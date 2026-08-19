@@ -27,7 +27,7 @@ from aot.scripts.measure_ai_tool_cost import measure_manifest
 AGENT_MANIFEST_TOKEN_CEILING = 12_000
 MCP_CATALOG_TOKEN_CEILING = 18_700
 
-# 도구 하나가 이보다 크면 설명이 아니라 문서다. 가장 큰 것이 get_planting
+# 도구 하나가 이보다 크면 설명이 아니라 문서다. 가장 큰 것이 get_plot
 # 3,164자인데, 그 정도가 이미 상한선이라고 본다.
 SINGLE_TOOL_CHAR_CEILING = 3_400
 

@@ -462,9 +462,9 @@
                     { id: 'boundary', label: (window._ ? window._('Boundary') : 'Boundary'), icon: 'fa-border-style' },
                     { id: 'label', label: (window._ ? window._('Label') : 'Label'), icon: 'fa-tag' },
                     { id: 'device', label: (window._ ? window._('Device') : 'Device'), icon: 'fa-microchip' },
-                    // 식생 구획(작기). 레이어 id 가 'aot-vegetation-*' 라
-                    // getLayerIdsByType('vegetation') 이 그대로 찾아 끈다.
-                    { id: 'vegetation', label: (window._ ? window._('Planting') : 'Planting'), icon: 'fa-seedling' }
+                    // 식생 구획(작기). 레이어 id 가 'aot-plot-*' 라
+                    // getLayerIdsByType('plot') 이 그대로 찾아 끈다.
+                    { id: 'plot', label: (window._ ? window._('Plot') : 'Plot'), icon: 'fa-seedling' }
                 ];
 
                 // Create layer items
@@ -634,9 +634,9 @@
                     { id: 'boundary', label: (window._ ? window._('Boundary') : 'Boundary'), icon: 'fa-border-style' },
                     { id: 'label', label: (window._ ? window._('Label') : 'Label'), icon: 'fa-tag' },
                     { id: 'device', label: (window._ ? window._('Device') : 'Device'), icon: 'fa-microchip' },
-                    // 식생 구획(작기). 레이어 id 가 'aot-vegetation-*' 라
-                    // getLayerIdsByType('vegetation') 이 그대로 찾아 끈다.
-                    { id: 'vegetation', label: (window._ ? window._('Planting') : 'Planting'), icon: 'fa-seedling' }
+                    // 식생 구획(작기). 레이어 id 가 'aot-plot-*' 라
+                    // getLayerIdsByType('plot') 이 그대로 찾아 끈다.
+                    { id: 'plot', label: (window._ ? window._('Plot') : 'Plot'), icon: 'fa-seedling' }
                 ];
 
                 // Create layer items

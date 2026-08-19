@@ -42,6 +42,7 @@
     <button type="button" class="btn aot-pill-btn fac-step" data-step="fittings" role="tab"
             data-issue="{{ _('Nothing placed yet') }}">{{ _('Equipment Layout') }}</button>
     <button type="button" class="btn aot-pill-btn fac-step" data-step="connect"  role="tab">{{ _('Connections') }}</button>
+    <button type="button" class="btn aot-pill-btn fac-step" data-step="plot" role="tab">{{ _('Plot') }}</button>
     <button type="button" class="btn aot-pill-btn fac-step" data-step="check"    role="tab"
             data-issue="{{ _('Not saved yet') }}">{{ _('Review') }}</button>
 
@@ -322,8 +323,13 @@
             <div class="text-muted small p-2">{{ _('No facilities yet.') }}</div>
           {% endfor %}
         </div>
-        <button class="btn aot-pill-btn aot-pill-btn-primary"
-                onclick="FacilityIO.create()">+ {{ _('New Facility') }}</button>
+        <div class="fac-list-actions">
+          <button class="btn aot-pill-btn aot-pill-btn-primary"
+                  onclick="FacilityIO.create()">+ {{ _('New Facility') }}</button>
+          <button class="btn aot-pill-btn aot-pill-btn-primary"
+                  onclick="FacilityIO.clone()"
+                  title="{{ _('Duplicate the facility currently open in the editor. Connected sensors/outputs are not carried over.') }}">{{ _('Duplicate Facility') }}</button>
+        </div>
       </div>
     </div>
 
@@ -966,6 +972,25 @@
   <div id="actuator-list" style="display:none;"></div>
 
   <!-- ── Step 6 · Review ───────────────────────────────────────────────────── -->
+  <!-- ── Plot — what is growing in each zone ───────────────────────────
+       시설 구획은 기하를 그리지 않는다: 위치의 정본이 구역 자체다
+       (docs/design/geo-vegetation-planting.md). 그래서 여기에는 그리기 도구가
+       없고, 구역을 고르고 작물을 적는 것이 전부다.
+
+       면적·식재량은 **일부러 보여주지 않는다** — 시설은 노지형·베드형·수직형에
+       따라 같은 바닥 면적의 재배 규모가 전혀 다르다. 배치는 구획 노트에 적는다.
+
+       운영 정보(노트·이력·센서 값·제어)는 여기가 아니라 대시보드 위젯의 구획
+       모달이 맡는다. geo/design 과 같은 분담이다. -->
+  <div id="fac-tab-plot" class="fac-step-pane" data-step="plot" role="tabpanel">
+    <div class="aot-modal-container">
+      <div class="aot-modal-body-text">
+        {{ _('Record what is in each zone. Facility plots need no drawing — the zone itself is the location.') }}
+      </div>
+    </div>
+    <div id="fac-plot-body"></div>
+  </div>
+
   <div class="fac-step-pane" data-step="check">
 
   <!-- Shown until the facility is saved — the integration summary and device
@@ -1089,6 +1114,9 @@ window._IEC = {
   conn_update:{{ _('Update connection settings')|tojson }},
   loading:{{ _('Loading...')|tojson }}, saving:{{ _('Saving...')|tojson }},
   saved:{{ _('Saved.')|tojson }},
+  clone_select_first:{{ _('Select a facility to duplicate first.')|tojson }},
+  cloned:{{ _('Facility duplicated. Sensors and outputs were not carried over.')|tojson }},
+  clone_failed:{{ _('Duplicate failed: ')|tojson }},
   unbound_none:{{ _('Every fitting has a device.')|tojson }},
   unbound_never:{{ _('device was deleted')|tojson }},
   place_center_hint:{{ _('Click on the map to set the facility center')|tojson }},
@@ -1124,6 +1152,32 @@ window._IEC = {
   am_shade_curtain_motor:{{ _('Shade curtain motor')|tojson }},
   zone_bay:{{ _('Bay')|tojson }}, zone_split:{{ _('Split zones')|tojson }},
   zone_merge:{{ _('Merge zones')|tojson }},
+  {#- 식생 스텝. 면적·식재량 문구가 없는 것은 의도한 것이다(위 pane 주석 참조). -#}
+  {#- 라벨 어휘는 지도 모달과 같다 — '작물' 은 용도를 농업으로 좁힌다
+     (test_geo_plot.TestVocabularyIsNotAgricultureOnly). -#}
+  plot_kind:{{ _('Kind')|tojson }},
+  kind_vegetation:{{ _('Vegetation')|tojson }}, kind_livestock:{{ _('Livestock')|tojson }},
+  kind_facility:{{ _('Facility')|tojson }}, kind_other:{{ _('Other')|tojson }},
+  plot_subject:{{ _('What is here')|tojson }}, plot_variety:{{ _('Variety')|tojson }},
+  plot_started_on:{{ _('Start date')|tojson }},
+  plot_expected_end:{{ _('Expected end')|tojson }},
+  plot_add:{{ _('Add a plot')|tojson }},
+  plot_end:{{ _('End')|tojson }},
+  plot_empty:{{ _('Nothing recorded here yet.')|tojson }},
+  plot_whole_facility:{{ _('Whole facility')|tojson }},
+  plot_program:{{ _('Program')|tojson }},
+  plot_program_none:{{ _('No program')|tojson }},
+  plot_stage_unit:{{ _(' stages')|tojson }},
+  plot_day_n:{{ _('Day {n}')|tojson }},
+  plot_subject_required:{{ _('Enter what is here.')|tojson }},
+  plot_save_first:{{ _('Save the facility first, then record what is in each zone.')|tojson }},
+  plot_end_confirm:{{ _('End this plot? The record stays as history.')|tojson }},
+  plot_orphan_confirm:{{ _('These plots sit in zones this change removes: {list}. They stay recorded but lose their zone. Save anyway?')|tojson }},
+  plot_orphan_warn:{{ _('Plots without a zone after this change: {list}')|tojson }},
+  plot_delete_confirm:{{ _('Delete this record? Use "End" instead if it was actually grown — deleting removes it from the history.')|tojson }},
+  edit:{{ _('Edit')|tojson }}, delete:{{ _('Delete')|tojson }},
+  cancel:{{ _('Cancel')|tojson }}, save:{{ _('Save')|tojson }},
+  save_failed:{{ _('Save failed')|tojson }}, delete_failed:{{ _('Delete failed')|tojson }},
   spec_stroke:{{ _('Stroke')|tojson }},
   spec_speed:{{ _('Speed')|tojson }},
   spec_coverage:{{ _('Coverage')|tojson }},

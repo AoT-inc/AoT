@@ -782,6 +782,7 @@
   }
   .facility-list-item:hover { background: var(--aot-surface-body); }
   .facility-list-item.active { background: var(--aot-color-brand-accent); font-weight: 600; }
+  .fac-list-actions { display: flex; gap: 8px; flex-wrap: wrap; }
   .facility-list-item .fac-item-info { flex: 1; min-width: 0; }
   /* The button itself is the shared pill; the page only says it appears on row
      hover so the list stays quiet until you reach for it. */

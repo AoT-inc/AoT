@@ -1500,7 +1500,11 @@
   // sections may share one data-step) and which stage view is behind it.
   // The drawer itself is the shared shell (aot-widget-drawer.js), so it pushes
   // the page aside and leaves the stage clickable.
-  var STEPS = ['basic', 'position', 'envelope', 'fittings', 'connect', 'check'];
+  // 'plot' 은 connect 와 check 사이다 — 설비를 다 붙인 뒤, 검토 전에 "여기에
+  // 무엇이 심겨 있나" 를 적는 자리다. 필수 단계가 아니라 data-issue 가 없다
+  // (작물을 적지 않아도 시설은 완성된다).
+  var STEPS = ['basic', 'position', 'envelope', 'fittings', 'connect',
+               'plot', 'check'];
   var _step = null;
 
   // Every step can show either view — the model and the map are two ways of

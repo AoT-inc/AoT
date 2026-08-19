@@ -47,13 +47,13 @@ class TestDescendantHelper(unittest.TestCase):
 
     def test_helper_exists(self):
         self.assertIn('def descendant_target_ids', self.src)
-        self.assertIn('def _planting_ids_inside', self.src)
+        self.assertIn('def _plot_ids_inside', self.src)
 
     def test_it_covers_every_identity(self):
         """한 대상 아래에는 정체성이 여러 벌이라 도형 uuid 만으로는 부족하다.
         하나라도 빠뜨리면 그 종류에 붙은 것만 조용히 사라진다."""
         body = _fn(self.src, 'descendant_target_ids')
-        for key in ('shapes', 'facilities', 'devices', 'plantings'):
+        for key in ('shapes', 'facilities', 'devices', 'plots'):
             self.assertIn("'%s'" % key, body)
         # 시설: 노트·일정은 GeoFacility uuid 에 붙는데 기하는 도형 쪽이다
         self.assertIn('GeoFacility', body)
@@ -66,10 +66,10 @@ class TestDescendantHelper(unittest.TestCase):
         body = _fn(self.src, 'descendant_target_ids')
         self.assertIn('return uniq, breakdown', body)
 
-    def test_plantings_are_found_geometrically(self):
-        """GeoPlanting 은 GeoShape 가 아니라 자손 순회에 안 들어가고, 소속
+    def test_plots_are_found_geometrically(self):
+        """GeoPlot 은 GeoShape 가 아니라 자손 순회에 안 들어가고, 소속
         컬럼도 없다(설계상 소속은 저장하지 않고 파생한다)."""
-        body = _fn(self.src, '_planting_ids_inside')
+        body = _fn(self.src, '_plot_ids_inside')
         self.assertIn('containment_point', body)
         self.assertIn('ended_on.is_(None)', body)   # 끝난 작기는 제외
 
@@ -110,11 +110,11 @@ class TestToolsExpandAndReport(unittest.TestCase):
         for fn in ('search_schedule_tool', 'search_notes_tool'):
             self.assertIn('"scope"', _fn(self.src, fn))
 
-    def test_note_target_name_covers_planting_and_facility(self):
+    def test_note_target_name_covers_plot_and_facility(self):
         """site 를 물으면 그 아래 전부가 돌아오므로, 어느 구획 것인지 구분이
         곧 답의 정확도다. 식생·시설은 GeoShape 가 아니라 이름이 비어 있었다."""
         body = _fn(self.src, '_note_target_name')
-        self.assertIn('GeoPlanting', body)
+        self.assertIn('GeoPlot', body)
         self.assertIn('GeoFacility', body)
 
 
@@ -261,7 +261,7 @@ class TestScreenAndAiAgree(unittest.TestCase):
         src = _read('aot_flask', 'routes_notes_api.py')
         self.assertIn('def _display_name_for_target', src)
         body = _fn(src, '_display_name_for_target')
-        for model in ('GeoShape', 'GeoPlanting', 'GeoFacility'):
+        for model in ('GeoShape', 'GeoPlot', 'GeoFacility'):
             self.assertIn(model, body)
         js = _read('aot_flask', 'static', 'js', 'common', 'sensor-label.js')
         self.assertIn('n.target_name', js)
@@ -272,7 +272,7 @@ class TestScreenAndAiAgree(unittest.TestCase):
                    'aot-map-widget-vector.js')
         self.assertGreaterEqual(js.count('descendants: true'), 3)
         veg = _read('aot_flask', 'static', 'js', 'widgets', 'AoT_map',
-                    'aot-map-vegetation.js')
+                    'aot-map-plot.js')
         self.assertNotIn('descendants', veg)
 
     def test_area_for_descendants_always_includes_the_root(self):
@@ -296,29 +296,29 @@ class TestScreenAndAiAgree(unittest.TestCase):
         self.assertIn('total > items.length', rec)
 
 
-class TestCropNameResolvesToThePlot(unittest.TestCase):
+class TestSubjectNameResolvesToThePlot(unittest.TestCase):
     """작물 이름은 그 **구획**으로 풀린다 — 예전에는 구역으로 접혔다."""
 
     def setUp(self):
         self.src = _read('..', 'aot', 'ai', 'services', 'aot_data_tool_service.py')
 
-    def test_resolver_returns_planting(self):
-        body = _fn(self.src, '_resolve_target_by_crop')
-        self.assertIn("'planting'", body)
+    def test_resolver_returns_plot(self):
+        body = _fn(self.src, '_resolve_target_by_subject')
+        self.assertIn("'plot'", body)
         self.assertIn('plot_id', body)
 
     def test_plots_outside_a_zone_are_kept(self):
         """구획이 쓰기 대상이 아니던 시절에는 버렸다. 지금은 노트의 선택
         구간이 구획에 붙은 예정이 되므로, 버리면 방금 만든 것에 도달하지
         못한다."""
-        body = _fn(self.src, '_active_crop_plots')
+        body = _fn(self.src, '_active_subject_plots')
         self.assertIn("'plot_id': row.unique_id", body)
         self.assertNotIn('if zone is None:\n                    continue', body)
 
     def test_ambiguity_still_returns_none(self):
         """5-tuple 에 '모호함' 을 담을 자리가 없고, 이 리졸버는 쓰기 도구도
         쓴다 — 하나를 골라 버리면 엉뚱한 구획에 조용히 쓰인다."""
-        body = _fn(self.src, '_resolve_target_by_crop')
+        body = _fn(self.src, '_resolve_target_by_subject')
         self.assertIn('len(plot_ids) == 1', body)
 
     def test_containers_list_their_plots(self):
@@ -326,7 +326,7 @@ class TestCropNameResolvesToThePlot(unittest.TestCase):
         존재를 알아야 한다."""
         body = _fn(self.src, 'resolve_target_tool')
         self.assertIn("target_type in ('site', 'zone')", body)
-        self.assertIn('"type": "planting"', body)
+        self.assertIn('"type": "plot"', body)
 
 
 if __name__ == '__main__':

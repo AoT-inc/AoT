@@ -220,7 +220,7 @@ def _extract_operational_state_metadata(
             "confirmed_at": None,
         }
 
-    # Days after planting
+    # Days after plot
     if "days_after_planting" in operational_state:
         per_parameter["days_after_planting"] = {
             "value": operational_state["days_after_planting"],

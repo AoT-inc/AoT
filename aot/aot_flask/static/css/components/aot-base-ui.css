@@ -1402,15 +1402,15 @@ input:checked+.slider:before {
    여기서 배경색을 받아 흰 글씨를 읽히게 하는데, 식생만 빠져 있어
    `.mode-tab.active { color: 흰색 !important }` 과 `.mode-tab { background: 흰색 }`
    이 겹쳤다. 모드를 추가하면 이 블록도 함께 추가해야 한다. */
-.nav-tier[data-tier-id="main"] .mode-tab[data-nav-mode="vegetation"] {
-    border-color: var(--theme-vegetation, #6a8f3c);
+.nav-tier[data-tier-id="main"] .mode-tab[data-nav-mode="plot"] {
+    border-color: var(--theme-plot, #6a8f3c);
     border-width: 3px;
 }
 
-.nav-tier[data-tier-id="main"] .mode-tab[data-nav-mode="vegetation"].active,
-.nav-tier[data-tier-id="main"] .mode-tab[data-nav-mode="vegetation"]:hover {
-    background: var(--theme-vegetation, #6a8f3c);
-    border-color: var(--theme-vegetation, #6a8f3c);
+.nav-tier[data-tier-id="main"] .mode-tab[data-nav-mode="plot"].active,
+.nav-tier[data-tier-id="main"] .mode-tab[data-nav-mode="plot"]:hover {
+    background: var(--theme-plot, #6a8f3c);
+    border-color: var(--theme-plot, #6a8f3c);
     color: var(--text-color-tertiary);
 }
 

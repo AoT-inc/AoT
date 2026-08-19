@@ -564,7 +564,7 @@ IMPORTANT: This is the SOURCE TEMPLATE file.
         </li>
         {% endif %}
         <li
-          class="nav-item dropdown {% if active_page in ['input', 'output', 'function', 'method_list', 'geo_design', 'geo_layer'] %} active{% endif %}">
+          class="nav-item dropdown {% if active_page in ['input', 'output', 'function', 'method_list', 'geo_design', 'geo_layer', 'geo_programs'] %} active{% endif %}">
           <a class="nav-link dropdown-toggle" href="#" id="dropdownSettings" data-toggle="dropdown" aria-haspopup="true"
             aria-expanded="false">
             {{ _('Settings') }}
@@ -577,6 +577,10 @@ IMPORTANT: This is the SOURCE TEMPLATE file.
             <a class="dropdown-item {% if active_page == 'geo_facility' %} active{% endif %}"
               href="{{ url_for('routes_geo.page_facility') }}">
               {{ _('Facility') }}
+            </a>
+            <a class="dropdown-item {% if active_page == 'geo_programs' %} active{% endif %}"
+              href="{{ url_for('routes_geo.page_programs') }}">
+              {{ _('Programs') }}
             </a>
             <a class="dropdown-item {% if active_page == 'geo_layer' %} active{% endif %}"
               href="{{ url_for('routes_geo.page_layer') }}">

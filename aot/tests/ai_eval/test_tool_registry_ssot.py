@@ -274,28 +274,41 @@ _ADAPTIVE_STORAGE_WRITE_TOOL_ADDITIONS = {
 # config_only 면제 대상이 절대 아니다(설계 문서 Phase D).
 _GEO_BINDING_TOOL_ADDITIONS = {'list_unbound_slots', 'rebind_device'}
 
-# 식생 구획(작기) — docs/design/geo-vegetation-planting.md (2026-08-13).
+# 식생 구획(작기) — docs/design/geo-vegetation-plot.md (2026-08-13).
 # "어디에 무엇이 심겨 있는가" 는 재배 조언의 전제인데, 시설(crop_preset /
 # facility_registry) 외에는 AI 가 알 방법이 없었다. 읽기 3 + 쓰기 4.
 _PLANTING_READ_TOOL_ADDITIONS = {
-    'list_plantings', 'get_planting', 'get_planting_history',
-    # propose_planting_split (2026-08-14): 계산만 하고 아무것도 만들지 않는다.
-    'propose_planting_split',
+    'list_plots', 'get_plot', 'get_plot_history',
+    # propose_plot_split (2026-08-14): 계산만 하고 아무것도 만들지 않는다.
+    'propose_plot_split',
 }
 # 쓰기 4종은 전부 승인 대상이다. config_only 로 면제하지 말 것 — end/delete 는
 # 되돌릴 수단이 없고(그 자리의 이력이 사라진다), create/modify 는 사람이 밭에서
 # 확인해야 하는 사실을 기록하는 행위다.
 _PLANTING_WRITE_TOOL_ADDITIONS = {
-    'create_planting', 'modify_planting', 'end_planting', 'delete_planting',
-    # copy_planting (2026-08-14): 구현은 planting_io 와 REST 에 있었는데 AI
+    'create_plot', 'modify_plot', 'end_plot', 'delete_plot',
+    # copy_plot (2026-08-14): 구현은 plot_io 와 REST 에 있었는데 AI
     # 도구로만 없었다. "작년 그 자리에 또" 는 가장 흔한 요청이고 좌표가 하나도
     # 필요 없는 유일한 생성 경로다 — LLM 은 구역이 지도 어디인지 알 방법이
     # 없으므로(어떤 도구도 경계 폴리곤을 안 내준다) 이 길이 없으면 좌표를
     # 지어내게 된다. 쓰기이므로 승인 대상.
-    'copy_planting',
-    # apply_planting_split (2026-08-14): 분할 제안을 실제 구획으로 만든다.
-    # 조각마다 GeoPlanting 한 행이 생기므로 쓰기이고 승인 대상.
-    'apply_planting_split',
+    'copy_plot',
+    # apply_plot_split (2026-08-14): 분할 제안을 실제 구획으로 만든다.
+    # 조각마다 GeoPlot 한 행이 생기므로 쓰기이고 승인 대상.
+    'apply_plot_split',
+}
+# 재배 프로그램 — docs/design/program-layer.md (2026-08-19, P3).
+# 작물의 단계·기간 템플릿. 구획에 붙이면 단계·예상 수확일이 따라오므로, AI 가
+# 구획을 만들 때 고를 수 있어야 하고(읽기 2) 없으면 만들 수 있어야 한다(쓰기 2).
+_CROP_PROGRAM_READ_TOOL_ADDITIONS = {
+    'list_programs', 'get_program',
+}
+# 쓰기 2종은 승인 대상이다. **config_only 로 면제하지 말 것** — 프로그램은 제어
+# 목표의 근거가 되고, 단계 기간과 목표는 그럴듯하게 지어낼 수 있는 값이다.
+# 별도의 안전장치가 하나 더 있다: 이렇게 만든 것은 `source='ai'` 라서 사람이
+# 확인(reviewed_at)하기 전까지 제어에 쓰이지 않는다(모델 usable_for_control).
+_CROP_PROGRAM_WRITE_TOOL_ADDITIONS = {
+    'create_program', 'modify_program',
 }
 _GEO_BINDING_MUTATING_ADDITIONS = {'rebind_device'}
 
@@ -385,6 +398,7 @@ def _check_dispatch_map(R):
            | _ADAPTIVE_STORAGE_READ_TOOL_ADDITIONS | _ADAPTIVE_STORAGE_WRITE_TOOL_ADDITIONS
            | _GEO_BINDING_TOOL_ADDITIONS
            | _PLANTING_READ_TOOL_ADDITIONS | _PLANTING_WRITE_TOOL_ADDITIONS
+           | _CROP_PROGRAM_READ_TOOL_ADDITIONS | _CROP_PROGRAM_WRITE_TOOL_ADDITIONS
            | _ZONE_SUMMARY_TOOL_ADDITIONS | _GEO_DISTANCE_TOOL_ADDITIONS
            | _DRAWER_TOOL_ADDITIONS | _DEVICE_FRESHNESS_TOOL_ADDITIONS,
            set(R.build_tool_map().keys()))
@@ -408,6 +422,7 @@ def _check_declarations(R):
            | _ADAPTIVE_STORAGE_READ_TOOL_ADDITIONS | _ADAPTIVE_STORAGE_WRITE_TOOL_ADDITIONS
            | _GEO_BINDING_TOOL_ADDITIONS
            | _PLANTING_READ_TOOL_ADDITIONS | _PLANTING_WRITE_TOOL_ADDITIONS
+           | _CROP_PROGRAM_READ_TOOL_ADDITIONS | _CROP_PROGRAM_WRITE_TOOL_ADDITIONS
            | _ZONE_SUMMARY_TOOL_ADDITIONS | _GEO_DISTANCE_TOOL_ADDITIONS
            | _DRAWER_TOOL_ADDITIONS | _DEVICE_FRESHNESS_TOOL_ADDITIONS,
            set(R.virtual_tool_registry()))
@@ -419,7 +434,8 @@ def _check_declarations(R):
             | _SEQUENCE_SCHEDULE_TOOL_ADDITIONS
             | _SCHEDULE_CRUD_MUTATING_ADDITIONS | _GIS_INPUT_CRUD_MUTATING_ADDITIONS
             | _CONFIRMATION_RELAY_MUTATING_ADDITIONS | _ADAPTIVE_STORAGE_WRITE_TOOL_ADDITIONS
-            | _GEO_BINDING_MUTATING_ADDITIONS | _PLANTING_WRITE_TOOL_ADDITIONS)
+            | _GEO_BINDING_MUTATING_ADDITIONS | _PLANTING_WRITE_TOOL_ADDITIONS
+            | _CROP_PROGRAM_WRITE_TOOL_ADDITIONS)
            - _CONFIG_ONLY_APPROVAL_EXEMPTIONS,
            set(R.virtual_approval_tools()))
 
@@ -432,7 +448,8 @@ def _check_declarations(R):
             | _SCHEDULE_CRUD_MUTATING_ADDITIONS | _GIS_INPUT_CRUD_MUTATING_ADDITIONS
             | _CONFIRMATION_RELAY_MUTATING_ADDITIONS | _ADAPTIVE_STORAGE_WRITE_TOOL_ADDITIONS
             | _GEO_BINDING_MUTATING_ADDITIONS | _SCHEDULE_BATCH_PHYSICAL_ADDITIONS
-            | _PLANTING_WRITE_TOOL_ADDITIONS)
+            | _PLANTING_WRITE_TOOL_ADDITIONS
+            | _CROP_PROGRAM_WRITE_TOOL_ADDITIONS)
            - _CONFIG_ONLY_APPROVAL_EXEMPTIONS,
            set(R.approval_required_tools()))
 

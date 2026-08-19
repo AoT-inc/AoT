@@ -1,7 +1,7 @@
 # coding=utf-8
 """지도 위 두 지점 사이의 거리 — 이름 또는 unique_id 로 해석한다.
 
-설계 정본: docs/design/geo-vegetation-planting.md §"거리 조회"
+설계 정본: docs/design/geo-vegetation-plot.md §"거리 조회"
 
 ## 왜 필요한가
 
@@ -13,15 +13,15 @@ LLM 은 좌표 산술을 조용히 틀린다. "관리사무소에서 가까운 �
 ## 이름 해석을 여기 따로 두는 이유
 
 `_resolve_note_target` 을 쓰지 않는다. 그쪽은 **작물명을 구획이 아니라 소속
-zone 으로 치환한다**(`_resolve_target_by_crop._one_zone`). 그래서 한 zone 을
+zone 으로 치환한다**(`_resolve_target_by_subject._one_zone`). 그래서 한 zone 을
 5등분해 서로 다른 품종을 심은 상태에서 품종명 다섯 개를 넘기면 **다섯 개가
 전부 같은 zone 중심으로 해석되어 거리가 전부 같게** 나온다. 형식은 멀쩡하고
 숫자만 틀리는 종류라 알아채기 어렵다.
 
 그렇다고 그 리졸버를 고칠 수도 없다 — 호출처 17곳 중 `add_schedule`·
 `create_note`·`schedule_device_control` 이 **쓰기** 도구이고, "target 은
-무언가를 쓸 수 있는 GeoShape 여야 한다"가 설계 정본이다(`_active_crop_plots`
-docstring). 거기를 건드리면 예약이 GeoPlanting uuid 에 걸린다.
+무언가를 쓸 수 있는 GeoShape 여야 한다"가 설계 정본이다(`_active_subject_plots`
+docstring). 거기를 건드리면 예약이 GeoPlot uuid 에 걸린다.
 
 그래서 **읽기전용 리졸버를 여기 따로 둔다**(`resolve_query`). 읽기전용이라
 쓰기 리졸버가 못 하는 것을 할 수 있다 — 구획 자신을 가리키고, **모호하면
@@ -37,7 +37,7 @@ docstring). 거기를 건드리면 예약이 GeoPlanting uuid 에 걸린다.
   `get_address`·`get_local_time` 이 쓰는 정본**이라 그대로 쓴다. 여기서만
   면적 중심으로 바꾸면 "3-1 이 어디냐"에 대한 답이 도구마다 달라진다 —
   이 저장소가 반복해서 데인 형태다.
-- **GeoPlanting**: 면적 중심(shapely `centroid`). 구획에는 기존 정본이
+- **GeoPlot**: 면적 중심(shapely `centroid`). 구획에는 기존 정본이
   없었으므로 옳은 쪽을 고른다. 오목 구획에서 중심이 밖으로 나가면
   `representative_point()` 로 떨어진다.
 - **장치(Input/Output/…)**: 자기 `latitude`/`longitude` 컬럼.
@@ -48,7 +48,7 @@ docstring). 거기를 건드리면 예약이 GeoPlanting uuid 에 걸린다.
 40m 로 답한다 — 경계 사이 최단거리가 아니다. 응답의 `basis` 가 이것을
 매번 말한다(안 적으면 읽는 쪽이 경계 거리로 오해한다).
 
-투영은 새 라이브러리를 들이지 않고 `planting_context`·`facility_calc` 가
+투영은 새 라이브러리를 들이지 않고 `plot_context`·`facility_calc` 가
 쓰는 것과 **같은 평면 근사**를 쓴다 — 같은 지도에서 면적과 거리가 다른
 평면에서 재어지면 설명 없이 어긋난다.
 """
@@ -58,11 +58,11 @@ import math
 logger = logging.getLogger(__name__)
 
 # 위도 1도 = 111320 m. 이 저장소가 이미 여섯 곳에서 쓰는 상수와 같은 값이다
-# (planting_context.py:131, facility_calc.py:117, geo_photo_georef.py 등).
+# (plot_context.py:131, facility_calc.py:117, geo_photo_georef.py 등).
 _M_PER_DEG_LAT = 111320.0
 
 # 한 번에 견줄 수 있는 후보 수. 넘으면 잘라내지 않고 **거부한다** — 조용히
-# 자르면 호출자는 자기가 본 것이 전부인 줄 안다(planting_split 과 같은 규칙).
+# 자르면 호출자는 자기가 본 것이 전부인 줄 안다(plot_split 과 같은 규칙).
 _MAX_CANDIDATES = 200
 
 
@@ -75,11 +75,11 @@ def distance_m(lat1, lng1, lat2, lng2):
     return math.hypot(dx, dy)
 
 
-def _planting_point(row):
-    """GeoPlanting → (lat, lng) 또는 None. 면적 중심, 오목이면 대표점."""
-    from aot.aot_flask.geo import planting_context
+def _plot_point(row):
+    """GeoPlot → (lat, lng) 또는 None. 면적 중심, 오목이면 대표점."""
+    from aot.aot_flask.geo import plot_context
 
-    poly = planting_context._shapely(planting_context.geometry_of(row))
+    poly = plot_context._shapely(plot_context.geometry_of(row))
     if poly is None or poly.is_empty:
         return None
     try:
@@ -94,18 +94,18 @@ def _planting_point(row):
         return None
 
 
-def _planting_label(row):
+def _plot_label(row):
     """구획 표시명. 분할로 만든 구획은 `name` 이 비어 있는 것이 정상이라
     (이름 없이 조각만 만들어진다) 작물명이 실질적인 정체성이다."""
     name = (getattr(row, 'name', None) or '').strip()
     if name:
         return name
-    crop = (getattr(row, 'crop', None) or '').strip()
+    subject = (getattr(row, 'subject', None) or '').strip()
     variety = (getattr(row, 'variety', None) or '').strip()
-    if crop and variety:
-        return '%s (%s)' % (crop, variety)
-    if crop:
-        return crop
+    if subject and variety:
+        return '%s (%s)' % (subject, variety)
+    if subject:
+        return subject
     return str(getattr(row, 'unique_id', ''))[:8]
 
 
@@ -114,28 +114,28 @@ def _point_from_shape(shape):
     centroid = shape.get_centroid()
     if not centroid:
         return None
-    from aot.aot_flask.geo import planting_context
+    from aot.aot_flask.geo import plot_context
 
     _tt = shape.type if shape.type in (
         'zone', 'site', 'facility', 'facility_bay', 'equipment') else 'zone'
     return {
         'target_id': shape.unique_id,
         'target_type': _tt,
-        'resolved_name': planting_context._shape_name(shape) or shape.unique_id[:8],
+        'resolved_name': plot_context._shape_name(shape) or shape.unique_id[:8],
         'lat': centroid[0],
         'lng': centroid[1],
     }
 
 
-def _point_from_planting(row):
-    """GeoPlanting 행 → 대표점 dict 또는 None."""
-    point = _planting_point(row)
+def _point_from_plot(row):
+    """GeoPlot 행 → 대표점 dict 또는 None."""
+    point = _plot_point(row)
     if not point:
         return None
     return {
         'target_id': row.unique_id,
-        'target_type': 'planting',
-        'resolved_name': _planting_label(row),
+        'target_type': 'plot',
+        'resolved_name': _plot_label(row),
         'lat': point[0],
         'lng': point[1],
     }
@@ -146,7 +146,7 @@ def resolve_point(target_id):
     또는 `(None, 오류문구)` 대신 None.
 
     디스패치 순서는 `device_tz.resolve_location_coords` 를 따르되 그 사이에
-    GeoPlanting 을 끼운다 — 그쪽은 구획을 모르고, 그쪽에 넣으면
+    GeoPlot 을 끼운다 — 그쪽은 구획을 모르고, 그쪽에 넣으면
     `get_address`/`get_local_time` 의 동작까지 함께 바뀐다.
     """
     if not target_id or str(target_id).strip().lower() in ('', 'none'):
@@ -164,16 +164,16 @@ def resolve_point(target_id):
     except Exception as exc:
         logger.debug('geo_distance: GeoShape 조회 실패 %s: %s', tid, exc)
 
-    # 2) GeoPlanting — 여기가 resolve_location_coords 에 없는 층위다.
+    # 2) GeoPlot — 여기가 resolve_location_coords 에 없는 층위다.
     try:
-        from aot.databases.models import GeoPlanting
-        row = GeoPlanting.query.filter_by(unique_id=tid).first()
+        from aot.databases.models import GeoPlot
+        row = GeoPlot.query.filter_by(unique_id=tid).first()
         if row is not None:
-            point = _point_from_planting(row)
+            point = _point_from_plot(row)
             if point:
                 return point
     except Exception as exc:
-        logger.debug('geo_distance: GeoPlanting 조회 실패 %s: %s', tid, exc)
+        logger.debug('geo_distance: GeoPlot 조회 실패 %s: %s', tid, exc)
 
     # 3) 장치 — 자기 lat/lng 컬럼. 기존 리졸버를 그대로 쓴다.
     try:
@@ -219,24 +219,24 @@ _MAX_AMBIGUOUS_LISTED = 10
 def _named_shapes():
     """이름이 있는 GeoShape 전부 → [(shape, name_lower)]."""
     from aot.databases.models.geo import GeoShape
-    from aot.aot_flask.geo import planting_context
+    from aot.aot_flask.geo import plot_context
 
     out = []
     for shape in GeoShape.query.all():
-        name = planting_context._shape_name(shape)
+        name = plot_context._shape_name(shape)
         if name and str(name).strip():
             out.append((shape, str(name).strip().lower()))
     return out
 
 
-def _active_planting_rows():
-    """재배 중인 GeoPlanting 전부.
+def _active_plot_rows():
+    """재배 중인 GeoPlot 전부.
 
     **활성만 본다** — 작년 배추가 올해 거리 질문을 끌고 가면 안 된다
-    (`_resolve_target_by_crop` 과 같은 규율).
+    (`_resolve_target_by_subject` 과 같은 규율).
     """
     from aot.databases.models import GeoMap
-    from aot.aot_flask.geo import planting_context
+    from aot.aot_flask.geo import plot_context
 
     rows = []
     try:
@@ -245,7 +245,7 @@ def _active_planting_rows():
         return rows
     for m in maps:
         try:
-            rows.extend(planting_context.active_plantings(m.unique_id))
+            rows.extend(plot_context.active_plots(m.unique_id))
         except Exception:
             continue
     return rows
@@ -267,11 +267,11 @@ def _named_devices():
     return out
 
 
-def _planting_fields(row):
+def _plot_fields(row):
     """구획이 불릴 수 있는 이름들(소문자). 분할 구획은 `name` 이 비어 있고
-    작물명이 실질적 정체성이라 crop/variety 도 함께 본다."""
+    작물명이 실질적 정체성이라 subject/variety 도 함께 본다."""
     vals = []
-    for attr in ('name', 'crop', 'variety'):
+    for attr in ('name', 'subject', 'variety'):
         v = (getattr(row, attr, None) or '').strip()
         if v:
             vals.append(v.lower())
@@ -286,11 +286,11 @@ def build_catalog():
     """
     try:
         return {'shapes': _named_shapes(),
-                'plantings': _active_planting_rows(),
+                'plots': _active_plot_rows(),
                 'devices': _named_devices()}
     except Exception as exc:
         logger.debug('geo_distance: 이름 카탈로그 준비 실패: %s', exc)
-        return {'shapes': [], 'plantings': [], 'devices': []}
+        return {'shapes': [], 'plots': [], 'devices': []}
 
 
 def resolve_query(query, catalog=None):
@@ -304,7 +304,7 @@ def resolve_query(query, catalog=None):
       0. unique_id
       1. GeoShape 이름 정확일치 — 지도의 정식 어휘가 항상 이긴다.
          구획 이름이 우연히 '3-1' 이어도 구역 '3-1' 이 먼저다.
-      2. 활성 구획의 name / crop / variety 정확일치
+      2. 활성 구획의 name / subject / variety 정확일치
       3. 장치 이름 정확일치
       4. 부분일치 — 위 셋을 한꺼번에 본다. **양쪽 다 두 글자 이상**일 때만
          허용한다(한 글자 작물명 '마' 가 '고구마' 에 걸리는 것을 막는다 —
@@ -337,7 +337,7 @@ def resolve_query(query, catalog=None):
 
     cat = catalog if catalog is not None else build_catalog()
     shapes = cat.get('shapes') or []
-    plantings = cat.get('plantings') or []
+    plots = cat.get('plots') or []
     devices = cat.get('devices') or []
 
     # 1) GeoShape 정확일치
@@ -347,8 +347,8 @@ def resolve_query(query, catalog=None):
         return got, cands
 
     # 2) 활성 구획 정확일치
-    got, cands = _finish([_point_from_planting(r)
-                          for r in plantings if ql in _planting_fields(r)])
+    got, cands = _finish([_point_from_plot(r)
+                          for r in plots if ql in _plot_fields(r)])
     if got or cands:
         return got, cands
 
@@ -365,8 +365,8 @@ def resolve_query(query, catalog=None):
         return len(hay) >= 2 and (ql in hay or hay in ql)
 
     loose = [_point_from_shape(s) for (s, nl) in shapes if _loose(nl)]
-    loose += [_point_from_planting(r) for r in plantings
-              if any(_loose(f) for f in _planting_fields(r))]
+    loose += [_point_from_plot(r) for r in plots
+              if any(_loose(f) for f in _plot_fields(r))]
     loose += [resolve_point(r.unique_id) for (r, _tt, nl) in devices if _loose(nl)]
     got, cands = _finish(loose)
     return got, (cands or [])
@@ -378,7 +378,7 @@ def _ambiguous_error(query, candidates):
     listed = candidates[:_MAX_AMBIGUOUS_LISTED]
     return {
         'error': ('%r matches %d things — say which one (pass its unique_id). '
-                  'A crop planted in several plots is the usual cause.'
+                  'A subject placed in several plots is the usual cause.'
                   % (query, len(candidates))),
         'needs_disambiguation': True,
         'query': query,
@@ -394,7 +394,7 @@ BASIS = ('Straight-line distance between the entities\' centre points, NOT the '
 
 
 _NOT_FOUND = ('could not locate %r — pass its name as the grower says it, or a '
-              'unique_id from list_plantings / get_spatial_tree / search_devices')
+              'unique_id from list_plots / get_spatial_tree / search_devices')
 
 
 def distance_between(a_query, b_query):

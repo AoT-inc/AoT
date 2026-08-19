@@ -5,10 +5,18 @@ from aot.databases import set_uuid
 from aot.aot_flask.extensions import db
 
 
-class GeoPlanting(CRUDMixin, db.Model):
-    """식생 구획(작기) — 짧게 살고 기하까지 함께 죽는 공간 단위.
+class GeoPlot(CRUDMixin, db.Model):
+    """공간 구획 — 어떤 대상이, 어디에, 언제부터 언제까지 있는가.
 
-    설계 정본: docs/design/geo-vegetation-planting.md
+    설계 정본: docs/design/geo-plot-instance.md
+    (식생 고유의 판단은 geo-vegetation-plot.md, 프로그램 쪽은 program-layer.md)
+
+    ## 식생은 대상 중 하나일 뿐이다
+
+    같은 구조("무엇이, 어디에, 언제부터")가 가축(어느 축사에 언제 입식) ·
+    시설물(어디에 언제 설치) · 도로·녹지 관리에 그대로 쓰인다. 그래서 이 표는
+    작물 전용이 아니라 **대상 종류(`kind`)를 갖는 구획**이다 — `GeoProgram` 이
+    이미 종류를 갖는데 붙일 대상이 식생뿐이면 절반만 넓힌 것이 된다.
 
     ## 왜 GeoShape 가 아닌가
 
@@ -40,7 +48,11 @@ class GeoPlanting(CRUDMixin, db.Model):
     가능한 값이므로 물질화하지 않는다)을 그대로 따른다 — 저장하면 복제가 남의
     링크를 복사하고 zone 재생성이 참조를 끊는다(2026-08-03 `map_overlay_id`
     사고). 센서도 마찬가지로 매달지 않고 공간 포함으로 파생한다
-    (`planting_context.sensors_for_planting`).
+    (`plot_context.sensors_for_plot`).
+
+    **시설 구획은 여기서 갈린다** — 기하를 그리지 않으면 소속을 파생할 근거가
+    없으므로 부모(`facility_uuid`/`bay_id`)가 위치의 정본이 된다. 아래 그
+    컬럼 주석에 왜 이것이 위 원칙의 예외가 아닌지 적어 두었다.
 
     ## 겹침은 정상이다
 
@@ -52,9 +64,9 @@ class GeoPlanting(CRUDMixin, db.Model):
 
     @phase active
     @stability experimental
-    @dependency GeoMap, GeoShape(zone, 파생 참조), GeoFacility(bay 스냅샷)
+    @dependency GeoMap, GeoShape(zone, 파생 참조), GeoFacility(부모 참조)
     """
-    __tablename__ = "geo_planting"
+    __tablename__ = "geo_plot"
     __table_args__ = {'extend_existing': True}
 
     id = db.Column(db.Integer, unique=True, primary_key=True)
@@ -69,23 +81,74 @@ class GeoPlanting(CRUDMixin, db.Model):
     # properties 에 device_id/channel_id/색 사본을 넣지 않는다(VP-4):
     # 사본은 원본이 바뀌어도 따라오지 않아 조용히 갈린다(GB-5 와 같은 결).
     # zone 소속은 여기에도, 컬럼에도 두지 않는다 — 공간 포함으로 파생한다.
-    feature = db.Column(db.JSON, nullable=False)
+    #
+    # **NULL 일 수 있다**(p6_39). 시설 구획은 기하 없이 성립한다 — 위치의
+    # 정본이 아래 `facility_uuid`/`bay_id` 이기 때문이다. 대신 VP-7 이 선다:
+    # `feature` 와 `facility_uuid` 중 적어도 하나는 있어야 한다.
+    feature = db.Column(db.JSON, nullable=True)
 
-    # ── 작물 ──────────────────────────────────────────────────────────
-    crop = db.Column(db.String(64), nullable=False)
+    # ── 시설 부모 (기하 대신 위치를 정하는 축) ─────────────────────────
+    #
+    # ## VP-5("소속을 컬럼으로 저장하지 않는다")와 충돌하지 않는다
+    #
+    # VP-5 의 근거는 "**파생 가능하니까** 물질화하지 않는다" 였다(저장하면
+    # 복제가 남의 링크를 복사하고 zone 재생성이 참조를 끊는다). 노지 두둑은
+    # 갈아엎으면 위치가 바뀌므로 기하가 정본이고 소속은 공간 포함으로 나온다.
+    #
+    # 시설은 반대다. 동·구역이 구조물로 존재하고 사람도 기하가 아니라
+    # **"3동"** 이라고 부른다. 기하를 그리지 않으면 소속을 파생할 근거 자체가
+    # 없으므로 VP-5 의 전제가 성립하지 않는다 — 예외가 아니라 조건이 다른
+    # 경우다. 그래서 여기서는 **부모가 정본이고 기하가 파생**이다(노지와 정확히
+    # 반대). 파생한 기하를 이 컬럼들에 되써 넣지 말 것(sync-back 금지와 같은 결).
+    #
+    # ## 왜 `source_ref` 파싱으로 대신하지 않는가
+    #
+    # `source_ref='<facility_uuid>:<bay_id>'` 를 소속의 정본으로 승격시키면
+    # `unique_id = 'uuid::채널'` 과 같은 문자열 파싱 계약이 하나 더 생긴다.
+    # `source_*` 는 원래 뜻인 **출처 기록**으로 둔다 — 백필로 만들어진 구획이
+    # 어디서 왔는지는 소속과 다른 질문이다.
+    facility_uuid = db.Column(db.String(36), nullable=True, index=True)
+    # 시설 구역 id — `facility_bays.compute_bay_slices()` 가 만드는 값과 같은
+    # 어휘다('bay_3' | 'bay_3_5'). 단동(bay_count=1)은 저장 시 'bay_1' 로
+    # 자동으로 채운다 — 구역이 하나뿐이라 사람이 고를 것이 없고, NULL 로 두면
+    # "시설 전체"와 "구역 1"이 같은 대상을 두 가지로 표현하게 된다.
+    # NULL 은 다동 시설에서만 의미를 갖는다(= 시설 전체).
+    bay_id = db.Column(db.String(40), nullable=True)
+
+    # ── 대상 ──────────────────────────────────────────────────────────
+    #
+    # 대상 종류 — `GeoProgram.kind` 와 **같은 어휘**를 쓴다
+    # ('vegetation' | 'livestock' | 'facility' | 'other').
+    #
+    # **프로그램에서 파생하지 않고 저장한다.** 프로그램이 NULL 인 구획이 정상
+    # 이므로(프로그램은 "있으면 자동" 이지 필수가 아니다) 파생하면 프로그램
+    # 없는 구획의 종류를 알 수 없다. 대신 프로그램을 붙일 때 종류가 다르면
+    # 거부한다 — 식생 구획에 가축 프로그램이 붙으면 단계·목표 해석이 통째로
+    # 엉뚱해지는데 에러는 나지 않는다.
+    kind = db.Column(db.String(24), nullable=False, default='vegetation',
+                     index=True)
+    # 이 구획에 있는 것. 작물명일 수도, 가축·수종·시설물 이름일 수도 있다.
+    #
+    # ⚠ `crop` 이 아니다(p6_44). `GeoProgram.subject` 와 **같은 축**이고 둘을
+    # 문자열로 맞추므로 이름도 같아야 한다 — 한쪽만 좁은 이름이면 붙이는 자리
+    # 마다 "이 crop 이 저 subject 인가" 를 다시 확인하게 된다.
+    subject = db.Column(db.String(64), nullable=False)
     variety = db.Column(db.String(64), nullable=True)
 
     # ── 시간 ──────────────────────────────────────────────────────────
-    # Date 이고 DateTime 이 아니다. 농사의 단위는 날이라 파종 시각의 시분초는
-    # 의미가 없고 tz 변환 문제만 부른다 — "오늘 심었다"는 지도의 tz 가
+    # Date 이고 DateTime 이 아니다. 이 축의 단위는 날이라 시작 시각의 시분초는
+    # 의미가 없고 tz 변환 문제만 부른다 — "오늘 시작했다"는 지도의 tz 가
     # 무엇이든 같은 날짜여야 한다(timezone-management.md 의 tz 상속 체인을
     # 탈 이유가 없다).
-    planted_on = db.Column(db.Date, nullable=False)
-    # index=True 는 마이그레이션(p6_34)의 ix_geo_planting_ended_on 과 짝이다.
+    #
+    # ⚠ `started_on` 이 아니다(p6_44) — "심다" 는 식생에만 있다. 가축 입식·
+    # 시설물 설치도 같은 칸을 쓴다.
+    started_on = db.Column(db.Date, nullable=False)
+    # index=True 는 마이그레이션(p6_44)의 ix_geo_plot_ended_on 과 짝이다.
     # 새 설치는 create_all(모델 기준), 업그레이드는 alembic 을 타므로 둘이
     # 어긋나면 **서버마다 인덱스가 달라진다.** 에러는 나지 않고 조회만 느려져
     # 아무도 모른 채 굴러간다 — 실제로 이 컬럼에서 한 번 어긋나 있었다.
-    ended_on = db.Column(db.Date, nullable=True, index=True)   # NULL = 재배 중
+    ended_on = db.Column(db.Date, nullable=True, index=True)   # NULL = 진행 중
     expected_end_on = db.Column(db.Date, nullable=True)   # 계획·알림용
     # 'harvested' | 'failed' | 'replaced' | 'removed'
     ended_reason = db.Column(db.String(16), nullable=True)
@@ -94,7 +157,7 @@ class GeoPlanting(CRUDMixin, db.Model):
     # 'drawn' | 'bay_snapshot' | 'copied'
     source_kind = db.Column(db.String(16), nullable=False, default='drawn')
     # bay_snapshot → GeoFacility.unique_id + ':' + bay_id
-    # copied       → 원본 GeoPlanting.unique_id
+    # copied       → 원본 GeoPlot.unique_id
     #
     # bay 는 **참조가 아니라 스냅샷**이다. 나중에 bay_count 를 바꾸면 bay 기하가
     # 재계산되는데, 과거 작기가 그것을 따라가면 "작년에 여기 뭐가 있었나"의
@@ -115,17 +178,32 @@ class GeoPlanting(CRUDMixin, db.Model):
     #    뿐이고 멀칭·지주·관수 관행이 뒤따른다. 그것을 전부 정량화해 스키마에
     #    담는 것이 어렵기 때문에 노트가 존재한다.
     #
-    # 확정된 배치는 **구획 노트**로 남긴다(`create_note(target_type='planting')`).
+    # 확정된 배치는 **구획 노트**로 남긴다(`create_note(target_type='plot')`).
     # 엔티티별 노트 다이제스트가 AI 컨텍스트에 미리 실리므로 다음 대화가 그
     # 문장을 읽고, 숫자는 조회 파라미터(`bed_pitch_cm`/`rows_per_bed`)로 넘긴다.
-    # 계산은 여전히 서버가 한다(`planting_context.capacity_estimate`).
+    # 계산은 여전히 서버가 한다(`plot_context.capacity_estimate`).
     #
     # ⚠ 여기에 배치 컬럼을 되살리지 말 것. 되살린다면 위 두 가지가 왜 더는
     #   문제가 아닌지 먼저 적을 것.
 
+    # ── 재배 프로그램 (p6_40) ─────────────────────────────────────────
+    #
+    # 작물의 단계·목표·자원을 담은 템플릿(`GeoProgram`)을 가리킨다. 이것이
+    # 있으면 사람이 적는 것은 **작물·품종·파종일·프로그램 넷뿐**이고, 현재 단계·
+    # 목표 환경·예상 수확일·자원 일정은 전부 여기서 파생한다.
+    #
+    # **버전을 함께 고정한다.** 프로그램을 고쳐도 진행 중인 작기의 해석이 바뀌면
+    # "그때 무엇을 목표로 길렀나" 의 답이 조용히 달라진다 — bay 기하를 참조가
+    # 아니라 스냅샷으로 복사한 것과 같은 판단이다.
+    #
+    # NULL 이면 프로그램 없이 동작한다(종전과 동일). 프로그램은 "있으면 자동"
+    # 이지 필수가 아니다.
+    program_uuid = db.Column(db.String(36), nullable=True, index=True)
+    program_version = db.Column(db.Integer, nullable=True)
+
     # ── 표시 ──────────────────────────────────────────────────────────
     name = db.Column(db.String(120), nullable=True)
-    # 사용자가 작물 구분용으로 고른 색. 미설정이면 테마의 vegetation 으로
+    # 사용자가 구분용으로 고른 색. 미설정이면 테마의 vegetation 으로
     # 수렴한다(aot-geo-theme-colors.js DEFAULTS 한 벌).
     #
     # color-system.md 의 "색 각인 금지"와 충돌하지 않는다 — 그 규칙이 막는 것은
@@ -136,10 +214,25 @@ class GeoPlanting(CRUDMixin, db.Model):
     created_at = db.Column(db.DateTime, default=utc_now)
     updated_at = db.Column(db.DateTime, default=utc_now, onupdate=utc_now)
 
+    def has_own_geometry(self):
+        """자기 기하를 가진 구획인가(= 노지식 정본).
+
+        False 면 위치의 정본은 `facility_uuid`/`bay_id` 이고, 기하는 시설에서
+        파생한다(`plot_context.geometry_of`). 면적·치수·식재량은 이 경우
+        **내지 않는다** — 시설은 노지형·베드형·수직형에 따라 같은 바닥 면적이
+        전혀 다른 재배 규모라, 면적에 재식거리를 곱하는 노지식 추정이 형태에
+        따라 몇 배씩 틀린 숫자를 낸다(틀렸다는 표시 없이).
+        """
+        feat = self.feature
+        if not isinstance(feat, dict):
+            return False
+        geom = feat.get('geometry')
+        return isinstance(geom, dict) and bool(geom.get('coordinates'))
+
     def is_active(self, on=None):
         """`on`(date, 기본 오늘) 시점에 재배 중인가.
 
-        지도 기본 렌더의 판정과 같아야 한다 — 여기와 `active_plantings` 의
+        지도 기본 렌더의 판정과 같아야 한다 — 여기와 `active_plots` 의
         쿼리가 갈리면 목록에는 있는데 지도에 없는(또는 그 반대) 구획이 생긴다.
 
         `ended_on` 은 **"종료된 날"** 이지 마지막 재배일이 아니다. 그래서 그날
@@ -147,16 +240,16 @@ class GeoPlanting(CRUDMixin, db.Model):
         사람이 화면에서는 사라진 구획을 새로고침하면 다시 보게 된다 — 하루
         동안만 어긋나는 종류라 버그로 신고되기도 어렵다.
 
-        이력 조회(`plantings_overlapping`)는 이 판정과 무관하게 전 기간을
+        이력 조회(`plots_overlapping`)는 이 판정과 무관하게 전 기간을
         보므로, 종료 당일의 기록이 사라지지는 않는다.
         """
         if on is None:
             from datetime import date
             on = date.today()
-        if self.planted_on and self.planted_on > on:
+        if self.started_on and self.started_on > on:
             return False        # 아직 안 심음 (계획 상태)
         return self.ended_on is None or self.ended_on > on
 
     def __repr__(self):
-        return "<{cls}(id={s.id}, crop={s.crop!r})>".format(
+        return "<{cls}(id={s.id}, kind={s.kind!r}, subject={s.subject!r})>".format(
             s=self, cls=self.__class__.__name__)

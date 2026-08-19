@@ -134,7 +134,7 @@ class AoTGeoUI {
         applyColor('facility', '--theme-facility', D.facility);
         applyColor('equipment', '--theme-equipment', D.equipment);
         applyColor('device', '--theme-device', D.device);
-        applyColor('vegetation', '--theme-vegetation', D.vegetation);
+        applyColor('plot', '--theme-plot', D.plot);
 
         // Sub-types (Inputs/Outputs/Functions) — 미설정이면 장치 공통색으로 수렴.
         window.AoTGeoTheme.DEVICE_KEYS.forEach((k) => {
@@ -250,7 +250,7 @@ class AoTGeoUI {
             addTool('far fa-square', window._('Rectangle'), 'rectangle');
             addTool('far fa-circle', window._('Circle'), 'circle');
             addTool('fas fa-draw-polygon', window._('Polygon'), 'polygon');
-        } else if (this.parent.activeMode === 'vegetation') {
+        } else if (this.parent.activeMode === 'plot') {
             // 면적 있는 도형만. 식생 구획은 폴리곤이어야 하고(VP-1), 점·선은
             // 구획이 될 수 없다 — 서버도 같은 규칙으로 거부한다.
             addTool('far fa-square', window._('Rectangle'), 'rectangle');
@@ -488,7 +488,7 @@ class AoTGeoUI {
         // visibility 를 'visible' 로 되돌린다. 여기서 숨김을 다시 적용하지 않으면
         // 사용자가 감춘 도형이 다른 모드로 갔다 오는 것만으로 되살아난다.
         //
-        // 아래의 connection·vegetation early-return 보다 **먼저** 판단해야 한다 —
+        // 아래의 connection·plot early-return 보다 **먼저** 판단해야 한다 —
         // 그 두 종류는 여기서 스타일을 안 칠하고 빠져나가므로, 뒤에 두면 장비
         // 연결부와 식생이 숨김에서 빠진다.
         if (this.parent && this.parent._applyVisibilityToLayer) {
@@ -511,22 +511,22 @@ class AoTGeoUI {
         let color = '#3388ff'; // Default Blue
         if (type === 'site') color = T.color('site');
         else if (type === 'zone') color = T.color('zone');
-        // 식생 구획의 스타일 정본은 vegetation 모듈이다 — 개별 색
-        // (GeoPlanting.color)과 모드별 강조(활성 모드에서 진하게)를 함께
+        // 식생 구획의 스타일 정본은 plot 모듈이다 — 개별 색
+        // (GeoPlot.color)과 모드별 강조(활성 모드에서 진하게)를 함께
         // 봐야 하는데 여기서는 그 둘을 알 수 없다.
         //
         // 위임하지 않고 여기서 색만 칠하면 **모드 전환 때마다 강조가 풀린다** —
         // updateLayerStyles() 가 모든 레이어를 훑으며 이 함수를 부르기 때문에,
         // 식생 모드에 처음 들어온 직후 강조가 사라지고 "나갔다 다시 들어와야
         // 강조된다" 는 증상이 된다.
-        else if (type === 'vegetation') {
-            const veg = this.parent && this.parent.vegetation;
-            const uuid = props.planting_uuid;
+        else if (type === 'plot') {
+            const veg = this.parent && this.parent.plot;
+            const uuid = props.plot_uuid;
             if (veg && uuid) {
                 veg._styleLayer(layer, veg.data.get(uuid));
                 return;
             }
-            color = T.color('vegetation');
+            color = T.color('plot');
         }
         else if (type === 'facility') color = T.color('facility');
         else if (type === 'equipment') color = T.color('equipment');
@@ -1380,7 +1380,7 @@ AoTGeoUI.prototype._toggleLayerPanel = function() {
             ['site', window._ ? window._('Site') : 'Site'],
             ['zone', window._ ? window._('Zone') : 'Zone'],
             ['facility', window._ ? window._('Facility') : 'Facility'],
-            ['vegetation', window._ ? window._('Planting') : 'Planting'],
+            ['plot', window._ ? window._('Plot') : 'Plot'],
             ['equipment', window._ ? window._('Equipment') : 'Equipment'],
             ['aot_device', window._ ? window._('Device') : 'Device'],
         ];

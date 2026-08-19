@@ -77,9 +77,9 @@ GROWTH_STAGE_MAP: dict[str, str] = {
     "발아기":      "germination",
     "파종기":      "sowing",
 
-    # Transplanting
-    "정식기":      "transplanting",
-    "이식기":      "transplanting",
+    # Transplant
+    "정식기":      "transplant",
+    "이식기":      "transplant",
 
     # Vegetative growth
     "생장기":      "vegetative",

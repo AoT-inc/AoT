@@ -190,9 +190,9 @@ def device_ids_in_geometry(map_uuid, geom, _label='geometry', markers=None):
     지도에서 여러 폴리곤을 판정할 때 조회가 폴리곤 수만큼 반복되지 않도록.
 
     `device_ids_in_shape` 의 알맹이. GeoShape 행이 아닌 기하로도 물어야 하는
-    소비처가 있어서 분리했다 — 식생 구획(GeoPlanting)은 GeoShape 가 아니지만
+    소비처가 있어서 분리했다 — 식생 구획(GeoPlot)은 GeoShape 가 아니지만
     "이 폴리곤 안의 센서" 라는 질문은 완전히 같다
-    (docs/design/geo-vegetation-planting.md §센서 참조 계약).
+    (docs/design/geo-vegetation-plot.md §센서 참조 계약).
 
     ⚠ 이 함수는 **참조**를 답할 뿐 소속을 정하지 않는다. 소속 판정의 컨테이너
     목록(`_CONTAINER_TYPES`)에 식생 구획 같은 단명 대상을 추가하지 말 것 —

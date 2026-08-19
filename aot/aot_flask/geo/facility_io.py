@@ -3,6 +3,7 @@
 Facility I/O Manager.
 CRUD for GeoFacility records and their linked GeoShape outer/bay polygons.
 """
+from copy import deepcopy
 from datetime import datetime
 from flask import current_app
 
@@ -11,6 +12,24 @@ from sqlalchemy.orm.attributes import flag_modified
 from aot.databases.models import GeoShape, GeoFacility
 from aot.databases.models.geo import _flatten_coords
 from aot.aot_flask.extensions import db
+
+
+def _shift_coords(coords, dlng, dlat):
+    """Recursively translate a GeoJSON coordinates array by (dlng, dlat)."""
+    if not coords:
+        return coords
+    if isinstance(coords[0], (int, float)):
+        return [coords[0] + dlng, coords[1] + dlat] + list(coords[2:])
+    return [_shift_coords(c, dlng, dlat) for c in coords]
+
+
+def _shift_geometry(geometry, dlng, dlat):
+    """Translate a GeoJSON geometry dict by (dlng, dlat) degrees. Non-destructive."""
+    if not geometry or not geometry.get('coordinates'):
+        return geometry
+    shifted = deepcopy(geometry)
+    shifted['coordinates'] = _shift_coords(shifted['coordinates'], dlng, dlat)
+    return shifted
 
 
 def _geometry_centroid(geometry):
@@ -335,17 +354,192 @@ class FacilityManager:
                     facility.unique_id, exc)
 
             db.session.commit()
+
+            # 구역 구성이 바뀌면 그 구역을 가리키던 **활성 구획**이 갈 곳을
+            # 잃는다. 시설 구획은 위치의 정본이 `bay_id` 문자열이라, 구역이
+            # 사라져도 에러가 나지 않고 지도에서 시설 외피로 슬그머니 넓어질
+            # 뿐이다 — 저장한 사람은 아무것도 못 본다.
+            #
+            # **막지는 않는다.** 온실 구조를 바꾸는 것은 정당한 작업이고, 막으면
+            # 구획을 먼저 지우는 것 말고는 길이 없어진다. 대신 무엇이 갈 곳을
+            # 잃었는지 응답에 실어 사람이 결정하게 한다(문서 §대가 1).
+            orphaned = FacilityManager._orphaned_plots(facility)
+
             return {
                 'ok': True,
                 'facility_uuid': facility.unique_id,
                 'shape_uuid': shape.unique_id,
                 'bays': bays_meta,
+                'orphaned_plots': orphaned,
             }, None
 
         except Exception as e:
             db.session.rollback()
             current_app.logger.error(f"FacilityManager.save error: {e}")
             return None, str(e)
+
+    @staticmethod
+    def _orphaned_plots(facility):
+        """저장된 시설에서 **없는 구역을 가리키는 활성 구획** 목록.
+
+        판정은 저장된 시설을 기준으로 한다 — 페이로드가 아니다. 부분 저장에서
+        "페이로드에 없는 것 = 없앤 것" 으로 읽으면 멀쩡한 구역이 사라진 것으로
+        잡힌다(`sync_facility_bindings` 가 같은 이유로 저장된 facility 를 본다).
+
+        구역이 지정되지 않은 구획(`bay_id` NULL = 시설 전체)은 대상이 아니다.
+        """
+        try:
+            from aot.databases.models import GeoPlot
+            from .facility_bays import compute_bay_slices, spec_from_row
+
+            valid = {sl['id'] for sl in compute_bay_slices(spec_from_row(facility))}
+            if not valid:
+                # 구역 목록을 못 만드는 시설(치수 미입력)에서는 판정하지 않는다 —
+                # 근거 없이 "갈 곳을 잃었다" 고 말하면 멀쩡한 구획이 매 저장마다
+                # 경고로 뜬다.
+                return []
+
+            rows = GeoPlot.query.filter(
+                GeoPlot.facility_uuid == facility.unique_id,
+                GeoPlot.bay_id.isnot(None),
+                GeoPlot.ended_on.is_(None),
+            ).all()
+            out = [{'unique_id': r.unique_id, 'subject': r.subject, 'bay_id': r.bay_id}
+                   for r in rows if r.bay_id not in valid]
+            if out:
+                current_app.logger.warning(
+                    '[FacilityIO] 시설 %s 의 구역 구성 변경으로 활성 구획 %d 건이 '
+                    '없는 구역을 가리킵니다: %s', facility.unique_id, len(out),
+                    ', '.join('%s(%s)' % (o['subject'], o['bay_id']) for o in out))
+            return out
+        except Exception as exc:
+            current_app.logger.warning(
+                '[FacilityIO] 고아 구획 판정 실패(facility=%s): %s',
+                getattr(facility, 'unique_id', None), exc)
+            return []
+
+    @staticmethod
+    def clone_facility(source_uuid, user_id=None):
+        """Duplicate a facility: same geometry/spec, device bindings reset to empty.
+
+        Reuses save_facility's create path (new GeoShape, bay rebuild, binding
+        sync) so the clone goes through the one verified code path. Device
+        reference fields (fittings[].actuator_id/input_id/measurement_id,
+        actuators[].device_uuid, weather_bindings) are stripped before
+        handoff — sync_facility_bindings skips any slot with no device_id
+        (device_binding.py `_want()`), so a cleared reference simply means no
+        binding gets created for that slot. `sensors`/`commissioning_state`
+        are legacy/derived columns save_facility never writes, so the new
+        row keeps their column defaults (empty) automatically.
+        """
+        source = GeoFacility.query.filter_by(unique_id=source_uuid).first()
+        if not source:
+            return None, "Source facility not found"
+
+        shape = GeoShape.query.filter_by(unique_id=source.shape_uuid).first()
+        outer_geometry = (shape.feature or {}).get('geometry') if shape else None
+        if not outer_geometry:
+            return None, "Source facility has no placed geometry to copy"
+
+        # Offset the clone east of the source by ~1.15x its own footprint width
+        # so it lands next to the original instead of exactly on top of it
+        # (an identical-geometry overlap is invisible on the map and trips
+        # check_geo_integrity's duplicate detector). Falls back to a small
+        # fixed offset (~20m) for a degenerate/point-like footprint.
+        pts = _flatten_coords(outer_geometry.get('coordinates'))
+        if pts:
+            lngs = [p[0] for p in pts]
+            width = max(lngs) - min(lngs)
+            dlng = width * 1.15 if width > 1e-9 else 0.0002
+        else:
+            dlng = 0.0002
+        outer_geometry = _shift_geometry(outer_geometry, dlng, 0.0)
+
+        parent_site_uuid = None
+        if shape and shape.parent_id:
+            parent_site = GeoShape.query.filter_by(id=shape.parent_id, type='site').first()
+            if parent_site:
+                parent_site_uuid = parent_site.unique_id
+
+        fittings = deepcopy(source.fittings) or []
+        for fit in fittings:
+            if isinstance(fit, dict):
+                fit.pop('actuator_id', None)
+                fit.pop('input_id', None)
+                fit.pop('measurement_id', None)
+
+        actuators = deepcopy(source.actuators)
+        actuator_items = actuators.values() if isinstance(actuators, dict) else (actuators or [])
+        for a in actuator_items:
+            if isinstance(a, dict):
+                a.pop('device_uuid', None)
+
+        # bays: strip crop/sensor_zone (device refs), keep zone ranges or
+        # geometry so save_facility can recreate 'connected'-structure bay
+        # shapes. Ignored entirely for 'single' structure (see save_facility).
+        bays_input = []
+        for b in (deepcopy(source.bays) or []):
+            if not isinstance(b, dict):
+                continue
+            entry = {'id': b.get('id'), 'name': b.get('name'), 'crop': None, 'sensor_zone': []}
+            if b.get('bay_start') and b.get('bay_end'):
+                entry['bay_start'] = b['bay_start']
+                entry['bay_end'] = b['bay_end']
+            poly_uuid = b.get('polygon_shape_uuid')
+            if poly_uuid:
+                bay_shape = GeoShape.query.filter_by(unique_id=poly_uuid).first()
+                if bay_shape and bay_shape.feature:
+                    # Same translation as the outer polygon, so bays stay
+                    # aligned with the shifted footprint.
+                    entry['geometry'] = _shift_geometry(
+                        (bay_shape.feature or {}).get('geometry'), dlng, 0.0)
+            bays_input.append(entry)
+
+        payload = {
+            'geo_id': source.geo_id,
+            'name': f"{source.name} 복제" if source.name else 'New Facility',
+            'preset': source.preset,
+            'structure': source.structure,
+            'bay_count': source.bay_count,
+            'outer_geometry': outer_geometry,
+            'geometry_3d': deepcopy(source.geometry_3d),
+            'envelope': deepcopy(source.envelope),
+            'actuators': actuators,
+            'fittings': fittings,
+            'computed': deepcopy(source.computed),
+            'notes': '',
+            'bays': bays_input,
+            'view_options': deepcopy(source.view_options),
+            'weather_bindings': [],
+            'groups': deepcopy(source.groups) or {},
+        }
+        if parent_site_uuid:
+            payload['site_shape_uuid'] = parent_site_uuid
+
+        result, err = FacilityManager.save_facility(payload, user_id=user_id)
+        if err:
+            return result, err
+
+        # Carry over fields save_facility never writes (timezone override,
+        # 3D asset override) — these aren't device references, so copying
+        # them keeps the clone visually/behaviorally identical apart from
+        # the reset bindings.
+        try:
+            new_facility = GeoFacility.query.filter_by(unique_id=result['facility_uuid']).first()
+            if new_facility:
+                new_facility.timezone = source.timezone
+                new_facility.tz_source = source.tz_source
+                new_facility.model_asset_uuid = source.model_asset_uuid
+                new_facility.model_transform = deepcopy(source.model_transform)
+                new_facility.render_mode = source.render_mode
+                db.session.commit()
+        except Exception as exc:
+            db.session.rollback()
+            current_app.logger.warning(
+                '[FacilityIO] 복제 후 부가필드 복사 실패(facility=%s) — %s',
+                result.get('facility_uuid'), exc)
+
+        return result, None
 
     @staticmethod
     def delete_facility(facility_uuid, confirm_name=None):

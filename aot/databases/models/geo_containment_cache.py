@@ -32,7 +32,7 @@ class GeoContainmentCache(CRUDMixin, db.Model):
     )
 
     id = db.Column(db.Integer, primary_key=True)
-    child_kind = db.Column(db.String(16), nullable=False)   # shape | planting
+    child_kind = db.Column(db.String(16), nullable=False)   # shape | plot
     child_uuid = db.Column(db.String(36), nullable=False)
     # NULL = "계산했고 부모가 없다". 행이 없는 것(미계산)과 구분된다 — 이
     # 구분이 없으면 루트 도형은 영원히 캐시 미스라 매번 기하를 돈다.

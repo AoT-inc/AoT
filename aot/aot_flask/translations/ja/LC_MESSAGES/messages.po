@@ -5729,7 +5729,7 @@ msgid "Setpoint Tracking Input"
 msgstr "設定値トラッキング入力"
 
 #: aot_flask/forms/forms_pid.py:129
-msgid "Schedule Start (planting date)"
+msgid "Schedule Start (start date)"
 msgstr "スケジュール開始(定植日)"
 
 #: aot_flask/forms/forms_pid.py:132
@@ -27457,15 +27457,15 @@ msgid "Overlaps an existing schedule — turns off at %(time)s"
 msgstr "既存の予約と重なります — %(time)s に一緒にオフになります"
 
 #: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
-msgid "Planting"
-msgstr "植生"
+msgid "Plot"
+msgstr "区画"
 
 #: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
 msgid "Area allocation"
 msgstr "面積配分"
 
 #: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
-msgid "Select a planting"
+msgid "Select a plot"
 msgstr "区画の選択"
 
 #: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
@@ -27473,7 +27473,7 @@ msgid "Several plantings overlap here. Pick one."
 msgstr "ここは複数の区画が重なっています。一つを選んでください。"
 
 #: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
-msgid "New planting"
+msgid "New plot"
 msgstr "新しい区画"
 
 
@@ -27508,7 +27508,7 @@ msgid "No map selected"
 msgstr "地図が選択されていません"
 
 #: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
-msgid "Draw an area (polygon) for a planting."
+msgid "Draw an area (polygon) for a plot."
 msgstr "植生区画は面で描いてください。"
 
 #: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
@@ -27532,7 +27532,7 @@ msgid "Copy as new"
 msgstr "コピーして新規作成"
 
 #: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
-msgid "End planting"
+msgid "End plot"
 msgstr "植栽の終了"
 
 #: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
@@ -27544,7 +27544,7 @@ msgid "Delete this planting record? Use \"End planting\" instead if it was harve
 msgstr "この区画の記録を削除しますか？収穫が終わった場合は「栽培終了」を使ってください。"
 
 #: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
-msgid "No past plantings on this spot."
+msgid "No past plots on this spot."
 msgstr "この場所の過去の記録はありません。"
 
 #: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
@@ -27620,7 +27620,7 @@ msgid "For mistakes only — the record is gone."
 msgstr "誤って作成した場合のみ — 記録が消えます。"
 
 #: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
-msgid "Ended plantings cannot be reshaped."
+msgid "Ended plots cannot be reshaped."
 msgstr "終了した区画は形を変更できません。"
 
 #: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
@@ -27780,8 +27780,8 @@ msgid "Discard preview"
 msgstr "プレビューを消す"
 
 #: aot/aot_flask/static/js/widgets/AoT_map/aot-map-vegetation.js:1
-msgid "Show Plantings"
-msgstr "植生区画を表示"
+msgid "Show Plots"
+msgstr "区画を表示"
 
 #: aot/aot_flask/static/js/widgets/AoT_map/aot-map-vegetation.js:1
 msgid "Show vegetation plots (what is planted where). Plot labels appear when zoomed in."
@@ -27792,11 +27792,11 @@ msgid "Ended"
 msgstr "終了日"
 
 #: aot/aot_flask/static/js/widgets/AoT_map/aot-map-vegetation.js:1
-msgid "Days since planting"
+msgid "Days elapsed"
 msgstr "経過日数"
 
 #: aot/aot_flask/static/js/widgets/AoT_map/aot-map-vegetation.js:1
-msgid "End this planting?"
+msgid "End this plot?"
 msgstr "栽培を終了しますか？"
 
 #: aot/aot_flask/static/js/widgets/AoT_map/aot-map-vegetation.js:1
@@ -28117,8 +28117,8 @@ msgstr "かん水"
 
 
 #: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
-msgid "%(pct)s% of this plot"
-msgstr "この区画の%(pct)s%"
+msgid "{pct} of this plot"
+msgstr "この区画の{pct}"
 
 
 #: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
@@ -28280,3 +28280,368 @@ msgstr "予定も取り消す"
 #: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
 msgid "%(n)s more"
 msgstr "ほか %(n)s件"
+
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Plant here"
+msgstr "ここに植える"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Nothing planted here yet."
+msgstr "まだ何も植えられていません。"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Whole facility"
+msgstr "施設全体"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Day {n}"
+msgstr "{n}日目"
+
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Save the facility first, then record what is planted in each zone."
+msgstr "先に施設を保存してから、各区画に植えた作物を記録してください。"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "End this plot? The record stays as history."
+msgstr "この区画を終了しますか？記録は履歴として残ります。"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Delete this record? Use \"End\" instead if it was actually grown — deleting removes it from the history."
+msgstr "この記録を削除しますか？実際に栽培したものなら「終了」を使ってください — 削除すると履歴からも消えます。"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Record what is planted in each zone. Greenhouse plots need no drawing — the zone itself is the location."
+msgstr "各区画に何が植えられているかを記録します。施設の区画は描く必要がありません — 区画そのものが位置です。"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "These plots sit in zones this change removes: {list}. They stay recorded but lose their zone. Save anyway?"
+msgstr "この変更で無くなる区画に植えられているものがあります: {list}。記録は残りますが区画を失います。それでも保存しますか？"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Plots without a zone after this change: {list}"
+msgstr "この変更で区画を失った作付け: {list}"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Where"
+msgstr "位置"
+
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Enter what is planted."
+msgstr "植えたものを入力してください。"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Floor area alone does not tell you how much fits inside a facility — record the layout (beds, rows, tiers) in the notes."
+msgstr "施設は床面積だけではどれだけ入るかわかりません — 配置（ベッド・列・段）はノートに記録してください。"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
+msgid "No program"
+msgstr "プログラムなし"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
+msgid " stages"
+msgstr "段階"
+
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
+msgid "Programme length"
+msgstr "全体期間"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
+msgid "A newer version of this program exists (not applied)."
+msgstr "このプログラムの新しいバージョンがあります（未適用）。"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
+msgid "The program this plot followed is gone. Pick another."
+msgstr "この区画が従っていたプログラムが失われました。選び直してください。"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
+msgid "Next stage"
+msgstr "次の段階"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
+msgid "Not planted yet"
+msgstr "まだ植えていません"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
+msgid "Past the programme end"
+msgstr "プログラム期間を過ぎました"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
+msgid "from programme"
+msgstr "プログラム基準"
+
+#: aot/aot_flask/templates/pages/geo/vegetation.html
+msgid "Vegetation"
+msgstr "植生"
+
+#: aot/aot_flask/templates/pages/geo/vegetation.html
+msgid "Pick a built-in program to copy, or start from an empty one."
+msgstr "コピーする組み込みプログラムを選ぶか、空のプログラムから始めます。"
+
+#: aot/aot_flask/templates/pages/geo/vegetation.html
+msgid "No programs yet. Add one above."
+msgstr "まだプログラムがありません。上から追加してください。"
+
+#: aot/aot_flask/templates/pages/geo/vegetation.html
+msgid "New program"
+msgstr "新しいプログラム"
+
+#: aot/aot_flask/templates/pages/geo/vegetation.html
+msgid "Total length"
+msgstr "全体期間"
+
+#: aot/aot_flask/templates/pages/geo/vegetation.html
+msgid "Stage name"
+msgstr "段階名"
+
+#: aot/aot_flask/templates/pages/geo/vegetation.html
+msgid "Days"
+msgstr "期間（日）"
+
+#: aot/aot_flask/templates/pages/geo/vegetation.html
+msgid "until the end"
+msgstr "最後まで"
+
+#: aot/aot_flask/templates/pages/geo/vegetation.html
+msgid "Add stage"
+msgstr "段階を追加"
+
+#: aot/aot_flask/templates/pages/geo/vegetation.html
+msgid "Delete this program?"
+msgstr "このプログラムを削除しますか？"
+
+#: aot/aot_flask/templates/pages/geo/vegetation.html
+msgid "Built-in and external programs are read-only. Copy it to make your own."
+msgstr "組み込み・外部プログラムは編集できません。複製して自分のものにしてください。"
+
+#: aot/aot_flask/templates/pages/geo/vegetation.html
+msgid "Made by AI — check it before using it for control."
+msgstr "AIが作成しました — 制御に使う前に確認してください。"
+
+#: aot/aot_flask/templates/pages/geo/vegetation.html
+msgid "Mark as checked"
+msgstr "確認済みにする"
+
+#: aot/aot_flask/templates/pages/geo/vegetation.html
+msgid "Empty program"
+msgstr "空のプログラム"
+
+#: aot/aot_flask/templates/pages/geo/vegetation.html
+msgid "%(n)s stages"
+msgstr "%(n)s段階"
+
+#: aot/aot_flask/templates/pages/geo/vegetation.html
+msgid "Targets"
+msgstr "目標"
+
+#: aot/aot_flask/templates/pages/geo/vegetation.html
+msgid "Used for display and advice. Control is not changed automatically."
+msgstr "表示と助言に使われます。制御が自動で変わることはありません。"
+
+#: aot/aot_flask/templates/pages/geo/vegetation.html
+msgid "Day temp"
+msgstr "昼温度"
+
+#: aot/aot_flask/templates/pages/geo/vegetation.html
+msgid "Night temp"
+msgstr "夜温度"
+
+#: aot/aot_flask/templates/pages/geo/vegetation.html
+msgid "DLI"
+msgstr "DLI"
+
+#: aot/aot_flask/templates/pages/geo/vegetation.html
+msgid "From a template"
+msgstr "テンプレートから開始"
+
+#: aot/aot_flask/templates/pages/geo/vegetation.html
+msgid "Copy one of mine"
+msgstr "自分のプログラムを複製"
+
+#: aot/aot_flask/templates/pages/geo/vegetation.html
+msgid "unnamed"
+msgstr "未指定"
+
+#: aot/aot_flask/templates/pages/geo/vegetation.html
+msgid "Start empty, or begin from a template. Templates are examples — nothing is installed until you add it."
+msgstr "空のプログラムから、またはテンプレートから始めます。テンプレートは例であり、追加するまで何も導入されません。"
+
+#: aot/aot_flask/templates/pages/geo/vegetation.html
+msgid "Target curves"
+msgstr "目標カーブ"
+
+#: aot/aot_flask/templates/pages/geo/vegetation.html
+msgid "A curve overrides the stage value for that item. Time runs from the planting date."
+msgstr "カーブを設定すると、その項目は段階の値ではなくカーブに従います。時間の基準は植えた日です。"
+
+#: aot/aot_flask/templates/pages/geo/vegetation.html
+msgid "Fixed value"
+msgstr "固定値"
+
+#: aot/aot_flask/templates/pages/geo/vegetation.html
+msgid "Applies to"
+msgstr "適用対象"
+
+#: aot/aot_flask/templates/pages/geo/vegetation.html
+msgid "Enter a new one…"
+msgstr "新規入力…"
+
+#: aot/aot_flask/templates/pages/geo/vegetation.html
+msgid "Programs"
+msgstr "プログラム"
+
+#: aot/aot_flask/templates/pages/geo/vegetation.html
+msgid "Kind"
+msgstr "種類"
+
+#: aot/aot_flask/templates/pages/geo/vegetation.html
+msgid "Livestock"
+msgstr "家畜"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "A program brings the stages and the expected end date."
+msgstr "プログラムを選ぶと段階と予想終了日が付いてきます。"
+
+msgid "Show plots (what is where). Plot labels appear when zoomed in."
+msgstr "区画（どこに何があるか）を表示します。拡大すると区画名が表示されます。"
+
+msgid "A curve overrides the stage value for that item. Time runs from the start date."
+msgstr "カーブを接続すると、その項目はステージ値ではなくカーブに従います。時間軸は開始日が基準です。"
+
+msgid "Start / germination date. Used as week-0 for DailyMultiPoint keyframe progression. Interpreted in the device local timezone."
+msgstr "開始日 / 発芽日。DailyMultiPoint キーフレーム進行の 0 週目の基準です。デバイスの現地タイムゾーンで解釈されます。"
+
+msgid "Start / germination date. Pick from the calendar. The date is interpreted in the device/facility local timezone (the system stores it as UTC internally — no manual conversion needed). Used to compute weeks_elapsed for all Method curves. Leave empty to disable week-based progression (Methods use wall-clock day only)."
+msgstr "開始日 / 発芽日。カレンダーから選択してください。日付はデバイス・施設の現地タイムゾーンで解釈されます（内部では UTC で保存され、手動変換は不要です）。すべての Method カーブの経過週数の計算に使われます。空欄にすると週単位の進行を使いません（Method は暦日のみ使用）。"
+
+msgid "What is here"
+msgstr "対象"
+
+msgid "Start date"
+msgstr "開始日"
+
+msgid "Subject is required"
+msgstr "対象を入力してください"
+
+msgid "Enter what is here."
+msgstr "対象を入力してください。"
+
+msgid "Not started yet"
+msgstr "まだ開始していません"
+
+msgid "Nothing recorded here yet."
+msgstr "まだ登録されたものがありません。"
+
+msgid "Nothing recorded in this zone."
+msgstr "このゾーンに登録されたものがありません。"
+
+msgid "Add a plot"
+msgstr "区画を追加"
+
+msgid "Save the facility first, then record what is in each zone."
+msgstr "先に施設を保存してから、各ゾーンに何があるかを記録してください。"
+
+msgid "Record what is in each zone. Facility plots need no drawing — the zone itself is the location."
+msgstr "各ゾーンに何があるかを記録してください。施設区画は図形を描く必要がありません — ゾーン自体が位置です。"
+
+msgid "Dates"
+msgstr "期間"
+
+msgid "Follows a curve"
+msgstr "カーブに従う"
+
+msgid "Follows curve: {name}"
+msgstr "カーブに従う: {name}"
+
+msgid "Targets are shown for reference. Control is not changed automatically."
+msgstr "目標は参考として表示されます。制御は自動的に変わりません。"
+
+msgid "Current stage"
+msgstr "ステージ"
+
+msgid "Stage count"
+msgstr "ステージ数"
+
+msgid "GDD"
+msgstr "GDD"
+
+msgid "by days"
+msgstr "日数基準"
+
+msgid "Base temperature"
+msgstr "基準温度"
+
+msgid "With a base temperature and a GDD per stage, stages advance on accumulated heat instead of the calendar."
+msgstr "基準温度と各ステージの積算温度を入力すると、ステージは暦ではなく積算温度で進みます。"
+
+msgid "Accumulated heat"
+msgstr "積算温度"
+
+msgid "By days"
+msgstr "日数基準"
+
+msgid "No base temperature set"
+msgstr "基準温度が未設定"
+
+msgid "No temperature sensor for this plot"
+msgstr "この区画に温度センサーがありません"
+
+msgid "Not enough temperature history"
+msgstr "温度履歴が不足"
+
+msgid "No start date"
+msgstr "開始日がありません"
+
+msgid "in {n} GDD"
+msgstr "残り {n} GDD"
+
+msgid "Days covered: {n}"
+msgstr "全日数の{n}"
+
+msgid "Stage change"
+msgstr "ステージ変更"
+
+msgid "Stage log"
+msgstr "ステージ記録"
+
+msgid "Undo last"
+msgstr "直前を戻す"
+
+msgid "undone"
+msgstr "取り消し済み"
+
+msgid "Undo the last confirmed stage change?"
+msgstr "最後に確認したステージ変更を戻しますか？以降のステージが再計算されます。"
+
+msgid "Advance stages automatically"
+msgstr "ステージを自動で進める"
+
+msgid "Stages are recorded without asking. The date comes from the data, not from when you happen to look."
+msgstr "確認せずにステージを記録します。日付は開いた時点ではなくデータから遡ります。"
+
+msgid "auto"
+msgstr "自動"
+
+msgid "Resources"
+msgstr "リソース"
+
+msgid "Declared only. Functions are not switched on or off automatically."
+msgstr "宣言のみです。機能を自動でオン・オフしません。"
+
+msgid "Fertigation"
+msgstr "施肥"
+
+msgid "Function is gone"
+msgstr "存在しない機能"
+
+msgid "stopped"
+msgstr "停止中"
+
+msgid "Turn on the functions this stage declares?"
+msgstr "このステージで宣言された機能をオンにしますか？宣言にない機能は触りません。"
+
+msgid "Some functions could not be started."
+msgstr "一部の機能を開始できませんでした。"

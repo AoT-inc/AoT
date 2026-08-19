@@ -277,21 +277,21 @@ def geo_descendant_unique_ids(root_shape, all_shapes=None):
 #     노트·일정은 GeoFacility 쪽에 붙는데 기하는 도형 쪽이다.
 #   - 장치 마커: 노트는 마커가 아니라 그 Input/Output 의 uuid 에 붙는다
 #     (`shape.device_id`).
-#   - 식생: `GeoPlanting` 은 GeoShape 가 **아니라서** 자손 순회에 아예 안
+#   - 식생: `GeoPlot` 은 GeoShape 가 **아니라서** 자손 순회에 아예 안
 #     들어간다. 소속 컬럼도 없어 기하로 판정해야 한다.
 # 하나라도 빠뜨리면 그 종류에 붙은 것만 조용히 사라진다.
 
 
-def _planting_ids_inside(shape_ids, geo_ids=None, use_cache=True):
-    """주어진 도형들 안에 있는 활성 GeoPlanting 의 unique_id.
+def _plot_ids_inside(shape_ids, geo_ids=None, use_cache=True):
+    """주어진 도형들 안에 있는 활성 GeoPlot 의 unique_id.
 
     식생은 소속 컬럼이 없다(설계상 소속은 저장하지 않고 파생한다 —
-    docs/design/geo-vegetation-planting.md). 쓰기(장치 소속)에는 맞는 원칙이지만
+    docs/design/geo-vegetation-plot.md). 쓰기(장치 소속)에는 맞는 원칙이지만
     읽기에서는 "식생만 안 보인다" 로 나타나므로, 조회 시점에 기하로 판정한다.
     """
     from shapely.geometry import shape as _shapely_shape
-    from aot.databases.models import GeoShape, GeoPlanting
-    from aot.aot_flask.geo import planting_context
+    from aot.databases.models import GeoShape, GeoPlot
+    from aot.aot_flask.geo import plot_context
 
     if not shape_ids:
         return []
@@ -304,9 +304,9 @@ def _planting_ids_inside(shape_ids, geo_ids=None, use_cache=True):
             raise RuntimeError('cache disabled')
         from aot.aot_flask.geo import containment_cache as cc
         cached = cc.load(kind=cc.KIND_PLANTING)
-        actives = GeoPlanting.query.filter(GeoPlanting.ended_on.is_(None))
+        actives = GeoPlot.query.filter(GeoPlot.ended_on.is_(None))
         if geo_ids:
-            actives = actives.filter(GeoPlanting.geo_id.in_(list(geo_ids)))
+            actives = actives.filter(GeoPlot.geo_id.in_(list(geo_ids)))
         actives = actives.all()
         keys = [(cc.KIND_PLANTING, p.unique_id) for p in actives]
         if keys and all(k in cached for k in keys):
@@ -326,9 +326,9 @@ def _planting_ids_inside(shape_ids, geo_ids=None, use_cache=True):
     if not polys:
         return []
 
-    q = GeoPlanting.query.filter(GeoPlanting.ended_on.is_(None))
+    q = GeoPlot.query.filter(GeoPlot.ended_on.is_(None))
     if geo_ids:
-        q = q.filter(GeoPlanting.geo_id.in_(list(geo_ids)))
+        q = q.filter(GeoPlot.geo_id.in_(list(geo_ids)))
 
     # 캐시에 적는 값은 **호출 범위와 무관해야 한다.** 후보를 이번 질의의
     # shape_ids 로 잡으면, '3-2' 만 물어 본 순간 3-1 의 구획들이 "부모 없음"
@@ -351,7 +351,7 @@ def _planting_ids_inside(shape_ids, geo_ids=None, use_cache=True):
     out, entries = [], []
     for pl in q.all():
         try:
-            geom = planting_context.geometry_of(pl)
+            geom = plot_context.geometry_of(pl)
             pt = containment_point(_shapely_shape(geom))
             if pt is None:
                 continue
@@ -391,7 +391,7 @@ def descendant_target_ids(root_shape, all_shapes=None, include_self=True,
     from aot.databases.models import GeoFacility
 
     ids, breakdown = [], {'self': 0, 'shapes': 0, 'facilities': 0,
-                          'devices': 0, 'plantings': 0}
+                          'devices': 0, 'plots': 0}
     if root_shape is None:
         return ids, breakdown
 
@@ -437,10 +437,10 @@ def descendant_target_ids(root_shape, all_shapes=None, include_self=True,
 
     geo_ids = {s.geo_id for s in ([root_shape] + list(kids)) if getattr(s, 'geo_id', None)}
     try:
-        for pid in _planting_ids_inside(shape_ids, geo_ids=geo_ids,
+        for pid in _plot_ids_inside(shape_ids, geo_ids=geo_ids,
                                         use_cache=use_cache):
             ids.append(pid)
-            breakdown['plantings'] += 1
+            breakdown['plots'] += 1
     except Exception:
         pass
 

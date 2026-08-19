@@ -4,18 +4,18 @@
 routes_geo.py 맨 아래에서 import 되어 공유 blueprint 에 등록된다
 (routes_geo_iec / routes_geo_commissioning 과 같은 방식).
 
-설계 정본: docs/design/geo-vegetation-planting.md
+설계 정본: docs/design/geo-vegetation-plot.md
 """
 import logging
 from datetime import datetime
 
 from flask import request, jsonify, current_app
-from flask_login import login_required
+from flask_login import current_user, login_required
 
 from aot.aot_flask.extensions import db
-from aot.aot_flask.geo import planting_context, planting_io, planting_split
+from aot.aot_flask.geo import plot_context, plot_io, plot_split
 from aot.aot_flask.utils import utils_general
-from aot.databases.models import GeoPlanting, GeoShape
+from aot.databases.models import GeoPlot, GeoShape
 from aot.aot_flask.routes_geo import blueprint  # noqa: E402
 
 logger = logging.getLogger(__name__)
@@ -40,14 +40,224 @@ def _parse_on(value):
 
 # ── 목록 ───────────────────────────────────────────────────────────────────
 
-@blueprint.route('/api/geo/plantings', methods=['GET'])
+@blueprint.route('/api/geo/programs', methods=['GET'])
 @login_required
-def api_plantings_list():
+def api_programs():
+    """재배 프로그램 목록 — 구획에서 고를 선택지.
+
+    대상별로 **품종본이 기본을 이긴다**(같은 대상에 품종본이 있으면 그것을 먼저
+    보여준다). 정렬은 대상 → 품종 순이라 화면이 안정적이다.
+
+    `subject`(옛 이름 `crop`)로 좁힐 수 있다.
+    """
+    from aot.databases.models import GeoProgram
+
+    subject = (request.args.get('subject') or request.args.get('crop')
+               or '').strip() or None
+    # 대상 종류로 좁힌다 — 식생 구획은 `vegetation` 만 봐야 가축·시설물 프로그램이
+    # 작물 선택지에 섞이지 않는다.
+    kind = (request.args.get('kind') or '').strip() or None
+    q = GeoProgram.query
+    if kind:
+        q = q.filter(GeoProgram.kind == kind)
+    if subject:
+        q = q.filter(GeoProgram.subject == subject)
+    rows = q.order_by(GeoProgram.subject.asc(),
+                      GeoProgram.variety.asc()).all()
+
+    # 목록·상세가 같은 형태를 쓰도록 한 함수로 낸다 — 두 벌로 두면 화면이
+    # 어느 쪽에서 왔는지에 따라 다른 키를 보게 된다.
+    from aot.aot_flask.geo import program_io
+    items = [program_io.to_dict(r, with_stages=False) for r in rows]
+    return jsonify({'ok': True, 'programs': items, 'count': len(items)})
+
+
+@blueprint.route('/api/geo/program/<string:program_uuid>', methods=['GET'])
+@login_required
+def api_program_get(program_uuid):
+    """프로그램 상세 — 단계 목록까지. 화면이 "몇 단계 중 몇" 을 그릴 근거다."""
+    from aot.databases.models import GeoProgram
+
+    row = GeoProgram.query.filter_by(unique_id=program_uuid).first()
+    if row is None:
+        return jsonify({'ok': False, 'message': 'program not found'}), 404
+    # 목록과 **같은 함수**로 낸다 — 두 벌로 두면 화면이 어느 쪽에서 왔는지에 따라
+    # 다른 키를 보게 된다(실제로 `target_methods` 가 상세에서만 빠져 있었다).
+    from aot.aot_flask.geo import program_io
+    return jsonify({'ok': True, 'program': program_io.to_dict(row)})
+
+
+@blueprint.route('/api/geo/target-methods', methods=['GET'])
+@login_required
+def api_target_methods():
+    """목표 곡선으로 걸 수 있는 Method 목록.
+
+    Method 는 AoT 가 이미 갖고 있는 **시간축 곡선**이다. 프로그램의 목표에 걸면
+    단계별 계단 대신 전 주기에 걸쳐 변하는 목표가 된다.
+
+    새 Method 를 여기서 만들지 않는다 — 만드는 화면(설정 > 메서드)이 따로 있고,
+    거기서 곡선을 그리는 편이 훨씬 낫다.
+    """
+    from aot.databases.models import Method
+
+    rows = Method.query.order_by(Method.name.asc()).all()
+    return jsonify({'ok': True, 'methods': [
+        {'unique_id': m.unique_id, 'name': m.name,
+         'method_type': m.method_type} for m in rows]})
+
+
+@blueprint.route('/api/geo/resource-functions', methods=['GET'])
+@login_required
+def api_resource_functions():
+    """자원(관수·시비)으로 걸 수 있는 Function 목록.
+
+    네 종류를 함께 낸다(CustomController · Conditional · Trigger · PID) —
+    `_set_function_activation` 이 켜고 끌 수 있는 것과 같은 범위여야 한다.
+    한쪽만 내면 화면에서 고를 수 없는 함수가 생기고, 그 이유가 화면 어디에도
+    없다.
+
+    **새 함수를 여기서 만들지 않는다** — 만드는 화면이 따로 있다
+    (`target-methods` 와 같은 규율).
+    """
+    from aot.databases.models import (Conditional, CustomController, PID,
+                                      Trigger)
+
+    out = []
+    for model, kind in ((CustomController, 'function'),
+                        (Conditional, 'conditional'),
+                        (Trigger, 'trigger'),
+                        (PID, 'pid')):
+        try:
+            rows = model.query.all()
+        except Exception:
+            continue
+        for r in rows:
+            out.append({'unique_id': r.unique_id,
+                        'name': getattr(r, 'name', None) or r.unique_id,
+                        'kind': kind,
+                        'active': bool(getattr(r, 'is_activated', False))})
+    out.sort(key=lambda x: (x['name'] or '').lower())
+    return jsonify({'ok': True, 'functions': out})
+
+
+@blueprint.route('/api/geo/program-templates', methods=['GET'])
+@login_required
+def api_program_templates():
+    """템플릿 카탈로그 — **DB 에 깔려 있지 않은** 예시 목록.
+
+    내장 프로그램을 미리 넣지 않는 대신, 필요할 때 여기서 골라 자기 것으로
+    만든다. 목록에 남의 작물이 먼저 들어차 있지 않게 하려는 것이다 — AoT 는
+    농장 전용이 아니고, 대부분의 사용자는 이 중 한둘만 쓴다.
+    """
+    try:
+        from aot.scripts.seed_programs import catalog
+        items = [{
+            'key': t['key'], 'name': t['name'], 'subject': t['subject'],
+            'stage_count': len(t['stages']),
+            'has_targets': any(st.get('targets') for st in t['stages']),
+        } for t in catalog()]
+    except Exception as exc:
+        current_app.logger.warning('[CropProgram] 카탈로그 로드 실패: %s', exc)
+        items = []
+    return jsonify({'ok': True, 'templates': items, 'count': len(items)})
+
+
+@blueprint.route('/api/geo/program', methods=['POST'])
+@login_required
+def api_program_create():
+    """새 프로그램. 사람이 만든 것은 항상 `source='user'` 다 —
+    화면에서 내장/외부를 사칭할 수 있으면 "출처가 신뢰를 정한다" 가 무너진다."""
+    denied = _require_edit()
+    if denied:
+        return denied
+    from aot.aot_flask.geo import program_io
+    data = request.get_json(silent=True) or {}
+
+    # 템플릿에서 시작 — 카탈로그의 단계·목표를 그대로 복사해 **내 것**으로 만든다.
+    # 복사이므로 나중에 템플릿이 바뀌어도 내 프로그램은 그대로다.
+    tkey = (data.get('template_key') or '').strip()
+    if tkey:
+        try:
+            from aot.scripts.seed_programs import catalog
+            tpl = next((t for t in catalog() if t['key'] == tkey), None)
+        except Exception:
+            tpl = None
+        if tpl is None:
+            return jsonify({'ok': False,
+                            'message': 'template not found: %s' % tkey}), 400
+        data = dict(data)
+        data.setdefault('name', tpl['name'])
+        data.setdefault('subject', tpl['subject'])
+        data.setdefault('stages', tpl['stages'])
+        data.setdefault('photosynthesis', tpl['photosynthesis'])
+        data.setdefault('source_note', 'template:%s' % tkey)
+
+    result, error = program_io.create_program(data, source='user')
+    if error:
+        return jsonify({'ok': False, 'message': error}), 400
+    return jsonify({'ok': True, 'program': result})
+
+
+@blueprint.route('/api/geo/program/<string:program_uuid>/clone',
+                 methods=['POST'])
+@login_required
+def api_program_clone(program_uuid):
+    """복제 — 내장·외부를 고치는 유일한 경로."""
+    denied = _require_edit()
+    if denied:
+        return denied
+    from aot.aot_flask.geo import program_io
+    result, error = program_io.clone_program(
+        program_uuid, request.get_json(silent=True) or {})
+    if error:
+        status = 404 if '찾을 수 없' in error else 400
+        return jsonify({'ok': False, 'message': error}), status
+    return jsonify({'ok': True, 'program': result})
+
+
+@blueprint.route('/api/geo/program/<string:program_uuid>',
+                 methods=['POST', 'PUT'])
+@login_required
+def api_program_update(program_uuid):
+    """수정. 내장·외부는 서버가 거절한다(복제해서 고친다)."""
+    denied = _require_edit()
+    if denied:
+        return denied
+    from aot.aot_flask.geo import program_io
+    result, error = program_io.update_program(
+        program_uuid, request.get_json(silent=True) or {})
+    if error:
+        status = 404 if '찾을 수 없' in error else 400
+        return jsonify({'ok': False, 'message': error}), status
+    return jsonify({'ok': True, 'program': result})
+
+
+@blueprint.route('/api/geo/program/<string:program_uuid>',
+                 methods=['DELETE'])
+@login_required
+def api_program_delete(program_uuid):
+    """삭제. 쓰는 구획이 있으면 거절한다 — 그 작기가 근거를 잃는다."""
+    denied = _require_edit()
+    if denied:
+        return denied
+    from aot.aot_flask.geo import program_io
+    result, error = program_io.delete_program(program_uuid)
+    if error:
+        status = 404 if '찾을 수 없' in error else 400
+        return jsonify({'ok': False, 'message': error}), status
+    return jsonify(result)
+
+
+@blueprint.route('/api/geo/plots', methods=['GET'])
+@login_required
+def api_plots_list():
     """지도의 식생 구획 목록.
 
     기본은 **재배 중인 것만** 준다. 종료된 작기까지 기본으로 실으면 몇 년 지난
     지도에서 목록도 렌더도 옛 두둑으로 뒤덮인다 — 이력은 요청해야 온다
     (`include_ended=1`).
+
+    `facility_uuid` 로 시설 하나의 구획만 받을 수 있다(시설 편집기용).
     """
     map_uuid = request.args.get('map_uuid')
     if not map_uuid:
@@ -55,34 +265,51 @@ def api_plantings_list():
 
     on = _parse_on(request.args.get('on'))
     include_ended = request.args.get('include_ended') in ('1', 'true', 'True')
+    # 시설 편집기가 자기 시설의 구획만 받기 위한 필터. 지도 전체를 받아
+    # 클라이언트에서 거르면 시설 하나를 여는 데 지도 전량이 실린다.
+    facility_uuid = request.args.get('facility_uuid') or None
 
     if include_ended:
-        rows = GeoPlanting.query.filter_by(geo_id=map_uuid).order_by(
-            GeoPlanting.planted_on.desc()).all()
+        rows = GeoPlot.query.filter_by(geo_id=map_uuid).order_by(
+            GeoPlot.started_on.desc()).all()
     else:
-        rows = planting_context.active_plantings(map_uuid, on=on)
+        rows = plot_context.active_plots(map_uuid, on=on)
+    if facility_uuid:
+        rows = [r for r in rows if r.facility_uuid == facility_uuid]
 
     # 컨테이너를 한 번만 준비한다 — 구획마다 다시 훑으면 지도 도형 전량
     # 스캔이 행 수만큼 반복된다.
     from aot.aot_flask.geo import device_membership
     containers = device_membership.load_containers(map_uuid)
+    # 시설 조회도 같은 이유로 한 벌만 — 시설 구획마다 GeoFacility+GeoShape 를
+    # 다시 읽으면 행 수만큼 반복된다.
+    facilities = {}
 
-    items = [planting_context.to_dict(r, containers=containers) for r in rows]
-    return jsonify({'ok': True, 'plantings': items, 'count': len(items)})
+    items = [plot_context.to_dict(r, containers=containers,
+                                      facilities=facilities) for r in rows]
+    return jsonify({'ok': True, 'plots': items, 'count': len(items)})
 
 
-@blueprint.route('/api/geo/planting/<string:planting_uuid>', methods=['GET'])
+@blueprint.route('/api/geo/plot/<string:plot_uuid>', methods=['GET'])
 @login_required
-def api_planting_get(planting_uuid):
-    row = GeoPlanting.query.filter_by(unique_id=planting_uuid).first()
+def api_plot_get(plot_uuid):
+    row = GeoPlot.query.filter_by(unique_id=plot_uuid).first()
     if row is None:
-        return jsonify({'ok': False, 'message': 'planting not found'}), 404
-    out = planting_context.to_dict(row, with_sensors=True)
-    out['schedule'] = _planting_schedule(row)
-    return jsonify({'ok': True, 'planting': out})
+        return jsonify({'ok': False, 'message': 'plot not found'}), 404
+
+    # 자동 승인(P7)은 **여기서만** 판정한다 — 구획 하나를 읽는 자리다.
+    #
+    # 목록 조회에 넣지 않는 이유: 지도 한 장이 수십 구획이라 목록 읽기가 그만큼
+    # 쓰기를 하게 된다. 늦게 기록돼도 내용은 같으므로(날짜를 자료에서 되짚는다)
+    # 급할 것이 없다.
+    plot_io.auto_advance_stage(plot_uuid)
+
+    out = plot_context.to_dict(row, with_sensors=True)
+    out['schedule'] = _plot_schedule(row)
+    return jsonify({'ok': True, 'plot': out})
 
 
-def _planting_schedule(row):
+def _plot_schedule(row):
     """구획의 다가오는 일정 — **이 구획에 닿는 것만**.
 
     ⚠ **[현황] 탭은 이 응답(상세 조회)으로 그려진다.** `/contents` 는
@@ -99,21 +326,21 @@ def _planting_schedule(row):
     from aot.aot_flask.geo.site_summary import upcoming_schedule
 
     try:
-        geom = planting_context.geometry_of(row)
+        geom = plot_context.geometry_of(row)
         plot = set(device_membership.device_ids_in_geometry(
-            row.geo_id, geom, _label='planting %s' % row.unique_id) or [])
-        valves = {v['device_id'] for v in planting_context.valves_for_planting(row)
+            row.geo_id, geom, _label='plot %s' % row.unique_id) or [])
+        valves = {v['device_id'] for v in plot_context.valves_for_plot(row)
                   if v.get('device_id')}
         return upcoming_schedule(row, plot | valves)
     except Exception:
-        current_app.logger.exception('planting detail: 일정 조회 실패')
+        current_app.logger.exception('plot detail: 일정 조회 실패')
         return {'own': [], 'devices': []}
 
 
-@blueprint.route('/api/geo/planting/<string:planting_uuid>/contents',
+@blueprint.route('/api/geo/plot/<string:plot_uuid>/contents',
                  methods=['GET'])
 @login_required
-def api_planting_contents(planting_uuid):
+def api_plot_contents(plot_uuid):
     """식생 구획 모달의 [환경·제어] 인벤토리 — 구역 모달과 **같은 모양**.
 
     본체는 구역과 공유한다(`_build_area_contents`). 두 벌로 만들면 같은 장치를
@@ -126,16 +353,16 @@ def api_planting_contents(planting_uuid):
 
     캐시는 구역과 같은 30초. can_edit 는 권한이라 캐시 밖에서 매번 채운다.
     """
-    from aot.aot_flask.geo.site_summary import cached_planting_contents
+    from aot.aot_flask.geo.site_summary import cached_plot_contents
 
-    payload = cached_planting_contents(
-        planting_uuid, lambda: _build_planting_contents(planting_uuid))
+    payload = cached_plot_contents(
+        plot_uuid, lambda: _build_plot_contents(plot_uuid))
     if payload is None:
-        return jsonify({'ok': False, 'error': 'planting not found'}), 404
+        return jsonify({'ok': False, 'error': 'plot not found'}), 404
 
     payload = dict(payload)
-    payload['planting'] = dict(payload['planting'])
-    payload['planting']['can_edit'] = utils_general.user_has_permission(
+    payload['plot'] = dict(payload['plot'])
+    payload['plot']['can_edit'] = utils_general.user_has_permission(
         'edit_settings', silent=True)
     return jsonify(payload)
 
@@ -157,7 +384,7 @@ def _env_of(input_ids):
     try:
         return env_for_devices(input_ids)
     except Exception:
-        current_app.logger.exception('planting contents: 센서 신선도 판정 실패')
+        current_app.logger.exception('plot contents: 센서 신선도 판정 실패')
         return {'readings': [], 'sensors': {'valid': 1, 'total': 1}}
 
 
@@ -217,16 +444,87 @@ def _classify_devices(device_ids):
             'functions': funcs}
 
 
-def _build_planting_contents(planting_uuid):
+def _build_facility_plot_contents(row):
+    """시설 구획의 [환경·제어] — 기하가 아니라 **부모**로 스코프를 정한다.
+
+    노지 경로(아래)는 전부 기하에 기대고 있다: 폴리곤 안의 마커, 밸브와의 면적
+    교차, 가장 가까운 장치. 시설 구획에 그것을 그대로 돌리면 **파생 기하**(구역
+    또는 시설 외피)로 마커를 세게 되어, 시설 어딘가에 있는 장치가 전부 이 구획의
+    것으로 잡힌다 — 파생값을 사실처럼 쓰는 순간이다.
+
+    대신 구역 → 시설 순으로 좁은 쪽부터 모은다(`facility_sensor_ids` ·
+    `facility_control_for_plot` 와 같은 규칙). `scope` 어휘도 그쪽과 같은
+    `'bay' | 'facility'` 다 — 화면이 "이건 이 동 것" 과 "온실 공통" 을 구분해
+    말할 수 있어야 한다.
+    """
+    from aot.aot_flask.routes_geo import _build_area_contents
+
+    sensors = plot_context.sensors_for_plot(row)
+    control = plot_context.facility_control_for_plot(row)
+
+    scope = {}
+    for uid in (sensors.get('in_bay') or []):
+        scope[uid] = 'bay'
+    for uid in (sensors.get('from_facility') or []):
+        scope.setdefault(uid, 'facility')
+    for a in control.get('actuators') or []:
+        if a.get('output_id'):
+            scope[a['output_id']] = a.get('scope') or 'facility'
+    for c in control.get('coordinators') or []:
+        scope[c['function_id']] = c.get('scope') or 'facility'
+
+    inv = _build_area_contents(set(scope), scope_of=lambda uid: scope.get(uid))
+
+    fac = control.get('facility') or {}
+    bay = control.get('bay') or {}
+    return {
+        'ok': True,
+        'plot': {
+            'unique_id': row.unique_id,
+            'kind': row.kind or 'vegetation',
+            'subject': row.subject,
+            'variety': row.variety,
+            'name': row.name,
+            # 면적·치수는 시설에서 낼 수 없는 값이다(위 to_dict 주석 참조).
+            'area_m2': None,
+            'dims': None,
+            'days_since_planted': plot_context.elapsed_days(row),
+            'days_to_expected_end': plot_context.days_to_expected_end(row),
+            'active': row.is_active(),
+            'facility_uuid': fac.get('unique_id'),
+            'facility_name': fac.get('name'),
+            'bay_id': bay.get('id'),
+            'bay_name': bay.get('name'),
+            'zone_uuid': sensors.get('zone_uuid'),
+            'zone_name': sensors.get('zone_name'),
+            'counts': inv['counts'],
+            'env': inv['env'],
+            'status': inv['status'],
+        },
+        'source': sensors.get('source'),
+        'sensors': inv['sensors'],
+        'outputs': inv['outputs'],
+        'functions': inv['functions'],
+        # 코디네이터는 Function 목록에도 들어가지만, "이 구역을 누가 맡는가" 는
+        # 장치 목록과 다른 질문이라 따로 낸다(스코프·활성 여부가 함께 온다).
+        'coordinators': control.get('coordinators') or [],
+    }
+
+
+def _build_plot_contents(plot_uuid):
     """식생 모달 인벤토리 본체. 못 찾으면 None(캐시에 남기지 않는다)."""
     from aot.aot_flask.geo import device_membership
     from aot.aot_flask.routes_geo import _build_area_contents
 
-    row = GeoPlanting.query.filter_by(unique_id=planting_uuid).first()
+    row = GeoPlot.query.filter_by(unique_id=plot_uuid).first()
     if row is None:
         return None
 
-    geom = planting_context.geometry_of(row)
+    # 시설 구획은 기하가 파생이라 아래 경로를 태울 수 없다.
+    if row.facility_uuid and not row.has_own_geometry():
+        return _build_facility_plot_contents(row)
+
+    geom = plot_context.geometry_of(row)
 
     # ── 무엇을 낼 것인가: **이 구획에 닿는 것만** ──────────────────────────
     #
@@ -242,14 +540,14 @@ def _build_planting_contents(planting_uuid):
     # 'zone'(구역에 있다는 이유만으로 싣기)은 없앴다. 구역 전체를 보려면 위로
     # 올라가는 화살표가 있다.
     plot_ids = set(device_membership.device_ids_in_geometry(
-        row.geo_id, geom, _label='planting %s' % row.unique_id) or [])
+        row.geo_id, geom, _label='plot %s' % row.unique_id) or [])
 
-    zone = planting_context.zone_for_planting(row)
+    zone = plot_context.zone_for_plot(row)
     zone_ids = set(device_membership.device_ids_in_shape(zone) or []) if zone else set()
 
-    # valves_for_planting 은 **면적이 있는 교차만** 낸다 — 여기 오는 밸브는
+    # valves_for_plot 은 **면적이 있는 교차만** 낸다 — 여기 오는 밸브는
     # 전부 실제로 이 구획을 적신다.
-    valves = planting_context.valves_for_planting(row)
+    valves = plot_context.valves_for_plot(row)
     valve_ids = {v['device_id'] for v in valves if v.get('device_id')}
 
     direct = plot_ids | valve_ids
@@ -287,14 +585,14 @@ def _build_planting_contents(planting_uuid):
             reason = 'stale'
         if have or not kinds_zone[kind]:
             continue
-        for did, dist in planting_context.nearest_devices(
+        for did, dist in plot_context.nearest_devices(
                 row, kinds_zone[kind], markers=markers, limit=1):
             nearest[did] = dist
             nearest_reason[did] = reason
 
     # "켜면 무엇이 함께 젖는가" — 구역 모달과 **같은 함수**로 센다. 여기서
     # 따로 세면 같은 밸브가 두 화면에서 다른 작물 목록을 갖게 된다.
-    cover = planting_context.plantings_by_valve_device(row.geo_id)
+    cover = plot_context.plots_by_valve_device(row.geo_id)
 
     coverage = {v['device_id']: v.get('coverage_pct')
                 for v in valves if v.get('device_id')}
@@ -339,7 +637,7 @@ def _build_planting_contents(planting_uuid):
         if pct is not None:
             out['coverage_pct'] = pct
         # 자기 자신은 "함께 젖는 것" 이 아니다.
-        names = planting_context.covered_crop_names(
+        names = plot_context.covered_subject_names(
             cover.get(out['unique_id']), exclude_uuid=row.unique_id)
         if names:
             out['also_covers'] = names
@@ -364,19 +662,20 @@ def _build_planting_contents(planting_uuid):
     for group in ('outputs', 'functions'):
         inv[group].sort(key=_involvement_key)
 
-    sensors = planting_context.sensors_for_planting(row)
+    sensors = plot_context.sensors_for_plot(row)
 
     return {
         'ok': True,
-        'planting': {
+        'plot': {
             'unique_id': row.unique_id,
-            'crop': row.crop,
+            'kind': row.kind or 'vegetation',
+            'subject': row.subject,
             'variety': row.variety,
             'name': row.name,
-            'area_m2': round(planting_context.area_m2(row), 1),
-            'dims': planting_context.dimensions(row),
-            'days_since_planted': planting_context.elapsed_days(row),
-            'days_to_expected_end': planting_context.days_to_expected_end(row),
+            'area_m2': round(plot_context.area_m2(row), 1),
+            'dims': plot_context.dimensions(row),
+            'days_since_planted': plot_context.elapsed_days(row),
+            'days_to_expected_end': plot_context.days_to_expected_end(row),
             'active': row.is_active(),
             'zone_uuid': sensors.get('zone_uuid'),
             'zone_name': sensors.get('zone_name'),
@@ -396,71 +695,148 @@ def _build_planting_contents(planting_uuid):
 
 # ── 쓰기 ───────────────────────────────────────────────────────────────────
 
-@blueprint.route('/api/geo/planting', methods=['POST'])
+@blueprint.route('/api/geo/plot', methods=['POST'])
 @login_required
-def api_planting_save():
+def api_plot_save():
     """생성 또는 수정. `unique_id` 가 있으면 수정."""
     denied = _require_edit()
     if denied:
         return denied
 
     data = request.get_json(silent=True) or {}
-    result, error = planting_io.save_planting(data)
+    result, error = plot_io.save_plot(data)
     if error:
         status = 404 if 'not found' in error.lower() else 400
         return jsonify({'ok': False, 'message': error}), status
-    return jsonify({'ok': True, 'planting': result})
+    return jsonify({'ok': True, 'plot': result})
 
 
-@blueprint.route('/api/geo/planting/<string:planting_uuid>/end',
+@blueprint.route('/api/geo/plot/<string:plot_uuid>/end',
                  methods=['POST'])
 @login_required
-def api_planting_end(planting_uuid):
+def api_plot_end(plot_uuid):
     """작기 종료 — 행을 지우지 않고 종료일을 적는다."""
     denied = _require_edit()
     if denied:
         return denied
 
     data = request.get_json(silent=True) or {}
-    result, error = planting_io.end_planting(
-        planting_uuid,
+    result, error = plot_io.end_plot(
+        plot_uuid,
         ended_on=data.get('ended_on'),
         reason=data.get('reason') or 'harvested')
     if error:
         status = 404 if 'not found' in error.lower() else 400
         return jsonify({'ok': False, 'message': error}), status
-    return jsonify({'ok': True, 'planting': result})
+    return jsonify({'ok': True, 'plot': result})
 
 
-@blueprint.route('/api/geo/planting/<string:planting_uuid>/copy',
+def _current_user_name():
+    """확인한 사람 — 원장에 남는다. 로그인 정보가 없으면 비운다(지어내지 않는다)."""
+    try:
+        return getattr(current_user, 'name', None) or None
+    except Exception:
+        return None
+
+@blueprint.route('/api/geo/plot/<string:plot_uuid>/stage',
                  methods=['POST'])
 @login_required
-def api_planting_copy(planting_uuid):
+def api_plot_stage_accept(plot_uuid):
+    """단계 전환을 확인한다 — **이 한 줄이 기준점을 옮긴다.**
+
+    이후 단계는 여기 적힌 날부터 계산된다. 그래서 날짜는 지어내지 않고 화면이
+    보낸 것을 그대로 쓴다(제안값을 사람이 고칠 수 있다).
+    """
+    denied = _require_edit()
+    if denied:
+        return denied
+
+    data = request.get_json(silent=True) or {}
+    result, error = plot_io.accept_stage(
+        plot_uuid,
+        stage_key=data.get('stage_key'),
+        stage_index=data.get('stage_index'),
+        started_on=data.get('started_on'),
+        source=data.get('source') or 'manual',
+        decided_by=_current_user_name(),
+        note=data.get('note'))
+    if error:
+        status = 404 if '찾을 수 없습니다' in error else 400
+        return jsonify({'ok': False, 'message': error}), status
+    from aot.aot_flask.geo.site_summary import invalidate_plot_contents
+    invalidate_plot_contents(plot_uuid)
+    return jsonify({'ok': True, 'event': result})
+
+
+@blueprint.route('/api/geo/plot/<string:plot_uuid>/stage',
+                 methods=['DELETE'])
+@login_required
+def api_plot_stage_undo(plot_uuid):
+    """마지막으로 확인된 전환을 되돌린다 — 행은 남는다(`undone_at`)."""
+    denied = _require_edit()
+    if denied:
+        return denied
+
+    result, error = plot_io.undo_stage(
+        plot_uuid, decided_by=_current_user_name())
+    if error:
+        return jsonify({'ok': False, 'message': error}), 400
+    from aot.aot_flask.geo.site_summary import invalidate_plot_contents
+    invalidate_plot_contents(plot_uuid)
+    return jsonify({'ok': True, 'event': result})
+
+
+@blueprint.route('/api/geo/plot/<string:plot_uuid>/resources',
+                 methods=['POST'])
+@login_required
+def api_plot_resources_apply(plot_uuid):
+    """현재 단계에 선언된 자원 함수를 켠다 — **사람이 눌러야 한다.**
+
+    프로그램이 스스로 부르지 않는다(단계 전환에도, 자동 승인에도 붙이지 않았다).
+    관수를 켜는 것은 물이 나오는 일이다.
+    """
+    denied = _require_edit()
+    if denied:
+        return denied
+
+    result, error = plot_io.apply_stage_resources(plot_uuid)
+    if error:
+        status = 404 if '찾을 수 없습니다' in error else 400
+        return jsonify({'ok': False, 'message': error}), status
+    from aot.aot_flask.geo.site_summary import invalidate_plot_contents
+    invalidate_plot_contents(plot_uuid)
+    return jsonify({'ok': True, 'result': result})
+
+
+@blueprint.route('/api/geo/plot/<string:plot_uuid>/copy',
+                 methods=['POST'])
+@login_required
+def api_plot_copy(plot_uuid):
     """지난 작기의 기하로 새 작기를 만든다."""
     denied = _require_edit()
     if denied:
         return denied
 
     data = request.get_json(silent=True) or {}
-    result, error = planting_io.copy_planting(
-        planting_uuid,
-        planted_on=data.get('planted_on'),
-        crop=data.get('crop'))
+    result, error = plot_io.copy_plot(
+        plot_uuid,
+        started_on=data.get('started_on'),
+        subject=data.get('subject'))
     if error:
         status = 404 if 'not found' in error.lower() else 400
         return jsonify({'ok': False, 'message': error}), status
-    return jsonify({'ok': True, 'planting': result})
+    return jsonify({'ok': True, 'plot': result})
 
 
-@blueprint.route('/api/geo/planting/<string:planting_uuid>', methods=['DELETE'])
+@blueprint.route('/api/geo/plot/<string:plot_uuid>', methods=['DELETE'])
 @login_required
-def api_planting_delete(planting_uuid):
+def api_plot_delete(plot_uuid):
     """오기입 삭제. 정상 종료는 /end 를 쓴다."""
     denied = _require_edit()
     if denied:
         return denied
 
-    result, error = planting_io.delete_planting(planting_uuid)
+    result, error = plot_io.delete_plot(plot_uuid)
     if error:
         status = 404 if 'not found' in error.lower() else 400
         return jsonify({'ok': False, 'message': error}), status
@@ -469,16 +845,16 @@ def api_planting_delete(planting_uuid):
 
 # ── 파생 조회 ──────────────────────────────────────────────────────────────
 
-@blueprint.route('/api/geo/planting/<string:planting_uuid>/sensors',
+@blueprint.route('/api/geo/plot/<string:plot_uuid>/sensors',
                  methods=['GET'])
 @login_required
-def api_planting_sensors(planting_uuid):
+def api_plot_sensors(plot_uuid):
     """구획이 참조할 장치 — 저장된 값이 아니라 매번 파생한 결과."""
-    row = GeoPlanting.query.filter_by(unique_id=planting_uuid).first()
+    row = GeoPlot.query.filter_by(unique_id=plot_uuid).first()
     if row is None:
-        return jsonify({'ok': False, 'message': 'planting not found'}), 404
+        return jsonify({'ok': False, 'message': 'plot not found'}), 404
     return jsonify({'ok': True,
-                    'sensors': planting_context.sensors_for_planting(row)})
+                    'sensors': plot_context.sensors_for_plot(row)})
 
 
 @blueprint.route('/api/geo/zone/<string:zone_uuid>/allocation',
@@ -496,16 +872,16 @@ def api_zone_allocation(zone_uuid):
 
     on = _parse_on(request.args.get('on'))
     return jsonify({'ok': True,
-                    'allocation': planting_context.zone_allocation(zone, on=on)})
+                    'allocation': plot_context.zone_allocation(zone, on=on)})
 
 
-@blueprint.route('/api/geo/plantings/history', methods=['POST'])
+@blueprint.route('/api/geo/plots/history', methods=['POST'])
 @login_required
-def api_plantings_history():
+def api_plots_history():
     """"이 자리에 뭐가 있었나" — 기하가 겹치는 작기 목록.
 
     연작 장해·윤작 판단의 근거다. 기준 기하는 본문으로 받는다:
-      - `planting_uuid` 를 주면 그 구획의 기하
+      - `plot_uuid` 를 주면 그 구획의 기하
       - 또는 `geometry` 를 직접
     GET 이 아닌 이유는 폴리곤이 URL 에 담기지 않기 때문이다.
     """
@@ -513,28 +889,28 @@ def api_plantings_history():
     map_uuid = data.get('map_uuid')
     geom = data.get('geometry')
 
-    if data.get('planting_uuid'):
-        src = GeoPlanting.query.filter_by(
-            unique_id=data['planting_uuid']).first()
+    if data.get('plot_uuid'):
+        src = GeoPlot.query.filter_by(
+            unique_id=data['plot_uuid']).first()
         if src is None:
-            return jsonify({'ok': False, 'message': 'planting not found'}), 404
-        geom = planting_context.geometry_of(src)
+            return jsonify({'ok': False, 'message': 'plot not found'}), 404
+        geom = plot_context.geometry_of(src)
         map_uuid = map_uuid or src.geo_id
     elif data.get('zone_uuid'):
         zone = GeoShape.query.filter_by(unique_id=data['zone_uuid']).first()
         if zone is None:
             return jsonify({'ok': False, 'message': 'zone not found'}), 404
-        geom = planting_context.geometry_of(zone)
+        geom = plot_context.geometry_of(zone)
         map_uuid = map_uuid or zone.geo_id
 
     if not map_uuid or not geom:
         return jsonify({'ok': False,
                         'message': 'map_uuid and geometry required'}), 400
 
-    pairs = planting_context.plantings_overlapping(map_uuid, geom)
+    pairs = plot_context.plots_overlapping(map_uuid, geom)
     items = []
     for row, overlap_m2 in pairs:
-        d = planting_context.to_dict(row)
+        d = plot_context.to_dict(row)
         d['overlap_m2'] = round(overlap_m2, 1)
         items.append(d)
     return jsonify({'ok': True, 'history': items, 'count': len(items)})
@@ -616,7 +992,7 @@ def split_args_from(src):
 
 
 def split_kwargs_from(args):
-    """`split_args_from` 결과 → `planting_split.split_shape` 키워드.
+    """`split_args_from` 결과 → `plot_split.split_shape` 키워드.
 
     한 곳에서 만든다 — 미리보기와 적용이 각자 조립하면 옵션 하나가 빠진 쪽만
     다른 결과를 낸다.
@@ -638,15 +1014,15 @@ def compute_split(args):
     if shape is None:
         return None, (jsonify({'ok': False,
                                'message': 'shape not found: %s' % args['shape_id']}), 404)
-    strips, info = planting_split.split_shape(shape, **split_kwargs_from(args))
+    strips, info = plot_split.split_shape(shape, **split_kwargs_from(args))
     if strips is None:
         return None, (jsonify({'ok': False, 'message': info}), 400)
     return (strips, info, shape), None
 
 
-@blueprint.route('/api/geo/planting/split-preview', methods=['GET'])
+@blueprint.route('/api/geo/plot/split-preview', methods=['GET'])
 @login_required
-def api_planting_split_preview():
+def api_plot_split_preview():
     """분할 제안을 계산해 돌려준다 — 아무것도 저장하지 않는다.
 
     지도가 이것을 점선으로 그린다. 사람이 보고 판단한 뒤 apply 로 넘어간다.
@@ -662,9 +1038,9 @@ def api_planting_split_preview():
                     'shape_uuid': shape.unique_id, 'geo_id': shape.geo_id})
 
 
-@blueprint.route('/api/geo/planting/split-apply', methods=['POST'])
+@blueprint.route('/api/geo/plot/split-apply', methods=['POST'])
 @login_required
-def api_planting_split_apply():
+def api_plot_split_apply():
     """미리보기와 **같은 파라미터로 재계산**해 구획을 만든다.
 
     미리보기에서 본 폴리곤을 클라이언트가 되돌려보내지 않는다 — 그러면 화면에서
@@ -679,8 +1055,8 @@ def api_planting_split_apply():
     args, err = split_args_from(data)
     if err:
         return jsonify({'ok': False, 'message': err}), 400
-    if not (data.get('crop') or '').strip():
-        return jsonify({'ok': False, 'message': 'crop is required'}), 400
+    if not (data.get('subject') or '').strip():
+        return jsonify({'ok': False, 'message': 'subject is required'}), 400
     out, fail = compute_split(args)
     if fail:
         return fail
@@ -693,9 +1069,10 @@ def api_planting_split_apply():
             'map_uuid': shape.geo_id,
             'feature': {'type': 'Feature', 'properties': {},
                         'geometry': strip['geometry']},
-            'crop': data.get('crop'),
+            'kind': data.get('kind') or 'vegetation',
+            'subject': data.get('subject'),
             'variety': data.get('variety'),
-            'planted_on': data.get('planted_on'),
+            'started_on': data.get('started_on'),
             'expected_end_on': data.get('expected_end_on'),
             'color': data.get('color'),
             'source_kind': 'copied',
@@ -703,7 +1080,7 @@ def api_planting_split_apply():
         }
         if name_base:
             payload['name'] = '%s %d' % (name_base, strip['index'])
-        row, error = planting_io.save_planting(payload)
+        row, error = plot_io.save_plot(payload)
         if error:
             errors.append({'index': strip['index'], 'message': error})
             continue

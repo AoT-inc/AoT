@@ -650,7 +650,7 @@
 <script src="{{ url_for('static', filename='js/geo/aot-map-custom-controls.js') }}"></script>
 
 <!-- geo_design design 모듈 → 단일 번들 (concat+minify, tools/bundle.mjs: geo-design).
-     18 소스: design/*(ui,geometry,events,modules,label,devices-v3,binding-ui,vegetation,
+     18 소스: design/*(ui,geometry,events,modules,label,devices-v3,binding-ui,plot,
      stats,preview,export,mapview) + theme-colors/device-connection/aot-map-utils/
      panel/migration/design-v3. 소스 순서 보존(preview→panel 등).
      소스 수정 시 npm run build:bundles geo-design → asset() 핑거프린팅으로 캐시 자동 무효화.

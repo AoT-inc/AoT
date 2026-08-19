@@ -1,7 +1,7 @@
 # coding=utf-8
 """지도 거리 도구(`nearest`/`distance_between`)의 계약을 고정한다.
 
-정본: aot/utils/geo_distance.py · docs/design/geo-vegetation-planting.md
+정본: aot/utils/geo_distance.py · docs/design/geo-vegetation-plot.md
 
 여기서 지키는 것 중 **깨져도 조용한 것**이 여럿이다:
 
@@ -29,12 +29,12 @@ _KIMJE_LNG = 126.88
 class _FakeRow(object):
     """`geometry_of()` 는 행에서 `feature` 만 읽는다 — DB 를 켤 이유가 없다."""
 
-    def __init__(self, geometry, name=None, crop=None, variety=None,
+    def __init__(self, geometry, name=None, subject=None, variety=None,
                  unique_id='abcdef12-0000-0000-0000-000000000000'):
         self.feature = {'type': 'Feature', 'properties': {},
                         'geometry': geometry}
         self.name = name
-        self.crop = crop
+        self.subject = subject
         self.variety = variety
         self.unique_id = unique_id
 
@@ -75,10 +75,10 @@ class TestDistanceMath(unittest.TestCase):
                                     _KIMJE_LAT, _KIMJE_LNG), 0.0)
 
 
-class TestPlantingPoint(unittest.TestCase):
+class TestPlotPoint(unittest.TestCase):
     def test_centroid_of_a_square(self):
         row = _FakeRow(_square_at(_KIMJE_LNG, _KIMJE_LAT, 100.0))
-        lat, lng = geo_distance._planting_point(row)
+        lat, lng = geo_distance._plot_point(row)
         m_lat = 111320.0
         self.assertAlmostEqual(lat, _KIMJE_LAT + 50.0 / m_lat, places=6)
 
@@ -100,35 +100,35 @@ class TestPlantingPoint(unittest.TestCase):
         poly = shape(u)
         self.assertFalse(poly.contains(poly.centroid), 'ㄷ자 전제가 깨졌다')
 
-        lat, lng = geo_distance._planting_point(_FakeRow(u))
+        lat, lng = geo_distance._plot_point(_FakeRow(u))
         from shapely.geometry import Point
         self.assertTrue(poly.contains(Point(lng, lat)),
                         '대표점이 구획 밖에 있다')
 
     def test_no_geometry_gives_none(self):
-        self.assertIsNone(geo_distance._planting_point(_FakeRow({})))
+        self.assertIsNone(geo_distance._plot_point(_FakeRow({})))
 
 
-class TestPlantingLabel(unittest.TestCase):
+class TestPlotLabel(unittest.TestCase):
     """분할로 만든 구획은 `name` 이 비어 있다 — 작물명이 실질적 정체성이다."""
 
     def test_name_wins_when_present(self):
         self.assertEqual(
-            geo_distance._planting_label(_FakeRow({}, name='앞두둑', crop='상추')),
+            geo_distance._plot_label(_FakeRow({}, name='앞두둑', subject='상추')),
             '앞두둑')
 
     def test_crop_and_variety_when_unnamed(self):
         self.assertEqual(
-            geo_distance._planting_label(_FakeRow({}, crop='콩', variety='검정콩')),
+            geo_distance._plot_label(_FakeRow({}, subject='콩', variety='검정콩')),
             '콩 (검정콩)')
 
-    def test_crop_alone_when_unnamed(self):
+    def test_subject_alone_when_unnamed(self):
         self.assertEqual(
-            geo_distance._planting_label(_FakeRow({}, crop='대선')), '대선')
+            geo_distance._plot_label(_FakeRow({}, subject='대선')), '대선')
 
     def test_falls_back_to_short_uuid_never_null(self):
         """`null` 다섯 줄을 내놓느니 uuid 앞자리라도 낸다."""
-        label = geo_distance._planting_label(_FakeRow({}))
+        label = geo_distance._plot_label(_FakeRow({}))
         self.assertTrue(label)
         self.assertEqual(label, 'abcdef12')
 
@@ -143,7 +143,7 @@ class _PointStub(object):
         return self.mapping.get(str(target_id))
 
 
-def _pt(tid, lat, lng, name, ttype='planting'):
+def _pt(tid, lat, lng, name, ttype='plot'):
     return {'target_id': tid, 'target_type': ttype, 'resolved_name': name,
             'lat': lat, 'lng': lng}
 
@@ -233,7 +233,7 @@ class TestDistanceBetween(unittest.TestCase):
         self.assertIsNone(err)
         self.assertAlmostEqual(out['distance_m'], 150.0, delta=1.0)
         self.assertEqual(out['a']['resolved_name'], '관리사무소')
-        self.assertEqual(out['b']['target_type'], 'planting')
+        self.assertEqual(out['b']['target_type'], 'plot')
 
     def test_either_end_unknown_is_an_error(self):
         for pair in (('a', 'ghost'), ('ghost', 'b')):
@@ -268,38 +268,38 @@ class _Shape(object):
 class _NameFixture(object):
     """이름 해석 3층(도형·구획·장치)을 DB 없이 갈아 끼운다."""
 
-    def __init__(self, test, shapes=(), plantings=(), devices=()):
+    def __init__(self, test, shapes=(), plots=(), devices=()):
         self.t = test
         self.shapes = list(shapes)
-        self.plantings = list(plantings)
+        self.plots = list(plots)
         self.devices = list(devices)
 
     def __enter__(self):
         g = geo_distance
-        self._orig = (g._named_shapes, g._active_planting_rows,
+        self._orig = (g._named_shapes, g._active_plot_rows,
                       g._named_devices, g.resolve_point)
         g._named_shapes = lambda: [
             (s, (s.feature['properties']['name'] or '').lower())
             for s in self.shapes]
-        g._active_planting_rows = lambda: list(self.plantings)
+        g._active_plot_rows = lambda: list(self.plots)
         g._named_devices = lambda: list(self.devices)
         # uuid 경로는 등록된 행에서만 맞는다 — 이름 층위를 검증하려는 것이므로
         # 실제 DB 조회는 타지 않게 한다.
         by_id = {s.unique_id: geo_distance._point_from_shape(s)
                  for s in self.shapes}
-        by_id.update({r.unique_id: geo_distance._point_from_planting(r)
-                      for r in self.plantings})
+        by_id.update({r.unique_id: geo_distance._point_from_plot(r)
+                      for r in self.plots})
         g.resolve_point = lambda tid: by_id.get(str(tid or '').strip())
         return self
 
     def __exit__(self, *exc):
-        (geo_distance._named_shapes, geo_distance._active_planting_rows,
+        (geo_distance._named_shapes, geo_distance._active_plot_rows,
          geo_distance._named_devices, geo_distance.resolve_point) = self._orig
         return False
 
 
-def _plot(crop, uid, lat=_KIMJE_LAT, lng=_KIMJE_LNG, name=None, variety=None):
-    return _FakeRow(_square_at(lng, lat, 10.0), name=name, crop=crop,
+def _plot(subject, uid, lat=_KIMJE_LAT, lng=_KIMJE_LNG, name=None, variety=None):
+    return _FakeRow(_square_at(lng, lat, 10.0), name=name, subject=subject,
                     variety=variety, unique_id=uid)
 
 
@@ -322,11 +322,11 @@ class TestNameResolution(unittest.TestCase):
         """이 도구가 존재하는 이유 — 쓰기 리졸버였다면 zone 이 나온다."""
         with _NameFixture(self,
                           shapes=[_Shape('3-2', 'zone-uuid-2')],
-                          plantings=[_plot('대선', 'plot-uuid-1')]):
+                          plots=[_plot('대선', 'plot-uuid-1')]):
             point, cands = geo_distance.resolve_query('대선')
             self.assertEqual(cands, [])
             self.assertEqual(point['target_id'], 'plot-uuid-1')
-            self.assertEqual(point['target_type'], 'planting')
+            self.assertEqual(point['target_type'], 'plot')
 
     def test_same_crop_in_several_plots_is_ambiguous_not_guessed(self):
         """검정콩을 다섯 조각에 심었으면 "검정콩까지 거리" 는 답이 없다.
@@ -335,7 +335,7 @@ class TestNameResolution(unittest.TestCase):
         이 상태다(같은 작물, 다섯 구획).
         """
         plots = [_plot('검정콩', 'p%d' % i) for i in range(5)]
-        with _NameFixture(self, plantings=plots):
+        with _NameFixture(self, plots=plots):
             point, cands = geo_distance.resolve_query('검정콩')
             self.assertIsNone(point)
             self.assertEqual(len(cands), 5)
@@ -344,26 +344,26 @@ class TestNameResolution(unittest.TestCase):
         """지도의 정식 어휘가 항상 이긴다 — 층위가 섞이면 안 된다."""
         with _NameFixture(self,
                           shapes=[_Shape('3-1', 'zone-uuid-1')],
-                          plantings=[_plot('콩', 'plot-uuid-1', name='3-1')]):
+                          plots=[_plot('콩', 'plot-uuid-1', name='3-1')]):
             point, _c = geo_distance.resolve_query('3-1')
             self.assertEqual(point['target_id'], 'zone-uuid-1')
 
     def test_uuid_still_wins_over_name_search(self):
         """도구 체이닝(앞선 호출이 낸 uuid)이 이름 검색을 거치면 안 된다."""
-        with _NameFixture(self, plantings=[_plot('대선', 'plot-uuid-1')]):
+        with _NameFixture(self, plots=[_plot('대선', 'plot-uuid-1')]):
             point, _c = geo_distance.resolve_query('plot-uuid-1')
             self.assertEqual(point['target_id'], 'plot-uuid-1')
 
-    def test_ended_plantings_are_not_searched(self):
-        """작년 배추가 올해 거리 질문을 끌고 가면 안 된다 — `_active_planting_rows`
+    def test_ended_plots_are_not_searched(self):
+        """작년 배추가 올해 거리 질문을 끌고 가면 안 된다 — `_active_plot_rows`
         가 활성만 내는 것에 의존한다(그 계약을 여기서 고정한다)."""
         import inspect
-        src = inspect.getsource(geo_distance._active_planting_rows)
-        self.assertIn('active_plantings', src)
+        src = inspect.getsource(geo_distance._active_plot_rows)
+        self.assertIn('active_plots', src)
 
     def test_one_character_query_does_not_fuzzy_match(self):
         """'마' 가 '고구마' 에 걸리면 오매치가 기본값이 된다."""
-        with _NameFixture(self, plantings=[_plot('고구마', 'plot-uuid-1')]):
+        with _NameFixture(self, plots=[_plot('고구마', 'plot-uuid-1')]):
             point, cands = geo_distance.resolve_query('마')
             self.assertIsNone(point)
             self.assertEqual(cands, [])
@@ -388,7 +388,7 @@ class TestAmbiguitySurfacing(unittest.TestCase):
         이름으로 되물으면 같은 자리에 다시 걸린다."""
         plots = [_plot('검정콩', 'p%d' % i) for i in range(3)]
         with _NameFixture(self, shapes=[_Shape('관리사무소', 'fac-1', 'facility')],
-                          plantings=plots):
+                          plots=plots):
             out, err = geo_distance.distance_between('관리사무소', '검정콩')
             self.assertIsNone(out)
             self.assertIsInstance(err, dict)
@@ -402,7 +402,7 @@ class TestAmbiguitySurfacing(unittest.TestCase):
         plots = [_plot('검정콩', 'p1'), _plot('검정콩', 'p2'),
                  _plot('대선', 'p3')]
         with _NameFixture(self, shapes=[_Shape('관리사무소', 'fac-1', 'facility')],
-                          plantings=plots):
+                          plots=plots):
             out, err = geo_distance.nearest(
                 '관리사무소', ['대선', '검정콩', '없는이름'])
             self.assertIsNone(err)
@@ -414,7 +414,7 @@ class TestAmbiguitySurfacing(unittest.TestCase):
 
     def test_clean_run_reports_none_not_empty_lists(self):
         with _NameFixture(self, shapes=[_Shape('관리사무소', 'fac-1', 'facility')],
-                          plantings=[_plot('대선', 'p1')]):
+                          plots=[_plot('대선', 'p1')]):
             out, _err = geo_distance.nearest('관리사무소', ['대선'])
             self.assertIsNone(out['unresolved'])
             self.assertIsNone(out['ambiguous'])

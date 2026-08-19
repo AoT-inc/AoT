@@ -17,7 +17,8 @@
       "geo/facility/sensor-ui.js",
       "geo/facility/weather-ui.js",
       "geo/facility/sensor-ranges-ui.js",
-      "geo/facility/group-ui.js"
+      "geo/facility/group-ui.js",
+      "geo/facility/plot-ui.js"
     ]
   },
   "aot-facility-widget": {
@@ -51,7 +52,7 @@
       "widgets/AoT_map/aot-facility-runtime.js",
       "widgets/AoT_map/aot-geo-data.js",
       "widgets/AoT_map/aot-map-label-layers.js",
-      "widgets/AoT_map/aot-map-vegetation.js",
+      "widgets/AoT_map/aot-map-plot.js",
       "widgets/AoT_map/aot-map-widget-vector.js"
     ]
   },
@@ -68,7 +69,7 @@
       "geo/design/aot-geo-label.js",
       "geo/design/aot-geo-devices-v3.js",
       "geo/design/aot-geo-binding-ui.js",
-      "geo/design/aot-geo-vegetation.js",
+      "geo/design/aot-geo-plot.js",
       "geo/design/aot-geo-device-split.js",
       "geo/aot-map-utils.js",
       "geo/design/aot-geo-stats.js",

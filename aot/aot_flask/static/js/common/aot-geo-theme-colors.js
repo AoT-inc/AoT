@@ -40,9 +40,9 @@
         //
         // 그래서 배경의 보색 쪽인 마젠타를 기본으로 한다 — 항공·위성 기반 GIS 가
         // 작물 구획에 관행적으로 쓰는 색이기도 하다. 브랜드 노랑은 액션 색이라
-        // 쓰지 않는다. 구획마다 사용자가 고른 색(GeoPlanting.color)이 있으면
+        // 쓰지 않는다. 구획마다 사용자가 고른 색(GeoPlot.color)이 있으면
         // 그것이 이긴다.
-        vegetation: '#e0409a'
+        plot: '#e0409a'
     };
 
     // Function 계열 세부 타입. DB 의 GeoShape.feature.properties.device_type 은

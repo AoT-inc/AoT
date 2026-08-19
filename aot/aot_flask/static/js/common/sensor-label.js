@@ -366,7 +366,12 @@
     });
 
     var cache = opts.cache;
-    if (cache && cache.html) listEl.innerHTML = cache.html;
+    // 캐시를 되쓸 때도 **같은 내용이면 손대지 않는다.** `innerHTML` 대입은
+    // 내용이 같아도 자식 노드를 전부 갈아끼우므로, 폴링마다 배선이 다시 불리는
+    // 화면(시설 모달은 5초)에서는 그 자체가 깜빡임이 된다.
+    if (cache && cache.html && listEl.innerHTML !== cache.html) {
+      listEl.innerHTML = cache.html;
+    }
 
     fetch('/notes/target/' + encodeURIComponent(target.targetId) +
           (opts.descendants ? '?descendants=1' : ''))

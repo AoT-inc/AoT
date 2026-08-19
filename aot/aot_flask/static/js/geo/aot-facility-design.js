@@ -2979,6 +2979,7 @@ function _T(k,f){var d=(typeof window!=="undefined"&&window._IEC)||{};return (d[
   window.FacilityIO = {
     select: selectFacility,
     create: newFacility,
+    clone: cloneFacility,
     // 지금 편집 중인 시설. 다른 IIFE(설비 인스펙터)가 시설 범위로 조회할 때
     // 쓴다 — #facility-page-vars 는 첫 로드 시점의 값이라, 페이지를 새로고침
     // 하지 않고 시설을 바꾸면 어긋난다.
@@ -4123,7 +4124,9 @@ function _T(k,f){var d=(typeof window!=="undefined"&&window._IEC)||{};return (d[
     // The uuid tells listeners whether this is a saved facility or the blank
     // form started by "New Facility" — the step ring rules differ.
     document.dispatchEvent(new CustomEvent('facility-loaded', {
-      detail: { facility_uuid: f.unique_id || null }
+      // 시설 dict 를 함께 싣는다 — 식생 스텝은 `bay_slices`(구역 목록의 정본)가
+      // 필요한데, uuid 만 주면 방금 받아 온 것을 한 번 더 조회하게 된다.
+      detail: { facility_uuid: f.unique_id || null, facility: f }
     }));
   }
 
@@ -4224,10 +4227,55 @@ function _T(k,f){var d=(typeof window!=="undefined"&&window._IEC)||{};return (d[
   // =========================================================
   // Save / Load
   // =========================================================
+  /** 저장하려는 구역 구성의 id 집합 — 식생 구획의 `bay_id` 와 같은 어휘.
+   *
+   * **서버가 구역을 정하는 규칙을 그대로 따라야 한다**(facility_io.save_facility
+   * + facility_bays.compute_bay_slices):
+   *   1. `bays` 항목 중 **`bay_end <= bay_count` 인 것만** 채택한다.
+   *   2. 하나도 안 남으면 bay 당 1구역으로 합성한다('bay_1'..'bay_N').
+   *
+   * 1번을 빠뜨리면 조용히 틀린다. 구역 편집기의 상태(`bays`)와 동 수 입력
+   * (`bay_count`)은 서로 다른 위젯이라 **어긋난 순간이 실재한다** — 동 수를
+   * 2→1 로 줄인 직후 편집기가 아직 'bay_1_2' 를 들고 있으면, 그 목록을 그대로
+   * 믿는 판정은 "사라지는 구역 없음" 이라 결론짓고 경고 없이 저장한다. 서버는
+   * bay_count 로 다시 자르므로 실제로는 그 구역이 사라진다. 실제로 그렇게
+   * 저장돼 구획 하나가 갈 곳을 잃었고, 서버 경고 로그만 남았다(2026-08-19).
+   *
+   * 여기는 **미리보기**다. 최종 판정은 서버(`_orphaned_plots`)이고, 그쪽은
+   * 저장된 시설을 기준으로 다시 본다.
+   */
+  function plannedBayIds(data) {
+    const n = Math.max(parseInt(data && data.bay_count, 10) || 1, 1);
+    const zones = ((data && data.bays) || []).filter(z => {
+      const s = parseInt(z && z.bay_start, 10);
+      const e = parseInt(z && z.bay_end, 10);
+      return s >= 1 && e >= s && e <= n;
+    });
+    if (zones.length) return zones.map(z => z.id).filter(Boolean);
+    const ids = [];
+    for (let i = 1; i <= n; i++) ids.push('bay_' + i);
+    return ids;
+  }
+
   async function saveFacility() {
     const data = readForm();
     if (!data.geo_id) { alert('Please select a map first.'); return; }
     if (!data.outer_geometry) { alert('Use "Place on Map" to set the facility location first.'); return; }
+
+    // 구역 구성을 바꾸면 그 구역에 심어 둔 것이 갈 곳을 잃는다. 막지 않고
+    // **묻는다** — 온실 구조를 바꾸는 것은 정당한 작업이고, 막으면 구획을 먼저
+    // 지우는 것 말고는 길이 없다. 서버도 저장 후 같은 판정을 응답에 싣지만
+    // (그쪽이 정본), 그때는 이미 바뀐 뒤라 결정할 기회가 아니다.
+    if (window.FacilityPlotUI && FacilityPlotUI.orphansFor) {
+      const orphans = FacilityPlotUI.orphansFor(plannedBayIds(data));
+      if (orphans.length) {
+        const list = orphans.map(o => o.subject + ' (' + o.bay_id + ')').join(', ');
+        const msg = _T('plot_orphan_confirm',
+                       'These plots sit in zones this change removes: {list}. They stay recorded but lose their zone. Save anyway?')
+                    .replace('{list}', list);
+        if (!window.confirm(msg)) return;
+      }
+    }
 
     try {
       const res = await fetch('/api/geo/facility', {
@@ -4246,6 +4294,16 @@ function _T(k,f){var d=(typeof window!=="undefined"&&window._IEC)||{};return (d[
         // list, and the integration panel.
         _syncFacilityRef(json.facility_uuid);
         _upsertFacilityListItem(json.facility_uuid, data);
+        // 서버 판정(정본)이 남은 고아를 알려주면 그대로 알린다 — 저장 전 확인을
+        // 지나쳤거나, 다른 창에서 만든 구획이 있을 수 있다.
+        if ((json.orphaned_plots || []).length) {
+          const names = json.orphaned_plots
+                            .map(o => o.subject + ' (' + o.bay_id + ')').join(', ');
+          window.showToast(
+            _T('plot_orphan_warn',
+               'Plots without a zone after this change: {list}')
+              .replace('{list}', names), 'warning');
+        }
         loadIntegration(json.facility_uuid);
         document.dispatchEvent(new CustomEvent('facility-saved', {
           detail: { facility_uuid: json.facility_uuid }
@@ -4256,6 +4314,46 @@ function _T(k,f){var d=(typeof window!=="undefined"&&window._IEC)||{};return (d[
       }
     } catch (e) {
       alert('Save error: ' + e.message);
+    }
+  }
+
+  // Duplicate the facility currently open in the editor. The server clone
+  // (FacilityManager.clone_facility) copies geometry/spec but resets every
+  // device reference (fittings.actuator_id/input_id, actuators.device_uuid,
+  // weather_bindings) — the new facility starts with no sensors/outputs
+  // connected. This mirrors saveFacility's in-place update of the URL,
+  // list and integration panel; the only extra step is re-fetching the
+  // clone's full record so the editor and list row reflect the new uuid.
+  async function cloneFacility() {
+    const uuid = State.facilityUuid;
+    if (!uuid) {
+      alert(_T('clone_select_first', 'Select a facility to duplicate first.'));
+      return;
+    }
+    try {
+      const res = await fetch('/api/geo/facility/' + uuid + '/clone', {
+        method: 'POST',
+        credentials: 'same-origin'
+      });
+      const json = await res.json();
+      if (!json.ok) {
+        alert(_T('clone_failed', 'Duplicate failed: ') + (json.message || 'unknown error'));
+        return;
+      }
+      const detailRes = await fetch('/api/geo/facility/' + json.facility_uuid, { credentials: 'same-origin' });
+      const detailJson = await detailRes.json();
+      if (detailJson.ok && detailJson.facility) {
+        fillForm(detailJson.facility);
+        _upsertFacilityListItem(json.facility_uuid, detailJson.facility);
+      }
+      window.showToast(_T('cloned', 'Facility duplicated. Sensors and outputs were not carried over.'), 'success');
+      loadIntegration(json.facility_uuid);
+      document.dispatchEvent(new CustomEvent('facility-saved', {
+        detail: { facility_uuid: json.facility_uuid }
+      }));
+      if (window.FacilityStep && FacilityStep.refreshCheckLock) FacilityStep.refreshCheckLock();
+    } catch (e) {
+      alert(_T('clone_failed', 'Duplicate failed: ') + e.message);
     }
   }
 

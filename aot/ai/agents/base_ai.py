@@ -124,7 +124,7 @@ class AbstractAI(ABC):
     # equivalent) append each tool's raw result to the running message/contents
     # list with NO length guard — unlike the initial prompt, which _build_prompt()
     # truncates via get_context_budget(), that guard never runs again once the
-    # loop starts. A single unfiltered tool call (e.g. list_plantings with no
+    # loop starts. A single unfiltered tool call (e.g. list_plots with no
     # map_id, or get_zone_sensor_summary with no measurement_type) can return
     # tens of thousands of characters, and because these APIs are stateless each
     # subsequent fc_turn resends the WHOLE accumulated history — 2-3 such turns

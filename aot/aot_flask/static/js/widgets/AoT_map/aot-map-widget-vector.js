@@ -333,19 +333,22 @@
             }
 
             // 식생 구획(작기). GeoShape 가 아니라 별도 테이블이라 아래 오버레이
-            // 로더를 타지 않는다 — 자기 API(/api/geo/plantings)로 따로 온다.
+            // 로더를 타지 않는다 — 자기 API(/api/geo/plots)로 따로 온다.
             //
             // **await 하지 않는다.** 아래 로더들이 느리거나 하나가 걸리면 식생까지
             // 함께 멈추기 때문이다(실제로 그 자리에 두었더니 레이어가 아예 안
             // 올라왔다). fetch 왕복이 있어 실제 추가는 대개 도형 뒤가 된다.
             try {
-                if (window.AoTMapVegetation) {
+                if (window.AoTMapPlot) {
                     const _vegOpts = (vars && vars.vars) || {};
                     const _vegMapUuid = _vegOpts.selected_map_uuid ||
                                         _vegOpts.map_uuid ||
                                         (vars && vars.contentMapUuid) || '';
-                    const _vegOpt = _vegOpts.show_vegetation;
-                    window.AoTMapVegetation.load(uniqueId, map, {
+                    // 옛 키(show_vegetation)도 읽는다 — 새 키만 보면 일부러 꺼 둔
+                    // 사람의 레이어가 업그레이드에서 조용히 다시 켜진다.
+                    const _vegOpt = (_vegOpts.show_plots !== undefined)
+                        ? _vegOpts.show_plots : _vegOpts.show_vegetation;
+                    window.AoTMapPlot.load(uniqueId, map, {
                         mapUuid: _vegMapUuid,
                         shell: _showFacilityCenterOverlay,
                         facilityCentric: !!_vegOpts.label_priority_facility,
@@ -355,11 +358,11 @@
                         // 같아 매핑이 없다).
                         defaultTab: _vegOpts.popup_default_tab,
                         // [환경·제어] 배선은 위젯이 빌려준다 — shell 과 같은
-                        // 이음매다(_attachPlantingControl 주석 참조). 등록소를
+                        // 이음매다(_attachPlotControl 주석 참조). 등록소를
                         // 거치는 이유는 그 함수가 아직 정의되기 전이기 때문이다.
-                        attachControl: function (uid, popup, body, plantingUuid) {
-                            const fn = _plantingControlHooks[uid];
-                            if (fn) fn(uid, popup, body, plantingUuid);
+                        attachControl: function (uid, popup, body, plotUuid) {
+                            const fn = _plotControlHooks[uid];
+                            if (fn) fn(uid, popup, body, plotUuid);
                         }
                     });
                 }
@@ -588,7 +591,7 @@
     // 이름을 직접 참조하면 다른 스코프라 ReferenceError 가 나고, 그 자리의
     // try/catch 가 삼켜 **식생 레이어가 통째로 안 뜬다**(실제로 그렇게 됐다).
     // 그래서 늦게 찾아 쓴다.
-    var _plantingControlHooks = {};
+    var _plotControlHooks = {};
 
     function _modalUrl(kind, uuid, channel) {
         if (!uuid) return null;
@@ -844,14 +847,14 @@
             // 구획 줄 → 그 구획 모달로 내려간다. 구역 모달은 닫는다 —
             // 모달 위에 모달을 쌓으면 뒤로 가기가 어디로 가는지 알 수 없다
             // (필지 → 구역 줄 클릭과 같은 규약).
-            pane.querySelectorAll('.aot-ov-planting-link').forEach(function (row) {
+            pane.querySelectorAll('.aot-ov-plot-link').forEach(function (row) {
                 row.addEventListener('click', function () {
-                    var pUuid = row.dataset.plantingUuid;
-                    if (!pUuid || !window.AoTMapVegetation) return;
-                    var st = window.AoTMapVegetation.state(uid);
+                    var pUuid = row.dataset.plotUuid;
+                    if (!pUuid || !window.AoTMapPlot) return;
+                    var st = window.AoTMapPlot.state(uid);
                     if (!st || !st.opts) return;
                     _closeZoneModal(uid);
-                    window.AoTMapVegetation.openModal(
+                    window.AoTMapPlot.openModal(
                         uid, (_actLabelState[uid] || {}).map, pUuid, st.opts);
                 });
             });
@@ -1088,7 +1091,7 @@
         //
         // **구역과 식생이 이 하나를 함께 쓴다.** 모달은 한 번에 하나만 열리므로
         // 상태 슬롯(`_zonePopupState[uid]`)도 공유한다 — 다른 점은 `z.scope`
-        // 하나뿐이다(`{kind:'zone'|'planting', uuid}`).
+        // 하나뿐이다(`{kind:'zone'|'plot', uuid}`).
         //
         // 식생에서 달라지는 것은 **드래그 정렬을 저장하지 않는다** 는 것뿐이다:
         // 장치 순서는 구역의 속성이라, 구획 창에서 바꾸면 그 구역을 보는 다른
@@ -1097,7 +1100,7 @@
         function _renderZoneDevices(uid, pane, data, zoneUuid) {
             var canCtrl = _zoneCanCtrl(uid);
             var z = _zonePopupState[uid] || {};
-            var isPlanting = !!(z.scope && z.scope.kind === 'planting');
+            var isPlot = !!(z.scope && z.scope.kind === 'plot');
             var outputOrder = (data.zone && data.zone.output_order) || [];
             var sensors = z._sensors || [];
             var html = '';
@@ -1184,7 +1187,7 @@
                                                                     out.distance_m,
                                                                     out.nearest_reason),
                             rawName: true,
-                            drag: canCtrl && !isPlanting,
+                            drag: canCtrl && !isPlot,
                             nameAttrs: ' style="cursor:pointer"' +
                                 ' data-output-id="' + _escZ(out.unique_id) + '"' +
                                 ' data-output-name="' + _escZ(rawLabel) + '"',
@@ -1239,7 +1242,7 @@
 
             // 드래그 정렬 — 구역에서만. 순서는 구역의 속성이라 구획 창에서
             // 바꾸면 그 구역을 보는 다른 사람의 순서까지 함께 바뀐다.
-            if (canCtrl && !isPlanting && window.AoTActuatorOrder) {
+            if (canCtrl && !isPlot && window.AoTActuatorOrder) {
                 var listEl = pane.querySelector('.aot-zone-output-list');
                 if (listEl) {
                     window.AoTActuatorOrder.makeSortable(listEl, {
@@ -1633,7 +1636,7 @@
 
         // ── 식생 모달에 [환경·제어]를 붙인다 ───────────────────────────────────
         //
-        // 구획 모달 자체는 `aot-map-vegetation.js` 가 그린다(작물·기간·이력·노트는
+        // 구획 모달 자체는 `aot-map-plot.js` 가 그린다(작물·기간·이력·노트는
         // 그쪽 일이다). 제어 배선만 여기서 빌려준다 — 폴링·토글·예약·이력
         // 오버레이가 전부 이 파일의 `_zonePopupState` 위에 서 있어서, 그쪽으로
         // 옮기면 같은 기계를 두 벌 갖게 된다.
@@ -1641,7 +1644,7 @@
         // `shell` 을 opts 로 넘기는 것과 같은 이음매다. 모달은 한 번에 하나만
         // 열리므로 상태 슬롯도 구역과 **공유**한다 — 구역 모달이 열려 있었다면
         // 그쪽 폴링은 이미 자기 close 훅에서 정리됐다.
-        function _attachPlantingControl(uid, popup, body, plantingUuid) {
+        function _attachPlotControl(uid, popup, body, plotUuid) {
             if (!popup || !body) return;
             var pane = body.querySelector('.aot-bay-popup-pane[data-pane="envctl"]');
             if (!pane) return;
@@ -1658,7 +1661,7 @@
                 // 실수로 구획 창에서 나가면 **그 구역을 보는 다른 사람의 설정**을
                 // 바꾼다. 값이 없으면 그 경로는 애초에 성립하지 않는다.
                 zoneUuid: null,
-                scope: { kind: 'planting', uuid: plantingUuid },
+                scope: { kind: 'plot', uuid: plotUuid },
                 _sensors: [], _histCache: {},
                 overlayOutputId: null, overlayOutputName: null
             };
@@ -1676,7 +1679,7 @@
 
             pane.innerHTML = _buildZoneSkel();
 
-            fetch('/api/geo/planting/' + encodeURIComponent(plantingUuid) + '/contents',
+            fetch('/api/geo/plot/' + encodeURIComponent(plotUuid) + '/contents',
                   { cache: 'no-store' })
                 .then(function (r) { return r.ok ? r.json() : null; })
                 .then(function (data) {
@@ -1697,8 +1700,8 @@
                     // 아니라 기하에서 파생된 것이라 이 응답에서만 알 수 있다.
                     _wireUpBtn(body, uid, {
                         kind: 'zone',
-                        uuid: (data.planting || {}).zone_uuid,
-                        name: (data.planting || {}).zone_name
+                        uuid: (data.plot || {}).zone_uuid,
+                        name: (data.plot || {}).zone_name
                     }, function () {
                         var z2 = _zonePopupState[uid];
                         if (z2 && z2.popup) { try { z2.popup.remove(); } catch (e) {} }
@@ -1720,7 +1723,7 @@
         }
 
         // 식생 로더가 늦게 찾아 쓸 수 있게 등록한다(등록소 주석 참조).
-        _plantingControlHooks[uniqueId] = _attachPlantingControl;
+        _plotControlHooks[uniqueId] = _attachPlotControl;
 
         // ── 상위(필지)로 올라가는 화살표 — 구역·시설 모달 제목줄 공용 ──────────
         //
@@ -2439,12 +2442,12 @@
                 // 작물은 **숫자로만** 낸다. 아래 구역 행(이름|값|상태)에
                 // 작물명을 이어붙이면 한 열이 두 가지를 말하게 되고 열 간격이
                 // 틀어진다 — 필지에서 알고 싶은 것은 규모 감각이다.
-                (counts.plantings
+                (counts.plots
                   ? '<div class="aot-ov-row"><span>' + _tr('Growing now') +
                     '</span><span>' +
                     _tr('%(kinds)s kinds · %(plots)s plots')
-                      .replace('%(kinds)s', String(counts.crops || 0))
-                      .replace('%(plots)s', String(counts.plantings)) +
+                      .replace('%(kinds)s', String(counts.subjects || 0))
+                      .replace('%(plots)s', String(counts.plots)) +
                     '</span></div>'
                   : '') +
                 '</div>';
@@ -3719,7 +3722,23 @@
                 var node = tmp.firstElementChild;
                 var slot = pane.querySelector('.aot-ov-record') ||
                            pane.querySelector('.aot-ov-notes');
-                if (slot) { slot.replaceWith(node); } else { pane.appendChild(node); }
+                // **노트 목록은 비교에서 빼야 한다.** `buildRecordBlock` 은 그
+                // 자리를 자리표시자('…')로 두고 `_wireFacilityNotes` 가 나중에
+                // 채운다. 그대로 비교하면 새 HTML('…')과 화면(실제 노트)이 늘
+                // 달라서 폴링마다 교체 → 노트 재로딩 → 다시 교체가 무한히 돌고,
+                // 그것이 5초마다 깜빡이던 실제 원인이었다.
+                //
+                // 지금 화면의 노트를 새 노드에 옮겨 심고 비교한다 — 나머지가
+                // 같으면 손대지 않고, 달라서 교체할 때도 노트가 살아남는다.
+                if (slot) {
+                    var curList = slot.querySelector('.aot-ov-notes-list');
+                    var newList = node.querySelector('.aot-ov-notes-list');
+                    if (curList && newList) newList.innerHTML = curList.innerHTML;
+                    if (slot.outerHTML === node.outerHTML) return;
+                    slot.replaceWith(node);
+                } else {
+                    pane.appendChild(node);
+                }
                 _wireFacilityNotes(uid, facilityUuid, pane);
             };
 
@@ -3735,6 +3754,192 @@
                     insert(st2._schedCache);
                 })
                 .catch(function () {});
+        }
+
+        /**
+         * HTML 문자열 → 첫 요소 노드.
+         *
+         * 폴링 갱신에서 "내용이 같으면 손대지 않는다" 를 판정할 때 **문자열끼리
+         * 비교하면 안 된다.** 브라우저는 파싱하며 속성 순서·따옴표·`style` 표기를
+         * 정규화하므로(`display:none` → `display: none;`), 원본 문자열과 DOM 의
+         * `outerHTML` 은 내용이 같아도 항상 달라 매번 교체된다 = 계속 깜빡인다.
+         * 양쪽 다 파싱한 뒤 비교해야 한다.
+         */
+        function _parseNode(html) {
+            var tmp = document.createElement('div');
+            tmp.innerHTML = html;
+            return tmp.firstElementChild;
+        }
+
+        /** 오늘(로컬). toISOString() 은 UTC 라 한국 오전에는 하루 전이 나온다. */
+        function _todayLocal() {
+            var d = new Date();
+            var p = function (n) { return String(n).padStart(2, '0'); };
+            return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
+        }
+
+        /**
+         * "여기에 심기" 배선 — **위젯에서 새 구획을 만든다.**
+         *
+         * 시설 구획은 기하를 그리지 않으므로 여기서 만들 수 있다. 이것이 없으면
+         * 지도만 쓰는 사람은 온실 식생을 아예 관리하지 못한다 — 시설 편집기까지
+         * 갈 수 있는 계정만 심을 수 있게 되기 때문이다.
+         *
+         * 저장 뒤에는 런타임 캐시를 버리고 [현황]을 다시 그린다. 캐시만 두면
+         * 방금 심은 것이 다음 폴링까지 화면에 없다(그리고 ETag 때문에 그 폴링이
+         * 304 로 끝나면 더 오래 비어 있다 — `invalidate` 가 둘을 함께 버린다).
+         */
+        function _wireFacilityPlotAdd(uid, facilityUuid, bayId, block, pane) {
+            var btn = block.querySelector('.aot-ov-plot-add');
+            var wrap = block.querySelector('.aot-ov-plot-new-wrap');
+            if (!btn || !wrap) return;
+            var show = function (on) {
+                wrap.style.display = on ? '' : 'none';
+                btn.style.display = on ? 'none' : '';
+                // 주기 갱신이 이 폼을 지우지 않도록 잠근다(위 _loadOverview 참조).
+                var st = _actLabelState[uid];
+                if (st) st._plantEditing = on;
+            };
+            btn.addEventListener('click', function () { show(true); });
+            var cancel = wrap.querySelector('.aot-ov-plot-new-cancel');
+            if (cancel) cancel.addEventListener('click', function () { show(false); });
+
+            var save = wrap.querySelector('.aot-ov-plot-new-save');
+            if (!save) return;
+            save.addEventListener('click', function () {
+                var payload = { facility_uuid: facilityUuid };
+                wrap.querySelectorAll('[data-nf]').forEach(function (el) {
+                    payload[el.getAttribute('data-nf')] = el.value || '';
+                });
+                if (!('bay_id' in payload)) payload.bay_id = bayId || '';
+                if (!payload.subject) {
+                    if (window.showToast) {
+                        window.showToast(_tr('Enter what is planted.'), 'warning');
+                    }
+                    return;
+                }
+                if (!payload.started_on) payload.started_on = _todayLocal();
+                save.disabled = true;
+                fetch('/api/geo/plot', {
+                    method: 'POST', credentials: 'same-origin',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRFToken': _csrfHeader()
+                    },
+                    body: JSON.stringify(payload)
+                }).then(function (r) { return r.json().catch(function () { return {}; }); })
+                  .then(function (j) {
+                    save.disabled = false;
+                    if (!j || !j.ok) {
+                        if (window.showToast) {
+                            window.showToast((j && j.message) || _tr('Save failed'), 'error');
+                        }
+                        return;      // 잠금은 유지 — 사람이 고칠 입력이 남아 있다
+                    }
+                    var stx = _actLabelState[uid];
+                    if (stx) stx._plantEditing = false;
+                    if (window.AoTFacilityRuntime) {
+                        window.AoTFacilityRuntime.invalidate(facilityUuid);
+                    }
+                    // 지도 레이어도 갱신 — 새 구획이 그 구역 자리에 그려져야 한다.
+                    if (window.AoTMapPlot) {
+                        var vst = window.AoTMapPlot.state(uid);
+                        var st2 = _actLabelState[uid];
+                        if (vst && st2 && st2.map) {
+                            window.AoTMapPlot.load(uid, st2.map, vst.opts || {});
+                        }
+                    }
+                    var old = pane.querySelector('.aot-ov-facility-plots');
+                    if (old) old.remove();
+                    _appendFacilityPlots(uid, facilityUuid, pane);
+                  }).catch(function () { save.disabled = false; });
+            });
+        }
+
+        /**
+         * [현황]에 "지금 심겨 있는 것" 을 붙인다 — 제어 → 식생 방향.
+         *
+         * 데이터는 시설 런타임(`plots`)에서 온다. 이미 폴링하는 응답이라
+         * 조회가 하나도 늘지 않는다.
+         *
+         * 줄을 누르면 그 구획 모달로 내려간다(구역 모달의 `aot-ov-plot-link`
+         * 와 같은 규약) — 거기서 작물·기간·구역을 고칠 수 있다.
+         */
+        function _appendFacilityPlots(uid, facilityUuid, pane) {
+            if (!window.AoTFacilityRuntime || !window.AoTMapPopup ||
+                !window.AoTMapPopup.buildFacilityPlotsHtml) return;
+            var st0 = _actLabelState[uid];
+            var bayId = st0 ? st0.openBayId : null;
+            window.AoTFacilityRuntime.get(facilityUuid).then(function (rt) {
+                if (!rt || !pane || !pane.isConnected) return;
+                var st = _actLabelState[uid];
+                if (!st || st.openBayFacility !== facilityUuid) return;
+                var html = window.AoTMapPopup.buildFacilityPlotsHtml(
+                    rt.plots || [], bayId, {
+                        // 시설 [현황]과 같은 권한 축(edit_settings). 식생 API 도
+                        // 같은 것을 요구하므로, 버튼이 보이면 저장도 된다.
+                        canEdit: !!(st.repEditByFac && st.repEditByFac[facilityUuid]),
+                        bays: rt.bays || [],
+                        today: _todayLocal()
+                    });
+                if (!html) return;
+                var existing = pane.querySelector('.aot-ov-facility-plots');
+                var block = _parseNode(html);
+                if (!block) return;
+                // 같은 내용이면 손대지 않는다 — 5초마다 지웠다 다시 그리면
+                // 화면이 깜빡이고, 열어 둔 심기 폼도 사라진다.
+                if (existing && existing.outerHTML === block.outerHTML) return;
+                if (existing) {
+                    existing.replaceWith(block);
+                    _wireFacilityPlotAdd(uid, facilityUuid, bayId, block, pane);
+                    block.querySelectorAll('.aot-ov-plot-link').forEach(function (row) {
+                        row.addEventListener('click', function () {
+                            var pUuid = row.dataset.plotUuid;
+                            if (!pUuid || !window.AoTMapPlot) return;
+                            var vst2 = window.AoTMapPlot.state(uid);
+                            var st3 = _actLabelState[uid];
+                            if (!st3) return;
+                            if (st3.openBayPopup) {
+                                try { st3.openBayPopup.remove(); } catch (e) {}
+                            }
+                            window.AoTMapPlot.openModal(
+                                uid, st3.map, pUuid, (vst2 && vst2.opts) || {});
+                        });
+                    });
+                    return;
+                }
+                // 환경값 블록 **다음**. 무엇이 자라는지는 그 값을 읽는 근거라
+                // 목록(액추에이터·일정)보다 위에 있어야 한다.
+                //
+                // 환경 블록은 `_prependFacilityEnvNow` 가 `afterbegin` 으로 넣고
+                // 이 함수는 그 뒤에 불리므로, 첫 자식이 곧 환경 블록이다. 다만
+                // 그쪽이 값을 하나도 못 만들면 블록이 없을 수 있어(센서 미등록
+                // 시설) 첫 자식 유무로 갈린다.
+                var first = pane.firstElementChild;
+                if (first && first.nextSibling) {
+                    pane.insertBefore(block, first.nextSibling);
+                } else if (first) {
+                    pane.appendChild(block);
+                } else {
+                    pane.appendChild(block);
+                }
+                _wireFacilityPlotAdd(uid, facilityUuid, bayId, block, pane);
+                block.querySelectorAll('.aot-ov-plot-link').forEach(function (row) {
+                    row.addEventListener('click', function () {
+                        var pUuid = row.dataset.plotUuid;
+                        if (!pUuid || !window.AoTMapPlot) return;
+                        var vst = window.AoTMapPlot.state(uid);
+                        var st2 = _actLabelState[uid];
+                        if (!st2) return;
+                        if (st2.openBayPopup) {
+                            try { st2.openBayPopup.remove(); } catch (e) {}
+                        }
+                        window.AoTMapPlot.openModal(
+                            uid, st2.map, pUuid, (vst && vst.opts) || {});
+                    });
+                });
+            }).catch(function () { /* 부가 정보다 — 실패해도 [현황]은 그대로 */ });
         }
 
         function _prependFacilityEnvNow(uid, facilityUuid, pane) {
@@ -3777,7 +3982,15 @@
                     selectable: canEdit
                 });
                 if (html) {
-                    pane.insertAdjacentHTML('afterbegin', html);
+                    // 같은 값이면 DOM 을 건드리지 않는다(위 _loadOverview 주석).
+                    var node = _parseNode(html);
+                    var cur = pane.querySelector('.aot-ov-envnow');
+                    if (cur && node && cur.outerHTML === node.outerHTML) return;
+                    if (cur && node) {
+                        cur.replaceWith(node);
+                    } else {
+                        pane.insertAdjacentHTML('afterbegin', html);
+                    }
                     _wireFacilityRepPick(uid, facilityUuid, pane, canEdit);
                 }
             }).catch(function () {});
@@ -3795,6 +4008,12 @@
             if (!pane) return;
             if (st._iecPending) return;   // 토글 적용 중 — 재렌더로 pending 상태를 지우지 않음
             if (st._ovEditing) return;    // 설명 편집 중 — 30초 갱신이 입력을 지우지 않음
+            // 심기 폼이 열려 있는 동안도 마찬가지다. [현황]은 30초마다 통째로
+            // 다시 그려지는데, 그때 작성 중인 작물명·날짜가 사라진다 — 처음에는
+            // "버튼이 안 먹는다" 로 보인다(폼을 열자마자 갱신이 지워버린다).
+            // `_ovEditing` 과 따로 두는 이유: 설명 편집과 동시에 열릴 수 있고,
+            // 한쪽을 닫을 때 다른 쪽 보호까지 풀리면 안 된다.
+            if (st._plantEditing) return;
             var _tr = function (s) { return (window._ ? window._(s) : s); };
             var _j = function (r) { return r.ok ? r.json() : null; };
             var _render = function (res) {
@@ -3808,12 +4027,25 @@
                 // [현황] = 동적 정보, [개요] = 정적 정보 — 분리 렌더.
                 // [개요]는 내용이 실제로 바뀐 경우에만 DOM 교체 — 매 갱신마다
                 // innerHTML 을 갈아끼우면 대표사진 <img> 가 다시 로드되며 깜빡인다.
-                pane.innerHTML = window.AoTMapPopup.buildOverviewSection(
+                // 위젯 폴링 주기(기본 5초)마다 불린다. 예전에는 그때마다
+                // `innerHTML` 을 통째로 갈아끼워 **값이 하나도 안 바뀌어도 모달이
+                // 계속 깜빡였다** — 그 위에 비동기로 붙는 블록들(환경·식생·기록)이
+                // 매번 사라졌다 다시 나타나며 높이까지 튀었다.
+                //
+                // 내용이 같으면 손대지 않는다. 그러면 그 안의 배선(노트·토글)도
+                // 살아남아 다시 붙일 일이 없다. [개요] 탭이 이미 같은 규칙이다.
+                var ovHtml = window.AoTMapPopup.buildOverviewSection(
                     res[0], res[1], { canToggle: st2.canCtrl });
+                var ovSame = (st2._ovHtml === ovHtml) && pane.children.length > 0;
+                if (!ovSame) {
+                    st2._ovHtml = ovHtml;
+                    pane.innerHTML = ovHtml;
+                }
                 // 현재 환경 + 센서 신뢰도를 맨 위에. 자동제어가 안 걸린 시설의
                 // [현황]은 예전에 "연동된 자동제어 없음" 한 줄이 전부여서, 수동
                 // 운영 시설에서는 탭이 통째로 빈 껍데기였다.
                 _prependFacilityEnvNow(uid, facilityUuid, pane);
+                _appendFacilityPlots(uid, facilityUuid, pane);
                 _appendFacilitySchedule(uid, facilityUuid, pane);
                 var aboutChanged = false;
                 if (abPane) {
@@ -3826,7 +4058,9 @@
                 }
                 var wireEl = abPane || pane;   // 사진/설명은 [개요] pane (노트는 [현황])
 
-                _wireFacilityNotes(uid, facilityUuid, pane);
+                // [현황] DOM 이 그대로면 리스너도 그대로 살아 있다 — 다시 붙이면
+                // 노트 목록을 되쓰면서 화면이 깜빡이고, 클릭 리스너도 겹친다.
+                if (!ovSame) _wireFacilityNotes(uid, facilityUuid, pane);
 
                 // 대표사진 업로드 (editor 이상에서만 버튼이 렌더됨).
                 // [개요] DOM 이 교체된 경우에만 wiring — 유지된 DOM 에
@@ -4182,6 +4416,7 @@
                     st2.openBayId = null;
                     st2.overlaySlot = null;
                     st2._ovEditing = false;
+                    st2._plantEditing = false;
                 }
             });
             st.openBayPopup = popup;
@@ -4190,6 +4425,7 @@
             st.overlaySlot = null;
             st._notesCache = null;   // 시설이 바뀌면 이전 시설의 노트를 물려주지 않는다
             st._aboutHtml = null;
+            st._ovHtml = null;       // [현황] 재사용 캐시 — 시설이 바뀌면 버린다
 
             // [현황] 데이터 로드 + 30초 주기 갱신 (팝업 열려있는 동안만 —
             // 사이클 주기와 유사하므로 더 짧을 필요 없음)
@@ -6837,9 +7073,9 @@
             // (fill/line) follows the facility category toggle.
             // 식생 구획 — 레이어 id 는 uid 가 붙어 고정 문자열이 아니다.
             // `layers` 는 아래 _applyShapeLOD/_applyShapeVisible 이 쓰는 실제 id 라
-            // 여기서 만들어 넣는다(aot-map-vegetation.js 의 _ids 와 같은 규약).
-            { cat: 'vegetation', label: (window._ ? window._('Planting') : 'Planting'),
-              layers: ['aot-vegetation-fill-' + uniqueId, 'aot-vegetation-line-' + uniqueId] },
+            // 여기서 만들어 넣는다(aot-map-plot.js 의 _ids 와 같은 규약).
+            { cat: 'plot', label: (window._ ? window._('Plot') : 'Plot'),
+              layers: ['aot-plot-fill-' + uniqueId, 'aot-plot-line-' + uniqueId] },
             { cat: 'facility',  label: (window._ ? window._('Facility') : 'Facility'),  layers: ['facilities-fill', 'facilities-line'], labelType: 'facility' },
             { cat: 'equipment', label: (window._ ? window._('Equipment') : 'Equipment'),layers: ['equipment-line', 'equipment-fill'],                  labelType: 'equipment' },
             { cat: 'device',    label: (window._ ? window._('Device') : 'Device'),      layers: ['aot-devices-line', 'aot-devices-fill'],              labelType: 'aot_device', markers: true },
@@ -6865,7 +7101,7 @@
         const _CAT_SHOW_KEY = {
             land: 'show_site_shape', zone: 'show_zone_shape', facility: 'show_facility_shape',
             equipment: 'show_equipment_shape', device: 'show_device_shapes', drawn: 'show_drawn_shapes',
-            vegetation: 'show_vegetation'
+            plot: 'show_plots'
         };
 
         function _catReadSaved(cat) {
@@ -6947,8 +7183,8 @@
             // 식생 칩은 DOM 마커라 setLayoutProperty 로 안 꺼진다 — 모듈이
             // 도형·칩을 함께 처리한다. 이걸 빠뜨리면 도형만 사라지고 라벨이
             // 허공에 남는다.
-            if (cat === 'vegetation' && window.AoTMapVegetation) {
-                try { window.AoTMapVegetation.setVisible(uniqueId, map, visible); } catch (e) { }
+            if (cat === 'plot' && window.AoTMapPlot) {
+                try { window.AoTMapPlot.setVisible(uniqueId, map, visible); } catch (e) { }
             }
             // Turning a category ON that was OFF at widget load never had its
             // MapLibre layer created (loadGeoJSONLayers only fetches/adds a
@@ -7709,8 +7945,8 @@
             });
             // 식생 구획도 setStyle 에 함께 지워진다 — layerDefs 캐시에는 없으므로
             // (자기 소스로 따로 올린다) 여기서 자기 캐시로 되살린다.
-            if (window.AoTMapVegetation && window.AoTMapVegetation.rehydrate) {
-                try { window.AoTMapVegetation.rehydrate(uniqueId, map); } catch (e) {}
+            if (window.AoTMapPlot && window.AoTMapPlot.rehydrate) {
+                try { window.AoTMapPlot.rehydrate(uniqueId, map); } catch (e) {}
             }
 
             // Re-attach Three.js facility overlay (custom layer also wiped by setStyle).

@@ -468,7 +468,14 @@ def register_extensions(app):
     # Create and populate database if it doesn't exist
     with app.app_context():
         if os.environ.get("ALEMBIC_RUNNING") != "1":
-            db.create_all()
+            # db.create_all() 을 여기서 무조건 부르지 않는다 — 기존 DB 가 있는데
+            # SQLAlchemy 모델 메타데이터로 먼저 테이블을 만들어 버리면, alembic 이
+            # 같은 테이블을 자기 DDL(정확한 인덱스 이름 등)로 만들려 할 때
+            # "table already exists" 로 실패하고 alembic_version 은 갱신되지 않는다
+            # — 재시도해도 영원히 같은 이유로 막힌다(2026-08-18 koat 26.08.11 업그레이드
+            # 실패 + 완전 신규 설치도 동일 증상으로 재현됨, p6_37/p6_38 두 신규 테이블).
+            # db.create_all() 이 필요한 경우(완전 신규 설치)와 그렇지 않은 경우를
+            # 가르는 판단은 alembic_upgrade_db() 하나에게만 맡긴다.
             # Database migration on startup
             from aot.databases.models import alembic_upgrade_db
             alembic_upgrade_db(app)

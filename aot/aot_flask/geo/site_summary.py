@@ -108,7 +108,7 @@ _PLANTING_CONTENTS_CACHE = {}
 _PLANTING_CONTENTS_LOCKS = {}
 
 
-def cached_planting_contents(planting_uuid, build, force=False):
+def cached_plot_contents(plot_uuid, build, force=False):
     """식생 구획 모달 응답 캐시 — 구역 모달과 **같은 수명**(30초).
 
     사전을 따로 두는 이유는 무효화 단위가 다르기 때문이다: 구획을 고치면 그
@@ -116,10 +116,10 @@ def cached_planting_contents(planting_uuid, build, force=False):
     구획 캐시를 함께 날리거나 그 반대가 된다.
     """
     return cached_build(_PLANTING_CONTENTS_CACHE, _PLANTING_CONTENTS_LOCKS,
-                        planting_uuid, _ZONE_CONTENTS_TTL_S, build, force)
+                        plot_uuid, _ZONE_CONTENTS_TTL_S, build, force)
 
 
-def invalidate_planting_contents(planting_uuid=None):
+def invalidate_plot_contents(plot_uuid=None):
     """구획이 바뀐 직후(저장·종료·삭제) 부른다.
 
     `None` 이면 전부 버린다 — 새 구획이 생기면 **다른 구획의 응답도** 달라지기
@@ -128,10 +128,10 @@ def invalidate_planting_contents(planting_uuid=None):
     구획을 빠뜨린 채로 보인다.
     """
     with _CACHE_LOCK:
-        if planting_uuid is None:
+        if plot_uuid is None:
             _PLANTING_CONTENTS_CACHE.clear()
         else:
-            _PLANTING_CONTENTS_CACHE.pop(planting_uuid, None)
+            _PLANTING_CONTENTS_CACHE.pop(plot_uuid, None)
 
 
 def invalidate_zone_contents_all():
@@ -358,7 +358,7 @@ def _build_summary(site_uuid):
                 'zones': sum(1 for c in children if c['kind'] == 'zone'),
                 'facilities': sum(1 for c in children if c['kind'] == 'facility'),
                 'devices': len(all_ids),
-            }, **_planting_counts(site)),
+            }, **_plot_counts(site)),
         },
         'children': children,
         # 다가오는 일정 — 구역·식생·시설과 **같은 창(지금부터)·같은 목록**이다.
@@ -374,8 +374,8 @@ def _build_summary(site_uuid):
     }
 
 
-def _planting_counts(site):
-    """필지 안에서 재배 중인 작물 종수·구획 수 → `{'crops', 'plantings'}`.
+def _plot_counts(site):
+    """필지 안에서 구획 대상 종수·구획 수 → `{'subjects', 'plots'}`.
 
     **작물 이름을 구역 행에 넣지 않는다.** 그 행은 이미 `이름 | 값 | 상태`
     3열이라 거기에 작물을 이어붙이면 한 열이 두 가지를 말하게 되고 열 간격이
@@ -385,24 +385,24 @@ def _planting_counts(site):
     실패해도 필지 요약 전체를 막지 않는다 — 식생이 없는 지도가 정상이다.
     """
     try:
-        from aot.aot_flask.geo import planting_context
+        from aot.aot_flask.geo import plot_context
 
-        rows = planting_context.active_plantings(site.geo_id)
+        rows = plot_context.active_plots(site.geo_id)
         if not rows:
-            return {'crops': 0, 'plantings': 0}
+            return {'subjects': 0, 'plots': 0}
 
-        site_geom = planting_context.geometry_of(site)
+        site_geom = plot_context.geometry_of(site)
         inside = []
         for row in rows:
-            covered = planting_context.plantings_covered_by_shape(
+            covered = plot_context.plots_covered_by_shape(
                 site_geom, site.geo_id, candidates=[row])
             if covered:
                 inside.append(row)
-        return {'crops': len({r.crop for r in inside if r.crop}),
-                'plantings': len(inside)}
+        return {'subjects': len({r.subject for r in inside if r.subject}),
+                'plots': len(inside)}
     except Exception:
         logger.exception('site summary: 식생 집계 실패')
-        return {'crops': 0, 'plantings': 0}
+        return {'subjects': 0, 'plots': 0}
 
 
 def _direct_children(site):

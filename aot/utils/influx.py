@@ -188,7 +188,7 @@ def add_measurements_influxdb(unique_id, measurements, use_same_timestamp=True, 
 def query_flux(unit, unique_id,
                value=None, measure=None, channel=None, ts_str=None,
                start_str=None, end_str=None, min_value=None, max_value=None, past_sec=None, group_sec=None,
-               limit=None):
+               limit=None, group_fn=None):
     """Generate influxdb query string (flux edition, using influxdb_client)."""
     settings = db_retrieve_table_daemon(Misc, entry='first')
     influx_host = resolve_measurement_db_host(settings.measurement_db_host)
@@ -235,7 +235,14 @@ def query_flux(unit, unique_id,
         query += f' |> filter(fn: (r) => r._time == {ts_str})'
 
     if group_sec:
-        if settings.measurement_db_version == '1':
+        # group_fn: 창마다 어떤 통계를 낼지. 기본(None)은 기존 동작 그대로 —
+        # 그래프가 쓰는 평균이다. 'max'/'min' 은 일별 최고·최저가 필요한 자리
+        # (GDD = (Tmax+Tmin)/2)에서 쓴다. 여기서 만들지 않으면 그 자리가 Flux
+        # 쿼리를 한 벌 더 짜게 되고, 버킷·필터 규약이 두 곳으로 갈린다.
+        _fn = group_fn if group_fn in ('max', 'min', 'mean', 'median') else None
+        if _fn:
+            query += f' |> aggregateWindow(every: {group_sec}s, fn: {_fn})'
+        elif settings.measurement_db_version == '1':
             # TODO: Change median to mean when issue is fixed
             # Bug in influxdb/Flux v1.8.10 due to mean
             # Error: panic: runtime error: invalid memory address or nil pointer dereference
@@ -399,7 +406,7 @@ def bulk_key(unit, device_id, channel, measure):
 def query_string(unit, unique_id,
                  value=None, measure=None, channel=None, ts_str=None,
                  start_str=None, end_str=None, min_value=None, max_value=None,
-                 past_sec=None, group_sec=None, limit=None):
+                 past_sec=None, group_sec=None, limit=None, group_fn=None):
     """Generate influxdb query string."""
     ret_value = None
     settings = db_retrieve_table_daemon(Misc, entry='first')
@@ -409,7 +416,8 @@ def query_string(unit, unique_id,
             unit, unique_id,
             value=value, measure=measure, channel=channel, ts_str=ts_str,
             start_str=start_str, end_str=end_str, min_value=min_value, max_value=max_value,
-            past_sec=past_sec, group_sec=group_sec, limit=limit)
+            past_sec=past_sec, group_sec=group_sec, limit=limit,
+            group_fn=group_fn)
 
     return ret_value
 

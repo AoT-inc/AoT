@@ -1775,10 +1775,10 @@ class AoTDataToolService:
                     # 그 아래 전부를 돌려주므로 구분이 곧 답의 정확도가 된다.
                     if not _nm:
                         try:
-                            from aot.databases.models import GeoPlanting, GeoFacility
-                            pl = GeoPlanting.query.filter_by(unique_id=tid).first()
+                            from aot.databases.models import GeoPlot, GeoFacility
+                            pl = GeoPlot.query.filter_by(unique_id=tid).first()
                             if pl is not None:
-                                _nm = pl.name or pl.crop
+                                _nm = pl.name or pl.subject
                             else:
                                 fac = GeoFacility.query.filter_by(unique_id=tid).first()
                                 if fac is not None:
@@ -6072,13 +6072,13 @@ class AoTDataToolService:
                 return row.unique_id, _tt, row.name, None, None
 
         # 5) Crop-name fallback — growers say what GROWS there, not the map name.
-        by_crop = AoTDataToolService._resolve_target_by_crop(_q)
-        if by_crop:
-            return by_crop
+        by_subject = AoTDataToolService._resolve_target_by_subject(_q)
+        if by_subject:
+            return by_subject
 
         return None, None, None, None, None
 
-    # Place words a grower appends to a crop name. Longest first so '재배지' is
+    # Place words people append to a subject name. Longest first so '재배지' is
     # tried before any shorter word that could also match. '포장'/'구역' are in
     # the site/zone naming scheme too, but stripping them is harmless HERE:
     # this runs only after every GeoShape match already failed, so a real
@@ -6095,9 +6095,9 @@ class AoTDataToolService:
         return None
 
     @staticmethod
-    def _active_crop_plots():
-        """Active GeoPlanting rows paired with the zone that contains them, as
-        [{'crop','variety','name','plot_id','zone_id','zone_type','zone_name'}].
+    def _active_subject_plots():
+        """Active GeoPlot rows paired with the zone that contains them, as
+        [{'subject','variety','name','plot_id','zone_id','zone_type','zone_name'}].
 
         **A plot IS a write target now.** It was not when this was written —
         notes and schedules only attached to GeoShapes, so a plot outside every
@@ -6109,7 +6109,7 @@ class AoTDataToolService:
         """
         import json as _json
         from aot.databases.models import GeoMap
-        from aot.aot_flask.geo import planting_context, device_membership
+        from aot.aot_flask.geo import plot_context, device_membership
 
         out = []
         try:
@@ -6119,7 +6119,7 @@ class AoTDataToolService:
 
         for m in maps:
             try:
-                rows = planting_context.active_plantings(m.unique_id)
+                rows = plot_context.active_plots(m.unique_id)
             except Exception:
                 continue
             if not rows:
@@ -6130,7 +6130,7 @@ class AoTDataToolService:
                 containers = None
             for row in rows:
                 try:
-                    zone = planting_context.zone_for_planting(row, containers=containers)
+                    zone = plot_context.zone_for_plot(row, containers=containers)
                 except Exception:
                     zone = None
                 zone_name, zone_id, _zt = '', None, None
@@ -6144,23 +6144,23 @@ class AoTDataToolService:
                     zone_id = zone.unique_id
                     _zt = zone.type if zone.type in ('zone', 'site', 'facility', 'facility_bay', 'equipment') else 'zone'
                 out.append({
-                    'crop': row.crop, 'variety': row.variety, 'name': row.name,
+                    'subject': row.subject, 'variety': row.variety, 'name': row.name,
                     'plot_id': row.unique_id,
                     'zone_id': zone_id, 'zone_type': _zt, 'zone_name': zone_name,
                 })
         return out
 
     @staticmethod
-    def _resolve_target_by_crop(query):
-        """Resolve '콩밭' / '장풍' to the PLOT that crop grows in.
+    def _resolve_target_by_subject(query):
+        """Resolve '콩밭' / '장풍' to the PLOT that subject is in.
 
         Farm hands name a plot by what is in it, not by the map's zone name
         ('3-1'), so every zone-name pass above misses those words entirely.
-        Matching runs against ACTIVE plantings only — last year's crop must not
+        Matching runs against ACTIVE plots only — last year's subject must not
         steer this year's note.
 
         **It resolves to the plot, not its zone.** It used to return the
-        containing zone, because a GeoPlanting could not be written against.
+        containing zone, because a GeoPlot could not be written against.
         That stopped being true on 2026-08-18: a note's selected span becomes a
         schedule attached to the plot. Returning the zone meant the user asked
         about '장풍', the resolver answered 'zone 3-1', and the two schedules
@@ -6168,15 +6168,15 @@ class AoTDataToolService:
 
         Returns the same 5-tuple as _resolve_note_target(), or None for no match.
 
-        One crop spread over several PLOTS resolves to None on purpose. The
+        One subject spread over several PLOTS resolves to None on purpose. The
         5-tuple cannot carry 'ambiguous', and this resolver feeds write tools
         (add_schedule, create_note) — picking the first would silently write to
         the wrong plot. No match lets the caller ask.
         """
         try:
-            plots = AoTDataToolService._active_crop_plots()
+            plots = AoTDataToolService._active_subject_plots()
         except Exception as e:
-            logger.debug(f"_resolve_target_by_crop: plot lookup failed: {e}")
+            logger.debug(f"_resolve_target_by_subject: plot lookup failed: {e}")
             return None
         if not plots:
             return None
@@ -6187,7 +6187,7 @@ class AoTDataToolService:
 
         def _fields(p):
             return [str(v).strip().lower()
-                    for v in (p['crop'], p['variety'], p['name'])
+                    for v in (p['subject'], p['variety'], p['name'])
                     if v and str(v).strip()]
 
         def _one_zone(hits):
@@ -6200,8 +6200,8 @@ class AoTDataToolService:
             plot_ids = {p.get('plot_id') for p in hits if p.get('plot_id')}
             if len(plot_ids) == 1:
                 p = next(h for h in hits if h.get('plot_id'))
-                label = p.get('name') or p.get('crop')
-                return p['plot_id'], 'planting', label, None, None
+                label = p.get('name') or p.get('subject')
+                return p['plot_id'], 'plot', label, None, None
             # 구획 id 가 없는(옛 데이터) 경우에만 zone 으로 물러선다.
             zone_ids = {p['zone_id'] for p in hits if p.get('zone_id')}
             if len(zone_ids) != 1:
@@ -6219,7 +6219,7 @@ class AoTDataToolService:
             if hits:
                 return _one_zone(hits)
 
-        # Partial match, kept tight on both sides: a 1-character crop name ('마')
+        # Partial match, kept tight on both sides: a 1-character subject name ('마')
         # matches inside half the words in the language ('고구마'), so require two
         # characters before either string is allowed to contain the other.
         for stem in stems:
@@ -6346,30 +6346,30 @@ class AoTDataToolService:
             AoTDataToolService._resolve_note_target(target_name)
 
         if not target_id:
-            # A crop name that grows in two zones resolves to nothing above (a
-            # coin-flip zone would be written to). Listing the crops with their
+            # A subject name found in two zones resolves to nothing above (a
+            # coin-flip zone would be written to). Listing the subjects with their
             # zones turns that dead end into a question the user can answer.
-            crop_targets = []
+            subject_targets = []
             try:
                 seen = set()
-                for p in AoTDataToolService._active_crop_plots():
-                    key = (p['crop'], p['zone_name'])
-                    if p['crop'] and key not in seen:
+                for p in AoTDataToolService._active_subject_plots():
+                    key = (p['subject'], p['zone_name'])
+                    if p['subject'] and key not in seen:
                         seen.add(key)
-                        crop_targets.append({"crop": p['crop'], "zone": p['zone_name']})
+                        subject_targets.append({"subject": p['subject'], "zone": p['zone_name']})
             except Exception:
-                crop_targets = []
+                subject_targets = []
             return {
                 "status": "needs_disambiguation",
                 "error": "target_not_found",
                 "message": (
                     f"'{target_name}' could not be resolved to a known entity. "
                     "A crop name ('콩밭', '상추 재배지') also resolves, to the zone "
-                    "that crop grows in — see 'crop_targets'; when one crop grows "
+                    "it is in — see 'subject_targets'; when one subject appears "
                     "in several zones, ask which one and pass that zone name."
                 ),
                 "available_targets": AoTDataToolService._geoshape_name_candidates(),
-                "crop_targets": crop_targets[:20],
+                "subject_targets": subject_targets[:20],
             }
 
         children = []
@@ -6381,20 +6381,20 @@ class AoTDataToolService:
             try:
                 _root = GeoShape.query.filter_by(unique_id=target_id).first()
                 if _root is not None:
-                    from aot.utils.geo_hierarchy import _planting_ids_inside
-                    from aot.databases.models import GeoPlanting
+                    from aot.utils.geo_hierarchy import _plot_ids_inside
+                    from aot.databases.models import GeoPlot
                     _ids = [_root.unique_id] + [
                         c.unique_id for c in
                         AoTDataToolService._geo_shape_descendants(_root)
                         if c.unique_id]
-                    for _pid in _planting_ids_inside(
+                    for _pid in _plot_ids_inside(
                             _ids, geo_ids={_root.geo_id} if _root.geo_id else None):
-                        _pl = GeoPlanting.query.filter_by(unique_id=_pid).first()
+                        _pl = GeoPlot.query.filter_by(unique_id=_pid).first()
                         if _pl is None:
                             continue
-                        _pn = _pl.name or _pl.crop
+                        _pn = _pl.name or _pl.subject
                         if _pn:
-                            children.append({"name": _pn, "type": "planting"})
+                            children.append({"name": _pn, "type": "plot"})
             except Exception:
                 pass
         if target_type == 'site':
@@ -7012,6 +7012,21 @@ class AoTDataToolService:
                 if wanted_name and wanted_name not in (fname or '').lower():
                     continue
 
+                # 이 코디네이터가 **무엇을 기르고 있는가**. 설정값을 판단하려면
+                # 목표 온습도만으로는 부족하다 — 같은 25도가 상추에는 높고
+                # 토마토에는 적정이다. `crop_preset` 은 사람이 고른 프리셋이라
+                # 실제로 심긴 것과 다를 수 있어, 식생 구획을 따로 싣는다.
+                _bay = (o.get('bay_scope') or '').strip() or None
+                _plants = []
+                if fid:
+                    try:
+                        from aot.aot_flask.geo import plot_context as _pc
+                        _plants = [_pc.plot_brief_for_control(r)
+                                   for r in _pc.plots_in_facility(fid, bay_id=_bay)]
+                    except Exception as exc:
+                        logger.warning(
+                            "list_env_coordinators: 식생 조회 실패(%s): %s", fid, exc)
+
                 entry = {
                     "function_id": c.unique_id,
                     "function_name": c.name,
@@ -7019,6 +7034,7 @@ class AoTDataToolService:
                     "facility_id": fid,
                     "facility_name": fname,
                     "bay_scope": o.get('bay_scope') or None,
+                    "plots": _plants,
                     "effect_engine": o.get('effect_engine', 'legacy'),
                     "crop_preset": o.get('crop_preset'),
                     "targets": {
@@ -7501,48 +7517,59 @@ class AoTDataToolService:
                     state = (module or {}).get('operational_state') or {}
                     if state.get('growth_stage'):
                         r["growth_stage"] = state.get('growth_stage')
-                        r["days_after_planting"] = state.get('days_after_planting')
+                        r["days_after_plot"] = state.get('days_after_plot')
                         r["optimal_ranges"] = state.get('optimal_ranges')
                         r["growth_stage_source"] = state.get('growth_stage_source')
                 except Exception as exc:
                     registry_note = (
                         "Growth stage unavailable: could not read the domain registry "
                         f"(facility_registry.yaml) ({type(exc).__name__}). The crop type is "
-                        "still available via crop_preset, but days-after-planting and "
+                        "still available via crop_preset, but days-after-plot and "
                         "stage-specific optimal ranges require planting_date/crop_type to be "
                         "registered there.")
 
-            # 노지 구획(GeoPlanting) — 시설 밖에 심긴 것은 위 두 소스에 **없다**.
+            # 노지 구획(GeoPlot) — 시설 밖에 심긴 것은 위 두 소스에 **없다**.
             # env_coordinator 도 facility_registry 도 시설 단위라, 여기를 더하지
             # 않으면 AI 는 노지 구역에 대해 "작물 없음" 으로 답한다.
             plots = []
             try:
                 from aot.databases.models import GeoMap
-                from aot.aot_flask.geo import planting_context
+                from aot.aot_flask.geo import plot_context
                 for m in GeoMap.query.all():
-                    for row in planting_context.active_plantings(m.unique_id):
-                        d = AoTDataToolService._planting_brief(row)
+                    for row in plot_context.active_plots(m.unique_id):
+                        d = AoTDataToolService._plot_brief(row)
                         d['map_id'] = m.unique_id
                         plots.append(d)
             except Exception as exc:
                 logger.warning("get_crop_status: 식생 구획 조회 실패: %s", exc)
 
-            # 시설 bay 에서 옮겨온 구획(source_kind='bay_snapshot')은 노지가
-            # 아니다 — 이름을 섞으면 AI 가 온실 작물을 노지로 읽는다.
+            # 시설 구획은 노지가 아니다 — 이름을 섞으면 AI 가 온실 작물을
+            # 노지로 읽는다. 판별 축이 **둘**이라는 것이 함정이다:
+            #   - `facility_uuid` — 시설 구역에 직접 매단 구획(p6_39)
+            #   - `source_kind='bay_snapshot'` — 옛 `bays[].crop` 백필분
+            #     (기하를 복사해 왔을 뿐 부모 참조는 없다)
+            # 한쪽만 보면 나머지 절반이 조용히 노지로 분류된다.
             # `bays[].crop` 은 아직 살아 있어(폴백) 같은 작물이 facilities 와
             # 여기 양쪽에 보일 수 있다. 그 사실을 note 로 밝힌다.
-            bay_plots = [d for d in plots if d.get('source_kind') == 'bay_snapshot']
-            open_plots = [d for d in plots if d.get('source_kind') != 'bay_snapshot']
+            def _in_facility(d):
+                return bool(d.get('facility_uuid')) or \
+                    d.get('source_kind') == 'bay_snapshot'
+
+            bay_plots = [d for d in plots if _in_facility(d)]
+            open_plots = [d for d in plots if not _in_facility(d)]
 
             result = {"status": "success", "count": len(rows), "facilities": rows,
                       "open_field_plots": open_plots, "plot_count": len(open_plots)}
             if bay_plots:
                 result["facility_bay_plots"] = bay_plots
                 result["facility_bay_plot_note"] = (
-                    "These came from greenhouse bays and now carry a planting date and "
-                    "history of their own. The same crop may still appear under "
-                    "'facilities' because the legacy bays[].crop field is kept until "
-                    "the migration is verified in production — do not count it twice.")
+                    "These grow inside facilities (greenhouse bays), not in the open "
+                    "field, and each carries its own start date and history. Their "
+                    "location is the bay itself, so they have no area or capacity "
+                    "estimate — read their notes for the actual layout. The same crop "
+                    "may still appear under 'facilities' because the legacy "
+                    "bays[].crop field is kept until the migration is verified in "
+                    "production — do not count it twice.")
             if not rows and not plots:
                 result["message"] = (
                     "No active env_coordinator carries crop information. Check whether an "
@@ -7550,7 +7577,7 @@ class AoTDataToolService:
             elif not rows and plots:
                 result["message"] = (
                     "No greenhouse crop info, but open-field vegetation plots exist — "
-                    "see open_field_plots (crop, period, area). Use get_planting_history "
+                    "see open_field_plots (crop, period, area). Use get_plot_history "
                     "for what grew on the same spot before.")
             if registry_note:
                 result["growth_stage_unavailable"] = registry_note
@@ -8061,40 +8088,67 @@ class AoTDataToolService:
             return {"status": "error", "message": str(e)}
 
     # ── 식생 구획(작기) ────────────────────────────────────────────────────
-    # 설계 정본: docs/design/geo-vegetation-planting.md
+    # 설계 정본: docs/design/geo-vegetation-plot.md
     #
     # "어디에 무엇이 심겨 있는가" 는 재배 조언의 전제다. 시설은 예전부터
     # crop_preset / facility_registry 로 알 수 있었지만 **노지는 알 방법이
     # 아예 없었다** — 그래서 AI 가 노지 구역에 대해서는 작물을 모른 채
     # 답하고 있었다.
     #
-    # 쓰기는 게이트웨이(planting_io)를 지나간다. 라우트가 하던 검증(VP-1~VP-6)
+    # 쓰기는 게이트웨이(plot_io)를 지나간다. 라우트가 하던 검증(VP-1~VP-6)
     # 을 여기서 다시 구현하지 않는다 — 두 벌이 되면 반드시 갈린다.
 
     @staticmethod
-    def _planting_brief(row, with_sensors=False, row_spacing_cm=None,
+    def _plot_brief(row, with_sensors=False, row_spacing_cm=None,
                         plant_spacing_cm=None, edge_margin_cm=None,
                         bed_pitch_cm=None, rows_per_bed=None,
                         containers=None, markers=None, with_valves=None):
-        from aot.aot_flask.geo import planting_context
+        from aot.aot_flask.geo import plot_context
         # with_dims=False 로 못 박는다 — 아래에서 `dimensions` 키로 직접 싣기
         # 때문이다(그쪽은 with_sensors 와 무관하게 **항상** 나가야 한다).
         # 기본값에 맡기면 with_sensors=True 일 때 같은 값이 `dims` 로 한 번 더
         # 실려, LLM 컨텍스트에 같은 것을 가리키는 이름이 둘이 된다.
-        d = planting_context.to_dict(row, with_sensors=with_sensors,
+        d = plot_context.to_dict(row, with_sensors=with_sensors,
                                      containers=containers, markers=markers,
                                      with_valves=with_valves, with_dims=False)
         # feature 전체(좌표 수백 개)는 LLM 컨텍스트에 실을 이유가 없다.
         d.pop('feature', None)
-        # 다만 면적 하나만 남기면 방향이 있는 질문("몇 줄 들어가나")에 답할 수
+        d.pop('derived_feature', None)
+
+        # 시설 구획은 치수도 식재량도 내지 않는다. 근거로 쓸 기하가 **시설
+        # 외피**(파생)뿐인데다, 시설은 노지형(땅에 심고 온실만 씌운 것)·베드형·
+        # 수직형에 따라 같은 바닥 면적의 재배 규모가 전혀 다르다. 면적에
+        # 재식거리를 곱하면 형태에 따라 몇 배씩 틀린 숫자가 나오고, 틀렸다는
+        # 표시가 어디에도 없다 — LLM 은 그 숫자를 그대로 사람에게 옮긴다.
+        #
+        # ⚠ `to_dict` 가 이미 같은 이유로 dims/valves 를 빼지만, 여기서
+        # `dimensions`/`capacity_estimate` 를 **직접** 부르므로 그 방어를
+        # 우회한다. 새 파생값을 여기 얹을 때도 이 분기를 먼저 볼 것.
+        if not row.has_own_geometry():
+            # 노지 구획의 `valves` 자리다. 시설 안에서는 밸브 하나가 아니라
+            # 코디네이터가 환경을 맡으므로 그쪽을 낸다(읽기 전용).
+            try:
+                d['facility_control'] = \
+                    plot_context.facility_control_for_plot(row)
+            except Exception as exc:
+                logger.warning("_plot_brief: 시설 제어 조회 실패: %s", exc)
+            d['scale_unavailable'] = (
+                "This plot lives in a facility, where floor area does not "
+                "determine growing capacity (ground beds vs raised beds vs "
+                "vertical racks differ several-fold). Read the plot notes for "
+                "the actual layout (bed count, rows, tiers) instead of "
+                "estimating from area.")
+            return d
+
+        # 면적 하나만 남기면 방향이 있는 질문("몇 줄 들어가나")에 답할 수
         # 없다. 좌표를 되살리는 대신 **계산된 요약 두 숫자**를 얹는다.
-        dims = planting_context.dimensions(row)
+        dims = plot_context.dimensions(row)
         if dims:
             d['dimensions'] = dims
         # 두둑 배치는 컬럼으로 저장하지 않는다 — 확정된 배치는 구획 노트에
-        # 남고(planting_context._FLAT_LAYOUT_ASK 참조), 그 노트가 다음 대화의
+        # 남고(plot_context._FLAT_LAYOUT_ASK 참조), 그 노트가 다음 대화의
         # 컨텍스트에 실려 온다. 여기로는 숫자만 파라미터로 들어온다.
-        cap = planting_context.capacity_estimate(
+        cap = plot_context.capacity_estimate(
             dims, row_spacing_cm, plant_spacing_cm, edge_margin_cm,
             bed_pitch_cm, rows_per_bed)
         if cap:
@@ -8102,7 +8156,127 @@ class AoTDataToolService:
         return d
 
     @staticmethod
-    def list_plantings(map_id=None, include_ended=False, on=None,
+    def list_programs(kind=None, subject=None, crop=None, **extra):
+        """[읽기전용] 관리 프로그램 목록 — 대상의 단계·기간 템플릿.
+
+        `kind` 로 종류를 좁힌다: `vegetation`(식생) · `livestock`(가축) ·
+        `facility`(시설물) · `other`. 식생 구획에 붙일 것을 찾는다면
+        `kind='vegetation'` 이다.
+
+        구획에 프로그램을 붙이면 단계·예상 수확일이 따라오므로, `create_plot`
+        전에 여기서 골라 `program_uuid` 로 넘긴다. 새로 만들기 전에 **먼저 이
+        목록을 본다** — 같은 작물의 프로그램이 이미 있으면 그것을 쓰거나 복제하는
+        편이 낫다(지어낸 표가 하나 더 생기는 것을 막는다).
+        """
+        try:
+            from aot.aot_flask.geo import program_io
+            from aot.databases.models import GeoProgram
+
+            want = (subject or crop or '').strip() or None
+            q = GeoProgram.query
+            if kind:
+                q = q.filter(GeoProgram.kind == str(kind).strip())
+            if want:
+                q = q.filter(GeoProgram.subject == want)
+            rows = q.order_by(GeoProgram.subject.asc()).all()
+            return {"status": "success", "count": len(rows),
+                    "programs": [program_io.to_dict(r, with_stages=False)
+                                 for r in rows]}
+        except Exception as e:
+            logger.exception("Error in list_programs")
+            return {"status": "error", "message": str(e)}
+
+    @staticmethod
+    def get_program(program_id=None, **extra):
+        """[읽기전용] 프로그램 하나 — 단계 목록까지."""
+        try:
+            from aot.aot_flask.geo import program_io
+            from aot.databases.models import GeoProgram
+
+            if not program_id:
+                return {"status": "error", "message": "program_id is required"}
+            row = GeoProgram.query.filter_by(unique_id=program_id).first()
+            if row is None:
+                return {"status": "error", "message": "program not found"}
+            return {"status": "success", "program": program_io.to_dict(row)}
+        except Exception as e:
+            logger.exception("Error in get_program")
+            return {"status": "error", "message": str(e)}
+
+    @staticmethod
+    def create_program(name=None, subject=None, crop=None, stages=None,
+                            variety=None, source_note=None, notes=None,
+                            kind=None, **extra):
+        """[쓰기] 관리 프로그램을 만든다. 사람 승인 필요.
+
+        `kind` 는 대상 종류다(기본 `vegetation`). 식생만이 아니라 가축·시설물·
+        도로도 같은 구조로 관리한다 — AoT 는 농장 전용이 아니다.
+
+        `stages` 는 `[{key, name, days}]` — `days` 는 **그 단계의 길이**(누적이
+        아니다). 마지막 단계만 `days` 를 비울 수 있고(=끝까지), 중간에 비우면
+        그 뒤 단계가 시작되지 않아 서버가 거절한다.
+
+        **`source_note` 에 근거를 적어야 한다**(어떤 재배 지침·자료에서 왔는가).
+        단계 기간과 목표는 그럴듯하게 지어낼 수 있는 값이라, 근거가 없으면 나중에
+        이 값을 고칠 사람이 판단할 재료가 없다.
+
+        이렇게 만든 프로그램은 `source='ai'` 이고, **사람이 확인하기 전에는 제어에
+        쓰이지 않는다**(화면의 "확인함으로 표시"). 표시·조언에는 바로 쓰인다.
+
+        만들기 전에 `list_programs` 로 같은 작물의 프로그램이 있는지 먼저 볼 것.
+        """
+        try:
+            from aot.aot_flask.geo import program_io
+
+            if not (source_note or '').strip():
+                return {"status": "error",
+                        "message": ("source_note is required: state what this "
+                                    "programme is based on (guideline, source, "
+                                    "or observed cycle).")}
+            result, err = program_io.create_program({
+                'name': name, 'subject': subject or crop, 'variety': variety,
+                'kind': kind or 'vegetation',
+                'stages': stages, 'source_note': source_note, 'notes': notes,
+            }, source='ai')
+            if err:
+                return {"status": "error", "message": err}
+            return {"status": "success", "program": result,
+                    "note": ("Created as an AI programme. It is used for display "
+                             "and advice, but NOT for control until a person "
+                             "marks it as checked.")}
+        except Exception as e:
+            logger.exception("Error in create_program")
+            return {"status": "error", "message": str(e)}
+
+    @staticmethod
+    def modify_program(program_id=None, **fields):
+        """[쓰기] 프로그램의 이름·품종·단계·설명을 고친다. 사람 승인 필요.
+
+        **내장·외부 프로그램은 서버가 거절한다** — 업그레이드나 외부 갱신이 그
+        수정을 덮어써 조용히 되돌아가기 때문이다. 고치려면 사람이 화면에서
+        복제한 뒤 그 사본을 고친다.
+        """
+        try:
+            from aot.aot_flask.geo import program_io
+
+            if not program_id:
+                return {"status": "error", "message": "program_id is required"}
+            payload = {k: v for k, v in fields.items()
+                       if k in ('name', 'variety', 'stages', 'notes',
+                                'source_note', 'targets_methods', 'kind')
+                       and v is not None}
+            if not payload:
+                return {"status": "error", "message": "nothing to change"}
+            result, err = program_io.update_program(program_id, payload)
+            if err:
+                return {"status": "error", "message": err}
+            return {"status": "success", "program": result}
+        except Exception as e:
+            logger.exception("Error in modify_program")
+            return {"status": "error", "message": str(e)}
+
+    @staticmethod
+    def list_plots(map_id=None, include_ended=False, on=None,
                        with_sensors=False, **extra):
         """[읽기전용] 식생 구획(작기) 목록 — 어디에 무엇이 심겨 있는가.
 
@@ -8112,12 +8286,12 @@ class AoTDataToolService:
         `with_sensors=True` 면 구획마다 참조 센서(`in_plot`/`from_zone`/
         `source`)를 함께 낸다. 밸브 교차는 **포함하지 않는다** — 그쪽이 비용의
         대부분이고(실측 구획 8개: 센서 37 쿼리 · 밸브 120 쿼리) 목록에서 필요한
-        일이 드물다. 밸브가 필요하면 그 구획 하나만 `get_planting` 으로 본다.
+        일이 드물다. 밸브가 필요하면 그 구획 하나만 `get_plot` 으로 본다.
         """
         try:
             from datetime import datetime
-            from aot.databases.models import GeoPlanting
-            from aot.aot_flask.geo import planting_context
+            from aot.databases.models import GeoPlot
+            from aot.aot_flask.geo import plot_context
 
             as_of = None
             if on:
@@ -8127,18 +8301,18 @@ class AoTDataToolService:
                     return {"error": "on must be YYYY-MM-DD"}
 
             if include_ended:
-                q = GeoPlanting.query
+                q = GeoPlot.query
                 if map_id:
                     q = q.filter_by(geo_id=map_id)
-                rows = q.order_by(GeoPlanting.planted_on.desc()).all()
+                rows = q.order_by(GeoPlot.started_on.desc()).all()
             elif map_id:
-                rows = planting_context.active_plantings(map_id, on=as_of)
+                rows = plot_context.active_plots(map_id, on=as_of)
             else:
                 # 지도를 안 주면 전 지도의 활성 구획을 모은다.
                 from aot.databases.models import GeoMap
                 rows = []
                 for m in GeoMap.query.all():
-                    rows.extend(planting_context.active_plantings(m.unique_id, on=as_of))
+                    rows.extend(plot_context.active_plots(m.unique_id, on=as_of))
 
             # 지도 단위 사전 로드. 구획마다 컨테이너·마커를 다시 읽으면 구획
             # 수만큼 전량 스캔이 반복된다 — 센서를 넣기 전부터 있던 N+1 이라,
@@ -8156,19 +8330,19 @@ class AoTDataToolService:
             items = []
             for r in rows:
                 _c, _mk = _cached(r.geo_id)
-                items.append(AoTDataToolService._planting_brief(
+                items.append(AoTDataToolService._plot_brief(
                     r, with_sensors=with_sensors, with_valves=False,
                     containers=_c, markers=_mk))
-            return {"count": len(items), "plantings": items,
-                    "note": ("Only plantings currently growing are listed. "
+            return {"count": len(items), "plots": items,
+                    "note": ("Only plots currently growing are listed. "
                              "Pass include_ended=true for history.")
                             if not include_ended else None}
         except Exception as e:
-            logger.exception("Error in list_plantings")
+            logger.exception("Error in list_plots")
             return {"error": str(e)}
 
     @staticmethod
-    def get_planting(planting_id=None, row_spacing_cm=None,
+    def get_plot(plot_id=None, row_spacing_cm=None,
                      plant_spacing_cm=None, edge_margin_cm=None,
                      bed_pitch_cm=None, rows_per_bed=None, **extra):
         """[읽기전용] 구획 하나의 상세 — 작물·기간·면적·치수 + 참조 센서 출처.
@@ -8178,21 +8352,21 @@ class AoTDataToolService:
         `bed_pitch_cm`(고랑 포함 간격)+`rows_per_bed` 는 두둑 배치로 세게 한다
         (두둑 개수까지 낸다). 배치를 모르면 평평하게 깐 것으로 계산하되 응답의
         `capacity_estimate.ask_user` 가 배치를 확정해 **구획 노트로 남기라고**
-        시킨다 — 컬럼으로 저장하지 않는 이유는 planting_context 의 주석 참조.
+        시킨다 — 컬럼으로 저장하지 않는 이유는 plot_context 의 주석 참조.
 
         조건을 한쪽만 주면 계산이 성립하지 않으므로 조용히 넘기지 않고 오류로
         말한다 — 사용자가 말한 조건이 답에 반영되지 않은 것을 아무도 모르는
         상태가 최악이다.
         """
         try:
-            from aot.databases.models import GeoPlanting
-            if not planting_id:
-                return {"error": "planting_id is required"}
-            row = GeoPlanting.query.filter_by(unique_id=planting_id).first()
+            from aot.databases.models import GeoPlot
+            if not plot_id:
+                return {"error": "plot_id is required"}
+            row = GeoPlot.query.filter_by(unique_id=plot_id).first()
             if row is None:
-                return {"error": f"planting not found: {planting_id}"}
+                return {"error": f"plot not found: {plot_id}"}
             try:
-                brief = AoTDataToolService._planting_brief(
+                brief = AoTDataToolService._plot_brief(
                     row, with_sensors=True,
                     row_spacing_cm=row_spacing_cm,
                     plant_spacing_cm=plant_spacing_cm,
@@ -8201,55 +8375,61 @@ class AoTDataToolService:
                     rows_per_bed=rows_per_bed)
             except ValueError as ve:
                 return {"error": str(ve)}
-            return {"planting": brief}
+            return {"plot": brief}
         except Exception as e:
-            logger.exception("Error in get_planting")
+            logger.exception("Error in get_plot")
             return {"error": str(e)}
 
     @staticmethod
-    def get_planting_history(planting_id=None, zone_id=None, map_id=None, **extra):
+    def get_plot_history(plot_id=None, zone_id=None, map_id=None, **extra):
         """[읽기전용] 이 자리에 무엇이 있었나 — 연작 장해·윤작 판단의 근거.
 
-        기준은 구획(`planting_id`) 또는 구역(`zone_id`)의 기하이고, 그와 면적이
+        기준은 구획(`plot_id`) 또는 구역(`zone_id`)의 기하이고, 그와 면적이
         겹치는 작기를 지난 것까지 전부 돌려준다.
         """
         try:
-            from aot.databases.models import GeoPlanting, GeoShape
-            from aot.aot_flask.geo import planting_context
+            from aot.databases.models import GeoPlot, GeoShape
+            from aot.aot_flask.geo import plot_context
 
             geom, geo_id = None, map_id
-            if planting_id:
-                src = GeoPlanting.query.filter_by(unique_id=planting_id).first()
+            if plot_id:
+                src = GeoPlot.query.filter_by(unique_id=plot_id).first()
                 if src is None:
-                    return {"error": f"planting not found: {planting_id}"}
-                geom, geo_id = planting_context.geometry_of(src), src.geo_id
+                    return {"error": f"plot not found: {plot_id}"}
+                geom, geo_id = plot_context.geometry_of(src), src.geo_id
             elif zone_id:
                 z = GeoShape.query.filter_by(unique_id=zone_id).first()
                 if z is None:
                     return {"error": f"zone not found: {zone_id}"}
-                geom, geo_id = planting_context.geometry_of(z), z.geo_id
+                geom, geo_id = plot_context.geometry_of(z), z.geo_id
             else:
-                return {"error": "planting_id or zone_id is required"}
+                return {"error": "plot_id or zone_id is required"}
 
-            pairs = planting_context.plantings_overlapping(geo_id, geom)
+            pairs = plot_context.plots_overlapping(geo_id, geom)
             items = []
             for row, overlap in pairs:
-                d = AoTDataToolService._planting_brief(row)
+                d = AoTDataToolService._plot_brief(row)
                 d['overlap_m2'] = round(overlap, 1)
                 items.append(d)
             return {"count": len(items), "history": items}
         except Exception as e:
-            logger.exception("Error in get_planting_history")
+            logger.exception("Error in get_plot_history")
             return {"error": str(e)}
 
     @staticmethod
-    def create_planting(map_id=None, geometry=None, zone_id=None, crop=None,
-                        planted_on=None, variety=None, name=None,
-                        expected_end_on=None, color=None, **extra):
+    def create_plot(map_id=None, geometry=None, zone_id=None, subject=None,
+                        started_on=None, variety=None, name=None,
+                        expected_end_on=None, color=None,
+                        facility_id=None, bay_id=None, program_id=None, **extra):
         """[쓰기] 식생 구획을 만든다. 사람 승인 필요.
 
-        기하는 둘 중 하나로 준다.
+        위치는 셋 중 하나로 준다.
 
+        - `facility_id`(+`bay_id`) — **온실 안**이다. 기하를 만들지 않는다.
+          시설 구획은 위치의 정본이 구역 자체이기 때문이다("3동에 토마토").
+          `bay_id` 는 `get_map_equipment`/`get_facility_capacity` 가 내는 구역
+          id('bay_3' | 'bay_3_5')를 그대로 쓴다. 단동 시설은 비워 두면 서버가
+          채운다. 다동에서 비우면 "시설 전체" 라는 뜻이다.
         - `zone_id` — **그 구역(또는 대지) 전체에 심었다.** 서버가 그 도형의
           기하를 복사한다. 좌표를 하나도 만들 필요가 없다.
         - `geometry` — GeoJSON Polygon/MultiPolygon 을 직접.
@@ -8260,26 +8440,50 @@ class AoTDataToolService:
         밖이면 `zone_uuid` 가 null 로 남을 뿐이다.
 
         구역의 **일부**에만 심는 경우는 여기서 만들지 말 것. 지도 설계 화면에서
-        그리거나, 지난 작기가 있으면 `copy_planting` 을 쓴다.
+        그리거나, 지난 작기가 있으면 `copy_plot` 을 쓴다.
 
         상위 zone 은 받아도 저장하지 않는다 — 읽을 때 공간 포함으로 파생한다.
         여기서 `zone_id` 는 **기하의 출처**일 뿐 소속이 아니다.
+
+        `program_id` 를 주면 관리 프로그램을 붙인다 — 단계·예상 종료일이 거기서
+        따라온다(`list_programs` 로 `kind='vegetation'` 인 것을 먼저 고른다).
         """
         try:
-            from aot.aot_flask.geo import planting_io, planting_context
+            from aot.aot_flask.geo import plot_io, plot_context
             from aot.databases.models import GeoShape
 
             if geometry and zone_id:
                 return {"status": "error",
                         "message": "give either geometry or zone_id, not both"}
+            if facility_id and (geometry or zone_id):
+                return {"status": "error",
+                        "message": ("give either facility_id or a geometry "
+                                    "source (zone_id/geometry), not both. A "
+                                    "facility plot's location is the bay itself.")}
             source_kind = 'drawn'
             source_ref = None
+
+            # 시설 구획 — 기하 없이 부모만으로 만든다.
+            if facility_id:
+                result, err = plot_io.save_plot({
+                    'map_uuid': map_id,
+                    'facility_uuid': facility_id, 'bay_id': bay_id,
+                    'subject': subject, 'variety': variety, 'name': name,
+                    'started_on': started_on,
+                    'expected_end_on': expected_end_on, 'color': color,
+                    'program_uuid': program_id,
+                })
+                if err:
+                    return {"status": "error", "message": err}
+                result.pop('feature', None)
+                result.pop('derived_feature', None)
+                return {"status": "success", "plot": result}
             if zone_id:
                 shape = GeoShape.query.filter_by(unique_id=zone_id).first()
                 if shape is None:
                     return {"status": "error",
                             "message": f"zone/shape not found: {zone_id}"}
-                geometry = planting_context.geometry_of(shape)
+                geometry = plot_context.geometry_of(shape)
                 if not geometry:
                     return {"status": "error",
                             "message": f"shape {zone_id} has no polygon to copy"}
@@ -8291,57 +8495,61 @@ class AoTDataToolService:
                 source_ref = zone_id
             if not geometry:
                 return {"status": "error",
-                        "message": ("geometry or zone_id is required. Prefer "
-                                    "zone_id — you cannot know where a zone is "
-                                    "on the map, so invented coordinates land "
-                                    "in the wrong place silently.")}
-            result, err = planting_io.save_planting({
+                        "message": ("facility_id, zone_id or geometry is "
+                                    "required. Inside a greenhouse use "
+                                    "facility_id; outdoors prefer zone_id — you "
+                                    "cannot know where a zone is on the map, so "
+                                    "invented coordinates land in the wrong "
+                                    "place silently.")}
+            result, err = plot_io.save_plot({
                 'map_uuid': map_id,
                 'feature': {'type': 'Feature', 'properties': {},
                             'geometry': geometry},
-                'crop': crop, 'variety': variety, 'name': name,
-                'planted_on': planted_on, 'expected_end_on': expected_end_on,
-                'color': color,
+                'subject': subject, 'variety': variety, 'name': name,
+                'started_on': started_on, 'expected_end_on': expected_end_on,
+                'color': color, 'program_uuid': program_id,
                 'source_kind': source_kind, 'source_ref': source_ref,
             })
             if err:
                 return {"status": "error", "message": err}
             result.pop('feature', None)
-            return {"status": "success", "planting": result}
+            return {"status": "success", "plot": result}
         except Exception as e:
-            logger.exception("Error in create_planting")
+            logger.exception("Error in create_plot")
             return {"status": "error", "message": str(e)}
 
     @staticmethod
-    def modify_planting(planting_id=None, **fields):
+    def modify_plot(plot_id=None, **fields):
         """[쓰기] 구획의 작물·품종·이름·기간·색·두둑 규격을 고친다. 사람 승인 필요.
 
         기하는 여기서 바꾸지 않는다(도형 편집은 geo/design). 종료된 작기의
         기하 수정은 서버가 거부한다(VP-6).
 
-        두둑 규격은 사람과 확정한 뒤 여기에 적어 둔다 — 그래야 다음 질문에서
-        다시 묻지 않는다.
+        `program_uuid` 로 관리 프로그램을 붙이거나 바꿀 수 있다(단계·예상 종료일이
+        거기서 따라온다). 빈 문자열을 주면 프로그램을 뗀다.
         """
         try:
-            from aot.aot_flask.geo import planting_io
-            if not planting_id:
-                return {"status": "error", "message": "planting_id is required"}
-            payload = {'unique_id': planting_id}
-            for k in ('crop', 'variety', 'name', 'planted_on',
-                      'expected_end_on', 'color'):
+            from aot.aot_flask.geo import plot_io
+            if not plot_id:
+                return {"status": "error", "message": "plot_id is required"}
+            payload = {'unique_id': plot_id}
+            # `bay_id` — 시설 안에서 구역을 옮긴다(모종을 다른 동으로 옮겨
+            # 심는 경우). 종료된 작기의 이동은 서버가 거부한다(VP-6).
+            for k in ('subject', 'variety', 'name', 'started_on',
+                      'expected_end_on', 'color', 'bay_id', 'program_uuid'):
                 if k in fields and fields[k] is not None:
                     payload[k] = fields[k]
-            result, err = planting_io.save_planting(payload)
+            result, err = plot_io.save_plot(payload)
             if err:
                 return {"status": "error", "message": err}
             result.pop('feature', None)
-            return {"status": "success", "planting": result}
+            return {"status": "success", "plot": result}
         except Exception as e:
-            logger.exception("Error in modify_planting")
+            logger.exception("Error in modify_plot")
             return {"status": "error", "message": str(e)}
 
     @staticmethod
-    def propose_planting_split(zone_id=None, parts=None, strip_width_cm=None,
+    def propose_plot_split(zone_id=None, parts=None, strip_width_cm=None,
                                widths_cm=None, edge_margin_m=0, orientation=None,
                                angle_deg=None, **extra):
         """[읽기전용] 구역/대지를 나눈 제안을 계산한다. 저장하지 않는다.
@@ -8373,17 +8581,17 @@ class AoTDataToolService:
 
         폴리곤 자체는 돌려주지 않는다. 조각 수·길이·면적 같은 **요약만** 낸다 —
         좌표 수백 개를 컨텍스트에 실을 이유가 없고, 실제로 만들 때는
-        `apply_planting_split` 가 같은 파라미터로 다시 계산한다(결정적이다).
+        `apply_plot_split` 가 같은 파라미터로 다시 계산한다(결정적이다).
         """
         try:
-            from aot.aot_flask.geo import planting_split
+            from aot.aot_flask.geo import plot_split
             from aot.databases.models import GeoShape
             if not zone_id:
                 return {"error": "zone_id is required"}
             shape = GeoShape.query.filter_by(unique_id=zone_id).first()
             if shape is None:
                 return {"error": f"zone/shape not found: {zone_id}"}
-            strips, info = planting_split.split_shape(
+            strips, info = plot_split.split_shape(
                 shape, parts=parts, strip_width_cm=strip_width_cm,
                 widths_cm=widths_cm, edge_margin_m=edge_margin_m,
                 orientation=orientation, angle_deg=angle_deg)
@@ -8404,47 +8612,47 @@ class AoTDataToolService:
                 "next": ("Nothing was created. Show these numbers to the grower "
                          "and tell them they can SEE the proposal on the map "
                          "design page (vegetation mode) before deciding. To "
-                         "create them, call apply_planting_split with the SAME "
-                         "zone_id and parts/strip_width_cm plus the crop."),
+                         "create them, call apply_plot_split with the SAME "
+                         "zone_id and parts/strip_width_cm plus the subject."),
             }
             if info.get('aspect_ratio') is not None:
                 result["aspect_ratio"] = info['aspect_ratio']
             return result
         except Exception as e:
-            logger.exception("Error in propose_planting_split")
+            logger.exception("Error in propose_plot_split")
             return {"error": str(e)}
 
     @staticmethod
-    def apply_planting_split(zone_id=None, crop=None, planted_on=None,
+    def apply_plot_split(zone_id=None, subject=None, started_on=None,
                              parts=None, strip_width_cm=None, widths_cm=None,
                              edge_margin_m=0, orientation=None, angle_deg=None,
                              variety=None, name=None,
                              expected_end_on=None, color=None, **extra):
         """[쓰기] 분할 제안을 실제 구획으로 만든다. 사람 승인 필요.
 
-        `propose_planting_split` 와 **같은 파라미터로 다시 계산**한다
+        `propose_plot_split` 와 **같은 파라미터로 다시 계산**한다
         (`orientation`/`angle_deg`/`widths_cm` 포함) — 제안을 저장해 두지 않는
         이유는 분할이 결정적이기 때문이다. 도형이 그 사이에 바뀌었으면 새
         모양대로 나뉜다(그게 맞다). `orientation` 을 생략했다면 그때와 똑같이
         생략할 것 — 서버가 모드로 고르는 기본값이 두 호출 사이에서도 같아야
         미리보기에서 본 것과 실제로 만들어지는 것이 갈리지 않는다.
 
-        조각 하나가 구획 하나(GeoPlanting 한 행)다. `parts=3` 이면 세 행,
+        조각 하나가 구획 하나(GeoPlot 한 행)다. `parts=3` 이면 세 행,
         `strip_width_cm=160` 이면 두둑 수만큼. **개수를 보고 부르라** — 41행이
         생기면 노트도 이력도 41벌이 된다.
         """
         try:
-            from aot.aot_flask.geo import planting_split, planting_io
+            from aot.aot_flask.geo import plot_split, plot_io
             from aot.databases.models import GeoShape
             if not zone_id:
                 return {"status": "error", "message": "zone_id is required"}
-            if not (crop or '').strip():
-                return {"status": "error", "message": "crop is required"}
+            if not (subject or '').strip():
+                return {"status": "error", "message": "subject is required"}
             shape = GeoShape.query.filter_by(unique_id=zone_id).first()
             if shape is None:
                 return {"status": "error",
                         "message": f"zone/shape not found: {zone_id}"}
-            strips, info = planting_split.split_shape(
+            strips, info = plot_split.split_shape(
                 shape, parts=parts, strip_width_cm=strip_width_cm,
                 widths_cm=widths_cm, edge_margin_m=edge_margin_m,
                 orientation=orientation, angle_deg=angle_deg)
@@ -8457,14 +8665,14 @@ class AoTDataToolService:
                     'map_uuid': shape.geo_id,
                     'feature': {'type': 'Feature', 'properties': {},
                                 'geometry': strip['geometry']},
-                    'crop': crop, 'variety': variety,
-                    'planted_on': planted_on,
+                    'subject': subject, 'variety': variety,
+                    'started_on': started_on,
                     'expected_end_on': expected_end_on, 'color': color,
                     'source_kind': 'copied', 'source_ref': shape.unique_id,
                 }
                 if name:
                     payload['name'] = '%s %d' % (name, strip['index'])
-                row, err = planting_io.save_planting(payload)
+                row, err = plot_io.save_plot(payload)
                 if err:
                     errors.append({'index': strip['index'], 'message': err})
                     continue
@@ -8477,77 +8685,77 @@ class AoTDataToolService:
                 "created_count": len(created),
                 "failed_count": len(errors),
                 "errors": errors or None,
-                "plantings": created,
+                "plots": created,
             }
         except Exception as e:
-            logger.exception("Error in apply_planting_split")
+            logger.exception("Error in apply_plot_split")
             return {"status": "error", "message": str(e)}
 
     @staticmethod
-    def copy_planting(planting_id=None, crop=None, planted_on=None, **extra):
+    def copy_plot(plot_id=None, subject=None, started_on=None, **extra):
         """[쓰기] 지난 작기의 기하를 그대로 새 작기로. 사람 승인 필요.
 
         **"작년에 콩 심었던 그 자리에 올해도" 는 실제로 가장 흔한 요청이고,
-        좌표가 하나도 필요 없다.** 구현은 이미 있었는데(`planting_io.copy_planting`,
-        REST `/api/geo/planting/<uuid>/copy`) AI 도구로만 없어서, 같은 자리를
+        좌표가 하나도 필요 없다.** 구현은 이미 있었는데(`plot_io.copy_plot`,
+        REST `/api/geo/plot/<uuid>/copy`) AI 도구로만 없어서, 같은 자리를
         다시 심는 것을 말로는 시킬 수 없었다.
 
         기하만 복사하고 기간은 새로 받는다. 작물을 안 주면 원본과 같은 작물이다
         (같은 자리에 같은 것을 또 심는 것이 연작이고, 그것 자체가 판단 대상이라
-        막지는 않는다 — `get_planting_history` 로 확인하고 조언할 것).
+        막지는 않는다 — `get_plot_history` 로 확인하고 조언할 것).
         """
         try:
-            from aot.aot_flask.geo import planting_io
-            if not planting_id:
-                return {"status": "error", "message": "planting_id is required"}
-            result, err = planting_io.copy_planting(
-                planting_id, planted_on=planted_on, crop=crop)
+            from aot.aot_flask.geo import plot_io
+            if not plot_id:
+                return {"status": "error", "message": "plot_id is required"}
+            result, err = plot_io.copy_plot(
+                plot_id, started_on=started_on, subject=subject)
             if err:
                 return {"status": "error", "message": err}
             result.pop('feature', None)
-            return {"status": "success", "planting": result}
+            return {"status": "success", "plot": result}
         except Exception as e:
-            logger.exception("Error in copy_planting")
+            logger.exception("Error in copy_plot")
             return {"status": "error", "message": str(e)}
 
     @staticmethod
-    def end_planting(planting_id=None, ended_on=None, reason='harvested', **extra):
+    def end_plot(plot_id=None, ended_on=None, reason='harvested', **extra):
         """[쓰기] 재배를 종료한다. 사람 승인 필요.
 
         행을 지우지 않는다 — 이력이 남아야 연작 판단이 된다. 지도에서만
         사라진다.
         """
         try:
-            from aot.aot_flask.geo import planting_io
-            if not planting_id:
-                return {"status": "error", "message": "planting_id is required"}
-            result, err = planting_io.end_planting(
-                planting_id, ended_on=ended_on, reason=reason or 'harvested')
+            from aot.aot_flask.geo import plot_io
+            if not plot_id:
+                return {"status": "error", "message": "plot_id is required"}
+            result, err = plot_io.end_plot(
+                plot_id, ended_on=ended_on, reason=reason or 'harvested')
             if err:
                 return {"status": "error", "message": err}
             result.pop('feature', None)
-            return {"status": "success", "planting": result}
+            return {"status": "success", "plot": result}
         except Exception as e:
-            logger.exception("Error in end_planting")
+            logger.exception("Error in end_plot")
             return {"status": "error", "message": str(e)}
 
     @staticmethod
-    def delete_planting(planting_id=None, **extra):
+    def delete_plot(plot_id=None, **extra):
         """[쓰기] 구획 기록을 삭제한다. 사람 승인 필요.
 
-        **오기입 정정용이다.** 수확이 끝난 것은 `end_planting` 을 쓴다 —
+        **오기입 정정용이다.** 수확이 끝난 것은 `end_plot` 을 쓴다 —
         삭제하면 그 자리의 이력이 사라져 연작 판단이 불가능해진다.
         """
         try:
-            from aot.aot_flask.geo import planting_io
-            if not planting_id:
-                return {"status": "error", "message": "planting_id is required"}
-            result, err = planting_io.delete_planting(planting_id)
+            from aot.aot_flask.geo import plot_io
+            if not plot_id:
+                return {"status": "error", "message": "plot_id is required"}
+            result, err = plot_io.delete_plot(plot_id)
             if err:
                 return {"status": "error", "message": err}
-            return {"status": "success", "deleted": planting_id,
-                    "note": ("Deleted outright. If this was a harvested crop, "
-                             "end_planting would have kept the history.")}
+            return {"status": "success", "deleted": plot_id,
+                    "note": ("Deleted outright. If this was a harvested subject, "
+                             "end_plot would have kept the history.")}
         except Exception as e:
-            logger.exception("Error in delete_planting")
+            logger.exception("Error in delete_plot")
             return {"status": "error", "message": str(e)}

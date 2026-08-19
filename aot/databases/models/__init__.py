@@ -79,7 +79,11 @@ from .geo import GeoLayer
 from .geo import GeoFacility
 from .geo import GeoModelAsset
 from .geo_binding import GeoBinding
-from .geo_planting import GeoPlanting
+from .geo_plot import GeoPlot
+from .geo_plot_stage_event import GeoPlotStageEvent
+from .geo_program import GeoProgram
+# 옛 이름 — 한 릴리스 동안만 남긴다(p6_43 에서 관리 프로그램으로 넓혔다).
+GeoCropProgram = GeoProgram
 from .irrigation import IrrigationDesign
 from .output import Output
 from .output import OutputChannel
@@ -144,32 +148,66 @@ def alembic_upgrade_db(app):
     Checks the alembic_version row; if absent, empty, or mismatched, runs the
     upgrade script. Idempotent — safe to call on every startup.
 
+    Fresh installs and existing installs take deliberately different paths (see
+    the two branches below) — collapsing them caused the 2026-08-18 bug where
+    both a brand-new database AND an existing one being upgraded across a
+    migration that adds a table got stuck silently two revisions behind head
+    (`db.create_all()` had already created the table from the current models,
+    so alembic's own `CREATE TABLE` for that same table failed with "already
+    exists" and the version was never bumped — indistinguishable from success
+    to the caller, since the subprocess failure is only logged, not raised).
+
     @phase active
     """
 
-    def upgrade_alembic():
-        """Run alembic database upgrade."""
-        app.logger.info(f"Database version mismatch or missing. Running alembic upgrade to {ALEMBIC_VERSION}...")
-        # 목표를 ALEMBIC_VERSION 으로 명시한다. 'head' 를 쓰면 폐기된 구 계보의
-        # p5_52 가 두 번째 head 로 남아 있어 "Multiple head revisions" 로 실패한다
-        # (26.06.0 재베이스라인에서 p6_00.down_revision=None 으로 계보를 분리한 결과).
-        command = '/bin/bash {path}/aot/scripts/upgrade_commands.sh update-alembic {version}'.format(
-            path=INSTALL_DIRECTORY, version=ALEMBIC_VERSION)
+    def run_alembic(subcommand, version):
+        """Run `aot/scripts/upgrade_commands.sh <subcommand> <version>`."""
+        command = '/bin/bash {path}/aot/scripts/upgrade_commands.sh {sub} {version}'.format(
+            path=INSTALL_DIRECTORY, sub=subcommand, version=version)
         try:
             upgrade = subprocess.Popen(
                 command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
             stdout, stderr = upgrade.communicate()
             if upgrade.returncode == 0:
-                app.logger.info("Alembic upgrade successful.")
+                app.logger.info(f"Alembic {subcommand} successful.")
             else:
-                app.logger.error(f"Alembic upgrade failed with return code {upgrade.returncode}")
+                app.logger.error(f"Alembic {subcommand} failed with return code {upgrade.returncode}")
                 app.logger.error(f"STDOUT: {stdout.decode()}")
                 app.logger.error(f"STDERR: {stderr.decode()}")
         except Exception as e:
-            app.logger.error(f"Exception during alembic upgrade: {e}")
+            app.logger.error(f"Exception during alembic {subcommand}: {e}")
+
+    def upgrade_alembic():
+        """Run alembic database upgrade (existing database, no DDL from create_all() involved)."""
+        app.logger.info(f"Database version mismatch or missing. Running alembic upgrade to {ALEMBIC_VERSION}...")
+        # 목표를 ALEMBIC_VERSION 으로 명시한다. 'head' 를 쓰면 폐기된 구 계보의
+        # p5_52 가 두 번째 head 로 남아 있어 "Multiple head revisions" 로 실패한다
+        # (26.06.0 재베이스라인에서 p6_00.down_revision=None 으로 계보를 분리한 결과).
+        run_alembic('update-alembic', ALEMBIC_VERSION)
 
     with app.app_context():
-        alembic = AlembicVersion.query.first()
+        try:
+            alembic = AlembicVersion.query.first()
+        except sqlalchemy.exc.OperationalError as e:
+            if 'no such table' not in str(e).lower():
+                raise
+            # 완전 신규 설치 — alembic_version 테이블조차 없다. 실측(2026-08-18)
+            # 으로 확인됨: `p6_00_rebaseline` 는 스키마를 처음부터 다 만들지 않고
+            # 그 이전부터 있던 베이스 테이블(예: misc·roles)이 이미 있다고 가정한
+            # 채 그 위에 증분 변경(ALTER 등)만 쌓는다. 그래서 여기서는 db.create_all()
+            # 로 현재 모델 기준 최종(head) 스키마를 한 번에 만들고, alembic 은
+            # DDL 을 다시 실행하지 않고 그 상태를 head 로 **스탬프만** 한다 —
+            # 'upgrade' 로 리비전을 처음부터 재생하면 create_all() 이 이미 만든
+            # 테이블(특히 최근 추가된 신규 테이블)과 부딪혀 "already exists" 로
+            # 실패하고 버전은 갱신되지 않는다. 이 경로로 만들어진 테이블 중 일부는
+            # SQLAlchemy 기본 인덱스 명명 규칙을 쓰므로 alembic 마이그레이션이
+            # 명시한 인덱스 이름과 다를 수 있다(기능에는 영향 없음, 인덱스를 이름
+            # 으로 참조하는 향후 마이그레이션이 있다면 유의).
+            db.session.rollback()
+            app.logger.info("No alembic_version table found (fresh install). Creating schema from models and stamping to head...")
+            db.create_all()
+            run_alembic('stamp-alembic', ALEMBIC_VERSION)
+            return
 
         if alembic:  # If alembic_version table has an entry
             if alembic.version_num == '':

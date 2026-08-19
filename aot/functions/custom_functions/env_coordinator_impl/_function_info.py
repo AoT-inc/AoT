@@ -319,9 +319,9 @@ FUNCTION_INFORMATION = {
             'html_type': 'date',
             'default_value': '',
             'required': False,
-            'name': lazy_gettext('Schedule Start (planting date)'),
+            'name': lazy_gettext('Schedule Start (start date)'),
             'phrase': lazy_gettext(
-                'Planting / germination date. Pick from the calendar. '
+                'Start / germination date. Pick from the calendar. '
                 'The date is interpreted in the device/facility local timezone '
                 '(the system stores it as UTC internally — no manual conversion '
                 'needed). Used to compute weeks_elapsed for all Method curves. '

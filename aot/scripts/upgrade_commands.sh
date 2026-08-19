@@ -124,6 +124,7 @@ Options:
   setup-virtualenv-full         Create a Python virtual environment and install dependencies
   ssl-certs-generate            Generate SSL certificates for the web user interface
   ssl-certs-regenerate          Regenerate SSL certificates
+  stamp-alembic                 Stamp aot.db alembic version without running DDL (fresh installs)
   uninstall-apt-pip             Uninstall the apt version of pip
   update-alembic                Use alembic to upgrade the aot.db settings database
   update-alembic-post           Execute script following all alembic upgrades
@@ -386,6 +387,23 @@ case "${1:-''}" in
         # 신규 마이그레이션을 추가하는 순간 기동 시 업그레이드가 깨진다.
         # 호출자(alembic_upgrade_db)가 ALEMBIC_VERSION 을 넘겨 목표를 특정한다.
         "${ALEMBIC_BIN}" upgrade "${2:-head}"
+    ;;
+    'stamp-alembic')
+        printf "\n#### Stamping AoT database alembic version (no DDL)\n"
+        cd "${AOT_PATH}"/alembic_db || return
+        # Resolve alembic binary: prefer venv bin, fall back to PATH
+        ALEMBIC_BIN="${AOT_PATH}/env/bin/alembic"
+        [ -n "${AOT_LOCAL_DIR}" ] && [ -f "${AOT_LOCAL_DIR}/env/bin/alembic" ] && ALEMBIC_BIN="${AOT_LOCAL_DIR}/env/bin/alembic"
+        [ ! -f "${ALEMBIC_BIN}" ] && ALEMBIC_BIN="$(command -v alembic 2>/dev/null || true)"
+        if [ -z "${ALEMBIC_BIN}" ]; then
+            printf "ERROR: alembic binary not found\n"
+            exit 1
+        fi
+        # 신규 설치 전용. db.create_all() 이 현재 모델 기준 최종 스키마를 이미
+        # 만든 뒤 호출된다 — 'upgrade' 로 전체 리비전을 재생하면 그 테이블들과
+        # 부딪혀 "already exists" 로 실패한다(alembic_upgrade_db() 참조). 그래서
+        # DDL 을 다시 실행하지 않고 버전 포인터만 목표로 찍는다.
+        "${ALEMBIC_BIN}" stamp "${2:-head}"
     ;;
     'update-alembic-post')
         printf "\n#### Executing post-alembic script\n"

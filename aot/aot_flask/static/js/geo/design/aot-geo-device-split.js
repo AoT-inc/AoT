@@ -4,13 +4,13 @@
  *
  * 설계 정본: docs/design/geo-device-area-split.md
  *
- * 식생 분할(`aot-geo-vegetation.js`)과 **같은 흐름**이다: 나눌 도형을 고르고,
+ * 식생 분할(`aot-geo-plot.js`)과 **같은 흐름**이다: 나눌 도형을 고르고,
  * 조건을 바꾸면 지도에 점선 제안이 따라오고, 만들기를 누르면 서버가 같은
  * 파라미터로 다시 계산해 저장한다. 다른 것은 결과물뿐이다 —
- * 식생은 작기(GeoPlanting), 여기서는 장치 담당 구역(GeoShape type='device')
+ * 식생은 작기(GeoPlot), 여기서는 장치 담당 구역(GeoShape type='device')
  * 이고, 만들어진 구역 안에 장치 마커가 하나면 그 장치에 자동 배정된다.
  *
- * 미리보기는 식생과 **같은 엔드포인트**를 쓴다(`/api/geo/planting/split-preview`).
+ * 미리보기는 식생과 **같은 엔드포인트**를 쓴다(`/api/geo/plot/split-preview`).
  * 그쪽은 도형을 잘라 조각만 돌려줄 뿐 작기와 무관하므로 하나 더 만들 이유가 없다.
  */
 class AoTGeoDeviceSplit {
@@ -265,7 +265,7 @@ class AoTGeoDeviceSplit {
             args.orientation = 'short';
         }
         // 입력칸은 cm 다 — 서버 edge_margin_m 는 m 이므로 여기서만 ÷100 한다
-        // (식생 분할과 같은 규칙, aot-geo-vegetation.js 참조).
+        // (식생 분할과 같은 규칙, aot-geo-plot.js 참조).
         const marginCm = parseFloat(get('edge_margin_cm'));
         if (isFinite(marginCm) && marginCm > 0) args.edge_margin_m = marginCm / 100;
 
@@ -289,7 +289,7 @@ class AoTGeoDeviceSplit {
     }
 
     _runPreview(args, root) {
-        return fetch('/api/geo/planting/split-preview?' + this._query(args).toString())
+        return fetch('/api/geo/plot/split-preview?' + this._query(args).toString())
             .then(r => r.json().then(data => ({ status: r.status, data })))
             .then(({ status, data }) => {
                 if (status >= 400 || !data || !data.ok) {

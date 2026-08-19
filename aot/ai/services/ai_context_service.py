@@ -244,7 +244,7 @@ class AIContextService:
                 # 를 넣어, 같은 지도의 노드 74개가 전부 같은 값을 달고 나갔다
                 # (실측: 노드 142개에 서로 다른 값 8개). 도구 설명이 AI 에게
                 # "get_spatial_tree 에서 id 를 얻어 zone_id 로 넘겨라" 라고
-                # 시키고 있으므로(copy_planting·geo_distance), 그 값은 지도가
+                # 시키고 있으므로(copy_plot·geo_distance), 그 값은 지도가
                 # 아니라 도형을 가리켜야 한다. semantic_note 도 같은 이유로
                 # 비어 있었다 — 노트는 엔티티 unique_id 에 붙는다.
                 node = {
@@ -391,18 +391,18 @@ class AIContextService:
             # — 빠뜨리면 구획에 붙인 노트가 이름 없이 남아 다이제스트에서 버려진다.
             #
             # **이 자리가 중요한 이유**: 두둑 배치·멀칭·관행처럼 대화에서 확정되는
-            # 사실은 컬럼이 아니라 구획 노트로 남긴다(planting_context 의
+            # 사실은 컬럼이 아니라 구획 노트로 남긴다(plot_context 의
             # _FLAT_LAYOUT_ASK 참조). 그 노트가 다음 대화에 실려 오는 통로가
             # 여기이므로, 여기가 비면 "적어 두라" 는 지시 자체가 헛돈다.
             #
             # 이름은 구획 이름 → 작물 순으로 잡는다. 이름 없는 구획이 흔하고
             # (그릴 때 선택), 그때는 '상추' 가 uuid 보다 훨씬 쓸모 있다.
             try:
-                from aot.databases.models import GeoPlanting
-                for p in GeoPlanting.query.all():
+                from aot.databases.models import GeoPlot
+                for p in GeoPlot.query.all():
                     if p.unique_id:
-                        label = str(p.name or p.crop or 'planting').strip()
-                        name_map[p.unique_id] = (label or 'planting', 'planting')
+                        label = str(p.name or p.subject or 'plot').strip()
+                        name_map[p.unique_id] = (label or 'plot', 'plot')
             except Exception:
                 pass
 

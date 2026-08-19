@@ -17,8 +17,8 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from config_translations import TRANSLATIONS as T
 
 MYCODO_VERSION = '8.16.0'
-ALEMBIC_VERSION = 'p6_38_geo_containment_cache_20260818'
-AOT_VERSION = '26.08.11'
+ALEMBIC_VERSION = 'p6_46_program_auto_advance_20260819'
+AOT_VERSION = '26.08.12'
 
 # FORCE UPGRADE MASTER
 # Set True to enable upgrading to the master branch of the AoT repository.

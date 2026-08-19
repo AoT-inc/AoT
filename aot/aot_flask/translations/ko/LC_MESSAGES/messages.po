@@ -5767,7 +5767,7 @@ msgid "Setpoint Tracking Input"
 msgstr "설정값 추적 입력"
 
 #: aot_flask/forms/forms_pid.py:129
-msgid "Schedule Start (planting date)"
+msgid "Schedule Start (start date)"
 msgstr "일정 시작 (정식일)"
 
 #: aot_flask/forms/forms_pid.py:132
@@ -27698,15 +27698,15 @@ msgid "Overlaps an existing schedule — turns off at %(time)s"
 msgstr "기존 예약과 겹칩니다 — %(time)s 에 함께 꺼집니다"
 
 #: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
-msgid "Planting"
-msgstr "식생"
+msgid "Plot"
+msgstr "구획"
 
 #: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
 msgid "Area allocation"
 msgstr "면적 배분"
 
 #: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
-msgid "Select a planting"
+msgid "Select a plot"
 msgstr "구획 선택"
 
 #: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
@@ -27714,7 +27714,7 @@ msgid "Several plantings overlap here. Pick one."
 msgstr "이 자리에 여러 구획이 겹쳐 있습니다. 하나를 고르세요."
 
 #: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
-msgid "New planting"
+msgid "New plot"
 msgstr "새 구획"
 
 
@@ -27749,7 +27749,7 @@ msgid "No map selected"
 msgstr "선택된 지도가 없습니다"
 
 #: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
-msgid "Draw an area (polygon) for a planting."
+msgid "Draw an area (polygon) for a plot."
 msgstr "식생 구획은 면으로 그려 주세요."
 
 #: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
@@ -27773,7 +27773,7 @@ msgid "Copy as new"
 msgstr "복사해서 새로 만들기"
 
 #: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
-msgid "End planting"
+msgid "End plot"
 msgstr "식재 종료"
 
 #: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
@@ -27785,7 +27785,7 @@ msgid "Delete this planting record? Use \"End planting\" instead if it was harve
 msgstr "이 구획 기록을 삭제할까요? 수확이 끝난 것이라면 \"재배 종료\"를 쓰세요."
 
 #: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
-msgid "No past plantings on this spot."
+msgid "No past plots on this spot."
 msgstr "이 자리의 지난 기록이 없습니다."
 
 #: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
@@ -27861,7 +27861,7 @@ msgid "For mistakes only — the record is gone."
 msgstr "잘못 만든 경우에만 — 기록이 사라집니다."
 
 #: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
-msgid "Ended plantings cannot be reshaped."
+msgid "Ended plots cannot be reshaped."
 msgstr "종료된 구획은 모양을 바꿀 수 없습니다."
 
 #: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
@@ -28021,8 +28021,8 @@ msgid "Discard preview"
 msgstr "미리보기 지우기"
 
 #: aot/aot_flask/static/js/widgets/AoT_map/aot-map-vegetation.js:1
-msgid "Show Plantings"
-msgstr "식생 구획 표시"
+msgid "Show Plots"
+msgstr "구획 표시"
 
 #: aot/aot_flask/static/js/widgets/AoT_map/aot-map-vegetation.js:1
 msgid "Show vegetation plots (what is planted where). Plot labels appear when zoomed in."
@@ -28033,11 +28033,11 @@ msgid "Ended"
 msgstr "종료일"
 
 #: aot/aot_flask/static/js/widgets/AoT_map/aot-map-vegetation.js:1
-msgid "Days since planting"
+msgid "Days elapsed"
 msgstr "경과 일수"
 
 #: aot/aot_flask/static/js/widgets/AoT_map/aot-map-vegetation.js:1
-msgid "End this planting?"
+msgid "End this plot?"
 msgstr "재배를 종료할까요?"
 
 #: aot/aot_flask/static/js/widgets/AoT_map/aot-map-vegetation.js:1
@@ -28358,8 +28358,8 @@ msgstr "관수"
 
 
 #: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
-msgid "%(pct)s% of this plot"
-msgstr "이 구획의 %(pct)s%"
+msgid "{pct} of this plot"
+msgstr "이 구획의 {pct}"
 
 
 #: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
@@ -28521,3 +28521,368 @@ msgstr "예정도 취소"
 #: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
 msgid "%(n)s more"
 msgstr "외 %(n)s건"
+
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Plant here"
+msgstr "여기에 심기"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Nothing planted here yet."
+msgstr "아직 심은 것이 없습니다."
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Whole facility"
+msgstr "시설 전체"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Day {n}"
+msgstr "{n}일차"
+
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Save the facility first, then record what is planted in each zone."
+msgstr "시설을 먼저 저장한 뒤, 각 구역에 심은 작물을 적으세요."
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "End this plot? The record stays as history."
+msgstr "이 구획을 종료할까요? 기록은 이력으로 남습니다."
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Delete this record? Use \"End\" instead if it was actually grown — deleting removes it from the history."
+msgstr "이 기록을 삭제할까요? 실제로 재배한 것이라면 \"종료\"를 쓰세요 — 삭제하면 이력에서도 사라집니다."
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Record what is planted in each zone. Greenhouse plots need no drawing — the zone itself is the location."
+msgstr "각 구역에 무엇이 심겨 있는지 적습니다. 시설 구획은 그릴 필요가 없습니다 — 구역 자체가 위치입니다."
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "These plots sit in zones this change removes: {list}. They stay recorded but lose their zone. Save anyway?"
+msgstr "이 변경으로 사라지는 구역에 심긴 것이 있습니다: {list}. 기록은 남지만 구역을 잃습니다. 그래도 저장할까요?"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Plots without a zone after this change: {list}"
+msgstr "이 변경으로 구역을 잃은 구획: {list}"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Where"
+msgstr "위치"
+
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Enter what is planted."
+msgstr "심은 것을 입력하세요."
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Floor area alone does not tell you how much fits inside a facility — record the layout (beds, rows, tiers) in the notes."
+msgstr "시설은 바닥 면적만으로 얼마나 들어가는지 알 수 없습니다 — 배치(베드·줄·단)는 노트에 적어 두세요."
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
+msgid "No program"
+msgstr "프로그램 없음"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
+msgid " stages"
+msgstr "단계"
+
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
+msgid "Programme length"
+msgstr "전체 기간"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
+msgid "A newer version of this program exists (not applied)."
+msgstr "이 프로그램의 새 버전이 있습니다(적용되지 않음)."
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
+msgid "The program this plot followed is gone. Pick another."
+msgstr "이 구획이 따르던 프로그램이 사라졌습니다. 다시 고르세요."
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
+msgid "Next stage"
+msgstr "다음 단계"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
+msgid "Not planted yet"
+msgstr "아직 심지 않음"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
+msgid "Past the programme end"
+msgstr "프로그램 기간이 지남"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
+msgid "from programme"
+msgstr "프로그램 기준"
+
+#: aot/aot_flask/templates/pages/geo/vegetation.html
+msgid "Vegetation"
+msgstr "식생"
+
+#: aot/aot_flask/templates/pages/geo/vegetation.html
+msgid "Pick a built-in program to copy, or start from an empty one."
+msgstr "복제할 내장 프로그램을 고르거나 빈 프로그램으로 시작하세요."
+
+#: aot/aot_flask/templates/pages/geo/vegetation.html
+msgid "No programs yet. Add one above."
+msgstr "아직 프로그램이 없습니다. 위에서 추가하세요."
+
+#: aot/aot_flask/templates/pages/geo/vegetation.html
+msgid "New program"
+msgstr "새 프로그램"
+
+#: aot/aot_flask/templates/pages/geo/vegetation.html
+msgid "Total length"
+msgstr "전체 기간"
+
+#: aot/aot_flask/templates/pages/geo/vegetation.html
+msgid "Stage name"
+msgstr "단계 이름"
+
+#: aot/aot_flask/templates/pages/geo/vegetation.html
+msgid "Days"
+msgstr "기간(일)"
+
+#: aot/aot_flask/templates/pages/geo/vegetation.html
+msgid "until the end"
+msgstr "끝까지"
+
+#: aot/aot_flask/templates/pages/geo/vegetation.html
+msgid "Add stage"
+msgstr "단계 추가"
+
+#: aot/aot_flask/templates/pages/geo/vegetation.html
+msgid "Delete this program?"
+msgstr "이 프로그램을 삭제할까요?"
+
+#: aot/aot_flask/templates/pages/geo/vegetation.html
+msgid "Built-in and external programs are read-only. Copy it to make your own."
+msgstr "내장·외부 프로그램은 고칠 수 없습니다. 복제해서 내 것으로 만드세요."
+
+#: aot/aot_flask/templates/pages/geo/vegetation.html
+msgid "Made by AI — check it before using it for control."
+msgstr "AI가 만들었습니다 — 제어에 쓰기 전에 확인하세요."
+
+#: aot/aot_flask/templates/pages/geo/vegetation.html
+msgid "Mark as checked"
+msgstr "확인함으로 표시"
+
+#: aot/aot_flask/templates/pages/geo/vegetation.html
+msgid "Empty program"
+msgstr "빈 프로그램"
+
+#: aot/aot_flask/templates/pages/geo/vegetation.html
+msgid "%(n)s stages"
+msgstr "%(n)s단계"
+
+#: aot/aot_flask/templates/pages/geo/vegetation.html
+msgid "Targets"
+msgstr "목표"
+
+#: aot/aot_flask/templates/pages/geo/vegetation.html
+msgid "Used for display and advice. Control is not changed automatically."
+msgstr "표시와 조언에 쓰입니다. 제어가 자동으로 바뀌지는 않습니다."
+
+#: aot/aot_flask/templates/pages/geo/vegetation.html
+msgid "Day temp"
+msgstr "주간 온도"
+
+#: aot/aot_flask/templates/pages/geo/vegetation.html
+msgid "Night temp"
+msgstr "야간 온도"
+
+#: aot/aot_flask/templates/pages/geo/vegetation.html
+msgid "DLI"
+msgstr "DLI"
+
+#: aot/aot_flask/templates/pages/geo/vegetation.html
+msgid "From a template"
+msgstr "템플릿에서 시작"
+
+#: aot/aot_flask/templates/pages/geo/vegetation.html
+msgid "Copy one of mine"
+msgstr "내 프로그램 복제"
+
+#: aot/aot_flask/templates/pages/geo/vegetation.html
+msgid "unnamed"
+msgstr "미지정"
+
+#: aot/aot_flask/templates/pages/geo/vegetation.html
+msgid "Start empty, or begin from a template. Templates are examples — nothing is installed until you add it."
+msgstr "빈 프로그램으로 시작하거나 템플릿에서 시작하세요. 템플릿은 예시일 뿐이고, 추가하기 전에는 아무것도 설치되지 않습니다."
+
+#: aot/aot_flask/templates/pages/geo/vegetation.html
+msgid "Target curves"
+msgstr "목표 곡선"
+
+#: aot/aot_flask/templates/pages/geo/vegetation.html
+msgid "A curve overrides the stage value for that item. Time runs from the planting date."
+msgstr "곡선을 걸면 그 항목은 단계 값 대신 곡선을 따릅니다. 시간 기준은 심은 날입니다."
+
+#: aot/aot_flask/templates/pages/geo/vegetation.html
+msgid "Fixed value"
+msgstr "고정 값"
+
+#: aot/aot_flask/templates/pages/geo/vegetation.html
+msgid "Applies to"
+msgstr "적용 대상"
+
+#: aot/aot_flask/templates/pages/geo/vegetation.html
+msgid "Enter a new one…"
+msgstr "직접 입력…"
+
+#: aot/aot_flask/templates/pages/geo/vegetation.html
+msgid "Programs"
+msgstr "프로그램"
+
+#: aot/aot_flask/templates/pages/geo/vegetation.html
+msgid "Kind"
+msgstr "종류"
+
+#: aot/aot_flask/templates/pages/geo/vegetation.html
+msgid "Livestock"
+msgstr "가축"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "A program brings the stages and the expected end date."
+msgstr "프로그램을 고르면 단계와 예상 종료일이 따라옵니다."
+
+msgid "Show plots (what is where). Plot labels appear when zoomed in."
+msgstr "구획(어디에 무엇이 있는지)을 표시합니다. 확대하면 구획 이름이 나타납니다."
+
+msgid "A curve overrides the stage value for that item. Time runs from the start date."
+msgstr "곡선을 연결하면 그 항목은 단계 값 대신 곡선을 따릅니다. 시간축은 시작일 기준입니다."
+
+msgid "Start / germination date. Used as week-0 for DailyMultiPoint keyframe progression. Interpreted in the device local timezone."
+msgstr "시작일 / 발아일. DailyMultiPoint 키프레임 진행의 0주차 기준입니다. 장치의 현지 시간대로 해석됩니다."
+
+msgid "Start / germination date. Pick from the calendar. The date is interpreted in the device/facility local timezone (the system stores it as UTC internally — no manual conversion needed). Used to compute weeks_elapsed for all Method curves. Leave empty to disable week-based progression (Methods use wall-clock day only)."
+msgstr "시작일 / 발아일. 달력에서 고르세요. 날짜는 장치·시설의 현지 시간대로 해석됩니다(내부 저장은 UTC이며 직접 변환할 필요가 없습니다). 모든 Method 곡선의 경과 주차 계산에 쓰입니다. 비워 두면 주차 기반 진행을 쓰지 않습니다(Method 는 달력 날짜만 사용)."
+
+msgid "What is here"
+msgstr "대상"
+
+msgid "Start date"
+msgstr "시작일"
+
+msgid "Subject is required"
+msgstr "대상을 입력하세요"
+
+msgid "Enter what is here."
+msgstr "대상을 입력하세요."
+
+msgid "Not started yet"
+msgstr "아직 시작 전"
+
+msgid "Nothing recorded here yet."
+msgstr "아직 등록된 것이 없습니다."
+
+msgid "Nothing recorded in this zone."
+msgstr "이 구역에 등록된 것이 없습니다."
+
+msgid "Add a plot"
+msgstr "구획 추가"
+
+msgid "Save the facility first, then record what is in each zone."
+msgstr "시설을 먼저 저장한 뒤, 각 구역에 무엇이 있는지 적으세요."
+
+msgid "Record what is in each zone. Facility plots need no drawing — the zone itself is the location."
+msgstr "각 구역에 무엇이 있는지 적으세요. 시설 구획은 도형을 그릴 필요가 없습니다 — 구역 자체가 위치입니다."
+
+msgid "Dates"
+msgstr "기간"
+
+msgid "Follows a curve"
+msgstr "곡선을 따름"
+
+msgid "Follows curve: {name}"
+msgstr "곡선을 따름: {name}"
+
+msgid "Targets are shown for reference. Control is not changed automatically."
+msgstr "목표는 참고용으로만 표시됩니다. 제어는 자동으로 바뀌지 않습니다."
+
+msgid "Current stage"
+msgstr "단계"
+
+msgid "Stage count"
+msgstr "단계 수"
+
+msgid "GDD"
+msgstr "GDD"
+
+msgid "by days"
+msgstr "날짜 기준"
+
+msgid "Base temperature"
+msgstr "기준온도"
+
+msgid "With a base temperature and a GDD per stage, stages advance on accumulated heat instead of the calendar."
+msgstr "기준온도와 단계별 적산온도를 채우면, 단계는 달력이 아니라 쌓인 온도로 넘어갑니다."
+
+msgid "Accumulated heat"
+msgstr "적산온도"
+
+msgid "By days"
+msgstr "날짜 기준"
+
+msgid "No base temperature set"
+msgstr "기준온도 미설정"
+
+msgid "No temperature sensor for this plot"
+msgstr "이 구획에 온도 센서 없음"
+
+msgid "Not enough temperature history"
+msgstr "온도 이력 부족"
+
+msgid "No start date"
+msgstr "시작일 없음"
+
+msgid "in {n} GDD"
+msgstr "{n} GDD 남음"
+
+msgid "Days covered: {n}"
+msgstr "전체 일수의 {n}"
+
+msgid "Stage change"
+msgstr "단계 전환"
+
+msgid "Stage log"
+msgstr "단계 기록"
+
+msgid "Undo last"
+msgstr "마지막 되돌리기"
+
+msgid "undone"
+msgstr "되돌림"
+
+msgid "Undo the last confirmed stage change?"
+msgstr "마지막으로 확인한 단계 전환을 되돌릴까요? 이후 단계가 다시 계산됩니다."
+
+msgid "Advance stages automatically"
+msgstr "단계 자동 전환"
+
+msgid "Stages are recorded without asking. The date comes from the data, not from when you happen to look."
+msgstr "묻지 않고 단계를 기록합니다. 날짜는 열어 본 시점이 아니라 자료에서 되짚습니다."
+
+msgid "auto"
+msgstr "자동"
+
+msgid "Resources"
+msgstr "자원"
+
+msgid "Declared only. Functions are not switched on or off automatically."
+msgstr "선언만 합니다. 함수를 자동으로 켜거나 끄지 않습니다."
+
+msgid "Fertigation"
+msgstr "시비"
+
+msgid "Function is gone"
+msgstr "없는 함수"
+
+msgid "stopped"
+msgstr "정지됨"
+
+msgid "Turn on the functions this stage declares?"
+msgstr "이 단계에 선언된 함수를 켤까요? 선언에 없는 함수는 건드리지 않습니다."
+
+msgid "Some functions could not be started."
+msgstr "일부 함수를 켜지 못했습니다."

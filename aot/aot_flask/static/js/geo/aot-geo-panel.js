@@ -187,10 +187,10 @@ class AoTGeoPanel {
         this._attachDragScroll(tierEl);
         this._bindNavEvents(tierEl);
         // 분할 폼은 자기 입력들을 스스로 배선한다(라이브 미리보기까지).
-        // tier id 로 판정하지 않는다 — 분할 폼은 'vegetation' tier 안에 바로
+        // tier id 로 판정하지 않는다 — 분할 폼은 'plot' tier 안에 바로
         // 이어 붙으므로(더 이상 별도 'split' tier 가 아니다), 내용에 그 폼의
         // 표식(zone_id select)이 있는지로 판정하는 편이 실제로 맞다.
-        const veg = this.geoDesign && this.geoDesign.vegetation;
+        const veg = this.geoDesign && this.geoDesign.plot;
         if (veg && veg.bindSplitPanel && tierEl.querySelector('[data-veg-split="zone_id"]')) {
             veg.bindSplitPanel(tierEl);
         }
@@ -205,7 +205,7 @@ class AoTGeoPanel {
     _modeLabel(mode) {
         const labels = {
             site: _('Site'), zone: _('Zone'), facility: _('Facility'),
-            vegetation: _('Planting'), equipment: _('Equipment'),
+            plot: _('Plot'), equipment: _('Equipment'),
             aot_device: _('A'),
         };
         return labels[mode] || _('Settings');
@@ -341,7 +341,7 @@ class AoTGeoPanel {
                     <div class="mode-tab ${this.currentMode === 'site' ? 'active' : ''}" data-nav-mode="site">${_('Site')}</div>
                     <div class="mode-tab ${this.currentMode === 'zone' ? 'active' : ''}" data-nav-mode="zone">${_('Zone')}</div>
                     <div class="mode-tab ${this.currentMode === 'facility' ? 'active' : ''}" data-nav-mode="facility">${_('Facility')}</div>
-                    <div class="mode-tab ${this.currentMode === 'vegetation' ? 'active' : ''}" data-nav-mode="vegetation">${_('Planting')}</div>
+                    <div class="mode-tab ${this.currentMode === 'plot' ? 'active' : ''}" data-nav-mode="plot">${_('Plot')}</div>
                     <div class="mode-tab ${this.currentMode === 'equipment' ? 'active' : ''}" data-nav-mode="equipment">${_('Equipment')}</div>
                     <div class="mode-tab ${this.currentMode === 'aot_device' ? 'active' : ''}" data-nav-mode="aot_device">${_('A')}</div>
                 `;
@@ -398,13 +398,13 @@ class AoTGeoPanel {
             }
 
             // --- Tier 2: 식생 구획(작기) ---
-            // 색 피커의 data-type 은 'vegetation' — theme_config 의 키와 같아야
+            // 색 피커의 data-type 은 'plot' — theme_config 의 키와 같아야
             // 하고, 그 기본값은 aot-geo-theme-colors.js 의 DEFAULTS 한 벌뿐이다.
             // 여기에 새 폴백 색을 적지 말 것.
-            case 'vegetation': {
+            case 'plot': {
                 const vegConfig = (window.AOT_GEO_CONFIG && window.AOT_GEO_CONFIG.theme_config) ? window.AOT_GEO_CONFIG.theme_config : {};
-                const vegColor = vegConfig['vegetation'] ||
-                    (window.AoTGeoTheme ? window.AoTGeoTheme.DEFAULTS.vegetation : '#6a8f3c');
+                const vegColor = vegConfig['plot'] ||
+                    (window.AoTGeoTheme ? window.AoTGeoTheme.DEFAULTS.plot : '#6a8f3c');
                 // 그리기·편집·삭제는 **오른쪽 그리기 컨트롤 패널**이 담당한다
                 // (다른 도형과 같다). 여기에 같은 기능의 버튼을 또 두면 진입점이
                 // 둘로 갈린다. 이 티어에는 종류별 설정(색)만 둔다.
@@ -413,14 +413,14 @@ class AoTGeoPanel {
                 // 여기 "구획으로 나누기 → 열기" 버튼이 있어 별도 tier 로
                 // 들어가야 했는데, 식생 드로어를 여는 것 자체가 대개 분할을
                 // 하려는 것이다 — 버튼을 한 번 더 누르게 하는 것은 중복이다.
-                // 내용·배선은 여전히 vegetation 모듈이 쥔다(폼이 지도의 미리보기
+                // 내용·배선은 여전히 plot 모듈이 쥔다(폼이 지도의 미리보기
                 // 점선·기준선과 한 몸이라 패널이 흉내 낼 수 있는 것이 아니다).
                 html += this._group(_('Basic settings')) +
                     `<div class="aot-modal-container">` +
-                    this._colorRow('theme-color-picker', 'data-type="vegetation"', vegColor) +
-                    this._shapeVisibilityRow('vegetation') +
+                    this._colorRow('theme-color-picker', 'data-type="plot"', vegColor) +
+                    this._shapeVisibilityRow('plot') +
                     `</div>`;
-                const veg = this.geoDesign && this.geoDesign.vegetation;
+                const veg = this.geoDesign && this.geoDesign.plot;
                 html += (veg && veg.splitPanelHtml) ? veg.splitPanelHtml() : '';
                 break;
             }
@@ -1020,7 +1020,7 @@ class AoTGeoPanel {
             };
         }
 
-        // 도형 종류 표시/숨김 (site/zone/facility/vegetation/equipment)
+        // 도형 종류 표시/숨김 (site/zone/facility/plot/equipment)
         const toggleShapeVis = rootEl.querySelector('#shape-visible-toggle');
         if (toggleShapeVis) {
             toggleShapeVis.onchange = (e) => {
@@ -1608,7 +1608,7 @@ class AoTGeoPanel {
         let themeVar = '--theme-site';
         if (mode === 'zone') themeVar = '--theme-zone';
         else if (mode === 'facility') themeVar = '--theme-facility';
-        else if (mode === 'vegetation') themeVar = '--theme-vegetation';
+        else if (mode === 'plot') themeVar = '--theme-plot';
         else if (mode === 'equipment') themeVar = '--theme-equipment';
         else if (mode === 'aot_device') themeVar = '--theme-device';
 

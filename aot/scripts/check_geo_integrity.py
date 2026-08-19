@@ -23,7 +23,7 @@ GeoShape 는 도형의 종류를 두 곳에 들고 있다 — `type` 컬럼과
               더 INSERT → 두 벌. 6일간 아무도 몰랐고, 08-03 시설 하나를
               추가하자 "예전 시설이 지도에서 사라짐"으로 표면화됐다.
 
-검사 항목 12종 (GeoShape 8 + GeoPlanting 4):
+검사 항목 12종 (GeoShape 8 + GeoPlot 4):
   type-mismatch   type 컬럼 ≠ properties.aot_type
   duplicate       같은 지도 안에서 (종류, 기하) 가 겹치는 도형.
                   좌표는 --tolerance(기본 1e-6 도, 약 0.1m) 로 반올림해 비교한다
@@ -49,14 +49,28 @@ GeoShape 는 도형의 종류를 두 곳에 들고 있다 — `type` 컬럼과
                   연결. 두 저장처가 공존하는 Phase B 완료 전까지의 감시자다.
                   geo_binding 테이블이 없는 설치에서는 건너뛴다.
 
-식생 구획(docs/design/geo-vegetation-planting.md) 관련 4종:
+공간 구획(docs/design/geo-plot-instance.md) 관련 9종:
 
-  planting-bad-geometry   기하가 Polygon/MultiPolygon 이 아님(VP-1). 지도에
+  plot-bad-geometry   기하가 Polygon/MultiPolygon 이 아님(VP-1). 지도에
                   아예 그려지지 않는다 — 목록에는 있는데 화면에 없는 상태.
-  planting-bad-dates      ended_on < planted_on (VP-2).
-  planting-embedded-ref   feature.properties 에 device_id/색 사본 각인(VP-4).
+  plot-bad-dates      ended_on < started_on (VP-2).
+  plot-embedded-ref   feature.properties 에 device_id/색 사본 각인(VP-4).
                   사본은 원본이 바뀌어도 따라오지 않아 조용히 갈린다.
-  planting-phantom-map    GeoMap 행이 없는 geo_id — 자동 삭제 금지.
+  plot-phantom-map    GeoMap 행이 없는 geo_id — 자동 삭제 금지.
+  plot-no-location    기하도 시설 부모도 없음(VP-7). 지도에 그려지지 않고
+                          어떤 소속 판정에도 걸리지 않는 유령 구획이다.
+  plot-dangling-facility  실존하지 않는 시설을 가리킴. 기하 없는 구획이면
+                          위치의 정본이 통째로 사라진 상태다.
+  plot-unknown-bay    시설은 있는데 그 구역이 없다(bay_count 축소·구역 병합).
+                          지도에서 시설 외피로 슬그머니 넓어질 뿐 에러가 없다.
+  plot-dangling-program   프로그램을 지웠는데 구획이 계속 가리킨다. 단계·목표·
+                          예상 종료일이 사라지는데 화면에는 "프로그램 없음" 으로
+                          만 보인다.
+  plot-program-kind-mismatch  구획과 프로그램의 대상 종류가 다르다. 쓰기
+                          게이트웨이가 막지만 **그것을 지나지 않은 행**은 아무도
+                          보지 않는다(게이트웨이 이전 행·백필·직접 수정).
+                          에러가 나지 않고, 화면에는 그럴듯한 단계와 목표가
+                          뜬 채 그 값이 제어로 흐른다.
 
   ⚠ 구획끼리의 **겹침은 검사하지 않는다.** 간작·혼작이 정상이다(VP-3).
     "겹치면 안 될 것 같다"는 직관으로 검사를 추가하지 말 것.
@@ -368,17 +382,17 @@ def collect(map_uuid=None, tolerance=1e-6):
             'shape_ids': ids[:20]})
 
     # ── 식생 구획(작기) ────────────────────────────────────────────────
-    _collect_plantings(findings, map_uuid, map_names)
+    _collect_plots(findings, map_uuid, map_names)
     _check_containment_cache(findings, map_uuid, map_names)
 
     return dict(findings), len(shapes)
 
 
-def _collect_plantings(findings, map_uuid, map_names):
-    """GeoPlanting 불변식 VP-1·VP-2·VP-4 + 유령 지도.
+def _collect_plots(findings, map_uuid, map_names):
+    """GeoPlot 불변식 VP-1·VP-2·VP-4·VP-7 + 유령 지도 + 죽은 시설 참조.
 
-    GeoPlanting 은 GeoShape 가 아니라 별도 테이블이므로 위 검사들의 대상이
-    아니다(그것이 이 설계의 요점이다 — docs/design/geo-vegetation-planting.md).
+    GeoPlot 은 GeoShape 가 아니라 별도 테이블이므로 위 검사들의 대상이
+    아니다(그것이 이 설계의 요점이다 — docs/design/geo-vegetation-plot.md).
     대신 자기 불변식은 여기서 함께 본다: 검사기를 둘로 나누면 한쪽만 돌리는
     운용이 생기고, 그러면 안 도는 쪽이 조용히 썩는다.
 
@@ -386,13 +400,13 @@ def _collect_plantings(findings, map_uuid, map_names):
     검사를 추가하지 말 것.
     """
     try:
-        from aot.databases.models import GeoPlanting
+        from aot.databases.models import GeoPlot
     except ImportError:
         return          # 마이그레이션 전 설치 — 검사할 것이 없다
 
     try:
-        rows = (GeoPlanting.query.filter_by(geo_id=map_uuid).all() if map_uuid
-                else GeoPlanting.query.all())
+        rows = (GeoPlot.query.filter_by(geo_id=map_uuid).all() if map_uuid
+                else GeoPlot.query.all())
     except Exception:
         # 테이블이 아직 없는 서버(p6_34 미적용). 검사 실패로 올리지 않는다 —
         # 나머지 8종의 판정을 가리면 안 된다.
@@ -400,32 +414,117 @@ def _collect_plantings(findings, map_uuid, map_names):
 
     forbidden = ('device_id', 'channel_id', 'color', 'zone_uuid', 'zone_id')
 
+    # 시설 부모 참조(p6_39)를 대조할 실존 시설 id 집합.
+    try:
+        from aot.databases.models import GeoFacility
+        facilities = {f.unique_id: f for f in GeoFacility.query.all()}
+    except Exception:
+        facilities = {}
+    facility_ids = set(facilities)
+
+    # 프로그램은 구획보다 훨씬 적다 — 한 번에 읽어 두고 대조한다.
+    # 테이블이 없는 설치(업그레이드 전)에서는 두 검사를 건너뛴다: 없는 것을
+    # 근거로 "끊어졌다" 고 말하면 정상 서버가 매번 문제로 잡힌다.
+    program_kinds = {}
+    have_programs = True
+    try:
+        from aot.databases.models import GeoProgram
+        program_kinds = {p.unique_id: (p.kind or 'vegetation')
+                         for p in GeoProgram.query.all()}
+    except Exception:
+        have_programs = False
+
+    _bay_cache = {}
+
+    def _facility_bay_ids(uuid):
+        """시설의 구역 id 집합. 목록을 못 만드는 시설(치수 미입력)은 빈 집합 —
+        근거 없이 "없는 구역" 이라고 말하지 않는다."""
+        if uuid in _bay_cache:
+            return _bay_cache[uuid]
+        ids = set()
+        try:
+            from aot.aot_flask.geo.facility_bays import (compute_bay_slices,
+                                                         spec_from_row)
+            ids = {sl['id'] for sl in
+                   compute_bay_slices(spec_from_row(facilities[uuid]))}
+        except Exception:
+            ids = set()
+        _bay_cache[uuid] = ids
+        return ids
+
     for r in rows:
-        where = {'planting_id': r.id, 'unique_id': r.unique_id,
-                 'crop': r.crop,
+        where = {'plot_id': r.id, 'unique_id': r.unique_id,
+                 'subject': r.subject,
                  'map': map_names.get(r.geo_id, r.geo_id)}
 
         feat = r.feature if isinstance(r.feature, dict) else {}
         geom = feat.get('geometry') if isinstance(feat, dict) else None
         gtype = (geom or {}).get('type')
-        if gtype not in ('Polygon', 'MultiPolygon'):
-            findings['planting-bad-geometry'].append(
-                dict(where, geometry_type=gtype))
+        facility_uuid = getattr(r, 'facility_uuid', None)
 
-        if r.ended_on and r.planted_on and r.ended_on < r.planted_on:
-            findings['planting-bad-dates'].append(
-                dict(where, planted_on=str(r.planted_on),
+        # 기하가 **없는 것**은 시설 구획(p6_39)에서 정상이다 — 위치의 정본이
+        # 부모(facility_uuid/bay_id)다. 그래서 VP-1(폴리곤이어야 한다)은 기하가
+        # 있을 때만 본다. 여기서 거르지 않으면 정상 시설 구획이 전부 위반으로
+        # 올라와, 진짜 위반이 그 안에 묻힌다.
+        if geom is not None:
+            if gtype not in ('Polygon', 'MultiPolygon'):
+                findings['plot-bad-geometry'].append(
+                    dict(where, geometry_type=gtype))
+        elif not facility_uuid:
+            # VP-7 — 기하도 부모도 없다. 어디에도 없는 구획이라 지도에 그려지지
+            # 않고 어떤 소속 판정에도 걸리지 않는다.
+            findings['plot-no-location'].append(dict(where))
+
+        # 죽은 시설 참조. 시설을 지웠는데 구획이 남으면 위치의 정본이 사라진
+        # 것이라, 기하 없는 구획은 그 순간 지도에서 통째로 사라진다.
+        if facility_uuid and facility_uuid not in facility_ids:
+            findings['plot-dangling-facility'].append(
+                dict(where, facility_uuid=facility_uuid,
+                     has_geometry=bool(geom)))
+        elif facility_uuid and getattr(r, 'bay_id', None):
+            # 시설은 살아 있는데 그 **구역**이 없다. bay_count 를 줄이거나 구역을
+            # 병합하면 생긴다 — 에러가 나지 않고, 지도에서는 시설 외피로 슬그머니
+            # 넓어질 뿐이라 아무도 모른 채 굴러간다. 저장 시점에도 경고하지만
+            # (facility_io._orphaned_plots) 그때 넘긴 것이 여기 남는다.
+            valid = _facility_bay_ids(facility_uuid)
+            if valid and r.bay_id not in valid:
+                findings['plot-unknown-bay'].append(
+                    dict(where, facility_uuid=facility_uuid, bay_id=r.bay_id))
+
+        if r.ended_on and r.started_on and r.ended_on < r.started_on:
+            findings['plot-bad-dates'].append(
+                dict(where, started_on=str(r.started_on),
                      ended_on=str(r.ended_on)))
 
         props = (feat.get('properties') or {}) if isinstance(feat, dict) else {}
         embedded = [k for k in forbidden if k in props]
         if embedded:
-            findings['planting-embedded-ref'].append(
+            findings['plot-embedded-ref'].append(
                 dict(where, keys=embedded))
 
         if r.geo_id not in map_names:
-            findings['planting-phantom-map'].append(
+            findings['plot-phantom-map'].append(
                 dict(where, geo_id=r.geo_id))
+
+        # 프로그램 참조 2종. 쓰기 게이트웨이(`plot_io.save_plot`)가 붙일 때와
+        # 종류만 바꿀 때 둘 다 막지만, **그 게이트웨이를 지나지 않은 행**은
+        # 아무도 보지 않는다 — 게이트웨이가 생기기 전에 만들어진 행, 백필,
+        # 사람이 직접 고친 DB. 이 도메인이 반복해서 겪은 모양 그대로다.
+        prog_uuid = getattr(r, 'program_uuid', None)
+        if prog_uuid and have_programs:
+            prog_kind = program_kinds.get(prog_uuid)
+            if prog_kind is None:
+                # 프로그램을 지웠는데 구획이 남았다. 단계·목표·예상 종료일이
+                # 통째로 사라지는데 화면에는 "프로그램 없음" 으로만 보인다.
+                findings['plot-dangling-program'].append(
+                    dict(where, program_uuid=prog_uuid))
+            elif prog_kind != (getattr(r, 'kind', None) or 'vegetation'):
+                # 종류가 어긋난 채 붙어 있다. **에러가 나지 않는다** — 화면에는
+                # 그럴듯한 단계와 목표가 뜨고, 그 값이 그대로 제어로 흐른다.
+                findings['plot-program-kind-mismatch'].append(
+                    dict(where, plot_kind=(getattr(r, 'kind', None)
+                                           or 'vegetation'),
+                         program_kind=prog_kind, program_uuid=prog_uuid))
 
 
 def _check_containment_cache(findings, map_uuid, map_names):
@@ -491,10 +590,15 @@ HEADINGS = {
     'orphan-device-shape': '실존하지 않는 장치를 가리키는 도형 (고아 도형)',
     'dangling-fitting':    '실존하지 않는 장치를 가리키는 시설 참조',
     'binding-drift':       '레거시 저장처에는 있는데 geo_binding 에 없는 연결',
-    'planting-bad-geometry': '식생 구획이 폴리곤이 아님 (VP-1)',
-    'planting-bad-dates':    '식생 구획의 종료일이 파종일보다 빠름 (VP-2)',
-    'planting-embedded-ref': '식생 구획 feature 에 장치/색 사본 각인 (VP-4)',
-    'planting-phantom-map':  '유령 지도의 식생 구획 — 자동삭제 금지',
+    'plot-bad-geometry': '식생 구획이 폴리곤이 아님 (VP-1)',
+    'plot-bad-dates':    '식생 구획의 종료일이 파종일보다 빠름 (VP-2)',
+    'plot-embedded-ref': '식생 구획 feature 에 장치/색 사본 각인 (VP-4)',
+    'plot-phantom-map':  '유령 지도의 식생 구획 — 자동삭제 금지',
+    'plot-no-location':  '기하도 시설도 없는 식생 구획 (VP-7)',
+    'plot-dangling-facility': '실존하지 않는 시설을 가리키는 식생 구획',
+    'plot-unknown-bay':  '없는 구역을 가리키는 식생 구획 (구역 구성 변경)',
+    'plot-dangling-program': '실존하지 않는 프로그램을 가리키는 구획',
+    'plot-program-kind-mismatch': '구획과 프로그램의 대상 종류가 다름',
     'containment-cache-drift': '포함 캐시가 기하와 불일치 (무효화 누락 경로)',
 }
 
@@ -503,12 +607,21 @@ HEADINGS = {
 # 계속 그려지고(장치는 없는데 구역이 남는다), 죽은 fitting 참조는 시설
 # 3D 의 창호·팬이 존재하지 않는 액추에이터를 가리킨 채 제어 UI 에 뜬다.
 # binding-drift 는 전환기의 정합 경고라 severe 가 아니다.
-# planting-bad-geometry 를 넣는 이유: 폴리곤이 아닌 구획은 지도에 아예 그려지지
+# plot-bad-geometry 를 넣는 이유: 폴리곤이 아닌 구획은 지도에 아예 그려지지
 # 않는다(면적 계산도 0). 목록에는 있는데 화면에 없는 상태다.
-# planting-bad-dates / embedded-ref 는 정합 경고라 severe 가 아니다.
+# plot-bad-dates / embedded-ref 는 정합 경고라 severe 가 아니다.
+# plot-no-location / dangling-facility 를 넣는 이유는 같다 — 전자는 위치가
+# 애초에 없고, 후자는 위치의 정본(부모)이 사라진 것이라 기하 없는 구획이면
+# 지도에서 통째로 안 보인다. 둘 다 "목록에는 있는데 화면에 없는" 상태다.
+# plot-program-kind-mismatch 를 넣는 이유: SEVERE 의 기준 중 "잘못 붙는" 쪽이다.
+# 가축 프로그램이 붙은 식생 구획은 화면에 그럴듯한 단계와 목표 환경을 띄우고,
+# 그 값이 제어로 흐른다 — 틀렸다는 표시가 어디에도 없다.
+# plot-dangling-program 은 severe 가 아니다: 구획은 계속 보이고 파생 정보만
+# 사라지므로 "화면에 없는" 것도 "잘못 붙은" 것도 아니다.
 SEVERE = ('type-mismatch', 'dangling-link', 'orphan-facility',
           'orphan-device-shape', 'dangling-fitting',
-          'planting-bad-geometry')
+          'plot-bad-geometry', 'plot-no-location',
+          'plot-dangling-facility', 'plot-program-kind-mismatch')
 
 
 def report(findings, shape_count, quiet=False):

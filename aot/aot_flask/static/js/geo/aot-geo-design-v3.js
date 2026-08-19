@@ -32,8 +32,8 @@ class AoTGeoDesign {
             // 식생 구획은 GeoShape 가 아니지만(별도 테이블) 그룹은 필요하다 —
             // 편집 도구가 여기서 레이어를 찾아 정점 편집 대상으로 삼는다
             // (_onDrawEdited 의 layerStorage 순회). 저장은 typesToSync 가
-            // 아니라 vegetation 모듈이 자기 API 로 한다.
-            'vegetation': new AoTGeoLayerGroup('vegetation')
+            // 아니라 plot 모듈이 자기 API 로 한다.
+            'plot': new AoTGeoLayerGroup('plot')
         };
 
         // **감춘 도형 종류는 지도를 만들기 전에 알아야 한다.**
@@ -84,10 +84,10 @@ class AoTGeoDesign {
         // 공간 슬롯 ↔ 장치 배정(geo_binding). 배치(devices)와는 다른 축이다 —
         // 저쪽은 좌표, 이쪽은 "이 자리를 지금 어느 장치가 맡는가"다.
         this.binding = window.AoTGeoBinding ? new AoTGeoBinding(this) : null;
-        // 식생 구획(작기). 저장처가 GeoShape 가 아니라 geo_planting 이라
+        // 식생 구획(작기). 저장처가 GeoShape 가 아니라 geo_plot 이라
         // saveDesign/typesToSync 경로를 타지 않는다 — 자기 API 로만 오간다.
-        this.vegetation = window.AoTGeoVegetation
-            ? new AoTGeoVegetation(this) : null;
+        this.plot = window.AoTGeoPlot
+            ? new AoTGeoPlot(this) : null;
         // 장치 모드의 구역 나누기 — 식생 분할과 같은 흐름, 결과물만 다르다
         // (작기 대신 장치 담당 구역 + 조각 안 마커로 자동 배정).
         this.deviceSplit = window.AoTGeoDeviceSplit
@@ -843,7 +843,7 @@ class AoTGeoDesign {
             // 새로 만들면 Leaflet/MapLibre 두 경로의 z-index 표를 모두 손봐야
             // 하는데 얻는 것이 없다.
             const paneName = (mode === 'site' ? 'sitePane' :
-                             (mode === 'zone' || mode === 'vegetation' ? 'zonePane' :
+                             (mode === 'zone' || mode === 'plot' ? 'zonePane' :
                              (mode === 'facility' ? 'facilityPane' :
                              (mode === 'equipment' ? 'equipmentPane' : 
                              (mode === 'aot_device' || mode === 'device' ? 'devicePane' : 'overlayPane')))));
@@ -932,17 +932,17 @@ class AoTGeoDesign {
 
         // 식생 구획은 별도 테이블이라 _switchLayerContext 의 대상이 아니다.
         // 처음 이 모드에 들어올 때 한 번 불러온다(이후는 캐시).
-        if (this.vegetation) {
+        if (this.plot) {
             // 식생 모드에서만 진하게 — 다른 모드에서는 배경으로 물러난다.
-            this.vegetation.setEmphasis(mode === 'vegetation');
+            this.plot.setEmphasis(mode === 'plot');
             // **모드와 무관하게 불러온다.** 예전에는 식생 모드일 때만 load()
             // 를 불러서, 페이지를 열면(초기 모드 'site') 구획이 아예 없다가
             // 식생 탭에 한 번 들어가야 나타났다 — 다른 모드에서 배치를 조정할
             // 때 참고할 것이 없다는 뜻이다. load() 는 자체 캐시 가드가 있어
             // 여러 번 불러도 서버 요청은 한 번이다.
-            this.vegetation.bindEditHook();
-            this.vegetation.bindDeleteHook();
-            this.vegetation.load();
+            this.plot.bindEditHook();
+            this.plot.bindDeleteHook();
+            this.plot.load();
         }
 
         // Auto Save Mode Change
@@ -3493,7 +3493,7 @@ class AoTGeoDesign {
         site: ['site'],
         zone: ['zone'],
         facility: ['facility'],
-        vegetation: ['vegetation'],
+        plot: ['plot'],
         equipment: ['equipment', 'connection'],
         aot_device: ['aot_device', 'device'],
     };
@@ -3786,7 +3786,7 @@ class AoTGeoDesign {
             const geomType = feature && feature.geometry && feature.geometry.type;
             if (geomType !== 'Polygon' && geomType !== 'MultiPolygon') return;
             const type = (feature.properties || {}).aot_type;
-            if (type === 'vegetation') return; // 자기 emphasis 시스템이 따로 있다
+            if (type === 'plot') return; // 자기 emphasis 시스템이 따로 있다
             const lineId = layer._layerId + '-line';
             if (!mlMap.getLayer(lineId)) { pending++; return; }
 

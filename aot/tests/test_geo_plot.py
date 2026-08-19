@@ -1,7 +1,7 @@
 # coding=utf-8
 """식생 구획(작기)의 불변식과 계약을 고정한다.
 
-설계 정본: docs/design/geo-vegetation-planting.md
+설계 정본: docs/design/geo-vegetation-plot.md
 
 여기서 지키는 것 중 **깨져도 조용한 것**이 여럿이다:
 
@@ -12,7 +12,7 @@
   멀쩡해 보이고 소속만 조용히 흔들린다.
 - `typesToSync` 에 'vegetation' 이 들어가면 GeoShape 전량교체 저장 경로가
   식생을 자기 것으로 착각한다.
-- `theme_keys` 화이트리스트에 'theme_vegetation' 이 없으면 색 피커는 색이
+- `theme_keys` 화이트리스트에 'theme_plot' 이 없으면 색 피커는 색이
   바뀐 것처럼 보이고 새로고침하면 되돌아온다(2026-08-08 device_unit 이 그랬다).
 - 미배정 면적을 단순 합으로 빼면 겹친 만큼 이중으로 빠져 음수가 된다.
 
@@ -35,7 +35,7 @@ _DESIGN_JS = os.path.join(_ROOT, 'aot_flask', 'static', 'js', 'geo',
                           'aot-geo-design-v3.js')
 _THEME_JS = os.path.join(_ROOT, 'aot_flask', 'static', 'js', 'common',
                          'aot-geo-theme-colors.js')
-_MODEL = os.path.join(_ROOT, 'databases', 'models', 'geo_planting.py')
+_MODEL = os.path.join(_ROOT, 'databases', 'models', 'geo_plot.py')
 
 
 def _read(path):
@@ -60,8 +60,8 @@ def _square(x0, y0, size):
 
 class TestAreaMath(unittest.TestCase):
     def setUp(self):
-        from aot.aot_flask.geo import planting_context
-        self.ctx = planting_context
+        from aot.aot_flask.geo import plot_context
+        self.ctx = plot_context
 
     def _sh(self, geom):
         from shapely.geometry import shape
@@ -148,8 +148,8 @@ class _FakeRow(object):
 
 class TestDimensions(unittest.TestCase):
     def setUp(self):
-        from aot.aot_flask.geo import planting_context
-        self.ctx = planting_context
+        from aot.aot_flask.geo import plot_context
+        self.ctx = plot_context
 
     def test_rectangular_plot_reports_its_two_sides(self):
         """40m × 46m ≈ 1837m² — 상추 구획 '앞두둑' 규모."""
@@ -236,8 +236,8 @@ class TestCapacityEstimate(unittest.TestCase):
     """평평한 배치 — 줄 간격 + 그루 간격."""
 
     def setUp(self):
-        from aot.aot_flask.geo import planting_context
-        self.ctx = planting_context
+        from aot.aot_flask.geo import plot_context
+        self.ctx = plot_context
         self.dims = self.ctx.dimensions(
             _FakeRow(_rect_at(_KIMJE_LNG, _KIMJE_LAT, 4.0, 20.0)))
 
@@ -336,8 +336,8 @@ class TestBedLayout(unittest.TestCase):
     """
 
     def setUp(self):
-        from aot.aot_flask.geo import planting_context
-        self.ctx = planting_context
+        from aot.aot_flask.geo import plot_context
+        self.ctx = plot_context
         self.dims = self.ctx.dimensions(
             _FakeRow(_rect_at(_KIMJE_LNG, _KIMJE_LAT, 4.0, 20.0)))
 
@@ -408,8 +408,8 @@ class TestFlatLayoutAsksForNotes(unittest.TestCase):
     """
 
     def setUp(self):
-        from aot.aot_flask.geo import planting_context
-        self.ctx = planting_context
+        from aot.aot_flask.geo import plot_context
+        self.ctx = plot_context
         self.dims = self.ctx.dimensions(
             _FakeRow(_rect_at(_KIMJE_LNG, _KIMJE_LAT, 4.0, 20.0)))
 
@@ -419,11 +419,11 @@ class TestFlatLayoutAsksForNotes(unittest.TestCase):
         self.assertIn('ask_user', cap)
 
     def test_it_points_at_a_note_not_a_column(self):
-        """노트가 정본이다. 저장 도구(modify_planting)를 시키면 안 된다."""
+        """노트가 정본이다. 저장 도구(modify_plot)를 시키면 안 된다."""
         ask = self.ctx._FLAT_LAYOUT_ASK
         self.assertIn('create_note', ask)
-        self.assertIn("target_type=\"planting\"", ask)
-        self.assertNotIn('modify_planting', ask)
+        self.assertIn("target_type=\"plot\"", ask)
+        self.assertNotIn('modify_plot', ask)
 
     def test_it_asks_the_pitch_as_one_number(self):
         """두둑과 고랑을 따로 물으면 같은 밭이 두 가지로 기록된다."""
@@ -439,16 +439,16 @@ class TestFlatLayoutAsksForNotes(unittest.TestCase):
             self.assertNotIn(banned, ask)
 
 
-class TestPlantingNotesAreVisible(unittest.TestCase):
+class TestPlotNotesAreVisible(unittest.TestCase):
     """구획 노트가 AI 컨텍스트에 실리는 통로 — 여기가 비면 "적어 두라" 가 헛돈다."""
 
-    def test_note_digest_resolves_planting_names(self):
+    def test_note_digest_resolves_plot_names(self):
         src = _read(os.path.join(_ROOT, 'ai', 'services', 'ai_context_service.py'))
         digest = src[src.index('def get_note_digests'):]
         digest = digest[:digest.index('def ', 10)]
-        self.assertIn('GeoPlanting', digest,
+        self.assertIn('GeoPlot', digest,
                       '구획이 이름맵에 없으면 노트가 다이제스트에서 버려진다')
-        self.assertIn("'planting'", digest)
+        self.assertIn("'plot'", digest)
 
 
 # ---------------------------------------------------------------------------
@@ -468,21 +468,21 @@ class TestNoParentSelection(unittest.TestCase):
 
     def test_write_path_takes_no_zone_and_no_clip(self):
         import inspect
-        from aot.aot_flask.geo import planting_io
+        from aot.aot_flask.geo import plot_io
 
-        sig = inspect.signature(planting_io.save_planting)
+        sig = inspect.signature(plot_io.save_plot)
         self.assertEqual(list(sig.parameters), ['data'],
-                         'save_planting 에 clip 같은 축이 되살아났다')
+                         'save_plot 에 clip 같은 축이 되살아났다')
 
         code = '\n'.join(
-            l for l in _read(planting_io.__file__.replace('.pyc', '.py')).splitlines()
+            l for l in _read(plot_io.__file__.replace('.pyc', '.py')).splitlines()
             if not l.lstrip().startswith('#'))
         self.assertNotIn('clip_to_zone', code)
         self.assertNotIn("data.get('zone_uuid')", code)
 
     def test_client_does_not_send_zone_uuid_when_creating(self):
         js = os.path.join(_ROOT, 'aot_flask', 'static', 'js', 'geo',
-                          'design', 'aot-geo-vegetation.js')
+                          'design', 'aot-geo-plot.js')
         code = '\n'.join(
             line for line in _read(js).splitlines()
             if not line.lstrip().startswith(('*', '//', '/*')))
@@ -492,8 +492,8 @@ class TestNoParentSelection(unittest.TestCase):
 
     def test_zone_is_still_derived_for_reading(self):
         """저장 때 안 받을 뿐, 읽을 때는 여전히 공간 포함으로 파생한다."""
-        from aot.aot_flask.geo import planting_context
-        self.assertTrue(hasattr(planting_context, 'zone_for_planting'))
+        from aot.aot_flask.geo import plot_context
+        self.assertTrue(hasattr(plot_context, 'zone_for_plot'))
 
 
 # ---------------------------------------------------------------------------
@@ -502,8 +502,8 @@ class TestNoParentSelection(unittest.TestCase):
 
 class TestWriteValidation(unittest.TestCase):
     def setUp(self):
-        from aot.aot_flask.geo import planting_io
-        self.io = planting_io
+        from aot.aot_flask.geo import plot_io
+        self.io = plot_io
 
     def test_geometry_must_be_polygon(self):
         for geom in ({'type': 'Point', 'coordinates': [1, 2]},
@@ -523,12 +523,12 @@ class TestWriteValidation(unittest.TestCase):
         self.assertEqual(set(removed), {'device_id', 'channel_id', 'color'})
 
     def test_date_parsing_rejects_garbage(self):
-        value, err = self.io._parse_date('2026-13-99', 'planted_on')
+        value, err = self.io._parse_date('2026-13-99', 'started_on')
         self.assertIsNone(value)
         self.assertIsNotNone(err)
 
     def test_date_parsing_accepts_iso_and_empty(self):
-        value, err = self.io._parse_date('2026-08-13', 'planted_on')
+        value, err = self.io._parse_date('2026-08-13', 'started_on')
         self.assertEqual(value, date(2026, 8, 13))
         self.assertIsNone(err)
 
@@ -543,9 +543,9 @@ class TestWriteValidation(unittest.TestCase):
 
 class TestLifetime(unittest.TestCase):
     def _row(self, planted, ended=None):
-        from aot.databases.models import GeoPlanting
-        return GeoPlanting(geo_id='m', feature={}, crop='c',
-                           planted_on=planted, ended_on=ended)
+        from aot.databases.models import GeoPlot
+        return GeoPlot(geo_id='m', feature={}, subject='c',
+                           started_on=planted, ended_on=ended)
 
     def test_open_ended_is_active_for_decades(self):
         """종료일이 없는 행 하나가 과수 30년을 담는다."""
@@ -562,7 +562,7 @@ class TestLifetime(unittest.TestCase):
 
         `>= on` 으로 두면 "재배 종료"를 누른 사람이 화면에서는 사라진 구획을
         새로고침하면 다시 보게 된다. 하루만 어긋나는 종류라 신고되기 어렵다.
-        `active_plantings` 의 쿼리와 같은 부등호를 써야 한다.
+        `active_plots` 의 쿼리와 같은 부등호를 써야 한다.
         """
         row = self._row(date.today() - timedelta(days=30), date.today())
         self.assertFalse(row.is_active())
@@ -572,7 +572,7 @@ class TestLifetime(unittest.TestCase):
                         date.today() + timedelta(days=1))
         self.assertTrue(row.is_active())
 
-    def test_future_planting_is_not_active_yet(self):
+    def test_future_plot_is_not_active_yet(self):
         row = self._row(date.today() + timedelta(days=7))
         self.assertFalse(row.is_active())
 
@@ -591,8 +591,8 @@ class TestNoHardcodedLocale(unittest.TestCase):
     """
 
     def test_ask_user_text_names_no_country(self):
-        from aot.aot_flask.geo import planting_context
-        text = planting_context._FLAT_LAYOUT_ASK
+        from aot.aot_flask.geo import plot_context
+        text = plot_context._FLAT_LAYOUT_ASK
         for banned in ('Korea', 'Korean', 'Japan', 'Japanese'):
             self.assertNotIn(banned, text)
 
@@ -606,7 +606,7 @@ class TestNoHardcodedLocale(unittest.TestCase):
         from babel.messages.pofile import read_po
 
         js = _read(os.path.join(_ROOT, 'aot_flask', 'static', 'js', 'geo',
-                                'design', 'aot-geo-vegetation.js'))
+                                'design', 'aot-geo-plot.js'))
         for banned in ('Bed layout', 'Bed width (cm)', 'Furrow width (cm)',
                        'bed_width_cm', 'path_width_cm'):
             self.assertNotIn(banned, js)
@@ -630,8 +630,8 @@ class TestSplitShape(unittest.TestCase):
     """
 
     def setUp(self):
-        from aot.aot_flask.geo import planting_split
-        self.ps = planting_split
+        from aot.aot_flask.geo import plot_split
+        self.ps = plot_split
 
     def _rot_rect(self, w, l, rot=0.0):
         return _rect_at(_KIMJE_LNG, _KIMJE_LAT, w, l, rot_deg=rot)
@@ -1116,7 +1116,7 @@ class TestSplitShape(unittest.TestCase):
 
 
 class TestSplitAcrossLayers(unittest.TestCase):
-    """MCP 도구·REST 라우트가 `planting_split.split_shape()` 를 어떻게
+    """MCP 도구·REST 라우트가 `plot_split.split_shape()` 를 어떻게
     감싸는지 — 두 계층 모두 새 파라미터를 그대로 관통시키고, `orientation`
     을 하드코딩하지 않아 모드별 기본값이 어긋나지 않는지 확인한다.
 
@@ -1137,14 +1137,14 @@ class TestSplitAcrossLayers(unittest.TestCase):
             'sqlite:///' + os.path.join(cls._tmp.name, 'split_layers.db')
         app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
         db.init_app(app)
-        # routes_geo_planting 는 라우트 모듈이라 forms_dashboard(위젯 목록의
+        # routes_geo_plot 는 라우트 모듈이라 forms_dashboard(위젯 목록의
         # gettext 지연문자열)까지 딸려 들어온다 — Babel 확장이 없으면 임포트
         # 시점에 KeyError('babel') 로 죽는다.
         Babel(app)
         cls._ctx = app.app_context()
         cls._ctx.push()
         db.create_all()
-        # routes_geo_planting 를 바로 임포트하면 routes_geo_device_split 과의
+        # routes_geo_plot 를 바로 임포트하면 routes_geo_device_split 과의
         # 순환 임포트에 걸린다(그쪽이 이 모듈의 _require_edit 을 가져오려다
         # 아직 초기화가 끝나지 않은 이 모듈을 만난다) — 실제 앱이 하는 순서
         # 그대로 routes_geo 를 먼저 임포트해 전체 체인이 정상 순서로 돌게 한다.
@@ -1173,7 +1173,7 @@ class TestSplitAcrossLayers(unittest.TestCase):
     def test_mcp_propose_defaults_short_for_parts_alone(self):
         from aot.ai.services.aot_data_tool_service import AoTDataToolService
         zone = self._zone()
-        result = AoTDataToolService.propose_planting_split(
+        result = AoTDataToolService.propose_plot_split(
             zone_id=zone.unique_id, parts=2)
         self.assertNotIn('error', result)
         self.assertEqual(result['orientation'], 'short')
@@ -1181,7 +1181,7 @@ class TestSplitAcrossLayers(unittest.TestCase):
     def test_mcp_propose_defaults_long_for_strip_width_cm(self):
         from aot.ai.services.aot_data_tool_service import AoTDataToolService
         zone = self._zone()
-        result = AoTDataToolService.propose_planting_split(
+        result = AoTDataToolService.propose_plot_split(
             zone_id=zone.unique_id, strip_width_cm=400)
         self.assertNotIn('error', result)
         self.assertEqual(result['orientation'], 'long')
@@ -1190,13 +1190,13 @@ class TestSplitAcrossLayers(unittest.TestCase):
         from aot.ai.services.aot_data_tool_service import AoTDataToolService
         zone = self._zone()
 
-        by_angle = AoTDataToolService.propose_planting_split(
+        by_angle = AoTDataToolService.propose_plot_split(
             zone_id=zone.unique_id, parts=2, angle_deg=45.0)
         self.assertNotIn('error', by_angle)
         self.assertEqual(by_angle['orientation'], 'custom')
         self.assertAlmostEqual(by_angle['orientation_deg'], 45.0, delta=1.0)
 
-        by_widths = AoTDataToolService.propose_planting_split(
+        by_widths = AoTDataToolService.propose_plot_split(
             zone_id=zone.unique_id, widths_cm=[500, 1000, 300])
         self.assertNotIn('error', by_widths)
         self.assertEqual(by_widths['pieces'], 3)
@@ -1206,31 +1206,31 @@ class TestSplitAcrossLayers(unittest.TestCase):
         도형(짧은 축 30m)이 통째로 사라져 에러가 난다."""
         from aot.ai.services.aot_data_tool_service import AoTDataToolService
         zone = self._zone()
-        plain = AoTDataToolService.propose_planting_split(
+        plain = AoTDataToolService.propose_plot_split(
             zone_id=zone.unique_id, parts=1)
-        inset = AoTDataToolService.propose_planting_split(
+        inset = AoTDataToolService.propose_plot_split(
             zone_id=zone.unique_id, parts=1, edge_margin_m=2)
         self.assertNotIn('error', inset)
         self.assertLess(inset['covered_area_m2'], plain['covered_area_m2'])
 
-        overflowed = AoTDataToolService.propose_planting_split(
+        overflowed = AoTDataToolService.propose_plot_split(
             zone_id=zone.unique_id, parts=1, edge_margin_m=200)
         self.assertIn('error', overflowed)
 
     def test_mcp_apply_creates_plots_with_widths_cm(self):
         from aot.ai.services.aot_data_tool_service import AoTDataToolService
         zone = self._zone()
-        result = AoTDataToolService.apply_planting_split(
-            zone_id=zone.unique_id, crop='상추',
-            planted_on=date.today().isoformat(),
+        result = AoTDataToolService.apply_plot_split(
+            zone_id=zone.unique_id, subject='상추',
+            started_on=date.today().isoformat(),
             widths_cm=[500, 1000, 300])
         self.assertEqual(result['status'], 'success')
         self.assertEqual(result['created_count'], 3)
 
-    # -- REST 라우트(routes_geo_planting) ------------------------------------
+    # -- REST 라우트(routes_geo_plot) ------------------------------------
 
     def test_route_layer_also_defaults_short_for_parts_alone(self):
-        from aot.aot_flask import routes_geo_planting as routes
+        from aot.aot_flask import routes_geo_plot as routes
         zone = self._zone()
         args, err = routes.split_args_from({'zone_id': zone.unique_id, 'parts': 2})
         self.assertIsNone(err)
@@ -1240,7 +1240,7 @@ class TestSplitAcrossLayers(unittest.TestCase):
         self.assertEqual(info['orientation'], 'short')
 
     def test_route_layer_also_defaults_long_for_strip_width_cm(self):
-        from aot.aot_flask import routes_geo_planting as routes
+        from aot.aot_flask import routes_geo_plot as routes
         zone = self._zone()
         args, err = routes.split_args_from(
             {'zone_id': zone.unique_id, 'strip_width_cm': 400})
@@ -1251,7 +1251,7 @@ class TestSplitAcrossLayers(unittest.TestCase):
         self.assertEqual(info['orientation'], 'long')
 
     def test_route_layer_edge_margin_m_field_name(self):
-        from aot.aot_flask import routes_geo_planting as routes
+        from aot.aot_flask import routes_geo_plot as routes
         zone = self._zone()
         args, err = routes.split_args_from(
             {'zone_id': zone.unique_id, 'parts': 1, 'edge_margin_m': 2})
@@ -1267,10 +1267,10 @@ class TestSplitAcrossLayers(unittest.TestCase):
         """같은 도형·같은 모드에 대해 MCP 와 REST 가 같은 기본값을 낸다 —
         어느 한쪽이 'long' 을 다시 하드코딩하면 여기서 걸린다."""
         from aot.ai.services.aot_data_tool_service import AoTDataToolService
-        from aot.aot_flask import routes_geo_planting as routes
+        from aot.aot_flask import routes_geo_plot as routes
         zone = self._zone()
 
-        mcp_result = AoTDataToolService.propose_planting_split(
+        mcp_result = AoTDataToolService.propose_plot_split(
             zone_id=zone.unique_id, parts=2)
         args, err = routes.split_args_from({'zone_id': zone.unique_id, 'parts': 2})
         self.assertIsNone(err)
@@ -1291,15 +1291,15 @@ class TestBedSpecIsNotAColumn(unittest.TestCase):
     """
 
     def test_model_has_no_bed_columns(self):
-        from aot.databases.models import GeoPlanting
-        cols = set(GeoPlanting.__table__.columns.keys())
+        from aot.databases.models import GeoPlot
+        cols = set(GeoPlot.__table__.columns.keys())
         for banned in ('bed_width_cm', 'path_width_cm',
                        'bed_pitch_cm', 'rows_per_bed'):
             self.assertNotIn(banned, cols)
 
     def test_write_path_does_not_persist_a_bed_spec(self):
-        from aot.aot_flask.geo import planting_io
-        src = _read(planting_io.__file__.replace('.pyc', '.py'))
+        from aot.aot_flask.geo import plot_io
+        src = _read(plot_io.__file__.replace('.pyc', '.py'))
         for banned in ('bed_width_cm', 'path_width_cm', 'bed_pitch_cm'):
             self.assertNotIn(banned, src)
 
@@ -1331,14 +1331,14 @@ class TestOverlapStaysAllowed(unittest.TestCase):
                 cols = [e.value for e in node.args[2].elts
                         if isinstance(e, ast.Constant)]
                 self.assertNotIn('feature', cols)
-                self.assertNotIn('crop', cols)
+                self.assertNotIn('subject', cols)
 
         self.assertNotIn('UniqueConstraint(\'geo_id\'', src)
 
     def test_no_overlap_check_in_write_path(self):
         """저장 경로에 겹침 거부가 들어오면 정상 기능이 막힌다."""
-        from aot.aot_flask.geo import planting_io
-        src = _read(planting_io.__file__.replace('.pyc', '.py'))
+        from aot.aot_flask.geo import plot_io
+        src = _read(plot_io.__file__.replace('.pyc', '.py'))
         lowered = src.lower()
         for banned in ('overlaps(', 'is_overlapping', 'reject_overlap'):
             self.assertNotIn(banned, lowered,
@@ -1347,8 +1347,8 @@ class TestOverlapStaysAllowed(unittest.TestCase):
     def test_integrity_checker_does_not_flag_overlap(self):
         checker = os.path.join(_ROOT, 'scripts', 'check_geo_integrity.py')
         src = _read(checker)
-        self.assertNotIn("'planting-overlap'", src)
-        self.assertNotIn('planting-overlapping', src)
+        self.assertNotIn("'plot-overlap'", src)
+        self.assertNotIn('plot-overlapping', src)
 
 
 # ---------------------------------------------------------------------------
@@ -1361,17 +1361,17 @@ class TestNotAContainer(unittest.TestCase):
         from aot.aot_flask.geo import device_membership
         self.assertEqual(device_membership._CONTAINER_TYPES, ('site', 'zone'))
 
-    def test_planting_has_no_zone_column(self):
+    def test_plot_has_no_zone_column(self):
         """소속을 물질화하면 map_overlay_id 가 겪은 오염 계열이 되살아난다."""
-        from aot.databases.models import GeoPlanting
-        cols = set(GeoPlanting.__table__.columns.keys())
+        from aot.databases.models import GeoPlot
+        cols = set(GeoPlot.__table__.columns.keys())
         for banned in ('zone_uuid', 'zone_id', 'parent_id', 'device_id'):
             self.assertNotIn(banned, cols)
 
-    def test_no_binding_written_for_plantings(self):
+    def test_no_binding_written_for_plots(self):
         """센서는 참조일 뿐이다 — geo_binding 행을 만들면 안 된다."""
-        from aot.aot_flask.geo import planting_io, planting_context
-        for mod in (planting_io, planting_context):
+        from aot.aot_flask.geo import plot_io, plot_context
+        for mod in (plot_io, plot_context):
             src = _read(mod.__file__.replace('.pyc', '.py'))
             self.assertNotIn('GeoBinding', src)
             self.assertNotIn('device_binding.bind', src)
@@ -1393,11 +1393,11 @@ class TestStorageSeparation(unittest.TestCase):
         """GeoShape 어휘에 넣으면 두 저장처가 생긴다."""
         from aot.databases.geo_integrity_ddl import VALID_SHAPE_TYPES
         self.assertNotIn('vegetation', VALID_SHAPE_TYPES)
-        self.assertNotIn('planting', VALID_SHAPE_TYPES)
+        self.assertNotIn('plot', VALID_SHAPE_TYPES)
 
     def test_vegetation_module_does_not_call_save_overlays(self):
         js = os.path.join(_ROOT, 'aot_flask', 'static', 'js', 'geo',
-                          'design', 'aot-geo-vegetation.js')
+                          'design', 'aot-geo-plot.js')
         # 주석은 뺀다 — 이 파일의 머리말이 "saveOverlays 를 쓰지 않는다" 라고
         # 적고 있어서, 문자열만 세면 그 설명 자체가 위반으로 잡힌다.
         code = '\n'.join(
@@ -1412,19 +1412,119 @@ class TestStorageSeparation(unittest.TestCase):
 # ---------------------------------------------------------------------------
 
 class TestThemeKey(unittest.TestCase):
-    def test_server_whitelist_has_theme_vegetation(self):
+    def test_server_whitelist_has_theme_plot(self):
         src = _read(_ROUTES_GEO)
-        self.assertIn("'theme_vegetation'", src,
+        self.assertIn("'theme_plot'", src,
                       "theme_keys 에 없으면 색 피커가 저장되지 않는다")
 
-    def test_defaults_has_single_vegetation_entry(self):
+    def test_defaults_has_single_plot_entry(self):
         """기본값은 DEFAULTS 한 벌뿐 — 새 폴백을 만들지 않는다."""
         src = _read(_THEME_JS)
-        self.assertEqual(src.count('vegetation:'), 1)
+        self.assertEqual(src.count('plot:'), 1)
 
 
 # ---------------------------------------------------------------------------
 # 9. 저장 경로 통합 — DB 를 실제로 쓴다
+# ---------------------------------------------------------------------------
+# 응답 빌더를 **실제로 부른다** — 소스를 읽는 검사만으로는 못 잡는다
+# ---------------------------------------------------------------------------
+
+class TestContentsBuildersActuallyRun(unittest.TestCase):
+    """`/contents` 응답 빌더 두 개를 진짜로 호출한다.
+
+    이 파일에는 `_build_plot_contents` 를 **소스 문자열로** 읽는 검사가 열 개쯤
+    있는데, 그 전부가 통과하는 동안 이 엔드포인트는 500 이었다 — 컬럼 이름을
+    옮긴 뒤 `row.crop` 이 남아 있었고, 아무도 함수를 부르지 않았기 때문에
+    `AttributeError` 가 실행 시점까지 살아 있었다.
+
+    증상은 **모달의 [환경·제어] 탭이 빈 화면**이다. 위젯이 `!data.ok` 를
+    `pane.innerHTML = ''` 로 처리해서 오류도 안 보인다.
+
+    그래서 여기서는 어떤 값이 맞는지는 따지지 않는다 — **부르면 도는가**만 본다.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        import tempfile
+        from flask import Flask
+        from flask_babel import Babel
+        from aot.aot_flask.extensions import db
+        import aot.databases.models  # noqa: F401
+
+        cls._tmp = tempfile.TemporaryDirectory()
+        app = Flask(__name__)
+        app.config['SQLALCHEMY_DATABASE_URI'] = \
+            'sqlite:///' + os.path.join(cls._tmp.name, 'contents.db')
+        app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+        db.init_app(app)
+        Babel(app)
+        cls._ctx = app.app_context()
+        cls._ctx.push()
+        db.create_all()
+
+    @classmethod
+    def tearDownClass(cls):
+        from aot.aot_flask.extensions import db
+        db.session.remove()
+        cls._ctx.pop()
+        cls._tmp.cleanup()
+
+    def _plot(self, **over):
+        from aot.aot_flask.geo import plot_io
+        payload = {
+            'map_uuid': 'map-contents',
+            'feature': {'type': 'Feature', 'properties': {},
+                        'geometry': _square(0.0, 0.0, 0.001)},
+            'subject': '상추',
+            'started_on': date.today().isoformat(),
+        }
+        payload.update(over)
+        row, err = plot_io.save_plot(payload)
+        self.assertIsNone(err)
+        return row
+
+    @staticmethod
+    def _routes():
+        """`routes_geo_plot` 을 바로 import 하면 순환 참조로 죽는다 —
+        `routes_geo_device_split` 이 이 모듈에서 이름을 가져가기 때문이다.
+        앱과 같은 순서(`routes_geo` 먼저)로 부르면 사슬이 풀린다."""
+        import aot.aot_flask.routes_geo  # noqa: F401
+        import aot.aot_flask.routes_geo_plot as rp
+        return rp
+
+    def test_open_field_contents_builds(self):
+        _build_plot_contents = self._routes()._build_plot_contents
+        saved = self._plot()
+        out = _build_plot_contents(saved['unique_id'])
+        self.assertTrue(out.get('ok'), out)
+        self.assertEqual(out['plot']['subject'], '상추')
+        self.assertEqual(out['plot']['kind'], 'vegetation')
+
+    def test_facility_contents_builds(self):
+        """시설 구획은 기하가 없어 다른 분기를 탄다 — 따로 부른다."""
+        from aot.aot_flask.extensions import db
+        from aot.databases.models import GeoFacility, GeoPlot, GeoShape
+        _build_facility_plot_contents = \
+            self._routes()._build_facility_plot_contents
+
+        outer = GeoShape(geo_id='map-contents', type='facility',
+                         feature={'type': 'Feature', 'properties': {},
+                                  'geometry': _square(0.0, 0.0, 0.002)})
+        db.session.add(outer)
+        db.session.commit()
+        fac = GeoFacility(geo_id='map-contents', name='1동',
+                          shape_uuid=outer.unique_id, bays=[])
+        db.session.add(fac)
+        db.session.commit()
+
+        saved = self._plot(feature=None, facility_uuid=fac.unique_id)
+        # 노지 쪽과 달리 이 빌더는 uuid 가 아니라 **행**을 받는다.
+        row = GeoPlot.query.filter_by(unique_id=saved['unique_id']).first()
+        out = _build_facility_plot_contents(row)
+        self.assertTrue(out.get('ok'), out)
+        self.assertEqual(out['plot']['subject'], '상추')
+
+
 # ---------------------------------------------------------------------------
 
 class TestSaveRoundTrip(unittest.TestCase):
@@ -1440,7 +1540,7 @@ class TestSaveRoundTrip(unittest.TestCase):
         cls._tmp = tempfile.TemporaryDirectory()
         app = Flask(__name__)
         app.config['SQLALCHEMY_DATABASE_URI'] = \
-            'sqlite:///' + os.path.join(cls._tmp.name, 'planting.db')
+            'sqlite:///' + os.path.join(cls._tmp.name, 'plot.db')
         app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
         db.init_app(app)
         cls._ctx = app.app_context()
@@ -1455,48 +1555,48 @@ class TestSaveRoundTrip(unittest.TestCase):
         cls._tmp.cleanup()
 
     def _save(self, **over):
-        from aot.aot_flask.geo import planting_io
+        from aot.aot_flask.geo import plot_io
         payload = {
             'map_uuid': 'map-test',
             'feature': {'type': 'Feature', 'properties': {},
                         'geometry': _square(0.0, 0.0, 0.001)},
-            'crop': '상추',
-            'planted_on': date.today().isoformat(),
+            'subject': '상추',
+            'started_on': date.today().isoformat(),
         }
         payload.update(over)
-        return planting_io.save_planting(payload)
+        return plot_io.save_plot(payload)
 
     def test_create_then_end_keeps_the_row(self):
-        from aot.databases.models import GeoPlanting
-        from aot.aot_flask.geo import planting_io
+        from aot.databases.models import GeoPlot
+        from aot.aot_flask.geo import plot_io
 
         created, err = self._save()
         self.assertIsNone(err)
         uid = created['unique_id']
 
-        ended, err = planting_io.end_planting(uid, reason='harvested')
+        ended, err = plot_io.end_plot(uid, reason='harvested')
         self.assertIsNone(err)
         self.assertIsNotNone(ended['ended_on'])
 
         # 종료는 삭제가 아니다 — 이력이 남아야 연작 장해를 판단할 수 있다.
         self.assertIsNotNone(
-            GeoPlanting.query.filter_by(unique_id=uid).first())
+            GeoPlot.query.filter_by(unique_id=uid).first())
 
     def test_end_before_planted_is_rejected(self):
-        from aot.aot_flask.geo import planting_io
-        created, _ = self._save(planted_on=date.today().isoformat())
-        _, err = planting_io.end_planting(
+        from aot.aot_flask.geo import plot_io
+        created, _ = self._save(started_on=date.today().isoformat())
+        _, err = plot_io.end_plot(
             created['unique_id'],
             ended_on=(date.today() - timedelta(days=5)).isoformat())
         self.assertIsNotNone(err, 'VP-2 가 강제되지 않았다')
 
     def test_geometry_frozen_after_end(self):
         """VP-6 — 종료된 작기의 기하가 바뀌면 과거 이력이 거짓말이 된다."""
-        from aot.aot_flask.geo import planting_io
+        from aot.aot_flask.geo import plot_io
         created, _ = self._save()
-        planting_io.end_planting(created['unique_id'])
+        plot_io.end_plot(created['unique_id'])
 
-        _, err = planting_io.save_planting({
+        _, err = plot_io.save_plot({
             'unique_id': created['unique_id'],
             'feature': {'type': 'Feature', 'properties': {},
                         'geometry': _square(0.5, 0.5, 0.001)},
@@ -1505,11 +1605,11 @@ class TestSaveRoundTrip(unittest.TestCase):
 
     def test_name_change_still_allowed_after_end(self):
         """날짜 정정·이름 변경까지 막으면 오기입을 고칠 수 없다."""
-        from aot.aot_flask.geo import planting_io
+        from aot.aot_flask.geo import plot_io
         created, _ = self._save()
-        planting_io.end_planting(created['unique_id'])
+        plot_io.end_plot(created['unique_id'])
 
-        updated, err = planting_io.save_planting({
+        updated, err = plot_io.save_plot({
             'unique_id': created['unique_id'], 'name': '고친 이름',
         })
         self.assertIsNone(err)
@@ -1517,21 +1617,21 @@ class TestSaveRoundTrip(unittest.TestCase):
 
     def test_partial_update_does_not_wipe_untouched_fields(self):
         """페이로드에 없는 키를 None 으로 덮으면 부분 저장이 값을 지운다."""
-        from aot.aot_flask.geo import planting_io
+        from aot.aot_flask.geo import plot_io
         created, _ = self._save(variety='청치마', name='두둑1')
 
-        updated, err = planting_io.save_planting({
-            'unique_id': created['unique_id'], 'crop': '배추',
+        updated, err = plot_io.save_plot({
+            'unique_id': created['unique_id'], 'subject': '배추',
         })
         self.assertIsNone(err)
-        self.assertEqual(updated['crop'], '배추')
+        self.assertEqual(updated['subject'], '배추')
         self.assertEqual(updated['variety'], '청치마')
         self.assertEqual(updated['name'], '두둑1')
 
     def test_copy_carries_geometry_and_marks_source(self):
-        from aot.aot_flask.geo import planting_io
+        from aot.aot_flask.geo import plot_io
         created, _ = self._save()
-        copied, err = planting_io.copy_planting(created['unique_id'])
+        copied, err = plot_io.copy_plot(created['unique_id'])
 
         self.assertIsNone(err)
         self.assertEqual(copied['source_kind'], 'copied')
@@ -1540,10 +1640,10 @@ class TestSaveRoundTrip(unittest.TestCase):
                          json.dumps(created['feature']['geometry'], sort_keys=True))
         self.assertNotEqual(copied['unique_id'], created['unique_id'])
 
-    def test_overlapping_plantings_both_save(self):
+    def test_overlapping_plots_both_save(self):
         """VP-3 — 간작·혼작. 겹친다고 거부하면 실제 농사를 담지 못한다."""
-        a, err_a = self._save(crop='토마토')
-        b, err_b = self._save(crop='바질',
+        a, err_a = self._save(subject='토마토')
+        b, err_b = self._save(subject='바질',
                               feature={'type': 'Feature', 'properties': {},
                                        'geometry': _square(0.0005, 0.0, 0.001)})
         self.assertIsNone(err_a)
@@ -1552,7 +1652,7 @@ class TestSaveRoundTrip(unittest.TestCase):
 
 
 # ---------------------------------------------------------------------------
-# 10. sensors_for_planting — Output(액추에이터)이 섞이면 안 된다
+# 10. sensors_for_plot — Output(액추에이터)이 섞이면 안 된다
 # ---------------------------------------------------------------------------
 
 class TestSensorsExcludeOutputs(unittest.TestCase):
@@ -1603,8 +1703,8 @@ class TestSensorsExcludeOutputs(unittest.TestCase):
 
     def test_output_marker_in_plot_is_not_reported_as_sensor(self):
         from aot.aot_flask.extensions import db
-        from aot.databases.models import GeoPlanting, Input, Output
-        from aot.aot_flask.geo import planting_context
+        from aot.databases.models import GeoPlot, Input, Output
+        from aot.aot_flask.geo import plot_context
 
         sensor = Input(name='온도계')
         valve = Output(name='v331')
@@ -1614,14 +1714,14 @@ class TestSensorsExcludeOutputs(unittest.TestCase):
         self._marker('map-sensors', sensor.unique_id, 0.0004, 0.0004)
         self._marker('map-sensors', valve.unique_id, 0.0006, 0.0006)
 
-        planting = GeoPlanting(
-            geo_id='map-sensors', crop='상추', planted_on=date.today(),
+        plot = GeoPlot(
+            geo_id='map-sensors', subject='상추', started_on=date.today(),
             feature={'type': 'Feature', 'properties': {},
                     'geometry': _square(0.0, 0.0, 0.001)})
-        db.session.add(planting)
+        db.session.add(plot)
         db.session.commit()
 
-        sensors = planting_context.sensors_for_planting(planting)
+        sensors = plot_context.sensors_for_plot(plot)
 
         self.assertIn(sensor.unique_id, sensors['in_plot'])
         self.assertNotIn(valve.unique_id, sensors['in_plot'])
@@ -1632,7 +1732,7 @@ class TestSensorsExcludeOutputs(unittest.TestCase):
 # 11. 작물명으로 구역을 찾는다 — 관리인은 '3-1' 이 아니라 '콩밭' 이라 부른다
 # ---------------------------------------------------------------------------
 
-class TestCropNameTargetResolution(unittest.TestCase):
+class TestSubjectNameTargetResolution(unittest.TestCase):
     """`_resolve_note_target` 의 작물명 폴백.
 
     2026-08-13 실측: `resolve_target('콩밭')` 이 needs_disambiguation 을 내고
@@ -1663,7 +1763,7 @@ class TestCropNameTargetResolution(unittest.TestCase):
         cls._tmp = tempfile.TemporaryDirectory()
         app = Flask(__name__)
         app.config['SQLALCHEMY_DATABASE_URI'] = \
-            'sqlite:///' + os.path.join(cls._tmp.name, 'croptarget.db')
+            'sqlite:///' + os.path.join(cls._tmp.name, 'subjecttarget.db')
         app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
         db.init_app(app)
         # aot_data_tool_service → config_translations 의 모듈 레벨 lazy_gettext.
@@ -1674,12 +1774,12 @@ class TestCropNameTargetResolution(unittest.TestCase):
         db.create_all()
 
         # 김제 지도를 본뜬 최소 구성: zone 둘, 그 안에 콩과 상추.
-        from aot.databases.models import GeoMap, GeoShape, GeoPlanting
-        db.session.add(GeoMap(name='김제', unique_id='map-crop'))
+        from aot.databases.models import GeoMap, GeoShape, GeoPlot
+        db.session.add(GeoMap(name='김제', unique_id='map-subject'))
 
         def _zone(name, x0):
             db.session.add(GeoShape(
-                geo_id='map-crop', type='zone',
+                geo_id='map-subject', type='zone',
                 feature={'type': 'Feature', 'properties': {'name': name},
                          'geometry': _square(x0, 0.0, 0.001)}))
 
@@ -1688,9 +1788,9 @@ class TestCropNameTargetResolution(unittest.TestCase):
         _zone('3-3', 0.02)     # 콩 (같은 작물 두 번째 구역 — 모호성 테스트용)
         db.session.commit()
 
-        def _plot(crop, x0, **over):
-            row = GeoPlanting(
-                geo_id='map-crop', crop=crop, planted_on=date.today(),
+        def _plot(subject, x0, **over):
+            row = GeoPlot(
+                geo_id='map-subject', subject=subject, started_on=date.today(),
                 feature={'type': 'Feature', 'properties': {},
                          'geometry': _square(x0 + 0.0002, 0.0002, 0.0004)})
             for k, v in over.items():
@@ -1717,11 +1817,11 @@ class TestCropNameTargetResolution(unittest.TestCase):
         from aot.ai.services.aot_data_tool_service import AoTDataToolService
         return AoTDataToolService._resolve_note_target(name)
 
-    def test_crop_with_place_suffix_resolves_to_its_plot(self):
+    def test_subject_with_place_suffix_resolves_to_its_plot(self):
         """'콩밭' → 콩이 심긴 **구획**. 구역이 아니다(클래스 docstring 참조)."""
         target_id, target_type, name, _, _ = self._resolve('콩밭')
         self.assertEqual(name, '콩')
-        self.assertEqual(target_type, 'planting')
+        self.assertEqual(target_type, 'plot')
         self.assertTrue(target_id)
 
     def test_spaced_suffix_also_resolves(self):
@@ -1729,15 +1829,15 @@ class TestCropNameTargetResolution(unittest.TestCase):
         self.assertEqual(self._resolve('상추 재배지')[2], '상추')
         self.assertEqual(self._resolve('상추재배지')[2], '상추')
 
-    def test_bare_crop_name_resolves(self):
+    def test_bare_subject_name_resolves(self):
         self.assertEqual(self._resolve('콩')[2], '콩')
 
     def test_variety_name_resolves(self):
         """품종으로 부르는 사람도 있다 — '청치마'는 상추 구획의 품종."""
-        self.assertEqual(self._resolve('청치마')[1], 'planting')
+        self.assertEqual(self._resolve('청치마')[1], 'plot')
         self.assertEqual(self._resolve('청치마')[2], '상추')
 
-    def test_zone_name_still_wins_over_crop(self):
+    def test_zone_name_still_wins_over_subject(self):
         """폴백은 **최후**다. 지도 이름이 맞으면 그것이 답이어야 한다."""
         self.assertEqual(self._resolve('3-2')[2], '3-2')
 
@@ -1745,13 +1845,13 @@ class TestCropNameTargetResolution(unittest.TestCase):
         """폴백이 아무거나 주워 담으면 엉뚱한 곳에 쓰기가 일어난다."""
         self.assertIsNone(self._resolve('없는이름12345')[0])
 
-    def test_ended_planting_does_not_resolve(self):
+    def test_ended_plot_does_not_resolve(self):
         """작년 작물이 올해 노트를 끌고 가면 안 된다."""
         from aot.aot_flask.extensions import db
-        from aot.databases.models import GeoPlanting
+        from aot.databases.models import GeoPlot
 
-        row = GeoPlanting(
-            geo_id='map-crop', crop='배추', planted_on=date.today() - timedelta(days=200),
+        row = GeoPlot(
+            geo_id='map-subject', subject='배추', started_on=date.today() - timedelta(days=200),
             ended_on=date.today() - timedelta(days=10),
             feature={'type': 'Feature', 'properties': {},
                      'geometry': _square(0.0003, 0.0003, 0.0003)})
@@ -1763,7 +1863,7 @@ class TestCropNameTargetResolution(unittest.TestCase):
             db.session.delete(row)
             db.session.commit()
 
-    def test_same_crop_in_two_zones_refuses_to_guess(self):
+    def test_same_subject_in_two_zones_refuses_to_guess(self):
         """모호하면 매치하지 않는다 — 이 리졸버는 쓰기 도구가 함께 쓴다.
 
         구획 단위로 풀게 된 뒤에도 그대로다: 같은 작물의 구획이 둘이면 어느
@@ -1787,10 +1887,10 @@ class TestCropNameTargetResolution(unittest.TestCase):
         리졸버가 도달하지 못한다.
         """
         from aot.aot_flask.extensions import db
-        from aot.databases.models import GeoPlanting
+        from aot.databases.models import GeoPlot
 
-        row = GeoPlanting(
-            geo_id='map-crop', crop='들깨', planted_on=date.today(),
+        row = GeoPlot(
+            geo_id='map-subject', subject='들깨', started_on=date.today(),
             feature={'type': 'Feature', 'properties': {},
                      'geometry': _square(0.5, 0.5, 0.0003)})
         db.session.add(row)
@@ -1798,21 +1898,21 @@ class TestCropNameTargetResolution(unittest.TestCase):
         try:
             tid, ttype, name, _, _ = self._resolve('들깨밭')
             self.assertTrue(tid)
-            self.assertEqual(ttype, 'planting')
+            self.assertEqual(ttype, 'plot')
             self.assertEqual(name, '들깨')
         finally:
             db.session.delete(row)
             db.session.commit()
 
-    def test_failure_response_points_at_crop_names(self):
+    def test_failure_response_points_at_subject_names(self):
         """되물음이 zone 이름만 늘어놓으면 사용자는 여전히 답할 수 없다."""
         from aot.ai.services.aot_data_tool_service import AoTDataToolService
 
         r = AoTDataToolService.resolve_target_tool('없는이름12345')
         self.assertEqual(r['status'], 'needs_disambiguation')
-        crops = {c['crop'] for c in r['crop_targets']}
-        self.assertIn('콩', crops)
-        self.assertIn('상추', crops)
+        subjects = {c['subject'] for c in r['subject_targets']}
+        self.assertIn('콩', subjects)
+        self.assertIn('상추', subjects)
 
 
 class TestSubstringFallbackIsNotGreedy(unittest.TestCase):
@@ -1922,7 +2022,7 @@ if __name__ == '__main__':
 # ---------------------------------------------------------------------------
 
 class TestBayBackfill(unittest.TestCase):
-    """`bays[].crop` → GeoPlanting 백필의 판정 규칙.
+    """`bays[].crop`(레거시 시설 필드) → GeoPlot 백필의 판정 규칙.
 
     실제 이관은 운영 데이터에서만 일어나므로(개발 DB 에는 bay 작물이 없다),
     **무엇을 옮기고 무엇을 건너뛰는지**를 여기서 고정한다. 조용히 잘못 옮기면
@@ -1934,6 +2034,7 @@ class TestBayBackfill(unittest.TestCase):
         import tempfile
         from flask import Flask
         from aot.aot_flask.extensions import db
+        from flask_babel import Babel
         import aot.databases.models  # noqa: F401
 
         cls._tmp = tempfile.TemporaryDirectory()
@@ -1942,6 +2043,12 @@ class TestBayBackfill(unittest.TestCase):
             'sqlite:///' + os.path.join(cls._tmp.name, 'bay.db')
         app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
         db.init_app(app)
+        # `aot.aot_flask.geo` 패키지를 임포트하면 `config_translations` 의
+        # lazy_gettext 지연문자열까지 딸려 들어온다 — Babel 확장이 없으면 그
+        # 시점에 KeyError('babel') 로 죽는다. 예전에는 다른 클래스가 먼저 그
+        # 패키지를 임포트해 줘서 우연히 지나갔고, 클래스 이름이 바뀌어 실행
+        # 순서가 달라지자 드러났다.
+        Babel(app)
         cls._ctx = app.app_context()
         cls._ctx.push()
         db.create_all()
@@ -1955,12 +2062,12 @@ class TestBayBackfill(unittest.TestCase):
 
     def setUp(self):
         from aot.aot_flask.extensions import db
-        from aot.databases.models import GeoFacility, GeoPlanting, GeoShape
-        for model in (GeoPlanting, GeoShape, GeoFacility):
+        from aot.databases.models import GeoFacility, GeoPlot, GeoShape
+        for model in (GeoPlot, GeoShape, GeoFacility):
             model.query.delete()
         db.session.commit()
 
-    def _facility_with_bay(self, crop, with_geometry=True, bay_id='bay_1'):
+    def _facility_with_bay(self, subject, with_geometry=True, bay_id='bay_1'):
         from aot.aot_flask.extensions import db
         from aot.databases.models import GeoFacility, GeoShape
 
@@ -1983,7 +2090,7 @@ class TestBayBackfill(unittest.TestCase):
 
         fac = GeoFacility(name='온실1', geo_id='map-bay',
                           shape_uuid=outer.unique_id, bays=[{
-            'id': bay_id, 'name': '1동', 'crop': crop,
+            'id': bay_id, 'name': '1동', 'crop': subject,
             'polygon_shape_uuid': shape_uuid,
         }])
         db.session.add(fac)
@@ -1998,7 +2105,7 @@ class TestBayBackfill(unittest.TestCase):
         self._facility_with_bay('토마토')
         planned, skipped = self._plan()
         self.assertEqual(len(planned), 1)
-        self.assertEqual(planned[0]['crop'], '토마토')
+        self.assertEqual(planned[0]['subject'], '토마토')
         self.assertIn(':', planned[0]['source_ref'])   # <facility>:<bay>
 
     def test_bay_without_geometry_is_skipped_not_created(self):
@@ -2034,14 +2141,14 @@ class TestBayBackfill(unittest.TestCase):
         따라 움직이면 "작년에 여기 뭐가 있었나" 의 답이 조용히 달라진다.
         """
         from aot.aot_flask.extensions import db
-        from aot.databases.models import GeoPlanting, GeoShape
+        from aot.databases.models import GeoPlot, GeoShape
         from aot.scripts.backfill_facility_bay_crops import _apply
 
         self._facility_with_bay('딸기')
         planned, _ = self._plan()
         _apply(None, planned)
 
-        before = json.dumps(GeoPlanting.query.first().feature['geometry'],
+        before = json.dumps(GeoPlot.query.first().feature['geometry'],
                             sort_keys=True)
 
         # bay 를 다시 나눈 것처럼 원본 도형의 기하를 바꾼다
@@ -2050,18 +2157,18 @@ class TestBayBackfill(unittest.TestCase):
                          'geometry': _square(9.0, 9.0, 0.0005)}
         db.session.commit()
 
-        after = json.dumps(GeoPlanting.query.first().feature['geometry'],
+        after = json.dumps(GeoPlot.query.first().feature['geometry'],
                            sort_keys=True)
         self.assertEqual(before, after, '스냅샷이 아니라 참조로 붙어 있다')
 
     def test_source_kind_marks_origin(self):
-        from aot.databases.models import GeoPlanting
+        from aot.databases.models import GeoPlot
         from aot.scripts.backfill_facility_bay_crops import _apply
 
         self._facility_with_bay('가지')
         planned, _ = self._plan()
         _apply(None, planned)
-        self.assertEqual(GeoPlanting.query.first().source_kind, 'bay_snapshot')
+        self.assertEqual(GeoPlot.query.first().source_kind, 'bay_snapshot')
 
 
 # ---------------------------------------------------------------------------
@@ -2103,16 +2210,16 @@ class TestValveIntersection(unittest.TestCase):
 
     def setUp(self):
         from aot.aot_flask.extensions import db
-        from aot.databases.models import GeoPlanting, GeoShape
-        GeoPlanting.query.delete()
+        from aot.databases.models import GeoPlot, GeoShape
+        GeoPlot.query.delete()
         GeoShape.query.delete()
         db.session.commit()
 
     def _plot(self, x0=0.0, size=0.001):
         from aot.aot_flask.extensions import db
-        from aot.databases.models import GeoPlanting
-        row = GeoPlanting(geo_id='m-valve', crop='상추',
-                          planted_on=date.today(),
+        from aot.databases.models import GeoPlot
+        row = GeoPlot(geo_id='m-valve', subject='상추',
+                          started_on=date.today(),
                           feature={'type': 'Feature', 'properties': {},
                                    'geometry': _square(x0, 0.0, size)})
         db.session.add(row)
@@ -2131,8 +2238,8 @@ class TestValveIntersection(unittest.TestCase):
         return shape
 
     def _valves(self, row):
-        from aot.aot_flask.geo import planting_context
-        return planting_context.valves_for_planting(row)
+        from aot.aot_flask.geo import plot_context
+        return plot_context.valves_for_plot(row)
 
     def test_no_overlap_no_valve(self):
         row = self._plot()
@@ -2193,59 +2300,59 @@ class TestElapsedDays(unittest.TestCase):
     """
 
     def _row(self, planted, ended=None, expected=None):
-        return _FakeCalRow(planted_on=planted, ended_on=ended,
+        return _FakeCalRow(started_on=planted, ended_on=ended,
                            expected_end_on=expected)
 
-    def test_planting_day_is_day_one(self):
-        from aot.aot_flask.geo import planting_context
+    def test_plot_day_is_day_one(self):
+        from aot.aot_flask.geo import plot_context
         today = date.today()
-        self.assertEqual(planting_context.elapsed_days(self._row(today)), 1)
+        self.assertEqual(plot_context.elapsed_days(self._row(today)), 1)
 
     def test_counts_forward(self):
-        from aot.aot_flask.geo import planting_context
+        from aot.aot_flask.geo import plot_context
         row = self._row(date.today() - timedelta(days=3))
-        self.assertEqual(planting_context.elapsed_days(row), 4)
+        self.assertEqual(plot_context.elapsed_days(row), 4)
 
-    def test_ended_planting_stops_at_its_end_date(self):
+    def test_ended_plot_stops_at_its_end_date(self):
         """작년에 끝난 작기가 오늘까지 나이를 먹으면 이력이 거짓말이 된다."""
-        from aot.aot_flask.geo import planting_context
+        from aot.aot_flask.geo import plot_context
         row = self._row(date(2025, 4, 1), ended=date(2025, 6, 30))
-        self.assertEqual(planting_context.elapsed_days(row), 91)
+        self.assertEqual(plot_context.elapsed_days(row), 91)
         # 며칠 뒤에 물어도 같은 답이어야 한다
         self.assertEqual(
-            planting_context.elapsed_days(row, on=date(2026, 1, 1)), 91)
+            plot_context.elapsed_days(row, on=date(2026, 1, 1)), 91)
 
-    def test_no_planted_on_is_none_not_zero(self):
-        from aot.aot_flask.geo import planting_context
-        self.assertIsNone(planting_context.elapsed_days(self._row(None)))
+    def test_no_started_on_is_none_not_zero(self):
+        from aot.aot_flask.geo import plot_context
+        self.assertIsNone(plot_context.elapsed_days(self._row(None)))
 
 
 class TestDaysToExpectedEnd(unittest.TestCase):
     """예상 종료까지 — 지난 것을 숨기지 않는다(음수로 낸다)."""
 
     def _row(self, expected, ended=None):
-        return _FakeCalRow(planted_on=date.today() - timedelta(days=10),
+        return _FakeCalRow(started_on=date.today() - timedelta(days=10),
                            ended_on=ended, expected_end_on=expected)
 
     def test_future_is_positive(self):
-        from aot.aot_flask.geo import planting_context
+        from aot.aot_flask.geo import plot_context
         row = self._row(date.today() + timedelta(days=44))
-        self.assertEqual(planting_context.days_to_expected_end(row), 44)
+        self.assertEqual(plot_context.days_to_expected_end(row), 44)
 
     def test_past_is_negative_not_hidden(self):
         """늦어지고 있다는 것 자체가 사용자가 봐야 할 사실이다."""
-        from aot.aot_flask.geo import planting_context
+        from aot.aot_flask.geo import plot_context
         row = self._row(date.today() - timedelta(days=12))
-        self.assertEqual(planting_context.days_to_expected_end(row), -12)
+        self.assertEqual(plot_context.days_to_expected_end(row), -12)
 
-    def test_ended_planting_has_no_countdown(self):
-        from aot.aot_flask.geo import planting_context
+    def test_ended_plot_has_no_countdown(self):
+        from aot.aot_flask.geo import plot_context
         row = self._row(date.today() + timedelta(days=5), ended=date.today())
-        self.assertIsNone(planting_context.days_to_expected_end(row))
+        self.assertIsNone(plot_context.days_to_expected_end(row))
 
     def test_unset_is_none(self):
-        from aot.aot_flask.geo import planting_context
-        self.assertIsNone(planting_context.days_to_expected_end(self._row(None)))
+        from aot.aot_flask.geo import plot_context
+        self.assertIsNone(plot_context.days_to_expected_end(self._row(None)))
 
 
 class TestDimsAreDetailOnly(unittest.TestCase):
@@ -2282,10 +2389,10 @@ class TestDimsAreDetailOnly(unittest.TestCase):
         # to_dict 는 소속 zone 을 공간 포함으로 파생하므로(저장하지 않는다)
         # DB 가 필요하다 — 그 자체가 이 설계의 핵심이라 대역으로 가리지 않는다.
         from aot.aot_flask.extensions import db
-        from aot.databases.models import GeoPlanting
-        GeoPlanting.query.delete()
-        row = GeoPlanting(geo_id='m-dims', crop='상추',
-                          planted_on=date.today(),
+        from aot.databases.models import GeoPlot
+        GeoPlot.query.delete()
+        row = GeoPlot(geo_id='m-dims', subject='상추',
+                          started_on=date.today(),
                           feature={'type': 'Feature', 'properties': {},
                                    'geometry': _square(0.0, 0.0, 0.0005)})
         db.session.add(row)
@@ -2293,38 +2400,38 @@ class TestDimsAreDetailOnly(unittest.TestCase):
         return row
 
     def test_list_payload_has_no_dims(self):
-        from aot.aot_flask.geo import planting_context
-        d = planting_context.to_dict(self._row(), with_sensors=False,
+        from aot.aot_flask.geo import plot_context
+        d = plot_context.to_dict(self._row(), with_sensors=False,
                                      with_valves=False)
         self.assertNotIn('dims', d)
 
     def test_days_are_always_present(self):
         """달력만 보는 값이라 목록에도 싣는다 — 구역 요약이 이걸 쓴다."""
-        from aot.aot_flask.geo import planting_context
-        d = planting_context.to_dict(self._row(), with_sensors=False,
+        from aot.aot_flask.geo import plot_context
+        d = plot_context.to_dict(self._row(), with_sensors=False,
                                      with_valves=False)
         self.assertEqual(d['days_since_planted'], 1)
         self.assertIn('days_to_expected_end', d)
 
     def test_dims_can_be_asked_for_explicitly(self):
-        from aot.aot_flask.geo import planting_context
-        d = planting_context.to_dict(self._row(), with_sensors=False,
+        from aot.aot_flask.geo import plot_context
+        d = plot_context.to_dict(self._row(), with_sensors=False,
                                      with_valves=False, with_dims=True)
         self.assertIsNotNone(d['dims'])
         self.assertIn('width_m', d['dims'])
 
     def test_ai_brief_does_not_carry_two_names_for_dimensions(self):
-        """`_planting_brief` 는 `dimensions` 키로 직접 싣는다 —
+        """`_plot_brief` 는 `dimensions` 키로 직접 싣는다 —
         `to_dict` 가 `dims` 로 한 번 더 실으면 LLM 컨텍스트에 같은 것을
         가리키는 이름이 둘이 된다."""
         src = _read(os.path.join(_ROOT, 'ai', 'services',
                                  'aot_data_tool_service.py'))
-        head = src.split('def _planting_brief', 1)[1][:900]
+        head = src.split('def _plot_brief', 1)[1][:900]
         self.assertIn('with_dims=False', head)
 
 
 class TestAlsoCovers(unittest.TestCase):
-    """"켜면 무엇이 함께 젖는가" — valves_for_planting 의 역방향.
+    """"켜면 무엇이 함께 젖는가" — valves_for_plot 의 역방향.
 
     밸브를 켜는 사람이 알아야 하는 것은 "이 구획이 얼마나 젖는가" 가 아니라
     무엇이 **함께** 젖는가다. 겹침이 정상인 도메인이라 한 밸브가 여러 작물을
@@ -2357,15 +2464,15 @@ class TestAlsoCovers(unittest.TestCase):
 
     def setUp(self):
         from aot.aot_flask.extensions import db
-        from aot.databases.models import GeoPlanting
-        GeoPlanting.query.delete()
+        from aot.databases.models import GeoPlot
+        GeoPlot.query.delete()
         db.session.commit()
 
-    def _plot(self, x0, crop, size=0.001, ended=None):
+    def _plot(self, x0, subject, size=0.001, ended=None):
         from aot.aot_flask.extensions import db
-        from aot.databases.models import GeoPlanting
-        row = GeoPlanting(geo_id='m-cov', crop=crop,
-                          planted_on=date.today() - timedelta(days=1),
+        from aot.databases.models import GeoPlot
+        row = GeoPlot(geo_id='m-cov', subject=subject,
+                          started_on=date.today() - timedelta(days=1),
                           ended_on=ended,
                           feature={'type': 'Feature', 'properties': {},
                                    'geometry': _square(x0, 0.0, size)})
@@ -2374,15 +2481,15 @@ class TestAlsoCovers(unittest.TestCase):
         return row
 
     def _covered(self, geom, exclude=None):
-        from aot.aot_flask.geo import planting_context
-        return planting_context.plantings_covered_by_shape(
+        from aot.aot_flask.geo import plot_context
+        return plot_context.plots_covered_by_shape(
             geom, 'm-cov', exclude_uuid=exclude)
 
     def test_lists_every_plot_the_valve_touches(self):
         a = self._plot(0.0, '상추')
         self._plot(0.0005, '대파')          # 겹침
         got = self._covered(_square(0.0, 0.0, 0.001), exclude=a.unique_id)
-        self.assertEqual([p['crop'] for p in got], ['대파'])
+        self.assertEqual([p['subject'] for p in got], ['대파'])
 
     def test_excludes_itself(self):
         """자기 자신이 "함께 젖는 것" 으로 나오면 안 된다."""
@@ -2396,7 +2503,7 @@ class TestAlsoCovers(unittest.TestCase):
         got = self._covered(_square(0.0, 0.0, 0.001))
         self.assertEqual(got, [])
 
-    def test_ended_plantings_are_not_watered(self):
+    def test_ended_plots_are_not_watered(self):
         """끝난 작기는 이제 그 자리에 없다."""
         self._plot(0.0005, '대파', ended=date.today() - timedelta(days=1))
         got = self._covered(_square(0.0, 0.0, 0.001))
@@ -2406,7 +2513,7 @@ class TestAlsoCovers(unittest.TestCase):
         self._plot(0.0009, '조금')          # 살짝 겹침
         self._plot(0.0001, '많이')          # 많이 겹침
         got = self._covered(_square(0.0, 0.0, 0.001))
-        self.assertEqual([p['crop'] for p in got], ['많이', '조금'])
+        self.assertEqual([p['subject'] for p in got], ['많이', '조금'])
 
     def test_no_water_amount(self):
         """역방향에서도 관수량을 계산하지 않는다."""
@@ -2431,9 +2538,9 @@ class TestAreaContentsIsShared(unittest.TestCase):
         self.assertNotIn('Output.query.filter(', body)
         self.assertNotIn('DeviceMeasurements.query.filter_by(', body)
 
-    def test_planting_builder_delegates(self):
-        src = _read(os.path.join(_ROOT, 'aot_flask', 'routes_geo_planting.py'))
-        body = src.split('def _build_planting_contents', 1)[1]
+    def test_plot_builder_delegates(self):
+        src = _read(os.path.join(_ROOT, 'aot_flask', 'routes_geo_plot.py'))
+        body = src.split('def _build_plot_contents', 1)[1]
         self.assertIn('_build_area_contents(', body)
         self.assertNotIn('Output.query.filter(', body)
 
@@ -2443,28 +2550,28 @@ class TestAreaContentsIsShared(unittest.TestCase):
         body = src.split('def _build_zone_contents', 1)[1].split('\ndef ', 1)[0]
         self.assertNotIn('scope_of', body)
 
-    def test_planting_is_not_a_container(self):
+    def test_plot_is_not_a_container(self):
         """구획은 컨테이너가 아니다 — 인벤토리를 만든다고 소속으로 만들지 말 것."""
         src = _read(_MEMBERSHIP)
         head = src.split('_CONTAINER_TYPES', 1)[1][:400]
-        self.assertNotIn('planting', head)
+        self.assertNotIn('plot', head)
         self.assertNotIn('vegetation', head)
 
 
-class TestPlantingCacheInvalidation(unittest.TestCase):
+class TestPlotCacheInvalidation(unittest.TestCase):
     """저장·종료·삭제가 모달 캐시를 버린다.
 
-    쓰기는 REST 만 지나가는 것이 아니라 AI/MCP 도구도 `planting_io` 로 온다.
+    쓰기는 REST 만 지나가는 것이 아니라 AI/MCP 도구도 `plot_io` 로 온다.
     라우트에 흩으면 새 진입점이 조용히 빠지고, 증상은 "저장은 됐는데 화면이
     30초 동안 안 바뀐다" 라 버그로 읽히지도 않는다.
     """
 
     def _io_src(self):
-        return _read(os.path.join(_ROOT, 'aot_flask', 'geo', 'planting_io.py'))
+        return _read(os.path.join(_ROOT, 'aot_flask', 'geo', 'plot_io.py'))
 
     def test_every_commit_path_invalidates(self):
         src = self._io_src()
-        for fn in ('def save_planting', 'def end_planting', 'def delete_planting'):
+        for fn in ('def save_plot', 'def end_plot', 'def delete_plot'):
             body = src.split(fn, 1)[1].split('\ndef ', 1)[0]
             self.assertIn('_invalidate_caches()', body,
                           '%s 가 캐시를 안 버린다' % fn)
@@ -2473,12 +2580,12 @@ class TestPlantingCacheInvalidation(unittest.TestCase):
         """새 구획이 생기면 같은 밸브를 쓰는 이웃의 also_covers 도 달라진다."""
         src = self._io_src()
         body = src.split('def _invalidate_caches', 1)[1].split('\ndef ', 1)[0]
-        self.assertIn('invalidate_planting_contents(None)', body)
+        self.assertIn('invalidate_plot_contents(None)', body)
 
-    def test_planting_cache_is_separate_from_zone_cache(self):
+    def test_plot_cache_is_separate_from_zone_cache(self):
         src = _read(os.path.join(_ROOT, 'aot_flask', 'geo', 'site_summary.py'))
         self.assertIn('_PLANTING_CONTENTS_CACHE', src)
-        self.assertIn('def cached_planting_contents', src)
+        self.assertIn('def cached_plot_contents', src)
 
 
 class TestCoverageWarningIsSymmetric(unittest.TestCase):
@@ -2491,13 +2598,13 @@ class TestCoverageWarningIsSymmetric(unittest.TestCase):
     def test_zone_contents_attaches_also_covers(self):
         src = _read(_ROUTES_GEO)
         body = src.split('def _build_zone_contents', 1)[1].split('\ndef ', 1)[0]
-        self.assertIn('plantings_by_valve_device', body)
+        self.assertIn('plots_by_valve_device', body)
         self.assertIn("also_covers", body)
 
-    def test_planting_contents_attaches_also_covers(self):
-        src = _read(os.path.join(_ROOT, 'aot_flask', 'routes_geo_planting.py'))
-        body = src.split('def _build_planting_contents', 1)[1]
-        self.assertIn('plantings_by_valve_device', body)
+    def test_plot_contents_attaches_also_covers(self):
+        src = _read(os.path.join(_ROOT, 'aot_flask', 'routes_geo_plot.py'))
+        body = src.split('def _build_plot_contents', 1)[1]
+        self.assertIn('plots_by_valve_device', body)
         self.assertIn('also_covers', body)
 
     def test_both_use_the_same_counter(self):
@@ -2505,30 +2612,30 @@ class TestCoverageWarningIsSymmetric(unittest.TestCase):
         zone = _read(_ROUTES_GEO).split(
             'def _build_zone_contents', 1)[1].split('\ndef ', 1)[0]
         plant = _read(os.path.join(
-            _ROOT, 'aot_flask', 'routes_geo_planting.py')).split(
-            'def _build_planting_contents', 1)[1]
+            _ROOT, 'aot_flask', 'routes_geo_plot.py')).split(
+            'def _build_plot_contents', 1)[1]
         for body in (zone, plant):
-            self.assertIn('covered_crop_names(', body)
+            self.assertIn('covered_subject_names(', body)
 
-    def test_only_the_planting_view_excludes_itself(self):
+    def test_only_the_plot_view_excludes_itself(self):
         """구역에서는 그 구역의 모든 작물이 나와야 한다 — 뺄 '자기' 가 없다."""
         zone = _read(_ROUTES_GEO).split(
             'def _build_zone_contents', 1)[1].split('\ndef ', 1)[0]
         plant = _read(os.path.join(
-            _ROOT, 'aot_flask', 'routes_geo_planting.py')).split(
-            'def _build_planting_contents', 1)[1]
+            _ROOT, 'aot_flask', 'routes_geo_plot.py')).split(
+            'def _build_plot_contents', 1)[1]
         self.assertNotIn('exclude_uuid', zone)
         self.assertIn('exclude_uuid', plant)
 
     def test_names_not_uuids(self):
         """화면에 uuid 를 내보내지 않는다 — 사람이 읽을 이름만."""
         src = _read(os.path.join(_ROOT, 'aot_flask', 'geo',
-                                 'planting_context.py'))
-        body = src.split('def covered_crop_names', 1)[1].split('\ndef ', 1)[0]
+                                 'plot_context.py'))
+        body = src.split('def covered_subject_names', 1)[1].split('\ndef ', 1)[0]
         self.assertNotIn("'unique_id'", body.split('exclude_uuid')[-1])
 
 
-class TestPlantingControlReusesZoneMachinery(unittest.TestCase):
+class TestPlotControlReusesZoneMachinery(unittest.TestCase):
     """식생 [환경·제어]는 구역의 기계를 **빌려 쓴다**.
 
     폴링·토글·예약·이력 오버레이를 따로 구현하면 같은 장치가 두 화면에서
@@ -2540,19 +2647,19 @@ class TestPlantingControlReusesZoneMachinery(unittest.TestCase):
                                   'widgets', 'AoT_map',
                                   'aot-map-widget-vector.js'))
 
-    def test_planting_does_not_get_its_own_polling(self):
+    def test_plot_does_not_get_its_own_polling(self):
         src = self._vector()
-        body = src.split('function _attachPlantingControl', 1)[1].split(
+        body = src.split('function _attachPlotControl', 1)[1].split(
             '\n        function ', 1)[0]
         self.assertIn('_startZoneOutputPolling(uid)', body)
         self.assertIn('_renderZoneDevices(', body)
         self.assertIn('_wireZoneTabs(', body)
 
-    def test_planting_never_writes_zone_scoped_settings(self):
+    def test_plot_never_writes_zone_scoped_settings(self):
         """구획 창에서 구역 설정(rep_key·output_order)을 쓰면 **그 구역을 보는
         다른 사람의 설정**이 바뀐다. zoneUuid 를 비워 그 경로를 없앤다."""
         src = self._vector()
-        body = src.split('function _attachPlantingControl', 1)[1].split(
+        body = src.split('function _attachPlotControl', 1)[1].split(
             '\n        // ── ', 1)[0]
         self.assertIn('zoneUuid: null', body)
         # 주석은 그 두 이름을 **설명하려고** 언급한다 — 코드만 본다.
@@ -2565,19 +2672,19 @@ class TestPlantingControlReusesZoneMachinery(unittest.TestCase):
         src = self._vector()
         body = src.split('function _renderZoneDevices', 1)[1].split(
             '\n        function ', 1)[0]
-        self.assertIn('isPlanting', body)
-        self.assertIn('canCtrl && !isPlanting && window.AoTActuatorOrder', body)
+        self.assertIn('isPlot', body)
+        self.assertIn('canCtrl && !isPlot && window.AoTActuatorOrder', body)
 
     def test_hook_is_late_bound(self):
         """제어 함수는 식생 로더보다 **늦게** 정의된다 — 직접 참조하면
         ReferenceError 가 나고 try/catch 가 삼켜 식생 레이어가 통째로 안 뜬다."""
         src = self._vector()
-        self.assertIn('_plantingControlHooks', src)
-        self.assertIn('_plantingControlHooks[uniqueId] = _attachPlantingControl',
+        self.assertIn('_plotControlHooks', src)
+        self.assertIn('_plotControlHooks[uniqueId] = _attachPlotControl',
                       src)
         # 로더 쪽은 등록소를 거쳐야 한다(이름 직접 참조 금지)
-        loader = src.split('AoTMapVegetation.load(', 1)[1][:900]
-        self.assertNotIn('attachControl: _attachPlantingControl', loader)
+        loader = src.split('AoTMapPlot.load(', 1)[1][:900]
+        self.assertNotIn('attachControl: _attachPlotControl', loader)
 
 
 class TestScopeBadgeAndCoverageMarkup(unittest.TestCase):
@@ -2623,12 +2730,54 @@ class TestScopeBadgeAndCoverageMarkup(unittest.TestCase):
         self.assertIn('color: inherit', block)
         self.assertIn('border: 1px solid currentColor', block)
 
-    def test_percent_is_not_double_escaped(self):
-        """printf 가 아니라 문자열 치환이라 %% 는 그대로 두 개가 찍힌다."""
+    def test_no_plot_screen_msgid_carries_a_literal_percent(self):
+        """구획 화면이 쓰는 **모든** msgid 에 리터럴 `%` 가 없어야 한다.
+
+        세 번 겪었다(`%(pct)s%` · `{pct}%` · `{n}% of days`). babel 은 `%` 를
+        python-format 지시자로 읽어 **그 언어 카탈로그 전체의 컴파일을 거부**한다
+        — 한 문구가 아니라 그 언어가 통째로 영어로 나온다. 치환을 JS 가 직접
+        하더라도 마찬가지다.
+
+        문구 하나씩 막으면 다음 문구에서 또 겪는다. 그래서 규칙으로 막는다:
+        `%` 는 값 쪽에 붙이고 msgid 에는 자리표시자만 둔다.
+        """
+        import re
+        popup = _read(os.path.join(_ROOT, 'aot_flask', 'static', 'js',
+                                   'widgets', 'AoT_map', 'aot-map-popup.js'))
+        design = _read(os.path.join(_ROOT, 'aot_flask', 'static', 'js', 'geo',
+                                    'design', 'aot-geo-plot.js'))
+        used = set()
+        for src in (popup, design):
+            used |= set(re.findall(r"_t\('((?:[^'\\]|\\.)+)'\)", src))
+
+        # `%(name)s` 는 이 저장소가 쓰는 정식 gettext 자리표시자다 — 그것만
+        # 걷어낸 뒤에도 `%` 가 남으면 리터럴이다.
+        bad = []
+        for mid in used:
+            if '%' not in mid:
+                continue
+            if re.sub(r'%\([A-Za-z_]+\)[sd]', '', mid).find('%') != -1:
+                bad.append(mid)
+        self.assertEqual(bad, [],
+                         'msgid 에 리터럴 %% 가 있다(그 언어 전체가 영어로 나온다): %s'
+                         % bad)
+
+    def test_percent_is_not_in_the_catalog_string(self):
+        """번역 문구에 리터럴 `%` 를 넣지 않는다.
+
+        치환은 JS 가 직접 하므로 `%` 는 포맷 지시자가 아닌데, **babel 은 그렇게
+        읽지 않는다** — `%(pct)s%` 든 `{pct}%` 든 "placeholders are incompatible"
+        로 `pybabel compile` 을 통째로 거부한다. 카탈로그가 컴파일되지 않으면 그
+        언어 전체가 영어로 나온다(그 한 문구만이 아니다).
+
+        그래서 `%` 는 값 쪽에 붙인다 — msgid 에는 자리표시자만 남는다.
+        """
         body = self._popup().split('function coverageHtml', 1)[1].split(
             '\n  function ', 1)[0]
+        self.assertIn('{pct} of this plot', body)
         self.assertNotIn('%% of this plot', body)
-        self.assertIn('%(pct)s% of this plot', body)
+        self.assertNotIn('%(pct)s', body)
+        self.assertNotIn('{pct}%', body)
 
     def test_coverage_goes_in_its_own_slot(self):
         """meta 에 이어붙이면 `.aot-act-meta-text` 안쪽이라 flex 자식이 아니고,
@@ -2666,7 +2815,7 @@ class TestZoneShowsWhatIsPlanted(unittest.TestCase):
     def test_allocation_reports_days(self):
         """"무엇이 며칠째" 를 한 줄로 말하려면 재배 일수가 배분에 있어야 한다."""
         src = _read(os.path.join(_ROOT, 'aot_flask', 'geo',
-                                 'planting_context.py'))
+                                 'plot_context.py'))
         body = src.split('def zone_allocation', 1)[1].split('\ndef ', 1)[0]
         self.assertIn('days_since_planted', body)
         self.assertIn('elapsed_days(row', body)
@@ -2674,7 +2823,7 @@ class TestZoneShowsWhatIsPlanted(unittest.TestCase):
     def test_unassigned_uses_union_not_sum(self):
         """단순 합으로 빼면 겹친 만큼 이중으로 빠져 미배정이 음수가 된다."""
         src = _read(os.path.join(_ROOT, 'aot_flask', 'geo',
-                                 'planting_context.py'))
+                                 'plot_context.py'))
         body = src.split('def zone_allocation', 1)[1].split('\ndef ', 1)[0]
         self.assertIn('unary_union', body)
 
@@ -2683,15 +2832,15 @@ class TestZoneShowsWhatIsPlanted(unittest.TestCase):
         띄우면 사용자가 그것을 오류로 읽는다."""
         src = _read(os.path.join(_ROOT, 'aot_flask', 'static', 'js',
                                  'widgets', 'AoT_map', 'aot-map-popup.js'))
-        body = src.split('function buildZonePlantingsHtml', 1)[1].split(
+        body = src.split('function buildZonePlotsHtml', 1)[1].split(
             '\n  function ', 1)[0]
         for word in ("_t('Total')", "'Sum'", 'reduce('):
             self.assertNotIn(word, body)
 
-    def test_rows_link_down_to_the_planting(self):
+    def test_rows_link_down_to_the_plot(self):
         popup = _read(os.path.join(_ROOT, 'aot_flask', 'static', 'js',
                                    'widgets', 'AoT_map', 'aot-map-popup.js'))
-        self.assertIn('aot-ov-planting-link', popup)
+        self.assertIn('aot-ov-plot-link', popup)
         vector = _read(os.path.join(_ROOT, 'aot_flask', 'static', 'js',
                                     'widgets', 'AoT_map',
                                     'aot-map-widget-vector.js'))
@@ -2699,7 +2848,7 @@ class TestZoneShowsWhatIsPlanted(unittest.TestCase):
             '\n        function ', 1)[0]
         # 내려가기 전에 구역 모달을 닫는다 — 모달을 쌓지 않는다
         self.assertIn('_closeZoneModal(uid)', body)
-        self.assertIn('AoTMapVegetation.openModal', body)
+        self.assertIn('AoTMapPlot.openModal', body)
 
 
 class TestSiteCropCount(unittest.TestCase):
@@ -2709,27 +2858,27 @@ class TestSiteCropCount(unittest.TestCase):
     가지를 말하게 되고 열 간격이 틀어진다.
     """
 
-    def test_counts_include_crops(self):
+    def test_counts_include_subjects(self):
         src = _read(os.path.join(_ROOT, 'aot_flask', 'geo', 'site_summary.py'))
-        self.assertIn('_planting_counts', src)
-        body = src.split('def _planting_counts', 1)[1].split('\ndef ', 1)[0]
-        self.assertIn("'crops'", body)
-        self.assertIn("'plantings'", body)
+        self.assertIn('_plot_counts', src)
+        body = src.split('def _plot_counts', 1)[1].split('\ndef ', 1)[0]
+        self.assertIn("'subjects'", body)
+        self.assertIn("'plots'", body)
 
-    def test_child_rows_do_not_carry_crop_names(self):
+    def test_child_rows_do_not_carry_subject_names(self):
         src = _read(os.path.join(_ROOT, 'aot_flask', 'geo', 'site_summary.py'))
         body = src.split('def _child_entry', 1)[1].split('\ndef ', 1)[0]
-        self.assertNotIn('crop', body)
+        self.assertNotIn('subject', body)
 
     def test_failure_does_not_break_the_site_modal(self):
         """식생이 없는 지도가 정상이다."""
         src = _read(os.path.join(_ROOT, 'aot_flask', 'geo', 'site_summary.py'))
-        body = src.split('def _planting_counts', 1)[1].split('\ndef ', 1)[0]
+        body = src.split('def _plot_counts', 1)[1].split('\ndef ', 1)[0]
         self.assertIn('except Exception', body)
-        self.assertIn("{'crops': 0, 'plantings': 0}", body)
+        self.assertIn("{'subjects': 0, 'plots': 0}", body)
 
 
-class TestPlantingCacheAlsoDropsZone(unittest.TestCase):
+class TestPlotCacheAlsoDropsZone(unittest.TestCase):
     """구획을 고치면 **구역 응답도** 달라진다.
 
     구역 [현황]이 작물 목록·면적 배분을 싣고 출력마다 `also_covers` 를 단다.
@@ -2738,7 +2887,7 @@ class TestPlantingCacheAlsoDropsZone(unittest.TestCase):
     """
 
     def test_invalidates_zone_cache_too(self):
-        src = _read(os.path.join(_ROOT, 'aot_flask', 'geo', 'planting_io.py'))
+        src = _read(os.path.join(_ROOT, 'aot_flask', 'geo', 'plot_io.py'))
         body = src.split('def _invalidate_caches', 1)[1].split('\ndef ', 1)[0]
         self.assertIn('invalidate_zone_contents_all()', body)
 
@@ -2747,7 +2896,7 @@ class TestPlantingCacheAlsoDropsZone(unittest.TestCase):
         self.assertIn('def invalidate_zone_contents_all', src)
 
 
-class TestPlantingGoesUpToItsZone(unittest.TestCase):
+class TestPlotGoesUpToItsZone(unittest.TestCase):
     """식생 → 구역 → 필지로 거슬러 올라갈 수 있어야 한다.
 
     계층이 한 방향으로만 흐르면 위젯 안에서 길을 잃는다.
@@ -2756,7 +2905,7 @@ class TestPlantingGoesUpToItsZone(unittest.TestCase):
     def test_header_has_the_up_button(self):
         src = _read(os.path.join(_ROOT, 'aot_flask', 'static', 'js',
                                  'widgets', 'AoT_map', 'aot-map-popup.js'))
-        body = src.split('function buildPlantingModal', 1)[1].split(
+        body = src.split('function buildPlotModal', 1)[1].split(
             '\n  function ', 1)[0]
         self.assertIn('up: true', body)
 
@@ -2766,13 +2915,13 @@ class TestPlantingGoesUpToItsZone(unittest.TestCase):
         src = _read(os.path.join(_ROOT, 'aot_flask', 'static', 'js',
                                  'widgets', 'AoT_map',
                                  'aot-map-widget-vector.js'))
-        body = src.split('function _attachPlantingControl', 1)[1].split(
+        body = src.split('function _attachPlotControl', 1)[1].split(
             '\n        // ── ', 1)[0]
         self.assertIn("kind: 'zone'", body)
         self.assertIn('zone_uuid', body)
 
 
-class TestPlantingShowsOnlyWhatItTouches(unittest.TestCase):
+class TestPlotShowsOnlyWhatItTouches(unittest.TestCase):
     """식생 패널은 **이 구획에 닿는 것만** 낸다.
 
     합집합(구획 안 ∪ 구역 전체 ∪ 밸브)으로 내던 시절에는 이 구획에 물 한 방울
@@ -2782,10 +2931,10 @@ class TestPlantingShowsOnlyWhatItTouches(unittest.TestCase):
     """
 
     def _src(self):
-        return _read(os.path.join(_ROOT, 'aot_flask', 'routes_geo_planting.py'))
+        return _read(os.path.join(_ROOT, 'aot_flask', 'routes_geo_plot.py'))
 
     def _body(self):
-        return self._src().split('def _build_planting_contents', 1)[1]
+        return self._src().split('def _build_plot_contents', 1)[1]
 
     def test_zone_devices_are_not_unioned_in(self):
         body = self._body()
@@ -2812,7 +2961,7 @@ class TestPlantingShowsOnlyWhatItTouches(unittest.TestCase):
     def test_devices_without_markers_are_skipped(self):
         """위치를 모르면 "가장 가깝다" 고 말할 근거가 없다."""
         src = _read(os.path.join(_ROOT, 'aot_flask', 'geo',
-                                 'planting_context.py'))
+                                 'plot_context.py'))
         body = src.split('def nearest_devices', 1)[1].split('\ndef ', 1)[0]
         self.assertIn('load_markers', body)
         self.assertIn('representative_point', body)
@@ -2839,19 +2988,19 @@ class TestOverviewIsAboutNotesNotDevices(unittest.TestCase):
     def _body(self):
         src = _read(os.path.join(_ROOT, 'aot_flask', 'static', 'js',
                                  'widgets', 'AoT_map', 'aot-map-popup.js'))
-        return src.split('function _plantingOverviewHtml', 1)[1].split(
+        return src.split('function _plotOverviewHtml', 1)[1].split(
             '\n  function ', 1)[0]
 
     def test_no_device_listing(self):
         body = self._body()
-        for gone in ('_plantingSensorsHtml', '_plantingValvesHtml'):
+        for gone in ('_plotSensorsHtml', '_plotValvesHtml'):
             self.assertNotIn(gone, body)
 
     def test_those_helpers_are_deleted_not_orphaned(self):
         src = _read(os.path.join(_ROOT, 'aot_flask', 'static', 'js',
                                  'widgets', 'AoT_map', 'aot-map-popup.js'))
-        self.assertNotIn('function _plantingSensorsHtml', src)
-        self.assertNotIn('function _plantingValvesHtml', src)
+        self.assertNotIn('function _plotSensorsHtml', src)
+        self.assertNotIn('function _plotValvesHtml', src)
 
     def test_notes_are_present(self):
         """노트는 여전히 이 탭의 본론이다 — 다만 이제 **통합 기록 블록 안**에
@@ -2863,7 +3012,7 @@ class TestOverviewIsAboutNotesNotDevices(unittest.TestCase):
     def test_missing_valve_is_still_reported(self):
         """밸브 목록이 아니라 **빠진 것**을 알리는 줄은 남는다 — "적실 수단이
         아직 없다" 는 장치 나열이 아니라 상태다."""
-        self.assertIn('_plantingNoValveHtml', self._body())
+        self.assertIn('_plotNoValveHtml', self._body())
 
 
 class TestInvolvementOrdering(unittest.TestCase):
@@ -2875,7 +3024,7 @@ class TestInvolvementOrdering(unittest.TestCase):
 
     def _key(self):
         import importlib
-        mod = importlib.import_module('aot.aot_flask.routes_geo_planting')
+        mod = importlib.import_module('aot.aot_flask.routes_geo_plot')
         return mod._involvement_key
 
     def test_higher_coverage_comes_first(self):
@@ -2919,8 +3068,8 @@ class TestInvolvementOrdering(unittest.TestCase):
         0으로 읽히고 조용히 이름순으로 떨어진다. 실제로 그렇게 나갔다
         (블랙틴: 39.8% 가 60.2% 보다 위). 키만 단위테스트하면 못 잡는다.
         """
-        src = _read(os.path.join(_ROOT, 'aot_flask', 'routes_geo_planting.py'))
-        body = src.split('def _build_planting_contents', 1)[1]
+        src = _read(os.path.join(_ROOT, 'aot_flask', 'routes_geo_plot.py'))
+        body = src.split('def _build_plot_contents', 1)[1]
         attach = body.index("out['coverage_pct'] = pct")
         sort_at = body.index('inv[group].sort(key=_involvement_key)')
         self.assertLess(attach, sort_at,
@@ -2941,23 +3090,23 @@ class TestFallbackWhenSensorGivesNoData(unittest.TestCase):
     """
 
     def _src(self):
-        return _read(os.path.join(_ROOT, 'aot_flask', 'routes_geo_planting.py'))
+        return _read(os.path.join(_ROOT, 'aot_flask', 'routes_geo_plot.py'))
 
     def test_liveness_not_just_existence(self):
-        body = self._src().split('def _build_planting_contents', 1)[1]
+        body = self._src().split('def _build_plot_contents', 1)[1]
         self.assertIn('_env_of(', body)
         self.assertIn("valid', 0) == 0", body)
         self.assertIn("reason = 'stale'", body)
 
     def test_dead_sensor_is_kept_not_hidden(self):
         """빼면 고장이 화면에서 사라져 아무도 고치지 않는다."""
-        body = self._src().split('def _build_planting_contents', 1)[1]
+        body = self._src().split('def _build_plot_contents', 1)[1]
         self.assertIn("item['no_data'] = True", body)
 
     def test_live_sensor_is_ordered_first(self):
         """첫 탭이 자동으로 그려진다 — 죽은 센서가 앞이면 열자마자 빈 차트다."""
         import importlib
-        mod = importlib.import_module('aot.aot_flask.routes_geo_planting')
+        mod = importlib.import_module('aot.aot_flask.routes_geo_plot')
         rows = [{'name': 'dead', 'scope': 'plot', 'no_data': True},
                 {'name': 'live', 'scope': 'nearest', 'distance_m': 36.6}]
         rows.sort(key=mod._sensor_order_key)
@@ -2976,7 +3125,7 @@ class TestFallbackWhenSensorGivesNoData(unittest.TestCase):
     def test_env_is_measured_once_not_twice(self):
         """판정용과 인벤토리용으로 같은 influx 왕복을 두 번 하지 않는다
         (실측 약 64ms). 집합이 안 바뀌었으면 잰 것을 그대로 넘긴다."""
-        body = self._src().split('def _build_planting_contents', 1)[1]
+        body = self._src().split('def _build_plot_contents', 1)[1]
         self.assertIn('env=(None if added_input else plot_env)', body)
         src = _read(_ROUTES_GEO)
         head = src.split('def _build_area_contents', 1)[1][:200]
@@ -3198,11 +3347,11 @@ class TestScheduleScoping(unittest.TestCase):
             self.assertNotIn(word, body)
 
 
-class TestPlantingSchedule(unittest.TestCase):
+class TestPlotSchedule(unittest.TestCase):
     """구획에도 다가오는 일정을 낸다 — **닿는 것만**."""
 
     def _src(self):
-        return _read(os.path.join(_ROOT, 'aot_flask', 'routes_geo_planting.py'))
+        return _read(os.path.join(_ROOT, 'aot_flask', 'routes_geo_plot.py'))
 
     def test_detail_endpoint_carries_it_not_contents(self):
         """**[현황] 탭은 상세 조회로 그려진다.**
@@ -3213,23 +3362,23 @@ class TestPlantingSchedule(unittest.TestCase):
         확인해 달라고 해서야 드러났다.
         """
         src = self._src()
-        self.assertIn("out['schedule'] = _planting_schedule(row)", src)
-        contents = src.split('def _build_planting_contents', 1)[1].split(
+        self.assertIn("out['schedule'] = _plot_schedule(row)", src)
+        contents = src.split('def _build_plot_contents', 1)[1].split(
             '\ndef ', 1)[0]
         self.assertNotIn("'schedule'", contents)
 
     def test_scope_is_direct_not_the_whole_zone(self):
         """구역 장치까지 넣으면 없앤 "구역 패널의 복사본" 이 일정 쪽으로
         되살아난다."""
-        body = self._src().split('def _planting_schedule', 1)[1].split(
+        body = self._src().split('def _plot_schedule', 1)[1].split(
             '\ndef ', 1)[0]
         self.assertIn('upcoming_schedule(row, plot | valves)', body)
         self.assertNotIn('device_ids_in_shape', body)
 
-    def test_planting_itself_is_a_target(self):
+    def test_plot_itself_is_a_target(self):
         """구획을 대상으로 하는 일정 경로가 생겼을 때 화면만 조용히 못
         따라가는 일이 없게, 대상 집합에 구획 자신을 넣어 둔다."""
-        body = self._src().split('def _planting_schedule', 1)[1].split(
+        body = self._src().split('def _plot_schedule', 1)[1].split(
             '\ndef ', 1)[0]
         # upcoming_schedule 의 첫 인자가 구획 행이면 그 uuid 가 own 대상이 된다
         self.assertIn('upcoming_schedule(row,', body)
@@ -3237,7 +3386,7 @@ class TestPlantingSchedule(unittest.TestCase):
     def test_creation_is_one_shared_endpoint(self):
         """구획 전용 생성 경로를 두지 않는다 — 대지·구역·시설도 같은 것을
         쓴다. 계층마다 만들면 tz 앵커·중복 승인 같은 함정을 각자 다시 밟는다."""
-        self.assertNotIn('api_planting_add_schedule', self._src())
+        self.assertNotIn('api_plot_add_schedule', self._src())
         rg = _read(_ROUTES_GEO)
         self.assertIn("@blueprint.route('/api/geo/schedule', methods=['POST'])", rg)
         self.assertIn('def _schedule_payload', rg)
@@ -3245,7 +3394,7 @@ class TestPlantingSchedule(unittest.TestCase):
     def test_overview_renders_it_with_the_shared_builder(self):
         js = _read(os.path.join(_ROOT, 'aot_flask', 'static', 'js',
                                 'widgets', 'AoT_map', 'aot-map-popup.js'))
-        body = js.split('function _plantingOverviewHtml', 1)[1].split(
+        body = js.split('function _plotOverviewHtml', 1)[1].split(
             '\n  function ', 1)[0]
         # Phase 2: 예정과 노트가 한 블록이라 빌더도 하나다. 순서(노트가
         # 마지막)는 이제 블록 **안**의 문제라 buildRecordBlock 이 지킨다.
@@ -3253,21 +3402,21 @@ class TestPlantingSchedule(unittest.TestCase):
         self.assertNotIn('_ovNotesBlock()', body)
 
 
-class TestPlantingTimezone(unittest.TestCase):
+class TestPlotTimezone(unittest.TestCase):
     """구획의 현지 시각은 **소속 구역**을 따른다.
 
-    `resolve_location_tz` 가 GeoPlanting 을 모르면 시스템 tz 로 조용히 떨어져,
+    `resolve_location_tz` 가 GeoPlot 을 모르면 시스템 tz 로 조용히 떨어져,
     여러 지역에 걸친 지도에서 구획에 걸린 일정이 남의 지역 시각으로 표시된다.
     """
 
     def _src(self):
         return _read(os.path.join(_ROOT, 'utils', 'device_tz.py'))
 
-    def test_planting_branch_exists(self):
+    def test_plot_branch_exists(self):
         src = self._src()
         body = src.split('def resolve_location_tz', 1)[1].split('\ndef ', 1)[0]
-        self.assertIn('GeoPlanting', body)
-        self.assertIn('zone_for_planting', body)
+        self.assertIn('GeoPlot', body)
+        self.assertIn('zone_for_plot', body)
 
     def test_it_resolves_through_the_container_not_its_own_column(self):
         """구획에는 tz 컬럼이 없다 — 소속 도형의 resolve_timezone 을 쓴다
@@ -3280,7 +3429,7 @@ class TestPlantingTimezone(unittest.TestCase):
         """구획 조회가 실패해도 장치 조회·시스템 폴백이 계속 이어져야 한다."""
         body = self._src().split('def resolve_location_tz', 1)[1].split(
             '\ndef ', 1)[0]
-        seg = body.split('GeoPlanting', 1)[1]
+        seg = body.split('GeoPlot', 1)[1]
         self.assertIn('except Exception', seg)
         self.assertIn('return get_device_tz(None)', body)
 
@@ -3313,8 +3462,8 @@ class TestNoWateringLanguage(unittest.TestCase):
     def test_server_helper_warns_about_its_own_name(self):
         """이름(`valves_*`)이 가정을 담고 있어 다음 사람이 되살리기 쉽다."""
         src = _read(os.path.join(_ROOT, 'aot_flask', 'geo',
-                                 'planting_context.py'))
-        body = src.split('def valves_for_planting', 1)[1].split('\ndef ', 1)[0]
+                                 'plot_context.py'))
+        body = src.split('def valves_for_plot', 1)[1].split('\ndef ', 1)[0]
         self.assertIn('관수 장치를 가려내지 않는다', body)
         self.assertIn('virtual_on_off_single', body)
 
@@ -3347,7 +3496,7 @@ class TestScheduleIsConsistentAcrossLayers(unittest.TestCase):
         구간을 골라 시각을 준다. 계층마다 폼을 두면 사용자가 쓰기 **전에**
         종류를 고르는 옛 방식으로 되돌아간다(2026-08-18, 네 계층 통합).
         계약은 test_note_schedule_link.py 가 지킨다."""
-        for f in ('aot-map-widget-vector.js', 'aot-map-vegetation.js',
+        for f in ('aot-map-widget-vector.js', 'aot-map-plot.js',
                   'aot-map-popup.js'):
             js = _read(os.path.join(_ROOT, 'aot_flask', 'static', 'js',
                                     'widgets', 'AoT_map', f))
@@ -3431,24 +3580,2107 @@ class TestVocabularyIsNotAgricultureOnly(unittest.TestCase):
                     bad.append('%s -> %s (%s)' % (mid, val, w))
         self.assertEqual(bad, [], '농업 한정 단어가 모달 문구에 남아 있다: %s' % bad)
 
-    def test_crop_msgid_is_gone(self):
-        """'Crop' 은 영어에서도 수확물을 뜻한다 — 공원의 나무는 crop 이 아니다."""
+    def test_subject_msgid_is_gone(self):
+        """'Crop' 은 영어에서도 수확물을 뜻한다 — 공원의 나무는 subject 이 아니다."""
         src = _read(os.path.join(_ROOT, 'aot_flask', 'static', 'js',
                                  'widgets', 'AoT_map', 'aot-map-popup.js'))
         design = _read(os.path.join(_ROOT, 'aot_flask', 'static', 'js', 'geo',
-                                    'design', 'aot-geo-vegetation.js'))
+                                    'design', 'aot-geo-plot.js'))
         for s in (src, design):
             self.assertNotIn("_t('Crop')", s)
+
+    def test_plot_labels_are_not_borrowed_from_another_meaning(self):
+        """같은 영어 단어를 다른 뜻으로 쓰는 화면과 msgid 를 공유하면 안 된다.
+
+        `Period` 는 이 저장소에서 **폴링 주기**("주기")다. 구획의 기간 제목에
+        그대로 쓰면 번역이 "주기" 로 나온다 — 영어로는 맞아 보이고 한국어에서만
+        틀리므로 리뷰에서 잘 안 보인다("Sensors"="센서류" 와 같은 계열).
+        """
+        import re
+        design = _read(os.path.join(_ROOT, 'aot_flask', 'static', 'js', 'geo',
+                                    'design', 'aot-geo-plot.js'))
+        popup = _read(os.path.join(_ROOT, 'aot_flask', 'static', 'js',
+                                   'widgets', 'AoT_map', 'aot-map-popup.js'))
+        # 빌려 쓰면 안 되는 msgid 와, 그것을 쓰는 다른 화면의 뜻:
+        #   Period → 폴링 주기("주기")
+        #   Stage / Stages → 시설 센서 색구간의 단("단 1", "단")
+        self.assertNotIn("_t('Period')", design)
+        for borrowed in ("_t('Period')", "_t('Stage')", "_t('Stages')"):
+            self.assertNotIn(borrowed, popup,
+                             '%s 는 다른 뜻으로 이미 번역돼 있다' % borrowed)
+
+        ko = _read(os.path.join(_ROOT, 'aot_flask', 'translations', 'ko',
+                                'LC_MESSAGES', 'messages.po'))
+        cat = dict(re.findall(
+            r'^msgid "((?:[^"\\]|\\.)*)"\nmsgstr "((?:[^"\\]|\\.)*)"', ko, re.M))
+        # 구획 화면이 쓰는 라벨의 한국어가 실제로 그 뜻인지 고정한다.
+        self.assertEqual(cat.get('Dates'), '기간')
+        self.assertEqual(cat.get('What is here'), '대상')
+        self.assertEqual(cat.get('Start date'), '시작일')
+        self.assertEqual(cat.get('Current stage'), '단계')
+        self.assertEqual(cat.get('Stage count'), '단계 수')
+
+    def test_gdd_stage_needs_all_three_or_falls_back(self):
+        """GDD 판정은 셋이 모두 갖춰졌을 때만 한다 — 하나라도 없으면 날짜로
+        되돌아가고, **되돌아간 이유를 함께 싣는다.**
+
+        이유 없이 되돌아가면 "왜 GDD 가 안 잡히지" 를 알 방법이 없다. 그 상태로
+        단계가 조용히 뒤처지는 것이 정확히 이 설계가 막으려는 것이다.
+        """
+        from aot.aot_flask.geo import plot_context
+
+        class _Plot(object):
+            started_on = None
+            ended_on = None
+
+        # 프로그램이 없다
+        self.assertEqual(
+            plot_context.gdd_accumulated(_Plot(), None)['reason'], 'no-program')
+
+        # 기준온도가 없다 — 지어내지 않는다
+        class _NoBase(object):
+            photosynthesis = None
+        out = plot_context.gdd_accumulated(_Plot(), _NoBase())
+        self.assertFalse(out['usable'])
+        self.assertEqual(out['reason'], 'no-t-base')
+
+        # 기준온도는 있는데 시작일이 없다
+        class _Base(object):
+            photosynthesis = {'T_base': 10.0}
+        out = plot_context.gdd_accumulated(_Plot(), _Base())
+        self.assertEqual(out['reason'], 'no-start-date')
+
+    def test_stage_gdd_is_a_length_not_a_total(self):
+        """단계의 `gdd` 는 **그 단계의 길이**다(`days` 와 같은 규약).
+
+        누적값으로 읽으면 마지막 단계만 맞고 나머지가 다 어긋나는데, 화면에서는
+        "단계가 이상하다" 로만 보인다.
+        """
+        from aot.aot_flask.geo.plot_context import _stage_by_gdd
+
+        stages = [{'key': 'a', 'name': 'A', 'gdd': 100},
+                  {'key': 'b', 'name': 'B', 'gdd': 100},
+                  {'key': 'c', 'name': 'C', 'gdd': 100}]
+        # 누적 150 → 길이 해석이면 2단계(50 소진), 누적 해석이면 2단계 경계
+        out = _stage_by_gdd(stages, {'value': 150.0}, None)
+        self.assertEqual(out['index'], 2)
+        self.assertEqual(out['source'], 'gdd')
+        self.assertEqual(out['gdd_in_stage'], 50.0)
+        self.assertEqual(out['gdd_left'], 50.0)
+
+    def test_mixed_stages_refuse_gdd_judgement(self):
+        """한 단계라도 `gdd` 가 없으면 판정하지 않는다.
+
+        0 으로 치면 그 단계가 건너뛰어지고, 날짜로 메우면 두 기준이 한 프로그램
+        안에서 섞인다 — 어느 쪽도 사람이 예상할 수 없다.
+        """
+        from aot.aot_flask.geo.plot_context import _stage_by_gdd
+
+        stages = [{'key': 'a', 'name': 'A', 'gdd': 100},
+                  {'key': 'b', 'name': 'B'},                 # 비었다
+                  {'key': 'c', 'name': 'C', 'gdd': 100}]
+        self.assertIsNone(_stage_by_gdd(stages, {'value': 150.0}, None))
+
+    def test_last_stage_may_run_to_the_end(self):
+        """마지막 단계의 빈 `gdd` 는 '끝까지' 다 — `days` 와 같은 규약."""
+        from aot.aot_flask.geo.plot_context import _stage_by_gdd
+
+        stages = [{'key': 'a', 'name': 'A', 'gdd': 100},
+                  {'key': 'b', 'name': 'B'}]
+        out = _stage_by_gdd(stages, {'value': 500.0}, None)
+        self.assertEqual(out['index'], 2)
+        self.assertIsNone(out['gdd_left'])
+
+    def test_gdd_is_not_the_coordinator_gdd(self):
+        """`cumulative_tracker` 의 GDD 와 **다른 값**이다.
+
+        그쪽은 제어 보상용으로 사이클마다 적분하고 env_coordinator 함수가 있어야
+        한다. 노지 구획에는 코디네이터가 없으므로 여기에 얹을 수 없다. 그 사실을
+        문서와 코드 주석에 남긴 것을 고정한다 — 나중에 "GDD 가 두 개네" 를 보고
+        한쪽으로 합치려는 시도를 막기 위해서다.
+        """
+        src = _read(os.path.join(_ROOT, 'aot_flask', 'geo', 'plot_context.py'))
+        body = src.split('def gdd_accumulated', 1)[1].split('\ndef ', 1)[0]
+        self.assertIn('cumulative_tracker', body)
+        self.assertIn('Tmax', body)
+
+    def test_stage_targets_come_from_the_server(self):
+        """항목 어휘·단위를 화면이 다시 조립하지 않는다.
+
+        조립하면 항목을 늘릴 때 한쪽만 늘어난다. 그리고 **곡선이 걸린 항목은
+        숫자를 내지 않는다** — 단계 값을 대신 보이면 실제로 쓰이지 않는 숫자를
+        목표라고 말하는 것이 된다.
+        """
+        from aot.aot_flask.geo.plot_context import _stage_targets
+        from aot.aot_flask.geo.program_io import _TARGET_FIELDS, _TARGET_UNITS
+
+        # 어휘와 단위는 한 벌이어야 한다.
+        self.assertEqual(set(_TARGET_FIELDS), set(_TARGET_UNITS))
+
+        stage = {'key': 'seedling', 'targets': {'temp_day': 24.0, 'rh': 70.0}}
+        out = _stage_targets(stage, None)
+        by_key = {t['key']: t for t in out}
+        self.assertEqual(by_key['temp_day']['value'], 24.0)
+        self.assertEqual(by_key['temp_day']['unit'], '\u00b0C')
+        self.assertEqual(by_key['temp_day']['source'], 'stage')
+        self.assertNotIn('co2', by_key)          # 미지정 항목은 내지 않는다
+
+    def test_a_curve_never_shows_the_stage_number(self):
+        """곡선이 이기는 항목에 단계 값을 보이면 화면이 거짓말을 한다."""
+        from aot.aot_flask.geo.plot_context import _stage_targets
+
+        class _Prog(object):
+            targets_methods = {'temp_day': 'method-uuid'}
+
+        stage = {'key': 'seedling', 'targets': {'temp_day': 24.0, 'rh': 70.0}}
+        out = _stage_targets(stage, _Prog())
+        by_key = {t['key']: t for t in out}
+        self.assertEqual(by_key['temp_day']['source'], 'method')
+        self.assertIsNone(by_key['temp_day']['value'])
+        self.assertEqual(by_key['rh']['value'], 70.0)   # 곡선 없는 항목은 그대로
+
+    def test_targets_say_they_do_not_drive_control(self):
+        """숫자만 보이면 사람이 '이대로 돌고 있다' 로 읽는다 — 아직 아니다."""
+        popup = _read(os.path.join(_ROOT, 'aot_flask', 'static', 'js',
+                                   'widgets', 'AoT_map', 'aot-map-popup.js'))
+        self.assertIn('Control is not changed automatically', popup)
+
+    def test_every_plot_form_can_pick_a_kind(self):
+        """구획을 만드는 세 화면이 **모두** 종류를 고를 수 있어야 한다.
+
+        한 화면만 빠지면 그 화면으로 만든 구획은 영영 식생이다 — `kind` 는
+        나중에 고칠 수 있지만, 고칠 수 있다는 것을 아무도 모른다. 서버가 받는
+        축이 화면에 없는 반쪽 상태가 정확히 이 작업이 없애려던 것이다.
+        """
+        design = _read(os.path.join(_ROOT, 'aot_flask', 'static', 'js', 'geo',
+                                    'design', 'aot-geo-plot.js'))
+        popup = _read(os.path.join(_ROOT, 'aot_flask', 'static', 'js',
+                                   'widgets', 'AoT_map', 'aot-map-popup.js'))
+        facility = _read(os.path.join(_ROOT, 'aot_flask', 'static', 'js', 'geo',
+                                      'facility', 'plot-ui.js'))
+        self.assertIn('data-veg-field="kind"', design)
+        self.assertIn("_kindSelect('data-nf=\"kind\"'", popup)   # 생성 폼
+        self.assertIn("_kindSelect('data-pf=\"kind\"'", popup)   # 편집 폼
+        self.assertIn('data-f="kind"', facility)
+        for src in (design, popup, facility):
+            for k in ('vegetation', 'livestock', 'facility', 'other'):
+                self.assertIn("'" + k + "'", src)
+
+    def test_program_list_follows_the_chosen_kind(self):
+        """종류를 바꿨는데 프로그램 목록이 옛 종류로 남으면, 화면에 보이는
+        선택지를 골라도 서버가 거절한다 — 저장이 안 되는 이유가 화면 어디에도
+        없다. 세 화면 모두 **종류별로** 받아야 한다."""
+        design = _read(os.path.join(_ROOT, 'aot_flask', 'static', 'js', 'geo',
+                                    'design', 'aot-geo-plot.js'))
+        plotjs = _read(os.path.join(_ROOT, 'aot_flask', 'static', 'js',
+                                    'widgets', 'AoT_map', 'aot-map-plot.js'))
+        facility = _read(os.path.join(_ROOT, 'aot_flask', 'static', 'js', 'geo',
+                                      'facility', 'plot-ui.js'))
+        for src in (design, plotjs, facility):
+            self.assertIn("'/api/geo/programs?kind=' + encodeURIComponent(", src)
+            self.assertNotIn('/api/geo/programs?kind=vegetation', src)
+        # 종류 변경을 실제로 듣는가
+        self.assertIn('_wireKindChange', design)
+        self.assertIn('refreshProgramChoices', plotjs)
+        self.assertIn("getAttribute('data-f') !== 'kind'", facility)
 
     def test_block_title_does_not_repeat_its_first_label(self):
         """'심겨 있는 것 / 심은 것' 처럼 제목과 첫 행이 같은 말이면 안 된다."""
         src = _read(os.path.join(_ROOT, 'aot_flask', 'static', 'js',
                                  'widgets', 'AoT_map', 'aot-map-popup.js'))
-        body = src.split('function _plantingOverviewHtml', 1)[1].split(
+        body = src.split('function _plotOverviewHtml', 1)[1].split(
             '\n  function ', 1)[0]
         self.assertIn("_t('This plot')", body)
         self.assertNotIn("_t('Growing now')", body)
         # [개요]도 같은 문제를 겪었다 — 제목과 첫 행이 둘 다 '심은 것' 이었다.
-        about = src.split('function _plantingAboutHtml', 1)[1].split(
+        about = src.split('function _plotAboutHtml', 1)[1].split(
             '\n  function ', 1)[0]
         self.assertIn("_t('Basics')", about)
+
+
+def _load_integrity_checker():
+    """앱 전체를 끌어오지 않고 검사기 모듈만 로드한다.
+
+    `check_geo_integrity` 는 모듈 상단에서 `from aot.start_flask_ui import app`
+    한다 — 그대로 import 하면 Flask 앱 전체(라우트·폼·babel)가 딸려와 테스트가
+    앱 부팅에 묶인다(실제로 babel 미초기화로 죽는다). `app` 은 `main()` 이
+    app_context 를 열 때만 쓰이고 검사 함수는 쓰지 않으므로 스텁으로 세운다.
+
+    스텁은 로드 직후 걷어낸다 — 남겨 두면 같은 프로세스의 다른 테스트가 진짜
+    `start_flask_ui` 대신 이 껍데기를 받는다.
+    """
+    import importlib
+    import sys
+    import types
+
+    had_real = 'aot.start_flask_ui' in sys.modules
+    if not had_real:
+        stub = types.ModuleType('aot.start_flask_ui')
+        stub.app = None
+        sys.modules['aot.start_flask_ui'] = stub
+    try:
+        return importlib.import_module('aot.scripts.check_geo_integrity')
+    finally:
+        if not had_real:
+            sys.modules.pop('aot.start_flask_ui', None)
+
+
+class TestFacilityParentPlot(unittest.TestCase):
+    """시설 구획 — 위치의 정본이 기하가 아니라 부모다 (p6_39).
+
+    노지 두둑은 갈아엎으면 위치가 바뀌므로 기하가 정본이고 소속은 파생이다.
+    시설은 반대다 — 동·구역이 구조물로 존재하고 사람도 "3동" 이라 부른다.
+    그래서 여기서 고정하는 것은 **뒤집힌 정본**이 조용히 되돌아가지 않는 것이다.
+
+    깨져도 조용한 것들:
+
+    - VP-7(기하 또는 부모 중 하나는 있어야 한다)이 빠지면 어디에도 없는 구획이
+      만들어진다. 지도에 안 그려지고 어떤 소속 판정에도 안 걸린다.
+    - `geometry_of` 폴백이 사라지면 시설 구획만 모든 읽기 경로에서 조용히
+      빠진다(지도·소속·센서). 목록에는 계속 보인다.
+    - 면적을 내면 시설 외피 면적이 재배 면적으로 읽힌다. 노지형·베드형·수직형은
+      같은 바닥 면적에 재배 규모가 전혀 다른데, 숫자에는 그 표시가 없다.
+    - 단동에서 `bay_id` 가 NULL 로 남으면 "시설 전체"와 "구역 1"이 같은 대상을
+      두 가지로 표현하게 된다.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        import tempfile
+        from flask import Flask
+        from aot.aot_flask.extensions import db
+        import aot.databases.models  # noqa: F401
+
+        cls._tmp = tempfile.TemporaryDirectory()
+        app = Flask(__name__)
+        app.config['SQLALCHEMY_DATABASE_URI'] = \
+            'sqlite:///' + os.path.join(cls._tmp.name, 'facility_plot.db')
+        app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+        db.init_app(app)
+        cls._ctx = app.app_context()
+        cls._ctx.push()
+        db.create_all()
+
+    @classmethod
+    def tearDownClass(cls):
+        from aot.aot_flask.extensions import db
+        db.session.remove()
+        cls._ctx.pop()
+        cls._tmp.cleanup()
+
+    def setUp(self):
+        from aot.aot_flask.extensions import db
+        from aot.databases.models import GeoFacility, GeoPlot, GeoShape
+        for model in (GeoPlot, GeoShape, GeoFacility):
+            model.query.delete()
+        db.session.commit()
+
+    # ── 준비 ────────────────────────────────────────────────────────────
+    def _facility(self, bay_count=1, name='온실1', fittings=None):
+        from aot.aot_flask.extensions import db
+        from aot.databases.models import GeoFacility, GeoShape
+
+        outer = GeoShape(geo_id='map-fac', type='facility',
+                         feature={'type': 'Feature', 'properties': {},
+                                  'geometry': _square(0.0, 0.0, 0.002)})
+        db.session.add(outer)
+        db.session.flush()
+        fac = GeoFacility(name=name, geo_id='map-fac',
+                          shape_uuid=outer.unique_id,
+                          structure='connected' if bay_count > 1 else 'single',
+                          bay_count=bay_count,
+                          # 중심·방위가 있어야 구역 기하를 파생할 수 있다
+                          # (없으면 slice_geometry 가 None 을 돌려준다 — 좌표를
+                          # 지어내지 않는다는 계약).
+                          geometry_3d={'span_width_m': 8.0, 'length_m': 30.0,
+                                       'spacing_m': 0.0,
+                                       'center_lng': 0.0, 'center_lat': 0.0,
+                                       'orientation_deg': 0.0},
+                          fittings=fittings or [])
+        db.session.add(fac)
+        db.session.commit()
+        return fac
+
+    def _save(self, **over):
+        from aot.aot_flask.geo import plot_io
+        payload = {'map_uuid': 'map-fac', 'subject': '토마토',
+                   'started_on': date.today().isoformat()}
+        payload.update(over)
+        return plot_io.save_plot(payload)
+
+    # ── VP-7 ────────────────────────────────────────────────────────────
+    def test_geometry_or_facility_is_required(self):
+        row, err = self._save()
+        self.assertIsNone(row)
+        self.assertIn('VP-7', err or '')
+
+    def test_facility_alone_is_enough(self):
+        fac = self._facility()
+        row, err = self._save(facility_uuid=fac.unique_id)
+        self.assertIsNone(err)
+        self.assertIsNone(row['feature'])
+        self.assertEqual(row['location_source'], 'facility')
+        self.assertEqual(row['facility_uuid'], fac.unique_id)
+
+    def test_clearing_the_parent_without_geometry_is_refused(self):
+        fac = self._facility()
+        row, _ = self._save(facility_uuid=fac.unique_id)
+        out, err = self._save(unique_id=row['unique_id'], facility_uuid=None)
+        self.assertIsNone(out)
+        self.assertIn('VP-7', err or '')
+
+    def test_facility_alone_implies_the_map(self):
+        """시설을 주면 지도는 시설이 안다 — 지도 uuid 를 따로 묻지 않는다."""
+        from aot.aot_flask.geo import plot_io
+
+        fac = self._facility()
+        row, err = plot_io.save_plot({
+            'facility_uuid': fac.unique_id, 'subject': '토마토',
+            'started_on': date.today().isoformat(),
+        })
+        self.assertIsNone(err)
+        self.assertEqual(row['geo_id'], 'map-fac')
+
+    # ── 단동은 bay_1 자동 ───────────────────────────────────────────────
+    def test_single_bay_facility_fills_bay_1(self):
+        fac = self._facility(bay_count=1)
+        row, err = self._save(facility_uuid=fac.unique_id)
+        self.assertIsNone(err)
+        self.assertEqual(row['bay_id'], 'bay_1')
+
+    def test_single_bay_facility_corrects_a_wrong_bay_id(self):
+        """단동에 'bay_7' 이 와도 서버가 정정한다 — 클라이언트 말을 믿지 않는다."""
+        fac = self._facility(bay_count=1)
+        row, err = self._save(facility_uuid=fac.unique_id, bay_id='bay_7')
+        self.assertIsNone(err)
+        self.assertEqual(row['bay_id'], 'bay_1')
+
+    # ── 다동 ────────────────────────────────────────────────────────────
+    def test_multi_bay_rejects_unknown_bay_id(self):
+        fac = self._facility(bay_count=3)
+        row, err = self._save(facility_uuid=fac.unique_id, bay_id='bay_9')
+        self.assertIsNone(row)
+        self.assertIn('bay_9', err or '')
+
+    def test_multi_bay_accepts_a_real_bay_and_allows_whole_facility(self):
+        fac = self._facility(bay_count=3)
+        row, err = self._save(facility_uuid=fac.unique_id, bay_id='bay_2')
+        self.assertIsNone(err)
+        self.assertEqual(row['bay_id'], 'bay_2')
+
+        whole, err = self._save(facility_uuid=fac.unique_id, subject='바질')
+        self.assertIsNone(err)
+        self.assertIsNone(whole['bay_id'])     # 다동에서 NULL = 시설 전체
+
+    def test_unknown_facility_is_refused(self):
+        row, err = self._save(facility_uuid='no-such-facility')
+        self.assertIsNone(row)
+        self.assertIn('시설', err or '')
+
+    # ── 기하 파생 ───────────────────────────────────────────────────────
+    def test_geometry_is_derived_from_the_facility(self):
+        from aot.aot_flask.geo import plot_context
+        from aot.databases.models import GeoPlot
+
+        fac = self._facility()
+        saved, _ = self._save(facility_uuid=fac.unique_id)
+        row = GeoPlot.query.filter_by(unique_id=saved['unique_id']).first()
+
+        self.assertFalse(row.has_own_geometry())
+        geom = plot_context.geometry_of(row)
+        self.assertEqual(geom.get('type'), 'Polygon')
+        # 저장된 것이 아니라 파생이다 — 행은 여전히 비어 있어야 한다.
+        self.assertIsNone(row.feature)
+
+    def test_derived_geometry_is_not_written_back(self):
+        """파생을 응답에서 받아 그대로 되돌려 저장해도 각인되지 않는다."""
+        from aot.databases.models import GeoPlot
+
+        fac = self._facility()
+        saved, _ = self._save(facility_uuid=fac.unique_id)
+        self.assertIsNotNone(saved.get('derived_feature'))
+        self.assertIsNone(saved['feature'])
+
+        row = GeoPlot.query.filter_by(unique_id=saved['unique_id']).first()
+        self.assertIsNone(row.feature)
+
+    # ── 면적·치수·밸브를 내지 않는다 ────────────────────────────────────
+    def test_no_area_no_dims_no_valves(self):
+        from aot.aot_flask.geo import plot_context
+        from aot.databases.models import GeoPlot
+
+        fac = self._facility()
+        saved, _ = self._save(facility_uuid=fac.unique_id)
+        row = GeoPlot.query.filter_by(unique_id=saved['unique_id']).first()
+
+        # 0 이 아니라 None 이다 — 0 은 "면적이 없다"는 거짓말이다.
+        self.assertIsNone(saved['area_m2'])
+        detail = plot_context.to_dict(row, with_sensors=False,
+                                          with_dims=True, with_valves=True)
+        self.assertNotIn('dims', detail)
+        self.assertNotIn('valves', detail)
+
+    def test_zone_allocation_skips_facility_plots(self):
+        """온실 하나가 zone 을 통째로 덮은 것처럼 계산되면 안 된다."""
+        from aot.aot_flask.extensions import db
+        from aot.aot_flask.geo import plot_context
+        from aot.databases.models import GeoShape
+
+        zone = GeoShape(geo_id='map-fac', type='zone',
+                        feature={'type': 'Feature', 'properties': {'name': 'Z'},
+                                 'geometry': _square(0.0, 0.0, 0.01)})
+        db.session.add(zone)
+        db.session.commit()
+
+        fac = self._facility()
+        self._save(facility_uuid=fac.unique_id)
+        alloc = plot_context.zone_allocation(zone)
+        self.assertEqual(alloc['plots'], [])
+        self.assertEqual(alloc['assigned_m2'], 0.0)
+
+    # ── 이력 보호 ───────────────────────────────────────────────────────
+    def test_ended_plot_cannot_move_to_another_bay(self):
+        from aot.aot_flask.geo import plot_io
+
+        fac = self._facility(bay_count=3)
+        row, _ = self._save(facility_uuid=fac.unique_id, bay_id='bay_1')
+        plot_io.end_plot(row['unique_id'])
+        out, err = self._save(unique_id=row['unique_id'],
+                              facility_uuid=fac.unique_id, bay_id='bay_2')
+        self.assertIsNone(out)
+        self.assertIn('VP-6', err or '')
+
+    def test_copy_keeps_the_parent(self):
+        from aot.aot_flask.geo import plot_io
+
+        fac = self._facility(bay_count=3)
+        row, _ = self._save(facility_uuid=fac.unique_id, bay_id='bay_2')
+        copy, err = plot_io.copy_plot(row['unique_id'])
+        self.assertIsNone(err)
+        self.assertEqual(copy['facility_uuid'], fac.unique_id)
+        self.assertEqual(copy['bay_id'], 'bay_2')
+
+    def test_modal_payload_can_move_a_plot_between_zones(self):
+        """모달 편집이 보내는 것과 같은 페이로드로 구역을 옮길 수 있는가.
+
+        모달은 `data-pf` 필드를 전부 싣고 빈 칸은 `''` 로 보낸다 — 그 모양
+        그대로 처리돼야 한다. 빈 `bay_id` 는 "시설 전체" 라는 뜻이다.
+        """
+        from aot.aot_flask.geo import plot_io
+        from aot.databases.models import GeoPlot
+
+        fac = self._facility(bay_count=3)
+        saved, _ = self._save(facility_uuid=fac.unique_id, bay_id='bay_1')
+
+        moved, err = plot_io.save_plot({
+            'unique_id': saved['unique_id'], 'bay_id': 'bay_2',
+            'subject': '토마토', 'variety': '', 'name': '',
+            'started_on': date.today().isoformat(), 'expected_end_on': '',
+            'color': '#6a8f3c',
+        })
+        self.assertIsNone(err)
+        self.assertEqual(moved['bay_id'], 'bay_2')
+
+        whole, err = plot_io.save_plot({
+            'unique_id': saved['unique_id'], 'bay_id': ''})
+        self.assertIsNone(err)
+        self.assertIsNone(whole['bay_id'])        # 빈 값 = 시설 전체
+
+        row = GeoPlot.query.filter_by(unique_id=saved['unique_id']).first()
+        self.assertEqual(row.facility_uuid, fac.unique_id)   # 부모는 유지된다
+
+    def test_response_carries_the_zone_choices(self):
+        """모달이 구역을 고르려면 선택지가 응답에 있어야 한다."""
+        fac = self._facility(bay_count=3)
+        saved, _ = self._save(facility_uuid=fac.unique_id, bay_id='bay_2')
+        ids = [b['id'] for b in saved.get('facility_bays') or []]
+        self.assertEqual(ids, ['bay_1', 'bay_2', 'bay_3'])
+
+    # ── 구역 단위 기하 파생 ─────────────────────────────────────────────
+    def test_bay_geometry_is_narrower_than_the_whole_facility(self):
+        """구역 하나짜리 구획이 시설 전체 자리를 차지하지 않는다."""
+        from aot.aot_flask.geo import plot_context
+        from aot.databases.models import GeoPlot
+
+        fac = self._facility(bay_count=3)
+        saved, _ = self._save(facility_uuid=fac.unique_id, bay_id='bay_2')
+        row = GeoPlot.query.filter_by(unique_id=saved['unique_id']).first()
+
+        geom = plot_context.geometry_of(row)
+        self.assertEqual(geom.get('type'), 'Polygon')
+
+        whole, _ = self._save(facility_uuid=fac.unique_id, subject='바질')
+        whole_row = GeoPlot.query.filter_by(
+            unique_id=whole['unique_id']).first()
+        whole_geom = plot_context.geometry_of(whole_row)
+
+        # 시설 전체(외피 폴백)보다 좁아야 한다 — 같으면 좁히기가 안 된 것이다.
+        a_bay = plot_context.shapely_area_m2(
+            plot_context._shapely(geom))
+        a_all = plot_context.shapely_area_m2(
+            plot_context._shapely(whole_geom))
+        self.assertGreater(a_bay, 0)
+        self.assertLess(a_bay, a_all * 0.75)
+
+    def test_bay_geometry_matches_the_editor_rectangle(self):
+        """편집기(`rotatedRectRing`)와 같은 규칙으로 계산되는가.
+
+        같은 규칙이 아니면 구역이 시설 밖으로 삐져나온 것처럼 보인다. 여기서는
+        면적으로 본다 — 연동 3동 중 1동은 span×length 여야 한다.
+        """
+        from aot.aot_flask.geo import facility_bays, plot_context
+
+        fac = self._facility(bay_count=3)
+        spec = facility_bays.spec_from_row(fac)
+        geom = facility_bays.geometry_for_bay(spec, 'bay_2')
+        area = plot_context.shapely_area_m2(plot_context._shapely(geom))
+        self.assertAlmostEqual(area, 8.0 * 30.0, delta=8.0)   # span 8 × length 30
+
+    def test_detached_bays_are_a_multipolygon(self):
+        """분리동은 동 사이가 비어 있다 — 하나의 사각형으로 덮지 않는다."""
+        from aot.aot_flask.extensions import db
+        from aot.aot_flask.geo import facility_bays
+        from aot.databases.models import GeoFacility
+
+        fac = self._facility(bay_count=3)
+        fac.structure = 'single'          # 분리동
+        g3d = dict(fac.geometry_3d or {})
+        g3d['spacing_m'] = 3.0
+        fac.geometry_3d = g3d
+        db.session.commit()
+
+        spec = facility_bays.spec_from_row(
+            GeoFacility.query.filter_by(unique_id=fac.unique_id).first())
+        # 병합 구역(1~3동)을 하나 만들어 본다.
+        geom = facility_bays.slice_geometry(
+            spec, {'id': 'bay_1_3', 'bay_start': 1, 'bay_end': 3})
+        self.assertEqual(geom.get('type'), 'MultiPolygon')
+        self.assertEqual(len(geom['coordinates']), 3)
+
+    def test_unplaced_facility_has_no_derived_geometry(self):
+        """지도에 배치되지 않은 시설은 좌표를 **지어내지 않는다**."""
+        from aot.aot_flask.geo import facility_bays
+
+        spec = {'structure': 'connected', 'bay_count': 2,
+                'geometry_3d': {'span_width_m': 8, 'length_m': 30},  # 중심 없음
+                'bays': [], 'name': 'x'}
+        self.assertIsNone(facility_bays.geometry_for_bay(spec, 'bay_1'))
+
+    def test_response_carries_the_bay_geometry_for_drawing(self):
+        """위젯이 그릴 수 있도록 `derived_feature` 로 나가되 `feature` 는 빈 채."""
+        fac = self._facility(bay_count=3)
+        saved, _ = self._save(facility_uuid=fac.unique_id, bay_id='bay_3')
+        self.assertIsNone(saved['feature'])
+        df = saved.get('derived_feature')
+        self.assertTrue(df and df.get('geometry'))
+        self.assertEqual(df['properties']['derived_from'], 'bay')
+
+    # ── 센서 — 마커가 아니라 fitting 에서 찾는다 ────────────────────────
+    def _facility_with_sensors(self):
+        """구역 2개, 각 구역에 센서 fitting 하나씩.
+
+        시설 센서는 로컬 미터 좌표(`position`)로 붙어 있고 **지도 마커가
+        아니다.** 그래서 구역 귀속은 기하 교차가 아니라 x 좌표 → 슬라이스
+        매핑으로 정해진다(`facility_bays.build_fitting_bay_map`).
+        """
+        from aot.aot_flask.extensions import db
+        from aot.databases.models import Input
+
+        ids = []
+        for name in ('1동 온습도', '2동 온습도'):
+            inp = Input(name=name, device='TEST00')
+            db.session.add(inp)
+            db.session.flush()
+            ids.append(inp.unique_id)
+        db.session.commit()
+
+        # span 8m × 2구역 → bay_1 은 x 0~8, bay_2 는 x 8~16.
+        fittings = [
+            {'id': 'f1', 'kind': 'sensor', 'input_id': ids[0],
+             'sensor_role': 'indoor', 'position': [4.0, 1.5, 15.0]},
+            {'id': 'f2', 'kind': 'sensor', 'input_id': ids[1],
+             'sensor_role': 'indoor', 'position': [12.0, 1.5, 15.0]},
+        ]
+        return self._facility(bay_count=2, fittings=fittings), ids
+
+    def test_bay_plot_sees_only_its_own_bay_sensor(self):
+        from aot.aot_flask.geo import plot_context
+        from aot.databases.models import GeoPlot
+
+        fac, ids = self._facility_with_sensors()
+        saved, err = self._save(facility_uuid=fac.unique_id, bay_id='bay_1')
+        self.assertIsNone(err)
+        row = GeoPlot.query.filter_by(unique_id=saved['unique_id']).first()
+
+        out = plot_context.sensors_for_plot(row)
+        self.assertEqual(out['source'], 'bay')
+        self.assertEqual(out['in_bay'], [ids[0]])
+        self.assertEqual(sorted(out['from_facility']), sorted(ids))
+        # 마커 판정은 아예 돌지 않는다 — 파생 기하(시설 외피)로 세면 시설
+        # 어딘가의 장치가 전부 이 구획의 것으로 잡힌다.
+        self.assertEqual(out['in_plot'], [])
+
+    def test_whole_facility_plot_falls_back_to_facility_scope(self):
+        from aot.aot_flask.geo import plot_context
+        from aot.databases.models import GeoPlot
+
+        fac, ids = self._facility_with_sensors()
+        saved, _ = self._save(facility_uuid=fac.unique_id)   # 다동 + bay 없음
+        row = GeoPlot.query.filter_by(unique_id=saved['unique_id']).first()
+
+        out = plot_context.sensors_for_plot(row)
+        self.assertEqual(out['source'], 'facility')
+        self.assertEqual(out['in_bay'], [])
+        self.assertEqual(sorted(out['from_facility']), sorted(ids))
+
+    def test_dead_fitting_reference_is_not_reported_as_a_sensor(self):
+        """fitting 이 지워진 장치를 가리키면 센서로 세지 않는다."""
+        from aot.aot_flask.extensions import db
+        from aot.aot_flask.geo import plot_context
+        from aot.databases.models import GeoPlot, Input
+
+        fac, ids = self._facility_with_sensors()
+        Input.query.filter_by(unique_id=ids[0]).delete()
+        db.session.commit()
+
+        saved, _ = self._save(facility_uuid=fac.unique_id, bay_id='bay_1')
+        row = GeoPlot.query.filter_by(unique_id=saved['unique_id']).first()
+        out = plot_context.sensors_for_plot(row)
+        self.assertEqual(out['in_bay'], [])
+        self.assertEqual(out['from_facility'], [ids[1]])
+        self.assertEqual(out['source'], 'facility')
+
+    # ── 제어 축 교차 ────────────────────────────────────────────────────
+    def _coordinator(self, name, bay_scope=None, activated=True):
+        import json as _json
+        from aot.aot_flask.extensions import db
+        from aot.databases.models import CustomController
+
+        opts = {'geo_facility_id': self._fac_uuid}
+        if bay_scope:
+            opts['bay_scope'] = bay_scope
+        c = CustomController(name=name, device='env_coordinator',
+                             custom_options=_json.dumps(opts),
+                             is_activated=activated)
+        db.session.add(c)
+        db.session.commit()
+        return c
+
+    def test_control_picks_the_bay_coordinator_and_the_whole_facility_one(self):
+        """구역 전담과 시설 전체가 함께 도는 것이 정상 구성이다.
+
+        한쪽만 보이면 "왜 내 설정이 안 먹지" 를 설명할 근거가 사라진다.
+        """
+        from aot.aot_flask.geo import plot_context
+        from aot.databases.models import GeoPlot
+
+        fac = self._facility(bay_count=3)
+        self._fac_uuid = fac.unique_id
+        self._coordinator('1동 전담', bay_scope='bay_1')
+        self._coordinator('온실 전체')
+        self._coordinator('2동 전담', bay_scope='bay_2')
+
+        saved, _ = self._save(facility_uuid=fac.unique_id, bay_id='bay_1')
+        row = GeoPlot.query.filter_by(unique_id=saved['unique_id']).first()
+        out = plot_context.facility_control_for_plot(row)
+
+        names = sorted(c['name'] for c in out['coordinators'])
+        self.assertEqual(names, ['1동 전담', '온실 전체'])
+        scopes = {c['name']: c['scope'] for c in out['coordinators']}
+        self.assertEqual(scopes['1동 전담'], 'bay')
+        self.assertEqual(scopes['온실 전체'], 'facility')
+        self.assertEqual(out['source'], 'bay')
+        self.assertEqual(out['bay']['name'], 'Bay 1')
+
+    def test_whole_facility_plot_does_not_claim_a_bay_coordinator(self):
+        """시설 전체 구획을 한 구역짜리 코디네이터가 대표할 수는 없다."""
+        from aot.aot_flask.geo import plot_context
+        from aot.databases.models import GeoPlot
+
+        fac = self._facility(bay_count=3)
+        self._fac_uuid = fac.unique_id
+        self._coordinator('2동 전담', bay_scope='bay_2')
+
+        saved, _ = self._save(facility_uuid=fac.unique_id)   # bay 없음
+        row = GeoPlot.query.filter_by(unique_id=saved['unique_id']).first()
+        out = plot_context.facility_control_for_plot(row)
+        self.assertEqual(out['coordinators'], [])
+        self.assertEqual(out['source'], 'none')
+
+    def test_control_is_read_only(self):
+        """재료만 낸다 — 여기서 제어를 걸지 않는다(관수량 미계산과 같은 결)."""
+        import inspect
+        from aot.aot_flask.geo import plot_context
+
+        src = inspect.getsource(plot_context.facility_control_for_plot)
+        for banned in ('DaemonControl', 'output_on', 'set_output',
+                       'db.session.add', 'db.session.commit'):
+            self.assertNotIn(banned, src)
+
+    def test_facility_knows_what_is_growing_in_it(self):
+        """반대 방향 — 제어 화면이 "무엇이 며칠째" 를 말할 수 있어야 한다."""
+        from aot.aot_flask.geo import plot_context
+
+        fac = self._facility(bay_count=3)
+        self._save(facility_uuid=fac.unique_id, bay_id='bay_1', subject='토마토')
+        self._save(facility_uuid=fac.unique_id, subject='바질')      # 시설 전체
+
+        rows = plot_context.plots_in_facility(fac.unique_id)
+        self.assertEqual(sorted(r.subject for r in rows), ['바질', '토마토'])
+
+        # 구역 뷰에서도 **시설 전체 구획이 함께** 보여야 한다 — 그 작물도 이
+        # 구역에서 자라고 있다.
+        in_bay1 = plot_context.plots_in_facility(fac.unique_id, bay_id='bay_1')
+        self.assertEqual(sorted(r.subject for r in in_bay1), ['바질', '토마토'])
+        in_bay2 = plot_context.plots_in_facility(fac.unique_id, bay_id='bay_2')
+        self.assertEqual([r.subject for r in in_bay2], ['바질'])
+
+        brief = plot_context.plot_brief_for_control(rows[0])
+        self.assertNotIn('area_m2', brief)      # 시설에서는 낼 수 없는 값
+        self.assertIn('days_since_planted', brief)
+
+    # ── 구역 구성 변경 경고 ─────────────────────────────────────────────
+    def test_shrinking_the_zones_reports_orphaned_plots(self):
+        from aot.aot_flask.geo.facility_io import FacilityManager
+        from aot.databases.models import GeoFacility
+
+        fac = self._facility(bay_count=3)
+        self._save(facility_uuid=fac.unique_id, bay_id='bay_3', subject='토마토')
+        self._save(facility_uuid=fac.unique_id, bay_id='bay_1', subject='상추')
+
+        fac.bay_count = 2                      # 3동 → 2동
+        from aot.aot_flask.extensions import db
+        db.session.commit()
+
+        row = GeoFacility.query.filter_by(unique_id=fac.unique_id).first()
+        orphans = FacilityManager._orphaned_plots(row)
+        self.assertEqual([o['subject'] for o in orphans], ['토마토'])
+
+    def test_whole_facility_plots_are_never_orphaned(self):
+        """구역이 어떻게 바뀌든 "시설 전체" 라는 자리는 사라지지 않는다."""
+        from aot.aot_flask.extensions import db
+        from aot.aot_flask.geo.facility_io import FacilityManager
+        from aot.databases.models import GeoFacility
+
+        fac = self._facility(bay_count=3)
+        self._save(facility_uuid=fac.unique_id, subject='바질')
+        fac.bay_count = 1
+        db.session.commit()
+        row = GeoFacility.query.filter_by(unique_id=fac.unique_id).first()
+        self.assertEqual(FacilityManager._orphaned_plots(row), [])
+
+    def test_no_judgement_without_a_zone_list(self):
+        """치수를 아직 안 넣은 시설에서 근거 없이 경고하지 않는다."""
+        from aot.aot_flask.extensions import db
+        from aot.aot_flask.geo.facility_io import FacilityManager
+        from aot.databases.models import GeoFacility
+
+        fac = self._facility(bay_count=2)
+        self._save(facility_uuid=fac.unique_id, bay_id='bay_1', subject='상추')
+        fac.geometry_3d = {}                   # 슬라이스를 만들 수 없다
+        db.session.commit()
+        row = GeoFacility.query.filter_by(unique_id=fac.unique_id).first()
+        self.assertEqual(FacilityManager._orphaned_plots(row), [])
+
+    def test_integrity_flags_an_unknown_bay(self):
+        from collections import defaultdict
+        from aot.aot_flask.extensions import db
+        from aot.databases.models import GeoFacility
+
+        chk = _load_integrity_checker()
+        fac = self._facility(bay_count=3)
+        self._save(facility_uuid=fac.unique_id, bay_id='bay_3', subject='토마토')
+        fac.bay_count = 2
+        db.session.commit()
+
+        findings = defaultdict(list)
+        chk._collect_plots(findings, None, {'map-fac': '테스트지도'})
+        self.assertEqual(len(findings['plot-unknown-bay']), 1)
+        self.assertEqual(findings['plot-unknown-bay'][0]['bay_id'], 'bay_3')
+
+    # ── 무결성 검사 ─────────────────────────────────────────────────────
+    def test_integrity_does_not_flag_a_missing_geometry_as_bad(self):
+        from collections import defaultdict
+        chk = _load_integrity_checker()
+
+        fac = self._facility()
+        self._save(facility_uuid=fac.unique_id)
+
+        findings = defaultdict(list)
+        chk._collect_plots(findings, None, {'map-fac': '테스트지도'})
+        self.assertEqual(findings['plot-bad-geometry'], [])
+        self.assertEqual(findings['plot-no-location'], [])
+        self.assertEqual(findings['plot-dangling-facility'], [])
+
+    def test_integrity_flags_a_dead_facility_reference(self):
+        from collections import defaultdict
+        from aot.aot_flask.extensions import db
+        from aot.databases.models import GeoFacility
+        chk = _load_integrity_checker()
+
+        fac = self._facility()
+        self._save(facility_uuid=fac.unique_id)
+        GeoFacility.query.filter_by(unique_id=fac.unique_id).delete()
+        db.session.commit()
+
+        findings = defaultdict(list)
+        chk._collect_plots(findings, None, {'map-fac': '테스트지도'})
+        self.assertEqual(len(findings['plot-dangling-facility']), 1)
+        self.assertIn('plot-dangling-facility', chk.SEVERE)
+
+    def test_integrity_flags_a_kind_mismatch(self):
+        """쓰기 게이트웨이를 지나지 않은 행은 아무도 안 본다.
+
+        `save_plot` 이 붙일 때와 종류만 바꿀 때 둘 다 막지만, 게이트웨이가
+        생기기 전에 만들어진 행·백필·직접 수정은 그 검사를 지나지 않는다. 어긋난
+        채로도 **에러가 나지 않고** 화면에는 그럴듯한 단계와 목표가 뜬다.
+        """
+        from collections import defaultdict
+        from aot.aot_flask.extensions import db
+        from aot.databases.models import GeoPlot, GeoProgram
+        chk = _load_integrity_checker()
+
+        prog = GeoProgram(name='젖소 표준', subject='젖소', kind='livestock',
+                          stages=[{'key': 'lactation', 'name': '착유기',
+                                   'days': 305}])
+        db.session.add(prog)
+        db.session.commit()
+
+        fac = self._facility()
+        saved, err = self._save(subject='상추',
+                                facility_uuid=fac.unique_id)   # kind='vegetation'
+        self.assertIsNone(err)
+        # 게이트웨이를 우회해 직접 붙인다 — 정확히 이 검사가 잡아야 할 모양이다.
+        row = GeoPlot.query.filter_by(unique_id=saved['unique_id']).first()
+        row.program_uuid = prog.unique_id
+        db.session.commit()
+
+        findings = defaultdict(list)
+        chk._collect_plots(findings, None, {'map-fac': '테스트지도'})
+        hits = findings['plot-program-kind-mismatch']
+        self.assertEqual(len(hits), 1)
+        self.assertEqual(hits[0]['plot_kind'], 'vegetation')
+        self.assertEqual(hits[0]['program_kind'], 'livestock')
+        # 값이 제어로 흐르므로 경고가 아니라 severe 다.
+        self.assertIn('plot-program-kind-mismatch', chk.SEVERE)
+        # 출력 루프가 HEADINGS 선언 순서를 따르므로, 여기 없으면 집계에만
+        # 잡히고 화면에는 안 나온다(2026-08-08 에 실제로 겪은 모양).
+        self.assertIn('plot-program-kind-mismatch', chk.HEADINGS)
+
+    def test_integrity_flags_a_dead_program_reference(self):
+        """프로그램을 지우면 단계·목표·예상 종료일이 통째로 사라지는데 화면에는
+        '프로그램 없음' 으로만 보인다 — 지운 것인지 끊어진 것인지 구분되지
+        않는다."""
+        from collections import defaultdict
+        from aot.aot_flask.extensions import db
+        from aot.databases.models import GeoPlot, GeoProgram
+        chk = _load_integrity_checker()
+
+        prog = GeoProgram(name='상추 표준', subject='상추', kind='vegetation',
+                          stages=[{'key': 'grow', 'name': '생육기',
+                                   'days': 40}])
+        db.session.add(prog)
+        db.session.commit()
+        fac = self._facility()
+        saved, err = self._save(subject='상추', facility_uuid=fac.unique_id,
+                                program_uuid=prog.unique_id)
+        self.assertIsNone(err)
+
+        GeoProgram.query.filter_by(unique_id=prog.unique_id).delete()
+        db.session.commit()
+
+        findings = defaultdict(list)
+        chk._collect_plots(findings, None, {'map-fac': '테스트지도'})
+        self.assertEqual(len(findings['plot-dangling-program']), 1)
+        # 구획 자체는 계속 보인다 — 화면에서 사라지는 것도, 잘못 붙은 것도
+        # 아니므로 severe 가 아니다.
+        self.assertNotIn('plot-dangling-program', chk.SEVERE)
+        self.assertIn('plot-dangling-program', chk.HEADINGS)
+
+    def test_integrity_is_quiet_when_the_pair_matches(self):
+        """정상 조합에서 조용한지 확인한다 — 안 그러면 위 두 검사가 항상
+        켜져 있는 것과 같아 아무 정보도 주지 않는다."""
+        from collections import defaultdict
+        from aot.aot_flask.extensions import db
+        from aot.databases.models import GeoProgram
+        chk = _load_integrity_checker()
+
+        prog = GeoProgram(name='상추 표준', subject='상추', kind='vegetation',
+                          stages=[{'key': 'grow', 'name': '생육기',
+                                   'days': 40}])
+        db.session.add(prog)
+        db.session.commit()
+        fac = self._facility()
+        _saved, err = self._save(subject='상추', facility_uuid=fac.unique_id,
+                                 program_uuid=prog.unique_id)
+        self.assertIsNone(err)
+
+        findings = defaultdict(list)
+        chk._collect_plots(findings, None, {'map-fac': '테스트지도'})
+        self.assertEqual(findings['plot-program-kind-mismatch'], [])
+        self.assertEqual(findings['plot-dangling-program'], [])
+
+    def test_integrity_flags_a_plot_with_no_location_at_all(self):
+        """검증을 우회해 들어온 행(직접 INSERT·옛 백필)도 잡힌다."""
+        from collections import defaultdict
+        from aot.aot_flask.extensions import db
+        from aot.databases.models import GeoPlot
+        chk = _load_integrity_checker()
+
+        db.session.add(GeoPlot(geo_id='map-fac', feature=None, subject='공중부양',
+                                   started_on=date.today()))
+        db.session.commit()
+
+        findings = defaultdict(list)
+        chk._collect_plots(findings, None, {'map-fac': '테스트지도'})
+        self.assertEqual(len(findings['plot-no-location']), 1)
+
+class TestFacilityPlotRendering(unittest.TestCase):
+    """지도 위젯이 시설 구획을 그릴 수 있는가 — 소스로 고정한다.
+
+    시설 구획은 `feature` 가 비어 있고 서버가 `derived_feature` 로 자리를 준다.
+    위젯이 `p.feature.geometry` 만 보면 **온실 작물만 지도에서 통째로 사라지는데**,
+    목록·AI·편집기에는 그대로 보이므로 아무도 없어진 줄 모른다. 라벨과 폴리곤이
+    서로 다른 접근자를 쓰다 한쪽만 고쳐지는 것도 같은 계열이라, 공용 접근자
+    하나(`_geomOf`)를 쓰는 것까지 함께 본다.
+    """
+
+    _WIDGET_VEG = os.path.join(_ROOT, 'aot_flask', 'static', 'js', 'widgets',
+                               'AoT_map', 'aot-map-plot.js')
+    _WIDGET_POPUP = os.path.join(_ROOT, 'aot_flask', 'static', 'js', 'widgets',
+                                 'AoT_map', 'aot-map-popup.js')
+    _DESIGN_VEG = os.path.join(_ROOT, 'aot_flask', 'static', 'js', 'geo',
+                               'design', 'aot-geo-plot.js')
+
+    def test_widget_falls_back_to_the_derived_geometry(self):
+        src = _read(self._WIDGET_VEG)
+        self.assertIn('derived_feature', src,
+                      '위젯이 파생 기하를 모르면 시설 구획이 지도에서 사라진다')
+        self.assertIn('function _geomOf(', src)
+
+    def test_polygon_and_label_use_the_same_accessor(self):
+        """폴리곤은 뜨는데 라벨은 안 뜨는(또는 반대) 상태를 막는다."""
+        src = _read(self._WIDGET_VEG)
+        self.assertGreaterEqual(src.count('_geomOf(p)'), 2)
+        # 옛 직접 접근이 되살아나면 그 자리만 조용히 빠진다.
+        self.assertNotIn('var geom = p.feature && p.feature.geometry;', src)
+
+    def test_facility_plot_label_is_offset_from_the_bay_chip(self):
+        """구역 칩과 같은 자리에 겹쳐 그리지 않는다(둘 다 못 읽게 된다)."""
+        src = _read(self._WIDGET_VEG)
+        self.assertIn("location_source === 'facility'", src)
+        self.assertIn('_southOffsetPoint', src)
+
+    def test_modal_says_where_instead_of_area(self):
+        """면적이 빈 자리를 "계산 중" 으로 읽지 않도록 위치와 이유를 말한다."""
+        src = _read(self._WIDGET_POPUP)
+        self.assertIn('_plotPlaceHtml', src)
+        self.assertIn("p.location_source !== 'facility'", src)
+        self.assertIn('facility_name', src)
+
+    def test_client_preview_follows_the_server_zone_rule(self):
+        """저장 전 경고의 판정이 서버 규칙과 같은가 (소스로 고정).
+
+        구역 편집기 상태(`bays`)와 동 수 입력(`bay_count`)은 서로 다른 위젯이라
+        **어긋난 순간이 실재한다.** 그때 `bays` 를 그대로 믿으면 "사라지는 구역
+        없음" 으로 읽고 경고 없이 저장하는데, 서버는 `bay_count` 로 다시 자르므로
+        실제로는 그 구역이 사라진다 — 2026-08-19 에 실제로 그렇게 저장돼 구획
+        하나가 갈 곳을 잃었다(서버 경고 로그만 남았다).
+
+        그래서 미리보기도 서버와 같은 두 단계를 밟아야 한다: `bay_end <=
+        bay_count` 로 거르고, 남는 것이 없으면 bay 당 1구역으로 합성한다.
+        """
+        src = _read(os.path.join(_ROOT, 'aot_flask', 'static', 'js', 'geo',
+                                 'aot-facility-design.js'))
+        body = src.split('function plannedBayIds(', 1)[1].split('\n  }', 1)[0]
+        self.assertIn('e <= n', body, 'bay_count 범위를 벗어난 구역을 걸러야 한다')
+        self.assertIn("'bay_' + i", body, 'bay 당 1구역 폴백이 있어야 한다')
+
+    def test_server_is_the_authority_on_orphans(self):
+        """미리보기를 지나쳐도 저장 응답이 사실을 말해야 한다."""
+        io_src = _read(os.path.join(_ROOT, 'aot_flask', 'geo', 'facility_io.py'))
+        self.assertIn('orphaned_plots', io_src)
+        self.assertIn('_orphaned_plots', io_src)
+        js = _read(os.path.join(_ROOT, 'aot_flask', 'static', 'js', 'geo',
+                                'aot-facility-design.js'))
+        self.assertIn('json.orphaned_plots', js)
+
+    def test_modal_can_edit_a_facility_plot(self):
+        """시설 구획도 모달에서 고칠 수 있어야 한다 — 노지와 같은 자리에서.
+
+        편집 폼 자체는 종류를 가리지 않지만(기하를 안 보낸다), **구역 선택**이
+        없으면 시설 구획만 위치를 못 고쳐 시설 편집기까지 다녀와야 한다.
+        """
+        src = _read(self._WIDGET_POPUP)
+        self.assertIn("data-pf=\"bay_id\"", src)
+        self.assertIn("p.location_source === 'facility'", src)
+        self.assertIn('facility_bays', src)
+
+    def test_place_block_does_not_repeat_its_title(self):
+        """블록 제목과 행 라벨이 같은 말이면 안 된다('위치/위치')."""
+        src = _read(self._WIDGET_POPUP)
+        body = src.split('function _plotPlaceHtml', 1)[1].split(
+            '\n  // ', 1)[0]
+        self.assertIn("_t('Where')", body)
+        self.assertNotIn("_t('Location')", body)
+        # 시설과 구역은 **두 행**이다 — 한 열에 두 정보를 이어붙이지 않는다.
+        self.assertIn("_t('Facility')", body)
+        self.assertIn("_t('Zone')", body)
+        self.assertNotIn("' · '", body)
+
+    def test_facility_modal_shows_what_is_growing(self):
+        """시설(구역) 모달의 [현황]에 식생 블록이 있는가 — 제어 → 식생 방향.
+
+        서버가 런타임에 `plots` 를 실어도 **그리는 코드가 없으면 화면에는
+        아무것도 없다.** 실제로 그 상태로 한 번 "구현했다" 고 보고했다
+        (2026-08-19) — API 까지만 만들고 위젯을 건드리지 않았다.
+        """
+        popup = _read(self._WIDGET_POPUP)
+        self.assertIn('function buildFacilityPlotsHtml(', popup)
+        self.assertIn('buildFacilityPlotsHtml: buildFacilityPlotsHtml', popup)
+
+        widget = _read(os.path.join(_ROOT, 'aot_flask', 'static', 'js', 'widgets',
+                                    'AoT_map', 'aot-map-widget-vector.js'))
+        self.assertIn('_appendFacilityPlots(uid, facilityUuid, pane)', widget)
+        self.assertIn('rt.plots', widget)
+
+    def test_bay_view_includes_whole_facility_plots(self):
+        """구역 뷰에서 "시설 전체" 구획도 보여야 한다 — 그 작물도 거기 자란다.
+
+        서버 `plots_in_facility` 와 **같은 규칙**이어야 한다. 한쪽만 고치면
+        같은 구역이 화면과 API 에서 다른 목록을 갖는다.
+        """
+        popup = _read(self._WIDGET_POPUP)
+        body = popup.split('function buildFacilityPlotsHtml', 1)[1].split(
+            '\n  function ', 1)[0]
+        self.assertIn('!bayId || !p.bay_id || p.bay_id === bayId', body)
+        # 구역 뷰에서 시설 전체인 것은 그렇다고 밝힌다 — 아니면 이 구역 전용으로 읽힌다.
+        self.assertIn("_t('Whole facility')", body)
+
+    def test_widget_can_create_a_facility_plot(self):
+        """위젯에서 **새로 심을 수 있어야** 한다.
+
+        시설 구획은 기하를 그리지 않으므로 지도 위젯에서 만들 수 있다. 이것이
+        없으면 구획이 하나도 없는 시설은 위젯에서 손댈 것이 아무것도 없고,
+        시설 편집기(geo/facility)까지 갈 수 있는 계정만 온실 식생을 관리하게
+        된다 — 지도만 쓰는 사람에게는 기능이 없는 것과 같다.
+        """
+        popup = _read(self._WIDGET_POPUP)
+        body = popup.split('function buildFacilityPlotsHtml', 1)[1].split(
+            '\n  function ', 1)[0]
+        # 비어 있어도 권한이 있으면 블록을 낸다 — 아니면 버튼이 나타날 자리가 없다.
+        self.assertIn('!items.length && !opts.canEdit', body)
+        self.assertIn('aot-ov-plot-add', body)
+        self.assertIn("data-nf=\"bay_id\"", body)
+
+        widget = _read(os.path.join(_ROOT, 'aot_flask', 'static', 'js', 'widgets',
+                                    'AoT_map', 'aot-map-widget-vector.js'))
+        self.assertIn('_wireFacilityPlotAdd', widget)
+        self.assertIn("'/api/geo/plot'", widget)
+        # 권한 축은 시설 [현황]과 같아야 한다(둘 다 edit_settings) — 버튼이
+        # 보이는데 저장이 403 이면 그게 더 나쁘다.
+        self.assertIn('st.repEditByFac && st.repEditByFac[facilityUuid]', widget)
+
+    def test_periodic_refresh_does_not_wipe_the_plot_form(self):
+        """[현황]은 30초마다 통째로 다시 그려진다 — 작성 중인 폼이 사라지면 안 된다.
+
+        처음에는 "버튼이 안 먹는다" 로 보인다(폼을 열자마자 갱신이 지운다).
+        `_ovEditing`(설명 편집)과 **따로** 둔다: 동시에 열릴 수 있고, 한쪽을 닫을
+        때 다른 쪽 보호까지 풀리면 안 된다.
+        """
+        widget = _read(os.path.join(_ROOT, 'aot_flask', 'static', 'js', 'widgets',
+                                    'AoT_map', 'aot-map-widget-vector.js'))
+        self.assertIn('if (st._plantEditing) return;', widget)
+        self.assertIn('st._plantEditing = on;', widget)
+        # 팝업이 닫히면 잠금도 풀려야 한다 — 아니면 다음에 열었을 때 갱신이 멈춘다.
+        self.assertIn('st2._plantEditing = false;', widget)
+
+    def test_polling_does_not_repaint_unchanged_blocks(self):
+        """[현황]은 위젯 폴링 주기(기본 5초)마다 불린다 — 값이 그대로면 DOM 도 그대로.
+
+        예전에는 매번 `innerHTML` 을 통째로 갈아끼워 **아무것도 안 바뀌어도 모달이
+        계속 깜빡였다.** 실측(2026-08-19): 44초 동안 DOM 변경 15건 이상 → 고친 뒤
+        같은 조건에서 0건, 실제로 구획이 하나 추가된 순간에만 2건.
+        """
+        widget = _read(os.path.join(_ROOT, 'aot_flask', 'static', 'js', 'widgets',
+                                    'AoT_map', 'aot-map-widget-vector.js'))
+        # [현황] 본문 · 환경 · 식생 · 기록 네 자리 모두 같으면 손대지 않는다.
+        self.assertIn('var ovSame =', widget)
+        self.assertIn('if (!ovSame)', widget)
+        self.assertIn("cur.outerHTML === node.outerHTML", widget)
+        self.assertIn("existing.outerHTML === block.outerHTML", widget)
+        self.assertIn("slot.outerHTML === node.outerHTML", widget)
+
+    def test_comparison_parses_before_comparing(self):
+        """문자열 HTML 과 DOM 의 `outerHTML` 을 직접 비교하면 안 된다.
+
+        브라우저가 파싱하며 속성 순서·따옴표·`style` 표기를 정규화하므로
+        (`display:none` → `display: none;`), 내용이 같아도 **항상 다르다** —
+        비교를 넣어도 매번 교체돼 깜빡임이 그대로다(실제로 그렇게 한 번 고쳤다).
+        """
+        widget = _read(os.path.join(_ROOT, 'aot_flask', 'static', 'js', 'widgets',
+                                    'AoT_map', 'aot-map-widget-vector.js'))
+        self.assertIn('function _parseNode(html)', widget)
+        # 원본 문자열과 DOM 을 직접 비교하던 형태가 되살아나면 잡는다.
+        self.assertNotIn('existing.outerHTML === html', widget)
+        self.assertNotIn('cur.outerHTML === html', widget)
+
+    def test_async_note_list_is_excluded_from_the_comparison(self):
+        """노트 목록은 비동기로 채워진다 — 비교에 넣으면 무한 재교체가 된다.
+
+        `buildRecordBlock` 은 그 자리를 '…' 로 두고 나중에 채우므로, 새 HTML 과
+        화면이 늘 달라 폴링마다 교체 → 노트 재로딩 → 다시 교체가 반복된다.
+        지금 화면의 노트를 새 노드에 옮겨 심고 비교한다(교체할 때도 살아남는다).
+        """
+        widget = _read(os.path.join(_ROOT, 'aot_flask', 'static', 'js', 'widgets',
+                                    'AoT_map', 'aot-map-widget-vector.js'))
+        self.assertIn('newList.innerHTML = curList.innerHTML', widget)
+
+        # 공용 노트 블록도 같은 내용이면 되쓰지 않는다 — `innerHTML` 대입은
+        # 내용이 같아도 자식을 전부 갈아끼운다.
+        shared = _read(os.path.join(_ROOT, 'aot_flask', 'static', 'js', 'common',
+                                    'sensor-label.js'))
+        self.assertIn("listEl.innerHTML !== cache.html", shared)
+
+    def test_design_form_can_pick_a_program(self):
+        """geo/design 에서 만든 구획도 프로그램을 붙일 수 있어야 한다.
+
+        여기만 빠지면 "지도에서 그린 구획" 과 "시설/위젯에서 만든 구획" 이 서로
+        다른 기능을 갖게 된다 — 같은 것을 만드는 두 경로가 다르게 동작하는 것은
+        이 저장소가 반복해서 겪은 실패다.
+        """
+        src = _read(self._DESIGN_VEG)
+        self.assertIn("data-veg-field=\"program_uuid\"", src)
+        # 그 구획의 종류로 묻는다 — 박아 두면 다른 종류가 섞인다.
+        self.assertIn("'/api/geo/programs?kind=' + encodeURIComponent(", src)
+        self.assertNotIn('programs?kind=vegetation', src)
+
+    def test_ai_can_attach_a_program_when_creating(self):
+        """도구 설명이 "program_id 로 넘긴다" 고 적고 실제로 안 받으면 거짓말이다."""
+        import inspect
+        from aot.ai.services.aot_data_tool_service import AoTDataToolService as S
+        sig = inspect.signature(S.create_plot)
+        self.assertIn('program_id', sig.parameters)
+
+        src = _read(os.path.join(_ROOT, 'ai', 'services', 'aot_data_tool_service.py'))
+        body = src.split('def modify_plot', 1)[1].split('\n    @staticmethod', 1)[0]
+        self.assertIn("'program_uuid'", body)
+
+    def test_design_page_does_not_draw_facility_plots(self):
+        """편집기는 **편집할 수 있는 것만** 그린다.
+
+        시설 구획은 기하가 없어 여기서 옮기거나 고칠 수 없다. 그려 두면 사람이
+        그렇게 하려 든다 — 파생 기하 폴백을 이 파일에 넣지 말 것.
+        """
+        src = _read(self._DESIGN_VEG)
+        self.assertIn('if (!plot || !plot.feature) return null;', src)
+        # 주석에는 나온다(왜 안 그리는지 적혀 있다) — 막는 것은 **사용**이다.
+        self.assertNotIn('.derived_feature', src)
+
+class TestProgram(unittest.TestCase):
+    """재배 프로그램(P1) — 템플릿과 인스턴스, 버전 고정.
+
+    이 레이어가 막으려는 것은 "작물 지식이 네 곳에 흩어져 서로 모르는" 상태다
+    (STAGE_DURATION_MAP=AI 전용 · setpoint 캐시=AI 전용 · FunctionCropPreset=제어
+    전용 · Method=사람이 수작업). 여기서 고정하는 계약 중 **깨져도 조용한 것**:
+
+    - 구획이 버전을 고정하지 않으면, 프로그램을 고치는 순간 진행 중인 작기의
+      "그때 무엇을 목표로 길렀나" 가 소급해서 바뀐다. 에러는 나지 않는다.
+    - `source='ai'` 인 프로그램이 검토 없이 제어에 쓰이면, 지어낸 단계 기간과
+      목표 온도가 곧바로 온실 설정이 된다.
+    - 내장/외부 프로그램을 사람이 직접 고칠 수 있으면 업그레이드·외부 갱신이
+      그 수정을 덮어써 조용히 되돌아간다.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        import tempfile
+        from flask import Flask
+        from aot.aot_flask.extensions import db
+        import aot.databases.models  # noqa: F401
+
+        cls._tmp = tempfile.TemporaryDirectory()
+        app = Flask(__name__)
+        app.config['SQLALCHEMY_DATABASE_URI'] = \
+            'sqlite:///' + os.path.join(cls._tmp.name, 'program.db')
+        app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+        db.init_app(app)
+        cls._ctx = app.app_context()
+        cls._ctx.push()
+        db.create_all()
+
+    @classmethod
+    def tearDownClass(cls):
+        from aot.aot_flask.extensions import db
+        db.session.remove()
+        cls._ctx.pop()
+        cls._tmp.cleanup()
+
+    def setUp(self):
+        from aot.aot_flask.extensions import db
+        from aot.databases.models import GeoProgram, GeoPlot
+        for model in (GeoPlot, GeoProgram):
+            model.query.delete()
+        db.session.commit()
+
+    def _program(self, subject='tomato', variety=None, source='builtin',
+                 stages=None, version=1, reviewed=None, kind='vegetation'):
+        from aot.aot_flask.extensions import db
+        from aot.databases.models import GeoProgram
+        row = GeoProgram(
+            name='%s 표준' % subject, subject=subject, variety=variety,
+            source=source, kind=kind,
+            version=version, reviewed_at=reviewed,
+            stages=stages if stages is not None else [
+                {'key': 'seedling', 'name': '육묘기', 'days': 21},
+                {'key': 'vegetative', 'name': '영양생장기', 'days': 35},
+                {'key': 'harvest', 'name': '수확기', 'days': None},
+            ])
+        db.session.add(row)
+        db.session.commit()
+        return row
+
+    def _plant(self, **over):
+        from aot.aot_flask.geo import plot_io
+        payload = {'map_uuid': 'map-p', 'subject': '토마토',
+                   'started_on': date.today().isoformat(),
+                   'feature': {'type': 'Feature', 'properties': {},
+                               'geometry': _square(0.0, 0.0, 0.001)}}
+        payload.update(over)
+        return plot_io.save_plot(payload)
+
+    # ── 버전 고정 ───────────────────────────────────────────────────────
+    def test_plot_pins_the_program_version(self):
+        prog = self._program()
+        row, err = self._plant(program_uuid=prog.unique_id)
+        self.assertIsNone(err)
+        self.assertEqual(row['program']['version'], 1)
+
+    def test_confirming_a_stage_moves_the_anchor(self):
+        """승인은 기록이 아니라 **보정**이다.
+
+        확인한 날부터 남은 단계를 다시 계산하지 않으면, 승인은 아무것도 바꾸지
+        않는 체크박스가 된다 — 그런 기능은 만들지 않는 편이 낫다.
+        """
+        from datetime import timedelta
+        from aot.aot_flask.geo import plot_context, plot_io
+
+        prog = self._program(stages=[
+            {'key': 's1', 'name': '1', 'days': 10},
+            {'key': 's2', 'name': '2', 'days': 10},
+            {'key': 's3', 'name': '3', 'days': None}])
+        saved, err = self._plant(
+            program_uuid=prog.unique_id,
+            started_on=(date.today() - timedelta(days=25)).isoformat())
+        self.assertIsNone(err)
+        uid = saved['unique_id']
+        from aot.databases.models import GeoPlot
+        row = GeoPlot.query.filter_by(unique_id=uid).first()
+
+        # 원장이 비면 지금까지와 똑같이 파생한다 — 26일차면 3단계.
+        self.assertEqual(plot_context.stage_of(row)['key'], 's3')
+        self.assertIsNone(plot_context.stage_anchor(row))
+
+        # 2단계가 **5일 전에** 시작됐다고 확인하면 거기서부터 다시 센다.
+        ev, err2 = plot_io.accept_stage(
+            uid, stage_key='s2',
+            started_on=(date.today() - timedelta(days=5)).isoformat(),
+            source='days', decided_by='tester')
+        self.assertIsNone(err2)
+        st = plot_context.stage_of(row)
+        self.assertEqual(st['key'], 's2')
+        # 순번은 **전체 기준**이다 — 잘린 구간 기준이면 "2단계 (1/2)" 로 보인다.
+        self.assertEqual(st['index'], 2)
+        self.assertEqual(st['total'], 3)
+
+    def test_undo_keeps_the_row_and_restores_the_previous_anchor(self):
+        """행을 지우면 '누가 언제 확인했다가 물렀다' 가 사라진다."""
+        from datetime import timedelta
+        from aot.aot_flask.geo import plot_context, plot_io
+        from aot.databases.models import GeoPlot
+
+        prog = self._program(stages=[
+            {'key': 's1', 'name': '1', 'days': 10},
+            {'key': 's2', 'name': '2', 'days': None}])
+        saved, _ = self._plant(
+            program_uuid=prog.unique_id,
+            started_on=(date.today() - timedelta(days=20)).isoformat())
+        uid = saved['unique_id']
+        row = GeoPlot.query.filter_by(unique_id=uid).first()
+        plot_io.accept_stage(uid, stage_key='s2',
+                             started_on=date.today().isoformat(),
+                             decided_by='tester')
+        self.assertIsNotNone(plot_context.stage_anchor(row))
+
+        out, err = plot_io.undo_stage(uid, decided_by='tester')
+        self.assertIsNone(err)
+        self.assertIsNone(plot_context.stage_anchor(row))
+        hist = plot_context.stage_history(row)
+        self.assertEqual(len(hist), 1)            # 지우지 않았다
+        self.assertTrue(hist[0]['undone'])
+
+    def test_going_backwards_is_refused(self):
+        """뒤로 가는 전환은 되돌리기로만 한다 — 여기로도 되면 원장에 앞뒤가
+        섞여 기준점이 어디인지 추적할 수 없다."""
+        from datetime import timedelta
+        from aot.aot_flask.geo import plot_io
+
+        prog = self._program(stages=[
+            {'key': 's1', 'name': '1', 'days': 10},
+            {'key': 's2', 'name': '2', 'days': 10},
+            {'key': 's3', 'name': '3', 'days': None}])
+        saved, _ = self._plant(
+            program_uuid=prog.unique_id,
+            started_on=(date.today() - timedelta(days=25)).isoformat())
+        uid = saved['unique_id']
+        plot_io.accept_stage(uid, stage_key='s3',
+                             started_on=date.today().isoformat())
+        out, err = plot_io.accept_stage(uid, stage_key='s2',
+                                        started_on=date.today().isoformat())
+        self.assertIsNone(out)
+        self.assertIn('되돌리기', err or '')
+
+    def test_no_proposal_until_the_ledger_has_a_row(self):
+        """기존 구획 전부에 소급해서 '승인하세요' 를 띄우지 않는다.
+
+        승인은 사람이 한 번 누른 시점부터 의미를 갖는다.
+        """
+        from datetime import timedelta
+        from aot.aot_flask.geo import plot_context
+        from aot.databases.models import GeoPlot
+
+        prog = self._program(stages=[
+            {'key': 's1', 'name': '1', 'days': 5},
+            {'key': 's2', 'name': '2', 'days': None}])
+        saved, _ = self._plant(
+            program_uuid=prog.unique_id,
+            started_on=(date.today() - timedelta(days=20)).isoformat())
+        row = GeoPlot.query.filter_by(unique_id=saved['unique_id']).first()
+        self.assertIsNone(plot_context.stage_proposal(row))
+
+    def test_pending_transition_is_not_stored(self):
+        """대기 중 전환을 행으로 만들면 프로그램 수정·GDD 변화에 조용히 낡는다."""
+        src = _read(os.path.join(_ROOT, 'aot_flask', 'geo', 'plot_context.py'))
+        body = src.split('def stage_proposal', 1)[1].split('\ndef ', 1)[0]
+        for w in ('db.session.add', 'db.session.commit'):
+            self.assertNotIn(w, body)
+
+    def test_program_never_switches_functions_itself(self):
+        """프로그램이 함수를 스스로 켜고 끄지 않는다.
+
+        관수를 켜는 것은 물이 나오는 일이고, 이 저장소는 이미
+        `activate_function` 을 승인 대상(`mutating=True`)으로 두고 있다. 목표값도
+        아직 표시 전용인 마당에 자원만 자동으로 물리 동작을 하면 앞뒤가 맞지 않고,
+        P7(자동 승인)과 겹치면 "단계가 저절로 넘어가고 그 순간 관수가 켜진다" 가
+        된다 — 그것은 **다른 결정**이다.
+        """
+        io_src = _read(os.path.join(_ROOT, 'aot_flask', 'geo', 'plot_io.py'))
+        # 자동 승인 경로에는 자원 적용이 붙어 있지 않다.
+        auto = io_src.split('def auto_advance_stage', 1)[1].split('\ndef ', 1)[0]
+        self.assertNotIn('apply_stage_resources', auto)
+        # 단계 확인 경로에도 붙어 있지 않다.
+        accept = io_src.split('def accept_stage', 1)[1].split('\ndef ', 1)[0]
+        self.assertNotIn('_set_function_activation', accept)
+
+    def test_apply_touches_only_declared_functions(self):
+        """선언에 없는 함수를 끄지 않는다 — 프로그램은 농장 전체의 함수 목록을
+        알지 못한다."""
+        io_src = _read(os.path.join(_ROOT, 'aot_flask', 'geo', 'plot_io.py'))
+        body = io_src.split('def apply_stage_resources', 1)[1].split('\ndef ', 1)[0]
+        self.assertIn('activate=True', body)
+        self.assertNotIn('activate=False', body)
+
+    def test_apply_does_not_trust_a_success_shaped_reply(self):
+        """`{"status": "success"}` 를 무조건 믿지 않는다 — 이 저장소가 겪은
+        "성공이라고 답하는데 안 돈 것" 계열이다."""
+        io_src = _read(os.path.join(_ROOT, 'aot_flask', 'geo', 'plot_io.py'))
+        body = io_src.split('def apply_stage_resources', 1)[1].split('\ndef ', 1)[0]
+        self.assertIn("res.get('error')", body)
+
+    def test_dead_function_reference_is_shown_not_dropped(self):
+        """조용히 빼면 그 단계에서 자원이 통째로 사라진 것을 아무도 모른다."""
+        from aot.aot_flask.geo.plot_context import stage_resources
+
+        out = stage_resources({'functions': [{'id': 'ghost',
+                                              'role': 'irrigation'}]})
+        self.assertEqual(len(out), 1)
+        self.assertTrue(out[0]['missing'])
+        self.assertIsNone(out[0]['active'])
+
+    def test_resource_roles_start_narrow(self):
+        """어휘는 한 번 퍼지면 되돌리기 어렵다 — `other` 로 담고 나중에 이름을
+        준다(`GeoProgram.kind` 와 같은 태도)."""
+        from aot.aot_flask.geo.program_io import _RESOURCE_ROLES
+        self.assertEqual(_RESOURCE_ROLES,
+                         ('irrigation', 'fertigation', 'other'))
+
+    def test_auto_advance_is_off_by_default(self):
+        """켜져 있는 것이 기본이면 사람이 아무 결정도 하지 않았는데 단계가 스스로
+        넘어간다 — 업그레이드로 그렇게 되면 특히 나쁘다."""
+        prog = self._program()
+        self.assertFalse(bool(getattr(prog, 'auto_advance', False)))
+
+    def test_auto_advance_records_and_is_idempotent(self):
+        from datetime import timedelta
+        from aot.aot_flask.extensions import db
+        from aot.aot_flask.geo import plot_context, plot_io
+        from aot.databases.models import GeoPlot
+
+        prog = self._program(stages=[
+            {'key': 's1', 'name': '1', 'days': 10},
+            {'key': 's2', 'name': '2', 'days': 10},
+            {'key': 's3', 'name': '3', 'days': None}])
+        saved, _ = self._plant(
+            program_uuid=prog.unique_id,
+            started_on=(date.today() - timedelta(days=25)).isoformat())
+        uid = saved['unique_id']
+        plot_io.accept_stage(uid, stage_key='s1',
+                             started_on=(date.today()
+                                         - timedelta(days=25)).isoformat())
+
+        # 꺼져 있으면 아무것도 하지 않는다.
+        self.assertIsNone(plot_io.auto_advance_stage(uid))
+
+        prog.auto_advance = True
+        db.session.commit()
+        out = plot_io.auto_advance_stage(uid)
+        self.assertIsNotNone(out)
+        # 같은 읽기가 두 번 들어와도 두 줄이 되지 않는다(동시 읽기 방어).
+        self.assertIsNone(plot_io.auto_advance_stage(uid))
+
+        row = GeoPlot.query.filter_by(unique_id=uid).first()
+        hist = [h for h in plot_context.stage_history(row) if not h['undone']]
+        self.assertEqual(len(hist), 2)
+        # 자동으로 남은 줄인지 구분된다 — `decided_by` 가 비었다는 것만으로는
+        # "로그인 정보가 없는 사람" 과 구분되지 않는다.
+        self.assertTrue(hist[-1]['auto'])
+
+    def test_recorded_date_does_not_depend_on_when_you_look(self):
+        """자동 승인이 "오늘" 을 적으면 그 기록은 무슨 일이 있었는지가 아니라
+        **언제 열어 봤는지**를 남기는 것이 된다.
+
+        날짜는 자료에서 되짚는다 — 같은 단계가 유효한 동안 언제 관찰해도 같은
+        날이 나와야 한다.
+        """
+        from datetime import timedelta
+        from aot.aot_flask.geo import plot_context, plot_io
+        from aot.databases.models import GeoPlot
+
+        prog = self._program(stages=[
+            {'key': 's1', 'name': '1', 'days': 10},
+            {'key': 's2', 'name': '2', 'days': 10},
+            {'key': 's3', 'name': '3', 'days': None}])
+        saved, _ = self._plant(
+            program_uuid=prog.unique_id,
+            started_on=(date.today() - timedelta(days=25)).isoformat())
+        uid = saved['unique_id']
+        plot_io.accept_stage(uid, stage_key='s1',
+                             started_on=(date.today()
+                                         - timedelta(days=25)).isoformat())
+        row = GeoPlot.query.filter_by(unique_id=uid).first()
+
+        seen = set()
+        for back in (0, 1, 2):
+            pr = plot_context.stage_proposal(
+                row, on=date.today() - timedelta(days=back))
+            self.assertIsNotNone(pr)
+            seen.add(pr['started_on'])
+        self.assertEqual(len(seen), 1, '관찰 시점에 따라 날짜가 달라진다: %s' % seen)
+
+    def test_auto_advance_needs_a_date_it_can_defend(self):
+        """되짚을 날짜가 없으면 기록하지 않고 사람에게 묻는 상태로 둔다."""
+        src = _read(os.path.join(_ROOT, 'aot_flask', 'geo', 'plot_io.py'))
+        body = src.split('def auto_advance_stage', 1)[1]
+        self.assertIn("proposal.get('started_on')", body)
+
+    def test_auto_advance_runs_only_on_the_detail_route(self):
+        """목록 조회에 넣으면 지도 한 장(수십 구획) 읽기가 그만큼 쓰기를 한다."""
+        src = _read(os.path.join(_ROOT, 'aot_flask', 'routes_geo_plot.py'))
+        detail = src.split('def api_plot_get', 1)[1].split('\ndef ', 1)[0]
+        listing = src.split('def api_plot_list', 1)[1].split('\ndef ', 1)[0] \
+            if 'def api_plot_list' in src else ''
+        self.assertIn('auto_advance_stage', detail)
+        self.assertNotIn('auto_advance_stage', listing)
+
+    def test_kind_reaches_the_client(self):
+        """종류를 저장해 놓고 안 내보내면 화면이 프로그램을 좁힐 수 없다.
+
+        조용한 실패다 — 목록은 정상으로 보이고, 식생 구획의 프로그램 선택지에
+        가축 프로그램이 섞여 있을 뿐이다.
+        """
+        row, err = self._plant()
+        self.assertIsNone(err)
+        self.assertEqual(row.get('kind'), 'vegetation')
+
+    def test_program_of_another_kind_is_refused(self):
+        """식생 구획에 가축 프로그램이 붙으면 단계·목표 해석이 통째로
+        엉뚱해지는데 **에러는 나지 않는다** — 붙는 순간 막는 것이 유일하게 싼
+        자리다(붙은 뒤에는 어느 쪽이 틀렸는지 알 방법이 없다)."""
+        prog = self._program(subject='젖소', kind='livestock')
+        row, err = self._plant(program_uuid=prog.unique_id)
+        self.assertIsNone(row)
+        self.assertIn('종류', err or '')
+
+    def test_changing_kind_alone_cannot_orphan_the_program(self):
+        """프로그램은 그대로 두고 **종류만** 바꾸는 저장이 검사를 지나치면
+        안 된다.
+
+        붙일 때만 대조하면 이 경로가 뚫린다 — 식생 프로그램이 매달린 채 종류만
+        가축이 되고, 아무 에러 없이 단계·목표 해석이 통째로 어긋난다.
+        """
+        prog = self._program()
+        saved, err = self._plant(program_uuid=prog.unique_id)
+        self.assertIsNone(err)
+
+        from aot.aot_flask.geo import plot_io
+        row, err2 = plot_io.save_plot({'unique_id': saved['unique_id'],
+                                       'kind': 'livestock'})
+        self.assertIsNone(row)
+        self.assertIn('종류', err2 or '')
+
+    def test_kind_can_change_when_no_program_is_attached(self):
+        """거부가 종류 자체가 아니라 **짝이 어긋남** 때문인지 확인한다."""
+        from aot.aot_flask.geo import plot_io
+        saved, err = self._plant()
+        self.assertIsNone(err)
+        row, err2 = plot_io.save_plot({'unique_id': saved['unique_id'],
+                                       'kind': 'livestock'})
+        self.assertIsNone(err2)
+        self.assertEqual(row['kind'], 'livestock')
+
+    def test_matching_kind_is_accepted(self):
+        """거부가 종류 대조 때문인지 확인한다 — 같은 종류는 그대로 붙는다."""
+        prog = self._program()
+        row, err = self._plant(program_uuid=prog.unique_id)
+        self.assertIsNone(err)
+        self.assertEqual(row['program']['unique_id'], prog.unique_id)
+
+    def test_editing_the_program_does_not_move_a_running_plot(self):
+        """프로그램을 고쳐도 진행 중인 작기의 해석은 그대로여야 한다."""
+        from aot.aot_flask.extensions import db
+        from aot.aot_flask.geo import plot_context
+        from aot.databases.models import GeoPlot
+
+        prog = self._program()
+        saved, _ = self._plant(program_uuid=prog.unique_id)
+
+        prog.stages = [{'key': 'seedling', 'name': '육묘기', 'days': 99}]
+        prog.version = 2
+        db.session.commit()
+
+        row = GeoPlot.query.filter_by(unique_id=saved['unique_id']).first()
+        brief = plot_context.program_brief(row)
+        self.assertEqual(brief['version'], 1)          # 고정된 버전
+        self.assertEqual(brief['latest_version'], 2)
+        self.assertTrue(brief['newer_version'])        # 새 버전이 있다는 **사실만**
+
+    def test_saving_again_does_not_silently_upgrade(self):
+        """저장할 때마다 최신 버전으로 끌어올리면 고정의 의미가 없다."""
+        from aot.aot_flask.extensions import db
+
+        prog = self._program()
+        saved, _ = self._plant(program_uuid=prog.unique_id)
+        prog.version = 3
+        db.session.commit()
+
+        again, err = self._plant(unique_id=saved['unique_id'], variety='대저')
+        self.assertIsNone(err)
+        self.assertEqual(again['program']['version'], 1)
+
+        # 사람이 명시적으로 고르면 올라간다.
+        upgraded, err = self._plant(unique_id=saved['unique_id'],
+                                    program_uuid=prog.unique_id,
+                                    program_version='latest')
+        self.assertIsNone(err)
+        self.assertEqual(upgraded['program']['version'], 3)
+
+    def test_unknown_program_is_refused(self):
+        row, err = self._plant(program_uuid='no-such-program')
+        self.assertIsNone(row)
+        self.assertIn('프로그램', err or '')
+
+    def test_program_is_optional(self):
+        """프로그램 없이도 종전대로 동작한다 — 필수가 아니다."""
+        row, err = self._plant()
+        self.assertIsNone(err)
+        self.assertNotIn('program', row)
+
+    def test_deleted_program_is_reported_not_hidden(self):
+        """근거가 사라진 것을 조용히 빈칸으로 두지 않는다."""
+        from aot.aot_flask.extensions import db
+        from aot.aot_flask.geo import plot_context
+        from aot.databases.models import GeoProgram, GeoPlot
+
+        prog = self._program()
+        saved, _ = self._plant(program_uuid=prog.unique_id)
+        GeoProgram.query.filter_by(unique_id=prog.unique_id).delete()
+        db.session.commit()
+
+        row = GeoPlot.query.filter_by(unique_id=saved['unique_id']).first()
+        self.assertTrue(plot_context.program_brief(row)['missing'])
+
+    # ── 출처가 신뢰를 정한다 ────────────────────────────────────────────
+    def test_ai_program_needs_review_before_control(self):
+        import datetime as _dt
+        ai = self._program(source='ai')
+        self.assertFalse(ai.usable_for_control())
+        ai.reviewed_at = _dt.datetime(2026, 8, 19)
+        self.assertTrue(ai.usable_for_control())
+
+    def test_builtin_and_external_are_read_only(self):
+        """내장·외부를 직접 고치게 두면 갱신이 그 수정을 덮어쓴다."""
+        self.assertFalse(self._program(source='builtin').is_editable())
+        self.assertFalse(self._program(subject='cucumber',
+                                       source='external').is_editable())
+        self.assertTrue(self._program(subject='lettuce', source='user').is_editable())
+
+    # ── 파생 ────────────────────────────────────────────────────────────
+    def test_total_days_is_the_sum_of_stage_lengths(self):
+        """`days` 는 누적이 아니라 **그 단계의 길이**다(예상 수확일의 근거)."""
+        prog = self._program()
+        self.assertEqual(prog.total_days(), 56)        # 21 + 35 + (끝까지)
+
+    def test_copy_carries_the_program(self):
+        from aot.aot_flask.geo import plot_io
+        prog = self._program()
+        saved, _ = self._plant(program_uuid=prog.unique_id)
+        copy, err = plot_io.copy_plot(saved['unique_id'])
+        self.assertIsNone(err)
+        self.assertEqual(copy['program']['unique_id'], prog.unique_id)
+
+    # ── P2: 단계 파생 · 예상 종료일 ──────────────────────────────────────
+    def _plant_days_ago(self, days, **over):
+        from datetime import timedelta
+        return self._plant(started_on=(date.today() - timedelta(days=days)).isoformat(),
+                           **over)
+
+    def test_stage_follows_elapsed_days(self):
+        """심은 날이 1일차 — `elapsed_days` 와 같은 기준으로 단계를 찾는다."""
+        from aot.aot_flask.geo import plot_context
+        from aot.databases.models import GeoPlot
+
+        prog = self._program()          # 육묘 21 · 영양생장 35 · 수확 끝까지
+        for days, want, idx in ((0, 'seedling', 1),      # 1일차
+                                (20, 'seedling', 1),     # 21일차 = 경계
+                                (21, 'vegetative', 2),   # 22일차
+                                (55, 'vegetative', 2),   # 56일차 = 경계
+                                (56, 'harvest', 3)):     # 57일차 이후는 끝까지
+            saved, err = self._plant_days_ago(days, program_uuid=prog.unique_id,
+                                              subject='단계%d' % days)
+            self.assertIsNone(err)
+            row = GeoPlot.query.filter_by(unique_id=saved['unique_id']).first()
+            st = plot_context.stage_of(row)
+            self.assertEqual((st['key'], st['index']), (want, idx),
+                             '%d일 경과' % days)
+            self.assertEqual(st['source'], 'days')
+
+    def test_future_plot_is_not_a_stage(self):
+        """계획만 세운 구획을 "육묘기" 라 부르면 심지도 않은 것을 기르는 중으로 읽는다."""
+        from datetime import timedelta
+        from aot.aot_flask.geo import plot_context
+        from aot.databases.models import GeoPlot
+
+        prog = self._program()
+        saved, _ = self._plant(program_uuid=prog.unique_id,
+                               started_on=(date.today() + timedelta(days=5)).isoformat())
+        row = GeoPlot.query.filter_by(unique_id=saved['unique_id']).first()
+        st = plot_context.stage_of(row)
+        self.assertEqual(st['state'], 'not_started')
+        self.assertEqual(st['days_until_start'], 5)
+
+    def test_past_the_end_is_said_not_pinned(self):
+        """마지막 단계에 길이가 있고 그마저 지나면 그 사실을 말한다."""
+        from aot.aot_flask.geo import plot_context
+        from aot.databases.models import GeoPlot
+
+        prog = self._program(stages=[
+            {'key': 'seedling', 'name': '육묘기', 'days': 10},
+            {'key': 'harvest', 'name': '수확기', 'days': 10},
+        ])
+        saved, _ = self._plant_days_ago(30, program_uuid=prog.unique_id)
+        row = GeoPlot.query.filter_by(unique_id=saved['unique_id']).first()
+        st = plot_context.stage_of(row)
+        self.assertEqual(st['state'], 'past_end')
+        self.assertEqual(st['days_past'], 11)      # 31일차 − 20일
+
+    def test_no_program_no_stage(self):
+        from aot.aot_flask.geo import plot_context
+        from aot.databases.models import GeoPlot
+        saved, _ = self._plant()
+        row = GeoPlot.query.filter_by(unique_id=saved['unique_id']).first()
+        self.assertIsNone(plot_context.stage_of(row))
+
+    def test_expected_end_is_derived_but_manual_wins(self):
+        """사람이 적은 값이 이긴다 — 덮으면 자기가 적은 날짜가 사라진다."""
+        from datetime import timedelta
+        from aot.aot_flask.geo import plot_context
+        from aot.databases.models import GeoPlot
+
+        prog = self._program()                      # 총 56일
+        saved, _ = self._plant(program_uuid=prog.unique_id)
+        row = GeoPlot.query.filter_by(unique_id=saved['unique_id']).first()
+
+        due, src = plot_context.expected_end(row)
+        self.assertEqual(src, 'program')
+        # 심은 날이 1일차이므로 마지막 날은 +55 다(56일차).
+        self.assertEqual(due, row.started_on + timedelta(days=55))
+
+        row.expected_end_on = date.today() + timedelta(days=99)
+        due2, src2 = plot_context.expected_end(row)
+        self.assertEqual(src2, 'manual')
+        self.assertEqual(due2, row.expected_end_on)
+
+    def test_derived_end_is_not_written_back(self):
+        """파생 종료일을 컬럼에 써 넣지 않는다 — 사람 입력과 구분이 사라진다."""
+        from aot.databases.models import GeoPlot
+        prog = self._program()
+        saved, _ = self._plant(program_uuid=prog.unique_id)
+        row = GeoPlot.query.filter_by(unique_id=saved['unique_id']).first()
+        self.assertIsNone(row.expected_end_on)          # 컬럼은 비어 있다
+        self.assertIsNotNone(saved['expected_end_on'])  # 응답에는 실린다
+        self.assertEqual(saved['expected_end_source'], 'program')
+
+    def test_days_to_expected_end_uses_the_derived_date(self):
+        """프로그램을 골라 둔 구획이 "예상 종료 없음" 으로 보이면 안 된다."""
+        from aot.aot_flask.geo import plot_context
+        from aot.databases.models import GeoPlot
+        prog = self._program()
+        saved, _ = self._plant_days_ago(10, program_uuid=prog.unique_id)
+        row = GeoPlot.query.filter_by(unique_id=saved['unique_id']).first()
+        self.assertEqual(plot_context.days_to_expected_end(row), 45)
+
+    def test_control_brief_carries_the_stage(self):
+        """제어 화면이 "지금 어느 단계인가" 를 말할 수 있어야 한다."""
+        from aot.aot_flask.geo import plot_context
+        from aot.databases.models import GeoPlot
+        prog = self._program()
+        saved, _ = self._plant_days_ago(30, program_uuid=prog.unique_id)
+        row = GeoPlot.query.filter_by(unique_id=saved['unique_id']).first()
+        brief = plot_context.plot_brief_for_control(row)
+        self.assertEqual(brief['stage_name'], '영양생장기')
+        self.assertEqual((brief['stage_index'], brief['stage_total']), (2, 3))
+
+    # ── P3: 관리(생성·복제·수정·삭제) ───────────────────────────────────
+    def test_builtin_cannot_be_edited_but_can_be_copied(self):
+        """내장을 고치게 두면 업그레이드가 그 수정을 덮어써 조용히 되돌아간다."""
+        from aot.aot_flask.geo import program_io
+
+        builtin = self._program(source='builtin')
+        out, err = program_io.update_program(builtin.unique_id, {'name': 'x'})
+        self.assertIsNone(out)
+        self.assertIn('복제', err or '')
+
+        copy, err = program_io.clone_program(builtin.unique_id)
+        self.assertIsNone(err)
+        self.assertEqual(copy['source'], 'user')
+        self.assertEqual(copy['derived_from'], builtin.unique_id)
+        self.assertTrue(copy['editable'])
+
+    def test_clone_does_not_follow_the_original(self):
+        """`derived_from` 은 출처 기록이지 링크가 아니다 — 원본이 바뀌어도 그대로."""
+        from aot.aot_flask.extensions import db
+        from aot.aot_flask.geo import program_io
+        from aot.databases.models import GeoProgram
+
+        src = self._program(source='builtin')
+        copy, _ = program_io.clone_program(src.unique_id)
+        src.stages = [{'key': 'x', 'name': 'x', 'days': 1}]
+        db.session.commit()
+
+        row = GeoProgram.query.filter_by(unique_id=copy['unique_id']).first()
+        self.assertEqual(len(row.stage_list()), 3)      # 복제 시점 그대로
+
+    def test_version_rises_only_when_content_changes(self):
+        """저장 버튼을 눌렀다는 이유로 올리면 고정 버전과의 차이가 의미를 잃는다."""
+        from aot.aot_flask.geo import program_io
+
+        row = self._program(source='user')
+        same, err = program_io.update_program(row.unique_id,
+                                                   {'name': row.name})
+        self.assertIsNone(err)
+        self.assertEqual(same['version'], 1)
+
+        changed, err = program_io.update_program(row.unique_id,
+                                                      {'name': '새 이름'})
+        self.assertIsNone(err)
+        self.assertEqual(changed['version'], 2)
+
+    def test_stage_without_days_must_be_last(self):
+        """중간에 "끝까지" 를 두면 그 뒤 단계는 시작되지 않는다 — 저장은 되고
+        화면만 이상해지는 종류라 서버가 막는다."""
+        from aot.aot_flask.geo import program_io
+        out, err = program_io.create_program({
+            'name': 'x', 'subject': 'tomato',
+            'stages': [{'key': 'a', 'name': 'a', 'days': None},
+                       {'key': 'b', 'name': 'b', 'days': 10}]})
+        self.assertIsNone(out)
+        self.assertIn('마지막', err or '')
+
+    def test_program_in_use_cannot_be_deleted(self):
+        """지우면 그 작기가 "무엇을 목표로 길렀나" 의 근거를 잃는다."""
+        from aot.aot_flask.geo import program_io
+
+        prog = self._program(source='user')
+        self._plant(program_uuid=prog.unique_id)
+        out, err = program_io.delete_program(prog.unique_id)
+        self.assertIsNone(out)
+        self.assertIn('구획', err or '')
+
+    def test_unused_program_can_be_deleted(self):
+        from aot.aot_flask.geo import program_io
+        prog = self._program(source='user')
+        out, err = program_io.delete_program(prog.unique_id)
+        self.assertIsNone(err)
+        self.assertTrue(out['ok'])
+
+    def test_ai_tool_requires_a_source_note(self):
+        """근거가 없으면 나중에 이 값을 고칠 사람이 판단할 재료가 없다."""
+        from aot.ai.services.aot_data_tool_service import AoTDataToolService as S
+
+        res = S.create_program(name='x', subject='tomato',
+                                    stages=[{'key': 'a', 'name': 'a', 'days': 10}])
+        self.assertEqual(res['status'], 'error')
+        self.assertIn('source_note', res['message'])
+
+    def test_ai_created_program_is_not_usable_for_control(self):
+        from aot.ai.services.aot_data_tool_service import AoTDataToolService as S
+
+        res = S.create_program(
+            name='AI 토마토', subject='tomato', source_note='RDA 지침 기준',
+            stages=[{'key': 'seedling', 'name': '육묘기', 'days': 20},
+                    {'key': 'harvest', 'name': '수확기', 'days': None}])
+        self.assertEqual(res['status'], 'success')
+        self.assertEqual(res['program']['source'], 'ai')
+        self.assertFalse(res['program']['usable_for_control'])
+
+    def test_review_flag_unlocks_control(self):
+        from aot.aot_flask.geo import program_io
+        row = self._program(source='ai')
+        out, err = program_io.update_program(row.unique_id, {'reviewed': True})
+        self.assertIsNone(err)
+        self.assertTrue(out['usable_for_control'])
+
+    # ── 단계 목표 ───────────────────────────────────────────────────────
+    def test_stage_targets_are_validated_and_kept(self):
+        from aot.aot_flask.geo import program_io
+        out, err = program_io.create_program({
+            'name': '목표', 'subject': 'tomato',
+            'stages': [{'key': 'a', 'name': 'a', 'days': 10,
+                        'targets': {'temp_day': '22', 'rh': 70}}]})
+        self.assertIsNone(err)
+        self.assertEqual(out['stages'][0]['targets'], {'temp_day': 22.0, 'rh': 70.0})
+
+    def test_blank_target_is_omitted_not_zeroed(self):
+        """빈 칸을 0 으로 채우면 "미지정" 과 구분할 수 없다."""
+        from aot.aot_flask.geo import program_io
+        out, _ = program_io.create_program({
+            'name': '목표2', 'subject': 'tomato',
+            'stages': [{'key': 'a', 'name': 'a', 'days': 10,
+                        'targets': {'temp_day': '22', 'co2': ''}}]})
+        self.assertEqual(out['stages'][0]['targets'], {'temp_day': 22.0})
+
+    def test_unknown_target_key_is_refused(self):
+        """어휘를 고정하지 않으면 temp/temperature/t_day 가 섞여 들어온다."""
+        from aot.aot_flask.geo import program_io
+        out, err = program_io.create_program({
+            'name': '목표3', 'subject': 'tomato',
+            'stages': [{'key': 'a', 'name': 'a', 'days': 10,
+                        'targets': {'temperature': 22}}]})
+        self.assertIsNone(out)
+        self.assertIn('temperature', err or '')
+
+    def test_target_out_of_range_is_refused(self):
+        from aot.aot_flask.geo import program_io
+        out, err = program_io.create_program({
+            'name': '목표4', 'subject': 'tomato',
+            'stages': [{'key': 'a', 'name': 'a', 'days': 10,
+                        'targets': {'rh': 250}}]})
+        self.assertIsNone(out)
+        self.assertIn('rh', err or '')
+
+    def test_ui_target_keys_match_the_server(self):
+        """화면이 자기 이름을 쓰면 저장은 되는데 읽는 쪽이 못 알아본다."""
+        import re
+        js = _read(os.path.join(_ROOT, 'aot_flask', 'static', 'js', 'geo',
+                                'program-settings.js'))
+        block = js.split('var _TARGETS = [', 1)[1].split('];', 1)[0]
+        ui_keys = set(re.findall(r"\['(\w+)'", block))
+        from aot.aot_flask.geo.program_io import _TARGET_FIELDS
+        self.assertEqual(ui_keys, set(_TARGET_FIELDS))
+
+    def test_adding_a_program_opens_the_drawer(self):
+        """추가하면 바로 고칠 수 있어야 한다 — 한 줄 늘어난 것만으로는
+        사용자가 "이제 뭘 해야 하나" 를 알 수 없다."""
+        js = _read(os.path.join(_ROOT, 'aot_flask', 'static', 'js', 'geo',
+                                'program-settings.js'))
+        self.assertIn('function focusName(', js)
+        self.assertIn('openEditor(newId); focusName(newId);', js)
+
+    def test_settings_open_in_a_drawer_with_a_save_button(self):
+        """설정은 **드로어**에서 고친다(input 페이지와 같은 셸).
+
+        인라인 편집에는 되돌릴 자리가 없었다 — 잘못 고치면 그대로 반영됐다.
+        드로어는 저장을 눌러야 반영되므로, 닫으면 원래 값이 남는다.
+        """
+        tpl = _read(os.path.join(_ROOT, 'aot_flask', 'templates', 'pages', 'geo',
+                                 'programs.html'))
+        self.assertIn('aot-option-modal aot-widget-drawer', tpl)
+        self.assertIn('id="veg-drawer-save"', tpl)
+        self.assertIn('aot-widget-drawer.js', tpl)
+
+        js = _read(os.path.join(_ROOT, 'aot_flask', 'static', 'js', 'geo',
+                                'program-settings.js'))
+        # 목록에 인라인 편집 영역을 남겨 두면 두 경로가 생긴다.
+        self.assertNotIn('aot-entry-detail', js)
+        self.assertIn("modal.setAttribute('data-config-uid-target', uuid)", js)
+
+    def test_subject_is_picked_from_a_list(self):
+        """자유 텍스트로 두면 대상을 바꿀 때마다 철자를 맞춰 적어야 하고,
+        한 글자만 달라도 같은 대상으로 묶이지 않는다."""
+        js = _read(os.path.join(_ROOT, 'aot_flask', 'static', 'js', 'geo',
+                                'program-settings.js'))
+        self.assertIn('function _subjectRow(', js)
+        self.assertIn('__custom__', js)
+        # 직접 입력을 비운 채 고르면 **아무것도 보내지 않는다**(기존 값 보존).
+        self.assertIn("delete out.subject;", js)
+
+    def test_program_kind_widens_beyond_vegetation(self):
+        """식생은 대상 중 하나일 뿐이다 — 같은 구조가 가축·시설물·도로에도 쓰인다."""
+        from aot.aot_flask.geo.program_io import VALID_KINDS
+        self.assertEqual(VALID_KINDS,
+                         ('vegetation', 'livestock', 'facility', 'other'))
+
+        js = _read(os.path.join(_ROOT, 'aot_flask', 'static', 'js', 'geo',
+                                'program-settings.js'))
+        self.assertIn("var _KINDS = ['vegetation', 'livestock', 'facility', 'other']", js)
+
+    def test_plot_pickers_never_mix_kinds(self):
+        """다른 종류의 프로그램이 선택지에 섞이면 안 된다.
+
+        예전에는 `kind=vegetation` 을 박아 두어 섞이지 않았다. 이제는 구획이
+        종류를 가지므로 **그 구획의 종류로** 물어야 한다 — 박아 두면 가축 구획의
+        선택지가 식생 프로그램이 되고, 그것을 고른 저장을 서버가 거절한다.
+        """
+        for path in (
+            os.path.join(_ROOT, 'aot_flask', 'static', 'js', 'geo', 'facility',
+                         'plot-ui.js'),
+            os.path.join(_ROOT, 'aot_flask', 'static', 'js', 'widgets', 'AoT_map',
+                         'aot-map-plot.js'),
+        ):
+            src = _read(path)
+            self.assertIn("'/api/geo/programs?kind=' + encodeURIComponent(", src)
+            self.assertNotIn('programs?kind=vegetation', src)
+
+    def test_program_kind_is_validated(self):
+        from aot.aot_flask.geo import program_io
+        out, err = program_io.create_program({
+            'name': 'x', 'subject': 'lawn', 'kind': 'spaceship',
+            'stages': [{'key': 'a', 'name': 'a', 'days': 10}]})
+        self.assertIsNone(out)
+        self.assertIn('종류', err or '')
+
+        ok, err = program_io.create_program({
+            'name': '잔디 관리', 'subject': 'lawn', 'kind': 'facility',
+            'stages': [{'key': 'a', 'name': 'a', 'days': 10}]})
+        self.assertIsNone(err)
+        self.assertEqual(ok['kind'], 'facility')
+
+    # ── 목표 곡선(Method) ───────────────────────────────────────────────
+    def _method(self, name='곡선'):
+        from aot.aot_flask.extensions import db
+        from aot.databases.models import Method
+        m = Method(name=name, method_type='Daily')
+        db.session.add(m)
+        db.session.commit()
+        return m
+
+    def test_target_method_is_stored_and_validated(self):
+        from aot.aot_flask.geo import program_io
+        m = self._method()
+        out, err = program_io.create_program({
+            'name': '곡선 프로그램', 'subject': 'lettuce',
+            'stages': [{'key': 'a', 'name': 'a', 'days': 10}],
+            'targets_methods': {'temp_day': m.unique_id}})
+        self.assertIsNone(err)
+        self.assertEqual(out['target_methods'], {'temp_day': m.unique_id})
+
+    def test_dead_method_reference_is_refused(self):
+        """죽은 참조를 두면 나중에 "곡선이 있는데 값이 안 나온다" 를 만난다."""
+        from aot.aot_flask.geo import program_io
+        out, err = program_io.create_program({
+            'name': 'x', 'subject': 'lettuce',
+            'stages': [{'key': 'a', 'name': 'a', 'days': 10}],
+            'targets_methods': {'temp_day': 'no-such-method'}})
+        self.assertIsNone(out)
+        self.assertIn('메서드', err or '')
+
+    def test_curve_keys_use_the_same_vocabulary_as_targets(self):
+        from aot.aot_flask.geo import program_io
+        m = self._method()
+        out, err = program_io.create_program({
+            'name': 'y', 'subject': 'lettuce',
+            'stages': [{'key': 'a', 'name': 'a', 'days': 10}],
+            'targets_methods': {'temperature': m.unique_id}})
+        self.assertIsNone(out)
+        self.assertIn('temperature', err or '')
+
+    def test_list_and_detail_return_the_same_shape(self):
+        """상세에만 있는 키가 생기면 화면이 어느 쪽에서 왔는지에 따라 달라진다."""
+        from aot.aot_flask.geo import program_io
+        row = self._program(source='user')
+        listed = program_io.to_dict(row, with_stages=False)
+        detail = program_io.to_dict(row)
+        self.assertIn('target_methods', listed)
+        self.assertIn('target_methods', detail)
+        self.assertTrue(set(listed).issubset(set(detail)))
+
+
+class TestProgramSeed(unittest.TestCase):
+    """템플릿 카탈로그 — **DB 에 미리 깔지 않는다**.
+
+    쓰지도 않는 작물 7종이 목록에 먼저 들어가 있으면 사용자는 자기 것을 찾기 전에
+    남의 것을 지나쳐야 한다. AoT 는 농장 전용이 아니라 공원·체육시설·교통시설에도
+    쓰이므로 "채소 7종" 이 기본값인 것은 특히 좁다.
+    """
+
+    def test_catalog_reads_the_hardcoded_table(self):
+        src = _read(os.path.join(_ROOT, 'scripts', 'seed_programs.py'))
+        self.assertIn('from aot.ai.context.growth_stage_resolver import '
+                      'STAGE_DURATION_MAP', src)
+        self.assertIn('_CROP_PRESETS', src)
+        # 단계 기간을 여기 다시 적으면 두 곳이 갈린다.
+        self.assertNotIn("'seedling', 21", src)
+
+    def test_nothing_is_installed_by_default(self):
+        """카탈로그는 코드 상수다 — 화면에서 고를 때 비로소 만들어진다."""
+        src = _read(os.path.join(_ROOT, 'scripts', 'seed_programs.py'))
+        self.assertNotIn("source='builtin'", src.split('def purge_builtin')[0])
+        self.assertIn('def purge_builtin(', src)
+
+    def test_catalog_does_not_invent_targets(self):
+        """**채워진 숫자는 빈 칸보다 강한 주장이다.**
+
+        한 번 광합성 프리셋의 작물 단위 값을 모든 단계에 복사했다가 되돌렸다 —
+        그것은 단계별 값이 아니고(육묘기와 착과기의 목표가 같을 리 없다), 사람은
+        채워진 값을 "조사된 추천값" 으로 읽는다. 단계별 목표는 실제 조사로 채운다.
+        """
+        import importlib
+        mod = importlib.import_module('aot.scripts.seed_programs')
+        items = mod.catalog()
+        self.assertTrue(items)
+        for t in items:
+            for st in t['stages']:
+                self.assertNotIn('targets', st, '%s 단계에 목표가 채워져 있다' % t['key'])
+        # 광합성 파라미터는 **작물 단위 모델 상수**라 단계와 무관하다 — 그쪽은 싣는다.
+        lettuce = next(t for t in items if t['key'] == 'lettuce')
+        self.assertTrue(lettuce['photosynthesis'])
+
+    def test_cumulative_days_become_stage_lengths(self):
+        import importlib
+        mod = importlib.import_module('aot.scripts.seed_programs')
+        stages = mod._stages_from_cumulative([
+            ('seedling', 21), ('vegetative', 56), ('harvest', 999)])
+        self.assertEqual([s['days'] for s in stages], [21, 35, None])
+        # 999 는 "끝까지" 다 — 길이로 옮기지 않는다.
+        self.assertIsNone(stages[-1]['days'])
+

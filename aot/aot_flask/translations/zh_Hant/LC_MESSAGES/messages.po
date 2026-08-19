@@ -5765,7 +5765,7 @@ msgid "Setpoint Tracking Input"
 msgstr "Setpoint Tracking Input"
 
 #: aot_flask/forms/forms_pid.py:129
-msgid "Schedule Start (planting date)"
+msgid "Schedule Start (start date)"
 msgstr "排程開始（定植日）"
 
 #: aot_flask/forms/forms_pid.py:132

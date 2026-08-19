@@ -51,21 +51,21 @@ def resolve_target_gps(target_type, target_id):
             current_app.logger.warning(f"facility centroid lookup failed: {_e}")
         return None, None
 
-    if target_type == 'planting':
+    if target_type == 'plot':
         try:
-            from aot.databases.models import GeoPlanting
-            from aot.aot_flask.geo import planting_context
+            from aot.databases.models import GeoPlot
+            from aot.aot_flask.geo import plot_context
             from shapely.geometry import shape as _shapely_shape
-            row = GeoPlanting.query.filter_by(unique_id=target_id).first()
+            row = GeoPlot.query.filter_by(unique_id=target_id).first()
             if row is not None:
-                geom = planting_context.geometry_of(row)
+                geom = plot_context.geometry_of(row)
                 if geom.get('type') in ('Polygon', 'MultiPolygon'):
                     # centroid 가 아니라 representative_point — 오목한 두둑에서
                     # centroid 는 구획 밖으로 나간다.
                     pt = _shapely_shape(geom).representative_point()
                     return pt.y, pt.x
         except Exception as _e:
-            current_app.logger.warning(f"planting centroid lookup failed: {_e}")
+            current_app.logger.warning(f"plot centroid lookup failed: {_e}")
         return None, None
 
     return None, None
@@ -81,16 +81,16 @@ def _display_name_for_target(tid):
     if not tid:
         return None
     try:
-        from aot.databases.models import GeoShape, GeoPlanting, GeoFacility
+        from aot.databases.models import GeoShape, GeoPlot, GeoFacility
         sh = GeoShape.query.filter_by(unique_id=tid).first()
         if sh is not None:
             feat = sh.feature if isinstance(sh.feature, dict) else {}
             props = (feat.get('properties') or {})
             return (props.get('name') or props.get('label')
                     or props.get('title') or None)
-        pl = GeoPlanting.query.filter_by(unique_id=tid).first()
+        pl = GeoPlot.query.filter_by(unique_id=tid).first()
         if pl is not None:
-            return pl.name or pl.crop
+            return pl.name or pl.subject
         fac = GeoFacility.query.filter_by(unique_id=tid).first()
         if fac is not None:
             return getattr(fac, 'name', None)
@@ -362,7 +362,7 @@ def api_notes_create():
 #
 # 화이트리스트인 이유: 새 대상 종류가 생길 때 기본값이 "핀 없음" 이어야 한다.
 # 블랙리스트로 두면 종류를 하나 추가할 때마다 여기 넣는 것을 기억해야 하고,
-# 빠뜨리면 그 종류만 조용히 핀이 돋는다(지금 planting 이 그랬다).
+# 빠뜨리면 그 종류만 조용히 핀이 돋는다(지금 plot 이 그랬다).
 _PIN_TARGET_TYPES = (
     'map_location',   # 사용자가 지도를 찍어 만든 노트 — 핀이 유일한 위치 표현
 )

@@ -1,0 +1,155 @@
+{% extends "layout.html" %}
+{% set active_page = "geo_programs" %}
+
+{% block title %}{{ _('Programs') }}{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/aot-entry-ui.css') }}" />
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/geo-program.css') }}" />
+{% endblock %}
+
+{%- block body %}
+{#- 설정 > 프로그램 — 관리 프로그램 목록·편집.
+
+    **식생은 대상 중 하나일 뿐이다**(kind: plot | livestock | facility | other).
+    같은 구조가 가축·시설물·도로에도 쓰인다.
+
+    골격은 input 페이지와 같다(`aot-entry-*`): 위에 "고르고 추가", 아래에 항목
+    목록, 항목을 누르면 그 자리에서 펼쳐 고친다. 같은 일을 하는 화면이 서로 다른
+    문법을 쓰면 사용자가 페이지마다 다시 배워야 한다.
+
+    목록·저장은 전부 `/api/geo/program*` 를 지난다 — 서버 렌더 폼을 또 만들면
+    같은 검증이 두 벌이 된다. -#}
+<main role="main" class="container">
+  {% include 'flash_messages.html' %}
+
+  <div style="clear: both; padding: 0.5em 0;"></div>
+
+  {#- 추가 줄: 무엇을 바탕으로 만들지 고른다. 내장 프로그램을 복제하는 것이
+      기본이다 — 빈 프로그램부터 단계를 손으로 다 적게 하면 아무도 안 만든다. -#}
+  <div class="row aot-main-selection-row">
+    <div class="col-auto">
+      <select id="veg-base" class="form-control aot-standard-select aot-modern-input">
+        <option value="">{{ _('Loading…') }}</option>
+      </select>
+    </div>
+    <div class="col-auto">
+      <button type="button" id="veg-add" class="btn btn-primary aot-pill-btn aot-pill-btn-primary">
+        {{ _('Add') }}
+      </button>
+    </div>
+    <div class="col-auto">
+      <span class="aot-modal-body-text" id="veg-hint">
+        {{ _('Start empty, or begin from a template. Templates are examples — nothing is installed until you add it.') }}
+      </span>
+    </div>
+  </div>
+
+  <div style="clear: both; padding: 1em 0;"></div>
+
+  <div id="veg-list" class="aot-entry-container"></div>
+</main>
+
+{#- 설정 드로어 — input 페이지와 같은 셸(`aot-option-modal aot-widget-drawer`).
+
+    프로그램마다 모달을 찍지 않고 **하나를 공유**한다(AI 에이전트 페이지와 같은
+    방식): 프로그램 수가 늘어도 DOM 이 한 벌이고, 여는 쪽이
+    `data-config-uid-target` 으로 어느 항목인지 알린다.
+
+    ⚠ 드로어의 값은 **저장을 눌러야 반영된다.** 그래서 잘못 고쳐도 닫으면 원래
+    값이 남는다 — 인라인 편집에는 그 되돌릴 자리가 없었다. -#}
+<div class="modal fade aot-option-modal aot-widget-drawer aot-drawer-fullcover"
+     data-backdrop="false" id="veg-drawer" tabindex="-1" role="dialog"
+     aria-labelledby="vegDrawerLabel" aria-hidden="true">
+  <div class="modal-dialog modal-xl aot-modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="vegDrawerLabel">{{ _('Program') }}</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="{{ _('Close') }}">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body" id="veg-drawer-body"></div>
+      <div class="modal-footer">
+        <button type="button" class="btn aot-pill-btn" data-dismiss="modal">{{ _('Close') }}</button>
+        <button type="button" id="veg-drawer-save"
+                class="btn aot-pill-btn aot-pill-btn-primary">{{ _('Save') }}</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+{#- 화면 문구 — JS 가 window._PROG 로 읽는다(다른 geo 페이지와 같은 방식). -#}
+<script>
+window._PROG = {
+  empty:        {{ _('No programs yet. Add one above.')|tojson }},
+  new_program:  {{ _('New program')|tojson }},
+  {#- 개수·기간은 **한 msgid 로** 둔다. 숫자와 단위를 따로 이어붙이면 언어마다
+     어순이 달라 "7 단계" 가 아니라 "단계 7" 이어야 하는 곳에서 깨진다. -#}
+  {#- `%(n)s` 를 그대로 두면 gettext 가 포맷하려 들어 KeyError 가 난다(실제로
+     500 이 났다). 자리표시자를 넘겨 번역만 받고, 치환은 JS 가 한다. -#}
+  n_stages:     {{ _('%(n)s stages', n='{n}')|tojson }},
+  n_days:       {{ _('%(n)s days', n='{n}')|tojson }},
+  {#- 'Subject' 는 기존 카탈로그에서 "주제" 로 번역돼 있다 — 뜻이 다르면 msgid 를
+     나눈다("Sensors"="센서류" 교훈). 여기서 말하는 것은 이 프로그램이 무엇을
+     관리하는가다(작물·수종·잔디·그 밖의 대상). -#}
+  kind:         {{ _('Kind')|tojson }},
+  kind_vegetation: {{ _('Vegetation')|tojson }},
+  kind_livestock:  {{ _('Livestock')|tojson }},
+  kind_facility:   {{ _('Facility')|tojson }},
+  kind_other:      {{ _('Other')|tojson }},
+  subject:      {{ _('Applies to')|tojson }},
+  subject_custom: {{ _('Enter a new one…')|tojson }},
+  variety:      {{ _('Variety')|tojson }},
+  name:         {{ _('Name')|tojson }},
+  stage_name:   {{ _('Stage name')|tojson }},
+  stage_key:    {{ _('Key')|tojson }},
+  stage_days:   {{ _('Days')|tojson }},
+  until_end:    {{ _('until the end')|tojson }},
+  add_stage:    {{ _('Add stage')|tojson }},
+  save:         {{ _('Save')|tojson }},
+  cancel:       {{ _('Cancel')|tojson }},
+  edit:         {{ _('Edit')|tojson }},
+  copy:         {{ _('Copy')|tojson }},
+  del:          {{ _('Delete')|tojson }},
+  saved:        {{ _('Saved.')|tojson }},
+  save_failed:  {{ _('Save failed')|tojson }},
+  delete_failed:{{ _('Delete failed')|tojson }},
+  del_confirm:  {{ _('Delete this program?')|tojson }},
+  read_only:    {{ _('Built-in and external programs are read-only. Copy it to make your own.')|tojson }},
+  needs_review: {{ _('Made by AI — check it before using it for control.')|tojson }},
+  mark_reviewed:{{ _('Mark as checked')|tojson }},
+  empty_base:   {{ _('Empty program')|tojson }},
+  from_template:{{ _('From a template')|tojson }},
+  copy_mine:    {{ _('Copy one of mine')|tojson }},
+  new_subject:  {{ _('unnamed')|tojson }},
+  version:      {{ _('Version')|tojson }},
+  {#- 단계 목표. 키는 서버 `_TARGET_FIELDS` 와 같은 어휘여야 한다. -#}
+  targets:      {{ _('Targets')|tojson }},
+  targets_note: {{ _('Used for display and advice. Control is not changed automatically.')|tojson }},
+  t_temp_day:   {{ _('Day temp')|tojson }},
+  t_temp_night: {{ _('Night temp')|tojson }},
+  t_rh:         {{ _('Humidity')|tojson }},
+  t_co2:        {{ _('CO2')|tojson }},
+  t_dli:        {{ _('DLI')|tojson }},
+  t_vpd:        {{ _('VPD')|tojson }},
+  curves:       {{ _('Target curves')|tojson }},
+  curves_note:  {{ _('A curve overrides the stage value for that item. Time runs from the start date.')|tojson }},
+  curve_none:   {{ _('Fixed value')|tojson }},
+  stage_gdd:    {{ _('GDD')|tojson }},
+  by_days:      {{ _('by days')|tojson }},
+  t_base:       {{ _('Base temperature')|tojson }},
+  gdd_note:     {{ _('With a base temperature and a GDD per stage, stages advance on accumulated heat instead of the calendar.')|tojson }},
+  auto_advance: {{ _('Advance stages automatically')|tojson }},
+  auto_advance_note: {{ _('Stages are recorded without asking. The date comes from the data, not from when you happen to look.')|tojson }},
+  resources:    {{ _('Resources')|tojson }},
+  resources_note: {{ _('Declared only. Functions are not switched on or off automatically.')|tojson }},
+  res_none:     {{ _('None')|tojson }},
+  res_irrigation: {{ _('Irrigation')|tojson }},
+  res_fertigation: {{ _('Fertigation')|tojson }},
+  res_other:    {{ _('Other')|tojson }}
+};
+</script>
+<script src="{{ url_for('static', filename='js/common/aot-widget-drawer.js') }}"></script>
+<script src="{{ url_for('static', filename='js/geo/program-settings.js') }}"></script>
+{%- endblock -%}

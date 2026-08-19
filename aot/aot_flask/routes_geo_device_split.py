@@ -2,14 +2,14 @@
 """장치 담당 구역 분할 API — routes_geo 의 서브모듈.
 
 routes_geo.py 맨 아래에서 import 되어 공유 blueprint 에 등록된다
-(routes_geo_planting 과 같은 방식).
+(routes_geo_plot 과 같은 방식).
 
 설계 정본: docs/design/geo-device-area-split.md
 
-**미리보기는 식생과 같은 엔드포인트를 쓴다**(`/api/geo/planting/split-preview`).
+**미리보기는 식생과 같은 엔드포인트를 쓴다**(`/api/geo/plot/split-preview`).
 그쪽은 도형을 잘라 조각을 돌려줄 뿐 작기와 아무 상관이 없어서, 장치용으로
 똑같은 것을 하나 더 만들 이유가 없다. 갈리는 것은 **적용**뿐이다 — 식생은
-GeoPlanting 을, 여기서는 `GeoShape(type='device')` 를 만들고 장치에 배정한다.
+GeoPlot 을, 여기서는 `GeoShape(type='device')` 를 만들고 장치에 배정한다.
 """
 import logging
 
@@ -18,7 +18,7 @@ from flask_login import login_required
 
 from aot.aot_flask.geo import device_split
 from aot.aot_flask.routes_geo import blueprint  # noqa: E402
-from aot.aot_flask.routes_geo_planting import (  # 공용 분할 파라미터 계층
+from aot.aot_flask.routes_geo_plot import (  # 공용 분할 파라미터 계층
     _require_edit, compute_split, split_args_from, split_kwargs_from)
 
 logger = logging.getLogger(__name__)

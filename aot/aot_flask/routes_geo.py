@@ -461,7 +461,7 @@ def api_geo_settings():
                 # 않았다).
                 theme_keys = [
                     'theme_site', 'theme_zone', 'theme_facility', 'theme_equipment', 'theme_device',
-                    'theme_vegetation',
+                    'theme_plot',
                     'theme_input', 'theme_output', 'theme_function', 'theme_device_unit',
                     'theme_panel_bg', 'theme_panel_opacity',
                     'theme_hide_label', 'theme_vis_input', 'theme_vis_output',
@@ -1522,6 +1522,31 @@ def page_design():
 
 
 # ============================================================
+# Programs (관리 프로그램) Route
+# ============================================================
+
+@blueprint.route('/geo/programs')
+@login_required
+def page_programs():
+    """설정 > 프로그램 — 관리 프로그램 목록·편집.
+
+    **식생은 대상 중 하나일 뿐이다.** 같은 구조("무엇을, 어떤 단계로, 어떤
+    목표로")가 가축·시설물·도로에도 그대로 쓰이므로, 이 화면은 종류(`kind`)를
+    가진 프로그램 전체를 다룬다.
+
+    프로그램은 **지도에 속하지 않는 전역 자원**이다(대상의 단계·기간·목표는 어느
+    지도에서 쓰든 같다). 그래서 지도 선택 없이 열린다.
+
+    목록·편집은 클라이언트가 `/api/geo/program*` 로 한다 — 서버 렌더 폼을
+    또 만들면 같은 검증이 두 벌이 되고, 이 도메인은 그 실패를 이미 겪었다.
+    """
+    if not utils_general.user_has_permission('edit_settings'):
+        return redirect(url_for('routes_general.home'))
+    return render_template('pages/geo/programs.html',
+                           active_page='geo_programs')
+
+
+# ============================================================
 # Facility Routes (PRD/DESIGN-GEO-FACILITY-001)
 # ============================================================
 
@@ -1895,6 +1920,21 @@ def api_facility_save():
     return jsonify(result)
 
 
+@blueprint.route('/api/geo/facility/<facility_uuid>/clone', methods=['POST'])
+@login_required
+def api_facility_clone(facility_uuid):
+    """Duplicate a facility (same geometry/spec, device bindings reset to empty)."""
+    if not utils_general.user_has_permission('edit_settings'):
+        return jsonify({'ok': False, 'message': 'Permission Denied'}), 403
+
+    from aot.aot_flask.geo import FacilityManager
+    result, error = FacilityManager.clone_facility(facility_uuid, user_id=current_user.id)
+    if error:
+        status = 404 if 'not found' in error.lower() else 400
+        return jsonify({'ok': False, 'message': error}), status
+    return jsonify(result)
+
+
 @blueprint.route('/api/geo/facility/<facility_uuid>', methods=['DELETE'])
 @login_required
 def api_facility_delete(facility_uuid):
@@ -2007,6 +2047,24 @@ def _get_or_refresh_sensor_snapshot(facility_uuid, sensors_resolved, sensors_out
     with _SENSOR_SNAP_LOCK:
         entry = _SENSOR_SNAP_CACHE.get(facility_uuid)
     return entry['snap'] if entry else _EMPTY_SENSOR_SNAP
+
+
+def _facility_plots_block(facility_uuid):
+    """시설에서 자라는 구획 요약 — 실패해도 런타임 응답을 막지 않는다.
+
+    폴링 응답이라 여기서 예외가 나면 3D 위젯 전체가 멈춘다. 식생은 **부가
+    정보**이므로 조용히 비운다(빈 목록은 "심은 것이 없다" 와 같은 화면이고,
+    그 차이는 로그로 남긴다).
+    """
+    try:
+        from aot.aot_flask.geo import plot_context
+        rows = plot_context.plots_in_facility(facility_uuid)
+        return [plot_context.plot_brief_for_control(r) for r in rows]
+    except Exception as exc:
+        current_app.logger.warning(
+            '[Facility] 구획 요약 실패(%s) — 런타임은 계속: %s',
+            facility_uuid, exc)
+        return []
 
 
 @blueprint.route('/api/aot/facility/<facility_uuid>/runtime', methods=['GET'])
@@ -2178,6 +2236,16 @@ def api_facility_runtime(facility_uuid):
         # 구역 칩/모달이 fitting_sensors.bay_id / actuator_states.bay_ids 와
         # 조합해 구역별 뷰를 구성한다.
         'bays': (integ.get('bays') or []) if integ else [],
+        # 지금 이 시설에서 자라는 것 — **제어 → 식생** 방향이다.
+        #
+        # 설정값을 보는 화면이 "무엇이 며칠째 자라고 있나" 를 함께 말할 수
+        # 있어야 그 값의 근거가 생긴다. 이것이 없으면 식생은 기록으로만 남고
+        # 제어와 만나지 않는다(그 반대 방향은 구획 모달의 [환경·제어]).
+        #
+        # 면적·치수는 싣지 않는다 — 시설에서는 낼 수 없는 값이다. 구역 없는
+        # 구획(bay_id=None)은 시설 전체에 심은 것이라 어느 구역 뷰에서도 보여야
+        # 한다(`plots_in_facility` 가 그렇게 낸다).
+        'plots': _facility_plots_block(facility_uuid),
     }
     # 시설 1개당 분당 3회 안팎으로 폴링되고, 액추에이터 상태·센서값이 안 바뀌면
     # 응답 바이트가 그대로다(실측 815 B, 3회 연속 해시 동일). 조건부 응답으로
@@ -3479,10 +3547,10 @@ def _build_zone_contents(zone_uuid):
     # 밸브도 그 안의 여러 작물에 물을 주므로, 한쪽에만 경고가 있으면
     # "구역에서 켜면 안전하다" 는 잘못된 대비가 생긴다(설계 §5-2).
     try:
-        from aot.aot_flask.geo import planting_context
-        _cover = planting_context.plantings_by_valve_device(zone.geo_id)
+        from aot.aot_flask.geo import plot_context
+        _cover = plot_context.plots_by_valve_device(zone.geo_id)
         for _out in inv['outputs']:
-            names = planting_context.covered_crop_names(
+            names = plot_context.covered_subject_names(
                 _cover.get(_out['unique_id']))
             if names:
                 _out['also_covers'] = names
@@ -3494,7 +3562,7 @@ def _build_zone_contents(zone_uuid):
     # 배분 계산(미배정 = **합집합**으로 빼기)은 zone_allocation 이 정본이다.
     allocation = None
     try:
-        from aot.aot_flask.geo import planting_context as _pc
+        from aot.aot_flask.geo import plot_context as _pc
         allocation = _pc.zone_allocation(zone)
     except Exception:
         current_app.logger.exception("zone contents: 식생 배분 계산 실패")
@@ -3580,8 +3648,8 @@ def _schedule_payload(target_id):
     이제 AI 도구와 **같은 헬퍼**(`descendant_target_ids`)를 쓴다. 두 벌로 두면
     한쪽만 고쳐지고, 그 어긋남은 "AI 는 아는데 화면은 모른다" 로 나타난다.
 
-      planting  구획에 **닿는** 장치만(구획 안 + 겹치는 장치 영역) — 최하위라
-                자손이 없고, 별도 경로(`_planting_schedule`)가 맡는다.
+      plot  구획에 **닿는** 장치만(구획 안 + 겹치는 장치 영역) — 최하위라
+                자손이 없고, 별도 경로(`_plot_schedule`)가 맡는다.
     """
     from aot.aot_flask.geo import device_membership
     from aot.aot_flask.geo.site_summary import upcoming_schedule
@@ -3597,11 +3665,11 @@ def _schedule_payload(target_id):
             current_app.logger.exception('schedule: 자손 조회 실패')
         return upcoming_schedule(shape, ids, kids)
 
-    from aot.databases.models import GeoPlanting
-    row = GeoPlanting.query.filter_by(unique_id=target_id).first()
+    from aot.databases.models import GeoPlot
+    row = GeoPlot.query.filter_by(unique_id=target_id).first()
     if row is not None:
-        from aot.aot_flask.routes_geo_planting import _planting_schedule
-        return _planting_schedule(row)
+        from aot.aot_flask.routes_geo_plot import _plot_schedule
+        return _plot_schedule(row)
 
     # 시설은 GeoFacility 이고 도형(GeoShape)이 따로 있다 — 도형으로 옮겨 푼다.
     from aot.databases.models import GeoFacility
@@ -3710,9 +3778,9 @@ def _create_human_schedule(target_id, kind, label, date_str, time_str,
     # 방금 만든 것이 바로 보여야 한다 — 모달들이 30초 캐시를 다시 읽는다.
     try:
         from aot.aot_flask.geo.site_summary import (
-            invalidate_planting_contents, invalidate_zone_contents_all,
+            invalidate_plot_contents, invalidate_zone_contents_all,
             invalidate)
-        invalidate_planting_contents(None)
+        invalidate_plot_contents(None)
         invalidate_zone_contents_all()
         invalidate()
     except Exception:
@@ -3724,15 +3792,15 @@ def _create_human_schedule(target_id, kind, label, date_str, time_str,
 
 def _schedule_target_label(target_id):
     """(사람이 읽을 이름, 종류) 또는 (None, None)."""
-    from aot.databases.models import GeoFacility, GeoPlanting
+    from aot.databases.models import GeoFacility, GeoPlot
 
     shape = GeoShape.query.filter_by(unique_id=target_id).first()
     if shape is not None:
         props = (_shape_feature_dict(shape).get('properties') or {})
         return props.get('name') or target_id, shape.type
-    row = GeoPlanting.query.filter_by(unique_id=target_id).first()
+    row = GeoPlot.query.filter_by(unique_id=target_id).first()
     if row is not None:
-        return row.crop or row.name or target_id, 'planting'
+        return row.subject or row.name or target_id, 'plot'
     fac = GeoFacility.query.filter_by(unique_id=target_id).first()
     if fac is not None:
         return getattr(fac, 'name', None) or target_id, 'facility'
@@ -4545,6 +4613,6 @@ def api_geo_map_site_order_save(map_uuid):
 # ── Sub-module route registrations ────────────────────────────────────────
 from aot.aot_flask import routes_geo_commissioning  # noqa: E402,F401
 from aot.aot_flask import routes_geo_iec            # noqa: E402,F401
-from aot.aot_flask import routes_geo_planting       # noqa: E402,F401
-# routes_geo_planting 뒤에 와야 한다 — 공용 분할 파라미터 계층을 그쪽에서 가져온다.
+from aot.aot_flask import routes_geo_plot       # noqa: E402,F401
+# routes_geo_plot 뒤에 와야 한다 — 공용 분할 파라미터 계층을 그쪽에서 가져온다.
 from aot.aot_flask import routes_geo_device_split   # noqa: E402,F401

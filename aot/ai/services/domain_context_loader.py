@@ -247,7 +247,7 @@ class DomainContextLoader:
                     operational_state['growth_stage']        = gs_data.get('growth_stage')
                     operational_state['growth_stage_meta'] = {'source': 'domain_kr:growth_stage_resolver', 'state': 'system_generated'}
                     operational_state['days_after_planting'] = gs_data.get('days_after_planting')
-                    operational_state['days_after_planting_meta'] = {'source': 'domain_kr:growth_stage_resolver', 'state': 'system_generated'}
+                    operational_state['days_after_plot_meta'] = {'source': 'domain_kr:growth_stage_resolver', 'state': 'system_generated'}
                     operational_state['optimal_ranges']      = gs_data.get('optimal_ranges')
                     operational_state['optimal_ranges_meta'] = {'source': 'domain_kr:optimal_ranges', 'state': 'system_generated'}
                     operational_state['growth_stage_source'] = gs_data.get('growth_stage_source')

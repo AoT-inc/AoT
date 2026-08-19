@@ -374,8 +374,8 @@
       // `%%` 를 쓰지 말 것 — 여기는 printf 가 아니라 문자열 치환이라 그대로
       // 두 개가 찍힌다(실제로 "75.9%%" 로 나갔다).
       parts.push('<span class="aot-act-cover-pct">' +
-                 _esc(_t('%(pct)s% of this plot')
-                      .replace('%(pct)s', String(coveragePct))) + '</span>');
+                 _esc(_t('{pct} of this plot')
+                      .replace('{pct}', String(coveragePct) + '%')) + '</span>');
     }
     if (alsoCovers && alsoCovers.length) {
       // 개수와 목록을 같이 쓰지 않는다 — 목록을 다 보여주므로 "3곳" 은
@@ -1205,7 +1205,7 @@
       html += '<div class="aot-ov-block aot-ov-photo-goal">' +
               '<div class="aot-ov-sec-title aot-ov-sec-title--row">' +
               '<span>' + _esc(_t('Photosynthesis')) +
-              (ph.crop ? ' · ' + _esc(ph.crop) : '') + '</span>' +
+              (ph.subject ? ' · ' + _esc(ph.subject) : '') + '</span>' +
               '<span class="aot-ov-muted">' + _esc(_t('Current / Target')) +
               '</span></div>' +
               (ph.enabled ? '' :
@@ -1398,7 +1398,9 @@
                 return _esc((+r.value).toFixed(dec) + (r.unit || ''));
               }).join(' · ') + '</div>';
     }
-    return '<div class="aot-ov-block">' + head + body + '</div>';
+    // 식별 클래스 — 폴링마다 이 블록만 골라 비교·교체하기 위한 것이다
+    // (없으면 [현황] 전체를 갈아엎어야 하고, 그러면 화면이 깜빡인다).
+    return '<div class="aot-ov-block aot-ov-envnow">' + head + body + '</div>';
   }
 
   // 현재 블록의 값 클릭 → 대표 지정. onPick(key|null) 로 넘긴다.
@@ -1451,7 +1453,7 @@
     // 예정과 노트는 **한 블록**이다 — 식생과 같은 빌더. 계층마다 다른 모양을
     // 쓰면 사용자는 화면을 옮길 때마다 어디에 무엇이 있는지 다시 찾아야 한다.
     return buildEnvNowHtml(zone.env, opts) +
-           buildZonePlantingsHtml(zone.allocation) +
+           buildZonePlotsHtml(zone.allocation) +
            buildRecordBlock(zone.schedule);
   }
 
@@ -1537,16 +1539,16 @@
   // **합계를 내지 않는다.** 겹침이 정상이라(간작·혼작, VP-3) 비율의 합이 100%를
   // 넘는 것이 맞는데, 합계를 띄우면 사용자는 그것을 오류로 읽는다. 미배정은
   // 서버가 **합집합**으로 뺀 값을 그대로 쓴다(단순 합으로 빼면 음수가 된다).
-  function buildZonePlantingsHtml(alloc) {
+  function buildZonePlotsHtml(alloc) {
     if (!alloc) return '';
-    var items = alloc.plantings || [];
-    var html = '<div class="aot-ov-block aot-ov-zone-plantings">' +
+    var items = alloc.plots || [];
+    var html = '<div class="aot-ov-block aot-ov-zone-plots">' +
                '<div class="aot-ov-sec-title">' +
                _esc(_t('Growing now')) + '</div>';
 
     if (!items.length) {
       html += '<div class="aot-ov-muted">' +
-              _esc(_t('Nothing is planted in this zone.')) + '</div></div>';
+              _esc(_t('Nothing recorded in this zone.')) + '</div></div>';
       return html;
     }
 
@@ -1562,10 +1564,10 @@
         right.push(_esc(a));
       }
       // 줄을 누르면 그 구획 모달로 내려간다(필지 → 구역과 같은 규약).
-      html += '<div class="aot-ov-row aot-ov-planting-link" ' +
-              'data-planting-uuid="' + _esc(p.unique_id) + '" ' +
+      html += '<div class="aot-ov-row aot-ov-plot-link" ' +
+              'data-plot-uuid="' + _esc(p.unique_id) + '" ' +
               'style="cursor:pointer"><span>' +
-              _esc(p.crop || p.name || '—') +
+              _esc(p.subject || p.name || '—') +
               (p.variety ? ' <span class="aot-ov-muted">· ' +
                            _esc(p.variety) + '</span>' : '') +
               '</span><span>' + right.join(' · ') + '</span></div>';
@@ -1587,6 +1589,127 @@
 
   // Zone [개요] 탭 — 이것의 정체는 무엇인가. 시설 [개요]와 같은 순서다
   // (사진 → 치수·소속 → 설명). 구역에는 설명 필드가 없어 두 블록뿐이다.
+  /**
+   * 시설(구역) 모달의 "지금 심겨 있는 것" — **제어 → 식생** 방향.
+   *
+   * 설정값을 보는 화면이 무엇을 기르는지 함께 말해야 그 값의 근거가 생긴다 —
+   * 같은 25도가 상추에는 높고 토마토에는 적정이다. 이것이 없으면 식생은 기록으로
+   * 남고 제어 화면과 만나지 않는다.
+   *
+   * `rows` 는 시설 런타임의 `plots`(시설 전체). 구역 뷰에서는 그 구역 것과
+   * **구역이 지정되지 않은 것**(= 시설 전체에 심은 것)을 함께 낸다 — 그 작물도
+   * 이 구역에서 자라고 있다(서버 `plots_in_facility` 와 같은 규칙).
+   *
+   * 면적·치수는 내지 않는다. 시설은 노지형·베드형·수직형에 따라 같은 바닥
+   * 면적의 재배 규모가 전혀 다르다(서버도 내지 않는다).
+   */
+  function buildFacilityPlotsHtml(rows, bayId, opts) {
+    opts = opts || {};
+    var items = (rows || []).filter(function (p) {
+      return !bayId || !p.bay_id || p.bay_id === bayId;
+    });
+    // 아무것도 없고 **심을 권한도 없으면** 블록을 만들지 않는다 — 창고·기계고처럼
+    // 심는 것이 없는 시설에서 빈 칸이 매번 자리를 차지한다.
+    //
+    // 권한이 있으면 비어 있어도 낸다. 시설 구획은 기하를 그리지 않으므로 여기서
+    // 만들 수 있어야 하고, 그러지 않으면 **지도만 쓰는 사람은 온실 식생을 아예
+    // 관리할 수 없다** — 시설 편집기(geo/facility)까지 갈 수 있는 계정만 심을 수
+    // 있게 되기 때문이다.
+    if (!items.length && !opts.canEdit) return '';
+
+    var html = '<div class="aot-ov-block aot-ov-facility-plots">' +
+               '<div class="aot-ov-sec-title">' + _esc(_t('Plot')) + '</div>';
+    if (!items.length) {
+      html += '<div class="aot-ov-muted">' +
+              _esc(_t('Nothing recorded here yet.')) + '</div>';
+    }
+    items.forEach(function (p) {
+      var right = [];
+      if (p.days_since_planted != null) {
+        right.push(_esc(_t('Day %(n)s').replace('%(n)s',
+                                                String(p.days_since_planted))));
+      }
+      // 단계는 일수보다 사람에게 직접적이다("32일차" 보다 "영양생장기").
+      if (p.stage_name) {
+        right.push(_esc(p.stage_name +
+                        (p.stage_index ? ' ' + p.stage_index + '/' + p.stage_total : '')));
+      }
+      // 구역 뷰에서 "시설 전체" 인 것은 그렇다고 밝힌다 — 그러지 않으면 이 구역
+      // 전용으로 읽힌다.
+      if (bayId && !p.bay_id) right.push(_esc(_t('Whole facility')));
+      html += '<div class="aot-ov-row aot-ov-plot-link" ' +
+              'data-plot-uuid="' + _esc(p.unique_id) + '" ' +
+              'style="cursor:pointer"><span>' +
+              _esc(p.subject || p.name || '—') +
+              (p.variety ? ' <span class="aot-ov-muted">· ' +
+                           _esc(p.variety) + '</span>' : '') +
+              '</span><span>' + right.join(' · ') + '</span></div>';
+    });
+
+    if (opts.canEdit) {
+      // 심기 폼 — 구획 모달의 편집 폼과 같은 골격(aot-modal-option-row +
+      // aot-modern-input)을 쓴다. 기하를 묻지 않는 것이 핵심이다: 시설에서는
+      // 구역을 고르는 것이 자리를 정하는 일이다.
+      var _fr = function (label, control) {
+        return '<div class="aot-modal-option-row">' +
+               '<div class="aot-modal-option-label">' + _esc(label) + '</div>' +
+               '<div class="aot-modal-option-control">' + control + '</div></div>';
+      };
+      var bays = opts.bays || [];
+      var zoneCtl = '';
+      if (bays.length) {
+        var o = '<option value=""' + (bayId ? '' : ' selected') + '>' +
+                _esc(_t('Whole facility')) + '</option>';
+        bays.forEach(function (b) {
+          o += '<option value="' + _esc(b.id) + '"' +
+               (b.id === bayId ? ' selected' : '') + '>' +
+               _esc(b.name || b.id) + '</option>';
+        });
+        zoneCtl = _fr(_t('Zone'), '<select class="aot-modern-input form-control" ' +
+                                  'data-nf="bay_id">' + o + '</select>');
+      }
+      var _in = function (field, type, val) {
+        return '<input type="' + type + '" class="aot-modern-input form-control" ' +
+               'data-nf="' + field + '" value="' + _esc(val || '') + '">';
+      };
+      html += '<button type="button" class="btn aot-pill-btn aot-pill-btn-sm ' +
+              'aot-ov-plot-add">' + _esc(_t('Add a plot')) + '</button>' +
+              '<div class="aot-ov-plot-new-wrap" style="display:none">' +
+              '<div class="aot-modal-container">' +
+              zoneCtl +
+              _fr(_t('Kind'), _kindSelect('data-nf="kind"', 'vegetation')) +
+              _fr(_t('What is here'), _in('subject', 'text', '')) +
+              _fr(_t('Variety'), _in('variety', 'text', '')) +
+              _fr(_t('Start date'), _in('started_on', 'date', opts.today || '')) +
+              _fr(_t('Expected end'), _in('expected_end_on', 'date', '')) +
+              '</div>' +
+              '<div class="aot-ov-desc-actions">' +
+              '<button type="button" class="btn aot-pill-btn aot-ov-plot-new-cancel">' +
+              _esc(_t('Cancel')) + '</button>' +
+              '<button type="button" class="btn aot-pill-btn aot-pill-btn-primary ' +
+              'aot-ov-plot-new-save">' + _esc(_t('Save')) + '</button>' +
+              '</div></div>';
+    }
+    return html + '</div>';
+  }
+
+  /** 대상 종류 select — `GeoProgram.kind` 와 같은 어휘.
+   *
+   * 구획을 만드는 화면이 종류를 못 고르면 서버가 받는 축이 화면에 없는
+   * 반쪽이 된다(가축 프로그램을 만들어도 붙일 구획을 만들 수 없다).
+   */
+  function _kindSelect(attr, cur) {
+    var labels = { vegetation: _t('Vegetation'), livestock: _t('Livestock'),
+                   facility: _t('Facility'), other: _t('Other') };
+    var out = '<select class="aot-modern-input form-control" ' + attr + '>';
+    ['vegetation', 'livestock', 'facility', 'other'].forEach(function (k) {
+      out += '<option value="' + k + '"' +
+             (k === (cur || 'vegetation') ? ' selected' : '') + '>' +
+             _esc(labels[k]) + '</option>';
+    });
+    return out + '</select>';
+  }
+
   function buildZoneAboutHtml(zone) {
     zone = zone || {};
     var html = '';
@@ -1991,7 +2114,7 @@
   // 위젯 옵션 popup_default_tab 은 세 키를 쓰는데 식생은 그중 둘만 갖는다 —
   // 'envctl' 로 설정된 대시보드에서 식생을 열면 존재하지 않는 탭을 요구받는다.
   // 그때는 조용히 [현황]으로 떨어뜨린다(빈 화면보다 낫다).
-  function plantingDefaultSec(want) {
+  function plotDefaultSec(want) {
     for (var i = 0; i < _PLANTING_SECS.length; i++) {
       if (_PLANTING_SECS[i].key === want) return want;
     }
@@ -2009,21 +2132,21 @@
            (key === active ? '' : ' style="display:none"') + '>' + inner + '</div>';
   }
 
-  function buildPlantingModal(p, opts) {
+  function buildPlotModal(p, opts) {
     p = p || {};
     opts = opts || {};
-    var defSec = plantingDefaultSec(opts.defaultTab);
+    var defSec = plotDefaultSec(opts.defaultTab);
     // up: 소속 구역으로 올라간다. 버튼은 hidden 으로 자리만 잡고, 상위가
     // 확인되면 위젯이 드러낸다(_wireUpBtn) — 구역을 못 찾은 구획에서는 눌러도
     // 아무 일 없는 버튼이 남지 않는다.
-    return buildModalHeader({ name: p.name || p.crop || _t('Planting'),
+    return buildModalHeader({ name: p.name || p.subject || _t('Plot'),
                               up: true, status: null }) +
            buildSectionNav(defSec, _PLANTING_SECS) +
-           _pPane('overview', defSec, _plantingOverviewHtml(p)) +
+           _pPane('overview', defSec, _plotOverviewHtml(p)) +
            // [환경·제어]는 별도 조회(/contents)라 빈 칸으로 열어 두고
            // 도착하면 채운다 — 그 왕복 때문에 모달 전체를 늦추지 않는다.
            _pPane('envctl',   defSec, '') +
-           _pPane('about',    defSec, _plantingAboutHtml(p));
+           _pPane('about',    defSec, _plotAboutHtml(p));
   }
 
   // ── [현황] — 지금 이 구획이 어떤 상태인가 ────────────────────────────────
@@ -2035,14 +2158,14 @@
   // 목록이 있었다. 둘 다 "어떤 장치로 관리하느냐" 인데 그건 [환경·제어]가
   // 값·스코프 배지·영향 범위까지 제대로 낸다 — 여기 있던 것은 값도 없이
   // 장치 이야기만 하면서 정작 봐야 할 노트를 아래로 밀어냈다.
-  function _plantingOverviewHtml(p) {
+  function _plotOverviewHtml(p) {
     // 제목은 목록 쪽('심겨 있는 것')과 달라야 한다 — 같은 말을 쓰면 블록
     // 제목과 첫 행 라벨이 겹쳐 "심겨 있는 것 / 심은 것" 으로 읽힌다.
     var html = '<div class="aot-ov-block">' +
                '<div class="aot-ov-sec-title">' + _esc(_t('This plot')) +
                '</div>';
 
-    html += _pRow(_t('Planted'), _esc(p.crop || '—') +
+    html += _pRow(_t('What is here'), _esc(p.subject || '—') +
                   (p.variety ? ' · ' + _esc(p.variety) : ''));
 
     // 재배 일수 — 심은 날이 1일차(서버 elapsed_days 가 정본).
@@ -2052,16 +2175,21 @@
     // 쓰면 아직 자라고 있는 것처럼 읽힌다.
     if (p.days_since_planted != null) {
       var n = String(p.days_since_planted);
-      html += _pRow(p.ended_on ? _t('Grown for') : _t('Days since planting'),
+      html += _pRow(p.ended_on ? _t('Grown for') : _t('Days elapsed'),
                     _esc((p.ended_on ? _t('%(n)s days') : _t('Day %(n)s'))
                          .replace('%(n)s', n)));
     }
-    html += _pRow(_t('Planted on'), _esc(p.planted_on || '—'));
+    html += _pRow(_t('Start date'), _esc(p.started_on || '—'));
 
     // 예상 종료까지 — 지난 것을 숨기지 않는다. 늦어지고 있다는 것 자체가
     // 사용자가 봐야 할 사실이다.
     if (p.expected_end_on) {
       var due = _esc(p.expected_end_on);
+      // 사람이 적은 값인지 프로그램에서 나온 값인지 밝힌다 — 밝히지 않으면
+      // 사용자는 자기가 적지도 않은 날짜를 자기 입력으로 오해한다.
+      if (p.expected_end_source === 'program') {
+        due += ' <span class="aot-ov-muted">(' + _esc(_t('from programme')) + ')</span>';
+      }
       var d = p.days_to_expected_end;
       if (d != null) {
         due += ' <span class="aot-ov-muted">(' +
@@ -2077,7 +2205,7 @@
 
     // 물 줄 수단이 없다 — 장치 목록이 아니라 **빠진 것**을 알리는 줄이다.
     // 정상일 때는 나오지 않으므로 평소 화면을 어지럽히지 않는다.
-    html += _plantingNoValveHtml(p);
+    html += _plotNoValveHtml(p);
 
     // 기록 — 예정과 노트가 **한 블록**이다. 진입점도 하나(계획서 Phase 2).
     // 네 계층 중 여기서 먼저 시험한다 — 한 번에 퍼뜨리면 되돌릴 지점이 없다.
@@ -2091,12 +2219,12 @@
   //
   // 여기서도 "관수" 라고 쓰지 않는다 — 그 영역이 물을 주는 것인지 시스템은
   // 모른다(coverageHtml 주석 참조).
-  function _plantingNoValveHtml(p) {
+  function _plotNoValveHtml(p) {
     var valves = p.valves;
     if (!Array.isArray(valves)) return '';
     var open = valves.filter(function (v) { return v.unassigned; });
     if (!open.length) return '';
-    return '<div class="aot-ov-block aot-ov-planting-novalve">' +
+    return '<div class="aot-ov-block aot-ov-plot-novalve">' +
            '<div class="aot-ov-muted">' +
            _esc(_t('A device area over this plot has no device assigned yet.')) +
            '</div></div>';
@@ -2104,23 +2232,23 @@
 
 
   // ── [개요] — 잘 안 변하는 사실 + 편집 ───────────────────────────────────
-  function _plantingAboutHtml(p) {
+  function _plotAboutHtml(p) {
     // 보기와 편집을 같은 블록에 두고 토글한다(구역 모달의 설명 편집과 같은
     // 방식: aot-ov-desc-*). geo/design 은 도형만 다루므로 **작물·기간을 고치는
     // 자리는 여기다.**
     // 제목은 첫 행 라벨('심은 것')과 달라야 한다 — 같으면 "심은 것 / 심은 것"
     // 으로 읽힌다([현황]에서 한 번 겪은 것과 같은 문제).
-    var html = '<div class="aot-ov-block aot-ov-planting-info">' +
+    var html = '<div class="aot-ov-block aot-ov-plot-info">' +
             '<div class="aot-ov-sec-title aot-ov-sec-title--row">' +
             '<span>' + _esc(_t('Basics')) + '</span>' +
-            '<button type="button" class="aot-ov-pill aot-ov-planting-edit">' +
+            '<button type="button" class="aot-ov-pill aot-ov-plot-edit">' +
             _esc(_t('Edit')) + '</button></div>';
 
-    html += '<div class="aot-ov-planting-view">';
-    html += _pRow(_t('Planted'), _esc(p.crop || '—') +
+    html += '<div class="aot-ov-plot-view">';
+    html += _pRow(_t('What is here'), _esc(p.subject || '—') +
                    (p.variety ? ' · ' + _esc(p.variety) : ''));
     if (p.name) html += _pRow(_t('Plot name'), _esc(p.name));
-    html += _pRow(_t('Planted on'), _esc(p.planted_on || '—'));
+    html += _pRow(_t('Start date'), _esc(p.started_on || '—'));
     if (p.expected_end_on) {
       html += _pRow(_t('Expected end'), _esc(p.expected_end_on));
     }
@@ -2144,12 +2272,53 @@
              'data-pf="' + field + '" value="' + _v(val) + '">';
     };
 
-    html += '<div class="aot-ov-planting-edit-wrap" style="display:none">' +
+    // 시설 구획은 **구역이 곧 위치**다. 노지 구획은 도형을 옮겨 자리를 바꾸지만
+    // (그 편집은 geo/design 이다), 시설 구획에서 자리를 바꾸는 일은 구역을 고르는
+    // 일이라 여기서 할 수 있어야 한다 — 그러지 않으면 온실 구획만 위치를 못 고쳐
+    // 시설 편집기까지 다녀와야 한다.
+    //
+    // 빈 값은 "시설 전체" 다(다동에서만 의미가 있다). 종료된 작기의 이동은 서버가
+    // 거부한다(VP-6) — 위치가 바뀌면 "작년에 여기 뭐가 있었나" 의 답이 달라진다.
+    var _bayRow = '';
+    if (p.location_source === 'facility' && (p.facility_bays || []).length) {
+        var opts = '<option value=""' + (p.bay_id ? '' : ' selected') + '>' +
+                   _esc(_t('Whole facility')) + '</option>';
+        p.facility_bays.forEach(function (b) {
+            opts += '<option value="' + _esc(b.id) + '"' +
+                    (b.id === p.bay_id ? ' selected' : '') + '>' +
+                    _esc(b.name || b.id) + '</option>';
+        });
+        _bayRow = _fRow(_t('Zone'),
+                        '<select class="aot-modern-input form-control" ' +
+                        'data-pf="bay_id">' + opts + '</select>');
+    }
+
+    // 재배 프로그램 — 선택지는 위젯이 `p.program_choices` 로 실어 준다(모달은
+    // 스스로 조회하지 않는다: 빌더는 순수 함수로 두고 조회는 위젯이 맡는 것이
+    // 이 파일의 규약이다). 선택지가 없으면 줄을 내지 않는다.
+    var _progRow = '';
+    if ((p.program_choices || []).length) {
+        var curP = (p.program && p.program.unique_id) || '';
+        var po = '<option value="">' + _esc(_t('No program')) + '</option>';
+        p.program_choices.forEach(function (x) {
+            po += '<option value="' + _esc(x.unique_id) + '"' +
+                  (x.unique_id === curP ? ' selected' : '') + '>' +
+                  _esc(x.name + (x.variety ? ' · ' + x.variety : '')) + '</option>';
+        });
+        _progRow = _fRow(_t('Program'),
+                         '<select class="aot-modern-input form-control" ' +
+                         'data-pf="program_uuid">' + po + '</select>');
+    }
+
+    html += '<div class="aot-ov-plot-edit-wrap" style="display:none">' +
             '<div class="aot-modal-container">' +
-            _fRow(_t('Planted'), _inp('crop', 'text', p.crop)) +
+            _bayRow +
+            _fRow(_t('Kind'), _kindSelect('data-pf="kind"', p.kind)) +
+            _progRow +
+            _fRow(_t('What is here'), _inp('subject', 'text', p.subject)) +
             _fRow(_t('Variety'), _inp('variety', 'text', p.variety)) +
             _fRow(_t('Plot name'), _inp('name', 'text', p.name)) +
-            _fRow(_t('Planted on'), _inp('planted_on', 'date', p.planted_on)) +
+            _fRow(_t('Start date'), _inp('started_on', 'date', p.started_on)) +
             _fRow(_t('Expected end'), _inp('expected_end_on', 'date', p.expected_end_on)) +
             '<div class="aot-modal-option-row">' +
             '<div class="aot-modal-option-label">' + _esc(_t('Colour')) + '</div>' +
@@ -2158,27 +2327,281 @@
             _v(p.color || '#6a8f3c') + '"></div></div>' +
             '</div>' +
             '<div class="aot-ov-desc-actions">' +
-            '<button type="button" class="btn aot-pill-btn aot-ov-planting-cancel">' +
+            '<button type="button" class="btn aot-pill-btn aot-ov-plot-cancel">' +
             _esc(_t('Cancel')) + '</button>' +
-            '<button type="button" class="btn aot-pill-btn aot-pill-btn-primary aot-ov-planting-save">' +
+            '<button type="button" class="btn aot-pill-btn aot-pill-btn-primary aot-ov-plot-save">' +
             _esc(_t('Save')) + '</button>' +
-            (p.active ? '<button type="button" class="btn aot-pill-btn aot-ov-planting-end">' +
-                        _esc(_t('End planting')) + '</button>' : '') +
+            (p.active ? '<button type="button" class="btn aot-pill-btn aot-ov-plot-end">' +
+                        _esc(_t('End plot')) + '</button>' : '') +
             '</div></div>';
     html += '</div>';
 
-    html += _plantingDimsHtml(p);
+    html += _plotProgramHtml(p);
+    html += _plotPlaceHtml(p);
+    html += _plotDimsHtml(p);
 
     // 이 자리 이력 — 연작 장해·윤작 판단의 근거. 도형과 함께 잘 안 변하는
-    // 사실이라 [개요]에 둔다(채우는 것은 fillPlantingHistory).
-    html += '<div class="aot-ov-block aot-ov-planting-history">' +
+    // 사실이라 [개요]에 둔다(채우는 것은 fillPlotHistory).
+    html += '<div class="aot-ov-block aot-ov-plot-history">' +
             '<div class="aot-ov-sec-title">' + _esc(_t('History here')) + '</div>' +
-            '<div class="aot-ov-planting-history-list">' +
+            '<div class="aot-ov-plot-history-list">' +
             '<span class="aot-ov-muted">…</span></div></div>';
     return html;
   }
 
 
+
+  // 재배 프로그램 — "무엇을 근거로 기르고 있나".
+  //
+  // P1 은 **무엇을 따르는지까지**다. 현재 단계·목표 적용은 이후 단계에서 붙는다 —
+  // 여기서 단계를 지어내 보여주면 사람이 그것을 판정 결과로 읽는다.
+  //
+  // 프로그램이 지워졌으면 그 사실을 말한다(조용히 빈칸으로 두면 "원래 없었다"로
+  // 읽혀 다시 고를 생각을 못 한다).
+  function _plotProgramHtml(p) {
+    var pr = p.program;
+    if (!pr) return '';
+    var rows;
+    if (pr.missing) {
+      rows = '<div class="aot-ov-muted">' +
+             _esc(_t('The program this plot followed is gone. Pick another.')) +
+             '</div>';
+    } else {
+      rows = _pRow(_t('Name'), _esc(pr.name || '—'));
+      // 현재 단계 — "3/7" 로 진행을 함께 보인다. 단계 이름만 있으면 얼마나 남았는지
+      // 알 수 없고, 숫자만 있으면 그것이 무엇인지 알 수 없다.
+      var stg = p.stage;
+      if (stg && stg.state === 'running') {
+        var lbl = _esc(stg.name || stg.key || '') +
+                  ' <span class="aot-ov-muted">(' + stg.index + '/' + stg.total + ')</span>';
+        rows += _pRow(_t('Current stage'), lbl);
+        if (stg.days_left != null) {
+          rows += _pRow(_t('Next stage'),
+                        _esc((stg.next_name || '—') + ' · ' +
+                             _t('in %(n)s days').replace('%(n)s', String(stg.days_left))));
+        } else if (stg.source === 'gdd' && stg.gdd_left != null) {
+          // GDD 판정에는 "며칠 남았나" 가 없다 — 남은 것은 날이 아니라 온도다.
+          // 날짜로 환산해 보이면 지어낸 예측이 된다(앞으로의 기온을 모른다).
+          rows += _pRow(_t('Next stage'),
+                        _esc((stg.next_name || '—') + ' · ' +
+                             _t('in {n} GDD').replace('{n}', String(stg.gdd_left))));
+        }
+      } else if (stg && stg.state === 'not_started') {
+        // 계획만 세운 구획을 "육묘기" 라 부르면 심지도 않은 것을 기르는 중으로 읽는다.
+        rows += _pRow(_t('Current stage'), _esc(_t('Not started yet')));
+      } else if (stg && stg.state === 'past_end') {
+        rows += _pRow(_t('Current stage'), _esc(_t('Past the programme end')));
+      }
+      rows += _plotStageProposalHtml(p);
+      rows += _plotGddRows(stg);
+      rows += _plotStageTargetRows(stg);
+      rows += _plotStageResourceRows(stg);
+      rows += _pRow(_t('Stage count'), _esc(String(pr.stage_count || 0)));
+      if (pr.total_days) {
+        rows += _pRow(_t('Programme length'),
+                      _esc(_t('%(n)s days').replace('%(n)s', String(pr.total_days))));
+      }
+      rows += _plotStageHistoryHtml(p);
+      // 프로그램이 그 뒤 갱신됐다는 사실만 알린다 — 해석은 고정 버전으로 한다.
+      if (pr.newer_version) {
+        rows += '<div class="aot-ov-muted">' +
+                _esc(_t('A newer version of this program exists (not applied).')) +
+                '</div>';
+      }
+    }
+    return '<div class="aot-ov-block">' +
+           '<div class="aot-ov-sec-title">' + _esc(_t('Program')) +
+           '</div>' + rows + '</div>';
+  }
+
+  // 자원(관수·시비) — 선언과 **실제 상태**를 나란히 보인다.
+  //
+  // 이 블록의 값은 자동화가 아니라 대조다: "이 단계에는 시비가 돌아야 하는데
+  // 꺼져 있다" 는 사람이 지금 알 수 없는 사실이고, 알면 바로 고칠 수 있다.
+  // 프로그램은 함수를 스스로 켜지 않는다 — 관수를 켜는 것은 물이 나오는 일이라
+  // 사람이 [적용]을 눌러야 한다.
+  var _RESOURCE_ROLES = {
+    irrigation: 'Irrigation', fertigation: 'Fertigation', other: 'Other'
+  };
+
+  function _plotStageResourceRows(stg) {
+    var list = (stg && stg.resources) || [];
+    if (!list.length) return '';
+    var rows = '';
+    var needsApply = false;
+    list.forEach(function (r) {
+      var label = _t(_RESOURCE_ROLES[r.role] || 'Other');
+      var val;
+      if (r.missing) {
+        // 조용히 빼지 않는다 — 빼면 자원이 통째로 사라진 것을 아무도 모른다.
+        val = '<span class="aot-ov-muted">' + _esc(_t('Function is gone')) +
+              '</span>';
+      } else if (r.active) {
+        val = _esc(r.name || '') + ' · ' + _esc(_t('running'));
+      } else {
+        needsApply = true;
+        val = _esc(r.name || '') + ' · <span class="aot-ov-muted">' +
+              _esc(_t('stopped')) + '</span>';
+      }
+      rows += _pRow(label, val);
+    });
+    if (needsApply) {
+      rows += '<div class="aot-ov-desc-actions">' +
+              '<button type="button" class="btn aot-pill-btn aot-pill-btn-sm ' +
+                'aot-ov-plot-res-apply">' + _esc(_t('Apply')) + '</button>' +
+              '</div>';
+    }
+    return rows;
+  }
+
+  // 단계 전환 제안 — **승인은 기준점을 옮긴다.**
+  //
+  // 확인하면 그 날부터 남은 단계가 다시 계산된다. 그래서 날짜를 고칠 수 있게
+  // 둔다: 계산이 제안한 날과 사람이 관찰한 날이 다를 수 있고, 그 차이가 이후
+  // 계산 전체를 좌우한다(docs/design/program-layer.md §P5).
+  function _plotStageProposalHtml(p) {
+    var pp = p && p.stage_proposal;
+    if (!pp) return '';
+    // 한 행에 입력과 버튼을 밀어 넣지 않는다 — 라벨/값 두 칸짜리 행이라
+    // 좁은 폭에서 줄이 깨진다. 액션은 아래 줄에 따로 둔다(생성 폼과 같은 골격).
+    return '<div class="aot-ov-plot-stage-ask" ' +
+             'data-stage-key="' + _esc(pp.stage_key || '') + '" ' +
+             'data-stage-source="' + _esc(pp.source || '') + '">' +
+             '<div class="aot-ov-row">' +
+               '<span>' + _esc(_t('Stage change')) + '</span>' +
+               '<span>' + _esc(pp.stage_name || pp.stage_key || '') + '</span>' +
+             '</div>' +
+             '<div class="aot-ov-desc-actions">' +
+               '<input type="date" class="form-control aot-modern-input ' +
+                 'aot-ov-plot-stage-date" value="' +
+                 _esc(pp.started_on || '') + '">' +
+               '<button type="button" class="btn aot-pill-btn aot-pill-btn-sm ' +
+                 'aot-pill-btn-primary aot-ov-plot-stage-ok">' +
+                 _esc(_t('Confirm')) + '</button>' +
+             '</div></div>';
+  }
+
+  // 확인된 전환 이력. **무른 것도 낸다** — "확인했다가 물렀다" 는 사실 자체가
+  // 이력이고, 숨기면 같은 판단을 다시 하게 된다.
+  function _plotStageHistoryHtml(p) {
+    var hist = (p && p.stage_history) || [];
+    if (!hist.length) return '';
+    var live = hist.filter(function (h) { return !h.undone; });
+    var lines = hist.map(function (h) {
+      return '<div class="aot-ov-row' + (h.undone ? ' aot-ov-muted' : '') + '">' +
+             '<span>' + _esc(h.started_on || '') + '</span>' +
+             '<span>' + _esc(h.stage_key || '') +
+               (h.auto ? ' · ' + _esc(_t('auto')) : '') +
+               (h.undone ? ' · ' + _esc(_t('undone')) : '') + '</span></div>';
+    }).join('');
+    // 되돌리기는 **마지막 것만** — 여러 개를 임의로 무르면 기준점이 어디인지
+    // 사람이 추적할 수 없다.
+    var undo = live.length
+      ? '<button type="button" class="btn aot-pill-btn aot-pill-btn-sm ' +
+        'aot-ov-plot-stage-undo">' + _esc(_t('Undo last')) + '</button>'
+      : '';
+    return '<div class="aot-ov-sub-title aot-ov-sec-title--row">' +
+           '<span>' + _esc(_t('Stage log')) + '</span>' + undo + '</div>' + lines;
+  }
+
+  // 적산온도 — **무엇으로 단계를 판정했는지**를 말한다.
+  //
+  // 날짜로 되돌아간 경우 그 사실만 알면 고칠 수가 없다. 그래서 이유를 함께
+  // 낸다(기준온도 없음 · 센서 없음 · 자료 부족). 아무 근거도 없는 경우
+  // (프로그램에 GDD 목표 자체가 없음)에는 줄을 내지 않는다 — 쓰지도 않는
+  // 기능의 상태를 모든 구획에 띄우면 화면만 길어진다.
+  var _GDD_REASONS = {
+    'no-t-base': 'No base temperature set',
+    'no-temperature-sensor': 'No temperature sensor for this plot',
+    'low-coverage': 'Not enough temperature history',
+    'no-start-date': 'No start date',
+    'not-started': 'Not started yet',
+    'too-early': 'Not started yet'
+  };
+
+  function _plotGddRows(stg) {
+    var g = stg && stg.gdd;
+    if (!g) return '';
+    if (g.usable) {
+      var val = String(g.value) + ' \u00b0C\u00b7d';
+      if (g.coverage_pct != null && g.coverage_pct < 100) {
+        val += ' <span class="aot-ov-muted">(' +
+               _t('Days covered: {n}').replace('{n}',
+                   String(g.coverage_pct) + '%') +
+               ')</span>';
+      }
+      return _pRow(_t('Accumulated heat'), val);
+    }
+    var why = _GDD_REASONS[g.reason];
+    if (!why) return '';
+    return _pRow(_t('Accumulated heat'),
+                 '<span class="aot-ov-muted">' +
+                 _esc(_t('By days') + ' \u00b7 ' + _t(why)) + '</span>');
+  }
+
+  // 현재 단계의 목표 — **서버가 만든 목록을 그대로 그린다.**
+  //
+  // 항목 어휘와 단위는 서버(`_TARGET_FIELDS`/`_TARGET_UNITS`)가 정본이다. 여기서
+  // 다시 조립하면 항목을 늘릴 때 한쪽만 늘어난다.
+  //
+  // **이 값은 표시 전용이다** — 제어를 바꾸지 않는다. 그래서 그 사실을 화면에
+  // 적는다: 숫자만 보이면 사람이 "이대로 돌고 있다" 로 읽고, 그러면 실제 제어와
+  // 다른데도 확인할 생각을 안 하게 된다.
+  //
+  // 곡선이 걸린 항목은 **숫자를 내지 않는다**(서버가 value=null 로 준다). 단계
+  // 값을 대신 보이면 실제로 쓰이지 않는 숫자를 목표라고 말하는 것이 된다.
+  var _TARGET_LABELS = {
+    temp_day: 'Day temp', temp_night: 'Night temp', rh: 'Humidity',
+    co2: 'CO2', dli: 'DLI', vpd: 'VPD'
+  };
+
+  function _plotStageTargetRows(stg) {
+    var list = (stg && stg.targets) || [];
+    if (!list.length) return '';
+    var rows = '';
+    list.forEach(function (t) {
+      var label = _t(_TARGET_LABELS[t.key] || t.key);
+      var val;
+      if (t.source === 'method') {
+        val = '<span class="aot-ov-muted">' +
+              _esc(t.method_name
+                   ? _t('Follows curve: {name}').replace('{name}', t.method_name)
+                   : _t('Follows a curve')) + '</span>';
+      } else {
+        val = _esc(String(t.value) + (t.unit ? ' ' + t.unit : ''));
+      }
+      rows += _pRow(label, val);
+    });
+    return rows +
+           '<div class="aot-ov-muted">' +
+           _esc(_t('Targets are shown for reference. Control is not changed automatically.')) +
+           '</div>';
+  }
+
+  // 시설 구획의 자리 — 좌표가 아니라 **이름**이 위치다.
+  //
+  // 온실 구획은 기하를 그리지 않는다. 위치의 정본이 구역 자체이고("3동"), 지도
+  // 폴리곤은 그 구역에서 파생한 표시용이다. 그래서 여기서 말해야 하는 것은
+  // 면적이 아니라 **어느 시설의 어느 구역인가**다.
+  //
+  // 면적·치수를 내지 않는 이유도 한 줄로 밝힌다. 값이 그냥 비어 있으면 사람은
+  // "아직 계산 안 됐나" 로 읽는데, 실제로는 낼 수 없는 값이다 — 시설은
+  // 노지형·베드형·수직형에 따라 같은 바닥 면적의 재배 규모가 몇 배씩 다르다.
+  function _plotPlaceHtml(p) {
+    if (p.location_source !== 'facility') return '';
+    // 시설과 구역을 **두 행으로** 낸다. "온실1 · 3동" 처럼 이어붙이면 한 열에
+    // 두 정보가 들어가고, 열 라벨이 어느 쪽을 가리키는지 흐려진다.
+    // 행 라벨은 블록 제목("위치")과 달라야 한다 — 같은 말이 두 번 나오면
+    // 사용자는 그것을 오류로 읽는다.
+    var rows = _pRow(_t('Facility'), _esc(p.facility_name || '—'));
+    if (p.bay_name) rows += _pRow(_t('Zone'), _esc(p.bay_name));
+    return '<div class="aot-ov-block">' +
+           '<div class="aot-ov-sec-title">' + _esc(_t('Where')) + '</div>' +
+           rows +
+           '<div class="aot-ov-muted">' +
+           _esc(_t('Floor area alone does not tell you how much fits inside a facility — record the layout (beds, rows, tiers) in the notes.')) +
+           '</div></div>';
+  }
 
   // 구획 정보 — 면적과 치수. 면적만으로는 방향이 있는 질문("몇 줄 들어가나")에
   // 답할 수 없어서 서버가 최소회전 외접사각형의 두 변을 함께 준다.
@@ -2190,7 +2613,7 @@
   //
   // 식재량(줄 수·그루 수)은 아직 싣지 않는다 — 간격을 받는 칸이 화면에 없고,
   // 간격 없이는 서버도 세지 않는다(capacity_estimate 는 None 을 돌려준다).
-  function _plantingDimsHtml(p) {
+  function _plotDimsHtml(p) {
     var d = p.dims;
     var rows = '';
     if (p.area_m2 != null) {
@@ -2215,21 +2638,21 @@
            '</div>' + rows + note + '</div>';
   }
 
-  // 이력 목록을 채운다. rows 는 /api/geo/plantings/history 의 history 배열.
-  function fillPlantingHistory(scopeEl, rows, currentUuid) {
+  // 이력 목록을 채운다. rows 는 /api/geo/plots/history 의 history 배열.
+  function fillPlotHistory(scopeEl, rows, currentUuid) {
     if (!scopeEl) return;
-    var list = scopeEl.querySelector('.aot-ov-planting-history-list');
+    var list = scopeEl.querySelector('.aot-ov-plot-history-list');
     if (!list) return;
     var others = (rows || []).filter(function (r) { return r.unique_id !== currentUuid; });
     if (!others.length) {
       list.innerHTML = '<span class="aot-ov-muted">' +
-                       _esc(_t('No past plantings on this spot.')) + '</span>';
+                       _esc(_t('No past plots on this spot.')) + '</span>';
       return;
     }
     var html = '';
     others.forEach(function (h) {
-      var period = (h.planted_on || '?') + ' → ' + (h.ended_on || _t('ongoing'));
-      html += '<div class="aot-ov-row"><span>' + _esc(h.crop) +
+      var period = (h.started_on || '?') + ' → ' + (h.ended_on || _t('ongoing'));
+      html += '<div class="aot-ov-row"><span>' + _esc(h.subject) +
               (h.variety ? ' · ' + _esc(h.variety) : '') + '</span><span>' +
               _esc(period) + '</span></div>';
     });
@@ -2237,9 +2660,10 @@
   }
 
   window.AoTMapPopup = {
-    buildPlantingModal:  buildPlantingModal,
-    plantingDefaultSec:  plantingDefaultSec,
-    fillPlantingHistory: fillPlantingHistory,
+    buildPlotModal:  buildPlotModal,
+    buildFacilityPlotsHtml: buildFacilityPlotsHtml,
+    plotDefaultSec:  plotDefaultSec,
+    fillPlotHistory: fillPlotHistory,
     positionDots:      positionDots,
     openOutputSchedule: openOutputSchedule,
     buildActuatorCat:  buildActuatorCat,

@@ -1,11 +1,11 @@
 # coding=utf-8
 """대지/구역 도형을 두둑(식생 구획)으로 분할한다 — 순수 기하 계산.
 
-설계 정본: docs/design/geo-vegetation-planting.md
+설계 정본: docs/design/geo-vegetation-plot.md
 
 ## 왜 필요한가
 
-`create_planting` 은 GeoJSON 폴리곤을 받는데, **LLM 은 구역이 지도 어디에 있는지
+`create_plot` 은 GeoJSON 폴리곤을 받는데, **LLM 은 구역이 지도 어디에 있는지
 알 방법이 없다** — 어떤 도구도 구역 경계 폴리곤을 내주지 않는다. 그래서 좌표를
 지어내면 엉뚱한 자리에 저장되고, 실패했다고 말해주지도 않는다(구역 밖이면
 `zone_uuid` 가 null 로 남을 뿐이다).
@@ -38,7 +38,7 @@ LLM 이 만드는 숫자는 간격 하나뿐이고, 좌표는 하나도 만들�
 주면(둘 중 어느 값이든) 그 값이 항상 이긴다 — 이 기본값 분기는 **생략했을 때만**
 적용된다.
 
-이 분기는 `split_shape()` 하나에만 있다 — 호출자(REST `routes_geo_planting.py`,
+이 분기는 `split_shape()` 하나에만 있다 — 호출자(REST `routes_geo_plot.py`,
 MCP `aot_data_tool_service.py`)는 `orientation` 을 생략(`None`)으로 그냥 통과시켜야
 한다. 예전에는 두 호출자가 각자 `'long'` 을 하드코딩해 두어(두 곳이 따로 놀 여지가
 있었다), 이제 여기 한 곳만 정본이다.
@@ -47,7 +47,7 @@ MCP `aot_data_tool_service.py`)는 `orientation` 을 생략(`None`)으로 그냥
 
 긴 변/짧은 변 두 프리셋으로는 부족한 경우가 있다 — 지도에서 구역 중심을 지나는
 기준선을 눈으로 보면서 원하는 각도로 돌려 나누고 싶을 때다(지도 UI 참조:
-`aot-geo-vegetation.js`). `angle_deg` 를 주면 `_longest_edge_angle()`/
+`aot-geo-plot.js`). `angle_deg` 를 주면 `_longest_edge_angle()`/
 `orientation` 계산을 건너뛰고 그 각도를 조각이 놓이는 방향(elongation
 axis)으로 그대로 쓴다 — `info['orientation_deg']` 와 같은 좌표계(로컬 평면에서
 동쪽=0°, 반시계 방향)다. **`orientation` 과 동시에 주어지면 `angle_deg` 가
@@ -65,7 +65,7 @@ axis)으로 그대로 쓴다 — `info['orientation_deg']` 와 같은 좌표계(
 import logging
 import math
 
-from aot.aot_flask.geo import planting_context
+from aot.aot_flask.geo import plot_context
 
 logger = logging.getLogger(__name__)
 
@@ -110,7 +110,7 @@ def split_shape(shape_or_geom, parts=None, strip_width_cm=None, widths_cm=None,
       (가장자리 여백을 줬으면 그만큼 안으로 들어온 하나). 밭 하나를 통째로 한
       작기로 쓰는 것이 가장 흔한 경우인데, 예전에는 2 이상만 받아서 그 사람이
       이 도구를 아예 못 썼다 — 도형을 손으로 다시 그려야 했다.
-    - `parts=3`            → 3등분. 조각 하나가 작기 하나(GeoPlanting 한 행).
+    - `parts=3`            → 3등분. 조각 하나가 작기 하나(GeoPlot 한 행).
     - `strip_width_cm=160` → 1.6m 띠. 두둑 단위로 관리할 때.
     - `parts=5, strip_width_cm=160` → **둘 다 주면 균등분할이 아니다.** 정확히
       5개, 정확히 1.6m 폭으로 자르고, `5×1.6m` 을 채우고 남는 치수는 도형
@@ -170,7 +170,7 @@ def split_shape(shape_or_geom, parts=None, strip_width_cm=None, widths_cm=None,
     from shapely.ops import transform
 
     geom = (shape_or_geom if isinstance(shape_or_geom, dict)
-            else planting_context.geometry_of(shape_or_geom))
+            else plot_context.geometry_of(shape_or_geom))
     if not geom:
         return None, 'no polygon to split'
 
@@ -225,10 +225,10 @@ def split_shape(shape_or_geom, parts=None, strip_width_cm=None, widths_cm=None,
         if not (0 <= angle_deg < 180):
             return None, 'angle_deg must be 0 or more and less than 180'
 
-    to_m, from_m, _lat0 = planting_context.local_frame(geom)
+    to_m, from_m, _lat0 = plot_context.local_frame(geom)
     if to_m is None:
         return None, 'could not project the shape'
-    poly = planting_context._shapely(geom)
+    poly = plot_context._shapely(geom)
     if poly is None or poly.is_empty:
         return None, 'no polygon to split'
     plane = transform(to_m, poly)
@@ -248,7 +248,7 @@ def split_shape(shape_or_geom, parts=None, strip_width_cm=None, widths_cm=None,
                                     message='.*oriented_envelope.*')
             rect = plane.minimum_rotated_rectangle
     except Exception as exc:
-        logger.warning('planting_split: 외접사각형 실패: %s', exc)
+        logger.warning('plot_split: 외접사각형 실패: %s', exc)
         return None, 'could not find the shape orientation'
     if angle_deg is not None:
         # 사용자가 준 각도가 이긴다 — orientation 은 여기서부터 쓰이지 않는다.
@@ -379,7 +379,7 @@ def split_shape(shape_or_geom, parts=None, strip_width_cm=None, widths_cm=None,
                 continue
             back = affinity.rotate(part, angle, origin=origin)
             lonlat = transform(from_m, back)
-            area = planting_context.shapely_area_m2(lonlat)
+            area = plot_context.shapely_area_m2(lonlat)
             covered += area
             strips.append({
                 'index': len(strips) + 1,
@@ -392,7 +392,7 @@ def split_shape(shape_or_geom, parts=None, strip_width_cm=None, widths_cm=None,
         return None, ('nothing usable came out — every strip was shorter than '
                       '%.1f m' % min_bed_length_m)
 
-    source_area = planting_context.shapely_area_m2(poly)
+    source_area = plot_context.shapely_area_m2(poly)
 
     # 종횡비는 parts(등분) 모드에서만 낸다. strip_width_cm(두둑)는 가늘고 긴 것이
     # 정상 설계라 경고 대상이 아니다 — 모듈 docstring "orientation" 절 참조.
@@ -424,7 +424,7 @@ def split_shape(shape_or_geom, parts=None, strip_width_cm=None, widths_cm=None,
         if aspect_ratio is not None and aspect_ratio > _ASPECT_RATIO_WARNING:
             if orientation == 'long':
                 note += (" Pieces are long and narrow (%.1f:1) — for squarer "
-                         "plots better suited to splitting between crops, pass "
+                         "plots better suited to splitting between subjects, pass "
                          "orientation='short'." % aspect_ratio)
             else:
                 note += (" Pieces are long and narrow (%.1f:1) even along the "

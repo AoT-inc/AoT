@@ -200,7 +200,7 @@ class TestOneDoorInTheUI(unittest.TestCase):
         for gone in ('_recordFormHtml', 'wireRecordAdd', 'aot-ov-record-open'):
             self.assertNotIn(gone, popup)
         veg = _read('aot_flask', 'static', 'js', 'widgets', 'AoT_map',
-                    'aot-map-vegetation.js')
+                    'aot-map-plot.js')
         self.assertNotIn('wireRecordAdd', veg)
 
     def test_map_modal_still_shows_both_in_one_block(self):
@@ -323,10 +323,10 @@ class TestMapPinsOnlyForNotesWithoutTheirOwnShape(unittest.TestCase):
     def test_it_is_a_whitelist_not_a_blacklist(self):
         """새 대상 종류가 생길 때 기본값이 "핀 없음" 이어야 한다. 블랙리스트면
         종류를 추가할 때마다 여기 넣는 것을 기억해야 하고, 빠뜨리면 그 종류만
-        조용히 핀이 돋는다 — 지금 planting 이 그랬다."""
+        조용히 핀이 돋는다 — 지금 plot 이 그랬다."""
         block = self.src.split('_PIN_TARGET_TYPES = (', 1)[1].split(')', 1)[0]
         self.assertIn('map_location', block)
-        for shaped in ('planting', 'facility', 'GeoFacility', 'zone', 'site',
+        for shaped in ('plot', 'facility', 'GeoFacility', 'zone', 'site',
                        'GeoShape', 'device'):
             self.assertNotIn("'%s'" % shaped, block)
 
@@ -341,7 +341,7 @@ class TestMapPinsOnlyForNotesWithoutTheirOwnShape(unittest.TestCase):
         그래서 저장이 아니라 노출에서 가른다 — 백필을 지우면 안 된다."""
         self.assertIn('def resolve_target_gps', self.src)
         body = _fn(self.src, 'resolve_target_gps')
-        self.assertIn('planting', body)
+        self.assertIn('plot', body)
         self.assertIn('representative_point', body)
         create = _fn(self.src, 'api_notes_create')
         self.assertIn('resolve_target_gps(', create)

@@ -16,7 +16,7 @@ from aot.databases.models import GeoContainmentCache
 from aot.utils.time_utils import utc_now
 
 KIND_SHAPE = 'shape'
-KIND_PLANTING = 'planting'
+KIND_PLANTING = 'plot'
 
 # 무효화를 빠뜨린 경로가 있어도 스스로 낫는 안전망.
 #

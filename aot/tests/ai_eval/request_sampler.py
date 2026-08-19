@@ -63,9 +63,9 @@ _TEMPLATES = [
     ('core_schedule_read', None, '일정', (),
      ['{period} 예정된 일정 뭐 있어?', '이번 주 일정 알려줘'],
      ['search_schedule']),
-    ('core_planting_list', None, '조회', (),
+    ('core_plot_list', None, '조회', (),
      ['지금 뭐 심어져 있어?', '재배 중인 작물 목록 보여줘'],
-     ['list_plantings']),
+     ['list_plots']),
     ('core_control', None, '제어', ('device',),
      ['{device} 좀 켜줘', '{device} 꺼줘'],
      ['operate_device', 'set_output_state']),
@@ -124,16 +124,16 @@ _TEMPLATES = [
     ('drw_space_equipment', 'space', '조회', ('site',),
      ['{site}에 설치된 관수 설비가 뭐뭐 있어?', '{site}에 그려둔 설비 목록 보여줘'],
      ['get_map_equipment']),
-    ('drw_space_planting_new', 'space', '설정', ('site', 'crop'),
+    ('drw_space_plot_new', 'space', '설정', ('site', 'crop'),
      ['{site}에 {crop} 심었다고 재배 구획 하나 등록해줘',
       '{site}에 {crop} 재배 시작한 걸로 만들어줘'],
-     ['create_planting']),
+     ['create_plot']),
     ('drw_space_tree', 'space', '조회', (),
      ['농장 구역 구조를 계층으로 보여줘', '사이트-구역-시설 구조가 어떻게 돼?'],
      ['get_spatial_tree']),
     ('drw_space_crop_status', 'space', '조회', ('crop',),
      ['{crop} 지금 생육 상태가 어때?', '{crop} 재배 이력 좀 보여줘'],
-     ['get_crop_status', 'get_planting_history']),
+     ['get_crop_status', 'get_plot_history']),
 
     # measurement — 센서 값·환경·날씨·에너지
     ('drw_meas_forecast', 'measurement', '조회', (),
@@ -209,7 +209,7 @@ def catalog_from_db(db_path):
             if name.strip():
                 cat['sensor'].append(name.strip())
         for (crop, variety) in conn.execute(
-                'select crop, variety from geo_planting where ended_on is null'):
+                'select crop, variety from geo_plot where ended_on is null'):
             for v in (crop, variety):
                 if v and v.strip():
                     cat['crop'].append(v.strip())

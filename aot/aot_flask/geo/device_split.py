@@ -9,9 +9,9 @@
 지금까지는 구역 폴리곤을 **손으로 다섯 번 그려야** 했다. 구역 경계를 눈대중으로
 맞추다 보니 조각마다 폭이 달라지고, 비스듬한 밭에서는 특히 어렵다.
 
-식생 구획 나누기(`planting_split`)가 이미 같은 문제를 푼다 — 다만 결과물이
-`GeoPlanting` 이다. 기하 계산은 완전히 같으므로 **엔진을 그대로 쓰고**
-(`planting_split.split_shape`), 만들어지는 행만 `GeoShape(type='device')` 로
+식생 구획 나누기(`plot_split`)가 이미 같은 문제를 푼다 — 다만 결과물이
+`GeoPlot` 이다. 기하 계산은 완전히 같으므로 **엔진을 그대로 쓰고**
+(`plot_split.split_shape`), 만들어지는 행만 `GeoShape(type='device')` 로
 바꾼 것이 이 모듈이다.
 
 ## 장치 연결 — 조각 안의 마커로 자동 배정
@@ -34,12 +34,12 @@
 import logging
 
 from aot.aot_flask.extensions import db
-from aot.aot_flask.geo import device_binding, device_membership, planting_split
+from aot.aot_flask.geo import device_binding, device_membership, plot_split
 from aot.databases.models import GeoShape
 
 logger = logging.getLogger(__name__)
 
-# 장치 담당 구역은 두둑이 아니다 — `planting_split` 의 기본 하한(2m, 두둑 기준)을
+# 장치 담당 구역은 두둑이 아니다 — `plot_split` 의 기본 하한(2m, 두둑 기준)을
 # 그대로 쓰면 밸브 하나가 맡는 좁은 구역이 조용히 버려진다. 여기서는 자투리만
 # 걸러낼 정도로만 낮춘다.
 _MIN_AREA_LENGTH_M = 0.5
@@ -68,7 +68,7 @@ def split_shape_into_device_areas(shape, name_base=None, device_kind=None,
                                   **split_kwargs):
     """`shape` 를 잘라 장치 구역 행들을 만든다 → `(result, 오류문구)`.
 
-    `split_kwargs` 는 `planting_split.split_shape` 와 같다(parts /
+    `split_kwargs` 는 `plot_split.split_shape` 와 같다(parts /
     strip_width_cm / widths_cm / orientation / angle_deg / edge_margin_m).
 
     반환 `result`:
@@ -78,7 +78,7 @@ def split_shape_into_device_areas(shape, name_base=None, device_kind=None,
       - `unassigned`: [{'index', 'reason': 'no_device'|'ambiguous', 'candidates'}]
     """
     split_kwargs.setdefault('min_bed_length_m', _MIN_AREA_LENGTH_M)
-    strips, info = planting_split.split_shape(shape, **split_kwargs)
+    strips, info = plot_split.split_shape(shape, **split_kwargs)
     if strips is None:
         return None, info          # info 가 오류문구다
 

@@ -528,15 +528,20 @@ WIDGET_INFORMATION = {
             )
         },
         {
-            # 식생 구획(작기) 레이어. 라벨이 이미 많은 화면이라 기본은 켜되
-            # 줌 16 이상에서만 라벨이 뜬다(label-layers 의 vegetation 프리셋).
-            # 지도의 레이어 컨트롤에서도 같은 축을 끄고 켤 수 있다.
-            'id': 'show_vegetation',
+            # 구획 레이어. 라벨이 이미 많은 화면이라 기본은 켜되 줌 16 이상
+            # 에서만 라벨이 뜬다(label-layers 의 plot 프리셋). 지도의 레이어
+            # 컨트롤에서도 같은 축을 끄고 켤 수 있다.
+            #
+            # ⚠ 옛 id 는 `show_vegetation` 이었다(p6_44 전). 이미 저장된 위젯
+            # 설정은 그 키로 남아 있으므로 **클라이언트가 둘 다 읽는다** — 새
+            # 키만 보면 일부러 꺼 둔 사람의 레이어가 업그레이드에서 조용히
+            # 다시 켜진다.
+            'id': 'show_plots',
             'type': 'bool',
             'default_value': True,
-            'name': lazy_gettext('Show Plantings'),
+            'name': lazy_gettext('Show Plots'),
             'phrase': lazy_gettext(
-                'Show vegetation plots (what is planted where). '
+                'Show plots (what is where). '
                 'Plot labels appear when zoomed in.'
             )
         },

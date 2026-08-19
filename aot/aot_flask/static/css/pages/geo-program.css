@@ -1,0 +1,41 @@
+/* 설정 > 식생(재배 프로그램) — 목록·단계 편집.
+
+   공용 클래스(aot-entry-*, aot-modal-*)로 안 되는 **격자만** 여기 둔다.
+   색·버튼·입력은 전부 공용을 그대로 쓴다(이 저장소 규칙). */
+
+/* 단계 한 줄: 이름 / 키 / 기간 / 동작 — 화면이 좁아지면 두 줄로 접힌다. */
+.veg-stage-row {
+  display: grid;
+  grid-template-columns: 2fr 1.5fr 1fr auto;
+  gap: 0.5em;
+  align-items: center;
+}
+.veg-stage-head {
+  display: grid;
+  grid-template-columns: 2fr 1.5fr 1fr auto;
+  gap: 0.5em;
+  opacity: 0.75;
+}
+@media (max-width: 768px) {
+  .veg-stage-row, .veg-stage-head { grid-template-columns: 1fr 1fr; }
+}
+
+/* 단계 목표: 여섯 칸이 한 줄에 다 들어가지 않으므로 흐르게 둔다. */
+.veg-stage-targets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5em 0.75em;
+  padding: 0.5em 0 0.75em 1em;
+}
+.veg-target-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15em;
+  min-width: 6.5em;
+  margin: 0;
+}
+.veg-target-field em { opacity: 0.7; font-style: normal; }
+.veg-stage-targets .aot-modal-body-text { flex-basis: 100%; }
+
+/* 목록 항목 아래 편집 영역 — 항목과 시각적으로 이어 보이게. */
+.aot-entry-detail { padding: 0 0 0.75em 0; }

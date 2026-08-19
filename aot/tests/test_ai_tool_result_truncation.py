@@ -6,7 +6,7 @@ anthropic.py / gemini.py) append each tool's raw JSON result to the running
 message/contents list with no length guard, unlike _build_prompt()'s initial
 prompt, which is truncated via get_context_budget(). Because those APIs are
 stateless, every subsequent fc_turn resends the whole accumulated history —
-one unfiltered tool call (e.g. list_plantings with no map_id) can burn a
+one unfiltered tool call (e.g. list_plots with no map_id) can burn a
 request's entire token budget. truncate_tool_result_json() caps each
 individual tool result before it enters that loop; these tests pin that it
 actually shrinks oversized payloads instead of passing them through raw, and
@@ -45,7 +45,7 @@ def test_oversized_list_field_is_shrunk_with_note():
     ai = ConcreteAI(model_tier='standard')  # 12000 char budget
     plots = [{"crop": f"crop_{i}", "variety": f"variety_{i}", "area_m2": i * 1.5}
              for i in range(200)]
-    exec_result = {"count": len(plots), "plantings": plots}
+    exec_result = {"count": len(plots), "plots": plots}
 
     raw_unbounded = json.dumps(exec_result, ensure_ascii=False)
     assert len(raw_unbounded) > ai.TOOL_RESULT_MAX_CHARS['standard'], \
@@ -54,10 +54,10 @@ def test_oversized_list_field_is_shrunk_with_note():
     shrunk_raw = ai.truncate_tool_result_json(exec_result)
     parsed = json.loads(shrunk_raw)  # must still be valid JSON
 
-    assert len(parsed["plantings"]) < len(plots)
-    assert len(parsed["plantings"]) == max(1, len(plots) // 4)
-    assert "_plantings_truncated" in parsed
-    assert str(len(plots)) in parsed["_plantings_truncated"]
+    assert len(parsed["plots"]) < len(plots)
+    assert len(parsed["plots"]) == max(1, len(plots) // 4)
+    assert "_plots_truncated" in parsed
+    assert str(len(plots)) in parsed["_plots_truncated"]
     assert len(shrunk_raw) <= ai.TOOL_RESULT_MAX_CHARS['standard']
 
 
@@ -108,7 +108,7 @@ def test_tier_budgets_are_distinct_and_ordered():
 def test_unknown_tier_falls_back_to_standard_budget():
     ai = ConcreteAI(model_tier='some_future_tier')
     plots = [{"crop": f"crop_{i}"} for i in range(2000)]
-    exec_result = {"plantings": plots}
+    exec_result = {"plots": plots}
     shrunk_raw = ai.truncate_tool_result_json(exec_result)
     assert len(shrunk_raw) <= AbstractAI.TOOL_RESULT_MAX_CHARS['standard']
 

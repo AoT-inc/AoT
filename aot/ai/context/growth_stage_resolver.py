@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
 # @ANCHOR: STAGE_DURATION_MAP
-# Crop-type → ordered list of (stage_id, max_days_after_planting).
+# Crop-type → ordered list of (stage_id, max_days_after_plot).
 # Stages are matched by first entry where days_after_planting <= max_days.
 # Source: RDA greenhouse management guidelines (static Phase 2a fallback).
 # ---------------------------------------------------------------------------
@@ -31,7 +31,7 @@ STAGE_DURATION_MAP: dict[str, list[tuple[str, int]]] = {
     # Fruiting vegetables
     "tomato": [
         ("seedling",     21),
-        ("transplanting",28),
+        ("transplant",28),
         ("vegetative",   56),
         ("flowering",    84),
         ("fruit_set",   105),
@@ -40,7 +40,7 @@ STAGE_DURATION_MAP: dict[str, list[tuple[str, int]]] = {
     ],
     "cherry_tomato": [
         ("seedling",     21),
-        ("transplanting",28),
+        ("transplant",28),
         ("vegetative",   56),
         ("flowering",    84),
         ("fruit_set",   105),
@@ -49,7 +49,7 @@ STAGE_DURATION_MAP: dict[str, list[tuple[str, int]]] = {
     ],
     "paprika": [
         ("seedling",     28),
-        ("transplanting",35),
+        ("transplant",35),
         ("vegetative",   70),
         ("flowering",   100),
         ("fruit_set",   120),
@@ -58,7 +58,7 @@ STAGE_DURATION_MAP: dict[str, list[tuple[str, int]]] = {
     ],
     "cucumber": [
         ("seedling",     14),
-        ("transplanting",21),
+        ("transplant",21),
         ("vegetative",   42),
         ("flowering",    56),
         ("fruiting",     80),
@@ -66,7 +66,7 @@ STAGE_DURATION_MAP: dict[str, list[tuple[str, int]]] = {
     ],
     "strawberry": [
         ("seedling",     21),
-        ("transplanting",35),
+        ("transplant",35),
         ("vegetative",   70),
         ("flower_initiation", 90),
         ("flowering",   110),
@@ -75,7 +75,7 @@ STAGE_DURATION_MAP: dict[str, list[tuple[str, int]]] = {
     ],
     "lettuce": [
         ("seedling",     10),
-        ("transplanting",17),
+        ("transplant",17),
         ("vegetative",   35),
         ("harvest",     999),
     ],

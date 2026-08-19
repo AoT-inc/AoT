@@ -88,7 +88,7 @@ class TestCacheSemantics(unittest.TestCase):
         """후보를 이번 질의 범위로 잡으면, '3-2' 만 물어 본 순간 3-1 의
         구획들이 "부모 없음" 으로 캐시되고 그 뒤 '3포장' 질의가 캐시 히트로
         그것들을 통째로 빠뜨린다 — 에러 없이 결과만 줄어든다."""
-        body = _fn(self.gh, '_planting_ids_inside')
+        body = _fn(self.gh, '_plot_ids_inside')
         self.assertIn("GeoShape.type.in_(('site', 'zone'))", body)
         self.assertIn('parent in want', body)
 
@@ -112,8 +112,8 @@ class TestInvalidationIsWired(unittest.TestCase):
     """기하를 바꾸는 경로는 캐시를 버려야 한다. 안 버리면 화면과 AI 가 낡은
     소속을 보고, 증상은 에러가 아니라 "왜 저 구획이 저 구역에 잡히지" 다."""
 
-    def test_planting_writes_invalidate(self):
-        body = _fn(_read('aot_flask', 'geo', 'planting_io.py'),
+    def test_plot_writes_invalidate(self):
+        body = _fn(_read('aot_flask', 'geo', 'plot_io.py'),
                    '_invalidate_caches')
         self.assertIn('containment_cache.invalidate()', body)
 
@@ -178,7 +178,7 @@ class TestTimezoneNaiveComparison(unittest.TestCase):
         느리다" 는 반대 결론이 나왔다."""
         gh = _read('utils', 'geo_hierarchy.py')
         for fn in ('build_geo_parent_map', 'geo_descendant_shapes',
-                   'descendant_target_ids', '_planting_ids_inside'):
+                   'descendant_target_ids', '_plot_ids_inside'):
             self.assertIn('use_cache', _fn(gh, fn), '%s 에 스위치 없음' % fn)
 
 

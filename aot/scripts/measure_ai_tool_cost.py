@@ -78,8 +78,8 @@ def measure_manifest():
 # 도구의 응답 크기는 아무도 안 본다.
 PAYLOAD_PROBES = [
     ('get_spatial_tree', {}),
-    ('list_plantings', {}),
-    ('list_plantings(with_sensors)', {'with_sensors': True}),
+    ('list_plots', {}),
+    ('list_plots(with_sensors)', {'with_sensors': True}),
     ('get_zone_sensor_summary', {'measurement_type': 'volumetric_water_content'}),
     ('search_devices', {'query': '온습도'}),
     ('get_device_list', {}),
@@ -92,8 +92,8 @@ def measure_payload():
 
     handlers = {
         'get_spatial_tree': svc.get_spatial_tree,
-        'list_plantings': svc.list_plantings,
-        'list_plantings(with_sensors)': svc.list_plantings,
+        'list_plots': svc.list_plots,
+        'list_plots(with_sensors)': svc.list_plots,
         'get_zone_sensor_summary': getattr(svc, 'get_zone_sensor_summary', None),
         'search_devices': svc.search_devices,
         'get_device_list': getattr(svc, 'get_device_list_tool', None),

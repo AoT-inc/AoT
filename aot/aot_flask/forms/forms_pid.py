@@ -126,7 +126,7 @@ class PIDModBase(FlaskForm):
         validators=[Optional()],
         widget=NumberInput(step='any'))
     schedule_start_time = StringField(
-        lazy_gettext('Schedule Start (planting date)'),
+        lazy_gettext('Schedule Start (start date)'),
         validators=[Optional()])
     schedule_week_offset = DecimalField(
         lazy_gettext('Week Offset'),

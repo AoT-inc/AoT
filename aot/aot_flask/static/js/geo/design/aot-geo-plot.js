@@ -1,12 +1,12 @@
 /**
- * aot-geo-vegetation.js
+ * aot-geo-plot.js
  *
  * 식생 구획(작기) UI — geo/design 의 "식생" 모드.
  * 설계 정본: docs/design/geo-vegetation-planting.md
  *
  * 다른 도형과 저장처가 다르다. 식생은 GeoShape 가 아니라 별도 테이블
- * (geo_planting)이고, 그래서 이 모듈은 saveDesign()/saveOverlays() 를 **쓰지
- * 않는다.** typesToSync 에 'vegetation' 을 넣지 말 것 — 넣으면 기존 전량교체
+ * (geo_plot)이고, 그래서 이 모듈은 saveDesign()/saveOverlays() 를 **쓰지
+ * 않는다.** typesToSync 에 'plot' 을 넣지 말 것 — 넣으면 기존 전량교체
  * 저장 경로가 식생을 GeoShape 로 착각해 지운다.
  *
  * 겹침은 정상이다(간작·혼작). 그래서 클릭하면 최상단 하나를 고르는 대신
@@ -14,12 +14,12 @@
  * 있고(전량삭제), 식생에서는 그 상황이 예외가 아니라 기본이다.
  */
 
-class AoTGeoVegetation {
+class AoTGeoPlot {
     constructor(parent) {
         this.parent = parent;
-        this._modalId = 'geoVegetationModal';
+        this._modalId = 'geoPlotModal';
         this.layers = new Map();      // unique_id → layer
-        this.data = new Map();        // unique_id → planting dict
+        this.data = new Map();        // unique_id → plot dict
         this._loaded = false;
 
         // 분할 미리보기 — 저장되지 않는 제안 하나. 지도에는 자기 GL 소스로만
@@ -46,6 +46,63 @@ class AoTGeoVegetation {
         } else if (window.showToast) {
             window.showToast(msg, level || 'info');
         }
+    }
+
+    /**
+     * 관리 프로그램 목록(식생 종류만) — 폼의 선택지.
+     *
+     * 한 번만 받아 둔다. 프로그램은 자주 바뀌지 않고 구획마다 같은 목록을 쓴다.
+     * `kind=vegetation` 으로 좁히는 이유는 가축·시설물 프로그램이 식생 구획의
+     * 선택지에 섞이면 안 되기 때문이다.
+     */
+    _loadPrograms(kind) {
+        // **종류별로 캐시한다.** 한 벌만 두면 종류를 바꾼 뒤 목록이 옛 종류의
+        // 것으로 남고, 그 프로그램을 고르면 서버가 거절한다 — 화면에 보이는
+        // 선택지가 저장되지 않는 상태가 된다.
+        kind = kind || 'vegetation';
+        this._programs = this._programs || {};
+        if (this._programs[kind]) return Promise.resolve(this._programs[kind]);
+        return fetch('/api/geo/programs?kind=' + encodeURIComponent(kind),
+                     { credentials: 'same-origin' })
+            .then(r => r.json())
+            .then(res => {
+                this._programs[kind] = (res && res.ok) ? (res.programs || []) : [];
+                return this._programs[kind];
+            })
+            .catch(() => { this._programs[kind] = []; return this._programs[kind]; });
+    }
+
+    /** 대상 종류 — `GeoProgram.kind` 와 같은 어휘. */
+    _kindRowHtml(p, row) {
+        const cur = p.kind || 'vegetation';
+        const labels = {
+            vegetation: this._t('Vegetation'), livestock: this._t('Livestock'),
+            facility: this._t('Facility'), other: this._t('Other')
+        };
+        let opts = '';
+        ['vegetation', 'livestock', 'facility', 'other'].forEach(k => {
+            opts += `<option value="${k}"` + (k === cur ? ' selected' : '') +
+                    `>${this._esc(labels[k])}</option>`;
+        });
+        return row(this._t('Kind'),
+                   `<select class="aot-modern-input form-control"
+                            data-veg-field="kind">${opts}</select>`);
+    }
+
+    /** 프로그램 선택 줄. 목록이 비어 있으면(만든 것이 없으면) 내지 않는다. */
+    _programRowHtml(p, row) {
+        const list = (this._programs || {})[p.kind || 'vegetation'] || [];
+        if (!list.length) return '';
+        const cur = (p.program && p.program.unique_id) || '';
+        let opts = `<option value="">${this._esc(this._t('No program'))}</option>`;
+        list.forEach(x => {
+            const label = x.name + (x.variety ? ' · ' + x.variety : '');
+            opts += `<option value="${this._esc(x.unique_id)}"` +
+                    (x.unique_id === cur ? ' selected' : '') + `>${this._esc(label)}</option>`;
+        });
+        return row(this._t('Program'),
+                   `<select class="aot-modern-input form-control"
+                            data-veg-field="program_uuid">${opts}</select>`);
     }
 
     _csrf() {
@@ -78,11 +135,11 @@ class AoTGeoVegetation {
         return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
     }
 
-    /** 구획 색 — 개별 지정이 이기고, 없으면 테마의 vegetation. */
-    colorOf(planting) {
-        if (planting && planting.color) return planting.color;
+    /** 구획 색 — 개별 지정이 이기고, 없으면 테마의 plot. */
+    colorOf(plot) {
+        if (plot && plot.color) return plot.color;
         return window.AoTGeoTheme
-            ? window.AoTGeoTheme.color('vegetation')
+            ? window.AoTGeoTheme.color('plot')
             : '#6a8f3c';
     }
 
@@ -100,12 +157,12 @@ class AoTGeoVegetation {
         if (!mapUuid) return Promise.resolve([]);
         if (this._loaded && !force) return Promise.resolve([...this.data.values()]);
 
-        return fetch(`/api/geo/plantings?map_uuid=${encodeURIComponent(mapUuid)}`)
+        return fetch(`/api/geo/plots?map_uuid=${encodeURIComponent(mapUuid)}`)
             .then(r => r.json())
             .then(res => {
                 if (!res || !res.ok) return [];
                 this._clearLayers();
-                (res.plantings || []).forEach(p => this._addLayer(p));
+                (res.plots || []).forEach(p => this._addLayer(p));
                 this._loaded = true;
                 this._renderChips();
                 this._verifyAttached();
@@ -116,7 +173,7 @@ class AoTGeoVegetation {
                 if (this.parent && this.parent._applyShapeVisibility) {
                     this.parent._applyShapeVisibility();
                 }
-                return res.plantings || [];
+                return res.plots || [];
             })
             .catch(() => []);
     }
@@ -145,44 +202,51 @@ class AoTGeoVegetation {
         this.data.clear();
     }
 
-    /** planting dict → 지도 레이어. 이미 있으면 갱신. */
-    _addLayer(planting) {
-        if (!planting || !planting.feature) return null;
-        this.data.set(planting.unique_id, planting);
+    /** plot dict → 지도 레이어. 이미 있으면 갱신.
+     *
+     * **시설 구획(`feature` 없음)은 여기서 그리지 않는다.** 기하가 없어서가
+     * 아니라 — 서버는 `derived_feature` 로 자리를 준다 — 이 페이지가 *도형을
+     * 만들고 고치는 곳*이기 때문이다. 편집할 수 없는 것을 편집기에 그려 놓으면
+     * 사람은 그것을 옮기거나 지우려 한다. 온실 구획은 시설 편집기의 식생
+     * 스텝에서 다루고, 지도에서 보는 것은 대시보드 위젯이 맡는다.
+     */
+    _addLayer(plot) {
+        if (!plot || !plot.feature) return null;
+        this.data.set(plot.unique_id, plot);
 
-        const existing = this.layers.get(planting.unique_id);
+        const existing = this.layers.get(plot.unique_id);
         if (existing) {
-            this._queueAttach(existing, planting);
+            this._queueAttach(existing, plot);
             return existing;
         }
 
         let layer = null;
         try {
-            const feature = JSON.parse(JSON.stringify(planting.feature));
+            const feature = JSON.parse(JSON.stringify(plot.feature));
             feature.properties = feature.properties || {};
             // aot_type 은 렌더·스타일 라우팅용 표시일 뿐 저장되지 않는다
             // (이 레이어는 saveOverlays 경로에 실리지 않는다).
-            feature.properties.aot_type = 'vegetation';
-            feature.properties.planting_uuid = planting.unique_id;
-            feature.properties.name = planting.name || planting.crop;
+            feature.properties.aot_type = 'plot';
+            feature.properties.plot_uuid = plot.unique_id;
+            feature.properties.name = plot.name || plot.subject;
 
             layer = this._layerFromFeature(feature);
             if (!layer) return null;
             layer.feature = feature;
-            layer._aotPlantingUuid = planting.unique_id;
+            layer._aotPlotUuid = plot.unique_id;
             // setStyle() 은 첫 줄이 `if (!this._map) return` 이다 — 실제 GL
             // 부착은 아래 큐에서 하지만, 그 전에 setStyle() 이 불려도 최소한
             // 캐시(styleCache)에는 쌓이도록 참조를 미리 둔다.
             layer._map = this.parent.map;
 
-            this._bindClick(layer, planting.unique_id);
-            this._queueAttach(layer, planting);
+            this._bindClick(layer, plot.unique_id);
+            this._queueAttach(layer, plot);
         } catch (e) {
-            console.error('[Vegetation] 레이어 생성 실패:', e);
+            console.error('[Plot] 레이어 생성 실패:', e);
             return null;
         }
 
-        this.layers.set(planting.unique_id, layer);
+        this.layers.set(plot.unique_id, layer);
         return layer;
     }
 
@@ -201,9 +265,9 @@ class AoTGeoVegetation {
      * 초기 표시상태 반영까지 다 하는 더 성숙한 경로라 이제 그것 하나만
      * 쓴다(다른 도형 종류가 쓰는 것과 같은 관용구).
      */
-    _queueAttach(layer, planting) {
+    _queueAttach(layer, plot) {
         if (!this._attachQueue) this._attachQueue = [];
-        this._attachQueue.push({ layer, planting });
+        this._attachQueue.push({ layer, plot });
         if (!this._attachDraining) this._drainAttachQueue();
     }
 
@@ -212,15 +276,15 @@ class AoTGeoVegetation {
         const step = () => {
             const item = this._attachQueue.shift();
             if (!item) { this._attachDraining = false; return; }
-            const { layer, planting } = item;
+            const { layer, plot } = item;
             const store = this.parent.layerStorage &&
-                          this.parent.layerStorage['vegetation'];
+                          this.parent.layerStorage['plot'];
             if (store && store.addLayer) store.addLayer(layer);
             // 편집 도구가 layerStorage 를 순회해 찾을 수 있게 위에서 이미
             // 등록됐다. 혹시 store.addLayer() 가 스타일 미준비 등으로 못
             // 붙였으면 한 번 더 시도한다(안전망).
             this._ensureOnMap(layer);
-            this._styleLayer(layer, planting);
+            this._styleLayer(layer, plot);
             if (this._emphasis !== false && layer.bringToFront) {
                 try { layer.bringToFront(); } catch (e) {}
             }
@@ -243,7 +307,7 @@ class AoTGeoVegetation {
             const layers = window.AoTGeoLayer.fromGeoJSON(feature);
             return (layers && layers[0]) || null;
         }
-        console.warn('[Vegetation] AoTGeoLayer 를 찾지 못해 구획을 그리지 못했다');
+        console.warn('[Plot] AoTGeoLayer 를 찾지 못해 구획을 그리지 못했다');
         return null;
     }
 
@@ -306,9 +370,9 @@ class AoTGeoVegetation {
      * 없다. 그래서 활성 모드에서는 진하게·굵게 그리고, 다른 모드에서는 배경으로
      * 물러난다(zone 을 그릴 때 식생이 시야를 가리면 그쪽이 방해가 된다).
      */
-    _styleLayer(layer, planting) {
+    _styleLayer(layer, plot) {
         if (!layer || !layer.setStyle) return;
-        const color = this.colorOf(planting);
+        const color = this.colorOf(plot);
         const on = this._emphasis !== false;
         layer.setStyle({
             color: color,
@@ -320,7 +384,7 @@ class AoTGeoVegetation {
             fillOpacity: on ? 0.45 : 0.20,
             weight: on ? 4 : 2,
             opacity: on ? 1 : 0.75,
-            dashArray: planting && planting.active === false ? '4,4' : null
+            dashArray: plot && plot.active === false ? '4,4' : null
         });
     }
 
@@ -368,12 +432,12 @@ class AoTGeoVegetation {
     // label_aux 는 GeoShape 라 식생을 지워도 남아 고아가 되고(부모 매칭이
     // node_id 기반이라 식생과 이어지지 않는다), 라벨 위치는 그 구획의 정보이지
     // 별도 도형이 아니다.
-    _labelPoint(planting) {
-        const props = (planting.feature && planting.feature.properties) || {};
+    _labelPoint(plot) {
+        const props = (plot.feature && plot.feature.properties) || {};
         if (Array.isArray(props.label_lnglat) && props.label_lnglat.length === 2) {
             return props.label_lnglat;              // 사람이 옮긴 자리
         }
-        const geom = planting.feature && planting.feature.geometry;
+        const geom = plot.feature && plot.feature.geometry;
         if (!geom) return null;
         try {
             if (window.turf && window.turf.pointOnFeature) {
@@ -407,19 +471,19 @@ class AoTGeoVegetation {
         this._chips = [];
     }
 
-    _renderChip(planting) {
+    _renderChip(plot) {
         if (!window.maplibregl || !window.maplibregl.Marker) return;
-        const pos = this._labelPoint(planting);
-        if (!pos || !planting.crop) return;
+        const pos = this._labelPoint(plot);
+        if (!pos || !plot.subject) return;
         const map = this.parent.map;
         const native = map._originalMap || (map.getNativeMap && map.getNativeMap()) ||
                        map._mlMap || map;
 
         const el = document.createElement('div');
-        el.className = 'aot-sensor-map-marker aot-bay-chip aot-vegetation-chip';
+        el.className = 'aot-sensor-map-marker aot-bay-chip aot-plot-chip';
         el.innerHTML = '<div class="aot-bay-chip-name"></div>';
-        el.querySelector('.aot-bay-chip-name').textContent = planting.crop;
-        const color = this.colorOf(planting);
+        el.querySelector('.aot-bay-chip-name').textContent = plot.subject;
+        const color = this.colorOf(plot);
         el.style.background = color;
         el.style.color = this._readableOn(color);
         el.style.cursor = 'move';
@@ -443,28 +507,28 @@ class AoTGeoVegetation {
         // 고치는 것은 작물·품종·기간·색 같은 **도형의 기본 정보**다.
         el.addEventListener('click', (ev) => {
             ev.stopPropagation();
-            this.select(planting.unique_id);
+            this.select(plot.unique_id);
         });
         el.addEventListener('dblclick', (ev) => {
             ev.stopPropagation();
             ev.preventDefault();
-            this.openEditForm(planting.unique_id);
+            this.openEditForm(plot.unique_id);
         });
 
         // 드래그로 옮긴 자리를 저장한다 — 겹치는 칩을 사람이 풀 수 있어야 한다.
         marker.on('dragend', () => {
             const ll = marker.getLngLat();
-            const feature = JSON.parse(JSON.stringify(planting.feature || {}));
+            const feature = JSON.parse(JSON.stringify(plot.feature || {}));
             feature.properties = feature.properties || {};
             feature.properties.label_lnglat = [ll.lng, ll.lat];
-            this._api('POST', '/api/geo/planting',
-                      { unique_id: planting.unique_id, feature })
+            this._api('POST', '/api/geo/plot',
+                      { unique_id: plot.unique_id, feature })
                 .then(({ status, data }) => {
                     if (status >= 400 || !data.ok) {
                         this._toast(data.message || this._t('Save failed'), 'error');
                         return;
                     }
-                    this.data.set(planting.unique_id, data.planting);
+                    this.data.set(plot.unique_id, data.plot);
                 });
         });
 
@@ -494,24 +558,30 @@ class AoTGeoVegetation {
         const p = this.data.get(uuid);
         if (!p) return;
 
-        const body = this._shell(this._t('Planting'));
-        body.innerHTML = this._formHtml(p);
+        const body = this._shell(this._t('Plot'));
+        const draw = (over) => {
+            body.innerHTML = this._formHtml(Object.assign({}, p, over || {}));
+            this._wireKindChange(body, draw);
+        };
+        // 목록이 늦게 오면 선택지가 빈 채로 그려진다 — 받아 두고 다시 그린다.
+        draw();
+        this._loadPrograms(p.kind).then(() => draw());
 
         this._wireForm(body, (values) => {
-            if (!values.crop) {
-                this._toast(this._t('Crop is required'), 'warning');
+            if (!values.subject) {
+                this._toast(this._t('Subject is required'), 'warning');
                 return;
             }
-            this._api('POST', '/api/geo/planting',
+            this._api('POST', '/api/geo/plot',
                       Object.assign({ unique_id: uuid }, values))
                 .then(({ status, data }) => {
                     if (status >= 400 || !data.ok) {
                         this._toast(data.message || this._t('Save failed'), 'error');
                         return;
                     }
-                    this.data.set(uuid, data.planting);
+                    this.data.set(uuid, data.plot);
                     const layer = this.layers.get(uuid);
-                    if (layer) this._styleLayer(layer, data.planting);
+                    if (layer) this._styleLayer(layer, data.plot);
                     this._renderChips();          // 이름·색이 바뀌면 칩도 바뀐다
                     this._close();
                     this._toast(this._t('Saved'), 'success');
@@ -544,10 +614,10 @@ class AoTGeoVegetation {
 
             const handle = (item) => {
                 if (!item) return;
-                const uuid = item._aotPlantingUuid ||
-                             (item.properties && item.properties.planting_uuid) ||
+                const uuid = item._aotPlotUuid ||
+                             (item.properties && item.properties.plot_uuid) ||
                              (item.feature && item.feature.properties &&
-                              item.feature.properties.planting_uuid);
+                              item.feature.properties.plot_uuid);
                 if (!uuid || seen.has(uuid)) return;
                 seen.add(uuid);
                 this._saveEditedGeometry(uuid, item);
@@ -561,7 +631,7 @@ class AoTGeoVegetation {
     _saveEditedGeometry(uuid, item) {
         const known = this.data.get(uuid);
         if (known && known.active === false) {
-            this._toast(this._t('Ended plantings cannot be reshaped.'), 'warning');
+            this._toast(this._t('Ended plots cannot be reshaped.'), 'warning');
             this.load(true);          // 화면을 서버 상태로 되돌린다
             return;
         }
@@ -575,7 +645,7 @@ class AoTGeoVegetation {
         } catch (e) { geom = null; }
         if (!geom || !geom.type) return;
 
-        this._api('POST', '/api/geo/planting', {
+        this._api('POST', '/api/geo/plot', {
             unique_id: uuid,
             feature: { type: 'Feature', properties: {}, geometry: geom }
         }).then(({ status, data }) => {
@@ -584,7 +654,7 @@ class AoTGeoVegetation {
                 this.load(true);      // 실패했으면 화면도 서버를 따라가야 한다
                 return;
             }
-            this.data.set(uuid, data.planting);
+            this.data.set(uuid, data.plot);
             this._toast(this._t('Saved'), 'success');
         });
     }
@@ -625,13 +695,13 @@ class AoTGeoVegetation {
         const out = [];
         if (!window.turf || !latlng) return out;
         const pt = window.turf.point([latlng.lng, latlng.lat]);
-        this.data.forEach((planting) => {
+        this.data.forEach((plot) => {
             try {
-                const geom = planting.feature && planting.feature.geometry;
+                const geom = plot.feature && plot.feature.geometry;
                 if (!geom) return;
                 // 열린 링에서 turf.booleanPointInPolygon 이 예외를 던지는
                 // 사례가 있어 방어한다 — 실패하면 그 구획만 후보에서 빠진다.
-                if (window.turf.booleanPointInPolygon(pt, geom)) out.push(planting);
+                if (window.turf.booleanPointInPolygon(pt, geom)) out.push(plot);
             } catch (e) { /* skip */ }
         });
         return out;
@@ -643,7 +713,7 @@ class AoTGeoVegetation {
      * 새 목록 CSS 를 만들지 않는다.
      */
     _openPicker(candidates) {
-        const body = this._shell(this._t('Select a planting'), false);
+        const body = this._shell(this._t('Select a plot'), false);
         let html = `<div class="aot-modal-container">`;
         candidates.forEach(p => {
             html += `
@@ -651,7 +721,7 @@ class AoTGeoVegetation {
                     <div class="aot-modal-option-label">
                         <span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:${
                             this._esc(this.colorOf(p))};margin-right:8px;"></span>
-                        ${this._esc(p.crop)}${p.variety ? ' · ' + this._esc(p.variety) : ''}
+                        ${this._esc(p.subject)}${p.variety ? ' · ' + this._esc(p.variety) : ''}
                         ${p.name ? `<div class="aot-modal-body-text">${this._esc(p.name)}</div>` : ''}
                     </div>
                     <div class="aot-modal-option-control">
@@ -697,7 +767,7 @@ class AoTGeoVegetation {
         }
         const gtype = feature.geometry.type;
         if (gtype !== 'Polygon' && gtype !== 'MultiPolygon') {
-            this._toast(this._t('Draw an area (polygon) for a planting.'), 'warning');
+            this._toast(this._t('Draw an area (polygon) for a plot.'), 'warning');
             this._removeDrawn(layer);
             return;
         }
@@ -723,18 +793,23 @@ class AoTGeoVegetation {
     }
 
     _openCreateForm(feature) {
-        const body = this._shell(this._t('New planting'));
+        const body = this._shell(this._t('New plot'));
         const themeColor = this.colorOf(null);
-        body.innerHTML = this._formHtml({ planted_on: this._today(),
-                                          color: themeColor });
+        const base = { started_on: this._today(), color: themeColor };
+        const draw = (over) => {
+            body.innerHTML = this._formHtml(Object.assign({}, base, over || {}));
+            this._wireKindChange(body, draw);
+        };
+        draw();
+        this._loadPrograms('vegetation').then(() => draw());
         this._wireForm(body, (values) => {
             // 색을 손대지 않았으면 저장하지 않는다 — 각인해 두면 나중에 테마
             // 색을 바꿔도 그 구획만 옛 색으로 남는다(색 정본은 theme_config).
             if (values.color && values.color.toLowerCase() === themeColor.toLowerCase()) {
                 delete values.color;
             }
-            if (!values.crop) {
-                this._toast(this._t('Crop is required'), 'warning');
+            if (!values.subject) {
+                this._toast(this._t('Subject is required'), 'warning');
                 return;
             }
             // 상위 zone 을 보내지 않는다 — 그냥 그리면 되고 소속은 서버가
@@ -742,12 +817,12 @@ class AoTGeoVegetation {
             const payload = Object.assign(
                 { map_uuid: this._mapUuid(), feature: feature }, values);
 
-            this._api('POST', '/api/geo/planting', payload).then(({ status, data }) => {
+            this._api('POST', '/api/geo/plot', payload).then(({ status, data }) => {
                 if (status >= 400 || !data.ok) {
                     this._toast(data.message || this._t('Save failed'), 'error');
                     return;
                 }
-                this._addLayer(data.planting);
+                this._addLayer(data.plot);
                 this._close();
                 this._toast(this._t('Saved'), 'success');
             });
@@ -773,11 +848,12 @@ class AoTGeoVegetation {
             </div>`;
 
         return `
-            <div class="aot-modal-group-title">${this._t('Planted')}</div>
+            <div class="aot-modal-group-title">${this._t('This plot')}</div>
             <div class="aot-modal-container">
-                ${row(this._t('Planted'),
+                ${this._kindRowHtml(p, row)}
+                ${row(this._t('What is here'),
                       `<input type="text" class="aot-modern-input form-control"
-                              data-veg-field="crop" value="${v(p.crop)}" autocomplete="off">`)}
+                              data-veg-field="subject" value="${v(p.subject)}" autocomplete="off">`)}
                 ${row(this._t('Variety'),
                       `<input type="text" class="aot-modern-input form-control"
                               data-veg-field="variety" value="${v(p.variety)}">`)}
@@ -786,11 +862,18 @@ class AoTGeoVegetation {
                               data-veg-field="name" value="${v(p.name)}">`)}
             </div>
 
-            <div class="aot-modal-group-title">${this._t('Growing period')}</div>
+            <div class="aot-modal-group-title">${this._t('Program')}</div>
             <div class="aot-modal-container">
-                ${row(this._t('Planted on'),
+                ${this._programRowHtml(p, row)}
+                <div class="aot-modal-body-text">${this._esc(this._t(
+                    'A program brings the stages and the expected end date.'))}</div>
+            </div>
+
+            <div class="aot-modal-group-title">${this._t('Dates')}</div>
+            <div class="aot-modal-container">
+                ${row(this._t('Start date'),
                       `<input type="date" class="aot-modern-input form-control"
-                              data-veg-field="planted_on" value="${v(p.planted_on)}">`)}
+                              data-veg-field="started_on" value="${v(p.started_on)}">`)}
                 ${row(this._t('Expected end'),
                       `<input type="date" class="aot-modern-input form-control"
                               data-veg-field="expected_end_on" value="${v(p.expected_end_on)}">`)}
@@ -801,6 +884,27 @@ class AoTGeoVegetation {
     }
 
     /** 폼 값을 모아 저장 콜백에 넘긴다. 저장 버튼은 모달 푸터에 있다. */
+    /** 종류를 바꾸면 프로그램 목록이 따라와야 한다.
+     *
+     * 안 따라오면 옛 종류의 프로그램이 선택지로 남고, 그것을 고른 저장은
+     * 서버가 거절한다 — **화면에 보이는 선택지가 저장되지 않는** 상태다.
+     * 사람이 이미 적어 넣은 값은 지키고 종류만 갈아 끼운다.
+     */
+    _wireKindChange(root, redraw) {
+        const sel = root.querySelector('[data-veg-field="kind"]');
+        if (!sel) return;
+        sel.onchange = () => {
+            const cur = {};
+            root.querySelectorAll('[data-veg-field]').forEach(el => {
+                cur[el.getAttribute('data-veg-field')] = el.value || '';
+            });
+            cur.kind = sel.value;
+            // 종류가 바뀌면 그 종류에 없는 프로그램은 더 못 쓴다.
+            delete cur.program_uuid;
+            this._loadPrograms(cur.kind).then(() => redraw(cur));
+        };
+    }
+
     _wireForm(root, onSave) {
         const content = root.closest('.modal-content');
         const btn = content && content.querySelector('[data-veg-save]');
@@ -831,12 +935,12 @@ class AoTGeoVegetation {
             const list = detail.features || detail.layers || [];
             const handle = (item) => {
                 if (!item) return;
-                const uuid = item._aotPlantingUuid ||
-                             (item.properties && item.properties.planting_uuid) ||
+                const uuid = item._aotPlotUuid ||
+                             (item.properties && item.properties.plot_uuid) ||
                              (item.feature && item.feature.properties &&
-                              item.feature.properties.planting_uuid);
+                              item.feature.properties.plot_uuid);
                 if (!uuid || !this.data.has(uuid)) return;
-                this._api('DELETE', `/api/geo/planting/${uuid}`)
+                this._api('DELETE', `/api/geo/plot/${uuid}`)
                     .then(() => {
                         this._dropLayer(uuid);
                         this._toast(this._t('Deleted'), 'success');
@@ -868,12 +972,12 @@ class AoTGeoVegetation {
 
     // ── 분할 — 구역 하나를 여러 구획으로 나눈다 ──────────────────────────
     //
-    // 서버(`planting_split`)가 도형의 **긴 변을 따라** 조각을 낸다. 여기서는
+    // 서버(`plot_split`)가 도형의 **긴 변을 따라** 조각을 낸다. 여기서는
     // 그 제안을 점선으로 그려 보여주기만 하고, 만들 때는 apply 가 **같은
     // 파라미터로 다시 계산**한다 — 화면이 본 폴리곤을 되돌려보내지 않는다.
     // 그러면 한 번 계산하고 다른 것을 저장하는 경로가 생기기 때문이고,
     // 분할은 결정적이라 재계산이 "본 것과 저장된 것이 같다" 를 구조로
-    // 보장한다(routes_geo_planting.py 의 같은 주석).
+    // 보장한다(routes_geo_plot.py 의 같은 주석).
     //
     // **진입은 지도 클릭이 아니라 목록이다.** 식생 모드에서 zone 도형은 클릭
     // 대상이 아니고(설계 정본: 겹침이 기본이라 클릭은 식생 후보만 고른다),
@@ -999,7 +1103,7 @@ class AoTGeoVegetation {
         // 같은 값을 두 군데서 배우게 하지 않는다.
         return this._splitFormHtml(areas, prev) +
                this._formHtml(Object.assign(
-                   { planted_on: this._today(), color: this.colorOf(null) },
+                   { started_on: this._today(), color: this.colorOf(null) },
                    prevValues)) +
                `<div class="aot-modal-container">
                     <div class="aot-modal-body-text" data-veg-split-summary></div>
@@ -1072,7 +1176,7 @@ class AoTGeoVegetation {
          * 방향 선택은 등분(parts) 모드에서 늘 의미가 있고, 폭(width) 모드는
          * 원래 긴 변 고정이지만 "정확한 조각 수" 를 같이 채우면 그때부터는
          * parts 처럼 N개를 특정 방향으로 늘어놓는 것이라 방향이 다시 의미를
-         * 갖는다(설계: planting_split.py 의 조합 모드 절).
+         * 갖는다(설계: plot_split.py 의 조합 모드 절).
          */
         const syncOrientationRow = () => {
             const byWidth = modeEl && modeEl.value === 'width';
@@ -1268,8 +1372,8 @@ class AoTGeoVegetation {
                 body.querySelectorAll('[data-veg-field]').forEach(el => {
                     values[el.getAttribute('data-veg-field')] = el.value || '';
                 });
-                if (!values.crop) {
-                    this._toast(this._t('Crop is required'), 'warning');
+                if (!values.subject) {
+                    this._toast(this._t('Subject is required'), 'warning');
                     return;
                 }
                 // 색을 손대지 않았으면 저장하지 않는다 — 생성 폼과 같은 규칙
@@ -1293,7 +1397,7 @@ class AoTGeoVegetation {
         const el = root && root.querySelector('[data-veg-split-summary]');
         if (!el) return;
         el.textContent = this.splitSummaryText();
-        // 서버(planting_split._ASPECT_RATIO_WARNING)와 같은 기준 — 가늘고 긴
+        // 서버(plot_split._ASPECT_RATIO_WARNING)와 같은 기준 — 가늘고 긴
         // 조각은 정보가 아니라 눈에 띄는 경고다.
         const info = this._split && this._split.info;
         const elongated = info && typeof info.aspect_ratio === 'number' &&
@@ -1406,7 +1510,7 @@ class AoTGeoVegetation {
     /**
      * 폼 → 서버 파라미터. 등분과 폭은 **한 칸**(amount)이라 서로 못 보낸다 —
      * 다만 폭 모드에서는 "정확한 조각 수"(exact_parts) 를 곁들여 parts 와
-     * strip_width_cm 를 **같이** 보낼 수 있다(설계: planting_split.py 의
+     * strip_width_cm 를 **같이** 보낼 수 있다(설계: plot_split.py 의
      * "둘 다 주면 균등분할이 아니다" 절 — N개를 정확히 그 폭으로 자르고
      * 남는 만큼만 여백이 된다).
      *
@@ -1461,7 +1565,7 @@ class AoTGeoVegetation {
             }
         }
         // 폭만 있고 정확한 개수가 없으면 방향을 건드리지 않는다 — 서버 기본값
-        // ('long') 그대로 둔다(설계: planting_split.py 의 orientation 절).
+        // ('long') 그대로 둔다(설계: plot_split.py 의 orientation 절).
         // 정확한 개수(또는 폭 목록)까지 주면 parts 처럼 방향이 다시 의미를 갖는다.
         const byWidthOnly = !useCustom && get('mode') === 'width';
         const orientation = (byWidthOnly && !hasExactCount) ? 'long' : get('orientation');
@@ -1506,7 +1610,7 @@ class AoTGeoVegetation {
      * 저장을 막아야 할 오류라면 그때 분명히 알려 준다.
      */
     _runSplitPreview(args, root) {
-        return this._api('GET', '/api/geo/planting/split-preview?' +
+        return this._api('GET', '/api/geo/plot/split-preview?' +
                          this._splitQuery(args).toString())
             .then(({ status, data }) => {
                 if (status >= 400 || !data || !data.ok) {
@@ -1581,7 +1685,7 @@ class AoTGeoVegetation {
                 });
             }
         } catch (e) {
-            console.error('[Vegetation] 분할 미리보기 그리기 실패:', e);
+            console.error('[Plot] 분할 미리보기 그리기 실패:', e);
             return false;
         }
         return true;
@@ -1605,10 +1709,10 @@ class AoTGeoVegetation {
      * turf 로 클라이언트에서 즉시 계산한다(feature 는 이미 지도에 올라와
      * 있다). 슬라이더를 아무리 빨리 움직여도 서버 부담이 없는 이유다.
      *
-     * `angleDeg` 는 `planting_split.py` 의 `angle` 과 같은 좌표계다 — 로컬
+     * `angleDeg` 는 `plot_split.py` 의 `angle` 과 같은 좌표계다 — 로컬
      * 평면(동쪽=0°, 반시계)에서 잰 각도이므로, 나침반 방위각으로 바꾸려면
      * `bearing = 90 - angleDeg` 다(투영은 위경도=동/북 축의 등장방형
-     * 근사라 이 변환이 지역 규모에서 충분히 정확하다 — `planting_context.
+     * 근사라 이 변환이 지역 규모에서 충분히 정확하다 — `plot_context.
      * local_frame` 참조).
      */
     _drawSplitAxis(feature, angleDeg) {
@@ -1651,7 +1755,7 @@ class AoTGeoVegetation {
                 });
             }
         } catch (e) {
-            console.error('[Vegetation] 기준선 그리기 실패:', e);
+            console.error('[Plot] 기준선 그리기 실패:', e);
             return false;
         }
         return true;
@@ -1700,7 +1804,7 @@ class AoTGeoVegetation {
         if (!args || this._splitBusy) return;
         this._splitBusy = true;
 
-        this._api('POST', '/api/geo/planting/split-apply',
+        this._api('POST', '/api/geo/plot/split-apply',
                   Object.assign({}, args, values))
             .then(({ status, data }) => {
                 this._splitBusy = false;
@@ -1770,7 +1874,7 @@ class AoTGeoVegetation {
                             <button type="button" class="close" data-dismiss="modal"
                                     aria-label="Close"><span aria-hidden="true">&times;</span></button>
                         </div>
-                        <div class="modal-body" id="geo-vegetation-body"></div>
+                        <div class="modal-body" id="geo-plot-body"></div>
                         <div class="modal-footer">
                             <button type="button" class="btn aot-pill-btn"
                                     data-dismiss="modal">${this._t('Cancel')}</button>${save}
@@ -1780,7 +1884,7 @@ class AoTGeoVegetation {
             </div>
         `);
         $('#' + this._modalId).modal('show');
-        return document.getElementById('geo-vegetation-body');
+        return document.getElementById('geo-plot-body');
     }
 
     _close() { $('#' + this._modalId).modal('hide'); }
@@ -1792,4 +1896,4 @@ class AoTGeoVegetation {
     }
 }
 
-window.AoTGeoVegetation = AoTGeoVegetation;
+window.AoTGeoPlot = AoTGeoPlot;
