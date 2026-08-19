@@ -73,6 +73,19 @@ class AoTGeoPlot {
     }
 
     /** 대상 종류 — `GeoProgram.kind` 와 같은 어휘. */
+    /** 대상·품종 라벨은 종류에 따라 달라진다(common/aot-plot-labels.js). */
+    _subjectLabel(p) {
+        const k = (p && p.kind) || 'vegetation';
+        return window.AoTPlotLabels ? window.AoTPlotLabels.subject(k)
+                                    : this._t('What is here');
+    }
+
+    _varietyLabel(p) {
+        const k = (p && p.kind) || 'vegetation';
+        return window.AoTPlotLabels ? window.AoTPlotLabels.variety(k)
+                                    : this._t('Variety');
+    }
+
     _kindRowHtml(p, row) {
         const cur = p.kind || 'vegetation';
         const labels = {
@@ -851,10 +864,10 @@ class AoTGeoPlot {
             <div class="aot-modal-group-title">${this._t('This plot')}</div>
             <div class="aot-modal-container">
                 ${this._kindRowHtml(p, row)}
-                ${row(this._t('What is here'),
+                ${row(this._subjectLabel(p),
                       `<input type="text" class="aot-modern-input form-control"
                               data-veg-field="subject" value="${v(p.subject)}" autocomplete="off">`)}
-                ${row(this._t('Variety'),
+                ${row(this._varietyLabel(p),
                       `<input type="text" class="aot-modern-input form-control"
                               data-veg-field="variety" value="${v(p.variety)}">`)}
                 ${row(this._t('Plot name'),

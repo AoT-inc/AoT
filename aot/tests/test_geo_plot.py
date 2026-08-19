@@ -3704,6 +3704,23 @@ class TestVocabularyIsNotAgricultureOnly(unittest.TestCase):
         self.assertIn('cumulative_tracker', body)
         self.assertIn('Tmax', body)
 
+    def test_expected_end_row_carries_one_fact(self):
+        """한 열에는 한 정보만.
+
+        예전에는 한 행이 "2026-09-07 (프로그램 기준) (19일 남음)" 이었다 —
+        날짜·출처·남은 일수 셋이 한 칸에 들어가 좁은 폭에서 줄이 접히고, 눈이
+        날짜를 찾기 전에 괄호부터 읽는다. 남은 일수는 아래 행으로 분리하고,
+        출처는 뺀다([개요] 탭의 프로그램 블록이 이미 말한다).
+        """
+        popup = _read(os.path.join(_ROOT, 'aot_flask', 'static', 'js',
+                                   'widgets', 'AoT_map', 'aot-map-popup.js'))
+        body = popup.split('function _plotOverviewHtml', 1)[1].split(
+            '\n  function ', 1)[0]
+        self.assertIn("_pRow(_t('Expected end'), _esc(p.expected_end_on))", body)
+        self.assertIn("_t('Days left')", body)
+        # 출처 꼬리표를 되살리지 않는다.
+        self.assertNotIn('from programme', body)
+
     def test_stage_targets_come_from_the_server(self):
         """항목 어휘·단위를 화면이 다시 조립하지 않는다.
 

@@ -1544,7 +1544,7 @@
     var items = alloc.plots || [];
     var html = '<div class="aot-ov-block aot-ov-zone-plots">' +
                '<div class="aot-ov-sec-title">' +
-               _esc(_t('Growing now')) + '</div>';
+               _esc(_t('Plots here')) + '</div>';
 
     if (!items.length) {
       html += '<div class="aot-ov-muted">' +
@@ -1678,8 +1678,12 @@
               '<div class="aot-modal-container">' +
               zoneCtl +
               _fr(_t('Kind'), _kindSelect('data-nf="kind"', 'vegetation')) +
-              _fr(_t('What is here'), _in('subject', 'text', '')) +
-              _fr(_t('Variety'), _in('variety', 'text', '')) +
+              _fr('<span class="aot-ov-plot-lbl-subject">' +
+                    _esc(_plotSubjectLabel(null)) + '</span>',
+                  _in('subject', 'text', '')) +
+              _fr('<span class="aot-ov-plot-lbl-variety">' +
+                    _esc(_plotVarietyLabel(null)) + '</span>',
+                  _in('variety', 'text', '')) +
               _fr(_t('Start date'), _in('started_on', 'date', opts.today || '')) +
               _fr(_t('Expected end'), _in('expected_end_on', 'date', '')) +
               '</div>' +
@@ -1691,6 +1695,19 @@
               '</div></div>';
     }
     return html + '</div>';
+  }
+
+  // 대상·품종 라벨은 **종류에 따라 달라진다**(common/aot-plot-labels.js).
+  // "품종" 은 생물에만 맞는 말이라 도로·시설물 구획에서는 틀린 말이 된다.
+  function _plotSubjectLabel(p) {
+    var k = (p && p.kind) || 'vegetation';
+    return window.AoTPlotLabels ? window.AoTPlotLabels.subject(k)
+                                : _t('What is here');
+  }
+  function _plotVarietyLabel(p) {
+    var k = (p && p.kind) || 'vegetation';
+    return window.AoTPlotLabels ? window.AoTPlotLabels.variety(k)
+                                : _t('Variety');
   }
 
   /** 대상 종류 select — `GeoProgram.kind` 와 같은 어휘.
@@ -2165,7 +2182,7 @@
                '<div class="aot-ov-sec-title">' + _esc(_t('This plot')) +
                '</div>';
 
-    html += _pRow(_t('What is here'), _esc(p.subject || '—') +
+    html += _pRow(_plotSubjectLabel(p), _esc(p.subject || '—') +
                   (p.variety ? ' · ' + _esc(p.variety) : ''));
 
     // 재배 일수 — 심은 날이 1일차(서버 elapsed_days 가 정본).
@@ -2184,21 +2201,22 @@
     // 예상 종료까지 — 지난 것을 숨기지 않는다. 늦어지고 있다는 것 자체가
     // 사용자가 봐야 할 사실이다.
     if (p.expected_end_on) {
-      var due = _esc(p.expected_end_on);
-      // 사람이 적은 값인지 프로그램에서 나온 값인지 밝힌다 — 밝히지 않으면
-      // 사용자는 자기가 적지도 않은 날짜를 자기 입력으로 오해한다.
-      if (p.expected_end_source === 'program') {
-        due += ' <span class="aot-ov-muted">(' + _esc(_t('from programme')) + ')</span>';
-      }
+      // **한 열에는 한 정보만.** 예전에는 한 행이
+      // "2026-09-07 (프로그램 기준) (19일 남음)" 이었다 — 날짜·출처·남은 일수
+      // 셋이 한 칸에 들어가 좁은 폭에서 줄이 접히고, 눈이 날짜를 찾기 전에
+      // 괄호부터 읽는다.
+      //
+      // 출처는 빼도 된다: 바로 위 [개요] 탭의 프로그램 블록이 무엇을 따르는지
+      // 이미 말하고, 사람이 날짜를 직접 적으면 그 값이 이긴다.
+      html += _pRow(_t('Expected end'), _esc(p.expected_end_on));
       var d = p.days_to_expected_end;
       if (d != null) {
-        due += ' <span class="aot-ov-muted">(' +
-               (d >= 0
-                 ? _esc(_t('in %(n)s days').replace('%(n)s', String(d)))
-                 : _esc(_t('%(n)s days overdue').replace('%(n)s',
-                        String(-d)))) + ')</span>';
+        html += _pRow(_t('Days left'),
+                      _esc(d >= 0
+                        ? _t('%(n)s days').replace('%(n)s', String(d))
+                        : _t('%(n)s days overdue').replace('%(n)s',
+                             String(-d))));
       }
-      html += _pRow(_t('Expected end'), due);
     }
     if (p.ended_on) html += _pRow(_t('Ended'), _esc(p.ended_on));
     html += '</div>';
@@ -2245,7 +2263,7 @@
             _esc(_t('Edit')) + '</button></div>';
 
     html += '<div class="aot-ov-plot-view">';
-    html += _pRow(_t('What is here'), _esc(p.subject || '—') +
+    html += _pRow(_plotSubjectLabel(p), _esc(p.subject || '—') +
                    (p.variety ? ' · ' + _esc(p.variety) : ''));
     if (p.name) html += _pRow(_t('Plot name'), _esc(p.name));
     html += _pRow(_t('Start date'), _esc(p.started_on || '—'));
@@ -2315,8 +2333,8 @@
             _bayRow +
             _fRow(_t('Kind'), _kindSelect('data-pf="kind"', p.kind)) +
             _progRow +
-            _fRow(_t('What is here'), _inp('subject', 'text', p.subject)) +
-            _fRow(_t('Variety'), _inp('variety', 'text', p.variety)) +
+            _fRow(_plotSubjectLabel(p), _inp('subject', 'text', p.subject)) +
+            _fRow(_plotVarietyLabel(p), _inp('variety', 'text', p.variety)) +
             _fRow(_t('Plot name'), _inp('name', 'text', p.name)) +
             _fRow(_t('Start date'), _inp('started_on', 'date', p.started_on)) +
             _fRow(_t('Expected end'), _inp('expected_end_on', 'date', p.expected_end_on)) +

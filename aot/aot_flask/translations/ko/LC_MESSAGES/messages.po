@@ -28898,3 +28898,18 @@ msgstr "내장"
 
 msgid "external"
 msgstr "외부"
+
+msgid "Days left"
+msgstr "남은 일수"
+
+msgid "Item"
+msgstr "품목"
+
+msgid "Structure item"
+msgstr "시설물"
+
+msgid "Subtype"
+msgstr "세부 구분"
+
+msgid "Plots here"
+msgstr "이 구역의 구획"

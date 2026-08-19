@@ -2,6 +2,7 @@
   "geo-facility": {
     "output": "dist/geo-facility.bundle.js",
     "inputs": [
+      "common/aot-plot-labels.js",
       "common/aot-device-connection.js",
       "widgets/AoT_facility/core/materials.js",
       "widgets/AoT_facility/core/parametric.js",
@@ -40,6 +41,7 @@
     "output": "dist/aot-map-widget.bundle.js",
     "comment": "AoT_map 위젯 default head(WIDGET_HEAD_HTML) run-A(276-307). three/facility-3d/map-3d document.write 가드 블록은 번들 제외·유지. CSS link·run-B는 별도 유지.",
     "inputs": [
+      "common/aot-plot-labels.js",
       "common/aot-geo-theme-colors.js",
       "geo/aot-vector-layer-manager.js",
       "geo/aot-map-loader.js",
@@ -60,6 +62,7 @@
     "output": "dist/geo-design.bundle.js",
     "comment": "geo_design 페이지 전용 design 스크립트(소스 순서). vendor turf·공유 aot-map-custom-controls는 제외(외부 유지). 코어/어댑터/dist번들은 별개.",
     "inputs": [
+      "common/aot-plot-labels.js",
       "common/aot-geo-theme-colors.js",
       "common/aot-device-connection.js",
       "geo/design/aot-geo-ui.js",

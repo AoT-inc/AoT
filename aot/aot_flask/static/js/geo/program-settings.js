@@ -120,6 +120,22 @@
 
   // ── 목록 ──────────────────────────────────────────────────────────────
 
+  /** 대상·품종 라벨은 종류에 따라 달라진다(common/aot-plot-labels.js).
+   *
+   * 구획과 **같은 말**을 써야 한다 — 프로그램의 `subject` 와 구획의 `subject` 는
+   * 문자열로 맞춰 붙이므로, 두 화면이 그 칸을 다른 이름으로 부르면 "이 대상이
+   * 저 적용 대상인가" 를 사람이 매번 다시 확인하게 된다. */
+  function _subjectLabel(p) {
+    var k = (p && p.kind) || 'vegetation';
+    return window.AoTPlotLabels ? window.AoTPlotLabels.subject(k)
+                                : _T('subject', 'Applies to');
+  }
+  function _varietyLabel(p) {
+    var k = (p && p.kind) || 'vegetation';
+    return window.AoTPlotLabels ? window.AoTPlotLabels.variety(k)
+                                : _T('variety', 'Variety');
+  }
+
   function _kindRow(p, ro) {
     var cur = p.kind || 'vegetation';
     var sel = '<select class="form-control aot-modern-input" data-pf="kind"' +
@@ -436,7 +452,7 @@
         var head = _row(_T('name', 'Name'), 'name', p.name) +
                    _kindRow(p, ro) +
                    _subjectRow(p, ro) +
-                   _row(_T('variety', 'Variety'), 'variety', p.variety) +
+                   _row(_varietyLabel(p), 'variety', p.variety) +
                    tBaseRow +
                    autoRow +
                    '<div class="aot-modal-body-text">' +
@@ -498,10 +514,10 @@
            _esc(_T('subject_custom', 'Enter a new one…')) + '</option></select>' +
            '<input type="text" class="form-control aot-modern-input veg-subject-custom" ' +
              'data-pf="subject_custom" style="display:none" placeholder="' +
-             _esc(_T('subject', 'Applies to')) + '"' + (ro ? ' disabled' : '') + '>';
+             _esc(_subjectLabel(p)) + '"' + (ro ? ' disabled' : '') + '>';
 
     return '<div class="aot-modal-option-row">' +
-           '<div class="aot-modal-option-label">' + _esc(_T('subject', 'Applies to')) +
+           '<div class="aot-modal-option-label">' + _esc(_subjectLabel(p)) +
            '</div><div class="aot-modal-option-control">' + sel + '</div></div>';
   }
 

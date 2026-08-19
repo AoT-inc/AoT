@@ -401,6 +401,22 @@ textarea.aot-modern-input {
     z-index: var(--aot-z-navbar) !important;
 }
 
+/* 페이지 상단 "종류: 선택" 셀렉트(input/output/function/geo_input/device/camera/
+   geo-programs/ai_library/ai_agent — 전부 .aot-main-selection-row 로 감싼다)의
+   드롭다운 목록이 모바일에서 버튼 폭(예: 220px)으로 눌려 긴 옵션명이 여러 줄로
+   찌그러지는 문제. 원인은 aot-base-ui.css 의 기본 규칙(`width: auto`)에 있다 —
+   `.dropdown-menu` 가 position:absolute 로 left 만 지정되고 right 는 auto 라,
+   shrink-to-fit 폭 계산의 "가용 폭"이 뷰포트가 아니라 containing block인
+   `.bootstrap-select`(=버튼 자체 폭)로 제한된다. width:auto 대신 명시적 값인
+   max-content 를 쓰면 이 shrink-to-fit 가용폭 제한을 우회해 내용 기준 폭으로
+   계산되고, 그 다음에 max-width 로 뷰포트에 맞춰 클램프된다 — 위 409번 라인의
+   모달용 "Auto Width Logic"과 동일한 패턴. */
+.aot-main-selection-row .bootstrap-select > .dropdown-menu {
+    min-width: 100% !important;
+    width: max-content !important;
+    max-width: calc(100vw - 30px) !important;
+}
+
 /* 모달 내부 [단일값 옵션 셀렉트] — Popper 렌더링 타입.
    Popper.js가 인라인 transform/top/left 를 심으므로 이를 무력화하려면 !important 가 불가피하다.
    action-group(조건/액션 추가) 셀렉트는 data-container="body" 로 목록을 body 로 빼므로

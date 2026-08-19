@@ -28657,3 +28657,18 @@ msgstr "内蔵"
 
 msgid "external"
 msgstr "外部"
+
+msgid "Days left"
+msgstr "残り日数"
+
+msgid "Item"
+msgstr "品目"
+
+msgid "Structure item"
+msgstr "施設物"
+
+msgid "Subtype"
+msgstr "詳細区分"
+
+msgid "Plots here"
+msgstr "このゾーンの区画"

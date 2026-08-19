@@ -122,6 +122,18 @@
       .catch(function () { State.programs[kind] = []; return State.programs[kind]; });
   }
 
+  /** 대상·품종 라벨은 종류에 따라 달라진다(common/aot-plot-labels.js). */
+  function _subjectLabel(r) {
+    var k = (r && r.kind) || 'vegetation';
+    return window.AoTPlotLabels ? window.AoTPlotLabels.subject(k)
+                                : _T('plot_subject', 'What is here');
+  }
+  function _varietyLabel(r) {
+    var k = (r && r.kind) || 'vegetation';
+    return window.AoTPlotLabels ? window.AoTPlotLabels.variety(k)
+                                : _T('plot_variety', 'Variety');
+  }
+
   /** 대상 종류 select — `GeoProgram.kind` 와 같은 어휘. */
   function _kindRow(r) {
     var labels = { vegetation: _T('kind_vegetation', 'Vegetation'),
@@ -242,14 +254,14 @@
       '<div class="aot-modal-container fac-plot-form" data-bay="' + _esc(bayId || '') + '">' +
         _kindRow(r) +
         '<div class="aot-modal-option-row">' +
-          '<label class="aot-modal-option-label">' + _T('plot_subject', 'What is here') + '</label>' +
+          '<label class="aot-modal-option-label">' + _subjectLabel(r) + '</label>' +
           '<div class="aot-modal-option-control">' +
             '<input type="text" class="form-control aot-modern-input" data-f="subject" value="' +
-              _esc(r.subject || '') + '" placeholder="' + _T('plot_subject', 'What is here') + '">' +
+              _esc(r.subject || '') + '" placeholder="' + _subjectLabel(r) + '">' +
           '</div>' +
         '</div>' +
         '<div class="aot-modal-option-row">' +
-          '<label class="aot-modal-option-label">' + _T('plot_variety', 'Variety') + '</label>' +
+          '<label class="aot-modal-option-label">' + _varietyLabel(r) + '</label>' +
           '<div class="aot-modal-option-control">' +
             '<input type="text" class="form-control aot-modern-input" data-f="variety" value="' +
               _esc(r.variety || '') + '">' +
