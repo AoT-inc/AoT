@@ -121,3 +121,86 @@ def test_factory_loads_daily_multipoint_without_target_id():
 
     assert handler is not None
     assert handler.target_id is None
+
+
+# ── facility_tz: 문자열도 받는다 ─────────────────────────────────────────────
+#
+# 하루 곡선은 **시각이 곧 값**이라, 시간대를 잘못 잡으면 새벽 목표가 한낮에
+# 적용된다(한국이면 9시간). 그런데 예전에는 시간대를 **문자열로 넘기면**
+# `datetime.fromtimestamp(tz='Asia/Seoul')` 가 TypeError 를 내고 그대로 UTC 로
+# 떨어졌다 — 에러도 로그도 없이 값만 9시간 밀렸다(2026-08-19 시뮬레이션에서
+# 발견: 같은 곡선이 0.33 대신 0.66 을 돌려줬다).
+
+def _daily_curve_stub():
+    """00:00 에 0.0, 12:00 에 12.0, 24:00 에 0.0 — 시각이 곧 값인 곡선."""
+    points = {
+        'version': 3,
+        'weeks': [0],
+        'points': [
+            {'point_id': 0, 't_sec': 0, 'values': [0.0], 'smooth': False,
+             'curve': 'linear', 'handle_dt': None, 'handle_dv': None,
+             'is_endpoint': True},
+            {'point_id': 1, 't_sec': 43200, 'values': [12.0], 'smooth': False,
+             'curve': 'linear', 'handle_dt': None, 'handle_dv': None,
+             'is_endpoint': False},
+            {'point_id': 2, 't_sec': 86400, 'values': [0.0], 'smooth': False,
+             'curve': 'linear', 'handle_dt': None, 'handle_dv': None,
+             'is_endpoint': True},
+        ],
+    }
+
+    class _Row:
+        output_id = None
+        duration_sec = None
+        points_json = json.dumps(points)
+
+    class _Method:
+        unique_id = 'tz-curve'
+        method_type = 'DailyMultiPoint'
+        name = 'tz 곡선'
+
+    return _Method(), _DataQuery([_Row()])
+
+
+def _at(handler, tz):
+    """2026-01-01 03:00 UTC 에서의 곡선 값."""
+    import calendar
+    ts = calendar.timegm((2026, 1, 1, 3, 0, 0, 0, 0, 0))
+    val, _ended = handler.calculate_setpoint(ts, weeks_elapsed=0.0,
+                                             facility_tz=tz)
+    return val
+
+
+def test_facility_tz_accepts_a_timezone_name():
+    """문자열과 tz 객체가 **같은 값**이어야 한다."""
+    import pytz
+    handler = create_method_handler(*_daily_curve_stub())
+    by_name = _at(handler, 'Asia/Seoul')
+    by_obj = _at(handler, pytz.timezone('Asia/Seoul'))
+    assert by_name is not None
+    assert abs(by_name - by_obj) < 1e-9, (by_name, by_obj)
+    # 03:00 UTC = 12:00 KST → 곡선의 정점.
+    assert abs(by_name - 12.0) < 1e-6, by_name
+
+
+def test_utc_fallback_is_not_silent():
+    """해석할 수 없는 시간대면 UTC 로 계산하되 **말한다**. 조용히 밀리면
+    "왜 새벽에 한낮 목표가 잡히지" 를 추적할 단서가 없다."""
+    class _Log:
+        def __init__(self):
+            self.warnings = []
+
+        def warning(self, msg, *args):
+            self.warnings.append(msg % args if args else msg)
+
+        def debug(self, *a, **k):
+            pass
+
+    log = _Log()
+    m, data = _daily_curve_stub()
+    handler = create_method_handler(m, data, logger=log)
+    val = _at(handler, 'Nowhere/Bad')
+    # 03:00 UTC → 0→12 직선의 1/4 지점(3.0). KST 로 읽었다면 정점 12.0 이다.
+    assert abs(val - 3.0) < 1e-6, val
+    assert log.warnings, '조용히 UTC 로 떨어졌다'
+    assert 'Nowhere/Bad' in log.warnings[0]

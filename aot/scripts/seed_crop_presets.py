@@ -1,9 +1,30 @@
 # coding=utf-8
-"""
-seed_crop_presets.py — Photosynthesis model 5-crop preset을 FunctionCropPreset에 시드.
+"""작물 5종의 광합성 파라미터·권장 목표 — **프로그램 템플릿의 재료**.
 
-기존 레코드는 덮어쓰지 않음 (신규 추가만).
-참조: aot/functions/utils/env_control/photosynthesis.py CROP_PRESETS
+## 지금 이 값을 쓰는 곳은 하나다
+
+`seed_programs.catalog()` 가 `_CROP_PRESETS` 를 읽어 프로그램 템플릿의
+`photosynthesis` 를 채운다. 사람이 템플릿에서 프로그램을 만들면 그 값이 프로그램
+안으로 들어가고, **그때부터 정본은 프로그램이다** — 이후 편집도 제어도 프로그램만
+본다(`docs/design/coordinator-plot-targets.md`).
+
+즉 여기 있는 숫자는 **출발점**이지 운영값이 아니다. 여기를 고쳐도 이미 만들어진
+프로그램은 바뀌지 않는다(그게 맞다 — 사람이 손댄 값을 시드가 덮으면 안 된다).
+
+## ⚠ `FunctionCropPreset` 표는 현재 **읽는 곳이 없다**
+
+`seed_crop_presets()` 가 그 표에 같은 값을 넣지만(설치 시
+`apply_initial_presets.py` 가 호출), 그 행을 읽는 코드는 레포에 없다. 원래는
+"제어가 읽는 작물 프리셋" 이었는데, 제어가 구획의 프로그램을 읽게 되면서
+(2026-08-19) 소비처가 사라졌다. 모델 docstring 이 말하는 "사용자가 UI 에서
+커스터마이즈" 하는 화면도 없다.
+
+**남겨 둔 이유**: 지우는 것은 표 삭제 마이그레이션이 따르는 별도 결정이고, 이
+파일이 쓰는 값 자체는 위 템플릿 경로에서 여전히 살아 있다. 새로 이 표를 읽는
+코드를 만들지 말 것 — 그러면 작물 정보가 다시 두 곳이 된다.
+
+참조: `aot/functions/utils/env_control/photosynthesis.py` 의 `CROP_PRESETS`
+(제어가 쓰는 `CropParams` 의 기본값 — 구획이 없을 때의 generic 값이다)
 """
 import os
 import sys

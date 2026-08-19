@@ -4864,9 +4864,10 @@ class TestFacilityPlotRendering(unittest.TestCase):
 class TestProgram(unittest.TestCase):
     """재배 프로그램(P1) — 템플릿과 인스턴스, 버전 고정.
 
-    이 레이어가 막으려는 것은 "작물 지식이 네 곳에 흩어져 서로 모르는" 상태다
+    이 레이어가 막으려는 것은 "작물 지식이 네 곳에 흩어져 서로 모르는" 상태였다
     (STAGE_DURATION_MAP=AI 전용 · setpoint 캐시=AI 전용 · FunctionCropPreset=제어
-    전용 · Method=사람이 수작업). 여기서 고정하는 계약 중 **깨져도 조용한 것**:
+    전용 · Method=사람이 수작업). 지금은 이 표가 정본이고 나머지는 템플릿 재료다.
+    여기서 고정하는 계약 중 **깨져도 조용한 것**:
 
     - 구획이 버전을 고정하지 않으면, 프로그램을 고치는 순간 진행 중인 작기의
       "그때 무엇을 목표로 길렀나" 가 소급해서 바뀐다. 에러는 나지 않는다.

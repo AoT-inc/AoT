@@ -72,10 +72,17 @@ class FunctionCumulativeState(CRUDMixin, db.Model):
 
 
 class FunctionCropPreset(CRUDMixin, db.Model):
-    """작물별 광합성 모델 파라미터 프리셋 (P3-2′).
+    """작물별 광합성 모델 파라미터 프리셋 (P3-2′) — **현재 읽는 곳이 없다**.
 
-    photosynthesis.CROP_PRESETS 와 동기화된 DB 사본.
-    사용자가 UI에서 커스터마이즈하거나 새 작물을 추가할 수 있도록 DB에 보관.
+    설치 때 `seed_crop_presets()` 가 채우지만 그 행을 읽는 코드는 레포에 없다.
+    원래는 "제어가 읽는 작물 프리셋" 이었는데, 제어가 구획의 프로그램을 읽게
+    되면서(2026-08-19) 소비처가 사라졌다. 여기 있던 "사용자가 UI 에서
+    커스터마이즈" 하는 화면도 만들어진 적이 없다 — 작물 값을 고치는 곳은
+    프로그램 편집기다(`docs/design/coordinator-plot-targets.md`).
+
+    **새로 이 표를 읽는 코드를 만들지 말 것** — 그러면 작물 정보가 다시 두 곳이
+    되고, 둘이 갈려도 에러는 나지 않는다. 표를 지우는 것은 마이그레이션이
+    따르는 별도 결정이라 남겨 두었다.
     """
     __tablename__ = 'function_crop_preset'
     __table_args__ = {'extend_existing': True}

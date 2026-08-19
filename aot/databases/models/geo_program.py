@@ -18,11 +18,15 @@ class GeoProgram(CRUDMixin, db.Model):
 
     ## 왜 필요한가
 
-    "이 작물은 몇 단계로 며칠씩 자라고, 그때 목표 환경은 얼마인가" 는 지금 **네 곳에
-    흩어져 있고 서로 만나지 않는다**: `STAGE_DURATION_MAP`(AI 전용 하드코딩) ·
+    "이 작물은 몇 단계로 며칠씩 자라고, 그때 목표 환경은 얼마인가" 는 한때 **네 곳에
+    흩어져 있고 서로 만나지 않았다**: `STAGE_DURATION_MAP`(AI 전용 하드코딩) ·
     스마트팜코리아 setpoint 캐시(AI 전용) · `FunctionCropPreset`(제어 전용, 단계 개념
-    없음) · Method 곡선(사람이 손으로 그림). 그래서 AI 는 "지금 개화기, 최적 22~26℃"
-    를 아는데 그 값이 제어로 흐르지 않고, 제어는 같은 목표를 사람이 다시 그린다.
+    없음) · Method 곡선(사람이 손으로 그림). AI 는 "지금 개화기, 최적 22~26℃" 를
+    아는데 그 값이 제어로 흐르지 않고, 제어는 같은 목표를 사람이 다시 그렸다.
+
+    **지금은 이 표가 정본이다** — 제어가 매 사이클 여기를 읽고(코디네이터에는
+    목표도 작물도 없다), AI 도 같은 값을 본다. 위 네 곳 중 남은 것은 템플릿을
+    만들 때의 재료뿐이다(`docs/design/coordinator-plot-targets.md`).
 
     이 테이블은 그 흩어진 지식을 **한 층**으로 모아 식생 구획이 참조하게 한다.
 
@@ -47,7 +51,7 @@ class GeoProgram(CRUDMixin, db.Model):
 
     @phase active
     @stability experimental
-    @dependency GeoPlot(식생 종류 참조), FunctionCropPreset(광합성 파라미터)
+    @dependency GeoPlot(식생 종류 참조)
     """
     __tablename__ = "geo_program"
     __table_args__ = {'extend_existing': True}
@@ -112,9 +116,11 @@ class GeoProgram(CRUDMixin, db.Model):
     # 함수의 `method_start_time`(그 함수가 켜진 시각)과는 다른 기준이다.
     targets_methods = db.Column(db.JSON, nullable=True)
 
-    # 광합성 파라미터 사본(FunctionCropPreset 과 같은 키). 여기 두는 이유는
-    # 프로그램이 자기 완결적이어야 버전 고정이 의미를 갖기 때문이다 — 파라미터가
-    # 밖에 있으면 프로그램 버전을 고정해도 목표가 바뀔 수 있다.
+    # 광합성 파라미터(Big-Leaf 모델 상수 + GDD 기준온도 + 권장 DLI/GDD).
+    # 키 이름은 제어 쪽 `CropParams` 와 **같다** — 갈리면 값이 조용히 무시되고
+    # 모델이 기본값으로 돈다. 여기 두는 이유는 프로그램이 자기 완결적이어야
+    # 버전 고정이 의미를 갖기 때문이다: 파라미터가 밖에 있으면 프로그램 버전을
+    # 고정해도 목표가 바뀔 수 있다.
     photosynthesis = db.Column(db.JSON, nullable=True)
 
     # 이 프로그램을 쓰는 구획의 단계 전환을 사람 확인 없이 기록한다(P7).

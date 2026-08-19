@@ -64,9 +64,11 @@
 - 단계와 기간: `aot/ai/context/growth_stage_resolver.py` 의 `STAGE_DURATION_MAP`
   (RDA 시설재배 지침 기반, 지금은 **AI 만** 읽는다)
 - 광합성 파라미터·권장 목표: `aot/scripts/seed_crop_presets.py` 의 `_CROP_PRESETS`
-  (지금은 **제어만** 읽는다)
+  (그때는 **제어만** 읽었다)
 
 둘은 같은 작물을 말하면서 서로를 모른다. 여기서 한 프로그램으로 합친다.
+합친 뒤로는 **프로그램이 정본**이다 — 제어도 AI 도 프로그램을 읽고, 위 두 곳은
+템플릿을 만들 때의 재료로만 남았다(`docs/design/coordinator-plot-targets.md`).
 
 ## 누적일 → 단계 길이
 

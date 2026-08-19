@@ -572,9 +572,15 @@ class OutputModule(AbstractOutput):
         {'device_id': ..., 'channel_id': ...} where channel_id is the
         OutputChannel.unique_id. We look up the channel number from the DB.
 
-        Legacy string formats are also accepted:
+        Legacy string formats are also accepted **here**:
           - 'output_id'              → (output_id, 0)
           - 'output_id,channel_uid'  → (output_id, looked_up_channel_number)
+
+        ⚠ 저장된 값이 그 형식이어야 한다는 뜻은 아니다. `select_channel` 옵션은
+        프레임워크가 **읽을 때** dict 로 파싱하는데, 저장된 값이 출력 UUID 하나뿐
+        이면 `{'device_id': None, 'channel_id': None}` 이 되어 여기 오기도 전에
+        비어 버린다. 그러면 명령은 성공으로 돌아오는데 릴레이는 돌지 않는다
+        (2026-08-19 실측). 저장 형식은 `'출력UUID,채널UUID'` 다.
         """
         if not ref:
             return '', 0

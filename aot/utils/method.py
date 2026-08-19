@@ -603,9 +603,11 @@ class DailyMultiPointMethod(AbstractMethod):
                                (ignored when weeks_elapsed is supplied explicitly).
             weeks_elapsed:   Pre-computed fractional weeks (from Function/Growth Schedule).
                              When supplied, method_start_time is ignored for week selection.
-            facility_tz:     pytz timezone object for the facility.
-                             When supplied, t_sec is derived from local facility time
-                             instead of UTC — fixes the 9-hour offset for e.g. Korea.
+            facility_tz:     시설의 시간대 — pytz 객체 **또는 이름 문자열**
+                             ('Asia/Seoul'). 주면 t_sec 을 UTC 가 아니라 그
+                             지역 시각으로 잡는다(한국이면 9시간 차이). 해석에
+                             실패하면 UTC 로 계산하되 **경고를 남긴다** —
+                             조용히 밀리면 새벽 목표가 한낮에 적용된다.
         """
         if isinstance(now, (int, float)):
             now_ts = now
@@ -634,15 +636,39 @@ class DailyMultiPointMethod(AbstractMethod):
             weeks_elapsed = max(0.0, (now_dt_utc - start_dt).total_seconds() / (7 * 86400))
 
         # ── t_sec: use facility local time when available ────────────────────
+        #
+        # **UTC 폴백은 곡선을 통째로 시간축에서 밀어 버린다** — 한국이면 9시간이다.
+        # 새벽 목표가 한낮에 적용되는데 에러도 로그도 없다. 그래서 (1) 시간대
+        # 이름(문자열)도 받고 (2) 폴백은 조용히 넘어가지 않는다.
+        # (2026-08-19 실측: 문자열을 넘기면 `fromtimestamp(tz='Asia/Seoul')` 가
+        #  TypeError 를 내고 그대로 UTC 로 떨어져, 같은 곡선이 0.34 대신 0.66 을
+        #  돌려줬다.)
+        t_sec = None
         if facility_tz is not None and now_ts is not None:
-            try:
-                import pytz as _pytz
-                now_local = datetime.datetime.fromtimestamp(now_ts, tz=facility_tz)
-                t_sec = now_local.hour * 3600 + now_local.minute * 60 + now_local.second
-            except Exception:
-                t_sec = now_dt_utc.hour * 3600 + now_dt_utc.minute * 60 + now_dt_utc.second
-        else:
-            t_sec = now_dt_utc.hour * 3600 + now_dt_utc.minute * 60 + now_dt_utc.second
+            tz = facility_tz
+            if isinstance(tz, str):
+                try:
+                    import pytz as _pytz
+                    tz = _pytz.timezone(tz)
+                except Exception:
+                    tz = None
+                    if self.logger:
+                        self.logger.warning(
+                            '[Method] 알 수 없는 시간대 %r — UTC 로 계산합니다. '
+                            '하루 곡선이 시간축에서 밀립니다.', facility_tz)
+            if tz is not None:
+                try:
+                    now_local = datetime.datetime.fromtimestamp(now_ts, tz=tz)
+                    t_sec = (now_local.hour * 3600 + now_local.minute * 60
+                             + now_local.second)
+                except Exception as exc:                    # noqa: BLE001
+                    if self.logger:
+                        self.logger.warning(
+                            '[Method] 시간대 적용 실패(%s) — UTC 로 계산합니다. '
+                            '하루 곡선이 시간축에서 밀립니다.', exc)
+        if t_sec is None:
+            t_sec = (now_dt_utc.hour * 3600 + now_dt_utc.minute * 60
+                     + now_dt_utc.second)
 
         week_floor = int(weeks_elapsed)
         if self._resolved_cache is None or self._resolved_week_floor != week_floor:
