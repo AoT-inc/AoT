@@ -401,6 +401,14 @@
         <xhtml:link rel="alternate" hreflang="ko" href="https://aot-inc.github.io/AoT/ko/geo/parcel-import/"/>
     </url>
     <url>
+        <loc>https://aot-inc.github.io/AoT/geo/programs/</loc>
+        <lastmod>2026-08-19</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="en" href="https://aot-inc.github.io/AoT/geo/programs/"/>
+        <xhtml:link rel="alternate" hreflang="ja" href="https://aot-inc.github.io/AoT/ja/geo/programs/"/>
+        <xhtml:link rel="alternate" hreflang="ko" href="https://aot-inc.github.io/AoT/ko/geo/programs/"/>
+    </url>
+    <url>
         <loc>https://aot-inc.github.io/AoT/geo/settings/</loc>
         <lastmod>2026-08-19</lastmod>
         <changefreq>daily</changefreq>
@@ -815,6 +823,14 @@
         <xhtml:link rel="alternate" hreflang="ja" href="https://aot-inc.github.io/AoT/ja/geo/parcel-import/"/>
     </url>
     <url>
+        <loc>https://aot-inc.github.io/AoT/ko/geo/programs/</loc>
+        <lastmod>2026-08-19</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="ko" href="https://aot-inc.github.io/AoT/ko/geo/programs/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="https://aot-inc.github.io/AoT/geo/programs/"/>
+        <xhtml:link rel="alternate" hreflang="ja" href="https://aot-inc.github.io/AoT/ja/geo/programs/"/>
+    </url>
+    <url>
         <loc>https://aot-inc.github.io/AoT/ko/geo/settings/</loc>
         <lastmod>2026-08-19</lastmod>
         <changefreq>daily</changefreq>
@@ -1221,6 +1237,14 @@
         <xhtml:link rel="alternate" hreflang="ja" href="https://aot-inc.github.io/AoT/ja/geo/parcel-import/"/>
         <xhtml:link rel="alternate" hreflang="en" href="https://aot-inc.github.io/AoT/geo/parcel-import/"/>
         <xhtml:link rel="alternate" hreflang="ko" href="https://aot-inc.github.io/AoT/ko/geo/parcel-import/"/>
+    </url>
+    <url>
+        <loc>https://aot-inc.github.io/AoT/ja/geo/programs/</loc>
+        <lastmod>2026-08-19</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="ja" href="https://aot-inc.github.io/AoT/ja/geo/programs/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="https://aot-inc.github.io/AoT/geo/programs/"/>
+        <xhtml:link rel="alternate" hreflang="ko" href="https://aot-inc.github.io/AoT/ko/geo/programs/"/>
     </url>
     <url>
         <loc>https://aot-inc.github.io/AoT/ja/geo/settings/</loc>
