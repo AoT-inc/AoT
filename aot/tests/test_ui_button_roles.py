@@ -165,5 +165,60 @@ class TestOnlyTheLastFooterButtonIsPrimary(unittest.TestCase):
 
 
 
+class TestButtonRowsOutsideFooters(unittest.TestCase):
+    """푸터 밖의 버튼 묶음에도 **강조는 하나**.
+
+    페이지 본문에는 `modal-footer` 같은 이름이 없어 묶음을 자리로 정의한다 —
+    사이에 구조 경계(div·tr·td·form …)가 없이 이어지는 버튼들.
+
+    **자리 규칙은 푸터와 다르다.** 푸터는 대화를 끝내는 곳이라 오른쪽 끝이
+    기본 동작이지만, 목록 위 액션 바는 왼쪽부터 읽으므로 주 동작이 먼저 온다
+    ([+ 새 시설][복제]). 그래서 여기서 고정하는 것은 **강조가 하나뿐인지**
+    이지 마지막인지가 아니다.
+
+    **배타 쌍은 대상이 아니다.** [활성화]/[비활성화] 처럼 `{% if %}` 나
+    `display:none` 으로 한 번에 하나만 렌더되는 버튼은, 정적으로 보면 강조가
+    둘이지만 화면에는 하나뿐이다. 실제로 이 검사를 만들 때 걸린 24개 묶음 중
+    20개가 그것이었다 — 걸러내지 않으면 검사가 늑대 소년이 된다.
+    """
+
+    _BOUNDARY = re.compile(r'<div\b|</div>|<tr\b|</tr>|<td\b|</td>|<table\b|'
+                           r'<form\b|</form>|<section\b|<ul\b|<li\b|</li>', re.I)
+    # 상태 토글(탭·세그먼트)에서 primary 는 "선택됨" 이라는 뜻이다.
+    _TOGGLE = re.compile(r'btn-group|data-toggle="(tab|pill|buttons)"|nav-|'
+                         r'aot-seg|role="tab"|data-tab', re.I)
+    _EXCLUSIVE = re.compile(r'\{%\s*(if|else|elif)|display:\s*none', re.I)
+
+    def test_each_button_row_has_at_most_one_recommended_action(self):
+        bad = []
+        for path, text in _files():
+            if not path.endswith('.html'):
+                continue
+            btns = list(_BUTTON.finditer(text))
+            rows, row = [], []
+            for i, m in enumerate(btns):
+                if row and self._BOUNDARY.search(text[btns[i - 1].end():m.start()]):
+                    rows.append(row)
+                    row = []
+                row.append(m)
+            if row:
+                rows.append(row)
+            for r in rows:
+                if len(r) < 2:
+                    continue
+                span = text[r[0].start():r[-1].end()]
+                if self._EXCLUSIVE.search(span):
+                    continue          # 한 번에 하나만 보이는 짝
+                if self._TOGGLE.search(text[max(0, r[0].start() - 300):r[0].start()]):
+                    continue
+                if sum(1 for m in r if 'aot-pill-btn-primary' in m.group(0)) > 1:
+                    bad.append('%s:%d' % (os.path.relpath(path, _ROOT),
+                                          text[:r[0].start()].count('\n') + 1))
+        self.assertEqual(
+            bad, [],
+            '한 버튼 묶음에 강조가 둘 이상이다:\n  ' + '\n  '.join(bad))
+
+
+
 if __name__ == '__main__':
     unittest.main()
