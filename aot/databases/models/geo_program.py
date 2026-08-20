@@ -105,6 +105,32 @@ class GeoProgram(CRUDMixin, db.Model):
     # 늘릴 때 뒤 단계를 전부 손봐야 한다.
     stages = db.Column(db.JSON, nullable=False, default=list)
 
+    # 이 프로그램이 다루는 **목표 항목의 정의** —
+    #   [{ key, label, unit, measurement, shape, min, max, fixed, hidden }]
+    #
+    # ## 왜 정의가 프로그램에 있나 (2026-08-20)
+    #
+    # 예전에는 여섯 항목이 `program_io._TARGET_FIELDS` 에 코드로 박혀 있었다.
+    # 그러면 **종류를 모른다** — 축사 프로그램의 편집 화면에도 DLI·VPD 칸이
+    # 그대로 나오고, 그 화면은 그냥 틀린 말을 한다. 반대로 EC·pH 처럼 실제로
+    # 관리하는 값은 적을 칸이 없었다.
+    #
+    # ## 정의는 프로그램 단위, 값은 단계 단위
+    #
+    # 같은 항목은 **모든 단계에서 같은 것을 뜻해야 한다.** 정의를 단계마다 들려
+    # 두면 육묘기의 "습도 %" 와 착과기의 "습도 g/m³" 가 조용히 갈리고, 그것을
+    # 읽는 제어·AI 는 둘을 같은 값으로 비교한다. 정의가 위에 있으면 그 사고가
+    # 구조적으로 불가능하다. 단계는 `targets = {키: 숫자}` 만 갖는다.
+    #
+    # ## `measurement` 가 제어 연결을 정한다
+    #
+    # `config_devices_units.MEASUREMENTS` 의 키다(새 어휘를 짓지 않는다 — 센서·
+    # 그래프가 이미 그 어휘를 쓰므로, 목표가 거기 붙으면 "이 목표를 재는 센서" 를
+    # 잇는 길이 저절로 생긴다). 비어 있으면 AoT 가 뜻을 모르는 값이라 **표시·
+    # 조언 전용**이고 제어에 닿지 않는다 — 코드는 자기가 뜻을 모르는 값으로
+    # 물리적 행동을 할 수 없다.
+    target_defs = db.Column(db.JSON, nullable=True)
+
     # 목표 곡선 — `{목표항목: Method.unique_id}`.
     #
     # 단계별 `targets` 는 **계단**이다(그 단계 내내 같은 값). 실제 재배는 주차마다
@@ -141,6 +167,21 @@ class GeoProgram(CRUDMixin, db.Model):
     def stage_list(self):
         """단계 목록(리스트). JSON 이 깨져 있어도 화면을 막지 않는다."""
         return self.stages if isinstance(self.stages, list) else []
+
+    def target_def_list(self):
+        """목표 항목 정의 → 리스트.
+
+        **비어 있으면 종류의 고정 항목으로 채워 답한다.** 이 컬럼은 나중에 생겼고
+        (`p6_47`), 마이그레이션이 채워 넣기는 하지만 그 전에 만들어진 행이나
+        JSON 이 깨진 행이 있을 수 있다. 읽는 쪽마다 "비었으면 어떻게" 를 각자
+        정하면 화면과 제어가 다른 목록을 보게 된다.
+        """
+        from aot.aot_flask.geo.program_io import fixed_target_defs
+
+        defs = self.target_defs
+        if isinstance(defs, list) and defs:
+            return defs
+        return fixed_target_defs(self.kind)
 
     def total_days(self):
         """전체 재배 기간(일). 단계에 `days` 가 없으면 그 단계는 0으로 센다.

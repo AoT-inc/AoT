@@ -69,7 +69,17 @@
     function scaleHtml(items, anchorPct) {
         if (!items || !items.length) return '';
         var anchored = isNum(anchorPct);
-        var html = '<div class="aot-viz-scale' + (anchored ? ' aot-viz-scale--anchored' : '') + '">';
+        // 끝에 붙는 경우 그쪽 축 라벨을 **감춘다.** 예전에는 배경만 깔았는데,
+        // 기준 라벨이 짧으면(예: '오늘') 그 옆으로 축 라벨이 삐져나와
+        // "오늘 08/14" 처럼 한 덩어리로 읽혔다. 축의 끝은 트랙이 이미 보여
+        // 주지만 기준은 이 라벨 말고 적을 자리가 없다.
+        var edge = '';
+        if (anchored) {
+            if (anchorPct <= 12) edge = ' is-anchor-start';
+            else if (anchorPct >= 88) edge = ' is-anchor-end';
+        }
+        var html = '<div class="aot-viz-scale' +
+                   (anchored ? ' aot-viz-scale--anchored' : '') + edge + '">';
         for (var i = 0; i < items.length; i++) {
             var it = items[i];
             var obj  = it && typeof it === 'object';
@@ -85,6 +95,31 @@
                 attr = ' class="aot-viz-scale-anchor"';
             }
             html += '<span' + attr + '>' + esc(text) + '</span>';
+        }
+        return html + '</div>';
+    }
+
+    /* 구간 이름 줄 (기간 바). 트랙 위에 **구간 폭 그대로** 늘어선다 —
+       flex-basis 를 구간 비율로 주므로 이름과 그 아래 구간이 어긋나지 않는다.
+       이름이 하나도 없으면 줄 자체를 만들지 않는다. */
+    function segNamesHtml(segs, total) {
+        if (!total) return '';
+        var any = false, i;
+        for (i = 0; i < segs.length; i++) {
+            if (segs[i] && segs[i].name) { any = true; break; }
+        }
+        if (!any) return '';
+        var html = '<div class="aot-viz-segs">';
+        for (i = 0; i < segs.length; i++) {
+            var span = Number(segs[i] && segs[i].span);
+            if (!isNum(span) || span <= 0) continue;
+            var w = (span / total) * 100;
+            var name = segs[i].name || '';
+            html += '<div class="aot-viz-seg' +
+                    (segs[i].current ? ' is-current' : '') +
+                    '" style="flex:0 0 ' + w.toFixed(2) + '%"' +
+                    (name ? ' title="' + esc(name) + '"' : '') + '>' +
+                    esc(name) + '</div>';
         }
         return html + '</div>';
     }
@@ -128,9 +163,21 @@
             html += '<div class="aot-viz-now" style="left:' + p.toFixed(2) + '%"></div>';
         }
         html += '</div>';
-        // 밴드의 기준은 적정 범위다 — 구간이므로 그 중앙에 붙인다.
+        // 밴드의 기준은 적정 범위이므로 눈금 라벨을 그 **중앙**에 붙인다.
+        // 다만 눈금의 기준 항목이 `at`(축 위의 값)을 주면 그 자리를 쓴다 —
+        // 사람이 정한 목표가 있으면 그것이 이 줄의 기준이고, 라벨이 가리키는
+        // 곳과 실제 위치가 달라서는 안 된다.
+        var at = null;
+        for (var k = 0; k < (o.scale || []).length; k++) {
+            var it = o.scale[k];
+            if (it && typeof it === 'object' && it.anchor && isNum(it.at)) {
+                at = pct(it.at, o.min, o.max);
+                break;
+            }
+        }
         html += scaleHtml(o.scale,
-                          (os !== null && oe !== null) ? (os + oe) / 2 : null);
+                          (at !== null) ? at
+                          : ((os !== null && oe !== null) ? (os + oe) / 2 : null));
         return html + '</div>';
     }
 
@@ -172,7 +219,11 @@
 '">';
         html += headHtml(o.label, o.valueText != null ? o.valueText : o.value, o.valueSub);
         html += '<div class="aot-viz-track">';
-        if (v !== null) {
+        // 0 이면 막대를 그리지 않는다. min-width 때문에 점이 남으면 "조금
+        // 열려 있다" 로 읽힌다 — 꺼져 있는 장치가 켜진 것처럼 보이는 것은
+        // 여백보다 나쁘다. "값 없음" 과는 여전히 구분된다: 그쪽은 값 글자가
+        // '—' 이고 트랙이 흐려진다(is-empty).
+        if (v !== null && v > 0) {
             html += '<div class="aot-viz-fill" style="width:' + v.toFixed(2) + '%"></div>';
         }
         if (t !== null) {
@@ -198,6 +249,9 @@
      * segments 의 span 은 상대 비율이면 된다(일수를 그대로 넣으면 된다).
      * current 인 구간이 '적정' 색으로 칠해진다 — 단계마다 색을 주면 단계 수
      * 만큼 색이 늘어난다.
+     *
+     * segments[].name 을 주면 **트랙 위**에 구간 이름 줄이 생긴다(구간 폭에
+     * 맞춰 늘어선다). 하나도 없으면 그 줄을 만들지 않는다.
      */
     function timeline(o) {
         o = o || {};
@@ -215,6 +269,7 @@
                                                       className: o.className }) +
 '">';
         html += headHtml(o.label, o.valueText, o.valueSub);
+        html += segNamesHtml(segs, total);
         html += '<div class="aot-viz-track">';
 
         if (total > 0) {
@@ -246,6 +301,66 @@
         return html + '</div>';
     }
 
+    /* ── 값만 ────────────────────────────────────────────────────────────
+     * 트랙 없이 머리줄(라벨 + 값)만. **축을 모르는 값**에 쓴다 — 적정 범위가
+     * 정의돼 있지 않은 지표(예: 기본 범위가 없는 CO2)에 억지로 축을 그리면
+     * 그 축의 끝이 무슨 근거인지 아무도 답할 수 없다.
+     *
+     * 밴드 바와 같은 머리줄을 쓰므로 한 목록에 섞여도 줄이 어긋나지 않는다.
+     */
+    function value(o) {
+        o = o || {};
+        var html = '<div class="' +
+                   cls('aot-viz aot-viz--value', { stale: o.stale, out: !!o.out,
+                                                   className: o.className }) +
+                   '">';
+        html += headHtml(o.label, o.valueText != null ? o.valueText : o.value,
+                         o.valueSub);
+        return html + '</div>';
+    }
+
+    /* ── 스파크라인 ──────────────────────────────────────────────────────
+     * 최근 값들의 **모양**만 낸다 — 축도 눈금도 없다.
+     *
+     * 적정 범위를 만들 수 없는 지표(CO2·토양수분·이슬점…)는 값 하나로는 좋은지
+     * 나쁜지 말할 수 없다. 그런데 **추세는 범위를 몰라도 그릴 수 있다** — "지금
+     * 612ppm" 은 판단할 수 없지만 "오르는 중" 은 값 몇 개면 보인다.
+     *
+     * 그래서 세로축에 숫자를 붙이지 않는다. 붙이면 그 축이 판단 기준처럼
+     * 읽히는데, 여기서는 **최소~최대에 맞춰 늘린 상대 모양**일 뿐이다(값 두
+     * 개짜리도 화면을 가득 채운다). 판단은 하지 않고 방향만 말한다.
+     *
+     *   AoTViz.spark({ label: 'CO2', valueText: '612', valueSub: 'ppm',
+     *                  points: [612, 604, 598, …] })   // 오래된 것 → 최신 순
+     */
+    function spark(o) {
+        o = o || {};
+        var pts = (o.points || []).filter(isNum);
+        var html = '<div class="' +
+                   cls('aot-viz aot-viz--spark', { stale: o.stale,
+                                                   className: o.className }) +
+                   '">';
+        html += headHtml(o.label, o.valueText != null ? o.valueText : o.value,
+                         o.valueSub);
+        // 점이 둘 미만이면 선이 아니라 점이다 — 방향을 말할 수 없으므로 그리지
+        // 않는다(빈 칸이 "아직 모른다" 를 정직하게 말한다).
+        if (pts.length >= 2) {
+            var lo = Math.min.apply(null, pts), hi = Math.max.apply(null, pts);
+            var span = (hi - lo) || 1;          // 평평한 구간도 그린다(가운데 선)
+            var n = pts.length;
+            var d = pts.map(function (v, i) {
+                var x = (i / (n - 1)) * 100;
+                // viewBox 높이 24, 위아래 3 여백 — 선 굵기가 잘리지 않게.
+                var y = 21 - ((v - lo) / span) * 18;
+                return x.toFixed(2) + ',' + y.toFixed(2);
+            }).join(' ');
+            html += '<svg class="aot-viz-spark" viewBox="0 0 100 24" ' +
+                    'preserveAspectRatio="none" aria-hidden="true">' +
+                    '<polyline points="' + d + '"/></svg>';
+        }
+        return html + '</div>';
+    }
+
     /* 여러 줄을 한 묶음으로. 사이 여백을 각 호출부가 인라인 style 로 넣지
        않게 하려는 것이 전부다. */
     function group(rows) {
@@ -254,8 +369,41 @@
                '</div>';
     }
 
+    /* **끝 라벨을 감출지는 글자 폭이 정한다.** `scaleHtml` 의 12%/88% 는
+       그릴 때 위치만 보고 내리는 짐작이라, 기준이 한가운데에서 조금 비켜난
+       정도(예: 18%)면 감추지 않는데 글자가 길면 그래도 부딪힌다 — 기준 라벨의
+       불투명 바탕이 축 라벨을 반만 덮어 "2026/0[오늘]" 처럼 잘린 채 읽혔다.
+
+       그래서 붙인 뒤에 실제로 잰다. 기준과 겹치는 축 라벨만 감춘다 — 축의
+       끝은 트랙이 이미 보여 주지만 기준은 이 라벨 말고 적을 자리가 없다.
+       레이아웃이 잡힌 뒤(모달이 화면에 붙은 뒤) 불러야 한다. */
+    function settle(root) {
+        var scope = root || (global.document && global.document.body);
+        if (!scope || !scope.querySelectorAll) return;
+        var scales = scope.querySelectorAll('.aot-viz-scale--anchored');
+        for (var i = 0; i < scales.length; i++) {
+            var el = scales[i];
+            var a  = el.querySelector('.aot-viz-scale-anchor');
+            if (!a) continue;
+            var ar = a.getBoundingClientRect();
+            if (!ar.width) continue;   // 아직 그려지지 않았다
+            for (var j = 0; j < el.children.length; j++) {
+                var kid = el.children[j];
+                if (kid === a) continue;
+                kid.style.visibility = '';
+                var kr = kid.getBoundingClientRect();
+                if (kr.width && kr.right > ar.left - 4 && kr.left < ar.right + 4) {
+                    kid.style.visibility = 'hidden';
+                }
+            }
+        }
+    }
+
     global.AoTViz = {
         band: band,
+        settle: settle,
+        value: value,
+        spark: spark,
         bullet: bullet,
         timeline: timeline,
         group: group,

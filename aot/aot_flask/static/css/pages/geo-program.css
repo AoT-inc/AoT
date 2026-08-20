@@ -146,3 +146,88 @@
   font-size: var(--aot-font-size-xs);
   font-weight: 400;
 }
+
+/* ── 목표 항목 관리 (2026-08-20) ──────────────────────────────────────────
+   항목은 프로그램마다 다르다(종류별 고정 항목 + 사용자가 만든 항목). 여기서는
+   "무엇을 목표로 삼을지" 를 고르고, 값은 단계 상세에서 적는다. */
+.veg-def-row {
+  align-items: center;
+}
+
+/* 숨긴 항목은 **지운 것이 아니다.** 흐리게 두어 "여기 있지만 안 쓴다" 를
+   말한다 — 아예 감추면 나중에 센서를 달았을 때 되살릴 생각을 못 한다. */
+.veg-def-row.is-hidden .aot-modal-option-label {
+  opacity: 0.55;
+}
+
+.veg-def-add {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5em;
+  margin-top: 0.5em;
+}
+
+.veg-def-add > * {
+  flex: 1 1 8rem;
+  min-width: 0;
+}
+
+.veg-def-add > .btn {
+  flex: 0 0 auto;
+}
+
+/* 단계 지침 — 산문이라 줄바꿈이 살아야 읽힌다. */
+.veg-guidance {
+  width: 100%;
+  resize: vertical;
+}
+
+/* 항목 행의 기본 목표값 — 값은 **여기 한 번** 적고 달라지는 단계에서만 덮어쓴다.
+   단계마다 다시 적게 하면 4단계 × 6항목이 빈 칸 24개가 된다. */
+.veg-def-ctl {
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+}
+
+.veg-def-val {
+  flex: 0 1 6rem;
+  min-width: 0;
+}
+
+/* ── 드로어 폼 손질 (2026-08-20) ─────────────────────────────────────────
+   `.aot-modern-input` 은 **한 줄 입력용**이라 알약 반경(`--aot-btn-pill-radius`)
+   을 `!important` 로 건다. 그것이 여러 줄 textarea 에 걸리면 좌우가 통째로
+   둥글어져 거대한 타원이 된다 — 이 저장소가 반복해서 겪는 문제다. */
+#veg-drawer-body .veg-guidance {
+  border-radius: 16px !important;
+  /* 공용 textarea 규칙은 코드 편집기용이라 `white-space: pre` 로 줄을 안 접는다.
+     지침은 산문이라 가로 스크롤이 아니라 줄바꿈이 맞다. */
+  white-space: pre-wrap !important;
+  overflow-wrap: break-word !important;
+}
+
+/* 버튼·입력은 오른쪽으로 모은다 — 라벨은 왼쪽, 조작은 오른쪽이라야 눈이
+   한 번만 움직인다. */
+#veg-drawer-body .veg-def-add,
+#veg-drawer-body .aot-ov-desc-actions {
+  justify-content: flex-end;
+}
+
+#veg-drawer-body .aot-ov-desc-actions {
+  display: flex;
+  gap: 0.5em;
+}
+
+/* 단계에서 "다르게 정하기" 고르기도 같은 줄맞춤. */
+#veg-drawer-body .veg-stage-targets > select[data-tf-add] {
+  display: block;
+  margin-left: auto;
+  max-width: 20rem;
+}
+
+/* 마지막 줄이 바닥에 붙지 않게 — 스크롤 끝에서 버튼이 모서리에 닿으면
+   누르기도 어렵고 잘린 것처럼 보인다. */
+#veg-drawer-body {
+  padding-bottom: 2em;
+}

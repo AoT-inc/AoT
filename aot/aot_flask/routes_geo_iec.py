@@ -1253,10 +1253,11 @@ def _build_facility_overview(facility_uuid):
     site = None
     area_status = None
     rep_key = None
+    hidden_rows = {}
     try:
         from aot.databases.models import GeoFacility, GeoShape
         from aot.aot_flask.geo.site_summary import (
-            parent_site_for_shape, status_for_shape, rep_key_of)
+            parent_site_for_shape, status_for_shape, rep_key_of, hidden_rows_of)
         row = GeoFacility.query.filter_by(unique_id=facility_uuid).first()
         if row is not None and row.shape_uuid:
             site = parent_site_for_shape(row.shape_uuid)
@@ -1267,6 +1268,7 @@ def _build_facility_overview(facility_uuid):
             shape = GeoShape.query.filter_by(unique_id=row.shape_uuid).first()
             if shape is not None:
                 rep_key = rep_key_of(shape)
+                hidden_rows = hidden_rows_of(shape)
     except Exception:
         logger.warning('[facility/overview] parent site / status lookup failed',
                        exc_info=True)
@@ -1286,8 +1288,17 @@ def _build_facility_overview(facility_uuid):
         _plot = _rows[0] if _rows else None
     except Exception:                                       # noqa: BLE001
         _plot = None
+    # 프로그램이 정한 **한계**(주/야간 온도 · 습도). 목표(vpd·co2)는 코디네이터의
+    # 런타임 요약(env_summary)이 이미 싣고 있다 — 그쪽은 곡선까지 풀린 값이라
+    # 여기서 다시 내면 두 숫자가 생긴다. 한계만 프로그램에서 가져온다.
+    try:
+        from aot.aot_flask.geo import coordinator_plot as _cp
+        _limits = _cp.program_limits(_plot)
+    except Exception:                                       # noqa: BLE001
+        _limits = {}
     return {
         'ok':          True,
+        'limits':      _limits,
         'irrigation':  irrigation_status.last_irrigation(facility_uuid, _plot),
         # 곧 닥칠 기상 위험 — 시설·노지가 **같은 판정**을 쓴다(같은 예보 파일).
         # 여기 실어 보내면 모달이 별도 요청 없이 그린다.
@@ -1298,6 +1309,8 @@ def _build_facility_overview(facility_uuid):
         'site':        site,
         'area_status': area_status,
         'rep_key':     rep_key,
+        # [현황] 카드에서 빼 둔 항목 — 거르는 것은 화면이 한다(site_summary 주석).
+        'hidden_rows': hidden_rows,
         'ts':          _time.time(),
     }
 
@@ -1344,6 +1357,38 @@ def api_facility_rep_key(facility_uuid):
     invalidate_rep(shape)
     invalidate_facility_overview(facility_uuid)
     return jsonify({'ok': True, 'rep_key': key})
+
+
+@blueprint.route('/api/aot/facility/<facility_uuid>/hidden_rows', methods=['POST'])
+@login_required
+def api_facility_hidden_rows(facility_uuid):
+    """시설 [현황] 카드에서 뺄 항목 — 구역과 같은 자리·같은 규칙.
+
+    저장 로직은 `routes_geo._save_hidden_rows` 하나다. 시설·구역이 각자
+    한 벌씩 들고 있으면 검사 규칙이 조용히 갈린다(rep_key 가 실제로 그랬다).
+    """
+    from aot.databases.models import GeoFacility, GeoShape
+    from aot.aot_flask.routes_geo import _save_hidden_rows
+
+    if not utils_general.user_has_permission('edit_settings', silent=True):
+        return jsonify({'ok': False, 'error': 'permission denied'}), 403
+
+    row = GeoFacility.query.filter_by(unique_id=facility_uuid).first()
+    if row is None:
+        return jsonify({'ok': False, 'error': 'facility not found'}), 404
+    if not row.shape_uuid:
+        return jsonify({'ok': False, 'error': 'facility has no shape'}), 422
+    shape = GeoShape.query.filter_by(unique_id=row.shape_uuid).first()
+    if shape is None:
+        return jsonify({'ok': False, 'error': 'shape not found'}), 404
+
+    body = request.get_json(force=True, silent=True) or {}
+    err, code, rows = _save_hidden_rows(shape, body)
+    if err is not None:
+        return err, code
+
+    invalidate_facility_overview(facility_uuid)
+    return jsonify({'ok': True, 'hidden_rows': rows})
 
 
 @blueprint.route('/api/aot/facility/<facility_uuid>/photo', methods=['POST'])

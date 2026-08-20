@@ -41,6 +41,20 @@
         <option value="">{{ _('Loading…') }}</option>
       </select>
     </div>
+    {#- 종류는 **만들 때 고른다.** 만든 뒤에 바꾸게 하면 식생 고정 항목 여섯이
+        먼저 들어왔다가 종류를 바꿀 때 빠지고, 값을 이미 적었다면 그 전환이
+        거절된다 — 축사 프로그램 하나 만드는 데 거쳐야 할 단계가 늘어난다.
+        템플릿·복제로 만들 때는 그쪽 종류를 따르므로 이 값은 쓰이지 않는다. -#}
+    <div class="col-auto">
+      <select id="veg-kind" class="selectpicker aot-standard-select"
+              data-style="btn btn-primary aot-roundbox"
+              title="{{ _('Kind') }}">
+        <option value="vegetation">{{ _('Vegetation') }}</option>
+        <option value="livestock">{{ _('Livestock') }}</option>
+        <option value="facility">{{ _('Facility') }}</option>
+        <option value="other">{{ _('Other') }}</option>
+      </select>
+    </div>
     <div class="col-auto">
       <button type="button" id="veg-add" class="btn btn-primary aot-pill-btn aot-pill-btn-primary">
         {{ _('Add') }}
@@ -139,15 +153,32 @@ window._PROG = {
   copy_mine:    {{ _('Copy one of mine')|tojson }},
   new_subject:  {{ _('unnamed')|tojson }},
   version:      {{ _('Version')|tojson }},
-  {#- 단계 목표. 키는 서버 `_TARGET_FIELDS` 와 같은 어휘여야 한다. -#}
+  {#- 단계 목표. **항목 이름은 여기 두지 않는다** — 항목이 프로그램마다 다르고
+      (종류별 고정 항목 + 사용자가 만든 항목) 서버가 `target_defs` 로 라벨까지
+      번역해 준다. 여기 표를 두면 사용자가 만든 항목은 영영 안 보인다. -#}
   targets:      {{ _('Targets')|tojson }},
   targets_note: {{ _('Used for display and advice. Control is not changed automatically.')|tojson }},
-  t_temp_day:   {{ _('Day temp')|tojson }},
-  t_temp_night: {{ _('Night temp')|tojson }},
-  t_rh:         {{ _('Humidity')|tojson }},
-  t_co2:        {{ _('CO2')|tojson }},
-  t_dli:        {{ _('DLI')|tojson }},
-  t_vpd:        {{ _('VPD')|tojson }},
+  no_targets:   {{ _('No target items yet. Add one below to track a value for each stage.')|tojson }},
+  target_items: {{ _('Target items')|tojson }},
+  target_items_note: {{ _('Pick what this programme aims for. Items with a measurement type are followed by the system; the rest stand as reference targets you meet your own way. Hide what you do not use, and leave anything blank you have not decided.')|tojson }},
+  item_name:    {{ _('Item name')|tojson }},
+  item_unit:    {{ _('Unit')|tojson }},
+  common:       {{ _('Common')|tojson }},
+  stages:       {{ _('Stages')|tojson }},
+  stages_note:  {{ _('One stage is fine. Split only where management actually changes — stages run on days elapsed from the start date, so they do not line up with calendar seasons.')|tojson }},
+  override_pick:{{ _('Set a different value here…')|tojson }},
+  default_is:   {{ _('default {v}')|tojson }},
+  unset:        {{ _('not set')|tojson }},
+  all_items:    {{ _('All')|tojson }},
+  add_item:     {{ _('Add item')|tojson }},
+  del_item:     {{ _('Delete this item?')|tojson }},
+  del_item_values: {{ _('Delete this item? {n} stage value(s) will be removed.')|tojson }},
+  dup_item:     {{ _('That item already exists.')|tojson }},
+  hide:         {{ _('Hide')|tojson }},
+  measured:     {{ _('measured')|tojson }},
+  no_measurement: {{ _('Reference target only')|tojson }},
+  guidance:     {{ _('Guidance')|tojson }},
+  guidance_ph:  {{ _('What matters in this stage — watering, ventilation, things to watch for.')|tojson }},
   curves:       {{ _('Target curves')|tojson }},
   curves_note:  {{ _('A curve overrides the stage value for that item. Time runs from the start date.')|tojson }},
   curve_none:   {{ _('Fixed value')|tojson }},

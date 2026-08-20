@@ -8244,15 +8244,29 @@ class AoTDataToolService:
     def create_program(name=None, subject=None, crop=None, stages=None,
                             variety=None, source_note=None, notes=None,
                             kind=None, base_temp_c=None, auto_advance=None,
-                            **extra):
+                            target_defs=None, **extra):
         """[쓰기] 관리 프로그램을 만든다. 사람 승인 필요.
 
         `kind` 는 대상 종류다(기본 `vegetation`). 식생만이 아니라 가축·시설물·
         도로도 같은 구조로 관리한다 — AoT 는 농장 전용이 아니다.
 
-        `stages` 는 `[{key, name, days}]` — `days` 는 **그 단계의 길이**(누적이
-        아니다). 마지막 단계만 `days` 를 비울 수 있고(=끝까지), 중간에 비우면
-        그 뒤 단계가 시작되지 않아 서버가 거절한다.
+        `stages` 는 `[{key, name, days, targets, guidance}]` — `days` 는 **그
+        단계의 길이**(누적이 아니다). 마지막 단계만 `days` 를 비울 수 있고
+        (=끝까지), 중간에 비우면 그 뒤 단계가 시작되지 않아 서버가 거절한다.
+
+        `targets` 는 `{항목키: 숫자}` 이고, **그 키는 `target_defs` 에 있어야
+        한다.** 종류마다 고정 항목이 있고(식생: temp_day·temp_night·rh·co2·
+        dli·vpd) 그것은 자동으로 들어가므로, 그 밖의 값을 목표로 삼고 싶을 때만
+        `target_defs` 에 `{key, label, unit, measurement}` 를 더한다.
+        `measurement` 는 센서가 쓰는 이름이어야 제어·센서와 이어진다(없으면
+        표시·조언 전용).
+
+        `guidance` 는 그 단계의 지침(자유 텍스트) — "육묘기엔 상토가 마르지 않게"
+        같은 문장이다. **아는 것만 적는다**: 지어낸 지침은 사람이 그대로 따르고,
+        틀렸을 때 근거를 되짚을 수 없다.
+
+        ⚠ **목표값과 지침을 비워 두는 것은 정상이다.** 실제 시설이 모든 항목을
+        재거나 제어하지 못하는 일이 흔하고, 근거 없는 숫자는 빈 칸보다 나쁘다.
 
         **`source_note` 에 근거를 적어야 한다**(어떤 재배 지침·자료에서 왔는가).
         단계 기간과 목표는 그럴듯하게 지어낼 수 있는 값이라, 근거가 없으면 나중에
@@ -8282,6 +8296,8 @@ class AoTDataToolService:
                 payload['photosynthesis'] = {'T_base': base_temp_c}
             if auto_advance is not None:
                 payload['auto_advance'] = bool(auto_advance)
+            if target_defs is not None:
+                payload['target_defs'] = target_defs
             result, err = program_io.create_program(payload, source='ai')
             if err:
                 return {"status": "error", "message": err}
@@ -8309,7 +8325,11 @@ class AoTDataToolService:
             payload = {k: v for k, v in fields.items()
                        if k in ('name', 'variety', 'stages', 'notes',
                                 'source_note', 'targets_methods', 'kind',
-                                'auto_advance', 'photosynthesis')
+                                'auto_advance', 'photosynthesis',
+                                # 목표 항목 정의 — 어휘가 프로그램마다 다르므로
+                                # AI 도 이것을 읽고 고칠 수 있어야 한다(고정
+                                # 항목은 서버가 되돌려 놓으므로 지워지지 않는다).
+                                'target_defs')
                        and v is not None}
             # 기준온도는 `photosynthesis.T_base` 에 산다(FunctionCropPreset 과
             # 같은 키). AI 에게 그 중첩을 시키지 않고 평평한 이름으로 받는다.

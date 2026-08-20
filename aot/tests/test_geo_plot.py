@@ -3775,14 +3775,22 @@ class TestVocabularyIsNotAgricultureOnly(unittest.TestCase):
         """
         popup = _read(os.path.join(_ROOT, 'aot_flask', 'static', 'js',
                                    'widgets', 'AoT_map', 'aot-map-popup.js'))
-        over = popup.split('function _plotOverviewHtml', 1)[1].split(
-            '\n  function ', 1)[0]
+        # [현황]의 진행 정보는 _plotOverviewHtml 이 부르는 두 함수에 흩어져
+        # 있다(막대 + AoTViz 가 없을 때의 되돌림). 둘을 합쳐서 본다 — 한쪽만
+        # 보면 막대로 옮긴 것을 "사라졌다" 로 읽는다.
+        over = ''.join(
+            popup.split('function ' + fn, 1)[1].split('\n  function ', 1)[0]
+            for fn in ('_plotOverviewHtml', '_plotProgressHtml',
+                       '_plotProgressRows'))
         about = popup.split('function _plotAboutHtml', 1)[1].split(
             '\n  function ', 1)[0]
         # 날짜는 [개요](바뀌지 않는 사실), 남은 일수는 [현황](지금 값).
         self.assertIn("_pRow(_t('Expected end'), _esc(p.expected_end_on))", about)
         self.assertIn("_t('Days left')", over)
-        self.assertNotIn("_t('Expected end')", over)
+        # [현황]이 예상 종료일 자체를 다시 말하지 않는다. 기간 막대의 눈금
+        # 오른쪽 끝은 **값**(p.expected_end_on / tl.end)이지 라벨이 아니므로
+        # 이 규칙과 무관하다 — 폴백 라벨로만 쓰는 것은 허용한다.
+        self.assertNotIn("_pRow(_t('Expected end')", over)
         # 출처 꼬리표를 되살리지 않는다.
         self.assertNotIn('from programme', over)
         self.assertNotIn('from programme', about)
@@ -3795,25 +3803,35 @@ class TestVocabularyIsNotAgricultureOnly(unittest.TestCase):
         목표라고 말하는 것이 된다.
         """
         from aot.aot_flask.geo.plot_context import _stage_targets
-        from aot.aot_flask.geo.program_io import _TARGET_FIELDS, _TARGET_UNITS
+        from aot.aot_flask.geo.program_io import fixed_target_defs
 
-        # 어휘와 단위는 한 벌이어야 한다.
-        self.assertEqual(set(_TARGET_FIELDS), set(_TARGET_UNITS))
+        class _Prog(object):
+            targets_methods = None
+
+            def target_def_list(self):
+                return fixed_target_defs('vegetation')
 
         stage = {'key': 'seedling', 'targets': {'temp_day': 24.0, 'rh': 70.0}}
-        out = _stage_targets(stage, None)
+        out = _stage_targets(stage, _Prog())
         by_key = {t['key']: t for t in out}
         self.assertEqual(by_key['temp_day']['value'], 24.0)
         self.assertEqual(by_key['temp_day']['unit'], '\u00b0C')
         self.assertEqual(by_key['temp_day']['source'], 'stage')
+        # 라벨도 서버가 붙인다 — 화면이 키로 표를 뒤지지 않게.
+        self.assertTrue(by_key['temp_day'].get('label'))
         self.assertNotIn('co2', by_key)          # 미지정 항목은 내지 않는다
 
     def test_a_curve_never_shows_the_stage_number(self):
         """곡선이 이기는 항목에 단계 값을 보이면 화면이 거짓말을 한다."""
         from aot.aot_flask.geo.plot_context import _stage_targets
 
+        from aot.aot_flask.geo.program_io import fixed_target_defs
+
         class _Prog(object):
             targets_methods = {'temp_day': 'method-uuid'}
+
+            def target_def_list(self):
+                return fixed_target_defs('vegetation')
 
         stage = {'key': 'seedling', 'targets': {'temp_day': 24.0, 'rh': 70.0}}
         out = _stage_targets(stage, _Prog())
@@ -5708,23 +5726,351 @@ class TestProgram(unittest.TestCase):
         self.assertIn('temperature', err or '')
 
     def test_target_out_of_range_is_refused(self):
+        """범위는 항목 정의(`min`/`max`)가 정한다. 오류는 **라벨**로 말한다 —
+        사람이 화면에서 보는 이름이 키가 아니라 라벨이기 때문이다."""
         from aot.aot_flask.geo import program_io
         out, err = program_io.create_program({
             'name': '목표4', 'subject': 'tomato',
             'stages': [{'key': 'a', 'name': 'a', 'days': 10,
                         'targets': {'rh': 250}}]})
         self.assertIsNone(out)
-        self.assertIn('rh', err or '')
+        self.assertIn('Humidity', err or '')
 
-    def test_ui_target_keys_match_the_server(self):
-        """화면이 자기 이름을 쓰면 저장은 되는데 읽는 쪽이 못 알아본다."""
-        import re
+    def test_ui_does_not_carry_its_own_target_vocabulary(self):
+        """항목은 프로그램마다 다르다 — 화면이 목록을 갖고 있으면 사용자가 만든
+        항목은 영영 안 보이고, 고정 항목을 늘려도 한쪽만 늘어난다."""
         js = _read(os.path.join(_ROOT, 'aot_flask', 'static', 'js', 'geo',
                                 'program-settings.js'))
-        block = js.split('var _TARGETS = [', 1)[1].split('];', 1)[0]
-        ui_keys = set(re.findall(r"\['(\w+)'", block))
-        from aot.aot_flask.geo.program_io import _TARGET_FIELDS
-        self.assertEqual(ui_keys, set(_TARGET_FIELDS))
+        self.assertNotIn('var _TARGETS = [', js)
+        # 서버가 준 정의를 그린다.
+        self.assertIn('State.defs', js)
+        self.assertIn('p.target_defs', js)
+
+        popup = _read(os.path.join(_ROOT, 'aot_flask', 'static', 'js',
+                                   'widgets', 'AoT_map', 'aot-map-popup.js'))
+        self.assertNotIn('var _TARGET_LABELS', popup)
+        self.assertIn('t.label', popup)
+
+    # ── 목표 항목 정의 (2026-08-20 재설계) ─────────────────────────────
+
+    def test_kind_decides_the_fixed_items(self):
+        """종류마다 목표가 다르다 — 축사 화면에 DLI·VPD 칸이 나오면 틀린 말이다.
+
+        가축·시설·기타는 **고정 항목이 없다.** AoT 에 그 종류의 측정·제어 축이
+        아직 없어, 근거 없이 지어낸 어휘를 화면에 내보내지 않는다.
+        """
+        from aot.aot_flask.geo import program_io
+
+        veg = {d['key'] for d in program_io.fixed_target_defs('vegetation')}
+        self.assertEqual(veg, {'temp_day', 'temp_night', 'rh', 'co2',
+                               'dli', 'vpd'})
+        for kind in ('livestock', 'facility', 'other'):
+            self.assertEqual(program_io.fixed_target_defs(kind), [], kind)
+
+    def test_fixed_items_cannot_be_deleted_but_can_be_hidden(self):
+        """실제 시설이 모든 항목을 재지 못하는 것은 당연하다 — 안 쓰는 칸은
+        숨겨 치우되, 어휘는 남는다(제어·AI 가 `co2` 를 계속 찾을 수 있어야 한다).
+        """
+        from aot.aot_flask.geo import program_io
+
+        row = self._program(source='user')
+        # 고정 항목을 통째로 빼고 저장해도 서버가 되돌려 놓는다.
+        out, err = program_io.update_program(row.unique_id, {'target_defs': []})
+        self.assertIsNone(err)
+        keys = [d['key'] for d in out['target_defs']]
+        self.assertIn('co2', keys)
+
+        # 숨기기는 받아들인다.
+        defs = [dict(d, hidden=(d['key'] == 'co2')) for d in out['target_defs']]
+        out, err = program_io.update_program(row.unique_id,
+                                             {'target_defs': defs})
+        self.assertIsNone(err)
+        by_key = {d['key']: d for d in out['target_defs']}
+        self.assertTrue(by_key['co2']['hidden'])
+        self.assertFalse(by_key['rh']['hidden'])
+
+    def test_user_item_needs_a_known_measurement_or_none(self):
+        """오타를 받아 두면 "센서가 있는데 안 잡힌다" 를 나중에 만난다."""
+        from aot.aot_flask.geo import program_io
+
+        row = self._program(source='user')
+        defs = program_io.fixed_target_defs('vegetation') + [
+            {'key': 'ec', 'label': '배양액 EC', 'unit': 'dS/m',
+             'measurement': 'no_such_measurement'}]
+        out, err = program_io.update_program(row.unique_id,
+                                             {'target_defs': defs})
+        self.assertIsNone(out)
+        self.assertIn('no_such_measurement', err or '')
+
+        # 물리량을 고르지 않는 것은 정상이다 — 표시·조언 전용으로 남는다.
+        defs[-1]['measurement'] = None
+        out, err = program_io.update_program(row.unique_id,
+                                             {'target_defs': defs})
+        self.assertIsNone(err)
+        by_key = {d['key']: d for d in out['target_defs']}
+        self.assertIsNone(by_key['ec']['measurement'])
+        self.assertFalse(by_key['ec']['fixed'])
+
+    def test_user_item_value_is_accepted_once_defined(self):
+        """정의에 있는 항목이라야 값이 들어간다 — 고아 값에는 그릴 라벨이 없다."""
+        from aot.aot_flask.geo import program_io
+
+        row = self._program(source='user')
+        stages = [{'key': 'a', 'name': 'a', 'days': 10, 'targets': {'ec': 1.8}}]
+
+        out, err = program_io.update_program(row.unique_id, {'stages': stages})
+        self.assertIsNone(out)
+        self.assertIn('ec', err or '')
+
+        defs = program_io.fixed_target_defs('vegetation') + [
+            {'key': 'ec', 'label': '배양액 EC', 'unit': 'dS/m',
+             'measurement': 'electrical_conductivity_soil',
+             'min': 0.0, 'max': 10.0}]
+        out, err = program_io.update_program(
+            row.unique_id, {'target_defs': defs, 'stages': stages})
+        self.assertIsNone(err)
+        self.assertEqual(out['stages'][0]['targets']['ec'], 1.8)
+
+    def test_removing_an_item_that_still_has_values_is_refused(self):
+        """조용히 지우지 않는다 — 화면이 값도 함께 지운 뒤 보내야 한다."""
+        from aot.aot_flask.geo import program_io
+
+        row = self._program(source='user')
+        defs = program_io.fixed_target_defs('vegetation') + [
+            {'key': 'ec', 'label': 'EC', 'unit': 'dS/m', 'measurement': None}]
+        _, err = program_io.update_program(row.unique_id, {
+            'target_defs': defs,
+            'stages': [{'key': 'a', 'name': 'a', 'days': 10,
+                        'targets': {'ec': 1.8}}]})
+        self.assertIsNone(err)
+
+        out, err = program_io.update_program(
+            row.unique_id,
+            {'target_defs': program_io.fixed_target_defs('vegetation')})
+        self.assertIsNone(out)
+        self.assertIn('ec', err or '')
+
+    def test_switching_kind_starts_clean_not_with_leftovers(self):
+        """식생→가축으로 바꾸면 DLI·VPD 가 "사용자 항목" 으로 둔갑해 남으면 안 된다.
+
+        가축·시설은 **고정 항목 없이 빈 상태에서 시작**한다. 걸러내지 않으면 축사
+        화면에 식생 항목이 그대로 남고, 라벨은 msgid 라 번역도 되지 않는다.
+        """
+        from aot.aot_flask.geo import program_io
+
+        row = self._program(source='user')
+        out, err = program_io.update_program(row.unique_id, {'kind': 'livestock'})
+        self.assertIsNone(err)
+        self.assertEqual(out['kind'], 'livestock')
+        self.assertEqual(out['target_defs'], [])
+
+        # 사람이 만든 항목은 종류가 바뀌어도 남는다 — 그건 그 사람의 것이다.
+        defs = [{'key': 'nh3', 'label': '암모니아', 'unit': 'ppm'}]
+        out, err = program_io.update_program(row.unique_id, {'target_defs': defs})
+        self.assertIsNone(err)
+        self.assertEqual([d['key'] for d in out['target_defs']], ['nh3'])
+
+        out, err = program_io.update_program(row.unique_id, {'kind': 'vegetation'})
+        self.assertIsNone(err)
+        keys = [d['key'] for d in out['target_defs']]
+        self.assertIn('nh3', keys)          # 사용자 항목 보존
+        self.assertIn('co2', keys)          # 식생 고정 항목 복귀
+
+    def test_switching_kind_is_refused_when_values_would_be_orphaned(self):
+        """조용히 지우지 않는다 — 무엇이 걸리는지 말하고 사람이 정하게 한다."""
+        from aot.aot_flask.geo import program_io
+
+        row = self._program(source='user')
+        _, err = program_io.update_program(row.unique_id, {
+            'stages': [{'key': 'a', 'name': 'a', 'days': 10,
+                        'targets': {'co2': 800}}]})
+        self.assertIsNone(err)
+
+        out, err = program_io.update_program(row.unique_id, {'kind': 'livestock'})
+        self.assertIsNone(out)
+        self.assertIn('co2', err or '')
+        self.assertIn('대상 종류', err or '')
+
+    def test_program_default_covers_stages_that_do_not_override(self):
+        """값을 단계마다 다시 적게 하면 4단계 × 6항목이 빈 칸 24개가 된다.
+
+        목표는 대개 작기 내내 같고 달라지는 것은 일부다. 프로그램에 한 번 적고
+        달라지는 단계에서만 덮어쓴다.
+        """
+        from aot.aot_flask.geo import program_io, plot_context
+
+        row = self._program(source='user')
+        defs = [dict(d, default=(70 if d['key'] == 'rh' else None))
+                for d in program_io.fixed_target_defs('vegetation')]
+        out, err = program_io.update_program(row.unique_id, {
+            'target_defs': defs,
+            'stages': [{'key': 'a', 'name': 'a', 'days': 10},
+                       {'key': 'b', 'name': 'b', 'days': None,
+                        'targets': {'rh': 85}}]})
+        self.assertIsNone(err)
+
+        from aot.databases.models import GeoProgram
+        prow = GeoProgram.query.filter_by(unique_id=row.unique_id).first()
+
+        # 덮어쓰지 않은 단계는 기본값을 따르고, 출처를 밝힌다.
+        t0 = {t['key']: t for t in
+              plot_context._stage_targets(prow.stage_list()[0], prow)}
+        self.assertEqual(t0['rh']['value'], 70)
+        self.assertEqual(t0['rh']['source'], 'default')
+
+        # 덮어쓴 단계는 그 값이 이긴다.
+        t1 = {t['key']: t for t in
+              plot_context._stage_targets(prow.stage_list()[1], prow)}
+        self.assertEqual(t1['rh']['value'], 85)
+        self.assertEqual(t1['rh']['source'], 'stage')
+
+    def test_default_is_range_checked_like_a_stage_value(self):
+        """기본값도 목표값이다 — 검사를 건너뛰면 범위 밖 값이 조용히 들어간다."""
+        from aot.aot_flask.geo import program_io
+
+        row = self._program(source='user')
+        defs = [dict(d, default=(250 if d['key'] == 'rh' else None))
+                for d in program_io.fixed_target_defs('vegetation')]
+        out, err = program_io.update_program(row.unique_id,
+                                             {'target_defs': defs})
+        self.assertIsNone(out)
+        self.assertIn('Humidity', err or '')
+
+    def test_ui_stage_shows_only_overridden_items(self):
+        """단계마다 항목을 전부 그리면 쓰지 않는 빈 칸이 화면을 채운다."""
+        js = _read(os.path.join(_ROOT, 'aot_flask', 'static', 'js', 'geo',
+                                'program-settings.js'))
+        # 덮어쓴 항목만 그리고, 나머지는 고르기로 꺼낸다.
+        self.assertIn("defs.filter(function (d) { return t[d.key] != null; })", js)
+        self.assertIn('data-tf-add', js)
+        # 값은 항목 행에서 한 번 적는다.
+        self.assertIn('data-def-val', js)
+
+    def test_plant_only_fields_are_hidden_for_other_kinds(self):
+        """축사 프로그램에 "광합성 지수" 가 떠 있으면 무엇을 적어야 할지 알 수 없고,
+        알 수 없는 칸이 하나 있으면 화면 전체를 못 믿게 된다.
+
+        광합성 모델 상수·기준온도(GDD)·관수/시비는 전부 **식물 개념**이다.
+        """
+        js = _read(os.path.join(_ROOT, 'aot_flask', 'static', 'js', 'geo',
+                                'program-settings.js'))
+        self.assertIn('function _isVeg()', js)
+        # 광합성·기준온도·GDD 안내는 식생에서만 낸다.
+        self.assertIn('var vegOnly = _isVeg()', js)
+        # 단계의 적산온도 칸도 식생에서만.
+        self.assertIn("(_isVeg()\n                 ? _stageField(_T('stage_gdd'", js)
+        # 관수·시비 역할도 식생에서만(그 밖은 역할 없는 자원 하나).
+        self.assertIn("var roles = _isVeg() ? _RES_ROLES : ['other'];", js)
+
+    def test_kind_and_defs_are_set_before_anything_reads_them(self):
+        """순서가 뒤집히면 이번 렌더가 **직전 프로그램의 값**으로 그려진다.
+
+        실제로 그랬다: 종류를 축사로 바꿔도 첫 번에는 광합성 칸이 그대로 남고,
+        한 번 더 바꿔야 사라졌다(`_kindNow` 를 읽는 곳보다 뒤에서 세웠다).
+        `State.defs` 도 같은 문제였다 — 단계 목표가 이전 정의로 그려진다.
+        """
+        js = _read(os.path.join(_ROOT, 'aot_flask', 'static', 'js', 'geo',
+                                'program-settings.js'))
+        set_kind = js.index("_kindNow = p.kind || 'vegetation';")
+        set_defs = js.index('State.defs = (p.target_defs || [])')
+        read_veg = js.index('var vegOnly = _isVeg()')
+        read_stages = js.index('var stages = (p.stages || [])')
+        self.assertLess(set_kind, read_veg)
+        self.assertLess(set_kind, read_stages)
+        self.assertLess(set_defs, read_stages)
+
+    def test_multiline_input_is_not_a_pill(self):
+        """`.aot-modern-input` 은 **한 줄 입력용**이라 알약 반경(9999px)을
+        `!important` 로 건다. 그것이 여러 줄 textarea 에 걸리면 좌우가 통째로
+        둥글어져 거대한 타원이 된다 — 이 저장소가 반복해서 겪는 문제다.
+
+        그리고 공용 textarea 규칙은 코드 편집기용이라 `white-space: pre` 로 줄을
+        접지 않는다. 지침은 산문이라 가로 스크롤이 아니라 줄바꿈이 맞다.
+        """
+        css = _read(os.path.join(_ROOT, 'aot_flask', 'static', 'css', 'pages',
+                                 'geo-program.css'))
+        self.assertIn('border-radius: 16px !important', css)
+        self.assertIn('white-space: pre-wrap !important', css)
+
+    def test_program_css_uses_only_defined_variables(self):
+        """없는 CSS 변수를 쓰면 그 선언이 **통째로 무시된다** — gap 이 아예 안 걸리는데
+        화면에는 아무 표시도 없다. 실제로 `--aot-space-xs`(존재하지 않음)를 썼었다.
+        """
+        import re
+        root = os.path.join(_ROOT, 'aot_flask', 'static', 'css')
+        defined = set()
+        for dirpath, _dirs, files in os.walk(root):
+            for fn in files:
+                if not fn.endswith('.css'):
+                    continue
+                for m in re.finditer(r'(--[a-z0-9-]+)\s*:',
+                                     _read(os.path.join(dirpath, fn))):
+                    defined.add(m.group(1))
+        # **폴백이 없는 것만** 본다. `var(--x, 12px)` 는 변수가 없어도 폴백이
+        # 받아 주므로 의도된 쓰임이다(이 파일에도 그런 줄이 있다). 폴백 없이
+        # 없는 변수를 쓰는 것만이 선언을 통째로 잃는다.
+        css = _read(os.path.join(root, 'pages', 'geo-program.css'))
+        bare = set(re.findall(r'var\((--[a-z0-9-]+)\s*\)', css))
+        missing = sorted(bare - defined)
+        self.assertEqual(missing, [], '정의되지 않은 CSS 변수(폴백 없음): %s' % missing)
+
+    def test_fixed_defs_are_published_per_kind(self):
+        """화면이 저장하지 않고 종류를 바꿔 볼 수 있어야 한다 — 그러려면 새 종류의
+        고정 항목을 스스로 세울 수 있어야 한다."""
+        from aot.aot_flask.geo import program_io
+
+        for kind in program_io.VALID_KINDS:
+            defs = program_io.fixed_target_defs(kind)
+            self.assertIsInstance(defs, list)
+        self.assertEqual(len(program_io.fixed_target_defs('vegetation')), 6)
+        self.assertEqual(program_io.fixed_target_defs('livestock'), [])
+
+    def test_guidance_is_kept_on_the_stage(self):
+        """AI 도 사람도 이 글을 읽는다 — 저장되지 않으면 둘 다 못 본다."""
+        from aot.aot_flask.geo import program_io
+
+        row = self._program(source='user')
+        out, err = program_io.update_program(row.unique_id, {
+            'stages': [{'key': 'a', 'name': 'a', 'days': 10,
+                        'guidance': '  상토가 마르지 않게 관리한다.  '}]})
+        self.assertIsNone(err)
+        self.assertEqual(out['stages'][0]['guidance'],
+                         '상토가 마르지 않게 관리한다.')
+
+        # 빈 글은 키를 남기지 않는다 — 있는데 비었다로 읽히면 안 된다.
+        out, err = program_io.update_program(row.unique_id, {
+            'stages': [{'key': 'a', 'name': 'a', 'days': 10, 'guidance': '   '}]})
+        self.assertIsNone(err)
+        self.assertNotIn('guidance', out['stages'][0])
+
+    def test_control_axis_is_found_by_measurement_not_by_key(self):
+        """사용자가 이름을 붙여도 제어에 닿아야 한다 — 키로 찾으면 못 찾는다."""
+        from aot.aot_flask.geo import coordinator_plot
+
+        self.assertEqual(coordinator_plot.axis_of(
+            {'key': 'co2_in', 'measurement': 'co2', 'shape': 'instant'}), 'co2')
+        # DLI 는 순간 광량이 아니라 일적산이다.
+        self.assertEqual(coordinator_plot.axis_of(
+            {'key': 'x', 'measurement': 'radiation', 'shape': 'daily'}), 'dli')
+        self.assertIsNone(coordinator_plot.axis_of(
+            {'key': 'x', 'measurement': 'radiation', 'shape': 'instant'}))
+        # 물리량이 없는 항목은 어느 축에도 닿지 않는다.
+        self.assertIsNone(coordinator_plot.axis_of(
+            {'key': 'nh3', 'measurement': None, 'shape': 'instant'}))
+
+    def test_ambiguous_axis_picks_nothing(self):
+        """둘 중 하나를 임의로 고르면 화면과 제어가 갈린다."""
+        from aot.aot_flask.geo import coordinator_plot
+
+        a = {'key': 'co2', 'measurement': 'co2', 'shape': 'instant',
+             'fixed': True, 'value': 800}
+        b = {'key': 'co2_in', 'measurement': 'co2', 'shape': 'instant',
+             'fixed': False, 'value': 900}
+        # 고정 항목이 이긴다.
+        self.assertEqual(coordinator_plot._pick_by_axis([a, b])['co2'], a)
+        # 고정 항목이 없고 후보가 둘이면 고르지 않는다.
+        c = dict(b, key='co2_out')
+        self.assertNotIn('co2', coordinator_plot._pick_by_axis([b, c]))
 
     def test_adding_a_program_opens_the_drawer(self):
         """추가하면 바로 고칠 수 있어야 한다 — 한 줄 늘어난 것만으로는
@@ -6492,3 +6838,98 @@ class TestPlotTimeline(_CoordPlotFixture, unittest.TestCase):
         self.assertIn('tl.today_pct', body)
         for gone in ('days_ago', 'Date.now()', 'new Date('):
             self.assertNotIn(gone, body, '화면이 기간을 다시 계산한다: %s' % gone)
+
+
+# ── 카드에서 뺄 항목 — 구획은 상위 것을 물려받는다 ────────────────────────
+#
+# 구획의 [현재]에 뜨는 값은 구획이 가진 것이 아니다(시설 구획이면 그 동·시설,
+# 노지 구획이면 그 구역의 센서). 같은 센서인데 창을 옮겼다고 다른 항목이 보이면
+# 사용자는 두 화면 중 어느 쪽이 맞는지 알 방법이 없다.
+#
+# **깨져도 조용하다.** 물려받기가 끊기면 구획 창에만 감춘 항목이 도로 나타나는데,
+# 에러는 없고 그 화면만 아는 사람이 아니면 눈치채기 어렵다. 반대로 구획에 [설정]
+# 버튼이 생기면, 거기서 고친 것이 그 시설·구역을 보는 **다른 사람의 화면**을
+# 함께 바꾼다(rep_key 를 구획 창에 넘기지 않는 것과 같은 이유).
+class TestPlotInheritsHiddenRows(unittest.TestCase):
+
+    _ROUTES = os.path.join(_ROOT, 'aot_flask', 'routes_geo_plot.py')
+    _WIDGET = os.path.join(_ROOT, 'aot_flask', 'static', 'js', 'widgets',
+                           'AoT_map', 'aot-map-widget-vector.js')
+
+    def test_both_builders_emit_it(self):
+        """시설 구획·노지 구획 **둘 다**. 한쪽만 내면 그쪽 창만 조용히 갈린다 —
+        서버에 `/contents` 빌더가 둘이라는 것 자체가 이미 한 번 데인 자리다."""
+        src = _read(self._ROUTES)
+        for fn in ('_build_facility_plot_contents', '_build_plot_contents'):
+            body = src.split('def %s' % fn, 1)[1].split('\ndef ', 1)[0]
+            self.assertIn(
+                "'hidden_rows'", body,
+                '%s 가 hidden_rows 를 내지 않는다 — 그 경로의 구획 창만 '
+                '상위 설정을 무시한다' % fn)
+
+    def test_source_is_where_the_values_come_from(self):
+        """시설 구획은 시설, 노지 구획은 구역. 시설 구획도 zone_uuid 를 가질 수
+        있지만(시설이 구역 안에 있으면) 그 구역은 값을 주지 않는다."""
+        # `routes_geo_plot` 을 바로 임포트하면 `routes_geo_device_split` 과의
+        # 순환 임포트에 걸린다 — 실제 앱과 같은 순서로 `routes_geo` 를 먼저
+        # 태운다(이 파일의 다른 클래스가 setUpClass 에서 하는 것과 같다).
+        # 이 검사는 앱 컨텍스트가 필요 없어 그 클래스에 얹지 않았다.
+        import aot.aot_flask.routes_geo  # noqa: F401
+        from aot.aot_flask import routes_geo_plot as routes
+        from aot.aot_flask.geo import site_summary
+        calls = {}
+
+        def _fac(uuid):
+            calls['facility'] = uuid
+            return {'now': ['RH']}
+
+        def _shape(uuid):
+            calls['shape'] = uuid
+            return {'now': ['T']}
+
+        # DB 를 켜지 않고 **어느 쪽을 보는지**만 본다 — 이 검사가 지키는 것은
+        # 조회 결과가 아니라 출처 선택이다.
+        real_fac = site_summary.hidden_rows_for_facility
+        real_shape = site_summary.hidden_rows_for_shape
+        site_summary.hidden_rows_for_facility = _fac
+        site_summary.hidden_rows_for_shape = _shape
+        try:
+            self.assertEqual(
+                routes._inherited_hidden_rows(facility_uuid='F', zone_uuid='Z'),
+                {'now': ['RH']})
+            self.assertEqual(calls.get('facility'), 'F')
+            self.assertNotIn('shape', calls,
+                             '시설이 있는데 구역까지 봤다 — 값을 주지 않는 쪽이다')
+            calls.clear()
+            self.assertEqual(routes._inherited_hidden_rows(zone_uuid='Z'),
+                             {'now': ['T']})
+            self.assertEqual(calls.get('shape'), 'Z')
+        finally:
+            site_summary.hidden_rows_for_facility = real_fac
+            site_summary.hidden_rows_for_shape = real_shape
+
+    def test_missing_parent_hides_nothing(self):
+        """상위를 못 찾은 것과 상위가 아무것도 감추지 않은 것은 화면에서 같은
+        결과라야 한다 — 못 찾았다고 전부 감추면 구획 창이 통째로 빈다."""
+        from aot.aot_flask.geo import site_summary
+        self.assertEqual(site_summary.hidden_rows_for_shape(None), {})
+        self.assertEqual(site_summary.hidden_rows_for_facility(None), {})
+
+    def test_client_applies_it_but_offers_no_button(self):
+        """구획 창은 물려받은 것을 적용만 한다. `configurable` 을 넘기면 거기서
+        고친 것이 상위를 바꾼다 — 저장이 상위에 있기 때문이다."""
+        js = _read(self._WIDGET)
+        # 구획 창의 `/contents` 한 곳만 본다 — 짧은 조각으로 자르면 다른 창의
+        # 코드까지 딸려 들어와 `configurable` 이 거기서 걸린다.
+        body = js.split("'/api/geo/plot/' + encodeURIComponent(plotUuid) +",
+                        1)[1].split('_renderZoneDevices', 1)[0]
+        self.assertIn('hidden_rows', body,
+                      '구획 창이 물려받은 설정을 읽지 않는다')
+        # **주석은 빼고 본다.** 왜 안 넘기는지를 적어 둔 주석에 그 낱말이
+        # 들어 있어, 그대로 세면 설명을 쓴 것만으로 검사가 깨진다.
+        code = '\n'.join(
+            l.split('//', 1)[0] for l in body.splitlines())
+        self.assertNotIn(
+            'configurable', code,
+            '구획 창에 [설정] 버튼이 생겼다 — 고치면 그 시설·구역을 보는 '
+            '다른 사람의 화면이 함께 바뀐다')

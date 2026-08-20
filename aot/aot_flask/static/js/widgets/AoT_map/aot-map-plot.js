@@ -530,6 +530,11 @@
                 var el = popup && popup.getElement && popup.getElement();
                 var body = el && el.querySelector('.maplibregl-popup-content');
                 if (!body) return;
+                // 단계를 몸통에 남긴다 — [목표] 블록을 측정값이 도착한 뒤 다시
+                // 그리는 것은 위젯(aot-map-widget-vector.js)이고, 그쪽 응답에는
+                // 단계가 없다. 속성이 아니라 프로퍼티로 두는 이유: 문자열로
+                // 직렬화했다 되돌리면 숫자·null 이 조용히 바뀐다.
+                body.__aotPlotStage = p.stage || null;
 
                 // [환경·제어] — 제어 배선은 위젯이 빌려준다. 여기서 다시
                 // 구현하면 폴링·토글·예약이 두 벌이 된다.

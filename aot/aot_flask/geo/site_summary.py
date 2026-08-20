@@ -30,8 +30,20 @@ logger = logging.getLogger(__name__)
 # 지도 칩과 팝업에서 다른 측정을 대표로 내세운다.
 SENSOR_KEY_PRIORITY = ('VPD', 'T', 'RH', 'CO2', 'light', 'wind_ms')
 
-# 측정값이 "살아 있다"고 보는 최대 나이(초). 계측 dock 의 판정과 같은 값.
+# 측정값이 "살아 있다"고 보는 최대 나이(초)의 **하한**. 장치 주기가 이보다
+# 길면 주기 × STALE_PERIOD_FACTOR 로 늘린다 — 고정값 하나로 판정하면 주기가
+# 이 값과 같거나 더 긴 장치는 지터만으로 매 주기 경계마다 "꺼짐"으로 잘못
+# 보인다(측정 시각과 조회 시각이 그 순간 우연히 어긋날 뿐인데도).
 FRESH_MAX_AGE_S = 600
+
+# 표시 경로 공통 배수 — `routes_general._PERIOD_LOOKBACK_FACTOR` 와 같은 값
+# ("표본 2회 유실까지 견딘다"). `facility_sensors._max_age_for` 의 2배(표본
+# 1회분)는 여기서는 부족했다 — 로컬에서 실측한 KMA_weather_500 입력(주기
+# 300초)이 692초(2.3주기) 공백을 정상적으로 낸다. 이 드라이버는 그 자체가
+# "유효 데이터 없음"을 단발로는 DEBUG 로만 남기고 6회 연속(=30분)부터 ERROR
+# 로 올린다 — 몇 주기 정도의 공백은 설계상 정상이라는 뜻이라, 표시 판정도
+# 그만큼 여유를 둬야 한다.
+STALE_PERIOD_FACTOR = 3
 
 # 이 아래면 교체 대상으로 센다. 경고이지 고장이 아니다.
 BATTERY_LOW_PCT = 20
@@ -511,7 +523,7 @@ def env_for_devices(device_ids):
         total += 1
         fresh_here = False
         for dm, meta in renderable:
-            value = _last_value(inp.unique_id, dm.unique_id)
+            value = _last_value(inp.unique_id, dm.unique_id, period=inp.period)
             if value is None:
                 continue
             fresh_here = True
@@ -556,6 +568,60 @@ def rep_key_of(shape):
     return key if isinstance(key, str) and key else None
 
 
+# [현황]의 카드 안에서 **빼 둔 항목**. 카드별 key 목록이다.
+#
+#   {'now': ['RH', 'dewpoint'], 'control': ['curtain']}
+#
+# `rep_key` 와 같은 자리(도형 meta_json)에 둔다. 이유도 같다 — 어디에서 보든
+# 같은 곳은 같은 것을 보여야 하고, 위젯 옵션에 두면 같은 시설이 대시보드마다
+# 다른 항목을 감춘다. **감추는 것은 화면의 일이라 서버는 값을 계속 보낸다** —
+# 여기서 걸러 버리면 설정 창이 "무엇을 감출 수 있는지" 를 목록으로 만들 수
+# 없고(감춘 것이 응답에서 사라져 다시 켤 수단이 없어진다), 대표값·지도 라벨
+# 같은 다른 소비처까지 함께 눈이 먼다.
+_HIDDEN_ROW_CARDS = ('now', 'control')
+
+
+def hidden_rows_of(shape):
+    """도형에 지정된 '카드에서 빼 둔 항목' (없으면 빈 dict)."""
+    meta = getattr(shape, 'meta_json', None) or {}
+    raw = meta.get('hidden_rows')
+    if not isinstance(raw, dict):
+        return {}
+    out = {}
+    for card in _HIDDEN_ROW_CARDS:
+        vals = raw.get(card)
+        if not isinstance(vals, list):
+            continue
+        keys = [k for k in vals if isinstance(k, str) and k]
+        if keys:
+            out[card] = keys
+    return out
+
+
+def hidden_rows_for_shape(shape_uuid):
+    """도형 uuid 로 바로 읽는다 — 도형 객체를 이미 들고 있지 않은 호출부용.
+
+    구획(`GeoPlot`)처럼 **자기 설정을 갖지 않고 상위 것을 물려받는** 자리가
+    쓴다. 없거나 못 찾으면 빈 dict — 상위를 못 찾은 것과 상위가 아무것도
+    감추지 않은 것은 화면에서 같은 결과라야 한다(못 찾았다고 전부 감추면
+    구획 창이 통째로 비고, 원인은 어디에도 안 보인다).
+    """
+    if not shape_uuid:
+        return {}
+    from aot.databases.models import GeoShape
+    shape = GeoShape.query.filter_by(unique_id=shape_uuid).first()
+    return hidden_rows_of(shape) if shape is not None else {}
+
+
+def hidden_rows_for_facility(facility_uuid):
+    """시설 uuid → 그 시설 도형의 설정. 시설은 도형을 한 겹 건너 갖는다."""
+    if not facility_uuid:
+        return {}
+    from aot.databases.models import GeoFacility
+    row = GeoFacility.query.filter_by(unique_id=facility_uuid).first()
+    return hidden_rows_for_shape(row.shape_uuid) if row is not None else {}
+
+
 def _pick_rep(readings, rep_key=None):
     """대표값 하나. 지정이 있으면 그것, 없으면 우선순위 첫 항목.
 
@@ -580,13 +646,21 @@ def _pick_rep(readings, rep_key=None):
     }
 
 
-def _last_value(device_id, measurement_id):
-    """신선한 마지막 값(float) 또는 None. 오래된 값은 없는 것으로 친다."""
+def _last_value(device_id, measurement_id, period=None):
+    """신선한 마지막 값(float) 또는 None. 오래된 값은 없는 것으로 친다.
+
+    `period`(장치 샘플링 주기, 초)를 넘기면 `period × STALE_PERIOD_FACTOR` 로
+    유효 수명을 정한다 — `FRESH_MAX_AGE_S` 는 그 하한일 뿐이다. 주기와 같은
+    고정값으로 판정하면 여유가 0이라, 지터 몇 초에도 매 주기 경계마다
+    "꺼짐"으로 잘못 보인다.
+    """
     from aot.utils.influx import get_last_measurement
 
+    max_age = (max(FRESH_MAX_AGE_S, int(float(period) * STALE_PERIOD_FACTOR))
+              if period else FRESH_MAX_AGE_S)
     try:
         ts, value = get_last_measurement(device_id, measurement_id,
-                                         max_age=FRESH_MAX_AGE_S)
+                                         max_age=max_age)
     except Exception as exc:
         logger.debug('[SiteSummary] %s/%s 조회 실패: %s',
                      device_id, measurement_id, exc)

@@ -90,14 +90,35 @@ class TestOverviewReadsServerFields(unittest.TestCase):
                      'feedforward'):
             self.assertNotIn(gone, body, '[현황]에 남아 있다: %s' % gone)
 
-    def test_target_and_deviation_sit_next_to_the_value(self):
+    def test_target_sits_next_to_the_value(self):
         """25.1°C 만 보면 좋은지 나쁜지 모르고, 목표만 표로 보면 지금 어떤지
-        모른다 — 둘은 붙어 있어야 뜻이 생긴다."""
-        body = _read(_POPUP).split('function buildEnvNowHtml', 1)[1].split(
+        모른다 — 둘은 붙어 있어야 뜻이 생긴다.
+
+        2026-08-20 부터 그 자리는 **밴드 바**다: 목표는 축 위 자기 위치에 눈금
+        라벨로 서고(`at`), 편차는 마커가 목표에서 얼마나 떨어져 있는지로 보인다.
+        그래서 `opts.deviation`(작은 글씨 한 줄)은 더 이상 읽지 않는다 — 축이
+        같은 말을 더 잘 하고, 줄이 하나 줄어든다.
+        """
+        body = _read(_POPUP).split('function _envNowRowHtml', 1)[1].split(
             '\n  function ', 1)[0]
         self.assertIn('opts.targets', body)
-        self.assertIn('opts.deviation', body)
         self.assertIn('_NOW_TO_TARGET', body)
+        # 목표는 **위치**로 말한다 — 값만 적고 자리를 안 주면 축 위 어디를
+        # 가리키는지 알 수 없다.
+        self.assertIn('at: anchorAt', body)
+
+    def test_env_axis_comes_from_the_band_table(self):
+        """축과 적정 구간은 **밴드 색과 같은 표**에서 온다.
+
+        화면이 범위를 따로 들면 라벨 색과 축이 갈린다. 단위 환산(bandValue)도
+        같이 써야 Pa 로 저장된 VPD 의 마커가 제자리에 선다.
+        """
+        body = _read(_POPUP).split('function _envNowRowHtml', 1)[1].split(
+            '\n  function ', 1)[0]
+        self.assertIn('bandScale', body)
+        self.assertIn('bandValue', body)
+        # 축을 모르는 지표는 **지어내지 않는다** — 머리줄만 낸다.
+        self.assertIn('V.value(', body)
 
     def test_control_status_leads_with_why(self):
         """숫자를 늘어놓기 전에 **왜 그런지**를 먼저 말한다 — 설비 한계와 안전

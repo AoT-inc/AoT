@@ -92,6 +92,20 @@
 | `photosynthesis.gdd_daily` | `gdd_target_daily` | 값이 있을 때 |
 | `targets.temp_day` · `temp_night` · `rh` | **없음** | 아래 참조 |
 
+> **2026-08-20 — 축은 키가 아니라 `(measurement, shape)` 으로 찾는다.**
+> 목표 항목은 이제 프로그램마다 다르고 사용자가 이름을 붙인다
+> (`program-layer.md` §단계 목표). 위 표의 `targets.vpd` 는 "키가 `vpd` 인 항목"
+> 이 아니라 **`measurement='vapor_pressure_deficit'`, `shape='instant'` 인 항목**을
+> 뜻한다(`coordinator_plot.axis_of`). 키로 찾으면 사용자가 만든 "실내 CO₂"
+> (key=`co2_in`)가 영영 제어에 닿지 않고, 그 이유가 화면 어디에도 없다.
+>
+> 한 축에 후보가 둘이면 **고정 항목이 이기고**, 고정 항목이 없으면 **아무것도
+> 고르지 않는다** — 임의로 고르면 어느 값으로 도는지 화면과 제어가 갈린다.
+>
+> `measurement` 가 없는 항목(사용자가 물리량을 고르지 않은 것)은 **어느 축에도
+> 닿지 않는다.** 코드는 자기가 뜻을 모르는 값으로 장비를 움직일 수 없다 —
+> 그런 항목은 `unmapped` 로 나가 화면이 "참고" 라고 말한다.
+
 ### 온도·습도에 대응하는 목표 필드가 **없다**
 
 코디네이터의 1차 목표는 VPD 이고, `temp_max`/`temp_min`·`humid_max`/`humid_min` 은

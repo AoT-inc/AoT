@@ -106,6 +106,40 @@ def api_target_methods():
          'method_type': m.method_type} for m in rows]})
 
 
+@blueprint.route('/api/geo/target-measurements', methods=['GET'])
+@login_required
+def api_target_measurements():
+    """목표 항목이 고를 수 있는 **측정 종류** 목록.
+
+    `config_devices_units.MEASUREMENTS` 를 그대로 낸다 — 센서·그래프가 이미 쓰는
+    어휘이고, 목표가 여기에 붙어야 "이 목표를 재는 센서가 이 구획에 있는가" 를
+    답할 수 있다. 새 어휘를 지어내면 그 연결이 영영 수동이 된다.
+
+    **고르지 않아도 된다.** 물리량이 없는 항목(AoT 가 뜻을 모르는 값)은 표시·조언
+    전용으로 남고, 그것도 정상이다 — 사람이 관리하는 값이 전부 센서로 잡히는
+    시설은 드물다.
+    """
+    from aot.config_devices_units import MEASUREMENTS
+
+    out = [{'key': k,
+            'name': (v.get('name') or k),
+            'units': list(v.get('units') or [])}
+           for k, v in MEASUREMENTS.items()]
+    out.sort(key=lambda x: (x['name'] or '').lower())
+
+    # 종류별 고정 항목도 함께 낸다 — 화면이 **저장하지 않고** 종류를 바꿔 볼 때
+    # 새 종류의 항목 목록을 스스로 세울 수 있어야 한다. 없으면 축사로 바꾼 순간
+    # 식생 여섯 항목이 화면에 남아 있다가 저장할 때에야 사라진다.
+    from aot.aot_flask.geo import program_io
+    fixed = {}
+    for kind in program_io.VALID_KINDS:
+        fixed[kind] = [program_io._public_target_def(dict(d, fixed=True,
+                                                          hidden=False))
+                       for d in program_io.fixed_target_defs(kind)]
+    return jsonify({'ok': True, 'measurements': out, 'count': len(out),
+                    'fixed_defs': fixed})
+
+
 @blueprint.route('/api/geo/resource-functions', methods=['GET'])
 @login_required
 def api_resource_functions():
@@ -163,15 +197,17 @@ def api_coordinator_plot_targets(function_uuid):
         fn, on=_parse_on(request.args.get('on')))
 
     # 라벨은 서버가 붙인다 — 화면이 각자 들고 있으면 항목을 늘릴 때 한쪽만
-    # 늘어난다(`_TARGET_FIELDS` 를 서버에 못 박은 것과 같은 이유).
+    # 늘어난다. 항목 정의가 이미 라벨을 갖고 오므로(`unmapped`) 여기서는 정의가
+    # 닿지 않는 축(`gdd_daily` 는 단계가 아니라 photosynthesis 에서 온다)과
+    # 제어 축 이름만 채운다.
     labels = {
         'vpd': 'VPD', 'co2': gettext('CO2'), 'dli': gettext('DLI'),
         'gdd_daily': gettext('GDD'),
-        'temp_day': gettext('Day temp'), 'temp_night': gettext('Night temp'),
-        'rh': gettext('Humidity'),
     }
     for r in (data.get('targets') or []) + (data.get('unmapped') or []):
-        r['label'] = labels.get(r['key'], r['key'])
+        # 사용자가 만든 항목은 자기 이름을 갖고 온다 — 덮어쓰지 않는다.
+        if not r.get('label'):
+            r['label'] = labels.get(r['key'], r['key'])
 
     # 곡선은 이름으로 보인다 — uuid 는 사람이 읽을 것이 아니다.
     ids = [r['method_id'] for r in (data.get('targets') or []) if r.get('method_id')]
@@ -492,6 +528,47 @@ def _env_of(input_ids):
         return {'readings': [], 'sensors': {'valid': 1, 'total': 1}}
 
 
+def _program_targets(row):
+    """프로그램이 정한 목표 — 판정은 `coordinator_plot` 이 한다(어휘 한 곳)."""
+    from aot.aot_flask.geo import coordinator_plot
+    return coordinator_plot.program_targets(row)
+
+
+def _program_limits(row):
+    """프로그램이 정한 한계 — 판정은 `coordinator_plot` 이 한다(어휘 한 곳)."""
+    from aot.aot_flask.geo import coordinator_plot
+    return coordinator_plot.program_limits(row)
+
+
+def _inherited_hidden_rows(facility_uuid=None, zone_uuid=None):
+    """[현황] 카드에서 뺄 항목 — **구획은 자기 것을 갖지 않고 물려받는다.**
+
+    구획의 [현재]에 뜨는 값은 구획이 가진 것이 아니다. 시설 구획이면 그 동·
+    시설의 센서고, 노지 구획이면 그 구역의 센서다(`sensors_for_plot`). 같은
+    센서인데 창을 옮겼다고 다른 항목이 보이면, 사용자는 두 화면 중 어느 쪽이
+    맞는지 알 방법이 없다.
+
+    **저장은 상위에만 있다.** 구획에 자기 설정을 두면 구획마다 한 벌씩 생겨,
+    한 시설에 작기가 열 개면 같은 결정을 열 번 해야 한다 — 그리고 작기가 끝나면
+    그 결정이 함께 사라진다. `rep_key` 를 구획 창에 넘기지 않는 것과 같은
+    판단이다(그쪽은 아예 쓰지도 않는다).
+
+    출처는 **값이 실제로 오는 쪽**이다 — 시설 구획은 시설, 노지 구획은 구역.
+    시설 구획도 `zone_uuid` 를 가질 수 있지만(시설이 구역 안에 있으면), 그
+    구역은 값을 주지 않으므로 기준이 될 수 없다.
+    """
+    from aot.aot_flask.geo import site_summary
+    if facility_uuid:
+        return site_summary.hidden_rows_for_facility(facility_uuid)
+    return site_summary.hidden_rows_for_shape(zone_uuid)
+
+
+def _program_methods(row):
+    """목표가 곡선인 항목 — 판정은 `coordinator_plot` 이 한다(어휘 한 곳)."""
+    from aot.aot_flask.geo import coordinator_plot
+    return coordinator_plot.program_target_methods(row)
+
+
 def _sensor_order_key(item):
     """값을 주는 것 → 구획 안 → 가까운 것 순."""
     return (1 if item.get('no_data') else 0,
@@ -601,8 +678,18 @@ def _build_facility_plot_contents(row):
             'bay_name': bay.get('name'),
             'zone_uuid': sensors.get('zone_uuid'),
             'zone_name': sensors.get('zone_name'),
+            # 카드에서 뺄 항목 — 시설의 설정을 그대로 쓴다(위 주석).
+            'hidden_rows': _inherited_hidden_rows(
+                facility_uuid=fac.get('unique_id')),
             'counts': inv['counts'],
             'env': inv['env'],
+            # 프로그램이 정한 목표 — 화면의 밴드 바가 앱 기본 구간 대신 이것을
+            # 기준으로 삼는다(_program_targets 주석 참조).
+            'targets': _program_targets(row),
+            # 한계(온도 주/야간 · 습도) — 목표와 다른 것이다. 화면은 선으로 긋는다.
+            'limits': _program_limits(row),
+            # 목표가 곡선인 항목 — 숫자가 없으므로 앱 기본 구간도 그리지 않는다.
+            'target_methods': _program_methods(row),
             'status': inv['status'],
         },
         'source': sensors.get('source'),
@@ -783,8 +870,18 @@ def _build_plot_contents(plot_uuid):
             'active': row.is_active(),
             'zone_uuid': sensors.get('zone_uuid'),
             'zone_name': sensors.get('zone_name'),
+            # 카드에서 뺄 항목 — 구역의 설정을 그대로 쓴다(위 주석).
+            'hidden_rows': _inherited_hidden_rows(
+                zone_uuid=sensors.get('zone_uuid')),
             'counts': inv['counts'],
             'env': inv['env'],
+            # 프로그램이 정한 목표 — 화면의 밴드 바가 앱 기본 구간 대신 이것을
+            # 기준으로 삼는다(_program_targets 주석 참조).
+            'targets': _program_targets(row),
+            # 한계(온도 주/야간 · 습도) — 목표와 다른 것이다. 화면은 선으로 긋는다.
+            'limits': _program_limits(row),
+            # 목표가 곡선인 항목 — 숫자가 없으므로 앱 기본 구간도 그리지 않는다.
+            'target_methods': _program_methods(row),
             'status': inv['status'],
         },
         # 대표값의 출처 — 목록(위 sensors/outputs)이 "손댈 수 있는 것 전부"

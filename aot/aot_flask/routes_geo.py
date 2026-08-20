@@ -3583,7 +3583,7 @@ def _build_zone_contents(zone_uuid):
     env = inv['env']
     zone_status = inv['status']
 
-    from aot.aot_flask.geo.site_summary import rep_key_of
+    from aot.aot_flask.geo.site_summary import rep_key_of, hidden_rows_of
 
     meta = zone.meta_json or {}
     photo_url = meta.get('photo_url')
@@ -3606,6 +3606,8 @@ def _build_zone_contents(zone_uuid):
     return {
         'ok': True,
         'rep_key': rep_key_of(zone),
+        # [현황] 카드에서 빼 둔 항목 — 거르는 것은 화면이 한다(site_summary 주석).
+        'hidden_rows': hidden_rows_of(zone),
         'irrigation': _irr,
         # 시설과 **같은 판정**(같은 예보 파일) — 노지에서 오히려 더 자주 행동을
         # 부르는 정보다.
@@ -4528,6 +4530,64 @@ def api_geo_zone_rep_key(zone_uuid):
     from aot.aot_flask.geo.site_summary import invalidate_rep
     invalidate_rep(zone)
     return jsonify({'ok': True, 'rep_key': key})
+
+
+# [현황] 카드에서 뺄 항목 — 항목이 많아지면 화면이 읽히지 않는다. 무엇을 빼도
+# 되는지는 그 자리를 쓰는 사람만 안다(노지에 실내 습도 줄, 창이 없는 시설에
+# 환기 면적 줄).
+#
+# `rep_key` 와 **같은 자리·같은 규칙**이다(도형 meta_json). 저장 실패를 조용히
+# 넘기지 않도록 카드 이름을 검사한다 — 오타 하나가 아무 데도 안 쓰이는 키를
+# 만들어 두면 화면은 계속 전부 보여 주고 사용자는 저장이 안 된 줄 모른다.
+def _save_hidden_rows(shape, body):
+    """(오류응답, 저장된 목록) — 저장에 성공하면 오류응답이 None."""
+    from aot.aot_flask.extensions import db as _db
+    from aot.aot_flask.geo.site_summary import (
+        hidden_rows_of, _HIDDEN_ROW_CARDS)
+
+    card = (body.get('card') or '').strip()
+    if card not in _HIDDEN_ROW_CARDS:
+        return jsonify({'ok': False, 'error': 'unknown card'}), 422, None
+    keys = body.get('keys')
+    if not isinstance(keys, list):
+        return jsonify({'ok': False, 'error': 'keys must be a list'}), 422, None
+    keys = [k.strip() for k in keys if isinstance(k, str) and k.strip()]
+
+    # dict() 로 새 객체 — 제자리 수정은 SQLAlchemy 가 못 본다(rep_key 주석).
+    meta = dict(shape.meta_json or {})
+    rows = dict(meta.get('hidden_rows') or {})
+    if keys:
+        rows[card] = keys
+    else:
+        # 전부 켠 상태를 빈 목록으로 남기지 않는다 — 기본값(감춘 것 없음)과
+        # 같은 뜻이고, 남겨 두면 무엇이 설정된 것인지 읽는 쪽이 매번 판단해야
+        # 한다.
+        rows.pop(card, None)
+    if rows:
+        meta['hidden_rows'] = rows
+    else:
+        meta.pop('hidden_rows', None)
+    shape.meta_json = meta
+    _db.session.commit()
+    return None, None, hidden_rows_of(shape)
+
+
+@blueprint.route('/api/geo/zone/<string:zone_uuid>/hidden_rows', methods=['POST'])
+@login_required
+def api_geo_zone_hidden_rows(zone_uuid):
+    """구역 [현황] 카드에서 뺄 항목 — 카드 제목 옆 설정에서 정한다."""
+    if not utils_general.user_has_permission('edit_settings', silent=True):
+        return jsonify({'ok': False, 'error': 'permission denied'}), 403
+
+    zone = GeoShape.query.filter_by(unique_id=zone_uuid, type='zone').first()
+    if not zone:
+        return jsonify({'ok': False, 'error': 'zone not found'}), 404
+
+    body = request.get_json(force=True, silent=True) or {}
+    err, code, rows = _save_hidden_rows(zone, body)
+    if err is not None:
+        return err, code
+    return jsonify({'ok': True, 'hidden_rows': rows})
 
 
 def _geo_map_state(geo_map):

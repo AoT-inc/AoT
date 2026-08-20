@@ -144,7 +144,7 @@ WIDGET_HEAD_HTML = """
      If maplibregl is missing the widget init will log a clear error. -->
 
 <!-- Map tool styles (.map-tools-left/right, .tool-group, .btn-circle) — same as /geo/design -->
-<link rel="stylesheet" href="/static/css/map/map.css?v=20260810b" />
+<link rel="stylesheet" href="{{ url_for('static', filename='css/map/map.css') }}" />
 
 <!-- 위젯 핵심 스크립트 11개 → 단일 번들 (static/js/tools/bundle.mjs: aot-map-widget).
      순서 보존: vector-layer-manager → map-loader → stopwatch → controls → custom-controls
@@ -171,9 +171,12 @@ WIDGET_HEAD_HTML = """
      떨어져 있었다 — 'fault'(무응답) 판정이 화면마다 달라질 수 있는 상태였다. -->
 <script src="/static/js/common/aot-output-state.js?v=9"></script>
 <script src="/static/js/common/sensor-label.js?v=51"></script>
-<script src="/static/js/widgets/AoT_map/aot-map-sensor-labels.js?v=22"></script>
-<link rel="stylesheet" href="/static/css/widget/aot-sensor-label.css?v=65">
+<script src="{{ url_for('static', filename='js/widgets/AoT_map/aot-map-sensor-labels.js') }}"></script>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/widget/aot-sensor-label.css') }}">
 <link rel="stylesheet" href="/static/css/components/aot-toggle.css?v=20260814a">
+<!-- 공용 데이터 시각화 프리미티브(밴드 바 · 불릿 · 기간 바).
+     구획 모달의 기간 축이 쓴다. 규약: docs/design/dataviz-primitives.md -->
+<link rel="stylesheet" href="{{ url_for('static', filename='css/components/aot-dataviz.css') }}">
 
 <!-- Shared time-wheel module (also used by AoT_timer, sequence widgets) — zone popup "settings" (turn on until end time) -->
 <link rel="stylesheet" href="/static/css/components/aot-time-wheel.css?v=20260813a">

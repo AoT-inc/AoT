@@ -29323,3 +29323,66 @@ msgstr "停止・保留中のコントローラ（PID の一時停止・保留�
 
 msgid "This is the desired state of the particular environmental condition. For example, you might enter a desired temperature in degrees Celsius."
 msgstr "この環境条件に達してほしい状態です。たとえば望む温度を摂氏で入力します。"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:0
+msgid "Choose which items to show"
+msgstr "表示する項目を選ぶ"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:0
+msgid "All items in this card are hidden."
+msgstr "このカードの項目はすべて非表示です。"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:0
+msgid "Nothing to show here yet."
+msgstr "表示できる項目がまだありません。"
+msgid "Target items"
+msgstr "目標項目"
+
+msgid "No target items yet. Add one below to track a value for each stage."
+msgstr "目標項目がまだありません。下から追加すると、ステージごとに値を記録できます。"
+
+msgid "Pick what this programme aims for. Items with a measurement type are followed by the system; the rest stand as reference targets you meet your own way. Hide what you do not use, and leave anything blank you have not decided."
+msgstr "このプログラムが目指す項目を選びます。測定種別のある項目はシステムが追従し、それ以外は各自の方法で満たす参考目標になります。使わない項目は隠し、まだ決めていない値は空のままにしてください。"
+
+msgid "Item name"
+msgstr "項目名"
+
+msgid "Add item"
+msgstr "項目を追加"
+
+msgid "Delete this item?"
+msgstr "この項目を削除しますか？"
+
+msgid "Delete this item? {n} stage value(s) will be removed."
+msgstr "この項目を削除しますか？ステージの値 {n} 件も削除されます。"
+
+msgid "That item already exists."
+msgstr "すでに存在する項目です。"
+
+msgid "measured"
+msgstr "測定あり"
+
+msgid "Reference target only"
+msgstr "参考目標のみ"
+
+msgid "Guidance"
+msgstr "指針"
+
+msgid "What matters in this stage — watering, ventilation, things to watch for."
+msgstr "このステージで重要なこと — 灌水・換気・注意点。"
+
+
+msgid "Common"
+msgstr "よく使う項目"
+
+msgid "One stage is fine. Split only where management actually changes — stages run on days elapsed from the start date, so they do not line up with calendar seasons."
+msgstr "ステージは1つでも構いません。管理方法が実際に変わるところだけで分けてください — ステージは開始日からの経過日数で進むため、暦の季節とは一致しません。"
+
+msgid "Set a different value here…"
+msgstr "このステージで別の値にする…"
+
+msgid "default {v}"
+msgstr "既定 {v}"
+
+msgid "not set"
+msgstr "未設定"

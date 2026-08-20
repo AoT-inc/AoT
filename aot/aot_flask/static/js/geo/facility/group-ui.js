@@ -96,7 +96,7 @@
             (g.mode !== 'stacked' ? ' disabled' : '') + '>' +
         '</td>' +
         '<td class="text-center">' +
-          '<button type="button" data-del class="btn aot-pill-btn aot-pill-btn-primary">X</button>' +
+          '<button type="button" data-del class="btn aot-pill-btn aot-pill-btn-danger">X</button>' +
         '</td>';
 
       tbody.appendChild(tr);

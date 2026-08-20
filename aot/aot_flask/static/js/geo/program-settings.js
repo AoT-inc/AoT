@@ -65,7 +65,7 @@
     if (window.showToast) window.showToast(msg, level || 'info');
   }
 
-  var State = { programs: [], templates: [], methods: [], functions: [],
+  var State = { programs: [], templates: [], methods: [], defs: [], measurements: [], fixedDefs: {}, functions: [],
                 openId: null };
 
   // ── 로드 ──────────────────────────────────────────────────────────────
@@ -79,6 +79,9 @@
       // 목표 곡선으로 걸 Method 목록. 만드는 것은 설정 > 메서드가 맡는다.
       fetch('/api/geo/target-methods', { credentials: 'same-origin' })
         .then(function (r) { return r.json(); }).catch(function () { return null; }),
+      // 목표 항목이 고를 수 있는 측정 종류(센서가 쓰는 어휘 그대로).
+      fetch('/api/geo/target-measurements', { credentials: 'same-origin' })
+        .then(function (r) { return r.json(); }).catch(function () { return null; }),
       // 자원으로 걸 Function 목록. 만드는 것은 설정 > 함수가 맡는다.
       fetch('/api/geo/resource-functions', { credentials: 'same-origin' })
         .then(function (r) { return r.json(); }).catch(function () { return null; })
@@ -86,7 +89,9 @@
       State.programs = (res[0] && res[0].ok) ? (res[0].programs || []) : [];
       State.templates = (res[1] && res[1].ok) ? (res[1].templates || []) : [];
       State.methods = (res[2] && res[2].ok) ? (res[2].methods || []) : [];
-      State.functions = (res[3] && res[3].ok) ? (res[3].functions || []) : [];
+      State.measurements = (res[3] && res[3].ok) ? (res[3].measurements || []) : [];
+      State.fixedDefs = (res[3] && res[3].ok) ? (res[3].fixed_defs || {}) : {};
+      State.functions = (res[4] && res[4].ok) ? (res[4].functions || []) : [];
       renderBase();
       renderList();
     });
@@ -163,6 +168,18 @@
   }
 
   var _KINDS = ['vegetation', 'livestock', 'facility', 'other'];
+
+  /**
+   * 지금 편집 중인 프로그램의 종류 — **화면을 종류에 맞추는 기준**.
+   *
+   * 광합성 모델 상수·기준온도(GDD)·관수/시비는 전부 **식물 개념**이다. 축사
+   * 프로그램에 "광합성 지수" 가 떠 있으면 그것을 본 사람은 무엇을 적어야 할지
+   * 알 수 없고, 알 수 없는 칸이 있으면 화면 전체를 못 믿는다.
+   *
+   * 드로어를 열 때 정해지고, 종류를 바꾸면 그 자리에서 다시 그린다.
+   */
+  var _kindNow = 'vegetation';
+  function _isVeg() { return _kindNow === 'vegetation'; }
 
   function _kindLabel(k) {
     return _T('kind_' + (k || 'vegetation'), k || 'vegetation');
@@ -241,28 +258,63 @@
   }
 
   // ── 편집 ──────────────────────────────────────────────────────────────
-  // 단계 목표 — 키는 서버(`_TARGET_FIELDS`)와 **같은 어휘**여야 한다. 화면이
-  // 자기 이름을 쓰면 저장은 되는데 읽는 쪽이 못 알아본다.
-  var _TARGETS = [
-    ['temp_day',   'temp_day',   '°C'],
-    ['temp_night', 'temp_night', '°C'],
-    ['rh',         'rh',         '%'],
-    ['co2',        'co2',        'ppm'],
-    ['dli',        'dli',        'mol/m²/d'],
-    ['vpd',        'vpd',        'kPa']
-  ];
+  // 단계 목표 — **어휘를 화면이 갖지 않는다.** 항목 정의는 프로그램마다 다르고
+  // (종류별 고정 항목 + 사용자가 만든 항목) 서버가 `target_defs` 로 준다. 여기에
+  // 목록을 또 적어 두면 항목을 늘릴 때 한쪽만 늘어난다 — 이 저장소가 반복해서
+  // 겪은 실패다.
+  //
+  // 숨긴 항목(`hidden`)은 입력칸을 내지 않는다. 실제 시설이 모든 항목을 재지
+  // 못하는 것은 당연하고, 안 쓰는 칸이 계속 보이는 것은 "없는 것을 채우라" 는
+  // 압박이 된다.
+  function _visibleDefs() {
+    return (State.defs || []).filter(function (d) { return !d.hidden; });
+  }
 
+  /**
+   * 단계의 목표 칸 — **이 단계에서 따로 정한 항목만** 낸다.
+   *
+   * 예전에는 항목 전부를 단계마다 그렸다. 4단계 × 6항목이면 빈 칸 24개가 나오고,
+   * 그중 대부분은 쓰지 않거나 같은 값을 옮겨 적는 자리였다 — 실제로 만들어 보면
+   * 여기서 그만두게 된다.
+   *
+   * 값은 **프로그램 항목에 한 번** 적고(기본값), 달라지는 단계에서만 덮어쓴다.
+   * 그래서 이 자리의 기본 상태는 **비어 있음**이고, 덮어쓸 항목은 아래 고르기로
+   * 하나씩 꺼낸다.
+   */
   function _targetInputs(t) {
     t = t || {};
-    return _TARGETS.map(function (f) {
-      var val = (t[f[0]] == null) ? '' : t[f[0]];
-      return '<label class="veg-target-field">' +
-               '<span class="aot-modal-body-text">' +
-                 _esc(_T('t_' + f[1], f[1])) + ' <em>' + _esc(f[2]) + '</em></span>' +
-               '<input type="number" step="any" class="form-control aot-modern-input" ' +
-                 'data-tf="' + f[0] + '" value="' + _esc(String(val)) + '">' +
-             '</label>';
-    }).join('');
+    var defs = _visibleDefs();
+    if (!defs.length) return '';
+
+    var rows = defs.filter(function (d) { return t[d.key] != null; })
+      .map(function (d) {
+        var unit = d.unit ? (' <em>' + _esc(d.unit) + '</em>') : '';
+        return '<label class="veg-target-field">' +
+                 '<span class="aot-modal-body-text">' +
+                   _esc(d.label || d.key) + unit + '</span>' +
+                 '<input type="number" step="any" class="form-control aot-modern-input" ' +
+                   'data-tf="' + _esc(d.key) + '" value="' + _esc(String(t[d.key])) + '">' +
+               '</label>';
+      }).join('');
+
+    // 아직 덮어쓰지 않은 항목만 고르기에 남긴다.
+    var rest = defs.filter(function (d) { return t[d.key] == null; });
+    var picker = '';
+    if (rest.length) {
+      var opts = '<option value="">' +
+                 _esc(_T('override_pick', 'Set a different value here…')) +
+                 '</option>';
+      rest.forEach(function (d) {
+        var base = (d['default'] == null) ? '' :
+                   ' (' + _T('default_is', 'default {v}')
+                            .replace('{v}', String(d['default'])) + ')';
+        opts += '<option value="' + _esc(d.key) + '">' +
+                _esc((d.label || d.key) + base) + '</option>';
+      });
+      picker = '<select class="form-control aot-modern-input" data-tf-add>' +
+               opts + '</select>';
+    }
+    return rows + picker;
   }
 
   // 자원(관수·시비) — 이 단계에 쓰는 Function. **선언일 뿐이고 프로그램이 켜지
@@ -279,7 +331,12 @@
       if (typeof it === 'string') cur[it] = 'other';
       else if (it && it.id) cur[it.id] = it.role || 'other';
     });
-    var rows = _RES_ROLES.map(function (role) {
+    // 관수·시비는 **식물 개념**이다. 축사·시설에 그 칸을 내면 무엇을 걸어야
+    // 할지 알 수 없다. 가축용 역할 어휘(급이·급수 등)를 지어내지는 않는다 —
+    // 근거 없는 어휘는 한 번 퍼지면 되돌리기 어렵다. 그때는 역할 없는 자원
+    // 하나만 남긴다(`other`).
+    var roles = _isVeg() ? _RES_ROLES : ['other'];
+    var rows = roles.map(function (role) {
       var opts = '<option value="">' + _esc(_T('res_none', 'None')) + '</option>';
       list.forEach(function (f) {
         var sel = (cur[f.unique_id] === role) ? ' selected' : '';
@@ -330,8 +387,12 @@
              '<div class="veg-stage-nums">' +
                _stageField(_T('stage_days', 'Days'), 'days', 'number',
                            st.days, _T('until_end', 'until the end')) +
-               _stageField(_T('stage_gdd', 'GDD'), 'gdd', 'number',
-                           st.gdd, _T('by_days', 'by days')) +
+               // 적산온도는 기준온도(광합성 파라미터)와 짝이라 식생에서만 뜻이
+               // 있다. 축사 단계에 GDD 칸이 있으면 무엇을 적어야 할지 알 수 없다.
+               (_isVeg()
+                 ? _stageField(_T('stage_gdd', 'GDD'), 'gdd', 'number',
+                               st.gdd, _T('by_days', 'by days'))
+                 : '') +
              '</div>' +
              '<div class="veg-stage-sub">' + _esc(_T('targets', 'Targets')) + '</div>' +
              '<div class="veg-stage-targets">' + _targetInputs(st.targets) + '</div>' +
@@ -339,6 +400,16 @@
                _esc(_T('targets_note',
                        'Used for display and advice. Control is not changed automatically.')) +
              '</div>' +
+             // 단계 지침 — 이 시기에 무엇을 어떻게 하는가. AI 가 그대로 인용하고,
+             // AI 를 안 쓰는 사용자도 구획 모달에서 읽는다.
+             '<div class="veg-stage-sub">' +
+               _esc(_T('guidance', 'Guidance')) + '</div>' +
+             '<textarea class="form-control aot-modern-input veg-guidance" ' +
+               'rows="4" data-guidance placeholder="' +
+               _esc(_T('guidance_ph',
+                       'What matters in this stage — watering, ventilation, ' +
+                       'things to watch for.')) + '">' +
+               _esc(st.guidance || '') + '</textarea>' +
              _resourceRows(st.functions) +
              // 삭제는 **펼친 안**에 둔다. 접힌 줄의 × 는 좁은 폭에서 오터치를
              // 부르고, 되돌릴 수단이 없다.
@@ -395,7 +466,16 @@
     if (modal && window.jQuery) window.jQuery(modal).modal('hide');
   }
 
-  function openEditor(uuid) {
+  /**
+   * 설정 드로어를 연다.
+   *
+   * `pending` 은 **저장하지 않고 다시 그릴 때** 이어받을 편집 중인 값이다
+   * (종류를 바꿨을 때). 서버에서 다시 읽되 화면 값은 사람이 방금 적은 것을
+   * 쓴다 — 저장을 강요하지 않으면서 화면만 종류에 맞춘다.
+   */
+  var _pendingKind = null;
+
+  function openEditor(uuid, pending) {
     var modal = document.getElementById('veg-drawer');
     var host = document.getElementById('veg-drawer-body');
     if (!modal || !host) return;
@@ -414,6 +494,29 @@
           return;
         }
         var p = res.program;
+        // 다시 그리기라면 사람이 방금 적은 값이 이긴다(서버 값으로 되돌리면
+        // 종류 하나 바꾸는 데 입력이 날아간다).
+        if (pending) {
+            if (_pendingKind) { p.kind = _pendingKind; _pendingKind = null; }
+            ['name', 'subject', 'variety'].forEach(function (k) {
+              if (pending[k] != null) p[k] = pending[k];
+            });
+            if (pending.stages && pending.stages.length) p.stages = pending.stages;
+            if (pending.target_defs) p.target_defs = pending.target_defs;
+        }
+
+        // ⚠ **읽는 것보다 먼저 세운다.** 이 둘은 아래에서 단계·목표·머리 블록을
+        // 그릴 때 전부 쓰인다(`_isVeg()`·`_targetInputs`). 뒤에 두면 이번 렌더가
+        // **직전 프로그램의 값**으로 그려지고, 종류를 바꿔도 첫 번에는 광합성
+        // 칸이 그대로 남았다가 한 번 더 바꿔야 사라진다.
+        //
+        // 화면을 종류에 맞추는 기준. 식물 개념(광합성·기준온도·관수/시비)은
+        // 식생에서만 낸다.
+        _kindNow = p.kind || 'vegetation';
+        // 항목 정의는 **서버가 정본**이다(고정 항목이 빠져 있으면 서버가
+        // 되돌려 놓는다). 화면은 받은 것을 그대로 들고 있다가 저장 때 돌려준다.
+        State.defs = (p.target_defs || []).map(function (d) { return d; });
+
         var ro = !p.editable;
         // 읽기 전용이면 저장 버튼을 숨긴다 — 눌러도 서버가 거절하는 버튼을
         // 보여 주는 것은 사용자에게 거짓말이다.
@@ -442,7 +545,7 @@
         // "FunctionCropPreset 과 같은 키" 라는 계약을 갖고 있고 거기에 T_base 가
         // 있다 — 새 키를 만들면 같은 값이 두 이름을 갖는다.
         var tBase = (p.photosynthesis || {}).T_base;
-        var tBaseRow = '<div class="aot-modal-option-row">' +
+        var tBaseRow0 = '<div class="aot-modal-option-row">' +
           '<div class="aot-modal-option-label">' +
             _esc(_T('t_base', 'Base temperature')) + '</div>' +
           '<div class="aot-modal-option-control"><input type="number" step="any" ' +
@@ -465,7 +568,7 @@
               f.key + '" value="' + (v == null ? '' : _esc(String(v))) + '"' +
               (ro ? ' disabled' : '') + '></div></div>';
         }).join('');
-        var photoBlock =
+        var photoBlock0 =
           '<details class="aot-prog-photo"><summary>' +
             _esc(_T('photo_model', 'Photosynthesis model')) +
           '</summary>' +
@@ -486,29 +589,37 @@
             (p.auto_advance ? ' checked' : '') + (ro ? ' disabled' : '') +
             '></div></div>';
 
+        // 기준온도·적산온도·광합성 모델은 **식물 개념**이다. 종류가 식생이
+        // 아니면 아예 내지 않는다 — 축사 프로그램에서 "광합성 지수" 를 본
+        // 사람은 무엇을 적어야 할지 알 수 없고, 알 수 없는 칸이 하나 있으면
+        // 화면 전체를 못 믿게 된다.
+        var vegOnly = _isVeg()
+          ? (tBaseRow0 +
+             '<div class="aot-modal-body-text">' +
+               _esc(_T('gdd_note',
+                 'With a base temperature and a GDD per stage, stages ' +
+                 'advance on accumulated heat instead of the calendar.')) +
+             '</div>' + photoBlock0)
+          : '';
+
         var head = _row(_T('name', 'Name'), 'name', p.name) +
                    _kindRow(p, ro) +
                    _subjectRow(p, ro) +
                    _row(_varietyLabel(p), 'variety', p.variety) +
-                   tBaseRow +
                    autoRow +
                    '<div class="aot-modal-body-text">' +
                      _esc(_T('auto_advance_note',
                        'Stages are recorded without asking. The date comes ' +
                        'from the data, not from when you happen to look.')) +
                    '</div>' +
-                   '<div class="aot-modal-body-text">' +
-                     _esc(_T('gdd_note',
-                       'With a base temperature and a GDD per stage, stages ' +
-                       'advance on accumulated heat instead of the calendar.')) +
-                   '</div>' +
-                   photoBlock;
+                   vegOnly;
 
         // `map` 은 index 를 두 번째 인자로 넘긴다 — 그대로 두면 첫 단계만
         // 접히고 나머지가 전부 펼쳐진다(open 으로 읽힌다).
         var stages = (p.stages || []).map(function (st) {
           return _stageRow(st);
         }).join('');
+        var defsBlock = '<div class="veg-defs">' + _targetDefsSection(ro) + '</div>';
         var curves = _curveSection(p, ro);
         // 저장·닫기는 **드로어 푸터**가 맡는다(input 페이지와 같은 자리).
         // 본문에 또 두면 같은 일을 하는 버튼이 두 벌이 된다.
@@ -520,9 +631,25 @@
             '<button type="button" class="btn aot-pill-btn" data-act="stage-add">' +
             _esc(_T('add_stage', 'Add stage')) + '</button></div>';
 
+        // 단계를 어떻게 나눌지 모르는 사람에게 **나누지 않아도 된다**고 먼저
+        // 말한다. 모르는 대상(축산 등)을 맡은 사람은 여기서 그만두는데, 사실
+        // 단계 하나짜리 프로그램도 완전히 정상이다.
+        //
+        // 계절로 나누는 것을 특히 말린다 — 단계는 **시작일로부터의 경과일**이라
+        // 시작일이 다르면 계절과 어긋나고, 해가 바뀌면 더 밀린다.
+        var stageNote = ro ? '' :
+          '<div class="aot-modal-body-text">' +
+            _esc(_T('stages_note',
+                    'One stage is fine. Split only where management actually ' +
+                    'changes — stages run on days elapsed from the start date, ' +
+                    'so they do not line up with calendar seasons.')) +
+          '</div>';
+
         // 열 머리는 두지 않는다 — 접힌 항목에는 열이 없다. 각 칸의 라벨은
         // 펼친 상세에 값 위로 붙는다(`_stageField`).
-        host.innerHTML = '<div class="aot-modal-container">' + head + curves +
+        host.innerHTML = '<div class="aot-modal-container">' + head + defsBlock + curves +
+                         '<div class="veg-stage-sub">' +
+                         _esc(_T('stages', 'Stages')) + '</div>' + stageNote +
                          '<div class="veg-stages">' + stages + '</div>' +
                          actions + '</div>';
       });
@@ -583,21 +710,126 @@
    * Method 가 하나도 없으면 섹션을 내지 않는다. 고를 것이 없는 칸은 화면만
    * 길게 만들고, 만드는 곳은 여기가 아니다(설정 > 메서드).
    */
+  /**
+   * 목표 항목 관리 — 무엇을 목표로 삼을지 사람이 정한다.
+   *
+   * ## 고정 항목은 지우지 못하고 **숨긴다**
+   *
+   * 실제 시설이 모든 항목을 재거나 제어하지 못하는 것은 당연하다(노지 상추에
+   * CO₂ 센서가 없는 것이 정상이다). 그래서 안 쓰는 항목은 숨겨 화면에서 치운다 —
+   * 지우지 않는 이유는 어휘가 프로그램마다 달라지면 제어·AI 가 `co2` 를 못 찾기
+   * 때문이고, 숨기기로 충분한 이유는 지운 것과 비운 것이 하류에서 똑같이
+   * "값 없음" 이기 때문이다. 나중에 센서를 달면 되살릴 수 있다.
+   *
+   * ## 사용자 항목은 지울 수 있다
+   *
+   * 지울 때 **그 항목의 단계 값도 함께 지운다** — 남겨 두면 서버가 "정의에 없는
+   * 값" 으로 거절한다(고아 값에는 화면에 그릴 라벨도 단위도 없다).
+   */
+  function _targetDefsSection(ro) {
+    var defs = State.defs || [];
+    var rows = defs.map(function (d, i) {
+      var meta = [d.unit, d.measurement ? _T('measured', 'measured') : null]
+        .filter(Boolean).join(' · ');
+      // 값은 **여기 한 번** 적는다. 단계마다 다시 적게 하면 4단계 × 6항목이
+      // 빈 칸 24개가 되고, 그중 대부분은 같은 값을 옮겨 적는 자리가 된다.
+      var dval = (d['default'] == null) ? '' : d['default'];
+      var valBox = '<input type="number" step="any" ' +
+        'class="form-control aot-modern-input veg-def-val" ' +
+        'data-def-val="' + _esc(d.key) + '" value="' + _esc(String(dval)) + '" ' +
+        'placeholder="' + _esc(_T('unset', 'not set')) + '"' +
+        (ro ? ' disabled' : '') + '>';
+
+      var right = d.fixed
+        ? '<label class="aot-modal-body-text">' +
+            '<input type="checkbox" data-def-hide="' + _esc(d.key) + '"' +
+            (d.hidden ? ' checked' : '') + (ro ? ' disabled' : '') + '> ' +
+            _esc(_T('hide', 'Hide')) + '</label>'
+        : (ro ? '' :
+           '<button type="button" class="btn aot-pill-btn aot-pill-btn-sm" ' +
+           'data-act="def-del" data-key="' + _esc(d.key) + '">' +
+           _esc(_T('del', 'Delete')) + '</button>');
+      return '<div class="aot-modal-option-row veg-def-row' +
+               (d.hidden ? ' is-hidden' : '') + '" data-def-i="' + i + '">' +
+               '<div class="aot-modal-option-label">' + _esc(d.label || d.key) +
+                 (meta ? ' <span class="aot-modal-body-text">' + _esc(meta) +
+                         '</span>' : '') + '</div>' +
+               '<div class="aot-modal-option-control veg-def-ctl">' +
+                 valBox + right + '</div>' +
+             '</div>';
+    }).join('');
+
+    var adder = '';
+    if (!ro) {
+      // **자주 쓰는 것을 앞에 둔다.** 97개를 이름순으로만 늘어놓으면 온실·축사에서
+      // 실제로 쓰는 대여섯 개를 찾는 데 목록을 다 훑어야 한다. 순서를 정하는 것일
+      // 뿐 값을 정하는 것이 아니라, 어느 종류에나 같은 목록을 쓴다.
+      var common = ['temperature', 'humidity', 'co2', 'vapor_pressure_deficit',
+                    'radiation', 'light', 'speed', 'pressure', 'soil_moisture_cb',
+                    'electrical_conductivity', 'ion_concentration'];
+      var byKey = {};
+      (State.measurements || []).forEach(function (m) { byKey[m.key] = m; });
+      var opts = '<option value="">' +
+                 _esc(_T('no_measurement', 'Reference target only')) +
+                 '</option>';
+      var seen = {};
+      opts += '<optgroup label="' + _esc(_T('common', 'Common')) + '">';
+      common.forEach(function (k) {
+        if (!byKey[k]) return;
+        seen[k] = 1;
+        opts += '<option value="' + _esc(k) + '">' + _esc(byKey[k].name) + '</option>';
+      });
+      opts += '</optgroup><optgroup label="' + _esc(_T('all_items', 'All')) + '">';
+      (State.measurements || []).forEach(function (m) {
+        if (seen[m.key]) return;
+        opts += '<option value="' + _esc(m.key) + '">' + _esc(m.name) + '</option>';
+      });
+      opts += '</optgroup>';
+
+      // 이름·단위는 **측정 종류를 고르면 따라온다**(`def-meas` 핸들러). 셋을 다
+      // 손으로 적게 하면 항목 하나 만드는 데 드는 품이 커서 아무도 안 만든다.
+      // 고른 뒤에 이름을 자기 말로 바꾸는 것은 자유다.
+      adder = '<div class="veg-def-add">' +
+        '<select class="form-control aot-modern-input" data-def-new="measurement">' +
+          opts + '</select>' +
+        '<input type="text" class="form-control aot-modern-input" data-def-new="label" ' +
+          'placeholder="' + _esc(_T('item_name', 'Item name')) + '">' +
+        '<input type="text" class="form-control aot-modern-input" data-def-new="unit" ' +
+          'placeholder="' + _esc(_T('item_unit', 'Unit')) + '">' +
+        '<button type="button" class="btn aot-pill-btn" data-act="def-add">' +
+          _esc(_T('add_item', 'Add item')) + '</button>' +
+        '</div>';
+    }
+
+    return '<div class="veg-stage-sub">' +
+             _esc(_T('target_items', 'Target items')) + '</div>' +
+           '<div class="aot-modal-body-text">' +
+             _esc(_T('target_items_note',
+                     'Pick what this programme aims for. Items with a ' +
+                     'measurement type are followed by the system; the rest ' +
+                     'stand as reference targets you meet your own way. Hide ' +
+                     'what you do not use, and leave anything blank you have ' +
+                     'not decided.')) +
+           '</div>' + rows + adder;
+  }
+
   function _curveSection(p, ro) {
     if (!State.methods.length) return '';
     var cur = p.target_methods || {};
-    var rows = _TARGETS.map(function (f) {
+    var defs = _visibleDefs();
+    if (!defs.length) return '';
+    var rows = defs.map(function (d) {
       var opts = '<option value="">' + _esc(_T('curve_none', 'Fixed value')) +
                  '</option>';
       State.methods.forEach(function (m) {
         opts += '<option value="' + _esc(m.unique_id) + '"' +
-                (cur[f[0]] === m.unique_id ? ' selected' : '') + '>' +
+                (cur[d.key] === m.unique_id ? ' selected' : '') + '>' +
                 _esc(m.name) + '</option>';
       });
       return '<label class="veg-target-field">' +
                '<span class="aot-modal-body-text">' +
-                 _esc(_T('t_' + f[1], f[1])) + '</span>' +
-               '<select class="form-control aot-modern-input" data-cf="' + f[0] + '"' +
+                 _esc(d.label || d.key) + '</span>' +
+               '<select class="form-control aot-modern-input" data-cf="' + _esc(d.key) + '"' +
                  (ro ? ' disabled' : '') + '>' + opts + '</select>' +
              '</label>';
     }).join('');
@@ -612,6 +844,33 @@
                      'Time runs from the start date.')) +
            '</div>' +
            '<div class="veg-stage-targets">' + rows + '</div>';
+  }
+
+  /**
+   * 항목 정의 섹션과 각 단계의 목표 칸을 다시 그린다.
+   *
+   * **이미 입력된 값을 보존한다** — 항목 하나를 더했다고 사람이 적어 둔 단계
+   * 값이 사라지면 그건 저장 전에 데이터를 잃는 것이다. 그래서 지금 화면의
+   * 값을 읽어 두었다가 새로 그린 칸에 되돌려 놓는다.
+   */
+  function _redrawDefs(drawer) {
+    var keep = [];
+    drawer.querySelectorAll('.veg-stage-block').forEach(function (block) {
+      var vals = {};
+      block.querySelectorAll('[data-tf]').forEach(function (el) {
+        if ((el.value || '').trim() !== '') vals[el.getAttribute('data-tf')] = el.value;
+      });
+      keep.push(vals);
+    });
+
+    var box = drawer.querySelector('.veg-defs');
+    if (box) box.innerHTML = _targetDefsSection(false);
+
+    drawer.querySelectorAll('.veg-stage-block').forEach(function (block, i) {
+      var host = block.querySelector('.veg-stage-targets');
+      if (!host) return;
+      host.innerHTML = _targetInputs(keep[i] || {});
+    });
   }
 
   function collect(host) {
@@ -654,6 +913,30 @@
     // 멀쩡한 설정을 지운다.
     if (host.querySelector('[data-cf]')) out.targets_methods = curves;
 
+    // 항목 정의 — 숨김 상태를 화면에서 읽어 얹는다. 정의 섹션이 있는 화면에서만
+    // 보낸다(없는 화면에서 보내면 부분 저장이 멀쩡한 정의를 지운다).
+    if (host.querySelector('.veg-def-row') || host.querySelector('[data-def-new]')) {
+      var hides = {};
+      host.querySelectorAll('[data-def-hide]').forEach(function (el) {
+        hides[el.getAttribute('data-def-hide')] = !!el.checked;
+      });
+      var vals = {};
+      host.querySelectorAll('[data-def-val]').forEach(function (el) {
+        vals[el.getAttribute('data-def-val')] = (el.value || '').trim();
+      });
+      out.target_defs = (State.defs || []).map(function (d) {
+        var c = {};
+        Object.keys(d).forEach(function (k) { c[k] = d[k]; });
+        if (hides.hasOwnProperty(d.key)) c.hidden = hides[d.key];
+        // 빈 칸은 **키를 지운다** — 남겨 두면 예전 기본값이 계속 쓰인다.
+        if (vals.hasOwnProperty(d.key)) {
+          if (vals[d.key] === '') delete c['default'];
+          else c['default'] = vals[d.key];
+        }
+        return c;
+      });
+    }
+
     host.querySelectorAll('.veg-stage-block').forEach(function (block) {
       var st = {};
       block.querySelectorAll('[data-sf]').forEach(function (el) {
@@ -667,10 +950,15 @@
       var t = {};
       block.querySelectorAll('[data-tf]').forEach(function (el) {
         var v = (el.value || '').trim();
-        // 빈 칸은 **보내지 않는다** — 0 과 미지정을 구분해야 한다.
+        // 빈 칸은 **보내지 않는다** — 0 과 미지정을 구분해야 한다. 비어 있는
+        // 것은 정상이다(그 시설이 그 항목을 재지 못하는 일이 흔하다).
         if (v !== '') t[el.getAttribute('data-tf')] = v;
       });
       if (Object.keys(t).length) st.targets = t;
+      // 지침은 **빈 문자열도 보낸다** — 지운 것을 반영해야 하기 때문이다(값이
+      // 있는 칸과 달리 "미지정" 과 "빈 글" 을 구분할 이유가 없다).
+      var gel = block.querySelector('[data-guidance]');
+      if (gel) st.guidance = gel.value || '';
       var fns = [];
       block.querySelectorAll('[data-rf]').forEach(function (el) {
         if (el.value) fns.push({ id: el.value, role: el.getAttribute('data-rf') });
@@ -708,9 +996,14 @@
       } else {
         // 빈 프로그램도 단계 하나는 있어야 저장된다(서버 규칙) — 그 하나를
         // 채워서 만든다. 빈 목록을 주고 오류를 보이는 것보다 낫다.
+        //
+        // **종류를 만들 때 고른다.** 만든 뒤에 바꾸게 하면 식생 고정 항목 여섯이
+        // 먼저 들어왔다가 종류를 바꿀 때 빠지고, 값을 이미 적었다면 그 전환이
+        // 거절된다 — 축사 프로그램 하나 만드는 데 거쳐야 할 단계가 늘어난다.
         _api('POST', '/api/geo/program', {
           name: _T('new_program', 'New program'),
           subject: _T('new_subject', 'unnamed'),
+          kind: (document.getElementById('veg-kind') || {}).value || 'vegetation',
           stages: [{ key: 'stage_1', name: _T('stage_name', 'Stage'), days: null }]
         }).then(done);
       }
@@ -790,12 +1083,124 @@
     });
 
     // 드로어 안의 단계 조작 — 목록과 다른 DOM 이라 따로 위임한다.
+    // 측정 종류를 고르면 **이름과 단위가 따라온다.** 비어 있을 때만 채운다 —
+    // 사람이 이미 자기 말로 적었으면 그것을 덮지 않는다.
+    var drawerEl = document.getElementById('veg-drawer-body');
+    if (drawerEl) drawerEl.addEventListener('change', function (e) {
+      var el = e.target;
+      // **종류를 바꾸면 화면이 바로 따라온다.** 저장해야 반영되면, 축사로
+      // 바꾼 사람이 광합성 칸을 그대로 보면서 "이걸 어떻게 하지" 를 먼저 만난다.
+      // 편집 중인 값은 서버에 저장하지 않고 드로어만 다시 그린다.
+      if (el && el.getAttribute && el.getAttribute('data-pf') === 'kind') {
+        var uid = State.openId;
+        if (uid) {
+          var pending = collect(document.getElementById('veg-drawer-body'));
+          _pendingKind = el.value;
+          // **서버와 같은 규칙으로** 정의를 다시 세운다: 새 종류의 고정 항목 +
+          // 사람이 만든 항목. 이전 종류의 고정 항목은 따라오지 않는다(따라오면
+          // 축사 화면에 DLI 가 "사용자 항목" 으로 남는다). 이미 적어 둔 기본값과
+          // 숨김은 키가 같은 항목에 한해 이어받는다.
+          var prev = {};
+          (pending.target_defs || []).forEach(function (d) { prev[d.key] = d; });
+          var next = (State.fixedDefs[el.value] || []).map(function (d) {
+            var c = {}; Object.keys(d).forEach(function (k) { c[k] = d[k]; });
+            var was = prev[d.key];
+            if (was) {
+              c.hidden = !!was.hidden;
+              if (was['default'] != null) c['default'] = was['default'];
+            }
+            return c;
+          });
+          (pending.target_defs || []).forEach(function (d) {
+            if (!d.fixed) next.push(d);
+          });
+          pending.target_defs = next;
+          openEditor(uid, pending);
+        }
+        return;
+      }
+      // 단계에서 덮어쓸 항목을 고르면 그 자리에 칸이 생긴다.
+      if (el && el.hasAttribute && el.hasAttribute('data-tf-add') && el.value) {
+        var blk = el.closest('.veg-stage-block');
+        var host = blk && blk.querySelector('.veg-stage-targets');
+        if (host) {
+          var cur = {};
+          host.querySelectorAll('[data-tf]').forEach(function (x) {
+            if ((x.value || '').trim() !== '') cur[x.getAttribute('data-tf')] = x.value;
+          });
+          var d = (State.defs || []).filter(function (x) {
+            return x.key === el.value; })[0];
+          // 기본값이 있으면 그것을 넣고 시작한다 — 빈 칸에서 시작하면 "덮어쓴다"
+          // 는 뜻이 아니라 "비운다" 로 읽힌다.
+          cur[el.value] = (d && d['default'] != null) ? d['default'] : '';
+          host.innerHTML = _targetInputs(cur);
+          var added = host.querySelector('[data-tf="' + el.value + '"]');
+          if (added) added.focus();
+        }
+        return;
+      }
+      if (!el || el.getAttribute('data-def-new') !== 'measurement') return;
+      var m = (State.measurements || []).filter(function (x) {
+        return x.key === el.value;
+      })[0];
+      if (!m) return;
+      var box = el.closest('.veg-def-add');
+      if (!box) return;
+      var lab = box.querySelector('[data-def-new="label"]');
+      var uni = box.querySelector('[data-def-new="unit"]');
+      if (lab && !(lab.value || '').trim()) lab.value = m.name || '';
+      if (uni && !(uni.value || '').trim()) uni.value = (m.units || [])[0] || '';
+    });
+
     var drawer = document.getElementById('veg-drawer-body');
     if (drawer) drawer.addEventListener('click', function (e) {
       var btn = e.target.closest('[data-act]');
       if (!btn) return;
       var act = btn.dataset.act;
-      if (act === 'stage-add') {
+      if (act === 'def-add') {
+        // 키는 이름에서 만든다(서버 규칙: 소문자로 시작하는 영문·숫자·밑줄).
+        // 만들 수 없으면 순번으로 떨어진다 — 사람에게 키를 묻지 않는다.
+        var lab = (drawer.querySelector('[data-def-new="label"]') || {}).value || '';
+        lab = lab.trim();
+        if (!lab) return;
+        var key = lab.toLowerCase().replace(/[^a-z0-9_]+/g, '_')
+                     .replace(/^_+|_+$/g, '').slice(0, 32);
+        if (!/^[a-z]/.test(key)) key = 'item_' + ((State.defs || []).length + 1);
+        if ((State.defs || []).some(function (d) { return d.key === key; })) {
+          _toast(_T('dup_item', 'That item already exists.'), 'error');
+          return;
+        }
+        var unitEl = drawer.querySelector('[data-def-new="unit"]');
+        var measEl = drawer.querySelector('[data-def-new="measurement"]');
+        State.defs = (State.defs || []).concat([{
+          key: key, label: lab,
+          unit: (unitEl && unitEl.value || '').trim() || null,
+          measurement: (measEl && measEl.value) || null,
+          shape: 'instant', min: null, max: null,
+          fixed: false, hidden: false
+        }]);
+        _redrawDefs(drawer);
+        return;
+      } else if (act === 'def-del') {
+        var dk = btn.getAttribute('data-key');
+        // **그 항목의 단계 값도 함께 지운다** — 남겨 두면 서버가 "정의에 없는
+        // 값" 으로 거절한다. 몇 개를 지우는지 먼저 말한다(조용히 지우지 않는다).
+        var hit = 0;
+        drawer.querySelectorAll('[data-tf="' + dk + '"]').forEach(function (el) {
+          if ((el.value || '').trim() !== '') hit += 1;
+        });
+        var msg = hit
+          ? _T('del_item_values', 'Delete this item? {n} stage value(s) will be removed.')
+              .replace('{n}', String(hit))
+          : _T('del_item', 'Delete this item?');
+        if (!window.confirm(msg)) return;
+        State.defs = (State.defs || []).filter(function (d) { return d.key !== dk; });
+        drawer.querySelectorAll('[data-tf="' + dk + '"]').forEach(function (el) {
+          el.value = '';
+        });
+        _redrawDefs(drawer);
+        return;
+      } else if (act === 'stage-add') {
         drawer.querySelector('.veg-stages')
               .insertAdjacentHTML('beforeend', _stageRow(null, true));
       } else if (act === 'stage-toggle') {

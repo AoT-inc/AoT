@@ -379,10 +379,14 @@
   font-size: var(--aot-font-size-base);
 }
 
-/* 단락 제목 — AoT 모던 섹션 타이틀 (aot-modal-section-title 축소판) */
+/* 단락 제목 — AoT 모던 섹션 타이틀 (aot-modal-section-title 축소판)
+ *
+ * **굵기가 아니라 크기로 앞선다**(2026-08-20). 굵은 글자가 화면에 여럿이면
+ * 시선이 갈 곳이 흩어진다 — 굵기는 블록 안의 내용 이름이 쓰고, 제목은 본문의
+ * 1.2배 크기로 층을 만든다. */
 .aot-ov-sec-title {
-  font-weight: 700;
-  font-size: var(--aot-font-size-base);
+  font-weight: 400;
+  font-size: calc(var(--aot-font-size-base) * 1.2);
   color: var(--aot-color-text-primary);
   /* 제목과 본문 사이 — 제목이 본문에 붙으면 블록 안이 한 덩어리로 뭉친다. */
   margin-bottom: var(--aot-space-3);
@@ -392,6 +396,49 @@
   align-items: center;
   justify-content: space-between;
   gap: 8px;
+}
+/* 제목 오른쪽에 붙는 것들(센서 응답 배지 · [설정]). */
+.aot-ov-title-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--aot-space-2);
+  margin-left: auto;
+}
+
+/* 카드 제목 옆 [설정] — 어떤 항목을 낼지 고른다.
+ *
+ * **채운 알약으로 만들지 말 것.** 이 버튼은 카드의 내용이 아니라 카드를 다루는
+ * 손잡이다. `.aot-ov-pill`/`.aot-act-pbtn` 처럼 짙게 채우면 카드마다 진한 버튼이
+ * 하나씩 서서, [현황] 전체가 버튼 목록처럼 읽히고 정작 값이 뒤로 밀린다
+ * (강조는 화면에 하나만 — aot-dataviz.css 의 같은 규칙). */
+.aot-ov-cardcfg {
+  border: 0;
+  background: none;
+  /* 점 세 개는 글자보다 훨씬 좁다 — 최소 손가락 표적(약 28px)을 여백으로
+     만든다. 글자였을 때는 낱말 폭이 그 일을 대신하고 있었다. */
+  min-width: 28px;
+  height: 28px;
+  padding: 0;
+  margin: -6px -6px -6px 0;   /* 표적만 키우고 제목줄 높이는 그대로 */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  color: var(--aot-color-text-secondary);
+  /* 기호라 본문 크기로 두면 작아 보인다. 제목 글자보다는 작게. */
+  font-size: var(--aot-font-size-lg);
+  font-weight: 400;
+  line-height: 1;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+/* 밑줄을 긋지 않는다 — 점 세 개에 밑줄이 붙으면 획이 하나 더 있는 다른
+   기호처럼 보인다. 글자였을 때 쓰던 신호를 그대로 옮기지 말 것. */
+.aot-ov-cardcfg:hover,
+.aot-ov-cardcfg:focus-visible {
+  color: var(--aot-color-text-primary);
+  background: var(--bg-active);
+  outline: none;
 }
 
 /* 상태 요약 본문 라인 */
@@ -641,6 +688,21 @@
 }
 
 /* Muted text */
+/* 단계 지침 — 재배 지침서에서 옮겨 온 산문이라 줄바꿈이 살아야 읽힌다.
+   길어질 수 있으므로(서버가 4000자까지 받는다) 스크롤을 준다. 스크롤바는
+   보이지 않게 둔다(이 저장소의 공통 규칙). */
+.aot-ov-guidance {
+  white-space: pre-wrap;
+  max-height: 14rem;
+  overflow-y: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.aot-ov-guidance::-webkit-scrollbar {
+  display: none;
+}
+
 .aot-ov-muted {
   color: var(--aot-color-text-secondary);
 }
@@ -992,39 +1054,51 @@
    값이 주인공이라 숫자를 크게, 이름은 아래에 작게 둔다. 지도 라벨과 달리
    밴드 색을 칠하지 않는다 — 여러 값이 나란히 서면 색이 다섯 개 겹쳐
    "무엇이 문제인가"가 아니라 "알록달록하다"가 된다. */
-.aot-env-now {
+/* 환경 값 목록 — 한 줄에 밴드 바 하나(components/aot-dataviz.css).
+   예전에는 큰 숫자 카드를 가로로 흘렸는데, 값만으로는 좋은지 나쁜지 알 수 없어
+   목표·편차를 작은 글씨로 아래 두 줄씩 더 달아야 했다.
+
+   래퍼에 .aot-viz-group 을 함께 붙인다 — 제목 아래·마지막 줄 아래 여백을 그쪽
+   규칙에 맡기려는 것이다(간격 기준: docs/design/dataviz-primitives.md). */
+/* 선택자에 두 클래스를 다 적는다 — .aot-viz-group 이 `display:block` 을 갖고
+   있고 components/aot-dataviz.css 가 이 파일보다 **뒤에** 로드된다. 클래스
+   하나짜리 선택자끼리는 나중이 이기므로, 여기서 특이도를 한 단계 올리지 않으면
+   목록이 조용히 block 으로 돌아가 줄 사이 gap 이 통째로 사라진다. */
+.aot-env-now.aot-viz-group {
   display: flex;
-  flex-wrap: wrap;
-  gap: 14px;
+  flex-direction: column;
+  /* 줄 사이는 프리미티브 기본(40px)의 **절반**이다(2026-08-20).
+     환경 목록은 한 줄이 사실 하나(이름·값·축)뿐이고, 여러 줄을 위아래로 훑어
+     "지금 어디가 벗어났나" 를 찾는 자리다 — 블록처럼 떨어뜨리면 한 화면에
+     서너 줄밖에 안 들어와 훑는 일이 스크롤이 된다. 구획 [현황]의 기간 축처럼
+     한 줄이 그 자체로 한 덩어리인 곳은 기본값(40px)을 그대로 쓴다. */
+  gap: var(--aot-space-4);
+  /* 제목 아래·마지막 줄 아래도 같은 비율로 줄인다 — 줄 사이만 좁히고 위아래를
+     그대로 두면 목록이 블록 가운데에 떠 있는 것처럼 보인다.
+       제목 아래   = 제목 margin 8 + 여기 8      = 16
+       마지막 아래 = 여기 0 + 카드 padding 16    = 16
+     셋(줄 사이·제목 아래·마지막 아래)이 모두 16 이라 목록이 한 덩어리로 읽힌다. */
+  padding-top: var(--aot-space-2);
+  padding-bottom: 0;
 }
-.aot-env-now-val {
-  font-size: var(--aot-font-size-lg);
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-  color: var(--aot-color-text-primary);
-  line-height: 1.15;
-}
-.aot-env-now-unit {
-  font-size: var(--aot-font-size-xs);
-  font-weight: 400;
-  color: var(--aot-color-text-secondary);
-  margin-left: 1px;
-}
-.aot-env-now-key {
-  font-size: var(--aot-font-size-xs);
-  color: var(--aot-color-text-secondary);
-}
+.aot-ov-envnow .aot-ov-sec-title { margin-bottom: var(--aot-space-2); }
 
 /* 대표 측정 지정 — 값 자체가 버튼이다.
    항목마다 padding 을 늘 잡아 둔다: 지정될 때만 주면 배경이 켜지는 순간 칸이
    커지면서 옆 항목들이 밀린다(누른 자리가 손가락 밑에서 움직인다).
    음수 마진으로 늘린 만큼 되돌려, 지정 전 배치는 예전과 같게 둔다. */
 .aot-env-now-item {
-  padding: 4px 8px;
-  margin: -4px -8px;
-  border-radius: 4px;
+  padding: 6px 8px;
+  /* 가로만 바깥으로 내민다. 세로까지 음수 마진을 주면 줄 사이 여백(gap)을
+     그만큼 먹어, 밴드 바 목록이 다시 붙어 보인다(옛 가로 배치에서 쓰던
+     값이었다). */
+  margin: 0 -8px;
+  border-radius: 8px;
   transition: background-color 0.12s ease;
+  /* 지정 배경이 켜져도 마커의 링 색은 카드 바탕이 아니라 이 배경이어야
+     한다 — 아니면 지정된 줄만 마커 둘레에 흰 홈이 생긴다. */
 }
+.aot-env-now-item.is-rep { --aot-viz-surface: var(--brand-accent); }
 /* 지정된 것은 브랜드 강조 배경(--brand-accent)으로 남는다. 호버는 그보다
    옅은 --bg-active — 둘이 같으면 마우스만 올려도 지정된 것처럼 보인다. */
 .aot-env-now-item.is-selectable { cursor: pointer; }
@@ -1297,78 +1371,13 @@
   line-height: 1.5;
 }
 
-/* ── 기간 축 (구획) ────────────────────────────────────────────────────
-   시작·현재·단계 경계를 한 줄로. 텍스트로 늘어놓으면 사람이 머릿속에서
-   배치해야 알 수 있다. */
-.aot-tl { margin: 6px 0 2px; }
-.aot-tl-bar {
-  position: relative;
-  display: flex;
-  height: 18px;
-  border-radius: 9px;
-  overflow: hidden;
-  background: var(--aot-surface-card, var(--bg-off));
-  border: 1px solid var(--aot-border-neutral, var(--aot-border-light));
-}
-.aot-tl-seg {
-  position: relative;
-  min-width: 2px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: var(--aot-font-size-xs);
-  color: var(--aot-color-text-secondary);
-  background: var(--aot-surface-card, var(--bg-off));
-  border-right: 1px solid var(--aot-border-neutral, var(--aot-border-light));
-  overflow: hidden;
-  white-space: nowrap;
-}
-.aot-tl-seg:last-child { border-right: 0; }
-/* 지금 단계만 채운다 — 전부 칠하면 어디인지 다시 찾아야 한다. */
-.aot-tl-seg.is-current {
-  background: var(--aot-color-brand, #13261B);
-  color: #fff;
-  font-weight: 600;
-}
-/* 끝이 열린 단계(사람이 끝낼 때까지)는 경계를 흐린다 — 실선으로 두면
-   그 날 끝난다고 읽힌다. */
-.aot-tl-seg.is-open { opacity: 0.65; }
-.aot-tl-seg-label {
-  padding: 0 6px;
-  text-overflow: ellipsis;
-  overflow: hidden;
-}
-.aot-tl-today {
-  position: absolute;
-  top: -2px;
-  bottom: -2px;
-  width: 2px;
-  background: var(--aot-color-warning, #b26a00);
-  transform: translateX(-1px);
-}
-.aot-tl-today.is-over { width: 3px; }
-.aot-tl-ends {
-  display: flex;
-  justify-content: space-between;
-  font-size: var(--aot-font-size-xs);
-  color: var(--aot-color-text-secondary);
-  margin-top: 2px;
-}
+/* 옛 기간 축(.aot-tl-*)은 공용 프리미티브로 옮겼다 —
+   components/aot-dataviz.css 의 .aot-viz--timeline. 같은 위젯에 두 종류의
+   기간 바가 남으면 톤이 갈린다. */
 
-/* 값 옆의 목표·편차 — 목표만 따로 표로 두면 "그래서 지금 맞나" 에 답하지
-   못하고, 값만 두면 좋은지 나쁜지 알 수 없다. 둘은 붙어 있어야 뜻이 생긴다. */
-.aot-env-now-target {
-  font-size: var(--aot-font-size-xs);
-  color: var(--aot-color-text-secondary);
-  margin-top: 1px;
-}
-.aot-env-now-dev {
-  font-size: var(--aot-font-size-xs);
-  font-weight: 600;
-  margin-top: 1px;
-}
-.aot-env-now-dev.is-above { color: var(--aot-color-warning, #b26a00); }
-.aot-env-now-dev.is-below { color: var(--aot-color-info, #2b6cb0); }
+/* 목표·편차 별도 줄(.aot-env-now-target/-dev)은 걷어냈다 — 목표는 밴드 바의
+   기준 눈금이 그 **위치에** 적고, 편차는 마커가 목표에서 얼마나 떨어져 있는지로
+   보인다. 작은 글씨 두 줄을 더 읽지 않아도 된다. */
 
 /* "설비가 못 따라감" — 숫자 나열 위에 그 뜻을 말하는 줄. 경고색이되 위험이
    아니라 **판단이 필요하다**는 신호다. */

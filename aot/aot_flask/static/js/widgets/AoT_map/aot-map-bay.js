@@ -83,9 +83,29 @@
   }
 
   // ── Runtime data filters ───────────────────────────────────────────────────
+
+  /* 실내 센서인가.
+   *
+   * **위치로는 가릴 수 없다.** 기상대도 시설 어딘가에 서 있어서 좌표 → 슬라이스
+   * 매핑(`build_fitting_bay_map`)이 그것에 구역을 붙인다 — 실측으로 영양 육묘장의
+   * '기상대' fitting 이 `bay_id: 'bay_1_6'` 을 달고 나온다. 그래서 구역 필터가
+   * 위치만 보면 실외 센서가 그 구역의 것으로 딸려 들어온다.
+   *
+   * 안팎을 가르는 것은 사람이 시설 편집기에서 정한 `sensor_role` 하나뿐이고,
+   * **미설정은 실내로 본다** — 서버(`facility_integration` · `read_fitting_sensors`)가
+   * 쓰는 것과 같은 폴백이다. 여기서만 다르게 잡으면 같은 센서가 화면마다
+   * 안팎이 갈린다.
+   *
+   * 실외 값을 아예 버리는 것이 아니다 — 시설 [현재] 카드의 '실외' 줄은 별도
+   * 경로(`runtime.outdoor`)로 계속 온다. 여기서 빼는 것은 **구역이 자기 것이라고
+   * 말하는 목록**뿐이다. */
+  function isIndoor(s) {
+    return !!s && (s.sensor_role || 'indoor') !== 'outdoor';
+  }
+
   function filterSensors(sensors, bayId) {
     return (sensors || []).filter(function (s) {
-      return s && s.bay_id === bayId;
+      return isIndoor(s) && s.bay_id === bayId;
     });
   }
 
@@ -108,6 +128,7 @@
   window.AoTMapBay = {
     slices: slices,
     centerLngLat: centerLngLat,
+    isIndoor: isIndoor,
     filterSensors: filterSensors,
     filterStates: filterStates
   };

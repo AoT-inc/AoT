@@ -203,7 +203,7 @@ msgstr "길이"
 
 #: config_devices_units.py:173 inputs_gis/gis_rainviewer.py:195
 msgid "Light"
-msgstr "약함"
+msgstr "광량"
 
 #: config_devices_units.py:177
 msgid "Magnetic Flux Density"
@@ -29564,3 +29564,66 @@ msgstr "건 저장했습니다"
 
 msgid "week columns"
 msgstr "주 열"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:0
+msgid "Choose which items to show"
+msgstr "표시할 항목 고르기"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:0
+msgid "All items in this card are hidden."
+msgstr "이 카드의 항목을 모두 숨겼습니다."
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:0
+msgid "Nothing to show here yet."
+msgstr "아직 표시할 항목이 없습니다."
+msgid "Target items"
+msgstr "목표 항목"
+
+msgid "No target items yet. Add one below to track a value for each stage."
+msgstr "목표 항목이 아직 없습니다. 아래에서 추가하면 단계마다 값을 적을 수 있습니다."
+
+msgid "Pick what this programme aims for. Items with a measurement type are followed by the system; the rest stand as reference targets you meet your own way. Hide what you do not use, and leave anything blank you have not decided."
+msgstr "이 프로그램이 무엇을 목표로 삼을지 고릅니다. 측정 종류가 있는 항목은 시스템이 따라가고, 나머지는 사람이 각자 방식으로 맞추는 참고 목표가 됩니다. 쓰지 않는 항목은 숨기고, 아직 정하지 않은 값은 비워 두세요."
+
+msgid "Item name"
+msgstr "항목 이름"
+
+msgid "Add item"
+msgstr "항목 추가"
+
+msgid "Delete this item?"
+msgstr "이 항목을 지울까요?"
+
+msgid "Delete this item? {n} stage value(s) will be removed."
+msgstr "이 항목을 지울까요? 단계 값 {n}개가 함께 지워집니다."
+
+msgid "That item already exists."
+msgstr "이미 있는 항목입니다."
+
+msgid "measured"
+msgstr "측정됨"
+
+msgid "Reference target only"
+msgstr "참고 목표로만"
+
+msgid "Guidance"
+msgstr "지침"
+
+msgid "What matters in this stage — watering, ventilation, things to watch for."
+msgstr "이 단계에서 중요한 것 — 관수·환기·살펴볼 것."
+
+
+msgid "Common"
+msgstr "자주 쓰는 것"
+
+msgid "One stage is fine. Split only where management actually changes — stages run on days elapsed from the start date, so they do not line up with calendar seasons."
+msgstr "단계는 하나여도 됩니다. 관리 방식이 실제로 달라지는 곳에서만 나누세요 — 단계는 시작일로부터의 경과일로 도는 것이라 달력상의 계절과는 맞지 않습니다."
+
+msgid "Set a different value here…"
+msgstr "이 단계에서 다르게 정하기…"
+
+msgid "default {v}"
+msgstr "기본 {v}"
+
+msgid "not set"
+msgstr "미지정"

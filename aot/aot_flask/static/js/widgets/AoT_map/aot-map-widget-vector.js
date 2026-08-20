@@ -830,6 +830,32 @@
             });
         }
 
+        /* 구역 [현재] 카드의 [설정]. 구역에는 [제어 상태] 카드가 없다 —
+         * 자동제어는 시설의 것이다. */
+        function _wireZoneCardConfig(uid, pane, zoneUuid, data) {
+            var P = window.AoTMapPopup;
+            if (!P || !(data.zone || {}).can_edit) return;
+            _wireCardConfig(uid, pane, {
+                canEdit: true,
+                cards: ['now'],
+                ownerUuid: zoneUuid,
+                saveUrl: '/api/geo/zone/' + encodeURIComponent(zoneUuid) +
+                         '/hidden_rows',
+                titleOf: function () {
+                    return (window._ ? window._('Now') : 'Now');
+                },
+                choicesOf: function () {
+                    return P.envRowChoices(((data.zone || {}).env || {}).readings);
+                },
+                hiddenOf: function () { return data.hidden_rows || {}; },
+                onSaved: function (rows) {
+                    data.hidden_rows = rows;
+                    invalidateModal('zone', zoneUuid);
+                    _renderZoneOverview(uid, pane, data, zoneUuid);
+                }
+            });
+        }
+
         // [현황] 탭 — 현재 환경 + 노트 (시설 [현황]과 같은 순서)
         function _renderZoneOverview(uid, pane, data, zoneUuid) {
             var z = data.zone || {};
@@ -842,9 +868,19 @@
                 window.AoTMapPopup.buildZoneStatusHtml(z, {
                     repKey: data.rep_key || null,
                     selectable: !!z.can_edit,
-                    canAdd: !!z.can_edit
+                    canAdd: !!z.can_edit,
+                    // 카드 제목 옆 [설정] — 시설과 같은 자리·같은 규칙.
+                    configurable: !!z.can_edit,
+                    hidden: (data.hidden_rows || {}).now
                 });
             _wireZoneRepPick(uid, pane, zoneUuid, data);
+            _wireZoneCardConfig(uid, pane, zoneUuid, data);
+            // 축이 없는 줄(CO2·토양수분·이슬점…)은 추세로 답한다 — 값은 이미
+            // 그려져 있고, 이력이 도착하면 그 자리만 스파크라인으로 바뀐다.
+            if (window.AoTMapPopup.fillEnvSparklines) {
+                window.AoTMapPopup.fillEnvSparklines(
+                    pane, data.sensors, ((z.env) || {}).readings);
+            }
             // 예정을 만드는 자리는 **노트 하나**다(노트 본문의 한 구간을 골라
             // 시각을 준다). 계층마다 별도 폼을 두면 사용자가 쓰기 전에 종류를
             // 고르는 옛 방식으로 되돌아간다.
@@ -1693,6 +1729,61 @@
                     if (!z || z.popup !== popup || !pane.isConnected) return;
 
                     z._sensors = data.sensors || [];
+
+                    // [현황]의 현재 환경 — 구역·시설과 같은 블록(밴드 바).
+                    // 값이 이 응답에 함께 오므로 따로 조회하지 않는다.
+                    // 대표 측정 지정은 넘기지 않는다: rep_key 는 시설의 설정이라
+                    // 구획 창에서 쓰면 그 시설을 보는 다른 사람의 화면이 바뀐다.
+                    var envSlot = body.querySelector(
+                        '.aot-bay-popup-pane[data-pane="overview"] ' +
+                        '[data-slot="envnow"]');
+                    if (envSlot && window.AoTMapPopup.buildEnvNowHtml) {
+                        envSlot.innerHTML = window.AoTMapPopup.buildEnvNowHtml(
+                            (data.plot || {}).env,
+                            // 프로그램이 정한 목표. 서버가 어떤 항목을 목표로
+                            // 볼지 이미 정해 준다(_program_targets) — 여기서
+                            // 다시 고르면 어휘가 두 곳에 생긴다.
+                            { // 카드에서 뺄 항목 — **상위(시설/구역)의 설정을
+                              // 물려받는다.** 서버가 어느 상위인지 이미 골라
+                              // 준다(`_inherited_hidden_rows`) — 여기서 다시
+                              // 고르면 규칙이 두 곳에 생긴다.
+                              //
+                              // [설정] 버튼은 두지 않는다(`configurable` 없음).
+                              // 저장이 상위에 있으니 여기서 고치면 그 시설·구역을
+                              // 보는 **다른 사람의 화면**이 함께 바뀐다 — 구획
+                              // 창에 rep_key 를 넘기지 않는 것과 같은 이유다.
+                              // 고치는 자리는 한 칸 위(←)의 그 창이다.
+                              hidden: ((data.plot || {}).hidden_rows || {}).now,
+                              targets: (data.plot || {}).targets,
+                              // 한계(온도 주/야간 · 습도)는 목표와 다른 축이다 —
+                              // 선으로 긋고 초록 면은 그리지 않는다.
+                              limits: (data.plot || {}).limits,
+                              // 목표가 곡선인 항목 — 숫자 대신 곡선 이름을 적고
+                              // 앱 기본 구간은 그리지 않는다.
+                              targetMethods: (data.plot || {}).target_methods });
+                        // 축이 없는 줄(CO2·토양수분·이슬점…)은 추세로 답한다.
+                        // 값은 이미 그려져 있고, 도착하면 그 자리만 바뀐다.
+                        if (window.AoTMapPopup.fillEnvSparklines) {
+                            window.AoTMapPopup.fillEnvSparklines(
+                                envSlot, data.sensors,
+                                ((data.plot || {}).env || {}).readings);
+                        }
+                    }
+
+                    // [목표] — 측정값이 이제 있으니 막대로 다시 그린다. 목표만
+                    // 표로 보면 "그래서 지금 맞나" 에 답하지 못한다.
+                    var tgtSlot = body.querySelector(
+                        '.aot-bay-popup-pane[data-pane="overview"] ' +
+                        '[data-slot="targets"]');
+                    if (tgtSlot && window.AoTMapPopup.plotStageTargetRows) {
+                        var _rs = ((data.plot || {}).env || {}).readings || [];
+                        // 단계는 구획 모달을 그린 쪽(aot-map-plot.js)이 남겨
+                        // 둔다 — 그 응답에만 있고 이 응답에는 없다.
+                        var _html = window.AoTMapPopup.plotStageTargetRows(
+                            body.__aotPlotStage, _rs);
+                        if (_html) tgtSlot.innerHTML = _html;
+                    }
+
                     // `_renderZoneDevices` 는 `data.zone.output_order` 를 읽는다.
                     // 구획에는 순서가 없다 — 빈 객체를 주어 구역의 순서를
                     // 빌려오지 않게 한다(빌려오면 구역 창과 달라 보인다).
@@ -3200,9 +3291,21 @@
         // Aggregate fitting_sensors[] → { key, avg, unit, more } for the chip.
         // repKey: 사용자가 시설 [현황]에서 지정한 대표 측정. 지금 값을 못 내면
         // 지정을 무시하고 우선순위로 물러선다(서버 _pick_rep 과 같은 규칙).
+        //
+        // **실외는 평균에 넣지 않는다.** 칩은 시설·구역 위에 앉아 "여기가 지금
+        // 어떤가" 를 한 숫자로 답하는 자리인데, 기상대를 섞으면 그 숫자가
+        // **안팎의 평균**이 된다 — 겨울에 안 25°C · 밖 -5°C 면 칩은 10°C 라고
+        // 말하고, 그 값은 어느 곳도 가리키지 않는다. 에러도 없고 숫자도
+        // 그럴듯해서 조용하다.
+        //
+        // 거르는 것은 여기 한 곳이다 — 부르는 쪽(시설 칩·구역 칩)이 각자
+        // 기억하게 두면 새 호출부가 생길 때마다 다시 새는 자리가 된다.
+        // 구역 칩은 이미 `filterSensors` 를 지나므로 두 번 걸러질 뿐 값은 같다.
         function _sensorSummary(sensors, repKey) {
             var byKey = {};
-            (sensors || []).forEach(function (s) {
+            (sensors || []).filter(function (s) {
+                return !window.AoTMapBay || window.AoTMapBay.isIndoor(s);
+            }).forEach(function (s) {
                 (s.channels || []).forEach(function (c) {
                     if (!c || c.value == null || isNaN(+c.value)) return;
                     var k = c.key || c.measurement_type || '?';
@@ -3459,12 +3562,22 @@
             return null;
         }
 
-        // Sensors shown in the bay modal: the bay's own sensors first, then
-        // facility-common sensors with no bay attribution (예: 기상대/실외 센서).
+        /* 구역 모달에 보일 센서 — 그 구역의 것 먼저, 다음에 어느 구역에도
+         * 배정되지 않은 시설 공통 센서(단동 시설·시설 한가운데 센서).
+         *
+         * **실외는 뺀다.** 구역은 시설 **안**의 한 칸이고, 그 안이 어떤지를
+         * 묻는 자리다. 기상대는 밖이 어떤지를 참고하라고 둔 것이라 여기 섞이면
+         * 같은 '온도' 가 두 뜻으로 한 목록에 선다(`AoTMapBay.isIndoor` 주석 —
+         * 위치로는 가릴 수 없어 기상대도 구역 배정을 달고 온다).
+         *
+         * 실외 값이 사라지는 것은 아니다 — 시설 [현재] 카드의 '실외' 줄이
+         * 계속 답한다. */
         function _baySensors(st, facilityUuid, bayId) {
             var all = st.sensorsByFac[facilityUuid] || [];
             var inBay = window.AoTMapBay.filterSensors(all, bayId);
-            var common = all.filter(function (s) { return s && s.bay_id == null; });
+            var common = all.filter(function (s) {
+                return window.AoTMapBay.isIndoor(s) && s.bay_id == null;
+            });
             return inBay.concat(common);
         }
 
@@ -3678,6 +3791,104 @@
                             !!cur && el.dataset.repKey === cur);
                     });
                 });
+            });
+        }
+
+        function _facilityHidden(uid, facilityUuid) {
+            var st = _actLabelState[uid];
+            return ((st && st.hiddenByFac) || {})[facilityUuid] || {};
+        }
+
+        /* 카드 제목 옆 [설정] — 어떤 항목을 낼지 고른다.
+         *
+         * 창은 예약 창과 **같은 방식**으로 띄운다: 같은 중앙 모달 셸에 다른
+         * uid 를 주면 위에 하나 더 쌓인다(`_showFacilityCenterOverlay`).
+         * 자체 오버레이를 만들면 폰 전체화면·안전영역 규칙이 따라오지 않는다.
+         *
+         * `choicesOf` 는 **열 때** 부른다 — 카드는 30초마다 다시 그려지므로
+         * 창을 여는 순간의 목록이 맞다(그 사이에 센서가 하나 붙었을 수 있다).
+         */
+        function _wireCardConfig(uid, pane, cfg) {
+            if (!window.AoTMapPopup.wireCardConfig || !cfg.canEdit) return;
+            var P = window.AoTMapPopup;
+            P.wireCardConfig(pane, cfg.cards, function (card) {
+                var items = cfg.choicesOf(card) || [];
+                var popup = _showFacilityCenterOverlay(
+                    P.buildRowPickerHtml({
+                        title: cfg.titleOf(card),
+                        items: items,
+                        hidden: (cfg.hiddenOf() || {})[card] || []
+                    }), 'rowpick-' + card + '-' + cfg.ownerUuid);
+                var el = popup.getElement();
+                var close = function () { try { popup.remove(); } catch (e) {} };
+                el.querySelector('.aot-rowpick-cancel').addEventListener('click', close);
+                var saveBtn = el.querySelector('.aot-rowpick-save');
+                saveBtn.addEventListener('click', function () {
+                    saveBtn.disabled = true;
+                    fetch(cfg.saveUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json',
+                                   'X-CSRFToken': _csrfHeader() },
+                        body: JSON.stringify({ card: card,
+                                               keys: P.readRowPicker(el) })
+                    })
+                    .then(function (r) { return r.ok ? r.json() : null; })
+                    .then(function (j) {
+                        if (!j || !j.ok) throw new Error('save failed');
+                        cfg.onSaved(j.hidden_rows || {});
+                        close();
+                    })
+                    .catch(function () {
+                        // 창을 닫지 않는다 — 닫아 버리면 저장된 줄 알고 지나간다.
+                        saveBtn.disabled = false;
+                    });
+                });
+            });
+        }
+
+        /* 시설의 두 카드([현재]·[제어 상태])에 [설정]을 건다.
+         *
+         * 카드마다 목록의 출처가 다르고 갱신 주기도 달라, 부르는 쪽이 자기가
+         * 아는 것만 넘긴다(`readings` 또는 `summary`). 넘기지 않은 카드의
+         * 버튼은 그 카드를 그린 쪽이 따로 건다. */
+        function _wireFacilityCardConfig(uid, facilityUuid, pane, canEdit,
+                                         card, source) {
+            var P = window.AoTMapPopup;
+            if (!P || !canEdit) return;
+            _wireCardConfig(uid, pane, {
+                canEdit: true,
+                // **자기가 목록을 아는 카드만** 건다(wireCardConfig 주석).
+                // 어느 카드인지는 부르는 쪽이 말한다 — `source` 가 비었는지로
+                // 짐작하면 코디네이터가 없는 시설(summary 가 없다)에서 제어
+                // 카드가 [현재]로 잘못 걸린다.
+                cards: [card],
+                ownerUuid: facilityUuid,
+                saveUrl: '/api/aot/facility/' +
+                         encodeURIComponent(facilityUuid) + '/hidden_rows',
+                titleOf: function () {
+                    var tr = function (x) { return (window._ ? window._(x) : x); };
+                    return card === 'control' ? tr('Control Status') : tr('Now');
+                },
+                choicesOf: function () {
+                    return card === 'control' ? P.controlRowChoices(source)
+                                              : P.envRowChoices(source);
+                },
+                hiddenOf: function () { return _facilityHidden(uid, facilityUuid); },
+                onSaved: function (rows) {
+                    var st = _actLabelState[uid];
+                    if (st) {
+                        st.hiddenByFac = st.hiddenByFac || {};
+                        st.hiddenByFac[facilityUuid] = rows;
+                    }
+                    // 서버 캐시를 비웠으니 클라이언트 캐시도 버린다 — 안 버리면
+                    // 창을 닫았다 다시 열 때 옛 설정이 돌아온다(rep_key 와 같다).
+                    invalidateModal('facility', facilityUuid);
+                    // 카드를 지금 다시 그린다. 30초를 기다리게 하면 저장이
+                    // 안 된 줄 안다.
+                    var st2 = _actLabelState[uid];
+                    if (st2) { st2._ovHtml = null; }
+                    _loadOverview(uid, facilityUuid, true);
+                }
             });
         }
 
@@ -3994,11 +4205,21 @@
                 }, {
                     repKey: _facilityRepKey(uid, facilityUuid),
                     selectable: canEdit,
+                    // 카드 제목 옆 [설정] — 낼 항목을 사용자가 고른다.
+                    configurable: canEdit,
+                    hidden: _facilityHidden(uid, facilityUuid).now,
                     // 목표·편차는 코디네이터 요약에서 온다(측정과 다른 요청).
                     // 값 옆에 붙어야 뜻이 생기므로 여기로 넘긴다 — 아직 안
                     // 왔으면 그 줄만 빠지고 다음 주기에 붙는다.
                     targets: (st._lastEnvSummary || {}).targets,
-                    deviation: (st._lastEnvSummary || {}).deviation
+                    deviation: (st._lastEnvSummary || {}).deviation,
+                    // 밴드 바의 축 — 라벨 색 판정과 **같은 표**를 넘긴다.
+                    // 시설이 자기 범위를 설정했으면 그것이, 없으면 기본값이
+                    // 쓰인다(bandScale 안에서 갈린다).
+                    ranges: _facilityRanges_act(uid, facilityUuid),
+                    // 프로그램이 정한 한계 — 온도·습도는 목표가 아니라 이쪽이다
+                    // (build_env_target 의 R3 주석 참조).
+                    limits: st._lastProgramLimits
                 });
                 if (html) {
                     // 같은 값이면 DOM 을 건드리지 않는다(위 _loadOverview 주석).
@@ -4014,6 +4235,16 @@
                         else pane.insertAdjacentHTML('afterbegin', html);
                     }
                     _wireFacilityRepPick(uid, facilityUuid, pane, canEdit);
+                    _wireFacilityCardConfig(uid, facilityUuid, pane, canEdit,
+                                            'now', readings);
+                    // 축이 없는 줄은 추세로 답한다. 센서 목록은 라벨용으로
+                    // 이미 받아 둔 것을 쓴다(sensorsByFac) — 같은 것을 또
+                    // 받으면 모달 열 때마다 왕복이 하나 는다.
+                    if (window.AoTMapPopup.fillEnvSparklines) {
+                        window.AoTMapPopup.fillEnvSparklines(
+                            pane, (st.sensorsByFac || {})[facilityUuid],
+                            readings);
+                    }
                 }
             }).catch(function () {});
         }
@@ -4058,6 +4289,9 @@
                 // 살아남아 다시 붙일 일이 없다. [개요] 탭이 이미 같은 규칙이다.
                 // 다음 [현재] 렌더가 목표·편차를 값 옆에 붙일 수 있게 보관한다.
                 st2._lastEnvSummary = (res[0] || {}).summary || null;
+                // 프로그램이 정한 한계(주/야간 온도 · 습도). 목표와 다른 축이라
+                // 따로 보관한다 — [현재] 렌더가 선으로 긋는다.
+                st2._lastProgramLimits = res[5] || null;
                 // **순서는 개념 계층이다** — 위치·시간 → 데이터 → 제어 → 기록물.
                 // 큰 것에서 작은 것으로, 상위에서 하위로.
                 //
@@ -4077,7 +4311,15 @@
                        ? window.AoTMapPopup.buildIrrigationHtml(res[4]) : '') +
                     // ③ 제어 상태 + ④ 기록물(노트)
                     window.AoTMapPopup.buildOverviewSection(
-                        res[0], res[1], { canToggle: st2.canCtrl });
+                        res[0], res[1], {
+                            canToggle: st2.canCtrl,
+                            // [제어 상태] 카드도 낼 항목을 고를 수 있다.
+                            // 권한 축은 [현재]와 같다(edit_settings).
+                            configurable: !!(st2.repEditByFac &&
+                                             st2.repEditByFac[facilityUuid]),
+                            hiddenControl:
+                                _facilityHidden(uid, facilityUuid).control
+                        });
                 var ovSame = (st2._ovHtml === ovHtml) && pane.children.length > 0;
                 if (!ovSame) {
                     st2._ovHtml = ovHtml;
@@ -4091,6 +4333,13 @@
                     window.AoTCoordinatorPlot.scan();
                 }
                 _prependFacilityEnvNow(uid, facilityUuid, pane);
+                // [제어 상태]의 [설정]. [현재]는 자기 블록을 다시 그릴 때
+                // 스스로 배선한다(`_prependFacilityEnvNow`) — 두 카드가 서로
+                // 다른 주기로 갱신되므로 한 곳에서 함께 걸 수 없다.
+                _wireFacilityCardConfig(
+                    uid, facilityUuid, pane,
+                    !!(st2.repEditByFac && st2.repEditByFac[facilityUuid]),
+                    'control', (res[0] || {}).summary);
                 _appendFacilityPlots(uid, facilityUuid, pane);
                 _appendFacilitySchedule(uid, facilityUuid, pane);
                 var aboutChanged = false;
@@ -4201,10 +4450,12 @@
                         st0.repEditByFac = st0.repEditByFac || {};
                         st0.repKeyByFac[facilityUuid] = j.rep_key || null;
                         st0.repEditByFac[facilityUuid] = !!j.can_edit;
+                        st0.hiddenByFac = st0.hiddenByFac || {};
+                        st0.hiddenByFac[facilityUuid] = j.hidden_rows || {};
                     }
                     _render([j.env_summary || null, j.status || null,
                              j.info || null, j.hazards || null,
-                             j.irrigation || null]);
+                             j.irrigation || null, j.limits || null]);
 
                     // 상위 필지로 올라가는 화살표 + 상태 점
                     var st2 = _actLabelState[uid];
@@ -6008,10 +6259,33 @@
             document.mozFullScreenElement || document.msFullscreenElement || document.body;
         _fsHost.appendChild(overlay);
 
+        /* 눈금의 기준 라벨(적정 범위·목표·오늘)이 축 끝 라벨과 부딪히는지는
+           **글자 폭**이 정하므로 붙은 뒤에 재야 한다(AoTViz.settle 주석 참조).
+           본문 상당수가 슬롯에 나중에 채워지니 호출부마다 부르는 대신
+           본문 변화를 보고 한 번씩 다시 잰다 — 슬롯이 늘어도 따라온다. */
+        var _settleObs = null;
+        if (window.AoTViz && window.AoTViz.settle && window.MutationObserver) {
+            var _settlePending = false;
+            var _settleNow = function () {
+                _settlePending = false;
+                try { window.AoTViz.settle(box); } catch (e) {}
+            };
+            _settleNow();
+            _settleObs = new MutationObserver(function () {
+                if (_settlePending) return;
+                _settlePending = true;
+                // rAF 는 숨은 탭에서 아예 발화하지 않는다 — 다시 열었을 때
+                // 라벨이 겹친 채로 남는다. 타이머는 느려질 뿐 멈추지 않는다.
+                setTimeout(_settleNow, 0);
+            });
+            _settleObs.observe(box, { childList: true, subtree: true });
+        }
+
         var _closeListeners = [];
         function _close() {
             if (!document.getElementById(OVERLAY_ID)) return;
             overlay.remove();
+            if (_settleObs) { _settleObs.disconnect(); _settleObs = null; }
             document.body.style.overflow = _prevOverflow;
             if (_scrollbarW > 0) document.body.style.paddingRight = '';
             _closeListeners.forEach(function (fn) { try { fn(); } catch (e) {} });

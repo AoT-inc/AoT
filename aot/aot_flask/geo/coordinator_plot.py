@@ -28,10 +28,15 @@
 로 따로 내고 화면이 "참고" 라고 말한다. **목표 목록에 추가하지 말 것.**
 """
 
+import logging
+
 from aot.aot_flask.geo import plot_context
 
+logger = logging.getLogger(__name__)
+
 # 이 코디네이터가 **목표로 쓰는** 항목과 단위. 여기 없는 단계 목표는 쓰이지
-# 않으며(아래 `UNMAPPED_UNITS`), 한계 필드는 여기 절대 넣지 않는다.
+# 않고 화면에 참고로만 나간다(`display_state` 의 `unmapped`). 한계 필드
+# (temp/humid min·max)는 여기 절대 넣지 않는다.
 TARGET_MAP = (
     ('vpd', 'kPa'),
     ('co2', 'ppm'),
@@ -47,8 +52,60 @@ PHOTO_MAP = (
 # 이미 있었다). 새 이름을 지으면 같은 값이 두 이름을 갖는다.
 MODEL_KEYS = ('A_max', 'K_L', 'K_C', 'T_opt', 'T_sigma', 'VPD_half')
 
-# 단계에는 있으나 이 코디네이터가 목표로 쓰지 않는 항목 — 화면에 참고로만.
-UNMAPPED_UNITS = {'temp_day': '°C', 'temp_night': '°C', 'rh': '%'}
+# 제어 축을 **키 이름이 아니라 `(measurement, shape)` 으로** 찾는다.
+#
+# 목표 항목은 이제 프로그램마다 다르고 사용자가 이름을 붙인다(`target_defs`).
+# 키 이름으로 찾으면 사용자가 만든 "실내 CO₂"(key=`co2_in`)는 영영 제어에 닿지
+# 않고, 그 이유가 화면 어디에도 없다. 물리량으로 찾으면 이름이 무엇이든 닿는다.
+#
+# `shape` 까지 보는 이유: DLI 는 `radiation` 의 **일적산**이라 순간 광량과 같은
+# 축에 놓으면 안 된다. 온도(`temperature`)도 주·야 두 항목이 같은 measurement 를
+# 쓰지만 이 코디네이터의 목표 축이 아니다(아래 `unmapped`).
+CONTROL_AXES = {
+    'vpd': ('vapor_pressure_deficit', 'instant'),
+    'co2': ('co2', 'instant'),
+    'dli': ('radiation', 'daily'),
+}
+
+
+def axis_of(target):
+    """단계 목표 한 줄 → 제어 축 이름 | None.
+
+    `measurement` 가 없는 항목(사용자가 물리량을 고르지 않은 것)은 **어느 축에도
+    닿지 않는다** — 코드는 자기가 뜻을 모르는 값으로 장비를 움직일 수 없다.
+    """
+    m = target.get('measurement')
+    if not m:
+        return None
+    shape = target.get('shape') or 'instant'
+    for axis, (want_m, want_shape) in CONTROL_AXES.items():
+        if m == want_m and shape == want_shape:
+            return axis
+    return None
+
+
+def _pick_by_axis(targets):
+    """단계 목표 목록 → `{축: 목표}`.
+
+    같은 축에 여러 항목이 걸리면(사용자가 CO₂ 항목을 하나 더 만든 경우)
+    **고정 항목이 이긴다.** 고정 항목이 없는데 후보가 둘 이상이면 **아무것도
+    고르지 않는다** — 둘 중 하나를 임의로 고르면 어느 값으로 도는지 화면과
+    제어가 갈리고, 그 갈라짐은 "설정한 대로 안 돈다" 로만 드러난다.
+    """
+    cand = {}
+    for t in targets or []:
+        axis = axis_of(t)
+        if axis:
+            cand.setdefault(axis, []).append(t)
+    out = {}
+    for axis, items in cand.items():
+        fixed = [t for t in items if t.get('fixed')]
+        if len(fixed) == 1:
+            out[axis] = fixed[0]
+        elif len(items) == 1:
+            out[axis] = items[0]
+        # else: 모호하다 — 고르지 않는다.
+    return out
 
 
 def _options(fn):
@@ -141,13 +198,13 @@ def control_targets(fn, on=None):
                     'total': st.get('total'), 'key': st.get('key')}
     out['reason'] = 'ok'
 
-    for t in (st.get('targets') or []):
-        key = t.get('key')
-        if key in ('vpd', 'co2'):
-            out[key] = {'value': _num(t.get('value')),
-                        'method_id': t.get('method_uuid')}
-        elif key == 'dli':
+    picked = _pick_by_axis(st.get('targets') or [])
+    for axis, t in picked.items():
+        if axis == 'dli':
             out['dli'] = _num(t.get('value'))
+        else:
+            out[axis] = {'value': _num(t.get('value')),
+                         'method_id': t.get('method_uuid')}
 
     photo = prow.photosynthesis if isinstance(prow.photosynthesis, dict) else {}
     # Big-Leaf 모델 상수도 프로그램이 정본이다 — 코드에 박힌 작물 5종은 이제
@@ -158,6 +215,175 @@ def control_targets(fn, on=None):
     # T_base 도 프로그램이 정본이다 — 없으면 코디네이터의 광합성 모델 작물에서
     # 온다. 둘이 다르면 같은 구획의 GDD 가 화면과 제어에서 갈린다.
     out['T_base'] = _num(photo.get('T_base'))
+    return out
+
+
+# ── 화면이 쓰는 프로그램 값 (목표 · 한계 · 곡선) ───────────────────────────
+#
+# 어휘가 여기 있는 이유: 무엇을 목표로 보고 무엇을 한계로 볼지는 이미 이 파일이
+# 정하고 있다(TARGET_MAP · UNMAPPED_UNITS). 라우트마다 다시 고르면 시설 모달과
+# 구획 모달이 같은 단계를 두고 다른 말을 하게 된다 — 실제로 그렇게 갈렸다.
+
+def facility_env_coordinator(facility_uuid):
+    """시설에 연결된 env_coordinator → CustomController (없으면 None). 활성 우선.
+
+    링크 판정은 `custom_options` 의 `geo_facility_id_device_id`(구: `geo_facility_id`)
+    다 — status·env_summary 가 쓰는 것과 **같은 기준**이어야 한다. 기준이 갈리면
+    같은 시설을 두고 한 화면은 코디네이터가 있다 하고 다른 화면은 없다고 한다.
+
+    라우트가 아니라 여기 있는 이유: "이 시설의 제어는 무엇인가" 는 도메인 질문이고,
+    구획 화면(곡선 값 빌려오기)도 같은 답이 필요하다.
+    """
+    import json as _json
+    from aot.databases.models.controller import CustomController
+
+    def _belongs(fn):
+        try:
+            opts = _json.loads(fn.custom_options or '{}') or {}
+        except (TypeError, ValueError):
+            return False
+        return (opts.get('geo_facility_id_device_id')
+                or opts.get('geo_facility_id') or '') == facility_uuid
+
+    try:
+        matched = [f for f in CustomController.query
+                   .filter_by(device='env_coordinator').all() if _belongs(f)]
+    except Exception as exc:                                # noqa: BLE001
+        logger.warning('[env_coordinator lookup] %s', exc)
+        return None
+    for f in matched:
+        if f.is_activated:
+            return f
+    return matched[0] if matched else None
+
+
+def _stage_values(plot_row, on=None):
+    """진행 중인 단계의 목표 목록 → `(값dict, 곡선이름dict)`."""
+    from aot.aot_flask.geo import plot_context
+    st = plot_context.stage_of(plot_row, on=on)
+    if not st or st.get('state') != 'running':
+        return {}, {}
+    vals, methods = {}, {}
+    for t in (st.get('targets') or []):
+        key = t.get('key')
+        if t.get('value') is not None:
+            vals[key] = t.get('value')
+        elif t.get('source') == 'method':
+            methods[key] = t.get('method_name') or ''
+    return vals, methods
+
+
+def program_targets(plot_row, on=None):
+    """프로그램이 정한 **목표** → `{env_key: value}`.
+
+    `TARGET_MAP` 과 같은 목록(vpd · co2 · dli)만 낸다. 주간·야간 온도와 습도는
+    단계가 정한 **한계**이지 목표가 아니다 — 목표 칸에 넣으면 한계가 목표로
+    둔갑한다(`display_state` 가 같은 이유로 `unmapped` 로 뺀다).
+    """
+    if plot_row is None:
+        return {}
+    vals, methods = _stage_values(plot_row, on=on)
+    usable = {k for k, _u in TARGET_MAP}
+    out = {k: v for k, v in vals.items() if k in usable}
+
+    # 곡선으로 정해진 항목은 단계에 숫자가 없다. 그런데 이 구획이 시설에 있고
+    # 그 시설에 코디네이터가 있으면 **그 곡선의 지금 값**이 이미 풀려 있다 —
+    # 제어가 매 주기 계산해 쓰는 값이다. 빌려 오면 구획 화면과 시설 화면이
+    # 같은 숫자를 말한다(따로 계산하면 두 화면이 갈린다).
+    #
+    # 코디네이터가 없으면(노지 등) 못 푼다 — 그때는 `program_target_methods` 가
+    # 곡선 이름만 낸다.
+    missing = [k for k in methods if k in usable and k not in out]
+    fac = getattr(plot_row, 'facility_uuid', None)
+    if missing and fac:
+        for k, v in _coordinator_live_targets(fac).items():
+            if k in missing and v is not None:
+                out[k] = v
+    return out
+
+
+def _coordinator_live_targets(facility_uuid):
+    """코디네이터가 **마지막 사이클에 실제로 쓴** 목표 → `{key: value}`.
+
+    곡선(메서드)이 걸린 항목의 지금 값은 여기에만 있다. `control_targets` 는
+    곡선을 풀지 않는다 — `method_id` 만 넘긴다(메서드 종류마다 계산 인자가 달라
+    조회 시점에 일반적으로 풀 수 없다는 것이 `_stage_targets` 의 판단이다).
+    실제로 푸는 것은 데몬의 사이클이고, 그 결과가 `FunctionRuntimeState.
+    summary_json` 에 남는다. 시설 모달이 읽는 것과 **같은 값**이다.
+
+    ⚠ 스냅샷이다. 코디네이터가 멈춰 있으면 마지막 값이 남아 있고, 한 번도 돈 적이
+    없으면 아무것도 없다. 그래서 "없으면 곡선 이름만" 으로 되돌아간다 — 지어낸
+    숫자를 목표라고 적는 것보다 낫다.
+    """
+    import json as _json
+    from aot.databases.models.function import FunctionRuntimeState
+
+    try:
+        fn = facility_env_coordinator(facility_uuid)
+        if fn is None:
+            return {}
+        rs = FunctionRuntimeState.query.filter_by(
+            function_id=fn.unique_id).first()
+        if rs is None or not getattr(rs, 'summary_json', None):
+            return {}
+        summary = _json.loads(rs.summary_json) or {}
+        tgt = summary.get('targets')
+        return tgt if isinstance(tgt, dict) else {}
+    except Exception as exc:                                # noqa: BLE001
+        logger.debug('코디네이터 목표 스냅샷 읽기 실패(%s): %s',
+                     facility_uuid, exc)
+        return {}
+
+
+def program_target_methods(plot_row, on=None):
+    """목표가 **곡선**으로 정해진 항목 → `{env_key: 곡선 이름}`.
+
+    곡선의 "지금 값" 은 여기서 구할 수 없다(`_stage_targets` 주석: 메서드 종류마다
+    계산 인자가 다르다). 그래서 숫자 대신 **곡선을 따른다는 사실**만 낸다 —
+    화면은 그 항목에 앱 기본 구간을 그리지 않는다. 곡선이 다스리는 값에 기본
+    적정 범위를 겹쳐 그리면 두 기준을 동시에 말하게 된다.
+
+    ⚠ 코디네이터가 붙어 있으면 그 **런타임 요약**에 곡선이 풀린 현재 값이
+    들어 있다(`summary.targets`) — 시설 모달은 그것을 쓰므로 이 목록이 필요
+    없다. 구획 모달은 코디네이터가 없을 수 있어 여기까지가 한계다.
+    """
+    if plot_row is None:
+        return {}
+    _v, methods = _stage_values(plot_row, on=on)
+    usable = {k for k, _u in TARGET_MAP}
+    out = {k: v for k, v in methods.items() if k in usable}
+
+    # 코디네이터가 그 곡선을 이미 풀어 놓았으면 여기서 뺀다 — `program_targets`
+    # 가 숫자를 내므로 두 목록에 같은 키가 남으면 화면이 "무엇을 먼저 볼지" 를
+    # 또 정해야 한다. 판정은 한 곳에서 끝낸다.
+    fac = getattr(plot_row, 'facility_uuid', None)
+    if out and fac:
+        live = _coordinator_live_targets(fac)
+        out = {k: v for k, v in out.items() if live.get(k) is None}
+    return out
+
+
+def program_limits(plot_row, on=None):
+    """프로그램이 정한 **한계** → `{env_key: [값, …]}`.
+
+    온도는 `temp_night` · `temp_day` 가 두 경계다. 어느 쪽이 큰지는 값이 정하게
+    두고 여기서 "야간이 하한" 이라고 못 박지 않는다.
+
+    습도는 값이 하나뿐이라 **한 줄만** 낸다. 그것이 상한인지 하한인지 아무도
+    선언한 적이 없으므로 정하지 않는다 — 한쪽으로 단정하면 "습도가 낮아서
+    문제" 를 "정상" 으로 읽게 만들 수 있다.
+
+    키는 화면 어휘(측정 키 → env 이름)로 맞춘다.
+    """
+    if plot_row is None:
+        return {}
+    vals, _m = _stage_values(plot_row, on=on)
+    out = {}
+    temps = [vals[k] for k in ('temp_night', 'temp_day') if k in vals]
+    if temps:
+        out['temperature'] = sorted(temps)
+    if 'rh' in vals:
+        out['humidity'] = [vals['rh']]
     return out
 
 
@@ -204,9 +430,16 @@ def display_state(fn, on=None):
     if row is None:
         return out
     st = plot_context.stage_of(row, on=on)
+    # 이 코디네이터가 목표로 쓰지 **않는** 항목 전부 — 주·야 온도와 습도(한계
+    # 필드라 목표로 쓸 수 없다)와, 사용자가 만든 항목(물리량이 없거나 이 축에
+    # 없는 것)이 여기로 온다. 숨기면 "왜 안 잡히지" 가 되고 목표 목록에 넣으면
+    # 한계가 목표로 둔갑한다 — 그래서 따로 내고 화면이 "참고" 라고 말한다.
+    used = {id(t) for t in _pick_by_axis((st or {}).get('targets') or []).values()}
     for t in ((st or {}).get('targets') or []):
-        if t.get('key') in UNMAPPED_UNITS and t.get('value') is not None:
-            out['unmapped'].append({'key': t['key'],
-                                    'unit': t.get('unit') or UNMAPPED_UNITS[t['key']],
-                                    'value': t['value']})
+        if id(t) in used or t.get('value') is None:
+            continue
+        out['unmapped'].append({'key': t.get('key'),
+                                'label': t.get('label'),
+                                'unit': t.get('unit'),
+                                'value': t['value']})
     return out

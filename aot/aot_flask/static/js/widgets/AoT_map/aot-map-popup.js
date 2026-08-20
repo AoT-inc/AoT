@@ -1215,8 +1215,16 @@
     }
 
     // ── 블록 3: 제어 상태 (환기/팬/커튼 등 의미 단위) ───────────────────
+    // 제목 옆 [설정] — 감출 수 있는 것은 아래 **환기 면적·장치 개도**뿐이다.
+    // 편차·안전 게이트는 목록에 없다(`controlRowChoices` 주석).
+    var ctrlHidden = _hiddenSet(opts.hiddenControl);
+    var ctrlChoices = controlRowChoices(summary);
     html += '<div class="aot-ov-block aot-ov-ctrl">' +
-            '<div class="aot-ov-sec-title">' + _esc(_t('Control Status')) + '</div>';
+            '<div class="aot-ov-sec-title aot-ov-sec-title--row">' +
+            '<span>' + _esc(_t('Control Status')) + '</span>' +
+            '<span class="aot-ov-title-actions">' +
+            (opts.configurable && ctrlChoices.length ? _cardCfgBtn('control') : '') +
+            '</span></div>';
     // **설비가 못 따라가고 있으면 그렇다고 말한다.** "냉각기 100%" 만 보여
     // 주면 그것이 좋은 신호인지 나쁜 신호인지 알 수 없다 — 최대로 밀고 있는데도
     // 편차가 안 줄면 사람이 할 판단(차광을 더 치든, 목표를 낮추든)이 생긴다.
@@ -1254,26 +1262,51 @@
     // 환기는 **면적**이고 아래 목록은 **장치별 개도**다. 둘 다 %로 적어 두면
     // 같은 것을 두 번 말하는 것처럼 보이는데 실제로는 다른 값이다(전체 개구
     // 면적 대비 열린 면적 vs 그 장치가 몇 % 열렸는가). 라벨로 구분한다.
+    // 환기 면적·장치 개도 — **막대**로 그린다. 둘 다 "얼마나 열려 있나" 이고,
+    // 숫자만 보면 40%가 큰지 작은지 판단하려고 사람이 매번 100 을 떠올려야
+    // 한다. 축이 있으면 그 계산이 사라진다.
+    //
+    // 환기는 **면적**이고 아래 목록은 **장치별 개도**다. 둘 다 %로 적어 두면
+    // 같은 것을 두 번 말하는 것처럼 보이는데 실제로는 다른 값이다(전체 개구
+    // 면적 대비 열린 면적 vs 그 장치가 몇 % 열렸는가). 라벨로 구분한다.
+    //
+    // 목표 눈금은 없다 — 개도에는 "얼마여야 한다" 가 없다. 제어가 지금 그만큼
+    // 열어 둔 것이고, 그것이 옳은지는 위의 편차·한계 줄이 말한다.
+    var V = window.AoTViz;
     var v = summary.vent || {};
-    if (v.total_area_m2 > 0) {
-      html += '<div class="aot-ov-row"><span>' + _esc(_t('Vent area open')) +
-              '</span><span>' +
-              _esc((v.effective_area_m2 != null ? v.effective_area_m2.toFixed(1) : '?') +
-              ' / ' + v.total_area_m2.toFixed(1) + ' m²' +
-              (v.open_ratio_pct != null ? ' (' + v.open_ratio_pct.toFixed(0) + '%)' : '')) +
-              '</span></div>';
+    var ctrlRows = [];
+    if (ctrlHidden.vent) { v = {}; }
+    if (v.total_area_m2 > 0 && V) {
+      ctrlRows.push(V.bullet({
+        label: _t('Vent area open'),
+        value: (v.effective_area_m2 != null ? v.effective_area_m2 : 0),
+        min: 0, max: v.total_area_m2,
+        valueText: (v.effective_area_m2 != null
+                    ? v.effective_area_m2.toFixed(1) : '?'),
+        valueSub: '/ ' + v.total_area_m2.toFixed(1) + ' m²' +
+                  (v.open_ratio_pct != null
+                   ? ' \u00b7 ' + v.open_ratio_pct.toFixed(0) + '%' : '')
+      }));
+    } else if (v.total_area_m2 > 0) {
+      ctrlRows.push(_pRow(_t('Vent area open'),
+        _esc((v.effective_area_m2 != null ? v.effective_area_m2.toFixed(1) : '?') +
+             ' / ' + v.total_area_m2.toFixed(1) + ' m²')));
     }
+    if (ctrlRows.length) html += V ? V.group(ctrlRows) : ctrlRows.join('');
+
     var obk = summary.outputs_by_kind || {};
-    var kinds = Object.keys(obk);
+    var kinds = Object.keys(obk).filter(function (k) { return !ctrlHidden[k]; });
     if (kinds.length) {
       html += '<div class="aot-ov-sub-title">' + _esc(_t('Device opening')) +
               '</div>';
+      var openRows = kinds.map(function (k) {
+        var label = _t(_KIND_LABELS[k] || k);
+        if (!V) return _pRow(label, _esc(obk[k].toFixed(0) + '%'));
+        return V.bullet({ label: label, value: obk[k], min: 0, max: 100,
+                          valueText: obk[k].toFixed(0), valueSub: '%' });
+      });
+      html += V ? V.group(openRows) : openRows.join('');
     }
-    kinds.forEach(function (k) {
-      html += '<div class="aot-ov-row"><span>' +
-              _esc(_t(_KIND_LABELS[k] || k)) + '</span><span>' +
-              _esc(obk[k].toFixed(0) + '%') + '</span></div>';
-    });
     html += '</div>';
 
     return html + _ovNotesBlock();
@@ -1371,7 +1404,334 @@
   //   opts.repKey     지금 대표로 지정된 key(배경 표시)
   //   opts.selectable 누를 수 있는가(edit_settings 권한자만)
   // 측정 키 → 목표·편차 키. 서버가 두 어휘를 쓰므로 여기서 한 번만 잇는다.
-  var _NOW_TO_TARGET = { T: 'temperature', RH: 'humidity', CO2: 'co2', VPD: 'vpd' };
+  // 측정 키 → **목표** 어휘. 온도·습도는 여기 없다(2026-08-20).
+  //
+  // 시설 코디네이터의 summary.targets 에는 temperature·humidity 도 들어 있지만
+  // 그것은 목표가 아니다 — `build_env_target` 의 주석이 못 박고 있다:
+  //   "R3: T/RH 는 호출자가 constraint 로 별도 관리(이 함수는 추적 목표용
+  //    변수만 반환)"
+  // 실제로 VPD 를 1차 목표로 쓰는 코디네이터에서는 T/RH 가 guide 대역의
+  // **중앙값**으로 계산된 보조값이라, 그것을 "목표" 라고 적으면 아무도 정한 적
+  // 없는 숫자가 목표로 둔갑한다(실측: 상추 육묘장이 "목표 32.0°C" 를 띄우고
+  // 있었는데 프로그램의 그 단계는 주간 25 · 야간 15 였다).
+  //
+  // 온도·습도가 정말로 정해진 것은 **한계**다 — _NOW_TO_LIMIT 로 따로 받아
+  // 선으로 긋는다.
+  // 값이 하나뿐인 기준(목표·단일 한계)을 구간으로 펼치는 폭. **이 화면의
+  // 약속이지 프로그램이 말한 값이 아니다** — 프로그램에 허용 오차 칸이 생기면
+  // 그 값이 이것을 대신해야 한다.
+  var _ENV_SINGLE_TOL = 0.10;
+
+  var _NOW_TO_TARGET = { CO2: 'co2', VPD: 'vpd' };
+  var _NOW_TO_LIMIT  = { T: 'temperature', RH: 'humidity' };
+
+  /* 환경 값 한 줄 — **밴드 바**(components/aot-dataviz.css).
+   *
+   * 예전에는 큰 숫자 카드였다. 25.1°C 만 보면 좋은지 나쁜지 알 수 없어서 목표와
+   * 편차를 작은 글씨로 아래 두 줄에 더 달았는데, 그러면 한 항목이 네 줄이 되고
+   * "그래서 지금 괜찮은가" 는 여전히 사람이 빼기를 해야 나왔다. 값을 축 위의
+   * 위치로 바꾸면 그 계산이 사라진다.
+   *
+   * 축과 적정 구간은 **밴드 색과 같은 표**에서 온다
+   * (AoTMapSensorLabels.bandScale → DEFAULT_RANGES 또는 시설의 sensor_ranges).
+   * 화면이 범위를 따로 들면 라벨 색과 축이 곧 갈린다.
+   *
+   * 축을 모르는 지표(기본 범위가 없는 CO2 등)는 **축을 지어내지 않고** 값만
+   * 낸다(AoTViz.value) — 같은 머리줄을 쓰므로 줄이 어긋나지 않는다.
+   *
+   * 대표 측정 지정(rep_key)은 그대로다: 바깥 래퍼가 .aot-env-now-item 이고
+   * wireEnvNowPick 이 그것을 찾는다.
+   */
+  /* 광합성에 직접 얽힌 값을 위로 올린다 — VPD · 일사 · CO2.
+   *
+   * 나머지(온도·습도·풍속…)가 덜 중요한 것이 아니라, 이 셋이 **지금 광합성이
+   * 되고 있는가** 를 직접 말하는 값이라 먼저 보인다. 온도·습도는 그 셋을 만드는
+   * 조건에 가깝다.
+   *
+   * **데이터가 있는 것만 올라간다.** 목록에 없는 키는 자리를 만들지 않는다 —
+   * 빈 줄을 위에 두면 "있어야 하는데 없다" 로 읽히고, 실제로는 그 시설에 그
+   * 센서가 없을 뿐이다.
+   *
+   * 나머지는 서버가 준 순서를 그대로 지킨다(안정 정렬). 서버 순서에는 대표값
+   * 우선 같은 판단이 이미 들어 있어, 여기서 다시 섞으면 그 판단이 사라진다.
+   */
+  var _ENV_LEAD_KEYS = ['VPD', 'light', 'DLI', 'CO2'];
+
+  function _envNowOrder(readings) {
+    var lead = [], rest = [];
+    readings.forEach(function (r) {
+      (_ENV_LEAD_KEYS.indexOf(r.key) >= 0 ? lead : rest).push(r);
+    });
+    lead.sort(function (a, b) {
+      return _ENV_LEAD_KEYS.indexOf(a.key) - _ENV_LEAD_KEYS.indexOf(b.key);
+    });
+    return lead.concat(rest);
+  }
+
+  function _envNowRowHtml(r, opts) {
+    opts = opts || {};
+    var V = window.AoTViz;
+    var SL = window.AoTSensorLabel;
+    var ML = window.AoTMapSensorLabels;
+    var dec  = (SL && SL.defaultDecimals) ? SL.defaultDecimals(r.key) : 1;
+    var name = (SL && SL.keyDisplay) ? SL.keyDisplay(r.key) : r.key;
+    // 단위 정규화는 공용 함수 하나만 쓴다(값 라벨·차트 레전드와 같은 판단).
+    var unit = (SL && SL.displayUnit) ? SL.displayUnit(r.unit)
+                                      : String(r.unit || '').trim();
+    var isRep = !!(opts.repKey && r.key === opts.repKey);
+    // 지정 가능할 때만 버튼처럼 보이게 한다 — 권한이 없는 사람에게 눌리는
+    // 시늉을 보여 주면 눌러 보고 아무 일도 안 일어나는 것을 겪는다.
+    var hint = isRep ? _t('Representative measurement')
+                     : (opts.selectable ? _t('Set as representative') : '');
+
+    var tkey = _NOW_TO_TARGET[r.key];
+    var tval = tkey ? (opts.targets || {})[tkey] : null;
+    // 한계 — 프로그램이 "이 안에서" 를 말한 값들. 값이 둘이면 상·하한,
+    // 하나면 그 자리 하나(어느 쪽인지는 아무도 선언한 적이 없다).
+    var lkey = _NOW_TO_LIMIT[r.key];
+    var lims = lkey ? ((opts.limits || {})[lkey] || null) : null;
+    if (lims && !lims.length) lims = null;
+    // 목표가 **곡선**으로 정해진 항목 — 숫자가 없다. 그 자리에 앱 기본 구간을
+    // 그리면 곡선이 다스리는 값에 다른 기준을 겹쳐 말하게 된다. 구간을 비우고
+    // "곡선을 따름" 만 적는다.
+    //
+    // ⚠ 코디네이터가 붙어 있으면 곡선이 풀린 **현재 값**이 목표로 들어온다
+    // (summary.targets). 그때는 tval 이 있으므로 이 분기에 오지 않는다.
+    var mname = (tkey && (opts.targetMethods || {})[tkey]) || null;
+
+    // **프로그램이 그 항목의 값을 정했으면 프로그램이 이긴다.** 앱 기본 밴드
+    // (DEFAULT_RANGES)는 일반 온실을 가정한 값이라, 프로그램이 단계별로 정한
+    // 것과 다르면 화면이 두 기준을 동시에 말하게 된다 — 사람은 어느 쪽을 믿을지
+    // 알 수 없다. 그래서 목표가 있으면 **적정 구간을 그리지 않고** 목표 하나만
+    // 기준으로 세운다. 범위를 지어내지 않는 이유: 프로그램이 주는 것은 값 하나이지
+    // 폭이 아니다(허용 오차는 아무도 선언한 적이 없다).
+    //
+    // 같은 이유로 범위 밖 표시(is-out)도 하지 않는다 — 목표와 다르다는 것은
+    // "벗어났다" 가 아니라 "여기서 저기까지" 다. 그 거리는 마커와 목표 눈금
+    // 사이가 이미 보여 준다.
+    var inner;
+    var hasTarget = (tval != null);
+    var sc = (V && ML && ML.bandScale) ? ML.bandScale(r.key, opts.ranges) : null;
+    if (V && sc) {
+      // 판정 축과 같은 공간으로 환산한 뒤 위치를 잡는다(Pa 로 저장된 VPD 등).
+      var v = ML.bandValue ? ML.bandValue(r.key, +r.value, r.unit) : +r.value;
+      // 가운데 눈금은 **그 줄의 기준**이다 — 목표가 설정돼 있으면 그것이
+      // 기준이고(사람이 정한 값이 밴드 기본값을 이긴다), 없으면 적정 범위다.
+      // ── 초록 구간을 어디서 얻는가 ──────────────────────────────────────
+      //
+      // 출처는 넷이지만 **그리는 방법은 하나**다: 초록 면. 프로그램이 정한
+      // 것이든 앱 기본값이든 뜻이 같으면(= "여기면 된다") 모양도 같아야 한다.
+      // 한때 프로그램 값만 선으로 따로 그렸는데, 한 줄에 선이 셋(하한·지금·
+      // 상한) 서면 어느 것이 지금인지 모양이 말해 주지 못했다.
+      //
+      // **값이 하나뿐이면 그 값을 가운데로 ±10% 를 구간으로 잡는다.**
+      // 프로그램이 주는 것은 대부분 값 하나이고(습도·VPD·CO2), 폭이 없으면
+      // 그릴 구간도 없다 — 그러면 그 줄은 "지금 어떤가" 에 답하지 못한다.
+      // 10% 는 이 화면의 **약속**이지 프로그램이 말한 값이 아니다.
+      var anchorText, anchorAt, okLo = null, okHi = null;
+      var _norm = function (v) {
+        return ML.bandValue ? ML.bandValue(r.key, +v, r.unit) : +v;
+      };
+      // 값 하나 → 가운데로 보고 ±TOL. 0 이면 폭이 0 이라 구간을 만들지 않는다.
+      var _spread = function (center) {
+        var c = _norm(center);
+        if (!isFinite(c) || c === 0) return;
+        var d = Math.abs(c) * _ENV_SINGLE_TOL;
+        okLo = c - d; okHi = c + d;
+      };
+
+      if (tval != null) {
+        anchorText = _t('target') + ' ' + (+tval).toFixed(dec);
+        anchorAt = _norm(tval);
+        _spread(tval);
+      } else if (mname) {
+        // 곡선은 지금 값을 여기서 구할 수 없다 — 가운데가 없으니 구간도 없다.
+        anchorText = mname ? _t('Follows curve: {name}').replace('{name}', mname)
+                           : _t('Follows a curve');
+        anchorAt = null;
+      } else if (lims && lims.length >= 2) {
+        var _l = lims.map(_norm);
+        okLo = Math.min.apply(null, _l);
+        okHi = Math.max.apply(null, _l);
+        anchorText = _t('Range') + ' ' +
+                     lims.map(function (v) { return _fmtBand(+v, dec); })
+                         .join('\u2013');
+        anchorAt = (okLo + okHi) / 2;
+      } else if (lims) {
+        anchorText = _t('Range') + ' ' + _fmtBand(+lims[0], dec);
+        anchorAt = _norm(lims[0]);
+        _spread(lims[0]);
+      } else {
+        okLo = sc.okMin; okHi = sc.okMax;
+        anchorText = _fmtBand(sc.okMin, dec) + '\u2013' + _fmtBand(sc.okMax, dec);
+        anchorAt = null;                 // band() 가 적정 구간 중앙에 붙인다
+      }
+      inner = V.band({
+        label: name,
+        value: v,
+        valueText: (+r.value).toFixed(dec),
+        valueSub: unit,
+        min: sc.min, max: sc.max,
+        okMin: okLo, okMax: okHi,
+        stale: !!r.stale,
+        // **축의 끝을 적지 않는다.** 밴드 축의 양 끝(10~45°C 등)은 5단계 색을
+        // 나누려고 정한 값이라 사람이 읽을 뜻이 없고, 기준 라벨이 그 자리로
+        // 움직이다 보면 끝 숫자와 겹쳐 "0.40 0.80–1.20" 처럼 한 덩어리로
+        // 읽힌다. 이 줄에서 알아야 하는 것은 **기준과 지금 위치**뿐이다.
+        scale: [ { text: anchorText, anchor: true, at: anchorAt } ]
+      });
+    } else if (V) {
+      // 축을 만들 수 없는 지표 — 값만 낸다. 다만 **추세는 범위를 몰라도 그릴 수
+      // 있으므로**, 최근 값이 도착하면 이 자리를 스파크라인으로 바꾼다
+      // (fillEnvSparklines). 표식만 남기고 여기서 조회하지 않는다 — 빌더는
+      // 순수 함수다.
+      inner = V.value({ label: name, valueText: (+r.value).toFixed(dec),
+                        valueSub: unit, stale: !!r.stale,
+                        className: 'aot-viz--sparkable' });
+    } else {
+      inner = _pRow(name, _esc((+r.value).toFixed(dec) + ' ' + unit));
+    }
+
+    return '<div class="aot-env-now-item' +
+             (isRep ? ' is-rep' : '') +
+             (opts.selectable ? ' is-selectable' : '') + '"' +
+             ' data-rep-key="' + _esc(r.key) + '"' +
+             (hint ? ' title="' + _esc(hint) + '"' : '') +
+             (opts.selectable ? ' role="button" tabindex="0"' : '') + '>' +
+             inner + '</div>';
+  }
+
+  // ── 카드 항목 고르기 ───────────────────────────────────────────────────
+  //
+  // 시설이 커지면 [현재]와 [제어 상태]에 줄이 계속 늘어난다 — 센서를 하나 더
+  // 달거나 액추에이터 종류가 하나 늘 때마다다. 그런데 **무엇이 볼 값인지는
+  // 그 자리를 쓰는 사람만 안다**(노지에 실내 습도, 창이 없는 시설에 환기 면적).
+  // 그래서 화면이 순서를 더 똑똑하게 정하려 애쓰는 대신, 빼는 손잡이를 준다.
+  //
+  // **거르는 것은 화면이 한다.** 서버는 감춘 항목도 계속 보낸다 — 응답에서
+  // 빼 버리면 설정 창이 "무엇을 감출 수 있는지" 를 목록으로 만들 수 없어
+  // 다시 켤 방법이 사라진다.
+  /* 카드 제목 옆 손잡이 — **글자가 아니라 점 세 개**다.
+   *
+   * "설정" 이라고 적으면 카드마다 제목 옆에 글자가 하나씩 더 서서, 제목줄이
+   * 두 낱말로 읽힌다("현재 설정"). 카드에서 읽어야 할 것은 제목과 값이지
+   * 손잡이가 아니다. 점 세 개는 어느 언어에서도 같은 폭이고 번역이 필요 없다.
+   *
+   * **글자를 지웠으니 이름은 `aria-label` 이 진다** — 그림만 남은 버튼은
+   * 스크린리더에서 "버튼" 으로만 읽힌다. `title` 은 마우스에게만 보인다. */
+  function _cardCfgBtn(card) {
+    var label = _t('Choose which items to show');
+    return '<button type="button" class="aot-ov-cardcfg"' +
+           ' data-card-cfg="' + _esc(card) + '"' +
+           ' aria-label="' + _esc(label) + '"' +
+           ' title="' + _esc(label) + '">' +
+           '\u22ef</button>';
+  }
+
+  function _hiddenSet(list) {
+    var out = {};
+    (list || []).forEach(function (k) { out[k] = true; });
+    return out;
+  }
+
+  /* 이 카드가 **지금 낼 수 있는** 줄 전부 — 감춘 것도 들어간다.
+   *
+   * 있지도 않은 항목까지 늘어놓지 않는 이유: 목록이 그 시설에 없는 센서로
+   * 채워지면 사용자는 "여기 CO2 가 있었나" 를 먼저 의심한다. 반대로 감춘
+   * 것을 빼면 다시 켤 수단이 없어진다. 그래서 기준은 "값이 오는가" 하나다. */
+  function envRowChoices(readings) {
+    var SL = window.AoTSensorLabel;
+    return _envNowOrder(readings || []).map(function (r) {
+      return { key: r.key,
+               label: (SL && SL.keyDisplay) ? SL.keyDisplay(r.key) : r.key };
+    });
+  }
+
+  /* 제어 상태 카드의 줄. **경고는 목록에 없다** — 편차("못 따라감")와 안전
+   * 게이트는 아래 숫자들이 왜 그런지의 이유라, 감출 수 있게 하면 카드가
+   * 거짓말을 한다(냉각기 100% 만 남고 그것이 나쁜 신호라는 사실이 사라진다). */
+  function controlRowChoices(summary) {
+    summary = summary || {};
+    var out = [];
+    if ((summary.vent || {}).total_area_m2 > 0) {
+      out.push({ key: 'vent', label: _t('Vent area open') });
+    }
+    Object.keys(summary.outputs_by_kind || {}).forEach(function (k) {
+      out.push({ key: k, label: _t(_KIND_LABELS[k] || k) });
+    });
+    return out;
+  }
+
+  /* 설정 창 본문 — 예약 창과 **같은 골격**이다(스크롤 페인 + modal-footer).
+   * opts: { title, items:[{key,label}], hidden:[key] } */
+  function buildRowPickerHtml(opts) {
+    opts = opts || {};
+    var hidden = _hiddenSet(opts.hidden);
+    var rows = (opts.items || []).map(function (it) {
+      // 토글이 켜짐 = **보인다**. 감춤을 켜는 형태로 두면 "숨김 끄기" 를
+      // 읽어야 하는 이중부정이 된다.
+      return '<div class="aot-modal-option-row">' +
+             '<div class="aot-modal-option-label">' + _esc(it.label) + '</div>' +
+             '<div class="aot-modal-option-control">' +
+             _slideToggle('aot-rowpick-toggle', '', it.key, !hidden[it.key],
+                          ' data-row-key="' + _esc(it.key) + '"') +
+             '</div></div>';
+    }).join('');
+
+    return '<div class="aot-sensor-popup-header"><b>' +
+             _esc(opts.title || _t('Settings')) + '</b></div>' +
+           '<div class="aot-bay-popup-pane">' +
+             (rows
+               ? '<div class="aot-modal-container">' + rows + '</div>'
+               : '<div class="aot-ov-muted">' +
+                 _esc(_t('Nothing to show here yet.')) + '</div>') +
+           '</div>' +
+           '<div class="modal-footer">' +
+           '<button type="button" class="btn aot-pill-btn aot-rowpick-cancel">' +
+             _esc(_t('Close')) + '</button>' +
+           '<button type="button" class="btn aot-pill-btn aot-pill-btn-primary ' +
+             'aot-rowpick-save">' + _esc(_t('Save')) + '</button>' +
+           '</div>';
+  }
+
+  /* 설정 창에서 꺼 둔 항목의 key 목록 — 저장할 값 그대로. */
+  function readRowPicker(root) {
+    var out = [];
+    (root ? root.querySelectorAll('.aot-rowpick-toggle input') : []).forEach(
+      function (inp) {
+        if (!inp.checked && inp.dataset.rowKey) out.push(inp.dataset.rowKey);
+      });
+    return out;
+  }
+
+  /* 카드 제목의 [설정] 클릭 → onOpen(card).
+   *
+   * **`cards` 로 자기 카드만 건다.** 카드마다 목록의 출처가 다르고([현재]는
+   * 측정값, [제어 상태]는 코디네이터 요약) 갱신 주기도 달라 거는 쪽이 둘이다.
+   * 한쪽이 pane 안의 버튼을 전부 걸어 버리면 남의 카드에 **빈 목록을 아는
+   * 핸들러**가 붙고, 나중에 제대로 건 핸들러와 둘이 같은 창을 서로 밀어낸다.
+   *
+   * 이미 건 버튼은 다시 걸지 않는다 — [현황]은 30초마다 다시 그려지는데,
+   * 내용이 같으면 DOM 을 그대로 두므로(깜빡임 방지) 리스너만 쌓인다. */
+  function wireCardConfig(root, cards, onOpen) {
+    if (!root) return;
+    (cards || []).forEach(function (card) {
+      var btn = root.querySelector('[data-card-cfg="' + card + '"]');
+      if (!btn || btn.dataset.cfgBound) return;
+      btn.dataset.cfgBound = '1';
+      btn.addEventListener('click', function (ev) {
+        ev.stopPropagation();
+        onOpen(card);
+      });
+    });
+  }
+
+  // 축 눈금 숫자 — 정수는 소수점을 붙이지 않는다(0.4 는 붙이고 10 은 안 붙인다).
+  function _fmtBand(v, dec) {
+    if (v == null || isNaN(v)) return '';
+    return (Math.abs(v - Math.round(v)) < 1e-9) ? String(Math.round(v))
+                                                : (+v).toFixed(dec);
+  }
 
   function buildEnvNowHtml(env, opts) {
     env = env || {};
@@ -1384,7 +1744,8 @@
     var _empty = (!readings.length && !sensors.total);
 
     var head = '<div class="aot-ov-sec-title aot-ov-sec-title--row">' +
-               '<span>' + _esc(_t('Now')) + '</span>';
+               '<span>' + _esc(_t('Now')) + '</span>' +
+               '<span class="aot-ov-title-actions">';
     if (sensors.total && sensors.valid < sensors.total) {
       // 'Sensors' 를 쓰지 않는다 — 그 msgid 는 설정 화면에서 "센서류"(장치 분류)
       // 로 번역돼 있어 "센서류 2/3" 이 된다. 뜻이 다르면 msgid 를 나눈다.
@@ -1393,55 +1754,26 @@
               sensors.valid + '/' + sensors.total +
               '</span>';
     }
-    head += '</div>';
+    // 낼 줄이 하나도 없으면 [설정]도 두지 않는다 — 열어 봐야 빈 목록이다.
+    if (opts.configurable && readings.length) head += _cardCfgBtn('now');
+    head += '</span></div>';
+
+    // **감추는 것은 여기서만 한다.** 서버는 감춘 항목도 계속 보낸다(설정 창이
+    // 목록을 만들려면 그래야 한다).
+    var hidden = _hiddenSet(opts.hidden);
+    var shown = readings.filter(function (r) { return !hidden[r.key]; });
 
     var body;
-    if (readings.length) {
-      body = '<div class="aot-env-now">' + readings.map(function (r) {
-        var dec = (window.AoTSensorLabel && window.AoTSensorLabel.defaultDecimals)
-          ? window.AoTSensorLabel.defaultDecimals(r.key) : 1;
-        var name = (window.AoTSensorLabel && window.AoTSensorLabel.keyDisplay)
-          ? window.AoTSensorLabel.keyDisplay(r.key) : r.key;
-        // 단위 정규화는 공용 함수 하나만 쓴다(값 라벨·차트 레전드와 같은 판단).
-        var unit = (window.AoTSensorLabel && window.AoTSensorLabel.displayUnit)
-          ? window.AoTSensorLabel.displayUnit(r.unit)
-          : String(r.unit || '').trim();
-        var isRep = !!(opts.repKey && r.key === opts.repKey);
-        // 지정 가능할 때만 버튼처럼 보이게 한다 — 권한이 없는 사람에게 눌리는
-        // 시늉을 보여 주면 눌러 보고 아무 일도 안 일어나는 것을 겪는다.
-        var hint = isRep ? _t('Representative measurement')
-                         : (opts.selectable ? _t('Set as representative') : '');
-        // **목표는 값 옆에 붙어야 뜻이 생긴다.** 25.1°C 만 보면 좋은지 나쁜지
-        // 알 수 없고, 목표만 따로 표로 보면 지금 어떤지 알 수 없다. 예전에는
-        // 그 둘이 다른 블록에 있어 사람이 머릿속에서 빼기를 해야 했다.
-        var tkey = _NOW_TO_TARGET[r.key];
-        var tval = tkey ? (opts.targets || {})[tkey] : null;
-        var dev  = tkey ? (opts.deviation || {})[tkey] : null;
-        var sub = '';
-        if (tval != null) {
-          sub += '<div class="aot-env-now-target">' +
-                 _esc(_t('target') + ' ' + (+tval).toFixed(dec)) + '</div>';
-        }
-        if (dev != null && isFinite(dev) && Math.abs(dev) >= 0.05) {
-          sub += '<div class="aot-env-now-dev' +
-                 (dev > 0 ? ' is-above' : ' is-below') + '">' +
-                 _esc((dev > 0 ? '+' : '') + (+dev).toFixed(dec) + ' ' +
-                      (dev > 0 ? _t('above') : _t('below'))) + '</div>';
-        }
-        return '<div class="aot-env-now-item' +
-                 (isRep ? ' is-rep' : '') +
-                 (opts.selectable ? ' is-selectable' : '') + '"' +
-                 ' data-rep-key="' + _esc(r.key) + '"' +
-                 (hint ? ' title="' + _esc(hint) + '"' : '') +
-                 (opts.selectable ? ' role="button" tabindex="0"' : '') + '>' +
-                 '<div class="aot-env-now-val">' +
-                 _esc((+r.value).toFixed(dec)) +
-                 '<span class="aot-env-now-unit">' + _esc(unit) + '</span>' +
-                 '</div>' +
-                 '<div class="aot-env-now-key">' + _esc(name) + '</div>' +
-                 sub +
-               '</div>';
-      }).join('') + '</div>';
+    if (shown.length) {
+      body = '<div class="aot-env-now aot-viz-group">' +
+             _envNowOrder(shown)
+               .map(function (r) { return _envNowRowHtml(r, opts); })
+               .join('') + '</div>';
+    } else if (readings.length) {
+      // 값은 오는데 전부 꺼 둔 상태. "측정값 없음" 이라고 적으면 센서가 죽은
+      // 줄 안다 — 그것은 지금 상태가 아니라 사용자가 정한 것이다.
+      body = '<div class="aot-ov-muted">' +
+             _esc(_t('All items in this card are hidden.')) + '</div>';
     } else {
       body = '<div class="aot-ov-muted">' +
              _esc(_empty ? _t('No sensors are linked to this place yet.')
@@ -1478,6 +1810,127 @@
   // pane 요소 자체는 그대로 재사용된다 — 렌더마다 리스너를 더하면 클릭 한 번에
   // 핸들러가 두 번 돌아 지정을 켰다 껐다 해서 **해제가 안 먹는다**(실제로
   // 겪음). 콜백만 갈아 끼우고 리스너는 최초 한 번만 건다.
+  /* 축이 없는 줄을 **스파크라인**으로 바꾼다.
+   *
+   * 축(적정 범위)을 만들 수 없는 지표는 값 하나로는 좋은지 나쁜지 말할 수 없다.
+   * 그런데 추세는 범위를 몰라도 그릴 수 있다 — "612ppm" 은 판단할 수 없어도
+   * "오르는 중" 은 값 몇 개면 보인다.
+   *
+   * ## 센서가 **하나일 때만** 그린다
+   *
+   * `readings` 의 값은 그 key 를 가진 센서들의 **평균**이다(`n` 이 그 개수).
+   * n>1 인데 센서 하나의 이력을 그리면 위의 숫자와 아래 선이 서로 다른 것을
+   * 말하게 된다 — 평균은 올라가는데 선은 내려가는 화면이 나올 수 있다.
+   * 이력을 평균 내어 맞출 수도 있지만, 그러면 화면이 서버의 집계 규칙(신선도
+   * 판정 포함)을 다시 구현하는 것이 된다.
+   *
+   * ## 조회는 한 번에 묶는다
+   *
+   * `/data_batch` 의 `kind:'past'` 를 쓴다(센서 팝업 차트와 같은 경로).
+   * 실패하면 조용히 지나간다 — 스파크라인은 덤이고, 없다고 값이 사라지면 안 된다.
+   */
+  var _SPARK_PAST_S = 6 * 3600;      // 6시간 — 하루 주기 센서도 두어 점은 잡힌다
+  var _SPARK_MAX_PTS = 24;           // 좁은 폭에 24점이면 모양이 다 보인다
+
+  // **순환값은 선으로 그리지 않는다.** 풍향 359° 와 0° 는 1도 차이인데 세로축
+  // 에서는 정반대 끝에 놓인다 — 바람이 거의 안 바뀌어도 화면은 위아래로 요동친다.
+  // 순환값의 추세를 그리려면 다른 그림(장미도·화살표)이 필요하고, 그것은 이
+  // 프리미티브가 하는 일이 아니다.
+  var _SPARK_SKIP_KEYS = { wind_deg: true };
+
+  function _parseFirst(html) {
+    var d = document.createElement('div');
+    d.innerHTML = html;
+    return d.firstElementChild;
+  }
+
+  function fillEnvSparklines(root, sensors, readings) {
+    var V = window.AoTViz;
+    if (!root || !V || !V.spark) return;
+    var items = root.querySelectorAll('.aot-env-now-item');
+    if (!items.length) return;
+
+    var byKey = {};
+    (readings || []).forEach(function (r) { byKey[r.key] = r; });
+
+    var jobs = [];
+    [].forEach.call(items, function (el) {
+      if (!el.querySelector('.aot-viz--sparkable')) return;
+      var key = el.dataset.repKey;
+      if (_SPARK_SKIP_KEYS[key]) return;    // 순환값(위 주석)
+      var r = byKey[key];
+      if (!r || r.n !== 1) return;          // 평균이면 그리지 않는다(위 주석)
+      for (var i = 0; i < (sensors || []).length; i++) {
+        var sen = sensors[i];
+        var chs = (sen && sen.channels) || [];
+        for (var c = 0; c < chs.length; c++) {
+          if (chs[c].key === key && chs[c].measurement_id) {
+            jobs.push({ el: el, key: key, reading: r,
+                        device_id: sen.unique_id,
+                        measurement_id: chs[c].measurement_id });
+            return;
+          }
+        }
+      }
+    });
+    if (!jobs.length) return;
+
+    var csrfEl = document.querySelector('meta[name="csrf-token"]');
+    fetch('/data_batch', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json',
+                 'X-CSRFToken': csrfEl ? csrfEl.getAttribute('content') : '' },
+      body: JSON.stringify({
+        items: jobs.map(function (j) {
+          return { kind: 'past', unique_id: j.device_id,
+                   measure_type: 'input',
+                   measurement_id: j.measurement_id,
+                   period: String(_SPARK_PAST_S) };
+        })
+      })
+    })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (d) {
+        var res = d && d.results;
+        // 길이가 안 맞으면 정렬이 깨진 것이다 — 잘못 짝지어 그리면 CO2 자리에
+        // 이슬점 모양이 들어간다. 그럴 바에는 안 그린다.
+        if (!Array.isArray(res) || res.length !== jobs.length) return;
+        jobs.forEach(function (j, i) {
+          var series = res[i];
+          if (!Array.isArray(series) || series.length < 2) return;
+          var pts = series.map(function (p) {
+            return Array.isArray(p) ? Number(p[1]) : Number(p);
+          }).filter(function (v) { return isFinite(v); });
+          if (pts.length < 2) return;
+          if (pts.length > _SPARK_MAX_PTS) {
+            // 균등 솎기 — 마지막 점(지금)은 반드시 남긴다.
+            var step = pts.length / _SPARK_MAX_PTS, out = [];
+            for (var k = 0; k < _SPARK_MAX_PTS; k++) {
+              out.push(pts[Math.min(pts.length - 1, Math.floor(k * step))]);
+            }
+            out[out.length - 1] = pts[pts.length - 1];
+            pts = out;
+          }
+          var oldEl = j.el.querySelector('.aot-viz--sparkable');
+          if (!oldEl) return;
+          var dec = (window.AoTSensorLabel && window.AoTSensorLabel.defaultDecimals)
+                    ? window.AoTSensorLabel.defaultDecimals(j.key) : 1;
+          var name = (window.AoTSensorLabel && window.AoTSensorLabel.keyDisplay)
+                     ? window.AoTSensorLabel.keyDisplay(j.key) : j.key;
+          var unit = (window.AoTSensorLabel && window.AoTSensorLabel.displayUnit)
+                     ? window.AoTSensorLabel.displayUnit(j.reading.unit)
+                     : (j.reading.unit || '');
+          var node = _parseFirst(V.spark({
+            label: name, valueText: (+j.reading.value).toFixed(dec),
+            valueSub: unit, points: pts, stale: !!j.reading.stale
+          }));
+          if (node) oldEl.replaceWith(node);
+        });
+      })
+      .catch(function () { /* 덤이다 — 실패해도 값은 그대로 남는다 */ });
+  }
+
   function wireEnvNowPick(root, onPick) {
     if (!root || typeof onPick !== 'function') return;
     root._aotEnvPick = onPick;
@@ -1627,11 +2080,19 @@
         right.push(_esc(_t('Day %(n)s')
                         .replace('%(n)s', String(p.days_since_planted))));
       }
-      if (p.area_m2 != null) {
-        var a = Number(p.area_m2).toLocaleString() + ' m²';
-        if (p.ratio_pct != null) a += ' (' + p.ratio_pct + '%)';
-        right.push(_esc(a));
-      }
+      // 면적이 아니라 **단계**를 낸다(2026-08-20). 면적은 심고 나면 안 바뀌어
+      // 아무 날에 봐도 같은 숫자다 — [현황]은 "지금 어떤가" 를 묻는 자리인데
+      // 거기서 변하지 않는 값이 가장 넓은 자리를 차지하고 있었다. 단계는 날마다
+      // 옮겨 가고, 그것이 이 구역에서 지금 무슨 일이 일어나는지 말한다.
+      //
+      // 면적은 사라지지 않는다 — 구획 모달과 이 블록 아래의 '미배정' 줄이
+      // 갖는다(그쪽은 "이 구역에 남은 자리" 라 구역 단위에서 뜻이 있다).
+      //
+      // 시설의 구획 목록과 **같은 어휘**다(buildFacilityPlotsHtml).
+      // **단계 이름만.** 순번(3/6)은 목록에서 뜻을 만들지 못한다 — 전체가 몇
+      // 단계인지 아는 사람만 읽을 수 있고, 여러 줄이 나란히 서면 서로 다른
+      // 프로그램의 숫자가 비교되는 것처럼 보인다. 순번은 구획 모달이 갖는다.
+      if (p.stage_name) right.push(_esc(p.stage_name));
       // 줄을 누르면 그 구획 모달로 내려간다(필지 → 구역과 같은 규약).
       html += '<div class="aot-ov-row aot-ov-plot-link" ' +
               'data-plot-uuid="' + _esc(p.unique_id) + '" ' +
@@ -1680,32 +2141,27 @@
   // 규칙이라 여기서 다시 조립하면 두 곳이 곧 갈린다.
   function _timelineHtml(tl) {
     if (!tl || !(tl.stages || []).length) return '';
-    var segs = tl.stages.map(function (st) {
-      var w = Math.max(0, (st.to_pct || 0) - (st.from_pct || 0));
-      var tip = st.name + ' · ' + (st.days != null
-        ? _t('%(n)s days').replace('%(n)s', String(st.days))
-        : _t('until you end it'));
-      return '<span class="aot-tl-seg' + (st.current ? ' is-current' : '') +
-             (st.days == null ? ' is-open' : '') + '"' +
-             ' style="width:' + w + '%" title="' + _esc(tip) + '">' +
-             '<span class="aot-tl-seg-label">' + _esc(st.name) + '</span></span>';
-    }).join('');
-    // 오늘 표시. 예정을 넘겼으면 축 끝에 붙이고 그 사실을 말한다(자르지 않는다
-    // — 넘겼다는 것 자체가 정보다).
-    var pct = tl.today_pct == null ? 0 : tl.today_pct;
+    var pct = (tl.today_pct == null) ? 0 : tl.today_pct;
     var over = pct > 100;
-    var marker = '<span class="aot-tl-today' + (over ? ' is-over' : '') +
-                 '" style="left:' + Math.min(100, Math.max(0, pct)) + '%"' +
-                 ' title="' + _esc(_t('Day %(n)s').replace(
-                    '%(n)s', String(tl.elapsed_days))) + '"></span>';
-    var ends = '<div class="aot-tl-ends"><span>' +
-               _esc(String(tl.start || '').replace(/-/g, '/')) + '</span><span>' +
-               _esc(tl.end ? String(tl.end).replace(/-/g, '/') : _t('open-ended')) +
-               '</span></div>';
-    return '<div class="aot-tl"><div class="aot-tl-bar">' + segs + marker +
-           '</div>' + ends +
-           (over ? '<div class="aot-ov-muted">' +
-                   _esc(_t('Past the planned end')) + '</div>' : '') + '</div>';
+    var V = window.AoTViz;
+    if (!V) return '';          // 프리미티브가 없으면 축을 그리지 않는다
+    // 목록 안의 한 줄이라 **머리줄(이름·값)을 만들지 않는다** — 바로 위에
+    // 작물명과 일수가 이미 있고, 여기서 또 내면 같은 말이 두 번 선다.
+    return V.timeline({
+      segments: tl.stages.map(function (st) {
+        return {
+          span: Math.max(0, (st.to_pct || 0) - (st.from_pct || 0)),
+          name: st.name,
+          current: !!st.current
+        };
+      }),
+      positionPct: Math.min(100, Math.max(0, pct)),
+      scale: [
+        String(tl.start || '').replace(/-/g, '/'),
+        { text: over ? _t('Past the planned end') : _t('Today'), anchor: true },
+        tl.end ? String(tl.end).replace(/-/g, '/') : _t('open-ended')
+      ]
+    });
   }
 
   function buildFacilityPlotsHtml(rows, bayId, opts) {
@@ -1735,10 +2191,9 @@
                                                 String(p.days_since_planted))));
       }
       // 단계는 일수보다 사람에게 직접적이다("32일차" 보다 "영양생장기").
-      if (p.stage_name) {
-        right.push(_esc(p.stage_name +
-                        (p.stage_index ? ' ' + p.stage_index + '/' + p.stage_total : '')));
-      }
+      // 순번은 빼는 것이 구역 목록과 같은 규칙이다(위 주석) — 두 목록이
+      // 달라지면 사용자가 옮겨 다닐 때마다 다시 읽어야 한다.
+      if (p.stage_name) right.push(_esc(p.stage_name));
       // 구역 뷰에서 "시설 전체" 인 것은 그렇다고 밝힌다 — 그러지 않으면 이 구역
       // 전용으로 읽힌다.
       if (bayId && !p.bay_id) right.push(_esc(_t('Whole facility')));
@@ -2291,6 +2746,159 @@
   // 목록이 있었다. 둘 다 "어떤 장치로 관리하느냐" 인데 그건 [환경·제어]가
   // 값·스코프 배지·영향 범위까지 제대로 낸다 — 여기 있던 것은 값도 없이
   // 장치 이야기만 하면서 정작 봐야 할 노트를 아래로 밀어냈다.
+  // ── 진행 — 재배 기간과 현재 단계를 **막대 두 개**로 답한다 ──────────────
+  //
+  // 예전에는 네 줄의 라벨-값 텍스트였다("경과 일수 22일차" · "남은 일수 19일" ·
+  // "단계 착과기 (3/6)" · "다음 단계 비대기 · 4일 남음"). 숫자는 다 있었지만
+  // "지금 어디쯤인가" 는 사람이 머릿속에서 나누기를 해야 나왔다. 값을 위치로
+  // 바꾸면 그 계산이 사라진다.
+  //
+  // 공용 프리미티브(AoTViz, static/js/common/aot-dataviz.js)를 쓴다 — 색·간격·
+  // 굵기 규칙은 전부 거기에 있고 여기서는 **무엇을 어디에 대응시킬지**만 정한다.
+  // 규약: docs/design/dataviz-primitives.md
+  //
+  // 초록 구간은 "여기까지 왔다"(경과분), 마커는 오늘이다. 두 막대가 같은 문법을
+  // 쓰므로 위아래로 나란히 놓아도 서로 다른 그림으로 읽히지 않는다.
+  function _plotProgressHtml(p) {
+    var V = window.AoTViz;
+    // 번들에 프리미티브가 없으면 **옛 텍스트 행으로 되돌아간다.** 조용히 빈
+    // 칸을 내면 진행 정보가 통째로 사라진 것을 아무도 모른다.
+    if (!V) return _plotProgressRows(p);
+
+    var rows = [];
+    var stg = p.stage;
+    var tl  = p.timeline;
+
+    // ① 기간 축 — **서버가 만든 단계 목록을 그대로 쓴다**(plot_context.timeline).
+    //    단계 길이·기준점(P5)·"끝까지" 처리가 전부 서버 규칙이라, 여기서 다시
+    //    조립하면 두 곳이 곧 갈린다. 단계 이름은 트랙 위에 늘어선다.
+    if (tl && (tl.stages || []).length) {
+      var pct = (tl.today_pct == null) ? 0 : tl.today_pct;
+      var over = pct > 100;                 // 예정을 넘겼다 — 자르되 사실은 말한다
+      rows.push(V.timeline({
+        label: p.ended_on ? _t('Grown for') : _t('Days elapsed'),
+        valueText: (p.ended_on ? _t('%(n)s days') : _t('Day %(n)s'))
+                   .replace('%(n)s', String(tl.elapsed_days)),
+        valueSub: tl.total_days ? ('/ ' + String(tl.total_days)) : '',
+        segments: tl.stages.map(function (st) {
+          return {
+            span: Math.max(0, (st.to_pct || 0) - (st.from_pct || 0)),
+            name: st.name,
+            current: !!st.current
+          };
+        }),
+        positionPct: Math.min(100, Math.max(0, pct)),
+        // 눈금 문자열은 AoTViz 가 이스케이프한다 — 여기서 또 하면 &amp; 가 뜬다.
+        scale: [
+          String(tl.start || '').replace(/-/g, '/'),
+          { text: _t('Today'), anchor: true },
+          tl.end ? String(tl.end).replace(/-/g, '/') : _t('open-ended')
+        ]
+      }));
+      // 예정을 넘긴 사실은 **자르지 않고 말한다**(넘겼다는 것 자체가 정보다).
+      // 눈금의 '오늘' 자리에 넣지 않는 이유: 그 자리는 좁고, 문장이 들어가면
+      // 양쪽 날짜를 가린다.
+      if (over) {
+        rows.push('<div class="aot-ov-muted">' +
+                  _esc(_t('Past the planned end')) + '</div>');
+      }
+    } else {
+      // 프로그램이 없는 구획 — 단계는 없지만 "얼마나 왔나" 는 여전히 답할 수
+      // 있다. 예정을 지난 작기(days_to_expected_end < 0)는 남은 칸이 없다:
+      // 음수를 폭으로 넘기면 막대가 뒤집히므로 0 으로 눕히고 마커를 끝에 둔다.
+      var el = p.days_since_planted, left = p.days_to_expected_end;
+      if (el != null && el >= 0) {
+        var rest = (left != null && left > 0) ? left : 0;
+        var span = el + rest;
+        if (span > 0) {
+          rows.push(V.timeline({
+            label: p.ended_on ? _t('Grown for') : _t('Days elapsed'),
+            valueText: (p.ended_on ? _t('%(n)s days') : _t('Day %(n)s'))
+                       .replace('%(n)s', String(el)),
+            valueSub: rest ? ('/ ' + String(span)) : '',
+            segments: [{ span: el, current: true }, { span: rest }],
+            positionPct: (el / span) * 100,
+            scale: [
+              p.started_on || _t('Start'),
+              { text: (left != null && left < 0)
+                  ? _t('%(n)s days overdue').replace('%(n)s', String(-left))
+                  : _t('Today'),
+                anchor: true },
+              p.expected_end_on || _t('Expected end')
+            ]
+          }));
+        }
+      }
+    }
+
+    // ② 다음 단계까지 — 축이 "어디쯤" 을 답하고, 이 줄이 "얼마나 남았나" 를
+    //    답한다. 판정 축이 둘이다(날짜 / GDD): 서버가 source 로 알려 주므로
+    //    여기서 다시 판단하지 않고 **있는 쪽의 값만** 쓴다.
+    if (stg && stg.state === 'running') {
+      var remain = null;
+      if (stg.source === 'gdd') {
+        if (stg.gdd_left != null) {
+          remain = _t('in {n} GDD').replace('{n}', String(stg.gdd_left));
+        }
+      } else if (stg.days_left != null) {
+        remain = _t('in %(n)s days').replace('%(n)s', String(stg.days_left));
+      }
+      if (remain) {
+        rows.push(_pRow(_t('Next stage'),
+                        _esc((stg.next_name || '\u2014') + ' \u00b7 ' + remain)));
+      }
+    } else if (stg && stg.state === 'not_started') {
+      rows.push(_pRow(_t('Current stage'), _esc(_t('Not started yet'))));
+    } else if (stg && stg.state === 'past_end') {
+      rows.push(_pRow(_t('Current stage'), _esc(_t('Past the programme end'))));
+    }
+
+    if (!rows.length) return '';
+    return V.group(rows);
+  }
+
+  // AoTViz 가 없을 때의 되돌림 — 옛 라벨-값 행 그대로. 막대가 못 그려지는
+  // 상황에서도 숫자는 남아야 한다.
+  function _plotProgressRows(p) {
+    var html = '';
+    if (p.days_since_planted != null) {
+      var n = String(p.days_since_planted);
+      html += _pRow(p.ended_on ? _t('Grown for') : _t('Days elapsed'),
+                    _esc((p.ended_on ? _t('%(n)s days') : _t('Day %(n)s'))
+                         .replace('%(n)s', n)));
+    }
+    var d = p.days_to_expected_end;
+    if (p.expected_end_on && d != null) {
+      html += _pRow(_t('Days left'),
+                    _esc(d >= 0
+                      ? _t('%(n)s days').replace('%(n)s', String(d))
+                      : _t('%(n)s days overdue').replace('%(n)s', String(-d))));
+    }
+    var stg = p.stage;
+    if (stg && stg.state === 'running') {
+      html += _pRow(_t('Current stage'),
+                    _esc(stg.name || stg.key || '') +
+                    ' <span class="aot-ov-muted">(' + stg.index + '/' +
+                    stg.total + ')</span>');
+      if (stg.days_left != null) {
+        html += _pRow(_t('Next stage'),
+                      _esc((stg.next_name || '\u2014') + ' \u00b7 ' +
+                           _t('in %(n)s days').replace('%(n)s',
+                                String(stg.days_left))));
+      } else if (stg.source === 'gdd' && stg.gdd_left != null) {
+        html += _pRow(_t('Next stage'),
+                      _esc((stg.next_name || '\u2014') + ' \u00b7 ' +
+                           _t('in {n} GDD').replace('{n}',
+                                String(stg.gdd_left))));
+      }
+    } else if (stg && stg.state === 'not_started') {
+      html += _pRow(_t('Current stage'), _esc(_t('Not started yet')));
+    } else if (stg && stg.state === 'past_end') {
+      html += _pRow(_t('Current stage'), _esc(_t('Past the programme end')));
+    }
+    return html;
+  }
+
   function _plotOverviewHtml(p) {
     // 제목은 목록 쪽('심겨 있는 것')과 달라야 한다 — 같은 말을 쓰면 블록
     // 제목과 첫 행 라벨이 겹쳐 "심겨 있는 것 / 심은 것" 으로 읽힌다.
@@ -2300,61 +2908,16 @@
 
     // 대상·시작일·예상 종료일은 [개요] 가 맡는다 — 바뀌지 않는 사실이고,
     // 두 탭에 같은 행을 두면 어느 쪽이 정본인지 사람이 매번 확인하게 된다.
-    //
-    // 재배 일수 — 심은 날이 1일차(서버 elapsed_days 가 정본).
-    //
-    // 끝난 작기는 **기간**이지 나이가 아니다. 같은 숫자라도 "60일차"(지금 60일째
-    // 자라는 중)와 "60일"(60일간 길렀다)은 다른 말이라, 종료된 작기에 '일차'를
-    // 쓰면 아직 자라고 있는 것처럼 읽힌다.
-    if (p.days_since_planted != null) {
-      var n = String(p.days_since_planted);
-      html += _pRow(p.ended_on ? _t('Grown for') : _t('Days elapsed'),
-                    _esc((p.ended_on ? _t('%(n)s days') : _t('Day %(n)s'))
-                         .replace('%(n)s', n)));
-    }
-    // 남은 일수는 날마다 바뀌므로 여기(지금 값)에 둔다. 예상 종료일 자체는
-    // 계획이라 [개요] 가 갖는다.
-    if (p.expected_end_on) {
-      // **한 열에는 한 정보만.** 예전에는 한 행이
-      // "2026-09-07 (프로그램 기준) (19일 남음)" 이었다 — 날짜·출처·남은 일수
-      // 셋이 한 칸에 들어가 좁은 폭에서 줄이 접히고, 눈이 날짜를 찾기 전에
-      // 괄호부터 읽는다.
-      //
-      // 출처는 빼도 된다: 바로 위 [개요] 탭의 프로그램 블록이 무엇을 따르는지
-      // 이미 말하고, 사람이 날짜를 직접 적으면 그 값이 이긴다.
-      var d = p.days_to_expected_end;
-      if (d != null) {
-        html += _pRow(_t('Days left'),
-                      _esc(d >= 0
-                        ? _t('%(n)s days').replace('%(n)s', String(d))
-                        : _t('%(n)s days overdue').replace('%(n)s',
-                             String(-d))));
-      }
-    }
+    html += _plotProgressHtml(p);
     var _stg = p.stage;
-    if (_stg && _stg.state === 'running') {
-      html += _pRow(_t('Current stage'),
-                    _esc(_stg.name || _stg.key || '') +
-                    ' <span class="aot-ov-muted">(' + _stg.index + '/' +
-                    _stg.total + ')</span>');
-      if (_stg.days_left != null) {
-        html += _pRow(_t('Next stage'),
-                      _esc((_stg.next_name || '—') + ' · ' +
-                           _t('in %(n)s days').replace('%(n)s',
-                                String(_stg.days_left))));
-      } else if (_stg.source === 'gdd' && _stg.gdd_left != null) {
-        html += _pRow(_t('Next stage'),
-                      _esc((_stg.next_name || '—') + ' · ' +
-                           _t('in {n} GDD').replace('{n}',
-                                String(_stg.gdd_left))));
-      }
-    } else if (_stg && _stg.state === 'not_started') {
-      html += _pRow(_t('Current stage'), _esc(_t('Not started yet')));
-    } else if (_stg && _stg.state === 'past_end') {
-      html += _pRow(_t('Current stage'), _esc(_t('Past the programme end')));
-    }
     html += _plotGddRows(_stg);
     html += '</div>';
+
+    // 현재 환경 — 구역·시설 [현황]과 **같은 자리, 같은 블록**이다. 값은 별도
+    // 조회(/contents)라 여기서는 자리만 잡아 두고 위젯이 채운다. 자리를 비워
+    // 두는 이유: 도착 순서에 따라 블록이 위아래로 튀면 사용자가 읽던 줄이
+    // 움직인다.
+    html += '<div data-slot="envnow"></div>';
 
     // 단계 전환 제안·목표·자원 — 전부 **지금** 의 값이다. 프로그램이 무엇인지
     // (이름·단계 수·전체 기간)는 바뀌지 않는 사실이라 [개요] 가 갖는다.
@@ -2366,9 +2929,20 @@
     }
     var _tg = _plotStageTargetRows(_stg);
     if (_tg) {
+      // 측정값은 나중에 온다 — 도착하면 위젯이 이 자리를 다시 채운다
+      // (data-slot="targets"). 처음부터 글자로 그려 두는 이유: 늦게 오는 값을
+      // 기다리며 비워 두면 목표가 없는 것처럼 보인다.
       html += '<div class="aot-ov-block">' +
               '<div class="aot-ov-sec-title">' + _esc(_t('Targets')) +
-              '</div>' + _tg + '</div>';
+              '</div><div data-slot="targets">' + _tg + '</div></div>';
+    }
+    // 단계 지침 — AI 를 안 쓰는 사용자도 이 시기에 무엇이 중요한지 여기서 읽는다.
+    // 프로그램을 고른 것만으로 얻는 값이라 목표 바로 다음에 둔다.
+    if (_stg && _stg.guidance) {
+      html += '<div class="aot-ov-block">' +
+              '<div class="aot-ov-sec-title">' + _esc(_t('Guidance')) +
+              '</div><div class="aot-ov-guidance">' +
+              _esc(_stg.guidance) + '</div></div>';
     }
     var _rs = _plotStageResourceRows(_stg);
     if (_rs) {
@@ -2656,8 +3230,9 @@
 
   // 현재 단계의 목표 — **서버가 만든 목록을 그대로 그린다.**
   //
-  // 항목 어휘와 단위는 서버(`_TARGET_FIELDS`/`_TARGET_UNITS`)가 정본이다. 여기서
-  // 다시 조립하면 항목을 늘릴 때 한쪽만 늘어난다.
+  // 항목 어휘·단위·**라벨**까지 서버(`target_defs`)가 정본이다. 항목은 이제
+  // 프로그램마다 다르고 사용자가 이름을 붙이므로, 여기에 표를 두면 사용자가 만든
+  // 항목은 영영 키 이름으로만 보인다.
   //
   // **이 값은 표시 전용이다** — 제어를 바꾸지 않는다. 그래서 그 사실을 화면에
   // 적는다: 숫자만 보이면 사람이 "이대로 돌고 있다" 로 읽고, 그러면 실제 제어와
@@ -2665,29 +3240,94 @@
   //
   // 곡선이 걸린 항목은 **숫자를 내지 않는다**(서버가 value=null 로 준다). 단계
   // 값을 대신 보이면 실제로 쓰이지 않는 숫자를 목표라고 말하는 것이 된다.
-  var _TARGET_LABELS = {
-    temp_day: 'Day temp', temp_night: 'Night temp', rh: 'Humidity',
-    co2: 'CO2', dli: 'DLI', vpd: 'VPD'
+  // 라벨 표는 두지 않는다 — 항목이 프로그램마다 다르고 사용자가 이름을 붙이므로
+  // (`target_defs`), 표를 두면 사용자가 만든 항목은 영영 키 이름으로만 보인다.
+  // 서버가 번역까지 마친 `t.label` 을 준다.
+
+  // 목표 항목 ↔ 측정 키. 현재값이 있으면 그 목표를 **축 위에** 그릴 수 있다.
+  // (`_NOW_TO_TARGET` 의 반대 방향 + 온도·습도까지. 여기서는 "제어가 무엇을
+  // 목표로 삼는가" 가 아니라 "이 숫자를 어느 측정값과 견줄 수 있는가" 를 묻는
+  // 것이라 온도·습도도 포함된다 — 그쪽은 한계지만 견줄 대상은 같다.)
+  var _TARGET_TO_NOW = {
+    temp_day: 'T', temp_night: 'T', rh: 'RH', co2: 'CO2', vpd: 'VPD'
   };
 
-  function _plotStageTargetRows(stg) {
+  /* 단계 목표 — **현재값이 있으면 막대**, 없으면 글자.
+   *
+   * 목표만 표로 보면 "그래서 지금 맞나" 에 답하지 못한다(이 저장소가 [현재]
+   * 블록에서 이미 내린 판단이다). 그래서 같은 모달의 측정값을 받아 축 위에
+   * 목표를 세우고 지금 값을 찍는다.
+   *
+   * `readings` 는 나중에 도착한다(/contents) — 없으면 예전처럼 글자만 낸다.
+   * 값이 늦게 온다고 블록이 비면 사용자는 목표가 없는 줄 안다.
+   */
+  function _plotStageTargetRows(stg, readings) {
     var list = (stg && stg.targets) || [];
     if (!list.length) return '';
-    var rows = '';
+    var V = window.AoTViz;
+    var ML = window.AoTMapSensorLabels;
+    var byKey = {};
+    (readings || []).forEach(function (r) { byKey[r.key] = r; });
+
+    var rows = [];
     list.forEach(function (t) {
-      var label = _t(_TARGET_LABELS[t.key] || t.key);
-      var val;
+      // 이스케이프는 그리는 쪽이 한다(`_pRow` · `AoTViz.headHtml` 모두
+      // `esc()` 를 건다) — 여기서 미리 걸면 이중 이스케이프로 `&amp;` 가 보인다.
+      var label = t.label || t.key;
       if (t.source === 'method') {
-        val = '<span class="aot-ov-muted">' +
-              _esc(t.method_name
-                   ? _t('Follows curve: {name}').replace('{name}', t.method_name)
-                   : _t('Follows a curve')) + '</span>';
-      } else {
-        val = _esc(String(t.value) + (t.unit ? ' ' + t.unit : ''));
+        rows.push(V ? V.value({ label: label,
+                                valueText: t.method_name
+                                  ? _t('Follows curve: {name}')
+                                      .replace('{name}', t.method_name)
+                                  : _t('Follows a curve') })
+                    : _pRow(label, '<span class="aot-ov-muted">' +
+                                   _esc(_t('Follows a curve')) + '</span>'));
+        return;
       }
-      rows += _pRow(label, val);
+      var nowKey = _TARGET_TO_NOW[t.key];
+      var r = nowKey ? byKey[nowKey] : null;
+      var sc = (V && ML && ML.bandScale && nowKey)
+               ? ML.bandScale(nowKey, null) : null;
+      if (V && r && r.value != null && sc) {
+        // 축은 [현재] 블록과 **같은 표**에서 온다 — 같은 지표가 두 블록에서
+        // 다른 축으로 그려지면 마커 위치가 서로 안 맞는다.
+        var v = ML.bandValue ? ML.bandValue(nowKey, +r.value, r.unit) : +r.value;
+        var c = ML.bandValue ? ML.bandValue(nowKey, +t.value, r.unit) : +t.value;
+        var d = Math.abs(c) * _ENV_SINGLE_TOL;
+        var dec = (window.AoTSensorLabel && window.AoTSensorLabel.defaultDecimals)
+                  ? window.AoTSensorLabel.defaultDecimals(nowKey) : 1;
+        rows.push(V.band({
+          label: label,
+          value: v,
+          valueText: (+r.value).toFixed(dec),
+          valueSub: r.unit || t.unit || '',
+          min: sc.min, max: sc.max,
+          okMin: c ? c - d : null, okMax: c ? c + d : null,
+          scale: [{ text: _t('target') + ' ' + String(t.value), anchor: true,
+                    at: c }]
+        }));
+      } else if (V) {
+        rows.push(V.value({ label: label,
+                            valueText: String(t.value),
+                            valueSub: t.unit || '' }));
+      } else {
+        rows.push(_pRow(label, _esc(String(t.value) +
+                                    (t.unit ? ' ' + t.unit : ''))));
+      }
+      // ⚠ 이 항목을 재는 센서가 있는지는 서버가 `t.observable` 로 알려 준다
+      // (true 있음 · false 없음 · null 알 수 없음). **지금은 그 상태를 화면에
+      // 그리지 않는다.**
+      //
+      // 문구로 적어 봤다가 걷어냈다(2026-08-20). "(여기 센서 없음)" 은 목표를
+      // 권하는 자리에서 시설의 결함을 지적하는 말이 되어 "네가 준비하지 않아서
+      // 못 한다" 로 읽힌다. 모든 시설이 모든 항목을 재지 못하는 것은 당연하고,
+      // 재지 못한다고 그 목표가 덜 유효해지지도 않는다(사람이 손으로 맞출 수
+      // 있다). 말을 덧붙이는 대신 **그래픽·스타일로 구분하는 쪽**을 따로 정한다.
+      //
+      // 그때까지 상태는 payload 에 그대로 실려 있으니 여기서 읽어 쓰면 된다.
     });
-    return rows +
+
+    return (V ? V.group(rows) : rows.join('')) +
            '<div class="aot-ov-muted">' +
            _esc(_t('Targets are shown for reference. Control is not changed automatically.')) +
            '</div>';
@@ -2827,6 +3467,13 @@
     buildRecordBlock:      buildRecordBlock,
     buildZoneAboutHtml:    buildZoneAboutHtml,
     buildEnvNowHtml:       buildEnvNowHtml,
+    envRowChoices:         envRowChoices,
+    controlRowChoices:     controlRowChoices,
+    buildRowPickerHtml:    buildRowPickerHtml,
+    readRowPicker:         readRowPicker,
+    wireCardConfig:        wireCardConfig,
+    fillEnvSparklines:     fillEnvSparklines,
+    plotStageTargetRows:   _plotStageTargetRows,
     wireEnvNowPick:        wireEnvNowPick,
     buildModalHeader:      buildModalHeader,
     scopeBadgeHtml:        scopeBadgeHtml,

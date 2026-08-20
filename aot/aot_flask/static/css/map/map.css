@@ -1,4 +1,39 @@
 /* MapLibre GL Styles - Leaflet dependencies removed */
+/* ── 지도 위 글자의 기준 크기 (2026-08-20) ────────────────────────────────
+ *
+ * MapLibre 자체 CSS 가 `.maplibregl-map { font: 12px/20px ... }` 를 건다. 지도
+ * 위 라벨은 대부분 `em`(위젯 옵션 size_em · .aot-bay-chip 0.92em …)이라, 그
+ * 12px 가 **모든 라벨의 기준**이 된다 — 앱의 루트 글자 크기와 완전히 끊겨
+ * 있었다. 그래서 폰에서 앱 전체가 15% 커져도 지도 라벨만 그대로였다.
+ *
+ * 여기서 기준을 rem 으로 되돌린다:
+ *   0.75rem × 16px(데스크탑 루트) = 12px  → 데스크탑은 **그대로**
+ *   0.75rem × 18.4px(터치 루트)   = 13.8px → 폰·태블릿에서 함께 15% 커진다
+ *
+ * 라벨마다 미디어쿼리를 다는 대신 기준 하나만 바꾼다 — em 으로 쓰인 라벨이
+ * 전부 따라오고, 새로 만드는 라벨도 자동으로 맞는다.
+ * 줄높이도 비율로 되돌린다(20/12 = 1.667) — 고정 20px 로 두면 글자만 커져서
+ * 두 줄짜리 칩(이름+값)이 눌린다.
+ *
+ * ⚠ **px 로 못 박은 지도 글자는 따라오지 않는다.** 이 파일 안의 px font-size 가
+ * 그것이다(범례·측정 안내 등 지도 **크롬**). 라벨이 아니라 도구라서 이번 범위에
+ * 넣지 않았다 — 필요하면 em 으로 바꾸면 같은 기준을 따른다.
+ * 정본: docs/design/typography-scale.md
+ */
+.maplibregl-map {
+  font-size: 0.75rem;
+  line-height: 1.667;
+}
+
+/* 범례·측정 안내도 위 기준을 따른다(2026-08-20). px 로 못 박혀 있던 것을 12px
+ * 기준의 em 으로 환산했다 — 데스크탑 실효 크기는 그대로고(0.833em × 12 = 10px),
+ * 터치 화면에서만 함께 15% 커진다.
+ *
+ * **새 지도 크롬에 px 를 쓰지 말 것.** px 로 적는 순간 그것만 폰에서 작게 남고,
+ * 그 사실은 옆에 커진 라벨이 있어야 비로소 눈에 띈다.
+ * 정본: docs/design/typography-scale.md
+ */
+
 /* [GIS Pure MapLibre v4.0] Pure MapLibre GL - Leaflet complete removal */
 
 /* ==========================================================================
@@ -918,7 +953,7 @@ body.aot-map-fullscreen-active .grid-stack-item:not(.aot-fs-parent) {
 }
 
 .aot-legend-title {
-  font-size: 12px;
+  font-size: 1em;
   font-weight: 600;
   margin-bottom: 8px;
   color: var(--aot-color-text-primary, #333);
@@ -938,7 +973,7 @@ body.aot-map-fullscreen-active .grid-stack-item:not(.aot-fs-parent) {
 .aot-legend-labels {
   display: flex;
   justify-content: space-between;
-  font-size: 10px;
+  font-size: 0.833em;
   color: var(--aot-color-text-secondary, #666);
   font-weight: 500;
 }
@@ -971,14 +1006,14 @@ body.aot-map-fullscreen-active .grid-stack-item:not(.aot-fs-parent) {
 }
 
 .aot-legend-value-text {
-  font-size: 18px;
+  font-size: 1.5em;
   font-weight: 700;
   color: var(--aot-color-text-primary, #333);
   line-height: 1;
 }
 
 .aot-legend-value-unit {
-  font-size: 10px;
+  font-size: 0.833em;
   color: var(--aot-color-text-secondary, #888);
   margin-top: 2px;
   font-weight: 500;
@@ -1017,7 +1052,7 @@ body.aot-map-fullscreen-active .grid-stack-item:not(.aot-fs-parent) {
 /* Title: small but legible, truncate if too long */
 .aot-map-w-sm .aot-legend-title {
   display: block !important;
-  font-size: 9px !important;
+  font-size: 0.75em !important;
   font-weight: 600 !important;
   margin-bottom: 0 !important;
   letter-spacing: 0 !important;
@@ -1043,11 +1078,11 @@ body.aot-map-fullscreen-active .grid-stack-item:not(.aot-fs-parent) {
 }
 
 .aot-map-w-sm .aot-legend-value-text {
-  font-size: 13px !important;
+  font-size: 1.083em !important;
 }
 
 .aot-map-w-sm .aot-legend-value-unit {
-  font-size: 8px !important;
+  font-size: 0.667em !important;
   margin-top: 0 !important;
 }
 
@@ -1185,7 +1220,7 @@ body.aot-map-fullscreen-active .grid-stack-item:not(.aot-fs-parent) {
 }
 
 .length-label {
-  font-size: 10px;
+  font-size: 0.833em;
   color: var(--aot-color-text-secondary, #888);
 }
 
@@ -1366,7 +1401,7 @@ body.aot-map-fullscreen-active .grid-stack-item:not(.aot-fs-parent) {
     color: var(--aot-color-text-primary, #333);
     opacity: 0.55;
     cursor: pointer;
-    font-size: 11px;
+    font-size: 0.917em;
     padding: 0;
 }
 .aot-meas-dock .aot-dock-collapse-btn:hover { opacity: 1; }
@@ -1473,7 +1508,7 @@ body.aot-map-fullscreen-active .grid-stack-item:not(.aot-fs-parent) {
     color: var(--text-color-tertiary, #fff);
     padding: 4px 8px;
     border-radius: 6px;
-    font-size: 12px;
+    font-size: 1em;
     line-height: 1.3;
     white-space: nowrap;
     pointer-events: none;
@@ -1679,7 +1714,7 @@ body.aot-map-fullscreen-active .grid-stack-item:not(.aot-fs-parent) {
     display: flex;
     align-items: center;
     gap: 6px;
-    font-size: 12px;
+    font-size: 1em;
     color: var(--aot-color-text-primary, #333);
     cursor: pointer;
     z-index: 10;
@@ -1688,7 +1723,7 @@ body.aot-map-fullscreen-active .grid-stack-item:not(.aot-fs-parent) {
     -webkit-user-select: none;
     transition: bottom 0.2s ease;
 }
-.aot-legend-chip i { font-size: 10px; opacity: 0.6; }
+.aot-legend-chip i { font-size: 0.833em; opacity: 0.6; }
 .aot-map-w-sm .aot-legend-chip {
     bottom: calc(var(--aot-dock-h, 0px) + 8px);
 }

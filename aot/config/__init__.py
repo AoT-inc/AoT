@@ -17,7 +17,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from config_translations import TRANSLATIONS as T
 
 MYCODO_VERSION = '8.16.0'
-ALEMBIC_VERSION = 'p6_46_program_auto_advance_20260819'
+ALEMBIC_VERSION = 'p6_47_program_target_defs_20260820'
 AOT_VERSION = '26.08.12'
 
 # FORCE UPGRADE MASTER

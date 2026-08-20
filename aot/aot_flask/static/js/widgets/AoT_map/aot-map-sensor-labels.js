@@ -575,10 +575,39 @@
     });
   }
 
+  /* 밴드 5단계를 **축**으로 바꾼다 → {min, max, okMin, okMax} (없으면 null).
+   *
+   * stages 는 각 단계의 상한이다([s0..s4]): band1 은 ≤s0, band3 은 (s1, s2].
+   * 밴드 3 이 '적정' 이므로 적정 구간은 s1~s2 이고, 축은 s0~s4 로 잡는다.
+   * 축 밖 값(예: s0 미만)은 그리는 쪽이 끝에 붙인다 — 여기서 자르지 않는다.
+   *
+   * 색 판정(`bandColor`)과 **같은 표에서 나온다.** 화면이 범위를 따로 들면
+   * 색과 축이 곧 갈린다 — 이 저장소가 반복해서 겪은 실패다. */
+  // 밴드 3 이 '적정' 이라는 말이 **성립하는 키**만 축으로 쓴다.
+  //
+  // 5단계 팔레트는 두 가지로 쓰인다: 온도·습도·VPD 처럼 가운데가 좋은 것과,
+  // 바람·기압·조도처럼 그냥 **세기**인 것. 후자에 "적정 4–6 m/s" 를 그리면
+  // 바람 한 점 없는 날이 경고로 뜬다(실측으로 그렇게 나왔다). 색은 세기 표시로
+  // 계속 쓰되(bandColor), 축과 적정 구간은 여기서 끊는다.
+  var OK_BAND_KEYS = { T: true, RH: true, VPD: true };
+
+  function _bandScale(key, ranges) {
+    if (!OK_BAND_KEYS[key]) return null;
+    var b = _resolveBand(key, ranges);
+    if (!b || b.stages.length < 5) return null;
+    var s = b.stages.map(parseFloat);
+    for (var i = 0; i < 5; i++) { if (isNaN(s[i])) return null; }
+    return { min: s[0], max: s[4], okMin: s[1], okMax: s[2] };
+  }
+
   window.AoTMapSensorLabels = {
     attach: attach, detach: detach, setVisible: setVisible,
     // Shared helpers for the facility sensor summary chip (vector widget)
     bandColor: _bandColor, textOn: _textOn,
+    // 밴드 바(components/aot-dataviz.css)가 쓰는 축. bandValue 는 판정 단위
+    // 환산 — 같은 key 라도 장치마다 저장 단위가 달라(VPD 를 Pa 로 저장하는
+    // 입력이 실제로 있다) 축과 값이 같은 공간에 있어야 마커가 제자리에 선다.
+    bandScale: _bandScale, bandValue: _bandValue,
     // Shared with addDeviceMarkers so a zone/map-placed Input renders its label
     // exactly like a facility fitting sensor.
     renderValueLabel: renderValueLabel,

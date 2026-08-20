@@ -50,6 +50,7 @@
       "geo/aot-map-controls.js",
       "geo/aot-map-custom-controls.js",
       "widgets/AoT_facility/aot-actuator-order.js",
+      "common/aot-dataviz.js",
       "widgets/AoT_map/aot-map-popup.js",
       "widgets/AoT_map/aot-map-bay.js",
       "widgets/AoT_map/aot-facility-runtime.js",

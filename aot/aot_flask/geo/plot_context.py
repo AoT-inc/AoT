@@ -689,7 +689,7 @@ def program_brief(plot, programs=None):
     }
 
 
-def stage_of(plot, program=None, on=None):
+def stage_of(plot, program=None, on=None, with_observability=False):
     """구획의 **현재 단계** → dict (판정 불가면 None).
 
     ## 계산
@@ -697,6 +697,12 @@ def stage_of(plot, program=None, on=None):
     `elapsed_days`(심은 날이 1일차)를 프로그램의 단계 길이에 대어 찾는다. 단계의
     `days` 는 **그 단계의 길이**이므로 누적하며 내려간다. 마지막 단계의
     `days=None` 은 "끝까지" 라 그 뒤는 전부 그 단계다.
+
+    ## `with_observability`
+
+    켜면 단계 목표마다 "이 구획이 그것을 재는 센서를 갖고 있는가" 를 얹는다
+    (`_mark_observable`). **기본은 꺼짐이다** — 구획마다 센서 조회가 한 번씩
+    더 붙으므로 목록 화면에서 켜면 N+1 이 된다. 구획 하나를 여는 화면에서만 켠다.
 
     ## 지어내지 않는 경우
 
@@ -764,6 +770,8 @@ def stage_of(plot, program=None, on=None):
             out = _stage_by_gdd(stages, gdd, row, base_index)
             if out is not None:
                 out['gdd'] = {k: v for k, v in gdd.items() if k != 'series'}
+                if with_observability:
+                    _mark_observable(out, plot)
                 return out
 
     cursor = 0
@@ -778,12 +786,16 @@ def stage_of(plot, program=None, on=None):
                                  row, base_index)
             if gdd is not None:
                 out['gdd'] = {k: v for k, v in gdd.items() if k != 'series'}
+            if with_observability:
+                _mark_observable(out, plot)
             return out
         if elapsed <= cursor + length:
             out = _stage_payload(st, idx, stages, elapsed - cursor,
                                  cursor + length - elapsed, row, base_index)
             if gdd is not None:
                 out['gdd'] = {k: v for k, v in gdd.items() if k != 'series'}
+            if with_observability:
+                _mark_observable(out, plot)
             return out
         cursor += length
 
@@ -793,6 +805,63 @@ def stage_of(plot, program=None, on=None):
            'days_past': elapsed - cursor}
     if gdd is not None:
         out['gdd'] = {k: v for k, v in gdd.items() if k != 'series'}
+    return out
+
+
+def measurable_in_plot(plot):
+    """이 구획이 실제로 재는 measurement 이름 집합 → set.
+
+    구획이 참조하는 센서(`sensors_for_plot` — 구획 안이 1순위, 없으면 zone 폴백)의
+    `DeviceMeasurements.measurement` 를 모은다. 목표 항목의 `measurement` 와 같은
+    어휘이므로 그대로 대조할 수 있다.
+
+    ## 왜 필요한가
+
+    **실제 시설이 모든 항목을 재지 못하는 것은 당연하다.** 노지 상추에 CO₂ 센서가
+    없는 것이 정상인데, 화면이 CO₂ 목표 칸을 그냥 비워 두면 사용자는 자기가 아직
+    안 채운 것으로 읽는다. "이 구획엔 그 센서가 없습니다" 라고 말할 수 있어야
+    빈칸이 압박이 아니라 정보가 된다.
+
+    비어 있는 집합은 "못 잰다" 가 아니라 **"모른다"** 로 다뤄야 한다(센서를 아직
+    안 이었을 수도, 조회가 실패했을 수도 있다) — 호출부가 그렇게 구분한다.
+    """
+    from aot.databases.models import DeviceMeasurements
+
+    try:
+        found = sensors_for_plot(plot) or {}
+    except Exception:
+        return set()
+    ids = list(found.get('in_plot') or []) or list(found.get('from_zone') or [])
+    if not ids:
+        return set()
+    try:
+        rows = DeviceMeasurements.query.filter(
+            DeviceMeasurements.device_id.in_(ids)).all()
+    except Exception:
+        return set()
+    return {m.measurement for m in rows if m.measurement}
+
+
+def _mark_observable(out, plot):
+    """단계 목표에 `observable` 을 얹는다(제자리 수정) → out.
+
+    `True` 재는 센서가 있다 · `False` 없다 · `None` 알 수 없다(센서를 하나도 못
+    찾았거나 항목에 `measurement` 가 없다 — 사용자가 만든 항목이 그렇다).
+
+    **없다고 값을 지우거나 감추지 않는다.** 프로그램은 시설과 독립이어야 다른 곳에
+    재사용된다(`coordinator-plot-targets.md` 의 분담) — 여기서 하는 일은 화면이
+    사실을 말할 수 있게 근거를 붙이는 것뿐이다.
+    """
+    targets = (out or {}).get('targets') or []
+    if not targets:
+        return out
+    have = measurable_in_plot(plot)
+    for t in targets:
+        m = t.get('measurement')
+        if not m or not have:
+            t['observable'] = None
+        else:
+            t['observable'] = m in have
     return out
 
 
@@ -896,6 +965,10 @@ def _stage_payload(st, idx, stages, day_in_stage, days_left,
         'next_key': (nxt or {}).get('key'),
         'next_name': (nxt or {}).get('name') if nxt else None,
         'targets': _stage_targets(st, program_row),
+        # 이 단계의 지침(자유 텍스트). AI 가 그대로 인용하고, AI 를 안 쓰는
+        # 사용자는 구획 모달에서 읽는다 — 프로그램을 고른 것만으로 그 시기의
+        # 일반사항을 얻는 것이 이 필드의 값어치다.
+        'guidance': st.get('guidance') or None,
         # 자원(P6) — 선언과 실제 상태를 함께. 프로그램은 켜고 끄지 않는다.
         'resources': stage_resources(st),
     }
@@ -926,13 +999,17 @@ def _stage_targets(stage, program_row=None):
     한다). 여기서 조용히 제어로 흘리지 말 것 — `source='ai'` 인 프로그램의 지어낸
     숫자가 곧바로 온실 설정이 되는 것을 막는 검토 게이트가 무의미해진다.
     """
-    from aot.aot_flask.geo.program_io import _TARGET_FIELDS, _TARGET_UNITS
+    from aot.aot_flask.geo.program_io import _public_target_def
 
+    defs = (program_row.target_def_list()
+            if program_row is not None and hasattr(program_row, 'target_def_list')
+            else [])
     targets = stage.get('targets') if isinstance(stage, dict) else None
     curves = getattr(program_row, 'targets_methods', None) or {}
     if not isinstance(curves, dict):
         curves = {}
-    if not targets and not curves:
+    has_default = any(d.get('default') is not None for d in defs)
+    if not targets and not curves and not has_default:
         return []
 
     names = {}
@@ -946,19 +1023,35 @@ def _stage_targets(stage, program_row=None):
             names = {}
 
     out = []
-    for key in _TARGET_FIELDS:                 # 선언 순서를 따른다(화면 순서)
+    for spec in defs:                          # 정의 순서를 따른다(화면 순서)
+        # 숨긴 항목은 내지 않는다 — 사람이 "이 시설엔 없다" 고 이미 말한 것이다.
+        if spec.get('hidden'):
+            continue
+        key = spec.get('key')
+        pub = _public_target_def(spec)
+        base = {'key': key, 'label': pub.get('label'),
+                'unit': spec.get('unit'), 'measurement': spec.get('measurement'),
+                'shape': spec.get('shape'), 'fixed': bool(spec.get('fixed'))}
         curve_uuid = curves.get(key)
         if curve_uuid:
-            out.append({'key': key, 'unit': _TARGET_UNITS.get(key),
-                        'value': None, 'source': 'method',
-                        'method_uuid': curve_uuid,
-                        # 죽은 참조는 저장 때 거절되지만, 나중에 지워질 수는
-                        # 있다 — 그때 이름 없이 "곡선" 으로만 보인다.
-                        'method_name': names.get(curve_uuid)})
+            out.append(dict(base, value=None, source='method',
+                            method_uuid=curve_uuid,
+                            # 죽은 참조는 저장 때 거절되지만, 나중에 지워질 수는
+                            # 있다 — 그때 이름 없이 "곡선" 으로만 보인다.
+                            method_name=names.get(curve_uuid)))
             continue
         if isinstance(targets, dict) and targets.get(key) is not None:
-            out.append({'key': key, 'unit': _TARGET_UNITS.get(key),
-                        'value': targets[key], 'source': 'stage'})
+            out.append(dict(base, value=targets[key], source='stage'))
+            continue
+        # 단계에 값이 없으면 **프로그램 기본값**이 그 단계의 목표다.
+        #
+        # 목표는 대개 작기 내내 같고 단계마다 달라지는 것은 그중 일부다. 기본값이
+        # 없으면 바뀌지 않는 값도 단계 수만큼 다시 적어야 하고, 실제로 만들어 보면
+        # 거기서 그만두게 된다. `source` 로 어느 쪽에서 왔는지 밝힌다 — 화면이
+        # "이 단계에서 따로 정한 값" 과 "프로그램 기본값" 을 구분해 말할 수 있어야
+        # 사람이 무엇을 고치면 되는지 안다.
+        if spec.get('default') is not None:
+            out.append(dict(base, value=spec['default'], source='default'))
     return out
 
 
@@ -1780,6 +1873,23 @@ def zone_allocation(zone_shape, on=None):
             # 며칠째 자라고 있나" 를 한 줄로 말할 수 있어야 한다.
             'days_since_planted': elapsed_days(row, on=on),
         })
+        # 현재 단계 — **면적을 대신하는 값**이다(2026-08-20). 면적은 심고 나면
+        # 안 바뀌므로 "지금 어떤가" 를 묻는 [현황]에서는 아무 날에 봐도 같은
+        # 숫자다. 단계는 날마다 옮겨 가고, 그것이 이 구역에서 지금 무슨 일이
+        # 일어나는지를 말한다. 면적은 구획 모달 [개요]가 갖는다.
+        #
+        # 시설의 구획 목록(`plot_brief_for_control`)과 **같은 키**를 쓴다 —
+        # 계층이 같아야 사용자가 옮겨 다녀도 같은 자리에서 같은 것을 찾는다.
+        try:
+            _st = stage_of(row, on=on)
+        except Exception:                                   # noqa: BLE001
+            _st = None
+        if _st and _st.get('state') == 'running':
+            # **이름만 낸다.** 순번(3/6)은 목록에서 뜻을 만들지 못한다 — 전체가
+            # 몇 단계인지 아는 사람만 읽을 수 있고, 다섯 줄이 나란히 서면 그
+            # 숫자들이 서로 비교되는 것처럼 보인다(다른 프로그램이라 비교 대상이
+            # 아니다). 순번이 필요한 자리는 구획 모달이다.
+            items[-1]['stage_name'] = _st.get('name')
 
     used = 0.0
     if geoms:
@@ -1957,13 +2067,22 @@ def to_dict(row, containers=None, with_sensors=False, markers=None,
     prog = program_brief(row)
     if prog:
         out['program'] = prog
-        st = stage_of(row, program=prog)
+        # 목표를 재는 센서가 이 구획에 있는지는 **상세에서만** 붙인다 —
+        # 구획마다 센서 조회가 한 번씩 더 붙으므로 목록에서 켜면 N+1 이 된다
+        # (`with_sensors` 가 이미 같은 성격의 비용 스위치다).
+        st = stage_of(row, program=prog, with_observability=bool(with_sensors))
         # 대기 중 전환·이력. **저장하지 않는 값과 저장된 값이 함께 나간다** —
         # 화면이 "지금 이렇게 보이는데 확인하시겠습니까" 를 말하려면 둘 다 필요하다.
         out['stage_proposal'] = stage_proposal(row, program=prog)
         out['stage_history'] = stage_history(row)
         if st:
             out['stage'] = st
+        # 기간 축 — 단계 이름·경계·오늘 위치. 화면이 날짜를 늘어놓는 대신 한 줄로
+        # 보인다. 계산은 여기서 한 번만 한다(단계 길이·기준점·"끝까지" 처리가
+        # 전부 서버 규칙이다). `plot_brief_for_control` 이 이미 같은 값을 싣고
+        # 있었는데 **모달이 쓰는 이 응답에는 없어서**, 지도 위젯의 구획 모달만
+        # 단계 이름 없이 경과/남음 두 칸으로 그려야 했다.
+        out['timeline'] = timeline(row, program=prog)
     due, due_src = expected_end(row, program=prog)
     if due is not None:
         out['expected_end_on'] = due.isoformat()
