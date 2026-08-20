@@ -28882,3 +28882,126 @@ msgstr "推奨日積算光量"
 
 msgid "Suggested GDD per day"
 msgstr "推奨日積算温度"
+
+msgid "Conservation"
+msgstr "維持"
+
+msgid "Partial Control"
+msgstr "一部のみ制御"
+
+msgid "Natural Ventilation"
+msgstr "自然換気"
+
+msgid "Target Unattainable"
+msgstr "目標到達不可"
+
+msgid "CO2 Enrichment"
+msgstr "CO₂施用"
+
+msgid "Dehumidify"
+msgstr "除湿"
+
+msgid "Humidify"
+msgstr "加湿"
+
+msgid "Fogger"
+msgstr "加湿機"
+
+msgid "CO2 Injector"
+msgstr "CO₂注入機"
+
+msgid "Growing here"
+msgstr "ここで育てているもの"
+
+msgid "Days in"
+msgstr "栽培日数"
+
+msgid "above"
+msgstr "高い"
+
+msgid "below"
+msgstr "低い"
+
+msgid "now / target"
+msgstr "現在 / 目標"
+
+msgid "Photosynthesis-oriented control is off, so these targets are not in use."
+msgstr "光合成志向制御がオフのため、これらの目標は使われていません。"
+
+msgid "Vent area open"
+msgstr "開いた換気面積"
+
+msgid "Device opening"
+msgstr "装置ごとの開度"
+
+msgid "Emergency"
+msgstr "緊急"
+
+msgid "Water (VPD)"
+msgstr "水分(VPD)"
+
+msgid "Control schedule"
+msgstr "制御スケジュール"
+
+msgid "until you end it"
+msgstr "終えるまで"
+
+msgid "open-ended"
+msgstr "終了未定"
+
+msgid "Past the planned end"
+msgstr "予定期間を過ぎています"
+
+msgid "control has stopped"
+msgstr "制御が停止しています"
+
+msgid "target"
+msgstr "目標"
+
+msgid "Not keeping up"
+msgstr "追いつかず"
+
+msgid "%(kinds)s at full output for %(min)s min, %(var)s still off target"
+msgstr "%(kinds)sが最大出力で%(min)s分経過、%(var)sは目標から外れたままです"
+
+msgid "%(var)s is off target and there is no device here that can move it"
+msgstr "%(var)sが目標から外れていますが、動かせる装置がありません"
+
+msgid "Coming weather"
+msgstr "これからの天気"
+
+msgid "Freezing"
+msgstr "結氷"
+
+msgid "Frost"
+msgstr "霜"
+
+msgid "Extreme heat"
+msgstr "猛暑"
+
+msgid "Strong wind"
+msgstr "強風"
+
+msgid "Heavy rain"
+msgstr "大雨"
+
+msgid "in %(n)s h"
+msgstr "%(n)s時間後"
+
+msgid "now"
+msgstr "今"
+
+msgid "Last watering"
+msgstr "最後の灌水"
+
+msgid "no run in the last 30 days"
+msgstr "直近30日の記録なし"
+
+msgid "%(n)s min ago"
+msgstr "%(n)s分前"
+
+msgid "%(n)s h ago"
+msgstr "%(n)s時間前"
+
+msgid "%(n)s min"
+msgstr "%(n)s分"

@@ -96,6 +96,7 @@
         });
       }
       el.innerHTML = html;
+      if (compact) el.classList.add('aot-ov-block');
       _wirePick(el);
       return;
     }
@@ -148,6 +149,9 @@
             _esc(_t('Targets come from the program. Safety limits below stay with this facility.')) +
             '</div>';
     el.innerHTML = html;
+    // 내용을 그렸을 때만 블록 테두리를 붙인다(빈 상자 방지 — 시설 모달의
+    // 앵커는 클래스 없이 나온다).
+    if (compact) el.classList.add('aot-ov-block');
   }
 
   function _wirePick(el) {

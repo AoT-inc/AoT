@@ -948,12 +948,16 @@
     light: 'Light Level', co2: 'CO2', temperature: 'Temperature',
     water: 'Water (VPD)', humidity: 'Humidity'
   };
+  // 액추에이터 종류 라벨. **키는 서버 어휘(`_KIND_CAPABILITIES`)와 같아야 한다** —
+  // 예전에는 여기 'heating'/'cooling'/'humidifier' 라고 적혀 있어 서버가 보내는
+  // heater/cooler/fogger 가 하나도 안 맞았고, 화면에 내부 키가 그대로 떴다
+  // (커튼만 우연히 일치했다). 회귀는 `test_map_popup_kind_labels.py` 가 잡는다.
   var _KIND_LABELS = {
     opening: 'Opening', curtain: 'Curtain', shade: 'Shade',
-    heating: 'Heating', cooling: 'Cooling',
+    heater: 'Heater', cooler: 'Cooler', fogger: 'Fogger',
+    co2_injector: 'CO2 Injector', lighting: 'Lighting',
     circulation_fan: 'Circulation Fan', exhaust_fan: 'Exhaust Fan',
-    lighting: 'Lighting', irrigation: 'Irrigation',
-    humidifier: 'Humidifier', dehumidifier: 'Dehumidifier', co2: 'CO2'
+    intake_fan: 'Intake Fan'
   };
 
   // 섹션 탭 내비 — [현황](동적) / [환경·제어](센서+제어) / [개요](정적)
@@ -975,27 +979,6 @@
               '" data-sec="' + s.key + '">' + _esc(_t(s.label)) + '</button>';
     });
     return html + '</div>';
-  }
-
-  // 추세 선형 외삽 텍스트 (15분, 상한 캡 ±5) — 과신 방지용 "단순 추세" 표기.
-  function _trendText(label, perMin, unit) {
-    if (perMin == null || !isFinite(perMin)) return '';
-    var d = perMin * TREND_LOOKAHEAD_MIN;
-    if (Math.abs(d) < 0.05) return '';
-    if (d > TREND_DELTA_CAP) d = TREND_DELTA_CAP;
-    if (d < -TREND_DELTA_CAP) d = -TREND_DELTA_CAP;
-    var dir = d > 0 ? _t('rising') : _t('falling');
-    return _t('%(label)s %(dir)s, about %(delta)s expected in %(min)s min')
-      .replace('%(label)s', label)
-      .replace('%(dir)s', dir)
-      .replace('%(min)s', String(TREND_LOOKAHEAD_MIN))
-      .replace('%(delta)s', (d > 0 ? '+' : '') + d.toFixed(1) + unit);
-  }
-
-  function _devRow(label, dev, unit) {
-    if (dev == null || !isFinite(dev)) return '';
-    var s = (dev > 0 ? '+' : '') + (+dev).toFixed(1);
-    return '<span class="aot-ov-dev">' + _esc(label) + ' ' + s + unit + '</span>';
   }
 
   // ── 시설 대표사진 / 치수 / 설명 블록 (섹션탭 바로 아래, 현황 pane 최상단) ──
@@ -1049,28 +1032,95 @@
     var descView = info.description
       ? _esc(info.description)
       : '<span class="aot-ov-muted">' + _esc(_t('No description')) + '</span>';
+    // [편집]은 **블록 맨 아래 오른쪽**이다(.aot-ov-actions). 제목 줄은 무엇인지
+    // 말하는 자리이고 버튼은 다 읽은 뒤 누르는 것이라, 행동은 시선이 끝나는 곳에
+    // 모은다 — 구획 [편집]·[구획 추가]·[노트 열기]와 같은 규칙이다.
     html += '<div class="aot-ov-block aot-ov-desc">' +
-            '<div class="aot-ov-sec-title aot-ov-sec-title--row">' +
-            '<span>' + _esc(_t('Description')) + '</span>' +
-            (info.can_edit
-              ? '<button type="button" class="aot-ov-pill aot-ov-desc-edit">' +
-                _esc(_t('Edit')) + '</button>'
-              : '') +
-            '</div>' +
+            '<div class="aot-ov-sec-title">' + _esc(_t('Description')) + '</div>' +
             '<div class="aot-ov-desc-view">' + descView + '</div>' +
             (info.can_edit
               ? '<div class="aot-ov-desc-editwrap" style="display:none">' +
                 '<textarea class="aot-ov-desc-input" rows="3" maxlength="2000">' +
                 _esc(info.description || '') + '</textarea>' +
+                // [취소] [저장] 순. **오른쪽 끝이 기본 동작**이다 — 같은 모달의
+                // 구획 편집·구획 생성·단계 확인 폼이 전부 이 순서인데 여기만
+                // 거꾸로였다.
                 '<div class="aot-ov-desc-actions">' +
-                '<button type="button" class="aot-ov-pill aot-ov-desc-save">' +
-                _esc(_t('Save')) + '</button>' +
                 '<button type="button" class="aot-ov-pill aot-ov-desc-cancel">' +
                 _esc(_t('Cancel')) + '</button>' +
-                '</div></div>'
+                '<button type="button" class="aot-ov-pill aot-ov-pill--primary ' +
+                'aot-ov-desc-save">' + _esc(_t('Save')) + '</button>' +
+                '</div></div>' +
+                '<div class="aot-ov-actions">' +
+                '<button type="button" class="aot-ov-pill aot-ov-desc-edit">' +
+                _esc(_t('Edit')) + '</button></div>'
               : '') +
             '</div>';
     return html;
+  }
+
+  // ── 곧 닥칠 기상 위험 ────────────────────────────────────────────────
+  //
+  // **시설과 노지가 같은 렌더러를 쓴다.** 같은 사실을 계층마다 다른 문장으로
+  // 적으면 사용자는 그것이 다른 이야기인 줄 안다. 판정도 서버 한 곳이다
+  // (`weather_hazards`, 제어가 읽는 예보와 같은 파일).
+  //
+  // 낡은 예보로는 아무 말도 하지 않는다 — 6개월 지난 예보로 "오늘 밤 서리"
+  // 라고 말하면 사람은 그 말을 믿고 행동한다.
+  var _HAZARD_LABELS = {
+    freeze: 'Freezing', frost: 'Frost', heat: 'Extreme heat',
+    wind: 'Strong wind', heavy_rain: 'Heavy rain', rain: 'Rain', snow: 'Snow'
+  };
+
+  function buildHazardsHtml(hz) {
+    var items = (hz && hz.items) || [];
+    if (!items.length) return '';
+    var rows = items.map(function (h) {
+      var when = h.in_h <= 0
+        ? _t('now')
+        : _t('in %(n)s h').replace('%(n)s', String(h.in_h));
+      var val = (h.value != null)
+        ? ' · ' + (+h.value).toFixed(h.unit === 'm/s' ? 1 : 0) + (h.unit || '')
+        : '';
+      return '<div class="aot-ov-row aot-hz aot-hz--' + _esc(h.severity) +
+             '"><span>' + _esc(_t(_HAZARD_LABELS[h.kind] || h.kind)) +
+             '</span><span>' + _esc(when + val) + '</span></div>';
+    }).join('');
+    return '<div class="aot-ov-block aot-ov-hazards">' +
+           '<div class="aot-ov-sec-title">' + _esc(_t('Coming weather')) +
+           '</div>' + rows + '</div>';
+  }
+
+  // ── 마지막 관수 ──────────────────────────────────────────────────────
+  //
+  // "오늘 물을 줬던가" 는 화면을 열자마자 답이 나와야 하는 질문이다. 시설·노지가
+  // **같은 한 줄**을 쓴다 — 판정도 서버 한 곳(`irrigation_status`).
+  //
+  // 근거가 없으면(무엇이 관수인지 모르면) 아무것도 그리지 않는다. 그때
+  // "기록 없음" 이라고 적으면 사용자는 장치가 안 돈 줄 안다.
+  function buildIrrigationHtml(irr) {
+    if (!irr) return '';
+    var right;
+    if (irr.at == null) {
+      right = _t('no run in the last 30 days');
+    } else {
+      var h = irr.hours_ago;
+      var when = (h != null && h < 1)
+        ? _t('%(n)s min ago').replace('%(n)s', String(Math.max(1, Math.round(h * 60))))
+        : _t('%(n)s h ago').replace('%(n)s',
+              String(h != null ? (h < 24 ? Math.round(h) : Math.round(h / 24) * 24) : '?'));
+      right = when;
+      if (irr.duration_s) {
+        right += ' · ' + _t('%(n)s min').replace(
+                   '%(n)s', String(Math.max(1, Math.round(irr.duration_s / 60))));
+      }
+    }
+    // 한 줄짜리 블록이다 — 제목을 따로 두면 "마지막 관수 / 마지막 관수" 가 된다.
+    return '<div class="aot-ov-block aot-ov-row aot-ov-irrigation"><span>' +
+           _esc(_t('Last watering')) +
+           (irr.device ? ' <span class="aot-ov-muted">' + _esc(irr.device) +
+                         '</span>' : '') +
+           '</span><span>' + _esc(right) + '</span></div>';
   }
 
   // buildOverviewSection(env, status, opts)
@@ -1084,48 +1134,23 @@
     var stale   = !env || env.stale;
     var html    = '';
 
-    // ── 블록 0: IEC 헤더 (시설 전체 표기 + 자동제어 토글) ────────────────
-    // 함수가 없으면 이 블록은 내용이 하나도 없다 — 그래도 내보내면 테두리만
-    // 있는 빈 상자가 안내문 위에 뜬다. 빈 상태의 안내는 아래 블록이 맡는다.
-    if (fn) {
-      html += '<div class="aot-ov-block aot-ov-iec">';
-      html += '<span class="aot-ov-fn-name">' + _esc(_t(fn.name || '')) + '</span>';
-      if (opts.canToggle) {
-        // 공용 슬라이드 토글 (AoT_timer 등과 동일한 btn-toggle 컴포넌트)
-        html += '<label class="btn-toggle aot-iec-toggle">' +
-                '<input type="checkbox" class="btn-toggle-input aot-iec-toggle-input"' +
-                ' data-active="' + (fn.active ? '1' : '0') + '"' +
-                (fn.active ? ' checked' : '') + '>' +
-                '<span class="btn-toggle-slider"><span class="btn-toggle-thumb"></span></span>' +
-                '</label>';
-      } else {
-        html += '<span class="aot-act-val-ro">' +
-                _esc(fn.active ? _t('Auto Control On') : _t('Auto Control Off')) + '</span>';
-      }
-      html += '</div>';
-    }
-
+    // 자동 제어를 켜고 끄는 토글은 여기 두지 않는다. 붙이고 켜는 것은 시설
+    // 설정에서 하는 일이고, [현황]은 "지금 어떤가" 만 말한다 — 응답이 없다는
+    // 것은 상태이므로 아래에 남는다.
     if (!fn) {
-      // 안내만 덩그러니 두지 않는다 — 무엇에 대한 안내인지 제목이 말해야 한다.
-      html += '<div class="aot-ov-block aot-ov-inactive">' +
-              '<div class="aot-ov-sec-title">' + _esc(_t('Automatic control')) +
-              '</div><div class="aot-ov-muted">' +
-              _esc(_t('No automatic control is linked to this facility')) +
-              '</div></div>';
       return html + _ovNotesBlock();
     }
-    // 단계 목표 ↔ 지금 설정. 채우는 것은 공용 로더(`aot-coordinator-plot.js`)
-    // 라 설정 화면과 **같은 구현**을 쓴다 — 규칙을 두 번 쓰면 곧 갈라진다.
-    // 여기서는 구획 이름을 다시 적지 않는다(바로 아래 [구획] 블록이 말한다).
-    if (fn.uuid) {
-      html += '<div class="aot-coord-plot aot-ov-block" data-compact="1"' +
-              ' data-function="' + _esc(fn.uuid) + '"></div>';
-    }
+
+    // 목표는 **현재값 옆**에 붙는다(`buildEnvNowHtml`). 목표만 따로 표로
+    // 늘어놓으면 "그래서 지금 맞나" 에 답하지 못한 채 칸만 차지한다.
+    // 전체 목표 목록은 그것을 정하는 곳(함수 설정)에서 본다.
 
     if (stale || !summary) {
       var msg = !fn.active ? _t('Automatic control inactive')
                            : _t('Automatic control not responding (no cycle in 5 minutes)');
-      html += '<div class="aot-ov-block aot-ov-inactive">' + _esc(msg);
+      html += '<div class="aot-ov-block aot-ov-inactive">' +
+              '<div class="aot-ov-sec-title">' + _esc(_t('Automatic control')) +
+              '</div><div class="aot-ov-muted">' + _esc(msg) + '</div>';
       var rs = (status && status.reasons) || [];
       if (rs.length) {
         html += '<div class="aot-ov-reasons">' + rs.map(_esc).join('<br>') + '</div>';
@@ -1133,67 +1158,17 @@
       return html + '</div>' + _ovNotesBlock();
     }
 
-    // ── 블록 0.5: Growth Schedule (Env Coordinator 일정 + 현재 주차) ─────
-    var sch = summary.schedule || {};
-    if (sch.start) {
-      var _d = function (v) { return String(v || '').replace(/-/g, '/'); };
-      html += '<div class="aot-ov-block aot-ov-schedule">' +
-              '<div class="aot-ov-sec-title">' + _esc(_t('Growth Schedule')) + '</div>' +
-              '<div class="aot-ov-row"><span>' + _esc(_t('Start Date')) +
-              '</span><span>' + _esc(_d(sch.start)) + '</span></div>' +
-              '<div class="aot-ov-row"><span>' + _esc(_t('End Date')) +
-              '</span><span>' + _esc(sch.end ? _d(sch.end) : '—') + '</span></div>';
-      if (sch.week != null) {
-        html += '<div class="aot-ov-row"><span>' + _esc(_t('Current')) +
-                '</span><span>' +
-                _esc(_t('Week %(n)s').replace('%(n)s',
-                     String(Math.floor(sch.week) + 1))) +
-                '</span></div>';
-      }
-      html += '</div>';
-    }
+    // 날짜는 [현황]에 두지 않는다. 시작일은 [구획] 의 기간 축이 보이고,
+    // 제어 종료일은 설정이다 — 그 날이 지나 실제로 멈추면 아래 "응답 없음 ·
+    // 비활성" 이 말한다. 남은 날수는 오늘 할 일을 바꾸지 않는다.
 
-    // ── 블록 1: 현재 상태 요약 (운전 모드 + 추세 + 예보 선행) ───────────
-    var modeStr = (summary.modes || []).map(function (m) {
-      return _t(_MODE_LABELS[m] || m);
-    }).join(' · ');
-    var line = modeStr || _t('Idle (within target range)');
-    if (summary.limiting_factor) {
-      line += ' — ' + _t('Limiting factor') + ': ' +
-              _t(_LIMIT_LABELS[summary.limiting_factor] ||
-                 summary.limiting_factor);
-    }
-    html += '<div class="aot-ov-block aot-ov-modes">' +
-            '<div class="aot-ov-sec-title">' + _esc(_t('Status Summary')) + '</div>' +
-            '<div class="aot-ov-modes-line">' + _esc(line) + '</div>';
-    // 목표 대비 편차 — "지금 얼마나 벗어나 있나". 운전 모드는 무엇을 하는
-    // 중인지만 말하고 추세는 어디로 가는지만 말해서, 정작 벗어난 폭은 어디에도
-    // 없었다. 서버는 계속 보내고 있었고 렌더 함수(_devRow)도 있었는데 부르는
-    // 곳이 없는 죽은 코드였다.
-    var dv = summary.deviation || {};
-    var devs = [
-      _devRow(_t('Temperature'), dv.temperature, '°C'),
-      _devRow(_t('Humidity'), dv.humidity, '%'),
-      _devRow('VPD', dv.vpd, ' kPa'),
-      _devRow('CO2', dv.co2, ' ppm')
-    ].filter(Boolean);
-    if (devs.length) {
-      html += '<div class="aot-ov-trend">' + _esc(_t('Deviation from target')) +
-              devs.join('') + '</div>';
-    }
-
-    var tr = summary.trend || {};
-    var t1 = _trendText(_t('Temperature'), tr.T_per_min, '°C');
-    var t2 = _trendText(_t('Humidity'), tr.RH_per_min, '%');
-    [t1, t2].forEach(function (t) {
-      if (t) html += '<div class="aot-ov-trend">' + _esc(t) + '</div>';
-    });
-    var ff = summary.feedforward || {};
-    if (ff.active && ff.reason) {
-      html += '<div class="aot-ov-ff">' + _esc(_t('Forecast Feedforward')) + ': ' +
-              _esc(ff.reason) + '</div>';
-    }
-    html += '</div>';
+    // ── 상태 요약 블록은 없앴다 ──────────────────────────────────────────
+    // "유지 · 일부만 제어" 는 내부 운전 모드 어휘라 뜻이 전달되지 않았다.
+    // 그 블록에서 값이 있던 셋은 각자 제 자리로 갔다:
+    //   편차     → 현재값 옆(`buildEnvNowHtml`)
+    //   센서 결함 → 현재 블록 머리("센서 응답 4/5")
+    //   안전 게이트 → 제어 상태 블록 맨 위(제어가 막힌 이유이므로)
+    // 추세·예보 선행은 제어 내부 사정이라 [현황]에서 뺐다.
 
     // ── 블록 2: 광합성 목표 대비 (시설의 최우선 목표) ───────────────────
     // 행 순서: 효율 → 광량 → VPD → CO2 → 온도 → 습도 → DLI.
@@ -1202,11 +1177,14 @@
     var tgt = summary.targets || {};
     var opt = ph.opt || {};
     var phRows = '';
+    // 각 행은 `현재 / 목표` 다. 제목에 또 적으면 같은 말이 두 번 나온다.
     function _vs(label, cur, target, unit) {
       if (cur == null && target == null) return '';
       var c = cur != null ? String(cur) : '—';
       var g = target != null ? String(target) : '—';
-      return '<div class="aot-ov-row"><span>' + _esc(label) + '</span><span>' +
+      return '<div class="aot-ov-row"><span>' + _esc(label) +
+             ' <span class="aot-ov-muted">' + _esc(_t('now / target')) +
+             '</span></span><span>' +
              _esc(c + ' / ' + g + (unit || '')) + '</span></div>';
     }
     if (ph.rate_rel_pct != null) {
@@ -1216,44 +1194,82 @@
     // 목표값은 summary.targets(매 사이클 산출 — VPD/CO2 메서드 곡선이면
     // 그 시점의 메서드 값, 온/습도는 VPD 분해 결과) 우선.
     // 작물 상수(opt.*)는 환경 목표가 없을 때의 참고값 폴백.
-    phRows += _vs(_t('Light Level'), ph.light, opt.light_k, '');
+    phRows += _vs(_t('Light Level'), ph.light, opt.light_k, ' \u00b5mol/m\u00b2/s');
     phRows += _vs('VPD', ph.vpd, tgt.vpd != null ? tgt.vpd : opt.vpd_half, ' kPa');
     phRows += _vs('CO2', ph.co2, tgt.co2 != null ? tgt.co2 : opt.co2_k, ' ppm');
     phRows += _vs(_t('Temperature'), ph.temp,
                   tgt.temperature != null ? tgt.temperature : opt.t_opt, '°C');
     phRows += _vs(_t('Humidity'), ph.rh, tgt.humidity, '%');
-    phRows += _vs('DLI', ph.dli_today, ph.dli_target, '');
-    if (phRows) {
+    phRows += _vs('DLI', ph.dli_today, ph.dli_target, ' mol/m\u00b2/d');
+    // 작물명은 서버가 `crop` 으로 보낸다. 예전에는 `subject` 를 읽어 작물명이
+    // 영영 붙지 않았다.
+    var phCrop = ph.crop || ph.subject;
+    // 꺼져 있으면 **아무 말도 하지 않는다.** 그것은 지금 상태가 아니라 설정이라
+    // 함수 설정에서 볼 일이고, "꺼져 있습니다" 한 줄이 [현황]에서 자리를 차지할
+    // 이유가 없다(꺼진 기능의 목표를 표로 늘어놓지 않는 것과 같은 이유).
+    if (ph.enabled && phRows) {
       html += '<div class="aot-ov-block aot-ov-photo-goal">' +
-              '<div class="aot-ov-sec-title aot-ov-sec-title--row">' +
-              '<span>' + _esc(_t('Photosynthesis')) +
-              (ph.subject ? ' · ' + _esc(ph.subject) : '') + '</span>' +
-              '<span class="aot-ov-muted">' + _esc(_t('Current / Target')) +
-              '</span></div>' +
-              (ph.enabled ? '' :
-                '<div class="aot-ov-muted">' +
-                _esc(_t('Photosynthesis mode disabled')) + '</div>') +
+              '<div class="aot-ov-sec-title">' + _esc(_t('Photosynthesis')) +
+              (phCrop ? ' · ' + _esc(phCrop) : '') + '</div>' +
               phRows + '</div>';
     }
 
     // ── 블록 3: 제어 상태 (환기/팬/커튼 등 의미 단위) ───────────────────
     html += '<div class="aot-ov-block aot-ov-ctrl">' +
             '<div class="aot-ov-sec-title">' + _esc(_t('Control Status')) + '</div>';
-    var v = summary.vent || {};
-    if (v.total_area_m2 > 0) {
-      html += '<div class="aot-ov-row"><span>' + _esc(_t('Ventilation')) + '</span><span>' +
-              _esc((v.effective_area_m2 != null ? v.effective_area_m2.toFixed(1) : '?') +
-              ' m² (' + (v.open_ratio_pct != null ? v.open_ratio_pct.toFixed(0) : '?') +
-              '%)') + '</span></div>';
+    // **설비가 못 따라가고 있으면 그렇다고 말한다.** "냉각기 100%" 만 보여
+    // 주면 그것이 좋은 신호인지 나쁜 신호인지 알 수 없다 — 최대로 밀고 있는데도
+    // 편차가 안 줄면 사람이 할 판단(차광을 더 치든, 목표를 낮추든)이 생긴다.
+    var strain = summary.strain;
+    if (strain && strain.var) {
+      var vlabel = _t(_LIMIT_LABELS[strain.var] ||
+                      { temperature: 'Temperature', humidity: 'Humidity',
+                        vpd: 'Water (VPD)', co2: 'CO2' }[strain.var] || strain.var);
+      var msg2;
+      if (strain.reason === 'no_actuator') {
+        msg2 = _t('%(var)s is off target and there is no device here that can move it')
+                 .replace('%(var)s', vlabel);
+      } else {
+        var kindNames = (strain.kinds || []).map(function (k) {
+          return _t(_KIND_LABELS[k] || k);
+        }).join(' · ');
+        msg2 = _t('%(kinds)s at full output for %(min)s min, %(var)s still off target')
+                 .replace('%(kinds)s', kindNames)
+                 .replace('%(min)s', String(Math.round((strain.since_s || 0) / 60)))
+                 .replace('%(var)s', vlabel);
+      }
+      html += '<div class="aot-ov-row aot-ov-strain"><span>' +
+              _esc(_t('Not keeping up')) + '</span><span>' + _esc(msg2) +
+              '</span></div>';
     }
+
+    // 안전 게이트가 걸렸으면 **맨 위**에 말한다 — 아래 숫자들이 왜 그런지의
+    // 이유이고, 사람이 지금 알아야 할 것도 그것이다(바람 때문에 창을 못 연다).
     var gate = summary.gate || {};
     if (gate.triggered) {
-      html += '<div class="aot-ov-row aot-ov-gate"><span>' + _esc(_t('Safety Gate')) +
-              '</span><span>' + _esc(gate.description || _t('Active')) + '</span></div>';
+      html += '<div class="aot-ov-row aot-ov-gate"><span>' +
+              _esc(_t('Safety Gate')) + '</span><span>' +
+              _esc(gate.description || _t('Active')) + '</span></div>';
+    }
+    // 환기는 **면적**이고 아래 목록은 **장치별 개도**다. 둘 다 %로 적어 두면
+    // 같은 것을 두 번 말하는 것처럼 보이는데 실제로는 다른 값이다(전체 개구
+    // 면적 대비 열린 면적 vs 그 장치가 몇 % 열렸는가). 라벨로 구분한다.
+    var v = summary.vent || {};
+    if (v.total_area_m2 > 0) {
+      html += '<div class="aot-ov-row"><span>' + _esc(_t('Vent area open')) +
+              '</span><span>' +
+              _esc((v.effective_area_m2 != null ? v.effective_area_m2.toFixed(1) : '?') +
+              ' / ' + v.total_area_m2.toFixed(1) + ' m²' +
+              (v.open_ratio_pct != null ? ' (' + v.open_ratio_pct.toFixed(0) + '%)' : '')) +
+              '</span></div>';
     }
     var obk = summary.outputs_by_kind || {};
-    Object.keys(obk).forEach(function (k) {
-      if (k === 'opening') return;   // 환기 행과 중복
+    var kinds = Object.keys(obk);
+    if (kinds.length) {
+      html += '<div class="aot-ov-sub-title">' + _esc(_t('Device opening')) +
+              '</div>';
+    }
+    kinds.forEach(function (k) {
       html += '<div class="aot-ov-row"><span>' +
               _esc(_t(_KIND_LABELS[k] || k)) + '</span><span>' +
               _esc(obk[k].toFixed(0) + '%') + '</span></div>';
@@ -1354,6 +1370,9 @@
   //
   //   opts.repKey     지금 대표로 지정된 key(배경 표시)
   //   opts.selectable 누를 수 있는가(edit_settings 권한자만)
+  // 측정 키 → 목표·편차 키. 서버가 두 어휘를 쓰므로 여기서 한 번만 잇는다.
+  var _NOW_TO_TARGET = { T: 'temperature', RH: 'humidity', CO2: 'co2', VPD: 'vpd' };
+
   function buildEnvNowHtml(env, opts) {
     env = env || {};
     opts = opts || {};
@@ -1392,6 +1411,23 @@
         // 시늉을 보여 주면 눌러 보고 아무 일도 안 일어나는 것을 겪는다.
         var hint = isRep ? _t('Representative measurement')
                          : (opts.selectable ? _t('Set as representative') : '');
+        // **목표는 값 옆에 붙어야 뜻이 생긴다.** 25.1°C 만 보면 좋은지 나쁜지
+        // 알 수 없고, 목표만 따로 표로 보면 지금 어떤지 알 수 없다. 예전에는
+        // 그 둘이 다른 블록에 있어 사람이 머릿속에서 빼기를 해야 했다.
+        var tkey = _NOW_TO_TARGET[r.key];
+        var tval = tkey ? (opts.targets || {})[tkey] : null;
+        var dev  = tkey ? (opts.deviation || {})[tkey] : null;
+        var sub = '';
+        if (tval != null) {
+          sub += '<div class="aot-env-now-target">' +
+                 _esc(_t('target') + ' ' + (+tval).toFixed(dec)) + '</div>';
+        }
+        if (dev != null && isFinite(dev) && Math.abs(dev) >= 0.05) {
+          sub += '<div class="aot-env-now-dev' +
+                 (dev > 0 ? ' is-above' : ' is-below') + '">' +
+                 _esc((dev > 0 ? '+' : '') + (+dev).toFixed(dec) + ' ' +
+                      (dev > 0 ? _t('above') : _t('below'))) + '</div>';
+        }
         return '<div class="aot-env-now-item' +
                  (isRep ? ' is-rep' : '') +
                  (opts.selectable ? ' is-selectable' : '') + '"' +
@@ -1403,6 +1439,7 @@
                  '<span class="aot-env-now-unit">' + _esc(unit) + '</span>' +
                  '</div>' +
                  '<div class="aot-env-now-key">' + _esc(name) + '</div>' +
+                 sub +
                '</div>';
       }).join('') + '</div>';
     } else {
@@ -1479,8 +1516,13 @@
     zone = zone || {};
     // 예정과 노트는 **한 블록**이다 — 식생과 같은 빌더. 계층마다 다른 모양을
     // 쓰면 사용자는 화면을 옮길 때마다 어디에 무엇이 있는지 다시 찾아야 한다.
-    return buildEnvNowHtml(zone.env, opts) +
-           buildZonePlotsHtml(zone.allocation) +
+    // **순서는 개념 계층이다** — 위치·시간 → 데이터 → 제어 → 기록물.
+    // 큰 것에서 작은 것으로, 상위에서 하위로. 예전에는 "얼마나 행동을
+    // 부르는가" 로 정렬했는데, 그 판단이 바뀔 때마다 순서가 흔들렸다.
+    // 시설 [현황]도 같은 계층을 쓴다(계층이 같아야 사용자가 옮겨 다녀도
+    // 같은 자리에서 같은 것을 찾는다).
+    return buildZonePlotsHtml(zone.allocation) +
+           buildEnvNowHtml(zone.env, opts) +
            buildRecordBlock(zone.schedule);
   }
 
@@ -1630,6 +1672,42 @@
    * 면적·치수는 내지 않는다. 시설은 노지형·베드형·수직형에 따라 같은 바닥
    * 면적의 재배 규모가 전혀 다르다(서버도 내지 않는다).
    */
+  // 기간 축 — 시작·현재·단계 경계를 한 줄로 보인다.
+  //
+  // 텍스트("8/17 시작 · 4일차 · 생육기 2/3")는 사람이 머릿속에서 배치해야
+  // 알 수 있지만, 축은 보는 순간 안다. 계산은 서버가 한다
+  // (`plot_context.timeline`) — 단계 길이·기준점·"끝까지" 처리가 전부 그쪽
+  // 규칙이라 여기서 다시 조립하면 두 곳이 곧 갈린다.
+  function _timelineHtml(tl) {
+    if (!tl || !(tl.stages || []).length) return '';
+    var segs = tl.stages.map(function (st) {
+      var w = Math.max(0, (st.to_pct || 0) - (st.from_pct || 0));
+      var tip = st.name + ' · ' + (st.days != null
+        ? _t('%(n)s days').replace('%(n)s', String(st.days))
+        : _t('until you end it'));
+      return '<span class="aot-tl-seg' + (st.current ? ' is-current' : '') +
+             (st.days == null ? ' is-open' : '') + '"' +
+             ' style="width:' + w + '%" title="' + _esc(tip) + '">' +
+             '<span class="aot-tl-seg-label">' + _esc(st.name) + '</span></span>';
+    }).join('');
+    // 오늘 표시. 예정을 넘겼으면 축 끝에 붙이고 그 사실을 말한다(자르지 않는다
+    // — 넘겼다는 것 자체가 정보다).
+    var pct = tl.today_pct == null ? 0 : tl.today_pct;
+    var over = pct > 100;
+    var marker = '<span class="aot-tl-today' + (over ? ' is-over' : '') +
+                 '" style="left:' + Math.min(100, Math.max(0, pct)) + '%"' +
+                 ' title="' + _esc(_t('Day %(n)s').replace(
+                    '%(n)s', String(tl.elapsed_days))) + '"></span>';
+    var ends = '<div class="aot-tl-ends"><span>' +
+               _esc(String(tl.start || '').replace(/-/g, '/')) + '</span><span>' +
+               _esc(tl.end ? String(tl.end).replace(/-/g, '/') : _t('open-ended')) +
+               '</span></div>';
+    return '<div class="aot-tl"><div class="aot-tl-bar">' + segs + marker +
+           '</div>' + ends +
+           (over ? '<div class="aot-ov-muted">' +
+                   _esc(_t('Past the planned end')) + '</div>' : '') + '</div>';
+  }
+
   function buildFacilityPlotsHtml(rows, bayId, opts) {
     opts = opts || {};
     var items = (rows || []).filter(function (p) {
@@ -1671,6 +1749,7 @@
               (p.variety ? ' <span class="aot-ov-muted">· ' +
                            _esc(p.variety) + '</span>' : '') +
               '</span><span>' + right.join(' · ') + '</span></div>';
+      html += _timelineHtml(p.timeline);
     });
 
     if (opts.canEdit) {
@@ -1699,8 +1778,11 @@
         return '<input type="' + type + '" class="aot-modern-input form-control" ' +
                'data-nf="' + field + '" value="' + _esc(val || '') + '">';
       };
-      html += '<button type="button" class="btn aot-pill-btn aot-pill-btn-sm ' +
-              'aot-ov-plot-add">' + _esc(_t('Add a plot')) + '</button>' +
+      // 노트 버튼과 **같은 컴포넌트·같은 자리**(오른쪽 아래). 예전에는 이쪽만
+      // `aot-pill-btn` 이라 같은 모달 안에서 두 버튼의 높이·색이 달랐다.
+      html += '<div class="aot-ov-actions">' +
+              '<button type="button" class="aot-ov-pill aot-ov-plot-add">' +
+              _esc(_t('Add a plot')) + '</button></div>' +
               '<div class="aot-ov-plot-new-wrap" style="display:none">' +
               '<div class="aot-modal-container">' +
               zoneCtl +
@@ -1713,9 +1795,9 @@
               _fr(_t('Expected end'), _in('expected_end_on', 'date', '')) +
               '</div>' +
               '<div class="aot-ov-desc-actions">' +
-              '<button type="button" class="btn aot-pill-btn aot-ov-plot-new-cancel">' +
+              '<button type="button" class="aot-ov-pill aot-ov-plot-new-cancel">' +
               _esc(_t('Cancel')) + '</button>' +
-              '<button type="button" class="btn aot-pill-btn aot-pill-btn-primary ' +
+              '<button type="button" class="aot-ov-pill aot-ov-pill--primary ' +
               'aot-ov-plot-new-save">' + _esc(_t('Save')) + '</button>' +
               '</div></div>';
     }
@@ -1880,8 +1962,13 @@
       // 규칙은 aot-modal-modern.css 에서 .aot-center-modal 로 확장했다(복제 아님).
       // 순서·문구도 그쪽과 같게: [닫기][저장]. '취소' 가 아니라 '닫기' 인 이유는
       // 저장해도 창이 남기 때문이고, 바로 위 '예약 취소' 와도 구분된다.
+      //
+      // **기본 동작 하나만 강조한다.** 예전에는 [닫기]까지 primary 라 딥그린 두
+      // 개가 나란히 서서, 오른쪽 끝이 기본 동작이라는 것이 화면에 안 보였다.
+      // 같은 골격을 쓰는 geo/design 구획 모달이 이미 이 형태다(취소는 평범,
+      // 저장만 primary) — 여기만 어긋나 있었다.
       '<div class="modal-footer">' +
-      '<button type="button" class="btn aot-pill-btn aot-pill-btn-primary aot-sched-cancel">' + _esc(_t('Close')) + '</button>' +
+      '<button type="button" class="btn aot-pill-btn aot-sched-cancel">' + _esc(_t('Close')) + '</button>' +
       '<button type="button" class="btn aot-pill-btn aot-pill-btn-primary aot-sched-save">' + _esc(_t('Save')) + '</button>' +
       '</div>';
 
@@ -2326,10 +2413,7 @@
     // 제목은 첫 행 라벨('심은 것')과 달라야 한다 — 같으면 "심은 것 / 심은 것"
     // 으로 읽힌다([현황]에서 한 번 겪은 것과 같은 문제).
     var html = '<div class="aot-ov-block aot-ov-plot-info">' +
-            '<div class="aot-ov-sec-title aot-ov-sec-title--row">' +
-            '<span>' + _esc(_t('Basics')) + '</span>' +
-            '<button type="button" class="aot-ov-pill aot-ov-plot-edit">' +
-            _esc(_t('Edit')) + '</button></div>';
+            '<div class="aot-ov-sec-title">' + _esc(_t('Basics')) + '</div>';
 
     html += '<div class="aot-ov-plot-view">';
     html += _pRow(_plotSubjectLabel(p), _esc(p.subject || '—') +
@@ -2413,14 +2497,20 @@
             '<input type="color" class="aot-modern-input form-control" data-pf="color" value="' +
             _v(p.color || '#6a8f3c') + '"></div></div>' +
             '</div>' +
+            // [작기 종료]는 되돌릴 수 없는 동작이라 **기본 동작 옆에 두지 않는다** —
+            // 왼쪽 끝으로 떼어 놓는다(`--apart`). 오른쪽 끝은 언제나 [저장]이다.
             '<div class="aot-ov-desc-actions">' +
-            '<button type="button" class="btn aot-pill-btn aot-ov-plot-cancel">' +
+            (p.active ? '<button type="button" class="aot-ov-pill aot-ov-pill--apart ' +
+                        'aot-ov-plot-end">' + _esc(_t('End plot')) + '</button>' : '') +
+            '<button type="button" class="aot-ov-pill aot-ov-plot-cancel">' +
             _esc(_t('Cancel')) + '</button>' +
-            '<button type="button" class="btn aot-pill-btn aot-pill-btn-primary aot-ov-plot-save">' +
+            '<button type="button" class="aot-ov-pill aot-ov-pill--primary aot-ov-plot-save">' +
             _esc(_t('Save')) + '</button>' +
-            (p.active ? '<button type="button" class="btn aot-pill-btn aot-ov-plot-end">' +
-                        _esc(_t('End plot')) + '</button>' : '') +
             '</div></div>';
+    // [편집]은 보기·폼 **아래** 오른쪽. 시설 [설명] 편집과 같은 자리다.
+    html += '<div class="aot-ov-actions">' +
+            '<button type="button" class="aot-ov-pill aot-ov-plot-edit">' +
+            _esc(_t('Edit')) + '</button></div>';
     html += '</div>';
 
     html += _plotProgramHtml(p);
@@ -2472,7 +2562,7 @@
     });
     if (needsApply) {
       rows += '<div class="aot-ov-desc-actions">' +
-              '<button type="button" class="btn aot-pill-btn aot-pill-btn-sm ' +
+              '<button type="button" class="aot-ov-pill aot-ov-pill--primary ' +
                 'aot-ov-plot-res-apply">' + _esc(_t('Apply')) + '</button>' +
               '</div>';
     }
@@ -2500,9 +2590,8 @@
                '<input type="date" class="form-control aot-modern-input ' +
                  'aot-ov-plot-stage-date" value="' +
                  _esc(pp.started_on || '') + '">' +
-               '<button type="button" class="btn aot-pill-btn aot-pill-btn-sm ' +
-                 'aot-pill-btn-primary aot-ov-plot-stage-ok">' +
-                 _esc(_t('Confirm')) + '</button>' +
+               '<button type="button" class="aot-ov-pill aot-ov-pill--primary ' +
+                 'aot-ov-plot-stage-ok">' + _esc(_t('Confirm')) + '</button>' +
              '</div></div>';
   }
 
@@ -2522,11 +2611,12 @@
     // 되돌리기는 **마지막 것만** — 여러 개를 임의로 무르면 기준점이 어디인지
     // 사람이 추적할 수 없다.
     var undo = live.length
-      ? '<button type="button" class="btn aot-pill-btn aot-pill-btn-sm ' +
-        'aot-ov-plot-stage-undo">' + _esc(_t('Undo last')) + '</button>'
+      ? '<div class="aot-ov-actions">' +
+        '<button type="button" class="aot-ov-pill aot-ov-plot-stage-undo">' +
+        _esc(_t('Undo last')) + '</button></div>'
       : '';
-    return '<div class="aot-ov-sub-title aot-ov-sec-title--row">' +
-           '<span>' + _esc(_t('Stage log')) + '</span>' + undo + '</div>' + lines;
+    return '<div class="aot-ov-sub-title">' + _esc(_t('Stage log')) + '</div>' +
+           lines + undo;
   }
 
   // 적산온도 — **무엇으로 단계를 판정했는지**를 말한다.
@@ -2730,6 +2820,8 @@
     buildInput:       buildInput,
     buildSectionNav:       buildSectionNav,
     buildOverviewSection:  buildOverviewSection,
+    buildHazardsHtml:      buildHazardsHtml,
+    buildIrrigationHtml:   buildIrrigationHtml,
     buildAboutSection:     buildAboutSection,
     buildZoneStatusHtml:   buildZoneStatusHtml,
     buildRecordBlock:      buildRecordBlock,

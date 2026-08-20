@@ -51,7 +51,7 @@
           <td>{{each_action}}</td>
           <td>{{dict_actions[each_action]['name']}}</td>
           <td>
-            {{form_action_delete.delete_action(class_='btn aot-pill-btn aot-pill-btn-primary w-100', **{'onclick':'return confirm("' + _('Are you sure you want to delete this?') + '")'})}}
+            {{form_action_delete.delete_action(class_='btn aot-pill-btn aot-pill-btn-danger w-100', **{'onclick':'return confirm("' + _('Are you sure you want to delete this?') + '")'})}}
           </td>
         </tr>
 

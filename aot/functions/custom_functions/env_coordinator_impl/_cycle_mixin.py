@@ -1315,6 +1315,93 @@ class CycleMixin:
     _SUMMARY_MAX_COMMANDS = 32
     _SUMMARY_MAX_TEXT     = 200
 
+    # 변수 × 편차 방향 → 그 방향으로 밀 수 있는 액추에이터 종류.
+    # `_KIND_CAPABILITIES` 와 같은 어휘를 쓴다(그쪽이 정본).
+    _STRAIN_KINDS = {
+        ('temperature', 'above'): ('cooler', 'opening', 'exhaust_fan', 'shade'),
+        ('temperature', 'below'): ('heater', 'curtain'),
+        ('humidity', 'above'):    ('opening', 'exhaust_fan', 'heater'),
+        ('humidity', 'below'):    ('fogger',),
+        ('vpd', 'above'):         ('fogger',),                 # 너무 건조
+        ('vpd', 'below'):         ('opening', 'exhaust_fan', 'heater'),
+        ('co2', 'below'):         ('co2_injector',),
+        ('co2', 'above'):         ('opening', 'exhaust_fan'),
+    }
+    _STRAIN_SATURATED_PCT = 99.0     # 이 이상이면 더 밀 여지가 없다고 본다
+    _STRAIN_MIN_SEC = 900.0          # 15분 — 한두 사이클의 흔들림과 가른다
+
+    def _assess_strain(self, situation, env_target, outputs_by_kind, ctx, now_ts):
+        """설비가 목표를 **못 따라가고 있는가** → dict|None.
+
+        화면이 "냉각기 100%" 만 보이면 그것이 좋은 신호인지 나쁜 신호인지 알 수
+        없다. 최대로 밀고 있는데도 편차가 안 줄면 그건 **설비 한계**이고, 사람이
+        해야 할 판단(차광을 더 치든, 목표를 낮추든, 장비를 늘리든)이 생긴다.
+
+        판정 셋을 모두 만족해야 한다:
+          1. 편차가 허용 오차를 넘는다
+          2. 그 방향으로 밀 수 있는 종류가 **전부** 포화(≥99%)
+          3. 추세가 목표 쪽으로 오지 않는다 — 그리고 그 상태가 15분 이상
+
+        한두 사이클의 흔들림을 "한계" 라고 부르면 경고가 값을 잃는다. 그래서
+        지속 시간을 함께 본다(상태는 인스턴스에 들고, 조건이 풀리면 지운다).
+        """
+        dev_all = situation.deviation_native or {}
+        trend_of = {'temperature': ctx.get('T_trend'),
+                    'humidity': ctx.get('RH_trend'),
+                    'co2': ctx.get('CO2_trend')}
+        since = getattr(self, '_strain_since', None)
+        if since is None:
+            since = {}
+            self._strain_since = since
+
+        worst = None
+        seen = set()
+        for var, tv in (env_target or {}).items():
+            if var.startswith('_'):
+                continue
+            dev = dev_all.get(var)
+            if dev is None:
+                continue
+            tol = float(getattr(tv, 'tolerance', 0.0) or 0.0)
+            if abs(dev) <= tol:
+                since.pop(var, None)
+                continue
+            kinds = self._STRAIN_KINDS.get((var, 'above' if dev > 0 else 'below'))
+            if not kinds:
+                since.pop(var, None)
+                continue
+            present = [k for k in kinds if k in outputs_by_kind]
+            if not present:
+                # 그 방향으로 밀 장치가 **아예 없다** — 이것도 사람이 알아야
+                # 하지만 "한계" 와는 다른 사실이라 따로 말한다.
+                since.pop(var, None)
+                if worst is None:
+                    worst = {'var': var, 'dev': round(dev, 2), 'kinds': [],
+                             'reason': 'no_actuator', 'since_s': 0}
+                continue
+            if not all(outputs_by_kind[k] >= self._STRAIN_SATURATED_PCT
+                       for k in present):
+                since.pop(var, None)
+                continue
+            # 추세가 목표 쪽으로 오고 있으면 기다리면 된다 — 한계가 아니다.
+            tr = trend_of.get(var)
+            if tr is not None and dev * tr < 0:
+                since.pop(var, None)
+                continue
+            since.setdefault(var, now_ts)
+            seen.add(var)
+            held = now_ts - since[var]
+            if held < self._STRAIN_MIN_SEC:
+                continue
+            cand = {'var': var, 'dev': round(dev, 2), 'kinds': present,
+                    'reason': 'saturated', 'since_s': int(held)}
+            if worst is None or cand['since_s'] > worst.get('since_s', 0):
+                worst = cand
+        for var in list(since):
+            if var not in seen:
+                since.pop(var, None)
+        return worst
+
     def _build_cycle_summary(self, now_ts: float, situation: SituationReport,
                              env_target: dict, final_cmds: dict,
                              commands: dict, gate_result: GateResult,
@@ -1439,9 +1526,13 @@ class CycleMixin:
         except Exception:
             pass
 
+        obk = {k: round(s / n, 1) for k, (s, n) in kind_acc.items() if n}
         return {
             'ts':              now_ts,
             'modes':           list(situation.modes or []),
+            # "설비가 못 따라가고 있다" — 숫자만 보고하지 않고 그 뜻을 말한다.
+            'strain':          self._assess_strain(
+                                   situation, env_target, obk, ctx, now_ts),
             'limiting_factor': situation.limiting_factor,
             'deviation': {k: _r(v) for k, v
                           in (situation.deviation_native or {}).items()},
@@ -1457,8 +1548,7 @@ class CycleMixin:
                 'open_ratio_pct':    (_r(vent_eff / vent_total * 100.0, 1)
                                       if vent_total > 0 else None),
             },
-            'outputs_by_kind': {k: round(s / n, 1)
-                                for k, (s, n) in kind_acc.items() if n},
+            'outputs_by_kind': obk,
             'gate': {
                 'triggered':   bool(gate_result.triggered),
                 'description': (gate_result.description or '')[:self._SUMMARY_MAX_TEXT],

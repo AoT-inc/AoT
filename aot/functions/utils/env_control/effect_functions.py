@@ -159,10 +159,23 @@ def opening_humid_effect(env: EnvContext, cmd_pct: float, profile=None) -> Effec
     return EffectResult(direction, magnitude)
 
 
+def _co2_excess(env) -> float:
+    """실내 CO₂ − 외기 CO₂. **측정이 없으면 0** (초과분을 알 수 없다).
+
+    예전에는 `env.get('CO2_int', 400.0)` 처럼 기본값을 썼는데, 그러면 센서가
+    없는 시설에서도 "외기와 같다" 는 가정이 값처럼 흘러 효과 모델이 돈다.
+    지금 `CO2_int` 는 측정이 없으면 **None** 이라(situation.py), 기본값을 두면
+    None 을 받아 그대로 TypeError 가 난다.
+    """
+    inside = env.get('CO2_int')
+    if inside is None:
+        return 0.0
+    return float(inside) - float(env.get('CO2_ext') or 400.0)
+
+
 def opening_co2_effect(env: EnvContext, cmd_pct: float, profile=None) -> EffectResult:
     """외부 CO₂(~400ppm)로 수렴. 내부가 더 높을 때만 희석 방향."""
-    co2_ext = env.get('CO2_ext', 400.0)
-    excess = env.get('CO2_int', 400.0) - co2_ext
+    excess = _co2_excess(env)
     if excess <= 20:
         return EffectResult('0', 0.0)
     af, _ = _gis_factor(profile, use_u=False)
@@ -462,7 +475,7 @@ def exhaust_fan_co2_effect(env: EnvContext, cmd_pct: float, profile=None) -> Eff
     ach = _exhaust_ach(cmd_pct, profile)
     if ach <= 0 or pf <= 0.0:
         return EffectResult('~', 0.0)
-    excess = max(0, env.get('CO2_int', 400) - env.get('CO2_ext', 400))
+    excess = max(0.0, _co2_excess(env))
     mag = excess * ach * (1 / 60.0) * K_EXHAUST_FAN_FACTOR * pf
     return EffectResult('↓', mag)
 
@@ -554,7 +567,7 @@ def _build_effect_model_raw(kind: str, k: dict) -> dict:
                                 abs(d) * (pct/100) * _k * _wind_boost(env) * af)
 
         def _co2(env, pct, profile=None, _k=k_co2):
-            ex = env.get('CO2_int', 400) - env.get('CO2_ext', 400)
+            ex = _co2_excess(env)
             if ex <= 20:
                 return EffectResult('0', 0.0)
             af, _u = _gis_factor(profile, use_u=False)

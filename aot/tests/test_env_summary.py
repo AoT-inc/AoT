@@ -62,6 +62,19 @@ def _make_dummy_self(profiles, last_ff_signal):
     obj._MOTOR_MIN_MOVE_SEC = HelpersMixin._MOTOR_MIN_MOVE_SEC
     obj._actuation_params = HelpersMixin._actuation_params.__get__(obj)
     obj._build_actuation_summary = CycleMixin._build_actuation_summary.__get__(obj)
+    # 목표·작물 상수는 **구획의 프로그램**에서 온다(2026-08-19). 요약이 그것을
+    # 읽으므로 스텁도 같은 표면을 가져야 한다 — DB 없이 도는 테스트라 빈 값으로.
+    obj._plot_targets = lambda: {'vpd': {'value': None, 'method_id': None},
+                                 'co2': {'value': None, 'method_id': None},
+                                 'dli': None, 'gdd_daily': None, 'T_base': None,
+                                 'model': {}, 'started_on': None,
+                                 'plot_name': None, 'stage': None,
+                                 'reason': 'none'}
+    obj._crop_params = HelpersMixin._crop_params.__get__(obj)
+    obj._STRAIN_KINDS = CycleMixin._STRAIN_KINDS
+    obj._STRAIN_SATURATED_PCT = CycleMixin._STRAIN_SATURATED_PCT
+    obj._STRAIN_MIN_SEC = CycleMixin._STRAIN_MIN_SEC
+    obj._assess_strain = CycleMixin._assess_strain.__get__(obj)
     return obj
 
 

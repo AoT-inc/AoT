@@ -82,9 +82,9 @@
         {% include 'pages/data_options/camera_options.html' %}
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn aot-pill-btn aot-pill-btn-primary" data-dismiss="modal">{{_('Close')}}</button>
+        <button type="button" class="btn aot-pill-btn" data-dismiss="modal">{{_('Close')}}</button>
         <button data-form-id="form_camera_options_{{each_camera.unique_id}}" onclick="return confirm('{{_('Are you sure you want to delete?')}}') && $(this).processRequest(this, 'camera_delete');"
-          class="btn aot-pill-btn aot-pill-btn-primary" type="button">{{_('Delete')}}</button>
+          class="btn aot-pill-btn aot-pill-btn-danger" type="button">{{_('Delete')}}</button>
         <button data-form-id="form_camera_options_{{each_camera.unique_id}}" onclick="return $(this).processRequest(this, 'camera_mod');"
           class="btn aot-pill-btn aot-pill-btn-primary" type="button">{{_('Save')}}</button>
       </div>

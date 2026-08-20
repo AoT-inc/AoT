@@ -834,11 +834,16 @@
         function _renderZoneOverview(uid, pane, data, zoneUuid) {
             var z = data.zone || {};
             if (!window.AoTMapPopup) { return; }
-            pane.innerHTML = window.AoTMapPopup.buildZoneStatusHtml(z, {
-                repKey: data.rep_key || null,
-                selectable: !!z.can_edit,
-                canAdd: !!z.can_edit
-            });
+            pane.innerHTML =
+                (window.AoTMapPopup.buildHazardsHtml
+                   ? window.AoTMapPopup.buildHazardsHtml(data.hazards) : '') +
+                (window.AoTMapPopup.buildIrrigationHtml
+                   ? window.AoTMapPopup.buildIrrigationHtml(data.irrigation) : '') +
+                window.AoTMapPopup.buildZoneStatusHtml(z, {
+                    repKey: data.rep_key || null,
+                    selectable: !!z.can_edit,
+                    canAdd: !!z.can_edit
+                });
             _wireZoneRepPick(uid, pane, zoneUuid, data);
             // 예정을 만드는 자리는 **노트 하나**다(노트 본문의 한 구간을 골라
             // 시각을 준다). 계층마다 별도 폼을 두면 사용자가 쓰기 전에 종류를
@@ -3916,18 +3921,13 @@
                     });
                     return;
                 }
-                // 환경값 블록 **다음**. 무엇이 자라는지는 그 값을 읽는 근거라
-                // 목록(액추에이터·일정)보다 위에 있어야 한다.
-                //
-                // 환경 블록은 `_prependFacilityEnvNow` 가 `afterbegin` 으로 넣고
-                // 이 함수는 그 뒤에 불리므로, 첫 자식이 곧 환경 블록이다. 다만
-                // 그쪽이 값을 하나도 못 만들면 블록이 없을 수 있어(센서 미등록
-                // 시설) 첫 자식 유무로 갈린다.
-                var first = pane.firstElementChild;
-                if (first && first.nextSibling) {
-                    pane.insertBefore(block, first.nextSibling);
-                } else if (first) {
-                    pane.appendChild(block);
+                // 정해진 자리(위치·시간 층)에 넣는다. 예전에는 "환경 블록이 첫
+                // 자식" 이라는 가정으로 그 뒤에 끼웠는데, 그 블록이 없는 시설
+                // (센서 미등록)이나 응답이 늦는 날에는 자리가 달라졌다.
+                var slot = pane.querySelector('[data-slot="plots"]');
+                if (slot) {
+                    slot.innerHTML = '';
+                    slot.appendChild(block);
                 } else {
                     pane.appendChild(block);
                 }
@@ -3966,6 +3966,13 @@
                 if (indoor.humidity_pct != null) {
                     readings.push({ key: 'RH', value: indoor.humidity_pct, unit: '%' });
                 }
+                // **VPD 는 이 시설의 1차 제어 목표다.** 센서가 재고 있는데도
+                // 화면이 읽지 않아 [현재]에 안 나왔다(2026-08-20 육묘장:
+                // indoor.vpd_kpa 는 계속 오고 있었다). 온·습도 다음에 둔다 —
+                // 목표와 편차가 붙는 자리도 여기다.
+                if (indoor.vpd_kpa != null) {
+                    readings.push({ key: 'VPD', value: indoor.vpd_kpa, unit: 'kPa' });
+                }
                 if (indoor.co2_ppm != null) {
                     readings.push({ key: 'CO2', value: indoor.co2_ppm, unit: 'ppm' });
                 }
@@ -3986,7 +3993,12 @@
                                total: sensors.total_count || 0 }
                 }, {
                     repKey: _facilityRepKey(uid, facilityUuid),
-                    selectable: canEdit
+                    selectable: canEdit,
+                    // 목표·편차는 코디네이터 요약에서 온다(측정과 다른 요청).
+                    // 값 옆에 붙어야 뜻이 생기므로 여기로 넘긴다 — 아직 안
+                    // 왔으면 그 줄만 빠지고 다음 주기에 붙는다.
+                    targets: (st._lastEnvSummary || {}).targets,
+                    deviation: (st._lastEnvSummary || {}).deviation
                 });
                 if (html) {
                     // 같은 값이면 DOM 을 건드리지 않는다(위 _loadOverview 주석).
@@ -3996,7 +4008,10 @@
                     if (cur && node) {
                         cur.replaceWith(node);
                     } else {
-                        pane.insertAdjacentHTML('afterbegin', html);
+                        // 정해진 자리에 넣는다(없으면 옛 동작으로 폴백).
+                        var slot = pane.querySelector('[data-slot="now"]');
+                        if (slot) slot.innerHTML = html;
+                        else pane.insertAdjacentHTML('afterbegin', html);
                     }
                     _wireFacilityRepPick(uid, facilityUuid, pane, canEdit);
                 }
@@ -4041,8 +4056,28 @@
                 //
                 // 내용이 같으면 손대지 않는다. 그러면 그 안의 배선(노트·토글)도
                 // 살아남아 다시 붙일 일이 없다. [개요] 탭이 이미 같은 규칙이다.
-                var ovHtml = window.AoTMapPopup.buildOverviewSection(
-                    res[0], res[1], { canToggle: st2.canCtrl });
+                // 다음 [현재] 렌더가 목표·편차를 값 옆에 붙일 수 있게 보관한다.
+                st2._lastEnvSummary = (res[0] || {}).summary || null;
+                // **순서는 개념 계층이다** — 위치·시간 → 데이터 → 제어 → 기록물.
+                // 큰 것에서 작은 것으로, 상위에서 하위로.
+                //
+                // 자리를 **먼저 깔고** 비동기 블록이 그 안을 채운다. 예전에는
+                // 도착한 순서대로 `afterbegin`/`insertBefore` 로 끼워 넣어,
+                // 응답이 늦는 날에는 순서가 뒤바뀌었다(그래서 "환경 블록이 첫
+                // 자식" 이라는 가정에 기대는 코드가 생겼다).
+                var ovHtml =
+                    // ① 위치·시간 — 지역(날씨)에서 이 시설(구획)로
+                    (window.AoTMapPopup.buildHazardsHtml
+                       ? window.AoTMapPopup.buildHazardsHtml(res[3]) : '') +
+                    '<div class="aot-ov-slot" data-slot="plots"></div>' +
+                    // ② 데이터
+                    '<div class="aot-ov-slot" data-slot="now"></div>' +
+                    // ③ 제어 — 직전에 한 일(관수) 다음에 지금 하는 일
+                    (window.AoTMapPopup.buildIrrigationHtml
+                       ? window.AoTMapPopup.buildIrrigationHtml(res[4]) : '') +
+                    // ③ 제어 상태 + ④ 기록물(노트)
+                    window.AoTMapPopup.buildOverviewSection(
+                        res[0], res[1], { canToggle: st2.canCtrl });
                 var ovSame = (st2._ovHtml === ovHtml) && pane.children.length > 0;
                 if (!ovSame) {
                     st2._ovHtml = ovHtml;
@@ -4098,6 +4133,10 @@
 
                 // 설명 편집/저장 (editor 이상에서만 편집 UI 렌더됨, 위와 동일 정책)
                 var descEdit   = aboutChanged ? wireEl.querySelector('.aot-ov-desc-edit') : null;
+                // 숨기는 것은 버튼이 아니라 **버튼이 든 행**이다. 버튼만 숨기면
+                // 빈 행이 남아 편집 중에만 블록 아래가 한 줄만큼 벌어진다.
+                var descEditRow = descEdit
+                    ? (descEdit.closest('.aot-ov-actions') || descEdit) : null;
                 var descView   = wireEl.querySelector('.aot-ov-desc-view');
                 var descWrap   = wireEl.querySelector('.aot-ov-desc-editwrap');
                 var descInput  = wireEl.querySelector('.aot-ov-desc-input');
@@ -4107,7 +4146,7 @@
                     descEdit.addEventListener('click', function () {
                         st2._ovEditing = true;
                         descView.style.display = 'none';
-                        descEdit.style.display = 'none';
+                        descEditRow.style.display = 'none';
                         descWrap.style.display = '';
                         if (descInput) descInput.focus();
                     });
@@ -4115,7 +4154,7 @@
                         st2._ovEditing = false;
                         descWrap.style.display = 'none';
                         descView.style.display = '';
-                        descEdit.style.display = '';
+                        descEditRow.style.display = '';
                     });
                     if (descSave) descSave.addEventListener('click', function () {
                         descSave.disabled = true;
@@ -4164,7 +4203,8 @@
                         st0.repEditByFac[facilityUuid] = !!j.can_edit;
                     }
                     _render([j.env_summary || null, j.status || null,
-                             j.info || null]);
+                             j.info || null, j.hazards || null,
+                             j.irrigation || null]);
 
                     // 상위 필지로 올라가는 화살표 + 상태 점
                     var st2 = _actLabelState[uid];

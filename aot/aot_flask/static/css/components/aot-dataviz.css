@@ -1,0 +1,252 @@
+/* aot-dataviz.css — 공용 데이터 시각화 프리미티브 (밴드 바 · 불릿 · 기간 바)
+ *
+ * 하나의 골격을 세 가지로 쓴다. 마크업이 같으므로 세 곳의 톤이 갈리지 않는다:
+ *
+ *   .aot-viz-head    라벨 + 값 (한 줄)
+ *   .aot-viz-track   전체 범위 — 중립 회색
+ *     .aot-viz-ok      구간   — 적정 범위(밴드) · 현재 단계(기간 바)
+ *     .aot-viz-fill    구간   — 채운 양(불릿). .aot-viz-ok 와 같은 색·모양이다
+ *     .aot-viz-tick    구간 경계 (기간 바)
+ *     .aot-viz-now     마커   — 지금 값(밴드) · 오늘(기간 바)
+ *     .aot-viz-target  마커   — 목표(불릿). .aot-viz-now 와 같은 색·모양이다
+ *   .aot-viz-scale   눈금 — 양 끝은 축의 끝, 가운데는 그 줄의 기준
+ *
+ * ── 색 규칙 (이 파일이 쓰는 색은 아래 3개뿐) ──────────────────────────────
+ *
+ *   트랙   "전체 범위"   text_color_primary 10% 혼합 — 중립 회색
+ *   구간   "여기다"       color_success 45% 혼합
+ *   마커   "이 지점"      text_color_primary
+ *
+ * 셋 다 settings/custom_ui 가 제어하는 필드다(forms_settings.THEME_COLOR_FIELDS,
+ * /custom.css 의 var_map 이 --aot-color-text-primary / --aot-color-success 로
+ * 발행한다). **custom_ui 가 제어하지 않는 색을 여기에 새로 넣지 말 것** —
+ * 운영자가 테마를 바꿔도 이 컴포넌트만 옛 색으로 남는다.
+ *
+ * ⚠ 다크 테마 사용자에게는 /custom.css 가 이 두 토큰을 **발행하지 않는다**
+ * (routes_general 의 dark_overridden — 늦게 로드되는 /custom.css 가
+ * custom-dark.css 의 다크 대응값을 라이트 값으로 덮어 어두운 배경에 어두운
+ * 글자를 만드는 것을 막기 위함). 즉 다크에서는 custom-dark.css 의 값이 쓰인다.
+ * 이 컴포넌트만의 예외가 아니라 앱 전역 규칙이다.
+ *
+ * 역할이 같으면 색도 모양도 같다. 불릿의 채운 막대는 밴드 바의 적정 구간과
+ * 같은 초록이고(둘 다 "여기다" 를 말하는 면이다), 불릿의 목표 눈금은 밴드
+ * 바의 현재 마커와 같은 마커다(둘 다 "이 지점" 이다). 트랙 높이와 라운드도
+ * 셋이 같다. 하나라도 갈라지면 세 블록이 나란히 놓였을 때 서로 다른 그림처럼
+ * 읽힌다 — 실제로 그렇게 만들었다가 되돌렸다(불릿만 진한 회색 막대 + 달성 시
+ * 밝은 초록, 트랙 높이 10/14/12px).
+ *
+ * 트랙을 회색 리터럴(--aot-bg-off 등)이 아니라 text_color_primary 의 혼합으로
+ * 만드는 이유: --aot-bg-* 는 라이트/다크에서 값이 갈리지 않아(다크 재정의가
+ * custom-dark.css 에 없다) 어두운 카드 위에서 밝은 회색 덩어리가 된다.
+ * 글자색을 섞으면 두 테마 모두에서 "배경보다 한 단계 진한 면" 이 된다.
+ *
+ * **줄마다 색을 바꾸는 손잡이를 두지 않는다.** 한 화면에 여러 줄이 서로 다른
+ * 색으로 서면 그것이 곧 "제각각" 이다. 지표를 구분하는 것은 색이 아니라
+ * 왼쪽의 이름이고, 계열별 색이 필요한 자리는 그래프 위젯이다.
+ * 같은 지표를 단계별로 여러 색으로 칠하지도 않는다 — 단계는 위치가 말한다.
+ * 목표 달성도 색으로 말하지 않는다(막대가 목표 눈금을 넘었는지로 읽는다).
+ */
+
+.aot-viz {
+  /* 구간 색 — 적정 범위 · 채운 양 · 현재 단계가 전부 이 하나를 쓴다. */
+  --aot-viz-zone: color-mix(in srgb, var(--aot-color-success) 45%, transparent);
+  /* 마커 테두리색 — 트랙 위에서 마커가 묻히지 않게 감싸는 링.
+     담는 카드의 배경과 같아야 하므로 색이 아니라 '바탕' 이다.
+     .aot-ov-block 과 같은 토큰을 쓴다. */
+  --aot-viz-surface: var(--aot-surface-card, #ffffff);
+  --aot-viz-track-h: 12px;
+
+  display: block;
+  font-size: var(--aot-font-size-base);
+  color: var(--aot-color-text-primary);
+}
+/* ── 간격 ────────────────────────────────────────────────────────────────
+   두 값으로 리듬을 만든다.
+
+     tail  한 줄이 **자기 아래에 갖는 몫**. 담는 쪽의 padding 에 기대면 어디에
+           넣느냐에 따라 마지막 줄이 카드 테두리에 붙어 답답해진다. 담는 카드의
+           모서리 라운드(.aot-ov-block = 16px) 이상이어야 마지막 줄의 눈금이
+           둥근 모서리 안쪽으로 들어가지 않는다.
+     gap   줄과 줄 사이의 **전체** 거리. 줄 안의 여백(제목 6 + 눈금 6 = 12px)의
+           배 이상이어야 한 줄이 한 덩어리로 묶여 읽힌다. 좁으면 앞 줄의 눈금이
+           다음 줄의 제목에 붙어, 어느 눈금이 어느 막대의 것인지 매번 되짚게
+           된다 — 그 되짚음이 곧 "복잡해 보인다" 이다.
+
+   묶음(.aot-viz-group)이 아래 여백을 계산할 때도 tail 을 읽어야 하는데 부모는
+   자식의 커스텀 속성을 못 읽는다 — 그래서 두 선택자에 함께 정의한다. */
+.aot-viz,
+.aot-viz-group {
+  --aot-viz-tail: 16px;
+  --aot-viz-gap: 34px;
+}
+
+.aot-viz { padding-bottom: var(--aot-viz-tail); }
+
+/* 줄 사이는 gap 이 정한다 — tail 을 이미 갖고 있으므로 나머지만 더한다.
+   묶음의 경계는 선이 아니라 여백이 만든다. */
+.aot-viz + .aot-viz {
+  margin-top: calc(var(--aot-viz-gap) - var(--aot-viz-tail));
+}
+
+/* ── 머리줄 — 라벨과 값 ──────────────────────────────────────────────────
+   값은 마커 위에 띄우지 않는다. 좁은 화면에서 마커가 양 끝에 붙으면 잘리고,
+   두 개 이상 나란히 두면 서로 겹친다. 값이 늘 같은 자리(오른쪽 끝)에 있어야
+   여러 줄을 위아래로 훑을 수 있다. */
+.aot-viz-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 6px;
+  line-height: 1.35;
+}
+.aot-viz-label {
+  color: var(--aot-color-text-secondary);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.aot-viz-value {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+/* 값의 부속 정보(목표·단위·기준)는 한 단계 약하게 — 한 열에 두 정보를
+   나란히 두되 무게로 갈라 놓는다. */
+.aot-viz-value small {
+  font-size: var(--aot-font-size-xs);
+  font-weight: 600;
+  color: var(--aot-color-text-secondary);
+}
+
+/* ── 트랙 ───────────────────────────────────────────────────────────────── */
+.aot-viz-track {
+  position: relative;
+  height: var(--aot-viz-track-h);
+  border-radius: calc(var(--aot-viz-track-h) / 2);
+  background: color-mix(in srgb, var(--aot-color-text-primary) 10%, transparent);
+  /* 마커의 링이 트랙 밖으로 나가야 하므로 overflow 를 자르지 않는다. */
+}
+
+/* 구간 — 적정 범위(밴드) · 채운 양(불릿) · 현재 단계(기간 바).
+   셋이 같은 것을 말하므로 같은 규칙 하나로 그린다. */
+.aot-viz-ok,
+.aot-viz-fill {
+  position: absolute;
+  top: 0; bottom: 0;
+  border-radius: inherit;
+  background: var(--aot-viz-zone);
+}
+/* 채운 양은 언제나 왼쪽 끝에서 시작한다. 값이 0 이어도 자리는 보이게 둔다 —
+   폭이 0 이면 "값이 없다" 와 구분되지 않는다. */
+.aot-viz-fill { left: 0; min-width: 3px; }
+
+/* 마커 — 지금 값(밴드) · 오늘(기간 바) · 목표(불릿).
+   셋 다 "이 지점" 이므로 모양이 같다. 불릿에는 현재 마커가 없다(채운 막대의
+   끝이 곧 현재다)라서 목표와 헷갈릴 자리가 없다. */
+.aot-viz-now,
+.aot-viz-target {
+  position: absolute;
+  top: -3px; bottom: -3px;
+  width: 3px;
+  margin-left: -1.5px;      /* left 값이 마커의 '중심' 이 되게 한다 */
+  border-radius: 2px;
+  background: var(--aot-color-text-primary);
+  box-shadow: 0 0 0 2px var(--aot-viz-surface);
+}
+
+/* 구간 경계 (기간 바) — 배경을 파내서 그린다. 경계마다 색을 주면 단계 수만큼
+   색이 늘어난다. */
+.aot-viz-tick {
+  position: absolute;
+  top: 0; bottom: 0;
+  width: 2px;
+  margin-left: -1px;
+  background: var(--aot-viz-surface);
+  opacity: 0.85;
+}
+
+/* ── 눈금 라벨 ──────────────────────────────────────────────────────────── */
+.aot-viz-scale {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 6px;
+  font-size: var(--aot-font-size-xs);
+  color: var(--aot-color-text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+.aot-viz-scale > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.aot-viz-scale > span:nth-child(2):not(:last-child) { text-align: center; }
+.aot-viz-scale > span:last-child:not(:first-child) { text-align: right; }
+/* 기준 라벨. 축의 끝보다 진하지만 **제목·값보다는 가볍다** — 한 줄에 굵은
+   글자가 셋이면 어디를 먼저 볼지 정해지지 않아 복잡해 보인다. */
+.aot-viz-scale .aot-viz-scale-anchor {
+  color: var(--aot-color-text-primary);
+  font-weight: 600;
+}
+
+/* 가운데 라벨은 **그 줄의 기준**을 가리키고, 가리키는 것의 위치에 붙는다
+   (밴드=적정 구간의 중앙 · 불릿=목표 눈금 · 기간 바=오늘). 가운데 고정으로
+   두면 기준이 왼쪽 끝에 있는데 라벨은 가운데 있어, 둘이 서로 다른 것을
+   가리키는 것처럼 읽힌다.
+   양 끝 항목은 흐름대로 두고 가운데만 띄운다 — 셋을 전부 절대배치하면 좁은
+   화면에서 서로 겹친다. */
+.aot-viz-scale--anchored { position: relative; }
+.aot-viz-scale--anchored .aot-viz-scale-anchor {
+  position: absolute;
+  top: 0;
+  max-width: 60%;
+  /* 양 끝 라벨과 부딪히지 않게 바탕을 깔아 위로 올린다. */
+  padding: 0 4px;
+  background: var(--aot-viz-surface);
+  z-index: 1;
+}
+
+/* ── 변형 ───────────────────────────────────────────────────────────────── */
+
+/* 변형별로 트랙 높이나 라운드를 바꾸지 않는다. 굵기가 다르면 세 블록이
+   나란히 놓였을 때 서로 다른 그림으로 읽힌다 — 차이는 '무엇을 그리느냐'
+   에서만 나야 한다.
+   .aot-viz--band / --bullet / --timeline 은 지금 모양을 바꾸지 않고, 나중에
+   변형이 필요할 때 붙일 자리와 디버깅용 표식으로만 남겨 둔다. */
+
+/* 범위를 벗어남 — 막대 색을 늘리지 않고 **값 글자**만 위험색으로 바꾼다.
+   벗어났다는 사실은 이미 마커 위치가 말하고 있으므로, 색은 그것을 거들기만
+   하면 된다. */
+.aot-viz.is-out .aot-viz-value { color: var(--aot-color-danger); }
+
+/* 값이 오래됨 — 앱 전역의 stale 표기와 같은 어휘를 쓴다(숨기지 않고 흐리게). */
+.aot-viz.is-stale .aot-viz-value { opacity: 0.55; }
+.aot-viz.is-stale .aot-viz-now,
+.aot-viz.is-stale .aot-viz-target { opacity: 0.5; }
+
+/* 값이 없음 — 트랙만 남기고 마커를 그리지 않는다. '0' 으로 그리면 없는 값이
+   가장 낮은 값처럼 읽힌다. */
+.aot-viz.is-empty .aot-viz-track { opacity: 0.5; }
+.aot-viz.is-empty .aot-viz-value { color: var(--aot-color-text-secondary); font-weight: 600; }
+
+/* ── 묶음 ───────────────────────────────────────────────────────────────── */
+.aot-viz-group {
+  display: block;
+  /* 담는 카드의 **모서리 라운드 높이만큼은 아래 여백으로 보장한다.**
+     .aot-ov-block 은 border-radius 16px 에 세로 padding 이 10px 뿐이라,
+     여기서 더 벌리지 않으면 마지막 줄의 눈금이 둥근 모서리 안쪽으로 들어가
+     테두리에 닿는다. 줄이 이미 10px 를 갖고 있으므로 모자란 만큼만 더한다.
+     라운드가 더 큰 곳에 넣는다면 --aot-viz-edge 를 그 값으로 지정할 것. */
+  --aot-viz-edge: 16px;
+  padding-bottom: max(0px, calc(var(--aot-viz-edge) - var(--aot-viz-tail)));
+}
+
+/* ── 좁은 화면 ──────────────────────────────────────────────────────────
+   지도 모달은 폰에서 화면 폭 전체를 쓴다. 여기서 줄 간격을 **좁히지 말 것** —
+   줄이 좁아지는 것이 아니라 화면이 좁아지는 것이라, 오히려 위아래 이웃과
+   붙어 보이기 쉽다. 트랙 높이와 글자 크기도 그대로 둔다(마커를 못 읽는다). */
+
+@media (prefers-reduced-motion: no-preference) {
+  .aot-viz-fill, .aot-viz-ok, .aot-viz-now, .aot-viz-target {
+    transition: left 0.25s ease, width 0.25s ease;
+  }
+}

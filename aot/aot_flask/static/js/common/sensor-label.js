@@ -249,16 +249,22 @@
   //               그대로 이 컴포넌트 것이라 진입점은 여전히 하나다.
   function notesBlockHtml(opts) {
     opts = opts || {};
+    // **행동을 요구하는 요소는 오른쪽 아래.** 제목 줄에 붙어 있던 버튼을 목록
+    // 아래로 내린다 — 제목은 무엇인지 말하는 자리이고, 버튼은 다 읽은 뒤 누르는
+    // 것이라 시선이 끝나는 곳에 있어야 한다. 자리·모양은 `.aot-ov-actions` +
+    // `.aot-ov-pill` 하나로 통일한다(구획 추가 버튼과 같은 것).
     var head =
-      '<div class="' + (opts.sub ? 'aot-ov-sub-title' : 'aot-ov-sec-title') +
-        ' aot-ov-sec-title--row">' +
-        '<span>' + _escape(opts.title || _t('Notes')) + '</span>' +
+      '<div class="' + (opts.sub ? 'aot-ov-sub-title' : 'aot-ov-sec-title') + '">' +
+        _escape(opts.title || _t('Notes')) +
+      '</div>';
+    var list = '<div class="aot-ov-notes-list"><span class="aot-ov-muted">…</span></div>';
+    var action =
+      '<div class="aot-ov-actions">' +
         '<button type="button" class="aot-ov-pill aot-ov-notes-open">' +
         _escape(_t('Open Notes')) + '</button>' +
       '</div>';
-    var list = '<div class="aot-ov-notes-list"><span class="aot-ov-muted">…</span></div>';
-    if (opts.sub) return head + list;
-    return '<div class="aot-ov-block aot-ov-notes">' + head + list + '</div>';
+    if (opts.sub) return head + list + action;
+    return '<div class="aot-ov-block aot-ov-notes">' + head + list + action + '</div>';
   }
 
   // 미리보기 목록을 그린다. notes 는 /notes/target/<uuid> 응답(최신순).

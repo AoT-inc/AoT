@@ -51,7 +51,7 @@
             <td>{{ each_output }}</td>
             <td>{{ dict_outputs[each_output]['output_name'] }}</td>
             <td>
-              {{ form_output_delete.delete_output(class_='btn aot-pill-btn aot-pill-btn-primary w-100', **{'onclick':'return confirm("' + _('Are you sure you want to delete this output?') + '")'}) }}
+              {{ form_output_delete.delete_output(class_='btn aot-pill-btn aot-pill-btn-danger w-100', **{'onclick':'return confirm("' + _('Are you sure you want to delete this output?') + '")'}) }}
             </td>
           </tr>
 

@@ -849,7 +849,7 @@ IMPORTANT: This is the SOURCE TEMPLATE file.
           </div>
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn aot-pill-btn aot-pill-btn-primary" data-dismiss="modal">{{ _('Close') }}</button>
+          <button type="button" class="btn aot-pill-btn" data-dismiss="modal">{{ _('Close') }}</button>
           <button type="submit" form="user_account_form" class="btn aot-pill-btn aot-pill-btn-primary"
             id="user_account_save" name="user_account_save" value="save">{{ _('Save') }}</button>
         </div>
@@ -884,14 +884,14 @@ IMPORTANT: This is the SOURCE TEMPLATE file.
             </div>
           </div>
           <div class="modal-footer">
-            {{ form_dashboard.dash_modify(class_='btn aot-pill-btn aot-pill-btn-primary') }}
-            {{ form_dashboard.dash_delete(class_='btn aot-pill-btn aot-pill-btn-primary', **{'onclick':'return confirm("' + _("Are you sure you want to delete?") + '")'}) }}
-            {{ form_dashboard.dash_duplicate(class_='btn aot-pill-btn aot-pill-btn-primary', **{'onclick':'return confirm("' + _("Are you sure you want to duplicate the dashboard and all its widgets?") + '")'}) }}
+            {{ form_dashboard.dash_delete(class_='btn aot-pill-btn aot-pill-btn-danger', **{'onclick':'return confirm("' + _("Are you sure you want to delete?") + '")'}) }}
+            {{ form_dashboard.dash_duplicate(class_='btn aot-pill-btn', **{'onclick':'return confirm("' + _("Are you sure you want to duplicate the dashboard and all its widgets?") + '")'}) }}
             {% if each_dash.locked %}
-            {{ form_dashboard.unlock(class_='btn aot-pill-btn aot-pill-btn-primary') }}
+            {{ form_dashboard.unlock(class_='btn aot-pill-btn') }}
             {% else %}
-            {{ form_dashboard.lock(class_='btn aot-pill-btn aot-pill-btn-primary') }}
+            {{ form_dashboard.lock(class_='btn aot-pill-btn') }}
             {% endif %}
+            {{ form_dashboard.dash_modify(class_='btn aot-pill-btn aot-pill-btn-primary') }}
           </div>
         </form>
       </div>
@@ -1102,7 +1102,7 @@ IMPORTANT: This is the SOURCE TEMPLATE file.
         </div>
         <div class="modal-footer justify-content-center border-0 pt-0">
           <button type="button" class="btn aot-pill-btn aot-pill-btn-primary aot-confirm-ok">{{_('OK')}}</button>
-          <button type="button" class="btn aot-pill-btn aot-pill-btn-primary" data-dismiss="modal">{{_('Cancel')}}</button>
+          <button type="button" class="btn aot-pill-btn" data-dismiss="modal">{{_('Cancel')}}</button>
         </div>
       </div>
     </div>

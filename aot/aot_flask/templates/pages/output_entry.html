@@ -21,10 +21,6 @@
       </div>
 
       <div class="aot-entry-content-item aot-output-col-4">
-        {% for did in dict_member_devices.get(each_output.unique_id, []) if dict_device_names and did in dict_device_names %}
-        <a class="badge badge-secondary aot-badge-inline" href="/device#device_card_{{did}}"
-          title="{{ _('Part of device') }}: {{ dict_device_names[did] }}">{{ dict_device_names[did] }}</a>
-        {% endfor %}
         <div id="output_name_{{each_output.unique_id}}" class="form-control aot-entry-name-input" title="{{each_output.name}}">{{each_output.name}}</div>
       </div>
       <div class="aot-entry-content-item aot-output-col-6">
@@ -149,13 +145,13 @@
         {% include 'pages/output_options.html' %}
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn aot-pill-btn aot-pill-btn-primary" data-dismiss="modal">{{_('Close')}}</button>
+        <button type="button" class="btn aot-pill-btn" data-dismiss="modal">{{_('Close')}}</button>
         <button data-form-id="mod_output_form_{{each_output.unique_id}}"
           data-aot-confirm="{{_('Are you sure you want to delete?')}}" data-aot-action="output_delete"
-          class="btn aot-pill-btn aot-pill-btn-primary" type="button">{{_('Delete')}}</button>
+          class="btn aot-pill-btn aot-pill-btn-danger" type="button">{{_('Delete')}}</button>
         <button data-form-id="mod_output_form_{{each_output.unique_id}}"
           data-aot-confirm="{{_('Are you sure you want to duplicate?')}}" data-aot-action="output_duplicate"
-          class="btn aot-pill-btn aot-pill-btn-primary" type="button">{{_('Duplicate')}}</button>
+          class="btn aot-pill-btn" type="button">{{_('Duplicate')}}</button>
         <button data-form-id="mod_output_form_{{each_output.unique_id}}" id="mod_output_save_{{each_output.unique_id}}"
           onclick="return $(this).processRequest(this, 'output_mod');"
           class="btn aot-pill-btn aot-pill-btn-primary" type="button">{{_('Save')}}</button>

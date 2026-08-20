@@ -39,6 +39,12 @@ def _update_trend(state: TrendState, now: float, values: Dict[str, float]) -> Di
     """히스토리 갱신 후 각 변수의 변화율(단위/min) 반환."""
     slopes: Dict[str, float] = {}
     for var, val in values.items():
+        # **측정이 없는 주기는 이력에 넣지 않는다.** 넣으면 회귀 계산이 None 을
+        # 더하다 죽고(사이클 통째로 실패), 0 으로 바꿔 넣으면 없는 값이 급락
+        # 추세로 둔갑한다. 그 변수의 기울기는 0(모름)으로 둔다.
+        if val is None:
+            slopes[var] = 0.0
+            continue
         buf = state.history.setdefault(var, [])
         buf.append((now, val))
         # 윈도우 바깥 포인트 제거
@@ -103,7 +109,12 @@ def assess(
     ctx: EnvContext = {
         'T_int':   internal.get('T',   0.0),
         'RH_int':  internal.get('RH',  0.0),
-        'CO2_int': internal.get('CO2', 400.0),
+        # **없는 측정을 400 으로 지어내지 않는다.** 그러면 CO₂ 센서가 없는
+        # 시설에서도 편차가 계산돼 화면이 "CO2 −500 ppm 벗어남" 이라 말하는데,
+        # 바로 옆 광합성 블록은 같은 값을 "—"(없음) 으로 보인다 — 한 화면이 두
+        # 소리를 낸다(2026-08-20 지적). None 이면 `_get_measured` 가 그 항목을
+        # 건너뛰므로 편차도, 그 편차를 근거로 한 모드도 서지 않는다.
+        'CO2_int': internal.get('CO2'),
         'VPD_int': internal.get('VPD', 0.0),
         'T_ext':   external.get('T',   20.0),
         'RH_ext':  external.get('RH',  60.0),
@@ -215,9 +226,10 @@ def _assess_limiting_factor(ctx: EnvContext, light_sat: Optional[float] = None) 
     if solar < sat:
         scores['light'] = (sat - solar) / sat
 
-    # CO₂ 제한
-    co2 = ctx['CO2_int']
-    if co2 < _CO2_OPT:
+    # CO₂ 제한 — 측정이 없으면 판단하지 않는다(없는 값으로 제한 인자를
+    # 고르면 늘 CO₂ 가 부족하다고 답한다).
+    co2 = ctx.get('CO2_int')
+    if co2 is not None and co2 < _CO2_OPT:
         scores['co2'] = max(0.0, (_CO2_OPT - co2) / (_CO2_OPT - _CO2_COMP + 1e-6))
 
     # 온도 제한
@@ -262,7 +274,7 @@ def _decide_modes(
     modes: List[str] = []
     T_now   = ctx['T_int']
     RH_now  = ctx['RH_int']
-    CO2_now = ctx['CO2_int']
+    CO2_now = ctx.get('CO2_int')
     solar   = ctx.get('solar', 0.0)
 
     T_trend   = ctx.get('T_trend',   0.0)   # °C/min
@@ -318,7 +330,9 @@ def _decide_modes(
                 modes.append(MODE_HUMIDIFY)
 
     # ── CO₂ ─────────────────────────────────────────────────────────────────
-    if 'co2' in target:
+    # 측정이 없으면 주입 판단을 하지 않는다 — 없는 값으로 "부족하다" 고 답하면
+    # 센서 없는 시설에서 낮마다 CO₂ 주입 모드가 선다.
+    if 'co2' in target and CO2_now is not None:
         cv  = target['co2']
         dev = CO2_now - cv.value
         if CO2_now < cv.value - cv.tolerance and solar > 10:

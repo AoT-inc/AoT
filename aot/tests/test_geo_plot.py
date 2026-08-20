@@ -5943,15 +5943,16 @@ class TestEmptyStatesKeepTheirTitle(unittest.TestCase):
         self.assertIn('AoTMapPopup.emptyBlock(', sec)
         self.assertIn("'No sensors are linked to this place yet.'", sec)
 
-    def test_missing_coordinator_notice_is_a_titled_block(self):
+    def test_status_tab_has_no_control_toggle(self):
+        """자동 제어를 켜고 끄는 것은 시설 설정에서 하는 일이다. [현황]은
+        "지금 어떤가" 만 말한다 — 조작 손잡이가 섞이면 상태를 보러 온 사람이
+        설정 화면을 보게 된다(2026-08-20 사용자 지적)."""
         body = _read(self._POPUP).split('function buildOverviewSection', 1)[1].split(
             '\n  function ', 1)[0]
-        notice = body.split('if (!fn) {', 1)[1].split('return html', 1)[0]
-        self.assertIn("_t('Automatic control')", notice)
-        self.assertIn("_t('No automatic control is linked to this facility')", notice)
-        # 함수가 없을 때 내용 없는 헤더 블록을 내보내지 않는다(테두리만 남는다).
-        header = body.split('블록 0', 1)[1].split('if (!fn)', 1)[0]
-        self.assertIn("if (fn) {", header.split('html +=', 1)[0] + 'html +=')
+        for gone in ('aot-iec-toggle', 'Auto Control On', 'canToggle'):
+            self.assertNotIn(gone, body, '현황에 조작 손잡이가 남아 있다: %s' % gone)
+        # 응답 없음은 상태라 남는다 — 그때도 제목이 무엇에 대한 말인지 밝힌다.
+        self.assertIn("_t('Automatic control')", body)
 
     def test_empty_state_titles_are_translated(self):
         """번역이 없으면 한국어 화면에 영어 한 줄만 남는다 — 빈 상태는 그 자체로
@@ -6150,11 +6151,14 @@ class TestCoordinatorPlotWiring(unittest.TestCase):
         self.assertIn("each_function.device == 'env_coordinator'", src)
         self.assertIn('class="aot-coord-plot"', src)
 
-    def test_facility_modal_uses_the_same_loader(self):
-        """모달이 자기 표를 따로 만들면 규칙이 곧 갈라진다 — 앵커만 낸다."""
+    def test_facility_modal_no_longer_lists_targets(self):
+        """목표 목록은 [현황]에서 뺐다(2026-08-20) — 목표만 나열하면 "그래서
+        지금 맞나" 에 답하지 못한 채 칸만 차지한다. 목표는 값 옆에 붙고
+        (`buildEnvNowHtml`), 전체 목록은 그것을 정하는 함수 설정에서 본다."""
         src = _read(self._POPUP)
-        self.assertIn("'<div class=\"aot-coord-plot aot-ov-block\" data-compact=\"1\"'",
-                      src)
+        self.assertNotIn('aot-coord-plot', src)
+        # 로더 자체는 설정 화면이 그대로 쓴다 — 지우지 않았다.
+        self.assertTrue(os.path.exists(self._JS))
         # 비교 규칙(어느 옵션과 견주는가)이 위젯 쪽에 복제되면 안 된다.
         for leaked in ('target_vpd', 'vpd_sp_type', 'gdd_target_daily'):
             self.assertNotIn(leaked, src)
@@ -6401,3 +6405,90 @@ class TestModelConstantsComeFromTheProgram(_CoordPlotFixture, unittest.TestCase)
         self.assertTrue(program_io._check_photosynthesis({'VPD_half': 99}))
         # 모르는 키는 거부하지 않는다 — 어휘가 늘 때 저장이 막히면 안 된다.
         self.assertIsNone(program_io._check_photosynthesis({'future_key': 1}))
+
+
+class TestPlotTimeline(_CoordPlotFixture, unittest.TestCase):
+    """기간 축 — 시작·현재·단계 경계를 한 줄로.
+
+    계산은 **서버에만** 둔다. 단계 길이·기준점(P5)·"끝까지" 단계 처리가 전부
+    여기 규칙이라, 화면이 다시 조립하면 두 곳이 곧 갈린다.
+    """
+
+    def _linked(self, stages, days_ago=2):
+        from aot.aot_flask.extensions import db
+        from aot.databases.models import GeoProgram
+        prog = GeoProgram(name='P', kind='vegetation', subject='상추',
+                          stages=stages)
+        db.session.add(prog)
+        db.session.commit()
+        row = self._plot('상추', days_ago=days_ago)
+        row.program_uuid = prog.unique_id
+        db.session.commit()
+        return row
+
+    _S3 = [{'key': 'a', 'name': '육묘기', 'days': 3},
+           {'key': 'b', 'name': '생육기', 'days': 7},
+           {'key': 'c', 'name': '수확기', 'days': None}]
+
+    def test_segments_span_the_axis(self):
+        from aot.aot_flask.geo import plot_context
+        tl = plot_context.timeline(self._linked(self._S3))
+        self.assertEqual(0.0, tl['stages'][0]['from_pct'])
+        self.assertEqual(100.0, tl['stages'][-1]['to_pct'])
+        for a, b in zip(tl['stages'], tl['stages'][1:]):
+            self.assertEqual(a['to_pct'], b['from_pct'], '구간 사이가 벌어졌다')
+
+    def test_current_stage_is_marked_once(self):
+        from aot.aot_flask.geo import plot_context
+        tl = plot_context.timeline(self._linked(self._S3, days_ago=4))
+        cur = [s for s in tl['stages'] if s['current']]
+        self.assertEqual(1, len(cur))
+        self.assertEqual('생육기', cur[0]['name'])
+
+    def test_open_ended_program_has_no_end_date(self):
+        """마지막 단계가 "끝까지" 면 종료일을 **지어내지 않는다** — 축에 날짜를
+        적으면 화면이 "그날 끝난다" 고 말하게 된다."""
+        from aot.aot_flask.geo import plot_context
+        tl = plot_context.timeline(self._linked(self._S3))
+        self.assertTrue(tl['open_end'])
+        self.assertIsNone(tl['end'])
+        # 열린 구간도 폭은 있어야 한다 — 0 이면 축에서 사라진다.
+        self.assertGreater(tl['stages'][-1]['to_pct'],
+                           tl['stages'][-1]['from_pct'])
+
+    def test_closed_program_gets_an_end_date(self):
+        from aot.aot_flask.geo import plot_context
+        stages = [{'key': 'a', 'name': '1', 'days': 3},
+                  {'key': 'b', 'name': '2', 'days': 7}]
+        tl = plot_context.timeline(self._linked(stages))
+        self.assertFalse(tl['open_end'])
+        self.assertEqual(10, tl['total_days'])
+        self.assertIsNotNone(tl['end'])
+
+    def test_past_the_end_is_not_clamped(self):
+        """예정을 넘긴 것 자체가 정보다 — 100%로 잘라 버리면 늦었다는 사실이
+        화면에서 사라진다."""
+        from aot.aot_flask.geo import plot_context
+        stages = [{'key': 'a', 'name': '1', 'days': 2}]
+        tl = plot_context.timeline(self._linked(stages, days_ago=10))
+        self.assertGreater(tl['today_pct'], 100.0)
+
+    def test_carried_in_the_control_brief(self):
+        """시설 모달이 읽는 payload 에 실려야 화면이 그린다."""
+        from aot.aot_flask.geo import plot_context
+        row = self._linked(self._S3)
+        brief = plot_context.plot_brief_for_control(row)
+        self.assertIn('timeline', brief)
+        self.assertTrue(brief['timeline']['stages'])
+
+    def test_client_does_not_recompute(self):
+        """화면은 서버가 준 퍼센트만 쓴다 — 단계 길이를 다시 더하기 시작하면
+        기준점·열린 구간 처리가 곧 갈린다."""
+        js = _read(os.path.join(_ROOT, 'aot_flask', 'static', 'js', 'widgets',
+                                'AoT_map', 'aot-map-popup.js'))
+        body = js.split('function _timelineHtml', 1)[1].split(
+            '\n  function ', 1)[0]
+        self.assertIn('st.to_pct', body)
+        self.assertIn('tl.today_pct', body)
+        for gone in ('days_ago', 'Date.now()', 'new Date('):
+            self.assertNotIn(gone, body, '화면이 기간을 다시 계산한다: %s' % gone)

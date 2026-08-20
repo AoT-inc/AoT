@@ -838,6 +838,12 @@ def compute_spatial_internal(
             'position':         s.get('position'),
             'measurement_type': mtype,
             'rejected':         {},  # {key: True} — 공간 outlier 로 제외된 항목
+            # **응답 여부는 "값이 하나라도 왔는가" 다.** 아래 다섯 키(T/RH/CO2/
+            # VPD/light)는 실내 환경 평균에 쓰이는 것일 뿐, 센서가 살아 있는지와
+            # 다른 이야기다 — 이슬점·풍속만 재는 센서는 멀쩡히 응답하는데도
+            # 예전에는 "응답 없음" 으로 셌다(2026-08-20 육묘장: 바닥센서 하나가
+            # 그래서 영영 4/5 였다).
+            'responded':        any(v is not None for v in vals.values()),
             **{k: vals.get(k) for k in ('T', 'RH', 'CO2', 'VPD', 'light')},
         })
 
@@ -878,10 +884,10 @@ def compute_spatial_internal(
         vpd_calc = round(max(0.0, (1.0 - RH_avg / 100.0) * svp), 3)
         vpd_readings = [vpd_calc]
 
-    valid = sum(
-        1 for d in detail
-        if any(d.get(k) is not None for k in ('T', 'RH', 'CO2', 'VPD', 'light'))
-    )
+    # 화면 문구가 "센서 응답" 이므로 세는 것도 **응답**이어야 한다. 환경 평균에
+    # 기여하지 않는 센서(이슬점·풍속 전용)를 고장처럼 세면, 사용자는 멀쩡한
+    # 장치를 찾아 헤맨다.
+    valid = sum(1 for d in detail if d.get('responded'))
     return {
         'T':           _avg(T_readings,         2),
         'RH':          _avg(RH_readings,        1),

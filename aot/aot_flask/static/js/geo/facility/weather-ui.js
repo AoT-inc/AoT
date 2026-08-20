@@ -111,7 +111,7 @@
         '</td>' +
         '<td style="padding:5px 8px;text-align:center;">' +
           '<button type="button" data-del ' +
-            'class="btn aot-pill-btn aot-pill-btn-primary" ' +
+            'class="btn aot-pill-btn aot-pill-btn-danger" ' +
             'title="' + (window._ ? window._('Delete') : 'Delete') + '">X</button>' +
         '</td>';
 

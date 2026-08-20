@@ -313,7 +313,7 @@
                 <div class="fac-item-name">{{ f.name }}</div>
                 <small class="text-muted fac-item-sub">{{ f.preset }} · {{ f.structure }}{% if f.structure == 'connected' %} (N={{ f.bay_count }}){% endif %}</small>
               </div>
-              <button class="btn aot-pill-btn aot-pill-btn-primary fac-item-del"
+              <button class="btn aot-pill-btn aot-pill-btn-danger fac-item-del"
                       data-uuid="{{ f.unique_id }}"
                       data-name="{{ f.name }}"
                       onclick="event.stopPropagation(); facilityDelete(this.dataset.uuid, this.dataset.name)"
@@ -799,7 +799,7 @@
         <div class="aot-modal-option-row" style="border-bottom:none;">
           <label class="aot-modal-option-label">{{ _('Delete') }}</label>
           <div class="aot-modal-option-control">
-            <button id="fi-delete" class="btn aot-pill-btn aot-pill-btn-primary" type="button">{{ _('Delete') }}</button>
+            <button id="fi-delete" class="btn aot-pill-btn aot-pill-btn-danger" type="button">{{ _('Delete') }}</button>
           </div>
         </div>
       </div>

@@ -47,8 +47,8 @@
   </div>
 
   <div class="modal-footer">
-    <button type="button" class="btn aot-pill-btn aot-pill-btn-primary" data-dismiss="modal">{{_('Close')}}</button>
-    {{form_user_roles.user_role_delete(class_='btn aot-pill-btn aot-pill-btn-primary',
+    <button type="button" class="btn aot-pill-btn" data-dismiss="modal">{{_('Close')}}</button>
+    {{form_user_roles.user_role_delete(class_='btn aot-pill-btn aot-pill-btn-danger',
       **{'onclick':'return confirm("' + _('Are you sure you want to delete this role?') + '")'})}}
     {{form_user_roles.user_role_save(class_='btn aot-pill-btn aot-pill-btn-primary')}}
   </div>

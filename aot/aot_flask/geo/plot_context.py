@@ -1192,6 +1192,110 @@ def plot_for_coordinator(fn, on=None):
     return out
 
 
+def timeline(plot, program=None, on=None):
+    """구획의 기간을 **한 축**으로 → `{start, end, today_pct, stages[]}`.
+
+    화면이 날짜 셋(시작·오늘·종료)과 단계 경계를 텍스트로 늘어놓는 대신 축
+    하나로 보이기 위한 것이다. 사람은 "8/17 시작, 4일차, 생육기 2/3" 를 머릿속
+    에서 배치해야 알 수 있지만, 축은 보는 순간 안다.
+
+    ## 계산은 서버가 한다
+
+    단계 길이·기준점(P5 승인)·"끝까지" 단계 처리가 전부 여기 규칙이라, 화면이
+    다시 조립하면 두 곳이 곧 갈린다(같은 이유로 단계 목표도 서버가 만든다).
+
+    ## 끝이 없는 프로그램
+
+    마지막 단계의 `days` 가 비어 있으면(수확기 = 사람이 끝낼 때까지) 축의 끝을
+    정할 수 없다. 그때는 **마지막 단계를 열린 구간**으로 표시하고 `open_end`
+    를 True 로 준다 — 임의의 종료일을 지어내면 화면이 "언제 끝난다" 고
+    말하게 된다.
+
+    반환:
+      start      ISO date | None
+      end        ISO date | None      (열린 구간이면 None)
+      open_end   bool
+      today_pct  0~100 | None         (축 위 현재 위치)
+      elapsed_days, total_days
+      stages     [{key, name, days, from_pct, to_pct, current}]
+    """
+    if plot is None or plot.started_on is None:
+        return None
+    on = on or date.today()
+    if program is None:
+        program = program_brief(plot)
+    if not program or program.get('missing'):
+        return None
+
+    row = None
+    if plot.program_uuid:
+        from aot.databases.models import GeoProgram
+        row = GeoProgram.query.filter_by(unique_id=plot.program_uuid).first()
+    stages = row.stage_list() if row is not None else []
+    if not stages:
+        return None
+
+    # 기준점(P5) 이후로 계산한다 — 승인이 기준을 옮겼으면 축도 옮겨야 화면과
+    # 제어가 같은 단계를 가리킨다.
+    anc = stage_anchor(plot)
+    anchor_on = (anc or {}).get('started_on') or plot.started_on
+    base_index = int((anc or {}).get('stage_index') or 0)
+    run = stages[base_index:] if base_index else stages
+
+    lengths = []
+    for st in run:
+        try:
+            d = int(st.get('days') or 0)
+        except (TypeError, ValueError):
+            d = 0
+        lengths.append(d if d > 0 else None)
+
+    known = [d for d in lengths if d]
+    open_end = (not lengths) or (lengths[-1] is None)
+    # 열린 마지막 구간에도 폭이 필요하다 — 0 이면 축에서 사라진다. 앞 구간
+    # 평균만큼 주되 "여기서 끝난다" 고 말하지 않는다(`open_end`).
+    tail = int(sum(known) / len(known)) if known else 7
+    widths = [d if d else tail for d in lengths]
+    total = sum(widths) or 1
+
+    elapsed = max(0, (on - anchor_on).days)
+    out_stages = []
+    acc = 0
+    cur_idx = None
+    for i, (st, w) in enumerate(zip(run, widths)):
+        frm, to = acc, acc + w
+        if cur_idx is None and elapsed < to:
+            cur_idx = i
+        out_stages.append({
+            'key': st.get('key'),
+            'name': st.get('name') or st.get('key'),
+            'days': lengths[i],
+            'from_pct': round(frm * 100.0 / total, 2),
+            'to_pct': round(to * 100.0 / total, 2),
+            'current': False,
+        })
+        acc = to
+    if cur_idx is None:
+        cur_idx = len(out_stages) - 1
+    if out_stages:
+        out_stages[cur_idx]['current'] = True
+
+    from datetime import timedelta
+    end_on = None if open_end else anchor_on + timedelta(days=total - 1)
+    return {
+        'start': plot.started_on.isoformat(),
+        'anchor': anchor_on.isoformat(),
+        'end': end_on.isoformat() if end_on else None,
+        'open_end': open_end,
+        # 100 을 넘길 수 있다(예정보다 오래 끌고 있다) — 넘긴 사실 자체가
+        # 정보라 자르지 않고, 화면이 축 밖 표시로 그린다.
+        'today_pct': round(elapsed * 100.0 / total, 2),
+        'elapsed_days': elapsed + 1,          # 심은 날이 1일차
+        'total_days': total,
+        'stages': out_stages,
+    }
+
+
 def plot_brief_for_control(row, on=None):
     """제어 화면이 한 줄로 읽을 수 있는 최소 요약.
 
@@ -1219,6 +1323,9 @@ def plot_brief_for_control(row, on=None):
             out['stage_name'] = st.get('name')
             out['stage_index'] = st.get('index')
             out['stage_total'] = st.get('total')
+        # 기간 축 — 화면이 날짜를 늘어놓는 대신 한 줄로 보인다. 계산은 여기서
+        # 한 번만 한다(단계 길이·기준점·"끝까지" 처리가 전부 서버 규칙이다).
+        out['timeline'] = timeline(row, program=prog, on=on)
     return out
 
 

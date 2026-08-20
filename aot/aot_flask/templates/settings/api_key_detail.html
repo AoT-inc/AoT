@@ -95,8 +95,8 @@
   </div>
 
   <div class="modal-footer">
-    <button type="button" class="btn aot-pill-btn aot-pill-btn-primary" data-dismiss="modal">{{_('Close')}}</button>
-    {{form_mod.api_key_delete(class_='btn aot-pill-btn aot-pill-btn-primary btn-delete',
+    <button type="button" class="btn aot-pill-btn" data-dismiss="modal">{{_('Close')}}</button>
+    {{form_mod.api_key_delete(class_='btn aot-pill-btn aot-pill-btn-danger btn-delete',
       **{'onclick':'return confirm("' + _('Are you sure you want to delete this API key?') + '")'})}}
     {{form_mod.api_key_mod_submit(class_='btn aot-pill-btn aot-pill-btn-primary')}}
   </div>

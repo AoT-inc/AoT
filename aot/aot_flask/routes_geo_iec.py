@@ -1276,8 +1276,22 @@ def _build_facility_overview(facility_uuid):
         return None   # 시설을 못 찾았다 — 캐시에 남기지 않는다
 
     # can_edit 는 라우트가 응답마다 다시 넣는다(캐시는 전역).
+    from aot.aot_flask.geo import irrigation_status, weather_hazards
+    # 마지막 관수 — 시설에서는 관수 피팅, 구획이 있으면 프로그램이 선언한
+    # 관수 함수가 근거다. 근거가 없으면 None 이고 화면은 아무 말도 안 한다.
+    _plot = None
+    try:
+        from aot.aot_flask.geo import plot_context as _pc
+        _rows = _pc.plots_in_facility(facility_uuid)
+        _plot = _rows[0] if _rows else None
+    except Exception:                                       # noqa: BLE001
+        _plot = None
     return {
         'ok':          True,
+        'irrigation':  irrigation_status.last_irrigation(facility_uuid, _plot),
+        # 곧 닥칠 기상 위험 — 시설·노지가 **같은 판정**을 쓴다(같은 예보 파일).
+        # 여기 실어 보내면 모달이 별도 요청 없이 그린다.
+        'hazards':     weather_hazards.upcoming_cached(),
         'env_summary': _unwrap_json(api_facility_env_summary(facility_uuid)),
         'status':      _unwrap_json(api_facility_iec_status(facility_uuid)),
         'info':        info,

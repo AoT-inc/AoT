@@ -233,9 +233,9 @@ WIDGET_INFORMATION = {
       <div class="modal-body" id="notice-widget-modal-content-{{each_widget.unique_id}}"></div>
       <div class="modal-footer">
         <button type="button" class="btn aot-pill-btn aot-pill-btn-primary notice-widget-view-edit-btn d-none">{{_('Edit')}}</button>
-        <button type="button" class="btn aot-pill-btn aot-pill-btn-primary notice-widget-view-delete-btn d-none">{{_('Delete')}}</button>
+        <button type="button" class="btn aot-pill-btn aot-pill-btn-danger notice-widget-view-delete-btn d-none">{{_('Delete')}}</button>
         <button type="button" class="btn aot-pill-btn aot-pill-btn-primary notice-widget-view-ack-btn">{{_('Acknowledge')}}</button>
-        <button type="button" class="btn aot-pill-btn aot-pill-btn-primary" data-dismiss="modal">{{_('Close')}}</button>
+        <button type="button" class="btn aot-pill-btn" data-dismiss="modal">{{_('Close')}}</button>
       </div>
     </div>
   </div>
@@ -329,8 +329,8 @@ WIDGET_INFORMATION = {
           </div>
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn aot-pill-btn aot-pill-btn-primary" data-dismiss="modal">{{_('Cancel')}}</button>
-          <button type="button" class="btn aot-pill-btn aot-pill-btn-primary d-none notice-widget-compose-delete-btn">{{_('Delete')}}</button>
+          <button type="button" class="btn aot-pill-btn" data-dismiss="modal">{{_('Cancel')}}</button>
+          <button type="button" class="btn aot-pill-btn aot-pill-btn-danger d-none notice-widget-compose-delete-btn">{{_('Delete')}}</button>
           <button type="submit" class="btn aot-pill-btn aot-pill-btn-primary notice-widget-compose-save-btn">{{_('Save')}}</button>
         </div>
       </form>

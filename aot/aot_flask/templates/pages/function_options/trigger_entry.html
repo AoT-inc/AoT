@@ -58,13 +58,13 @@
         {% include 'pages/function_options/trigger_options.html' %}
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn aot-pill-btn aot-pill-btn-primary" data-dismiss="modal">{{_('Close')}}</button>
+        <button type="button" class="btn aot-pill-btn" data-dismiss="modal">{{_('Close')}}</button>
         <button data-form-id="form_function_{{each_function.unique_id}}"
           data-aot-confirm="{{_('Are you sure you want to delete?')}}" data-aot-action="function_delete"
-          class="btn aot-pill-btn aot-pill-btn-primary" type="button">{{_('Delete')}}</button>
+          class="btn aot-pill-btn aot-pill-btn-danger" type="button">{{_('Delete')}}</button>
         <button data-form-id="form_function_{{each_function.unique_id}}"
           data-aot-confirm="{{_('Are you sure you want to duplicate?')}}" data-aot-action="function_duplicate"
-          class="btn aot-pill-btn aot-pill-btn-primary" type="button">{{_('Duplicate')}}</button>
+          class="btn aot-pill-btn" type="button">{{_('Duplicate')}}</button>
         <button data-form-id="form_function_{{each_function.unique_id}}" onclick="return $(this).processRequest(this, 'function_mod');"
           class="btn aot-pill-btn aot-pill-btn-primary" type="button">{{_('Save')}}</button>
       </div>

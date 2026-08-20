@@ -136,7 +136,7 @@
           '<div style="font-weight:600;font-size:var(--aot-font-size-sm);">' + _esc(e.label) +
             ' <span style="color:var(--aot-color-text-secondary);font-weight:400;font-size:var(--aot-font-size-xs);">' + _esc(e.unit) +
             ' · <code style="font-size:var(--aot-font-size-xs);color:var(--aot-color-text-secondary);">' + _esc(e.key) + '</code></span></div>' +
-          '<button type="button" data-del class="btn aot-pill-btn aot-pill-btn-primary">' + (window._ ? window._('Delete') : 'Delete') + '</button>' +
+          '<button type="button" data-del class="btn aot-pill-btn aot-pill-btn-danger">' + (window._ ? window._('Delete') : 'Delete') + '</button>' +
         '</div>';
 
       // 5 stages: color + upper limit

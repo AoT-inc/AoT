@@ -3591,9 +3591,25 @@ def _build_zone_contents(zone_uuid):
 
     # can_edit 는 여기서 넣지 않는다 — 캐시는 전역이라 처음 연 사람의 권한이
     # 다음 사람에게 그대로 간다. 라우트가 응답마다 다시 채운다.
+    from aot.aot_flask.geo import irrigation_status, weather_hazards
+    # 노지의 마지막 관수 — 이 구역에서 자라는 구획의 프로그램이 "관수" 라고
+    # 선언한 함수만 근거다. 영역에 묶인 범용 on/off 를 관수라고 부르지 않는다.
+    _irr = None
+    try:
+        from aot.aot_flask.geo import plot_context as _pc
+        for _p in _pc.active_plots(zone.geo_id):
+            _irr = irrigation_status.last_irrigation(None, _p)
+            if _irr:
+                break
+    except Exception:                                       # noqa: BLE001
+        _irr = None
     return {
         'ok': True,
         'rep_key': rep_key_of(zone),
+        'irrigation': _irr,
+        # 시설과 **같은 판정**(같은 예보 파일) — 노지에서 오히려 더 자주 행동을
+        # 부르는 정보다.
+        'hazards': weather_hazards.upcoming_cached(),
         'zone': {
             'unique_id': zone.unique_id,
             'name': zone_name,

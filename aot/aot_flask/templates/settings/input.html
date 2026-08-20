@@ -55,7 +55,7 @@
             <td>{{dict_inputs[each_input]['input_name']}}</td>
             <td>{{dict_inputs[each_input]['measurements_name']}}</td>
             <td>
-              {{form_input_delete.delete_input(class_='btn aot-pill-btn aot-pill-btn-primary w-100', **{'onclick':'return confirm("' + _('Are you sure you want to delete this?') + '")'})}}
+              {{form_input_delete.delete_input(class_='btn aot-pill-btn aot-pill-btn-danger w-100', **{'onclick':'return confirm("' + _('Are you sure you want to delete this?') + '")'})}}
             </td>
           </tr>
 

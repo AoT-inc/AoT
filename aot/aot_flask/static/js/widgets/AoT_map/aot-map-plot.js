@@ -612,10 +612,13 @@
         var btnEdit = body.querySelector('.aot-ov-plot-edit');
         if (!view || !form || !btnEdit) return;
 
+        // 숨기는 것은 버튼이 아니라 **버튼이 든 행**이다(.aot-ov-actions).
+        // 버튼만 숨기면 빈 행이 남아 편집 중에만 블록 아래가 벌어진다.
+        var editRow = btnEdit.closest('.aot-ov-actions') || btnEdit;
         function show(editing) {
             view.style.display = editing ? 'none' : '';
             form.style.display = editing ? '' : 'none';
-            btnEdit.style.display = editing ? 'none' : '';
+            editRow.style.display = editing ? 'none' : '';
         }
         btnEdit.addEventListener('click', function () { show(true); });
         var btnCancel = body.querySelector('.aot-ov-plot-cancel');

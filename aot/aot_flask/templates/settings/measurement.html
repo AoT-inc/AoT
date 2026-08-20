@@ -162,7 +162,7 @@
               {{form_mod_measurement.save_measurement(class_='btn aot-pill-btn aot-pill-btn-primary w-100')}}
             </div>
             <div class="col-12 small-gutters">
-              {{form_mod_measurement.delete_measurement(class_='btn aot-pill-btn aot-pill-btn-primary w-100', **{'onclick':'return confirm("' + _('Are you sure you want to delete this?') + '")'})}}
+              {{form_mod_measurement.delete_measurement(class_='btn aot-pill-btn aot-pill-btn-danger w-100', **{'onclick':'return confirm("' + _('Are you sure you want to delete this?') + '")'})}}
             </div>
           </td>
         </tr>
@@ -208,7 +208,7 @@
               {{form_mod_unit.save_unit(class_='btn aot-pill-btn aot-pill-btn-primary w-100')}}
             </div>
             <div class="col-12 small-gutters">
-              {{form_mod_unit.delete_unit(class_='btn aot-pill-btn aot-pill-btn-primary w-100', **{'onclick':'return confirm("' + _('Are you sure you want to delete this?') + '")'})}}
+              {{form_mod_unit.delete_unit(class_='btn aot-pill-btn aot-pill-btn-danger w-100', **{'onclick':'return confirm("' + _('Are you sure you want to delete this?') + '")'})}}
             </div>
           </td>
         </tr>
@@ -286,7 +286,7 @@
           </td>
         {% if not each_conversion.protected %}
           <td>
-            {{form_mod_conversion.delete_conversion(class_='btn aot-pill-btn aot-pill-btn-primary w-100', **{'onclick':'return confirm("' + _('Are you sure you want to delete this?') + '")'})}}
+            {{form_mod_conversion.delete_conversion(class_='btn aot-pill-btn aot-pill-btn-danger w-100', **{'onclick':'return confirm("' + _('Are you sure you want to delete this?') + '")'})}}
           </td>
         {% endif %}
         </tr>

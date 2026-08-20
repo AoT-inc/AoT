@@ -40,13 +40,13 @@
         {% include 'pages/data_options/input_options.html' %}
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn aot-pill-btn aot-pill-btn-primary" data-dismiss="modal">{{_('Close')}}</button>
+        <button type="button" class="btn aot-pill-btn" data-dismiss="modal">{{_('Close')}}</button>
         <button data-form-id="mod_input_form_{{each_input.unique_id}}"
           data-aot-confirm="{{_('Are you sure you want to delete?')}}" data-aot-action="input_delete"
-          class="btn aot-pill-btn aot-pill-btn-primary" type="button">{{_('Delete')}}</button>
+          class="btn aot-pill-btn aot-pill-btn-danger" type="button">{{_('Delete')}}</button>
         <button data-form-id="mod_input_form_{{each_input.unique_id}}"
           data-aot-confirm="{{_('Are you sure you want to duplicate?')}}" data-aot-action="input_duplicate"
-          class="btn aot-pill-btn aot-pill-btn-primary" type="button">{{_('Duplicate')}}</button>
+          class="btn aot-pill-btn" type="button">{{_('Duplicate')}}</button>
         <button data-form-id="mod_input_form_{{each_input.unique_id}}" id="mod_input_save_{{each_input.unique_id}}" onclick="return $(this).processRequest(this, 'input_mod');"
           class="btn aot-pill-btn aot-pill-btn-primary" type="button">{{_('Save')}}</button>
       </div>

@@ -168,10 +168,10 @@
 
             <div class="d-flex justify-content-between mt-4 mb-5">
                 <span>
-                    <button type="button" class="btn aot-pill-btn aot-pill-btn-primary" id="editNoticeDeleteBtn" data-post="{{ post.unique_id }}">{{ _('Delete') }}</button>
+                    <button type="button" class="btn aot-pill-btn aot-pill-btn-danger" id="editNoticeDeleteBtn" data-post="{{ post.unique_id }}">{{ _('Delete') }}</button>
                 </span>
                 <span class="d-flex" style="gap:6px;">
-                    <a href="{{ url_for('routes_notice.page_notice_detail', unique_id=post.unique_id) }}" class="btn aot-pill-btn aot-pill-btn-primary">{{ _('Cancel') }}</a>
+                    <a href="{{ url_for('routes_notice.page_notice_detail', unique_id=post.unique_id) }}" class="btn aot-pill-btn">{{ _('Cancel') }}</a>
                     {{ form_notice_mod.notice_save(class_='btn aot-pill-btn aot-pill-btn-primary') }}
                 </span>
             </div>

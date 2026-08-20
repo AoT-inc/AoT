@@ -198,11 +198,11 @@
   </div>
 
   <div class="modal-footer">
-    <button type="button" class="btn aot-pill-btn aot-pill-btn-primary" data-dismiss="modal">{{_('Close')}}</button>
-    {{form_mod_user.user_delete(class_='btn aot-pill-btn aot-pill-btn-primary',
+    <button type="button" class="btn aot-pill-btn" data-dismiss="modal">{{_('Close')}}</button>
+    {{form_mod_user.user_delete(class_='btn aot-pill-btn aot-pill-btn-danger',
       **{'onclick':'return confirm("' + _('Are you sure you want to delete this user?') + '")'})}}
     {% if not user.is_approved %}
-    {{form_mod_user.user_approve(class_='btn aot-pill-btn aot-pill-btn-primary')}}
+    {{form_mod_user.user_approve(class_='btn aot-pill-btn')}}
     {% endif %}
     {{form_mod_user.user_save(class_='btn aot-pill-btn aot-pill-btn-primary')}}
   </div>

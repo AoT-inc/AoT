@@ -29123,3 +29123,126 @@ msgstr "권장 일적산광량"
 
 msgid "Suggested GDD per day"
 msgstr "권장 일 적산온도"
+
+msgid "Conservation"
+msgstr "유지"
+
+msgid "Partial Control"
+msgstr "일부만 제어"
+
+msgid "Natural Ventilation"
+msgstr "자연 환기"
+
+msgid "Target Unattainable"
+msgstr "목표 도달 불가"
+
+msgid "CO2 Enrichment"
+msgstr "CO₂ 시비"
+
+msgid "Dehumidify"
+msgstr "제습"
+
+msgid "Humidify"
+msgstr "가습"
+
+msgid "Fogger"
+msgstr "가습기"
+
+msgid "CO2 Injector"
+msgstr "CO₂ 주입기"
+
+msgid "Growing here"
+msgstr "여기서 기르는 것"
+
+msgid "Days in"
+msgstr "재배 일수"
+
+msgid "above"
+msgstr "높음"
+
+msgid "below"
+msgstr "낮음"
+
+msgid "now / target"
+msgstr "지금 / 목표"
+
+msgid "Photosynthesis-oriented control is off, so these targets are not in use."
+msgstr "광합성 지향 제어가 꺼져 있어 이 목표는 쓰이지 않습니다."
+
+msgid "Vent area open"
+msgstr "열린 환기 면적"
+
+msgid "Device opening"
+msgstr "장치별 개도"
+
+msgid "Emergency"
+msgstr "비상"
+
+msgid "Water (VPD)"
+msgstr "수분(VPD)"
+
+msgid "Control schedule"
+msgstr "제어 일정"
+
+msgid "until you end it"
+msgstr "끝낼 때까지"
+
+msgid "open-ended"
+msgstr "종료 미정"
+
+msgid "Past the planned end"
+msgstr "예정 기간을 넘겼습니다"
+
+msgid "control has stopped"
+msgstr "제어가 멈춰 있습니다"
+
+msgid "target"
+msgstr "목표"
+
+msgid "Not keeping up"
+msgstr "못 따라감"
+
+msgid "%(kinds)s at full output for %(min)s min, %(var)s still off target"
+msgstr "%(kinds)s 최대 출력 %(min)s분째인데 %(var)s가 목표를 벗어나 있습니다"
+
+msgid "%(var)s is off target and there is no device here that can move it"
+msgstr "%(var)s가 목표를 벗어났는데 이를 움직일 장치가 없습니다"
+
+msgid "Coming weather"
+msgstr "다가오는 날씨"
+
+msgid "Freezing"
+msgstr "결빙"
+
+msgid "Frost"
+msgstr "서리"
+
+msgid "Extreme heat"
+msgstr "폭염"
+
+msgid "Strong wind"
+msgstr "강풍"
+
+msgid "Heavy rain"
+msgstr "호우"
+
+msgid "in %(n)s h"
+msgstr "%(n)s시간 뒤"
+
+msgid "now"
+msgstr "지금"
+
+msgid "Last watering"
+msgstr "마지막 관수"
+
+msgid "no run in the last 30 days"
+msgstr "최근 30일 기록 없음"
+
+msgid "%(n)s min ago"
+msgstr "%(n)s분 전"
+
+msgid "%(n)s h ago"
+msgstr "%(n)s시간 전"
+
+msgid "%(n)s min"
+msgstr "%(n)s분"
