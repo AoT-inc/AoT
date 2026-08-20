@@ -79,10 +79,6 @@
         </div>
 
         <div class="aot-entry-content-item aot-col-name aot-col-name-copy" onclick="setClipboard('{{ dev.unique_id }}')">
-          {% for parent_id in dict_device_parent_map.get(dev.unique_id, []) if parent_id in dict_device_names %}
-          <a class="badge badge-secondary aot-badge-inline" href="/device#device_card_{{ parent_id }}"
-            onclick="event.stopPropagation();" title="{{ _('Part of device') }}: {{ dict_device_names[parent_id] }}">{{ dict_device_names[parent_id] }}</a>
-          {% endfor %}
           <div class="form-control aot-entry-name-input" data-toggle="tooltip"
             title="{{ dev.name }} · UUID: {{ dev.unique_id }}, {{ dict_translation['copy_to_clipboard']['phrase'] }}">{{ dev.name }}</div>
         </div>
