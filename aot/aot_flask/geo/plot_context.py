@@ -644,6 +644,159 @@ def facility_sensor_ids(facility_uuid, bay_id=None):
     }
 
 
+# 자원 역할 → 시설 fitting 종류. **관수만 현장 어휘가 있다.**
+#
+# 시설 설계기의 fitting 종류에 시비(fertigation) 항목이 아직 없다. 없는 어휘를
+# 지어내지 않는다 — 지어내면 화면에 나가는 순간 되돌리기 어렵고, 실제 배관과
+# 무관한 분류가 데이터에 남는다(`_FIXED_TARGET_DEFS` 가 가축·시설을 빈 목록으로
+# 시작하는 것과 같은 태도). 그래서 시비·기타는 "이 자리에서 찾을 수 없음" 으로
+# 정직하게 보고하고, 그 이유(`reason`)를 함께 낸다.
+_ROLE_FITTING_KINDS = {
+    'irrigation': ('irrigation_valve', 'irrigation_layer'),
+}
+
+
+def declared_roles(stage, program_row=None):
+    """이 단계가 요구하는 자원 역할 → `[{role, source}]` (P6).
+
+    프로그램의 `resource_defs` 가 기본값을 정하고 단계의 `resources` 가 그것을
+    덮어쓴다 — 목표(`_stage_targets`)와 같은 패턴이다. `source` 로 어느 쪽에서
+    왔는지 밝힌다(`'stage'` | `'default'`): 밝히지 않으면 사람이 "이 단계에서
+    일부러 끈 것" 과 "원래 안 쓰는 것" 을 구분할 수 없다.
+    """
+    defs = []
+    if program_row is not None:
+        try:
+            defs = program_row.resource_def_list() or []
+        except Exception:                                   # noqa: BLE001
+            defs = []
+    if not defs:
+        return []
+
+    over = (stage or {}).get('resources') if isinstance(stage, dict) else None
+    over = over if isinstance(over, dict) else {}
+
+    out = []
+    for d in defs:
+        role = (d or {}).get('role')
+        if not role:
+            continue
+        if role in over:
+            use, source = bool(over[role]), 'stage'
+        else:
+            use, source = bool(d.get('default', True)), 'default'
+        if use:
+            out.append({'role': role, 'source': source})
+    return out
+
+
+def functions_for_role(role, plot):
+    """그 역할을 이 자리에서 맡는 함수 → `(list, reason)`.
+
+    ## 계획이 아니라 현장이 답한다
+
+    프로그램은 역할만 선언한다(P6 재설계). **무엇이 그 일을 하는지는 여기서
+    푼다** — 계획이 함수를 미리 지목하면 같은 프로그램을 두 번째 자리에서 쓸 때
+    복제해야 하고, 그 순간 작물 지식이 두 벌이 되어 한쪽만 고쳐진다.
+
+    ## 경로
+
+    시설이 이미 "어느 출력이 관수인가" 를 알고 있다(`fittings[].kind`). 그
+    출력을 켜는 함수를 `Actions.do_unique_id` 로 되짚는다 — 함수가 무엇을 켜는지는
+    그 표가 정본이다(`irrigation_status` 가 쓰는 것과 같은 길).
+
+    `bay_id` 가 있으면 그 구역의 피팅만 본다(`facility_sensor_ids` 와 같은
+    슬라이스 매핑). 없으면 시설 전체다.
+
+    ## 찾지 못하면 이유를 낸다
+
+    빈 목록만 돌려주면 화면은 "없다" 까지만 말하고 사람은 무엇을 고쳐야 할지
+    모른다. `reason` 은 `'ok'` | `'no-facility'`(노지 — 아직 현장 어휘가 없다) |
+    `'no-vocabulary'`(그 역할에 대응하는 fitting 종류가 없다) |
+    `'not-placed'`(자리는 맞는데 그 역할의 장치가 배치돼 있지 않다).
+
+    ⚠ 반환값을 저장하지 말 것 — `sensors_for_plot` 과 같은 이유다(파생값을 컬럼에
+    쓰면 구획이 끝나도 옛 값이 남는다).
+    """
+    kinds = _ROLE_FITTING_KINDS.get(role)
+    if not kinds:
+        return [], 'no-vocabulary'
+
+    facility_uuid = getattr(plot, 'facility_uuid', None) if plot else None
+    if not facility_uuid:
+        # 노지 구획. 출력 마커를 기하로 찾는 길은 있으나 "이 출력이 관수다" 를
+        # 말해 주는 어휘가 노지에는 아직 없다 — 시설의 fitting 종류에 해당하는
+        # 것이 없다. 없는 것을 추측해 물을 틀지 않는다.
+        return [], 'no-facility'
+
+    from .facility_bays import build_fitting_bay_map, compute_bay_slices
+    from .facility_io import FacilityManager
+
+    # `_to_dict` 를 지나야 fitting 의 장치가 바인딩 기준으로 해소된다.
+    fac, err = FacilityManager.get_facility(facility_uuid)
+    if err or not fac:
+        return [], 'not-placed'
+
+    fittings = [f for f in (fac.get('fittings') or [])
+                if isinstance(f, dict) and f.get('kind') in kinds
+                and f.get('actuator_id')]
+    if not fittings:
+        return [], 'not-placed'
+
+    bay_id = getattr(plot, 'bay_id', None)
+    if bay_id:
+        slices = compute_bay_slices(fac)
+        fitting_bay = build_fitting_bay_map(slices, fittings)
+        scoped = [f for f in fittings
+                  if fitting_bay.get(f.get('id')) == bay_id]
+        # 구역에 하나도 없으면 시설 전체로 넓히지 **않는다** — 넓히면 옆 구역의
+        # 밸브를 이 구획의 것이라고 말하게 된다. 센서(표시)와 달리 자원은
+        # 물이 나오는 쪽이라 폴백이 조용히 틀리면 안 된다.
+        fittings = scoped
+        if not fittings:
+            return [], 'not-placed'
+
+    outputs = {f['actuator_id'] for f in fittings}
+    return _functions_driving(outputs), 'ok'
+
+
+def _functions_driving(output_uuids):
+    """그 출력을 켜는 함수 → `[{id, name, active}]`.
+
+    `Actions.do_unique_id` 는 `'uuid,channel'` 형태로도 온다 — 출력 uuid 만 본다.
+    """
+    if not output_uuids:
+        return []
+    from aot.databases.models import (Actions, Conditional, CustomController,
+                                      PID, Trigger)
+
+    try:
+        rows = Actions.query.all()
+    except Exception as exc:                                # noqa: BLE001
+        logger.debug('[자원] 액션 조회 실패: %s', exc)
+        return []
+
+    fn_ids = []
+    for a in rows:
+        ref = (a.do_unique_id or '').strip()
+        if ref and ref.split(',')[0] in output_uuids and a.function_id:
+            if a.function_id not in fn_ids:
+                fn_ids.append(a.function_id)
+
+    out = []
+    for fid in fn_ids:
+        for model in (CustomController, Conditional, Trigger, PID):
+            row = model.query.filter_by(unique_id=fid).first()
+            if row is not None:
+                out.append({
+                    'id': fid,
+                    'name': getattr(row, 'name', None),
+                    'active': bool(getattr(row, 'is_activated', False)),
+                })
+                break
+    return out
+
+
 def program_brief(plot, programs=None):
     """구획이 참조하는 재배 프로그램 요약 → dict (없으면 None).
 
@@ -767,7 +920,7 @@ def stage_of(plot, program=None, on=None, with_observability=False):
     if any(st.get('gdd') is not None for st in stages):
         gdd = gdd_accumulated(plot, row, on=on, with_series=True)
         if gdd.get('usable'):
-            out = _stage_by_gdd(stages, gdd, row, base_index)
+            out = _stage_by_gdd(stages, gdd, row, base_index, plot)
             if out is not None:
                 out['gdd'] = {k: v for k, v in gdd.items() if k != 'series'}
                 if with_observability:
@@ -783,7 +936,7 @@ def stage_of(plot, program=None, on=None, with_observability=False):
             length = None
         if length is None:                     # 끝까지 — 여기서 멈춘다
             out = _stage_payload(st, idx, stages, elapsed - cursor, None,
-                                 row, base_index)
+                                 row, base_index, plot)
             if gdd is not None:
                 out['gdd'] = {k: v for k, v in gdd.items() if k != 'series'}
             if with_observability:
@@ -791,7 +944,8 @@ def stage_of(plot, program=None, on=None, with_observability=False):
             return out
         if elapsed <= cursor + length:
             out = _stage_payload(st, idx, stages, elapsed - cursor,
-                                 cursor + length - elapsed, row, base_index)
+                                 cursor + length - elapsed, row, base_index,
+                                 plot)
             if gdd is not None:
                 out['gdd'] = {k: v for k, v in gdd.items() if k != 'series'}
             if with_observability:
@@ -865,7 +1019,7 @@ def _mark_observable(out, plot):
     return out
 
 
-def _stage_by_gdd(stages, gdd, program_row, base_index=0):
+def _stage_by_gdd(stages, gdd, program_row, base_index=0, plot=None):
     """누적 GDD 를 단계 목표에 대어 현재 단계를 찾는다 (판정 불가면 None).
 
     단계의 `gdd` 는 **그 단계의 길이**다(`days` 와 같은 규약) — 누적값이 아니다.
@@ -896,13 +1050,13 @@ def _stage_by_gdd(stages, gdd, program_row, base_index=0):
     for idx, (st, length) in enumerate(zip(stages, lengths)):
         if length is None:
             out = _gdd_payload(st, idx, stages, total - cursor, None,
-                               program_row, base_index)
+                               program_row, base_index, plot)
             out['started_on'] = _gdd_crossed_on(gdd, cursor)
             return out
         if total <= cursor + length:
             out = _gdd_payload(st, idx, stages, total - cursor,
                                cursor + length - total, program_row,
-                               base_index)
+                               base_index, plot)
             # **이 단계가 시작된 날.** 자동 승인(P7)이 기록할 날짜라 "오늘" 로
             # 두면 안 된다 — 아무도 안 본 사이에 넘어갔으면 기록이 관찰 시점에
             # 따라 달라진다. 누적이 앞 단계의 합을 넘어선 날을 되짚는다.
@@ -936,11 +1090,11 @@ def _gdd_crossed_on(gdd, threshold):
 
 
 def _gdd_payload(st, idx, stages, gdd_in_stage, gdd_left, program_row,
-                 base_index=0):
+                 base_index=0, plot=None):
     """GDD 판정 결과. 날짜 판정과 **키를 맞춘다** — 화면이 두 모양을 알게 되면
     한쪽만 고쳐진다. 다른 것은 `source` 와 단위뿐이다."""
     out = _stage_payload(st, idx, stages, None, None, program_row,
-                         base_index)
+                         base_index, plot)
     out['source'] = 'gdd'
     out['gdd_in_stage'] = round(gdd_in_stage, 1)
     out['gdd_left'] = None if gdd_left is None else round(gdd_left, 1)
@@ -948,7 +1102,7 @@ def _gdd_payload(st, idx, stages, gdd_in_stage, gdd_left, program_row,
 
 
 def _stage_payload(st, idx, stages, day_in_stage, days_left,
-                   program_row=None, base_index=0):
+                   program_row=None, base_index=0, plot=None):
     nxt = stages[idx + 1] if idx + 1 < len(stages) else None
     return {
         'state': 'running',
@@ -969,8 +1123,9 @@ def _stage_payload(st, idx, stages, day_in_stage, days_left,
         # 사용자는 구획 모달에서 읽는다 — 프로그램을 고른 것만으로 그 시기의
         # 일반사항을 얻는 것이 이 필드의 값어치다.
         'guidance': st.get('guidance') or None,
-        # 자원(P6) — 선언과 실제 상태를 함께. 프로그램은 켜고 끄지 않는다.
-        'resources': stage_resources(st),
+        # 자원(P6) — 선언(역할)과 현장(찾은 함수)을 나란히. 프로그램은 함수를
+        # 가리키지 않고, 켜고 끄지도 않는다.
+        'resources': stage_resources(st, program_row, plot),
     }
 
 
@@ -2399,8 +2554,17 @@ def _proposed_start(plot, st, on=None):
     return today.isoformat()
 
 
-def stage_resources(stage, plot=None):
-    """현재 단계의 자원 함수 → 선언과 **실제 상태**를 나란히 낸 목록.
+def stage_resources(stage, program_row=None, plot=None):
+    """이 단계의 자원 → **선언(역할)과 현장(찾은 함수)을 나란히** 낸 목록.
+
+    ## 프로그램은 역할만 말하고, 현장이 함수를 답한다 (2026-08-20 재설계)
+
+    예전에는 단계가 함수 uuid 를 들고 있었다(`stages[].functions`). 그러면
+    프로그램이 템플릿이기를 그만둔다 — 두 번째 온실에서 쓰려면 복제해야 하고,
+    복제한 순간 작물 지식이 두 벌이 되어 한쪽만 고쳐진다. 게다가 그 uuid 로
+    함수를 켜는 일에는 아무 맥락도 실리지 않았다(`_set_function_activation` 은
+    전역 스위치다) — 두 구획이 같은 함수를 선언하면 두 번째 [적용]은 무동작이고
+    어느 쪽 현장 데이터도 거동을 바꾸지 못했다.
 
     ## 이 기능의 값은 자동화가 아니라 **대조**다
 
@@ -2409,42 +2573,33 @@ def stage_resources(stage, plot=None):
     어긋남을 보이는 것이 먼저다 — 관수를 켜는 것은 물이 나오는 일이라
     `activate_function` 이 승인 대상인 것과 같은 이유다.
 
-    ## 죽은 참조는 조용히 빼지 않는다
+    재설계로 **말할 수 있는 사실이 하나 늘었다**: 예전에는 "지목한 함수가 꺼져
+    있다" 까지였고, 이제는 "이 단계는 관수를 요구하는데 이 자리에 관수 함수가
+    아예 없다" 를 말한다. 후자가 실제로 더 자주 일어나는 사고인데 예전 구조에는
+    그것을 표현할 자리가 없었다.
 
-    함수를 지웠는데 프로그램이 계속 가리키면 `missing: True` 로 남긴다. 목록에서
-    빼면 그 단계에서 자원이 통째로 사라진 것을 아무도 모른다.
+    ## 없음은 조용히 넘기지 않는다
+
+    찾지 못하면 목록에서 빼는 것이 아니라 `found: False` + `reason` 으로 남긴다.
+    빼면 그 단계에서 자원이 통째로 사라진 것을 아무도 모른다(옛 구조의 "죽은
+    참조를 지우지 않는다" 와 같은 원칙이 자리를 옮긴 것이다).
     """
-    from aot.databases.models import (Conditional, CustomController, PID,
-                                      Trigger)
-
-    items = (stage or {}).get('functions') if isinstance(stage, dict) else None
-    if not items:
+    roles = declared_roles(stage, program_row)
+    if not roles:
         return []
 
     out = []
-    for item in items:
-        if isinstance(item, str):
-            item = {'id': item}
-        if not isinstance(item, dict):
-            continue
-        fid = item.get('id')
-        if not fid:
-            continue
-        row = None
-        for model in (CustomController, Conditional, Trigger, PID):
-            row = model.query.filter_by(unique_id=fid).first()
-            if row is not None:
-                break
-        if row is None:
-            out.append({'id': fid, 'role': item.get('role') or 'other',
-                        'missing': True, 'name': None, 'active': None})
-            continue
+    for entry in roles:
+        role = entry['role']
+        fns, reason = functions_for_role(role, plot)
         out.append({
-            'id': fid,
-            'role': item.get('role') or 'other',
-            'missing': False,
-            'name': getattr(row, 'name', None),
-            # 선언과 다른가 — 화면이 [적용]을 띄울 근거다.
-            'active': bool(getattr(row, 'is_activated', False)),
+            'role': role,
+            'source': entry['source'],      # 'stage' | 'default'
+            'functions': fns,
+            'found': bool(fns),
+            'reason': reason,
+            # 하나라도 돌고 있으면 "작동 중" 이다. 여럿이 잡히는 것은 정상이다
+            # (밸브가 여럿인 시설) — 무엇이 지금 도는지는 목록이 말한다.
+            'active': any(f.get('active') for f in fns) if fns else None,
         })
     return out

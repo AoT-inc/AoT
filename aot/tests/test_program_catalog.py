@@ -65,12 +65,23 @@ class TestSpeciesEntries(unittest.TestCase):
         expected = {k for k in STAGE_DURATION_MAP if not k.startswith('_')}
         self.assertEqual(set(self.species), expected)
 
-    def test_no_invented_targets(self):
-        """목표는 지어내지 않는다 — 빈 칸이 채워진 숫자보다 낫다."""
+    def test_targets_only_where_a_source_says_so(self):
+        """목표는 지어내지 않는다 — 빈 칸이 근거 없는 숫자보다 낫다.
+
+        2026-08-20 부터 **출처가 있는 작물에는** 조사된 목표가 들어간다
+        (`crop_target_sources.SPECIES_TARGETS`). 그 밖의 작물은 여전히 비어 있어야
+        한다 — 사람은 채워진 값을 "조사된 추천값" 으로 읽는다.
+        """
+        from aot.scripts.crop_target_sources import SPECIES_TARGETS
+
         for key, item in self.species.items():
+            if key in SPECIES_TARGETS:
+                continue
             for st in item['stages']:
                 self.assertNotIn('targets', st,
-                                 '%s.%s 에 목표가 채워져 있습니다' % (key, st['key']))
+                                 '%s.%s 에 근거 없는 목표가 있습니다' % (key, st['key']))
+            for d in (item.get('target_defs') or []):
+                self.assertIsNone(d.get('default'), key)
 
     def test_tagged_with_parent_category(self):
         self.assertEqual(self.species['tomato']['category'], 'fruiting_vegetable')

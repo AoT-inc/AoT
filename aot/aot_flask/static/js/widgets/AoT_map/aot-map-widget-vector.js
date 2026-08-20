@@ -1770,20 +1770,6 @@
                         }
                     }
 
-                    // [목표] — 측정값이 이제 있으니 막대로 다시 그린다. 목표만
-                    // 표로 보면 "그래서 지금 맞나" 에 답하지 못한다.
-                    var tgtSlot = body.querySelector(
-                        '.aot-bay-popup-pane[data-pane="overview"] ' +
-                        '[data-slot="targets"]');
-                    if (tgtSlot && window.AoTMapPopup.plotStageTargetRows) {
-                        var _rs = ((data.plot || {}).env || {}).readings || [];
-                        // 단계는 구획 모달을 그린 쪽(aot-map-plot.js)이 남겨
-                        // 둔다 — 그 응답에만 있고 이 응답에는 없다.
-                        var _html = window.AoTMapPopup.plotStageTargetRows(
-                            body.__aotPlotStage, _rs);
-                        if (_html) tgtSlot.innerHTML = _html;
-                    }
-
                     // `_renderZoneDevices` 는 `data.zone.output_order` 를 읽는다.
                     // 구획에는 순서가 없다 — 빈 객체를 주어 구역의 순서를
                     // 빌려오지 않게 한다(빌려오면 구역 창과 달라 보인다).
@@ -2165,12 +2151,12 @@
             var head = (dev.kind === 'device') ? _tr('Contents') : _tr('Control');
             pane.innerHTML =
                 (dev.kind === 'device' ? '' :
+                 '<div class="aot-ov-card-title">' + _tr('History') + '</div>' +
                  '<div class="aot-ov-block aot-device-hist">' +
-                     '<div class="aot-ov-sec-title">' + _tr('History') + '</div>' +
                      '<div class="aot-bay-sensor-chart">' + _buildZoneSkel() + '</div>' +
                  '</div>') +
+                '<div class="aot-ov-card-title">' + head + '</div>' +
                 '<div class="aot-ov-block aot-device-ctrl">' +
-                    '<div class="aot-ov-sec-title">' + head + '</div>' +
                 '</div>' +
                 window.AoTNotesBlock.html();
 
@@ -2548,8 +2534,8 @@
                   : '') +
                 '</div>';
 
-            html += '<div class="aot-ov-block">' +
-                    '<div class="aot-ov-sec-title">' + _tr('Zone status') + '</div>';
+            html += '<div class="aot-ov-card-title">' + _tr('Zone status') + '</div>' +
+                    '<div class="aot-ov-block">';
             if (live.length) {
                 html += live.map(_siteRowHTML).join('');
             } else {
@@ -2563,8 +2549,8 @@
             html += '</div>';
 
             var today = data.today || {};
-            html += '<div class="aot-ov-block">' +
-                '<div class="aot-ov-sec-title">' + _tr('Today') + '</div>' +
+            html += '<div class="aot-ov-card-title">' + _tr('Today') + '</div>' +
+                '<div class="aot-ov-block">' +
                 '<div class="aot-site-tiles">' +
                     // 일정은 타일(숫자)에서 뺐다 — 아래 목록이 같은 것을
                     // 더 정확히 말한다. 숫자는 '오늘' 창이라 목록('지금부터')과
@@ -3943,8 +3929,14 @@
                 var tmp = document.createElement('div');
                 tmp.innerHTML = html;
                 var node = tmp.firstElementChild;
-                var slot = pane.querySelector('.aot-ov-record') ||
-                           pane.querySelector('.aot-ov-notes');
+                // `buildRecordBlock`/`notesBlockHtml` 모두 제목+박스를
+                // `.aot-ov-card` 로 감싼 뿌리 노드 하나를 낸다(2026-08-20) —
+                // 옛 박스(`.aot-ov-record`·`.aot-ov-notes`)로 찾은 뒤
+                // `.closest()` 로 감싼 카드 전체를 집어야 제목까지 함께
+                // 교체된다. 박스만 바꿔치기하면 옛 제목이 고아로 남는다.
+                var slotBlock = pane.querySelector('.aot-ov-record') ||
+                                pane.querySelector('.aot-ov-notes');
+                var slot = slotBlock && (slotBlock.closest('.aot-ov-card') || slotBlock);
                 // **노트 목록은 비교에서 빼야 한다.** `buildRecordBlock` 은 그
                 // 자리를 자리표시자('…')로 두고 `_wireFacilityNotes` 가 나중에
                 // 채운다. 그대로 비교하면 새 HTML('…')과 화면(실제 노트)이 늘
@@ -4074,7 +4066,9 @@
                         }
                     }
                     var old = pane.querySelector('.aot-ov-facility-plots');
-                    if (old) old.remove();
+                    // 카드 전체(제목+박스)를 지운다 — 박스만 지우면 제목만
+                    // 고아로 남는다(`.aot-ov-card` 로 감싼 이유는 위 참조).
+                    if (old) (old.closest('.aot-ov-card') || old).remove();
                     _appendFacilityPlots(uid, facilityUuid, pane);
                   }).catch(function () { save.disabled = false; });
             });
@@ -4107,7 +4101,14 @@
                         today: _todayLocal()
                     });
                 if (!html) return;
-                var existing = pane.querySelector('.aot-ov-facility-plots');
+                // `buildFacilityPlotsHtml` 은 이제 제목+박스를 `.aot-ov-card`
+                // 로 감싼 뿌리 노드 하나를 낸다 — 옛 박스(`.aot-ov-facility-plots`)
+                // 로 찾은 뒤 `.closest()` 로 감싼 카드 전체를 집어야 제목까지
+                // 함께 교체된다. 안 그러면 새 카드(제목+박스)가 옛 박스 자리에
+                // 끼어들어 제목이 중복되거나 옛 제목이 고아로 남는다.
+                var existingBlock = pane.querySelector('.aot-ov-facility-plots');
+                var existing = existingBlock &&
+                    (existingBlock.closest('.aot-ov-card') || existingBlock);
                 var block = _parseNode(html);
                 if (!block) return;
                 // 같은 내용이면 손대지 않는다 — 5초마다 지웠다 다시 그리면
@@ -4223,8 +4224,16 @@
                 });
                 if (html) {
                     // 같은 값이면 DOM 을 건드리지 않는다(위 _loadOverview 주석).
+                    // `buildEnvNowHtml` 은 제목+박스를 `.aot-ov-card` 로 감싼
+                    // 뿌리 노드 하나를 낸다(2026-08-20) — `_parseNode` 가 그
+                    // 뿌리를 그대로 돌려주므로 `node` 는 이미 카드 전체다.
+                    // 옛 박스(`.aot-ov-envnow`)로 찾은 뒤 `.closest()` 로 감싼
+                    // 카드 전체를 집어야 제목까지 함께 교체된다 — 안 그러면
+                    // (박스만 찾아 통째로 바꿔치기하면) 새 카드가 옛 박스
+                    // 자리에 끼어들어 옛 제목이 고아로 남는다.
                     var node = _parseNode(html);
-                    var cur = pane.querySelector('.aot-ov-envnow');
+                    var curBlock = pane.querySelector('.aot-ov-envnow');
+                    var cur = curBlock && (curBlock.closest('.aot-ov-card') || curBlock);
                     if (cur && node && cur.outerHTML === node.outerHTML) return;
                     if (cur && node) {
                         cur.replaceWith(node);

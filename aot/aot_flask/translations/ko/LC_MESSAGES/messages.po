@@ -29576,6 +29576,7 @@ msgstr "이 카드의 항목을 모두 숨겼습니다."
 #: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:0
 msgid "Nothing to show here yet."
 msgstr "아직 표시할 항목이 없습니다."
+
 msgid "Target items"
 msgstr "목표 항목"
 
@@ -29627,3 +29628,27 @@ msgstr "기본 {v}"
 
 msgid "not set"
 msgstr "미지정"
+
+msgid "Declare what this crop needs. Which device does it is resolved from the site, so the same programme works in more than one place."
+msgstr "이 작물에 무엇이 필요한지를 적습니다. 그 일을 어느 장치가 하는지는 현장에서 정해지므로, 같은 프로그램을 여러 자리에서 쓸 수 있습니다."
+
+msgid "set for this stage"
+msgstr "이 단계에서 따로 정함"
+
+msgid "follows the programme"
+msgstr "프로그램을 따름"
+
+msgid "Resources changed"
+msgstr "자원 바뀜"
+
+msgid "No device for this here yet"
+msgstr "이 자리에 해당 장치가 아직 없습니다"
+
+msgid "Outdoor plots cannot resolve this yet"
+msgstr "노지 구획은 아직 이것을 찾을 수 없습니다"
+
+msgid "This role has no device type yet"
+msgstr "이 역할에 해당하는 장치 종류가 아직 없습니다"
+
+msgid "Not found here"
+msgstr "이 자리에서 찾을 수 없음"

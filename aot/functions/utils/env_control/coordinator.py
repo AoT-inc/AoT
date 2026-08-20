@@ -25,6 +25,19 @@ Control law (P6 재설계 — position-form PI):
     - "올림" 방향도 effect_sign 으로 대칭 처리 (기존 부호 버그 제거)
     - I 는 [0,100] 하드클램프 + back-calculation anti-windup (무한 와인드업 제거)
 
+  레일 고착 회복 (2026-08-20):
+    back-calculation 은 포화 **직후** 한 사이클에만 맡기고, 레일에 계속 눌러붙어
+    있으면 적분을 실제 개도 쪽으로 기하 감쇠시킨다. 이유는 back-calc 의 부호에
+    있다 — 아래쪽 레일(u<0)에서는 `I -= (u−c)·β` 가 I 를 **위로** 밀고, 요구값
+    −P 가 100 을 넘으면 상한에 눌러붙어 그대로 굳는다. 그렇게 굳은 I 는 '기억된
+    평형 개도'가 아니라 포화 부산물인데, 편차가 풀리는 순간 `cmd = P + I` 의
+    I 가 통째로 계단으로 튀어나온다.
+    위쪽 레일에서는 대칭으로 반대 사고가 난다 — dispatch 는 며칠째 100% 인데
+    I 만 조용히 0 근처로 깎여, 무구배로 전환되는 순간 명령이 급락한다
+    (2026-07-29 aot-005 폭염 중 보온커튼 오폐쇄). 회복 경로는 이 괴리 자체를
+    없앤다: 레일에 눌러붙어 있는 동안 I 는 그 레일 값으로 수렴한다.
+    편차가 반대로 서면 `cmd = P + I ≈ P` 라 **편차에 비례해서** 되돌아온다.
+
   데드존을 '빼는' 이유 (2026-08-06 aot-005 야간 창호 진동):
     이전 구현은 |e_norm|<hb 이면 cmd=I, 아니면 cmd=I+kp·e_norm·100 으로 **분기**했다.
     경계에서 P항이 0 에서 kp·hb·100(=8.33%p, 부호 반전 시 16.7%p)으로 **계단 점프**해,
@@ -77,8 +90,12 @@ POS_KI     = 0.2     # 적분 이득 (사이클당 e_norm 만큼 평형 개도 �
 HOLD_FRAC  = 0.5     # 데드존 반폭 = tolerance×HOLD_FRAC. 이 안에서는 P·I 모두 0 이라
                      # 직전 평형 개도를 유지한다. 데드존은 '분기'가 아니라 유효오차에서
                      # '빼는' 방식이라 경계에서 P항이 연속이다(모듈 docstring 참조).
-RELAX_FACTOR = 0.6   # 폐쇄해야 할 때(충돌·gradient 없음) 평형 개도 감쇠 비율
-AW_BETA    = 0.5     # back-calculation anti-windup 강도
+RELAX_FACTOR = 0.6   # 평형 개도 기하 감쇠 비율. 두 자리가 쓴다 —
+                     #  (a) 무구배·파킹: safe_default 로 수렴
+                     #  (b) 레일 고착 회복: 실제 개도(0 또는 100)로 수렴
+                     # 100 → 1 미만까지 약 11 사이클.
+AW_BETA    = 0.5     # back-calculation anti-windup 강도 (포화 **직후** 한정)
+RAIL_EPS   = 0.5     # 직전 개도가 레일에 있다고 볼 허용오차 [%]
 
 # ── 환기 무익 게이트 (사용자 옵션 vent_futility_gate) ─────────────────────────
 # 외기와 공기를 바꾸는 장치는 실내 상태를 **실외 상태 쪽으로**밖에 못 민다.
@@ -247,7 +264,11 @@ def coordinate(
                 len(locked), sorted(i[:8] for i in locked))
 
     # ── 3. Per-actuator position-form PI (다목적 결합 drive) ───────────────────
-    # accumulated: 이미 확정된 명령들이 만든 효과(native). 부하분담에 사용.
+    # accumulated: 이미 확정된 명령들이 만들 **부호 있는 물리 변화량**(native).
+    # 부호는 물리 방향 그대로다('↑'=+, '↓'=−, 아래 축적부 참조). 따라서 잔여
+    # 편차는 deviation **+** accumulated 다 — 편차가 current−target 이고
+    # accumulated 가 current 에 더해질 변화량이므로, 확정 후 예상 편차는
+    # (current + accumulated) − target 이다.
     accumulated: Dict[str, float] = {var: 0.0 for var in situation.deviation_native}
 
     # 저렴한 액추에이터부터 확정 → 이후 것들은 잔여 편차를 보고 적게 동작(부하분담).
@@ -282,7 +303,12 @@ def coordinate(
             t = situation.target.get(v)
             if t is None or t.tolerance <= 0:
                 continue
-            residual_v  = situation.deviation_native[v] - accumulated.get(v, 0.0)
+            # 부호 주의: 빼면 부하'분담'이 부하'증폭'이 된다. 앞 장비가 −3°C 를
+            # 확정했는데 편차 +5 에서 5−(−3)=8 을 보면 뒤 장비는 혼자일 때보다
+            # 더 세게 돈다. 실제로 2026-08-20 로컬 육묘장에서 분무 64.9%(모델상
+            # −29.6°C)가 냉방기에 +29.6°C 로 넘어가 편차 0 인데도 냉방 100%,
+            # 난방 0% 로 고착됐다. 위 주석의 "적게 동작"과도 반대였다.
+            residual_v  = situation.deviation_native[v] + accumulated.get(v, 0.0)
             effect_sign = 1.0 if eff.direction == '↑' else -1.0
             pband_v     = max(PBAND_MULT * t.tolerance, 1e-9)
             e_v         = (-residual_v * effect_sign) / pband_v    # + = 더 열기
@@ -333,9 +359,20 @@ def coordinate(
                 p_term = kp * e_eff * 100.0
                 cmd_unclamped = p_term + I
                 cmd_raw = _clamp(cmd_unclamped, 0.0, 100.0)
-                # back-calculation anti-windup: 포화분만큼 적분을 되돌림
                 if cmd_unclamped != cmd_raw:
-                    I = _clamp(I - (cmd_unclamped - cmd_raw) * AW_BETA, 0.0, 100.0)
+                    if abs(prev_val - cmd_raw) <= RAIL_EPS:
+                        # ── 레일 고착 회복 경로 ────────────────────────────
+                        # 직전 dispatch 가 이미 이 레일이다 = 최소 한 사이클
+                        # 이상 여기 눌러붙어 있었다. 그 상태의 적분은 '기억된
+                        # 평형 개도'가 아니라 **포화 부산물**이라 값에 뜻이 없다.
+                        # 실제 개도(cmd_raw) 쪽으로 기하 감쇠시켜 적분이 자기
+                        # 정의(=이 액추에이터가 서 있는 자리)를 되찾게 한다.
+                        I = cmd_raw + (I - cmd_raw) * RELAX_FACTOR
+                    else:
+                        # 갓 포화 — 표준 back-calculation(포화분만큼 되돌림).
+                        # 첫 사이클의 빠른 anti-windup 은 그대로 둔다.
+                        I = _clamp(I - (cmd_unclamped - cmd_raw) * AW_BETA,
+                                   0.0, 100.0)
                 reason = REASON_PRIMARY
 
         new_state.integral[p.actuator_id] = I

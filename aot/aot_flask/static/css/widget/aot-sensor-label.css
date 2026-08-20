@@ -379,19 +379,50 @@
   font-size: var(--aot-font-size-base);
 }
 
-/* 단락 제목 — AoT 모던 섹션 타이틀 (aot-modal-section-title 축소판)
+/* **박스 위/아래 여백은 이 패딩 하나뿐이어야 한다** — 어떤 카드를 열어도
+ * 테두리에서 첫 글자까지의 거리가 같아야 "카드" 라는 모양이 성립한다.
+ * 안에 들어가는 것(행·시각화 묶음·소제목·안내문 …)은 종류를 안 가리고
+ * **첫째·마지막 자식일 때만** 자기 몫의 위/아래 패딩·마진을 내려놓는다 —
+ * 그래야 새 콘텐츠 종류를 카드에 넣을 때마다 이 규칙을 다시 손볼 필요가
+ * 없다(카드마다 다른 기준을 넣지 않는 것이 "동일 기준" 의 요지다). 가운데
+ * 항목끼리의 간격(행 패딩·시각화 gap)은 그대로 각자 몫이다 — 건드리는
+ * 것은 오직 박스 테두리에 닿는 양 끝뿐이다.
+ * `!important` 를 쓴다 — 텍스트형 행처럼 자기 패딩을 2배로 올린 콘텐츠가
+ * 나중에 로드돼도(특이도 동률 + 소스 순서) 가장자리 규칙이 밀리지 않아야
+ * "카드 여백은 항상 같다" 가 예외 없이 성립한다. */
+.aot-ov-block > :first-child { padding-top: 0 !important; margin-top: 0 !important; }
+.aot-ov-block > :last-child  { padding-bottom: 0 !important; margin-bottom: 0 !important; }
+
+/* "관수" 한 줄 카드처럼 `.aot-ov-block` 과 `.aot-ov-row` 가 **같은 요소**에
+ * 함께 붙는 경우, 두 규칙이 같은 `padding` 단축 속성을 쓰고 있어(특이도
+ * 동률) 파일에서 나중에 나오는 `.aot-ov-row` 쪽이 통째로 이긴다 — 그러면
+ * 이 카드만 좌우 패딩이 0 이 되어 모서리 라운드에 내용이 닿는다. 두 클래스
+ * 선택자(특이도 우위)로 박스 쪽 패딩을 되살린다. */
+.aot-ov-block.aot-ov-row { padding: var(--aot-space-4); }
+
+/* 카드 제목 — 박스 **밖**, 카드 위에 선다(input 설정 모달의
+ * `.aot-modal-group-title` + `.aot-modal-container` 골격과 같은 규약,
+ * 2026-08-20). 제목이 박스 안에 있으면 카드마다 제목 높이가 들쭉날쭉해
+ * 세부 항목의 시작 위치가 카드마다 어긋난다 — 밖으로 빼면 박스는 세부
+ * 항목만 담고, 박스 높이가 곧 내용 높이가 된다.
  *
- * **굵기가 아니라 크기로 앞선다**(2026-08-20). 굵은 글자가 화면에 여럿이면
- * 시선이 갈 곳이 흩어진다 — 굵기는 블록 안의 내용 이름이 쓰고, 제목은 본문의
- * 1.2배 크기로 층을 만든다. */
-.aot-ov-sec-title {
+ * **굵기가 아니라 크기로 앞선다.** 굵은 글자가 화면에 여럿이면 시선이 갈
+ * 곳이 흩어진다 — 굵기는 카드 안의 내용 이름이 쓰고, 제목은 본문의 1.2배
+ * 크기로 층을 만든다.
+ *
+ * 좌우 패딩은 박스 내부 여백(`.aot-ov-block` padding)과 같은 값이다 —
+ * 그래야 제목 글자가 그 아래 박스 안 첫 줄과 같은 세로선에서 시작한다. */
+.aot-ov-card-title {
   font-weight: 400;
   font-size: calc(var(--aot-font-size-base) * 1.2);
   color: var(--aot-color-text-primary);
-  /* 제목과 본문 사이 — 제목이 본문에 붙으면 블록 안이 한 덩어리로 뭉친다. */
-  margin-bottom: var(--aot-space-3);
+  padding: 0 var(--aot-space-4);
+  /* 다음 박스와의 사이 — 작게 두는 이유: 박스 자신의 위쪽 안여백
+     (--aot-space-4)이 이미 충분한 공기를 만든다. 둘을 더하면 박스마다
+     제목 하나에 24px 이상이 들어가 카드 사이가 헐거워 보인다. */
+  margin-bottom: var(--aot-space-1);
 }
-.aot-ov-sec-title--row {
+.aot-ov-card-title--row {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -439,6 +470,15 @@
   color: var(--aot-color-text-primary);
   background: var(--bg-active);
   outline: none;
+}
+
+/* [현재] 밑에 붙는 한 줄 — "목표는 참고용" (구획 모달 전용).
+   카드가 아니라 앞 카드에 딸린 각주라 블록 여백을 쓰지 않는다. 카드 사이
+   간격(--aot-space-4)의 절반만 띄워 앞 카드에 매달린 것으로 읽히게 한다. */
+.aot-ov-targets-note {
+  margin: calc(var(--aot-space-4) * -0.5) var(--aot-space-4) var(--aot-space-4);
+  font-size: var(--aot-font-size-sm);
+  line-height: 1.5;
 }
 
 /* 상태 요약 본문 라인 */
@@ -491,12 +531,10 @@
   font-style: italic;
 }
 
-/* 제목은 이탤릭에서 뺀다 — 블록 제목은 다른 블록과 같은 모양이어야
-   "여기 무엇이 있는지" 를 훑을 때 한 줄만 다르게 읽히지 않는다. */
-.aot-ov-inactive .aot-ov-sec-title {
-  font-style: normal;
-  color: var(--aot-color-text-primary);
-}
+/* 제목이 이제 박스 밖(`.aot-ov-card-title`)이라 이 이탤릭을 물려받지
+   않는다 — 예전에는 제목이 `.aot-ov-inactive` 박스 안 자식이라 이탤릭을
+   물려받았고, 그것을 되돌리는 규칙이 여기 있었다. 지금은 애초에 상속
+   경로가 없어 되돌릴 것도 없다. */
 
 /* Reasons for inactivity */
 .aot-ov-reasons {
@@ -515,9 +553,27 @@
   display: flex;
   justify-content: space-between;
   font-variant-numeric: tabular-nums;
-  padding: 2px 0;
+  padding: 6px 0;
   color: var(--aot-color-text-primary);
 }
+
+/* 세부 항목 사이 가로 구분선 — input 설정 모달(`.aot-modal-option-row`)과
+ * 같은 규약. **끝이 아니라 사이에** 긋는다: "마지막만 예외" 로 하려면
+ * 그 행이 카드의 진짜 마지막 자식이어야 하는데, 각주·안내문이 뒤에 더
+ * 붙는 카드가 있어 `:last-child` 는 거기서 틀린 판정을 낸다. 인접 형제
+ * 선택자는 그 경우 그냥 선을 안 그어 안전한 쪽으로 틀린다.
+ * `:not(.aot-ov-block)` 은 "관수" 한 줄 카드(같은 요소가 block 이자
+ * row)를 제외한다 — 그 카드는 형제가 없어 실제로는 안 걸리지만, 의도를
+ * 명시해 둔다. */
+.aot-ov-row:not(.aot-ov-block) + .aot-ov-row:not(.aot-ov-block) {
+  border-top: 1px solid var(--aot-border-neutral, var(--aot-border-light));
+}
+
+/* 일반 텍스트형 행 — 이름·품종처럼 길이가 일정하지 않은 문장을 담는 줄은
+ * 숫자 한 줄(`.aot-ov-row` 기본 6px)보다 위아래 숨 쉴 칸이 더 필요하다.
+ * 지금 값의 2배(12px)를 준다. 예: "이 구역의 구획" 목록의 각 줄
+ * (`buildZonePlotsHtml`·`buildFacilityPlotsHtml` 이 다는 `.aot-ov-plot-link`). */
+.aot-ov-row.aot-ov-plot-link { padding: 12px 0; }
 
 /* Gate state: warning-like color */
 .aot-ov-gate {
@@ -1073,21 +1129,17 @@
      서너 줄밖에 안 들어와 훑는 일이 스크롤이 된다. 구획 [현황]의 기간 축처럼
      한 줄이 그 자체로 한 덩어리인 곳은 기본값(40px)을 그대로 쓴다. */
   gap: var(--aot-space-4);
-  /* 제목 아래·마지막 줄 아래도 같은 비율로 줄인다 — 줄 사이만 좁히고 위아래를
-     그대로 두면 목록이 블록 가운데에 떠 있는 것처럼 보인다.
-       제목 아래   = 제목 margin 8 + 여기 8      = 16
-       마지막 아래 = 여기 0 + 카드 padding 16    = 16
-     셋(줄 사이·제목 아래·마지막 아래)이 모두 16 이라 목록이 한 덩어리로 읽힌다. */
-  padding-top: var(--aot-space-2);
-  padding-bottom: 0;
+  /* 위아래 패딩은 두지 않는다 — `.aot-viz-group` 기본값이 이미 0/0 이다
+     (components/aot-dataviz.css). 첫 줄·마지막 줄 모두 박스 자신의 균일한
+     안여백(--aot-space-4, 위아래 16px)에 바로 닿는다. */
 }
-.aot-ov-envnow .aot-ov-sec-title { margin-bottom: var(--aot-space-2); }
 
 /* 대표 측정 지정 — 값 자체가 버튼이다.
    항목마다 padding 을 늘 잡아 둔다: 지정될 때만 주면 배경이 켜지는 순간 칸이
    커지면서 옆 항목들이 밀린다(누른 자리가 손가락 밑에서 움직인다).
    음수 마진으로 늘린 만큼 되돌려, 지정 전 배치는 예전과 같게 둔다. */
 .aot-env-now-item {
+  position: relative;   /* 아래 구분선 의사요소의 기준점 */
   padding: 6px 8px;
   /* 가로만 바깥으로 내민다. 세로까지 음수 마진을 주면 줄 사이 여백(gap)을
      그만큼 먹어, 밴드 바 목록이 다시 붙어 보인다(옛 가로 배치에서 쓰던
@@ -1097,6 +1149,26 @@
   transition: background-color 0.12s ease;
   /* 지정 배경이 켜져도 마커의 링 색은 카드 바탕이 아니라 이 배경이어야
      한다 — 아니면 지정된 줄만 마커 둘레에 흰 홈이 생긴다. */
+}
+/* 그래프끼리도 `.aot-ov-row` 와 같은 가로 구분선을 긋는다 — [현재] 는
+ * 값이 아니라 그래프(밴드 바)로 나열되지만 "세부 항목이 여러 개 나열된
+ * 카드" 라는 점은 같은 카드이므로 같은 규약을 쓴다.
+ *
+ * **`border-top` 을 직접 주지 않는다.** 이 항목은 `border-radius: 8px`
+ * 가 있는 지정/호버 배경 상자다 — 그 상자 자신의 위쪽 변에 선을 그으면
+ * 둥근 모서리를 따라 선 양 끝이 살짝 잘려 곡선처럼 보이고, gap(가운데
+ * 빈 칸)이 아니라 다음 항목의 상자 테두리에 선이 "붙은" 모양이 된다
+ * (2026-08-21, "카드 상단에 이상한 선" 신고). 대신 항목과 무관한
+ * 의사요소를 **줄 사이 간격의 정중앙**에 절대배치해 진짜 "항목과 항목
+ * 사이" 에 곧은 선을 놓는다. */
+.aot-env-now-item + .aot-env-now-item::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(var(--aot-space-4) / -2);
+  height: 1px;
+  background: var(--aot-border-neutral, var(--aot-border-light));
 }
 .aot-env-now-item.is-rep { --aot-viz-surface: var(--brand-accent); }
 /* 지정된 것은 브랜드 강조 배경(--brand-accent)으로 남는다. 호버는 그보다

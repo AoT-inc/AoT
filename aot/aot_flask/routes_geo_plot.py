@@ -140,40 +140,6 @@ def api_target_measurements():
                     'fixed_defs': fixed})
 
 
-@blueprint.route('/api/geo/resource-functions', methods=['GET'])
-@login_required
-def api_resource_functions():
-    """자원(관수·시비)으로 걸 수 있는 Function 목록.
-
-    네 종류를 함께 낸다(CustomController · Conditional · Trigger · PID) —
-    `_set_function_activation` 이 켜고 끌 수 있는 것과 같은 범위여야 한다.
-    한쪽만 내면 화면에서 고를 수 없는 함수가 생기고, 그 이유가 화면 어디에도
-    없다.
-
-    **새 함수를 여기서 만들지 않는다** — 만드는 화면이 따로 있다
-    (`target-methods` 와 같은 규율).
-    """
-    from aot.databases.models import (Conditional, CustomController, PID,
-                                      Trigger)
-
-    out = []
-    for model, kind in ((CustomController, 'function'),
-                        (Conditional, 'conditional'),
-                        (Trigger, 'trigger'),
-                        (PID, 'pid')):
-        try:
-            rows = model.query.all()
-        except Exception:
-            continue
-        for r in rows:
-            out.append({'unique_id': r.unique_id,
-                        'name': getattr(r, 'name', None) or r.unique_id,
-                        'kind': kind,
-                        'active': bool(getattr(r, 'is_activated', False))})
-    out.sort(key=lambda x: (x['name'] or '').lower())
-    return jsonify({'ok': True, 'functions': out})
-
-
 @blueprint.route('/api/geo/coordinator/<string:function_uuid>/plot-targets',
                  methods=['GET'])
 @login_required
@@ -325,7 +291,20 @@ def api_program_create():
         data.setdefault('kind', tpl.get('kind', 'vegetation'))
         data.setdefault('stages', tpl['stages'])
         data.setdefault('photosynthesis', tpl['photosynthesis'])
-        data.setdefault('source_note', 'template:%s' % tkey)
+        # 근거. 템플릿에 **출처가 붙은 단계 지침**이 실려 있으면 그 출처까지
+        # 함께 남긴다 — 지침만 남고 출처가 사라지면, 나중에 그 말을 고칠 사람이
+        # 판단할 재료가 없다(create_program 이 AI 에게 source_note 를 요구하는
+        # 것과 같은 이유). 지침이 없으면 예전과 똑같은 한 줄이다.
+        #
+        # 번역하지 않는다 — `source_note` 는 DB 에 남는 **데이터**라, 만든 사람의
+        # 언어로 굳으면 다른 언어 사용자에게는 영영 그 언어로 보인다. 기존
+        # `template:<key>` 와 같은 기계 표지를 쓴다(출처 본문은 적은 사람의 말
+        # 그대로다).
+        _gsrc = tpl.get('guidance_sources') or []
+        data.setdefault('source_note',
+                        'template:%s' % tkey if not _gsrc else
+                        'template:%s · guidance-source: %s'
+                        % (tkey, ' / '.join(_gsrc)))
         # 카테고리 템플릿은 "이건 중앙값입니다, 실제에 맞게 고치세요" 를
         # notes 에 담아 둔다 — 만든 프로그램에도 그대로 남아야 사람이 나중에
         # 이걸 조사된 값으로 오해하지 않는다.

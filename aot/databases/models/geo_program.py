@@ -142,6 +142,19 @@ class GeoProgram(CRUDMixin, db.Model):
     # 함수의 `method_start_time`(그 함수가 켜진 시각)과는 다른 기준이다.
     targets_methods = db.Column(db.JSON, nullable=True)
 
+    # 자원 역할 선언 — `[{role, default}]` (P6, 2026-08-20 재설계).
+    #
+    # **함수 uuid 를 담지 않는다.** 프로그램은 "이 작물은 관수를 쓴다" 까지만
+    # 말하고, 그 일을 무엇이 하는지는 현장이 기하로 푼다
+    # (`plot_context.resources_for_plot`). 예전에는 `stages[].functions` 에
+    # 함수 uuid 를 적었는데, 그러면 프로그램이 템플릿이기를 그만둔다 — 두 번째
+    # 온실에서 쓰려면 복제해야 하고 작물 지식이 두 벌이 된다.
+    #
+    # `default` 는 **단계 기본값**이다. 목표(`target_defs`)와 같은 패턴 —
+    # 프로그램에 한 번 적고 달라지는 단계에서만 덮어쓴다. 관수는 대개 작기 내내
+    # 필요하고, 단계마다 달라지는 것은 예외(수확 전 단수) 쪽이다.
+    resource_defs = db.Column(db.JSON, nullable=True)
+
     # 광합성 파라미터(Big-Leaf 모델 상수 + GDD 기준온도 + 권장 DLI/GDD).
     # 키 이름은 제어 쪽 `CropParams` 와 **같다** — 갈리면 값이 조용히 무시되고
     # 모델이 기본값으로 돈다. 여기 두는 이유는 프로그램이 자기 완결적이어야
@@ -182,6 +195,16 @@ class GeoProgram(CRUDMixin, db.Model):
         if isinstance(defs, list) and defs:
             return defs
         return fixed_target_defs(self.kind)
+
+    def resource_def_list(self):
+        """자원 역할 정의 → `[{role, default}]`. 없으면 빈 목록.
+
+        **비어 있음이 정상이다** — 자원을 쓰지 않는 프로그램이 있다. 목표
+        (`target_def_list`)처럼 고정 항목으로 채우지 않는 이유는, 자원은 종류가
+        정해 주는 것이 아니라 그 작물을 어떻게 기르는가의 문제라서다.
+        """
+        defs = self.resource_defs
+        return defs if isinstance(defs, list) else []
 
     def total_days(self):
         """전체 재배 기간(일). 단계에 `days` 가 없으면 그 단계는 0으로 센다.

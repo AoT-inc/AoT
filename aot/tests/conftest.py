@@ -80,6 +80,17 @@ def _isolate_aot_logger():
     import logging
     aot_logger = logging.getLogger('aot')
     saved = (aot_logger.propagate, list(aot_logger.handlers), aot_logger.level)
+    # **되돌리는 것만으로는 부족하다.** 이 픽스처는 함수 스코프라 `setUpClass`
+    # 나 세션 픽스처보다 **나중에** 돈다. 그래서 그쪽에서 오염되면(예:
+    # `test_mcp_rate_limit` 의 `setUpClass` 가 부르는 `create_app()`) 이미
+    # 오염된 상태를 저장했다가 그대로 되돌려 놓아, 그 뒤 스위트 전체가
+    # `propagate=False` 로 돈다 — 2026-08-20 까지 `test_safety_service` 의
+    # "실패를 조용히 삼키지 않는다" 검사가 **전체 스위트에서만** 실패한 원인이다.
+    #
+    # 핸들러는 건드리지 않는다(그쪽은 되돌리기만 한다 — 임시 로그 파일을 붙드는
+    # 문제 때문이다). 필요한 것은 기록이 root 까지 올라오는 것뿐이고, 그래야
+    # caplog 이 받는다. 데몬 핸들러도 그대로 받으므로 잃는 것이 없다.
+    aot_logger.propagate = True
     yield
     aot_logger.propagate, aot_logger.handlers[:], aot_logger.level = (
         saved[0], saved[1], saved[2])

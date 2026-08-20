@@ -3745,7 +3745,10 @@ class TestVocabularyIsNotAgricultureOnly(unittest.TestCase):
             '\n  function ', 1)[0]
 
         # 지금 값은 [현황] 에만.
-        for now in ('_plotStageProposalHtml', '_plotStageTargetRows',
+        # `_plotStageTargetRows` 는 목록에서 뺐다 — [목표] 카드를 없앴다
+        # (2026-08-20). [현재] 가 값 옆에 목표를 세우게 되면서 두 카드가 거의
+        # 같은 말을 했고, 이쪽은 재는 센서가 없는 항목까지 늘어놓았다.
+        for now in ('_plotStageProposalHtml',
                     '_plotStageResourceRows', '_plotGddRows'):
             self.assertIn(now, over, '%s 가 [현황] 에 없다' % now)
             self.assertNotIn(now, about, '%s 가 [개요] 에도 있다' % now)
@@ -3841,10 +3844,30 @@ class TestVocabularyIsNotAgricultureOnly(unittest.TestCase):
         self.assertEqual(by_key['rh']['value'], 70.0)   # 곡선 없는 항목은 그대로
 
     def test_targets_say_they_do_not_drive_control(self):
-        """숫자만 보이면 사람이 '이대로 돌고 있다' 로 읽는다 — 아직 아니다."""
+        """숫자만 보이면 사람이 '이대로 돌고 있다' 로 읽는다 — 아직 아니다.
+
+        **문구는 카드가 아니라 목표 숫자에 딸린다.** [목표] 카드를 없앨 때
+        (2026-08-20) 이 문장이 함께 사라질 뻔했다 — 그 카드에만 있었기
+        때문이다. 지금은 구획 [현황]의 [현재] 바로 밑에 붙는다: 프로그램
+        목표가 그 눈금으로 들어가므로 문장이 붙을 자리도 거기다.
+
+        **시설·구역에는 붙지 않는다** — 그쪽 목표는 코디네이터가 실제로 쫓는
+        값이라 같은 문장이 거짓이 된다. 그래서 공용 빌더가 아니라 구획
+        빌더에 있어야 한다.
+        """
         popup = _read(os.path.join(_ROOT, 'aot_flask', 'static', 'js',
                                    'widgets', 'AoT_map', 'aot-map-popup.js'))
         self.assertIn('Control is not changed automatically', popup)
+        over = popup.split('function _plotOverviewHtml', 1)[1].split(
+            '\n  function ', 1)[0]
+        self.assertIn('Control is not changed automatically', over,
+                      '구획 [현황] 이 아닌 곳으로 옮겨졌다 — 프로그램 목표가 '
+                      '보이는 자리에 있어야 한다')
+        shared = popup.split('function buildEnvNowHtml', 1)[1].split(
+            '\n  function ', 1)[0]
+        self.assertNotIn('Control is not changed automatically', shared,
+                         '공용 [현재] 빌더에 붙었다 — 시설 목표는 코디네이터가 '
+                         '실제로 쫓는 값이라 이 문장이 거짓이 된다')
 
     def test_every_plot_form_can_pick_a_kind(self):
         """구획을 만드는 세 화면이 **모두** 종류를 고를 수 있어야 한다.
@@ -5233,15 +5256,90 @@ class TestProgram(unittest.TestCase):
         body = io_src.split('def apply_stage_resources', 1)[1].split('\ndef ', 1)[0]
         self.assertIn("res.get('error')", body)
 
-    def test_dead_function_reference_is_shown_not_dropped(self):
-        """조용히 빼면 그 단계에서 자원이 통째로 사라진 것을 아무도 모른다."""
+    def test_missing_resource_is_shown_not_dropped(self):
+        """조용히 빼면 그 단계에서 자원이 통째로 사라진 것을 아무도 모른다.
+
+        P6 재설계로 자리가 옮겨졌다 — 예전에는 "죽은 함수 참조" 를 남겼고, 이제는
+        "선언한 역할을 맡을 함수가 이 자리에 없다" 를 남긴다. 원칙은 같다.
+        """
         from aot.aot_flask.geo.plot_context import stage_resources
 
-        out = stage_resources({'functions': [{'id': 'ghost',
-                                              'role': 'irrigation'}]})
+        prog = self._program(source='user')
+        prog.resource_defs = [{'role': 'irrigation', 'default': True}]
+        out = stage_resources({'key': 'a'}, prog, None)
         self.assertEqual(len(out), 1)
-        self.assertTrue(out[0]['missing'])
+        self.assertEqual(out[0]['role'], 'irrigation')
+        self.assertFalse(out[0]['found'])
+        # 노지 구획(시설 없음)은 아직 현장 어휘가 없다 — 이유를 밝힌다.
+        self.assertEqual(out[0]['reason'], 'no-facility')
         self.assertIsNone(out[0]['active'])
+
+    def test_stage_can_turn_a_declared_role_off(self):
+        """단계가 끈 역할은 목록에 나오지 않는다 — 그 단계에는 요구가 없다."""
+        from aot.aot_flask.geo.plot_context import stage_resources
+
+        prog = self._program(source='user')
+        prog.resource_defs = [{'role': 'irrigation', 'default': True}]
+        self.assertEqual(
+            stage_resources({'key': 'a', 'resources': {'irrigation': False}},
+                            prog, None), [])
+
+    def test_declared_role_says_where_it_came_from(self):
+        """밝히지 않으면 "이 단계에서 일부러 끈 것" 과 "원래 안 쓰는 것" 을
+        사람이 구분할 수 없다."""
+        from aot.aot_flask.geo.plot_context import declared_roles
+
+        prog = self._program(source='user')
+        prog.resource_defs = [{'role': 'irrigation', 'default': False}]
+        self.assertEqual(declared_roles({'key': 'a'}, prog), [])
+        self.assertEqual(
+            declared_roles({'key': 'a', 'resources': {'irrigation': True}},
+                           prog),
+            [{'role': 'irrigation', 'source': 'stage'}])
+
+    def test_field_resolves_the_role_to_its_own_function(self):
+        """**같은 프로그램이 자리마다 다른 함수를 쓴다** — 이것이 재설계의 요지다.
+
+        프로그램에는 함수 uuid 가 없고, 시설의 관수 피팅이 켜는 출력을 되짚어
+        함수를 찾는다. 그래서 두 번째 온실에서 같은 프로그램을 써도 복제할
+        필요가 없다.
+        """
+        from aot.aot_flask.extensions import db
+        from aot.aot_flask.geo.plot_context import functions_for_role
+        from aot.databases.models import (Actions, GeoFacility, GeoPlot,
+                                          Output, Trigger)
+
+        trg = Trigger(name='A동 관수', trigger_type='trigger_run_pwm_method')
+        db.session.add(trg)
+        db.session.add(Output(unique_id='out-A', name='A동 밸브',
+                              output_type='virtual_on_off_single'))
+        db.session.commit()
+        db.session.add(Actions(function_id=trg.unique_id,
+                               function_type='trigger', action_type='output',
+                               do_unique_id='out-A,0'))
+        fac = GeoFacility(name='A동', geo_id='m', shape_uuid='shape-A',
+                          fittings=[{'id': 'f1', 'kind': 'irrigation_valve',
+                                     'actuator_id': 'out-A'}])
+        db.session.add(fac)
+        db.session.commit()
+        plot = GeoPlot(geo_id='m', kind='vegetation', subject='상추',
+                       source_kind='facility', facility_uuid=fac.unique_id,
+                       started_on=date.today())
+        db.session.add(plot)
+        db.session.commit()
+
+        fns, reason = functions_for_role('irrigation', plot)
+        self.assertEqual(reason, 'ok')
+        self.assertEqual([f['name'] for f in fns], ['A동 관수'])
+
+    def test_role_without_field_vocabulary_says_so(self):
+        """시비는 시설 설계기에 fitting 종류가 아직 없다. 없는 어휘를 지어내지
+        않고 이유를 낸다 — 지어내면 실제 배관과 무관한 분류가 데이터에 남는다."""
+        from aot.aot_flask.geo.plot_context import functions_for_role
+
+        fns, reason = functions_for_role('fertigation', None)
+        self.assertEqual(fns, [])
+        self.assertEqual(reason, 'no-vocabulary')
 
     def test_resource_roles_start_narrow(self):
         """어휘는 한 번 퍼지면 되돌리기 어렵다 — `other` 로 담고 나중에 이름을
@@ -5249,6 +5347,85 @@ class TestProgram(unittest.TestCase):
         from aot.aot_flask.geo.program_io import _RESOURCE_ROLES
         self.assertEqual(_RESOURCE_ROLES,
                          ('irrigation', 'fertigation', 'other'))
+
+    # ── 자원 역할 선언 (P6 재설계, 2026-08-20) ──────────────────────────
+    # 프로그램은 함수를 가리키지 않는다. 계획이 현장을 미리 지정하면 충돌을 풀
+    # 방법이 없고, 같은 프로그램을 두 번째 자리에서 쓰려면 복제해야 해서 작물
+    # 지식이 두 벌이 된다.
+
+    def test_program_declares_roles_not_function_ids(self):
+        """프로그램에 함수 uuid 가 들어갈 자리가 없다."""
+        from aot.aot_flask.geo import program_io
+        out, err = program_io.create_program({
+            'name': '역할선언', 'subject': 'tomato',
+            'resource_defs': [{'role': 'irrigation'}],
+            'stages': [{'key': 'a', 'name': 'a', 'days': 10}]})
+        self.assertIsNone(err)
+        self.assertEqual(out['resource_defs'],
+                         [{'role': 'irrigation', 'default': True}])
+        # 프로그램 응답 어디에도 함수 uuid 가 없다.
+        self.assertNotIn('functions', out)
+
+    def test_unknown_role_is_refused(self):
+        from aot.aot_flask.geo import program_io
+        out, err = program_io.create_program({
+            'name': 'x', 'subject': 'tomato',
+            'resource_defs': [{'role': 'lighting'}],
+            'stages': [{'key': 'a', 'name': 'a', 'days': 10}]})
+        self.assertIsNone(out)
+        self.assertIn('lighting', err or '')
+
+    def test_stage_overrides_only_declared_roles(self):
+        """정의에 없는 역할을 단계가 켜면 화면에 그릴 근거가 없다."""
+        from aot.aot_flask.geo import program_io
+        out, err = program_io.create_program({
+            'name': 'x', 'subject': 'tomato',
+            'resource_defs': [{'role': 'irrigation'}],
+            'stages': [{'key': 'a', 'name': 'a', 'days': 10,
+                        'resources': {'fertigation': True}}]})
+        self.assertIsNone(out)
+        self.assertIn('fertigation', err or '')
+
+    def test_stage_can_switch_a_role_off(self):
+        """"이 단계는 쓰지 않는다" 와 "기본값을 따른다" 는 다른 사실이다 —
+        수확 전 단수(斷水)를 빈 칸으로 표현하면 실수와 구분되지 않는다."""
+        from aot.aot_flask.geo import program_io
+        out, err = program_io.create_program({
+            'name': 'x', 'subject': 'tomato',
+            'resource_defs': [{'role': 'irrigation', 'default': True}],
+            'stages': [{'key': 'a', 'name': 'a', 'days': 10},
+                       {'key': 'b', 'name': 'b', 'days': None,
+                        'resources': {'irrigation': False}}]})
+        self.assertIsNone(err)
+        self.assertNotIn('resources', out['stages'][0])   # 기본값을 따른다
+        self.assertEqual(out['stages'][1]['resources'], {'irrigation': False})
+
+    def test_legacy_function_ids_are_kept_not_dropped(self):
+        """p6_48 이전의 함수 uuid 는 "이 함수가 그 자리에 배치돼야 한다" 는
+        정보다. 읽는 쪽은 안 보지만 조용히 버리지 않는다."""
+        from aot.aot_flask.geo import program_io
+        out, err = program_io.create_program({
+            'name': 'x', 'subject': 'tomato',
+            'stages': [{'key': 'a', 'name': 'a', 'days': 10,
+                        'functions': [{'id': 'legacy-uuid',
+                                       'role': 'irrigation'}]}]})
+        self.assertIsNone(err)
+        self.assertEqual(out['stages'][0]['functions'],
+                         [{'id': 'legacy-uuid', 'role': 'irrigation'}])
+
+    def test_resource_defs_survive_a_partial_save(self):
+        """키가 없으면 기존 값을 지킨다 — 부분 저장 규칙."""
+        from aot.aot_flask.geo import program_io
+        out, err = program_io.create_program({
+            'name': 'x', 'subject': 'tomato',
+            'resource_defs': [{'role': 'irrigation'}],
+            'stages': [{'key': 'a', 'name': 'a', 'days': 10}]})
+        self.assertIsNone(err)
+        same, err = program_io.update_program(out['unique_id'],
+                                              {'name': '새 이름'})
+        self.assertIsNone(err)
+        self.assertEqual(same['resource_defs'],
+                         [{'role': 'irrigation', 'default': True}])
 
     def test_auto_advance_is_off_by_default(self):
         """켜져 있는 것이 기본이면 사람이 아무 결정도 하지 않았는데 단계가 스스로
@@ -5696,6 +5873,33 @@ class TestProgram(unittest.TestCase):
         self.assertIsNone(err)
         self.assertTrue(out['usable_for_control'])
 
+    # ── delete_program (AI 도구) ────────────────────────────────────────
+    # program_io.delete_program 자체의 참조 무결성은 위
+    # test_program_in_use_cannot_be_deleted / test_unused_program_can_be_deleted
+    # 가 지킨다. 여기서는 도구 계층(AoTDataToolService.delete_program) 이 그
+    # 결과를 그대로 전달하는지만 본다 — 얇은 어댑터라 자체 로직이 없다.
+
+    def test_ai_tool_deletes_unused_program(self):
+        from aot.ai.services.aot_data_tool_service import AoTDataToolService as S
+        prog = self._program(source='user')
+        res = S.delete_program(program_id=prog.unique_id)
+        self.assertEqual(res['status'], 'success')
+        self.assertEqual(res['deleted'], prog.unique_id)
+
+    def test_ai_tool_refuses_program_in_use(self):
+        from aot.ai.services.aot_data_tool_service import AoTDataToolService as S
+        prog = self._program(source='user')
+        self._plant(program_uuid=prog.unique_id)
+        res = S.delete_program(program_id=prog.unique_id)
+        self.assertEqual(res['status'], 'error')
+        self.assertIn('구획', res['message'])
+
+    def test_ai_tool_requires_program_id(self):
+        from aot.ai.services.aot_data_tool_service import AoTDataToolService as S
+        res = S.delete_program()
+        self.assertEqual(res['status'], 'error')
+        self.assertIn('program_id', res['message'])
+
     # ── 단계 목표 ───────────────────────────────────────────────────────
     def test_stage_targets_are_validated_and_kept(self):
         from aot.aot_flask.geo import program_io
@@ -5959,8 +6163,9 @@ class TestProgram(unittest.TestCase):
         self.assertIn('var vegOnly = _isVeg()', js)
         # 단계의 적산온도 칸도 식생에서만.
         self.assertIn("(_isVeg()\n                 ? _stageField(_T('stage_gdd'", js)
-        # 관수·시비 역할도 식생에서만(그 밖은 역할 없는 자원 하나).
-        self.assertIn("var roles = _isVeg() ? _RES_ROLES : ['other'];", js)
+        # 관수·시비 역할도 식생에서만(그 밖은 역할 없는 자원 하나). P6 재설계로
+        # 자리가 `_roleChoices()` 로 옮겨졌다 — 원칙은 같다.
+        self.assertIn("return _isVeg() ? _RES_ROLES : ['other'];", js)
 
     def test_kind_and_defs_are_set_before_anything_reads_them(self):
         """순서가 뒤집히면 이번 렌더가 **직전 프로그램의 값**으로 그려진다.
@@ -6014,6 +6219,68 @@ class TestProgram(unittest.TestCase):
         missing = sorted(bare - defined)
         self.assertEqual(missing, [], '정의되지 않은 CSS 변수(폴백 없음): %s' % missing)
 
+    def test_researched_targets_carry_their_source(self):
+        """출처가 없으면 나중에 이 숫자를 고칠 사람이 판단할 근거가 없다 —
+        지어낸 값과도 구분되지 않는다."""
+        from aot.scripts.crop_target_sources import SOURCES, SPECIES_TARGETS
+        from aot.scripts.seed_programs import catalog
+
+        for crop, spec in SPECIES_TARGETS.items():
+            self.assertIn(spec.get('src'), SOURCES, crop)
+            src = SOURCES[spec['src']]
+            self.assertTrue(src.get('title'), crop)
+
+        by_key = {t['key']: t for t in catalog()}
+        for crop in SPECIES_TARGETS:
+            item = by_key[crop]
+            self.assertTrue(item.get('notes'), crop)
+            self.assertIn('출처', item['notes'], crop)
+
+    def test_guidance_is_sourced_too(self):
+        """지침은 범위 검사가 없어 **지어내기 가장 쉬운 자리**다. 그래서 본문과
+        출처를 한 짝으로 요구하고(`_guidance_for`), 실제로 단계에 실리는지 본다.
+
+        정본은 `seed_programs._STAGE_GUIDANCE` **한 곳**이다 — 목표값 표
+        (`crop_target_sources`)에 두지 않는다. 두 곳에 두면 어느 쪽이 화면에
+        나가는지 알 수 없게 된다.
+        """
+        import aot.scripts.crop_target_sources as cts
+        from aot.scripts.seed_programs import _STAGE_GUIDANCE, catalog
+
+        self.assertFalse(hasattr(cts, 'SPECIES_GUIDANCE'),
+                         '지침 표가 두 곳에 있다')
+        self.assertTrue(_STAGE_GUIDANCE, '지침이 비어 있다')
+        for key, entry in _STAGE_GUIDANCE.items():
+            self.assertEqual(len(entry), 2, key)      # (본문, 출처)
+            self.assertTrue((entry[0] or '').strip(), key)
+            self.assertTrue((entry[1] or '').strip(), key)
+
+        # 표만 있고 안 실리면 아무도 못 읽는다.
+        by_key = {t['key']: t for t in catalog()}
+        for (crop, stage) in _STAGE_GUIDANCE:
+            item = by_key[crop]
+            got = {st['key'] for st in item['stages'] if st.get('guidance')}
+            self.assertIn(stage, got, '%s/%s' % (crop, stage))
+    def test_researched_values_stay_in_range(self):
+        """범위를 벗어난 값은 저장 단계에서 거절된다 — 카탈로그가 그런 값을 들고
+        있으면 그 템플릿은 영영 쓸 수 없다."""
+        from aot.aot_flask.geo import program_io
+        from aot.scripts.seed_programs import catalog
+
+        for item in catalog():
+            if item['scope'] != 'species':
+                continue
+            defs = item.get('target_defs')
+            if not defs:
+                continue
+            cleaned, err = program_io._clean_target_defs(defs, 'vegetation')
+            self.assertIsNone(err, '%s: %s' % (item['key'], err))
+            for st in item['stages']:
+                if not st.get('targets'):
+                    continue
+                _, terr = program_io._clean_targets(st['targets'], cleaned)
+                self.assertIsNone(terr, '%s/%s: %s' % (item['key'], st['key'], terr))
+
     def test_fixed_defs_are_published_per_kind(self):
         """화면이 저장하지 않고 종류를 바꿔 볼 수 있어야 한다 — 그러려면 새 종류의
         고정 항목을 스스로 세울 수 있어야 한다."""
@@ -6042,6 +6309,109 @@ class TestProgram(unittest.TestCase):
             'stages': [{'key': 'a', 'name': 'a', 'days': 10, 'guidance': '   '}]})
         self.assertIsNone(err)
         self.assertNotIn('guidance', out['stages'][0])
+
+    def test_guidance_reaches_the_ai_not_just_the_screen(self):
+        """구획을 조회한 AI 가 그 단계의 지침을 **받는다**.
+
+        payload 에서 조용히 빠지면 AI 는 프로그램에 적힌 지침 대신 일반론으로
+        답한다 — 답이 그럴듯해서 빠진 것을 아무도 눈치채지 못한다.
+        """
+        from aot.ai.services.aot_data_tool_service import AoTDataToolService
+
+        prog = self._program(source='user', stages=[
+            {'key': 'seedling', 'name': '육묘기', 'days': 21,
+             'guidance': '상토가 마르지 않게 관리한다.'},
+            {'key': 'harvest', 'name': '수확기', 'days': None},
+        ])
+        row, err = self._plant(program_uuid=prog.unique_id)
+        self.assertIsNone(err)
+
+        one = AoTDataToolService.get_plot(plot_id=row['unique_id'])
+        self.assertEqual(one['plot']['stage']['guidance'],
+                         '상토가 마르지 않게 관리한다.')
+
+        # 목록 경로도 같아야 한다 — 상세만 실으면 "구획 여럿" 질문에서 빠진다.
+        many = AoTDataToolService.list_plots(map_id='map-p')
+        self.assertEqual(many['plots'][0]['stage']['guidance'],
+                         '상토가 마르지 않게 관리한다.')
+
+        # 프로그램 조회는 **모든** 단계의 지침을 낸다(다음 단계를 미리 묻는다).
+        got = AoTDataToolService.get_program(program_id=prog.unique_id)
+        self.assertEqual(got['program']['stages'][0]['guidance'],
+                         '상토가 마르지 않게 관리한다.')
+
+    def test_ai_is_told_the_guidance_field_exists(self):
+        """payload 에 있는 것과 AI 가 쓰는 것은 다르다.
+
+        도구 설명에 없는 필드는 모델이 존재를 모르거나, 알아도 일반 재배 지식보다
+        우선할 이유를 모른다. 그래서 규칙은 도구 설명에 적혀 있어야 한다 —
+        **슬림 매니페스트와 MCP 페이로드 양쪽**이다(한쪽만 고치면 인앱 AI 와
+        외부 MCP 클라이언트가 서로 다른 계약을 읽는다).
+        """
+        from aot.ai.services import tool_registry
+
+        # 선언 자리를 본다 — `manifest_system_tools()` 는 등급이 켜지면
+        # 서랍 도구를 걸러내므로, 그 출력으로 검사하면 등급 설정에 따라 결과가
+        # 갈린다(검사하려는 것은 설명 문구이지 노출 여부가 아니다).
+        declared = {t.name: (t.manifest or {}).get('description') or ''
+                    for t in tool_registry.TOOLS}
+        mcp = {e['tool_name']: e.get('description') or ''
+               for e in tool_registry.virtual_tools()}
+        for surface, by_name in (('manifest', declared), ('mcp', mcp)):
+            for name in ('get_plot', 'list_plots'):
+                self.assertIn('guidance', by_name.get(name, ''),
+                              '%s/%s 설명에 guidance 가 없다' % (surface, name))
+
+        # 제어 경로에는 싣지 않는다 — 지침은 제어를 바꾸지 않는다(설계 정본).
+        from aot.aot_flask.geo import coordinator_plot
+        import inspect
+        self.assertNotIn(
+            'guidance', inspect.getsource(coordinator_plot.control_targets),
+            '지침이 제어 목표로 새어 들어갔다')
+
+    def test_template_catalog_never_carries_unsourced_guidance(self):
+        """지침은 범위 검사가 없어 **가장 지어내기 쉬운 필드**다.
+
+        그래서 카탈로그의 규율은 하나다 — 본문과 출처를 함께 적지 않으면 실리지
+        않는다. 지금은 `_STAGE_GUIDANCE` 가 비어 있어 아무 지침도 없고, 나중에
+        누가 출처 없이 한 줄 적어 넣으면 여기서 걸린다.
+        """
+        from aot.scripts import seed_programs
+
+        for item in seed_programs.catalog():
+            filled = [st for st in item['stages'] if st.get('guidance')]
+            if item['scope'] == 'category':
+                # 소속 5종을 뭉뚱그린 자리라 어느 작물의 지침도 그 범위의 것이
+                # 아니다 — 일수는 중앙값으로 요약되지만 산문은 요약되지 않는다.
+                self.assertEqual(filled, [],
+                                 '%s: 카테고리에는 지침을 붙이지 않는다'
+                                 % item['key'])
+                continue
+            if not filled:
+                self.assertIsNone(item.get('guidance_sources'))
+                continue
+            self.assertTrue(item.get('guidance_sources'),
+                            '%s: 지침이 있는데 출처가 없다' % item['key'])
+
+        # 출처가 빈 항목은 **거절이 아니라 누락**이다 — 시드가 실패해 카탈로그
+        # 전체가 안 나오는 것보다 근거 없는 한 줄만 빠지는 편이 낫다.
+        self.assertEqual(seed_programs._guidance_for('x', 'y'), (None, None))
+        try:
+            seed_programs._STAGE_GUIDANCE[('x', 'y')] = ('마르지 않게', '')
+            self.assertEqual(seed_programs._guidance_for('x', 'y'), (None, None))
+            seed_programs._STAGE_GUIDANCE[('x', 'y')] = ('마르지 않게', '어느 자료')
+            self.assertEqual(seed_programs._guidance_for('x', 'y'),
+                             ('마르지 않게', '어느 자료'))
+        finally:
+            seed_programs._STAGE_GUIDANCE.pop(('x', 'y'), None)
+
+    def test_template_guidance_source_follows_into_the_programme(self):
+        """지침만 남고 출처가 사라지면, 나중에 그 말을 고칠 사람이 판단할 재료가
+        없다. 템플릿에서 만든 프로그램의 `source_note` 가 출처를 데리고 간다."""
+        src = _read(os.path.join(_ROOT, 'aot_flask', 'routes_geo_plot.py'))
+        self.assertIn('guidance_sources', src,
+                      'api_program_create 가 지침 출처를 source_note 로 옮기지 '
+                      '않는다')
 
     def test_control_axis_is_found_by_measurement_not_by_key(self):
         """사용자가 이름을 붙여도 제어에 닿아야 한다 — 키로 찾으면 못 찾는다."""
@@ -6226,15 +6596,30 @@ class TestProgramSeed(unittest.TestCase):
 
         한 번 광합성 프리셋의 작물 단위 값을 모든 단계에 복사했다가 되돌렸다 —
         그것은 단계별 값이 아니고(육묘기와 착과기의 목표가 같을 리 없다), 사람은
-        채워진 값을 "조사된 추천값" 으로 읽는다. 단계별 목표는 실제 조사로 채운다.
+        채워진 값을 "조사된 추천값" 으로 읽는다.
+
+        그래서 목표는 **출처가 있는 작물에만** 들어간다(`crop_target_sources`).
+        자료를 못 찾은 작물은 비어 있는 것이 옳다.
         """
         import importlib
         mod = importlib.import_module('aot.scripts.seed_programs')
+        from aot.scripts.crop_target_sources import SPECIES_TARGETS
         items = mod.catalog()
         self.assertTrue(items)
         for t in items:
+            sourced = t['key'] in SPECIES_TARGETS
             for st in t['stages']:
-                self.assertNotIn('targets', st, '%s 단계에 목표가 채워져 있다' % t['key'])
+                if not sourced:
+                    self.assertNotIn('targets', st,
+                                     '%s 단계에 근거 없는 목표가 있다' % t['key'])
+            if not sourced:
+                for d in (t.get('target_defs') or []):
+                    self.assertIsNone(d.get('default'), t['key'])
+
+        # 시금치는 자료가 낮·밤을 나누지 않아 **목표를 비운 채 지침만** 남겼다.
+        spinach = next(t for t in items if t['key'] == 'spinach')
+        self.assertFalse(any(st.get('targets') for st in spinach['stages']))
+        self.assertTrue(any(st.get('guidance') for st in spinach['stages']))
         # 광합성 파라미터는 **작물 단위 모델 상수**라 단계와 무관하다 — 그쪽은 싣는다.
         lettuce = next(t for t in items if t['key'] == 'lettuce')
         self.assertTrue(lettuce['photosynthesis'])

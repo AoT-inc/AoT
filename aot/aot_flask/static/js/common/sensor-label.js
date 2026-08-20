@@ -253,8 +253,10 @@
     // 아래로 내린다 — 제목은 무엇인지 말하는 자리이고, 버튼은 다 읽은 뒤 누르는
     // 것이라 시선이 끝나는 곳에 있어야 한다. 자리·모양은 `.aot-ov-actions` +
     // `.aot-ov-pill` 하나로 통일한다(구획 추가 버튼과 같은 것).
+    // sub 가 아닐 때만 카드 제목이다(박스 밖) — sub 는 다른 블록 안에 얹히는
+    // 소제목이라 그 블록의 박스 안에 그대로 남는다.
     var head =
-      '<div class="' + (opts.sub ? 'aot-ov-sub-title' : 'aot-ov-sec-title') + '">' +
+      '<div class="' + (opts.sub ? 'aot-ov-sub-title' : 'aot-ov-card-title') + '">' +
         _escape(opts.title || _t('Notes')) +
       '</div>';
     var list = '<div class="aot-ov-notes-list"><span class="aot-ov-muted">…</span></div>';
@@ -264,7 +266,12 @@
         _escape(_t('Open Notes')) + '</button>' +
       '</div>';
     if (opts.sub) return head + list + action;
-    return '<div class="aot-ov-block aot-ov-notes">' + head + list + action + '</div>';
+    // `.aot-ov-card` 로 제목+박스를 감싼다 — 시설 위젯의
+    // `_appendFacilitySchedule` 이 이 결과를 기록 블록으로 갈아끼울 때
+    // `firstElementChild`/`closest('.aot-ov-card')` 로 카드 전체를
+    // 다뤄야 옛 제목이 고아로 남지 않는다.
+    return '<div class="aot-ov-card">' + head +
+           '<div class="aot-ov-block aot-ov-notes">' + list + action + '</div></div>';
   }
 
   // 미리보기 목록을 그린다. notes 는 /notes/target/<uuid> 응답(최신순).

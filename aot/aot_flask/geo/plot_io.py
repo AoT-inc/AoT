@@ -717,7 +717,14 @@ def auto_advance_stage(plot_uuid):
 
 
 def apply_stage_resources(plot_uuid):
-    """현재 단계에 선언된 자원 함수를 켠다 → (dict, error).
+    """현재 단계가 요구하는 자원을 켠다 → (dict, error).
+
+    ## 켤 대상은 현장이 정한다
+
+    프로그램은 역할만 선언하고 함수를 가리키지 않는다(P6 재설계). 그래서 여기서
+    켜는 것은 **그 자리에서 찾힌 함수**다. 찾지 못한 역할(`unresolved`)과 후보가
+    여럿이라 고르지 않은 역할(`ambiguous`)은 응답에 그대로 담는다 — "적용했다"
+    만 받으면 사람은 관수가 걸린 줄 안다.
 
     ## 선언된 것만 건드린다
 
@@ -745,10 +752,32 @@ def apply_stage_resources(plot_uuid):
     if not st or st.get('state') != 'running':
         return None, '진행 중인 단계가 없습니다'
 
+    # 선언(역할)마다 **현장이 찾아 준 함수**를 켠다. 프로그램은 함수를 가리키지
+    # 않으므로(P6 재설계) 여기서 켤 대상은 기하 해석의 결과다.
     items = st.get('resources') or []
-    todo = [r for r in items if not r.get('missing') and not r.get('active')]
-    if not todo:
-        return {'activated': [], 'skipped': len(items)}, None
+
+    # 찾지 못한 역할은 조용히 넘기지 않고 그대로 돌려준다 — "적용했다" 는 답만
+    # 받으면 사람은 관수가 걸린 줄 안다. 무엇을 못 했는지가 이 응답의 값이다.
+    unresolved = [{'role': r['role'], 'reason': r.get('reason')}
+                  for r in items if not r.get('found')]
+
+    todo, ambiguous = [], []
+    for r in items:
+        if not r.get('found'):
+            continue
+        fns = r.get('functions') or []
+        # **모호하면 고르지 않는다**(R4 와 같은 태도). 한 역할에 함수가 여럿
+        # 잡히는 것은 밸브가 여럿인 시설에서 정상이지만, 그중 무엇을 켤지는
+        # 자동으로 정할 수 없다 — 자동 선택은 조용히 틀린다.
+        if len(fns) > 1:
+            ambiguous.append({'role': r['role'],
+                              'functions': [{'id': f['id'],
+                                             'name': f.get('name')}
+                                            for f in fns]})
+            continue
+        fn = fns[0]
+        if not fn.get('active'):
+            todo.append({'role': r['role'], **fn})
 
     done, failed = [], []
     for r in todo:
@@ -768,4 +797,6 @@ def apply_stage_resources(plot_uuid):
         done.append({'id': r['id'], 'name': r.get('name')})
 
     return {'activated': done, 'failed': failed,
-            'skipped': len(items) - len(todo)}, None
+            'unresolved': unresolved, 'ambiguous': ambiguous,
+            'skipped': len(items) - len(todo) - len(unresolved)
+                       - len(ambiguous)}, None

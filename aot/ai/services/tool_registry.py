@@ -400,6 +400,9 @@ TOOLS: List[Tool] = [
         "description": ("Lists vegetation plots (what crop is planted where). "
                         "Growing plots only unless include_ended=true. "
                         "with_sensors=true adds each plot's sensors in one call. "
+                        "'stage.guidance' is this programme's own instruction "
+                        "for the current stage — prefer it over generic advice; "
+                        "null means none was written. "
                         "Read-only."),
         "usage_hint": ("params.arguments: {map_id?, include_ended?, "
                        "on?: 'YYYY-MM-DD', with_sensors?}"),
@@ -410,7 +413,10 @@ TOOLS: List[Tool] = [
         "description": ("One plot in detail: crop, variety, period, area, size "
                         "(width x length), which sensors it reads (own plot or "
                         "falls back to its zone), and which irrigation valves overlap "
-                        "it. Give both spacings to get row and plant counts. Read-only."),
+                        "it. Give both spacings to get row and plant counts. "
+                        "'stage.guidance' is this programme's own instruction "
+                        "for the current stage — prefer it over generic advice; "
+                        "null means none was written. Read-only."),
         "usage_hint": ("params.arguments: {plot_id, plant_spacing_cm, "
                        "row_spacing_cm? (flat only), bed_pitch_cm? + "
                        "rows_per_bed? (bed layout), edge_margin_cm?} — "
@@ -436,7 +442,9 @@ TOOLS: List[Tool] = [
     Tool('get_program', handler='get_program', manifest={
         "tool_name": "get_program",
         "action_type": "virtual_tool_call",
-        "description": ("One growing programme with its full stage list. Read-only."),
+        "description": ("One growing programme with its full stage list. A stage may "
+                        "carry 'guidance' — free text written for that stage. "
+                        "Read-only."),
         "usage_hint": "params.arguments: {program_id}",
     }),
     Tool('create_program', handler='create_program', mutating=True, manifest={
@@ -449,11 +457,17 @@ TOOLS: List[Tool] = [
                         "days is the LENGTH of that stage, not a cumulative day; only "
                         "the last stage may leave it blank (= until the end). "
                         "source_note is required — state what the programme is based "
-                        "on. Programmes made this way are used for display and advice "
-                        "but NOT for control until a person marks them as checked. "
+                        "on. resource_defs declares WHAT the crop needs (roles) — "
+                        "never which function does it, because that is a fact about "
+                        "a place, not about the crop; the site resolves it, so one "
+                        "programme works in several greenhouses. Programmes made "
+                        "this way are used for display and advice but NOT for "
+                        "control until a person marks them as checked. "
                         "Requires human approval."),
         "usage_hint": ("params.arguments: {name, subject, source_note, "
-                       "stages: [{key, name, days, targets?}], kind?, variety?, notes?}"),
+                       "stages: [{key, name, days, targets?}], kind?, variety?, "
+                       "notes?, resource_defs?: [{role: irrigation|fertigation|"
+                       "other}]}"),
     }),
     Tool('modify_program', handler='modify_program', mutating=True, manifest={
         "tool_name": "modify_program",
@@ -464,6 +478,16 @@ TOOLS: List[Tool] = [
                         "Requires human approval."),
         "usage_hint": ("params.arguments: {program_id, name?, variety?, "
                        "stages?, notes?, source_note?}"),
+    }),
+    Tool('delete_program', handler='delete_program', mutating=True, manifest={
+        "tool_name": "delete_program",
+        "action_type": "virtual_tool_call",
+        "description": ("Deletes a growing programme outright — for mistakes only. "
+                        "Refused if any plot still uses it; unassign the plot's "
+                        "programme first (modify_plot with program_uuid: null), or "
+                        "just leave an unused programme in place — it costs nothing "
+                        "to keep. Requires human approval."),
+        "usage_hint": "params.arguments: {program_id}",
     }),
     Tool('create_plot', handler='create_plot', mutating=True, manifest={
         "tool_name": "create_plot",
@@ -547,12 +571,14 @@ TOOLS: List[Tool] = [
          physical=True, manifest={
         "tool_name": "apply_plot_resources",
         "action_type": "virtual_tool_call",
-        "description": ("Starts the irrigation/fertigation Functions the current "
-                        "stage DECLARES. This makes water flow — it is a physical "
-                        "action. Only declared functions are touched; nothing is "
-                        "ever switched off. Read get_plot's stage.resources first "
-                        "to see what is declared and what is already running, and "
-                        "check 'failed' in the reply: some may not have started. "
+        "description": ("Starts the irrigation/fertigation Functions that the "
+                        "current stage needs, as resolved FROM THE SITE (the "
+                        "programme declares roles, not functions). This makes water "
+                        "flow — it is a physical action. Nothing is ever switched "
+                        "off. Read get_plot's stage.resources first, and check the "
+                        "reply: 'failed' (did not start), 'unresolved' (no device "
+                        "for that role here — placement is a human job), "
+                        "'ambiguous' (several candidates, so nothing was picked). "
                         "Requires human approval."),
         "usage_hint": "params.arguments: {plot_id}",
     }),
@@ -1099,6 +1125,9 @@ _TIER_ASSIGNMENT = {
     'get_program':          ('space', 'drawer', False),
     'create_program':       ('space', 'drawer', False),
     'modify_program':       ('space', 'drawer', False),
+    # 되돌릴 수 없는 동작이지만 **자주 쓰지 않는다** — 생성·편집과 같은 서랍이다
+    # (서랍은 빈도가 아니라 도메인으로 묶는다).
+    'delete_program':       ('space', 'drawer', False),
     'get_plot':              ('space', 'drawer', False),
     'get_plot_history':      ('space', 'drawer', False),
     'create_plot':           ('space', 'drawer', False),
@@ -1108,6 +1137,12 @@ _TIER_ASSIGNMENT = {
     'copy_plot':             ('space', 'drawer', False),
     'propose_plot_split':    ('space', 'drawer', False),
     'apply_plot_split':      ('space', 'drawer', False),
+    # 단계 원장·자원(P6~P7). 다른 구획 도구와 같은 자리다 — 사용자가 "육묘기
+    # 끝났어" / "관수 시작해" 처럼 **이름을 말해 주는** 쪽이라 강등 보호 대상이
+    # 아니다(보호는 AI 가 스스로 떠올려야 하는 도구에만 붙인다).
+    'confirm_plot_stage':    ('space', 'drawer', False),
+    'undo_plot_stage':       ('space', 'drawer', False),
+    'apply_plot_resources':  ('space', 'drawer', False),
     'get_spatial_tree':          ('space', 'drawer', False),
     'get_crop_status':           ('space', 'drawer', False),
     'list_geo_maps':             ('space', 'drawer', False),
@@ -1202,7 +1237,7 @@ _MCP_TOOL_PAYLOADS: List[Dict[str, Any]] = [
     # 안 보이는 상태로 한참 헤맸다).
     {
         "tool_name": "list_plots",
-        "description": "Lists vegetation plots — what crop is planted where, with area, size (width x length), period and the zone each plot sits in. Growing plots only unless include_ended=true. This is the ONLY source for open-field crops; get_crop_status covers greenhouses. For row/plant counts at a given spacing, call get_plot on the one plot. Pass with_sensors=true to get every plot's sensors in ONE call instead of calling get_plot per plot — the reply then carries sensors.in_plot / sensors.from_zone / sensors.source for each plot, and 'source' says whether a reading is measured in that plot ('plot') or is its zone's representative value ('zone'), which you must pass on when reporting a number. Irrigation valves are NOT included here (they are the expensive part); call get_plot on the single plot when you need them. Read-only.",
+        "description": "Lists vegetation plots — what crop is planted where, with area, size (width x length), period and the zone each plot sits in. Growing plots only unless include_ended=true. This is the ONLY source for open-field crops; get_crop_status covers greenhouses. For row/plant counts at a given spacing, call get_plot on the one plot. Pass with_sensors=true to get every plot's sensors in ONE call instead of calling get_plot per plot — the reply then carries sensors.in_plot / sensors.from_zone / sensors.source for each plot, and 'source' says whether a reading is measured in that plot ('plot') or is its zone's representative value ('zone'), which you must pass on when reporting a number. Irrigation valves are NOT included here (they are the expensive part); call get_plot on the single plot when you need them. 'stage.guidance' is what THIS programme says to do in the current stage — quote it instead of generic crop advice; null means nobody wrote any, and saying so is the honest answer. Read-only.",
         "input_schema": {
             "type": "object",
             "properties": {
@@ -1215,7 +1250,7 @@ _MCP_TOOL_PAYLOADS: List[Dict[str, Any]] = [
     },
     {
         "tool_name": "get_plot",
-        "description": "One vegetation plot in detail: crop, variety, planted/expected-end dates, area, size, and which sensors it reads. 'dimensions' gives the plot's width and length in meters (bounding rectangle) — use it for any 'how many rows / will it fit' question, since area alone cannot answer one. Pass plant_spacing_cm (plus row_spacing_cm for a flat layout, or bed_pitch_cm + rows_per_bed for beds) to also get 'capacity_estimate' (rows, plants per row, total) computed here rather than in your head. Without a bed layout the reply carries an 'ask_user' field telling you to settle the layout with the grower first — follow it instead of reporting the flat-layout number, and record the agreed layout as a NOTE on the plot (create_note with target_type='plot'), which is what the next conversation reads. Read 'basis' and any 'dimensions.shape_note' and pass the caveat on — the counts are approximate. IMPORTANT: the 'sensors.source' field says whether the readings come from inside the plot ('plot') or are the zone's representative values ('zone') — say which one when you report a value, because a zone value is not measured in this plot. 'valves' lists the irrigation valves overlapping this plot with the % of the plot each covers; an entry marked unassigned means that ground has no way to be watered yet. Read-only.",
+        "description": "One vegetation plot in detail: crop, variety, planted/expected-end dates, area, size, and which sensors it reads. 'dimensions' gives the plot's width and length in meters (bounding rectangle) — use it for any 'how many rows / will it fit' question, since area alone cannot answer one. Pass plant_spacing_cm (plus row_spacing_cm for a flat layout, or bed_pitch_cm + rows_per_bed for beds) to also get 'capacity_estimate' (rows, plants per row, total) computed here rather than in your head. Without a bed layout the reply carries an 'ask_user' field telling you to settle the layout with the grower first — follow it instead of reporting the flat-layout number, and record the agreed layout as a NOTE on the plot (create_note with target_type='plot'), which is what the next conversation reads. Read 'basis' and any 'dimensions.shape_note' and pass the caveat on — the counts are approximate. IMPORTANT: the 'sensors.source' field says whether the readings come from inside the plot ('plot') or are the zone's representative values ('zone') — say which one when you report a value, because a zone value is not measured in this plot. 'valves' lists the irrigation valves overlapping this plot with the % of the plot each covers; an entry marked unassigned means that ground has no way to be watered yet. 'stage.guidance' is what THIS programme says to do in the current stage — quote it instead of generic crop advice; null means nobody wrote any, and saying so is the honest answer. Read-only.",
         "input_schema": {
             "type": "object",
             "properties": {
@@ -1283,7 +1318,7 @@ _MCP_TOOL_PAYLOADS: List[Dict[str, Any]] = [
     },
     {
         "tool_name": "propose_plot_split",
-        "description": "Works out how a zone or site would divide into plots, WITHOUT creating anything. Give parts (how many pieces — e.g. 3 to put three crops in one zone), strip_width_cm (how wide each piece is, in cm — e.g. 160 for bed-by-bed), or widths_cm (a list of per-piece widths in cm when pieces should NOT all be equal). Irregular edges are clipped, so pieces differ in length. Direction needs no input in the common case — it defaults by mode: with strip_width_cm, pieces follow the shape's LONGEST side (furrow direction must match the actual working/drainage direction); with parts alone (no strip_width_cm), pieces follow the SHORTEST side instead, since there is no furrow to align and squarer plots are easier to manage when splitting a zone between different crops. Override either default with orientation, or set angle_deg for an arbitrary direction — only pass angle_deg when a human looked at the map and chose that angle (e.g. to match an adjacent field's beds); never invent one. angle_deg wins over orientation if both are given. You get counts, widths and lengths back, not coordinates. If the response includes aspect_ratio much above ~4:1 for a parts-only split, the pieces are unusually long and narrow — try orientation='long' or 'short' (whichever was not already used) for squarer pieces. Tell the grower they can SEE the proposal drawn on the map design page (plot mode) before deciding. Read-only.",
+        "description": "Works out how a zone or site would divide into plots, WITHOUT creating anything. Pick the mode with parts, strip_width_cm or widths_cm; direction needs no input in the common case — each parameter below states its own rule, including the mode-dependent default on 'orientation' and when angle_deg may be used. Irregular edges are clipped, so pieces differ in length. You get counts, widths and lengths back, not coordinates. If a parts-only split comes back with aspect_ratio much above ~4:1 the pieces are unusually long and narrow — try orientation='long' or 'short' (whichever was not already used) for squarer pieces. Tell the grower they can SEE the proposal drawn on the map design page (plot mode) before deciding. Read-only.",
         "input_schema": {
             "type": "object",
             "properties": {
@@ -2411,7 +2446,7 @@ _MCP_TOOL_PAYLOADS: List[Dict[str, Any]] = [
     },
     {
         "tool_name": "get_crop_status",
-        "description": "Crop and growth stage per facility - taken from the plot program growing there (crop, stage, growing-season window) and, when the domain registry is configured, stage-specific optimal ranges. Optimal-growing advice is not possible without knowing the crop, so check this before advising on cultivation. If the growth stage is missing, the reason is returned with it. Read-only.",
+        "description": "Crop and growth stage per facility - taken from the plot program growing there (crop, stage, growing-season window) and, when the domain registry is configured, stage-specific optimal ranges. Optimal-growing advice is not possible without knowing the crop, so check this before advising on cultivation. If the growth stage is missing, the reason is returned with it. Every plot entry carries 'stage.guidance' — what THIS programme says to do in the stage it is in now; quote it instead of generic crop advice, and when it is null say the programme has none rather than inventing one. (facilities[].stage is a stage NAME only — guidance never rides the control path.) Read-only.",
         "input_schema": {
             "type": "object",
             "properties": {

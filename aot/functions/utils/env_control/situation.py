@@ -407,10 +407,22 @@ def decompose_vpd_to_T_RH(
     VPD 목표값을 (T_aux, RH_aux) 보조목표로 분해한다. (P1-1, 설계 §3.1)
 
     알고리즘:
-      1. 현재 RH 유지 시 VPD 목표를 달성하는 T_needed 를 뉴턴법으로 산출
+      1. 현재 수증기압(ea) 유지 시 VPD 목표를 달성하는 T_needed 를 산출
       2. T_aux = lerp(T_int, T_needed, w_T)  (w_T 비중만큼 T 이동)
       3. T_aux 에서 VPD 제약을 정확히 만족하는 RH_aux 를 역산
       4. RH_aux 를 [0, 100] 으로 클램프
+
+    **1번에서 고정하는 것은 RH 가 아니라 ea 다.** 밀폐 공간을 가열해도 물이
+    늘지 않으므로 보존되는 것은 수증기압이고 RH 는 따라 내려간다. RH 를
+    고정으로 두면 VPD = (1−RH/100)·svp(T) 의 (1−RH/100) 인자가 그대로 남아,
+    **RH=100% 에서 온도가 VPD 에 아무 영향이 없다**는 결론이 나온다 — 즉
+    포화 상태(VPD=0)에서 난방 요구가 0 이 되어 가열이 영영 일어나지 않는다.
+    RH=99.9% 에서는 반대로 T_needed 가 상한(50°C)까지 튀어 "아무것도 안 함"과
+    "최대 가열" 사이에 중간이 없었다. ea 고정은 두 경우 모두 같은 답을 준다.
+
+    부수 효과로 1번과 3번이 서로 맞는다: w_T=1 이면 3번이 되돌리는 RH_aux 가
+    정확히 ea 를 보존한다(RH_aux/100·svp(T_aux) = ea). 예전에는 1번이 RH 고정,
+    3번이 VPD 고정이라 두 단계가 서로 다른 물리를 쓰고 있었다.
 
     Args:
         vpd_target: 목표 VPD [kPa]
@@ -428,8 +440,8 @@ def decompose_vpd_to_T_RH(
     if abs(vpd_now - vpd_target) < 1e-4:
         return T_int, RH_int
 
-    # 1. 현재 RH 유지 시 필요한 T_needed
-    T_needed = _invert_svp_for_T(vpd_target, RH_int, T_guess=T_int)
+    # 1. 현재 수증기압(ea) 유지 시 필요한 T_needed
+    T_needed = _invert_svp_for_T(vpd_target, RH_int, T_ref=T_int)
 
     # 2. w_T 비중만큼 T 이동
     T_aux = T_int + w_T * (T_needed - T_int)
@@ -471,18 +483,36 @@ def _compute_vpd(T: float, RH: float) -> float:
     return compute_vpd(T, RH)
 
 
-def _invert_svp_for_T(vpd_target: float, RH: float, T_guess: float = 20.0) -> float:
-    """뉴턴법으로 VPD 목표를 만족하는 T 계산 (최대 10회)."""
-    T = T_guess
-    for _ in range(10):
-        s   = svp(T)
-        f   = (1 - RH / 100) * s - vpd_target
-        df  = (1 - RH / 100) * s * 17.27 * 237.3 / (T + 237.3) ** 2
-        if abs(df) < 1e-9:
-            break
-        T -= f / df
-        T = max(-10.0, min(50.0, T))
-    return T
+def _invert_svp_for_T(vpd_target: float, RH: float, T_ref: float = 20.0) -> float:
+    """수증기압(ea)을 고정한 채 VPD 목표를 만족하는 T 를 해석적으로 구한다.
+
+    ea    = RH/100 · svp(T_ref)          — (T_ref, RH) 상태의 수증기압
+    조건  = svp(T) − ea = vpd_target     → svp(T) = vpd_target + ea
+    Magnus 역함수로 닫힌 해를 얻는다. 반복이 필요 없다.
+
+    **RH 고정이 아니라 ea 고정인 이유**: 가열은 물을 늘리지 않으므로 보존되는
+    것은 ea 다. RH 를 고정으로 두면 f·df 에 (1−RH/100) 이 공통으로 남아
+    RH=100 에서 df=0 → 뉴턴법이 첫 회에 탈출하며 **T_guess 를 그대로 반환**했다.
+    호출부가 T_guess=T_int 를 넘기므로 "필요 온도 = 현재 온도" 가 되어 난방
+    요구가 0 이 된다(포화 상태에서 가열이 일어나지 않던 원인).
+
+    Args:
+        vpd_target: 목표 VPD [kPa] (음수는 0 으로 클램프)
+        RH:         기준 상태의 상대습도 [%]
+        T_ref:      기준 상태의 온도 [°C] — ea 산출에 쓰인다
+
+    Returns:
+        목표 VPD 를 만족하는 온도 [°C], [-10, 50] 클램프.
+    """
+    vpd_target = max(0.0, vpd_target)
+    ea = max(0.0, min(100.0, RH) / 100.0) * svp(T_ref)
+    s_need = vpd_target + ea
+    if s_need <= 0.0:
+        return max(-10.0, min(50.0, T_ref))
+    r = math.log(s_need / 0.6108)
+    if r >= 17.27:                       # Magnus 의 점근선 — 물리적 상한 밖
+        return 50.0
+    return max(-10.0, min(50.0, 237.3 * r / (17.27 - r)))
 
 
 def _lerp(a: float, b: float, t: float) -> float:

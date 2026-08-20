@@ -323,6 +323,13 @@ _CROP_PROGRAM_READ_TOOL_ADDITIONS = {
 _CROP_PROGRAM_WRITE_TOOL_ADDITIONS = {
     'create_program', 'modify_program',
 }
+# delete_program(2026-08-20) — 승인 대상. `program_io.delete_program` 이
+# 참조 무결성을 지킨다(쓰는 구획이 있으면 거절)는 것은 데이터 계층의 방어일
+# 뿐 승인 생략의 근거가 아니다 — 삭제는 되돌릴 수 없는 동작이라 그 자체로
+# 승인 대상이다.
+_CROP_PROGRAM_DELETE_TOOL_ADDITIONS = {
+    'delete_program',
+}
 _GEO_BINDING_MUTATING_ADDITIONS = {'rebind_device'}
 
 # 구역 단위 센서 집계(2026-08-14). 읽기 전용이라 승인 집합에는 들어가지 않는다 —
@@ -413,6 +420,7 @@ def _check_dispatch_map(R):
            | _PLANTING_READ_TOOL_ADDITIONS | _PLANTING_WRITE_TOOL_ADDITIONS
            | _PLOT_STAGE_TOOL_ADDITIONS
            | _CROP_PROGRAM_READ_TOOL_ADDITIONS | _CROP_PROGRAM_WRITE_TOOL_ADDITIONS
+           | _CROP_PROGRAM_DELETE_TOOL_ADDITIONS
            | _ZONE_SUMMARY_TOOL_ADDITIONS | _GEO_DISTANCE_TOOL_ADDITIONS
            | _DRAWER_TOOL_ADDITIONS | _DEVICE_FRESHNESS_TOOL_ADDITIONS,
            set(R.build_tool_map().keys()))
@@ -438,6 +446,7 @@ def _check_declarations(R):
            | _PLANTING_READ_TOOL_ADDITIONS | _PLANTING_WRITE_TOOL_ADDITIONS
            | _PLOT_STAGE_TOOL_ADDITIONS
            | _CROP_PROGRAM_READ_TOOL_ADDITIONS | _CROP_PROGRAM_WRITE_TOOL_ADDITIONS
+           | _CROP_PROGRAM_DELETE_TOOL_ADDITIONS
            | _ZONE_SUMMARY_TOOL_ADDITIONS | _GEO_DISTANCE_TOOL_ADDITIONS
            | _DRAWER_TOOL_ADDITIONS | _DEVICE_FRESHNESS_TOOL_ADDITIONS,
            set(R.virtual_tool_registry()))
@@ -451,7 +460,7 @@ def _check_declarations(R):
             | _CONFIRMATION_RELAY_MUTATING_ADDITIONS | _ADAPTIVE_STORAGE_WRITE_TOOL_ADDITIONS
             | _GEO_BINDING_MUTATING_ADDITIONS | _PLANTING_WRITE_TOOL_ADDITIONS
             | _PLOT_STAGE_TOOL_ADDITIONS
-            | _CROP_PROGRAM_WRITE_TOOL_ADDITIONS)
+            | _CROP_PROGRAM_WRITE_TOOL_ADDITIONS | _CROP_PROGRAM_DELETE_TOOL_ADDITIONS)
            - _CONFIG_ONLY_APPROVAL_EXEMPTIONS,
            set(R.virtual_approval_tools()))
 
@@ -465,7 +474,7 @@ def _check_declarations(R):
             | _CONFIRMATION_RELAY_MUTATING_ADDITIONS | _ADAPTIVE_STORAGE_WRITE_TOOL_ADDITIONS
             | _GEO_BINDING_MUTATING_ADDITIONS | _SCHEDULE_BATCH_PHYSICAL_ADDITIONS
             | _PLANTING_WRITE_TOOL_ADDITIONS | _PLOT_STAGE_TOOL_ADDITIONS
-            | _CROP_PROGRAM_WRITE_TOOL_ADDITIONS)
+            | _CROP_PROGRAM_WRITE_TOOL_ADDITIONS | _CROP_PROGRAM_DELETE_TOOL_ADDITIONS)
            - _CONFIG_ONLY_APPROVAL_EXEMPTIONS,
            set(R.approval_required_tools()))
 

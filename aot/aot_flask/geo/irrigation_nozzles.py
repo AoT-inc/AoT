@@ -179,6 +179,9 @@ def summarize_nozzles(devices, layer_height=None) -> dict:
         'min_radius_m':    0.0,
         'min_height_m':    None,
         'total_flow_lph':  0.0,
+        # 공기 중으로 나가는 유량만 — 드립은 뿌리로 가므로 뺀다.
+        # 증발냉각·가습 효과는 이 값으로 계산해야 한다(`total_flow_lph` 아님).
+        'sprinkler_flow_lph': 0.0,
         'precip_mm_h_max':  0.0,
         'precip_mm_h_mean': 0.0,
         'overlap_max':      0,
@@ -202,6 +205,7 @@ def summarize_nozzles(devices, layer_height=None) -> dict:
             continue
 
         summary['sprinkler_count'] += 1
+        summary['sprinkler_flow_lph'] += flow
         sprinklers.append(d)
         if (d.get('orientation') or 'down').strip().lower() == 'down':
             summary['down_count'] += 1
@@ -215,6 +219,7 @@ def summarize_nozzles(devices, layer_height=None) -> dict:
     summary['min_radius_m'] = round(min(radii), 2) if radii else 0.0
     summary['min_height_m'] = round(min(heights), 2) if heights else None
     summary['total_flow_lph'] = round(summary['total_flow_lph'], 1)
+    summary['sprinkler_flow_lph'] = round(summary['sprinkler_flow_lph'], 1)
     summary['max_flow_lph'] = round(summary['max_flow_lph'], 1)
 
     # ── 습윤형 판정 — 드립 전용이면 잎에 닿지 않으므로 대상 아님 ──────────────

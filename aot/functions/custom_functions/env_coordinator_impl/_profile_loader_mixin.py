@@ -408,6 +408,27 @@ class ProfileLoaderMixin:
                     if nozzle_meta:
                         act_capacity_meta['nozzle'] = nozzle_meta
 
+                    # 증발 효과용 유량 — `irrigation_flow_lpm` 과 **다른 값**이다.
+                    #
+                    #  * `irrigation_flow_lpm` : 투여량 환산용(VolumetricAdapter).
+                    #    드립을 포함한 총 유량이고, 위에서 보듯 액추에이터 값이
+                    #    없으면 시설 합계로 폴백한다.
+                    #  * `fog_flow_lpm`        : 공기 중으로 나가 증발하는 유량.
+                    #    드립은 뿌리로 가므로 제외하고, **폴백도 하지 않는다.**
+                    #
+                    # 두 값을 하나로 쓰다가 사고가 났다(2026-08-20 로컬 육묘장):
+                    # 노즐이 없는 SIM 가습기가 시설 전체 관수 216 L/min(드립
+                    # 에미터 324개)을 물려받아, 증발냉각 효과가 9448 m³ 온실에서
+                    # **45.6 °C/사이클** 로 나왔다. 그 한 값이 결합 drive 의
+                    # 가중치를 20배로 지배해 나머지 축을 전부 무의미하게 만들었다.
+                    #
+                    # 노즐 정보가 없으면 키를 넣지 않는다 — effect 쪽이 그때
+                    # 물리 계산을 포기하고 보수적 K 상수로 떨어진다. 모르는 값을
+                    # 남의 값으로 메우지 않는 것이 요점이다.
+                    _spr_lph = float((nozzle_meta or {}).get('sprinkler_flow_lph') or 0.0)
+                    if _spr_lph > 0.0:
+                        act_capacity_meta['fog_flow_lpm'] = _spr_lph / 60.0
+
                     effect_model = build_effect_model(kind, {})
                     profile = ActuatorProfile(
                         actuator_id=output_uuid,

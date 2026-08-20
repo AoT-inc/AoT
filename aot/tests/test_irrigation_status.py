@@ -100,8 +100,12 @@ class TestEvidence(_Fixture, unittest.TestCase):
         self.assertIsNone(out['at'])
 
     def test_program_declaration_is_evidence(self):
-        """P6 선언(`role='irrigation'`)은 사람이 "이건 관수다" 라고 말해 둔
-        것이라 화면이 그렇게 불러도 된다."""
+        """P6 선언(역할 `irrigation`)은 사람이 "이건 관수다" 라고 말해 둔
+        것이라 화면이 그렇게 불러도 된다.
+
+        재설계(2026-08-20) 뒤에는 프로그램이 역할만 선언하고 **함수는 현장이**
+        푼다 — 그래서 이 증거가 서려면 구획이 시설에 매여 있고 그 시설에 관수
+        피팅이 있어야 한다. 계획만으로는 아무것도 켜지지 않는 것이 요지다."""
         import datetime
         from aot.aot_flask.extensions import db
         from aot.aot_flask.geo import irrigation_status as irr
@@ -114,14 +118,19 @@ class TestEvidence(_Fixture, unittest.TestCase):
         db.session.commit()
         db.session.add(Actions(function_id=trg.unique_id, function_type='trigger',
                                action_type='output', do_unique_id='out-3,0'))
+        # 현장: 이 시설의 관수 피팅이 out-3 을 켠다.
+        fac = self._facility([{'id': 'f1', 'kind': 'irrigation_valve',
+                               'actuator_id': 'out-3'}])
+        # 계획: 이 프로그램은 관수를 쓴다 — 어느 함수인지는 적지 않는다.
         prog = GeoProgram(name='P', kind='vegetation', subject='상추',
-                          stages=[{'key': 'a', 'name': '생육', 'days': 30,
-                                   'functions': [{'id': trg.unique_id,
-                                                  'role': 'irrigation'}]}])
+                          resource_defs=[{'role': 'irrigation',
+                                          'default': True}],
+                          stages=[{'key': 'a', 'name': '생육', 'days': 30}])
         db.session.add(prog)
         db.session.commit()
         plot = GeoPlot(geo_id='m', kind='vegetation', subject='상추',
                        source_kind='facility', program_uuid=prog.unique_id,
+                       facility_uuid=fac.unique_id,
                        started_on=datetime.date.today() - datetime.timedelta(days=2))
         db.session.add(plot)
         db.session.commit()
@@ -143,14 +152,18 @@ class TestEvidence(_Fixture, unittest.TestCase):
         trg = Trigger(name='빈 트리거', trigger_type='trigger_run_pwm_method')
         db.session.add(trg)
         db.session.commit()
+        # 관수 피팅은 있는데 그 출력을 켜는 함수가 아무 액션도 갖지 않는다.
+        fac = self._facility([{'id': 'f1', 'kind': 'irrigation_valve',
+                               'actuator_id': 'out-empty'}])
         prog = GeoProgram(name='P', kind='vegetation', subject='상추',
-                          stages=[{'key': 'a', 'name': '생육', 'days': 30,
-                                   'functions': [{'id': trg.unique_id,
-                                                  'role': 'irrigation'}]}])
+                          resource_defs=[{'role': 'irrigation',
+                                          'default': True}],
+                          stages=[{'key': 'a', 'name': '생육', 'days': 30}])
         db.session.add(prog)
         db.session.commit()
         plot = GeoPlot(geo_id='m', kind='vegetation', subject='상추',
                        source_kind='facility', program_uuid=prog.unique_id,
+                       facility_uuid=fac.unique_id,
                        started_on=datetime.date.today() - datetime.timedelta(days=2))
         db.session.add(plot)
         db.session.commit()

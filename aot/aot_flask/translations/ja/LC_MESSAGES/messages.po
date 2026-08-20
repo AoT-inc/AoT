@@ -29335,6 +29335,7 @@ msgstr "このカードの項目はすべて非表示です。"
 #: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:0
 msgid "Nothing to show here yet."
 msgstr "表示できる項目がまだありません。"
+
 msgid "Target items"
 msgstr "目標項目"
 
@@ -29386,3 +29387,27 @@ msgstr "既定 {v}"
 
 msgid "not set"
 msgstr "未設定"
+
+msgid "Declare what this crop needs. Which device does it is resolved from the site, so the same programme works in more than one place."
+msgstr "この作物に何が必要かを書きます。それをどの機器が行うかは現場で決まるので、同じプログラムを複数の場所で使えます。"
+
+msgid "set for this stage"
+msgstr "この段階で個別に指定"
+
+msgid "follows the programme"
+msgstr "プログラムに従う"
+
+msgid "Resources changed"
+msgstr "資源の変更あり"
+
+msgid "No device for this here yet"
+msgstr "この場所にはまだ該当する機器がありません"
+
+msgid "Outdoor plots cannot resolve this yet"
+msgstr "露地区画ではまだこれを解決できません"
+
+msgid "This role has no device type yet"
+msgstr "この役割に対応する機器の種類がまだありません"
+
+msgid "Not found here"
+msgstr "この場所では見つかりません"

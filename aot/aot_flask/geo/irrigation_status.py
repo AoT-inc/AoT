@@ -50,7 +50,8 @@ def _outputs_from_facility(facility_uuid):
 def _outputs_from_plot_program(plot):
     """구획의 현재 단계가 **관수로 선언한** 함수가 켜는 출력 uuid 집합.
 
-    선언은 P6 의 `stages[].functions[{id, role}]` 이다. 그 함수의 액션
+    선언은 P6 의 역할(`resource_defs` + 단계 덮어쓰기)이고, 그 역할을 맡는 함수는
+    현장이 기하로 푼다(`plot_context.functions_for_role`). 그 함수의 액션
     (`function_actions.do_unique_id`)이 가리키는 출력을 본다 — 함수가 무엇을
     켜는지는 그 표가 정본이다.
     """
@@ -64,9 +65,15 @@ def _outputs_from_plot_program(plot):
     st = plot_context.stage_of(plot)
     if not st or st.get('state') != 'running':
         return set()
-    fn_ids = [r.get('id') for r in (st.get('resources') or [])
-              if r.get('role') == 'irrigation' and r.get('id')
-              and not r.get('missing')]
+    # P6 재설계(2026-08-20): 단계는 역할만 선언하고 함수는 현장이 푼다. 그래서
+    # 여기 오는 것은 이미 **이 자리에서 찾힌** 함수 목록이다.
+    fn_ids = []
+    for r in (st.get('resources') or []):
+        if r.get('role') != 'irrigation' or not r.get('found'):
+            continue
+        for fn in (r.get('functions') or []):
+            if fn.get('id'):
+                fn_ids.append(fn['id'])
     if not fn_ids:
         return set()
     out = set()

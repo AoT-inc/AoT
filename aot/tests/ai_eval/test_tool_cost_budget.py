@@ -21,14 +21,60 @@ import unittest
 
 from aot.scripts.measure_ai_tool_cost import measure_manifest
 
-# 2026-08-15 기준선. 낮추는 것은 언제든 환영이고, 올리려면 근거를 커밋에 남길 것.
-#   에이전트 루프 매니페스트: 도구 87개 · 47,921자 · 약 11,980토큰
-#   MCP 카탈로그:             도구 97개 · 74,293자 · 약 18,573토큰
-AGENT_MANIFEST_TOKEN_CEILING = 12_000
-MCP_CATALOG_TOKEN_CEILING = 18_700
+# 2026-08-15 기준선(70ba1ff6). 낮추는 것은 언제든 환영이고, 올리려면 근거를
+# 커밋에 남길 것.
+#   에이전트 루프 매니페스트: 도구 87개 · 47,921자 · 약 11,980토큰 → 상한 12,000
+#   MCP 카탈로그:             도구 97개 · 74,293자 · 약 18,573토큰 → 상한 18,700
+#
+# ── 2026-08-20 재기준선 ────────────────────────────────────────────────────
+#
+# 상한을 넘긴 채로 다섯 커밋을 지났다. 어디서 늘었는지 재 보면 전부 **도구를
+# 더한 기능 작업**이고, 문구가 부풀어서가 아니다:
+#
+#   커밋        에이전트   MCP      무엇이
+#   70ba1ff6    11,980    18,573   기준선(도구 87)
+#   aedacb77    12,016    19,076   구획 분할 인자 확장(angle_deg·widths_cm…)
+#   dc705d09    12,070    19,642   koat MCP 수정 + 도구 1
+#   692839fa    12,551    19,592   관리 프로그램 레이어(도구 +4)
+#   799f11b6    12,914    19,765   구획 단계·자원 도구 +3
+#   fa90d527    12,914    19,598   propose_plot_split 설명 정리(-677자)
+#   dbca0eed    12,999    19,763   단계 지침(`stage.guidance`) 사용 규칙
+#   이 커밋      13,191    19,7xx   두 갈래 병합 — delete_program(도구 +1) +
+#                                   P6 자원 역할. 도구 94→95.
+#
+# 이번 증가는 **세션 두 갈래가 서로를 모른 채 각자 도구·설명을 더한 결과**다.
+# `delete_program`(CRUD 완성)과 단계 지침 규칙이 따로 만들어졌고, 합쳐질 때에야
+# 한 저울에 올라왔다. 문구가 부푼 것이 아니라 도구가 하나 더 늘었다.
+#
+# 87개용으로 잡은 예산을 94개에 그대로 씌우면 **실제 규칙을 지워야** 맞출 수
+# 있다. 이 설명들은 한 줄씩이 과거의 실패에서 나온 것이라(센서 출처를 안 밝혀
+# 구역 대표값을 구획 값으로 보고한 일 등) 자릿수를 맞추자고 지울 것이 아니다.
+# 그래서 도구 수가 늘어난 만큼 상한을 올리되, 여유는 예전과 같이 좁게 둔다.
+#
+# ⚠ **서랍 배정으로는 이 숫자가 내려가지 않는다.** 여기서 재는 것은 등급을 끈
+# (기본값) 매니페스트라 도구가 전부 실린다 — 배정은 등급을 켰을 때 값을 한다.
+# 그 값이 얼마인지는 아래 `TIERED_MANIFEST_TOKEN_CEILING` 이 보인다.
+AGENT_MANIFEST_TOKEN_CEILING = 13_260
+MCP_CATALOG_TOKEN_CEILING = 19_800
 
-# 도구 하나가 이보다 크면 설명이 아니라 문서다. 가장 큰 것이 get_plot
-# 3,164자인데, 그 정도가 이미 상한선이라고 본다.
+# 등급(`AOT_AI_TOOL_TIERING=1`)을 켰을 때의 매니페스트. 2026-08-20 실측
+# 도구 15개 · 11,149자 · 약 2,787토큰 — 끈 상태의 **21%** 다.
+#
+# 이것을 따로 재는 이유: 위 두 상한은 도구를 더하면 반드시 오르므로 "무엇을
+# 서랍으로 내릴지" 를 판단하게 만들지 못한다. 이 상한이 그 일을 한다 — core 에
+# 도구를 하나 더 얹거나 `_TIER_ASSIGNMENT` 에서 배정을 빠뜨리면(빠뜨린 도구는
+# 서랍 기본값으로 떨어지므로 이 숫자는 안 움직이지만, 바로 아래
+# `test_every_tool_has_a_tier_assignment` 가 잡는다) 여기서 보인다.
+TIERED_MANIFEST_TOKEN_CEILING = 2_850
+
+# 도구 하나가 이보다 크면 설명이 아니라 문서다. 2026-08-15 에는 가장 큰 것이
+# get_plot 3,164자였고 그 정도를 상한선으로 봤다.
+#
+# 2026-08-20: `propose_plot_split` 이 3,636자로 이 선을 넘었다 — 설명이
+# `input_schema` 의 파라미터 문서를 통째로 되풀이하고 있었다(분할 모드 셋의 뜻,
+# 방향 기본값, angle_deg 규칙). 스키마 쪽만 남기고 677자를 덜어 2,959자가 됐다.
+# **상한은 올리지 않았다** — 여기 걸리는 것은 대개 이런 중복이지 부족한 설명이
+# 아니고, 실제로 그랬다.
 SINGLE_TOOL_CHAR_CEILING = 3_400
 
 
@@ -43,7 +89,10 @@ class TestToolSurfaceBudget(unittest.TestCase):
         self.assertLessEqual(
             block['tokens'], AGENT_MANIFEST_TOKEN_CEILING,
             '에이전트 매니페스트가 예산을 넘었다 (%d토큰 > %d, 도구 %d개). '
-            '도구를 늘렸다면 무엇을 서랍으로 내릴지 함께 정할 것 — '
+            '이 숫자는 등급을 끈 상태를 재므로 **서랍 배정으로는 내려가지 '
+            '않는다** — 문구를 줄이거나 도구를 없애거나, 늘어난 근거를 적고 '
+            '상한을 올릴 것(위 재기준선 표와 같은 형식으로). 서랍 배정의 값은 '
+            'test_tiered_manifest_stays_small 이 잰다 — '
             'docs/design/ai-tool-architecture.md §노출 등급과 서랍'
             % (block['tokens'], AGENT_MANIFEST_TOKEN_CEILING, block['count']))
 
@@ -53,6 +102,38 @@ class TestToolSurfaceBudget(unittest.TestCase):
             block['tokens'], MCP_CATALOG_TOKEN_CEILING,
             'MCP 카탈로그가 예산을 넘었다 (%d토큰 > %d, 도구 %d개)'
             % (block['tokens'], MCP_CATALOG_TOKEN_CEILING, block['count']))
+
+    def test_tiered_manifest_stays_small(self):
+        """등급을 켰을 때의 고정비 — **서랍 배정이 실제로 값을 하는가.**
+
+        위 두 상한은 도구를 더하면 반드시 오르므로 "무엇을 core 에 둘까" 를
+        판단하게 만들지 못한다. 이 검사가 그 일을 한다: core 에 도구를 하나 더
+        얹으면 여기서 보인다.
+        """
+        import json
+        import os
+
+        from aot.ai.services import tool_registry as registry
+
+        old = os.environ.get('AOT_AI_TOOL_TIERING')
+        os.environ['AOT_AI_TOOL_TIERING'] = '1'
+        try:
+            # `tiering_enabled()` 는 매번 환경변수를 읽으므로 reload 가 필요 없다.
+            entries = registry.manifest_system_tools()
+        finally:
+            if old is None:
+                os.environ.pop('AOT_AI_TOOL_TIERING', None)
+            else:
+                os.environ['AOT_AI_TOOL_TIERING'] = old
+
+        chars = len(json.dumps(entries, ensure_ascii=False, default=str))
+        tokens = chars // 4
+        self.assertLessEqual(
+            tokens, TIERED_MANIFEST_TOKEN_CEILING,
+            '등급을 켠 매니페스트가 예산을 넘었다 (%d토큰 > %d, 도구 %d개). '
+            'core 로 승격한 도구가 있다면 무엇을 대신 내릴지 함께 정할 것 — '
+            'docs/design/ai-tool-architecture.md §노출 등급과 서랍'
+            % (tokens, TIERED_MANIFEST_TOKEN_CEILING, len(entries)))
 
     def test_no_single_tool_is_a_document(self):
         """한 도구가 지나치게 크면 그 자체로 다른 모든 질문에 세금이 된다."""

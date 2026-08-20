@@ -114,10 +114,20 @@ class TestDecomposeVPD:
     # ── 가중치 극단값 ─────────────────────────────────────────────────────────
 
     def test_w_T_one_adjusts_only_temperature(self):
-        """w_T=1 → T_aux 이동, RH_aux ≈ RH_int."""
+        """w_T=1 → 온도만 움직이고, 그때 보존되는 것은 RH 가 아니라 수증기압(ea).
+
+        예전 이 테스트는 `RH_aux ≈ RH_int`("가열해도 RH 불변")를 요구했는데,
+        그것은 물을 넣지 않고는 성립할 수 없다 — 그 가정이 곧 RH=100% 에서
+        난방 요구를 0 으로 만들던 버그였다. 온도만 조작하는 동작에서 실제로
+        보존되는 양은 ea = RH/100·svp(T) 다.
+        """
         T_a, RH_a = decompose_vpd_to_T_RH(1.5, self.T_int, self.RH_int, w_T=1.0)
-        assert abs(RH_a - self.RH_int) < 1.0  # RH 거의 불변
         assert abs(T_a - self.T_int) > 0.5    # T 이동
+        ea_before = self.RH_int / 100.0 * svp(self.T_int)
+        ea_after  = RH_a / 100.0 * svp(T_a)
+        assert ea_after == pytest.approx(ea_before, rel=1e-6)
+        # 습도 목표는 따라 내려간다(가열 → RH 하락). 이것이 정상이다.
+        assert RH_a < self.RH_int
 
     def test_w_T_zero_adjusts_only_humidity(self):
         """w_T=0 → RH_aux 이동, T_aux = T_int."""

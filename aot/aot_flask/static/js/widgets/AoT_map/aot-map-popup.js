@@ -82,8 +82,8 @@
   // 빈 상태도 제목을 달아 내보낸다 — 안내문만 떠 있으면 "무엇이 없다는
   // 것인지" 를 화면이 말해 주지 못한다(현황 pane 의 블록들과 같은 골격).
   function _emptyBlock(title, msg) {
-    return '<div class="aot-ov-block aot-ov-inactive">' +
-           '<div class="aot-ov-sec-title">' + _esc(title) + '</div>' +
+    return '<div class="aot-ov-card-title">' + _esc(title) + '</div>' +
+           '<div class="aot-ov-block aot-ov-inactive">' +
            '<div class="aot-ov-muted">' + _esc(msg) + '</div></div>';
   }
 
@@ -989,8 +989,8 @@
 
     // 대표사진 + 등록/변경 버튼 (editor 이상)
     if (info.photo_url || info.can_edit) {
-      html += '<div class="aot-ov-block aot-ov-photo-wrap">' +
-              '<div class="aot-ov-sec-title">' + _esc(_t('Photo')) + '</div>';
+      html += '<div class="aot-ov-card-title">' + _esc(_t('Photo')) + '</div>' +
+              '<div class="aot-ov-block aot-ov-photo-wrap">';
       if (info.photo_url) {
         html += '<div class="aot-ov-photo"><img src="' + _esc(info.photo_url) +
                 '" alt="" loading="lazy"></div>';
@@ -1023,9 +1023,9 @@
     if (d.volume_m3) rows += _row(d.estimated ? _t('Interior Volume (est.)') : _t('Interior Volume'),
                                   d.volume_m3 + ' m³');
     if (rows) {
-      html += '<div class="aot-ov-block aot-ov-dims">' +
-              '<div class="aot-ov-sec-title">' +
-              _esc(_t('Facility Information')) + '</div>' + rows + '</div>';
+      html += '<div class="aot-ov-card-title">' +
+              _esc(_t('Facility Information')) + '</div>' +
+              '<div class="aot-ov-block aot-ov-dims">' + rows + '</div>';
     }
 
     // 설명 (편집/저장은 editor 이상 — can_edit)
@@ -1035,8 +1035,8 @@
     // [편집]은 **블록 맨 아래 오른쪽**이다(.aot-ov-actions). 제목 줄은 무엇인지
     // 말하는 자리이고 버튼은 다 읽은 뒤 누르는 것이라, 행동은 시선이 끝나는 곳에
     // 모은다 — 구획 [편집]·[구획 추가]·[노트 열기]와 같은 규칙이다.
-    html += '<div class="aot-ov-block aot-ov-desc">' +
-            '<div class="aot-ov-sec-title">' + _esc(_t('Description')) + '</div>' +
+    html += '<div class="aot-ov-card-title">' + _esc(_t('Description')) + '</div>' +
+            '<div class="aot-ov-block aot-ov-desc">' +
             '<div class="aot-ov-desc-view">' + descView + '</div>' +
             (info.can_edit
               ? '<div class="aot-ov-desc-editwrap" style="display:none">' +
@@ -1086,9 +1086,8 @@
              '"><span>' + _esc(_t(_HAZARD_LABELS[h.kind] || h.kind)) +
              '</span><span>' + _esc(when + val) + '</span></div>';
     }).join('');
-    return '<div class="aot-ov-block aot-ov-hazards">' +
-           '<div class="aot-ov-sec-title">' + _esc(_t('Coming weather')) +
-           '</div>' + rows + '</div>';
+    return '<div class="aot-ov-card-title">' + _esc(_t('Coming weather')) +
+           '</div><div class="aot-ov-block aot-ov-hazards">' + rows + '</div>';
   }
 
   // ── 마지막 관수 ──────────────────────────────────────────────────────
@@ -1148,9 +1147,9 @@
     if (stale || !summary) {
       var msg = !fn.active ? _t('Automatic control inactive')
                            : _t('Automatic control not responding (no cycle in 5 minutes)');
-      html += '<div class="aot-ov-block aot-ov-inactive">' +
-              '<div class="aot-ov-sec-title">' + _esc(_t('Automatic control')) +
-              '</div><div class="aot-ov-muted">' + _esc(msg) + '</div>';
+      html += '<div class="aot-ov-card-title">' + _esc(_t('Automatic control')) +
+              '</div><div class="aot-ov-block aot-ov-inactive">' +
+              '<div class="aot-ov-muted">' + _esc(msg) + '</div>';
       var rs = (status && status.reasons) || [];
       if (rs.length) {
         html += '<div class="aot-ov-reasons">' + rs.map(_esc).join('<br>') + '</div>';
@@ -1208,10 +1207,9 @@
     // 함수 설정에서 볼 일이고, "꺼져 있습니다" 한 줄이 [현황]에서 자리를 차지할
     // 이유가 없다(꺼진 기능의 목표를 표로 늘어놓지 않는 것과 같은 이유).
     if (ph.enabled && phRows) {
-      html += '<div class="aot-ov-block aot-ov-photo-goal">' +
-              '<div class="aot-ov-sec-title">' + _esc(_t('Photosynthesis')) +
+      html += '<div class="aot-ov-card-title">' + _esc(_t('Photosynthesis')) +
               (phCrop ? ' · ' + _esc(phCrop) : '') + '</div>' +
-              phRows + '</div>';
+              '<div class="aot-ov-block aot-ov-photo-goal">' + phRows + '</div>';
     }
 
     // ── 블록 3: 제어 상태 (환기/팬/커튼 등 의미 단위) ───────────────────
@@ -1219,12 +1217,12 @@
     // 편차·안전 게이트는 목록에 없다(`controlRowChoices` 주석).
     var ctrlHidden = _hiddenSet(opts.hiddenControl);
     var ctrlChoices = controlRowChoices(summary);
-    html += '<div class="aot-ov-block aot-ov-ctrl">' +
-            '<div class="aot-ov-sec-title aot-ov-sec-title--row">' +
+    html += '<div class="aot-ov-card-title aot-ov-card-title--row">' +
             '<span>' + _esc(_t('Control Status')) + '</span>' +
             '<span class="aot-ov-title-actions">' +
             (opts.configurable && ctrlChoices.length ? _cardCfgBtn('control') : '') +
-            '</span></div>';
+            '</span></div>' +
+            '<div class="aot-ov-block aot-ov-ctrl">';
     // **설비가 못 따라가고 있으면 그렇다고 말한다.** "냉각기 100%" 만 보여
     // 주면 그것이 좋은 신호인지 나쁜 신호인지 알 수 없다 — 최대로 밀고 있는데도
     // 편차가 안 줄면 사람이 할 판단(차광을 더 치든, 목표를 낮추든)이 생긴다.
@@ -1743,7 +1741,7 @@
     // 것인지 화면이 덜 그려진 것인지 구분할 수 없다.
     var _empty = (!readings.length && !sensors.total);
 
-    var head = '<div class="aot-ov-sec-title aot-ov-sec-title--row">' +
+    var head = '<div class="aot-ov-card-title aot-ov-card-title--row">' +
                '<span>' + _esc(_t('Now')) + '</span>' +
                '<span class="aot-ov-title-actions">';
     if (sensors.total && sensors.valid < sensors.total) {
@@ -1796,7 +1794,17 @@
     }
     // 식별 클래스 — 폴링마다 이 블록만 골라 비교·교체하기 위한 것이다
     // (없으면 [현황] 전체를 갈아엎어야 하고, 그러면 화면이 깜빡인다).
-    return '<div class="aot-ov-block aot-ov-envnow">' + head + body + '</div>';
+    //
+    // **제목·박스를 `.aot-ov-card` 하나로 감싼다.** 제목이 박스 밖으로
+    // 나가며(2026-08-20) 이 함수의 반환값이 형제 노드 둘(제목 div + 박스
+    // div)이 됐다 — 호출부가 이 문자열을 그대로 `html +=` 로 이어붙이는
+    // 자리는 문제가 없지만, `_prependFacilityEnvNow`(시설 위젯)처럼
+    // **독립 조각으로 파싱해 `firstElementChild` 하나만 꺼내 교체**하는
+    // 자리는 제목 div만 남고 박스(진짜 값)는 통째로 버려진다 — 시설
+    // [현재] 카드가 스타일도 내용도 깨진 것으로 보였던 원인이 이것이다.
+    // 감싸면 파싱해도 뿌리 노드가 하나라 안전하다.
+    return '<div class="aot-ov-card">' + head +
+           '<div class="aot-ov-block aot-ov-envnow">' + body + '</div></div>';
   }
 
   // 현재 블록의 값 클릭 → 대표 지정. onPick(key|null) 로 넘긴다.
@@ -2008,8 +2016,13 @@
       return String(a.when || '').localeCompare(String(b.when || ''));
     });
 
-    var html = '<div class="aot-ov-block aot-ov-record">' +
-      '<div class="aot-ov-sec-title">' + _esc(_t('Records')) + '</div>';
+    // `.aot-ov-card` 로 제목+박스를 감싼다 — `_appendFacilitySchedule`(시설
+    // 위젯)가 독립 조각으로 파싱해 `firstElementChild` 하나만 교체하므로,
+    // 감싸지 않으면 제목 div만 남고 실제 기록·노트는 통째로 사라진다
+    // (buildEnvNowHtml 의 같은 주석 참조).
+    var html = '<div class="aot-ov-card">' +
+      '<div class="aot-ov-card-title">' + _esc(_t('Records')) + '</div>' +
+      '<div class="aot-ov-block aot-ov-record">';
 
     html += '<div class="aot-ov-sub-title">' + _esc(_t('Coming up')) + '</div>';
     if (!items.length) {
@@ -2037,7 +2050,7 @@
     html += (window.AoTNotesBlock
       ? window.AoTNotesBlock.html({ sub: true, title: _t('Up to now') })
       : '');
-    return html + '</div>';
+    return html + '</div></div>';
   }
 
   // ISO(앵커 tz 포함) → 사람이 읽는 짧은 시각. 오늘이면 시각만 낸다 —
@@ -2064,9 +2077,9 @@
   function buildZonePlotsHtml(alloc) {
     if (!alloc) return '';
     var items = alloc.plots || [];
-    var html = '<div class="aot-ov-block aot-ov-zone-plots">' +
-               '<div class="aot-ov-sec-title">' +
-               _esc(_t('Plots here')) + '</div>';
+    var html = '<div class="aot-ov-card-title">' +
+               _esc(_t('Plots here')) + '</div>' +
+               '<div class="aot-ov-block aot-ov-zone-plots">';
 
     if (!items.length) {
       html += '<div class="aot-ov-muted">' +
@@ -2178,8 +2191,13 @@
     // 있게 되기 때문이다.
     if (!items.length && !opts.canEdit) return '';
 
-    var html = '<div class="aot-ov-block aot-ov-facility-plots">' +
-               '<div class="aot-ov-sec-title">' + _esc(_t('Plot')) + '</div>';
+    // `.aot-ov-card` 로 제목+박스를 감싼다 — `_appendFacilityPlots`(시설
+    // 위젯)가 독립 조각으로 파싱해 `firstElementChild` 하나만 교체하므로,
+    // 감싸지 않으면 제목 div만 남고 실제 구획 목록은 통째로 사라진다
+    // (buildEnvNowHtml 의 같은 주석 참조).
+    var html = '<div class="aot-ov-card">' +
+               '<div class="aot-ov-card-title">' + _esc(_t('Plot')) + '</div>' +
+               '<div class="aot-ov-block aot-ov-facility-plots">';
     if (!items.length) {
       html += '<div class="aot-ov-muted">' +
               _esc(_t('Nothing recorded here yet.')) + '</div>';
@@ -2256,7 +2274,7 @@
               'aot-ov-plot-new-save">' + _esc(_t('Save')) + '</button>' +
               '</div></div>';
     }
-    return html + '</div>';
+    return html + '</div></div>';
   }
 
   // 대상·품종 라벨은 **종류에 따라 달라진다**(common/aot-plot-labels.js).
@@ -2295,8 +2313,8 @@
     var counts = zone.counts || {};
 
     if (zone.photo_url || zone.can_edit) {
-      html += '<div class="aot-ov-block aot-ov-photo-wrap">' +
-              '<div class="aot-ov-sec-title">' + _esc(_t('Photo')) + '</div>';
+      html += '<div class="aot-ov-card-title">' + _esc(_t('Photo')) + '</div>' +
+              '<div class="aot-ov-block aot-ov-photo-wrap">';
       if (zone.photo_url) {
         html += '<div class="aot-ov-photo"><img src="' + _esc(zone.photo_url) +
                 '" alt="" loading="lazy"></div>';
@@ -2324,9 +2342,8 @@
     rows += _zrow(_t('Functions'), String(counts.functions || 0));
     // 제목 없는 블록은 사진 블록 아래에 다섯 줄이 떠 있는 모양이 된다 —
     // 구획 모달의 "구획 정보" 와 같은 자리이므로 같은 방식으로 이름을 준다.
-    html += '<div class="aot-ov-block aot-ov-dims">' +
-            '<div class="aot-ov-sec-title">' + _esc(_t('Zone information')) +
-            '</div>' + rows + '</div>';
+    html += '<div class="aot-ov-card-title">' + _esc(_t('Zone information')) +
+            '</div><div class="aot-ov-block aot-ov-dims">' + rows + '</div>';
 
     return html;
   }
@@ -2902,9 +2919,8 @@
   function _plotOverviewHtml(p) {
     // 제목은 목록 쪽('심겨 있는 것')과 달라야 한다 — 같은 말을 쓰면 블록
     // 제목과 첫 행 라벨이 겹쳐 "심겨 있는 것 / 심은 것" 으로 읽힌다.
-    var html = '<div class="aot-ov-block">' +
-               '<div class="aot-ov-sec-title">' + _esc(_t('Right now')) +
-               '</div>';
+    var html = '<div class="aot-ov-card-title">' + _esc(_t('Right now')) +
+               '</div><div class="aot-ov-block">';
 
     // 대상·시작일·예상 종료일은 [개요] 가 맡는다 — 바뀌지 않는 사실이고,
     // 두 탭에 같은 행을 두면 어느 쪽이 정본인지 사람이 매번 확인하게 된다.
@@ -2919,36 +2935,54 @@
     // 움직인다.
     html += '<div data-slot="envnow"></div>';
 
+    /* **숫자만 보이면 사람이 "이대로 돌고 있다" 로 읽는다.**
+     *
+     * 프로그램 목표는 이제 [현재] 의 눈금으로 들어간다(값 옆 `목표 25`).
+     * 그런데 프로그램은 함수를 스스로 켜지 않는다(P6) — 그 사실이 화면에
+     * 없으면 실제 제어와 다른데도 확인할 생각을 안 하게 된다. [목표] 카드를
+     * 없애면서 이 문장이 갈 곳이 여기밖에 없다.
+     *
+     * **시설·구역 [현재] 에는 붙이지 않는다.** 그쪽 목표는 코디네이터가 실제로
+     * 쫓는 값이라(`summary.targets`) 같은 문장이 거짓이 된다. 그래서 공용
+     * 빌더(`buildEnvNowHtml`)가 아니라 구획 쪽에서만 붙인다. */
+    if (_stg && (_stg.targets || []).length) {
+      html += '<div class="aot-ov-muted aot-ov-targets-note">' +
+              // msgid 는 한 줄 리터럴로 둔다 — 이어붙이면 추출기가 못 읽어
+              // 그 문구만 영어로 나온다(project_i18n_babel_footguns).
+              _esc(_t('Targets are shown for reference. Control is not changed automatically.')) +
+              '</div>';
+    }
+
     // 단계 전환 제안·목표·자원 — 전부 **지금** 의 값이다. 프로그램이 무엇인지
     // (이름·단계 수·전체 기간)는 바뀌지 않는 사실이라 [개요] 가 갖는다.
     var _ask = _plotStageProposalHtml(p);
     if (_ask) {
-      html += '<div class="aot-ov-block">' +
-              '<div class="aot-ov-sec-title">' + _esc(_t('Stage change')) +
-              '</div>' + _ask + '</div>';
+      html += '<div class="aot-ov-card-title">' + _esc(_t('Stage change')) +
+              '</div><div class="aot-ov-block">' + _ask + '</div>';
     }
-    var _tg = _plotStageTargetRows(_stg);
-    if (_tg) {
-      // 측정값은 나중에 온다 — 도착하면 위젯이 이 자리를 다시 채운다
-      // (data-slot="targets"). 처음부터 글자로 그려 두는 이유: 늦게 오는 값을
-      // 기다리며 비워 두면 목표가 없는 것처럼 보인다.
-      html += '<div class="aot-ov-block">' +
-              '<div class="aot-ov-sec-title">' + _esc(_t('Targets')) +
-              '</div><div data-slot="targets">' + _tg + '</div></div>';
-    }
+    // ── [목표] 카드는 없앴다 (2026-08-20) ───────────────────────────────
+    //
+    // [현재] 가 값 옆에 목표를 함께 세우게 되면서(`buildEnvNowHtml` 의
+    // anchor 눈금) 두 카드가 거의 같은 말을 하게 됐다 — 같은 지표가 두 번
+    // 나오면 사용자는 어느 쪽이 정본인지 매번 확인한다.
+    //
+    // 게다가 이 카드는 **재는 센서가 없는 항목까지** 늘어놓았다(관수량·EC 등
+    // `t.observable === false`). 지금 값과 나란히 놓을 수 없는 줄이라, 남는
+    // 것은 "목표 숫자 목록" 뿐이고 그것은 프로그램 설정 화면이 이미 보여 준다.
+    //
+    // 목표가 사라진 것은 아니다 — 지금 값이 있는 항목은 [현재] 의 눈금이
+    // 그대로 답한다("그래서 지금 맞나" 까지 함께).
+    //
     // 단계 지침 — AI 를 안 쓰는 사용자도 이 시기에 무엇이 중요한지 여기서 읽는다.
-    // 프로그램을 고른 것만으로 얻는 값이라 목표 바로 다음에 둔다.
     if (_stg && _stg.guidance) {
-      html += '<div class="aot-ov-block">' +
-              '<div class="aot-ov-sec-title">' + _esc(_t('Guidance')) +
-              '</div><div class="aot-ov-guidance">' +
+      html += '<div class="aot-ov-card-title">' + _esc(_t('Guidance')) +
+              '</div><div class="aot-ov-block"><div class="aot-ov-guidance">' +
               _esc(_stg.guidance) + '</div></div>';
     }
     var _rs = _plotStageResourceRows(_stg);
     if (_rs) {
-      html += '<div class="aot-ov-block">' +
-              '<div class="aot-ov-sec-title">' + _esc(_t('Resources')) +
-              '</div>' + _rs + '</div>';
+      html += '<div class="aot-ov-card-title">' + _esc(_t('Resources')) +
+              '</div><div class="aot-ov-block">' + _rs + '</div>';
     }
 
     // 물 줄 수단이 없다 — 장치 목록이 아니라 **빠진 것**을 알리는 줄이다.
@@ -2986,8 +3020,8 @@
     // 자리는 여기다.**
     // 제목은 첫 행 라벨('심은 것')과 달라야 한다 — 같으면 "심은 것 / 심은 것"
     // 으로 읽힌다([현황]에서 한 번 겪은 것과 같은 문제).
-    var html = '<div class="aot-ov-block aot-ov-plot-info">' +
-            '<div class="aot-ov-sec-title">' + _esc(_t('Basics')) + '</div>';
+    var html = '<div class="aot-ov-card-title">' + _esc(_t('Basics')) + '</div>' +
+            '<div class="aot-ov-block aot-ov-plot-info">';
 
     html += '<div class="aot-ov-plot-view">';
     html += _pRow(_plotSubjectLabel(p), _esc(p.subject || '—') +
@@ -3093,8 +3127,8 @@
 
     // 이 자리 이력 — 연작 장해·윤작 판단의 근거. 도형과 함께 잘 안 변하는
     // 사실이라 [개요]에 둔다(채우는 것은 fillPlotHistory).
-    html += '<div class="aot-ov-block aot-ov-plot-history">' +
-            '<div class="aot-ov-sec-title">' + _esc(_t('History here')) + '</div>' +
+    html += '<div class="aot-ov-card-title">' + _esc(_t('History here')) + '</div>' +
+            '<div class="aot-ov-block aot-ov-plot-history">' +
             '<div class="aot-ov-plot-history-list">' +
             '<span class="aot-ov-muted">…</span></div></div>';
     return html;
@@ -3113,6 +3147,14 @@
     irrigation: 'Irrigation', fertigation: 'Fertigation', other: 'Other'
   };
 
+  // 못 찾은 이유 → 사람이 무엇을 고쳐야 하는지. 빈칸으로 두면 "자원이 없는
+  // 프로그램" 으로 읽혀 아무도 배치를 확인하지 않는다.
+  var _RESOURCE_REASONS = {
+    'not-placed':    'No device for this here yet',
+    'no-facility':   'Outdoor plots cannot resolve this yet',
+    'no-vocabulary': 'This role has no device type yet'
+  };
+
   function _plotStageResourceRows(stg) {
     var list = (stg && stg.resources) || [];
     if (!list.length) return '';
@@ -3121,16 +3163,26 @@
     list.forEach(function (r) {
       var label = _t(_RESOURCE_ROLES[r.role] || 'Other');
       var val;
-      if (r.missing) {
-        // 조용히 빼지 않는다 — 빼면 자원이 통째로 사라진 것을 아무도 모른다.
-        val = '<span class="aot-ov-muted">' + _esc(_t('Function is gone')) +
+      if (!r.found) {
+        // **없음을 조용히 넘기지 않는다.** 프로그램은 역할만 선언하고 함수는
+        // 현장이 푼다(P6 재설계) — 그래서 여기서 말할 수 있는 사실이 하나
+        // 늘었다: "이 단계는 관수를 요구하는데 이 자리에 관수 장치가 없다".
+        val = '<span class="aot-ov-muted">' +
+              _esc(_t(_RESOURCE_REASONS[r.reason] || 'Not found here')) +
               '</span>';
-      } else if (r.active) {
-        val = _esc(r.name || '') + ' · ' + _esc(_t('running'));
       } else {
-        needsApply = true;
-        val = _esc(r.name || '') + ' · <span class="aot-ov-muted">' +
-              _esc(_t('stopped')) + '</span>';
+        // 여럿 잡히는 것은 정상이다(밸브가 여럿인 시설). 무엇이 도는지 목록이
+        // 말한다 — 그중 하나를 골라 켜는 것은 사람의 몫이다.
+        var names = (r.functions || []).map(function (f) {
+          return _esc(f.name || '');
+        }).join(', ');
+        if (r.active) {
+          val = names + ' · ' + _esc(_t('running'));
+        } else {
+          needsApply = true;
+          val = names + ' · <span class="aot-ov-muted">' +
+                _esc(_t('stopped')) + '</span>';
+        }
       }
       rows += _pRow(label, val);
     });
@@ -3228,111 +3280,6 @@
                  _esc(_t('By days') + ' \u00b7 ' + _t(why)) + '</span>');
   }
 
-  // 현재 단계의 목표 — **서버가 만든 목록을 그대로 그린다.**
-  //
-  // 항목 어휘·단위·**라벨**까지 서버(`target_defs`)가 정본이다. 항목은 이제
-  // 프로그램마다 다르고 사용자가 이름을 붙이므로, 여기에 표를 두면 사용자가 만든
-  // 항목은 영영 키 이름으로만 보인다.
-  //
-  // **이 값은 표시 전용이다** — 제어를 바꾸지 않는다. 그래서 그 사실을 화면에
-  // 적는다: 숫자만 보이면 사람이 "이대로 돌고 있다" 로 읽고, 그러면 실제 제어와
-  // 다른데도 확인할 생각을 안 하게 된다.
-  //
-  // 곡선이 걸린 항목은 **숫자를 내지 않는다**(서버가 value=null 로 준다). 단계
-  // 값을 대신 보이면 실제로 쓰이지 않는 숫자를 목표라고 말하는 것이 된다.
-  // 라벨 표는 두지 않는다 — 항목이 프로그램마다 다르고 사용자가 이름을 붙이므로
-  // (`target_defs`), 표를 두면 사용자가 만든 항목은 영영 키 이름으로만 보인다.
-  // 서버가 번역까지 마친 `t.label` 을 준다.
-
-  // 목표 항목 ↔ 측정 키. 현재값이 있으면 그 목표를 **축 위에** 그릴 수 있다.
-  // (`_NOW_TO_TARGET` 의 반대 방향 + 온도·습도까지. 여기서는 "제어가 무엇을
-  // 목표로 삼는가" 가 아니라 "이 숫자를 어느 측정값과 견줄 수 있는가" 를 묻는
-  // 것이라 온도·습도도 포함된다 — 그쪽은 한계지만 견줄 대상은 같다.)
-  var _TARGET_TO_NOW = {
-    temp_day: 'T', temp_night: 'T', rh: 'RH', co2: 'CO2', vpd: 'VPD'
-  };
-
-  /* 단계 목표 — **현재값이 있으면 막대**, 없으면 글자.
-   *
-   * 목표만 표로 보면 "그래서 지금 맞나" 에 답하지 못한다(이 저장소가 [현재]
-   * 블록에서 이미 내린 판단이다). 그래서 같은 모달의 측정값을 받아 축 위에
-   * 목표를 세우고 지금 값을 찍는다.
-   *
-   * `readings` 는 나중에 도착한다(/contents) — 없으면 예전처럼 글자만 낸다.
-   * 값이 늦게 온다고 블록이 비면 사용자는 목표가 없는 줄 안다.
-   */
-  function _plotStageTargetRows(stg, readings) {
-    var list = (stg && stg.targets) || [];
-    if (!list.length) return '';
-    var V = window.AoTViz;
-    var ML = window.AoTMapSensorLabels;
-    var byKey = {};
-    (readings || []).forEach(function (r) { byKey[r.key] = r; });
-
-    var rows = [];
-    list.forEach(function (t) {
-      // 이스케이프는 그리는 쪽이 한다(`_pRow` · `AoTViz.headHtml` 모두
-      // `esc()` 를 건다) — 여기서 미리 걸면 이중 이스케이프로 `&amp;` 가 보인다.
-      var label = t.label || t.key;
-      if (t.source === 'method') {
-        rows.push(V ? V.value({ label: label,
-                                valueText: t.method_name
-                                  ? _t('Follows curve: {name}')
-                                      .replace('{name}', t.method_name)
-                                  : _t('Follows a curve') })
-                    : _pRow(label, '<span class="aot-ov-muted">' +
-                                   _esc(_t('Follows a curve')) + '</span>'));
-        return;
-      }
-      var nowKey = _TARGET_TO_NOW[t.key];
-      var r = nowKey ? byKey[nowKey] : null;
-      var sc = (V && ML && ML.bandScale && nowKey)
-               ? ML.bandScale(nowKey, null) : null;
-      if (V && r && r.value != null && sc) {
-        // 축은 [현재] 블록과 **같은 표**에서 온다 — 같은 지표가 두 블록에서
-        // 다른 축으로 그려지면 마커 위치가 서로 안 맞는다.
-        var v = ML.bandValue ? ML.bandValue(nowKey, +r.value, r.unit) : +r.value;
-        var c = ML.bandValue ? ML.bandValue(nowKey, +t.value, r.unit) : +t.value;
-        var d = Math.abs(c) * _ENV_SINGLE_TOL;
-        var dec = (window.AoTSensorLabel && window.AoTSensorLabel.defaultDecimals)
-                  ? window.AoTSensorLabel.defaultDecimals(nowKey) : 1;
-        rows.push(V.band({
-          label: label,
-          value: v,
-          valueText: (+r.value).toFixed(dec),
-          valueSub: r.unit || t.unit || '',
-          min: sc.min, max: sc.max,
-          okMin: c ? c - d : null, okMax: c ? c + d : null,
-          scale: [{ text: _t('target') + ' ' + String(t.value), anchor: true,
-                    at: c }]
-        }));
-      } else if (V) {
-        rows.push(V.value({ label: label,
-                            valueText: String(t.value),
-                            valueSub: t.unit || '' }));
-      } else {
-        rows.push(_pRow(label, _esc(String(t.value) +
-                                    (t.unit ? ' ' + t.unit : ''))));
-      }
-      // ⚠ 이 항목을 재는 센서가 있는지는 서버가 `t.observable` 로 알려 준다
-      // (true 있음 · false 없음 · null 알 수 없음). **지금은 그 상태를 화면에
-      // 그리지 않는다.**
-      //
-      // 문구로 적어 봤다가 걷어냈다(2026-08-20). "(여기 센서 없음)" 은 목표를
-      // 권하는 자리에서 시설의 결함을 지적하는 말이 되어 "네가 준비하지 않아서
-      // 못 한다" 로 읽힌다. 모든 시설이 모든 항목을 재지 못하는 것은 당연하고,
-      // 재지 못한다고 그 목표가 덜 유효해지지도 않는다(사람이 손으로 맞출 수
-      // 있다). 말을 덧붙이는 대신 **그래픽·스타일로 구분하는 쪽**을 따로 정한다.
-      //
-      // 그때까지 상태는 payload 에 그대로 실려 있으니 여기서 읽어 쓰면 된다.
-    });
-
-    return (V ? V.group(rows) : rows.join('')) +
-           '<div class="aot-ov-muted">' +
-           _esc(_t('Targets are shown for reference. Control is not changed automatically.')) +
-           '</div>';
-  }
-
   function _plotProgramHtml(p) {
     var pr = p.program;
     if (!pr) return '';
@@ -3359,9 +3306,8 @@
       }
       rows += _plotStageHistoryHtml(p);
     }
-    return '<div class="aot-ov-block">' +
-           '<div class="aot-ov-sec-title">' + _esc(_t('Program')) +
-           '</div>' + rows + '</div>';
+    return '<div class="aot-ov-card-title">' + _esc(_t('Program')) +
+           '</div><div class="aot-ov-block">' + rows + '</div>';
   }
 
   // 시설 구획의 자리 — 좌표가 아니라 **이름**이 위치다.
@@ -3381,8 +3327,8 @@
     // 사용자는 그것을 오류로 읽는다.
     var rows = _pRow(_t('Facility'), _esc(p.facility_name || '—'));
     if (p.bay_name) rows += _pRow(_t('Zone'), _esc(p.bay_name));
-    return '<div class="aot-ov-block">' +
-           '<div class="aot-ov-sec-title">' + _esc(_t('Where')) + '</div>' +
+    return '<div class="aot-ov-card-title">' + _esc(_t('Where')) + '</div>' +
+           '<div class="aot-ov-block">' +
            rows +
            '<div class="aot-ov-muted">' +
            _esc(_t('Floor area alone does not tell you how much fits inside a facility — record the layout (beds, rows, tiers) in the notes.')) +
@@ -3419,9 +3365,8 @@
              _esc(_t('This plot is not rectangular, so these dimensions are the enclosing rectangle — the usable area is smaller.')) +
              '</div>';
     }
-    return '<div class="aot-ov-block">' +
-           '<div class="aot-ov-sec-title">' + _esc(_t('Plot information')) +
-           '</div>' + rows + note + '</div>';
+    return '<div class="aot-ov-card-title">' + _esc(_t('Plot information')) +
+           '</div><div class="aot-ov-block">' + rows + note + '</div>';
   }
 
   // 이력 목록을 채운다. rows 는 /api/geo/plots/history 의 history 배열.
@@ -3473,7 +3418,6 @@
     readRowPicker:         readRowPicker,
     wireCardConfig:        wireCardConfig,
     fillEnvSparklines:     fillEnvSparklines,
-    plotStageTargetRows:   _plotStageTargetRows,
     wireEnvNowPick:        wireEnvNowPick,
     buildModalHeader:      buildModalHeader,
     scopeBadgeHtml:        scopeBadgeHtml,

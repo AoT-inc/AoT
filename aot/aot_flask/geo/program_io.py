@@ -33,7 +33,7 @@ _VALID_SOURCES = ('builtin', 'external', 'user', 'ai')
 VALID_KINDS = ('vegetation', 'livestock', 'facility', 'other')
 
 
-def _clean_stages(stages, defs=None):
+def _clean_stages(stages, defs=None, rdefs=None):
     """단계 목록 검증·정규화 → (stages, error).
 
     `days` 는 **그 단계의 길이**다. `None`(끝까지)을 허용하되 마지막이 아닌 자리에
@@ -43,7 +43,8 @@ def _clean_stages(stages, defs=None):
     `defs` 는 **이 프로그램의 목표 항목 정의**다(`_clean_target_defs` 의 결과).
     단계 값의 어휘와 범위를 그것이 정하므로 반드시 함께 넘어와야 한다 — 정의에
     없는 키가 값으로 들어오면 거절한다(고아 값을 받아 두면 화면에 그릴 라벨도
-    단위도 없다).
+    단위도 없다). `rdefs`(`_clean_resource_defs` 의 결과)도 같은 이유로 함께
+    온다 — 단계의 자원 덮어쓰기가 그 정의 안에 있어야 한다.
     """
     if not isinstance(stages, list) or not stages:
         return None, '단계를 하나 이상 넣어야 합니다'
@@ -91,12 +92,14 @@ def _clean_stages(stages, defs=None):
                               % (i + 1))
             entry['gdd'] = gdd
 
-        # 자원(관수·시비) — 이 단계에 쓰는 Function 목록(P6).
-        funcs, ferr = _clean_stage_functions(st.get('functions'))
-        if ferr:
-            return None, '단계 %d: %s' % (i + 1, ferr)
-        if funcs:
-            entry['functions'] = funcs
+        # 자원(관수·시비) — **역할 on/off 덮어쓰기**다(P6, 2026-08-20 재설계).
+        # 함수 uuid 는 여기 오지 않는다. 무엇이 그 일을 하는지는 현장이 기하로
+        # 푼다(`plot_context.stage_resources`).
+        res, rerr = _clean_stage_resources(st.get('resources'), rdefs)
+        if rerr:
+            return None, '단계 %d: %s' % (i + 1, rerr)
+        if res:
+            entry['resources'] = res
 
         # 단계 지침 — 이 시기에 무엇을 어떻게 하는가(자유 텍스트).
         #
@@ -121,7 +124,12 @@ def _clean_stages(stages, defs=None):
                 entry['guidance'] = guidance
 
         # 이후 단계가 쓸 필드는 있으면 그대로 보존한다(모르는 키를 버리지 않는다).
-        for extra in ('tasks',):
+        #
+        # `functions` 는 **P6 재설계 이전의 함수 uuid 목록**이다(p6_48). 읽는
+        # 쪽은 더 이상 보지 않지만 조용히 버리지 않는다 — 그 uuid 들은 "이
+        # 함수가 그 자리에 배치돼야 한다" 는 정보라, 배치를 맞춘 뒤 사람이
+        # 확인하고 지우는 것이 맞다(geo_binding 레거시 컬럼과 같은 태도).
+        for extra in ('tasks', 'functions'):
             if st.get(extra) is not None:
                 entry[extra] = st[extra]
         out.append(entry)
@@ -359,49 +367,69 @@ def _clean_targets(targets, defs):
 
 
 
-def _clean_stage_functions(value):
-    """단계의 자원 함수 목록 검증 → (list|None, error).
+def _clean_resource_defs(defs):
+    """자원 역할 정의 검증 → (list, error). `[{role, default}]`.
 
-    `[{'id': <unique_id>, 'role': 'irrigation'|'fertigation'|'other'}]`.
+    **함수 uuid 를 받지 않는다**(P6 재설계, 2026-08-20). 프로그램은 "이 작물은
+    관수를 쓴다" 까지만 말하고 무엇이 그 일을 하는지는 현장이 기하로 푼다 —
+    계획이 현장을 미리 지정하면 충돌을 풀 방법이 없고, 같은 프로그램을 두 번째
+    자리에서 쓰려면 복제해야 해서 작물 지식이 두 벌이 된다.
 
-    **실존하지 않는 함수는 저장 시점에 거절한다** — 죽은 참조를 받아 두면 나중에
-    화면이 "자원이 있는데 안 돈다" 를 만나고, 그때는 원인이 프로그램인지 함수인지
-    알 수 없다(목표 곡선과 같은 규율).
-
-    이미 저장된 뒤에 함수가 지워지는 것은 막을 수 없다. 그쪽은 조용히 빼지 않고
-    화면이 "없는 함수" 로 보인다(`plot_context.stage_resources`).
+    `default` 는 **단계 기본값**이다(목표 항목의 `default` 와 같은 패턴). 관수는
+    대개 작기 내내 필요하고 달라지는 것은 예외 쪽이라, 단계마다 적게 하면 안
+    바뀌는 것을 단계 수만큼 다시 적어야 한다.
     """
-    if value in (None, '', []):
-        return None, None
-    if not isinstance(value, list):
-        return None, '자원 형식이 올바르지 않습니다'
-
-    from aot.databases.models import Conditional, CustomController, PID, Trigger
+    if defs in (None, ''):
+        return [], None
+    if not isinstance(defs, list):
+        return None, '자원 정의 형식이 올바르지 않습니다'
 
     out = []
     seen = set()
-    for item in value:
+    for item in defs:
         if isinstance(item, str):
-            item = {'id': item}
+            item = {'role': item}
         if not isinstance(item, dict):
             return None, '자원 항목 형식이 올바르지 않습니다'
-        fid = (item.get('id') or '').strip()
-        if not fid:
+        role = (item.get('role') or '').strip()
+        if not role:
             continue
-        if fid in seen:
-            continue                       # 같은 함수를 두 번 적어도 한 번만
-        role = (item.get('role') or 'other').strip()
         if role not in _RESOURCE_ROLES:
             return None, '알 수 없는 자원 역할: %s' % role
-        found = False
-        for model in (CustomController, Conditional, Trigger, PID):
-            if model.query.filter_by(unique_id=fid).first() is not None:
-                found = True
-                break
-        if not found:
-            return None, '함수를 찾을 수 없습니다: %s' % fid
-        seen.add(fid)
-        out.append({'id': fid, 'role': role})
+        if role in seen:
+            continue                       # 같은 역할을 두 번 적어도 한 번만
+        seen.add(role)
+        out.append({'role': role, 'default': bool(item.get('default', True))})
+    return out, None
+
+
+def _clean_stage_resources(value, rdefs):
+    """단계의 자원 덮어쓰기 검증 → (dict|None, error). `{role: bool}`.
+
+    **"이 단계는 쓰지 않는다" 와 "기본값을 따른다" 는 다른 사실이다.** 수확 전
+    단수(斷水)처럼 일부러 끊는 단계가 있고, 그것을 빈 칸으로 표현하면 실수와
+    구분되지 않는다. 그래서 덮어쓴 역할만 키로 담고, 없는 키는 기본값을 따른다.
+
+    정의(`rdefs`)에 없는 역할은 거절한다 — 고아 값을 받아 두면 화면에 그릴
+    근거가 없다(목표 값과 같은 규율).
+    """
+    if value in (None, '', {}, []):
+        return None, None
+    if not isinstance(value, dict):
+        return None, '단계 자원 형식이 올바르지 않습니다'
+
+    known = {d.get('role') for d in (rdefs or [])}
+    out = {}
+    for role, use in value.items():
+        role = (role or '').strip()
+        if not role:
+            continue
+        if role not in _RESOURCE_ROLES:
+            return None, '알 수 없는 자원 역할: %s' % role
+        if role not in known:
+            return None, ('프로그램이 쓰지 않는 자원 역할입니다: %s '
+                          '— 먼저 프로그램에 추가하세요' % role)
+        out[role] = bool(use)
     return (out or None), None
 
 
@@ -521,6 +549,16 @@ def _apply_fields(row, data):
         changed = True
     row.target_defs = defs
 
+    # 자원 역할 정의 — 같은 부분 저장 규칙(키가 없으면 기존 값을 지킨다).
+    rdefs, rderr = _clean_resource_defs(
+        data['resource_defs'] if 'resource_defs' in data
+        else row.resource_def_list())
+    if rderr:
+        return None, rderr
+    if row.resource_def_list() != rdefs:
+        row.resource_defs = rdefs
+        changed = True
+
     for field in ('name', 'variety', 'notes', 'source_note'):
         if field not in data:
             continue
@@ -538,7 +576,7 @@ def _apply_fields(row, data):
     # 남아 있으면 화면에 그릴 라벨이 없는 고아가 된다. `stages` 를 보내지 않은
     # 부분 저장에서도 검사해야 그 고아를 저장 시점에 잡는다.
     stages_in = data['stages'] if 'stages' in data else row.stage_list()
-    stages, err = _clean_stages(stages_in, defs)
+    stages, err = _clean_stages(stages_in, defs, rdefs)
     if err:
         # 종류를 바꾼 것이 원인이면 그렇게 말한다 — "알 수 없는 목표 항목" 만
         # 보면 사람은 자기가 방금 종류를 바꾼 것과 연결짓지 못한다.
@@ -600,7 +638,12 @@ def create_program(data, source='user'):
     if err:
         return None, err
 
-    stages, err = _clean_stages(data.get('stages'), defs)
+    # 자원 역할 정의 — 단계의 자원 덮어쓰기가 이 안에 있어야 한다.
+    rdefs, err = _clean_resource_defs(data.get('resource_defs'))
+    if err:
+        return None, err
+
+    stages, err = _clean_stages(data.get('stages'), defs, rdefs)
     if err:
         return None, err
 
@@ -611,6 +654,7 @@ def create_program(data, source='user'):
     row = GeoProgram(
         name=name, subject=subject, kind=kind,
         target_defs=defs,
+        resource_defs=rdefs,
         variety=(data.get('variety') or '').strip() or None,
         source=source,
         source_ref=(data.get('source_ref') or None),
@@ -769,6 +813,9 @@ def to_dict(row, with_stages=True):
         out['target_defs'] = [_public_target_def(d)
                               for d in row.target_def_list()]
         out['stages'] = row.stage_list()
+        # 자원 역할 정의(P6). 단계는 `resources` 로 on/off 만 덮어쓴다 —
+        # 함수 uuid 는 프로그램 어디에도 없다.
+        out['resource_defs'] = row.resource_def_list()
         out['photosynthesis'] = row.photosynthesis
     out['auto_advance'] = bool(getattr(row, 'auto_advance', False))
     return out

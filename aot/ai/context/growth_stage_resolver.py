@@ -25,72 +25,85 @@ logger = logging.getLogger(__name__)
 # Crop-type → ordered list of (stage_id, max_days_after_plot).
 # Stages are matched by first entry where days_after_planting <= max_days.
 # Source: RDA greenhouse management guidelines (static Phase 2a fallback).
+#
+# ⚠ 'seedling' 은 옮겨심는(transplant) 작물에는 없다 (2026-08-21 결정).
+#
+# 이 표의 day-0 은 GeoPlot.started_on 이다 — 그 구획에 그 대상이 **있기 시작한
+# 날**(program-layer.md 참조). 옮겨심는 작물은 육묘를 대개 다른 장소(육묘장·
+# 별도 트레이)에서 하고, 그 육묘가 "이 구획"의 기하에 있었던 적이 없다. 그런데
+# day-0 을 파종일로 두고 'seedling' 을 첫 단계로 얹으면, 정식한 그 구획이 정식
+# 당일부터 며칠 동안 "아직 육묘기" 로 읽힌다 — 실제로 이 구획에 없었던 기간을
+# 이 구획의 경과일로 세는 것.
+#
+# 그래서 옮겨심는 6종은 'transplant' 를 day-0 단계로 삼고, 원래 자료(파종일
+# 기준 누적일)에서 육묘 기간만큼을 빼서 다시 앵커링했다 — 값을 새로 지어낸
+# 것이 아니라 같은 경계를 기준점만 바꿔 다시 읽은 것이다. 직파(直播) 작물인
+# 시금치는 파종 자리가 곧 이 구획이므로 'seedling' 을 그대로 둔다. 자기 시설
+# 안에서 트레이 육묘를 하는 농가도 있지만, 트레이가 있는 자리와 정식할 두둑은
+# 별개의 기하라 여전히 다른 GeoPlot 이다.
 # ---------------------------------------------------------------------------
 
 STAGE_DURATION_MAP: dict[str, list[tuple[str, int]]] = {
     # Fruiting vegetables
     "tomato": [
-        ("seedling",     21),
-        ("transplant",28),
-        ("vegetative",   56),
-        ("flowering",    84),
-        ("fruit_set",   105),
-        ("fruiting",    140),
-        ("harvest",     999),
+        ("transplant",     7),   # 정식 원자료 28 − 육묘 21
+        ("vegetative",    35),   # 56 − 21
+        ("flowering",     63),   # 84 − 21
+        ("fruit_set",     84),   # 105 − 21
+        ("fruiting",     119),   # 140 − 21
+        ("harvest",      999),
     ],
     "cherry_tomato": [
-        ("seedling",     21),
-        ("transplant",28),
-        ("vegetative",   56),
-        ("flowering",    84),
-        ("fruit_set",   105),
-        ("fruiting",    130),
-        ("harvest",     999),
+        ("transplant",     7),   # 28 − 21
+        ("vegetative",    35),   # 56 − 21
+        ("flowering",     63),   # 84 − 21
+        ("fruit_set",     84),   # 105 − 21
+        ("fruiting",     109),   # 130 − 21
+        ("harvest",      999),
     ],
     "paprika": [
-        ("seedling",     28),
-        ("transplant",35),
-        ("vegetative",   70),
-        ("flowering",   100),
-        ("fruit_set",   120),
-        ("fruiting",    160),
-        ("harvest",     999),
+        ("transplant",     7),   # 35 − 28
+        ("vegetative",    42),   # 70 − 28
+        ("flowering",     72),   # 100 − 28
+        ("fruit_set",     92),   # 120 − 28
+        ("fruiting",     132),   # 160 − 28
+        ("harvest",      999),
     ],
     "cucumber": [
-        ("seedling",     14),
-        ("transplant",21),
-        ("vegetative",   42),
-        ("flowering",    56),
-        ("fruiting",     80),
-        ("harvest",     999),
+        ("transplant",     7),   # 21 − 14
+        ("vegetative",    28),   # 42 − 14
+        ("flowering",     42),   # 56 − 14
+        ("fruiting",      66),   # 80 − 14
+        ("harvest",      999),
     ],
     "strawberry": [
-        ("seedling",     21),
-        ("transplant",35),
-        ("vegetative",   70),
-        ("flower_initiation", 90),
-        ("flowering",   110),
-        ("fruiting",    140),
-        ("harvest",     999),
+        ("transplant",    14),   # 35 − 21
+        ("vegetative",    49),   # 70 − 21
+        ("flower_initiation", 69),   # 90 − 21
+        ("flowering",     89),   # 110 − 21
+        ("fruiting",     119),   # 140 − 21
+        ("harvest",      999),
     ],
     "lettuce": [
-        ("seedling",     10),
-        ("transplant",17),
-        ("vegetative",   35),
-        ("harvest",     999),
+        ("transplant",     7),   # 17 − 10
+        ("vegetative",    25),   # 35 − 10
+        ("harvest",      999),
     ],
+    # 직파 — 파종한 그 자리가 곧 이 구획이라 'seedling' 이 실제로 이 구획의
+    # 첫 단계다(위 anchor 설명 참조).
     "spinach": [
         ("seedling",      7),
         ("vegetative",   30),
         ("harvest",     999),
     ],
-    # Default fallback used when crop_type not in map
+    # Default fallback used when crop_type not in map — 옮겨심는지 직파인지
+    # 모르는 작물이라 'seedling' 을 그대로 둔다(더 안전한 쪽으로 fallback).
     "_default": [
         ("seedling",     21),
-        ("vegetative",   60),
-        ("flowering",    90),
-        ("fruiting",    120),
-        ("harvest",     999),
+        ("vegetative",    60),
+        ("flowering",     90),
+        ("fruiting",     120),
+        ("harvest",      999),
     ],
 }
 

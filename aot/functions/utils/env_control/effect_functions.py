@@ -20,22 +20,40 @@ def _svp_kpa(T: float) -> float:
     return 0.6108 * math.exp(17.27 * T / (T + 237.3))
 
 
-def make_vpd_effect(temp_fn, humid_fn):
+# 선언된 humidity effect 가 **수분 이동이 아니라 온도 변화의 부산물**인 종류.
+# 난방기('온도 상승 → 같은 절대습도에서 RH 하락')와 냉방기('응결로 RH 상승
+# 경향')가 그렇다. dsvp/dT 항이 이 RH 변화를 이미 담고 있으므로 dea 에 다시
+# 더하면 이중계상이다. 개구부·분무·배기/흡기팬은 실제로 수분을 옮기므로 남긴다.
+# (커튼·차광막·보광등은 humidity effect 자체를 선언하지 않는다.)
+_THERMAL_RH_KINDS = frozenset({'heater', 'cooler'})
+
+
+def make_vpd_effect(temp_fn, humid_fn, humid_is_moisture: bool = True):
     """액추에이터의 T·RH effect 로부터 VPD effect 를 연쇄법칙으로 유도한다.
 
-    VPD = svp(T)·(1−RH/100).
-      ∂VPD/∂T  = (1−RH/100)·dsvp/dT   (> 0)
-      ∂VPD/∂RH = −svp/100             (< 0)
+    VPD = svp(T) − ea 로 두고 **(T, ea) 좌표**에서 미분한다.
+      ∂VPD/∂T  = dsvp/dT              (> 0)
+      ∂VPD/∂ea = −1  → dRH 로 환산 = −svp/100
       dVPD = ∂VPD/∂T·dT + ∂VPD/∂RH·dRH
     dT·dRH 는 해당 액추에이터의 기존 T·RH effect(부호 있는 magnitude)에서 가져온다.
+    이때 **선언된 dRH 는 "온도가 그대로일 때 수분 출입이 만드는 RH 변화"** 로
+    읽는다(분무의 가습, 환기의 교환). 온도 변화가 스스로 만드는 RH 이동은
+    dsvp/dT 항이 이미 담고 있으므로, 그것을 dRH 로 신고하는 종류
+    (`_THERMAL_RH_KINDS`)는 `humid_is_moisture=False` 로 받아 제외한다.
     → 액추에이터별 VPD 함수를 따로 작성할 필요 없이 모든 kind 에 일관 적용.
+
+    **(1−RH/100) 을 곱하지 않는다.** 예전에는 (T, RH) 좌표의 편미분
+    (1−RH/100)·dsvp 를 썼는데, 이는 "온도를 바꾸는 동안 RH 가 그대로" 라는
+    뜻이라 물을 넣지 않고는 성립하지 않는다. 그래서 RH=100% 에서
+    ∂VPD/∂T = 0 이 되어 **난방기의 VPD 효과가 0** 으로 나왔다 — 포화 상태에서
+    VPD 를 올릴 수단이 아예 없다고 판단하는 원인이었다. RH=50% 에서도 실제의
+    절반만 잡혔다(24.34°C, dT=2°C 실측: 옛 0.182 vs 실제 0.365 kPa).
     """
     def vpd_effect(env: EnvContext, cmd_pct: float, profile=None) -> EffectResult:
         T  = env.get('T_int', 0.0)
-        RH = env.get('RH_int', 0.0)
         svp_ = _svp_kpa(T)
         dsvp = svp_ * 17.27 * 237.3 / (T + 237.3) ** 2
-        dVPD_dT  = (1.0 - RH / 100.0) * dsvp
+        dVPD_dT  = dsvp                  # (T, ea) 좌표 — RH 고정 인자를 곱하지 않는다
         dVPD_dRH = -svp_ / 100.0
 
         def _signed(fn):
@@ -45,7 +63,8 @@ def make_vpd_effect(temp_fn, humid_fn):
             s = 1.0 if r.direction == '↑' else (-1.0 if r.direction == '↓' else 0.0)
             return r.magnitude_native * s
 
-        dVPD = dVPD_dT * _signed(temp_fn) + dVPD_dRH * _signed(humid_fn)
+        dRH = _signed(humid_fn) if humid_is_moisture else 0.0
+        dVPD = dVPD_dT * _signed(temp_fn) + dVPD_dRH * dRH
         if abs(dVPD) < 1e-6:
             return EffectResult('0', 0.0)
         return EffectResult('↑' if dVPD > 0 else '↓', abs(dVPD))
@@ -226,61 +245,116 @@ _RHO_CP_AIR    = 1.21 * 1.006   # ≈ 1.217 kJ/(m³·K)
 _CYCLE_REF_S   = 60.0
 # 참조 체적 (m³) — K_FOG_* 상수 기준 (소형 온실 기준)
 _VOLUME_REF_M3 = 100.0
-# 참조 유량 (L/min) — K_FOG_* 상수 기준
-_FLOW_REF_LPM  = 2.0
+
+# 증발 가용도의 기준 습도 [%] — K_FOG_* 상수가 서 있는 조건.
+# 이 습도 이하에서는 계수를 그대로 쓰고(가용도 1.0), 위로 갈수록 줄어 포화에서 0.
+_EVAP_REF_RH = 70.0
 
 
-def _fog_liters(env: EnvContext, cmd_pct: float, profile=None) -> float:
-    """사이클당 분무 리터를 계산한다.
+def _evaporation_availability(env: EnvContext) -> float:
+    """분무한 물이 실제로 **증발할 수 있는 비율** [0,1].
 
-    capacity_meta 에 irrigation_flow_lpm 이 있으면 물리 기반으로,
-    없으면 참조값 (_FLOW_REF_LPM) 으로 fallback.
-    cycle_sec 는 env 컨텍스트 'cycle_sec' 키로 전달 (없으면 _CYCLE_REF_S).
+    증발을 미는 힘은 VPD 다. 포화 공기(RH=100%)는 수증기를 더 받지 못하므로
+    분무해도 증발하지 않는다 — 냉각도 가습도 일어나지 않고 표면만 젖는다.
+    그런데 모델은 RH 와 무관하게 같은 ΔT·ΔRH 를 신고했다. 2026-08-20 로컬
+    육묘장이 정확히 RH 100% 였고, 거기서 분무가 냉각 효과를 주장한 것이
+    결합 drive 를 엉뚱하게 몰고 간 성분 중 하나다.
+
+    ⚠ 이 `(1−RH/100)` 은 `make_vpd_effect` 에서 **제거한** 인자와 형태만 같고
+    성격이 다르다. 거기서는 "온도를 바꿀 때 RH 가 고정" 이라는 틀린 가정이었고,
+    여기서는 증발의 실제 구동력이다. 한쪽을 고쳤다고 다른 쪽까지 지우지 말 것.
+
+    `_EVAP_REF_RH` 로 정규화해 기준 습도 이하에서는 1.0 에 걸어 둔다 — K_FOG_*
+    는 이미 보수적인 실사용 계수라, 건조할 때 그 값을 넘겨 키우면 근거가 없다.
     """
-    cap   = getattr(profile, 'capacity_meta', None) or {}
-    flow  = float(cap.get('irrigation_flow_lpm') or 0.0)
+    rh   = float(env.get('RH_int') or 0.0)
+    head = 1.0 - max(0.0, min(100.0, rh)) / 100.0
+    ref  = 1.0 - _EVAP_REF_RH / 100.0
+    return max(0.0, min(1.0, head / ref))
+
+
+def _fog_liters(env: EnvContext, cmd_pct: float, profile=None):
+    """사이클당 **증발하는** 분무 리터. 유량을 모르면 None.
+
+    유량은 `capacity_meta['fog_flow_lpm']` 하나만 본다 — 그 액추에이터의 노즐
+    중 드립이 아닌 것들의 합(`sprinkler_flow_lph`/60)이고, 프로필 로더가
+    노즐 정보가 있을 때만 넣는다.
+
+    **`irrigation_flow_lpm` 을 쓰지 않는다.** 그 값은 투여량 환산용이라
+    (1) 뿌리로 가는 드립을 포함하고 (2) 액추에이터 값이 없으면 시설 합계로
+    폴백한다. 2026-08-20 로컬 육묘장에서 노즐이 없는 분무기가 그 폴백으로
+    시설 전체 관수 216 L/min(드립 에미터 324개)을 받아, 9448 m³ 온실에서
+    증발냉각 **45.6 °C/사이클** 이 나왔다. 결합 drive 에서 이 한 항의 가중치가
+    나머지의 20배가 되면서 다른 축이 전부 무의미해졌다.
+
+    모르면 **지어내지 않고 None** 을 돌려준다. 호출부는 그때 보수적 K 상수로
+    떨어진다 — 없는 유량을 참조값으로 메우면 그 값이 실측처럼 흘러다닌다.
+    """
+    cap  = getattr(profile, 'capacity_meta', None) or {}
+    flow = float(cap.get('fog_flow_lpm') or 0.0)
     if flow <= 0.0:
-        flow = _FLOW_REF_LPM
+        return None
     cycle = float(env.get('cycle_sec', _CYCLE_REF_S) or _CYCLE_REF_S)
     return flow * cycle * (cmd_pct / 100.0) / 60.0
 
 
 def fogger_humid_effect(env: EnvContext, cmd_pct: float, profile=None) -> EffectResult:
-    """분무 → 증발 → RH 상승. capacity_meta.irrigation_flow_lpm 기반 물리 계산.
+    """분무 → 증발 → RH 상승.
 
+    우선순위: 캘리브레이션 K → 노즐 유량 기반 물리 → 보수적 K 상수.
+    어느 경로든 마지막에 증발 가용도(`_evaporation_availability`)를 곱한다 —
+    포화 공기에서는 분무해도 RH 가 오르지 않는다.
     단순화: ΔRH ≈ liters × 1000g × (100 / volume_m3) × RH_per_g/m3
     volume_m3 미설정 시 _VOLUME_REF_M3 사용.
-    calibrated_K 가 있으면 그 값으로 override.
     """
+    avail = _evaporation_availability(env)
+    if avail <= 0.0:
+        return EffectResult('0', 0.0)
+
     k_cal = _calibrated_k(profile, 'humidity', 0.0)
     if k_cal > 0.0:
         # 캘리브레이션 값 우선
-        return EffectResult('↑', k_cal * (cmd_pct / 100.0))
+        return EffectResult('↑', k_cal * (cmd_pct / 100.0) * avail)
+
+    liters = _fog_liters(env, cmd_pct, profile)
+    if liters is None:
+        # 노즐 유량 미상 — 물리 계산 불가. 보수적 기본 계수로 떨어진다.
+        return EffectResult('↑', K_FOG_RH * (cmd_pct / 100.0) * avail)
 
     cap      = getattr(profile, 'capacity_meta', None) or {}
     vol      = float(cap.get('volume_m3') or 0.0) or _VOLUME_REF_M3
-    liters   = _fog_liters(env, cmd_pct, profile)
     # 1 L = 1000 g → 수증기량(g/m³) 증가 → RH 변환 (포화수증기량 기준 약 1% per 0.2 g/m³ @20°C)
     # 실용적 근사: ΔRH ≈ liters × 1000 / vol × 0.5
     delta_rh = liters * 1000.0 / vol * 0.5
-    return EffectResult('↑', max(delta_rh, K_FOG_RH * (cmd_pct / 100.0) * 0.1))
+    return EffectResult(
+        '↑', max(delta_rh, K_FOG_RH * (cmd_pct / 100.0) * 0.1) * avail)
 
 
 def fogger_temp_effect(env: EnvContext, cmd_pct: float, profile=None) -> EffectResult:
-    """증발냉각으로 온도 하락. capacity_meta.irrigation_flow_lpm 기반 물리 계산.
+    """증발냉각으로 온도 하락.
 
+    우선순위: 캘리브레이션 K → 노즐 유량 기반 물리 → 보수적 K 상수.
+    어느 경로든 마지막에 증발 가용도(`_evaporation_availability`)를 곱한다 —
+    증발하지 않은 물은 잠열을 가져가지 않는다(표면만 젖는다).
     ΔT = -(liters × _L_VAP_KJ_KG) / (volume_m3 × _RHO_CP_AIR)
-    calibrated_K 가 있으면 override.
     """
+    avail = _evaporation_availability(env)
+    if avail <= 0.0:
+        return EffectResult('0', 0.0)
+
     k_cal = _calibrated_k(profile, 'temperature', 0.0)
     if k_cal > 0.0:
-        return EffectResult('↓', k_cal * (cmd_pct / 100.0))
+        return EffectResult('↓', k_cal * (cmd_pct / 100.0) * avail)
+
+    liters = _fog_liters(env, cmd_pct, profile)
+    if liters is None:
+        return EffectResult('↓', K_FOG_T * (cmd_pct / 100.0) * avail)
 
     cap    = getattr(profile, 'capacity_meta', None) or {}
     vol    = float(cap.get('volume_m3') or 0.0) or _VOLUME_REF_M3
-    liters = _fog_liters(env, cmd_pct, profile)
     delta_t = liters * _L_VAP_KJ_KG / (vol * _RHO_CP_AIR)
-    return EffectResult('↓', max(delta_t, K_FOG_T * (cmd_pct / 100.0) * 0.1))
+    return EffectResult(
+        '↓', max(delta_t, K_FOG_T * (cmd_pct / 100.0) * 0.1) * avail)
 
 
 FOGGER_EFFECT_MODEL = {
@@ -509,21 +583,28 @@ DEFAULT_EFFECT_MODELS = {
 }
 
 
-def _inject_vpd(model: dict) -> dict:
-    """effect_model 에 'vpd' 키가 없고 T/RH effect 가 있으면 유도 VPD effect 추가."""
+def _inject_vpd(model: dict, kind: str = None) -> dict:
+    """effect_model 에 'vpd' 키가 없고 T/RH effect 가 있으면 유도 VPD effect 추가.
+
+    kind 를 넘겨야 난방·냉방의 '열에 의한 RH 이동' 신고를 dea 에서 뺄 수 있다
+    (`_THERMAL_RH_KINDS`). kind 미상이면 신고를 그대로 수분으로 본다.
+    """
     if 'vpd' not in model and ('temperature' in model or 'humidity' in model):
-        model['vpd'] = make_vpd_effect(model.get('temperature'), model.get('humidity'))
+        model['vpd'] = make_vpd_effect(
+            model.get('temperature'), model.get('humidity'),
+            humid_is_moisture=(kind not in _THERMAL_RH_KINDS),
+        )
     return model
 
 
 # 기본 모델 전체에 유도 VPD effect 주입 (VPD 직접 제어용)
-for _m in DEFAULT_EFFECT_MODELS.values():
-    _inject_vpd(_m)
+for _kind, _m in DEFAULT_EFFECT_MODELS.items():
+    _inject_vpd(_m, _kind)
 
 
 def build_effect_model(kind: str, k: dict) -> dict:
     """build_effect_model 래퍼 — 결과에 유도 VPD effect 를 주입한다."""
-    return _inject_vpd(_build_effect_model_raw(kind, k))
+    return _inject_vpd(_build_effect_model_raw(kind, k), kind)
 
 
 def _build_effect_model_raw(kind: str, k: dict) -> dict:

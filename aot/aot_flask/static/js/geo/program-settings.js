@@ -65,7 +65,8 @@
     if (window.showToast) window.showToast(msg, level || 'info');
   }
 
-  var State = { programs: [], templates: [], methods: [], defs: [], measurements: [], fixedDefs: {}, functions: [],
+  var State = { programs: [], templates: [], methods: [], defs: [], measurements: [], fixedDefs: {},
+               resourceDefs: [],
                 openId: null };
 
   // ── 로드 ──────────────────────────────────────────────────────────────
@@ -82,16 +83,16 @@
       // 목표 항목이 고를 수 있는 측정 종류(센서가 쓰는 어휘 그대로).
       fetch('/api/geo/target-measurements', { credentials: 'same-origin' })
         .then(function (r) { return r.json(); }).catch(function () { return null; }),
-      // 자원으로 걸 Function 목록. 만드는 것은 설정 > 함수가 맡는다.
-      fetch('/api/geo/resource-functions', { credentials: 'same-origin' })
-        .then(function (r) { return r.json(); }).catch(function () { return null; })
+      // 자원 함수 목록은 **더 이상 받지 않는다**(P6 재설계, 2026-08-20).
+      // 프로그램은 함수를 고르지 않는다 — 역할만 선언하고, 무엇이 그 일을 하는지는
+      // 현장이 기하로 푼다. 고르는 칸이 없으니 목록도 필요 없다.
+      Promise.resolve(null)
     ]).then(function (res) {
       State.programs = (res[0] && res[0].ok) ? (res[0].programs || []) : [];
       State.templates = (res[1] && res[1].ok) ? (res[1].templates || []) : [];
       State.methods = (res[2] && res[2].ok) ? (res[2].methods || []) : [];
       State.measurements = (res[3] && res[3].ok) ? (res[3].measurements || []) : [];
       State.fixedDefs = (res[3] && res[3].ok) ? (res[3].fixed_defs || {}) : {};
-      State.functions = (res[4] && res[4].ok) ? (res[4].functions || []) : [];
       renderBase();
       renderList();
     });
@@ -317,45 +318,78 @@
     return rows + picker;
   }
 
-  // 자원(관수·시비) — 이 단계에 쓰는 Function. **선언일 뿐이고 프로그램이 켜지
-  // 않는다**(물이 나오는 일이라 사람이 구획 모달에서 [적용]을 누른다).
+  // 자원(관수·시비) — **역할 선언**이다(P6 재설계, 2026-08-20).
   //
-  // 함수 목록은 드로어를 열 때 한 번 받는다(State.functions).
+  // 프로그램은 "이 작물은 관수를 쓴다" 까지만 말하고 **어느 함수가 그 일을 하는지
+  // 적지 않는다.** 계획이 현장을 미리 지정하면 같은 프로그램을 두 번째 온실에서
+  // 쓸 때 복제해야 하고, 그 순간 작물 지식이 두 벌이 되어 한쪽만 고쳐진다.
+  // 무엇이 그 일을 하는지는 현장이 기하로 푼다(구획 모달이 보인다).
+  //
+  // 선언일 뿐이고 프로그램이 켜지 않는다 — 물이 나오는 일이라 사람이 누른다.
   var _RES_ROLES = ['irrigation', 'fertigation', 'other'];
 
-  function _resourceRows(items) {
-    var list = State.functions || [];
-    if (!list.length) return '';
-    var cur = {};
-    (items || []).forEach(function (it) {
-      if (typeof it === 'string') cur[it] = 'other';
-      else if (it && it.id) cur[it.id] = it.role || 'other';
-    });
+  function _roleChoices() {
     // 관수·시비는 **식물 개념**이다. 축사·시설에 그 칸을 내면 무엇을 걸어야
     // 할지 알 수 없다. 가축용 역할 어휘(급이·급수 등)를 지어내지는 않는다 —
     // 근거 없는 어휘는 한 번 퍼지면 되돌리기 어렵다. 그때는 역할 없는 자원
     // 하나만 남긴다(`other`).
-    var roles = _isVeg() ? _RES_ROLES : ['other'];
-    var rows = roles.map(function (role) {
-      var opts = '<option value="">' + _esc(_T('res_none', 'None')) + '</option>';
-      list.forEach(function (f) {
-        var sel = (cur[f.unique_id] === role) ? ' selected' : '';
-        opts += '<option value="' + _esc(f.unique_id) + '"' + sel + '>' +
-                _esc(f.name || f.unique_id) + '</option>';
-      });
+    return _isVeg() ? _RES_ROLES : ['other'];
+  }
+
+  /** 프로그램 레벨 — 이 프로그램이 쓰는 역할과 **단계 기본값**. */
+  function _resourceDefsSection(ro) {
+    var cur = {};
+    (State.resourceDefs || []).forEach(function (d) {
+      if (d && d.role) cur[d.role] = (d.default !== false);
+    });
+    var rows = _roleChoices().map(function (role) {
+      var on = Object.prototype.hasOwnProperty.call(cur, role);
       return '<div class="aot-modal-option-row">' +
              '<div class="aot-modal-option-label">' +
                _esc(_T('res_' + role, role)) + '</div>' +
              '<div class="aot-modal-option-control">' +
-               '<select class="form-control aot-modern-input" ' +
-                 'data-rf="' + role + '">' + opts + '</select></div></div>';
+               '<label class="aot-switch"><input type="checkbox" ' +
+                 'data-rdef="' + role + '"' + (on ? ' checked' : '') +
+                 (ro ? ' disabled' : '') + '><span></span></label>' +
+             '</div></div>';
+    }).join('');
+    return '<div class="aot-modal-group-title">' +
+             _esc(_T('resources', 'Resources')) + '</div>' + rows +
+           '<div class="aot-modal-body-text">' +
+             _esc(_T('resources_note_v2',
+                     'Declare what this crop needs. Which device does it is ' +
+                     'resolved from the site, so the same programme works in ' +
+                     'more than one place.')) +
+           '</div>';
+  }
+
+  /** 단계 레벨 — 선언된 역할의 **on/off 덮어쓰기**만. */
+  function _resourceRows(st) {
+    var defs = (State.resourceDefs || []).filter(function (d) {
+      return d && d.role;
+    });
+    if (!defs.length) return '';
+    var over = (st && st.resources) || {};
+    var rows = defs.map(function (d) {
+      var role = d.role;
+      var base = (d.default !== false);
+      var has = Object.prototype.hasOwnProperty.call(over, role);
+      var on = has ? !!over[role] : base;
+      // 기본값을 따르는 상태와 덮어쓴 상태를 **구분해 보인다** — 수확 전 단수
+      // 처럼 일부러 끈 단계가 있고, 그것을 빈 칸으로 두면 실수와 구분되지 않는다.
+      var note = has ? _T('res_overridden', 'set for this stage')
+                     : _T('res_from_default', 'follows the programme');
+      return '<div class="aot-modal-option-row">' +
+             '<div class="aot-modal-option-label">' +
+               _esc(_T('res_' + role, role)) +
+               ' <span class="aot-modal-hint">' + _esc(note) + '</span></div>' +
+             '<div class="aot-modal-option-control">' +
+               '<label class="aot-switch"><input type="checkbox" ' +
+                 'data-rf="' + role + '"' + (on ? ' checked' : '') +
+                 '><span></span></label></div></div>';
     }).join('');
     return '<div class="aot-modal-option-row"><div class="aot-modal-option-label">' +
-           _esc(_T('resources', 'Resources')) + '</div><div></div></div>' + rows +
-           '<div class="aot-modal-body-text">' +
-             _esc(_T('resources_note',
-                     'Declared only. Functions are not switched on or off automatically.')) +
-           '</div>';
+           _esc(_T('resources', 'Resources')) + '</div><div></div></div>' + rows;
   }
 
   /**
@@ -377,7 +411,10 @@
   function _stageRow(st, open) {
     st = st || { key: '', name: '', days: '' };
     var hasT = !!(st.targets && Object.keys(st.targets).length);
-    var hasF = !!(st.functions && st.functions.length);
+    // 요약이 말하는 것은 **이 단계가 기본값과 다른가**다. 선언 자체는 프로그램
+    // 레벨이라 모든 단계에 같으므로, 그것을 요약에 넣으면 모든 줄에 똑같이
+    // 붙어서 아무것도 구분해 주지 않는다.
+    var hasF = !!(st.resources && Object.keys(st.resources).length);
     return '<div class="veg-stage-block' + (open ? ' is-open' : '') + '">' +
            _stageSummary(st, hasT, hasF) +
            '<div class="veg-stage-detail"' + (open ? '' : ' hidden') + '>' +
@@ -410,7 +447,7 @@
                        'What matters in this stage — watering, ventilation, ' +
                        'things to watch for.')) + '">' +
                _esc(st.guidance || '') + '</textarea>' +
-             _resourceRows(st.functions) +
+             _resourceRows(st) +
              // 삭제는 **펼친 안**에 둔다. 접힌 줄의 × 는 좁은 폭에서 오터치를
              // 부르고, 되돌릴 수단이 없다.
              '<div class="aot-ov-desc-actions">' +
@@ -431,7 +468,7 @@
     }
     if (st.gdd != null && st.gdd !== '') bits.push(st.gdd + ' GDD');
     if (hasT) bits.push(_T('targets', 'Targets'));
-    if (hasF) bits.push(_T('resources', 'Resources'));
+    if (hasF) bits.push(_T('res_changed', 'Resources changed'));
     return '<button type="button" class="veg-stage-summary" data-act="stage-toggle">' +
            '<span class="veg-stage-caret" aria-hidden="true"></span>' +
            '<span class="veg-stage-title">' +
@@ -503,6 +540,7 @@
             });
             if (pending.stages && pending.stages.length) p.stages = pending.stages;
             if (pending.target_defs) p.target_defs = pending.target_defs;
+            if (pending.resource_defs) p.resource_defs = pending.resource_defs;
         }
 
         // ⚠ **읽는 것보다 먼저 세운다.** 이 둘은 아래에서 단계·목표·머리 블록을
@@ -516,6 +554,10 @@
         // 항목 정의는 **서버가 정본**이다(고정 항목이 빠져 있으면 서버가
         // 되돌려 놓는다). 화면은 받은 것을 그대로 들고 있다가 저장 때 돌려준다.
         State.defs = (p.target_defs || []).map(function (d) { return d; });
+        // 자원 역할 정의(P6). 단계 화면이 이것을 보고 칸을 낸다 — **읽는 것보다
+        // 먼저 세운다**(위 `_kindNow` 와 같은 이유: 뒤에 두면 이번 렌더가 직전
+        // 프로그램의 역할로 그려진다).
+        State.resourceDefs = (p.resource_defs || []).map(function (d) { return d; });
 
         var ro = !p.editable;
         // 읽기 전용이면 저장 버튼을 숨긴다 — 눌러도 서버가 거절하는 버튼을
@@ -621,6 +663,10 @@
         }).join('');
         var defsBlock = '<div class="veg-defs">' + _targetDefsSection(ro) + '</div>';
         var curves = _curveSection(p, ro);
+        // 자원 역할은 **프로그램 레벨**이다 — 단계마다 다시 적지 않는다. 단계는
+        // 아래에서 on/off 만 덮어쓴다.
+        var resBlock = '<div class="veg-resdefs">' + _resourceDefsSection(ro) +
+                       '</div>';
         // 저장·닫기는 **드로어 푸터**가 맡는다(input 페이지와 같은 자리).
         // 본문에 또 두면 같은 일을 하는 버튼이 두 벌이 된다.
         var actions = ro
@@ -647,7 +693,8 @@
 
         // 열 머리는 두지 않는다 — 접힌 항목에는 열이 없다. 각 칸의 라벨은
         // 펼친 상세에 값 위로 붙는다(`_stageField`).
-        host.innerHTML = '<div class="aot-modal-container">' + head + defsBlock + curves +
+        host.innerHTML = '<div class="aot-modal-container">' + head + defsBlock +
+                         resBlock + curves +
                          '<div class="veg-stage-sub">' +
                          _esc(_T('stages', 'Stages')) + '</div>' + stageNote +
                          '<div class="veg-stages">' + stages + '</div>' +
@@ -937,6 +984,15 @@
       });
     }
 
+    // 자원 역할 정의(프로그램 레벨). 체크된 역할만 담는다 — 안 쓰는 역할을
+    // `default: false` 로 남겨 두면 단계 화면에 계속 칸이 나온다.
+    var rdefs = [];
+    host.querySelectorAll('[data-rdef]').forEach(function (el) {
+      if (el.checked) rdefs.push({ role: el.getAttribute('data-rdef'),
+                                   'default': true });
+    });
+    out.resource_defs = rdefs;
+
     host.querySelectorAll('.veg-stage-block').forEach(function (block) {
       var st = {};
       block.querySelectorAll('[data-sf]').forEach(function (el) {
@@ -959,13 +1015,22 @@
       // 있는 칸과 달리 "미지정" 과 "빈 글" 을 구분할 이유가 없다).
       var gel = block.querySelector('[data-guidance]');
       if (gel) st.guidance = gel.value || '';
-      var fns = [];
-      block.querySelectorAll('[data-rf]').forEach(function (el) {
-        if (el.value) fns.push({ id: el.value, role: el.getAttribute('data-rf') });
+      // 자원은 **선언된 역할의 on/off 덮어쓰기**만 보낸다(P6 재설계). 함수
+      // uuid 는 프로그램에 저장하지 않는다.
+      //
+      // 기본값과 같은 값은 **보내지 않는다** — 보내면 모든 단계가 덮어쓴 상태가
+      // 되어, 나중에 프로그램 기본값을 바꿔도 단계들이 옛 값을 붙들고 있게 된다
+      // (목표값의 default/override 와 같은 규율).
+      var base = {};
+      (State.resourceDefs || []).forEach(function (d) {
+        if (d && d.role) base[d.role] = (d.default !== false);
       });
-      // 빈 목록은 **키를 보내지 않는다** — 부분 저장 규칙상 키가 없으면 서버가
-      // 기존 값을 지킨다(목표·적산온도와 같은 규율).
-      if (fns.length) st.functions = fns;
+      var res = {};
+      block.querySelectorAll('[data-rf]').forEach(function (el) {
+        var role = el.getAttribute('data-rf');
+        if (el.checked !== base[role]) res[role] = el.checked;
+      });
+      if (Object.keys(res).length) st.resources = res;
       if (st.key || st.name) out.stages.push(st);
     });
     return out;

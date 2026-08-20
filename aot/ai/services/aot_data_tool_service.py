@@ -8244,7 +8244,7 @@ class AoTDataToolService:
     def create_program(name=None, subject=None, crop=None, stages=None,
                             variety=None, source_note=None, notes=None,
                             kind=None, base_temp_c=None, auto_advance=None,
-                            target_defs=None, **extra):
+                            target_defs=None, resource_defs=None, **extra):
         """[쓰기] 관리 프로그램을 만든다. 사람 승인 필요.
 
         `kind` 는 대상 종류다(기본 `vegetation`). 식생만이 아니라 가축·시설물·
@@ -8298,6 +8298,8 @@ class AoTDataToolService:
                 payload['auto_advance'] = bool(auto_advance)
             if target_defs is not None:
                 payload['target_defs'] = target_defs
+            if resource_defs is not None:
+                payload['resource_defs'] = resource_defs
             result, err = program_io.create_program(payload, source='ai')
             if err:
                 return {"status": "error", "message": err}
@@ -8329,7 +8331,10 @@ class AoTDataToolService:
                                 # 목표 항목 정의 — 어휘가 프로그램마다 다르므로
                                 # AI 도 이것을 읽고 고칠 수 있어야 한다(고정
                                 # 항목은 서버가 되돌려 놓으므로 지워지지 않는다).
-                                'target_defs')
+                                'target_defs',
+                                # 자원 역할 선언(P6). **함수 uuid 는 여기 없다** —
+                                # 무엇이 그 일을 하는지는 현장이 푼다.
+                                'resource_defs')
                        and v is not None}
             # 기준온도는 `photosynthesis.T_base` 에 산다(FunctionCropPreset 과
             # 같은 키). AI 에게 그 중첩을 시키지 않고 평평한 이름으로 받는다.
@@ -8343,6 +8348,28 @@ class AoTDataToolService:
             return {"status": "success", "program": result}
         except Exception as e:
             logger.exception("Error in modify_program")
+            return {"status": "error", "message": str(e)}
+
+    @staticmethod
+    def delete_program(program_id=None, **extra):
+        """[쓰기] 프로그램을 삭제한다. 사람 승인 필요.
+
+        **오기입 정정용이다.** `program_io.delete_program` 이 참조 무결성을
+        지킨다 — 쓰는 구획이 하나라도 있으면 거절하고 몇 건인지 알려 준다.
+        쓰던 구획에서 떼려면 `modify_plot` 으로 `program_uuid` 를 비운 뒤
+        다시 시도한다.
+        """
+        try:
+            from aot.aot_flask.geo import program_io
+
+            if not program_id:
+                return {"status": "error", "message": "program_id is required"}
+            result, err = program_io.delete_program(program_id)
+            if err:
+                return {"status": "error", "message": err}
+            return {"status": "success", "deleted": program_id}
+        except Exception as e:
+            logger.exception("Error in delete_program")
             return {"status": "error", "message": str(e)}
 
     @staticmethod
@@ -8427,6 +8454,15 @@ class AoTDataToolService:
         조건을 한쪽만 주면 계산이 성립하지 않으므로 조용히 넘기지 않고 오류로
         말한다 — 사용자가 말한 조건이 답에 반영되지 않은 것을 아무도 모르는
         상태가 최악이다.
+
+        ## `stage.guidance` — 실려 있다는 것과 닿는다는 것은 다르다
+
+        응답의 `stage` 는 `plot_context._stage_payload` 가 만들고 그 안에
+        `guidance`(이 단계의 지침)가 들어 있다. **payload 에 있는 것만으로는
+        LLM 이 쓰지 않는다** — 도구 설명에 없는 필드는 모델이 존재를 모르거나,
+        알아도 일반 재배 지식보다 우선할 이유를 모른다. 그래서 "있으면 인용하고
+        없으면 없다고 말한다" 는 규칙은 `tool_registry` 의 설명 문자열에 적혀
+        있다(슬림 매니페스트 · MCP 페이로드 양쪽). 여기를 고치면 그쪽도 본다.
         """
         try:
             from aot.databases.models import GeoPlot

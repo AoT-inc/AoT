@@ -79,7 +79,17 @@ from aot.ai.services.domain_context_loader import DomainContextLoader
 
 
 class TestGetRegistry(unittest.TestCase):
-    """DomainContextLoader._get_registry() — cache + mtime invalidation."""
+    """DomainContextLoader._get_registry() — cache + mtime invalidation.
+
+    ⚠ `os.path.exists` must be patched in every test here. `_get_registry()`
+    gained an early return for a missing registry file on 2026-08-10 (4384513d
+    — "a missing registry file is a normal state, not a failure"), and the test
+    environment has no `facility_registry.yaml`. Without the patch the method
+    returns `{}` before it ever reaches the mocked open/safe_load, so the test
+    measures nothing about caching. Six of these tests silently became that,
+    and `test_returns_dict` still PASSED because `{}` is a dict — a test can go
+    hollow without going red. The missing-file path has its own test below.
+    """
 
     def setUp(self):
         # Reset all class-level cache state before each test
@@ -93,7 +103,9 @@ class TestGetRegistry(unittest.TestCase):
     @patch('aot.ai.services.domain_context_loader.yaml.safe_load', return_value=SAMPLE_REGISTRY)
     @patch('builtins.open', mock_open(read_data=''))
     @patch('os.path.getmtime', return_value=1000.0)
-    def test_cache_miss_loads_registry_from_disk(self, mock_mtime, mock_yaml):
+    @patch('os.path.exists', return_value=True)
+    def test_cache_miss_loads_registry_from_disk(self, mock_exists, mock_mtime,
+                                                 mock_yaml):
         """When cache is empty, _get_registry() reads and returns the YAML file."""
         result = DomainContextLoader._get_registry()
         self.assertEqual(result, SAMPLE_REGISTRY)
@@ -101,7 +113,9 @@ class TestGetRegistry(unittest.TestCase):
     @patch('aot.ai.services.domain_context_loader.yaml.safe_load', return_value=SAMPLE_REGISTRY)
     @patch('builtins.open', mock_open(read_data=''))
     @patch('os.path.getmtime', return_value=1000.0)
-    def test_cache_miss_populates_registry_cache(self, mock_mtime, mock_yaml):
+    @patch('os.path.exists', return_value=True)
+    def test_cache_miss_populates_registry_cache(self, mock_exists, mock_mtime,
+                                                 mock_yaml):
         """After a cache miss, _registry_cache must be populated."""
         DomainContextLoader._get_registry()
         self.assertEqual(DomainContextLoader._registry_cache, SAMPLE_REGISTRY)
@@ -109,7 +123,8 @@ class TestGetRegistry(unittest.TestCase):
     @patch('aot.ai.services.domain_context_loader.yaml.safe_load', return_value=SAMPLE_REGISTRY)
     @patch('builtins.open', mock_open(read_data=''))
     @patch('os.path.getmtime', return_value=1000.0)
-    def test_cache_miss_stores_mtime(self, mock_mtime, mock_yaml):
+    @patch('os.path.exists', return_value=True)
+    def test_cache_miss_stores_mtime(self, mock_exists, mock_mtime, mock_yaml):
         """After a cache miss, _registry_mtime must be updated."""
         DomainContextLoader._get_registry()
         self.assertEqual(DomainContextLoader._registry_mtime, 1000.0)
@@ -119,7 +134,9 @@ class TestGetRegistry(unittest.TestCase):
     @patch('os.path.getmtime', return_value=1000.0)
     @patch('builtins.open', mock_open(read_data=''))
     @patch('aot.ai.services.domain_context_loader.yaml.safe_load')
-    def test_cache_hit_returns_cached_without_reloading(self, mock_yaml, mock_mtime):
+    @patch('os.path.exists', return_value=True)
+    def test_cache_hit_returns_cached_without_reloading(self, mock_exists,
+                                                        mock_yaml, mock_mtime):
         """When cache is warm and mtime unchanged, yaml.safe_load is NOT called again."""
         DomainContextLoader._registry_cache = SAMPLE_REGISTRY
         DomainContextLoader._registry_mtime = 1000.0  # same as mock_mtime
@@ -134,7 +151,9 @@ class TestGetRegistry(unittest.TestCase):
     @patch('aot.ai.services.domain_context_loader.yaml.safe_load', return_value=SAMPLE_REGISTRY)
     @patch('builtins.open', mock_open(read_data=''))
     @patch('os.path.getmtime', return_value=2000.0)  # newer than cached 1000.0
-    def test_stale_mtime_triggers_reload(self, mock_mtime, mock_yaml):
+    @patch('os.path.exists', return_value=True)
+    def test_stale_mtime_triggers_reload(self, mock_exists, mock_mtime,
+                                         mock_yaml):
         """When disk mtime > cached mtime, the registry file must be reloaded."""
         DomainContextLoader._registry_cache = {'facilities': []}
         DomainContextLoader._registry_mtime = 1000.0
@@ -146,7 +165,9 @@ class TestGetRegistry(unittest.TestCase):
     @patch('aot.ai.services.domain_context_loader.yaml.safe_load', return_value=SAMPLE_REGISTRY)
     @patch('builtins.open', mock_open(read_data=''))
     @patch('os.path.getmtime', return_value=2000.0)
-    def test_stale_mtime_updates_cached_mtime(self, mock_mtime, mock_yaml):
+    @patch('os.path.exists', return_value=True)
+    def test_stale_mtime_updates_cached_mtime(self, mock_exists, mock_mtime,
+                                              mock_yaml):
         """After a stale reload, _registry_mtime must be updated to the new mtime."""
         DomainContextLoader._registry_cache = {}
         DomainContextLoader._registry_mtime = 1000.0
@@ -160,9 +181,31 @@ class TestGetRegistry(unittest.TestCase):
     @patch('aot.ai.services.domain_context_loader.yaml.safe_load', return_value=SAMPLE_REGISTRY)
     @patch('builtins.open', mock_open(read_data=''))
     @patch('os.path.getmtime', return_value=1000.0)
-    def test_returns_dict(self, mock_mtime, mock_yaml):
+    @patch('os.path.exists', return_value=True)
+    def test_returns_dict(self, mock_exists, mock_mtime, mock_yaml):
         result = DomainContextLoader._get_registry()
         self.assertIsInstance(result, dict)
+
+    # --- Missing registry file: a normal state, not a failure ---------------
+
+    @patch('os.path.exists', return_value=False)
+    def test_missing_registry_file_returns_empty_and_drops_cache(self,
+                                                                 mock_exists):
+        """등록된 도메인 모듈이 없는 설치가 정상이다(4384513d).
+
+        빈 dict 를 돌려주지 않고 예외를 던지면 `_context_broadcast_job` 이 매
+        주기마다 "Step 1 failed: No such file or directory" 를 남겨, 멀쩡한
+        설치가 고장난 것처럼 읽힌다.
+
+        캐시까지 비우는 것이 핵심이다 — 파일이 지워진 뒤에도 예전 목록을 계속
+        내주면 없어진 시설이 살아 있는 것처럼 보인다.
+        """
+        DomainContextLoader._registry_cache = SAMPLE_REGISTRY
+        DomainContextLoader._registry_mtime = 1000.0
+
+        self.assertEqual(DomainContextLoader._get_registry(), {})
+        self.assertEqual(DomainContextLoader._registry_cache, {})
+        self.assertEqual(DomainContextLoader._registry_mtime, 0.0)
 
 
 # ===========================================================================

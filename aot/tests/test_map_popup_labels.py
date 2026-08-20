@@ -233,7 +233,7 @@ class TestActionButtons(unittest.TestCase):
         js = _read(self._SENSOR_LABEL)
         body = js.split('function notesBlockHtml', 1)[1].split(
             '\n  // 미리보기 목록', 1)[0]
-        i_title = body.index("aot-ov-sec-title")
+        i_title = body.index("aot-ov-card-title")
         i_list = body.index('aot-ov-notes-list')
         i_btn = body.index('aot-ov-notes-open')
         self.assertLess(i_title, i_list)
@@ -291,7 +291,7 @@ class TestActionButtons(unittest.TestCase):
         뿐이어야 한다.
         """
         js = _read(_POPUP)
-        for m in re.finditer(r'aot-ov-sec-title--row', js):
+        for m in re.finditer(r'aot-ov-card-title--row', js):
             seg = js[m.end():m.end() + 900]
             seg = seg.split("'</div>'", 1)[0]
             self.assertNotIn('<button', seg,
