@@ -29246,3 +29246,321 @@ msgstr "%(n)s시간 전"
 
 msgid "%(n)s min"
 msgstr "%(n)s분"
+
+msgid "1 Year"
+msgstr "1년"
+
+msgid "3D"
+msgstr "3D"
+
+msgid "Activation Status"
+msgstr "활성 상태"
+
+msgid "Additional"
+msgstr "추가"
+
+msgid "Additional Info"
+msgstr "추가 정보"
+
+msgid "Advanced Settings"
+msgstr "고급 설정"
+
+msgid "After selecting Raise and/or Lower Output, additional options will appear for each output and must be configured. The options available depend on the output type selected. Therefore, before enabling the PID controller, confirm status after saving to ensure all configuration is complete."
+msgstr "올림 출력 또는 내림 출력을 고르면 출력마다 추가 항목이 나타나며, 그 항목들을 채워야 합니다. 어떤 항목이 나타나는지는 고른 출력 종류에 따라 다릅니다. 따라서 PID 제어기를 켜기 전에, 저장한 뒤 상태를 확인해 설정이 모두 끝났는지 살펴보십시오."
+
+msgid "All Data"
+msgstr "전체 데이터"
+
+msgid "Are you sure you want to delete this item?"
+msgstr "이 항목을 삭제하시겠습니까?"
+
+msgid "At least 1 column is required."
+msgstr "열이 최소 1개는 있어야 합니다."
+
+msgid "At least 2 points are required."
+msgstr "점이 최소 2개는 있어야 합니다."
+
+msgid "Channel Options"
+msgstr "채널 설정"
+
+msgid "Click to edit Danger Tint colors"
+msgstr "위험 배경색을 고치려면 클릭하십시오"
+
+msgid "Control hysteresis around setpoint. Applied as setpoint +/- band value. 0 to disable."
+msgstr "목표값 주변의 불감대입니다. 목표값 ± 밴드 값으로 적용됩니다. 0이면 쓰지 않습니다."
+
+msgid "Create Method"
+msgstr "방법 만들기"
+
+msgid "Danger"
+msgstr "위험"
+
+msgid "Danger Tint"
+msgstr "위험 배경색"
+
+msgid "Danger Tint Text"
+msgstr "위험 배경색 글자"
+
+msgid "Datasheet"
+msgstr "데이터시트"
+
+msgid "Delete asset \"%s\"?"
+msgstr "자산 \"%s\" 을(를) 삭제하시겠습니까?"
+
+msgid "Delete request failed"
+msgstr "삭제 요청이 실패했습니다"
+
+msgid "Deletion is rejected if any facility references it."
+msgstr "이것을 참조하는 시설이 하나라도 있으면 삭제되지 않습니다."
+
+msgid "Derivative Gain"
+msgstr "미분 이득"
+
+msgid "Direct week adjustment on top of elapsed weeks. Positive = fast-forward, negative = compensate downtime."
+msgstr "지난 주차에 더해 직접 조정하는 값입니다. 양수는 앞당기고, 음수는 멈춰 있던 기간을 보정합니다."
+
+msgid "Display Graph"
+msgstr "그래프 보기"
+
+msgid "Duplicate Facility"
+msgstr "시설 복제"
+
+msgid "Duplicate failed: "
+msgstr "복제 실패: "
+
+msgid "Duplicate the facility currently open in the editor. Connected sensors/outputs are not carried over."
+msgstr "편집기에 열려 있는 시설을 복제합니다. 연결된 센서·출력은 따라오지 않습니다."
+
+msgid "Every Period of the Input, each Action is executed with the returned measurements."
+msgstr "입력의 주기마다, 돌려받은 측정값으로 각 동작이 실행됩니다."
+
+msgid "Extruded Polygon"
+msgstr "돌출 폴리곤"
+
+msgid "Facility duplicated. Sensors and outputs were not carried over."
+msgstr "시설을 복제했습니다. 센서와 출력은 따라오지 않았습니다."
+
+msgid "GLTF Import"
+msgstr "GLTF 가져오기"
+
+msgid "Graphs are useful for visualizing datasets over weeks, months, or years. Displaying such data on synchronous graphs can cause high data processing and computation load."
+msgstr "그래프는 주·월·연 단위 자료를 눈으로 보는 데 좋습니다. 그런 자료를 동기 그래프로 그리면 처리와 계산 부담이 커질 수 있습니다."
+
+msgid "Include in AI Judgment"
+msgstr "AI 판단에 포함"
+
+msgid "Info Tint"
+msgstr "정보 배경색"
+
+msgid "Info Tint Text"
+msgstr "정보 배경색 글자"
+
+msgid "Integral Gain"
+msgstr "적분 이득"
+
+msgid "Invalid saved ID. Please select another item from the list to save."
+msgstr "저장된 ID가 올바르지 않습니다. 목록에서 다른 항목을 골라 저장하십시오."
+
+msgid "Libraries"
+msgstr "라이브러리"
+
+msgid "Limits the maximum of the integrator"
+msgstr "적분기의 최댓값을 제한합니다"
+
+msgid "Limits the minimum of the integrator"
+msgstr "적분기의 최솟값을 제한합니다"
+
+msgid "Max measure age"
+msgstr "측정값 최대 나이"
+
+msgid "Method End"
+msgstr "방법 종료"
+
+msgid "Method called to calculate this method value"
+msgstr "이 방법 값을 계산할 때 부르는 방법"
+
+msgid "Methods are used to reference various types of setpoints in a PID controller. Typically, a PID controller controls a device to a fixed setpoint. If you want the setpoint to change over time, you can change the setpoint over time in the method and use it for control by tracking the value in the PID controller."
+msgstr "방법은 PID 제어기에서 여러 형태의 목표값을 참조하는 데 씁니다. 보통 PID 제어기는 고정된 목표값으로 장치를 제어합니다. 목표값이 시간에 따라 달라지기를 바란다면, 방법에서 목표값을 시간에 따라 바꾸고 PID 제어기가 그 값을 따라가게 해 제어할 수 있습니다."
+
+msgid "No assets registered. Upload one using the button above."
+msgstr "등록된 자산이 없습니다. 위 버튼으로 올리십시오."
+
+msgid "No results"
+msgstr "결과 없음"
+
+msgid "No saved methods."
+msgstr "저장된 방법이 없습니다."
+
+msgid "None Selected"
+msgstr "선택 안 함"
+
+msgid "Output Action (On/Off, PWM, Value, Volume, etc.)"
+msgstr "출력 동작 (켜기/끄기, PWM, 값, 부피 등)"
+
+msgid "PID Parameters"
+msgstr "PID 매개변수"
+
+msgid "Parcel"
+msgstr "필지"
+
+msgid "Please choose a CSV file."
+msgstr "CSV 파일을 고르십시오."
+
+msgid "Please enter an address."
+msgstr "주소를 입력하십시오."
+
+msgid "Please select a file."
+msgstr "파일을 고르십시오."
+
+msgid "Processing..."
+msgstr "처리 중..."
+
+msgid "Product"
+msgstr "제품"
+
+msgid "Product Info"
+msgstr "제품 정보"
+
+msgid "Proportional Gain"
+msgstr "비례 이득"
+
+msgid "Referencing facilities: "
+msgstr "참조하는 시설: "
+
+msgid "Regenerate Thumbnail"
+msgstr "썸네일 다시 만들기"
+
+msgid "Return to Method Management"
+msgstr "방법 관리로 돌아가기"
+
+msgid "Row/card background for paused or held controllers (PID pause/hold, pending AI drafts). Offline devices use Danger Tint below."
+msgstr "멈추거나 보류된 제어기(PID 일시정지·보류, 대기 중인 AI 초안)의 행·카드 배경색입니다. 두절된 장치는 아래 위험 배경색을 씁니다."
+
+msgid "Saved Methods"
+msgstr "저장된 방법"
+
+msgid "Searching"
+msgstr "검색 중"
+
+msgid "Searching..."
+msgstr "검색 중..."
+
+msgid "Select a facility to duplicate first."
+msgstr "복제할 시설을 먼저 고르십시오."
+
+msgid "Select direction to control"
+msgstr "제어할 방향을 고르십시오"
+
+msgid "Select one to calculate setpoint. When activated, measurement value replaces PID setpoint"
+msgstr "목표값을 계산할 것을 하나 고르십시오. 켜면 측정값이 PID 목표값을 대신합니다"
+
+msgid "Select output to lower the measured value"
+msgstr "측정값을 낮출 출력을 고르십시오"
+
+msgid "Select output to raise the measured value"
+msgstr "측정값을 올릴 출력을 고르십시오"
+
+msgid "Semantic color for destructive actions and errors (delete buttons, failures)"
+msgstr "되돌릴 수 없는 동작과 오류에 쓰는 의미색입니다 (삭제 버튼, 실패)"
+
+msgid "Semantic color for informational marks and in-progress states"
+msgstr "안내 표시와 진행 중 상태에 쓰는 의미색입니다"
+
+msgid "Semantic color for success/normal results — a different axis from the device-state colors above"
+msgstr "성공·정상 결과에 쓰는 의미색입니다 — 위의 장치 상태 색과는 다른 축입니다"
+
+msgid "Semantic color for warnings and attention marks"
+msgstr "경고와 주의 표시에 쓰는 의미색입니다"
+
+msgid "Send Lower as Negative to Output."
+msgstr "내림 값을 음수로 출력에 보냅니다."
+
+msgid "Setpoint Tracking"
+msgstr "목표값 추종"
+
+msgid "Soft background for failures — also the row/card background and map-popup name highlight for offline or unresponsive devices"
+msgstr "실패에 쓰는 옅은 배경색입니다 — 두절되거나 응답 없는 장치의 행·카드 배경과 지도 팝업 이름 강조에도 씁니다"
+
+msgid "Soft badge background for in-progress/informational states"
+msgstr "진행 중·안내 상태 배지의 옅은 배경색입니다"
+
+msgid "Soft badge background for success — pairs with the text color below"
+msgstr "성공 배지의 옅은 배경색입니다 — 아래 글자색과 짝을 이룹니다"
+
+msgid "Store Lower measurement as Negative."
+msgstr "내림 측정값을 음수로 저장합니다."
+
+msgid "Success Tint"
+msgstr "성공 배경색"
+
+msgid "Success Tint Text"
+msgstr "성공 배경색 글자"
+
+msgid "Text color used on the danger tint"
+msgstr "위험 배경색 위에 쓰는 글자색입니다"
+
+msgid "Text color used on the info tint"
+msgstr "정보 배경색 위에 쓰는 글자색입니다"
+
+msgid "Text color used on the success tint"
+msgstr "성공 배경색 위에 쓰는 글자색입니다"
+
+msgid "This is the desired state of the particular environmental condition. For example, you might enter a desired temperature in degrees Celsius."
+msgstr "이 환경 조건이 이르렀으면 하는 상태입니다. 예를 들어 바라는 온도를 섭씨로 적을 수 있습니다."
+
+msgid "Thumbnail"
+msgstr "썸네일"
+
+msgid "Up to"
+msgstr "최대"
+
+msgid "Update Immediately"
+msgstr "즉시 갱신"
+
+msgid "Upload failed"
+msgstr "올리기 실패"
+
+msgid "Uploading…"
+msgstr "올리는 중…"
+
+msgid "When enabled, if this Input measures both temperature and humidity, a VPD (vapor pressure deficit) channel is automatically recorded."
+msgstr "켜면, 이 입력이 온도와 습도를 함께 잰다면 VPD(수증기압 부족) 채널이 저절로 기록됩니다."
+
+msgid "When enabled, this device is visible to AI judgment and control tools."
+msgstr "켜면 이 장치가 AI의 판단·제어 도구에 보입니다."
+
+msgid "addresses"
+msgstr "개 주소"
+
+msgid "and"
+msgstr "외"
+
+msgid "can be added."
+msgstr "개까지 추가할 수 있습니다."
+
+msgid "columns are allowed."
+msgstr "개 열까지 쓸 수 있습니다."
+
+msgid "failed"
+msgstr "건 실패"
+
+msgid "more parcels"
+msgstr "필지"
+
+msgid "parcels found"
+msgstr "필지를 찾았습니다"
+
+msgid "parcels previewed"
+msgstr "필지를 미리 봅니다"
+
+msgid "points"
+msgstr "점"
+
+msgid "processed"
+msgstr "건 처리했습니다"
+
+msgid "saved"
+msgstr "건 저장했습니다"
+
+msgid "week columns"
+msgstr "주 열"
