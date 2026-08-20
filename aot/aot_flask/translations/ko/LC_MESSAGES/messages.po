@@ -10492,7 +10492,7 @@ msgstr "시작하기"
 
 #: aot_flask/templates/pages/landing.html:222
 msgid "Sign Up"
-msgstr ""
+msgstr "회원 가입"
 
 #: aot_flask/templates/pages/landing.html:236
 msgid "All rights reserved."
@@ -12598,7 +12598,7 @@ msgstr "근거: "
 
 #: aot_flask/templates/pages/ai/scheduler.html:1022
 msgid "Calendar shown in your timezone"
-msgstr ""
+msgstr "달력은 사용자의 시간대로 보입니다"
 
 #: aot_flask/templates/pages/ai/components/getting_to_know.html:218
 msgid "Getting to Know Each Other"
@@ -13311,7 +13311,7 @@ msgstr "조건 설정"
 msgid ""
 "Conditional functions can not only execute Python 3 code, but also interact "
 "with AoT using conditions and actions within the code."
-msgstr ""
+msgstr "조건부 함수는 파이썬 3 코드를 실행할 뿐 아니라, 코드 안에서 조건과 동작으로 AoT와 주고받을 수 있습니다."
 
 #: aot_flask/templates/pages/function_options/conditional_options.html:46
 msgid "For more information, see the"
@@ -16683,15 +16683,15 @@ msgstr "구글 캘린더"
 
 #: aot_flask/templates/settings/integrations.html:24
 msgid "Google Calendar is not configured yet."
-msgstr ""
+msgstr "구글 캘린더가 아직 설정되지 않았습니다."
 
 #: aot_flask/templates/settings/integrations.html:26
 msgid "Enter the OAuth client credentials below to enable it."
-msgstr ""
+msgstr "쓰려면 아래에 OAuth 클라이언트 인증 정보를 입력하십시오."
 
 #: aot_flask/templates/settings/integrations.html:28
 msgid "Ask an administrator to configure it."
-msgstr ""
+msgstr "관리자에게 설정을 요청하십시오."
 
 #: aot_flask/templates/settings/integrations.html:41
 msgid "Sync Direction"
@@ -16699,11 +16699,11 @@ msgstr "동기화 방향"
 
 #: aot_flask/templates/settings/integrations.html:43
 msgid "AoT → Google"
-msgstr ""
+msgstr "AoT → 구글"
 
 #: aot_flask/templates/settings/integrations.html:44
 msgid "Google → AoT"
-msgstr ""
+msgstr "구글 → AoT"
 
 #: aot_flask/templates/settings/integrations.html:49
 msgid "Last Synced"
@@ -16712,17 +16712,17 @@ msgstr "마지막 동기화"
 #: aot_flask/templates/settings/integrations.html:64
 msgid ""
 "Disconnect Google Calendar? Synced events already in Google are not deleted."
-msgstr ""
+msgstr "구글 캘린더 연결을 끊으시겠습니까? 이미 구글에 동기화된 일정은 지워지지 않습니다."
 
 #: aot_flask/templates/settings/integrations.html:72
 msgid ""
 "Connect your Google account to sync farm schedule events with your Google "
 "Calendar (two-way)."
-msgstr ""
+msgstr "구글 계정을 연결하면 농장 일정이 구글 캘린더와 양방향으로 동기화됩니다."
 
 #: aot_flask/templates/settings/integrations.html:77
 msgid "Connect Google Calendar"
-msgstr ""
+msgstr "구글 캘린더 연결"
 
 #: aot_flask/templates/settings/integrations.html:84
 msgid "Google OAuth Configuration"
@@ -16733,21 +16733,21 @@ msgid ""
 "Create an OAuth 2.0 Client ID (type: Web application) in the Google Cloud "
 "Console with the Google Calendar API enabled, then paste the credentials "
 "here."
-msgstr ""
+msgstr "구글 클라우드 콘솔에서 Google Calendar API를 켜고 OAuth 2.0 클라이언트 ID(유형: 웹 애플리케이션)를 만든 뒤, 그 인증 정보를 여기에 붙여 넣으십시오."
 
 #: aot_flask/templates/settings/integrations.html:91
 msgid "Authorized redirect URI to register in Google:"
-msgstr ""
+msgstr "구글에 등록할 승인된 리디렉션 URI:"
 
 #: aot_flask/templates/settings/integrations.html:94
 msgid "Set the Public Base URL first to compute the redirect URI."
-msgstr ""
+msgstr "리디렉션 URI를 계산하려면 먼저 공개 기본 URL을 정하십시오."
 
 #: aot_flask/templates/settings/integrations.html:97
 msgid ""
 "Some values are provided by environment variables and override the fields "
 "below."
-msgstr ""
+msgstr "일부 값은 환경 변수로 주어지며 아래 항목보다 우선합니다."
 
 #: aot_flask/templates/settings/integrations.html:106
 msgid "Public Base URL"
@@ -16759,7 +16759,7 @@ msgstr "OAuth Client ID"
 
 #: aot_flask/templates/settings/integrations.html:124
 msgid "OAuth Client Secret"
-msgstr ""
+msgstr "OAuth 클라이언트 비밀키"
 
 #: aot_flask/templates/settings/integrations.html:133
 msgid "Google Picker API Key"

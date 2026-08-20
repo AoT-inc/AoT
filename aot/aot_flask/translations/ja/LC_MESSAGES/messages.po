@@ -10421,7 +10421,7 @@ msgstr "始める"
 
 #: aot_flask/templates/pages/landing.html:222
 msgid "Sign Up"
-msgstr ""
+msgstr "新規登録"
 
 #: aot_flask/templates/pages/landing.html:236
 msgid "All rights reserved."
@@ -11100,50 +11100,50 @@ msgstr "同期"
 
 #: aot_flask/templates/pages/ai/ai_library.html:136
 msgid "AI-Curated Knowledge Review"
-msgstr ""
+msgstr "AI が整理した知識の確認"
 
 #: aot_flask/templates/pages/ai/ai_library.html:138
 msgid ""
 "Knowledge the AI shelved on its own (always unconfirmed at first). "
 "Confirm/edit what is correct, retire what is wrong — see it cited as [AI 정리 "
 "— 미확인] until reviewed."
-msgstr ""
+msgstr "AI が自分で棚に上げた知識です（最初は必ず未確認です）。正しいものは確認・編集し、誤っているものは取り下げてください — 確認されるまでは [AI 정리 — 미확인] として引用されます。"
 
 #: aot_flask/templates/pages/ai/ai_library.html:142
 msgid "No AI-curated knowledge yet."
-msgstr ""
+msgstr "AI が整理した知識はまだありません。"
 
 #: aot_flask/templates/pages/ai/ai_library.html:166
 msgid "Corroborated"
-msgstr ""
+msgstr "裏付けあり"
 
 #: aot_flask/templates/pages/ai/ai_library.html:167
 msgid "Retired"
-msgstr ""
+msgstr "取り下げ済み"
 
 #: aot_flask/templates/pages/ai/ai_library.html:168
 msgid "Unconfirmed"
-msgstr ""
+msgstr "未確認"
 
 #: aot_flask/templates/pages/ai/ai_library.html:172
 msgid "Flagged"
-msgstr ""
+msgstr "要確認"
 
 #: aot_flask/templates/pages/ai/ai_library.html:176
 msgid "Same topic as an authoritative source"
-msgstr ""
+msgstr "権威ある出典と同じ主題です"
 
 #: aot_flask/templates/pages/ai/ai_library.html:177
 msgid "Matches"
-msgstr ""
+msgstr "一致"
 
 #: aot_flask/templates/pages/ai/ai_library.html:196
 msgid "Reactivate"
-msgstr ""
+msgstr "再開"
 
 #: aot_flask/templates/pages/ai/ai_library.html:207
 msgid "Retire"
-msgstr ""
+msgstr "取り下げ"
 
 #: aot_flask/templates/pages/ai/ai_library.html:233
 msgid "Source Settings"
@@ -11151,11 +11151,11 @@ msgstr "ソース設定"
 
 #: aot_flask/templates/pages/ai/ai_library.html:258
 msgid "Edit AI-Curated Knowledge"
-msgstr ""
+msgstr "AI が整理した知識を編集"
 
 #: aot_flask/templates/pages/ai/ai_library.html:268
 msgid "Save (Confirms)"
-msgstr ""
+msgstr "保存（確認とする）"
 
 #: aot_flask/templates/pages/ai/ai_library.html:279
 msgid "Please select a source type."
@@ -11227,45 +11227,45 @@ msgstr "クエリテンプレート"
 
 #: aot_flask/templates/pages/ai/ai_library.html:301
 msgid "Pick from Google Drive"
-msgstr ""
+msgstr "Google ドライブから選ぶ"
 
 #: aot_flask/templates/pages/ai/ai_library.html:302
 msgid "Selected Files"
-msgstr ""
+msgstr "選んだファイル"
 
 #: aot_flask/templates/pages/ai/ai_library.html:303
 msgid "No files selected yet."
-msgstr ""
+msgstr "まだファイルが選ばれていません。"
 
 #: aot_flask/templates/pages/ai/ai_library.html:304
 msgid "Checking Google connection…"
-msgstr ""
+msgstr "Google との接続を確認しています…"
 
 #: aot_flask/templates/pages/ai/ai_library.html:305
 msgid "Connected as"
-msgstr ""
+msgstr "接続中のアカウント"
 
 #: aot_flask/templates/pages/ai/ai_library.html:306
 msgid "Google account not connected."
-msgstr ""
+msgstr "Google アカウントが接続されていません。"
 
 #: aot_flask/templates/pages/ai/ai_library.html:307
 msgid "Connect it under Settings > Integrations"
-msgstr ""
+msgstr "設定 > 連携 から接続してください"
 
 #: aot_flask/templates/pages/ai/ai_library.html:308
 msgid "Your Google connection predates Drive access — reconnect to grant it."
-msgstr ""
+msgstr "現在の Google 接続はドライブへのアクセスを含んでいません — 接続し直して許可してください。"
 
 #: aot_flask/templates/pages/ai/ai_library.html:309
 msgid "Reconnect under Settings > Integrations"
-msgstr ""
+msgstr "設定 > 連携 から接続し直してください"
 
 #: aot_flask/templates/pages/ai/ai_library.html:310
 msgid ""
 "Google Picker is not configured yet — an admin must set the Picker API key "
 "under Settings > Integrations."
-msgstr ""
+msgstr "Google Picker はまだ設定されていません — 管理者が 設定 > 連携 で Picker API キーを設定する必要があります。"
 
 #: aot_flask/templates/pages/ai/ai_library.html:315
 msgid "Source is not enabled. Activate it before syncing."
@@ -11294,47 +11294,47 @@ msgstr "作物の種類"
 
 #: aot_flask/templates/pages/ai/ai_library.html:324
 msgid "Confirming…"
-msgstr ""
+msgstr "確認しています…"
 
 #: aot_flask/templates/pages/ai/ai_library.html:325
 msgid "Confirmed."
-msgstr ""
+msgstr "確認しました。"
 
 #: aot_flask/templates/pages/ai/ai_library.html:326
 msgid "Retiring…"
-msgstr ""
+msgstr "取り下げています…"
 
 #: aot_flask/templates/pages/ai/ai_library.html:327
 msgid "Retired."
-msgstr ""
+msgstr "取り下げました。"
 
 #: aot_flask/templates/pages/ai/ai_library.html:328
 msgid "Retire this item? It will stop being cited until reactivated."
-msgstr ""
+msgstr "この項目を取り下げますか？再開するまで引用されなくなります。"
 
 #: aot_flask/templates/pages/ai/ai_library.html:329
 msgid "Reactivating…"
-msgstr ""
+msgstr "再開しています…"
 
 #: aot_flask/templates/pages/ai/ai_library.html:330
 msgid "Reactivated."
-msgstr ""
+msgstr "再開しました。"
 
 #: aot_flask/templates/pages/ai/ai_library.html:331
 msgid "Item not found."
-msgstr ""
+msgstr "項目が見つかりません。"
 
 #: aot_flask/templates/pages/ai/ai_library.html:332
 msgid "Heading"
-msgstr ""
+msgstr "方位"
 
 #: aot_flask/templates/pages/ai/ai_library.html:334
 msgid "Tags (comma-separated)"
-msgstr ""
+msgstr "タグ（コンマ区切り）"
 
 #: aot_flask/templates/pages/ai/ai_library.html:335
 msgid "Attribution"
-msgstr ""
+msgstr "出典表示"
 
 #: aot_flask/templates/pages/ai/ai_library.html:336
 #: aot_flask/templates/pages/geo_input_components/geo_input_option.html:37
@@ -11343,50 +11343,50 @@ msgstr "関連ドキュメント"
 
 #: aot_flask/templates/pages/ai/ai_library.html:337
 msgid "Source Site"
-msgstr ""
+msgstr "出典サイト"
 
 #: aot_flask/templates/pages/ai/ai_library.html:338
 msgid "Link"
-msgstr ""
+msgstr "リンク"
 
 #: aot_flask/templates/pages/ai/ai_library.html:339
 msgid "Usage:"
-msgstr ""
+msgstr "使い方:"
 
 #: aot_flask/templates/pages/ai/ai_library.html:340
 msgid "Select operations to register as knowledge"
-msgstr ""
+msgstr "知識として登録する操作を選んでください"
 
 #: aot_flask/templates/pages/ai/ai_library.html:341
 msgid "Parameters for the selected operations"
-msgstr ""
+msgstr "選んだ操作のパラメータ"
 
 #: aot_flask/templates/pages/ai/ai_library.html:342
 msgid "Select at least one operation."
-msgstr ""
+msgstr "操作を1つ以上選んでください。"
 
 #: aot_flask/templates/pages/ai/ai_library.html:343
 msgid ""
 "Enter your service key, then use the Farm and Season pickers below to choose"
 " your farm by region and season by name — the internal IDs are filled in for"
 " you, so you never have to type a code."
-msgstr ""
+msgstr "サービスキーを入力し、下の農場・作季の選択欄から地域で農場を、名前で作季を選んでください — 内部 ID は自動で入るので、コードを打ち込む必要はありません。"
 
 #: aot_flask/templates/pages/ai/ai_library.html:344
 msgid ""
 "Each of these operations only needs a service key and a date range — no "
 "farm-specific ID required."
-msgstr ""
+msgstr "これらの操作に必要なのはサービスキーと期間だけです — 農場ごとの ID は要りません。"
 
 #: aot_flask/templates/pages/ai/ai_library.html:345
 msgid ""
 "A classification code from the measurement record — the example is one real "
 "sample value, not a fixed option; actual values vary per record."
-msgstr ""
+msgstr "測定記録に含まれる分類コードです — 例に挙げているのは実際のサンプル値の一つで、決まった選択肢ではありません。実際の値は記録ごとに異なります。"
 
 #: aot_flask/templates/pages/ai/ai_library.html:346
 msgid "Select an operation above to see its required parameters."
-msgstr ""
+msgstr "上で操作を選ぶと、必要なパラメータが表示されます。"
 
 #: aot_flask/templates/pages/ai/ai_library.html:347
 #: aot_flask/templates/pages/geo/geo_facility.html:1938
@@ -11395,63 +11395,63 @@ msgstr "すべて選択"
 
 #: aot_flask/templates/pages/ai/ai_library.html:348
 msgid "Deselect All"
-msgstr ""
+msgstr "すべて選択解除"
 
 #: aot_flask/templates/pages/ai/ai_library.html:349
 msgid "Farm"
-msgstr ""
+msgstr "農場"
 
 #: aot_flask/templates/pages/ai/ai_library.html:350
 msgid "Cropping Season"
-msgstr ""
+msgstr "作季"
 
 #: aot_flask/templates/pages/ai/ai_library.html:351
 msgid "Load farms"
-msgstr ""
+msgstr "農場を読み込む"
 
 #: aot_flask/templates/pages/ai/ai_library.html:352
 msgid "Select a farm"
-msgstr ""
+msgstr "農場を選んでください"
 
 #: aot_flask/templates/pages/ai/ai_library.html:353
 msgid "Select a season"
-msgstr ""
+msgstr "作季を選んでください"
 
 #: aot_flask/templates/pages/ai/ai_library.html:354
 msgid "Enter the API key first, then load farms."
-msgstr ""
+msgstr "先に API キーを入力してから農場を読み込んでください。"
 
 #: aot_flask/templates/pages/ai/ai_library.html:355
 msgid "Pick a farm first to load its seasons."
-msgstr ""
+msgstr "作季を読み込むには、先に農場を選んでください。"
 
 #: aot_flask/templates/pages/ai/ai_library.html:356
 msgid "Current:"
-msgstr ""
+msgstr "現在:"
 
 #: aot_flask/templates/pages/ai/ai_library.html:358
 msgid "Load failed"
-msgstr ""
+msgstr "読み込みに失敗しました"
 
 #: aot_flask/templates/pages/ai/ai_library.html:359
 msgid "No farms returned for this key."
-msgstr ""
+msgstr "このキーでは農場が返ってきませんでした。"
 
 #: aot_flask/templates/pages/ai/ai_library.html:360
 msgid "No seasons found for this farm."
-msgstr ""
+msgstr "この農場の作季が見つかりません。"
 
 #: aot_flask/templates/pages/ai/ai_library.html:433
 msgid "Facility ID"
-msgstr ""
+msgstr "施設 ID"
 
 #: aot_flask/templates/pages/ai/ai_library.html:434
 msgid "Cropping Serial No."
-msgstr ""
+msgstr "作季通し番号"
 
 #: aot_flask/templates/pages/ai/ai_library.html:435
 msgid "Measurement Date"
-msgstr ""
+msgstr "測定日"
 
 #: aot_flask/templates/pages/ai/ai_library.html:436
 #: aot_flask/templates/pages/ai/ai_scheduler.html:174
@@ -11465,19 +11465,19 @@ msgstr "終了日"
 
 #: aot_flask/templates/pages/ai/ai_library.html:438
 msgid "Field Code"
-msgstr ""
+msgstr "圃場コード"
 
 #: aot_flask/templates/pages/ai/ai_library.html:439
 msgid "Section Code"
-msgstr ""
+msgstr "区画コード"
 
 #: aot_flask/templates/pages/ai/ai_library.html:440
 msgid "Attribute Code"
-msgstr ""
+msgstr "属性コード"
 
 #: aot_flask/templates/pages/ai/ai_library.html:441
 msgid "Item Code"
-msgstr ""
+msgstr "品目コード"
 
 #: aot_flask/templates/pages/ai/ai_library.html:680
 #: aot_flask/templates/pages/ai/ai_modals.html:123
@@ -12520,7 +12520,7 @@ msgstr "根拠:"
 
 #: aot_flask/templates/pages/ai/scheduler.html:1022
 msgid "Calendar shown in your timezone"
-msgstr ""
+msgstr "カレンダーはお使いのタイムゾーンで表示されます"
 
 #: aot_flask/templates/pages/ai/components/getting_to_know.html:218
 msgid "Getting to Know Each Other"
@@ -13229,7 +13229,7 @@ msgstr "条件設定"
 msgid ""
 "Conditional functions can not only execute Python 3 code, but also interact "
 "with AoT using conditions and actions within the code."
-msgstr ""
+msgstr "条件関数は Python 3 のコードを実行するだけでなく、コードの中で条件とアクションを使って AoT とやり取りできます。"
 
 #: aot_flask/templates/pages/function_options/conditional_options.html:46
 msgid "For more information, see the"
@@ -16577,15 +16577,15 @@ msgstr "Google カレンダー"
 
 #: aot_flask/templates/settings/integrations.html:24
 msgid "Google Calendar is not configured yet."
-msgstr ""
+msgstr "Google カレンダーはまだ設定されていません。"
 
 #: aot_flask/templates/settings/integrations.html:26
 msgid "Enter the OAuth client credentials below to enable it."
-msgstr ""
+msgstr "有効にするには、下に OAuth クライアントの認証情報を入力してください。"
 
 #: aot_flask/templates/settings/integrations.html:28
 msgid "Ask an administrator to configure it."
-msgstr ""
+msgstr "管理者に設定を依頼してください。"
 
 #: aot_flask/templates/settings/integrations.html:41
 msgid "Sync Direction"
@@ -16593,11 +16593,11 @@ msgstr "同期方向"
 
 #: aot_flask/templates/settings/integrations.html:43
 msgid "AoT → Google"
-msgstr ""
+msgstr "AoT → Google"
 
 #: aot_flask/templates/settings/integrations.html:44
 msgid "Google → AoT"
-msgstr ""
+msgstr "Google → AoT"
 
 #: aot_flask/templates/settings/integrations.html:49
 msgid "Last Synced"
@@ -16606,17 +16606,17 @@ msgstr "最終同期"
 #: aot_flask/templates/settings/integrations.html:64
 msgid ""
 "Disconnect Google Calendar? Synced events already in Google are not deleted."
-msgstr ""
+msgstr "Google カレンダーの接続を解除しますか？すでに Google に同期された予定は削除されません。"
 
 #: aot_flask/templates/settings/integrations.html:72
 msgid ""
 "Connect your Google account to sync farm schedule events with your Google "
 "Calendar (two-way)."
-msgstr ""
+msgstr "Google アカウントを接続すると、農場の予定が Google カレンダーと双方向で同期されます。"
 
 #: aot_flask/templates/settings/integrations.html:77
 msgid "Connect Google Calendar"
-msgstr ""
+msgstr "Google カレンダーを接続"
 
 #: aot_flask/templates/settings/integrations.html:84
 msgid "Google OAuth Configuration"
@@ -16627,21 +16627,21 @@ msgid ""
 "Create an OAuth 2.0 Client ID (type: Web application) in the Google Cloud "
 "Console with the Google Calendar API enabled, then paste the credentials "
 "here."
-msgstr ""
+msgstr "Google Cloud Console で Google Calendar API を有効にし、OAuth 2.0 クライアント ID（種類: ウェブ アプリケーション）を作成してから、その認証情報をここに貼り付けてください。"
 
 #: aot_flask/templates/settings/integrations.html:91
 msgid "Authorized redirect URI to register in Google:"
-msgstr ""
+msgstr "Google に登録する承認済みリダイレクト URI:"
 
 #: aot_flask/templates/settings/integrations.html:94
 msgid "Set the Public Base URL first to compute the redirect URI."
-msgstr ""
+msgstr "リダイレクト URI を求めるには、先に公開ベース URL を設定してください。"
 
 #: aot_flask/templates/settings/integrations.html:97
 msgid ""
 "Some values are provided by environment variables and override the fields "
 "below."
-msgstr ""
+msgstr "一部の値は環境変数から与えられ、下の項目より優先されます。"
 
 #: aot_flask/templates/settings/integrations.html:106
 msgid "Public Base URL"
@@ -16653,18 +16653,18 @@ msgstr "OAuth Client ID"
 
 #: aot_flask/templates/settings/integrations.html:124
 msgid "OAuth Client Secret"
-msgstr ""
+msgstr "OAuth クライアント シークレット"
 
 #: aot_flask/templates/settings/integrations.html:133
 msgid "Google Picker API Key"
-msgstr ""
+msgstr "Google Picker API キー"
 
 #: aot_flask/templates/settings/integrations.html:139
 msgid ""
 "Optional — only needed for the AI Library Google Drive source (file picker)."
 " A Cloud Console API key with the Picker API enabled, NOT the OAuth Client "
 "Secret above."
-msgstr ""
+msgstr "任意です — AI ライブラリの Google ドライブ ソース（ファイル選択）にだけ必要です。Picker API を有効にした Cloud Console の API キーであって、上の OAuth クライアント シークレットではありません。"
 
 #: aot_flask/templates/settings/measurement.html:4
 #: aot_flask/templates/settings/measurement.html:6
@@ -29005,3 +29005,321 @@ msgstr "%(n)s時間前"
 
 msgid "%(n)s min"
 msgstr "%(n)s分"
+
+msgid "1 Year"
+msgstr "1年"
+
+msgid "3D"
+msgstr "3D"
+
+msgid "Activation Status"
+msgstr "有効状態"
+
+msgid "Additional"
+msgstr "追加"
+
+msgid "Additional Info"
+msgstr "追加情報"
+
+msgid "Advanced Settings"
+msgstr "詳細設定"
+
+msgid "All Data"
+msgstr "全データ"
+
+msgid "Are you sure you want to delete this item?"
+msgstr "この項目を削除しますか？"
+
+msgid "At least 1 column is required."
+msgstr "列は最低1つ必要です。"
+
+msgid "At least 2 points are required."
+msgstr "点は最低2つ必要です。"
+
+msgid "Channel Options"
+msgstr "チャンネル設定"
+
+msgid "Click to edit Danger Tint colors"
+msgstr "危険背景色を編集するにはクリックしてください"
+
+msgid "Create Method"
+msgstr "メソッドを作成"
+
+msgid "Danger"
+msgstr "危険"
+
+msgid "Danger Tint"
+msgstr "危険背景色"
+
+msgid "Danger Tint Text"
+msgstr "危険背景色の文字"
+
+msgid "Datasheet"
+msgstr "データシート"
+
+msgid "Delete asset \"%s\"?"
+msgstr "アセット「%s」を削除しますか？"
+
+msgid "Delete request failed"
+msgstr "削除リクエストに失敗しました"
+
+msgid "Deletion is rejected if any facility references it."
+msgstr "参照している施設が1つでもあると削除できません。"
+
+msgid "Derivative Gain"
+msgstr "微分ゲイン"
+
+msgid "Display Graph"
+msgstr "グラフを表示"
+
+msgid "Duplicate Facility"
+msgstr "施設を複製"
+
+msgid "Duplicate failed: "
+msgstr "複製に失敗しました: "
+
+msgid "Duplicate the facility currently open in the editor. Connected sensors/outputs are not carried over."
+msgstr "エディタで開いている施設を複製します。接続されたセンサー・出力は引き継がれません。"
+
+msgid "Every Period of the Input, each Action is executed with the returned measurements."
+msgstr "入力の周期ごとに、返された測定値で各アクションが実行されます。"
+
+msgid "Extruded Polygon"
+msgstr "押し出しポリゴン"
+
+msgid "Facility duplicated. Sensors and outputs were not carried over."
+msgstr "施設を複製しました。センサーと出力は引き継がれていません。"
+
+msgid "GLTF Import"
+msgstr "GLTF 読み込み"
+
+msgid "Include in AI Judgment"
+msgstr "AI の判断に含める"
+
+msgid "Info Tint"
+msgstr "情報背景色"
+
+msgid "Info Tint Text"
+msgstr "情報背景色の文字"
+
+msgid "Integral Gain"
+msgstr "積分ゲイン"
+
+msgid "Invalid saved ID. Please select another item from the list to save."
+msgstr "保存された ID が正しくありません。一覧から別の項目を選んで保存してください。"
+
+msgid "Libraries"
+msgstr "ライブラリ"
+
+msgid "Limits the maximum of the integrator"
+msgstr "積分項の最大値を制限します"
+
+msgid "Limits the minimum of the integrator"
+msgstr "積分項の最小値を制限します"
+
+msgid "Max measure age"
+msgstr "測定値の最大経過時間"
+
+msgid "Method End"
+msgstr "メソッド終了"
+
+msgid "Method called to calculate this method value"
+msgstr "このメソッド値の計算に呼び出すメソッド"
+
+msgid "No assets registered. Upload one using the button above."
+msgstr "登録されたアセットがありません。上のボタンからアップロードしてください。"
+
+msgid "No results"
+msgstr "結果なし"
+
+msgid "No saved methods."
+msgstr "保存されたメソッドがありません。"
+
+msgid "None Selected"
+msgstr "選択なし"
+
+msgid "Output Action (On/Off, PWM, Value, Volume, etc.)"
+msgstr "出力アクション（オン/オフ、PWM、値、体積など）"
+
+msgid "PID Parameters"
+msgstr "PID パラメータ"
+
+msgid "Parcel"
+msgstr "地番"
+
+msgid "Please choose a CSV file."
+msgstr "CSV ファイルを選んでください。"
+
+msgid "Please enter an address."
+msgstr "住所を入力してください。"
+
+msgid "Please select a file."
+msgstr "ファイルを選んでください。"
+
+msgid "Processing..."
+msgstr "処理中..."
+
+msgid "Product"
+msgstr "製品"
+
+msgid "Product Info"
+msgstr "製品情報"
+
+msgid "Proportional Gain"
+msgstr "比例ゲイン"
+
+msgid "Referencing facilities: "
+msgstr "参照している施設: "
+
+msgid "Regenerate Thumbnail"
+msgstr "サムネイルを再生成"
+
+msgid "Return to Method Management"
+msgstr "メソッド管理に戻る"
+
+msgid "Saved Methods"
+msgstr "保存されたメソッド"
+
+msgid "Searching"
+msgstr "検索中"
+
+msgid "Searching..."
+msgstr "検索中..."
+
+msgid "Select a facility to duplicate first."
+msgstr "複製する施設を先に選んでください。"
+
+msgid "Select direction to control"
+msgstr "制御する方向を選んでください"
+
+msgid "Select one to calculate setpoint. When activated, measurement value replaces PID setpoint"
+msgstr "設定値を計算するものを1つ選んでください。有効にすると測定値が PID の設定値に置き換わります"
+
+msgid "Select output to lower the measured value"
+msgstr "測定値を下げる出力を選んでください"
+
+msgid "Select output to raise the measured value"
+msgstr "測定値を上げる出力を選んでください"
+
+msgid "Semantic color for destructive actions and errors (delete buttons, failures)"
+msgstr "取り消せない操作とエラーに使う意味色です（削除ボタン、失敗）"
+
+msgid "Semantic color for informational marks and in-progress states"
+msgstr "案内表示と進行中の状態に使う意味色です"
+
+msgid "Semantic color for success/normal results — a different axis from the device-state colors above"
+msgstr "成功・正常な結果に使う意味色です — 上の機器状態の色とは別の軸です"
+
+msgid "Semantic color for warnings and attention marks"
+msgstr "警告と注意表示に使う意味色です"
+
+msgid "Send Lower as Negative to Output."
+msgstr "下げる値を負の値として出力に送ります。"
+
+msgid "Setpoint Tracking"
+msgstr "設定値の追従"
+
+msgid "Soft background for failures — also the row/card background and map-popup name highlight for offline or unresponsive devices"
+msgstr "失敗に使う淡い背景色です — 切断または応答のない機器の行・カード背景と、地図ポップアップの名前強調にも使います"
+
+msgid "Soft badge background for in-progress/informational states"
+msgstr "進行中・案内状態のバッジの淡い背景色です"
+
+msgid "Soft badge background for success — pairs with the text color below"
+msgstr "成功バッジの淡い背景色です — 下の文字色と対になります"
+
+msgid "Store Lower measurement as Negative."
+msgstr "下げる測定値を負の値として保存します。"
+
+msgid "Success Tint"
+msgstr "成功背景色"
+
+msgid "Success Tint Text"
+msgstr "成功背景色の文字"
+
+msgid "Text color used on the danger tint"
+msgstr "危険背景色の上に使う文字色です"
+
+msgid "Text color used on the info tint"
+msgstr "情報背景色の上に使う文字色です"
+
+msgid "Text color used on the success tint"
+msgstr "成功背景色の上に使う文字色です"
+
+msgid "Thumbnail"
+msgstr "サムネイル"
+
+msgid "Up to"
+msgstr "最大"
+
+msgid "Update Immediately"
+msgstr "すぐに更新"
+
+msgid "Upload failed"
+msgstr "アップロードに失敗しました"
+
+msgid "Uploading…"
+msgstr "アップロード中…"
+
+msgid "When enabled, if this Input measures both temperature and humidity, a VPD (vapor pressure deficit) channel is automatically recorded."
+msgstr "有効にすると、この入力が温度と湿度の両方を測る場合、VPD（飽差）チャンネルが自動で記録されます。"
+
+msgid "When enabled, this device is visible to AI judgment and control tools."
+msgstr "有効にすると、この機器が AI の判断・制御ツールから見えるようになります。"
+
+msgid "addresses"
+msgstr "件の住所"
+
+msgid "and"
+msgstr "ほか"
+
+msgid "can be added."
+msgstr "個まで追加できます。"
+
+msgid "columns are allowed."
+msgstr "個の列まで使えます。"
+
+msgid "failed"
+msgstr "件失敗"
+
+msgid "more parcels"
+msgstr "地番"
+
+msgid "parcels found"
+msgstr "件の地番が見つかりました"
+
+msgid "parcels previewed"
+msgstr "件の地番をプレビューします"
+
+msgid "points"
+msgstr "点"
+
+msgid "processed"
+msgstr "件を処理しました"
+
+msgid "saved"
+msgstr "件を保存しました"
+
+msgid "week columns"
+msgstr "週の列"
+
+msgid "After selecting Raise and/or Lower Output, additional options will appear for each output and must be configured. The options available depend on the output type selected. Therefore, before enabling the PID controller, confirm status after saving to ensure all configuration is complete."
+msgstr "上げる出力または下げる出力を選ぶと、出力ごとに追加の項目が現れるので設定してください。どの項目が現れるかは選んだ出力の種類によって変わります。したがって PID コントローラを有効にする前に、保存したあと状態を確認して設定がすべて済んでいるか確かめてください。"
+
+msgid "Control hysteresis around setpoint. Applied as setpoint +/- band value. 0 to disable."
+msgstr "設定値まわりの不感帯です。設定値 ± バンド値として適用されます。0 で無効になります。"
+
+msgid "Direct week adjustment on top of elapsed weeks. Positive = fast-forward, negative = compensate downtime."
+msgstr "経過週数に加えて直接調整する値です。正の値は前倒し、負の値は停止していた期間の補正になります。"
+
+msgid "Graphs are useful for visualizing datasets over weeks, months, or years. Displaying such data on synchronous graphs can cause high data processing and computation load."
+msgstr "グラフは週・月・年単位のデータを目で見るのに向いています。そうしたデータを同期グラフで描くと、処理と計算の負荷が大きくなることがあります。"
+
+msgid "Methods are used to reference various types of setpoints in a PID controller. Typically, a PID controller controls a device to a fixed setpoint. If you want the setpoint to change over time, you can change the setpoint over time in the method and use it for control by tracking the value in the PID controller."
+msgstr "メソッドは PID コントローラでさまざまな設定値を参照するために使います。通常 PID コントローラは固定した設定値へ機器を制御します。設定値を時間とともに変えたい場合は、メソッドで設定値を時間に沿って変え、PID コントローラがその値を追従することで制御できます。"
+
+msgid "Row/card background for paused or held controllers (PID pause/hold, pending AI drafts). Offline devices use Danger Tint below."
+msgstr "停止・保留中のコントローラ（PID の一時停止・保留、承認待ちの AI 下書き）の行・カード背景色です。切断された機器は下の危険背景色を使います。"
+
+msgid "This is the desired state of the particular environmental condition. For example, you might enter a desired temperature in degrees Celsius."
+msgstr "この環境条件に達してほしい状態です。たとえば望む温度を摂氏で入力します。"
