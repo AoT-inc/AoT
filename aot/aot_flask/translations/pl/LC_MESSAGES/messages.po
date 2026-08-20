@@ -10717,7 +10717,7 @@ msgstr "Section Start"
 
 #: aot_flask/templates/pages/landing.html:222
 msgid "Sign Up"
-msgstr ""
+msgstr "Zarejestruj się"
 
 #: aot_flask/templates/pages/landing.html:236
 #, fuzzy
@@ -11473,50 +11473,50 @@ msgstr "Sync"
 
 #: aot_flask/templates/pages/ai/ai_library.html:136
 msgid "AI-Curated Knowledge Review"
-msgstr ""
+msgstr "Przegląd wiedzy uporządkowanej przez AI"
 
 #: aot_flask/templates/pages/ai/ai_library.html:138
 msgid ""
 "Knowledge the AI shelved on its own (always unconfirmed at first). "
 "Confirm/edit what is correct, retire what is wrong — see it cited as [AI "
 "정리 — 미확인] until reviewed."
-msgstr ""
+msgstr "Wiedza, którą AI samodzielnie odłożyła (na początku zawsze niepotwierdzona). Potwierdź/edytuj to, co poprawne, wycofaj to, co błędne — do czasu weryfikacji jest cytowana jako [AI 정리 — 미확인]."
 
 #: aot_flask/templates/pages/ai/ai_library.html:142
 msgid "No AI-curated knowledge yet."
-msgstr ""
+msgstr "Brak jeszcze wiedzy uporządkowanej przez AI."
 
 #: aot_flask/templates/pages/ai/ai_library.html:166
 msgid "Corroborated"
-msgstr ""
+msgstr "Potwierdzone"
 
 #: aot_flask/templates/pages/ai/ai_library.html:167
 msgid "Retired"
-msgstr ""
+msgstr "Wycofane"
 
 #: aot_flask/templates/pages/ai/ai_library.html:168
 msgid "Unconfirmed"
-msgstr ""
+msgstr "Niepotwierdzone"
 
 #: aot_flask/templates/pages/ai/ai_library.html:172
 msgid "Flagged"
-msgstr ""
+msgstr "Oznaczone"
 
 #: aot_flask/templates/pages/ai/ai_library.html:176
 msgid "Same topic as an authoritative source"
-msgstr ""
+msgstr "Ten sam temat co wiarygodne źródło"
 
 #: aot_flask/templates/pages/ai/ai_library.html:177
 msgid "Matches"
-msgstr ""
+msgstr "Dopasowania"
 
 #: aot_flask/templates/pages/ai/ai_library.html:196
 msgid "Reactivate"
-msgstr ""
+msgstr "Reaktywuj"
 
 #: aot_flask/templates/pages/ai/ai_library.html:207
 msgid "Retire"
-msgstr ""
+msgstr "Wycofaj"
 
 #: aot_flask/templates/pages/ai/ai_library.html:233
 #, fuzzy
@@ -11525,11 +11525,11 @@ msgstr "User Settings"
 
 #: aot_flask/templates/pages/ai/ai_library.html:258
 msgid "Edit AI-Curated Knowledge"
-msgstr ""
+msgstr "Edytuj wiedzę uporządkowaną przez AI"
 
 #: aot_flask/templates/pages/ai/ai_library.html:268
 msgid "Save (Confirms)"
-msgstr ""
+msgstr "Zapisz (potwierdza)"
 
 #: aot_flask/templates/pages/ai/ai_library.html:279
 #, fuzzy
@@ -11613,45 +11613,45 @@ msgstr ""
 
 #: aot_flask/templates/pages/ai/ai_library.html:301
 msgid "Pick from Google Drive"
-msgstr ""
+msgstr "Wybierz z Google Drive"
 
 #: aot_flask/templates/pages/ai/ai_library.html:302
 msgid "Selected Files"
-msgstr ""
+msgstr "Wybrane pliki"
 
 #: aot_flask/templates/pages/ai/ai_library.html:303
 msgid "No files selected yet."
-msgstr ""
+msgstr "Nie wybrano jeszcze żadnych plików."
 
 #: aot_flask/templates/pages/ai/ai_library.html:304
 msgid "Checking Google connection…"
-msgstr ""
+msgstr "Sprawdzanie połączenia z Google…"
 
 #: aot_flask/templates/pages/ai/ai_library.html:305
 msgid "Connected as"
-msgstr ""
+msgstr "Połączono jako"
 
 #: aot_flask/templates/pages/ai/ai_library.html:306
 msgid "Google account not connected."
-msgstr ""
+msgstr "Konto Google niepołączone."
 
 #: aot_flask/templates/pages/ai/ai_library.html:307
 msgid "Connect it under Settings > Integrations"
-msgstr ""
+msgstr "Połącz w Ustawienia > Integracje"
 
 #: aot_flask/templates/pages/ai/ai_library.html:308
 msgid "Your Google connection predates Drive access — reconnect to grant it."
-msgstr ""
+msgstr "Twoje połączenie z Google jest wcześniejsze niż dostęp do Dysku — połącz się ponownie, aby go przyznać."
 
 #: aot_flask/templates/pages/ai/ai_library.html:309
 msgid "Reconnect under Settings > Integrations"
-msgstr ""
+msgstr "Połącz ponownie w Ustawienia > Integracje"
 
 #: aot_flask/templates/pages/ai/ai_library.html:310
 msgid ""
 "Google Picker is not configured yet — an admin must set the Picker API "
 "key under Settings > Integrations."
-msgstr ""
+msgstr "Google Picker nie jest jeszcze skonfigurowany — administrator musi ustawić klucz API Picker w Ustawienia > Integracje."
 
 #: aot_flask/templates/pages/ai/ai_library.html:315
 msgid "Source is not enabled. Activate it before syncing."
@@ -11685,47 +11685,47 @@ msgstr "Action Type"
 
 #: aot_flask/templates/pages/ai/ai_library.html:324
 msgid "Confirming…"
-msgstr ""
+msgstr "Potwierdzanie…"
 
 #: aot_flask/templates/pages/ai/ai_library.html:325
 msgid "Confirmed."
-msgstr ""
+msgstr "Potwierdzono."
 
 #: aot_flask/templates/pages/ai/ai_library.html:326
 msgid "Retiring…"
-msgstr ""
+msgstr "Wycofywanie…"
 
 #: aot_flask/templates/pages/ai/ai_library.html:327
 msgid "Retired."
-msgstr ""
+msgstr "Wycofano."
 
 #: aot_flask/templates/pages/ai/ai_library.html:328
 msgid "Retire this item? It will stop being cited until reactivated."
-msgstr ""
+msgstr "Wycofać ten element? Nie będzie cytowany, dopóki nie zostanie reaktywowany."
 
 #: aot_flask/templates/pages/ai/ai_library.html:329
 msgid "Reactivating…"
-msgstr ""
+msgstr "Reaktywowanie…"
 
 #: aot_flask/templates/pages/ai/ai_library.html:330
 msgid "Reactivated."
-msgstr ""
+msgstr "Reaktywowano."
 
 #: aot_flask/templates/pages/ai/ai_library.html:331
 msgid "Item not found."
-msgstr ""
+msgstr "Nie znaleziono elementu."
 
 #: aot_flask/templates/pages/ai/ai_library.html:332
 msgid "Heading"
-msgstr ""
+msgstr "Orientacja"
 
 #: aot_flask/templates/pages/ai/ai_library.html:334
 msgid "Tags (comma-separated)"
-msgstr ""
+msgstr "Tagi (oddzielone przecinkami)"
 
 #: aot_flask/templates/pages/ai/ai_library.html:335
 msgid "Attribution"
-msgstr ""
+msgstr "Przypisanie źródła"
 
 #: aot_flask/templates/pages/ai/ai_library.html:336
 #: aot_flask/templates/pages/geo_input_components/geo_input_option.html:37
@@ -11734,50 +11734,50 @@ msgstr "Related Documents"
 
 #: aot_flask/templates/pages/ai/ai_library.html:337
 msgid "Source Site"
-msgstr ""
+msgstr "Witryna źródłowa"
 
 #: aot_flask/templates/pages/ai/ai_library.html:338
 msgid "Link"
-msgstr ""
+msgstr "Łącze"
 
 #: aot_flask/templates/pages/ai/ai_library.html:339
 msgid "Usage:"
-msgstr ""
+msgstr "Użycie:"
 
 #: aot_flask/templates/pages/ai/ai_library.html:340
 msgid "Select operations to register as knowledge"
-msgstr ""
+msgstr "Wybierz operacje do zarejestrowania jako wiedza"
 
 #: aot_flask/templates/pages/ai/ai_library.html:341
 msgid "Parameters for the selected operations"
-msgstr ""
+msgstr "Parametry wybranych operacji"
 
 #: aot_flask/templates/pages/ai/ai_library.html:342
 msgid "Select at least one operation."
-msgstr ""
+msgstr "Wybierz co najmniej jedną operację."
 
 #: aot_flask/templates/pages/ai/ai_library.html:343
 msgid ""
 "Enter your service key, then use the Farm and Season pickers below to "
 "choose your farm by region and season by name — the internal IDs are "
 "filled in for you, so you never have to type a code."
-msgstr ""
+msgstr "Wpisz swój klucz usługi, a następnie użyj poniższych selektorów Gospodarstwo i Sezon, aby wybrać gospodarstwo według regionu, a sezon według nazwy — wewnętrzne identyfikatory są wypełniane automatycznie, więc nigdy nie musisz wpisywać kodu."
 
 #: aot_flask/templates/pages/ai/ai_library.html:344
 msgid ""
 "Each of these operations only needs a service key and a date range — no "
 "farm-specific ID required."
-msgstr ""
+msgstr "Każda z tych operacji wymaga tylko klucza usługi i zakresu dat — nie jest wymagany identyfikator konkretnego gospodarstwa."
 
 #: aot_flask/templates/pages/ai/ai_library.html:345
 msgid ""
 "A classification code from the measurement record — the example is one "
 "real sample value, not a fixed option; actual values vary per record."
-msgstr ""
+msgstr "Kod klasyfikacyjny z rekordu pomiaru — przykład to rzeczywista wartość próbki, a nie stała opcja; rzeczywiste wartości różnią się w zależności od rekordu."
 
 #: aot_flask/templates/pages/ai/ai_library.html:346
 msgid "Select an operation above to see its required parameters."
-msgstr ""
+msgstr "Wybierz powyżej operację, aby zobaczyć jej wymagane parametry."
 
 #: aot_flask/templates/pages/ai/ai_library.html:347
 #: aot_flask/templates/pages/geo/geo_facility.html:1938
@@ -11787,63 +11787,63 @@ msgstr "Select Map"
 
 #: aot_flask/templates/pages/ai/ai_library.html:348
 msgid "Deselect All"
-msgstr ""
+msgstr "Odznacz wszystko"
 
 #: aot_flask/templates/pages/ai/ai_library.html:349
 msgid "Farm"
-msgstr ""
+msgstr "Gospodarstwo"
 
 #: aot_flask/templates/pages/ai/ai_library.html:350
 msgid "Cropping Season"
-msgstr ""
+msgstr "Sezon uprawy"
 
 #: aot_flask/templates/pages/ai/ai_library.html:351
 msgid "Load farms"
-msgstr ""
+msgstr "Wczytaj gospodarstwa"
 
 #: aot_flask/templates/pages/ai/ai_library.html:352
 msgid "Select a farm"
-msgstr ""
+msgstr "Wybierz gospodarstwo"
 
 #: aot_flask/templates/pages/ai/ai_library.html:353
 msgid "Select a season"
-msgstr ""
+msgstr "Wybierz sezon"
 
 #: aot_flask/templates/pages/ai/ai_library.html:354
 msgid "Enter the API key first, then load farms."
-msgstr ""
+msgstr "Najpierw wpisz klucz API, a następnie wczytaj gospodarstwa."
 
 #: aot_flask/templates/pages/ai/ai_library.html:355
 msgid "Pick a farm first to load its seasons."
-msgstr ""
+msgstr "Najpierw wybierz gospodarstwo, aby wczytać jego sezony."
 
 #: aot_flask/templates/pages/ai/ai_library.html:356
 msgid "Current:"
-msgstr ""
+msgstr "Bieżące:"
 
 #: aot_flask/templates/pages/ai/ai_library.html:358
 msgid "Load failed"
-msgstr ""
+msgstr "Wczytywanie nie powiodło się"
 
 #: aot_flask/templates/pages/ai/ai_library.html:359
 msgid "No farms returned for this key."
-msgstr ""
+msgstr "Brak gospodarstw zwróconych dla tego klucza."
 
 #: aot_flask/templates/pages/ai/ai_library.html:360
 msgid "No seasons found for this farm."
-msgstr ""
+msgstr "Nie znaleziono sezonów dla tego gospodarstwa."
 
 #: aot_flask/templates/pages/ai/ai_library.html:433
 msgid "Facility ID"
-msgstr ""
+msgstr "ID obiektu"
 
 #: aot_flask/templates/pages/ai/ai_library.html:434
 msgid "Cropping Serial No."
-msgstr ""
+msgstr "Nr seryjny uprawy"
 
 #: aot_flask/templates/pages/ai/ai_library.html:435
 msgid "Measurement Date"
-msgstr ""
+msgstr "Data pomiaru"
 
 #: aot_flask/templates/pages/ai/ai_library.html:436
 #: aot_flask/templates/pages/ai/ai_scheduler.html:174
@@ -11859,19 +11859,19 @@ msgstr "End Time"
 
 #: aot_flask/templates/pages/ai/ai_library.html:438
 msgid "Field Code"
-msgstr ""
+msgstr "Kod pola"
 
 #: aot_flask/templates/pages/ai/ai_library.html:439
 msgid "Section Code"
-msgstr ""
+msgstr "Kod sekcji"
 
 #: aot_flask/templates/pages/ai/ai_library.html:440
 msgid "Attribute Code"
-msgstr ""
+msgstr "Kod atrybutu"
 
 #: aot_flask/templates/pages/ai/ai_library.html:441
 msgid "Item Code"
-msgstr ""
+msgstr "Kod elementu"
 
 #: aot_flask/templates/pages/ai/ai_library.html:680
 #: aot_flask/templates/pages/ai/ai_modals.html:123
@@ -13065,7 +13065,7 @@ msgstr ""
 
 #: aot_flask/templates/pages/ai/scheduler.html:1022
 msgid "Calendar shown in your timezone"
-msgstr ""
+msgstr "Kalendarz wyświetlany w Twojej strefie czasowej"
 
 #: aot_flask/templates/pages/ai/components/getting_to_know.html:218
 msgid "Getting to Know Each Other"
@@ -13486,7 +13486,7 @@ msgid ""
 "will be used. These represent the red and blue balance of the camera. "
 "These values will be between 0.0 and 8.0. Typical values for the gains "
 "are between 0.9 and 1.9."
-msgstr ""
+msgstr "Gdy automatyczny balans bieli jest ustawiony na „Wyłączony”, używane będą wzmocnienia czerwieni i błękitu AWB. Reprezentują one równowagę czerwieni i błękitu kamery. Wartości te mieszczą się w zakresie od 0,0 do 8,0. Typowe wartości wzmocnień mieszczą się w zakresie od 0,9 do 1,9."
 
 #: aot_flask/templates/pages/camera_options/picamera.html:121
 msgid "With iso settings other than Auto, Exposure Mode becomes non-functional."
@@ -13822,7 +13822,7 @@ msgstr "Condition Settings"
 msgid ""
 "Conditional functions can not only execute Python 3 code, but also "
 "interact with AoT using conditions and actions within the code."
-msgstr ""
+msgstr "Funkcje warunkowe mogą nie tylko wykonywać kod Python 3, ale także wchodzić w interakcję z AoT za pomocą warunków i akcji w kodzie."
 
 #: aot_flask/templates/pages/function_options/conditional_options.html:46
 #, fuzzy
@@ -17534,15 +17534,15 @@ msgstr "Clear"
 
 #: aot_flask/templates/settings/integrations.html:24
 msgid "Google Calendar is not configured yet."
-msgstr ""
+msgstr "Kalendarz Google nie jest jeszcze skonfigurowany."
 
 #: aot_flask/templates/settings/integrations.html:26
 msgid "Enter the OAuth client credentials below to enable it."
-msgstr ""
+msgstr "Wpisz poniżej dane uwierzytelniające klienta OAuth, aby to włączyć."
 
 #: aot_flask/templates/settings/integrations.html:28
 msgid "Ask an administrator to configure it."
-msgstr ""
+msgstr "Poproś administratora o skonfigurowanie tego."
 
 #: aot_flask/templates/settings/integrations.html:41
 #, fuzzy
@@ -17551,11 +17551,11 @@ msgstr "Sort Direction"
 
 #: aot_flask/templates/settings/integrations.html:43
 msgid "AoT → Google"
-msgstr ""
+msgstr "AoT → Google"
 
 #: aot_flask/templates/settings/integrations.html:44
 msgid "Google → AoT"
-msgstr ""
+msgstr "Google → AoT"
 
 #: aot_flask/templates/settings/integrations.html:49
 #, fuzzy
@@ -17566,17 +17566,17 @@ msgstr "Past Week"
 msgid ""
 "Disconnect Google Calendar? Synced events already in Google are not "
 "deleted."
-msgstr ""
+msgstr "Odłączyć Kalendarz Google? Wydarzenia już zsynchronizowane w Google nie zostaną usunięte."
 
 #: aot_flask/templates/settings/integrations.html:72
 msgid ""
 "Connect your Google account to sync farm schedule events with your Google"
 " Calendar (two-way)."
-msgstr ""
+msgstr "Połącz konto Google, aby synchronizować wydarzenia harmonogramu gospodarstwa z Kalendarzem Google (dwukierunkowo)."
 
 #: aot_flask/templates/settings/integrations.html:77
 msgid "Connect Google Calendar"
-msgstr ""
+msgstr "Połącz z Kalendarzem Google"
 
 #: aot_flask/templates/settings/integrations.html:84
 #, fuzzy
@@ -17588,21 +17588,21 @@ msgid ""
 "Create an OAuth 2.0 Client ID (type: Web application) in the Google Cloud"
 " Console with the Google Calendar API enabled, then paste the credentials"
 " here."
-msgstr ""
+msgstr "Utwórz identyfikator klienta OAuth 2.0 (typ: aplikacja internetowa) w konsoli Google Cloud z włączonym API Kalendarza Google, a następnie wklej tutaj dane uwierzytelniające."
 
 #: aot_flask/templates/settings/integrations.html:91
 msgid "Authorized redirect URI to register in Google:"
-msgstr ""
+msgstr "Autoryzowany URI przekierowania do zarejestrowania w Google:"
 
 #: aot_flask/templates/settings/integrations.html:94
 msgid "Set the Public Base URL first to compute the redirect URI."
-msgstr ""
+msgstr "Najpierw ustaw publiczny adres bazowy URL, aby obliczyć URI przekierowania."
 
 #: aot_flask/templates/settings/integrations.html:97
 msgid ""
 "Some values are provided by environment variables and override the fields"
 " below."
-msgstr ""
+msgstr "Niektóre wartości są dostarczane przez zmienne środowiskowe i zastępują poniższe pola."
 
 #: aot_flask/templates/settings/integrations.html:106
 #, fuzzy
@@ -17616,18 +17616,18 @@ msgstr "Input ID"
 
 #: aot_flask/templates/settings/integrations.html:124
 msgid "OAuth Client Secret"
-msgstr ""
+msgstr "Tajny klucz klienta OAuth"
 
 #: aot_flask/templates/settings/integrations.html:133
 msgid "Google Picker API Key"
-msgstr ""
+msgstr "Klucz API Google Picker"
 
 #: aot_flask/templates/settings/integrations.html:139
 msgid ""
 "Optional — only needed for the AI Library Google Drive source (file "
 "picker). A Cloud Console API key with the Picker API enabled, NOT the "
 "OAuth Client Secret above."
-msgstr ""
+msgstr "Opcjonalne — potrzebne tylko dla źródła Google Drive w Bibliotece AI (selektor plików). Klucz API Cloud Console z włączonym API Picker, NIE powyższy tajny klucz klienta OAuth."
 
 #: aot_flask/templates/settings/measurement.html:4
 #: aot_flask/templates/settings/measurement.html:6
@@ -26156,3 +26156,333 @@ msgstr ""
 #: aot_flask/templates/settings/user_detail.html:193
 msgid "Copy it now — it is shown only once and cannot be retrieved later."
 msgstr ""
+
+msgid "1 Year"
+msgstr "1 rok"
+
+msgid "3D"
+msgstr "3D"
+
+msgid "Activation Status"
+msgstr "Stan aktywacji"
+
+msgid "Additional"
+msgstr "Dodatkowe"
+
+msgid "Additional Info"
+msgstr "Dodatkowe informacje"
+
+msgid "Advanced Settings"
+msgstr "Ustawienia zaawansowane"
+
+msgid "After selecting Raise and/or Lower Output, additional options will appear for each output and must be configured. The options available depend on the output type selected. Therefore, before enabling the PID controller, confirm status after saving to ensure all configuration is complete."
+msgstr "Po wybraniu wyjścia Podnieś i/lub Obniż pojawią się dodatkowe opcje dla każdego wyjścia, które trzeba skonfigurować. Dostępne opcje zależą od wybranego typu wyjścia. Dlatego przed włączeniem regulatora PID sprawdź stan po zapisaniu, aby upewnić się, że cała konfiguracja jest kompletna."
+
+msgid "All Data"
+msgstr "Wszystkie dane"
+
+msgid "Are you sure you want to delete this item?"
+msgstr "Czy na pewno usunąć ten element?"
+
+msgid "At least 1 column is required."
+msgstr "Wymagana jest co najmniej 1 kolumna."
+
+msgid "At least 2 points are required."
+msgstr "Wymagane są co najmniej 2 punkty."
+
+msgid "Channel Options"
+msgstr "Opcje kanału"
+
+msgid "Click \"Place on Map\" then click the facility center on the map. Drag the placed facility to move it. Form dimensions and rotation update the rectangle in real time."
+msgstr "Kliknij „Umieść na mapie”, a następnie kliknij środek obiektu na mapie. Przeciągnij umieszczony obiekt, aby go przesunąć. Wymiary i obrót w formularzu aktualizują prostokąt w czasie rzeczywistym."
+
+msgid "Click to edit Danger Tint colors"
+msgstr "Kliknij, aby edytować kolor tła Niebezpieczeństwo"
+
+msgid "Control hysteresis around setpoint. Applied as setpoint +/- band value. 0 to disable."
+msgstr "Histereza regulacji wokół wartości zadanej. Stosowana jako wartość zadana ± wartość pasma. 0, aby wyłączyć."
+
+msgid "Create Method"
+msgstr "Utwórz metodę"
+
+msgid "Danger"
+msgstr "Niebezpieczeństwo"
+
+msgid "Danger Tint"
+msgstr "Kolor tła Niebezpieczeństwo"
+
+msgid "Danger Tint Text"
+msgstr "Tekst na kolorze tła Niebezpieczeństwo"
+
+msgid "Datasheet"
+msgstr "Karta katalogowa"
+
+msgid "Delete asset \"%s\"?"
+msgstr "Usunąć zasób „%s”?"
+
+msgid "Delete request failed"
+msgstr "Żądanie usunięcia nie powiodło się"
+
+msgid "Delete this record? Use \"End\" instead if it was actually grown — deleting removes it from the history."
+msgstr "Usunąć ten rekord? Jeśli faktycznie coś uprawiano, użyj zamiast tego „Zakończ” — usunięcie usuwa go z historii."
+
+msgid "Deletion is rejected if any facility references it."
+msgstr "Usunięcie zostanie odrzucone, jeśli odwołuje się do tego jakikolwiek obiekt."
+
+msgid "Derivative Gain"
+msgstr "Wzmocnienie różniczkujące"
+
+msgid "Direct week adjustment on top of elapsed weeks. Positive = fast-forward, negative = compensate downtime."
+msgstr "Bezpośrednia korekta tygodni oprócz tygodni, które upłynęły. Wartość dodatnia = przewinięcie do przodu, ujemna = kompensacja przestoju."
+
+msgid "Display Graph"
+msgstr "Pokaż wykres"
+
+msgid "Duplicate Facility"
+msgstr "Duplikuj obiekt"
+
+msgid "Duplicate failed: "
+msgstr "Duplikowanie nie powiodło się: "
+
+msgid "Duplicate the facility currently open in the editor. Connected sensors/outputs are not carried over."
+msgstr "Duplikuje obiekt aktualnie otwarty w edytorze. Podłączone czujniki/wyjścia nie są przenoszone."
+
+msgid "Every Period of the Input, each Action is executed with the returned measurements."
+msgstr "W każdym okresie wejścia każda akcja jest wykonywana ze zwróconymi pomiarami."
+
+msgid "Extruded Polygon"
+msgstr "Wyciągnięty wielokąt"
+
+msgid "Facility duplicated. Sensors and outputs were not carried over."
+msgstr "Obiekt zduplikowany. Czujniki i wyjścia nie zostały przeniesione."
+
+msgid "GLTF Import"
+msgstr "Import GLTF"
+
+msgid "Graphs are useful for visualizing datasets over weeks, months, or years. Displaying such data on synchronous graphs can cause high data processing and computation load."
+msgstr "Wykresy są przydatne do wizualizacji zbiorów danych obejmujących tygodnie, miesiące lub lata. Wyświetlanie takich danych na synchronicznych wykresach może powodować duże obciążenie przetwarzania i obliczeń."
+
+msgid "Include in AI Judgment"
+msgstr "Uwzględnij w ocenie AI"
+
+msgid "Info Tint"
+msgstr "Kolor tła Informacja"
+
+msgid "Info Tint Text"
+msgstr "Tekst na kolorze tła Informacja"
+
+msgid "Integral Gain"
+msgstr "Wzmocnienie całkujące"
+
+msgid "Invalid saved ID. Please select another item from the list to save."
+msgstr "Nieprawidłowy zapisany identyfikator. Wybierz inny element z listy, aby zapisać."
+
+msgid "Libraries"
+msgstr "Biblioteki"
+
+msgid "Limits the maximum of the integrator"
+msgstr "Ogranicza maksimum całki"
+
+msgid "Limits the minimum of the integrator"
+msgstr "Ogranicza minimum całki"
+
+msgid "Max measure age"
+msgstr "Maksymalny wiek pomiaru"
+
+msgid "Method End"
+msgstr "Koniec metody"
+
+msgid "Method called to calculate this method value"
+msgstr "Metoda wywoływana do obliczenia tej wartości metody"
+
+msgid "Methods are used to reference various types of setpoints in a PID controller. Typically, a PID controller controls a device to a fixed setpoint. If you want the setpoint to change over time, you can change the setpoint over time in the method and use it for control by tracking the value in the PID controller."
+msgstr "Metody służą do odwoływania się do różnych rodzajów wartości zadanych w regulatorze PID. Zwykle regulator PID steruje urządzeniem do stałej wartości zadanej. Jeśli chcesz, aby wartość zadana zmieniała się w czasie, możesz ją zmieniać w metodzie i użyć jej do sterowania, śledząc tę wartość w regulatorze PID."
+
+msgid "No assets registered. Upload one using the button above."
+msgstr "Brak zarejestrowanych zasobów. Prześlij jeden za pomocą powyższego przycisku."
+
+msgid "No results"
+msgstr "Brak wyników"
+
+msgid "No saved methods."
+msgstr "Brak zapisanych metod."
+
+msgid "None Selected"
+msgstr "Nic nie wybrano"
+
+msgid "Output Action (On/Off, PWM, Value, Volume, etc.)"
+msgstr "Akcja wyjścia (Wł./Wył., PWM, Wartość, Objętość itd.)"
+
+msgid "PID Parameters"
+msgstr "Parametry PID"
+
+msgid "Parcel"
+msgstr "Działka"
+
+msgid "Please choose a CSV file."
+msgstr "Wybierz plik CSV."
+
+msgid "Please enter an address."
+msgstr "Wpisz adres."
+
+msgid "Please select a file."
+msgstr "Wybierz plik."
+
+msgid "Processing..."
+msgstr "Przetwarzanie..."
+
+msgid "Product"
+msgstr "Produkt"
+
+msgid "Product Info"
+msgstr "Informacje o produkcie"
+
+msgid "Proportional Gain"
+msgstr "Wzmocnienie proporcjonalne"
+
+msgid "Referencing facilities: "
+msgstr "Obiekty odwołujące się: "
+
+msgid "Regenerate Thumbnail"
+msgstr "Wygeneruj ponownie miniaturę"
+
+msgid "Return to Method Management"
+msgstr "Powrót do zarządzania metodami"
+
+msgid "Row/card background for paused or held controllers (PID pause/hold, pending AI drafts). Offline devices use Danger Tint below."
+msgstr "Tło wiersza/karty dla wstrzymanych lub zatrzymanych regulatorów (pauza/wstrzymanie PID, oczekujące szkice AI). Urządzenia offline używają poniższego koloru tła Niebezpieczeństwo."
+
+msgid "Saved Methods"
+msgstr "Zapisane metody"
+
+msgid "Searching"
+msgstr "Wyszukiwanie"
+
+msgid "Searching..."
+msgstr "Wyszukiwanie..."
+
+msgid "Select a facility to duplicate first."
+msgstr "Najpierw wybierz obiekt do zduplikowania."
+
+msgid "Select direction to control"
+msgstr "Wybierz kierunek do regulacji"
+
+msgid "Select one to calculate setpoint. When activated, measurement value replaces PID setpoint"
+msgstr "Wybierz jeden, aby obliczyć wartość zadaną. Po aktywacji wartość pomiaru zastępuje wartość zadaną PID"
+
+msgid "Select output to lower the measured value"
+msgstr "Wybierz wyjście, aby obniżyć zmierzoną wartość"
+
+msgid "Select output to raise the measured value"
+msgstr "Wybierz wyjście, aby podnieść zmierzoną wartość"
+
+msgid "Semantic color for destructive actions and errors (delete buttons, failures)"
+msgstr "Kolor semantyczny dla nieodwracalnych działań i błędów (przyciski usuwania, niepowodzenia)"
+
+msgid "Semantic color for informational marks and in-progress states"
+msgstr "Kolor semantyczny dla oznaczeń informacyjnych i stanów w toku"
+
+msgid "Semantic color for success/normal results — a different axis from the device-state colors above"
+msgstr "Kolor semantyczny dla wyników udanych/normalnych — inna oś niż powyższe kolory stanu urządzenia"
+
+msgid "Semantic color for warnings and attention marks"
+msgstr "Kolor semantyczny dla ostrzeżeń i oznaczeń wymagających uwagi"
+
+msgid "Send Lower as Negative to Output."
+msgstr "Wyślij wartość obniżenia jako ujemną do wyjścia."
+
+msgid "Setpoint Tracking"
+msgstr "Śledzenie wartości zadanej"
+
+msgid "Soft background for failures — also the row/card background and map-popup name highlight for offline or unresponsive devices"
+msgstr "Miękkie tło dla niepowodzeń — również tło wiersza/karty i wyróżnienie nazwy w wyskakującym okienku mapy dla urządzeń offline lub nieodpowiadających"
+
+msgid "Soft badge background for in-progress/informational states"
+msgstr "Miękkie tło odznaki dla stanów w toku/informacyjnych"
+
+msgid "Soft badge background for success — pairs with the text color below"
+msgstr "Miękkie tło odznaki dla sukcesu — pasuje do poniższego koloru tekstu"
+
+msgid "Store Lower measurement as Negative."
+msgstr "Zapisz pomiar obniżenia jako ujemny."
+
+msgid "Success Tint"
+msgstr "Kolor tła Sukces"
+
+msgid "Success Tint Text"
+msgstr "Tekst na kolorze tła Sukces"
+
+msgid "Text color used on the danger tint"
+msgstr "Kolor tekstu używany na kolorze tła Niebezpieczeństwo"
+
+msgid "Text color used on the info tint"
+msgstr "Kolor tekstu używany na kolorze tła Informacja"
+
+msgid "Text color used on the success tint"
+msgstr "Kolor tekstu używany na kolorze tła Sukces"
+
+msgid "This is the desired state of the particular environmental condition. For example, you might enter a desired temperature in degrees Celsius."
+msgstr "To jest pożądany stan danego warunku środowiskowego. Na przykład możesz wpisać pożądaną temperaturę w stopniach Celsjusza."
+
+msgid "This only allows or refuses requests to the external MCP server that is already running. The address and port it listens on are not configured here: for Docker, edit the aot_mcp service's \"ports:\" entry in docker-compose.yml and re-run docker compose up -d; for a native install, edit and restart the aotmcp systemd service."
+msgstr "To ustawienie tylko zezwala na żądania do już działającego zewnętrznego serwera MCP lub je odrzuca. Adres i port, na którym nasłuchuje, nie są tu konfigurowane: w przypadku Dockera edytuj wpis „ports:” usługi aot_mcp w docker-compose.yml i uruchom ponownie docker compose up -d; w przypadku instalacji natywnej edytuj i uruchom ponownie usługę systemd aotmcp."
+
+msgid "Thumbnail"
+msgstr "Miniatura"
+
+msgid "Up to"
+msgstr "Do"
+
+msgid "Update Immediately"
+msgstr "Zaktualizuj natychmiast"
+
+msgid "Upload failed"
+msgstr "Przesyłanie nie powiodło się"
+
+msgid "Uploading…"
+msgstr "Przesyłanie…"
+
+msgid "Use \"Place on Map\" above the map to set the facility center, then drag the facility on the map to adjust it."
+msgstr "Użyj „Umieść na mapie” nad mapą, aby ustawić środek obiektu, a następnie przeciągnij obiekt na mapie, aby go dostosować."
+
+msgid "When enabled, if this Input measures both temperature and humidity, a VPD (vapor pressure deficit) channel is automatically recorded."
+msgstr "Jeśli włączone, a to wejście mierzy zarówno temperaturę, jak i wilgotność, kanał VPD (deficytu ciśnienia pary) jest rejestrowany automatycznie."
+
+msgid "When enabled, this device is visible to AI judgment and control tools."
+msgstr "Jeśli włączone, to urządzenie jest widoczne dla narzędzi oceny i sterowania AI."
+
+msgid "addresses"
+msgstr "adresów"
+
+msgid "and"
+msgstr "i"
+
+msgid "can be added."
+msgstr "można dodać."
+
+msgid "columns are allowed."
+msgstr "kolumn jest dozwolonych."
+
+msgid "failed"
+msgstr "nieudanych"
+
+msgid "more parcels"
+msgstr "więcej działek"
+
+msgid "parcels found"
+msgstr "znaleziono działek"
+
+msgid "parcels previewed"
+msgstr "działek w podglądzie"
+
+msgid "points"
+msgstr "punktów"
+
+msgid "processed"
+msgstr "przetworzono"
+
+msgid "saved"
+msgstr "zapisano"
+
+msgid "week columns"
+msgstr "kolumny tygodni"

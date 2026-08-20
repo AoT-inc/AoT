@@ -10722,7 +10722,7 @@ msgstr "Mulai"
 
 #: aot_flask/templates/pages/landing.html:222
 msgid "Sign Up"
-msgstr ""
+msgstr "Daftar"
 
 #: aot_flask/templates/pages/landing.html:236
 #, fuzzy
@@ -11411,50 +11411,50 @@ msgstr "Sync"
 
 #: aot_flask/templates/pages/ai/ai_library.html:136
 msgid "AI-Curated Knowledge Review"
-msgstr ""
+msgstr "Peninjauan Pengetahuan yang Disusun AI"
 
 #: aot_flask/templates/pages/ai/ai_library.html:138
 msgid ""
 "Knowledge the AI shelved on its own (always unconfirmed at first). "
 "Confirm/edit what is correct, retire what is wrong — see it cited as [AI "
 "정리 — 미확인] until reviewed."
-msgstr ""
+msgstr "Pengetahuan yang disimpan AI secara mandiri (selalu belum dikonfirmasi pada awalnya). Konfirmasi/edit yang benar, tarik yang salah — dikutip sebagai [AI 정리 — 미확인] hingga ditinjau."
 
 #: aot_flask/templates/pages/ai/ai_library.html:142
 msgid "No AI-curated knowledge yet."
-msgstr ""
+msgstr "Belum ada pengetahuan yang disusun AI."
 
 #: aot_flask/templates/pages/ai/ai_library.html:166
 msgid "Corroborated"
-msgstr ""
+msgstr "Dikuatkan"
 
 #: aot_flask/templates/pages/ai/ai_library.html:167
 msgid "Retired"
-msgstr ""
+msgstr "Ditarik"
 
 #: aot_flask/templates/pages/ai/ai_library.html:168
 msgid "Unconfirmed"
-msgstr ""
+msgstr "Belum Dikonfirmasi"
 
 #: aot_flask/templates/pages/ai/ai_library.html:172
 msgid "Flagged"
-msgstr ""
+msgstr "Ditandai"
 
 #: aot_flask/templates/pages/ai/ai_library.html:176
 msgid "Same topic as an authoritative source"
-msgstr ""
+msgstr "Topik yang sama dengan sumber otoritatif"
 
 #: aot_flask/templates/pages/ai/ai_library.html:177
 msgid "Matches"
-msgstr ""
+msgstr "Kecocokan"
 
 #: aot_flask/templates/pages/ai/ai_library.html:196
 msgid "Reactivate"
-msgstr ""
+msgstr "Aktifkan Kembali"
 
 #: aot_flask/templates/pages/ai/ai_library.html:207
 msgid "Retire"
-msgstr ""
+msgstr "Tarik"
 
 #: aot_flask/templates/pages/ai/ai_library.html:233
 msgid "Source Settings"
@@ -11462,11 +11462,11 @@ msgstr "Pengaturan Sumber"
 
 #: aot_flask/templates/pages/ai/ai_library.html:258
 msgid "Edit AI-Curated Knowledge"
-msgstr ""
+msgstr "Edit Pengetahuan yang Disusun AI"
 
 #: aot_flask/templates/pages/ai/ai_library.html:268
 msgid "Save (Confirms)"
-msgstr ""
+msgstr "Simpan (Mengonfirmasi)"
 
 #: aot_flask/templates/pages/ai/ai_library.html:279
 msgid "Please select a source type."
@@ -11538,45 +11538,45 @@ msgstr "Template Kueri"
 
 #: aot_flask/templates/pages/ai/ai_library.html:301
 msgid "Pick from Google Drive"
-msgstr ""
+msgstr "Pilih dari Google Drive"
 
 #: aot_flask/templates/pages/ai/ai_library.html:302
 msgid "Selected Files"
-msgstr ""
+msgstr "File yang Dipilih"
 
 #: aot_flask/templates/pages/ai/ai_library.html:303
 msgid "No files selected yet."
-msgstr ""
+msgstr "Belum ada file yang dipilih."
 
 #: aot_flask/templates/pages/ai/ai_library.html:304
 msgid "Checking Google connection…"
-msgstr ""
+msgstr "Memeriksa koneksi Google…"
 
 #: aot_flask/templates/pages/ai/ai_library.html:305
 msgid "Connected as"
-msgstr ""
+msgstr "Terhubung sebagai"
 
 #: aot_flask/templates/pages/ai/ai_library.html:306
 msgid "Google account not connected."
-msgstr ""
+msgstr "Akun Google belum terhubung."
 
 #: aot_flask/templates/pages/ai/ai_library.html:307
 msgid "Connect it under Settings > Integrations"
-msgstr ""
+msgstr "Hubungkan di Pengaturan > Integrasi"
 
 #: aot_flask/templates/pages/ai/ai_library.html:308
 msgid "Your Google connection predates Drive access — reconnect to grant it."
-msgstr ""
+msgstr "Koneksi Google Anda lebih lama dari akses Drive — sambungkan kembali untuk memberikan akses tersebut."
 
 #: aot_flask/templates/pages/ai/ai_library.html:309
 msgid "Reconnect under Settings > Integrations"
-msgstr ""
+msgstr "Sambungkan kembali di Pengaturan > Integrasi"
 
 #: aot_flask/templates/pages/ai/ai_library.html:310
 msgid ""
 "Google Picker is not configured yet — an admin must set the Picker API "
 "key under Settings > Integrations."
-msgstr ""
+msgstr "Google Picker belum dikonfigurasi — administrator harus mengatur kunci API Picker di Pengaturan > Integrasi."
 
 #: aot_flask/templates/pages/ai/ai_library.html:315
 msgid "Source is not enabled. Activate it before syncing."
@@ -11605,47 +11605,47 @@ msgstr "Jenis Tanaman"
 
 #: aot_flask/templates/pages/ai/ai_library.html:324
 msgid "Confirming…"
-msgstr ""
+msgstr "Mengonfirmasi…"
 
 #: aot_flask/templates/pages/ai/ai_library.html:325
 msgid "Confirmed."
-msgstr ""
+msgstr "Dikonfirmasi."
 
 #: aot_flask/templates/pages/ai/ai_library.html:326
 msgid "Retiring…"
-msgstr ""
+msgstr "Menarik…"
 
 #: aot_flask/templates/pages/ai/ai_library.html:327
 msgid "Retired."
-msgstr ""
+msgstr "Ditarik."
 
 #: aot_flask/templates/pages/ai/ai_library.html:328
 msgid "Retire this item? It will stop being cited until reactivated."
-msgstr ""
+msgstr "Tarik item ini? Item ini tidak akan dikutip lagi hingga diaktifkan kembali."
 
 #: aot_flask/templates/pages/ai/ai_library.html:329
 msgid "Reactivating…"
-msgstr ""
+msgstr "Mengaktifkan kembali…"
 
 #: aot_flask/templates/pages/ai/ai_library.html:330
 msgid "Reactivated."
-msgstr ""
+msgstr "Diaktifkan kembali."
 
 #: aot_flask/templates/pages/ai/ai_library.html:331
 msgid "Item not found."
-msgstr ""
+msgstr "Item tidak ditemukan."
 
 #: aot_flask/templates/pages/ai/ai_library.html:332
 msgid "Heading"
-msgstr ""
+msgstr "Arah"
 
 #: aot_flask/templates/pages/ai/ai_library.html:334
 msgid "Tags (comma-separated)"
-msgstr ""
+msgstr "Tag (dipisahkan koma)"
 
 #: aot_flask/templates/pages/ai/ai_library.html:335
 msgid "Attribution"
-msgstr ""
+msgstr "Atribusi"
 
 #: aot_flask/templates/pages/ai/ai_library.html:336
 #: aot_flask/templates/pages/geo_input_components/geo_input_option.html:37
@@ -11654,50 +11654,50 @@ msgstr "Related Documents"
 
 #: aot_flask/templates/pages/ai/ai_library.html:337
 msgid "Source Site"
-msgstr ""
+msgstr "Situs Sumber"
 
 #: aot_flask/templates/pages/ai/ai_library.html:338
 msgid "Link"
-msgstr ""
+msgstr "Tautan"
 
 #: aot_flask/templates/pages/ai/ai_library.html:339
 msgid "Usage:"
-msgstr ""
+msgstr "Penggunaan:"
 
 #: aot_flask/templates/pages/ai/ai_library.html:340
 msgid "Select operations to register as knowledge"
-msgstr ""
+msgstr "Pilih operasi untuk didaftarkan sebagai pengetahuan"
 
 #: aot_flask/templates/pages/ai/ai_library.html:341
 msgid "Parameters for the selected operations"
-msgstr ""
+msgstr "Parameter untuk operasi yang dipilih"
 
 #: aot_flask/templates/pages/ai/ai_library.html:342
 msgid "Select at least one operation."
-msgstr ""
+msgstr "Pilih setidaknya satu operasi."
 
 #: aot_flask/templates/pages/ai/ai_library.html:343
 msgid ""
 "Enter your service key, then use the Farm and Season pickers below to "
 "choose your farm by region and season by name — the internal IDs are "
 "filled in for you, so you never have to type a code."
-msgstr ""
+msgstr "Masukkan kunci layanan Anda, lalu gunakan pemilih Pertanian dan Musim di bawah untuk memilih pertanian berdasarkan wilayah dan musim berdasarkan nama — ID internal diisi otomatis, sehingga Anda tidak pernah perlu mengetik kode."
 
 #: aot_flask/templates/pages/ai/ai_library.html:344
 msgid ""
 "Each of these operations only needs a service key and a date range — no "
 "farm-specific ID required."
-msgstr ""
+msgstr "Masing-masing operasi ini hanya memerlukan kunci layanan dan rentang tanggal — tidak diperlukan ID khusus pertanian."
 
 #: aot_flask/templates/pages/ai/ai_library.html:345
 msgid ""
 "A classification code from the measurement record — the example is one "
 "real sample value, not a fixed option; actual values vary per record."
-msgstr ""
+msgstr "Kode klasifikasi dari catatan pengukuran — contohnya adalah satu nilai sampel nyata, bukan opsi tetap; nilai sebenarnya berbeda-beda per catatan."
 
 #: aot_flask/templates/pages/ai/ai_library.html:346
 msgid "Select an operation above to see its required parameters."
-msgstr ""
+msgstr "Pilih operasi di atas untuk melihat parameter yang diperlukan."
 
 #: aot_flask/templates/pages/ai/ai_library.html:347
 #: aot_flask/templates/pages/geo/geo_facility.html:1938
@@ -11706,63 +11706,63 @@ msgstr "Pilih Semua"
 
 #: aot_flask/templates/pages/ai/ai_library.html:348
 msgid "Deselect All"
-msgstr ""
+msgstr "Batalkan Pilih Semua"
 
 #: aot_flask/templates/pages/ai/ai_library.html:349
 msgid "Farm"
-msgstr ""
+msgstr "Pertanian"
 
 #: aot_flask/templates/pages/ai/ai_library.html:350
 msgid "Cropping Season"
-msgstr ""
+msgstr "Musim Tanam"
 
 #: aot_flask/templates/pages/ai/ai_library.html:351
 msgid "Load farms"
-msgstr ""
+msgstr "Muat daftar pertanian"
 
 #: aot_flask/templates/pages/ai/ai_library.html:352
 msgid "Select a farm"
-msgstr ""
+msgstr "Pilih pertanian"
 
 #: aot_flask/templates/pages/ai/ai_library.html:353
 msgid "Select a season"
-msgstr ""
+msgstr "Pilih musim"
 
 #: aot_flask/templates/pages/ai/ai_library.html:354
 msgid "Enter the API key first, then load farms."
-msgstr ""
+msgstr "Masukkan kunci API terlebih dahulu, lalu muat daftar pertanian."
 
 #: aot_flask/templates/pages/ai/ai_library.html:355
 msgid "Pick a farm first to load its seasons."
-msgstr ""
+msgstr "Pilih pertanian terlebih dahulu untuk memuat musimnya."
 
 #: aot_flask/templates/pages/ai/ai_library.html:356
 msgid "Current:"
-msgstr ""
+msgstr "Saat ini:"
 
 #: aot_flask/templates/pages/ai/ai_library.html:358
 msgid "Load failed"
-msgstr ""
+msgstr "Pemuatan gagal"
 
 #: aot_flask/templates/pages/ai/ai_library.html:359
 msgid "No farms returned for this key."
-msgstr ""
+msgstr "Tidak ada pertanian yang dikembalikan untuk kunci ini."
 
 #: aot_flask/templates/pages/ai/ai_library.html:360
 msgid "No seasons found for this farm."
-msgstr ""
+msgstr "Tidak ada musim ditemukan untuk pertanian ini."
 
 #: aot_flask/templates/pages/ai/ai_library.html:433
 msgid "Facility ID"
-msgstr ""
+msgstr "ID Fasilitas"
 
 #: aot_flask/templates/pages/ai/ai_library.html:434
 msgid "Cropping Serial No."
-msgstr ""
+msgstr "No. Seri Tanam"
 
 #: aot_flask/templates/pages/ai/ai_library.html:435
 msgid "Measurement Date"
-msgstr ""
+msgstr "Tanggal Pengukuran"
 
 #: aot_flask/templates/pages/ai/ai_library.html:436
 #: aot_flask/templates/pages/ai/ai_scheduler.html:174
@@ -11776,19 +11776,19 @@ msgstr "Tanggal Selesai"
 
 #: aot_flask/templates/pages/ai/ai_library.html:438
 msgid "Field Code"
-msgstr ""
+msgstr "Kode Bidang"
 
 #: aot_flask/templates/pages/ai/ai_library.html:439
 msgid "Section Code"
-msgstr ""
+msgstr "Kode Bagian"
 
 #: aot_flask/templates/pages/ai/ai_library.html:440
 msgid "Attribute Code"
-msgstr ""
+msgstr "Kode Atribut"
 
 #: aot_flask/templates/pages/ai/ai_library.html:441
 msgid "Item Code"
-msgstr ""
+msgstr "Kode Item"
 
 #: aot_flask/templates/pages/ai/ai_library.html:680
 #: aot_flask/templates/pages/ai/ai_modals.html:123
@@ -12852,7 +12852,7 @@ msgstr "Alasan:"
 
 #: aot_flask/templates/pages/ai/scheduler.html:1022
 msgid "Calendar shown in your timezone"
-msgstr ""
+msgstr "Kalender ditampilkan dalam zona waktu Anda"
 
 #: aot_flask/templates/pages/ai/components/getting_to_know.html:218
 msgid "Getting to Know Each Other"
@@ -13581,7 +13581,7 @@ msgstr "Condition Settings"
 msgid ""
 "Conditional functions can not only execute Python 3 code, but also "
 "interact with AoT using conditions and actions within the code."
-msgstr ""
+msgstr "Fungsi kondisional tidak hanya dapat menjalankan kode Python 3, tetapi juga berinteraksi dengan AoT menggunakan kondisi dan aksi di dalam kode."
 
 #: aot_flask/templates/pages/function_options/conditional_options.html:46
 #, fuzzy
@@ -17130,15 +17130,15 @@ msgstr "Clear"
 
 #: aot_flask/templates/settings/integrations.html:24
 msgid "Google Calendar is not configured yet."
-msgstr ""
+msgstr "Google Kalender belum dikonfigurasi."
 
 #: aot_flask/templates/settings/integrations.html:26
 msgid "Enter the OAuth client credentials below to enable it."
-msgstr ""
+msgstr "Masukkan kredensial klien OAuth di bawah untuk mengaktifkannya."
 
 #: aot_flask/templates/settings/integrations.html:28
 msgid "Ask an administrator to configure it."
-msgstr ""
+msgstr "Minta administrator untuk mengonfigurasinya."
 
 #: aot_flask/templates/settings/integrations.html:41
 #, fuzzy
@@ -17147,11 +17147,11 @@ msgstr "Arah Angin"
 
 #: aot_flask/templates/settings/integrations.html:43
 msgid "AoT → Google"
-msgstr ""
+msgstr "AoT → Google"
 
 #: aot_flask/templates/settings/integrations.html:44
 msgid "Google → AoT"
-msgstr ""
+msgstr "Google → AoT"
 
 #: aot_flask/templates/settings/integrations.html:49
 #, fuzzy
@@ -17162,17 +17162,17 @@ msgstr "Terakhir Terlihat"
 msgid ""
 "Disconnect Google Calendar? Synced events already in Google are not "
 "deleted."
-msgstr ""
+msgstr "Putuskan sambungan Google Kalender? Acara yang sudah disinkronkan di Google tidak akan dihapus."
 
 #: aot_flask/templates/settings/integrations.html:72
 msgid ""
 "Connect your Google account to sync farm schedule events with your Google"
 " Calendar (two-way)."
-msgstr ""
+msgstr "Hubungkan akun Google Anda untuk menyinkronkan acara jadwal pertanian dengan Google Kalender (dua arah)."
 
 #: aot_flask/templates/settings/integrations.html:77
 msgid "Connect Google Calendar"
-msgstr ""
+msgstr "Hubungkan Google Kalender"
 
 #: aot_flask/templates/settings/integrations.html:84
 #, fuzzy
@@ -17184,21 +17184,21 @@ msgid ""
 "Create an OAuth 2.0 Client ID (type: Web application) in the Google Cloud"
 " Console with the Google Calendar API enabled, then paste the credentials"
 " here."
-msgstr ""
+msgstr "Buat ID Klien OAuth 2.0 (jenis: aplikasi web) di Google Cloud Console dengan Google Calendar API diaktifkan, lalu tempelkan kredensialnya di sini."
 
 #: aot_flask/templates/settings/integrations.html:91
 msgid "Authorized redirect URI to register in Google:"
-msgstr ""
+msgstr "URI pengalihan resmi yang didaftarkan di Google:"
 
 #: aot_flask/templates/settings/integrations.html:94
 msgid "Set the Public Base URL first to compute the redirect URI."
-msgstr ""
+msgstr "Atur URL Dasar Publik terlebih dahulu untuk menghitung URI pengalihan."
 
 #: aot_flask/templates/settings/integrations.html:97
 msgid ""
 "Some values are provided by environment variables and override the fields"
 " below."
-msgstr ""
+msgstr "Beberapa nilai disediakan oleh variabel lingkungan dan menimpa bidang di bawah."
 
 #: aot_flask/templates/settings/integrations.html:106
 #, fuzzy
@@ -17212,18 +17212,18 @@ msgstr "Client ID"
 
 #: aot_flask/templates/settings/integrations.html:124
 msgid "OAuth Client Secret"
-msgstr ""
+msgstr "Rahasia Klien OAuth"
 
 #: aot_flask/templates/settings/integrations.html:133
 msgid "Google Picker API Key"
-msgstr ""
+msgstr "Kunci API Google Picker"
 
 #: aot_flask/templates/settings/integrations.html:139
 msgid ""
 "Optional — only needed for the AI Library Google Drive source (file "
 "picker). A Cloud Console API key with the Picker API enabled, NOT the "
 "OAuth Client Secret above."
-msgstr ""
+msgstr "Opsional — hanya diperlukan untuk sumber Google Drive Pustaka AI (pemilih file). Kunci API Cloud Console dengan Picker API diaktifkan, BUKAN Rahasia Klien OAuth di atas."
 
 #: aot_flask/templates/settings/measurement.html:4
 #: aot_flask/templates/settings/measurement.html:6
@@ -25998,3 +25998,333 @@ msgstr ""
 #: aot_flask/templates/settings/user_detail.html:193
 msgid "Copy it now — it is shown only once and cannot be retrieved later."
 msgstr ""
+
+msgid "1 Year"
+msgstr "1 Tahun"
+
+msgid "3D"
+msgstr "3D"
+
+msgid "Activation Status"
+msgstr "Status Aktivasi"
+
+msgid "Additional"
+msgstr "Tambahan"
+
+msgid "Additional Info"
+msgstr "Info Tambahan"
+
+msgid "Advanced Settings"
+msgstr "Pengaturan Lanjutan"
+
+msgid "After selecting Raise and/or Lower Output, additional options will appear for each output and must be configured. The options available depend on the output type selected. Therefore, before enabling the PID controller, confirm status after saving to ensure all configuration is complete."
+msgstr "Setelah memilih keluaran Naikkan dan/atau Turunkan, opsi tambahan akan muncul untuk setiap keluaran dan harus dikonfigurasi. Opsi yang tersedia bergantung pada jenis keluaran yang dipilih. Karena itu, sebelum mengaktifkan pengontrol PID, periksa status setelah menyimpan untuk memastikan semua konfigurasi sudah lengkap."
+
+msgid "All Data"
+msgstr "Semua Data"
+
+msgid "Are you sure you want to delete this item?"
+msgstr "Apakah Anda yakin ingin menghapus item ini?"
+
+msgid "At least 1 column is required."
+msgstr "Minimal 1 kolom diperlukan."
+
+msgid "At least 2 points are required."
+msgstr "Minimal 2 titik diperlukan."
+
+msgid "Channel Options"
+msgstr "Opsi Kanal"
+
+msgid "Click \"Place on Map\" then click the facility center on the map. Drag the placed facility to move it. Form dimensions and rotation update the rectangle in real time."
+msgstr "Klik \"Tempatkan di Peta\" lalu klik pusat fasilitas di peta. Seret fasilitas yang ditempatkan untuk memindahkannya. Dimensi dan rotasi pada formulir memperbarui persegi panjang secara langsung."
+
+msgid "Click to edit Danger Tint colors"
+msgstr "Klik untuk mengedit warna latar Bahaya"
+
+msgid "Control hysteresis around setpoint. Applied as setpoint +/- band value. 0 to disable."
+msgstr "Histeresis kontrol di sekitar titik setel. Diterapkan sebagai titik setel ± nilai pita. 0 untuk menonaktifkan."
+
+msgid "Create Method"
+msgstr "Buat Metode"
+
+msgid "Danger"
+msgstr "Bahaya"
+
+msgid "Danger Tint"
+msgstr "Warna Latar Bahaya"
+
+msgid "Danger Tint Text"
+msgstr "Teks pada Warna Latar Bahaya"
+
+msgid "Datasheet"
+msgstr "Lembar Data"
+
+msgid "Delete asset \"%s\"?"
+msgstr "Hapus aset \"%s\"?"
+
+msgid "Delete request failed"
+msgstr "Permintaan hapus gagal"
+
+msgid "Delete this record? Use \"End\" instead if it was actually grown — deleting removes it from the history."
+msgstr "Hapus catatan ini? Gunakan \"Akhiri\" sebagai gantinya jika memang benar-benar ditanam — menghapus akan menghilangkannya dari riwayat."
+
+msgid "Deletion is rejected if any facility references it."
+msgstr "Penghapusan ditolak jika ada fasilitas yang mereferensikannya."
+
+msgid "Derivative Gain"
+msgstr "Penguatan Derivatif"
+
+msgid "Direct week adjustment on top of elapsed weeks. Positive = fast-forward, negative = compensate downtime."
+msgstr "Penyesuaian minggu langsung di atas minggu yang telah berlalu. Positif = maju cepat, negatif = kompensasi waktu henti."
+
+msgid "Display Graph"
+msgstr "Tampilkan Grafik"
+
+msgid "Duplicate Facility"
+msgstr "Duplikasi Fasilitas"
+
+msgid "Duplicate failed: "
+msgstr "Duplikasi gagal: "
+
+msgid "Duplicate the facility currently open in the editor. Connected sensors/outputs are not carried over."
+msgstr "Menduplikasi fasilitas yang sedang terbuka di editor. Sensor/keluaran yang terhubung tidak ikut dibawa."
+
+msgid "Every Period of the Input, each Action is executed with the returned measurements."
+msgstr "Pada setiap periode Input, setiap Aksi dijalankan dengan pengukuran yang dikembalikan."
+
+msgid "Extruded Polygon"
+msgstr "Poligon Ekstrusi"
+
+msgid "Facility duplicated. Sensors and outputs were not carried over."
+msgstr "Fasilitas diduplikasi. Sensor dan keluaran tidak ikut dibawa."
+
+msgid "GLTF Import"
+msgstr "Impor GLTF"
+
+msgid "Graphs are useful for visualizing datasets over weeks, months, or years. Displaying such data on synchronous graphs can cause high data processing and computation load."
+msgstr "Grafik berguna untuk memvisualisasikan kumpulan data selama beberapa minggu, bulan, atau tahun. Menampilkan data seperti itu pada grafik sinkron dapat menyebabkan beban pemrosesan dan komputasi data yang tinggi."
+
+msgid "Include in AI Judgment"
+msgstr "Sertakan dalam Penilaian AI"
+
+msgid "Info Tint"
+msgstr "Warna Latar Info"
+
+msgid "Info Tint Text"
+msgstr "Teks pada Warna Latar Info"
+
+msgid "Integral Gain"
+msgstr "Penguatan Integral"
+
+msgid "Invalid saved ID. Please select another item from the list to save."
+msgstr "ID tersimpan tidak valid. Pilih item lain dari daftar untuk menyimpan."
+
+msgid "Libraries"
+msgstr "Pustaka"
+
+msgid "Limits the maximum of the integrator"
+msgstr "Membatasi maksimum integrator"
+
+msgid "Limits the minimum of the integrator"
+msgstr "Membatasi minimum integrator"
+
+msgid "Max measure age"
+msgstr "Usia maksimum pengukuran"
+
+msgid "Method End"
+msgstr "Akhir Metode"
+
+msgid "Method called to calculate this method value"
+msgstr "Metode yang dipanggil untuk menghitung nilai metode ini"
+
+msgid "Methods are used to reference various types of setpoints in a PID controller. Typically, a PID controller controls a device to a fixed setpoint. If you want the setpoint to change over time, you can change the setpoint over time in the method and use it for control by tracking the value in the PID controller."
+msgstr "Metode digunakan untuk merujuk berbagai jenis titik setel dalam pengontrol PID. Biasanya, pengontrol PID mengendalikan perangkat ke titik setel tetap. Jika Anda ingin titik setel berubah seiring waktu, Anda dapat mengubah titik setel dalam metode seiring waktu dan menggunakannya untuk kontrol dengan mengikuti nilai tersebut di pengontrol PID."
+
+msgid "No assets registered. Upload one using the button above."
+msgstr "Belum ada aset terdaftar. Unggah satu menggunakan tombol di atas."
+
+msgid "No results"
+msgstr "Tidak ada hasil"
+
+msgid "No saved methods."
+msgstr "Tidak ada metode tersimpan."
+
+msgid "None Selected"
+msgstr "Tidak Ada yang Dipilih"
+
+msgid "Output Action (On/Off, PWM, Value, Volume, etc.)"
+msgstr "Aksi Keluaran (Hidup/Mati, PWM, Nilai, Volume, dll.)"
+
+msgid "PID Parameters"
+msgstr "Parameter PID"
+
+msgid "Parcel"
+msgstr "Bidang Tanah"
+
+msgid "Please choose a CSV file."
+msgstr "Silakan pilih file CSV."
+
+msgid "Please enter an address."
+msgstr "Silakan masukkan alamat."
+
+msgid "Please select a file."
+msgstr "Silakan pilih file."
+
+msgid "Processing..."
+msgstr "Memproses..."
+
+msgid "Product"
+msgstr "Produk"
+
+msgid "Product Info"
+msgstr "Info Produk"
+
+msgid "Proportional Gain"
+msgstr "Penguatan Proporsional"
+
+msgid "Referencing facilities: "
+msgstr "Fasilitas yang mereferensikan: "
+
+msgid "Regenerate Thumbnail"
+msgstr "Buat Ulang Gambar Mini"
+
+msgid "Return to Method Management"
+msgstr "Kembali ke Manajemen Metode"
+
+msgid "Row/card background for paused or held controllers (PID pause/hold, pending AI drafts). Offline devices use Danger Tint below."
+msgstr "Latar baris/kartu untuk pengontrol yang dijeda atau ditahan (jeda/tahan PID, draf AI yang tertunda). Perangkat offline menggunakan Warna Latar Bahaya di bawah."
+
+msgid "Saved Methods"
+msgstr "Metode Tersimpan"
+
+msgid "Searching"
+msgstr "Mencari"
+
+msgid "Searching..."
+msgstr "Mencari..."
+
+msgid "Select a facility to duplicate first."
+msgstr "Pilih fasilitas yang akan diduplikasi terlebih dahulu."
+
+msgid "Select direction to control"
+msgstr "Pilih arah yang akan dikendalikan"
+
+msgid "Select one to calculate setpoint. When activated, measurement value replaces PID setpoint"
+msgstr "Pilih satu untuk menghitung titik setel. Saat diaktifkan, nilai pengukuran menggantikan titik setel PID"
+
+msgid "Select output to lower the measured value"
+msgstr "Pilih keluaran untuk menurunkan nilai yang diukur"
+
+msgid "Select output to raise the measured value"
+msgstr "Pilih keluaran untuk menaikkan nilai yang diukur"
+
+msgid "Semantic color for destructive actions and errors (delete buttons, failures)"
+msgstr "Warna semantik untuk tindakan destruktif dan kesalahan (tombol hapus, kegagalan)"
+
+msgid "Semantic color for informational marks and in-progress states"
+msgstr "Warna semantik untuk tanda informasi dan status sedang berlangsung"
+
+msgid "Semantic color for success/normal results — a different axis from the device-state colors above"
+msgstr "Warna semantik untuk hasil berhasil/normal — sumbu berbeda dari warna status perangkat di atas"
+
+msgid "Semantic color for warnings and attention marks"
+msgstr "Warna semantik untuk peringatan dan tanda perhatian"
+
+msgid "Send Lower as Negative to Output."
+msgstr "Kirim nilai Turunkan sebagai negatif ke keluaran."
+
+msgid "Setpoint Tracking"
+msgstr "Pelacakan Titik Setel"
+
+msgid "Soft background for failures — also the row/card background and map-popup name highlight for offline or unresponsive devices"
+msgstr "Latar lembut untuk kegagalan — juga latar baris/kartu dan sorotan nama pada popup peta untuk perangkat offline atau tidak merespons"
+
+msgid "Soft badge background for in-progress/informational states"
+msgstr "Latar lencana lembut untuk status sedang berlangsung/informasi"
+
+msgid "Soft badge background for success — pairs with the text color below"
+msgstr "Latar lencana lembut untuk keberhasilan — berpasangan dengan warna teks di bawah"
+
+msgid "Store Lower measurement as Negative."
+msgstr "Simpan pengukuran Turunkan sebagai negatif."
+
+msgid "Success Tint"
+msgstr "Warna Latar Berhasil"
+
+msgid "Success Tint Text"
+msgstr "Teks pada Warna Latar Berhasil"
+
+msgid "Text color used on the danger tint"
+msgstr "Warna teks yang digunakan pada warna latar Bahaya"
+
+msgid "Text color used on the info tint"
+msgstr "Warna teks yang digunakan pada warna latar Info"
+
+msgid "Text color used on the success tint"
+msgstr "Warna teks yang digunakan pada warna latar Berhasil"
+
+msgid "This is the desired state of the particular environmental condition. For example, you might enter a desired temperature in degrees Celsius."
+msgstr "Ini adalah keadaan yang diinginkan dari kondisi lingkungan tertentu. Misalnya, Anda dapat memasukkan suhu yang diinginkan dalam derajat Celsius."
+
+msgid "This only allows or refuses requests to the external MCP server that is already running. The address and port it listens on are not configured here: for Docker, edit the aot_mcp service's \"ports:\" entry in docker-compose.yml and re-run docker compose up -d; for a native install, edit and restart the aotmcp systemd service."
+msgstr "Ini hanya mengizinkan atau menolak permintaan ke server MCP eksternal yang sudah berjalan. Alamat dan port yang didengarkannya tidak dikonfigurasi di sini: untuk Docker, edit entri \"ports:\" layanan aot_mcp di docker-compose.yml dan jalankan ulang docker compose up -d; untuk instalasi native, edit dan mulai ulang layanan systemd aotmcp."
+
+msgid "Thumbnail"
+msgstr "Gambar Mini"
+
+msgid "Up to"
+msgstr "Hingga"
+
+msgid "Update Immediately"
+msgstr "Perbarui Segera"
+
+msgid "Upload failed"
+msgstr "Unggah gagal"
+
+msgid "Uploading…"
+msgstr "Mengunggah…"
+
+msgid "Use \"Place on Map\" above the map to set the facility center, then drag the facility on the map to adjust it."
+msgstr "Gunakan \"Tempatkan di Peta\" di atas peta untuk mengatur pusat fasilitas, lalu seret fasilitas di peta untuk menyesuaikannya."
+
+msgid "When enabled, if this Input measures both temperature and humidity, a VPD (vapor pressure deficit) channel is automatically recorded."
+msgstr "Jika diaktifkan, dan Input ini mengukur suhu dan kelembapan sekaligus, kanal VPD (defisit tekanan uap) akan dicatat secara otomatis."
+
+msgid "When enabled, this device is visible to AI judgment and control tools."
+msgstr "Jika diaktifkan, perangkat ini terlihat oleh alat penilaian dan kontrol AI."
+
+msgid "addresses"
+msgstr "alamat"
+
+msgid "and"
+msgstr "dan"
+
+msgid "can be added."
+msgstr "dapat ditambahkan."
+
+msgid "columns are allowed."
+msgstr "kolom diizinkan."
+
+msgid "failed"
+msgstr "gagal"
+
+msgid "more parcels"
+msgstr "bidang tanah lagi"
+
+msgid "parcels found"
+msgstr "bidang tanah ditemukan"
+
+msgid "parcels previewed"
+msgstr "bidang tanah dipratinjau"
+
+msgid "points"
+msgstr "titik"
+
+msgid "processed"
+msgstr "diproses"
+
+msgid "saved"
+msgstr "disimpan"
+
+msgid "week columns"
+msgstr "kolom minggu"

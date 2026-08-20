@@ -10716,7 +10716,7 @@ msgstr "Section Start"
 
 #: aot_flask/templates/pages/landing.html:222
 msgid "Sign Up"
-msgstr ""
+msgstr "Registreren"
 
 #: aot_flask/templates/pages/landing.html:236
 #, fuzzy
@@ -11472,50 +11472,50 @@ msgstr "Sync"
 
 #: aot_flask/templates/pages/ai/ai_library.html:136
 msgid "AI-Curated Knowledge Review"
-msgstr ""
+msgstr "Beoordeling van door AI samengestelde kennis"
 
 #: aot_flask/templates/pages/ai/ai_library.html:138
 msgid ""
 "Knowledge the AI shelved on its own (always unconfirmed at first). "
 "Confirm/edit what is correct, retire what is wrong — see it cited as [AI "
 "정리 — 미확인] until reviewed."
-msgstr ""
+msgstr "Kennis die de AI zelfstandig heeft opgeslagen (aanvankelijk altijd onbevestigd). Bevestig/bewerk wat correct is, trek in wat onjuist is — totdat het is beoordeeld, wordt het geciteerd als [AI 정리 — 미확인]."
 
 #: aot_flask/templates/pages/ai/ai_library.html:142
 msgid "No AI-curated knowledge yet."
-msgstr ""
+msgstr "Nog geen door AI samengestelde kennis."
 
 #: aot_flask/templates/pages/ai/ai_library.html:166
 msgid "Corroborated"
-msgstr ""
+msgstr "Bevestigd door andere bronnen"
 
 #: aot_flask/templates/pages/ai/ai_library.html:167
 msgid "Retired"
-msgstr ""
+msgstr "Ingetrokken"
 
 #: aot_flask/templates/pages/ai/ai_library.html:168
 msgid "Unconfirmed"
-msgstr ""
+msgstr "Onbevestigd"
 
 #: aot_flask/templates/pages/ai/ai_library.html:172
 msgid "Flagged"
-msgstr ""
+msgstr "Gemarkeerd"
 
 #: aot_flask/templates/pages/ai/ai_library.html:176
 msgid "Same topic as an authoritative source"
-msgstr ""
+msgstr "Zelfde onderwerp als een gezaghebbende bron"
 
 #: aot_flask/templates/pages/ai/ai_library.html:177
 msgid "Matches"
-msgstr ""
+msgstr "Overeenkomsten"
 
 #: aot_flask/templates/pages/ai/ai_library.html:196
 msgid "Reactivate"
-msgstr ""
+msgstr "Heractiveren"
 
 #: aot_flask/templates/pages/ai/ai_library.html:207
 msgid "Retire"
-msgstr ""
+msgstr "Intrekken"
 
 #: aot_flask/templates/pages/ai/ai_library.html:233
 #, fuzzy
@@ -11524,11 +11524,11 @@ msgstr "User Settings"
 
 #: aot_flask/templates/pages/ai/ai_library.html:258
 msgid "Edit AI-Curated Knowledge"
-msgstr ""
+msgstr "Door AI samengestelde kennis bewerken"
 
 #: aot_flask/templates/pages/ai/ai_library.html:268
 msgid "Save (Confirms)"
-msgstr ""
+msgstr "Opslaan (bevestigt)"
 
 #: aot_flask/templates/pages/ai/ai_library.html:279
 #, fuzzy
@@ -11612,45 +11612,45 @@ msgstr ""
 
 #: aot_flask/templates/pages/ai/ai_library.html:301
 msgid "Pick from Google Drive"
-msgstr ""
+msgstr "Kiezen uit Google Drive"
 
 #: aot_flask/templates/pages/ai/ai_library.html:302
 msgid "Selected Files"
-msgstr ""
+msgstr "Geselecteerde bestanden"
 
 #: aot_flask/templates/pages/ai/ai_library.html:303
 msgid "No files selected yet."
-msgstr ""
+msgstr "Nog geen bestanden geselecteerd."
 
 #: aot_flask/templates/pages/ai/ai_library.html:304
 msgid "Checking Google connection…"
-msgstr ""
+msgstr "Google-verbinding controleren…"
 
 #: aot_flask/templates/pages/ai/ai_library.html:305
 msgid "Connected as"
-msgstr ""
+msgstr "Verbonden als"
 
 #: aot_flask/templates/pages/ai/ai_library.html:306
 msgid "Google account not connected."
-msgstr ""
+msgstr "Google-account niet gekoppeld."
 
 #: aot_flask/templates/pages/ai/ai_library.html:307
 msgid "Connect it under Settings > Integrations"
-msgstr ""
+msgstr "Koppel dit onder Instellingen > Integraties"
 
 #: aot_flask/templates/pages/ai/ai_library.html:308
 msgid "Your Google connection predates Drive access — reconnect to grant it."
-msgstr ""
+msgstr "Uw Google-verbinding dateert van vóór Drive-toegang — maak opnieuw verbinding om dit te verlenen."
 
 #: aot_flask/templates/pages/ai/ai_library.html:309
 msgid "Reconnect under Settings > Integrations"
-msgstr ""
+msgstr "Opnieuw koppelen onder Instellingen > Integraties"
 
 #: aot_flask/templates/pages/ai/ai_library.html:310
 msgid ""
 "Google Picker is not configured yet — an admin must set the Picker API "
 "key under Settings > Integrations."
-msgstr ""
+msgstr "Google Picker is nog niet geconfigureerd — een beheerder moet de Picker-API-sleutel instellen onder Instellingen > Integraties."
 
 #: aot_flask/templates/pages/ai/ai_library.html:315
 msgid "Source is not enabled. Activate it before syncing."
@@ -11684,47 +11684,47 @@ msgstr "Action Type"
 
 #: aot_flask/templates/pages/ai/ai_library.html:324
 msgid "Confirming…"
-msgstr ""
+msgstr "Bevestigen…"
 
 #: aot_flask/templates/pages/ai/ai_library.html:325
 msgid "Confirmed."
-msgstr ""
+msgstr "Bevestigd."
 
 #: aot_flask/templates/pages/ai/ai_library.html:326
 msgid "Retiring…"
-msgstr ""
+msgstr "Intrekken…"
 
 #: aot_flask/templates/pages/ai/ai_library.html:327
 msgid "Retired."
-msgstr ""
+msgstr "Ingetrokken."
 
 #: aot_flask/templates/pages/ai/ai_library.html:328
 msgid "Retire this item? It will stop being cited until reactivated."
-msgstr ""
+msgstr "Dit item intrekken? Het wordt niet meer geciteerd totdat het opnieuw is geactiveerd."
 
 #: aot_flask/templates/pages/ai/ai_library.html:329
 msgid "Reactivating…"
-msgstr ""
+msgstr "Heractiveren…"
 
 #: aot_flask/templates/pages/ai/ai_library.html:330
 msgid "Reactivated."
-msgstr ""
+msgstr "Geheractiveerd."
 
 #: aot_flask/templates/pages/ai/ai_library.html:331
 msgid "Item not found."
-msgstr ""
+msgstr "Item niet gevonden."
 
 #: aot_flask/templates/pages/ai/ai_library.html:332
 msgid "Heading"
-msgstr ""
+msgstr "Oriëntatie"
 
 #: aot_flask/templates/pages/ai/ai_library.html:334
 msgid "Tags (comma-separated)"
-msgstr ""
+msgstr "Tags (kommagescheiden)"
 
 #: aot_flask/templates/pages/ai/ai_library.html:335
 msgid "Attribution"
-msgstr ""
+msgstr "Bronvermelding"
 
 #: aot_flask/templates/pages/ai/ai_library.html:336
 #: aot_flask/templates/pages/geo_input_components/geo_input_option.html:37
@@ -11733,50 +11733,50 @@ msgstr "Related Documents"
 
 #: aot_flask/templates/pages/ai/ai_library.html:337
 msgid "Source Site"
-msgstr ""
+msgstr "Bronsite"
 
 #: aot_flask/templates/pages/ai/ai_library.html:338
 msgid "Link"
-msgstr ""
+msgstr "Link"
 
 #: aot_flask/templates/pages/ai/ai_library.html:339
 msgid "Usage:"
-msgstr ""
+msgstr "Gebruik:"
 
 #: aot_flask/templates/pages/ai/ai_library.html:340
 msgid "Select operations to register as knowledge"
-msgstr ""
+msgstr "Selecteer bewerkingen om als kennis te registreren"
 
 #: aot_flask/templates/pages/ai/ai_library.html:341
 msgid "Parameters for the selected operations"
-msgstr ""
+msgstr "Parameters voor de geselecteerde bewerkingen"
 
 #: aot_flask/templates/pages/ai/ai_library.html:342
 msgid "Select at least one operation."
-msgstr ""
+msgstr "Selecteer ten minste één bewerking."
 
 #: aot_flask/templates/pages/ai/ai_library.html:343
 msgid ""
 "Enter your service key, then use the Farm and Season pickers below to "
 "choose your farm by region and season by name — the internal IDs are "
 "filled in for you, so you never have to type a code."
-msgstr ""
+msgstr "Voer uw servicesleutel in en gebruik daarna de kiezers Boerderij en Seizoen hieronder om uw boerderij op regio en het seizoen op naam te kiezen — de interne ID's worden automatisch ingevuld, u hoeft nooit een code te typen."
 
 #: aot_flask/templates/pages/ai/ai_library.html:344
 msgid ""
 "Each of these operations only needs a service key and a date range — no "
 "farm-specific ID required."
-msgstr ""
+msgstr "Elk van deze bewerkingen heeft alleen een servicesleutel en een datumbereik nodig — geen boerderijspecifieke ID vereist."
 
 #: aot_flask/templates/pages/ai/ai_library.html:345
 msgid ""
 "A classification code from the measurement record — the example is one "
 "real sample value, not a fixed option; actual values vary per record."
-msgstr ""
+msgstr "Een classificatiecode uit het meetrecord — het voorbeeld is een echte steekproefwaarde, geen vaste optie; de werkelijke waarden verschillen per record."
 
 #: aot_flask/templates/pages/ai/ai_library.html:346
 msgid "Select an operation above to see its required parameters."
-msgstr ""
+msgstr "Selecteer hierboven een bewerking om de vereiste parameters te zien."
 
 #: aot_flask/templates/pages/ai/ai_library.html:347
 #: aot_flask/templates/pages/geo/geo_facility.html:1938
@@ -11786,63 +11786,63 @@ msgstr "Select Map"
 
 #: aot_flask/templates/pages/ai/ai_library.html:348
 msgid "Deselect All"
-msgstr ""
+msgstr "Alles deselecteren"
 
 #: aot_flask/templates/pages/ai/ai_library.html:349
 msgid "Farm"
-msgstr ""
+msgstr "Boerderij"
 
 #: aot_flask/templates/pages/ai/ai_library.html:350
 msgid "Cropping Season"
-msgstr ""
+msgstr "Teeltseizoen"
 
 #: aot_flask/templates/pages/ai/ai_library.html:351
 msgid "Load farms"
-msgstr ""
+msgstr "Boerderijen laden"
 
 #: aot_flask/templates/pages/ai/ai_library.html:352
 msgid "Select a farm"
-msgstr ""
+msgstr "Selecteer een boerderij"
 
 #: aot_flask/templates/pages/ai/ai_library.html:353
 msgid "Select a season"
-msgstr ""
+msgstr "Selecteer een seizoen"
 
 #: aot_flask/templates/pages/ai/ai_library.html:354
 msgid "Enter the API key first, then load farms."
-msgstr ""
+msgstr "Voer eerst de API-sleutel in en laad daarna de boerderijen."
 
 #: aot_flask/templates/pages/ai/ai_library.html:355
 msgid "Pick a farm first to load its seasons."
-msgstr ""
+msgstr "Kies eerst een boerderij om de seizoenen ervan te laden."
 
 #: aot_flask/templates/pages/ai/ai_library.html:356
 msgid "Current:"
-msgstr ""
+msgstr "Huidig:"
 
 #: aot_flask/templates/pages/ai/ai_library.html:358
 msgid "Load failed"
-msgstr ""
+msgstr "Laden mislukt"
 
 #: aot_flask/templates/pages/ai/ai_library.html:359
 msgid "No farms returned for this key."
-msgstr ""
+msgstr "Geen boerderijen geretourneerd voor deze sleutel."
 
 #: aot_flask/templates/pages/ai/ai_library.html:360
 msgid "No seasons found for this farm."
-msgstr ""
+msgstr "Geen seizoenen gevonden voor deze boerderij."
 
 #: aot_flask/templates/pages/ai/ai_library.html:433
 msgid "Facility ID"
-msgstr ""
+msgstr "Faciliteits-ID"
 
 #: aot_flask/templates/pages/ai/ai_library.html:434
 msgid "Cropping Serial No."
-msgstr ""
+msgstr "Teeltserienummer"
 
 #: aot_flask/templates/pages/ai/ai_library.html:435
 msgid "Measurement Date"
-msgstr ""
+msgstr "Meetdatum"
 
 #: aot_flask/templates/pages/ai/ai_library.html:436
 #: aot_flask/templates/pages/ai/ai_scheduler.html:174
@@ -11858,19 +11858,19 @@ msgstr "End Time"
 
 #: aot_flask/templates/pages/ai/ai_library.html:438
 msgid "Field Code"
-msgstr ""
+msgstr "Veldcode"
 
 #: aot_flask/templates/pages/ai/ai_library.html:439
 msgid "Section Code"
-msgstr ""
+msgstr "Sectiecode"
 
 #: aot_flask/templates/pages/ai/ai_library.html:440
 msgid "Attribute Code"
-msgstr ""
+msgstr "Attribuutcode"
 
 #: aot_flask/templates/pages/ai/ai_library.html:441
 msgid "Item Code"
-msgstr ""
+msgstr "Itemcode"
 
 #: aot_flask/templates/pages/ai/ai_library.html:680
 #: aot_flask/templates/pages/ai/ai_modals.html:123
@@ -13064,7 +13064,7 @@ msgstr ""
 
 #: aot_flask/templates/pages/ai/scheduler.html:1022
 msgid "Calendar shown in your timezone"
-msgstr ""
+msgstr "Agenda wordt weergegeven in uw tijdzone"
 
 #: aot_flask/templates/pages/ai/components/getting_to_know.html:218
 msgid "Getting to Know Each Other"
@@ -13485,7 +13485,7 @@ msgid ""
 "will be used. These represent the red and blue balance of the camera. "
 "These values will be between 0.0 and 8.0. Typical values for the gains "
 "are between 0.9 and 1.9."
-msgstr ""
+msgstr "Als Automatische witbalans op \"Uit\" staat, worden de AWB-rood- en -blauwversterkingen gebruikt. Deze vertegenwoordigen de rood-blauwbalans van de camera. Deze waarden liggen tussen 0,0 en 8,0. Typische waarden voor de versterkingen liggen tussen 0,9 en 1,9."
 
 #: aot_flask/templates/pages/camera_options/picamera.html:121
 msgid "With iso settings other than Auto, Exposure Mode becomes non-functional."
@@ -13821,7 +13821,7 @@ msgstr "Condition Settings"
 msgid ""
 "Conditional functions can not only execute Python 3 code, but also "
 "interact with AoT using conditions and actions within the code."
-msgstr ""
+msgstr "Voorwaardelijke functies kunnen niet alleen Python 3-code uitvoeren, maar ook interacteren met AoT via voorwaarden en acties binnen de code."
 
 #: aot_flask/templates/pages/function_options/conditional_options.html:46
 #, fuzzy
@@ -17533,15 +17533,15 @@ msgstr "Clear"
 
 #: aot_flask/templates/settings/integrations.html:24
 msgid "Google Calendar is not configured yet."
-msgstr ""
+msgstr "Google Agenda is nog niet geconfigureerd."
 
 #: aot_flask/templates/settings/integrations.html:26
 msgid "Enter the OAuth client credentials below to enable it."
-msgstr ""
+msgstr "Voer hieronder de OAuth-clientgegevens in om dit in te schakelen."
 
 #: aot_flask/templates/settings/integrations.html:28
 msgid "Ask an administrator to configure it."
-msgstr ""
+msgstr "Vraag een beheerder om dit in te stellen."
 
 #: aot_flask/templates/settings/integrations.html:41
 #, fuzzy
@@ -17550,11 +17550,11 @@ msgstr "Sort Direction"
 
 #: aot_flask/templates/settings/integrations.html:43
 msgid "AoT → Google"
-msgstr ""
+msgstr "AoT → Google"
 
 #: aot_flask/templates/settings/integrations.html:44
 msgid "Google → AoT"
-msgstr ""
+msgstr "Google → AoT"
 
 #: aot_flask/templates/settings/integrations.html:49
 #, fuzzy
@@ -17565,17 +17565,17 @@ msgstr "Past Week"
 msgid ""
 "Disconnect Google Calendar? Synced events already in Google are not "
 "deleted."
-msgstr ""
+msgstr "Google Agenda ontkoppelen? Al gesynchroniseerde gebeurtenissen in Google worden niet verwijderd."
 
 #: aot_flask/templates/settings/integrations.html:72
 msgid ""
 "Connect your Google account to sync farm schedule events with your Google"
 " Calendar (two-way)."
-msgstr ""
+msgstr "Koppel uw Google-account om planningsgebeurtenissen van de boerderij tweerichtings te synchroniseren met Google Agenda."
 
 #: aot_flask/templates/settings/integrations.html:77
 msgid "Connect Google Calendar"
-msgstr ""
+msgstr "Google Agenda koppelen"
 
 #: aot_flask/templates/settings/integrations.html:84
 #, fuzzy
@@ -17587,21 +17587,21 @@ msgid ""
 "Create an OAuth 2.0 Client ID (type: Web application) in the Google Cloud"
 " Console with the Google Calendar API enabled, then paste the credentials"
 " here."
-msgstr ""
+msgstr "Maak in de Google Cloud Console een OAuth 2.0-client-ID (type: webtoepassing) aan met de Google Calendar API ingeschakeld en plak de gegevens hier."
 
 #: aot_flask/templates/settings/integrations.html:91
 msgid "Authorized redirect URI to register in Google:"
-msgstr ""
+msgstr "Geautoriseerde redirect-URI om te registreren bij Google:"
 
 #: aot_flask/templates/settings/integrations.html:94
 msgid "Set the Public Base URL first to compute the redirect URI."
-msgstr ""
+msgstr "Stel eerst de openbare basis-URL in om de redirect-URI te berekenen."
 
 #: aot_flask/templates/settings/integrations.html:97
 msgid ""
 "Some values are provided by environment variables and override the fields"
 " below."
-msgstr ""
+msgstr "Sommige waarden worden geleverd via omgevingsvariabelen en overschrijven de onderstaande velden."
 
 #: aot_flask/templates/settings/integrations.html:106
 #, fuzzy
@@ -17615,18 +17615,18 @@ msgstr "Input ID"
 
 #: aot_flask/templates/settings/integrations.html:124
 msgid "OAuth Client Secret"
-msgstr ""
+msgstr "OAuth-clientgeheim"
 
 #: aot_flask/templates/settings/integrations.html:133
 msgid "Google Picker API Key"
-msgstr ""
+msgstr "Google Picker API-sleutel"
 
 #: aot_flask/templates/settings/integrations.html:139
 msgid ""
 "Optional — only needed for the AI Library Google Drive source (file "
 "picker). A Cloud Console API key with the Picker API enabled, NOT the "
 "OAuth Client Secret above."
-msgstr ""
+msgstr "Optioneel — alleen nodig voor de Google Drive-bron van de AI-bibliotheek (bestandskiezer). Een Cloud Console-API-sleutel met de Picker-API ingeschakeld, NIET het bovenstaande OAuth-clientgeheim."
 
 #: aot_flask/templates/settings/measurement.html:4
 #: aot_flask/templates/settings/measurement.html:6
@@ -26155,3 +26155,333 @@ msgstr ""
 #: aot_flask/templates/settings/user_detail.html:193
 msgid "Copy it now — it is shown only once and cannot be retrieved later."
 msgstr ""
+
+msgid "1 Year"
+msgstr "1 jaar"
+
+msgid "3D"
+msgstr "3D"
+
+msgid "Activation Status"
+msgstr "Activeringsstatus"
+
+msgid "Additional"
+msgstr "Aanvullend"
+
+msgid "Additional Info"
+msgstr "Aanvullende informatie"
+
+msgid "Advanced Settings"
+msgstr "Geavanceerde instellingen"
+
+msgid "After selecting Raise and/or Lower Output, additional options will appear for each output and must be configured. The options available depend on the output type selected. Therefore, before enabling the PID controller, confirm status after saving to ensure all configuration is complete."
+msgstr "Na het selecteren van Verhogen- en/of Verlagen-uitgang verschijnen er voor elke uitgang extra opties die geconfigureerd moeten worden. Welke opties beschikbaar zijn, hangt af van het gekozen uitgangstype. Controleer daarom, voordat u de PID-regelaar inschakelt, na het opslaan de status om te bevestigen dat de configuratie volledig is."
+
+msgid "All Data"
+msgstr "Alle gegevens"
+
+msgid "Are you sure you want to delete this item?"
+msgstr "Weet u zeker dat u dit item wilt verwijderen?"
+
+msgid "At least 1 column is required."
+msgstr "Er is minstens 1 kolom vereist."
+
+msgid "At least 2 points are required."
+msgstr "Er zijn minstens 2 punten vereist."
+
+msgid "Channel Options"
+msgstr "Kanaalinstellingen"
+
+msgid "Click \"Place on Map\" then click the facility center on the map. Drag the placed facility to move it. Form dimensions and rotation update the rectangle in real time."
+msgstr "Klik op \"Op kaart plaatsen\" en klik vervolgens op het middelpunt van de faciliteit op de kaart. Sleep de geplaatste faciliteit om deze te verplaatsen. Afmetingen en rotatie in het formulier werken de rechthoek in realtime bij."
+
+msgid "Click to edit Danger Tint colors"
+msgstr "Klik om de achtergrondkleur voor Gevaar te bewerken"
+
+msgid "Control hysteresis around setpoint. Applied as setpoint +/- band value. 0 to disable."
+msgstr "Regelhysterese rond het setpoint. Toegepast als setpoint ± bandwaarde. 0 om uit te schakelen."
+
+msgid "Create Method"
+msgstr "Methode aanmaken"
+
+msgid "Danger"
+msgstr "Gevaar"
+
+msgid "Danger Tint"
+msgstr "Achtergrondkleur Gevaar"
+
+msgid "Danger Tint Text"
+msgstr "Tekst op achtergrondkleur Gevaar"
+
+msgid "Datasheet"
+msgstr "Datasheet"
+
+msgid "Delete asset \"%s\"?"
+msgstr "Asset \"%s\" verwijderen?"
+
+msgid "Delete request failed"
+msgstr "Verwijderverzoek mislukt"
+
+msgid "Delete this record? Use \"End\" instead if it was actually grown — deleting removes it from the history."
+msgstr "Dit record verwijderen? Gebruik in plaats daarvan \"Beëindigen\" als er daadwerkelijk geteeld is — verwijderen haalt het uit de geschiedenis."
+
+msgid "Deletion is rejected if any facility references it."
+msgstr "Verwijderen wordt geweigerd als een faciliteit ernaar verwijst."
+
+msgid "Derivative Gain"
+msgstr "Differentiële versterking"
+
+msgid "Direct week adjustment on top of elapsed weeks. Positive = fast-forward, negative = compensate downtime."
+msgstr "Directe weekaanpassing bovenop de verstreken weken. Positief = vooruitspoelen, negatief = uitvaltijd compenseren."
+
+msgid "Display Graph"
+msgstr "Grafiek weergeven"
+
+msgid "Duplicate Facility"
+msgstr "Faciliteit dupliceren"
+
+msgid "Duplicate failed: "
+msgstr "Dupliceren mislukt: "
+
+msgid "Duplicate the facility currently open in the editor. Connected sensors/outputs are not carried over."
+msgstr "Dupliceert de faciliteit die momenteel geopend is in de editor. Verbonden sensoren/uitgangen worden niet overgenomen."
+
+msgid "Every Period of the Input, each Action is executed with the returned measurements."
+msgstr "Bij elke periode van de invoer wordt elke actie uitgevoerd met de teruggegeven metingen."
+
+msgid "Extruded Polygon"
+msgstr "Geëxtrudeerde polygoon"
+
+msgid "Facility duplicated. Sensors and outputs were not carried over."
+msgstr "Faciliteit gedupliceerd. Sensoren en uitgangen zijn niet overgenomen."
+
+msgid "GLTF Import"
+msgstr "GLTF-import"
+
+msgid "Graphs are useful for visualizing datasets over weeks, months, or years. Displaying such data on synchronous graphs can cause high data processing and computation load."
+msgstr "Grafieken zijn nuttig om datasets over weken, maanden of jaren te visualiseren. Het weergeven van dergelijke gegevens op synchrone grafieken kan een hoge verwerkings- en rekenbelasting veroorzaken."
+
+msgid "Include in AI Judgment"
+msgstr "Opnemen in AI-beoordeling"
+
+msgid "Info Tint"
+msgstr "Achtergrondkleur Info"
+
+msgid "Info Tint Text"
+msgstr "Tekst op achtergrondkleur Info"
+
+msgid "Integral Gain"
+msgstr "Integrerende versterking"
+
+msgid "Invalid saved ID. Please select another item from the list to save."
+msgstr "Ongeldige opgeslagen ID. Selecteer een ander item uit de lijst om op te slaan."
+
+msgid "Libraries"
+msgstr "Bibliotheken"
+
+msgid "Limits the maximum of the integrator"
+msgstr "Beperkt het maximum van de integrator"
+
+msgid "Limits the minimum of the integrator"
+msgstr "Beperkt het minimum van de integrator"
+
+msgid "Max measure age"
+msgstr "Maximale leeftijd van meting"
+
+msgid "Method End"
+msgstr "Einde methode"
+
+msgid "Method called to calculate this method value"
+msgstr "Methode die wordt aangeroepen om deze methodewaarde te berekenen"
+
+msgid "Methods are used to reference various types of setpoints in a PID controller. Typically, a PID controller controls a device to a fixed setpoint. If you want the setpoint to change over time, you can change the setpoint over time in the method and use it for control by tracking the value in the PID controller."
+msgstr "Methoden worden gebruikt om diverse soorten setpoints in een PID-regelaar te refereren. Doorgaans regelt een PID-regelaar een apparaat naar een vast setpoint. Als u wilt dat het setpoint in de loop van de tijd verandert, kunt u het setpoint binnen de methode laten variëren en het gebruiken voor regeling door die waarde in de PID-regelaar te volgen."
+
+msgid "No assets registered. Upload one using the button above."
+msgstr "Geen assets geregistreerd. Upload er een met de knop hierboven."
+
+msgid "No results"
+msgstr "Geen resultaten"
+
+msgid "No saved methods."
+msgstr "Geen opgeslagen methoden."
+
+msgid "None Selected"
+msgstr "Geen selectie"
+
+msgid "Output Action (On/Off, PWM, Value, Volume, etc.)"
+msgstr "Uitgangsactie (Aan/Uit, PWM, Waarde, Volume, enz.)"
+
+msgid "PID Parameters"
+msgstr "PID-parameters"
+
+msgid "Parcel"
+msgstr "Perceel"
+
+msgid "Please choose a CSV file."
+msgstr "Kies een CSV-bestand."
+
+msgid "Please enter an address."
+msgstr "Voer een adres in."
+
+msgid "Please select a file."
+msgstr "Selecteer een bestand."
+
+msgid "Processing..."
+msgstr "Verwerken..."
+
+msgid "Product"
+msgstr "Product"
+
+msgid "Product Info"
+msgstr "Productinformatie"
+
+msgid "Proportional Gain"
+msgstr "Proportionele versterking"
+
+msgid "Referencing facilities: "
+msgstr "Verwijzende faciliteiten: "
+
+msgid "Regenerate Thumbnail"
+msgstr "Miniatuur opnieuw genereren"
+
+msgid "Return to Method Management"
+msgstr "Terug naar methodebeheer"
+
+msgid "Row/card background for paused or held controllers (PID pause/hold, pending AI drafts). Offline devices use Danger Tint below."
+msgstr "Rij-/kaartachtergrond voor gepauzeerde of vastgehouden regelaars (PID-pauze/vasthouden, in behandeling zijnde AI-concepten). Offline apparaten gebruiken hieronder de achtergrondkleur Gevaar."
+
+msgid "Saved Methods"
+msgstr "Opgeslagen methoden"
+
+msgid "Searching"
+msgstr "Zoeken"
+
+msgid "Searching..."
+msgstr "Zoeken..."
+
+msgid "Select a facility to duplicate first."
+msgstr "Selecteer eerst een te dupliceren faciliteit."
+
+msgid "Select direction to control"
+msgstr "Selecteer de te regelen richting"
+
+msgid "Select one to calculate setpoint. When activated, measurement value replaces PID setpoint"
+msgstr "Selecteer er één om het setpoint te berekenen. Bij activering vervangt de gemeten waarde het PID-setpoint"
+
+msgid "Select output to lower the measured value"
+msgstr "Selecteer een uitgang om de gemeten waarde te verlagen"
+
+msgid "Select output to raise the measured value"
+msgstr "Selecteer een uitgang om de gemeten waarde te verhogen"
+
+msgid "Semantic color for destructive actions and errors (delete buttons, failures)"
+msgstr "Betekeniskleur voor destructieve acties en fouten (verwijderknoppen, mislukkingen)"
+
+msgid "Semantic color for informational marks and in-progress states"
+msgstr "Betekeniskleur voor informatieve markeringen en lopende statussen"
+
+msgid "Semantic color for success/normal results — a different axis from the device-state colors above"
+msgstr "Betekeniskleur voor succesvolle/normale resultaten — een andere as dan de bovenstaande apparaatstatuskleuren"
+
+msgid "Semantic color for warnings and attention marks"
+msgstr "Betekeniskleur voor waarschuwingen en aandachtsmarkeringen"
+
+msgid "Send Lower as Negative to Output."
+msgstr "Verlagen-waarde als negatief naar de uitgang sturen."
+
+msgid "Setpoint Tracking"
+msgstr "Setpoint-volgen"
+
+msgid "Soft background for failures — also the row/card background and map-popup name highlight for offline or unresponsive devices"
+msgstr "Zachte achtergrond voor mislukkingen — ook de rij-/kaartachtergrond en de naammarkering in de kaart-pop-up voor offline of niet-reagerende apparaten"
+
+msgid "Soft badge background for in-progress/informational states"
+msgstr "Zachte badgeachtergrond voor lopende/informatieve statussen"
+
+msgid "Soft badge background for success — pairs with the text color below"
+msgstr "Zachte badgeachtergrond voor succes — combineert met de onderstaande tekstkleur"
+
+msgid "Store Lower measurement as Negative."
+msgstr "Verlagen-meting als negatief opslaan."
+
+msgid "Success Tint"
+msgstr "Achtergrondkleur Succes"
+
+msgid "Success Tint Text"
+msgstr "Tekst op achtergrondkleur Succes"
+
+msgid "Text color used on the danger tint"
+msgstr "Tekstkleur gebruikt op achtergrondkleur Gevaar"
+
+msgid "Text color used on the info tint"
+msgstr "Tekstkleur gebruikt op achtergrondkleur Info"
+
+msgid "Text color used on the success tint"
+msgstr "Tekstkleur gebruikt op achtergrondkleur Succes"
+
+msgid "This is the desired state of the particular environmental condition. For example, you might enter a desired temperature in degrees Celsius."
+msgstr "Dit is de gewenste toestand van die specifieke omgevingsconditie. U kunt bijvoorbeeld een gewenste temperatuur in graden Celsius invoeren."
+
+msgid "This only allows or refuses requests to the external MCP server that is already running. The address and port it listens on are not configured here: for Docker, edit the aot_mcp service's \"ports:\" entry in docker-compose.yml and re-run docker compose up -d; for a native install, edit and restart the aotmcp systemd service."
+msgstr "Dit staat verzoeken naar de reeds draaiende externe MCP-server alleen toe of weigert ze. Het adres en de poort waarop deze luistert, worden hier niet geconfigureerd: bewerk voor Docker het item \"ports:\" van de aot_mcp-service in docker-compose.yml en voer docker compose up -d opnieuw uit; bewerk en herstart bij een native installatie de aotmcp systemd-service."
+
+msgid "Thumbnail"
+msgstr "Miniatuur"
+
+msgid "Up to"
+msgstr "Tot"
+
+msgid "Update Immediately"
+msgstr "Direct bijwerken"
+
+msgid "Upload failed"
+msgstr "Uploaden mislukt"
+
+msgid "Uploading…"
+msgstr "Uploaden…"
+
+msgid "Use \"Place on Map\" above the map to set the facility center, then drag the facility on the map to adjust it."
+msgstr "Gebruik \"Op kaart plaatsen\" boven de kaart om het middelpunt van de faciliteit in te stellen en sleep de faciliteit vervolgens op de kaart om deze aan te passen."
+
+msgid "When enabled, if this Input measures both temperature and humidity, a VPD (vapor pressure deficit) channel is automatically recorded."
+msgstr "Indien ingeschakeld en deze invoer meet zowel temperatuur als luchtvochtigheid, wordt automatisch een VPD-kanaal (vochtdrukdeficit) vastgelegd."
+
+msgid "When enabled, this device is visible to AI judgment and control tools."
+msgstr "Indien ingeschakeld, is dit apparaat zichtbaar voor AI-beoordelings- en regeltools."
+
+msgid "addresses"
+msgstr "adressen"
+
+msgid "and"
+msgstr "en"
+
+msgid "can be added."
+msgstr "kunnen worden toegevoegd."
+
+msgid "columns are allowed."
+msgstr "kolommen zijn toegestaan."
+
+msgid "failed"
+msgstr "mislukt"
+
+msgid "more parcels"
+msgstr "meer percelen"
+
+msgid "parcels found"
+msgstr "percelen gevonden"
+
+msgid "parcels previewed"
+msgstr "percelen in voorbeeld"
+
+msgid "points"
+msgstr "punten"
+
+msgid "processed"
+msgstr "verwerkt"
+
+msgid "saved"
+msgstr "opgeslagen"
+
+msgid "week columns"
+msgstr "weekkolommen"

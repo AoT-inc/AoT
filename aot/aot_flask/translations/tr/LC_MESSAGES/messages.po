@@ -10716,7 +10716,7 @@ msgstr "Section Start"
 
 #: aot_flask/templates/pages/landing.html:222
 msgid "Sign Up"
-msgstr ""
+msgstr "Kaydol"
 
 #: aot_flask/templates/pages/landing.html:236
 #, fuzzy
@@ -11472,50 +11472,50 @@ msgstr "Sync"
 
 #: aot_flask/templates/pages/ai/ai_library.html:136
 msgid "AI-Curated Knowledge Review"
-msgstr ""
+msgstr "Yapay Zekâ Tarafından Derlenen Bilginin İncelenmesi"
 
 #: aot_flask/templates/pages/ai/ai_library.html:138
 msgid ""
 "Knowledge the AI shelved on its own (always unconfirmed at first). "
 "Confirm/edit what is correct, retire what is wrong — see it cited as [AI "
 "정리 — 미확인] until reviewed."
-msgstr ""
+msgstr "Yapay zekânın kendi başına rafa kaldırdığı bilgi (başlangıçta her zaman onaylanmamıştır). Doğru olanı onaylayın/düzenleyin, yanlış olanı geri çekin — incelenene kadar [AI 정리 — 미확인] olarak alıntılanır."
 
 #: aot_flask/templates/pages/ai/ai_library.html:142
 msgid "No AI-curated knowledge yet."
-msgstr ""
+msgstr "Henüz yapay zekâ tarafından derlenen bilgi yok."
 
 #: aot_flask/templates/pages/ai/ai_library.html:166
 msgid "Corroborated"
-msgstr ""
+msgstr "Doğrulandı"
 
 #: aot_flask/templates/pages/ai/ai_library.html:167
 msgid "Retired"
-msgstr ""
+msgstr "Geri Çekildi"
 
 #: aot_flask/templates/pages/ai/ai_library.html:168
 msgid "Unconfirmed"
-msgstr ""
+msgstr "Onaylanmadı"
 
 #: aot_flask/templates/pages/ai/ai_library.html:172
 msgid "Flagged"
-msgstr ""
+msgstr "İşaretlendi"
 
 #: aot_flask/templates/pages/ai/ai_library.html:176
 msgid "Same topic as an authoritative source"
-msgstr ""
+msgstr "Yetkili bir kaynakla aynı konu"
 
 #: aot_flask/templates/pages/ai/ai_library.html:177
 msgid "Matches"
-msgstr ""
+msgstr "Eşleşmeler"
 
 #: aot_flask/templates/pages/ai/ai_library.html:196
 msgid "Reactivate"
-msgstr ""
+msgstr "Yeniden Etkinleştir"
 
 #: aot_flask/templates/pages/ai/ai_library.html:207
 msgid "Retire"
-msgstr ""
+msgstr "Geri Çek"
 
 #: aot_flask/templates/pages/ai/ai_library.html:233
 #, fuzzy
@@ -11524,11 +11524,11 @@ msgstr "User Settings"
 
 #: aot_flask/templates/pages/ai/ai_library.html:258
 msgid "Edit AI-Curated Knowledge"
-msgstr ""
+msgstr "Yapay Zekâ Tarafından Derlenen Bilgiyi Düzenle"
 
 #: aot_flask/templates/pages/ai/ai_library.html:268
 msgid "Save (Confirms)"
-msgstr ""
+msgstr "Kaydet (Onaylar)"
 
 #: aot_flask/templates/pages/ai/ai_library.html:279
 #, fuzzy
@@ -11612,45 +11612,45 @@ msgstr ""
 
 #: aot_flask/templates/pages/ai/ai_library.html:301
 msgid "Pick from Google Drive"
-msgstr ""
+msgstr "Google Drive'dan Seç"
 
 #: aot_flask/templates/pages/ai/ai_library.html:302
 msgid "Selected Files"
-msgstr ""
+msgstr "Seçilen Dosyalar"
 
 #: aot_flask/templates/pages/ai/ai_library.html:303
 msgid "No files selected yet."
-msgstr ""
+msgstr "Henüz dosya seçilmedi."
 
 #: aot_flask/templates/pages/ai/ai_library.html:304
 msgid "Checking Google connection…"
-msgstr ""
+msgstr "Google bağlantısı kontrol ediliyor…"
 
 #: aot_flask/templates/pages/ai/ai_library.html:305
 msgid "Connected as"
-msgstr ""
+msgstr "Şu şekilde bağlı:"
 
 #: aot_flask/templates/pages/ai/ai_library.html:306
 msgid "Google account not connected."
-msgstr ""
+msgstr "Google hesabı bağlı değil."
 
 #: aot_flask/templates/pages/ai/ai_library.html:307
 msgid "Connect it under Settings > Integrations"
-msgstr ""
+msgstr "Ayarlar > Entegrasyonlar altından bağlayın"
 
 #: aot_flask/templates/pages/ai/ai_library.html:308
 msgid "Your Google connection predates Drive access — reconnect to grant it."
-msgstr ""
+msgstr "Google bağlantınız Drive erişiminden önceki bir tarihe ait — bu erişimi vermek için yeniden bağlanın."
 
 #: aot_flask/templates/pages/ai/ai_library.html:309
 msgid "Reconnect under Settings > Integrations"
-msgstr ""
+msgstr "Ayarlar > Entegrasyonlar altından yeniden bağlanın"
 
 #: aot_flask/templates/pages/ai/ai_library.html:310
 msgid ""
 "Google Picker is not configured yet — an admin must set the Picker API "
 "key under Settings > Integrations."
-msgstr ""
+msgstr "Google Picker henüz yapılandırılmadı — bir yönetici, Picker API anahtarını Ayarlar > Entegrasyonlar altından ayarlamalıdır."
 
 #: aot_flask/templates/pages/ai/ai_library.html:315
 msgid "Source is not enabled. Activate it before syncing."
@@ -11684,47 +11684,47 @@ msgstr "Action Type"
 
 #: aot_flask/templates/pages/ai/ai_library.html:324
 msgid "Confirming…"
-msgstr ""
+msgstr "Onaylanıyor…"
 
 #: aot_flask/templates/pages/ai/ai_library.html:325
 msgid "Confirmed."
-msgstr ""
+msgstr "Onaylandı."
 
 #: aot_flask/templates/pages/ai/ai_library.html:326
 msgid "Retiring…"
-msgstr ""
+msgstr "Geri çekiliyor…"
 
 #: aot_flask/templates/pages/ai/ai_library.html:327
 msgid "Retired."
-msgstr ""
+msgstr "Geri çekildi."
 
 #: aot_flask/templates/pages/ai/ai_library.html:328
 msgid "Retire this item? It will stop being cited until reactivated."
-msgstr ""
+msgstr "Bu öğe geri çekilsin mi? Yeniden etkinleştirilene kadar artık alıntılanmayacak."
 
 #: aot_flask/templates/pages/ai/ai_library.html:329
 msgid "Reactivating…"
-msgstr ""
+msgstr "Yeniden etkinleştiriliyor…"
 
 #: aot_flask/templates/pages/ai/ai_library.html:330
 msgid "Reactivated."
-msgstr ""
+msgstr "Yeniden etkinleştirildi."
 
 #: aot_flask/templates/pages/ai/ai_library.html:331
 msgid "Item not found."
-msgstr ""
+msgstr "Öğe bulunamadı."
 
 #: aot_flask/templates/pages/ai/ai_library.html:332
 msgid "Heading"
-msgstr ""
+msgstr "Yön"
 
 #: aot_flask/templates/pages/ai/ai_library.html:334
 msgid "Tags (comma-separated)"
-msgstr ""
+msgstr "Etiketler (virgülle ayrılmış)"
 
 #: aot_flask/templates/pages/ai/ai_library.html:335
 msgid "Attribution"
-msgstr ""
+msgstr "Kaynak Belirtme"
 
 #: aot_flask/templates/pages/ai/ai_library.html:336
 #: aot_flask/templates/pages/geo_input_components/geo_input_option.html:37
@@ -11733,50 +11733,50 @@ msgstr "Related Documents"
 
 #: aot_flask/templates/pages/ai/ai_library.html:337
 msgid "Source Site"
-msgstr ""
+msgstr "Kaynak Site"
 
 #: aot_flask/templates/pages/ai/ai_library.html:338
 msgid "Link"
-msgstr ""
+msgstr "Bağlantı"
 
 #: aot_flask/templates/pages/ai/ai_library.html:339
 msgid "Usage:"
-msgstr ""
+msgstr "Kullanım:"
 
 #: aot_flask/templates/pages/ai/ai_library.html:340
 msgid "Select operations to register as knowledge"
-msgstr ""
+msgstr "Bilgi olarak kaydedilecek işlemleri seçin"
 
 #: aot_flask/templates/pages/ai/ai_library.html:341
 msgid "Parameters for the selected operations"
-msgstr ""
+msgstr "Seçilen işlemler için parametreler"
 
 #: aot_flask/templates/pages/ai/ai_library.html:342
 msgid "Select at least one operation."
-msgstr ""
+msgstr "En az bir işlem seçin."
 
 #: aot_flask/templates/pages/ai/ai_library.html:343
 msgid ""
 "Enter your service key, then use the Farm and Season pickers below to "
 "choose your farm by region and season by name — the internal IDs are "
 "filled in for you, so you never have to type a code."
-msgstr ""
+msgstr "Hizmet anahtarınızı girin, ardından çiftliğinizi bölgeye göre ve sezonu ada göre seçmek için aşağıdaki Çiftlik ve Sezon seçicilerini kullanın — iç kimlikler sizin için otomatik doldurulur, hiçbir zaman kod yazmanız gerekmez."
 
 #: aot_flask/templates/pages/ai/ai_library.html:344
 msgid ""
 "Each of these operations only needs a service key and a date range — no "
 "farm-specific ID required."
-msgstr ""
+msgstr "Bu işlemlerin her biri yalnızca bir hizmet anahtarı ve bir tarih aralığına ihtiyaç duyar — çiftliğe özgü bir kimlik gerekmez."
 
 #: aot_flask/templates/pages/ai/ai_library.html:345
 msgid ""
 "A classification code from the measurement record — the example is one "
 "real sample value, not a fixed option; actual values vary per record."
-msgstr ""
+msgstr "Ölçüm kaydından bir sınıflandırma kodu — örnek gerçek bir numune değeridir, sabit bir seçenek değildir; gerçek değerler kayda göre değişir."
 
 #: aot_flask/templates/pages/ai/ai_library.html:346
 msgid "Select an operation above to see its required parameters."
-msgstr ""
+msgstr "Gerekli parametrelerini görmek için yukarıdan bir işlem seçin."
 
 #: aot_flask/templates/pages/ai/ai_library.html:347
 #: aot_flask/templates/pages/geo/geo_facility.html:1938
@@ -11786,63 +11786,63 @@ msgstr "Select Map"
 
 #: aot_flask/templates/pages/ai/ai_library.html:348
 msgid "Deselect All"
-msgstr ""
+msgstr "Tüm Seçimi Kaldır"
 
 #: aot_flask/templates/pages/ai/ai_library.html:349
 msgid "Farm"
-msgstr ""
+msgstr "Çiftlik"
 
 #: aot_flask/templates/pages/ai/ai_library.html:350
 msgid "Cropping Season"
-msgstr ""
+msgstr "Ekim Sezonu"
 
 #: aot_flask/templates/pages/ai/ai_library.html:351
 msgid "Load farms"
-msgstr ""
+msgstr "Çiftlikleri yükle"
 
 #: aot_flask/templates/pages/ai/ai_library.html:352
 msgid "Select a farm"
-msgstr ""
+msgstr "Bir çiftlik seçin"
 
 #: aot_flask/templates/pages/ai/ai_library.html:353
 msgid "Select a season"
-msgstr ""
+msgstr "Bir sezon seçin"
 
 #: aot_flask/templates/pages/ai/ai_library.html:354
 msgid "Enter the API key first, then load farms."
-msgstr ""
+msgstr "Önce API anahtarını girin, ardından çiftlikleri yükleyin."
 
 #: aot_flask/templates/pages/ai/ai_library.html:355
 msgid "Pick a farm first to load its seasons."
-msgstr ""
+msgstr "Sezonlarını yüklemek için önce bir çiftlik seçin."
 
 #: aot_flask/templates/pages/ai/ai_library.html:356
 msgid "Current:"
-msgstr ""
+msgstr "Mevcut:"
 
 #: aot_flask/templates/pages/ai/ai_library.html:358
 msgid "Load failed"
-msgstr ""
+msgstr "Yükleme başarısız oldu"
 
 #: aot_flask/templates/pages/ai/ai_library.html:359
 msgid "No farms returned for this key."
-msgstr ""
+msgstr "Bu anahtar için hiçbir çiftlik döndürülmedi."
 
 #: aot_flask/templates/pages/ai/ai_library.html:360
 msgid "No seasons found for this farm."
-msgstr ""
+msgstr "Bu çiftlik için sezon bulunamadı."
 
 #: aot_flask/templates/pages/ai/ai_library.html:433
 msgid "Facility ID"
-msgstr ""
+msgstr "Tesis Kimliği"
 
 #: aot_flask/templates/pages/ai/ai_library.html:434
 msgid "Cropping Serial No."
-msgstr ""
+msgstr "Ekim Seri No."
 
 #: aot_flask/templates/pages/ai/ai_library.html:435
 msgid "Measurement Date"
-msgstr ""
+msgstr "Ölçüm Tarihi"
 
 #: aot_flask/templates/pages/ai/ai_library.html:436
 #: aot_flask/templates/pages/ai/ai_scheduler.html:174
@@ -11858,19 +11858,19 @@ msgstr "End Time"
 
 #: aot_flask/templates/pages/ai/ai_library.html:438
 msgid "Field Code"
-msgstr ""
+msgstr "Alan Kodu"
 
 #: aot_flask/templates/pages/ai/ai_library.html:439
 msgid "Section Code"
-msgstr ""
+msgstr "Bölüm Kodu"
 
 #: aot_flask/templates/pages/ai/ai_library.html:440
 msgid "Attribute Code"
-msgstr ""
+msgstr "Öznitelik Kodu"
 
 #: aot_flask/templates/pages/ai/ai_library.html:441
 msgid "Item Code"
-msgstr ""
+msgstr "Öğe Kodu"
 
 #: aot_flask/templates/pages/ai/ai_library.html:680
 #: aot_flask/templates/pages/ai/ai_modals.html:123
@@ -13064,7 +13064,7 @@ msgstr ""
 
 #: aot_flask/templates/pages/ai/scheduler.html:1022
 msgid "Calendar shown in your timezone"
-msgstr ""
+msgstr "Takvim, saat diliminizde gösterilir"
 
 #: aot_flask/templates/pages/ai/components/getting_to_know.html:218
 msgid "Getting to Know Each Other"
@@ -13485,7 +13485,7 @@ msgid ""
 "will be used. These represent the red and blue balance of the camera. "
 "These values will be between 0.0 and 8.0. Typical values for the gains "
 "are between 0.9 and 1.9."
-msgstr ""
+msgstr "Otomatik Beyaz Dengesi \"Kapalı\" olarak ayarlandığında, AWB Kırmızı ve Mavi kazançları kullanılır. Bunlar kameranın kırmızı ve mavi dengesini temsil eder. Bu değerler 0,0 ile 8,0 arasında olacaktır. Kazançlar için tipik değerler 0,9 ile 1,9 arasındadır."
 
 #: aot_flask/templates/pages/camera_options/picamera.html:121
 msgid "With iso settings other than Auto, Exposure Mode becomes non-functional."
@@ -13821,7 +13821,7 @@ msgstr "Condition Settings"
 msgid ""
 "Conditional functions can not only execute Python 3 code, but also "
 "interact with AoT using conditions and actions within the code."
-msgstr ""
+msgstr "Koşullu işlevler yalnızca Python 3 kodu çalıştırmakla kalmaz, kod içindeki koşullar ve eylemlerle AoT ile de etkileşime girebilir."
 
 #: aot_flask/templates/pages/function_options/conditional_options.html:46
 #, fuzzy
@@ -17533,15 +17533,15 @@ msgstr "Clear"
 
 #: aot_flask/templates/settings/integrations.html:24
 msgid "Google Calendar is not configured yet."
-msgstr ""
+msgstr "Google Takvim henüz yapılandırılmadı."
 
 #: aot_flask/templates/settings/integrations.html:26
 msgid "Enter the OAuth client credentials below to enable it."
-msgstr ""
+msgstr "Bunu etkinleştirmek için aşağıya OAuth istemci kimlik bilgilerini girin."
 
 #: aot_flask/templates/settings/integrations.html:28
 msgid "Ask an administrator to configure it."
-msgstr ""
+msgstr "Yapılandırması için bir yöneticiden yardım isteyin."
 
 #: aot_flask/templates/settings/integrations.html:41
 #, fuzzy
@@ -17550,11 +17550,11 @@ msgstr "Sort Direction"
 
 #: aot_flask/templates/settings/integrations.html:43
 msgid "AoT → Google"
-msgstr ""
+msgstr "AoT → Google"
 
 #: aot_flask/templates/settings/integrations.html:44
 msgid "Google → AoT"
-msgstr ""
+msgstr "Google → AoT"
 
 #: aot_flask/templates/settings/integrations.html:49
 #, fuzzy
@@ -17565,17 +17565,17 @@ msgstr "Past Week"
 msgid ""
 "Disconnect Google Calendar? Synced events already in Google are not "
 "deleted."
-msgstr ""
+msgstr "Google Takvim bağlantısı kesilsin mi? Google'da zaten senkronize edilmiş etkinlikler silinmez."
 
 #: aot_flask/templates/settings/integrations.html:72
 msgid ""
 "Connect your Google account to sync farm schedule events with your Google"
 " Calendar (two-way)."
-msgstr ""
+msgstr "Çiftlik takvim etkinliklerini Google Takvim ile çift yönlü senkronize etmek için Google hesabınızı bağlayın."
 
 #: aot_flask/templates/settings/integrations.html:77
 msgid "Connect Google Calendar"
-msgstr ""
+msgstr "Google Takvim'i Bağla"
 
 #: aot_flask/templates/settings/integrations.html:84
 #, fuzzy
@@ -17587,21 +17587,21 @@ msgid ""
 "Create an OAuth 2.0 Client ID (type: Web application) in the Google Cloud"
 " Console with the Google Calendar API enabled, then paste the credentials"
 " here."
-msgstr ""
+msgstr "Google Cloud Console'da Google Calendar API etkinleştirilmiş bir OAuth 2.0 İstemci Kimliği (tür: Web uygulaması) oluşturun, ardından kimlik bilgilerini buraya yapıştırın."
 
 #: aot_flask/templates/settings/integrations.html:91
 msgid "Authorized redirect URI to register in Google:"
-msgstr ""
+msgstr "Google'a kaydedilecek yetkili yönlendirme URI'si:"
 
 #: aot_flask/templates/settings/integrations.html:94
 msgid "Set the Public Base URL first to compute the redirect URI."
-msgstr ""
+msgstr "Yönlendirme URI'sini hesaplamak için önce genel taban URL'sini ayarlayın."
 
 #: aot_flask/templates/settings/integrations.html:97
 msgid ""
 "Some values are provided by environment variables and override the fields"
 " below."
-msgstr ""
+msgstr "Bazı değerler ortam değişkenleri tarafından sağlanır ve aşağıdaki alanları geçersiz kılar."
 
 #: aot_flask/templates/settings/integrations.html:106
 #, fuzzy
@@ -17615,18 +17615,18 @@ msgstr "Input ID"
 
 #: aot_flask/templates/settings/integrations.html:124
 msgid "OAuth Client Secret"
-msgstr ""
+msgstr "OAuth İstemci Gizli Anahtarı"
 
 #: aot_flask/templates/settings/integrations.html:133
 msgid "Google Picker API Key"
-msgstr ""
+msgstr "Google Picker API Anahtarı"
 
 #: aot_flask/templates/settings/integrations.html:139
 msgid ""
 "Optional — only needed for the AI Library Google Drive source (file "
 "picker). A Cloud Console API key with the Picker API enabled, NOT the "
 "OAuth Client Secret above."
-msgstr ""
+msgstr "İsteğe bağlı — yalnızca Yapay Zekâ Kitaplığı Google Drive kaynağı (dosya seçici) için gereklidir. Picker API'si etkinleştirilmiş bir Cloud Console API anahtarıdır, yukarıdaki OAuth İstemci Gizli Anahtarı DEĞİLDİR."
 
 #: aot_flask/templates/settings/measurement.html:4
 #: aot_flask/templates/settings/measurement.html:6
@@ -26147,3 +26147,333 @@ msgstr ""
 #: aot_flask/templates/settings/user_detail.html:193
 msgid "Copy it now — it is shown only once and cannot be retrieved later."
 msgstr ""
+
+msgid "1 Year"
+msgstr "1 Yıl"
+
+msgid "3D"
+msgstr "3D"
+
+msgid "Activation Status"
+msgstr "Etkinleştirme Durumu"
+
+msgid "Additional"
+msgstr "Ek"
+
+msgid "Additional Info"
+msgstr "Ek Bilgi"
+
+msgid "Advanced Settings"
+msgstr "Gelişmiş Ayarlar"
+
+msgid "After selecting Raise and/or Lower Output, additional options will appear for each output and must be configured. The options available depend on the output type selected. Therefore, before enabling the PID controller, confirm status after saving to ensure all configuration is complete."
+msgstr "Yükselt ve/veya Düşür çıkışı seçildikten sonra her çıkış için ek seçenekler görünür ve yapılandırılması gerekir. Hangi seçeneklerin görüneceği seçilen çıkış türüne bağlıdır. Bu yüzden PID denetleyicisini etkinleştirmeden önce, kaydettikten sonra durumu kontrol ederek yapılandırmanın tamamlandığından emin olun."
+
+msgid "All Data"
+msgstr "Tüm Veriler"
+
+msgid "Are you sure you want to delete this item?"
+msgstr "Bu öğeyi silmek istediğinizden emin misiniz?"
+
+msgid "At least 1 column is required."
+msgstr "En az 1 sütun gereklidir."
+
+msgid "At least 2 points are required."
+msgstr "En az 2 nokta gereklidir."
+
+msgid "Channel Options"
+msgstr "Kanal Seçenekleri"
+
+msgid "Click \"Place on Map\" then click the facility center on the map. Drag the placed facility to move it. Form dimensions and rotation update the rectangle in real time."
+msgstr "\"Haritaya Yerleştir\"e tıklayın, ardından haritada tesisin merkezine tıklayın. Yerleştirilen tesisi taşımak için sürükleyin. Formdaki boyutlar ve döndürme, dikdörtgeni gerçek zamanlı olarak günceller."
+
+msgid "Click to edit Danger Tint colors"
+msgstr "Tehlike arka plan rengini düzenlemek için tıklayın"
+
+msgid "Control hysteresis around setpoint. Applied as setpoint +/- band value. 0 to disable."
+msgstr "Ayar noktası çevresindeki kontrol histerezisi. Ayar noktası ± bant değeri olarak uygulanır. Devre dışı bırakmak için 0."
+
+msgid "Create Method"
+msgstr "Metot Oluştur"
+
+msgid "Danger"
+msgstr "Tehlike"
+
+msgid "Danger Tint"
+msgstr "Tehlike Arka Plan Rengi"
+
+msgid "Danger Tint Text"
+msgstr "Tehlike Arka Plan Rengi Metni"
+
+msgid "Datasheet"
+msgstr "Veri Sayfası"
+
+msgid "Delete asset \"%s\"?"
+msgstr "\"%s\" varlığı silinsin mi?"
+
+msgid "Delete request failed"
+msgstr "Silme isteği başarısız oldu"
+
+msgid "Delete this record? Use \"End\" instead if it was actually grown — deleting removes it from the history."
+msgstr "Bu kayıt silinsin mi? Gerçekten yetiştirildiyse bunun yerine \"Bitir\"i kullanın — silme işlemi kaydı geçmişten kaldırır."
+
+msgid "Deletion is rejected if any facility references it."
+msgstr "Herhangi bir tesis buna başvuruyorsa silme işlemi reddedilir."
+
+msgid "Derivative Gain"
+msgstr "Türev Kazancı"
+
+msgid "Direct week adjustment on top of elapsed weeks. Positive = fast-forward, negative = compensate downtime."
+msgstr "Geçen haftalara ek olarak doğrudan hafta ayarı. Pozitif = ileri sar, negatif = kesinti süresini telafi et."
+
+msgid "Display Graph"
+msgstr "Grafiği Göster"
+
+msgid "Duplicate Facility"
+msgstr "Tesisi Kopyala"
+
+msgid "Duplicate failed: "
+msgstr "Kopyalama başarısız oldu: "
+
+msgid "Duplicate the facility currently open in the editor. Connected sensors/outputs are not carried over."
+msgstr "Düzenleyicide şu anda açık olan tesisi kopyalar. Bağlı sensörler/çıkışlar aktarılmaz."
+
+msgid "Every Period of the Input, each Action is executed with the returned measurements."
+msgstr "Girişin her periyodunda, döndürülen ölçümlerle her eylem çalıştırılır."
+
+msgid "Extruded Polygon"
+msgstr "Ekstrüde Poligon"
+
+msgid "Facility duplicated. Sensors and outputs were not carried over."
+msgstr "Tesis kopyalandı. Sensörler ve çıkışlar aktarılmadı."
+
+msgid "GLTF Import"
+msgstr "GLTF İçe Aktarma"
+
+msgid "Graphs are useful for visualizing datasets over weeks, months, or years. Displaying such data on synchronous graphs can cause high data processing and computation load."
+msgstr "Grafikler, haftalar, aylar veya yıllar boyunca veri kümelerini görselleştirmek için kullanışlıdır. Bu tür verileri eşzamanlı grafiklerde göstermek yüksek veri işleme ve hesaplama yüküne neden olabilir."
+
+msgid "Include in AI Judgment"
+msgstr "Yapay Zekâ Değerlendirmesine Dahil Et"
+
+msgid "Info Tint"
+msgstr "Bilgi Arka Plan Rengi"
+
+msgid "Info Tint Text"
+msgstr "Bilgi Arka Plan Rengi Metni"
+
+msgid "Integral Gain"
+msgstr "İntegral Kazancı"
+
+msgid "Invalid saved ID. Please select another item from the list to save."
+msgstr "Geçersiz kayıtlı kimlik. Kaydetmek için listeden başka bir öğe seçin."
+
+msgid "Libraries"
+msgstr "Kitaplıklar"
+
+msgid "Limits the maximum of the integrator"
+msgstr "İntegratörün maksimumunu sınırlar"
+
+msgid "Limits the minimum of the integrator"
+msgstr "İntegratörün minimumunu sınırlar"
+
+msgid "Max measure age"
+msgstr "Maksimum ölçüm yaşı"
+
+msgid "Method End"
+msgstr "Metot Sonu"
+
+msgid "Method called to calculate this method value"
+msgstr "Bu metot değerini hesaplamak için çağrılan metot"
+
+msgid "Methods are used to reference various types of setpoints in a PID controller. Typically, a PID controller controls a device to a fixed setpoint. If you want the setpoint to change over time, you can change the setpoint over time in the method and use it for control by tracking the value in the PID controller."
+msgstr "Metotlar, bir PID denetleyicisinde çeşitli ayar noktası türlerine başvurmak için kullanılır. Genellikle bir PID denetleyicisi bir cihazı sabit bir ayar noktasına göre kontrol eder. Ayar noktasının zamanla değişmesini istiyorsanız, metot içinde zamanla değiştirip PID denetleyicisinde bu değeri izleyerek kontrol için kullanabilirsiniz."
+
+msgid "No assets registered. Upload one using the button above."
+msgstr "Kayıtlı varlık yok. Yukarıdaki düğmeyi kullanarak bir tane yükleyin."
+
+msgid "No results"
+msgstr "Sonuç yok"
+
+msgid "No saved methods."
+msgstr "Kayıtlı metot yok."
+
+msgid "None Selected"
+msgstr "Hiçbiri Seçilmedi"
+
+msgid "Output Action (On/Off, PWM, Value, Volume, etc.)"
+msgstr "Çıkış Eylemi (Açık/Kapalı, PWM, Değer, Hacim vb.)"
+
+msgid "PID Parameters"
+msgstr "PID Parametreleri"
+
+msgid "Parcel"
+msgstr "Parsel"
+
+msgid "Please choose a CSV file."
+msgstr "Lütfen bir CSV dosyası seçin."
+
+msgid "Please enter an address."
+msgstr "Lütfen bir adres girin."
+
+msgid "Please select a file."
+msgstr "Lütfen bir dosya seçin."
+
+msgid "Processing..."
+msgstr "İşleniyor..."
+
+msgid "Product"
+msgstr "Ürün"
+
+msgid "Product Info"
+msgstr "Ürün Bilgisi"
+
+msgid "Proportional Gain"
+msgstr "Oransal Kazanç"
+
+msgid "Referencing facilities: "
+msgstr "Başvuran tesisler: "
+
+msgid "Regenerate Thumbnail"
+msgstr "Küçük Resmi Yeniden Oluştur"
+
+msgid "Return to Method Management"
+msgstr "Metot Yönetimine Dön"
+
+msgid "Row/card background for paused or held controllers (PID pause/hold, pending AI drafts). Offline devices use Danger Tint below."
+msgstr "Duraklatılmış veya tutulan denetleyiciler için satır/kart arka planı (PID duraklat/tut, bekleyen yapay zekâ taslakları). Çevrimdışı cihazlar aşağıdaki Tehlike arka plan rengini kullanır."
+
+msgid "Saved Methods"
+msgstr "Kayıtlı Metotlar"
+
+msgid "Searching"
+msgstr "Aranıyor"
+
+msgid "Searching..."
+msgstr "Aranıyor..."
+
+msgid "Select a facility to duplicate first."
+msgstr "Önce kopyalanacak bir tesis seçin."
+
+msgid "Select direction to control"
+msgstr "Kontrol edilecek yönü seçin"
+
+msgid "Select one to calculate setpoint. When activated, measurement value replaces PID setpoint"
+msgstr "Ayar noktasını hesaplamak için birini seçin. Etkinleştirildiğinde, ölçüm değeri PID ayar noktasının yerini alır"
+
+msgid "Select output to lower the measured value"
+msgstr "Ölçülen değeri düşürecek çıkışı seçin"
+
+msgid "Select output to raise the measured value"
+msgstr "Ölçülen değeri yükseltecek çıkışı seçin"
+
+msgid "Semantic color for destructive actions and errors (delete buttons, failures)"
+msgstr "Yıkıcı eylemler ve hatalar için anlamsal renk (silme düğmeleri, başarısızlıklar)"
+
+msgid "Semantic color for informational marks and in-progress states"
+msgstr "Bilgilendirici işaretler ve devam eden durumlar için anlamsal renk"
+
+msgid "Semantic color for success/normal results — a different axis from the device-state colors above"
+msgstr "Başarılı/normal sonuçlar için anlamsal renk — yukarıdaki cihaz durumu renklerinden farklı bir eksen"
+
+msgid "Semantic color for warnings and attention marks"
+msgstr "Uyarılar ve dikkat işaretleri için anlamsal renk"
+
+msgid "Send Lower as Negative to Output."
+msgstr "Düşürme değerini çıkışa negatif olarak gönder."
+
+msgid "Setpoint Tracking"
+msgstr "Ayar Noktası Takibi"
+
+msgid "Soft background for failures — also the row/card background and map-popup name highlight for offline or unresponsive devices"
+msgstr "Başarısızlıklar için yumuşak arka plan — ayrıca çevrimdışı veya yanıt vermeyen cihazlar için satır/kart arka planı ve harita açılır penceresi adı vurgusu"
+
+msgid "Soft badge background for in-progress/informational states"
+msgstr "Devam eden/bilgilendirici durumlar için yumuşak rozet arka planı"
+
+msgid "Soft badge background for success — pairs with the text color below"
+msgstr "Başarı için yumuşak rozet arka planı — aşağıdaki metin rengiyle eşleşir"
+
+msgid "Store Lower measurement as Negative."
+msgstr "Düşürme ölçümünü negatif olarak sakla."
+
+msgid "Success Tint"
+msgstr "Başarı Arka Plan Rengi"
+
+msgid "Success Tint Text"
+msgstr "Başarı Arka Plan Rengi Metni"
+
+msgid "Text color used on the danger tint"
+msgstr "Tehlike arka plan renginde kullanılan metin rengi"
+
+msgid "Text color used on the info tint"
+msgstr "Bilgi arka plan renginde kullanılan metin rengi"
+
+msgid "Text color used on the success tint"
+msgstr "Başarı arka plan renginde kullanılan metin rengi"
+
+msgid "This is the desired state of the particular environmental condition. For example, you might enter a desired temperature in degrees Celsius."
+msgstr "Bu, belirli bir çevresel koşulun istenen durumudur. Örneğin, Santigrat derece cinsinden istenen bir sıcaklık girebilirsiniz."
+
+msgid "This only allows or refuses requests to the external MCP server that is already running. The address and port it listens on are not configured here: for Docker, edit the aot_mcp service's \"ports:\" entry in docker-compose.yml and re-run docker compose up -d; for a native install, edit and restart the aotmcp systemd service."
+msgstr "Bu yalnızca zaten çalışmakta olan harici MCP sunucusuna gelen istekleri kabul eder veya reddeder. Dinlediği adres ve port burada yapılandırılmaz: Docker için, docker-compose.yml içindeki aot_mcp hizmetinin \"ports:\" girdisini düzenleyip docker compose up -d'yi yeniden çalıştırın; yerel kurulum için aotmcp systemd hizmetini düzenleyip yeniden başlatın."
+
+msgid "Thumbnail"
+msgstr "Küçük Resim"
+
+msgid "Up to"
+msgstr "En fazla"
+
+msgid "Update Immediately"
+msgstr "Hemen Güncelle"
+
+msgid "Upload failed"
+msgstr "Yükleme başarısız oldu"
+
+msgid "Uploading…"
+msgstr "Yükleniyor…"
+
+msgid "Use \"Place on Map\" above the map to set the facility center, then drag the facility on the map to adjust it."
+msgstr "Tesisin merkezini ayarlamak için haritanın üzerindeki \"Haritaya Yerleştir\"i kullanın, ardından ayarlamak için tesisi haritada sürükleyin."
+
+msgid "When enabled, if this Input measures both temperature and humidity, a VPD (vapor pressure deficit) channel is automatically recorded."
+msgstr "Etkinleştirildiğinde ve bu giriş hem sıcaklığı hem de nemi ölçüyorsa, bir VPD (buhar basıncı açığı) kanalı otomatik olarak kaydedilir."
+
+msgid "When enabled, this device is visible to AI judgment and control tools."
+msgstr "Etkinleştirildiğinde, bu cihaz yapay zekâ değerlendirme ve kontrol araçları tarafından görülebilir."
+
+msgid "addresses"
+msgstr "adres"
+
+msgid "and"
+msgstr "ve"
+
+msgid "can be added."
+msgstr "eklenebilir."
+
+msgid "columns are allowed."
+msgstr "sütuna izin verilir."
+
+msgid "failed"
+msgstr "başarısız"
+
+msgid "more parcels"
+msgstr "parsel daha"
+
+msgid "parcels found"
+msgstr "parsel bulundu"
+
+msgid "parcels previewed"
+msgstr "parsel önizlendi"
+
+msgid "points"
+msgstr "nokta"
+
+msgid "processed"
+msgstr "işlendi"
+
+msgid "saved"
+msgstr "kaydedildi"
+
+msgid "week columns"
+msgstr "hafta sütunu"

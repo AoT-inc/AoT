@@ -10716,7 +10716,7 @@ msgstr "Section Start"
 
 #: aot_flask/templates/pages/landing.html:222
 msgid "Sign Up"
-msgstr ""
+msgstr "Registrera dig"
 
 #: aot_flask/templates/pages/landing.html:236
 #, fuzzy
@@ -11472,50 +11472,50 @@ msgstr "Sync"
 
 #: aot_flask/templates/pages/ai/ai_library.html:136
 msgid "AI-Curated Knowledge Review"
-msgstr ""
+msgstr "Granskning av AI-sammanställd kunskap"
 
 #: aot_flask/templates/pages/ai/ai_library.html:138
 msgid ""
 "Knowledge the AI shelved on its own (always unconfirmed at first). "
 "Confirm/edit what is correct, retire what is wrong — see it cited as [AI "
 "정리 — 미확인] until reviewed."
-msgstr ""
+msgstr "Kunskap som AI:n lagt undan på egen hand (alltid obekräftad från början). Bekräfta/redigera det som är korrekt, dra tillbaka det som är fel — den citeras som [AI 정리 — 미확인] tills den granskats."
 
 #: aot_flask/templates/pages/ai/ai_library.html:142
 msgid "No AI-curated knowledge yet."
-msgstr ""
+msgstr "Ingen AI-sammanställd kunskap ännu."
 
 #: aot_flask/templates/pages/ai/ai_library.html:166
 msgid "Corroborated"
-msgstr ""
+msgstr "Bekräftad från annat håll"
 
 #: aot_flask/templates/pages/ai/ai_library.html:167
 msgid "Retired"
-msgstr ""
+msgstr "Tillbakadraget"
 
 #: aot_flask/templates/pages/ai/ai_library.html:168
 msgid "Unconfirmed"
-msgstr ""
+msgstr "Obekräftad"
 
 #: aot_flask/templates/pages/ai/ai_library.html:172
 msgid "Flagged"
-msgstr ""
+msgstr "Flaggad"
 
 #: aot_flask/templates/pages/ai/ai_library.html:176
 msgid "Same topic as an authoritative source"
-msgstr ""
+msgstr "Samma ämne som en auktoritativ källa"
 
 #: aot_flask/templates/pages/ai/ai_library.html:177
 msgid "Matches"
-msgstr ""
+msgstr "Träffar"
 
 #: aot_flask/templates/pages/ai/ai_library.html:196
 msgid "Reactivate"
-msgstr ""
+msgstr "Återaktivera"
 
 #: aot_flask/templates/pages/ai/ai_library.html:207
 msgid "Retire"
-msgstr ""
+msgstr "Dra tillbaka"
 
 #: aot_flask/templates/pages/ai/ai_library.html:233
 #, fuzzy
@@ -11524,11 +11524,11 @@ msgstr "User Settings"
 
 #: aot_flask/templates/pages/ai/ai_library.html:258
 msgid "Edit AI-Curated Knowledge"
-msgstr ""
+msgstr "Redigera AI-sammanställd kunskap"
 
 #: aot_flask/templates/pages/ai/ai_library.html:268
 msgid "Save (Confirms)"
-msgstr ""
+msgstr "Spara (bekräftar)"
 
 #: aot_flask/templates/pages/ai/ai_library.html:279
 #, fuzzy
@@ -11612,45 +11612,45 @@ msgstr ""
 
 #: aot_flask/templates/pages/ai/ai_library.html:301
 msgid "Pick from Google Drive"
-msgstr ""
+msgstr "Välj från Google Drive"
 
 #: aot_flask/templates/pages/ai/ai_library.html:302
 msgid "Selected Files"
-msgstr ""
+msgstr "Valda filer"
 
 #: aot_flask/templates/pages/ai/ai_library.html:303
 msgid "No files selected yet."
-msgstr ""
+msgstr "Inga filer valda ännu."
 
 #: aot_flask/templates/pages/ai/ai_library.html:304
 msgid "Checking Google connection…"
-msgstr ""
+msgstr "Kontrollerar anslutning till Google…"
 
 #: aot_flask/templates/pages/ai/ai_library.html:305
 msgid "Connected as"
-msgstr ""
+msgstr "Ansluten som"
 
 #: aot_flask/templates/pages/ai/ai_library.html:306
 msgid "Google account not connected."
-msgstr ""
+msgstr "Google-konto inte anslutet."
 
 #: aot_flask/templates/pages/ai/ai_library.html:307
 msgid "Connect it under Settings > Integrations"
-msgstr ""
+msgstr "Anslut det under Inställningar > Integrationer"
 
 #: aot_flask/templates/pages/ai/ai_library.html:308
 msgid "Your Google connection predates Drive access — reconnect to grant it."
-msgstr ""
+msgstr "Din Google-anslutning föregår Drive-åtkomst — återanslut för att bevilja den."
 
 #: aot_flask/templates/pages/ai/ai_library.html:309
 msgid "Reconnect under Settings > Integrations"
-msgstr ""
+msgstr "Återanslut under Inställningar > Integrationer"
 
 #: aot_flask/templates/pages/ai/ai_library.html:310
 msgid ""
 "Google Picker is not configured yet — an admin must set the Picker API "
 "key under Settings > Integrations."
-msgstr ""
+msgstr "Google Picker är inte konfigurerad ännu — en administratör måste ange Picker-API-nyckeln under Inställningar > Integrationer."
 
 #: aot_flask/templates/pages/ai/ai_library.html:315
 msgid "Source is not enabled. Activate it before syncing."
@@ -11684,47 +11684,47 @@ msgstr "Action Type"
 
 #: aot_flask/templates/pages/ai/ai_library.html:324
 msgid "Confirming…"
-msgstr ""
+msgstr "Bekräftar…"
 
 #: aot_flask/templates/pages/ai/ai_library.html:325
 msgid "Confirmed."
-msgstr ""
+msgstr "Bekräftad."
 
 #: aot_flask/templates/pages/ai/ai_library.html:326
 msgid "Retiring…"
-msgstr ""
+msgstr "Drar tillbaka…"
 
 #: aot_flask/templates/pages/ai/ai_library.html:327
 msgid "Retired."
-msgstr ""
+msgstr "Tillbakadraget."
 
 #: aot_flask/templates/pages/ai/ai_library.html:328
 msgid "Retire this item? It will stop being cited until reactivated."
-msgstr ""
+msgstr "Dra tillbaka detta objekt? Det kommer inte längre citeras förrän det återaktiveras."
 
 #: aot_flask/templates/pages/ai/ai_library.html:329
 msgid "Reactivating…"
-msgstr ""
+msgstr "Återaktiverar…"
 
 #: aot_flask/templates/pages/ai/ai_library.html:330
 msgid "Reactivated."
-msgstr ""
+msgstr "Återaktiverad."
 
 #: aot_flask/templates/pages/ai/ai_library.html:331
 msgid "Item not found."
-msgstr ""
+msgstr "Objektet hittades inte."
 
 #: aot_flask/templates/pages/ai/ai_library.html:332
 msgid "Heading"
-msgstr ""
+msgstr "Riktning"
 
 #: aot_flask/templates/pages/ai/ai_library.html:334
 msgid "Tags (comma-separated)"
-msgstr ""
+msgstr "Taggar (kommaseparerade)"
 
 #: aot_flask/templates/pages/ai/ai_library.html:335
 msgid "Attribution"
-msgstr ""
+msgstr "Källangivelse"
 
 #: aot_flask/templates/pages/ai/ai_library.html:336
 #: aot_flask/templates/pages/geo_input_components/geo_input_option.html:37
@@ -11733,50 +11733,50 @@ msgstr "Related Documents"
 
 #: aot_flask/templates/pages/ai/ai_library.html:337
 msgid "Source Site"
-msgstr ""
+msgstr "Källplats"
 
 #: aot_flask/templates/pages/ai/ai_library.html:338
 msgid "Link"
-msgstr ""
+msgstr "Länk"
 
 #: aot_flask/templates/pages/ai/ai_library.html:339
 msgid "Usage:"
-msgstr ""
+msgstr "Användning:"
 
 #: aot_flask/templates/pages/ai/ai_library.html:340
 msgid "Select operations to register as knowledge"
-msgstr ""
+msgstr "Välj åtgärder att registrera som kunskap"
 
 #: aot_flask/templates/pages/ai/ai_library.html:341
 msgid "Parameters for the selected operations"
-msgstr ""
+msgstr "Parametrar för de valda åtgärderna"
 
 #: aot_flask/templates/pages/ai/ai_library.html:342
 msgid "Select at least one operation."
-msgstr ""
+msgstr "Välj minst en åtgärd."
 
 #: aot_flask/templates/pages/ai/ai_library.html:343
 msgid ""
 "Enter your service key, then use the Farm and Season pickers below to "
 "choose your farm by region and season by name — the internal IDs are "
 "filled in for you, so you never have to type a code."
-msgstr ""
+msgstr "Ange din tjänstenyckel och använd sedan väljarna för Gård och Säsong nedan för att välja din gård efter region och säsongen efter namn — de interna ID:na fylls i automatiskt, så du behöver aldrig skriva in en kod."
 
 #: aot_flask/templates/pages/ai/ai_library.html:344
 msgid ""
 "Each of these operations only needs a service key and a date range — no "
 "farm-specific ID required."
-msgstr ""
+msgstr "Var och en av dessa åtgärder behöver bara en tjänstenyckel och ett datumintervall — inget gårdsspecifikt ID krävs."
 
 #: aot_flask/templates/pages/ai/ai_library.html:345
 msgid ""
 "A classification code from the measurement record — the example is one "
 "real sample value, not a fixed option; actual values vary per record."
-msgstr ""
+msgstr "En klassificeringskod från mätposten — exemplet är ett verkligt stickprovsvärde, inte ett fast alternativ; faktiska värden varierar per post."
 
 #: aot_flask/templates/pages/ai/ai_library.html:346
 msgid "Select an operation above to see its required parameters."
-msgstr ""
+msgstr "Välj en åtgärd ovan för att se dess obligatoriska parametrar."
 
 #: aot_flask/templates/pages/ai/ai_library.html:347
 #: aot_flask/templates/pages/geo/geo_facility.html:1938
@@ -11786,63 +11786,63 @@ msgstr "Select Map"
 
 #: aot_flask/templates/pages/ai/ai_library.html:348
 msgid "Deselect All"
-msgstr ""
+msgstr "Avmarkera alla"
 
 #: aot_flask/templates/pages/ai/ai_library.html:349
 msgid "Farm"
-msgstr ""
+msgstr "Gård"
 
 #: aot_flask/templates/pages/ai/ai_library.html:350
 msgid "Cropping Season"
-msgstr ""
+msgstr "Odlingssäsong"
 
 #: aot_flask/templates/pages/ai/ai_library.html:351
 msgid "Load farms"
-msgstr ""
+msgstr "Läs in gårdar"
 
 #: aot_flask/templates/pages/ai/ai_library.html:352
 msgid "Select a farm"
-msgstr ""
+msgstr "Välj en gård"
 
 #: aot_flask/templates/pages/ai/ai_library.html:353
 msgid "Select a season"
-msgstr ""
+msgstr "Välj en säsong"
 
 #: aot_flask/templates/pages/ai/ai_library.html:354
 msgid "Enter the API key first, then load farms."
-msgstr ""
+msgstr "Ange API-nyckeln först och läs sedan in gårdar."
 
 #: aot_flask/templates/pages/ai/ai_library.html:355
 msgid "Pick a farm first to load its seasons."
-msgstr ""
+msgstr "Välj en gård först för att läsa in dess säsonger."
 
 #: aot_flask/templates/pages/ai/ai_library.html:356
 msgid "Current:"
-msgstr ""
+msgstr "Aktuell:"
 
 #: aot_flask/templates/pages/ai/ai_library.html:358
 msgid "Load failed"
-msgstr ""
+msgstr "Inläsning misslyckades"
 
 #: aot_flask/templates/pages/ai/ai_library.html:359
 msgid "No farms returned for this key."
-msgstr ""
+msgstr "Inga gårdar returnerades för denna nyckel."
 
 #: aot_flask/templates/pages/ai/ai_library.html:360
 msgid "No seasons found for this farm."
-msgstr ""
+msgstr "Inga säsonger hittades för denna gård."
 
 #: aot_flask/templates/pages/ai/ai_library.html:433
 msgid "Facility ID"
-msgstr ""
+msgstr "Anläggnings-ID"
 
 #: aot_flask/templates/pages/ai/ai_library.html:434
 msgid "Cropping Serial No."
-msgstr ""
+msgstr "Odlingsserienummer"
 
 #: aot_flask/templates/pages/ai/ai_library.html:435
 msgid "Measurement Date"
-msgstr ""
+msgstr "Mätdatum"
 
 #: aot_flask/templates/pages/ai/ai_library.html:436
 #: aot_flask/templates/pages/ai/ai_scheduler.html:174
@@ -11858,19 +11858,19 @@ msgstr "End Time"
 
 #: aot_flask/templates/pages/ai/ai_library.html:438
 msgid "Field Code"
-msgstr ""
+msgstr "Fältkod"
 
 #: aot_flask/templates/pages/ai/ai_library.html:439
 msgid "Section Code"
-msgstr ""
+msgstr "Sektionskod"
 
 #: aot_flask/templates/pages/ai/ai_library.html:440
 msgid "Attribute Code"
-msgstr ""
+msgstr "Attributkod"
 
 #: aot_flask/templates/pages/ai/ai_library.html:441
 msgid "Item Code"
-msgstr ""
+msgstr "Artikelkod"
 
 #: aot_flask/templates/pages/ai/ai_library.html:680
 #: aot_flask/templates/pages/ai/ai_modals.html:123
@@ -13064,7 +13064,7 @@ msgstr ""
 
 #: aot_flask/templates/pages/ai/scheduler.html:1022
 msgid "Calendar shown in your timezone"
-msgstr ""
+msgstr "Kalendern visas i din tidszon"
 
 #: aot_flask/templates/pages/ai/components/getting_to_know.html:218
 msgid "Getting to Know Each Other"
@@ -13485,7 +13485,7 @@ msgid ""
 "will be used. These represent the red and blue balance of the camera. "
 "These values will be between 0.0 and 8.0. Typical values for the gains "
 "are between 0.9 and 1.9."
-msgstr ""
+msgstr "När automatisk vitbalans är inställd på \"Av\" används AWB:s röda och blåa förstärkning. Dessa representerar kamerans röda och blåa balans. Dessa värden ligger mellan 0,0 och 8,0. Typiska värden för förstärkningarna ligger mellan 0,9 och 1,9."
 
 #: aot_flask/templates/pages/camera_options/picamera.html:121
 msgid "With iso settings other than Auto, Exposure Mode becomes non-functional."
@@ -13821,7 +13821,7 @@ msgstr "Condition Settings"
 msgid ""
 "Conditional functions can not only execute Python 3 code, but also "
 "interact with AoT using conditions and actions within the code."
-msgstr ""
+msgstr "Villkorsfunktioner kan inte bara köra Python 3-kod utan även interagera med AoT via villkor och åtgärder i koden."
 
 #: aot_flask/templates/pages/function_options/conditional_options.html:46
 #, fuzzy
@@ -17533,15 +17533,15 @@ msgstr "Clear"
 
 #: aot_flask/templates/settings/integrations.html:24
 msgid "Google Calendar is not configured yet."
-msgstr ""
+msgstr "Google Kalender är inte konfigurerad ännu."
 
 #: aot_flask/templates/settings/integrations.html:26
 msgid "Enter the OAuth client credentials below to enable it."
-msgstr ""
+msgstr "Ange OAuth-klientuppgifterna nedan för att aktivera det."
 
 #: aot_flask/templates/settings/integrations.html:28
 msgid "Ask an administrator to configure it."
-msgstr ""
+msgstr "Be en administratör att konfigurera det."
 
 #: aot_flask/templates/settings/integrations.html:41
 #, fuzzy
@@ -17550,11 +17550,11 @@ msgstr "Sort Direction"
 
 #: aot_flask/templates/settings/integrations.html:43
 msgid "AoT → Google"
-msgstr ""
+msgstr "AoT → Google"
 
 #: aot_flask/templates/settings/integrations.html:44
 msgid "Google → AoT"
-msgstr ""
+msgstr "Google → AoT"
 
 #: aot_flask/templates/settings/integrations.html:49
 #, fuzzy
@@ -17565,17 +17565,17 @@ msgstr "Past Week"
 msgid ""
 "Disconnect Google Calendar? Synced events already in Google are not "
 "deleted."
-msgstr ""
+msgstr "Koppla bort Google Kalender? Redan synkroniserade händelser i Google tas inte bort."
 
 #: aot_flask/templates/settings/integrations.html:72
 msgid ""
 "Connect your Google account to sync farm schedule events with your Google"
 " Calendar (two-way)."
-msgstr ""
+msgstr "Anslut ditt Google-konto för att synkronisera gårdens schemahändelser med Google Kalender (dubbelriktat)."
 
 #: aot_flask/templates/settings/integrations.html:77
 msgid "Connect Google Calendar"
-msgstr ""
+msgstr "Anslut Google Kalender"
 
 #: aot_flask/templates/settings/integrations.html:84
 #, fuzzy
@@ -17587,21 +17587,21 @@ msgid ""
 "Create an OAuth 2.0 Client ID (type: Web application) in the Google Cloud"
 " Console with the Google Calendar API enabled, then paste the credentials"
 " here."
-msgstr ""
+msgstr "Skapa ett OAuth 2.0-klient-ID (typ: webbapplikation) i Google Cloud Console med Google Calendar API aktiverat, och klistra sedan in uppgifterna här."
 
 #: aot_flask/templates/settings/integrations.html:91
 msgid "Authorized redirect URI to register in Google:"
-msgstr ""
+msgstr "Auktoriserad omdirigerings-URI att registrera i Google:"
 
 #: aot_flask/templates/settings/integrations.html:94
 msgid "Set the Public Base URL first to compute the redirect URI."
-msgstr ""
+msgstr "Ange den publika bas-URL:en först för att beräkna omdirigerings-URI:n."
 
 #: aot_flask/templates/settings/integrations.html:97
 msgid ""
 "Some values are provided by environment variables and override the fields"
 " below."
-msgstr ""
+msgstr "Vissa värden tillhandahålls av miljövariabler och åsidosätter fälten nedan."
 
 #: aot_flask/templates/settings/integrations.html:106
 #, fuzzy
@@ -17615,18 +17615,18 @@ msgstr "Input ID"
 
 #: aot_flask/templates/settings/integrations.html:124
 msgid "OAuth Client Secret"
-msgstr ""
+msgstr "OAuth-klienthemlighet"
 
 #: aot_flask/templates/settings/integrations.html:133
 msgid "Google Picker API Key"
-msgstr ""
+msgstr "Google Picker API-nyckel"
 
 #: aot_flask/templates/settings/integrations.html:139
 msgid ""
 "Optional — only needed for the AI Library Google Drive source (file "
 "picker). A Cloud Console API key with the Picker API enabled, NOT the "
 "OAuth Client Secret above."
-msgstr ""
+msgstr "Valfritt — behövs endast för Google Drive-källan i AI-biblioteket (filväljare). En Cloud Console-API-nyckel med Picker-API aktiverat, INTE OAuth-klienthemligheten ovan."
 
 #: aot_flask/templates/settings/measurement.html:4
 #: aot_flask/templates/settings/measurement.html:6
@@ -26147,3 +26147,333 @@ msgstr ""
 #: aot_flask/templates/settings/user_detail.html:193
 msgid "Copy it now — it is shown only once and cannot be retrieved later."
 msgstr ""
+
+msgid "1 Year"
+msgstr "1 år"
+
+msgid "3D"
+msgstr "3D"
+
+msgid "Activation Status"
+msgstr "Aktiveringsstatus"
+
+msgid "Additional"
+msgstr "Ytterligare"
+
+msgid "Additional Info"
+msgstr "Ytterligare information"
+
+msgid "Advanced Settings"
+msgstr "Avancerade inställningar"
+
+msgid "After selecting Raise and/or Lower Output, additional options will appear for each output and must be configured. The options available depend on the output type selected. Therefore, before enabling the PID controller, confirm status after saving to ensure all configuration is complete."
+msgstr "Efter att du valt Höj- och/eller Sänk-utgång visas ytterligare alternativ för varje utgång som måste konfigureras. Vilka alternativ som finns beror på vald utgångstyp. Kontrollera därför statusen efter att du sparat, innan du aktiverar PID-regulatorn, för att säkerställa att konfigurationen är fullständig."
+
+msgid "All Data"
+msgstr "All data"
+
+msgid "Are you sure you want to delete this item?"
+msgstr "Är du säker på att du vill ta bort detta objekt?"
+
+msgid "At least 1 column is required."
+msgstr "Minst 1 kolumn krävs."
+
+msgid "At least 2 points are required."
+msgstr "Minst 2 punkter krävs."
+
+msgid "Channel Options"
+msgstr "Kanalinställningar"
+
+msgid "Click \"Place on Map\" then click the facility center on the map. Drag the placed facility to move it. Form dimensions and rotation update the rectangle in real time."
+msgstr "Klicka på \"Placera på kartan\" och klicka sedan på anläggningens mittpunkt på kartan. Dra den placerade anläggningen för att flytta den. Mått och rotation i formuläret uppdaterar rektangeln i realtid."
+
+msgid "Click to edit Danger Tint colors"
+msgstr "Klicka för att redigera bakgrundsfärgen för Fara"
+
+msgid "Control hysteresis around setpoint. Applied as setpoint +/- band value. 0 to disable."
+msgstr "Reglerhysteres kring börvärdet. Tillämpas som börvärde ± bandvärde. 0 för att inaktivera."
+
+msgid "Create Method"
+msgstr "Skapa metod"
+
+msgid "Danger"
+msgstr "Fara"
+
+msgid "Danger Tint"
+msgstr "Bakgrundsfärg Fara"
+
+msgid "Danger Tint Text"
+msgstr "Text på bakgrundsfärg Fara"
+
+msgid "Datasheet"
+msgstr "Datablad"
+
+msgid "Delete asset \"%s\"?"
+msgstr "Ta bort tillgång \"%s\"?"
+
+msgid "Delete request failed"
+msgstr "Borttagningsförfrågan misslyckades"
+
+msgid "Delete this record? Use \"End\" instead if it was actually grown — deleting removes it from the history."
+msgstr "Ta bort denna post? Använd \"Avsluta\" istället om något faktiskt odlats — att ta bort tar bort den från historiken."
+
+msgid "Deletion is rejected if any facility references it."
+msgstr "Borttagning nekas om någon anläggning refererar till den."
+
+msgid "Derivative Gain"
+msgstr "Derivataförstärkning"
+
+msgid "Direct week adjustment on top of elapsed weeks. Positive = fast-forward, negative = compensate downtime."
+msgstr "Direkt veckojustering utöver förflutna veckor. Positivt = spola framåt, negativt = kompensera stilleståndstid."
+
+msgid "Display Graph"
+msgstr "Visa graf"
+
+msgid "Duplicate Facility"
+msgstr "Duplicera anläggning"
+
+msgid "Duplicate failed: "
+msgstr "Dubblering misslyckades: "
+
+msgid "Duplicate the facility currently open in the editor. Connected sensors/outputs are not carried over."
+msgstr "Duplicerar anläggningen som just nu är öppen i redigeraren. Anslutna sensorer/utgångar förs inte över."
+
+msgid "Every Period of the Input, each Action is executed with the returned measurements."
+msgstr "Vid varje period för ingången körs varje åtgärd med de returnerade mätvärdena."
+
+msgid "Extruded Polygon"
+msgstr "Utdragen polygon"
+
+msgid "Facility duplicated. Sensors and outputs were not carried over."
+msgstr "Anläggningen duplicerad. Sensorer och utgångar fördes inte över."
+
+msgid "GLTF Import"
+msgstr "GLTF-import"
+
+msgid "Graphs are useful for visualizing datasets over weeks, months, or years. Displaying such data on synchronous graphs can cause high data processing and computation load."
+msgstr "Grafer är användbara för att visualisera datamängder över veckor, månader eller år. Att visa sådan data i synkrona grafer kan orsaka hög belastning på databehandling och beräkning."
+
+msgid "Include in AI Judgment"
+msgstr "Inkludera i AI-bedömning"
+
+msgid "Info Tint"
+msgstr "Bakgrundsfärg Information"
+
+msgid "Info Tint Text"
+msgstr "Text på bakgrundsfärg Information"
+
+msgid "Integral Gain"
+msgstr "Integralförstärkning"
+
+msgid "Invalid saved ID. Please select another item from the list to save."
+msgstr "Ogiltigt sparat ID. Välj ett annat objekt från listan för att spara."
+
+msgid "Libraries"
+msgstr "Bibliotek"
+
+msgid "Limits the maximum of the integrator"
+msgstr "Begränsar integratorns maximum"
+
+msgid "Limits the minimum of the integrator"
+msgstr "Begränsar integratorns minimum"
+
+msgid "Max measure age"
+msgstr "Max mätningsålder"
+
+msgid "Method End"
+msgstr "Metodslut"
+
+msgid "Method called to calculate this method value"
+msgstr "Metod som anropas för att beräkna detta metodvärde"
+
+msgid "Methods are used to reference various types of setpoints in a PID controller. Typically, a PID controller controls a device to a fixed setpoint. If you want the setpoint to change over time, you can change the setpoint over time in the method and use it for control by tracking the value in the PID controller."
+msgstr "Metoder används för att referera till olika typer av börvärden i en PID-regulator. Vanligtvis reglerar en PID-regulator en enhet mot ett fast börvärde. Om du vill att börvärdet ska ändras över tid kan du ändra det över tid inom metoden och använda den för reglering genom att följa det värdet i PID-regulatorn."
+
+msgid "No assets registered. Upload one using the button above."
+msgstr "Inga tillgångar registrerade. Ladda upp en med knappen ovan."
+
+msgid "No results"
+msgstr "Inga resultat"
+
+msgid "No saved methods."
+msgstr "Inga sparade metoder."
+
+msgid "None Selected"
+msgstr "Inget valt"
+
+msgid "Output Action (On/Off, PWM, Value, Volume, etc.)"
+msgstr "Utgångsåtgärd (På/Av, PWM, Värde, Volym, etc.)"
+
+msgid "PID Parameters"
+msgstr "PID-parametrar"
+
+msgid "Parcel"
+msgstr "Fastighet"
+
+msgid "Please choose a CSV file."
+msgstr "Välj en CSV-fil."
+
+msgid "Please enter an address."
+msgstr "Ange en adress."
+
+msgid "Please select a file."
+msgstr "Välj en fil."
+
+msgid "Processing..."
+msgstr "Bearbetar..."
+
+msgid "Product"
+msgstr "Produkt"
+
+msgid "Product Info"
+msgstr "Produktinformation"
+
+msgid "Proportional Gain"
+msgstr "Proportionell förstärkning"
+
+msgid "Referencing facilities: "
+msgstr "Anläggningar som refererar: "
+
+msgid "Regenerate Thumbnail"
+msgstr "Återskapa miniatyrbild"
+
+msgid "Return to Method Management"
+msgstr "Återgå till metodhantering"
+
+msgid "Row/card background for paused or held controllers (PID pause/hold, pending AI drafts). Offline devices use Danger Tint below."
+msgstr "Rad-/kortbakgrund för pausade eller hållna regulatorer (PID paus/håll, väntande AI-utkast). Offline-enheter använder bakgrundsfärgen Fara nedan."
+
+msgid "Saved Methods"
+msgstr "Sparade metoder"
+
+msgid "Searching"
+msgstr "Söker"
+
+msgid "Searching..."
+msgstr "Söker..."
+
+msgid "Select a facility to duplicate first."
+msgstr "Välj en anläggning att duplicera först."
+
+msgid "Select direction to control"
+msgstr "Välj riktning att reglera"
+
+msgid "Select one to calculate setpoint. When activated, measurement value replaces PID setpoint"
+msgstr "Välj en för att beräkna börvärdet. När aktiverad ersätter mätvärdet PID-börvärdet"
+
+msgid "Select output to lower the measured value"
+msgstr "Välj utgång för att sänka det uppmätta värdet"
+
+msgid "Select output to raise the measured value"
+msgstr "Välj utgång för att höja det uppmätta värdet"
+
+msgid "Semantic color for destructive actions and errors (delete buttons, failures)"
+msgstr "Semantisk färg för destruktiva åtgärder och fel (borttagningsknappar, misslyckanden)"
+
+msgid "Semantic color for informational marks and in-progress states"
+msgstr "Semantisk färg för informativa markeringar och pågående tillstånd"
+
+msgid "Semantic color for success/normal results — a different axis from the device-state colors above"
+msgstr "Semantisk färg för lyckade/normala resultat — en annan axel än enhetsstatusfärgerna ovan"
+
+msgid "Semantic color for warnings and attention marks"
+msgstr "Semantisk färg för varningar och uppmärksamhetsmarkeringar"
+
+msgid "Send Lower as Negative to Output."
+msgstr "Skicka sänkningsvärdet som negativt till utgången."
+
+msgid "Setpoint Tracking"
+msgstr "Börvärdesspårning"
+
+msgid "Soft background for failures — also the row/card background and map-popup name highlight for offline or unresponsive devices"
+msgstr "Mjuk bakgrund för misslyckanden — även rad-/kortbakgrund och namnmarkering i kartans popup för offline eller icke-svarande enheter"
+
+msgid "Soft badge background for in-progress/informational states"
+msgstr "Mjuk märkesbakgrund för pågående/informativa tillstånd"
+
+msgid "Soft badge background for success — pairs with the text color below"
+msgstr "Mjuk märkesbakgrund för lyckat resultat — matchar textfärgen nedan"
+
+msgid "Store Lower measurement as Negative."
+msgstr "Lagra sänkningsmätningen som negativ."
+
+msgid "Success Tint"
+msgstr "Bakgrundsfärg Lyckad"
+
+msgid "Success Tint Text"
+msgstr "Text på bakgrundsfärg Lyckad"
+
+msgid "Text color used on the danger tint"
+msgstr "Textfärg som används på bakgrundsfärgen Fara"
+
+msgid "Text color used on the info tint"
+msgstr "Textfärg som används på bakgrundsfärgen Information"
+
+msgid "Text color used on the success tint"
+msgstr "Textfärg som används på bakgrundsfärgen Lyckad"
+
+msgid "This is the desired state of the particular environmental condition. For example, you might enter a desired temperature in degrees Celsius."
+msgstr "Detta är det önskade tillståndet för det specifika miljövillkoret. Du kan till exempel ange en önskad temperatur i grader Celsius."
+
+msgid "This only allows or refuses requests to the external MCP server that is already running. The address and port it listens on are not configured here: for Docker, edit the aot_mcp service's \"ports:\" entry in docker-compose.yml and re-run docker compose up -d; for a native install, edit and restart the aotmcp systemd service."
+msgstr "Detta tillåter eller nekar endast förfrågningar till den externa MCP-servern som redan körs. Adressen och porten den lyssnar på konfigureras inte här: för Docker, redigera posten \"ports:\" för aot_mcp-tjänsten i docker-compose.yml och kör docker compose up -d igen; för en nativ installation, redigera och starta om systemd-tjänsten aotmcp."
+
+msgid "Thumbnail"
+msgstr "Miniatyrbild"
+
+msgid "Up to"
+msgstr "Upp till"
+
+msgid "Update Immediately"
+msgstr "Uppdatera omedelbart"
+
+msgid "Upload failed"
+msgstr "Uppladdning misslyckades"
+
+msgid "Uploading…"
+msgstr "Laddar upp…"
+
+msgid "Use \"Place on Map\" above the map to set the facility center, then drag the facility on the map to adjust it."
+msgstr "Använd \"Placera på kartan\" ovanför kartan för att ange anläggningens mittpunkt, dra sedan anläggningen på kartan för att justera den."
+
+msgid "When enabled, if this Input measures both temperature and humidity, a VPD (vapor pressure deficit) channel is automatically recorded."
+msgstr "Om aktiverad, och denna ingång mäter både temperatur och luftfuktighet, registreras en VPD-kanal (ångtryckunderskott) automatiskt."
+
+msgid "When enabled, this device is visible to AI judgment and control tools."
+msgstr "Om aktiverad är denna enhet synlig för AI:ns bedömnings- och regleringsverktyg."
+
+msgid "addresses"
+msgstr "adresser"
+
+msgid "and"
+msgstr "och"
+
+msgid "can be added."
+msgstr "kan läggas till."
+
+msgid "columns are allowed."
+msgstr "kolumner är tillåtna."
+
+msgid "failed"
+msgstr "misslyckade"
+
+msgid "more parcels"
+msgstr "fler fastigheter"
+
+msgid "parcels found"
+msgstr "fastigheter hittades"
+
+msgid "parcels previewed"
+msgstr "fastigheter i förhandsvisning"
+
+msgid "points"
+msgstr "punkter"
+
+msgid "processed"
+msgstr "bearbetade"
+
+msgid "saved"
+msgstr "sparade"
+
+msgid "week columns"
+msgstr "veckokolumner"

@@ -10718,7 +10718,7 @@ msgstr "Section Start"
 
 #: aot_flask/templates/pages/landing.html:222
 msgid "Sign Up"
-msgstr ""
+msgstr "Registruotis"
 
 #: aot_flask/templates/pages/landing.html:236
 #, fuzzy
@@ -11474,50 +11474,50 @@ msgstr "Sync"
 
 #: aot_flask/templates/pages/ai/ai_library.html:136
 msgid "AI-Curated Knowledge Review"
-msgstr ""
+msgstr "DI sutvarkytų žinių peržiūra"
 
 #: aot_flask/templates/pages/ai/ai_library.html:138
 msgid ""
 "Knowledge the AI shelved on its own (always unconfirmed at first). "
 "Confirm/edit what is correct, retire what is wrong — see it cited as [AI "
 "정리 — 미확인] until reviewed."
-msgstr ""
+msgstr "Žinios, kurias DI atidėjo savarankiškai (iš pradžių visada nepatvirtintos). Patvirtinkite / redaguokite, kas teisinga, pašalinkite, kas klaidinga — kol nebus peržiūrėta, jos cituojamos kaip [AI 정리 — 미확인]."
 
 #: aot_flask/templates/pages/ai/ai_library.html:142
 msgid "No AI-curated knowledge yet."
-msgstr ""
+msgstr "Dar nėra DI sutvarkytų žinių."
 
 #: aot_flask/templates/pages/ai/ai_library.html:166
 msgid "Corroborated"
-msgstr ""
+msgstr "Patvirtinta kitu šaltiniu"
 
 #: aot_flask/templates/pages/ai/ai_library.html:167
 msgid "Retired"
-msgstr ""
+msgstr "Atšaukta"
 
 #: aot_flask/templates/pages/ai/ai_library.html:168
 msgid "Unconfirmed"
-msgstr ""
+msgstr "Nepatvirtinta"
 
 #: aot_flask/templates/pages/ai/ai_library.html:172
 msgid "Flagged"
-msgstr ""
+msgstr "Pažymėta"
 
 #: aot_flask/templates/pages/ai/ai_library.html:176
 msgid "Same topic as an authoritative source"
-msgstr ""
+msgstr "Ta pati tema kaip autoritetingame šaltinyje"
 
 #: aot_flask/templates/pages/ai/ai_library.html:177
 msgid "Matches"
-msgstr ""
+msgstr "Atitikmenys"
 
 #: aot_flask/templates/pages/ai/ai_library.html:196
 msgid "Reactivate"
-msgstr ""
+msgstr "Aktyvinti iš naujo"
 
 #: aot_flask/templates/pages/ai/ai_library.html:207
 msgid "Retire"
-msgstr ""
+msgstr "Atšaukti"
 
 #: aot_flask/templates/pages/ai/ai_library.html:233
 #, fuzzy
@@ -11526,11 +11526,11 @@ msgstr "User Settings"
 
 #: aot_flask/templates/pages/ai/ai_library.html:258
 msgid "Edit AI-Curated Knowledge"
-msgstr ""
+msgstr "Redaguoti DI sutvarkytas žinias"
 
 #: aot_flask/templates/pages/ai/ai_library.html:268
 msgid "Save (Confirms)"
-msgstr ""
+msgstr "Išsaugoti (patvirtina)"
 
 #: aot_flask/templates/pages/ai/ai_library.html:279
 #, fuzzy
@@ -11614,45 +11614,45 @@ msgstr ""
 
 #: aot_flask/templates/pages/ai/ai_library.html:301
 msgid "Pick from Google Drive"
-msgstr ""
+msgstr "Pasirinkti iš Google Drive"
 
 #: aot_flask/templates/pages/ai/ai_library.html:302
 msgid "Selected Files"
-msgstr ""
+msgstr "Pasirinkti failai"
 
 #: aot_flask/templates/pages/ai/ai_library.html:303
 msgid "No files selected yet."
-msgstr ""
+msgstr "Dar nepasirinkta jokių failų."
 
 #: aot_flask/templates/pages/ai/ai_library.html:304
 msgid "Checking Google connection…"
-msgstr ""
+msgstr "Tikrinamas ryšys su Google…"
 
 #: aot_flask/templates/pages/ai/ai_library.html:305
 msgid "Connected as"
-msgstr ""
+msgstr "Prisijungta kaip"
 
 #: aot_flask/templates/pages/ai/ai_library.html:306
 msgid "Google account not connected."
-msgstr ""
+msgstr "Google paskyra neprijungta."
 
 #: aot_flask/templates/pages/ai/ai_library.html:307
 msgid "Connect it under Settings > Integrations"
-msgstr ""
+msgstr "Prijunkite skiltyje Nustatymai > Integracijos"
 
 #: aot_flask/templates/pages/ai/ai_library.html:308
 msgid "Your Google connection predates Drive access — reconnect to grant it."
-msgstr ""
+msgstr "Jūsų ryšys su Google atsirado anksčiau nei prieiga prie Drive — prisijunkite iš naujo, kad ją suteiktumėte."
 
 #: aot_flask/templates/pages/ai/ai_library.html:309
 msgid "Reconnect under Settings > Integrations"
-msgstr ""
+msgstr "Prisijunkite iš naujo skiltyje Nustatymai > Integracijos"
 
 #: aot_flask/templates/pages/ai/ai_library.html:310
 msgid ""
 "Google Picker is not configured yet — an admin must set the Picker API "
 "key under Settings > Integrations."
-msgstr ""
+msgstr "Google Picker dar nesukonfigūruotas — administratorius turi nustatyti Picker API raktą skiltyje Nustatymai > Integracijos."
 
 #: aot_flask/templates/pages/ai/ai_library.html:315
 msgid "Source is not enabled. Activate it before syncing."
@@ -11686,47 +11686,47 @@ msgstr "Action Type"
 
 #: aot_flask/templates/pages/ai/ai_library.html:324
 msgid "Confirming…"
-msgstr ""
+msgstr "Patvirtinama…"
 
 #: aot_flask/templates/pages/ai/ai_library.html:325
 msgid "Confirmed."
-msgstr ""
+msgstr "Patvirtinta."
 
 #: aot_flask/templates/pages/ai/ai_library.html:326
 msgid "Retiring…"
-msgstr ""
+msgstr "Atšaukiama…"
 
 #: aot_flask/templates/pages/ai/ai_library.html:327
 msgid "Retired."
-msgstr ""
+msgstr "Atšaukta."
 
 #: aot_flask/templates/pages/ai/ai_library.html:328
 msgid "Retire this item? It will stop being cited until reactivated."
-msgstr ""
+msgstr "Atšaukti šį elementą? Jis nebebus cituojamas, kol nebus aktyvintas iš naujo."
 
 #: aot_flask/templates/pages/ai/ai_library.html:329
 msgid "Reactivating…"
-msgstr ""
+msgstr "Aktyvinama iš naujo…"
 
 #: aot_flask/templates/pages/ai/ai_library.html:330
 msgid "Reactivated."
-msgstr ""
+msgstr "Aktyvinta iš naujo."
 
 #: aot_flask/templates/pages/ai/ai_library.html:331
 msgid "Item not found."
-msgstr ""
+msgstr "Elementas nerastas."
 
 #: aot_flask/templates/pages/ai/ai_library.html:332
 msgid "Heading"
-msgstr ""
+msgstr "Orientacija"
 
 #: aot_flask/templates/pages/ai/ai_library.html:334
 msgid "Tags (comma-separated)"
-msgstr ""
+msgstr "Žymos (atskirtos kableliais)"
 
 #: aot_flask/templates/pages/ai/ai_library.html:335
 msgid "Attribution"
-msgstr ""
+msgstr "Šaltinio nuoroda"
 
 #: aot_flask/templates/pages/ai/ai_library.html:336
 #: aot_flask/templates/pages/geo_input_components/geo_input_option.html:37
@@ -11735,50 +11735,50 @@ msgstr "Related Documents"
 
 #: aot_flask/templates/pages/ai/ai_library.html:337
 msgid "Source Site"
-msgstr ""
+msgstr "Šaltinio svetainė"
 
 #: aot_flask/templates/pages/ai/ai_library.html:338
 msgid "Link"
-msgstr ""
+msgstr "Nuoroda"
 
 #: aot_flask/templates/pages/ai/ai_library.html:339
 msgid "Usage:"
-msgstr ""
+msgstr "Naudojimas:"
 
 #: aot_flask/templates/pages/ai/ai_library.html:340
 msgid "Select operations to register as knowledge"
-msgstr ""
+msgstr "Pasirinkite operacijas, kurias reikia registruoti kaip žinias"
 
 #: aot_flask/templates/pages/ai/ai_library.html:341
 msgid "Parameters for the selected operations"
-msgstr ""
+msgstr "Pasirinktų operacijų parametrai"
 
 #: aot_flask/templates/pages/ai/ai_library.html:342
 msgid "Select at least one operation."
-msgstr ""
+msgstr "Pasirinkite bent vieną operaciją."
 
 #: aot_flask/templates/pages/ai/ai_library.html:343
 msgid ""
 "Enter your service key, then use the Farm and Season pickers below to "
 "choose your farm by region and season by name — the internal IDs are "
 "filled in for you, so you never have to type a code."
-msgstr ""
+msgstr "Įveskite savo paslaugos raktą, tada naudokite ūkio ir sezono parinkiklius žemiau, kad pasirinktumėte ūkį pagal regioną ir sezoną pagal pavadinimą — vidiniai ID užpildomi automatiškai, todėl niekada nereikia įvedinėti kodo."
 
 #: aot_flask/templates/pages/ai/ai_library.html:344
 msgid ""
 "Each of these operations only needs a service key and a date range — no "
 "farm-specific ID required."
-msgstr ""
+msgstr "Kiekvienai iš šių operacijų reikia tik paslaugos rakto ir datų intervalo — ūkiui būdingas ID nereikalingas."
 
 #: aot_flask/templates/pages/ai/ai_library.html:345
 msgid ""
 "A classification code from the measurement record — the example is one "
 "real sample value, not a fixed option; actual values vary per record."
-msgstr ""
+msgstr "Klasifikavimo kodas iš matavimo įrašo — pavyzdys yra tikra pavyzdžio reikšmė, o ne fiksuota parinktis; tikrosios reikšmės skiriasi kiekviename įraše."
 
 #: aot_flask/templates/pages/ai/ai_library.html:346
 msgid "Select an operation above to see its required parameters."
-msgstr ""
+msgstr "Pasirinkite operaciją aukščiau, kad pamatytumėte jos reikalaujamus parametrus."
 
 #: aot_flask/templates/pages/ai/ai_library.html:347
 #: aot_flask/templates/pages/geo/geo_facility.html:1938
@@ -11788,63 +11788,63 @@ msgstr "Select Map"
 
 #: aot_flask/templates/pages/ai/ai_library.html:348
 msgid "Deselect All"
-msgstr ""
+msgstr "Panaikinti viso pasirinkimą"
 
 #: aot_flask/templates/pages/ai/ai_library.html:349
 msgid "Farm"
-msgstr ""
+msgstr "Ūkis"
 
 #: aot_flask/templates/pages/ai/ai_library.html:350
 msgid "Cropping Season"
-msgstr ""
+msgstr "Auginimo sezonas"
 
 #: aot_flask/templates/pages/ai/ai_library.html:351
 msgid "Load farms"
-msgstr ""
+msgstr "Įkelti ūkius"
 
 #: aot_flask/templates/pages/ai/ai_library.html:352
 msgid "Select a farm"
-msgstr ""
+msgstr "Pasirinkite ūkį"
 
 #: aot_flask/templates/pages/ai/ai_library.html:353
 msgid "Select a season"
-msgstr ""
+msgstr "Pasirinkite sezoną"
 
 #: aot_flask/templates/pages/ai/ai_library.html:354
 msgid "Enter the API key first, then load farms."
-msgstr ""
+msgstr "Pirmiausia įveskite API raktą, tada įkelkite ūkius."
 
 #: aot_flask/templates/pages/ai/ai_library.html:355
 msgid "Pick a farm first to load its seasons."
-msgstr ""
+msgstr "Pirmiausia pasirinkite ūkį, kad įkeltumėte jo sezonus."
 
 #: aot_flask/templates/pages/ai/ai_library.html:356
 msgid "Current:"
-msgstr ""
+msgstr "Dabartinė:"
 
 #: aot_flask/templates/pages/ai/ai_library.html:358
 msgid "Load failed"
-msgstr ""
+msgstr "Įkėlimas nepavyko"
 
 #: aot_flask/templates/pages/ai/ai_library.html:359
 msgid "No farms returned for this key."
-msgstr ""
+msgstr "Šiam raktui ūkių negrąžinta."
 
 #: aot_flask/templates/pages/ai/ai_library.html:360
 msgid "No seasons found for this farm."
-msgstr ""
+msgstr "Šiam ūkiui sezonų nerasta."
 
 #: aot_flask/templates/pages/ai/ai_library.html:433
 msgid "Facility ID"
-msgstr ""
+msgstr "Objekto ID"
 
 #: aot_flask/templates/pages/ai/ai_library.html:434
 msgid "Cropping Serial No."
-msgstr ""
+msgstr "Auginimo serijos Nr."
 
 #: aot_flask/templates/pages/ai/ai_library.html:435
 msgid "Measurement Date"
-msgstr ""
+msgstr "Matavimo data"
 
 #: aot_flask/templates/pages/ai/ai_library.html:436
 #: aot_flask/templates/pages/ai/ai_scheduler.html:174
@@ -11860,19 +11860,19 @@ msgstr "End Time"
 
 #: aot_flask/templates/pages/ai/ai_library.html:438
 msgid "Field Code"
-msgstr ""
+msgstr "Lauko kodas"
 
 #: aot_flask/templates/pages/ai/ai_library.html:439
 msgid "Section Code"
-msgstr ""
+msgstr "Skyriaus kodas"
 
 #: aot_flask/templates/pages/ai/ai_library.html:440
 msgid "Attribute Code"
-msgstr ""
+msgstr "Atributo kodas"
 
 #: aot_flask/templates/pages/ai/ai_library.html:441
 msgid "Item Code"
-msgstr ""
+msgstr "Prekės kodas"
 
 #: aot_flask/templates/pages/ai/ai_library.html:680
 #: aot_flask/templates/pages/ai/ai_modals.html:123
@@ -13066,7 +13066,7 @@ msgstr ""
 
 #: aot_flask/templates/pages/ai/scheduler.html:1022
 msgid "Calendar shown in your timezone"
-msgstr ""
+msgstr "Kalendorius rodomas jūsų laiko juostoje"
 
 #: aot_flask/templates/pages/ai/components/getting_to_know.html:218
 msgid "Getting to Know Each Other"
@@ -13487,7 +13487,7 @@ msgid ""
 "will be used. These represent the red and blue balance of the camera. "
 "These values will be between 0.0 and 8.0. Typical values for the gains "
 "are between 0.9 and 1.9."
-msgstr ""
+msgstr "Kai automatinis baltos spalvos balansas nustatytas į „Išjungta“, bus naudojami AWB raudonos ir mėlynos spalvos stiprinimai. Jie atspindi kameros raudonos ir mėlynos spalvos balansą. Šios reikšmės bus nuo 0,0 iki 8,0. Įprastos stiprinimo reikšmės yra nuo 0,9 iki 1,9."
 
 #: aot_flask/templates/pages/camera_options/picamera.html:121
 msgid "With iso settings other than Auto, Exposure Mode becomes non-functional."
@@ -13823,7 +13823,7 @@ msgstr "Condition Settings"
 msgid ""
 "Conditional functions can not only execute Python 3 code, but also "
 "interact with AoT using conditions and actions within the code."
-msgstr ""
+msgstr "Sąlyginės funkcijos gali ne tik vykdyti Python 3 kodą, bet ir sąveikauti su AoT naudodamos kodo viduje esančias sąlygas ir veiksmus."
 
 #: aot_flask/templates/pages/function_options/conditional_options.html:46
 #, fuzzy
@@ -17535,15 +17535,15 @@ msgstr "Clear"
 
 #: aot_flask/templates/settings/integrations.html:24
 msgid "Google Calendar is not configured yet."
-msgstr ""
+msgstr "Google kalendorius dar nesukonfigūruotas."
 
 #: aot_flask/templates/settings/integrations.html:26
 msgid "Enter the OAuth client credentials below to enable it."
-msgstr ""
+msgstr "Įveskite žemiau OAuth kliento prisijungimo duomenis, kad tai įjungtumėte."
 
 #: aot_flask/templates/settings/integrations.html:28
 msgid "Ask an administrator to configure it."
-msgstr ""
+msgstr "Paprašykite administratoriaus tai sukonfigūruoti."
 
 #: aot_flask/templates/settings/integrations.html:41
 #, fuzzy
@@ -17552,11 +17552,11 @@ msgstr "Sort Direction"
 
 #: aot_flask/templates/settings/integrations.html:43
 msgid "AoT → Google"
-msgstr ""
+msgstr "AoT → Google"
 
 #: aot_flask/templates/settings/integrations.html:44
 msgid "Google → AoT"
-msgstr ""
+msgstr "Google → AoT"
 
 #: aot_flask/templates/settings/integrations.html:49
 #, fuzzy
@@ -17567,17 +17567,17 @@ msgstr "Past Week"
 msgid ""
 "Disconnect Google Calendar? Synced events already in Google are not "
 "deleted."
-msgstr ""
+msgstr "Atjungti Google kalendorių? Google jau sinchronizuoti įvykiai nebus ištrinti."
 
 #: aot_flask/templates/settings/integrations.html:72
 msgid ""
 "Connect your Google account to sync farm schedule events with your Google"
 " Calendar (two-way)."
-msgstr ""
+msgstr "Prijunkite savo Google paskyrą, kad ūkio tvarkaraščio įvykiai būtų dvipusiai sinchronizuojami su Google kalendoriumi."
 
 #: aot_flask/templates/settings/integrations.html:77
 msgid "Connect Google Calendar"
-msgstr ""
+msgstr "Prijungti Google kalendorių"
 
 #: aot_flask/templates/settings/integrations.html:84
 #, fuzzy
@@ -17589,21 +17589,21 @@ msgid ""
 "Create an OAuth 2.0 Client ID (type: Web application) in the Google Cloud"
 " Console with the Google Calendar API enabled, then paste the credentials"
 " here."
-msgstr ""
+msgstr "Google Cloud Console sukurkite OAuth 2.0 kliento ID (tipas: žiniatinklio programa) su įjungtu Google Calendar API, tada čia įklijuokite prisijungimo duomenis."
 
 #: aot_flask/templates/settings/integrations.html:91
 msgid "Authorized redirect URI to register in Google:"
-msgstr ""
+msgstr "Įgaliotas nukreipimo URI, registruotinas Google:"
 
 #: aot_flask/templates/settings/integrations.html:94
 msgid "Set the Public Base URL first to compute the redirect URI."
-msgstr ""
+msgstr "Pirmiausia nustatykite viešąjį pagrindinį URL, kad apskaičiuotumėte nukreipimo URI."
 
 #: aot_flask/templates/settings/integrations.html:97
 msgid ""
 "Some values are provided by environment variables and override the fields"
 " below."
-msgstr ""
+msgstr "Kai kurios reikšmės pateikiamos aplinkos kintamaisiais ir pakeičia žemiau esančius laukus."
 
 #: aot_flask/templates/settings/integrations.html:106
 #, fuzzy
@@ -17617,18 +17617,18 @@ msgstr "Input ID"
 
 #: aot_flask/templates/settings/integrations.html:124
 msgid "OAuth Client Secret"
-msgstr ""
+msgstr "OAuth kliento paslaptis"
 
 #: aot_flask/templates/settings/integrations.html:133
 msgid "Google Picker API Key"
-msgstr ""
+msgstr "Google Picker API raktas"
 
 #: aot_flask/templates/settings/integrations.html:139
 msgid ""
 "Optional — only needed for the AI Library Google Drive source (file "
 "picker). A Cloud Console API key with the Picker API enabled, NOT the "
 "OAuth Client Secret above."
-msgstr ""
+msgstr "Neprivaloma — reikalinga tik DI bibliotekos Google Drive šaltiniui (failų parinkikliui). Cloud Console API raktas su įjungtu Picker API, O NE aukščiau nurodyta OAuth kliento paslaptis."
 
 #: aot_flask/templates/settings/measurement.html:4
 #: aot_flask/templates/settings/measurement.html:6
@@ -26153,3 +26153,333 @@ msgstr ""
 #: aot_flask/templates/settings/user_detail.html:193
 msgid "Copy it now — it is shown only once and cannot be retrieved later."
 msgstr ""
+
+msgid "1 Year"
+msgstr "1 metai"
+
+msgid "3D"
+msgstr "3D"
+
+msgid "Activation Status"
+msgstr "Aktyvinimo būsena"
+
+msgid "Additional"
+msgstr "Papildoma"
+
+msgid "Additional Info"
+msgstr "Papildoma informacija"
+
+msgid "Advanced Settings"
+msgstr "Išplėstiniai nustatymai"
+
+msgid "After selecting Raise and/or Lower Output, additional options will appear for each output and must be configured. The options available depend on the output type selected. Therefore, before enabling the PID controller, confirm status after saving to ensure all configuration is complete."
+msgstr "Pasirinkus Padidinti ir (arba) Sumažinti išvestį, kiekvienai išvesčiai atsiras papildomų parinkčių, kurias reikės sukonfigūruoti. Galimos parinktys priklauso nuo pasirinkto išvesties tipo. Todėl prieš įjungdami PID valdiklį, po išsaugojimo patikrinkite būseną, kad įsitikintumėte, jog konfigūracija baigta."
+
+msgid "All Data"
+msgstr "Visi duomenys"
+
+msgid "Are you sure you want to delete this item?"
+msgstr "Ar tikrai norite ištrinti šį elementą?"
+
+msgid "At least 1 column is required."
+msgstr "Reikalingas bent 1 stulpelis."
+
+msgid "At least 2 points are required."
+msgstr "Reikalingi bent 2 taškai."
+
+msgid "Channel Options"
+msgstr "Kanalo nustatymai"
+
+msgid "Click \"Place on Map\" then click the facility center on the map. Drag the placed facility to move it. Form dimensions and rotation update the rectangle in real time."
+msgstr "Spustelėkite „Padėti žemėlapyje“, tada spustelėkite objekto centrą žemėlapyje. Norėdami perkelti padėtą objektą, jį vilkite. Formoje nurodyti matmenys ir pasukimas realiuoju laiku atnaujina stačiakampį."
+
+msgid "Click to edit Danger Tint colors"
+msgstr "Spustelėkite, kad redaguotumėte pavojaus fono spalvą"
+
+msgid "Control hysteresis around setpoint. Applied as setpoint +/- band value. 0 to disable."
+msgstr "Valdymo histerezė aplink nustatytą vertę. Taikoma kaip nustatyta vertė ± juostos reikšmė. 0 — išjungti."
+
+msgid "Create Method"
+msgstr "Sukurti metodą"
+
+msgid "Danger"
+msgstr "Pavojus"
+
+msgid "Danger Tint"
+msgstr "Pavojaus fono spalva"
+
+msgid "Danger Tint Text"
+msgstr "Tekstas ant pavojaus fono spalvos"
+
+msgid "Datasheet"
+msgstr "Techninis lapas"
+
+msgid "Delete asset \"%s\"?"
+msgstr "Ištrinti išteklių „%s“?"
+
+msgid "Delete request failed"
+msgstr "Trynimo užklausa nepavyko"
+
+msgid "Delete this record? Use \"End\" instead if it was actually grown — deleting removes it from the history."
+msgstr "Ištrinti šį įrašą? Jei iš tikrųjų buvo auginama, geriau naudokite „Baigti“ — trynimas pašalina jį iš istorijos."
+
+msgid "Deletion is rejected if any facility references it."
+msgstr "Trynimas atmetamas, jei į jį nurodo bet kuris objektas."
+
+msgid "Derivative Gain"
+msgstr "Diferencinis stiprinimas"
+
+msgid "Direct week adjustment on top of elapsed weeks. Positive = fast-forward, negative = compensate downtime."
+msgstr "Tiesioginis savaičių koregavimas, papildantis praėjusias savaites. Teigiama reikšmė = pasukti į priekį, neigiama = kompensuoti prastovą."
+
+msgid "Display Graph"
+msgstr "Rodyti grafiką"
+
+msgid "Duplicate Facility"
+msgstr "Dubliuoti objektą"
+
+msgid "Duplicate failed: "
+msgstr "Dubliavimas nepavyko: "
+
+msgid "Duplicate the facility currently open in the editor. Connected sensors/outputs are not carried over."
+msgstr "Dubliuoja šiuo metu redaktoriuje atidarytą objektą. Prijungti jutikliai / išvestys nėra perkeliami."
+
+msgid "Every Period of the Input, each Action is executed with the returned measurements."
+msgstr "Kiekvieną įvesties periodą kiekvienas veiksmas vykdomas su grąžintais matavimais."
+
+msgid "Extruded Polygon"
+msgstr "Ištrauktas daugiakampis"
+
+msgid "Facility duplicated. Sensors and outputs were not carried over."
+msgstr "Objektas dubliuotas. Jutikliai ir išvestys nebuvo perkelti."
+
+msgid "GLTF Import"
+msgstr "GLTF importas"
+
+msgid "Graphs are useful for visualizing datasets over weeks, months, or years. Displaying such data on synchronous graphs can cause high data processing and computation load."
+msgstr "Grafikai naudingi vizualizuojant duomenų rinkinius per savaites, mėnesius ar metus. Tokių duomenų rodymas sinchroniniuose grafikuose gali sukelti didelį duomenų apdorojimo ir skaičiavimo krūvį."
+
+msgid "Include in AI Judgment"
+msgstr "Įtraukti į DI vertinimą"
+
+msgid "Info Tint"
+msgstr "Informacijos fono spalva"
+
+msgid "Info Tint Text"
+msgstr "Tekstas ant informacijos fono spalvos"
+
+msgid "Integral Gain"
+msgstr "Integralinis stiprinimas"
+
+msgid "Invalid saved ID. Please select another item from the list to save."
+msgstr "Neteisingas išsaugotas ID. Norėdami išsaugoti, pasirinkite kitą elementą iš sąrašo."
+
+msgid "Libraries"
+msgstr "Bibliotekos"
+
+msgid "Limits the maximum of the integrator"
+msgstr "Riboja integratoriaus maksimumą"
+
+msgid "Limits the minimum of the integrator"
+msgstr "Riboja integratoriaus minimumą"
+
+msgid "Max measure age"
+msgstr "Didžiausias matavimo amžius"
+
+msgid "Method End"
+msgstr "Metodo pabaiga"
+
+msgid "Method called to calculate this method value"
+msgstr "Metodas, kviečiamas šiai metodo reikšmei apskaičiuoti"
+
+msgid "Methods are used to reference various types of setpoints in a PID controller. Typically, a PID controller controls a device to a fixed setpoint. If you want the setpoint to change over time, you can change the setpoint over time in the method and use it for control by tracking the value in the PID controller."
+msgstr "Metodai naudojami nurodyti įvairaus tipo nustatytas vertes PID valdiklyje. Paprastai PID valdiklis valdo įrenginį iki fiksuotos nustatytos vertės. Jei norite, kad nustatyta vertė laikui bėgant keistųsi, galite ją keisti metodo viduje ir naudoti valdymui, sekant šią reikšmę PID valdiklyje."
+
+msgid "No assets registered. Upload one using the button above."
+msgstr "Nėra registruotų išteklių. Įkelkite vieną naudodami aukščiau esantį mygtuką."
+
+msgid "No results"
+msgstr "Rezultatų nėra"
+
+msgid "No saved methods."
+msgstr "Nėra išsaugotų metodų."
+
+msgid "None Selected"
+msgstr "Nieko nepasirinkta"
+
+msgid "Output Action (On/Off, PWM, Value, Volume, etc.)"
+msgstr "Išvesties veiksmas (Įjungta/Išjungta, PWM, reikšmė, tūris ir kt.)"
+
+msgid "PID Parameters"
+msgstr "PID parametrai"
+
+msgid "Parcel"
+msgstr "Sklypas"
+
+msgid "Please choose a CSV file."
+msgstr "Pasirinkite CSV failą."
+
+msgid "Please enter an address."
+msgstr "Įveskite adresą."
+
+msgid "Please select a file."
+msgstr "Pasirinkite failą."
+
+msgid "Processing..."
+msgstr "Apdorojama..."
+
+msgid "Product"
+msgstr "Produktas"
+
+msgid "Product Info"
+msgstr "Produkto informacija"
+
+msgid "Proportional Gain"
+msgstr "Proporcinis stiprinimas"
+
+msgid "Referencing facilities: "
+msgstr "Objektai, kurie nurodo į tai: "
+
+msgid "Regenerate Thumbnail"
+msgstr "Iš naujo sukurti miniatiūrą"
+
+msgid "Return to Method Management"
+msgstr "Grįžti į metodų valdymą"
+
+msgid "Row/card background for paused or held controllers (PID pause/hold, pending AI drafts). Offline devices use Danger Tint below."
+msgstr "Eilutės / kortelės fonas pristabdytiems ar sulaikytiems valdikliams (PID pauzė / sulaikymas, laukiantys DI juodraščiai). Neprisijungę įrenginiai naudoja žemiau esančią pavojaus fono spalvą."
+
+msgid "Saved Methods"
+msgstr "Išsaugoti metodai"
+
+msgid "Searching"
+msgstr "Ieškoma"
+
+msgid "Searching..."
+msgstr "Ieškoma..."
+
+msgid "Select a facility to duplicate first."
+msgstr "Pirmiausia pasirinkite objektą, kurį norite dubliuoti."
+
+msgid "Select direction to control"
+msgstr "Pasirinkite valdymo kryptį"
+
+msgid "Select one to calculate setpoint. When activated, measurement value replaces PID setpoint"
+msgstr "Pasirinkite vieną, kad apskaičiuotumėte nustatytą vertę. Aktyvinus, matavimo reikšmė pakeičia PID nustatytą vertę"
+
+msgid "Select output to lower the measured value"
+msgstr "Pasirinkite išvestį matavimo reikšmei sumažinti"
+
+msgid "Select output to raise the measured value"
+msgstr "Pasirinkite išvestį matavimo reikšmei padidinti"
+
+msgid "Semantic color for destructive actions and errors (delete buttons, failures)"
+msgstr "Semantinė spalva negrįžtamiems veiksmams ir klaidoms (trynimo mygtukams, gedimams)"
+
+msgid "Semantic color for informational marks and in-progress states"
+msgstr "Semantinė spalva informacinėms žymoms ir vykdomoms būsenoms"
+
+msgid "Semantic color for success/normal results — a different axis from the device-state colors above"
+msgstr "Semantinė spalva sėkmingiems / normaliems rezultatams — kita ašis nei aukščiau esančios įrenginio būsenos spalvos"
+
+msgid "Semantic color for warnings and attention marks"
+msgstr "Semantinė spalva įspėjimams ir dėmesio žymoms"
+
+msgid "Send Lower as Negative to Output."
+msgstr "Siųsti sumažinimo reikšmę į išvestį kaip neigiamą."
+
+msgid "Setpoint Tracking"
+msgstr "Nustatytos vertės sekimas"
+
+msgid "Soft background for failures — also the row/card background and map-popup name highlight for offline or unresponsive devices"
+msgstr "Švelnus fonas gedimams — taip pat eilutės / kortelės fonas ir pavadinimo paryškinimas žemėlapio iškylančiajame lange neprisijungusiems ar nereaguojantiems įrenginiams"
+
+msgid "Soft badge background for in-progress/informational states"
+msgstr "Švelnus ženkliuko fonas vykdomoms / informacinėms būsenoms"
+
+msgid "Soft badge background for success — pairs with the text color below"
+msgstr "Švelnus ženkliuko fonas sėkmei — dera su žemiau esančia teksto spalva"
+
+msgid "Store Lower measurement as Negative."
+msgstr "Saugoti sumažinimo matavimą kaip neigiamą."
+
+msgid "Success Tint"
+msgstr "Sėkmės fono spalva"
+
+msgid "Success Tint Text"
+msgstr "Tekstas ant sėkmės fono spalvos"
+
+msgid "Text color used on the danger tint"
+msgstr "Teksto spalva, naudojama ant pavojaus fono spalvos"
+
+msgid "Text color used on the info tint"
+msgstr "Teksto spalva, naudojama ant informacijos fono spalvos"
+
+msgid "Text color used on the success tint"
+msgstr "Teksto spalva, naudojama ant sėkmės fono spalvos"
+
+msgid "This is the desired state of the particular environmental condition. For example, you might enter a desired temperature in degrees Celsius."
+msgstr "Tai yra pageidaujama tos konkrečios aplinkos sąlygos būsena. Pavyzdžiui, galite įvesti pageidaujamą temperatūrą Celsijaus laipsniais."
+
+msgid "This only allows or refuses requests to the external MCP server that is already running. The address and port it listens on are not configured here: for Docker, edit the aot_mcp service's \"ports:\" entry in docker-compose.yml and re-run docker compose up -d; for a native install, edit and restart the aotmcp systemd service."
+msgstr "Tai tik leidžia arba atmeta užklausas jau veikiančiam išoriniam MCP serveriui. Adresas ir prievadas, kurio jis klausosi, čia nekonfigūruojami: naudojant Docker, docker-compose.yml faile redaguokite aot_mcp paslaugos įrašą „ports:“ ir iš naujo paleiskite docker compose up -d; naudojant native diegimą, redaguokite ir iš naujo paleiskite aotmcp systemd paslaugą."
+
+msgid "Thumbnail"
+msgstr "Miniatiūra"
+
+msgid "Up to"
+msgstr "Iki"
+
+msgid "Update Immediately"
+msgstr "Atnaujinti nedelsiant"
+
+msgid "Upload failed"
+msgstr "Įkėlimas nepavyko"
+
+msgid "Uploading…"
+msgstr "Įkeliama…"
+
+msgid "Use \"Place on Map\" above the map to set the facility center, then drag the facility on the map to adjust it."
+msgstr "Naudokite „Padėti žemėlapyje“ virš žemėlapio, kad nustatytumėte objekto centrą, tada vilkite objektą žemėlapyje, kad jį pakoreguotumėte."
+
+msgid "When enabled, if this Input measures both temperature and humidity, a VPD (vapor pressure deficit) channel is automatically recorded."
+msgstr "Įjungus, jei šis įvestis matuoja ir temperatūrą, ir drėgmę, VPD (garų slėgio deficito) kanalas įrašomas automatiškai."
+
+msgid "When enabled, this device is visible to AI judgment and control tools."
+msgstr "Įjungus, šis įrenginys matomas DI vertinimo ir valdymo įrankiams."
+
+msgid "addresses"
+msgstr "adresai"
+
+msgid "and"
+msgstr "ir"
+
+msgid "can be added."
+msgstr "galima pridėti."
+
+msgid "columns are allowed."
+msgstr "stulpelių leidžiama."
+
+msgid "failed"
+msgstr "nepavyko"
+
+msgid "more parcels"
+msgstr "daugiau sklypų"
+
+msgid "parcels found"
+msgstr "rasta sklypų"
+
+msgid "parcels previewed"
+msgstr "sklypų peržiūrėta"
+
+msgid "points"
+msgstr "taškai"
+
+msgid "processed"
+msgstr "apdorota"
+
+msgid "saved"
+msgstr "išsaugota"
+
+msgid "week columns"
+msgstr "savaičių stulpeliai"
