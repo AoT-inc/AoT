@@ -423,8 +423,8 @@
   gap: .35rem;
   padding: .65rem .55rem;
   border-radius: .3rem;
-  border: 1px solid var(--aot-border-light);
-  background: var(--bg-off);
+  border: none;
+  background: var(--bd-primary, #FFFFFF);
   margin-bottom: .3rem;
 }
 .aot-act-row:last-child {

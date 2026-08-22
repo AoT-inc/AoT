@@ -4001,7 +4001,7 @@ class TestFacilityParentPlot(unittest.TestCase):
         db.session.commit()
 
     # ── 준비 ────────────────────────────────────────────────────────────
-    def _facility(self, bay_count=1, name='온실1', fittings=None):
+    def _facility(self, bay_count=1, name='온실1', fittings=None, bays=None):
         from aot.aot_flask.extensions import db
         from aot.databases.models import GeoFacility, GeoShape
 
@@ -4021,7 +4021,13 @@ class TestFacilityParentPlot(unittest.TestCase):
                                        'spacing_m': 0.0,
                                        'center_lng': 0.0, 'center_lat': 0.0,
                                        'orientation_deg': 0.0},
-                          fittings=fittings or [])
+                          fittings=fittings or [],
+                          # 실제 시설은 저장될 때 구역 메타를 갖는다
+                          # (`facility_io`: 단동이면 [{'id': 'main', ...}]).
+                          # 생성 시점에 넣는 이유는 하나다 — 만들어 둔 뒤 고쳐
+                          # 커밋하면 그 두 번째 커밋이 after_commit 사슬을 깨워
+                          # 테스트 단독 실행에서 babel 미등록으로 터진다.
+                          bays=bays if bays is not None else [])
         db.session.add(fac)
         db.session.commit()
         return fac
@@ -4066,9 +4072,10 @@ class TestFacilityParentPlot(unittest.TestCase):
         self.assertIsNone(err)
         self.assertEqual(row['geo_id'], 'map-fac')
 
-    # ── 단동은 bay_1 자동 ───────────────────────────────────────────────
-    def test_single_bay_facility_fills_bay_1(self):
-        fac = self._facility(bay_count=1)
+    # ── 단동도 구역 하나를 채운다 ───────────────────────────────────────
+    def test_single_bay_facility_fills_a_bay(self):
+        """구역 목록을 만들 근거가 없으면 관례 id('bay_1')로 물러선다."""
+        fac = self._facility(bay_count=1)      # bays 메타 없음
         row, err = self._save(facility_uuid=fac.unique_id)
         self.assertIsNone(err)
         self.assertEqual(row['bay_id'], 'bay_1')
@@ -4079,6 +4086,152 @@ class TestFacilityParentPlot(unittest.TestCase):
         row, err = self._save(facility_uuid=fac.unique_id, bay_id='bay_7')
         self.assertIsNone(err)
         self.assertEqual(row['bay_id'], 'bay_1')
+
+    # ── 구역 안에서의 몫 (p6_50) ────────────────────────────────────────
+    #
+    # 시설 구획은 기하가 없어 같은 구역의 두 구획이 **똑같이 "그 구역 전체"** 를
+    # 가리킨다. 몫이 없으면 화면도 서버도 둘을 구분하지 못한다 — 그런데 그것이
+    # 에러로 나타나지 않고 "면적이 같게 보인다" 로만 나타난다.
+
+    def _facility_with_capacity(self, total=12, unit='bed'):
+        return self._facility(bay_count=1, bays=[{
+            'id': 'main', 'name': '온실1', 'crop': None,
+            'capacity': {'unit': unit, 'total': total},
+        }])
+
+    def test_amount_derives_percent_from_the_zone_total(self):
+        """비율은 **저장하지 않고 파생한다** — 총량이 바뀌면 따라 바뀌어야 한다."""
+        fac = self._facility_with_capacity(total=12)
+        row, err = self._save(facility_uuid=fac.unique_id,
+                              allocation={'amount': 4})
+        self.assertIsNone(err)
+        self.assertEqual(row['allocation']['amount'], 4)
+        self.assertEqual(row['allocation']['total'], 12)
+        self.assertEqual(row['allocation']['unit'], 'bed')
+        self.assertAlmostEqual(row['allocation']['percent'], 33.3, places=1)
+
+    def test_percent_follows_the_total_when_it_changes(self):
+        """총량을 고치면 같은 4베드가 다른 비율이 된다(그래서 저장하지 않는다)."""
+        from aot.aot_flask.extensions import db
+
+        fac = self._facility_with_capacity(total=12)
+        row, _ = self._save(facility_uuid=fac.unique_id, allocation={'amount': 4})
+        self.assertAlmostEqual(row['allocation']['percent'], 33.3, places=1)
+
+        fac.bays = [{'id': 'main', 'name': '온실1',
+                     'capacity': {'unit': 'bed', 'total': 8}}]
+        db.session.commit()
+
+        from aot.aot_flask.geo import plot_context
+        from aot.databases.models import GeoPlot
+        again = plot_context.to_dict(
+            GeoPlot.query.filter_by(unique_id=row['unique_id']).first())
+        self.assertEqual(again['allocation']['amount'], 4)
+        self.assertEqual(again['allocation']['total'], 8)
+        self.assertAlmostEqual(again['allocation']['percent'], 50.0, places=1)
+
+    def test_percent_is_the_fallback_when_no_total_is_recorded(self):
+        """총량을 아직 안 적은 시설에서도 두 구획은 구분돼야 한다."""
+        fac = self._facility(bay_count=1)          # capacity 없음
+        row, err = self._save(facility_uuid=fac.unique_id,
+                              allocation={'percent': 40})
+        self.assertIsNone(err)
+        self.assertEqual(row['allocation']['percent'], 40)
+        self.assertNotIn('total', row['allocation'])
+
+    def test_the_sum_may_exceed_the_total(self):
+        """간작·혼작이 정상이다(VP-3) — 합이 넘어도 저장을 막지 않는다."""
+        fac = self._facility_with_capacity(total=12)
+        a, err_a = self._save(facility_uuid=fac.unique_id, subject='토마토',
+                              allocation={'amount': 8})
+        b, err_b = self._save(facility_uuid=fac.unique_id, subject='바질',
+                              allocation={'amount': 8})
+        self.assertIsNone(err_a)
+        self.assertIsNone(err_b)
+        self.assertEqual(a['allocation']['amount'], 8)
+        self.assertEqual(b['allocation']['amount'], 8)
+
+    def test_amount_and_percent_together_are_refused(self):
+        """어느 쪽이 정본인지 모호한 값을 저장하면 화면마다 다른 숫자가 된다."""
+        fac = self._facility_with_capacity()
+        row, err = self._save(facility_uuid=fac.unique_id,
+                              allocation={'amount': 4, 'percent': 30})
+        self.assertIsNone(row)
+        self.assertIn('하나만', err or '')
+
+    def test_zero_or_negative_share_is_refused(self):
+        fac = self._facility_with_capacity()
+        for bad in (0, -3):
+            row, err = self._save(facility_uuid=fac.unique_id,
+                                  allocation={'amount': bad})
+            self.assertIsNone(row, bad)
+            self.assertIn('0보다', err or '')
+
+    def test_percent_over_100_is_refused(self):
+        """한 구획이 구역의 100%를 넘게 쓸 수는 없다(합계와는 다른 이야기다)."""
+        fac = self._facility(bay_count=1)
+        row, err = self._save(facility_uuid=fac.unique_id,
+                              allocation={'percent': 120})
+        self.assertIsNone(row)
+        self.assertIn('100', err or '')
+
+    def test_a_plot_with_its_own_geometry_refuses_a_share(self):
+        """노지 구획은 면적이 도형에서 나온다 — 몫을 적으면 정본이 둘이 된다.
+
+        조용히 무시하지 않는 이유: 무시하면 "적었는데 화면이 안 바뀐다" 가 되고
+        그때 원인이 입력인지 저장인지 가릴 방법이 없다.
+        """
+        row, err = self._save(feature={'type': 'Feature', 'properties': {},
+                                       'geometry': _square(0.0, 0.0, 0.001)},
+                              allocation={'percent': 50})
+        self.assertIsNone(row)
+        self.assertIn('기하', err or '')
+
+    def test_a_partial_save_keeps_the_share(self):
+        """날짜만 고치는 저장이 적어 둔 몫을 지우면 안 된다."""
+        fac = self._facility_with_capacity()
+        row, _ = self._save(facility_uuid=fac.unique_id, allocation={'amount': 4})
+        again, err = self._save(unique_id=row['unique_id'],
+                                expected_end_on='2026-12-31')
+        self.assertIsNone(err)
+        self.assertEqual(again['allocation']['amount'], 4)
+
+    def test_an_empty_share_clears_it(self):
+        """잘못 적은 것을 되돌릴 수단이 없으면 사람은 아무 숫자나 두고 만다."""
+        fac = self._facility_with_capacity()
+        row, _ = self._save(facility_uuid=fac.unique_id, allocation={'amount': 4})
+        again, err = self._save(unique_id=row['unique_id'], allocation=None)
+        self.assertIsNone(err)
+        self.assertIsNone(again['allocation'])
+
+    def test_single_bay_uses_the_facilitys_real_bay_id_not_a_constant(self):
+        """**실제 단동 시설의 구역 id 는 'main' 이다.**
+
+        `facility_io` 가 단동 시설을 저장할 때 `bays=[{'id': 'main', ...}]` 을
+        만든다. 예전에는 저장 경로가 단동만 대조를 건너뛰고 `'bay_1'` 을 박아,
+        저장은 성공하는데 읽는 쪽(`bay_geometries`/`bay_names`)에 그 키가 없어
+        구획이 **구역 기하 대신 시설 외피로 폴백**하고 구역 이름이 비었다 —
+        화면에서는 구획이 시설에 붙지 않고 따로 노는 것으로 보였다.
+        에러는 나지 않았고 `check_geo_integrity` 의 `plot-unknown-bay` 만이 봤다.
+
+        픽스처가 `bays` 를 비워 두는 바람에 위의 두 테스트는 폴백 경로만 돌아
+        이 버그를 통과시켰다 — 그래서 여기서는 실제 시설과 같은 모양을 만든다.
+        """
+        # 실제 단동 시설과 같은 모양 — 구역 메타가 'main' 하나.
+        fac = self._facility(bay_count=1,
+                             bays=[{'id': 'main', 'name': '온실1', 'crop': None}])
+
+        # 결과가 'main' 이라는 것 자체가 "목록을 따랐다" 는 증거다 — 상수를
+        # 박는 옛 코드에서는 여기서 'bay_1' 이 나온다.
+        row, err = self._save(facility_uuid=fac.unique_id)
+        self.assertIsNone(err)
+        self.assertEqual(row['bay_id'], 'main')
+
+        # 클라이언트가 옛 상수를 보내도 실제 id 로 정정된다.
+        row2, err2 = self._save(facility_uuid=fac.unique_id, subject='바질',
+                                bay_id='bay_1')
+        self.assertIsNone(err2)
+        self.assertEqual(row2['bay_id'], 'main')
 
     # ── 다동 ────────────────────────────────────────────────────────────
     def test_multi_bay_rejects_unknown_bay_id(self):
@@ -5145,13 +5298,18 @@ class TestProgram(unittest.TestCase):
     def test_stage_editor_fits_a_fixed_width_drawer(self):
         """단계 편집이 드로어(520px 고정) 안에 들어가야 한다.
 
-        예전에는 5열 표였는데 `grid-template-columns` 는 4트랙이었다 — 다섯
+        처음에는 5열 표였는데 `grid-template-columns` 는 4트랙이었다 — 다섯
         번째가 암시적 트랙으로 밀려 [목표]·[×] 가 화면 밖 253px 에 놓였고,
         `overflow-x: hidden` 이라 스크롤로도 못 갔다. **목표·자원을 아예 설정할
         수 없었고 단계 삭제도 안 됐다.**
 
-        그래서 표를 버리고 접히는 항목으로 갔다. 여기서 고정하는 것은 "표로
-        돌아가지 않는다" 다.
+        그래서 표를 버리고 접히는 항목으로 갔다가(2026-08-20), 다시 **트랙**
+        으로 갔다(2026-08-21): 가로 막대(비율)와 세로 목록(편집)이 같은 것을 두
+        방향으로 두 번 그리고 있었고, 여섯 단계가 세로 공간을 전부 차지했다.
+        지금은 막대의 구간이 곧 메뉴이고 **고른 단계 하나만** 아래에 그린다.
+
+        여기서 고정하는 것은 "다열 표로 돌아가지 않는다" 와 "단계마다 한 벌씩
+        DOM 을 만들지 않는다" 둘이다.
         """
         css = _read(os.path.join(_ROOT, 'aot_flask', 'static', 'css', 'pages',
                                  'geo-program.css'))
@@ -5160,10 +5318,22 @@ class TestProgram(unittest.TestCase):
         # 다열 표를 되살리지 않는다.
         self.assertNotIn('.veg-stage-head', css)
         self.assertNotIn('veg-stage-row', js)
-        # 접힘/펼침 구조가 있다.
-        self.assertIn('veg-stage-summary', js)
-        self.assertIn('veg-stage-detail', js)
-        self.assertIn("data-act=\"stage-toggle\"", js)
+        # 트랙이 메뉴다 — 구간을 고르고 끌 수 있어야 한다.
+        self.assertIn('veg-track-seg', js)
+        self.assertIn("data-act=\"stage-pick\"", js)
+        # 순서는 **끌어서** 바꾼다. HTML5 네이티브 DnD 는 쓰지 않는다 — 터치에서
+        # 안 되고(폰에서 순서를 못 바꾸면 절반만 있는 기능이다), 위젯·팝업
+        # 안에서 시작조차 안 되는 경우가 있다. 이 저장소가 이미 그렇게 정했다
+        # (`widgets/AoT_facility/aot-actuator-order.js`).
+        self.assertNotIn('draggable="true"', js)
+        self.assertIn("addEventListener('touchstart'", js)
+        self.assertIn("addEventListener('touchmove'", js)
+        # 단계 패널은 **한 벌**이다(고른 것만 그린다).
+        self.assertIn('function _stagePanel()', js)
+        self.assertNotIn('function _stageRow(', js)
+        # 그래서 편집 중인 값의 정본은 DOM 이 아니라 State 다.
+        self.assertIn('function _readStagePanel(', js)
+        self.assertIn('State.stages', js)
 
     def test_stage_editor_does_not_branch_on_viewport(self):
         """드로어는 1440px 화면에서도 520px 다 — 좁은 것은 뷰포트가 아니라
@@ -6162,7 +6332,14 @@ class TestProgram(unittest.TestCase):
         # 광합성·기준온도·GDD 안내는 식생에서만 낸다.
         self.assertIn('var vegOnly = _isVeg()', js)
         # 단계의 적산온도 칸도 식생에서만.
-        self.assertIn("(_isVeg()\n                 ? _stageField(_T('stage_gdd'", js)
+        #
+        # **들여쓰기까지 고정하지 않는다** — 단계 상세를 재배치할 때마다 공백이
+        # 달라져 테스트가 깨지는데, 그때 확인해야 할 것은 "식생에서만 내는가"
+        # 이지 "몇 칸 들여썼는가" 가 아니다(2026-08-21에 실제로 겪었다).
+        import re as _re
+        self.assertTrue(
+            _re.search(r"_isVeg\(\)\s*\?\s*_stageField\(_T\('stage_gdd'", js),
+            '단계 적산온도 칸이 _isVeg() 뒤에 있지 않다')
         # 관수·시비 역할도 식생에서만(그 밖은 역할 없는 자원 하나). P6 재설계로
         # 자리가 `_roleChoices()` 로 옮겨졌다 — 원칙은 같다.
         self.assertIn("return _isVeg() ? _RES_ROLES : ['other'];", js)
@@ -6179,7 +6356,9 @@ class TestProgram(unittest.TestCase):
         set_kind = js.index("_kindNow = p.kind || 'vegetation';")
         set_defs = js.index('State.defs = (p.target_defs || [])')
         read_veg = js.index('var vegOnly = _isVeg()')
-        read_stages = js.index('var stages = (p.stages || [])')
+        # 단계는 이제 State 로 옮겨 담고(`State.stages = ...`) 거기서 그린다 —
+        # 그 대입이 `_kindNow`·`State.defs` 보다 뒤여야 한다는 것은 같다.
+        read_stages = js.index('State.stages = (p.stages || [])')
         self.assertLess(set_kind, read_veg)
         self.assertLess(set_kind, read_stages)
         self.assertLess(set_defs, read_stages)
@@ -6468,15 +6647,26 @@ class TestProgram(unittest.TestCase):
         self.assertNotIn('aot-entry-detail', js)
         self.assertIn("modal.setAttribute('data-config-uid-target', uuid)", js)
 
-    def test_subject_is_picked_from_a_list(self):
-        """자유 텍스트로 두면 대상을 바꿀 때마다 철자를 맞춰 적어야 하고,
-        한 글자만 달라도 같은 대상으로 묶이지 않는다."""
+    def test_subject_is_not_asked_in_the_drawer(self):
+        """품목(`subject`)은 **드로어에서 묻지 않는다**(2026-08-21).
+
+        만들 때 정해지고(템플릿이면 그 대상, 빈 프로그램이면 이름과 같게) 뒤에
+        바꿀 일이 없는 값인데, 화면에 두면 "이름과 무엇이 다른가" 를 설명해야
+        하는 칸이 하나 더 생긴다. 실제로 이름이 "무" 인데 품목이 `cucumber` 인
+        상태를 만들어 놓고도 무엇이 잘못인지 알기 어려웠다.
+
+        여기서 고정하는 것은 **값이 조용히 지워지지 않는다** 는 것이다 — 칸이
+        없으면 `collect` 가 키를 보내지 않고, 부분 저장 규칙상 서버가 기존 값을
+        지킨다. 빈 값을 실어 보내면 그 규칙이 깨진다.
+        """
         js = _read(os.path.join(_ROOT, 'aot_flask', 'static', 'js', 'geo',
                                 'program-settings.js'))
-        self.assertIn('function _subjectRow(', js)
-        self.assertIn('__custom__', js)
-        # 직접 입력을 비운 채 고르면 **아무것도 보내지 않는다**(기존 값 보존).
-        self.assertIn("delete out.subject;", js)
+        self.assertNotIn('function _subjectRow(', js)
+        self.assertNotIn("data-pf=\"subject\"", js)
+        # 빈 값은 **보내지 않는다**(기존 값 보존).
+        self.assertIn('if (!out.subject) delete out.subject;', js)
+        # 새로 만들 때는 이름과 같게 — 아무도 못 고치는 자리표시자를 남기지 않는다.
+        self.assertNotIn("_T('new_subject'", js)
 
     def test_program_kind_widens_beyond_vegetation(self):
         """식생은 대상 중 하나일 뿐이다 — 같은 구조가 가축·시설물·도로에도 쓰인다."""

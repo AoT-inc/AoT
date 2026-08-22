@@ -54,6 +54,7 @@
   let currentTabId = null;
   let currentTabName = null;
   let totalTabs = 0;
+  let currentPageType = null;
   
   // Show toast notification
   function showToast(message, type = 'info') {
@@ -78,10 +79,11 @@
   }
   
   // Open modal
-  window.openTabSettings = function(tabId, tabName, tabCount) {
+  window.openTabSettings = function(tabId, tabName, tabCount, pageType) {
     currentTabId = tabId;
     currentTabName = tabName;
     totalTabs = tabCount || 1;
+    currentPageType = pageType || null;
     
     tabIdInput.value = tabId;
     nameInput.value = tabName;
@@ -187,7 +189,13 @@
       return;
     }
     
-    window.aotConfirm('{{_("Delete this tab and all its entries? This cannot be undone.")}}', function() {
+    // Programs 는 다르다 — 탭을 지워도 프로그램은 지워지지 않고 기본 탭으로
+    // 옮겨간다(다른 구획이 여전히 참조할 수 있어서다). 공용 확인문구를 그대로
+    // 쓰면 "전부 삭제된다" 고 잘못 겁주게 된다.
+    const deleteConfirmMsg = currentPageType === 'program'
+      ? '{{_("Delete this tab? Its programmes are not deleted — they move to the page\'s default tab.")}}'
+      : '{{_("Delete this tab and all its entries? This cannot be undone.")}}';
+    window.aotConfirm(deleteConfirmMsg, function() {
       console.log('[TabSettings] Sending DELETE request to /tab/' + currentTabId);
       btnDelete.disabled = true;
       fetch(`/tab/${currentTabId}`, {

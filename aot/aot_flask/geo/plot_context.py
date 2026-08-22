@@ -93,6 +93,74 @@ def facility_geometry(facility_uuid, bay_id=None, facilities=None):
     return brief.get('geometry') or {}
 
 
+_CAPACITY_UNITS = ('bed', 'row', 'tray', 'area', 'house')
+
+
+def bay_capacities(fac):
+    """`GeoFacility` 행 → `{bay_id: {'unit': str, 'total': number}}` (p6_50).
+
+    구역 메타(`bays[]`)에 사람이 적어 둔 총량만 추린다. 값이 없거나 모양이
+    어긋난 구역은 **그냥 빠진다** — 총량이 없는 것은 오류가 아니라 "아직 안
+    적었다" 이고, 그때는 구획이 비율(percent)로 몫을 적는다.
+
+    단위를 자유 문자열로 두지 않는 이유는 번역과 집계가 곧 갈리기 때문이다.
+    어휘를 고정하고 표시 문구만 번역한다.
+    """
+    out = {}
+    bays = fac.bays if isinstance(fac.bays, list) else []
+    for b in bays:
+        if not isinstance(b, dict):
+            continue
+        cap = b.get('capacity')
+        if not isinstance(cap, dict):
+            continue
+        try:
+            total = float(cap.get('total'))
+        except (TypeError, ValueError):
+            continue
+        if total <= 0:
+            continue
+        unit = cap.get('unit')
+        if unit not in _CAPACITY_UNITS:
+            unit = 'bed'
+        bid = b.get('id')
+        if not bid:
+            continue
+        out[bid] = {'unit': unit,
+                    'total': int(total) if float(total).is_integer()
+                             else round(total, 2)}
+    return out
+
+
+def allocation_view(allocation, capacity):
+    """저장된 몫 + 구역 총량 → 화면이 그대로 쓰는 dict (없으면 None).
+
+        {'amount': 4, 'total': 12, 'unit': 'bed', 'percent': 33.3}
+        {'percent': 33}                      # 총량이 없는 시설
+
+    `percent` 는 **여기서 파생한다.** `amount` 만 저장하고 비율을 만들어 내는
+    것이 요지다 — 총량을 12에서 10으로 고치면 같은 4베드가 33%에서 40%가 되어야
+    하는데, 비율을 저장해 두면 그 순간 둘이 갈린다.
+
+    총량이 있는데 구획이 `percent` 로 적혀 있으면(총량을 나중에 적은 경우)
+    그 값을 그대로 쓴다 — 서버가 어림해 `amount` 로 옮겨 적지 않는다. 어느
+    베드인지는 사람만 안다.
+    """
+    if not isinstance(allocation, dict) or not allocation:
+        return None
+    out = dict(allocation)
+    if isinstance(capacity, dict) and capacity.get('total'):
+        out['total'] = capacity.get('total')
+        out['unit'] = capacity.get('unit')
+        if out.get('amount') is not None:
+            try:
+                pct = float(out['amount']) / float(capacity['total']) * 100.0
+                out['percent'] = round(pct, 1)
+            except (TypeError, ValueError, ZeroDivisionError):
+                pass
+    return out
+
+
 def facility_brief(facility_uuid, facilities=None):
     """시설 요약 → `{'unique_id', 'name', 'geometry'}` (없으면 빈 dict).
 
@@ -134,8 +202,13 @@ def facility_brief(facility_uuid, facilities=None):
         except Exception as exc:
             logger.warning('plot: 시설 %s 구역 기하 계산 실패 — 외피로 '
                            '폴백: %s', facility_uuid, exc)
+        # 구역 총량(p6_50) — "12베드" 처럼 **사람이 세는 단위**의 전체 수량.
+        # 구획의 몫(`allocation.amount`)이 이것을 분모로 삼는다. 시설이 정하는
+        # 사실이므로 구획은 참조만 한다 — 구획 저장이 이 값을 고칠 수 있으면
+        # 마지막에 저장한 구획이 분모를 정하게 된다.
         brief = {'unique_id': fac.unique_id, 'name': fac.name, 'geometry': geom,
-                 'bay_geometries': bay_geoms, 'bay_names': bay_names}
+                 'bay_geometries': bay_geoms, 'bay_names': bay_names,
+                 'bay_capacities': bay_capacities(fac)}
     if isinstance(facilities, dict):
         facilities[facility_uuid] = brief
     return brief
@@ -1544,11 +1617,15 @@ def timeline(plot, program=None, on=None):
     }
 
 
-def plot_brief_for_control(row, on=None):
+def plot_brief_for_control(row, on=None, capacities=None):
     """제어 화면이 한 줄로 읽을 수 있는 최소 요약.
 
     면적·치수는 넣지 않는다 — 시설에서는 낼 수 없는 값이고, 제어가 알아야 하는
     것은 "무엇이 며칠째" 다.
+
+    `capacities` 를 주면 몫(p6_50)을 파생 비율과 함께 낸다. 시설 하나의 총량을
+    호출부가 **한 번** 읽어 넘기는 형태다 — 구획마다 시설을 다시 조회하면 목록
+    하나에 N+1 이 된다.
     """
     due, _src = expected_end(row)
     out = {
@@ -1557,6 +1634,9 @@ def plot_brief_for_control(row, on=None):
         'variety': row.variety,
         'name': row.name,
         'bay_id': row.bay_id,
+        'allocation': allocation_view(
+            row.allocation,
+            (capacities or {}).get(row.bay_id) if capacities else None),
         'started_on': row.started_on.isoformat() if row.started_on else None,
         'days_since_planted': elapsed_days(row, on=on),
         'expected_end_on': due.isoformat() if due else None,
@@ -2201,6 +2281,11 @@ def to_dict(row, containers=None, with_sensors=False, markers=None,
         brief = facility_brief(facility_uuid, facilities=facilities)
         out['facility_name'] = brief.get('name')
         out['bay_name'] = (brief.get('bay_names') or {}).get(row.bay_id)
+        # 구역 안에서의 몫 (p6_50) — 적힌 값과 **파생 비율**을 함께 낸다.
+        # 비율을 저장하지 않는 이유가 여기 있다: 총량이 바뀌면 비율도 따라
+        # 바뀌어야 하는데, 저장해 두면 둘이 조용히 갈린다.
+        out['allocation'] = allocation_view(
+            row.allocation, (brief.get('bay_capacities') or {}).get(row.bay_id))
         # 고를 수 있는 구역 목록 — 모달에서 구역을 바꾸려면 **선택지**가 있어야
         # 한다. 노지 구획은 위치를 도형 편집으로 옮기지만, 시설 구획의 위치는
         # `bay_id` 문자열이라 옮기는 일이 곧 고르는 일이다.

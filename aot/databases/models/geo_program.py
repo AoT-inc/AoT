@@ -173,6 +173,16 @@ class GeoProgram(CRUDMixin, db.Model):
     auto_advance = db.Column(db.Boolean, nullable=False, default=False)
 
     notes = db.Column(db.Text, nullable=True)
+
+    # 소속 탭(`Tab.unique_id`) — geo/program 화면의 사용자 구획 정보일 뿐이다.
+    #
+    # **진짜 FK 제약을 걸지 않는다**(`geo_planting.facility_uuid`와 같은 패턴,
+    # p6_39). 탭이 지워져도 이 값이 가리키는 행이 사라져서는 안 된다 — 이
+    # 프로그램은 다른 구획(`GeoPlot.program_uuid`)에서 참조 중일 수 있어, DB
+    # 레벨 CASCADE로 함께 지우면 무결성이 깨진다. 탭 삭제 시 재배정은
+    # `TabService`의 고아 정리가 담당한다.
+    tab_id = db.Column(db.String(36), nullable=True, index=True)
+
     created_at = db.Column(db.DateTime, default=utc_now)
     updated_at = db.Column(db.DateTime, default=utc_now, onupdate=utc_now)
 

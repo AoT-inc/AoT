@@ -17,61 +17,146 @@
    모바일(309px)과 드로어(454px)는 둘 다 좁은 단일 컬럼이다. 좁은 쪽 하나에
    맞추면 양쪽이 함께 맞는다 — 분기를 늘리면 한쪽만 고쳐진다. */
 
-/* ── 단계 항목 ─────────────────────────────────────────────────────── */
+/* ── 배경·카드 색 ──────────────────────────────────────────────────── */
+/* settings/custom_ui 의 전역 색 토큰을 그대로 쓴다(하드코딩 금지, 이 저장소
+   규칙) — 페이지는 배경 보조(`--bd-secondary`), 카드는 배경 기본
+   (`--bd-primary`, 공용 `.aot-entry-item` 규칙이 이미 이 변수를 쓴다)로
+   갈라 카드가 옅은 면 위에 얹힌 것처럼 보이게 한다. 그 대비만으로 카드를
+   구분할 수 있어 테두리는 없앤다(아래 `#veg-list` 규칙).
+   `main.container` 가 아니라 `body` 에 건다 — `.container` 는 넓은 화면에서
+   좌우로 여백이 남아 그 바깥은 계속 body 기본색으로 보이므로, 탭 바 아래
+   영역 전체를 덮으려면 `body` 여야 한다. 이 파일은 programs.html 에서만
+   로드되므로 다른 페이지의 body 색에는 영향이 없다. */
+body {
+  background-color: var(--bd-secondary);
+}
 
-.veg-stage-block { border-bottom: 1px solid var(--aot-color-border, #e5e5e5); }
-.veg-stage-block:last-child { border-bottom: none; }
+/* ── 목록 카드 간격 ────────────────────────────────────────────────── */
+/* GridStack 을 안 쓰는 화면(input 은 GridStack 의 margin:2 로 카드 사이가
+   벌어진다)이라 여기는 카드가 그냥 이어붙어 렌더된다 — 알약 테두리끼리
+   맞닿아 하나로 뭉쳐 보인다. `#veg-list` 로 좁혀서 다른 aot-entry-item
+   소비처(input/output/function)의 GridStack 간격 계산에 영향을 안 준다. */
+#veg-list .aot-entry-item {
+  margin-bottom: 4px;
+  border: none;
+}
 
-/* 접힌 줄 전체가 펼치기 버튼이다 — 좁은 화면에서 손가락이 닿을 면적이 필요하다. */
-.veg-stage-summary {
-  display: grid;
-  grid-template-columns: 1em minmax(0, auto) minmax(0, 1fr);
-  align-items: baseline;
-  gap: 0.5em;
-  width: 100%;
-  padding: 0.6em 0;
-  background: none;
+/* ── 검색창 ────────────────────────────────────────────────────────── */
+/* 공용 `.note-search-input-group`(aot-base.css)은 폭을 정하지 않는다 —
+   notes 페이지에서는 부트스트랩 컬럼(`col-md-6`)이 좁혀 주지만, 여기는 그
+   컬럼이 없어 카드와 같은 폭까지 늘어나 데스크탑에서 지나치게 길어 보인다.
+   흔한 검색창 폭(약 320px)으로 좁힌다 — notes 페이지의 공용 정의는 그대로
+   두고 이 화면(`#veg-search-group`)에서만 좁힌다. */
+#veg-search-group {
+  max-width: 20em;
+}
+
+/* 폰트 아이콘은 글리프 잉크가 em 박스 안에서 아래쪽에 쏠려 있어, 박스만
+   flex-center 해도 눈에는 살짝 위로 떠 보인다(돋보기 손잡이가 오른쪽 아래로
+   빠지는 모양이라 더 그렇다). line-height 를 명시해 폰트 메트릭이 만드는
+   여백을 없앤 뒤, 아이콘 자체도 flex 로 다시 중앙에 놓는다. */
+#veg-search-group .note-search-icon {
+  display: inline-flex;
+  align-items: center;
+  line-height: 1;
+}
+
+/* ── 단계 트랙 (2026-08-21) ──────────────────────────────────────────────
+   **막대가 곧 메뉴다.** 예전에는 가로 막대(비율)와 세로 목록(편집)이 따로
+   있어, 어느 단계를 고치려면 막대에서 위치를 눈으로 찾고 목록에서 그 이름을
+   다시 찾아야 했다 — 마우스가 왕복하고 여섯 단계가 세로 공간을 전부 차지했다.
+
+   **겉모양은 공용 기간 바 그대로다.** 컨테이너에 `aot-viz` 를 함께 붙여 그
+   토큰(트랙 굵기·구간 색·표면색·다크 override)을 상속받는다 — 색을 여기 다시
+   적으면 공용 팔레트가 바뀔 때 이 화면만 남는다. 상호작용만 얹는 것이지
+   **모양을 바꾸는 것이 아니다**: 구간을 각각 테두리 있는 상자로 그렸다가
+   막대가 칩 여섯 개로 보인다는 지적을 받고 되돌렸다.
+
+   빌더(`AoTViz.timeline`)를 쓰지 않는 이유는 그것이 **읽기 전용**이라서다.
+   고르고 끌 수 있는 컨트롤은 다른 물건이고, 상호작용을 넣자고 공용 빌더를
+   고치면 그것을 쓰는 지도 위젯까지 함께 흔들린다. */
+.veg-track-wrap { padding: 0.2em 0 0.4em; }
+
+.veg-track {
+  display: flex;
+  /* 조각 사이를 벌리지 않는다 — 벌리면 하나의 막대가 아니라 칩 여섯 개가
+     된다. 경계는 아래에서 표면색으로 **파낸다**(공용 `.aot-viz-tick` 과 같은
+     방식). */
+  gap: 0;
+  /* 단계가 많으면 최소폭 합이 상자를 넘는다. 줄바꿈하면 비율 감각이 깨지므로
+     가로로 흐르게 두고, 스크롤바는 감춘다(이 저장소 규칙). */
+  overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.veg-track::-webkit-scrollbar { display: none; }
+
+/* 구간은 버튼이지만 **버튼처럼 그리지 않는다** — 테두리도 배경도 없고, 보이는
+   것은 가운데 막대 조각뿐이다. 폭은 비율이되 최소폭이 있다: 7일짜리 단계는
+   80일 중 8.75% 라 520px 드로어에서 45px 다 — 이름도 안 보이고 끌기도 어렵다.
+   비율 감각보다 조작 가능성이 먼저다. */
+.veg-track-seg {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25em;
+  min-width: 4.4em;
+  padding: 0;
   border: 0;
-  text-align: left;
-  cursor: pointer;
+  background: none;
+  cursor: grab;
+  text-align: center;
+  overflow: hidden;
 }
-.veg-stage-caret {
-  justify-self: center;
-  border: solid currentColor;
-  border-width: 0 1.5px 1.5px 0;
-  padding: 0.16em;
-  transform: rotate(-45deg);
-  transition: transform 0.15s ease;
-  opacity: 0.6;
+.veg-track-seg:active { cursor: grabbing; }
+.veg-track-seg.is-dragging { opacity: 0.45; }
+
+/* 막대 조각 — 이어 붙으면 공용 기간 바와 같은 하나의 트랙이 된다. 양 끝만
+   둥글게 해 알약 모양을 유지한다(`.aot-viz-track` 과 같은 반경). */
+.veg-track-bar {
+  height: var(--aot-viz-track-h, 8px);
+  background: color-mix(in srgb, var(--aot-color-text-primary)
+                        var(--aot-viz-track-mix, 10%), transparent);
 }
-.veg-stage-block.is-open .veg-stage-caret { transform: rotate(45deg); }
-.veg-stage-title { font-weight: 600; }
-/* 요약은 넘치면 자른다 — 줄이 늘어나면 접어 둔 뜻이 없어진다. */
-.veg-stage-meta {
-  font-size: var(--aot-font-size-xs, 0.8em);
-  opacity: 0.7;
+.veg-track-seg:first-child .veg-track-bar {
+  border-top-left-radius: calc(var(--aot-viz-track-h, 8px) / 2);
+  border-bottom-left-radius: calc(var(--aot-viz-track-h, 8px) / 2);
+}
+.veg-track-seg:last-child .veg-track-bar {
+  border-top-right-radius: calc(var(--aot-viz-track-h, 8px) / 2);
+  border-bottom-right-radius: calc(var(--aot-viz-track-h, 8px) / 2);
+}
+/* 구간 경계 — 표면색으로 1px 파낸다(공용 `.aot-viz-tick` 과 같은 방식). */
+.veg-track-seg + .veg-track-seg .veg-track-bar {
+  border-left: 1px solid var(--aot-viz-surface, #fff);
+}
+/* 고른 구간 — 공용 기간 바의 "현재 단계" 와 같은 색(`--aot-viz-zone`). */
+.veg-track-seg.is-current .veg-track-bar {
+  background: var(--aot-viz-zone, #32c85a);
+}
+.veg-track-seg.is-drop .veg-track-bar {
+  background: color-mix(in srgb, var(--aot-viz-zone, #32c85a) 45%, transparent);
+}
+
+/* 이름은 트랙 **위**, 일수는 **아래**. 둘 다 가운데 정렬이다 — 한쪽만 왼쪽으로
+   붙으면 구간마다 글자가 어긋나 보인다. 공용 `.aot-viz-segs` 와 같은 서체. */
+.veg-track-name,
+.veg-track-days {
+  display: block;
+  max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.veg-stage-detail { padding: 0 0 0.9em 1.5em; }
-
-/* 라벨은 값 **위**에 둔다. 520px 에서 label|value 2열은 값이 너무 좁아,
-   "곡선을 연결하면 그 / 항목은 단계 값 대신" 처럼 10자마다 끊긴다. */
-.veg-stage-field {
-  display: flex;
-  flex-direction: column;
-  gap: 0.2em;
-  margin: 0 0 0.6em;
-}
-.veg-stage-field > span {
   font-size: var(--aot-font-size-xs, 0.8em);
-  opacity: 0.75;
+  color: var(--aot-color-text-secondary);
+  line-height: 1.3;
+}
+.veg-track-seg.is-current .veg-track-name {
+  color: var(--aot-color-text-primary);
+  font-weight: 600;
 }
 
-/* 짧은 숫자 둘(일수·적산온도)만 나란히 둔다 — 여기까지가 좁은 폭에서 안전하다. */
-.veg-stage-nums { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6em; }
+/* 고른 단계의 설정 — 화면에 **한 벌만** 있다. */
+.veg-stage-panel { padding-top: 0.2em; }
 
 .veg-stage-sub {
   margin: 0.4em 0 0.3em;
@@ -80,24 +165,10 @@
   opacity: 0.75;
 }
 
-/* ── 단계 목표 ─────────────────────────────────────────────────────── */
-/* 여섯 칸. 좁으면 한 열, 조금 넓으면 두 열 — **컨테이너 폭**으로 정한다.
-   뷰포트로 정하면 드로어 안에서는 늘 틀린 쪽이 걸린다. */
-.veg-stage-targets {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(8.5em, 1fr));
-  gap: 0.5em 0.75em;
-  padding: 0 0 0.5em;
-}
-.veg-target-field {
-  display: flex;
-  flex-direction: column;
-  gap: 0.15em;
-  min-width: 0;          /* 격자 칸이 내용 최소폭에 밀려 넘치지 않게 */
-  margin: 0;
-}
-.veg-target-field em { opacity: 0.7; font-style: normal; }
-.veg-target-field input { min-width: 0; }
+/* ── 단계 목표 ───────────────────────────────────────────────────────
+   **한 줄에 하나**다(2026-08-21). 예전에는 3열 격자였는데 좁은 폭에서 라벨과
+   칸이 어긋나고, 같은 드로어의 다른 줄들과 문법도 갈렸다. 격자 클래스는
+   남기지 않는다 — 남겨 두면 다음에 누가 다시 격자로 돌린다. */
 
 /* ── 자원(관수·시비) ───────────────────────────────────────────────── */
 /* 공용 option-row(label|value 2열)를 그대로 쓴다 — 라벨이 짧아 454px 에서도
@@ -106,8 +177,8 @@
 
    `select` 만 남은 폭을 채우게 한다 — 기본값은 내용 크기라 "없음" 하나면
    칸이 우스꽝스럽게 좁아진다. */
-.veg-stage-detail .aot-modal-option-control select,
-.veg-stage-detail .aot-modal-option-control input { width: 100%; }
+.veg-stage-panel .aot-modal-option-control select,
+.veg-stage-panel .aot-modal-option-control input { width: 100%; }
 
 /* ── 목록 카드 ─────────────────────────────────────────────────────── */
 /* 부가정보는 **한 줄로 자른다.** input 카드의 같은 열에는 짧은 것(측정 칩·장치
@@ -125,39 +196,30 @@
 /* 목록 항목 아래 편집 영역 — 항목과 시각적으로 이어 보이게. */
 .aot-entry-detail { padding: 0 0 0.75em 0; }
 
-/* 광합성 모델 상수 — 접어 둔다. 대부분은 손대지 않고, 템플릿에서 만들면 이미
-   채워져 있다. 펼쳐 두면 "채워야 할 칸" 으로 읽힌다. */
-.aot-prog-photo {
+/* 접는 고급 블록(`<details class="aot-prog-adv">`) — 광합성 모델 상수와 단계
+   식별 코드가 쓴다. 펼쳐 두면 "채워야 할 칸" 으로 읽히는 것들이다.
+   예전에는 광합성 전용 클래스(`.aot-prog-photo`)였는데, 같은 성격의 자리가
+   둘이 되면서 이름을 넓혔다. */
+.aot-prog-adv {
   margin-top: 10px;
   border-top: 1px solid var(--aot-border-neutral, var(--aot-border-light));
   padding-top: 8px;
 }
-.aot-prog-photo > summary {
+.aot-prog-adv > summary {
   cursor: pointer;
   font-weight: 600;
   color: var(--aot-color-text-primary);
   list-style: none;
 }
-.aot-prog-photo > summary::-webkit-details-marker { display: none; }
-.aot-prog-photo > summary::before { content: '▸ '; }
-.aot-prog-photo[open] > summary::before { content: '▾ '; }
-.aot-prog-unit {
-  color: var(--aot-color-text-secondary);
-  font-size: var(--aot-font-size-xs);
-  font-weight: 400;
-}
+.aot-prog-adv > summary::-webkit-details-marker { display: none; }
+.aot-prog-adv > summary::before { content: '▸ '; }
+.aot-prog-adv[open] > summary::before { content: '▾ '; }
 
 /* ── 목표 항목 관리 (2026-08-20) ──────────────────────────────────────────
    항목은 프로그램마다 다르다(종류별 고정 항목 + 사용자가 만든 항목). 여기서는
    "무엇을 목표로 삼을지" 를 고르고, 값은 단계 상세에서 적는다. */
 .veg-def-row {
   align-items: center;
-}
-
-/* 숨긴 항목은 **지운 것이 아니다.** 흐리게 두어 "여기 있지만 안 쓴다" 를
-   말한다 — 아예 감추면 나중에 센서를 달았을 때 되살릴 생각을 못 한다. */
-.veg-def-row.is-hidden .aot-modal-option-label {
-  opacity: 0.55;
 }
 
 .veg-def-add {
@@ -176,12 +238,6 @@
   flex: 0 0 auto;
 }
 
-/* 단계 지침 — 산문이라 줄바꿈이 살아야 읽힌다. */
-.veg-guidance {
-  width: 100%;
-  resize: vertical;
-}
-
 /* 항목 행의 기본 목표값 — 값은 **여기 한 번** 적고 달라지는 단계에서만 덮어쓴다.
    단계마다 다시 적게 하면 4단계 × 6항목이 빈 칸 24개가 된다. */
 .veg-def-ctl {
@@ -191,20 +247,10 @@
 }
 
 .veg-def-val {
-  flex: 0 1 6rem;
+  /* "목표 없음" 이라는 placeholder 가 들어갈 만큼은 돼야 한다 — 6rem 에서는
+     "목표 없" 으로 잘려, 무엇을 말하는지가 정확히 안 보인다. */
+  flex: 0 1 7.5rem;
   min-width: 0;
-}
-
-/* ── 드로어 폼 손질 (2026-08-20) ─────────────────────────────────────────
-   `.aot-modern-input` 은 **한 줄 입력용**이라 알약 반경(`--aot-btn-pill-radius`)
-   을 `!important` 로 건다. 그것이 여러 줄 textarea 에 걸리면 좌우가 통째로
-   둥글어져 거대한 타원이 된다 — 이 저장소가 반복해서 겪는 문제다. */
-#veg-drawer-body .veg-guidance {
-  border-radius: 16px !important;
-  /* 공용 textarea 규칙은 코드 편집기용이라 `white-space: pre` 로 줄을 안 접는다.
-     지침은 산문이라 가로 스크롤이 아니라 줄바꿈이 맞다. */
-  white-space: pre-wrap !important;
-  overflow-wrap: break-word !important;
 }
 
 /* 버튼·입력은 오른쪽으로 모은다 — 라벨은 왼쪽, 조작은 오른쪽이라야 눈이
@@ -231,3 +277,174 @@
 #veg-drawer-body {
   padding-bottom: 2em;
 }
+
+
+/* ── 그룹 골격 (2026-08-21) ──────────────────────────────────────────────
+   드로어를 네 덩이 + 고급으로 나눈다(기본 · 단계 · 목표 · 자원 · 고급).
+   그룹 제목은 공용 `.aot-modal-group-title` 이고, **그룹 설명은 상자 밖**
+   제목 바로 아래에 온다 — 상자 안에 넣으면 첫 항목의 설명처럼 읽힌다. */
+.aot-prog-group-note {
+  padding: 0 16px 0.4rem;   /* 그룹 제목의 좌측 정렬(16px)과 맞춘다 */
+  margin-top: 0;
+}
+
+/* 읽기 전용 안내는 맨 위에 — 고칠 수 없다는 사실을 칸을 만지기 전에 안다. */
+.aot-prog-ro {
+  padding: 0 16px 0.4rem;
+}
+
+/* **상자의 라운드는 내용의 최소 여백이다.** 공용 `.aot-modal-container` 는
+   `border-radius: 16px` 인데 상하 여백이 0 이라, 첫 행과 마지막 행이 둥근
+   모서리 안쪽을 파고들어 글자가 테두리에 닿는다. 같은 값만큼 띄운다. */
+#veg-drawer-body .aot-modal-container {
+  padding: 16px !important;
+}
+
+/* ── 설정 한 줄 ──────────────────────────────────────────────────────────
+   **1행 [제목][컨트롤] · 2행 [설명]**, 구분선은 그 아래.
+
+   설명이 행 밖이면 공용 구분선이 제목과 설명 사이를 갈라 설명이 다음 항목의
+   것처럼 읽히고, 라벨 안이면 라벨 열(160px 컨트롤을 뺀 나머지)에 갇혀 대여섯
+   글자마다 끊긴다. 그래서 행 안·라벨 밖 세 번째 자식으로 두고 `wrap` 으로
+   내린다. 폭으로 분기하지 않는다 — 좁은 쪽(폰)에 맞춘 이 배치가 넓은 쪽에서도
+   그대로 읽힌다. */
+#veg-drawer-body .veg-row {
+  flex-wrap: wrap !important;
+}
+#veg-drawer-body .veg-row-note {
+  flex: 1 1 100%;
+  margin-top: 0.15rem;
+}
+
+/* 여러 줄 입력은 제목과 나란히 설 수 없다 — 설명을 먼저 읽고 쓰게 한다. */
+#veg-drawer-body .veg-row-wide > .aot-modal-option-label,
+#veg-drawer-body .veg-row-wide > .veg-row-note {
+  flex: 1 1 100%;
+  max-width: 100%;
+}
+#veg-drawer-body .veg-row-wide > .aot-modal-option-control {
+  flex: 1 1 100% !important;
+  width: 100% !important;
+  min-width: 100% !important;
+  max-width: 100% !important;
+  margin-top: 0.3rem;
+}
+
+/* 공용 라벨 규칙 둘은 "라벨은 짧은 한 줄" 을 전제한다 — 폰에서 한 줄로 자르고
+   (`nowrap` + ellipsis), 컨트롤 열 자리를 `max-width` 로 비워 둔다. 이 화면의
+   제목은 짧지만 그 두 규칙이 긴 제목("VPD 반포화 상수")까지 잘라 버렸다. */
+#veg-drawer-body .aot-modal-option-label {
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+  max-width: 100%;
+}
+
+/* ── 목표 항목 행 ────────────────────────────────────────────────────────
+   공용 컨트롤 열은 160px 고정인데, 이 행은 [값][사용 토글] 또는 [값][삭제] 로
+   둘이 들어간다. 폭을 내용에 맡겨 값 칸이 찌그러지지 않게 한다. */
+.veg-def-row .aot-modal-option-control {
+  flex: 0 0 auto !important;
+  width: auto !important;
+  min-width: 0 !important;
+}
+
+/* 끈 항목은 **지운 것이 아니다.** 흐리게 두어 "여기 있지만 안 쓴다" 를 말한다
+   — 아예 감추면 나중에 센서를 달았을 때 되살릴 생각을 못 한다. */
+.veg-def-row.is-hidden .aot-modal-option-label,
+.veg-def-row.is-hidden .veg-row-note {
+  opacity: 0.55;
+}
+
+/* ── 의도(notes)·지침 ────────────────────────────────────────────────────
+   `.aot-modern-input` 은 **한 줄 입력용**이라 알약 반경을 `!important` 로
+   건다. 여러 줄 textarea 에 그것이 걸리면 좌우가 통째로 둥글어져 거대한
+   타원이 된다 — 이 저장소가 반복해서 겪는 문제다. */
+#veg-drawer-body .veg-intent,
+#veg-drawer-body .veg-guidance {
+  width: 100%;
+  resize: vertical;
+  border-radius: 16px !important;
+  /* 공용 textarea 규칙은 코드 편집기용이라 `white-space: pre` 로 줄을 안 접는다.
+     산문이라 가로 스크롤이 아니라 줄바꿈이 맞다. */
+  white-space: pre-wrap !important;
+  overflow-wrap: break-word !important;
+}
+
+/* ── 접는 고급 블록 ──────────────────────────────────────────────────────
+   `<details class="aot-prog-adv">` — 광합성 모델 상수와 단계 식별 코드가 쓴다.
+
+   **가로선이 겹치지 않게 한다.** 바로 앞 형제가 이미 아래쪽 구분선을 가진
+   설정 행이면(공용 `aot-modal-option-row`) 여기에 또 위쪽 선을 그어 두 줄이
+   된다 — 실제로 기준온도 행과 광합성 블록 사이가 그랬다. */
+.aot-prog-adv {
+  margin-top: 10px;
+  border-top: 1px solid var(--aot-border-neutral, var(--aot-border-light));
+  padding-top: 8px;
+}
+.aot-modal-option-row + .aot-prog-adv,
+.aot-prog-adv + .aot-prog-adv {
+  border-top: none;
+  margin-top: 0;
+}
+.aot-prog-adv > summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--aot-color-text-primary);
+  list-style: none;
+}
+.aot-prog-adv > summary::-webkit-details-marker { display: none; }
+.aot-prog-adv > summary::before { content: '▸ '; }
+.aot-prog-adv[open] > summary::before { content: '▾ '; }
+/* 접힌 블록 안의 첫 설명은 제목 바로 아래 — 행이 아니므로 구분선이 없다. */
+.veg-adv-note { padding: 0.2rem 0 0.4rem; }
+
+/* 목표 곡선도 같은 자리(고급 상자)에 선다. 앞 형제가 이미 선을 가졌으면
+   겹치지 않게 한다 — 위 `.aot-prog-adv` 와 같은 규칙이다. */
+.veg-curves {
+  margin-top: 10px;
+  border-top: 1px solid var(--aot-border-neutral, var(--aot-border-light));
+  padding-top: 8px;
+}
+.aot-modal-option-row + .veg-curves,
+.aot-prog-adv + .veg-curves {
+  border-top: none;
+  margin-top: 0;
+}
+
+
+/* ── 2026-08-21 2차 ──────────────────────────────────────────────────────
+
+   ## 단계 상세: 구분선은 하나만
+
+   지침 줄(공용 행)이 이미 아래쪽 선을 갖는데 그 다음 `<details>` 가 위쪽 선을
+   또 그으면 두 줄이 된다. 사이에 숨겨진 블록(`hidden`)이 있어도 `+` 는 그것을
+   형제로 세므로, 인접 선택자 대신 **자리로** 끈다. */
+.veg-stage-panel > .aot-prog-adv {
+  border-top: none;
+  margin-top: 0;
+}
+
+/* ## 단계 추가는 목록의 한 행
+
+   목록 밖에 떠 있으면 마지막 단계에 딸린 버튼처럼 보인다. 단계 블록과 같은
+   구분선을 위에 둬 "이 줄도 목록의 일부" 로 읽히게 한다. */
+/* 단계 추가는 트랙과 패널 사이의 한 행이다 — 트랙에서 고른 단계 **바로 뒤**에
+   들어가므로, 그 둘 사이가 자리로도 맞다. */
+.veg-stage-add-row {
+  border-bottom: 1px solid var(--aot-color-border, #e5e5e5);
+  padding-bottom: 0.6em;
+  margin-bottom: 0.2em;
+}
+
+/* ## 항목 추가 — 1행 제목·버튼 / 2행 설명 / 3행 입력 셋
+
+   앞의 세 칸(측정 종류·이름·단위)은 한 덩이라 나란히 둔다. 제목 줄은 위쪽
+   목록과 같은 공용 행이므로 그쪽 규칙을 그대로 따른다. */
+.veg-def-adder > .veg-def-add {
+  margin-top: 0.6em;
+}
+
+/* 곡선 목록도 이제 한 줄에 하나다 — 상자 안 다른 줄과 같은 골격이라 따로 줄
+   여백을 주지 않는다. */
+.veg-curves .aot-modal-option-row:last-child { border-bottom: none; }

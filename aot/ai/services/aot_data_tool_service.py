@@ -8193,12 +8193,15 @@ class AoTDataToolService:
         return d
 
     @staticmethod
-    def list_programs(kind=None, subject=None, crop=None, **extra):
+    def list_programs(kind=None, subject=None, crop=None, tab_id=None, **extra):
         """[읽기전용] 관리 프로그램 목록 — 대상의 단계·기간 템플릿.
 
         `kind` 로 종류를 좁힌다: `vegetation`(식생) · `livestock`(가축) ·
         `facility`(시설물) · `other`. 식생 구획에 붙일 것을 찾는다면
         `kind='vegetation'` 이다.
+
+        `tab_id` 로 Programs 화면의 특정 탭에 있는 것만 볼 수 있다(`list_tabs`
+        로 먼저 탭 id를 확인).
 
         구획에 프로그램을 붙이면 단계·예상 수확일이 따라오므로, `create_plot`
         전에 여기서 골라 `program_uuid` 로 넘긴다. 새로 만들기 전에 **먼저 이
@@ -8215,6 +8218,8 @@ class AoTDataToolService:
                 q = q.filter(GeoProgram.kind == str(kind).strip())
             if want:
                 q = q.filter(GeoProgram.subject == want)
+            if tab_id:
+                q = q.filter(GeoProgram.tab_id == str(tab_id).strip())
             rows = q.order_by(GeoProgram.subject.asc()).all()
             return {"status": "success", "count": len(rows),
                     "programs": [program_io.to_dict(r, with_stages=False)
@@ -8244,7 +8249,8 @@ class AoTDataToolService:
     def create_program(name=None, subject=None, crop=None, stages=None,
                             variety=None, source_note=None, notes=None,
                             kind=None, base_temp_c=None, auto_advance=None,
-                            target_defs=None, resource_defs=None, **extra):
+                            target_defs=None, resource_defs=None, tab_id=None,
+                            **extra):
         """[쓰기] 관리 프로그램을 만든다. 사람 승인 필요.
 
         `kind` 는 대상 종류다(기본 `vegetation`). 식생만이 아니라 가축·시설물·
@@ -8289,6 +8295,7 @@ class AoTDataToolService:
                 'name': name, 'subject': subject or crop, 'variety': variety,
                 'kind': kind or 'vegetation',
                 'stages': stages, 'source_note': source_note, 'notes': notes,
+                'tab_id': tab_id,
             }
             if base_temp_c is not None:
                 # 기준온도는 `photosynthesis.T_base` 에 산다(FunctionCropPreset 과
@@ -8313,11 +8320,14 @@ class AoTDataToolService:
 
     @staticmethod
     def modify_program(program_id=None, **fields):
-        """[쓰기] 프로그램의 이름·품종·단계·설명을 고친다. 사람 승인 필요.
+        """[쓰기] 프로그램의 이름·품종·단계·설명을 고치거나, 다른 탭으로 옮긴다.
+        사람 승인 필요.
 
         **내장·외부 프로그램은 서버가 거절한다** — 업그레이드나 외부 갱신이 그
         수정을 덮어써 조용히 되돌아가기 때문이다. 고치려면 사람이 화면에서
-        복제한 뒤 그 사본을 고친다.
+        복제한 뒤 그 사본을 고친다. **단, `tab_id` 만 보내는 호출은 예외다** —
+        탭 이동은 조직 정보일 뿐 내용이 아니라서, 내장·외부 프로그램도 옮길 수
+        있다(`program_io.update_program` 참조).
         """
         try:
             from aot.aot_flask.geo import program_io
@@ -8327,7 +8337,7 @@ class AoTDataToolService:
             payload = {k: v for k, v in fields.items()
                        if k in ('name', 'variety', 'stages', 'notes',
                                 'source_note', 'targets_methods', 'kind',
-                                'auto_advance', 'photosynthesis',
+                                'auto_advance', 'photosynthesis', 'tab_id',
                                 # 목표 항목 정의 — 어휘가 프로그램마다 다르므로
                                 # AI 도 이것을 읽고 고칠 수 있어야 한다(고정
                                 # 항목은 서버가 되돌려 놓으므로 지워지지 않는다).
@@ -8370,6 +8380,568 @@ class AoTDataToolService:
             return {"status": "success", "deleted": program_id}
         except Exception as e:
             logger.exception("Error in delete_program")
+            return {"status": "error", "message": str(e)}
+
+    # ── 대시보드 위젯 ────────────────────────────────────────────────────────
+    # 위젯은 사람이 보는 화면의 구성 요소다. 여기 있는 도구들은 웹 UI 의
+    # utils_dashboard.widget_add/mod/del 과 **같은 일**을 하되 Flask 폼을 거치지
+    # 않는다 — 그 함수들은 WTForms 객체(form_base.name.data …)와 flash() 를
+    # 전제로 쓰여 있어 폼 없이는 부를 수 없다. 그래서 저장 자체는 여기서 하고,
+    # 위젯별 훅(execute_at_creation/modification/deletion)과 데몬 통지,
+    # 템플릿 재생성처럼 **빠뜨리면 조용히 어긋나는 단계**만 그대로 따라간다.
+
+    @staticmethod
+    def _widget_catalog():
+        from aot.utils.widgets import parse_widget_information
+        return parse_widget_information()
+
+    @staticmethod
+    def _widget_option_schema(widget_info):
+        """위젯 종류 하나의 옵션 스키마 — 사람이 읽을 수 있는 형태로.
+
+        `name`/`phrase` 는 lazy_gettext 객체라 그대로 JSON 으로 못 나간다.
+        """
+        out = []
+        for opt in (widget_info.get('custom_options') or []):
+            if 'id' not in opt:
+                continue
+            entry = {
+                'id': opt['id'],
+                'type': opt.get('type'),
+                'name': str(opt.get('name') or opt['id']),
+            }
+            if opt.get('phrase'):
+                entry['phrase'] = str(opt['phrase'])
+            if 'default_value' in opt:
+                entry['default'] = opt['default_value']
+            if opt.get('options_select'):
+                entry['accepts'] = opt['options_select']
+            out.append(entry)
+        return out
+
+    @staticmethod
+    def _coerce_widget_options(widget_info, options):
+        """AI 가 준 옵션을 스키마에 맞춰 거른다 → (정제된 dict, 오류 목록).
+
+        **스키마에 없는 id 는 조용히 무시하지 않고 오류로 돌려준다.** 무시하면
+        오타 하나가 "설정했다고 했는데 화면이 안 바뀐다" 로 나타나고, 그때
+        원인이 위젯인지 도구인지 알 방법이 없다.
+
+        값의 의미(그 장치가 실제로 있는지 등)까지는 보지 않는다 — 그것은 위젯
+        자신의 훅이 판단할 몫이고, 여기서 흉내내면 두 벌이 되어 갈라진다.
+        """
+        schema = {opt['id']: opt for opt in (widget_info.get('custom_options') or [])
+                  if 'id' in opt}
+        clean, errors = {}, []
+        for key, value in (options or {}).items():
+            opt = schema.get(key)
+            if opt is None:
+                errors.append("unknown option '%s' for this widget type" % key)
+                continue
+            kind = opt.get('type')
+            try:
+                if kind == 'integer':
+                    clean[key] = int(value)
+                elif kind == 'float':
+                    clean[key] = float(value)
+                elif kind == 'bool':
+                    clean[key] = bool(value)
+                else:
+                    # select_* / text / 그 밖 — 위젯이 문자열이나 목록으로 받는다.
+                    clean[key] = value
+            except (TypeError, ValueError):
+                errors.append("option '%s' expects %s, got %r" % (key, kind, value))
+        return clean, errors
+
+    @staticmethod
+    def _widget_brief(widget, widget_info=None):
+        name = (widget.name or '').strip()
+        out = {
+            'widget_id': widget.unique_id,
+            'name': name or None,
+            'widget_type': widget.graph_type,
+            'position': {'x': widget.position_x, 'y': widget.position_y,
+                         'width': widget.width, 'height': widget.height},
+        }
+        if widget_info:
+            out['type_name'] = str(widget_info.get('widget_name') or widget.graph_type)
+        return out
+
+    @staticmethod
+    def _notify_daemon_widget(action, widget_id):
+        """데몬에 위젯 변경을 알린다. 데몬이 없어도 저장은 유효하다.
+
+        저장은 DB 에 끝났고 이 통지는 실행 중인 데몬의 캐시를 새로 고치는 것뿐
+        이라, 실패를 저장 실패로 올리면 **성공한 작업을 실패로 보고**하게 된다.
+        대신 무엇이 안 됐는지는 응답에 남긴다.
+        """
+        try:
+            from aot.aot_client import DaemonControl
+            control = DaemonControl()
+            if action == 'remove':
+                control.widget_remove(widget_id)
+            else:
+                control.widget_add_refresh(widget_id)
+            return None
+        except Exception as exc:
+            logger.warning("[widget] 데몬 통지 실패(%s, %s): %s", action, widget_id, exc)
+            return ("saved, but the running daemon could not be notified (%s) — "
+                    "the dashboard may need a page reload to pick it up." % exc)
+
+    @staticmethod
+    def list_dashboards(tab_id=None, with_options=False, **extra):
+        """[읽기전용] 대시보드 탭과 그 안의 위젯들.
+
+        `custom_options` 는 기본으로 싣지 않는다 — 위젯 하나가 지도나 시설처럼
+        큰 설정을 들고 있으면 목록 하나가 응답 상한을 넘길 수 있다. 하나를
+        자세히 볼 때는 `get_widget` 을 쓴다.
+        """
+        try:
+            import json
+            from sqlalchemy import text
+            from aot.databases.models import Dashboard, Widget
+
+            catalog = AoTDataToolService._widget_catalog()
+            # 대시보드 탭의 정본은 **Dashboard 테이블**이다. Widget.tab_id 의 FK
+            # 선언은 tab.unique_id 를 가리키지만 실제로 담기는 값은 Dashboard 의
+            # unique_id 이고, 화면(routes_dashboard.page_dashboard)도 Dashboard 를
+            # 읽는다. FK 강제가 꺼져 있어 이 어긋남은 아무 에러도 내지 않는다 —
+            # TabService.get_tabs_for_page('dashboard') 를 보면 **빈 목록**이
+            # 돌아와 "대시보드가 하나도 없다" 로 읽힌다(실제로 겪었다).
+            q = Dashboard.query.order_by(text("COALESCE(sort_order, 999999), id"))
+            tabs = q.all()
+            if tab_id:
+                tabs = [t for t in tabs if t.unique_id == tab_id]
+                if not tabs:
+                    return {"status": "error",
+                            "message": "no dashboard with id %s" % tab_id}
+
+            out = []
+            for tab in tabs:
+                widgets = (Widget.query.filter(Widget.tab_id == tab.unique_id)
+                           .order_by(Widget.position_y, Widget.position_x).all())
+                entries = []
+                for w in widgets:
+                    brief = AoTDataToolService._widget_brief(
+                        w, catalog.get(w.graph_type))
+                    if w.graph_type not in catalog:
+                        brief['warning'] = ('this widget type is not installed on '
+                                            'this system — it will not render')
+                    if with_options:
+                        try:
+                            brief['options'] = json.loads(w.custom_options or '{}')
+                        except Exception:
+                            brief['options'] = {}
+                    entries.append(brief)
+                entry = {'tab_id': tab.unique_id, 'name': tab.name,
+                         'position': tab.sort_order,
+                         'widget_count': len(entries), 'widgets': entries}
+                if tab.locked:
+                    entry['locked'] = True
+                out.append(entry)
+            return {"status": "success", "tabs": out}
+        except Exception as e:
+            logger.exception("Error in list_dashboards")
+            return {"status": "error", "message": str(e)}
+
+    @staticmethod
+    def list_widget_types(widget_type=None, **extra):
+        """[읽기전용] 이 시스템에 설치된 위젯 종류.
+
+        종류 이름만 아는 것으로는 `create_widget` 을 부를 수 없다 — 어떤 옵션을
+        받는지가 종류마다 다르기 때문이다. 그래서 `widget_type` 을 주면 그 종류의
+        **옵션 스키마**까지 낸다. 안 주면 목록만 낸다(전 종류의 스키마를 한 번에
+        실으면 응답이 통째로 커진다).
+        """
+        try:
+            catalog = AoTDataToolService._widget_catalog()
+            if widget_type:
+                info = catalog.get(widget_type)
+                if not info:
+                    return {"status": "error",
+                            "message": "unknown widget type '%s'" % widget_type,
+                            "available": sorted(catalog)}
+                return {"status": "success", "widget_type": widget_type,
+                        "name": str(info.get('widget_name') or widget_type),
+                        "message": str(info.get('message') or '') or None,
+                        "default_size": {"width": info.get('widget_width'),
+                                         "height": info.get('widget_height')},
+                        "options": AoTDataToolService._widget_option_schema(info)}
+            return {"status": "success",
+                    "types": [{"widget_type": key,
+                               "name": str(info.get('widget_name') or key),
+                               "option_count": len(info.get('custom_options') or [])}
+                              for key, info in sorted(catalog.items())],
+                    "next": ("call again with widget_type=<one of these> to get its "
+                             "option schema before creating one")}
+        except Exception as e:
+            logger.exception("Error in list_widget_types")
+            return {"status": "error", "message": str(e)}
+
+    @staticmethod
+    def get_widget(widget_id=None, **extra):
+        """[읽기전용] 위젯 하나 — 설정(custom_options) 포함."""
+        try:
+            import json
+            from aot.databases.models import Widget
+
+            if not widget_id:
+                return {"status": "error", "message": "widget_id is required"}
+            w = Widget.query.filter(Widget.unique_id == widget_id).first()
+            if not w:
+                return {"status": "error", "message": "no widget with id %s" % widget_id}
+
+            catalog = AoTDataToolService._widget_catalog()
+            info = catalog.get(w.graph_type)
+            out = AoTDataToolService._widget_brief(w, info)
+            try:
+                out['options'] = json.loads(w.custom_options or '{}')
+            except Exception:
+                out['options'] = {}
+            out['tab_id'] = w.tab_id
+            if info:
+                out['option_schema'] = AoTDataToolService._widget_option_schema(info)
+            else:
+                out['warning'] = ('this widget type is not installed on this system '
+                                  '— it will not render')
+            return {"status": "success", "widget": out}
+        except Exception as e:
+            logger.exception("Error in get_widget")
+            return {"status": "error", "message": str(e)}
+
+    @staticmethod
+    def create_widget(tab_id=None, widget_type=None, name=None, options=None,
+                      width=None, height=None, **extra):
+        """[쓰기] 대시보드 탭에 위젯을 추가한다. 사람 승인 필요."""
+        try:
+            import json
+            from aot.databases.models import Dashboard, Widget
+            from aot.aot_flask.utils.utils_general import custom_options_return_json
+
+            if not tab_id or not widget_type:
+                return {"status": "error",
+                        "message": "tab_id and widget_type are required — call "
+                                   "list_dashboards for tabs and list_widget_types "
+                                   "for the types"}
+            # 위 list_dashboards 주석 참조 — 대시보드 탭은 Dashboard 테이블이다.
+            tab = Dashboard.query.filter(Dashboard.unique_id == tab_id).first()
+            if not tab:
+                return {"status": "error",
+                        "message": "no dashboard with id %s" % tab_id}
+            if tab.locked:
+                return {"status": "error",
+                        "message": "the dashboard '%s' is locked — the UI hides the "
+                                   "add-widget control on a locked dashboard, so "
+                                   "adding one here would bypass a deliberate "
+                                   "choice. Ask the user to unlock it first."
+                                   % tab.name}
+
+            catalog = AoTDataToolService._widget_catalog()
+            info = catalog.get(widget_type)
+            if not info:
+                return {"status": "error",
+                        "message": "unknown widget type '%s'" % widget_type,
+                        "available": sorted(catalog)}
+
+            clean, errors = AoTDataToolService._coerce_widget_options(info, options)
+            if errors:
+                return {"status": "error", "message": "; ".join(errors),
+                        "option_schema": AoTDataToolService._widget_option_schema(info)}
+
+            # 기본 옵션은 위젯 자신의 스키마에서 만든다. 폼이 없을 때
+            # custom_options_return_json 이 default_value/타입별 기본을 채운다 —
+            # 여기서 빈 dict 로 시작하면 위젯이 없는 키를 읽고 렌더에서 죽는다.
+            err, defaults_json = custom_options_return_json(
+                [], catalog, None, device=widget_type, use_defaults=True)
+            try:
+                merged = json.loads(defaults_json)
+            except Exception:
+                merged = {}
+            merged.update(clean)
+
+            new_widget = Widget()
+            new_widget.tab_id = tab_id
+            new_widget.graph_type = widget_type
+            new_widget.name = (name or '').strip() or str(
+                info.get('widget_name') or widget_type)
+            new_widget.width = int(width) if width else (info.get('widget_width') or 6)
+            new_widget.height = int(height) if height else (info.get('widget_height') or 6)
+            # 새 위젯은 그 탭의 맨 아래에. 기존 위젯 위에 겹쳐 놓으면 사람이
+            # 지금 보고 있는 화면이 재배치된다.
+            bottom = 0
+            for each in Widget.query.filter(Widget.tab_id == tab_id).all():
+                bottom = max(bottom, (each.position_y or 0) + (each.height or 0))
+            new_widget.position_x = 0
+            new_widget.position_y = bottom
+            new_widget.custom_options = json.dumps(merged)
+
+            creation_errors = []
+            if 'execute_at_creation' in info:
+                creation_errors, new_widget = info['execute_at_creation'](
+                    creation_errors, new_widget, info)
+                if creation_errors:
+                    return {"status": "error",
+                            "message": "; ".join(str(e) for e in creation_errors)}
+
+            new_widget.save()
+
+            # 그 종류가 이 시스템에 처음 놓인 위젯이면 Flask 가 아직 그 템플릿을
+            # 모른다. 웹 UI 는 이때 재시작을 안내한다(reload_flask) — 여기서
+            # 마음대로 재시작하면 화면을 보고 있는 사람의 세션이 끊기므로,
+            # 사실만 알리고 결정은 사람에게 남긴다.
+            first_of_type = Widget.query.filter(
+                Widget.graph_type == widget_type).count() == 1
+
+            warnings = []
+            try:
+                from aot.utils.widget_generate_html import generate_widget_html
+                generate_widget_html()
+            except Exception as exc:
+                logger.warning("[widget] 템플릿 재생성 실패: %s", exc)
+                warnings.append("widget template regeneration failed: %s" % exc)
+
+            note = AoTDataToolService._notify_daemon_widget('refresh', new_widget.unique_id)
+            if note:
+                warnings.append(note)
+
+            out = {"status": "success", "widget_id": new_widget.unique_id,
+                   "name": new_widget.name, "widget_type": widget_type,
+                   "tab_id": tab_id}
+            if first_of_type:
+                out["requires_restart"] = True
+                out["restart_note"] = (
+                    "This is the first widget of this type on this system, so the web "
+                    "service must be restarted before it renders. Tell the user; do "
+                    "not restart anything yourself.")
+            if warnings:
+                out["warnings"] = warnings
+            return out
+        except Exception as e:
+            logger.exception("Error in create_widget")
+            return {"status": "error", "message": str(e)}
+
+    @staticmethod
+    def modify_widget(widget_id=None, name=None, options=None, width=None,
+                      height=None, position_x=None, position_y=None,
+                      tab_id=None, **extra):
+        """[쓰기] 위젯의 이름·크기·위치·탭·설정을 바꾼다. 사람 승인 필요.
+
+        준 것만 바꾼다 — 빠진 인자는 "비우라"가 아니라 "그대로 두라"다.
+        """
+        try:
+            import json
+            from aot.databases.models import Dashboard, Widget
+
+            if not widget_id:
+                return {"status": "error", "message": "widget_id is required"}
+            w = Widget.query.filter(Widget.unique_id == widget_id).first()
+            if not w:
+                return {"status": "error", "message": "no widget with id %s" % widget_id}
+
+            catalog = AoTDataToolService._widget_catalog()
+            info = catalog.get(w.graph_type)
+            changed = []
+
+            # 잠금은 **레이아웃**을 지킨다 — 잠긴 대시보드에서 UI 는 이동·크기
+            # 조정을 막는다(gs-no-move/gs-no-resize). 이름과 설정까지 막지는
+            # 않으므로 여기서도 막지 않는다: 통째로 거부하면 잠가 둔 화면의
+            # 값을 고치는 정상 작업이 함께 불가능해진다.
+            if any(v is not None for v in (width, height, position_x, position_y)):
+                board = Dashboard.query.filter(
+                    Dashboard.unique_id == w.tab_id).first()
+                if board is not None and board.locked:
+                    return {"status": "error",
+                            "message": "the dashboard '%s' is locked, so this "
+                                       "widget's size and position cannot be "
+                                       "changed. Its name and settings still can."
+                                       % board.name}
+
+            if name is not None:
+                w.name = str(name).strip()
+                changed.append('name')
+            for attr, value in (('width', width), ('height', height),
+                                ('position_x', position_x), ('position_y', position_y)):
+                if value is not None:
+                    try:
+                        setattr(w, attr, int(value))
+                    except (TypeError, ValueError):
+                        return {"status": "error",
+                                "message": "%s must be an integer" % attr}
+                    changed.append(attr)
+
+            if tab_id is not None and tab_id != w.tab_id:
+                # 대시보드 탭은 Dashboard 테이블이다(list_dashboards 주석 참조).
+                target = Dashboard.query.filter(Dashboard.unique_id == tab_id).first()
+                if not target:
+                    return {"status": "error",
+                            "message": "no dashboard with id %s" % tab_id}
+                if target.locked:
+                    return {"status": "error",
+                            "message": "the target dashboard '%s' is locked"
+                                       % target.name}
+                w.tab_id = tab_id
+                changed.append('tab_id')
+
+            if options:
+                if not info:
+                    return {"status": "error",
+                            "message": "widget type '%s' is not installed here, so "
+                                       "its options cannot be validated" % w.graph_type}
+                clean, errors = AoTDataToolService._coerce_widget_options(info, options)
+                if errors:
+                    return {"status": "error", "message": "; ".join(errors),
+                            "option_schema": AoTDataToolService._widget_option_schema(info)}
+                try:
+                    current = json.loads(w.custom_options or '{}')
+                except Exception:
+                    current = {}
+                new_options = dict(current)
+                new_options.update(clean)
+
+                # 위젯이 자기 훅을 갖고 있으면 그것을 지나야 한다 — 웹 UI 의 AJAX
+                # 저장 경로(save_widget_custom_options)와 같은 계약이다. 건너뛰면
+                # 필드 매핑이나 파생값이 빠진 채 저장돼, 저장은 됐는데 화면은
+                # 다르게 나오는 상태가 된다.
+                if 'execute_at_modification' in info:
+                    (allow, _page_refresh, w, final) = info['execute_at_modification'](
+                        w, None, current, new_options)
+                    if not allow:
+                        return {"status": "error",
+                                "message": "the widget rejected this change "
+                                           "(execute_at_modification)"}
+                    new_options = final
+                w.custom_options = json.dumps(new_options)
+                changed.append('options')
+
+            if not changed:
+                return {"status": "error",
+                        "message": "nothing to change — pass at least one of name, "
+                                   "options, width, height, position_x, position_y, "
+                                   "tab_id"}
+
+            db.session.commit()
+            out = {"status": "success", "widget_id": widget_id, "changed": changed}
+            note = AoTDataToolService._notify_daemon_widget('refresh', widget_id)
+            if note:
+                out["warnings"] = [note]
+            return out
+        except Exception as e:
+            logger.exception("Error in modify_widget")
+            db.session.rollback()
+            return {"status": "error", "message": str(e)}
+
+    @staticmethod
+    def delete_widget(widget_id=None, **extra):
+        """[쓰기] 위젯을 대시보드에서 지운다. 사람 승인 필요."""
+        try:
+            from aot.databases.models import Widget
+
+            if not widget_id:
+                return {"status": "error", "message": "widget_id is required"}
+            w = Widget.query.filter(Widget.unique_id == widget_id).first()
+            if not w:
+                return {"status": "error", "message": "no widget with id %s" % widget_id}
+
+            removed = AoTDataToolService._widget_brief(w)
+            catalog = AoTDataToolService._widget_catalog()
+            info = catalog.get(w.graph_type)
+
+            # 위젯이 자기 뒷정리를 갖고 있으면 먼저 부른다(웹 UI 와 같은 순서).
+            # 행을 지운 뒤에 부르면 훅이 참조할 대상이 이미 없다.
+            warnings = []
+            if info and 'execute_at_deletion' in info:
+                try:
+                    info['execute_at_deletion'](widget_id)
+                except Exception as exc:
+                    logger.warning("[widget] execute_at_deletion 실패: %s", exc)
+                    warnings.append("the widget's own cleanup failed: %s" % exc)
+
+            db.session.delete(w)
+            db.session.commit()
+
+            note = AoTDataToolService._notify_daemon_widget('remove', widget_id)
+            if note:
+                warnings.append(note)
+            out = {"status": "success", "deleted": removed}
+            if warnings:
+                out["warnings"] = warnings
+            return out
+        except Exception as e:
+            logger.exception("Error in delete_widget")
+            db.session.rollback()
+            return {"status": "error", "message": str(e)}
+
+    @staticmethod
+    def list_tabs(page_type=None, **extra):
+        """[읽기전용] 탭 목록 — Dashboard/Input/Output/Function/Programs 화면이
+        공유하는 같은 탭 인프라(`TabService`)를 그대로 쓴다."""
+        try:
+            from aot.services.tab_service import TabService, TAB_PAGE_TYPES
+
+            if page_type not in TAB_PAGE_TYPES:
+                return {"status": "error",
+                        "message": "page_type must be one of %s" % (TAB_PAGE_TYPES,)}
+            tabs = TabService.get_tabs_for_page(page_type)
+            return {"status": "success",
+                    "tabs": [{"unique_id": t.unique_id, "name": t.name,
+                             "position": t.position} for t in tabs]}
+        except Exception as e:
+            logger.exception("Error in list_tabs")
+            return {"status": "error", "message": str(e)}
+
+    @staticmethod
+    def create_tab(page_type=None, name=None, **extra):
+        """[쓰기] 새 탭을 만든다. 사람 승인 필요."""
+        try:
+            from aot.services.tab_service import TabService, TAB_PAGE_TYPES
+
+            if page_type not in TAB_PAGE_TYPES:
+                return {"status": "error",
+                        "message": "page_type must be one of %s" % (TAB_PAGE_TYPES,)}
+            tab = TabService.create_tab(page_type, name)
+            if not tab:
+                return {"status": "error", "message": "tab creation failed"}
+            return {"status": "success", "tab_id": tab.unique_id, "name": tab.name}
+        except Exception as e:
+            logger.exception("Error in create_tab")
+            return {"status": "error", "message": str(e)}
+
+    @staticmethod
+    def modify_tab(tab_id=None, name=None, **extra):
+        """[쓰기] 탭 이름을 바꾼다. 사람 승인 필요."""
+        try:
+            from aot.services.tab_service import TabService
+
+            if not tab_id or not (name or '').strip():
+                return {"status": "error",
+                        "message": "tab_id and name are required"}
+            ok = TabService.rename_tab(tab_id, name)
+            if not ok:
+                return {"status": "error", "message": "rename failed — tab not found?"}
+            return {"status": "success", "tab_id": tab_id, "name": name}
+        except Exception as e:
+            logger.exception("Error in modify_tab")
+            return {"status": "error", "message": str(e)}
+
+    @staticmethod
+    def delete_tab(tab_id=None, **extra):
+        """[쓰기] 탭을 삭제한다. 사람 승인 필요.
+
+        Input/Output/Function 은 소속 카드까지 함께 삭제된다(UI와 동일). Programs
+        는 예외 — 소속 프로그램은 다른 구획이 계속 참조할 수 있어 지우지 않고
+        기본 탭으로 옮겨진다. 마지막 남은 탭은 지울 수 없다.
+        """
+        try:
+            from aot.services.tab_service import TabService
+
+            if not tab_id:
+                return {"status": "error", "message": "tab_id is required"}
+            result = TabService.delete_tab(tab_id)
+            if not result.get('success'):
+                return {"status": "error", "message": result.get('message')}
+            return {"status": "success", "deleted": tab_id}
+        except Exception as e:
+            logger.exception("Error in delete_tab")
             return {"status": "error", "message": str(e)}
 
     @staticmethod

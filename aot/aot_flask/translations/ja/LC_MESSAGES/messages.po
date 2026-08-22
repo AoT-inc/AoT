@@ -29411,3 +29411,304 @@ msgstr "この役割に対応する機器の種類がまだありません"
 
 msgid "Not found here"
 msgstr "この場所では見つかりません"
+
+msgid "Search programs…"
+msgstr "プログラムを検索…"
+
+msgid "No programs match your search."
+msgstr "検索条件に一致するプログラムがありません。"
+
+msgid "Delete this tab? Its programmes are not deleted — they move to the page's default tab."
+msgstr "このタブを削除しますか？ プログラムは削除されず、既定のタブに移動します。"
+
+#: aot/aot_flask/templates/pages/geo/programs.html
+msgid "A few numbers describing how this crop responds to light, temperature and CO2. Only the environment coordinator reads them, and only when it is set to control for photosynthesis — nothing else on this page uses them. Leave the whole block empty if you do not run that. Do not guess: a wrong number makes control quietly wrong. Templates come filled in from published figures."
+msgstr "この作物が光・温度・CO2 にどう反応するかを数個の数字でまとめたものです。環境コーディネーターが光合成基準で制御するときだけ読み、この画面の他のものは一切使いません。その制御を使わないなら丸ごと空で構いません。当てずっぽうで入れないでください — 誤った値一つが制御を静かに狂わせます。テンプレートから作ると公開された数値がすでに入っています。"
+
+#: aot/aot_flask/templates/pages/geo/programs.html
+msgid "Advanced settings"
+msgstr "詳細設定"
+
+#: aot/aot_flask/templates/pages/geo/programs.html
+msgid "Based on"
+msgstr "根拠"
+
+#: aot/aot_flask/templates/pages/geo/programs.html
+msgid "Different in this stage"
+msgstr "このステージだけ変える"
+
+#: aot/aot_flask/templates/pages/geo/programs.html
+msgid "Growth base temperature"
+msgstr "生育基準温度"
+
+#: aot/aot_flask/templates/pages/geo/programs.html
+msgid "Heat units for this stage"
+msgstr "このステージの積算温度"
+
+#: aot/aot_flask/templates/pages/geo/programs.html
+msgid "How far from the optimum it still does well. Larger means less fussy about temperature."
+msgstr "最適温度からどれだけ外れても耐えられるかです。大きいほど温度に鈍感です。"
+
+#: aot/aot_flask/templates/pages/geo/programs.html
+msgid "How fast this crop can photosynthesise when light and CO2 are plentiful."
+msgstr "光と CO2 が十分なときにこの作物が出せる光合成速度です。"
+
+#: aot/aot_flask/templates/pages/geo/programs.html
+msgid "In use"
+msgstr "使用"
+
+#: aot/aot_flask/templates/pages/geo/programs.html
+msgid "In your own words — what you are aiming for, what you learned the hard way, anything you would tell someone taking over. Read back whenever this programme comes up."
+msgstr "自分の言葉で書いてください — 何を狙っているか、経験してわかったこと、引き継ぐ人に伝えたいこと。このプログラムを開くたびに読み返すことになります。"
+
+#: aot/aot_flask/templates/pages/geo/programs.html
+msgid "None of this is needed. Leave it empty unless you already know the numbers."
+msgstr "ここにあるものは一つも必要ありません。値をすでに知っている場合を除き、空のままにしてください。"
+
+#: aot/aot_flask/templates/pages/geo/programs.html
+msgid "Nothing here yet. Write down how you grow something once — the stages and how long each takes — and every plot you attach it to will track its own stage, days left and harvest date, and show your notes for the stage it is in."
+msgstr "まだ何もありません。何をどう育てるかを一度書いておけば — ステージと各ステージの日数 — このプログラムを付けた区画ごとに現在のステージ・残り日数・収穫予定日が付いてきて、そのステージに書いた内容が地図に表示されます。"
+
+#: aot/aot_flask/templates/pages/geo/programs.html
+msgid "On, a stage change is recorded as soon as the data says it is due. Off, you get a suggestion and it only counts once you confirm it. Either way the date comes from the data, not from when you happen to look."
+msgstr "オンにすると、データ上その時期になった時点でステージ移行がすぐ記録されます。オフだと提案だけが出て、確認して初めて反映されます。どちらでも日付は開いた時点ではなくデータからさかのぼります。"
+
+#: aot/aot_flask/templates/pages/geo/programs.html
+msgid "One row per item; the number is what you aim for through the whole programme, and stages that need a different number set it themselves. Sensor-linked items are read from your sensors and shown against this number; the rest are notes to yourself. Turn off what you do not measure here, and leave a number blank if you have not decided. All of it can stay empty."
+msgstr "一行が項目一つで、数字はこのプログラム全体で合わせたい目標です。ステージごとに変わる値はそのステージで別に決めます。センサー連動の項目はセンサーから読み取ってこの数字と並べて表示し、残りは自分用の参考目標です。ここで測らない項目はオフにし、まだ決めていない値は空のままにしてください。すべて空でも構いません。"
+
+#: aot/aot_flask/templates/pages/geo/programs.html
+msgid "Only what differs from the programme target. Anything left out follows the value set under Targets."
+msgstr "プログラム目標と違うものだけ書きます。書かなかった項目は「目標」で決めた値に従います。"
+
+#: aot/aot_flask/templates/pages/geo/programs.html
+msgid "Program stages"
+msgstr "ステージ"
+
+#: aot/aot_flask/templates/pages/geo/programs.html
+msgid "Roughly how much warmth this crop banks on a normal day."
+msgstr "普通の日に一日でこの作物が積む温度のおおよその値です。"
+
+#: aot/aot_flask/templates/pages/geo/programs.html
+msgid "Say what this needs — watering, feeding. Which device actually does it is worked out from where the plot is, so one programme works in more than one place. Nothing is switched on here; a person still presses the button."
+msgstr "この対象に何が必要かを書きます — かん水、施肥。実際にどの機器がそれを行うかは区画の位置から決まるので、同じプログラムを複数の場所で使えます。ここで何かが入ることはなく、人がボタンを押して動きます。"
+
+#: aot/aot_flask/templates/pages/geo/programs.html
+msgid "Shown on the map when someone opens a plot that is in this stage."
+msgstr "このステージにある区画を地図で開くと、そのまま表示されます。"
+
+#: aot/aot_flask/templates/pages/geo/programs.html
+msgid "Split the run into stretches you manage differently, and give each one how many days it lasts. One stage is completely fine. Stages count days from the start date, so they do not line up with calendar seasons."
+msgstr "管理の仕方が変わる区切りで分け、それぞれ何日続くかを書きます。ステージが一つだけでも全く問題ありません。ステージは開始日からの日数で数えるので、暦の季節とは一致しません。"
+
+#: aot/aot_flask/templates/pages/geo/programs.html
+msgid "Stage code"
+msgstr "ステージコード"
+
+#: aot/aot_flask/templates/pages/geo/programs.html
+msgid "Stages normally advance on days elapsed. Fill in a base temperature — the temperature below which this crop does not grow — and heat units for each stage, and they advance on the warmth actually accumulated instead. Leave it blank to stay on days."
+msgstr "ステージは通常、経過日数で進みます。基準温度 — この作物がそれ以下では育たない温度 — とステージごとの積算温度を埋めると、暦ではなく実際に積み上がった温度で進みます。空欄なら日数基準のままです。"
+
+#: aot/aot_flask/templates/pages/geo/programs.html
+msgid "Starting from a template is easiest — it comes with stages and lengths already filled in, and you change what differs. Nothing is installed until you add it."
+msgstr "テンプレートから始めるのが一番簡単です — ステージと期間がすでに入っているので、違うところだけ直します。追加するまで何もインストールされません。"
+
+#: aot/aot_flask/templates/pages/geo/programs.html
+msgid "The CO2 concentration at which it reaches half the maximum."
+msgstr "最大値の半分に達する CO2 濃度です。"
+
+#: aot/aot_flask/templates/pages/geo/programs.html
+msgid "The dryness of the air at which the stomata are half closed. Lower means it suffers sooner in dry air."
+msgstr "気孔が半分ほど閉じる空気の乾き具合です。低いほど乾いた空気で早く弱ります。"
+
+#: aot/aot_flask/templates/pages/geo/programs.html
+msgid "The light level at which it reaches half that maximum. Lower means it does well in weaker light."
+msgstr "その最大値の半分に達する光量です。低いほど弱い光でもよく育ちます。"
+
+#: aot/aot_flask/templates/pages/geo/programs.html
+msgid "The name the system uses for this stage. Leave it blank and it is made from the stage name. Changing it on a stage already in use cuts the link to what has been recorded."
+msgstr "システムがこのステージを指す名前です。空欄にするとステージ名から作られます。すでに使われているステージのコードを変えると、それまで記録されたものとのつながりが切れます。"
+
+#: aot/aot_flask/templates/pages/geo/programs.html
+msgid "The temperature at which photosynthesis is fastest."
+msgstr "光合成が最も活発になる温度です。"
+
+#: aot/aot_flask/templates/pages/geo/programs.html
+msgid "The total light worth aiming for in a day."
+msgstr "一日に受けたい光の総量です。"
+
+#: aot/aot_flask/templates/pages/geo/programs.html
+msgid "Watering"
+msgstr "かん水"
+
+#: aot/aot_flask/templates/pages/geo/programs.html
+msgid "What this programme is for. Only the name and what it applies to are needed — everything else can wait."
+msgstr "このプログラムが何のためのものかを書きます。名前と対象さえあれば十分で、残りは後から埋めても構いません。"
+
+#: aot/aot_flask/templates/pages/geo/programs.html
+msgid "What to do in this stage"
+msgstr "このステージですること"
+
+#: aot/aot_flask/templates/pages/geo/programs.html
+msgid "Why you do it this way"
+msgstr "なぜこのやり方なのか"
+
+#: aot/aot_flask/templates/pages/geo/programs.html
+msgid "blank = go by days"
+msgstr "空欄なら日数基準"
+
+#: aot/aot_flask/templates/pages/geo/programs.html
+msgid "e.g. Keep it on the dry side. Vent early on sunny mornings. Watch for aphids under the leaves."
+msgstr "例: 少し乾かし気味に管理する。晴れた朝は早めに換気する。葉裏にアブラムシが付いていないか見る。"
+
+#: aot/aot_flask/templates/pages/geo/programs.html
+msgid "e.g. Sown early so it heads up before the summer heat. Water goes down once it starts bolting."
+msgstr "例: 暑くなる前に結球するよう早めに播種する。抽苔が始まったら水を減らす。"
+
+#: aot/aot_flask/templates/pages/geo/programs.html
+msgid "no target"
+msgstr "目標なし"
+
+#: aot/aot_flask/templates/pages/geo/programs.html
+msgid "programme target {v}"
+msgstr "プログラム目標 {v}"
+
+#: aot/aot_flask/templates/pages/geo/programs.html
+msgid "sensor-linked"
+msgstr "センサー連動"
+
+#: aot/aot_flask/templates/pages/geo/programs.html
+msgid "A few numbers describing how this crop responds to light, temperature and CO2. These do not compete with the targets above — a target is the number to reach, these describe how the crop behaves on the way there, and only the environment coordinator reads them when it is set to control for photosynthesis. Leave the whole block empty if you do not run that. Do not guess: a wrong number makes control quietly wrong. Templates come filled in from published figures."
+msgstr "この作物が光・温度・CO2 にどう反応するかを数個の数字でまとめたものです。上の目標とぶつかることはありません — 目標は合わせたい値で、これらはそこへ向かう途中で作物がどう振る舞うかを書いたものなので、環境コーディネーターが光合成基準で制御するときだけ読みます。その制御を使わないなら丸ごと空で構いません。当てずっぽうで入れないでください — 誤った値一つが制御を静かに狂わせます。テンプレートから作ると公開された数値がすでに入っています。"
+
+#: aot/aot_flask/templates/pages/geo/programs.html
+msgid "Different per stage"
+msgstr "ステージごとに変える"
+
+#: aot/aot_flask/templates/pages/geo/programs.html
+msgid "Different values per stage"
+msgstr "ステージごとに違う値"
+
+#: aot/aot_flask/templates/pages/geo/programs.html
+msgid "How long this stage lasts, counted from when the one before it ended. Leave the last one blank to run until the end."
+msgstr "このステージが続く期間です。前のステージが終わった時から数えます。最後のステージは空欄にすると最後まで続きます。"
+
+#: aot/aot_flask/templates/pages/geo/programs.html
+msgid "In your own words — what you are aiming for, what you learned the hard way, anything you would tell someone taking over. It is read back every time this programme comes up."
+msgstr "自分の言葉で書いてください — 何を狙っているか、経験してわかったこと、引き継ぐ人に伝えたいこと。このプログラムを見るたびに読み返すことになります。"
+
+#: aot/aot_flask/templates/pages/geo/programs.html
+msgid "Off, every stage aims for the numbers above. On, each stage gets its own box where you set only what differs."
+msgstr "オフならすべてのステージが上の値を目標にします。オンにするとステージごとに欄ができ、違うところだけ書きます。"
+
+#: aot/aot_flask/templates/pages/geo/programs.html
+msgid "Off, every stage uses what is switched on above. On, each stage can turn one of them off — a dry-down before harvest, for instance."
+msgstr "オフならすべてのステージが上でオンにしたものをそのまま使います。オンにするとステージごとにそのうち一つをオフにできます — 収穫前の断水などです。"
+
+#: aot/aot_flask/templates/pages/geo/programs.html
+msgid "One row per item, and the number is what this programme aims for. Switch on what you actually manage here and fill in the ones you have decided — anything left off or blank simply is not tracked. Sensor-linked items are read from your sensors and shown against the number; the rest are there for you to read."
+msgstr "一行が項目一つで、数字はこのプログラムが合わせたい目標です。ここで実際に管理するものだけをオンにし、決めた値を入れてください — オフのままや空欄のものは単に追いかけません。センサー連動の項目はセンサーから読み取ってこの数字と並べて表示し、残りは人が読むためのものです。"
+
+#: aot/aot_flask/templates/pages/geo/programs.html
+msgid "The starting line for counting heat units. Each day banks the average temperature minus this number: base 10, a day averaging 18, banks 8. Set this and the heat units on each stage, and stages advance on warmth banked instead of days on the calendar. Leave it blank and stages go by days."
+msgstr "積算温度を数え始める基準線です。一日の平均気温からこの値を引いた分がその日に積み上がります — 基準10度で平均18度の日なら8が積み上がります。この値とステージごとの積算温度を両方入れると、ステージが暦の日数ではなく積み上がった温度で進みます。空欄なら日数で進みます。"
+
+#: aot/aot_flask/templates/pages/geo/programs.html
+msgid "Values set on individual stages will be removed. Continue?"
+msgstr "ステージごとに設定した値が削除されます。続けますか？"
+
+#: aot/aot_flask/templates/pages/geo/programs.html
+msgid "What this programme is and why. Only the name is needed — everything else can wait."
+msgstr "このプログラムが何で、なぜこうするのかを書きます。名前さえあれば十分で、残りは後から埋めても構いません。"
+
+#: aot/aot_flask/templates/pages/geo/programs.html
+msgid "Whole run"
+msgstr "全体期間"
+
+#: aot/aot_flask/templates/pages/geo/programs.html
+msgid "Why it is done this way"
+msgstr "なぜこのやり方なのか"
+
+#: aot/aot_flask/templates/pages/geo/programs.html
+msgid "e.g. Started early so it finishes before the summer heat. Ease off the water once it starts to bolt."
+msgstr "例: 暑くなる前に終わるよう早めに始める。抽苔が始まったら水を減らす。"
+
+#: aot/aot_flask/templates/pages/geo/programs.html
+msgid "Add your own item"
+msgstr "項目を自分で作る"
+
+#: aot/aot_flask/templates/pages/geo/programs.html
+msgid "For anything the list above does not cover — EC, pH, stocking density. Pick a measurement type and the system reads it from your sensors; leave it blank and the item is yours to read."
+msgstr "上の一覧にないものを作ります — EC、pH、飼養密度など。測定種類を選ぶとシステムがセンサーから読み取り、空欄にすると人が読む値になります。"
+
+#: aot/aot_flask/templates/pages/geo/programs.html
+msgid "Heat unit base temperature"
+msgstr "積算基準温度"
+
+#: aot/aot_flask/templates/pages/geo/programs.html
+msgid "Heat units"
+msgstr "積算温度"
+
+#: aot/aot_flask/templates/pages/geo/programs.html
+msgid "Matched to irrigation valves placed on the facility plan."
+msgstr "施設図面に配置したかん水バルブから探します。"
+
+#: aot/aot_flask/templates/pages/geo/programs.html
+msgid "Move down"
+msgstr "下へ"
+
+#: aot/aot_flask/templates/pages/geo/programs.html
+msgid "Move up"
+msgstr "上へ"
+
+#: aot/aot_flask/templates/pages/geo/programs.html
+msgid "Recorded as intent — there is no way to recognise this equipment yet."
+msgstr "記録するだけです — この設備を見分ける手段がまだありません。"
+
+#: aot/aot_flask/templates/pages/geo/programs.html
+msgid "Split the run into stretches you manage differently, and give each one how many days it lasts. One stage is completely fine."
+msgstr "管理の仕方が変わる区切りで分け、それぞれ何日続くかを書きます。ステージが一つだけでも全く問題ありません。"
+
+#: aot/aot_flask/templates/pages/geo/programs.html
+msgid "The numbers this programme aims for. Switch on what you manage, and fill in a number when you have decided one — anything switched off is simply not part of this programme."
+msgstr "このプログラムが合わせたい値です。実際に管理するものをオンにし、決めた値があれば入れてください — オフのものはこのプログラムでは扱いません。"
+
+#: aot/aot_flask/templates/pages/geo/programs.html
+msgid "Use different values per stage"
+msgstr "ステージごとに違う値を使う"
+
+#: aot/aot_flask/templates/pages/geo/programs.html
+msgid "What this programme is for and how you want it to run. Written in your own words and read back whenever the programme comes up — by you, and by the AI when it advises on a plot using it."
+msgstr "このプログラムが何のためのもので、どう動いてほしいかを自分の言葉で書きます。このプログラムを開くたびに読み返すことになり、このプログラムを使う区画に AI が助言するときもそのまま読みます。"
+
+#: aot/aot_flask/templates/pages/geo/programs.html
+msgid "What this programme needs. Nothing is switched on here — a plot using this programme looks at where it sits and reports whether the equipment for each of these is actually there, so you find out before the crop does. Only watering can be found that way today, and only inside a facility: it is matched to irrigation valves placed on the facility plan. The others are recorded as intent until there is a way to recognise them."
+msgstr "このプログラムに何が必要かを書きます。ここで何かが入ることはありません — このプログラムを使う区画が自分の場所を見て、その設備が実際にあるかを知らせます。今そうやって探せるのはかん水だけで、施設内の区画に限ります（施設図面に配置したかん水バルブと突き合わせます）。残りは見分ける手段ができるまで記録するだけです。"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-widget-vector.js
+msgid "Expand"
+msgstr "展開"
+
+msgid "Share"
+msgstr "割り当て"
+
+msgid "Zone capacity"
+msgstr "区域の総量"
+
+msgid "beds"
+msgstr "ベッド"
+
+msgid "rows"
+msgstr "列"
+
+msgid "trays"
+msgstr "トレイ"
+
+msgid "houses"
+msgstr "棟"
+
+msgid "%(n)s left"
+msgstr "残り %(n)s"
+
+msgid "Overlapping by %(n)s"
+msgstr "%(n)s 重複"

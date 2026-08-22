@@ -53,369 +53,30 @@ SERVER_VERSION = "1.0.0"
 # 동일 사용자가 여러 AoT 인스턴스의 MCP 서버를 동시에 붙였을 때 응답을 구분할 수
 # 있도록, 관리자가 별도로 설정하지 않아도 프로세스 호스트명을 자동으로 싣는다.
 SERVER_HOST = socket.gethostname()
-# initialize 응답의 result.instructions로 전달되는 안내문. MCP 클라이언트(사람이
-# 아니라 이 서버를 사용하는 AI)에게 노출되는 필드이므로, 도구 설명이 아니라 여기
-# 한 곳에만 적어 두면 모든 클라이언트/세션에 일관되게 반영된다.
-SERVER_INSTRUCTIONS = (
-    "When reporting results to the user, never surface raw unique_id/note_id "
-    "UUIDs. Most lookup tools here return both a human-readable name (zone, "
-    "crop, device, etc.) and its unique_id — refer to the entity by name "
-    "instead. Only include the raw id if the user explicitly asks for it."
+
+# ── 실행층 ────────────────────────────────────────────────────────────────────
+# 도구 실행·승인 게이트·감사·응답 캡·도구 목록은 **이 파일에 없다.** 내부 AI 도
+# 같은 것을 쓰기 때문이다 — 예전에는 그러려고 여기를 subprocess 로 띄워 자기
+# 자신에게 JSON-RPC 를 보냈고, 그 대가로 앱을 한 벌 더 로드(약 400MB)하면서
+# 두 프로세스의 코드 버전이 갈렸다. 이 파일이 하는 일은 이제 **전송**뿐이다:
+# stdio/HTTP 로 받아 tool_execution 에 넘기고 결과를 돌려준다.
+from aot.ai.services.tool_execution import (  # noqa: E402
+    SERVER_HOST,
+    _CONFIRMATION_RESPONSE_TOOL,
+    _EXTRA_TOOLS,
+    _MAX_RESPONSE_TOKENS,
+    _NATIVE_TOOLS,
+    _TIER_EXEMPT_TOOLS,
+    _cap_result,
+    _drawer_index,
+    _estimate_tokens,
+    _execute_tool,
+    _exclude_always_listed,
+    _get_all_tools,
+    _server_instructions,
+    _tiering_enabled,
 )
 
-# ── Native tool names handled by AoTNativeToolEngine ──────────────────────────
-_NATIVE_TOOLS = {"list_available_devices", "get_sensor_reading", "set_output_state"}
-
-# 승인 큐에 직접 응답하는 도구 — 일반 가상도구/네이티브도구 디스패치가 아니라
-# mcp_safety_gate.approve/reject를 곧장 호출한다(아래 _respond_to_confirmation).
-_CONFIRMATION_RESPONSE_TOOL = "respond_to_confirmation"
-
-# tool_registry.TOOLS 에는 handler=None(특수 디스패치, set_output_state 등 네이티브
-# 브릿지 도구와 동일 취급)으로 등록돼 있어 virtual_tools()/_MCP_TOOL_PAYLOADS 경로로는
-# 못 내보낸다(그 경로는 handler 필수). tools/list 에는 여기서 직접 얹는다.
-_EXTRA_TOOLS = [
-    {
-        "name": _CONFIRMATION_RESPONSE_TOOL,
-        "description": (
-            "Approves or rejects ONE OR MORE pending confirmations (from a prior "
-            "'pending_approval' response or from list_pending_confirmations) over MCP — "
-            "this is the primary approval path; the web review page is only an "
-            "alternative for whoever is at a browser. Call this ONLY after the user has "
-            "explicitly told you, in THIS conversation, to approve or reject THOSE "
-            "SPECIFIC confirmation_id(s) — never call it on your own judgment, and "
-            "never infer approval from the user's ORIGINAL task request alone (e.g. "
-            "'create these schedules' is the task; it is NOT, by itself, 'yes, execute "
-            "confirmation_id X' — that needs its own explicit go-ahead, even if it "
-            "comes right after you show the pending confirmation). This applies just as "
-            "much to a batch as to a single one: 'clean up whatever is pending' is NOT "
-            "authorization to approve/reject an unnamed set — only a set the user "
-            "actually named or that you listed and the user confirmed applies here). If "
-            "you are unsure whether the user actually approved, ask them plainly before "
-            "calling this. Approving executes nothing by itself — retry the original "
-            "write tool call with the same arguments plus '_confirmation_id' afterward. "
-            "Requires an Admin/Editor-role key."
-        ),
-        "inputSchema": {
-            "type": "object",
-            "properties": {
-                "confirmation_id": {"type": "string", "description": "The confirmation_id from the pending_approval response. Use for a single confirmation."},
-                "confirmation_ids": {"type": "array", "items": {"type": "string"}, "description": "Multiple confirmation_ids to approve/reject with the same decision in one call, instead of one confirmation_id per call. Use only the exact id set the user named."},
-                "decision": {"type": "string", "enum": ["approve", "reject"], "description": "What the user explicitly told you to do, in this conversation, about these specific id(s)."},
-            },
-            "required": ["decision"],
-        },
-    },
-]
-
-
-# =============================================================================
-# Tool registry
-# =============================================================================
-
-def _get_all_tools(app, role=None):
-    """Return merged list of VIRTUAL_TOOLS + AoTNativeToolEngine tools.
-
-    Priority: VIRTUAL_TOOLS first (richer descriptions), then native tools
-    not already present by name.
-
-    `role` is whatever mcp_auth.authenticate_http/authenticate_stdio resolved
-    (a Role row, or None for unauthenticated). Tools classified mutating/physical
-    in tool_registry (tool_registry.approval_required_tools()) are left out of the
-    list for callers without write access — this is advisory (it just shapes what
-    tools/list advertises); the actual enforcement is mcp_safety_gate.gate()'s own
-    role check, so hiding a tool here is a UX nicety, not the security boundary.
-    """
-    from aot.ai.services.mcp_auth import role_can_write
-    from aot.ai.services.tool_registry import approval_required_tools
-
-    hidden = frozenset() if role_can_write(role) else approval_required_tools()
-
-    tools = []
-
-    # 1. VIRTUAL_TOOLS from mcp_aot.py
-    try:
-        from aot.ai.agents.mcp_aot import VIRTUAL_TOOLS
-        for vt in VIRTUAL_TOOLS:
-            if vt["tool_name"] in hidden:
-                continue
-            tools.append({
-                "name": vt["tool_name"],
-                "description": vt["description"],
-                "inputSchema": vt.get("input_schema", {"type": "object", "properties": {}}),
-            })
-    except Exception as exc:
-        logger.warning(f"[AoTMCP] Could not load VIRTUAL_TOOLS: {exc}")
-
-    # 2. AoTNativeToolEngine tools (deduplicated)
-    try:
-        with app.app_context():
-            from aot.ai.services.aot_native_tool_engine import AoTNativeToolEngine
-            native_tools = AoTNativeToolEngine.get_tools()
-            existing = {t["name"] for t in tools}
-            for nt in native_tools:
-                if nt["name"] in hidden:
-                    continue
-                if nt["name"] not in existing:
-                    tools.append({
-                        "name": nt["name"],
-                        "description": nt.get("description", ""),
-                        "inputSchema": nt.get("inputSchema", {"type": "object", "properties": {}}),
-                    })
-    except Exception as exc:
-        logger.warning(f"[AoTMCP] Could not load NativeToolEngine tools: {exc}")
-
-    # 3. Extra tools that bypass the normal handler-based dispatch (see _EXTRA_TOOLS)
-    existing = {t["name"] for t in tools}
-    for et in _EXTRA_TOOLS:
-        if et["name"] in hidden or et["name"] in existing:
-            continue
-        tools.append(dict(et))
-
-    return tools
-
-
-def _execute_tool(app, tool_name, arguments, agent_id="unknown", role=None, elicit_fn=None):
-    """Execute a named tool and return MCP-format content list.
-
-    Every call — read or write, executed or refused — is recorded in
-    mcp_audit_log with the calling agent's identity and its stated reason, so a
-    multi-AI setup (main AoT AI / external AI / subordinate node AI) can be told
-    apart after the fact. Write tools do not execute until a human approves them
-    (see aot/ai/services/mcp_safety_gate.py); the gate returns the response body
-    to hand back instead.
-
-    elicit_fn: optional callable(tool_name, briefing_message, arguments) -> True
-        (human approved) / False (declined) / None (elicitation unavailable or
-        failed, fall back to the async confirmation queue). Only the stdio
-        transport can supply this — it needs a live, bidirectional connection
-        to send the client a mid-call 'elicitation/create' request and block
-        for its reply, which a stateless HTTP request/response cycle cannot
-        do. See StdioMCPServer._elicit_decision.
-
-    Returns:
-        list[dict]: MCP content blocks, e.g. [{"type": "text", "text": "..."}]
-    """
-    from aot.ai.services import mcp_safety_gate as gate
-    from aot.mcp_server import audit
-
-    arguments = arguments or {}
-    # `agent_id` is decided by the transport (API key, or the declared name when
-    # auth is off) and is NOT overridable from the arguments. An earlier version
-    # honoured a `_agent_id` argument here, which let any caller stamp someone
-    # else's name on its calls and defeated authentication entirely. The key is
-    # still accepted and stripped for backward compatibility, but ignored.
-    # `_reason` is free-text and stays caller-supplied — it is not an identity.
-    reason = arguments.get("_reason") or ""
-    permission = gate.classify_permission(tool_name)
-
-    blocked = None
-    error_text = ""
-    # test_request_context (not just app_context): several handlers call
-    # parse_input_information()/parse_output_information() (create_input,
-    # create_output, create_gis_input, list_device_types(kind='input'|'output'),
-    # get_device_type_options(...)), which need flask_babel's request-bound
-    # gettext for translated option labels and raise "Working outside of
-    # request context" under a bare app_context. The in-app AI never hits this
-    # because it always runs inside a real Flask request; this standalone
-    # server previously only pushed an app context, so every one of those
-    # tools was silently broken here until now (found 2026-07-26 testing
-    # create_gis_input). test_request_context() pushes both a request and an
-    # app context, so this is a strict superset of the old app_context() call.
-    with app.test_request_context():
-        try:
-            if tool_name == _CONFIRMATION_RESPONSE_TOOL:
-                # 승인 큐 응답 자체는 게이트를 거치지 않는다 — "승인하려면 승인이
-                # 필요하다"는 순환을 피하기 위함. 대신 role 체크는 여기서 직접 한다.
-                result = _respond_to_confirmation(arguments, agent_id, role)
-            else:
-                blocked = gate.gate(tool_name, arguments, agent_id=agent_id, role=role,
-                                    reason=reason, elicit_fn=elicit_fn)
-                if blocked is None:
-                    call_args = gate.inject_agent(
-                        tool_name, gate.strip_meta(arguments), agent_id)
-                    if tool_name in _NATIVE_TOOLS:
-                        from aot.ai.services.aot_native_tool_engine import AoTNativeToolEngine
-                        result = AoTNativeToolEngine.execute(tool_name, call_args)
-                    else:
-                        result = _dispatch_virtual_tool(tool_name, call_args)
-                else:
-                    result = blocked
-        except ValueError as exc:
-            error_text = str(exc)
-            result = {"status": "error", "message": error_text}
-        except Exception as exc:
-            error_text = str(exc)
-            logger.error(f"[AoTMCP] Tool '{tool_name}' failed: {exc}", exc_info=True)
-            result = {"status": "error", "message": error_text}
-
-        _record_audit(audit, tool_name, arguments, agent_id, permission,
-                      reason, blocked, result, error_text)
-
-    if isinstance(result, dict):
-        result.setdefault("server_host", SERVER_HOST)
-        # 호출이 실제로 돌았는지를 도구별 어휘와 무관하게 한 키로 알린다.
-        # 여기가 stdio/HTTP 양쪽이 반드시 지나는 단일 지점이라 한 번만 찍으면 된다.
-        result["call_state"] = gate.call_state(blocked, result, error_text)
-    return [{"type": "text", "text": json.dumps(result, ensure_ascii=False)}]
-
-
-def _record_audit(audit, tool_name, arguments, agent_id, permission,
-                  reason, blocked, result, error_text):
-    """Write one mcp_audit_log row describing this call's outcome.
-
-    Never raises: an audit failure must not turn a working tool call into an
-    error for the caller (the audit helpers already swallow and log their own
-    exceptions, but the status mapping below is ours).
-    """
-    try:
-        from aot.ai.services import mcp_safety_gate as gate
-        confirmation_id = (blocked or {}).get("confirmation_id")
-        uid = audit.log_call(
-            tool_name=tool_name,
-            params=arguments,
-            agent_id=agent_id,
-            permission=permission,
-            reason=reason,
-            confirmation_id=confirmation_id,
-        )
-        if permission == "read":
-            status = "n/a"
-        elif blocked is None and tool_name in gate.config_only_tools():
-            # 승인이 면제된 설정 편집. 'approved' 로 적으면 아무도 보지 않은
-            # 동작을 사람이 승인한 것처럼 남는다 — 안전 감사 로그에서 그건
-            # 거짓이다. 승인이 애초에 요구되지 않았음을 그대로 적는다.
-            status = "not_required"
-        elif blocked is None:
-            status = "approved"          # gate consumed a human approval
-        elif blocked.get("status") == "pending_approval":
-            status = "pending"
-        else:
-            status = "rejected"
-        summary = (blocked or {}).get("reason_code") or (
-            "" if error_text else str(result.get("status", ""))[:100])
-        audit.update_status(uid, status, result_summary=summary, error=error_text)
-    except Exception:
-        logger.exception("[AoTMCP] audit record failed for '%s'", tool_name)
-
-
-def _respond_to_confirmation(arguments, agent_id, role):
-    """respond_to_confirmation 의 실제 실행부.
-
-    사용자가 '이 채팅 안에서' 명시적으로 승인/거부한다고 말한 뒤에만 호출되어야
-    한다는 전제를 도구 설명(tool_registry._MCP_TOOL_PAYLOADS)에 강하게 못박아
-    두었다 — 여기서는 그 전제가 지켜졌다고 신뢰하고, 대신 "쓰기 권한이 없는
-    role은 애초에 아무것도 승인 못 하게" 막는 것만 서버 쪽에서 강제한다. 웹
-    승인 엔드포인트(routes_mcp_api.py)와 동일하게 mcp_safety_gate.approve/
-    reject를 그대로 호출하고, user_id도 같은 규약(User.unique_id)을 쓴다.
-
-    confirmation_ids(복수, 배열)도 받는다 — 사용자가 여러 건을 한 번에 지목해
-    거부/승인하라고 말했을 때(예: 잘못된 배치를 통째로 폐기) 한 건씩 반복 호출할
-    필요가 없게 하기 위함이다. 단일 confirmation_id와 동일한 신뢰 전제를 그대로
-    적용한다 — 사용자가 이 대화에서 명시적으로 지목한 id들에 한해서만 호출돼야
-    하며, "대기 중인 거 알아서 정리해" 같은 막연한 지시로부터 추론해 부르면 안 된다.
-    """
-    from aot.ai.services import mcp_auth
-    if not mcp_auth.role_can_write(role):
-        return {
-            "status": "refused",
-            "reason_code": "insufficient_role",
-            "message": ("Your MCP key's role does not have write access — only "
-                        "Admin/Editor role keys can approve or reject pending "
-                        "confirmations."),
-        }
-
-    decision = arguments.get("decision")
-    if decision not in ("approve", "reject"):
-        return {"status": "error",
-                "message": "decision ('approve'|'reject') is required."}
-
-    confirmation_ids = arguments.get("confirmation_ids")
-    if confirmation_ids is None:
-        single = arguments.get("confirmation_id")
-        if not single:
-            return {"status": "error",
-                    "message": "confirmation_id or confirmation_ids is required."}
-        confirmation_ids = [single]
-    elif not isinstance(confirmation_ids, list) or not confirmation_ids:
-        return {"status": "error",
-                "message": "confirmation_ids must be a non-empty list of confirmation_id strings."}
-
-    from aot.ai.services import mcp_safety_gate as gate
-    user_id = getattr(role, "user_id", None)
-    results = []
-    for cid in confirmation_ids:
-        if decision == "approve":
-            r = gate.approve(cid, user_id=user_id)
-        else:
-            r = gate.reject(cid, user_id=user_id)
-        results.append({"confirmation_id": cid, **r})
-        logger.info("[AoTMCP] respond_to_confirmation agent=%s decision=%s confirmation=%s -> %s",
-                    agent_id, decision, cid, r.get("status"))
-
-    if len(results) == 1:
-        return results[0]
-    return {
-        "status": "batch_complete",
-        "count": len(results),
-        "succeeded": sum(1 for r in results if r.get("status") == "success"),
-        "results": results,
-    }
-
-
-def _dispatch_virtual_tool(tool_name, arguments):
-    """Map a virtual tool name to its AoTDataToolService handler.
-
-    Derives the dispatch table from the SSOT tool registry (build_tool_map) so
-    EVERY declared virtual tool — search_notes, create_note, list_notices,
-    get_cumulative_status, … — is executable here, not just a hand-maintained
-    subset. The old explicit dict omitted several tools that tools/list still
-    advertised (via VIRTUAL_TOOLS), so an external MCP client calling e.g.
-    search_notes got 'Unknown tool' despite the tool being listed. Registering a
-    tool once in tool_registry.py now suffices for both list and execute.
-    """
-    from aot.ai.services.tool_registry import build_tool_map
-
-    tool_map = build_tool_map()
-    handler = tool_map.get(tool_name)
-    if handler is None:
-        raise ValueError(f"Unknown tool: '{tool_name}'")
-
-    # Strip transport/meta keys the handler signatures don't accept. _execute_tool
-    # already removes the gate's own meta keys, but this stays defensive for any
-    # caller that reaches this helper directly.
-    from aot.ai.services.mcp_safety_gate import META_KEYS
-    _meta = {"tool_name", "server_id", "agent_unique_id", "context"} | set(META_KEYS)
-    kwargs = {k: v for k, v in (arguments or {}).items() if k not in _meta}
-
-    # 시그니처에 없는 인자는 버린다. 외부 AI는 잉여 인자를 흔히 실어 보내는데,
-    # **extra 를 받지 않는 핸들러(get_energy_report 등)는 TypeError 로 죽어버려
-    # 도구가 통째로 못 쓰이게 된다.
-    # 다만 조용히 버리지는 않는다 — 'zone' 을 'zone_id' 로 잘못 쓴 경우를 감추면
-    # 엉뚱한 범위의 답을 정답으로 오해하게 되므로, 무엇을 무시했는지 돌려준다.
-    ignored = []
-    try:
-        import inspect
-        params = inspect.signature(handler).parameters
-        if not any(p.kind is inspect.Parameter.VAR_KEYWORD for p in params.values()):
-            ignored = sorted(k for k in kwargs if k not in params)
-            for k in ignored:
-                kwargs.pop(k, None)
-    except (TypeError, ValueError):
-        pass
-
-    result = handler(**kwargs)
-    if ignored and isinstance(result, dict):
-        result = dict(result)
-        result["_ignored_arguments"] = ignored
-        result["_ignored_note"] = (
-            f"이 도구가 받지 않는 인자를 무시했습니다: {', '.join(ignored)}. "
-            f"의도한 인자였다면 tools/list 의 input_schema 에서 정확한 이름을 확인하세요.")
-    return result
-
-
-# =============================================================================
-# stdio transport — JSON-RPC 2.0 over stdin/stdout
-# =============================================================================
 
 class StdioMCPServer:
     """Reads JSON-RPC requests from stdin, writes responses to stdout.
@@ -427,8 +88,13 @@ class StdioMCPServer:
       4. tools/call       → execute tool and return result
     """
 
-    def __init__(self, app):
+    def __init__(self, app, out=None):
         self._app = app
+        # JSON-RPC 를 내보낼 스트림. main() 이 로그를 stderr 로 몰아내면서
+        # sys.stdout 을 갈아치우므로, **그 전에 잡아 둔 진짜 stdout** 을 받는다
+        # (main() 의 주석 참조). 인자가 없으면 현재 stdout — 이 클래스를 다른
+        # 자리에서 쓰거나 시험할 때를 위한 것이지, 정상 경로는 항상 주입한다.
+        self._out = out or sys.stdout
         self._initialized = False
         # Identity of the connected client, taken from the initialize handshake's
         # clientInfo.name. Recorded on every call so a multi-AI setup can be
@@ -445,9 +111,13 @@ class StdioMCPServer:
         self._next_elicit_id = 0
 
     def _send(self, obj):
-        """Write a JSON-RPC response line to stdout."""
-        sys.stdout.write(json.dumps(obj, ensure_ascii=False) + "\n")
-        sys.stdout.flush()
+        """Write a JSON-RPC response line to the protocol stream.
+
+        `sys.stdout` 을 쓰지 않는다 — 그 이름은 로그가 프로토콜을 오염시키지
+        않도록 stderr 로 바뀌어 있다.
+        """
+        self._out.write(json.dumps(obj, ensure_ascii=False) + "\n")
+        self._out.flush()
 
     def _elicit_decision(self, tool_name, briefing, arguments):
         """Send a server-initiated 'elicitation/create' request over this same
@@ -556,7 +226,7 @@ class StdioMCPServer:
                     "capabilities": {"tools": {}},
                     "serverInfo": {"name": SERVER_NAME, "version": SERVER_VERSION,
                                    "host": SERVER_HOST},
-                    "instructions": SERVER_INSTRUCTIONS,
+                    "instructions": _server_instructions(),
                 },
             })
 
@@ -702,7 +372,7 @@ def _run_http_server(app, port=5700):
                 "capabilities": {"tools": {}},
                 "serverInfo": {"name": SERVER_NAME, "version": SERVER_VERSION,
                                "host": SERVER_HOST},
-                "instructions": SERVER_INSTRUCTIONS,
+                "instructions": _server_instructions(),
             }}
         if method.startswith("notifications/"):
             return None                      # 알림에는 응답하지 않는다
@@ -923,6 +593,33 @@ def main():
         handlers=handlers
     )
 
+    # ── stdio 는 stdout 이 프로토콜 그 자체다 ────────────────────────────────
+    # `create_app()` 이 부르는 `configure_aot_file_logging()` 은 'aot' 로거에
+    # **StreamHandler(sys.stdout)** 을 붙인다(utils/logging_setup.py). 데몬에게는
+    # 맞는 선택이지만(도커/systemd 가 stdout 을 수집한다) 여기서는 그 로그가
+    # JSON-RPC 스트림 한가운데로 쏟아진다 — 클라이언트가 받는 첫 줄이
+    # `2026-08-21 ... INFO ...` 라서 JSON 파싱이 그 자리에서 실패한다.
+    #
+    # 실제로 그래서 `MCPBridge` 의 initialize 핸드셰이크가 늘 실패했고
+    # ("Invalid JSON from MCP server: Extra data: line 1 column 5"), 내부 AI 의
+    # 매니페스트는 `mcp_tools: 0` 이었다 — operate_device 를 비롯한 MCP 도구를
+    # **하나도 못 받는 상태**로 돌고 있었다. 관대한 클라이언트(줄 앞에 '{' 가
+    # 없으면 건너뛰는 쪽)만 우연히 동작해서, 붙는 클라이언트가 있다는 사실이
+    # 오히려 이 고장을 가렸다.
+    #
+    # **create_app() 앞에서** 바꿔야 한다. StreamHandler 는 생성 시점의 스트림
+    # 객체를 붙잡으므로, 핸들러가 만들어진 뒤에 sys.stdout 을 갈아도 이미 붙은
+    # 핸들러는 옛 객체(진짜 stdout)를 계속 쓴다.
+    #
+    # 스트림 자체를 바꾸는 이유는 핸들러 하나만 고치는 것으로는 부족해서다 —
+    # 어떤 라이브러리든 print() 한 줄이면 같은 고장이 재발하는데, 그때는
+    # 원인이 다시 보이지 않는다. HTTP 모드는 stdout 이 프로토콜이 아니므로
+    # 건드리지 않는다.
+    protocol_stdout = None
+    if not args.http:
+        protocol_stdout = sys.stdout
+        sys.stdout = sys.stderr
+
     # Bootstrap Flask app for SQLAlchemy / config access
     # Skip scheduler initialization in MCP server process to avoid DB job conflicts
     os.environ["AOT_SKIP_SCHEDULER"] = "1"
@@ -938,7 +635,7 @@ def main():
     if args.http:
         _run_http_server(app, port=args.port)
     else:
-        server = StdioMCPServer(app)
+        server = StdioMCPServer(app, out=protocol_stdout)
         server.run()
 
 

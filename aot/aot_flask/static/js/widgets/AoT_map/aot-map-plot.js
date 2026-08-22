@@ -222,7 +222,12 @@
                     id: id.line, type: 'line', source: id.src,
                     paint: { 'line-color': ['get', 'color'], 'line-width': 1.5 }
                 });
-                _bindClick(uid, map, opts);
+                // **구획 도형에는 클릭을 걸지 않는다** — 모달을 여는 것은
+                // 라벨뿐이고, 이는 지도 전체의 규칙이다(필지·구역·시설도
+                // 라벨과 값 키로만 연다). 구획은 특히 겹치는 것이 정상이라
+                // (간작·혼작) 도형 클릭은 무엇이 열릴지 예측할 수 없었고,
+                // 팬을 시작하려고 짚은 것까지 창이 떴다. 커서도 pointer 로
+                // 바꾸지 않는다 — 누를 수 없는 것을 누를 수 있다고 말하는 셈이다.
             }
         } catch (e) {
             console.warn('[AoT Map] 식생 레이어 렌더 실패:', e);
@@ -417,27 +422,6 @@
 
     // ── 클릭 → 중앙 모달 ────────────────────────────────────────────────────
 
-    function _bindClick(uid, map, opts) {
-        var st = STATE[uid] = STATE[uid] || {};
-        // 베이스 지도를 바꾸면 레이어는 사라지지만 **핸들러는 남는다.**
-        // 다시 바인딩하면 클릭 한 번에 모달이 두 번 열린다.
-        if (st.clickBound) return;
-        st.clickBound = true;
-        var id = _ids(uid);
-        map.on('click', id.fill, function (e) {
-            var f = e.features && e.features[0];
-            if (!f) return;
-            var uuid = f.properties && f.properties.plot_uuid;
-            if (uuid) openModal(uid, map, uuid, opts);
-        });
-        map.on('mouseenter', id.fill, function () {
-            map.getCanvas().style.cursor = 'pointer';
-        });
-        map.on('mouseleave', id.fill, function () {
-            map.getCanvas().style.cursor = '';
-        });
-    }
-
     /**
      * 구획 모달. 팝업 말풍선이 아니라 **중앙 모달**을 쓴다 — 작물·기간·센서
      * 출처·이력·노트가 함께 들어가야 해서 말풍선 폭으로는 부족하다.
@@ -527,6 +511,13 @@
                 var want = opts.openTab || opts.defaultTab;
                 var popup = shell(popupApi.buildPlotModal(
                     p, { defaultTab: want }), uid);
+                // 연 구획이 보이도록 지도를 옮긴다. 옮기는 것은 위젯의 일이라
+                // (카메라 여백이 패널 폭을 알아야 한다) 콜백으로 위임한다.
+                // 도형은 응답의 feature 에 실려 온다 — 구획 소스는 이 모듈이
+                // 직접 붙여서 위젯의 소스 목록에는 없다.
+                if (typeof opts.focus === 'function') {
+                    try { opts.focus(p); } catch (e) {}
+                }
                 var el = popup && popup.getElement && popup.getElement();
                 var body = el && el.querySelector('.maplibregl-popup-content');
                 if (!body) return;
@@ -728,6 +719,15 @@
                 payload[el.getAttribute('data-pf')] = el.value || '';
             });
             if (!payload.subject) return;
+            // 몫(p6_50)은 서버가 dict 로 받는다. 수량인지 비율인지는 그 구역에
+            // 총량이 적혀 있는지가 정한다 — 화면이 접미로 보인 것과 같은 기준이다.
+            if ('allocation_value' in payload) {
+                var _av = payload.allocation_value;
+                delete payload.allocation_value;
+                payload.allocation = (_av === '' || _av == null) ? null
+                    : ((p.allocation && p.allocation.total != null)
+                        ? { amount: _av } : { percent: _av });
+            }
             _api('POST', '/api/geo/plot', payload).then(function (res) {
                 if (res.status >= 400 || !res.data.ok) {
                     if (window.showToast) {

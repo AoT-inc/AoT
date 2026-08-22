@@ -33,6 +33,28 @@ _VALID_SOURCES = ('builtin', 'external', 'user', 'ai')
 VALID_KINDS = ('vegetation', 'livestock', 'facility', 'other')
 
 
+def _resolve_tab_id(raw_tab_id):
+    """탭 소속 문자열 → (tab_id, error).
+
+    비어 있으면 **기본 탭으로 채운다** — 이후 생성되는 행은 항상 유효한 탭에
+    속하게 해서 "어느 탭에도 안 보이는 프로그램" 이 생기지 않게 한다. 값이
+    있으면 그 탭이 실제로 존재하고 `page_type='program'` 인지 검증한다 —
+    검증 없이 받으면 다른 페이지(input 등)의 탭 id 를 잘못 붙이는 요청을
+    조용히 받아들이게 된다.
+    """
+    from aot.services.tab_service import TabService
+
+    tab_id = (raw_tab_id or '').strip() or None
+    if not tab_id:
+        default_tab = TabService.get_default_tab('program')
+        return (default_tab.unique_id if default_tab else None), None
+
+    tab = TabService.get_tab_by_id(tab_id)
+    if not tab or tab.page_type != 'program':
+        return None, '탭을 찾을 수 없습니다: %r' % tab_id
+    return tab_id, None
+
+
 def _clean_stages(stages, defs=None, rdefs=None):
     """단계 목록 검증·정규화 → (stages, error).
 
@@ -651,6 +673,10 @@ def create_program(data, source='user'):
     if err:
         return None, err
 
+    tab_id, err = _resolve_tab_id(data.get('tab_id'))
+    if err:
+        return None, err
+
     row = GeoProgram(
         name=name, subject=subject, kind=kind,
         target_defs=defs,
@@ -665,6 +691,7 @@ def create_program(data, source='user'):
         photosynthesis=data.get('photosynthesis') or None,
         auto_advance=bool(data.get('auto_advance')),
         notes=(data.get('notes') or None),
+        tab_id=tab_id,
         version=1)
     try:
         db.session.add(row)
@@ -701,29 +728,54 @@ def clone_program(program_uuid, data=None):
         'targets_methods': data.get('targets_methods') or src.targets_methods,
         'notes': data.get('notes', src.notes),
         'derived_from': src.unique_id,
+        # 복제본은 **호출한 쪽이 보고 있던 탭**에 놓인다(안 넘기면 기본 탭).
+        # 원본의 탭을 그대로 따라가지 않는다 — 내장/외부 프로그램은 탭이
+        # 없을 수 있고, 사용자가 지금 보는 화면 맥락이 더 유의미하다.
+        'tab_id': data.get('tab_id'),
     }
     return create_program(payload, source='user')
 
 
 def update_program(program_uuid, data):
-    """수정 → (dict, error). 내장·외부는 거절한다."""
+    """수정 → (dict, error). 내장·외부는 거절한다.
+
+    **탭 소속(`tab_id`)은 예외다.** "무엇을, 어떤 단계로, 어떤 목표로 기르는가"
+    라는 내용이 아니라 화면에서 어디 보이는지일 뿐이라, 내장·외부 프로그램도
+    사용자가 원하는 탭으로 옮길 수 있어야 한다(안 그러면 내장 프로그램은 영원히
+    첫 탭에 갇힌다). payload 가 `tab_id` 하나만 담고 있으면(geo/program 화면의
+    탭 이동 드롭다운이 보내는 요청) `is_editable()` 게이트를 건너뛰고 탭만
+    바꾼다 — 다른 필드가 하나라도 같이 오면 평소대로 내장·외부를 거절한다.
+    """
     row = GeoProgram.query.filter_by(unique_id=program_uuid).first()
     if row is None:
         return None, '프로그램을 찾을 수 없습니다: %s' % program_uuid
-    if not row.is_editable():
-        return None, ('내장·외부 프로그램은 직접 고칠 수 없습니다. '
-                      '복제한 뒤 고치세요.')
 
-    changed, err = _apply_fields(row, data)
-    if err:
-        db.session.rollback()
-        return None, err
+    tab_only = set(data.keys()) <= {'tab_id'}
+    changed = False
 
-    # 사람이 AI 프로그램을 확인했다는 표시. 이게 있어야 제어에 쓸 수 있다.
-    if data.get('reviewed') is True and row.reviewed_at is None:
-        from aot.utils.time_utils import utc_now
-        row.reviewed_at = utc_now()
-        changed = True
+    if 'tab_id' in data:
+        tab_id, err = _resolve_tab_id(data.get('tab_id'))
+        if err:
+            return None, err
+        if tab_id != row.tab_id:
+            row.tab_id = tab_id
+            # 버전은 올리지 않는다 — 탭 이동은 내용이 아니라 조직 정보다.
+
+    if not tab_only:
+        if not row.is_editable():
+            return None, ('내장·외부 프로그램은 직접 고칠 수 없습니다. '
+                          '복제한 뒤 고치세요.')
+
+        changed, err = _apply_fields(row, data)
+        if err:
+            db.session.rollback()
+            return None, err
+
+        # 사람이 AI 프로그램을 확인했다는 표시. 이게 있어야 제어에 쓸 수 있다.
+        if data.get('reviewed') is True and row.reviewed_at is None:
+            from aot.utils.time_utils import utc_now
+            row.reviewed_at = utc_now()
+            changed = True
 
     if changed:
         # 내용이 실제로 바뀔 때만 올린다 — 저장 버튼을 눌렀다는 이유로 올리면
@@ -797,12 +849,21 @@ def to_dict(row, with_stages=True):
         'derived_from': row.derived_from,
         'reviewed_at': row.reviewed_at.isoformat() if row.reviewed_at else None,
         'version': row.version,
+        'tab_id': row.tab_id,
         'stage_count': len(row.stage_list()),
         'total_days': row.total_days(),
         'editable': row.is_editable(),
         'usable_for_control': row.usable_for_control(),
         'notes': row.notes,
     }
+    # 검색용 지침 텍스트 — 단계 안의 `guidance`(자유 텍스트 지침)는 `with_stages`
+    # 가 꺼진 목록 응답에는 원래 안 나간다(전체 stages 구조를 실으면 응답이
+    # 커진다는 이유는 위 with_stages 분기 주석과 같다). 하지만 검색은 "제목
+    # 말고 지침 속 단어로도 찾고 싶다"는 요구가 있어, 무거운 구조 전체 대신
+    # 지침 문장만 뽑아 붙인다 — 목록·상세 어느 쪽이든 가볍게 함께 낸다.
+    guidance_bits = [st.get('guidance') for st in row.stage_list()
+                     if st.get('guidance')]
+    out['guidance_text'] = ' '.join(guidance_bits) if guidance_bits else None
     # 곡선 유무는 목록에서도 보여야 한다 — "이 프로그램은 값이 변한다" 는 사실이
     # 단계 수만큼이나 중요하다.
     out['target_methods'] = row.targets_methods or {}

@@ -1539,11 +1539,37 @@ def page_programs():
 
     목록·편집은 클라이언트가 `/api/geo/program*` 로 한다 — 서버 렌더 폼을
     또 만들면 같은 검증이 두 벌이 되고, 이 도메인은 그 실패를 이미 겪었다.
+
+    탭은 input 페이지(`routes_input.page_input`)와 같은 방식으로 다룬다 —
+    `?tab_id=` 로 현재 탭을 고르고, 레거시(탭 도입 전) 행의 `tab_id IS NULL`
+    은 여기서 기본 탭으로 지연 백필한다. 마이그레이션이 이 백필을 하지 않는
+    이유는 `alembic_db/.../p6_49_program_tab_20260821.py` 참조.
     """
     if not utils_general.user_has_permission('edit_settings'):
         return redirect(url_for('routes_general.home'))
+
+    from aot.databases.models import GeoProgram
+    from aot.services.tab_service import TabService
+
+    tab_id = request.args.get('tab_id', None)
+    tabs = TabService.get_tabs_for_page('program')
+    current_tab = (TabService.get_tab_by_id(tab_id) if tab_id else None) \
+        or TabService.get_default_tab('program')
+
+    if current_tab:
+        null_count = GeoProgram.query.filter(GeoProgram.tab_id.is_(None)).count()
+        if null_count:
+            default_tab = TabService.get_default_tab('program')
+            GeoProgram.query.filter(GeoProgram.tab_id.is_(None)) \
+                .update({'tab_id': default_tab.unique_id})
+            db.session.commit()
+            tabs = TabService.get_tabs_for_page('program')
+
     return render_template('pages/geo/programs.html',
-                           active_page='geo_programs')
+                           active_page='geo_programs',
+                           tabs=tabs,
+                           current_tab_id=(current_tab.unique_id
+                                          if current_tab else None))
 
 
 # ============================================================
@@ -2058,13 +2084,33 @@ def _facility_plots_block(facility_uuid):
     """
     try:
         from aot.aot_flask.geo import plot_context
+        from aot.databases.models import GeoFacility
         rows = plot_context.plots_in_facility(facility_uuid)
-        return [plot_context.plot_brief_for_control(r) for r in rows]
+        # 구역 총량은 시설 하나당 **한 번만** 읽어 넘긴다 — 구획마다 다시 읽으면
+        # 폴링 응답 하나에 N+1 이 된다.
+        fac = GeoFacility.query.filter_by(unique_id=facility_uuid).first()
+        caps = plot_context.bay_capacities(fac) if fac is not None else {}
+        return [plot_context.plot_brief_for_control(r, capacities=caps)
+                for r in rows]
     except Exception as exc:
         current_app.logger.warning(
             '[Facility] 구획 요약 실패(%s) — 런타임은 계속: %s',
             facility_uuid, exc)
         return []
+
+
+def _facility_bay_capacities(facility_uuid):
+    """구역 총량 — 실패해도 런타임 응답을 막지 않는다(구획 요약과 같은 규칙)."""
+    try:
+        from aot.aot_flask.geo import plot_context
+        from aot.databases.models import GeoFacility
+        fac = GeoFacility.query.filter_by(unique_id=facility_uuid).first()
+        return plot_context.bay_capacities(fac) if fac is not None else {}
+    except Exception as exc:
+        current_app.logger.warning(
+            '[Facility] 구역 총량 읽기 실패(%s) — 런타임은 계속: %s',
+            facility_uuid, exc)
+        return {}
 
 
 @blueprint.route('/api/aot/facility/<facility_uuid>/runtime', methods=['GET'])
@@ -2246,6 +2292,10 @@ def api_facility_runtime(facility_uuid):
         # 구획(bay_id=None)은 시설 전체에 심은 것이라 어느 구역 뷰에서도 보여야
         # 한다(`plots_in_facility` 가 그렇게 낸다).
         'plots': _facility_plots_block(facility_uuid),
+        # 구역 총량(p6_50) — 구획의 몫이 이것을 분모로 삼는다. 화면이 "4/12 베드"
+        # 를 그리려면 분모가 목록과 **같은 응답**에 있어야 한다(따로 조회하면
+        # 둘이 어긋난 순간이 생긴다).
+        'bay_capacities': _facility_bay_capacities(facility_uuid),
     }
     # 시설 1개당 분당 3회 안팎으로 폴링되고, 액추에이터 상태·센서값이 안 바뀌면
     # 응답 바이트가 그대로다(실측 815 B, 3회 연속 해시 동일). 조건부 응답으로
@@ -2302,6 +2352,87 @@ def api_facility_actuator_order(facility_uuid):
         return jsonify({'ok': False, 'message': str(e)}), 500
 
     return jsonify({'ok': True, 'order': clean})
+
+
+@blueprint.route('/api/aot/facility/<facility_uuid>/bay_capacity', methods=['POST'])
+@login_required
+def api_facility_bay_capacity(facility_uuid):
+    """구역 총량을 적는다 (p6_50) — `{bay_id, unit, total}`.
+
+    구획의 몫(`geo_plot.allocation.amount`)이 이 값을 분모로 삼는다. "12베드 중
+    4베드" 의 12 가 여기서 온다.
+
+    **총량은 시설의 사실이고 구획은 참조만 한다.** 구획 저장이 이 값을 고칠 수
+    있으면 마지막에 저장한 구획이 분모를 정하게 되므로, 쓰는 자리를 시설 쪽에
+    따로 둔다.
+
+    `total` 을 0 이하나 빈 값으로 주면 총량을 **지운다** — 잘못 적은 것을 되돌릴
+    수단이 없으면 사람은 아무 숫자나 넣어 두고 만다. 그때 그 구역의 구획들은
+    비율(percent) 축으로 되돌아간다(값 자체는 지우지 않는다 — 총량을 다시 적으면
+    그대로 되살아난다).
+    """
+    from sqlalchemy.orm.attributes import flag_modified
+    from aot.databases.models import GeoFacility
+    from aot.aot_flask.geo.plot_context import _CAPACITY_UNITS
+
+    if not utils_general.user_has_permission('edit_settings'):
+        return jsonify({'ok': False, 'message': 'Insufficient permission'}), 403
+
+    facility = GeoFacility.query.filter_by(unique_id=facility_uuid).first()
+    if not facility:
+        return jsonify({'ok': False, 'message': 'Facility not found'}), 404
+
+    body = request.get_json(silent=True) or {}
+    bay_id = str(body.get('bay_id') or '').strip()
+    if not bay_id:
+        return jsonify({'ok': False, 'message': 'bay_id required'}), 400
+
+    raw_total = body.get('total')
+    total = None
+    if raw_total not in (None, ''):
+        try:
+            total = float(raw_total)
+        except (TypeError, ValueError):
+            return jsonify({'ok': False,
+                            'message': '총량은 숫자여야 합니다'}), 400
+        if total <= 0:
+            total = None                       # 0 이하 = 지우기
+        elif float(total).is_integer():
+            total = int(total)
+        else:
+            total = round(total, 2)
+
+    unit = body.get('unit')
+    if unit not in _CAPACITY_UNITS:
+        unit = 'bed'
+
+    bays = facility.bays if isinstance(facility.bays, list) else []
+    target = None
+    for b in bays:
+        if isinstance(b, dict) and b.get('id') == bay_id:
+            target = b
+            break
+    if target is None:
+        return jsonify({'ok': False,
+                        'message': "구역 '%s' 가 시설에 없습니다" % bay_id}), 400
+
+    if total is None:
+        target.pop('capacity', None)
+    else:
+        target['capacity'] = {'unit': unit, 'total': total}
+
+    facility.bays = bays
+    flag_modified(facility, 'bays')     # JSON 컬럼 변경 감지
+    facility.updated_at = datetime.utcnow()
+    try:
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        logger.exception('[bay_capacity] save failed')
+        return jsonify({'ok': False, 'message': str(e)}), 500
+
+    return jsonify({'ok': True, 'bay_id': bay_id,
+                    'capacity': target.get('capacity')})
 
 
 @blueprint.route('/api/aot/facility/<facility_uuid>/calibration_status', methods=['GET'])

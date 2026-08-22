@@ -54,6 +54,9 @@
     55   facility 액추에이터 팝업         → var(--z-map-popup-act)
     60   bootstrap tooltips (for tool buttons)
     70   facility widget IEC 설정점 패널  → var(--z-facility-panel)
+  9500   모달 도킹 패널(.aot-map-panel-layer) — 스케일 밖이다. 라벨 핀
+         (LABEL_Z_FRONT=9000, JS 가 인라인으로 준다)이 이 스케일 밖에 있어서
+         그 위에 둘 수밖에 없다. 라벨 핀을 스케일 안으로 되돌리면 80 으로 내릴 것.
    ── 전역 토큰(지도 밖으로 뜨는 UI) ──
    var(--aot-z-overlay)  pseudo-fullscreen / fullscreen parent
    var(--aot-z-tooltip)  clipped-name bubble (.aot-meas-sum-tip)
@@ -212,7 +215,7 @@ body.aot-map-fullscreen-active .grid-stack-item:not(.aot-fs-parent) {
 .maplibregl-popup-content {
   padding: 12px 16px;             /* 8→12 상하, 12→16 좌우 — 16px 라운드에 균형잡힌 여백 */
   border-radius: 16px;
-  background: var(--aot-surface-card);
+  background: var(--bd-secondary, #F3F6F5); /* 모달 페이지 배경 = 배경 보조. 안의 카드(.aot-ov-block)는 배경 기본으로 대비를 만든다 */
   color: var(--aot-color-text-primary);
   box-shadow: var(--aot-shadow-md);
   font-family: var(--aot-font-family);
@@ -222,15 +225,15 @@ body.aot-map-fullscreen-active .grid-stack-item:not(.aot-fs-parent) {
 .maplibregl-popup-anchor-top      .maplibregl-popup-tip,
 .maplibregl-popup-anchor-top-left .maplibregl-popup-tip,
 .maplibregl-popup-anchor-top-right .maplibregl-popup-tip {
-  border-bottom-color: var(--aot-surface-card);
+  border-bottom-color: var(--bd-secondary, #F3F6F5);
 }
 .maplibregl-popup-anchor-bottom      .maplibregl-popup-tip,
 .maplibregl-popup-anchor-bottom-left .maplibregl-popup-tip,
 .maplibregl-popup-anchor-bottom-right .maplibregl-popup-tip {
-  border-top-color: var(--aot-surface-card);
+  border-top-color: var(--bd-secondary, #F3F6F5);
 }
-.maplibregl-popup-anchor-left  .maplibregl-popup-tip { border-right-color: var(--aot-surface-card); }
-.maplibregl-popup-anchor-right .maplibregl-popup-tip { border-left-color:  var(--aot-surface-card); }
+.maplibregl-popup-anchor-left  .maplibregl-popup-tip { border-right-color: var(--bd-secondary, #F3F6F5); }
+.maplibregl-popup-anchor-right .maplibregl-popup-tip { border-left-color:  var(--bd-secondary, #F3F6F5); }
 
 .maplibregl-popup-close-button {
   top: 10px !important;           /* 0→10 : 라운드 모서리에서 안쪽으로 */
@@ -1597,7 +1600,10 @@ body.aot-map-fullscreen-active .grid-stack-item:not(.aot-fs-parent) {
        when they would actually overlap. --aot-dock-h-left is 0 when there is
        horizontal room (set by the vector widget's _updateDockHeightVar), so the
        copyright stays pinned to the bottom instead of floating in empty space. */
-    bottom: var(--aot-dock-h-left, var(--aot-dock-h, 0px));
+    /* --aot-panel-h 는 하단 시트로 뜬 모달 패널의 높이(0 = 없음). 저작권이 패널에
+       가려지면 라이선스 준수 문제가 되므로 여기서 함께 더한다. 패널 쪽에 전용
+       규칙을 따로 두지 않는 이유: 이 한 줄이면 특이도 경쟁이 아예 없다. */
+    bottom: calc(var(--aot-panel-h, 0px) + var(--aot-dock-h-left, var(--aot-dock-h, 0px)));
     transition: bottom 0.2s ease;
     /* Match dock/legend layer (see hierarchy comment at top of file) so
        attribution is never hidden beneath them by an unrelated stacking context. */
@@ -2290,4 +2296,81 @@ body.aot-map-fullscreen-active .grid-stack-item:not(.aot-fs-parent) {
 }
 .aot-map-h-xs .aot-meas-name-row {
     font-size: 0.7em !important;
+}
+
+/* ==========================================================================
+   도킹 패널이 열린 동안 지도 크롬은 패널을 피한다
+   --------------------------------------------------------------------------
+   `--aot-panel-w`(side) / `--aot-panel-h`(sheet)는 패널 셸 JS
+   (_showFacilityCenterOverlay)가 .aot-map-container 에 세팅하고, 닫을 때 지운다.
+   측정 도크의 --aot-dock-h 와 같은 방식이다.
+
+   **저작권 표시가 패널에 가려지면 라이선스 준수 문제가 된다** — 이 블록은 장식이
+   아니라 필수 배선이다. 지도 크롬을 새로 만들면 여기에도 자리를 잡아 줄 것.
+
+   툴 레일과 저작권 버튼은 위치가 **인라인 style** 이라(vector 위젯 JS) `!important`
+   없이는 이길 수 없다.
+   ========================================================================== */
+
+/* ── side: 오른쪽 크롬을 패널 폭만큼 왼쪽으로 ── */
+.aot-map-container[data-aot-panel="side"] [id^="map-tools-right-"],
+.aot-map-container[data-aot-panel="side"] [id^="map-attrib-"] {
+    right: calc(var(--aot-panel-w, 0px) + 10px) !important;
+    transition: right 0.2s ease;
+}
+/* 패널이 이미 열려 있는 상태에서 **다른 도형의 모달로 갈아탈 때**는 크롬이
+   움직일 이유가 없다(자리가 그대로다). 그런데 셸이 닫혔다 열리므로 속성이
+   잠깐 사라졌다 붙고, 그때마다 오른쪽 크롬이 왕복 애니메이션을 한 번씩 했다.
+   실제 원인(속성이 깜빡이는 것)은 JS 에서 없앴고, 여기서는 남은 한 프레임짜리
+   깜빡임까지 눈에 띄지 않게 한다 — 저작권이 가려지는 일은 없어야 하므로
+   트랜지션을 통째로 지우지는 않는다(열림/닫힘 때는 부드럽게 움직인다). */
+.aot-map-container[data-aot-panel] .maplibregl-ctrl-bottom-left { transition: none; }
+/* 저작권 패널(.aot-map-attrib-panel)은 여기서 옮기지 않는다 — 저작권 버튼
+   컨테이너(#map-attrib-*) **안**에 있어서 그 컨테이너가 옮겨질 때 함께 따라온다.
+   여기에 또 --aot-panel-w 를 더하면 패널만 두 배로 밀려 버튼에서 떨어진다. */
+.aot-map-container[data-aot-panel="side"] .aot-legend-container,
+.aot-map-container[data-aot-panel="side"] .aot-legend-chip {
+    right: calc(var(--aot-panel-w, 0px) + 10px) !important;
+}
+.aot-map-container[data-aot-panel="side"] .aot-map-advice-chips {
+    right: calc(var(--aot-panel-w, 0px) + 60px);
+}
+/* 측정 도크는 bottom-CENTER 다 — 남은 폭의 중앙으로 옮긴다. **숨기지 않는다.**
+   한때 모달이 열린 동안 숨겨 봤지만(시트와 같은 처리) 두 가지가 따라왔다:
+   데스크탑에서는 도크가 계속 보여야 하고, 도크가 사라지면 범례가 축소(chip)에서
+   펼침으로 자동 전환된다(_syncLegendMode 가 도크 가시성을 본다) — 모달을 열었을
+   뿐인데 지도 크롬이 두 군데나 달라 보였다. 도크가 차지하는 높이는 카메라 여백
+   계산에 그대로 포함된다(MAP_CHROME). */
+.aot-map-container[data-aot-panel="side"] .aot-measurement-panel.aot-meas-dock {
+    left: calc(50% - var(--aot-panel-w, 0px) / 2) !important;
+    max-width: calc(100% - var(--aot-panel-w, 0px)) !important;
+}
+
+/* ── sheet: 하단 크롬을 시트 위로 ── */
+/* 시트가 뜨면 측정 도크는 숨긴다. 위로 밀어 올리면 남은 지도 몫(위쪽 38%)을
+   도크가 다시 절반 먹어, 정작 대조할 지도가 사라진다. 숨기는 것은 표시일 뿐이라
+   접힘 상태(meas_dock_collapsed)를 건드리지 않는다 — 시트를 닫으면 그대로 돌아온다.
+   display:none 이면 offsetParent 가 null 이라 --aot-dock-h 도 0 으로 잡히고,
+   그 값을 쓰는 범례·저작권이 함께 제자리를 찾는다. */
+.aot-map-container[data-aot-panel="sheet"] .aot-measurement-panel.aot-meas-dock {
+    display: none !important;
+}
+/* 범례도 도크와 같이 숨긴다. 시트 위로 올리면 남은 지도 몫(위쪽 38%)을 또
+   잘라먹는데, 정작 시트를 연 이유는 그 대상을 지도와 대조하려는 것이다.
+   자리를 옮기지 않으므로 시트를 닫으면 있던 곳에 그대로 돌아온다. */
+.aot-map-container[data-aot-panel="sheet"] .aot-legend-container,
+.aot-map-container[data-aot-panel="sheet"] .aot-legend-chip {
+    display: none !important;
+}
+
+/* 폰 가로(side + 폰)에서도 도크·범례를 숨긴다.
+   눕힌 폰은 높이가 375px 남짓이라, 옆으로 도킹해 폭을 아껴도 하단 도크가 남은
+   높이의 상당 부분을 그대로 먹는다 — 세로에서 시트를 열었을 때와 같은 상황이
+   축만 바뀌어 되풀이된다. 데스크탑 `side` 는 해당 없다(높이가 넉넉하고, 모달을
+   열었다고 크롬이 사라지면 같은 화면이 두 모습으로 보인다).
+   판정 근거는 JS 가 남긴 `data-aot-panel-phone` 이다(`_isPhoneClass()` 가 정본). */
+.aot-map-container[data-aot-panel="side"][data-aot-panel-phone] .aot-measurement-panel.aot-meas-dock,
+.aot-map-container[data-aot-panel="side"][data-aot-panel-phone] .aot-legend-container,
+.aot-map-container[data-aot-panel="side"][data-aot-panel-phone] .aot-legend-chip {
+    display: none !important;
 }

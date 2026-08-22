@@ -373,13 +373,24 @@
               // Map widget host: the map container element (DOM ancestor of MapLibre canvas).
               var host = map.getContainer ? map.getContainer() : null;
               if (_onSelect && _onSelect.pin) _onSelect.pin();
+              // 지도의 다른 창들과 **같은 셸**로 연다(도킹 패널 / 하단 시트).
+              // 셸과 카메라는 위젯이 인스턴스에 걸어 둔다 — 이 모듈은 그 함수들이
+              // 있는 스코프에 닿지 못한다. 없으면(구버전) 옛 중앙 모달로 뜬다.
+              var _inst = window.AoTWidgetInstances && window.AoTWidgetInstances[uniqueId];
               window.AoTSensorLabel.openPopup(sensor, {
                 decimals: opts.decimals,
                 anchorEvent: ev,
                 host: host,
-                modal: true,   // Render as a screen-centered modal, like the control label
+                modal: true,   // 셸이 없으면 화면 중앙 모달로 떨어진다
+                shell: _inst && _inst._modalShell,
+                shellUid: uniqueId,
                 onClose: (_onSelect && _onSelect.unpin) || undefined
               });
+              // 그 센서가 달린 **시설**을 화면에 들인다 — 센서 키는 시설의 부속이라
+              // 시설 도형이 대상이다(구역·장치 모달과 같은 규칙).
+              if (_inst && _inst._focusMap) {
+                _inst._focusMap(facility.shape_uuid || facility.unique_id);
+              }
             }
           });
         }

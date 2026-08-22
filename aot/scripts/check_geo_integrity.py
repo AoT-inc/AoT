@@ -452,6 +452,22 @@ def _collect_plots(findings, map_uuid, map_names):
         _bay_cache[uuid] = ids
         return ids
 
+    _cap_cache = {}
+
+    def _facility_bay_capacities(uuid):
+        """시설의 구역 총량 `{bay_id: {...}}` (p6_50). 못 읽으면 빈 dict —
+        근거 없이 "총량이 없다" 고 말하지 않는다."""
+        if uuid in _cap_cache:
+            return _cap_cache[uuid]
+        caps = {}
+        try:
+            from aot.aot_flask.geo.plot_context import bay_capacities
+            caps = bay_capacities(facilities[uuid]) or {}
+        except Exception:
+            caps = {}
+        _cap_cache[uuid] = caps
+        return caps
+
     for r in rows:
         where = {'plot_id': r.id, 'unique_id': r.unique_id,
                  'subject': r.subject,
@@ -490,6 +506,24 @@ def _collect_plots(findings, map_uuid, map_names):
             if valid and r.bay_id not in valid:
                 findings['plot-unknown-bay'].append(
                     dict(where, facility_uuid=facility_uuid, bay_id=r.bay_id))
+
+        # 몫은 적혀 있는데 분모가 없다 (p6_50). 총량을 지우거나 구역을 다시
+        # 구성하면 생긴다 — `{'amount': 4}` 만 남은 구획은 화면에서 "4" 라는
+        # 단위 없는 숫자가 되고, 사람은 그것이 베드인지 %인지 알 수 없다.
+        # 값을 지우지는 않는다(총량을 다시 적으면 그대로 되살아난다) — 그래서
+        # 자동으로 낫지 않고, 이 검사만이 그 상태를 본다.
+        alloc = getattr(r, 'allocation', None)
+        if isinstance(alloc, dict) and alloc.get('amount') is not None:
+            if not facility_uuid:
+                findings['plot-orphan-allocation'].append(
+                    dict(where, amount=alloc.get('amount'), reason='no-facility'))
+            elif facility_uuid in facility_ids:
+                caps = _facility_bay_capacities(facility_uuid)
+                if not caps.get(getattr(r, 'bay_id', None)):
+                    findings['plot-orphan-allocation'].append(
+                        dict(where, facility_uuid=facility_uuid,
+                             bay_id=getattr(r, 'bay_id', None),
+                             amount=alloc.get('amount'), reason='no-capacity'))
 
         if r.ended_on and r.started_on and r.ended_on < r.started_on:
             findings['plot-bad-dates'].append(
@@ -597,6 +631,7 @@ HEADINGS = {
     'plot-no-location':  '기하도 시설도 없는 식생 구획 (VP-7)',
     'plot-dangling-facility': '실존하지 않는 시설을 가리키는 식생 구획',
     'plot-unknown-bay':  '없는 구역을 가리키는 식생 구획 (구역 구성 변경)',
+    'plot-orphan-allocation': '몫(수량)은 있는데 구역 총량이 없는 구획',
     'plot-dangling-program': '실존하지 않는 프로그램을 가리키는 구획',
     'plot-program-kind-mismatch': '구획과 프로그램의 대상 종류가 다름',
     'containment-cache-drift': '포함 캐시가 기하와 불일치 (무효화 누락 경로)',

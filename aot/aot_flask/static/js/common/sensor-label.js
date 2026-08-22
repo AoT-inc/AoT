@@ -115,27 +115,38 @@
     return popupEl;
   }
 
+  /**
+   * **재진입한다.** 셸(지도 위젯의 도킹 패널) 안에서 열린 경우 여기서 부르는
+   * `shellHandle.remove()` 가 셸의 close 훅을 타고 이 함수를 다시 부른다.
+   * 그래서 상태를 **먼저 지역 변수로 옮기고 `_activePopup` 을 비운 뒤** 정리에
+   * 들어간다 — 재진입은 그 자리에서 즉시 반환한다.
+   *
+   * 이 순서가 아니면 정리 도중 `_activePopup` 이 null 이 되고, 그 뒤의
+   * `_activePopup.onClose` 에서 TypeError 가 난다. 증상은 엉뚱하게 나타났다:
+   * 입력 모달이 열린 채로 다른 입력을 누르면 **기존 창만 닫히고 새 창이 열리지
+   * 않았다**(openPopup 이 맨 앞에서 closePopup 을 부르는데, 거기서 던진 예외가
+   * 나머지 실행을 통째로 막았다).
+   */
   function closePopup() {
-    if (_activePopup) {
-      if (_activePopup.outsideHandler) {
-        document.removeEventListener('mousedown', _activePopup.outsideHandler, true);
-        document.removeEventListener('touchstart', _activePopup.outsideHandler, true);
-      }
-      if (_activePopup.modalOverlay) {
-        // Modal: remove the entire screen-centered overlay
-        try { _activePopup.modalOverlay.remove(); } catch (e) {}
-        document.body.style.overflow = '';
-      } else if (_activePopup.popupEl) {
-        _activePopup.popupEl.style.display = 'none';
-      }
-      // 호출자 정리 훅 (지도 마커의 "앞으로 고정" 해제 등). null 로 만들기 전에
-      // 지역 변수에 옮겨 둔다 — 훅 안에서 다시 openPopup 을 부를 수도 있다.
-      var _onClose = _activePopup.onClose;
-      _activePopup = null;
-      if (typeof _onClose === 'function') { try { _onClose(); } catch (e) {} }
-      return;
-    }
+    var ap = _activePopup;
+    if (!ap) return;
     _activePopup = null;
+
+    if (ap.outsideHandler) {
+      document.removeEventListener('mousedown', ap.outsideHandler, true);
+      document.removeEventListener('touchstart', ap.outsideHandler, true);
+    }
+    if (ap.shellHandle) {
+      try { ap.shellHandle.remove(); } catch (e) {}
+    } else if (ap.modalOverlay) {
+      // Modal: remove the entire screen-centered overlay
+      try { ap.modalOverlay.remove(); } catch (e) {}
+      document.body.style.overflow = '';
+    } else if (ap.popupEl) {
+      ap.popupEl.style.display = 'none';
+    }
+    // 호출자 정리 훅 (지도 마커의 "앞으로 고정" 해제 등).
+    if (typeof ap.onClose === 'function') { try { ap.onClose(); } catch (e) {} }
   }
 
   // Create a screen-centered fixed modal overlay (same UX as the control label popup).
@@ -529,11 +540,35 @@
     closePopup();  // ensure single active popup across widgets
 
     var modal = !!opts.modal;
-    var hostEl = null, popupEl, modalOverlay = null;
+    var hostEl = null, popupEl = null, modalOverlay = null, shellHandle = null;
     if (modal) {
-      var m = _buildModalOverlay();
-      modalOverlay = m.overlay;
-      popupEl = m.box;
+      // **셸을 주입받는다.** 이 컴포넌트는 지도 위젯과 시설 위젯이 함께 쓰는데,
+      // 지도 쪽에서는 창이 화면 한가운데를 덮으면 지도와 대조할 수가 없다(그래서
+      // 지도의 다른 창들은 전부 옆/아래로 도킹한다). 시설 위젯에는 지도가 없어
+      // 도킹이 의미 없으므로, 컴포넌트가 스스로 정하지 않고 **호출자가 정한다** —
+      // 예약 창(openOutputSchedule)이 셸을 받는 것과 같은 방식이다.
+      if (typeof opts.shell === 'function') {
+        try {
+          var sh = opts.shell(
+            '<div class="aot-sensor-popup aot-sensor-popup--docked" style="display:block"></div>',
+            opts.shellUid);
+          var wrapEl = sh && sh.getElement && sh.getElement();
+          var box = wrapEl && wrapEl.querySelector('.aot-sensor-popup');
+          if (box) {
+            popupEl = box;
+            shellHandle = sh;
+            // 셸이 닫히면(✕ · Esc · 교체) 이쪽 상태도 함께 정리한다.
+            if (sh.on) sh.on('close', function () { closePopup(); });
+          } else if (sh && sh.remove) {
+            try { sh.remove(); } catch (e2) {}   // 기대한 모양이 아니면 되돌린다
+          }
+        } catch (e) { popupEl = null; shellHandle = null; }
+      }
+      if (!popupEl) {
+        var m = _buildModalOverlay();
+        modalOverlay = m.overlay;
+        popupEl = m.box;
+      }
     } else {
       hostEl  = _resolveHost(opts);
       popupEl = _ensurePopup(hostEl);
@@ -591,7 +626,11 @@
       }(_popupEl, sensor.device_id, _token));
     }
 
-    if (modal) {
+    if (modal && shellHandle) {
+      // 도킹 셸은 스크롤을 잠그지 않고 백드롭도 없다 — 뒤의 지도가 계속 보이고
+      // 계속 조작돼야 한다. 닫기는 셸의 ✕ · Esc 가 맡는다.
+      _activePopup = { popupEl: _popupEl, shellHandle: shellHandle, onClose: opts.onClose };
+    } else if (modal) {
       document.body.style.overflow = 'hidden';
       // Centered modal: close on backdrop click. No separate position calculation needed.
       modalOverlay.addEventListener('click', function (e) {

@@ -56,9 +56,23 @@ class AIContextService:
 
         # 1. Rounding based on tier
         precision = 6 if tier == 'heavy' else 5
-        
-        # 2. Hard Abstraction for Small Tier
-        if tier == 'lightweight':
+
+        # 2. 좌표 배열은 **접어서 보낸다** (heavy 제외).
+        #
+        # 예전에는 lightweight 에서만 접었고 standard 는 반올림만 했다. 그래서
+        # 폴리곤 꼭짓점이 통째로 프롬프트에 실렸다 — 실측(2026-08-21 로컬,
+        # 지도 10개): geo_designs 44,454자 중 43,326자(97%)가 좌표였고, 이는
+        # 도구 매니페스트 전체(56,094자)에 맞먹는다. 매 호출에 나가는 값이다.
+        #
+        # **LLM 이 꼭짓점으로 할 수 있는 일이 없다.** 면적은 properties 에
+        # 이미 있고, 거리·최근접·포함 판정은 서버가 도구로 계산한다
+        # (distance_between · nearest · get_spatial_tree). 위치를 말할 때
+        # 필요한 것은 중심점이고, 크기 감각에는 bbox 로 충분하다.
+        #
+        # 점(Point)은 접지 않는다 — 좌표가 둘뿐이라 bbox/centroid 로 바꾸면
+        # 오히려 커진다.
+        _is_point = str(geometry.get('type', '')).lower() == 'point'
+        if tier != 'heavy' and not _is_point:
             # Calculate BBox and Centroid
             all_coords = []
             def extract_all(c):
@@ -1592,7 +1606,9 @@ class AIContextService:
                     
                     shape_info.append({
                         "id": s.id,
-                        "geo_id": s.geo_id,
+                        # geo_id 는 싣지 않는다 — 이 목록을 감싼 항목이 이미
+                        # map_id 로 갖고 있다. 도형마다 UUID 를 한 벌씩 더
+                        # 실으면 도형 수만큼 곱해진다(실측 128개 = 약 4.9KB).
                         "type": s.type, # 'site', 'zone', 'feature'
                         "name": name,
                         "drawn_device_id": s.device_id,
@@ -1731,6 +1747,23 @@ class AIContextService:
                         except Exception as e:
                             logger.warning(f"Dynamic GIS enrichment failed: {e}")
                 
+                # 위젯 설정은 **여기서 소비가 끝난다.** 위에서 라이브 값
+                # (live_readings) · 시각 해석(visual_interpretation) · GIS 조회
+                # (wms_readings)로 이미 파생됐고, 그 파생 결과가 프롬프트에
+                # 실린다. 원본 설정까지 함께 싣는 것은 같은 정보를 두 번 보내는
+                # 것이고, 그 원본이 **매니페스트 전체보다 크다** — 실측
+                # (2026-08-21 로컬, 위젯 39개): dashboards 섹션 37,768자 중
+                # 36,993자(98%)가 config_options 였다(지도·시설 위젯 하나가
+                # 색·레이어·패널 설정을 통째로 들고 있다).
+                #
+                # 다만 통째로 빼지는 않는다. 프롬프트의 [Viewport Awareness]
+                # 지시가 "dashboards → widgets 를 보고 사용자가 지금 무엇을
+                # 보는지 파악하라" 이므로, **어떤 장치를 보여주는가**는 남아야
+                # 한다. 그 참조만 남기고 나머지(색·폰트·갱신주기·좌표)는 뺀다.
+                for w_info in widget_info:
+                    w_info["config_options"] = AIContextService._widget_option_refs(
+                        w_info.get("config_options"))
+
                 dash_ctx.append({
                     "dashboard_id": dash.unique_id,
                     "name": dash.name,
@@ -1741,6 +1774,27 @@ class AIContextService:
         except Exception as e:
             logger.exception("Error building dashboard context")
             return []
+
+    # 위젯 설정에서 프롬프트에 남길 키 — "이 화면이 무엇을 보여주는가" 를
+    # 판단할 수 있는 참조만. 새 위젯이 다른 이름으로 장치를 가리키면 여기에
+    # 추가한다(빠뜨리면 그 위젯은 '무엇을 보여주는지 모르는 위젯'이 된다).
+    _WIDGET_OPTION_REFERENCE_KEYS = (
+        'device_ids', 'device_selection_input', 'device_selection_output',
+        'measurement', 'measurements', 'input_ids_measurements',
+        'output_ids', 'pid_ids', 'function_ids', 'active_layers',
+    )
+
+    @staticmethod
+    def _widget_option_refs(options):
+        """위젯 설정 → 장치/레이어 참조만. 소비가 끝난 뒤에 부를 것."""
+        if not isinstance(options, dict):
+            return {}
+        out = {}
+        for key in AIContextService._WIDGET_OPTION_REFERENCE_KEYS:
+            value = options.get(key)
+            if value or value == 0:
+                out[key] = value
+        return out
 
     @staticmethod
     def get_widget_visual_summary(widget_id, widget_type, options):

@@ -330,6 +330,35 @@ _CROP_PROGRAM_WRITE_TOOL_ADDITIONS = {
 _CROP_PROGRAM_DELETE_TOOL_ADDITIONS = {
     'delete_program',
 }
+
+# 범용 탭 도구(2026-08-21) — Dashboard/Input/Output/Function/Programs 가 공유하는
+# `Tab`/`TabService` 위에 얹힌다. 이름은 하나뿐이라 page_type 인자로 페이지를
+# 고른다. 쓰기 2종(create/modify)과 삭제 1종을 갈라 두는 것은 위 프로그램 도구와
+# 같은 이유다 — 삭제는 되돌릴 수 없어 그 자체로 승인 대상이고, config_only 로
+# 면제하지 않는다.
+_TAB_READ_TOOL_ADDITIONS = {
+    'list_tabs',
+}
+_TAB_WRITE_TOOL_ADDITIONS = {
+    'create_tab', 'modify_tab',
+}
+_TAB_DELETE_TOOL_ADDITIONS = {
+    'delete_tab',
+}
+# 대시보드 위젯 도구(2026-08-21) — 탭 도구와 같은 '화면 구성' 축이다. 읽기
+# 3종은 승인 밖이고, 쓰기 3종은 전부 승인 대상이다. **물리 장치를 움직이지
+# 않는다는 이유로 config_only(승인 면제)에 넣지 않았다**: 면제의 근거는 "아무
+# 것도 움직이지 않는다" 인데, 위젯은 사람이 지금 보고 있는 화면을 즉시 바꾼다.
+_WIDGET_READ_TOOL_ADDITIONS = {
+    'list_dashboards', 'list_widget_types', 'get_widget',
+}
+_WIDGET_WRITE_TOOL_ADDITIONS = {
+    'create_widget', 'modify_widget',
+}
+_WIDGET_DELETE_TOOL_ADDITIONS = {
+    'delete_widget',
+}
+
 _GEO_BINDING_MUTATING_ADDITIONS = {'rebind_device'}
 
 # 구역 단위 센서 집계(2026-08-14). 읽기 전용이라 승인 집합에는 들어가지 않는다 —
@@ -421,6 +450,8 @@ def _check_dispatch_map(R):
            | _PLOT_STAGE_TOOL_ADDITIONS
            | _CROP_PROGRAM_READ_TOOL_ADDITIONS | _CROP_PROGRAM_WRITE_TOOL_ADDITIONS
            | _CROP_PROGRAM_DELETE_TOOL_ADDITIONS
+           | _TAB_READ_TOOL_ADDITIONS | _TAB_WRITE_TOOL_ADDITIONS | _TAB_DELETE_TOOL_ADDITIONS
+           | _WIDGET_READ_TOOL_ADDITIONS | _WIDGET_WRITE_TOOL_ADDITIONS | _WIDGET_DELETE_TOOL_ADDITIONS
            | _ZONE_SUMMARY_TOOL_ADDITIONS | _GEO_DISTANCE_TOOL_ADDITIONS
            | _DRAWER_TOOL_ADDITIONS | _DEVICE_FRESHNESS_TOOL_ADDITIONS,
            set(R.build_tool_map().keys()))
@@ -447,6 +478,8 @@ def _check_declarations(R):
            | _PLOT_STAGE_TOOL_ADDITIONS
            | _CROP_PROGRAM_READ_TOOL_ADDITIONS | _CROP_PROGRAM_WRITE_TOOL_ADDITIONS
            | _CROP_PROGRAM_DELETE_TOOL_ADDITIONS
+           | _TAB_READ_TOOL_ADDITIONS | _TAB_WRITE_TOOL_ADDITIONS | _TAB_DELETE_TOOL_ADDITIONS
+           | _WIDGET_READ_TOOL_ADDITIONS | _WIDGET_WRITE_TOOL_ADDITIONS | _WIDGET_DELETE_TOOL_ADDITIONS
            | _ZONE_SUMMARY_TOOL_ADDITIONS | _GEO_DISTANCE_TOOL_ADDITIONS
            | _DRAWER_TOOL_ADDITIONS | _DEVICE_FRESHNESS_TOOL_ADDITIONS,
            set(R.virtual_tool_registry()))
@@ -460,7 +493,9 @@ def _check_declarations(R):
             | _CONFIRMATION_RELAY_MUTATING_ADDITIONS | _ADAPTIVE_STORAGE_WRITE_TOOL_ADDITIONS
             | _GEO_BINDING_MUTATING_ADDITIONS | _PLANTING_WRITE_TOOL_ADDITIONS
             | _PLOT_STAGE_TOOL_ADDITIONS
-            | _CROP_PROGRAM_WRITE_TOOL_ADDITIONS | _CROP_PROGRAM_DELETE_TOOL_ADDITIONS)
+            | _CROP_PROGRAM_WRITE_TOOL_ADDITIONS | _CROP_PROGRAM_DELETE_TOOL_ADDITIONS
+            | _TAB_WRITE_TOOL_ADDITIONS | _TAB_DELETE_TOOL_ADDITIONS
+            | _WIDGET_WRITE_TOOL_ADDITIONS | _WIDGET_DELETE_TOOL_ADDITIONS)
            - _CONFIG_ONLY_APPROVAL_EXEMPTIONS,
            set(R.virtual_approval_tools()))
 
@@ -474,7 +509,9 @@ def _check_declarations(R):
             | _CONFIRMATION_RELAY_MUTATING_ADDITIONS | _ADAPTIVE_STORAGE_WRITE_TOOL_ADDITIONS
             | _GEO_BINDING_MUTATING_ADDITIONS | _SCHEDULE_BATCH_PHYSICAL_ADDITIONS
             | _PLANTING_WRITE_TOOL_ADDITIONS | _PLOT_STAGE_TOOL_ADDITIONS
-            | _CROP_PROGRAM_WRITE_TOOL_ADDITIONS | _CROP_PROGRAM_DELETE_TOOL_ADDITIONS)
+            | _CROP_PROGRAM_WRITE_TOOL_ADDITIONS | _CROP_PROGRAM_DELETE_TOOL_ADDITIONS
+            | _TAB_WRITE_TOOL_ADDITIONS | _TAB_DELETE_TOOL_ADDITIONS
+            | _WIDGET_WRITE_TOOL_ADDITIONS | _WIDGET_DELETE_TOOL_ADDITIONS)
            - _CONFIG_ONLY_APPROVAL_EXEMPTIONS,
            set(R.approval_required_tools()))
 

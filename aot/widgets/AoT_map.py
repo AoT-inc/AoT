@@ -170,7 +170,10 @@ WIDGET_HEAD_HTML = """
      전제로 쓰고 있었는데 정작 로드는 안 하고 있어서, 늘 인라인 폴백으로
      떨어져 있었다 — 'fault'(무응답) 판정이 화면마다 달라질 수 있는 상태였다. -->
 <script src="/static/js/common/aot-output-state.js?v=9"></script>
-<script src="/static/js/common/sensor-label.js?v=52"></script>
+<!-- 고정 리터럴 `?v=52` 였다 — 내용이 바뀌어도 URL 이 그대로라 1년 캐시가
+     곧 "1년간 옛 JS" 가 된다(CLAUDE.md 정적 캐시 무효화). url_for 가 내용
+     해시를 붙인다. -->
+<script src="{{ url_for('static', filename='js/common/sensor-label.js') }}"></script>
 <script src="{{ url_for('static', filename='js/widgets/AoT_map/aot-map-sensor-labels.js') }}"></script>
 <link rel="stylesheet" href="{{ url_for('static', filename='css/widget/aot-sensor-label.css') }}">
 <link rel="stylesheet" href="/static/css/components/aot-toggle.css?v=20260814a">
@@ -184,7 +187,7 @@ WIDGET_HEAD_HTML = """
 
 <!-- Actuator group panel -->
 <script src="/static/js/widgets/AoT_facility/aot-facility-actuator-panel.js?v=15"></script>
-<link rel="stylesheet" href="/static/css/widget/aot-facility-widget.css?v=27">
+<link rel="stylesheet" href="/static/css/widget/aot-facility-widget.css?v=29">
 
 <style>
   /* Pure MapLibre Styles */

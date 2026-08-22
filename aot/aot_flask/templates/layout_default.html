@@ -133,7 +133,11 @@ IMPORTANT: This is the SOURCE TEMPLATE file.
   <!-- [GIS Vector Migration] MapLibre Compatibility Layer:
        callInitHooks 패치는 aot-maplibre-patches.js 로 이전됨(멱등 apply). -->
 
-  <link href="/static/css/map/map.css?v=20260810b" rel="stylesheet">
+  <!-- 고정 리터럴 `?v=20260810b` 이었다 — 내용이 바뀌어도 URL 이 그대로라
+       1년 캐시가 곧 "1년간 옛 CSS" 가 된다(CLAUDE.md 정적 캐시 무효화 항목).
+       url_for 는 내용 해시를 붙이므로 위젯 head 가 싣는 같은 파일과 URL 이
+       일치해 중복 다운로드도 사라진다. -->
+  <link href="{{ url_for('static', filename='css/map/map.css') }}" rel="stylesheet">
   {% endif %}{# needs_map #}
 
   <!-- AoT timezone display utility (single source of truth for UTC → device/viewer TZ) -->
@@ -713,7 +717,10 @@ IMPORTANT: This is the SOURCE TEMPLATE file.
   </nav>
   <!-- /Main Navigation Bar -->
 
-  {% if active_page not in ['geo_design', 'settings', 'dashboard', 'geo_setting', 'geo_input', 'input', 'output', 'function'] %}
+  {#- geo_programs 는 이제 이 자리(block body 맨 위)에 sticky 탭바를 얹는다
+      (input/output/function 과 같은 render_tabs 인프라) — 이 목록에 없으면
+      탭바 위에 1.5em 여백이 끼어 다른 탭 페이지와 다르게 아래로 밀려 보인다. -#}
+  {% if active_page not in ['geo_design', 'settings', 'dashboard', 'geo_setting', 'geo_input', 'input', 'output', 'function', 'geo_programs'] %}
   <!-- Top Spacer for non-map pages (replaces navbar margin) -->
   <div style="height: 1.5em; clear: both;"></div>
   {% endif %}

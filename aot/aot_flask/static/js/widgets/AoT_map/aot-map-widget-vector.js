@@ -80,6 +80,43 @@
         }
     }
 
+    /**
+     * **스마트폰인가.** `_isDesktopClass()` 는 "데스크탑급인가" 라 태블릿도 false 인데,
+     * 모달 시트는 폰에서만 쓴다 — 태블릿은 화면이 넓어 옆에 도킹하는 편이 낫다.
+     *
+     * 회전에 흔들리지 않는 신호만 본다: 포인터가 거친가(마우스가 없는가)와 **물리
+     * 화면의 짧은 변**. 폰은 360~430, 태블릿은 768 이상이다. 뷰포트 폭으로 재면
+     * 폰을 눕히는 순간 태블릿이 되고, 데스크탑 창을 좁히면 폰이 된다.
+     */
+    function _isPhoneClass() {
+        try {
+            var mm = window.matchMedia;
+            var coarse = mm && (mm('(pointer: coarse)').matches || mm('(hover: none)').matches);
+            if (!coarse) return false;
+            var shortEdge = Math.min(window.screen && window.screen.width || 0,
+                                     window.screen && window.screen.height || 0);
+            if (!shortEdge) return false;
+            return shortEdge <= 500;
+        } catch (e) { return false; }
+    }
+
+    /**
+     * **지금 눕혀져 있는가.** `_isPhoneClass()` 는 기기 종류라 회전에 흔들리지
+     * 않아야 하지만, 이쪽은 반대로 **회전할 때마다 답이 달라져야 한다** — 그래서
+     * 물리 화면이 아니라 뷰포트를 본다.
+     */
+    function _isLandscape() {
+        try {
+            var mm = window.matchMedia;
+            if (mm && mm('(orientation: landscape)').media !== 'not all') {
+                return mm('(orientation: landscape)').matches;
+            }
+            return window.innerWidth > window.innerHeight;
+        } catch (e) {
+            return window.innerWidth > window.innerHeight;
+        }
+    }
+
     window.initAoTMapVectorWidget = async function(uniqueId) {
 
         // Get widget data from embedded JSON
@@ -363,6 +400,14 @@
                         attachControl: function (uid, popup, body, plotUuid) {
                             const fn = _plotControlHooks[uid];
                             if (fn) fn(uid, popup, body, plotUuid);
+                        },
+                        // 연 구획으로 지도를 옮긴다. 구획 도형은 응답의 feature 에
+                        // 실려 오므로(구획 소스는 AoTMapPlot 이 직접 붙인다) 그것을
+                        // 먼저 쓰고, 없으면 uuid 로 지도 소스를 뒤진다.
+                        focus: function (plot) {
+                            const g = plot && plot.feature && plot.feature.geometry;
+                            _focusMapOn(uniqueId, g ? { geometry: g }
+                                                    : (plot && plot.unique_id));
                         }
                     });
                 }
@@ -1599,6 +1644,9 @@
             var zoneDefSec = (_actLabelState[uid] || {}).popupDefaultTab || 'overview';
 
             var popup = _showFacilityCenterOverlay(_buildZonePopupHTML(zoneName, zoneDefSec), uid);
+            // 패널을 **연 뒤에** 옮긴다 — 카메라 여백이 패널 폭을 알아야 대상이
+            // 패널 뒤로 가지 않는다.
+            _focusMapOn(uid, zoneUuid);
             _zonePopupState[uid] = { popup: popup, zoneUuid: zoneUuid,
                                      _sensors: [], _histCache: {},
                                      overlayOutputId: null, overlayOutputName: null };
@@ -2051,7 +2099,7 @@
         var _devicePopupState = {};
         _deviceModalOpener = _openDeviceModal;
 
-        // 도형 클릭 핸들러(_installShapeClick)는 이 스코프 바깥에 있다 —
+        // 도형 호버 예열(_installShapeWarm)은 이 스코프 바깥에 있다 —
         // 모달 여는 함수들을 인스턴스에 걸어 두어야 닿는다(_onZoneLabelClick 과
         // 같은 방식).
         (function () {
@@ -2066,7 +2114,25 @@
             _inst._openFacilityByShape = function (shapeUuid) {
                 _openFacilityFromShape(uniqueId, shapeUuid);
             };
-            // 도형 호버 예열이 시설 uuid 를 얻는 통로(_installShapeClick 은
+            // 입력(센서) 모달은 공용 컴포넌트가 띄우므로 **지도의 계층을 모른다**.
+            // 상위가 무엇인지는 장치 상세 응답이 알려 주고(`data.parent`), 그것을
+            // 여는 함수는 이 스코프에 있다 — 다리를 놓아 다른 모달과 같은 ← 버튼을
+            // 쓰게 한다.
+            // 센서 값 키(형제 모듈 aot-map-sensor-labels.js)가 여는 모달도 지도의
+            // 다른 창들과 **같은 셸·같은 카메라**를 써야 한다. 그쪽은 모듈이 달라
+            // 이 함수들에 닿지 못하므로 인스턴스에 걸어 둔다.
+            _inst._modalShell = _showFacilityCenterOverlay;
+            _inst._focusMap = function (target, opts) { _focusMapOn(uniqueId, target, opts); };
+            _inst._wireSensorModalUp = function (body, deviceUuid, channel, closeFn) {
+                if (!body || !deviceUuid) return;
+                modalFetch('device', deviceUuid, channel)
+                    .then(function (r) { return r.ok ? r.json() : null; })
+                    .then(function (data) {
+                        if (data && data.ok) _wireUpBtn(body, uniqueId, data.parent, closeFn);
+                    })
+                    .catch(function () {});
+            };
+            // 도형 호버 예열이 시설 uuid 를 얻는 통로(_installShapeWarm 은
             // 형제 스코프다).
             _inst._facilityUuidOfShape = function (shapeUuid) {
                 return _facilityUuidOfShape(uniqueId, shapeUuid);
@@ -2102,6 +2168,7 @@
 
             var popup = _showFacilityCenterOverlay(
                 _buildDevicePopupHTML(deviceName || _tr('Device')), uid);
+            _focusMapOn(uid, deviceUuid);
             _devicePopupState[uid] = { popup: popup, deviceUuid: deviceUuid,
                                        channel: channel };
             if (typeof onClose === 'function') { popup.on('close', onClose); }
@@ -2638,6 +2705,7 @@
             if (st.popup) { try { st.popup.remove(); } catch (e) {} }
 
             var popup = _showFacilityCenterOverlay(_buildSitePopupHTML(siteName), uid);
+            _focusMapOn(uid, siteUuid);
             _sitePopupState[uid] = { popup: popup, siteUuid: siteUuid };
 
             var popupEl = popup.getElement();
@@ -3379,6 +3447,12 @@
             var sensors = st.sensorsByFac[facilityUuid] || [];
             var popup = _showFacilityCenterOverlay(
                 window.AoTMapPopup.buildSensorTabs(null, sensors), uid);
+            // 다른 모달과 같이 그 시설을 화면에 들인다(도형 uuid 로 찾는다).
+            var _fRow = null, _fList = (st.facilities || []);
+            for (var _fi = 0; _fi < _fList.length; _fi++) {
+                if (_fList[_fi] && _fList[_fi].unique_id === facilityUuid) { _fRow = _fList[_fi]; break; }
+            }
+            _focusMapOn(uid, (_fRow && _fRow.shape_uuid) || facilityUuid);
 
             var popupEl = popup.getElement();
             var bodyEl = popupEl && popupEl.querySelector('.maplibregl-popup-content');
@@ -3415,7 +3489,12 @@
                     var sensors = st.sensorsByFac[facilityUuid] || [];
                     for (var i = 0; i < sensors.length; i++) {
                         if (String(sensors[i].fitting_id) === String(fittingId)) {
-                            window.AoTSensorLabel.openPopup(sensors[i], { modal: true });
+                            // 도킹 셸로 연다 — 이 자리만 옛 중앙 모달로 남아 있었다.
+                            window.AoTSensorLabel.openPopup(sensors[i], {
+                                modal: true,
+                                shell: _showFacilityCenterOverlay,
+                                shellUid: uid
+                            });
                             break;
                         }
                     }
@@ -4004,6 +4083,121 @@
          * 방금 심은 것이 다음 폴링까지 화면에 없다(그리고 ETag 때문에 그 폴링이
          * 304 로 끝나면 더 오래 비어 있다 — `invalidate` 가 둘을 함께 버린다).
          */
+        /** 단위 표시 문구 — 서버 어휘(`_CAPACITY_UNITS`) 다섯 개와 짝이다. */
+        function _capUnitLabel(unit) {
+            switch (unit) {
+                case 'row':   return _tr('rows');
+                case 'tray':  return _tr('trays');
+                case 'area':  return _tr('m²');
+                case 'house': return _tr('houses');
+                default:      return _tr('beds');
+            }
+        }
+
+        /**
+         * 구역 총량 편집 + "남은 몫" 표시 (p6_50).
+         *
+         * 총량은 **시설의 사실**이라 구획이 아니라 시설에 쓴다(전용 API). 구획
+         * 저장이 이 값을 고칠 수 있으면 마지막에 저장한 구획이 분모를 정하게 된다.
+         *
+         * 남은 몫은 **막지 않는다** — 합이 총량을 넘는 것은 간작·혼작에서 정상이고
+         * (VP-3), 넘었다는 것은 표시로만 알린다.
+         */
+        function _wireFacilityCapacity(uid, facilityUuid, bayId, block, pane, caps, plots) {
+            block._aotCaps = caps || {};
+            var left = block.querySelector('.aot-ov-alloc-left');
+            var cap = (caps || {})[bayId] || null;
+
+            if (left) {
+                var used = 0, hasAny = false;
+                (plots || []).forEach(function (p) {
+                    var a = p.allocation;
+                    if (!a) return;
+                    if (cap && a.amount != null) { used += Number(a.amount) || 0; hasAny = true; }
+                    else if (!cap && a.percent != null) { used += Number(a.percent) || 0; hasAny = true; }
+                });
+                if (cap) {
+                    var rest = cap.total - used;
+                    left.textContent = (rest >= 0)
+                        ? _tr('%(n)s left').replace('%(n)s',
+                              _fmtNum(rest) + ' / ' + cap.total + ' ' + _capUnitLabel(cap.unit))
+                        : _tr('Overlapping by %(n)s').replace('%(n)s',
+                              _fmtNum(-rest) + ' ' + _capUnitLabel(cap.unit));
+                } else if (hasAny) {
+                    left.textContent = (used <= 100)
+                        ? _tr('%(n)s left').replace('%(n)s', _fmtNum(100 - used) + '%')
+                        : _tr('Overlapping by %(n)s').replace('%(n)s', _fmtNum(used - 100) + '%');
+                } else {
+                    left.textContent = '';
+                }
+            }
+
+            var edit = block.querySelector('.aot-ov-cap-edit');
+            var capWrap = block.querySelector('.aot-ov-cap-wrap');
+            if (!edit || !capWrap) return;
+            var unitSel = capWrap.querySelector('[data-cf="unit"]');
+            var totalIn = capWrap.querySelector('[data-cf="total"]');
+            var showCap = function (on) {
+                capWrap.style.display = on ? '' : 'none';
+                edit.style.display = on ? 'none' : '';
+                var st = _actLabelState[uid];
+                if (st) st._plantEditing = on;   // 주기 갱신이 폼을 지우지 않게
+            };
+            edit.addEventListener('click', function () {
+                if (unitSel) unitSel.value = (cap && cap.unit) || 'bed';
+                if (totalIn) totalIn.value = cap ? cap.total : '';
+                showCap(true);
+            });
+            var cancel = capWrap.querySelector('.aot-ov-cap-cancel');
+            if (cancel) cancel.addEventListener('click', function () { showCap(false); });
+
+            var save = capWrap.querySelector('.aot-ov-cap-save');
+            if (!save) return;
+            save.addEventListener('click', function () {
+                save.disabled = true;
+                fetch('/api/aot/facility/' + encodeURIComponent(facilityUuid) +
+                      '/bay_capacity', {
+                    method: 'POST', credentials: 'same-origin',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRFToken': _csrfHeader()
+                    },
+                    body: JSON.stringify({
+                        bay_id: bayId || 'main',
+                        unit: unitSel ? unitSel.value : 'bed',
+                        total: totalIn ? totalIn.value : ''
+                    })
+                }).then(function (r) { return r.json().catch(function () { return {}; }); })
+                  .then(function (j) {
+                    save.disabled = false;
+                    if (!j || !j.ok) {
+                        if (window.showToast) {
+                            window.showToast((j && j.message) || _tr('Save failed'), 'error');
+                        }
+                        return;
+                    }
+                    var st = _actLabelState[uid];
+                    if (st) st._plantEditing = false;
+                    // 총량이 바뀌면 모든 구획의 파생 비율이 바뀐다 — 캐시를 버리고
+                    // 카드를 다시 그린다(서버가 파생의 정본이다).
+                    if (window.AoTFacilityRuntime) {
+                        window.AoTFacilityRuntime.invalidate(facilityUuid);
+                    }
+                    var old = pane.querySelector('.aot-ov-facility-plots');
+                    if (old) (old.closest('.aot-ov-card') || old).remove();
+                    _appendFacilityPlots(uid, facilityUuid, pane);
+                  }).catch(function () { save.disabled = false; });
+            });
+        }
+
+        /** 소수점 없는 정수는 정수로 — "4.0 베드" 를 보이지 않게. */
+        function _fmtNum(n) {
+            var v = Number(n) || 0;
+            return (Math.round(v * 10) / 10 === Math.round(v))
+                ? String(Math.round(v)) : String(Math.round(v * 10) / 10);
+        }
+
         function _wireFacilityPlotAdd(uid, facilityUuid, bayId, block, pane) {
             var btn = block.querySelector('.aot-ov-plot-add');
             var wrap = block.querySelector('.aot-ov-plot-new-wrap');
@@ -4015,7 +4209,49 @@
                 var st = _actLabelState[uid];
                 if (st) st._plantEditing = on;
             };
-            btn.addEventListener('click', function () { show(true); });
+            // 종류 ↔ 프로그램 — 목록은 종류에 따라 달라진다. 폼을 열 때 한 번
+            // 채우고, 종류를 바꾸면 다시 채운다. 채우는 일은 구획 모듈이 맡는다
+            // (목록 캐시가 거기 있고, 구획 모달이 쓰는 것과 같은 함수다 — 두
+            // 화면이 서로 다른 목록을 보이면 안 된다).
+            var selKind = wrap.querySelector('[data-nf="kind"]');
+            var selProg = wrap.querySelector('[data-nf="program_uuid"]');
+            var fillPrograms = function () {
+                if (!selKind || !selProg || !window.AoTMapPlot ||
+                    !window.AoTMapPlot.refreshProgramChoices) return;
+                window.AoTMapPlot.refreshProgramChoices(
+                    selKind, selProg, _tr('No program'));
+            };
+            if (selKind) selKind.addEventListener('change', fillPrograms);
+
+            // ── 구역 안에서의 몫 (p6_50) ────────────────────────────────
+            // 입력은 숫자 하나다. 그것이 수량인지 비율인지는 **그 구역에 총량이
+            // 적혀 있는지**가 정한다 — 접미 표시가 그 사실을 말한다. 구역을
+            // 바꾸면 총량도 달라지므로 접미도 함께 갱신한다.
+            var selBay = wrap.querySelector('[data-nf="bay_id"]');
+            var alloIn = wrap.querySelector('[data-nf="allocation_value"]');
+            var alloSuf = wrap.querySelector('.aot-ov-alloc-suffix');
+            var curBay = function () {
+                return (selBay ? (selBay.value || '') : (bayId || '')) || bayId || '';
+            };
+            var capOf = function (bid) {
+                var caps = (block._aotCaps || {});
+                return caps[bid] || caps[bayId] || null;
+            };
+            var syncAllocSuffix = function () {
+                if (!alloSuf) return;
+                var cap = capOf(curBay());
+                alloSuf.textContent = cap
+                    ? ('/ ' + cap.total + ' ' + _capUnitLabel(cap.unit))
+                    : '%';
+                if (alloIn) {
+                    alloIn.setAttribute('max', cap ? String(cap.total) : '100');
+                }
+            };
+            if (selBay) selBay.addEventListener('change', syncAllocSuffix);
+
+            btn.addEventListener('click', function () {
+                show(true); fillPrograms(); syncAllocSuffix();
+            });
             var cancel = wrap.querySelector('.aot-ov-plot-new-cancel');
             if (cancel) cancel.addEventListener('click', function () { show(false); });
 
@@ -4027,6 +4263,17 @@
                     payload[el.getAttribute('data-nf')] = el.value || '';
                 });
                 if (!('bay_id' in payload)) payload.bay_id = bayId || '';
+                // 몫은 서버가 dict 로 받는다. 어느 키로 보낼지는 총량 유무가
+                // 정한다 — 화면이 접미로 보인 것과 같은 기준이라야 사람이 본
+                // 것과 저장되는 것이 어긋나지 않는다.
+                var _av = payload.allocation_value;
+                delete payload.allocation_value;
+                if (_av !== '' && _av != null) {
+                    payload.allocation = capOf(payload.bay_id || bayId || '')
+                        ? { amount: _av } : { percent: _av };
+                } else {
+                    payload.allocation = null;      // 비우면 지운다
+                }
                 if (!payload.subject) {
                     if (window.showToast) {
                         window.showToast(_tr('Enter what is planted.'), 'warning');
@@ -4116,6 +4363,8 @@
                 if (existing && existing.outerHTML === block.outerHTML) return;
                 if (existing) {
                     existing.replaceWith(block);
+                    _wireFacilityCapacity(uid, facilityUuid, bayId, block, pane,
+                                          rt.bay_capacities, rt.plots || []);
                     _wireFacilityPlotAdd(uid, facilityUuid, bayId, block, pane);
                     block.querySelectorAll('.aot-ov-plot-link').forEach(function (row) {
                         row.addEventListener('click', function () {
@@ -4143,6 +4392,8 @@
                 } else {
                     pane.appendChild(block);
                 }
+                _wireFacilityCapacity(uid, facilityUuid, bayId, block, pane,
+                                      rt.bay_capacities, rt.plots || []);
                 _wireFacilityPlotAdd(uid, facilityUuid, bayId, block, pane);
                 block.querySelectorAll('.aot-ov-plot-link').forEach(function (row) {
                     row.addEventListener('click', function () {
@@ -4692,6 +4943,12 @@
 
             var popup = _showFacilityCenterOverlay(
                 _buildBayPopupHTML(uid, facilityUuid, bayId, null), uid);
+            // 시설은 자기 uuid 가 아니라 **도형** uuid 로 지도에 있다.
+            var _facRow = null, _facs = (st.facilities || []);
+            for (var _fi = 0; _fi < _facs.length; _fi++) {
+                if (_facs[_fi] && _facs[_fi].unique_id === facilityUuid) { _facRow = _facs[_fi]; break; }
+            }
+            _focusMapOn(uid, (_facRow && _facRow.shape_uuid) || facilityUuid);
             var popupEl = popup.getElement();
             var bodyEl = popupEl && popupEl.querySelector('.maplibregl-popup-content');
             if (bodyEl) {
@@ -4867,6 +5124,9 @@
         // cannot drift apart on defaults (they used to: output fell back to
         // '#dd4444' here and '#995aff' there).
         const theme = wOpts.theme_config || (vars && vars.theme) || {};
+        // 강조 레이어도 **같은 테마**로 색을 정해야 도형과 테두리가 갈리지 않는다.
+        // 모듈 스코프의 _highlightShape 는 이 지역 변수에 닿지 못하므로 남겨 둔다.
+        if (instance) instance._geoTheme = theme;
         const _T = window.AoTGeoTheme;
         const C = {
             site:      _T.color('site', theme),
@@ -4914,6 +5174,7 @@
                 const sitesResponse = await geoFetch('/api/geo/sites?format=geojson' + (mapUuid ? '&map_uuid=' + encodeURIComponent(mapUuid) : ''));
                 if (sitesResponse.ok) {
                     const sitesGeoJSON = await sitesResponse.json();
+                    _cacheShapes(uniqueId, sitesGeoJSON);
                     if (sitesGeoJSON.features && sitesGeoJSON.features.length > 0) {
                         if (_boolOpt('show_site_shape')) {
                             addGeoJSONLayer(uniqueId, map, 'sites', sitesGeoJSON, {
@@ -4968,6 +5229,9 @@
                 const zonesResponse = await geoFetch('/api/geo/zones?format=geojson' + (mapUuid ? '&map_uuid=' + encodeURIComponent(mapUuid) : ''));
                 if (zonesResponse.ok) {
                     const zonesGeoJSON = await zonesResponse.json();
+                    // 레이어를 안 그리는 구성에서도 모달이 도형을 찾을 수 있게
+                    // 캐시는 항상 채운다(show_zone_shape 와 무관하다).
+                    _cacheShapes(uniqueId, zonesGeoJSON);
                     if (zonesGeoJSON.features && zonesGeoJSON.features.length > 0) {
                         if (_boolOpt('show_zone_shape')) {
                             addGeoJSONLayer(uniqueId, map, 'zones', zonesGeoJSON, {
@@ -5013,6 +5277,7 @@
                 const facRes = await geoFetch('/api/geo/overlays?map_uuid=' + encodeURIComponent(mapUuid) + '&type=facility');
                 if (facRes.ok) {
                     const facGeoJSON = await facRes.json();
+                    _cacheShapes(uniqueId, facGeoJSON);
                     if (facGeoJSON.features && facGeoJSON.features.length > 0) {
                         // Flat footprint + extrusion box: ONLY when the Facility shape
                         // category is actually on. The 3D model / sensor labels / actuator
@@ -5208,7 +5473,7 @@
         if (_boolOpt('show_device_shapes')) { await _ensureDeviceShapeLayer(); }
         if (_boolOpt('show_drawn_shapes')) { await _ensureDrawnShapeLayer(); }
 
-        _installShapeClick(uniqueId, map);
+        _installShapeWarm(uniqueId, map);
     }
 
     // ── 도형 클릭 ──────────────────────────────────────────────────────────────
@@ -5219,16 +5484,25 @@
     // 겹친 도형은 **좁은 것부터** 고른다(시설 > 구역 > 필지). 시설은 구역 안에,
     // 구역은 필지 안에 있으므로 넓은 것을 먼저 집으면 안쪽을 영영 못 연다.
     // (겹침에서 하나만 고르는 규칙은 삭제 클릭이 이미 쓰는 것과 같은 원칙이다.)
-    function _installShapeClick(uid, map) {
+    /**
+     * 도형 위 호버 **예열**만 설치한다.
+     *
+     * **도형을 눌러도 모달은 열리지 않는다.** 모달을 여는 것은 라벨과 값 키뿐이다
+     * (전부 DOM 요소라 이 캔버스 핸들러를 지나지 않는다). 예전에는 필지·구역·
+     * 시설의 fill 레이어 클릭도 모달을 열었는데, 그러면 지도를 짚거나 팬을
+     * 시작하려고 도형을 누른 것까지 창이 뜬다. 겹친 도형 위에서는 무엇이 열릴지도
+     * 예측할 수 없다(안쪽 도형을 노렸는데 위에 깔린 것이 열린다).
+     *
+     * 예열은 남긴다 — 라벨로 가는 길에 도형 위를 지나가는 것이 보통이라, 그때
+     * 미리 받아 두면 라벨을 눌렀을 때 곧바로 뜬다.
+     */
+    function _installShapeWarm(uid, map) {
         var inst = window.AoTWidgetInstances[uid];
-        if (!inst || inst._shapeClickWired) return;
-        inst._shapeClickWired = true;
+        if (!inst || inst._shapeWarmWired) return;
+        inst._shapeWarmWired = true;
 
-        var ORDER = ['facilities-fill', 'zones-fill', 'sites-fill'];
-
-        // 도형 위를 지나가면 그 모달의 응답을 미리 받아 둔다(라벨 호버와 같은
-        // 예열). 레이어 한정 mousemove 라 히트테스트는 MapLibre 가 하고, 같은
-        // 도형 위에서는 uuid 가 안 바뀌어 한 번만 나간다.
+        // 레이어 한정 mousemove 라 히트테스트는 MapLibre 가 하고, 같은 도형
+        // 위에서는 uuid 가 안 바뀌어 한 번만 나간다.
         // 시설은 도형 uuid 가 아니라 **시설 uuid** 로 조회한다(/overview) —
         // 그 대응은 inst.cachedFacilities3d 가 들고 있다.
         var _lastWarmed = null;
@@ -5246,54 +5520,6 @@
                             : u);
             });
         });
-
-        map.on('click', function (e) {
-            // 도구(거리 측정·노트 찍기)가 켜져 있으면 클릭의 주인은 그쪽이다.
-            // 도구가 활성 상태를 커서로만 알려서 이렇게 본다 — 공용 플래그가
-            // 생기면 그걸로 바꿀 것.
-            var container = map.getContainer();
-            if (container && container.style.cursor === 'crosshair') return;
-            // 라벨·칩·마커는 DOM 요소라 이 핸들러까지 오지 않는다(캔버스 클릭만).
-
-            var ids = ORDER.filter(function (id) {
-                return map.getLayer(id);
-            });
-            if (!ids.length) return;
-
-            var feats;
-            try {
-                feats = map.queryRenderedFeatures(e.point, { layers: ids });
-            } catch (err) { return; }
-            if (!feats || !feats.length) return;
-
-            for (var i = 0; i < ids.length; i++) {
-                var layerId = ids[i];
-                for (var k = 0; k < feats.length; k++) {
-                    if (feats[k].layer && feats[k].layer.id === layerId) {
-                        _openShapeModal(uid, layerId, feats[k].properties || {});
-                        return;
-                    }
-                }
-            }
-        });
-    }
-
-    function _openShapeModal(uid, layerId, props) {
-        // shape_uuid 는 서버가 항상 실어 보낸다 — properties.id 는 저장된
-        // feature 의 draw id 일 수 있고, MapLibre 는 문자열 feature.id 를 버린다.
-        var uuid = props.shape_uuid;
-        if (!uuid) return;
-        var name = props.label_name || props.name || '';
-        var inst = window.AoTWidgetInstances[uid];
-        if (!inst) return;
-
-        if (layerId === 'zones-fill' && inst._openZoneModal) {
-            inst._openZoneModal(uuid, name);
-        } else if (layerId === 'sites-fill' && inst._openSiteModal) {
-            inst._openSiteModal(uuid, name);
-        } else if (layerId === 'facilities-fill' && inst._openFacilityByShape) {
-            inst._openFacilityByShape(uuid);
-        }
     }
 
     /**
@@ -6225,21 +6451,930 @@
         };
     }
 
+    // ── 모달 셸 ───────────────────────────────────────────────────────────────
+    // 하나의 셸이 세 가지로 뜨고, 어느 것으로 뜰지는 **기기**가 정한다.
+    // 사용자 설정 항목은 만들지 않는다.
+    //
+    //   sheet  스마트폰. 아래에서 올라오는 시트, 위쪽은 지도(+ 지도 전체화면).
+    //   side   그 밖(데스크탑·태블릿). 위젯 안 오른쪽 도킹. 크기로 다시 가르지
+    //          않는다 — 창을 조금 좁혔다고 창 모양이 바뀌면 안 된다.
+    //   center **지도 모달에는 더 이상 쓰지 않는다.** 이미 열린 패널 **위**에 뜨는
+    //          작은 중첩 창(예약 휠 `output-sched-…`, 행 고르기 `rowpick-…`)과,
+    //          지도가 없는 호출자(시설 위젯)만 이 모양으로 남는다.
+    //
+    // **왜 도킹인가**: 예전에는 어느 계층을 눌러도 화면 전체를 덮는 카드가 떠서,
+    // 방금 누른 도형이 카드 **뒤**에 있었다(화면 중앙을 눌렀으니 당연하다).
+    // 게다가 바깥을 누르면 닫혔으므로 "지도를 보려고 지도를 만지면 창이 닫힌다".
+    // 모달 상태와 지도를 대조할 방법이 아예 없었다.
+    //
+    // 패널은 지도를 **밀지 않고 덮는다**. 캔버스를 줄이면 타일 재요청과 리페인트가
+    // 따라오는데, 가려진 만큼을 카메라 padding 으로 비키는 편이 훨씬 싸고 같은
+    // 효과를 낸다(그 연동은 2단계).
+    // (크기 문턱은 없앴다 — 모드는 **기기**가 정한다: 스마트폰이면 시트,
+    //  아니면 옆 도킹. 크기로 다시 가르면 창을 조금 좁혔을 뿐인데 창의 모양이
+    //  바뀌어, 같은 화면에서 같은 동작의 결과가 달라 보인다.)
+
+    // 열려 있는 셸의 close 함수 스택. Esc 는 **맨 위 하나만** 닫는다 — 예약 휠이
+    // 구역 패널 위에 떠 있을 때 Esc 로 둘 다 닫히면 방금 한 조작의 맥락이 사라진다.
+    var _modalStack = [];
+    var _escBound = false;
+
+    // ── 지도 최대화 — **브라우저 뷰포트 기준**(네이티브 전체화면 API 아님) ──
+    //
+    // 예전에는 데스크탑에서만 `requestFullscreen()` 을 썼다. 그러면 지도가
+    // 브라우저의 top layer 로 올라가 **모니터 전체**를 덮는데, 이 화면에서는
+    // 그것이 두 가지를 깬다 — geo/design 이 같은 이유로 이미 클래스 방식으로
+    // 옮겨 갔다(`_toggleMaximize`, aot-geo-events.js):
+    //
+    //   1. **top layer 밖의 UI 가 전부 사라진다.** 모달 셸은 위젯 안에 도킹하니
+    //      따라가지만, 토스트·드로어처럼 <body> 에 붙는 것들은 뒤로 숨는다.
+    //   2. **임베드 환경에서 거부된다.** iframe 에 `allow="fullscreen"` 이
+    //      없으면 "Permissions check failed" 로 실패한다. AoT 를 엣지 프록시
+    //      뒤에서 임베드해 여는 것은 정상 사용 경로다.
+    //
+    // 그래서 iOS 폴백이던 의사 전체화면(`.aot-map-pseudo-fullscreen`, map.css)을
+    // **모든 환경의 기본 동작**으로 올린다. 위젯을 <body> 로 옮기는 것은 그대로
+    // 필요하다 — grid-stack 항목의 `transform` 이 stacking context 이자
+    // (iOS 에서는) `position: fixed` 의 컨테이닝 블록이라, 그 안에 두면 지도가
+    // 내비바 밑에 깔린다.
+    function _isMaximized(target) {
+        return !!(target && target.classList.contains('aot-map-pseudo-fullscreen'));
+    }
+
+    function _toggleMapMaximize(target) {
+        if (!target) return;
+        var doc = document;
+        var entering = !_isMaximized(target);
+        // Esc 로 빠져나올 수 있어야 한다. 이 핸들러는 원래 모달을 처음 열 때
+        // 붙는데, 모달을 한 번도 안 열고 최대화만 한 경우에는 없다.
+        _ensureEscHandler();
+
+        if (entering) {
+            if (!target._aotFsPlaceholder) {
+                var ph = doc.createComment('aot-fs-placeholder');
+                target._aotFsPlaceholder = ph;
+                if (target.parentNode) target.parentNode.insertBefore(ph, target);
+            }
+            doc.body.appendChild(target);
+            target.classList.add('aot-map-pseudo-fullscreen');
+            doc.body.classList.add('aot-map-fullscreen-active');
+        } else {
+            target.classList.remove('aot-map-pseudo-fullscreen');
+            doc.body.classList.remove('aot-map-fullscreen-active');
+            var ph2 = target._aotFsPlaceholder;
+            if (ph2 && ph2.parentNode) {
+                ph2.parentNode.insertBefore(target, ph2);
+                ph2.parentNode.removeChild(ph2);
+            }
+            target._aotFsPlaceholder = null;
+        }
+
+        // 버튼의 모양과 이름을 상태에 맞춘다(geo/design 과 같은 문법).
+        var uid = (target.id || '').replace(/^aot-map-/, '');
+        var btn = document.getElementById('tool-fullscreen-' + uid);
+        if (btn) {
+            var icon = btn.querySelector('i');
+            if (icon) {
+                icon.classList.toggle('fa-expand', !entering);
+                icon.classList.toggle('fa-compress', entering);
+            }
+            var T = window._ || function (x) { return x; };
+            var label = entering ? T('Exit fullscreen') : T('Fullscreen');
+            btn.setAttribute('title', label);
+            btn.setAttribute('aria-label', label);
+        }
+
+        // MapLibre 는 컨테이너 크기를 스스로 감시하지 않는다. 레이아웃이 자리를
+        // 잡은 뒤 한 번, 트랜지션까지 끝난 뒤 한 번 더 잰다.
+        var inst = window.AoTWidgetInstances && window.AoTWidgetInstances[uid];
+        var resize = function () { try { if (inst && inst.map) inst.map.resize(); } catch (e) {} };
+        if (window.requestAnimationFrame) requestAnimationFrame(resize); else setTimeout(resize, 16);
+        setTimeout(resize, 450);
+    }
+
+    function _ensureEscHandler() {
+        if (_escBound) return;
+        _escBound = true;
+        document.addEventListener('keydown', function (e) {
+            if (e.key !== 'Escape' && e.keyCode !== 27) return;
+            if (!_modalStack.length) {
+                // 열린 모달이 없으면 최대화를 푼다. 네이티브 전체화면이 아니라
+                // 뷰포트를 덮는 방식이라 브라우저가 Esc 를 대신 처리해 주지
+                // 않는다 — 직접 받는다(geo/design 과 같다).
+                var fsEl = document.querySelector('.aot-map-container.aot-map-pseudo-fullscreen');
+                if (fsEl) { e.preventDefault(); _toggleMapMaximize(fsEl); }
+                return;
+            }
+            // 입력 중 Esc 는 그 컴포넌트 몫이다(자동완성 닫기 등).
+            var t = e.target;
+            if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' ||
+                      t.tagName === 'SELECT' || t.isContentEditable)) return;
+            e.preventDefault();
+            _modalStack[_modalStack.length - 1]();
+        });
+    }
+
+    // 위젯의 **주 패널**이면서 uid 에 접미사를 붙여 여는 자리. 도킹 대상이다.
+    // 화이트리스트인 이유: 파생 uid 가 전부 도킹 대상은 아니다 — 예약 휠
+    // ('output-sched-…')과 행 고르기('rowpick-…')는 이미 열린 패널 **위**에 뜨는
+    // 중첩 창이라, 도킹하면 부모 패널 안에 갇히거나 부모를 통째로 가린다.
+    // 사이트 목록은 반대다: 목록을 열어 둔 채 항목을 눌러 지도가 그리로 가는 것을
+    // 봐야 고를 수 있다(`_navigateTo`). 덮는 모달로는 그 동작이 보이지 않는다.
+    var PANEL_UID_SUFFIXES = ['-sitelist'];
+
+    /** uid → 위젯 인스턴스 id (도킹 대상이 아니면 null). */
+    function _widgetIdFromUid(uid) {
+        if (!uid) return null;
+        var W = window.AoTWidgetInstances || {};
+        if (W[uid]) return uid;
+        for (var i = 0; i < PANEL_UID_SUFFIXES.length; i++) {
+            var suf = PANEL_UID_SUFFIXES[i];
+            if (uid.length > suf.length && uid.slice(-suf.length) === suf) {
+                var base = uid.slice(0, -suf.length);
+                if (W[base]) return base;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * 이 uid 를 도킹할 수 있으면 { host, mode } 를, 아니면 null(=중앙 모달).
+     */
+    function _panelHostFor(uid) {
+        var wid = _widgetIdFromUid(uid);
+        if (!wid) return null;
+        var inst = window.AoTWidgetInstances[wid];
+        if (!inst || !inst.map) return null;
+        var host = document.getElementById('aot-map-' + wid);
+        if (!host) return null;
+
+        // ── 스마트폰: 시트 + 전체화면 ─────────────────────────────────────────
+        // 폰에서는 위젯이 대개 화면의 일부라, 그 안에서 시트를 열면 지도 몫이
+        // 손바닥만 해진다. 그래서 **모달을 여는 순간 지도를 전체화면으로 올린다**
+        // (모니터 전체가 아니라 브라우저 뷰포트 — _toggleMapMaximize 주석 참조).
+        // 우리가 올렸다는 표시를 남겨, 닫을 때 그 경우에만 되돌린다.
+        if (_isPhoneClass()) {
+            if (!_isMaximized(host)) {
+                _toggleMapMaximize(host);
+                host._aotFsByModal = true;
+            }
+            if (!host.clientWidth || !host.clientHeight) return null;
+            // 눕히면 옆으로 — 가로에서는 높이가 곧 병목이다(폰을 눕히면 390px
+            // 남짓). 아래에서 올라오는 시트는 그 높이를 다시 반으로 갈라 지도도
+            // 모달도 못 쓰게 만든다. 폭은 남아도니 세로에서 부족했던 것과 정반대다.
+            return { host: host, mode: _isLandscape() ? 'side' : 'sheet' };
+        }
+
+        // ── 그 밖(데스크탑·태블릿): **항상 옆에 도킹** ───────────────────────
+        // 폰이 아니면 데스크탑 모드다. 크기로 다시 가르지 않는다 — 창을 조금
+        // 좁혔다는 이유로 창이 화면 한가운데를 덮는 옛 모양으로 돌아가면, 같은
+        // 화면에서 같은 동작을 해도 결과가 달라 보인다. 패널 폭은 clamp 라
+        // 좁은 위젯에서는 알아서 줄어든다.
+        // (시트는 쓰지 않는다. 아래에서 올라오는 시트는 폰 흉내처럼 보이고,
+        //  옆으로 도킹할 수 있는데도 지도를 위아래로 반 토막 낸다.)
+        if (!host.clientWidth || !host.clientHeight) return null;   // 숨은/접힌 위젯
+        return { host: host, mode: 'side' };
+    }
+
+    // ── 모달을 열면 그 대상이 보이도록 지도를 옮긴다 ─────────────────────────
+    // 패널이 지도를 가리지 않게 된 다음에도, 방금 연 도형이 화면 밖(또는 패널
+    // 뒤)에 있으면 대조할 것이 없다. 그래서 모달을 여는 경로마다 이 함수를 부른다.
+    //
+    // **이미 잘 보이면 움직이지 않는다.** 매번 옮기면 사용자가 방금 맞춰 둔 축척과
+    // 방향감각을 빼앗는다 — 특히 옆 도형을 연달아 눌러 비교하는 중에는 화면이
+    // 계속 튄다. "잘 보인다"의 기준은 둘: 대상이 패널을 뺀 가시 영역 **안**에
+    // 있고, 그 영역에서 너무 작지 않다(폭·높이 중 하나가 12% 이상).
+
+    /** geometry 의 좌표를 전부 훑어 [[w,s],[e,n]]. 점 하나면 폭 0 인 상자다. */
+    function _geomBounds(geometry) {
+        if (!geometry || !geometry.coordinates) return null;
+        var w = Infinity, s = Infinity, e = -Infinity, n = -Infinity, seen = false;
+        (function walk(a) {
+            if (!a) return;
+            if (typeof a[0] === 'number') {
+                var lng = a[0], lat = a[1];
+                if (isNaN(lng) || isNaN(lat)) return;
+                seen = true;
+                if (lng < w) w = lng; if (lng > e) e = lng;
+                if (lat < s) s = lat; if (lat > n) n = lat;
+                return;
+            }
+            if (Array.isArray(a)) a.forEach(walk);
+        })(geometry.coordinates);
+        return seen ? [[w, s], [e, n]] : null;
+    }
+
+    /**
+     * 받아 온 GeoJSON 을 uuid → 도형 캐시에 담는다.
+     *
+     * 지도에 **레이어로 올라가지 않는 도형**이 있기 때문에 필요하다 — 구역
+     * 폴리곤은 `show_zone_shape` 가 꺼져 있으면 그리지 않지만(라벨만 뜬다)
+     * 구역 모달은 여전히 열린다. 소스만 뒤지면 그런 도형은 옮길 곳도 강조할
+     * 것도 못 찾고, 모달을 열어도 지도가 아무 반응을 하지 않는다.
+     *
+     * 도형의 정체가 자리마다 다른 키에 들어 있으므로(f.id · shape_uuid ·
+     * properties.id) 있는 것을 모두 키로 등록한다.
+     */
+    function _cacheShapes(uniqueId, geojson) {
+        var inst = window.AoTWidgetInstances && window.AoTWidgetInstances[uniqueId];
+        if (!inst || !geojson) return;
+        var feats = geojson.features || [];
+        var cache = inst._shapeCache || (inst._shapeCache = {});
+        feats.forEach(function (f) {
+            if (!f || !f.geometry) return;
+            var p = f.properties || {};
+            var entry = {
+                geometry: f.geometry,
+                color: p.color || null,
+                aot_type: String(p.aot_type || p.category || '').toLowerCase() || null
+            };
+            [f.id, p.shape_uuid, p.unique_id, p.id].forEach(function (k) {
+                if (k) cache[String(k)] = entry;
+            });
+        });
+    }
+
+    /**
+     * 이 위젯이 지도에 올린 GeoJSON 중 uuid 가 맞는 feature.
+     * 도형의 정체는 자리마다 다른 키에 들어 있다(shape_uuid · unique_id ·
+     * node_id) — 하나만 보면 종류에 따라 조용히 못 찾는다.
+     */
+    function _findFeature(uid, uuid) {
+        if (!uuid) return null;
+        var inst = window.AoTWidgetInstances && window.AoTWidgetInstances[uid];
+        var srcs = inst && inst.sources;
+        if (!srcs || typeof srcs.forEach !== 'function') return null;
+        // 같은 장치가 **마커와 구역 폴리곤을 둘 다** 갖는 경우가 흔하다(장치
+        // 목록 48건 중 점 32 · 면 16). 그때는 면을 고른다 — 테두리를 두를 수 있고
+        // 카메라도 면 기준이라야 그 장치가 맡은 범위가 보인다. 먼저 찾은 것을
+        // 그냥 쓰면 소스 순서에 따라 마커가 이기는 날과 아닌 날이 갈린다.
+        var hit = null, hitSrc = null;
+        var _isArea = function (f) {
+            var t = (f && f.geometry && f.geometry.type) || '';
+            return t.indexOf('Polygon') >= 0 || t.indexOf('LineString') >= 0;
+        };
+        var scan = function (gj, srcId) {
+            if (!gj) return;
+            if (hit && _isArea(hit)) return;          // 이미 면을 찾았으면 끝
+            var feats = gj.features || (gj.type === 'Feature' ? [gj] : null);
+            if (!feats) return;
+            for (var i = 0; i < feats.length; i++) {
+                var p = (feats[i] && feats[i].properties) || {};
+                if (p.shape_uuid === uuid || p.unique_id === uuid ||
+                    p.uuid === uuid || p.device_id === uuid || p.node_id === uuid) {
+                    if (!hit || (_isArea(feats[i]) && !_isArea(hit))) {
+                        hit = feats[i];
+                        hitSrc = srcId || null;
+                    }
+                    if (_isArea(hit)) return;
+                }
+            }
+        };
+        srcs.forEach(function (gj, srcId) { scan(gj, srcId); });
+        if (hit && _isArea(hit)) return { feature: hit, sourceId: hitSrc };
+        // 자기 소스를 직접 붙이는 레이어(구획 등)는 instance.sources 에 없다 —
+        // 지도에 올라간 geojson 소스를 그대로 훑는다. 새 레이어가 늘어도 따라온다.
+        try {
+            var style = inst.map && inst.map.getStyle && inst.map.getStyle();
+            var ids = style && style.sources ? Object.keys(style.sources) : [];
+            for (var k = 0; k < ids.length && !hit; k++) {
+                var src = inst.map.getSource(ids[k]);
+                if (src && src._data && typeof src._data !== 'string') scan(src._data, ids[k]);
+                if (hit && _isArea(hit)) break;
+            }
+        } catch (e) {}
+        if (hit) return { feature: hit, sourceId: hitSrc };
+        // 지도에 레이어가 없는 도형(구역이 대표적이다)은 목록이 받아 둔 overlays
+        // 캐시에서 찾는다. 여기까지 오지 않으면 구역 모달은 옮길 곳도 강조할 것도
+        // 없이 조용히 아무 일도 하지 않는다.
+        var cached = inst._shapeCache && inst._shapeCache[uuid];
+        if (cached) {
+            return {
+                feature: { geometry: cached.geometry,
+                           properties: { color: cached.color,
+                                         aot_type: cached.aot_type } },
+                sourceId: null
+            };
+        }
+        return null;
+    }
+
+    // ── 연 도형을 지도에서 강조한다 ───────────────────────────────────────────
+    // 카메라만 옮기면 "이 패널이 **어느** 도형 얘기인지" 는 여전히 안 보인다.
+    // 겹친 구획이나 이름이 비슷한 구역이 나란히 있으면 특히 그렇다.
+    //
+    // 원 레이어의 paint 를 바꾸지 않는다 — 레이어는 도형 전체를 그리므로 거기서
+    // 두께를 올리면 **모든** 도형이 두꺼워진다. 대신 그 도형 하나만 담은 강조
+    // 레이어를 위에 얹고, 닫을 때 통째로 지운다(원복이 곧 삭제라 되돌릴 상태가
+    // 남지 않는다).
+    var HL_SRC = 'aot-focus-hl-src-';
+    var HL_LYR = 'aot-focus-hl-line-';
+
+    /** 이 소스를 그리는 첫 line 레이어의 색·두께(못 찾으면 기본값). */
+    function _lineStyleOf(map, sourceId) {
+        var style = { color: null, width: 2 };
+        try {
+            var layers = (map.getStyle() || {}).layers || [];
+            for (var i = 0; i < layers.length; i++) {
+                var L = layers[i];
+                if (L.type !== 'line' || L.source !== sourceId) continue;
+                var w = map.getPaintProperty(L.id, 'line-width');
+                var c = map.getPaintProperty(L.id, 'line-color');
+                if (typeof w === 'number') style.width = w;
+                if (typeof c === 'string') style.color = c;
+                break;
+            }
+        } catch (e) {}
+        return style;
+    }
+
+    var HL_PT = 'aot-focus-hl-pt-';
+
+    function _clearHighlight(uid) {
+        var inst = window.AoTWidgetInstances && window.AoTWidgetInstances[uid];
+        var map = inst && inst.map;
+        if (!map) return;
+        try {
+            if (map.getLayer(HL_LYR + uid)) map.removeLayer(HL_LYR + uid);
+            if (map.getLayer(HL_PT + uid)) map.removeLayer(HL_PT + uid);
+            if (map.getSource(HL_SRC + uid)) map.removeSource(HL_SRC + uid);
+        } catch (e) {}
+    }
+
+    function _highlightShape(uid, feature, sourceId) {
+        var inst = window.AoTWidgetInstances && window.AoTWidgetInstances[uid];
+        var map = inst && inst.map;
+        if (!map || !feature || !feature.geometry) return;
+        var t = feature.geometry.type || '';
+        var isPoint = t.indexOf('Polygon') < 0 && t.indexOf('LineString') < 0;
+
+        _clearHighlight(uid);
+        var base = _lineStyleOf(map, sourceId);
+        var props = feature.properties || {};
+
+        // 색의 정본은 테마(theme_config) 하나다 — 강조도 도형을 칠한 것과 **같은
+        // 함수**로 정한다. 하드코딩 폴백을 새로 만들지 않는다.
+        //
+        // 장치는 `color(...)` 가 아니라 `deviceColor(...)` 여야 한다. 장치 도형의
+        // `aot_type` 은 종류와 무관하게 'aot_device' 라서, 그것으로 조회하면
+        // input·output·function 이 전부 장치 공통색 하나로 수렴한다(실측: 입력
+        // 마커가 #995aff = device 기본색으로 강조됐다). 지도가 도형을 칠할 때
+        // 쓰는 expression 도 deviceColor 로 만들어져 있다.
+        var color = null;
+        var T = window.AoTGeoTheme;
+        var theme = (inst && inst._geoTheme) || null;
+        try {
+            if (T && props.device_type)   color = T.deviceColor(props.device_type, theme);
+            else if (T && props.aot_type) color = T.color(props.aot_type, theme);
+        } catch (e) {}
+        // 구획은 사용자가 고른 색이 테마 기본값을 이긴다(GeoPlot.color).
+        if (props.plot_uuid && props.color) color = props.color;
+        if (!color) color = base.color || props.color || '#ffffff';
+        try {
+            map.addSource(HL_SRC + uid, {
+                type: 'geojson',
+                data: { type: 'Feature', geometry: feature.geometry, properties: {} }
+            });
+            if (isPoint) {
+                // 점으로만 있는 장치(마커)는 두를 테두리가 없다 — 자리에 고리를
+                // 그린다. 채우지 않는 이유는 마커 라벨을 가리지 않기 위해서다.
+                map.addLayer({
+                    id: HL_PT + uid,
+                    type: 'circle',
+                    source: HL_SRC + uid,
+                    paint: {
+                        'circle-radius': 14,
+                        'circle-color': 'rgba(0,0,0,0)',
+                        'circle-stroke-color': color,
+                        'circle-stroke-width': 4,   // 도형 테두리(2배)와 같은 무게
+                        'circle-stroke-opacity': 1
+                    }
+                });
+            } else {
+                map.addLayer({
+                    id: HL_LYR + uid,
+                    type: 'line',
+                    source: HL_SRC + uid,
+                    paint: {
+                        'line-color': color,
+                        'line-width': base.width * 2,   // 원래 두께의 2배
+                        'line-opacity': 1               // 가장 진하게
+                    }
+                });
+            }
+        } catch (e) {}
+    }
+
+    // ── 도형을 맞출 때 쓸 최대 줌 ────────────────────────────────────────────
+    //
+    // 예전에는 18 고정이었다. 그러면 **작은 대상만 제약을 받는다** — 실측한
+    // "꽉 차는 줌"은 필지 16.3 · 구역 17.3 으로 여유가 있는데, 구획 18.4 ·
+    // 장치 폴리곤 18.6 이라 이 둘만 상한에 걸려 화면을 덜 채웠다. 화면이 클수록
+    // 도형의 지리적 크기는 그대로라 상대적으로 더 작게 느껴진다.
+    //
+    // 얼마까지 올릴 수 있는지는 **베이스맵이 정한다**: 벡터 타일은 오버줌해도
+    // 선과 라벨이 선명하지만, 래스터(위성·항공)는 소스의 maxzoom 을 넘으면
+    // 그때부터 픽셀이 뭉갠다. 그래서 고정값 대신 지금 깔린 베이스에서 읽는다.
+    var FIT_ZOOM_VECTOR = 20;   // 벡터 전용 지도의 상한
+    var FIT_ZOOM_FLOOR  = 18;   // 예전 고정값 — 이보다 내려가지는 않는다
+
+    function _fitMaxZoom(map) {
+        var z = null;
+        try {
+            var style = map.getStyle() || {};
+            var sources = style.sources || {};
+            // 실제로 그려지는 소스만 본다 — 스타일에 남아 있어도 레이어가 없거나
+            // 꺼져 있으면 화면에 아무 영향이 없다.
+            var used = {};
+            (style.layers || []).forEach(function (l) {
+                if (!l.source) return;
+                if (l.layout && l.layout.visibility === 'none') return;
+                used[l.source] = true;
+            });
+            Object.keys(sources).forEach(function (id) {
+                if (!used[id] || sources[id].type !== 'raster') return;
+                var mz = sources[id].maxzoom;
+                if (typeof mz !== 'number') {
+                    // 스타일에 없으면 TileJSON 로드 뒤 소스 객체에 채워진다.
+                    var live = map.getSource(id);
+                    if (live && typeof live.maxzoom === 'number') mz = live.maxzoom;
+                }
+                if (typeof mz !== 'number') return;
+                // 한 단계 오버줌까지는 허용한다 — 픽셀이 2배로 늘 뿐 판이 깨지진
+                // 않고, 그 한 단계가 작은 도형에는 결정적이다.
+                var cand = mz + 1;
+                z = (z == null) ? cand : Math.min(z, cand);
+            });
+        } catch (e) {}
+        if (z == null) z = FIT_ZOOM_VECTOR;      // 래스터가 없다 = 벡터 지도
+        var hard = (map.getMaxZoom && map.getMaxZoom()) || 22;
+        return Math.max(FIT_ZOOM_FLOOR, Math.min(z, hard));
+    }
+
+    // ── 기울어진 지도에서도 정확히 맞추기 ────────────────────────────────────
+    //
+    // `cameraForBounds` 는 **pitch 를 계산에 넣지 않는다**(`pitch: 0` 을 명시로
+    // 넘겨도 같은 값이 나온다). 화면이 기울어져 있으면 같은 줌에서도 도형이
+    // 원근으로 멀어져 훨씬 작게 투영된다 — 실측(pitch 58°): 같은 카메라에서
+    // 도형이 가시 높이의 48%, 눕히면 100%. 게다가 `offset` 도 어긋난다(화면
+    // 위쪽은 멀고 아래쪽은 가까워 같은 픽셀이 다른 지리 거리에 대응한다).
+    //
+    // 공식으로 풀지 않고 **가상 카메라에 올려놓고 재서 맞춘다.** pitch·bearing·
+    // 위도가 모두 섞인 값이라 근사식은 곧 틀어지지만, 실제 투영을 재면 그 전부가
+    // 이미 반영돼 있다. `map.transform.clone()` 은 화면을 건드리지 않으므로
+    // 사용자에게는 **이동이 한 번**으로 보인다(도착 뒤 다시 당기는 방식은 줌이
+    // 두 번 일어나 눈에 거슬렸다).
+    //
+    // ⚠ `map.transform` 은 MapLibre 비공개 API 다. 없거나 모양이 바뀌면 아래
+    // 폴백(cameraForBounds + offset)으로 내려간다 — 그 경우 기운 지도에서 도형이
+    // 작게 잡히지만 동작은 한다.
+    var FIT_SOLVE_ZOOM_STEPS   = 6;      // 줌 수렴
+    var FIT_SOLVE_CENTER_STEPS = 4;      // 중심 수렴(줌 고정 뒤)
+    var FIT_SOLVE_DAMPING      = 0.7;    // 줌·중심이 서로 얽혀 있어 감쇠가 필요하다
+
+    /** 위도의 메르카토르 중간값 — 남북으로 긴 도형에서 산술평균은 어긋난다. */
+    function _midLat(s, n) {
+        var mY = function (lat) { return Math.log(Math.tan(Math.PI / 4 + lat * Math.PI / 360)); };
+        var y = (mY(s) + mY(n)) / 2;
+        return (Math.atan(Math.exp(y)) - Math.PI / 4) * 360 / Math.PI;
+    }
+
+    /**
+     * 도형이 가시 사각형을 채우면서 그 한가운데 오는 카메라를 푼다.
+     * @return { center, zoom } — 풀지 못하면 null(호출부가 폴백).
+     */
+    function _solveFitCamera(map, bounds, rect, startZoom, lockZoom) {
+        var tr = null;
+        try {
+            tr = (map.transform && map.transform.clone) ? map.transform.clone() : null;
+        } catch (e) { tr = null; }
+        if (!tr || typeof tr.setLocationAtPoint !== 'function' ||
+            typeof tr.locationPoint !== 'function') return null;
+
+        var w = bounds[0][0], s = bounds[0][1], e = bounds[1][0], n = bounds[1][1];
+        var corners = [[w, s], [e, s], [e, n], [w, n]];
+        var anchor = { lng: (w + e) / 2, lat: _midLat(s, n) };
+        // 목표 지점은 **중심 전용 좌표**다(rect.cx/cy — 위 _visibleMapRect 주석).
+        // 다만 도형이 크면 그 자리에 두었을 때 아래위가 크롬에 물린다. 그래서
+        // 도형 크기를 알게 된 뒤 **한계선 안으로 당긴다** — 겹치지 않는 선에서
+        // 최대한 중앙이다. 공간 자체가 부족하면(도형이 가시 영역보다 큼) 위아래
+        // 여백을 똑같이 나눈다.
+        var base = { x: (rect.cx != null ? rect.cx : rect.x + rect.w / 2),
+                     y: (rect.cy != null ? rect.cy : rect.y + rect.h / 2) };
+        var lim = rect.limit;
+        var clampAxis = function (v, size, lo, hi) {
+            if (!lim) return v;
+            var a = lo + size / 2, b = hi - size / 2;
+            if (a > b) return (a + b) / 2;
+            return Math.min(Math.max(v, a), b);
+        };
+        var tgt = { x: base.x, y: base.y };
+        var maxZ = _fitMaxZoom(map);
+
+        // 기울어진 지도에서 **투영은 폭발할 수 있다.** pitch 가 크면 화면 위쪽이
+        // 지평선에 수렴하는데, 도형의 먼 변이 그 근처로 가면 y 가 화면의 수십 배로
+        // 튄다(실측 pitch 60°·큰 필지: 도형 높이 6241px, 중심이 화면 밖 3232).
+        // 그 값으로 줌을 풀면 카메라가 엉뚱한 데로 간다. 말이 안 되는 크기가 나오면
+        // **푸는 것을 포기하고** 호출부의 폴백(cameraForBounds)으로 넘긴다 —
+        // 그쪽은 pitch 를 무시해 도형이 작게 잡히지만, 적어도 화면 안에 든다.
+        var SANE_SPAN = 4;   // 컨테이너의 4배
+        var box = function () {
+            var xs = [], ys = [];
+            for (var i = 0; i < corners.length; i++) {
+                var p = tr.locationPoint({ lng: corners[i][0], lat: corners[i][1] });
+                if (!p || !isFinite(p.x) || !isFinite(p.y)) return null;
+                xs.push(p.x); ys.push(p.y);
+            }
+            var l = Math.min.apply(null, xs), r = Math.max.apply(null, xs);
+            var t = Math.min.apply(null, ys), b = Math.max.apply(null, ys);
+            if ((r - l) > tr.width * SANE_SPAN || (b - t) > tr.height * SANE_SPAN) return null;
+            return { l: l, r: r, t: t, b: b, w: r - l, h: b - t,
+                     cx: (l + r) / 2, cy: (t + b) / 2 };
+        };
+
+        // lockZoom 이 오면 줌은 그대로 두고 중심만 맞춘다(사용자가 맞춰 둔 축척 유지).
+        var z = (lockZoom != null) ? lockZoom : Math.min(maxZ, startZoom);
+        var aim = { x: tgt.x, y: tgt.y };
+        try {
+            // 1단계 — 줌을 수렴시킨다. 중심은 매 회 따라 붙는다(둘이 얽혀 있다).
+            for (var i = 0; lockZoom == null && i < FIT_SOLVE_ZOOM_STEPS; i++) {
+                tr.zoom = z;
+                tr.setLocationAtPoint(anchor, aim);
+                var bb = box();
+                if (!bb || bb.w <= 0 || bb.h <= 0) return null;
+                if (lim) {
+                    tgt.x = clampAxis(base.x, bb.w, lim.left, lim.right);
+                    tgt.y = clampAxis(base.y, bb.h, lim.top, lim.bottom);
+                }
+                aim = { x: aim.x + (tgt.x - bb.cx), y: aim.y + (tgt.y - bb.cy) };
+                var dz = Math.log2(Math.min(rect.w / bb.w, rect.h / bb.h));
+                if (!isFinite(dz) || Math.abs(dz) < 0.02) break;
+                z = Math.min(maxZ, z + dz * FIT_SOLVE_DAMPING);
+            }
+            // 2단계 — 줌을 고정하고 중심만 맞춘다(여기서는 곧바로 수렴한다).
+            for (var k = 0; k < FIT_SOLVE_CENTER_STEPS; k++) {
+                tr.zoom = z;
+                tr.setLocationAtPoint(anchor, aim);
+                var b2 = box();
+                if (!b2) return null;
+                if (lim) {
+                    tgt.x = clampAxis(base.x, b2.w, lim.left, lim.right);
+                    tgt.y = clampAxis(base.y, b2.h, lim.top, lim.bottom);
+                }
+                var ex = tgt.x - b2.cx, ey = tgt.y - b2.cy;
+                if (Math.abs(ex) < 1 && Math.abs(ey) < 1) break;
+                aim = { x: aim.x + ex, y: aim.y + ey };
+            }
+            tr.zoom = z;
+            tr.setLocationAtPoint(anchor, aim);
+            // **푼 결과를 그대로 믿지 않는다.** 마지막으로 한 번 더 재서, 도형이
+            // 화면 안에 들어오고 중심이 목표에서 크게 벗어나지 않았을 때만 쓴다.
+            // 위 반복이 수렴하지 못하는 경우가 있고(기운 지도 + 큰 도형), 그때
+            // 그대로 넘기면 카메라가 화면 밖으로 날아간다.
+            var fin = box();
+            if (!fin) return null;
+            if (Math.abs(fin.cx - tgt.x) > rect.W || Math.abs(fin.cy - tgt.y) > rect.H) return null;
+            var c = tr.center;
+            if (!c || !isFinite(c.lng) || !isFinite(c.lat)) return null;
+            return { center: [c.lng, c.lat], zoom: z };
+        } catch (e2) { return null; }
+    }
+
+    // ── 사용자가 확대해 둔 축척은 되돌리지 않는다 ────────────────────────────
+    //
+    // 일부러 크게 보려고 확대해 둔 상태에서 모달을 열면 계산값으로 **축소**되어
+    // 도형이 도로 작아졌다. 대상을 화면에 들이는 것이 목적이지 축척을 정해 주는
+    // 것이 목적은 아니다 — 이미 더 크게 보고 있다면 그대로 두고 **중심만** 옮긴다.
+    //
+    // 다만 무한정 봐줄 수는 없다. 멀리 확대해 다른 곳을 보다가 먼 대상을 열면
+    // 도형이 화면을 크게 넘쳐 어디를 보는지 알 수 없다. 도형이 가시 영역의
+    // **2배(줌 차 1단계)** 까지는 유지하고, 그보다 넘치면 계산값으로 맞춘다.
+    var ZOOM_KEEP_MAX_OVER = 1.0;
+
+    /** 유지할 줌(없으면 null). */
+    function _keepUserZoom(map, fitZoom) {
+        var cur = map.getZoom();
+        if (!(cur > fitZoom)) return null;                  // 더 확대돼 있지 않다
+        if (cur - fitZoom > ZOOM_KEEP_MAX_OVER) return null; // 너무 넘친다
+        // 상한(_fitMaxZoom)으로 자르지 않는다 — 사용자가 그 위로 올려 둔 것도
+        // 사용자의 선택이다. 상한은 **우리가 정할 때** 지키는 값이다.
+        return cur;
+    }
+
+    /**
+     * 모달 대상으로 지도를 옮긴다.
+     * @param uid    위젯 인스턴스 id
+     * @param target uuid 문자열, 또는 { geometry } / { lng, lat, zoom }
+     */
+    function _focusMapOn(uid, target, opts) {
+        opts = opts || {};
+        var inst = window.AoTWidgetInstances && window.AoTWidgetInstances[uid];
+        var map = inst && inst.map;
+        if (!map || !target) return;
+
+        var geometry = null, point = null;
+        var doHighlight = opts.highlight !== false;
+        if (typeof target === 'string') {
+            var f = _findFeature(uid, target);
+            geometry = f && f.feature && f.feature.geometry;
+            if (f && doHighlight) _highlightShape(uid, f.feature, f.sourceId);
+        } else if (target.geometry) {
+            // geometry 를 직접 받은 자리(구획)는 소스를 모른다 — 색은 도형이
+            // 실어 온 것을 쓰고 두께는 기본값이 된다.
+            if (doHighlight) {
+                _highlightShape(uid, { geometry: target.geometry,
+                                       properties: target.properties || {} }, null);
+            }
+            geometry = target.geometry;
+        } else if (target.lng != null && target.lat != null) {
+            point = target;
+        }
+
+        var rect = _visibleMapRect(uid);
+        if (!rect) return;
+
+        var bounds = geometry ? _geomBounds(geometry) : null;
+        if (bounds && bounds[0][0] === bounds[1][0] && bounds[0][1] === bounds[1][1]) {
+            // 점 하나짜리 geometry — 넓이가 0 이라 줌을 정할 근거가 없다.
+            point = { lng: bounds[0][0], lat: bounds[0][1] };
+            bounds = null;
+        }
+
+        // 닫을 때 같은 대상으로 다시 맞추기 위해 기억해 둔다. 문자열 uuid 대신
+        // **geometry 를 통째로** 담는다 — 도형 소스는 레이어 토글이나 새로고침에
+        // 따라 사라질 수 있는데, 그때 uuid 만 들고 있으면 되찾을 방법이 없다.
+        if (!opts.transient) {
+            inst._lastFocus = bounds ? { geometry: geometry } : (point ? point : null);
+        }
+
+        // 도형을 **가시 사각형 한가운데**에 놓기 위한 카메라 오프셋.
+        // `offset` 은 "화면 중심에서 이만큼 떨어진 자리에 center 를 놓아라" 라,
+        // 가려진 면적이 아무리 커도 선형으로 정확하다. 가려진 영역을 padding 으로
+        // 넘기는 방식은 시트가 화면의 62% 를 덮으면 어긋났다(실측 48px).
+        var offset = [ (rect.cx != null ? rect.cx : rect.x + rect.w / 2) - rect.W / 2,
+                       (rect.cy != null ? rect.cy : rect.y + rect.h / 2) - rect.H / 2 ];
+
+        try {
+            if (bounds) {
+                // **"이미 잘 보이면 그냥 둔다" 는 규칙은 두지 않는다.** 모달을 여는
+                // 것은 "이 대상을 보겠다" 는 분명한 의사표시다. 화면에 걸쳐 있기만
+                // 해도 그대로 두면, 모달 안의 링크로 자식(구획·시설)을 열었을 때
+                // 대상이 구석에 작게 놓인 채 지도가 꿈쩍도 하지 않는다(실측:
+                // 중심 160px 아래, 가시 높이의 35%). 이미 맞아 있으면 easeTo 가
+                // 아무것도 하지 않으므로 손해도 없다.
+                //
+                // **`fitBounds` 를 부르지 않는다.** 그것은 카메라를 움직일 뿐
+                // 아니라 bearing 을 명시하지 않으면 **정북으로 되돌린다**(실측:
+                // 45° → 0°). 사용자가 도형이 잘 보이는 방향으로 일부러 돌려 둔
+                // 것을 코드가 되돌리면 안 된다. 여기서는 재기만 한다.
+                //
+                // **줌은 cameraForBounds 에게 맡기고, 중심은 우리가 잡는다.**
+                // 어긋났던 것은 줌이 아니라 중심이었다(실측: 줌은 가시 영역을
+                // 잘 채웠고 중심만 48px 아래로 밀렸다). 줌을 직접 환산하면
+                // 도형이 세로로 길든 가로로 길든 한쪽 비율만 따라가 필요 이상으로
+                // 작아진다 — 그 계산은 cameraForBounds 가 이미 정확히 한다.
+                // padding 은 **대칭**으로 준다. 목적은 "가시 사각형과 같은 크기의
+                // 창에 맞는 줌" 하나뿐이고, 어디에 놓을지는 아래 offset 이 정한다.
+                // 실제 위치대로 비대칭 padding 을 주면 cameraForBounds 는 그
+                // 비대칭 배치에 맞는 줌을 내는데, 우리가 중심을 옮기는 순간 그
+                // 전제가 깨져 도형이 가시 사각형을 넘친다(실측 24px).
+                var padOpt = {
+                    top:    Math.max(0, (rect.H - rect.h) / 2),
+                    bottom: Math.max(0, (rect.H - rect.h) / 2),
+                    left:   Math.max(0, (rect.W - rect.w) / 2),
+                    right:  Math.max(0, (rect.W - rect.w) / 2)
+                };
+                var cam = null;
+                try {
+                    cam = map.cameraForBounds(bounds, {
+                        padding: padOpt, bearing: map.getBearing()
+                    });
+                } catch (e) {}
+                if (!cam) {
+                    // 여백이 컨테이너를 넘어 계산이 실패하는 경우의 폴백 —
+                    // 전체 기준 줌에서 가시 사각형이 작아진 만큼 낮춘다.
+                    cam = map.cameraForBounds(bounds, { padding: 0, bearing: map.getBearing() });
+                    if (!cam) return;
+                    cam = { center: cam.center,
+                            zoom: cam.zoom + Math.log2(Math.min(rect.w / rect.W, rect.h / rect.H)) };
+                }
+                // 중심도 cameraForBounds 의 것을 쓴다. padding 이 **대칭**이라
+                // 그 값은 "도형을 화면 한가운데 놓는 중심" 이고, 거기서 offset 만큼
+                // 밀면 정확히 가시 사각형 한가운데다. 위경도 평균으로 대신 계산하면
+                // 메르카토르에서 위도 방향이 비선형이라 남북으로 긴 도형에서 어긋난다
+                // (실측 13px).
+                // bearing·pitch 를 주지 않는다 = 사용자가 맞춰 둔 방향 그대로.
+                // 가상 카메라에서 미리 풀어 **한 번에** 옮긴다.
+                var solved = _solveFitCamera(map, bounds, rect, cam.zoom);
+                if (solved) {
+                    // 사용자가 더 확대해 둔 상태면 그 축척으로 다시 푼다(중심만).
+                    var keep = _keepUserZoom(map, solved.zoom);
+                    if (keep != null) {
+                        var kept = _solveFitCamera(map, bounds, rect, cam.zoom, keep);
+                        if (kept) solved = kept;
+                    }
+                    // 이미 도형 중심이 가시 사각형 한가운데 오도록 푼 값이라
+                    // offset 은 주지 않는다(주면 두 번 밀린다).
+                    map.easeTo({ center: solved.center, zoom: solved.zoom, duration: 400 });
+                } else {
+                    // transform 을 못 쓰는 경우의 폴백 — 눕힌 지도에서는 정확하다.
+                    var fz = Math.min(_fitMaxZoom(map), cam.zoom);
+                    var keep2 = _keepUserZoom(map, fz);
+                    map.easeTo({ center: cam.center, zoom: (keep2 != null ? keep2 : fz),
+                                 offset: offset, duration: 400 });
+                }
+            } else if (point) {
+                var pz = point.zoom != null ? point.zoom : Math.max(map.getZoom(), 17);
+                map.easeTo({ center: [point.lng, point.lat], zoom: pz,
+                             offset: offset, duration: 400 });
+            }
+        } catch (e) {}
+    }
+
+    /**
+     * 보이는 영역이 바뀌었을 때(시트 확대·축소, 측정 도크 접기·펼치기 …) 지금
+     * 열려 있는 대상으로 **구도만** 다시 잡는다.
+     *
+     * 화면이 바뀌었는데 카메라가 그대로면, 방금 넓힌 자리가 빈 여백이 되거나
+     * 도형이 새로 생긴 크롬 밑으로 들어간다. 패널이 열려 있을 때만 동작한다 —
+     * 닫힌 뒤의 재구성은 `_refocusAfterClose` 가 따로 맡는다(그쪽은 강조도 없다).
+     */
+    var REFIT_COOLDOWN_MS = 1000;
+
+    function _refitCurrentFocus(uid) {
+        var wid = _widgetIdFromUid(uid);
+        var inst = wid && window.AoTWidgetInstances && window.AoTWidgetInstances[wid];
+        var host = wid && document.getElementById('aot-map-' + wid);
+        if (!inst || !inst._lastFocus || !host) return;
+        if (!host.getAttribute('data-aot-panel')) return;   // 패널이 없으면 할 일 없다
+        // 연달아 부르지 않는다. 카메라를 옮기면 화면에 보이는 것이 달라지고, 그것이
+        // 다시 재조정을 부르는 자리가 생기기 쉽다 — 마지막 방어선이다.
+        var now = (window.performance && performance.now) ? performance.now() : Date.now();
+        if (inst._lastRefitAt && (now - inst._lastRefitAt) < REFIT_COOLDOWN_MS) return;
+        inst._lastRefitAt = now;
+        _focusMapOn(wid, inst._lastFocus,
+                    { force: true, highlight: false, transient: true });
+    }
+
+    /**
+     * 패널이 닫힌 뒤, 마지막으로 본 도형을 넓어진 화면 가운데로 다시 맞춘다.
+     *
+     * 패널이 사라지면 그 폭만큼 지도가 갑자기 넓어지는데 카메라는 그대로라,
+     * 방금까지 보던 도형이 한쪽에 치우치고 반대편에는 빈 여백이 남는다. 화면이
+     * 바뀌었으니 구도도 다시 잡아 준다.
+     *
+     * **강조는 걸지 않는다**(highlight:false) — 닫으면서 막 지운 참이다.
+     * 반드시 `data-aot-panel` 속성과 --aot-panel-* 을 지운 **뒤에** 부를 것:
+     * 그 전에 부르면 없어진 패널 몫까지 여백으로 빼서 도형이 다시 치우친다.
+     */
+    function _refocusAfterClose(uid) {
+        var inst = window.AoTWidgetInstances && window.AoTWidgetInstances[uid];
+        var last = inst && inst._lastFocus;
+        if (!last) return;
+        _focusMapOn(uid, last, { force: true, highlight: false, transient: true });
+    }
+
+    // ── 지금 실제로 지도가 보이는 사각형 ─────────────────────────────────────
+    //
+    // 지도를 가리는 것은 도킹 패널만이 아니다. **가리는 것은 전부 여기 한 곳에서
+    // 센다** — 예전에는 패널만 세서 도형 하단이 측정 도크에 33px 가린 채 "다 보인다"
+    // 로 판정됐다(실측). 크롬이 늘어도 이 표에만 넣으면 카메라와 판정이 함께 따라온다.
+    //
+    // 각 항목은 "어느 변을 얼마나 먹는가" 로만 환산한다. 도크처럼 가운데에만 있는
+    // 것도 그 변 전체를 먹는 것으로 본다 — 도형이 그 위에 걸치는지 매번 따지는 것보다
+    // 예측 가능하고, 넉넉하게 잡아서 손해 보는 것은 약간의 축척뿐이다.
+    var MAP_CHROME = [
+        { sel: '.map-tools-left',          side: 'left'   },
+        { sel: '[id^="map-tools-right-"]', side: 'right'  },
+        { sel: '[id^="map-attrib-"]',      side: 'right'  },
+        { sel: '.aot-meas-dock',           side: 'bottom' },
+        { sel: '.aot-map-advice-chips',    side: 'top'    }
+    ];
+    // **범례는 일부러 넣지 않는다.** 우하단 구석의 상자일 뿐인데 높이가 꽤 되어,
+    // 이것을 아래 경계로 삼으면 가시 영역이 크게 줄고 도형이 작아지면서 위로
+    // 치우친다. 도형이 범례 위에 조금 걸치는 것보다 그 대가가 크다. 도크는
+    // 다르다 — 하단 **중앙을 가로지르므로** 도형과 정면으로 겹친다.
+
+    // 여백은 **가시 변에 비례**한다. 고정 40px 은 가시 높이가 124px 인 화면에서
+    // 위아래 합쳐 65% 를 먹어, 도형에 돌아갈 자리를 43px 로 만들었다.
+    var FIT_PAD_MIN = 8, FIT_PAD_MAX = 40, FIT_PAD_RATIO = 0.06;
+
+    // 크롬이 패널을 피해 옮겨 간 뒤의 자리까지 남는 여백(map.css 의 `+ 10px`).
+    var CHROME_GAP = 10;
+
+    /**
+     * @param panel { w, h } 도킹 패널이 가린 폭/높이(없으면 0).
+     *
+     * **패널이 열린 쪽은 재지 않고 계약대로 계산한다.** 오른쪽 크롬은 패널이 열리면
+     * `right: calc(var(--aot-panel-w) + 10px)` 로 비켜가는데(map.css), 그 이동에는
+     * 0.2s 트랜지션이 있다. 패널을 연 **직후**에 재면 아직 옮기기 전 자리가 나오고,
+     * 그 값으로 카메라를 맞추면 도형이 딱 그만큼 밀린다(실측: 가로 20px, 줌도 과대).
+     * 폭·높이는 트랜지션과 무관하게 정확하므로 그것만 쓴다.
+     */
+    function _mapChromeInset(host, contRect, panel) {
+        var ins = { top: 0, right: 0, bottom: 0, left: 0 };
+        MAP_CHROME.forEach(function (c) {
+            var el = host.querySelector(c.sel);
+            if (!el) return;
+            var r = el.getBoundingClientRect();
+            if (r.width <= 0 || r.height <= 0) return;   // 숨겨진 것은 안 센다
+            var v = 0;
+            if (c.side === 'top')         v = r.bottom - contRect.top;
+            else if (c.side === 'left')   v = r.right - contRect.left;
+            else if (c.side === 'right')  v = panel.w > 0 ? (panel.w + r.width + CHROME_GAP)
+                                                          : (contRect.right - r.left);
+            else                          v = panel.h > 0 ? (panel.h + r.height + CHROME_GAP)
+                                                          : (contRect.bottom - r.top);
+            v = Math.max(0, v);                          // 컨테이너 밖이면 0
+            if (v > ins[c.side]) ins[c.side] = v;
+        });
+        return ins;
+    }
+
+    /**
+     * 지도가 실제로 보이는 사각형(지도 컨테이너 좌표계) + 컨테이너 크기.
+     * 카메라 계산과 가시성 판정이 **둘 다 이것만** 본다.
+     */
+    function _visibleMapRect(uid) {
+        var wid = _widgetIdFromUid(uid);
+        var inst = wid && window.AoTWidgetInstances && window.AoTWidgetInstances[wid];
+        var map = inst && inst.map;
+        if (!map) return null;
+        var cont = map.getContainer();
+        var W = cont.clientWidth, H = cont.clientHeight;
+        if (!W || !H) return null;
+
+        var host = document.getElementById('aot-map-' + wid) || cont;
+        // 도킹 패널은 DOM 을 재지 않고 변수로 읽는다 — 셸이 이미 "가린 폭/높이" 로
+        // 내보내고 있고(바깥 여백 포함), 그 값이 카메라가 알아야 할 바로 그 값이다.
+        var read = function (n) { return parseFloat(host.style.getPropertyValue(n)) || 0; };
+        var panel = { w: read('--aot-panel-w'), h: read('--aot-panel-h') };
+
+        var ins = _mapChromeInset(host, cont.getBoundingClientRect(), panel);
+        ins.right  = Math.max(ins.right,  panel.w);
+        ins.bottom = Math.max(ins.bottom, panel.h);
+
+        var vw = W - ins.left - ins.right;
+        var vh = H - ins.top - ins.bottom;
+        // 크롬이 다 먹어 버리면 크롬을 무시한다 — 어긋난 자리에 맞추는 것보다
+        // 컨테이너 기준으로라도 맞추는 편이 낫다.
+        if (vw < 60 || vh < 60) { ins = { top: 0, right: 0, bottom: 0, left: 0 }; vw = W; vh = H; }
+
+        var mx = Math.min(FIT_PAD_MAX, Math.max(FIT_PAD_MIN, vw * FIT_PAD_RATIO));
+        var my = Math.min(FIT_PAD_MAX, Math.max(FIT_PAD_MIN, vh * FIT_PAD_RATIO));
+        // **크기를 정하는 사각형과 중심을 정하는 자리는 다르다.**
+        //
+        // 크기(줌)는 지금 계산한 사각형 그대로다 — 도크·범례·툴 레일에 도형이
+        // 가리지 않으려면 그것들을 다 빼고 재야 한다.
+        //
+        // 중심은 다르다. 그 작은 크롬들까지 빼고 한가운데를 잡으면 도형이 지도의
+        // **위쪽으로 치우쳐 보인다**(하단 도크 때문에 실측 40px). 사람은 도크를
+        // "지도 위에 얹힌 것" 으로 보지 지도가 거기서 끝난다고 보지 않는다.
+        // 그래서 중심은 **불투명하게 넓은 면을 덮는 것**(도킹 패널)만 피한다.
+        var cw = W - panel.w, ch = H - panel.h;
+        var rect = {
+            x: ins.left + mx, y: ins.top + my,
+            w: Math.max(20, vw - 2 * mx), h: Math.max(20, vh - 2 * my),
+            cx: cw / 2, cy: ch / 2,
+            // 크롬에 닿지 않는 한계선. 중심(cx/cy)을 그대로 쓰면 도형 아래가
+            // 측정값 도크에 물리므로(실측 32px), 겹치지 않는 선까지만 내려간다.
+            limit: { top: ins.top + my, bottom: H - ins.bottom - my,
+                     left: ins.left + mx, right: W - ins.right - mx },
+            W: W, H: H
+        };
+        // 진단용으로 남긴다 — 카메라가 어긋났을 때 "그때 무엇을 가려진 것으로
+        // 봤는가" 를 되짚을 방법이 이것뿐이다(계산이 한 프레임 안에서 끝난다).
+        inst._lastFitRect = rect;
+        inst._lastFitInset = ins;
+        return rect;
+    }
+
     function _showFacilityCenterOverlay(html, uid) {
         var OVERLAY_ID = 'aot-facility-ctrl-overlay-' + uid;
         var existing = document.getElementById(OVERLAY_ID);
         if (existing) existing.remove();
 
+        var dock = _panelHostFor(uid);
+        var mode = dock ? dock.mode : 'center';
+
         var overlay = document.createElement('div');
         overlay.id = OVERLAY_ID;
-        overlay.style.cssText = [
-            'position:fixed', 'inset:0', 'z-index:var(--aot-z-modal)',
-            'display:flex', 'align-items:center', 'justify-content:center',
-            'background:rgba(0,0,0,0.35)'
-        ].join(';');
+        if (dock) {
+            // 레이어 자체는 클릭을 통과시킨다(pointer-events 는 CSS). 백드롭도
+            // 없다 — 지도가 계속 보이고 계속 조작돼야 하는 것이 이 모드의 전부다.
+            overlay.className = 'aot-map-panel-layer';
+            overlay.setAttribute('data-mode', mode);
+        } else {
+            overlay.style.cssText = [
+                'position:fixed', 'inset:0', 'z-index:var(--aot-z-modal)',
+                'display:flex', 'align-items:center', 'justify-content:center',
+                'background:rgba(0,0,0,0.35)'
+            ].join(';');
+        }
 
         var popupWrap = document.createElement('div');
         popupWrap.style.cssText = 'position:relative;';
+        if (dock) popupWrap.className = 'aot-map-panel-wrap';
 
         var box = document.createElement('div');
         box.className = 'maplibregl-popup-content aot-center-modal';
@@ -6254,19 +7389,247 @@
 
         popupWrap.appendChild(box);
         popupWrap.appendChild(closeBtn);
+
+        // 시트(폰·좁은 위젯)에는 위쪽에 그랩바를 둔다. 누르면 시트가 위젯 전체로
+        // 커지고 다시 누르면 되돌아온다 — 지도를 보며 훑다가 내용이 길어지면
+        // 그때 넓히면 된다. 바텀시트의 표준 어포던스라 설명이 필요 없고, 아이콘을
+        // 새로 들이지 않는다.
+        // 그랩바는 dock 이면 **모드와 무관하게** 만든다. 회전으로 시트↔옆이
+        // 바뀔 때 만들었다 지웠다 하면 그 순간의 상태(펼침 여부·리스너)가 함께
+        // 사라진다. 보이고 안 보이고는 CSS 가 `data-mode` 로 정한다.
+        var grab = null;
+        if (dock) {
+            var _T = function (t) { return window._ ? window._(t) : t; };
+            grab = document.createElement('button');
+            grab.type = 'button';
+            grab.className = 'aot-map-sheet-grab';
+            grab.setAttribute('aria-expanded', 'false');
+            grab.setAttribute('aria-label', _T('Expand'));
+            grab.addEventListener('click', function () {
+                var on = overlay.classList.toggle('is-expanded');
+                grab.setAttribute('aria-expanded', on ? 'true' : 'false');
+                grab.setAttribute('aria-label', on ? _T('Collapse') : _T('Expand'));
+                // 높이가 바뀌면 크롬이 비켜갈 거리도, 지도가 보이는 자리도 바뀐다.
+                setTimeout(function () {
+                    if (typeof _syncPanelVarRef === 'function') _syncPanelVarRef();
+                    _refitCurrentFocus(uid);             // 새 가시 영역에 다시 맞춘다
+                }, 220);                                 // 높이 트랜지션 뒤에 잰다
+            });
+            popupWrap.insertBefore(grab, box);
+        }
         overlay.appendChild(popupWrap);
 
-        var _prevOverflow = document.body.style.overflow;
-        var _scrollbarW = window.innerWidth - document.documentElement.clientWidth;
-        document.body.style.overflow = 'hidden';
-        if (_scrollbarW > 0) document.body.style.paddingRight = _scrollbarW + 'px';
+        // 본문을 아래로 훑으면 탭 줄을 접고, 위로 올리면 즉시 되돌린다.
+        //
+        // 폰 시트는 높이가 곧 전부다 — 제목·탭·본문이 나눠 쓰는데 탭은 한 번
+        // 고르고 나면 계속 자리만 차지한다. 셸에 한 번 달아 두면 구역·시설·구획
+        // 모달이 전부 같은 동작을 한다(탭이 없는 모달은 아무 일도 일어나지 않는다).
+        //
+        // `scroll` 은 버블링하지 않으므로 **캡처 단계**에서 받는다. 스크롤하는
+        // 것은 본문(.aot-bay-popup-pane)이고 그것은 나중에 만들어질 수도 있어,
+        // 요소마다 걸지 않고 셸에서 위임으로 잡는다.
+        //
+        // ⚠ **접는 행위가 스크롤을 바꾼다 — 되먹임을 끊어야 한다.** 탭을 접으면
+        // 본문이 그만큼 커지고, 스크롤 여유가 탭 높이만 한 화면에서는 바닥에
+        // 붙어 있던 scrollTop 이 브라우저에 의해 위로 당겨진다. 그 감소는 "위로
+        // 스크롤" 로 읽혀 탭이 다시 펼쳐지고, 그러면 다시 아래로 밀리고… 화면이
+        // 떨린다(사용자 보고: "탭 가림과 바닥 반동이 핑퐁"). 그래서 **접어도
+        // 여유가 남을 때만** 접는다.
+        var NAV_SCROLL_EPS = 4;      // 이보다 작은 움직임은 떨림으로 본다
+        var NAV_SLACK_RATIO = 2.5;   // 탭 높이의 이만큼은 남아야 접는다
+        var NAV_LOCK_MS = 400;       // 한 번 바꾼 뒤 이만큼은 다시 안 바꾼다
 
-        // Native Fullscreen API puts the fullscreen element in the browser's
-        // top-layer; siblings appended to <body> render behind it regardless
-        // of z-index. Mount inside the fullscreen element when one is active.
-        var _fsHost = document.fullscreenElement || document.webkitFullscreenElement ||
-            document.mozFullScreenElement || document.msFullscreenElement || document.body;
-        _fsHost.appendChild(overlay);
+        var _navNow = function () {
+            return (window.performance && performance.now) ? performance.now() : Date.now();
+        };
+        /**
+         * 상태를 바꾸고 **잠근다.**
+         *
+         * 여유 검사만으로는 부족했다 — 접힘/펼침에는 0.18s 전이가 붙어 있고 그
+         * 동안에도 스크롤 이벤트는 계속 들어온다. 전이 중의 본문 높이는 중간값
+         * 이라, 그것으로 방향을 재면 한 프레임마다 판정이 뒤집혀 다시 떨린다.
+         * 바꾼 직후 잠깐 잠가 두면 어떤 경로로 들어오든 진동이 멈춘다.
+         */
+        var _setNavCollapsed = function (on) {
+            if (box.classList.contains('aot-nav-collapsed') === on) return;
+            box.classList.toggle('aot-nav-collapsed', on);
+            box._aotNavLockUntil = _navNow() + NAV_LOCK_MS;
+        };
+
+        box.addEventListener('scroll', function (e) {
+            var el = e.target;
+            if (!el || !el.classList ||
+                !el.classList.contains('aot-bay-popup-pane')) return;
+
+            // 잠금 중에는 위치만 따라간다(다음 판정의 기준이 튀지 않게).
+            if (box._aotNavLockUntil && _navNow() < box._aotNavLockUntil) {
+                el._aotNavLastY = el.scrollTop;
+                return;
+            }
+
+            var nav = box.querySelector('.aot-bay-popup-nav');
+            // 접혀 있어도 scrollHeight 는 원래 높이를 유지한다(overflow:hidden).
+            var navH = nav ? (nav.scrollHeight || 0) : 0;
+            var collapsed = box.classList.contains('aot-nav-collapsed');
+            // 접힌 상태에서는 본문이 이미 커져 있으므로, **펼친 기준**으로 환산해
+            // 여유를 잰다. 그래야 접었다 폈다가 판정을 뒤집지 않는다.
+            var slack = (el.scrollHeight - el.clientHeight) + (collapsed ? navH : 0);
+            if (navH <= 0 || slack < navH * NAV_SLACK_RATIO) {
+                _setNavCollapsed(false);
+                el._aotNavLastY = el.scrollTop;
+                return;
+            }
+
+            var y = el.scrollTop;
+            var dy = y - (el._aotNavLastY || 0);
+            el._aotNavLastY = y;
+            // 맨 위에서는 언제나 보인다 — 접힌 채로 위에 도달하면 되돌릴 길이 없다.
+            if (y <= NAV_SCROLL_EPS) { _setNavCollapsed(false); return; }
+
+            // **바닥 근처에서는 펼치지 않는다.** 탭을 접으면 본문이 그만큼 커져
+            // 최대 스크롤이 줄고, 바닥에 닿아 있던 화면은 브라우저가 그만큼 위로
+            // 되민다. 그 되밀림은 "위로 스크롤" 과 구분되지 않아 곧바로 탭이
+            // 펼쳐지고, 펼쳐지면 다시 아래로 밀린다 — 훑다 보면 어느 높이에서든
+            // 결국 바닥에 닿으므로 **모든 화면에서** 떨렸다.
+            var toBottom = el.scrollHeight - el.clientHeight - y;
+            if (dy > NAV_SCROLL_EPS) { _setNavCollapsed(true); return; }
+            if (dy < -NAV_SCROLL_EPS && toBottom > navH) _setNavCollapsed(false);
+        }, true);
+
+        /**
+         * 닫기(✕)를 제목줄 **한가운데**에 맞춘다.
+         *
+         * 닫기 버튼은 셸 래퍼 기준 absolute 이고 제목줄은 셸 안쪽에 있어서,
+         * 고정 `top` 으로는 둘이 맞지 않는다 — 셸의 위 여백이 모드마다 다르고
+         * (도킹 12px · 시트 22px) 제목줄 높이도 다르다(36px · 폰 44px). 실측에서
+         * 닫기만 데스크탑 4.5px · 모바일 18.5px 위로 떠 있었다(화살표·제목·상태
+         * 점은 서로 맞아 있었다).
+         *
+         * `important` 로 넣는 이유: 폰 폭에서 닫기 위치를 잡는 규칙이
+         * `!important` 라 그냥 인라인으로는 이기지 못한다.
+         */
+        function _alignCloseButton() {
+            try {
+                var hdr = box.querySelector('.aot-sensor-popup-header');
+                if (!hdr) return;
+                var hb = hdr.getBoundingClientRect();
+                var wb = popupWrap.getBoundingClientRect();
+                if (!hb.height) return;
+                var cs = getComputedStyle(hdr);
+                var padT = parseFloat(cs.paddingTop) || 0;
+                var padB = parseFloat(cs.paddingBottom) || 0;
+                // 제목줄의 **내용** 중심(구분선 여백은 뺀다)
+                var mid = (hb.top - wb.top) + padT + (hb.height - padT - padB) / 2;
+                var top = Math.round(mid - (closeBtn.offsetHeight || 24) / 2);
+                closeBtn.style.setProperty('top', Math.max(2, top) + 'px', 'important');
+            } catch (e) {}
+        }
+
+        var _prevOverflow = null;
+        var _scrollbarW = 0;
+        var _panelRo = null;
+        var _panelOrientOff = null;    // 회전 감시자 해제
+        var _syncPanelVarRef = null;   // 그랩바(위에서 만든다)가 높이 변경 뒤 부른다
+
+        if (dock) {
+            // 위젯 wrapper(.aot-map-container, position:relative)에 붙인다. 전체화면
+            // 버튼은 이 **같은 요소**를 전체화면으로 만들므로(의사/네이티브 모두),
+            // 패널은 아무 배선 없이 전체화면을 따라간다.
+            dock.host.appendChild(overlay);
+            dock.host.setAttribute('data-aot-panel', mode);
+            // 폰인지도 함께 남긴다. `side` 만으로는 데스크탑과 구분되지 않는데,
+            // 하단 크롬을 숨길지 말지는 **폰이냐**가 가른다(폰 가로는 높이가
+            // 375px 남짓이라 도크 하나가 지도의 상당 부분을 먹는다).
+            // 판정을 CSS 미디어쿼리로 다시 쓰지 않는다 — `_isPhoneClass()` 가
+            // 유일한 정본이어야 두 곳이 조용히 갈리지 않는다.
+            if (_isPhoneClass()) dock.host.setAttribute('data-aot-panel-phone', '1');
+            // 시트 모드에서는 측정 도크를 숨긴다(CSS). 숨기면 높이가 0 이 되므로
+            // 도크 높이를 쓰는 크롬들이 따라오도록 다시 재게 한다.
+            try { _updateDockHeightVar(_widgetIdFromUid(uid)); } catch (e) {}
+
+            // 지도 크롬(저작권·범례·툴 레일·측정 도크)이 패널을 피하도록 실제
+            // 렌더 크기를 변수로 내보낸다. 측정 도크의 --aot-dock-h 와 같은 방식.
+            // **저작권이 가려지면 라이선스 준수 문제가 된다** — 이 배선은 선택이 아니다.
+            //
+            // 내보내는 값은 패널 **박스 폭이 아니라 패널이 가린 영역 폭**이다 —
+            // 레이어의 바깥 여백(padding)까지 포함한다. 박스 폭만 내보내면 크롬이
+            // 그 여백만큼 패널에 붙어 버려(실측 2px) 붙은 것처럼 보였다. 2단계에서
+            // 카메라 padding 에 넘길 값도 "가려진 폭"이라 정의가 하나로 맞는다.
+            var _syncPanelVar = function () {
+                if (!dock.host.isConnected) return;
+                var hostBox = dock.host.getBoundingClientRect();
+                var panelBox = popupWrap.getBoundingClientRect();
+                if (mode === 'side') {
+                    dock.host.style.setProperty(
+                        '--aot-panel-w', Math.max(0, Math.round(hostBox.right - panelBox.left)) + 'px');
+                } else {
+                    dock.host.style.setProperty(
+                        '--aot-panel-h', Math.max(0, Math.round(hostBox.bottom - panelBox.top)) + 'px');
+                }
+            };
+            _syncPanelVarRef = _syncPanelVar;
+            _syncPanelVar();
+
+            // ── 회전하면 배치를 다시 고른다 ─────────────────────────────────
+            // 모드는 열 때 한 번 정해지는데, 폰은 열어 둔 채 눕히는 것이 흔하다.
+            // 그대로 두면 눕힌 화면에서 시트가 남은 높이를 반으로 갈라 지도도
+            // 모달도 못 쓴다. 모드만 갈아 끼우면 나머지(폭·크롬 회피·카메라)는
+            // 이미 `data-mode` 를 보고 따라온다.
+            var _applyMode = function () {
+                if (!dock.host.isConnected) return;
+                var next = _isPhoneClass() ? (_isLandscape() ? 'side' : 'sheet') : 'side';
+                if (next === mode) return;
+                // 이전 모드가 내보낸 변수를 지운다 — 남으면 크롬이 이제 없는
+                // 패널을 계속 피해 한쪽이 텅 빈다.
+                dock.host.style.removeProperty(
+                    mode === 'side' ? '--aot-panel-w' : '--aot-panel-h');
+                mode = next;
+                overlay.setAttribute('data-mode', mode);
+                dock.host.setAttribute('data-aot-panel', mode);
+                if (_isPhoneClass()) dock.host.setAttribute('data-aot-panel-phone', '1');
+                else dock.host.removeAttribute('data-aot-panel-phone');
+                // 펼침은 시트에만 있는 상태다.
+                if (mode !== 'sheet') overlay.classList.remove('is-expanded');
+                try { _updateDockHeightVar(_widgetIdFromUid(uid)); } catch (e) {}
+                _syncPanelVar();
+                // 회전 직후에는 뷰포트도 위젯도 아직 정착하지 않았다 — 다시 재고
+                // 카메라를 새 가시 영역에 맞춘다.
+                setTimeout(function () {
+                    if (!dock.host.isConnected) return;
+                    _syncPanelVar();
+                    _refitCurrentFocus(uid);
+                }, 300);
+            };
+            var _orientT = null;
+            var _onOrient = function () {
+                if (_orientT) clearTimeout(_orientT);
+                _orientT = setTimeout(_applyMode, 120);   // 회전 중 resize 폭풍을 모은다
+            };
+            window.addEventListener('resize', _onOrient);
+            window.addEventListener('orientationchange', _onOrient);
+            _panelOrientOff = function () {
+                if (_orientT) { clearTimeout(_orientT); _orientT = null; }
+                window.removeEventListener('resize', _onOrient);
+                window.removeEventListener('orientationchange', _onOrient);
+            };
+            if (typeof ResizeObserver !== 'undefined') {
+                // 패널 폭은 clamp 라 위젯이 리사이즈되면 함께 변한다.
+                _panelRo = new ResizeObserver(_syncPanelVar);
+                _panelRo.observe(popupWrap);
+            }
+        } else {
+            _prevOverflow = document.body.style.overflow;
+            _scrollbarW = window.innerWidth - document.documentElement.clientWidth;
+            document.body.style.overflow = 'hidden';
+            if (_scrollbarW > 0) document.body.style.paddingRight = _scrollbarW + 'px';
+
+            // Native Fullscreen API puts the fullscreen element in the browser's
+            // top-layer; siblings appended to <body> render behind it regardless
+            // of z-index. Mount inside the fullscreen element when one is active.
+            var _fsHost = document.fullscreenElement || document.webkitFullscreenElement ||
+                document.mozFullScreenElement || document.msFullscreenElement || document.body;
+            _fsHost.appendChild(overlay);
+        }
 
         /* 눈금의 기준 라벨(적정 범위·목표·오늘)이 축 끝 라벨과 부딪히는지는
            **글자 폭**이 정하므로 붙은 뒤에 재야 한다(AoTViz.settle 주석 참조).
@@ -6278,6 +7641,7 @@
             var _settleNow = function () {
                 _settlePending = false;
                 try { window.AoTViz.settle(box); } catch (e) {}
+                _alignCloseButton();
             };
             _settleNow();
             _settleObs = new MutationObserver(function () {
@@ -6291,28 +7655,85 @@
         }
 
         var _closeListeners = [];
-        function _close() {
+        /**
+         * @param byUser 사용자가 직접 닫았는가(✕ · Esc · 바깥 클릭).
+         *
+         * 모달 **안의 링크**로 다른 모달을 여는 경로는 "닫고 → (fetch) → 연다" 라,
+         * 닫힘과 열림 사이에 왕복이 낀다. 그 틈에 닫힘 쪽이 카메라를 이전 도형으로
+         * 되돌리면, 곧이어 시작되는 새 모달의 이동과 애니메이션이 겹쳐 **엉뚱한
+         * 자리에 멈춘다**(라벨 클릭은 왕복이 없어서 멀쩡했다). 되돌리기는 사용자가
+         * 실제로 닫았을 때만 한다 — 원래 의도도 그것이다.
+         */
+        function _close(byUser) {
             if (!document.getElementById(OVERLAY_ID)) return;
             overlay.remove();
             if (_settleObs) { _settleObs.disconnect(); _settleObs = null; }
-            document.body.style.overflow = _prevOverflow;
-            if (_scrollbarW > 0) document.body.style.paddingRight = '';
+            if (_panelRo) { try { _panelRo.disconnect(); } catch (e) {} _panelRo = null; }
+            if (_panelOrientOff) { try { _panelOrientOff(); } catch (e) {} _panelOrientOff = null; }
+            if (dock) {
+                // 곧바로 다른 패널이 열리는 경우(도형을 연달아 클릭, 목록 →
+                // 도형)에는 속성을 **지우지 않는다.** 지웠다 다시 붙이면 오른쪽
+                // 크롬이 원위치로 갔다 되돌아오는 왕복 애니메이션을 매번 한다.
+                // 다음 틱에 host 에 패널이 정말 없을 때만 정리한다.
+                var _host = dock.host;
+                // 사용자가 닫은 것이면 곧바로 정리한다. 교체(remove())라면 새 모달이
+                // fetch 왕복 뒤에 열릴 수 있으므로 조금 기다린다 — 그 사이에 속성을
+                // 지웠다 다시 붙이면 오른쪽 크롬이 왕복 애니메이션을 한 번 한다.
+                setTimeout(function () {
+                    if (_host.querySelector('.aot-map-panel-layer')) return;
+                    _host.removeAttribute('data-aot-panel');
+                    _host.removeAttribute('data-aot-panel-phone');
+                    _host.style.removeProperty('--aot-panel-w');
+                    _host.style.removeProperty('--aot-panel-h');
+                    var _wid = _widgetIdFromUid(uid);
+                    // 모달 때문에 올린 전체화면이면 되돌린다. 사용자가 직접 올려
+                    // 둔 것이면 표시가 없으므로 그대로 둔다.
+                    if (_host._aotFsByModal) {
+                        _host._aotFsByModal = false;
+                        try { if (_isMaximized(_host)) _toggleMapMaximize(_host); } catch (e) {}
+                    }
+                    try { _updateDockHeightVar(_wid); } catch (e) {}
+                    // 넓어진 화면에 맞춰 구도를 다시 잡는다(속성을 지운 뒤라야
+                    // 여백 계산이 맞다). 갈아타는 중이면 위에서 이미 반환했고,
+                    // 링크로 다른 모달을 여는 중이면 byUser 가 false 다.
+                    if (byUser) { try { _refocusAfterClose(_wid); } catch (e) {} }
+                }, byUser ? 0 : 600);
+            } else {
+                document.body.style.overflow = _prevOverflow;
+                if (_scrollbarW > 0) document.body.style.paddingRight = '';
+            }
+            // 강조는 되돌릴 상태가 없다 — 얹은 레이어를 지우면 원래 그림이다.
+            try { _clearHighlight(_widgetIdFromUid(uid)); } catch (e) {}
+            var i = _modalStack.indexOf(_closeByUser);
+            if (i >= 0) _modalStack.splice(i, 1);
             _closeListeners.forEach(function (fn) { try { fn(); } catch (e) {} });
         }
 
-        overlay.addEventListener('wheel', function (e) {
-            if (e.target === overlay) e.preventDefault();
-        }, { passive: false });
-        overlay.addEventListener('touchmove', function (e) {
-            if (e.target === overlay) e.preventDefault();
-        }, { passive: false });
+        if (!dock) {
+            // 백드롭 위 스크롤이 뒤 페이지로 새는 것을 막는다. 도킹 모드에는
+            // 백드롭이 없고 레이어가 클릭을 통과시키므로 이 이벤트가 오지 않는다.
+            overlay.addEventListener('wheel', function (e) {
+                if (e.target === overlay) e.preventDefault();
+            }, { passive: false });
+            overlay.addEventListener('touchmove', function (e) {
+                if (e.target === overlay) e.preventDefault();
+            }, { passive: false });
+            // 바깥 클릭 = 닫기는 **중앙 모달에서만**. 도킹 모드에서 이걸 두면
+            // 지도를 만지는 순간 패널이 닫혀 대조가 통째로 무너진다.
+            overlay.addEventListener('click', function (e) {
+                if (e.target === overlay) _close(true);
+            });
+        }
+        closeBtn.addEventListener('click', function () { _close(true); });
 
-        overlay.addEventListener('click', function (e) { if (e.target === overlay) _close(); });
-        closeBtn.addEventListener('click', _close);
+        // Esc 로 닫는 것도 사용자의 닫기다.
+        var _closeByUser = function () { _close(true); };
+        _modalStack.push(_closeByUser);
+        _ensureEscHandler();
 
         return {
             getElement: function () { return popupWrap; },
-            remove:     function () { _close(); },
+            remove:     function () { _close(false); },
             on: function (evt, fn) {
                 if (evt === 'close') _closeListeners.push(fn);
             }
@@ -6677,44 +8098,9 @@
         _wire(btnZoomOut, 'zoom-out', function() { map.zoomOut(); });
 
         _wire(btnFs, 'fullscreen', function() {
-            const target = widgetWrap;
-            const doc = document;
-            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-            const requestFullScreen = target.requestFullscreen || target.webkitRequestFullscreen ||
-                                      target.mozRequestFullScreen || target.msRequestFullscreen;
-
-            if (isIOS || !requestFullScreen) {
-                // Pseudo-fullscreen (iOS / browsers without the Fullscreen API).
-                // The widget lives inside a grid-stack-item whose CSS `transform`
-                // creates a stacking context (and, on iOS, the containing block
-                // for `position: fixed`), trapping the map below the navbar.
-                // Reparent to <body> so z-index/fixed resolve against the viewport.
-                const isEntering = !target.classList.contains('aot-map-pseudo-fullscreen');
-                if (isEntering) {
-                    if (!target._aotFsPlaceholder) {
-                        const ph = doc.createComment('aot-fs-placeholder');
-                        target._aotFsPlaceholder = ph;
-                        if (target.parentNode) target.parentNode.insertBefore(ph, target);
-                    }
-                    doc.body.appendChild(target);
-                    target.classList.add('aot-map-pseudo-fullscreen');
-                    doc.body.classList.add('aot-map-fullscreen-active');
-                } else {
-                    target.classList.remove('aot-map-pseudo-fullscreen');
-                    doc.body.classList.remove('aot-map-fullscreen-active');
-                    const ph = target._aotFsPlaceholder;
-                    if (ph && ph.parentNode) {
-                        ph.parentNode.insertBefore(target, ph);
-                        ph.parentNode.removeChild(ph);
-                    }
-                    target._aotFsPlaceholder = null;
-                }
-                setTimeout(function() { try { map.resize(); } catch (err) {} }, 50);
-            } else if (!doc.fullscreenElement && !doc.webkitFullscreenElement) {
-                requestFullScreen.call(target);
-            } else {
-                (doc.exitFullscreen || doc.webkitExitFullscreen).call(doc);
-            }
+            // 모니터 전체화면이 아니라 **브라우저 뷰포트**를 덮는다
+            // (`_toggleMapMaximize` 주석에 근거).
+            _toggleMapMaximize(widgetWrap);
         });
 
         _wire(btnSearch, 'search', function() {
@@ -6834,16 +8220,39 @@
                     _esc(_tr('Reorder')) + '"><i class="fa fa-grip-lines"></i></span>';
             };
 
+            /**
+             * 목록에서 고른 항목 → 그 도형의 모달.
+             *
+             * 예전에는 지도만 옮기고 목록이 그대로 사라졌다. 고른 것이 무엇인지
+             * 확인할 화면이 없어서, 이름을 눌렀는데 지도가 움직이고 끝이었다.
+             * 이제 목록을 닫고 **그 자리에** 도형 모달을 연다(같은 오른쪽 자리다).
+             * 카메라는 모달 쪽이 옮긴다 — 여기서 또 옮기면 두 번 움직인다.
+             */
+            function _openFromList(item, kind) {
+                popup.remove();
+                var opener = kind === 'zone' ? inst._openZoneModal : inst._openSiteModal;
+                if (item && item.shape_uuid && typeof opener === 'function') {
+                    opener(item.shape_uuid, item.name);
+                    return;
+                }
+                // 도형 uuid 가 없는 항목(레거시 데이터)은 최소한 지도라도 옮긴다.
+                _navigateTo(item);
+            }
+
             function _navigateTo(item) {
-                if (item.geometry && window.turf) {
-                    try {
-                        const bbox = window.turf.bbox(item.geometry);
-                        map.fitBounds([[bbox[0], bbox[1]], [bbox[2], bbox[3]]], { padding: 60, maxZoom: 18 });
-                        return;
-                    } catch (e) {}
+                // 모달을 여는 경로와 **같은 카메라 로직**을 쓴다 — 가려진 영역
+                // 계산도, 방향 보존도 한 곳(`_focusMapOn`)에만 있어야 갈리지 않는다.
+                // 강조는 걸지 않는다(목록은 도형을 고르는 중이지 연 것이 아니다).
+                if (item.geometry) {
+                    _focusMapOn(uniqueId, { geometry: item.geometry },
+                                { force: true, highlight: false, transient: true });
+                    return;
                 }
                 if (item.lat != null && item.lng != null) {
-                    map.flyTo({ center: [parseFloat(item.lng), parseFloat(item.lat)], zoom: item.zoom || 17 });
+                    _focusMapOn(uniqueId,
+                                { lng: parseFloat(item.lng), lat: parseFloat(item.lat),
+                                  zoom: item.zoom || 17 },
+                                { force: true, highlight: false, transient: true });
                 }
             }
 
@@ -7054,8 +8463,7 @@
                     zones.forEach(function(z) {
                         const zrow = _row(z.name, null, 'aot-sl-zrow', function(e) {
                             e.stopPropagation();
-                            _navigateTo(z);
-                            popup.remove();
+                            _openFromList(z, 'zone');
                         }, zoneDrag);
                         zrow.dataset.slot = _keyOf(z);
                         zonesEl.appendChild(zrow);
@@ -7064,15 +8472,13 @@
                     const row = _row(s.name, zones.length > 0 ? '▾' : null, null, function() {
                         if (_openSite === s) {
                             // Already expanded → this site is now a direct go-to.
-                            _navigateTo(s);
-                            popup.remove();
+                            _openFromList(s, 'site');
                         } else if (zones.length > 0) {
                             // Collapsed site with zones → expand its zone dropdown.
                             _expand(s, row, zonesEl);
                         } else {
-                            // Zone-less site → navigate immediately.
-                            _navigateTo(s);
-                            popup.remove();
+                            // Zone-less site → open immediately.
+                            _openFromList(s, 'site');
                         }
                     }, siteDrag);
 
@@ -7254,9 +8660,23 @@
                 const sites = [];
                 const zones = [];
 
+                // 모달이 대상 도형을 찾을 수 있게 uuid → 도형을 캐시한다.
+                // 지도 소스만으로는 부족하다 — 구역 폴리곤은 지도에 레이어로
+                // 올라가지 않는 구성이 있고(라벨만 그린다), 그러면 구역 모달을
+                // 열어도 옮길 곳도 강조할 것도 못 찾는다. 목록은 어차피 같은
+                // overlays 를 받으므로 여기서 한 번에 담아 둔다.
+                const shapeCache = {};
+
                 features.forEach(function(f) {
                     const p = f.properties || {};
                     const aotType = String(p.aot_type || '').toLowerCase();
+                    if (p.shape_uuid && f.geometry) {
+                        shapeCache[p.shape_uuid] = {
+                            geometry: f.geometry,
+                            color: p.color || null,
+                            aot_type: aotType
+                        };
+                    }
                     if (aotType !== 'site' && aotType !== 'zone') return;
 
                     let lat = null, lng = null;
@@ -7276,6 +8696,9 @@
                             lng: lng,
                             zoom: 17,
                             geometry: f.geometry || null,
+                            // 목록에서 고른 항목의 **모달**을 열려면 도형 uuid 가
+                            // 있어야 한다(db_id 는 순서 저장용 키일 뿐이다).
+                            shape_uuid: p.shape_uuid || null,
                             parent_id: p.parent_id != null ? p.parent_id : null,
                             db_id: p.db_id != null ? p.db_id : null,
                             zones: []
@@ -7287,6 +8710,7 @@
                             lng: lng,
                             zoom: 18,
                             geometry: f.geometry || null,
+                            shape_uuid: p.shape_uuid || null,
                             parent_id: p.parent_id != null ? p.parent_id : null,
                             db_id: p.db_id != null ? p.db_id : null
                         });
@@ -7328,6 +8752,7 @@
                 });
 
                 instance.sites = sites;
+                instance._shapeCache = Object.assign(instance._shapeCache || {}, shapeCache);
             })
             .catch(function(e) { });
 
@@ -9027,6 +10452,9 @@
                 }).catch(function() {});
                 try { localStorage.setItem(_lsKey, collapsed ? 'true' : 'false'); } catch (e) {}
                 _updateDockHeightVar(uniqueId);
+                // 도크가 접히면 그만큼 지도가 더 보인다 — 열린 모달이 있으면
+                // 그 대상 기준으로 구도를 다시 잡는다.
+                setTimeout(function () { _refitCurrentFocus(uniqueId); }, 220);
             }
         });
         const instance = window.AoTWidgetInstances[uniqueId];
@@ -9038,7 +10466,20 @@
             // legend chip, attribution and advice panel ride above the dock.
             _updateDockHeightVar(uniqueId);
             if (typeof ResizeObserver !== 'undefined' && handle.panel) {
-                const dockRo = new ResizeObserver(function() { _updateDockHeightVar(uniqueId); });
+                // **도크 크기 변화로 카메라를 다시 맞추지 않는다.**
+                //
+                // 도크는 화면에 보이는 시설의 요약을 싣는다 — 즉 **카메라의 결과**다.
+                // 그것을 다시 카메라의 입력으로 쓰면 고리가 닫힌다: 도착 → 시설이
+                // 가장자리에 걸침 → 요약 행이 생겨 도크가 커짐 → 다시 맞춤 → 시설이
+                // 화면 밖으로 → 요약이 사라져 도크가 줄어듦 → 다시 맞춤 … 실제로
+                // 줌이 출렁이며 멈추지 않았다(크롬에서 재현).
+                //
+                // 도크 높이는 **카메라를 계산하는 그 순간의 값**만 쓴다. 나중에
+                // 커져서 도형 아래를 조금 가릴 수는 있지만, 화면이 진동하는 것보다
+                // 낫다. 사람이 한 행동(시트 펼치기 등)으로 인한 재조정은 그대로다.
+                const dockRo = new ResizeObserver(function() {
+                    _updateDockHeightVar(uniqueId);
+                });
                 dockRo.observe(handle.panel);
                 instance._dockResizeObserver = dockRo;
             }
@@ -10035,6 +11476,42 @@
      * Create device popup (MapLibre) — exact port of v3 bindDevicePopup.
      * Returns { popup, onOpen } where onOpen must be called after marker.setPopup(popup).addTo(map).
      */
+    /**
+     * 입력(센서) 모달 제목줄에 **상위로 가는 ← 버튼**을 붙인다.
+     *
+     * 다른 모달은 `AoTMapPopup.buildModalHeader` 가 이 버튼을 함께 그리는데,
+     * 입력은 공용 센서 컴포넌트가 자기 제목줄을 만들어서 **혼자 버튼이 없었다.**
+     * 마크업만 같은 자리에 끼워 넣으면 정렬(제목줄이 이미 flex 중앙)과 배선
+     * (`_wireUpBtn`)이 그대로 따라온다.
+     */
+    function _addSensorModalUpButton(uniqueId, deviceUuid, channel) {
+        try {
+            var inst = window.AoTWidgetInstances && window.AoTWidgetInstances[uniqueId];
+            if (!inst || typeof inst._wireSensorModalUp !== 'function') return;
+            var hdr = document.querySelector(
+                '.aot-sensor-popup--docked > .aot-sensor-popup-header, ' +
+                '.aot-sensor-popup--modal > .aot-sensor-popup-header');
+            if (!hdr) return;
+            var btn = hdr.querySelector('.aot-modal-up');
+            if (!btn) {
+                btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'aot-modal-up';
+                // 같은 아이콘을 쓴다 — 여기만 글리프로 두면 센서 모달의
+                // 화살표만 다른 모양이 된다.
+                btn.innerHTML = (window.AoTMapPopup && window.AoTMapPopup.upIconHtml)
+                    ? window.AoTMapPopup.upIconHtml() : '\u2190';
+                btn.hidden = true;          // 상위를 알아낸 뒤 _wireUpBtn 이 편다
+                hdr.insertBefore(btn, hdr.firstChild);
+            }
+            inst._wireSensorModalUp(hdr, deviceUuid, channel, function () {
+                if (window.AoTSensorLabel && window.AoTSensorLabel.closePopup) {
+                    window.AoTSensorLabel.closePopup();
+                }
+            });
+        } catch (e) {}
+    }
+
     function createDevicePopup(uniqueId, dev, wOpts) {
         const devType = dev.device_type || dev.type || '';
         const isInput = devType === 'input';
@@ -10093,16 +11570,30 @@
                                 sensorObj.comm_fault = !!st.comm_fault;
                                 window.AoTSensorLabel.openPopup(sensorObj, {
                                     modal: true,
+                                    // 지도의 다른 창들과 **같은 셸**을 쓴다 —
+                                    // 폭이 넉넉하면 오른쪽 도킹, 좁으면 하단 시트.
+                                    // 이걸 안 주면 컴포넌트가 자기 중앙 오버레이를
+                                    // 띄워 입력만 옛 방식으로 남는다.
+                                    shell: _showFacilityCenterOverlay,
+                                    shellUid: uniqueId,
                                     note: { targetId: uniqueKey, targetType: 'device', name: displayName },
                                     onClose: function () {
+                                        _clearHighlight(uniqueId);
                                         _closeFns.forEach(function (fn) { try { fn(); } catch (e) {} });
                                     }
                                 });
+                                // **패널이 열린 뒤에** 옮긴다. 그 전에 부르면
+                                // 가려질 폭을 아직 몰라 위젯 한가운데를 기준으로
+                                // 잡고, 그러면 장치가 패널 뒤로 밀린다 —
+                                // 다른 모달들이 전부 셸을 연 뒤에 부르는 이유다.
+                                _focusMapOn(uniqueId, uniqueKey);
+                                _addSensorModalUpButton(uniqueId, uniqueKey, channel);
                             });
                     }
                     return this;
                 },
                 remove: function() {
+                    _clearHighlight(uniqueId);
                     if (window.AoTSensorLabel && window.AoTSensorLabel.closePopup) window.AoTSensorLabel.closePopup();
                     return this;
                 },

@@ -35,7 +35,7 @@ param_name='dashboard_id', use_query_string=False, page_type='') %}
 
     <!-- Setting Button -->
     <a href="#" class="aot-nav-tab-add text-center btn-fixed-40"
-       onclick="openTabSettings('{{ current_id }}', '{% for item in items if item.unique_id == current_id %}{{ item.name }}{% endfor %}', {{ items|length }}); return false;">
+       onclick="openTabSettings('{{ current_id }}', '{% for item in items if item.unique_id == current_id %}{{ item.name }}{% endfor %}', {{ items|length }}, '{{ page_type }}'); return false;">
         <i class="fa fa-cog"></i>
     </a>
 </div>

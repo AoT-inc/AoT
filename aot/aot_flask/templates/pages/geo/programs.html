@@ -1,4 +1,5 @@
 {% extends "layout.html" %}
+{% from 'macros/tabs.html' import render_tabs %}
 {% set active_page = "geo_programs" %}
 {% set help_page = [manual_url("geo/programs/"), _('Management Programs')] %}
 
@@ -6,6 +7,9 @@
 
 {% block head %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/aot-entry-ui.css') }}" />
+{#- 단계 기간 바가 쓰는 공용 시각화(밴드·불릿·기간 바). 지도 위젯의 작기
+    진행 바와 **같은 모양**이라 사용자가 따로 배울 것이 없다. -#}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/components/aot-dataviz.css') }}" />
 <link rel="stylesheet" href="{{ url_for('static', filename='css/pages/geo-program.css') }}" />
 {% endblock %}
 
@@ -20,7 +24,23 @@
     문법을 쓰면 사용자가 페이지마다 다시 배워야 한다.
 
     목록·저장은 전부 `/api/geo/program*` 를 지난다 — 서버 렌더 폼을 또 만들면
-    같은 검증이 두 벌이 된다. -#}
+    같은 검증이 두 벌이 된다.
+
+    탭은 input 페이지와 같은 인프라(`Tab`/`TabService`/`render_tabs`)를 그대로
+    쓴다 — page_type='program'. -#}
+  <div id="prog-tabs-sticky" class="container-fluid px-0 aot-sticky-tabs">
+    {{ render_tabs(
+        items=tabs,
+        current_id=current_tab_id,
+        link_endpoint='routes_geo.page_programs',
+        save_order_endpoint='/tab/save_order',
+        container_id='prog-tabs',
+        param_name='tab_id',
+        use_query_string=True,
+        page_type='program'
+    ) }}
+  </div>
+
 <main role="main" class="container">
   {% include 'flash_messages.html' %}
 
@@ -35,42 +55,62 @@
           원본 select 에만 붙이면 스타일이 하나도 안 걸리고 브라우저 기본 드롭다운이
           뜬다 — 앱의 다른 목록(function·output·camera)과 생김새·동작이 갈린다.
           layout 이 `$('.selectpicker').selectpicker()` 를 부른다. -#}
+      {#- `data-live-search`: 프로그램이 많아지면 스크롤 대신 타이핑으로 찾는다
+          — "장치 추가" 드롭다운(input 페이지)과 같은 bootstrap-select 내장
+          기능이다. -#}
       <select id="veg-base" class="selectpicker aot-standard-select"
-              data-style="btn btn-primary aot-roundbox"
+              data-style="btn btn-primary aot-roundbox" data-live-search="true"
               title="{{ _('Programs') }}: {{ _('Select') }}">
         <option value="">{{ _('Loading…') }}</option>
       </select>
     </div>
-    {#- 종류는 **만들 때 고른다.** 만든 뒤에 바꾸게 하면 식생 고정 항목 여섯이
-        먼저 들어왔다가 종류를 바꿀 때 빠지고, 값을 이미 적었다면 그 전환이
-        거절된다 — 축사 프로그램 하나 만드는 데 거쳐야 할 단계가 늘어난다.
-        템플릿·복제로 만들 때는 그쪽 종류를 따르므로 이 값은 쓰이지 않는다. -#}
+    {#- input 페이지의 "추가" 버튼과 같은 클래스만 쓴다(`btn btn-primary`).
+        `aot-pill-btn` 계열은 모달/드로어 전용 알약 버튼이라(`aot-modal-modern.css`),
+        모달 밖인 이 줄에 쓰면 그 쪽 배경색 규칙이 안 걸려 다른 버튼과 다르게
+        보인다 — 실제로 옆의 selectpicker 알약과 안 맞았다. -#}
     <div class="col-auto">
-      <select id="veg-kind" class="selectpicker aot-standard-select"
-              data-style="btn btn-primary aot-roundbox"
-              title="{{ _('Kind') }}">
-        <option value="vegetation">{{ _('Vegetation') }}</option>
-        <option value="livestock">{{ _('Livestock') }}</option>
-        <option value="facility">{{ _('Facility') }}</option>
-        <option value="other">{{ _('Other') }}</option>
-      </select>
-    </div>
-    <div class="col-auto">
-      <button type="button" id="veg-add" class="btn btn-primary aot-pill-btn aot-pill-btn-primary">
+      <button type="button" id="veg-add" class="btn btn-primary">
         {{ _('Add') }}
       </button>
     </div>
-    <div class="col-auto">
+  </div>
+
+  {#- 버튼 줄과 같은 줄에 두면 버튼 옆으로 밀려 좁은 화면에서 잘리거나
+      줄바꿈이 뒤섞인다 — 설명은 그 아래 자기 줄로 내린다. -#}
+  <div class="row">
+    <div class="col-12">
       <span class="aot-modal-body-text" id="veg-hint">
-        {{ _('Start empty, or begin from a template. Templates are examples — nothing is installed until you add it.') }}
+        {{ _('Starting from a template is easiest — it comes with stages and lengths already filled in, and you change what differs. Nothing is installed until you add it.') }}
       </span>
     </div>
   </div>
 
   <div style="clear: both; padding: 1em 0;"></div>
 
+  {#- 현재 탭 안에서만 실시간으로 좁힌다(서버 재조회 없음 — 이미 받아 온
+      목록을 거른다). 탭이 목록을 나누는 1차 수단이고, 검색은 그 안에서
+      찾는 2차 수단이다.
+
+      돋보기 아이콘 + 알약형 입력 그룹은 새로 만들지 않고 notes 페이지의
+      검색창 클래스를 그대로 가져다 쓴다(`tools/notes.html`, `aot-base.css`)
+      — 위쪽 "추가" 줄의 `aot-modern-input`류 일반 입력칸과 생김새를 다르게
+      둬야, 목록 바로 위에 있어도 "이건 검색창" 이라는 게 한눈에 온다. -#}
+  <div class="note-search-input-group ui-pill" id="veg-search-group">
+    <span class="note-search-icon"><i class="fas fa-search"></i></span>
+    <input type="text" id="veg-search" class="note-search-input"
+           placeholder="{{ _('Search programs…') }}"
+           aria-label="{{ _('Search programs…') }}">
+  </div>
+
+  <div style="clear: both; padding: 0.5em 0;"></div>
+
   <div id="veg-list" class="aot-entry-container"></div>
 </main>
+
+{#- 탭 추가/설정 버튼이 부르는 전역 함수(createNewTab/openTabSettings 등)는
+    여기서 온다 — input 페이지와 같은 스크립트다. -#}
+<script src="{{ url_for('static', filename='js/app/tab_management.js') }}"></script>
+{% include 'modals/tab_settings.html' %}
 
 {#- 설정 드로어 — input 페이지와 같은 셸(`aot-option-modal aot-widget-drawer`).
 
@@ -111,7 +151,17 @@
 {#- 화면 문구 — JS 가 window._PROG 로 읽는다(다른 geo 페이지와 같은 방식). -#}
 <script>
 window._PROG = {
-  empty:        {{ _('No programs yet. Add one above.')|tojson }},
+  {#- 서버가 렌더한 활성 탭. JS 가 목록을 그 탭으로 거른다. -#}
+  currentTabId: {{ current_tab_id|tojson }},
+  tab:          {{ _('Tab')|tojson }},
+
+  {#- ── 목록이 비었을 때 ─────────────────────────────────────────────────
+      **이 기능이 무엇을 돌려주는지**를 말한다. 기능 설명("프로그램을 만드세요")
+      으로는 사람이 40칸을 채울 이유를 알 수 없다. 실제로 돌아오는 것은 셋이다:
+      구획에 붙이면 단계·남은 일수·수확 예정일이 따라오고, 지도에서 그 구획을
+      누르면 지금 단계의 지침이 뜨고, 단계 목표가 제어로 흐른다. -#}
+  empty:        {{ _('Nothing here yet. Write down how you grow something once — the stages and how long each takes — and every plot you attach it to will track its own stage, days left and harvest date, and show your notes for the stage it is in.')|tojson }},
+  empty_search: {{ _('No programs match your search.')|tojson }},
   new_program:  {{ _('New program')|tojson }},
   {#- 개수·기간은 **한 msgid 로** 둔다. 숫자와 단위를 따로 이어붙이면 언어마다
      어순이 달라 "7 단계" 가 아니라 "단계 7" 이어야 하는 곳에서 깨진다. -#}
@@ -119,6 +169,22 @@ window._PROG = {
      500 이 났다). 자리표시자를 넘겨 번역만 받고, 치환은 JS 가 한다. -#}
   n_stages:     {{ _('%(n)s stages', n='{n}')|tojson }},
   n_days:       {{ _('%(n)s days', n='{n}')|tojson }},
+
+  {#- ── 그룹 제목 ────────────────────────────────────────────────────────
+      드로어는 **네 덩이 + 전문가**로 읽힌다: 무엇을 기르는가(기본) → 어떻게
+      나누는가(단계) → 무엇을 맞추는가(목표) → 무엇이 필요한가(자원).
+
+      예전에는 이 넷이 한 상자에 이어져 있어 어느 설명이 어느 항목의 것인지
+      읽어 봐야 알 수 있었고, 모르는 칸(광합성 상수·적산온도)이 아는 칸 사이에
+      섞여 있어 화면 전체가 어려워 보였다. -#}
+  g_basic:      {{ _('Basics')|tojson }},
+  g_basic_note: {{ _('What this programme is and why. Only the name is needed — everything else can wait.')|tojson }},
+  {#- 목표·자원 그룹 제목은 기존 msgid 를 그대로 쓴다(`Targets`="목표",
+      `Resources`="자원") — 같은 뜻을 두 msgid 로 갈라 두면 한쪽만 번역된다. -#}
+  g_targets:    {{ _('Targets')|tojson }},
+  g_advanced:   {{ _('Advanced settings')|tojson }},
+  g_advanced_note: {{ _('None of this is needed. Leave it empty unless you already know the numbers.')|tojson }},
+
   {#- 'Subject' 는 기존 카탈로그에서 "주제" 로 번역돼 있다 — 뜻이 다르면 msgid 를
      나눈다("Sensors"="센서류" 교훈). 여기서 말하는 것은 이 프로그램이 무엇을
      관리하는가다(작물·수종·잔디·그 밖의 대상). -#}
@@ -131,9 +197,21 @@ window._PROG = {
   subject_custom: {{ _('Enter a new one…')|tojson }},
   variety:      {{ _('Variety')|tojson }},
   name:         {{ _('Name')|tojson }},
+  {#- 의도 — `notes` 컬럼. 서버는 예전부터 받아 왔는데 **화면에만 없었다.**
+      "메모" 라고만 하면 아무도 안 적으므로, 무엇을 적는 칸인지 물어서 묻는다. -#}
+  {#- 그냥 "설명" 이다. 무슨 칸인지를 제목이 아니라 **설명이 말한다** —
+      제목을 "왜 이렇게 하는지" 처럼 물음으로 두면 그것부터 해석해야 했다.
+      문구는 종류에 중립이어야 한다(작물만 다루지 않는다). -#}
+  intent:       {{ _('Description')|tojson }},
+  intent_note:  {{ _('What this programme is for and how you want it to run. Written in your own words and read back whenever the programme comes up — by you, and by the AI when it advises on a plot using it.')|tojson }},
+  intent_ph:    {{ _('e.g. Started early so it finishes before the summer heat. Ease off the water once it starts to bolt.')|tojson }},
   stage_name:   {{ _('Stage name')|tojson }},
-  stage_key:    {{ _('Key')|tojson }},
+  {#- 'Key' 는 사람에게 물을 것이 아니다 — 이름에서 만들어 준다. 칸은 남기되
+     접어 두고, 무엇인지 한 줄로 말한다. -#}
+  stage_key:    {{ _('Stage code')|tojson }},
+  stage_key_note: {{ _('The name the system uses for this stage. Leave it blank and it is made from the stage name. Changing it on a stage already in use cuts the link to what has been recorded.')|tojson }},
   stage_days:   {{ _('Days')|tojson }},
+  stage_days_note: {{ _('How long this stage lasts, counted from when the one before it ended. Leave the last one blank to run until the end.')|tojson }},
   until_end:    {{ _('until the end')|tojson }},
   add_stage:    {{ _('Add stage')|tojson }},
   save:         {{ _('Save')|tojson }},
@@ -150,61 +228,110 @@ window._PROG = {
   mark_reviewed:{{ _('Mark as checked')|tojson }},
   empty_base:   {{ _('Empty program')|tojson }},
   from_template:{{ _('From a template')|tojson }},
-  copy_mine:    {{ _('Copy one of mine')|tojson }},
-  new_subject:  {{ _('unnamed')|tojson }},
   version:      {{ _('Version')|tojson }},
   {#- 단계 목표. **항목 이름은 여기 두지 않는다** — 항목이 프로그램마다 다르고
       (종류별 고정 항목 + 사용자가 만든 항목) 서버가 `target_defs` 로 라벨까지
       번역해 준다. 여기 표를 두면 사용자가 만든 항목은 영영 안 보인다. -#}
   targets:      {{ _('Targets')|tojson }},
-  targets_note: {{ _('Used for display and advice. Control is not changed automatically.')|tojson }},
+  stage_targets: {{ _('Different in this stage')|tojson }},
+  stage_targets_note: {{ _('Only what differs from the programme target. Anything left out follows the value set under Targets.')|tojson }},
   no_targets:   {{ _('No target items yet. Add one below to track a value for each stage.')|tojson }},
   target_items: {{ _('Target items')|tojson }},
-  target_items_note: {{ _('Pick what this programme aims for. Items with a measurement type are followed by the system; the rest stand as reference targets you meet your own way. Hide what you do not use, and leave anything blank you have not decided.')|tojson }},
+  {#- 예전 설명은 "무엇을 목표로 삼을지 고릅니다" 로 시작했는데, 정작 그 줄에
+      있는 입력칸이 무엇인지는 말하지 않았다 — 사람은 "미지정" 이라 적힌 빈 칸을
+      보며 무엇을 지정하라는 것인지 물었다. 값이 무엇인지부터 말한다. -#}
+  target_items_note: {{ _('The numbers this programme aims for. Switch on what you manage, and fill in a number when you have decided one — anything switched off is simply not part of this programme.')|tojson }},
   item_name:    {{ _('Item name')|tojson }},
   item_unit:    {{ _('Unit')|tojson }},
   common:       {{ _('Common')|tojson }},
-  stages:       {{ _('Stages')|tojson }},
-  stages_note:  {{ _('One stage is fine. Split only where management actually changes — stages run on days elapsed from the start date, so they do not line up with calendar seasons.')|tojson }},
+  {#- `Stages` 는 기존 카탈로그에서 "단"(단수를 세는 말) 으로 번역돼 있다 —
+      그대로 쓰면 화면 제목이 "단" 한 글자로 뜬다. 실제로 그랬다. -#}
+  stages:       {{ _('Program stages')|tojson }},
+  {#- 기간 바의 라벨. 그룹 제목이 이미 "단계" 라 여기에 또 "단계" 를 쓰면
+      화면에 "단계 / 단계" 가 뜬다. -#}
+  total_span:   {{ _('Whole run')|tojson }},
+  stages_note:  {{ _('Split the run into stretches you manage differently, and give each one how many days it lasts. One stage is completely fine.')|tojson }},
   override_pick:{{ _('Set a different value here…')|tojson }},
-  default_is:   {{ _('default {v}')|tojson }},
-  unset:        {{ _('not set')|tojson }},
+  default_is:   {{ _('programme target {v}')|tojson }},
+  unset:        {{ _('no target')|tojson }},
   all_items:    {{ _('All')|tojson }},
   add_item:     {{ _('Add item')|tojson }},
+  {#- 추가 줄에 제목이 없어 위 목록과 구분되지 않았다 — 세 칸이 갑자기
+      나타나는 것처럼 보인다. -#}
+  add_item_title: {{ _('Add your own item')|tojson }},
+  add_item_note: {{ _('For anything the list above does not cover — EC, pH, stocking density. Pick a measurement type and the system reads it from your sensors; leave it blank and the item is yours to read.')|tojson }},
   del_item:     {{ _('Delete this item?')|tojson }},
   del_item_values: {{ _('Delete this item? {n} stage value(s) will be removed.')|tojson }},
   dup_item:     {{ _('That item already exists.')|tojson }},
-  hide:         {{ _('Hide')|tojson }},
-  measured:     {{ _('measured')|tojson }},
+  {#- 예전에는 "숨기기" 체크박스였다. 이중부정(체크하면 안 쓴다)이라 한 번
+      멈춰 읽어야 했고, 시스템의 다른 화면은 전부 슬라이드 토글로 사용 여부를
+      말한다. 뜻을 뒤집어 "사용" 으로 둔다. -#}
+  use_item:     {{ _('In use')|tojson }},
+  {#- 단계마다 다른 값을 쓰는가 — **화면 전용 스위치**다(저장하지 않는다).
+      켜야 단계 상세에 그 칸이 나온다. 늘 내면 단계마다 또 정할 것이 있는
+      것처럼 읽혀, 쓰지도 않는 칸이 화면을 채운다. -#}
+  per_stage_targets: {{ _('Use different values per stage')|tojson }},
+  per_stage_targets_note: {{ _('Off, every stage aims for the numbers above. On, each stage gets its own box where you set only what differs.')|tojson }},
+  per_stage_res: {{ _('Different per stage')|tojson }},
+  per_stage_res_note: {{ _('Off, every stage uses what is switched on above. On, each stage can turn one of them off — a dry-down before harvest, for instance.')|tojson }},
+  per_stage_off_confirm: {{ _('Values set on individual stages will be removed. Continue?')|tojson }},
+  {#- 'measured' 는 "측정됨" 으로 번역돼, 무엇이 언제 측정됐다는 말인지 알 수
+      없었다. 말하려던 것은 "이 항목은 센서에서 읽어 온다" 다. -#}
+  measured:     {{ _('sensor-linked')|tojson }},
   no_measurement: {{ _('Reference target only')|tojson }},
+  {#- 지침이 단계의 주인공이다. AI 가 일반 조언보다 이것을 우선하고
+      (tool_registry 의 list_plots·get_plot 설명), **AI 를 쓰지 않아도**
+      지도에서 그 구획을 누르면 사람이 이것을 읽는다
+      (aot-map-popup.js 의 `.aot-ov-guidance`). -#}
   guidance:     {{ _('Guidance')|tojson }},
-  guidance_ph:  {{ _('What matters in this stage — watering, ventilation, things to watch for.')|tojson }},
+  guidance_note: {{ _('Shown on the map when someone opens a plot that is in this stage.')|tojson }},
+  guidance_ph:  {{ _('e.g. Keep it on the dry side. Vent early on sunny mornings. Watch for aphids under the leaves.')|tojson }},
   curves:       {{ _('Target curves')|tojson }},
   curves_note:  {{ _('A curve overrides the stage value for that item. Time runs from the start date.')|tojson }},
   curve_none:   {{ _('Fixed value')|tojson }},
-  stage_gdd:    {{ _('GDD')|tojson }},
-  by_days:      {{ _('by days')|tojson }},
-  t_base:       {{ _('Base temperature')|tojson }},
-  gdd_note:     {{ _('With a base temperature and a GDD per stage, stages advance on accumulated heat instead of the calendar.')|tojson }},
-  {#- 광합성 모델 상수 — 코디네이터가 광합성 지향 제어를 돌 때만 쓴다. -#}
+  {#- ── 단계 전환 ─────────────────────────────────────────────────────── -#}
+  stage_gdd:    {{ _('Heat units')|tojson }},
+  by_days:      {{ _('blank = go by days')|tojson }},
+  {#- "생육 기준온도" 보다 **하는 일**을 그대로 부르는 편이 낫다 — 이 값은
+      적산온도(GDD)를 셀 때의 기준선이다. -#}
+  t_base:       {{ _('Heat unit base temperature')|tojson }},
+  gdd_note:     {{ _('The starting line for counting heat units. Each day banks the average temperature minus this number: base 10, a day averaging 18, banks 8. Set this and the heat units on each stage, and stages advance on warmth banked instead of days on the calendar. Leave it blank and stages go by days.')|tojson }},
+  {#- 광합성 모델 상수 — 코디네이터가 광합성 지향 제어를 돌 때만 쓴다.
+      사용자가 "설명을 봐도 무슨 설정인지 알 수 없다" 고 한 자리다. 무엇을
+      요약한 숫자인지, 누가 읽는지, 비워 두면 어떻게 되는지를 먼저 말한다. -#}
   photo_model:  {{ _('Photosynthesis model')|tojson }},
-  photo_note:   {{ _('Used only when the coordinator runs photosynthesis-oriented control. Leave them alone unless you have measured values — templates come filled in.')|tojson }},
+  photo_note:   {{ _('A few numbers describing how this crop responds to light, temperature and CO2. These do not compete with the targets above — a target is the number to reach, these describe how the crop behaves on the way there, and only the environment coordinator reads them when it is set to control for photosynthesis. Leave the whole block empty if you do not run that. Do not guess: a wrong number makes control quietly wrong. Templates come filled in from published figures.')|tojson }},
   p_amax:       {{ _('Max photosynthesis')|tojson }},
+  p_amax_note:  {{ _('How fast this crop can photosynthesise when light and CO2 are plentiful.')|tojson }},
   p_kl:         {{ _('Light half-saturation')|tojson }},
+  p_kl_note:    {{ _('The light level at which it reaches half that maximum. Lower means it does well in weaker light.')|tojson }},
   p_kc:         {{ _('CO2 half-saturation')|tojson }},
+  p_kc_note:    {{ _('The CO2 concentration at which it reaches half the maximum.')|tojson }},
   p_topt:       {{ _('Optimum temperature')|tojson }},
+  p_topt_note:  {{ _('The temperature at which photosynthesis is fastest.')|tojson }},
   p_tsig:       {{ _('Temperature width')|tojson }},
+  p_tsig_note:  {{ _('How far from the optimum it still does well. Larger means less fussy about temperature.')|tojson }},
   p_vpdh:       {{ _('VPD half-saturation')|tojson }},
+  p_vpdh_note:  {{ _('The dryness of the air at which the stomata are half closed. Lower means it suffers sooner in dry air.')|tojson }},
   p_dli:        {{ _('Suggested DLI')|tojson }},
+  p_dli_note:   {{ _('The total light worth aiming for in a day.')|tojson }},
   p_gdd:        {{ _('Suggested GDD per day')|tojson }},
+  p_gdd_note:   {{ _('Roughly how much warmth this crop banks on a normal day.')|tojson }},
   auto_advance: {{ _('Advance stages automatically')|tojson }},
-  auto_advance_note: {{ _('Stages are recorded without asking. The date comes from the data, not from when you happen to look.')|tojson }},
+  auto_advance_note: {{ _('On, a stage change is recorded as soon as the data says it is due. Off, you get a suggestion and it only counts once you confirm it. Either way the date comes from the data, not from when you happen to look.')|tojson }},
   resources:    {{ _('Resources')|tojson }},
-  resources_note_v2: {{ _('Declare what this crop needs. Which device does it is resolved from the site, so the same programme works in more than one place.')|tojson }},
+  resources_note_v2: {{ _('What this programme needs. Nothing is switched on here — a plot using this programme looks at where it sits and reports whether the equipment for each of these is actually there, so you find out before the crop does. Only watering can be found that way today, and only inside a facility: it is matched to irrigation valves placed on the facility plan. The others are recorded as intent until there is a way to recognise them.')|tojson }},
   res_overridden: {{ _('set for this stage')|tojson }},
   res_from_default: {{ _('follows the programme')|tojson }},
   res_changed:  {{ _('Resources changed')|tojson }},
-  res_irrigation: {{ _('Irrigation')|tojson }},
+  {#- 'Irrigation' 은 카탈로그에서 "관개" 다 — 논에 물을 대는 말이라 시설재배
+      화면에서는 어긋난다. 이 화면이 말하는 것은 물주기다. -#}
+  {#- 역할마다 **지금 시스템이 그것을 찾을 수 있는지**를 밝힌다. 현장 어휘가
+      있는 것은 관수뿐이다(`plot_context._ROLE_FITTING_KINDS`) — 말하지 않으면
+      시비를 켜 둔 사람이 "왜 아무 일도 안 일어나지" 를 혼자 헤맨다. -#}
+  res_resolved: {{ _('Matched to irrigation valves placed on the facility plan.')|tojson }},
+  res_intent_only: {{ _('Recorded as intent — there is no way to recognise this equipment yet.')|tojson }},
+  res_irrigation: {{ _('Watering')|tojson }},
   res_fertigation: {{ _('Fertigation')|tojson }},
   res_other:    {{ _('Other')|tojson }},
   stage_delete: {{ _('Delete this stage')|tojson }},
@@ -215,5 +342,6 @@ window._PROG = {
 </script>
 <script src="{{ url_for('static', filename='js/common/aot-widget-drawer.js') }}"></script>
 <script src="{{ url_for('static', filename='js/common/aot-plot-labels.js') }}"></script>
+<script src="{{ url_for('static', filename='js/common/aot-dataviz.js') }}"></script>
 <script src="{{ url_for('static', filename='js/geo/program-settings.js') }}"></script>
 {%- endblock -%}

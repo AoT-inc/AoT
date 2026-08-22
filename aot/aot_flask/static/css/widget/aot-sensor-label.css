@@ -189,6 +189,52 @@
   -ms-overflow-style: none;     /* IE/Edge */
 }
 .aot-sensor-popup--modal::-webkit-scrollbar { width: 0; height: 0; display: none; }
+
+/* 도킹 셸 안에서는 **셸의 닫기(✕)만 쓴다.** 센서 컴포넌트는 자기 제목줄에
+   닫기 버튼을 하나 그리는데(자립형 중앙 모달일 때 필요하다), 셸 안에서는 셸이
+   우상단에 또 하나를 두어 **버튼이 나란히 둘** 있었다(실측: 컴포넌트 것이
+   셸 것 왼쪽 16px 옆). 시설 위젯처럼 셸 없이 뜨는 경우는 그대로 둔다 —
+   거기서는 이것이 유일한 닫기다. */
+.aot-center-modal .aot-sensor-popup--docked .aot-sensor-popup-close {
+  display: none;
+}
+
+/* 도킹 셸 안에서 열린 센서 모달. 크기는 셸이 정하므로(오른쪽 패널 / 하단 시트)
+   여기서는 그 칸을 가득 채우기만 한다 — 자체 clamp 폭·vh 높이를 그대로 두면
+   패널 안에 또 하나의 카드가 떠 있는 꼴이 된다. */
+.aot-sensor-popup--docked {
+  position: relative;
+  left: auto; top: auto;
+  width: 100%;
+  max-width: 100%;
+  height: 100%;
+  max-height: 100%;
+  display: flex;
+  flex-direction: column;
+  /* **카드 장식을 전부 걷어낸다.** 셸(.aot-center-modal)이 이미 카드다 —
+     배경·테두리·라운드·그림자를 그대로 두면 창 안에 창이 하나 더 뜬 것처럼
+     보인다(실측: 배경 #fff vs 셸 #f3f6f5, 라운드 16 vs 12, 테두리 1px, 그림자
+     두 벌). 크기와 여백도 셸이 정한다. */
+  background: none;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  padding: 0;
+  /* 자립형 팝업은 호스트 위에 떠야 해서 z-index:50 을 갖는다. 셸 안에서는 그것이
+     **셸의 닫기 버튼(z 3)까지 덮어** 버튼이 통째로 안 보였다 — 스택 컨텍스트가
+     생겨 그 안의 sticky 제목줄이 바깥 버튼을 가린 것이다. 셸 안에서 본문은
+     떠 있을 이유가 없다. */
+  z-index: auto;
+  /* 글자 기준도 셸을 따른다 — 1rem 으로 고정하면 이 모달만 다른 크기가 된다
+     (셸은 14px 기준이고 내부는 전부 em 체인이다). */
+  font-size: inherit;
+  overflow-y: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.aot-sensor-popup--docked::-webkit-scrollbar { width: 0; height: 0; display: none; }
+.aot-sensor-popup--docked .aot-sensor-popup-title { font-size: 1.1em; }
+.aot-sensor-popup--docked .aot-sensor-popup-chart-wrap { flex: 0 0 auto; }
 .aot-sensor-popup--modal .aot-sensor-popup-title { font-size: 1.1em; }
 .aot-sensor-popup--modal .aot-sensor-popup-chart-wrap { flex: 0 0 auto; }
 
@@ -325,7 +371,8 @@
 
 /* 헤더(제목) 행 — 센서 팝업 헤더와 동일한 행높이/정렬. 닫기(×) 버튼
    (popupWrap 우상단 absolute)을 회피하는 우측 여백을 헤더가 담당한다. */
-.aot-center-modal > .aot-sensor-popup-header {
+.aot-center-modal > .aot-sensor-popup-header,
+.aot-center-modal .aot-sensor-popup--docked > .aot-sensor-popup-header {
   flex: 0 0 auto;
   min-height: 36px;
   align-items: center;
@@ -334,12 +381,48 @@
   padding-bottom: 6px;
   border-bottom: 1px solid var(--aot-border-light);
 }
+/* 도킹된 센서 본문은 자기가 스크롤한다(구역·시설 모달은 헤더 밖의 pane 이
+   스크롤한다). 감쌀 pane 이 없으므로 헤더를 붙여 둔다 — 스크롤해도 제목과
+   닫기 버튼이 함께 남아 다른 모달과 같이 읽힌다. */
+.aot-center-modal .aot-sensor-popup--docked > .aot-sensor-popup-header {
+  /* 배지(통신·배터리)와 닫기 사이 간격을 절반으로. 공용 제목줄은 닫기를 피해
+     오른쪽 36px 을 비우는데, 배지가 붙는 이 제목줄에서는 그 틈이 16px 로 떠
+     보였다. 28px 이면 8px 이 된다(닫기는 right:12px + 폭 24px). */
+  padding-right: 28px;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  /* 셸과 **같은 배경**이어야 한다. `inherit` 은 부모(투명한 본문)를 따라가
+     스크롤할 때 차트가 제목 뒤로 비친다. 값은 셸이 쓰는 토큰 그대로다
+     (.maplibregl-popup-content, map.css). */
+  background: var(--bd-secondary, #F3F6F5);
+}
 
 /* Section tab navigation — 헤더와 분리된 독립 행 (상위 단계 탭) */
 .aot-bay-popup-nav {
   margin-bottom: 6px;
   flex-shrink: 0;
   padding-right: 0;        /* 닫기 버튼 회피는 헤더 행이 담당 */
+  /* 본문을 아래로 훑으면 접히고, 위로 올리면 즉시 돌아온다(셸 JS 가 클래스를
+     토글한다). 폰 시트는 높이가 곧 전부라 이 한 줄이 본문 30여 px 을 돌려준다.
+     max-height 는 실제 높이보다 넉넉히 — 정확한 값을 알 수 없고, 넘겨 잡아도
+     펼침 전이가 그만큼 빨리 끝날 뿐이다. */
+  max-height: 80px;
+  overflow: hidden;
+  transition: max-height 0.18s ease, opacity 0.18s ease,
+              margin-bottom 0.18s ease, padding 0.18s ease;
+}
+.aot-center-modal.aot-nav-collapsed .aot-bay-popup-nav {
+  max-height: 0;
+  opacity: 0;
+  margin-bottom: 0;
+  /* 여백·테두리도 함께 걷는다 — max-height 만 0 으로 두면 그것들이 남아
+     7px 짜리 띠가 그대로 있었다(실측). 접을 거면 자리를 완전히 비운다. */
+  padding-top: 0;
+  padding-bottom: 0;
+  border-top-width: 0;
+  border-bottom-width: 0;
+  pointer-events: none;    /* 접힌 탭이 클릭을 가로채지 않게 */
 }
 
 /* Pane container: flex column with overflow handling
@@ -372,8 +455,8 @@
   padding: var(--aot-space-4) var(--aot-space-4);
   border-radius: 16px;
   margin-bottom: var(--aot-space-4);
-  background: var(--aot-surface-card, var(--bg-off));
-  border: 1px solid var(--aot-border-neutral, var(--aot-border-light));
+  background: var(--bd-primary, #FFFFFF); /* 카드 배경 = 배경 기본 (모달 페이지 배경인 배경 보조와 대비) */
+  border: none;
   /* 본문 기준 크기 — AoT 모던 모달의 일반 텍스트(base)와 동일.
      하위 요소는 상속으로 균일화 (sm 은 모바일에서 너무 작음) */
   font-size: var(--aot-font-size-base);
@@ -947,6 +1030,120 @@
   }
 }
 
+/* ─── 지도 위젯 도킹 패널 (side / sheet) ────────────────────────────────────
+   같은 셸(.aot-center-modal)을 지도 위젯 **안**에 띄우는 모드. 어느 모드로 뜰지는
+   위젯의 렌더 크기가 정한다(JS `_panelHostFor`). 시설 위젯처럼 지도가 없는
+   호출자는 이 클래스를 받지 않으므로 위의 중앙 카드 규칙 그대로다.
+
+   백드롭이 없다는 것이 핵심이다 — 지도가 계속 보이고, 계속 조작되고, 다른 도형을
+   눌러 패널 내용을 바꿀 수 있어야 모달과 지도를 대조할 수 있다. */
+.aot-map-panel-layer {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  box-sizing: border-box;
+  /* 레이어는 통과, 패널만 받는다. 지도를 만질 수 있어야 한다. */
+  pointer-events: none;
+  /* 지도 로컬 z 스케일은 0~99 인데(map.css 상단 표) 라벨 핀은 그 밖의
+     LABEL_Z_FRONT(9000)를 인라인으로 쓴다. 핀된 라벨이 패널을 뚫지 않도록 그
+     위에 둔다. 라벨 핀을 스케일 안으로 되돌리면 이 값도 80 으로 내릴 것. */
+  z-index: 9500;
+}
+.aot-map-panel-layer[data-mode="side"] {
+  justify-content: flex-end;
+  align-items: stretch;
+  padding: 8px;
+}
+.aot-map-panel-layer[data-mode="sheet"] {
+  justify-content: center;
+  align-items: flex-end;
+}
+
+.aot-map-panel-wrap { pointer-events: auto; position: relative; }
+/* 닫기(✕)는 **언제나 맨 위**에 있어야 한다. 도킹 셸 안의 sticky 제목줄이
+   z-index:1 에 불투명 배경이라, 그 위를 덮어 버튼이 통째로 사라졌다(실측: 버튼
+   자리의 최상위 요소가 제목줄이었다 — 버튼은 멀쩡히 있었는데 보이지 않았다).
+   닫기의 z-index 는 인라인이라 !important 로만 이길 수 있다. */
+.aot-map-panel-layer > .aot-map-panel-wrap > .aot-center-modal-close {
+  z-index: 3 !important;
+}
+/* 크기는 감싼 wrap 이 정하고 셸은 그것을 채운다. 셸에 직접 %를 주면 shrink-to-fit
+   래퍼와 순환 참조가 된다. % 기준은 레이어(=위젯 크기)다. */
+.aot-map-panel-layer[data-mode="side"]  > .aot-map-panel-wrap { width: clamp(320px, 34%, 560px); }
+.aot-map-panel-layer[data-mode="sheet"] > .aot-map-panel-wrap {
+  width: 100%;
+  height: clamp(220px, 62%, 100%);
+}
+
+/* (0,3,0) — 셸의 고정 clamp 폭·min(80vh) 높이와 폰 전체화면 규칙(0,1,0)을 모두 이긴다. */
+.aot-map-panel-layer > .aot-map-panel-wrap > .aot-center-modal {
+  width: 100%;
+  max-width: 100%;
+  height: 100%;
+  max-height: 100%;
+}
+.aot-map-panel-layer[data-mode="side"] > .aot-map-panel-wrap > .aot-center-modal {
+  border-radius: 12px;
+  box-shadow: -6px 0 24px rgba(0, 0, 0, 0.18);
+}
+.aot-map-panel-layer[data-mode="sheet"] > .aot-map-panel-wrap > .aot-center-modal {
+  border-radius: 16px 16px 0 0;
+  box-shadow: 0 -6px 24px rgba(0, 0, 0, 0.22);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* 시트 그랩바 — 누르면 시트가 위젯 전체로 커진다. 바텀시트의 표준 어포던스라
+   라벨이 필요 없고, 아이콘을 새로 들이지 않는다. 터치 목표는 보이는 막대보다
+   크게 잡는다(막대만 44px 로 만들면 시트 위에 굵은 띠가 생긴다). */
+.aot-map-sheet-grab {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 96px;
+  /* 시트 padding-top(22px) 안에 정확히 들어가는 높이 — 더 크면 헤더 위로
+     클릭 영역이 넘어간다. 보이는 막대는 4px 이라 여기가 터치 목표다. */
+  height: 22px;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+}
+.aot-map-sheet-grab::before {
+  content: "";
+  display: block;
+  width: 44px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--aot-text-secondary, #98a2b3);
+  opacity: 0.55;
+  transition: opacity 0.15s ease, width 0.15s ease;
+}
+.aot-map-sheet-grab:hover::before { opacity: 0.85; width: 56px; }
+.aot-map-sheet-grab:focus-visible { outline: 2px solid var(--aot-focus-ring, #4c9aff); outline-offset: 2px; }
+
+/* 그랩바는 시트 **안** 위쪽 여백에 앉는다. 예전에는 래퍼에 padding-top 을 주고
+   시트 높이에서 그만큼 또 뺐는데, 래퍼의 콘텐츠 영역이 이미 줄어든 뒤라 18px 을
+   두 번 뺀 셈이 되어 **시트 아래가 잘렸다**. 게다가 닫기 버튼은 래퍼 기준
+   absolute 라 시트보다 위에 떠서 허공에 놓였다. 이제 래퍼는 시트와 같은 크기이고
+   (닫기 버튼 좌표가 그대로 맞는다) 여백은 시트 자신의 padding 이 갖는다. */
+.aot-map-panel-layer[data-mode="sheet"] > .aot-map-panel-wrap > .aot-center-modal {
+  padding-top: 22px;
+}
+
+/* 확대 상태 — 시트가 위젯을 가득 채운다. 높이만 바뀌므로 안에서 렌더된
+   차트·표는 그대로 있고, 지도는 뒤에 살아 있다(닫지 않았다). */
+.aot-map-panel-layer[data-mode="sheet"].is-expanded > .aot-map-panel-wrap {
+  height: 100%;
+}
+.aot-map-panel-layer[data-mode="sheet"] > .aot-map-panel-wrap {
+  transition: height 0.22s cubic-bezier(0.075, 0.82, 0.165, 1);
+}
+
 /* ─── 배터리 / 통신품질 배지 ─────────────────────────────────────────────────
    지도 위젯의 세 모달(입력 센서 · 출력/함수 팝업 · 장치 라벨 팝업)이 공유한다.
    생성은 sensor-label.js 의 linkBadgesHtml() 한 곳뿐 — 마크업이 여기 없는 이유다.
@@ -1089,20 +1286,29 @@
 .aot-modal-up {
   flex-shrink: 0;
   border: none;
-  background: transparent;
   font-size: 16px;
   line-height: 1;
+  /* 글리프(←)를 버튼 상자 한가운데 놓는다. 텍스트 기준선에 맡기면 글꼴마다
+     위아래로 조금씩 어긋나, 옆의 제목·상태 점과 눈에 띄게 어긋나 보인다. */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
   color: var(--aot-color-text-secondary);
-  padding: 4px 6px;
-  margin-left: -6px;   /* 제목이 모달 왼쪽 정렬을 유지하도록 광학 보정 */
-  border-radius: var(--aot-radius-sm, 6px);
+  /* 원형 32px. 글리프 하나짜리 버튼은 좌우 패딩으로 크기를 잡으면 글꼴마다
+     폭이 달라져 원이 타원이 된다 — 지름을 직접 고정하고 패딩은 0 으로 둔다.
+     배경은 settings/custom_ui 의 **배경 기본**(`bd_primary`)이다. */
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  margin-left: 0;
+  border-radius: 50%;
+  background: var(--bd-primary, #FFFFFF);
 }
 .aot-modal-up[hidden] { display: none; }
 @media (hover: hover) {
   .aot-modal-up:hover {
     color: var(--aot-color-text-primary);
-    background: var(--aot-surface-card, var(--bg-off));
   }
 }
 
@@ -1477,3 +1683,149 @@
   gap: 6px;
   margin: var(--aot-space-3, 12px) 0 0;
 }
+
+/* ── 모달 안 카드 규격 통일 ────────────────────────────────────────────────
+   [현황]·[개요] 탭은 `.aot-ov-block` 이 카드다 — 라운드 16px · 안팎 여백 16px ·
+   흰 배경. 그런데 [환경·제어] 탭의 그래프와 제어 카드만 다른 값을 써서(그래프는
+   카드가 아예 아니었고, 제어 행은 라운드 4.8px) 같은 창 안에서 모서리가 두 종류로
+   보였다. 셸 안에서는 같은 규격으로 맞춘다.
+
+   **셸(.aot-center-modal) 안으로 범위를 좁힌다** — `.aot-act-row` 는 시설 위젯의
+   제어 목록도 쓰는 클래스라, 전역으로 바꾸면 모달과 무관한 화면까지 끌려온다.
+   장치·센서 모달도 같은 셸을 쓰므로 이 한 벌로 함께 맞춰진다. */
+.aot-center-modal .aot-zone-chart-area,
+.aot-center-modal .aot-bay-popup-section[data-zone="sensors"],
+.aot-center-modal .aot-sensor-popup-chart-wrap {
+  padding: var(--aot-space-4);
+  border-radius: 16px;
+  margin-bottom: var(--aot-space-4);
+  background: var(--bd-primary, #FFFFFF);
+}
+.aot-center-modal .aot-act-row {
+  padding: var(--aot-space-4);
+  border-radius: 16px;
+  margin-bottom: var(--aot-space-4);
+}
+
+/* 제어 카드 2행의 **마지막 작동 시간**과 **함께 작동** 문구를 본문 크기로.
+   12px 이라 같은 카드 안 이름(15.4px)이나 다른 탭 본문(15.2px)보다 확연히 작아
+   읽히지 않았다. 셸 안으로 좁힌다 — 같은 클래스를 쓰는 시설 위젯 목록은
+   행이 촘촘해야 해서 작은 글씨가 맞다. */
+.aot-center-modal .aot-act-meta-text,
+.aot-center-modal .aot-act-coverage {
+  font-size: var(--aot-font-size-base);
+}
+
+/* [설정] 버튼은 바로 위 토글과 **같은 폭**으로 — 둘이 같은 오른쪽 선에 서 있는데
+   폭만 52px 대 60px 로 어긋나 보였다. `width` 가 아니라 `min-width` 로 두는 이유:
+   다른 언어에서 문구가 길어지면 잘리지 않고 늘어나야 한다. */
+.aot-center-modal .aot-act-row .aot-act-pbtn.aot-output-settings {
+  min-width: 60px;
+}
+/* 높이도 토글과 맞춘다(28px). 폭만 맞추면 두 사각형이 위아래로 어긋나 보인다.
+   토글은 스위치라 높이가 모양에 묶여 있어 건드리지 않고, 버튼 쪽을 낮춘다. */
+.aot-center-modal .aot-act-row .aot-act-pbtn.aot-output-settings {
+  height: 28px;
+  line-height: 1;
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+/* 작동 시간은 `tabular-nums` 를 유지한다 — 1초마다 갱신되는 카운터라 숫자 폭이
+   고정돼야 글자가 좌우로 흔들리지 않는다. 대신 부모(`.aot-act-meta`)에서 물려받는
+   흐린 색을 본문 색으로 되돌려, 같은 글꼴·같은 크기인데도 다른 서체처럼 보이던
+   인상을 없앤다. 옆의 '함께 작동' 은 부가 정보라 흐린 색 그대로 둔다. */
+.aot-center-modal .aot-act-meta-text {
+  color: var(--text-color-primary, #13261B);
+}
+
+/* ── 셸 안에서는 스크롤 주체가 pane 하나여야 한다 ───────────────────────────
+   원래 팝업은 높이가 80vh 로 고정된 상자라, 그래프는 제자리에 두고 제어 목록만
+   안쪽에서 굴리는 구조가 맞았다(`.aot-act-tabs-body` 가 남은 높이를 채우고 혼자
+   스크롤). 도킹 셸에서는 그것이 어긋난다 — 바깥 pane 은 넘칠 일이 없어 스크롤이
+   생기지 않으므로 **상단 탭이 접히지 않고**, 그래프가 늘 자리를 차지해 제어 목록은
+   130px 남짓한 창에 갇힌다. 현황·개요 탭은 pane 이 통째로 흐르는데 환경·제어만
+   다르게 움직이는 것도 이 때문이다.
+   그래서 셸 안에서만 안쪽 높이 제약을 풀어 콘텐츠가 자연 높이를 갖게 하고,
+   스크롤은 pane 이 전담한다. 셸 밖(시설 위젯의 원래 제어 팝업)은 건드리지 않는다. */
+.aot-center-modal .aot-bay-popup-section[data-zone="acts"] {
+  flex: 0 0 auto;
+  min-height: auto;
+}
+.aot-center-modal .aot-act-tabs {
+  flex: 0 0 auto;
+  height: auto;
+  min-height: auto;
+}
+.aot-center-modal .aot-act-tabs-body {
+  flex: 0 0 auto;
+  min-height: auto;
+  overflow-y: visible;
+}
+
+/* 마지막 카드 아래에 여백을 둔다 — 셸 안에서는 pane 이 스크롤 주체라 콘텐츠가
+   끝나는 지점이 곧 스크롤 끝이고, 마지막 카드가 창 밑변에 딱 붙어 멈춘다.
+   폰 시트에서는 그 밑변에 홈 인디케이터·브라우저 하단 바가 겹쳐 마지막 카드가
+   실제로 가려지고, 더 굴릴 여지가 없어 확인할 방법이 없다.
+   `env(safe-area-inset-bottom)` 을 더하는 이유가 그것이다(노치 없는 기기에선 0). */
+.aot-center-modal .aot-bay-popup-pane {
+  padding-bottom: calc(40px + env(safe-area-inset-bottom));
+}
+.aot-map-panel-layer[data-mode="sheet"] .aot-center-modal .aot-bay-popup-pane {
+  padding-bottom: calc(64px + env(safe-area-inset-bottom));
+}
+
+/* 장치(output) 모달은 제어 행이 이미 카드(`.aot-ov-block.aot-device-ctrl`) **안**에
+   놓인다 — 구역·시설처럼 행이 pane 에 직접 서는 구조가 아니다. 그래서 위에서
+   행에 준 카드 장식이 여기서는 카드 안의 카드가 되어, 좌우 여백이 16+16=32px 로
+   이중이 되고 상하는 `.aot-ov-block > :first/last-child` 의 `!important` 에 눌려
+   0 이 된다(같은 카드인데 좌우만 넓고 위아래는 붙는 모양).
+   카드 껍데기는 하나면 된다. 블록 안에서는 행이 장식을 내려놓고 내용만 담는다 —
+   그러면 테두리에서 첫 글자까지의 거리가 다른 모달·다른 탭의 카드와 같아진다.
+   행이 여럿일 때의 간격만 행 사이에 남긴다. */
+.aot-center-modal .aot-ov-block .aot-act-row {
+  padding: 0;
+  border-radius: 0;
+  margin-bottom: 0;
+  background: transparent;
+}
+.aot-center-modal .aot-ov-block .aot-act-row + .aot-act-row {
+  margin-top: var(--aot-space-4);
+}
+
+/* 화살표 아이콘 — 32px 원 안에서 시각적으로 균형 잡히는 크기. 글리프였을 때는
+   font-size 로 정했지만 이제 그린 도형이라 상자 크기로 정한다. */
+.aot-modal-up-icon {
+  width: 19px;
+  height: 19px;
+  display: block;
+}
+
+/* 그랩바는 시트에만 있는 어포던스다. JS 는 회전 대비로 모드와 무관하게 만들어
+   두므로(만들었다 지우면 그때의 펼침 상태가 사라진다) 옆 도킹에서는 여기서 감춘다.
+   옆 패널은 위젯 높이를 그대로 쓰니 "더 펼치기" 라는 개념 자체가 없다. */
+.aot-map-panel-layer[data-mode="side"] .aot-map-sheet-grab { display: none; }
+
+/* 구역 안에서의 몫 (p6_50) — 숫자 칸 + 접미("/ 12 베드" 또는 "%").
+   접미를 라벨에 넣지 않는 이유: 구역을 바꾸면 총량이 달라져 접미도 바뀐다.
+   입력 옆에 붙여 두면 갱신할 자리가 한 곳이다. */
+.aot-ov-alloc-input {
+  display: flex;
+  align-items: center;
+  gap: var(--aot-space-2);
+}
+.aot-ov-alloc-input > input { flex: 1; min-width: 0; }
+.aot-ov-alloc-suffix {
+  flex: 0 0 auto;
+  color: var(--aot-color-text-secondary);
+  white-space: nowrap;
+}
+/* 남은 몫 ←→ 총량 설정 — 카드 안에서 한 줄을 나눠 쓴다. */
+.aot-ov-alloc-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--aot-space-3);
+  margin-top: var(--aot-space-3);
+}
+.aot-ov-alloc-bar > .aot-ov-alloc-left { min-width: 0; }

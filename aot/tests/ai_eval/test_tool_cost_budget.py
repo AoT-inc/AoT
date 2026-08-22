@@ -54,18 +54,50 @@ from aot.scripts.measure_ai_tool_cost import measure_manifest
 # ⚠ **서랍 배정으로는 이 숫자가 내려가지 않는다.** 여기서 재는 것은 등급을 끈
 # (기본값) 매니페스트라 도구가 전부 실린다 — 배정은 등급을 켰을 때 값을 한다.
 # 그 값이 얼마인지는 아래 `TIERED_MANIFEST_TOKEN_CEILING` 이 보인다.
-AGENT_MANIFEST_TOKEN_CEILING = 13_260
-MCP_CATALOG_TOKEN_CEILING = 19_800
+#
+# ── 2026-08-21 재기준선 ────────────────────────────────────────────────────
+#
+#   무엇                          에이전트    MCP     도구
+#   직전(dbca0eed 계열)            13,560   19,763   99 / 98
+#   대시보드 위젯 도구 6종            14,023   21,363  105 / 108
+#
+# 늘어난 것은 둘이다.
+#  (1) 위젯 도구 6종(list_dashboards·list_widget_types·get_widget·create/
+#      modify/delete_widget) — 화면 구성은 지금까지 AI 가 손댈 수 없던 축이다.
+#  (2) 탭 도구 4종의 **MCP 배선**. 도구 자체는 전부터 있었지만 카탈로그
+#      (`_MCP_TOOL_PAYLOADS`)에 없어 어떤 MCP 클라이언트에도 안 보였다 —
+#      선언만으로는 안 나간다는 그 함정에 걸려 있던 것을 이제 실었다. 그래서
+#      MCP 쪽 증가(+1,600)가 에이전트 쪽(+463)보다 크다.
+#
+# **에이전트 상한은 직전에 이미 초과 상태였다**(13,560 > 13,260). 이번 작업이
+# 낸 초과가 아니라 앞선 커밋들이 넘긴 채 지나간 것이고, 여기서 그 몫까지 함께
+# 재기준선으로 삼는다.
+#
+# ⚠ **MCP 카탈로그 상한의 의미가 이 커밋부터 달라졌다.** 서랍(`AOT_MCP_TOOL_
+# TIERING`, 기본 켜짐)이 붙으면서 `tools/list` 에 실제로 나가는 것은 core +
+# 서랍 기계장치 9개뿐이다 — 실측 2,783토큰으로, 여기 적힌 21,363 은 **서랍을
+# 껐을 때의 값**이다. 카탈로그가 커지는 것이 예전만큼 곧바로 비용은 아니지만,
+# 서랍을 끈 서버가 있는 한 이 상한은 계속 의미가 있으므로 남긴다. 실제로 나가는
+# 값은 `aot/tests/test_mcp_tool_surface.py::test_listed_surface_stays_small`
+# 이 잰다 — 그쪽이 이제 진짜 고정비다.
+AGENT_MANIFEST_TOKEN_CEILING = 14_100
+MCP_CATALOG_TOKEN_CEILING = 21_500
 
-# 등급(`AOT_AI_TOOL_TIERING=1`)을 켰을 때의 매니페스트. 2026-08-20 실측
-# 도구 15개 · 11,149자 · 약 2,787토큰 — 끈 상태의 **21%** 다.
+# 등급(`AOT_AI_TOOL_TIERING=1`)을 켰을 때의 매니페스트. 2026-08-21 실측
+# 19항목 · 14,064자 · 약 3,516토큰 — 끈 상태의 **25%** 다.
+#
+# 2026-08-20 에는 15항목 2,787토큰이었다. 늘어난 이유는 둘 다 실측에서 나왔다:
+# (1) core 를 5→31개로 넓혔다 — 좁은 core 로는 외부 클라이언트가 요청을 끝내지
+#     못했다(aot/tests/test_mcp_tool_surface.py::test_core_stays_bounded 의 표).
+# (2) 서랍 인덱스가 그 안의 **도구 이름까지** 싣는다 — 이름이 없으면 LLM 이
+#     열지 말지를 추측해야 하고, 그러면 열지 않는다.
 #
 # 이것을 따로 재는 이유: 위 두 상한은 도구를 더하면 반드시 오르므로 "무엇을
 # 서랍으로 내릴지" 를 판단하게 만들지 못한다. 이 상한이 그 일을 한다 — core 에
 # 도구를 하나 더 얹거나 `_TIER_ASSIGNMENT` 에서 배정을 빠뜨리면(빠뜨린 도구는
 # 서랍 기본값으로 떨어지므로 이 숫자는 안 움직이지만, 바로 아래
 # `test_every_tool_has_a_tier_assignment` 가 잡는다) 여기서 보인다.
-TIERED_MANIFEST_TOKEN_CEILING = 2_850
+TIERED_MANIFEST_TOKEN_CEILING = 3_600
 
 # 도구 하나가 이보다 크면 설명이 아니라 문서다. 2026-08-15 에는 가장 큰 것이
 # get_plot 3,164자였고 그 정도를 상한선으로 봤다.
@@ -174,7 +206,7 @@ class TestToolSurfaceBudget(unittest.TestCase):
 
         core = registry.core_tools()
         self.assertLessEqual(
-            len(core), 25,
+            len(core), 35,
             'core 가 %d개다. 늘리려면 무엇을 서랍으로 내릴지 함께 정할 것: %s'
             % (len(core), sorted(core)))
 

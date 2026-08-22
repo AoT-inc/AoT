@@ -113,9 +113,21 @@ class AoTGeoPlot {
             opts += `<option value="${this._esc(x.unique_id)}"` +
                     (x.unique_id === cur ? ' selected' : '') + `>${this._esc(label)}</option>`;
         });
+        // `selectpicker` + `data-live-search`: 프로그램이 많아지면 스크롤 대신
+        // 타이핑으로 찾는다(geo/program 화면·"장치 추가" 드롭다운과 같은 방식).
+        // 초기화는 이 HTML을 DOM에 넣는 쪽(openEditForm/openCreateForm)이 한다.
         return row(this._t('Program'),
-                   `<select class="aot-modern-input form-control"
-                            data-veg-field="program_uuid">${opts}</select>`);
+                   `<select class="aot-modern-input form-control selectpicker"
+                            data-veg-field="program_uuid"
+                            data-live-search="true">${opts}</select>`);
+    }
+
+    /** 매번 컨테이너를 통째로 다시 그리므로 이전 bootstrap-select DOM은
+     * 함께 사라진다 — `refresh`가 아니라 새 초기화를 부른다. */
+    _initSelectpickers(host) {
+        if (window.jQuery && window.jQuery.fn && window.jQuery.fn.selectpicker) {
+            window.jQuery(host).find('.selectpicker').selectpicker();
+        }
     }
 
     _csrf() {
@@ -575,6 +587,7 @@ class AoTGeoPlot {
         const draw = (over) => {
             body.innerHTML = this._formHtml(Object.assign({}, p, over || {}));
             this._wireKindChange(body, draw);
+            this._initSelectpickers(body);
         };
         // 목록이 늦게 오면 선택지가 빈 채로 그려진다 — 받아 두고 다시 그린다.
         draw();
@@ -812,6 +825,7 @@ class AoTGeoPlot {
         const draw = (over) => {
             body.innerHTML = this._formHtml(Object.assign({}, base, over || {}));
             this._wireKindChange(body, draw);
+            this._initSelectpickers(body);
         };
         draw();
         this._loadPrograms('vegetation').then(() => draw());

@@ -578,6 +578,13 @@ class MCPBridgeService:
             sid = server.unique_id
             status = "ok"
 
+            # 내장 서버는 띄울 프로세스가 없다. 건강 검사를 그대로 태우면
+            # subprocess 를 새로 띄우고(앱 한 벌 더 로드) 실패로 세다가 3회
+            # 뒤에는 **서버를 비활성화**해 버린다 — 실제로는 멀쩡히 도는데.
+            if cls._is_builtin(sid):
+                results[sid] = "ok"
+                continue
+
             # 1. Attempt to get/start process
             process = cls.get_server_process(sid)
 
@@ -887,7 +894,27 @@ class MCPBridgeService:
                 return 'running'
             if server_id in cls._failed_servers:
                 return 'cooldown'
+            # AoT 내장 서버는 **프로세스로 돌지 않는다** — 도구 실행층이 이
+            # 프로세스 안에 있고(tool_execution), 내부 AI 는 그것을 직접
+            # 부른다. 프로세스 생사로 판정하면 늘 'stopped' 가 되어, 실제로는
+            # 항상 쓸 수 있는 서버가 화면에서 꺼져 보인다(그리고 매니페스트에서
+            # 통째로 빠진다).
+            if cls._is_builtin(server_id):
+                return 'running'
             return 'stopped'
+
+    @classmethod
+    def _is_builtin(cls, server_id: str) -> bool:
+        """AoT 자기 서버인가 — 판별은 `command` 로 한다.
+
+        이름은 사람이 바꿀 수 있고 unique_id 는 설치마다 다르다.
+        `ai_action_service` 와 `mcp_tool_call_resolver` 가 같은 기준을 쓴다.
+        """
+        try:
+            row = MCPServer.query.filter_by(unique_id=server_id).first()
+            return bool(row and 'aot_mcp_server' in (row.command or ''))
+        except Exception:
+            return False
 
     @classmethod
     def restart_server(cls, server_id: str) -> dict:

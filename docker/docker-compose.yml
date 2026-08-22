@@ -45,11 +45,22 @@ services:
       resources:
         limits:
           cpus: '4.0'
-          # 1G was too tight once the AoT MCP server actually runs: the web app
-          # (~700MB) plus its MCP subprocess (aot_mcp_server.py loads the full app,
-          # ~400MB) exceeded 1G → gunicorn worker OOM-killed (exit 137) → "시스템
-          # 오류". Rebalanced net-zero against the daemon (below) so total container
-          # budget stays 2.5G within the ~4G Docker VM (no host-pressure regression).
+          # 이 값이 3072M 인 역사적 이유: 1G 는 AoT MCP 서버가 실제로 돌기
+          # 시작하자 부족했다 — 웹 앱(~700MB)에 **자기 MCP subprocess**
+          # (aot_mcp_server.py 가 전체 앱을 다시 로드, 당시 추정 ~400MB)가
+          # 얹혀 1G 를 넘겼고, gunicorn 워커가 OOM(exit 137)으로 죽어 "시스템
+          # 오류" 가 됐다. 데몬 쪽에서 같은 양을 덜어 총 예산을 2.5G 로
+          # 유지했다(~4G 도커 VM 안).
+          #
+          # **2026-08-22: 그 subprocess 가 없어졌다.** 도구 실행층을
+          # aot/ai/services/tool_execution.py 로 분리해, 내부 AI 가 프로토콜을
+          # 거치지 않고 직접 부른다(CLAUDE.md "도구 실행층은 MCP 가 아니다").
+          # 앱 컨테이너 재시작 기준 실측:
+          #     전 374 MiB (MCP subprocess 190 MB 상주)
+          #     후 221 MiB (subprocess 없음)
+          # 즉 이 한도의 원래 근거는 사라졌다. 다만 값은 그대로 둔다 — 한도는
+          # 카메라 처리·동시 요청·워커 수에도 걸리므로, 줄이려면 그 부하까지
+          # 실사용으로 지켜본 뒤 정할 일이다. 줄일 때 이 문단이 근거다.
           memory: 3072M
     depends_on:
       - aot_daemon
@@ -116,8 +127,10 @@ services:
       resources:
         limits:
           cpus: '1.0'
-          # aot_mcp_server.py 도 전체 Flask 앱을 로드하므로 ~400MB 안팎 (aot-app
-          # 메모리 주석 참고). 넉넉히 768M.
+          # aot_mcp_server.py 는 전체 Flask 앱을 로드한다 — 2026-08-22 실측
+          # 482 MiB(HTTP 상주 + stdio 연결들). 이 컨테이너는 **외부 AI 전용**
+          # 이라 subprocess 분리와 무관하게 그대로 필요하다(내부 AI 는 이제
+          # 앱 안의 실행층을 직접 부른다). 넉넉히 768M.
           memory: 768M
     depends_on:
       - aot_daemon
@@ -161,6 +174,8 @@ services:
           cpus: '2.0'
           # Reduced 1024M -> 768M to fund the aot-app increase net-zero (daemon runs
           # at ~490MB and does NOT start an MCP subprocess — it no longer warms MCP).
+          # 2026-08-22: 이제 **앱도** MCP subprocess 를 띄우지 않는다 — 데몬만의
+          # 특성이던 것이 양쪽 공통이 됐다(위 aot-app 주석 참조).
           memory: 1536M
     depends_on:
       - influxdb

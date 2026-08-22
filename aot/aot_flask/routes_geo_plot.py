@@ -57,11 +57,16 @@ def api_programs():
     # 대상 종류로 좁힌다 — 식생 구획은 `vegetation` 만 봐야 가축·시설물 프로그램이
     # 작물 선택지에 섞이지 않는다.
     kind = (request.args.get('kind') or '').strip() or None
+    # geo/program 화면의 탭 필터 — 호출하는 쪽(bay/facility 폼)은 이 파라미터를
+    # 안 쓰므로 안 넘기면 지금까지처럼 전체가 나온다.
+    tab_id = (request.args.get('tab_id') or '').strip() or None
     q = GeoProgram.query
     if kind:
         q = q.filter(GeoProgram.kind == kind)
     if subject:
         q = q.filter(GeoProgram.subject == subject)
+    if tab_id:
+        q = q.filter(GeoProgram.tab_id == tab_id)
     rows = q.order_by(GeoProgram.subject.asc(),
                       GeoProgram.variety.asc()).all()
 

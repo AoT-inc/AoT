@@ -12,11 +12,16 @@ from typing import List, Optional, Dict, Any
 from sqlalchemy import and_
 from flask import current_app
 
-from aot.databases.models import Tab, Input, Output, Function, Widget, Trigger, Conditional, PID, CustomController, InputChannel, OutputChannel, FunctionChannel, Actions, ConditionalConditions, DeviceMeasurements
+from aot.databases.models import Tab, Input, Output, Function, Widget, Trigger, Conditional, PID, CustomController, InputChannel, OutputChannel, FunctionChannel, Actions, ConditionalConditions, DeviceMeasurements, GeoProgram
 from aot.aot_flask.extensions import db
 from aot.aot_flask.utils.utils_general import delete_entry_with_id
 
 logger = logging.getLogger(__name__)
+
+# 탭을 지원하는 페이지 종류의 정본 어휘. routes_tab.py 의 검증과 AI 도구
+# 핸들러(aot_data_tool_service.py) 양쪽이 이 상수를 가져다 쓴다 — 허용값을
+# 두 곳에 따로 적으면 한쪽만 늘었을 때 조용히 갈린다.
+TAB_PAGE_TYPES = ('dashboard', 'input', 'output', 'function', 'program')
 
 
 class TabService:
@@ -59,7 +64,8 @@ class TabService:
                     'dashboard': 'Dashboard',
                     'input': 'Input',
                     'output': 'Output',
-                    'function': 'Function'
+                    'function': 'Function',
+                    'program': 'Programs'
                 }
 
                 default_tab = Tab()
@@ -337,6 +343,28 @@ class TabService:
                 # For now, just create empty tab
                 logger.info(f"Created duplicate dashboard tab {new_tab.unique_id}")
 
+            elif source_tab.page_type == 'program':
+                # 단순 컬럼 복사가 아니라 `program_io.clone_program()` 을 거친다 —
+                # 내장·외부 판정, target_defs/resource_defs 정규화, 버전 초기화
+                # 같은 프로그램 고유 규칙이 거기 있다. 여기서 컬럼을 직접 베끼면
+                # 그 규칙을 다시 구현하게 되고 언젠가 갈린다.
+                from aot.aot_flask.geo import program_io
+
+                entries = GeoProgram.query.filter_by(tab_id=source_tab_id).all()
+                cloned = 0
+                for entry in entries:
+                    _result, err = program_io.clone_program(
+                        entry.unique_id, {'tab_id': new_tab.unique_id})
+                    if err:
+                        # 한 건이 막혀도(예: 이름 충돌 없음, 여기선 사실상 항상
+                        # 성공하지만 방어적으로) 나머지 탭 복제까지 실패시키지
+                        # 않는다 — 사람이 못 옮긴 것만 다시 손보면 된다.
+                        logger.error(f"Error cloning program {entry.unique_id} "
+                                    f"into tab {new_tab.unique_id}: {err}")
+                        continue
+                    cloned += 1
+                logger.info(f"Cloned {cloned} of {len(entries)} programs to new tab {new_tab.unique_id}")
+
             db.session.commit()
             return new_tab
 
@@ -447,6 +475,12 @@ class TabService:
                     except Exception as e:
                         logger.error(f"Error deleting Widget {widget.unique_id}: {e}")
                         raise
+
+            # 'program' 은 의도적으로 분기가 없다 — 프로그램은 다른 구획에서
+            # 참조될 수 있어(GeoPlot.program_uuid) 탭과 함께 지우면 그 구획이
+            # 고아가 된다. 그래서 삭제하지 않고, 아래 POST-CLEANUP 의 고아
+            # 정리(find_orphaned_entries/cleanup_orphaned_entries, TABLE_MAP
+            # 에 'program' 등록됨)가 기본 탭으로 재배정한다.
 
             # 모든 자식 장치 삭제 성공 → 탭 삭제
             tab.delete()
@@ -762,6 +796,11 @@ class TabService:
             'pid': PID,
             'custom_controller': CustomController,
             'function': Function,
+            # program 은 다른 종류와 다르다 — 탭 삭제가 이 종류를 지우지
+            # 않는다(delete_tab 의 page_type 분기에 'program' 이 없다).
+            # 그래서 탭이 지워지면 소속 프로그램은 항상 '고아'가 되고, 이
+            # 정리 메커니즘이 유일하게 기본 탭으로 재배정하는 경로다.
+            'program': GeoProgram,
         }
 
         orphans = {}
@@ -798,6 +837,7 @@ class TabService:
             'pid': 'function',
             'custom_controller': 'function',
             'function': 'function',
+            'program': 'program',
         }
         MODEL_MAP = {
             'input': Input,
@@ -807,6 +847,7 @@ class TabService:
             'pid': PID,
             'custom_controller': CustomController,
             'function': Function,
+            'program': GeoProgram,
         }
 
         reassigned = 0

@@ -211,6 +211,26 @@ class GeoPlot(CRUDMixin, db.Model):
     # 사람이 의도적으로 고른 데이터다. GeoShape.feature 에는 들어가지 않는다.
     color = db.Column(db.String(16), nullable=True)
 
+    # ── 구역 안에서의 몫 (p6_50) ──────────────────────────────────────
+    #
+    # 시설 구획은 기하가 없어 같은 구역의 두 구획이 **똑같이 "그 구역 전체"** 를
+    # 가리킨다. 얼마씩인지 적는 자리가 여기다.
+    #
+    #     {"amount": 4}     구역 총량(`GeoFacility.bays[].capacity.total`) 대비 몫
+    #     {"percent": 33}   총량이 아직 없는 시설에서의 폴백
+    #
+    # **비율은 저장하지 않는다** — `amount/total` 에서 파생한다. 저장하면 총량이
+    # 바뀔 때 둘이 조용히 갈린다(정본을 둘로 만들지 않는다는 이 도메인의 원칙).
+    # `percent` 는 그 파생이 불가능할 때만 쓰는 별개 축이고, 총량을 적는 순간
+    # `amount` 로 옮겨 적는 것은 사람의 일이다 — 서버가 어림해 채우지 않는다.
+    #
+    # **합이 총량을 넘는 것은 정상이다**(간작·혼작, VP-3). 막지 않고 화면이
+    # 알린다 — 노지 구획의 면적 겹침에 유니크 인덱스를 걸지 않은 것과 같은 판단.
+    #
+    # 노지 구획(자기 기하가 있는 구획)에는 쓰지 않는다. 거기서는 면적이 기하에서
+    # 나오므로 몫을 따로 적으면 정본이 둘이 된다.
+    allocation = db.Column(db.JSON, nullable=True)
+
     created_at = db.Column(db.DateTime, default=utc_now)
     updated_at = db.Column(db.DateTime, default=utc_now, onupdate=utc_now)
 

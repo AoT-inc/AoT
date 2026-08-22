@@ -164,6 +164,26 @@ class AIActionService:
             if not _aot_server_id:
                 logger.warning("[TASK_31] No active AoT MCP server found. Using virtual_tool_call binding.")
 
+            # 출력 제어 방법 — 목록 전체에 한 번. `operate_device` 는 system_tools
+            # 매니페스트에 자기 항목이 없고(도구 선언 주석 참조) 여기서만 알려지므로,
+            # 인자 형식과 금지사항이 반드시 남아 있어야 한다.
+            manifest["output_control"] = {
+                "tool_name": "operate_device",
+                "applies_to": "every entry in 'outputs' below",
+                "arguments": {
+                    "device_id": "the entry's own unique_id",
+                    "state": "on | off",
+                    "duration_seconds": "<seconds> (optional)",
+                },
+                "rules": [
+                    "Do NOT include action_type in your JSON output.",
+                    "Check the entry's 'capabilities' before choosing state — "
+                    "a pwm output takes a level, an on_off output does not.",
+                ],
+            }
+            if _aot_server_id:
+                manifest["output_control"]["server_id"] = _aot_server_id
+
             # v26: Only include AI-enabled outputs in manifest (Output model lacks is_activated field)
             outputs = Output.query.filter_by(is_ai_enabled=True).all()
             for o in outputs:
@@ -174,24 +194,14 @@ class AIActionService:
                     "capabilities": ["on", "off", "pwm" if o.output_type == 'pwm' else "on_off"]
                 }
 
-                # [TASK_31][TASK_32] Bind MCP server metadata + enforce strict type rule
-                # [FIX] MCP 서버 미등록 시에도 virtual_tool_call 바인딩으로 LLM에 operate_device 정보 제공
-                _binding_hint = (
-                    f"To control this device use tool_name='operate_device' with "
-                    f"params.arguments={{\"device_id\": \"{o.unique_id}\", \"state\": \"on|off\", \"duration_seconds\": <seconds>}}. "
-                    f"Do NOT include action_type in your JSON output."
-                )
-                if _aot_server_id:
-                    out_item["mcp_binding"] = {
-                        "server_id": _aot_server_id,
-                        "tool_name": "operate_device",
-                        "hint": _binding_hint
-                    }
-                else:
-                    out_item["mcp_binding"] = {
-                        "tool_name": "operate_device",
-                        "hint": _binding_hint
-                    }
+                # [TASK_31][TASK_32] 제어 방법은 장치마다 싣지 않는다 — 아래
+                # manifest["output_control"] 에 **한 번만** 적는다. 예전에는
+                # 장치마다 `mcp_binding.hint` 로 같은 문장을 실었는데, 서로
+                # 다른 부분은 device_id 하나뿐이고 그 값은 이 항목의
+                # `unique_id` 에 이미 있다. 실측(2026-08-21 로컬, 출력 57개):
+                # outputs 섹션 28,346자 중 19,038자(78%)가 그 반복이었다 —
+                # 매니페스트 전체의 20%다. 매 호출에 실리는 값이라 그대로
+                # 요금이 된다.
 
                 # Only include channels if NOT in slim mode to save tokens
                 if not is_slim:
@@ -253,28 +263,28 @@ class AIActionService:
                 # Phase 21: Always include certain 'Virtual/Analysis' inputs even in slim mode
                 # to help AI recognize them without a second RAG loop.
                 v_inputs = [
-                    k for k in dict_inputs.keys() 
+                    k for k in dict_inputs.keys()
                     if k.upper() == 'SATELLITE_ANALYSIS' or k.startswith('gis_')
                 ]
-                manifest["creatable_inputs"] = []
-                for k in v_inputs:
-                    v = dict_inputs[k]
-                    interfaces = v.get('interfaces', [])
-                    for itf in (interfaces if interfaces else ['']):
-                        type_id = f"{k},{itf}" if itf else f"{k},"
-                        manifest["creatable_inputs"].append({
-                            "type_id": type_id,
-                            "name": str(v.get('input_name', k)),
-                            "manufacturer": str(v.get('input_manufacturer', 'Unknown')),
-                            "description": str(v.get('message', ''))
-                        })
+                # slim 모드는 **설치 가능한 종류의 카탈로그를 싣지 않는다.**
+                # 예전에는 GIS/위성 모듈 23종을 설명까지 붙여 실었는데(실측
+                # 6,853자 ≈ 1,713토큰), 그것은 사용자가 가진 장치가 아니라
+                # "만들 수 있는 종류" 목록이라 대화 대부분과 무관하다. 게다가
+                # 모델이 그 목록을 사용자의 장치인 양 읊는 문제가 있었다 —
+                # 아래 intent=='DATA_QUERY' 분기가 같은 이유로 이미 이것들을
+                # 걷어내고 있었고, 여기서는 그 판단을 slim 전체로 넓힌다.
+                #
+                # 대신 아래 `_summary` 가 개수와 조회 방법을 남긴다. 종류가
+                # 실제로 필요한 자리(create_input 등)는 `list_device_types`
+                # 도구가 채운다 — 그 도구의 설명이 "create_* 전에 반드시
+                # 부르라" 이므로 경로가 이미 갖춰져 있다.
 
                 # Phase 6: Return summary only for slimming
                 manifest["creatable_inputs_summary"] = {
                     "total_count": len(dict_inputs),
                     "analysis_count": len(v_inputs),
                     "meaning": "CATALOG of input device TYPES that CAN be added — NOT the user's registered devices. For registered devices call get_device_list.",
-                    "note": "A few key analysis/GIS modules are listed above. Use 'action_type: get_detailed_manifest, target_id: input' for the full list of physical sensors."
+                    "note": "The types themselves are not listed here. Call the list_device_types tool (kind='input') before create_input, or 'action_type: get_detailed_manifest, target_id: input' for the full catalog."
                 }
                 manifest["creatable_outputs_summary"] = {
                     "total_count": len(dict_outputs),
@@ -449,21 +459,39 @@ class AIActionService:
                 # get_tools() → get_server_process() holds cls._lock for up to 30s
                 # (MCP_INIT_TIMEOUT). Calling it from ThreadPoolExecutor threads on
                 # stopped/cooldown servers starves the UI restart button HTTP request.
-                status = MCPBridgeService.get_server_status(server_id)
-                if status != 'running':
-                    logger.warning(f"MCP server '{server_id}' skipped in manifest: status is '{status}' (not running).")
-                    _MCP_HEALTH_CACHE.pop(server_id, None)
-                    return []
+                # AoT 자기 서버는 **프로세스가 없다** — 도구 구현이 이 프로세스
+                # 안에 있으므로 목록도 직접 만든다. 생사 검사를 그대로 태우면
+                # 늘 'stopped' 로 나와 매니페스트에서 통째로 빠진다.
+                _builtin = 'aot_mcp_server' in (server.command or '')
+
+                if not _builtin:
+                    # [P3-FIX] Guard: only call get_tools() for already-running servers.
+                    # get_tools() → get_server_process() holds cls._lock for up to 30s
+                    # (MCP_INIT_TIMEOUT). Calling it from ThreadPoolExecutor threads on
+                    # stopped/cooldown servers starves the UI restart button HTTP request.
+                    status = MCPBridgeService.get_server_status(server_id)
+                    if status != 'running':
+                        logger.warning(f"MCP server '{server_id}' skipped in manifest: status is '{status}' (not running).")
+                        _MCP_HEALTH_CACHE.pop(server_id, None)
+                        return []
 
                 try:
                     # [REFIX P3] Push app context for this thread; get_tools() calls
                     # MCPServer.query which requires SQLAlchemy app context.
                     # Explicit if/else avoids contextlib.nullcontext() version dependency.
+                    def _fetch_tools():
+                        if _builtin:
+                            from aot.ai.services import tool_execution
+                            from flask import current_app as _ca
+                            return tool_execution.tools_for_agent(
+                                _ca._get_current_object())
+                        return MCPBridgeService.get_tools(server_id)
+
                     if _fa:
                         with _fa.app_context():
-                            tools = MCPBridgeService.get_tools(server_id)
+                            tools = _fetch_tools()
                     else:
-                        tools = MCPBridgeService.get_tools(server_id)
+                        tools = _fetch_tools()
                     if not tools:
                         _MCP_HEALTH_CACHE.pop(server_id, None)
                         return []
@@ -498,6 +526,12 @@ class AIActionService:
 
             # v23 (MCP_T08): Populate mcp_resources — parallel loop over same mcp_servers
             for server in mcp_servers:
+                # 내장 서버는 건너뛴다. 리소스를 지원하지 않는데(실측:
+                # "Failed to list resources") 물어보려고 subprocess 를 띄운다 —
+                # 도구는 이제 프로세스 없이 내는데 여기서 다시 띄우면 없앤
+                # 비용이 그대로 돌아온다.
+                if 'aot_mcp_server' in (server.command or ''):
+                    continue
                 resources = MCPBridgeService.get_resources(server.unique_id)
                 for resource in resources:
                     desc = resource.get('description', '')
@@ -1189,8 +1223,16 @@ class AIActionService:
                 # MCP server detailed manifest
                 if target_id and target_id.startswith('mcp_'):
                     mcp_server_id = target_id[4:]  # Strip 'mcp_' prefix
-                    from aot.ai.services.mcp_bridge_service import MCPBridgeService
-                    tools = MCPBridgeService.get_tools(mcp_server_id, force_refresh=True)
+                    from aot.databases.models.mcp_server import MCPServer as _Srv
+                    _row = _Srv.query.filter_by(unique_id=mcp_server_id).first()
+                    if _row and 'aot_mcp_server' in (_row.command or ''):
+                        from aot.ai.services import tool_execution
+                        from flask import current_app as _ca
+                        tools = tool_execution.tools_for_agent(
+                            _ca._get_current_object())
+                    else:
+                        from aot.ai.services.mcp_bridge_service import MCPBridgeService
+                        tools = MCPBridgeService.get_tools(mcp_server_id, force_refresh=True)
                     return {"status": "success", "data": tools}
 
                 full_manifest = AIActionService.get_action_manifest(is_slim=False)

@@ -133,6 +133,58 @@ def _resolve_program(program_uuid, current_uuid=None, current_version=None,
     return program_uuid, (row.version or 1), None
 
 
+def _resolve_allocation(raw, has_geom):
+    """구역 안에서의 몫을 검증·정규화 → (allocation, error).
+
+    받는 모양은 둘 중 하나다 — `{'amount': 4}`(구역 총량 대비 몫) 또는
+    `{'percent': 33}`(총량이 아직 없는 시설의 폴백). **둘을 함께 주면 거절한다**:
+    어느 쪽이 정본인지 모호한 값을 저장하면 화면마다 다른 숫자를 보이게 된다.
+
+    **비율은 저장하지 않는다** — `amount/total` 에서 파생한다. 여기 들어오는
+    `percent` 는 그 파생이 불가능할 때 쓰는 별개 축이지 `amount` 의 사본이 아니다.
+
+    **개별 값의 상한은 두지 않는다.** 합이 총량을 넘는 것은 간작·혼작에서 정상이고
+    (VP-3), 총량은 나중에 줄어들 수도 있다 — 저장 시점에 막으면 정상 상황이 거부로
+    나타난다. 넘었다는 것은 화면이 알린다.
+
+    노지 구획(자기 기하가 있는 구획)에는 **쓰지 않는다.** 거기서는 면적이 기하에서
+    나오므로 몫을 따로 적으면 정본이 둘이 된다. 조용히 무시하지 않고 거절하는
+    이유는 하나다 — 무시하면 "적었는데 화면이 안 바뀐다" 가 되고, 그때 원인이
+    입력인지 저장인지 가릴 방법이 없다.
+    """
+    if raw is None:
+        return None, None
+    if raw == {} or raw == '':
+        return None, None            # 명시적으로 비우기
+    if not isinstance(raw, dict):
+        return None, '몫(allocation)은 객체여야 합니다'
+    if has_geom:
+        return None, ('기하를 가진 구획에는 몫을 적지 않습니다 — 면적이 도형에서 '
+                      '나옵니다')
+
+    has_amount = raw.get('amount') not in (None, '')
+    has_percent = raw.get('percent') not in (None, '')
+    if has_amount and has_percent:
+        return None, ('몫은 수량(amount) 또는 비율(percent) 중 하나만 적습니다')
+    if not has_amount and not has_percent:
+        return None, None            # 알맹이가 없으면 비운 것으로 본다
+
+    key = 'amount' if has_amount else 'percent'
+    try:
+        val = float(raw.get(key))
+    except (TypeError, ValueError):
+        return None, '몫은 숫자여야 합니다: %r' % (raw.get(key),)
+    if val <= 0:
+        return None, '몫은 0보다 커야 합니다'
+    if key == 'percent' and val > 100:
+        # 한 구획이 구역의 100%를 넘게 쓸 수는 없다(합계와는 다른 이야기다 —
+        # 여럿이 겹쳐 합이 100을 넘는 것은 정상이다).
+        return None, '비율은 100%를 넘을 수 없습니다'
+    # 정수로 떨어지면 정수로 — 화면이 "4.0 베드" 를 보이지 않게.
+    out = int(val) if float(val).is_integer() else round(val, 2)
+    return {key: out}, None
+
+
 def _resolve_parent(map_uuid, facility_uuid, bay_id):
     """시설 부모를 검증·정규화 → (facility_uuid, bay_id, error).
 
@@ -141,10 +193,17 @@ def _resolve_parent(map_uuid, facility_uuid, bay_id):
     을 그대로 믿었다가 구역 배정이 마커 배정으로 저장된 것과 같은 종류의
     실수를 막는다.
 
-    **단동(bay_count=1)은 'bay_1' 로 자동으로 채운다.** 구역이 하나뿐이라
-    사람이 고를 것이 없고, NULL 로 두면 "시설 전체"와 "구역 1"이 같은 대상을
-    두 가지로 표현하게 된다 — 나중에 그 둘을 합치는 코드가 어디에 있어야
-    하는지 아무도 모르게 된다.
+    **단동(bay_count=1)도 구역 하나를 채운다.** 사람이 고를 것이 없고, NULL 로
+    두면 "시설 전체"와 "구역 1"이 같은 대상을 두 가지로 표현하게 된다 — 나중에
+    그 둘을 합치는 코드가 어디에 있어야 하는지 아무도 모르게 된다.
+
+    그 id 는 **상수로 지어내지 않고 `compute_bay_slices` 에게 묻는다.** 예전에는
+    단동만 이 대조를 건너뛰고 `'bay_1'` 을 박았는데, 단동 시설의 실제 구역 id 는
+    `'main'` 이다. 그래서 저장은 성공하는데 읽는 쪽(`facility_brief` 의
+    `bay_geometries`/`bay_names`)에는 그 키가 없어, 구획이 **구역 기하 대신 시설
+    외피로 폴백**하고 구역 이름도 비었다 — 화면에서는 구획이 시설에 붙지 않고
+    따로 노는 것으로 보인다. 에러는 나지 않는다(`check_geo_integrity` 의
+    `plot-unknown-bay` 만이 본다).
     """
     from aot.aot_flask.geo.facility_bays import compute_bay_slices, spec_from_row
     from aot.databases.models import GeoFacility
@@ -164,12 +223,20 @@ def _resolve_parent(map_uuid, facility_uuid, bay_id):
         bay_count = 1
 
     if bay_count <= 1:
-        if bay_id and bay_id != 'bay_1':
+        slices = compute_bay_slices(spec_from_row(fac))
+        # 목록을 못 만드는 시설(치수 미입력 등)에서만 관례 id 로 물러선다 —
+        # 근거가 없을 때 지어낸 값이라 그 사실이 로그에 남아야 한다.
+        only = (slices[0].get('id') if slices else None)
+        if not only:
+            only = 'bay_1'
+            logger.info("[Plot] 시설 %s 의 구역 목록을 만들 수 없어 구역 id 를 "
+                        "%r 로 둔다", facility_uuid, only)
+        if bay_id and bay_id != only:
             # 조용히 정정하되 남긴다 — 클라이언트가 어긋난 값을 보내고 있다는
             # 사실이 로그에 없으면 다음 사람이 같은 것을 다시 만든다.
-            logger.info("[Plot] 단동 시설의 구역 id %r → 'bay_1' 로 정정 "
-                        "(facility=%s)", bay_id, facility_uuid)
-        return fac.unique_id, 'bay_1', None
+            logger.info("[Plot] 단동 시설의 구역 id %r → %r 로 정정 "
+                        "(facility=%s)", bay_id, only, facility_uuid)
+        return fac.unique_id, only, None
 
     if bay_id:
         valid = {sl['id'] for sl in compute_bay_slices(spec_from_row(fac))}
@@ -324,6 +391,13 @@ def save_plot(data):
         return None, ('식생 구획에는 기하(feature) 또는 시설(facility_uuid) 중 '
                       '하나가 필요합니다 (VP-7).')
 
+    # ── 구역 안에서의 몫 (p6_50) ──────────────────────────────────────
+    eff_allocation = row.allocation if row else None
+    if 'allocation' in data:
+        eff_allocation, err = _resolve_allocation(data.get('allocation'), has_geom)
+        if err:
+            return None, err
+
     # VP-6 확장 — 종료된 작기는 기하뿐 아니라 **소속**도 못 바꾼다. 위치가
     # 바뀌면 "작년에 여기 뭐가 있었나" 의 답이 달라지는 것은 부모 참조에서도
     # 똑같다(시설 구획은 그 참조가 곧 위치다).
@@ -410,6 +484,7 @@ def save_plot(data):
                 source_ref=(data.get('source_ref') or None),
                 name=(data.get('name') or None),
                 color=(data.get('color') or None),
+                allocation=eff_allocation,
             )
             db.session.add(row)
         else:
@@ -420,6 +495,13 @@ def save_plot(data):
             row.program_uuid = eff_program
             row.program_version = eff_program_version
             row.kind = eff_kind
+            # 몫도 페이로드에 있는 키만 — 없는 키를 None 으로 덮으면 부분 저장이
+            # (예: 날짜만 고치는 저장) 적어 둔 몫을 지운다.
+            if 'allocation' in data:
+                row.allocation = eff_allocation
+            # 기하를 새로 그리면 몫은 의미를 잃는다 — 면적이 도형에서 나온다.
+            elif has_geom and row.allocation:
+                row.allocation = None
             # 페이로드에 **있는 키만** 반영한다. 없는 키를 None 으로 덮으면
             # 부분 저장이 멀쩡한 값을 지운다.
             for field in ('subject', 'variety', 'name', 'color', 'source_ref'):

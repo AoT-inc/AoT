@@ -437,7 +437,7 @@ TOOLS: List[Tool] = [
                         "Attach one to a plot and the stage, remaining days and "
                         "expected harvest date follow from it. Check here before "
                         "creating a new one. Read-only."),
-        "usage_hint": "params.arguments: {kind?, subject?}",
+        "usage_hint": "params.arguments: {kind?, subject?, tab_id?}",
     }),
     Tool('get_program', handler='get_program', manifest={
         "tool_name": "get_program",
@@ -467,17 +467,20 @@ TOOLS: List[Tool] = [
         "usage_hint": ("params.arguments: {name, subject, source_note, "
                        "stages: [{key, name, days, targets?}], kind?, variety?, "
                        "notes?, resource_defs?: [{role: irrigation|fertigation|"
-                       "other}]}"),
+                       "other}], tab_id?}"),
     }),
     Tool('modify_program', handler='modify_program', mutating=True, manifest={
         "tool_name": "modify_program",
         "action_type": "virtual_tool_call",
-        "description": ("Edits a growing programme's name / variety / stages / notes. "
-                        "Built-in and external programmes are refused — they must be "
-                        "copied first (a person does that on the Vegetation page). "
-                        "Requires human approval."),
+        "description": ("Edits a growing programme's name / variety / stages / notes, "
+                        "or moves it to a different tab (tab_id) on the Programs page. "
+                        "A tab_id-only call is allowed even for built-in/external "
+                        "programmes (moving a tab is organisation, not content); any "
+                        "other field on a built-in/external programme is refused — "
+                        "it must be copied first (a person does that on the "
+                        "Vegetation page). Requires human approval."),
         "usage_hint": ("params.arguments: {program_id, name?, variety?, "
-                       "stages?, notes?, source_note?}"),
+                       "stages?, notes?, source_note?, tab_id?}"),
     }),
     Tool('delete_program', handler='delete_program', mutating=True, manifest={
         "tool_name": "delete_program",
@@ -488,6 +491,96 @@ TOOLS: List[Tool] = [
                         "just leave an unused programme in place — it costs nothing "
                         "to keep. Requires human approval."),
         "usage_hint": "params.arguments: {program_id}",
+    }),
+    Tool('list_tabs', handler='list_tabs', manifest={
+        "tool_name": "list_tabs",
+        "action_type": "virtual_tool_call",
+        "description": ("Tabs group cards on a page into folders — the same "
+                        "mechanism across the Dashboard, Input, Output, Function "
+                        "and Programs pages. Read-only."),
+        "usage_hint": "params.arguments: {page_type: dashboard|input|output|function|program}",
+    }),
+    # ── 대시보드 위젯 ────────────────────────────────────────────────────────
+    # 위젯은 사람이 보는 화면이라, 여기서 하는 일은 전부 사용자의 대시보드를
+    # 바꾼다. 물리 장치를 움직이지 않는다는 이유로 config_only(승인 면제)에
+    # 넣지 말 것 — 면제의 근거는 "아무것도 움직이지 않는다" 인데, 위젯은
+    # 사람이 지금 보고 있는 화면을 즉시 바꾼다.
+    Tool('list_dashboards', handler='list_dashboards', manifest={
+        "tool_name": "list_dashboards",
+        "action_type": "virtual_tool_call",
+        "description": ("Dashboard tabs and the widgets on each — what the user "
+                        "actually sees. Read-only."),
+        "usage_hint": ("params.arguments: {tab_id?, with_options?}. Widget settings "
+                       "are omitted unless with_options is true; use get_widget for "
+                       "one widget in detail."),
+    }),
+    Tool('list_widget_types', handler='list_widget_types', manifest={
+        "tool_name": "list_widget_types",
+        "action_type": "virtual_tool_call",
+        "description": ("Widget types installed on this system, and the option "
+                        "schema of one of them. Read-only."),
+        "usage_hint": ("params.arguments: {widget_type?}. Call with no argument for "
+                       "the list, then again with a type to get its options before "
+                       "create_widget — every type takes different options."),
+    }),
+    Tool('get_widget', handler='get_widget', manifest={
+        "tool_name": "get_widget",
+        "action_type": "virtual_tool_call",
+        "description": "One widget in detail, including its settings. Read-only.",
+        "usage_hint": "params.arguments: {widget_id}",
+    }),
+    Tool('create_widget', handler='create_widget', mutating=True, manifest={
+        "tool_name": "create_widget",
+        "action_type": "virtual_tool_call",
+        "description": ("Adds a widget to a dashboard tab. Requires human approval."),
+        "usage_hint": ("params.arguments: {tab_id, widget_type, name?, options?, "
+                       "width?, height?}. Get tab_id from list_dashboards and the "
+                       "option schema from list_widget_types first — an option name "
+                       "that is not in that schema is rejected rather than ignored."),
+    }),
+    Tool('modify_widget', handler='modify_widget', mutating=True, manifest={
+        "tool_name": "modify_widget",
+        "action_type": "virtual_tool_call",
+        "description": ("Changes a widget's name, size, position, tab or settings. "
+                        "Only what you pass is changed. Requires human approval."),
+        "usage_hint": ("params.arguments: {widget_id, name?, options?, width?, "
+                       "height?, position_x?, position_y?, tab_id?}. options are "
+                       "merged into the existing settings, not replaced."),
+    }),
+    Tool('delete_widget', handler='delete_widget', mutating=True, manifest={
+        "tool_name": "delete_widget",
+        "action_type": "virtual_tool_call",
+        "description": ("Removes a widget from the dashboard. Requires human "
+                        "approval."),
+        "usage_hint": "params.arguments: {widget_id}",
+    }),
+
+    Tool('create_tab', handler='create_tab', mutating=True, manifest={
+        "tool_name": "create_tab",
+        "action_type": "virtual_tool_call",
+        "description": ("Creates a new tab on a page. Name is auto-generated if "
+                        "omitted. Requires human approval."),
+        "usage_hint": ("params.arguments: {page_type: dashboard|input|output|"
+                       "function|program, name?}"),
+    }),
+    Tool('modify_tab', handler='modify_tab', mutating=True, manifest={
+        "tool_name": "modify_tab",
+        "action_type": "virtual_tool_call",
+        "description": "Renames a tab. Requires human approval.",
+        "usage_hint": "params.arguments: {tab_id, name}",
+    }),
+    Tool('delete_tab', handler='delete_tab', mutating=True, manifest={
+        "tool_name": "delete_tab",
+        "action_type": "virtual_tool_call",
+        "description": ("Deletes a tab. On Input/Output/Function pages this also "
+                        "deletes the cards inside it (same as the UI) — check "
+                        "list_tabs and move anything worth keeping first. On "
+                        "Programs, cards are never deleted this way; they move "
+                        "to the page's default tab instead, because a programme "
+                        "may still be in use by a plot elsewhere. The last "
+                        "remaining tab on a page cannot be deleted. Requires "
+                        "human approval."),
+        "usage_hint": "params.arguments: {tab_id}",
     }),
     Tool('create_plot', handler='create_plot', mutating=True, manifest={
         "tool_name": "create_plot",
@@ -1049,20 +1142,28 @@ DRAWERS = {
 
 # name → (domain, base_tier, never_demote)
 #
-# core 16개의 근거는 농장 관리자의 일상 동선(보기·켜고 끄기·기록·일정)에
-# 해소(resolve_target)와 대화 수단(ask_user·get_tool_detail)을 더한 것이다.
-# never_demote 5개의 기준은 "사용자가 이름을 말해주는가, AI 가 스스로 떠올려야
+# core 는 **5개뿐**이다(2026-08-21 축소). 예전에는 일상 동선을 근거로 16개를
+# 상시 노출했는데, 그 크기가 정확히 서랍을 죽인다 — core 가 어중간하게 넓으면
+# LLM 은 "이 안에서 어떻게든 되겠지" 로 판단하고 **서랍을 아예 열지 않는다.**
+# 없는 기능을 없다고 결론짓거나, 맞지 않는 core 도구로 우회한다. 그래서 기준을
+# "자주 쓰는가" 에서 **"이것이 없으면 다음 한 걸음을 뗄 수 없는가"** 로 바꿨다:
+# 이름 해소(resolve_target) · 장치 찾기(search_devices) · 값 읽기
+# (get_sensor_reading) · 즉시 제어(operate_device) · 승인 큐
+# (list_pending_confirmations). 나머지는 전부 서랍이고, 서랍 인덱스가 그 안의
+# **도구 이름까지** 싣는다(drawer_index) — 열 이유를 주는 것이 인덱스의 일이다.
+#
+# never_demote 의 기준은 "사용자가 이름을 말해주는가, AI 가 스스로 떠올려야
 # 하는가" — 후자만 보호한다. 설계 문서의 두 절에 근거가 있다.
 _TIER_ASSIGNMENT = {
     # --- 장치 ---------------------------------------------------------------
     'operate_device':            ('device', 'core', False),
-    'set_output_state':          ('device', 'core', False),
+    'set_output_state':          ('device', 'drawer', False),
     'get_output_state':          ('device', 'core', False),
     'get_control_state':         ('device', 'drawer', False),
     'search_devices':            ('device', 'core', False),
     'get_device_measurements':   ('device', 'core', False),
-    'get_device_list':           ('device', 'drawer', False),
-    'list_available_devices':    ('device', 'drawer', False),
+    'get_device_list':           ('device', 'core', False),
+    'list_available_devices':    ('device', 'core', False),
     'list_unbound_slots':        ('device', 'drawer', False),
     'rebind_device':             ('device', 'drawer', False),
     # --- 측정 ---------------------------------------------------------------
@@ -1070,7 +1171,7 @@ _TIER_ASSIGNMENT = {
     'get_sensor_reading':        ('measurement', 'core', False),
     'get_zone_sensor_summary':   ('measurement', 'core', False),
     'get_weather':               ('measurement', 'core', False),
-    'get_weather_forecast':      ('measurement', 'drawer', False),
+    'get_weather_forecast':      ('measurement', 'core', False),
     'get_anomalies':             ('measurement', 'drawer', False),
     'get_device_freshness':      ('measurement', 'drawer', False),
     'get_cumulative_status':     ('measurement', 'drawer', False),
@@ -1079,9 +1180,9 @@ _TIER_ASSIGNMENT = {
     'get_function_list':         ('function', 'core', False),
     'get_function_detail':       ('function', 'drawer', False),
     'get_function_doc':          ('function', 'drawer', False),
-    'get_active_functions_summary': ('function', 'drawer', False),
-    'activate_function':         ('function', 'drawer', False),
-    'deactivate_function':       ('function', 'drawer', False),
+    'get_active_functions_summary': ('function', 'core', False),
+    'activate_function':         ('function', 'core', False),
+    'deactivate_function':       ('function', 'core', False),
     'create_function':           ('function', 'drawer', False),
     'delete_function':           ('function', 'drawer', False),
     'modify_function_options':   ('function', 'drawer', False),
@@ -1128,7 +1229,7 @@ _TIER_ASSIGNMENT = {
     # 되돌릴 수 없는 동작이지만 **자주 쓰지 않는다** — 생성·편집과 같은 서랍이다
     # (서랍은 빈도가 아니라 도메인으로 묶는다).
     'delete_program':       ('space', 'drawer', False),
-    'get_plot':              ('space', 'drawer', False),
+    'get_plot':              ('space', 'core', False),
     'get_plot_history':      ('space', 'drawer', False),
     'create_plot':           ('space', 'drawer', False),
     'modify_plot':           ('space', 'drawer', False),
@@ -1143,13 +1244,13 @@ _TIER_ASSIGNMENT = {
     'confirm_plot_stage':    ('space', 'drawer', False),
     'undo_plot_stage':       ('space', 'drawer', False),
     'apply_plot_resources':  ('space', 'drawer', False),
-    'get_spatial_tree':          ('space', 'drawer', False),
+    'get_spatial_tree':          ('space', 'core', False),
     'get_crop_status':           ('space', 'drawer', False),
     'list_geo_maps':             ('space', 'drawer', False),
     'delete_geo_shape':          ('space', 'drawer', False),
     'get_device_location':       ('space', 'drawer', False),
     'set_device_location':       ('space', 'drawer', False),
-    'get_map_equipment':         ('space', 'drawer', False),
+    'get_map_equipment':         ('space', 'core', False),
     'get_map_equipment_detail':  ('space', 'drawer', False),
     'get_facility_capacity':     ('space', 'drawer', False),
     'get_address':               ('space', 'drawer', False),
@@ -1167,7 +1268,7 @@ _TIER_ASSIGNMENT = {
     'delete_gis_input':          ('definition', 'drawer', False),
     'activate_gis_input':        ('definition', 'drawer', False),
     'list_gis_inputs':           ('definition', 'drawer', False),
-    'list_device_types':         ('definition', 'drawer', False),
+    'list_device_types':         ('definition', 'core', False),
     'get_device_type_options':   ('definition', 'drawer', False),
     'get_input_doc':             ('definition', 'drawer', False),
     'get_output_doc':            ('definition', 'drawer', False),
@@ -1180,19 +1281,32 @@ _TIER_ASSIGNMENT = {
     'resolve_target':            ('system', 'core', False),
     'ask_user':                  ('system', 'core', False),
     'get_tool_detail':           ('system', 'core', False),
-    'get_local_time':            ('system', 'core', False),
+    # 탭은 페이지(대시보드·입력·출력·함수·프로그램)의 카드를 묶는 UI 구조라
+    # 어느 도메인에도 속하지 않는다 — 화면 구성을 다루는 것이므로 system 이다.
+    # 대시보드 위젯 — 탭과 같은 '화면 구성' 축이다.
+    'list_dashboards':           ('system', 'drawer', False),
+    'list_widget_types':         ('system', 'drawer', False),
+    'get_widget':                ('system', 'drawer', False),
+    'create_widget':             ('system', 'drawer', False),
+    'modify_widget':             ('system', 'drawer', False),
+    'delete_widget':             ('system', 'drawer', False),
+    'list_tabs':                 ('system', 'drawer', False),
+    'create_tab':                ('system', 'drawer', False),
+    'modify_tab':                ('system', 'drawer', False),
+    'delete_tab':                ('system', 'drawer', False),
+    'get_local_time':            ('system', 'drawer', False),
     # 아래 둘은 사고 이력 때문에 core 다 — 2026-08-13 예약 10건이 전부 승인
     # 대기에 걸려 장치가 한 번도 안 켜졌는데 그때 아무도 큐를 안 봤다.
     # 서랍에 있으면 AI 도 안 본다.
     'list_pending_confirmations': ('system', 'core', True),
-    'analyze_system_failure':    ('system', 'core', True),
+    'analyze_system_failure':    ('system', 'drawer', True),
     'respond_to_confirmation':   ('system', 'drawer', True),
     'read_manual':               ('system', 'drawer', True),
-    'get_system_brief':          ('system', 'drawer', False),
+    'get_system_brief':          ('system', 'core', False),
     'get_system_update_status':  ('system', 'drawer', False),
     'get_storage_tier_status':   ('system', 'drawer', False),
     'get_detailed_manifest':     ('system', 'drawer', False),
-    'list_ai_agents':            ('system', 'drawer', False),
+    'list_ai_agents':            ('system', 'core', False),
     'list_ai_entries':           ('system', 'drawer', False),
     'create_ai_agent':           ('system', 'drawer', False),
     'modify_ai_agent':           ('system', 'drawer', False),
@@ -2508,6 +2622,133 @@ _MCP_TOOL_PAYLOADS: List[Dict[str, Any]] = [
             }
         }
     },
+
+    # ── (D) 화면 구성 — 대시보드 위젯과 탭 ────────────────────────────────────
+    # Tool(...) 선언만으로는 MCP 에 안 나간다. **이 목록이 카탈로그의 정본**이라
+    # 여기 없으면 서버에는 등록됐는데 클라이언트는 도구를 아예 못 본다.
+    {
+        "tool_name": "list_dashboards",
+        "description": "The dashboard tabs and the widgets on each one - what the user actually sees when they open AoT. Use it before changing anything on a dashboard, so you are working from the real layout rather than assuming one. Widget settings are omitted by default because a single widget (a map, a facility) can carry a large configuration; pass with_options only when you need them, or use get_widget for one widget. Read-only.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "tab_id": {"type": "string", "description": "Restrict to one dashboard tab. Omit for all of them."},
+                "with_options": {"type": "boolean", "description": "Include each widget's full settings. Off by default - it can make the response very large."}
+            }
+        }
+    },
+    {
+        "tool_name": "list_widget_types",
+        "description": "The widget types installed on this system (gauge, graph, map, camera, timer, facility, …), and the option schema of one of them. Knowing a type's name is NOT enough to create one - each type takes different options - so call this with widget_type before create_widget and use the ids it returns. Read-only.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "widget_type": {"type": "string", "description": "A type from the list. Given, the reply includes that type's option schema and default size. Omitted, you get the list of types only."}
+            }
+        }
+    },
+    {
+        "tool_name": "get_widget",
+        "description": "One widget in detail: which tab it is on, its size and position, its current settings, and the schema those settings follow. Use it before modify_widget so you change one setting rather than overwriting a configuration you have not seen. Read-only.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "widget_id": {"type": "string", "description": "Widget unique_id, from list_dashboards."}
+            },
+            "required": ["widget_id"]
+        }
+    },
+    {
+        "tool_name": "create_widget",
+        "description": "Adds a widget to a dashboard tab. Requires human approval. Get tab_id from list_dashboards and the option ids from list_widget_types first: an option name that is not in that type's schema is REJECTED, not ignored, so a typo comes back as an error instead of a widget that silently does nothing. The widget is placed at the bottom of the tab so it never displaces what the user is currently looking at. If it is the first widget of its type on this system the reply sets requires_restart - tell the user, and do not restart anything yourself.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "tab_id": {"type": "string", "description": "Dashboard tab to add it to (from list_dashboards)."},
+                "widget_type": {"type": "string", "description": "A type from list_widget_types."},
+                "name": {"type": "string", "description": "Title shown on the widget. Defaults to the type's name."},
+                "options": {"type": "object", "description": "The type's own settings, keyed by the option ids from list_widget_types. Anything not in that schema is rejected."},
+                "width": {"type": "integer", "description": "Grid columns. Defaults to the type's own default."},
+                "height": {"type": "integer", "description": "Grid rows. Defaults to the type's own default."}
+            },
+            "required": ["tab_id", "widget_type"]
+        }
+    },
+    {
+        "tool_name": "modify_widget",
+        "description": "Changes a widget's name, size, position, tab or settings. Requires human approval. ONLY what you pass is changed - an omitted argument means 'leave it alone', not 'clear it' - and options are MERGED into the existing settings rather than replacing them, so you can change one field without knowing the rest. Read the current state with get_widget first when you are changing settings.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "widget_id": {"type": "string", "description": "Widget unique_id."},
+                "name": {"type": "string", "description": "New title."},
+                "options": {"type": "object", "description": "Settings to merge in, keyed by this type's option ids."},
+                "width": {"type": "integer", "description": "Grid columns."},
+                "height": {"type": "integer", "description": "Grid rows."},
+                "position_x": {"type": "integer", "description": "Grid column of the top-left corner."},
+                "position_y": {"type": "integer", "description": "Grid row of the top-left corner."},
+                "tab_id": {"type": "string", "description": "Move the widget to another dashboard tab."}
+            },
+            "required": ["widget_id"]
+        }
+    },
+    {
+        "tool_name": "delete_widget",
+        "description": "Removes a widget from the dashboard. Requires human approval. This deletes the widget and its settings; it does not touch the devices or data the widget was displaying.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "widget_id": {"type": "string", "description": "Widget unique_id, from list_dashboards."}
+            },
+            "required": ["widget_id"]
+        }
+    },
+    {
+        "tool_name": "list_tabs",
+        "description": "Tabs group the cards on a page into folders - the same mechanism on the Dashboard, Input, Output, Function and Programs pages. For dashboards, list_dashboards gives the same tabs plus their widgets. Read-only.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "page_type": {"type": "string", "description": "Which page: dashboard | input | output | function | program."}
+            },
+            "required": ["page_type"]
+        }
+    },
+    {
+        "tool_name": "create_tab",
+        "description": "Creates a new tab on a page. Requires human approval. The name is generated if you omit it.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "page_type": {"type": "string", "description": "dashboard | input | output | function | program"},
+                "name": {"type": "string", "description": "Tab name."}
+            },
+            "required": ["page_type"]
+        }
+    },
+    {
+        "tool_name": "modify_tab",
+        "description": "Renames a tab. Requires human approval.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "tab_id": {"type": "string", "description": "Tab unique_id, from list_tabs."},
+                "name": {"type": "string", "description": "New name."}
+            },
+            "required": ["tab_id", "name"]
+        }
+    },
+    {
+        "tool_name": "delete_tab",
+        "description": "Deletes a tab. Requires human approval. On the Input/Output/Function pages this also deletes the cards inside it, exactly as the UI does - check list_tabs and move anything worth keeping first. On Programs the cards are never deleted this way; they move to the page's default tab, because a programme may still be in use by a plot elsewhere. The last remaining tab on a page cannot be deleted.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "tab_id": {"type": "string", "description": "Tab unique_id, from list_tabs."}
+            },
+            "required": ["tab_id"]
+        }
+    },
 ]
 
 
@@ -2581,20 +2822,38 @@ def tiering_enabled() -> bool:
 def _drawer_index_manifest() -> Dict[str, Any]:
     """서랍 목록을 도구 하나로 싣는다 — 상시 노출.
 
-    서랍의 **존재와 내용 힌트**까지 숨기면 LLM 은 열 생각을 못 한다. 목록 자체는
-    수백 자로 싸다. 설명은 DRAWERS 에서 만들어 드리프트가 생기지 않게 한다.
+    서랍의 **존재와 내용**까지 숨기면 LLM 은 열 생각을 못 한다. 설명은
+    DRAWERS 에서, 도구 이름은 배정표에서 만들어 드리프트가 생기지 않게 한다.
+
+    **도구 이름까지 싣는 것이 핵심이다.** 서랍 이름과 한 줄 설명만으로는 LLM 이
+    자기가 찾는 기능이 그 안에 있는지 확신하지 못해, 열어 보는 대신 "그런 기능은
+    없다" 로 결론짓거나 손에 든 core 도구로 우회한다 — 서랍을 안 여는 실패는
+    에러가 아니라 **조용한 오답**이라 로그에도 안 남는다. 이름이 보이면 판단이
+    추측에서 조회로 바뀐다. 이름만이면 서랍 전체를 실어도 3KB 미만이라, 카탈로그
+    전량(약 56KB)에 비하면 무시할 비용이다.
+
+    `available` 은 **이 표면이 실제로 가진 도구**로 좁힌다. 여기서는 매니페스트가
+    있는 도구뿐이다(`open_drawer` 핸들러가 manifest 기준으로 돌려주므로, 그 밖의
+    이름을 광고하면 열어도 안 나온다).
     """
-    listing = ' / '.join('%s(%s)' % (name, desc)
-                         for name, desc in DRAWERS.items())
+    available = {t.name for t in TOOLS if t.manifest}
+    listing = ' / '.join(
+        '%s(%s): %s' % (name, desc, ', '.join(tools))
+        for name, desc, tools in (
+            (n, d, tools_in_drawer(n, available=available))
+            for n, d in DRAWERS.items())
+        if tools)
     return {
         "tool_name": "open_drawer",
         "action_type": "virtual_tool_call",
         "description": (
             "Opens a drawer and returns the full definitions of the tools inside. "
-            "Only frequently used tools are listed up front; everything else lives "
-            "in a drawer, grouped by what it is for. If no listed tool fits what you "
-            "need, open the drawer whose name matches the job before concluding that "
-            "it cannot be done. Drawers: " + listing),
+            "Only a handful of everyday tools are listed up front; everything else "
+            "lives in a drawer, grouped by what it is for. The tool names in each "
+            "drawer are listed below, so check them before you conclude that "
+            "something cannot be done here or settle for a listed tool that only "
+            "roughly fits — open the drawer and use the real one. "
+            "Drawers: " + listing),
         "usage_hint": "params.arguments: {drawer: '<drawer name from the list>'}",
     }
 
@@ -2609,17 +2868,39 @@ def never_demote_tools() -> frozenset:
     return frozenset(n for n in _BY_NAME if tier_of(n)[2])
 
 
-def drawer_index() -> List[Dict[str, str]]:
-    """서랍 목록(이름 + 한 줄). **상시 노출에 남긴다** — 서랍의 존재까지 숨기면
-    LLM 은 열 생각을 못 한다. 비용은 수백 자로 싸다."""
-    return [{'drawer': name, 'description': desc}
+def drawer_index(available=None) -> List[Dict[str, Any]]:
+    """서랍 목록 — 이름 + 한 줄 + **그 안의 도구 이름들**.
+
+    상시 노출에 남긴다. 서랍의 존재까지 숨기면 LLM 은 열 생각을 못 한다.
+
+    도구 **이름까지** 싣는 것이 이 인덱스의 핵심이다. 서랍 이름과 한 줄 설명만
+    보여 주면 LLM 은 자기가 찾는 기능이 그 안에 있는지 확신하지 못해, 열어
+    보는 대신 "그런 기능은 없다" 로 결론짓거나 손에 든 core 도구로 우회한다
+    (서랍을 안 여는 실패는 에러가 아니라 **조용한 오답**으로 나타난다).
+    이름 목록이 있으면 판단이 추측에서 조회로 바뀐다 — `get_weather_forecast`
+    라는 이름이 measurement 서랍에 보이면 열지 말지가 더는 도박이 아니다.
+    비용은 전량 실어도 3KB 미만이라, 카탈로그 전량(79KB)에 비하면 무시할 수준이다.
+
+    available: 이 표면이 실제로 가진 도구 이름 집합. 주면 교집합만 싣는다.
+        표면마다 도구 집합이 다르므로(MCP 카탈로그 ≠ 내부 매니페스트) 인덱스가
+        **없는 도구를 광고하면 안 된다** — 열어도 안 나오는 이름은 LLM 을
+        서랍에서 한 번 더 멀어지게 만든다.
+    """
+    return [{'drawer': name, 'description': desc,
+             'tools': tools_in_drawer(name, available=available)}
             for name, desc in DRAWERS.items()]
 
 
-def tools_in_drawer(drawer: str) -> List[str]:
-    """그 서랍 안의 도구 이름 — 상시 노출이 아닌 것만."""
-    return sorted(n for n in _BY_NAME
-                  if tier_of(n)[0] == drawer and tier_of(n)[1] != 'core')
+def tools_in_drawer(drawer: str, available=None) -> List[str]:
+    """그 서랍 안의 도구 이름 — 상시 노출이 아닌 것만.
+
+    available 을 주면 그 표면에 실재하는 것만 남긴다(drawer_index 주석 참조)."""
+    names = (n for n in _BY_NAME
+             if tier_of(n)[0] == drawer and tier_of(n)[1] != 'core')
+    if available is not None:
+        avail = set(available)
+        names = (n for n in names if n in avail)
+    return sorted(names)
 
 
 def manifest_system_tools() -> List[Dict[str, Any]]:

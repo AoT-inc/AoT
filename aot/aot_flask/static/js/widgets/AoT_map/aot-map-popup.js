@@ -413,16 +413,63 @@
   //           deferLast }
   //   deferLast  마지막 작동 시간이 별도 배치로 뒤따라올 때(구역 목록).
   //              켜져 있지도 않은 칸마다 낱개 요청을 보내지 않게 한다.
+  // 상위로 가는 화살표 글리프 대신 **그린 아이콘**을 쓴다.
+  //
+  // `←`(U+2190)는 글꼴이 그리는 문자라 굵기를 정할 수 없다. 본문용 글꼴에서는
+  // 획이 가늘고 화살촉이 뭉툭해, 원형 배경 위에 놓으면 배경만 보이고 화살표는
+  // 눈에 들어오지 않았다. 획 굵기·끝 모양을 직접 정할 수 있는 선(셰브론)으로
+  // 바꾼다 — `currentColor` 라 색은 버튼 규칙을 그대로 따른다.
+  function upIconHtml() {
+    return '<svg class="aot-modal-up-icon" viewBox="0 0 24 24" aria-hidden="true"' +
+           ' fill="none" stroke="currentColor" stroke-width="2.6"' +
+           ' stroke-linecap="round" stroke-linejoin="round">' +
+           '<path d="M14.5 5.5 8 12l6.5 6.5"/></svg>';
+  }
+
+  // 같은 칸이 **다시 그려질 때** 값을 잃지 않게 하는 기억.
+  //
+  // 제어 영역은 상태 폴링마다 통째로 다시 그려진다(`.aot-act-tabs` 교체). 그때
+  // 새 HTML 의 시간 칸은 값이 없어 `—`(또는 켜져 있으면 `…`)로 시작하고, 곧이어
+  // 서버 왕복이 돌아와 실제 시간이 채워진다 — 실측 115ms. 값 자체는 맞지만
+  // 사용자 눈에는 **주기마다 시간이 사라졌다 나타나는 깜빡임**이다.
+  //
+  // 마지막 작동 시간과 가동 시작 시각은 다시 그리는 사이에 변하지 않는다.
+  // 그러니 마지막으로 알던 값을 슬롯 키에 남겨 두고, 새로 그릴 때 그것으로
+  // 첫 화면을 채운다. 서버 응답이 오면 평소대로 덮어쓴다(값의 정본은 그대로
+  // 서버다 — 여기 있는 것은 왕복 동안 보여 줄 직전 값일 뿐이다).
+  var _slotMemo = Object.create(null);   // 'oid::ch' → { last, startEpoch }
+  function _memoKey(oid, ch) {
+    return String(oid || '') + '::' + String(ch == null ? 0 : ch);
+  }
+  function _memoPut(oid, ch, patch) {
+    if (!oid) return;
+    var k = _memoKey(oid, ch);
+    var m = _slotMemo[k] || (_slotMemo[k] = {});
+    if (patch.last != null) m.last = patch.last;
+    if ('startEpoch' in patch) m.startEpoch = patch.startEpoch;
+  }
+  function _memoGet(oid, ch) { return _slotMemo[_memoKey(oid, ch)] || null; }
+
   function timeSlotHtml(opts) {
     var _tr = function (x) { return (window._ ? window._(x) : x); };
     opts = opts || {};
     var rt   = opts.runtime || {};
     var on   = !!(opts.on || (rt.elapsed_sec != null && rt.elapsed_sec > 0));
     var last = (rt.last_duration_sec != null) ? rt.last_duration_sec : null;
+    var memo = _memoGet(opts.outputId, opts.channel);
+    if (last == null && memo && memo.last != null) last = memo.last;
     var txt;
     if (on) {
-      txt = (rt.elapsed_sec != null && rt.elapsed_sec > 0)
-        ? _fmtDur(rt.elapsed_sec) : '…';
+      if (rt.elapsed_sec != null && rt.elapsed_sec > 0) {
+        txt = _fmtDur(rt.elapsed_sec);
+      } else if (memo && memo.startEpoch) {
+        // 가동 중인 칸은 시작 시각만 알면 지금 경과를 그 자리에서 계산할 수
+        // 있다 — 스톱워치가 첫 tick 을 놓을 때까지 `…` 를 보이지 않는다.
+        var el0 = Math.floor(Date.now() / 1000) - memo.startEpoch;
+        txt = (el0 > 0) ? _fmtDur(el0) : '…';
+      } else {
+        txt = '…';
+      }
     } else {
       txt = (last != null && last > 0) ? _fmtDur(last) : '—';
     }
@@ -495,6 +542,7 @@
   }
 
   function _regSlot(el, oid, ch, startEpoch) {
+    if (startEpoch) _memoPut(oid, ch, { startEpoch: startEpoch });
     if (!window.AoTStopwatchManager) return;
     window.AoTStopwatchManager.register(oid, ch, true, startEpoch || null,
                                         el, 7000, false);
@@ -511,6 +559,7 @@
         if (!d || el._aotSwOn || !document.body.contains(el)) return;
         var s = parseInt(d.last_duration_sec, 10);
         el.dataset.last = isNaN(s) ? '0' : String(s);
+        if (!isNaN(s)) _memoPut(oid, ch, { last: s });
         delete el.dataset.deferlast;
         el.textContent = (isNaN(s) || s <= 0) ? '—' : _fmtDur(s);
       })
@@ -524,6 +573,7 @@
     rt = rt || {};
     if (rt.last_duration_sec != null) {
       el.dataset.last = String(rt.last_duration_sec);
+      _memoPut(el.dataset.out, el.dataset.ch, { last: rt.last_duration_sec });
     }
     delete el.dataset.deferlast;
     if (el._aotSwOn) return;
@@ -1339,7 +1389,7 @@
     // 구체적인 상위 이름은 버튼의 title 로 붙인다(_wireUpBtn).
     var up = opts.up
       ? '<button type="button" class="aot-modal-up" hidden aria-label="' +
-        _esc(_t('Go up')) + '">&#x2190;</button>'
+        _esc(_t('Go up')) + '">' + upIconHtml() + '</button>'
       : '';
     return '<div class="aot-sensor-popup-header">' + up +
              '<span class="aot-modal-heading">' +
@@ -2177,6 +2227,32 @@
     });
   }
 
+  // 구역 총량의 단위 어휘(p6_50). 자유 문자열을 쓰지 않는 이유는 번역과 집계가
+  // 곧 갈리기 때문이다 — 어휘는 서버(`plot_context._CAPACITY_UNITS`)와 같은 다섯
+  // 개로 고정하고 여기서는 표시 문구만 만든다.
+  function _capUnitLabel(unit) {
+    switch (unit) {
+      case 'row':   return _t('rows');
+      case 'tray':  return _t('trays');
+      case 'area':  return _t('m\u00b2');
+      case 'house': return _t('houses');
+      default:      return _t('beds');
+    }
+  }
+
+  /** 몫 한 조각 — "4/12 베드 · 33%" 또는 "33%". 없으면 빈 문자열. */
+  function allocationText(a) {
+    if (!a) return '';
+    if (a.amount != null && a.total) {
+      var s = a.amount + '/' + a.total + ' ' + _capUnitLabel(a.unit);
+      if (a.percent != null) s += ' \u00b7 ' + a.percent + '%';
+      return s;
+    }
+    if (a.amount != null) return String(a.amount);   // 총량을 아직 안 적었다
+    if (a.percent != null) return a.percent + '%';
+    return '';
+  }
+
   function buildFacilityPlotsHtml(rows, bayId, opts) {
     opts = opts || {};
     var items = (rows || []).filter(function (p) {
@@ -2212,6 +2288,9 @@
       // 순번은 빼는 것이 구역 목록과 같은 규칙이다(위 주석) — 두 목록이
       // 달라지면 사용자가 옮겨 다닐 때마다 다시 읽어야 한다.
       if (p.stage_name) right.push(_esc(p.stage_name));
+      // 몫 — 같은 구역에 여럿이면 이것이 서로를 가르는 유일한 표시다.
+      var _al = allocationText(p.allocation);
+      if (_al) right.push(_esc(_al));
       // 구역 뷰에서 "시설 전체" 인 것은 그렇다고 밝힌다 — 그러지 않으면 이 구역
       // 전용으로 읽힌다.
       if (bayId && !p.bay_id) right.push(_esc(_t('Whole facility')));
@@ -2253,19 +2332,69 @@
       };
       // 노트 버튼과 **같은 컴포넌트·같은 자리**(오른쪽 아래). 예전에는 이쪽만
       // `aot-pill-btn` 이라 같은 모달 안에서 두 버튼의 높이·색이 달랐다.
-      html += '<div class="aot-ov-actions">' +
+      // 재배 프로그램 — 선택지는 **비운 채로** 낸다. 위젯이 폼을 열 때
+      // `AoTMapPlot.refreshProgramChoices` 로 채운다(빌더는 순수 함수라 스스로
+      // 조회하지 않는다는 이 파일의 규약, 위 구획 모달과 같다). 비워 두는 편이
+      // 안전하기도 하다 — 목록은 **종류에 따라 달라지고**, 종류가 다른 프로그램을
+      // 붙이면 서버가 거절한다(단계·목표 해석이 통째로 어긋나기 때문).
+      var progCtl = _fr(_t('Program'),
+                        '<select class="aot-modern-input form-control" ' +
+                        'data-nf="program_uuid"><option value="">' +
+                        _esc(_t('No program')) + '</option></select>');
+
+      // 남은 몫 + 총량 설정. 총량이 없으면 "적어 두면 4/12 로 읽힌다" 를
+      // 사람이 알 길이 없으므로 **없을 때도** 설정 버튼을 낸다.
+      var capRow = '<div class="aot-ov-alloc-bar">' +
+                   '<span class="aot-ov-muted aot-ov-alloc-left"></span>' +
+                   '<button type="button" class="aot-ov-pill aot-ov-cap-edit">' +
+                   _esc(_t('Zone capacity')) + '</button></div>' +
+                   '<div class="aot-ov-cap-wrap" style="display:none">' +
+                   '<div class="aot-modal-container">' +
+                   _fr(_t('Unit'),
+                       '<select class="aot-modern-input form-control" data-cf="unit">' +
+                       '<option value="bed">' + _esc(_t('beds')) + '</option>' +
+                       '<option value="row">' + _esc(_t('rows')) + '</option>' +
+                       '<option value="tray">' + _esc(_t('trays')) + '</option>' +
+                       '<option value="area">' + _esc(_t('m²')) + '</option>' +
+                       '<option value="house">' + _esc(_t('houses')) + '</option>' +
+                       '</select>') +
+                   _fr(_t('Total'),
+                       '<input type="number" min="0" step="any" ' +
+                       'class="aot-modern-input form-control" data-cf="total" value="">') +
+                   '</div>' +
+                   '<div class="aot-ov-desc-actions">' +
+                   '<button type="button" class="aot-ov-pill aot-ov-cap-cancel">' +
+                   _esc(_t('Cancel')) + '</button>' +
+                   '<button type="button" class="aot-ov-pill aot-ov-pill--primary ' +
+                   'aot-ov-cap-save">' + _esc(_t('Save')) + '</button>' +
+                   '</div></div>';
+
+      html += capRow +
+              '<div class="aot-ov-actions">' +
               '<button type="button" class="aot-ov-pill aot-ov-plot-add">' +
               _esc(_t('Add a plot')) + '</button></div>' +
               '<div class="aot-ov-plot-new-wrap" style="display:none">' +
               '<div class="aot-modal-container">' +
               zoneCtl +
               _fr(_t('Kind'), _kindSelect('data-nf="kind"', 'vegetation')) +
+              progCtl +
               // `_fr` 은 라벨을 이스케이프한다 — HTML 을 넘기면 태그가 그대로
               // 화면에 찍힌다. 라벨은 **문자열**로만 넘긴다.
               _fr(_plotSubjectLabel(null), _in('subject', 'text', '')) +
               _fr(_plotVarietyLabel(null), _in('variety', 'text', '')) +
               _fr(_t('Start date'), _in('started_on', 'date', opts.today || '')) +
               _fr(_t('Expected end'), _in('expected_end_on', 'date', '')) +
+              // 구역 안에서의 몫(p6_50) — 같은 구역에 둘 이상 심을 때 서로를
+              // 가르는 유일한 값이다. 입력은 **숫자 하나**고, 그것이 수량인지
+              // 비율인지는 그 구역에 총량이 적혀 있는지가 정한다(접미 표시가
+              // 말해 준다). 두 칸으로 나누면 사람이 어느 쪽에 적을지 고르게
+              // 되는데, 그 선택은 시설이 이미 한 것이다.
+              _fr(_t('Share'),
+                  '<span class="aot-ov-alloc-input">' +
+                  '<input type="number" min="0" step="any" ' +
+                  'class="aot-modern-input form-control" ' +
+                  'data-nf="allocation_value" value="">' +
+                  '<span class="aot-ov-alloc-suffix"></span></span>') +
               '</div>' +
               '<div class="aot-ov-desc-actions">' +
               '<button type="button" class="aot-ov-pill aot-ov-plot-new-cancel">' +
@@ -3089,9 +3218,28 @@
                          'data-pf="program_uuid">' + po + '</select>');
     }
 
+    // 구역 안에서의 몫(p6_50) — 시설 구획에만 있다. 노지 구획은 면적이 도형에서
+    // 나오므로 몫을 따로 적으면 정본이 둘이 된다(서버도 거절한다).
+    var _allocRow = '';
+    if (p.facility_uuid && p.location_source !== 'own') {
+        var _a = p.allocation || {};
+        var _cap = (_a.total != null)
+            ? ('/ ' + _a.total + ' ' + _capUnitLabel(_a.unit)) : '%';
+        var _av = (_a.amount != null) ? _a.amount
+                  : (_a.percent != null ? _a.percent : '');
+        _allocRow = _fRow(_t('Share'),
+                          '<span class="aot-ov-alloc-input">' +
+                          '<input type="number" min="0" step="any" ' +
+                          'class="aot-modern-input form-control" ' +
+                          'data-pf="allocation_value" value="' + _esc(String(_av)) +
+                          '"><span class="aot-ov-alloc-suffix">' + _esc(_cap) +
+                          '</span></span>');
+    }
+
     html += '<div class="aot-ov-plot-edit-wrap" style="display:none">' +
             '<div class="aot-modal-container">' +
             _bayRow +
+            _allocRow +
             _fRow(_t('Kind'), _kindSelect('data-pf="kind"', p.kind)) +
             _progRow +
             _fRow(_plotSubjectLabel(p), _inp('subject', 'text', p.subject)) +
@@ -3428,6 +3576,7 @@
     buildOutputRow:        buildOutputRow,
     scheduleButtonHtml:    scheduleButtonHtml,
     timeSlotHtml:          timeSlotHtml,
+    upIconHtml:            upIconHtml,
     applyTimeSlot:         applyTimeSlot,
     seedTimeSlot:          seedTimeSlot,
     wireTimeSlots:         wireTimeSlots,

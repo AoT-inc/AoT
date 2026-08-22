@@ -6,7 +6,7 @@ Provides REST API endpoints for tab operations across all pages.
 import logging
 import flask_login
 from flask import Blueprint, request, jsonify, url_for, redirect
-from aot.services.tab_service import TabService
+from aot.services.tab_service import TabService, TAB_PAGE_TYPES
 from aot.aot_flask.utils import utils_general
 from aot.aot_flask.routes_static import inject_variables
 
@@ -22,6 +22,34 @@ blueprint = Blueprint('routes_tab',
 @flask_login.login_required
 def inject_dictionary():
     return inject_variables()
+
+
+@blueprint.route('/tab/list', methods=['GET'])
+@flask_login.login_required
+def list_tabs():
+    """List tabs for a page type — JSON, for pages that render their list
+    client-side instead of via the server-rendered `render_tabs` macro
+    (geo/program 이 이 경로로 탭 셀렉트를 채운다).
+
+    Query string:
+        page_type: str - one of TAB_PAGE_TYPES
+
+    Returns:
+        JSON: {'success': bool, 'tabs': [{'unique_id', 'name', 'position'}]}
+    """
+    page_type = request.args.get('page_type')
+    if page_type not in TAB_PAGE_TYPES:
+        return jsonify({
+            'success': False,
+            'message': f'Invalid page_type: {page_type}'
+        }), 400
+
+    tabs = TabService.get_tabs_for_page(page_type)
+    return jsonify({
+        'success': True,
+        'tabs': [{'unique_id': t.unique_id, 'name': t.name,
+                 'position': t.position} for t in tabs]
+    })
 
 
 @blueprint.route('/tab/create', methods=['POST'])
@@ -63,7 +91,7 @@ def create_tab():
                 'message': 'page_type is required'
             }), 400
 
-        if page_type not in ['dashboard', 'input', 'output', 'function']:
+        if page_type not in TAB_PAGE_TYPES:
             return jsonify({
                 'success': False,
                 'message': f'Invalid page_type: {page_type}'
@@ -87,7 +115,8 @@ def create_tab():
             'dashboard': 'routes_dashboard.page_dashboard',
             'input': 'routes_input.page_input',
             'output': 'routes_output.page_output',
-            'function': 'routes_function.page_function'
+            'function': 'routes_function.page_function',
+            'program': 'routes_geo.page_programs'
         }
 
         # Dashboard uses dashboard_id parameter, others use tab_id
@@ -239,7 +268,8 @@ def duplicate_tab():
             'dashboard': 'routes_dashboard.page_dashboard',
             'input': 'routes_input.page_input',
             'output': 'routes_output.page_output',
-            'function': 'routes_function.page_function'
+            'function': 'routes_function.page_function',
+            'program': 'routes_geo.page_programs'
         }
 
         # Dashboard uses dashboard_id parameter, others use tab_id
@@ -307,7 +337,8 @@ def delete_tab(tab_id):
                 'dashboard': 'routes_dashboard.page_dashboard',
                 'input': 'routes_input.page_input',
                 'output': 'routes_output.page_output',
-                'function': 'routes_function.page_function'
+                'function': 'routes_function.page_function',
+                'program': 'routes_geo.page_programs'
             }
             
             # Dashboard uses dashboard_id parameter, others use tab_id

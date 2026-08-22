@@ -237,11 +237,15 @@
       opts += '<option value="' + _esc(p.unique_id) + '"' +
               (p.unique_id === cur ? ' selected' : '') + '>' + label + '</option>';
     });
+    // `selectpicker` + `data-live-search`: 프로그램이 많아지면 스크롤 대신
+    // 타이핑으로 찾는다(geo/program 화면·"장치 추가" 드롭다운과 같은 방식).
+    // 초기화는 render() 가 이 HTML을 DOM에 넣은 뒤 한 번에 한다.
     return '<div class="aot-modal-option-row">' +
            '<label class="aot-modal-option-label">' +
            _T('plot_program', 'Program') + '</label>' +
            '<div class="aot-modal-option-control">' +
-           '<select class="form-control aot-modern-input" data-f="program_uuid">' +
+           '<select class="form-control aot-modern-input selectpicker" ' +
+           'data-f="program_uuid" data-live-search="true">' +
            opts + '</select></div></div>';
   }
 
@@ -333,6 +337,12 @@
         whole.map(_plotLine).join('') + '</div></div>';
     }
     box.innerHTML = html;
+
+    // 매번 컨테이너를 통째로 다시 그리므로 이전 bootstrap-select DOM은 함께
+    // 사라진다 — `refresh`가 아니라 새 초기화(`.selectpicker()`)를 부른다.
+    if (window.jQuery && window.jQuery.fn && window.jQuery.fn.selectpicker) {
+      window.jQuery(box).find('.selectpicker').selectpicker();
+    }
   }
 
   // ── 동작 ──────────────────────────────────────────────────────────────

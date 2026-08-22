@@ -254,6 +254,24 @@ class FacilityManager:
                 db.session.delete(ob)
 
             bays_meta = []
+            # 구역 총량(p6_50)은 **시설을 다시 저장해도 살아남아야 한다.**
+            # `bays_meta` 는 저장할 때마다 통째로 재생성되므로(위 도형 삭제 참조),
+            # 사람이 적어 둔 총량이 여기서 그냥 사라진다 — 도형을 한 번 고쳤을
+            # 뿐인데 구획의 분모가 없어지고 "4/12 베드" 가 "4" 로 읽힌다.
+            # 그래서 id 로 이어받는다. 페이로드가 명시하면 그쪽이 이긴다.
+            _prev_caps = {}
+            for _b in (facility.bays if isinstance(facility.bays, list) else []):
+                if isinstance(_b, dict) and _b.get('id') and _b.get('capacity'):
+                    _prev_caps[_b['id']] = _b['capacity']
+
+            def _with_cap(meta, src=None):
+                cap = (src or {}).get('capacity')
+                if cap is None:
+                    cap = _prev_caps.get(meta.get('id'))
+                if cap is not None:
+                    meta['capacity'] = cap
+                return meta
+
             # 구역(zone) 정의 — 편집기 구역 UI 가 보내는 bay 범위 항목.
             # {id, name, crop, bay_start, bay_end} (1-based, inclusive).
             # 폴리곤은 만들지 않는다: 슬라이스 좌표는 geometry_3d 에서 파생
@@ -275,13 +293,13 @@ class FacilityManager:
                     if not (1 <= s <= e <= _bc):
                         continue
                     default_id = 'bay_%d' % s if s == e else 'bay_%d_%d' % (s, e)
-                    bays_meta.append({
+                    bays_meta.append(_with_cap({
                         'id':        str(z.get('id') or default_id),
                         'name':      z.get('name'),
                         'crop':      z.get('crop'),
                         'bay_start': s,
                         'bay_end':   e,
-                    })
+                    }, z))
             elif facility.structure == 'connected' and bays_input:
                 for bay in bays_input:
                     bay_geom = bay.get('geometry')
@@ -302,21 +320,21 @@ class FacilityManager:
                     )
                     db.session.add(bay_shape)
                     db.session.flush()
-                    bays_meta.append({
+                    bays_meta.append(_with_cap({
                         'id': bay.get('id'),
                         'polygon_shape_uuid': bay_shape.unique_id,
                         'crop': bay.get('crop'),
                         'sensor_zone': bay.get('sensor_zone', []),
                         'name': bay.get('name'),
-                    })
+                    }, bay))
             elif facility.structure == 'single':
-                bays_meta = [{
+                bays_meta = [_with_cap({
                     'id': 'main',
                     'polygon_shape_uuid': shape.unique_id,
                     'crop': data.get('crop'),
                     'sensor_zone': data.get('sensor_zone', []),
                     'name': data.get('name'),
-                }]
+                }, data)]
 
             facility.bays = bays_meta
 

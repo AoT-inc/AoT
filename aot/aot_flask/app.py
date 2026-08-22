@@ -83,7 +83,9 @@ def warm_start_mcp_servers(app):
 
     Call ONLY from the web entry (start_flask_ui) — NOT from create_app, because
     the daemon also builds an app via create_app and must not spawn these heavy
-    (~400MB) subprocesses. Runs in a daemon thread so it never blocks boot. One
+    (~186MB measured) subprocesses. **The built-in AoT server is skipped entirely**
+    — its tools come from the in-process execution layer, so there is nothing to
+    warm and spawning it would undo that. Runs in a daemon thread so it never blocks boot. One
     retry covers the transient 'started but not ready yet' 0-tools race."""
     import threading
     import time as _t
@@ -94,6 +96,15 @@ def warm_start_mcp_servers(app):
                 from aot.databases.models.mcp_server import MCPServer
                 from aot.ai.services.mcp_bridge_service import MCPBridgeService
                 for srv in MCPServer.query.filter_by(is_activated=True).all():
+                    # 내장 서버(AoT 자기 자신)는 예열할 프로세스가 없다. 도구
+                    # 실행층이 이 프로세스 안에 있고(tool_execution) 내부 AI 는
+                    # 그것을 직접 부른다 — 여기서 띄우면 없앤 subprocess(실측
+                    # 186MB)가 기동 때마다 그대로 돌아온다.
+                    if 'aot_mcp_server' in (srv.command or ''):
+                        logger.info(
+                            "[Startup] MCP '%s' 는 내장 실행층이라 예열하지 않습니다.",
+                            srv.name)
+                        continue
                     n = 0
                     for attempt in (1, 2):
                         try:
