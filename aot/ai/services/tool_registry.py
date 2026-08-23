@@ -451,23 +451,36 @@ TOOLS: List[Tool] = [
         "tool_name": "create_program",
         "action_type": "virtual_tool_call",
         "description": ("Creates a growing programme (subject -> stages with lengths). "
-                        "'subject' is what the programme manages — a crop, a tree "
-                        "species, a turf type, a herd, or a structure; AoT is not "
-                        "limited to farms. Set 'kind' accordingly (default vegetation). "
-                        "days is the LENGTH of that stage, not a cumulative day; only "
-                        "the last stage may leave it blank (= until the end). "
-                        "source_note is required — state what the programme is based "
-                        "on. resource_defs declares WHAT the crop needs (roles) — "
-                        "never which function does it, because that is a fact about "
-                        "a place, not about the crop; the site resolves it, so one "
-                        "programme works in several greenhouses. Programmes made "
-                        "this way are used for display and advice but NOT for "
-                        "control until a person marks them as checked. "
+                        "'subject' is whatever the programme manages — a crop, a tree "
+                        "species, a turf type, a herd, a structure; AoT is not "
+                        "farm-only, so set 'kind' to match (default vegetation). "
+                        "resource_defs declares WHAT the subject needs (roles), never "
+                        "which function does it — that is a fact about a place, so the "
+                        "site resolves it and one programme serves several "
+                        "greenhouses. Made this way it is used for display and advice "
+                        "but NOT for control until a person marks it as checked. "
                         "Requires human approval."),
         "usage_hint": ("params.arguments: {name, subject, source_note, "
-                       "stages: [{key, name, days, targets?}], kind?, variety?, "
-                       "notes?, resource_defs?: [{role: irrigation|fertigation|"
-                       "other}], tab_id?}"),
+                       "stages: [{key, name, days, targets?, guidance?}], kind?, "
+                       "variety?, notes?, target_defs?: [{key, label, unit, "
+                       "measurement}], base_temp_c?, auto_advance?, "
+                       "resource_defs?: [{role: irrigation|fertigation|"
+                       "other}], tab_id?}. "
+                       "days is that stage's LENGTH, not cumulative; only the "
+                       "last may be blank (= until the end). source_note is "
+                       "required. 'guidance' is the half no sensor can do — what "
+                       "to LOOK at and what to DO BY HAND in that stage. Fill "
+                       "it: it is what a beginner opens the programme for. "
+                       "'targets' keys must exist in target_defs (vegetation "
+                       "already has temp_day/temp_night/rh/co2/dli/vpd). "
+                       "RECIPE: 1) list_programs — does it exist already? "
+                       "2) knowledge_search the subject for stage-by-stage "
+                       "practice. 3) Map what you find onto YOUR stage keys — "
+                       "sources split stages their own way, so state the "
+                       "mapping in source_note; never bend a day count to make "
+                       "a source fit. 4) Cite in source_note. Leave a field "
+                       "blank rather than guessing — a blank is normal, a "
+                       "plausible wrong number is not."),
     }),
     Tool('modify_program', handler='modify_program', mutating=True, manifest={
         "tool_name": "modify_program",
@@ -480,7 +493,17 @@ TOOLS: List[Tool] = [
                         "it must be copied first (a person does that on the "
                         "Vegetation page). Requires human approval."),
         "usage_hint": ("params.arguments: {program_id, name?, variety?, "
-                       "stages?, notes?, source_note?, tab_id?}"),
+                       "stages?: [{key, name, days, targets?, guidance?}], "
+                       "target_defs?, base_temp_c?, auto_advance?, "
+                       "resource_defs?, kind?, notes?, source_note?, tab_id?}. "
+                       "This is how an empty programme a person made in the UI "
+                       "gets filled in — same stage shape and same RECIPE as "
+                       "create_program, and get_program first to see what is "
+                       "already there. Send only the fields you are changing; "
+                       "'stages' replaces the whole list. Writing stages, "
+                       "target items or base_temp_c sends the programme back "
+                       "for a person to check before it drives control again — "
+                       "that is expected, say so rather than working around it."),
     }),
     Tool('delete_program', handler='delete_program', mutating=True, manifest={
         "tool_name": "delete_program",

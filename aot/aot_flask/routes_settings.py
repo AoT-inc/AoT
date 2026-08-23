@@ -1126,3 +1126,144 @@ def settings_account_self():
     if logout:
         return redirect(url_for('routes_authentication.logout'))
     return redirect(request.referrer or url_for('routes_general.home'))
+
+
+# ---------------------------------------------------------------------------
+# 사용자 지정 이름 번역 사전 — docs/design/user-string-live-translation.md
+#
+# 오역을 사용자가 직접 고칠 수 있어야 한다. 번역은 캐시라, 고쳐 두면 그 값이
+# 계속 쓰인다(is_locked=True 인 행은 재번역이 덮지 않는다).
+# ---------------------------------------------------------------------------
+
+@blueprint.route('/settings/translations', methods=('GET',))
+@flask_login.login_required
+def settings_translations():
+    """번역 사전 목록."""
+    if not utils_general.user_has_permission('view_settings'):
+        return redirect(url_for('routes_general.home'))
+
+    from aot.aot_flask.extensions import db
+    from aot.ai.services import user_string_translator as ust
+    from aot.databases.models.user_string_translation import (
+        STATUS_DONE, STATUS_PENDING, UserStringTranslation)
+    from flask_babel import get_locale
+
+    lang = request.args.get('lang') or str(get_locale())
+    status = request.args.get('status') or 'all'
+
+    query = UserStringTranslation.query.filter_by(target_lang=lang)
+    if status != 'all':
+        query = query.filter_by(status=status)
+
+    rows = query.order_by(UserStringTranslation.status,
+                          UserStringTranslation.source_text).limit(1000).all()
+
+    # 어떤 언어에 번역이 쌓여 있는지 — 언어 선택 탭용.
+    langs = [r[0] for r in db.session.query(
+        UserStringTranslation.target_lang).distinct().all()]
+    if lang not in langs:
+        langs.append(lang)
+
+    counts = {
+        'total': UserStringTranslation.query.filter_by(target_lang=lang).count(),
+        'done': UserStringTranslation.query.filter_by(
+            target_lang=lang, status=STATUS_DONE).count(),
+        'pending': UserStringTranslation.query.filter_by(
+            target_lang=lang, status=STATUS_PENDING).count(),
+    }
+
+    return render_template('settings/translations.html',
+                           rows=rows,
+                           lang=lang,
+                           langs=sorted(langs),
+                           status=status,
+                           counts=counts,
+                           enabled=ust.is_enabled())
+
+
+@blueprint.route('/settings/translations/save', methods=['POST'])
+@flask_login.login_required
+def settings_translations_save():
+    """번역 한 건을 사람이 고쳐 넣는다 — 이후 재번역이 덮지 않는다."""
+    if not utils_general.user_has_permission('edit_settings'):
+        return jsonify({'error': 'permission denied'}), 403
+
+    from aot.aot_flask.extensions import db
+    from aot.databases.models.user_string_translation import (
+        STATUS_DONE, UserStringTranslation)
+
+    data = request.get_json(silent=True) or {}
+    row_id = data.get('id')
+    text = (data.get('translated_text') or '').strip()
+
+    row = UserStringTranslation.query.filter_by(id=row_id).first()
+    if not row:
+        return jsonify({'error': 'not found'}), 404
+
+    row.translated_text = text or None
+    row.status = STATUS_DONE if text else 'pending'
+    row.is_locked = bool(text)
+    row.fail_count = 0
+    db.session.commit()
+
+    return jsonify({'ok': True, 'id': row.id, 'status': row.status,
+                    'is_locked': row.is_locked})
+
+
+@blueprint.route('/settings/translations/retranslate', methods=['POST'])
+@flask_login.login_required
+def settings_translations_retranslate():
+    """번역을 지우고 다시 번역하게 한다. 잠긴 행은 건드리지 않는다."""
+    if not utils_general.user_has_permission('edit_settings'):
+        return jsonify({'error': 'permission denied'}), 403
+
+    from aot.aot_flask.extensions import db
+    from aot.databases.models.user_string_translation import (
+        STATUS_PENDING, UserStringTranslation)
+
+    data = request.get_json(silent=True) or {}
+    row_id = data.get('id')
+
+    query = UserStringTranslation.query.filter_by(is_locked=False)
+    if row_id:
+        query = query.filter_by(id=row_id)
+    else:
+        lang = data.get('lang')
+        if not lang:
+            return jsonify({'error': 'lang or id required'}), 400
+        query = query.filter_by(target_lang=lang)
+
+    count = 0
+    for row in query.all():
+        row.translated_text = None
+        row.status = STATUS_PENDING
+        row.fail_count = 0
+        count += 1
+    db.session.commit()
+
+    return jsonify({'ok': True, 'reset': count})
+
+
+@blueprint.route('/settings/translations/sync', methods=['POST'])
+@flask_login.login_required
+def settings_translations_sync():
+    """DB 의 사용자 문자열을 훑어 미등록분을 큐에 넣고, 한 배치를 바로 번역한다.
+
+    주기 잡을 기다리지 않고 지금 채워 보고 싶을 때 쓴다.
+    """
+    if not utils_general.user_has_permission('edit_settings'):
+        return jsonify({'error': 'permission denied'}), 403
+
+    from aot.ai.services import user_string_translator as ust
+
+    data = request.get_json(silent=True) or {}
+    lang = data.get('lang')
+    if not lang:
+        return jsonify({'error': 'lang required'}), 400
+
+    added = ust.sync_sources(lang)
+    result = ust.run_batch(target_lang=lang)
+    return jsonify({'ok': True, 'queued': added,
+                    'translated': result.get('translated', 0),
+                    'remaining': result.get('remaining', 0),
+                    'reason': result.get('reason')})

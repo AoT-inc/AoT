@@ -4083,6 +4083,17 @@
          * 방금 심은 것이 다음 폴링까지 화면에 없다(그리고 ETag 때문에 그 폴링이
          * 304 로 끝나면 더 오래 비어 있다 — `invalidate` 가 둘을 함께 버린다).
          */
+        /** 총량 칸 라벨 — 단위가 무엇을 적는 칸인지 말한다(popup 쪽과 같은 어휘). */
+        function _capTotalLabel(unit) {
+            switch (unit) {
+                case 'row':   return _tr('Total rows');
+                case 'tray':  return _tr('Total trays');
+                case 'area':  return _tr('Total area (m²)');
+                case 'house': return _tr('Total houses');
+                default:      return _tr('Total beds');
+            }
+        }
+
         /** 단위 표시 문구 — 서버 어휘(`_CAPACITY_UNITS`) 다섯 개와 짝이다. */
         function _capUnitLabel(unit) {
             switch (unit) {
@@ -4137,6 +4148,14 @@
             if (!edit || !capWrap) return;
             var unitSel = capWrap.querySelector('[data-cf="unit"]');
             var totalIn = capWrap.querySelector('[data-cf="total"]');
+            // 총량 칸이 **무엇을 적는 칸인지**는 단위가 정한다("전체 베드 수").
+            // 라벨을 "전체" 로만 두면 전체 면적인지 배정 수량인지 알 수 없다.
+            var totalLabel = capWrap.querySelector('.aot-ov-cap-total-label');
+            var syncTotalLabel = function () {
+                if (!totalLabel) return;
+                totalLabel.textContent = _capTotalLabel(unitSel ? unitSel.value : 'bed');
+            };
+            if (unitSel) unitSel.addEventListener('change', syncTotalLabel);
             var showCap = function (on) {
                 capWrap.style.display = on ? '' : 'none';
                 edit.style.display = on ? 'none' : '';
@@ -4146,6 +4165,7 @@
             edit.addEventListener('click', function () {
                 if (unitSel) unitSel.value = (cap && cap.unit) || 'bed';
                 if (totalIn) totalIn.value = cap ? cap.total : '';
+                syncTotalLabel();
                 showCap(true);
             });
             var cancel = capWrap.querySelector('.aot-ov-cap-cancel');
@@ -4237,6 +4257,7 @@
                 var caps = (block._aotCaps || {});
                 return caps[bid] || caps[bayId] || null;
             };
+            var alloHint = wrap.querySelector('.aot-ov-alloc-hint');
             var syncAllocSuffix = function () {
                 if (!alloSuf) return;
                 var cap = capOf(curBay());
@@ -4246,6 +4267,9 @@
                 if (alloIn) {
                     alloIn.setAttribute('max', cap ? String(cap.total) : '100');
                 }
+                // 총량이 없을 때만 "아래에서 총량을 적으면 개수로 적을 수
+                // 있습니다" 를 보인다. 늘 보이면 설정을 마친 사람에게 잔소리다.
+                if (alloHint) alloHint.style.display = cap ? 'none' : '';
             };
             if (selBay) selBay.addEventListener('change', syncAllocSuffix);
 
@@ -4341,9 +4365,16 @@
                 if (!st || st.openBayFacility !== facilityUuid) return;
                 var html = window.AoTMapPopup.buildFacilityPlotsHtml(
                     rt.plots || [], bayId, {
-                        // 시설 [현황]과 같은 권한 축(edit_settings). 식생 API 도
-                        // 같은 것을 요구하므로, 버튼이 보이면 저장도 된다.
-                        canEdit: !!(st.repEditByFac && st.repEditByFac[facilityUuid]),
+                        // 설계 화면 링크를 보일지 — 편집 권한과 **다른 축**이다.
+                        // 지금은 값이 같지만(둘 다 edit_settings) 운영 권한
+                        // (edit_plots)이 생기면 갈린다.
+                        canDesign: !!rt.can_design,
+                        // 구획 카드는 **작기 운영 권한**(edit_plots)으로 연다
+                        // (p6_51). 시설 설정(대표 센서 선택 등)과 다른 축이다 —
+                        // 예전에는 같은 플래그를 써서, 작기만 맡기려 해도 시설
+                        // 설정을 통째로 열어야 했다. 서버가 같은 것을 요구하므로
+                        // 버튼이 보이면 저장도 된다.
+                        canEdit: !!rt.can_edit_plots,
                         bays: rt.bays || [],
                         today: _todayLocal()
                     });

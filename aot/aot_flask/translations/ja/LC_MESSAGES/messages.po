@@ -29712,3 +29712,91 @@ msgstr "残り %(n)s"
 
 msgid "Overlapping by %(n)s"
 msgstr "%(n)s 重複"
+
+msgid "Total beds"
+msgstr "ベッド総数"
+
+msgid "Total rows"
+msgstr "列の総数"
+
+msgid "Total trays"
+msgstr "トレイ総数"
+
+msgid "Total area (m²)"
+msgstr "総面積(㎡)"
+
+msgid "Total houses"
+msgstr "棟の総数"
+
+msgid "Create a new program"
+msgstr "新しいプログラムを作成"
+
+msgid "Add or rename zones in facility settings"
+msgstr "区域の追加・名称変更は施設設定で"
+
+msgid "Set the zone capacity below to enter it as a count"
+msgstr "下で区域の総量を設定すると個数で入力できます"
+
+msgid "Facility settings"
+msgstr "施設設定を開く"
+
+msgid "Edit Plots"
+msgstr "区画の編集"
+
+# 사용자 지정 이름 실시간 번역 — docs/design/user-string-live-translation.md
+msgid "Show translated names"
+msgstr "翻訳された名前を表示"
+
+msgid "Show original names"
+msgstr "元の名前を表示"
+
+msgid "Translate User-Defined Names"
+msgstr "ユーザー定義の名前を翻訳"
+
+msgid "Names you typed in yourself — device, zone and crop names — stay in the language you wrote them in. Turn this on to have them shown in the interface language as well. The stored names are never changed."
+msgstr "自分で付けた名前（機器名・区域名・作物名）は、入力した言語のまま残ります。これを有効にすると、その名前も画面の言語で表示されます。保存されている名前自体は変更されません。"
+
+msgid "Name Translations"
+msgstr "名前の翻訳"
+
+msgid "Names you typed in yourself are stored exactly as you wrote them. This table holds the translation shown for each of them in the selected language. Editing one here locks it, so it is never overwritten again. The stored name is never changed."
+msgstr "自分で付けた名前は入力したとおりに保存されます。この表には、選択した言語で代わりに表示する翻訳が入っています。ここで編集するとその値は固定され、二度と上書きされません。保存されている名前自体は変更されません。"
+
+msgid "Name translation is currently turned off. Turn it on under General Settings."
+msgstr "名前の翻訳は現在オフです。一般設定から有効にできます。"
+
+msgid "Translated"
+msgstr "翻訳済み"
+
+msgid "Not translated yet"
+msgstr "未翻訳"
+
+msgid "Excluded"
+msgstr "翻訳対象外"
+
+msgid "Translate now"
+msgstr "今すぐ翻訳"
+
+msgid "Retranslate all"
+msgstr "すべて再翻訳"
+
+msgid "Retranslate"
+msgstr "再翻訳"
+
+msgid "Nothing here yet. Press \"Translate now\" to collect the names in use."
+msgstr "まだ何もありません。「今すぐ翻訳」を押すと、使われている名前を集めます。"
+
+msgid "Original"
+msgstr "原文"
+
+msgid "Translation"
+msgstr "翻訳"
+
+msgid "Edited"
+msgstr "手動修正"
+
+msgid "Discard every translation for this language and translate again? Names you edited by hand are kept."
+msgstr "この言語の翻訳をすべて破棄して、もう一度翻訳しますか？手動で修正した名前はそのまま残ります。"
+
+msgid "Crop"
+msgstr "作物"

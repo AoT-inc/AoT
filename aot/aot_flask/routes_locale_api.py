@@ -1,4 +1,4 @@
-from flask import Blueprint, jsonify, session, request
+from flask import Blueprint, current_app, jsonify, session, request
 from flask_babel import get_locale
 
 blueprint = Blueprint('routes_locale_api', __name__)
@@ -62,3 +62,114 @@ def get_js_translations():
         return response
     except Exception as e:
         return Response(f"console.error('Error loading translations: {str(e)}');", mimetype='application/javascript')
+
+
+# ---------------------------------------------------------------------------
+# 사용자 지정 문자열 번역 — docs/design/user-string-live-translation.md
+#
+# gettext 카탈로그(위의 /locale/js)는 소스에 박힌 문구만 덮는다. 사용자가 지은
+# 이름은 DB 원문 그대로 나가므로, 다국어 계정으로 열면 한 화면에 두 언어가
+# 섞인다. 아래 두 라우트가 그 이름들의 번역 사전을 브라우저로 나른다.
+# ---------------------------------------------------------------------------
+
+def _translation_target_lang():
+    """번역 대상 언어. 꺼져 있거나 판정 불가면 None."""
+    try:
+        import flask_login
+        from aot.ai.services import user_string_translator as ust
+
+        if not ust.is_enabled():
+            return None
+
+        # 사용자별 토글 — NULL 은 "전역 설정을 따른다".
+        try:
+            user = flask_login.current_user
+            if user is not None and getattr(user, 'is_authenticated', False):
+                pref = getattr(user, 'translate_user_strings', None)
+                if pref is False:
+                    return None
+        except Exception:
+            pass
+
+        return str(get_locale())
+    except Exception:
+        return None
+
+
+@blueprint.route('/api/v1/locale/user_strings.js', methods=['GET'])
+def get_user_string_catalog():
+    """사용자 지정 이름의 번역 사전을 JS 로 내려준다.
+
+    `AOT_USER_I18N` 은 확정된 번역, `AOT_USER_I18N_PENDING` 은 "번역 대상이지만
+    아직 번역본이 없는" 원문이다. 브라우저는 pending 문자열을 화면에서 실제로
+    만났을 때만 번역을 요청한다 — 보이지도 않는 이름을 미리 번역하느라 호출을
+    쓰지 않기 위해서다.
+
+    실패해도 화면은 원문으로 정상 동작해야 하므로, 어떤 오류에서도 빈 사전을
+    돌려주고 끝낸다.
+    """
+    from flask import Response
+    import json
+
+    empty = ("window.AOT_USER_I18N = {};"
+             "window.AOT_USER_I18N_PENDING = [];"
+             "window.AOT_USER_I18N_LANG = null;")
+
+    lang = _translation_target_lang()
+    if not lang:
+        response = Response(empty, mimetype='application/javascript')
+        response.headers['Cache-Control'] = 'private, max-age=60'
+        response.headers['Vary'] = 'Cookie, Accept-Language'
+        return response
+
+    try:
+        from aot.ai.services import user_string_translator as ust
+        catalog = ust.build_catalog(lang)
+        js = (
+            f"window.AOT_USER_I18N = "
+            f"{json.dumps(catalog['entries'], ensure_ascii=False)};"
+            f"window.AOT_USER_I18N_PENDING = "
+            f"{json.dumps(catalog['pending'], ensure_ascii=False)};"
+            f"window.AOT_USER_I18N_LANG = {json.dumps(lang)};"
+        )
+    except Exception:
+        current_app.logger.exception("user_strings.js: build_catalog failed")
+        js = empty
+
+    response = Response(js, mimetype='application/javascript')
+    # 무효화의 정본은 layout 이 붙이는 ?v= 지문이다. 위의 카탈로그 라우트와 같은
+    # 이유로 Vary 에 Accept-Language 가 필요하다(엣지 캐시 대응).
+    response.headers['Cache-Control'] = 'private, max-age=300'
+    response.headers['Vary'] = 'Cookie, Accept-Language'
+    return response
+
+
+@blueprint.route('/api/v1/locale/user_strings/translate', methods=['POST'])
+def translate_user_strings():
+    """화면에 실제로 보이는 미번역 문자열을 즉시 번역한다.
+
+    브라우저가 pending 문자열을 DOM 에서 만났을 때 부르는 경로다.
+    """
+    lang = _translation_target_lang()
+    if not lang:
+        return jsonify({'entries': {}, 'pending': [], 'enabled': False})
+
+    data = request.get_json(silent=True) or {}
+    texts = data.get('texts') or []
+    if not isinstance(texts, list):
+        return jsonify({'error': 'texts must be a list'}), 400
+
+    # 한 번에 받는 양을 제한한다 — 요청 하나가 LLM 호출을 무한히 유발하면 안 된다.
+    texts = [t for t in texts if isinstance(t, str)][:100]
+    if not texts:
+        return jsonify({'entries': {}, 'pending': [], 'enabled': True})
+
+    try:
+        from aot.ai.services import user_string_translator as ust
+        result = ust.translate_now(texts, lang)
+    except Exception:
+        current_app.logger.exception("translate_user_strings failed")
+        return jsonify({'entries': {}, 'pending': texts, 'enabled': True})
+
+    result['enabled'] = True
+    return jsonify(result)

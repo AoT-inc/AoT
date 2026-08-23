@@ -736,7 +736,12 @@ def clone_program(program_uuid, data=None):
     return create_program(payload, source='user')
 
 
-def update_program(program_uuid, data):
+# AI 가 이것을 쓰면 검토 게이트로 되돌린다(아래 update_program 참조) — 제어가
+# 실제로 읽는 필드들이다. 이름·설명·탭은 여기 없다(제어에 닿지 않는다).
+_AI_CONTENT_FIELDS = ('stages', 'target_defs', 'photosynthesis')
+
+
+def update_program(program_uuid, data, by=None):
     """수정 → (dict, error). 내장·외부는 거절한다.
 
     **탭 소속(`tab_id`)은 예외다.** "무엇을, 어떤 단계로, 어떤 목표로 기르는가"
@@ -745,6 +750,26 @@ def update_program(program_uuid, data):
     첫 탭에 갇힌다). payload 가 `tab_id` 하나만 담고 있으면(geo/program 화면의
     탭 이동 드롭다운이 보내는 요청) `is_editable()` 게이트를 건너뛰고 탭만
     바꾼다 — 다른 필드가 하나라도 같이 오면 평소대로 내장·외부를 거절한다.
+
+    ## `by='ai'` — AI 가 내용을 쓰면 검토 게이트로 되돌린다 (2026-08-21)
+
+    검토 게이트(`source='ai'` 는 `reviewed_at` 전까지 제어 불가)는 **AI 가 처음부터
+    만든 프로그램만** 막고 있었다. 그런데 실제로 쓰이는 흐름은 그쪽이 아니다 —
+    사람이 화면에서 빈 프로그램을 만들고(`source='user'`) AI 에게 채우게 한다.
+    그러면 내용은 전부 AI 가 쓴 것인데 `source` 는 `user` 로 남아
+    `usable_for_control()` 이 참이 되고, **지어냈을지 모르는 숫자가 검토 없이
+    바로 온실 설정이 된다.** 게이트가 쓰이지 않는 경로만 지키고 있던 셈이다.
+
+    그래서 AI 가 **제어에 닿는 내용**(`CONTENT_FIELDS` — 단계·목표 항목·광합성
+    상수)을 쓰면 그 프로그램은 검토 대기로 돌아간다:
+
+    - `source` 를 `ai` 로 — 내용의 출처가 실제로 AI 다(껍데기를 사람이 만들었다는
+      사실은 제어 판단에 쓰이지 않는다).
+    - `reviewed_at` 을 지운다 — 전에 검토했더라도 AI 가 내용을 다시 썼으면 그
+      검토는 지금 내용에 대한 것이 아니다.
+
+    이름·설명·탭만 고치는 호출은 건드리지 않는다(제어에 닿지 않는다). 사람이
+    화면에서 고칠 때(`by=None`)도 그대로다 — 사람이 쓴 것은 사람이 이미 본 것이다.
     """
     row = GeoProgram.query.filter_by(unique_id=program_uuid).first()
     if row is None:
@@ -771,8 +796,21 @@ def update_program(program_uuid, data):
             db.session.rollback()
             return None, err
 
+        # AI 가 제어에 닿는 내용을 썼으면 검토 대기로 되돌린다(위 독스트링 참조).
+        # `changed` 를 조건에 넣지 않는다 — 값이 같아도 AI 가 그 자리를 다시
+        # 썼다는 사실은 남아야 하고, 무엇보다 이 판정이 "바뀌었나" 에 걸리면
+        # 같은 값을 다시 쓰는 것으로 게이트를 우회할 수 있다.
+        if by == 'ai' and any(f in data for f in _AI_CONTENT_FIELDS):
+            if row.source != 'ai':
+                row.source = 'ai'
+                changed = True
+            if row.reviewed_at is not None:
+                row.reviewed_at = None
+                changed = True
+
         # 사람이 AI 프로그램을 확인했다는 표시. 이게 있어야 제어에 쓸 수 있다.
-        if data.get('reviewed') is True and row.reviewed_at is None:
+        # AI 자신은 이것을 세울 수 없다 — 세울 수 있으면 게이트가 없는 것과 같다.
+        if by != 'ai' and data.get('reviewed') is True and row.reviewed_at is None:
             from aot.utils.time_utils import utc_now
             row.reviewed_at = utc_now()
             changed = True

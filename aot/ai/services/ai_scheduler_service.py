@@ -726,6 +726,55 @@ def _audit_log_purge_job() -> None:
             logger.error("[AuditLogPurge] Job failed: %s", exc, exc_info=True)
 
 
+def _user_string_translation_job() -> None:
+    """Background job: 사용자 지정 이름을 UI 언어로 번역해 캐시에 채운다.
+
+    두 가지를 한다 — DB 의 사용자 문자열 중 미등록분을 큐에 적재하고, 큐에 쌓인
+    것을 배치로 번역한다. 대상 언어는 실제로 쓰이는 언어(사용자 계정 언어)로
+    한정한다. 22개 언어를 전부 미리 채우는 것은 낭비다.
+
+    이름은 유한하고 거의 변하지 않으므로, 초기 채움이 끝나면 이 잡은 대부분
+    아무 일도 하지 않는다.
+
+    docs/design/user-string-live-translation.md
+    """
+    global _flask_app
+    if not _flask_app:
+        return
+
+    with _flask_app.app_context():
+        try:
+            from aot.ai.services import user_string_translator as ust
+            if not ust.is_enabled():
+                return
+
+            from aot.config import LANGUAGES
+            from aot.databases.models import User
+
+            # 실제로 쓰이는 언어만 채운다.
+            langs = set()
+            try:
+                for (lang,) in User.query.with_entities(User.language).all():
+                    if lang and lang in LANGUAGES:
+                        langs.add(lang)
+            except Exception:
+                pass
+            if not langs:
+                return
+
+            for lang in sorted(langs):
+                added = ust.sync_sources(lang)
+                result = ust.run_batch(target_lang=lang)
+                if added or result.get('translated'):
+                    logger.info(
+                        "[UserStringTranslation] %s: queued %d, translated %d, "
+                        "remaining %d", lang, added, result.get('translated', 0),
+                        result.get('remaining', 0))
+        except Exception as exc:
+            logger.error("[UserStringTranslation] Job failed: %s", exc,
+                         exc_info=True)
+
+
 def _job_event_listener(event):
     """Handle job execution results and update metadata."""
     from aot.ai.services.ai_scheduler_service import AISchedulerService, _flask_app
@@ -920,6 +969,23 @@ class AISchedulerService:
             )
         except Exception as _ws_err:
             logger.warning("[WeatherSummary] Could not register weather summary job: %s", _ws_err)
+
+        # @ANCHOR: USER_STRING_TRANSLATION_JOB (registration site)
+        # 15분 주기 — 이름이 새로 생기면 다음 주기에 잡힌다. 기능이 꺼져 있으면
+        # 잡 본문이 즉시 반환하므로 등록해 두어도 비용이 없다.
+        try:
+            scheduler.add_job(
+                func=_user_string_translation_job,
+                trigger='interval',
+                minutes=15,
+                id='ai_scheduler_user_string_translation',
+                coalesce=True,
+                max_instances=1,
+                replace_existing=True,
+            )
+        except Exception as _ust_err:
+            logger.warning("[UserStringTranslation] Could not register job: %s",
+                           _ust_err)
 
         # @ANCHOR: CONTEXT_BROADCAST_JOB (registration site)
         try:

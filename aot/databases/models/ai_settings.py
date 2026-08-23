@@ -182,6 +182,23 @@ class AIGlobalSettings(CRUDMixin, db.Model):
     # see docs/design/ai-agent-loop.md §15 Phase 3 decision).
     agent_loop_enabled = db.Column(db.Boolean, default=True, nullable=True)
 
+    # 사용자 지정 문자열 실시간 번역 — docs/design/user-string-live-translation.md
+    #
+    # gettext 는 소스에 박힌 문구만 덮으므로, 사용자가 지은 이름은 모든 언어에서
+    # 원문 그대로 나온다. 켜면 그 이름들을 UI 언어로 번역해 표시한다(원문 DB 는
+    # 건드리지 않는다 — 번역본은 표시 레이어 캐시일 뿐).
+    #
+    # 기본 False: LLM 호출이 필요하므로 AI 를 안 쓰는 설치에서는 꺼진 채로 둔다.
+    user_string_translation_enabled = db.Column(db.Boolean, default=False, nullable=True)
+
+    # 번역에 쓸 AIAgent.unique_id. NULL 이면 활성 에이전트 중에서 자동 선택한다.
+    # 특정 모델을 하드코딩하지 않기 위한 설정이다.
+    user_string_translation_agent_id = db.Column(db.String(36), default=None, nullable=True)
+
+    # 하루 번역 건수 상한(문자열 개수 기준). 이름은 유한하고 한 번 번역하면
+    # 영구 캐시되므로 정상 운용에서는 걸릴 일이 없다 — 폭주 방어용이다.
+    user_string_translation_daily_limit = db.Column(db.Integer, default=500, nullable=True)
+
     # Comma-separated User.id allowlist for the agent-loop canary. Empty/NULL
     # while agent_loop_enabled=True means every user gets the new loop —
     # intentional for local single-tenant test environments; a real staged

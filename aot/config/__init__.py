@@ -17,7 +17,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from config_translations import TRANSLATIONS as T
 
 MYCODO_VERSION = '8.16.0'
-ALEMBIC_VERSION = 'p6_50_plot_allocation_20260822'
+ALEMBIC_VERSION = 'p6_53_user_string_translation_20260823'
 AOT_VERSION = '26.08.12'
 
 # FORCE UPGRADE MASTER
@@ -658,22 +658,27 @@ FUNCTIONS = [
 USER_ROLES = [
     dict(id=1, name='Admin',
          edit_settings=True, edit_controllers=True, edit_users=True,
+         edit_plots=True,
          view_settings=True, view_camera=True, view_stats=True, view_logs=True,
          reset_password=True),
     dict(id=2, name='Editor',
          edit_settings=True, edit_controllers=True, edit_users=False,
+         edit_plots=True,
          view_settings=True, view_camera=True, view_stats=True, view_logs=True,
          reset_password=True),
     dict(id=3, name='Monitor',
          edit_settings=False, edit_controllers=False, edit_users=False,
+         edit_plots=False,
          view_settings=True, view_camera=True, view_stats=True, view_logs=True,
          reset_password=True),
     dict(id=4, name='Guest',
          edit_settings=False, edit_controllers=False, edit_users=False,
+         edit_plots=False,
          view_settings=False, view_camera=False, view_stats=False, view_logs=False,
          reset_password=False),
     dict(id=5, name='Kiosk',
          edit_settings=False, edit_controllers=False, edit_users=False,
+         edit_plots=False,
          view_settings=False, view_camera=True, view_stats=True, view_logs=False,
          reset_password=False)
 ]

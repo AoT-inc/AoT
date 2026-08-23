@@ -117,6 +117,7 @@ def user_roles(form):
             new_role.edit_users = form.edit_users.data
             new_role.edit_settings = form.edit_settings.data
             new_role.edit_controllers = form.edit_controllers.data
+            new_role.edit_plots = form.edit_plots.data
             new_role.reset_password = form.reset_password.data
             try:
                 new_role.save()
@@ -138,6 +139,7 @@ def user_roles(form):
             mod_role.edit_users = form.edit_users.data
             mod_role.edit_settings = form.edit_settings.data
             mod_role.edit_controllers = form.edit_controllers.data
+            mod_role.edit_plots = form.edit_plots.data
             mod_role.reset_password = form.reset_password.data
             db.session.commit()
             messages["success"].append('{action} {controller}'.format(
@@ -422,6 +424,22 @@ def account_self_update(form):
                     session['language'] = user.language
                 else:
                     session.pop('language', None)
+            # 사용자 지정 이름을 UI 언어로 번역해 보여줄지. 체크박스라 두 상태만
+            # 오지만, 저장하는 순간 NULL(미지정)이 명시값이 된다.
+            # (docs/design/user-string-live-translation.md)
+            #
+            # 전역 기능이 꺼져 있으면 모달에 이 칸이 없어 폼에도 값이 실리지
+            # 않는다 — 그때 False 로 덮으면 나중에 전역을 켰을 때 사용자가
+            # 끈 적도 없이 꺼진 채로 남으므로, 그 경우는 손대지 않는다.
+            if hasattr(form, 'translate_user_strings'):
+                try:
+                    from aot.ai.services.user_string_translator import is_enabled
+                    if is_enabled():
+                        user.translate_user_strings = bool(
+                            form.translate_user_strings.data)
+                except Exception:
+                    pass
+
             # Personal display timezone (IANA). Valid zone stored; blank/invalid
             # → None (system default). (timezone-management.md §7)
             if hasattr(form, 'timezone'):
@@ -863,6 +881,8 @@ def settings_general_mod(form):
                     db.session.add(mod_ai_settings)
                 mod_ai_settings.ai_enabled = form.ai_enabled.data
                 mod_ai_settings.mcp_http_enabled = form.mcp_http_enabled.data
+                mod_ai_settings.user_string_translation_enabled = \
+                    form.user_string_translation_enabled.data
 
                 mod_user = User.query.filter(
                     User.id == flask_login.current_user.id).first()

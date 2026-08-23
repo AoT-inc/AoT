@@ -80,7 +80,27 @@ from aot.scripts.measure_ai_tool_cost import measure_manifest
 # 서랍을 끈 서버가 있는 한 이 상한은 계속 의미가 있으므로 남긴다. 실제로 나가는
 # 값은 `aot/tests/test_mcp_tool_surface.py::test_listed_surface_stays_small`
 # 이 잰다 — 그쪽이 이제 진짜 고정비다.
-AGENT_MANIFEST_TOKEN_CEILING = 14_100
+# ── 2026-08-21 재기준선 (2) — 프로그램 채우기 P1 ──────────────────────────
+#
+#   무엇                          에이전트    MCP     도구
+#   직전                           14,023   21,363  105 / 108
+#   create/modify_program 설명      14,316   21,363  105 / 108
+#
+# **도구는 하나도 늘지 않았다.** 이번 +293 은 이미 있던 도구 둘의 설명이다 —
+# 이런 증가야말로 이 상한이 잡으라고 있는 것이라 근거를 적는다.
+#
+# `create_program` 핸들러는 처음부터 `stages[].guidance` 와 `target_defs` 를
+# 받았는데 **매니페스트가 그것을 말하지 않았다.** 그래서 AI 는 지침을 채울 수
+# 있다는 사실 자체를 몰랐고, 단계 지침은 사람이 코드 상수(`_STAGE_GUIDANCE`)에
+# 손으로 적어 배포해야만 늘어났다 — 작목 하나 추가가 커밋 하나였다. 스키마를
+# 실제 핸들러에 맞추고, 스마트팜코리아에서 검증된 RECIPE 패턴(절차를
+# `usage_hint` 에 주입)을 같은 방식으로 얹은 것이 이 증가의 전부다.
+#
+# 되돌려 아끼면 그 293토큰만큼 **기능이 없어진다**(AI 가 프로그램을 채우지 못하고
+# 사람이 다시 코드로 적는다). 문구가 부푼 경우와 구분되는 지점이라 상한을 올린다.
+# `create_program` 설명에서 스키마 중복(days 규칙·source_note)은 hint 로 옮겨
+# 덜어냈다 — propose_plot_split 때와 같은 정리이고, 그것으로 26토큰을 되찾았다.
+AGENT_MANIFEST_TOKEN_CEILING = 14_400
 MCP_CATALOG_TOKEN_CEILING = 21_500
 
 # 등급(`AOT_AI_TOOL_TIERING=1`)을 켰을 때의 매니페스트. 2026-08-21 실측

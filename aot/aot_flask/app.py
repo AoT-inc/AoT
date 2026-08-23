@@ -367,6 +367,26 @@ def create_app(config=ProdConfig):
     _ASSET_BUILD_ID = '%s-%x' % (_AOT_VERSION, int(time.time()))
 
     @app.context_processor
+    def inject_user_i18n_fingerprint():
+        """사용자 지정 이름 번역 사전의 캐시 지문.
+
+        layout 이 user_strings.js 의 ?v= 에 붙인다. 번역이 하나라도 추가되면
+        값이 바뀌어 브라우저가 새 사전을 받는다. 기능이 꺼져 있으면 조회조차
+        하지 않는다 — 이건 모든 페이지 렌더에서 도는 경로다.
+
+        docs/design/user-string-live-translation.md
+        """
+        try:
+            from aot.ai.services import user_string_translator as ust
+            if not ust.is_enabled():
+                return {'user_i18n_fingerprint': 'off'}
+            from flask_babel import get_locale
+            return {'user_i18n_fingerprint':
+                    ust.catalog_fingerprint(str(get_locale()))}
+        except Exception:
+            return {'user_i18n_fingerprint': 'off'}
+
+    @app.context_processor
     def inject_static_build_id():
         return {'static_build_id': _ASSET_BUILD_ID}
 

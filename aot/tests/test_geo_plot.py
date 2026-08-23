@@ -6043,6 +6043,77 @@ class TestProgram(unittest.TestCase):
         self.assertIsNone(err)
         self.assertTrue(out['usable_for_control'])
 
+    # ── AI 가 사람의 프로그램을 채우면 검토 게이트로 되돌아간다 ────────────
+    #
+    # 게이트가 `create_program` 만 막고 있었다. 실제로 쓰이는 흐름은 사람이 빈
+    # 프로그램을 만들고(source='user') AI 에게 채우게 하는 쪽인데, 그때는
+    # source 가 user 로 남아 지어냈을지 모르는 숫자가 검토 없이 제어에 닿았다.
+
+    def test_ai_filling_a_user_program_sends_it_back_for_review(self):
+        from aot.ai.services.aot_data_tool_service import AoTDataToolService as S
+
+        row = self._program(source='user')
+        self.assertTrue(row.usable_for_control())      # 사람 것이라 원래는 통과
+
+        res = S.modify_program(
+            program_id=row.unique_id,
+            stages=[{'key': 'seedling', 'name': '육묘기', 'days': 20,
+                     'targets': {'temp_day': 24.0}},
+                    {'key': 'harvest', 'name': '수확기', 'days': None}])
+        self.assertEqual(res['status'], 'success')
+        self.assertEqual(res['program']['source'], 'ai')
+        self.assertFalse(res['program']['usable_for_control'])
+
+    def test_ai_rewriting_a_reviewed_program_clears_the_review(self):
+        """전에 검토했더라도 AI 가 내용을 다시 썼으면 그 검토는 지금 내용에
+        대한 것이 아니다."""
+        from aot.ai.services.aot_data_tool_service import AoTDataToolService as S
+        from aot.utils.time_utils import utc_now
+
+        row = self._program(source='ai', reviewed=utc_now())
+        self.assertTrue(row.usable_for_control())
+
+        res = S.modify_program(
+            program_id=row.unique_id,
+            stages=[{'key': 'harvest', 'name': '수확기', 'days': None}])
+        self.assertEqual(res['status'], 'success')
+        self.assertFalse(res['program']['usable_for_control'])
+
+    def test_ai_renaming_does_not_touch_the_gate(self):
+        """이름·설명은 제어에 닿지 않는다 — 고쳤다고 검토를 무르면 사람이
+        검토한 프로그램이 이름 한 번에 잠긴다."""
+        from aot.ai.services.aot_data_tool_service import AoTDataToolService as S
+
+        row = self._program(source='user')
+        res = S.modify_program(program_id=row.unique_id, name='새 이름')
+        self.assertEqual(res['status'], 'success')
+        self.assertEqual(res['program']['source'], 'user')
+        self.assertTrue(res['program']['usable_for_control'])
+
+    def test_ai_cannot_mark_its_own_work_reviewed(self):
+        """AI 가 `reviewed` 를 세울 수 있으면 게이트가 없는 것과 같다."""
+        from aot.aot_flask.geo import program_io
+
+        row = self._program(source='ai')
+        out, err = program_io.update_program(
+            row.unique_id, {'reviewed': True, 'notes': 'AI 가 스스로 확인'},
+            by='ai')
+        self.assertIsNone(err)
+        self.assertFalse(out['usable_for_control'])
+
+    def test_person_editing_stages_keeps_their_own_program(self):
+        """사람이 화면에서 고치는 경로(by=None)는 그대로다 — 사람이 쓴 것은
+        사람이 이미 본 것이다."""
+        from aot.aot_flask.geo import program_io
+
+        row = self._program(source='user')
+        out, err = program_io.update_program(
+            row.unique_id,
+            {'stages': [{'key': 'harvest', 'name': '수확기', 'days': None}]})
+        self.assertIsNone(err)
+        self.assertEqual(out['source'], 'user')
+        self.assertTrue(out['usable_for_control'])
+
     # ── delete_program (AI 도구) ────────────────────────────────────────
     # program_io.delete_program 자체의 참조 무결성은 위
     # test_program_in_use_cannot_be_deleted / test_unused_program_can_be_deleted

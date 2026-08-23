@@ -2296,6 +2296,16 @@ def api_facility_runtime(facility_uuid):
         # 를 그리려면 분모가 목록과 **같은 응답**에 있어야 한다(따로 조회하면
         # 둘이 어긋난 순간이 생긴다).
         'bay_capacities': _facility_bay_capacities(facility_uuid),
+        # 설계 화면(geo/facility·geo/programs)에 갈 수 있는가. 구획 폼의
+        # "여기서 설정합니다" 링크를 보일지 정한다 — 권한 없는 사람에게 보이면
+        # 눌러도 리다이렉트만 되고 무엇이 잘못됐는지 알 수 없다.
+        'can_design': utils_general.user_has_permission(
+            'edit_settings', silent=True),
+        # 구획 카드(추가·몫·총량)를 열 권한. 대표 센서 선택 같은 **시설 설정**과
+        # 다른 축이라 따로 내린다 — 하나로 묶으면 작기만 맡는 사람에게 시설
+        # 설정이 열리거나, 반대로 구획을 못 만들게 된다.
+        'can_edit_plots': utils_general.user_has_permission(
+            'edit_plots', silent=True),
     }
     # 시설 1개당 분당 3회 안팎으로 폴링되고, 액추에이터 상태·센서값이 안 바뀌면
     # 응답 바이트가 그대로다(실측 815 B, 3회 연속 해시 동일). 조건부 응답으로
@@ -2375,7 +2385,10 @@ def api_facility_bay_capacity(facility_uuid):
     from aot.databases.models import GeoFacility
     from aot.aot_flask.geo.plot_context import _CAPACITY_UNITS
 
-    if not utils_general.user_has_permission('edit_settings'):
+    # 총량은 시설의 사실이지만 **작기마다 달라지는 운영 값**이다(같은 온실을
+    # 이번 작기에는 8베드로 쓸 수 있다). 그래서 설계 권한이 아니라 작기 운영
+    # 권한으로 연다 — 설계 화면에 못 가는 사람이 실제로 이 값을 쓴다.
+    if not utils_general.user_has_permission('edit_plots'):
         return jsonify({'ok': False, 'message': 'Insufficient permission'}), 403
 
     facility = GeoFacility.query.filter_by(unique_id=facility_uuid).first()

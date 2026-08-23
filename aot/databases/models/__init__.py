@@ -121,6 +121,7 @@ from .ai_error_feedback import AIErrorFeedback
 # from .ai_memory import AIUserSemanticMemory   # Layer 3 — SBS-002_V2
 # from .ai_memory import AIGlossaryOverride     # Layer 3 — SBS-002_V2
 from .tab import Tab
+from .user_string_translation import UserStringTranslation
 from .orch_device import OrchDevice
 from .orch_workflow import OrchWorkflow
 from .orch_task import OrchTask

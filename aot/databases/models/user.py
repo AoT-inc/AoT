@@ -85,6 +85,10 @@ class User(UserMixin, CRUDMixin, db.Model):
     landing_page = db.Column(db.Text, default='live')
     index_page = db.Column(db.Text, default='landing')
     language = db.Column(db.Text, default=None)  # Force the web interface to use a specific language
+    # 사용자 지정 이름(장치명·구역명 등)을 UI 언어로 실시간 번역해 보여줄지.
+    # NULL = 자동 — 전역 설정이 켜져 있으면 켠 것으로 본다.
+    # docs/design/user-string-live-translation.md
+    translate_user_strings = db.Column(db.Boolean, default=None)
     timezone = db.Column(db.String(64), default=None)  # IANA tz for personal display; None = use system default (docs/design/timezone-management.md §3·§7)
     password_reset_code = db.Column(db.Text, default=None)
     password_reset_code_expiration = db.Column(db.DateTime, default=None)

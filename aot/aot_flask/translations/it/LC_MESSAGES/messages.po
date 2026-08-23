@@ -5783,7 +5783,7 @@ msgstr "Setpoint Tracking Input"
 
 #: aot_flask/forms/forms_pid.py:129
 msgid "Schedule Start (start date)"
-msgstr ""
+msgstr "Inizio pianificazione (data di inizio)"
 
 #: aot_flask/forms/forms_pid.py:132
 #, fuzzy

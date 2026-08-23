@@ -1,0 +1,179 @@
+{% extends "layout-settings.html" %}
+{% set active_page = "settings" %}
+{% set active_settings = "translations" %}
+
+{% block title %} - {{_('Settings')}}: {{_('Name Translations')}}{% endblock %}
+
+{# 도메인 코드는 프롬프트 힌트라 영문이다. 화면에는 사람이 읽는 말로 낸다. #}
+{% set domain_labels = {
+  'device': _('Device'),
+  'measurement': _('Measurement'),
+  'function': _('Function'),
+  'dashboard': _('Dashboard'),
+  'zone': _('Zone'),
+  'crop': _('Crop'),
+  'program': _('Program'),
+  'note_title': _('Note'),
+  'notice': _('Notice'),
+  'misc': _('Other')
+} %}
+
+{% block settings %}
+  {# 사용자 지정 이름의 번역 사전. 오역은 여기서 고친다 — 고친 값은 잠기고,
+     이후 재번역이 덮지 않는다. docs/design/user-string-live-translation.md #}
+  <!-- Route: /settings/translations -->
+  <div class="container" data-no-translate>
+
+    <div class="aot-settings-title">
+      <h3>{{_('Name Translations')}}</h3>
+      <div class="d-flex" style="gap: 8px;">
+        <button class="btn aot-pill-btn aot-pill-btn-primary" id="menu-toggle">{{_('Settings Menu')}}</button>
+      </div>
+    </div>
+
+    <div class="aot-modal-body-text" style="padding-left:4px; margin-bottom:0.75rem;">
+      {{_('Names you typed in yourself are stored exactly as you wrote them. This table holds the translation shown for each of them in the selected language. Editing one here locks it, so it is never overwritten again. The stored name is never changed.')}}
+    </div>
+
+    {% if not enabled %}
+    <div class="aot-modal-body-text" style="padding-left:4px; margin-bottom:0.75rem;">
+      {{_('Name translation is currently turned off. Turn it on under General Settings.')}}
+    </div>
+    {% endif %}
+
+    <div class="d-flex flex-wrap align-items-center" style="gap:8px; margin-bottom:0.75rem;">
+      <form method="get" class="d-flex align-items-center" style="gap:8px; margin:0;">
+        <select name="lang" class="form-control form-control-sm" style="width:auto;" onchange="this.form.submit()">
+          {% for code in langs %}
+          <option value="{{code}}"{% if code == lang %} selected{% endif %}>{{code}}</option>
+          {% endfor %}
+        </select>
+        <select name="status" class="form-control form-control-sm" style="width:auto;" onchange="this.form.submit()">
+          <option value="all"{% if status == 'all' %} selected{% endif %}>{{_('All')}}</option>
+          <option value="done"{% if status == 'done' %} selected{% endif %}>{{_('Translated')}}</option>
+          <option value="pending"{% if status == 'pending' %} selected{% endif %}>{{_('Not translated yet')}}</option>
+          <option value="skipped"{% if status == 'skipped' %} selected{% endif %}>{{_('Excluded')}}</option>
+          <option value="failed"{% if status == 'failed' %} selected{% endif %}>{{_('Failed')}}</option>
+        </select>
+      </form>
+      <button type="button" class="btn aot-pill-btn aot-pill-btn-primary" id="btn-sync">{{_('Translate now')}}</button>
+      <button type="button" class="btn aot-pill-btn" id="btn-retranslate-all">{{_('Retranslate all')}}</button>
+      <span class="aot-modal-body-text" style="margin-left:auto;">
+        {{counts.done}} / {{counts.total}}
+      </span>
+    </div>
+
+    {% if not rows %}
+    <p class="aot-modal-body-text" style="padding-left:4px;">{{_('Nothing here yet. Press "Translate now" to collect the names in use.')}}</p>
+    {% else %}
+    <div class="table-responsive">
+      <table class="table table-sm">
+        <thead>
+          <tr>
+            <th>{{_('Original')}}</th>
+            <th>{{_('Translation')}}</th>
+            <th style="white-space:nowrap;">{{_('Category')}}</th>
+            <th style="white-space:nowrap;">{{_('Status')}}</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in rows %}
+          <tr data-row-id="{{row.id}}">
+            <td>{{row.source_text}}</td>
+            <td>
+              {% if row.status == 'skipped' %}
+              <span class="aot-modal-body-text">&mdash;</span>
+              {% else %}
+              <input type="text" class="form-control form-control-sm js-translation"
+                     value="{{row.translated_text or ''}}"
+                     placeholder="{{_('Not translated yet')}}">
+              {% endif %}
+            </td>
+            <td style="white-space:nowrap;">{{ domain_labels.get(row.domain, row.domain) }}</td>
+            <td style="white-space:nowrap;">
+              {% if row.status == 'done' and row.is_locked %}{{_('Edited')}}
+              {% elif row.status == 'done' %}{{_('Translated')}}
+              {% elif row.status == 'pending' %}{{_('Not translated yet')}}
+              {% elif row.status == 'skipped' %}{{_('Excluded')}}
+              {% else %}{{_('Failed')}}{% endif %}
+            </td>
+            <td>
+              {% if row.status != 'skipped' %}
+              <button type="button" class="btn btn-sm aot-pill-btn js-retranslate">{{_('Retranslate')}}</button>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% endif %}
+  </div>
+
+<script>
+(function () {
+  'use strict';
+  var LANG = {{ lang|tojson }};
+
+  function post(url, body) {
+    return fetch(url, {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': (document.querySelector('meta[name="csrf-token"]') || {})
+          .content || ''
+      },
+      body: JSON.stringify(body || {})
+    }).then(function (res) { return res.ok ? res.json() : null; });
+  }
+
+  /* 편집한 번역은 그 자리에서 저장하고 잠근다. */
+  document.querySelectorAll('.js-translation').forEach(function (input) {
+    input.addEventListener('change', function () {
+      var id = input.closest('tr').getAttribute('data-row-id');
+      post('/settings/translations/save',
+           {id: parseInt(id, 10), translated_text: input.value})
+        .then(function (data) {
+          if (data && data.ok) { window.location.reload(); }
+        });
+    });
+  });
+
+  document.querySelectorAll('.js-retranslate').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var id = btn.closest('tr').getAttribute('data-row-id');
+      post('/settings/translations/retranslate', {id: parseInt(id, 10)})
+        .then(function () {
+          return post('/settings/translations/sync', {lang: LANG});
+        })
+        .then(function () { window.location.reload(); });
+    });
+  });
+
+  var sync = document.getElementById('btn-sync');
+  if (sync) {
+    sync.addEventListener('click', function () {
+      sync.disabled = true;
+      post('/settings/translations/sync', {lang: LANG})
+        .then(function () { window.location.reload(); })
+        .catch(function () { sync.disabled = false; });
+    });
+  }
+
+  var all = document.getElementById('btn-retranslate-all');
+  if (all) {
+    all.addEventListener('click', function () {
+      if (!window.confirm({{ _('Discard every translation for this language and translate again? Names you edited by hand are kept.')|tojson }})) {
+        return;
+      }
+      all.disabled = true;
+      post('/settings/translations/retranslate', {lang: LANG})
+        .then(function () { window.location.reload(); })
+        .catch(function () { all.disabled = false; });
+    });
+  }
+})();
+</script>
+{% endblock %}

@@ -220,6 +220,8 @@ class SettingsGeneral(FlaskForm):
 
     ai_enabled = BooleanField(lazy_gettext('Enable AI Service'))
     mcp_http_enabled = BooleanField(lazy_gettext('Enable External MCP Server'))
+    user_string_translation_enabled = BooleanField(
+        lazy_gettext('Translate User-Defined Names'))
 
     sample_rate_controller_conditional = DecimalField(
         "{} ({}): {}".format(lazy_gettext('Sample Rate'), lazy_gettext('Seconds'), lazy_gettext('Conditional')),
@@ -417,6 +419,8 @@ class UserRoles(FlaskForm):
     view_settings = BooleanField(lazy_gettext('View Settings'))
     edit_users = BooleanField(lazy_gettext('Edit Users'))
     edit_controllers = BooleanField(lazy_gettext('Edit Controllers'))
+    # 작기 운영(p6_51) — 설정보다 **낮은** 권한이라 목록에서도 그 앞에 둔다.
+    edit_plots = BooleanField(lazy_gettext('Edit Plots'))
     edit_settings = BooleanField(lazy_gettext('Edit Settings'))
     reset_password = BooleanField(lazy_gettext('Reset Password'))
     role_id = StringField(lazy_gettext('Role ID'), widget=widgets.HiddenInput())
@@ -502,6 +506,10 @@ class AccountSelf(FlaskForm):
     password_repeat = PasswordField(lazy_gettext('Confirm Password'))
     language = StringField(lazy_gettext('Language'))
     timezone = StringField(lazy_gettext('Timezone'))  # IANA tz for personal display; empty = system default
+    # 사용자 지정 이름을 UI 언어로 번역해 보여줄지. 체크박스라 True/False 만
+    # 오지만, DB 의 NULL(=미지정)은 켬으로 읽는다.
+    translate_user_strings = BooleanField(
+        lazy_gettext('Translate User-Defined Names'))
     user_account_save = SubmitField(lazy_gettext('Save'))
 
 

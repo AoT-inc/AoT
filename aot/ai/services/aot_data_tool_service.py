@@ -23,6 +23,37 @@ _UUID_RE = re.compile(
     r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$', re.I)
 
 
+def _with_translated_alias(fn):
+    """번역된 이름으로 불러도 원문 엔티티를 찾게 한다.
+
+    사용자 지정 이름 번역이 켜져 있으면 화면에는 "1号ハウス" 가 보이는데 DB 에는
+    "1번 하우스" 로 저장되어 있다. 사용자는 자기가 보는 이름으로 말하므로, 원문
+    매칭이 실패했을 때 번역 사전을 역방향으로 읽어 한 번 더 시도한다.
+
+    원문 매칭을 **먼저** 한다. 저장된 이름으로 부른 것을 번역명으로 오인해
+    엉뚱한 엔티티로 보내면 안 되기 때문이다.
+
+    docs/design/user-string-live-translation.md
+    """
+    import functools
+
+    @functools.wraps(fn)
+    def wrapper(target_name):
+        result = fn(target_name)
+        if result and result[0]:
+            return result
+        try:
+            from aot.ai.services.user_string_translator import reverse_lookup
+            source = reverse_lookup(target_name)
+        except Exception:
+            source = None
+        if source and source != target_name:
+            return fn(source)
+        return result
+
+    return wrapper
+
+
 def _looks_like_uuid(value):
     """uuid 꼴인가 — 이름 기반 폴백을 건너뛸지 판정한다.
 
@@ -842,6 +873,19 @@ class AoTDataToolService:
                     for v in _normalize_variants(canonical):
                         if v not in search_terms:
                             search_terms.append(v)
+
+            # 번역된 이름으로 검색할 수 있어야 한다. 사용자 지정 이름 번역이
+            # 켜져 있으면 화면에는 "1号ハウス" 가 보이는데 DB 에는 "1번 하우스"
+            # 로 저장되어 있고, 사용자는 자기가 보는 이름으로 말한다.
+            # docs/design/user-string-live-translation.md
+            try:
+                from aot.ai.services.user_string_translator import reverse_lookup
+                for term in [query] + tokens:
+                    source = reverse_lookup(term)
+                    if source and source not in search_terms:
+                        search_terms.append(source)
+            except Exception:
+                pass
 
             seen_ids = set()
             results = []
@@ -6015,6 +6059,7 @@ class AoTDataToolService:
     # ─────────────────────────────────────────────────────────────────────
 
     @staticmethod
+    @_with_translated_alias
     def _resolve_note_target(target_name):
         """Resolve a human location/entity name to (target_id, target_type,
         resolved_name, gps_lat, gps_lng). Returns (None, ...) when no match.
@@ -8352,10 +8397,17 @@ class AoTDataToolService:
                 payload['photosynthesis'] = {'T_base': fields['base_temp_c']}
             if not payload:
                 return {"status": "error", "message": "nothing to change"}
-            result, err = program_io.update_program(program_id, payload)
+            # by='ai' — 제어에 닿는 내용(단계·목표 항목·광합성)을 고치면 서버가
+            # 그 프로그램을 검토 대기로 되돌린다. 사람이 만든 껍데기를 AI 가
+            # 채우는 흐름에서 게이트가 비어 있던 것을 막는다(program_io 참조).
+            result, err = program_io.update_program(program_id, payload, by='ai')
             if err:
                 return {"status": "error", "message": err}
-            return {"status": "success", "program": result}
+            return {"status": "success", "program": result,
+                    "note": ("Saved. If stages, target items or the "
+                             "photosynthesis constants changed, this programme "
+                             "now needs a person to mark it as checked before "
+                             "it is used for control again.")}
         except Exception as e:
             logger.exception("Error in modify_program")
             return {"status": "error", "message": str(e)}

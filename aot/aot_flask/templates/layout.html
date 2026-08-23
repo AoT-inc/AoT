@@ -223,6 +223,12 @@ IMPORTANT: This is the SOURCE TEMPLATE file.
        이 URL 은 즉시 새로 렌더된다). 계정 언어 변경처럼 Accept-Language 도 쿠키도
        안 바뀌는 경로까지 이 한 줄이 덮는다 — Vary 만으로는 못 덮는다. #}
     <script src="{{ url_for('routes_locale_api.get_js_translations', lang=current_locale) }}"></script>
+    {# 사용자 지정 이름(장치명·구역명·작물명)의 번역 사전. 위 카탈로그가 소스에 박힌
+       문구를 덮는다면 이쪽은 사용자가 지은 이름을 덮는다. ?v= 지문은 번역이
+       추가될 때마다 바뀌고, 기능이 꺼져 있으면 'off' 로 고정된다.
+       docs/design/user-string-live-translation.md #}
+    <script defer src="{{ url_for('routes_locale_api.get_user_string_catalog', lang=current_locale, v=user_i18n_fingerprint) }}"></script>
+    <script defer src="/static/js/common/aot-user-i18n.js?v=20260823"></script>
     <script>
     /**
      * Translation helper for JS
@@ -703,6 +709,13 @@ IMPORTANT: This is the SOURCE TEMPLATE file.
             <a class="dropdown-item" href="/systemctl/shutdown" onclick='return confirm("{{ _("Are you sure you want to shutdown the system?") }}")'>{{ _('Shutdown System')
               }}</a>
             <div class="dropdown-divider"></div>
+            {# 사용자 지정 이름의 원문 ↔ 번역 전환. 브라우저 번역기의 "원문 보기"와
+               같은 역할이며, 기능이 꺼져 있으면 항목 자체를 내보내지 않는다. #}
+            {% if user_i18n_fingerprint and user_i18n_fingerprint != 'off' %}
+            <a class="dropdown-item" href="#" id="aot-user-i18n-toggle"
+               data-label-show="{{ _('Show translated names') }}"
+               data-label-hide="{{ _('Show original names') }}">{{ _('Show original names') }}</a>
+            {% endif %}
             <a class="dropdown-item" href="#" data-toggle="modal" data-target="#modal_config_theme">{{_('User Settings')}}</a>
             <a class="dropdown-item" href="/logout">{{_('Logout')}} ({{current_user.name}})</a>
           </div>
@@ -791,6 +804,23 @@ IMPORTANT: This is the SOURCE TEMPLATE file.
                   </select>
                 </div>
               </div>
+              {# 사용자 지정 이름 번역 — 전역으로 켜져 있을 때만 보인다.
+                 끄면 사전 자체를 내려받지 않는다(원문 그대로 표시).
+                 docs/design/user-string-live-translation.md #}
+              {% if user_i18n_fingerprint and user_i18n_fingerprint != 'off' %}
+              <div class="aot-modal-option-row" style="border-bottom: none;">
+                {% set user_i18n_tooltip = _("Names you typed in yourself — device, zone and crop names — stay in the language you wrote them in. Turn this on to have them shown in the interface language as well. The stored names are never changed.") %}
+                <div class="aot-modal-option-label">{{ _('Translate User-Defined Names') }}</div>
+                <div class="aot-modal-option-control">
+                  <label class="btn-toggle mb-0">
+                    <input type="checkbox" class="btn-toggle-input" id="translate_user_strings"
+                      name="translate_user_strings" title="{{ user_i18n_tooltip }}"
+                      {% if current_user.translate_user_strings != False %} checked{% endif %}>
+                    <span class="btn-toggle-slider"><span class="btn-toggle-thumb"></span></span>
+                  </label>
+                </div>
+              </div>
+              {% endif %}
               <div class="aot-modal-option-row" style="border-bottom: none;">
                 {% set timezone_tooltip = _("Your personal timezone for displaying times. Leave blank to use the system default. Device schedules still use each device's own local time.") %}
                 <div class="aot-modal-option-label">{{ _('Timezone') }}</div>

@@ -1017,10 +1017,16 @@
   // 손으로 그리기 시작하면 탭 키·순서·클래스가 조용히 갈리고, 구역이 시설과
   // 탭을 맞추느라 한 번 겪은 일이 그대로 재발한다.
   function buildSectionNav(active, secs) {
+    // 마지막 탭의 이름은 **'개요'가 아니라 '설정'** 이다. 그 탭에 들어 있는 것은
+    // 기본 정보와 **편집 폼**(이름·기간·프로그램·몫·사진·설명)이라, '개요' 라는
+    // 이름은 "읽기만 하는 요약" 을 약속하고 배신한다. 사용자가 "설정을 어디서
+    // 하느냐" 를 물었을 때 화면이 스스로 답해야 한다.
+    // 키(`about`)는 그대로 둔다 — 위젯 옵션(`popup_default_tab`)에 저장된 값이라
+    // 바꾸면 기존 대시보드가 존재하지 않는 탭을 요구하게 된다.
     secs = secs || [
       { key: 'overview', label: 'Overview' },
       { key: 'envctl',   label: 'Environment & Control' },
-      { key: 'about',    label: 'About' }
+      { key: 'about',    label: 'Settings' }
     ];
     var html = '<div class="aot-act-tabs-nav aot-bay-popup-nav">';
     secs.forEach(function (s) {
@@ -2230,6 +2236,46 @@
   // 구역 총량의 단위 어휘(p6_50). 자유 문자열을 쓰지 않는 이유는 번역과 집계가
   // 곧 갈리기 때문이다 — 어휘는 서버(`plot_context._CAPACITY_UNITS`)와 같은 다섯
   // 개로 고정하고 여기서는 표시 문구만 만든다.
+  /**
+   * 칸 아래 한 줄 안내 — **막다른 곳에 길을 놓는다.**
+   *
+   * 폼이 고를 수만 있고 만들 수는 없는 것들이 있다(프로그램·구역). 사용자는
+   * 목록에 없는 것을 만나면 어디로 가야 하는지 모른 채 막힌다 — 그 순간 화면이
+   * 알려 주지 않으면 기능이 없는 것과 같다.
+   *
+   * `href` 가 있으면 링크, 없으면 설명만. **링크는 설계 화면에 갈 수 있는
+   * 사람에게만 보인다**(`can_design`) — 권한 없이 누르면 리다이렉트만 되고
+   * 무엇이 잘못됐는지 알 수 없다.
+   */
+  function _fieldHint(text, href, canDesign) {
+    if (!text) return '';
+    var inner = _esc(text);
+    if (href && canDesign) {
+      inner = '<a href="' + _esc(href) + '">' + inner + '</a>';
+    } else if (href && !canDesign) {
+      return '';                 // 갈 수 없는 곳은 아예 말하지 않는다
+    }
+    return '<div class="aot-modal-option-row aot-ov-field-hint">' +
+           '<div class="aot-modal-option-label"></div>' +
+           '<div class="aot-modal-option-control">' + inner + '</div></div>';
+  }
+
+  /** 총량 칸의 라벨 — **단위에 따라 달라진다.**
+   *
+   * 예전에는 그냥 "전체" 였는데, 전체 면적을 적으라는 것인지 배정된 수량을
+   * 적으라는 것인지 알 수 없다는 지적을 받았다. 단위를 이미 골랐으므로 그것을
+   * 라벨에 넣으면 문장이 스스로 설명한다 — "전체 베드 수".
+   */
+  function _capTotalLabel(unit) {
+    switch (unit) {
+      case 'row':   return _t('Total rows');
+      case 'tray':  return _t('Total trays');
+      case 'area':  return _t('Total area (m\u00b2)');
+      case 'house': return _t('Total houses');
+      default:      return _t('Total beds');
+    }
+  }
+
   function _capUnitLabel(unit) {
     switch (unit) {
       case 'row':   return _t('rows');
@@ -2324,7 +2370,9 @@
                _esc(b.name || b.id) + '</option>';
         });
         zoneCtl = _fr(_t('Zone'), '<select class="aot-modern-input form-control" ' +
-                                  'data-nf="bay_id">' + o + '</select>');
+                                  'data-nf="bay_id">' + o + '</select>') +
+                  _fieldHint(_t('Facility settings'),
+                             '/geo/facility', opts.canDesign);
       }
       var _in = function (field, type, val) {
         return '<input type="' + type + '" class="aot-modern-input form-control" ' +
@@ -2358,9 +2406,13 @@
                        '<option value="area">' + _esc(_t('m²')) + '</option>' +
                        '<option value="house">' + _esc(_t('houses')) + '</option>' +
                        '</select>') +
-                   _fr(_t('Total'),
-                       '<input type="number" min="0" step="any" ' +
-                       'class="aot-modern-input form-control" data-cf="total" value="">') +
+                   ('<div class="aot-modal-option-row">' +
+                    '<div class="aot-modal-option-label aot-ov-cap-total-label">' +
+                    _esc(_capTotalLabel('bed')) + '</div>' +
+                    '<div class="aot-modal-option-control">' +
+                    '<input type="number" min="0" step="any" ' +
+                    'class="aot-modern-input form-control" data-cf="total" value="">' +
+                    '</div></div>') +
                    '</div>' +
                    '<div class="aot-ov-desc-actions">' +
                    '<button type="button" class="aot-ov-pill aot-ov-cap-cancel">' +
@@ -2378,6 +2430,8 @@
               zoneCtl +
               _fr(_t('Kind'), _kindSelect('data-nf="kind"', 'vegetation')) +
               progCtl +
+              _fieldHint(_t('Create a new program'), '/geo/programs',
+                         opts.canDesign) +
               // `_fr` 은 라벨을 이스케이프한다 — HTML 을 넘기면 태그가 그대로
               // 화면에 찍힌다. 라벨은 **문자열**로만 넘긴다.
               _fr(_plotSubjectLabel(null), _in('subject', 'text', '')) +
@@ -2395,6 +2449,16 @@
                   'class="aot-modern-input form-control" ' +
                   'data-nf="allocation_value" value="">' +
                   '<span class="aot-ov-alloc-suffix"></span></span>') +
+              // 총량이 없으면 몫이 %로만 적힌다. 그 사실과 고치는 방법을
+              // 여기서 말하지 않으면 사용자는 %가 유일한 방식인 줄 안다.
+              // (설계 화면 링크가 아니라 **같은 카드 안**을 가리키므로 권한과
+              //  무관하게 보인다 — 총량은 이 화면에서 고친다.)
+              '<div class="aot-modal-option-row aot-ov-field-hint ' +
+              'aot-ov-alloc-hint" style="display:none">' +
+              '<div class="aot-modal-option-label"></div>' +
+              '<div class="aot-modal-option-control">' +
+              _esc(_t('Set the zone capacity below to enter it as a count')) +
+              '</div></div>' +
               '</div>' +
               '<div class="aot-ov-desc-actions">' +
               '<button type="button" class="aot-ov-pill aot-ov-plot-new-cancel">' +
@@ -2842,7 +2906,9 @@
   var _PLANTING_SECS = [
     { key: 'overview', label: 'Overview' },
     { key: 'envctl',   label: 'Environment & Control' },
-    { key: 'about',    label: 'About' }
+    // 위 `buildSectionNav` 기본값과 **같은 이름**이어야 한다 — 구획만 다른
+    // 이름을 쓰면 계층을 오갈 때마다 같은 자리의 탭을 다시 읽어야 한다.
+    { key: 'about',    label: 'Settings' }
   ];
 
   // 위젯 옵션 popup_default_tab 은 세 키를 쓰는데 식생은 그중 둘만 갖는다 —
@@ -3198,7 +3264,9 @@
         });
         _bayRow = _fRow(_t('Zone'),
                         '<select class="aot-modern-input form-control" ' +
-                        'data-pf="bay_id">' + opts + '</select>');
+                        'data-pf="bay_id">' + opts + '</select>') +
+                  _fieldHint(_t('Facility settings'),
+                             '/geo/facility', p.can_design);
     }
 
     // 재배 프로그램 — 선택지는 위젯이 `p.program_choices` 로 실어 준다(모달은
@@ -3215,7 +3283,9 @@
         });
         _progRow = _fRow(_t('Program'),
                          '<select class="aot-modern-input form-control" ' +
-                         'data-pf="program_uuid">' + po + '</select>');
+                         'data-pf="program_uuid">' + po + '</select>') +
+                   _fieldHint(_t('Create a new program'), '/geo/programs',
+                              p.can_design);
     }
 
     // 구역 안에서의 몫(p6_50) — 시설 구획에만 있다. 노지 구획은 면적이 도형에서

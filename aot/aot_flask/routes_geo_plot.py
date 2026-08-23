@@ -22,8 +22,17 @@ logger = logging.getLogger(__name__)
 
 
 def _require_edit():
-    """쓰기 권한 확인 — 없으면 응답 튜플, 있으면 None."""
-    if not utils_general.user_has_permission('edit_settings'):
+    """쓰기 권한 확인 — 없으면 응답 튜플, 있으면 None.
+
+    **작기 운영 권한(`edit_plots`)으로 연다** (p6_51). 예전에는 `edit_settings`
+    였는데, 그러면 작기 기록만 맡기려 해도 장치·시설·네트워크 설정까지 함께
+    열어야 했다. `edit_settings` 는 이 권한을 함의하므로 기존 Admin·Editor 의
+    동작은 그대로다.
+
+    구획 라우트 9곳이 이 헬퍼 하나를 쓴다 — 게이트를 각자 적으면 한 곳만
+    빠뜨려도 그 경로가 조용히 열린다.
+    """
+    if not utils_general.user_has_permission('edit_plots'):
         return jsonify({'ok': False, 'message': 'Permission Denied'}), 403
     return None
 
@@ -429,6 +438,17 @@ def api_plot_get(plot_uuid):
     plot_io.auto_advance_stage(plot_uuid)
 
     out = plot_context.to_dict(row, with_sensors=True)
+    # 권한은 캐시 밖에서 매번 채운다(`api_plot_contents` 와 같은 규칙).
+    #
+    # `can_edit` 는 이 구획을 고칠 수 있는가이고, `can_design` 은 **설계 화면
+    # (geo/facility·geo/programs)에 갈 수 있는가**다. 지금은 둘 다 `edit_settings`
+    # 라 값이 같지만 의미가 다르다 — 화면이 "여기서 설정합니다" 링크를 보일지
+    # 정하는 것은 후자다. 권한 없는 사람에게 그 링크를 보이면 눌러도 리다이렉트만
+    # 되고, 무엇이 잘못됐는지 알 길이 없다.
+    out['can_edit'] = utils_general.user_has_permission(
+        'edit_plots', silent=True)
+    out['can_design'] = utils_general.user_has_permission(
+        'edit_settings', silent=True)
     out['schedule'] = _plot_schedule(row)
     return jsonify({'ok': True, 'plot': out})
 
@@ -487,7 +507,7 @@ def api_plot_contents(plot_uuid):
     payload = dict(payload)
     payload['plot'] = dict(payload['plot'])
     payload['plot']['can_edit'] = utils_general.user_has_permission(
-        'edit_settings', silent=True)
+        'edit_plots', silent=True)
     return jsonify(payload)
 
 

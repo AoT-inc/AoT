@@ -1828,6 +1828,12 @@ def user_has_permission(permission, silent=False):
     user = User.query.filter(User.name == flask_login.current_user.name).first()
     role = Role.query.filter(Role.id == user.role_id).first()
     if ((permission == 'edit_settings' and role.edit_settings) or
+            # 설정 권한은 작기 운영을 **함의한다.** 따로 체크하게 하면 기존
+            # Editor 가 업그레이드 순간 구획을 못 쓰게 된다. 반대는 성립하지
+            # 않는다 — 작기만 맡는 사람에게 설정이 열리면 이 권한을 나눈 이유가
+            # 사라진다.
+            (permission == 'edit_plots' and
+             (getattr(role, 'edit_plots', False) or role.edit_settings)) or
             (permission == 'edit_controllers' and role.edit_controllers) or
             (permission == 'edit_users' and role.edit_users) or
             (permission == 'view_settings' and role.view_settings) or

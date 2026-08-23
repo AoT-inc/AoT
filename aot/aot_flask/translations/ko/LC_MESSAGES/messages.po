@@ -29953,3 +29953,91 @@ msgstr "%(n)s 남음"
 
 msgid "Overlapping by %(n)s"
 msgstr "%(n)s 겹침"
+
+msgid "Total beds"
+msgstr "전체 베드 수"
+
+msgid "Total rows"
+msgstr "전체 열 수"
+
+msgid "Total trays"
+msgstr "전체 트레이 수"
+
+msgid "Total area (m²)"
+msgstr "전체 면적(㎡)"
+
+msgid "Total houses"
+msgstr "전체 동 수"
+
+msgid "Create a new program"
+msgstr "새 프로그램 만들기"
+
+msgid "Add or rename zones in facility settings"
+msgstr "구역 추가·이름 변경은 시설 설정에서"
+
+msgid "Set the zone capacity below to enter it as a count"
+msgstr "아래에서 구역 총량을 적으면 개수로 적을 수 있습니다"
+
+msgid "Facility settings"
+msgstr "시설 설정 열기"
+
+msgid "Edit Plots"
+msgstr "구획 편집"
+
+# 사용자 지정 이름 실시간 번역 — docs/design/user-string-live-translation.md
+msgid "Show translated names"
+msgstr "번역된 이름 보기"
+
+msgid "Show original names"
+msgstr "원문 이름 보기"
+
+msgid "Translate User-Defined Names"
+msgstr "사용자 지정 이름 번역"
+
+msgid "Names you typed in yourself — device, zone and crop names — stay in the language you wrote them in. Turn this on to have them shown in the interface language as well. The stored names are never changed."
+msgstr "직접 지은 이름(장치명·구역명·작물명)은 적은 언어 그대로 남습니다. 켜면 그 이름도 화면 언어로 보여 줍니다. 저장된 이름 자체는 바뀌지 않습니다."
+
+msgid "Name Translations"
+msgstr "이름 번역"
+
+msgid "Names you typed in yourself are stored exactly as you wrote them. This table holds the translation shown for each of them in the selected language. Editing one here locks it, so it is never overwritten again. The stored name is never changed."
+msgstr "직접 지은 이름은 적은 그대로 저장됩니다. 이 표에는 선택한 언어에서 그 이름 대신 보여 줄 번역이 들어 있습니다. 여기서 고치면 그 값이 잠겨 다시 덮이지 않습니다. 저장된 이름 자체는 바뀌지 않습니다."
+
+msgid "Name translation is currently turned off. Turn it on under General Settings."
+msgstr "이름 번역이 꺼져 있습니다. 일반 설정에서 켤 수 있습니다."
+
+msgid "Translated"
+msgstr "번역됨"
+
+msgid "Not translated yet"
+msgstr "아직 번역 안 됨"
+
+msgid "Excluded"
+msgstr "번역 제외"
+
+msgid "Translate now"
+msgstr "지금 번역"
+
+msgid "Retranslate all"
+msgstr "전체 다시 번역"
+
+msgid "Retranslate"
+msgstr "다시 번역"
+
+msgid "Nothing here yet. Press \"Translate now\" to collect the names in use."
+msgstr "아직 비어 있습니다. \"지금 번역\"을 누르면 쓰이고 있는 이름을 모읍니다."
+
+msgid "Original"
+msgstr "원문"
+
+msgid "Translation"
+msgstr "번역"
+
+msgid "Edited"
+msgstr "직접 수정"
+
+msgid "Discard every translation for this language and translate again? Names you edited by hand are kept."
+msgstr "이 언어의 번역을 모두 지우고 다시 번역할까요? 직접 고친 이름은 그대로 둡니다."
+
+msgid "Crop"
+msgstr "작물"
