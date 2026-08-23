@@ -222,6 +222,48 @@ class TestCatalogEndpoint(_TranslationAppFixture):
                       response.get_data(as_text=True))
 
 
+class TestAuthentication(_TranslationAppFixture):
+    """두 라우트는 로그인을 요구한다.
+
+    사전에는 장치명·구역명·작물명 — 그 농장의 사용자 데이터가 실린다. 번역
+    요청 경로는 LLM 호출을 유발하므로 열어 두면 비용을 태우는 데 쓰인다.
+    바로 위 gettext 카탈로그(`/locale/js`)가 공개인 것과 대비된다 — 그쪽은
+    로그인 화면에서도 필요하고 담는 것이 소스 문구뿐이다.
+
+    2026-08-23 릴리스 직후 CI(`check_route_auth.py`)가 이 누락을 잡았다.
+    """
+
+    def _logout(self):
+        with self.client.session_transaction() as sess:
+            sess.clear()
+
+    def test_catalog_requires_login(self):
+        self._seed('1번 하우스', '1号ハウス')
+        self._logout()
+        response = self.client.get('/api/v1/locale/user_strings.js')
+        self.assertIn(response.status_code, (302, 401))
+        self.assertNotIn('1号ハウス', response.get_data(as_text=True))
+
+    def test_translate_requires_login(self):
+        self._logout()
+        response = self.client.post(
+            '/api/v1/locale/user_strings/translate',
+            data=json.dumps({'texts': ['남쪽 온실']}),
+            content_type='application/json')
+        self.assertIn(response.status_code, (302, 401))
+
+    def test_unauthenticated_request_never_queues_work(self):
+        """미인증 요청이 번역 큐를 늘리면 그것만으로 비용 경로가 열린다."""
+        from aot.databases.models.user_string_translation import \
+            UserStringTranslation
+        self._logout()
+        self.client.post('/api/v1/locale/user_strings/translate',
+                         data=json.dumps({'texts': ['처음 보는 이름']}),
+                         content_type='application/json')
+        with self.app.app_context():
+            self.assertEqual(UserStringTranslation.query.count(), 0)
+
+
 class TestTranslateEndpoint(_TranslationAppFixture):
 
     def _post(self, texts):

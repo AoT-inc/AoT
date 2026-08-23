@@ -1,3 +1,4 @@
+import flask_login
 from flask import Blueprint, current_app, jsonify, session, request
 from flask_babel import get_locale
 
@@ -97,8 +98,13 @@ def _translation_target_lang():
 
 
 @blueprint.route('/api/v1/locale/user_strings.js', methods=['GET'])
+@flask_login.login_required
 def get_user_string_catalog():
     """사용자 지정 이름의 번역 사전을 JS 로 내려준다.
+
+    바로 위 gettext 카탈로그(`/locale/js`)와 달리 **로그인이 필요하다** — 이쪽은
+    장치명·구역명·작물명, 즉 그 농장의 사용자 데이터를 담는다. 로그인 화면에서
+    쓸 일도 없다(layout 은 인증 후에만 렌더된다).
 
     `AOT_USER_I18N` 은 확정된 번역, `AOT_USER_I18N_PENDING` 은 "번역 대상이지만
     아직 번역본이 없는" 원문이다. 브라우저는 pending 문자열을 화면에서 실제로
@@ -145,8 +151,12 @@ def get_user_string_catalog():
 
 
 @blueprint.route('/api/v1/locale/user_strings/translate', methods=['POST'])
+@flask_login.login_required
 def translate_user_strings():
     """화면에 실제로 보이는 미번역 문자열을 즉시 번역한다.
+
+    로그인이 필요하다 — 이 경로는 LLM 호출을 유발하므로, 열어 두면 비용을
+    태우는 데 쓰일 수 있다.
 
     브라우저가 pending 문자열을 DOM 에서 만났을 때 부르는 경로다.
     """
