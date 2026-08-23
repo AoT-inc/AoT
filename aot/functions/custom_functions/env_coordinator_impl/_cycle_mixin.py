@@ -491,45 +491,17 @@ class CycleMixin:
 
         return False, ''
 
-    def _run_cycle(self, cycle_sec: float) -> None:
-        uid     = self.unique_id
-        max_age = self.sensor_max_age or 120.0
-        # 구획 목표는 사이클당 한 번만 읽는다. 항목마다 따로 읽으면 DB 를 여러
-        # 번 치는 것도 문제지만, 그 사이에 값이 바뀌면 **한 사이클 안에서 서로
-        # 다른 목표**를 보게 된다.
-        self._plot_targets_cache = None
-        self._crop_params_cache = None
+    def _collect_external_context(self, max_age):
+        """이번 사이클의 **실외 컨텍스트**를 정한다.
 
-        if not self._profiles:
-            if getattr(self, 'debug_logging', False):
-                self.logger.debug(
-                    'EnvCoordinator: no actuators registered — skipping cycle')
-            return
+        세 갈래가 같은 dict 를 순서대로 덮는다 — ext_context_collector 의
+        공유 컨텍스트 · 시설 실외 센서(이긴다) · 값이 빈 사이클의 마지막
+        실측 승계. 흩어 두면 "무엇이 이겼는가" 를 읽어서 알 수 없고, 이
+        결함은 조용하다(지어낸 20°C/60% 가 제어로 흘러간 것이 그것이다).
 
-        # ── Schedule end gate ─────────────────────────────────────────────────
-        # 종료 날짜가 지나면 제어를 정지한다: 각 액추에이터를 end_behavior 로
-        # 복귀시키고 이후 사이클을 건너뛴다. Method 는 종료 전까지 실제 경과
-        # 주차를 그대로 따른다.
-        if self._schedule_ended():
-            if not getattr(self, '_schedule_ended_logged', False):
-                self.logger.info(
-                    'EnvCoordinator: 종료 날짜(%s) 도달 — 제어 정지, '
-                    '액추에이터 end_behavior 복귀', self.schedule_end_time)
-                self._schedule_ended_logged = True
-            self._apply_end_behaviors()
-            return
-        else:
-            # 종료일 이전(또는 종료일 재설정)으로 복귀 시 재가동 로그 재무장
-            if getattr(self, '_schedule_ended_logged', False):
-                self._schedule_ended_logged = False
-                self.logger.info(
-                    'EnvCoordinator: 종료 날짜 이전 — 제어 재개')
-
-        # ── Time window gate ──────────────────────────────────────────────────
-        if self.time_enable and not self._in_time_window():
-            self._apply_end_behaviors()
-            return
-
+        반환 `(external, outdoor_cache)` — 뒤엣것은 `_collect_internal` 에
+        그대로 넘겨 같은 InfluxDB 조회를 두 번 하지 않게 한다.
+        """
         # ── External context ──────────────────────────────────────────────────
         # 외부 환경 데이터는 facility 실외 센서(주력) 또는 ext_context_collector
         # (선택)에서 받는다. 먼저 ext_context_collector 공유 컨텍스트를 읽고,
@@ -632,6 +604,49 @@ class CycleMixin:
             self.logger.debug(
                 'EnvCoordinator: 실외 %s 를 마지막 유효값으로 승계 (관측 지연)',
                 ','.join(_carried))
+        return external, _od_cache
+
+    def _run_cycle(self, cycle_sec: float) -> None:
+        uid     = self.unique_id
+        max_age = self.sensor_max_age or 120.0
+        # 구획 목표는 사이클당 한 번만 읽는다. 항목마다 따로 읽으면 DB 를 여러
+        # 번 치는 것도 문제지만, 그 사이에 값이 바뀌면 **한 사이클 안에서 서로
+        # 다른 목표**를 보게 된다.
+        self._plot_targets_cache = None
+        self._crop_params_cache = None
+
+        if not self._profiles:
+            if getattr(self, 'debug_logging', False):
+                self.logger.debug(
+                    'EnvCoordinator: no actuators registered — skipping cycle')
+            return
+
+        # ── Schedule end gate ─────────────────────────────────────────────────
+        # 종료 날짜가 지나면 제어를 정지한다: 각 액추에이터를 end_behavior 로
+        # 복귀시키고 이후 사이클을 건너뛴다. Method 는 종료 전까지 실제 경과
+        # 주차를 그대로 따른다.
+        if self._schedule_ended():
+            if not getattr(self, '_schedule_ended_logged', False):
+                self.logger.info(
+                    'EnvCoordinator: 종료 날짜(%s) 도달 — 제어 정지, '
+                    '액추에이터 end_behavior 복귀', self.schedule_end_time)
+                self._schedule_ended_logged = True
+            self._apply_end_behaviors()
+            return
+        else:
+            # 종료일 이전(또는 종료일 재설정)으로 복귀 시 재가동 로그 재무장
+            if getattr(self, '_schedule_ended_logged', False):
+                self._schedule_ended_logged = False
+                self.logger.info(
+                    'EnvCoordinator: 종료 날짜 이전 — 제어 재개')
+
+        # ── Time window gate ──────────────────────────────────────────────────
+        if self.time_enable and not self._in_time_window():
+            self._apply_end_behaviors()
+            return
+
+        # ── External context ──────────────────────────────────────────────────
+        external, _od_cache = self._collect_external_context(max_age)
 
         # P2-2: 외부 컨텍스트 신선도 확인 — 유효하면 캐시 갱신, 만료면 fallback 준비
         now_ts      = time.time()

@@ -16,6 +16,7 @@
 조사 보고서: .local/reports/spatial-hierarchy-rollup-gap-20260818.md
 """
 import os
+import re
 import unittest
 
 _HERE = os.path.dirname(__file__)
@@ -26,6 +27,17 @@ def _read(*parts):
     with open(os.path.join(_ROOT, *parts), encoding='utf-8') as fh:
         return fh.read()
 
+
+
+def _strip_js_comments(src):
+    """JS 소스에서 `//` 줄주석과 `/* */` 블록주석을 걷어낸다.
+
+    소스에 낱말이 있는가가 아니라 **코드가 그것을 쓰는가**를 보기 위한 것이다.
+    문자열 리터럴 안의 `//`(URL 등)까지 가르지는 않지만, 여기서 찾는 것은
+    `descendants` 같은 식별자라 그 정도로 충분하다.
+    """
+    src = re.sub(r'/\*.*?\*/', '', src, flags=re.S)
+    return re.sub(r'(^|[^:])//[^\n]*', r'\1', src)
 
 def _fn(src, name):
     for head in ('def %s' % name, 'function %s' % name):
@@ -267,13 +279,18 @@ class TestScreenAndAiAgree(unittest.TestCase):
         self.assertIn('n.target_name', js)
 
     def test_containers_ask_for_descendants(self):
-        """대지·구역·시설은 컨테이너다. 식생은 최하위라 자기 것만."""
+        """대지·구역·시설은 컨테이너다. 구획은 최하위라 자기 것만.
+
+        ⚠ **주석은 빼고 본다.** 예전에는 파일 전체에서 낱말을 찾아, "여기서는
+        자손을 켜지 않는다" 고 **적어 두는 것 자체**가 이 검사를 깨뜨렸다.
+        규칙을 설명하는 글이 규칙 위반이 되면 다음 사람은 설명을 지운다.
+        """
         js = _read('aot_flask', 'static', 'js', 'widgets', 'AoT_map',
                    'aot-map-widget-vector.js')
         self.assertGreaterEqual(js.count('descendants: true'), 3)
         veg = _read('aot_flask', 'static', 'js', 'widgets', 'AoT_map',
                     'aot-map-plot.js')
-        self.assertNotIn('descendants', veg)
+        self.assertNotIn('descendants', _strip_js_comments(veg))
 
     def test_area_for_descendants_always_includes_the_root(self):
         """`include_self` 는 결과 목록에 root 를 넣을지만 정한다. 판정 영역까지

@@ -23,13 +23,14 @@ from aot.functions.custom_functions.env_coordinator_impl import _cycle_mixin
 # 추출된 단계와 그 역할. 이름이 바뀌면 여기도 바뀌어야 한다 —
 # 그 자체가 "무엇이 단계인가" 를 명시하는 기록이다.
 _EXTRACTED = {
+    '_collect_external_context':      '실외 컨텍스트 확정(공유·시설센서·승계)',
     '_check_hard_constraints':        '온습도·광량 하드 임계 판정',
     '_apply_forecast_feedforward':    '예보 기반 목표 선제 보정',
     '_apply_photosynthesis_priority': '광합성 제한인자 우선순위 격상',
     '_finalize_cycle':                '학습·누적·상태 저장(명령 이후)',
 }
 
-# _run_cycle 이 다시 비대해지지 않게 막는 상한. 현재 444줄이며, 남은 부분은
+# _run_cycle 이 다시 비대해지지 않게 막는 상한. 현재 402줄이며, 남은 부분은
 # L1→L2→L3 주 파이프라인이라 데이터가 촘촘히 흘러 더 쪼개면 인자 목록만
 # 길어진다. 여유를 조금 두되 727줄 시절로 돌아가지는 못하게 한다.
 _RUN_CYCLE_MAX_LINES = 480
