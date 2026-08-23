@@ -196,14 +196,18 @@ def page_output():
 
     # ===== TAB SYSTEM INTEGRATION =====
     tab_id = request.args.get('tab_id', None)
-    tabs = TabService.get_tabs_for_page('output')
+    # 조작할 수 없는 탭은 목록에서 뺀다(그룹 스코프).
+    # ⚠ 정보 격리가 아니다 — 그 장치들의 값은 대시보드·지도로 여전히 보인다.
+    tabs = TabService.visible_tabs_for_page('output')
 
     if tab_id:
         current_tab = TabService.get_tab_by_id(tab_id)
-        if not current_tab:
-            current_tab = TabService.get_default_tab('output')
+        # URL 로 스코프 밖 탭을 직접 지정하면 보이는 탭으로 되돌린다 — 여기서
+        # 그대로 열면 목록에 없는 탭이 열려 있는 모순된 화면이 된다.
+        if not current_tab or current_tab not in tabs:
+            current_tab = TabService.default_visible_tab('output')
     else:
-        current_tab = TabService.get_default_tab('output')
+        current_tab = TabService.default_visible_tab('output')
 
     if not current_tab:
         # Fallback: Tab 테이블이 비어있는 경우

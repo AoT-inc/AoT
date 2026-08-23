@@ -57,6 +57,11 @@ def dashboard_mod(form):
         action=TRANSLATIONS['modify']['title'],
         controller=TRANSLATIONS['dashboard']['title'])
     error = []
+    # 그룹 스코프(A1b) — 대시보드는 자기 자신이 부여 단위다.
+    from aot.aot_flask.access import scope
+    if not scope.can_operate('dashboard', form.dashboard_id.data):
+        error.append(scope.deny_message())
+        return
 
     dash_mod = Dashboard.query.filter(
         Dashboard.unique_id == form.dashboard_id.data).first()
@@ -71,8 +76,36 @@ def dashboard_mod(form):
     if not error:
         db.session.commit()
 
+    # 그룹 부여는 대시보드 이름과 **같은 [저장]** 으로 함께 반영된다.
+    #
+    # ⚠ **"보내지 않음" 과 "전부 해제" 를 구분해야 한다.** 폼이 그 섹션을
+    # 그리지 않았을 때(비관리자·로딩 실패) 빈 목록을 전량 교체로 넘기면
+    # 대시보드 이름만 고쳐도 부여가 통째로 지워진다 — 그룹 저장 핸들러에서
+    # 이미 한 번 겪은 실패다. 그래서 표식 필드를 본다.
+    if not error:
+        error.extend(_apply_dashboard_groups(form.dashboard_id.data) or [])
+
     flash_success_errors(
         error, action, url_for('routes_dashboard.page_dashboard_default'))
+
+
+def _apply_dashboard_groups(dashboard_id):
+    """폼이 그룹 섹션을 실어 보냈을 때만 부여를 반영한다. (오류 목록)"""
+    from flask import request
+
+    from aot.aot_flask.routes_access import save_grants
+    from aot.aot_flask.utils.utils_general import user_has_permission
+
+    if not request.form.get('dashboard_groups_present'):
+        return []                        # 섹션이 없었다 — 건드리지 않는다
+    if not user_has_permission('edit_users', silent=True):
+        # 표식만 흉내내 보내도 통과하면 안 된다 — 부여는 사용자 관리 권한이다.
+        logger.warning("[scope] 대시보드 그룹 부여 거부(권한 없음): %s",
+                       dashboard_id)
+        return []
+    failed = save_grants('dashboard', dashboard_id,
+                         request.form.getlist('dashboard_groups'))
+    return [failed] if failed else []
 
 
 def dashboard_lock(dashboard_id, lock):
@@ -81,6 +114,14 @@ def dashboard_lock(dashboard_id, lock):
         action=TRANSLATIONS['lock']['title'],
         controller=TRANSLATIONS['dashboard']['title'])
     error = []
+
+    # 그룹 스코프(A1b) — 잠금은 그 대시보드를 쓰는 모두의 화면을 바꾼다.
+    from aot.aot_flask.access import scope
+    if not scope.can_operate('dashboard', dashboard_id):
+        error.append(scope.deny_message())
+        flash_success_errors(error, action, url_for(
+            'routes_dashboard.page_dashboard', dashboard_id=dashboard_id))
+        return
 
     try:
         dash_mod = Dashboard.query.filter(
@@ -105,6 +146,14 @@ def dashboard_copy(form):
         action=TRANSLATIONS['duplicate']['title'],
         controller=TRANSLATIONS['dashboard']['title'])
     error = []
+
+    # 그룹 스코프(A1b) — **원본**으로 판정한다. 복제본은 부여가 없는 새
+    # 대시보드(=전원 공개)가 되므로, 원본을 조작할 수 없는 사람이 복제하면
+    # 복제 한 번으로 그 화면이 전원에게 열린다.
+    from aot.aot_flask.access import scope
+    if not scope.can_operate('dashboard', form.dashboard_id.data):
+        error.append(scope.deny_message())
+        return
 
     try:
         # Get current dashboard and its widgets.
@@ -134,6 +183,12 @@ def dashboard_del(form):
         action=TRANSLATIONS['delete']['title'],
         controller=TRANSLATIONS['dashboard']['title'])
     error = []
+
+    # 그룹 스코프(A1b) — 부수 효과보다 먼저 막는다.
+    from aot.aot_flask.access import scope
+    if not scope.can_operate('dashboard', form.dashboard_id.data):
+        error.append(scope.deny_message())
+        return
     create_new_dash = False
 
     dashboards = Dashboard.query.all()
@@ -166,6 +221,18 @@ def widget_add(form_base, request_form):
         action=TRANSLATIONS['add']['title'],
         controller=TRANSLATIONS['widget']['title'])
     error = []
+    # 그룹 스코프(A1b) — 위젯은 자기가 놓인 대시보드로 판정한다.
+    #
+    # 호출부가 `unmet_dependencies, reload_flask` 로 언패킹하므로 빈 return 을
+    # 두면 언패킹에서 죽는다 — 거부가 예외로 나타나면 사용자는 "권한 없음" 이
+    # 아니라 "고장" 을 본다.
+    from aot.aot_flask.access import scope
+    if not scope.can_operate('dashboard', form_base.dashboard_id.data):
+        error.append(scope.deny_message())
+        flash_success_errors(error, action, url_for(
+            'routes_dashboard.page_dashboard',
+            dashboard_id=form_base.dashboard_id.data))
+        return None, False
 
     reload_flask = False
 
@@ -267,6 +334,11 @@ def widget_mod(form_base, request_form):
         action=TRANSLATIONS['modify']['title'],
         controller=TRANSLATIONS['widget']['title'])
     error = []
+    # 그룹 스코프(A1b) — 위젯은 자기가 놓인 대시보드로 판정한다.
+    from aot.aot_flask.access import scope
+    if not scope.can_operate('dashboard', form_base.dashboard_id.data):
+        error.append(scope.deny_message())
+        return
 
     dict_widgets = parse_widget_information()
 
@@ -333,6 +405,12 @@ def widget_del(form_base):
         controller=TRANSLATIONS['widget']['title'])
     error = []
 
+    # 그룹 스코프(A1b) — 부수 효과보다 먼저 막는다.
+    from aot.aot_flask.access import scope
+    if not scope.can_operate('dashboard', form_base.dashboard_id.data):
+        error.append(scope.deny_message())
+        return
+
     dict_widgets = parse_widget_information()
     widget = Widget.query.filter(
         Widget.unique_id == form_base.widget_id.data).first()
@@ -363,6 +441,12 @@ def widget_duplicate(form_base):
         action=TRANSLATIONS['duplicate']['title'],
         controller=TRANSLATIONS['widget']['title'])
     error = []
+
+    # 그룹 스코프(A1b) — 위젯은 자기가 놓인 대시보드로 판정한다.
+    from aot.aot_flask.access import scope
+    if not scope.can_operate('dashboard', form_base.dashboard_id.data):
+        error.append(scope.deny_message())
+        return
 
     dict_widgets = parse_widget_information()
     orig_widget = Widget.query.filter(

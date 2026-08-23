@@ -388,3 +388,39 @@ class TestActionButtons(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class TestSentenceRowsDoNotSplitTheirLabel(unittest.TestCase):
+    """문장을 값으로 갖는 줄은 이름 칸이 쪼개지면 안 된다.
+
+    `.aot-ov-row` 는 flex 라 좁아지면 **양쪽을 함께** 줄인다. 값이 숫자면 줄
+    것이 없어 이름은 멀쩡한데, 값이 문장이면 이름까지 눌려 낱말 한가운데가
+    갈라진다. 실측(300px 폭): 이름 칸이 36px·2줄이 되어 "못 따라감" 이
+    "못 따 / 라감" 으로 보였다. 규칙을 넣은 뒤 63px·1줄이다.
+    """
+
+    _CSS = os.path.join(_ROOT, 'aot_flask', 'static', 'css', 'widget',
+                        'aot-sensor-label.css')
+
+    def test_sentence_rows_keep_their_label_on_one_line(self):
+        css = _read(self._CSS)
+        # 이름은 줄이지 않는다.
+        block = css.split('.aot-ov-strain,', 1)[1].split('\n}', 3)
+        self.assertIn('flex-wrap: wrap', block[0])
+        self.assertIn('white-space: nowrap', block[1])
+        # 문장은 자리가 모자라면 자기 줄로 내려간다(basis 아래로 눌리면 wrap).
+        self.assertIn('flex: 1 1 14em', block[2])
+
+    def test_every_sentence_row_class_is_covered(self):
+        """값이 **문장**인 줄을 새로 만들면 이 명부에도 넣을 것.
+
+        빠뜨리면 증상이 조용하다 — 넓은 화면에서는 멀쩡하고, 좁은 폭에서만
+        낱말이 갈라진다. 자동 판정은 두지 않는다: "이 값이 문장인가" 는
+        마크업이 말해 주지 않고 사람이 아는 것이다.
+        """
+        css = _read(self._CSS)
+        popup = _read(_POPUP)
+        for cls in ('aot-ov-strain', 'aot-ov-gate', 'aot-hz'):
+            self.assertIn(cls, popup, '%s 를 쓰는 자리가 사라졌다' % cls)
+            self.assertIn('.%s > span:first-child' % cls, css,
+                          '%s 가 문장 줄 규칙 명부에 없다' % cls)

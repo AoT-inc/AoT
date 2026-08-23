@@ -742,7 +742,7 @@ Phase C 의 처분 정책 전환이 곧바로 손댈 수 없는 도형을 만든
 - 사람이 지은 이름은 **`properties.label_name` 에 따로 산다**(라벨 편집·
   위젯 이름 변경이 쓰는 키). `sync_device_name` 은 이 키를 건드리지 않는다.
 - 그리고 렌더 경로가 전부 `label_name || name` 순으로 읽는다
-  (`aot-map-widget-vector.js`·`aot-map-widget-v3.js`·`aot-geo-panel.js`).
+  (`aot-map-widget-vector.js`·`aot-geo-panel.js`).
 - 즉 **사람이 지은 이름은 이미 보존되고 있고**, `name` 은 사람이 이름을 안
   지었을 때의 폴백이다. 그 폴백이 교체 뒤에도 옛 장치 이름으로 남는 것이
   오히려 거짓말이다.

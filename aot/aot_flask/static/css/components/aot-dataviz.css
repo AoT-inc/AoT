@@ -241,7 +241,11 @@
 }
 .aot-viz-seg {
   min-width: 0;
-  padding-right: 4px;
+  /* 이름은 **자기 구간의 가운데**에 선다. 왼쪽 정렬이면 이름이 구간의 시작
+     경계에 붙어, 바로 왼쪽 구간의 끝 이름처럼 읽힌다(구간이 좁을수록 심하다).
+     좌우 패딩은 대칭이어야 가운데가 실제 가운데다. */
+  padding: 0 3px;
+  text-align: center;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -289,6 +293,20 @@
   border-radius: 2px;
   background: var(--aot-viz-mark, var(--aot-color-brand-secondary));
   transform: translate(-50%, -50%);
+  /* **트랙의 양끝은 둥글다**(반지름 = 높이/2 = 4px). 그래서 눈으로 읽히는
+     시작·끝은 트랙의 x=0·x=W 가 아니라 그만큼 안쪽이고, 0~100% 를 트랙 폭에
+     그대로 매핑하면 마커가 라운드 안에 박혀 **시작·끝이 실제보다 바깥으로**
+     보인다(끝단에서 최대 4px).
+
+     그래서 캡을 뺀 구간에 매핑한다. 좌표는 JS 가 `--aot-viz-pos`(0~100, 단위
+     없는 수)로 넘긴다 — 캡 크기는 트랙 높이에서 파생되므로, 높이를 바꾸면
+     보정도 함께 따라온다(JS 에 4px 을 적어 두면 그때 조용히 어긋난다).
+
+     구간(.aot-viz-ok/.aot-viz-fill)에는 같은 보정을 하지 않는다. 그쪽은
+     점이 아니라 **면**이라, 100% 인 구간이 캡을 안 채우면 양끝에 트랙 배경이
+     남아 "덜 찼다" 로 보인다. */
+  left: calc(var(--aot-viz-track-h) / 2 +
+             (100% - var(--aot-viz-track-h)) * var(--aot-viz-pos, 0) / 100);
 }
 
 /* 구간 경계 (기간 바) — 배경을 파내서 그린다. 경계마다 색을 주면 단계 수만큼
@@ -355,6 +373,11 @@
 .aot-viz-scale--anchored .aot-viz-scale-anchor {
   position: absolute;
   top: 0;
+  /* 마커와 **같은 좌표계**를 쓴다(위 .aot-viz-now 주석 참조). 라벨이 선과
+     다른 자리를 가리키면 둘 중 어느 것이 '오늘' 인지 알 수 없다. 끝으로
+     밀린 경우(left:0/right:0)는 JS 가 정하므로 여기서 건드리지 않는다. */
+  left: calc(var(--aot-viz-track-h) / 2 +
+             (100% - var(--aot-viz-track-h)) * var(--aot-viz-pos, 0) / 100);
   max-width: 60%;
   /* 양 끝 라벨과 부딪히지 않게 바탕을 깔아 위로 올린다. */
   padding: 0 4px;

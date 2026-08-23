@@ -62,6 +62,9 @@ from .misc import EnergyUsage
 from .misc import Misc
 from .user import User
 from .user_api_key import UserAPIKey
+from .user_group import GroupGrant
+from .user_group import UserGroup
+from .user_group import UserGroupMember
 from .notes import NoteTags
 from .notes import Notes
 from .note_schedule_link import NoteScheduleLink

@@ -51,6 +51,7 @@ from flask_login import current_user
 
 from aot.databases.models import Conditional, CustomController, Function, Input, Trigger
 from aot.aot_client import DaemonControl
+from aot.aot_flask.access import scope
 from aot.aot_flask.utils.utils_general import user_has_permission
 from aot.utils.constraints_pass import constraints_pass_positive_value
 
@@ -101,6 +102,10 @@ def aot_controller_activate_deactivate(unique_id, state):
         return "You are not logged in and cannot access this endpoint"
     if not user_has_permission('edit_controllers'):
         return 'Insufficient user permissions to manipulate Controller'
+
+    # 그룹 스코프(A1a) — docs/design/access-scope-groups.md
+    if not scope.can_operate_device(unique_id):
+        return 'ERROR: ' + scope.deny_message()
 
     input_ = Input.query.filter(Input.unique_id == unique_id).first()
     function = Function.query.filter(Function.unique_id == unique_id).first()

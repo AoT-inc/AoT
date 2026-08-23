@@ -14,11 +14,20 @@
      * Initialize Pure MapLibre Map Widget
      * @param {string} uniqueId - Widget unique identifier
      */
-    // Inject .aot-type-hidden CSS rule once — independent of Python template caching
+    // `.aot-type-hidden` 을 한 번 심는다 — 위젯 템플릿(파이썬)이 캐시돼 옛 CSS 를
+    // 내보내도 토글이 듣게 하려는 보험이다.
+    //
+    // ⚠ **위젯 템플릿의 같은 규칙과 글자 그대로 같아야 한다**(`AoT_map.py`).
+    // 규칙을 두 벌 두면 갈라지고, 갈라지면 **나중에 심긴 쪽이 이긴다** — 여기서
+    // 실제로 겪었다: 템플릿 쪽에 `:not(.aot-focus-show)` 를 붙였는데 이 줄이
+    // 옛 형태로 남아, 임시 표시가 라벨 종류 하나(값 키 원형)에서만 안 듣는 것도
+    // 아니고 `.aot-type-hidden` 계열 **전부**에서 안 들었다. 화면에는 "모달을
+    // 열어도 꺼 둔 라벨이 안 나온다" 로만 보인다.
     if (!document.getElementById('aot-type-hidden-style')) {
         var _styleEl = document.createElement('style');
         _styleEl.id = 'aot-type-hidden-style';
-        _styleEl.textContent = '.aot-type-hidden { display: none !important; }';
+        _styleEl.textContent =
+            '.aot-type-hidden:not(.aot-focus-show) { display: none !important; }';
         document.head.appendChild(_styleEl);
     }
 
@@ -313,7 +322,7 @@
 
         // 줌 게이트: 축척이 낮으면 장치 단위 라벨/키를 감춘다(LABEL_MIN_ZOOM).
         // 라벨 렌더러보다 먼저 걸어 둬야 첫 렌더부터 기준이 적용된다.
-        try { _installZoomGate(instance, map); } catch (e) {}
+        try { _installZoomGate(instance, map, uniqueId); } catch (e) {}
 
         // Label layer registry skeleton (rank x pin presets). P1: init only —
         // renderers register entries in a later phase. Reading the toggle here so
@@ -794,12 +803,10 @@
 
         function _tr(s) { return (window._ ? window._(s) : s); }
 
+        // 모양은 공용(`AoTMapPopup.skeleton`)에 있다. 이 이름은 부르는 자리가
+        // 여섯 곳이라 그대로 둔다.
         function _buildZoneSkel() {
-            return '<div class="aot-ov-skel">' +
-                '<div class="aot-ov-skel-bar w60"></div>' +
-                '<div class="aot-ov-skel-bar w80"></div>' +
-                '<div class="aot-ov-skel-bar w40"></div>' +
-                '</div>';
+            return window.AoTMapPopup.skeleton();
         }
 
         function _buildZonePopupHTML(zoneName, defSec) {
@@ -808,24 +815,16 @@
             // [상태]여서, 시설에서 배운 화면 구조가 구역에서 통하지 않았다.
             // 위젯 옵션 popup_default_tab 도 이 세 키를 그대로 쓰므로 매핑이 없다.
             defSec = (defSec === 'envctl' || defSec === 'about') ? defSec : 'overview';
-            function _zNav(sec, label) {
-                return '<button type="button" class="aot-act-tab-btn' +
-                    (sec === defSec ? ' active' : '') + '" data-sec="' + sec + '">' + label + '</button>';
-            }
-            function _zPane(sec, inner) {
-                return '<div class="aot-bay-popup-pane" data-pane="' + sec + '"' +
-                    (sec === defSec ? '' : ' style="display:none"') + '>' + inner + '</div>';
-            }
-            return window.AoTMapPopup.buildModalHeader({
-                       name: zoneName || _tr('Zone'), up: true }) +
-                   '<div class="aot-act-tabs-nav aot-bay-popup-nav">' +
-                       _zNav('overview', _tr('Overview')) +
-                       _zNav('envctl', _tr('Environment & Control')) +
-                       _zNav('about', _tr('About')) +
-                   '</div>' +
-                   _zPane('overview', _buildZoneSkel()) +
-                   _zPane('envctl', '') +
-                   _zPane('about', '');
+            var P = window.AoTMapPopup;
+            return P.buildModalHeader({ name: zoneName || _tr('Zone'), up: true }) +
+                   P.buildSectionNav(defSec, [
+                       { key: 'overview', label: 'Overview' },
+                       { key: 'envctl',   label: 'Environment & Control' },
+                       { key: 'about',    label: 'About' }
+                   ]) +
+                   P.sectionPane('overview', defSec, _buildZoneSkel()) +
+                   P.sectionPane('envctl',   defSec, '') +
+                   P.sectionPane('about',    defSec, '');
         }
 
         // 노트 패널은 z-index 최상위라 모달 위로 뜨지 못한다 — 열기 전에 모달을
@@ -887,7 +886,7 @@
                 saveUrl: '/api/geo/zone/' + encodeURIComponent(zoneUuid) +
                          '/hidden_rows',
                 titleOf: function () {
-                    return (window._ ? window._('Now') : 'Now');
+                    return (window._ ? window._('Environment') : 'Environment');
                 },
                 choicesOf: function () {
                     return P.envRowChoices(((data.zone || {}).env || {}).readings);
@@ -1192,6 +1191,8 @@
             var html = '';
 
             // 단일 차트 영역 — 센서 있으면 센서 차트, 없으면 장치 선택 시 여기에 렌더
+            // 카드 제목 — 베이(공용 빌더)와 **같은 어휘**를 쓴다.
+            html += '<div class="aot-ov-card-title">' + _tr('Environment') + '</div>';
             html += '<div class="aot-zone-chart-area">';
             if (sensors.length) {
                 var sensorTabs = sensors.length > 1
@@ -1248,7 +1249,7 @@
                     outputs.forEach(function (o) { if (ordered.indexOf(o) < 0) ordered.push(o); });
                     outputs = ordered;
                 }
-                html += '<div class="aot-act-group-header">' + _tr('Devices') + '</div>';
+                html += '<div class="aot-ov-card-title">' + _tr('Control') + '</div>';
                 html += '<div class="aot-zone-output-list">';
                 outputs.forEach(function (out) {
                     out.channels.forEach(function (ch) {
@@ -1461,13 +1462,9 @@
                 // 메인 탭 전환 (nav 버튼)
                 var navBtn = e.target.closest('.aot-bay-popup-nav .aot-act-tab-btn[data-sec]');
                 if (navBtn && popupEl.contains(navBtn)) {
-                    popupEl.querySelectorAll('.aot-bay-popup-nav .aot-act-tab-btn').forEach(function (b) {
-                        b.classList.toggle('active', b === navBtn);
-                    });
                     var secKey = navBtn.dataset.sec;
-                    popupEl.querySelectorAll('.aot-bay-popup-pane').forEach(function (p) {
-                        p.style.display = (p.dataset.pane === secKey) ? '' : 'none';
-                    });
+                    window.AoTMapPopup.activateSection(
+                        popupEl, secKey, navBtn.closest('.aot-bay-popup-nav'));
                     if (secKey === 'envctl') {
                         var devPane2 = popupEl.querySelector('.aot-bay-popup-pane[data-pane="envctl"]');
                         if (devPane2) {
@@ -1643,7 +1640,8 @@
             // 탭이 없어 [상태]로 떨어졌다).
             var zoneDefSec = (_actLabelState[uid] || {}).popupDefaultTab || 'overview';
 
-            var popup = _showFacilityCenterOverlay(_buildZonePopupHTML(zoneName, zoneDefSec), uid);
+            var popup = _showFacilityCenterOverlay(
+                _buildZonePopupHTML(zoneName, zoneDefSec), uid, zoneUuid);
             // 패널을 **연 뒤에** 옮긴다 — 카메라 여백이 패널 폭을 알아야 대상이
             // 패널 뒤로 가지 않는다.
             _focusMapOn(uid, zoneUuid);
@@ -1733,6 +1731,79 @@
         // `shell` 을 opts 로 넘기는 것과 같은 이음매다. 모달은 한 번에 하나만
         // 열리므로 상태 슬롯도 구역과 **공유**한다 — 구역 모달이 열려 있었다면
         // 그쪽 폴링은 이미 자기 close 훅에서 정리됐다.
+        /**
+         * 필지 모달의 [환경·제어] — **구역 모달의 렌더를 그대로 빌려 쓴다.**
+         *
+         * 구획 모달이 같은 방식이다(`_attachPlotControl`). 센서 탭·제어 카드·
+         * 이력 오버레이를 여기서 다시 만들면 같은 장치가 세 화면에서 다르게
+         * 보이고, 폴링·토글·예약이 세 벌이 된다.
+         *
+         * `zoneUuid` 는 **비운다.** 구역 전용 쓰기(대표 측정 `rep_key`, 장치
+         * 순서 `output_order`)가 필지 창에서 나가면 어느 구역의 설정인지
+         * 모호하고, 실수로 그 구역을 보는 다른 사람의 화면을 바꾼다. 값이
+         * 없으면 그 경로는 애초에 성립하지 않는다.
+         */
+        function _attachSiteControl(uid, popup, body, siteUuid) {
+            if (!popup || !body) return;
+            var pane = body.querySelector('.aot-bay-popup-pane[data-pane="envctl"]');
+            if (!pane) return;
+
+            var prev = _zonePopupState[uid];
+            if (prev && prev.pollTimer) { clearInterval(prev.pollTimer); }
+            if (prev && prev.visHandler) {
+                document.removeEventListener('visibilitychange', prev.visHandler);
+            }
+
+            _zonePopupState[uid] = {
+                popup: popup,
+                zoneUuid: null,                       // 위 주석 참조
+                scope: { kind: 'site', uuid: siteUuid },
+                _sensors: [], _histCache: {},
+                overlayOutputId: null, overlayOutputName: null
+            };
+
+            popup.on('close', function () {
+                var z = _zonePopupState[uid];
+                if (z && z.popup === popup) {
+                    if (z.pollTimer) { clearInterval(z.pollTimer); }
+                    if (z.visHandler) {
+                        document.removeEventListener('visibilitychange', z.visHandler);
+                    }
+                    _zonePopupState[uid] = {};
+                }
+            });
+
+            pane.innerHTML = _buildZoneSkel();
+
+            fetch('/api/geo/site/' + encodeURIComponent(siteUuid) + '/contents',
+                  { cache: 'no-store' })
+                .then(function (r) { return r.ok ? r.json() : null; })
+                .then(function (data) {
+                    if (!data || !data.ok) { pane.innerHTML = ''; return; }
+                    var z = _zonePopupState[uid];
+                    if (!z || z.popup !== popup || !pane.isConnected) return;
+
+                    z._sensors = data.sensors || [];
+                    // 구역처럼 `output_order` 를 읽지 않는다 — 필지에는 그
+                    // 설정이 없다(빈 객체를 주어 구역의 순서를 빌려오지 않는다).
+                    _renderZoneDevices(uid, pane, {
+                        zone: {}, outputs: data.outputs, functions: data.functions
+                    }, null);
+                    _startZoneOutputPolling(uid);
+
+                    if (pane.style.display !== 'none') {
+                        var first = pane.querySelector('.aot-bay-sensor-chart');
+                        if (first && first.dataset.rendered !== '1') {
+                            _activateZoneSensorTab(uid, pane, 0);
+                        }
+                    }
+                })
+                .catch(function () { pane.innerHTML = ''; });
+
+            // 탭·토글·이력 오버레이는 구역과 같은 위임 핸들러를 쓴다.
+            _wireZoneTabs(body, uid, null);
+        }
+
         function _attachPlotControl(uid, popup, body, plotUuid) {
             if (!popup || !body) return;
             var pane = body.querySelector('.aot-bay-popup-pane[data-pane="envctl"]');
@@ -1826,13 +1897,30 @@
                     }, null);
                     _startZoneOutputPolling(uid);
 
-                    // 소속 구역으로 올라가는 화살표. 구역 uuid 는 저장된 값이
-                    // 아니라 기하에서 파생된 것이라 이 응답에서만 알 수 있다.
-                    _wireUpBtn(body, uid, {
-                        kind: 'zone',
-                        uuid: (data.plot || {}).zone_uuid,
-                        name: (data.plot || {}).zone_name
-                    }, function () {
+                    // 상위로 올라가는 화살표.
+                    //
+                    // **시설 구획의 상위는 시설이다.** 예전에는 `kind:'zone'` 으로
+                    // 고정했는데, 시설 구획에는 구역이 없어 서버가 `zone_uuid` 에
+                    // **필지(site) 도형**을 넣어 준다(포함 판정의 폴백이 그렇게
+                    // 잡는다 — 실측: `type='site'`). 그러면 구역 팝업이 필지
+                    // uuid 로 열려 조회가 빈 손으로 끝나고, 화면은 **스켈레톤에
+                    // 그대로 멈춘다**. 에러도 안 나서 "뒤로가기가 고장" 으로만 보인다.
+                    //
+                    // 이름까지 같은 경우가 있어(필지 "육묘장" 안의 시설 "육묘장")
+                    // 화살표 라벨만으로는 어느 쪽인지 알 수 없었다.
+                    // 노지 구획도 같은 함정을 갖는다 — zone 이 없는 지도에서는
+                    // `zone_uuid` 에 site 가 온다. 그래서 **서버가 준 종류**
+                    // (`zone_kind`)로 어느 창을 열지 정한다.
+                    var _pl = data.plot || {};
+                    var _up;
+                    if (_pl.facility_uuid) {
+                        _up = { kind: 'facility', uuid: _pl.facility_uuid,
+                                name: _pl.facility_name };
+                    } else {
+                        _up = { kind: (_pl.zone_kind === 'site') ? 'site' : 'zone',
+                                uuid: _pl.zone_uuid, name: _pl.zone_name };
+                    }
+                    _wireUpBtn(body, uid, _up, function () {
                         var z2 = _zonePopupState[uid];
                         if (z2 && z2.popup) { try { z2.popup.remove(); } catch (e) {} }
                     });
@@ -2167,7 +2255,7 @@
             if (st.popup) { try { st.popup.remove(); } catch (e) {} }
 
             var popup = _showFacilityCenterOverlay(
-                _buildDevicePopupHTML(deviceName || _tr('Device')), uid);
+                _buildDevicePopupHTML(deviceName || _tr('Device')), uid, deviceUuid);
             _focusMapOn(uid, deviceUuid);
             _devicePopupState[uid] = { popup: popup, deviceUuid: deviceUuid,
                                        channel: channel };
@@ -2517,10 +2605,24 @@
         function _buildSitePopupHTML(siteName) {
             // 필지 위에는 개별 도형이 아니라 "이 지도의 필지 목록"이 있다 —
             // 계층을 끝까지 거슬러 올라갈 수 있어야 길을 잃지 않는다.
-            return window.AoTMapPopup.buildModalHeader({
-                       name: siteName || _tr('Site'), up: true }) +
-                   '<div class="aot-bay-popup-pane" data-pane="ssummary">' +
-                   _buildZoneSkel() + '</div>';
+            //
+            // 탭 키·순서는 구역·시설과 **같다**. 가운데만 다르다 —
+            // 구역은 [환경·제어], 필지는 [구성]이다.
+            //
+            // **필지에 [환경·제어]를 두지 않는다.** 근거는 서버에 이미 적혀
+            // 있다(`site_summary._child_entry` 의 `'control': None` —
+            // "자동제어 연동은 시설별로 알 수가 없다"). 필지는 그보다 한 단계
+            // 더 위라 근거가 더 없고, 제어는 구역·시설에서 한다.
+            var P = window.AoTMapPopup;
+            return P.buildModalHeader({ name: siteName || _tr('Site'), up: true }) +
+                   P.buildSectionNav('overview', [
+                       { key: 'overview', label: 'Overview' },
+                       { key: 'envctl',   label: 'Environment & Control' },
+                       { key: 'about',    label: 'About' }
+                   ]) +
+                   P.sectionPane('overview', 'overview', _buildZoneSkel()) +
+                   P.sectionPane('envctl',   'overview', '') +
+                   P.sectionPane('about',    'overview', '');
         }
 
         // 필지 요약의 마지막 응답을 들고 있는다. 서버가 30초 캐시를 갖고 있어도
@@ -2560,10 +2662,14 @@
                 }
             }
             var st = _siteStateText(child);
+            // 이름 없는 도형이 실제로 있다(geo/design 에서 그렸지만 시설 등록이
+            // 안 된 경우). 서버는 그때 빈 이름을 주고, 무엇을 보일지는 여기서
+            // 정한다 — uuid 를 보이면 사람이 읽을 수 없는 줄이 된다.
+            var nm = child.name || _tr('Unnamed');
             return '<div class="aot-site-row" data-kind="' + _escZ(child.kind) +
                        '" data-uuid="' + _escZ(child.uuid) +
-                       '" data-name="' + _escZ(child.name) + '">' +
-                       '<span class="aot-site-row-name">' + _escZ(child.name) + '</span>' +
+                       '" data-name="' + _escZ(nm) + '">' +
+                       '<span class="aot-site-row-name">' + _escZ(nm) + '</span>' +
                        '<span class="aot-site-row-val' + valCls + '"' + style + '>' +
                        _escZ(valTxt) + '</span>' +
                        '<span class="aot-site-row-state ' + st.cls + '">' +
@@ -2574,46 +2680,17 @@
         function _buildSiteSummaryHTML(data) {
             var site = data.site || {};
             var counts = site.counts || {};
-            var kids = data.children || [];
-            var live = kids.filter(function (c) { return c.status !== 'empty'; });
-            var empty = kids.filter(function (c) { return c.status === 'empty'; });
+            var html = '';
 
-            var html = '<div class="aot-ov-block">' +
-                '<div class="aot-ov-row"><span>' + _tr('Area') + '</span><span>' +
-                (site.area_m2 != null ? (+site.area_m2).toLocaleString() + ' m²' : '—') +
-                '</span></div>' +
-                '<div class="aot-ov-row"><span>' + _tr('Zones') + '</span><span>' +
-                (counts.zones || 0) + '</span></div>' +
-                '<div class="aot-ov-row"><span>' + _tr('Facilities') + '</span><span>' +
-                (counts.facilities || 0) + '</span></div>' +
-                '<div class="aot-ov-row"><span>' + _tr('Devices') + '</span><span>' +
-                (counts.devices || 0) + '</span></div>' +
-                // 작물은 **숫자로만** 낸다. 아래 구역 행(이름|값|상태)에
-                // 작물명을 이어붙이면 한 열이 두 가지를 말하게 되고 열 간격이
-                // 틀어진다 — 필지에서 알고 싶은 것은 규모 감각이다.
-                (counts.plots
-                  ? '<div class="aot-ov-row"><span>' + _tr('Growing now') +
-                    '</span><span>' +
-                    _tr('%(kinds)s kinds · %(plots)s plots')
-                      .replace('%(kinds)s', String(counts.subjects || 0))
-                      .replace('%(plots)s', String(counts.plots)) +
-                    '</span></div>'
-                  : '') +
-                '</div>';
+            // 개요 카드(면적·구역·시설·장치·작물)는 **[개요] 탭**이 갖는다.
+            // 필지에서 "지금 어떤가" 를 묻는 화면에 규모 숫자가 맨 위에 있으면,
+            // 정작 봐야 할 것(무엇이 들어 있고 오늘 무슨 일이 있나)이 아래로
+            // 밀린다 — 그 숫자는 한 번 보면 잘 안 바뀐다.
 
-            html += '<div class="aot-ov-card-title">' + _tr('Zone status') + '</div>' +
-                    '<div class="aot-ov-block">';
-            if (live.length) {
-                html += live.map(_siteRowHTML).join('');
-            } else {
-                html += '<div class="aot-site-empty">' + _tr('Nothing to show yet') + '</div>';
-            }
-            if (empty.length) {
-                html += '<div class="aot-site-empty">' + _tr('No devices') + ': ' +
-                        _escZ(empty.map(function (c) { return c.name; }).join(', ')) +
-                        '</div>';
-            }
-            html += '</div>';
+            // 구성(구역·시설)은 **[현황] 안에** 둔다 — 필지에서 "지금 어떤가" 를
+            // 묻는 사람이 가장 먼저 보는 것이 "무엇이 들어 있나" 다.
+            // 구역과 시설은 카드 둘로 나눈다(성격이 다르다: 땅과 구조물).
+            html += _buildSiteChildrenHTML(data);
 
             var today = data.today || {};
             html += '<div class="aot-ov-card-title">' + _tr('Today') + '</div>' +
@@ -2641,6 +2718,100 @@
             return html;
         }
 
+        /**
+         * [구성] — 하위 **구역**과 **시설**을 카드 둘로 나눠 낸다.
+         *
+         * 종류를 가르는 이유: 구역은 땅이고 시설은 구조물이라 성격이 다르다.
+         * 한 목록에 섞이면 이름만 보고 어느 쪽인지 알아야 하고, 제목("구역
+         * 상태")은 절반만 맞는 말이 된다.
+         *
+         * **장치가 없는 항목도 행으로 낸다.** 예전에는 이름을 쉼표로 이어붙인
+         * 한 줄이라 눌러도 아무 일이 없었다 — 그 항목으로 내려갈 방법이 아예
+         * 없었다는 뜻이다. 상태 칸은 `_siteStateText` 가 이미 "장치 없음" 을
+         * 낼 줄 안다.
+         *
+         * bay(시설 안 구역)는 여기 끌어올리지 않는다 — 필지에서 두 단계 아래이고,
+         * 시설 8동 × bay 6개면 목록이 무너진다. 시설 행을 누르면 시설 모달이
+         * 열리고 거기서 본다.
+         */
+        /** 개요 카드 — 규모 숫자. [개요] 탭이 쓴다. */
+        function _siteOverviewCardHTML(site, counts) {
+            return '<div class="aot-ov-block">' +
+                '<div class="aot-ov-row"><span>' + _tr('Area') + '</span><span>' +
+                (site.area_m2 != null ? (+site.area_m2).toLocaleString() + ' m²' : '—') +
+                '</span></div>' +
+                '<div class="aot-ov-row"><span>' + _tr('Zones') + '</span><span>' +
+                (counts.zones || 0) + '</span></div>' +
+                '<div class="aot-ov-row"><span>' + _tr('Facilities') + '</span><span>' +
+                (counts.facilities || 0) + '</span></div>' +
+                '<div class="aot-ov-row"><span>' + _tr('Devices') + '</span><span>' +
+                (counts.devices || 0) + '</span></div>' +
+                // 작물은 **숫자로만** 낸다. 아래 구역 행(이름|값|상태)에
+                // 작물명을 이어붙이면 한 열이 두 가지를 말하게 되고 열 간격이
+                // 틀어진다 — 필지에서 알고 싶은 것은 규모 감각이다.
+                (counts.plots
+                  ? '<div class="aot-ov-row"><span>' + _tr('Growing now') +
+                    '</span><span>' +
+                    _tr('%(kinds)s kinds · %(plots)s plots')
+                      .replace('%(kinds)s', String(counts.subjects || 0))
+                      .replace('%(plots)s', String(counts.plots)) +
+                    '</span></div>'
+                  : '') +
+                '</div>';
+        }
+
+        function _buildSiteChildrenHTML(data) {
+            var kids = data.children || [];
+            var zones = kids.filter(function (c) { return c.kind !== 'facility'; });
+            var facs  = kids.filter(function (c) { return c.kind === 'facility'; });
+
+            // **빈 카드는 내지 않는다.** 구역만 있는 필지, 시설만 있는 필지가
+            // 둘 다 정상이다 — 없는 쪽에 "아직 없습니다" 를 세워 두면 화면 절반이
+            // 빈 칸을 설명하는 데 쓰이고, 사용자는 무언가 빠졌다고 읽는다.
+            function _card(title, list) {
+                if (!list.length) return '';
+                var html = '<div class="aot-ov-card-title">' + _escZ(title) +
+                           ' (' + list.length + ')</div>' +
+                           '<div class="aot-ov-block">';
+                // 상태가 있는 것을 먼저 — 빈 것이 위에 오면 "볼 것이 없는
+                // 필지" 처럼 읽힌다.
+                var live = list.filter(function (c) { return c.status !== 'empty'; });
+                var idle = list.filter(function (c) { return c.status === 'empty'; });
+                return html + live.concat(idle).map(_siteRowHTML).join('') + '</div>';
+            }
+            var cards = _card(_tr('Zones'), zones) + _card(_tr('Facilities'), facs);
+            // 둘 다 없으면 그 사실을 한 번만 말한다. 필지를 막 그리고 아직
+            // 아무것도 안 넣은 상태가 정상이므로, 오류처럼 보이면 안 된다.
+            return cards || ('<div class="aot-ov-block"><div class="aot-site-empty">' +
+                             _tr('Nothing to show yet') + '</div></div>');
+        }
+
+        /**
+         * [설정] — 설명과 읽기 정보.
+         *
+         * 설명 블록은 **시설 모달과 같은 공용 컴포넌트**다
+         * (`AoTMapPopup.buildDescriptionHtml`). 여기서 다시 적으면 [편집] 자리나
+         * [취소]/[저장] 순서가 화면마다 갈린다.
+         *
+         * 도형 자체(경계·이름)는 여기서 고치지 않는다 — 그것은 geo/design 의
+         * 일이고, 이 화면은 운영이다(구획 모달과 같은 분담).
+         */
+        /**
+         * [개요] — 규모 숫자(면적·구역·시설·장치·작물).
+         *
+         * **설명 카드는 두지 않는다.** 한때 여기 있었는데, 필지에서 사람이
+         * 적는 글은 노트가 받는다([현황] 탭) — 설명과 노트 둘을 두면 "어디에
+         * 적어야 하나" 를 쓰기 전에 답해야 하고, 그 구분은 저장 위치이지
+         * 사람이 아는 구분이 아니다(같은 이유로 예정/노트 입구도 하나로 모았다).
+         *
+         * 서버(`/api/geo/shape/<uuid>/description`)와 저장 자리(`meta_json`)는
+         * 남겨 둔다 — 구역·시설이 같은 것을 쓰고, 되살릴 때 다시 만들 이유가 없다.
+         */
+        function _buildSiteAboutHTML(data) {
+            var site = data.site || {};
+            return _siteOverviewCardHTML(site, site.counts || {});
+        }
+
         function _siteTileHTML(key, num, label, extraCls) {
             return '<div class="aot-site-tile" data-tile="' + key + '">' +
                        '<div class="aot-site-tile-num' + (extraCls || '') + '">' +
@@ -2651,6 +2822,7 @@
 
         // 줄을 누르면 그 계층의 기존 모달로 넘긴다. site 모달은 닫는다 —
         // 모달 위에 모달을 쌓으면 뒤로 가기가 어디로 가는지 알 수 없다.
+        /** 필지 모달의 탭 전환 — 구역 모달과 같은 규약(`data-sec`/`data-pane`). */
         function _wireSiteRows(uid, body) {
             Array.prototype.forEach.call(
                 body.querySelectorAll('.aot-site-row'), function (row) {
@@ -2704,12 +2876,17 @@
             var st = _sitePopupState[uid] || {};
             if (st.popup) { try { st.popup.remove(); } catch (e) {} }
 
-            var popup = _showFacilityCenterOverlay(_buildSitePopupHTML(siteName), uid);
+            var popup = _showFacilityCenterOverlay(
+                _buildSitePopupHTML(siteName), uid, siteUuid);
             _focusMapOn(uid, siteUuid);
             _sitePopupState[uid] = { popup: popup, siteUuid: siteUuid };
 
             var popupEl = popup.getElement();
             var body = popupEl && popupEl.querySelector('.maplibregl-popup-content');
+            window.AoTMapPopup.wireSectionTabs(popupEl);
+            // [환경·제어]는 요약과 **다른 조회**(장치 인벤토리)라 따로 붙인다.
+            // 구획 모달과 같은 방식이다(`_attachPlotControl`).
+            _attachSiteControl(uid, popup, body, siteUuid);
 
             popup.on('close', function () {
                 var s = _sitePopupState[uid];
@@ -2723,9 +2900,18 @@
                 var s = _sitePopupState[uid];
                 if (!s || s.popup !== popup) return;
                 var pane = body && body.querySelector(
-                    '.aot-bay-popup-pane[data-pane="ssummary"]');
+                    '.aot-bay-popup-pane[data-pane="overview"]');
                 if (!pane) return;
                 pane.innerHTML = _buildSiteSummaryHTML(data);
+
+                // [개요]도 **여기서 함께** 채운다. 탭을 누를 때 그리면 첫 클릭에
+                // 빈 화면이 한 번 보이고, 폴링이 돌아오는 30초마다 그 상태로
+                // 되돌아간다(pane 이 다시 비므로).
+                var aboutPane = body.querySelector(
+                    '.aot-bay-popup-pane[data-pane="about"]');
+                if (aboutPane) aboutPane.innerHTML = _buildSiteAboutHTML(data);
+
+                // 구성 목록은 [현황] 안에 있다 — 같은 pane 이므로 여기서 배선한다.
                 _wireSiteRows(uid, pane);
                 // 예정을 만드는 자리는 **노트 하나**다 — 계층마다 별도 폼을
                 // 두면 사용자가 쓰기 전에 종류를 고르는 옛 방식으로 되돌아간다.
@@ -2989,19 +3175,38 @@
                 // Chip shows the bay name (+ representative value after polling).
                 // Click → per-bay monitoring/control modal (_openBayPopup).
                 var bSlices = (window.AoTMapBay && window.AoTMapBay.slices(fac)) || [];
-                bSlices.forEach(function (sl) {
+                // **시설 하나에 칩 하나.** 구역이 여럿이면 첫 구역 자리에 하나만
+                // 두고 이름은 시설명이다.
+                //
+                // 구역마다 칩을 두면 서로를 덮는다 — 구역 중심이 8.4m 인 시설이
+                // 있는데(폭 7m·6동을 둘로 나눈 것) 줌 17 에서 그 거리는 30px
+                // 남짓이라 칩 하나 폭도 안 된다. 겹칠 때만 접는 방법도 있지만,
+                // 그러면 줌을 만질 때마다 칩 개수가 바뀌어 지도가 요동친다.
+                //
+                // 구역으로 들어가는 길은 **시설 모달의 구역 전환 줄**이다
+                // (`aot-bay-switch`). 어차피 그 경로로 들어가므로 지도에 구역을
+                // 다 늘어놓을 이유가 없다.
+                var _multiBay = bSlices.length > 1;
+                (_multiBay ? bSlices.slice(0, 1) : bSlices).forEach(function (sl) {
                     var bPos = window.AoTMapBay.centerLngLat(fac, sl);
                     if (!bPos) return;
                     var bEl = document.createElement('div');
                     bEl.className = 'aot-sensor-map-marker aot-sensor-label-clickable aot-bay-chip';
                     bEl.dataset.facilityId = fac.unique_id;
                     bEl.dataset.bayId = sl.id;
+                    // 구역이 여럿이라 하나로 합친 칩인가 — 라벨 컨트롤·진단이
+                    // 이 표식으로 "이 시설은 구역이 더 있다" 를 안다.
+                    if (_multiBay) {
+                        bEl.dataset.bayRollup = String(bSlices.length);
+                    }
                     // 2행 라벨: 1행 = 구역명, 2행 = 대표 측정값 (폴링 후 갱신).
                     // 2행은 빈 채로 만든다 — 값이 오기 전이나 아예 없는 시설에서
                     // 자리표시자를 그리면 이름만 있는 칩이 두 줄 높이를 차지한다
                     // (CSS `.aot-bay-chip-val:empty { display:none }` 가 접는다).
                     bEl.innerHTML =
-                        '<div class="aot-bay-chip-name">' + _escAct(sl.name || sl.id) + '</div>' +
+                        '<div class="aot-bay-chip-name">' +
+                        _escAct(_multiBay ? (fac.name || sl.name || sl.id)
+                                          : (sl.name || sl.id)) + '</div>' +
                         '<div class="aot-bay-chip-val"></div>';
                     bEl.style.fontSize = ctrlLabelEm + 'em';
                     bEl.style.transform = 'none';
@@ -3014,8 +3219,14 @@
                     }
                     // 시설(구역) 칩도 공용 z-order + "고른 라벨을 앞으로".
                     // CSS 에 z-index:6 이 박혀 있던 것을 LABEL_Z.facility 로 옮겼다.
+                    // **자기 종류로 새긴다.** 예전에는 'facility' 로 새겨져
+                    // 시설 라벨과 한 몸이었다 — 줌 게이트·쌓임·충돌이 전부 시설
+                    // 것을 따랐고, `LABEL_ZOOM_GATED.bay` 를 등록해도 아무 일이
+                    // 없었다(그 값을 읽는 요소가 없으니까).
+                    // 줌 임계는 여전히 하나(label_min_zoom)라 **시설과 같은
+                    // 축척에서 함께 접힌다** — 등록만 자기 이름으로 바뀐 것이다.
                     var _bRestore = _uidInstTop
-                        ? _wireLabelStacking(_uidInstTop, bEl, 'facility') : null;
+                        ? _wireLabelStacking(_uidInstTop, bEl, 'bay') : null;
                     // 호버 예열 — 지도에서 시설 모달을 여는 실제 과녁이 이 칩이다.
                     // 도형(facilities-fill) 호버만으로는 칩 위에 마우스가 올라간
                     // 경우를 못 잡는다(칩은 DOM 이라 캔버스 이벤트가 안 온다).
@@ -3452,7 +3663,24 @@
             for (var _fi = 0; _fi < _fList.length; _fi++) {
                 if (_fList[_fi] && _fList[_fi].unique_id === facilityUuid) { _fRow = _fList[_fi]; break; }
             }
-            _focusMapOn(uid, (_fRow && _fRow.shape_uuid) || facilityUuid);
+            var _facFocus = (_fRow && _fRow.shape_uuid) || facilityUuid;
+            _focusMapOn(uid, _facFocus);
+            (function () {
+                var _inst = window.AoTWidgetInstances[uid];
+                if (!_inst || !_facFocus) return;
+                // 도형은 **도형 uuid**, 라벨(구역 칩)은 **시설 uuid** 로
+                // 달려 있다 — 둘이 다르므로 둘 다 얹는다.
+                [_facFocus, facilityUuid].forEach(function (u) {
+                    if (u) _setFocus(_inst, uid, String(u), 'modal', true);
+                });
+                if (popup && popup.on) {
+                    popup.on('close', function () {
+                        [_facFocus, facilityUuid].forEach(function (u) {
+                            if (u) _setFocus(_inst, uid, String(u), 'modal', false);
+                        });
+                    });
+                }
+            })();
 
             var popupEl = popup.getElement();
             var bodyEl = popupEl && popupEl.querySelector('.maplibregl-popup-content');
@@ -3573,13 +3801,30 @@
             //           [개요](정적 — 사진/시설 정보/설명/노트).
             // /overview 응답 전까지 보이는 스켈레톤 — 빈/말줄임 박스 대신
             // 로딩 중임을 드러내 체감 지연을 줄인다.
-            var _skel = '<div class="aot-ov-skel">' +
-                        '<div class="aot-ov-skel-bar w60"></div>' +
-                        '<div class="aot-ov-skel-bar w80"></div>' +
-                        '<div class="aot-ov-skel-bar w40"></div>' +
-                        '<div class="aot-ov-skel-bar w80"></div>' +
-                        '</div>';
+            // 베이는 바가 하나 더 많다 — 이 탭에 들어설 내용이 그만큼 길다.
+            var _skel = window.AoTMapPopup.skeleton(['w60', 'w80', 'w40', 'w80']);
+
+            // 구역 전환 줄 — **구역이 둘 이상인 시설에서만.**
+            //
+            // 이 모달은 구역 하나를 다루고, 다른 구역으로 가는 길이 지도의
+            // 구역 칩뿐이었다. 그런데 그 칩들은 서로 겹쳐서(구역 중심이 8.4m 인
+            // 시설이 있다) 이제 하나로 접힌다 — 접는 순간 나머지 구역에 닿을
+            // 방법이 사라지므로, 그 길을 여기 먼저 만든다.
+            var _allSlices = fac ? window.AoTMapBay.slices(fac) : [];
+            var _bayNav = '';
+            if (_allSlices.length > 1) {
+                _bayNav = '<div class="aot-act-tabs-nav aot-bay-switch">';
+                _allSlices.forEach(function (sl2) {
+                    _bayNav += '<button type="button" class="aot-act-tab-btn' +
+                               (sl2.id === bayId ? ' active' : '') +
+                               '" data-bay-switch="' + _escAct(sl2.id) + '">' +
+                               _escAct(sl2.name || sl2.id) + '</button>';
+                });
+                _bayNav += '</div>';
+            }
+
             return window.AoTMapPopup.buildModalHeader({ name: title, up: true }) +
+                   _bayNav +
                    window.AoTMapPopup.buildSectionNav(defSec) +
                    '<div class="aot-bay-popup-pane" data-pane="overview"' +
                        (defSec === 'overview' ? '' : ' style="display:none"') + '>' +
@@ -3591,7 +3836,7 @@
                            // 센서가 없어도 제목과 안내는 남긴다 — 값이 붙으면
                            // _renderBayChart 가 이 자리를 통째로 갈아끼운다.
                            window.AoTMapPopup.emptyBlock(
-                               (window._ ? window._('Sensors') : 'Sensors'),
+                               (window._ ? window._('Environment') : 'Environment'),
                                (window._ ? window._('No sensors are linked to this place yet.')
                                          : 'No sensors are linked to this place yet.')) +
                        '</div>' +
@@ -3702,6 +3947,15 @@
             if (!scopeEl || scopeEl._bayTabsWired) return;
             scopeEl._bayTabsWired = true;
             scopeEl.addEventListener('click', function (e) {
+                // 구역 전환 — 같은 시설의 다른 구역으로 창을 갈아 끼운다.
+                // **탭 전환보다 먼저 본다**: 이 버튼도 `.aot-act-tab-btn` 이라
+                // 아래 섹션 탭 분기가 먼저 잡으면 pane 만 바꾸고 끝난다.
+                var swBtn = e.target.closest('[data-bay-switch]');
+                if (swBtn && scopeEl.contains(swBtn)) {
+                    var toBay = swBtn.getAttribute('data-bay-switch');
+                    if (toBay && toBay !== bayId) _openBayPopup(uid, facilityUuid, toBay);
+                    return;
+                }
                 var st = _actLabelState[uid];
                 if (!st || !window.AoTMapPopup || !window.AoTMapBay) return;
 
@@ -3743,15 +3997,8 @@
 
                 // 섹션 pane 전환 ([현황] / [환경·제어])
                 if (btn.dataset.sec) {
-                    var nav = btn.closest('.aot-bay-popup-nav');
-                    if (nav) {
-                        nav.querySelectorAll('.aot-act-tab-btn').forEach(function (b) {
-                            b.classList.toggle('active', b === btn);
-                        });
-                    }
-                    scopeEl.querySelectorAll('.aot-bay-popup-pane').forEach(function (p) {
-                        p.style.display = (p.dataset.pane === btn.dataset.sec) ? '' : 'none';
-                    });
+                    window.AoTMapPopup.activateSection(
+                        scopeEl, btn.dataset.sec, btn.closest('.aot-bay-popup-nav'));
                     if (btn.dataset.sec === 'envctl') {
                         // 차트는 pane 이 보일 때 렌더해야 폭 계산이 맞다 (지연 렌더)
                         _renderBayChart(uid, facilityUuid, bayId, scopeEl);
@@ -3932,7 +4179,7 @@
                          encodeURIComponent(facilityUuid) + '/hidden_rows',
                 titleOf: function () {
                     var tr = function (x) { return (window._ ? window._(x) : x); };
-                    return card === 'control' ? tr('Control Status') : tr('Now');
+                    return card === 'control' ? tr('Control Status') : tr('Environment');
                 },
                 choicesOf: function () {
                     return card === 'control' ? P.controlRowChoices(source)
@@ -4229,52 +4476,34 @@
                 var st = _actLabelState[uid];
                 if (st) st._plantEditing = on;
             };
-            // 종류 ↔ 프로그램 — 목록은 종류에 따라 달라진다. 폼을 열 때 한 번
-            // 채우고, 종류를 바꾸면 다시 채운다. 채우는 일은 구획 모듈이 맡는다
-            // (목록 캐시가 거기 있고, 구획 모달이 쓰는 것과 같은 함수다 — 두
-            // 화면이 서로 다른 목록을 보이면 안 된다).
-            var selKind = wrap.querySelector('[data-nf="kind"]');
-            var selProg = wrap.querySelector('[data-nf="program_uuid"]');
-            var fillPrograms = function () {
-                if (!selKind || !selProg || !window.AoTMapPlot ||
-                    !window.AoTMapPlot.refreshProgramChoices) return;
-                window.AoTMapPlot.refreshProgramChoices(
-                    selKind, selProg, _tr('No program'));
-            };
-            if (selKind) selKind.addEventListener('change', fillPrograms);
-
-            // ── 구역 안에서의 몫 (p6_50) ────────────────────────────────
-            // 입력은 숫자 하나다. 그것이 수량인지 비율인지는 **그 구역에 총량이
-            // 적혀 있는지**가 정한다 — 접미 표시가 그 사실을 말한다. 구역을
-            // 바꾸면 총량도 달라지므로 접미도 함께 갱신한다.
-            var selBay = wrap.querySelector('[data-nf="bay_id"]');
-            var alloIn = wrap.querySelector('[data-nf="allocation_value"]');
-            var alloSuf = wrap.querySelector('.aot-ov-alloc-suffix');
-            var curBay = function () {
-                return (selBay ? (selBay.value || '') : (bayId || '')) || bayId || '';
-            };
-            var capOf = function (bid) {
-                var caps = (block._aotCaps || {});
-                return caps[bid] || caps[bayId] || null;
-            };
-            var alloHint = wrap.querySelector('.aot-ov-alloc-hint');
-            var syncAllocSuffix = function () {
-                if (!alloSuf) return;
-                var cap = capOf(curBay());
-                alloSuf.textContent = cap
-                    ? ('/ ' + cap.total + ' ' + _capUnitLabel(cap.unit))
-                    : '%';
-                if (alloIn) {
-                    alloIn.setAttribute('max', cap ? String(cap.total) : '100');
+            // 폼의 살아 있는 부분(종류↔프로그램, 몫 접미·안내)은 **공용
+            // 컴포넌트**가 맡는다(`common/aot-plot-form.js`). 화면마다 이 배선을
+            // 적으면 필드가 하나 늘 때 화면 수만큼 고쳐야 하고, 한 곳만
+            // 빠뜨려도 그 화면에서만 조용히 동작이 다르다.
+            var formCtx = {
+                attr: 'data-nf',
+                target: 'facility',
+                bayId: bayId,
+                capacities: block._aotCaps || {},
+                // 프로그램 목록 캐시는 구획 모듈이 갖고 있다 — 조회는 계속
+                // 그쪽이 맡는다(두 화면이 다른 목록을 보이면 안 된다).
+                loadPrograms: function (kind) {
+                    return (window.AoTMapPlot && window.AoTMapPlot.loadPrograms)
+                        ? window.AoTMapPlot.loadPrograms(kind)
+                        : Promise.resolve([]);
                 }
-                // 총량이 없을 때만 "아래에서 총량을 적으면 개수로 적을 수
-                // 있습니다" 를 보인다. 늘 보이면 설정을 마친 사람에게 잔소리다.
-                if (alloHint) alloHint.style.display = cap ? 'none' : '';
             };
-            if (selBay) selBay.addEventListener('change', syncAllocSuffix);
+            var formApi = null;
 
             btn.addEventListener('click', function () {
-                show(true); fillPrograms(); syncAllocSuffix();
+                show(true);
+                if (window.AoTPlotForm) {
+                    // 총량은 폼을 열 때마다 다시 읽는다 — 그 사이 [구역 총량]
+                    // 으로 바뀌었을 수 있다.
+                    formCtx.capacities = block._aotCaps || {};
+                    if (!formApi) formApi = window.AoTPlotForm.wire(wrap, formCtx);
+                    else formApi.refresh();
+                }
             });
             var cancel = wrap.querySelector('.aot-ov-plot-new-cancel');
             if (cancel) cancel.addEventListener('click', function () { show(false); });
@@ -4282,22 +4511,11 @@
             var save = wrap.querySelector('.aot-ov-plot-new-save');
             if (!save) return;
             save.addEventListener('click', function () {
-                var payload = { facility_uuid: facilityUuid };
-                wrap.querySelectorAll('[data-nf]').forEach(function (el) {
-                    payload[el.getAttribute('data-nf')] = el.value || '';
-                });
+                var payload = window.AoTPlotForm
+                    ? window.AoTPlotForm.collect(wrap, formCtx)
+                    : {};
+                payload.facility_uuid = facilityUuid;
                 if (!('bay_id' in payload)) payload.bay_id = bayId || '';
-                // 몫은 서버가 dict 로 받는다. 어느 키로 보낼지는 총량 유무가
-                // 정한다 — 화면이 접미로 보인 것과 같은 기준이라야 사람이 본
-                // 것과 저장되는 것이 어긋나지 않는다.
-                var _av = payload.allocation_value;
-                delete payload.allocation_value;
-                if (_av !== '' && _av != null) {
-                    payload.allocation = capOf(payload.bay_id || bayId || '')
-                        ? { amount: _av } : { percent: _av };
-                } else {
-                    payload.allocation = null;      // 비우면 지운다
-                }
                 if (!payload.subject) {
                     if (window.showToast) {
                         window.showToast(_tr('Enter what is planted.'), 'warning');
@@ -4369,6 +4587,8 @@
                         // 지금은 값이 같지만(둘 다 edit_settings) 운영 권한
                         // (edit_plots)이 생기면 갈린다.
                         canDesign: !!rt.can_design,
+                        // 공용 폼이 몫 접미("/12 베드")를 그리려면 총량이 필요하다.
+                        capacities: rt.bay_capacities || {},
                         // 구획 카드는 **작기 운영 권한**(edit_plots)으로 연다
                         // (p6_51). 시설 설정(대표 센서 선택 등)과 다른 축이다 —
                         // 예전에는 같은 플래그를 써서, 작기만 맡기려 해도 시설
@@ -4979,7 +5199,26 @@
             for (var _fi = 0; _fi < _facs.length; _fi++) {
                 if (_facs[_fi] && _facs[_fi].unique_id === facilityUuid) { _facRow = _facs[_fi]; break; }
             }
-            _focusMapOn(uid, (_facRow && _facRow.shape_uuid) || facilityUuid);
+            var _bayFocus = (_facRow && _facRow.shape_uuid) || facilityUuid;
+            _focusMapOn(uid, _bayFocus);
+            // 셸을 부를 때는 도형 uuid 를 아직 몰랐다(시설 목록을 여기서 뒤진다).
+            // 그래서 이유를 여기서 얹고, 창이 닫힐 때 거둔다.
+            (function () {
+                var _inst = window.AoTWidgetInstances[uid];
+                if (!_inst || !_bayFocus) return;
+                // 도형은 **도형 uuid**, 라벨(구역 칩)은 **시설 uuid** 로
+                // 달려 있다 — 둘이 다르므로 둘 다 얹는다.
+                [_bayFocus, facilityUuid].forEach(function (u) {
+                    if (u) _setFocus(_inst, uid, String(u), 'modal', true);
+                });
+                if (popup && popup.on) {
+                    popup.on('close', function () {
+                        [_bayFocus, facilityUuid].forEach(function (u) {
+                            if (u) _setFocus(_inst, uid, String(u), 'modal', false);
+                        });
+                    });
+                }
+            })();
             var popupEl = popup.getElement();
             var bodyEl = popupEl && popupEl.querySelector('.maplibregl-popup-content');
             if (bodyEl) {
@@ -7380,9 +7619,23 @@
         return rect;
     }
 
-    function _showFacilityCenterOverlay(html, uid) {
+    /**
+     * 공용 모달 셸.
+     *
+     * `focusUuid` 를 주면 **열려 있는 동안** 그 대상의 도형·라벨이 보인다 —
+     * 사용자가 그 종류를 꺼 두었더라도. 어디 이야기인지 지도에서 못 찾으면
+     * 모달 안의 값이 어느 자리 것인지 알 수 없다. 닫으면 그대로 되돌아간다
+     * (토글을 건드리지 않으므로 꺼 둔 상태가 남는다).
+     */
+    function _showFacilityCenterOverlay(html, uid, focusUuid) {
         var OVERLAY_ID = 'aot-facility-ctrl-overlay-' + uid;
         var existing = document.getElementById(OVERLAY_ID);
+        // 앞 창의 임시 표시를 먼저 거둔다 — 아래 remove() 는 그 창의 닫힘
+        // 리스너를 지나지 않는다(위 `_clearModalFocus` 주석).
+        try {
+            var _prevInst = window.AoTWidgetInstances[uid];
+            if (_prevInst) _clearModalFocus(_prevInst, uid);
+        } catch (e) {}
         if (existing) existing.remove();
 
         var dock = _panelHostFor(uid);
@@ -7762,6 +8015,18 @@
         _modalStack.push(_closeByUser);
         _ensureEscHandler();
 
+        // 열려 있는 동안 대상을 보이게 한다. 닫힐 때(사용자가 닫든, 다른 모달이
+        // 갈아 끼우든) 이유를 거둔다 — `_close` 는 두 경로 모두 지난다.
+        if (focusUuid) {
+            var _fInst = window.AoTWidgetInstances[uid];
+            if (_fInst) {
+                _setFocus(_fInst, uid, focusUuid, 'modal', true);
+                _closeListeners.push(function () {
+                    _setFocus(_fInst, uid, focusUuid, 'modal', false);
+                });
+            }
+        }
+
         return {
             getElement: function () { return popupWrap; },
             remove:     function () { _close(false); },
@@ -7788,9 +8053,17 @@
     // 라벨이 구역 라벨과 같은 단(6)에 올라가 시설·장치 라벨을 전부 덮었다.
     // 복합장치는 장치이므로 장치 라벨 단에 두되, 그 안에서는 가장 위다
     // (output/input/function 을 담는 그릇이라 이름이 가려지면 못 찾는다).
+    // ⚠ 새 종류는 위 "네 표" 주석 참조 — 여기만 넣고 끝나지 않는다.
     var LABEL_Z = {
-        site: 8, zone: 7, facility: 6, equipment: 5,
-        device: 4, output: 3, input: 2, 'function': 1
+        site: 9, zone: 8, facility: 7,
+        // 시설 구역(bay)은 시설 **안**이라 시설보다 위에 온다. 구획은 구역을
+        // 나눈 것이라 그 아래.
+        bay: 6, plot: 5,
+        equipment: 4, device: 3, output: 2, input: 1, 'function': 1,
+        // 센서(측정값) 라벨 — 가장 구체적이라 쌓임은 낮고 충돌에서는 이긴다.
+        // **두 표 모두에 없었다**(2026-08-23 발견): 쌓임은 0 으로 깔리고 충돌
+        // 순위는 `style.zIndex` 폴백이라 호버 여부에 따라 튀고 있었다.
+        sensor: 1
     };
 
     // ── 충돌 우선순위 (쌓임 순서와 **별개 축**) ───────────────────────────────
@@ -7803,8 +8076,8 @@
     // 빠뜨리면 아래 폴백이 `style.zIndex` 를 읽는데, 그 값은 호버/핀 중에는
     // LABEL_Z_FRONT(9000)라 우선순위가 포인터에 따라 튄다.
     var LABEL_COLLISION_RANK = {
-        'function': 8, input: 7, output: 6, device: 5, equipment: 4,
-        facility: 3, zone: 2, site: 1
+        'function': 10, input: 9, sensor: 9, output: 8, device: 7, equipment: 6,
+        plot: 5, bay: 4, facility: 3, zone: 2, site: 1
     };
 
     function _collisionRank(el) {
@@ -7815,12 +8088,31 @@
     }
 
     // ── 줌 게이트 ─────────────────────────────────────────────────────────────
-    // 이 종류들만 줌 기준의 적용을 받는다. 대지·구역은 멀리서 위치를 잡는
-    // 기준이라 항상 보이고, 개별 장치 단위 정보는 그 축척에서 읽히지도 않으면서
-    // 화면만 덮는다. 기준 줌 자체는 위젯 옵션(label_min_zoom, 기본 17)이 정한다.
-    // 복합장치(device)도 장치 단위 정보이므로 함께 게이트한다 — 빠뜨리면 다른
-    // 장치 라벨이 다 접힌 축척에서 복합장치 이름만 지도에 남는다.
-    var LABEL_ZOOM_GATED = { facility: 1, device: 1, output: 1, input: 1, 'function': 1 };
+    // ⚠⚠ **라벨 종류를 새로 만들면 아래 네 표에 전부 등록해야 한다.**
+    //
+    //   LABEL_Z              쌓임 순서(누가 위에 그려지나)
+    //   LABEL_COLLISION_RANK 충돌에서 누가 남나  ← LABEL_Z 의 **역순**
+    //   LABEL_ZOOM_GATED     줌아웃에서 접히나
+    //   LABEL_KEYS           라벨 컨트롤에서 사람이 끄고 켜나
+    //
+    // 자주 있는 일이 아니라 자동 판정을 두지 않는다 — 종류마다 "이것이 멀리서도
+    // 필요한 기준인가" 는 사람이 정할 판단이고, 기본값으로 때우면 그 판단이
+    // 생략된 채 굳는다. 대신 **빠뜨리면 테스트가 잡는다**
+    // (`test_geo_plot.py::test_every_map_label_kind_is_registered`).
+    //
+    // 등록을 빠뜨렸을 때의 증상은 표마다 다르고 전부 조용하다:
+    //   Z 누락       → 다른 라벨 뒤에 깔린다(폴백이 0)
+    //   RANK 누락    → 충돌 순위가 호버 여부에 따라 튄다(폴백이 style.zIndex)
+    //   ZOOM 누락    → **줌아웃에서도 화면을 덮는다** ← bay·plot 이 그랬다
+    //   KEYS 누락    → 라벨 컨트롤에 그 종류가 아예 안 나온다
+    //
+    // 이 표는 "줌 기준의 적용을 받는 종류" 다. 대지·구역은 멀리서 위치를 잡는
+    // 기준이라 빠져 있고(항상 보인다), 나머지는 그 축척에서 읽히지도 않으면서
+    // 화면만 덮으므로 접는다. 기준 줌 자체는 위젯 옵션(label_min_zoom, 기본 17).
+    var LABEL_ZOOM_GATED = {
+        facility: 1, bay: 1, plot: 1,
+        device: 1, output: 1, input: 1, 'function': 1, equipment: 1, sensor: 1
+    };
     var LABEL_MIN_ZOOM_DEFAULT = 17;
 
     /** 이 위젯의 라벨 숨김 기준 줌. 0(또는 미설정 0) = 숨기지 않음. */
@@ -7933,7 +8225,305 @@
         }
     }
 
-    function _installZoomGate(instance, map) {
+    // ── 임시 표시(focus) ──────────────────────────────────────────────────────
+    // 사용자가 꺼 둔 도형·라벨이라도 **지금 봐야 할 이유**가 있으면 잠깐 보인다:
+    //
+    //   모달이 열려 있다 → 그 대상       (어디 이야기인지 지도에서 못 찾으면
+    //                                     모달의 값이 어느 자리 것인지 알 수 없다)
+    //   출력이 켜져 있다 → 그 장치       (지금 돌고 있는 것이 안 보이면 안 된다)
+    //
+    // **꺼 둔 상태를 바꾸지 않는다.** 토글을 켜 버리면 모달을 닫았을 때 사용자가
+    // 꺼 둔 것이 켜진 채로 남는다. 그래서
+    //   라벨 → `.aot-focus-show` 클래스(숨김 규칙이 이 클래스를 비켜 간다 —
+    //          display 를 지정하지 않으므로 각 라벨의 생김새가 그대로 남는다)
+    //   도형 → 카테고리 레이어를 켜는 대신 **전용 소스에 덧그린다**
+    //
+    // 이유가 둘이므로 **이유별로 센다.** 모달을 닫았다고 바로 끄면 그 장치가
+    // 아직 켜져 있는데도 사라진다.
+    var _focus = {};    // uid -> { targets: { key: {reason:1} }, feats: {key: feature} }
+
+    function _focusState(uid) {
+        if (!_focus[uid]) _focus[uid] = { targets: {}, feats: {} };
+        return _focus[uid];
+    }
+
+    /** 이 위젯 지도 안에서 그 대상의 라벨 요소들. 라벨마다 uuid 를 담은 속성이
+     *  달라서(도형 라벨=parentId · 구획 칩=plotUuid · 시설 칩=facilityId) 한꺼번에
+     *  훑는다. 하나라도 맞으면 그 라벨이다. */
+    function _focusLabelEls(instance, uuid) {
+        var cont = instance && instance.map && instance.map.getContainer &&
+                   instance.map.getContainer();
+        if (!cont || !uuid) return [];
+        var sel = ['parent-id', 'plot-uuid', 'facility-id', 'device-id', 'output-id',
+                   'shape-uuid', 'bay-id']
+            .map(function (a) { return '[data-' + a + '="' + uuid + '"]'; }).join(',');
+        try { return Array.prototype.slice.call(cont.querySelectorAll(sel)); }
+        catch (e) { return []; }
+    }
+
+    /** 대상 도형을 소스들에서 찾는다. 레이어마다 uuid 를 담은 속성 이름이 달라
+     *  후보를 순서대로 본다. 못 찾으면 null(그때는 라벨만 보인다). */
+    var _FOCUS_ID_KEYS = ['id', 'node_id', 'shape_uuid', 'unique_id', 'device_id',
+                          'plot_uuid', 'parent_id'];
+
+    /**
+     * 같은 uuid 를 가진 피처 중 **면(Polygon)을 우선**해서 고른다.
+     *
+     * 장치는 한 uuid 에 피처가 둘이다 — 위치 **마커**(Point)와 그 장치가 맡은
+     * **영역**(Polygon). 먼저 만나는 것을 잡으면 대개 Point 가 걸리는데, 이
+     * 표시는 fill/line 레이어로 그리므로 점은 아무것도 그리지 못한다(실측:
+     * `hasFeature: true, geom: 'Point'` 인데 그려진 피처는 0개였다).
+     *
+     * 점밖에 없으면 그것이라도 돌려준다 — 못 찾은 것과 구별돼야 재조회를
+     * 반복하지 않는다.
+     */
+    function _findInFeatures(feats, uuid) {
+        var fallback = null;
+        for (var j = 0; j < (feats || []).length; j++) {
+            var pr = feats[j].properties || {};
+            var hit = false;
+            for (var k = 0; k < _FOCUS_ID_KEYS.length && !hit; k++) {
+                var v = pr[_FOCUS_ID_KEYS[k]];
+                if (v && String(v) === String(uuid)) hit = true;
+            }
+            if (!hit) continue;
+            var g = feats[j].geometry || {};
+            if (/Polygon/.test(g.type || '')) return feats[j];
+            if (!fallback) fallback = feats[j];
+        }
+        return fallback;
+    }
+
+    function _findShapeFeature(map, uid, uuid) {
+        if (!map || !uuid) return null;
+        // 이미 지도에 올라온 소스들 먼저 — 대부분 여기서 끝난다.
+        var srcs = ['zones', 'sites', 'facilities', 'aot_devices', 'equipment',
+                    'aot-plot-src-' + uid];
+        var fallback = null;
+        for (var i = 0; i < srcs.length; i++) {
+            var src = map.getSource(srcs[i]);
+            var hit = _findInFeatures((src && src._data && src._data.features) || [],
+                                      uuid);
+            if (!hit) continue;
+            // 면이면 바로 끝, 점이면 더 나은 것이 있는지 계속 본다.
+            if (/Polygon/.test((hit.geometry || {}).type || '')) return hit;
+            if (!fallback) fallback = hit;
+        }
+        if (fallback) return fallback;
+        // 꺼 둔 종류는 소스가 없다 — 따로 받아 둔 것에서 찾는다.
+        return _findInFeatures((_focusState(uid).pool) || [], uuid);
+    }
+
+    function _ensureFocusLayers(map, uid) {
+        var src = 'aot-focus-src-' + uid;
+        if (map.getSource(src)) return src;
+        try {
+            map.addSource(src, { type: 'geojson',
+                                 data: { type: 'FeatureCollection', features: [] } });
+            // 원래 색을 그대로 쓴다 — 강조색을 새로 만들면 "이건 무슨 색이지" 가
+            // 하나 늘고, 이 표시의 목적은 강조가 아니라 **보이게 하는 것**이다.
+            //
+            // ⚠ 색은 피처에 없다. 도형의 색은 `feature.properties.color` 가 아니라
+            // **테마(theme_config)** 가 정한다(CLAUDE.md — 각인 금지). `['get','color']`
+            // 로 읽으면 거의 항상 비어 폴백 한 색으로 통일돼 버린다(실측: 켜진 출력이
+            // 브랜드 딥그린으로 나왔다). `_repaintFocus` 가 종류마다 테마를 해석해
+            // `aot_focus_color` 로 찍어 주고, 여기서는 그것만 읽는다 — 찍는 것은 소스에
+            // 넣는 사본뿐이라 DB 의 도형에는 색이 되쓰이지 않는다.
+            map.addLayer({
+                id: 'aot-focus-fill-' + uid, type: 'fill', source: src,
+                paint: { 'fill-color': ['coalesce', ['get', 'aot_focus_color'], '#13261B'],
+                         'fill-opacity': 0.18 }
+            });
+            map.addLayer({
+                id: 'aot-focus-line-' + uid, type: 'line', source: src,
+                paint: { 'line-color': ['coalesce', ['get', 'aot_focus_color'], '#13261B'],
+                         'line-width': 2 }
+            });
+        } catch (e) { return null; }
+        return src;
+    }
+
+    // 임시 표시의 색 = **평소 그 도형이 갖는 색**. 종류마다 해석이 다르므로
+    // (장치는 device_type 별, 나머지는 카테고리 키) 카테고리를 함께 들고 온다.
+    var _FOCUS_THEME_KEY = { land: 'site', zone: 'zone', facility: 'facility',
+                             equipment: 'equipment', plot: 'plot' };
+
+    function _focusColor(instance, cat, feat) {
+        var T = window.AoTGeoTheme;
+        var theme = (instance && instance._geoTheme) || {};
+        if (!T) return null;
+        var pr = (feat && feat.properties) || {};
+        if (cat === 'device' || (!cat && pr.device_type)) {
+            return T.deviceColor(pr.device_type || pr.aot_device_type || '', theme);
+        }
+        // 구획만은 피처가 자기 색을 갖는다 — 구획 행(`GeoPlot.color`)에서 온
+        // 값이라 각인된 색(테마 드리프트)이 아니고, 평소 레이어도 그것을 칠한다.
+        // 나머지 종류는 절대 `properties.color` 를 보지 않는다: GeoShape 에
+        // 남아 있을 수 있는 옛 각인 색을 되살리게 된다(CLAUDE.md 색 정본 절).
+        if (cat === 'plot' && pr.color) return pr.color;
+        var key = _FOCUS_THEME_KEY[cat];
+        if (!key) {
+            // 카테고리를 모르면 도형이 스스로 말하는 종류로 되짚는다.
+            var t = String(pr.aot_type || pr.type || '').toLowerCase();
+            key = _FOCUS_THEME_KEY[t === 'site' ? 'land' : t];
+        }
+        return key ? T.color(key, theme) : null;
+    }
+
+    function _repaintFocus(instance, uid) {
+        var map = instance && instance.map;
+        var st = _focusState(uid);
+        if (!map) return;
+        var feats = [];
+        Object.keys(st.targets).forEach(function (uuid) {
+            var f = st.feats[uuid];
+            if (!f || !f.geometry || !/Polygon/.test(f.geometry.type)) return;
+            var color = _focusColor(instance, (st.cats || {})[uuid], f);
+            // **사본**에만 찍는다 — 원본에 쓰면 그 값이 저장 경로를 타고 도형에
+            // 각인될 수 있고, 그러면 테마를 바꿔도 그 도형만 옛 색으로 남는다.
+            var props = {};
+            Object.keys(f.properties || {}).forEach(function (k) {
+                props[k] = f.properties[k]; });
+            if (color) props.aot_focus_color = color;
+            feats.push({ type: 'Feature', geometry: f.geometry, properties: props });
+        });
+        var src = _ensureFocusLayers(map, uid);
+        if (!src) return;
+        try {
+            map.getSource(src).setData({ type: 'FeatureCollection', features: feats });
+        } catch (e) {}
+    }
+
+    // 도형 원본을 **직접** 받아 둔다.
+    //
+    // ⚠ `_ensureShapeLayer[cat]` 을 부르면 안 된다 — 그것은 카테고리 **레이어를
+    // 만들고**, 만들어진 레이어는 보인다. 실측으로 출력 하나가 켜지자 **모든**
+    // 장치 도형이 떴고, 다른 모달이 열려 카테고리가 정상 상태로 돌아가는 순간
+    // 그 전부가 함께 사라졌다. 우리가 필요한 것은 레이어가 아니라 **피처 하나**다.
+    //
+    // 받아 온 것은 focus 소스에만 들어가므로, 카테고리를 꺼 둔 상태는 처음부터
+    // 끝까지 그대로다.
+    var _FOCUS_OVERLAY_TYPE = { device: 'aot_device', zone: 'zone', land: 'site',
+                                facility: 'facility', equipment: 'equipment' };
+
+    function _fetchFocusShapes(instance, uid, cat) {
+        var st = _focusState(uid);
+        if (st['_fetch_' + cat]) return;          // 종류당 한 번
+        st['_fetch_' + cat] = 1;
+        var type = _FOCUS_OVERLAY_TYPE[cat];
+        var mapUuid = (instance.vars && instance.vars.vars &&
+                       (instance.vars.vars.selected_map_uuid ||
+                        instance.vars.vars.map_uuid)) ||
+                      (instance.vars && instance.vars.contentMapUuid) || '';
+        if (!type || !mapUuid) return;
+        geoFetch('/api/geo/overlays?map_uuid=' + encodeURIComponent(mapUuid) +
+                 '&type=' + encodeURIComponent(type))
+            .then(function (r) { return r.json(); })
+            .then(function (gj) {
+                var feats = (gj && gj.features) || [];
+                if (!feats.length) return;
+                st.pool = st.pool || [];
+                st.pool = st.pool.concat(feats);
+                // 기다리고 있던 대상들을 다시 찾는다.
+                var changed = false;
+                Object.keys(st.targets).forEach(function (u) {
+                    var cur = st.feats[u];
+                    // 점을 잡아 둔 것도 면이 오면 갈아 준다 — 그리는 것은 면이다.
+                    if (cur && /Polygon/.test((cur.geometry || {}).type || '')) return;
+                    var f = _findInFeatures(feats, u);
+                    if (f && f !== cur) { st.feats[u] = f; changed = true; }
+                });
+                if (changed) _repaintFocus(instance, uid);
+            })
+            .catch(function () {});
+    }
+
+    /**
+     * 대상 하나를 임시로 보이게 하거나(on) 그 이유를 거둔다(off).
+     *   uuid   대상 식별자(구역·시설·구획·장치 어느 것이든)
+     *   reason 'modal' | 'active'  — 이유별로 세므로 서로를 끄지 않는다
+     */
+    function _setFocus(instance, uid, uuid, reason, on, cat) {
+        if (!instance || !uuid) return;
+        var st = _focusState(uid);
+        var box = st.targets[uuid] || (st.targets[uuid] = {});
+        if (on) {
+            box[reason] = 1;
+            // 색을 해석하려면 종류가 필요하다(장치는 device_type, 나머지는 카테고리).
+            if (cat) (st.cats || (st.cats = {}))[uuid] = cat;
+            if (!st.feats[uuid]) {
+                st.feats[uuid] = _findShapeFeature(instance.map, uid, uuid);
+                // **못 찾는 것이 정상인 경우가 있다.** 그 종류의 도형을 꺼 두면
+                // 데이터 자체를 안 받아온다 — 레이어는 옵션이 켜져 있을 때만
+                // 만들어진다(`_ensureShapeLayer` 주석). 그래서 "켜진 장치의
+                // 도형" 을 덧그리려 해도 그릴 것이 클라이언트에 없었다.
+                //
+                // 받아온 뒤 다시 찾는다. 받아오는 것과 **보이는 것은 별개**다 —
+                // 카테고리 visibility 는 `_applyShapeLOD` 가 정하므로 꺼 둔
+                // 상태는 그대로다.
+                if (!st.feats[uuid] && cat) _fetchFocusShapes(instance, uid, cat);
+            }
+        } else {
+            delete box[reason];
+            if (!Object.keys(box).length) {
+                delete st.targets[uuid];
+                delete st.feats[uuid];
+                if (st.cats) delete st.cats[uuid];
+            }
+        }
+        var show = !!st.targets[uuid];
+        _focusLabelEls(instance, uuid).forEach(function (el) {
+            el.classList.toggle('aot-focus-show', show);
+        });
+        _repaintFocus(instance, uid);
+    }
+
+    /** 이 위젯에 걸린 'modal' 이유를 전부 거둔다.
+     *
+     *  모달은 한 번에 하나이므로 이유도 하나뿐이고, **새 창을 열 때 먼저 거두는
+     *  것**이 가장 확실하다. 창마다 닫힘 리스너에만 맡기면 갈아 끼우는 경로
+     *  (`existing.remove()`)가 그 리스너를 지나지 않아 앞 대상이 계속 보인다
+     *  (실측으로 그랬다). */
+    function _clearModalFocus(instance, uid) {
+        var st = _focusState(uid);
+        Object.keys(st.targets).forEach(function (u) {
+            if (st.targets[u] && st.targets[u].modal) {
+                _setFocus(instance, uid, u, 'modal', false);
+            }
+        });
+    }
+
+    // 진단 훅 — 임시 표시가 왜 안 보이는지는 **어디서 끊겼는지**를 봐야 알 수
+    // 있다(이유가 안 붙었나 · 도형을 못 찾았나 · 레이어가 없나). 화면만 보고는
+    // 셋을 구별할 수 없어서 상태를 그대로 내보낸다.
+    function _installFocusDebug(instance, uid) {
+        if (instance._focusDebug) return;
+        instance._focusDebug = function () {
+            var st = _focusState(uid);
+            var m = instance.map;
+            var src = m && m.getSource('aot-focus-src-' + uid);
+            return {
+                targets: Object.keys(st.targets).map(function (u) {
+                    return { uuid: u, reasons: Object.keys(st.targets[u]),
+                             hasFeature: !!st.feats[u],
+                             geom: st.feats[u] && st.feats[u].geometry
+                                 ? st.feats[u].geometry.type : null };
+                }),
+                pool: (st.pool || []).length,
+                fetched: Object.keys(st).filter(function (k) {
+                    return k.indexOf('_fetch_') === 0; }),
+                srcFeatures: src && src._data ? (src._data.features || []).length : null,
+                layers: ['aot-focus-fill-' + uid, 'aot-focus-line-' + uid]
+                    .map(function (l) { return l + '=' + (m && m.getLayer(l) ? 'ok' : 'none'); })
+            };
+        };
+        instance._focusSet = function (uuid, reason, on, cat) {
+            _setFocus(instance, uid, String(uuid), reason || 'active', on !== false, cat);
+        };
+    }
+
+    function _installZoomGate(instance, map, uid) {
+        _installFocusDebug(instance, uid);
         if (instance._zoomGateHandler) return;
         var raf = null;
         instance._zoomGateHandler = function () {
@@ -7957,7 +8547,12 @@
     // BEFORE addLayerPanel exists (see call site, right after instance creation).
     var _LABEL_DEVICE = { input: 1, output: 1, 'function': 1 };
     var _LABEL_REGCAT = { site: 'land', zone: 'zone', facility: 'facility', equipment: 'equipment', sensor: 'sensor' };
-    var LABEL_KEYS = ['input', 'output', 'function', 'facility', 'site', 'zone', 'equipment', 'sensor'];
+    // ⚠ 새 종류는 위 "네 표" 주석 참조. **아래 9424 줄의 같은 배열도 함께
+    // 고쳐야 한다** — 한쪽만 고치면 시드와 컨트롤이 다른 목록을 본다.
+    // 동(bay)은 여기 없다 — **시설 토글이 담당**한다(지도의 시설 이름이 곧 동
+    // 칩이다). 줌 게이트·쌓임·충돌 표에는 그대로 있다(칩이 'bay' 로 새겨진다).
+    var LABEL_KEYS = ['input', 'output', 'function', 'facility', 'plot',
+                      'site', 'zone', 'equipment', 'sensor'];
 
     // Read one label key's persisted hidden state: server-saved custom_option
     // first, then localStorage, then a one-time migration from the legacy
@@ -8865,7 +9460,8 @@
             // `layers` 는 아래 _applyShapeLOD/_applyShapeVisible 이 쓰는 실제 id 라
             // 여기서 만들어 넣는다(aot-map-plot.js 의 _ids 와 같은 규약).
             { cat: 'plot', label: (window._ ? window._('Plot') : 'Plot'),
-              layers: ['aot-plot-fill-' + uniqueId, 'aot-plot-line-' + uniqueId] },
+              layers: ['aot-plot-fill-' + uniqueId, 'aot-plot-line-' + uniqueId,
+                       'aot-plot-line-planned-' + uniqueId] },
             { cat: 'facility',  label: (window._ ? window._('Facility') : 'Facility'),  layers: ['facilities-fill', 'facilities-line'], labelType: 'facility' },
             { cat: 'equipment', label: (window._ ? window._('Equipment') : 'Equipment'),layers: ['equipment-line', 'equipment-fill'],                  labelType: 'equipment' },
             { cat: 'device',    label: (window._ ? window._('Device') : 'Device'),      layers: ['aot-devices-line', 'aot-devices-fill'],              labelType: 'aot_device', markers: true },
@@ -8970,11 +9566,14 @@
             if (window.AoTMapLabelLayers) {
                 try { AoTMapLabelLayers.setShapeVisible(uniqueId, cat, visible); } catch (e) { }
             }
-            // 식생 칩은 DOM 마커라 setLayoutProperty 로 안 꺼진다 — 모듈이
-            // 도형·칩을 함께 처리한다. 이걸 빠뜨리면 도형만 사라지고 라벨이
-            // 허공에 남는다.
-            if (cat === 'plot' && window.AoTMapPlot) {
-                try { window.AoTMapPlot.setVisible(uniqueId, map, visible); } catch (e) { }
+            // 구획 도형은 그 모듈이 관리한다(레이어 id 에 uid 가 붙어 여기서
+            // 직접 못 만진다). **도형만** 끈다 — 라벨은 라벨 컨트롤의 일이다.
+            // 예전에는 `setVisible`(도형+라벨)을 불러서, 다른 계층과 달리 구획만
+            // 도형을 끄면 이름까지 사라졌다.
+            if (cat === 'plot' && window.AoTMapPlot &&
+                    window.AoTMapPlot.setShapeVisible) {
+                try { window.AoTMapPlot.setShapeVisible(uniqueId, map, visible); }
+                catch (e) { }
             }
             // Turning a category ON that was OFF at widget load never had its
             // MapLibre layer created (loadGeoJSONLayers only fetches/adds a
@@ -9283,7 +9882,9 @@
             var _LABEL_PTYPE  = { site: 'site', zone: 'zone', facility: 'facility', equipment: 'equipment' };
             var _LABEL_REGCAT = { site: 'land', zone: 'zone', facility: 'facility', equipment: 'equipment', sensor: 'sensor' };
             // Every label key the widget knows (quick-buttons + Labels-panel rows).
-            var LABEL_KEYS = ['input', 'output', 'function', 'facility', 'site', 'zone', 'equipment', 'sensor'];
+            // ⚠ 위 8097 줄의 같은 배열과 **함께** 고칠 것(네 표 주석 참조).
+            var LABEL_KEYS = ['input', 'output', 'function', 'facility',
+                              'plot', 'site', 'zone', 'equipment', 'sensor'];
 
             function _applyLabel(key, hidden) {
                 var inst = window.AoTWidgetInstances[uniqueId];
@@ -9308,9 +9909,29 @@
                     // addLayerPanel is a sibling top-level function. _attachActuatorLabels
                     // mirrors its bayMarkers array onto window.AoTWidgetInstances[uid]
                     // for exactly this reason; go through the instance, not _actLabelState.
+                    // **동 칩은 시설 토글이 끈다.** 지도에서 사람이 보는 시설
+                    // 이름이 곧 이 칩이기 때문이다(시설 가장자리 칩은 예전에
+                    // 없앴고 동 칩이 단일 진입점이다). 한때 동 토글로 갈랐다가
+                    // "[시설] 을 눌러도 시설 이름이 안 꺼진다" 가 됐다 — 화면에
+                    // 시설 라벨이 따로 없으니 그 버튼이 아무 일도 안 하는 것으로
+                    // 보인다.
                     if (key === 'facility' && inst.bayMarkers) {
                         inst.bayMarkers.forEach(function(bm) {
                             if (bm && bm.el) bm.el.classList.toggle('aot-type-hidden', hidden);
+                        });
+                    }
+                } else if (key === 'plot') {
+                    // 구획 라벨은 다른 모듈(`AoTMapPlot`)이 만든다. 모듈의 라벨
+                    // 축을 함께 내려야 한다 — 그러지 않으면 폴링이 라벨을 다시
+                    // 그릴 때(`_applyLabelZoom`) 켜진 채로 돌아온다.
+                    if (window.AoTMapPlot && window.AoTMapPlot.setLabelVisible) {
+                        try { window.AoTMapPlot.setLabelVisible(uniqueId, inst.map, !hidden); }
+                        catch (e) {}
+                    }
+                    var _mc = inst.map && inst.map.getContainer && inst.map.getContainer();
+                    if (_mc) {
+                        _mc.querySelectorAll('[data-label-kind="plot"]').forEach(function(el) {
+                            el.classList.toggle('aot-type-hidden', hidden);
                         });
                     }
                 }
@@ -9402,7 +10023,12 @@
             var quickLabels = [
                 { key: 'input',    icon: 'fas fa-thermometer-half', title: (window._ ? window._('Toggle Input labels') : 'Toggle Input labels') },
                 { key: 'output',   icon: 'fas fa-sliders-h',        title: (window._ ? window._('Toggle Output labels') : 'Toggle Output labels') },
-                { key: 'function', icon: 'fas fa-code-branch',      title: (window._ ? window._('Toggle Function labels') : 'Toggle Function labels') },
+                // 함수 라벨 토글은 뺐다 — 누르는 일이 드물다. 그 자리를 구획
+                // (plot)이 받는다: 한 구역에 두둑이 수십 개면 이 라벨이 지도에서
+                // 가장 자주 걸린다.
+                // (함수 라벨은 여전히 마스터 스위치 'Show Labels' 와 레이어
+                //  컨트롤로 끌 수 있다 — 사라진 것은 빠른 버튼뿐이다.)
+                { key: 'plot',     icon: 'fas fa-vector-square',     title: (window._ ? window._('Toggle Plot labels') : 'Toggle Plot labels') },
                 { key: 'facility', icon: 'fas fa-industry',         title: (window._ ? window._('Toggle Facility labels') : 'Toggle Facility labels') }
             ];
 
@@ -9814,10 +10440,16 @@
             head.textContent = _t('Labels');
             panel.appendChild(head);
 
+            // ⚠ **`LABEL_KEYS` 의 모든 종류가 여기 있어야 한다.** 빠진 종류는
+            // 라벨 축을 켜고 끌 자리가 화면에 없는데, 저장은 계속 살아 있다 —
+            // 구획이 실제로 그랬다: 도형 체크박스([도형] 그룹)만 있어서 사용자는
+            // "토글이 켜져 있는데 라벨이 안 나온다" 를 보게 됐다(꺼 둔 것은 라벨
+            // 축이고 그것을 되돌릴 체크박스가 없었다).
             const labelDefs = [
                 { key: 'site',      label: _t('Site') },
                 { key: 'zone',      label: _t('Zone') },
                 { key: 'facility',  label: _t('Facility') },
+                { key: 'plot',      label: _t('Plot') },
                 { key: 'equipment', label: _t('Equipment') },
                 { key: 'input',     label: _t('Input') },
                 { key: 'output',    label: _t('Output') },
@@ -11394,6 +12026,11 @@
                 el.dataset.labelName  = displayName;
                 el.dataset.labelColor = userColor;
                 el.dataset.deviceType = devType2;
+                // 임시 표시(focus)가 uuid 로 찾는다 — 켜져 있는 출력은 라벨을
+                // 꺼 두었어도 보여야 한다. 도형과 라벨의 식별자가 다를 수 있어
+                // (도형=shape_uuid) 둘 다 새긴다.
+                el.dataset.deviceId = String(dev.device_id || dev.unique_id || '');
+                if (dev.shape_uuid) el.dataset.shapeUuid = String(dev.shape_uuid);
                 el.innerHTML = labelHtml;
                 // Apply persisted hide state immediately on creation
                 if (instance._hiddenTypes && instance._hiddenTypes[devType2]) {
@@ -11427,6 +12064,8 @@
                 const el = document.createElement('div');
                 el.className = 'map-marker-dot' + (isON ? ' device-on' : '');
                 el.dataset.deviceType = devType2;
+                el.dataset.deviceId = String(dev.device_id || dev.unique_id || '');
+                if (dev.shape_uuid) el.dataset.shapeUuid = String(dev.shape_uuid);
                 el.style.cssText =
                     'background-color:' + (isON ? userColor : '#fff') + ';' +
                     'border:2px solid ' + userColor + ';' +
@@ -12191,6 +12830,21 @@
                    || (instance.vars && instance.vars.devices) || [];
             refreshDeviceMarkersAppearance(uniqueId, all.length ? all : touched, wOpts);
         }
+
+        // **켜져 있는 출력은 꺼 두었어도 보인다.** 지금 돌고 있는 것이 지도에
+        // 없으면 "무엇이 작동 중인가" 를 화면이 답하지 못한다. 사용자가 꺼 둔
+        // 상태는 그대로 두고(토글을 건드리지 않는다) 이유만 얹었다 뗀다 —
+        // 꺼지면 원래대로 사라진다.
+        //
+        // 여기서 `touched` 만 보면 안 된다: /outputstate 가 모르는 출력은 목록에
+        // 없고, 그 사이 꺼진 장치의 이유를 거둘 기회도 사라진다. 상태를 아는
+        // 것 전부를 한 번에 훑는다.
+        touched.forEach(function (dev) {
+            var uuid = dev.shape_uuid || dev.unique_id || dev.device_id;
+            if (!uuid) return;
+            _setFocus(instance, uniqueId, String(uuid), 'active',
+                      dev.is_activated === true, 'device');
+        });
     }
 
     // /outputstate 는 전 출력을 한 번에 주는 **전역** 응답이고 데몬 RPC 를 탄다.

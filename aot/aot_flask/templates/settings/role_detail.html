@@ -27,7 +27,12 @@
         (form_user_roles.edit_controllers, each_role.edit_controllers),
         (form_user_roles.edit_plots, each_role.edit_plots),
         (form_user_roles.edit_settings, each_role.edit_settings),
-        (form_user_roles.reset_password, each_role.reset_password)
+        (form_user_roles.reset_password, each_role.reset_password),
+        {# 이 줄이 빠지면 역할을 저장할 때마다 면제가 **조용히 해제된다** —
+           체크박스는 꺼져 있을 때 아무것도 보내지 않고, BooleanField 는 그것을
+           False 로 읽는다. 관리자 역할이 그렇게 풀리면 첫 부여 순간 아무도
+           조작할 수 없게 된다. #}
+        (form_user_roles.bypass_group_scope, each_role.bypass_group_scope)
       ] %}
       <div class="aot-modal-option-row">
         <label class="aot-modal-option-label">{{field.label.text}}</label>

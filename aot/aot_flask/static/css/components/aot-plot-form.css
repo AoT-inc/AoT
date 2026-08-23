@@ -1,0 +1,56 @@
+/* 공용 구획 폼(`common/aot-plot-form.js`)의 스타일.
+ *
+ * 폼이 한 벌이므로 스타일도 한 벌이다 — 예전에 필드 집합이 화면마다 갈렸던
+ * 이유가 각자 적었기 때문이고, CSS 를 화면별 파일에 두면 같은 일이 반복된다.
+ * 지금 이 파일을 싣는 곳: 지도 위젯(AoT_map) · 구획 페이지(/plots).
+ */
+
+/* 비울 수 있는 날짜 입력 — 값이 있을 때만 [x] 가 붙는다.
+   iOS Safari 는 날짜 입력을 비울 수단을 주지 않아(피커의 [재설정]도 표시된
+   날짜를 넣는다) "종료 미정" 으로 되돌릴 방법이 화면에 없었다. */
+.aot-pf-date {
+  position: relative;
+  display: block;
+}
+.aot-pf-date > input { width: 100%; padding-right: 32px; }
+.aot-pf-date-clear {
+  position: absolute;
+  top: 50%;
+  right: 6px;
+  transform: translateY(-50%);
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--aot-color-text-secondary);
+  font-size: var(--aot-font-size-sm);
+  line-height: 1;
+  cursor: pointer;
+}
+.aot-pf-date-clear[hidden] { display: none; }
+@media (hover: hover) {
+  .aot-pf-date-clear:hover { color: var(--text-color-primary, #13261B); }
+}
+
+/* ── 작기 종료 창의 선택지 ─────────────────────────────────────────────────
+   [비워 둔다 / 쉬어 간다 / 이어서 심는다]. 라디오를 목록이 아니라 **줄**로 두는
+   이유: 각 선택이 무엇을 하는지 한 줄 설명이 함께 서야 하고, 그 설명이 선택지와
+   같은 블록 안에 있어야 고르는 순간 읽힌다. */
+.aot-pe-choice {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--aot-space-3);
+  padding: var(--aot-space-3) 0;
+  margin: 0;
+  border-top: 1px solid var(--aot-border-light);
+  cursor: pointer;
+}
+.aot-pe-choice > input { margin-top: 0.25em; flex: 0 0 auto; }
+.aot-pe-choice-text { display: flex; flex-direction: column; min-width: 0; }
+.aot-pe-choice-text .aot-ov-muted { font-size: var(--aot-font-size-sm); }
+
+/* "아무것도 지워지지 않는다" — 이 창에서 사람이 가장 알고 싶은 것이라 선택지
+   **위**에 둔다. 아래 두면 이미 고른 뒤에 읽는다. */
+.aot-pe-note { padding-bottom: var(--aot-space-2); }

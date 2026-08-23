@@ -44,7 +44,9 @@ def list_tabs():
             'message': f'Invalid page_type: {page_type}'
         }), 400
 
-    tabs = TabService.get_tabs_for_page(page_type)
+    # 화면이 쓰는 목록이므로 스코프를 적용한다 — 페이지 렌더와 같은 집합이어야
+    # 한다. 갈리면 셀렉트에는 있는데 페이지에는 없는 탭이 생긴다.
+    tabs = TabService.visible_tabs_for_page(page_type)
     return jsonify({
         'success': True,
         'tabs': [{'unique_id': t.unique_id, 'name': t.name,

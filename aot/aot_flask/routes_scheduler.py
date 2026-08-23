@@ -18,6 +18,7 @@ from aot.ai.services.ai_scheduler_service import (
     AISchedulerService, JOB_STATE_DRAFT, JOB_STATE_PENDING,
     JOB_STATE_COMPLETED, JOB_STATE_FAILED, JOB_STATE_ARCHIVED
 )
+from aot.aot_flask.utils.utils_general import current_user_id
 from aot.aot_flask.utils.utils_general import user_has_permission
 
 logger = logging.getLogger(__name__)
@@ -311,7 +312,11 @@ def api_propose_job():
             schedule_cron=data.get('schedule_cron'),
             proposed_by='HUMAN',
             approval_required=False,
-            priority=data.get('priority', 1)
+            priority=data.get('priority', 1),
+            # 예약을 만든 사람. 발화 시 이 신원으로 스코프를 **다시** 묻는다
+            # — 없으면 "지금 못 켜니 1분 뒤로 예약" 이 제어 게이트의 우회로가
+            # 된다(docs/design/access-scope-groups.md §6-3·§8-7).
+            user_id=current_user_id()
         )
         # Persist the device-local tz anchor so display re-derives device time.
         if _anchor_name:

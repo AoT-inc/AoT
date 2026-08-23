@@ -100,8 +100,28 @@ from aot.scripts.measure_ai_tool_cost import measure_manifest
 # 사람이 다시 코드로 적는다). 문구가 부푼 경우와 구분되는 지점이라 상한을 올린다.
 # `create_program` 설명에서 스키마 중복(days 규칙·source_note)은 hint 로 옮겨
 # 덜어냈다 — propose_plot_split 때와 같은 정리이고, 그것으로 26토큰을 되찾았다.
+# ── 2026-08-22 재기준선 — 프로그램 도구를 MCP 에 싣는다 ─────────────────────
+#
+#   무엇                          에이전트    MCP     도구
+#   직전                           14,316   21,363  105 / 108
+#   프로그램 도구 5종 MCP 배선        14,316   23,004  105 / 113
+#
+# **에이전트 쪽은 한 톨도 안 늘었다** — 도구는 2026-08-19 부터 있었고, 없던 것은
+# `_MCP_TOOL_PAYLOADS` 항목뿐이다. 카탈로그에도 서랍에도 없으면 **그 도구는 어떤
+# MCP 클라이언트로도 부를 수 없다**(실측: `_drawer_index` 에도 'program' 이 없었다).
+# 탭 도구 4종이 걸렸던 것과 같은 함정이고, 이번에는 증상이 더 뚜렷했다 —
+# `create_plot` 스키마가 이미 "unique_id from list_programs" 라고 안내하는데
+# 정작 그 도구가 안 보였다.
+#
+# 늘어난 1,641 은 **없던 기능이 아니라 닿지 않던 기능의 값**이다. 되돌리면
+# 프로그램은 MCP 사용자에게 존재하지 않는 기능으로 되돌아간다.
+#
+# ⚠ 이 숫자는 **서랍을 껐을 때**의 값이다(위 2026-08-21 주석 참조). 서랍이
+# 기본 켜짐이라 `tools/list` 에 실제로 나가는 것은 core + 서랍 기계장치뿐이고,
+# 이 5종은 `_TIER_ASSIGNMENT` 에서 space/drawer 라 서랍 인덱스에 **이름만**
+# 늘어난다. 실제 고정비는 test_mcp_tool_surface.py 가 잰다.
 AGENT_MANIFEST_TOKEN_CEILING = 14_400
-MCP_CATALOG_TOKEN_CEILING = 21_500
+MCP_CATALOG_TOKEN_CEILING = 23_100
 
 # 등급(`AOT_AI_TOOL_TIERING=1`)을 켰을 때의 매니페스트. 2026-08-21 실측
 # 19항목 · 14,064자 · 약 3,516토큰 — 끈 상태의 **25%** 다.

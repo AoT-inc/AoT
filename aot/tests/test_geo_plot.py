@@ -21,6 +21,7 @@ DB 를 쓰는 것은 저장 경로 검증뿐이고, 나머지는 순수 계산·
 import ast
 import json
 import os
+import re
 import unittest
 from datetime import date, timedelta
 
@@ -2818,7 +2819,10 @@ class TestZoneShowsWhatIsPlanted(unittest.TestCase):
                                  'plot_context.py'))
         body = src.split('def zone_allocation', 1)[1].split('\ndef ', 1)[0]
         self.assertIn('days_since_planted', body)
-        self.assertIn('elapsed_days(row', body)
+        # 값의 출처는 `_days_shown`(= `elapsed_days` + 시작 전 방어)이다.
+        # 이름을 고정하는 이유는 "달력에서 파생된 값" 이어야 하기 때문이고,
+        # 그 성질은 감싼 쪽도 그대로 갖는다.
+        self.assertIn('_days_shown(row', body)
 
     def test_unassigned_uses_union_not_sum(self):
         """단순 합으로 빼면 겹친 만큼 이중으로 빠져 미배정이 음수가 된다."""
@@ -2909,16 +2913,40 @@ class TestPlotGoesUpToItsZone(unittest.TestCase):
             '\n  function ', 1)[0]
         self.assertIn('up: true', body)
 
-    def test_up_target_is_the_zone_from_the_response(self):
-        """구역 uuid 는 저장된 값이 아니라 기하에서 파생된다 —
-        응답에서만 알 수 있으므로 하드코딩하거나 추측하지 않는다."""
+    def test_up_target_comes_from_the_response_not_a_constant(self):
+        """상위는 **응답이 정한다** — 종류까지.
+
+        예전에는 `kind: 'zone'` 으로 고정했다. 그런데 `zone_uuid` 는 이름과 달리
+        zone 이 아닐 수 있다 — `container_for_geometry` 의 계약이 "감싸는
+        site/zone" 이라, zone 이 없는 자리에서는 **site 도형**이 온다(시설
+        구획이 특히 그렇다: 구역이 없으므로 필지가 잡힌다).
+
+        그것을 zone 으로 믿고 구역 화면을 열면 조회가 빈 손으로 끝나고 화면이
+        **스켈레톤에 멈춘다** — 에러가 없어서 "뒤로가기가 고장" 으로만 보인다
+        (실측: 필지 "육묘장" 안의 시설 "육묘장" — 이름까지 같아 오래 안 보였다).
+        """
         src = _read(os.path.join(_ROOT, 'aot_flask', 'static', 'js',
                                  'widgets', 'AoT_map',
                                  'aot-map-widget-vector.js'))
         body = src.split('function _attachPlotControl', 1)[1].split(
             '\n        // ── ', 1)[0]
-        self.assertIn("kind: 'zone'", body)
+        # 시설 구획의 상위는 **시설**이다.
+        self.assertIn("kind: 'facility'", body)
+        self.assertIn('facility_uuid', body)
+        # 노지 구획은 서버가 준 종류로 갈린다 — 상수로 박지 않는다.
+        self.assertIn('zone_kind', body)
         self.assertIn('zone_uuid', body)
+
+    def test_server_says_what_the_container_actually_is(self):
+        """화면이 판단할 근거(`zone_kind`)를 서버가 실어야 한다.
+
+        없으면 소비처마다 도형을 다시 조회해 확인해야 하고, 대개는 확인하지
+        않고 이름을 믿는다 — 그 믿음이 위 버그였다.
+        """
+        ctx = _read(os.path.join(_ROOT, 'aot_flask', 'geo', 'plot_context.py'))
+        self.assertIn("'zone_kind'", ctx)
+        routes = _read(os.path.join(_ROOT, 'aot_flask', 'routes_geo_plot.py'))
+        self.assertIn("'zone_kind'", routes)
 
 
 class TestPlotShowsOnlyWhatItTouches(unittest.TestCase):
@@ -3876,19 +3904,28 @@ class TestVocabularyIsNotAgricultureOnly(unittest.TestCase):
         나중에 고칠 수 있지만, 고칠 수 있다는 것을 아무도 모른다. 서버가 받는
         축이 화면에 없는 반쪽 상태가 정확히 이 작업이 없애려던 것이다.
         """
+        # 폼은 이제 **공용 컴포넌트 한 벌**이다(`common/aot-plot-form.js`).
+        # 화면마다 마크업을 확인하던 예전 검사를 그대로 두면 통합을 되돌려야
+        # 통과하게 된다 — 지켜야 하는 것은 "세 화면이 종류를 고를 수 있는가"
+        # 이지 "각자 select 를 적어 두었는가" 가 아니다.
+        form = _read(os.path.join(_ROOT, 'aot_flask', 'static', 'js', 'common',
+                                  'aot-plot-form.js'))
         design = _read(os.path.join(_ROOT, 'aot_flask', 'static', 'js', 'geo',
                                     'design', 'aot-geo-plot.js'))
         popup = _read(os.path.join(_ROOT, 'aot_flask', 'static', 'js',
                                    'widgets', 'AoT_map', 'aot-map-popup.js'))
         facility = _read(os.path.join(_ROOT, 'aot_flask', 'static', 'js', 'geo',
                                       'facility', 'plot-ui.js'))
-        self.assertIn('data-veg-field="kind"', design)
-        self.assertIn("_kindSelect('data-nf=\"kind\"'", popup)   # 생성 폼
-        self.assertIn("_kindSelect('data-pf=\"kind\"'", popup)   # 편집 폼
-        self.assertIn('data-f="kind"', facility)
-        for src in (design, popup, facility):
-            for k in ('vegetation', 'livestock', 'facility', 'other'):
-                self.assertIn("'" + k + "'", src)
+        # 공용 폼이 종류 칸과 네 어휘를 갖는다.
+        self.assertIn("key: 'kind'", form)
+        for k in ('vegetation', 'livestock', 'facility', 'other'):
+            self.assertIn("'" + k + "'", form)
+        # 세 화면이 그것을 쓴다 — 각자 자기 필드 속성으로.
+        self.assertIn("attr: 'data-veg-field'", design)
+        self.assertIn("attr: 'data-nf'", popup)
+        self.assertIn("attr: 'data-f'", facility)
+        # 구획 모달 편집 폼은 아직 자기 마크업을 갖는다(4단계는 등록 폼 셋).
+        self.assertIn("_kindSelect('data-pf=\"kind\"'", popup)
 
     def test_program_list_follows_the_chosen_kind(self):
         """종류를 바꿨는데 프로그램 목록이 옛 종류로 남으면, 화면에 보이는
@@ -3903,10 +3940,16 @@ class TestVocabularyIsNotAgricultureOnly(unittest.TestCase):
         for src in (design, plotjs, facility):
             self.assertIn("'/api/geo/programs?kind=' + encodeURIComponent(", src)
             self.assertNotIn('/api/geo/programs?kind=vegetation', src)
-        # 종류 변경을 실제로 듣는가
-        self.assertIn('_wireKindChange', design)
-        self.assertIn('refreshProgramChoices', plotjs)
-        self.assertIn("getAttribute('data-f') !== 'kind'", facility)
+        # 종류 변경을 실제로 듣는 곳은 이제 **공용 폼 하나**다. 세 화면은
+        # 목록을 가져오는 함수(`loadPrograms`)만 넘긴다 — 캐시가 화면마다
+        # 다른 곳에 있기 때문이다(디자인은 인스턴스, 위젯은 구획 모듈).
+        form = _read(os.path.join(_ROOT, 'aot_flask', 'static', 'js', 'common',
+                                  'aot-plot-form.js'))
+        self.assertIn('ctx.loadPrograms', form)
+        self.assertIn("selKind.addEventListener('change'", form)
+        for src in (design, facility):
+            self.assertIn('loadPrograms', src)
+        self.assertIn('loadPrograms: _loadPrograms', plotjs)
 
     def test_block_title_does_not_repeat_its_first_label(self):
         """'심겨 있는 것 / 심은 것' 처럼 제목과 첫 행이 같은 말이면 안 된다."""
@@ -3915,7 +3958,7 @@ class TestVocabularyIsNotAgricultureOnly(unittest.TestCase):
         body = src.split('function _plotOverviewHtml', 1)[1].split(
             '\n  function ', 1)[0]
         # [현황] 은 "지금" 이다 — 대상·시작일 같은 정체성은 [개요] 가 갖는다.
-        self.assertIn("_t('Right now')", body)
+        self.assertIn("_t('Progress')", body)
         self.assertNotIn("_t('Growing now')", body)
         # [개요]도 같은 문제를 겪었다 — 제목과 첫 행이 둘 다 '심은 것' 이었다.
         about = src.split('function _plotAboutHtml', 1)[1].split(
@@ -4949,7 +4992,12 @@ class TestFacilityPlotRendering(unittest.TestCase):
         # 비어 있어도 권한이 있으면 블록을 낸다 — 아니면 버튼이 나타날 자리가 없다.
         self.assertIn('!items.length && !opts.canEdit', body)
         self.assertIn('aot-ov-plot-add', body)
-        self.assertIn("data-nf=\"bay_id\"", body)
+        # 구역 칸은 공용 폼이 낸다(`target: 'facility'` 일 때만).
+        self.assertIn("target: 'facility'", body)
+        form = _read(os.path.join(_ROOT, 'aot_flask', 'static', 'js', 'common',
+                                  'aot-plot-form.js'))
+        self.assertIn("key: 'bay_id'", form)
+        self.assertIn("when: 'facility'", form)
 
         widget = _read(os.path.join(_ROOT, 'aot_flask', 'static', 'js', 'widgets',
                                     'AoT_map', 'aot-map-widget-vector.js'))
@@ -4957,7 +5005,10 @@ class TestFacilityPlotRendering(unittest.TestCase):
         self.assertIn("'/api/geo/plot'", widget)
         # 권한 축은 시설 [현황]과 같아야 한다(둘 다 edit_settings) — 버튼이
         # 보이는데 저장이 403 이면 그게 더 나쁘다.
-        self.assertIn('st.repEditByFac && st.repEditByFac[facilityUuid]', widget)
+        # 권한 축은 **작기 운영**(edit_plots, p6_51)이다 — 시설 설정(대표 센서
+        # 선택 등)과 다른 축이라, 예전처럼 같은 플래그를 쓰면 작기만 맡기려 해도
+        # 시설 설정이 함께 열린다.
+        self.assertIn('rt.can_edit_plots', widget)
 
     def test_periodic_refresh_does_not_wipe_the_plot_form(self):
         """[현황]은 30초마다 통째로 다시 그려진다 — 작성 중인 폼이 사라지면 안 된다.
@@ -5028,7 +5079,12 @@ class TestFacilityPlotRendering(unittest.TestCase):
         이 저장소가 반복해서 겪은 실패다.
         """
         src = _read(self._DESIGN_VEG)
-        self.assertIn("data-veg-field=\"program_uuid\"", src)
+        # 폼 마크업은 공용 컴포넌트가 낸다 — 이 화면은 그것을 쓴다는 사실과
+        # 목록을 어떻게 가져오는지만 갖는다.
+        self.assertIn("attr: 'data-veg-field'", src)
+        form = _read(os.path.join(_ROOT, 'aot_flask', 'static', 'js', 'common',
+                                  'aot-plot-form.js'))
+        self.assertIn("key: 'program_uuid'", form)
         # 그 구획의 종류로 묻는다 — 박아 두면 다른 종류가 섞인다.
         self.assertIn("'/api/geo/programs?kind=' + encodeURIComponent(", src)
         self.assertNotIn('programs?kind=vegetation', src)
@@ -5870,6 +5926,701 @@ class TestProgram(unittest.TestCase):
         st = plot_context.stage_of(row)
         self.assertEqual(st['state'], 'not_started')
         self.assertEqual(st['days_until_start'], 5)
+
+    def test_every_map_label_kind_is_registered(self):
+        """**라벨 종류를 새로 만들면 네 표에 전부 등록해야 한다.**
+
+        빠뜨렸을 때의 증상이 표마다 다르고 전부 조용하다:
+
+          LABEL_Z 누락              → 다른 라벨 뒤에 깔린다(폴백이 0)
+          LABEL_COLLISION_RANK 누락 → 충돌 순위가 호버 여부에 따라 튄다
+          LABEL_ZOOM_GATED 누락     → **줌아웃에서도 화면을 덮는다**
+          LABEL_KEYS 누락           → 라벨 컨트롤에 그 종류가 안 나온다
+
+        자동 판정을 두지 않는 이유는 종류마다 "멀리서도 필요한 기준인가" 가
+        사람이 정할 판단이기 때문이다(기본값으로 때우면 그 판단이 생략된 채
+        굳는다). 대신 등록을 빠뜨린 것을 여기서 잡는다.
+
+        실제로 셋이 빠져 있었다 — 시설 구역(bay)·구획(plot) 이 네 표 전부에서,
+        센서(sensor)가 Z·RANK 두 표에서.
+        """
+        import re
+        js = _read(os.path.join(_ROOT, 'aot_flask', 'static', 'js',
+                                'widgets', 'AoT_map', 'aot-map-widget-vector.js'))
+
+        def _obj_keys(name):
+            m = re.search(r'var %s = \{(.*?)\};' % name, js, re.S)
+            self.assertIsNotNone(m, '%s 표가 사라졌다' % name)
+            return set(re.findall(r"'?([A-Za-z_]+)'?\s*:", m.group(1)))
+
+        def _arr_keys(name):
+            m = re.search(r"var %s = \[(.*?)\];" % name, js, re.S)
+            self.assertIsNotNone(m, '%s 목록이 사라졌다' % name)
+            return set(re.findall(r"'([a-z]+)'", m.group(1)))
+
+        z = _obj_keys('LABEL_Z')
+        rank = _obj_keys('LABEL_COLLISION_RANK')
+        gated = _obj_keys('LABEL_ZOOM_GATED')
+        keys = _arr_keys('LABEL_KEYS')
+
+        # 쌓임과 충돌은 **같은 종류 집합**이어야 한다(한쪽은 다른 쪽의 역순이다).
+        self.assertEqual(z, rank,
+                         'LABEL_Z 와 LABEL_COLLISION_RANK 의 종류가 다르다: %s'
+                         % sorted(z ^ rank))
+        # 컨트롤에 나오는 종류는 전부 쌓임 순서를 가져야 한다.
+        self.assertFalse(keys - z, 'LABEL_Z 에 없는 종류: %s' % sorted(keys - z))
+        # 줌 게이트 대상도 마찬가지.
+        self.assertFalse(gated - z, 'LABEL_Z 에 없는 종류: %s' % sorted(gated - z))
+        # 대지·구역은 **게이트 대상이 아니다**(멀리서 위치를 잡는 기준).
+        self.assertNotIn('site', gated)
+        self.assertNotIn('zone', gated)
+        # 이번에 채운 것들이 되돌아가지 않게.
+        for k in ('bay', 'plot', 'sensor'):
+            self.assertIn(k, z, '%s 가 LABEL_Z 에서 빠졌다' % k)
+            self.assertIn(k, gated, '%s 가 줌 게이트에서 빠졌다' % k)
+
+    def test_bay_and_plot_labels_go_through_the_widget_gate(self):
+        """라벨은 `data-label-kind` 를 새겨야 위젯의 관리(줌 게이트·쌓임·충돌)를
+        받는다. 명부에 이름을 올리는 것만으로는 아무 일도 안 일어난다 — 그 값을
+        읽는 요소가 없기 때문이다.
+
+        실제로 둘이 밖에 있었다:
+          구역 칩  → 'facility' 로 새겨져 시설 라벨과 한 몸이었다(따로 못 끈다)
+          구획 칩  → **아무것도 안 새겼다**. 자체 줌 규칙만 있어, 시설·장치
+                     라벨이 다 접힌 축척에서 홀로 남았다.
+        """
+        vec = _read(os.path.join(_ROOT, 'aot_flask', 'static', 'js',
+                                 'widgets', 'AoT_map', 'aot-map-widget-vector.js'))
+        plot = _read(os.path.join(_ROOT, 'aot_flask', 'static', 'js',
+                                  'widgets', 'AoT_map', 'aot-map-plot.js'))
+        # 구역 칩은 자기 이름으로 등록한다.
+        self.assertIn("_wireLabelStacking(_uidInstTop, bEl, 'bay')", vec)
+        # 구획 칩도 종류를 새긴다(모듈이 달라 스택 배선을 못 부르므로 표식만).
+        self.assertIn("el.dataset.labelKind = 'plot'", plot)
+        # 줌 임계는 하나(label_min_zoom) — 시설과 **같은 축척에서** 함께 접힌다.
+        self.assertIn('label_min_zoom', vec)
+        for k in ('facility', 'bay', 'plot'):
+            self.assertRegex(vec, r'LABEL_ZOOM_GATED = \{[\s\S]{0,200}%s:' % k)
+
+    def test_space_words_do_not_collide(self):
+        """다섯 낱말이 각자 다른 것을 가리킨다 — 대지(site) · 구역(zone) ·
+        시설(facility) · 동(bay) · 구획(plot). 어휘 표는 CLAUDE.md '공간 어휘'.
+
+        섞이면 사용자가 화면마다 다른 말을 배운다. 2026-08-23 까지 실제로
+        섞여 있었다:
+
+          `Site`/`Sites`/`Site list` → "필지"  (다른 곳은 "대지")
+          `Bays` → "베이 수" · `Bay Scope` → "구역(Bay) 범위"
+          `Zone capacity` → "구역 총량"   ← **msgid 자체가 틀렸다**(bay 의 총량)
+
+        ⚠ `Parcel*` 은 건드리지 않는다 — 지적도에서 주소로 불러오는 필지라
+        site 와 다른 것이다.
+        """
+        import re
+        po = _read(os.path.join(_ROOT, 'aot_flask', 'translations', 'ko',
+                                'LC_MESSAGES', 'messages.po'))
+
+        def _ko(msgid):
+            m = re.search(r'msgid "%s"\nmsgstr "([^"]*)"' % re.escape(msgid), po)
+            return m.group(1) if m else None
+
+        # site 는 '대지' 하나로.
+        for mid in ('Site', 'Sites', 'Site list'):
+            self.assertEqual('대지', (_ko(mid) or '').split()[0],
+                             '%s 의 한국어가 대지가 아니다: %r' % (mid, _ko(mid)))
+        # bay 는 '동'. **'구역' 이 들어가면 안 된다** — zone 이 쓰는 말이다.
+        for mid in ('Bays', 'Bay Scope (optional)', 'Toggle Bay labels',
+                    'Bay capacity'):
+            ko = _ko(mid)
+            self.assertIsNotNone(ko, '%s 번역이 없다' % mid)
+            self.assertNotIn('구역', ko,
+                             '%s: bay 를 "구역" 이라 부르면 zone 과 겹친다 (%r)'
+                             % (mid, ko))
+        # 지적도 필지는 그대로.
+        self.assertEqual('필지', _ko('Parcel'))
+        # bay 의 총량을 zone 이라 부르던 msgid 가 되살아나지 않게.
+        for f in ('widgets/AoT_map/aot-map-popup.js', 'common/aot-plot-form.js'):
+            js = _read(os.path.join(_ROOT, 'aot_flask', 'static', 'js', f))
+            self.assertNotIn("_t('Zone capacity')", js)
+            self.assertNotIn("zone capacity below", js)
+
+    def test_plot_shape_and_label_are_separate_axes(self):
+        """구획만 도형과 라벨이 **한 스위치**에 묶여 있었다 — 다른 계층
+        (대지·구역·시설)은 레이어 컨트롤에서 둘이 따로다. 도형을 끄면 이름까지
+        사라져 "어디인지는 감추되 무엇이 있는지는 남긴다" 를 할 수 없었다.
+
+        `setVisible`(둘 다)은 위젯 옵션 `show_plots` 가 쓰는 큰 스위치로 남기고,
+        레이어 컨트롤은 `setShapeVisible`, 라벨 컨트롤은 `setLabelVisible` 을
+        쓴다.
+        """
+        plot = _read(os.path.join(_ROOT, 'aot_flask', 'static', 'js',
+                                  'widgets', 'AoT_map', 'aot-map-plot.js'))
+        vec = _read(os.path.join(_ROOT, 'aot_flask', 'static', 'js',
+                                 'widgets', 'AoT_map', 'aot-map-widget-vector.js'))
+        self.assertIn('function setShapeVisible', plot)
+        self.assertIn('function setLabelVisible', plot)
+        # 라벨 표시는 **라벨 축**과 줌만 본다(도형 축을 보면 다시 묶인다).
+        self.assertIn('st.labelVisible !== false', plot)
+        self.assertNotIn('var show = (st.visible !== false)', plot)
+        # 도형 카테고리 토글은 도형만 끈다.
+        self.assertIn('AoTMapPlot.setShapeVisible(uniqueId, map, visible)', vec)
+        self.assertNotIn('AoTMapPlot.setVisible(uniqueId, map, visible)', vec)
+
+    def test_focus_fetches_features_without_turning_the_category_on(self):
+        """도형 종류를 꺼 두면 **데이터 자체를 안 받아온다**(레이어는 옵션이 켜져
+        있을 때만 만들어진다) — 실측으로 `aot_devices` 소스의 피처가 0개였다.
+        그래서 "켜진 장치의 도형을 보인다" 가 그릴 것이 없었다.
+
+        ⚠ 그렇다고 `_ensureShapeLayer[cat]` 을 부르면 안 된다. 그것은 카테고리
+        **레이어를 만들고**, 만들어진 레이어는 보인다 — 실측으로 출력 하나가
+        켜지자 **모든** 장치 도형이 떴고, 다른 모달이 열려 카테고리가 정상
+        상태로 돌아가는 순간 그 전부가 함께 사라졌다.
+
+        필요한 것은 레이어가 아니라 **피처 하나**다. 직접 받아 focus 소스에만
+        넣는다 — 카테고리를 꺼 둔 상태는 처음부터 끝까지 그대로다.
+        """
+        vec = _read(os.path.join(_ROOT, 'aot_flask', 'static', 'js',
+                                 'widgets', 'AoT_map', 'aot-map-widget-vector.js'))
+        self.assertIn('function _fetchFocusShapes', vec)
+        # 데이터만 받는다 — 레이어를 만드는 경로를 타면 안 된다.
+        head = vec.split('function _fetchFocusShapes', 1)[1].split('\n    function ', 1)[0]
+        self.assertIn('geoFetch(', head)
+        self.assertNotIn('_ensureShapeLayer', head)
+        self.assertNotIn('addGeoJSONLayer', head)
+        # 출력 ON 은 'device' 종류로 확보한다.
+        self.assertIn("dev.is_activated === true, 'device'", vec)
+
+    def test_focus_paints_with_the_theme_not_a_baked_color(self):
+        """도형의 색은 피처가 아니라 **테마(theme_config)** 가 정한다 —
+        `feature.properties.color` 는 각인 금지 대상이라 오버레이 응답에 아예
+        없다(`geo_overlays.py` 에 'color' 라는 낱말이 없다). 그것을 읽던
+        `['get','color']` 는 언제나 비어 폴백 한 색으로 통일됐다: 켜진 출력이
+        보라(#995aff)가 아니라 브랜드 딥그린으로 나왔다.
+        """
+        vec = _read(os.path.join(_ROOT, 'aot_flask', 'static', 'js',
+                                 'widgets', 'AoT_map', 'aot-map-widget-vector.js'))
+        focus = vec.split('function _ensureFocusLayers', 1)[1].split('\n    function ', 1)[0]
+        self.assertNotIn("['get', 'color']", focus)
+        self.assertEqual(2, focus.count("['get', 'aot_focus_color']"))
+        # 칠하는 색은 종류마다 테마에서 해석한다.
+        self.assertIn('function _focusColor', vec)
+        self.assertIn('T.deviceColor(', vec)
+        # 구획만 예외 — 그 색은 구획 행에서 오고 평소 레이어도 그것을 칠한다.
+        self.assertIn("if (cat === 'plot' && pr.color) return pr.color;", vec)
+        # 원본이 아니라 **사본**에 찍는다(각인 방지).
+        rp = vec.split('function _repaintFocus', 1)[1].split('\n    // ', 1)[0]
+        self.assertIn('props.aot_focus_color = color', rp)
+        self.assertIn("geometry: f.geometry, properties: props", rp)
+
+    def test_focus_does_not_dictate_a_display_value(self):
+        """임시 표시가 `display` 를 정하면 **그 라벨이 원래 무엇이었는지**를
+        여기서 정해 버린다. 값 키의 원형 모드(`--circle`)는 `display: flex` 로
+        숫자를 원 한가운데 놓으므로, `block` 으로 바뀌는 순간 숫자가 좌상단으로
+        밀린다(실측). 라벨 종류마다 display 가 달라 하나를 고르면 언제나 어느
+        하나는 깨진다 — 대신 숨김 규칙이 이 클래스를 비켜 가게 한다.
+        """
+        py = _read(os.path.join(_ROOT, 'widgets', 'AoT_map.py'))
+        self.assertNotIn('.aot-focus-show {', py)
+        for cls in ('.aot-type-hidden', '.aot-zoom-hidden'):
+            self.assertIn('%s:not(.aot-focus-show)' % cls, py,
+                          '%s 가 임시 표시를 비켜 가지 않는다' % cls)
+        # 원형 모드가 flex 인 것이 이 규칙의 전제다.
+        css = _read(os.path.join(_ROOT, 'aot_flask', 'static', 'css', 'widget',
+                                 'aot-sensor-label.css'))
+        circle = css.split('.aot-sensor-map-marker--circle {', 1)[1].split('}', 1)[0]
+        self.assertIn('display: flex', circle)
+
+    def test_the_injected_hide_rule_matches_the_template(self):
+        """`.aot-type-hidden` 은 위젯 템플릿과 JS 두 곳에서 심긴다(템플릿 캐시
+        보험). 한쪽만 고치면 **나중에 심긴 쪽이 이겨** 조용히 갈라진다 — 실제로
+        템플릿에만 `:not(.aot-focus-show)` 를 붙였더니 임시 표시가 통째로 안
+        들었다.
+        """
+        vec = _read(os.path.join(_ROOT, 'aot_flask', 'static', 'js',
+                                 'widgets', 'AoT_map', 'aot-map-widget-vector.js'))
+        self.assertIn(
+            "'.aot-type-hidden:not(.aot-focus-show) { display: none !important; }'",
+            vec)
+
+    def test_every_label_key_has_a_row_in_the_labels_panel(self):
+        """라벨 패널에 행이 없는 종류는 **끌 수는 있는데 켤 수가 없다** — 툴바
+        빠른 버튼이나 옛 저장으로 꺼진 축을 되돌릴 자리가 화면에 없기 때문이다.
+        구획이 그랬다: [도형] 그룹의 체크박스만 있어서 그것이 켜져 있는데도 라벨이
+        안 나왔고, 사용자에게는 "토글이 켜져 있는데 반영이 안 된다" 로 보였다.
+        """
+        vec = _read(os.path.join(_ROOT, 'aot_flask', 'static', 'js',
+                                 'widgets', 'AoT_map', 'aot-map-widget-vector.js'))
+        keys = set(re.findall(r"'([a-z]+)'",
+                              vec.split('var LABEL_KEYS = [', 1)[1].split(']', 1)[0]))
+        rows = set(re.findall(r"key: '([a-z]+)'",
+                              vec.split('const labelDefs = [', 1)[1].split('\n            ];', 1)[0]))
+        self.assertTrue(keys, 'LABEL_KEYS 를 못 읽었다')
+        self.assertEqual(set(), keys - rows,
+                         '라벨 패널에 행이 없는 종류: %s' % sorted(keys - rows))
+
+    def test_render_does_not_reset_the_plot_label_axis(self):
+        """`opts.visible` 은 [도형] 그룹의 `show_plots` 다. 렌더가 그것으로 라벨까지
+        내리면 5분 주기 갱신과 새로고침마다 라벨 토글이 지워진다.
+        """
+        js = _read(os.path.join(_ROOT, 'aot_flask', 'static', 'js',
+                                'widgets', 'AoT_map', 'aot-map-plot.js'))
+        render = js.split('function _render(uid, map, rows, opts)', 1)[1] \
+                   .split('\n    // ── 라벨', 1)[0]
+        self.assertIn('setShapeVisible(uid, map, opts.visible !== false)', render)
+        self.assertNotIn('setVisible(uid, map, opts.visible', render)
+
+    def test_plot_label_axis_survives_being_set_before_render(self):
+        """새로고침 직후 위젯은 저장된 라벨 상태를 되살리려고 500·1500·3000ms 에
+        `setLabelVisible` 을 부른다. 그때 구획은 아직 서버에서 안 왔을 수 있다 —
+        예전에는 `if (st)` 라 그 호출이 조용히 버려져, 뒤늦게 렌더된 라벨이 켜진
+        채 돌아왔다("꺼 두고 새로고침하면 되살아난다").
+        """
+        js = _read(os.path.join(_ROOT, 'aot_flask', 'static', 'js',
+                                'widgets', 'AoT_map', 'aot-map-plot.js'))
+        setl = js.split('function setLabelVisible', 1)[1].split('\n    }', 1)[0]
+        self.assertIn('STATE[uid] = STATE[uid] || {}', setl)
+        self.assertNotIn('if (st) st.labelVisible', setl)
+        sets = js.split('function setShapeVisible', 1)[1].split('\n    }', 1)[0]
+        self.assertIn('.shapeVisible = !!visible', sets)
+        self.assertNotIn('if (st) st.shapeVisible', sets)
+        # 레이어가 나중에 생겨도 그 전에 정해진 뜻을 따른다.
+        self.assertIn('if (_stv === false) setShapeVisible(uid, map, false);', js)
+
+    def test_focus_prefers_the_area_over_the_marker(self):
+        """장치는 한 uuid 에 피처가 **둘**이다 — 위치 마커(Point)와 그 장치가 맡은
+        영역(Polygon). 먼저 만나는 것을 잡으면 대개 Point 가 걸리는데, 이 표시는
+        fill/line 레이어로 그리므로 점은 아무것도 그리지 못한다.
+
+        실측으로 그랬다: `hasFeature: true, geom: 'Point'` 인데 그려진 피처는 0개 —
+        **라벨만 켜지고 도형은 안 나온다** 가 그 증상이다.
+        """
+        vec = _read(os.path.join(_ROOT, 'aot_flask', 'static', 'js',
+                                 'widgets', 'AoT_map', 'aot-map-widget-vector.js'))
+        body = vec.split('function _findInFeatures', 1)[1].split('\n    function ', 1)[0]
+        # 면이면 즉시 반환, 점은 폴백으로만.
+        self.assertIn('if (/Polygon/.test(g.type', body)
+        self.assertIn('fallback', body)
+        # 나중에 면이 도착하면 점을 갈아 준다.
+        self.assertIn("if (cur && /Polygon/.test((cur.geometry || {}).type", vec)
+
+    def test_active_focus_survives_opening_another_modal(self):
+        """켜진 장치의 표시는 **모달과 무관**해야 한다. 창을 갈아 끼울 때 거두는
+        것은 'modal' 이유뿐이고, 'active' 는 그 장치가 꺼질 때까지 남는다."""
+        vec = _read(os.path.join(_ROOT, 'aot_flask', 'static', 'js',
+                                 'widgets', 'AoT_map', 'aot-map-widget-vector.js'))
+        body = vec.split('function _clearModalFocus', 1)[1].split('\n    function ', 1)[0]
+        self.assertIn("st.targets[u].modal", body)
+        self.assertIn("'modal', false", body)
+        # 'active' 를 함께 거두면 켜진 장치가 모달 한 번에 사라진다.
+        self.assertNotIn("'active', false", body)
+
+    def test_hidden_things_come_back_while_you_look_at_them(self):
+        """사용자가 꺼 둔 도형·라벨이라도 **지금 봐야 할 이유**가 있으면 보인다:
+        그 대상의 모달이 열려 있거나, 그 출력이 켜져 있을 때.
+
+        ⚠ **꺼 둔 상태를 바꾸지 않는다.** 토글을 켜 버리면 모달을 닫았을 때
+        사용자가 꺼 둔 것이 켜진 채로 남는다. 그래서 숨김 클래스는 그대로 두고
+        더 강한 클래스를 얹었다 뗀다.
+
+        ⚠ 이유를 **이유별로 센다.** 모달을 닫았다고 바로 끄면 그 장치가 아직
+        켜져 있는데도 사라진다.
+        """
+        vec = _read(os.path.join(_ROOT, 'aot_flask', 'static', 'js',
+                                 'widgets', 'AoT_map', 'aot-map-widget-vector.js'))
+        py = _read(os.path.join(_ROOT, 'widgets', 'AoT_map.py'))
+
+        self.assertIn('function _setFocus', vec)
+        self.assertIn("'modal'", vec)
+        self.assertIn("'active'", vec)
+        # 토글 상태를 건드리지 않는다 — 숨김 클래스를 지우는 코드가 없어야 한다.
+        self.assertNotIn("classList.remove('aot-type-hidden')", vec)
+
+        # CSS 는 **숨김 규칙이 이 클래스를 비켜 가는** 방식이다. 예전에는
+        # `.aot-focus-show { display: block !important }` 로 되살렸는데, 그러면
+        # 라벨의 생김새를 여기서 정해 버려 원형 값 키가 깨졌다
+        # (`test_focus_does_not_dictate_a_display_value`).
+        self.assertIn('.aot-type-hidden:not(.aot-focus-show)', py)
+        self.assertIn('.aot-zoom-hidden:not(.aot-focus-show)', py)
+
+        # 창을 갈아 끼울 때도 앞 대상의 이유를 거둔다(remove() 는 닫힘 리스너를
+        # 지나지 않는다 — 실측으로 앞 대상이 계속 보였다).
+        self.assertIn('function _clearModalFocus', vec)
+        self.assertIn('_clearModalFocus(_prevInst, uid)', vec)
+
+        # 라벨은 uuid 로 찾는다 — 표식이 없으면 명부가 있어도 못 찾는다.
+        plot = _read(os.path.join(_ROOT, 'aot_flask', 'static', 'js',
+                                  'widgets', 'AoT_map', 'aot-map-plot.js'))
+        self.assertIn('el.dataset.plotUuid', plot)
+        self.assertIn('el.dataset.deviceId', vec)
+
+    def test_shape_option_is_live_appliable(self):
+        """도형 표시 옵션은 **두 표에 다 있어야** 화면이 즉시 반응한다.
+        한쪽만 넣으면 저장은 되는데 새로고침해야 반영된다 — 사용자에게는
+        "옵션이 작동하지 않는다" 로 보인다(구획이 실제로 그랬다).
+        """
+        lp = _read(os.path.join(_ROOT, 'aot_flask', 'static', 'js', 'app',
+                                'dashboard-widget-live-preview.js'))
+        # 자동저장 대상.
+        m = re.search(r'var MAP_SAFE_KEYS = \{(.*?)\};', lp, re.S)
+        self.assertIsNotNone(m, 'MAP_SAFE_KEYS 가 사라졌다')
+        self.assertIn('show_plots', m.group(1))
+        # 지도 카테고리 매핑.
+        m2 = re.search(r'var MAP_SHAPE_CAT = \{(.*?)\};', lp, re.S)
+        self.assertIsNotNone(m2, 'MAP_SHAPE_CAT 가 사라졌다')
+        self.assertIn("show_plots: 'plot'", m2.group(1))
+        # 지도 쪽이 그 카테고리를 실제로 처리하는가.
+        vec = _read(os.path.join(_ROOT, 'aot_flask', 'static', 'js',
+                                 'widgets', 'AoT_map', 'aot-map-widget-vector.js'))
+        self.assertIn("cat === 'plot' && window.AoTMapPlot", vec)
+
+    def test_end_dialog_wording_is_not_agriculture_only(self):
+        """종료 창의 선택지도 **중립어**여야 한다 — 구획의 `kind` 는 vegetation |
+        livestock | facility | other 다.
+
+        "심는다"(plant)는 축사·창고를 이어받는 자리에서 그냥 틀리고, 종류를 고르는
+        칸이 바로 아래 있는데 선택지 이름이 하나를 미리 말해 버린다. 아이콘·
+        "휴경" 과 같은 계열의 실수다.
+
+        종료 사유의 `Failed` 도 뺐다 — 작업·요청 실패에도 쓰이는 말이라 일본어가
+        「失敗しました」 라는 **문장형**이고, 드롭다운에 "실패했습니다" 가 선다.
+        """
+        js = _read(os.path.join(_ROOT, 'aot_flask', 'static', 'js',
+                                'widgets', 'AoT_map', 'aot-map-popup.js'))
+        self.assertNotIn('Plant the next one', js)
+        self.assertNotIn('pick what to grow', js)
+        self.assertIn("_t('Start the next one')", js)
+        # 종료 사유는 전용 낱말.
+        self.assertIn("""'<option value="failed">' + _esc(_t('Lost'))""", js)
+
+    def test_japanese_says_advice_one_way(self):
+        """같은 것을 두 말로 부르면 사용자가 둘을 다른 기능으로 읽는다. 일본어
+        카탈로그에 「助言」(문어체) 10건과 「アドバイス」 13건이 섞여 있었다 —
+        일상어인 쪽으로 모았다.
+
+        「紐づく」 도 뺐다. IT 업계 말이라 농가 화면에서 딱딱하다.
+        """
+        ja = _read(os.path.join(_ROOT, 'aot_flask', 'translations', 'ja',
+                                'LC_MESSAGES', 'messages.po'))
+        self.assertNotIn('助言', ja)
+        self.assertNotIn('紐づ', ja)
+
+    def test_plot_icon_is_not_a_plant(self):
+        """구획은 **식생 전용이 아니다** — `kind` 가 vegetation | livestock |
+        facility | other 다. 새싹·잎사귀 아이콘은 가축사·창고를 관리하는 화면에서
+        그냥 틀린 그림이고, 종류를 고르는 자리가 따로 있는데 아이콘이 하나를
+        미리 말해 버린다.
+
+        같은 이유로 `crop`→`subject`(p6_42), "휴경"→종류별 이름을 이미 고쳤다.
+        """
+        for rel in (('aot_flask', 'static', 'js', 'geo', 'aot-map-custom-controls.js'),
+                    ('aot_flask', 'static', 'js', 'widgets', 'AoT_map',
+                     'aot-map-widget-vector.js')):
+            js = _read(os.path.join(_ROOT, *rel))
+            for icon in ('fa-seedling', 'fa-leaf', 'fa-tree', 'fa-cannabis'):
+                self.assertNotIn(icon, js,
+                                 '%s: 구획에 식물 아이콘(%s)을 쓰면 안 된다'
+                                 % (rel[-1], icon))
+
+    def test_plot_has_a_quick_toggle_and_facility_still_hides_its_chip(self):
+        """오른쪽 툴바의 빠른 토글은 자주 누르는 것만 둔다. 함수 라벨은 드물어
+        빼고 그 자리를 **구획(plot)** 이 받는다 — 한 구역에 두둑이 수십 개면 이
+        라벨이 지도에서 가장 자주 걸린다.
+
+        ⚠ **동(bay) 칩은 시설 토글이 끈다.** 지도에서 사람이 보는 시설 이름이 곧
+        이 칩이기 때문이다(시설 가장자리 칩은 예전에 없앴고 동 칩이 단일
+        진입점이다). 한때 동 토글로 갈랐다가 "[시설] 을 눌러도 시설 이름이 안
+        꺼진다" 가 됐다 — 화면에 시설 라벨이 따로 없으니 그 버튼이 아무 일도 안
+        하는 것으로 보인다.
+        """
+        vec = _read(os.path.join(_ROOT, 'aot_flask', 'static', 'js',
+                                 'widgets', 'AoT_map', 'aot-map-widget-vector.js'))
+        m = re.search(r'var quickLabels = \[(.*?)\];', vec, re.S)
+        self.assertIsNotNone(m, 'quickLabels 가 사라졌다')
+        keys = re.findall(r"key: '([a-z]+)'", m.group(1))
+        self.assertEqual(['input', 'output', 'plot', 'facility'], keys)
+        # 시설 토글이 동 칩을 끈다(갈라 놓으면 시설 버튼이 아무 일도 안 한다).
+        self.assertIn("key === 'facility' && inst.bayMarkers", vec)
+        self.assertNotIn("key === 'bay' && inst.bayMarkers", vec)
+        # 구획 라벨은 다른 모듈이 만든다 — 종류 표식으로 찾아 끈다.
+        self.assertIn("""querySelectorAll('[data-label-kind="plot"]')""", vec)
+        # 사람이 끄고 켜는 축에 bay 는 없다(시설이 대신한다).
+        for m2 in re.finditer(r"var LABEL_KEYS = \[(.*?)\];", vec, re.S):
+            self.assertNotIn("'bay'", m2.group(1))
+            self.assertIn("'plot'", m2.group(1))
+
+    def test_one_chip_per_facility_and_a_way_into_each_bay(self):
+        """**시설 하나에 칩 하나.** 구역마다 칩을 두면 서로를 덮는다 — 구역
+        중심이 8.4m 인 시설이 있는데(폭 7m·6동을 둘로 나눈 것) 줌 17 에서 그
+        거리는 30px 남짓이라 칩 하나 폭도 안 된다.
+
+        겹칠 때만 접는 방법도 있었지만 그러면 줌을 만질 때마다 칩 개수가 바뀌어
+        지도가 요동친다. 어차피 구역에는 시설을 거쳐 들어간다.
+
+        ⚠ 그래서 **모달에 구역 전환 줄이 먼저 있어야 한다.** 예전에는 다른
+        구역으로 가는 길이 지도의 구역 칩뿐이었다 — 칩을 접는 순간 나머지
+        구역에 닿을 방법이 사라진다.
+        """
+        js = _read(os.path.join(_ROOT, 'aot_flask', 'static', 'js',
+                                'widgets', 'AoT_map', 'aot-map-widget-vector.js'))
+        # 칩은 시설당 하나 — 구역이 여럿이면 첫 것만.
+        self.assertIn('bSlices.slice(0, 1)', js)
+        self.assertIn('dataset.bayRollup', js)
+        # 그 칩은 시설 이름을 단다(첫 구역 이름이 아니라).
+        self.assertIn('_multiBay ? (fac.name', js)
+        # 구역 전환 줄과 그 배선.
+        self.assertIn('aot-bay-switch', js)
+        self.assertIn('data-bay-switch', js)
+        self.assertIn("closest('[data-bay-switch]')", js)
+        # 겹침 계산은 없앴다 — 줌마다 칩 개수가 바뀌면 지도가 요동친다.
+        self.assertNotIn('_applyBayCrowding', js)
+
+    def test_track_markers_do_not_map_onto_the_rounded_caps(self):
+        """트랙은 양끝이 둥글다(반지름 = 높이/2). 0~100% 를 트랙 폭에 그대로
+        매핑하면 마커가 라운드 안에 박혀 **시작·끝이 실제보다 바깥으로** 보인다.
+
+        보정은 CSS 가 한다(캡 크기가 트랙 높이에서 파생되므로). JS 가 퍼센트를
+        `left` 로 직접 박으면 그 보정이 통째로 무력해지고, 증상은 "끝에서만 몇
+        px 어긋난다" 라 눈으로 잡기 어렵다.
+        """
+        js = _read(os.path.join(_ROOT, 'aot_flask', 'static', 'js',
+                                'common', 'aot-dataviz.js'))
+        css = _read(os.path.join(_ROOT, 'aot_flask', 'static', 'css',
+                                 'components', 'aot-dataviz.css'))
+
+        # 마커는 위치값만 넘긴다.
+        self.assertIn('--aot-viz-pos', js)
+        for cls in ('aot-viz-now', 'aot-viz-target'):
+            self.assertNotIn('"%s" style="left:' % cls, js,
+                             '%s: 퍼센트를 left 에 직접 박으면 캡 보정이 죽는다' % cls)
+
+        # 보정식은 트랙 높이에서 파생돼야 한다 — 4px 을 적어 두면 높이를 바꿀 때
+        # 조용히 어긋난다.
+        self.assertIn('var(--aot-viz-track-h) / 2', css)
+        self.assertIn('100% - var(--aot-viz-track-h)', css)
+
+        # 구간(면)은 보정하지 않는다 — 100% 인 구간이 캡을 안 채우면 양끝에
+        # 트랙 배경이 남아 "덜 찼다" 로 보인다.
+        self.assertIn('"aot-viz-ok" style="left:', js)
+
+    def test_planned_plot_is_visible_but_says_it_has_not_started(self):
+        """계획 구획은 **목록에 보이되** 자라는 것과 구분돼야 한다.
+
+        예전에는 저장은 되는데 어느 화면에도 나타나지 않았다(지도·기본 목록·시설
+        목록 모두 `started_on <= today` 로 걸렀다). 만든 사람이 자기가 만든 것을
+        찾을 수 없으니 "저장이 안 됐나" 하고 다시 만들게 되고, 그 중복도 안 보인다.
+        """
+        from datetime import timedelta
+        from aot.aot_flask.geo import plot_context
+        from aot.databases.models import GeoPlot
+
+        saved, _ = self._plant(
+            started_on=(date.today() + timedelta(days=7)).isoformat())
+        row = GeoPlot.query.filter_by(unique_id=saved['unique_id']).first()
+
+        d = plot_context.to_dict(row)
+        self.assertTrue(d['planned'])
+        self.assertEqual(d['days_until_start'], 7)
+        # **음수를 내보내지 않는다.** 그대로 실으면 화면이 "-6일차" 를 그린다.
+        self.assertIsNone(d['days_since_planted'])
+
+        # 계산 자체는 음수를 유지해야 한다 — `stage_of` 가 그 부호로 계획을
+        # 판정한다. 여기서 눕히면 그 판정이 통째로 사라진다(실제 회귀 이력).
+        self.assertLessEqual(plot_context.elapsed_days(row), 0)
+
+    def test_ending_a_plot_can_hand_the_place_over(self):
+        """수확이 끝났다고 그 자리가 없어지지 않는다 — 휴지기·정지·다음 작기가
+        이어진다. 종료와 생성을 따로 하게 두면 사람이 그 사이에 도형을 다시
+        그리고 몫을 다시 적어야 하고, 그 왕복이 곧 자리를 잃는 것이다.
+        """
+        from aot.aot_flask.geo import plot_io, plot_context
+        from aot.databases.models import GeoPlot
+
+        prog = self._program()
+        saved, _ = self._plant(program_uuid=prog.unique_id)
+        uid = saved['unique_id']
+
+        res, err = plot_io.succeed_plot(uid, subject='휴경',
+                                        program_uuid=None, variety=None)
+        self.assertIsNone(err)
+        ended, nxt = res['ended'], res['next']
+
+        # 끝난 것은 **지워지지 않는다** — 종료일만 적힌다.
+        self.assertIsNotNone(GeoPlot.query.filter_by(unique_id=uid).first())
+        self.assertFalse(ended['active'])
+        self.assertTrue(ended['ended_on'])
+
+        # 새 것은 같은 자리를 그대로 물려받는다.
+        src = GeoPlot.query.filter_by(unique_id=uid).first()
+        new = GeoPlot.query.filter_by(unique_id=nxt['unique_id']).first()
+        self.assertEqual(src.facility_uuid, new.facility_uuid)
+        self.assertEqual(src.bay_id, new.bay_id)
+        self.assertEqual(src.allocation, new.allocation)   # 몫도 물려준다
+        self.assertEqual(src.feature, new.feature)
+        # 프로그램은 **명시적으로 비웠다**(휴지기).
+        self.assertIsNone(new.program_uuid)
+        # 시작은 종료 다음 날 — 같은 날로 두면 하루가 두 작기에 걸친다.
+        self.assertEqual(new.started_on, src.ended_on + timedelta(days=1))
+
+    def test_succession_keeps_the_program_unless_told_otherwise(self):
+        """`program_uuid` 를 **주지 않는 것**과 `None` 을 주는 것은 다른 뜻이다.
+        기본값을 None 으로 두면 "안 줬다" 와 "비워라" 를 구별할 수 없어, 이어심기가
+        늘 프로그램을 잃는다."""
+        from aot.aot_flask.geo import plot_io
+        from aot.databases.models import GeoPlot
+
+        prog = self._program()
+        saved, _ = self._plant(program_uuid=prog.unique_id)
+        res, err = plot_io.succeed_plot(saved['unique_id'])   # 인자 없음
+        self.assertIsNone(err)
+        new = GeoPlot.query.filter_by(unique_id=res['next']['unique_id']).first()
+        self.assertEqual(prog.unique_id, new.program_uuid)
+
+    def test_resting_name_is_not_agriculture_only(self):
+        """**"휴경" 은 중립어가 아니다** — 경작(耕)을 전제한 말이라 축사·시설에는
+        그냥 틀리다. 반대로 넷을 "쉬는 중" 으로 통일하면 농가 화면이 관공서
+        말투가 된다. 그래서 종류마다 부르는 말이 따로 있고, 그 표는 한 곳
+        (`AoTPlotLabels`)에 있다 — 대상·품종 라벨과 같은 자리다.
+        """
+        js = _read(os.path.join(_ROOT, 'aot_flask', 'static', 'js',
+                                'common', 'aot-plot-labels.js'))
+        popup = _read(os.path.join(_ROOT, 'aot_flask', 'static', 'js',
+                                   'widgets', 'AoT_map', 'aot-map-popup.js'))
+        self.assertIn('var RESTING', js)
+        for kind in ('vegetation', 'livestock', 'facility', 'other'):
+            self.assertRegex(js, r'RESTING[\s\S]{0,400}%s:' % kind)
+        # 종료 창은 표를 **부른다**(자기 기본값을 적지 않는다).
+        self.assertIn('AoTPlotLabels.resting', popup)
+        self.assertNotIn("_t('Fallow')", popup)
+        # `Not in use` 는 이미 "사용 중이 아님" 으로 번역돼 있어 이름 자리에
+        # 문장이 들어간다 — 빌려 쓰지 않는다.
+        self.assertNotIn("'Not in use'", js)
+
+    def test_end_dialog_does_not_claim_anything_is_deleted(self):
+        """옛 문구는 "지도에서 사라지고 이력으로만 남습니다" 였다 — 도형이 지워지는
+        것으로 읽혀 사람이 종료를 못 눌렀다. 실제로 `end_plot` 은 행도 기하도
+        남기고 종료일만 적는다."""
+        js = _read(os.path.join(_ROOT, 'aot_flask', 'static', 'js',
+                                'widgets', 'AoT_map', 'aot-map-popup.js'))
+        plot = _read(os.path.join(_ROOT, 'aot_flask', 'static', 'js',
+                                  'widgets', 'AoT_map', 'aot-map-plot.js'))
+        self.assertIn('function openPlotEnd', js)
+        self.assertIn('Nothing is deleted', js)
+        self.assertNotIn('It disappears from the map', plot)
+        # 세 선택지가 다 있어야 한다.
+        for v in ("'none'", "'rest'", "'next'"):
+            self.assertIn(v, js)
+
+    def test_planned_plot_still_shows_its_stages(self):
+        """계획을 세우는 사람이 알고 싶은 것은 "언제부터" 만이 아니라 **어떤
+        단계로 얼마나** 다. 그 구조는 프로그램에 이미 있으니 축을 그대로 그린다.
+
+        다만 오늘 마커도 현재 단계 강조도 두지 않는다 — 아직 아무 단계도 아니라서,
+        마커를 왼쪽 끝에 세우면 "이제 막 시작했다" 로 읽힌다.
+        """
+        from datetime import timedelta
+        from aot.aot_flask.geo import plot_context
+        from aot.databases.models import GeoPlot
+
+        prog = self._program()
+        saved, _ = self._plant(
+            program_uuid=prog.unique_id,
+            started_on=(date.today() + timedelta(days=30)).isoformat())
+        row = GeoPlot.query.filter_by(unique_id=saved['unique_id']).first()
+
+        tl = plot_context.timeline(row)
+        self.assertTrue(tl and tl['stages'], '계획에도 단계 축이 있어야 한다')
+        # 위치는 0 이 아니라 **없는 값**이다.
+        self.assertIsNone(tl['today_pct'])
+        self.assertIsNone(tl['elapsed_days'])
+        self.assertEqual(tl['days_until_start'], 30)
+        # 어느 단계도 진행 중이 아니다.
+        self.assertEqual(0, sum(1 for st in tl['stages'] if st.get('current')))
+
+    def test_a_clearable_date_has_one_markup(self):
+        """iOS 는 날짜 입력을 비울 수단을 주지 않는다(피커의 [재설정]도 표시된
+        날짜를 넣는다). "종료 미정" 은 정상 상태이므로 화면이 지우는 수단을
+        줘야 한다.
+
+        마크업은 **한 곳**(`AoTPlotForm.clearableDate`)이다 — 구획 모달이 아직
+        자기 입력 빌더를 갖고 있어서, 각자 적으면 두 화면의 x 가 다른 자리에
+        다른 크기로 선다.
+        """
+        form = _read(os.path.join(_ROOT, 'aot_flask', 'static', 'js',
+                                  'common', 'aot-plot-form.js'))
+        popup = _read(os.path.join(_ROOT, 'aot_flask', 'static', 'js',
+                                   'widgets', 'AoT_map', 'aot-map-popup.js'))
+        self.assertIn('function clearableDate', form)
+        self.assertIn('function wireDateClear', form)
+        self.assertIn('clearableDate: clearableDate', form)
+        # 구획 모달은 빌려 쓴다(자기 버튼을 새로 적지 않는다).
+        self.assertIn('AoTPlotForm.clearableDate', popup)
+        self.assertNotIn('aot-pf-date-clear', popup)
+        # 시작일에는 붙지 않는다 — 비어 있으면 안 되는 값이다.
+        self.assertIn("field !== 'started_on'", popup)
+        self.assertIn("f.key !== 'started_on'", form)
+
+    def test_planned_plot_stays_on_the_map(self):
+        """**계획 구획도 지도에 그린다** (2026-08-22 판단 번복).
+
+        처음에는 "아직 심지 않은 것을 그리면 있는 것처럼 보인다" 로 지도에서
+        뺐는데, 그러자 구획을 만든 자리에서 그것이 사라졌다 — 자리를 정하는
+        일이 곧 계획이고 그 자리를 정하는 화면이 지도다. 만들자마자 사라지면
+        무엇을 어디에 두었는지 확인할 방법이 없다.
+
+        대신 **점선**으로 가른다(`planned` 속성 → 별도 line 레이어).
+        `line-dasharray` 는 data-driven 을 지원하지 않아 레이어를 나눈다.
+        """
+        js = _read(os.path.join(_ROOT, 'aot_flask', 'static', 'js',
+                                'widgets', 'AoT_map', 'aot-map-plot.js'))
+        # 지도도 계획을 받는다.
+        self.assertIn('include_planned=1', js)
+        # 피처가 자기 상태를 싣고, 선 레이어가 그것으로 갈린다.
+        self.assertIn('planned: !!p.planned', js)
+        self.assertIn("'line-dasharray': [2, 2]", js)
+        self.assertIn('aot-plot-line-planned-', js)
+        # 레이어 이름은 `aot-plot-` 으로 시작해야 레이어 컨트롤이 찾는다
+        # (`getLayerIdsByType('plot')` 가 이름을 본다).
+        for m in re.finditer(r"(\w+):\s*'(aot-[a-z-]+)-' \+ uid", js):
+            self.assertTrue(m.group(2).startswith('aot-plot-'),
+                            '%s: 레이어 이름이 aot-plot- 으로 시작해야 한다'
+                            % m.group(2))
+
+    def test_planned_plot_is_out_of_the_default_query_but_in_the_list(self):
+        """기본 조회는 활성만 — 제어와 옛 소비처가 계획을 보면 안 된다.
+        계획을 원하는 자리(지도·목록)만 `include_planned` 를 켠다."""
+        from datetime import timedelta
+        from aot.databases.models import GeoPlot
+        from aot.aot_flask.geo import plot_context
+
+        saved, _ = self._plant(
+            started_on=(date.today() + timedelta(days=7)).isoformat())
+        uid = saved['unique_id']
+        row = GeoPlot.query.filter_by(unique_id=uid).first()
+
+        default = plot_context.active_plots(row.geo_id)
+        planned = plot_context.active_plots(row.geo_id, include_planned=True)
+        self.assertNotIn(uid, [r.unique_id for r in default])
+        self.assertIn(uid, [r.unique_id for r in planned])
+
+    def test_control_never_sees_a_planned_plot(self):
+        """코디네이터가 아직 심지도 않은 작물의 목표를 따르면 빈 온실을 그 작물
+        기준으로 덥히고 적신다. 그래서 `plots_in_facility` 의 **기본값**이 곧
+        안전 결정이다 — 화면만 켠다."""
+        import inspect
+        from aot.aot_flask.geo import plot_context
+
+        sig = inspect.signature(plot_context.plots_in_facility)
+        self.assertIs(sig.parameters['include_planned'].default, False)
+
+        # 켜는 곳은 화면 하나뿐이어야 한다.
+        for mod in ('routes_geo_iec.py', 'coordinator_plot.py'):
+            path = os.path.join(_ROOT, 'aot_flask',
+                                'geo' if mod == 'coordinator_plot.py' else '',
+                                mod)
+            if not os.path.exists(path):
+                continue
+            self.assertNotIn('include_planned', _read(path),
+                             '%s: 제어 경로가 계획 구획을 보면 안 된다' % mod)
 
     def test_past_the_end_is_said_not_pinned(self):
         """마지막 단계에 길이가 있고 그마저 지나면 그 사실을 말한다."""
@@ -6921,7 +7672,9 @@ class TestEmptyStatesKeepTheirTitle(unittest.TestCase):
         js = _read(self._POPUP)
         # 제목 없는 맨 안내문(옛 형태)이 되살아나면 잡는다.
         self.assertNotIn("'<div class=\"aot-act-empty\">'", js)
-        self.assertEqual(2, js.count("_emptyBlock(_t('Actuators'), _t('No actuators'))"))
+        # 어휘는 [환경]/[제어] 로 통일했다 — 빈 상태도 같은 제목을 쓴다.
+        self.assertEqual(1, js.count("_emptyBlock(_t('Control'), _t('No actuators'))"))
+        self.assertNotIn("_t('Actuators')", js)
 
     def test_sensor_section_is_seeded_so_the_tab_is_never_blank(self):
         """[환경·제어]의 센서 자리는 값이 없으면 렌더가 아예 안 돈다

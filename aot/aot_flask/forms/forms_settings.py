@@ -423,10 +423,33 @@ class UserRoles(FlaskForm):
     edit_plots = BooleanField(lazy_gettext('Edit Plots'))
     edit_settings = BooleanField(lazy_gettext('Edit Settings'))
     reset_password = BooleanField(lazy_gettext('Reset Password'))
+    # 그룹 스코프 면제(p6_52). 다른 항목이 "무엇을 할 수 있는가"(동사)라면
+    # 이것은 "어디까지"(목적어)라, 목록 맨 아래에 따로 둔다.
+    bypass_group_scope = BooleanField(
+        lazy_gettext('Access all groups'))
     role_id = StringField(lazy_gettext('Role ID'), widget=widgets.HiddenInput())
     user_role_add = SubmitField(lazy_gettext('Add Role'))
     user_role_save = SubmitField(lazy_gettext('Save'))
     user_role_delete = SubmitField(lazy_gettext('Delete'))
+
+
+class UserGroups(FlaskForm):
+    """사용자 그룹 — 권한의 **목적어** 축 (docs/design/access-scope-groups.md).
+
+    역할이 "무엇을 할 수 있는가" 를 정하고, 그룹이 "무엇에 대해" 를 정한다.
+    둘을 합치지 않는다 — "A그룹 관리자 역할" 을 만들면 역할 수가 그룹 수만큼
+    곱해지고, 그게 지금 모두에게 Editor 를 주고 있는 이유와 같은 원인이다.
+    """
+    name = StringField(
+        lazy_gettext('Group Name'), validators=[DataRequired()])
+    description = StringField(lazy_gettext('Description'))
+    group_id = StringField(lazy_gettext('Group ID'), widget=widgets.HiddenInput())
+    # 멤버·부여는 체크박스 다중 선택이라 폼 필드로 두지 않고 request.form 에서
+    # getlist 로 읽는다. WTForms 의 SelectMultipleField 는 선택지를 서버가 미리
+    # 알아야 하는데, 대상이 네 테이블에 흩어져 있어 그 목록을 폼이 만들 수 없다.
+    user_group_add = SubmitField(lazy_gettext('Add Group'))
+    user_group_save = SubmitField(lazy_gettext('Save'))
+    user_group_delete = SubmitField(lazy_gettext('Delete'))
 
 
 class User(FlaskForm):

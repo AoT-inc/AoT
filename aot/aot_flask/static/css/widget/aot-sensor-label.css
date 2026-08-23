@@ -325,6 +325,22 @@
   line-height: 1.25;
 }
 .aot-bay-chip .aot-bay-chip-name { font-weight: 700; }
+
+/* 구역 전환 줄 — 구역이 둘 이상인 시설의 모달에만 선다. 섹션 탭과 **같은 칩
+   모양**을 쓰되 그 위에 놓여, 위에서 아래로 "어느 구역 → 무엇을 볼까" 순서로
+   읽힌다. */
+.aot-bay-switch {
+  margin-bottom: var(--aot-space-2);
+}
+
+/* 아직 시작 전인 구획의 라벨 — 도형은 점선으로 갈리지만 라벨만 보고 읽는
+   사람에게는 그것이 안 보인다. **테두리를 점선으로** 두어 같은 말을 한다
+   (색을 흐리게 하지 않는다 — 이 지도는 흐림을 `.aot-stale`, 즉 "값이 낡았다"
+   에 이미 쓰고 있어 뜻이 겹친다). */
+.aot-plot-chip--planned {
+  border: 1px dashed currentColor;
+  opacity: 0.92;
+}
 .aot-bay-chip .aot-bay-chip-val  { font-size: 0.92em; opacity: 0.95; }
 /* 값이 없으면 2행 자체를 없앤다 — 예전에는 '—' 한 글자가 그대로 남아 시설마다
    빈 줄이 하나씩 붙었고, 시설이 몇 개만 모여도 그 빈 줄들이 지도를 가렸다.
@@ -826,6 +842,47 @@
   color: var(--aot-color-text-secondary);
 }
 
+/* [현황] 맨 위의 최신 사진. 카드 폭에 맞추되 **높이를 제한**한다 — 세로로 긴
+   사진 한 장이 화면을 통째로 먹으면 그 아래 [진행]·[환경]이 스크롤 밖으로 밀린다.
+   잘리는 쪽을 택한 이유는 이 자리가 "지금 어떻게 생겼나" 를 흘깃 보는 자리이고,
+   원본은 [노트] 가 갖고 있기 때문이다. */
+.aot-ov-photo {
+  padding: 0;
+  overflow: hidden;
+}
+.aot-ov-photo img {
+  display: block;
+  width: 100%;
+  max-height: 12rem;
+  object-fit: cover;
+  border-radius: inherit;
+}
+
+/* 단계 지침 접기 — [진행] 카드 안, 타임라인 바로 아래에 버튼 하나로 앉는다.
+   `<summary>` 를 pill 버튼 모양으로 쓰므로 기본 마커(삼각형)를 지운다. 이 저장소는
+   아이콘을 쓰지 않으므로 열림 표시도 글머리가 아니라 **버튼 색**으로 한다. */
+.aot-ov-guide {
+  margin-top: var(--aot-space-3);
+}
+.aot-ov-guide > summary {
+  display: inline-flex;
+  align-items: center;
+  list-style: none;
+  width: auto;
+}
+.aot-ov-guide > summary::-webkit-details-marker,
+.aot-ov-guide > summary::marker {
+  display: none;
+  content: '';
+}
+.aot-ov-guide[open] > summary {
+  background: var(--bg-btn-on, #13261B);
+  font-weight: 600;
+}
+.aot-ov-guide[open] > .aot-ov-guidance {
+  margin-top: var(--aot-space-3);
+}
+
 /* Muted text */
 /* 단계 지침 — 재배 지침서에서 옮겨 온 산문이라 줄바꿈이 살아야 읽힌다.
    길어질 수 있으므로(서버가 4000자까지 받는다) 스크롤을 준다. 스크롤바는
@@ -919,20 +976,21 @@
 .aot-center-modal .aot-act-tabs-nav::-webkit-scrollbar { width: 0; height: 0; display: none; }
 .aot-center-modal .aot-act-tab-btn { flex: 0 0 auto; white-space: nowrap; }
 
-/* 모바일 전체화면(≤480px): 본문 기준은 16px로 키웠지만 탭 버튼은 16px 기준 em으로
-   과대해지므로(1.1em→17.6px) 14px로 되돌리고 높이도 컴팩트하게 고정한다.
-   탭 외 나머지 컨텐츠(행/이름 등)는 16px 그대로 유지. */
+/* 모바일 전체화면(≤480px): **머리 부분은 본문 확대를 따라가지 않는다.**
+ *
+ * 모달 본문은 모바일에서 16px 로 키운다(행·값이 읽혀야 한다). 그런데 헤더 제목과
+ * 탭은 `1.1em` 이라 그 기준을 따라가면 17.6px 가 되어 탭 세 개가 한 줄을 넘긴다.
+ * 예전에는 그걸 막으려고 탭만 14px·30px 로 **눌러** 놓았는데, 그러면 이번에는
+ * 데스크탑(15.4px·42px)보다 작아진다 — 폰에서 오히려 작은 글씨를 보게 된다.
+ *
+ * 그래서 크기를 다시 정하지 않고 **기준을 데스크탑과 같게(14px) 고정**한다.
+ * `1.1em` 이 양쪽에서 같은 값이 되므로 헤더·탭은 화면 크기와 무관하게 같은
+ * 크기이고, 본문은 16px 확대를 그대로 유지한다. */
 @media (max-width: 480px) {
-  .aot-center-modal .aot-act-tab-btn {
+  .aot-center-modal > .aot-sensor-popup-header,
+  .aot-center-modal .aot-sensor-popup--docked > .aot-sensor-popup-header,
+  .aot-center-modal .aot-act-tabs-nav {
     font-size: 14px;
-    padding-top: .35rem;
-    padding-bottom: .35rem;
-    line-height: 1.2;
-  }
-  .aot-center-modal .aot-bay-popup-pane .aot-act-tab-btn {
-    height: 30px;
-    padding-top: 0;
-    padding-bottom: 0;
   }
 }
 
@@ -1393,6 +1451,22 @@
 
 /* 센서 일부가 응답하지 않을 때만 나온다 — 값이 평균이라 몇 대가 빠졌는지
    모르면 숫자를 얼마나 믿을지 판단할 수 없다. */
+/* 아직 시작 전인 구획 — 목록에서 자라는 것과 섞이지 않아야 한다.
+   흐리게(opacity)만 하면 "값이 오래됐다"(.aot-stale)와 같은 뜻으로 읽히므로,
+   글자는 그대로 두고 **남은 날을 말로** 적는다. */
+.aot-ov-planned {
+  font-size: var(--aot-font-size-xs);
+  color: var(--text-color-primary, #13261B);
+  border: 1px solid var(--aot-border-light);
+  border-radius: 999px;
+  padding: 0 6px;
+  white-space: nowrap;
+}
+.aot-ov-row--planned .aot-act-name,
+.aot-ov-row--planned > span:first-child {
+  color: var(--aot-color-text-secondary);
+}
+
 .aot-ov-degraded {
   font-size: var(--aot-font-size-xs);
   color: var(--aot-color-warning, #ff9f43);
@@ -1663,7 +1737,33 @@
   color: var(--aot-color-warning, #b26a00);
   font-weight: 500;
 }
-.aot-ov-strain > span:last-child { text-align: right; }
+
+/* 문장을 담는 줄은 "이름 | 숫자" 문법이 아니다.
+ *
+ * `.aot-ov-row` 는 flex 라 좁아지면 **양쪽을 함께** 줄인다. 값이 숫자면 줄
+ * 것이 없어 이름 쪽은 멀쩡한데, 값이 문장이면 이름까지 눌려 낱말 한가운데가
+ * 쪼개진다 — 실제로 시설 모달 [현황]의 좁은 폭에서 "못 따라감" 이
+ * "못 따 / 라감" 으로 보였다. 이름은 줄이지 않고, 문장이 들어갈 자리가
+ * 모자라면 **자기 줄로 내린다**(flex-basis 아래로 눌리면 wrap 이 받는다). */
+.aot-ov-strain,
+.aot-ov-gate,
+.aot-hz {
+  flex-wrap: wrap;
+  gap: 2px var(--aot-space-3, 12px);
+}
+.aot-ov-strain > span:first-child,
+.aot-ov-gate > span:first-child,
+.aot-hz > span:first-child {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+.aot-ov-strain > span:last-child,
+.aot-ov-gate > span:last-child,
+.aot-hz > span:last-child {
+  flex: 1 1 14em;
+  min-width: 0;
+  text-align: right;
+}
 
 /* 곧 닥칠 기상 위험 — 시설·노지 공통. 지금 값보다 위에 두는 이유는 그것이
    오늘 저녁에 무엇을 할지를 정하기 때문이다. */

@@ -51,6 +51,7 @@ from flask_login import current_user
 
 from aot.databases.models import Conversion, DeviceMeasurements, Method, MethodData, PID
 from aot.aot_client import DaemonControl
+from aot.aot_flask.access import scope
 from aot.aot_flask.utils.utils_general import user_has_permission
 from aot.utils.constraints_pass import constraints_pass_positive_value
 from aot.utils.influx import read_influxdb_single
@@ -227,6 +228,10 @@ def pid_mod_unique_id(unique_id, state):
         return "You are not logged in and cannot access this endpoint"
     if not user_has_permission('edit_controllers'):
         return 'Insufficient user permissions to manipulate PID'
+
+    # 그룹 스코프(A1a) — docs/design/access-scope-groups.md
+    if not scope.can_operate_device(unique_id):
+        return 'ERROR: ' + scope.deny_message()
     if not unique_id or unique_id == 'None':
         return "No PID selected"
     pid = PID.query.filter(PID.unique_id == unique_id).first()
@@ -303,6 +308,10 @@ def pid_set_params(pid_id):
         return "Not logged in", 401
     if not user_has_permission('edit_controllers'):
         return 'Insufficient user permissions to modify PID', 403
+
+    # 그룹 스코프(A1a) — docs/design/access-scope-groups.md
+    if not scope.can_operate_device(pid_id):
+        return (scope.deny_message(), 403)
     if not pid_id or pid_id == 'None':
         return 'No PID specified', 400
     pid = PID.query.filter(PID.unique_id == pid_id).first()

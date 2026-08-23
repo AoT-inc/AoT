@@ -6,6 +6,8 @@
 <!-- MapLibre GL 은 layout.html head 에서 제공됨 (GIS 설정의 로컬/CDN 옵션 적용).
      여기서 재로드하면 window.maplibregl 을 덮어쓰므로 로드하지 않는다. -->
 <link rel="stylesheet" href="{{ url_for('static', filename='css/map/map.css') }}" />
+{#- 공용 구획 폼(`common/aot-plot-form.js`)의 스타일 — 지도 위젯·/plots 와 **같은 파일**이다. -#}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/components/aot-plot-form.css') }}" />
 <link rel="stylesheet" href="/static/css/pages/geo-facility.css?v=20260812d" />
 
 <script src="/static/js/widgets/AoT_facility/three.min.js?v=2"></script>
@@ -454,6 +456,35 @@
       <label class="aot-modal-option-label">{{ _('Name') }}</label>
       <div class="aot-modal-option-control">
         <input type="text" id="facility-name" class="form-control aot-modern-input" placeholder="GH-001">
+      </div>
+    </div>
+
+    {# 그룹 부여 — 관리자에게만. 내용은 시설을 고른 뒤 받아 온다.
+
+       ⚠ 시설의 [저장]은 번들(`geo-facility`) 안에 있고, 그 번들은 지금 다른
+       미커밋 작업(`common/aot-plot-form.js`)도 입력으로 갖는다. 거기 훅을 걸려면
+       소스를 고치고 재빌드해야 하는데, 그러면 **커밋된 소스와 커밋된 번들이
+       어긋난다**(`check_js_bundles` 가 잡는 그 드리프트). 그래서 이 섹션은
+       자기 [적용] 버튼으로 따로 저장한다.
+
+       그쪽 작업이 커밋되면 시설 저장에 합치는 것이 정리다.
+       정본 설계: docs/design/access-scope-groups.md #}
+    <div class="aot-fac-scope" style="display: none;">
+      <div class="aot-modal-option-row">
+        <div class="aot-modal-option-label">
+          {{ _('Groups that can operate this facility') }}
+          <div class="aot-modal-body-text">
+            {{ _('If no group is selected, everyone can operate this facility. Selecting a group limits operation to its members. Data stays visible to everyone.') }}
+          </div>
+        </div>
+        <div class="aot-modal-option-control">
+          <button type="button" class="btn aot-pill-btn aot-pill-btn-primary"
+                  id="fac_scope_apply">{{ _('Apply') }}</button>
+        </div>
+      </div>
+      <div class="aot-fac-scope-groups"></div>
+      <div class="aot-modal-option-row">
+        <div class="aot-modal-body-text aot-fac-scope-impact"></div>
       </div>
     </div>
 
@@ -1084,6 +1115,20 @@
     </div><!-- /.modal-content -->
   </div><!-- /.modal-dialog -->
 </div><!-- /#modal_fac_step -->
+
+<script>
+  // 모달 JS 는 번역을 모르므로 문구를 넘겨준다.
+  window.AoTFacilityScopeI18n = {
+    everyone: {{ _('Everyone can operate this facility (no group assigned).')|tojson }},
+    lockout: {{ _('Warning: nobody would be able to operate this facility.')|tojson }},
+    losing: {{ _('Losing operation')|tojson }},
+    nobody: {{ _('Nobody loses operation with this change.')|tojson }},
+    comm_error: {{ _('Error: Unable to communicate with server.')|tojson }},
+    no_groups: {{ _('No groups yet. Create one in Settings > Users > Groups.')|tojson }},
+    saved: {{ _('Saved')|tojson }}
+  };
+</script>
+<script src="{{ url_for('static', filename='js/geo/aot-facility-scope.js') }}"></script>
 
 <script type="application/json" id="facility-page-vars">
 {{ {

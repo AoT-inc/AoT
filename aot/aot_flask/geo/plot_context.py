@@ -1413,7 +1413,8 @@ def facility_control_for_plot(plot):
     return out
 
 
-def plots_in_facility(facility_uuid, bay_id=None, on=None):
+def plots_in_facility(facility_uuid, bay_id=None, on=None,
+                      include_planned=False):
     """시설(또는 그 구역)에서 지금 자라는 구획들 — **제어 → 식생** 방향.
 
     코디네이터·구역 모달이 "지금 이 동에 무엇이 며칠째" 를 말할 수 있어야
@@ -1421,16 +1422,23 @@ def plots_in_facility(facility_uuid, bay_id=None, on=None):
 
     `bay_id` 를 주면 그 구역 것만. 다만 **구역이 지정되지 않은 구획**(시설 전체에
     심은 것)도 함께 낸다 — 그 작물도 이 구역에서 자라고 있기 때문이다.
+
+    ## `include_planned` 는 **화면 전용**이다
+
+    시작일이 아직 오지 않은 구획(계획)은 기본으로 빠진다. 이 함수의 주 소비처가
+    **제어**이기 때문이다 — 코디네이터가 아직 심지도 않은 작물의 목표를 따르면
+    빈 온실을 그 작물 기준으로 덥히고 적신다. 목록을 보여 주는 자리
+    (`_facility_plots_block`)만 켠다.
     """
     from aot.databases.models import GeoPlot
 
     if not facility_uuid:
         return []
     on = on or date.today()
-    rows = GeoPlot.query.filter(
-        GeoPlot.facility_uuid == facility_uuid,
-        GeoPlot.started_on <= on,
-    ).filter(
+    q = GeoPlot.query.filter(GeoPlot.facility_uuid == facility_uuid)
+    if not include_planned:
+        q = q.filter(GeoPlot.started_on <= on)
+    rows = q.filter(
         (GeoPlot.ended_on.is_(None)) | (GeoPlot.ended_on > on)
     ).all()
     if bay_id:
@@ -1579,6 +1587,10 @@ def timeline(plot, program=None, on=None):
     widths = [d if d else tail for d in lengths]
     total = sum(widths) or 1
 
+    # 아직 시작 전(계획)이면 **어느 단계도 진행 중이 아니다.** 예전에는
+    # `max(0, …)` 이 경과를 0 으로 눕혀 첫 단계가 `current` 로 잡혔고, 화면은
+    # 심지도 않은 구획을 "육묘기 진행 중" 이라고 말했다.
+    not_started = plot.started_on > on
     elapsed = max(0, (on - anchor_on).days)
     out_stages = []
     acc = 0
@@ -1598,7 +1610,7 @@ def timeline(plot, program=None, on=None):
         acc = to
     if cur_idx is None:
         cur_idx = len(out_stages) - 1
-    if out_stages:
+    if out_stages and not not_started:
         out_stages[cur_idx]['current'] = True
 
     from datetime import timedelta
@@ -1610,8 +1622,14 @@ def timeline(plot, program=None, on=None):
         'open_end': open_end,
         # 100 을 넘길 수 있다(예정보다 오래 끌고 있다) — 넘긴 사실 자체가
         # 정보라 자르지 않고, 화면이 축 밖 표시로 그린다.
-        'today_pct': round(elapsed * 100.0 / total, 2),
-        'elapsed_days': elapsed + 1,          # 심은 날이 1일차
+        #
+        # **시작 전이면 `None` 이다.** 0 으로 두면 화면이 축의 맨 왼쪽에 오늘
+        # 마커를 세워 "이제 막 시작했다" 로 읽힌다 — 시작하지 않은 것의 위치는
+        # 0 이 아니라 **없는 값**이다.
+        'today_pct': None if not_started else round(elapsed * 100.0 / total, 2),
+        'elapsed_days': None if not_started else elapsed + 1,   # 심은 날이 1일차
+        # 시작까지 남은 날 — 축은 그대로 그리고 이 값이 "언제부터" 를 말한다.
+        'days_until_start': (plot.started_on - on).days if not_started else None,
         'total_days': total,
         'stages': out_stages,
     }
@@ -1638,7 +1656,12 @@ def plot_brief_for_control(row, on=None, capacities=None):
             row.allocation,
             (capacities or {}).get(row.bay_id) if capacities else None),
         'started_on': row.started_on.isoformat() if row.started_on else None,
-        'days_since_planted': elapsed_days(row, on=on),
+        'days_since_planted': _days_shown(row, on=on),
+        # 아직 시작 전인 구획(계획). 목록에 함께 보이므로 **자기가 계획이라는
+        # 사실을 스스로 말해야** 한다 — 날짜만 보고 사람이 계산하게 두면
+        # 자라는 것과 예정된 것이 같은 줄로 읽힌다.
+        'planned': row.started_on is not None and row.started_on > (on or date.today()),
+        'days_until_start': days_until_start(row, on=on),
         'expected_end_on': due.isoformat() if due else None,
     }
     # 제어 화면이 "지금 어느 단계인가" 를 함께 말할 수 있어야 설정값의 근거가
@@ -1707,6 +1730,17 @@ def sensors_for_plot(plot, containers=None, markers=None):
             'bay_id': getattr(plot, 'bay_id', None),
             'zone_uuid': zone.unique_id if zone is not None else None,
             'zone_name': _shape_name(zone) if zone is not None else None,
+            # **`zone_uuid` 는 zone 이 아닐 수 있다.** 이름이 그렇게 읽히지만
+            # 값은 `container_for_geometry` 가 준 것이고, 그 계약은 "감싸는
+            # site/zone"(겹치면 zone 이 이긴다)이다 — zone 이 없는 자리에서는
+            # **site 도형**이 온다. 그것을 zone 으로 믿고 구역 화면을 열면
+            # 조회가 빈 손으로 끝나고 화면이 스켈레톤에 멈춘다(실측: 시설 구획의
+            # 뒤로가기가 그랬다 — 필지와 시설의 이름까지 같아 오래 안 보였다).
+            #
+            # 그래서 **종류를 함께 낸다.** 이름을 바꾸는 대신 판단 근거를 주는
+            # 쪽을 고른 이유는 소비처가 여럿이고, 종류가 없으면 각자 다시
+            # 조회해서 확인해야 하기 때문이다.
+            'zone_kind': getattr(zone, 'type', None) if zone is not None else None,
             'source': source,
         }
 
@@ -1732,6 +1766,9 @@ def sensors_for_plot(plot, containers=None, markers=None):
         'from_zone': from_zone,
         'zone_uuid': zone.unique_id if zone is not None else None,
         'zone_name': _shape_name(zone) if zone is not None else None,
+        # 위 주석 참조 — zone 일 수도 site 일 수도 있다. 노지 구획도 zone 이
+        # 없는 지도에서는 site 가 온다.
+        'zone_kind': getattr(zone, 'type', None) if zone is not None else None,
         'source': source,
     }
 
@@ -1748,22 +1785,31 @@ def _shape_name(shape):
 # 조회
 # ---------------------------------------------------------------------------
 
-def active_plots(map_uuid, on=None):
+def active_plots(map_uuid=None, on=None, include_planned=False):
     """`on`(기본 오늘) 시점에 재배 중인 구획 목록.
 
     지도 기본 렌더의 판정과 같아야 한다 — 여기와 `GeoPlot.is_active` 가
     갈리면 목록에는 있는데 지도에 없는 구획이 생긴다.
+
+    `map_uuid` 를 주지 않으면 **전체 지도**를 본다(운영 페이지 `/plots`).
+    지도를 오가며 세 번 조회하는 것과 한 번에 받는 것은 "이번 철에 무엇을
+    어디에 심었나" 를 보는 화면에서 전혀 다른 일이다.
+
+    `include_planned` 는 시작일이 아직 오지 않은 구획까지 낸다. **지도 렌더에는
+    쓰지 않는다** — 아직 심지 않은 것을 그리면 있는 것처럼 보인다. 목록 화면
+    (`/plots`)만 켠다.
     """
     on = on or date.today()
     # `ended_on > on` — 종료일은 "종료된 날" 이라 그날부터 이미 활성이 아니다.
     # GeoPlot.is_active 와 **같은 부등호**여야 한다(그 docstring 참조).
-    rows = GeoPlot.query.filter(
-        GeoPlot.geo_id == map_uuid,
-        GeoPlot.started_on <= on,
-    ).filter(
+    q = GeoPlot.query
+    if not include_planned:
+        q = q.filter(GeoPlot.started_on <= on)
+    if map_uuid:
+        q = q.filter(GeoPlot.geo_id == map_uuid)
+    return q.filter(
         (GeoPlot.ended_on.is_(None)) | (GeoPlot.ended_on > on)
     ).all()
-    return rows
 
 
 def plots_overlapping(map_uuid, geom, since=None, until=None,
@@ -2106,7 +2152,7 @@ def zone_allocation(zone_shape, on=None):
             'ratio_pct': round(a / zone_area * 100.0, 1) if zone_area > 0 else None,
             # 달력만 보는 값이라 여기서 함께 낸다 — 구역 [현황]이 "무엇이
             # 며칠째 자라고 있나" 를 한 줄로 말할 수 있어야 한다.
-            'days_since_planted': elapsed_days(row, on=on),
+            'days_since_planted': _days_shown(row, on=on),
         })
         # 현재 단계 — **면적을 대신하는 값**이다(2026-08-20). 면적은 심고 나면
         # 안 바뀌므로 "지금 어떤가" 를 묻는 [현황]에서는 아무 날에 봐도 같은
@@ -2191,7 +2237,34 @@ def elapsed_days(row, on=None, since=None):
     if base is None:
         return None
     ref = row.ended_on or (on or date.today())
+    # **음수를 여기서 막지 않는다.** 시작 전이면 음수가 나오는데, `stage_of` 가
+    # 그 부호로 계획 상태(`not_started`)를 판정한다 — 여기서 None 으로 눕히면
+    # 그 판정이 통째로 사라진다(실제로 한 번 그렇게 고쳤다가 회귀를 냈다).
+    # 화면에 나가는 값은 응답을 만드는 자리에서 막는다(`_days_shown`).
     return (ref - base).days + 1
+
+
+def _days_shown(row, on=None):
+    """화면에 내보내는 재배 일수 — **시작 전이면 없는 값**이다.
+
+    계산(`elapsed_days`)은 음수를 그대로 내야 `stage_of` 가 계획을 알아본다.
+    응답에 그 음수를 실으면 화면이 "-29일차" 를 그리므로 여기서 한 번 막는다.
+    남은 날은 별개 값(`days_until_start`)으로 간다 — 두 뜻을 한 숫자에 담으면
+    부호를 아는 화면만 옳게 읽는다.
+    """
+    d = elapsed_days(row, on=on)
+    return d if (d is not None and d > 0) else None
+
+
+def days_until_start(row, on=None):
+    """시작일까지 남은 날. 이미 시작했거나 시작일이 없으면 None.
+
+    `elapsed_days` 와 **한 쌍**이다 — 둘 중 하나만 값을 갖는다.
+    """
+    if row.started_on is None:
+        return None
+    on = on or date.today()
+    return (row.started_on - on).days if row.started_on > on else None
 
 
 def days_to_expected_end(row, on=None):
@@ -2274,7 +2347,9 @@ def to_dict(row, containers=None, with_sensors=False, markers=None,
         'area_m2': round(area_m2(row), 1) if own_geom else None,
         # 달력만 보는 값이라 목록에서도 항상 싣는다 — 구역 모달의 "지금 심겨
         # 있는 것" 목록이 이 값으로 재배 일수를 보인다.
-        'days_since_planted': elapsed_days(row),
+        'days_since_planted': _days_shown(row),
+        'planned': row.started_on is not None and row.started_on > date.today(),
+        'days_until_start': days_until_start(row),
         'days_to_expected_end': days_to_expected_end(row),
     }
     if facility_uuid:

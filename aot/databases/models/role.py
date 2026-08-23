@@ -37,6 +37,16 @@ class Role(CRUDMixin, db.Model):
     # 따로 체크하게 하면 기존 Editor 가 업그레이드 순간 구획을 못 쓰게 된다.
     edit_plots = db.Column(db.Boolean, nullable=False, default=False)
     edit_users = db.Column(db.Boolean, nullable=False, default=False)
+    # 그룹 스코프 면제 — 이 역할은 부여와 무관하게 전체를 조작한다.
+    #
+    # **`role_id == 1` 로 대신하지 말 것.** `user_is_admin()` 이 그렇게 하고
+    # 있는데, 그러면 "관리자와 동급으로 전체를 봐야 하는 두 번째 역할" 을 만들
+    # 수 없고 역할 id 라는 우연한 값에 보안 경계가 걸린다.
+    #
+    # 기본값 False 다. 새 역할이 만들어질 때 조용히 면제되면, 권한을 나눈
+    # 사람이 나눴다고 믿는 동안 나뉘지 않는다. 시드에서 Admin 만 True 다.
+    # (정본: docs/design/access-scope-groups.md §3)
+    bypass_group_scope = db.Column(db.Boolean, nullable=False, default=False)
     view_settings = db.Column(db.Boolean, nullable=False, default=False)
     view_camera = db.Column(db.Boolean, nullable=False, default=False)
     view_stats = db.Column(db.Boolean, nullable=False, default=False)

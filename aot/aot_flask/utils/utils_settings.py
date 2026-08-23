@@ -119,6 +119,7 @@ def user_roles(form):
             new_role.edit_controllers = form.edit_controllers.data
             new_role.edit_plots = form.edit_plots.data
             new_role.reset_password = form.reset_password.data
+            new_role.bypass_group_scope = form.bypass_group_scope.data
             try:
                 new_role.save()
                 page_refresh = True
@@ -141,6 +142,26 @@ def user_roles(form):
             mod_role.edit_controllers = form.edit_controllers.data
             mod_role.edit_plots = form.edit_plots.data
             mod_role.reset_password = form.reset_password.data
+
+            # **마지막 면제 역할을 풀지 못하게 한다.** 면제 역할이 하나도 없는
+            # 상태에서 자원에 그룹을 처음 붙이면, 그 자원을 조작할 수 있는
+            # 사람이 아무도 없게 된다(관리자 포함) — 그리고 그 상태를 되돌릴
+            # 화면도 그 사람이 열 수 없다.
+            #
+            # 그룹을 쓰지 않는 설치에서는 아무것도 잠기지 않지만, 그때 풀어
+            # 두면 나중에 그룹을 켜는 순간 잠긴다. 그래서 grant 유무와
+            # 무관하게 막는다.
+            if mod_role.bypass_group_scope and not form.bypass_group_scope.data:
+                others = Role.query.filter(
+                    Role.bypass_group_scope.is_(True),
+                    Role.id != mod_role.id).count()
+                if not others:
+                    messages["error"].append(gettext(
+                        "At least one role must keep access to all groups. "
+                        "Grant it to another role first."))
+                    db.session.rollback()
+                    return messages, page_refresh
+            mod_role.bypass_group_scope = form.bypass_group_scope.data
             db.session.commit()
             messages["success"].append('{action} {controller}'.format(
                 action=TRANSLATIONS['modify']['title'],
@@ -159,6 +180,126 @@ def user_roles(form):
                 messages["success"].append('{action} {controller}'.format(
                     action=TRANSLATIONS['delete']['title'],
                     controller=gettext("User Role")))
+
+    return messages, page_refresh
+
+
+def user_groups(form, request_form=None):
+    """사용자 그룹 추가·수정·삭제 + 멤버·부여 반영.
+
+    정본 설계: `docs/design/access-scope-groups.md`
+
+    멤버와 부여는 폼 필드가 아니라 `request_form` 의 다중 값으로 온다 —
+    부여 대상이 네 테이블(탭·대시보드·지도·시설)에 흩어져 있어 WTForms 가
+    선택지를 미리 만들 수 없다.
+
+    **저장은 전량 교체다.** 부분 반영("보낸 것만 추가")으로 두면 체크를 푸는
+    조작이 아무 일도 하지 않아, 권한을 회수했다고 믿는 상태가 만들어진다.
+    """
+    from aot.databases.models import GroupGrant
+    from aot.databases.models import UserGroup
+    from aot.databases.models import UserGroupMember
+
+    messages = {"success": [], "info": [], "warning": [], "error": []}
+    page_refresh = False
+    request_form = request_form if request_form is not None else {}
+
+    def _selected(key):
+        getlist = getattr(request_form, 'getlist', None)
+        return [v for v in (getlist(key) if getlist else []) if v]
+
+    if form.user_group_add.data:
+        new_group = UserGroup()
+        new_group.name = form.name.data
+        new_group.description = form.description.data
+        try:
+            new_group.save()
+            page_refresh = True
+            audit_log(audit.GROUP_CREATE, target_type='UserGroup',
+                      target_id=new_group.unique_id, target_name=new_group.name)
+            messages["success"].append('{action} {controller}'.format(
+                action=TRANSLATIONS['add']['title'],
+                controller=gettext("User Group")))
+        except sqlalchemy.exc.IntegrityError:
+            # 이름이 유일해야 하는 이유 — 같은 이름이 둘이면 부여 화면에서
+            # 어느 쪽인지 구분할 수 없다.
+            messages["error"].append(
+                gettext("A group with that name already exists."))
+        except sqlalchemy.exc.OperationalError as except_msg:
+            messages["error"].append(except_msg)
+
+    elif form.user_group_save.data:
+        group = UserGroup.query.filter(
+            UserGroup.unique_id == form.group_id.data).first()
+        if not group:
+            messages["error"].append(gettext("Group not found."))
+            return messages, page_refresh
+
+        before_members = sorted(
+            m.user_uuid for m in UserGroupMember.query.filter(
+                UserGroupMember.group_uuid == group.unique_id).all())
+        group.name = form.name.data
+        group.description = form.description.data
+
+        # 멤버 — 전량 교체
+        members = _selected('group_members')
+        UserGroupMember.query.filter(
+            UserGroupMember.group_uuid == group.unique_id).delete(
+            synchronize_session=False)
+        for user_uuid in dict.fromkeys(members):
+            db.session.add(UserGroupMember(group_uuid=group.unique_id,
+                                           user_uuid=user_uuid))
+
+        # **부여는 여기서 건드리지 않는다.** 편집은 각 자원의 설정 모달에서
+        # 한다(그룹은 적고 자원은 많다 — 그룹 쪽에서 고르게 하면 목록이 자원
+        # 수만큼 길어져 못 쓰게 된다).
+        #
+        # ⚠ 예전에는 여기서 전량 교체를 했다. 폼이 더는 부여를 보내지 않으므로
+        # 그 코드를 남겨 두면 **그룹 이름만 고쳐도 부여가 전부 지워진다** —
+        # 아무 에러 없이, 그리고 그 사실은 누군가 조작을 잃은 뒤에야 드러난다.
+
+        db.session.commit()
+        page_refresh = True
+
+        after_members = sorted(dict.fromkeys(members))
+        if before_members != after_members:
+            audit_log(audit.GROUP_MEMBER_CHANGE, target_type='UserGroup',
+                      target_id=group.unique_id, target_name=group.name,
+                      before={'members': before_members},
+                      after={'members': after_members})
+        audit_log(audit.GROUP_MODIFY, target_type='UserGroup',
+                  target_id=group.unique_id, target_name=group.name)
+        messages["success"].append('{action} {controller}'.format(
+            action=TRANSLATIONS['modify']['title'],
+            controller=gettext("User Group")))
+
+    elif form.user_group_delete.data:
+        group = UserGroup.query.filter(
+            UserGroup.unique_id == form.group_id.data).first()
+        if not group:
+            messages["error"].append(gettext("Group not found."))
+            return messages, page_refresh
+
+        # 멤버십과 부여를 함께 지운다. 남기면 고아가 되고, 고아 grant 는
+        # 아무 에러 없이 판정에서 무시되다가 uuid 가 재사용되는 순간
+        # **아무도 부여한 적 없는 권한**이 된다(check_scope_grants 의
+        # orphan-grant 가 그것을 본다).
+        grant_count = GroupGrant.query.filter(
+            GroupGrant.group_uuid == group.unique_id).delete(
+            synchronize_session=False)
+        member_count = UserGroupMember.query.filter(
+            UserGroupMember.group_uuid == group.unique_id).delete(
+            synchronize_session=False)
+        name, uid = group.name, group.unique_id
+        db.session.delete(group)
+        db.session.commit()
+        page_refresh = True
+        audit_log(audit.GROUP_DELETE, target_type='UserGroup',
+                  target_id=uid, target_name=name,
+                  before={'members': member_count, 'grants': grant_count})
+        messages["success"].append('{action} {controller}'.format(
+            action=TRANSLATIONS['delete']['title'],
+            controller=gettext("User Group")))
 
     return messages, page_refresh
 

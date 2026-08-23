@@ -21,6 +21,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.
 os.environ["ALEMBIC_RUNNING"] = "1"
 
 from flask import Flask
+from flask_babel import Babel
 
 from aot.aot_flask.extensions import db
 from aot.databases.models import (
@@ -46,6 +47,11 @@ def _make_test_app():
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     app.config['TESTING'] = True
     db.init_app(app)
+    # `config_translations` 는 import 시점에 `lazy_gettext(...).format()` 을
+    # 평가하므로 babel 이 없으면 KeyError 로 죽는다 — 그 모듈을 끌어오는 것은
+    # `aot_data_tool_service` 이고, 도구 응답을 검증하는 테스트가 그것을 부른다.
+    # 여기서 한 줄 붙여 두면 그 계열이 이 최소 앱에서도 돈다.
+    Babel(app)
     return app
 
 
@@ -313,6 +319,108 @@ class TestKnowledgeLibraryP1(unittest.TestCase):
         hits = [h for h in knowledge_search.search('총채벌레') if h['origin'] == 'library']
         self.assertEqual(len(hits), 1)
         self.assertIn('끈끈이트랩', hits[0]['content'])
+
+    # ── 빈 라이브러리를 정직하게 말한다 (2026-08-22) ────────────────────────
+    #
+    # 자료가 없는 설치에서 "Try different keywords" 는 **검색어가 틀렸다는 뜻으로
+    # 읽힌다.** 모델은 키워드만 바꿔 가며 같은 빈손을 반복하다가, 라이브러리가
+    # 비었다는 사실을 모른 채 자기 지식으로 넘어가고 그것을 출처처럼 적는다.
+
+    def test_populated_flag_follows_the_chunks(self):
+        self._enable_digest()
+        self.assertFalse(knowledge_search.library_is_populated())
+        self._make_chunk(self._make_source(), '딸기 육묘', '내용')
+        self.assertTrue(knowledge_search.library_is_populated())
+
+    def test_digest_switch_off_reads_as_empty(self):
+        """스위치가 꺼져 있으면 청크가 있어도 검색에 실리지 않는다
+        (`_load_library_sections` 가 곧바로 [] 를 돌려준다) — 사용자에게는
+        자료가 없는 것과 같으므로 여기서도 '비었다' 로 답해야 한다."""
+        self._make_chunk(self._make_source(), '딸기 육묘', '내용')
+        self.assertFalse(knowledge_search.library_is_populated())
+
+    def test_empty_library_is_said_even_when_the_manual_matched(self):
+        """**빈 결과만 보고 판정하면 안 된다** — 검색은 저장소에 늘 있는 AoT
+        매뉴얼도 함께 뒤지므로 도메인 질문에도 엉뚱한 매뉴얼 섹션이 느슨하게
+        걸린다. 그러면 결과가 비지 않아 '자료 없음' 분기를 영영 안 탄다."""
+        from aot.ai.services.aot_data_tool_service import AoTDataToolService as S
+
+        res = S.knowledge_search_tool(query='상추 생육단계별 재배 관리')
+        self.assertTrue(res.get('library_empty'), res)
+        self.assertIn('EMPTY', res['result'])
+
+    def test_populated_library_gets_no_empty_notice(self):
+        from aot.ai.services.aot_data_tool_service import AoTDataToolService as S
+
+        self._enable_digest()
+        self._make_chunk(self._make_source(), '상추 육묘',
+                         '본엽 3~4매에 정식한다.')
+        res = S.knowledge_search_tool(query='상추 육묘')
+        self.assertNotIn('library_empty', res)
+        self.assertNotIn('EMPTY', res['result'])
+
+    # ── 띄어쓰기 없는 문자도 검색된다 (2026-08-22) ──────────────────────────
+    #
+    # AoT 는 22개 언어로 출시되는데 그중 넷(ja·zh·zh_Hant·th)은 지식 라이브러리를
+    # 아예 쓸 수 없었다. 문장 전체가 토큰 하나가 되고 그 하나가 Latin 취급으로
+    # `\b` 단어경계 매칭을 받아 아무것도 못 찾았다 — 에러 없이 0건이라 아무도
+    # 모른다(라이브러리가 비었다는 안내조차 안 뜬다, 자료는 실제로 있으므로).
+
+    def test_space_separated_languages_tokenize_exactly_as_before(self):
+        """bigram 도입이 **띄어쓰기 쓰는 언어를 건드리면 안 된다** — 한국어의
+        어간 규칙과 영어 불용어 제거는 그대로여야 한다."""
+        self.assertEqual(
+            knowledge_search._tokenize('상추 생육단계별 재배관리'),
+            ['상추', '생육단계별', '생육', '재배관리', '재배'])
+        self.assertEqual(
+            knowledge_search._tokenize('lettuce growth stage cultivation'),
+            ['lettuce', 'growth', 'stage', 'cultivation'])
+        # 'the'/'for' 는 불용어라 빠진다(예전과 같음).
+        self.assertNotIn('the', knowledge_search._tokenize('the lettuce'))
+
+    def test_korean_does_not_get_bigrams(self):
+        """한국어에 bigram 을 물리면 '재배관리' 가 '배관'(수도 배관)까지 만들어
+        엉뚱한 문서에 걸린다. 한국어는 띄어쓰기를 쓰므로 어간이면 충분하다."""
+        self.assertNotIn('배관', knowledge_search._tokenize('재배관리'))
+
+    def _find(self, query):
+        return [h for h in knowledge_search.search(query) if h['origin'] == 'library']
+
+    def test_japanese_document_is_findable(self):
+        self._enable_digest()
+        self._make_chunk(self._make_source(), 'レタスの栽培',
+                         'レタスは生育ステージごとに栽培管理を変える。')
+        self.assertEqual(len(self._find('レタスの生育ステージ別栽培管理')), 1)
+
+    def test_chinese_document_is_findable(self):
+        self._enable_digest()
+        self._make_chunk(self._make_source(), '生菜栽培',
+                         '生菜按生育阶段进行栽培管理。')
+        self.assertEqual(len(self._find('生菜生育阶段栽培管理')), 1)
+
+    def test_thai_document_is_findable(self):
+        self._enable_digest()
+        self._make_chunk(self._make_source(), 'การปลูกผักกาดหอม',
+                         'ผักกาดหอมต้องจัดการการปลูกตามระยะการเจริญเติบโต')
+        self.assertEqual(len(self._find('การปลูกผักกาดหอม')), 1)
+
+    def test_bigram_count_is_capped(self):
+        """긴 문장은 글자 수만큼 bigram 이 늘어난다 — 상한이 없으면 폭주한다."""
+        toks = knowledge_search._tokenize('栽' * 500)
+        self.assertLessEqual(len(toks), knowledge_search._MAX_QUERY_TOKENS)
+
+    def test_unknown_state_does_not_claim_empty(self):
+        """판정하지 못했을 때 '비었다' 고 단정하면 자료가 있는 설치에서 없는
+        안내를 하게 된다 — 모르면 평소 문구가 낫다."""
+        import aot.databases.models as _m
+
+        real = _m.AIGlobalSettings.query
+        try:
+            type(_m.AIGlobalSettings).query = property(
+                lambda self: (_ for _ in ()).throw(RuntimeError('DB 없음')))
+            self.assertTrue(knowledge_search.library_is_populated())
+        finally:
+            type(_m.AIGlobalSettings).query = real
 
 
 if __name__ == '__main__':

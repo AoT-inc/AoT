@@ -28,7 +28,7 @@ from aot.aot_flask import (routes_admin, routes_authentication,
                                  routes_method, routes_output, routes_page,
                                  routes_password_reset, routes_remote_admin,
                                  routes_settings, routes_static, routes_notes_api,
-                                 routes_ai_agent, routes_tab, routes_camera, routes_orch_api, routes_mcp_api,
+                                 routes_ai_agent, routes_tab, routes_access, routes_camera, routes_orch_api, routes_mcp_api,
                                  routes_ai_monitoring)
 from aot.aot_flask.api import api_blueprint, init_api
 from aot.aot_flask.extensions import db
@@ -788,6 +788,7 @@ def register_blueprints(app):
     app.register_blueprint(routes_notes_api.blueprint)  # register notes api routes
     app.register_blueprint(routes_ai_agent.blueprint)  # register ai agent routes
     app.register_blueprint(routes_tab.blueprint)  # register tab routes
+    app.register_blueprint(routes_access.blueprint)  # 그룹 부여(자원 쪽 편집)
     app.register_blueprint(routes_camera.blueprint)  # register camera routes
     app.register_blueprint(routes_orch_api.blueprint)  # register orch api routes
     app.register_blueprint(routes_mcp_api.blueprint)   # register mcp api routes

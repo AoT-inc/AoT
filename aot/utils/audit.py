@@ -33,6 +33,19 @@ USER_CREATE = 'user.create'
 USER_MODIFY = 'user.modify'
 USER_DELETE = 'user.delete'
 SETTINGS_CHANGE = 'settings.change'
+# 그룹 스코프(p6_52, docs/design/access-scope-groups.md §8-5).
+#
+# **`group_grant` 행의 존재만으로는 답이 안 된다.** 회수된 권한은 행이 사라지므로
+# "예전에 열려 있었다" 를 말할 수 없고, 접근 제어에서 그 질문이 나오는 때는 대개
+# 사고 이후다. 그리고 권한은 여러 그룹에서 올 수 있으므로(합집합), 어느 그룹을
+# 통해 왔는지 남기지 않으면 "이 사람 접근을 끊으려면 어디서 빼야 하는가" 에
+# 답할 수 없다 — 하나만 빼고 여전히 되는 것을 보고서야 알게 된다.
+GROUP_CREATE = 'group.create'
+GROUP_MODIFY = 'group.modify'
+GROUP_DELETE = 'group.delete'
+GROUP_MEMBER_CHANGE = 'group.member_change'
+GROUP_GRANT_CHANGE = 'group.grant_change'
+ROLE_SCOPE_BYPASS = 'role.scope_bypass'
 OUTPUT_CONTROL = 'output.control'
 DATA_EXPORT = 'data.export'
 DATA_IMPORT = 'data.import'

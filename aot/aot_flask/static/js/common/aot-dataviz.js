@@ -87,9 +87,14 @@
             var attr = '';
             if (obj && it.anchor && anchored) {
                 var style;
+                // 끝으로 밀 때는 **left 를 반드시 풀어 준다.** 공용 규칙이
+                // `left: calc(...)` 를 갖고 있어, right 만 주면 좌우가 동시에
+                // 고정돼 라벨이 트랙 폭만큼 늘어난다.
                 if (anchorPct <= 12)      style = 'left:0';
-                else if (anchorPct >= 88) style = 'right:0';
-                else style = 'left:' + anchorPct.toFixed(2) + '%;transform:translateX(-50%)';
+                else if (anchorPct >= 88) style = 'right:0;left:auto';
+                // 마커와 **같은 식**이다(캡 보정은 CSS 의 left 가 한다).
+                else style = '--aot-viz-pos:' + anchorPct.toFixed(2) +
+                             ';transform:translateX(-50%)';
                 attr = ' class="aot-viz-scale-anchor" style="' + style + '"';
             } else if (obj && it.anchor) {
                 attr = ' class="aot-viz-scale-anchor"';
@@ -160,7 +165,8 @@
                     '%;width:' + (oe - os).toFixed(2) + '%"></div>';
         }
         if (p !== null) {
-            html += '<div class="aot-viz-now" style="left:' + p.toFixed(2) + '%"></div>';
+            html += '<div class="aot-viz-now" style="--aot-viz-pos:' +
+                    p.toFixed(2) + '"></div>';
         }
         html += '</div>';
         // 밴드의 기준은 적정 범위이므로 눈금 라벨을 그 **중앙**에 붙인다.
@@ -227,7 +233,8 @@
             html += '<div class="aot-viz-fill" style="width:' + v.toFixed(2) + '%"></div>';
         }
         if (t !== null) {
-            html += '<div class="aot-viz-target" style="left:' + t.toFixed(2) + '%"></div>';
+            html += '<div class="aot-viz-target" style="--aot-viz-pos:' +
+                    t.toFixed(2) + '"></div>';
         }
         html += '</div>';
         // 불릿의 기준은 목표다.
@@ -293,7 +300,8 @@
             }
         }
         if (p !== null) {
-            html += '<div class="aot-viz-now" style="left:' + p.toFixed(2) + '%"></div>';
+            html += '<div class="aot-viz-now" style="--aot-viz-pos:' +
+                    p.toFixed(2) + '"></div>';
         }
         html += '</div>';
         // 기간 바의 기준은 오늘이다.

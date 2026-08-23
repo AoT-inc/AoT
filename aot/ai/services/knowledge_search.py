@@ -35,6 +35,46 @@ logger = logging.getLogger(__name__)
 _HEADER = re.compile(r'^(#{1,6})\s+(.+?)\s*$')
 _HANGUL = re.compile(r'[가-힣]')
 
+# 띄어쓰기로 낱말을 가르지 않는 문자 — **한글은 여기 없다.** 한국어는 띄어쓰기를
+# 쓰므로 `_tokenize` 가 이미 낱말을 받고 어간(앞 2글자)만 더하면 됐다. 아래
+# 문자들은 사정이 다르다: 문장 전체가 공백 없이 이어져 들어와 토큰이 **하나**가
+# 되고, 그 하나가 Latin 취급을 받아 `\b` 단어경계 정규식으로 매칭되니 사실상
+# 아무것도 찾지 못한다.
+#
+# 실측(2026-08-22) — AoT 는 22개 언어로 출시되는데 그중 넷이 이 상태였다:
+#   한국어 5토큰 · English 5 · Nederlands 3 · हिन्दी 8 · Русский 6  (정상)
+#   日本語 1 · 中文 1 · 繁體中文 1 · ไทย 1                          (검색 불가)
+# 일본어 자료를 올린 사용자는 **아무 에러 없이 0건**을 받는다. 라이브러리가 비어
+# 있다는 안내조차 뜨지 않는다 — 자료는 실제로 있기 때문이다.
+#
+# 가르는 근거가 없으므로 표준적인 방법을 쓴다: **문자 bigram**(인접 두 글자).
+# 형태소 분석기를 들이지 않는 이유는 언어마다 다른 사전과 무게가 붙기 때문이고,
+# bigram 은 사전 없이 어느 문자에나 같은 규칙으로 선다.
+_NO_WORD_BREAK = re.compile(
+    '['
+    '぀-ゟ'   # 히라가나
+    '゠-ヿ'   # 가타카나
+    'ㇰ-ㇿ'   # 가타카나 확장
+    '㐀-䶿'   # CJK 확장 A
+    '一-鿿'   # CJK 통합 한자 (中文·漢字)
+    '豈-﫿'   # CJK 호환 한자
+    '฀-๿'   # 태국어
+    ']'
+)
+
+# bigram 은 글자 수만큼 늘어나므로 긴 질문에서 토큰이 폭주할 수 있다. 점수는
+# **한 질문 안에서의 순위**에만 쓰이므로(절대 임계값이 없다) 상한을 둬도 판정이
+# 흔들리지 않는다.
+_MAX_QUERY_TOKENS = 64
+
+
+def _splits_on_spaces(token):
+    """이 토큰을 부분문자열로 맞춰야 하는가 → bool.
+
+    한글과 위 `_NO_WORD_BREAK` 문자들이 여기 해당한다. Latin·키릴·데바나가리는
+    낱말 경계가 있으므로 `\\b` 매칭이 맞다('how' ⊄ 'however')."""
+    return bool(_HANGUL.search(token) or _NO_WORD_BREAK.search(token))
+
 # Localized translation variants (About.de.md, index.ja.md, …) add noise without
 # adding distinct content. Index the base/Korean/English and skip other locales.
 _KEEP_LOCALES = ('.ko', '.md')  # <name>.ko.md and <name>.md
@@ -480,14 +520,29 @@ def _tokenize(text):
     raw = [t for t in re.split(r'[\s,./()\[\]{}:;"\'`|?!~]+', (text or '').lower()) if len(t) >= 2]
     out = []
     for t in raw:
-        is_cjk = bool(_HANGUL.search(t))
-        if not is_cjk and t in _STOPWORDS:
+        is_hangul = bool(_HANGUL.search(t))
+        # 띄어쓰기가 없는 문자(일본어·중국어·태국어 등)는 문장 전체가 토큰
+        # 하나로 들어온다 — `_NO_WORD_BREAK` 주석 참조. **한글은 여기 해당하지
+        # 않는다**(띄어쓰기를 쓰므로 아래 어간 경로가 그대로 맞다).
+        unsegmented = bool(_NO_WORD_BREAK.search(t))
+        if not (is_hangul or unsegmented) and t in _STOPWORDS:
             continue
         if t not in out:
             out.append(t)
-        stem = t[:2] if (is_cjk and len(t) >= 3) else t
-        if stem not in out:
-            out.append(stem)
+        if unsegmented:
+            # 자를 근거가 없으니 인접 두 글자로 훑는다. 통째 토큰도 위에서
+            # 이미 넣었으므로, 원문에 그 문장이 그대로 있으면 더 높게 잡힌다.
+            for i in range(len(t) - 1):
+                if len(out) >= _MAX_QUERY_TOKENS:
+                    break
+                bg = t[i:i + 2]
+                if bg not in out:
+                    out.append(bg)
+            stem = t[:2]
+        else:
+            stem = t[:2] if (is_hangul and len(t) >= 3) else t
+            if stem not in out:
+                out.append(stem)
         # Domain-vocabulary bridge: expand the token (or its Korean stem) with
         # navigation aliases so '센서' also scores against 입력 / input / Inputs.md.
         for alias in _QUERY_ALIASES.get(t, ()) + _QUERY_ALIASES.get(stem, ()):
@@ -562,8 +617,10 @@ def search(query, top_k=3, max_chars=1400, tags=None):
         fname_l = fname_raw.replace('-', ' ').replace('_', ' ').lower()
         score = 0
         for tok in q_tokens:
-            if _HANGUL.search(tok):
-                # Korean has no word boundaries — substring match.
+            if _splits_on_spaces(tok):
+                # 낱말 경계가 없는 문자 — 부분문자열로 맞춘다. 한글뿐 아니라
+                # 일본어·중국어·태국어도 여기다(예전에는 한글만 이 갈래로 와서,
+                # 나머지는 `\b` 로 매칭돼 영영 못 찾았다).
                 if tok in heading_l:
                     score += 3
                 if tok in content_l:
@@ -661,6 +718,36 @@ def _format_hit_tag(hit):
     else:
         tag = _PROVENANCE_TAG.get(provenance, '[Library]')
     return f"{tag} "
+
+
+def library_is_populated():
+    """도메인 지식 라이브러리에 **읽을 것이 하나라도 있는가** → bool.
+
+    빈 결과의 원인을 가르기 위한 것이다. `search()` 는 저장소에 늘 있는 매뉴얼
+    (`_build_index()`)과 동기화된 라이브러리 청크를 함께 뒤지므로, 결과가 비었을
+    때 그것이 "검색어가 안 맞았다" 인지 "애초에 자료가 없다" 인지 호출자가 알 수
+    없다. 자료가 없는 설치에서 "다른 키워드로 해 보라" 고 답하면 모델은 키워드만
+    바꿔 가며 같은 빈손을 반복하고, 끝내 라이브러리가 비었다는 사실을 모른 채
+    자기 지식으로 넘어간다 — 그리고 그것을 출처처럼 적는다.
+
+    여기서 보는 것은 **청크뿐**이다(매뉴얼은 제외). 매뉴얼은 AoT 사용법이라
+    작물·가축 같은 도메인 질문에는 원래 답하지 못하고, 그것까지 세면 어떤
+    설치에서도 "비어 있다" 가 나오지 않아 판정이 무의미해진다.
+
+    실패는 조용히 True 로 돌린다 — 판정하지 못했을 때 "비었다" 고 단정하면
+    자료가 있는 설치에서 없는 안내를 하게 된다. 모르면 평소 문구가 낫다.
+    """
+    try:
+        from aot.databases.models import AIGlobalSettings, AIKnowledgeChunk
+        settings = AIGlobalSettings.query.first()
+        if not (settings and getattr(settings, 'knowledge_digest_enabled', False)):
+            # 기능 자체가 꺼져 있으면 청크는 검색에 실리지 않는다
+            # (`_load_library_sections` 가 곧바로 [] 를 돌려준다) — 사용자에게는
+            # 자료가 없는 것과 같다.
+            return False
+        return AIKnowledgeChunk.query.filter_by(is_enabled=True).first() is not None
+    except Exception:
+        return True
 
 
 def search_as_text(query, top_k=3, max_chars=1400, tags=None):

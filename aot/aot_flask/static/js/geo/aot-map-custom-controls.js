@@ -464,7 +464,7 @@
                     { id: 'device', label: (window._ ? window._('Device') : 'Device'), icon: 'fa-microchip' },
                     // 식생 구획(작기). 레이어 id 가 'aot-plot-*' 라
                     // getLayerIdsByType('plot') 이 그대로 찾아 끈다.
-                    { id: 'plot', label: (window._ ? window._('Plot') : 'Plot'), icon: 'fa-seedling' }
+                    { id: 'plot', label: (window._ ? window._('Plot') : 'Plot'), icon: 'fa-vector-square' }
                 ];
 
                 // Create layer items
@@ -636,7 +636,7 @@
                     { id: 'device', label: (window._ ? window._('Device') : 'Device'), icon: 'fa-microchip' },
                     // 식생 구획(작기). 레이어 id 가 'aot-plot-*' 라
                     // getLayerIdsByType('plot') 이 그대로 찾아 끈다.
-                    { id: 'plot', label: (window._ ? window._('Plot') : 'Plot'), icon: 'fa-seedling' }
+                    { id: 'plot', label: (window._ ? window._('Plot') : 'Plot'), icon: 'fa-vector-square' }
                 ];
 
                 // Create layer items

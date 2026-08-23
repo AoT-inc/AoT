@@ -717,9 +717,16 @@ def execute_approved(confirmation_id, role=None):
         params = {}
 
     try:
-        # 실행 자체는 MCP 서버의 디스패치를 그대로 쓴다. 여기서 같은 로직을 다시
+        # 실행 자체는 **실행층**의 디스패치를 그대로 쓴다. 여기서 같은 로직을 다시
         # 구현하면(핸들러 시그니처에 맞춘 메타키 제거 등) 두 벌이 서로 어긋난다.
-        from aot.aot_mcp_server import _dispatch_virtual_tool, _NATIVE_TOOLS
+        #
+        # 정본은 `tool_execution` 이다 — MCP 서버가 아니다. 2026-08-22 실행층을
+        # MCP 서버에서 분리(`896d4595`)하면서 이 두 이름이 옮겨갔는데 여기 import
+        # 는 옛 위치를 그대로 가리키고 있었다. 그 결과 **승인된 쓰기 도구가 하나도
+        # 실행되지 않았다** — 승인은 정상으로 보이고 그다음 즉시실행이 ImportError
+        # 로 죽어, 사용자에게는 "승인했는데 아무 일도 안 일어남" 으로 나타났다.
+        from aot.ai.services.tool_execution import (
+            _dispatch_virtual_tool, _NATIVE_TOOLS)
 
         call_args = inject_agent(row.tool_name, strip_meta(params), row.agent_id)
         if row.tool_name in _NATIVE_TOOLS:

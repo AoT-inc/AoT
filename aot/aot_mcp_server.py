@@ -258,9 +258,14 @@ class StdioMCPServer:
                 # 쓴다. _elicit_decision 자체는 남겨둔다 — 특정 호스트의 elicitation
                 # 지원이 검증되면 이 elicit_fn=None을 self._elicit_decision으로
                 # 되돌리기만 하면 된다.
+                # 그룹 스코프(A2) — 신원은 **키 소유자**다(`RoleInfo.user_id`).
+                # 역할 자체로 판정하지 않는다 — 역할은 서비스 계정에서 올 수도
+                # 있고, 그러면 판정 근거가 사람이 아니게 된다.
                 content = _execute_tool(self._app, tool_name, arguments,
                                         agent_id=self._agent_id, role=self._role,
-                                        elicit_fn=None)
+                                        elicit_fn=None,
+                                        scope_user_uuid=getattr(
+                                            self._role, 'user_id', None))
                 self._send({
                     "jsonrpc": "2.0",
                     "id": msg_id,
@@ -386,8 +391,11 @@ def _run_http_server(app, port=5700):
             if not name:
                 return _rpc_error(msg_id, -32602, "Missing tool name")
             try:
+                # 그룹 스코프(A2) — 신원은 키 소유자(`RoleInfo.user_id`).
                 content = _execute_tool(app, name, params.get("arguments") or {},
-                                        agent_id=agent_id, role=role)
+                                        agent_id=agent_id, role=role,
+                                        scope_user_uuid=getattr(
+                                            role, 'user_id', None))
                 return {"jsonrpc": "2.0", "id": msg_id,
                         "result": {"content": content}}
             except Exception as exc:
@@ -508,7 +516,10 @@ def _run_http_server(app, port=5700):
         if not ok:
             return jsonify(err), 401
         try:
-            content = _execute_tool(app, tool_name, arguments, agent_id=agent_id, role=role)
+            # 그룹 스코프(A2) — 신원은 키 소유자(`RoleInfo.user_id`).
+            content = _execute_tool(app, tool_name, arguments,
+                                    agent_id=agent_id, role=role,
+                                    scope_user_uuid=getattr(role, 'user_id', None))
             return jsonify({"content": content})
         except Exception as exc:
             return jsonify({"error": str(exc)}), 400

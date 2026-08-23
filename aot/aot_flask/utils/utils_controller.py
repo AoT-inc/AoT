@@ -39,6 +39,17 @@ def controller_mod(form_mod, request_form):
         "error": [],
         "name": None
     }
+
+    # 그룹 스코프(A1b) — 대상이 정해진 **뒤에** 묻는다.
+    #
+    # 역할 게이트는 submit 핸들러 맨 위에 있어 어떤 장치인지 모른 채 통과한다
+    # (설계 §1-A 표). 그래서 여기서 한 번 더 묻는다 — 옮기지 않고 여기에
+    # 더하는 이유는, 옮기다 분기를 하나 빠뜨리면 **통과하는 게이트**가 되기
+    # 때문이다(막혔다고 믿는 상태가 가장 나쁘다).
+    from aot.aot_flask.access import scope
+    if not scope.can_operate_device(form_mod.function_id.data):
+        messages["error"].append(scope.deny_message())
+        return messages, False
     page_refresh = False
 
     dict_controllers = parse_function_information()
@@ -237,6 +248,20 @@ def controller_del(cond_id):
         "warning": [],
         "error": []
     }
+
+    # 그룹 스코프(A1b) — **부수 효과보다 먼저 막는다.**
+    #
+    # `delete_entry_with_id()` 의 초크포인트만으로는 부족하다는 것을 실측으로
+    # 확인했다(2026-08-22): `output_del` 은 그 함수를 부르기 전에 측정값을
+    # 지우고 바인딩을 끊으며, 반환값 0(거부)을 보지 않고 "삭제 성공" 을
+    # 보고했다. 결과는 **출력은 남았는데 그 측정값·채널은 사라진** 부분 변경
+    # 이고, 사용자는 성공 메시지를 봤다.
+    #
+    # 그래서 초크포인트는 **뒤를 받치는 것**이고 실제 경계는 여기다.
+    from aot.aot_flask.access import scope
+    if not scope.can_operate_device(cond_id):
+        messages["error"].append(scope.deny_message())
+        return messages
 
     cond = CustomController.query.filter(
         CustomController.unique_id == cond_id).first()

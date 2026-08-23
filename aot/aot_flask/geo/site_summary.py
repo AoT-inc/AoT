@@ -355,6 +355,16 @@ def _build_summary(site_uuid):
 
     children = []
     for shape in children_shapes:
+        # **열 수 없는 것은 목록에 넣지 않는다.** `type='facility'` 인데
+        # `GeoFacility` 행이 없는 도형이 실제로 있다(geo/design 에서 시설
+        # 종류로 그렸지만 시설 등록은 안 한 경우 — 로컬 실측 4건). 그런 줄은
+        # 이름이 없어 "이름 없음" 으로 뜨고, 눌러도 시설 모달이 열 대상을
+        # 못 찾아 **아무 일도 일어나지 않는다** — 존재하지 않는 링크다.
+        #
+        # 도형은 지도에 계속 그려진다. 목록이 담는 것은 "이 필지에 무엇이
+        # 있나" 가 아니라 **"어디로 내려갈 수 있나"** 다.
+        if shape.type == 'facility' and not _facility_of_shape(shape.unique_id):
+            continue
         children.append(_child_entry(shape, ids_by_child[shape.unique_id],
                                      link_status, partial))
 
@@ -364,6 +374,9 @@ def _build_summary(site_uuid):
         'site': {
             'uuid': site.unique_id,
             'name': _shape_name(site),
+            # 사람이 적은 설명. `meta_json` 에 있다(도형 저장이 건드리지 않는
+            # 유일한 자리 — `feature` 에 두면 지도를 다시 그릴 때 사라진다).
+            'description': (site.meta_json or {}).get('description') or '',
             'area_m2': _shape_area_m2(site),
             'status': _rollup_status(children),
             'counts': dict({
@@ -464,10 +477,15 @@ def _child_entry(shape, device_ids, link_status, partial):
     rep, sensors = _sensor_rollup(device_ids, partial, rep_key_of(shape))
     issues = _issue_counts(device_ids, link_status)
 
+    # 이름이 없으면 **빈 문자열**로 낸다 — uuid 를 그대로 내보내면 목록에
+    # "e05c9d51-093f-…" 가 찍힌다(이름 없는 도형은 실제로 있다: geo/design 에서
+    # 시설 종류로 그렸지만 `GeoFacility` 행이 없는 경우). 화면이 그 자리에
+    # 무엇을 보일지 정한다 — 서버가 uuid 를 사람에게 보이는 값으로 쓰지 않는다.
+    _name = _shape_name(shape)
     return {
         'uuid': shape.unique_id,
         'kind': 'facility' if shape.type == 'facility' else 'zone',
-        'name': _shape_name(shape),
+        'name': '' if _name == shape.unique_id else _name,
         'status': _child_status(device_ids, sensors, issues),
         'rep': rep,
         'sensors': sensors,
@@ -1057,10 +1075,36 @@ def _notes_block(site, partial):
 
 # ── 잡동사니 ────────────────────────────────────────────────────────────────
 
+def _facility_of_shape(shape_uuid):
+    """도형 uuid → `GeoFacility` (없으면 None).
+
+    시설 모달은 `GeoFacility` 로 열린다. 이 행이 없으면 도형이 있어도 열
+    대상이 없다 — 목록에 넣을지 정하는 근거이자, 이름을 찾는 자리이기도 하다
+    (시설 이름은 도형이 아니라 이 행에 있다).
+    """
+    try:
+        from aot.databases.models import GeoFacility
+        return GeoFacility.query.filter_by(shape_uuid=shape_uuid).first()
+    except Exception:                                       # noqa: BLE001
+        return None
+
+
 def _shape_name(shape):
     props = _feature(shape).get('properties') or {}
-    return (props.get('label_name') or props.get('name')
-            or shape.unique_id)
+    name = props.get('label_name') or props.get('name')
+    if name:
+        return name
+
+    # **시설은 이름이 도형이 아니라 `GeoFacility` 에 있다.** 시설 편집기에서
+    # 만든 시설의 외곽 도형은 `properties.name` 이 비어 있는 것이 정상이고,
+    # 그대로 두면 목록에 uuid 가 그대로 찍힌다("e05c9d51-093f-…"). 필지 요약의
+    # [구성] 탭이 시설을 따로 세우면서 드러났다 — 그전에는 구역과 섞여 있어
+    #     눈에 덜 띄었을 뿐 같은 값이었다.
+    if getattr(shape, 'type', None) == 'facility':
+        fac = _facility_of_shape(shape.unique_id)
+        if fac is not None and fac.name:
+            return fac.name
+    return shape.unique_id
 
 
 def _shape_area_m2(shape):

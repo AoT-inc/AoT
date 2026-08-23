@@ -6738,8 +6738,44 @@ class AoTDataToolService:
             top_k = 3
         _tags = [t.strip() for t in str(tags).split(',') if t.strip()] if tags else None
         text = _ks.search_as_text(query, top_k=top_k, tags=_tags)
+
+        # 도메인 라이브러리가 비었다는 사실을 응답이 직접 말한다. 예전에는 빈
+        # 결과에 "Try different keywords" 만 돌려줬는데, 자료가 하나도 없는
+        # 설치에서 그 말은 **검색어가 틀렸다는 뜻으로 읽힌다.** 모델은 키워드만
+        # 바꿔 가며 같은 빈손을 반복하고, 끝내 라이브러리가 비었다는 사실을 모른
+        # 채 자기 지식으로 넘어간다 — 그리고 그것을 출처처럼 적는다.
+        #
+        # ⚠ **빈 결과만 보고 판정하면 안 된다.** 검색은 저장소에 늘 있는 AoT
+        # 매뉴얼도 함께 뒤지므로, "상추 생육단계" 같은 질문에도 매뉴얼의 엉뚱한
+        # 섹션(실측: Security.ko.md)이 느슨하게 걸려 결과가 비지 않는다. 그래서
+        # 결과가 **있을 때도** 그것이 매뉴얼뿐이면 그 사실을 함께 말한다.
+        # 매니페스트가 아니라 응답이라 고정비가 0이다.
+        populated = _ks.library_is_populated()
+
         if not text:
+            if not populated:
+                return {"result": ("The knowledge library is EMPTY — no domain source "
+                                   "has been synced, so this returns nothing about "
+                                   f"'{query}' no matter how it is worded. Do not "
+                                   "retry with other keywords. Either answer from your "
+                                   "own general knowledge AND say plainly that it is "
+                                   "unverified — never pass it off as a citation in a "
+                                   "source_note — or tell the user a source can be "
+                                   "added (list_library_source_types shows what is "
+                                   "available)."),
+                        "library_empty": True}
             return {"result": f"No documentation section matched '{query}'. Try different keywords."}
+
+        if not populated:
+            return {"result": (text + "\n\n---\n[NOTE] The domain knowledge library is "
+                               "EMPTY — everything above is the AoT system manual "
+                               "(how to operate AoT), not reference material about "
+                               "crops, livestock or facilities. If you were asking "
+                               "about a subject rather than about AoT, treat this as "
+                               "NO SOURCE FOUND: say your answer is your own "
+                               "unverified knowledge, and do not cite it as a "
+                               "source."),
+                    "library_empty": True}
         return {"result": text}
 
     # --- Knowledge shelve (@ANCHOR: KNOWLEDGE_SHELVE_TOOL, P4 2026-07-19) --------

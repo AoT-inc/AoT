@@ -43,6 +43,47 @@ class TabService:
             return []
 
     @staticmethod
+    def visible_tabs_for_page(page_type: str) -> List[Tab]:
+        """이 사람에게 **보여줄** 탭만. 조작할 수 없는 탭은 뺀다.
+
+        정본 설계: `docs/design/access-scope-groups.md`
+
+        ⚠ **이것은 정보 격리가 아니다.** 감추는 것은 장치 **관리 화면**뿐이고,
+        그 장치들의 값은 대시보드·지도·`/data_batch` 로 여전히 보인다(A 범위는
+        조작만 막는다). 감추는 대상을 넓히는 것은 B 단계의 결정이다.
+
+        그래도 감추는 이유는 UX 다 — 조작할 수 없는 탭을 목록에 두면 눌러 보고
+        거부당하는 일이 반복된다. 자원이 늘수록 그 잡음이 커진다.
+
+        ⚠ **`get_tabs_for_page` 를 대신 고치지 말 것.** 그 함수는 삭제 시
+        "마지막 탭인가" 판정처럼 **서버가 전체를 알아야 하는 자리**에서도
+        쓰인다. 거기서 스코프로 걸러진 목록을 쓰면, 남의 탭이 안 보이는
+        사람에게는 자기 탭이 늘 "마지막 탭" 이 되어 삭제가 막힌다.
+        """
+        tabs = TabService.get_tabs_for_page(page_type)
+        try:
+            from aot.aot_flask.access import scope
+            denied = scope.denied_resource_uuids('tab')
+        except Exception as exc:
+            # 판정이 깨져도 화면이 비면 안 된다 — 그때는 전부 보인다(A 범위의
+            # 기본값과 같은 방향이다).
+            logger.error("[scope] 탭 필터 실패, 전체를 보입니다: %s", exc)
+            return tabs
+        if not denied:
+            return tabs
+        return [t for t in tabs if t.unique_id not in denied]
+
+    @staticmethod
+    def default_visible_tab(page_type: str) -> Optional[Tab]:
+        """보이는 탭 중 첫 번째. 하나도 없으면 None.
+
+        `get_default_tab` 은 position 0 을 돌려주는데 그 탭이 스코프 밖일 수
+        있다 — 그대로 쓰면 열자마자 남의 탭으로 보내진다.
+        """
+        tabs = TabService.visible_tabs_for_page(page_type)
+        return tabs[0] if tabs else None
+
+    @staticmethod
     def get_tab_by_id(tab_id: str) -> Optional[Tab]:
         """Retrieve a tab by its unique_id."""
         try:
@@ -155,6 +196,14 @@ class TabService:
     @staticmethod
     def rename_tab(tab_id: str, new_name: str) -> bool:
         """Rename a tab identified by unique_id."""
+        # 그룹 스코프(A1b) — **탭은 자기 자신이 부여 단위다.**
+        # 이름을 바꾸는 것은 부여가 가리키는 대상의 정체를 바꾸는 일이라,
+        # 그 탭을 조작할 수 있는 사람만 할 수 있어야 한다.
+        from aot.aot_flask.access import scope
+        if not scope.can_operate('tab', tab_id):
+            logger.warning("[scope] 탭 이름 변경 거부: %s", tab_id)
+            return False
+
         try:
             tab = Tab.query.filter_by(unique_id=tab_id).first()
             if not tab:
@@ -176,6 +225,14 @@ class TabService:
     @staticmethod
     def duplicate_tab(source_tab_id: str) -> Optional[Tab]:
         """Duplicate a tab and all its entries with deactivated state."""
+        # 그룹 스코프(A1b) — **원본**으로 판정한다. 복제본은 부여가 없는 새 탭
+        # (=전원 공개)이 되므로, 원본을 조작할 수 없는 사람이 복제할 수 있으면
+        # 복제 한 번으로 남의 장치 사본이 전원에게 열린다.
+        from aot.aot_flask.access import scope
+        if not scope.can_operate('tab', source_tab_id):
+            logger.warning("[scope] 탭 복제 거부: %s", source_tab_id)
+            return None
+
         try:
             source_tab = Tab.query.filter_by(unique_id=source_tab_id).first()
             if not source_tab:
@@ -376,6 +433,16 @@ class TabService:
     @staticmethod
     def delete_tab(tab_id: str) -> Dict[str, Any]:
         """Delete a tab and its associated entries with fail-fast rollback on error."""
+        # 그룹 스코프(A1b) — 여기를 빼면 스코프 밖 사람이 **탭을 지워서** 안의
+        # 장치를 미지정(=전원 공개)으로 만들 수 있다. 삭제가 곧 부여 해제다.
+        from aot.aot_flask.access import scope
+        if not scope.can_operate('tab', tab_id):
+            return {
+                'success': False,
+                'message': scope.deny_message(),
+                'redirect_tab_id': tab_id
+            }
+
         try:
             tab = Tab.query.filter_by(unique_id=tab_id).first()
             if not tab:

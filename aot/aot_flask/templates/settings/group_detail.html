@@ -1,0 +1,92 @@
+{# Drawer body+footer for one user group — served on demand by
+   /settings/users/group_detail/<uid>. Same shell as the Role drawer.
+
+   정본 설계: docs/design/access-scope-groups.md #}
+<form method="post" id="group_form_{{each_group.unique_id}}" data-group-detail-form action="/settings/users">
+  {{form_user_groups.csrf_token}}
+  {{form_user_groups.group_id(value=each_group.unique_id)}}
+
+  <div class="modal-body">
+
+    <div class="aot-modal-group-title">{{_('Basic Settings')}}</div>
+    <div class="aot-modal-container">
+      <div class="aot-modal-option-row">
+        <label class="aot-modal-option-label" for="group_name_detail">{{form_user_groups.name.label.text}}</label>
+        <div class="aot-modal-option-control">
+          {# 추가 모달·역할 폼과 id 가 겹치지 않게 한다 — 겹치면 label[for] 이
+             먼저 나온 칸을 가리킨다. #}
+          {{form_user_groups.name(class_='form-control aot-modern-input', value=each_group.name, id='group_name_detail')}}
+        </div>
+      </div>
+      <div class="aot-modal-option-row">
+        <div class="aot-modal-option-label">
+          {{form_user_groups.description.label.text}}
+          <div class="aot-modal-body-text">{{_('What this group is for. Without it, nobody can tell later whether the group is still needed.')}}</div>
+        </div>
+        <div class="aot-modal-option-control">
+          {{form_user_groups.description(class_='form-control aot-modern-input', value=each_group.description or '', id='group_description_detail')}}
+        </div>
+      </div>
+    </div>
+
+    <div class="aot-modal-group-title">{{_('Members')}}</div>
+    <div class="aot-modal-container">
+      {% for user in users %}
+      <div class="aot-modal-option-row">
+        <label class="aot-modal-option-label">{{user.full_name or user.name}}</label>
+        <div class="aot-modal-option-control">
+          <label class="btn-toggle mb-0">
+            <input type="checkbox" name="group_members" value="{{user.unique_id}}"
+              class="btn-toggle-input"{% if user.unique_id in member_uuids %} checked{% endif %}>
+            <div class="btn-toggle-slider"><div class="btn-toggle-thumb"></div></div>
+          </label>
+        </div>
+      </div>
+      {% endfor %}
+      {% if not users %}
+      <div class="aot-modal-body-text">{{_('No users.')}}</div>
+      {% endif %}
+    </div>
+
+    <div class="aot-modal-group-title">{{_('Granted Resources')}}</div>
+    <div class="aot-modal-container">
+      {# 부여는 **여기서 편집하지 않는다.**
+
+         그룹은 적고 자원은 많다. 여기서 자원을 고르게 하면 목록이 자원 수만큼
+         길어져(실측: 탭 27 + 대시보드·지도·시설 = 56줄) 자원이 늘수록 못 쓰게
+         된다. 편집은 각 자원의 설정 모달에서 한다 — 거기서는 목록이 항상 그룹
+         수만큼이고, 무엇에 영향을 주는지가 눈앞에 있다.
+
+         이 목록을 남기는 이유는 **"이 그룹은 무엇을 조작하나" 라는 질문이
+         그룹 쪽에서 나오기 때문**이다. 답할 곳이 없으면 자원을 하나씩 열어
+         봐야 한다. #}
+      <div class="aot-modal-body-text">
+        {{_('Assign resources from each tab or resource settings dialog. This list is read-only.')}}
+      </div>
+    </div>
+    <div class="aot-modal-container">
+      {% if granted_resources %}
+      {% for row in granted_resources %}
+      <div class="aot-modal-option-row">
+        <label class="aot-modal-option-label">{{row['name']}}</label>
+        <div class="aot-modal-option-control">
+          <div class="form-control aot-entry-name-input">{{row['label']}}</div>
+        </div>
+      </div>
+      {% endfor %}
+      {% else %}
+      <div class="aot-modal-body-text">
+        {{_('This group has no resources yet. Everyone can still operate what is not assigned.')}}
+      </div>
+      {% endif %}
+    </div>
+
+  </div>
+
+  <div class="modal-footer">
+    <button type="button" class="btn aot-pill-btn" data-dismiss="modal">{{_('Close')}}</button>
+    {{form_user_groups.user_group_delete(class_='btn aot-pill-btn aot-pill-btn-danger',
+      **{'onclick':'return confirm("' + _('Are you sure you want to delete this group?') + '")'})}}
+    {{form_user_groups.user_group_save(class_='btn aot-pill-btn aot-pill-btn-primary')}}
+  </div>
+</form>

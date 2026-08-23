@@ -1,16 +1,13 @@
 /**
  * aot-map-popup.js
- * Shared popup utilities for AoT Map widgets (v3 + vector).
+ * Shared popup utilities for the AoT Map widget.
  *
- * Extracts the duplicated HTML builders, dot-positioning, and event-wiring
- * that previously existed separately in aot-map-widget-v3.js and
- * aot-map-widget-vector.js into a single authoritative module.
+ * Holds the HTML builders, dot-positioning, and event-wiring that the widget's
+ * popups share, in a single authoritative module.
  *
  * Public API: window.AoTMapPopup = {
  *   positionDots(containerEl)
- *   buildActuatorCat(catKey, catLabel, states, canCtrl, lastCmd, catKeyFn, savedOrder?)
  *   wire(containerEl, onControl, lastCmdRef)
- *   buildInput(devName, measurements, devId)
  * }
  *
  * @version 1
@@ -87,28 +84,8 @@
            '<div class="aot-ov-muted">' + _esc(msg) + '</div></div>';
   }
 
-  // ── buildActuatorCat ───────────────────────────────────────────────────────
-  // Build the innerHTML for a facility-level actuator category popup.
-  //
-  //   catKey    string  category key (e.g. 'envelope')
-  //   catLabel  string  display label
-  //   states    object  { slotKey: { name, kind, control_type, percent,
-  //                                   last_target_pct, last_target_source, on } }
-  //   canCtrl   bool    whether the current user may send control commands
-  //   lastCmd   object  { slotKey: cachedPercent }  (JS-session slider cache)
-  //   catKeyFn  function(kind) → catKey  (caller supplies its own mapping)
-  //   savedOrder array  user-defined slot order (flat list, all categories)
-  function buildActuatorCat(catKey, catLabel, states, canCtrl, lastCmd, catKeyFn, savedOrder) {
-    var rows = _buildCatRows(catKey, states, canCtrl, lastCmd, catKeyFn, savedOrder);
-    if (!rows) {
-      return _emptyBlock(_t('Actuators'), _t('No actuators'));
-    }
-    return '<div class="aot-act-group-header" data-cat="' + _esc(catKey) + '">' +
-           _esc(catLabel) + '</div>' + rows;
-  }
-
   // Build only the actuator rows for one category (no header). Returns '' when
-  // the category has no actuators. Shared by buildActuatorCat + buildActuatorTabs.
+  // the category has no actuators.
   function _buildCatRows(catKey, states, canCtrl, lastCmd, catKeyFn, savedOrder) {
     var allSlots = Object.keys(states);
     var ordered  = (window.AoTActuatorOrder)
@@ -127,6 +104,9 @@
     return html;
   }
 
+  // 탭 이름이 [환경·제어]이므로 카드가 그 둘을 가른다. **비어 있을 때만 제목을
+  // 내면 안 된다** — 값이 붙는 순간 제목이 사라져, 같은 자리가 상태에 따라 다른
+  // 화면이 된다(예전 동작). 어휘는 네 모달이 하나를 쓴다: 환경 / 제어.
   // ── buildActuatorTabs ───────────────────────────────────────────────────────
   // Build a single tabbed popup body covering every category that has at least
   // one actuator. Replaces the old "one chip per category" UI where each chip
@@ -135,7 +115,7 @@
   //   activeCatKey  string|null  category to show first (defaults to first
   //                              available); ignored if it has no actuators
   //   cats          array        [{ key, label }, ...] in display order
-  //   states/canCtrl/lastCmd/catKeyFn/savedOrder  same as buildActuatorCat
+  //   states/canCtrl/lastCmd/catKeyFn/savedOrder  see _buildCatRows
   //
   // Structure:
   //   .aot-act-tabs[data-active-cat]
@@ -149,7 +129,7 @@
     });
     var avail = cats.filter(function (c) { return (counts[c.key] || 0) > 0; });
     if (!avail.length) {
-      return _emptyBlock(_t('Actuators'), _t('No actuators'));
+      return _emptyBlock(_t('Control'), _t('No actuators'));
     }
     // Resolve active tab: keep requested one if it still has actuators.
     var active = avail.some(function (c) { return c.key === activeCatKey; })
@@ -168,7 +148,8 @@
                _buildCatRows(active, states, canCtrl, lastCmd, catKeyFn, savedOrder) +
                '</div>';
 
-    return '<div class="aot-act-tabs" data-active-cat="' + _esc(active) + '">' +
+    return '<div class="aot-ov-card-title">' + _esc(_t('Control')) + '</div>' +
+           '<div class="aot-act-tabs" data-active-cat="' + _esc(active) + '">' +
            nav + body + '</div>';
   }
 
@@ -197,7 +178,7 @@
     });
     var keys = Object.keys(groups);
     if (!keys.length) {
-      return _emptyBlock(_t('Sensors'), _t('No Measurements'));
+      return _emptyBlock(_t('Environment'), _t('No Measurements'));
     }
     keys.sort(function (a, b) {
       var ia = _SENSOR_KEY_ORDER.indexOf(a), ib = _SENSOR_KEY_ORDER.indexOf(b);
@@ -224,7 +205,8 @@
               '</div>';
     });
 
-    return '<div class="aot-act-tabs" data-active-cat="' + _esc(active) + '">' +
+    return '<div class="aot-ov-card-title">' + _esc(_t('Environment')) + '</div>' +
+           '<div class="aot-act-tabs" data-active-cat="' + _esc(active) + '">' +
            nav + '<div class="aot-act-tabs-body" data-cat="' + _esc(active) + '">' + rows + '</div></div>';
   }
 
@@ -943,39 +925,6 @@
     });
   }
 
-  // ── buildInput ────────────────────────────────────────────────────────────
-  // Build the popup body HTML for an input device (v3 device-level popup).
-  // The returned HTML starts with the title div and ends after the measurements.
-  // 노트 블록은 포함하지 않는다 — 필요하면 AoTNotesBlock.html() 을 덧붙인다.
-  //
-  //   devName       string
-  //   measurements  array of { id, meas_name|name, last_value, unit }
-  //   devId         device ID string (used to build span IDs for live refresh)
-  function buildInput(devName, measurements, devId) {
-    var html = '<div class="aot-popup-title">' + _esc(devName) + '</div>' +
-               '<hr class="aot-popup-divider">';
-    if (!measurements || !measurements.length) {
-      return html + '<div class="text-muted">' +
-             (window._ ? window._('No Measurements') : 'No Measurements') + '</div>';
-    }
-    measurements.forEach(function (m) {
-      var mName   = m.meas_name || m.name || '';
-      var mVal    = (m.last_value !== undefined && m.last_value !== null && m.last_value !== '')
-                  ? m.last_value : 'N/A';
-      var unitStr = m.unit || '';
-      if (unitStr === 'bearing') unitStr = '';
-
-      html += '<div class="aot-popup-row">' +
-              '<span class="aot-popup-row-label">' + _esc(mName) + '</span>' +
-              '<span style="text-align:right;white-space:nowrap;flex:0 0 auto;">' +
-              '<span id="popup-val-' + _esc(String(devId)) + '-' + _esc(String(m.id)) + '"' +
-              ' class="aot-popup-row-value">' + _esc(String(mVal)) + '</span>' +
-              (unitStr ? '<span class="aot-popup-unit">' + _esc(unitStr) + '</span>' : '') +
-              '</span></div>';
-    });
-    return html;
-  }
-
   // ── [현황] 탭 빌더들 ────────────────────────────────────────────────────────
   // env_summary(데몬 사이클 스냅샷) + status 를 4블록으로 요약 렌더.
   // 규격 정보는 의도적으로 배제 — "지금 무슨 일이 일어나는가"만.
@@ -1037,6 +986,37 @@
     return html + '</div>';
   }
 
+  // ── 섹션 탭 전환 (구역·필지·베이·구획이 공유) ──────────────────────────
+  // 셋이 각자 같은 토글을 들고 있었다. 탭을 하나 더 붙이거나 활성 표시 규칙을
+  // 바꾸면 세 곳을 고쳐야 하는데, 한 곳을 빠뜨려도 **그 계층에서만** 달라 보여
+  // 화면으로는 알아채기 어렵다.
+  //
+  // `navEl` 을 주면 그 안의 버튼만 토글한다 — 한 모달에 nav 가 둘 이상 있을 때
+  // (베이) 남의 nav 까지 끄지 않기 위해서다. pane 은 언제나 모달 전체에서 고른다.
+  function activateSection(scopeEl, key, navEl) {
+    if (!scopeEl || !key) return;
+    var btns = (navEl || scopeEl).querySelectorAll('.aot-act-tab-btn[data-sec]');
+    Array.prototype.forEach.call(btns, function (b) {
+      b.classList.toggle('active', b.dataset.sec === key);
+    });
+    Array.prototype.forEach.call(
+      scopeEl.querySelectorAll('.aot-bay-popup-pane'), function (p) {
+        p.style.display = (p.dataset.pane === key) ? '' : 'none';
+      });
+  }
+
+  // 탭 전환 **말고는 할 일이 없는** 모달용 배선(필지). 전환 뒤에 다른 일이
+  // 붙는 모달(구역·베이)은 자기 리스너 안에서 `activateSection` 만 부른다.
+  function wireSectionTabs(scopeEl) {
+    if (!scopeEl || scopeEl._sectionTabsWired) return;
+    scopeEl._sectionTabsWired = true;
+    scopeEl.addEventListener('click', function (e) {
+      var btn = e.target.closest('.aot-bay-popup-nav .aot-act-tab-btn[data-sec]');
+      if (!btn || !scopeEl.contains(btn)) return;
+      activateSection(scopeEl, btn.dataset.sec, btn.closest('.aot-bay-popup-nav'));
+    });
+  }
+
   // ── 시설 대표사진 / 치수 / 설명 블록 (섹션탭 바로 아래, 현황 pane 최상단) ──
   //   info: GET /api/aot/facility/<uuid>/info 응답
   function _ovInfoBlocks(info) {
@@ -1084,34 +1064,7 @@
               '<div class="aot-ov-block aot-ov-dims">' + rows + '</div>';
     }
 
-    // 설명 (편집/저장은 editor 이상 — can_edit)
-    var descView = info.description
-      ? _esc(info.description)
-      : '<span class="aot-ov-muted">' + _esc(_t('No description')) + '</span>';
-    // [편집]은 **블록 맨 아래 오른쪽**이다(.aot-ov-actions). 제목 줄은 무엇인지
-    // 말하는 자리이고 버튼은 다 읽은 뒤 누르는 것이라, 행동은 시선이 끝나는 곳에
-    // 모은다 — 구획 [편집]·[구획 추가]·[노트 열기]와 같은 규칙이다.
-    html += '<div class="aot-ov-card-title">' + _esc(_t('Description')) + '</div>' +
-            '<div class="aot-ov-block aot-ov-desc">' +
-            '<div class="aot-ov-desc-view">' + descView + '</div>' +
-            (info.can_edit
-              ? '<div class="aot-ov-desc-editwrap" style="display:none">' +
-                '<textarea class="aot-ov-desc-input" rows="3" maxlength="2000">' +
-                _esc(info.description || '') + '</textarea>' +
-                // [취소] [저장] 순. **오른쪽 끝이 기본 동작**이다 — 같은 모달의
-                // 구획 편집·구획 생성·단계 확인 폼이 전부 이 순서인데 여기만
-                // 거꾸로였다.
-                '<div class="aot-ov-desc-actions">' +
-                '<button type="button" class="aot-ov-pill aot-ov-desc-cancel">' +
-                _esc(_t('Cancel')) + '</button>' +
-                '<button type="button" class="aot-ov-pill aot-ov-pill--primary ' +
-                'aot-ov-desc-save">' + _esc(_t('Save')) + '</button>' +
-                '</div></div>' +
-                '<div class="aot-ov-actions">' +
-                '<button type="button" class="aot-ov-pill aot-ov-desc-edit">' +
-                _esc(_t('Edit')) + '</button></div>'
-              : '') +
-            '</div>';
+    html += buildDescriptionHtml(info.description, info.can_edit);
     return html;
   }
 
@@ -1368,6 +1321,49 @@
 
   // [개요] 섹션 — 정적 정보: 대표사진 / 시설 정보 / 설명 / 노트.
   //   info: GET /api/aot/facility/<uuid>/info 응답
+  /**
+   * 설명 블록 — **시설·필지가 같은 모양을 쓴다.**
+   *
+   * 예전에는 시설 전용이었다(`_ovInfoBlocks` 안). 필지에 같은 것을 다시 적으면
+   * 두 벌이 되고, [편집] 버튼 자리나 [취소]/[저장] 순서가 화면마다 갈린다 —
+   * 이 파일이 반복해서 겪은 실패다.
+   *
+   * 저장 배선은 호출자가 붙인다(엔드포인트가 다르다: 시설은
+   * `/api/aot/facility/<uuid>/info`, 도형은 `/api/geo/shape/<uuid>/description`).
+   * 마크업과 클래스 이름은 같으므로 배선 코드도 같은 모양이 된다.
+   */
+  function buildDescriptionHtml(description, canEdit) {
+    var descView = description
+      ? _esc(description)
+      : '<span class="aot-ov-muted">' + _esc(_t('No description')) + '</span>';
+    // [편집]은 **블록 맨 아래 오른쪽**이다(.aot-ov-actions). 제목 줄은 무엇인지
+    // 말하는 자리이고 버튼은 다 읽은 뒤 누르는 것이라, 행동은 시선이 끝나는 곳에
+    // 모은다 — 구획 [편집]·[구획 추가]·[노트 열기]와 같은 규칙이다.
+    return '<div class="aot-ov-card-title">' + _esc(_t('Description')) + '</div>' +
+           '<div class="aot-ov-block aot-ov-desc">' +
+           // 원본을 함께 남긴다 — [취소] 가 화면 글자를 되읽으면 "설명 없음"
+           // 이라는 **안내 문구**가 본문으로 저장된다.
+           '<div class="aot-ov-desc-view" data-raw="' + _esc(description || '') +
+           '">' + descView + '</div>' +
+           (canEdit
+             ? '<div class="aot-ov-desc-editwrap" style="display:none">' +
+               '<textarea class="aot-ov-desc-input" rows="3" maxlength="2000">' +
+               _esc(description || '') + '</textarea>' +
+               // [취소] [저장] 순. **오른쪽 끝이 기본 동작**이다 — 같은 모달의
+               // 구획 편집·구획 생성·단계 확인 폼이 전부 이 순서다.
+               '<div class="aot-ov-desc-actions">' +
+               '<button type="button" class="aot-ov-pill aot-ov-desc-cancel">' +
+               _esc(_t('Cancel')) + '</button>' +
+               '<button type="button" class="aot-ov-pill aot-ov-pill--primary ' +
+               'aot-ov-desc-save">' + _esc(_t('Save')) + '</button>' +
+               '</div></div>' +
+               '<div class="aot-ov-actions">' +
+               '<button type="button" class="aot-ov-pill aot-ov-desc-edit">' +
+               _esc(_t('Edit')) + '</button></div>'
+             : '') +
+           '</div>';
+  }
+
   function buildAboutSection(info) {
     return _ovInfoBlocks(info);
   }
@@ -1798,7 +1794,7 @@
     var _empty = (!readings.length && !sensors.total);
 
     var head = '<div class="aot-ov-card-title aot-ov-card-title--row">' +
-               '<span>' + _esc(_t('Now')) + '</span>' +
+               '<span>' + _esc(_t('Environment')) + '</span>' +
                '<span class="aot-ov-title-actions">';
     if (sensors.total && sensors.valid < sensors.total) {
       // 'Sensors' 를 쓰지 않는다 — 그 msgid 는 설정 화면에서 "센서류"(장치 분류)
@@ -2077,7 +2073,11 @@
     // 감싸지 않으면 제목 div만 남고 실제 기록·노트는 통째로 사라진다
     // (buildEnvNowHtml 의 같은 주석 참조).
     var html = '<div class="aot-ov-card">' +
-      '<div class="aot-ov-card-title">' + _esc(_t('Records')) + '</div>' +
+      // 제목은 **'노트'** 다. '기록' 은 이 블록이 담는 것(예정·노트)을 아우르는
+      // 말이지만, 사용자가 이 자리에서 하는 일은 노트를 읽고 쓰는 것 하나다 —
+      // 다른 이름으로 부르면 [노트 열기] 버튼과 제목이 서로 다른 것을 가리키는
+      // 것처럼 읽힌다. 모달마다 같은 말을 쓴다.
+      '<div class="aot-ov-card-title">' + _esc(_t('Notes')) + '</div>' +
       '<div class="aot-ov-block aot-ov-record">';
 
     html += '<div class="aot-ov-sub-title">' + _esc(_t('Coming up')) + '</div>';
@@ -2134,7 +2134,7 @@
     if (!alloc) return '';
     var items = alloc.plots || [];
     var html = '<div class="aot-ov-card-title">' +
-               _esc(_t('Plots here')) + '</div>' +
+               _esc(_t('Plots')) + '</div>' +
                '<div class="aot-ov-block aot-ov-zone-plots">';
 
     if (!items.length) {
@@ -2163,12 +2163,14 @@
       // 프로그램의 숫자가 비교되는 것처럼 보인다. 순번은 구획 모달이 갖는다.
       if (p.stage_name) right.push(_esc(p.stage_name));
       // 줄을 누르면 그 구획 모달로 내려간다(필지 → 구역과 같은 규약).
-      html += '<div class="aot-ov-row aot-ov-plot-link" ' +
+      html += '<div class="aot-ov-row aot-ov-plot-link' +
+              (p.planned ? ' aot-ov-row--planned' : '') + '" ' +
               'data-plot-uuid="' + _esc(p.unique_id) + '" ' +
               'style="cursor:pointer"><span>' +
               _esc(p.subject || p.name || '—') +
               (p.variety ? ' <span class="aot-ov-muted">· ' +
                            _esc(p.variety) + '</span>' : '') +
+              _plannedBadge(p) +
               '</span><span>' + right.join(' · ') + '</span></div>';
     });
 
@@ -2299,6 +2301,16 @@
     return '';
   }
 
+  // 아직 시작 전이라는 표식. **날짜가 아니라 남은 날**로 쓴다 — 날짜는 사람이
+  // 오늘과 빼야 하고, 목록의 모든 줄에서 그 뺄셈이 반복된다.
+  function _plannedBadge(p) {
+    if (!p || !p.planned) return '';
+    return ' <span class="aot-ov-planned">' +
+           _esc(p.days_until_start != null
+                ? _t('In %(n)s days').replace('%(n)s', String(p.days_until_start))
+                : _t('Planned')) + '</span>';
+  }
+
   function buildFacilityPlotsHtml(rows, bayId, opts) {
     opts = opts || {};
     var items = (rows || []).filter(function (p) {
@@ -2326,7 +2338,11 @@
     }
     items.forEach(function (p) {
       var right = [];
-      if (p.days_since_planted != null) {
+      // **아직 시작 전이면 그 사실을 먼저 말한다.** 자라는 것과 예정된 것이 같은
+      // 줄로 읽히면 "이 동에 지금 무엇이 있나" 라는 이 목록의 질문에 틀린 답을
+      // 하게 된다. 날짜가 아니라 남은 날로 쓴다 — 날짜는 사람이 오늘과 빼야
+      // 하고, 그 뺄셈이 목록의 모든 줄에서 반복된다.
+      if (!p.planned && p.days_since_planted != null) {
         right.push(_esc(_t('Day %(n)s').replace('%(n)s',
                                                 String(p.days_since_planted))));
       }
@@ -2340,62 +2356,47 @@
       // 구역 뷰에서 "시설 전체" 인 것은 그렇다고 밝힌다 — 그러지 않으면 이 구역
       // 전용으로 읽힌다.
       if (bayId && !p.bay_id) right.push(_esc(_t('Whole facility')));
-      html += '<div class="aot-ov-row aot-ov-plot-link" ' +
+      html += '<div class="aot-ov-row aot-ov-plot-link' +
+              (p.planned ? ' aot-ov-row--planned' : '') + '" ' +
               'data-plot-uuid="' + _esc(p.unique_id) + '" ' +
               'style="cursor:pointer"><span>' +
               _esc(p.subject || p.name || '—') +
               (p.variety ? ' <span class="aot-ov-muted">· ' +
                            _esc(p.variety) + '</span>' : '') +
+              _plannedBadge(p) +
               '</span><span>' + right.join(' · ') + '</span></div>';
       html += _timelineHtml(p.timeline);
     });
 
     if (opts.canEdit) {
-      // 심기 폼 — 구획 모달의 편집 폼과 같은 골격(aot-modal-option-row +
-      // aot-modern-input)을 쓴다. 기하를 묻지 않는 것이 핵심이다: 시설에서는
-      // 구역을 고르는 것이 자리를 정하는 일이다.
+      // 심기 폼 — **공용 컴포넌트 한 벌**(`common/aot-plot-form.js`)을 쓴다.
+      // 예전에는 이 화면·시설 편집기·geo/design 이 각자 적고 있어서 필드 집합이
+      // 서로 달랐다(몫은 여기만, 프로그램은 여기만 없었다).
+      // 기하를 묻지 않는 것이 시설 구획의 핵심이다: 구역을 고르는 것이 자리를
+      // 정하는 일이다 — 그것은 `target: 'facility'` 가 정한다.
       var _fr = function (label, control) {
         return '<div class="aot-modal-option-row">' +
                '<div class="aot-modal-option-label">' + _esc(label) + '</div>' +
                '<div class="aot-modal-option-control">' + control + '</div></div>';
       };
-      var bays = opts.bays || [];
-      var zoneCtl = '';
-      if (bays.length) {
-        var o = '<option value=""' + (bayId ? '' : ' selected') + '>' +
-                _esc(_t('Whole facility')) + '</option>';
-        bays.forEach(function (b) {
-          o += '<option value="' + _esc(b.id) + '"' +
-               (b.id === bayId ? ' selected' : '') + '>' +
-               _esc(b.name || b.id) + '</option>';
-        });
-        zoneCtl = _fr(_t('Zone'), '<select class="aot-modern-input form-control" ' +
-                                  'data-nf="bay_id">' + o + '</select>') +
-                  _fieldHint(_t('Facility settings'),
-                             '/geo/facility', opts.canDesign);
-      }
-      var _in = function (field, type, val) {
-        return '<input type="' + type + '" class="aot-modern-input form-control" ' +
-               'data-nf="' + field + '" value="' + _esc(val || '') + '">';
-      };
-      // 노트 버튼과 **같은 컴포넌트·같은 자리**(오른쪽 아래). 예전에는 이쪽만
-      // `aot-pill-btn` 이라 같은 모달 안에서 두 버튼의 높이·색이 달랐다.
-      // 재배 프로그램 — 선택지는 **비운 채로** 낸다. 위젯이 폼을 열 때
-      // `AoTMapPlot.refreshProgramChoices` 로 채운다(빌더는 순수 함수라 스스로
-      // 조회하지 않는다는 이 파일의 규약, 위 구획 모달과 같다). 비워 두는 편이
-      // 안전하기도 하다 — 목록은 **종류에 따라 달라지고**, 종류가 다른 프로그램을
-      // 붙이면 서버가 거절한다(단계·목표 해석이 통째로 어긋나기 때문).
-      var progCtl = _fr(_t('Program'),
-                        '<select class="aot-modern-input form-control" ' +
-                        'data-nf="program_uuid"><option value="">' +
-                        _esc(_t('No program')) + '</option></select>');
+      var formRows = (window.AoTPlotForm && window.AoTPlotForm.rowsHtml)
+        ? window.AoTPlotForm.rowsHtml({
+            attr: 'data-nf',
+            target: 'facility',
+            bays: opts.bays || [],
+            bayId: bayId,
+            capacities: opts.capacities || {},
+            canDesign: opts.canDesign,
+            today: opts.today || ''
+          })
+        : '';
 
       // 남은 몫 + 총량 설정. 총량이 없으면 "적어 두면 4/12 로 읽힌다" 를
       // 사람이 알 길이 없으므로 **없을 때도** 설정 버튼을 낸다.
       var capRow = '<div class="aot-ov-alloc-bar">' +
                    '<span class="aot-ov-muted aot-ov-alloc-left"></span>' +
                    '<button type="button" class="aot-ov-pill aot-ov-cap-edit">' +
-                   _esc(_t('Zone capacity')) + '</button></div>' +
+                   _esc(_t('Bay capacity')) + '</button></div>' +
                    '<div class="aot-ov-cap-wrap" style="display:none">' +
                    '<div class="aot-modal-container">' +
                    _fr(_t('Unit'),
@@ -2426,39 +2427,7 @@
               '<button type="button" class="aot-ov-pill aot-ov-plot-add">' +
               _esc(_t('Add a plot')) + '</button></div>' +
               '<div class="aot-ov-plot-new-wrap" style="display:none">' +
-              '<div class="aot-modal-container">' +
-              zoneCtl +
-              _fr(_t('Kind'), _kindSelect('data-nf="kind"', 'vegetation')) +
-              progCtl +
-              _fieldHint(_t('Create a new program'), '/geo/programs',
-                         opts.canDesign) +
-              // `_fr` 은 라벨을 이스케이프한다 — HTML 을 넘기면 태그가 그대로
-              // 화면에 찍힌다. 라벨은 **문자열**로만 넘긴다.
-              _fr(_plotSubjectLabel(null), _in('subject', 'text', '')) +
-              _fr(_plotVarietyLabel(null), _in('variety', 'text', '')) +
-              _fr(_t('Start date'), _in('started_on', 'date', opts.today || '')) +
-              _fr(_t('Expected end'), _in('expected_end_on', 'date', '')) +
-              // 구역 안에서의 몫(p6_50) — 같은 구역에 둘 이상 심을 때 서로를
-              // 가르는 유일한 값이다. 입력은 **숫자 하나**고, 그것이 수량인지
-              // 비율인지는 그 구역에 총량이 적혀 있는지가 정한다(접미 표시가
-              // 말해 준다). 두 칸으로 나누면 사람이 어느 쪽에 적을지 고르게
-              // 되는데, 그 선택은 시설이 이미 한 것이다.
-              _fr(_t('Share'),
-                  '<span class="aot-ov-alloc-input">' +
-                  '<input type="number" min="0" step="any" ' +
-                  'class="aot-modern-input form-control" ' +
-                  'data-nf="allocation_value" value="">' +
-                  '<span class="aot-ov-alloc-suffix"></span></span>') +
-              // 총량이 없으면 몫이 %로만 적힌다. 그 사실과 고치는 방법을
-              // 여기서 말하지 않으면 사용자는 %가 유일한 방식인 줄 안다.
-              // (설계 화면 링크가 아니라 **같은 카드 안**을 가리키므로 권한과
-              //  무관하게 보인다 — 총량은 이 화면에서 고친다.)
-              '<div class="aot-modal-option-row aot-ov-field-hint ' +
-              'aot-ov-alloc-hint" style="display:none">' +
-              '<div class="aot-modal-option-label"></div>' +
-              '<div class="aot-modal-option-control">' +
-              _esc(_t('Set the zone capacity below to enter it as a count')) +
-              '</div></div>' +
+              '<div class="aot-modal-container">' + formRows +
               '</div>' +
               '<div class="aot-ov-desc-actions">' +
               '<button type="button" class="aot-ov-pill aot-ov-plot-new-cancel">' +
@@ -2573,6 +2542,200 @@
   function _wallClockString(d) {
     return d.getFullYear() + '-' + _pad2(d.getMonth() + 1) + '-' + _pad2(d.getDate()) +
            'T' + _pad2(d.getHours()) + ':' + _pad2(d.getMinutes());
+  }
+
+  /**
+   * 작기 종료 — **끝내는 일과 이어가는 일을 한 창에서** 정한다.
+   *
+   * 예전에는 `confirm()` 한 줄이었고 문구가 "지도에서 사라지고 이력으로만
+   * 남습니다" 였다. 둘 다 틀렸다:
+   *
+   *  - 도형은 **지워지지 않는다.** `end_plot` 은 행도 기하도 남기고 종료일만
+   *    적는다. 그런데 문구가 삭제로 읽혀 사람이 종료를 못 눌렀다.
+   *  - 수확이 끝났다고 그 자리가 없어지지 않는다 — 휴지기·정지·다음 작기가
+   *    이어진다. 종료와 생성을 따로 하게 두면 그 사이에 도형을 다시 그리고
+   *    몫을 다시 적어야 하고(노지는 측량까지), 그 왕복이 곧 자리를 잃는 것이다.
+   *
+   * 그래서 [비워 둔다 / 쉬어 간다 / 이어서 심는다] 셋 중 하나를 고르게 한다.
+   * 뒤 둘은 서버가 한 번에 처리한다(`/succeed`).
+   */
+  function openPlotEnd(opts) {
+    opts = opts || {};
+    var shell = opts.shell;
+    var p = opts.plot || {};
+    if (!shell || !p.unique_id) return;
+
+    var today = new Date();
+    var iso = function (d) {
+      return d.getFullYear() + '-' +
+             String(d.getMonth() + 1).padStart(2, '0') + '-' +
+             String(d.getDate()).padStart(2, '0');
+    };
+    var endDefault = iso(today);
+
+    var progOpts = '<option value="">' + _esc(_t('No program')) + '</option>';
+    (p.program_choices || []).forEach(function (x) {
+      progOpts += '<option value="' + _esc(x.unique_id) + '"' +
+                  (x.unique_id === p.program_uuid ? ' selected' : '') + '>' +
+                  _esc(x.name + (x.variety ? ' · ' + x.variety : '')) +
+                  '</option>';
+    });
+
+    var _row = function (label, control) {
+      return '<div class="aot-modal-option-row">' +
+             '<div class="aot-modal-option-label">' + _esc(label) + '</div>' +
+             '<div class="aot-modal-option-control">' + control + '</div></div>';
+    };
+    var _choice = function (val, label, note) {
+      return '<label class="aot-pe-choice">' +
+             '<input type="radio" name="aot-pe-next" value="' + val + '"' +
+             (val === 'none' ? ' checked' : '') + '>' +
+             '<span class="aot-pe-choice-text"><b>' + _esc(label) + '</b>' +
+             (note ? '<span class="aot-ov-muted">' + _esc(note) + '</span>' : '') +
+             '</span></label>';
+    };
+
+    var html =
+      '<div class="aot-sensor-popup-header"><b>' +
+        _esc(_t('End this plot')) + ' — ' +
+        _esc(p.subject || p.name || '') + '</b></div>' +
+      '<div class="aot-bay-popup-pane">' +
+        '<div class="aot-ov-block">' +
+          _row(_t('End date'),
+               '<input type="date" class="aot-modern-input form-control ' +
+               'aot-pe-end" value="' + endDefault + '">') +
+          _row(_t('Reason'),
+               '<select class="aot-modern-input form-control aot-pe-reason">' +
+               '<option value="harvested">' + _esc(_t('Harvested')) + '</option>' +
+               '<option value="failed">' + _esc(_t('Lost')) + '</option>' +
+               '<option value="replaced">' + _esc(_t('Replaced')) + '</option>' +
+               '<option value="removed">' + _esc(_t('Removed')) + '</option>' +
+               '</select>') +
+        '</div>' +
+        // **자리는 남는다.** 그 사실을 문장 하나로 먼저 말한다 — 이 창에서
+        // 사람이 가장 알고 싶은 것이 "지워지나" 이기 때문이다.
+        '<div class="aot-ov-card-title">' + _esc(_t('And then?')) + '</div>' +
+        '<div class="aot-ov-block">' +
+          '<div class="aot-ov-muted aot-pe-note">' +
+            _esc(_t('The plot stays as history either way. Nothing is deleted.')) +
+          '</div>' +
+          _choice('none', _t('Leave it empty'),
+                  _t('The place is free for something else.')) +
+          _choice('rest', _t('Rest for a while'),
+                  _t('Same place, no program — while it rests or gets ready.')) +
+          _choice('next', _t('Start the next one'),
+                  _t('Same place and share — pick what comes next.')) +
+          '<div class="aot-pe-next-fields" style="display:none">' +
+            _row(_t('Item'),
+                 '<input type="text" class="aot-modern-input form-control ' +
+                 'aot-pe-subject" value="">') +
+            _row(_t('Program'),
+                 '<select class="aot-modern-input form-control aot-pe-prog">' +
+                 progOpts + '</select>') +
+            _row(_t('Start date'),
+                 '<input type="date" class="aot-modern-input form-control ' +
+                 'aot-pe-start" value="">') +
+          '</div>' +
+        '</div>' +
+        '<div class="aot-pe-status aot-ov-muted" style="text-align:center"></div>' +
+      '</div>' +
+      '<div class="modal-footer">' +
+        '<button type="button" class="btn aot-pill-btn aot-pe-cancel">' +
+          _esc(_t('Cancel')) + '</button>' +
+        '<button type="button" class="btn aot-pill-btn aot-pill-btn-primary ' +
+          'aot-pe-ok">' + _esc(_t('End')) + '</button>' +
+      '</div>';
+
+    var popup = shell(html, 'plot-end-' + p.unique_id);
+    var el = popup.getElement();
+    var q = function (sel) { return el.querySelector(sel); };
+    var endIn = q('.aot-pe-end');
+    var fields = q('.aot-pe-next-fields');
+    var subjIn = q('.aot-pe-subject');
+    var progIn = q('.aot-pe-prog');
+    var startIn = q('.aot-pe-start');
+    var status = q('.aot-pe-status');
+
+    // **"휴경" 은 중립어가 아니다** — 경작을 전제한 말이라 축사·시설에는 틀리다.
+    // 종류마다 부르는 말이 따로 있고, 그 표는 `AoTPlotLabels` 한 곳에 있다.
+    var restName = (window.AoTPlotLabels && window.AoTPlotLabels.resting)
+      ? window.AoTPlotLabels.resting(p.kind) : _t('Resting');
+
+    var mode = function () {
+      var r = el.querySelector('input[name="aot-pe-next"]:checked');
+      return r ? r.value : 'none';
+    };
+    // 시작일 기본값은 **종료 다음 날**이다. 같은 날로 두면 하루가 두 작기에
+    // 걸치는데, 이 도메인은 겹침이 정상이라 서버가 막지 않는다 — 기본값이
+    // 잘못되면 조용히 이상한 이력이 쌓인다.
+    var nextDay = function () {
+      var d = new Date((endIn.value || endDefault) + 'T00:00:00');
+      if (isNaN(d)) return endDefault;
+      d.setDate(d.getDate() + 1);
+      return iso(d);
+    };
+    var sync = function () {
+      var m = mode();
+      fields.style.display = (m === 'next') ? '' : 'none';
+      startIn.value = nextDay();
+      // 이름은 **고쳐 쓸 수 있는 기본값**이다. 화면이 정한 말을 데이터에 박아
+      // 넣지 않는다(휴지기를 부르는 말이 곳마다 다르다 — 정지·건조·전작 정리).
+      //
+      // 비워 두면 안 된다: 제출은 빈 칸을 원본 품목으로 폴백하므로, 화면은
+      // 비었는데 저장되는 값은 다른 것이 된다.
+      if (m === 'rest') {
+        if (!subjIn.value || subjIn.value === p.subject) {
+          subjIn.value = restName;
+        }
+      } else if (m === 'next') {
+        if (!subjIn.value || subjIn.value === restName) {
+          subjIn.value = p.subject || '';
+        }
+      }
+    };
+    el.querySelectorAll('input[name="aot-pe-next"]').forEach(function (r) {
+      r.addEventListener('change', sync);
+    });
+    endIn.addEventListener('change', sync);
+    sync();
+
+    q('.aot-pe-cancel').addEventListener('click', function () {
+      try { popup.remove(); } catch (e) {}
+    });
+
+    q('.aot-pe-ok').addEventListener('click', function () {
+      var btn = this;
+      var m = mode();
+      var body = {
+        ended_on: endIn.value || endDefault,
+        reason: q('.aot-pe-reason').value || 'harvested'
+      };
+      var url = '/api/geo/plot/' + encodeURIComponent(p.unique_id) + '/end';
+      if (m !== 'none') {
+        url = '/api/geo/plot/' + encodeURIComponent(p.unique_id) + '/succeed';
+        body.started_on = startIn.value || nextDay();
+        if (m === 'rest') {
+          body.subject = subjIn.value || restName;
+          // 프로그램 **없음**을 명시한다. 키를 빼면 서버는 물려받는다.
+          body.program_uuid = null;
+          body.variety = null;
+        } else {
+          body.subject = subjIn.value || p.subject || '';
+          body.program_uuid = progIn.value || null;
+        }
+      }
+      btn.disabled = true;
+      status.textContent = '';
+      if (typeof opts.submit === 'function') {
+        opts.submit(url, body, function (err) {
+          btn.disabled = false;
+          if (err) { status.textContent = err; return; }
+          try { popup.remove(); } catch (e) {}
+          if (typeof opts.onDone === 'function') opts.onDone(m);
+        });
+      }
+    });
+    return popup;
   }
 
   function openOutputSchedule(opts) {
@@ -2927,10 +3090,24 @@
            val + '</span></div>';
   }
 
-  function _pPane(key, active, inner) {
+  // 로딩 자리막이. 바 개수는 **부르는 쪽이 정한다** — 자리막이가 들어설 내용보다
+  // 짧으면 값이 오는 순간 창이 튀고, 길어도 마찬가지라 자리마다 다른 것이 맞다.
+  // 여기서 한곳에 두는 것은 **모양**이다(예전에는 구역용과 베이용 두 벌이 따로
+  // 있었고, 한쪽에만 바가 하나 더 붙은 채 갈라져 있었다).
+  function skeleton(widths) {
+    var w = widths || ['w60', 'w80', 'w40'];
+    var html = '<div class="aot-ov-skel">';
+    w.forEach(function (c) { html += '<div class="aot-ov-skel-bar ' + c + '"></div>'; });
+    return html + '</div>';
+  }
+
+  // nav 와 **짝**이다. 한쪽만 공용으로 두면 탭을 늘릴 때 pane 쪽만 각자 짓게 되어
+  // 다시 갈라진다(실제로 구역·필지가 그 상태였다).
+  function sectionPane(key, active, inner) {
     return '<div class="aot-bay-popup-pane" data-pane="' + key + '"' +
            (key === active ? '' : ' style="display:none"') + '>' + inner + '</div>';
   }
+  var _pPane = sectionPane;
 
   function buildPlotModal(p, opts) {
     p = p || {};
@@ -2981,6 +3158,52 @@
     var stg = p.stage;
     var tl  = p.timeline;
 
+    // ⓪ 아직 시작 전(계획) — **축은 그대로 그린다.** 계획을 세우는 사람이 알고
+    //    싶은 것은 "언제부터" 만이 아니라 "어떤 단계로 얼마나" 이고, 그 구조는
+    //    프로그램에 이미 있다. 축을 빼면 그것을 볼 자리가 어디에도 없다.
+    //
+    //    다만 **오늘 마커도 현재 단계 강조도 두지 않는다.** 아직 아무 단계도
+    //    아니라서, 마커를 왼쪽 끝에 세우면 "이제 막 시작했다" 로 읽힌다.
+    //    (서버가 `today_pct: null` · 모든 단계 `current: false` 로 낸다.)
+    //    값 자리와 눈금 가운데가 "며칠 뒤 시작" 을 말한다.
+    if (p.planned) {
+      var untilTxt = (p.days_until_start != null)
+        ? _t('Starts in %(n)s days').replace('%(n)s', String(p.days_until_start))
+        : _t('Planned');
+      if (tl && (tl.stages || []).length) {
+        rows.push(V.timeline({
+          label: _t('Plan'),
+          valueText: untilTxt,
+          valueSub: tl.total_days ? ('/ ' + String(tl.total_days)) : '',
+          segments: tl.stages.map(function (st) {
+            return {
+              span: Math.max(0, (st.to_pct || 0) - (st.from_pct || 0)),
+              name: st.name
+              // `current` 를 주지 않는다 — 아직 아무 단계도 아니다.
+            };
+          }),
+          // 마커 없음. `AoTViz` 는 위치가 null 이면 그리지 않는다.
+          positionPct: null,
+          scale: [
+            _axisDate(tl.start || p.started_on),
+            // anchor 로 두지 않는다 — 가리킬 지점이 축 위에 없다. 흐름에 두면
+            // 세 칸이 고르게 놓여 가운데가 실제 가운데다.
+            untilTxt,
+            _axisDate(tl.end || p.expected_end_on) || _t('open-ended')
+          ]
+        }));
+      } else {
+        // 프로그램이 없는 계획 — 단계가 없으니 날짜만 말한다.
+        rows.push(_pRow(_t('Starts on'), _esc(p.started_on || '—')));
+        if (p.days_until_start != null) {
+          rows.push(_pRow(_t('Until start'),
+                          _esc(_t('%(n)s days').replace('%(n)s',
+                               String(p.days_until_start)))));
+        }
+      }
+      return V.group(rows);
+    }
+
     // ① 기간 축 — **서버가 만든 단계 목록을 그대로 쓴다**(plot_context.timeline).
     //    단계 길이·기준점(P5)·"끝까지" 처리가 전부 서버 규칙이라, 여기서 다시
     //    조립하면 두 곳이 곧 갈린다. 단계 이름은 트랙 위에 늘어선다.
@@ -3002,9 +3225,9 @@
         positionPct: Math.min(100, Math.max(0, pct)),
         // 눈금 문자열은 AoTViz 가 이스케이프한다 — 여기서 또 하면 &amp; 가 뜬다.
         scale: [
-          String(tl.start || '').replace(/-/g, '/'),
+          _axisDate(tl.start),
           { text: _t('Today'), anchor: true },
-          tl.end ? String(tl.end).replace(/-/g, '/') : _t('open-ended')
+          _axisDate(tl.end) || _t('open-ended')
         ]
       }));
       // 예정을 넘긴 사실은 **자르지 않고 말한다**(넘겼다는 것 자체가 정보다).
@@ -3031,12 +3254,12 @@
             segments: [{ span: el, current: true }, { span: rest }],
             positionPct: (el / span) * 100,
             scale: [
-              p.started_on || _t('Start'),
+              _axisDate(p.started_on) || _t('Start'),
               { text: (left != null && left < 0)
                   ? _t('%(n)s days overdue').replace('%(n)s', String(-left))
                   : _t('Today'),
                 anchor: true },
-              p.expected_end_on || _t('Expected end')
+              _axisDate(p.expected_end_on) || _t('Expected end')
             ]
           }));
         }
@@ -3073,6 +3296,17 @@
   // 상황에서도 숫자는 남아야 한다.
   function _plotProgressRows(p) {
     var html = '';
+    // 계획은 위 `_plotProgressHtml` 과 같은 것을 말한다 — 폴백만 다르게 두면
+    // 프리미티브가 없는 환경에서 그 구획이 빈 카드로 보인다.
+    if (p.planned) {
+      html += _pRow(_t('Starts on'), _esc(p.started_on || '—'));
+      if (p.days_until_start != null) {
+        html += _pRow(_t('Until start'),
+                      _esc(_t('%(n)s days').replace('%(n)s',
+                           String(p.days_until_start))));
+      }
+      return html;
+    }
     if (p.days_since_planted != null) {
       var n = String(p.days_since_planted);
       html += _pRow(p.ended_on ? _t('Grown for') : _t('Days elapsed'),
@@ -3111,17 +3345,81 @@
     return html;
   }
 
+  // 단계 지침은 재배 지침서에서 옮겨 온 산문이라 길다(서버가 4000자까지 받는다).
+  // 펼친 채로 두면 [진행] 카드 하나가 화면을 넘겨 그 아래 [환경]·[노트]가 밀린다.
+  // 그래서 **접어 둔다** — 있다는 사실은 버튼이 말하고, 읽을 사람만 편다.
+  //
+  // `<details>` 를 쓰는 이유는 상태가 DOM 에 있어서다. 펼침을 JS 로 관리하면
+  // 이 pane 이 다시 그려질 때(폴링) 되살리는 코드가 따로 필요하고, 그 코드가
+  // 빠지면 "펼쳐 놓았는데 30초마다 접힌다" 가 된다.
+  // 노트에 붙은 **마지막 사진**. 목록이 아니라 한 장이다 — 여러 장을 늘어놓으면
+  // 그 아래 [진행]·[환경] 이 화면 밖으로 밀리고, "지금 어떻게 생겼나" 라는 질문에는
+  // 가장 최근 한 장이면 답이 된다. 나머지는 [노트] 가 갖는다.
+  //
+  // **사진이 없으면 아무것도 내지 않는다**(대부분의 구획이 그렇다). 빈 카드는
+  // 자리만 차지하고 아무 말도 하지 않는다.
+  var _PHOTO_EXT = /\.(png|jpe?g|gif|webp|bmp|heic|heif)$/i;
+
+  function latestNotePhoto(notes) {
+    if (!Array.isArray(notes)) return null;
+    for (var i = 0; i < notes.length; i++) {          // 응답이 최신순이다
+      var f = (notes[i] && notes[i].files) || '';
+      var parts = String(f).split(',');
+      for (var j = 0; j < parts.length; j++) {
+        var rel = parts[j].trim();
+        // 동영상도 같은 칸에 담긴다 — 사진만 고른다(재생 UI 를 여기 두지 않는다).
+        if (rel && _PHOTO_EXT.test(rel)) {
+          return { url: '/note_attachment/' + rel, note: notes[i] };
+        }
+      }
+    }
+    return null;
+  }
+
+  function buildPhotoCardHtml(photo) {
+    if (!photo) return '';
+    return '<div class="aot-ov-card-title">' + _esc(_t('Latest photo')) + '</div>' +
+           '<div class="aot-ov-block aot-ov-photo">' +
+           '<img src="' + _esc(photo.url) + '" alt="" loading="lazy">' +
+           '</div>';
+  }
+
+  // 축 눈금의 날짜. **한 곳에서 정한다** — 분기마다 적으면 같은 축에 두 형식이
+  // 선다(실측: 시작 '2026/09/22' 옆에 종료 '2027-01-18'). 연도를 남기는 것이
+  // 핵심이다: 해를 넘기는 작기(월동·과수)에서 '12/20 → 3/15' 는 거꾸로 읽힌다.
+  function _axisDate(v) {
+    return v ? String(v).replace(/-/g, '/') : '';
+  }
+
+  function _plotGuidanceHtml(stg) {
+    if (!stg || !stg.guidance) return '';
+    return '<details class="aot-ov-guide">' +
+           '<summary class="aot-ov-pill aot-ov-guide-btn">' +
+           _esc(_t('Guidance')) + '</summary>' +
+           '<div class="aot-ov-guidance">' + _esc(stg.guidance) + '</div>' +
+           '</details>';
+  }
+
   function _plotOverviewHtml(p) {
     // 제목은 목록 쪽('심겨 있는 것')과 달라야 한다 — 같은 말을 쓰면 블록
     // 제목과 첫 행 라벨이 겹쳐 "심겨 있는 것 / 심은 것" 으로 읽힌다.
-    var html = '<div class="aot-ov-card-title">' + _esc(_t('Right now')) +
-               '</div><div class="aot-ov-block">';
+    // 최신 사진 — 카드 **위**에 둔다. 이 화면에서 가장 먼저 확인하는 것이
+    // "지금 어떻게 생겼나" 이고, 그 답은 숫자가 아니라 사진이다. 값은 별도
+    // 조회(노트)라 자리만 잡고 위젯이 채운다([현재] 자리와 같은 방식).
+    var html = '<div data-slot="photo"></div>';
+
+    html += '<div class="aot-ov-card-title">' + _esc(_t('Progress')) +
+            '</div><div class="aot-ov-block">';
 
     // 대상·시작일·예상 종료일은 [개요] 가 맡는다 — 바뀌지 않는 사실이고,
     // 두 탭에 같은 행을 두면 어느 쪽이 정본인지 사람이 매번 확인하게 된다.
     html += _plotProgressHtml(p);
     var _stg = p.stage;
     html += _plotGddRows(_stg);
+    // 단계 지침 — 타임라인 바로 아래, **같은 카드 안**이다. 이 시기에 무엇이
+    // 중요한지는 단계를 본 그 자리에서 읽혀야 한다(AI 를 안 쓰는 사용자에게는
+    // 여기가 유일한 자리다).
+    html += _plotGuidanceHtml(_stg);
     html += '</div>';
 
     // 현재 환경 — 구역·시설 [현황]과 **같은 자리, 같은 블록**이다. 값은 별도
@@ -3168,12 +3466,6 @@
     // 목표가 사라진 것은 아니다 — 지금 값이 있는 항목은 [현재] 의 눈금이
     // 그대로 답한다("그래서 지금 맞나" 까지 함께).
     //
-    // 단계 지침 — AI 를 안 쓰는 사용자도 이 시기에 무엇이 중요한지 여기서 읽는다.
-    if (_stg && _stg.guidance) {
-      html += '<div class="aot-ov-card-title">' + _esc(_t('Guidance')) +
-              '</div><div class="aot-ov-block"><div class="aot-ov-guidance">' +
-              _esc(_stg.guidance) + '</div></div>';
-    }
     var _rs = _plotStageResourceRows(_stg);
     if (_rs) {
       html += '<div class="aot-ov-card-title">' + _esc(_t('Resources')) +
@@ -3215,7 +3507,8 @@
     // 자리는 여기다.**
     // 제목은 첫 행 라벨('심은 것')과 달라야 한다 — 같으면 "심은 것 / 심은 것"
     // 으로 읽힌다([현황]에서 한 번 겪은 것과 같은 문제).
-    var html = '<div class="aot-ov-card-title">' + _esc(_t('Basics')) + '</div>' +
+    var html = _plotDimsHtml(p) +
+            '<div class="aot-ov-card-title">' + _esc(_t('Basics')) + '</div>' +
             '<div class="aot-ov-block aot-ov-plot-info">';
 
     html += '<div class="aot-ov-plot-view">';
@@ -3242,8 +3535,16 @@
              '<div class="aot-modal-option-control">' + control + '</div></div>';
     };
     var _inp = function (field, type, val) {
-      return '<input type="' + type + '" class="aot-modern-input form-control" ' +
-             'data-pf="' + field + '" value="' + _v(val) + '">';
+      var html = '<input type="' + type + '" class="aot-modern-input form-control" ' +
+                 'data-pf="' + field + '" value="' + _v(val) + '">';
+      // 종료일은 비울 수 있어야 한다("종료 미정" 이 정상인 대상이 있다). iOS 는
+      // 날짜 입력을 비울 수단을 주지 않으므로 [지우기] 를 함께 낸다 — 마크업은
+      // 공용 폼의 것을 그대로 빌린다(`AoTPlotForm.clearableDate`).
+      if (type === 'date' && field !== 'started_on' &&
+          window.AoTPlotForm && window.AoTPlotForm.clearableDate) {
+        return window.AoTPlotForm.clearableDate(html, field);
+      }
+      return html;
     };
 
     // 시설 구획은 **구역이 곧 위치**다. 노지 구획은 도형을 옮겨 자리를 바꾸지만
@@ -3341,7 +3642,6 @@
 
     html += _plotProgramHtml(p);
     html += _plotPlaceHtml(p);
-    html += _plotDimsHtml(p);
 
     // 이 자리 이력 — 연작 장해·윤작 판단의 근거. 도형과 함께 잘 안 변하는
     // 사실이라 [개요]에 둔다(채우는 것은 fillPlotHistory).
@@ -3610,18 +3910,22 @@
 
   window.AoTMapPopup = {
     buildPlotModal:  buildPlotModal,
+    latestNotePhoto:    latestNotePhoto,
+    buildPhotoCardHtml: buildPhotoCardHtml,
     buildFacilityPlotsHtml: buildFacilityPlotsHtml,
-    plotDefaultSec:  plotDefaultSec,
     fillPlotHistory: fillPlotHistory,
     positionDots:      positionDots,
     openOutputSchedule: openOutputSchedule,
-    buildActuatorCat:  buildActuatorCat,
+    openPlotEnd:        openPlotEnd,
     buildActuatorTabs: buildActuatorTabs,
     emptyBlock:        _emptyBlock,
     buildSensorTabs:   buildSensorTabs,
     wire:              wire,
-    buildInput:       buildInput,
     buildSectionNav:       buildSectionNav,
+    activateSection:       activateSection,
+    wireSectionTabs:       wireSectionTabs,
+    sectionPane:           sectionPane,
+    skeleton:              skeleton,
     buildOverviewSection:  buildOverviewSection,
     buildHazardsHtml:      buildHazardsHtml,
     buildIrrigationHtml:   buildIrrigationHtml,
@@ -3629,6 +3933,7 @@
     buildZoneStatusHtml:   buildZoneStatusHtml,
     buildRecordBlock:      buildRecordBlock,
     buildZoneAboutHtml:    buildZoneAboutHtml,
+    buildDescriptionHtml:  buildDescriptionHtml,
     buildEnvNowHtml:       buildEnvNowHtml,
     envRowChoices:         envRowChoices,
     controlRowChoices:     controlRowChoices,
@@ -3649,9 +3954,7 @@
     upIconHtml:            upIconHtml,
     applyTimeSlot:         applyTimeSlot,
     seedTimeSlot:          seedTimeSlot,
-    wireTimeSlots:         wireTimeSlots,
-    nextRunHtml:           nextRunHtml,
-    refreshOutputScheduleLabel: refreshOutputScheduleLabel
+    nextRunHtml:           nextRunHtml
   };
 
 })();

@@ -32,7 +32,13 @@
         return {
             src:  'aot-plot-src-' + uid,
             fill: 'aot-plot-fill-' + uid,
-            line: 'aot-plot-line-' + uid
+            line: 'aot-plot-line-' + uid,
+            // 계획(시작 전)은 **별도 레이어**다. `line-dasharray` 는 MapLibre 에서
+            // data-driven 을 지원하지 않아 한 레이어에서 `['case', …]` 로 가를 수
+            // 없다 — 실선/점선을 나누려면 레이어를 나누는 수밖에 없다.
+            // 이름은 그대로 `aot-plot-` 으로 시작해야 한다(레이어 컨트롤이 이름을
+            // 보고 켜고 끈다 — 위 주석 참조).
+            linePlanned: 'aot-plot-line-planned-' + uid
         };
     }
 
@@ -113,6 +119,9 @@
                     plot_uuid: p.unique_id,
                     subject: p.subject || '',
                     color: c,
+                    // 아직 시작 전 — 레이어가 이 값으로 점선/옅은 채움을 고른다.
+                    // (MapLibre 의 `['get']` 은 boolean 을 그대로 읽는다.)
+                    planned: !!p.planned,
                     // 글자색은 여기서 함께 실어야 한다 — symbol 레이어의
                     // ['get','label_color'] 가 이 값을 읽는다. 빠뜨리면 글자가
                     // 기본 검정으로 떨어져 "도형색 하나로" 라는 규칙이 깨진다.
@@ -155,7 +164,12 @@
         if (!map || !opts.mapUuid) return Promise.resolve([]);
         _loadPrograms();
 
-        return fetch('/api/geo/plots?map_uuid=' + encodeURIComponent(opts.mapUuid))
+        // **계획(시작 전)도 함께 받는다.** 자리를 정하는 일이 곧 계획이고,
+        // 그 자리를 정하는 화면이 지도다 — 만들자마자 사라지면 무엇을 어디에
+        // 두었는지 확인할 방법이 없다. 자라는 것과는 **점선**으로 가른다
+        // (`planned` 속성 → 레이어 paint).
+        return fetch('/api/geo/plots?include_planned=1&map_uuid=' +
+                     encodeURIComponent(opts.mapUuid))
             .then(function (r) { return r.json(); })
             .then(function (res) {
                 if (!res || !res.ok) return [];
@@ -189,7 +203,7 @@
             if (document.hidden) return;
             var cur = STATE[uid];
             if (!cur || !cur.opts) return;
-            fetch('/api/geo/plots?map_uuid=' +
+            fetch('/api/geo/plots?include_planned=1&map_uuid=' +
                   encodeURIComponent(cur.opts.mapUuid || ''))
                 .then(function (r) { return r.json(); })
                 .then(function (res) {
@@ -215,12 +229,27 @@
                     paint: {
                         'fill-color': ['get', 'color'],
                         // 겹침(간작·혼작)이 정상이라 옅게 — 진하면 아래가 안 보인다.
-                        'fill-opacity': 0.22
+                        // 계획은 한 번 더 옅다. **감추지는 않는다** — 자리를
+                        // 잡아 둔 사실이 보여야 다음 구획을 어디에 둘지 정한다.
+                        'fill-opacity': ['case', ['get', 'planned'], 0.10, 0.22]
                     }
                 });
                 map.addLayer({
                     id: id.line, type: 'line', source: id.src,
+                    filter: ['!', ['to-boolean', ['get', 'planned']]],
                     paint: { 'line-color': ['get', 'color'], 'line-width': 1.5 }
+                });
+                // **점선이 "아직 아니다" 를 말한다.** 색을 바꾸거나 흐리게만
+                // 하면 "멀리 있는 것"·"값이 낡은 것" 과 구별되지 않는다(이
+                // 지도는 이미 흐림을 stale 에 쓰고 있다).
+                map.addLayer({
+                    id: id.linePlanned, type: 'line', source: id.src,
+                    filter: ['to-boolean', ['get', 'planned']],
+                    paint: {
+                        'line-color': ['get', 'color'],
+                        'line-width': 1.5,
+                        'line-dasharray': [2, 2]
+                    }
                 });
                 // **구획 도형에는 클릭을 걸지 않는다** — 모달을 여는 것은
                 // 라벨뿐이고, 이는 지도 전체의 규칙이다(필지·구역·시설도
@@ -229,13 +258,29 @@
                 // 팬을 시작하려고 짚은 것까지 창이 떴다. 커서도 pointer 로
                 // 바꾸지 않는다 — 누를 수 없는 것을 누를 수 있다고 말하는 셈이다.
             }
+            // 레이어가 방금 생겼다면 그 전에 정해진 뜻을 여기서 반영한다 —
+            // 새로고침 직후 위젯이 `setShapeVisible(false)` 를 먼저 부르는데,
+            // 그때는 아직 레이어가 없어 `setLayoutProperty` 가 아무것도 못 한다.
+            var _stv = (STATE[uid] || {}).shapeVisible;
+            if (_stv === false) setShapeVisible(uid, map, false);
         } catch (e) {
             console.warn('[AoT Map] 식생 레이어 렌더 실패:', e);
             return;
         }
 
         _renderLabels(uid, map, rows, opts);
-        setVisible(uid, map, opts.visible !== false);
+        // ⚠ **도형 축만 적용한다.** 예전에는 `setVisible`(도형+라벨)을 불렀는데,
+        // `opts.visible` 은 도형 옵션(`show_plots`, [도형] 그룹)이다. 그래서 렌더가
+        // 돌 때마다 도형 옵션이 라벨 축을 덮어썼다 — **라벨 토글을 켜 두어도
+        // 새로고침하면 라벨이 안 나오고**(도형이 꺼져 있으면), 5분 주기 갱신에서도
+        // 같은 일이 반복됐다. 구획만 둘이 묶여 있던 마지막 자리다.
+        //
+        // 라벨 축의 주인은 위젯의 라벨 토글(`label_hidden_plot`)이고, 그 값은
+        // `setLabelVisible` 로 들어와 `st.labelVisible` 에 남아 있다. 여기서
+        // 건드리지 않으면 방금 만든 라벨에도 `_renderLabels` 끝의
+        // `_applyLabelZoom` 이 그 값을 그대로 적용한다.
+        setShapeVisible(uid, map, opts.visible !== false);
+        (STATE[uid] = STATE[uid] || {}).visible = opts.visible !== false;
     }
 
     // ── 라벨 ────────────────────────────────────────────────────────────────
@@ -334,10 +379,23 @@
             if (!pos) return;
 
             var el = document.createElement('div');
-            el.className = 'aot-sensor-map-marker aot-bay-chip aot-plot-chip';
+            // 계획은 라벨에서도 갈린다 — 도형만 점선으로 두면 라벨이 자라는
+            // 것과 똑같아, 라벨만 보고 읽는 사람에게는 아무 차이가 없다.
+            el.className = 'aot-sensor-map-marker aot-bay-chip aot-plot-chip' +
+                           (p.planned ? ' aot-plot-chip--planned' : '');
             el.innerHTML = '<div class="aot-bay-chip-name"></div>';
             el.querySelector('.aot-bay-chip-name').textContent = p.subject;
             el.style.fontSize = _labelEm(opts) + 'em';
+            // **위젯의 라벨 관리에 등록한다.** 이 종류를 새기지 않으면 위젯의
+            // 줌 게이트(`[data-label-kind]` 를 훑는다)·쌓임·충돌이 이 라벨을
+            // 아예 못 본다 — 구획 라벨이 그동안 그 밖에 있었다(자체 줌 규칙만
+            // 있었고, 시설·장치 라벨이 다 접힌 축척에서 홀로 남았다).
+            // 값은 위젯의 `LABEL_Z` / `LABEL_ZOOM_GATED` 가 쓰는 이름과 같아야
+            // 한다(`plot`).
+            el.dataset.labelKind = 'plot';
+            // 임시 표시(focus)가 이 칩을 uuid 로 찾는다 — 그 구획의 모달이
+            // 열려 있는 동안은 라벨을 꺼 두었어도 보여야 한다.
+            el.dataset.plotUuid = p.unique_id;
             // 배경은 그 구획의 색 — 어느 구획의 이름인지 색으로 드러난다.
             el.style.background = _color(p);
             el.style.color = _readableOn(_color(p));
@@ -371,7 +429,9 @@
     function _applyLabelZoom(uid, map) {
         var st = STATE[uid];
         if (!st || !st.markers) return;
-        var show = (st.visible !== false) &&
+        // 라벨의 표시는 **라벨 축**과 줌만 본다. 예전에는 `st.visible`(도형까지
+        // 함께 뜻하던 값)을 봐서 도형을 끄면 라벨도 사라졌다.
+        var show = (st.labelVisible !== false) &&
                    (map.getZoom() >= (st.labelMinZoom || 16));
         st.markers.forEach(function (m) {
             try { m.getElement().style.display = show ? '' : 'none'; } catch (e) {}
@@ -385,23 +445,58 @@
         return _luminance(rgb) > 0.45 ? '#1a1a1a' : '#ffffff';
     }
 
-    /** 도형·라벨 표시 토글. custom option 과 레이어 컨트롤이 함께 쓴다. */
-    function setVisible(uid, map, visible) {
+    /**
+     * 도형만 켜고 끈다.
+     *
+     * **라벨은 건드리지 않는다** — 다른 계층(대지·구역·시설)은 레이어 컨트롤에서
+     * 도형과 라벨이 따로 있는데 구획만 하나로 묶여 있었다. 도형을 끄면 라벨까지
+     * 사라져, "구획이 어디에 있는지는 감추되 이름은 남기고 싶다" 를 할 수 없었다.
+     */
+    function setShapeVisible(uid, map, visible) {
         var id = _ids(uid);
         var v = visible ? 'visible' : 'none';
-        [id.fill, id.line].forEach(function (lid) {
+        [id.fill, id.line, id.linePlanned].forEach(function (lid) {
             try {
                 if (map.getLayer(lid)) map.setLayoutProperty(lid, 'visibility', v);
             } catch (e) { /* 아직 안 올라간 레이어 */ }
         });
+        // 라벨과 같은 이유로 조건 없이 적어 둔다 — 레이어가 아직 없어도 뜻은
+        // 남아야 `_render` 가 만들 때 그대로 따른다.
+        (STATE[uid] = STATE[uid] || {}).shapeVisible = !!visible;
+    }
+
+    /** 라벨만 켜고 끈다. 줌 게이트와는 **다른 축**이다(둘 다 꺼야 보이지 않는다).
+     *
+     * 라벨 축만 켜고 끈다.
+     *
+     * ⚠ **아직 이 위젯을 모를 때 불릴 수 있다.** 위젯은 새로고침 직후 저장된
+     * 라벨 상태를 되살리려고 500·1500·3000ms 에 이것을 부르는데, 구획은 그때까지
+     * 서버에서 안 왔을 수 있다. 예전에는 `if (st)` 라 그 호출이 **조용히 버려졌고**,
+     * 뒤늦게 렌더된 라벨은 아무도 끈 적 없다는 듯 켜진 채 나왔다 — "토글을 꺼
+     * 두고 새로고침하면 되돌아온다" 가 그 증상이다. 상태 칸을 먼저 만들어 두면
+     * 나중에 렌더될 때 `_applyLabelZoom` 이 그 값을 그대로 따른다.
+     */
+    function setLabelVisible(uid, map, visible) {
+        var st = STATE[uid] = STATE[uid] || {};
+        st.labelVisible = !!visible;
+        _applyLabelZoom(uid, map);
+    }
+
+    /** 도형·라벨을 함께 내리는 큰 스위치.
+     *
+     * ⚠ **렌더 경로에서 부르지 말 것.** `show_plots` 는 [도형] 그룹의 옵션이라
+     * 그것으로 라벨까지 내리면 라벨 토글이 매 렌더마다 지워진다. 둘을 한 번에
+     * 다뤄야 하는 바깥 호출자를 위해 남겨 둔다. */
+    function setVisible(uid, map, visible) {
+        setShapeVisible(uid, map, visible);
         var st = STATE[uid];
         if (st) st.visible = !!visible;
-        _applyLabelZoom(uid, map);      // 라벨은 DOM 마커라 따로 숨긴다
+        setLabelVisible(uid, map, visible);
     }
 
     function isVisible(uid) {
         var st = STATE[uid];
-        return !st || st.visible !== false;
+        return !st || st.shapeVisible !== false;
     }
 
     // 레이어 컨트롤(지도 우측 패널)의 '식생' 체크박스와 상태를 맞춘다.
@@ -415,7 +510,8 @@
         if (d.layerId !== 'plot') return;
         Object.keys(STATE).forEach(function (uid) {
             var st = STATE[uid];
-            if (st) st.visible = !!d.visible;
+            // 그 컨트롤이 만지는 것은 **도형 레이어**뿐이다 — 라벨 축은 따로다.
+            if (st) { st.visible = !!d.visible; st.shapeVisible = !!d.visible; }
             if (st && st.opts) st.opts.visible = !!d.visible;
         });
     });
@@ -509,8 +605,12 @@
                 p.program_choices = _programs[_k] || [];
                 // 열 탭: 명시 지정(저장 후 복귀) > 위젯 옵션 popup_default_tab.
                 var want = opts.openTab || opts.defaultTab;
+                // 세 번째 인자 = **열려 있는 동안 보이게 할 대상**. 사용자가
+                // 구획 라벨·도형을 꺼 두었어도 이 창이 떠 있는 동안은 보인다 —
+                // 어디 이야기인지 지도에서 못 찾으면 창 안의 값이 어느 자리
+                // 것인지 알 수 없다. (셸이 닫힐 때 스스로 거둔다.)
                 var popup = shell(popupApi.buildPlotModal(
-                    p, { defaultTab: want }), uid);
+                    p, { defaultTab: want }), uid, p.unique_id);
                 // 연 구획이 보이도록 지도를 옮긴다. 옮기는 것은 위젯의 일이라
                 // (카메라 여백이 패널 폭을 알아야 한다) 콜백으로 위임한다.
                 // 도형은 응답의 feature 에 실려 온다 — 구획 소스는 이 모듈이
@@ -547,6 +647,11 @@
                         name: p.name || p.subject || ''
                     });
                 }
+
+                // 최신 사진 — [현황] 맨 위. **이 구획의 노트만** 본다
+                // (`descendants` 를 켜면 구역 사진이 구획 사진인 것처럼 보인다).
+                // 사진이 없으면 자리 자체를 비워 둔다.
+                _fillLatestPhoto(body, p.unique_id);
 
                 // 이 자리 이력 — 기하 교차라 POST 다(폴리곤이 URL 에 안 들어간다).
                 var st = STATE[uid] || {};
@@ -591,6 +696,34 @@
     }
 
     /**
+     * [현황] 맨 위의 최신 사진.
+     *
+     * 노트 목록은 이미 `AoTNotesBlock` 이 같은 엔드포인트로 받는다. 그래도 여기서
+     * 한 번 더 부르는 이유는 그 블록이 자기 DOM 안에서만 그리기 때문이다 — 사진을
+     * 카드 위로 올리려면 응답이 이쪽에도 있어야 한다. (한 번의 왕복을 아끼려고
+     * 블록에 콜백을 뚫으면 노트 블록이 이 화면 전용 지식을 갖게 된다.)
+     *
+     * **같은 사진이면 노드를 그대로 둔다.** 이 pane 은 다시 그려질 수 있는데,
+     * `<img>` 를 매번 새로 만들면 그때마다 사진이 한 번 깜빡인다.
+     */
+    function _fillLatestPhoto(body, plotUuid) {
+        var slot = body && body.querySelector('[data-slot="photo"]');
+        var P = window.AoTMapPopup;
+        if (!slot || !P || !P.latestNotePhoto) return;
+        fetch('/notes/target/' + encodeURIComponent(plotUuid),
+              { cache: 'no-store' })
+            .then(function (r) { return r.json(); })
+            .then(function (notes) {
+                if (!slot.isConnected) return;
+                var photo = P.latestNotePhoto(notes);
+                var cur = slot.querySelector('img');
+                if (photo && cur && cur.getAttribute('src') === photo.url) return;
+                slot.innerHTML = P.buildPhotoCardHtml(photo);
+            })
+            .catch(function () { /* 사진은 곁들이다 — 실패해도 나머지는 그대로 */ });
+    }
+
+    /**
      * 모달의 정보 편집 배선 — 보기 ↔ 편집 토글, 저장, 재배 종료.
      *
      * 저장하면 지도 레이어도 함께 갱신한다(작물 이름이 라벨이고 색이 도형색이라
@@ -601,6 +734,12 @@
         var form = body.querySelector('.aot-ov-plot-edit-wrap');
         var btnEdit = body.querySelector('.aot-ov-plot-edit');
         if (!view || !form || !btnEdit) return;
+
+        // 날짜 [지우기] — 이 폼은 아직 공용 폼(`AoTPlotForm.wire`)을 지나지
+        // 않으므로 배선을 직접 부른다. 마크업은 이미 공용 조각이다.
+        if (window.AoTPlotForm && window.AoTPlotForm.wireDateClear) {
+            window.AoTPlotForm.wireDateClear(form);
+        }
 
         // 숨기는 것은 버튼이 아니라 **버튼이 든 행**이다(.aot-ov-actions).
         // 버튼만 숨기면 빈 행이 남아 편집 중에만 블록 아래가 벌어진다.
@@ -744,18 +883,69 @@
         // 말하고 한 번 더 묻는다.
         var btnEnd = body.querySelector('.aot-ov-plot-end');
         if (btnEnd) btnEnd.addEventListener('click', function () {
-            var msg = _t('End this plot?') + '\n\n' +
-                      _t('It disappears from the map and stays only as history. ' +
-                         'This cannot be undone here.');
-            if (!window.confirm(msg)) return;
+            // 창을 띄운다 — 끝내는 일과 **이어가는 일**을 함께 정한다.
+            // (예전에는 confirm 한 줄이었고, 그 문구가 "도형이 지워진다" 로
+            //  읽혀 사람이 종료를 못 눌렀다. 실제로는 아무것도 안 지워진다.)
+            var P = window.AoTMapPopup;
+            if (P && P.openPlotEnd && opts && typeof opts.shell === 'function') {
+                P.openPlotEnd({
+                    shell: opts.shell,
+                    plot: p,
+                    submit: function (url, body, done) {
+                        _api('POST', url, body).then(function (res) {
+                            if (res.status >= 400 || !res.data || !res.data.ok) {
+                                done((res.data &&
+                                      (res.data.message || res.data.error)) ||
+                                     _t('Save failed'));
+                                return;
+                            }
+                            done(null);
+                        }).catch(function () { done(_t('Save failed')); });
+                    },
+                    onDone: function () {
+                        // 목록·지도를 새로 받는다. 이어심기를 골랐으면 새 구획이
+                        // 그 자리에 서 있어야 한다.
+                        var st2 = STATE[uid] || {};
+                        load(uid, map, st2.opts || opts || {});
+                        var ov2 = document.getElementById(
+                            'aot-facility-ctrl-overlay-' + uid);
+                        if (ov2) ov2.remove();
+                    }
+                });
+                return;
+            }
+            // 폴백 — 공용 모달이 없으면 예전 방식으로라도 끝낼 수 있어야 한다.
+            if (!window.confirm(_t('End this plot?'))) return;
+            btnEnd.disabled = true;
             _api('POST', '/api/geo/plot/' + p.unique_id + '/end',
                  { reason: 'harvested' }).then(function (res) {
-                if (res.status >= 400 || !res.data.ok) return;
+                btnEnd.disabled = false;
+                if (res.status >= 400 || !res.data || !res.data.ok) {
+                    // **조용히 삼키지 않는다.** 권한 거부(edit_plots)나 검증
+                    // 실패(종료일이 시작일보다 빠름)가 여기로 온다 — 아무 말이
+                    // 없으면 사용자는 눌렀는데 아무 일도 안 일어난 것으로 읽고,
+                    // 그때 원인을 알 방법이 없다.
+                    var m = (res.data && (res.data.message || res.data.error)) ||
+                            _t('Save failed');
+                    if (window.showToast) window.showToast(m, 'error');
+                    return;
+                }
                 // 종료하면 기본 목록에서 빠지므로 지도에서도 사라진다.
                 var st = STATE[uid] || {};
                 load(uid, map, st.opts || opts || {});
+
+                // **상위로 되돌린다.** 시설·구역 목록에서 들어온 사람은 그
+                // 목록으로 돌아가야 "빠졌구나" 를 본다 — 모달을 그냥 닫으면
+                // 지도만 남아서 화면상으로는 아무 일도 안 일어난 것과 구별되지
+                // 않는다. 뒤로가기 배선을 그대로 쓴다(복귀 경로가 두 벌이 되면
+                // 갈라진다). 상위가 없으면(버튼이 숨겨져 있으면) 닫는다.
+                var up = body.querySelector('.aot-modal-up');
+                if (up && !up.hidden) { up.click(); return; }
                 var ov = document.getElementById('aot-facility-ctrl-overlay-' + uid);
                 if (ov) ov.remove();
+            }).catch(function () {
+                btnEnd.disabled = false;
+                if (window.showToast) window.showToast(_t('Save failed'), 'error');
             });
         });
     }
@@ -779,9 +969,16 @@
         load: load,
         rehydrate: rehydrate,
         setVisible: setVisible,
+        setShapeVisible: setShapeVisible,
+        setLabelVisible: setLabelVisible,
         isVisible: isVisible,
         openModal: openModal,
         refreshProgramChoices: refreshProgramChoices,
+        // 공용 폼(`AoTPlotForm.wire`)이 `loadPrograms(kind) -> Promise<list>` 를
+        // 받는다. 목록 캐시가 여기 있으므로 조회는 계속 이 모듈이 맡는다 —
+        // 화면마다 따로 받으면 같은 목록이 여러 벌 돌고, 종류를 바꿀 때마다
+        // 화면 수만큼 왕복이 난다.
+        loadPrograms: _loadPrograms,
         state: function (uid) { return STATE[uid]; }
     };
 })();

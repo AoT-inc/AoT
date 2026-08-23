@@ -18,7 +18,8 @@ from aot.functions.utils.env_control.coordinator import (
 from aot.functions.utils.env_control.data_hygiene import DataHygieneChecker
 from aot.functions.utils.env_control.greybox.params import GreyboxParams
 from aot.functions.utils.env_control.greybox.shadow import GreyboxShadow
-from aot.functions.utils.env_control.ext_context_fallback import build_fallback_context
+from aot.functions.utils.env_control.ext_context_fallback import (
+    build_fallback_context, carry_forward_outdoor)
 from aot.functions.utils.env_control.goal import build_env_target
 from aot.functions.utils.env_control.group_expander import expand_group_commands
 from aot.functions.utils.env_control.log_channels import (
@@ -540,9 +541,13 @@ class CycleMixin:
                 external = dict(_shared)
                 # situation.py 는 'T'/'RH'/'CO2' 키를 읽으나 ext_context_collector 는
                 # 'T_ext'/'RH_ext'/'CO2_ext' 로 저장하므로 양쪽 키를 맞춰준다.
-                external.setdefault('T',   _shared.get('T_ext',   20.0))
-                external.setdefault('RH',  _shared.get('RH_ext',  60.0))
-                external.setdefault('CO2', _shared.get('CO2_ext', 400.0))
+                # **값이 없으면 키를 만들지 않는다** — 없는 실외값을 20°C/60% 로
+                # 지어내면 아래 캐시 승계도, P2-2 의 fallback 컨텍스트도 발동하지
+                # 못한 채 그 상수가 그대로 제어로 흘러간다(아래 긴 주석 참조).
+                for _src, _dst in (('T_ext', 'T'), ('RH_ext', 'RH'), ('CO2_ext', 'CO2')):
+                    _v = _shared.get(_src)
+                    if _v is not None and _dst not in external:
+                        external[_dst] = _v
             else:
                 external = {}
         except Exception:
@@ -584,12 +589,49 @@ class CycleMixin:
                 if _od_cache.get('solar_wm2') is not None:
                     external['solar'] = _od_cache['solar_wm2']
                     _od_fresh = True
+                # ── 마지막 유효 실외값을 기억한다 (2026-08-22) ─────────────────
+                # 실외 센서가 값을 준 사이클에는 **무조건** 캐시를 채운다. 아래
+                # `if not ext_stale:` 안에서만 갱신하면, ext_context_collector 가
+                # 없는 설치에서는 캐시가 영원히 빈 채로 남는다 — `_shared` 가 {}
+                # 라 `last_ext_ts` 가 0.0 이고, 그러면 `ext_stale` 이 항상 True 라
+                # 갱신 분기에 도달하지 못하기 때문이다. 정작 값이 빈 순간에
+                # 기댈 것이 없어진다.
+                if (_od_cache.get('T_ext') is not None
+                        or _od_cache.get('RH_ext') is not None):
+                    self._ext_cache.update(
+                        {k: v for k, v in external.items() if v is not None},
+                        now=time.time())
+
                 # facility 실외 센서가 신선한 값을 제공하면 외부 컨텍스트를 신선으로 갱신.
                 # (직접 센서가 만료돼 동결됐더라도 facility 가 live source 이면 정상 처리)
                 if _od_fresh:
                     external['last_ext_ts'] = time.time()
             except Exception:
                 pass
+
+        # ── 실외값이 이번 사이클에 비면 **마지막 유효값으로 잇는다** ────────────
+        # 없는 값을 지어내는 것과 마지막 실측을 잠깐 더 쓰는 것은 전혀 다르다.
+        # `situation.py` 는 external 에 'T'/'RH' 가 없으면 20°C/60% 를 기본값으로
+        # 만들어 넣는데(그 파일의 EnvContext 구성부), 그 가짜 실외는 VPD 0.93 이라
+        # 실내(0.32)보다 높다 → "창을 열면 건조해진다" 로 읽혀 환기 무익 게이트가
+        # 풀리고 창이 열린다. 실제 실외(23°C/96%, VPD 0.11)면 정반대다.
+        #
+        # 2026-08-22 aot-005 새벽 창호 진동의 원인이 이것이다. 기상대 관측이
+        # 간헐적으로 최대 31분 벌어지는데(중앙값 60초) `sensor_max_age`(1200초)를
+        # 넘긴 사이클마다 이 가짜 실외가 들어가 40분 주기로 창이 열렸다 닫혔다 했다.
+        # 실측 리플레이: 가짜 실외가 뜬 야간 사이클 10회 = 창이 열린 10회, 1:1 대응.
+        # 고친 뒤 같은 입력에서 10회 → 0회.
+        #
+        # 밤사이 실외는 천천히 변하므로 20~30분 된 실측이 지어낸 상수보다 비교할
+        # 수 없이 낫다. 캐시조차 비어 있으면 손대지 않는다 — 그 경우는 아래 P2-2
+        # 의 fallback 컨텍스트가 맡는다. (판정은 `carry_forward_outdoor` 에 있다 —
+        # 인라인으로 두면 단위 검증이 안 되고, 이 결함은 조용해서 검증이 필요하다.)
+        _carried = carry_forward_outdoor(
+            external, getattr(self._ext_cache, 'values', None) or {})
+        if _carried and getattr(self, 'debug_logging', False):
+            self.logger.debug(
+                'EnvCoordinator: 실외 %s 를 마지막 유효값으로 승계 (관측 지연)',
+                ','.join(_carried))
 
         # P2-2: 외부 컨텍스트 신선도 확인 — 유효하면 캐시 갱신, 만료면 fallback 준비
         now_ts      = time.time()

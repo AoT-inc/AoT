@@ -392,34 +392,63 @@ def api_plots_list():
 
     `facility_uuid` 로 시설 하나의 구획만 받을 수 있다(시설 편집기용).
     """
-    map_uuid = request.args.get('map_uuid')
-    if not map_uuid:
-        return jsonify({'ok': False, 'message': 'map_uuid required'}), 400
+    # `map_uuid` 는 **선택**이다. 없으면 전체 지도 — 운영 페이지(`/plots`)가
+    # "이번 철에 무엇을 어디에 심었나" 를 한눈에 보려면 지도 경계를 넘어야
+    # 한다. 지도 위젯은 계속 자기 지도만 넘긴다.
+    map_uuid = request.args.get('map_uuid') or None
 
     on = _parse_on(request.args.get('on'))
     include_ended = request.args.get('include_ended') in ('1', 'true', 'True')
+    # 시작일이 아직 오지 않은 구획(계획). **기본은 끈다** — 이 엔드포인트를
+    # 지도 레이어가 그대로 쓰고 있어서, 켜 두면 아직 심지 않은 것이 지도에
+    # 그려진다. 목록 화면(`/plots`)만 켜서 부른다.
+    include_planned = request.args.get('include_planned') in ('1', 'true', 'True')
     # 시설 편집기가 자기 시설의 구획만 받기 위한 필터. 지도 전체를 받아
     # 클라이언트에서 거르면 시설 하나를 여는 데 지도 전량이 실린다.
     facility_uuid = request.args.get('facility_uuid') or None
 
     if include_ended:
-        rows = GeoPlot.query.filter_by(geo_id=map_uuid).order_by(
-            GeoPlot.started_on.desc()).all()
+        q = GeoPlot.query
+        if map_uuid:
+            q = q.filter_by(geo_id=map_uuid)
+        rows = q.order_by(GeoPlot.started_on.desc()).all()
     else:
-        rows = plot_context.active_plots(map_uuid, on=on)
+        rows = plot_context.active_plots(map_uuid, on=on,
+                                         include_planned=include_planned)
     if facility_uuid:
         rows = [r for r in rows if r.facility_uuid == facility_uuid]
 
     # 컨테이너를 한 번만 준비한다 — 구획마다 다시 훑으면 지도 도형 전량
     # 스캔이 행 수만큼 반복된다.
+    #
+    # 전체 조회(map_uuid 없음)에서는 **지도별로** 한 벌씩 만든다. 하나로 합치면
+    # 다른 지도의 zone 이 이 구획을 품은 것으로 잡힌다 — 좌표가 겹치는 지도가
+    # 실제로 있다(같은 농장을 두 지도로 보는 구성).
     from aot.aot_flask.geo import device_membership
-    containers = device_membership.load_containers(map_uuid)
+    container_cache = {}
+
+    def _containers_for(gid):
+        if gid not in container_cache:
+            container_cache[gid] = device_membership.load_containers(gid)
+        return container_cache[gid]
+
     # 시설 조회도 같은 이유로 한 벌만 — 시설 구획마다 GeoFacility+GeoShape 를
     # 다시 읽으면 행 수만큼 반복된다.
     facilities = {}
 
-    items = [plot_context.to_dict(r, containers=containers,
-                                      facilities=facilities) for r in rows]
+    items = [plot_context.to_dict(r, containers=_containers_for(r.geo_id),
+                                     facilities=facilities) for r in rows]
+    # 지도 이름 — 전체 조회에서는 "어느 지도의 구획인가" 가 목록의 핵심 축이다.
+    # 항목마다 GeoMap 을 다시 읽지 않도록 한 번에 만든다.
+    map_names = {}
+    try:
+        from aot.databases.models import GeoMap
+        for m in GeoMap.query.all():
+            map_names[m.unique_id] = m.name or m.unique_id
+    except Exception:                                       # noqa: BLE001
+        map_names = {}
+    for it in items:
+        it['map_name'] = map_names.get(it.get('geo_id'))
     return jsonify({'ok': True, 'plots': items, 'count': len(items)})
 
 
@@ -682,6 +711,9 @@ def _build_facility_plot_contents(row):
             'bay_name': bay.get('name'),
             'zone_uuid': sensors.get('zone_uuid'),
             'zone_name': sensors.get('zone_name'),
+            # 그 도형이 실제로 무엇인지 — 'zone' | 'site'. 화면이 어느 창을
+            # 열지 정하는 근거다(`sensors_for_plot` 주석 참조).
+            'zone_kind': sensors.get('zone_kind'),
             # 카드에서 뺄 항목 — 시설의 설정을 그대로 쓴다(위 주석).
             'hidden_rows': _inherited_hidden_rows(
                 facility_uuid=fac.get('unique_id')),
@@ -874,6 +906,9 @@ def _build_plot_contents(plot_uuid):
             'active': row.is_active(),
             'zone_uuid': sensors.get('zone_uuid'),
             'zone_name': sensors.get('zone_name'),
+            # 그 도형이 실제로 무엇인지 — 'zone' | 'site'. 화면이 어느 창을
+            # 열지 정하는 근거다(`sensors_for_plot` 주석 참조).
+            'zone_kind': sensors.get('zone_kind'),
             # 카드에서 뺄 항목 — 구역의 설정을 그대로 쓴다(위 주석).
             'hidden_rows': _inherited_hidden_rows(
                 zone_uuid=sensors.get('zone_uuid')),
@@ -1031,6 +1066,45 @@ def api_plot_copy(plot_uuid):
         status = 404 if 'not found' in error.lower() else 400
         return jsonify({'ok': False, 'message': error}), status
     return jsonify({'ok': True, 'plot': result})
+
+
+@blueprint.route('/api/geo/plot/<string:plot_uuid>/succeed',
+                 methods=['POST'])
+@login_required
+def api_plot_succeed(plot_uuid):
+    """작기를 끝내고 **같은 자리를 이어받는다**(종료 + 승계, 한 번에).
+
+    `/end` 와 나눈 이유: 종료만 하는 것도 정상이고(그 자리를 당분간 비운다),
+    이어심기는 그 위에 얹는 선택이다. 한 엔드포인트에 옵션으로 넣으면 "종료" 가
+    무엇을 하는지가 요청마다 달라진다.
+
+    `program_uuid` 를 **키 자체로 보내지 않으면** 지난 작기 것을 물려받고,
+    `null` 로 보내면 비운다(휴지기). 둘은 다른 뜻이다.
+    """
+    denied = _require_edit()
+    if denied:
+        return denied
+
+    data = request.get_json(silent=True) or {}
+    kw = {}
+    if 'program_uuid' in data:
+        kw['program_uuid'] = data.get('program_uuid') or None
+    if 'variety' in data:
+        kw['variety'] = data.get('variety') or None
+
+    result, error = plot_io.succeed_plot(
+        plot_uuid,
+        ended_on=data.get('ended_on'),
+        reason=data.get('reason') or 'harvested',
+        subject=data.get('subject'),
+        started_on=data.get('started_on'),
+        **kw)
+    if error:
+        status = 404 if 'not found' in error.lower() else 400
+        return jsonify({'ok': False, 'message': error}), status
+    from aot.aot_flask.geo.site_summary import invalidate_plot_contents
+    invalidate_plot_contents(plot_uuid)
+    return jsonify({'ok': True, **result})
 
 
 @blueprint.route('/api/geo/plot/<string:plot_uuid>', methods=['DELETE'])

@@ -294,11 +294,27 @@ def save_dashboard_order():
 @flask_login.login_required
 def page_dashboard_default():
     """Load default dashboard according to sort_order."""
-    dashboard = Dashboard.query.order_by(text("COALESCE(sort_order, 999999), id")).first()
+    # 첫 대시보드가 스코프 밖일 수 있다 — 그대로 보내면 열자마자 되돌려진다.
+    from aot.aot_flask.access import scope
+    denied = scope.denied_resource_uuids('dashboard')
+    dashboard = None
+    for row in Dashboard.query.order_by(
+            text("COALESCE(sort_order, 999999), id")).all():
+        if row.unique_id not in denied:
+            dashboard = row
+            break
     if dashboard:
         return redirect(url_for(
             'routes_dashboard.page_dashboard', dashboard_id=dashboard.unique_id))
-    return redirect(url_for('routes_general.home'))
+    # ⚠ **여기서 home 으로 보내면 무한 리다이렉트가 된다.**
+    #
+    # `landing_page='dashboard'` 인 사용자의 home 은 다시 이 함수로 온다
+    # (`routes_general.home`). 대시보드가 아예 없던 시절에는 일어나기 어려운
+    # 조합이었지만, 그룹 스코프가 생기면서 **보이는 대시보드가 0개인 사용자**
+    # 가 정상적으로 존재하게 됐다 — 그 사람은 로그인하자마자 고리에 빠진다.
+    #
+    # 그래서 항상 열리는 화면으로 보낸다.
+    return redirect(url_for('routes_page.page_live'))
 
 
 @blueprint.route('/dashboard-add', methods=('GET', 'POST'))
@@ -320,6 +336,13 @@ def page_dashboard(dashboard_id):
     this_dashboard = Dashboard.query.filter(
         Dashboard.unique_id == dashboard_id).first()
     if not this_dashboard:
+        return redirect(url_for('routes_dashboard.page_dashboard_default'))
+
+    # 그룹 스코프 — 목록에서 빼는 것만으로는 부족하다. URL 을 직접 치거나
+    # 북마크로 들어오는 길이 남아 있으면 "감췄다" 가 아니라 "메뉴에서만
+    # 없앴다" 다. (정본: docs/design/access-scope-groups.md)
+    from aot.aot_flask.access import scope
+    if not scope.can_operate('dashboard', dashboard_id):
         return redirect(url_for('routes_dashboard.page_dashboard_default'))
 
     # Create form objects

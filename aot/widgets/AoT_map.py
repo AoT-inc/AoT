@@ -180,6 +180,7 @@ WIDGET_HEAD_HTML = """
 <!-- 공용 데이터 시각화 프리미티브(밴드 바 · 불릿 · 기간 바).
      구획 모달의 기간 축이 쓴다. 규약: docs/design/dataviz-primitives.md -->
 <link rel="stylesheet" href="{{ url_for('static', filename='css/components/aot-dataviz.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/components/aot-plot-form.css') }}">
 
 <!-- Shared time-wheel module (also used by AoT_timer, sequence widgets) — zone popup "settings" (turn on until end time) -->
 <link rel="stylesheet" href="/static/css/components/aot-time-wheel.css?v=20260813a">
@@ -249,17 +250,33 @@ WIDGET_HEAD_HTML = """
     box-shadow: 0 4px 10px rgba(0,0,0,0.5) !important;
   }
 
-  /* Device-type label toggle: overrides collision handler's inline display:block */
-  .aot-type-hidden {
+  /* Device-type label toggle: overrides collision handler's inline display:block
+     ⚠ `:not(.aot-focus-show)` 는 임시 표시를 위한 것이다 — 아래 주석 참조. */
+  .aot-type-hidden:not(.aot-focus-show) {
     display: none !important;
   }
 
   /* Zoom gate (LABEL_MIN_ZOOM): 축척이 낮을 때 장치 단위 라벨·키를 감춘다.
      사용자 토글(.aot-type-hidden)과 같은 이유로 !important — 충돌 회피가
      인라인 display:block 을 직접 찍기 때문에 클래스가 이겨야 한다. */
-  .aot-zoom-hidden {
+  .aot-zoom-hidden:not(.aot-focus-show) {
     display: none !important;
   }
+
+  /* 임시 표시 — 사용자가 꺼 둔 라벨이라도 **지금 봐야 할 이유**가 있으면 보인다
+     (그 대상의 모달이 열려 있다 · 그 출력이 켜져 있다).
+
+     ⚠ **`display` 값을 지정하지 않는다.** 예전에는 `display: block !important`
+     로 되살렸는데, 그러면 그 라벨이 원래 무엇이었는지를 여기서 정해 버린다 —
+     값 키의 원형 모드(`.aot-sensor-map-marker--circle`)는 `display: flex` 로
+     숫자를 원 한가운데 놓으므로, block 으로 바뀌는 순간 숫자가 좌상단으로
+     밀린다(실측). 라벨 종류마다 display 가 다르니 여기서 하나를 고르면 언제나
+     어느 하나는 깨진다.
+
+     대신 **숨김 규칙이 이 클래스를 비켜 가게** 한다. 그러면 각자의 display 가
+     그대로 살아 있고, 이유가 사라지면 숨김이 다시 걸린다(꺼 둔 상태 자체는
+     건드리지 않는다). 새 숨김 클래스를 만들면 여기에도 `:not(.aot-focus-show)`
+     를 붙일 것 — 빠뜨리면 그 종류만 임시 표시가 안 듣는다. */
 </style>
 """
 
@@ -531,24 +548,6 @@ WIDGET_INFORMATION = {
             'phrase': lazy_gettext(
                 'Master switch for all map labels (site, zone, device, sensor). '
                 'Use the map\'s label controller to fine-tune input/output/function labels.'
-            )
-        },
-        {
-            # 구획 레이어. 라벨이 이미 많은 화면이라 기본은 켜되 줌 16 이상
-            # 에서만 라벨이 뜬다(label-layers 의 plot 프리셋). 지도의 레이어
-            # 컨트롤에서도 같은 축을 끄고 켤 수 있다.
-            #
-            # ⚠ 옛 id 는 `show_vegetation` 이었다(p6_44 전). 이미 저장된 위젯
-            # 설정은 그 키로 남아 있으므로 **클라이언트가 둘 다 읽는다** — 새
-            # 키만 보면 일부러 꺼 둔 사람의 레이어가 업그레이드에서 조용히
-            # 다시 켜진다.
-            'id': 'show_plots',
-            'type': 'bool',
-            'default_value': True,
-            'name': lazy_gettext('Show Plots'),
-            'phrase': lazy_gettext(
-                'Show plots (what is where). '
-                'Plot labels appear when zoomed in.'
             )
         },
         {
@@ -824,6 +823,28 @@ WIDGET_INFORMATION = {
 
             'name': lazy_gettext('Zone Shape'),
             'phrase': lazy_gettext('Show Zone polygons on the map.')
+        },
+        {
+            # 구획(plot) — **도형 그룹에 둔다.** 예전에는 맨 위 기본 영역에
+            # 혼자 있었는데, 구획도 지도에 그려지는 도형이라 사람이 그것을
+            # 여기서 찾는다(대지·구역·시설과 같은 줄에 있어야 "무엇을 그릴까"
+            # 를 한 번에 정한다).
+            #
+            # 기본값이 이 그룹의 다른 것들과 다르다(True) — 구획은 그리라고
+            # 만든 것이라 켜 두고, 라벨만 줌 게이트로 접는다.
+            #
+            # ⚠ 옛 id 는 `show_vegetation` 이었다(p6_44 전). 이미 저장된 위젯
+            # 설정은 그 키로 남아 있으므로 **클라이언트가 둘 다 읽는다** — 새
+            # 키만 보면 일부러 꺼 둔 사람의 레이어가 업그레이드에서 조용히
+            # 다시 켜진다.
+            'id': 'show_plots',
+            'type': 'bool',
+            'default_value': True,
+            'name': lazy_gettext('Plot Shape'),
+            'phrase': lazy_gettext(
+                'Show plots (what is where) on the map. '
+                'Plot labels appear when zoomed in.'
+            )
         },
         {
             'id': 'show_facility_shape',

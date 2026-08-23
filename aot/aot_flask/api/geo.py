@@ -65,7 +65,19 @@ class GeoDesigns(Resource):
         if not utils_general.user_has_permission('edit_settings'):
             abort(403)
         from aot.aot_flask.geo import GeoDesignManager
-        data = request.get_json()
+        data = request.get_json() or {}
+
+        # 그룹 스코프 — 지도는 자기 자신이 부여 단위다.
+        #
+        # ⚠ **이 경로가 `routes_geo.api_geo_design_save` 와 같은 URL 을 갖는다.**
+        # 두 곳 다 `/api/geo/designs` POST 로 등록돼 있고, Flask 는 먼저 등록된
+        # 이쪽을 매칭한다 — 저쪽만 막았을 때 실측에서 그대로 통과했다.
+        # 규칙을 두 벌 두면 갈라지고, **갈라지면 느슨한 쪽이 실질 권한**이 된다.
+        from aot.aot_flask.access import scope
+        _map_uuid = data.get('map_uuid')
+        if _map_uuid and not scope.can_operate('geo_map', _map_uuid):
+            abort(403, message=scope.deny_message())
+
         from flask_login import current_user
         result, error = GeoDesignManager.save_design_map(data, current_user.id)
         if error:
@@ -90,6 +102,10 @@ class GeoDesignDetail(Resource):
         """Delete GeoMap"""
         if not utils_general.user_has_permission('edit_settings'):
             abort(403)
+        # 그룹 스코프 — 같은 URL 의 두 번째 라우트다(위 주석 참조).
+        from aot.aot_flask.access import scope
+        if not scope.can_operate('geo_map', map_uuid):
+            abort(403, message=scope.deny_message())
         from aot.aot_flask.geo import GeoDesignManager
         result, error = GeoDesignManager.delete_design_map(map_uuid)
         if error:
@@ -105,6 +121,10 @@ class GeoMapRestoreOriginal(Resource):
         """Restore all migrated overlays for a map to their original pre-migration data."""
         if not utils_general.user_has_permission('edit_settings'):
             abort(403)
+        # 그룹 스코프 — 그 지도의 도형을 통째로 되돌리는 경로다.
+        from aot.aot_flask.access import scope
+        if not scope.can_operate('geo_map', map_uuid):
+            abort(403, message=scope.deny_message())
         try:
             from aot.aot_flask.extensions import db
             import json
@@ -186,7 +206,14 @@ class GeoOverlays(Resource):
         if not utils_general.user_has_permission('edit_settings'):
             abort(403)
         from aot.aot_flask.geo import GeoOverlayManager
-        data = request.get_json()
+        data = request.get_json() or {}
+
+        # 그룹 스코프 — 도형은 지도에 속한다. 이 경로도 `routes_geo` 쪽과 같은
+        # URL 을 갖는다(위 designs 주석 참조).
+        from aot.aot_flask.access import scope
+        if not scope.can_operate('geo_map', data.get('map_uuid')):
+            abort(403, message=scope.deny_message())
+
         result, error = GeoOverlayManager.save_overlays(data)
         if error:
             abort(500, message=error)

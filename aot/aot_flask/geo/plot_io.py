@@ -10,7 +10,7 @@
 읽기·파생은 `plot_context` 가 담당한다.
 """
 import logging
-from datetime import date, datetime
+from datetime import date, timedelta, datetime
 
 from aot.aot_flask.extensions import db
 from aot.aot_flask.geo import plot_context
@@ -605,33 +605,96 @@ def delete_plot(unique_id):
     return {'ok': True, 'deleted': unique_id, 'archived_jobs': orphaned}, None
 
 
-def copy_plot(unique_id, started_on=None, subject=None):
-    """지난 작기의 기하를 그대로 새 작기로 → (dict, error).
+_UNSET = object()
 
-    같은 두둑에 매년 심는 경우 매번 다시 그리게 하면 쓸 수 없다. 기하만
-    복사하고 기간은 새로 받는다.
+
+def copy_plot(unique_id, started_on=None, subject=None,
+              program_uuid=_UNSET, variety=_UNSET, kind=None):
+    """지난 작기의 **자리**를 그대로 새 작기로 → (dict, error).
+
+    같은 두둑에 매년 심는 경우 매번 다시 그리게 하면 쓸 수 없다. 기하·시설·
+    구역·몫·색을 복사하고 기간과 대상만 새로 받는다.
+
+    `program_uuid`/`variety` 는 **주지 않으면 물려받는다**(지난 작기와 같은
+    기준으로 기른다는 뜻). `None` 을 명시하면 비운다 — 휴지기처럼 프로그램이
+    없는 구간이 그 경우다. 기본값을 `None` 으로 두면 "안 줬다" 와 "비워라" 를
+    구별할 수 없다.
     """
     src = GeoPlot.query.filter_by(unique_id=unique_id).first()
     if src is None:
         return None, 'plot not found: %s' % unique_id
 
-    return save_plot({
+    payload = {
         'map_uuid': src.geo_id,
         'feature': src.feature,
         # 시설 구획은 기하가 없으므로 부모를 안 넘기면 복사본이 VP-7 에 걸린다.
         'facility_uuid': src.facility_uuid,
         'bay_id': src.bay_id,
-        # 같은 자리에 같은 작물을 다시 심는 것이므로 프로그램도 물려준다
-        # (버전까지 그대로 — 지난 작기와 같은 기준으로 기른다는 뜻이다).
-        'program_uuid': src.program_uuid,
+        # **몫도 물려준다.** 시설 구획에서 자리는 기하가 아니라 몫(베드 수)이라,
+        # 빠뜨리면 "같은 자리에 이어심기" 가 자리를 잃은 채 만들어진다.
+        'allocation': src.allocation,
+        'kind': kind or src.kind,
         'subject': subject or src.subject,
-        'variety': src.variety,
         'name': src.name,
         'color': src.color,
         'started_on': started_on or date.today().isoformat(),
         'source_kind': 'copied',
         'source_ref': src.unique_id,
-    })
+    }
+    payload['program_uuid'] = (src.program_uuid if program_uuid is _UNSET
+                               else program_uuid)
+    payload['variety'] = src.variety if variety is _UNSET else variety
+    return save_plot(payload)
+
+
+def succeed_plot(unique_id, ended_on=None, reason='harvested',
+                 subject=None, program_uuid=_UNSET, variety=_UNSET,
+                 started_on=None):
+    """작기를 끝내고 **같은 자리를 이어받는다** → (dict, error).
+
+    반환의 `ended` 는 끝난 작기, `next` 는 새로 시작한 것이다.
+
+    ## 왜 한 번의 조작인가
+
+    수확이 끝났다고 그 자리가 없어지지 않는다 — 휴지기·정지·다음 작기가
+    이어진다. 종료와 생성을 따로 하게 두면 사람이 그 사이에 도형을 다시 그리고
+    몫을 다시 적어야 하고(노지는 측량까지), 그 왕복이 곧 "자리를 잃는" 것이다.
+
+    ## 순서: **새 것을 먼저 만들고 원본을 끝낸다**
+
+    반대로 하면 승계가 실패했을 때 자리가 비어 버린다. 이 순서면 실패해도
+    원본이 그대로 살아 있어, 사람이 다시 눌러 볼 수 있다. (두 커밋을 한
+    트랜잭션으로 묶지 않는 이유 — `save_plot`·`end_plot` 이 각자 커밋한다.)
+
+    시작일은 기본이 **종료 다음 날**이다. 같은 날로 두면 하루가 두 작기에
+    걸치는데, 이 도메인은 겹침이 정상이라(간작·혼작) 서버가 막지 않는다 —
+    그래서 기본값이 잘못되면 조용히 이상한 이력이 쌓인다.
+    """
+    src = GeoPlot.query.filter_by(unique_id=unique_id).first()
+    if src is None:
+        return None, 'plot not found: %s' % unique_id
+
+    parsed_end, err = _parse_date(ended_on, 'ended_on')
+    if err:
+        return None, err
+    parsed_end = parsed_end or date.today()
+
+    if not started_on:
+        started_on = (parsed_end + timedelta(days=1)).isoformat()
+
+    nxt, err = copy_plot(unique_id, started_on=started_on, subject=subject,
+                         program_uuid=program_uuid, variety=variety)
+    if err:
+        return None, err
+
+    ended, err = end_plot(unique_id, ended_on=parsed_end.isoformat(),
+                          reason=reason)
+    if err:
+        # 승계는 만들어졌는데 종료가 실패했다. 되돌리지 않고 **말한다** —
+        # 여기서 새 구획을 지우면 사람이 방금 정한 것이 소리 없이 사라진다.
+        return None, ('이어심기는 만들어졌지만 종료에 실패했습니다: %s' % err)
+
+    return {'ended': ended, 'next': nxt}, None
 
 
 # ── 단계 전환 (P5) ─────────────────────────────────────────────────────────

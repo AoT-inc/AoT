@@ -64,6 +64,9 @@
         <a class="nav-link" id="tab-roles" data-toggle="tab" href="#pane-roles" role="tab">{{_('Roles')}}</a>
       </li>
       <li class="nav-item">
+        <a class="nav-link" id="tab-groups" data-toggle="tab" href="#pane-groups" role="tab">{{_('Groups')}}</a>
+      </li>
+      <li class="nav-item">
         <a class="nav-link" id="tab-general" data-toggle="tab" href="#pane-general" role="tab">{{_('General')}}</a>
       </li>
     </ul>
@@ -152,6 +155,59 @@
         </div> <!-- grid-stack-item -->
         {% endfor %}
         </div> <!-- grid-stack -->
+      </div>
+
+      <!-- ===== Groups =====
+           역할이 "무엇을 할 수 있는가"(동사)라면 그룹은 "무엇에 대해"(목적어)다.
+           정본 설계: docs/design/access-scope-groups.md -->
+      <div class="tab-pane fade" id="pane-groups" role="tabpanel">
+        <div class="aot-modal-container" style="margin-bottom: 0.75rem;">
+          <div class="aot-modal-body-text">
+            {{_('Groups restrict who can operate a resource. Every user can still view all data.')}}
+          </div>
+        </div>
+        <div style="display: flex; justify-content: flex-end; margin-bottom: 0.75rem;">
+          <button type="button" class="btn aot-pill-btn aot-pill-btn-primary"
+            data-toggle="modal" data-target="#modal_add_group">{{_('Add Group')}}</button>
+        </div>
+
+        <div class="grid-stack aot-entry-container" id="groups-grid">
+        {% for each_group in user_groups %}
+        <div id="gridstack_group_{{each_group.unique_id}}" class="grid-stack-item" gs-id="{{each_group.unique_id}}"
+          gs-x="0" gs-y="{{loop.index0}}" gs-w="24" gs-h="1" gs-no-resize="true">
+        <div class="grid-stack-item-content row small-gutters aot-entry-item"
+          data-config-uid="{{each_group.unique_id}}"
+          data-open-detail="group" data-uid="{{each_group.unique_id}}"
+          data-drawer-title="{{_('Edit Group')}}: {{each_group.name}}">
+          <div class="aot-entry-drag-handle"><i class="fa fa-grip-lines"></i></div>
+          <div class="aot-entry-content-item aot-col-grow">
+            <div class="form-control aot-entry-name-input">{{each_group.name}}</div>
+          </div>
+          <div class="aot-entry-content-item aot-col-grow">
+            <div class="form-control aot-entry-name-input">
+              {{_('Members')}}: {{ group_member_counts.get(each_group.unique_id, 0) }}
+            </div>
+          </div>
+          <div class="aot-entry-content-item aot-col-grow">
+            <div class="form-control aot-entry-name-input">
+              {{_('Granted Resources')}}: {{ group_grant_counts.get(each_group.unique_id, 0) }}
+            </div>
+          </div>
+          <div class="aot-entry-settings">
+            <a class="btn p-0"><i class="fas fa-cog"></i></a>
+          </div>
+        </div> <!-- grid-stack-item-content -->
+        </div> <!-- grid-stack-item -->
+        {% endfor %}
+        </div> <!-- grid-stack -->
+
+        {% if not user_groups %}
+        <div class="aot-modal-container">
+          <div class="aot-modal-body-text">
+            {{_('No groups yet. Without a group, every user operates every resource their role allows.')}}
+          </div>
+        </div>
+        {% endif %}
       </div>
 
       <!-- ===== General ===== -->
@@ -323,7 +379,8 @@
               {% for field in [form_user_roles.view_logs, form_user_roles.view_stats, form_user_roles.view_camera,
                                form_user_roles.view_settings, form_user_roles.edit_users, form_user_roles.edit_controllers,
                                form_user_roles.edit_plots,
-                               form_user_roles.edit_settings, form_user_roles.reset_password] %}
+                               form_user_roles.edit_settings, form_user_roles.reset_password,
+                               form_user_roles.bypass_group_scope] %}
               <div class="aot-modal-option-row">
                 <label class="aot-modal-option-label">{{field.label.text}}</label>
                 <div class="aot-modal-option-control">
@@ -340,6 +397,57 @@
           <div class="modal-footer">
             <button type="button" class="btn aot-pill-btn" data-dismiss="modal">{{_('Close')}}</button>
             {{form_user_roles.user_role_add(class_='btn aot-pill-btn aot-pill-btn-primary')}}
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== Add Group drawer ===== -->
+  <div class="modal fade aot-option-modal aot-widget-drawer aot-drawer-fullcover" data-backdrop="false"
+    id="modal_add_group" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-lg aot-modal-dialog" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">{{_('Add Group')}}</h5>
+          <button type="button" class="close" data-dismiss="modal" aria-label="{{_('Close')}}">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <form method="post" action="/settings/users">
+          {{form_user_groups.csrf_token}}
+          <div class="modal-body">
+            <div class="aot-modal-group-title">{{_('Basic Settings')}}</div>
+            <div class="aot-modal-container">
+              <div class="aot-modal-option-row">
+                <label class="aot-modal-option-label" for="group_name">{{form_user_groups.name.label.text}}</label>
+                <div class="aot-modal-option-control">
+                  {# 역할 폼도 `name` 필드를 갖는다 — 같은 페이지에 두 폼이 있으므로
+                     id 를 그대로 두면 DOM id 가 충돌해 label[for] 이 엉뚱한 칸을
+                     가리킨다(실제로 그룹 이름 칸의 접근성 이름이 "역할명" 으로
+                     잡혔다). #}
+                  {{form_user_groups.name(class_='form-control aot-modern-input', id='group_name')}}
+                </div>
+              </div>
+              <div class="aot-modal-option-row">
+                <label class="aot-modal-option-label" for="group_description">{{form_user_groups.description.label.text}}</label>
+                <div class="aot-modal-option-control">
+                  {{form_user_groups.description(class_='form-control aot-modern-input', id='group_description')}}
+                </div>
+              </div>
+            </div>
+            {# 멤버와 부여는 만든 뒤 상세에서 정한다. 생성 화면에 다 넣으면
+               "그룹을 만든다" 와 "권한을 준다" 가 한 번에 일어나, 잘못 만든
+               그룹이 곧바로 권한 변경이 된다. #}
+            <div class="aot-modal-container">
+              <div class="aot-modal-body-text">
+                {{_('Members and granted resources are set after the group is created.')}}
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn aot-pill-btn" data-dismiss="modal">{{_('Close')}}</button>
+            {{form_user_groups.user_group_add(class_='btn aot-pill-btn aot-pill-btn-primary')}}
           </div>
         </form>
       </div>
@@ -405,6 +513,8 @@
     $('a[data-toggle="tab"]').on('shown.bs.tab', function () {
       if ($(this).attr('href') === '#pane-roles') {
         initGrid('#roles-grid', '/settings/users/save_role_order');
+      } else if ($(this).attr('href') === '#pane-groups') {
+        initGrid('#groups-grid', '/settings/users/save_group_order');
       }
     });
 
@@ -417,9 +527,13 @@
       e.preventDefault();
       var kind = $(this).data('open-detail');
       var uid = $(this).data('uid');
-      var url = (kind === 'user')
-        ? '/settings/users/detail/' + encodeURIComponent(uid)
-        : '/settings/users/role_detail/' + encodeURIComponent(uid);
+      var detailPath = {
+        user: '/settings/users/detail/',
+        role: '/settings/users/role_detail/',
+        group: '/settings/users/group_detail/'
+      }[kind];
+      if (!detailPath) return;
+      var url = detailPath + encodeURIComponent(uid);
 
       // The detail template ships its own <form> wrapping .modal-body + .modal-footer,
       // so everything under .modal-content except the header gets swapped wholesale.
@@ -454,7 +568,9 @@
           action === 'user_save' ||
           action === 'user_approve' ||
           action === 'user_role_save' ||
-          action === 'user_role_delete') {
+          action === 'user_role_delete' ||
+          action === 'user_group_save' ||
+          action === 'user_group_delete') {
 
         // 폐기는 "어느 키인지" 를 함께 보내야 한다. 키 목록은 행마다 버튼이
         // 하나씩이고 폼은 하나뿐이라, 누른 버튼의 id 를 제출 직전에 숨은
@@ -468,7 +584,10 @@
         // Saving a user changes several things the card shows at once — name,
         // role, the disabled badge and tint — and a role rename changes every
         // user row. Reload instead of patching each of those in place.
-        let needs_reload = (action === 'user_save' || action === 'user_role_save');
+        // 그룹 저장은 카드의 "멤버 N · 부여 M" 을 함께 바꾸고, 삭제는 카드를
+        // 통째로 없앤다 — 자리에서 고칠 것이 여러 개라 다시 그린다.
+        let needs_reload = (action === 'user_save' || action === 'user_role_save' ||
+                            action === 'user_group_save' || action === 'user_group_delete');
 
         window.showToast('{{_("Command sent. Please wait.")}}', 'info');
         $.ajax({

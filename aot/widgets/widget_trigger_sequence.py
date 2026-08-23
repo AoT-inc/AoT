@@ -12,6 +12,7 @@ logger = logging.getLogger(__name__)
 from flask import jsonify, request
 from flask_login import current_user
 from aot.aot_client import DaemonControl
+from aot.aot_flask.access import scope
 from aot.aot_flask.utils.utils_general import user_has_permission
 
 def sequence_func_activate_toggle(unique_id, state):
@@ -27,6 +28,10 @@ def sequence_func_activate_toggle(unique_id, state):
     # Check permissions if needed
     if not user_has_permission('edit_controllers'):
         return jsonify({'error': 'Permission Denied'}), 403
+
+    # 그룹 스코프(A1a) — docs/design/access-scope-groups.md
+    if not scope.can_operate_device(unique_id):
+        return (jsonify({'error': scope.deny_message()}), 403)
 
     daemon = DaemonControl()
     if state == 'activate':

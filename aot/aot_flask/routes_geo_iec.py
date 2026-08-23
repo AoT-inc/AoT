@@ -11,6 +11,7 @@ import logging
 from flask import request, jsonify, current_app
 from flask_login import login_required, current_user
 
+from aot.aot_flask.access import scope
 from aot.aot_flask.utils import utils_general
 from aot.aot_flask.extensions import db
 from aot.aot_flask.routes_geo import blueprint  # noqa: E402
@@ -465,6 +466,10 @@ def api_facility_control(facility_uuid):
 
     if not utils_general.user_has_permission('edit_settings'):
         return jsonify({'ok': False, 'message': 'Insufficient permission'}), 403
+
+    # 그룹 스코프(A1a) — 시설 단위. docs/design/access-scope-groups.md
+    if not scope.can_operate('geo_facility', facility_uuid):
+        return jsonify({'ok': False, 'message': scope.deny_message()}), 403
 
     facility = GeoFacility.query.filter_by(unique_id=facility_uuid).first()
     if not facility:
@@ -1017,6 +1022,10 @@ def api_facility_function_state(facility_uuid):
 
     if not utils_general.user_has_permission('edit_controllers'):
         return jsonify({'ok': False, 'message': 'Insufficient permission'}), 403
+
+    # 그룹 스코프(A1a) — 시설 단위. docs/design/access-scope-groups.md
+    if not scope.can_operate('geo_facility', facility_uuid):
+        return jsonify({'ok': False, 'message': scope.deny_message()}), 403
 
     facility = GeoFacility.query.filter_by(unique_id=facility_uuid).first()
     if not facility:

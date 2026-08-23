@@ -25,6 +25,7 @@ from aot.databases.models import (PID, Camera, Conversion, CustomController,
                                      NoteTags, Output, OutputChannel)
 from aot.aot_client import DaemonControl
 from aot.aot_flask.routes_authentication import clear_cookie_auth
+from aot.aot_flask.access import scope
 from aot.aot_flask.utils import utils_general
 from aot.aot_flask.utils.utils_general import get_ip_address
 from aot.aot_flask.utils.utils_output import get_all_output_states
@@ -260,6 +261,15 @@ def output_mod(output_id, channel, state, output_type, amount):
     """Manipulate output (using non-unique ID)"""
     if not utils_general.user_has_permission('edit_controllers'):
         return 'Insufficient user permissions to manipulate outputs'
+
+    # 그룹 스코프(A1a) — 역할이 "켤 수 있는가" 를 정하고 여기서 "이것을" 을
+    # 정한다. 대상 id 가 URL 에 있으므로 역할 검사 바로 뒤에서 물을 수 있다.
+    # (정본: docs/design/access-scope-groups.md)
+    if not scope.can_operate_device(output_id):
+        audit_log(audit.OUTPUT_CONTROL, target_type='Output',
+                  target_id=output_id, result='failure',
+                  detail='denied by group scope')
+        return 'ERROR: {}'.format(scope.deny_message())
 
     if is_int(channel):
         # if an integer was returned
@@ -544,6 +554,15 @@ def output_comm_capable_all():
 @flask_login.login_required
 def widget_execute(unique_id):
     """Return the response from the execution of widget code."""
+    # 이 경로에는 원래 **역할 검사조차 없었다**(로그인만 확인). 위젯 코드를
+    # 데몬에서 실행하므로 실질적으로 제어 경로다. 스코프를 붙이는 김에 역할
+    # 검사도 함께 세운다 — 스코프만 붙이면 그룹을 쓰지 않는 설치에서는
+    # 여전히 아무나 실행할 수 있다.
+    if not utils_general.user_has_permission('edit_controllers'):
+        return jsonify({'error': 'Insufficient user permissions'}), 403
+    if not scope.can_operate_widget(unique_id):
+        return jsonify({'error': scope.deny_message()}), 403
+
     daemon_control = DaemonControl()
     return_value = daemon_control.widget_execute(unique_id)
     return jsonify(return_value)

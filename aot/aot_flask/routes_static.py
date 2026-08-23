@@ -206,11 +206,36 @@ def upgrade_badge_is_light(custom_theme):
         return True
 
 
+def visible_dashboards(dashboards):
+    """조작할 수 없는 대시보드는 목록에서 뺀다 (그룹 스코프).
+
+    정본 설계: `docs/design/access-scope-groups.md`
+
+    ⚠ **`_cached_dashboards()` 안에서 거르지 말 것.** 그것은 프로세스 공유
+    캐시(TTL)라, 거기서 거르면 **한 사람의 목록이 그 뒤 모든 사람에게 나간다.**
+    설계 원칙 5 가 말하는 그 실패이고, 이 저장소는 캐시로 신원이 섞이는 사고를
+    이미 겪었다(2026-08-12 `Set-Cookie` 가 실린 응답이 공유 캐시에 들어가 한
+    사람의 세션이 전원에게 배포됐다).
+
+    캐시에는 전량을 담고, 거르는 일은 **캐시 밖**에서 한다.
+    """
+    try:
+        from aot.aot_flask.access import scope
+        denied = scope.denied_resource_uuids('dashboard')
+    except Exception as exc:
+        # 판정이 깨져도 화면이 비면 안 된다 — 그때는 전부 보인다.
+        logger.error("[scope] 대시보드 필터 실패, 전체를 보입니다: %s", exc)
+        return dashboards
+    if not denied:
+        return dashboards
+    return [d for d in dashboards if d.unique_id not in denied]
+
+
 @blueprint.app_context_processor
 def inject_variables():
     """Variables to send with every page request."""
     form_dashboard = forms_dashboard.DashboardConfig()
-    dashboards = _cached_dashboards()
+    dashboards = visible_dashboards(_cached_dashboards())
     misc = _cached_misc()
 
     try:

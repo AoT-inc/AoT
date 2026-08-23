@@ -1,4 +1,7 @@
-// aot-map-bay.js — facility bay(구역) shared helpers for AoT Map widgets.
+// aot-map-bay.js — facility bay(동) shared helpers for AoT Map widgets.
+//
+// **'구역'(zone)이 아니라 '동'(bay)이다.** zone 은 대지 안의 영역 도형이고
+// bay 는 시설을 나누는 단위다 — 어휘 표는 CLAUDE.md '공간 어휘' 절에 있다.
 //
 // Stateless module (no markers, no polling). The vector widget composes these
 // helpers with aot-map-popup.js builders to render per-bay chips and the bay
@@ -20,8 +23,8 @@
 (function () {
   'use strict';
 
-  // 구역 슬라이스. 단동(bay 1개)도 서버가 슬라이스 1개를 주므로 칩이 생성된다.
-  // 슬라이스 1개 = 단동 또는 모든 bay 를 한 구역으로 통합한 경우.
+  // 동 슬라이스. 단동(bay 1개)도 서버가 슬라이스 1개를 주므로 칩이 생성된다.
+  // 슬라이스 1개 = 단동 또는 모든 bay 를 하나로 통합한 경우.
   function slices(facility) {
     var s = facility && facility.bay_slices;
     return Array.isArray(s) ? s : [];
@@ -87,9 +90,9 @@
   /* 실내 센서인가.
    *
    * **위치로는 가릴 수 없다.** 기상대도 시설 어딘가에 서 있어서 좌표 → 슬라이스
-   * 매핑(`build_fitting_bay_map`)이 그것에 구역을 붙인다 — 실측으로 영양 육묘장의
-   * '기상대' fitting 이 `bay_id: 'bay_1_6'` 을 달고 나온다. 그래서 구역 필터가
-   * 위치만 보면 실외 센서가 그 구역의 것으로 딸려 들어온다.
+   * 매핑(`build_fitting_bay_map`)이 그것에 동을 붙인다 — 실측으로 영양 육묘장의
+   * '기상대' fitting 이 `bay_id: 'bay_1_6'` 을 달고 나온다. 그래서 동 필터가
+   * 위치만 보면 실외 센서가 그 동의 것으로 딸려 들어온다.
    *
    * 안팎을 가르는 것은 사람이 시설 편집기에서 정한 `sensor_role` 하나뿐이고,
    * **미설정은 실내로 본다** — 서버(`facility_integration` · `read_fitting_sensors`)가
@@ -97,7 +100,7 @@
    * 안팎이 갈린다.
    *
    * 실외 값을 아예 버리는 것이 아니다 — 시설 [현재] 카드의 '실외' 줄은 별도
-   * 경로(`runtime.outdoor`)로 계속 온다. 여기서 빼는 것은 **구역이 자기 것이라고
+   * 경로(`runtime.outdoor`)로 계속 온다. 여기서 빼는 것은 **동이 자기 것이라고
    * 말하는 목록**뿐이다. */
   function isIndoor(s) {
     return !!s && (s.sensor_role || 'indoor') !== 'outdoor';
@@ -110,7 +113,7 @@
   }
 
   // Actuators attributed to the bay. includeCommon=true 면 시설 공통
-  // (bay_ids = []) 액추에이터도 포함 — 단동(슬라이스 1개) 시설은 구역 칩이
+  // (bay_ids = []) 액추에이터도 포함 — 단동(슬라이스 1개) 시설은 동 칩이
   // 유일한 진입점이므로 공통 장치를 함께 보여준다.
   function filterStates(states, bayId, includeCommon) {
     var out = {};

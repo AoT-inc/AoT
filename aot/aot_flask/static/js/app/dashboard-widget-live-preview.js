@@ -325,7 +325,7 @@
     enable_label_collision: 1,
     global_label_size: 1, label_priority_facility: 1, label_min_zoom: 1,
     sensor_label_style: 1, sensor_popup_enabled: 1,
-    show_site_shape: 1, show_zone_shape: 1, show_facility_shape: 1,
+    show_site_shape: 1, show_zone_shape: 1, show_plots: 1, show_facility_shape: 1,
     show_equipment_shape: 1, show_device_shapes: 1, show_drawn_shapes: 1,
     device_shape_opacity: 1,
     // Live-capable via the map's own maplibre API (setTerrain), so auto-saved too.
@@ -346,8 +346,12 @@
   };
 
   // Modal show_*_shape option key -> the map's internal shape-category key (_CAT_DEFS).
+  // ⚠ **도형 종류를 추가하면 위 MAP_SAFE_KEYS 와 여기 둘 다** 넣어야 한다.
+  // 한쪽만 넣으면 저장은 되는데 화면이 안 바뀌고, 새로고침해야 반영된다 —
+  // 사용자에게는 "옵션이 작동하지 않는다" 로 보인다(구획이 실제로 그랬다).
   var MAP_SHAPE_CAT = {
-    show_site_shape: 'land', show_zone_shape: 'zone', show_facility_shape: 'facility',
+    show_site_shape: 'land', show_zone_shape: 'zone', show_plots: 'plot',
+    show_facility_shape: 'facility',
     show_equipment_shape: 'equipment', show_device_shapes: 'device', show_drawn_shapes: 'drawn'
   };
 

@@ -71,7 +71,7 @@ from .log_channels import (
     ch_coord_cmd, ch_coord_reason, ch_integral,
     REASON_IDLE, REASON_PRIMARY, REASON_SECONDARY,
     REASON_WRONG_DIRECTION, REASON_SIDE_EFFECT, REASON_MANUAL_OVERRIDE,
-    REASON_NO_GRADIENT,
+    REASON_NO_GRADIENT, REASON_NO_OUTDOOR_DATA,
 )
 from .authority import is_natural_var
 from .types import ActuatorProfile, SituationReport
@@ -263,6 +263,30 @@ def coordinate(
                 '냉난방 연동 — 가동 중이라 개구부 %d개 잠금: %s',
                 len(locked), sorted(i[:8] for i in locked))
 
+    # ── 2.6. 실외 근거가 지어낸 것이면 → **제자리 유지**(hold) ──────────────────
+    # 환기는 실내를 실외 쪽으로만 밀 수 있으므로, 실외를 모르면 열지 닫을지 말할
+    # 근거가 없다. 그런데 지금 구조는 실외를 모를 때 fallback 이 **실외=실내**로
+    # 가정해 채운다(`ext_context_fallback`, 캐시가 비었을 때). 그러면 내외 차이가
+    # 0 이라 환기 무익 판정이 서고 개구부가 safe_default(닫힘)로 수렴한다 —
+    # 한여름에 기상대가 죽으면 창이 닫힌다는 뜻이다. 실측(리플레이에서 기상대만
+    # 제거): 71 사이클 전부 NO_GRADIENT, 개도가 0 까지 내려갔다.
+    #
+    # 파킹(위 2.5)과 다르다 — 파킹은 닫는 것이고, 여기서 해야 할 일은 **아무것도
+    # 하지 않는 것**이다. 근거가 없다는 이유로 장비를 움직여서는 안 된다.
+    #
+    # 판정은 `_ext_synthetic`(캐시조차 없어 지어낸 실외) 하나로 한다. 마지막
+    # 실측이 남아 있으면(캐시 hit) 그것은 근거이므로 여기 걸리지 않는다.
+    if bool((ctx.get('external') or {}).get('_ext_synthetic')):
+        hold_ids = {p.actuator_id for p in vents}
+    else:
+        hold_ids = set()
+    if hold_ids:
+        # 근거 없음이 근거 있는 판정을 이겨서는 안 되므로 파킹에서 뺀다.
+        park_ids -= hold_ids
+        logger.debug(
+            '실외 측정 없음(지어낸 값) — 개구부 %d개 제자리 유지: %s',
+            len(hold_ids), sorted(i[:8] for i in hold_ids))
+
     # ── 3. Per-actuator position-form PI (다목적 결합 drive) ───────────────────
     # accumulated: 이미 확정된 명령들이 만들 **부호 있는 물리 변화량**(native).
     # 부호는 물리 방향 그대로다('↑'=+, '↓'=−, 아래 축적부 참조). 따라서 잔여
@@ -322,7 +346,13 @@ def coordinate(
                 primary_score = score
                 primary_var = v
 
-        if den <= 1e-12 or max_g < G_MIN_EFFECT or p.actuator_id in park_ids:
+        if p.actuator_id in hold_ids:
+            # 실외 근거 없음 → **제자리**. 감쇠하지 않는다(그건 닫는 것이다).
+            # 적분도 그대로 둔다 — 모르는 동안 '평형 개도 기억'을 흔들면 실외가
+            # 돌아왔을 때 엉뚱한 자리에서 다시 출발한다.
+            cmd_raw = _clamp(prev_val, 0.0, 100.0)
+            reason = REASON_NO_OUTDOOR_DATA
+        elif den <= 1e-12 or max_g < G_MIN_EFFECT or p.actuator_id in park_ids:
             # 제어 가능 변수 없음 OR 유효 구동력 없음(무구배 환기 등) OR 파킹 대상
             # (환기 무익 / 냉난방 연동 — 2.5 참조) → 안전 idle
             # 위치(safe_default)로 부드럽게 수렴하고 적분을 풀어준다. 100% 가동해도

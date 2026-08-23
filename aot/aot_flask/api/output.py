@@ -175,6 +175,11 @@ class Outputs(Resource):
         """Change the state of an output."""
         if not utils_general.user_has_permission('edit_controllers'):
             abort(403)
+        # 그룹 스코프(A1a). REST 도 화면과 같은 경계를 지나야 한다 — 한쪽만
+        # 막으면 막지 않은 쪽이 실질 권한이 된다.
+        from aot.aot_flask.access import scope
+        if not scope.can_operate_device(unique_id):
+            abort(403, message=scope.deny_message())
 
         control = DaemonControl()
 

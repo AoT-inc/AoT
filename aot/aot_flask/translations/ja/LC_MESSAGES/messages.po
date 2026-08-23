@@ -4129,12 +4129,12 @@ msgstr "エイリアスが見つかりません"
 
 #: aot_flask/routes_ai_api.py:1658
 msgid "Advice not found."
-msgstr "該当する助言が見つかりません。"
+msgstr "該当するアドバイスが見つかりません。"
 
 #: aot_flask/routes_ai_api.py:1661
 #, python-format
 msgid "This advice has already been reviewed (status: %(status)s)."
-msgstr "この助言はすでに検討済みです（状態: %(status)s）。"
+msgstr "このアドバイスはすでに検討済みです（状態: %(status)s）。"
 
 #: aot_flask/routes_authentication.py:45
 msgid "Cannot access admin creation form if an admin user already exists."
@@ -9054,7 +9054,7 @@ msgstr "自律レベル"
 #: aot_flask/templates/layout.html:1008
 #: aot_flask/templates/layout_default.html:1008
 msgid "Advice"
-msgstr "助言"
+msgstr "アドバイス"
 
 #: aot_flask/templates/layout.html:1010
 #: aot_flask/templates/layout_default.html:1010
@@ -12111,7 +12111,7 @@ msgstr "変更を保存"
 #: aot_flask/templates/pages/ai/mcp_review.html:12
 #: aot_flask/templates/pages/ai/mcp_servers.html:19
 msgid "AI Requests & Advice"
-msgstr "AI リクエストと助言"
+msgstr "AI リクエストとアドバイス"
 
 #: aot_flask/templates/pages/ai/mcp_review.html:19
 msgid ""
@@ -12132,7 +12132,7 @@ msgstr "まだ実行されていません。承認すると、画面に表示さ
 
 #: aot_flask/templates/pages/ai/mcp_review.html:30
 msgid "AI advice ledger"
-msgstr "AI 助言台帳"
+msgstr "AI アドバイス台帳"
 
 #: aot_flask/templates/pages/ai/mcp_review.html:32
 msgid ""
@@ -12150,7 +12150,7 @@ msgstr "待機中の制御リクエストはありません。"
 
 #: aot_flask/templates/pages/ai/mcp_review.html:45
 msgid "No advice has been submitted yet."
-msgstr "まだ提出された助言はありません。"
+msgstr "まだ提出されたアドバイスはありません。"
 
 #: aot_flask/templates/pages/ai/mcp_review.html:46
 msgid "No tool calls recorded yet."
@@ -22250,7 +22250,7 @@ msgstr "最小アラートレベル"
 
 #: widgets/AoT_advice.py:255
 msgid "Advice below this alert level will be treated as empty."
-msgstr "このアラートレベルを下回る助言は空として扱われます。"
+msgstr "このアラートレベルを下回るアドバイスは空として扱われます。"
 
 #: widgets/AoT_advice.py:262
 msgid "Max Change Items"
@@ -22318,7 +22318,7 @@ msgstr "AoT 施設"
 msgid ""
 "Facility 3D view, environment summary, setpoint editor, actuator control "
 "grid, and AI advice."
-msgstr "施設の3Dビュー、環境サマリー、設定値エディター、アクチュエーター制御グリッド、AI助言を提供します。"
+msgstr "施設の3Dビュー、環境サマリー、設定値エディター、アクチュエーター制御グリッド、AIアドバイスを提供します。"
 
 #: widgets/AoT_facility.py:398
 msgid "Refresh interval for runtime data. 0 to disable."
@@ -22338,7 +22338,7 @@ msgstr ""
 
 #: widgets/AoT_facility.py:418
 msgid "Show AI Advice (§ E) — EXPERIMENTAL"
-msgstr "AI助言を表示 (§ E) — 実験的機能"
+msgstr "AIアドバイスを表示 (§ E) — 実験的機能"
 
 #: widgets/AoT_facility.py:420
 msgid ""
@@ -28439,7 +28439,7 @@ msgstr "目標"
 
 #: aot/aot_flask/templates/pages/geo/vegetation.html
 msgid "Used for display and advice. Control is not changed automatically."
-msgstr "表示と助言に使われます。制御が自動で変わることはありません。"
+msgstr "表示とアドバイスに使われます。制御が自動で変わることはありません。"
 
 #: aot/aot_flask/templates/pages/geo/vegetation.html
 msgid "Day temp"
@@ -28716,13 +28716,13 @@ msgid "Limiting factor"
 msgstr "制限要因"
 
 msgid "No automatic control is linked to this facility"
-msgstr "この施設に紐づく自動制御がありません"
+msgstr "この施設には自動制御が設定されていません"
 
 msgid "No description"
 msgstr "説明なし"
 
 msgid "No sensors are linked to this place yet."
-msgstr "この場所にはまだセンサーが紐づいていません。"
+msgstr "この場所にはまだセンサーがありません。"
 
 msgid "Photosynthesis"
 msgstr "光合成"
@@ -29679,7 +29679,7 @@ msgstr "ステージごとに違う値を使う"
 
 #: aot/aot_flask/templates/pages/geo/programs.html
 msgid "What this programme is for and how you want it to run. Written in your own words and read back whenever the programme comes up — by you, and by the AI when it advises on a plot using it."
-msgstr "このプログラムが何のためのもので、どう動いてほしいかを自分の言葉で書きます。このプログラムを開くたびに読み返すことになり、このプログラムを使う区画に AI が助言するときもそのまま読みます。"
+msgstr "このプログラムが何のためのもので、どう動いてほしいかを自分の言葉で書きます。このプログラムを開くたびに読み返すことになり、このプログラムを使う区画に AI がアドバイスするときもそのまま読みます。"
 
 #: aot/aot_flask/templates/pages/geo/programs.html
 msgid "What this programme needs. Nothing is switched on here — a plot using this programme looks at where it sits and reports whether the equipment for each of these is actually there, so you find out before the crop does. Only watering can be found that way today, and only inside a facility: it is matched to irrigation valves placed on the facility plan. The others are recorded as intent until there is a way to recognise them."
@@ -29800,3 +29800,356 @@ msgstr "この言語の翻訳をすべて破棄して、もう一度翻訳しま
 
 msgid "Crop"
 msgstr "作物"
+
+msgid "Appearance"
+msgstr "表示"
+
+#: 그룹 스코프 (docs/design/access-scope-groups.md)
+msgid "Are you sure you want to delete this group?"
+msgstr "このグループを削除しますか？"
+
+#: 그룹 스코프 (docs/design/access-scope-groups.md)
+msgid "Granted Resources"
+msgstr "付与されたリソース"
+
+#: 그룹 스코프 (docs/design/access-scope-groups.md)
+msgid "Impact"
+msgstr "影響"
+
+#: 그룹 스코프 (docs/design/access-scope-groups.md)
+msgid "No users."
+msgstr "ユーザーがいません。"
+
+#: 그룹 스코프 (docs/design/access-scope-groups.md)
+msgid "This group setting restricts operation. Every user can still view all data."
+msgstr "このグループ設定は操作を制限します。すべてのユーザーは引き続き全データを閲覧できます。"
+
+#: 그룹 스코프 (docs/design/access-scope-groups.md)
+msgid "What this group is for. Without it, nobody can tell later whether the group is still needed."
+msgstr "このグループの用途。記載がないと、後でこのグループがまだ必要か判断できません。"
+
+#: 그룹 스코프 (docs/design/access-scope-groups.md)
+msgid "Edit Group"
+msgstr "グループ編集"
+
+#: 그룹 스코프 (docs/design/access-scope-groups.md)
+msgid "Groups restrict who can operate a resource. Every user can still view all data."
+msgstr "グループはリソースを操作できる人を制限します。すべてのユーザーは引き続き全データを閲覧できます。"
+
+#: 그룹 스코프 (docs/design/access-scope-groups.md)
+msgid "Members"
+msgstr "メンバー"
+
+#: 그룹 스코프 (docs/design/access-scope-groups.md)
+msgid "Members and granted resources are set after the group is created."
+msgstr "メンバーと付与リソースはグループ作成後に設定します。"
+
+#: 그룹 스코프 (docs/design/access-scope-groups.md)
+msgid "No groups yet. Without a group, every user operates every resource their role allows."
+msgstr "まだグループがありません。グループがない場合、すべてのユーザーは自分の役割が許可するすべてのリソースを操作します。"
+
+#: 그룹 스코프 (docs/design/access-scope-groups.md)
+msgid "Access all groups"
+msgstr "全グループへのアクセス"
+
+#: 그룹 스코프 (docs/design/access-scope-groups.md)
+msgid "Group ID"
+msgstr "グループ ID"
+
+#: 그룹 스코프 (docs/design/access-scope-groups.md)
+msgid "Losing operation"
+msgstr "操作権限を失うユーザー"
+
+#: 그룹 스코프 (docs/design/access-scope-groups.md)
+msgid "No resources granted — every user operates them as their role allows."
+msgstr "付与されたリソースがありません — すべてのユーザーが自分の役割の許す範囲で操作します。"
+
+#: 그룹 스코프 (docs/design/access-scope-groups.md)
+msgid "Nobody loses operation with this change."
+msgstr "この変更で操作権限を失うユーザーはいません。"
+
+#: 그룹 스코프 (docs/design/access-scope-groups.md)
+msgid "Warning: nobody would be able to operate this resource."
+msgstr "警告: このリソースを操作できるユーザーがいなくなります。"
+
+#: 그룹 스코프 (docs/design/access-scope-groups.md)
+msgid "Dashboards"
+msgstr "ダッシュボード"
+
+#: 그룹 스코프 (docs/design/access-scope-groups.md)
+msgid "Device Tabs"
+msgstr "デバイスタブ"
+
+#: 그룹 스코프 (docs/design/access-scope-groups.md)
+msgid "Maps"
+msgstr "地図"
+
+#: 그룹 스코프 (docs/design/access-scope-groups.md)
+msgid "A group with that name already exists."
+msgstr "同じ名前のグループが既に存在します。"
+
+#: 그룹 스코프 (docs/design/access-scope-groups.md)
+msgid "Group not found."
+msgstr "グループが見つかりません。"
+
+#: 그룹 스코프 (docs/design/access-scope-groups.md)
+msgid "User Group"
+msgstr "ユーザーグループ"
+
+#: 그룹 스코프 (docs/design/access-scope-groups.md)
+msgid "At least one role must keep access to all groups. Grant it to another role first."
+msgstr "全グループへのアクセス権を持つ役割が最低1つ必要です。先に別の役割へ付与してください。"
+
+
+#: 그룹 스코프 (docs/design/access-scope-groups.md)
+msgid "This resource is assigned to another group. Ask an administrator for access."
+msgstr "このリソースは別のグループに割り当てられています。管理者にアクセスを依頼してください。"
+
+msgid "Plots"
+msgstr "区画"
+
+msgid "All maps"
+msgstr "すべての地図"
+
+msgid "All kinds"
+msgstr "すべての種類"
+
+msgid "Include ended"
+msgstr "終了分を含む"
+
+msgid "%(n)s items"
+msgstr "%(n)s件"
+
+msgid "Nothing recorded yet."
+msgstr "まだ記録がありません。"
+
+msgid "Pick a map first."
+msgstr "先に地図を選んでください。"
+
+#: 그룹 스코프 (docs/design/access-scope-groups.md)
+msgid "Groups that can operate this tab"
+msgstr "このタブを操作できるグループ"
+
+#: 그룹 스코프 (docs/design/access-scope-groups.md)
+msgid "If no group is selected, everyone can operate this tab. Selecting a group limits operation to its members. Data stays visible to everyone."
+msgstr "グループを選ばない場合は全員がこのタブを操作できます。グループを選ぶとそのメンバーだけが操作できます。データは引き続き全員に表示されます。"
+
+#: 그룹 스코프 (docs/design/access-scope-groups.md)
+msgid "No groups yet. Create one in Settings > Users > Groups."
+msgstr "まだグループがありません。設定 > ユーザー > グループで作成してください。"
+
+#: 그룹 스코프 (docs/design/access-scope-groups.md)
+msgid "Everyone can operate this tab (no group assigned)."
+msgstr "全員がこのタブを操作できます（グループ未割り当て）。"
+
+#: 그룹 스코프 (docs/design/access-scope-groups.md)
+msgid "Warning: nobody would be able to operate this tab."
+msgstr "警告: このタブを操作できるユーザーがいなくなります。"
+
+#: 그룹 스코프 (docs/design/access-scope-groups.md)
+msgid "Assign resources from each tab or resource settings dialog. This list is read-only."
+msgstr "付与は各タブやリソースの設定画面で行います。この一覧は読み取り専用です。"
+
+#: 그룹 스코프 (docs/design/access-scope-groups.md)
+msgid "This group has no resources yet. Everyone can still operate what is not assigned."
+msgstr "このグループに付与されたリソースはありません。未割り当てのリソースは引き続き全員が操作できます。"
+
+#: 그룹 스코프 (docs/design/access-scope-groups.md)
+msgid "Device Tab"
+msgstr "デバイスタブ"
+
+#: 그룹 스코프 (docs/design/access-scope-groups.md)
+msgid "(missing resource)"
+msgstr "(存在しないリソース)"
+
+#: 그룹 스코프 (docs/design/access-scope-groups.md)
+msgid "Groups that can operate this dashboard"
+msgstr "このダッシュボードを操作できるグループ"
+
+#: 그룹 스코프 (docs/design/access-scope-groups.md)
+msgid "If no group is selected, everyone can operate this dashboard. Selecting a group limits operation to its members. Data stays visible to everyone."
+msgstr "グループを選ばない場合は全員がこのダッシュボードを操作できます。グループを選ぶとそのメンバーだけが操作できます。データは引き続き全員に表示されます。"
+
+#: 그룹 스코프 (docs/design/access-scope-groups.md)
+msgid "Everyone can operate this dashboard (no group assigned)."
+msgstr "全員がこのダッシュボードを操作できます（グループ未割り当て）。"
+
+#: 그룹 스코프 (docs/design/access-scope-groups.md)
+msgid "Warning: nobody would be able to operate this dashboard."
+msgstr "警告: このダッシュボードを操作できるユーザーがいなくなります。"
+
+#: 그룹 스코프 (docs/design/access-scope-groups.md)
+msgid "Map Settings"
+msgstr "地図設定"
+
+#: 그룹 스코프 (docs/design/access-scope-groups.md)
+msgid "Groups that can operate this map"
+msgstr "この地図を操作できるグループ"
+
+#: 그룹 스코프 (docs/design/access-scope-groups.md)
+msgid "If no group is selected, everyone can operate this map. Selecting a group limits operation to its members. Data stays visible to everyone."
+msgstr "グループを選ばない場合は全員がこの地図を操作できます。グループを選ぶとそのメンバーだけが操作できます。データは引き続き全員に表示されます。"
+
+#: 그룹 스코프 (docs/design/access-scope-groups.md)
+msgid "Everyone can operate this map (no group assigned)."
+msgstr "全員がこの地図を操作できます（グループ未割り当て）。"
+
+#: 그룹 스코프 (docs/design/access-scope-groups.md)
+msgid "Warning: nobody would be able to operate this map."
+msgstr "警告: この地図を操作できるユーザーがいなくなります。"
+
+#: 그룹 스코프 (docs/design/access-scope-groups.md)
+msgid "Save the map first."
+msgstr "先に地図を保存してください。"
+
+#: 그룹 스코프 (docs/design/access-scope-groups.md)
+msgid "Groups that can operate this facility"
+msgstr "この施設を操作できるグループ"
+
+#: 그룹 스코프 (docs/design/access-scope-groups.md)
+msgid "If no group is selected, everyone can operate this facility. Selecting a group limits operation to its members. Data stays visible to everyone."
+msgstr "グループを選ばない場合は全員がこの施設を操作できます。グループを選ぶとそのメンバーだけが操作できます。データは引き続き全員に表示されます。"
+
+#: 그룹 스코프 (docs/design/access-scope-groups.md)
+msgid "Everyone can operate this facility (no group assigned)."
+msgstr "全員がこの施設を操作できます（グループ未割り当て）。"
+
+#: 그룹 스코프 (docs/design/access-scope-groups.md)
+msgid "Warning: nobody would be able to operate this facility."
+msgstr "警告: この施設を操作できるユーザーがいなくなります。"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
+msgid "Progress"
+msgstr "進行"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
+msgid "Latest photo"
+msgstr "最新の写真"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
+msgid "Planned"
+msgstr "予定"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
+msgid "Starts on"
+msgstr "開始予定日"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
+msgid "Until start"
+msgstr "開始まで"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
+msgid "In %(n)s days"
+msgstr "%(n)s日後"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
+msgid "Starts in %(n)s days"
+msgstr "%(n)s日後に開始"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
+msgid "Plan"
+msgstr "計画"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
+msgid "End this plot"
+msgstr "区画を終了"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
+msgid "End date"
+msgstr "終了日"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
+msgid "Harvested"
+msgstr "収穫完了"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
+msgid "Replaced"
+msgstr "入れ替え"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
+msgid "Removed"
+msgstr "撤去"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
+msgid "And then?"
+msgstr "そのあとは？"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
+msgid "The plot stays as history either way. Nothing is deleted."
+msgstr "どちらでも履歴として残ります。削除されるものはありません。"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
+msgid "Leave it empty"
+msgstr "空けておく"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
+msgid "The place is free for something else."
+msgstr "この場所を別の用途に使えます。"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
+msgid "Rest for a while"
+msgstr "休ませる"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
+msgid "Same place, no program — fallow, drying, turnaround."
+msgstr "同じ場所でプログラムなし — 休閑・乾燥・跡片づけ。"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
+msgid "Plant the next one"
+msgstr "次を植える"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
+msgid "Same place and share, pick what to grow."
+msgstr "同じ場所と割り当てで、何を育てるか選びます。"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
+msgid "Fallow"
+msgstr "休閑"
+
+#: aot/aot_flask/static/js/common/aot-plot-labels.js:1
+msgid "Empty period"
+msgstr "空舎"
+
+#: aot/aot_flask/static/js/common/aot-plot-labels.js:1
+msgid "Resting"
+msgstr "休止中"
+
+#: aot/aot_flask/static/js/common/aot-plot-labels.js:1
+msgid "Same place, no program — while it rests or gets ready."
+msgstr "同じ場所でプログラムなし — 休ませる・次の準備をする間。"
+
+#: aot/aot_flask/static/js/common/aot-plot-labels.js:1
+msgid "Vacant"
+msgstr "未使用"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-widget-vector.js:1
+msgid "Toggle Bay labels"
+msgstr "区域ラベルの表示切替"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
+msgid "Bay capacity"
+msgstr "棟の総量"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
+msgid "Set the bay capacity below to enter it as a count"
+msgstr "下で棟の総量を入力すると個数で記入できます"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-widget-vector.js:1
+msgid "Toggle Plot labels"
+msgstr "区画ラベルの表示切替"
+
+#: aot/widgets/AoT_map.py:1
+msgid "Plot Shape"
+msgstr "区画の図形"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
+msgid "Start the next one"
+msgstr "次を始める"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
+msgid "Same place and share — pick what comes next."
+msgstr "同じ場所と割り当てで、次に何をするか選びます。"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
+msgid "Lost"
+msgstr "不作・損失"

@@ -883,6 +883,69 @@ class AISchedulerService:
     _IS_ERROR_RE = re.compile(r'["\']isError["\']\s*:\s*(?:True|true)')
 
     @staticmethod
+    def _scope_denies(meta_id, action_type, target_id, params=None):
+        """발화 시점의 그룹 스코프 재검사. 막으면 사유 문자열, 통과면 None.
+
+        정본 설계: `docs/design/access-scope-groups.md` §8-7
+
+        판정 신원은 **예약을 만든 사람**(`SchedulerJobMeta.user_id`)이다.
+        APScheduler 는 신원 없이 발화하므로 그 자리에서 물을 사람이 없고,
+        `job_kwargs` 에 새로 싣는 대신 이미 있는 컬럼을 쓴다 — 그래야
+        **이 변경 이전에 만들어진 예약도 같은 검사를 받는다**(kwargs 를 쓰면
+        잡스토어에 이미 직렬화된 예약은 영영 검사 밖에 남는다).
+
+        면제는 셋이다. 전부 "물을 사람이 없다" 는 같은 이유다:
+
+        - `meta_id` 가 없다 — 원장에 행이 없는 호출.
+        - `user_id` 가 NULL 이다 — 시스템이 만든 예약(§6-1 데몬과 동급).
+          **여기에 기존 예약 전부가 들어간다**(한시 면제). 그 건수는
+          `check_scope_grants.py` 의 `legacy-schedule` 이 0 이 될 때까지
+          계속 보여준다 — 0 이 되기 전에는 "예약 우회로가 닫혔다" 고
+          말하지 않는다.
+        - 그 사용자가 지워졌다 — 판정 근거가 사라졌다. 여기서 **거부**하면
+          사람을 지우는 것만으로 남의 예약이 멈추는데, 그것은 이 함수가
+          막으려는 것과 다른 종류의 사고다.
+
+        ⚠ **반복(cron) 예약은 회차마다 이 검사를 받는다.** 한 번 거부됐다고
+        잡을 지우지 않는다 — 그룹이 다시 부여되면 그대로 이어져야 하고,
+        지우면 사람이 만든 것을 시스템이 없앤 것이 된다.
+        """
+        if not meta_id:
+            return None
+        try:
+            from aot.aot_flask.access import scope
+            from aot.databases.models import User
+            from aot.databases.models.scheduler import SchedulerJobMeta
+
+            meta = SchedulerJobMeta.query.filter(
+                SchedulerJobMeta.id == meta_id).first()
+            if meta is None or meta.user_id is None:
+                return None
+            owner = User.query.filter(User.id == meta.user_id).first()
+            if owner is None:
+                return None
+
+            device_id = target_id
+            # MCP 도구 호출은 대상이 인자 안에 있다 — 겉의 target_id 는 도구
+            # 이름이라 그것으로 물으면 늘 통과한다(존재하지 않는 장치 =
+            # 탭 없음 = 전원 공개).
+            if action_type == 'mcp_tool_call' and isinstance(params, dict):
+                args = params.get('arguments') or {}
+                device_id = args.get('device_id') or args.get('unique_id') or target_id
+
+            if scope.can_operate_device(device_id, user=owner):
+                return None
+            return ('group scope: %s cannot operate %s'
+                    % (owner.name, device_id))
+        except Exception as exc:
+            # **검사가 실패했다고 실행을 막지 않는다.** 막으면 스코프를 쓰지
+            # 않는 설치에서 이 코드의 버그 하나가 모든 예약을 멈춘다. 대신
+            # 시끄럽게 남긴다 — 조용히 통과시키면 게이트가 언제부터 없었는지
+            # 알 방법이 없다.
+            logger.error("[scope] 예약 재검사 실패, 실행은 계속합니다: %s", exc)
+            return None
+
+    @staticmethod
     def _retval_indicates_not_executed(retval):
         """미실행으로 보이면 그 근거 문자열을, 정상 실행이면 None 을 돌려준다.
 
@@ -1538,6 +1601,26 @@ def _execute_scheduled_action(action_type, target_id, params, meta_id=None):
 
     with _flask_app.app_context():
         try:
+            # 그룹 스코프 재검사 (A1a — docs/design/access-scope-groups.md §6-3·§8-7)
+            #
+            # **생성 시 한 번 검사하는 것으로는 부족하다.** 잡스토어는 영구이고
+            # 발화는 신원 없이 일어나므로, 재검사가 없으면 (1) 그룹에서 뺀
+            # 사람이 어제 걸어 둔 예약이 계속 발화하고 (2) "지금 못 켜니 1분
+            # 뒤로 예약" 이 제어 게이트의 우회로가 된다. 후자는 게이트를 켠 뒤
+            # 남는 구멍 중 **사람이 의도적으로 쓸 수 있는 유일한 것**이라
+            # 데몬 면제(§6-1)와 같은 무게로 다루면 안 된다.
+            _denied = AISchedulerService._scope_denies(meta_id, action_type,
+                                                       target_id, params)
+            if _denied:
+                logger.error("Scheduled action %s on %s did NOT execute: %s",
+                             action_type, target_id, _denied)
+                if meta_id:
+                    AISchedulerService.update_job_state(
+                        meta_id, JOB_STATE_FAILED,
+                        result='NOT EXECUTED: %s' % _denied)
+                return {"status": "error", "message": _denied,
+                        "call_state": "refused"}
+
             # Safety validation first
             SafetyService.validate(action_type, target_id, params)
 

@@ -903,6 +903,21 @@ def controller_activate_deactivate(messages,
             gettext("You do not have permission to activate/deactivate controllers."))
         return messages
 
+    # 그룹 스코프(A1a) — docs/design/access-scope-groups.md
+    #
+    # **여기가 초크포인트다.** 이 함수는 utils_input·utils_controller·
+    # utils_trigger·utils_conditional·utils_device_connection 등 10여 곳에서
+    # 불린다. 호출자마다 게이트를 다는 대신 여기 한 번 다는 이유는, 새 호출자가
+    # 생겼을 때 자동으로 같은 경계를 지나게 하기 위해서다 — 규칙을 여러 벌
+    # 두면 갈라지고, 갈라지면 **느슨한 쪽이 실질 권한**이 된다.
+    #
+    # import 를 함수 안에서 하는 것은 순환을 피하기 위해서다(scope 가 모델을
+    # 늦게 import 하는 것과 같은 이유).
+    from aot.aot_flask.access import scope
+    if not scope.can_operate_device(controller_id):
+        messages["error"].append(scope.deny_message())
+        return messages
+
     activated = bool(controller_action == 'activate')
 
     mod_controller = None
@@ -1847,6 +1862,27 @@ def user_has_permission(permission, silent=False):
     return False
 
 
+def current_user_id():
+    """지금 요청을 낸 사람의 `users.id`. 없으면 None.
+
+    예약을 만들 때 소유자를 남기는 데 쓴다 — 발화 시 그 신원으로 스코프를
+    **다시** 묻지 않으면 "지금 못 켜니 1분 뒤로 예약" 이 제어 게이트의
+    우회로가 된다(docs/design/access-scope-groups.md §6-3·§8-7).
+
+    **None 은 "시스템이 만든 예약" 이라는 뜻이고 발화 시 면제된다.** 그래서
+    사람이 만든 경로에서 None 이 새면 그 예약은 검사를 통째로 건너뛴다 —
+    새 예약 생성 경로를 만들면 이 값을 반드시 넘길 것.
+    """
+    try:
+        if not flask_login.current_user.is_authenticated:
+            return None
+        user = User.query.filter(
+            User.name == flask_login.current_user.name).first()
+        return user.id if user else None
+    except Exception:
+        return None
+
+
 def user_is_admin():
     """
     Determine if the currently-logged-in user has the Admin role (role_id 1).
@@ -1923,6 +1959,26 @@ def dashboard_widget_get_info(dashboard_id=None):
 
 def delete_entry_with_id(table, entry_id, flash_message=True):
     """Delete SQL database entry with specific id."""
+    # 그룹 스코프(A1b) — **삭제의 초크포인트다.**
+    #
+    # 이 함수는 utils_input·utils_output·utils_function·utils_pid·
+    # utils_trigger·utils_conditional·utils_controller·utils_dashboard 등
+    # 16개 모듈이 지난다. 여기 한 번 다는 것이 삭제 경로마다 다는 것보다
+    # 낫고, 새 삭제 경로가 생겨도 자동으로 같은 경계를 지난다.
+    #
+    # 모델 종류로 판정하므로(`can_operate_record`) 채널·조건·액션 같은 자식
+    # 행은 그대로 통과한다 — 부모를 지울 권한이 있으면 자식도 함께 지워지고,
+    # 자식마다 따로 물으면 같은 질문을 두 번 하는 것이 된다.
+    # (정본: docs/design/access-scope-groups.md)
+    from aot.aot_flask.access import scope
+    if not scope.can_operate_record(table, entry_id):
+        msg = scope.deny_message()
+        if flash_message:
+            flash(msg, "error")
+        else:
+            logger.warning("[scope] 삭제 거부: %s %s", table, entry_id)
+        return 0
+
     try:
         logger.debug("delete_entry_with_id called for table=%s id=%s", getattr(table, '__tablename__', table), entry_id)
         entry = table.query.filter(

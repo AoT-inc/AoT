@@ -1,0 +1,137 @@
+/* 구획 운영 페이지(`/plots`).
+ *
+ * 공용 클래스(`aot-*`)를 최대한 재사용하고, 이 파일에는 **이 화면에만 있는
+ * 배치**만 둔다 — 필터 한 줄과 목록 행. 색·모서리·간격은 전역 토큰을 쓴다
+ * (인라인이나 새 색을 만들지 않는다).
+ */
+
+.aot-page {
+  padding: var(--aot-space-5) var(--aot-space-4);
+}
+
+.aot-page-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--aot-space-4);
+  margin-bottom: var(--aot-space-4);
+}
+
+.aot-page-title {
+  font-size: calc(var(--aot-font-size-base) * 1.5);
+  font-weight: 400;      /* 굵기가 아니라 크기로 앞선다(카드 제목과 같은 규약) */
+  margin: 0;
+  color: var(--text-color-primary, #13261B);
+}
+
+/* 필터 한 줄 — 좁아지면 접히되 **감추지는 않는다.** 접어 두면 "왜 이것만
+   보이지" 를 사람이 스스로 찾아내야 한다. */
+.aot-plots-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--aot-space-3);
+  margin-bottom: var(--aot-space-4);
+}
+.aot-plots-filters > input[type="search"] { flex: 1 1 220px; min-width: 0; }
+.aot-plots-filters > select { flex: 0 1 180px; }
+
+.aot-plots-ended {
+  display: flex;
+  align-items: center;
+  gap: var(--aot-space-2);
+  margin: 0;
+  white-space: nowrap;
+  color: var(--aot-color-text-secondary);
+}
+
+.aot-plots-count {
+  margin-left: auto;
+  color: var(--aot-color-text-secondary);
+  font-size: var(--aot-font-size-sm);
+  white-space: nowrap;
+}
+
+/* 목록 — 카드 하나에 행을 쌓는다(설정 화면의 항목 목록과 같은 모양). */
+.aot-plots-list {
+  background: var(--bd-primary, #FFFFFF);
+  border-radius: 16px;
+  padding: var(--aot-space-2) var(--aot-space-4);
+}
+
+.aot-plots-row {
+  display: flex;
+  align-items: center;
+  gap: var(--aot-space-3);
+  padding: var(--aot-space-3) 0;
+  border-bottom: 1px solid var(--aot-border-light);
+}
+.aot-plots-row:last-child { border-bottom: none; }
+
+.aot-plots-main {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--aot-space-2);
+}
+
+.aot-plots-subject {
+  font-size: var(--aot-font-size-base);
+  color: var(--text-color-primary, #13261B);
+}
+
+/* 품종·위치는 **곁들이다** — 한 열에 한 정보라는 규약을 지키되, 목록에서는
+   같은 줄에 두고 색으로 층을 만든다(줄을 나누면 행이 두 배로 길어진다). */
+.aot-plots-variety,
+.aot-plots-where {
+  color: var(--aot-color-text-secondary);
+  font-size: var(--aot-font-size-sm);
+}
+.aot-plots-where { margin-left: var(--aot-space-2); }
+
+.aot-plots-meta {
+  flex: 0 0 auto;
+  color: var(--aot-color-text-secondary);
+  font-size: var(--aot-font-size-sm);
+  text-align: right;
+  white-space: nowrap;
+}
+
+/* 종료된 작기 — 이력을 켠 사람이 "지금 자라는 것" 으로 읽지 않도록 먼저 보인다. */
+.aot-plots-ended-badge {
+  flex: 0 0 auto;
+  font-size: var(--aot-font-size-xs);
+  color: var(--aot-color-text-secondary);
+  border: 1px solid var(--aot-border-light);
+  border-radius: 999px;
+  padding: 1px 8px;
+}
+
+/* 아직 시작 전 — 종료 배지와 **같은 모양, 다른 색**이다. 둘 다 "지금 자라는
+   것이 아니다" 를 말하므로 자리와 형태를 맞추되, 지나간 것(회색)과 올 것을
+   눈으로 가를 수 있어야 한다. 채운 배경을 쓰지 않는 이유는 이 줄에서 가장
+   먼저 읽혀야 하는 것이 작물 이름이기 때문이다. */
+.aot-plots-planned-badge {
+  flex: 0 0 auto;
+  font-size: var(--aot-font-size-xs);
+  color: var(--text-color-primary, #13261B);
+  border: 1px solid var(--text-color-primary, #13261B);
+  border-radius: 999px;
+  padding: 1px 8px;
+  white-space: nowrap;
+}
+
+.aot-plots-empty {
+  padding: var(--aot-space-5) 0;
+  text-align: center;
+  color: var(--aot-color-text-secondary);
+}
+
+@media (max-width: 640px) {
+  /* 폰에서는 메타를 아래 줄로 내린다 — 한 줄에 넣으면 이름이 잘린다. */
+  .aot-plots-row { flex-wrap: wrap; }
+  .aot-plots-meta { flex: 1 1 100%; text-align: left; }
+  .aot-plots-count { margin-left: 0; }
+}

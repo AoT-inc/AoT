@@ -30,6 +30,7 @@ from aot.databases.models import Function
 from aot.databases.models import Input
 from aot.databases.models import Trigger
 from aot.aot_client import DaemonControl
+from aot.aot_flask.access import scope
 from aot.aot_flask.utils.utils_general import user_has_permission
 from aot.utils.constraints_pass import constraints_pass_positive_value
 
@@ -72,6 +73,10 @@ def widget_cad_activate_deactivate(unique_id, state):
     if not user_has_permission('edit_controllers'):
         app.logger.warning("Insufficient permission to toggle controller.")
         return 'Insufficient user permissions to manipulate Controller', 403
+
+    # 그룹 스코프(A1a) — docs/design/access-scope-groups.md
+    if not scope.can_operate_device(unique_id):
+        return (scope.deny_message(), 403)
 
     input = Input.query.filter(Input.unique_id == unique_id).first()
     function = Function.query.filter(Function.unique_id == unique_id).first()

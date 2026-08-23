@@ -62,6 +62,10 @@ class ControllerStatus(Resource):
         """Activate or deactivate a controller."""
         if not utils_general.user_has_permission('edit_controllers'):
             abort(403)
+        # 그룹 스코프(A1a) — REST 도 화면과 같은 경계를 지난다.
+        from aot.aot_flask.access import scope
+        if not scope.can_operate_device(unique_id):
+            abort(403, message=scope.deny_message())
 
         if not ns_controller.payload or 'activate' not in ns_controller.payload:
             abort(422, message='missing "activate" in payload')

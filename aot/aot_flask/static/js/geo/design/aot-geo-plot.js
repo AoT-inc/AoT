@@ -72,55 +72,15 @@ class AoTGeoPlot {
             .catch(() => { this._programs[kind] = []; return this._programs[kind]; });
     }
 
-    /** 대상 종류 — `GeoProgram.kind` 와 같은 어휘. */
-    /** 대상·품종 라벨은 종류에 따라 달라진다(common/aot-plot-labels.js). */
-    _subjectLabel(p) {
-        const k = (p && p.kind) || 'vegetation';
-        return window.AoTPlotLabels ? window.AoTPlotLabels.subject(k)
-                                    : this._t('What is here');
+    /** 공용 폼이 첫 렌더에 쓸 선택지(이미 받아 둔 것만). 없으면 빈 목록으로
+     *  그려지고 `AoTPlotForm.wire` 가 도착하는 대로 채운다. */
+    _programsFor(kind) {
+        return (this._programs || {})[kind || 'vegetation'] || [];
     }
 
-    _varietyLabel(p) {
-        const k = (p && p.kind) || 'vegetation';
-        return window.AoTPlotLabels ? window.AoTPlotLabels.variety(k)
-                                    : this._t('Variety');
-    }
 
-    _kindRowHtml(p, row) {
-        const cur = p.kind || 'vegetation';
-        const labels = {
-            vegetation: this._t('Vegetation'), livestock: this._t('Livestock'),
-            facility: this._t('Facility'), other: this._t('Other')
-        };
-        let opts = '';
-        ['vegetation', 'livestock', 'facility', 'other'].forEach(k => {
-            opts += `<option value="${k}"` + (k === cur ? ' selected' : '') +
-                    `>${this._esc(labels[k])}</option>`;
-        });
-        return row(this._t('Kind'),
-                   `<select class="aot-modern-input form-control"
-                            data-veg-field="kind">${opts}</select>`);
-    }
 
-    /** 프로그램 선택 줄. 목록이 비어 있으면(만든 것이 없으면) 내지 않는다. */
-    _programRowHtml(p, row) {
-        const list = (this._programs || {})[p.kind || 'vegetation'] || [];
-        if (!list.length) return '';
-        const cur = (p.program && p.program.unique_id) || '';
-        let opts = `<option value="">${this._esc(this._t('No program'))}</option>`;
-        list.forEach(x => {
-            const label = x.name + (x.variety ? ' · ' + x.variety : '');
-            opts += `<option value="${this._esc(x.unique_id)}"` +
-                    (x.unique_id === cur ? ' selected' : '') + `>${this._esc(label)}</option>`;
-        });
-        // `selectpicker` + `data-live-search`: 프로그램이 많아지면 스크롤 대신
-        // 타이핑으로 찾는다(geo/program 화면·"장치 추가" 드롭다운과 같은 방식).
-        // 초기화는 이 HTML을 DOM에 넣는 쪽(openEditForm/openCreateForm)이 한다.
-        return row(this._t('Program'),
-                   `<select class="aot-modern-input form-control selectpicker"
-                            data-veg-field="program_uuid"
-                            data-live-search="true">${opts}</select>`);
-    }
+
 
     /** 매번 컨테이너를 통째로 다시 그리므로 이전 bootstrap-select DOM은
      * 함께 사라진다 — `refresh`가 아니라 새 초기화를 부른다. */
@@ -867,47 +827,30 @@ class AoTGeoPlot {
      */
     _formHtml(p) {
         p = p || {};
-        const v = (x) => this._esc(x == null ? '' : x);
-        const row = (label, control) => `
-            <div class="aot-modal-option-row">
-                <div class="aot-modal-option-label">${label}</div>
-                <div class="aot-modal-option-control">${control}</div>
-            </div>`;
-
-        return `
-            <div class="aot-modal-group-title">${this._t('This plot')}</div>
-            <div class="aot-modal-container">
-                ${this._kindRowHtml(p, row)}
-                ${row(this._subjectLabel(p),
-                      `<input type="text" class="aot-modern-input form-control"
-                              data-veg-field="subject" value="${v(p.subject)}" autocomplete="off">`)}
-                ${row(this._varietyLabel(p),
-                      `<input type="text" class="aot-modern-input form-control"
-                              data-veg-field="variety" value="${v(p.variety)}">`)}
-                ${row(this._t('Plot name'),
-                      `<input type="text" class="aot-modern-input form-control"
-                              data-veg-field="name" value="${v(p.name)}">`)}
-            </div>
-
-            <div class="aot-modal-group-title">${this._t('Program')}</div>
-            <div class="aot-modal-container">
-                ${this._programRowHtml(p, row)}
-                <div class="aot-modal-body-text">${this._esc(this._t(
-                    'A program brings the stages and the expected end date.'))}</div>
-            </div>
-
-            <div class="aot-modal-group-title">${this._t('Dates')}</div>
-            <div class="aot-modal-container">
-                ${row(this._t('Start date'),
-                      `<input type="date" class="aot-modern-input form-control"
-                              data-veg-field="started_on" value="${v(p.started_on)}">`)}
-                ${row(this._t('Expected end'),
-                      `<input type="date" class="aot-modern-input form-control"
-                              data-veg-field="expected_end_on" value="${v(p.expected_end_on)}">`)}
-                ${row(this._t('Colour'),
-                      `<input type="color" class="aot-modern-input form-control aot-detail-field-color"
-                              data-veg-field="color" value="${v(p.color || this.colorOf(p))}">`)}
-            </div>`;
+        // **공용 폼 한 벌**(`common/aot-plot-form.js`). 예전에는 이 화면이 필드를
+        // 직접 적고 있어서 다른 화면과 집합이 갈렸다.
+        //
+        // 노지 구획이라 `target: 'ground'` — 구역(`bay_id`)과 몫(`allocation`)이
+        // 빠진다. 여기서는 **기하가 위치이자 면적**이고, 몫을 함께 적으면 정본이
+        // 둘이 되어 서버가 거절한다(`plot_io._resolve_allocation`).
+        //
+        // 이름·색은 이 화면에만 있다(`include`) — 지도에 여러 구획이 겹쳐 그려
+        // 지므로 서로 구분할 수단이 필요하다.
+        if (window.AoTPlotForm && window.AoTPlotForm.rowsHtml) {
+            return window.AoTPlotForm.rowsHtml({
+                attr: 'data-veg-field',
+                target: 'ground',
+                groups: true,               // 모달이 커서 묶어 보이는 편이 낫다
+                include: ['name', 'color'],
+                values: p,
+                kind: p.kind || 'vegetation',
+                programs: this._programsFor(p.kind || 'vegetation'),
+                canDesign: false,           // 이미 설계 화면 안이다
+                today: this._today(),
+                defaultColor: this.colorOf(p)
+            });
+        }
+        return '';
     }
 
     /** 폼 값을 모아 저장 콜백에 넘긴다. 저장 버튼은 모달 푸터에 있다. */
@@ -918,18 +861,16 @@ class AoTGeoPlot {
      * 사람이 이미 적어 넣은 값은 지키고 종류만 갈아 끼운다.
      */
     _wireKindChange(root, redraw) {
-        const sel = root.querySelector('[data-veg-field="kind"]');
-        if (!sel) return;
-        sel.onchange = () => {
-            const cur = {};
-            root.querySelectorAll('[data-veg-field]').forEach(el => {
-                cur[el.getAttribute('data-veg-field')] = el.value || '';
-            });
-            cur.kind = sel.value;
-            // 종류가 바뀌면 그 종류에 없는 프로그램은 더 못 쓴다.
-            delete cur.program_uuid;
-            this._loadPrograms(cur.kind).then(() => redraw(cur));
-        };
+        // 종류↔프로그램·라벨은 **공용 폼**이 맡는다(`AoTPlotForm.wire`).
+        // 예전에는 종류가 바뀌면 폼을 통째로 다시 그렸는데(`redraw`), 사람이
+        // 적던 값이 한 번 사라졌다 돌아오고 포커스도 잃었다. 공용 배선은
+        // 프로그램 목록과 대상·품종 라벨만 갈아 끼운다.
+        if (!window.AoTPlotForm || !window.AoTPlotForm.wire) return;
+        window.AoTPlotForm.wire(root, {
+            attr: 'data-veg-field',
+            target: 'ground',
+            loadPrograms: (kind) => this._loadPrograms(kind)
+        });
     }
 
     _wireForm(root, onSave) {
@@ -937,10 +878,9 @@ class AoTGeoPlot {
         const btn = content && content.querySelector('[data-veg-save]');
         if (!btn) return;
         btn.onclick = () => {
-            const values = {};
-            root.querySelectorAll('[data-veg-field]').forEach(el => {
-                values[el.getAttribute('data-veg-field')] = el.value || '';
-            });
+            const values = window.AoTPlotForm
+                ? window.AoTPlotForm.collect(root, { attr: 'data-veg-field' })
+                : {};
             onSave(values);
         };
     }

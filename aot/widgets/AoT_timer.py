@@ -59,6 +59,7 @@ from aot.utils.influx import read_influxdb_list
 from aot.utils.database import db_retrieve_table_daemon
 from aot.databases.models import OutputChannel, Output, Misc
 from aot.aot_client import DaemonControl
+from aot.aot_flask.access import scope
 from aot.aot_flask.utils import utils_general
 from aot.utils.device_tz import get_device_tz
 from flask_babel import lazy_gettext
@@ -1081,6 +1082,10 @@ def aot_timer_cycle_start(device_unique_id, channel_id):
             return jsonify({"error": "unauthorized"}), 401
         if not utils_general.user_has_permission('edit_controllers'):
             return jsonify({"error": "forbidden"}), 403
+        # 그룹 스코프(A1a) — docs/design/access-scope-groups.md
+        if not scope.can_operate_device(device_unique_id):
+            return jsonify({"error": "forbidden",
+                            "message": scope.deny_message()}), 403
         payload = request.get_json(silent=True) or {}
         mode = 'cycle' if str(payload.get('mode', 'simple')) == 'cycle' else 'simple'
         validated = _cyc_validate(payload, mode)
@@ -1106,6 +1111,10 @@ def aot_timer_cycle_stop(device_unique_id, channel_id):
             return jsonify({"error": "unauthorized"}), 401
         if not utils_general.user_has_permission('edit_controllers'):
             return jsonify({"error": "forbidden"}), 403
+        # 그룹 스코프(A1a) — docs/design/access-scope-groups.md
+        if not scope.can_operate_device(device_unique_id):
+            return jsonify({"error": "forbidden",
+                            "message": scope.deny_message()}), 403
         _cyc_stop_worker(device_unique_id, channel_id, reason='user_stop')
         return jsonify(_cyc_decorate(_cyc_state_snapshot(device_unique_id, channel_id)))
     except Exception as exc:

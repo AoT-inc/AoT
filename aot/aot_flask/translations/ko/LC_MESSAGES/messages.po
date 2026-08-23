@@ -7299,7 +7299,7 @@ msgstr "버튼 숨기기"
 #: aot_flask/static/js/widgets/AoT_map/aot-map-widget-vector.js:4882
 #: aot_flask/templates/pages/geo/geo_facility.html:1092
 msgid "Site"
-msgstr "필지"
+msgstr "대지"
 
 #: aot_flask/static/js/dist/aot-map-widget.bundle.js:23
 #: aot_flask/static/js/dist/geo-design.bundle.js:163
@@ -14082,7 +14082,7 @@ msgstr "연결됨"
 
 #: aot_flask/templates/pages/geo/geo_facility.html:1162
 msgid "Bays"
-msgstr "베이 수"
+msgstr "동 수"
 
 #: aot_flask/templates/pages/geo/geo_facility.html:1169
 msgid "Spacing (m)"
@@ -24453,7 +24453,7 @@ msgstr ""
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:308
 msgid "Bay Scope (optional)"
-msgstr "구역(Bay) 범위 (선택사항)"
+msgstr "동 범위 (선택사항)"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:310
 msgid ""
@@ -26683,7 +26683,7 @@ msgstr "전체 구역"
 
 #: aot/aot_flask/templates/pages/graph-async.html
 msgid "Site / Zone"
-msgstr "필지 · 구역"
+msgstr "대지 · 구역"
 
 #: aot/aot_flask/templates/pages/graph-async.html
 msgid "All sites and zones"
@@ -26691,7 +26691,7 @@ msgstr "전체"
 
 #: aot/aot_flask/templates/pages/graph-async.html
 msgid "Sites"
-msgstr "필지"
+msgstr "대지"
 
 #: aot/aot_flask/static/js/widgets/AoT_map/aot-map-widget-vector.js
 msgid "Zone status"
@@ -26735,7 +26735,7 @@ msgstr "목표 대비"
 
 #: aot/aot_flask/static/js/widgets/AoT_map/aot-map-widget-vector.js
 msgid "Go to site"
-msgstr "상위 필지로"
+msgstr "상위 대지로"
 
 #: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
 msgid "Attention"
@@ -26779,7 +26779,7 @@ msgstr "기록 없음"
 
 #: aot/aot_flask/static/js/widgets/AoT_map/aot-map-widget-vector.js
 msgid "Site list"
-msgstr "필지 목록"
+msgstr "대지 목록"
 
 #: aot/aot_flask/static/js/widgets/AoT_map/aot-map-widget-vector.js
 msgid "Contents"
@@ -27774,7 +27774,7 @@ msgstr "복사해서 새로 만들기"
 
 #: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
 msgid "End plot"
-msgstr "식재 종료"
+msgstr "구획 종료"
 
 #: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
 msgid "Planting ended"
@@ -30041,3 +30041,356 @@ msgstr "이 언어의 번역을 모두 지우고 다시 번역할까요? 직접 
 
 msgid "Crop"
 msgstr "작물"
+
+msgid "Appearance"
+msgstr "표시"
+
+#: 그룹 스코프 (docs/design/access-scope-groups.md)
+msgid "Are you sure you want to delete this group?"
+msgstr "이 그룹을 삭제하시겠습니까?"
+
+#: 그룹 스코프 (docs/design/access-scope-groups.md)
+msgid "Granted Resources"
+msgstr "부여된 자원"
+
+#: 그룹 스코프 (docs/design/access-scope-groups.md)
+msgid "Impact"
+msgstr "영향"
+
+#: 그룹 스코프 (docs/design/access-scope-groups.md)
+msgid "No users."
+msgstr "사용자가 없습니다."
+
+#: 그룹 스코프 (docs/design/access-scope-groups.md)
+msgid "This group setting restricts operation. Every user can still view all data."
+msgstr "이 그룹 설정은 조작을 제한합니다. 모든 사용자는 여전히 전체 데이터를 볼 수 있습니다."
+
+#: 그룹 스코프 (docs/design/access-scope-groups.md)
+msgid "What this group is for. Without it, nobody can tell later whether the group is still needed."
+msgstr "이 그룹의 용도. 적어두지 않으면 나중에 이 그룹이 아직 필요한지 판단할 수 없습니다."
+
+#: 그룹 스코프 (docs/design/access-scope-groups.md)
+msgid "Edit Group"
+msgstr "그룹 편집"
+
+#: 그룹 스코프 (docs/design/access-scope-groups.md)
+msgid "Groups restrict who can operate a resource. Every user can still view all data."
+msgstr "그룹은 자원을 조작할 수 있는 사람을 제한합니다. 모든 사용자는 여전히 전체 데이터를 볼 수 있습니다."
+
+#: 그룹 스코프 (docs/design/access-scope-groups.md)
+msgid "Members"
+msgstr "구성원"
+
+#: 그룹 스코프 (docs/design/access-scope-groups.md)
+msgid "Members and granted resources are set after the group is created."
+msgstr "구성원과 부여 자원은 그룹을 만든 뒤에 정합니다."
+
+#: 그룹 스코프 (docs/design/access-scope-groups.md)
+msgid "No groups yet. Without a group, every user operates every resource their role allows."
+msgstr "아직 그룹이 없습니다. 그룹이 없으면 모든 사용자가 자기 역할이 허용하는 모든 자원을 조작합니다."
+
+#: 그룹 스코프 (docs/design/access-scope-groups.md)
+msgid "Access all groups"
+msgstr "모든 그룹 접근"
+
+#: 그룹 스코프 (docs/design/access-scope-groups.md)
+msgid "Group ID"
+msgstr "그룹 ID"
+
+#: 그룹 스코프 (docs/design/access-scope-groups.md)
+msgid "Losing operation"
+msgstr "조작 권한을 잃는 사용자"
+
+#: 그룹 스코프 (docs/design/access-scope-groups.md)
+msgid "No resources granted — every user operates them as their role allows."
+msgstr "부여된 자원이 없습니다 — 모든 사용자가 자기 역할이 허용하는 대로 조작합니다."
+
+#: 그룹 스코프 (docs/design/access-scope-groups.md)
+msgid "Nobody loses operation with this change."
+msgstr "이 변경으로 조작 권한을 잃는 사용자는 없습니다."
+
+#: 그룹 스코프 (docs/design/access-scope-groups.md)
+msgid "Warning: nobody would be able to operate this resource."
+msgstr "경고: 이 자원을 조작할 수 있는 사용자가 아무도 없게 됩니다."
+
+#: 그룹 스코프 (docs/design/access-scope-groups.md)
+msgid "Dashboards"
+msgstr "대시보드"
+
+#: 그룹 스코프 (docs/design/access-scope-groups.md)
+msgid "Device Tabs"
+msgstr "장치 탭"
+
+#: 그룹 스코프 (docs/design/access-scope-groups.md)
+msgid "Maps"
+msgstr "지도"
+
+#: 그룹 스코프 (docs/design/access-scope-groups.md)
+msgid "A group with that name already exists."
+msgstr "같은 이름의 그룹이 이미 있습니다."
+
+#: 그룹 스코프 (docs/design/access-scope-groups.md)
+msgid "Group not found."
+msgstr "그룹을 찾을 수 없습니다."
+
+#: 그룹 스코프 (docs/design/access-scope-groups.md)
+msgid "User Group"
+msgstr "사용자 그룹"
+
+#: 그룹 스코프 (docs/design/access-scope-groups.md)
+msgid "At least one role must keep access to all groups. Grant it to another role first."
+msgstr "모든 그룹 접근 권한을 가진 역할이 최소 하나는 있어야 합니다. 다른 역할에 먼저 부여하세요."
+
+
+#: 그룹 스코프 (docs/design/access-scope-groups.md)
+msgid "This resource is assigned to another group. Ask an administrator for access."
+msgstr "이 자원은 다른 그룹에 배정되어 있습니다. 관리자에게 접근을 요청하세요."
+
+msgid "Plots"
+msgstr "구획"
+
+msgid "All maps"
+msgstr "모든 지도"
+
+msgid "All kinds"
+msgstr "모든 종류"
+
+msgid "Include ended"
+msgstr "종료된 것 포함"
+
+msgid "%(n)s items"
+msgstr "%(n)s건"
+
+msgid "Nothing recorded yet."
+msgstr "아직 기록이 없습니다."
+
+msgid "Pick a map first."
+msgstr "지도를 먼저 고르세요."
+
+#: 그룹 스코프 (docs/design/access-scope-groups.md)
+msgid "Groups that can operate this tab"
+msgstr "이 탭을 조작할 수 있는 그룹"
+
+#: 그룹 스코프 (docs/design/access-scope-groups.md)
+msgid "If no group is selected, everyone can operate this tab. Selecting a group limits operation to its members. Data stays visible to everyone."
+msgstr "그룹을 고르지 않으면 모두가 이 탭을 조작합니다. 그룹을 고르면 그 구성원만 조작합니다. 데이터는 모두에게 계속 보입니다."
+
+#: 그룹 스코프 (docs/design/access-scope-groups.md)
+msgid "No groups yet. Create one in Settings > Users > Groups."
+msgstr "아직 그룹이 없습니다. 설정 > 사용자 > 그룹에서 만드세요."
+
+#: 그룹 스코프 (docs/design/access-scope-groups.md)
+msgid "Everyone can operate this tab (no group assigned)."
+msgstr "모두가 이 탭을 조작합니다 (부여된 그룹 없음)."
+
+#: 그룹 스코프 (docs/design/access-scope-groups.md)
+msgid "Warning: nobody would be able to operate this tab."
+msgstr "경고: 이 탭을 조작할 수 있는 사용자가 아무도 없게 됩니다."
+
+#: 그룹 스코프 (docs/design/access-scope-groups.md)
+msgid "Assign resources from each tab or resource settings dialog. This list is read-only."
+msgstr "부여는 각 탭이나 자원의 설정 창에서 합니다. 이 목록은 읽기 전용입니다."
+
+#: 그룹 스코프 (docs/design/access-scope-groups.md)
+msgid "This group has no resources yet. Everyone can still operate what is not assigned."
+msgstr "이 그룹에 부여된 자원이 없습니다. 부여되지 않은 자원은 여전히 모두가 조작합니다."
+
+#: 그룹 스코프 (docs/design/access-scope-groups.md)
+msgid "Device Tab"
+msgstr "장치 탭"
+
+#: 그룹 스코프 (docs/design/access-scope-groups.md)
+msgid "(missing resource)"
+msgstr "(사라진 자원)"
+
+#: 그룹 스코프 (docs/design/access-scope-groups.md)
+msgid "Groups that can operate this dashboard"
+msgstr "이 대시보드를 조작할 수 있는 그룹"
+
+#: 그룹 스코프 (docs/design/access-scope-groups.md)
+msgid "If no group is selected, everyone can operate this dashboard. Selecting a group limits operation to its members. Data stays visible to everyone."
+msgstr "그룹을 고르지 않으면 모두가 이 대시보드를 조작합니다. 그룹을 고르면 그 구성원만 조작합니다. 데이터는 모두에게 계속 보입니다."
+
+#: 그룹 스코프 (docs/design/access-scope-groups.md)
+msgid "Everyone can operate this dashboard (no group assigned)."
+msgstr "모두가 이 대시보드를 조작합니다 (부여된 그룹 없음)."
+
+#: 그룹 스코프 (docs/design/access-scope-groups.md)
+msgid "Warning: nobody would be able to operate this dashboard."
+msgstr "경고: 이 대시보드를 조작할 수 있는 사용자가 아무도 없게 됩니다."
+
+#: 그룹 스코프 (docs/design/access-scope-groups.md)
+msgid "Map Settings"
+msgstr "지도 설정"
+
+#: 그룹 스코프 (docs/design/access-scope-groups.md)
+msgid "Groups that can operate this map"
+msgstr "이 지도를 조작할 수 있는 그룹"
+
+#: 그룹 스코프 (docs/design/access-scope-groups.md)
+msgid "If no group is selected, everyone can operate this map. Selecting a group limits operation to its members. Data stays visible to everyone."
+msgstr "그룹을 고르지 않으면 모두가 이 지도를 조작합니다. 그룹을 고르면 그 구성원만 조작합니다. 데이터는 모두에게 계속 보입니다."
+
+#: 그룹 스코프 (docs/design/access-scope-groups.md)
+msgid "Everyone can operate this map (no group assigned)."
+msgstr "모두가 이 지도를 조작합니다 (부여된 그룹 없음)."
+
+#: 그룹 스코프 (docs/design/access-scope-groups.md)
+msgid "Warning: nobody would be able to operate this map."
+msgstr "경고: 이 지도를 조작할 수 있는 사용자가 아무도 없게 됩니다."
+
+#: 그룹 스코프 (docs/design/access-scope-groups.md)
+msgid "Save the map first."
+msgstr "지도를 먼저 저장하세요."
+
+#: 그룹 스코프 (docs/design/access-scope-groups.md)
+msgid "Groups that can operate this facility"
+msgstr "이 시설을 조작할 수 있는 그룹"
+
+#: 그룹 스코프 (docs/design/access-scope-groups.md)
+msgid "If no group is selected, everyone can operate this facility. Selecting a group limits operation to its members. Data stays visible to everyone."
+msgstr "그룹을 고르지 않으면 모두가 이 시설을 조작합니다. 그룹을 고르면 그 구성원만 조작합니다. 데이터는 모두에게 계속 보입니다."
+
+#: 그룹 스코프 (docs/design/access-scope-groups.md)
+msgid "Everyone can operate this facility (no group assigned)."
+msgstr "모두가 이 시설을 조작합니다 (부여된 그룹 없음)."
+
+#: 그룹 스코프 (docs/design/access-scope-groups.md)
+msgid "Warning: nobody would be able to operate this facility."
+msgstr "경고: 이 시설을 조작할 수 있는 사용자가 아무도 없게 됩니다."
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
+msgid "Progress"
+msgstr "진행"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
+msgid "Latest photo"
+msgstr "최신 사진"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
+msgid "Planned"
+msgstr "예정"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
+msgid "Starts on"
+msgstr "시작 예정일"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
+msgid "Until start"
+msgstr "시작까지"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
+msgid "In %(n)s days"
+msgstr "%(n)s일 뒤"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
+msgid "Starts in %(n)s days"
+msgstr "%(n)s일 뒤 시작"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
+msgid "Plan"
+msgstr "계획"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
+msgid "End this plot"
+msgstr "구획 종료"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
+msgid "End date"
+msgstr "종료일"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
+msgid "Harvested"
+msgstr "수확 완료"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
+msgid "Replaced"
+msgstr "교체"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
+msgid "Removed"
+msgstr "제거"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
+msgid "And then?"
+msgstr "그 다음은?"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
+msgid "The plot stays as history either way. Nothing is deleted."
+msgstr "어느 쪽이든 이력으로 남습니다. 지워지는 것은 없습니다."
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
+msgid "Leave it empty"
+msgstr "비워 둔다"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
+msgid "The place is free for something else."
+msgstr "이 자리를 다른 데 쓸 수 있습니다."
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
+msgid "Rest for a while"
+msgstr "쉬어 간다"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
+msgid "Same place, no program — fallow, drying, turnaround."
+msgstr "같은 자리에 프로그램 없이 — 휴경·건조·전작 정리."
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
+msgid "Plant the next one"
+msgstr "이어서 심는다"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
+msgid "Same place and share, pick what to grow."
+msgstr "같은 자리와 몫으로, 무엇을 기를지 고릅니다."
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
+msgid "Fallow"
+msgstr "휴경"
+
+#: aot/aot_flask/static/js/common/aot-plot-labels.js:1
+msgid "Empty period"
+msgstr "비움"
+
+#: aot/aot_flask/static/js/common/aot-plot-labels.js:1
+msgid "Resting"
+msgstr "쉬는 중"
+
+#: aot/aot_flask/static/js/common/aot-plot-labels.js:1
+msgid "Same place, no program — while it rests or gets ready."
+msgstr "같은 자리에 프로그램 없이 — 쉬거나 다음을 준비하는 동안."
+
+#: aot/aot_flask/static/js/common/aot-plot-labels.js:1
+msgid "Vacant"
+msgstr "미사용"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-widget-vector.js:1
+msgid "Toggle Bay labels"
+msgstr "동 라벨 켜고 끄기"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
+msgid "Bay capacity"
+msgstr "동 총량"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
+msgid "Set the bay capacity below to enter it as a count"
+msgstr "아래에서 동 총량을 적으면 개수로 적을 수 있습니다"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-widget-vector.js:1
+msgid "Toggle Plot labels"
+msgstr "구획 라벨 켜고 끄기"
+
+#: aot/widgets/AoT_map.py:1
+msgid "Plot Shape"
+msgstr "구획 도형"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
+msgid "Start the next one"
+msgstr "이어서 시작한다"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
+msgid "Same place and share — pick what comes next."
+msgstr "같은 자리와 몫으로, 다음에 무엇을 할지 고릅니다."
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
+msgid "Lost"
+msgstr "실패"

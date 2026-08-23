@@ -1530,6 +1530,129 @@ _MCP_TOOL_PAYLOADS: List[Dict[str, Any]] = [
             "required": ["plot_id"]
         }
     },
+    # --- 관리 프로그램 (@ANCHOR: PROGRAM_MCP_PAYLOADS, 2026-08-22) ------------
+    # 도구 자체는 2026-08-19 부터 있었지만 **이 목록에 없어 어떤 MCP 클라이언트로도
+    # 부를 수 없었다** — 카탈로그에도 서랍에도 없으면 그 도구는 존재하지 않는 것과
+    # 같다(탭 도구 4종이 겪은 것과 같은 함정). `create_plot` 의 스키마가 이미
+    # "unique_id from list_programs" 라고 안내하고 있었는데 정작 그 도구가 안
+    # 보였다. `_TIER_ASSIGNMENT` 에는 이미 space/drawer 로 배정돼 있어, 여기
+    # 실리면 곧바로 space 서랍에 들어간다.
+    {
+        "tool_name": "list_programs",
+        "description": "Lists management programmes — a subject's stages with their lengths. A programme says what to grow/raise in what stages; attach one to a plot and the stage, remaining days and expected end date follow from it. Check here before creating one: duplicates are the common mistake. Read-only.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "kind": {"type": "string", "enum": ["vegetation", "livestock", "facility", "other"],
+                         "description": "Filter by subject kind."},
+                "subject": {"type": "string", "description": "Filter by subject (crop/species/herd) name."},
+                "tab_id": {"type": "string", "description": "Filter by the Programs page tab."}
+            }
+        }
+    },
+    {
+        "tool_name": "get_program",
+        "description": "One programme with its full stage list. Each stage may carry 'targets' (numbers the site should hold) and 'guidance' (free text — what to LOOK at and DO BY HAND that stage). Read this before modifying: 'stages' is replaced wholesale, so you need what is already there. Read-only.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "program_id": {"type": "string", "description": "Programme unique_id."}
+            },
+            "required": ["program_id"]
+        }
+    },
+    {
+        "tool_name": "create_program",
+        "description": "Creates a management programme (subject -> stages with lengths). 'subject' is whatever it manages — crop, tree species, turf, herd, structure; AoT is not farm-only. RECIPE: 1) list_programs — does it exist already? 2) research it (knowledge_search; if the library is empty, say so rather than passing your own knowledge off as a source). 3) Map what you find onto YOUR stage keys — sources split stages their own way; never bend a day count to fit one. 4) Blank beats a guess. Display/advice only until a person marks it checked. Requires human approval.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "name": {"type": "string", "description": "Programme name."},
+                "subject": {"type": "string", "description": "What it manages."},
+                "source_note": {"type": "string", "description": "REQUIRED. What this is based on, and how that source's stages were mapped onto these ones — without it nobody can later judge whether a number is right."},
+                "stages": {
+                    "type": "array",
+                    "description": "Ordered stages. 'days' is that stage's LENGTH, not a cumulative day; only the LAST stage may leave it blank (= until the end).",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "key": {"type": "string", "description": "Stage key, e.g. transplant / vegetative / flowering / fruiting / harvest."},
+                            "name": {"type": "string", "description": "Display name."},
+                            "days": {"type": "integer", "description": "Length of this stage in days. Blank only on the last stage."},
+                            "targets": {"type": "object", "description": "{item_key: number}, this stage only. Keys MUST exist in target_defs — vegetation already has temp_day, temp_night, rh, co2, dli, vpd. Out-of-range values are refused."},
+                            "guidance": {"type": "string", "description": "The half no sensor can do — what to LOOK at and DO BY HAND this stage. This is what a beginner opens the programme for, so fill it when you have a real basis."}
+                        }
+                    }
+                },
+                "kind": {"type": "string", "enum": ["vegetation", "livestock", "facility", "other"],
+                         "description": "Default 'vegetation'. Only vegetation has fixed target items; other kinds need target_defs before targets."},
+                "variety": {"type": "string", "description": "Cultivar / breed."},
+                "notes": {"type": "string", "description": "Free notes."},
+                "target_defs": {
+                    "type": "array",
+                    "description": "Extra target ITEMS, only for a value the fixed vocabulary lacks.",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "key": {"type": "string", "description": "lowercase a-z0-9_ ."},
+                            "label": {"type": "string"},
+                            "unit": {"type": "string"},
+                            "measurement": {"type": "string", "description": "Sensor measurement name this maps to — without it the value is display/advice only (control cannot act on a quantity it has no meaning for)."}
+                        }
+                    }
+                },
+                "base_temp_c": {"type": "number", "description": "GDD base temperature. Vegetation only."},
+                "auto_advance": {"type": "boolean", "description": "Advance stages without asking. Default false."},
+                "resource_defs": {
+                    "type": "array",
+                    "description": "What the subject NEEDS (roles), never which function does it — that is a fact about a place, so the site resolves it and one programme serves several greenhouses.",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "role": {"type": "string", "enum": ["irrigation", "fertigation", "other"]}
+                        }
+                    }
+                },
+                "tab_id": {"type": "string", "description": "Tab on the Programs page."}
+            },
+            "required": ["name", "subject", "source_note"]
+        }
+    },
+    {
+        "tool_name": "modify_program",
+        "description": "Edits a programme, or moves it to another tab. THIS is how an empty programme a person made in the UI gets filled in — same stage shape and same RECIPE as create_program; call get_program first because 'stages' replaces the whole list. Send only the fields you are changing. Built-in/external programmes are refused for anything but tab_id (they must be copied first). Writing stages, target items or base_temp_c sends the programme back for a person to check before it drives control again — that is expected, say so rather than working around it. Requires human approval.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "program_id": {"type": "string", "description": "Programme unique_id."},
+                "name": {"type": "string"},
+                "variety": {"type": "string"},
+                "stages": {"type": "array", "description": "Replaces the WHOLE stage list — same item shape as create_program (key, name, days, targets, guidance).",
+                           "items": {"type": "object"}},
+                "target_defs": {"type": "array", "items": {"type": "object"},
+                                "description": "Target item definitions — same shape as create_program."},
+                "resource_defs": {"type": "array", "items": {"type": "object"}},
+                "base_temp_c": {"type": "number"},
+                "auto_advance": {"type": "boolean"},
+                "kind": {"type": "string", "enum": ["vegetation", "livestock", "facility", "other"]},
+                "notes": {"type": "string"},
+                "source_note": {"type": "string", "description": "Update the basis when you change what the programme says."},
+                "tab_id": {"type": "string"}
+            },
+            "required": ["program_id"]
+        }
+    },
+    {
+        "tool_name": "delete_program",
+        "description": "Deletes a programme outright — for mistakes only. Refused while any plot still uses it; unassign that plot's programme first (modify_plot with program_id null), or just leave an unused programme in place, which costs nothing. Requires human approval.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "program_id": {"type": "string", "description": "Programme unique_id."}
+            },
+            "required": ["program_id"]
+        }
+    },
     {
         "tool_name": "get_storage_tier_status",
         "description": "Reports the adaptive document storage state: whether tiering is enabled, how many documents sit in each tier (1=hot, 2=warm, 3=cold), and how many are ACTUALLY archived. A tier value records an intent to move; only a row in the archive means the content was really moved. Relay any 'warning' or 'note' field to the user instead of dropping it.",

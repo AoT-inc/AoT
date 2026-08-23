@@ -6,6 +6,8 @@
 <!-- ANTIGRAVITY_v3_VERIFY_20251227_01 -->
 <!-- Leaflet & Draw CSS [Globalized in layout.html] -->
 <link rel="stylesheet" href="{{ url_for('static', filename='css/map/map.css') }}" />
+{#- 공용 구획 폼(`common/aot-plot-form.js`)의 스타일 — 지도 위젯·/plots 와 **같은 파일**이다. -#}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/components/aot-plot-form.css') }}" />
 <style>
     /* Card Styles */
     .card {
@@ -1107,4 +1109,65 @@
     });
 })();
 </script>
+
+{# ===== 지도 설정 모달 =====
+   예전에는 [편집]이 브라우저 prompt() 로 이름만 물었다. 부여를 붙이려면 창이
+   필요하고, 탭·대시보드와 같은 자리에 같은 모양으로 두는 편이 배우기 쉽다.
+   정본 설계: docs/design/access-scope-groups.md #}
+<div class="modal fade aot-option-modal aot-tab-settings-modal" id="modal_map_settings"
+     tabindex="-1" role="dialog" aria-hidden="true">
+  <div class="modal-dialog modal-lg aot-modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">{{ _('Map Settings') }}</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="{{ _('Close') }}">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="aot-modal-group-title">{{ _('Basic Settings') }}</div>
+        <div class="aot-modal-container">
+          <div class="aot-modal-option-row">
+            <label class="aot-modal-option-label" for="map_settings_name">{{ _('Name') }}</label>
+            <div class="aot-modal-option-control">
+              <input type="text" class="form-control aot-modern-input" id="map_settings_name">
+            </div>
+          </div>
+        </div>
+
+        {# 그룹 부여 — 관리자에게만. 내용은 모달을 열 때 받아 온다. #}
+        <div class="aot-map-scope" style="display: none;">
+          <div class="aot-modal-group-title">{{ _('Groups that can operate this map') }}</div>
+          <div class="aot-modal-container">
+            <div class="aot-modal-body-text">
+              {{ _('If no group is selected, everyone can operate this map. Selecting a group limits operation to its members. Data stays visible to everyone.') }}
+            </div>
+          </div>
+          <div class="aot-modal-container aot-map-scope-groups"></div>
+          <div class="aot-modal-container">
+            <div class="aot-modal-body-text aot-map-scope-impact"></div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn aot-pill-btn" data-dismiss="modal">{{ _('Close') }}</button>
+        <button type="button" class="btn aot-pill-btn aot-pill-btn-primary" id="map_settings_save">{{ _('Save') }}</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // 모달 JS 는 번역을 모르므로 문구를 넘겨준다.
+  window.AoTMapSettingsI18n = {
+    everyone: {{ _('Everyone can operate this map (no group assigned).')|tojson }},
+    lockout: {{ _('Warning: nobody would be able to operate this map.')|tojson }},
+    losing: {{ _('Losing operation')|tojson }},
+    nobody: {{ _('Nobody loses operation with this change.')|tojson }},
+    comm_error: {{ _('Error: Unable to communicate with server.')|tojson }},
+    no_groups: {{ _('No groups yet. Create one in Settings > Users > Groups.')|tojson }},
+    unsaved: {{ _('Save the map first.')|tojson }}
+  };
+</script>
+<script src="{{ url_for('static', filename='js/geo/aot-map-settings-modal.js') }}"></script>
 {% endblock %}

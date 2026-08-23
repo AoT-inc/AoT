@@ -299,7 +299,9 @@ def collect(map_uuid=None, tolerance=1e-6):
                 })
 
     # ── 고아 GeoFacility ───────────────────────────────────────────────
+    _facility_shape_uuids = set()
     for fac in GeoFacility.query.all():
+        _facility_shape_uuids.add(fac.shape_uuid)
         if fac.shape_uuid not in by_uuid:
             findings['orphan-facility'].append({
                 'facility': fac.name,
@@ -307,6 +309,27 @@ def collect(map_uuid=None, tolerance=1e-6):
                 'shape_uuid': fac.shape_uuid,
                 'map': map_names.get(fac.geo_id, fac.geo_id),
             })
+
+    # ── 등록되지 않은 시설 도형 (위와 **반대 방향**) ───────────────────
+    #
+    # `type='facility'` 인데 `GeoFacility` 행이 없다. geo/design 에서 시설
+    # 종류로 그렸지만 시설 편집기에서 등록하지 않은 경우다(로컬 실측 4건).
+    #
+    # 조용한 이유: 지도에는 멀쩡히 그려지고 아무 에러도 안 난다. 그런데 시설
+    # 모달은 `GeoFacility` 로 열리므로 **눌러도 아무 일이 일어나지 않는다** —
+    # 필지 모달의 목록은 이제 그런 줄을 아예 빼므로(존재하지 않는 링크를 만들지
+    # 않는다) 화면에서는 더 안 보인다. 그래서 이 검사가 유일한 통로다.
+    for shape in shapes:
+        if shape.type != 'facility':
+            continue
+        if shape.unique_id in _facility_shape_uuids:
+            continue
+        props = (shape.feature or {}).get('properties') or {}
+        findings['unregistered-facility-shape'].append({
+            'shape_uuid': shape.unique_id,
+            'name': props.get('label_name') or props.get('name'),
+            'map': map_names.get(shape.geo_id, shape.geo_id),
+        })
 
     # ── 부모를 잃은 라벨 ───────────────────────────────────────────────
     nodes_by_map = defaultdict(set)
@@ -619,6 +642,7 @@ HEADINGS = {
     'duplicate':       '같은 지도 안 (종류, 기하) 중복',
     'dangling-link':   '끊어진 map_overlay_id',
     'orphan-facility': '고아 GeoFacility (도형 없음)',
+    'unregistered-facility-shape': '시설로 등록되지 않은 facility 도형 (열리지 않는다)',
     'orphan-label':    '부모를 잃은 라벨',
     'phantom-map':     '유령 지도 (GeoMap 행 없는 geo_id) — 자동삭제 금지',
     'orphan-device-shape': '실존하지 않는 장치를 가리키는 도형 (고아 도형)',

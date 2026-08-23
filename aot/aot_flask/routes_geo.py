@@ -19,6 +19,7 @@ import time
 import threading
 from flask_login import login_required, current_user
 from flask_babel import gettext as _
+from aot.aot_flask.access import scope
 from aot.aot_flask.utils import utils_general
 from aot.aot_flask.utils import utils_http
 from aot.databases.models import GeoMap, GeoSetting, GeoLayer, GeoShape, Input, Output, PID, Trigger, Conditional, CustomController, Function, DeviceMeasurements
@@ -288,6 +289,11 @@ def api_geo_design_delete(map_uuid):
     """Delete GeoMap"""
     if not utils_general.user_has_permission('edit_settings'):
         return jsonify({'ok': False, 'message': 'Permission Denied'}), 403
+
+    # 그룹 스코프 — 지도는 자기 자신이 부여 단위다.
+    # (정본: docs/design/access-scope-groups.md)
+    if not scope.can_operate('geo_map', map_uuid):
+        return jsonify({'ok': False, 'message': scope.deny_message()}), 403
         
     from aot.aot_flask.geo import GeoDesignManager
     result, error = GeoDesignManager.delete_design_map(map_uuid)
@@ -306,7 +312,14 @@ def api_geo_design_save():
         return jsonify({'ok': False, 'message': 'Permission Denied'}), 403
     
     from aot.aot_flask.geo import GeoDesignManager
-    data = request.get_json()
+    data = request.get_json() or {}
+
+    # 그룹 스코프 — 기존 지도를 고칠 때만 판정한다. 새 지도(uuid 없음)는
+    # 부여할 대상이 아직 없으므로 막을 것이 없다.
+    _map_uuid = data.get('map_uuid')
+    if _map_uuid and not scope.can_operate('geo_map', _map_uuid):
+        return jsonify({'ok': False, 'message': scope.deny_message()}), 403
+
     result, error = GeoDesignManager.save_design_map(data, current_user.id)
     
     if error:
@@ -564,7 +577,13 @@ def api_geo_overlays():
         if not utils_general.user_has_permission('edit_settings'):
             return jsonify({'ok': False, 'message': 'Permission Denied'}), 403
             
-        data = request.get_json()
+        data = request.get_json() or {}
+
+        # 그룹 스코프 — 도형은 지도에 속한다. 여기를 막지 않으면 부여된 지도의
+        # 도형을 남이 통째로 갈아치울 수 있다(이 경로는 전량 교체다).
+        if not scope.can_operate('geo_map', data.get('map_uuid')):
+            return jsonify({'ok': False, 'message': scope.deny_message()}), 403
+
         result, error = GeoOverlayManager.save_overlays(data)
         
         if error:
@@ -577,8 +596,18 @@ def api_geo_overlays():
 def api_geo_overlays_delta():
     """Efficient Delta Save for individual features"""
     from aot.aot_flask.geo.geo_overlays import GeoOverlayManager
-    
-    data = request.get_json()
+
+    # 이 경로에는 원래 **역할 검사조차 없었다**(로그인만 확인). 도형을
+    # upsert/delete 하므로 실질적으로 쓰기 경로다 — 스코프를 붙이는 김에
+    # 역할 검사도 함께 세운다. 스코프만 붙이면 그룹을 쓰지 않는 설치에서는
+    # 여전히 아무나 도형을 고칠 수 있다.
+    if not utils_general.user_has_permission('edit_settings'):
+        return jsonify({'ok': False, 'message': 'Permission Denied'}), 403
+
+    data = request.get_json() or {}
+    if not scope.can_operate('geo_map', data.get('map_uuid')):
+        return jsonify({'ok': False, 'message': scope.deny_message()}), 403
+
     result, error = GeoOverlayManager.save_delta(data)
     
     if error:
@@ -1552,9 +1581,12 @@ def page_programs():
     from aot.services.tab_service import TabService
 
     tab_id = request.args.get('tab_id', None)
-    tabs = TabService.get_tabs_for_page('program')
-    current_tab = (TabService.get_tab_by_id(tab_id) if tab_id else None) \
-        or TabService.get_default_tab('program')
+    # 조작할 수 없는 탭은 목록에서 뺀다(그룹 스코프). 정보 격리가 아니다.
+    tabs = TabService.visible_tabs_for_page('program')
+    current_tab = (TabService.get_tab_by_id(tab_id) if tab_id else None)
+    if current_tab is not None and current_tab not in tabs:
+        current_tab = None          # URL 로 지정된 스코프 밖 탭
+    current_tab = current_tab or TabService.default_visible_tab('program')
 
     if current_tab:
         null_count = GeoProgram.query.filter(GeoProgram.tab_id.is_(None)).count()
@@ -1563,13 +1595,53 @@ def page_programs():
             GeoProgram.query.filter(GeoProgram.tab_id.is_(None)) \
                 .update({'tab_id': default_tab.unique_id})
             db.session.commit()
-            tabs = TabService.get_tabs_for_page('program')
+            tabs = TabService.visible_tabs_for_page('program')
 
     return render_template('pages/geo/programs.html',
                            active_page='geo_programs',
                            tabs=tabs,
                            current_tab_id=(current_tab.unique_id
                                           if current_tab else None))
+
+
+@blueprint.route('/plots')
+@login_required
+def page_plots():
+    """구획 운영 페이지 — 전체 목록·검색·이력.
+
+    ## 왜 페이지가 필요한가
+
+    지금까지 구획의 중간 지점은 지도 위젯 모달이었고 그 판단은 옳다(일반
+    사용자의 세계는 대시보드가 전부다). 다만 모달은 **하나의 대상**을 다루기에
+    적합하고, 구획은 수가 느는 대상이라 곧 감당이 안 된다 — 작기 20개, 시설
+    5동, 지난 이력. "이번 철에 무엇을 어디에 심었나" 는 지도를 세 번 오가며
+    답할 질문이 아니다.
+
+    ## 진입은 누구나, 편집은 `edit_plots`
+
+    **보기는 전원 공개**다(그룹 스코프 A 결정 — 그룹은 조작만 제한한다).
+    그래서 진입에 권한을 걸지 않는다. 걸면 Monitor 가 "이번 철에 뭐 심었나" 를
+    보려고 대시보드를 열어 지도를 돌려야 하는데, 그 정보는 원래 그에게 공개다.
+
+    편집 가능 여부는 **서버가 판정해 응답에 싣는다**(`can_edit`) — 화면이 스스로
+    판단하면 곧 갈라지고, 그 갈라짐은 "눌러도 403" 으로만 드러난다.
+
+    ## 목록은 클라이언트가 API 로 받는다
+
+    `/api/geo/plots` 를 그대로 쓴다(`map_uuid` 없으면 전체). 서버 렌더 목록을
+    또 만들면 같은 필터·정렬이 두 벌이 되고, 이 도메인은 그 실패를 이미 겪었다.
+    """
+    from aot.databases.models import GeoMap
+
+    maps = GeoMap.query.order_by(GeoMap.sort_order.asc(),
+                                 GeoMap.name.asc()).all()
+    return render_template(
+        'pages/geo/plots.html',
+        active_page='plots',
+        maps=[{'unique_id': m.unique_id, 'name': m.name} for m in maps],
+        can_edit=utils_general.user_has_permission('edit_plots', silent=True),
+        can_design=utils_general.user_has_permission('edit_settings',
+                                                     silent=True))
 
 
 # ============================================================
@@ -2085,7 +2157,11 @@ def _facility_plots_block(facility_uuid):
     try:
         from aot.aot_flask.geo import plot_context
         from aot.databases.models import GeoFacility
-        rows = plot_context.plots_in_facility(facility_uuid)
+        # **화면 목록이라 계획까지 낸다.** 몫(베드)을 함께 세야 "5베드 남음"
+        # 이 거짓말이 되지 않는다 — 9월에 2베드를 쓰기로 해 둔 것을 빼고 세면
+        # 그 자리에 또 배정할 수 있고, 그날이 오면 조용히 초과된다.
+        # 제어 경로(`routes_geo_iec`·코디네이터)는 기본값 그대로 활성만 본다.
+        rows = plot_context.plots_in_facility(facility_uuid, include_planned=True)
         # 구역 총량은 시설 하나당 **한 번만** 읽어 넘긴다 — 구획마다 다시 읽으면
         # 폴링 응답 하나에 N+1 이 된다.
         fac = GeoFacility.query.filter_by(unique_id=facility_uuid).first()
@@ -2607,6 +2683,12 @@ def api_facility_apply(facility_uuid):
     """
     if not utils_general.user_has_permission('edit_settings'):
         return jsonify({'ok': False, 'message': 'Permission denied'}), 403
+
+    # 그룹 스코프(A1a) — 시설 단위로 묻는다. 시설 제어는 그 안의 액추에이터
+    # 여럿을 한 번에 움직이므로 장치마다 묻는 것보다 시설 자체가 맞는 단위다.
+    # (설계 §8-3 — 시설은 지도에서 상속받지 않고 따로 부여한다.)
+    if not scope.can_operate('geo_facility', facility_uuid):
+        return jsonify({'ok': False, 'message': scope.deny_message()}), 403
 
     from aot.databases.models import GeoFacility
     from aot.aot_client import DaemonControl
@@ -3928,7 +4010,11 @@ def _create_human_schedule(target_id, kind, label, date_str, time_str,
             action_type='human', target_id=target_id, params=params,
             reasoning='[human_schedule] %s @ %s | tags: human_work' % (content, label),
             schedule_time=run_at, proposed_by='HUMAN',
-            approval_required=False, source_type='human')
+            approval_required=False, source_type='human',
+            # 발화 시 스코프를 다시 묻기 위한 신원(§8-7). 'human' 예약은
+            # 장치를 움직이지 않지만, 소유자를 남기는 규칙은 예약 종류마다
+            # 갈리지 않아야 한다 — 갈리면 어느 종류가 검사되는지 세야 한다.
+            user_id=utils_general.current_user_id())
         meta.anchor_tz = anchor_name
         meta.anchor_source = anchor_src
         db.session.commit()
@@ -3969,6 +4055,51 @@ def _schedule_target_label(target_id):
     return None, None
 
 
+@blueprint.route('/api/geo/site/<string:site_uuid>/contents', methods=['GET'])
+@login_required
+def api_geo_site_contents(site_uuid):
+    """필지 안 장치 인벤토리 — 센서·출력. 필지 모달의 [환경·제어]가 쓴다.
+
+    **`_build_area_contents` 를 그대로 쓴다.** 구역 모달·구획 모달이 이미 같은
+    함수를 쓰고 있고, 따로 만들면 같은 장치를 화면마다 다르게 세게 된다 —
+    이 도메인이 정확히 그 실패로 크게 데었다(그 함수의 docstring 참조).
+    여기서 하는 일은 **집합을 정하는 것**뿐이다: 필지 안 구역·시설의 장치 전부.
+
+    `device_ids_in_area` 는 site 도형에도 그대로 동작한다(포함 판정은 종류를
+    가리지 않는다). 필지 요약(`summary_for_site`)도 같은 집합을 쓰므로 두
+    화면의 장치 수가 갈리지 않는다.
+    """
+    from aot.databases.models import GeoShape as _GS
+    from aot.aot_flask.geo.device_membership import device_ids_in_area
+
+    site = _GS.query.filter_by(unique_id=site_uuid).first()
+    if not site:
+        return jsonify({'ok': False, 'error': 'site not found'}), 404
+
+    inv = _build_area_contents(device_ids_in_area(site_uuid) or set())
+
+    # "켜면 무엇이 함께 젖는가" — 구역 모달과 같은 경고를 단다. 한쪽에만 있으면
+    # "필지에서 켜면 안전하다" 는 잘못된 대비가 생긴다.
+    try:
+        from aot.aot_flask.geo import plot_context
+        _cover = plot_context.plots_by_valve_device(site.geo_id)
+        for _out in inv['outputs']:
+            names = plot_context.covered_subject_names(
+                _cover.get(_out['unique_id']))
+            if names:
+                _out['also_covers'] = names
+    except Exception:                                       # noqa: BLE001
+        pass
+
+    payload = {'ok': True}
+    payload.update(inv)
+    # 권한은 캐시 밖에서 매번(구역과 같은 규칙). 필지에는 구역 전용 쓰기
+    # (rep_key·output_order)가 없으므로 제어 권한만 낸다.
+    payload['can_edit'] = utils_general.user_has_permission(
+        'edit_controllers', silent=True)
+    return jsonify(payload)
+
+
 @blueprint.route('/api/geo/site/<string:site_uuid>/summary', methods=['GET'])
 @login_required
 def api_geo_site_summary(site_uuid):
@@ -3995,6 +4126,12 @@ def api_geo_site_summary(site_uuid):
 
     result = {'ok': True}
     result.update(payload)
+    # 권한은 **캐시 밖에서 매번** 채운다(구역 모달과 같은 규칙) — 요약 자체는
+    # 30초 캐시라, 안에 넣으면 권한이 바뀌어도 30초 동안 옛 값이 나간다.
+    if isinstance(result.get('site'), dict):
+        result['site'] = dict(result['site'])
+        result['site']['can_edit'] = utils_general.user_has_permission(
+            'edit_settings', silent=True)
     return jsonify(result)
 
 
@@ -4004,6 +4141,9 @@ def api_geo_output_state(output_uuid):
     """장치(Output) ON/OFF 제어 (세션 인증 래퍼)."""
     if not utils_general.user_has_permission('edit_controllers'):
         return jsonify({'ok': False, 'error': 'permission denied'}), 403
+    # 그룹 스코프(A1a) — docs/design/access-scope-groups.md
+    if not scope.can_operate_device(output_uuid):
+        return jsonify({'ok': False, 'error': scope.deny_message()}), 403
 
     data = request.get_json(force=True, silent=True) or {}
     state = data.get('state')
@@ -4628,6 +4768,65 @@ def api_geo_zone_output_order(zone_uuid):
     return jsonify({'ok': True})
 
 
+@blueprint.route('/api/geo/shape/<string:shape_uuid>/description',
+                 methods=['POST'])
+@login_required
+def api_geo_shape_description(shape_uuid):
+    """도형(필지·구역)의 설명 — 사람이 적는 한 문단.
+
+    **`meta_json` 에 담는다.** `feature` 가 아닌 이유가 중요하다 — 도형 저장
+    (`save_overlays`)은 `feature` 를 통째로 갈아 끼우므로, 거기 두면 지도에서
+    도형을 한 번 다시 그리는 것만으로 설명이 사라진다. `meta_json` 은 그 경로가
+    건드리지 않는다(실측: `geo_overlays.py` 에 `meta_json` 참조 0건).
+    사진(`photo_url`)·대표 측정(`rep_key`)이 이미 같은 자리를 쓴다.
+
+    site 와 zone 이 같은 `GeoShape` 라 **한 라우트가 둘 다 받는다.** 계층마다
+    엔드포인트를 따로 두면 같은 검증이 두 벌이 되고, 이 도메인은 그 실패를
+    이미 겪었다.
+    """
+    if not utils_general.user_has_permission('edit_settings'):
+        return jsonify({'ok': False, 'error': 'Insufficient permission'}), 403
+
+    shape = GeoShape.query.filter_by(unique_id=shape_uuid).first()
+    if not shape:
+        return jsonify({'ok': False, 'error': 'shape not found'}), 404
+
+    body = request.get_json(force=True, silent=True) or {}
+    desc = body.get('description')
+    if desc is None:
+        return jsonify({'ok': False, 'error': 'description required'}), 422
+    desc = str(desc).strip()
+    if len(desc) > 2000:
+        return jsonify({'ok': False, 'error': 'description too long'}), 422
+
+    # dict() 필수 — 제자리 수정은 SQLAlchemy 가 못 본다(rep_key 라우트 주석).
+    meta = dict(shape.meta_json or {})
+    if desc:
+        meta['description'] = desc
+    else:
+        meta.pop('description', None)      # 비우면 지운다
+    shape.meta_json = meta
+    db.session.commit()
+
+    # 필지 요약은 30초 캐시라, 비우지 않으면 방금 적은 설명이 다음 갱신까지
+    # 안 보인다("저장했는데 화면이 그대로").
+    #
+    # 이 도형이 site 면 자기 캐시를, zone 이면 자기 내용 캐시와 **상위 site 의
+    # 요약**을 함께 버린다(필지 요약이 자식 이름을 싣는다). `invalidate_rep` 가
+    # 같은 이유로 같은 일을 한다 — 전체 `invalidate()` 는 부르지 않는다:
+    # `_PARENT_CACHE` 까지 날아가 지도 도형 전량을 다시 훑게 된다.
+    try:
+        from aot.aot_flask.geo import site_summary
+        site_summary.invalidate(shape_uuid)
+        site_summary.invalidate_zone_contents(shape_uuid)
+        parent = site_summary.parent_site_for_shape(shape_uuid)
+        if parent:
+            site_summary.invalidate(parent['uuid'])
+    except Exception:                                       # noqa: BLE001
+        pass
+    return jsonify({'ok': True, 'description': desc})
+
+
 @blueprint.route('/api/geo/zone/<string:zone_uuid>/rep_key', methods=['POST'])
 @login_required
 def api_geo_zone_rep_key(zone_uuid):
@@ -4787,6 +4986,10 @@ def api_geo_map_site_order_save(map_uuid):
 
     if not utils_general.user_has_permission('edit_settings', silent=True):
         return jsonify({'ok': False, 'error': 'permission denied'}), 403
+
+    # 그룹 스코프 — 지도는 자기 자신이 부여 단위다.
+    if not scope.can_operate('geo_map', map_uuid):
+        return jsonify({'ok': False, 'error': scope.deny_message()}), 403
 
     geo_map = GeoMap.query.filter_by(unique_id=map_uuid).first()
     if not geo_map:

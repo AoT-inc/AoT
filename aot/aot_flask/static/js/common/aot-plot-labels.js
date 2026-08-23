@@ -12,10 +12,15 @@
  *
  * "대상" 도 약하다 — 무엇을 적는 칸인지 말하지 않아, 구획 이름과 헷갈린다.
  *
- *   종류        대상 라벨    품종 라벨
- *   식생·가축   품목         품종
- *   시설        시설물       규격
- *   기타        대상         세부 구분
+ *   종류        대상 라벨    품종 라벨    쉬는 기간의 기본 이름
+ *   식생        품목         품종         휴경
+ *   가축        품목         품종         비움
+ *   시설        시설물       규격         미사용
+ *   기타        대상         세부 구분    쉬는 중
+ *
+ * **"휴경" 은 중립어가 아니다** — 경작(耕)을 전제한 말이라 축사·시설에는 그냥
+ * 틀리다. 반대로 넷을 "쉬는 중" 으로 통일하면 농가 화면이 관공서 말투가 된다.
+ * 이 표가 있는 이유가 그것이다.
  *
  * ## msgid 는 뜻이 겹치지 않는 것으로 고른다
  *
@@ -38,6 +43,17 @@
     facility: 'Spec',
     other: 'Subtype'
   };
+  // 작기를 끝내고 그 자리를 쉬게 할 때의 **기본 이름**. 고쳐 쓸 수 있는 값이라
+  // 데이터에 박히는 것은 사람이 확인한 뒤다.
+  var RESTING = {
+    vegetation: 'Fallow',
+    livestock: 'Empty period',
+    // `Not in use` 를 쓰지 않는다 — 이미 "사용 중이 아님" 으로 번역돼 있어
+    // 구획 이름 자리에 문장이 들어간다(파일 머리 "msgid 는 뜻이 겹치지 않는
+    // 것으로" 참조).
+    facility: 'Vacant',
+    other: 'Resting'
+  };
 
   function _t(key) {
     var fn = root._;
@@ -53,7 +69,12 @@
     variety: function (kind) {
       return _t(VARIETY[kind] || VARIETY.other);
     },
+    /** 쉬는 기간의 기본 이름. */
+    resting: function (kind) {
+      return _t(RESTING[kind] || RESTING.other);
+    },
     SUBJECT_KEYS: SUBJECT,
-    VARIETY_KEYS: VARIETY
+    VARIETY_KEYS: VARIETY,
+    RESTING_KEYS: RESTING
   };
 })(typeof window !== 'undefined' ? window : this);

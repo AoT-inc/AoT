@@ -71,88 +71,11 @@
     facilityUuid: null,
     mapUuid: null,
     bays: [],        // [{id, name}]
+    capacities: {},  // {bay_id: {unit, total}} — 몫 접미("/12 베드")의 분모
     rows: [],        // GeoPlot dict
     editing: null,   // 편집 중인 구획 uuid (신규는 null)
     formBay: null    // 폼이 열려 있는 구역 id (null = 폼 닫힘)
   };
-
-  // ── 로드 ──────────────────────────────────────────────────────────────
-  /**
-   * 시설이 바뀔 때마다 호출된다. `facility` 는 `/api/geo/facility/<uuid>` 의
-   * dict — `bay_slices` 가 구역 목록의 정본이다(서버가 만든다).
-   */
-  function setFacility(facility) {
-    facility = facility || {};
-    State.facilityUuid = facility.unique_id || null;
-    State.mapUuid = facility.geo_id || null;
-    State.bays = (facility.bay_slices || []).map(function (s) {
-      return { id: s.id, name: s.name };
-    });
-    // 치수를 아직 안 넣어 슬라이스를 못 만드는 시설도 구역 하나는 있어야
-    // 작물을 적을 수 있다 — 단동은 서버가 'bay_1' 로 채운다.
-    if (!State.bays.length) {
-      State.bays = [{ id: 'bay_1',
-                      name: facility.name || _T('zone_bay', 'Bay') + ' 1' }];
-    }
-    State.editing = null;
-    State.formBay = null;
-    loadPrograms('vegetation').then(render);
-    reload();
-  }
-
-  /**
-   * 재배 프로그램 목록을 한 번만 받아 둔다.
-   *
-   * 프로그램은 자주 바뀌지 않고 구획마다 같은 목록을 쓰므로, 폼을 열 때마다
-   * 다시 받을 이유가 없다. 새로 만든 프로그램은 페이지를 다시 열면 잡힌다.
-   */
-  function loadPrograms(kind) {
-    // **종류별로 캐시한다.** 한 벌만 두면 종류를 바꾼 뒤 목록이 옛 종류의
-    // 것으로 남고, 그것을 고른 저장을 서버가 거절한다 — 화면에 보이는
-    // 선택지가 저장되지 않는 상태가 된다.
-    kind = kind || 'vegetation';
-    if (State.programs[kind]) return Promise.resolve(State.programs[kind]);
-    return fetch('/api/geo/programs?kind=' + encodeURIComponent(kind),
-                 { credentials: 'same-origin' })
-      .then(function (r) { return r.json(); })
-      .then(function (res) {
-        State.programs[kind] = (res && res.ok) ? (res.programs || []) : [];
-        return State.programs[kind];
-      })
-      .catch(function () { State.programs[kind] = []; return State.programs[kind]; });
-  }
-
-  /** 대상·품종 라벨은 종류에 따라 달라진다(common/aot-plot-labels.js). */
-  function _subjectLabel(r) {
-    var k = (r && r.kind) || 'vegetation';
-    return window.AoTPlotLabels ? window.AoTPlotLabels.subject(k)
-                                : _T('plot_subject', 'What is here');
-  }
-  function _varietyLabel(r) {
-    var k = (r && r.kind) || 'vegetation';
-    return window.AoTPlotLabels ? window.AoTPlotLabels.variety(k)
-                                : _T('plot_variety', 'Variety');
-  }
-
-  /** 대상 종류 select — `GeoProgram.kind` 와 같은 어휘. */
-  function _kindRow(r) {
-    var labels = { vegetation: _T('kind_vegetation', 'Vegetation'),
-                   livestock: _T('kind_livestock', 'Livestock'),
-                   facility: _T('kind_facility', 'Facility'),
-                   other: _T('kind_other', 'Other') };
-    var cur = r.kind || 'vegetation';
-    var opts = '';
-    ['vegetation', 'livestock', 'facility', 'other'].forEach(function (k) {
-      opts += '<option value="' + k + '"' + (k === cur ? ' selected' : '') + '>' +
-              _esc(labels[k]) + '</option>';
-    });
-    return '<div class="aot-modal-option-row">' +
-           '<label class="aot-modal-option-label">' + _T('plot_kind', 'Kind') + '</label>' +
-           '<div class="aot-modal-option-control">' +
-           '<select class="form-control aot-modern-input" data-f="kind">' +
-           opts + '</select></div></div>';
-  }
-
   function reload() {
     if (!State.facilityUuid || !State.mapUuid) {
       State.rows = [];
@@ -178,6 +101,58 @@
       // 않는다. 아래에서 따로 묶어 보여 준다.
       return r.bay_id === bayId;
     });
+  }
+
+  // ── 로드 ──────────────────────────────────────────────────────────────
+  /**
+   * 시설이 바뀔 때마다 호출된다. `facility` 는 `/api/geo/facility/<uuid>` 의
+   * dict — `bay_slices` 가 구역 목록의 정본이다(서버가 만든다).
+   */
+  function setFacility(facility) {
+    facility = facility || {};
+    State.facilityUuid = facility.unique_id || null;
+    State.mapUuid = facility.geo_id || null;
+    // 구역 총량(p6_50) — 공용 폼이 몫 접미("/12 베드")를 그리는 근거다.
+    State.capacities = facility.bay_capacities || {};
+    State.bays = (facility.bay_slices || []).map(function (s) {
+      return { id: s.id, name: s.name };
+    });
+    // 치수를 아직 안 넣어 슬라이스를 못 만드는 시설도 구역 하나는 있어야
+    // 작물을 적을 수 있다 — 단동은 서버가 실제 구역 id 로 채운다.
+    if (!State.bays.length) {
+      State.bays = [{ id: 'bay_1',
+                      name: facility.name || _T('zone_bay', 'Bay') + ' 1' }];
+    }
+    State.editing = null;
+    State.formBay = null;
+    loadPrograms('vegetation').then(render);
+    reload();
+  }
+
+  /**
+   * 재배 프로그램 목록을 한 번만 받아 둔다.
+   *
+   * 프로그램은 자주 바뀌지 않고 구획마다 같은 목록을 쓰므로, 폼을 열 때마다
+   * 다시 받을 이유가 없다. 새로 만든 프로그램은 페이지를 다시 열면 잡힌다.
+   *
+   * 공용 폼(`AoTPlotForm.wire`)이 `ctx.loadPrograms` 로 이것을 받는다 — 캐시가
+   * 화면마다 다른 곳에 있어(여기는 `State`, 위젯은 구획 모듈) 조회는 화면이
+   * 계속 맡는다.
+   */
+  function loadPrograms(kind) {
+    // **종류별로 캐시한다.** 한 벌만 두면 종류를 바꾼 뒤 목록이 옛 종류의
+    // 것으로 남고, 그것을 고른 저장을 서버가 거절한다 — 화면에 보이는
+    // 선택지가 저장되지 않는 상태가 된다.
+    kind = kind || 'vegetation';
+    if (State.programs[kind]) return Promise.resolve(State.programs[kind]);
+    return fetch('/api/geo/programs?kind=' + encodeURIComponent(kind),
+                 { credentials: 'same-origin' })
+      .then(function (r) { return r.json(); })
+      .then(function (res) {
+        State.programs[kind] = (res && res.ok) ? (res.programs || []) : [];
+        return State.programs[kind];
+      })
+      .catch(function () { State.programs[kind] = []; return State.programs[kind]; });
   }
 
   function _wholeFacilityRows() {
@@ -212,80 +187,35 @@
         '</div>' +
       '</div>';
   }
-
-  /**
-   * 재배 프로그램 선택 줄.
-   *
-   * 프로그램이 있으면 단계·기간·목표가 여기서 따라온다 — 사람이 적는 것은
-   * 작물·품종·파종일·프로그램 넷뿐이 된다. 없으면 종전대로 동작하므로 빈 값이
-   * 기본이다("프로그램 없음").
-   *
-   * 목록이 비어 있으면(시드 전) 줄 자체를 내지 않는다 — 고를 것이 없는 칸은
-   * 화면만 길게 만든다.
-   */
-  function _programRow(r) {
-    var list = State.programs[(r && r.kind) || 'vegetation'] || [];
-    if (!list.length) return '';
-    var cur = (r && r.program && r.program.unique_id) || '';
-    var opts = '<option value="">' +
-               _T('plot_program_none', 'No program') + '</option>';
-    list.forEach(function (p) {
-      var label = _esc(p.name) +
-                  (p.variety ? ' · ' + _esc(p.variety) : '') +
-                  (p.stage_count ? ' (' + p.stage_count +
-                   _T('plot_stage_unit', ' stages') + ')' : '');
-      opts += '<option value="' + _esc(p.unique_id) + '"' +
-              (p.unique_id === cur ? ' selected' : '') + '>' + label + '</option>';
-    });
-    // `selectpicker` + `data-live-search`: 프로그램이 많아지면 스크롤 대신
-    // 타이핑으로 찾는다(geo/program 화면·"장치 추가" 드롭다운과 같은 방식).
-    // 초기화는 render() 가 이 HTML을 DOM에 넣은 뒤 한 번에 한다.
-    return '<div class="aot-modal-option-row">' +
-           '<label class="aot-modal-option-label">' +
-           _T('plot_program', 'Program') + '</label>' +
-           '<div class="aot-modal-option-control">' +
-           '<select class="form-control aot-modern-input selectpicker" ' +
-           'data-f="program_uuid" data-live-search="true">' +
-           opts + '</select></div></div>';
-  }
-
   function _form(bayId) {
     var r = State.editing
       ? State.rows.filter(function (x) { return x.unique_id === State.editing; })[0]
       : null;
     r = r || {};
+    // **공용 폼 한 벌**(`common/aot-plot-form.js`). 예전에는 이 화면이 필드를
+    // 직접 적고 있어서 지도 위젯과 집합이 달랐다 — 몫(p6_50)이 없어서 여기서
+    // 만든 구획은 몫이 빈 채로 남았고, 채우려면 대시보드로 옮겨 가야 했다.
+    //
+    // `bay_id` 는 뺀다: 이 화면은 **구역마다 폼이 따로 열리므로** 자리가 곧
+    // 구역이다(`data-bay`). select 를 내면 같은 것을 두 번 고르게 된다.
+    var rows = (window.AoTPlotForm && window.AoTPlotForm.rowsHtml)
+      ? window.AoTPlotForm.rowsHtml({
+          attr: 'data-f',
+          target: 'facility',
+          omit: ['bay_id'],
+          values: r,
+          kind: r.kind || 'vegetation',
+          bayId: bayId,
+          capacities: State.capacities,
+          // 이 화면에 온 사람은 이미 설계 화면 안이다 — "시설 설정 열기" 는
+          // 자기 자신을 가리키므로 링크를 내지 않는다.
+          canDesign: false,
+          today: _today()
+        })
+      : '';
     return '' +
       '<div class="aot-modal-container fac-plot-form" data-bay="' + _esc(bayId || '') + '">' +
-        _kindRow(r) +
-        '<div class="aot-modal-option-row">' +
-          '<label class="aot-modal-option-label">' + _subjectLabel(r) + '</label>' +
-          '<div class="aot-modal-option-control">' +
-            '<input type="text" class="form-control aot-modern-input" data-f="subject" value="' +
-              _esc(r.subject || '') + '" placeholder="' + _subjectLabel(r) + '">' +
-          '</div>' +
-        '</div>' +
-        '<div class="aot-modal-option-row">' +
-          '<label class="aot-modal-option-label">' + _varietyLabel(r) + '</label>' +
-          '<div class="aot-modal-option-control">' +
-            '<input type="text" class="form-control aot-modern-input" data-f="variety" value="' +
-              _esc(r.variety || '') + '">' +
-          '</div>' +
-        '</div>' +
-        '<div class="aot-modal-option-row">' +
-          '<label class="aot-modal-option-label">' + _T('plot_started_on', 'Start date') + '</label>' +
-          '<div class="aot-modal-option-control">' +
-            '<input type="date" class="form-control aot-modern-input" data-f="started_on" value="' +
-              _esc(r.started_on || _today()) + '">' +
-          '</div>' +
-        '</div>' +
-        _programRow(r) +
-        '<div class="aot-modal-option-row">' +
-          '<label class="aot-modal-option-label">' + _T('plot_expected_end', 'Expected end') + '</label>' +
-          '<div class="aot-modal-option-control">' +
-            '<input type="date" class="form-control aot-modern-input" data-f="expected_end_on" value="' +
-              _esc(r.expected_end_on || '') + '">' +
-          '</div>' +
-        '</div>' +
+        rows +
         '<div class="aot-modal-option-row" style="border-bottom:none;">' +
           '<div class="aot-modal-option-label"></div>' +
           '<div class="aot-modal-option-control">' +
@@ -340,13 +270,45 @@
 
     // 매번 컨테이너를 통째로 다시 그리므로 이전 bootstrap-select DOM은 함께
     // 사라진다 — `refresh`가 아니라 새 초기화(`.selectpicker()`)를 부른다.
+    // (공용 폼은 일반 select 를 내므로 여기 걸리는 것이 없다 — 다른 화면과
+    //  같은 모양을 쓰는 것이 우선이고, 검색이 필요해지면 공용 폼에 넣는다.)
     if (window.jQuery && window.jQuery.fn && window.jQuery.fn.selectpicker) {
       window.jQuery(box).find('.selectpicker').selectpicker();
     }
+    _wireForms(box);
+  }
+
+  /**
+   * 그려진 폼마다 공용 배선을 붙인다 — 종류↔프로그램 목록, 종류↔대상/품종
+   * 라벨, 몫 접미("/12 베드").
+   *
+   * `render()` 가 폼을 통째로 다시 만들기 때문에 매번 붙인다. 요소가 새것이라
+   * 중복 등록이 되지 않는다.
+   */
+  function _wireForms(box) {
+    if (!window.AoTPlotForm || !window.AoTPlotForm.wire) return;
+    box.querySelectorAll('.fac-plot-form').forEach(function (form) {
+      window.AoTPlotForm.wire(form, {
+        attr: 'data-f',
+        target: 'facility',
+        bayId: form.dataset.bay || null,
+        capacities: State.capacities,
+        loadPrograms: loadPrograms
+      });
+    });
   }
 
   // ── 동작 ──────────────────────────────────────────────────────────────
   function _readForm(formEl) {
+    // 공용 폼이 몫(`allocation`)을 dict 로 조립한다 — 수량인지 비율인지는 그
+    // 구역에 총량이 있는지가 정하고, 그 기준은 화면이 접미로 보인 것과 같다.
+    if (window.AoTPlotForm && window.AoTPlotForm.collect) {
+      return window.AoTPlotForm.collect(formEl, {
+        attr: 'data-f',
+        bayId: formEl.dataset.bay || null,
+        capacities: State.capacities
+      });
+    }
     var out = {};
     formEl.querySelectorAll('[data-f]').forEach(function (el) {
       out[el.dataset.f] = (el.value || '').trim() || null;
@@ -370,6 +332,9 @@
       started_on: values.started_on || _today(),
       expected_end_on: values.expected_end_on
     };
+    // 몫은 공용 폼이 이미 dict 로 만들어 두었다. 키가 있을 때만 싣는다 —
+    // 부분 저장 규칙상 없는 키는 "변경 없음" 이고 `null` 은 "지우기" 다.
+    if ('allocation' in values) payload.allocation = values.allocation;
     payload.kind = values.kind || 'vegetation';
     // 선택지가 없는 화면(시드 전)에서는 키 자체를 보내지 않는다 — 보내면
     // 부분 저장 규칙상 "프로그램 해제"로 읽힌다.
@@ -447,28 +412,10 @@
 
     // 종류를 바꾸면 프로그램 목록이 따라와야 한다 — 안 따라오면 옛 종류의
     // 프로그램이 선택지로 남고, 그것을 고른 저장을 서버가 거절한다.
-    // 위임으로 듣는다: 폼은 render() 가 매번 다시 그려서 요소가 바뀐다.
-    box.addEventListener('change', function (e) {
-      var sel = e.target;
-      if (!sel || sel.getAttribute('data-f') !== 'kind') return;
-      var form = sel.closest('.fac-plot-form');
-      if (!form) return;
-      loadPrograms(sel.value).then(function () {
-        // 폼 전체를 다시 그리지 않는다 — 사람이 이미 적어 넣은 값이 날아간다.
-        // 프로그램 줄만 갈아 끼우고, 종류가 바뀌었으니 선택은 비운다.
-        var row = form.querySelector('[data-f="program_uuid"]');
-        var list = State.programs[sel.value] || [];
-        if (!row) { render(); return; }
-        var opts = '<option value="">' +
-                   _T('plot_program_none', 'No program') + '</option>';
-        list.forEach(function (p) {
-          opts += '<option value="' + _esc(p.unique_id) + '">' +
-                  _esc(p.name) + (p.variety ? ' · ' + _esc(p.variety) : '') +
-                  '</option>';
-        });
-        if (row.innerHTML !== opts) row.innerHTML = opts;
-      });
-    });
+    // 종류↔프로그램·몫 접미는 **공용 폼**이 맡는다. 폼은 render() 가 매번 다시
+    // 그리므로 그릴 때마다 배선한다(`_wireForms`) — 위임으로 듣던 예전 코드는
+    // 프로그램 줄만 갈아 끼웠고, 종류에 따라 달라지는 라벨("품종"/"규격")은
+    // 그대로 남아 시설물을 고른 채 "품종" 을 묻는 화면이 됐다.
 
     box.addEventListener('click', function (e) {
       var btn = e.target.closest('[data-act]');

@@ -45,6 +45,12 @@ def pid_mod(form_mod_pid_base,
     }
     page_refresh = False
 
+    # 그룹 스코프(A1b) — 대상이 정해진 뒤에 묻는다(설계 §1-A).
+    from aot.aot_flask.access import scope
+    if not scope.can_operate_device(form_mod_pid_base.function_id.data):
+        messages["error"].append(scope.deny_message())
+        return messages, page_refresh
+
     dict_outputs = parse_output_information()
 
     if not form_mod_pid_base.validate():
@@ -324,6 +330,20 @@ def pid_del(pid_id):
         "warning": [],
         "error": []
     }
+
+    # 그룹 스코프(A1b) — **부수 효과보다 먼저 막는다.**
+    #
+    # `delete_entry_with_id()` 의 초크포인트만으로는 부족하다는 것을 실측으로
+    # 확인했다(2026-08-22): `output_del` 은 그 함수를 부르기 전에 측정값을
+    # 지우고 바인딩을 끊으며, 반환값 0(거부)을 보지 않고 "삭제 성공" 을
+    # 보고했다. 결과는 **출력은 남았는데 그 측정값·채널은 사라진** 부분 변경
+    # 이고, 사용자는 성공 메시지를 봤다.
+    #
+    # 그래서 초크포인트는 **뒤를 받치는 것**이고 실제 경계는 여기다.
+    from aot.aot_flask.access import scope
+    if not scope.can_operate_device(pid_id):
+        messages["error"].append(scope.deny_message())
+        return messages
 
     try:
         pid = PID.query.filter(

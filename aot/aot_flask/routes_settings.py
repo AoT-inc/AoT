@@ -652,6 +652,7 @@ def settings_users_submit():
     logout = False
     user_id = None
     role_id = None
+    group_id = None
     generated_api_key = None
 
     if not utils_general.user_has_permission('edit_users'):
@@ -660,6 +661,7 @@ def settings_users_submit():
     form_user = forms_settings.User()
     form_mod_user = forms_settings.UserMod()
     form_user_roles = forms_settings.UserRoles()
+    form_user_groups = forms_settings.UserGroups()
 
     if not messages["error"]:
         if form_user.settings_user_save.data:
@@ -704,6 +706,13 @@ def settings_users_submit():
               form_user_roles.user_role_delete.data):
             role_id = form_user_roles.role_id.data
             messages, page_refresh = utils_settings.user_roles(form_user_roles)
+        elif (form_user_groups.user_group_save.data or
+              form_user_groups.user_group_delete.data):
+            group_id = form_user_groups.group_id.data
+            # 멤버·부여는 다중 값이라 폼이 아니라 request.form 에서 읽는다
+            # (`utils_settings.user_groups` 주석 참조).
+            messages, page_refresh = utils_settings.user_groups(
+                form_user_groups, request.form)
 
     if page_refresh:
         for each_error in messages["error"]:
@@ -719,6 +728,7 @@ def settings_users_submit():
         'generated_api_key': generated_api_key,
         'user_id': user_id,
         'role_id': role_id,
+        'group_id': group_id,
         'messages': messages,
         'logout': logout
     })
@@ -763,6 +773,17 @@ def settings_roles_save_order():
     return "success"
 
 
+@blueprint.route('/settings/users/save_group_order', methods=['POST'])
+@flask_login.login_required
+def settings_groups_save_order():
+    """Save the drag order of the group cards."""
+    if not utils_general.user_has_permission('edit_users'):
+        return '', 403
+    from aot.databases.models import UserGroup
+    _save_card_order(UserGroup, request.get_json())
+    return "success"
+
+
 @blueprint.route('/settings/users/detail/<string:unique_id>', methods=['GET'])
 @flask_login.login_required
 def settings_user_detail(unique_id):
@@ -804,6 +825,68 @@ def settings_role_detail(unique_id):
                            form_user_roles=forms_settings.UserRoles())
 
 
+def _granted_resource_rows(group_uuid):
+    """이 그룹이 부여받은 자원 — 사람이 읽는 이름과 종류.
+
+    죽은 자원을 가리키는 grant(고아)는 이름을 찾을 수 없다. **조용히 빼지
+    않는다** — 빼면 화면과 데이터가 갈리고, 고아가 있다는 사실이 사라진다.
+    (`check_scope_grants.py` 의 `orphan-grant` 가 보는 것과 같은 행이다.)
+    """
+    from flask_babel import gettext
+
+    from aot.databases.models import (Dashboard, GeoFacility, GeoMap,
+                                      GroupGrant, Tab)
+    kinds = {
+        'tab': (Tab, gettext('Device Tab')),
+        'dashboard': (Dashboard, gettext('Dashboard')),
+        'geo_map': (GeoMap, gettext('Map')),
+        'geo_facility': (GeoFacility, gettext('Facility')),
+    }
+    rows = []
+    for grant in GroupGrant.query.filter(
+            GroupGrant.group_uuid == group_uuid).order_by(
+            GroupGrant.resource_type).all():
+        model, label = kinds.get(grant.resource_type, (None, grant.resource_type))
+        name = None
+        if model is not None:
+            found = model.query.filter(
+                model.unique_id == grant.resource_uuid).first()
+            name = getattr(found, 'name', None) if found else None
+        rows.append({'label': label,
+                     'name': name or gettext('(missing resource)')})
+    return rows
+
+
+@blueprint.route('/settings/users/group_detail/<string:unique_id>', methods=['GET'])
+@flask_login.login_required
+def settings_group_detail(unique_id):
+    """Render one group's edit form for the Users-page drawer."""
+    if not utils_general.user_has_permission('view_settings'):
+        return '', 403
+
+    from aot.databases.models import GroupGrant, UserGroup, UserGroupMember
+
+    group = UserGroup.query.filter(UserGroup.unique_id == unique_id).first()
+    if not group:
+        return '', 404
+
+    members = {m.user_uuid for m in UserGroupMember.query.filter(
+        UserGroupMember.group_uuid == unique_id).all()}
+
+    # 부여는 **읽기 전용**이다 — 편집은 각 자원의 설정 모달에서 한다.
+    # 그룹은 적고 자원은 많아서, 여기서 자원을 고르게 하면 목록이 자원 수만큼
+    # 길어져 자원이 늘수록 못 쓰게 된다.
+    granted = _granted_resource_rows(unique_id)
+
+    return render_template('settings/group_detail.html',
+                           each_group=group,
+                           users=User.query.order_by(User.position_y,
+                                                     User.id).all(),
+                           member_uuids=members,
+                           granted_resources=granted,
+                           form_user_groups=forms_settings.UserGroups())
+
+
 @blueprint.route('/settings/users', methods=('GET', 'POST'))
 @flask_login.login_required
 def settings_users():
@@ -823,6 +906,7 @@ def settings_users():
     form_add_user = forms_settings.UserAdd()
     form_mod_user = forms_settings.UserMod()
     form_user_roles = forms_settings.UserRoles()
+    form_user_groups = forms_settings.UserGroups()
 
     if request.method == 'POST':
         if not utils_general.user_has_permission('edit_users'):
@@ -832,6 +916,9 @@ def settings_users():
             utils_settings.user_add(form_add_user)
         elif form_user_roles.user_role_add.data:
             messages, page_refresh = utils_settings.user_roles(form_user_roles)
+        elif form_user_groups.user_group_add.data:
+            messages, page_refresh = utils_settings.user_groups(
+                form_user_groups, request.form)
 
     for each_error in messages["error"]:
         flash(each_error, "error")
@@ -847,6 +934,18 @@ def settings_users():
     users = User.query.order_by(User.position_y, User.id).all()
     user_roles = Role.query.order_by(Role.position_y, Role.id).all()
 
+    from aot.databases.models import GroupGrant, UserGroup, UserGroupMember
+    user_groups = UserGroup.query.order_by(UserGroup.position_y,
+                                           UserGroup.id).all()
+    # 카드에 "멤버 N · 부여 M" 을 찍기 위한 집계. 그룹마다 조회하면 N+1 이라
+    # 두 번에 모은다.
+    member_counts = {}
+    for row in UserGroupMember.query.all():
+        member_counts[row.group_uuid] = member_counts.get(row.group_uuid, 0) + 1
+    grant_counts = {}
+    for row in GroupGrant.query.all():
+        grant_counts[row.group_uuid] = grant_counts.get(row.group_uuid, 0) + 1
+
     return render_template('settings/users.html',
                            misc=misc,
                            themes=THEMES,
@@ -855,7 +954,11 @@ def settings_users():
                            form_add_user=form_add_user,
                            form_mod_user=form_mod_user,
                            form_user=form_user,
-                           form_user_roles=form_user_roles)
+                           form_user_roles=form_user_roles,
+                           user_groups=user_groups,
+                           group_member_counts=member_counts,
+                           group_grant_counts=grant_counts,
+                           form_user_groups=form_user_groups)
 
 
 @blueprint.route('/settings/pi', methods=('GET', 'POST'))

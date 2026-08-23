@@ -566,7 +566,8 @@ def _cap_result(result, tool_name, max_tokens=None):
     return result
 
 
-def _execute_tool(app, tool_name, arguments, agent_id="unknown", role=None, elicit_fn=None):
+def _execute_tool(app, tool_name, arguments, agent_id="unknown", role=None,
+                  elicit_fn=None, scope_user_uuid=None):
     """Execute a named tool and return MCP-format content list.
 
     Every call — read or write, executed or refused — is recorded in
@@ -617,8 +618,11 @@ def _execute_tool(app, tool_name, arguments, agent_id="unknown", role=None, elic
         for k, v in arguments.items():
             if k.startswith("_") and k not in merged:
                 merged[k] = v
+        # scope_user_uuid 를 함께 넘긴다 — 빠뜨리면 **use_tool 로 감싸 부르는
+        # 것만으로 스코프를 벗어난다.** 서랍 안 도구는 전부 이 경로를 지난다.
         return _execute_tool(app, inner, merged, agent_id=agent_id,
-                             role=role, elicit_fn=elicit_fn)
+                             role=role, elicit_fn=elicit_fn,
+                             scope_user_uuid=scope_user_uuid)
     # `agent_id` is decided by the transport (API key, or the declared name when
     # auth is off) and is NOT overridable from the arguments. An earlier version
     # honoured a `_agent_id` argument here, which let any caller stamp someone
@@ -655,8 +659,25 @@ def _execute_tool(app, tool_name, arguments, agent_id="unknown", role=None, elic
                 # 필요하다"는 순환을 피하기 위함. 대신 role 체크는 여기서 직접 한다.
                 result = _respond_to_confirmation(arguments, agent_id, role)
             else:
-                blocked = gate.gate(tool_name, arguments, agent_id=agent_id, role=role,
-                                    reason=reason, elicit_fn=elicit_fn)
+                # 그룹 스코프(A2) — **승인 게이트보다 먼저** 묻는다.
+                #
+                # 뒤에 두면 어차피 거부될 호출이 승인 큐에 들어가고, 사람이
+                # 승인한 뒤에야 거부된다 — 승인한 사람에게는 "승인했는데 안
+                # 됐다" 로 보이고 큐에는 답할 수 없는 항목이 쌓인다.
+                # (설계 §6-2)
+                _denied_uuid = _scope_refusal(tool_name, arguments,
+                                              scope_user_uuid)
+                if _denied_uuid:
+                    from aot.aot_flask.access import scope as _scope
+                    result = {"status": "refused",
+                              "reason_code": "group_scope",
+                              "message": _scope.deny_message(),
+                              "target": _denied_uuid}
+                    blocked = result
+                else:
+                    blocked = gate.gate(tool_name, arguments, agent_id=agent_id,
+                                        role=role, reason=reason,
+                                        elicit_fn=elicit_fn)
                 if blocked is None:
                     call_args = gate.inject_agent(
                         tool_name, gate.strip_meta(arguments), agent_id)
@@ -686,6 +707,71 @@ def _execute_tool(app, tool_name, arguments, agent_id="unknown", role=None, elic
         # 감사 기록(위)이 끝난 뒤에 줄인다 — 진단에는 잘리지 않은 원본이 필요하다.
         result = _cap_result(result, tool_name)
     return [{"type": "text", "text": json.dumps(result, ensure_ascii=False)}]
+
+
+def _current_request_user_uuid():
+    """지금 요청을 낸 사람의 uuid. 요청 밖이거나 미인증이면 None.
+
+    **요청 밖 = 사람이 없는 호출**이다(백그라운드 AI 잡·주기 요약·예약 발화).
+    그 경우 스코프는 면제이고, 그것이 A1 이 막은 것을 여는 구멍이라는 사실은
+    설계 §6-2 와 매뉴얼에 적혀 있다.
+    """
+    try:
+        from flask import has_request_context
+        if not has_request_context():
+            return None
+        import flask_login
+        current = flask_login.current_user
+        if not current or not current.is_authenticated:
+            return None
+        from aot.databases.models import User
+        row = User.query.filter(User.name == current.name).first()
+        return row.unique_id if row else None
+    except Exception:
+        return None
+
+
+def _scope_refusal(tool_name, arguments, scope_user_uuid):
+    """그룹 스코프가 이 도구 호출을 막는가. 막으면 거부된 자원 uuid, 아니면 None.
+
+    정본 설계: `docs/design/access-scope-groups.md` §6-2
+
+    신원은 **`scope_user_uuid` 하나**다:
+
+      - 외부 MCP: 전송 계층이 확인한 **키 소유자**(`RoleInfo.user_id`).
+      - 인앱 채팅: 부른 사람.
+      - `None`: **사람이 없는 호출**(백그라운드 AI 잡·주기 요약) → 면제.
+        §6-1 데몬과 같은 근거다. 이 면제가 A1 이 막은 것을 여는 구멍이라는
+        사실은 설계 문서와 매뉴얼에 적혀 있다.
+
+    ⚠ **`role` 로 판정하지 말 것.** 내부 AI 의 `role` 은 서비스 계정
+    `aot-system` 에서 오고, 그것을 신원으로 쓰면 내부 AI 가 아무것도 못 하게
+    된다 — 그것을 고치려고 서비스 계정을 면제하면 **같은 계정 키로 붙는 외부
+    클라이언트까지 함께 열린다**(`scope.is_exempt` 주석).
+
+    검사 자체가 깨져도 실행을 막지 않는다. 막으면 이 코드의 버그 하나가 모든
+    도구 호출을 멈춘다 — 대신 시끄럽게 남긴다.
+    """
+    try:
+        from aot.aot_flask.access import scope
+        from aot.databases.models import User
+
+        if not scope.scoping_active():
+            return None
+        if not scope_user_uuid:
+            return None                  # 사람이 없는 호출 = 면제
+        user = User.query.filter(User.unique_id == scope_user_uuid).first()
+        if user is None:
+            # 신원을 확인했는데 그 사용자가 없다 — 판정 근거가 없으므로
+            # 거부하지 않는다(예약 재검사에서 지워진 소유자를 면제하는 것과
+            # 같은 판단).
+            return None
+        allowed, denied_uuid = scope.can_operate_tool_call(
+            tool_name, arguments, user=user)
+        return None if allowed else denied_uuid
+    except Exception as exc:
+        logger.error("[scope] 도구 호출 판정 실패, 실행은 계속합니다: %s", exc)
+        return None
 
 
 def _tool_error(message):
@@ -860,7 +946,7 @@ def _dispatch_virtual_tool(tool_name, arguments):
 # 같은 게이트를 지나므로 승인·감사·응답 캡이 양쪽에서 동일하다.
 
 def execute_for_agent(app, tool_name, arguments, agent_unique_id=None,
-                      server_id=None):
+                      server_id=None, scope_user_uuid=None):
     """내부 AI 의 도구 호출. 반환 형식은 `MCPBridgeService.call_tool` 과 같다.
 
     리졸버가 그 형식을 기대하므로 맞춘다 — 호출 방식이 바뀐 것이지 계약이
@@ -892,8 +978,21 @@ def execute_for_agent(app, tool_name, arguments, agent_unique_id=None,
             logger.warning("[tool_execution] 서비스 계정 조회 실패: %s", exc)
             role = None
 
+    # 그룹 스코프(A2) — 신원은 **요청을 낸 사람**이다(설계 §6-2).
+    #
+    # 호출자가 명시하지 않으면 요청 컨텍스트에서 찾는다. 인앱 채팅은 실제
+    # Flask 요청 안에서 돌므로 여기서 사람이 잡히고, 백그라운드 AI 잡은
+    # app_context 만 갖고 요청 컨텍스트가 없으므로 `None` — 즉 **사람이 없는
+    # 호출**이라 면제다(§6-1 데몬과 같은 근거).
+    #
+    # ⚠ `role` 을 신원으로 쓰지 않는 이유는 `_scope_refusal` 주석 참조 —
+    # 그 역할은 서비스 계정 `aot-system` 에서 온다.
+    if scope_user_uuid is None:
+        scope_user_uuid = _current_request_user_uuid()
+
     content = _execute_tool(app, tool_name, arguments,
-                            agent_id=agent_unique_id or "internal-ai", role=role)
+                            agent_id=agent_unique_id or "internal-ai", role=role,
+                            scope_user_uuid=scope_user_uuid)
     try:
         result = json.loads(content[0]["text"])
     except Exception:

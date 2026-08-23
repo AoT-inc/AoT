@@ -104,6 +104,16 @@ def output_add(form_add, request_form, tab_id=None):
         "warning": [],
         "error": []
     }
+
+    # 그룹 스코프(A1b) — 만들어 넣을 **탭**으로 판정한다.
+    #
+    # 새 장치가 어느 탭에 들어가는지가 곧 누가 그것을 조작할 수 있는지다
+    # (설계 §4-3). 스코프 밖 탭에 만들 수 있게 두면, 만들기만으로 남의
+    # 영역에 장치를 밀어넣을 수 있다.
+    from aot.aot_flask.access import scope
+    if tab_id and not scope.can_operate('tab', tab_id):
+        messages["error"].append(scope.deny_message())
+        return messages, dep_name, list_unmet_deps, dep_message, None, None
     output_id = None
     list_unmet_deps = []
     dep_name = None
@@ -319,6 +329,14 @@ def output_duplicate(form_mod):
         "error": []
     }
 
+    # 그룹 스코프(A1b) — **원본**으로 판정한다. 복제는 그 장치의 설정을
+    # 통째로 읽어 새 행을 만드는 일이라, 원본을 조작할 수 없는 사람이
+    # 복제할 수 있으면 스코프가 복제 한 번으로 뚫린다.
+    from aot.aot_flask.access import scope
+    if not scope.can_operate_device(form_mod.output_id.data):
+        messages["error"].append(scope.deny_message())
+        return messages, None
+
     source_output = Output.query.filter(
         Output.unique_id == form_mod.output_id.data).first()
 
@@ -397,6 +415,17 @@ def output_mod(form_output, request_form):
         "name": None,
         "return_text": []
     }
+
+    # 그룹 스코프(A1b) — 대상이 정해진 **뒤에** 묻는다.
+    #
+    # 역할 게이트는 submit 핸들러 맨 위에 있어 어떤 장치인지 모른 채 통과한다
+    # (설계 §1-A 표). 그래서 여기서 한 번 더 묻는다 — 옮기지 않고 여기에
+    # 더하는 이유는, 옮기다 분기를 하나 빠뜨리면 **통과하는 게이트**가 되기
+    # 때문이다(막혔다고 믿는 상태가 가장 나쁘다).
+    from aot.aot_flask.access import scope
+    if not scope.can_operate_device(form_output.output_id.data):
+        messages["error"].append(scope.deny_message())
+        return messages, False
     page_refresh = False
 
     dict_outputs = parse_output_information()
@@ -628,6 +657,17 @@ def output_del(form_output):
     output_id = normalize_nullish_value(output_id_raw, '')
     if output_id in ['', None]:
         messages["error"].append("Invalid output ID")
+        return messages
+
+    # 그룹 스코프(A1b) — **부수 효과보다 먼저 막는다.**
+    #
+    # 아래는 측정값을 지우고 바인딩을 끊은 **뒤에** delete_entry_with_id 를
+    # 부르고, 그 반환값을 보지 않는다. 초크포인트만 믿으면 거부됐을 때
+    # "출력은 남았는데 그 측정값·채널은 사라진" 상태가 되고 사용자는 성공
+    # 메시지를 본다 — 2026-08-22 실측으로 확인한 실패다.
+    from aot.aot_flask.access import scope
+    if not scope.can_operate_device(output_id):
+        messages["error"].append(scope.deny_message())
         return messages
 
     try:

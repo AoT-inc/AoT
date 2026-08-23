@@ -19,6 +19,25 @@
           </div>
         </div>
 
+        {# 그룹 부여 — 관리자에게만 보인다.
+
+           부여를 그룹 화면이 아니라 여기 두는 이유: 그룹은 적고 자원은 많다.
+           그룹 쪽에서 자원을 고르게 하면 목록이 자원 수만큼 길어져 자원이
+           늘수록 못 쓰게 된다. 탭에서 그룹을 고르면 목록은 항상 그룹 수만큼
+           이고, 무엇에 영향을 주는지가 눈앞에 있다. #}
+        <div id="tabScopeSection" style="display: none;">
+          <div class="aot-modal-group-title">{{_('Groups that can operate this tab')}}</div>
+          <div class="aot-modal-container">
+            <div class="aot-modal-body-text">
+              {{_('If no group is selected, everyone can operate this tab. Selecting a group limits operation to its members. Data stays visible to everyone.')}}
+            </div>
+          </div>
+          <div class="aot-modal-container" id="tabScopeGroups"></div>
+          <div class="aot-modal-container">
+            <div class="aot-modal-body-text" id="tabScopeImpact"></div>
+          </div>
+        </div>
+
         <!-- Warning Message -->
         <div class="alert alert-warning mx-3 mt-0" id="lastTabWarning" style="display: none;">
           <i class="fas fa-exclamation-triangle"></i> {{_('Cannot delete the last tab on this page.')}}
@@ -88,6 +107,8 @@
     tabIdInput.value = tabId;
     nameInput.value = tabName;
     
+    loadTabScope(tabId);
+
     // Show/hide delete warning
     if (totalTabs <= 1) {
       lastTabWarning.style.display = 'block';
@@ -100,6 +121,114 @@
     $modal.modal('show');
   };
   
+  // ---- 그룹 부여 (관리자에게만) ----
+  const scopeSection = document.getElementById('tabScopeSection');
+  const scopeGroups = document.getElementById('tabScopeGroups');
+  const scopeImpact = document.getElementById('tabScopeImpact');
+  let scopeImpactTimer = null;
+
+  function csrf() {
+    return document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+  }
+
+  function selectedGroups() {
+    return Array.from(scopeGroups.querySelectorAll('input:checked'))
+                .map(function (i) { return i.value; });
+  }
+
+  function loadTabScope(tabId) {
+    scopeSection.style.display = 'none';
+    scopeGroups.innerHTML = '';
+    scopeImpact.textContent = '';
+    if (!tabId) return;
+    // 403 이면 관리자가 아니다 — 섹션을 아예 보이지 않는다.
+    fetch('/api/scope/grants/tab/' + encodeURIComponent(tabId))
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (d) {
+        if (!d || !d.success) return;
+        if (!d.groups.length) {
+          scopeGroups.innerHTML =
+            '<div class="aot-modal-body-text">{{_("No groups yet. Create one in Settings > Users > Groups.")}}</div>';
+          scopeSection.style.display = '';
+          return;
+        }
+        d.groups.forEach(function (g) {
+          const row = document.createElement('div');
+          row.className = 'aot-modal-option-row';
+          const label = document.createElement('label');
+          label.className = 'aot-modal-option-label';
+          label.textContent = g.name;
+          const control = document.createElement('div');
+          control.className = 'aot-modal-option-control';
+          const toggle = document.createElement('label');
+          toggle.className = 'btn-toggle mb-0';
+          const input = document.createElement('input');
+          input.type = 'checkbox';
+          input.className = 'btn-toggle-input';
+          input.value = g.unique_id;
+          input.checked = !!g.granted;
+          input.addEventListener('change', function () {
+            clearTimeout(scopeImpactTimer);
+            scopeImpactTimer = setTimeout(refreshScopeImpact, 250);
+          });
+          const slider = document.createElement('div');
+          slider.className = 'btn-toggle-slider';
+          slider.innerHTML = '<div class="btn-toggle-thumb"></div>';
+          toggle.appendChild(input);
+          toggle.appendChild(slider);
+          control.appendChild(toggle);
+          row.appendChild(label);
+          row.appendChild(control);
+          scopeGroups.appendChild(row);
+        });
+        scopeSection.style.display = '';
+        refreshScopeImpact();
+      })
+      .catch(function () { /* 관리자가 아니거나 통신 실패 — 섹션을 숨긴 채 둔다 */ });
+  }
+
+  // 무해함은 첫 부여까지다 — 저장 전에 누가 잃는지 말한다.
+  function refreshScopeImpact() {
+    const groups = selectedGroups();
+    if (!groups.length) {
+      scopeImpact.textContent =
+        '{{_("Everyone can operate this tab (no group assigned).")}}';
+      return;
+    }
+    fetch('/api/scope/grant_impact/tab/' + encodeURIComponent(currentTabId), {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrf()},
+      body: JSON.stringify({groups: groups})
+    }).then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (d) {
+        if (!d || !d.success) return;
+        const i = d.impact || {};
+        if (i.locks_out_everyone) {
+          scopeImpact.textContent =
+            '{{_("Warning: nobody would be able to operate this tab.")}}';
+        } else if (i.losing) {
+          scopeImpact.textContent =
+            '{{_("Losing operation")}}: ' + (i.losing_names || []).join(', ');
+        } else {
+          scopeImpact.textContent =
+            '{{_("Nobody loses operation with this change.")}}';
+        }
+      }).catch(function () {
+        // 조용히 "영향 없음" 으로 보이면 안 된다 — 모른다는 것을 말한다.
+        scopeImpact.textContent =
+          '{{_("Error: Unable to communicate with server.")}}';
+      });
+  }
+
+  function saveTabScope() {
+    if (scopeSection.style.display === 'none') return Promise.resolve();
+    return fetch('/api/scope/grants/tab/' + encodeURIComponent(currentTabId), {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrf()},
+      body: JSON.stringify({groups: selectedGroups()})
+    }).then(function (r) { return r.ok ? r.json() : null; });
+  }
+
   // Rename Tab
   btnRename.addEventListener('click', function() {
     const newName = nameInput.value.trim();
@@ -108,11 +237,22 @@
       return;
     }
     
+    // 이름이 그대로여도 **그룹 부여는 저장해야 한다.** 예전처럼 여기서 바로
+    // 반환하면 그룹만 바꾼 사람의 변경이 조용히 버려진다 — "설정했는데 안
+    // 먹는다" 가 되고, 그 침묵이 접근 제어에서 가장 나쁘다.
     if (newName === currentTabName) {
-      showToast('{{_("Tab name unchanged")}}', 'info');
+      saveTabScope().then(function (res) {
+        if (res && res.success === false) {
+          showToast(res.message || '{{_("Failed to save")}}', 'error');
+          return;
+        }
+        showToast('{{_("Saved")}}', 'success');
+        $modal.modal('hide');
+        setTimeout(function () { window.location.reload(); }, 500);
+      });
       return;
     }
-    
+
     fetch('/tab/rename', {
       method: 'POST',
       headers: {
@@ -128,10 +268,13 @@
     .then(r => r.json())
     .then(data => {
       if (data.success) {
-        showToast('{{_("Tab renamed successfully")}}', 'success');
-        $modal.modal('hide');
-        // Reload page to show new name
-        setTimeout(() => window.location.reload(), 500);
+        // 이름과 그룹은 같은 [저장]으로 함께 반영된다.
+        saveTabScope().then(function () {
+          showToast('{{_("Tab renamed successfully")}}', 'success');
+          $modal.modal('hide');
+          // Reload page to show new name
+          setTimeout(() => window.location.reload(), 500);
+        });
       } else {
         showToast(data.message || '{{_("Failed to rename tab")}}', 'error');
       }

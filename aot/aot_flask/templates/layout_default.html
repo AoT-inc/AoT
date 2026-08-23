@@ -638,6 +638,13 @@ IMPORTANT: This is the SOURCE TEMPLATE file.
               href="{{ url_for('routes_camera.page_camera') }}">
               {{ _('Camera') }}
             </a>
+            {#- 구획은 **운영** 화면이라 설정이 아니라 여기 둔다 — 보기는
+                전원 공개이고(그룹은 조작만 제한한다), 설정 메뉴는 `edit_settings`
+                사용자의 자리다. -#}
+            <a class="dropdown-item {% if active_page == 'plots' %} active{% endif %}"
+              href="{{ url_for('routes_geo.page_plots') }}">
+              {{ _('Plots') }}
+            </a>
             <a class="dropdown-item {% if active_page == 'notes' %} active{% endif %}"
               href="{{ url_for('routes_page.page_notes') }}">
               {{ _('Notes') }}
@@ -919,6 +926,37 @@ IMPORTANT: This is the SOURCE TEMPLATE file.
                 </div>
               </div>
             </div>
+
+            {# 그룹 부여 — 관리자에게만. 탭 설정과 같은 방식이다.
+
+               부여를 그룹 화면이 아니라 여기 두는 이유: 그룹은 적고 자원은
+               많다. 그룹 쪽에서 자원을 고르게 하면 목록이 자원 수만큼 길어져
+               자원이 늘수록 못 쓰게 된다.
+
+               ⚠ 내용은 모달을 열 때 받아 온다. 여기서 서버 렌더로 채우면
+               `inject_variables` 가 **모든 페이지 요청마다** 그룹·부여를
+               조회하게 된다 — 열지도 않는 모달을 위해. #}
+            <div class="aot-dash-scope" data-dash-uid="{{ each_dash.unique_id }}"
+                 style="display: none;">
+              <div class="aot-modal-group-title">{{ _('Groups that can operate this dashboard') }}</div>
+              <div class="aot-modal-container">
+                <div class="aot-modal-body-text">
+                  {{ _('If no group is selected, everyone can operate this dashboard. Selecting a group limits operation to its members. Data stays visible to everyone.') }}
+                </div>
+              </div>
+              <div class="aot-modal-container aot-dash-scope-groups"></div>
+              <div class="aot-modal-container">
+                <div class="aot-modal-body-text aot-dash-scope-impact"></div>
+              </div>
+              {# 표식(`dashboard_groups_present`)은 **JS 가 조회에 성공했을 때만**
+                 넣는다. 여기 정적으로 두면 안 된다 — `display:none` 안의
+                 hidden input 도 그대로 제출되므로, 조회가 실패해 목록이 빈
+                 상태에서도 표식만 나가 "전부 해제" 로 읽힌다. 그러면 대시보드
+                 이름만 고쳐도 부여가 통째로 지워진다(무에러).
+
+                 "보내지 않음" 과 "전부 해제" 를 구분하는 것이 이 표식의 전부
+                 이므로, 표식 자체가 그 구분을 지켜야 한다. #}
+            </div>
           </div>
           <div class="modal-footer">
             {{ form_dashboard.dash_delete(class_='btn aot-pill-btn aot-pill-btn-danger', **{'onclick':'return confirm("' + _("Are you sure you want to delete?") + '")'}) }}
@@ -937,6 +975,77 @@ IMPORTANT: This is the SOURCE TEMPLATE file.
   {% endfor %}
 
   <script>
+    // ---- 대시보드 그룹 부여 (관리자에게만) ----
+    //
+    // 탭 설정과 같은 방식이다. 모달을 **열 때** 받아 오고, 저장은 대시보드
+    // 폼의 [저장] 하나로 함께 나간다 — 저장 버튼이 둘이면 사람은 하나만
+    // 누르고 나머지는 조용히 버려진다.
+    $(document).on('show.bs.modal', '[id^="modal_config_"]', function () {
+      var $sec = $(this).find('.aot-dash-scope');
+      if (!$sec.length) return;
+      var uid = $sec.data('dash-uid');
+      var $groups = $sec.find('.aot-dash-scope-groups');
+      var $impact = $sec.find('.aot-dash-scope-impact');
+
+      function refreshImpact() {
+        var picked = $groups.find('input:checked').map(function () {
+          return $(this).val();
+        }).get();
+        if (!picked.length) {
+          $impact.text('{{ _("Everyone can operate this dashboard (no group assigned).") }}');
+          return;
+        }
+        $.ajax({
+          url: '/api/scope/grant_impact/dashboard/' + encodeURIComponent(uid),
+          method: 'POST', contentType: 'application/json',
+          data: JSON.stringify({groups: picked})
+        }).done(function (res) {
+          if (!res || !res.success) return;
+          var i = res.impact || {};
+          if (i.locks_out_everyone) {
+            $impact.text('{{ _("Warning: nobody would be able to operate this dashboard.") }}');
+          } else if (i.losing) {
+            $impact.text('{{ _("Losing operation") }}: ' + (i.losing_names || []).join(', '));
+          } else {
+            $impact.text('{{ _("Nobody loses operation with this change.") }}');
+          }
+        }).fail(function () {
+          // 조용히 "영향 없음" 으로 보이면 안 된다 — 모른다는 것을 말한다.
+          $impact.text('{{ _("Error: Unable to communicate with server.") }}');
+        });
+      }
+
+      $groups.empty();
+      $impact.text('');
+      $sec.find('input[name="dashboard_groups_present"]').remove();
+      $.getJSON('/api/scope/grants/dashboard/' + encodeURIComponent(uid))
+        .done(function (d) {
+          if (!d || !d.success) return;
+          if (!d.groups.length) {
+            $groups.html('<div class="aot-modal-body-text">'
+              + '{{ _("No groups yet. Create one in Settings > Users > Groups.") }}</div>');
+            $sec.show();
+            return;   // 그룹이 없으면 표식도 넣지 않는다 — 지울 부여가 없다
+          }
+          // 조회에 성공했을 때만 표식을 넣는다(위 주석 참조).
+          $sec.append($('<input type="hidden" name="dashboard_groups_present" value="1">'));
+          d.groups.forEach(function (g) {
+            var $row = $('<div class="aot-modal-option-row">');
+            $row.append($('<label class="aot-modal-option-label">').text(g.name));
+            var $input = $('<input type="checkbox" class="btn-toggle-input" name="dashboard_groups">')
+              .val(g.unique_id).prop('checked', !!g.granted)
+              .on('change', refreshImpact);
+            $row.append($('<div class="aot-modal-option-control">').append(
+              $('<label class="btn-toggle mb-0">').append($input).append(
+                $('<div class="btn-toggle-slider">').append('<div class="btn-toggle-thumb"></div>'))));
+            $groups.append($row);
+          });
+          $sec.show();
+          refreshImpact();
+        })
+        .fail(function () { /* 관리자가 아니다 — 섹션을 숨긴 채 둔다 */ });
+    });
+
     $(document).ready(function () {
       /* window.initTooltip handles this or it's handled by global delegation above */
       $('.selectpicker').selectpicker();

@@ -638,6 +638,15 @@ class FacilityManager:
             d['bay_slices'] = compute_bay_slices(d)
         except Exception:
             d['bay_slices'] = []
+        # 구역 총량(p6_50) — 구획의 몫이 이것을 분모로 삼는다. 시설 런타임
+        # (`/api/aot/facility/<uuid>/runtime`)이 이미 같은 값을 내보내는데,
+        # **시설 편집기는 그 API 를 쓰지 않는다.** 두 화면이 같은 폼을 쓰므로
+        # 여기서도 내야 접미("/12 베드")가 화면마다 갈리지 않는다.
+        try:
+            from .plot_context import bay_capacities
+            d['bay_capacities'] = bay_capacities(f)
+        except Exception:
+            d['bay_capacities'] = {}
         if include_shape and f.shape is not None:
             d['outer_feature'] = f.shape.feature
             d['parent_id'] = f.shape.parent_id

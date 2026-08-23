@@ -101,6 +101,10 @@ REASON_SAFETY_PRE_GATE  = 12   # 안전 Pre-Gate 강제 명령
 REASON_UNAVAILABLE      = 13   # Output unavailable (통신 실패)
 REASON_SAFETY_POST_GATE = 14   # 안전 Post-Gate 보정
 REASON_NO_GRADIENT      = 15   # 구동력 없음 — 내외부 차이 부족으로 효과 없음
+REASON_NO_OUTDOOR_DATA  = 16   # 실외 측정 없음 — 판단 근거가 없어 개구부 제자리 유지
+                               # 15 와 구분한다: 15 는 "차이가 없다"는 **판단**이고
+                               # 16 은 "판단할 근거가 없다"다. 같은 코드로 뭉치면
+                               # 로그만 보고 왜 안 움직였는지 알 수 없다.
 REASON_MANUAL_OVERRIDE  = 20   # 수동 오버라이드 — 락 활성
 
 # 안전 게이트 비트마스크 (CH_SAFETY_GATE)
