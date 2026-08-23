@@ -3572,22 +3572,30 @@
 
     // 재배 프로그램 — 선택지는 위젯이 `p.program_choices` 로 실어 준다(모달은
     // 스스로 조회하지 않는다: 빌더는 순수 함수로 두고 조회는 위젯이 맡는 것이
-    // 이 파일의 규약이다). 선택지가 없으면 줄을 내지 않는다.
-    var _progRow = '';
-    if ((p.program_choices || []).length) {
-        var curP = (p.program && p.program.unique_id) || '';
-        var po = '<option value="">' + _esc(_t('No program')) + '</option>';
-        p.program_choices.forEach(function (x) {
-            po += '<option value="' + _esc(x.unique_id) + '"' +
-                  (x.unique_id === curP ? ' selected' : '') + '>' +
-                  _esc(x.name + (x.variety ? ' · ' + x.variety : '')) + '</option>';
-        });
-        _progRow = _fRow(_t('Program'),
+    // 이 파일의 규약이다).
+    //
+    // ⚠ **등록된 프로그램이 없어도 줄을 낸다.** 예전에는 선택지가 비면 줄 자체를
+    // 빼서, 프로그램을 한 번도 만들지 않은 설치에서는 "프로그램" 이라는 낱말이
+    // 화면 어디에도 없었다. 사용자는 그것을 **기능이 없다/고장났다** 로 읽는다 —
+    // 2026-08-23 실제로 "구버전 모달이 떴다 · 프로그램 연동이 안 된다" 는 보고가
+    // 왔고, 코드는 최신이었고 다른 것은 `geo_program` 이 0건이라는 사실뿐이었다.
+    // "없는 것" 과 "안 보여준 것" 이 같은 화면이 되면 안 된다.
+    var _progChoices = p.program_choices || [];
+    var curP = (p.program && p.program.unique_id) || '';
+    var po = '<option value="">' + _esc(_t('No program')) + '</option>';
+    _progChoices.forEach(function (x) {
+        po += '<option value="' + _esc(x.unique_id) + '"' +
+              (x.unique_id === curP ? ' selected' : '') + '>' +
+              _esc(x.name + (x.variety ? ' · ' + x.variety : '')) + '</option>';
+    });
+    var _progRow = _fRow(_t('Program'),
                          '<select class="aot-modern-input form-control" ' +
                          'data-pf="program_uuid">' + po + '</select>') +
-                   _fieldHint(_t('Create a new program'), '/geo/programs',
-                              p.can_design);
-    }
+                   // 하나도 없을 때야말로 만들러 갈 길을 보여야 한다.
+                   _fieldHint(_progChoices.length
+                                  ? _t('Create a new program')
+                                  : _t('No programs yet — create one'),
+                              '/geo/programs', p.can_design);
 
     // 구역 안에서의 몫(p6_50) — 시설 구획에만 있다. 노지 구획은 면적이 도형에서
     // 나오므로 몫을 따로 적으면 정본이 둘이 된다(서버도 거절한다).

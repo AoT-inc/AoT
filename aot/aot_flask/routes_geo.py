@@ -1588,6 +1588,21 @@ def page_programs():
         current_tab = None          # URL 로 지정된 스코프 밖 탭
     current_tab = current_tab or TabService.default_visible_tab('program')
 
+    # ⚠ **탭이 하나도 없으면 여기서 만든다.** 이 화면의 편집은 전부 탭을 전제로
+    # 하는데(프로그램 행은 `tab_id` 를 갖는다), 새 설치에는 program 탭이 없다 —
+    # 다른 페이지는 장치를 **추가할 때** `get_default_tab` 이 만들지만 이 화면의
+    # 생성은 클라이언트 API 라 그 경로를 지나지 않는다. 그래서 처음 여는 사람은
+    # 탭도 없고 아래 백필도 못 돌아, 이름조차 저장되지 않는 화면을 본다(2026-08-23
+    # koat 실측: 사용자가 손으로 탭을 만들자 그때부터 동작했다).
+    #
+    # **보이는 탭이 없다는 것과 탭이 없다는 것은 다르다** — 그룹 스코프로 남의
+    # 탭만 가려진 경우까지 여기서 새 탭을 만들면, 그 사람에게 만들 권한이 없는데도
+    # 자원이 늘어난다. 그래서 `get_tabs_for_page`(전체)로 판정한다.
+    if current_tab is None and not TabService.get_tabs_for_page('program'):
+        TabService.get_default_tab('program')
+        tabs = TabService.visible_tabs_for_page('program')
+        current_tab = TabService.default_visible_tab('program')
+
     if current_tab:
         null_count = GeoProgram.query.filter(GeoProgram.tab_id.is_(None)).count()
         if null_count:

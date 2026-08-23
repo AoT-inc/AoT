@@ -8331,13 +8331,34 @@
             // 넣는 사본뿐이라 DB 의 도형에는 색이 되쓰이지 않는다.
             map.addLayer({
                 id: 'aot-focus-fill-' + uid, type: 'fill', source: src,
+                filter: ['==', ['geometry-type'], 'Polygon'],
                 paint: { 'fill-color': ['coalesce', ['get', 'aot_focus_color'], '#13261B'],
                          'fill-opacity': 0.18 }
             });
             map.addLayer({
                 id: 'aot-focus-line-' + uid, type: 'line', source: src,
+                filter: ['==', ['geometry-type'], 'Polygon'],
                 paint: { 'line-color': ['coalesce', ['get', 'aot_focus_color'], '#13261B'],
                          'line-width': 2 }
+            });
+            // **면이 없는 장치가 있다.** 위치 마커만 있고 맡은 영역이 없는 것
+            // (koat 실측: 출력 18개 중 펌프 2개가 점뿐이었다). 면만 그리면 그
+            // 장치들은 라벨만 켜지고 도형은 영영 안 나온다 — 사용자에게는
+            // "출력을 켜도 도형이 활성화되지 않는다" 로 보인다.
+            //
+            // 자리에 고리를 그린다. 채우지 않는 것은 마커 라벨을 가리지 않기
+            // 위해서고, 이 규약은 `_highlightShape` 의 점 처리와 같다.
+            map.addLayer({
+                id: 'aot-focus-pt-' + uid, type: 'circle', source: src,
+                filter: ['==', ['geometry-type'], 'Point'],
+                paint: {
+                    'circle-radius': 14,
+                    'circle-color': 'rgba(0,0,0,0)',
+                    'circle-stroke-color':
+                        ['coalesce', ['get', 'aot_focus_color'], '#13261B'],
+                    'circle-stroke-width': 3,
+                    'circle-stroke-opacity': 0.9
+                }
             });
         } catch (e) { return null; }
         return src;
@@ -8377,7 +8398,8 @@
         var feats = [];
         Object.keys(st.targets).forEach(function (uuid) {
             var f = st.feats[uuid];
-            if (!f || !f.geometry || !/Polygon/.test(f.geometry.type)) return;
+            // 면이 없는 장치는 점이라도 그린다(위 `aot-focus-pt-` 고리).
+            if (!f || !f.geometry || !/Polygon|Point/.test(f.geometry.type)) return;
             var color = _focusColor(instance, (st.cats || {})[uuid], f);
             // **사본**에만 찍는다 — 원본에 쓰면 그 값이 저장 경로를 타고 도형에
             // 각인될 수 있고, 그러면 테마를 바꿔도 그 도형만 옛 색으로 남는다.
@@ -8409,19 +8431,31 @@
     function _fetchFocusShapes(instance, uid, cat) {
         var st = _focusState(uid);
         if (st['_fetch_' + cat]) return;          // 종류당 한 번
-        st['_fetch_' + cat] = 1;
+
+        // ⚠ **가드는 실제로 요청을 보낼 때만 세운다.**
+        //
+        // 예전에는 함수 첫 줄에서 세웠는데, 그러면 **실패한 시도가 기회를 태워
+        // 버린다** — 아직 지도 uuid 를 못 읽는 이른 시점에 한 번 불리면 그대로
+        // 영구히 죽고, 그 위젯에서는 꺼 둔 종류의 도형이 다시는 안 나온다.
+        // 증상이 고약하다: 장치 도형 레이어를 **켰다 끄면** 그때부터 동작한다
+        // (그 조작이 `aot_devices` 소스를 만들어 이 경로를 건너뛰게 하므로).
+        // 사용자가 찾아낸 그 우회법이 곧 진단이었다.
+        //
+        // 같은 이유로 **응답이 실패하거나 비면 가드를 되돌린다.** 한 번의 네트워크
+        // 오류가 그 위젯의 남은 세션 전체를 결정해서는 안 된다.
         var type = _FOCUS_OVERLAY_TYPE[cat];
         var mapUuid = (instance.vars && instance.vars.vars &&
                        (instance.vars.vars.selected_map_uuid ||
                         instance.vars.vars.map_uuid)) ||
                       (instance.vars && instance.vars.contentMapUuid) || '';
-        if (!type || !mapUuid) return;
+        if (!type || !mapUuid) return;            // 가드를 세우지 않는다 — 다시 온다
+        st['_fetch_' + cat] = 1;
         geoFetch('/api/geo/overlays?map_uuid=' + encodeURIComponent(mapUuid) +
                  '&type=' + encodeURIComponent(type))
             .then(function (r) { return r.json(); })
             .then(function (gj) {
                 var feats = (gj && gj.features) || [];
-                if (!feats.length) return;
+                if (!feats.length) { st['_fetch_' + cat] = 0; return; }
                 st.pool = st.pool || [];
                 st.pool = st.pool.concat(feats);
                 // 기다리고 있던 대상들을 다시 찾는다.
@@ -8435,7 +8469,7 @@
                 });
                 if (changed) _repaintFocus(instance, uid);
             })
-            .catch(function () {});
+            .catch(function () { st['_fetch_' + cat] = 0; });
     }
 
     /**
@@ -8461,7 +8495,23 @@
                 // 받아온 뒤 다시 찾는다. 받아오는 것과 **보이는 것은 별개**다 —
                 // 카테고리 visibility 는 `_applyShapeLOD` 가 정하므로 꺼 둔
                 // 상태는 그대로다.
-                if (!st.feats[uuid] && cat) _fetchFocusShapes(instance, uid, cat);
+                //
+                // ⚠ **종류를 모르면 아는 종류를 전부 받는다.** 모달 쪽 호출부는
+                // `cat` 을 넘기지 않는데(공용 셸 하나가 구역·구획·시설·장치를
+                // 모두 연다), 그것을 그대로 두면 **꺼 둔 종류의 대상은 모달을
+                // 열어도 아무 일도 일어나지 않는다** — 2026-08-23 실측: 장치
+                // 도형 카테고리(`show_device_shapes`)가 꺼진 위젯에서 장치를
+                // 골라도 도형이 뜨지 않았다(켜진 출력만 `'device'` 를 넘겨
+                // 우연히 동작했다).
+                //
+                // 종류당 한 번만 받고(`_fetch_<cat>` 가드) 받은 것은 이 표시
+                // 전용 소스에만 들어가므로, 꺼 둔 카테고리는 그대로 꺼져 있다.
+                // 호출부마다 종류를 적게 하는 편이 정확하지만, 빠뜨렸을 때
+                // 조용하다는 것이 이 결함의 전부였다.
+                if (!st.feats[uuid]) {
+                    var _cats = cat ? [cat] : Object.keys(_FOCUS_OVERLAY_TYPE);
+                    _cats.forEach(function (c) { _fetchFocusShapes(instance, uid, c); });
+                }
             }
         } else {
             delete box[reason];
@@ -8513,7 +8563,8 @@
                 fetched: Object.keys(st).filter(function (k) {
                     return k.indexOf('_fetch_') === 0; }),
                 srcFeatures: src && src._data ? (src._data.features || []).length : null,
-                layers: ['aot-focus-fill-' + uid, 'aot-focus-line-' + uid]
+                layers: ['aot-focus-fill-' + uid, 'aot-focus-line-' + uid,
+                         'aot-focus-pt-' + uid]
                     .map(function (l) { return l + '=' + (m && m.getLayer(l) ? 'ok' : 'none'); })
             };
         };

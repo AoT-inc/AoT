@@ -30153,3 +30153,7 @@ msgstr "同じ場所と割り当てで、次に何をするか選びます。"
 #: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
 msgid "Lost"
 msgstr "不作・損失"
+
+#: 구획 모달 — 프로그램이 0건일 때도 줄을 낸다
+msgid "No programs yet — create one"
+msgstr "プログラムがまだありません — 作成"

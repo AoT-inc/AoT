@@ -106,6 +106,18 @@ def save_widget_custom_options():
             current_options = {}
 
         dict_widgets = parse_widget_information()
+
+        # 선언된 타입에 맞춘다 — **이 경로가 폼보다 느슨하면 안 된다.**
+        # 여기로 들어온 값은 검증 없이 그대로 저장됐고, 타입에 안 맞는 값 하나가
+        # 남으면 그 값을 건드리지도 않은 다음 **폼 저장 전체**가 거부된다
+        # (2026-08-23: label_min_zoom=17.5 하나가 팝업 기본 탭 변경을 막았다).
+        _dw = dict_widgets.get(widget.graph_type) or {}
+        new_options, _coerce_errors = utils_general.coerce_custom_option_values(
+            _dw, new_options)
+        if _coerce_errors:
+            return jsonify({"status": "error",
+                            "message": "; ".join(_coerce_errors)}), 400
+
         if widget.graph_type in dict_widgets and 'execute_at_modification' in dict_widgets[widget.graph_type]:
              # Call widget-specific modification logic (haromizes AJAX and Form save paths)
              logger.debug(f"[AoT Map Debug] Calling execute_at_modification for {widget.unique_id}")
@@ -168,6 +180,14 @@ def get_widget_custom_options(widget_id):
             options = json.loads(widget.custom_options) if widget.custom_options else {}
         except Exception:
             options = {}
+        # **폼이 거부할 값을 폼에 보여 주지 않는다.** 쓰기 게이트가 생기기 전에
+        # 저장된 값이 남아 있으면(예: integer 칸의 17.5) 그 항목을 건드리지도
+        # 않은 저장이 계속 실패한다 — 사용자에게는 자기가 만진 적 없는 항목
+        # 이름이 뜬다. 여기서 다듬어 내보내면 다음 저장에 정상값이 실려 DB 도
+        # 함께 고쳐진다. 숫자로 안 읽히는 값은 손대지 않는다(적은 값이 조용히
+        # 사라지면 안 된다).
+        _dw = (parse_widget_information() or {}).get(widget.graph_type) or {}
+        options, _ = utils_general.coerce_custom_option_values(_dw, options)
         return jsonify({"status": "success", "custom_options": options})
     except Exception as e:
         logger.exception("Error fetching widget custom options")

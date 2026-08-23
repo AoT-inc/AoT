@@ -366,6 +366,53 @@ def custom_options_return_string(error, dict_options, mod_dev, request_form):
     return error, ';'.join(list_options)
 
 
+def coerce_custom_option_values(dict_widget, options):
+    """선언된 타입에 맞게 위젯 옵션 값을 다듬는다. `(정리된 dict, 오류 목록)`.
+
+    **왜 필요한가.** 위젯 옵션에는 쓰기 경로가 둘이다 — 설정 폼(POST, 검증함)과
+    라이브 미리보기·지도 컨트롤이 쓰는 `/save_widget_custom_options`(AJAX,
+    예전에는 **아무 검증도 없었다**). 느슨한 쪽이 타입에 안 맞는 값을 넣으면,
+    그 값을 건드리지도 않은 다음 폼 저장이 통째로 거부된다.
+
+    2026-08-23 실제로 그랬다: `label_min_zoom`(integer)에 `17.5` 가 들어가 있어,
+    **팝업 기본 탭** 같은 전혀 다른 옵션을 바꾸려 해도
+    "축소 시 라벨 숨기기 must represent an integer value (submitted '17.5')" 로
+    실패했다. 사용자에게는 자기가 만진 적 없는 항목의 이름이 뜬다.
+
+    다듬는 것은 **무해한 변환뿐**이다 — 숫자로 읽히는 값의 타입 맞추기(17.5 → 17,
+    "3" → 3), 불리언 문자열. 숫자로 읽히지 않으면 고치지 않고 **오류로 올린다**:
+    거기서 임의로 기본값을 넣으면 사용자가 적은 값이 조용히 사라진다.
+    """
+    errors = []
+    if not dict_widget or not isinstance(options, dict):
+        return options, errors
+    declared = {}
+    for each_option in (dict_widget.get('custom_options') or []):
+        if isinstance(each_option, dict) and each_option.get('id'):
+            declared[each_option['id']] = each_option
+    out = {}
+    for key, value in options.items():
+        opt = declared.get(key)
+        kind = (opt or {}).get('type')
+        if value is None or kind not in ('integer', 'float', 'bool'):
+            out[key] = value
+            continue
+        if kind == 'bool':
+            if isinstance(value, bool):
+                out[key] = value
+            else:
+                out[key] = str(value).strip().lower() in ('1', 'true', 'on', 'yes')
+            continue
+        try:
+            num = float(value)
+        except (TypeError, ValueError):
+            errors.append('{name}: 숫자가 아닌 값 {value!r}'.format(
+                name=opt.get('name') or key, value=value))
+            continue
+        out[key] = int(num) if kind == 'integer' else num
+    return out, errors
+
+
 def custom_options_return_json(
         error,
         dict_options,

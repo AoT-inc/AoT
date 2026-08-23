@@ -250,8 +250,13 @@
                 perStageTargets: false, perStageRes: false,
                 openId: null,
                 // 초기 활성 탭은 서버가 렌더한 페이지가 안다(routes_geo.page_programs
-                // 가 백필까지 마친 뒤 넘겨준 탭). 탭 인프라 도입 전 프로그램이 있을
-                // 리 없으므로(백필이 먼저 돈다) null 로 남는 경우는 사실상 없다.
+                // 가 탭 부트스트랩과 백필까지 마친 뒤 넘겨준 탭).
+                //
+                // ⚠ 예전 주석은 "null 로 남는 경우는 사실상 없다" 고 적혀 있었는데
+                // **틀렸다.** 새 설치에는 program 탭이 아예 없어 백필 자체가 돌지
+                // 않았고, 그때 이 값이 null 이라 이름조차 저장되지 않았다. 서버가
+                // 탭을 만들어 주도록 고쳤지만, 그 사람이 그 탭을 조작할 수 없으면
+                // (그룹 스코프) 여전히 null 이 올 수 있다.
                 activeTabId: (typeof window !== 'undefined' && window._PROG &&
                              window._PROG.currentTabId) || null,
                 searchQuery: '' };

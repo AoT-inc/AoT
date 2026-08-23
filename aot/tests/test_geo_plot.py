@@ -6101,7 +6101,8 @@ class TestProgram(unittest.TestCase):
                                  'widgets', 'AoT_map', 'aot-map-widget-vector.js'))
         focus = vec.split('function _ensureFocusLayers', 1)[1].split('\n    function ', 1)[0]
         self.assertNotIn("['get', 'color']", focus)
-        self.assertEqual(2, focus.count("['get', 'aot_focus_color']"))
+        # 면 fill·면 line·점 고리 셋 다 같은 키를 읽는다.
+        self.assertEqual(3, focus.count("['get', 'aot_focus_color']"))
         # 칠하는 색은 종류마다 테마에서 해석한다.
         self.assertIn('function _focusColor', vec)
         self.assertIn('T.deviceColor(', vec)
@@ -6111,6 +6112,86 @@ class TestProgram(unittest.TestCase):
         rp = vec.split('function _repaintFocus', 1)[1].split('\n    // ', 1)[0]
         self.assertIn('props.aot_focus_color = color', rp)
         self.assertIn("geometry: f.geometry, properties: props", rp)
+
+    def test_program_row_shows_even_with_no_programs(self):
+        """등록된 프로그램이 0건이어도 줄을 낸다.
+
+        예전에는 선택지가 비면 줄 자체를 뺐다. 그러면 프로그램을 한 번도 만들지
+        않은 설치에서 "프로그램" 이라는 낱말이 화면 어디에도 없고, 사용자는 그것을
+        **기능이 없다/고장났다** 로 읽는다 — 2026-08-23 "구버전 모달이 떴다 ·
+        프로그램 연동이 안 된다" 는 보고가 실제로 그것이었다(코드는 최신이었고
+        다른 것은 `geo_program` 이 0건이라는 사실뿐이었다).
+        """
+        js = _read(os.path.join(_ROOT, 'aot_flask', 'static', 'js',
+                                'widgets', 'AoT_map', 'aot-map-popup.js'))
+        block = js.split('// 재배 프로그램 —', 1)[1].split('// 구역 안에서의 몫', 1)[0]
+        self.assertNotIn('if ((p.program_choices || []).length) {', block)
+        # 하나도 없을 때야말로 만들러 갈 길을 보여야 한다.
+        self.assertIn("_t('No programs yet — create one')", block)
+        self.assertIn("'/geo/programs'", block)
+        for lang in ('ko', 'ja'):
+            po = _read(os.path.join(_ROOT, 'aot_flask', 'translations', lang,
+                                    'LC_MESSAGES', 'messages.po'))
+            self.assertIn('msgid "No programs yet — create one"', po,
+                          '%s 번역이 없다' % lang)
+
+    def test_a_failed_fetch_does_not_burn_the_only_attempt(self):
+        """"종류당 한 번" 가드를 **함수 첫 줄에서** 세우면 실패한 시도가 기회를
+        태운다 — 아직 지도 uuid 를 못 읽는 이른 시점에 한 번 불리면 그대로 영구히
+        죽고, 그 위젯에서는 꺼 둔 종류의 도형이 다시는 안 나온다.
+
+        증상이 고약하다: 장치 도형 레이어를 **켰다 끄면** 그때부터 동작한다(그
+        조작이 `aot_devices` 소스를 만들어 이 경로를 건너뛰게 하므로). 사용자가
+        찾아낸 그 우회법이 곧 진단이었다(2026-08-23 koat).
+        """
+        vec = _read(os.path.join(_ROOT, 'aot_flask', 'static', 'js',
+                                 'widgets', 'AoT_map', 'aot-map-widget-vector.js'))
+        body = vec.split('function _fetchFocusShapes', 1)[1] \
+                  .split('\n    /**', 1)[0]
+        # 가드는 uuid 를 확인한 **뒤에** 선다.
+        guard = body.index("st['_fetch_' + cat] = 1;")
+        bail = body.index('if (!type || !mapUuid) return;')
+        self.assertLess(bail, guard,
+                        '가드가 mapUuid 검사보다 앞서면 이른 호출이 기회를 태운다')
+        # 빈 응답·실패는 가드를 되돌린다.
+        self.assertIn("if (!feats.length) { st['_fetch_' + cat] = 0; return; }", body)
+        self.assertIn(".catch(function () { st['_fetch_' + cat] = 0; });", body)
+
+    def test_focus_draws_devices_that_have_no_area(self):
+        """**면이 없는 장치가 있다** — 위치 마커만 있고 맡은 영역이 없는 것.
+
+        koat 실측: 출력 18개 중 펌프 2개가 점뿐이었다. 면만 그리던 시절에는 그
+        장치를 켜도 라벨만 켜지고 도형은 영영 안 나왔고, 사용자에게는 "출력을
+        켜도 도형이 활성화되지 않는다" 로 보였다(면이 있는 장치로 시험하면
+        멀쩡해서 더 찾기 어렵다).
+        """
+        vec = _read(os.path.join(_ROOT, 'aot_flask', 'static', 'js',
+                                 'widgets', 'AoT_map', 'aot-map-widget-vector.js'))
+        layers = vec.split('function _ensureFocusLayers', 1)[1] \
+                    .split('\n    function ', 1)[0]
+        # 점 전용 고리 레이어가 있어야 한다.
+        self.assertIn("id: 'aot-focus-pt-' + uid, type: 'circle'", layers)
+        # 면 레이어는 점을 받지 않는다(그 반대도).
+        self.assertEqual(2, layers.count("['==', ['geometry-type'], 'Polygon']"))
+        self.assertIn("['==', ['geometry-type'], 'Point']", layers)
+        # 칠할 목록이 점을 걸러내면 위 레이어는 늘 비어 있다.
+        rp = vec.split('function _repaintFocus', 1)[1].split('\n    // ', 1)[0]
+        self.assertIn('/Polygon|Point/.test(f.geometry.type)', rp)
+
+    def test_focus_fetches_every_kind_when_the_caller_omits_one(self):
+        """모달 쪽 호출부는 대상 종류를 넘기지 않는다 — 공용 셸 하나가 구역·구획·
+        시설·장치를 모두 열기 때문이다. 종류가 없을 때 받아오지 않으면 **꺼 둔
+        종류의 대상은 모달을 열어도 아무 일도 일어나지 않는다**(실측: 장치 도형
+        카테고리가 꺼진 위젯에서 장치를 골라도 도형이 뜨지 않았다 — 켜진 출력만
+        `'device'` 를 넘겨 우연히 동작했다).
+        """
+        vec = _read(os.path.join(_ROOT, 'aot_flask', 'static', 'js',
+                                 'widgets', 'AoT_map', 'aot-map-widget-vector.js'))
+        body = vec.split('function _setFocus', 1)[1].split('\n    /** 이 위젯', 1)[0]
+        self.assertIn('cat ? [cat] : Object.keys(_FOCUS_OVERLAY_TYPE)', body)
+        # 종류당 한 번만 받는 가드가 있어야 다섯 번 훑는 것이 비용이 되지 않는다.
+        fetch = vec.split('function _fetchFocusShapes', 1)[1].split('\n    /**', 1)[0]
+        self.assertIn("if (st['_fetch_' + cat]) return;", fetch)
 
     def test_focus_does_not_dictate_a_display_value(self):
         """임시 표시가 `display` 를 정하면 **그 라벨이 원래 무엇이었는지**를

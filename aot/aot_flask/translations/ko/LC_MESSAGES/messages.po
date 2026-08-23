@@ -30394,3 +30394,7 @@ msgstr "같은 자리와 몫으로, 다음에 무엇을 할지 고릅니다."
 #: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
 msgid "Lost"
 msgstr "실패"
+
+#: 구획 모달 — 프로그램이 0건일 때도 줄을 낸다
+msgid "No programs yet — create one"
+msgstr "아직 프로그램이 없습니다 — 만들기"
