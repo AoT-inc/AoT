@@ -35,6 +35,7 @@ Click the new entry to open the edit drawer.
 | Applies to | What this program covers — crop, species, animal. Pick from the list or **enter a new one** |
 | Variety | Blank means the default for that subject. Filled makes it variety-specific |
 | Base temperature | Basis for growing degree days. Blank means stages advance by calendar ([below](#gdd)) |
+| Advance stages automatically | Records stage changes without asking. **Off by default** ([below](#auto)) |
 | Target curves | Attach a Method to an item and it follows a **curve** instead of the stage value |
 
 ### The stage table { #stages }
@@ -101,47 +102,10 @@ Confirmed changes accumulate in the **Stage log**. **[Undo last]** reverses the 
 - **Only the last** one can be undone; undoing arbitrary entries would make the anchor untraceable.
 - A plot that has never been confirmed behaves exactly as before — existing plots are not retroactively asked to approve anything.
 
-!!! note "Nothing advances until you confirm it"
-    Once a plot has been confirmed even once, it **stays in its current stage until you confirm the next one** — target environment included — even when the calculation has already moved on. The next-stage row then reads "waiting for your confirmation". (Plots with automatic advance are the exception: that decision has already been made.)
-
-## Editing the schedule — postpone and pull forward { #stage-schedule }
-
-Stage lengths in the program are a **standard**; a plot only **references** them. The real schedule is edited in the plot modal under **[Settings] > Stage schedule**.
-
-- What you edit is **how many days that stage lasts** — the same wording the programme uses, so no date arithmetic. The start date shows beside it as the result.
-- Edit the **length** of any stage still ahead and press **[Save]**.
-- Changing one stage **moves the ones after it.** To keep a later date fixed, shorten the next stage by the same amount.
-- The last stage has no length (**until the end**) — when it ends is decided by ending the plot.
-- **Typing the programme's own length back** returns that stage to the standard — there is no separate revert button.
-
-### Stage guidance, adding and removing stages
-
-All in the same table, and the programme is left alone — what you change here applies to this plot only.
-
-- **[Edit]** on a stage opens **both its length field and its guidance box**. Change either, press **[Save]**, and both go in. You can write it even where the programme left none; clearing it brings the programme's own text back.
-- **[Remove stage]**, bottom-left of that editor, drops a stage this season does not have (straight to transplanting, no seedling stage). **Stages already passed cannot be removed** — a confirmed change points at them, so removing one loses what was done then. Undo the change first.
-- **[Add stage]** below the table opens name and length fields for a stage the standard has no room for (a top dressing, say). It goes last; adjust position with the lengths.
-- The **current** stage's guidance shows **plainly under the axis on the [Status] tab** — no click. Other stages' guidance lives in this table.
-
-### Registering the schedule as a programme { #register }
-
-Once you have tuned lengths, added stages and written guidance, that knowledge lives **only in that plot**. **[Register as programme]**, at the bottom of the **[Program]** card on the [Settings] tab, makes it reusable.
-
-- What goes in is the list the plot **actually follows** — stages removed stay out, added stages come along, and the lengths are the **real spans between boundaries**, not the standard. Guidance travels too.
-- Targets and target items are copied from the source programme unchanged (the plot never edits them).
-- **The plot is not moved onto it.** Registering is a copy — changing a running season's interpretation would silently change what it was grown for. Pick the new programme in [Settings] if you want this plot on it too.
-- A name already in use gets a number appended.
-- Guidance you wrote **survives a stage change.** An observation on a past stage that vanishes on the next transition is worth nothing as a record.
-- **[Postpone]** on the Stage change row moves the change to the date shown. **[Confirm]** means "it happened that day" (a fact); **[Postpone]** means "it will happen that day" (a plan).
-- Boundaries already past are not edited here — that is what **[Confirm]** and **[Undo last]** are for.
-- Setting any date makes that plot judge stages **by date rather than growing degree days**. Clear them all and GDD comes back.
-- The expected end date follows the edited schedule.
-
 ## Automatic advance { #auto }
 
-Turning on **Advance stages automatically** for a **plot** records changes without asking. It lives in the plot modal under **[Settings] > Stage schedule**.
+Turning on **Advance stages automatically** records changes without asking, for every plot using that program.
 
-- **It is set per plot.** Two plots on the same program may differ — whether stages can advance unwatched is a fact about that place, not about the crop.
 - **Off by default.** If it were on by default, stages would advance without anyone having decided anything.
 - The recorded date is **derived from the data**, not from when you looked. Opening the plot three weeks later records the same date.
 - With no defensible date, nothing is recorded and the question stays for a person.

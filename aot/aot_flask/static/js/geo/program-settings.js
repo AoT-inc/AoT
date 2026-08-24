@@ -914,9 +914,13 @@
                intentRow);
 
         // ── 2. 단계 ────────────────────────────────────────────────────
-        // 자동 승인은 **여기 없다**(P8). 언제 넘길지는 이 작물의 성질이 아니라
-        // 그 자리를 사람 눈 없이 믿느냐의 문제라 구획이 정한다 — 같은 프로그램을
-        // 쓰는 두 구획이 다른 답을 갖는 것이 정상이다.
+        // 자동 승인(P7). **기본은 꺼짐** — 켜져 있는 것이 기본이면 사람이 아무
+        // 결정도 하지 않았는데 단계가 스스로 넘어간다. 단계 목록과는 다른
+        // 결정(언제 넘길지)이라 상자를 따로 둔다.
+        var autoRow = _optRow(
+          _T('auto_advance', 'Advance stages automatically'),
+          _T('auto_advance_note', ''),
+          _toggle('data-auto="1"', !!p.auto_advance, ro));
 
         // 단계 추가는 **트랙과 패널 사이의 한 행**이다.
         var actions = ro ? ''
@@ -926,6 +930,7 @@
 
         var gStages =
           _group(_T('stages', 'Program stages'), _T('stages_note', '')) +
+          _box(autoRow) +
           _box('<div class="veg-track-host">' + _trackHtml() + '</div>' +
                actions +
                '<div class="veg-stage-panel-host">' + _stagePanel() + '</div>');
@@ -1257,6 +1262,9 @@
 
     // 기준온도는 photosynthesis JSON 안에 넣는다. **비우면 키를 지운다** —
     // 남겨 두면 "예전에 넣었던 값" 이 계속 GDD 판정에 쓰인다.
+    var au = host.querySelector('[data-auto]');
+    if (au) out.auto_advance = !!au.checked;
+
     // 기준온도와 모델 상수는 같은 JSON 에 담긴다. **비운 칸은 키를 지운다** —
     // 남겨 두면 "예전에 넣었던 값" 이 계속 쓰인다.
     var tb = host.querySelector('[data-tbase]');

@@ -788,25 +788,19 @@
     var csrf = csrfEl ? csrfEl.getAttribute('content') : '';
 
     return Promise.all(chunks.map(function (chunk) {
-      var items = chunk.map(function (j) {
-        return { kind: 'past', unique_id: j.sensor.device_id,
-                 measure_type: 'input',
-                 measurement_id: j.ch.measurement_id, period: String(past) };
-      });
-      // 공유 코얼레서가 있으면 그쪽으로 — 같은 창 안의 다른 호출(지도 위젯 등)과
-      // 항목이 겹치면 한 번만 나간다. 없으면 예전 경로 그대로.
-      var sent = (window.AoTDataBatch && window.AoTDataBatch.postItems)
-        ? window.AoTDataBatch.postItems(items).then(function (res) {
-            return res ? { results: res } : null;
+      return fetch('/data_batch', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf },
+        body: JSON.stringify({
+          items: chunk.map(function (j) {
+            return { kind: 'past', unique_id: j.sensor.device_id,
+                     measure_type: 'input',
+                     measurement_id: j.ch.measurement_id, period: String(past) };
           })
-        : fetch('/data_batch', {
-            method: 'POST',
-            credentials: 'same-origin',
-            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf },
-            body: JSON.stringify({ items: items })
-          }).then(function (r) { return r.ok ? r.json() : null; });
-
-      return sent
+        })
+      })
+        .then(function (r) { return r.ok ? r.json() : null; })
         .then(function (d) {
           // 길이가 안 맞으면 정렬이 깨진 것이다 — 그 조각만 낱개로 다시 받는다.
           // 잘못 정렬된 시리즈를 그리면 온도 자리에 습도가 들어간다.
