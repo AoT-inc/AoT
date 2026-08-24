@@ -175,24 +175,72 @@ Approving on the web review page (`AI → MCP Servers → AI Requests & Advice`)
 
 The `AI -> Library` page (`/ai/library`) is where you register the **context sources** that ground the AI's answers. Sources can be documents (PDF/text), web URLs, REST APIs, or internal queries.
 
+### Where knowledge comes from
+
+Four kinds of thing live in the library, and the AI cites each of them differently:
+
+| Origin | What it is | How the AI cites it |
+|---|---|---|
+| Authoritative | A synced public-data feed (e.g. RDA, Nongsaro) | Stated as fact, with the source named |
+| Entered by a person | You typed it in, or uploaded a document | Trusted — you are the source |
+| Derived from data | Worked out from this system's own measurements | Presented as an observation here, not a general rule |
+| AI-curated | The AI looked something up or worked it out and saved it | **Flagged as an unconfirmed note** until a person confirms it |
+
+The AI can write to the library itself: when it researches something it saves a
+summary so the next question does not start from nothing. Those notes always
+enter unconfirmed and are always disclosed as such — the server appends the
+disclosure even if the model forgets to.
+
+### Reviewing what the AI wrote
+
+The **AI-Curated Knowledge Review** section lists the AI's own notes. Open the
+source link to check the original, then confirm, edit or retire. Confirming is
+what promotes a note out of "unconfirmed"; a note with no source link cannot
+really be checked, so it shows no link and stays unconfirmed.
+
+**Reviewed knowledge only** (off by default) stops the AI citing its own
+unreviewed notes. Authoritative and hand-entered knowledge is unaffected.
+
+### Browsing and adding
+
+The **Knowledge Items** section shows everything the AI can cite — search it,
+filter by tag or origin, and set aside anything stale (set-aside keeps the row;
+it only takes it out of the AI's reach).
+
+**Add Knowledge** writes in what you already know, without an AI turn or a
+registered source. What you write is treated as confirmed: you are the source.
+
 ### Knowledge Digest Pipeline
 
-Long prose sources such as documents and web URLs are pre-processed **once**, at registration time:
+Long prose sources such as documents and web URLs are pre-processed **once**, at
+registration time:
 
 1. The source is split into **chunks**.
 2. Each chunk is **digested (LLM summarize + keyword extraction)** and cached in the `ai_knowledge_chunk` table.
 3. At query time there is **no LLM call** — retrieval is pure DB lookup + deterministic search, so answers are fast and cheap.
 
-Each chunk reuses the same **3-state trust pipeline** (`system_generated` → `pending` → `user_confirmed`) as context records, so document-shaped knowledge is reviewed and approved through the same UX.
+### Scoping is by tag, not by site
 
-### Multi-site Scoping (facility_id)
+!!! warning "This changed — the library is farm-wide"
+    Knowledge used to be filtered by `facility_id`, and earlier versions of this
+    page said a document registered for one site could never surface for
+    another. **That is no longer true.** The library is a flat, farm-wide
+    catalog: any item can be retrieved for any question, and relevance is
+    decided by tags and keyword scoring.
 
-Each chunk stores the `facility_id` (site/facility boundary) of its source, and knowledge search filters on it.
+    Do not treat the library as a confidentiality boundary. If something must
+    not be visible to everyone who uses this AI, do not put it in the library.
 
-- **A document uploaded for site A never surfaces in an answer for site B.**
-- Searching **without** a `facility_id` excludes **all** library knowledge — a deliberate no-cross-site-leakage behavior, not an unfiltered fallback.
+Scope comes from **tags** instead — free text (`radish`, `north-block`,
+`bridge-a`), whatever you actually manage. AoT is not farm-only, so there is no
+fixed vocabulary; tags are how a query narrows to the right subject.
 
-This scoping keeps each facility's manuals and cultivation guidance separate when several sites are operated from one system.
+### Built-in feeds are Korean
+
+Every pre-built public-data feed in the Add list is Korean (RDA, Nongsaro,
+NCPMS, SmartFarmKorea) and needs an API key from that provider. Everywhere else,
+the library is filled the other way: your own documents, web pages, REST APIs —
+plus whatever the AI looks up and shelves as it works.
 
 ---
 

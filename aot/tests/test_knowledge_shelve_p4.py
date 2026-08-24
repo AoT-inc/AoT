@@ -222,5 +222,73 @@ class TestKnowledgeShelveP4(unittest.TestCase):
         self.assertEqual(AIKnowledgeChunk.query.count(), 0)
 
 
+
+class TestSourceUrlC4(unittest.TestCase):
+    """C4 — 출처 주소. 이 필드가 없으면 리뷰어가 원문으로 돌아갈 수 없고,
+    그러면 §3.2 승격 경로가 실질적으로 막혀 AI 가 비친 지식이 영원히 미확인으로
+    남는다. MCP 로 연결된 외부 LLM 이 웹 조사 요약을 비치하게 되면서 결정적이
+    된 구멍이다."""
+
+    def setUp(self):
+        self.app = _make_test_app()
+        self.app_context = self.app.app_context()
+        self.app_context.push()
+        db.create_all()
+
+    def tearDown(self):
+        db.session.remove()
+        db.drop_all()
+        self.app_context.pop()
+
+    def _shelve(self, **kw):
+        kw.setdefault('content', '가을무는 파종 후 약 80일에 수확한다.')
+        kw.setdefault('tags', '무,재배')
+        return shelve_svc.shelve_knowledge(**kw)
+
+    def test_http_url_is_stored(self):
+        r = self._shelve(source_url='https://www.nongsaro.go.kr/x?y=1')
+        row = AIKnowledgeChunk.query.filter_by(unique_id=r['chunk_id']).first()
+        self.assertEqual('https://www.nongsaro.go.kr/x?y=1', row.source_url)
+
+    def test_non_http_scheme_is_dropped_not_stored(self):
+        """이 값은 리뷰 화면에서 클릭 가능한 링크가 된다 — 저장 시점에 거르는
+        것이 렌더 시점마다 방어하는 것보다 확실하다."""
+        for bad in ('javascript:alert(1)', 'data:text/html,x', 'www.example.com', '  '):
+            db.session.query(AIKnowledgeChunk).delete()
+            db.session.commit()
+            r = self._shelve(source_url=bad)
+            row = AIKnowledgeChunk.query.filter_by(unique_id=r['chunk_id']).first()
+            self.assertIsNone(row.source_url, "거부되지 않은 값: %r" % bad)
+
+    def test_omitted_url_is_null_and_write_still_succeeds(self):
+        """출처가 없는 비치도 막지 않는다 — 대화 중 확정된 사실처럼 원문이
+        애초에 없는 경우가 있다. 다만 그런 항목은 확인할 수단이 없다."""
+        r = self._shelve()
+        self.assertEqual('created', r['status'])
+        row = AIKnowledgeChunk.query.filter_by(unique_id=r['chunk_id']).first()
+        self.assertIsNone(row.source_url)
+
+    def test_source_url_does_not_raise_trust(self):
+        """자기 신고를 신뢰로 바꾸면 §3.3 오염 방지가 무너진다."""
+        r = self._shelve(source_url='https://example.org/authoritative')
+        row = AIKnowledgeChunk.query.filter_by(unique_id=r['chunk_id']).first()
+        self.assertEqual('ai_curated', row.provenance)
+        self.assertEqual('system_generated', row.context_state)
+
+    def test_review_payload_exposes_source_url(self):
+        from aot.ai.services import knowledge_promotion_service as promo
+        self._shelve(source_url='https://example.org/a')
+        items = promo.list_review_items()
+        self.assertEqual(1, len(items))
+        self.assertEqual('https://example.org/a', items[0]['source_url'])
+
+    def test_quota_remaining_is_reported_so_a_batch_can_pace_itself(self):
+        r = self._shelve(content='첫 항목', tags='무')
+        self.assertIn('quota_remaining', r)
+        first = r['quota_remaining']
+        r2 = self._shelve(content='둘째 항목', tags='무')
+        self.assertEqual(first - 1, r2['quota_remaining'])
+
+
 if __name__ == '__main__':
     unittest.main()

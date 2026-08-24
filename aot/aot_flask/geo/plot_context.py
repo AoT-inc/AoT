@@ -929,385 +929,14 @@ def program_brief(plot, programs=None):
     }
 
 
-def effective_stages(plot, program_row):
-    """이 구획이 실제로 따르는 **단계 목록** → list.
-
-    프로그램의 목록에서 뺀 것을 빼고, 더한 것을 자리에 끼우고, 지침을 덮는다
-    (`GeoPlot.stage_overrides`). 목록을 복제하지 않고 **차이만** 얹으므로,
-    손대지 않은 단계는 프로그램을 고치면 그대로 따라온다.
-
-    ## 지침은 덮어쓴다, 목표는 아니다
-
-    구획이 적는 지침은 "이 자리에서 이 시기에 무엇을 하나" 이고, 프로그램의
-    지침은 그 작물의 일반 사항이다. 둘을 나란히 보이면 화면이 같은 자리에서 두
-    가지를 말하게 되므로, **구획이 적었으면 그것이 이긴다**(적지 않았으면
-    프로그램 것이 그대로 보인다).
-
-    목표(`targets`)는 여기서 건드리지 않는다 — 그것은 제어로 흐르는 값이라
-    구획마다 손대기 시작하면 "무엇을 목표로 길렀나" 의 답이 흩어진다.
-    """
-    stages = program_row.stage_list() if program_row is not None else []
-    if plot is None or not hasattr(plot, 'stage_override_map'):
-        return list(stages)
-    ov = plot.stage_override_map()
-    if not (ov['removed'] or ov['added'] or ov['guidance']):
-        return list(stages)
-
-    out = []
-    for st in stages:
-        key = st.get('key')
-        if key in ov['removed']:
-            continue
-        out.append(dict(st))
-
-    # 더한 단계는 `after` 가 가리키는 칸 **뒤**에 끼운다. 가리킨 칸이 없으면
-    # (프로그램이 그 사이 바뀌었다) 맨 뒤에 붙인다 — 조용히 버리지 않는다.
-    for add in ov['added']:
-        item = dict(add)
-        after = item.pop('after', None)
-        pos = None
-        if after:
-            for i, st in enumerate(out):
-                if st.get('key') == after:
-                    pos = i + 1
-                    break
-        if pos is None:
-            pos = 0 if after == '' else len(out)
-        out.insert(pos, item)
-
-    for st in out:
-        text = ov['guidance'].get(st.get('key'))
-        if text:
-            st['guidance'] = text
-    return out
-
-
-def stage_schedule(plot, program=None, on=None, plan=None, anchors=None,
-                   programs=None):
-    """구획의 **단계 경계** 한 벌 → dict|None. 정본: program-layer.md §P8
-
-    ## 프로그램은 참고고, 경계는 구획이 갖는다
-
-    단계 길이(`days`)는 표준이다. 현실은 표준대로 가지 않으므로 사람이 경계를
-    직접 잡을 수 있고(`GeoPlot.stage_plan`), 그 날이 프로그램 길이를 이긴다.
-
-        기준점(마지막 확정 전환, 없으면 시작일)에서 출발
-        다음 단계 시작일 = 계획 경계가 있으면 그 날, 없으면 앞 경계 + days
-
-    그래서 **명시한 경계는 고정되고 나머지는 밀린다.** 한 단계를 늘리면 뒤가
-    통째로 밀리는 것이 기본이고, "이 단계만 늘리고 다음은 그대로" 는 다음 경계도
-    함께 박으면 된다 — 같은 결과를 데이터로 표현할 수 있으면 모드 플래그를
-    만들지 않는다.
-
-    ## 왜 한 곳인가
-
-    예전에는 `stage_of`·`timeline`·`expected_end`·`stage_proposal` 이 각자
-    기준점 + `days` 를 다시 조립했고 **실제로 어긋나 있었다** — `timeline()` 은
-    GDD 를 보지 않고 `stage_of` 는 봐서, 같은 모달 안에서 축이 가리키는 단계와
-    "현재 단계" 줄이 서로 다른 근거로 계산됐다.
-
-    반환:
-      program_row  GeoProgram
-      run          기준점 단계부터의 프로그램 단계 목록(원본 dict)
-      base_index   기준점 단계의 0-based 위치(프로그램 전체 기준)
-      anchored     원장에 확정 전환이 있는가
-      planned      계획 경계가 하나라도 걸렸는가
-      ref          판정 기준일(종료된 작기는 종료일)
-      not_started  아직 시작 전인가
-      boundaries   [{index, key, name, days, starts_on, ends_on, source}]
-                   source = 'actual'(확정) | 'planned'(사람이 잡음) | 'program'
-      end_on       마지막 날(열린 구간이면 None)
-      open_end     마지막 단계에 길이가 없는가
-    """
-    from datetime import timedelta
-
-    if plot is None or getattr(plot, 'started_on', None) is None:
-        return None
-    if program is None:
-        program = program_brief(plot)
-    if not program or program.get('missing'):
-        return None
-
-    from aot.databases.models import GeoProgram
-    # `program_brief` 가 방금 읽은 것을 다시 읽지 않는다 — 같은 캐시를 쓴다.
-    row = (programs or {}).get(program.get('unique_id'))
-    if row is None:
-        row = GeoProgram.query.filter_by(
-            unique_id=program.get('unique_id')).first()
-        if isinstance(programs, dict) and row is not None:
-            programs[program.get('unique_id')] = row
-    if row is None:
-        return None
-    stages = effective_stages(plot, row)
-    if not stages:
-        return None
-
-    anchor = stage_anchor(plot, anchors=anchors)
-    base_index = int((anchor or {}).get('stage_index') or 1) - 1
-    # 프로그램이 짧아졌을 수 있다(단계를 지운 편집). 범위를 벗어난 기준점으로
-    # 슬라이스하면 빈 목록이 되어 그 구획의 단계가 통째로 사라진다.
-    base_index = max(0, min(base_index, len(stages) - 1))
-    base_on = (anchor or {}).get('started_on') or plot.started_on
-    run = stages[base_index:]
-
-    # `plan` 을 주면 저장된 값 대신 그것으로 계산한다 — 저장 **전에** "이렇게
-    # 되는가" 를 같은 규칙으로 검사하기 위한 자리다(계산을 한 벌 더 쓰지 않는다).
-    if plan is None:
-        plan = plot.stage_plan_map() if hasattr(plot, 'stage_plan_map') else {}
-
-    bounds = []
-    planned_used = False
-    prev_start, prev_days = None, None
-    for i, st in enumerate(run):
-        key = st.get('key')
-        try:
-            days = st.get('days')
-            days = None if days in (None, '') else int(days)
-        except (TypeError, ValueError, AttributeError):
-            days = None
-        if days is not None and days <= 0:
-            days = None
-        if i == 0:
-            # 기준점 단계의 시작일은 **계획이 손대지 못한다** — 확정된 사실이거나
-            # 구획의 시작일이다. 고치고 싶으면 원장을 무르는 것이 그 수단이다.
-            starts_on, source = base_on, ('actual' if anchor else 'program')
-        elif key and key in plan:
-            starts_on, source = plan[key], 'planned'
-            planned_used = True
-        elif prev_start is not None and prev_days:
-            starts_on, source = prev_start + timedelta(days=prev_days), 'program'
-        else:
-            # 앞 단계가 "끝까지"(days 없음)라 다음 경계를 셀 수 없다. 지어내지
-            # 않는다 — 날짜가 없는 칸으로 남기고 화면이 그렇게 말한다.
-            starts_on, source = None, 'program'
-        bounds.append({'index': base_index + i + 1, 'key': key,
-                       'name': st.get('name') or key, 'days': days,
-                       'guidance': st.get('guidance') or None,
-                       'starts_on': starts_on, 'ends_on': None,
-                       'source': source})
-        prev_start, prev_days = starts_on, days
-
-    for i, b in enumerate(bounds):
-        nxt = bounds[i + 1] if i + 1 < len(bounds) else None
-        if nxt is not None and nxt['starts_on'] is not None:
-            b['ends_on'] = nxt['starts_on'] - timedelta(days=1)
-        elif b['starts_on'] is not None and b['days']:
-            b['ends_on'] = b['starts_on'] + timedelta(days=b['days'] - 1)
-
-    ref = plot.ended_on or (on or date.today())
-    last = bounds[-1]
-    return {
-        'program_row': row,
-        'run': run,
-        'base_index': base_index,
-        'anchored': bool(anchor),
-        'planned': planned_used,
-        'ref': ref,
-        'not_started': plot.started_on > ref,
-        'boundaries': bounds,
-        'end_on': last['ends_on'],
-        'open_end': last['days'] is None,
-    }
-
-
-def _fill_ends(bounds):
-    """경계 목록의 빈 `ends_on` 을 다음 칸의 시작에서 채운다 → 같은 목록.
-
-    지난 칸은 원장이 시작일만 적으므로 끝이 비어 있다. 축과 표가 각자 채우면
-    한쪽만 고쳐진다.
-    """
-    from datetime import timedelta
-
-    for i, b in enumerate(bounds[:-1]):
-        if b['ends_on'] is None and b['starts_on'] is not None:
-            nxt = bounds[i + 1]['starts_on']
-            if nxt is not None:
-                b['ends_on'] = nxt - timedelta(days=1)
-    return bounds
-
-
-def _past_boundaries(plot, sched, events=None):
-    """기준점 **앞**의 단계 → 목록.
-
-    파생에는 쓰지 않는다(계산은 기준점부터다). 화면의 일정 표에만 붙인다 —
-    3단계가 확인된 구획에서 앞의 두 줄이 통째로 사라지면, 그 표는 "이 작기가
-    어떻게 흘러왔나" 를 답하지 못한다.
-
-    ## 날짜는 원장이 아는 것 먼저, 없으면 프로그램으로 잇는다
-
-    원장에는 **확인된 전환만** 있다. 자동 승인이 3단계를 한 번에 따라잡으면
-    1·2단계에는 줄이 없어서, 원장만 보면 그 칸들이 영영 비어 있다 — 실제로
-    화면이 "— " 다섯 줄을 보였다.
-
-    그것은 모르는 값이 아니다. 확인된 전환이 나오기 전까지는 **시작일에서
-    프로그램 길이로 이어 온 그 날짜**가 그 구획이 따르던 일정이었다. 그래서
-    시작일에서부터 걸어 내려오며 원장이 아는 칸에서만 갈아탄다.
-    """
-    from datetime import timedelta
-
-    base_index = sched['base_index']
-    if base_index <= 0:
-        return []
-    full = effective_stages(plot, sched['program_row'])
-
-    seen = {}
-    for h in stage_history(plot, events=events):
-        if h.get('undone') or not h.get('started_on'):
-            continue
-        seen[h['stage_key']] = _as_date(h['started_on'])
-
-    # **기준점을 넘어설 수 없다.** 프로그램 길이로 걸어 내려온 날짜가 확인된
-    # 전환보다 뒤에 서면 축이 뒤엉킨다 — 성숙이 9/4 에 시작하는데 수확은 8/19 에
-    # 확인돼 있으면 칸 폭이 음수가 되고, "오늘" 마커는 앞 칸에 찍히는데 현재
-    # 단계는 뒤 칸으로 표시된다(실제로 그렇게 보였다).
-    #
-    # 그때는 그 칸들을 기준점에 붙여 **폭 0** 으로 둔다. 확인된 사실이 이기고,
-    # "여기서 한 번에 건너뛰었다" 가 축에 그대로 보인다 — 지어낸 날짜로 사이를
-    # 메우면 언제 무엇을 했는지가 거짓이 된다.
-    b0 = (sched['boundaries'] or [None])[0]
-    limit = (b0 or {}).get('starts_on')
-
-    out = []
-    cur = getattr(plot, 'started_on', None)
-    for i, st in enumerate(full[:base_index]):
-        key = st.get('key')
-        if key in seen and seen[key] is not None:
-            cur, source = seen[key], 'actual'
-        else:
-            source = 'program'
-        if limit is not None and cur is not None and cur > limit:
-            cur = limit
-        try:
-            days = st.get('days')
-            days = None if days in (None, '') else int(days)
-        except (TypeError, ValueError, AttributeError):
-            days = None
-        out.append({'index': i + 1, 'key': key,
-                    'name': st.get('name') or key,
-                    'days': days,
-                    'guidance': st.get('guidance') or None,
-                    'starts_on': cur,
-                    'ends_on': None,
-                    'source': source})
-        # 다음 칸의 자리. 길이를 모르면(끝까지) 더 셀 수 없다 — 지어내지 않는다.
-        cur = (cur + timedelta(days=days)) if (cur and days) else None
-    return out
-
-
-def _as_date(iso):
-    """'YYYY-MM-DD' → date|None. 깨진 값은 없는 값으로 본다."""
-    if not iso:
-        return None
-    try:
-        y, m, d = (int(x) for x in str(iso).split('-')[:3])
-        return date(y, m, d)
-    except (TypeError, ValueError):
-        return None
-
-
-def stage_schedule_view(plot, program=None, on=None, sched=None, events=None,
-                        stage=None):
-    """화면·AI 가 그대로 읽는 일정 → list. 없으면 `[]`.
-
-    `[{index, key, name, days, starts_on, ends_on, source, state}]`
-
-    `state` 는 `'done'` | `'current'` | `'future'`. **고칠 수 있는 것은 아직 오지
-    않은 경계뿐**이라 화면이 그것을 알아야 한다 — 지나간 경계를 옮기는 일은
-    원장(확인·되돌리기)이 하는 일이고, 두 수단이 같은 값을 다투면 무엇이 정본
-    인지 알 수 없다.
-    """
-    if sched is None:
-        sched = stage_schedule(plot, program=program, on=on)
-    if sched is None:
-        return []
-    ref = sched['ref']
-    bounds = _fill_ends(list(_past_boundaries(plot, sched, events=events))
-                        + list(sched['boundaries']))
-
-    # **현재 칸은 `stage_of` 가 정한다.** 날짜만으로 고르면 승인 대기로 고정된
-    # 구획에서 표의 '지금' 과 "현재 단계" 줄이 서로 다른 칸을 가리킨다(P8 게이팅).
-    if stage is None:
-        stage = stage_of(plot, program=program, on=on, sched=sched)
-    cur = None
-    if stage and stage.get('state') == 'running' and stage.get('index'):
-        for i, b in enumerate(bounds):
-            if b['index'] == stage['index']:
-                cur = i
-                break
-    elif stage and stage.get('state') == 'past_end':
-        cur = len(bounds) - 1
-    if sched['not_started']:
-        cur = None
-
-    # 지나간 경계는 고칠 수 없다 — 그것은 원장(확인·되돌리기)이 다루는 사실이다.
-    first_editable = len(bounds) - len(sched['boundaries'])
-
-    out = []
-    for i, b in enumerate(bounds):
-        if cur is None:
-            state = 'future'
-        elif i < cur:
-            state = 'done'
-        elif i == cur:
-            state = 'current'
-        else:
-            state = 'future'
-        nxt = bounds[i + 1] if i + 1 < len(bounds) else None
-        # **실제 기간**은 경계 사이의 날수다. 프로그램이 적은 길이와 다를 수 있고
-        # (사람이 고쳤다), 화면이 고치는 값도 이쪽이다. 마지막 칸과 셀 수 없는
-        # 칸은 없는 값으로 둔다 — 0 으로 두면 "0일짜리 단계" 로 읽힌다.
-        length = None
-        if (nxt is not None and nxt['starts_on'] is not None
-                and b['starts_on'] is not None):
-            length = (nxt['starts_on'] - b['starts_on']).days
-        elif nxt is None:
-            length = None
-        else:
-            length = b['days']
-        out.append({
-            'index': b['index'],
-            'key': b['key'],
-            'name': b['name'],
-            # 실제 기간(일). 화면·AI 가 고치는 값이다.
-            'days': length,
-            # 프로그램이 적은 길이 — "표준과 얼마나 다른가" 를 말할 수 있게 함께.
-            'program_days': b['days'],
-            'starts_on': b['starts_on'].isoformat() if b['starts_on'] else None,
-            'ends_on': b['ends_on'].isoformat() if b['ends_on'] else None,
-            'source': b['source'],
-            'state': state,
-            # 이 시기에 무엇을 하나. 구획이 적었으면 그것이, 아니면 프로그램의
-            # 것이 온다(`effective_stages`).
-            'guidance': b.get('guidance'),
-            # 마지막 칸은 다음 경계가 없어 기간을 정할 수 없다(끝내는 날은
-            # 재배 종료가 정한다).
-            'editable': i >= first_editable and nxt is not None,
-            # 지나간 단계는 뺄 수 없다 — 확인된 전환이 그것을 가리킨다.
-            # 지침은 지나간 단계에도 적을 수 있다(관찰의 기록이다).
-            'removable': i >= first_editable and len(bounds) > 1,
-        })
-    return out
-
-
-def stage_of(plot, program=None, on=None, with_observability=False,
-             gated=True, sched=None):
+def stage_of(plot, program=None, on=None, with_observability=False):
     """구획의 **현재 단계** → dict (판정 불가면 None).
 
     ## 계산
 
-    경계는 `stage_schedule` 이 만든다(기준점 + 계획 경계 + 프로그램 길이).
-    여기서는 그 경계 중 기준일이 들어 있는 칸을 고른다.
-
-    ## `gated` — 승인 전에는 넘어가지 않는다 (P8)
-
-    기준점이 있는 구획에서 파생이 기준점보다 앞서가면 **기준점의 단계를
-    유지**하고 앞서간 사실을 `pending` 으로 얹는다. 제어가 이 값을 읽으므로
-    (`coordinator_plot`), 이것이 없으면 화면이 "확인하시겠습니까" 를 묻는 동안
-    목표 온도는 이미 다음 단계 값으로 바뀌어 있다 — 그 상태의 승인 버튼은
-    무엇을 승인하는 것인지 말할 수 없다.
-
-    끄는 자리는 **제안을 만드는 곳뿐**이다(`stage_proposal`). 제안은 "앞서갔다"
-    는 사실 자체라 고정된 값을 보면 영영 뜨지 않는다.
+    `elapsed_days`(심은 날이 1일차)를 프로그램의 단계 길이에 대어 찾는다. 단계의
+    `days` 는 **그 단계의 길이**이므로 누적하며 내려간다. 마지막 단계의
+    `days=None` 은 "끝까지" 라 그 뒤는 전부 그 단계다.
 
     ## `with_observability`
 
@@ -1325,25 +954,48 @@ def stage_of(plot, program=None, on=None, with_observability=False,
 
     ## `source` 는 무엇으로 판정했는지 말한다
 
-    `'days'` | `'gdd'`. 화면이 근거를 말할 수 있어야 사람이 그 값을 믿는다
-    (측정값의 `source` 와 같은 태도).
+    지금은 `'days'` 뿐이다(P2). 이후 GDD·사람 선언이 붙으면 같은 자리에서
+    `'gdd'`·`'declared'` 가 된다 — 화면이 근거를 말할 수 있어야 사람이 그 값을
+    믿는다(측정값의 `source` 와 같은 태도).
     """
-    # `sched` 를 받으면 다시 만들지 않는다 — 한 구획을 그리는 데 `stage_of` ·
-    # `timeline` · `expected_end` · `stage_proposal` 이 모두 같은 일정을 쓰므로,
-    # 각자 만들면 목록 화면 한 장에서 구획마다 네 벌씩 조회가 돈다.
-    if sched is None:
-        sched = stage_schedule(plot, program=program, on=on)
-    if sched is None:
+    if program is None:
+        program = program_brief(plot)
+    if not program or program.get('missing'):
         return None
 
-    row = sched['program_row']
-    run = sched['run']
-    base_index = sched['base_index']
-    total = base_index + len(run)
+    from aot.databases.models import GeoProgram
+    row = GeoProgram.query.filter_by(
+        unique_id=program.get('unique_id')).first()
+    if row is None:
+        return None
+    stages = row.stage_list()
+    if not stages:
+        return None
 
-    if sched['not_started']:
-        return {'state': 'not_started', 'source': 'days', 'total': total,
-                'days_until_start': (plot.started_on - sched['ref']).days}
+    # ── 기준점(anchor) ────────────────────────────────────────────────
+    #
+    # 사람이 확인한 전환이 있으면 **그 날부터** 남은 단계를 계산한다. 프로그램은
+    # 표준이고 현실은 표준대로 가지 않으므로, 확인된 사실이 들어올 때마다 남은
+    # 계산이 거기에 맞춰 다시 정렬돼야 한다 — 그것이 승인의 값이다.
+    #
+    # 원장이 비면 기준점은 시작일이고 단계는 지금까지와 똑같이 파생된다
+    # (기존 구획에 소급해서 "승인하세요" 를 띄우지 않는다).
+    anchor = stage_anchor(plot)
+    if anchor:
+        stages = stages[anchor['stage_index'] - 1:]
+        base_index = anchor['stage_index'] - 1
+        base_date = anchor['started_on']
+    else:
+        base_index = 0
+        base_date = getattr(plot, 'started_on', None)
+
+    elapsed = elapsed_days(plot, on=on, since=base_date)
+    if elapsed is None:
+        return None
+    if elapsed <= 0:
+        return {'state': 'not_started', 'source': 'days',
+                'total': len(stages) + base_index,
+                'days_until_start': 1 - elapsed}
 
     # ── GDD 로 판정할 수 있으면 그쪽이 이긴다 ──────────────────────────
     #
@@ -1351,99 +1003,50 @@ def stage_of(plot, program=None, on=None, with_observability=False,
     # 갖춰졌을 때만** 쓴다(기준온도 · 단계 목표 · 자료 커버리지) — 하나라도
     # 없으면 날짜로 되돌아가고, 되돌아간 **이유를 함께 싣는다**. 이유 없이
     # 되돌아가면 "왜 GDD 가 안 잡히지" 를 알 방법이 없다.
-    #
-    # **계획 경계가 하나라도 있으면 GDD 를 쓰지 않는다**(P8). 사람이 날짜를
-    # 잡았는데 적산온도가 그것을 앞질러 가면 그 편집이 무의미해진다
-    # (선언 > 계획 > GDD > 경과일). 계획을 전부 지우면 GDD 로 돌아온다.
-    out = None
     gdd = None
-    if not sched['planned'] and any(st.get('gdd') is not None for st in run):
+    if any(st.get('gdd') is not None for st in stages):
         gdd = gdd_accumulated(plot, row, on=on, with_series=True)
         if gdd.get('usable'):
-            out = _stage_by_gdd(run, gdd, row, base_index, plot)
+            out = _stage_by_gdd(stages, gdd, row, base_index, plot)
+            if out is not None:
+                out['gdd'] = {k: v for k, v in gdd.items() if k != 'series'}
+                if with_observability:
+                    _mark_observable(out, plot)
+                return out
 
-    if out is None:
-        out = _stage_by_dates(sched, row, plot)
-    if out is None:
-        return None
+    cursor = 0
+    for idx, st in enumerate(stages):
+        try:
+            length = st.get('days')
+            length = None if length is None else int(length)
+        except (TypeError, ValueError, AttributeError):
+            length = None
+        if length is None:                     # 끝까지 — 여기서 멈춘다
+            out = _stage_payload(st, idx, stages, elapsed - cursor, None,
+                                 row, base_index, plot)
+            if gdd is not None:
+                out['gdd'] = {k: v for k, v in gdd.items() if k != 'series'}
+            if with_observability:
+                _mark_observable(out, plot)
+            return out
+        if elapsed <= cursor + length:
+            out = _stage_payload(st, idx, stages, elapsed - cursor,
+                                 cursor + length - elapsed, row, base_index,
+                                 plot)
+            if gdd is not None:
+                out['gdd'] = {k: v for k, v in gdd.items() if k != 'series'}
+            if with_observability:
+                _mark_observable(out, plot)
+            return out
+        cursor += length
+
+    # 모든 단계에 길이가 있고 그 합을 지났다.
+    out = {'state': 'past_end', 'source': 'days',
+           'total': len(stages) + base_index,
+           'days_past': elapsed - cursor}
     if gdd is not None:
         out['gdd'] = {k: v for k, v in gdd.items() if k != 'series'}
-
-    out = _hold_at_anchor(out, sched, row, plot, gated)
-    if with_observability and out.get('state') == 'running':
-        _mark_observable(out, plot)
     return out
-
-
-def _stage_by_dates(sched, program_row, plot):
-    """경계 목록에서 기준일이 들어 있는 칸을 고른다 → 단계 payload."""
-    ref = sched['ref']
-    bounds = sched['boundaries']
-    run = sched['run']
-    base_index = sched['base_index']
-
-    idx = 0
-    for i, b in enumerate(bounds):
-        if b['starts_on'] is None:
-            break                     # 셀 수 없는 구간 — 여기서 멈춘다
-        if b['starts_on'] <= ref:
-            idx = i
-        else:
-            break
-
-    b = bounds[idx]
-    ends_on = b['ends_on']
-    if ends_on is not None and ref > ends_on:
-        # 마지막 단계에 길이가 있고 그마저 지났다(중간 단계는 다음 경계가
-        # 잡아 주므로 여기 오지 않는다).
-        return {'state': 'past_end', 'source': 'days',
-                'total': base_index + len(run),
-                'days_past': (ref - ends_on).days}
-
-    start = b['starts_on']
-    day_in_stage = None if start is None else (ref - start).days + 1
-    days_left = None if ends_on is None else (ends_on - ref).days
-    return _stage_payload(run[idx], idx, run, day_in_stage, days_left,
-                          program_row, base_index, plot)
-
-
-def _hold_at_anchor(out, sched, program_row, plot, gated=True):
-    """승인 전에는 단계가 넘어가지 않는다 (P8) → 고정된 payload.
-
-    **예외 둘 — 둘 다 "사람이 이미 결정했다" 는 자리다.**
-
-    - `auto_advance` 가 켜진 구획: "확인 없이 넘어가도 된다" 는 결정이 이미 있다.
-      고정하면 그 구획의 목표가 **아무도 상세 화면을 열지 않는 동안 멈춘다**
-      (원장 기록은 읽을 때 따라잡지만 제어는 매 사이클 돈다).
-    - 원장이 빈 구획: 승인은 한 번 누른 시점부터 의미를 갖는다(§P5). 이 예외가
-      없으면 업그레이드가 기존 구획 **전부**의 단계를 첫 단계로 얼린다.
-    """
-    if not gated or out.get('state') != 'running':
-        return out
-    if not sched['anchored'] or getattr(plot, 'auto_advance', False):
-        return out
-    base_index = sched['base_index']
-    if (out.get('index') or 1) <= base_index + 1:
-        return out
-
-    b0 = sched['boundaries'][0]
-    ref = sched['ref']
-    start = b0['starts_on']
-    held = _stage_payload(
-        sched['run'][0], 0, sched['run'],
-        None if start is None else (ref - start).days + 1, 0,
-        program_row, base_index, plot)
-    # 앞서간 사실은 없애지 않는다 — 화면이 "예정보다 N일" 을 말할 수 있어야
-    # 사람이 확인할지 연기할지 정한다.
-    held['overdue_days'] = (max(0, (ref - b0['ends_on']).days)
-                            if b0['ends_on'] else 0)
-    held['pending'] = {'stage_key': out.get('key'),
-                       'stage_index': out.get('index'),
-                       'stage_name': out.get('name'),
-                       'source': out.get('source')}
-    if out.get('gdd') is not None:
-        held['gdd'] = out['gdd']
-    return held
 
 
 def measurable_in_plot(plot):
@@ -1694,7 +1297,7 @@ def _stage_targets(stage, program_row=None):
     return out
 
 
-def expected_end(plot, program=None, sched=None, programs=None, anchors=None):
+def expected_end(plot, program=None):
     """예상 종료일 → `(date, source)`. 없으면 `(None, None)`.
 
     **사람이 적은 값이 이긴다.** 프로그램의 기간은 표준이고, 현장에서 그것과
@@ -1713,18 +1316,9 @@ def expected_end(plot, program=None, sched=None, programs=None, anchors=None):
     if plot.started_on is None:
         return None, None
     if program is None:
-        program = program_brief(plot, programs=programs)
+        program = program_brief(plot)
     if not program or program.get('missing'):
         return None, None
-    # 일정(§P8)이 있으면 그것이 답이다 — 확인된 전환과 사람이 잡은 경계가
-    # 이미 반영된 마지막 날이다. 시작일 + 총 기간으로 다시 세면 승인·연기가
-    # 예상 종료일에 닿지 않아, 2주 미룬 구획이 여전히 옛 날짜로 끝난다고 말한다.
-    if sched is None:
-        sched = stage_schedule(plot, program=program, anchors=anchors,
-                               programs=programs)
-    if sched is not None and sched.get('end_on') is not None:
-        return sched['end_on'], 'program'
-
     total = program.get('total_days') or 0
     if total <= 0:
         return None, None
@@ -1941,20 +1535,17 @@ def plot_for_coordinator(fn, on=None):
     return out
 
 
-def timeline(plot, program=None, on=None, sched=None, stage=None,
-             events=None):
+def timeline(plot, program=None, on=None):
     """구획의 기간을 **한 축**으로 → `{start, end, today_pct, stages[]}`.
 
     화면이 날짜 셋(시작·오늘·종료)과 단계 경계를 텍스트로 늘어놓는 대신 축
     하나로 보이기 위한 것이다. 사람은 "8/17 시작, 4일차, 생육기 2/3" 를 머릿속
     에서 배치해야 알 수 있지만, 축은 보는 순간 안다.
 
-    ## 계산은 서버가 한다 — 그리고 `stage_of` 와 **같은 경계**를 쓴다
+    ## 계산은 서버가 한다
 
-    단계 길이·기준점(P5 승인)·계획 경계(P8)·"끝까지" 단계 처리가 전부
-    `stage_schedule` 의 규칙이라, 화면이 다시 조립하면 두 곳이 곧 갈린다.
-    예전에는 이 함수가 자기만의 조립을 갖고 있었고 GDD 를 보지 않아, 같은
-    모달에서 축이 가리키는 단계와 "현재 단계" 줄이 다를 수 있었다.
+    단계 길이·기준점(P5 승인)·"끝까지" 단계 처리가 전부 여기 규칙이라, 화면이
+    다시 조립하면 두 곳이 곧 갈린다(같은 이유로 단계 목표도 서버가 만든다).
 
     ## 끝이 없는 프로그램
 
@@ -1969,103 +1560,80 @@ def timeline(plot, program=None, on=None, sched=None, stage=None,
       open_end   bool
       today_pct  0~100 | None         (축 위 현재 위치)
       elapsed_days, total_days
-      stages     [{key, name, days, source, from_pct, to_pct, current}]
-                 `source` 는 그 경계를 누가 정했나 — 'actual'(확정) |
-                 'planned'(사람이 잡음) | 'program'. 프로그램과 달라진 구간이
-                 보여야 "참고는 프로그램, 실제는 이것" 이 이해된다.
+      stages     [{key, name, days, from_pct, to_pct, current}]
     """
-    from datetime import timedelta
-
-    if sched is None:
-        sched = stage_schedule(plot, program=program, on=on)
-    if sched is None:
+    if plot is None or plot.started_on is None:
+        return None
+    on = on or date.today()
+    if program is None:
+        program = program_brief(plot)
+    if not program or program.get('missing'):
         return None
 
-    # **지나간 단계도 축에 남긴다.** 기준점 이후만 그리면 3단계가 확인된 구획의
-    # 축이 3단계에서 시작해, 그 작기가 어떻게 흘러왔는지가 화면에서 사라진다 —
-    # 축은 "지금 어디쯤" 을 답하는 그림이고, 앞이 없으면 '어디쯤' 이 성립하지 않는다.
-    bounds = _fill_ends(list(_past_boundaries(plot, sched, events=events))
-                        + list(sched['boundaries']))
-    base_on = bounds[0]['starts_on'] or plot.started_on
-    ref = sched['ref']
+    row = None
+    if plot.program_uuid:
+        from aot.databases.models import GeoProgram
+        row = GeoProgram.query.filter_by(unique_id=plot.program_uuid).first()
+    stages = row.stage_list() if row is not None else []
+    if not stages:
+        return None
 
-    # 칸의 폭 — 경계가 잡힌 구간은 **실제 날짜 차이**다(계획으로 늘린 단계가
-    # 축에서도 길어진다). 마지막 열린 구간에도 폭이 필요하다: 0 이면 축에서
-    # 사라진다. 앞 구간 평균만큼 주되 "여기서 끝난다" 고 말하지 않는다.
-    spans = []
-    for i, b in enumerate(bounds):
-        nxt = bounds[i + 1] if i + 1 < len(bounds) else None
-        if (nxt is not None and nxt['starts_on'] is not None
-                and b['starts_on'] is not None):
-            spans.append(max(0, (nxt['starts_on'] - b['starts_on']).days))
-        else:
-            spans.append(b['days'] if b['days'] else None)
-    known = [w for w in spans if w]
+    # 기준점(P5) 이후로 계산한다 — 승인이 기준을 옮겼으면 축도 옮겨야 화면과
+    # 제어가 같은 단계를 가리킨다.
+    anc = stage_anchor(plot)
+    anchor_on = (anc or {}).get('started_on') or plot.started_on
+    base_index = int((anc or {}).get('stage_index') or 0)
+    run = stages[base_index:] if base_index else stages
+
+    lengths = []
+    for st in run:
+        try:
+            d = int(st.get('days') or 0)
+        except (TypeError, ValueError):
+            d = 0
+        lengths.append(d if d > 0 else None)
+
+    known = [d for d in lengths if d]
+    open_end = (not lengths) or (lengths[-1] is None)
+    # 열린 마지막 구간에도 폭이 필요하다 — 0 이면 축에서 사라진다. 앞 구간
+    # 평균만큼 주되 "여기서 끝난다" 고 말하지 않는다(`open_end`).
     tail = int(sum(known) / len(known)) if known else 7
-    # **폭 0 은 0 이다.** `tail` 은 길이를 *모르는* 칸(열린 마지막 구간)을 위한
-    # 값이고, 길이가 **없는** 칸과는 다르다. 둘을 같이 다루면 확인된 전환 때문에
-    # 0일이 된 칸이 평균 폭을 차지해, "오늘" 마커가 앞 칸에 찍히는데 현재 단계는
-    # 뒤 칸으로 표시된다(2026-08-24 실제로 그렇게 보였다).
-    widths = [tail if w is None else w for w in spans]
+    widths = [d if d else tail for d in lengths]
     total = sum(widths) or 1
 
     # 아직 시작 전(계획)이면 **어느 단계도 진행 중이 아니다.** 예전에는
     # `max(0, …)` 이 경과를 0 으로 눕혀 첫 단계가 `current` 로 잡혔고, 화면은
     # 심지도 않은 구획을 "육묘기 진행 중" 이라고 말했다.
-    not_started = sched['not_started']
-    elapsed = max(0, (ref - base_on).days)
-
-    # **현재 칸은 `stage_of` 가 정한다.** 축이 자기 폭으로 따로 고르면 승인 대기로
-    # 고정된 구획에서 축이 가리키는 단계와 "현재 단계" 줄이 서로 다른 칸을
-    # 가리킨다 — 실제로 그렇게 갈렸다(축은 녹협, 줄은 수확).
-    if stage is None:
-        stage = stage_of(plot, program=program, on=on, sched=sched)
-    marked = None
-    if stage and stage.get('state') == 'running' and stage.get('index'):
-        for i, b in enumerate(bounds):
-            if b['index'] == stage['index']:
-                marked = i
-                break
-    elif stage and stage.get('state') == 'past_end':
-        marked = len(bounds) - 1
-
+    not_started = plot.started_on > on
+    elapsed = max(0, (on - anchor_on).days)
     out_stages = []
     acc = 0
     cur_idx = None
-    for i, (b, w) in enumerate(zip(bounds, widths)):
+    for i, (st, w) in enumerate(zip(run, widths)):
         frm, to = acc, acc + w
         if cur_idx is None and elapsed < to:
             cur_idx = i
         out_stages.append({
-            'key': b['key'],
-            'name': b['name'],
-            'days': b['days'],
-            'source': b['source'],
-            'starts_on': (b['starts_on'].isoformat()
-                          if b['starts_on'] else None),
+            'key': st.get('key'),
+            'name': st.get('name') or st.get('key'),
+            'days': lengths[i],
             'from_pct': round(frm * 100.0 / total, 2),
             'to_pct': round(to * 100.0 / total, 2),
             'current': False,
         })
         acc = to
-    if marked is not None:
-        cur_idx = marked
     if cur_idx is None:
         cur_idx = len(out_stages) - 1
     if out_stages and not not_started:
         out_stages[cur_idx]['current'] = True
 
-    end_on = sched['end_on']
-    if end_on is None and not sched['open_end']:
-        end_on = base_on + timedelta(days=total - 1)
-    anchor_on = (sched['boundaries'][0]['starts_on']
-                 if sched['boundaries'] else base_on) or base_on
+    from datetime import timedelta
+    end_on = None if open_end else anchor_on + timedelta(days=total - 1)
     return {
         'start': plot.started_on.isoformat(),
-        # 기준점은 여전히 **확인된 전환**의 날이다 — 축의 왼쪽 끝(시작일)과 다르다.
         'anchor': anchor_on.isoformat(),
         'end': end_on.isoformat() if end_on else None,
-        'open_end': sched['open_end'],
+        'open_end': open_end,
         # 100 을 넘길 수 있다(예정보다 오래 끌고 있다) — 넘긴 사실 자체가
         # 정보라 자르지 않고, 화면이 축 밖 표시로 그린다.
         #
@@ -2075,8 +1643,7 @@ def timeline(plot, program=None, on=None, sched=None, stage=None,
         'today_pct': None if not_started else round(elapsed * 100.0 / total, 2),
         'elapsed_days': None if not_started else elapsed + 1,   # 심은 날이 1일차
         # 시작까지 남은 날 — 축은 그대로 그리고 이 값이 "언제부터" 를 말한다.
-        'days_until_start': ((plot.started_on - ref).days
-                             if not_started else None),
+        'days_until_start': (plot.started_on - on).days if not_started else None,
         'total_days': total,
         'stages': out_stages,
     }
@@ -2389,8 +1956,7 @@ def valves_for_plot(plot):
 
 
 def plots_covered_by_shape(shape_geom, map_uuid, on=None,
-                               exclude_uuid=None, candidates=None,
-                               prepared=None):
+                               exclude_uuid=None, candidates=None):
     """도형(관수 구역 등)이 덮는 **재배 중인** 구획들.
 
     `valves_for_plot` 의 **역방향**이다. 그쪽이 "이 구획을 적시는 밸브" 라면
@@ -2404,42 +1970,19 @@ def plots_covered_by_shape(shape_geom, map_uuid, on=None,
 
     `candidates` 로 활성 구획 목록을 넘기면 재사용한다 — 밸브마다 다시 조회하면
     밸브 수 × 구획 수가 된다.
-
-    `prepared`(`{구획 uuid: shapely}`)를 주면 도형 변환도 재사용한다. 이것이
-    없으면 밸브마다 같은 구획의 기하를 **다시 파싱**한다 — 밸브 16개 × 구획
-    23개면 같은 일을 368번 한다(실측: `geometry_of` 호출 441회).
     """
     src = _shapely(shape_geom)
     if src is None:
         return []
-
-    # 겹치지 않는 쌍을 **경계 상자로 먼저 걸러 낸다.** 교차 계산과 면적 투영은
-    # 둘 다 비싸고, 지도에서 서로 멀리 떨어진 두둑과 밸브 구역이 대부분이다.
-    # 상자는 겹치는데 실제로는 안 겹치는 경우가 있으므로 **걸러 내기에만** 쓴다
-    # (통과한 쌍은 그대로 정확히 계산한다).
-    try:
-        sxmin, symin, sxmax, symax = src.bounds
-    except Exception:
-        sxmin = None
 
     rows = candidates if candidates is not None else active_plots(map_uuid, on=on)
     out = []
     for row in rows:
         if exclude_uuid and row.unique_id == exclude_uuid:
             continue
-        other = (prepared or {}).get(row.unique_id)
-        if other is None:
-            other = _shapely(geometry_of(row))
+        other = _shapely(geometry_of(row))
         if other is None:
             continue
-        if sxmin is not None:
-            try:
-                oxmin, oymin, oxmax, oymax = other.bounds
-                if (oxmax < sxmin or oxmin > sxmax
-                        or oymax < symin or oymin > symax):
-                    continue
-            except Exception:
-                pass
         try:
             inter = src.intersection(other)
         except Exception:
@@ -2483,19 +2026,10 @@ def plots_by_valve_device(map_uuid, on=None):
         GeoShape.geo_id == map_uuid,
         GeoShape.type == 'device').all()
 
-    # 구획 기하는 **한 번만** 변환한다. 밸브마다 다시 파싱하면 밸브 수 ×
-    # 구획 수만큼 같은 일을 되풀이한다.
-    prepared = {}
-    for row in active:
-        geom = _shapely(geometry_of(row))
-        if geom is not None:
-            prepared[row.unique_id] = geom
-
     out = {}
     for shape in shapes:
         covered = plots_covered_by_shape(
-            geometry_of(shape), map_uuid, on=on, candidates=active,
-            prepared=prepared)
+            geometry_of(shape), map_uuid, on=on, candidates=active)
         if not covered:
             continue
         try:
@@ -2747,7 +2281,7 @@ def days_until_start(row, on=None):
     return (row.started_on - on).days if row.started_on > on else None
 
 
-def days_to_expected_end(row, on=None, programs=None, anchors=None):
+def days_to_expected_end(row, on=None):
     """예상 종료일까지 남은 날 (음수 = 지났다). 없으면 None.
 
     지난 것을 숨기지 않는다 — "예상보다 20일 지났다" 는 수확을 미루고 있다는
@@ -2757,15 +2291,14 @@ def days_to_expected_end(row, on=None, programs=None, anchors=None):
         return None
     # 사람이 안 적었어도 프로그램이 있으면 파생 종료일로 센다 — 그러지 않으면
     # 프로그램을 골라 둔 구획이 "예상 종료 없음" 으로 보인다.
-    due, _src = expected_end(row, programs=programs, anchors=anchors)
+    due, _src = expected_end(row)
     if due is None:
         return None
     return (due - (on or date.today())).days
 
 
 def to_dict(row, containers=None, with_sensors=False, markers=None,
-            with_valves=None, with_dims=None, facilities=None,
-            programs=None, anchors=None, events=None):
+            with_valves=None, with_dims=None, facilities=None):
     """GeoPlot → API 응답 dict.
 
     `with_valves` 는 기본적으로 `with_sensors` 를 따른다 — 상세 조회의 기존
@@ -2831,8 +2364,7 @@ def to_dict(row, containers=None, with_sensors=False, markers=None,
         'days_since_planted': _days_shown(row),
         'planned': row.started_on is not None and row.started_on > date.today(),
         'days_until_start': days_until_start(row),
-        'days_to_expected_end': days_to_expected_end(row, programs=programs,
-                                                     anchors=anchors),
+        'days_to_expected_end': days_to_expected_end(row),
     }
     if facility_uuid:
         brief = facility_brief(facility_uuid, facilities=facilities)
@@ -2861,30 +2393,17 @@ def to_dict(row, containers=None, with_sensors=False, markers=None,
                 'properties': {'derived_from': row.bay_id and 'bay' or 'facility'},
             } if geom else None)
 
-    prog = program_brief(row, programs=programs)
+    prog = program_brief(row)
     if prog:
         out['program'] = prog
         # 목표를 재는 센서가 이 구획에 있는지는 **상세에서만** 붙인다 —
         # 구획마다 센서 조회가 한 번씩 더 붙으므로 목록에서 켜면 N+1 이 된다
         # (`with_sensors` 가 이미 같은 성격의 비용 스위치다).
-        # 일정은 **한 번만** 만든다 — 아래 넷이 전부 같은 것을 쓴다. 각자
-        # 만들면 목록 화면 한 장(수십 구획)이 구획마다 네 벌씩 조회한다.
-        sched = stage_schedule(row, program=prog, anchors=anchors,
-                               programs=programs)
-        st = stage_of(row, program=prog, with_observability=bool(with_sensors),
-                      sched=sched)
+        st = stage_of(row, program=prog, with_observability=bool(with_sensors))
         # 대기 중 전환·이력. **저장하지 않는 값과 저장된 값이 함께 나간다** —
         # 화면이 "지금 이렇게 보이는데 확인하시겠습니까" 를 말하려면 둘 다 필요하다.
-        out['stage_proposal'] = stage_proposal(row, program=prog,
-                                               sched=sched, anchors=anchors)
-        out['stage_history'] = stage_history(row, events=events)
-        # 단계 일정(P8) — 화면이 경계를 고치는 자리다. 여기서 내지 않으면
-        # 사람은 전환이 **닥친 뒤에** 확인/연기만 할 수 있고, 미리 잡아 둘 수 없다.
-        out['stage_schedule'] = stage_schedule_view(row, program=prog,
-                                                    sched=sched, stage=st,
-                                                    events=events)
-        # 자동 승인은 구획의 성질이다(P8) — 프로그램이 아니라 여기서 낸다.
-        out['auto_advance'] = bool(getattr(row, 'auto_advance', False))
+        out['stage_proposal'] = stage_proposal(row, program=prog)
+        out['stage_history'] = stage_history(row)
         if st:
             out['stage'] = st
         # 기간 축 — 단계 이름·경계·오늘 위치. 화면이 날짜를 늘어놓는 대신 한 줄로
@@ -2892,11 +2411,8 @@ def to_dict(row, containers=None, with_sensors=False, markers=None,
         # 전부 서버 규칙이다). `plot_brief_for_control` 이 이미 같은 값을 싣고
         # 있었는데 **모달이 쓰는 이 응답에는 없어서**, 지도 위젯의 구획 모달만
         # 단계 이름 없이 경과/남음 두 칸으로 그려야 했다.
-        out['timeline'] = timeline(row, program=prog, sched=sched,
-                                   stage=st, events=events)
-    due, due_src = expected_end(row, program=prog, programs=programs,
-                                anchors=anchors,
-                                sched=(sched if prog else None))
+        out['timeline'] = timeline(row, program=prog)
+    due, due_src = expected_end(row, program=prog)
     if due is not None:
         out['expected_end_on'] = due.isoformat()
         # 사람이 적은 값인지 프로그램에서 나온 값인지 화면이 구분해 말해야 한다.
@@ -2919,14 +2435,6 @@ def to_dict(row, containers=None, with_sensors=False, markers=None,
     else:
         zone = zone_for_plot(row, containers=containers)
         out['zone_uuid'] = zone.unique_id if zone is not None else None
-        # 이름과 종류도 함께 낸다 — **이미 손에 든 도형**이라 조회가 늘지 않는다.
-        #
-        # 목록만 받은 화면이 "상위로" 를 세우려면 uuid 만으로는 모자란다: 어느
-        # 창을 열지는 종류가 정하고(구역이 없는 지도에서는 여기 필지가 온다),
-        # 버튼의 이름표는 이름이 채운다. 이것이 없으면 화면은 상세 응답을
-        # 기다려야 하고, 그동안 제목줄의 화살표만 늦게 나타난다.
-        out['zone_name'] = _shape_name(zone) if zone is not None else None
-        out['zone_kind'] = getattr(zone, 'type', None) if zone is not None else None
     if with_valves:
         # 목록에서 구획마다 지도 도형을 전량 훑으면 구획 수 × 도형 수가 된다.
         out['valves'] = valves_for_plot(row)
@@ -3110,70 +2618,7 @@ def gdd_accumulated(plot, program_row=None, on=None, with_series=False):
 # 계산한다. 정본: docs/design/program-layer.md §P5
 
 
-def _anchor_of(row):
-    return {'unique_id': row.unique_id, 'stage_key': row.stage_key,
-            'stage_index': row.stage_index, 'started_on': row.started_on,
-            'source': row.source, 'decided_at': row.decided_at,
-            'decided_by': row.decided_by}
-
-
-def stage_events_for(plot_uuids):
-    """여러 구획의 전환 원장을 **한 번에** → `{plot_uuid: [row, ...]}`.
-
-    기준점(`stage_anchors_for`)과 이력(`stage_history`)이 같은 표를 읽으므로
-    한 번만 읽어 둘 다 여기서 파생시킨다 — 따로 읽으면 구획당 두 번이 된다.
-    무른 행도 담는다(이력이 그것을 낸다). 표가 없는 설치에서는 빈 dict.
-    """
-    from aot.databases.models import GeoPlotStageEvent
-
-    uuids = [u for u in (plot_uuids or []) if u]
-    out = {u: [] for u in uuids}
-    if not uuids:
-        return out
-    try:
-        rows = (GeoPlotStageEvent.query
-                .filter(GeoPlotStageEvent.plot_uuid.in_(uuids))
-                .all())
-    except Exception:
-        return out
-    for row in rows:
-        out.setdefault(row.plot_uuid, []).append(row)
-    return out
-
-
-def stage_anchors_for(plot_uuids, events=None):
-    """여러 구획의 기준점을 **한 번에** → `{plot_uuid: dict|None}`.
-
-    `stage_anchor` 는 구획마다 원장을 한 번씩 읽는다. 목록은 그것을 구획 수만큼
-    반복하는데, `to_dict` 안에서 `stage_schedule` 과 `stage_proposal` 이 각각
-    부르므로 **구획당 두 번**이다(라즈베리파이 실측: 구획 24개에 44쿼리).
-    원시 SQL 시간은 작아도 ORM 왕복이 쌓인다 — 같은 실측에서 쿼리 95건이
-    290ms 중 108ms 를 썼다.
-
-    **키가 없는 것과 값이 None 인 것은 같은 뜻이다**(그 구획에 원장이 없음).
-    호출부가 렌더할 구획 전체를 넘기는 것을 전제로 한다.
-    """
-    uuids = [u for u in (plot_uuids or []) if u]
-    out = {u: None for u in uuids}
-    if not uuids:
-        return out
-    if events is None:
-        events = stage_events_for(uuids)
-    best = {}
-    for uuid in uuids:
-        for row in events.get(uuid) or []:
-            if row.undone_at is not None:
-                continue             # 무른 행은 기준점이 되지 않는다
-            key = (row.started_on, row.stage_index, row.id)
-            cur = best.get(uuid)
-            if cur is None or key > cur[0]:
-                best[uuid] = (key, row)
-    for uuid, (_key, row) in best.items():
-        out[uuid] = _anchor_of(row)
-    return out
-
-
-def stage_anchor(plot, anchors=None):
+def stage_anchor(plot):
     """이 구획의 기준점 → dict|None.
 
     "안 무른 행 중 가장 늦게 시작된 것". 원장이 비면 None 이고, 그때 기준점은
@@ -3181,17 +2626,12 @@ def stage_anchor(plot, anchors=None):
 
     **`started_on` 으로 고른다, `decided_at` 이 아니다.** 사흘 뒤에 확인해도 단계는
     사흘 전에 시작됐고, 나중에 과거 전환을 뒤늦게 적을 수도 있다.
-
-    `anchors`(`stage_anchors_for` 의 결과)가 있고 이 구획이 그 안에 있으면 그것을
-    쓴다 — 구획을 여럿 도는 자리는 그렇게 넘길 것.
     """
     from aot.databases.models import GeoPlotStageEvent
 
     uuid = getattr(plot, 'unique_id', None)
     if not uuid:
         return None
-    if anchors is not None and uuid in anchors:
-        return anchors[uuid]
     try:
         rows = (GeoPlotStageEvent.query
                 .filter_by(plot_uuid=uuid)
@@ -3202,30 +2642,27 @@ def stage_anchor(plot, anchors=None):
     if not rows:
         return None
     row = max(rows, key=lambda r: (r.started_on, r.stage_index, r.id))
-    return _anchor_of(row)
+    return {'unique_id': row.unique_id, 'stage_key': row.stage_key,
+            'stage_index': row.stage_index, 'started_on': row.started_on,
+            'source': row.source, 'decided_at': row.decided_at,
+            'decided_by': row.decided_by}
 
 
-def stage_history(plot, events=None):
+def stage_history(plot):
     """이 구획의 전환 이력(무른 것 포함) — 시작일 오름차순.
 
     무른 행도 낸다. "확인했다가 물렀다" 는 사실 자체가 이력이고, 숨기면 같은
     판단을 다시 하게 된다.
-
-    `events`(`stage_events_for` 의 결과)가 있으면 그것을 쓴다 — 구획을 여럿
-    도는 자리는 넘길 것.
     """
     from aot.databases.models import GeoPlotStageEvent
 
     uuid = getattr(plot, 'unique_id', None)
     if not uuid:
         return []
-    if events is not None:
-        rows = list(events.get(uuid) or [])
-    else:
-        try:
-            rows = GeoPlotStageEvent.query.filter_by(plot_uuid=uuid).all()
-        except Exception:
-            return []
+    try:
+        rows = GeoPlotStageEvent.query.filter_by(plot_uuid=uuid).all()
+    except Exception:
+        return []
     rows.sort(key=lambda r: (r.started_on, r.id))
     return [{'unique_id': r.unique_id, 'stage_key': r.stage_key,
              'stage_index': r.stage_index,
@@ -3236,8 +2673,7 @@ def stage_history(plot, events=None):
              'undone': r.undone_at is not None} for r in rows]
 
 
-def stage_proposal(plot, program=None, on=None, assume_start=False, anchors=None,
-                   sched=None):
+def stage_proposal(plot, program=None, on=None):
     """대기 중인 전환 제안 → dict|None. **저장하지 않는다.**
 
     기준점 이후로 계산한 단계가 기준점보다 앞서 있으면 그것이 제안이다. 행으로
@@ -3246,40 +2682,22 @@ def stage_proposal(plot, program=None, on=None, assume_start=False, anchors=None
 
     **원장이 비어 있으면 제안하지 않는다.** 승인은 사람이 한 번 누른 시점부터
     의미를 갖는다(기존 구획 전부에 "승인하세요" 를 띄우지 않는다).
-
-    `assume_start` 는 그 규칙의 **자동 승인 전용 예외**다(P8). 자동 승인을 켠
-    구획은 배너를 띄우지 않고 조용히 기록하므로 "소급해서 승인을 요구한다" 는
-    문제가 없고, 켜 두었는데 첫 전환이 영영 기록되지 않으면 그 사람은 기능이
-    꺼진 것으로 본다. 이때 기준점은 시작일(1단계)로 친다.
     """
-    anchor = stage_anchor(plot, anchors=anchors)
+    anchor = stage_anchor(plot)
     if not anchor:
-        if not (assume_start and getattr(plot, 'auto_advance', False)):
-            return None
-
-    if sched is None:
-        sched = stage_schedule(plot, program=program, on=on)
-    if sched is None:
         return None
-    from_index = int((anchor or {}).get('stage_index') or 1)
-    from_key = ((anchor or {}).get('stage_key')
-                or (sched['boundaries'][0].get('key') if sched['boundaries']
-                    else None))
-
-    # **고정을 풀고 본다**(`gated=False`) — 제안은 "파생이 앞서갔다" 는 사실
-    # 자체라, 고정된 값을 보면 영영 뜨지 않는다.
-    st = stage_of(plot, program=program, on=on, gated=False, sched=sched)
+    st = stage_of(plot, program=program, on=on)
     if not st or st.get('state') != 'running':
         return None
     # `stage_of` 의 `index` 는 이미 **전체 기준**이다(기준점 이후 구간으로 잘라
     # 계산하되 순번은 프로그램 전체로 낸다). 여기서 또 더하면 두 번 보정된다.
     idx = st.get('index') or 1
-    if idx <= from_index:
+    if idx <= anchor['stage_index']:
         return None
     return {'stage_key': st.get('key'), 'stage_index': idx,
             'stage_name': st.get('name'),
-            'from_key': from_key,
-            'from_index': from_index,
+            'from_key': anchor['stage_key'],
+            'from_index': anchor['stage_index'],
             'source': st.get('source'),
             # 언제부터였나 — 승인하면 이 날이 새 기준점이 된다. 사람이 화면에서
             # 고칠 수 있어야 한다(관찰과 계산이 다를 수 있다).

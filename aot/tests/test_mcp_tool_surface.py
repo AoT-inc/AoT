@@ -160,6 +160,12 @@ class TestDrawerSurface(unittest.TestCase):
         네이티브 도구(get_sensor_reading 등)는 스키마가 DB 의 장치 목록에서
         만들어져 시스템마다 크기가 다르므로 여기서 빼고 잰다 — 앱 없이 도는
         검사로 남기기 위해서다. 그만큼 상한에 여유를 두었다.
+
+        2026-08-24: `knowledge_search` 를 core 로 올려 31개 7,164토큰이 됐다
+        (근거는 tool_registry `_TIER_ASSIGNMENT` 의 해당 항목 주석). **상한까지
+        36토큰 남았다** — 다음에 core 도구를 더하거나 설명을 늘리려면 무엇을
+        서랍으로 내릴지 함께 정해야 한다. 상한을 올리는 것은 마지막 수단이다:
+        이 숫자가 곧 대화마다 나가는 고정비다.
         """
         import importlib
         server = importlib.import_module('aot.aot_mcp_server')

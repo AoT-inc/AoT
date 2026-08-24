@@ -76,20 +76,20 @@ class PestManagementClient:
             if not api_key:
                 # Once per process. A missing key is a static configuration
                 # state, not an event — repeating it every sync interval only
-                # buries the log. The status record below is what actually
-                # surfaces it to the user.
+                # buries the log. What surfaces it to the user is the error
+                # return below: it sets the source's last_sync_status='error'
+                # and writes the reason into the sync log, which the AI Library
+                # page shows.
                 global _KEY_WARNING_LOGGED
                 if not _KEY_WARNING_LOGGED:
                     _KEY_WARNING_LOGGED = True
                     logger.warning(
                         "EXT-KR-03: NCPMS_API_KEY not configured — pest forecast "
-                        "sync returns a status record only (logged once).")
-                return [
-                    {
-                        'parameter_name': 'pest_alert.status',
-                        'value':          'API key not configured. Set NCPMS_API_KEY.',
-                    }
-                ]
+                        "sync reports an error (logged once).")
+                # 오류는 오류로 보고한다 — 지식으로 적립하지 않는다.
+                # (nongsaro_client 의 같은 자리 주석 참조: 상태 레코드로
+                # 돌려주면 sync 가 'ok' 로 기록되고 오류 문구가 지식이 된다.)
+                return {'error': 'API key not configured. Set NCPMS_API_KEY.'}
 
             if not self._is_cache_fresh():
                 self._refresh_cache(api_key, year_month)

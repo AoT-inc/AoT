@@ -28842,57 +28842,6 @@ msgstr "{n} GDD 남음"
 msgid "Days covered: {n}"
 msgstr "전체 일수의 {n}"
 
-msgid "Postpone"
-msgstr "연기"
-
-msgid "Move this change to the date shown, without recording it as done."
-msgstr "이 전환을 위 날짜로 미룹니다 — 넘어갔다고 기록하지는 않습니다."
-
-msgid "Stage schedule"
-msgstr "단계 일정"
-
-msgid "Use programme"
-msgstr "프로그램 값으로"
-
-msgid "The programme is a reference. Changing one stage moves the ones after it."
-msgstr "프로그램은 참고입니다. 한 단계를 고치면 그 뒤 단계가 함께 밀립니다."
-
-msgid "waiting for your confirmation"
-msgstr "확인 대기"
-
-msgid "Pick a later date to postpone to."
-msgstr "미룰 날짜는 지금보다 뒤로 고르세요."
-
-msgid "Pick a date first."
-msgstr "날짜를 먼저 고르세요."
-
-msgid "Nothing changed."
-msgstr "바뀐 것이 없습니다."
-
-msgid "days"
-msgstr "일"
-
-msgid "What to do in this stage, here."
-msgstr "이 시기에 여기서 무엇을 하는지 적습니다."
-
-msgid "Remove stage"
-msgstr "단계 빼기"
-
-msgid "Remove this stage from this plot?"
-msgstr "이 구획에서 이 단계를 뺄까요? 프로그램은 그대로입니다."
-
-msgid "Register as programme"
-msgstr "프로그램으로 등록"
-
-msgid "Programme name"
-msgstr "프로그램 이름"
-
-msgid "Register"
-msgstr "등록"
-
-msgid "Registered as a programme: %(name)s"
-msgstr "프로그램으로 등록했습니다: %(name)s"
-
 msgid "Stage change"
 msgstr "단계 전환"
 
@@ -30458,3 +30407,175 @@ msgstr "주기에서 파생"
 
 msgid "How old a measurement may be and still be used, in seconds. Leave blank to derive it from the measurement period — that is right for most devices. Set a number only when this device needs its own rule (a LoRaWAN node that reports every 30-60 minutes, for example)."
 msgstr "측정값을 몇 초까지 오래된 것으로 쓸 수 있는지. 비워 두면 측정 주기에서 파생한다 — 대부분의 장치는 그게 맞다. 이 장치만의 규칙이 필요할 때만 숫자를 넣는다(예: 30~60분마다 보고하는 LoRaWAN 노드)."
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "AI notes reviewed"
+msgstr "AI 메모 검토"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "AI-curated"
+msgstr "AI 정리"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Add Knowledge"
+msgstr "지식 추가"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Added to the library."
+msgstr "라이브러리에 추가했습니다."
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "All sources"
+msgstr "모든 출처"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "At least one tag is required."
+msgstr "태그를 하나 이상 적어 주세요."
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Authoritative"
+msgstr "권위"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Connect data sources so the AI answers from a source instead of its own general knowledge. The built-in public-data feeds are Korean; anywhere else, bring your own documents, web pages or APIs."
+msgstr "AI 가 자기 일반 지식이 아니라 출처를 근거로 답하도록 데이터 소스를 연결합니다. 내장 공공데이터 피드는 한국 자료이며, 그 밖의 지역에서는 자기 문서·웹 페이지·API 를 쓰십시오."
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Derived from data"
+msgstr "관측"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Entered by a person"
+msgstr "사용자 입력"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Everything the AI can cite — synced from sources, shelved by the AI, or written in by hand. Search and filter to see what is actually in here."
+msgstr "AI 가 인용할 수 있는 전부입니다 — 소스에서 동기화한 것, AI 가 비친 것, 직접 적은 것. 검색·필터로 실제로 무엇이 들어 있는지 확인하세요."
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Include set-aside items"
+msgstr "치워 둔 항목 포함"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Knowledge"
+msgstr "지식"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Knowledge Items"
+msgstr "지식 항목"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Most retrieved"
+msgstr "가장 많이 걸린 항목"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Nothing matches those filters."
+msgstr "조건에 맞는 항목이 없습니다."
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Open source"
+msgstr "원문 열기"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Public data — Korea"
+msgstr "공공데이터 — 한국"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Put back"
+msgstr "되돌리기"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Retrieved at least once"
+msgstr "한 번 이상 검색에 걸림"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Reviewed knowledge only: OFF"
+msgstr "검토된 지식만: 꺼짐"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Reviewed knowledge only: ON"
+msgstr "검토된 지식만: 켜짐"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Search knowledge…"
+msgstr "지식 검색…"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Set aside"
+msgstr "치우기"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Set aside — the AI will not cite this."
+msgstr "치웠습니다 — AI 가 이 항목을 인용하지 않습니다."
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Setting saved."
+msgstr "설정을 저장했습니다."
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Show more"
+msgstr "더 보기"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Showing"
+msgstr "표시"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Source URL"
+msgstr "출처 주소"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "The knowledge library is empty. Until something is in here, the AI answers subject questions from its own general knowledge — with no source to cite."
+msgstr "지식 라이브러리가 비어 있습니다. 여기에 무언가 들어오기 전까지 AI 는 주제 질문에 자기 일반 지식으로 답하며, 인용할 출처가 없습니다."
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "This source is already in your library. Configure it via the settings cog."
+msgstr "이미 라이브러리에 있는 소스입니다. 설정 톱니로 구성하세요."
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Three ways to fill it: connect a source above, press Add Knowledge to write in what you already know, or just ask the AI to look something up — it saves what it finds."
+msgstr "채우는 방법은 셋입니다. 위에서 소스를 연결하거나, '지식 추가'로 이미 아는 것을 적거나, AI 에게 무언가를 찾아봐 달라고 하면 됩니다 — 찾은 것을 스스로 저장합니다."
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "What you write here is treated as confirmed — you are the source. Tag it so it only comes up for the right questions."
+msgstr "여기 적은 것은 확인된 것으로 취급합니다 — 사용자가 곧 출처입니다. 알맞은 질문에만 나오도록 태그를 달아 주세요."
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "When on, the AI may not cite notes it wrote itself until a person confirms them. Authoritative and hand-entered knowledge is unaffected."
+msgstr "켜면 AI 가 스스로 쓴 메모를 사람이 확인하기 전까지 인용하지 못합니다. 권위·직접 입력 지식은 영향을 받지 않습니다."
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "With a source link"
+msgstr "출처 링크 있음"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Write the knowledge text."
+msgstr "지식 내용을 적어 주세요."
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Your own material — anywhere"
+msgstr "내 자료 — 어디서나"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "comma-separated, required"
+msgstr "쉼표로 구분, 필수"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "e.g. radish, autumn, irrigation"
+msgstr "예: 무, 가을, 관수"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "of"
+msgstr "중"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "optional"
+msgstr "선택"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "retired"
+msgstr "폐기"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "“Retrieved” means the knowledge search returned it — not that the answer quoted it."
+msgstr "'검색에 걸림' 은 지식 검색이 그 항목을 돌려줬다는 뜻이며, 답변이 인용했다는 뜻은 아닙니다."

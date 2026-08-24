@@ -91,14 +91,45 @@ class AbstractAI(ABC):
         self.timeout = _TIER_TIMEOUT.get(self.model_tier, 45)
 
     def get_context_budget(self):
-        """
-        v12.6: Tier-based input character limits (guardrail).
-        Returns max allowed characters for the prompt.
+        """Max characters this engine may send in one prompt. Over this,
+        `_build_prompt` HARD-CUTS THE TAIL — and the tail is where the system
+        instructions and the re-stated goal live, so overrunning is not a
+        graceful degradation, it is the model losing its orders.
+
+        These are FALLBACKS for engines that don't know their own window. An
+        engine that does should override this (gemini/groq/minimax do) — the
+        value belongs with the driver that knows the provider.
+
+        2026-08-24 — standard raised 100,000 → 300,000. Measured: this
+        install's agent-loop prompt is 197,267 chars (system_state ~100k +
+        the tool catalog ~118k, inflated because base_ai serializes the
+        context with ensure_ascii on, so every Korean character costs 6). At
+        100k, an engine on this default lost 97,767 chars: the entire SYSTEM
+        INSTRUCTIONS block, the re-stated goal, and the tool catalog cut off
+        mid-JSON.
+
+        It went unnoticed because the engine actually in use (gemini) had
+        already overridden this to 600k — the five that had NOT
+        (anthropic, openai, openai_compatible, mistral, ollama) were the ones
+        silently degraded, and AoT lets the operator pick any of them. A
+        default that only works for the engine the developer happened to run
+        is not a default.
+
+        Why 300,000 and not a per-model table: a table of model → window
+        goes stale the week a provider ships a new model, and a stale table
+        fails the same silent way. 300k (~75k tokens) fits every current
+        flagship (Claude 200k tokens, GPT-5.x, Mistral Large) with room to
+        spare, and an engine whose real window is SMALLER should say so here
+        by overriding — where being wrong is loud (an API error) instead of
+        quiet (a cut tail). 300,000 was already the fallback for an unknown
+        tier; standard being lower than the unknown-tier default was the
+        anomaly.
         """
         budgets = {
+            # 이 등급은 "작은 모델을 일부러 골랐다" 는 뜻이므로 그대로 둔다.
             'lightweight': 20000,    # ~5k tokens
-            'standard': 100000,      # ~25k tokens
-            'heavy': 2000000         # ~500k tokens (Gemini)
+            'standard': 300000,      # ~75k tokens
+            'heavy': 2000000         # ~500k tokens
         }
         return budgets.get(self.model_tier, 300000)
     def get_max_output_tokens(self):
@@ -209,6 +240,108 @@ class AbstractAI(ABC):
     # Common utilities for real API calls
     # ------------------------------------------------------------------
 
+    # 예산 검사 **뒤**에 붙는 고정 꼬리(응답 형식 지시 + JSON 스키마).
+    # 상수로 뽑은 이유는 하나다: `_fit_context_to_budget` 가 자리를 계산할 때
+    # 이 길이를 알아야 하는데, 숫자를 손으로 적으면 문구를 고치는 날
+    # 조용히 어긋난다. len() 으로 읽으면 어긋날 수가 없다.
+    _RESPONSE_FORMAT_TRAILER = (
+            "CRITICAL INSTRUCTION: You MUST detect the language used in the 'Goal' user command "
+            "and strictly write your reasoning ('insight') in that EXACT SAME language. "
+            "(e.g., If the user asks in Korean, you must reply in Korean.)\n"
+            "CRITICAL INSTRUCTION 2: NEVER use unicode escape sequences (like \\u0000) for non-English characters in the JSON. Output raw UTF-8 characters directly.\n"
+            "CRITICAL INSTRUCTION 3: Respond with ONLY THE JSON OBJECT. No preamble, no postscript. Ensure the `insight` field does NOT contain any raw technical IDs or JSON structures unless explicitly asked for debugging.\n"
+            "CRITICAL INSTRUCTION 4: Your `insight` MUST be plain, conversational text. DO NOT use ANY Markdown formatting (e.g., **, *, -, #) inside the `insight` string.\n"
+            "CRITICAL INSTRUCTION 5: Your response MUST be 100% strictly valid JSON. Properly escape all internal double quotes (\\\") and newlines (\\\\n). Never leave trailing commas.\n"
+            "CRITICAL INSTRUCTION 6: Physical Truth (Law 3). Your 'insight' will be DISCARDED by the system "
+            "if your 'actions' JSON fails to execute successfully. Do NOT claim you have already performed "
+            "an action; state your intent and wait for the tool output in the next turn.\n\n"
+
+            "You MUST respond with ONLY a valid JSON object (no markdown, no explanation outside JSON) "
+            "in the following format:\n"
+            '{\n'
+            '  "insight": "Your natural language analysis of the situation IN THE USER\'S LANGUAGE",\n'
+            '  "actions": [\n'
+            '    {\n'
+            '      "action_type": "output|pid|function|note|register_device|edit_device|delete_device|get_detailed_manifest|read_manual|mcp_tool_call|virtual_tool_call",\n'
+            '      "target_id": "device_unique_id",\n'
+            '      "description": "What this action does",\n'
+            '      "params": {}\n'
+            '    }\n'
+            '  ]\n'
+            '}'
+    )
+
+    # 컨텍스트에서 절대 버리지 않는 키. 요청 그 자체와 그 근거다 — 이것을
+    # 버리면 모델은 무엇을 답해야 하는지 모른 채 데이터만 받는다.
+    _NEVER_DROPPED_CONTEXT_KEYS = ('user_command', 'manual_reference', 'page_context')
+
+    # 이보다 작은 값은 버려도 자리가 거의 안 생긴다 — 큰 것부터 버리다 여기까지
+    # 내려왔다면 어차피 최후수단 경로로 가야 한다.
+    _MIN_DROPPABLE_CHARS = 2000
+
+    def _fit_context_to_budget(self, context, ctx_str, goal, instructions,
+                               mcp_addon, system_overview):
+        """컨텍스트를 프롬프트 예산 안에 넣는다. 넘지 않으면 **원본 그대로**.
+
+        예산을 넘으면 컨텍스트의 **큰 최상위 키를 통째로** 덜어낸다. 문자열을
+        중간에서 자르지 않는 이유는 둘이다: 잘린 JSON 은 파싱이 안 되고, 잘린
+        도구 목록은 모델에게 "도구가 이것뿐" 으로 보인다. 키를 통째로 빼면
+        남은 것은 항상 valid JSON 이고, 무엇이 빠졌는지 이름으로 말해 줄 수 있다.
+
+        빠졌다는 사실을 반드시 알린다. 장치 목록이 빠진 줄 모르는 모델은
+        "그런 장치는 없습니다" 라고 단정한다 — 없는 것과 못 본 것을 구분하지
+        못하는 답이 가장 나쁘다.
+
+        Returns: 예산에 맞는 컨텍스트 JSON 문자열.
+        """
+        try:
+            budget = self.get_context_budget()
+            # 컨텍스트를 뺀 나머지(머리말·지시·목표)가 차지하는 길이. 이만큼은
+            # 항상 지킨다 — 이 메서드의 존재 이유가 그것이다.
+            envelope = (
+                len(system_overview) + len(instructions) + len(mcp_addon)
+                + 2 * len(goal) + 400                      # 고정 문구·구분자 여유
+                + len(self._RESPONSE_FORMAT_TRAILER)       # 예산 검사 뒤에 붙는 꼬리
+            )
+            available = budget - envelope - 500            # 절단 안내문 자리
+            if available <= 0 or len(ctx_str) <= available:
+                return ctx_str
+
+            kept = dict(context)
+            dropped = []
+            # 큰 것부터 뺀다 — 한 번에 가장 많이 회수된다.
+            sizes = sorted(
+                ((k, len(json.dumps(v, separators=(',', ':'), default=str)))
+                 for k, v in context.items()),
+                key=lambda kv: -kv[1])
+            for key, size in sizes:
+                if len(json.dumps(kept, separators=(',', ':'), default=str)) <= available:
+                    break
+                if key in self._NEVER_DROPPED_CONTEXT_KEYS or size < self._MIN_DROPPABLE_CHARS:
+                    continue
+                kept.pop(key, None)
+                dropped.append(key)
+
+            if dropped:
+                kept['_omitted'] = (
+                    "These context sections were LEFT OUT of this request because it "
+                    "exceeded this model's size limit: " + ", ".join(dropped) + ". "
+                    "You are NOT seeing the full picture. Do NOT conclude that "
+                    "something does not exist because it is absent here — call a tool "
+                    "to look it up, or say you could not check."
+                )
+            out = json.dumps(kept, separators=(',', ':'), default=str)
+            logger.warning(
+                "[%s] context %d chars > %d available (budget %d) — omitted %s, now %d chars",
+                self.__class__.__name__, len(ctx_str), available, budget,
+                dropped or 'nothing droppable', len(out))
+            return out
+        except Exception as e:
+            # 이 계산이 깨져서 요청 자체가 죽으면 안 된다. 원본을 돌려주면
+            # 아래의 최후수단 하드컷이 종전대로 받아 준다.
+            logger.debug("[%s] context fitting skipped: %s", self.__class__.__name__, e)
+            return ctx_str
+
     def _build_prompt(self, context, goal):
         """
         Constructs a prompt that explicitly requests JSON output.
@@ -273,14 +406,22 @@ class AbstractAI(ABC):
         # English (instruction to the AI; it answers in the user's language).
         if settings is not None and getattr(settings, 't3_knowledge_search_enabled', False):
             instructions += (
-                "\n- [Knowledge Search] When you need to find system usage, features, or "
-                "terminology in the documentation, use action_type='knowledge_search', "
-                "params={\"query\": \"<what to find>\"}. It searches ALL docs by a free query and "
-                "returns the relevant sections without needing a filename or section heading. It "
-                "also covers registered domain knowledge (crops, pests, environment guides) when "
-                "the AI Library has synced sources. Prefer this for capability / how-to / domain "
-                "questions instead of denying or guessing; use read_manual only when you need a "
-                "specific full file."
+                # 도구 이름으로 말한다. 예전엔 action_type='knowledge_search' 라는
+                # **레거시 디스패치 형식**만 알려줬는데, 지금 기본 경로인
+                # 에이전트 루프는 도구 카탈로그에서 도구를 고르는 방식이라
+                # 이 문장이 자기 규약과 어긋나 보였다. 이름으로 지시하면 두
+                # 경로 모두에서 통한다(레거시 체인도 같은 이름으로 해석한다).
+                "\n- [Knowledge Search] To find system usage, features, terminology, or subject "
+                "knowledge, call the 'knowledge_search' tool with {\"query\": \"<what to find>\"} "
+                "(tags optional). It searches ALL docs by a free query and returns the relevant "
+                "sections without needing a filename or section heading. It also covers "
+                "registered domain knowledge (crops, livestock, pests, environment guides) and "
+                "anything previously shelved into the library. Prefer this for capability / "
+                "how-to / domain questions instead of denying or guessing; use read_manual only "
+                "when you need a specific full file. If it returns nothing, say the library has "
+                "no source on it rather than presenting your own knowledge as one — and if you "
+                "then work the answer out anyway, call 'knowledge_shelve' to save it for next "
+                "time."
             )
 
         # Tool selection guide is now integrated into instructions for brevity
@@ -349,6 +490,23 @@ class AbstractAI(ABC):
         # aot/tests/ai_eval/drawer_ab.py).
         ctx_str = json.dumps(context, separators=(',', ':'), default=str)
 
+        # @ANCHOR: PROMPT_BUDGET_FIT
+        # 예산을 넘을 때 **컨텍스트를 줄인다** — 프롬프트 꼬리를 자르지 않는다.
+        #
+        # 아래 조립에서 지시(SYSTEM INSTRUCTIONS)와 재진술 목표는 컨텍스트
+        # **뒤**에 온다. 그래서 예전처럼 완성된 프롬프트의 꼬리를 잘라내면
+        # 없어지는 것이 정확히 그 둘이었다 — 모델이 데이터를 조금 덜 받는 게
+        # 아니라 **지시를 통째로 잃는다.** 실측(2026-08-24): 197,267자 프롬프트를
+        # 100,000자 예산으로 자르면 SYSTEM INSTRUCTIONS(pos 184,266)·재진술
+        # 목표(187,459)가 전부 잘려 나갔다.
+        #
+        # 순서를 바꾸지 않은 이유: 지시를 앞으로 옮기면 **절단이 없는 경우까지**
+        # 모든 엔진의 프롬프트가 바뀐다(지시를 뒤에 두는 것은 최신성 효과를
+        # 노린 배치이기도 하다). 여기서는 들어갈 자리를 먼저 계산해 컨텍스트만
+        # 줄이므로, 예산 안에 들어오는 요청은 **바이트 단위로 종전과 같다.**
+        ctx_str = self._fit_context_to_budget(context, ctx_str, goal, instructions,
+                                              mcp_addon, system_overview)
+
         full_prompt = (
             f"{system_overview}"
             f"**CRITICAL GOAL:** {goal}\n"
@@ -364,10 +522,23 @@ class AbstractAI(ABC):
         # v12.6: Enforce Tiered Character Budgets (Engine-specific Guardrail)
         max_chars = self.get_context_budget()
         
-        # v16.2: Final Hard-Limit Guardrail with Truncation instead of simple Abortion
-        if len(full_prompt) > max_chars:
-            logger.warning(f"[{self.__class__.__name__}] Hard-truncating prompt for {self.model_tier} tier: {len(full_prompt)} -> {max_chars}")
-            full_prompt = full_prompt[:max_chars-500] + "\n... [PROMPT TRUNCATED DUE TO BUDGET LIMIT] ..."
+        # 최후수단. `_fit_context_to_budget` 가 컨텍스트를 줄여 놓으므로 여기까지
+        # 오는 것은 **컨텍스트를 다 덜어내도 머리말+지시+목표만으로 예산을 넘는**
+        # 경우뿐이다(예산이 지나치게 작게 잡혔다는 뜻). 그때는 지시를 잃는 것을
+        # 피할 방법이 없으니 종전 동작을 그대로 둔다 — 다만 로그가 "설정이
+        # 잘못됐다" 를 가리키도록 문구를 바꾼다.
+        # 꼬리(_RESPONSE_FORMAT_TRAILER)는 이 검사 **뒤**에 붙으므로 여기서 함께
+        # 센다. 예전에는 안 셌고, 그래서 "예산 안" 으로 판정된 프롬프트가 실제로는
+        # 꼬리 길이만큼 예산을 넘어서 나갔다 — 경고도 안 뜨는 초과였다.
+        _trailer = len(self._RESPONSE_FORMAT_TRAILER)
+        if len(full_prompt) + _trailer > max_chars:
+            logger.warning(
+                "[%s] prompt still %d(+%d trailer) > %d after context fitting — the %s "
+                "budget is too small for this engine's own instructions; system "
+                "instructions WILL be cut. Raise this engine's get_context_budget or "
+                "its model tier.",
+                self.__class__.__name__, len(full_prompt), _trailer, max_chars, self.model_tier)
+            full_prompt = full_prompt[:max_chars - _trailer - 500] + "\n... [PROMPT TRUNCATED DUE TO BUDGET LIMIT] ..."
             
         if len(full_prompt) > (max_chars * 0.8):
             logger.warning(f"[{self.__class__.__name__}] Near budget limit ({self.model_tier}): {len(full_prompt)}/{max_chars}")
@@ -387,33 +558,7 @@ class AbstractAI(ABC):
         except Exception:
             pass
 
-        return (
-            f"{full_prompt}"
-            "CRITICAL INSTRUCTION: You MUST detect the language used in the 'Goal' user command "
-            "and strictly write your reasoning ('insight') in that EXACT SAME language. "
-            "(e.g., If the user asks in Korean, you must reply in Korean.)\n"
-            "CRITICAL INSTRUCTION 2: NEVER use unicode escape sequences (like \\u0000) for non-English characters in the JSON. Output raw UTF-8 characters directly.\n"
-            "CRITICAL INSTRUCTION 3: Respond with ONLY THE JSON OBJECT. No preamble, no postscript. Ensure the `insight` field does NOT contain any raw technical IDs or JSON structures unless explicitly asked for debugging.\n"
-            "CRITICAL INSTRUCTION 4: Your `insight` MUST be plain, conversational text. DO NOT use ANY Markdown formatting (e.g., **, *, -, #) inside the `insight` string.\n"
-            "CRITICAL INSTRUCTION 5: Your response MUST be 100% strictly valid JSON. Properly escape all internal double quotes (\\\") and newlines (\\\\n). Never leave trailing commas.\n"
-            "CRITICAL INSTRUCTION 6: Physical Truth (Law 3). Your 'insight' will be DISCARDED by the system "
-            "if your 'actions' JSON fails to execute successfully. Do NOT claim you have already performed "
-            "an action; state your intent and wait for the tool output in the next turn.\n\n"
-
-            "You MUST respond with ONLY a valid JSON object (no markdown, no explanation outside JSON) "
-            "in the following format:\n"
-            '{\n'
-            '  "insight": "Your natural language analysis of the situation IN THE USER\'S LANGUAGE",\n'
-            '  "actions": [\n'
-            '    {\n'
-            '      "action_type": "output|pid|function|note|register_device|edit_device|delete_device|get_detailed_manifest|read_manual|mcp_tool_call|virtual_tool_call",\n'
-            '      "target_id": "device_unique_id",\n'
-            '      "description": "What this action does",\n'
-            '      "params": {}\n'
-            '    }\n'
-            '  ]\n'
-            '}'
-        )
+        return f"{full_prompt}" + self._RESPONSE_FORMAT_TRAILER
 
     def _extract_json_from_text(self, text):
         """

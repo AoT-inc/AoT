@@ -9,15 +9,6 @@
   var _ctx = null;
   var _debounceTimer = null;
 
-  // ── Move history (undo) ──────────────────────────────────────────────────
-  // Only position moves are tracked — the case the button exists for is a
-  // careless drag, and everything else (add/remove/kind changes) already has
-  // its own explicit, deliberate control (Delete button, "Back to automatic").
-  var _historyStack = [];
-  var MAX_HISTORY = 50;
-  var _dragTrackingId = null;   // id of the fitting the in-progress drag is moving
-  var _dragFromPos    = null;   // its position before that drag began
-
   // ── Which fittings the user may move by hand ────────────────────────────────
   // Exactly the ones listed as components in step 4: everything the envelope
   // generates (curtains, windows and doors derived from the cover settings) is
@@ -34,45 +25,6 @@
   function _findFitting(id) {
     if (!id || !window.FittingsUI) return null;
     return FittingsUI.readAll().find(function (x) { return x.id === id; }) || null;
-  }
-
-  function _pushHistory(entry) {
-    _historyStack.push(entry);
-    if (_historyStack.length > MAX_HISTORY) _historyStack.shift();
-    _syncUndoButton();
-  }
-
-  function _syncUndoButton() {
-    var btn = document.getElementById('btn-3d-undo');
-    if (btn) btn.disabled = _historyStack.length === 0;
-  }
-
-  // Reverts the most recent recorded move. Only reaches into the pieces that
-  // a live drag itself updates (data, inspector fields, mesh, arrows) — same
-  // set as the aot-gizmo-moved handler above, just applied once instead of
-  // per mouse-move.
-  function undoLastMove() {
-    var entry = _historyStack.pop();
-    _syncUndoButton();
-    if (!entry || entry.type !== 'move') return;
-    var p = entry.from;
-    if (window.FittingsUI && typeof FittingsUI.updateFittingPosition === 'function') {
-      FittingsUI.updateFittingPosition(entry.id, p);
-    }
-    if (_ctx && typeof _ctx.updateFittingTransform === 'function') {
-      _ctx.updateFittingTransform(entry.id, p, null);
-    }
-    // Only touch the inspector/arrows if this fitting is still the one selected.
-    if (window.FittingsUI && FittingsUI.getSelectedId() === entry.id) {
-      var fx = document.getElementById('fi-x');
-      var fy = document.getElementById('fi-y');
-      var fz = document.getElementById('fi-z');
-      if (fx) fx.value = p.x.toFixed(3);
-      if (fy) fy.value = p.z.toFixed(3); // user Y = depth = Three.js Z
-      if (fz) fz.value = p.y.toFixed(3); // user Z = height = Three.js Y
-      if (_ctx && typeof _ctx.showGizmo === 'function') _ctx.showGizmo(entry.id, p);
-    }
-    document.dispatchEvent(new CustomEvent('fittings-data-changed'));
   }
 
   // Lets the 3D scene ask whether a mesh may be dragged, without teaching it
@@ -865,30 +817,16 @@
     // toggles the envelope feature off.
     document.addEventListener('facility-loaded',       _renderEnvelopeFittings);
     document.addEventListener('facility-loaded',       rebuildFit);
-    // A freshly loaded facility has no relationship to whatever was on the
-    // undo stack a moment ago — drop it rather than let Ctrl+Z reach back
-    // into a different facility's edits.
-    document.addEventListener('facility-loaded', function () {
-      _historyStack = [];
-      _syncUndoButton();
-    });
 
     document.addEventListener('fitting-added', function (e) {
       if (_ctx && typeof _ctx.addFittingMesh === 'function' && e.detail && e.detail.fitting) {
         var f = e.detail.fitting;
         _ctx.addFittingMesh(f);
-        var selId = window.FittingsUI ? FittingsUI.getSelectedId() : null;
         if (typeof _ctx.updateFittingSelection === 'function' && window.FittingsUI) {
-          _ctx.updateFittingSelection(selId);
+          _ctx.updateFittingSelection(FittingsUI.getSelectedId());
         }
-        // Arrows up immediately on placement, for anything the user may move —
-        // but only when the fitting that just arrived is the one the user
-        // actually selected (add/addAt select before dispatching this event).
-        // syncEnvelopeItems() also fires fitting-added, every time an envelope
-        // item's id is regenerated (e.g. a cover-dimension tweak), without
-        // touching the selection — without this check the arrows would jump
-        // to that unrelated item instead of staying on what the user picked.
-        if (typeof _ctx.showGizmo === 'function' && f.id === selId && _isMovableFitting(f)) {
+        // Arrows up immediately on placement, for anything the user may move.
+        if (typeof _ctx.showGizmo === 'function' && _isMovableFitting(f)) {
           _ctx.showGizmo(f.id, f.position);
         }
       }
@@ -917,15 +855,6 @@
     document.addEventListener('aot-gizmo-moved', function (e) {
       var d = e.detail; if (!d || !d.id || !d.position) return;
       var p = d.position;
-      // First move of a drag: snapshot the position it started from, so
-      // aot-fitting-drag-end can record an undo step. Must run before the
-      // update below overwrites it.
-      if (_dragTrackingId !== d.id) {
-        var before = _findFitting(d.id);
-        _dragFromPos = (before && before.position)
-          ? { x: before.position.x, y: before.position.y, z: before.position.z } : null;
-        _dragTrackingId = d.id;
-      }
       // Reflect internal _fittings data immediately (readAll() is a deep copy, so update directly)
       if (window.FittingsUI && typeof FittingsUI.updateFittingPosition === 'function') {
         FittingsUI.updateFittingPosition(d.id, p);
@@ -946,37 +875,8 @@
       // is updated above; the broadcast waits for the end of the drag.
     });
 
-    document.addEventListener('aot-fitting-drag-end', function (e) {
-      var id = e.detail && e.detail.id;
-      if (id && _dragTrackingId === id && _dragFromPos) {
-        var f = _findFitting(id);
-        var to = f && f.position;
-        if (to) {
-          var moved = Math.abs(to.x - _dragFromPos.x) > 1e-6 ||
-                      Math.abs(to.y - _dragFromPos.y) > 1e-6 ||
-                      Math.abs(to.z - _dragFromPos.z) > 1e-6;
-          if (moved) {
-            _pushHistory({ type: 'move', id: id, from: _dragFromPos,
-                           to: { x: to.x, y: to.y, z: to.z } });
-          }
-        }
-      }
-      _dragTrackingId = null;
-      _dragFromPos = null;
+    document.addEventListener('aot-fitting-drag-end', function () {
       document.dispatchEvent(new CustomEvent('fittings-data-changed'));
-    });
-
-    var undoBtn = document.getElementById('btn-3d-undo');
-    if (undoBtn) undoBtn.addEventListener('click', undoLastMove);
-    _syncUndoButton();
-    document.addEventListener('keydown', function (e) {
-      if (!e.ctrlKey && !e.metaKey) return;
-      if (e.key !== 'z' && e.key !== 'Z') return;
-      // Don't hijack undo while the user is editing a text field.
-      var tag = (document.activeElement && document.activeElement.tagName) || '';
-      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
-      e.preventDefault();
-      undoLastMove();
     });
 
     // "Back to automatic" — hand the item back to the envelope generator and

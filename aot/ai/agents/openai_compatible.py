@@ -79,6 +79,28 @@ class OpenAICompatibleAI(AbstractAI):
             )
         logger.info(f"Initializing OpenAICompatibleAI with endpoint: {self.api_endpoint}, model: {self.model_name}")
 
+    def get_context_budget(self):
+        """이 드라이버는 **어느 엔드포인트를 가리키는지 알 수 없다.**
+
+        vLLM·LM Studio·Together·Perplexity·자체 호스팅 — 창이 8k 토큰인 것도
+        1M 인 것도 같은 이 클래스로 들어온다. 모델 이름조차 큐레이트하지 않는
+        드라이버가 base_ai 의 낙관적 기본값(300,000자 ≈ 75k 토큰)을 쓰면,
+        작은 엔드포인트에서 프롬프트 꼬리(시스템 지시·재진술 목표)가 조용히
+        잘린다.
+
+        그래서 **보수적으로 잡는다** — 100,000자 ≈ 25k 토큰은 요즘 거의 모든
+        엔드포인트(32k 창 vLLM 포함)가 받는 값이다. 큰 엔드포인트를 붙인
+        운영자는 등급을 heavy 로 올려 그 사실을 표현하면 된다. 모르는 쪽으로
+        기울일 때는 **큰 값을 가정해 조용히 잘리는 것보다, 작은 값을 써서
+        덜 싣는 쪽**이 낫다.
+        """
+        budgets = {
+            'lightweight': 20000,
+            'standard': 100000,
+            'heavy': 400000,
+        }
+        return budgets.get(self.model_tier, 100000)
+
     def run_reasoning(self, context, goal):
         return self._call_openai_compatible_api(context, goal)
 

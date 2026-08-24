@@ -1936,27 +1936,21 @@
     if (!jobs.length) return;
 
     var csrfEl = document.querySelector('meta[name="csrf-token"]');
-    var items = jobs.map(function (j) {
-      return { kind: 'past', unique_id: j.device_id,
-               measure_type: 'input',
-               measurement_id: j.measurement_id,
-               period: String(_SPARK_PAST_S) };
-    });
-    // 공유 코얼레서 경유(없으면 예전 경로). 팝업은 지도 위젯의 값 갱신과 거의
-    // 같은 순간에 뜨는 일이 많아, 같은 창에서 항목이 겹치면 한 번으로 합쳐진다.
-    var sent = (window.AoTDataBatch && window.AoTDataBatch.postItems)
-      ? window.AoTDataBatch.postItems(items).then(function (res) {
-          return res ? { results: res } : null;
+    fetch('/data_batch', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json',
+                 'X-CSRFToken': csrfEl ? csrfEl.getAttribute('content') : '' },
+      body: JSON.stringify({
+        items: jobs.map(function (j) {
+          return { kind: 'past', unique_id: j.device_id,
+                   measure_type: 'input',
+                   measurement_id: j.measurement_id,
+                   period: String(_SPARK_PAST_S) };
         })
-      : fetch('/data_batch', {
-          method: 'POST',
-          credentials: 'same-origin',
-          headers: { 'Content-Type': 'application/json',
-                     'X-CSRFToken': csrfEl ? csrfEl.getAttribute('content') : '' },
-          body: JSON.stringify({ items: items })
-        }).then(function (r) { return r.ok ? r.json() : null; });
-
-    sent
+      })
+    })
+      .then(function (r) { return r.ok ? r.json() : null; })
       .then(function (d) {
         var res = d && d.results;
         // 길이가 안 맞으면 정렬이 깨진 것이다 — 잘못 짝지어 그리면 CO2 자리에
@@ -3115,27 +3109,6 @@
   }
   var _pPane = sectionPane;
 
-  // 구획 모달의 **자리막이**. 값이 오기 전까지 보이는 화면이다.
-  //
-  // 구획 창은 `/api/geo/plot/<uuid>` 를 받은 **뒤에** 열렸다 — 그 왕복 동안
-  // 화면에는 아무 일도 일어나지 않아, 누른 사람은 눌린 줄을 모른다. 구역·시설
-  // 창은 이미 껍데기를 먼저 띄우고 자리막이를 보인다(`_buildZoneSkel`).
-  //
-  // 껍데기는 **진짜 창과 같은 것**이어야 한다(같은 헤더·같은 탭) — 도착하는
-  // 순간 창이 다시 그려지는 것처럼 보이면 자리막이를 두는 뜻이 없다.
-  function buildPlotModalSkeleton(name, opts) {
-    opts = opts || {};
-    var defSec = plotDefaultSec(opts.defaultTab);
-    return buildModalHeader({ name: name || _t('Plot'), up: true,
-                              status: null }) +
-           buildSectionNav(defSec, _PLANTING_SECS) +
-           // 바 넷 — [현황]에 들어설 것이 사진·진행·환경·노트라 그만큼 길다.
-           // 짧게 두면 값이 오는 순간 창이 튄다.
-           _pPane('overview', defSec, skeleton(['w60', 'w80', 'w40', 'w80'])) +
-           _pPane('envctl',   defSec, '') +
-           _pPane('about',    defSec, '');
-  }
-
   function buildPlotModal(p, opts) {
     p = p || {};
     opts = opts || {};
@@ -3296,13 +3269,7 @@
     // ② 다음 단계까지 — 축이 "어디쯤" 을 답하고, 이 줄이 "얼마나 남았나" 를
     //    답한다. 판정 축이 둘이다(날짜 / GDD): 서버가 source 로 알려 주므로
     //    여기서 다시 판단하지 않고 **있는 쪽의 값만** 쓴다.
-    if (stg && stg.state === 'running' && stg.pending) {
-      // 파생은 다음 단계를 가리키는데 사람이 아직 확인하지 않았다(P8). 단계는
-      // 넘어가지 않았다 — 그 사실을 말하지 않으면 화면은 "왜 안 넘어가지" 가 된다.
-      rows.push(_pRow(_t('Next stage'),
-                      _esc((stg.pending.stage_name || '\u2014') + ' \u00b7 ' +
-                           _t('waiting for your confirmation'))));
-    } else if (stg && stg.state === 'running') {
+    if (stg && stg.state === 'running') {
       var remain = null;
       if (stg.source === 'gdd') {
         if (stg.gdd_left != null) {
@@ -3359,11 +3326,7 @@
                     _esc(stg.name || stg.key || '') +
                     ' <span class="aot-ov-muted">(' + stg.index + '/' +
                     stg.total + ')</span>');
-      if (stg.pending) {
-        html += _pRow(_t('Next stage'),
-                      _esc((stg.pending.stage_name || '\u2014') + ' \u00b7 ' +
-                           _t('waiting for your confirmation')));
-      } else if (stg.days_left != null) {
+      if (stg.days_left != null) {
         html += _pRow(_t('Next stage'),
                       _esc((stg.next_name || '\u2014') + ' \u00b7 ' +
                            _t('in %(n)s days').replace('%(n)s',
@@ -3430,11 +3393,11 @@
 
   function _plotGuidanceHtml(stg) {
     if (!stg || !stg.guidance) return '';
-    // **버튼 뒤에 두지 않는다.** 지금 단계에 무엇을 해야 하는지는 축을 본 그
-    // 자리에서 바로 읽혀야 하는 것이고, 한 번 더 눌러야 나오면 아무도 읽지
-    // 않는다(AI 를 안 쓰는 사용자에게는 여기가 유일한 자리다).
-    return '<div class="aot-ov-guidance aot-ov-guidance-inline">' +
-           _esc(stg.guidance) + '</div>';
+    return '<details class="aot-ov-guide">' +
+           '<summary class="aot-ov-pill aot-ov-guide-btn">' +
+           _esc(_t('Guidance')) + '</summary>' +
+           '<div class="aot-ov-guidance">' + _esc(stg.guidance) + '</div>' +
+           '</details>';
   }
 
   function _plotOverviewHtml(p) {
@@ -3503,9 +3466,6 @@
     // 목표가 사라진 것은 아니다 — 지금 값이 있는 항목은 [현재] 의 눈금이
     // 그대로 답한다("그래서 지금 맞나" 까지 함께).
     //
-    // 단계 일정은 **[설정]** 에 있다(기본 정보 다음). [현황]은 "지금 어떤가" 를
-    // 답하는 자리고, 일정을 짜는 것은 그 구획을 어떻게 기를지 정하는 일이라
-    // 작물·기간·프로그램을 고치는 자리와 함께 있어야 한다.
     var _rs = _plotStageResourceRows(_stg);
     if (_rs) {
       html += '<div class="aot-ov-card-title">' + _esc(_t('Resources')) +
@@ -3688,14 +3648,6 @@
             _esc(_t('Edit')) + '</button></div>';
     html += '</div>';
 
-    // 단계 일정 — **기본 정보 바로 다음**이다. 작물·시작일 다음에 오는 질문이
-    // "그래서 언제 무엇을 하나" 이고, 그 답을 고치는 자리가 여기다.
-    var _sched = _plotScheduleHtml(p);
-    if (_sched) {
-      html += '<div class="aot-ov-card-title">' + _esc(_t('Stage schedule')) +
-              '</div><div class="aot-ov-block">' + _sched + '</div>';
-    }
-
     html += _plotProgramHtml(p);
     html += _plotPlaceHtml(p);
 
@@ -3792,113 +3744,7 @@
                  _esc(pp.started_on || '') + '">' +
                '<button type="button" class="aot-ov-pill aot-ov-pill--primary ' +
                  'aot-ov-plot-stage-ok">' + _esc(_t('Confirm')) + '</button>' +
-               // 같은 날짜 칸을 나눠 쓴다 — [확인] 은 "그 날 넘어갔다"(사실),
-               // [연기] 는 "그 날 넘어갈 것"(계획). 같은 질문의 두 답이라
-               // 입력이 둘일 이유가 없다.
-               '<button type="button" class="aot-ov-pill ' +
-                 'aot-ov-plot-stage-defer" title="' +
-                 _esc(_t('Move this change to the date shown, without recording it as done.')) +
-                 '">' + _esc(_t('Postpone')) + '</button>' +
              '</div></div>';
-  }
-
-  // 단계 일정 (P8) — **프로그램은 참고고 경계는 구획이 갖는다.**
-  //
-  // 고치는 값은 **기간(일)** 이다. 날짜를 직접 받으면 사람이 계산해야 한다 —
-  // "육묘를 닷새 더" 를 말하려고 정식일을 머릿속에서 더하고, 뒤 단계까지 보려면
-  // 그 덧셈을 다섯 번 더 한다. 프로그램이 이미 단계마다 며칠로 적으므로 같은
-  // 어휘를 쓴다. 날짜는 그 옆에 **결과로** 보인다(입력이 아니다).
-  //
-  // 고칠 수 있는 것은 아직 오지 않은 경계뿐이다. 지나간 경계를 옮기는 일은
-  // 원장(확인·되돌리기)이 하는 일이고, 두 수단이 같은 값을 다투면 무엇이
-  // 정본인지 알 수 없다.
-  function _plotScheduleHtml(p) {
-    var list = (p && p.stage_schedule) || [];
-    if (!list.length) return '';
-
-    var rows = list.map(function (st) {
-      var key = _esc(st.key || '');
-      var days = (st.days == null) ? '' : String(st.days);
-      var shown = (st.days == null)
-        ? _esc(_t('until the end'))
-        : _esc(_t('%(n)s days').replace('%(n)s', days));
-
-      // 1행 — 이름과 [편집]. 버튼은 이 창의 공용 pill 이다(새로 만들지 않는다).
-      var head = '<div class="aot-ov-row">' +
-                 '<span>' + _esc(st.name || st.key || '') + '</span>' +
-                 '<span><button type="button" class="aot-ov-pill ' +
-                   'aot-ov-sched-edit" data-stage-key="' + key + '">' +
-                   _esc(_t('Edit')) + '</button></span></div>';
-
-      // 2행 — 시작일과 기간. 평소에는 **읽는 값**이고, [편집] 을 눌러야 입력이
-      // 된다. 늘 입력칸으로 두면 여섯 줄이 전부 폼처럼 보여, 일정을 확인하러
-      // 온 사람이 무엇을 고칠 참인지부터 헷갈린다.
-      var right = '<span class="aot-ov-sched-days-view">' + shown + '</span>';
-      if (st.editable) {
-        right += '<span class="aot-ov-sched-days-edit" hidden>' +
-                 '<input type="number" min="1" step="1" ' +
-                 'class="form-control aot-modern-input aot-ov-sched-days" ' +
-                 'data-stage-key="' + key + '" value="' + _esc(days) + '"> ' +
-                 _esc(_t('days')) + '</span>';
-      }
-      var body = '<div class="aot-ov-row">' +
-                 '<span class="aot-ov-muted">' +
-                   _esc(st.starts_on || '\u2014') + '</span>' +
-                 '<span>' + right + '</span></div>';
-
-      // 편집 칸 — 기간과 지침을 함께 고치고 [저장] 하나로 보낸다. 저장 버튼이
-      // 단계마다 둘이면 어느 것이 무엇을 저장하는지 매번 확인하게 된다.
-      var drop = st.removable
-        ? '<button type="button" class="aot-ov-pill aot-ov-pill--apart ' +
-          'aot-ov-sched-drop" data-stage-key="' + key + '">' +
-          _esc(_t('Remove stage')) + '</button>'
-        : '';
-      var edit = '<div class="aot-ov-sched-edit-wrap" hidden>' +
-                 '<textarea class="aot-ov-desc-input aot-ov-sched-guide" ' +
-                   'rows="3" data-stage-key="' + key + '" placeholder="' +
-                   _esc(_t('What to do in this stage, here.')) + '">' +
-                   _esc(st.guidance || '') + '</textarea>' +
-                 '<div class="aot-ov-desc-actions">' + drop +
-                 '<button type="button" class="aot-ov-pill ' +
-                   'aot-ov-pill--primary aot-ov-sched-save" ' +
-                   'data-stage-key="' + key + '">' + _esc(_t('Save')) +
-                   '</button>' +
-                 '</div></div>';
-
-      return '<div class="aot-ov-sched-item">' + head + body + edit + '</div>';
-    }).join('');
-
-    // 단계 더하기 — 여는 줄은 폼 푸터가 아니라 `.aot-ov-actions` 다([편집]과
-    // 같은 자리).
-    var add = '<div class="aot-ov-sched-item aot-ov-sched-add">' +
-              '<div class="aot-ov-actions">' +
-              '<button type="button" class="aot-ov-pill aot-ov-sched-addopen">' +
-              _esc(_t('Add stage')) + '</button></div>' +
-              '<div class="aot-ov-sched-add-wrap" hidden>' +
-              '<div class="aot-ov-row">' +
-              '<span><input type="text" class="form-control aot-modern-input ' +
-                'aot-ov-sched-newname" placeholder="' +
-                _esc(_t('Stage name')) + '"></span>' +
-              '<span><input type="number" min="1" step="1" ' +
-                'class="form-control aot-modern-input aot-ov-sched-days ' +
-                'aot-ov-sched-newdays" value="7"> ' + _esc(_t('days')) +
-                '</span></div>' +
-              '<div class="aot-ov-desc-actions">' +
-              '<button type="button" class="aot-ov-pill aot-ov-pill--primary ' +
-                'aot-ov-sched-addgo">' + _esc(_t('Add')) + '</button>' +
-              '</div></div></div>';
-
-    // 자동 승인은 **구획**의 성질이다(P8) — 같은 프로그램을 쓰는 두 구획이
-    // 다른 답을 갖는 것이 정상이라 프로그램이 아니라 여기서 정한다.
-    var auto = '<div class="aot-ov-row aot-ov-sched-auto">' +
-               '<span>' + _esc(_t('Advance stages automatically')) + '</span>' +
-               '<span>' + _slideToggle('', 'aot-ov-plot-auto', 'auto',
-                                       !!p.auto_advance, '') + '</span></div>';
-
-    return '<div class="aot-ov-plot-sched">' + rows + add + auto +
-           '<div class="aot-ov-muted">' +
-           _esc(_t('The programme is a reference. Changing one stage moves the ones after it.')) +
-           '</div></div>';
   }
 
   // 확인된 전환 이력. **무른 것도 낸다** — "확인했다가 물렀다" 는 사실 자체가
@@ -3985,20 +3831,6 @@
                 '</div>';
       }
       rows += _plotStageHistoryHtml(p);
-      // 이 구획의 일정을 프로그램으로 — **이 카드의 맨 아래**다. 무엇을
-      // 따르고 있는지 말하는 자리이므로, "이것을 프로그램으로 만든다" 도 같은
-      // 자리에서 이어진다. 여닫는 방식은 단계 [편집]과 같다.
-      rows += '<div class="aot-ov-actions">' +
-              '<button type="button" class="aot-ov-pill aot-ov-sched-regopen">' +
-              _esc(_t('Register as programme')) + '</button></div>' +
-              '<div class="aot-ov-sched-reg-wrap" hidden>' +
-              '<input type="text" class="form-control aot-modern-input ' +
-                'aot-ov-sched-regname" placeholder="' +
-                _esc(_t('Programme name')) + '">' +
-              '<div class="aot-ov-desc-actions">' +
-              '<button type="button" class="aot-ov-pill aot-ov-pill--primary ' +
-                'aot-ov-sched-reggo">' + _esc(_t('Register')) + '</button>' +
-              '</div></div>';
     }
     return '<div class="aot-ov-card-title">' + _esc(_t('Program')) +
            '</div><div class="aot-ov-block">' + rows + '</div>';
@@ -4086,7 +3918,6 @@
 
   window.AoTMapPopup = {
     buildPlotModal:  buildPlotModal,
-    buildPlotModalSkeleton: buildPlotModalSkeleton,
     latestNotePhoto:    latestNotePhoto,
     buildPhotoCardHtml: buildPhotoCardHtml,
     buildFacilityPlotsHtml: buildFacilityPlotsHtml,

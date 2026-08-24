@@ -28601,57 +28601,6 @@ msgstr "残り {n} GDD"
 msgid "Days covered: {n}"
 msgstr "全日数の{n}"
 
-msgid "Postpone"
-msgstr "延期"
-
-msgid "Move this change to the date shown, without recording it as done."
-msgstr "この移行を上の日付に延ばします — 完了として記録はしません。"
-
-msgid "Stage schedule"
-msgstr "ステージ日程"
-
-msgid "Use programme"
-msgstr "プログラムの値に"
-
-msgid "The programme is a reference. Changing one stage moves the ones after it."
-msgstr "プログラムは参考です。ひとつのステージを変えると以降もずれます。"
-
-msgid "waiting for your confirmation"
-msgstr "確認待ち"
-
-msgid "Pick a later date to postpone to."
-msgstr "延期する日付は今より後を選んでください。"
-
-msgid "Pick a date first."
-msgstr "先に日付を選んでください。"
-
-msgid "Nothing changed."
-msgstr "変更はありません。"
-
-msgid "days"
-msgstr "日"
-
-msgid "What to do in this stage, here."
-msgstr "この時期にここで何をするかを書きます。"
-
-msgid "Remove stage"
-msgstr "ステージを外す"
-
-msgid "Remove this stage from this plot?"
-msgstr "この区画からこのステージを外しますか？プログラムはそのままです。"
-
-msgid "Register as programme"
-msgstr "プログラムとして登録"
-
-msgid "Programme name"
-msgstr "プログラム名"
-
-msgid "Register"
-msgstr "登録"
-
-msgid "Registered as a programme: %(name)s"
-msgstr "プログラムとして登録しました: %(name)s"
-
 msgid "Stage change"
 msgstr "ステージ変更"
 
@@ -30217,3 +30166,175 @@ msgstr "周期から導出"
 
 msgid "How old a measurement may be and still be used, in seconds. Leave blank to derive it from the measurement period — that is right for most devices. Set a number only when this device needs its own rule (a LoRaWAN node that reports every 30-60 minutes, for example)."
 msgstr "測定値を何秒前のものまで使えるか。空欄にすると測定周期から導出する — ほとんどの装置はそれで正しい。この装置だけの規則が必要なときにだけ数値を入れる(例: 30~60分ごとに報告する LoRaWAN ノード)。"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "AI notes reviewed"
+msgstr "AI メモの確認済み"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "AI-curated"
+msgstr "AI 整理"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Add Knowledge"
+msgstr "知識を追加"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Added to the library."
+msgstr "ライブラリに追加しました。"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "All sources"
+msgstr "すべての出典"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "At least one tag is required."
+msgstr "タグを 1 つ以上入力してください。"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Authoritative"
+msgstr "権威"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Connect data sources so the AI answers from a source instead of its own general knowledge. The built-in public-data feeds are Korean; anywhere else, bring your own documents, web pages or APIs."
+msgstr "AI が自身の一般知識ではなく出典に基づいて答えるよう、データソースを接続します。組み込みの公共データフィードは韓国のものです。それ以外の地域では、自分の文書・Web ページ・API をお使いください。"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Derived from data"
+msgstr "観測"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Entered by a person"
+msgstr "利用者の入力"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Everything the AI can cite — synced from sources, shelved by the AI, or written in by hand. Search and filter to see what is actually in here."
+msgstr "AI が引用できるすべてです — ソースから同期したもの、AI が保存したもの、手で書いたもの。検索と絞り込みで実際の中身を確認できます。"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Include set-aside items"
+msgstr "取り置き項目を含める"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Knowledge"
+msgstr "知識"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Knowledge Items"
+msgstr "知識項目"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Most retrieved"
+msgstr "最も多く検索に掛かった項目"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Nothing matches those filters."
+msgstr "条件に一致する項目がありません。"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Open source"
+msgstr "原文を開く"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Public data — Korea"
+msgstr "公共データ — 韓国"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Put back"
+msgstr "戻す"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Retrieved at least once"
+msgstr "1 回以上検索に掛かった"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Reviewed knowledge only: OFF"
+msgstr "確認済みの知識のみ: オフ"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Reviewed knowledge only: ON"
+msgstr "確認済みの知識のみ: オン"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Search knowledge…"
+msgstr "知識を検索…"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Set aside"
+msgstr "取り置く"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Set aside — the AI will not cite this."
+msgstr "取り置きました — AI はこの項目を引用しません。"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Setting saved."
+msgstr "設定を保存しました。"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Show more"
+msgstr "もっと見る"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Showing"
+msgstr "表示"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Source URL"
+msgstr "出典 URL"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "The knowledge library is empty. Until something is in here, the AI answers subject questions from its own general knowledge — with no source to cite."
+msgstr "知識ライブラリが空です。ここに何か入るまで、AI は主題に関する質問に自身の一般知識で答え、引用できる出典がありません。"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "This source is already in your library. Configure it via the settings cog."
+msgstr "このソースはすでにライブラリにあります。設定の歯車から構成してください。"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Three ways to fill it: connect a source above, press Add Knowledge to write in what you already know, or just ask the AI to look something up — it saves what it finds."
+msgstr "満たす方法は 3 つです。上でソースを接続する、「知識を追加」で既に知っていることを書く、または AI に調べてもらう — 見つけたものを自分で保存します。"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "What you write here is treated as confirmed — you are the source. Tag it so it only comes up for the right questions."
+msgstr "ここに書いた内容は確認済みとして扱われます — あなたが出典です。適切な質問にだけ出るようタグを付けてください。"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "When on, the AI may not cite notes it wrote itself until a person confirms them. Authoritative and hand-entered knowledge is unaffected."
+msgstr "オンにすると、AI が自分で書いたメモは人が確認するまで引用できません。権威ある知識と手入力の知識は影響を受けません。"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "With a source link"
+msgstr "出典リンクあり"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Write the knowledge text."
+msgstr "知識の内容を入力してください。"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Your own material — anywhere"
+msgstr "自分の資料 — どこでも"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "comma-separated, required"
+msgstr "カンマ区切り・必須"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "e.g. radish, autumn, irrigation"
+msgstr "例: 大根, 秋, 灌水"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "of"
+msgstr "/"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "optional"
+msgstr "任意"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "retired"
+msgstr "廃棄"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "“Retrieved” means the knowledge search returned it — not that the answer quoted it."
+msgstr "「検索に掛かった」は知識検索がその項目を返したという意味で、回答が引用したという意味ではありません。"

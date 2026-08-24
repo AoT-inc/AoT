@@ -201,43 +201,6 @@ class GeoPlot(CRUDMixin, db.Model):
     program_uuid = db.Column(db.String(36), nullable=True, index=True)
     program_version = db.Column(db.Integer, nullable=True)
 
-    # ── 단계 일정 (P8, 2026-08-24) ────────────────────────────────────
-    #
-    # 단계 전환을 사람 확인 없이 기록한다.
-    #
-    # **프로그램이 아니라 여기 있다**(p6_56 에서 이전). 자동 승인이 묻는 것은
-    # "이 작물의 단계 모델이 정확한가" 가 아니라 "이 자리를 사람 눈 없이 믿을 수
-    # 있는가" 이고, 그것은 작물이 아니라 구획의 성질이다 — 같은 프로그램을 쓰는
-    # 두 구획이 서로 다른 답을 갖는 것이 정상이다. 프로그램에 두면 그 둘을 나누려고
-    # 작물 지식을 한 벌 더 복제하게 된다.
-    #
-    # 기본은 꺼짐이다. 켜져 있는 것이 기본이면 사람이 아무 결정도 하지 않았는데
-    # 단계가 스스로 넘어간다.
-    auto_advance = db.Column(db.Boolean, nullable=False, default=False)
-
-    # 사람이 정한 **단계 경계** — `{단계키: {started_on, set_by, set_at}}`.
-    #
-    # 프로그램의 단계 길이는 표준이고 현실은 표준대로 가지 않는다. 정식이 비로
-    # 닷새 밀리면 그 사실을 적을 자리가 여기다(docs/design/program-layer.md §P8).
-    #
-    # ## 원장(`geo_plot_stage_event`)에 넣지 않는다
-    #
-    # 원장은 추가 전용이고 계획은 자주 고쳐진다 — 축을 드래그할 때마다 줄이 쌓이면
-    # "무슨 일이 있었나" 를 보는 화면이 일정 수정으로 도배된다. 계획은 사건이 아니라
-    # **상태**다.
-    #
-    # ## 절대 날짜로 담는다
-    #
-    # 화면은 "+7일" 로 말하지만 저장은 날짜다. 상대값을 저장하면 앞 단계가 밀릴 때
-    # 그 7일이 어느 날이었는지 조용히 달라진다(색 각인 금지와 같은 결).
-    #
-    # ## 단계 길이는 담지 않는다
-    #
-    # 경계 날짜 하나만 담는다. 길이와 날짜를 둘 다 저장할 수 있으면 어긋났을 때
-    # 무엇이 맞는지 답할 수 없다 — 명시한 경계는 고정되고 나머지는 프로그램 길이로
-    # 이어 붙는다(`plot_context.stage_schedule`).
-    stage_plan = db.Column(db.JSON, nullable=True)
-
     # ── 표시 ──────────────────────────────────────────────────────────
     name = db.Column(db.String(120), nullable=True)
     # 사용자가 구분용으로 고른 색. 미설정이면 테마의 vegetation 으로
@@ -268,71 +231,8 @@ class GeoPlot(CRUDMixin, db.Model):
     # 나오므로 몫을 따로 적으면 정본이 둘이 된다.
     allocation = db.Column(db.JSON, nullable=True)
 
-    # 이 구획만의 **단계 구성** — `{removed: [키], added: [{...}], guidance: {키: 글}}`.
-    #
-    # 프로그램의 단계 목록은 표준이고, 현장에서는 한 단계를 건너뛰거나(육묘 없이
-    # 바로 정식) 한 단계를 더 넣는 일(추비)이 흔하다. 그리고 그 시기에 무엇을
-    # 할지는 프로그램이 비워 둔 채로 오는 경우가 대부분이라, 사람이 그 자리에서
-    # 적을 수 있어야 한다.
-    #
-    # ## 복제가 아니라 **차이**다
-    #
-    # 단계 목록을 통째로 복사하지 않는다. 복사하면 프로그램을 고쳐도 구획이
-    # 따라오지 않고, 버전 고정이 의미를 잃는다(§P8 의 판단 그대로). 여기 담기는
-    # 것은 표준과 달라진 부분뿐이고, 나머지는 여전히 프로그램에서 읽는다.
-    #
-    # ## `stage_plan` 과 나누어 둔다
-    #
-    # 경계 날짜는 확정된 전환보다 앞선 것이 지워진다(`_drop_plan_upto`) — 이미
-    # 답이 나온 질문이라서다. 지침과 구성은 그 규칙을 타면 **안 된다**: 지나간
-    # 단계에 적어 둔 관찰이 전환 한 번에 사라지면 기록으로서 값이 없다.
-    stage_overrides = db.Column(db.JSON, nullable=True)
-
     created_at = db.Column(db.DateTime, default=utc_now)
     updated_at = db.Column(db.DateTime, default=utc_now, onupdate=utc_now)
-
-    def stage_plan_map(self):
-        """계획 경계 → `{단계키: date}`. 깨진 값은 조용히 버린다.
-
-        JSON 이 손상돼도 화면과 제어를 막지 않는다 — 그 구획은 프로그램 기본
-        일정으로 되돌아갈 뿐이다(`stage_list()` 가 같은 태도를 취한다).
-        """
-        from datetime import date as _date
-
-        plan = self.stage_plan
-        if not isinstance(plan, dict):
-            return {}
-        out = {}
-        for key, entry in plan.items():
-            raw = entry.get('started_on') if isinstance(entry, dict) else None
-            if not raw:
-                continue
-            try:
-                y, m, d = (int(x) for x in str(raw).split('-')[:3])
-                out[str(key)] = _date(y, m, d)
-            except (TypeError, ValueError):
-                continue
-        return out
-
-    def stage_override_map(self):
-        """단계 구성 → `{removed: set, added: [dict], guidance: {키: 글}}`.
-
-        깨진 값은 조용히 버린다 — 그 구획은 프로그램 그대로 동작할 뿐이다
-        (`stage_plan_map` 과 같은 태도).
-        """
-        raw = self.stage_overrides
-        if not isinstance(raw, dict):
-            raw = {}
-        removed = raw.get('removed')
-        added = raw.get('added')
-        guidance = raw.get('guidance')
-        return {
-            'removed': {str(k) for k in removed} if isinstance(removed, list) else set(),
-            'added': [a for a in added if isinstance(a, dict) and a.get('key')]
-                     if isinstance(added, list) else [],
-            'guidance': {str(k): v for k, v in guidance.items() if v}
-                        if isinstance(guidance, dict) else {},
-        }
 
     def has_own_geometry(self):
         """자기 기하를 가진 구획인가(= 노지식 정본).
