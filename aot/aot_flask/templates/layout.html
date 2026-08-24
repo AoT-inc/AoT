@@ -59,9 +59,13 @@ IMPORTANT: This is the SOURCE TEMPLATE file.
   <script src="{{ url_for('static', filename='js/vendor/jquery-3.4.1.min.js') }}"></script>
   <script>window.jQuery || document.write('<script src="https://code.jquery.com/jquery-3.6.0.min.js"><\/script>')</script>
   <!-- 위젯 /last·/past 요청 코얼레서: 폴링 틱마다 다수 요청을 /data_batch 1회로 합쳐 6커넥션 직렬화 병목 제거. jQuery 직후 로드 필수. -->
-  <script src="/static/js/common/aot-data-batch.js?v=20260627"></script>
+  <script src="/static/js/common/aot-data-batch.js?v=20260824"></script>
   <!-- 주기 폴링 GET 조건부 요청 레이어(ETag/304). 안 바뀐 주기의 본문 전송과 JSON.parse 제거. jQuery 직후 로드 필수. -->
   <script src="/static/js/common/aot-conditional-get.js?v=1"></script>
+  <!-- 같은 URL 동시요청 합치기 + 짧은 TTL 캐시(window.AoTAPIManager). 지도 범례가
+       같은 프록시 URL 을 값 박스 수만큼 부르던 것을 1회로 접는다. 이 모듈이 없으면
+       호출부가 조용히 생 fetch 로 폴백하므로 지도 스크립트보다 먼저 로드해야 한다. -->
+  <script src="/static/js/common/aot-api-manager.js?v=20260824"></script>
   <script src="{{ url_for('static', filename='js/vendor/popper.min.js') }}"></script>
   <script src="{{ url_for('static', filename='js/vendor/bootstrap.min.js') }}"></script>
   <!-- 모달 시프트 방지: Bootstrap scrollbar 보정 no-op + iOS Safari 배경 스크롤 차단 -->

@@ -543,6 +543,11 @@ def input_mod(form_mod, request_form):
 
         if form_mod.period.data:
             mod_input.period = form_mod.period.data
+            # 비우면 NULL — '주기에서 파생하라' 는 뜻이다(p6_55).
+            # 0 을 넣으면 '즉시 만료' 로 읽힐 수 있으므로 미설정으로 다룬다.
+            if hasattr(form_mod, 'max_age_s'):
+                _ma = form_mod.max_age_s.data
+                mod_input.max_age_s = int(_ma) if _ma else None
         if form_mod.start_offset.data:
             mod_input.start_offset = form_mod.start_offset.data
 

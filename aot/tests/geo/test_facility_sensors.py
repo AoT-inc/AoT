@@ -465,7 +465,7 @@ class TestPeriodAwareMaxAge:
             return [ts, 21.5]
 
         with patch.object(fs, 'get_last_measurement', side_effect=fake_get_last), \
-             patch.object(fs, '_period_by_device', return_value={'dev-1': period}):
+             patch.object(fs, '_freshness_by_device', return_value={'dev-1': (period, None)}):
             return fs.read_facility_sensors([_binding()], max_age=max_age)
 
     def test_display_accepts_value_older_than_300_when_period_is_long(self):
@@ -506,7 +506,7 @@ class TestPeriodAwareMaxAge:
                 return [None, None]
             return [ts, 21.5]
 
-        # _period_by_device 를 패치하지 않는다 — 실제로 DB 가 없어 빈 dict 가 나온다.
+        # _freshness_by_device 를 패치하지 않는다 — 실제로 DB 가 없어 빈 dict 가 나온다.
         with patch.object(fs, 'get_last_measurement', side_effect=fake_get_last):
             r = fs.read_facility_sensors([_binding()])
         assert r['sensors'][0]['valid'] is False   # 하한 300 < 400
@@ -530,9 +530,75 @@ class TestPeriodAwareMaxAge:
             return [ts, 21.5]
 
         with patch('aot.utils.influx.get_last_measurement', side_effect=fake_get_last), \
-             patch.object(fs, '_period_by_device', return_value={'dev-1': 600.0}), \
+             patch.object(fs, '_freshness_by_device', return_value={'dev-1': (600.0, None)}), \
              patch.object(fs, 'channel_meta_for_dm', return_value={}):
             out = fs.read_fitting_sensors(sensors)
         ch = out[0]['channels'][0]
         assert ch['valid'] is True and ch['stale'] is False
         assert ch['value'] == pytest.approx(21.5)
+
+
+class TestDeviceLevelMaxAge:
+    """장치가 명시한 유효 수명(`Input.max_age_s`)이 호출자 값보다 먼저다 (p6_55).
+
+    현장 센서는 갱신 주기가 제각각이다 — LoRaWAN 하트비트 30~60분 · MQTT 60초 ·
+    기상청 10분. 그래서 호출자가 든 숫자 하나(예: 코디네이터의 `sensor_max_age`)로
+    전부를 판정하면, 느린 장치는 늘 고장으로 보이고 빠른 장치는 너무 오래된 값을
+    받는다. 그 장치를 아는 사람이 적어 둔 값이 이겨야 한다.
+
+    **우선순위가 뒤집히면 컬럼이 무의미해진다** — 제어 경로는 늘 `requested` 를
+    들고 오기 때문에, `requested` 가 먼저면 장치별 설정이 제어에서 통째로 무시된다.
+    """
+
+    def test_장치값이_호출자값을_이긴다(self):
+        from aot.aot_flask.geo.facility_sensors import (
+            _max_age_for, DEFAULT_MAX_AGE_S, STALE_PERIOD_FACTOR)
+        # 제어가 120초를 들고 와도, 그 장치가 3600 이라고 적어 두었으면 3600.
+        assert _max_age_for(120, 60.0, 3600) == 3600
+
+    def test_장치값이_주기파생을_이긴다(self):
+        from aot.aot_flask.geo.facility_sensors import (
+            _max_age_for, DEFAULT_MAX_AGE_S, STALE_PERIOD_FACTOR)
+        assert _max_age_for(None, 86400.0, 900) == 900
+
+    def test_장치값이_없으면_종전대로(self):
+        from aot.aot_flask.geo.facility_sensors import (
+            _max_age_for, DEFAULT_MAX_AGE_S, STALE_PERIOD_FACTOR)
+        assert _max_age_for(120, 60.0, None) == 120
+        assert _max_age_for(None, 300.0, None) == 300 * STALE_PERIOD_FACTOR
+        assert _max_age_for(None, None, None) == DEFAULT_MAX_AGE_S
+
+    def test_0_이나_빈값은_미설정으로_본다(self):
+        """0 을 '즉시 만료' 로 읽으면 모든 값이 버려진다 — 미설정으로 다룬다."""
+        from aot.aot_flask.geo.facility_sensors import (
+            _max_age_for, DEFAULT_MAX_AGE_S, STALE_PERIOD_FACTOR)
+        assert _max_age_for(120, 60.0, 0) == 120
+        assert _max_age_for(120, 60.0, '') == 120
+
+    def test_이상한_값은_무시하고_다음_순위로(self):
+        from aot.aot_flask.geo.facility_sensors import (
+            _max_age_for, DEFAULT_MAX_AGE_S, STALE_PERIOD_FACTOR)
+        assert _max_age_for(120, 60.0, 'abc') == 120
+
+    def test_컬럼이_없는_DB_에서도_돈다(self):
+        """`max_age_s` 는 p6_55 에서 생겼다 — 업그레이드 전 설치에서도 죽지 않아야 한다.
+
+        `_freshness_by_device` 가 컬럼 조회에 실패하면 주기만으로 재시도하고,
+        그것도 안 되면 빈 dict 를 준다(호출자는 기본값으로 떨어진다).
+        """
+        from aot.aot_flask.geo.facility_sensors import (
+            _max_age_for, DEFAULT_MAX_AGE_S, STALE_PERIOD_FACTOR)
+        import aot.aot_flask.geo.facility_sensors as fs
+        assert fs._freshness_by_device([]) == {}
+        assert fs._freshness_by_device(None) == {}
+        # DB 가 없는 환경에서도 예외를 올리지 않는다
+        assert isinstance(fs._freshness_by_device(['no-such-device']), dict)
+
+    def test_옛_헬퍼가_여전히_주기만_돌려준다(self):
+        """`_period_by_device` 는 호환용 껍데기로 남아 있다."""
+        from aot.aot_flask.geo.facility_sensors import (
+            _max_age_for, DEFAULT_MAX_AGE_S, STALE_PERIOD_FACTOR)
+        import aot.aot_flask.geo.facility_sensors as fs
+        with patch.object(fs, '_freshness_by_device',
+                          return_value={'a': (60.0, 900), 'b': (None, 300)}):
+            assert fs._period_by_device(['a', 'b']) == {'a': 60.0}

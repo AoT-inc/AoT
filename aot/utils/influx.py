@@ -348,14 +348,36 @@ def query_last_values_bulk(specs, past_sec=600):
     `channel_str` is str(channel) or '' — Influx tags are strings, so callers
     must look up with the same normalisation (see _bulk_key).
     Returns {} on any failure so callers can fall back to the per-item path.
+
+    A caller that must tell "the query failed" from "the query ran and that
+    series simply has no point in the window" cannot do it here — both are {}.
+    Use query_last_values_bulk_status() for that.
+    """
+    values, _ok = query_last_values_bulk_status(specs, past_sec=past_sec)
+    return values
+
+
+def query_last_values_bulk_status(specs, past_sec=600):
+    """query_last_values_bulk + whether the query actually ran → (values, ok).
+
+    An empty result is ambiguous: the query may have failed, or it may have run
+    and found nothing (a fresh install with no measurements yet — every series
+    misses). A caller that falls back to the per-item path on a miss needs the
+    difference. Treating "ran, found nothing" as a miss puts it right back on
+    the N-queries path it was trying to leave, and that is the exact case where
+    N is largest, so the fallback is at its most expensive when it buys nothing.
+
+    `ok` is True when the Flux query returned and parsed. With ok=True the
+    absence of a key means that series has no point inside `past_sec` — an
+    answer, not a failure.
     """
     specs = [s for s in specs if s and s[0] and s[1]]
     if not specs:
-        return {}
+        return {}, True
 
     conn = _influx_connection_params()
     if not conn:
-        return {}
+        return {}, False
     url, token, bucket, _version = conn
 
     units = sorted({str(s[0]) for s in specs})
@@ -376,7 +398,7 @@ def query_last_values_bulk(specs, past_sec=600):
             tables = client.query_api().query(query)
     except Exception as err:
         logger.error(f"query_last_values_bulk() InfluxDB query failed: {err}")
-        return {}
+        return {}, False
 
     out = {}
     try:
@@ -391,8 +413,8 @@ def query_last_values_bulk(specs, past_sec=600):
                 out[key] = [v['_time'].timestamp(), v['_value']]
     except Exception as err:
         logger.error(f"query_last_values_bulk() result parse failed: {err}")
-        return {}
-    return out
+        return {}, False
+    return out, True
 
 
 def bulk_key(unit, device_id, channel, measure):

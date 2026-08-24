@@ -156,6 +156,12 @@ class InputMod(FlaskForm):
         )],
         widget=NumberInput(step='any')
     )
+    max_age_s = IntegerField(
+        lazy_gettext('Max Measurement Age'),
+        validators=[validators.Optional(),
+                    validators.NumberRange(min=1, max=604800)],
+        widget=NumberInput()
+    )
     start_offset = DecimalField(
         lazy_gettext('Start Offset'),
         validators=[DataRequired(),

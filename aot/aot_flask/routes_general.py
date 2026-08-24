@@ -745,32 +745,41 @@ _PERIOD_LOOKBACK_CAP_S = 2592000   # 30일 — 주기가 비정상적으로 큰 
 
 
 def _sample_periods(unique_ids):
-    """{Input.unique_id: period(초)} 를 IN 조회 한 번으로 가져온다.
+    """{Input.unique_id: (period(초), max_age_s(초) or None)} — IN 조회 한 번.
 
     Input 만 대상이다 — Output/Function/PID 의 주기는 "센서가 언제 값을 낼지"와
     의미가 달라 창을 넓힐 근거가 되지 않는다.
+
+    **값이 튜플이다**(p6_55 이전에는 주기 하나였다). 장치가 자기 유효 수명을
+    갖게 되면서 창을 넓힐 근거가 둘이 됐다 — 주기 × 배수, 그리고 장치가 직접
+    적어 둔 값. 조회는 `measurement_freshness` 가 한다.
     """
-    ids = [u for u in set(unique_ids or []) if u]
-    if not ids:
-        return {}
-    rows = Input.query.filter(Input.unique_id.in_(ids)).with_entities(
-        Input.unique_id, Input.period).all()
-    return {uid: period for uid, period in rows if period}
+    from aot.utils.measurement_freshness import freshness_by_device
+    return freshness_by_device(unique_ids)
 
 
-def _effective_lookback(requested, sample_period):
-    """호출자가 요청한 창과 장치 주기에서 실제 조회 창(초, 문자열)을 정한다."""
+def _effective_lookback(requested, freshness):
+    """호출자 요청 · 장치 주기 · 장치 명시 수명에서 실제 조회 창(초, 문자열).
+
+    `freshness` 는 `_sample_periods` 가 준 `(주기, max_age_s)` 튜플이다.
+
+    **넓히기만 한다.** 요청창이 하한이라는 계약은 그대로다 — 장치가 말하는
+    것은 "이만큼은 봐야 값이 있다" 이지 "이보다 멀리 보지 말라" 가 아니다.
+    좁히면 사용자가 30일을 요청해도 장치 수명만큼만 보게 되어 그래프가
+    통째로 빈다.
+    """
+    from aot.utils.measurement_freshness import widen_window
+    period, device_max_age = (freshness if isinstance(freshness, tuple)
+                              else (freshness, None))
+    if period is None and device_max_age is None:
+        return requested
+    widened = widen_window(requested, period, device_max_age,
+                           factor=_PERIOD_LOOKBACK_FACTOR,
+                           cap=_PERIOD_LOOKBACK_CAP_S)
     try:
-        req = float(requested)
+        return str(int(widened))
     except (TypeError, ValueError):
         return requested
-    if req <= 0 or not sample_period:      # '0' = 무제한(그대로 둔다)
-        return requested
-    try:
-        derived = float(sample_period) * _PERIOD_LOOKBACK_FACTOR
-    except (TypeError, ValueError):
-        return requested
-    return str(int(min(max(req, derived), _PERIOD_LOOKBACK_CAP_S)))
 
 
 def _prefetch_last_metadata(measurement_ids):
@@ -973,9 +982,10 @@ def data_batch():
     meas_cache, conv_cache = _prefetch_last_metadata(
         [it.get('measurement_id') for it in items if isinstance(it, dict)])
 
-    # 장치 샘플링 주기 — 조회 창을 장치별로 넓히는 근거(_effective_lookback).
-    # 여기서도 IN 조회 한 번이다; 항목별로 Input 을 찾으면 배치의 의미가 사라진다.
-    period_by_device = _sample_periods(
+    # 장치 신선도(주기 + 명시 수명) — 조회 창을 장치별로 넓히는 근거
+    # (_effective_lookback). 여기서도 IN 조회 한 번이다; 항목별로 Input 을
+    # 찾으면 배치의 의미가 사라진다.
+    fresh_by_device = _sample_periods(
         [it.get('unique_id') for it in items
          if isinstance(it, dict) and it.get('kind') != 'past'
          and it.get('measure_type') == 'input'])
@@ -1007,7 +1017,7 @@ def data_batch():
         unit, channel, measurement = resolved
         # 창을 장치 주기에 맞춰 넓힌다 — 주기가 요청 창보다 긴 장치의 값이
         # 조용히 누락되던 것을 막는다. 짧은 장치는 요청 창 그대로.
-        period = _effective_lookback(period, period_by_device.get(unique_id))
+        period = _effective_lookback(period, fresh_by_device.get(unique_id))
         last_jobs.append((i, unique_id, unit, channel, measurement, period))
 
     if last_jobs:

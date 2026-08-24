@@ -618,9 +618,6 @@ def _apply_fields(row, data):
             row.targets_methods = tm
             changed = True
 
-    if 'auto_advance' in data:
-        row.auto_advance = bool(data.get('auto_advance'))
-
     if 'photosynthesis' in data:
         photo = data.get('photosynthesis') or None
         perr = _check_photosynthesis(photo)
@@ -689,7 +686,6 @@ def create_program(data, source='user'):
         stages=stages,
         targets_methods=tmethods,
         photosynthesis=data.get('photosynthesis') or None,
-        auto_advance=bool(data.get('auto_advance')),
         notes=(data.get('notes') or None),
         tab_id=tab_id,
         version=1)
@@ -916,5 +912,7 @@ def to_dict(row, with_stages=True):
         # 함수 uuid 는 프로그램 어디에도 없다.
         out['resource_defs'] = row.resource_def_list()
         out['photosynthesis'] = row.photosynthesis
-    out['auto_advance'] = bool(getattr(row, 'auto_advance', False))
+    # `auto_advance` 는 여기 없다 — 자동 승인은 구획의 성질이다(P8).
+    # `GeoPlot.auto_advance` 가 정본이고, 프로그램 페이로드에 남겨 두면 화면이
+    # 다시 그 칸을 그린다.
     return out

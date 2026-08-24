@@ -410,6 +410,12 @@
                             const fn = _plotControlHooks[uid];
                             if (fn) fn(uid, popup, body, plotUuid);
                         },
+                        // 뒤로가기 — 상세가 오는 즉시. `/contents` 를 기다리면
+                        // 창이 다 그려진 뒤에도 화살표만 한참 늦게 나타난다.
+                        wireUp: function (uid, body, plot) {
+                            const fn = _plotUpHooks[uid];
+                            if (fn) fn(body, plot);
+                        },
                         // 연 구획으로 지도를 옮긴다. 구획 도형은 응답의 feature 에
                         // 실려 오므로(구획 소스는 AoTMapPlot 이 직접 붙인다) 그것을
                         // 먼저 쓰고, 없으면 uuid 로 지도 소스를 뒤진다.
@@ -574,26 +580,44 @@
             }
         });
 
-        // Persist view state (center, zoom, pitch, bearing) after user interaction
+        // Persist view state (center, zoom, pitch, bearing) after user interaction.
+        //
+        // ⚠ **사용자가 움직였을 때만 쓴다.** `moveend` 는 지도가 처음 자기
+        // 위치로 잡을 때도 발화하므로, 그대로 두면 대시보드를 열기만 해도 지도
+        // 위젯 수만큼 POST 가 나간다(김제 대시보드 실측 3회 — 사용자는 아무것도
+        // 하지 않았고, 저장되는 값은 방금 읽어온 값 그대로다). 라즈베리파이처럼
+        // 워커가 하나인 서버에서는 그 쓰기가 같은 순간의 읽기와 경합한다.
+        //
+        // 판정은 **저장될 값이 실제로 달라졌는가**로 한다. `originalEvent` 유무로
+        // 사람/코드를 가르는 방법도 있지만, 확대·축소 버튼은 `map.zoomIn()` 을
+        // 부르는 프로그램 이동이라 그 방식은 버튼으로 바꾼 뷰를 저장하지 않는다.
+        // 첫 정착값을 기준선으로 잡아 두고 그와 다를 때만 보내면, 무엇이 지도를
+        // 움직였든 "바뀐 것만 저장" 이 된다.
         let _viewSaveTimer;
+        let _lastViewPayload = null;
         map.on('moveend', function() {
             clearTimeout(_viewSaveTimer);
             _viewSaveTimer = setTimeout(function() {
                 const widgetId = (vars && vars.widgetId) || uniqueId;
                 const center = map.getCenter();
+                const options = {
+                    fallback_latitude:  center.lat.toFixed(6),
+                    fallback_longitude: center.lng.toFixed(6),
+                    default_zoom:       map.getZoom().toFixed(2),
+                    default_pitch:      Math.round(map.getPitch()),
+                    default_bearing:    Math.round(map.getBearing())
+                };
+                const payload = JSON.stringify(options);
+                // 첫 발화 = 지도가 자기 초기 위치로 잡은 것. 기준선으로만 삼고
+                // 저장하지 않는다 — 여기서 보내면 대시보드를 열기만 해도 지도
+                // 위젯 수만큼 쓰기가 나간다(실측 3회, 값은 방금 읽은 것 그대로).
+                if (_lastViewPayload === null) { _lastViewPayload = payload; return; }
+                if (payload === _lastViewPayload) return;   // 되돌아온 경우
+                _lastViewPayload = payload;
                 fetch('/save_widget_custom_options', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        widget_id: widgetId,
-                        options: {
-                            fallback_latitude:  center.lat.toFixed(6),
-                            fallback_longitude: center.lng.toFixed(6),
-                            default_zoom:       map.getZoom().toFixed(2),
-                            default_pitch:      Math.round(map.getPitch()),
-                            default_bearing:    Math.round(map.getBearing())
-                        }
-                    })
+                    body: JSON.stringify({ widget_id: widgetId, options: options })
                 }).catch(function(e) { })
             }, 1000);
         });
@@ -646,6 +670,10 @@
     // try/catch 가 삼켜 **식생 레이어가 통째로 안 뜬다**(실제로 그렇게 됐다).
     // 그래서 늦게 찾아 쓴다.
     var _plotControlHooks = {};
+    // 구획 모달의 **뒤로가기 배선**. 제어 배선과 따로 두는 이유는 시점이
+    // 다르기 때문이다 — 상위가 누구인지는 구획 상세(`/api/geo/plot/<uuid>`)에
+    // 이미 들어 있고, 제어는 그보다 훨씬 무거운 `/contents` 를 기다린다.
+    var _plotUpHooks = {};
 
     function _modalUrl(kind, uuid, channel) {
         if (!uuid) return null;
@@ -1943,6 +1971,66 @@
         // 식생 로더가 늦게 찾아 쓸 수 있게 등록한다(등록소 주석 참조).
         _plotControlHooks[uniqueId] = _attachPlotControl;
 
+        // 뒤로가기는 **구획 상세가 오는 즉시** 배선한다.
+        //
+        // 예전에는 `/contents` 응답 안에서만 드러냈다. 그 조회는 센서·환경·밸브를
+        // 함께 끌어오는 무거운 것이라, 창이 다 그려진 뒤에도 제목줄의 화살표만
+        // 한참 뒤에 튀어나왔다 — 사용자에게는 버튼이 늦게 "생기는" 것으로 보인다.
+        //
+        // 필요한 것(상위가 시설인가 구역인가, 그 이름)은 상세 응답에 이미 다
+        // 들어 있다. `_wireUpBtn` 은 `dataset.wired` 로 두 번 붙지 않으므로
+        // `/contents` 쪽 호출은 그대로 둬도 무해하다(그쪽이 먼저 오는 경로도 있다).
+        //
+        // **지도에 이미 있는 것으로 먼저 푼다.** 목록 응답에는 `zone_uuid` 만
+        // 있고 그 도형이 구역인지 필지인지, 이름이 무엇인지는 없다 — 그런데
+        // 지도는 그 도형을 이미 그리고 있다. 어느 소스에서 찾았는지가 곧 종류다
+        // (도형 properties 에는 type 이 없다). 그래서 조회를 기다리지 않고
+        // **창이 뜨는 순간** 화살표를 세울 수 있다.
+        function _upFromMap(uuid) {
+            var pairs = [['zones', 'zone'], ['sites', 'site'],
+                         ['facilities', 'facility']];
+            for (var i = 0; i < pairs.length; i++) {
+                var src = map.getSource(pairs[i][0]);
+                var hit = _findInFeatures(
+                    (src && src._data && src._data.features) || [], uuid);
+                if (!hit) continue;
+                var pr = hit.properties || {};
+                return { kind: pairs[i][1], uuid: uuid,
+                         name: pr.name || pr.label_name || '' };
+            }
+            return null;
+        }
+
+        _plotUpHooks[uniqueId] = function (body, plot) {
+            var _pl = plot || {};
+            var _sn = _pl.sensors || {};
+            var _up = null;
+            if (_pl.facility_uuid) {
+                _up = { kind: 'facility', uuid: _pl.facility_uuid,
+                        name: _pl.facility_name };
+            } else if (_sn.zone_uuid) {
+                // 상세가 왔다 — 종류를 **서버가 준 값**으로 정한다. `zone_uuid`
+                // 는 zone 이 아닐 수 있다: 구역이 없는 지도에서는 서버가
+                // 필지(site)를 넣어 준다.
+                _up = { kind: (_sn.zone_kind === 'site') ? 'site' : 'zone',
+                        uuid: _sn.zone_uuid, name: _sn.zone_name };
+            } else if (_pl.zone_uuid && _pl.zone_kind) {
+                // 목록 응답도 종류와 이름을 함께 준다 — 상세를 기다릴 이유가 없다.
+                _up = { kind: (_pl.zone_kind === 'site') ? 'site' : 'zone',
+                        uuid: _pl.zone_uuid, name: _pl.zone_name };
+            } else if (_pl.zone_uuid) {
+                // 옛 응답(종류 없음) — 지도에 그 도형이 올라와 있으면 거기서
+                // 푼다. 위젯이 구역 레이어를 안 그리는 설정이면 못 찾는다:
+                // 그때는 그냥 두고 상세가 오면 붙는다(두 번 붙지는 않는다).
+                _up = _upFromMap(_pl.zone_uuid);
+            }
+            if (!_up) return;
+            _wireUpBtn(body, uniqueId, _up, function () {
+                var z2 = _zonePopupState[uniqueId];
+                if (z2 && z2.popup) { try { z2.popup.remove(); } catch (e) {} }
+            });
+        };
+
         // ── 상위(필지)로 올라가는 화살표 — 구역·시설 모달 제목줄 공용 ──────────
         //
         // site → 구역/시설로 내려가는 길은 필지 요약의 줄 클릭으로 열렸는데,
@@ -2021,11 +2109,23 @@
             var inst = window.AoTWidgetInstances[uid];
             if (!inst || inst._zoneStatusTimer) return;
 
-            function _tick() {
+            // 이 폴러는 **위젯 인스턴스마다** 돈다. 한 대시보드에 같은 지도를
+            // 보는 지도 위젯이 여럿이면(김제: 지도·위성·위성2) 완전히 같은
+            // 요청이 위젯 수만큼 같은 순간에 나갔다 — 생 fetch 라 공유 캐시를
+            // 지나지 않았기 때문이다. 주기(60초)가 TTL(10초)보다 길어 신선도는
+            // 그대로이고, 합쳐지는 것은 동시에 깨어난 위젯들의 중복뿐이다.
+            //
+            // `force` 는 다음 주기를 기다릴 수 없는 자리(대표 측정 변경 직후)용
+            // 이다 — 캐시를 건너뛰지 않으면 방금 바꾼 것이 최대 10초 안 보인다.
+            function _tick(force) {
                 var i2 = window.AoTWidgetInstances[uid];
                 if (!i2 || !i2.map) return;
-                fetch('/api/geo/zones/status?map_uuid=' + encodeURIComponent(mapUuid))
-                    .then(function (r) { return r.ok ? r.json() : null; })
+                var _u = '/api/geo/zones/status?map_uuid=' + encodeURIComponent(mapUuid);
+                var _p = window.AoTGeoData
+                    ? window.AoTGeoData.get(_u, { force: !!force })
+                          .then(function (r) { return r.ok ? r.json() : null; })
+                    : fetch(_u).then(function (r) { return r.ok ? r.json() : null; });
+                _p
                     .then(function (j) {
                         if (!j || !j.ok) return;
                         // 라벨이 아직 안 만들어졌을 수 있다 — 이 조회는 구역
@@ -2043,7 +2143,7 @@
             inst._zoneStatusTimer = setInterval(_tick, 60000);
             // 대표 측정을 바꾼 직후처럼 다음 주기를 기다릴 수 없는 자리를 위해.
             // 서버 캐시(60초)도 함께 비워졌을 때만 새 값이 온다.
-            inst._refreshZoneStatusNow = _tick;
+            inst._refreshZoneStatusNow = function () { _tick(true); };
         }
 
         // 라벨이 나타날 때까지 짧게 재시도. 라벨 생성은 다른 비동기 경로라
@@ -3872,23 +3972,39 @@
             return null;
         }
 
-        /* 구역 모달에 보일 센서 — 그 구역의 것 먼저, 다음에 어느 구역에도
-         * 배정되지 않은 시설 공통 센서(단동 시설·시설 한가운데 센서).
+        /* 이 모달에 보일 센서 — 이 동의 것, 어느 동에도 배정되지 않은 시설 공통
+         * 센서(단동 시설·시설 한가운데 센서), 그리고 **시설의 실외 센서 전부**.
          *
-         * **실외는 뺀다.** 구역은 시설 **안**의 한 칸이고, 그 안이 어떤지를
-         * 묻는 자리다. 기상대는 밖이 어떤지를 참고하라고 둔 것이라 여기 섞이면
-         * 같은 '온도' 가 두 뜻으로 한 목록에 선다(`AoTMapBay.isIndoor` 주석 —
-         * 위치로는 가릴 수 없어 기상대도 구역 배정을 달고 온다).
+         * ⚠ **실외를 넣는다.** 시설은 안과 밖을 함께 다루는 단위다 — 창을 열지,
+         * 커튼을 칠지는 바깥이 어떤가에서 나오는 판단이라, 환경 카드가 그것을
+         * 말하지 못하면 사용자는 화면을 하나 더 열어야 한다. 예전에는 뺐는데
+         * 그것이 뒤집힌 처리였다(2026-08-24).
          *
-         * 실외 값이 사라지는 것은 아니다 — 시설 [현재] 카드의 '실외' 줄이
-         * 계속 답한다. */
+         * 실외는 **동으로 나누지 않는다.** 기상대도 시설 어딘가에 서 있어서
+         * 좌표 → 슬라이스 매핑이 그것에 동을 붙이지만(실측: 영양 육묘장의
+         * '기상대' 가 `bay_id: 'bay_1_6'`), 그 배정은 뜻이 없다 — 바깥은 어느
+         * 동의 것도 아니다. 그래서 `bay_id` 를 보지 않고 시설 전체에서 모은다.
+         *
+         * 순서는 **안이 먼저, 밖이 나중**이다. 이 자리에서 먼저 읽어야 할 것은
+         * 기르는 대상이 겪는 환경이고, 바깥은 그 판단의 근거다.
+         *
+         * ⚠ **평균에는 여전히 넣지 않는다**(`_sensorSummary` 가 거른다). 목록에
+         * 보이는 것과 한 숫자로 접는 것은 다른 일이다 — 겨울에 안 25°C · 밖
+         * -5°C 를 평균 내면 칩이 10°C 라고 말하고 그 값은 어느 곳도 가리키지
+         * 않는다.
+         *
+         * 반대로 **구획(plot) 모달에는 실외가 들어가지 않는다** — 그쪽은 기르는
+         * 대상이 겪는 환경만 묻는 자리다(`plot_context.facility_sensor_ids`). */
         function _baySensors(st, facilityUuid, bayId) {
             var all = st.sensorsByFac[facilityUuid] || [];
             var inBay = window.AoTMapBay.filterSensors(all, bayId);
             var common = all.filter(function (s) {
                 return window.AoTMapBay.isIndoor(s) && s.bay_id == null;
             });
-            return inBay.concat(common);
+            var outdoor = all.filter(function (s) {
+                return !window.AoTMapBay.isIndoor(s);
+            });
+            return inBay.concat(common).concat(outdoor);
         }
 
         // Build the per-sensor tab structure once per popup (one tab per sensor,
@@ -7336,6 +7452,19 @@
      * @param uid    위젯 인스턴스 id
      * @param target uuid 문자열, 또는 { geometry } / { lng, lat, zoom }
      */
+    /**
+     * 이 지도가 **잠겨 있는가**.
+     *
+     * 잠금의 목적은 "이 화면은 여기를 본다" 를 고정하는 것이다. 그래서 판정은
+     * 저장된 옵션이 아니라 **지금 상호작용이 꺼져 있는가**로 한다 — 잠금은
+     * 버튼으로 실행 중에 바뀌고(`_setMapInteraction`), 옵션은 저장 왕복이
+     * 끝나야 최신이 된다. 둘을 각각 보면 방금 잠근 지도가 한 박자 동안 움직인다.
+     */
+    function _mapIsLocked(map) {
+        try { return !!(map && map.dragPan && !map.dragPan.isEnabled()); }
+        catch (e) { return false; }
+    }
+
     function _focusMapOn(uid, target, opts) {
         opts = opts || {};
         var inst = window.AoTWidgetInstances && window.AoTWidgetInstances[uid];
@@ -7359,6 +7488,22 @@
         } else if (target.lng != null && target.lat != null) {
             point = target;
         }
+
+        // ⚠ **잠긴 지도는 옮기지 않는다.** 잠금은 "다른 곳으로 가지 않는다" 는
+        // 뜻인데, 모달을 열 때마다 카메라가 대상으로 날아가면 그 뜻이 무너진다 —
+        // 사용자가 맞춰 둔 화면이 창을 하나 열 때마다 사라진다.
+        //
+        // 강조(`_highlightShape`)는 **위에서 이미 걸었다.** 그것은 카메라를
+        // 건드리지 않으므로 잠금과 무관하고, 오히려 지도가 움직이지 않을 때야말로
+        // "이 패널이 어느 도형 얘기인가" 를 알려 줄 유일한 단서다.
+        //
+        // 여기서 되돌리므로 `_lastFocus` 도 남지 않는다 — 닫은 뒤의 재구성
+        // (`_refocusAfterClose`)·화면 변화 재조정(`_refitCurrentFocus`)도 함께
+        // 조용해진다. 셋 다 이 함수를 지나므로 관문은 여기 하나면 된다.
+        //
+        // 사용자가 직접 누르는 이동(주소 검색·현위치·초기화·클러스터 확대)은
+        // 막지 않는다. 그것은 "가겠다" 는 의사표시이지 부수 효과가 아니다.
+        if (_mapIsLocked(map)) return;
 
         var rect = _visibleMapRect(uid);
         if (!rect) return;
@@ -7669,7 +7814,11 @@
         closeBtn.setAttribute('type', 'button');
         closeBtn.setAttribute('aria-label', 'Close');
         closeBtn.innerHTML = '&#x2715;';
-        closeBtn.style.cssText = 'position:absolute;top:10px;right:14px;background:none;border:none;cursor:pointer;font-size:16px;line-height:1;padding:4px 6px;z-index:1;';
+        // 자리와 층만 인라인으로 둔다. **생김새는 CSS 가 갖는다**
+        // (`button.aot-center-modal-close`) — 인라인은 어떤 규칙도 이기므로,
+        // 여기에 배경·여백을 적어 두면 스타일시트에서 아무리 고쳐도 안 먹는다
+        // (실측: 뒤로가기와 짝을 맞추려 배경을 줬는데 이 한 줄에 막혔다).
+        closeBtn.style.cssText = 'position:absolute;top:10px;right:14px;border:none;cursor:pointer;line-height:1;z-index:1;';
 
         popupWrap.appendChild(box);
         popupWrap.appendChild(closeBtn);
@@ -8060,6 +8209,8 @@
         // 나눈 것이라 그 아래.
         bay: 6, plot: 5,
         equipment: 4, device: 3, output: 2, input: 1, 'function': 1,
+        // 노트 핀 — 사람이 그 자리에 일부러 찍은 표식이라 장치 라벨만큼 구체적이다.
+        note: 2,
         // 센서(측정값) 라벨 — 가장 구체적이라 쌓임은 낮고 충돌에서는 이긴다.
         // **두 표 모두에 없었다**(2026-08-23 발견): 쌓임은 0 으로 깔리고 충돌
         // 순위는 `style.zIndex` 폴백이라 호버 여부에 따라 튀고 있었다.
@@ -8077,6 +8228,11 @@
     // LABEL_Z_FRONT(9000)라 우선순위가 포인터에 따라 튄다.
     var LABEL_COLLISION_RANK = {
         'function': 10, input: 9, sensor: 9, output: 8, device: 7, equipment: 6,
+        // 노트는 **살아 있는 값에 진다.** 겹치면 지금 읽어야 하는 것은 측정값·
+        // 장치 상태이고, 노트는 정적이라 줌인하거나 목록에서 다시 찾을 수 있다.
+        // 대신 영역 라벨(구획·구역·대지)보다는 앞선다 — 그 자리를 콕 집은
+        // 표식이라 넓은 이름에 가려지면 찍은 뜻이 없어진다.
+        note: 5.5,
         plot: 5, bay: 4, facility: 3, zone: 2, site: 1
     };
 
@@ -8111,7 +8267,11 @@
     // 화면만 덮으므로 접는다. 기준 줌 자체는 위젯 옵션(label_min_zoom, 기본 17).
     var LABEL_ZOOM_GATED = {
         facility: 1, bay: 1, plot: 1,
-        device: 1, output: 1, input: 1, 'function': 1, equipment: 1, sensor: 1
+        device: 1, output: 1, input: 1, 'function': 1, equipment: 1, sensor: 1,
+        // 노트 핀도 함께 접힌다. 멀리서 보는 화면에서 위치를 잡는 기준은
+        // 대지·구역이고(그 둘만 게이트 밖이다), 노트는 그 자리에 가까이
+        // 갔을 때 읽는 것이다 — 축척이 낮을수록 핀만 빽빽해져 지도를 덮는다.
+        note: 1
     };
     var LABEL_MIN_ZOOM_DEFAULT = 17;
 
@@ -9972,18 +10132,16 @@
                         });
                     }
                 } else if (key === 'plot') {
-                    // 구획 라벨은 다른 모듈(`AoTMapPlot`)이 만든다. 모듈의 라벨
-                    // 축을 함께 내려야 한다 — 그러지 않으면 폴링이 라벨을 다시
-                    // 그릴 때(`_applyLabelZoom`) 켜진 채로 돌아온다.
+                    // 구획 라벨은 다른 모듈(`AoTMapPlot`)이 만든다. 그 라벨의
+                    // DOM 을 들고 있는 것도 그 모듈이므로 **클래스는 그쪽에서만
+                    // 새긴다** — 여기서 한 번 더 새기면 두 곳이 같은 요소를
+                    // 건드리는 자리가 되고, 나중에 한쪽만 고치면 조용히 갈린다
+                    // (도형·라벨이 반대로 켜지던 사고가 그 모양이었다).
+                    // `setLabelVisible` 은 폴링이 라벨을 다시 그릴 때도 이 값을
+                    // 다시 입힌다(`_renderLabels` 의 `_applyLabelVisibility`).
                     if (window.AoTMapPlot && window.AoTMapPlot.setLabelVisible) {
                         try { window.AoTMapPlot.setLabelVisible(uniqueId, inst.map, !hidden); }
                         catch (e) {}
-                    }
-                    var _mc = inst.map && inst.map.getContainer && inst.map.getContainer();
-                    if (_mc) {
-                        _mc.querySelectorAll('[data-label-kind="plot"]').forEach(function(el) {
-                            el.classList.toggle('aot-type-hidden', hidden);
-                        });
                     }
                 }
                 if (window.AoTMapLabelLayers && _LABEL_REGCAT[key]) {
@@ -10873,6 +11031,15 @@
                         el.className = 'aot-map-note-marker';
                         el.style.cssText = 'background:var(--gray-dark, #495057); border:2px solid #fff; border-radius:50%; width:24px; height:24px; display:flex; justify-content:center; align-items:center; box-shadow:0 2px 5px rgba(0,0,0,0.3); color:#fff; cursor:pointer;';
                         el.innerHTML = '<i class="fas fa-map-pin" style="font-size:12px;"></i>';
+                        // **위젯의 라벨 관리에 등록한다.** 이것이 없으면 줌
+                        // 게이트·쌓임·충돌이 이 핀을 아예 못 본다 — 명부에 이름만
+                        // 올려서는 아무 일도 일어나지 않는다(그 값을 읽는 요소가
+                        // 없기 때문이다). 노트 핀이 그동안 그 밖에 있어서, 다른
+                        // 라벨이 전부 접힌 축척에서도 혼자 남아 지도를 덮었다.
+                        try {
+                            _wireLabelStacking(
+                                window.AoTWidgetInstances[uniqueId], el, 'note');
+                        } catch (e) {}
 
                         const popup = new maplibregl.Popup({ offset: 12, closeOnClick: false, className: 'aot-popup aot-popup--note' })
                             .setHTML(html);
@@ -11580,6 +11747,11 @@
     //
     // 배수 2 = 표본 1회 유실까지는 정상으로 본다. 1배로 하면 데몬·전송 지터
     // 몇 초에도 매 주기 끝마다 깜빡인다.
+    //
+    // 다만 배수는 어디까지나 **추정**이다. 장치가 `max_age_s`(서버가 붙인다,
+    // p6_55)를 갖고 있으면 그것이 이긴다 — 40분마다 깨는 LoRaWAN 노드는
+    // 주기×2 로 재면 정상 동작 중에도 절반은 늦은 것으로 보인다. 미설정이면
+    // null 이라 종전 판정 그대로다.
     const STALE_PERIOD_FACTOR = 2;
 
     function _markChannelFreshness(channels, instance) {
@@ -11587,10 +11759,21 @@
         if (!tsMap) return;
         const nowSec = Date.now() / 1000;
         channels.forEach(function (c) {
-            const period = parseFloat(c.sample_period);
             const ts = tsMap[c.measurement_id];
-            if (!isFinite(period) || period <= 0 || ts == null) return;
-            c.valid = (nowSec - ts) <= period * STALE_PERIOD_FACTOR;
+            if (ts == null) return;
+            const declared = parseFloat(c.max_age_s);
+            const period = parseFloat(c.sample_period);
+            let maxAge;
+            if (isFinite(declared) && declared > 0) {
+                maxAge = declared;
+            } else if (isFinite(period) && period > 0) {
+                maxAge = period * STALE_PERIOD_FACTOR;
+            } else {
+                // 둘 다 모르면 판정하지 않는다 — 모르면서 "오래됨" 으로
+                // 그리면 정상 장치가 상시 흐리게 보인다.
+                return;
+            }
+            c.valid = (nowSec - ts) <= maxAge;
         });
     }
 
@@ -11687,10 +11870,17 @@
     }
 
     function _postDataBatch(items) {
+        var trimmed = items.slice(0, 300);
+        // 공유 코얼레서를 지난다 — 같은 지도를 보는 지도 위젯이 여럿이면 항목이
+        // 거의 겹치는데, 각자 POST 하면 그 수만큼 왕복이 늘어난다(실측 3회).
+        // 모듈이 없으면(레이아웃이 안 실은 페이지) 예전처럼 직접 보낸다.
+        if (window.AoTDataBatch && window.AoTDataBatch.postItems) {
+            return window.AoTDataBatch.postItems(trimmed);
+        }
         return fetch('/data_batch', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'X-CSRFToken': _csrfMeta() },
-            body: JSON.stringify({ items: items.slice(0, 300) })
+            body: JSON.stringify({ items: trimmed })
         })
             .then(function (r) { return r.ok ? r.json() : null; })
             .then(function (j) { return (j && Array.isArray(j.results)) ? j.results : null; });

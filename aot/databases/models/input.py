@@ -42,6 +42,11 @@ class Input(CRUDMixin, db.Model):
     preset_name = db.Column(db.Text, default=None)  # Name for preset
     interface = db.Column(db.Text, default=None)  # Communication interface (I2C, UART, etc.)
     period = db.Column(db.Float, default=15.0)  # Duration between readings
+    # 이 장치 측정을 '아직 쓸 수 있다' 고 볼 최대 나이(초). NULL 이면
+    # 주기에서 파생한다(`facility_sensors._max_age_for`) — 전역 상수로
+    # 판정하면 하루 한 번 재는 센서가 늘 고장처럼 보이고, 15초 장치는
+    # 반대로 너무 오래된 값을 받는다. 숫자를 넣으면 사람이 정한 값이 이긴다.
+    max_age_s = db.Column(db.Integer, default=None)
     start_offset = db.Column(db.Float, default=0.0)
     power_output_id = db.Column(db.String(36), default=None)
     resolution = db.Column(db.Integer, default=0)

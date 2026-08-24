@@ -463,7 +463,7 @@ TOOLS: List[Tool] = [
         "usage_hint": ("params.arguments: {name, subject, source_note, "
                        "stages: [{key, name, days, targets?, guidance?}], kind?, "
                        "variety?, notes?, target_defs?: [{key, label, unit, "
-                       "measurement}], base_temp_c?, auto_advance?, "
+                       "measurement}], base_temp_c?, "
                        "resource_defs?: [{role: irrigation|fertigation|"
                        "other}], tab_id?}. "
                        "days is that stage's LENGTH, not cumulative; only the "
@@ -494,7 +494,7 @@ TOOLS: List[Tool] = [
                         "Vegetation page). Requires human approval."),
         "usage_hint": ("params.arguments: {program_id, name?, variety?, "
                        "stages?: [{key, name, days, targets?, guidance?}], "
-                       "target_defs?, base_temp_c?, auto_advance?, "
+                       "target_defs?, base_temp_c?, "
                        "resource_defs?, kind?, notes?, source_note?, tab_id?}. "
                        "This is how an empty programme a person made in the UI "
                        "gets filled in — same stage shape and same RECIPE as "
@@ -624,7 +624,8 @@ TOOLS: List[Tool] = [
                         "for a facility plot the bay it sits in. Geometry is not "
                         "editable here. Requires human approval."),
         "usage_hint": ("params.arguments: {plot_id, subject?, kind?, program_uuid?, variety?, name?, "
-                       "started_on?, expected_end_on?, color?, bay_id?, program_uuid?}"),
+                       "started_on?, expected_end_on?, color?, bay_id?, "
+                       "program_uuid?, auto_advance?}"),
     }),
     Tool('propose_plot_split', handler='propose_plot_split', manifest={
         "tool_name": "propose_plot_split",
@@ -673,6 +674,75 @@ TOOLS: List[Tool] = [
                         "null there is nothing to confirm. Requires human approval."),
         "usage_hint": ("params.arguments: {plot_id, stage_key (from "
                        "stage_proposal.stage_key), started_on?: 'YYYY-MM-DD'}"),
+    }),
+    Tool('reschedule_plot_stage', handler='reschedule_plot_stage',
+         mutating=True, manifest={
+        "tool_name": "reschedule_plot_stage",
+        "action_type": "virtual_tool_call",
+        "description": ("Moves a stage boundary for THIS plot — 'transplanting "
+                        "slipped a week'. The programme is a reference only and "
+                        "is never changed. Boundaries after the one you move "
+                        "shift with it; pin the next one too if it must stay. "
+                        "Only boundaries still ahead can be moved — a change "
+                        "that already happened is confirm_plot_stage. Read "
+                        "get_plot's stage_schedule first. Requires human "
+                        "approval."),
+        "usage_hint": ("params.arguments: {plot_id, stage_key (from "
+                       "stage_schedule), days?: 20 | shift_days?: +7|-3 | "
+                       "started_on?: 'YYYY-MM-DD'} — exactly one of the three. "
+                       "days sets how long THAT stage lasts (same wording as "
+                       "the programme); shift_days moves its start boundary."),
+    }),
+    Tool('set_plot_stage_guidance', handler='set_plot_stage_guidance',
+         mutating=True, manifest={
+        "tool_name": "set_plot_stage_guidance",
+        "action_type": "virtual_tool_call",
+        "description": ("Writes what to do in one stage OF THIS PLOT. The "
+                        "programme's guidance is general advice for the crop; "
+                        "this is 'here, at this time, do X'. Catalogue "
+                        "programmes usually ship with none, so write it even "
+                        "when the stage shows nothing. An empty string clears "
+                        "it and the programme's own text shows again. The "
+                        "programme is NOT touched — use modify_program for "
+                        "that. Requires human approval."),
+        "usage_hint": ("params.arguments: {plot_id, stage_key (from "
+                       "stage_schedule), guidance}"),
+    }),
+    Tool('add_plot_stage', handler='add_plot_stage', mutating=True, manifest={
+        "tool_name": "add_plot_stage",
+        "action_type": "virtual_tool_call",
+        "description": ("Adds a stage to THIS PLOT only — e.g. a top-dressing "
+                        "step the standard programme has no room for. 'after' "
+                        "names the stage it follows (empty string = first, "
+                        "omitted = last). The key is generated. The programme "
+                        "is NOT touched. Requires human approval."),
+        "usage_hint": ("params.arguments: {plot_id, name, days, after?, "
+                       "guidance?}"),
+    }),
+    Tool('remove_plot_stage', handler='remove_plot_stage', mutating=True,
+         manifest={
+        "tool_name": "remove_plot_stage",
+        "action_type": "virtual_tool_call",
+        "description": ("Drops a stage from THIS PLOT only — e.g. a crop that "
+                        "goes straight to transplanting with no seedling "
+                        "stage. Stages already passed are refused: the ledger "
+                        "points at them and removing one loses the answer to "
+                        "what was done then. Requires human approval."),
+        "usage_hint": "params.arguments: {plot_id, stage_key}",
+    }),
+    Tool('save_plot_schedule_as_program',
+         handler='save_plot_schedule_as_program', mutating=True, manifest={
+        "tool_name": "save_plot_schedule_as_program",
+        "action_type": "virtual_tool_call",
+        "description": ("Registers THIS PLOT's schedule as a reusable "
+                        "programme — the stages it actually follows, with the "
+                        "lengths as edited and the plot's own guidance. Targets "
+                        "come from the source programme unchanged. The plot is "
+                        "NOT moved onto the new programme: registering is a "
+                        "copy, and changing a running season's interpretation "
+                        "would silently change what it was grown for. Requires "
+                        "human approval."),
+        "usage_hint": "params.arguments: {plot_id, name?}",
     }),
     Tool('undo_plot_stage', handler='undo_plot_stage', mutating=True, manifest={
         "tool_name": "undo_plot_stage",
@@ -1265,6 +1335,11 @@ _TIER_ASSIGNMENT = {
     # 끝났어" / "관수 시작해" 처럼 **이름을 말해 주는** 쪽이라 강등 보호 대상이
     # 아니다(보호는 AI 가 스스로 떠올려야 하는 도구에만 붙인다).
     'confirm_plot_stage':    ('space', 'drawer', False),
+    'reschedule_plot_stage': ('space', 'drawer', False),
+    'set_plot_stage_guidance': ('space', 'drawer', False),
+    'add_plot_stage':        ('space', 'drawer', False),
+    'remove_plot_stage':     ('space', 'drawer', False),
+    'save_plot_schedule_as_program': ('space', 'drawer', False),
     'undo_plot_stage':       ('space', 'drawer', False),
     'apply_plot_resources':  ('space', 'drawer', False),
     'get_spatial_tree':          ('space', 'core', False),
@@ -1448,7 +1523,8 @@ _MCP_TOOL_PAYLOADS: List[Dict[str, Any]] = [
                 "name": {"type": "string"},
                 "started_on": {"type": "string", "description": "'YYYY-MM-DD'"},
                 "expected_end_on": {"type": "string", "description": "'YYYY-MM-DD'"},
-                "color": {"type": "string", "description": "'#rrggbb'"}
+                "color": {"type": "string", "description": "'#rrggbb'"},
+                "auto_advance": {"type": "boolean", "description": "Record stage changes for THIS plot without asking. Default false. It is a property of the plot, not of the programme — two plots on the same programme can differ."}
             },
             "required": ["plot_id"]
         }
@@ -1602,7 +1678,6 @@ _MCP_TOOL_PAYLOADS: List[Dict[str, Any]] = [
                     }
                 },
                 "base_temp_c": {"type": "number", "description": "GDD base temperature. Vegetation only."},
-                "auto_advance": {"type": "boolean", "description": "Advance stages without asking. Default false."},
                 "resource_defs": {
                     "type": "array",
                     "description": "What the subject NEEDS (roles), never which function does it — that is a fact about a place, so the site resolves it and one programme serves several greenhouses.",
@@ -1633,7 +1708,6 @@ _MCP_TOOL_PAYLOADS: List[Dict[str, Any]] = [
                                 "description": "Target item definitions — same shape as create_program."},
                 "resource_defs": {"type": "array", "items": {"type": "object"}},
                 "base_temp_c": {"type": "number"},
-                "auto_advance": {"type": "boolean"},
                 "kind": {"type": "string", "enum": ["vegetation", "livestock", "facility", "other"]},
                 "notes": {"type": "string"},
                 "source_note": {"type": "string", "description": "Update the basis when you change what the programme says."},

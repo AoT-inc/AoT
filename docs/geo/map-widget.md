@@ -66,6 +66,7 @@ Plots drawn in the design tool's [Plot mode](design-tool.md#plot) appear on the 
 
 - **[Status]** — subject and variety, days elapsed, start date.
 - **[Overview] > Program** — current and next stage, accumulated heat, stage targets, and the actual state of the declared resources. Confirming, logging and undoing stage changes happens here too. See [Management Programs](programs.md#stage-events).
+- **[Settings] > Stage schedule** — where the real schedule is edited. Programme lengths are only a reference, so stages can be **postponed or pulled forward**, and this one plot can be set to advance automatically. See [Editing the schedule](programs.md#stage-schedule).
 
 - **Crop, variety, growing period**, and days elapsed.
 - **Area and dimensions** — width and length are shown together, because area alone cannot answer "how many rows fit here?".

@@ -28,42 +28,85 @@ from aot.utils.weekly_schedule import (
 logger = logging.getLogger(__name__)
 
 
-def _resolve_device_detail(target_id):
-    """Resolve a target_id (output/input/function UUID, optionally with channel) to a human-readable string."""
+def resolve_device_details(target_ids):
+    """여러 target_id → `{target_id: 사람이 읽는 문자열}` 을 **한 번에**.
+
+    낱개 해소(`_resolve_device_detail`)는 대상 하나에 최대 4번 조회한다 —
+    Output 에서 못 찾으면 Input, 그다음 CustomController 순으로 훑기 때문이라,
+    출력이 아닌 대상일수록 조회가 늘어난다. 스텝마다 부르면 그것이 스텝 수만큼
+    곱해진다. `/function_status_activated` 는 시퀀스 위젯이 **5초마다** 부르는데,
+    라즈베리파이 실측에서 한 번에 421ms · 쿼리 32건이었고 그중 314ms(75%)가
+    이 조회였다. 워커가 하나인 서버에서 5초마다 421ms 면 위젯 하나가 CPU 를
+    상시 물고 있는 셈이다.
+
+    표마다 한 번씩(최대 4쿼리) 읽고 메모리에서 맞춘다.
+    """
+    out = {}
+    ids = [t for t in (target_ids or []) if t]
+    if not ids:
+        return out
+
+    # "uuid" 또는 "uuid,channel_uuid" 두 형태가 섞여 들어온다.
+    main_of, chan_of = {}, {}
+    for t in ids:
+        parts = str(t).split(',')
+        main_of[t] = parts[0]
+        chan_of[t] = parts[1] if len(parts) > 1 else None
+
+    def _by_uid(model, uids):
+        if not uids:
+            return {}
+        try:
+            rows = db_retrieve_table_daemon(model).filter(
+                model.unique_id.in_(list(uids))).all()
+            return {r.unique_id: r for r in rows}
+        except Exception as e:
+            logger.error(f"resolve_device_details({model.__name__}) failed: {e}")
+            return {}
+
+    main_ids = set(main_of.values())
+    outputs = _by_uid(Output, main_ids)
+    # Output 에서 찾은 것은 나머지 표에서 다시 찾을 필요가 없다.
+    rest = {m for m in main_ids if m not in outputs}
+    inputs = _by_uid(Input, rest)
+    rest = {m for m in rest if m not in inputs}
+    funcs = _by_uid(CustomController, rest)
+    channels = _by_uid(OutputChannel,
+                       {c for c in chan_of.values() if c})
+
+    for t in ids:
+        main_id, raw_chan = main_of[t], chan_of[t]
+        row = outputs.get(main_id)
+        if row is not None:
+            detail = row.name
+            if raw_chan:
+                chan_obj = channels.get(raw_chan)
+                if chan_obj is not None:
+                    detail += f" [CH{chan_obj.channel}]"
+                elif len(str(raw_chan)) <= 5:
+                    detail += f" [CH{raw_chan}]"
+            out[t] = detail
+            continue
+        row = inputs.get(main_id)
+        if row is not None:
+            out[t] = f"{row.name} [Input]"
+            continue
+        row = funcs.get(main_id)
+        out[t] = f"{row.name} [Func]" if row is not None else "-"
+    return out
+
+
+def _resolve_device_detail(target_id, details=None):
+    """낱개 해소. `details`(resolve_device_details 결과)가 있으면 그것을 쓴다.
+
+    대상을 여럿 도는 자리는 `resolve_device_details` 를 한 번 불러 넘길 것 —
+    여기서 하나씩 부르면 표 3개를 대상 수만큼 다시 훑는다.
+    """
     if not target_id:
         return "-"
-    try:
-        parts = str(target_id).split(',')
-        main_id = parts[0]
-        raw_chan = parts[1] if len(parts) > 1 else None
-
-        out = db_retrieve_table_daemon(Output, unique_id=main_id)
-        if out:
-            detail = out.name
-            if raw_chan:
-                try:
-                    chan_obj = db_retrieve_table_daemon(OutputChannel, unique_id=raw_chan)
-                    if chan_obj:
-                        detail += f" [CH{chan_obj.channel}]"
-                    elif len(str(raw_chan)) <= 5:
-                        detail += f" [CH{raw_chan}]"
-                except Exception:
-                    if len(str(raw_chan)) <= 5:
-                        detail += f" [CH{raw_chan}]"
-            return detail
-
-        inp = db_retrieve_table_daemon(Input, unique_id=main_id)
-        if inp:
-            return f"{inp.name} [Input]"
-
-        func = db_retrieve_table_daemon(CustomController, unique_id=main_id)
-        if func:
-            return f"{func.name} [Func]"
-
-        return "-"
-    except Exception as e:
-        logger.error(f"Error resolving device detail for {target_id}: {e}")
-        return "-"
+    if details is not None and target_id in details:
+        return details[target_id]
+    return resolve_device_details([target_id]).get(target_id, "-")
 
 
 def _parse_opts(action):
@@ -386,13 +429,23 @@ class SequenceTriggerController(AbstractController, threading.Thread):
             start_t, end_t = _total_window(aopts, total_mode_duration)
             schedule.append({'action_uid': action.unique_id, 'start': start_t, 'end': end_t})
 
+        # 대상 이름은 **한 번에** 해소한다 — 스텝마다 부르면 표 3개를 스텝 수만큼
+        # 훑는다(이 엔드포인트는 5초마다 폴링된다).
+        _targets = []
+        for _a in actions:
+            _o = _parse_opts(_a)
+            _t = _a.do_unique_id or _o.get('output') or _o.get('input')
+            if _t:
+                _targets.append(_t)
+        details = resolve_device_details(_targets)
+
         steps = []
         for action in actions:
             try:
                 opts = json.loads(action.custom_options) if action.custom_options else {}
             except:
                 opts = {}
-            
+
             sched_item = next((i for i in schedule if i['action_uid'] == action.unique_id), None)
             
             # Action Desc
@@ -402,7 +455,7 @@ class SequenceTriggerController(AbstractController, threading.Thread):
 
             # Name / Device Detail
             target_id = action.do_unique_id or opts.get('output') or opts.get('input')
-            device_detail = _resolve_device_detail(target_id)
+            device_detail = _resolve_device_detail(target_id, details=details)
 
             # Prepare original duration for display
             display_duration = ""

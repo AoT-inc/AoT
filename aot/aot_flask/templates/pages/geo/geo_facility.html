@@ -90,6 +90,8 @@
       <button id="btn-3d-fitlist" type="button" title="{{ _('Show/hide the display filter') }}">{{ _('Show in 3D') }} <span id="fit-list-count-badge"></span></button>
       <!-- Fast preview mode (moved out of the viewport into this toolbar) -->
       <button id="btn-fast-mode" type="button" title="{{ _('Fast preview mode — simplifies materials to reduce CPU load') }}">{{ _('High Quality') }}</button>
+      <!-- Undo the most recent component move — disabled with nothing to undo -->
+      <button id="btn-3d-undo" type="button" title="{{ _('Undo last move (Ctrl+Z)') }}" disabled>{{ _('Undo') }}</button>
       <!-- Live actuator control lives in the dashboard facility widget, which
            has the fuller panel (grouping, ordering, e-stop). This page is for
            building the facility, not running it. -->

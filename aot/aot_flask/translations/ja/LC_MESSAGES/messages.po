@@ -28601,6 +28601,57 @@ msgstr "残り {n} GDD"
 msgid "Days covered: {n}"
 msgstr "全日数の{n}"
 
+msgid "Postpone"
+msgstr "延期"
+
+msgid "Move this change to the date shown, without recording it as done."
+msgstr "この移行を上の日付に延ばします — 完了として記録はしません。"
+
+msgid "Stage schedule"
+msgstr "ステージ日程"
+
+msgid "Use programme"
+msgstr "プログラムの値に"
+
+msgid "The programme is a reference. Changing one stage moves the ones after it."
+msgstr "プログラムは参考です。ひとつのステージを変えると以降もずれます。"
+
+msgid "waiting for your confirmation"
+msgstr "確認待ち"
+
+msgid "Pick a later date to postpone to."
+msgstr "延期する日付は今より後を選んでください。"
+
+msgid "Pick a date first."
+msgstr "先に日付を選んでください。"
+
+msgid "Nothing changed."
+msgstr "変更はありません。"
+
+msgid "days"
+msgstr "日"
+
+msgid "What to do in this stage, here."
+msgstr "この時期にここで何をするかを書きます。"
+
+msgid "Remove stage"
+msgstr "ステージを外す"
+
+msgid "Remove this stage from this plot?"
+msgstr "この区画からこのステージを外しますか？プログラムはそのままです。"
+
+msgid "Register as programme"
+msgstr "プログラムとして登録"
+
+msgid "Programme name"
+msgstr "プログラム名"
+
+msgid "Register"
+msgstr "登録"
+
+msgid "Registered as a programme: %(name)s"
+msgstr "プログラムとして登録しました: %(name)s"
+
 msgid "Stage change"
 msgstr "ステージ変更"
 
@@ -30157,3 +30208,12 @@ msgstr "不作・損失"
 #: 구획 모달 — 프로그램이 0건일 때도 줄을 낸다
 msgid "No programs yet — create one"
 msgstr "プログラムがまだありません — 作成"
+
+msgid "Max Measurement Age"
+msgstr "測定の有効期限"
+
+msgid "Derive from period"
+msgstr "周期から導出"
+
+msgid "How old a measurement may be and still be used, in seconds. Leave blank to derive it from the measurement period — that is right for most devices. Set a number only when this device needs its own rule (a LoRaWAN node that reports every 30-60 minutes, for example)."
+msgstr "測定値を何秒前のものまで使えるか。空欄にすると測定周期から導出する — ほとんどの装置はそれで正しい。この装置だけの規則が必要なときにだけ数値を入れる(例: 30~60分ごとに報告する LoRaWAN ノード)。"

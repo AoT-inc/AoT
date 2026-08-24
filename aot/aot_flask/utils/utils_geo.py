@@ -1358,11 +1358,11 @@ def get_all_measurements_for_map(devices):
         # 실제로 안 채워져 있다(로컬 실측 196행 전부 NULL). 그래서 Input 테이블
         # 조회 자체를 권위로 쓴다: device_id 가 Input 이면 주기가 나오고,
         # Output/Function 이면 아무 행도 안 나와 자연히 None 이 된다.
-        period_by_device = {
-            uid: period for uid, period in Input.query.filter(
-                Input.unique_id.in_(list(map_device_ids))
-            ).with_entities(Input.unique_id, Input.period).all() if period
-        }
+        # 값은 (주기, 장치 명시 max_age) 튜플이다. 조회의 정본은
+        # `measurement_freshness` — 같은 질문을 하는 자리가 다섯이라 여기서
+        # 다시 쓰면 갈라진다.
+        from aot.utils.measurement_freshness import freshness_by_device
+        period_by_device = freshness_by_device(map_device_ids)
 
         from aot.aot_flask.geo.facility_sensors import channel_label_meta
 
@@ -1395,7 +1395,12 @@ def get_all_measurements_for_map(devices):
                 # 이 측정을 내는 장치의 샘플링 주기(초). Input 이 아니거나
                 # 주기를 모르면 None — 그때는 클라이언트가 신선도 판정을
                 # 하지 않는다(모르면서 "오래됨"이라 그리지 않는다).
-                'sample_period': period_by_device.get(d_id),
+                'sample_period': period_by_device.get(d_id, (None, None))[0],
+                # 그 장치가 직접 정한 유효 수명(초, `Input.max_age_s`, p6_55).
+                # 있으면 클라이언트는 주기×배수 대신 이 값으로 판정한다 —
+                # 40분마다 깨는 LoRaWAN 노드를 주기 배수로 재면 정상인데도
+                # 매번 흐리게 그려진다. 미설정이면 None 이라 종전과 같다.
+                'max_age_s': period_by_device.get(d_id, (None, None))[1],
             })
         
         # Sort by channel

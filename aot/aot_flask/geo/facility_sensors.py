@@ -28,6 +28,7 @@ Update handling:
 import logging
 from typing import Dict, List, Optional, Tuple
 
+from aot.utils import measurement_freshness as _freshness
 from aot.utils.influx import get_last_measurement  # module-level — patchable in tests
 
 logger = logging.getLogger(__name__)
@@ -41,27 +42,27 @@ DEFAULT_MAX_AGE_S: int = 300
 STALE_PERIOD_FACTOR: int = 2
 
 
-def _period_by_device(device_ids) -> Dict[str, float]:
-    """{Input.unique_id: 샘플링 주기(초)}. 한 번의 IN 조회.
+def _freshness_by_device(device_ids) -> Dict[str, tuple]:
+    """{Input.unique_id: (주기(초), 장치 명시 max_age(초) or None)}.
 
-    이 모듈은 **DB·앱 컨텍스트 없이도 도는 것이 계약**이다(테스트가
-    get_last_measurement 만 패치해 호출한다). 그래서 모델 import 를 함수 안으로
-    미루고, 실패하면 빈 dict 를 준다 — 호출자는 DEFAULT_MAX_AGE_S 로 떨어진다.
+    판정의 정본은 `aot.utils.measurement_freshness` 다 — 같은 질문을 하는
+    자리가 다섯이라 규칙을 여기 두면 갈라진다. 이 이름은 호출부 호환용이다.
     """
-    ids = sorted({i for i in (device_ids or []) if i})
-    if not ids:
-        return {}
-    try:
-        from aot.databases.models import Input
-        rows = Input.query.filter(Input.unique_id.in_(ids)).with_entities(
-            Input.unique_id, Input.period).all()
-        return {uid: period for uid, period in rows if period}
-    except Exception as exc:
-        logger.debug('[FacilitySensors] 장치 주기 조회 실패 — 고정 하한 사용: %s', exc)
-        return {}
+    return _freshness.freshness_by_device(device_ids)
 
 
-def _max_age_for(requested: Optional[int], period: Optional[float]) -> int:
+def _period_by_device(device_ids) -> Dict[str, float]:
+    """{unique_id: 주기} — 옛 호출부 호환용 얇은 껍데기."""
+    return {uid: p for uid, (p, _m) in _freshness_by_device(device_ids).items() if p}
+
+
+def _fresh(table: Dict[str, tuple], device_id) -> tuple:
+    """(주기, 장치 명시 max_age) — 없는 장치는 (None, None)."""
+    return _freshness.lookup(table, device_id)
+
+
+def _max_age_for(requested: Optional[int], period: Optional[float],
+                 device_max_age: Optional[int] = None) -> int:
     """이 측정에 적용할 유효 수명(초).
 
     `requested is None` = "장치 주기로 정해라" — 표시 경로(/runtime·IEC 상태 화면)의
@@ -72,15 +73,14 @@ def _max_age_for(requested: Optional[int], period: Optional[float]) -> int:
     숫자가 오면 호출자가 명시한 값이므로 그대로 쓴다 — 제어(env_coordinator)의
     max_age 는 "이보다 오래된 값으로는 작동하지 않는다"는 **안전 결정**이라,
     주기를 근거로 넓혀서는 안 된다.
+
+    그보다 앞서는 것이 `device_max_age`(`Input.max_age_s`)다. 근거는 정본
+    모듈의 `effective_max_age` 주석 참조 — 여기 배수 2 는 "표본 1회 유실까지는
+    정상" 이라는 이 화면의 판단이고, 표시 경로 공통 배수(3)와 다르다.
     """
-    if requested is not None:
-        return int(requested)
-    if period:
-        try:
-            return int(max(DEFAULT_MAX_AGE_S, float(period) * STALE_PERIOD_FACTOR))
-        except (TypeError, ValueError):
-            pass
-    return DEFAULT_MAX_AGE_S
+    return _freshness.effective_max_age(
+        requested, period, device_max_age,
+        floor=DEFAULT_MAX_AGE_S, factor=STALE_PERIOD_FACTOR)
 
 
 # role → (섹션, 필드) 매핑
@@ -131,7 +131,7 @@ def read_facility_sensors(
     valid_count = 0
 
     # 표시 경로(max_age 미지정)에서만 장치 주기를 조회한다 — 한 번의 IN 조회.
-    periods = {} if max_age is not None else _period_by_device(
+    fresh = _freshness_by_device(
         [(b.get('device_id') or '').strip() for b in (sensor_bindings or [])])
 
     for binding in (sensor_bindings or []):
@@ -158,7 +158,7 @@ def read_facility_sensors(
             'degraded_reason': None,
         }
 
-        eff_max_age = _max_age_for(max_age, periods.get(device_id))
+        eff_max_age = _max_age_for(max_age, *_fresh(fresh, device_id))
         try:
             ts, value = get_last_measurement(device_id, measurement_id,
                                              max_age=eff_max_age)
@@ -536,7 +536,7 @@ def read_fitting_sensors(
     order: List[str] = []  # 입력 순서 유지
 
     # 표시 경로(max_age 미지정)에서만 장치 주기를 조회한다 — 한 번의 IN 조회.
-    periods = {} if max_age is not None else _period_by_device(
+    fresh = _freshness_by_device(
         [s.get('input_uuid') for s in (sensors_resolved_all or [])])
 
     for s in (sensors_resolved_all or []):
@@ -585,7 +585,7 @@ def read_fitting_sensors(
 
         try:
             ts, val = _get_last(iid, meas_id,
-                                max_age=_max_age_for(max_age, periods.get(iid)))
+                                max_age=_max_age_for(max_age, *_fresh(fresh, iid)))
         except Exception as exc:
             logger.debug('[FittingSensors] %s/%s 조회 실패: %s', iid, meas_id, exc)
             ts, val = None, None
@@ -813,7 +813,7 @@ def compute_spatial_internal(
     detail: List[dict] = []
 
     # 표시 경로(max_age 미지정)에서만 장치 주기를 조회한다 — 한 번의 IN 조회.
-    periods = {} if max_age is not None else _period_by_device(
+    fresh = _freshness_by_device(
         [s.get('input_uuid') for s in (sensors_resolved or [])])
 
     for s in (sensors_resolved or []):
@@ -824,7 +824,7 @@ def compute_spatial_internal(
         mtype   = s.get('measurement_type') or None
         meas_id = s.get('measurement_id')   or None
         vals = _read_one_sensor(input_uuid, mtype,
-                                _max_age_for(max_age, periods.get(input_uuid)),
+                                _max_age_for(max_age, *_fresh(fresh, input_uuid)),
                                 measurement_id=meas_id)
 
         d_idx = len(detail)
@@ -936,7 +936,7 @@ def read_outdoor_sensors(
     outdoor_device_ids: List[str] = []
 
     # 표시 경로(max_age 미지정)에서만 장치 주기를 조회한다 — 한 번의 IN 조회.
-    periods = {} if max_age is not None else _period_by_device(
+    fresh = _freshness_by_device(
         [s.get('input_uuid') for s in (sensors_outdoor or [])])
 
     for s in (sensors_outdoor or []):
@@ -950,7 +950,7 @@ def read_outdoor_sensors(
         mtype   = s.get('measurement_type') or None
         meas_id = s.get('measurement_id')   or None
         vals = _read_one_sensor(input_uuid, mtype,
-                                _max_age_for(max_age, periods.get(input_uuid)),
+                                _max_age_for(max_age, *_fresh(fresh, input_uuid)),
                                 measurement_id=meas_id)
 
         for k in ('T', 'RH', 'CO2', 'light', 'rain_mm'):
@@ -984,7 +984,7 @@ def read_outdoor_sensors(
                     try:
                         ts, val = get_last_measurement(
                             dm.device_id, dm.unique_id,
-                            max_age=_max_age_for(max_age, periods.get(dm.device_id)))
+                            max_age=_max_age_for(max_age, *_fresh(fresh, dm.device_id)))
                         if ts is not None and val is not None:
                             buckets['rain_mm'].append(float(val))
                             break

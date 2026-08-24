@@ -1406,68 +1406,102 @@ def function_status_activated(unique_id):
                      data = fallback_data
 
         # Polyfill/Augment device details
+        #
+        # ⚠ 스텝마다 조회하지 않는다. 이 엔드포인트는 시퀀스 위젯이 **5초마다**
+        # 부르는데, 예전에는 스텝 하나에 Actions·Output·Input·CustomController 를
+        # 각각 한 번씩 쳐서 8스텝짜리 시퀀스가 32쿼리였다(라즈베리파이 실측
+        # 421ms, 그중 314ms 가 이 조회). 워커가 하나인 서버에서 5초마다 그만큼이면
+        # 위젯 하나가 CPU 를 상시 물고 있는 셈이다. 표마다 한 번씩만 읽는다.
         if data and 'steps' in data:
             try:
-                for step in data['steps']:
-                    # Always resolve names if missing or to ensure freshness
-                    act_id = step.get('unique_id')
-                    
-                    # Optimization: If the step already has what we need, maybe skip? 
-                    # But we need fresh names if user renamed them.
-                    # We'll just fast-resolve.
-                    
-                    act = Actions.query.filter_by(unique_id=act_id).first()
-                    if act:
-                        opts = {}
-                        if act.custom_options:
-                            try:
-                                opts = json.loads(act.custom_options)
-                            except: pass
-                        
-                        target_id = act.do_unique_id
-                        if not target_id: target_id = opts.get('output')
-                        if not target_id: target_id = opts.get('input')
-                        
-                        d_name = ""
-                        d_ch_name = ""
-                        detail = step.get('device_detail', '-')
+                steps = data['steps'] or []
+                act_ids = [st.get('unique_id') for st in steps if st.get('unique_id')]
+                acts = {}
+                if act_ids:
+                    acts = {a.unique_id: a for a in Actions.query.filter(
+                        Actions.unique_id.in_(act_ids)).all()}
 
-                        if target_id:
-                            parts = str(target_id).split(',')
-                            main_id = parts[0]
-                            raw_chan = parts[1] if len(parts) > 1 else "0"
-                            
-                            out = Output.query.filter_by(unique_id=main_id).first()
-                            if out:
-                                d_name = out.name
-                                chan_idx = raw_chan
-                                # Resolve Channel UUID if needed
-                                if len(str(raw_chan)) > 5:
-                                    chan_obj = OutputChannel.query.filter_by(unique_id=raw_chan).first()
-                                    if chan_obj:
-                                        chan_idx = chan_obj.channel
-                                        d_ch_name = chan_obj.name
-                                    else:
-                                        chan_idx = None  # Unresolvable UUID: never display it
-                                detail = f"{out.name} [CH{chan_idx}]" if chan_idx is not None else out.name
-                            else:
-                                inp = Input.query.filter_by(unique_id=main_id).first()
-                                if inp:
-                                    d_name = inp.name
-                                    detail = f"{inp.name} [Input]"
+                def _target_of(act):
+                    opts = {}
+                    if act.custom_options:
+                        try:
+                            opts = json.loads(act.custom_options)
+                        except Exception:
+                            opts = {}
+                    return (act.do_unique_id or opts.get('output')
+                            or opts.get('input'))
+
+                targets = {}
+                for st in steps:
+                    act = acts.get(st.get('unique_id'))
+                    if act is not None:
+                        targets[st.get('unique_id')] = _target_of(act)
+
+                mains, chans = set(), set()
+                for t in targets.values():
+                    if not t:
+                        continue
+                    parts = str(t).split(',')
+                    mains.add(parts[0])
+                    raw = parts[1] if len(parts) > 1 else "0"
+                    if len(str(raw)) > 5:
+                        chans.add(raw)
+
+                def _map(model, ids):
+                    if not ids:
+                        return {}
+                    return {r.unique_id: r for r in model.query.filter(
+                        model.unique_id.in_(list(ids))).all()}
+
+                outs = _map(Output, mains)
+                rest = mains - set(outs)
+                inps = _map(Input, rest)
+                rest = rest - set(inps)
+                funcs = _map(CustomController, rest)
+                ochans = _map(OutputChannel, chans)
+
+                for step in steps:
+                    target_id = targets.get(step.get('unique_id'))
+                    d_name = ""
+                    d_ch_name = ""
+                    detail = step.get('device_detail', '-')
+
+                    if target_id:
+                        parts = str(target_id).split(',')
+                        main_id = parts[0]
+                        raw_chan = parts[1] if len(parts) > 1 else "0"
+
+                        out = outs.get(main_id)
+                        if out:
+                            d_name = out.name
+                            chan_idx = raw_chan
+                            # Resolve Channel UUID if needed
+                            if len(str(raw_chan)) > 5:
+                                chan_obj = ochans.get(raw_chan)
+                                if chan_obj:
+                                    chan_idx = chan_obj.channel
+                                    d_ch_name = chan_obj.name
                                 else:
-                                    func = CustomController.query.filter_by(unique_id=main_id).first()
-                                    if func:
-                                        d_name = func.name
-                                        detail = f"{func.name} [Func]"
-                        
-                        # Inject into step
-                        step['device_name'] = d_name
-                        step['device_channel_name'] = d_ch_name
-                        
-                        # Only overwrite detail if it was missing/placeholder
-                        if not step.get('device_detail') or step.get('device_detail') in ['-', '']:
-                             step['device_detail'] = detail
+                                    chan_idx = None  # Unresolvable UUID: never display it
+                            detail = f"{out.name} [CH{chan_idx}]" if chan_idx is not None else out.name
+                        else:
+                            inp = inps.get(main_id)
+                            if inp:
+                                d_name = inp.name
+                                detail = f"{inp.name} [Input]"
+                            else:
+                                func = funcs.get(main_id)
+                                if func:
+                                    d_name = func.name
+                                    detail = f"{func.name} [Func]"
+
+                    # Inject into step
+                    step['device_name'] = d_name
+                    step['device_channel_name'] = d_ch_name
+
+                    # Only overwrite detail if it was missing/placeholder
+                    if not step.get('device_detail') or step.get('device_detail') in ['-', '']:
+                        step['device_detail'] = detail
             except Exception as e:
                 logger.error(f"Error polyfilling device details: {e}")
 

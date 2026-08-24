@@ -180,6 +180,44 @@ def tag_del(form):
 # Notes
 #
 
+def ensure_target_tag(tags_csv, target_id):
+    """노트에 **대상 자신의 태그**를 보장한다 → 태그 id 들의 CSV.
+
+    노트 페이지는 태그로 묶고 태그로 찾는다(`note_item.html` 의 `#태그` 칩).
+    대상이 있는 노트에 그 대상의 태그가 없으면 목록에 **'태그 없음'** 으로 뜨고
+    어느 묶음에도 들어가지 않는다 — 만든 사람은 그 구획을 보면서 적었는데
+    나중에 그 구획에서 찾을 수 없다.
+
+    ⚠ **클라이언트가 보내 주기를 기대하지 않는다.** 지도 위젯의 작성기는
+    `widget` + 대상 이름을 실어 보내지만 AI 도구(`create_note`)와 서버 경로는
+    안 보낸다 — 실측으로 구획 노트 넷이 태그 없이 남아 있었다(2026-08-24).
+    규칙을 서버 한 곳에 두면 새 작성 경로가 생겨도 따라온다.
+
+    이름은 종류를 가리지 않고 한 리졸버로 찾는다(도형·구획·시설·장치). 이름을
+    못 찾으면 **아무것도 하지 않는다** — uuid 를 태그로 만들면 사람이 못 읽는
+    칩이 목록에 쌓이고, 그것은 태그가 없는 것보다 나쁘다.
+    """
+    ids = [t.strip() for t in (tags_csv or '').split(',') if t.strip()]
+    if not target_id:
+        return ','.join(ids)
+
+    from aot.aot_flask.routes_notes_api import _display_name_for_target
+    name = (_display_name_for_target(target_id) or '').strip()
+    if not name:
+        return ','.join(ids)
+
+    tag = NoteTags.query.filter_by(name=name).first()
+    if tag is None:
+        tag = NoteTags()
+        tag.unique_id = set_uuid()
+        tag.name = name
+        db.session.add(tag)
+        db.session.flush()
+    if tag.unique_id not in ids:
+        ids.append(tag.unique_id)
+    return ','.join(ids)
+
+
 def note_add(form):
     action = '{action} {controller}'.format(
         action=TRANSLATIONS['add']['title'],

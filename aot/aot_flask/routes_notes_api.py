@@ -6,6 +6,7 @@ from aot.utils.time_utils import utc_now, api_iso
 import uuid
 from sqlalchemy import or_
 from aot.databases.models import Notes, NoteTags
+from aot.aot_flask.utils import utils_notes
 from aot.aot_flask.extensions import db
 from aot.aot_flask.utils import utils_general
 from aot.config import PATH_NOTE_ATTACHMENTS
@@ -317,6 +318,13 @@ def api_notes_create():
                 final_name = _("New Note")
 
 
+        # 대상 자신의 태그는 **서버가 보장한다.** 클라이언트가 보내 주면 그대로
+        # 쓰이고(중복은 합쳐진다), 안 보내는 경로에서도 붙는다 — 그러지 않으면
+        # 그 노트는 노트 페이지에서 '태그 없음' 으로 남아 어느 묶음에도 들어가지
+        # 못한다(`utils_notes.ensure_target_tag` 주석).
+        tags_csv = utils_notes.ensure_target_tag(
+            ','.join(resolved_tag_ids), target_id)
+
         new_note = Notes(
             name=final_name,
             date_time=utc_now(),
@@ -325,7 +333,7 @@ def api_notes_create():
             target_type=target_type,
             files=','.join(uploaded_files_paths) if uploaded_files_paths else None,
             unique_id=str(uuid.uuid4()),
-            tags=','.join(resolved_tag_ids),
+            tags=tags_csv,
             gps_lat=gps_lat,
             gps_lng=gps_lng,
             category=category,

@@ -1846,62 +1846,10 @@ def dict_custom_colors(widget_options):
         index_sum = 0
         total = []
 
-        if widget_options['measurements_output']:
-            index = 0
-            for each_set in widget_options['measurements_output']:
-                if not each_set:
-                    continue
-
-                output_unique_id = each_set.split(',')[0]
-                output_measure_id = each_set.split(',')[1]
-
-                device_measurement = DeviceMeasurements.query.filter(
-                    DeviceMeasurements.unique_id == output_measure_id).first()
-                if device_measurement:
-                    measurement_name = device_measurement.name
-                    conversion = Conversion.query.filter(
-                        Conversion.unique_id == device_measurement.conversion_id).first()
-                else:
-                    measurement_name = None
-                    conversion = None
-                channel, unit, measurement = return_measurement_info(
-                    device_measurement, conversion)
-
-                output = Output.query.filter_by(unique_id=output_unique_id).first()
-
-                if (index < len(widget_options['measurements_output']) and
-                        len(colors) > index_sum + index):
-                    color = colors[index_sum + index]
-                else:
-                    color = '#FF00AA'
-
-                # Data grouping
-                disable_data_grouping = False
-                if 'disable_data_grouping' in widget_options and output_measure_id in widget_options['disable_data_grouping']:
-                    disable_data_grouping = True
-
-                # Series type
-                series_type = 'column'
-                if 'series_type' in widget_options and output_measure_id in widget_options['series_type']:
-                    series_type = widget_options['series_type'][output_measure_id]
-
-                if None not in [output, device_measurement]:
-                    total.append({
-                        'unique_id': output_unique_id,
-                        'measure_id': output_measure_id,
-                        'type': 'Output',
-                        'name': output.name,
-                        'channel': channel,
-                        'unit': unit,
-                        'measure': measurement,
-                        'measure_name': measurement_name,
-                        'color': color,
-                        'disable_data_grouping': disable_data_grouping,
-                        'series_type': series_type
-                    })
-                    index += 1
-            index_sum += index
-
+        # NOTE: 아래 처리 순서(Input, Function, Output, PID, Tag)는 실제 차트 시리즈가
+        # 추가되는 순서(위젯 템플릿의 series: 블록, devices_list = [input, function,
+        # output, pid])와 반드시 일치해야 한다. 순서가 어긋나면 옵션에서 지정한 색상이
+        # 엉뚱한 시리즈에 적용된다.
         if widget_options['measurements_input']:
             index = 0
             for each_set in widget_options['measurements_input']:
@@ -2005,6 +1953,62 @@ def dict_custom_colors(widget_options):
                         'measure_id': function_measure_id,
                         'type': 'Function',
                         'name': function.name,
+                        'channel': channel,
+                        'unit': unit,
+                        'measure': measurement,
+                        'measure_name': measurement_name,
+                        'color': color,
+                        'disable_data_grouping': disable_data_grouping,
+                        'series_type': series_type
+                    })
+                    index += 1
+            index_sum += index
+
+        if widget_options['measurements_output']:
+            index = 0
+            for each_set in widget_options['measurements_output']:
+                if not each_set:
+                    continue
+
+                output_unique_id = each_set.split(',')[0]
+                output_measure_id = each_set.split(',')[1]
+
+                device_measurement = DeviceMeasurements.query.filter(
+                    DeviceMeasurements.unique_id == output_measure_id).first()
+                if device_measurement:
+                    measurement_name = device_measurement.name
+                    conversion = Conversion.query.filter(
+                        Conversion.unique_id == device_measurement.conversion_id).first()
+                else:
+                    measurement_name = None
+                    conversion = None
+                channel, unit, measurement = return_measurement_info(
+                    device_measurement, conversion)
+
+                output = Output.query.filter_by(unique_id=output_unique_id).first()
+
+                if (index < len(widget_options['measurements_output']) and
+                        len(colors) > index_sum + index):
+                    color = colors[index_sum + index]
+                else:
+                    color = '#FF00AA'
+
+                # Data grouping
+                disable_data_grouping = False
+                if 'disable_data_grouping' in widget_options and output_measure_id in widget_options['disable_data_grouping']:
+                    disable_data_grouping = True
+
+                # Series type
+                series_type = 'column'
+                if 'series_type' in widget_options and output_measure_id in widget_options['series_type']:
+                    series_type = widget_options['series_type'][output_measure_id]
+
+                if None not in [output, device_measurement]:
+                    total.append({
+                        'unique_id': output_unique_id,
+                        'measure_id': output_measure_id,
+                        'type': 'Output',
+                        'name': output.name,
                         'channel': channel,
                         'unit': unit,
                         'measure': measurement,

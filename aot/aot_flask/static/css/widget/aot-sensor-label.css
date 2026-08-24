@@ -783,6 +783,101 @@
   margin-top: 4px;
 }
 
+/* 단계 일정(P8) — 단계 하나가 **한 덩이**다.
+ *
+ * 1행 이름 + [지침], 2행 시작일 + 기간, 그 아래 지침 칸. 덩이 사이에만 선을
+ * 긋는다 — `.aot-ov-row + .aot-ov-row` 의 공용 규칙을 그대로 두면 한 단계의
+ * 두 줄 사이에도 선이 생겨, 여섯 단계가 열두 칸으로 읽힌다. */
+.aot-ov-sched-item + .aot-ov-sched-item {
+  border-top: 1px solid var(--aot-border-neutral, var(--aot-border-light));
+}
+/* 한 단계의 두 줄 사이에는 선이 없다.
+ *
+ * **선택자 무게를 맞춰야 한다.** 공용 규칙
+ * `.aot-ov-row:not(.aot-ov-block) + .aot-ov-row:not(.aot-ov-block)` 은 클래스
+ * 넷(0,4,0)이라, 셋짜리로 끄면 조용히 무시된다 — 실제로 그렇게 남아 있었다.
+ * 카드 클래스를 앞에 붙여 같은 무게로 만들고, 파일 뒤쪽이라 이 쪽이 이긴다. */
+.aot-ov-plot-sched .aot-ov-sched-item > .aot-ov-row + .aot-ov-row {
+  border-top: none;
+}
+
+/* 숫자 한두 자리를 위한 칸 — 날짜 입력만큼 넓으면 무엇을 적는 칸인지 흐려진다.
+ *
+ * `display` 를 되돌리는 것이 핵심이다. `.form-control` 은 블록이라, 그대로 두면
+ * 단위("일")가 입력 **아래 줄**로 떨어져 줄 높이가 두 배가 된다. */
+.aot-ov-sched-days {
+  display: inline-block;
+  width: 4.2em;
+  text-align: right;
+}
+/* 증감 화살표는 지운다 — 한 번에 하루씩 올리는 조작은 이 칸에서 쓸 일이
+   없고(14 → 20 은 그냥 적는 편이 빠르다), 좁은 칸의 절반을 차지한다.
+   `type=number` 는 그대로 둔다: 폰에서 숫자 자판이 열린다. */
+.aot-ov-sched-days::-webkit-outer-spin-button,
+.aot-ov-sched-days::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.aot-ov-sched-days {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+/* 지침 칸 — 글상자는 설명 편집(`.aot-ov-desc-input`)과 같은 것을 쓴다. 모서리만
+   이 자리에서 조금 더 둥글게 둔다. */
+.aot-ov-sched-guide {
+  border-radius: 8px;
+}
+.aot-ov-sched-edit-wrap {
+  padding-bottom: var(--aot-space-2, 6px);
+}
+/* 기간은 평소 읽는 값이고 [편집] 을 눌러야 입력이 된다 — 둘이 같은 칸을 번갈아
+   차지하므로 줄 높이가 흔들리지 않게 세로 가운데로 맞춘다. */
+.aot-ov-sched-days-edit {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* [현황]의 단계 지침 — 버튼 없이 바로 보인다. 축 바로 아래라 위 여백만 준다. */
+.aot-ov-guidance-inline {
+  margin-top: var(--aot-space-3);
+}
+
+/* 새 단계 이름 칸은 그 줄을 다 쓴다 — 기간 칸과 폭이 어긋나면 추가 줄만 다른
+   표처럼 보인다. 등록 이름 칸도 같다. */
+.aot-ov-sched-newname,
+.aot-ov-sched-regname { width: 100%; }
+
+/* [단계 더하기] 덩이는 **아래에도 숨 쉴 칸**을 준다.
+ *
+ * 여백을 `.aot-ov-actions` 에 붙이지 않는다 — 그 줄의 규약은 "아래 여백 없음"
+ * 이고(블록 패딩이 모서리 반지름을 맡는다), 거기에 예외를 하나 두면 다음
+ * 사람은 어느 쪽이 규칙인지 알 수 없다. 덩이 자체가 자기 아래를 띄운다. */
+.aot-ov-sched-add {
+  padding-bottom: var(--aot-space-2, 6px);
+}
+
+/* 자동 전환 줄 — 글자와 토글을 **한 줄에 세운다.**
+ *
+ * `.aot-ov-row` 는 `align-items` 를 정하지 않아 기본값(stretch)으로 돈다. 글자
+ * 줄상자는 20px 남짓이고 토글은 28px 이라, 둘 다 칸 위쪽에 붙으면 글자가 토글보다
+ * 한참 위에 앉아 **다른 줄에 있는 것처럼** 보인다(실제로 그렇게 보였다). */
+.aot-ov-row.aot-ov-sched-auto {
+  align-items: center;
+}
+/* **칸 안에서도 세워야 한다.** 토글은 `inline-flex` 라 그것을 담은 `<span>` 은
+   글자 줄상자로 자리를 잡는다 — 인라인 요소의 밑선이 글자 밑선에 맞춰지면서
+   토글이 아래로 처지고, 줄 자체를 가운데로 맞춰도 그 처짐은 남는다. 칸을
+   플렉스로 만들어 밑선 정렬 자체를 없앤다. */
+.aot-ov-row.aot-ov-sched-auto > span {
+  display: flex;
+  align-items: center;
+}
+.aot-ov-row.aot-ov-sched-auto > span:last-child {
+  justify-content: flex-end;
+}
+
 /* 노트창 호출 버튼 — **자체 스타일 없음**. .aot-ov-pill 을 그대로 쓴다(같은
    창의 [사진 변경]·[편집]·[저장]과 같은 높이·라운드·색). 이 클래스는 JS 가
    잡는 훅일 뿐이다. 예전에는 .aot-ov-pill 과 선언이 한 글자도 다르지 않은
@@ -1368,6 +1463,29 @@
   .aot-modal-up:hover {
     color: var(--aot-color-text-primary);
   }
+}
+
+/* 닫기(✕)도 **같은 손잡이**다 — 제목줄 양 끝에 서는 원형 버튼 한 쌍이라,
+   한쪽만 배경이 있으면 둘이 다른 종류의 것으로 보인다.
+ *
+ * 셀렉터에 태그를 붙여 (0,1,1) 로 만든다. 지도 팝업 공용 규칙
+ * (`map.css` 의 `.maplibregl-popup-close-button`, (0,1,0))과 무게가 같으면
+ * 파일 순서가 이기고 지는 것을 정하는데, 그 순서는 템플릿마다 다르다.
+ *
+ * ⚠ 공용 규칙 자체는 건드리지 않는다 — 그 클래스는 센서·장치 팝업까지 전부
+ * 쓰므로, 거기에 배경을 주면 작은 팝업마다 흰 원이 하나씩 생긴다. 모달 셸의
+ * 닫기(`.aot-center-modal-close`)만 짝을 맞춘다. */
+button.aot-center-modal-close {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  font-size: 16px;
+  color: var(--aot-color-text-secondary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--bd-primary, #FFFFFF);
 }
 
 /* ── 현재 환경 (구역·시설 [현황] 첫 블록) ─────────────────────────────────

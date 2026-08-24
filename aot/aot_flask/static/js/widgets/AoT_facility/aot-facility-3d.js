@@ -2250,8 +2250,10 @@
 
     function _buildGizmo() {
       const g = new THREE.Group(); g.name = 'transform_gizmo';
-      // Arrow dimensions — 4× scale so they're visible from the default camera distance (~40m)
-      const S = 4;
+      // Arrow dimensions — 8× scale so they're visible from the default camera
+      // distance (~40m) and, more importantly, big enough to grab: the shafts
+      // are the click/drag target, and thin ones were too easy to miss.
+      const S = 8;
       const SHAFT_R = 0.014 * S, SHAFT_L = 0.32 * S;
       const HEAD_R  = 0.038 * S, HEAD_L  = 0.11  * S;
       const OFF     = 0.16  * S;
@@ -2367,6 +2369,13 @@
     // Movement is confined to the horizontal plane the component already sits
     // on, so a careless drag can never change a device's mounting height.
     //
+    // Only the currently selected fitting may be body-dragged — a raycast
+    // that grabbed whatever the mouse happened to land on (regardless of
+    // selection) meant an unrelated, overlapping component could move while
+    // the user believed they were repositioning the selected one. Selecting
+    // a different component is still a plain click (onCanvasClick); dragging
+    // only ever moves what the axis arrows are currently attached to.
+    //
     // Which components may be dragged is not decided here — the host injects a
     // probe via setFittingProbe(). The 3D module has no idea which fittings the
     // user manages by hand and which the envelope generates.
@@ -2375,7 +2384,6 @@
     let _bodyDragGrab  = new THREE.Vector3();   // pointer→component offset at grab time
     let _bodyDragBaseY = 0;
     let _bodyDragMoved = false;
-    let _bodyDragSel   = false;                 // was it already selected when grabbed?
     let _bodyDragCursor = '';                   // canvas cursor to restore afterwards
     let _bodyDragProbe = null;
     const _bodyRay = new THREE.Raycaster();
@@ -2397,7 +2405,7 @@
       const id = _pickFittingId(event);
       if (!id) return;
       const info = _bodyDragProbe(id);
-      if (!info || !info.movable || !info.position) return;
+      if (!info || !info.movable || !info.position || !info.selected) return;
       const p = info.position;
       _bodyDragBaseY = p.y || 0;
       _bodyDragPlane.setFromNormalAndCoplanarPoint(
@@ -2409,7 +2417,6 @@
       _bodyDragGrab.set((p.x || 0) - grab.x, 0, (p.z || 0) - grab.z);
       _bodyDragId    = id;
       _bodyDragMoved = false;
-      _bodyDragSel   = !!info.selected;
       _bodyDragCursor = canvas.style.cursor;
       controls.enabled = false;
     });
@@ -2423,12 +2430,6 @@
       if (!_bodyDragMoved) {
         _bodyDragMoved = true;
         canvas.style.cursor = 'grabbing';
-        // Selecting on the first move rather than on mousedown keeps a plain
-        // click on the same mesh flowing through the normal selection path,
-        // which toggles — selecting here too would immediately undo it.
-        if (!_bodyDragSel) {
-          document.dispatchEvent(new CustomEvent('aot-fitting-clicked', { detail: { id: _bodyDragId } }));
-        }
       }
       const pos = { x: +(cur.x + _bodyDragGrab.x).toFixed(3),
                     y: +_bodyDragBaseY.toFixed(3),

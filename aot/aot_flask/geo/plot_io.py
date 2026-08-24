@@ -485,6 +485,7 @@ def save_plot(data):
                 name=(data.get('name') or None),
                 color=(data.get('color') or None),
                 allocation=eff_allocation,
+                auto_advance=bool(data.get('auto_advance')),
             )
             db.session.add(row)
         else:
@@ -513,6 +514,10 @@ def save_plot(data):
                 if field == 'subject' and not value:
                     return None, 'subject 은 비울 수 없습니다'
                 setattr(row, field, value or None)
+            # 자동 승인(P8) — 페이로드에 있는 키만. 없는 키를 False 로 덮으면
+            # 날짜만 고치는 저장이 켜 둔 자동 승인을 끈다.
+            if 'auto_advance' in data:
+                row.auto_advance = bool(data.get('auto_advance'))
             if started_on is not None:
                 row.started_on = started_on
             if 'ended_on' in data:
@@ -718,7 +723,9 @@ def accept_stage(plot_uuid, stage_key=None, stage_index=None, started_on=None,
         return None, '프로그램이 없는 구획에는 단계가 없습니다'
 
     prog = GeoProgram.query.filter_by(unique_id=row.program_uuid).first()
-    stages = prog.stage_list() if prog is not None else []
+    # **구획이 실제로 따르는 목록**을 본다 — 뺀 단계를 확인하거나 더한 단계를
+    # "프로그램에 없다" 며 거절하면, 구성을 고칠 수 있게 한 의미가 없다.
+    stages = plot_context.effective_stages(row, prog)
     if not stages:
         return None, '프로그램에 단계가 없습니다'
 
@@ -770,6 +777,9 @@ def accept_stage(plot_uuid, stage_key=None, stage_index=None, started_on=None,
             started_on=started, source=source, auto=bool(auto),
             decided_by=(decided_by or None), note=(note or None))
         db.session.add(ev)
+        # 확정된 전환보다 앞선 계획 경계는 **이미 답이 나온 질문**이다(P8).
+        # 남겨 두면 되돌리기를 했을 때 지워진 줄 알았던 옛 계획이 되살아난다.
+        _drop_plan_upto(row, stages, idx)
         db.session.commit()
     except Exception as exc:
         db.session.rollback()
@@ -814,7 +824,13 @@ def undo_stage(plot_uuid, decided_by=None):
 
 
 def auto_advance_stage(plot_uuid):
-    """프로그램이 자동 승인이면 대기 중 전환을 기록한다 → dict|None.
+    """자동 승인 구획의 대기 중 전환을 기록한다 → list (없으면 []).
+
+    ## 프로그램이 아니라 **구획**이 정한다 (P8)
+
+    `GeoPlot.auto_advance` 가 정본이다. 자동 승인이 묻는 것은 "이 작물의 단계
+    모델이 정확한가" 가 아니라 "이 자리를 사람 눈 없이 믿을 수 있는가" 이고,
+    그것은 작물이 아니라 구획의 성질이다.
 
     ## 읽기 경로에서 부르는 쓰기다 — 그 사실을 숨기지 않는다
 
@@ -825,6 +841,12 @@ def auto_advance_stage(plot_uuid):
     자료에서 되짚은 날이기 때문이다 — 날짜 판정은 단계 진입일을 거꾸로 세고,
     GDD 판정은 누적이 임계를 넘어선 날을 되짚는다(`_gdd_crossed_on`). 아무도
     3주 뒤에 열어 봐도 같은 날짜가 남는다.
+
+    ## 한 번에 **여러 단계를 따라잡는다**
+
+    한 줄만 적고 멈추면 3주 만에 연 구획의 이력에 구멍이 남는다(그리고 다음
+    조회까지 단계가 하나 뒤처져 있다). 프로그램의 단계 수를 넘지 않는 선에서
+    더 이상 제안이 없을 때까지 민다.
 
     ## 되짚을 날짜가 없으면 기록하지 않는다
 
@@ -839,26 +861,541 @@ def auto_advance_stage(plot_uuid):
 
     row = GeoPlot.query.filter_by(unique_id=plot_uuid).first()
     if row is None or not row.program_uuid:
-        return None
+        return []
+    if not getattr(row, 'auto_advance', False):
+        return []
     prog = GeoProgram.query.filter_by(unique_id=row.program_uuid).first()
-    if prog is None or not getattr(prog, 'auto_advance', False):
-        return None
+    if prog is None:
+        return []
 
-    proposal = plot_context.stage_proposal(row)
-    if not proposal:
-        return None
-    if not proposal.get('started_on'):
-        # 되짚을 날짜가 없다 — 지어내지 않고 사람에게 묻는 상태로 둔다.
-        return None
+    out = []
+    for _ in range(len(plot_context.effective_stages(row, prog)) or 1):
+        # `assume_start` — 원장이 비어 있어도 첫 전환부터 민다. 자동 승인을 켠
+        # 구획은 배너를 띄우지 않으므로 "소급해서 승인을 요구한다"(§P5)는
+        # 문제가 없고, 켜 두었는데 아무것도 기록되지 않으면 사람은 기능이
+        # 꺼진 것으로 본다.
+        proposal = plot_context.stage_proposal(row, assume_start=True)
+        if not proposal or not proposal.get('started_on'):
+            # 되짚을 날짜가 없다 — 지어내지 않고 사람에게 묻는 상태로 둔다.
+            break
+        result, err = accept_stage(
+            plot_uuid, stage_key=proposal['stage_key'],
+            started_on=proposal['started_on'],
+            source=proposal.get('source') or 'manual', auto=True)
+        if err:
+            logger.debug('자동 단계 전환 건너뜀(%s): %s', plot_uuid, err)
+            break
+        out.append(result)
+        db.session.refresh(row)
+    return out
 
-    result, err = accept_stage(
-        plot_uuid, stage_key=proposal['stage_key'],
-        started_on=proposal['started_on'],
-        source=proposal.get('source') or 'manual', auto=True)
+
+# ── 단계 일정 (P8) ─────────────────────────────────────────────────────────
+#
+# 프로그램의 단계 길이는 표준이고, 구획은 그것을 **참조만** 한다. 현실에서
+# 밀리거나 앞당겨진 경계를 적는 자리가 `GeoPlot.stage_plan` 이다.
+# 정본: docs/design/program-layer.md §P8
+
+
+def _drop_plan_upto(row, stages, idx):
+    """`idx`(1-based) 까지의 계획 경계를 지운다. 커밋은 호출부가 한다."""
+    plan = row.stage_plan
+    if not isinstance(plan, dict) or not plan:
+        return
+    done = {st.get('key') for st in stages[:idx] if st.get('key')}
+    left = {k: v for k, v in plan.items() if k not in done}
+    if len(left) != len(plan):
+        row.stage_plan = left or None
+
+
+def _plan_context(plot_uuid):
+    """(row, program, stages, 편집 가능한 첫 단계 순번) → 또는 (None, …, error)."""
+    from aot.databases.models import GeoProgram
+
+    row = GeoPlot.query.filter_by(unique_id=plot_uuid).first()
+    if row is None:
+        return None, None, None, None, '구획을 찾을 수 없습니다: %s' % plot_uuid
+    if not row.program_uuid:
+        return None, None, None, None, '프로그램이 없는 구획에는 단계가 없습니다'
+    prog = GeoProgram.query.filter_by(unique_id=row.program_uuid).first()
+    stages = plot_context.effective_stages(row, prog)
+    if not stages:
+        return None, None, None, None, '프로그램에 단계가 없습니다'
+    anchor = plot_context.stage_anchor(row)
+    # 기준점 단계의 시작일은 확정된 사실이거나 구획의 시작일이다 — 계획이
+    # 손대지 못한다. 고치고 싶으면 원장을 무르는 것이 그 수단이다.
+    first = int((anchor or {}).get('stage_index') or 1) + 1
+    return row, prog, stages, first, None
+
+
+def set_stage_plan(plot_uuid, plan, set_by=None):
+    """계획 경계를 **병합** 저장 → (dict, error).
+
+    `plan` = `{단계키: 'YYYY-MM-DD' | None}`. `None` 은 해제(프로그램 기본으로
+    되돌림)다 — 없는 키는 건드리지 않는다(부분 저장 원칙).
+
+    **절대 날짜만 받는다.** 화면은 "+7일" 로 말하지만 그 환산은 저장 전에 끝난다
+    (`shift_stage`). 상대값을 저장하면 앞 단계가 밀릴 때 그 7일이 어느 날이었는지
+    조용히 달라진다.
+    """
+    from aot.utils.time_utils import utc_now
+
+    if not isinstance(plan, dict) or not plan:
+        return None, '고칠 경계가 없습니다'
+
+    row, prog, stages, first, err = _plan_context(plot_uuid)
     if err:
-        logger.debug('자동 단계 전환 건너뜀(%s): %s', plot_uuid, err)
-        return None
-    return result
+        return None, err
+
+    by_key = {st.get('key'): i + 1 for i, st in enumerate(stages)
+              if st.get('key')}
+    current = dict(row.stage_plan) if isinstance(row.stage_plan, dict) else {}
+
+    for key, raw in plan.items():
+        idx = by_key.get(key)
+        if idx is None:
+            return None, '프로그램에 없는 단계입니다: %s' % key
+        if idx < first:
+            return None, ('이미 지나간 경계입니다: %s — 확인·되돌리기로 고치세요'
+                          % key)
+        if raw in (None, ''):
+            current.pop(key, None)
+            continue
+        when, derr = _parse_date(raw, key)
+        if derr:
+            return None, derr
+        if row.started_on and when < row.started_on:
+            return None, '경계가 구획 시작일보다 빠릅니다: %s' % key
+        current[key] = {'started_on': when.isoformat(),
+                        'set_by': (set_by or None),
+                        'set_at': utc_now().isoformat()}
+
+    # **저장하기 전에 같은 규칙으로 검사한다.** 경계가 앞 경계보다 빠르면 그
+    # 단계는 길이가 음수가 되는데, 읽는 쪽에서 조용히 바로잡으면 사람이 적은
+    # 값과 화면이 보이는 값이 갈린다.
+    cand = {}
+    for key, entry in current.items():
+        when, derr = _parse_date((entry or {}).get('started_on'), key)
+        if derr or when is None:
+            continue
+        cand[key] = when
+    sched = plot_context.stage_schedule(row, plan=cand)
+    if sched is not None:
+        prev = None
+        for b in sched['boundaries']:
+            if b['starts_on'] is None:
+                continue
+            if prev is not None and b['starts_on'] <= prev:
+                return None, ('%s 의 경계가 앞 단계보다 빠릅니다'
+                              % (b['name'] or b['key']))
+            prev = b['starts_on']
+
+    try:
+        row.stage_plan = current or None
+        db.session.commit()
+    except Exception as exc:
+        db.session.rollback()
+        logger.exception('단계 일정 저장 실패')
+        return None, '저장하지 못했습니다: %s' % exc
+
+    return {'stage_schedule': plot_context.stage_schedule_view(row)}, None
+
+
+def set_stage_days(plot_uuid, days, set_by=None):
+    """단계 **기간(일)** 으로 일정을 고친다 → (dict, error).
+
+    `days` = `{단계키: 일수}`.
+
+    ## 왜 날짜가 아니라 기간으로 받나 (2026-08-24)
+
+    처음에는 화면이 경계 **날짜**를 직접 받았다. 사람이 계산해야 했다 — "육묘를
+    닷새 더" 를 말하려면 정식일이 며칠이 되는지를 먼저 머릿속에서 더해야 하고,
+    뒤 단계까지 보려면 그 덧셈을 다섯 번 더 한다.
+
+    프로그램은 이미 **단계마다 며칠**로 적고 그 합이 일정을 만든다. 구획이 같은
+    프로그램을 참조하는데 입력 어휘만 다르면, 같은 것을 두 가지로 생각하게 된다.
+
+    **저장은 여전히 절대 날짜다**(`set_stage_plan`). 기간을 그대로 저장하면 앞
+    단계가 밀릴 때 그 기간이 가리키던 날이 조용히 달라진다 — 여기서 하는 일은
+    받은 기간을 그 자리에서 날짜로 환산하는 것뿐이다.
+
+    **프로그램과 같은 값을 적으면 그 경계를 푼다.** 화면에 되돌리기 버튼이 없는
+    이유가 이것이다 — 표준으로 돌아가는 수단이 이미 입력 칸 안에 있다.
+
+    ## 기간을 정하는 것은 **다음 경계**를 정하는 것과 같은 말이다
+
+    그래서 단계 i 의 기간을 받으면 경계 i+1 을 박는다. 마지막 단계는 다음 경계가
+    없어 정할 수 없다(프로그램에서도 마지막은 "끝까지" 인 경우가 많다).
+
+    여러 칸을 한 번에 받으면 **앞에서부터 누적해** 환산한다. 앞 단계를 늘린 뒤의
+    뒤 단계 기간은 밀린 자리에서 세어야 하는데, 각자 원래 자리에서 세면 앞의
+    변경이 두 번 반영된다.
+    """
+    from datetime import timedelta
+
+    if not isinstance(days, dict) or not days:
+        return None, '고칠 기간이 없습니다'
+
+    row, prog, stages, first, err = _plan_context(plot_uuid)
+    if err:
+        return None, err
+
+    clean = {}
+    for key, raw in days.items():
+        if raw in (None, ''):
+            continue
+        try:
+            n = int(raw)
+        except (TypeError, ValueError):
+            return None, '기간이 숫자가 아닙니다: %s' % key
+        if n < 1:
+            return None, '기간은 하루 이상이어야 합니다: %s' % key
+        clean[key] = n
+    if not clean:
+        return None, '고칠 기간이 없습니다'
+
+    sched = plot_context.stage_schedule(row)
+    if sched is None:
+        return None, '단계를 계산할 수 없습니다'
+    bounds = sched['boundaries']
+    known = {b['key'] for b in bounds}
+    for key in clean:
+        if key not in known:
+            return None, ('이 구획의 남은 단계가 아닙니다: %s' % key)
+        if key == bounds[-1]['key']:
+            return None, ('마지막 단계는 기간을 정하지 않습니다 — 끝내는 날은 '
+                          '재배 종료가 정합니다')
+
+    plan = {}
+    cursor = bounds[0]['starts_on']
+    for i, b in enumerate(bounds[:-1]):
+        nxt = bounds[i + 1]
+        start = cursor
+        if start is None:
+            break
+        n = clean.get(b['key'])
+        if n is None:
+            # 안 건드린 칸 — 지금 길이를 그대로 쓴다(앞이 밀렸으면 함께 밀린다).
+            if nxt['starts_on'] is not None and b['starts_on'] is not None:
+                n = (nxt['starts_on'] - b['starts_on']).days
+            else:
+                n = b['days']
+            if not n:
+                break
+        elif n == b['days']:
+            # **프로그램과 같은 값을 적으면 표준으로 돌아간다.** 되돌리기 버튼을
+            # 따로 두지 않는 이유가 이것이다 — 같은 일을 하는 수단이 둘이면
+            # 좁은 줄에 칸이 하나 더 생기고, 사람은 어느 쪽이 정본인지 묻는다.
+            #
+            # 박아 두어도 날짜는 같지만 뜻이 다르다: 박힌 경계는 프로그램을
+            # 고쳐도 따라오지 않는다. 사람이 "표준대로" 라고 말한 것을 고정으로
+            # 기록하면 그 뒤의 프로그램 수정이 조용히 무시된다.
+            plan[nxt['key']] = None
+        else:
+            plan[nxt['key']] = (start + timedelta(days=n)).isoformat()
+        cursor = start + timedelta(days=n)
+
+    if not plan:
+        return None, '고칠 기간이 없습니다'
+    return set_stage_plan(plot_uuid, plan, set_by=set_by)
+
+
+def _save_overrides(row, ov):
+    """구성(뺀 것·더한 것·지침)을 저장 → error|None. 빈 것은 NULL 로 눕힌다."""
+    out = {}
+    if ov['removed']:
+        out['removed'] = sorted(ov['removed'])
+    if ov['added']:
+        out['added'] = ov['added']
+    if ov['guidance']:
+        out['guidance'] = ov['guidance']
+    try:
+        row.stage_overrides = out or None
+        db.session.commit()
+    except Exception as exc:
+        db.session.rollback()
+        logger.exception('단계 구성 저장 실패')
+        return '저장하지 못했습니다: %s' % exc
+    return None
+
+
+def set_stage_guidance(plot_uuid, stage_key=None, text=None, set_by=None):
+    """이 구획의 **단계 지침**을 적는다 → (dict, error).
+
+    프로그램의 지침은 그 작물의 일반 사항이고, 여기 적는 것은 "이 자리에서 이
+    시기에 무엇을 하나" 다. 프로그램 카탈로그는 지침을 비운 채로 오는 경우가
+    대부분이라, **없어도 적을 수 있어야** 한다.
+
+    빈 글을 주면 지운다(= 프로그램 지침이 다시 보인다).
+
+    ⚠ 프로그램을 고치지 않는다. 구획 화면에서 템플릿을 건드리면 같은 프로그램을
+    쓰는 다른 구획이 조용히 함께 바뀐다.
+    """
+    row, prog, stages, first, err = _plan_context(plot_uuid)
+    if err:
+        return None, err
+    if not stage_key:
+        return None, '단계를 지정해야 합니다'
+    if stage_key not in {st.get('key') for st in stages}:
+        return None, '이 구획에 없는 단계입니다: %s' % stage_key
+
+    text = (text or '').strip()
+    if len(text) > 4000:
+        return None, '지침이 너무 깁니다 (4000자)'
+
+    ov = row.stage_override_map()
+    if text:
+        ov['guidance'][stage_key] = text
+    else:
+        ov['guidance'].pop(stage_key, None)
+    err = _save_overrides(row, ov)
+    if err:
+        return None, err
+    return {'stage_key': stage_key,
+            'guidance': text or None,
+            'stage_schedule': plot_context.stage_schedule_view(row)}, None
+
+
+def remove_stage(plot_uuid, stage_key=None, set_by=None):
+    """이 구획에서 단계를 **뺀다** → (dict, error).
+
+    육묘 없이 바로 정식하는 작기가 있다. 프로그램을 고치면 그 프로그램을 쓰는
+    모든 구획이 함께 바뀌므로, 뺀 사실은 구획이 든다.
+
+    **이미 지나간 단계는 뺄 수 없다** — 확인된 전환이 가리키는 단계를 없애면
+    원장이 존재하지 않는 단계를 가리키게 되고, 그때 무엇을 했는지의 답이 사라진다.
+    남은 단계가 하나도 없게 만드는 것도 막는다.
+    """
+    row, prog, stages, first, err = _plan_context(plot_uuid)
+    if err:
+        return None, err
+    if not stage_key:
+        return None, '단계를 지정해야 합니다'
+
+    idx = None
+    for i, st in enumerate(stages):
+        if st.get('key') == stage_key:
+            idx = i + 1
+            break
+    if idx is None:
+        return None, '이 구획에 없는 단계입니다: %s' % stage_key
+    # **원장이 가리키는 단계**와 그 앞은 뺄 수 없다. 원장이 비어 있으면 막을
+    # 것이 없다 — 아직 아무 전환도 확인되지 않았으므로 무엇을 뺐다고 해서
+    # 잃어버릴 기록이 없다(첫 단계를 건너뛰는 작기가 바로 이 경우다).
+    anc = plot_context.stage_anchor(row)
+    if anc and idx <= int(anc.get('stage_index') or 1):
+        return None, ('이미 지나간 단계는 뺄 수 없습니다 — 되돌리기로 전환을 '
+                      '먼저 무르세요')
+    if len(stages) <= 1:
+        return None, '마지막 남은 단계는 뺄 수 없습니다'
+
+    ov = row.stage_override_map()
+    # 더한 단계를 다시 빼는 것은 **목록에서 지우는 것**이다. `removed` 에 적으면
+    # 프로그램에 없는 키가 영영 남는다.
+    added_keys = {a.get('key') for a in ov['added']}
+    if stage_key in added_keys:
+        ov['added'] = [a for a in ov['added'] if a.get('key') != stage_key]
+    else:
+        ov['removed'].add(stage_key)
+    ov['guidance'].pop(stage_key, None)
+
+    err = _save_overrides(row, ov)
+    if err:
+        return None, err
+    # 그 단계에 걸린 경계도 함께 푼다 — 없는 단계의 날짜가 남으면 파생이 그
+    # 키를 영영 못 찾는다.
+    plan = row.stage_plan
+    if isinstance(plan, dict) and stage_key in plan:
+        left = {k: v for k, v in plan.items() if k != stage_key}
+        row.stage_plan = left or None
+        db.session.commit()
+    return {'stage_key': stage_key,
+            'stage_schedule': plot_context.stage_schedule_view(row)}, None
+
+
+def add_stage(plot_uuid, name=None, days=None, after=None, guidance=None,
+              set_by=None):
+    """이 구획에 단계를 **더한다** → (dict, error).
+
+    `after` 는 그 단계 **뒤**에 끼운다는 뜻이다(빈 문자열이면 맨 앞, 없으면 맨 뒤).
+
+    키는 서버가 짓는다 — 사람에게 식별자를 묻지 않는다. `custom_` 접두사를 쓰는
+    이유는 프로그램이 나중에 단계를 늘려도 키가 부딪히지 않게 하기 위해서다.
+    """
+    row, prog, stages, first, err = _plan_context(plot_uuid)
+    if err:
+        return None, err
+
+    name = (name or '').strip()
+    if not name:
+        return None, '단계 이름이 필요합니다'
+    try:
+        days = int(days)
+    except (TypeError, ValueError):
+        return None, '기간이 숫자가 아닙니다'
+    if days < 1:
+        return None, '기간은 하루 이상이어야 합니다'
+
+    keys = {st.get('key') for st in stages}
+    if after not in (None, '') and after not in keys:
+        return None, '이 구획에 없는 단계입니다: %s' % after
+    # 지나간 자리에 끼우면 이미 확인된 전환의 순번이 틀어진다. 원장이 비어
+    # 있으면 막을 것이 없다(빼기와 같은 판단).
+    anc = plot_context.stage_anchor(row)
+    anchor_index = int((anc or {}).get('stage_index') or 0)
+    if anchor_index:
+        pos = 0
+        if after not in (None, ''):
+            pos = [i for i, st in enumerate(stages)
+                   if st.get('key') == after][0] + 1
+        elif after is None:
+            pos = len(stages)
+        if pos < anchor_index:
+            return None, '이미 지나간 자리에는 넣을 수 없습니다'
+
+    ov = row.stage_override_map()
+    n = 1
+    while ('custom_%d' % n) in keys:
+        n += 1
+    key = 'custom_%d' % n
+
+    entry = {'key': key, 'name': name, 'days': days}
+    if after is not None:
+        entry['after'] = after
+    if (guidance or '').strip():
+        entry['guidance'] = guidance.strip()[:4000]
+    ov['added'] = list(ov['added']) + [entry]
+
+    err = _save_overrides(row, ov)
+    if err:
+        return None, err
+    return {'stage_key': key, 'name': name,
+            'stage_schedule': plot_context.stage_schedule_view(row)}, None
+
+
+def save_as_program(plot_uuid, name=None, set_by=None):
+    """이 구획의 일정을 **프로그램으로 등록한다** → (dict, error).
+
+    ## 왜 필요한가
+
+    구획에서 기간을 맞추고 단계를 더하고 지침을 적고 나면, 그 지식은 그 구획
+    안에만 있다. 다음 작기·옆 밭은 같은 일을 처음부터 다시 한다 — 프로그램은
+    바로 그것(같은 걸 두 번 하지 않기)을 위해 있는 층이다.
+
+    ## 무엇을 담나
+
+    지금 **실제로 따르고 있는 단계 목록**이다(`effective_stages`) — 뺀 단계는
+    빠지고 더한 단계는 들어가며 지침은 구획이 적은 것이 담긴다. 기간은 프로그램의
+    표준이 아니라 **경계 사이의 실제 날수**다: 그것을 고쳐 둔 것이 이 기능을
+    부르는 이유다.
+
+    목표(`targets`)와 목표 항목 정의는 원본 프로그램 것을 그대로 옮긴다 —
+    구획이 손대지 않는 값이라 바뀐 것이 없다.
+
+    ## 구획을 새 프로그램으로 옮기지는 않는다
+
+    등록은 **복사**다. 이 구획은 지금 따르던 것을 그대로 따른다 — 등록 한 번이
+    진행 중인 작기의 해석을 바꾸면(버전 고정이 옮겨 가면) "그때 무엇을 목표로
+    길렀나" 의 답이 조용히 달라진다. 새 프로그램을 이 구획에도 쓰려면 [설정]
+    에서 고르는 것이 사람의 결정이다.
+    """
+    from aot.aot_flask.geo import program_io
+    from aot.databases.models import GeoProgram
+
+    row, prog, stages, first, err = _plan_context(plot_uuid)
+    if err:
+        return None, err
+
+    view = plot_context.stage_schedule_view(row)
+    lengths = {v['key']: v['days'] for v in view}
+
+    out_stages = []
+    for i, st in enumerate(stages):
+        item = {k: v for k, v in st.items() if k != 'after'}
+        # 마지막 단계는 "끝까지" 로 둔다 — 끝내는 날은 재배 종료가 정한다.
+        if i == len(stages) - 1:
+            item['days'] = None
+        else:
+            n = lengths.get(st.get('key'))
+            item['days'] = n if n else st.get('days')
+        out_stages.append(item)
+
+    src = GeoProgram.query.filter_by(unique_id=row.program_uuid).first()
+    name = (name or '').strip()
+    if not name:
+        # 이름을 지어 준다 — 사람에게 빈 칸부터 내밀지 않는다. 겹치면 뒤에 번호.
+        base = '%s %s' % (row.subject, (row.name or '').strip() or
+                          (src.name if src is not None else ''))
+        name = ' '.join(base.split()) or row.subject
+    exists = {p.name for p in GeoProgram.query.filter_by(name=name).all()}
+    if exists:
+        n = 2
+        while '%s (%d)' % (name, n) in {p.name for p in GeoProgram.query.all()}:
+            n += 1
+        name = '%s (%d)' % (name, n)
+
+    payload = {
+        'name': name,
+        'kind': row.kind or 'vegetation',
+        'subject': row.subject,
+        'variety': row.variety or None,
+        'stages': out_stages,
+        'source_note': ('구획 "%s" 의 일정에서 등록' % (row.name or row.subject)),
+    }
+    if src is not None:
+        payload['target_defs'] = src.target_def_list()
+        payload['resource_defs'] = src.resource_def_list()
+        payload['photosynthesis'] = src.photosynthesis
+        payload['targets_methods'] = src.targets_methods
+        payload['tab_id'] = src.tab_id
+        payload['derived_from'] = src.unique_id
+
+    result, err = program_io.create_program(payload, source='user')
+    if err:
+        return None, err
+    return {'program': {'unique_id': result.get('unique_id'),
+                        'name': result.get('name')}}, None
+
+
+def shift_stage(plot_uuid, stage_key=None, days=None, set_by=None):
+    """단계 경계를 상대로 옮긴다 → (dict, error). 연기는 +, 앞당김은 −.
+
+    지금 경계가 어디인지는 서버가 알고 있으므로(계획이든 프로그램 기본이든),
+    화면은 며칠인지만 말하면 된다. 저장은 **환산한 절대 날짜**다.
+    """
+    from datetime import timedelta
+
+    try:
+        days = int(days)
+    except (TypeError, ValueError):
+        return None, '며칠인지가 숫자가 아닙니다'
+    if days == 0:
+        return None, '옮길 날수가 0 입니다'
+    if not stage_key:
+        return None, '단계를 지정해야 합니다'
+
+    row, prog, stages, first, err = _plan_context(plot_uuid)
+    if err:
+        return None, err
+
+    sched = plot_context.stage_schedule(row)
+    if sched is None:
+        return None, '단계를 계산할 수 없습니다'
+    target = None
+    for b in sched['boundaries']:
+        if b['key'] == stage_key:
+            target = b
+            break
+    if target is None:
+        return None, '이 구획의 남은 단계가 아닙니다: %s' % stage_key
+    if target['starts_on'] is None:
+        return None, ('앞 단계에 기간이 없어 이 경계를 셀 수 없습니다 — '
+                      '날짜를 직접 정하세요')
+
+    return set_stage_plan(
+        plot_uuid,
+        {stage_key: (target['starts_on'] + timedelta(days=days)).isoformat()},
+        set_by=set_by)
 
 
 def apply_stage_resources(plot_uuid):

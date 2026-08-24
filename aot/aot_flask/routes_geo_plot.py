@@ -436,8 +436,20 @@ def api_plots_list():
     # 다시 읽으면 행 수만큼 반복된다.
     facilities = {}
 
+    # 프로그램·단계 기준점도 컨테이너·시설과 같은 이유로 한 벌만 만든다.
+    # `program_brief` 는 캐시 인자를 원래 받고 있었는데 여기서 넘기지 않아
+    # 구획마다 다시 읽었고, 기준점은 캐시가 아예 없어 구획당 두 번씩 읽혔다
+    # (라즈베리파이 실측: 구획 24개에 쿼리 95건 — 그중 85건이 이 둘).
+    programs = {}
+    _uuids = [r.unique_id for r in rows]
+    events = plot_context.stage_events_for(_uuids)          # 원장 1회
+    anchors = plot_context.stage_anchors_for(_uuids, events=events)
+
     items = [plot_context.to_dict(r, containers=_containers_for(r.geo_id),
-                                     facilities=facilities) for r in rows]
+                                     facilities=facilities,
+                                     programs=programs, anchors=anchors,
+                                     events=events)
+             for r in rows]
     # 지도 이름 — 전체 조회에서는 "어느 지도의 구획인가" 가 목록의 핵심 축이다.
     # 항목마다 GeoMap 을 다시 읽지 않도록 한 번에 만든다.
     map_names = {}
@@ -1024,6 +1036,162 @@ def api_plot_stage_undo(plot_uuid):
     from aot.aot_flask.geo.site_summary import invalidate_plot_contents
     invalidate_plot_contents(plot_uuid)
     return jsonify({'ok': True, 'event': result})
+
+
+@blueprint.route('/api/geo/plot/<string:plot_uuid>/schedule',
+                 methods=['POST'])
+@login_required
+def api_plot_schedule(plot_uuid):
+    """단계 경계를 고친다 (P8) — 연기·앞당김.
+
+    프로그램의 단계 기간은 **표준**이고, 구획은 그것을 참조만 한다. 정식이 비로
+    닷새 밀린 사실을 적는 자리가 여기다.
+
+    한 번에 여럿을 받는다 — 축에서 경계 둘을 옮긴 결과가 반쪽만 남으면 안 된다.
+    """
+    denied = _require_edit()
+    if denied:
+        return denied
+
+    data = request.get_json(silent=True) or {}
+    # **기간(일)이 화면의 어휘다.** 사람이 날짜를 계산하지 않게 — 프로그램도
+    # 단계마다 며칠로 적고 그 합이 일정을 만든다. 날짜형(`plan`)은 그대로 둔다:
+    # "정식은 9월 3일" 처럼 날을 못박는 입력이 따로 있다(전환 배너의 [연기]).
+    days = data.get('days')
+    plan = data.get('plan')
+    if isinstance(days, dict):
+        result, error = plot_io.set_stage_days(
+            plot_uuid, days, set_by=_current_user_name())
+    elif isinstance(plan, dict):
+        result, error = plot_io.set_stage_plan(
+            plot_uuid, plan, set_by=_current_user_name())
+    else:
+        return jsonify({'ok': False,
+                        'message': ('days {단계키: 일수} 또는 '
+                                    'plan {단계키: 날짜|null} 이 필요합니다')}), 400
+    if error:
+        status = 404 if '찾을 수 없습니다' in error else 400
+        return jsonify({'ok': False, 'message': error}), status
+    from aot.aot_flask.geo.site_summary import invalidate_plot_contents
+    invalidate_plot_contents(plot_uuid)
+    return jsonify(dict({'ok': True}, **result))
+
+
+@blueprint.route('/api/geo/plot/<string:plot_uuid>/schedule/shift',
+                 methods=['POST'])
+@login_required
+def api_plot_schedule_shift(plot_uuid):
+    """단계 경계를 상대로 옮긴다 (P8) — `{stage_key, days: ±N}`.
+
+    화면은 "+7일" 로 말하고 **서버가 절대 날짜로 환산해 저장한다**. 상대값을
+    저장하면 앞 단계가 밀릴 때 그 7일이 어느 날이었는지 조용히 달라진다.
+    """
+    denied = _require_edit()
+    if denied:
+        return denied
+
+    data = request.get_json(silent=True) or {}
+    result, error = plot_io.shift_stage(
+        plot_uuid, stage_key=data.get('stage_key'), days=data.get('days'),
+        set_by=_current_user_name())
+    if error:
+        status = 404 if '찾을 수 없습니다' in error else 400
+        return jsonify({'ok': False, 'message': error}), status
+    from aot.aot_flask.geo.site_summary import invalidate_plot_contents
+    invalidate_plot_contents(plot_uuid)
+    return jsonify(dict({'ok': True}, **result))
+
+
+@blueprint.route('/api/geo/plot/<string:plot_uuid>/stage-guidance',
+                 methods=['POST'])
+@login_required
+def api_plot_stage_guidance(plot_uuid):
+    """이 구획의 단계 지침을 적는다 (P8).
+
+    프로그램의 지침은 그 작물의 일반 사항이고, 여기 적는 것은 "이 자리에서 이
+    시기에 무엇을 하나" 다. 프로그램이 비워 둔 채로 와도 적을 수 있어야 한다.
+    """
+    denied = _require_edit()
+    if denied:
+        return denied
+
+    data = request.get_json(silent=True) or {}
+    result, error = plot_io.set_stage_guidance(
+        plot_uuid, stage_key=data.get('stage_key'),
+        text=data.get('guidance'), set_by=_current_user_name())
+    if error:
+        status = 404 if '찾을 수 없습니다' in error else 400
+        return jsonify({'ok': False, 'message': error}), status
+    from aot.aot_flask.geo.site_summary import invalidate_plot_contents
+    invalidate_plot_contents(plot_uuid)
+    return jsonify(dict({'ok': True}, **result))
+
+
+@blueprint.route('/api/geo/plot/<string:plot_uuid>/stages', methods=['POST'])
+@login_required
+def api_plot_stage_add(plot_uuid):
+    """이 구획에 단계를 더한다 (P8) — `{name, days, after?, guidance?}`.
+
+    프로그램은 건드리지 않는다. 같은 프로그램을 쓰는 다른 구획이 조용히 함께
+    바뀌면 안 된다.
+    """
+    denied = _require_edit()
+    if denied:
+        return denied
+
+    data = request.get_json(silent=True) or {}
+    result, error = plot_io.add_stage(
+        plot_uuid, name=data.get('name'), days=data.get('days'),
+        after=data.get('after'), guidance=data.get('guidance'),
+        set_by=_current_user_name())
+    if error:
+        status = 404 if '찾을 수 없습니다' in error else 400
+        return jsonify({'ok': False, 'message': error}), status
+    from aot.aot_flask.geo.site_summary import invalidate_plot_contents
+    invalidate_plot_contents(plot_uuid)
+    return jsonify(dict({'ok': True}, **result))
+
+
+@blueprint.route('/api/geo/plot/<string:plot_uuid>/stages/<string:stage_key>',
+                 methods=['DELETE'])
+@login_required
+def api_plot_stage_remove(plot_uuid, stage_key):
+    """이 구획에서 단계를 뺀다 (P8). 이미 지나간 단계는 거절한다."""
+    denied = _require_edit()
+    if denied:
+        return denied
+
+    result, error = plot_io.remove_stage(
+        plot_uuid, stage_key=stage_key, set_by=_current_user_name())
+    if error:
+        status = 404 if '찾을 수 없습니다' in error else 400
+        return jsonify({'ok': False, 'message': error}), status
+    from aot.aot_flask.geo.site_summary import invalidate_plot_contents
+    invalidate_plot_contents(plot_uuid)
+    return jsonify(dict({'ok': True}, **result))
+
+
+@blueprint.route('/api/geo/plot/<string:plot_uuid>/save-as-program',
+                 methods=['POST'])
+@login_required
+def api_plot_save_as_program(plot_uuid):
+    """이 구획의 일정을 프로그램으로 등록한다 (P8).
+
+    등록은 **복사**다 — 이 구획은 지금 따르던 것을 그대로 따른다. 등록 한 번이
+    진행 중인 작기의 해석을 바꾸면 "그때 무엇을 목표로 길렀나" 의 답이 조용히
+    달라진다.
+    """
+    denied = _require_edit()
+    if denied:
+        return denied
+
+    data = request.get_json(silent=True) or {}
+    result, error = plot_io.save_as_program(
+        plot_uuid, name=data.get('name'), set_by=_current_user_name())
+    if error:
+        status = 404 if '찾을 수 없습니다' in error else 400
+        return jsonify({'ok': False, 'message': error}), status
+    return jsonify(dict({'ok': True}, **result))
 
 
 @blueprint.route('/api/geo/plot/<string:plot_uuid>/resources',

@@ -13,4 +13,16 @@
   </div>
 </div>
 
+<div class="aot-modal-option-row">
+  <label class="aot-modal-option-label">{{form.max_age_s.label(class_='mb-0')}}</label>
+  <div class="aot-modal-option-control">
+    {{form.max_age_s(class_='form-control aot-modern-input', value=(each_device.max_age_s if each_device.max_age_s is not none else ''),
+      placeholder=_('Derive from period'),
+      **{'title': _('How old a measurement may be and still be used, in seconds. '
+                    'Leave blank to derive it from the measurement period — that is right '
+                    'for most devices. Set a number only when this device needs its own '
+                    'rule (a LoRaWAN node that reports every 30-60 minutes, for example).')})}}
+  </div>
+</div>
+
 {% endif %}
