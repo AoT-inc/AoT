@@ -139,11 +139,20 @@ _SEQUENCE_SCHEDULE_TOOL_ADDITIONS = {'modify_sequence_schedule',
 # 여기에 이름을 추가하는 것은 **승인 요구를 없애는 안전 결정**이다.
 # 삭제(delete_*)와 활성/비활성(activate_/deactivate_)은 절대 넣지 말 것 —
 # 전자는 복구 불가능하고 후자가 바로 "물이 흐르기 시작하는" 순간이다.
+#
+# create_program / modify_program (2026-08-24): 프로그램은 장치를 직접 움직이지
+# 않는 참고자료다. 뗄 수 있는 근거는 위험이 작아서가 아니라 **더 강한 게이트가
+# 뒤에 있어서다** — GeoProgram.usable_for_control() 이 source='ai' 를 reviewed_at
+# 전까지 제어에서 배제하고, reviewed 는 by != 'ai' 조건 때문에 AI 가 스스로 세울
+# 수 없다. 이 계약은 test_program_approval_contract.py 가 따로 붙들고 있다.
+# delete_program 은 복구 불가라 위 금지 조항대로 승인 대상으로 남는다.
 _CONFIG_ONLY_APPROVAL_EXEMPTIONS = {'modify_sequence_schedule',
                                     'modify_sequence_step',
                                     'configure_sequence_day',
                                     'create_sequence_function',
-                                    'modify_function_options'}
+                                    'modify_function_options',
+                                    'create_program',
+                                    'modify_program'}
 
 # ---------------------------------------------------------------------------
 # 이름 휴리스틱 가드 — 위 스냅샷들이 못 잡는 구멍을 메운다.
@@ -325,6 +334,26 @@ _PLANTING_WRITE_TOOL_ADDITIONS = {
 _PLOT_STAGE_TOOL_ADDITIONS = {
     'confirm_plot_stage', 'undo_plot_stage', 'apply_plot_resources',
 }
+# 단계 원장 편집 (2026-08-24, p6_56/p6_57). 다섯 종 전부 승인 대상이다.
+#
+# - reschedule_plot_stage / add_plot_stage / remove_plot_stage: 단계 자체를
+#   고치므로 confirm_plot_stage 와 같은 급이다 — **기준점이 움직인다.** 뒤따르는
+#   단계와 예상 수확일이 통째로 다시 계산되므로 config_only 로 면제하지 말 것.
+# - set_plot_stage_guidance: 지침은 사람이 밭에서 할 일을 지시하는 문장이다.
+#   모델이 그럴듯하게 지어낼 수 있는 값이라 사람이 읽고 넘겨야 한다.
+# - save_plot_schedule_as_program: 구획의 일정을 재배 프로그램으로 굳힌다.
+#   새 프로그램 행이 생기고 이후 다른 구획이 그것을 근거로 삼으므로,
+#   create_program 이 승인 대상인 것과 같은 이유로 승인 대상이다.
+_PLOT_STAGE_EDIT_TOOL_ADDITIONS = {
+    'add_plot_stage', 'remove_plot_stage', 'reschedule_plot_stage',
+    'set_plot_stage_guidance', 'save_plot_schedule_as_program',
+}
+# 연결된 조회 소스 (2026-08-24). 셋 다 읽기 전용이라 승인 집합에는 들어가지
+# 않는다 — 등록해 둔 외부 API·참조표를 그때그때 물어보기만 하고, 무엇도
+# 적재하거나 바꾸지 않는다.
+_LOOKUP_SOURCE_READ_TOOL_ADDITIONS = {
+    'list_lookup_sources', 'query_data_source', 'query_reference_table',
+}
 # 재배 프로그램 — docs/design/program-layer.md (2026-08-19, P3).
 # 작물의 단계·기간 템플릿. 구획에 붙이면 단계·예상 수확일이 따라오므로, AI 가
 # 구획을 만들 때 고를 수 있어야 하고(읽기 2) 없으면 만들 수 있어야 한다(쓰기 2).
@@ -462,7 +491,8 @@ def _check_dispatch_map(R):
            | _ADAPTIVE_STORAGE_READ_TOOL_ADDITIONS | _ADAPTIVE_STORAGE_WRITE_TOOL_ADDITIONS
            | _GEO_BINDING_TOOL_ADDITIONS
            | _PLANTING_READ_TOOL_ADDITIONS | _PLANTING_WRITE_TOOL_ADDITIONS
-           | _PLOT_STAGE_TOOL_ADDITIONS
+           | _PLOT_STAGE_TOOL_ADDITIONS | _PLOT_STAGE_EDIT_TOOL_ADDITIONS
+           | _LOOKUP_SOURCE_READ_TOOL_ADDITIONS
            | _CROP_PROGRAM_READ_TOOL_ADDITIONS | _CROP_PROGRAM_WRITE_TOOL_ADDITIONS
            | _CROP_PROGRAM_DELETE_TOOL_ADDITIONS
            | _TAB_READ_TOOL_ADDITIONS | _TAB_WRITE_TOOL_ADDITIONS | _TAB_DELETE_TOOL_ADDITIONS
@@ -490,7 +520,8 @@ def _check_declarations(R):
            | _ADAPTIVE_STORAGE_READ_TOOL_ADDITIONS | _ADAPTIVE_STORAGE_WRITE_TOOL_ADDITIONS
            | _GEO_BINDING_TOOL_ADDITIONS
            | _PLANTING_READ_TOOL_ADDITIONS | _PLANTING_WRITE_TOOL_ADDITIONS
-           | _PLOT_STAGE_TOOL_ADDITIONS
+           | _PLOT_STAGE_TOOL_ADDITIONS | _PLOT_STAGE_EDIT_TOOL_ADDITIONS
+           | _LOOKUP_SOURCE_READ_TOOL_ADDITIONS
            | _CROP_PROGRAM_READ_TOOL_ADDITIONS | _CROP_PROGRAM_WRITE_TOOL_ADDITIONS
            | _CROP_PROGRAM_DELETE_TOOL_ADDITIONS
            | _TAB_READ_TOOL_ADDITIONS | _TAB_WRITE_TOOL_ADDITIONS | _TAB_DELETE_TOOL_ADDITIONS
@@ -507,7 +538,7 @@ def _check_declarations(R):
             | _SCHEDULE_CRUD_MUTATING_ADDITIONS | _GIS_INPUT_CRUD_MUTATING_ADDITIONS
             | _CONFIRMATION_RELAY_MUTATING_ADDITIONS | _ADAPTIVE_STORAGE_WRITE_TOOL_ADDITIONS
             | _GEO_BINDING_MUTATING_ADDITIONS | _PLANTING_WRITE_TOOL_ADDITIONS
-            | _PLOT_STAGE_TOOL_ADDITIONS
+            | _PLOT_STAGE_TOOL_ADDITIONS | _PLOT_STAGE_EDIT_TOOL_ADDITIONS
             | _CROP_PROGRAM_WRITE_TOOL_ADDITIONS | _CROP_PROGRAM_DELETE_TOOL_ADDITIONS
             | _TAB_WRITE_TOOL_ADDITIONS | _TAB_DELETE_TOOL_ADDITIONS
             | _WIDGET_WRITE_TOOL_ADDITIONS | _WIDGET_DELETE_TOOL_ADDITIONS)
@@ -524,6 +555,7 @@ def _check_declarations(R):
             | _CONFIRMATION_RELAY_MUTATING_ADDITIONS | _ADAPTIVE_STORAGE_WRITE_TOOL_ADDITIONS
             | _GEO_BINDING_MUTATING_ADDITIONS | _SCHEDULE_BATCH_PHYSICAL_ADDITIONS
             | _PLANTING_WRITE_TOOL_ADDITIONS | _PLOT_STAGE_TOOL_ADDITIONS
+            | _PLOT_STAGE_EDIT_TOOL_ADDITIONS
             | _CROP_PROGRAM_WRITE_TOOL_ADDITIONS | _CROP_PROGRAM_DELETE_TOOL_ADDITIONS
             | _TAB_WRITE_TOOL_ADDITIONS | _TAB_DELETE_TOOL_ADDITIONS
             | _WIDGET_WRITE_TOOL_ADDITIONS | _WIDGET_DELETE_TOOL_ADDITIONS)
@@ -616,6 +648,19 @@ def test_write_tools_are_gated():
 
     print(f"  OK  write-name gating: {len(_WRITE_NAME_PREFIXES)} prefixes checked, "
           f"{len(_INTENTIONALLY_UNGATED_WRITE_TOOLS)} deliberate exemptions, no gaps")
+
+
+def test_ssot_derivations_match_snapshots():
+    """위 run() 을 pytest 에서도 돌린다.
+
+    **이 래퍼가 없으면 pytest 초록불이 CI 통과를 뜻하지 않는다.** 파생 검사는
+    전부 run() 안에 있고 run() 은 `__main__` 에서만 불렸다 — CI 는 모듈을 직접
+    실행(`python3 -m ...`)해서 잡지만, 개발자가 `pytest aot/tests/ai_eval/` 로
+    확인하면 수집되는 것이 없어 조용히 지나갔다. 실제로 2026-08-24 도구 8종이
+    스냅샷 갱신 없이 들어가 main 이 사흘간 붉었는데, 그동안 로컬 pytest 는
+    계속 통과했다.
+    """
+    run(check_dispatch=True)
 
 
 if __name__ == '__main__':

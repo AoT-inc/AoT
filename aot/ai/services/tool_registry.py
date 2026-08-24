@@ -467,7 +467,7 @@ TOOLS: List[Tool] = [
                         "Read-only."),
         "usage_hint": "params.arguments: {program_id}",
     }),
-    Tool('create_program', handler='create_program', config_only=True, manifest={
+    Tool('create_program', handler='create_program', mutating=True, config_only=True, manifest={
         "tool_name": "create_program",
         "action_type": "virtual_tool_call",
         "description": ("Creates a growing programme (subject -> stages with lengths). "
@@ -502,7 +502,7 @@ TOOLS: List[Tool] = [
                        "blank rather than guessing — a blank is normal, a "
                        "plausible wrong number is not."),
     }),
-    Tool('modify_program', handler='modify_program', config_only=True, manifest={
+    Tool('modify_program', handler='modify_program', mutating=True, config_only=True, manifest={
         "tool_name": "modify_program",
         "action_type": "virtual_tool_call",
         "description": ("Edits a growing programme's name / variety / stages / notes, "
