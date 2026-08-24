@@ -182,6 +182,21 @@ _INTENTIONALLY_UNGATED_WRITE_TOOLS = {
     'create_note',
     'knowledge_shelve',
     'submit_advice',
+    # 프로그램(2026-08-24, 사용자 결정). 프로그램은 제어가 아니라 **제어에
+    # 영향을 주는 참고자료**다 — 장치를 직접 움직이지 않고, 오래 두고 보는
+    # 문서인데 만들 때마다 승인을 받게 하면 마찰만 남는다.
+    #
+    # 승인을 뗀 근거는 "위험이 작다" 가 아니라 **더 강한 게이트가 뒤에 있다**
+    # 는 것이다: `GeoProgram.usable_for_control()` 이 `source='ai'` 프로그램을
+    # `reviewed_at` 전까지 제어에서 배제하고 `coordinator_plot` 이 그 판정을
+    # 실제로 본다. `program_io.update_program(by='ai')` 는 AI 가 단계·목표를
+    # 쓸 때마다 그 상태로 되돌린다. 그리고 `reviewed` 는 `by != 'ai'` 조건 때문에
+    # **AI 가 스스로 세울 수 없다** — activate_function 보다 강한 게이트다.
+    # 자세한 대조는 tool_registry 의 _CONFIG_ONLY 주석(2026-08-24 항목).
+    #
+    # `delete_program` 은 뺐다 — 복구 불가라 _CONFIG_ONLY 금지 조항에 걸린다.
+    'create_program',
+    'modify_program',
 }
 
 # Scheduler CRUD close-out + per-location local time (2026-07-20, aa2c5bc

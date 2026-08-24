@@ -79,7 +79,7 @@ class TestSmartfarmkoreaUrlBuilding(unittest.TestCase):
         for op_key, params, expected in cases:
             self.assertEqual(sfk.build_url(op_key, params), expected, msg=op_key)
 
-    def test_all_six_outdoor_operations_match_scraped_sample_urls(self):
+    def test_all_outdoor_operations_match_scraped_sample_urls(self):
         """OUTDOOR_OPERATIONS (EXT-KR-05, menuId=M11040302) — every URL below
         was scraped verbatim from that page's own 샘플 URL panel (2026-07-19),
         same verification method as the facility dataset above."""
@@ -104,6 +104,17 @@ class TestSmartfarmkoreaUrlBuilding(unittest.TestCase):
                                    'startDate': '2020-10-01', 'endDate': '2020-10-01'},
              'http://www.smartfarmkorea.net/Agree_WS/webservices/OutdoorFarmRest/getBlueberryCultivateDataList/'
              'SERVICE_KEY/PF_0020477/3587/2020-10-01/2020-10-01'),
+            # 2026-08-24 추가. 실호출로 데이터가 나오는 것을 확인한 둘이다
+            # (품목코드가 맞는 농가를 골라서 재야 한다 — 무=110100, 배추=100100.
+            # 클라이언트의 해당 항목 주석 참조).
+            ('growth_radish', {'serviceKey': 'SERVICE_KEY', 'userId': 'PF_0002739', 'croppingSerlNo': '3540',
+                               'startDate': '2018-07-20', 'endDate': '2018-11-30'},
+             'http://www.smartfarmkorea.net/Agree_WS/webservices/OutdoorFarmRest/getRadishCultivateDataList/'
+             'SERVICE_KEY/PF_0002739/3540/2018-07-20/2018-11-30'),
+            ('growth_cabbage', {'serviceKey': 'SERVICE_KEY', 'userId': 'PF_0002739', 'croppingSerlNo': '3540',
+                                'startDate': '2018-07-20', 'endDate': '2018-11-30'},
+             'http://www.smartfarmkorea.net/Agree_WS/webservices/OutdoorFarmRest/getCabbageCultivateDataList/'
+             'SERVICE_KEY/PF_0002739/3540/2018-07-20/2018-11-30'),
         ]
         self.assertEqual(len(cases), len(sfk.OUTDOOR_OPERATIONS))  # every operation covered
         for op_key, params, expected in cases:

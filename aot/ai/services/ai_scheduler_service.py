@@ -1084,7 +1084,16 @@ class AISchedulerService:
         try:
             from aot.databases.models.ai_context_source import AIContextSource
             with app.app_context():
-                active_sources = AIContextSource.query.filter_by(is_active=True).all()
+                # is_active 와 is_enabled 는 서로 다른 것을 뜻한다:
+                #   is_active  = 삭제되지 않았다 (삭제는 소프트삭제다)
+                #   is_enabled = 운영자가 "이 소스를 쓰겠다" 고 켰다
+                # 예전엔 여기서 is_active 만 봤다. 그래서 **운영자가 끈 소스를
+                # 스케줄러가 계속 동기화**했다(실측: 비활성 document 소스가
+                # 매시간 'file_path is required' 오류를 적립). 수동 동기화
+                # 라우트는 이미 is_enabled 를 검사하고 있었으니, 두 경로가
+                # 서로 다른 기준으로 돌고 있던 셈이다 — 여기를 맞춘다.
+                active_sources = AIContextSource.query.filter_by(
+                    is_active=True, is_enabled=True).all()
             for source in active_sources:
                 interval_min = source.sync_interval_min or 60
                 if interval_min <= 0:

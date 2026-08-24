@@ -97,6 +97,27 @@ class Tool:
 # 활성 상태인 시퀀스의 시간표를 고치면 오늘 밤 관수 시각이 승인 없이 바뀐다 —
 # 이건 알고 받아들인 절충이다(2026-08-07 사용자 결정). 되돌리려면 해당 도구의
 # config_only 를 떼면 된다. 삭제(delete_*)와 활성/비활성은 절대 넣지 말 것.
+#
+# 2026-08-24 — 프로그램(create_program·modify_program) 추가.
+#
+# 프로그램은 제어가 아니라 **제어에 영향을 주는 참고자료**다. 장치를 직접 움직이지
+# 않고, 오래 두고 보는 문서인데 만들 때마다 승인을 받게 하면 마찰만 남는다
+# (사용자 판단, 2026-08-24).
+#
+# 게이트가 이미 두 겹이었고 **뒤쪽이 더 강하다**. `GeoProgram.usable_for_control()`
+# 은 `source='ai'` 인 프로그램을 `reviewed_at` 전까지 제어에서 배제하고, 그 판정을
+# `coordinator_plot` 이 실제로 본다. `program_io.update_program(by='ai')` 는 AI 가
+# 제어에 닿는 내용(단계·목표·광합성 상수)을 쓸 때마다 `source` 를 `ai` 로 되돌리고
+# `reviewed_at` 을 지운다 — 사람이 껍데기를 만들고 AI 가 채우는 실제 흐름까지 덮는다.
+#
+# 위 세 조건 대조:
+#   1. 이 도구만으로 장비가 움직이지 않는다 — `usable_for_control()` 이 막는다.
+#   2. 실제로 도는 시점에 별도 게이트가 있다 — 검토(`reviewed_at`). 이쪽은
+#      activate_function 보다 **더 강하다**: `by != 'ai'` 조건 때문에 AI 는 자기
+#      프로그램을 스스로 검토 완료로 만들 수 없다(program_io 해당 줄 주석 참조).
+#   3. 되돌릴 수 있다 — 다시 고치거나 지우면 된다.
+#
+# `delete_program` 은 그대로 승인 대상이다(위 금지 조항).
 # ---------------------------------------------------------------------------
 
 
@@ -447,7 +468,7 @@ TOOLS: List[Tool] = [
                         "Read-only."),
         "usage_hint": "params.arguments: {program_id}",
     }),
-    Tool('create_program', handler='create_program', mutating=True, manifest={
+    Tool('create_program', handler='create_program', config_only=True, manifest={
         "tool_name": "create_program",
         "action_type": "virtual_tool_call",
         "description": ("Creates a growing programme (subject -> stages with lengths). "
@@ -458,8 +479,8 @@ TOOLS: List[Tool] = [
                         "which function does it — that is a fact about a place, so the "
                         "site resolves it and one programme serves several "
                         "greenhouses. Made this way it is used for display and advice "
-                        "but NOT for control until a person marks it as checked. "
-                        "Requires human approval."),
+                        "but NOT for control until a person marks it as checked — "
+                        "that check is the gate, and only a person can give it."),
         "usage_hint": ("params.arguments: {name, subject, source_note, "
                        "stages: [{key, name, days, targets?, guidance?}], kind?, "
                        "variety?, notes?, target_defs?: [{key, label, unit, "
@@ -482,7 +503,7 @@ TOOLS: List[Tool] = [
                        "blank rather than guessing — a blank is normal, a "
                        "plausible wrong number is not."),
     }),
-    Tool('modify_program', handler='modify_program', mutating=True, manifest={
+    Tool('modify_program', handler='modify_program', config_only=True, manifest={
         "tool_name": "modify_program",
         "action_type": "virtual_tool_call",
         "description": ("Edits a growing programme's name / variety / stages / notes, "
@@ -491,7 +512,9 @@ TOOLS: List[Tool] = [
                         "programmes (moving a tab is organisation, not content); any "
                         "other field on a built-in/external programme is refused — "
                         "it must be copied first (a person does that on the "
-                        "Vegetation page). Requires human approval."),
+                        "Vegetation page). Writing stages or targets sends the "
+                        "programme back for a person to check before it drives "
+                        "control again — say so rather than working around it."),
         "usage_hint": ("params.arguments: {program_id, name?, variety?, "
                        "stages?: [{key, name, days, targets?, guidance?}], "
                        "target_defs?, base_temp_c?, "
@@ -1049,8 +1072,8 @@ TOOLS: List[Tool] = [
     Tool('knowledge_shelve', handler='knowledge_shelve', manifest={
         "tool_name": "knowledge_shelve",
         "action_type": "virtual_tool_call",
-        "description": "Saves a piece of knowledge you just derived, observed, or were told, so a later query can retrieve it (the write counterpart to knowledge_search). ALWAYS saved as unconfirmed/ai_curated — you MUST tell the user it's an unconfirmed note you're keeping, not present it as fact. Only shelve something genuinely reusable (a pattern, an answer worth remembering) — not routine chit-chat.",
-        "usage_hint": "params.arguments: {content (the knowledge text, required), tags (comma-separated scope tags — crop/livestock/structure/topic, REQUIRED — an untagged note would surface for every query), heading (optional short title), attribution (optional — defaults to a dated 'AI 대화 비치' note if omitted), entity_ref (optional AoT entity unique_id this is about), content_kind ('prose' default or 'structured'), ttl_hours (optional — set for time-sensitive info like a pest sighting so it expires; omit for a durable observation).",
+        "description": "Saves a piece of knowledge into this system's knowledge library so a later query can retrieve it (the write counterpart to knowledge_search). Shelve what you derived, observed, were told, **or researched yourself** — a summary of material you looked up outside this system is exactly what this is for. ALWAYS saved as unconfirmed/ai_curated — you MUST tell the user it's an unconfirmed note you're keeping, not present it as fact. Only shelve something genuinely reusable (a pattern, an answer worth remembering) — not routine chit-chat.",
+        "usage_hint": "params.arguments: {content (the knowledge text, required), tags (comma-separated scope tags — crop/livestock/structure/topic, REQUIRED — an untagged note would surface for every query), heading (optional short title), attribution (the source title/URL you got this from — omit only if there is none), entity_ref (optional AoT entity unique_id this is about), source_url (the http(s) address you got this from — without it a reviewer cannot check the note), source_ref (when the content came from a lookup here, pass the 'source_ref' that query returned — it marks the note as checkable), content_kind ('prose' default or 'structured'), ttl_hours (optional — set for time-sensitive info like a pest sighting so it expires; omit for a durable observation). RECIPE for 'research X and set it up': knowledge_search -> research -> shelve the summary WITH attribution -> then build on it (create_program etc.), citing it in source_note. Skip the shelve and the next question researches it all over again.",
     }),
 
     # --- System update / version status (read-only, 2026-07-18) ------------------
@@ -1088,7 +1111,30 @@ TOOLS: List[Tool] = [
         "tool_name": "knowledge_search",
         "action_type": "virtual_tool_call",
         "description": "Searches the AI knowledge LIBRARY (system manuals + domain knowledge synced from external sources — crops, pests, environment guides) by free-text query. Read-only. Broader than read_manual (no filename/section needed). NOT for per-entity notes/memos a user recorded on a specific device or zone — those are the Notes model; use search_notes(target_name=...) for anything the user 'wrote down / recorded / noted' about a named device or zone.",
-        "usage_hint": "params.arguments: {query (free text, required), top_k (optional, default 3), tags (optional comma-separated scope filter)}. Prefer this over read_manual for capability/how-to/domain questions; use read_manual only when you already know the exact file.",
+        "usage_hint": "params.arguments: {query (free text, required), top_k (optional, default 3), tags (optional comma-separated scope filter)}.",
+    }),
+
+    # --- 참조표 (@ANCHOR: REFERENCE_TABLE_TOOLS, 2026-08-24) --------------------
+    # 표를 지식 항목으로 적재하지 않고 등록만 해 두고 물어볼 때 조회한다
+    # (reference_table_service 모듈 주석). 도구가 둘인 이유는 등록된 표가
+    # 설치마다 달라 **정적인 도구 설명에 담을 수 없기** 때문이다. 둘 다 읽기 전용.
+    Tool('list_lookup_sources', handler='list_lookup_sources', manifest={
+        "tool_name": "list_lookup_sources",
+        "action_type": "virtual_tool_call",
+        "description": "Lists everything this system can LOOK THINGS UP IN: reference tables the operator registered (crop requirements, spec sheets) and connected data APIs (measured farm data). Read-only. These are queried on demand, so they are NOT in knowledge_search results — when a question asks for a per-item value or for external measured data and knowledge_search found nothing, check here before answering from your own memory.",
+        "usage_hint": "params.arguments: {}. Returns sources[] each with kind. kind='table' -> query_reference_table (look a row up by name; see name_language/aliases). kind='api' -> query_data_source (run one operation with its params).",
+    }),
+    Tool('query_data_source', handler='query_data_source', manifest={
+        "tool_name": "query_data_source",
+        "action_type": "virtual_tool_call",
+        "description": "Runs one operation against a connected data API right now, instead of relying on what was synced earlier. Read-only. Use it to answer 'what did other farms measure', 'what does this season look like' — questions the stored digest cannot cover because it holds one fixed selection. Always report 'total_available' honestly: a truncated result is not the complete set.",
+        "usage_hint": "params.arguments: {source_id (from list_lookup_sources), operation (one of that source's operations), params (object with that operation's parameters), limit (default 5, max 25), columns (comma-separated, or '*')}. Codes like userId/facilityId/croppingSerlNo are not things a person knows — resolve them with smartfarmkorea_lookup first.",
+    }),
+    Tool('query_reference_table', handler='query_reference_table', manifest={
+        "tool_name": "query_reference_table",
+        "action_type": "virtual_tool_call",
+        "description": "Looks a row up in a registered reference table by name. Read-only. Names are matched in the table's own language (see name_language/aliases). Returns matching rows plus the table's attribution and caveat — quote the caveat when it changes what the numbers mean (e.g. a suitability range is not a greenhouse setpoint). If nothing matches, say so; do not fill the gap from memory.",
+        "usage_hint": "params.arguments: {table_id (from list_lookup_sources; omit only when exactly one table exists), query (the name to look up — species, part, variety), limit (default 5), columns (comma-separated; omit for the table's summary columns, '*' for all)}. Use the name the TABLE is keyed by (see name_language/aliases).",
     }),
 
     # --- Knowledge-library catalog (@ANCHOR: LIBRARY_CATALOG_TOOL, 2026-07-19) ---
@@ -1121,7 +1167,7 @@ TOOLS: List[Tool] = [
         "tool_name": "configure_library_source",
         "action_type": "virtual_tool_call",
         "description": "Create or update a SmartFarmKorea library source and (by default) activate + sync it so its measured farm data enters the AI knowledge layer. Requires human approval (registers a source and fetches external data). Handles all three datasets: smartfarmkorea (시설원예), smartfarmkorea_outdoor (노지), smartfarmkorea_livestock (축산).",
-        "usage_hint": "params.arguments: {preset_key (required), api_key (required), operations (list of EXACT operation keys — NOT generic words like 'growth'/'환경'; a wrong key returns valid_operations to retry with. 시설 growth keys are crop-specific: growth_strawberry(딸기)/growth_mum(국화)/growth_melon(참외)/growth_other; 노지: growth_garlic(마늘)/growth_onion(양파)/growth_blueberry(블루베리); shared: identity/cropping/env), plus the params each operation needs. For 시설/노지 cropping/growth/env ops: userId, facilityId, croppingSerlNo, itemCode — RESOLVE THESE VIA smartfarmkorea_lookup, never ask the user for a code — and measDate/startDate/endDate (ask the user, YYYY-MM-DD). For 축산: only startDate/endDate (YYYYMMDD, no dashes). Optional: source_id (update instead of create), activate (default true), sync (default true), farm_label/season_label. NOTE: only register a farm whose crop (itemCode) matches what the user asked for — the lookup label shows the crop code. RECIPE: smartfarmkorea_lookup first, then this.",
+        "usage_hint": "params.arguments: {preset_key (required), api_key (required), operations (list of EXACT operation keys — NOT generic words like 'growth'/'환경'; a wrong key returns valid_operations to retry with. 시설 growth keys are crop-specific: growth_strawberry(딸기)/growth_mum(국화)/growth_melon(참외)/growth_other; 노지: growth_radish(무)/growth_cabbage(배추)/growth_garlic(마늘)/growth_onion(양파)/growth_blueberry(블루베리); shared: identity/cropping/env), plus the params each operation needs. For 시설/노지 cropping/growth/env ops: userId, facilityId, croppingSerlNo, itemCode — RESOLVE THESE VIA smartfarmkorea_lookup, never ask the user for a code — and measDate/startDate/endDate (ask the user, YYYY-MM-DD). For 축산: only startDate/endDate (YYYYMMDD, no dashes). Optional: source_id (update instead of create), activate (default true), sync (default true), farm_label/season_label. NOTE: only register a farm whose crop (itemCode) matches what the user asked for — the lookup label shows the crop code. RECIPE: smartfarmkorea_lookup first, then this.",
     }),
 
     # --- Local time per location (@ANCHOR: GET_LOCAL_TIME_TOOL, 2026-07-20) ------
@@ -1302,7 +1348,24 @@ _TIER_ASSIGNMENT = {
     'get_archived_document':     ('record', 'drawer', False),
     'delete_archive':            ('record', 'drawer', False),
     'set_document_tier':         ('record', 'drawer', False),
-    'knowledge_search':          ('record', 'drawer', True),
+    # 읽기 동사만 core 다(2026-08-24 실측으로 결정, C5).
+    #
+    # 두 동사는 **필요해지는 시점이 다르다.** `knowledge_search` 는 답하기
+    # 전에 가장 먼저 불려야 하는데, tools/list 에 없으면 LLM 이 ① 서랍
+    # 인덱스에서 이름을 알아보고 ② 열기로 정하고 ③ 부르는 세 단계를 거쳐야
+    # 한다. 단계마다 건너뛸 자리가 있고, 건너뛰면 자기 기억으로 답한다 —
+    # 라이브러리가 막으려는 바로 그 실패다. `knowledge_shelve` 는 반대로
+    # 이미 라이브러리를 쓴 뒤에 필요해지므로, 그때는 record 서랍이 이미
+    # 열려 있어 정의가 손에 있다.
+    #
+    # 비용 실측: 상시 노출 6,958 → 7,164 토큰(+206), 상한 7,200 이라
+    # **여유가 36 토큰뿐이다** — core 도구 설명을 늘리려면 무엇을 서랍으로
+    # 내릴지 함께 정해야 한다(test_listed_surface_stays_small 이 잡는다).
+    # 둘 다 올리면 7,575 로 상한을 넘는다.
+    'list_lookup_sources':       ('record', 'drawer', True),
+    'query_data_source':         ('record', 'drawer', True),
+    'query_reference_table':     ('record', 'drawer', True),
+    'knowledge_search':          ('record', 'core', True),
     'knowledge_shelve':          ('record', 'drawer', False),
     'list_notices':              ('record', 'drawer', False),
     'create_notice':             ('record', 'drawer', False),
@@ -1639,7 +1702,7 @@ _MCP_TOOL_PAYLOADS: List[Dict[str, Any]] = [
     },
     {
         "tool_name": "create_program",
-        "description": "Creates a management programme (subject -> stages with lengths). 'subject' is whatever it manages — crop, tree species, turf, herd, structure; AoT is not farm-only. RECIPE: 1) list_programs — does it exist already? 2) research it (knowledge_search; if the library is empty, say so rather than passing your own knowledge off as a source). 3) Map what you find onto YOUR stage keys — sources split stages their own way; never bend a day count to fit one. 4) Blank beats a guess. Display/advice only until a person marks it checked. Requires human approval.",
+        "description": "Creates a management programme (subject -> stages with lengths). 'subject' is whatever it manages — crop, tree species, turf, herd, structure; AoT is not farm-only. RECIPE: 1) list_programs — does it exist already? 2) research it (knowledge_search; if the library is empty, say so rather than passing your own knowledge off as a source). 3) Map what you find onto YOUR stage keys — sources split stages their own way; never bend a day count to fit one. 4) Blank beats a guess. Display/advice only until a person marks it checked — that check is what gates control, and only a person can give it.",
         "input_schema": {
             "type": "object",
             "properties": {
@@ -1695,7 +1758,7 @@ _MCP_TOOL_PAYLOADS: List[Dict[str, Any]] = [
     },
     {
         "tool_name": "modify_program",
-        "description": "Edits a programme, or moves it to another tab. THIS is how an empty programme a person made in the UI gets filled in — same stage shape and same RECIPE as create_program; call get_program first because 'stages' replaces the whole list. Send only the fields you are changing. Built-in/external programmes are refused for anything but tab_id (they must be copied first). Writing stages, target items or base_temp_c sends the programme back for a person to check before it drives control again — that is expected, say so rather than working around it. Requires human approval.",
+        "description": "Edits a programme, or moves it to another tab. THIS is how an empty programme a person made in the UI gets filled in — same stage shape and same RECIPE as create_program; call get_program first because 'stages' replaces the whole list. Send only the fields you are changing. Built-in/external programmes are refused for anything but tab_id (they must be copied first). Writing stages, target items or base_temp_c sends the programme back for a person to check before it drives control again — that is expected, say so rather than working around it.",
         "input_schema": {
             "type": "object",
             "properties": {
@@ -2129,7 +2192,7 @@ _MCP_TOOL_PAYLOADS: List[Dict[str, Any]] = [
     # ── (A) 실행은 되나 광고가 빠져 있던 읽기 도구 ───────────────────────────
     {
         "tool_name": "knowledge_search",
-        "description": "Search the knowledge layer - system manuals, synced domain knowledge from agricultural authorities, and AI-curated notes - with a free-text query. Use it to ground growing, configuration and troubleshooting advice in a source. Read-only.",
+        "description": "Search the knowledge layer - system manuals, synced domain knowledge from external authorities, and notes shelved by you or a colleague - with a free-text query. Read-only. Call this FIRST when asked to research or look something up — it may already be here. If it returns nothing, say so rather than passing your own knowledge off as a source, then knowledge_shelve what you research.",
         "input_schema": {
             "type": "object",
             "properties": {
@@ -2639,19 +2702,55 @@ _MCP_TOOL_PAYLOADS: List[Dict[str, Any]] = [
     },
     {
         "tool_name": "knowledge_shelve",
-        "description": "Saves a piece of knowledge you just derived, observed, or were told, so a later query can retrieve it (the write counterpart to knowledge_search). ALWAYS saved as unconfirmed/ai_curated — you MUST tell the user it's an unconfirmed note you're keeping, not present it as fact. Only shelve something genuinely reusable (a pattern, an answer worth remembering) — not routine chit-chat.",
+        "description": "Saves a piece of knowledge into this system's knowledge library so a later query can retrieve it (the write counterpart to knowledge_search). Shelve what you derived, observed, were told, **or researched yourself** — a summary of material you looked up outside this system is exactly what this is for. ALWAYS saved as unconfirmed/ai_curated — you MUST tell the user it's an unconfirmed note you're keeping, not present it as fact. Only shelve something genuinely reusable (a pattern, an answer worth remembering) — not routine chit-chat.",
         "input_schema": {
             "type": "object",
             "properties": {
                 "content": {"type": "string", "description": "The knowledge text."},
                 "tags": {"type": "string", "description": "Comma-separated scope tags (crop/livestock/structure/topic) — REQUIRED, an untagged note would surface for every query."},
                 "heading": {"type": "string", "description": "Optional short title."},
-                "attribution": {"type": "string", "description": "Optional — defaults to a dated 'AI 대화 비치' note if omitted."},
+                "attribution": {"type": "string", "description": "Where this came from — source title and/or URL. Without it nobody can verify the note later, so it can never be promoted above unconfirmed."},
                 "entity_ref": {"type": "string", "description": "Optional AoT entity unique_id this is about."},
+                "source_url": {"type": "string", "description": "The http(s) address you got this from. A reviewer opens it to check the note; without it the note stays unconfirmed."},
+                "source_ref": {"type": "string", "description": "When this came from a lookup here, the 'source_ref' that query_reference_table / query_data_source returned. Marks the note as checkable against a source this system has."},
                 "content_kind": {"type": "string", "enum": ["prose", "structured"], "description": "Default 'prose'."},
                 "ttl_hours": {"type": "number", "description": "Optional — set for time-sensitive info so it expires."}
             },
             "required": ["content", "tags"]
+        }
+    },
+    {
+        "tool_name": "list_lookup_sources",
+        "description": "Lists everything this system can LOOK THINGS UP IN: reference tables the operator registered (crop requirements, spec sheets) and connected data APIs (measured farm data). Read-only. These are queried on demand, so they are NOT in knowledge_search results — when a question asks for a per-item value or for external measured data and knowledge_search found nothing, check here before answering from your own memory. Each entry has kind: 'table' -> query_reference_table, 'api' -> query_data_source.",
+        "input_schema": {"type": "object", "properties": {}}
+    },
+    {
+        "tool_name": "query_data_source",
+        "description": "Runs one operation against a connected data API right now, instead of relying on what was synced earlier. Read-only. Answers 'what did other farms measure' — questions the stored digest cannot cover because it holds one fixed selection. Report 'total_available' honestly: a truncated result is not the complete set.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "source_id": {"type": "string", "description": "From list_lookup_sources."},
+                "operation": {"type": "string", "description": "One of that source's operations."},
+                "params": {"type": "object", "description": "That operation's parameters. Codes (userId/facilityId/croppingSerlNo) come from smartfarmkorea_lookup, never from the user."},
+                "limit": {"type": "integer", "description": "Default 5, max 25."},
+                "columns": {"type": "string", "description": "Comma-separated columns, or '*'."}
+            },
+            "required": ["operation"]
+        }
+    },
+    {
+        "tool_name": "query_reference_table",
+        "description": "Looks a row up in a registered reference table by name. Read-only. Names are matched in the table's own language (see name_language/aliases). Returns matching rows plus the table's attribution and caveat — quote the caveat when it changes what the numbers mean (e.g. a suitability range is not a greenhouse setpoint). If nothing matches, say so; do not fill the gap from memory.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "table_id": {"type": "string", "description": "From list_lookup_sources. Omit only when exactly one table is registered."},
+                "query": {"type": "string", "description": "The name to look up — species, part, variety."},
+                "limit": {"type": "integer", "description": "Maximum rows (default 5)."},
+                "columns": {"type": "string", "description": "Comma-separated columns to return; omit for the table's summary set, '*' for all. Ask only for what the question needs — a full row can be several times larger."}
+            },
+            "required": ["query"]
         }
     },
     {
@@ -2684,7 +2783,7 @@ _MCP_TOOL_PAYLOADS: List[Dict[str, Any]] = [
             "properties": {
                 "preset_key": {"type": "string", "enum": ["smartfarmkorea", "smartfarmkorea_outdoor", "smartfarmkorea_livestock"]},
                 "api_key": {"type": "string"},
-                "operations": {"type": "array", "items": {"type": "string"}, "description": "EXACT operation keys (not generic words) — a wrong key returns valid_operations to retry with. 시설: growth_strawberry/growth_mum/growth_melon/growth_other, 노지: growth_garlic/growth_onion/growth_blueberry, shared: identity/cropping/env."},
+                "operations": {"type": "array", "items": {"type": "string"}, "description": "EXACT operation keys (not generic words) — a wrong key returns valid_operations to retry with. 시설: growth_strawberry/growth_mum/growth_melon/growth_other, 노지: growth_radish/growth_cabbage/growth_garlic/growth_onion/growth_blueberry, shared: identity/cropping/env."},
                 "userId": {"type": "string"}, "facilityId": {"type": "string"},
                 "croppingSerlNo": {"type": "string"}, "itemCode": {"type": "string"},
                 "measDate": {"type": "string"}, "startDate": {"type": "string"}, "endDate": {"type": "string"},

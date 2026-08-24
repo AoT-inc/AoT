@@ -55,6 +55,16 @@ def sync_source(source_id):
             messages["error"].append(f"Source not found or inactive: {source_id}")
             return messages
 
+        # 운영자가 끈 소스는 어느 호출자가 불러도 동기화하지 않는다.
+        # 수동 동기화 라우트만 이 검사를 갖고 있었고 스케줄러 경로에는 없어,
+        # "껐는데도 계속 도는" 상태가 가능했다(ai_scheduler_service 의 등록
+        # 게이트와 짝을 이루는 방어선 — 등록 시점 이후에 꺼진 소스는 이미
+        # 등록된 잡이 남아 있을 수 있다).
+        if not source.is_enabled:
+            messages["error"].append(
+                f"Source is deactivated — not syncing: {source.source_name}")
+            return messages
+
         try:
             config = json.loads(source.config_json or '{}')
         except (ValueError, TypeError):
@@ -115,6 +125,23 @@ def sync_source(source_id):
                     messages["warning"].append(
                         "knowledge_digest_enabled is off — fetched data was not added to the AI knowledge index."
                     )
+        elif source.source_type == 'csv_table':
+            # @ANCHOR: REFERENCE_TABLE_SYNC
+            # 참조표는 **지식 항목으로 잘라 넣지 않는다.** 동기화가 하는 일은
+            # 표를 한 벌 받아 두는 것뿐이고, 조회는 AI 가 물어볼 때 일어난다
+            # (reference_table_service 모듈 주석 참조). 그래서 여기서
+            # records/청크를 만들지 않는다 — 만들면 그 순간 관련도 오염이 시작된다.
+            from aot.ai.services import reference_table_service as _rts
+            n_rows, n_cols, err = _rts.fetch(source.source_id, config.get('data_url'))
+            records = []
+            if err:
+                pass  # 아래 공통 오류 경로가 받는다
+            else:
+                raw_payload = '%d rows x %d columns' % (n_rows, n_cols)
+                messages["info"].append(
+                    '참조표를 받았습니다: %d행 %d열. AI 가 물어볼 때 조회합니다.'
+                    % (n_rows, n_cols))
+
         else:
             # Dispatch by source_type (existing logic — unchanged)
             value = None
@@ -212,9 +239,15 @@ def _dispatch_ext_client(source, config, preset_key):
     """
     Ext client interface contract:
         All ext clients must implement:
-            def sync(self, facility_id: str, config: dict) -> list[dict]:
-                Returns list of {'parameter_name': str, 'value': str} dicts.
-                May return an empty list on error (log internally).
+            def sync(self, facility_id: str, config: dict) -> list[dict] | dict:
+                Returns list of {'parameter_name': str, 'value': str} dicts,
+                OR {'error': str} when the sync could not be performed at all
+                (e.g. no API key configured).
+
+                A client must NOT report a failure as a record. Doing so made
+                the caller log sync_status='ok' with records_written=1 and
+                persist the error text itself as knowledge — observed live for
+                EXT-KR-02/03 ("API key not configured. Set ...").
 
     Dynamically imports and invokes the ext client class registered in EXT_CLIENT_MAP.
     Returns list[dict] on success, or {'error': str} on import/invocation failure.
@@ -238,6 +271,11 @@ def _dispatch_ext_client(source, config, preset_key):
     try:
         client = client_cls()
         records = client.sync(facility_id=source.facility_id, config=config)
+        if isinstance(records, dict) and 'error' in records:
+            # 클라이언트가 보고한 실패를 그대로 통과시킨다. 예전엔 list 가
+            # 아니면 무조건 [] 로 뭉갰다 — 그래서 클라이언트가 오류를 제대로
+            # 돌려줘도 호출부는 "성공, 0건" 으로 기록했다.
+            return records
         return records if isinstance(records, list) else []
     except Exception as exc:
         logger.exception("Ext client %s sync() failed", preset_key)

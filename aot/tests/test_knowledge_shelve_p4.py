@@ -222,5 +222,165 @@ class TestKnowledgeShelveP4(unittest.TestCase):
         self.assertEqual(AIKnowledgeChunk.query.count(), 0)
 
 
+
+class TestSourceUrlC4(unittest.TestCase):
+    """C4 — 출처 주소. 이 필드가 없으면 리뷰어가 원문으로 돌아갈 수 없고,
+    그러면 §3.2 승격 경로가 실질적으로 막혀 AI 가 비친 지식이 영원히 미확인으로
+    남는다. MCP 로 연결된 외부 LLM 이 웹 조사 요약을 비치하게 되면서 결정적이
+    된 구멍이다."""
+
+    def setUp(self):
+        self.app = _make_test_app()
+        self.app_context = self.app.app_context()
+        self.app_context.push()
+        db.create_all()
+
+    def tearDown(self):
+        db.session.remove()
+        db.drop_all()
+        self.app_context.pop()
+
+    def _shelve(self, **kw):
+        kw.setdefault('content', '가을무는 파종 후 약 80일에 수확한다.')
+        kw.setdefault('tags', '무,재배')
+        return shelve_svc.shelve_knowledge(**kw)
+
+    def test_http_url_is_stored(self):
+        r = self._shelve(source_url='https://www.nongsaro.go.kr/x?y=1')
+        row = AIKnowledgeChunk.query.filter_by(unique_id=r['chunk_id']).first()
+        self.assertEqual('https://www.nongsaro.go.kr/x?y=1', row.source_url)
+
+    def test_non_http_scheme_is_dropped_not_stored(self):
+        """이 값은 리뷰 화면에서 클릭 가능한 링크가 된다 — 저장 시점에 거르는
+        것이 렌더 시점마다 방어하는 것보다 확실하다."""
+        for bad in ('javascript:alert(1)', 'data:text/html,x', 'www.example.com', '  '):
+            db.session.query(AIKnowledgeChunk).delete()
+            db.session.commit()
+            r = self._shelve(source_url=bad)
+            row = AIKnowledgeChunk.query.filter_by(unique_id=r['chunk_id']).first()
+            self.assertIsNone(row.source_url, "거부되지 않은 값: %r" % bad)
+
+    def test_omitted_url_is_null_and_write_still_succeeds(self):
+        """출처가 없는 비치도 막지 않는다 — 대화 중 확정된 사실처럼 원문이
+        애초에 없는 경우가 있다. 다만 그런 항목은 확인할 수단이 없다."""
+        r = self._shelve()
+        self.assertEqual('created', r['status'])
+        row = AIKnowledgeChunk.query.filter_by(unique_id=r['chunk_id']).first()
+        self.assertIsNone(row.source_url)
+
+    def test_source_url_does_not_raise_trust(self):
+        """자기 신고를 신뢰로 바꾸면 §3.3 오염 방지가 무너진다."""
+        r = self._shelve(source_url='https://example.org/authoritative')
+        row = AIKnowledgeChunk.query.filter_by(unique_id=r['chunk_id']).first()
+        self.assertEqual('ai_curated', row.provenance)
+        self.assertEqual('system_generated', row.context_state)
+
+    def test_review_payload_exposes_source_url(self):
+        from aot.ai.services import knowledge_promotion_service as promo
+        self._shelve(source_url='https://example.org/a')
+        items = promo.list_review_items()
+        self.assertEqual(1, len(items))
+        self.assertEqual('https://example.org/a', items[0]['source_url'])
+
+    def test_quota_remaining_is_reported_so_a_batch_can_pace_itself(self):
+        r = self._shelve(content='첫 항목', tags='무')
+        self.assertIn('quota_remaining', r)
+        first = r['quota_remaining']
+        r2 = self._shelve(content='둘째 항목', tags='무')
+        self.assertEqual(first - 1, r2['quota_remaining'])
+
+
 if __name__ == '__main__':
     unittest.main()
+
+
+class TestVerifiedSourceRef(unittest.TestCase):
+    """P6-59 — 옮긴 것과 지어낸 것을 가른다.
+
+    AI 가 비치하는 항목은 전부 ai_curated/미확인으로 들어간다(설계 §4, 옳다).
+    그런데 성격이 다른 둘이 같은 칸에 쌓인다: **등록된 소스를 조회해 그대로 옮긴
+    것**은 확인이 기계적이고(그 소스로 가서 대조하면 끝), **AI 가 추론해 만든
+    것**은 사람 판단이 필요하다. 구분이 없으면 리뷰 부담만 쌓이고 결국 아무도
+    안 본다.
+
+    attribution/source_url 로는 못 가른다 — 자유 텍스트라 AI 가 그럴듯한 값을
+    적으면 서버는 모른다. source_ref 만은 쓰기 시점에 **등록 소스인지 확인**한다.
+    """
+
+    def setUp(self):
+        self.app = _make_test_app()
+        self.ctx = self.app.app_context()
+        self.ctx.push()
+        db.create_all()
+        # 라이브러리 섹션 적재는 knowledge_digest_enabled 를 읽는다 — 설정 행이
+        # 없으면 검색이 통째로 빈손이 되어 태그를 볼 수 없다.
+        db.session.add(AIGlobalSettings())
+        self.src = AIContextSource(
+            facility_id='global', source_name='FAO ECOCROP', source_type='csv_table',
+            parameter_name='p.real', config_json='{}', sync_interval_min=0,
+            is_active=True, is_enabled=True)
+        db.session.add(self.src)
+        db.session.commit()
+
+    def tearDown(self):
+        db.session.remove()
+        db.drop_all()
+        self.ctx.pop()
+
+    def _shelve(self, **kw):
+        kw.setdefault('content', '오크라는 최적 20~30도에서 자란다.')
+        kw.setdefault('tags', '오크라')
+        return shelve_svc.shelve_knowledge(**kw)
+
+    def test_a_registered_source_is_recorded(self):
+        r = self._shelve(source_ref=self.src.source_id)
+        row = AIKnowledgeChunk.query.filter_by(unique_id=r['chunk_id']).first()
+        self.assertEqual(self.src.source_id, row.source_ref)
+
+    def test_a_made_up_reference_is_dropped_not_stored(self):
+        """자기 신고를 그대로 믿으면 이 필드가 attribution 과 다를 바 없어진다."""
+        r = self._shelve(source_ref='does-not-exist')
+        row = AIKnowledgeChunk.query.filter_by(unique_id=r['chunk_id']).first()
+        self.assertIsNone(row.source_ref)
+
+    def test_a_bad_reference_does_not_lose_the_knowledge(self):
+        """출처 표기가 틀렸다고 지식 자체를 버릴 이유는 없다."""
+        r = self._shelve(source_ref='does-not-exist')
+        self.assertEqual('created', r['status'])
+
+    def test_it_does_not_raise_trust(self):
+        """확인할 데가 생겼을 뿐, 확인된 것은 아니다."""
+        r = self._shelve(source_ref=self.src.source_id)
+        row = AIKnowledgeChunk.query.filter_by(unique_id=r['chunk_id']).first()
+        self.assertEqual('ai_curated', row.provenance)
+        self.assertEqual('system_generated', row.context_state)
+
+    def test_the_citation_tag_distinguishes_it(self):
+        from aot.ai.services import knowledge_search as ks
+        self._shelve(source_ref=self.src.source_id, heading='옮긴 것')
+        # 같은 질의에 둘 다 걸려야 태그가 갈리는지 볼 수 있다 — 본문에도
+        # 질의어가 있어야 점수가 붙는다.
+        self._shelve(content='오크라는 여기 3번 구역에서 잘 자랐다는 인상이 있다.',
+                     tags='오크라', heading='지어낸 것')
+        ks._library_sections = []
+        ks._library_stamp = None
+        ks._source_name_cache.clear()
+        ks.reset_index()
+        text = ks.search_as_text('오크라', top_k=5) or ''
+        self.assertIn('출처 FAO ECOCROP', text)
+        self.assertIn('[AI 정리 — 미확인]', text)
+
+    def test_a_confirmed_item_follows_the_normal_tag(self):
+        """승격된 뒤에는 사람이 이미 봤다는 뜻이라 일반 태그를 따른다."""
+        from aot.ai.services import knowledge_search as ks
+        r = self._shelve(source_ref=self.src.source_id, heading='옮긴 것')
+        row = AIKnowledgeChunk.query.filter_by(unique_id=r['chunk_id']).first()
+        row.context_state = 'user_confirmed'
+        db.session.commit()
+        ks._library_sections = []
+        ks._library_stamp = None
+        ks._source_name_cache.clear()
+        ks.reset_index()
+        text = ks.search_as_text('오크라', top_k=5) or ''
+        self.assertIn('[AI 정리 — 확인됨]', text)
+        self.assertNotIn('출처 FAO ECOCROP', text)

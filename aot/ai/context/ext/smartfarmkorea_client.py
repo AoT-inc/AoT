@@ -185,6 +185,37 @@ OUTDOOR_OPERATIONS = {
         'label_ko': '생육 정보(블루베리)',
         'params': ['serviceKey', 'userId', 'croppingSerlNo', 'startDate', 'endDate'],
     },
+    # 무·배추 (2026-08-24). 위 주석은 마늘/양파/블루베리 외 작물에 "라이브
+    # 엔드포인트가 없다" 고 적었는데, 실호출로 확인하니 그렇지 않았다.
+    #
+    # 확인 방법이 중요하다: 아무 농가에나 물으면 안 되고 **품목코드가 맞는 농가**
+    # 를 골라야 한다(별첨 품목코드표: 무=110100, 배추=100100). 처음에 앞쪽 12개
+    # 농가로만 훑었을 때는 무가 '데이터 없음' 으로 나왔는데, 그 표본에 무 농가가
+    # 없었을 뿐이었다.
+    #
+    # 실측 결과(각 작물의 농가 6곳 × 작기 2개 표본):
+    #   무   110100  농가  10곳 → 12건 (measDate/leafNum/sampleNum …)
+    #   배추 100100  농가  37곳 →  4건 (measDate/leafNum/cropHeight …)
+    # 같은 방법으로 콩·사과·복숭아는 데이터를 찾지 못해 넣지 않았다. **없다는
+    # 증명은 아니다** — 표본이 작다. 필요해지면 같은 방법으로 다시 재면 된다.
+    #
+    # ⚠ 같은 표본에서 **이미 등록돼 있던 마늘·양파·블루베리도 데이터가 나오지
+    # 않았다.** 선언은 그대로 두되(선언 자체는 비용이 없다) 실제로 쓰기 전에
+    # 확인이 필요하다는 뜻이다.
+    'growth_radish': {
+        'base': _API_BASE_OUTDOOR,
+        'path': 'getRadishCultivateDataList',
+        'category': '생육',
+        'label_ko': '생육 정보(무)',
+        'params': ['serviceKey', 'userId', 'croppingSerlNo', 'startDate', 'endDate'],
+    },
+    'growth_cabbage': {
+        'base': _API_BASE_OUTDOOR,
+        'path': 'getCabbageCultivateDataList',
+        'category': '생육',
+        'label_ko': '생육 정보(배추)',
+        'params': ['serviceKey', 'userId', 'croppingSerlNo', 'startDate', 'endDate'],
+    },
 }
 
 # @ANCHOR: SMARTFARMKOREA_LIVESTOCK_OPERATIONS

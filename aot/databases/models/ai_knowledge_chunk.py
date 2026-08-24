@@ -89,6 +89,23 @@ class AIKnowledgeChunk(CRUDMixin, db.Model):
     # "대화 2026-07-18", "텔레메트리 분석") — always shown so the AI can
     # distinguish authority from its own unconfirmed notes when citing.
     attribution = db.Column(db.Text, nullable=True)
+    # C4: 원문 주소. `attribution` 이 사람이 읽는 표기("농사로 무 재배 정보")
+    # 라면 이쪽은 **되짚어 갈 수 있는 주소**다. 둘을 나눈 이유는 화면이 링크를
+    # 걸려면 "여기에 주소가 있다" 가 스키마여야 하기 때문 — 자유 텍스트에서
+    # URL 을 긁어내는 방식은 쓰는 쪽의 표기 습관에 기댄다.
+    #
+    # 이 값이 있다고 신뢰가 오르지는 않는다. 쓰는 쪽의 자기 신고를 믿으면
+    # §3.3 오염 방지가 무너진다 — 진입은 여전히 ai_curated/미확인이고, 이
+    # 컬럼은 **사람이 확인할 수 있게** 할 뿐이다(§3.2 승격 경로의 전제).
+    source_url = db.Column(db.String(500), nullable=True)
+    # P6-59: 이 내용이 나온 **등록 소스**(ai_context_source.source_id).
+    # attribution/source_url 이 AI 가 적는 자유 텍스트인 것과 달리, 이 값은 쓰기
+    # 시점에 "그런 소스가 실제로 등록돼 있는가" 를 서버가 확인한다 — "AI 가
+    # ECOCROP 이라고 말했다" 와 "이 시스템에 있는 ECOCROP 소스를 가리킨다" 의
+    # 차이다. 신뢰를 올리지는 않는다(여전히 ai_curated/미확인). 바뀌는 것은
+    # 인용 태그와 리뷰 화면뿐 — 확인이 기계적인 것과 사람 판단이 필요한 것을
+    # 가르기 위해서다. FK 는 걸지 않는다: 소스가 지워져도 지식은 남아야 한다.
+    source_ref = db.Column(db.String(36), nullable=True, index=True)
     # 'prose' (digest text, searched by keyword) | 'structured' (a
     # regular-shaped fact meant to be read as data, not prose — not yet
     # produced by any writer in P1; reserved for P3's structured adapter).

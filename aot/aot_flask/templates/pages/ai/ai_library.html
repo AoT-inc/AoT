@@ -29,7 +29,7 @@
   <div class="aot-settings-title">
     <h3>{{ _('AI Library') }}</h3>
   </div>
-  <p class="aot-modal-body-text">{{ _('Connect external data sources to automatically inject knowledge into AI context records.') }}</p>
+  <p class="aot-modal-body-text">{{ _('Connect data sources so the AI answers from a source instead of its own general knowledge. The built-in public-data feeds are Korean; anywhere else, bring your own documents, web pages or APIs.') }}</p>
 
   <div style="clear: both; padding: 0.5em 0;"></div>
 
@@ -41,15 +41,23 @@
               data-live-search="false"
               title="{{ _('Select Source Type') }}"
               id="library_source_select">
-        <optgroup label="{{ _('System Library') }}">
-          {% for key, preset in library_presets.items() if preset.is_system %}
+        {#- 지역으로 가른다. 예전 그룹 이름은 '시스템 / 커스텀' 이었는데, 그러면
+            내장 피드 여섯이 **전부 한국 공공데이터**라는 사실이 화면 어디에도
+            안 나온다 — AoT 는 22개 언어로 나가고, 한국 밖 운영자에게 그 목록은
+            '고를 수 있는 것 전부' 처럼 보인다. 무엇을 고를 수 없는지가 보여야
+            아래 그룹으로 눈이 간다. -#}
+        {% set kr_presets = library_presets.items() | selectattr('1.region', 'equalto', 'KR') | list %}
+        {% if kr_presets %}
+        <optgroup label="{{ _('Public data — Korea') }}">
+          {% for key, preset in kr_presets %}
           <option value="{{ key }}" data-subtext="{{ preset.source_type }}">
             {{ preset.label }}
           </option>
           {% endfor %}
         </optgroup>
-        <optgroup label="{{ _('Custom Source') }}">
-          {% for key, preset in library_presets.items() if not preset.is_system %}
+        {% endif %}
+        <optgroup label="{{ _('Your own material — anywhere') }}">
+          {% for key, preset in library_presets.items() if preset.region != 'KR' %}
           <option value="{{ key }}" data-subtext="{{ preset.source_type }}">
             {{ preset.label }}
           </option>
@@ -136,6 +144,17 @@
       <h3>{{ _('AI-Curated Knowledge Review') }}</h3>
     </div>
     <p class="aot-modal-body-text">{{ _('Knowledge the AI shelved on its own (always unconfirmed at first). Confirm/edit what is correct, retire what is wrong — see it cited as [AI 정리 — 미확인] until reviewed.') }}</p>
+    {#- 지식 플래그 셋 중 이것 하나만 조작할 값이다. 나머지 둘
+        (t3_knowledge_search_enabled / knowledge_digest_enabled)은 끄면
+        라이브러리가 조용히 아무 일도 안 하는 상태가 되는데, 그것을 원하는
+        사람은 없다 — 켜짐 말고 쓸 자리가 없는 스위치는 설정이 아니다. -#}
+    <div class="aot-modal-body-text" style="padding: 0.25em 0 0.5em;">
+      <input class="form-control btn aot-pill-btn{% if strict_mode %} aot-pill-btn-primary{% endif %}"
+             id="strictModeBtn" type="button"
+             value="{% if strict_mode %}{{ _('Reviewed knowledge only: ON') }}{% else %}{{ _('Reviewed knowledge only: OFF') }}{% endif %}"
+             onclick="toggleStrictMode({{ 'false' if strict_mode else 'true' }})">
+      <span>{{ _('When on, the AI may not cite notes it wrote itself until a person confirms them. Authoritative and hand-entered knowledge is unaffected.') }}</span>
+    </div>
   </div>
 
   <div id="reviewEmptyState" class="aot-modal-body-text" style="{% if review_items %}display:none;{% endif %} padding: 1em 0;">
@@ -190,6 +209,15 @@
         </div>
 
         <div class="aot-entry-actions aot-col-action aot-entry-button-group">
+          {#- 원문 열기를 '확인' 앞에 둔다 — 순서가 곧 동선이다. 출처를 보지 않고
+              누르는 '확인' 은 검토가 아니라 통과일 뿐이고, §3.2 의 승격은 사람이
+              실제로 원문을 봤다는 전제 위에 서 있다. 주소가 없는 항목은 이
+              버튼이 아예 없어서, 확인할 수 없는 항목이라는 것이 화면에서 보인다. -#}
+          {% if item.source_url %}
+          <a class="form-control btn aot-pill-btn"
+             href="{{ item.source_url }}" target="_blank" rel="noopener noreferrer"
+             title="{{ item.source_url }}">{{ _('Open source') }}</a>
+          {% endif %}
           {% if item.context_state == 'retired' %}
             <input class="form-control btn aot-pill-btn aot-pill-btn-primary"
                    type="button"
@@ -220,10 +248,137 @@
     {% endfor %}
   </div>
 
+  {#- ── 지식 항목 (C6) ──────────────────────────────────────────────────────
+      위의 리뷰 섹션은 AI 가 스스로 비친 것만 보여준다. 그것만으로는 운영자가
+      "이 라이브러리에 무엇이 들어 있나" 를 볼 수 없다 — 비어 있는 것과 고장난
+      것을 구분할 수 없고, 오래된 외부 피드도 눈에 띄지 않는다. 설계 §8 이
+      요구한 '지식 저장소 관리' 는 이 섹션이다. -#}
+  <div style="clear: both; padding: 2em 0 0.5em;">
+    <div class="aot-settings-title">
+      <h3>{{ _('Knowledge Items') }}</h3>
+    </div>
+    <p class="aot-modal-body-text">
+      {{ _('Everything the AI can cite — synced from sources, shelved by the AI, or written in by hand. Search and filter to see what is actually in here.') }}
+    </p>
+  </div>
+
+  <div class="row aot-main-selection-row">
+    <div class="col-auto">
+      <input type="text" id="kbQuery" class="form-control aot-modern-input"
+             placeholder="{{ _('Search knowledge…') }}"
+             onkeydown="if(event.key==='Enter'){loadKnowledge(1);}">
+    </div>
+    <div class="col-auto">
+      <select class="selectpicker aot-standard-select" id="kbProvenance"
+              data-style="btn btn-primary aot-roundbox" data-live-search="false"
+              title="{{ _('All sources') }}" onchange="loadKnowledge(1)">
+        <option value="">{{ _('All sources') }}</option>
+        <option value="external_authority">{{ _('Authoritative') }}</option>
+        <option value="user_provided">{{ _('Entered by a person') }}</option>
+        <option value="ai_curated">{{ _('AI-curated') }}</option>
+        <option value="data_derived">{{ _('Derived from data') }}</option>
+      </select>
+    </div>
+    <div class="col-auto">
+      <input class="form-control btn aot-pill-btn aot-pill-btn-primary" type="button"
+             value="{{ _('Add Knowledge') }}" onclick="openAddKnowledge()">
+    </div>
+  </div>
+
+  {#- 태그 막대. 라이브러리가 실제로 무엇에 대해 알고 있는지가 여기서 한눈에
+      보인다 — 목록을 훑기 전에 범위를 먼저 좁히는 자리다. -#}
+  <div id="kbTagBar" class="aot-modal-body-text" style="padding: 0.5em 0;">
+    {% for t in knowledge_tags %}
+    <input class="form-control btn aot-pill-btn kb-tag-btn" type="button"
+           data-tag="{{ t.tag }}" value="{{ t.tag }} ({{ t.count }})"
+           onclick="toggleKnowledgeTag('{{ t.tag }}')">
+    {% endfor %}
+  </div>
+
+  {#- 빈 상태는 "없음" 만 말하지 않는다. 라이브러리가 비면 AI 는 주제 질문에
+      자기 기억으로 답할 수밖에 없는데, 화면이 그 사실도, 다음에 할 일도 알려
+      주지 않으면 운영자는 이 페이지가 고장난 줄 안다. -#}
+  <div id="kbEmptyState" class="aot-modal-body-text"
+       style="{% if knowledge_summary.total %}display:none;{% endif %} padding: 1em 0;">
+    <p>{{ _('The knowledge library is empty. Until something is in here, the AI answers subject questions from its own general knowledge — with no source to cite.') }}</p>
+    <p>{{ _('Three ways to fill it: connect a source above, press Add Knowledge to write in what you already know, or just ask the AI to look something up — it saves what it finds.') }}</p>
+  </div>
+
+  {#- 무엇이 **쓰이고** 있는가. "무엇이 들어 있나" 만으로는 다음에 무엇을 채울지
+      정할 수 없다 — 한 번도 안 걸린 항목이 대부분이라면 태그가 잘못됐거나 애초에
+      필요 없던 지식이고, 검토율이 0 이면 리뷰 화면이 안 쓰이고 있다는 뜻이다.
+      `reuse_count` 는 '검색에 걸린 횟수'이지 '답변에 인용된 횟수'가 아니다 —
+      그 둘을 가르는 계측은 아직 없으므로 문구도 정확히 그렇게 쓴다. -#}
+  {% if knowledge_usage and knowledge_usage.total %}
+  <div class="aot-modal-body-text" style="padding: 0.5em 0;">
+    <div>
+      {{ _('Retrieved at least once') }}: {{ knowledge_usage.total - knowledge_usage.never_retrieved }} / {{ knowledge_usage.total }}
+      &nbsp;·&nbsp; {{ _('With a source link') }}: {{ knowledge_usage.with_source_url }}
+      {% if knowledge_usage.ai_curated_total %}
+      &nbsp;·&nbsp; {{ _('AI notes reviewed') }}: {{ knowledge_usage.ai_curated_reviewed }} / {{ knowledge_usage.ai_curated_total }}
+      {% if knowledge_usage.ai_curated_retired %}({{ _('retired') }} {{ knowledge_usage.ai_curated_retired }}){% endif %}
+      {% endif %}
+    </div>
+    {% if knowledge_usage.top_retrieved %}
+    <div>{{ _('Most retrieved') }}:
+      {% for t in knowledge_usage.top_retrieved %}{{ t.heading }} ({{ t.reuse_count }}){% if not loop.last %}, {% endif %}{% endfor %}
+    </div>
+    {% endif %}
+    <small>{{ _('“Retrieved” means the knowledge search returned it — not that the answer quoted it.') }}</small>
+  </div>
+  {% endif %}
+
+  <div id="kbSummary" class="aot-modal-body-text" style="padding: 0.25em 0;"></div>
+  <div class="aot-entry-container" id="grid-knowledge"></div>
+  <div id="kbPager" style="padding: 0.75em 0;"></div>
+
 </main>
 </div>
 
 <div style="clear: both; padding-bottom: 1.5em;"></div>
+
+<!-- Add Knowledge Modal -->
+<div class="modal fade aot-option-modal" id="addKnowledgeModal" tabindex="-1" role="dialog" aria-hidden="true">
+  <div class="modal-dialog modal-lg aot-modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header aot-modal-header">
+        <h5 class="modal-title">{{ _('Add Knowledge') }}</h5>
+      </div>
+      <div class="modal-body aot-modal-body">
+        <p class="aot-modal-body-text">
+          {{ _('What you write here is treated as confirmed — you are the source. Tag it so it only comes up for the right questions.') }}
+        </p>
+        <div class="aot-modal-container">
+          <div class="form-group">
+            <label class="aot-modal-body-text">{{ _('Title') }}</label>
+            <input type="text" id="akHeading" class="form-control aot-modern-input">
+          </div>
+          <div class="form-group">
+            <label class="aot-modal-body-text">{{ _('Tags') }} <small>({{ _('comma-separated, required') }})</small></label>
+            <input type="text" id="akTags" class="form-control aot-modern-input"
+                   placeholder="{{ _('e.g. radish, autumn, irrigation') }}">
+          </div>
+          <div class="form-group">
+            <label class="aot-modal-body-text">{{ _('Knowledge') }}</label>
+            <textarea id="akContent" class="form-control aot-modern-input aot-input-prose" rows="7"></textarea>
+          </div>
+          <div class="form-group">
+            <label class="aot-modal-body-text">{{ _('Attribution') }} <small>({{ _('optional') }})</small></label>
+            <input type="text" id="akAttribution" class="form-control aot-modern-input">
+          </div>
+          <div class="form-group">
+            <label class="aot-modal-body-text">{{ _('Source URL') }} <small>({{ _('optional') }})</small></label>
+            <input type="text" id="akSourceUrl" class="form-control aot-modern-input" placeholder="https://">
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer aot-modal-footer">
+        <button type="button" class="btn aot-pill-btn" data-dismiss="modal">{{ _('Close') }}</button>
+        <button type="button" class="btn aot-pill-btn aot-pill-btn-primary" onclick="saveAddKnowledge()">{{ _('Save') }}</button>
+      </div>
+    </div>
+  </div>
+</div>
 
 <!-- Source Settings Modal -->
 <div class="modal fade aot-option-modal" id="sourceSettingsModal" tabindex="-1" role="dialog" aria-hidden="true">
@@ -279,6 +434,7 @@ var T = {
   selectSourceType: "{{ _('Please select a source type.') }}",
   adding:           "{{ _('Adding…') }}",
   sourceAdded:      "{{ _('Source added. Configure it via the settings cog.') }}",
+  sourceExists:     "{{ _('This source is already in your library. Configure it via the settings cog.') }}",
   error:            "{{ _('Error') }}",
   requestFailed:    "{{ _('Request failed') }}",
   syncing:          "{{ _('Syncing…') }}",
@@ -333,6 +489,33 @@ var T = {
   content:          "{{ _('Content') }}",
   tags:             "{{ _('Tags (comma-separated)') }}",
   attribution:      "{{ _('Attribution') }}",
+  sourceUrl:        "{{ _('Source URL') }}",
+  tableUrl:         "{{ _('Table URL (CSV)') }}",
+  tableTitle:       "{{ _('Table name') }}",
+  tableAnswers:     "{{ _('What this table can answer') }}",
+  tableAnswersHint: "{{ _('The AI reads only this to decide whether to use the table. e.g. Growing temperature, rainfall and soil pH ranges per plant species.') }}",
+  tableSearchCols:  "{{ _('Columns to look up by') }}",
+  tableCaveat:      "{{ _('Caveat to quote with the numbers') }}",
+  tableSummaryCols: "{{ _('Columns to return by default') }}",
+  tableSummaryColsHint: "{{ _('Leave blank to return every column. Narrow it if rows are wide.') }}",
+  tableNameLang:    "{{ _('What names the table is keyed by') }}",
+  tableNameLangHint:"{{ _('e.g. English common names or scientific names') }}",
+  tableAliases:     "{{ _('Name aliases') }}",
+  tableAliasesHint: "{{ _('Local word = table name, comma separated. e.g. 무=radish, 배추=cabbage. Only common anchors are needed — the AI works out synonyms itself.') }}",
+  tableCaveatHint:  "{{ _('e.g. These are survival ranges, not greenhouse setpoints.') }}",
+  kbNoResults:      "{{ _('Nothing matches those filters.') }}",
+  kbShowing:        "{{ _('Showing') }}",
+  kbOf:             "{{ _('of') }}",
+  kbMore:           "{{ _('Show more') }}",
+  kbOpenSource:     "{{ _('Open source') }}",
+  kbDisable:        "{{ _('Set aside') }}",
+  kbEnable:         "{{ _('Put back') }}",
+  kbSetAside:       "{{ _('Set aside — the AI will not cite this.') }}",
+  kbContentRequired:"{{ _('Write the knowledge text.') }}",
+  kbTagsRequired:   "{{ _('At least one tag is required.') }}",
+  kbAdded:          "{{ _('Added to the library.') }}",
+  kbIncludeAside:   "{{ _('Include set-aside items') }}",
+  strictSaved:      "{{ _('Setting saved.') }}",
   relatedDocs:      "{{ _('Related Documents') }}",
   sourceSite:       "{{ _('Source Site') }}",
   link:             "{{ _('Link') }}",
@@ -535,7 +718,9 @@ function triggerAddSource() {
   .then(function(r){ return r.json(); })
   .then(function(data){
     if (data.success) {
-      if (window.showToast) window.showToast(T.sourceAdded, 'success');
+      if (window.showToast) {
+        window.showToast(data.already_existed ? T.sourceExists : T.sourceAdded, 'success');
+      }
       setTimeout(function(){ location.reload(); }, 800);
     } else {
       if (window.showToast) window.showToast(T.error + ': ' + (data.error || ''), 'error');
@@ -696,6 +881,18 @@ function openSourceSettings(sourceId) {
     } else if (source.source_type === 'web_url') {
       html += row('URL', '<input type="text" id="sWebUrl" class="form-control aot-modern-input" value="' + esc(config.url||'') + '" placeholder="https://example.com/data">');
       html += row(T.cssSelector, '<input type="text" id="sWebCss" class="form-control aot-modern-input" value="' + esc(config.css_selector||'') + '" placeholder=".data-table td">');
+    } else if (source.source_type === 'csv_table') {
+      html += row(T.tableUrl,     '<input type="text" id="sTblUrl" class="form-control aot-modern-input" value="' + esc(config.data_url||'') + '" placeholder="https://example.com/table.csv">');
+      html += row(T.tableTitle,   '<input type="text" id="sTblTitle" class="form-control aot-modern-input" value="' + esc(config.title||'') + '">');
+      // 이 칸이 이 기능의 핵심이다 — AI 는 여기 적힌 설명만 보고 이 표를 쓸지 정한다.
+      html += row(T.tableAnswers, '<textarea id="sTblAnswers" class="form-control aot-modern-input aot-input-prose" rows="3" placeholder="' + esc(T.tableAnswersHint) + '">' + esc(config.answers||'') + '</textarea>');
+      html += row(T.tableSearchCols, '<input type="text" id="sTblCols" class="form-control aot-modern-input" value="' + esc(config.search_columns||'') + '" placeholder="ScientificName,COMNAME">');
+      html += row(T.tableSummaryCols, '<input type="text" id="sTblSumCols" class="form-control aot-modern-input" value="' + esc(config.summary_columns||'') + '" placeholder="' + esc(T.tableSummaryColsHint) + '">');
+      html += row(T.tableNameLang, '<input type="text" id="sTblLang" class="form-control aot-modern-input" value="' + esc(config.name_language||'') + '" placeholder="' + esc(T.tableNameLangHint) + '">');
+      html += row(T.tableAliases, '<textarea id="sTblAliases" class="form-control aot-modern-input aot-input-prose" rows="2" placeholder="' + esc(T.tableAliasesHint) + '">' + esc(config.aliases||'') + '</textarea>');
+      html += row(T.tableCaveat,  '<textarea id="sTblCaveat" class="form-control aot-modern-input aot-input-prose" rows="2" placeholder="' + esc(T.tableCaveatHint) + '">' + esc(config.caveat||'') + '</textarea>');
+      html += row(T.attribution,  '<input type="text" id="sTblAttr" class="form-control aot-modern-input" value="' + esc(config.attribution||'') + '">');
+      html += row(T.sourceUrl,    '<input type="text" id="sTblSrcUrl" class="form-control aot-modern-input" value="' + esc(config.source_url||'') + '" placeholder="https://">');
     } else if (source.source_type === 'internal_query') {
       html += row(T.queryTemplate, '<textarea id="sQueryTemplate" class="form-control aot-modern-input" rows="4">' + esc(config.query_template||'') + '</textarea>');
     } else if (source.source_type === 'google_drive') {
@@ -1121,6 +1318,17 @@ function saveSourceSettings(sourceId, sourceType, isSystem) {
   } else if (sourceType === 'web_url') {
     config.url          = (document.getElementById('sWebUrl')  || {value:''}).value.trim();
     config.css_selector = (document.getElementById('sWebCss')  || {value:''}).value.trim();
+  } else if (sourceType === 'csv_table') {
+    config.data_url       = (document.getElementById('sTblUrl')     || {value:''}).value.trim();
+    config.title          = (document.getElementById('sTblTitle')   || {value:''}).value.trim();
+    config.answers        = (document.getElementById('sTblAnswers') || {value:''}).value.trim();
+    config.search_columns = (document.getElementById('sTblCols')    || {value:''}).value.trim();
+    config.caveat         = (document.getElementById('sTblCaveat')  || {value:''}).value.trim();
+    config.summary_columns= (document.getElementById('sTblSumCols') || {value:''}).value.trim();
+    config.name_language  = (document.getElementById('sTblLang')    || {value:''}).value.trim();
+    config.aliases        = (document.getElementById('sTblAliases') || {value:''}).value.trim();
+    config.attribution    = (document.getElementById('sTblAttr')    || {value:''}).value.trim();
+    config.source_url     = (document.getElementById('sTblSrcUrl')  || {value:''}).value.trim();
   } else if (sourceType === 'internal_query') {
     config.query_template = (document.getElementById('sQueryTemplate') || {value:''}).value.trim();
   } else if (sourceType === 'google_drive') {
@@ -1224,6 +1432,9 @@ function openReviewEdit(chunkId) {
     html += row(T.heading,     '<input type="text" id="rHeading" class="form-control aot-modern-input" value="' + esc(item.heading || '') + '">');
     html += row(T.tags,        '<input type="text" id="rTags" class="form-control aot-modern-input" value="' + esc((item.tags || []).join(', ')) + '">');
     html += row(T.attribution, '<input type="text" id="rAttribution" class="form-control aot-modern-input" value="' + esc(item.attribution || '') + '" disabled>');
+    if (item.source_url) {
+      html += row(T.sourceUrl, '<a href="' + esc(item.source_url) + '" target="_blank" rel="noopener noreferrer" class="form-control aot-modern-input">' + esc(item.source_url) + '</a>');
+    }
     html += row(T.content,     '<textarea id="rContent" class="form-control aot-modern-input" rows="6">' + esc(item.content || '') + '</textarea>');
     html += '</div>';
     $body.html(html);
@@ -1248,6 +1459,189 @@ function saveReviewEdit() {
     else { if (window.showToast) window.showToast(T.saveFailed + ': ' + (data.error || ''), 'error'); }
   });
 }
+
+/* -----------------------------------------------------------------------
+   지식 항목 브라우저 (C6)
+
+   위의 리뷰 목록은 AI 가 비친 것만 보여준다. 여기는 저장소 전체를 본다 —
+   운영자가 "이 안에 무엇이 있나" 를 확인하고, 자기가 아는 것을 직접 넣고,
+   쓸모없어진 항목을 AI 손이 닿지 않게 치우는 자리다.
+   ----------------------------------------------------------------------- */
+var kbState = { page: 1, tag: '', includeDisabled: false };
+
+function toggleKnowledgeTag(tag) {
+  kbState.tag = (kbState.tag === tag) ? '' : tag;
+  document.querySelectorAll('.kb-tag-btn').forEach(function(b){
+    b.classList.toggle('aot-pill-btn-primary', b.dataset.tag === kbState.tag);
+  });
+  loadKnowledge(1);
+}
+
+function loadKnowledge(page) {
+  kbState.page = page || 1;
+  var params = new URLSearchParams();
+  var q = (document.getElementById('kbQuery') || {value:''}).value.trim();
+  var prov = (document.getElementById('kbProvenance') || {value:''}).value;
+  if (q) params.set('q', q);
+  if (prov) params.set('provenance', prov);
+  if (kbState.tag) params.set('tag', kbState.tag);
+  if (kbState.includeDisabled) params.set('include_disabled', '1');
+  params.set('page', kbState.page);
+
+  fetch('/api/v1/ai/library/knowledge?' + params.toString())
+  .then(function(r){ return r.json(); })
+  .then(function(data){ renderKnowledge(data); })
+  .catch(function(e){ if (window.showToast) window.showToast(T.requestFailed + ': ' + e, 'error'); });
+}
+
+function renderKnowledge(data) {
+  var grid = document.getElementById('grid-knowledge');
+  var pager = document.getElementById('kbPager');
+  var summary = document.getElementById('kbSummary');
+  var empty = document.getElementById('kbEmptyState');
+  var items = data.items || [];
+
+  // 저장소가 통째로 비었을 때만 온보딩 문구를 보인다. 필터 때문에 0건인
+  // 것은 다른 상황이라 다른 말을 해야 한다 — 둘을 같은 문구로 덮으면
+  // 운영자가 "넣었는데도 비어 있다" 로 읽는다.
+  var libraryEmpty = !(data.summary && data.summary.total);
+  if (empty) empty.style.display = libraryEmpty ? '' : 'none';
+
+  if (summary) {
+    if (libraryEmpty) { summary.innerHTML = ''; }
+    else {
+      var by = (data.summary && data.summary.by_provenance) || {};
+      var parts = [];
+      Object.keys(by).forEach(function(k){ parts.push(esc(k) + ': ' + by[k]); });
+      summary.innerHTML = esc(T.kbShowing) + ' ' + items.length + ' ' + esc(T.kbOf) + ' ' +
+                          (data.total || 0) + (parts.length ? '  ·  ' + parts.join('  ·  ') : '');
+    }
+  }
+
+  if (!items.length) {
+    grid.innerHTML = libraryEmpty ? '' :
+      '<div class="aot-modal-body-text" style="padding:1em 0;">' + esc(T.kbNoResults) + '</div>';
+    pager.innerHTML = '';
+    return;
+  }
+
+  var html = '';
+  items.forEach(function(it){
+    var tags = (it.tags || []).join(', ');
+    var stateCls = it.is_enabled ? 'active-background' : 'inactive-background';
+    html += '<div class="' + stateCls + ' row small-gutters aot-entry-item mb-2">' +
+        '<div class="aot-entry-content-item aot-col-name">' +
+          '<span class="badge aot-badge-inline ' + provBadgeClass(it.provenance) + '">' +
+            esc(it.provenance_label || it.provenance) + '</span>' +
+          (it.flagged_reason ? '<span class="badge badge-danger aot-badge-inline" title="' +
+            esc(it.flagged_reason) + '">!</span>' : '') +
+          '<div class="form-control aot-entry-name-input" title="' + esc(it.attribution || '') + '">' +
+            esc(it.heading || '') + '</div>' +
+        '</div>' +
+        '<div class="aot-entry-content-item aot-col-uuid">' +
+          '<input class="form-control btn aot-entry-uuid-btn aot-pill-btn" type="button" title="' +
+            esc(tags) + '" value="' + esc(tags) + '">' +
+        '</div>' +
+        '<div class="aot-entry-actions aot-col-action aot-entry-button-group">' +
+          (it.source_url ? '<a class="form-control btn aot-pill-btn" href="' + esc(it.source_url) +
+            '" target="_blank" rel="noopener noreferrer" title="' + esc(it.source_url) + '">' +
+            esc(T.kbOpenSource) + '</a>' : '') +
+          '<input class="form-control btn aot-pill-btn' + (it.is_enabled ? '' : ' aot-pill-btn-primary') +
+            '" type="button" value="' + esc(it.is_enabled ? T.kbDisable : T.kbEnable) +
+            '" onclick="setKnowledgeEnabled(\'' + it.chunk_id + '\', ' + (!it.is_enabled) + ')">' +
+        '</div>' +
+      '</div>';
+  });
+  grid.innerHTML = html;
+
+  pager.innerHTML = '';
+  if (data.has_more) {
+    var btn = document.createElement('input');
+    btn.className = 'form-control btn aot-pill-btn';
+    btn.type = 'button';
+    btn.value = T.kbMore;
+    btn.onclick = function(){ loadKnowledge(kbState.page + 1); };
+    pager.appendChild(btn);
+  }
+  var aside = document.createElement('input');
+  aside.className = 'form-control btn aot-pill-btn' + (kbState.includeDisabled ? ' aot-pill-btn-primary' : '');
+  aside.type = 'button';
+  aside.value = T.kbIncludeAside;
+  aside.onclick = function(){ kbState.includeDisabled = !kbState.includeDisabled; loadKnowledge(1); };
+  pager.appendChild(aside);
+}
+
+function provBadgeClass(p) {
+  if (p === 'external_authority') return 'badge-success';
+  if (p === 'user_provided') return 'badge-info';
+  if (p === 'data_derived') return 'badge-secondary';
+  return 'badge-warning';   // ai_curated — 가장 낮은 신뢰
+}
+
+function setKnowledgeEnabled(chunkId, enabled) {
+  fetch('/api/v1/ai/library/knowledge/' + encodeURIComponent(chunkId) + '/enabled', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF_TOKEN },
+    body: JSON.stringify({ enabled: enabled }),
+  })
+  .then(function(r){ return r.json(); })
+  .then(function(data){
+    if (data.success) {
+      if (window.showToast && !enabled) window.showToast(T.kbSetAside, 'success');
+      loadKnowledge(kbState.page);
+    } else { if (window.showToast) window.showToast(T.error + ': ' + (data.error || ''), 'error'); }
+  });
+}
+
+function toggleStrictMode(enabled) {
+  fetch('/api/v1/ai/library/strict-mode', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF_TOKEN },
+    body: JSON.stringify({ enabled: enabled }),
+  })
+  .then(function(r){ return r.json(); })
+  .then(function(data){
+    if (data.success) {
+      if (window.showToast) window.showToast(T.strictSaved, 'success');
+      setTimeout(function(){ location.reload(); }, 400);
+    } else { if (window.showToast) window.showToast(T.error + ': ' + (data.error || ''), 'error'); }
+  });
+}
+
+function openAddKnowledge() {
+  ['akHeading','akTags','akContent','akAttribution','akSourceUrl'].forEach(function(id){
+    var el = document.getElementById(id); if (el) el.value = '';
+  });
+  $('#addKnowledgeModal').modal('show');
+}
+
+function saveAddKnowledge() {
+  var content = (document.getElementById('akContent') || {value:''}).value.trim();
+  var tags    = (document.getElementById('akTags')    || {value:''}).value.trim();
+  if (!content) { if (window.showToast) window.showToast(T.kbContentRequired, 'error'); return; }
+  if (!tags)    { if (window.showToast) window.showToast(T.kbTagsRequired, 'error'); return; }
+  fetch('/api/v1/ai/library/knowledge', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF_TOKEN },
+    body: JSON.stringify({
+      content: content,
+      tags: tags,
+      heading:     (document.getElementById('akHeading')     || {value:''}).value.trim(),
+      attribution: (document.getElementById('akAttribution') || {value:''}).value.trim(),
+      source_url:  (document.getElementById('akSourceUrl')   || {value:''}).value.trim(),
+    }),
+  })
+  .then(function(r){ return r.json(); })
+  .then(function(data){
+    if (data.success) {
+      $('#addKnowledgeModal').modal('hide');
+      if (window.showToast) window.showToast(T.kbAdded, 'success');
+      setTimeout(function(){ location.reload(); }, 500);
+    } else { if (window.showToast) window.showToast(T.error + ': ' + (data.error || ''), 'error'); }
+  });
+}
+
+document.addEventListener('DOMContentLoaded', function(){ loadKnowledge(1); });
 
 /* helpers */
 function row(label, control) {

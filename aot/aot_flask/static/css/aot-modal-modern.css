@@ -313,12 +313,30 @@ a.aot-modal-section-title-collapsible[aria-expanded="true"] .aot-collapse-caret 
    the rows attribute / min-height, and is freely overridden by the inline height the
    browser writes while the user drags the resize handle. */
 textarea.aot-modern-input {
+    /* 알약 반경(9999px)은 한 줄 입력에만 맞다. 위 height 규칙은 :not(textarea)
+       로 예외를 뒀는데 border-radius 는 빠져 있어서, 여러 줄 textarea 가 전부
+       **타원**이 됐다 — 글이 곡선 안쪽에서 시작해 읽기 어렵다(2026-08-24
+       브라우저 실측, 앱 전체 26곳).
+       8px 는 새로 고른 값이 아니라 이 앱이 이미 긴 글에 쓰던 값이다
+       (공지 작성창 `textarea.aot-notice-textarea`). 다만 그쪽은 공용 CSS 가
+       아니라 템플릿 두 곳에 인라인으로 박혀 있어서, 같은 판단이 여기까지
+       오지 못했다. */
+    border-radius: 8px !important;
     line-height: 1.5 !important;
     padding: 0.5rem 1rem !important;
     resize: vertical !important;
     overflow: auto !important;
     white-space: pre !important;       /* code: no wrap, horizontal scroll instead */
     overflow-wrap: normal !important;
+}
+
+/* 산문 입력용. 위 규칙은 조건부 컨트롤러의 **코드 편집기**를 기준으로 삼아
+   `white-space: pre` 로 줄바꿈을 막는다 — 코드는 그게 맞지만 사람이 쓰는 글은
+   가로로 흘러 나가 읽을 수 없다. 코드가 아닌 곳에 이 클래스를 함께 준다. */
+textarea.aot-modern-input.aot-input-prose {
+    white-space: normal !important;
+    overflow-wrap: break-word !important;
+    overflow-x: hidden !important;
 }
 
 /* Conditional Controller code editors: sensible default heights, user-resizable.

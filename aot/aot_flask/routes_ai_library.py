@@ -17,11 +17,17 @@ from aot.aot_flask.utils import utils_general
 from aot.databases.models import AIContextSource, Misc
 from aot.ai.services.context_source_service import sync_source
 from aot.ai.services import knowledge_promotion_service
+from aot.ai.services import knowledge_library_service
 
 logger = logging.getLogger(__name__)
 
 # @ANCHOR: AI_LIBRARY_BLUEPRINT
 ai_library_bp = Blueprint('routes_ai_library', __name__)
+
+# 지식이 들어앉을 자리로만 존재하는 예약 소스들(AI 자율 비치 / 직접 입력).
+# 외부 피드가 아니므로 소스 카드 목록에서 뺀다 — 목록에 뜨면 '활성화'·'동기화'
+# 버튼이 보이는데 둘 다 이 소스엔 뜻이 없다.
+_RESERVED_SOURCE_TYPES = ('ai_curated', 'user_provided')
 
 
 # ---------------------------------------------------------------------------
@@ -45,6 +51,7 @@ LIBRARY_PRESETS = {
     # System Libraries — aot/ai/context/ext/
     # ------------------------------------------------------------------
     'ext_smartfarm': {
+        'region': 'KR', 'topics': ['crop', 'environment'],
         'label': 'SmartFarm Productivity (EXT-KR-01)',
         'description': 'RDA SmartFarm optimal setpoints: temperature, humidity, CO2, light per crop/stage.',
         'description_ko': '농촌진흥청(RDA) 스마트팜 생산성 공공데이터 — 작물·생육단계별 '
@@ -61,6 +68,7 @@ LIBRARY_PRESETS = {
         'sync_interval_min': 10080,  # 7 days
     },
     'ext_nongsaro': {
+        'region': 'KR', 'topics': ['crop'],
         'label': 'Nongsaro Cultivation Guide (EXT-KR-02)',
         'description': 'Crop cultivation guides and weekly farming calendar from Nongsaro Open API.',
         'description_ko': '농사로(농촌진흥청 농업기술포털) 오픈API — 작물별 재배 가이드와 '
@@ -77,6 +85,7 @@ LIBRARY_PRESETS = {
         'sync_interval_min': 1440,  # 1 day
     },
     'ext_pest': {
+        'region': 'KR', 'topics': ['pest'],
         'label': 'Pest Management Alerts (EXT-KR-03)',
         'description': 'Real-time pest and disease alerts from the National Crop Protection Management System.',
         'description_ko': '국가농작물병해충관리시스템(NCPMS) — 작물별 병해충 발생 경보와 '
@@ -93,6 +102,7 @@ LIBRARY_PRESETS = {
         'sync_interval_min': 360,  # 6 hours
     },
     'smartfarmkorea': {
+        'region': 'KR', 'topics': ['crop', 'environment'],
         'label': 'SmartFarmKorea Big Data (EXT-KR-04)',
         'description': 'Real farm environment/growth measurement data from ~2,300 participating '
                        'farms, via the SmartFarmKorea data mart. Pick which operations to sync.',
@@ -120,6 +130,7 @@ LIBRARY_PRESETS = {
         'multi_operation': True,  # UI: render the 7-operation checklist, not a single config form
     },
     'smartfarmkorea_outdoor': {
+        'region': 'KR', 'topics': ['crop', 'environment'],
         'label': 'SmartFarmKorea Big Data — Outdoor Field (EXT-KR-05)',
         'description': 'Real farm environment/growth measurement data from ~1,650 open-field '
                        '(non-greenhouse) farms, via the SmartFarmKorea data mart. Pick which '
@@ -148,6 +159,7 @@ LIBRARY_PRESETS = {
         'multi_operation': True,
     },
     'smartfarmkorea_livestock': {
+        'region': 'KR', 'topics': ['livestock', 'environment'],
         'label': 'SmartFarmKorea Big Data — Livestock (EXT-KR-06)',
         'description': 'Real farm production/breeding measurement data from ~348 livestock '
                        'farms (dairy/swine/poultry/hanwoo), via the SmartFarmKorea data mart. '
@@ -181,7 +193,73 @@ LIBRARY_PRESETS = {
     # ------------------------------------------------------------------
     # Custom Sources — user-configured
     # ------------------------------------------------------------------
+    # ── 참조표 (2026-08-24) ────────────────────────────────────────────
+    # 문서를 잘라 지식 항목으로 넣는 기존 방식과 다르다. 행이 수천 개인 표는
+    # 적재하면 매 질의에서 매뉴얼과 관련도를 다투고, 일부만 적재하면 "미리 고른
+    # 것만 답할 수 있다". 그래서 **등록만 하고 물어볼 때 조회**한다 —
+    # reference_table_service 의 모듈 주석 참조.
+    'csv_table': {
+        'label': 'Reference Table (CSV)',
+        'description': 'Register a CSV table the AI can look rows up in, instead of ingesting it as text.',
+        'description_ko': '표(CSV)를 지식으로 잘라 넣지 않고 **조회 대상**으로 등록합니다. '
+                          '행이 수천 개여도 평소 검색이 무거워지지 않고, 표 전체가 답변 '
+                          '범위에 들어옵니다. 작물 요구조건표·부품 제원표·품종 목록처럼 '
+                          '"이름으로 찾아 값을 읽는" 자료에 맞습니다.',
+        'usage': '표 주소(CSV)와 함께 **이 표가 무엇에 답할 수 있는지**를 적어 주세요 — '
+                 'AI 는 그 설명을 보고 이 표를 쓸지 정합니다. 찾을 기준이 되는 컬럼도 '
+                 '지정할 수 있습니다(비우면 앞쪽 컬럼을 씁니다).',
+        'source_type': 'csv_table',
+        'is_system': False,
+        'region': 'any', 'topics': ['any'],
+    },
+    # 위 범용 표의 **미리 채워진 사례**다. 별도 클라이언트를 두지 않는다 — 특별한
+    # 자료여서가 아니라, 한국 밖에서 쓸 수 있는 첫 내장 소스라서 기본값을 채워 둔다.
+    'ext_ecocrop': {
+        'label': 'FAO ECOCROP — Crop Requirements (EXT-GL-01)',
+        'description': 'FAO ECOCROP: environmental requirement ranges for 2,500+ plant species. Suitability envelopes, not greenhouse setpoints.',
+        'description_ko': 'FAO ECOCROP — 2,500종 이상의 식물에 대한 생육 환경 요구조건'
+                          '(온도·강수·토양 pH·고도·생육일수). 지역을 가리지 않는 첫 내장 '
+                          '소스입니다. **주의: 이 값은 "이 종이 그 기후에서 자랄 수 있는가" '
+                          '를 판단하는 적합성 범위이지, 온실 목표값이 아닙니다.**',
+        'usage': '키가 필요 없습니다. 그대로 활성화하면 표를 내려받고, 이후 AI 가 '
+                 '작물 요구조건을 물을 때 조회합니다. 라이선스는 CC BY 4.0 이며 '
+                 'AoT 는 이 자료를 재배포하지 않고 조회 시점에 받아 둡니다.',
+        'url_source': 'https://ecocrop.apps.fao.org/ecocrop/srv/en/home',
+        'source_type': 'csv_table',
+        'is_system': True,
+        'needs_api_key': False,
+        'region': 'any', 'topics': ['crop', 'environment'],
+        'sync_interval_min': 0,
+        'defaults': {
+            'data_url': 'https://raw.githubusercontent.com/OpenCLIM/ecocrop/main/EcoCrop_DB.csv',
+            'title': 'FAO ECOCROP — 종별 생육 적합 범위',
+            'answers': '식물 종의 생육 온도·연강수량·토양 pH·재배 고도 한계·생육 일수, '
+                       '학명과 통용명. "이 작물을 여기서 키울 수 있나", "이 종의 한계 '
+                       '온도는", "생육 기간이 얼마나 되나" 같은 물음에 답할 수 있다.',
+            'search_columns': 'ScientificName,COMNAME,FAMNAME',
+            # 41컬럼 중 실제로 답에 쓰이는 것만. 나머지는 columns='*' 로 받는다.
+            'summary_columns': ('ScientificName,COMNAME,TOPMN,TOPMX,TMIN,TMAX,KTMP,'
+                                'ROPMN,ROPMX,RMIN,RMAX,PHOPMN,PHOPMX,GMIN,GMAX,ALTMX'),
+            # ECOCROP 의 통용명에는 한글이 한 건도 없다(실측). 별칭이 없으면
+            # '무는 어떻게 키워?' 가 0건으로 끝난다 — 한국어 설치에서 이 표를
+            # 사실상 못 쓴다는 뜻이라, 흔한 작물만이라도 채워서 내보낸다.
+            # 운영자가 자기 작물을 여기에 더하면 된다.
+            'name_language': '영어 통용명 또는 학명 (한글 이름은 아래 별칭으로 연결)',
+            'aliases': ('무=radish, 배추=cabbage, 토마토=tomato, 딸기=strawberry, '
+                        '고추=chili, 마늘=garlic, 양파=onion, 오이=cucumber, '
+                        '상추=lettuce, 벼=rice, 콩=soybean, 감자=potato, '
+                        '고구마=sweet potato, 파=leek, 당근=carrot, 호박=pumpkin, '
+                        '참외=melon, 수박=watermelon, 배=pear, 사과=apple, '
+                        '복숭아=peach, 포도=grape, 감귤=mandarin, 블루베리=blueberry'),
+            'attribution': 'FAO ECOCROP (CC BY 4.0)',
+            'source_url': 'https://ecocrop.apps.fao.org/ecocrop/srv/en/home',
+            'caveat': 'TOPMN/TOPMX 는 최적, TMIN/TMAX 는 생존 한계 범위다. 생육 단계별 '
+                      '목표값이 아니므로 온실 설정값으로 그대로 쓰지 말 것. KTMP 는 '
+                      '치명 저온, GMIN/GMAX 는 생육 일수, 강수는 mm/년 이다.',
+        },
+    },
     'rest_api': {
+        'region': 'any', 'topics': ['any'],
         'label': 'REST API',
         'description': 'Fetch data from any external REST API endpoint on a schedule.',
         'description_ko': '임의의 외부 REST API를 주기적으로 호출해 응답을 AI 지식으로 '
@@ -193,6 +271,7 @@ LIBRARY_PRESETS = {
         'is_system': False,
     },
     'document': {
+        'region': 'any', 'topics': ['any'],
         'label': 'Document',
         'description': 'Upload a PDF, text, or markdown file and convert it to AI knowledge.',
         'description_ko': '서버에 있는 PDF/텍스트/마크다운 문서를 읽어 AI 지식으로 '
@@ -204,6 +283,7 @@ LIBRARY_PRESETS = {
         'is_system': False,
     },
     'web_url': {
+        'region': 'any', 'topics': ['any'],
         'label': 'Web URL',
         'description': 'Scrape a web page periodically and create context records from the content.',
         'description_ko': '웹 페이지를 주기적으로 수집해 본문을 AI 지식으로 변환합니다. '
@@ -214,6 +294,7 @@ LIBRARY_PRESETS = {
         'is_system': False,
     },
     'internal_query': {
+        'region': 'any', 'topics': ['any'],
         'label': 'Internal Query',
         'description': 'Run a read-only DB query against the system and inject the result as context.',
         'description_ko': 'AoT 내부 데이터베이스에 읽기 전용 SQL 쿼리를 실행해 결과를 AI '
@@ -224,6 +305,7 @@ LIBRARY_PRESETS = {
         'is_system': False,
     },
     'google_drive': {
+        'region': 'any', 'topics': ['any'],
         'label': 'Google Drive',
         'description': 'Pick one or more files from your Google Drive and convert them to AI knowledge.',
         'description_ko': "Google Drive에서 파일을 선택해 AI 지식으로 변환합니다. PDF·텍스트·"
@@ -269,7 +351,7 @@ def page_ai_library():
 
     sources = AIContextSource.query.filter(
         AIContextSource.is_active.is_(True),
-        AIContextSource.source_type != 'ai_curated',
+        AIContextSource.source_type.notin_(_RESERVED_SOURCE_TYPES),
     ).order_by(AIContextSource.created_at.desc()).all()
     from aot.ai.context.ext.smartfarmkorea_client import (
         OPERATIONS as smartfarmkorea_operations,
@@ -282,6 +364,10 @@ def page_ai_library():
         active_page='ai_library',
         library_presets=LIBRARY_PRESETS,
         review_items=knowledge_promotion_service.list_review_items(),
+        knowledge_summary=knowledge_library_service.summary(),
+        strict_mode=bool(getattr(_ai_settings(), 'knowledge_chunk_confirmed_only', False)),
+        knowledge_tags=knowledge_library_service.tag_counts(),
+        knowledge_usage=knowledge_library_service.usage_stats(),
         smartfarmkorea_operations=smartfarmkorea_operations,
         smartfarmkorea_outdoor_operations=smartfarmkorea_outdoor_operations,
         smartfarmkorea_livestock_operations=smartfarmkorea_livestock_operations,
@@ -309,7 +395,7 @@ def api_list_sources():
 
     sources = AIContextSource.query.filter(
         AIContextSource.is_active.is_(True),
-        AIContextSource.source_type != 'ai_curated',
+        AIContextSource.source_type.notin_(_RESERVED_SOURCE_TYPES),
     ).order_by(AIContextSource.created_at.desc()).all()
 
     return jsonify({
@@ -346,13 +432,40 @@ def api_quick_add_source():
     if not preset:
         return jsonify({'success': False, 'error': f'Unknown preset: {preset_key}'}), 400
 
+    # 같은 프리셋을 두 번 담지 않는다.
+    #
+    # 이 버튼은 누를 때마다 새 행을 만들었다. 그래서 실측 18행 중 SmartFarmKorea
+    # 계열만 7행이 중복으로 쌓여 있었고, 어느 것이 설정된 행인지 화면에서
+    # 구분되지 않았다. 프리셋은 종류마다 하나면 된다 — 이미 있으면 그 행을
+    # 그대로 돌려준다(멱등). 사용자는 '추가' 를 다시 눌러도 놀라지 않고,
+    # 설정 톱니로 가면 자기가 아까 만든 그 행이 있다.
+    # config_json 은 문자열이라 LIKE 로 찾고 싶어지지만, 직렬화 형식(공백·키
+    # 순서)이 writer 마다 다르다 — 파싱해서 본다. 소스 행은 수십 개 규모다.
+    existing = None
+    for _cand in AIContextSource.query.filter(
+            AIContextSource.is_active.is_(True),
+            AIContextSource.facility_id == facility_id).all():
+        try:
+            if (json.loads(_cand.config_json or '{}') or {}).get('preset_key') == preset_key:
+                existing = _cand
+                break
+        except (ValueError, TypeError):
+            continue
+    if existing:
+        return jsonify({'success': True, 'source': _source_to_dict(existing),
+                        'already_existed': True}), 200
+
     import uuid as _uuid
     short_id = str(_uuid.uuid4())[:8]
     source_name = preset['label']
     source_type = preset['source_type']
     parameter_name = f"{preset_key}.{short_id}"
     sync_interval_min = preset.get('sync_interval_min', 60)
-    config_json = json.dumps({'preset_key': preset_key})
+    # 프리셋이 기본값을 갖고 있으면 그대로 채워 준다 — ECOCROP 처럼 주소·설명이
+    # 정해진 소스는 운영자가 아무것도 안 적어도 바로 활성화할 수 있어야 한다.
+    _cfg = {'preset_key': preset_key}
+    _cfg.update(preset.get('defaults') or {})
+    config_json = json.dumps(_cfg)
 
     try:
         source = AIContextSource(
@@ -506,7 +619,9 @@ def _missing_config_error(source):
     preset_key = config.get('preset_key', '')
     preset = LIBRARY_PRESETS.get(preset_key)
     if preset and preset.get('is_system'):
-        if not (config.get('api_key') or '').strip():
+        # 모든 내장 프리셋이 키를 요구하지는 않는다(ECOCROP 은 공개 CSV 다).
+        # 키가 필요 없는 소스에 키를 내놓으라고 막으면 활성화가 아예 안 된다.
+        if preset.get('needs_api_key', True) and not (config.get('api_key') or '').strip():
             return f"{preset.get('auth_key_name', 'API Key')} is required before activation."
         if preset.get('multi_operation'):
             operations = config.get('operations') or []
@@ -530,6 +645,14 @@ def _missing_config_error(source):
             return 'Connect a Google account and pick at least one file before activation.'
         if not (config.get('files') or []):
             return 'Pick at least one file from Google Drive before activation.'
+        return None
+
+    if source.source_type == 'csv_table':
+        if not (config.get('data_url') or '').strip():
+            return 'Table URL (CSV) is required before activation.'
+        if not (config.get('answers') or '').strip():
+            return ('Describe what this table can answer — the AI decides whether to '
+                    'use it from that description alone.')
         return None
 
     field = _REQUIRED_CONFIG_FIELD.get(source.source_type)
@@ -747,6 +870,94 @@ def api_google_drive_picker_config():
 # knowledge is an admin action, not a public one.
 # ---------------------------------------------------------------------------
 
+# ---------------------------------------------------------------------------
+# API: Knowledge browsing / hand entry (C6)
+#
+# The review endpoints below only ever show the AI's own notes. These show the
+# WHOLE library and let a person put knowledge in without an AI turn or a
+# registered feed — see knowledge_library_service's module docstring.
+# ---------------------------------------------------------------------------
+
+@ai_library_bp.route('/api/v1/ai/library/knowledge', methods=['GET'])
+@login_required
+def api_browse_knowledge():
+    """Every knowledge item, filtered. Read-only, so no edit_settings gate —
+    the same permission that got the operator onto this page is enough to
+    LOOK at what the AI is being told."""
+    return jsonify({
+        'success': True,
+        **knowledge_library_service.browse(
+            query=request.args.get('q'),
+            tag=request.args.get('tag'),
+            provenance=request.args.get('provenance'),
+            include_disabled=request.args.get('include_disabled') == '1',
+            page=request.args.get('page', 1, type=int),
+        ),
+        'tags': knowledge_library_service.tag_counts(),
+        'summary': knowledge_library_service.summary(),
+    })
+
+
+@ai_library_bp.route('/api/v1/ai/library/knowledge', methods=['POST'])
+@login_required
+def api_add_knowledge():
+    """Hand-enter one knowledge item (provenance='user_provided')."""
+    if not utils_general.user_has_permission('edit_settings'):
+        return jsonify({'success': False, 'error': 'Permission denied'}), 403
+    body = request.get_json(silent=True) or {}
+    result = knowledge_library_service.add_user_knowledge(
+        content=body.get('content'),
+        tags=body.get('tags'),
+        heading=body.get('heading'),
+        attribution=body.get('attribution'),
+        source_url=body.get('source_url'),
+        entity_ref=body.get('entity_ref'),
+    )
+    return jsonify(result), (201 if result.get('success') else 400)
+
+
+@ai_library_bp.route('/api/v1/ai/library/knowledge/<chunk_id>/enabled', methods=['POST'])
+@login_required
+def api_set_knowledge_enabled(chunk_id):
+    """Take an item out of the AI's reach, or put it back. Works on ANY item —
+    the review endpoints' retire/reactivate carry trust-state meaning and are
+    ai_curated-only; this is the plain on/off for a stale hand-entered note or
+    a bad synced chunk."""
+    if not utils_general.user_has_permission('edit_settings'):
+        return jsonify({'success': False, 'error': 'Permission denied'}), 403
+    body = request.get_json(silent=True) or {}
+    result = knowledge_library_service.set_enabled(chunk_id, bool(body.get('enabled')))
+    return jsonify(result), (200 if result.get('success') else 404)
+
+
+@ai_library_bp.route('/api/v1/ai/library/strict-mode', methods=['POST'])
+@login_required
+def api_set_strict_mode():
+    """Toggle `knowledge_chunk_confirmed_only` — "don't let the AI cite its
+    own unreviewed notes".
+
+    This is the ONLY knowledge flag with a control. The other two
+    (`t3_knowledge_search_enabled`, `knowledge_digest_enabled`) are settled
+    decisions, not operator choices: with either off the library silently
+    does nothing, which is never what someone wants and was exactly the
+    "동작하는 척" state P6 fixed. A switch whose only sensible position is ON
+    is not a setting — see feedback: 불필요한 설정 금지.
+
+    This one IS a real choice: a cautious operator can decide that only
+    reviewed knowledge may be cited, at the cost of the AI forgetting what it
+    worked out until someone confirms it."""
+    if not utils_general.user_has_permission('edit_settings'):
+        return jsonify({'success': False, 'error': 'Permission denied'}), 403
+    from aot.databases.models import AIGlobalSettings
+    settings = AIGlobalSettings.query.first()
+    if not settings:
+        return jsonify({'success': False, 'error': 'AI settings not initialized.'}), 404
+    body = request.get_json(silent=True) or {}
+    settings.knowledge_chunk_confirmed_only = bool(body.get('enabled'))
+    db.session.commit()
+    return jsonify({'success': True, 'enabled': settings.knowledge_chunk_confirmed_only})
+
+
 @ai_library_bp.route('/api/v1/ai/library/review', methods=['GET'])
 @login_required
 def api_list_review_items():
@@ -805,6 +1016,11 @@ def api_reactivate_review_item(chunk_id):
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
+def _ai_settings():
+    from aot.databases.models import AIGlobalSettings
+    return AIGlobalSettings.query.first()
+
 
 def _resolve_facility_id():
     """Resolve facility_id from request args or Misc settings."""

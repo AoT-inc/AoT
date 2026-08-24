@@ -56,19 +56,29 @@ _AI_CURATED_PARAMETER_NAME = 'ai_curated.shelve'
 _PEER_TRUST_PROVENANCE = ('ai_curated', 'data_derived')
 
 
-def _get_or_create_ai_curated_source():
-    """The reserved AIContextSource all shelve() writes are attributed to.
-    sync_interval_min=0 so the scheduler never registers a job for it (see
-    ai_scheduler_service.py: 'if interval_min <= 0: continue') — this source
-    is never synced, only written to directly by shelve_knowledge()."""
-    source = AIContextSource.query.filter_by(parameter_name=_AI_CURATED_PARAMETER_NAME).first()
+# @ANCHOR: RESERVED_KNOWLEDGE_SOURCE
+def get_or_create_reserved_source(parameter_name, source_name, source_type):
+    """A reserved, never-synced AIContextSource for knowledge that has no
+    registered external feed behind it.
+
+    `AIKnowledgeChunk.source_id` is a NOT NULL FK, so every writer needs
+    SOME source row. `sync_interval_min=0` keeps the scheduler from ever
+    registering a job for it (ai_scheduler_service: 'if interval_min <= 0:
+    continue'), and `is_enabled=False` keeps it out of the sync path
+    entirely — these rows are only ever written to directly.
+
+    Two writers use this: the AI's own shelf (ai_curated) and the operator's
+    hand-entered knowledge (user_provided). They get SEPARATE rows on
+    purpose — the source list is one of the places a person can see at a
+    glance where knowledge came from, and merging them would erase that."""
+    source = AIContextSource.query.filter_by(parameter_name=parameter_name).first()
     if source:
         return source
     source = AIContextSource(
         facility_id='global',
-        source_name=_AI_CURATED_SOURCE_NAME,
-        source_type='ai_curated',
-        parameter_name=_AI_CURATED_PARAMETER_NAME,
+        source_name=source_name,
+        source_type=source_type,
+        parameter_name=parameter_name,
         config_json='{}',
         sync_interval_min=0,
         is_active=True,
@@ -77,6 +87,12 @@ def _get_or_create_ai_curated_source():
     db.session.add(source)
     db.session.commit()
     return source
+
+
+def _get_or_create_ai_curated_source():
+    """The reserved source all shelve() writes are attributed to."""
+    return get_or_create_reserved_source(
+        _AI_CURATED_PARAMETER_NAME, _AI_CURATED_SOURCE_NAME, 'ai_curated')
 
 
 def _quota_remaining():
@@ -146,8 +162,42 @@ def _detect_heading_collision(heading, tag_list, content_hash):
     )
 
 
+def _clean_source_url(url):
+    """http/https 만 받는다. 스킴 없는 문자열이나 javascript:/data: 는 버린다 —
+    이 값은 리뷰 화면에서 **클릭 가능한 링크**가 되므로, 저장 시점에 거르는
+    것이 렌더 시점마다 방어하는 것보다 확실하다. 형식만 본다: 살아 있는
+    주소인지는 사람이 눌러 보고 판단한다."""
+    url = (url or '').strip()
+    if not url:
+        return None
+    if not url.lower().startswith(('http://', 'https://')):
+        return None
+    return url[:500]
+
+
+def _verified_source_ref(source_ref):
+    """등록된 소스를 가리키는지 **서버가 확인한다.**
+
+    attribution/source_url 은 AI 가 적는 자유 텍스트라 그럴듯한 문자열이면
+    통과한다. 이 값만은 다르다 — 실제로 등록돼 활성인 소스가 아니면 버린다.
+    버릴 뿐 쓰기를 막지는 않는다: 출처 표기가 틀렸다고 지식 자체를 잃을 이유는
+    없고, 값이 없으면 그냥 '확인 경로 없는 항목' 으로 남는다."""
+    ref = (source_ref or '').strip()
+    if not ref:
+        return None
+    try:
+        row = AIContextSource.query.filter_by(source_id=ref, is_active=True).first()
+    except Exception:
+        return None
+    if row is None:
+        logger.info("[KnowledgeShelve] source_ref %r is not a registered source — dropped", ref)
+        return None
+    return ref
+
+
 def shelve_knowledge(content, tags, heading=None, entity_ref=None,
-                      attribution=None, content_kind='prose', ttl=None):
+                      attribution=None, content_kind='prose', ttl=None,
+                      source_url=None, source_ref=None):
     """Write one AI-curated knowledge item. This IS the knowledge_shelve verb
     (§4) — callers (the action dispatch layer) pass through whatever the
     model provided; this function owns all the trust/governance decisions.
@@ -167,9 +217,21 @@ def shelve_knowledge(content, tags, heading=None, entity_ref=None,
             the caller doesn't supply one — never fabricated beyond that.
         content_kind: 'prose' (default) or 'structured'.
         ttl: optional expiry datetime.
+        source_url: the ORIGINAL http(s) address this came from, when there is
+            one (C4). Without it a reviewer cannot go back to the source, so
+            the item can never be promoted past unconfirmed (§3.2). Does NOT
+            raise the item's trust — see the model's column comment.
+        source_ref: the registered AIContextSource this content was read FROM
+            (P6-59). Unlike attribution/source_url this is verified against the
+            source list at write time — it separates "the AI transcribed a
+            source this system actually has" from "the AI worked it out". It
+            does not raise trust either; it changes the citation tag and the
+            review surface so a checkable item is recognisable as one.
 
-    Returns: {status, message, chunk_id, flagged_reason} —
+    Returns: {status, message, chunk_id, flagged_reason, quota_remaining} —
         status is one of 'created' | 'duplicate' | 'quota_exceeded' | 'rejected'.
+        `quota_remaining` lets a caller depositing several items pace itself
+        instead of discovering the cap by being refused mid-batch.
     """
     content = (content or '').strip()
     if not content:
@@ -193,6 +255,7 @@ def shelve_knowledge(content, tags, heading=None, entity_ref=None,
             'status': 'quota_exceeded',
             'message': f'Daily ai_curated shelve quota ({_DAILY_QUOTA}) reached — try again later.',
             'chunk_id': None,
+            'quota_remaining': 0,
         }
 
     content_hash = hashlib.sha256(content.encode('utf-8')).hexdigest()
@@ -222,6 +285,8 @@ def shelve_knowledge(content, tags, heading=None, entity_ref=None,
         tags=','.join(tag_list),
         entity_ref=entity_ref,
         attribution=(attribution or '').strip() or 'AI 자율 비치 (출처 미기재)',
+        source_url=_clean_source_url(source_url),
+        source_ref=_verified_source_ref(source_ref),
         ttl=ttl,
         flagged_reason=flagged_reason,
     )
@@ -238,4 +303,5 @@ def shelve_knowledge(content, tags, heading=None, entity_ref=None,
                    + (f' Flagged: {flagged_reason}' if flagged_reason else ''),
         'chunk_id': chunk.unique_id,
         'flagged_reason': flagged_reason,
+        'quota_remaining': remaining - 1,
     }

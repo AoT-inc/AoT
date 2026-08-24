@@ -276,12 +276,94 @@ def test_configure_sequence_day_does_not_activate(app, daemon):
 # 빠뜨림 방지 — 새 config_only 도구가 검사 없이 들어오는 것을 막는다
 # ---------------------------------------------------------------------------
 
+# ---------------------------------------------------------------------------
+# 프로그램 — "활성화" 에 해당하는 것이 다르다
+# ---------------------------------------------------------------------------
+#
+# 프로그램은 장치를 직접 돌리지 않는다. 그래서 승인 게이트를 뺐다(2026-08-25:
+# "제어에 영향을 미치는 가이드일 뿐인데 승인까지 거치면 너무 피로하다").
+# 그 면제가 성립하는 근거는 **다른 게이트가 그 자리를 지킨다**는 것이다:
+# `source='ai'` 인 프로그램은 `reviewed_at` 이 서기 전까지 제어에 쓰이지
+# 않는다(program_io 참조). 즉 여기서 `is_activated` 에 해당하는 것은
+# `reviewed_at` 이고, AI 는 그것을 스스로 세울 수 없어야 한다.
+
+
+def _make_program():
+    from aot.ai.services.aot_data_tool_service import AoTDataToolService
+
+    return AoTDataToolService.create_program(
+        name='prog-under-test', subject='무', kind='vegetation',
+        source_note='테스트 픽스처 — 근거 없음',
+        stages=[{'key': 'seedling', 'name': '육묘', 'days': 20},
+                {'key': 'bulking', 'name': '비대'}])
+
+
+def _program_row(program_id):
+    from aot.databases.models.geo_program import GeoProgram
+    return GeoProgram.query.filter(GeoProgram.unique_id == program_id).first()
+
+
+def test_create_program_lands_unreviewed(app, daemon):
+    """AI 가 만든 프로그램은 검토 전이라 제어에 닿지 않는다."""
+    with app.test_request_context():
+        res = _make_program()
+        assert res.get('status') != 'error', res
+
+        row = _program_row((res.get('program') or {}).get('unique_id'))
+        assert row is not None, res
+        assert row.source == 'ai', row.source
+        assert row.reviewed_at is None, "AI 가 만든 프로그램이 검토됨으로 들어왔다"
+        assert 'controller_activate' not in daemon.names, daemon.names
+
+
+def test_modify_program_cannot_mark_itself_reviewed(app, daemon):
+    """AI 가 `reviewed` 를 보내도 검토됨이 되지 않는다 — 될 수 있으면
+    게이트가 없는 것과 같다."""
+    from aot.ai.services.aot_data_tool_service import AoTDataToolService
+
+    with app.test_request_context():
+        created = _make_program()
+        pid = (created.get('program') or {}).get('unique_id')
+
+        AoTDataToolService.modify_program(pid, name='prog-renamed', reviewed=True)
+
+        row = _program_row(pid)
+        assert row.name == 'prog-renamed', "편집 자체는 되어야 한다"
+        assert row.reviewed_at is None, "AI 가 스스로 검토됨을 세웠다"
+        assert 'controller_activate' not in daemon.names, daemon.names
+
+
+def test_modify_program_returns_content_to_review(app, daemon):
+    """사람이 확인한 프로그램이라도 AI 가 제어에 닿는 내용을 다시 쓰면
+    검토 대기로 돌아간다."""
+    from aot.aot_flask.extensions import db
+    from aot.ai.services.aot_data_tool_service import AoTDataToolService
+    from aot.utils.time_utils import utc_now
+
+    with app.test_request_context():
+        created = _make_program()
+        pid = (created.get('program') or {}).get('unique_id')
+
+        row = _program_row(pid)
+        row.reviewed_at = utc_now()          # 사람이 확인한 상태를 흉내낸다
+        db.session.commit()
+
+        AoTDataToolService.modify_program(
+            pid, stages=[{'key': 'seedling', 'name': '육묘', 'days': 30}])
+
+        assert _program_row(pid).reviewed_at is None, \
+            "AI 가 단계를 고쳤는데 검토됨이 유지됐다"
+        assert 'controller_activate' not in daemon.names, daemon.names
+
+
 COVERED_CONFIG_ONLY_TOOLS = {
     'create_sequence_function',
     'modify_function_options',
     'modify_sequence_schedule',
     'modify_sequence_step',
     'configure_sequence_day',
+    'create_program',
+    'modify_program',
 }
 
 

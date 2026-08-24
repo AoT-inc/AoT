@@ -1,3 +1,4 @@
+import json
 import logging
 import re
 from aot.utils.time_utils import utc_now, to_local, serialize_ts
@@ -6740,6 +6741,49 @@ class AoTDataToolService:
     # execute_action, invoked only through a prompt-text instruction (base_ai.py) —
     # never a real tool_name the agent loop's catalog could offer.
     @staticmethod
+    @staticmethod
+    def _known_knowledge_tags():
+        """라이브러리에서 실제로 쓰이는 태그. 없는 태그를 필터로 쓰지 않기 위해
+        필요하고, 모델에게 무엇이 있는지 알려 줄 때도 쓴다."""
+        try:
+            from aot.databases.models import AIKnowledgeChunk
+            out = set()
+            for (tags,) in AIKnowledgeChunk.query.with_entities(
+                    AIKnowledgeChunk.tags).filter_by(is_enabled=True).all():
+                for t in (tags or '').split(','):
+                    t = t.strip().lower()
+                    if t:
+                        out.add(t)
+            return out
+        except Exception:
+            return set()
+
+    @staticmethod
+    def _registered_table_titles():
+        """등록된 참조표의 제목만. 표 파일을 읽지 않는다 — 이 함수는 검색
+        응답마다 불리므로 DB 한 번으로 끝나야 한다."""
+        try:
+            from aot.databases.models import AIContextSource
+            import json as _json
+            out = []
+            for src in AIContextSource.query.filter_by(
+                    is_active=True, is_enabled=True, source_type='csv_table').all():
+                try:
+                    cfg = _json.loads(src.config_json or '{}')
+                except (ValueError, TypeError):
+                    cfg = {}
+                out.append((cfg.get('title') or src.source_name or '').strip())
+            # 온디맨드로 조회되는 API 소스도 같은 안내에 넣는다 — 모델 입장에서
+            # 둘은 "검색되지 않지만 물어보면 답하는 것" 으로 같다.
+            try:
+                from aot.ai.services import data_source_query_service as dsq
+                out += [a['label'] for a in dsq.describe_all() if a.get('label')]
+            except Exception:
+                pass
+            return [t for t in out if t]
+        except Exception:
+            return []
+
     def knowledge_search_tool(query=None, top_k=3, tags=None, **extra):
         """Free-text search across manuals + synced domain knowledge + AI-curated
         notes. Read-only — the write counterpart is knowledge_shelve."""
@@ -6751,6 +6795,32 @@ class AoTDataToolService:
         except (TypeError, ValueError):
             top_k = 3
         _tags = [t.strip() for t in str(tags).split(',') if t.strip()] if tags else None
+
+        # @ANCHOR: KNOWLEDGE_SEARCH_UNKNOWN_TAG
+        # 없는 태그로 거르면 **전부가 걸러진다.** 태그는 운영자·AI 가 자유롭게
+        # 붙이는 값이라 정해진 어휘가 없는데, 모델은 그것을 모르고 그럴듯한 말을
+        # 지어 넣는다.
+        #
+        # 실측(2026-08-25): "가을 무는 어떻게 키워야 되지?" 에 모델이
+        # tags='crop' 을 붙여 불렀다. 이 라이브러리의 실제 태그는
+        # '무,가을무,김장무,재배' 라 하나도 안 걸렸고, 답을 담은 바로 그 항목이
+        # 필터에 잘려 나갔다. 서버가 이미 접지로 같은 내용을 넣어 줬는데도
+        # 모델은 자기 빈 검색 결과를 믿고 "정보가 없습니다" 로 끝냈다.
+        #
+        # 그래서 **하나도 안 맞는 태그는 필터로 쓰지 않는다.** 거르는 대신 무엇이
+        # 있는지 알려 준다 — 조용히 빈손을 주는 것보다 스스로 고칠 수 있게 하는
+        # 편이 낫다.
+        _tag_note = ''
+        if _tags:
+            known = AoTDataToolService._known_knowledge_tags()
+            if known and not (set(t.lower() for t in _tags) & known):
+                _tag_note = ("\n\n[NOTE] The tag(s) %s are not used by any item here, so "
+                             "they were IGNORED (filtering on them would have hidden "
+                             "everything). Tags are free-form, not a fixed vocabulary. "
+                             "Tags actually in use: %s."
+                             % (', '.join(repr(t) for t in _tags),
+                                ', '.join(sorted(known)[:15])))
+                _tags = None
         text = _ks.search_as_text(query, top_k=top_k, tags=_tags)
 
         # 도메인 라이브러리가 비었다는 사실을 응답이 직접 말한다. 예전에는 빈
@@ -6766,6 +6836,23 @@ class AoTDataToolService:
         # 매니페스트가 아니라 응답이라 고정비가 0이다.
         populated = _ks.library_is_populated()
 
+        # 참조표는 **검색 대상이 아니다** — 등록만 해 두고 물어볼 때 조회한다
+        # (reference_table_service 모듈 주석). 그래서 이 검색이 빈손이어도
+        # 답이 표 안에 있을 수 있는데, 모델은 표의 존재를 모른 채 "정보가
+        # 없습니다" 로 끝낸다(실측 2026-08-24: 오크라 생육 온도 질문에서 그랬다).
+        # 여기서 한 줄 가리켜 주는 것이 그 간극을 메우는 가장 싼 방법이다 —
+        # 매니페스트가 아니라 응답이라 표가 없는 설치에서는 고정비가 0이다.
+        _tables = AoTDataToolService._registered_table_titles()
+        _pointer = ''
+        if _tables:
+            _pointer = ("\n\n[NOTE] %d lookup source(s) are registered and are NOT "
+                        "searched here — they are queried on demand: %s. If this "
+                        "question asks for a per-item value or live external data, call "
+                        "list_lookup_sources first, before concluding anything is "
+                        "unknown." % (len(_tables), '; '.join(_tables[:4])))
+        # 두 안내는 서로 다른 것을 말한다 — 하나가 다른 하나를 덮으면 안 된다.
+        _pointer = _tag_note + _pointer
+
         if not text:
             if not populated:
                 return {"result": ("The knowledge library is EMPTY — no domain source "
@@ -6776,9 +6863,10 @@ class AoTDataToolService:
                                    "unverified — never pass it off as a citation in a "
                                    "source_note — or tell the user a source can be "
                                    "added (list_library_source_types shows what is "
-                                   "available)."),
+                                   "available)." + _pointer),
                         "library_empty": True}
-            return {"result": f"No documentation section matched '{query}'. Try different keywords."}
+            return {"result": f"No documentation section matched '{query}'. "
+                              f"Try different keywords." + _pointer}
 
         if not populated:
             return {"result": (text + "\n\n---\n[NOTE] The domain knowledge library is "
@@ -6788,9 +6876,9 @@ class AoTDataToolService:
                                "about a subject rather than about AoT, treat this as "
                                "NO SOURCE FOUND: say your answer is your own "
                                "unverified knowledge, and do not cite it as a "
-                               "source."),
+                               "source." + _pointer),
                     "library_empty": True}
-        return {"result": text}
+        return {"result": text + _pointer}
 
     # --- Knowledge shelve (@ANCHOR: KNOWLEDGE_SHELVE_TOOL, P4 2026-07-19) --------
     # The write half of the AI library redesign (docs/design/ai-library-redesign.md
@@ -6803,7 +6891,8 @@ class AoTDataToolService:
     # it or it corroborates against a real source (P5, not yet built).
     @staticmethod
     def knowledge_shelve(content=None, tags=None, heading=None, entity_ref=None,
-                         attribution=None, content_kind='prose', ttl_hours=None, **extra):
+                         attribution=None, content_kind='prose', ttl_hours=None,
+                         source_url=None, source_ref=None, **extra):
         """Save a piece of knowledge the AI just derived or was told, so a
         later query can retrieve it. Always shelved as ai_curated/unconfirmed
         — see knowledge_shelve_service.shelve_knowledge for the governance
@@ -6833,10 +6922,156 @@ class AoTDataToolService:
         result = shelve_knowledge(
             content=str(content), tags=tags, heading=heading,
             entity_ref=entity_ref, attribution=attribution,
-            content_kind=content_kind, ttl=ttl,
+            content_kind=content_kind, ttl=ttl, source_url=source_url,
+            source_ref=source_ref,
         )
         if extra:
             result["ignored_args"] = list(extra.keys())
+        return result
+
+    # ─────────────────────────────────────────────────────────────────────
+    # 참조표 조회 (@ANCHOR: REFERENCE_TABLE_TOOLS, 2026-08-24)
+    #
+    # 표를 지식으로 적재하지 않고 등록만 해 두고 물어볼 때 조회한다 —
+    # 이유는 reference_table_service 모듈 주석에 있다. 도구가 둘인 이유:
+    # 등록된 표는 설치마다 다르므로 **정적인 도구 설명에 담을 수 없다.**
+    # 무엇이 있는지 먼저 보고(list), 맞으면 조회한다(query).
+    # ─────────────────────────────────────────────────────────────────────
+    @staticmethod
+    def list_lookup_sources(**extra):
+        """이 시스템이 **찾아볼 수 있는 것** 전부 — 참조표와 연결된 데이터 API.
+
+        발견 지점을 하나로 둔다. 둘로 나누면 모델이 한쪽만 보고 "없다" 고
+        단정한다(실측 2026-08-25: 표가 있는데 knowledge_search 만 보고 끝냈다).
+        종류는 kind 로 구분한다 — 조회 방법이 다르기 때문이다."""
+        from aot.databases.models import AIContextSource
+        from aot.ai.services import reference_table_service as rts
+        import json as _json
+
+        out = []
+        rows = AIContextSource.query.filter_by(
+            is_active=True, is_enabled=True, source_type='csv_table').all()
+        for src in rows:
+            try:
+                cfg = _json.loads(src.config_json or '{}')
+            except (ValueError, TypeError):
+                cfg = {}
+            out.append(rts.describe(src, cfg))
+        for t in out:
+            t['kind'] = 'table'
+
+        from aot.ai.services import data_source_query_service as dsq
+        apis = []
+        try:
+            for a in dsq.describe_all():
+                a['kind'] = 'api'
+                apis.append(a)
+        except Exception as exc:
+            logger.debug("[LookupSources] api listing skipped: %s", exc)
+
+        if not out and not apis:
+            return {
+                "sources": [],
+                "note": "Nothing is registered to look things up in. Do NOT invent values "
+                        "— say the operator can add a source on the AI Library page.",
+            }
+        return {
+            "sources": out + apis,
+            "note": "Pick by the 'answers' text. kind='table' -> query_reference_table "
+                    "(look a row up by name). kind='api' -> query_data_source (run one "
+                    "operation with its params; codes come from smartfarmkorea_lookup). "
+                    "Honour any 'caveat' when you cite the numbers.",
+        }
+
+    @staticmethod
+    def query_data_source(source_id=None, operation=None, params=None,
+                          limit=5, columns=None, **extra):
+        """등록된 데이터 API 를 지금 조회한다 — 고정 동기화가 아니라 질문할 때."""
+        from aot.ai.services import data_source_query_service as dsq
+        if not operation:
+            return {"error": "operation is required — call list_lookup_sources to see "
+                             "which operations this source has."}
+        if isinstance(params, str):
+            try:
+                params = json.loads(params)
+            except (ValueError, TypeError):
+                return {"error": "params must be an object, e.g. {\"userId\": \"PF_0000001\"}"}
+        payload, err = dsq.query(source_id, operation, params=params,
+                                 limit=limit, columns=columns)
+        if err:
+            return {"error": err}
+        return payload
+
+    @staticmethod
+    def query_reference_table(table_id=None, query=None, limit=5, columns=None, **extra):
+        """참조표에서 이름으로 행을 찾는다."""
+        from aot.databases.models import AIContextSource
+        from aot.ai.services import reference_table_service as rts
+        import json as _json
+
+        if not query or not str(query).strip():
+            return {"error": "query is required"}
+        q = AIContextSource.query.filter_by(
+            is_active=True, is_enabled=True, source_type='csv_table')
+        src = q.filter_by(source_id=table_id).first() if table_id else None
+        if src is None:
+            candidates = q.all()
+            if len(candidates) == 1 and not table_id:
+                src = candidates[0]      # 표가 하나뿐이면 굳이 고르게 하지 않는다
+            else:
+                return {"error": "table_id not found — call list_lookup_sources first",
+                        "available": [c.source_id for c in candidates]}
+        try:
+            cfg = _json.loads(src.config_json or '{}')
+        except (ValueError, TypeError):
+            cfg = {}
+        _cols = None
+        if columns:
+            _cols = ([c.strip() for c in columns.split(',') if c.strip()]
+                     if isinstance(columns, str) else list(columns))
+        rows, err = rts.query(src, cfg, str(query), limit=limit, columns=_cols)
+        if err:
+            return {"error": err}
+        if not rows:
+            # 0건일 때 **무엇을 해야 하는지**를 여기서 말한다. 매니페스트가 아니라
+            # 응답이라 고정비가 0이고, 필요한 순간에만 나간다.
+            #
+            # 왜 별칭표로 안 되는가(사용자 지적, 2026-08-24): 김장무·총각무·
+            # 알타리무·달청무가 전부 radish 다. 유의어는 끝이 없어서 표로 다 담을
+            # 수 없다 — 유의어를 정규 이름으로 옮기는 일은 **모델이 잘하는 일**이고,
+            # 표가 어느 언어로 매겨졌는지는 **데이터가 아는 일**이다. 각자 잘하는
+            # 쪽에 맡긴다: 언어는 name_language 로 알려 주고, 옮기는 판단은 모델에게
+            # 넘기되 여기서 명시적으로 시킨다.
+            hint = ''
+            lang = (cfg.get('name_language') or '').strip()
+            tried = str(query).strip()
+            if lang:
+                hint = (" This table is keyed by: %s. '%s' may be a local or colloquial "
+                        "name for something listed under a different one — work out the "
+                        "canonical name yourself (e.g. a regional variety name maps to its "
+                        "species' common or scientific name) and call this tool ONCE more "
+                        "with that. Only if that also returns nothing is the row absent."
+                        % (lang, tried))
+            return {"rows": [], "matched": 0, "query": tried,
+                    "name_language": lang or None,
+                    "aliases": (cfg.get('aliases') or '').strip() or None,
+                    "note": ("No row matched '%s'." % tried) + hint +
+                            " Do NOT answer from your own memory as if the table had said it."}
+        result = {"rows": rows, "matched": len(rows),
+                  "table": (cfg.get('title') or src.source_name),
+                  # 이 값을 knowledge_shelve(source_ref=...) 에 그대로 넘기면,
+                  # 비친 항목이 "확인할 데가 있는 것" 으로 표시된다.
+                  "source_ref": src.source_id}
+        # 기본 투영이 걸렸으면 그 사실을 말한다 — 안 그러면 모델은 이 표에 이
+        # 컬럼들뿐이라고 읽고, 없는 값을 '없다' 고 단정한다.
+        if not _cols and (cfg.get('summary_columns') or '').strip():
+            result["columns_shown"] = 'summary'
+            result["more_columns"] = ("This table has more columns than shown. "
+                                      "Call again with columns='*' or a specific "
+                                      "column list if you need them.")
+        for key in ('attribution', 'source_url', 'caveat'):
+            if (cfg.get(key) or '').strip():
+                result[key] = cfg[key].strip()
         return result
 
     # ─────────────────────────────────────────────────────────────────────
@@ -6903,6 +7138,8 @@ class AoTDataToolService:
                 "label": p.get("label", key),
                 "description": p.get("description_ko") or p.get("description", ""),
             }
+            entry["region"] = p.get("region", "any")
+            entry["topics"] = p.get("topics", ["any"])
             if p.get("is_system"):
                 entry["url"] = p.get("url_source", "")
                 entry["needs_api_key"] = True
@@ -6911,14 +7148,22 @@ class AoTDataToolService:
             else:
                 entry["source_type"] = p.get("source_type", key)
                 custom.append(entry)
+        regions = sorted({e["region"] for e in system})
         return {
             "system_presets": system,
             "custom_types": custom,
+            # 지역 축을 **결과에서 계산해** 싣는다. 상수로 "한국 전용" 이라고
+            # 적어 두면 지역 불가지 프리셋이 하나라도 생기는 순간 거짓말이 된다.
+            "system_preset_regions": regions,
             "note": "system_presets are pre-built external public-data APIs — each needs its own API "
-                    "key from that provider. custom_types let the operator ingest their OWN data: a "
-                    "document (PDF/text/markdown), a web page, any REST API, or an internal DB query. "
-                    "When the user asks what knowledge libraries they can add (or for a recommendation), "
-                    "present BOTH groups — never mention only one source.",
+                    "key from that provider, and each carries a `region`. IMPORTANT: every built-in "
+                    "preset today is region='KR' (Korean public data). If this operation is NOT in "
+                    "Korea, say so plainly instead of recommending one — the way anywhere else gets "
+                    "covered is custom_types, which ingest the operator's OWN material: a document "
+                    "(PDF/text/markdown), a web page, any REST API, or an internal DB query. Those "
+                    "work in any country and for any subject (crop, livestock, structure, "
+                    "infrastructure). When asked what can be added, present BOTH groups and match "
+                    "them to where the operator actually is and what they actually manage.",
         }
 
     # ─────────────────────────────────────────────────────────────────────

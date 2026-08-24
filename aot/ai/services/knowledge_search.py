@@ -231,6 +231,28 @@ def reset_index():
 
 
 # @ANCHOR: LOAD_LIBRARY_SECTIONS
+_source_name_cache = {}
+
+
+def _source_name(source_id):
+    """등록 소스 id → 사람이 읽는 이름. 섹션 적재는 캐시되므로 여기서 조회해도
+    매 검색 비용이 되지 않는다. 지워진 소스는 None 을 돌려주고, 태그는 그때
+    '등록 소스' 로 떨어진다 — 소스가 사라져도 지식은 남아야 한다."""
+    sid = (source_id or '').strip()
+    if not sid:
+        return None
+    if sid in _source_name_cache:
+        return _source_name_cache[sid]
+    try:
+        from aot.databases.models import AIContextSource
+        row = AIContextSource.query.filter_by(source_id=sid).first()
+        name = (row.source_name or '').strip() if row else None
+    except Exception:
+        name = None
+    _source_name_cache[sid] = name
+    return name
+
+
 def _load_library_sections():
     """Fetch AIKnowledgeChunk rows as index entries (same shape as a markdown
     section, plus 'origin': 'library' and the P1 unified-item fields —
@@ -290,6 +312,11 @@ def _load_library_sections():
                     'provenance': row.provenance or 'user_provided',
                     'trust_state': row.context_state or 'system_generated',
                     'attribution': row.attribution or row.source_name or '',
+                    # 어느 등록 소스에서 나왔는가. 이름까지 함께 실어야 인용
+                    # 태그에 "출처 FAO ECOCROP" 처럼 사람이 읽는 이름이 나온다 —
+                    # id 만 있으면 태그가 uuid 를 뱉는다.
+                    'source_ref': row.source_ref,
+                    'source_ref_name': _source_name(row.source_ref),
                     'content_kind': row.content_kind or 'prose',
                     'tags': [t.strip().lower() for t in (row.tags or '').split(',') if t.strip()],
                     'entity_ref': row.entity_ref,
@@ -664,6 +691,11 @@ def search(query, top_k=3, max_chars=1400, tags=None):
             'trust_state': s.get('trust_state') if origin == 'library' else None,
             'attribution': s.get('attribution') if origin == 'library' else None,
             'content_kind': s.get('content_kind') if origin == 'library' else None,
+            # 인용 태그가 "확인할 데가 있는 항목" 을 가르려면 이 둘이 필요하다.
+            # 결과 dict 는 섹션의 부분집합만 넘기므로, 새 필드를 섹션에만 실으면
+            # 태그 계산까지 오지 않는다(실측 2026-08-25).
+            'source_ref': s.get('source_ref') if origin == 'library' else None,
+            'source_ref_name': s.get('source_ref_name') if origin == 'library' else None,
             'tags': s.get('tags', []) if origin == 'library' else [],
         })
         # P5: an ai_curated hit surfacing here is a "reuse" — see
@@ -706,6 +738,12 @@ _AI_CURATED_TRUST_TAG = {
 }
 
 
+# P6-59: 등록된 소스를 조회해 옮긴 항목은 **확인이 기계적**이다 — 어느 소스에서
+# 나왔는지 알면 그 주소로 가서 대조하면 끝이다. AI 가 추론해 만든 것과 같은
+# 태그를 달면 읽는 사람도 모델도 둘을 못 가른다.
+_AI_SOURCED_TAG = '[AI 정리 — 출처 %s, 미확인]'
+
+
 def _format_hit_tag(hit):
     """Citation prefix for one search() hit. Manual (origin == 'manual') has
     no provenance concept — it's the software's own docs — so it gets no tag,
@@ -714,7 +752,14 @@ def _format_hit_tag(hit):
         return ''
     provenance = hit.get('provenance')
     if provenance == 'ai_curated':
-        tag = _AI_CURATED_TRUST_TAG.get(hit.get('trust_state'), '[AI 정리 — 미확인]')
+        state = hit.get('trust_state')
+        sourced = (hit.get('source_ref') or '').strip()
+        if sourced and state == 'system_generated':
+            # 아직 미확인이지만 **확인할 데가 있다**. 승격된 뒤로는 일반
+            # ai_curated 태그를 따른다 — 그때는 사람이 이미 봤다는 뜻이므로.
+            tag = _AI_SOURCED_TAG % (hit.get('source_ref_name') or '등록 소스')
+        else:
+            tag = _AI_CURATED_TRUST_TAG.get(state, '[AI 정리 — 미확인]')
     else:
         tag = _PROVENANCE_TAG.get(provenance, '[Library]')
     return f"{tag} "

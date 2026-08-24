@@ -2905,6 +2905,60 @@ class AIAgentService:
         "아직 사람이 확인하지 않은 정보이니 참고용으로 활용해 주세요."
     )
 
+    # Korean glues grammar onto the END of a content word ('압력이'/'압력은',
+    # '안정되기까지'/'안정되는'), so whole-word comparison misses an answer that
+    # states the same fact in different clothes. Particles and the everyday
+    # endings are a CLOSED class, which is why stripping a recognized one is
+    # safe in a way that cutting every word to a fixed length is not: truncation
+    # would also collapse '관리기' and '관리자' onto '관리' and disclose an
+    # answer that never touched the note. A morphological analyzer would do this
+    # properly and isn't available — AoT ships in 22 languages and can't take a
+    # Korean-only runtime dependency for a presentation guard. Anything this
+    # list doesn't know simply stays whole, i.e. degrades to the old behaviour.
+    _KO_SUFFIXES = tuple(sorted({
+        # 조사 (nouns)
+        '은', '는', '이', '가', '을', '를', '에', '의', '도', '만', '와', '과',
+        '로', '나', '랑', '께', '에서', '에게', '한테', '으로', '로써', '로서',
+        '보다', '처럼', '까지', '부터', '마다', '조차', '밖에', '라도', '든지',
+        '만큼', '대로', '와의', '과의', '에는', '에도', '에서는', '에서도',
+        '으로는', '으로도', '에게서', '이라고', '라고는', '까지는', '부터는',
+        # 용언 어미 (verbs/adjectives)
+        '된', '된다', '되는', '되어', '되며', '되고', '되기', '됩니다', '되었다',
+        '되기까지', '되었습니다', '한다', '하는', '하고', '하며', '하면', '하여',
+        '하지', '해서', '해야', '했다', '합니다', '했습니다', '하기까지',
+        '임', '함', '이다', '이며', '이고', '이나', '이란', '이라', '이라는',
+        '입니다', '있다', '있는', '없다', '없는', '있습니다', '없습니다',
+    }, key=len, reverse=True))
+
+    # A suffix that would leave less than this isn't a suffix here — it's part
+    # of the word. This is what keeps '관로', '온도', '결로' (which merely END
+    # in the particles 로/도) from being filed away as '관', '온', '결'.
+    _KO_MIN_STEM = 2
+
+    # Words that are pure grammar even after stripping. A hit on them says
+    # nothing about WHICH section an answer came from, and they are the words
+    # most likely to sit in the unconfirmed block alone by accident — which is
+    # all "distinctive" means here. Two wordy texts overlap on these no matter
+    # what they are about, which is enough to clear the word-only threshold.
+    _DISCLOSURE_STOP_WORDS = frozenset({
+        '있습니다', '없습니다', '합니다', '입니다', '됩니다', '같습니다', '것으로',
+        '되어', '하기', '때문', '때문에', '경우', '따라', '따라서', '또는',
+        '그리고', '그러나', '그래서', '하지만', '통해', '위해', '대한', '대해',
+        '정도', '다시', '다만', '이런', '그런', '저런', '이렇게', '그렇게',
+    })
+
+    @staticmethod
+    def _grounding_block_text(block):
+        """One grounding block with the provenance parenthetical dropped from
+        its '### ' header ('… 관로 압력 안정 시간  (AI 자율 비치 — 대화
+        2026-08-24)'). The title stays — an answer really can quote it — but
+        the parenthetical is shelving bookkeeping, and its date digits are
+        unique to the unconfirmed block, so they would count as a distinctive
+        number match against any answer that happens to mention 24."""
+        return '\n'.join(
+            re.sub(r'\s*\([^)]*\)\s*$', '', line) if line.startswith('### ') else line
+            for line in block.split('\n'))
+
     @staticmethod
     def _enforce_unconfirmed_disclosure(insight, manual_ref):
         """Deterministic post-guard for the citation-trust contract
@@ -2930,7 +2984,22 @@ class AIAgentService:
         observation: '45초', '30%') plus corroborating words, or a strong
         word-overlap alone. Never raises; on any error returns the insight
         unchanged (this is a presentation guard, not allowed to break the
-        response path)."""
+        response path).
+
+        Tokens are compared as STEMS — particle/ending stripped — rather
+        than as whole words (measured 2026-08-24).
+        Whole-word containment let Korean inflection walk straight through
+        the guard: a note saying '관로 압력이 안정되기까지 약 45초' and an
+        answer saying '관로 압력은 약 45초 뒤 안정되는 것으로 확인되었습니다'
+        state the same fact, yet only '관로' matched — '압력이'/'압력은' and
+        '안정되기까지'/'안정되는' both missed, the answer landed one word
+        short of the threshold, and it shipped with no disclosure at all.
+        That is the exact failure this guard exists to stop. Stemming cuts
+        both ways on purpose: the same reduction is applied when subtracting
+        the other sections, so a word the authoritative section also uses
+        cancels out however either side inflected it — which is what keeps
+        the looser match from turning into looser triggering. The threshold
+        is therefore unchanged."""
         try:
             if not insight or not manual_ref or '[AI 정리 — 미확인]' not in manual_ref:
                 return insight
@@ -2946,22 +3015,70 @@ class AIAgentService:
                 # search_as_text glues its "[Knowledge search: ...]" preamble
                 # onto that block.
                 header = next((l for l in block.split('\n') if l.startswith('### ')), '')
-                (unconf_parts if '[AI 정리 — 미확인]' in header else other_parts).append(block)
+                (unconf_parts if '[AI 정리 — 미확인]' in header else other_parts).append(
+                    AIAgentService._grounding_block_text(block))
             unconf_text = ' '.join(unconf_parts)
             other_text = ' '.join(other_parts)
 
             def _tokens(text):
-                nums = set(_re.findall(r'\d+(?:\.\d+)?', text))
-                words = set(w for w in _re.findall(r'[가-힣A-Za-z]{2,}', text))
+                # Bracketed spans are the injector's own furniture — the trust
+                # tag itself and search_as_text's "[Knowledge search: ...]"
+                # preamble. They sit only in the retrieved text, so left in they
+                # read as evidence distinctive to the unconfirmed block ('정리'
+                # would match any answer that says '정리하면').
+                text = _re.sub(r'\[[^\]]*\]', ' ', text)
+                # A number is evidence only together with what it counts: '90%'
+                # in the note and '90일' in the answer are not the same fact,
+                # and a bare number is the one thing loose enough to clear the
+                # threshold on its own. Captured as (value, first unit char).
+                nums = set(_re.findall(r'(\d+(?:\.\d+)?)\s*([%℃가-힣A-Za-z]?)', text))
+                # Split hangul and latin runs apart so a particle glued to a
+                # latin term ('VPD가', 'EC는') doesn't hide the term.
+                words = set(_re.findall(r'[가-힣]{2,}|[A-Za-z]{2,}', text))
                 return nums, words
+
+            def _stem(word):
+                if not ('가' <= word[0] <= '힣'):
+                    return word.lower()
+                for suf in AIAgentService._KO_SUFFIXES:
+                    if word.endswith(suf):
+                        stem = word[:-len(suf)]
+                        return stem if len(stem) >= AIAgentService._KO_MIN_STEM else word
+                return word
+
+            def _stems(words):
+                out = set()
+                for w in words:
+                    if w in AIAgentService._DISCLOSURE_STOP_WORDS:
+                        continue
+                    st = _stem(w)
+                    if st not in AIAgentService._DISCLOSURE_STOP_WORDS:
+                        out.add(st)
+                return out
 
             u_nums, u_words = _tokens(unconf_text)
             o_nums, o_words = _tokens(other_text)
-            distinct_nums = u_nums - o_nums
-            distinct_words = u_words - o_words
+            a_nums, a_words = _tokens(insight)
+            a_stems = _stems(a_words)
+            # Cancel by value alone — if any other section states this number,
+            # it isn't the unconfirmed block's to give away, whatever unit
+            # either of them attached to it.
+            _o_values = set(n for n, _ in o_nums)
+            distinct_nums = set((n, u) for n, u in u_nums if n not in _o_values)
+            distinct_words = _stems(u_words) - _stems(o_words)
 
-            num_hits = [n for n in distinct_nums if n in insight]
-            word_hits = [w for w in distinct_words if w in insight]
+            # Numbers match as whole tokens: '45' must not be read out of the
+            # answer's '450'. Stems match either way round INSIDE a word, which
+            # is what absorbs Korean compounding — '밸브' is written into
+            # '급수밸브' with no space — and any ending this module doesn't know,
+            # where one side ends up stripped further than the other.
+            num_hits = sorted(
+                n for n, unit in distinct_nums
+                if any(n == a_n and (not unit or not a_unit or unit == a_unit)
+                       for a_n, a_unit in a_nums))
+            word_hits = sorted(
+                w for w in distinct_words
+                if any(w in a or a in w for a in a_stems))
             drew_on_it = (num_hits and len(word_hits) >= 2) or len(word_hits) >= 5
             if not drew_on_it:
                 return insight
@@ -2999,7 +3116,11 @@ class AIAgentService:
         "'[권위]'-tagged entry, state it as an authoritative fact and cite the source shown after "
         "the dash; for a '[Library]'-tagged entry, cite the source name in parentheses; for a "
         "'[관측]'-tagged entry, present it as an observation from this operation's own data, not a "
-        "general rule; for an '[AI 정리 — 미확인]'-tagged entry, you MUST tell the user this is your "
+        "general rule; for an '[AI 정리 — 출처 …, 미확인]'-tagged entry, you transcribed it from a "
+        "source this system actually has (the source is named in the tag): cite that "
+        "source by name, and say it has not been reviewed yet — but do NOT call it your "
+        "own guess, because it is checkable; "
+        "for an '[AI 정리 — 미확인]'-tagged entry, you MUST tell the user this is your "
         "own prior unconfirmed note (not a verified source) before using it, and prefer a "
         "'[권위]'/'[Library]' entry over it if both cover the same point; for '[AI 정리 — 확인됨]', a "
         "person has reviewed and confirmed it — you may state it with the same confidence as "
