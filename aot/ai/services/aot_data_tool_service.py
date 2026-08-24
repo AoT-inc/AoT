@@ -616,6 +616,35 @@ class AoTDataToolService:
             if degraded:
                 out["warning"] = ("InfluxDB returned nothing for any series — "
                                   "this may be a read failure, not an absence of data.")
+            notes = []
+            # 같은 측정 이름을 여러 채널이 쓰는 구역이 실제로 있을 때만 말한다
+            # (토양 프로브의 대기 채널과 토양 채널이 둘 다 'temperature' 인 식).
+            # 그런 구역이 없으면 이 경고는 읽는 사람을 헷갈리게만 한다.
+            for z in zones_out:
+                seen = {}
+                for r in z.get("sensors") or []:
+                    key = (r.get("device_id"), r.get("measurement"))
+                    if key in seen and seen[key] != r.get("channel"):
+                        notes.append(
+                            "A device here reports the same measurement on more "
+                            "than one channel — 'channel' is what tells them "
+                            "apart, not 'measurement'. Name the channel when you "
+                            "report one of these.")
+                        break
+                    seen[key] = r.get("channel")
+                if notes:
+                    break
+            if skipped:
+                notes.append(
+                    "'zones_without_data' lists the zones that returned nothing, "
+                    "by name. Relay WHICH ones, not just how many.")
+            if degraded:
+                notes.append(
+                    "'warning' is present: the readings may be missing because "
+                    "InfluxDB could not be read, NOT because there is no data. "
+                    "Say that rather than reporting zero.")
+            if notes:
+                out["_reading"] = notes
             return out
         except Exception as e:
             logger.exception("Error in get_zone_sensor_summary")
@@ -1060,9 +1089,33 @@ class AoTDataToolService:
                 results = [r for r in results if r.get('id') in candidate_ids]
 
             results = AoTDataToolService._annotate_device_membership(results)
-            return {"results": results, "count": len(results)}
+            out = {"results": results, "count": len(results)}
+            note = AoTDataToolService._complex_device_note(results)
+            if note:
+                out["_reading"] = [note]
+            return out
         except Exception as e:
             return {"error": str(e)}
+
+    @staticmethod
+    def _complex_device_note(results):
+        """복합장치(PLC 등)가 **실제로 결과에 있을 때만** 그 규칙을 낸다.
+
+        복합장치는 한 물리 장치의 읽기/쓰기가 Input·Output 으로 쪼개져 있어,
+        모르면 하위 항목을 독립 장치로 취급하게 된다. 다만 결과에 복합장치가
+        없으면 그 설명은 매번 읽히기만 하고 쓰이지 않는다 — 그래서 도구 설명이
+        아니라 결과가 말한다.
+        """
+        rows = results or []
+        if not (any(r.get('type') == 'device' and r.get('member_ids') for r in rows)
+                or any(r.get('parent_device_id') for r in rows)):
+            return None
+        return ("A complex device (e.g. a PLC) is in these results: one physical "
+                "unit whose readings/controls are split across separate Input and "
+                "Output entries. A 'device' row lists its member_ids, and a member "
+                "row carries parent_device_id + parent_device_name. Answer and act "
+                "at the parent device level rather than treating a member as "
+                "standalone.")
 
     @staticmethod
     def get_device_list_tool(**kwargs):
@@ -1115,7 +1168,11 @@ class AoTDataToolService:
                 pass
 
             results = AoTDataToolService._annotate_device_membership(results)
-            return {"results": results, "count": len(results)}
+            out = {"results": results, "count": len(results)}
+            note = AoTDataToolService._complex_device_note(results)
+            if note:
+                out["_reading"] = [note]
+            return out
         except Exception as e:
             return {"error": str(e)}
 
@@ -2279,6 +2336,16 @@ class AoTDataToolService:
             if n == 0:
                 out["message"] = (f"No equipment drawn on the map"
                                   + (f" in '{area_name}'" if area_name else "") + ".")
+            # 두 관수 방식을 한 숫자로 합치지 말라는 규칙은 **둘 다 있을 때만**
+            # 실수가 가능하다. 한쪽뿐이면 합칠 것이 없다.
+            if any(i.get('sprinklers') for i in res['irrigation']) and \
+                    any(i.get('drip_emitters') for i in res['irrigation']):
+                out["_reading"] = [
+                    "Both irrigation methods are present here. Keep 'sprinklers' "
+                    "(spray heads, each with throw radius and flow) and "
+                    "'drip_emitters' (derived from drip pipe length / spacing) "
+                    "strictly apart — never add them into a single 'emitter' "
+                    "figure. Report the two separately."]
             return out
         except Exception as e:
             logger.error(f"Error in get_map_equipment_tool: {e}")
@@ -6741,7 +6808,6 @@ class AoTDataToolService:
     # execute_action, invoked only through a prompt-text instruction (base_ai.py) —
     # never a real tool_name the agent loop's catalog could offer.
     @staticmethod
-    @staticmethod
     def _known_knowledge_tags():
         """라이브러리에서 실제로 쓰이는 태그. 없는 태그를 필터로 쓰지 않기 위해
         필요하고, 모델에게 무엇이 있는지 알려 줄 때도 쓴다."""
@@ -6784,6 +6850,7 @@ class AoTDataToolService:
         except Exception:
             return []
 
+    @staticmethod
     def knowledge_search_tool(query=None, top_k=3, tags=None, **extra):
         """Free-text search across manuals + synced domain knowledge + AI-curated
         notes. Read-only — the write counterpart is knowledge_shelve."""
@@ -9347,10 +9414,33 @@ class AoTDataToolService:
                 items.append(AoTDataToolService._plot_brief(
                     r, with_sensors=with_sensors, with_valves=False,
                     containers=_c, markers=_mk))
-            return {"count": len(items), "plots": items,
-                    "note": ("Only plots currently growing are listed. "
-                             "Pass include_ended=true for history.")
-                            if not include_ended else None}
+            out = {"count": len(items), "plots": items,
+                   "note": ("Only plots currently growing are listed. "
+                            "Pass include_ended=true for history.")
+                           if not include_ended else None}
+            # get_plot 과 같은 규칙이되, 목록에서 실제로 걸리는 것만 싣는다.
+            notes = []
+            if with_sensors and any(
+                    (p.get('sensors') or {}).get('source') == 'zone' for p in items):
+                notes.append(
+                    "Some plots here read their ZONE's representative values, not "
+                    "sensors inside the plot (sensors.source='zone'). Say so for "
+                    "those plots when you report a number.")
+            if any((p.get('stage') or {}).get('guidance') for p in items):
+                notes.append(
+                    "'stage.guidance' is what THAT plot's programme says to do in "
+                    "its current stage. Quote it; do not replace it with generic "
+                    "crop advice.")
+            elif items:
+                # 지침이 하나도 없을 때야말로 지어내기 쉽다 — 그 자리에서 말한다.
+                notes.append(
+                    "No plot here has programme guidance for its current stage "
+                    "('stage.guidance' is null throughout). Saying so is the "
+                    "honest answer; do not present generic crop advice as if it "
+                    "came from the programme.")
+            if notes:
+                out["_reading"] = notes
+            return out
         except Exception as e:
             logger.exception("Error in list_plots")
             return {"error": str(e)}
@@ -9377,9 +9467,18 @@ class AoTDataToolService:
         응답의 `stage` 는 `plot_context._stage_payload` 가 만들고 그 안에
         `guidance`(이 단계의 지침)가 들어 있다. **payload 에 있는 것만으로는
         LLM 이 쓰지 않는다** — 도구 설명에 없는 필드는 모델이 존재를 모르거나,
-        알아도 일반 재배 지식보다 우선할 이유를 모른다. 그래서 "있으면 인용하고
-        없으면 없다고 말한다" 는 규칙은 `tool_registry` 의 설명 문자열에 적혀
-        있다(슬림 매니페스트 · MCP 페이로드 양쪽). 여기를 고치면 그쪽도 본다.
+        알아도 일반 재배 지식보다 우선할 이유를 모른다.
+
+        2026-08-25: 그래서 규칙을 없앤 것이 아니라 **자리를 옮겼다.** 예전에는
+        `tool_registry` 설명 문자열에 있었는데, 그 설명은 `get_plot` 을 부르지
+        않는 대화까지 포함해 매번 실린다(core 27개 설명이 고정비의 74%였고 그중
+        get_plot 이 가장 컸다 — 1,492자 중 91%가 결과 읽는 법이었다). 이제
+        `_plot_reading_notes` 가 이 응답에 해당하는 규칙만 골라 `_reading` 으로
+        함께 보낸다.
+
+        위 경고는 여전히 유효하므로 **설명에 한 줄 포인터를 남겼다** — "응답의
+        `_reading` 을 따르라". 그 한 줄까지 지우면 이 주석이 적어 둔 실패로
+        그대로 돌아간다. 지우지 말 것.
         """
         try:
             from aot.databases.models import GeoPlot
@@ -9398,10 +9497,71 @@ class AoTDataToolService:
                     rows_per_bed=rows_per_bed)
             except ValueError as ve:
                 return {"error": str(ve)}
-            return {"plot": brief}
+            return {"plot": brief,
+                    "_reading": AoTDataToolService._plot_reading_notes(brief)}
         except Exception as e:
             logger.exception("Error in get_plot")
             return {"error": str(e)}
+
+    @staticmethod
+    def _plot_reading_notes(brief):
+        """이 응답에 **실제로 해당되는** 읽기 규칙만 고른다.
+
+        규칙 자체는 새로 만든 것이 아니다. 도구 설명에 붙어 있던 것을 이리로
+        옮겼다 — 설명에 있으면 `get_plot` 을 부르지 않는 대화까지 전부 그 값을
+        치르는데, 규칙이 쓸모 있는 것은 이 응답을 받은 순간뿐이다.
+
+        **조건을 걸어 고르는 것이 요점이다.** 설명은 모든 경우를 한꺼번에
+        말해야 하지만(부를지도 모르는 모든 호출을 상대하므로) 여기서는 이번
+        응답이 실제로 어떤지 안다. 센서가 구획 안에서 왔으면 구역 대표값
+        경고는 실을 이유가 없다. 그래서 옮기는 것만으로 분량이 줄고, 남은
+        줄은 전부 이 응답에 해당한다.
+        """
+        notes = []
+        sensors = brief.get('sensors') or {}
+        if sensors.get('source') == 'zone':
+            notes.append(
+                "'sensors' are the zone's representative values, NOT measured "
+                "inside this plot (sensors.source='zone'). Say so whenever you "
+                "report one of these numbers.")
+
+        stage = brief.get('stage') or {}
+        if stage:
+            if stage.get('guidance'):
+                notes.append(
+                    "'stage.guidance' is what THIS programme says to do in the "
+                    "current stage. Quote it; do not replace it with generic "
+                    "crop advice.")
+            else:
+                notes.append(
+                    "'stage.guidance' is null — nobody wrote guidance for this "
+                    "stage. Saying so is the honest answer. Do not present "
+                    "generic crop advice as if it came from the programme.")
+
+        cap = brief.get('capacity_estimate') or {}
+        if cap:
+            # basis·ask_user 는 이미 응답 안에 전문이 있다. 여기서는 그것을
+            # 그냥 지나치지 말라고만 한다 — 본문을 되풀이하면 옮긴 의미가 없다.
+            line = ("'capacity_estimate' is approximate — read its 'basis' "
+                    "and pass the caveat on.")
+            if (brief.get('dimensions') or {}).get('shape_note'):
+                line += " 'dimensions.shape_note' also applies."
+            notes.append(line)
+            if cap.get('ask_user'):
+                notes.append(
+                    "'capacity_estimate.ask_user' is an instruction, not a "
+                    "remark. Follow it BEFORE reporting any plant count.")
+
+        if any(v.get('unassigned') for v in (brief.get('valves') or [])):
+            notes.append(
+                "Some ground in this plot has no irrigation valve assigned "
+                "(valves[].unassigned=true) — it cannot be watered yet.")
+
+        if brief.get('scale_unavailable'):
+            notes.append(
+                "'scale_unavailable' applies — do not estimate capacity from "
+                "floor area for this plot.")
+        return notes
 
     @staticmethod
     def get_plot_history(plot_id=None, zone_id=None, map_id=None, **extra):
@@ -9782,7 +9942,6 @@ class AoTDataToolService:
             return {"status": "error", "message": str(e)}
 
     @staticmethod
-    @staticmethod
     def confirm_plot_stage(plot_id=None, stage_key=None, started_on=None,
                            **extra):
         """[쓰기] 단계 전환을 확인해 원장에 남긴다. 사람 승인 필요.
@@ -10035,6 +10194,7 @@ class AoTDataToolService:
             logger.exception("Error in apply_plot_resources")
             return {"status": "error", "message": str(e)}
 
+    @staticmethod
     def delete_plot(plot_id=None, **extra):
         """[쓰기] 구획 기록을 삭제한다. 사람 승인 필요.
 

@@ -19,7 +19,7 @@ Phase 0 에서 이 테스트가 하는 일은 하나 — **더 나빠지는 것�
 """
 import unittest
 
-from aot.scripts.measure_ai_tool_cost import measure_manifest
+from aot.scripts.measure_ai_tool_cost import _tok, measure_manifest
 
 # 2026-08-15 기준선(70ba1ff6). 낮추는 것은 언제든 환영이고, 올리려면 근거를
 # 커밋에 남길 것.
@@ -187,13 +187,59 @@ from aot.scripts.measure_ai_tool_cost import measure_manifest
 # 목록 도구는 늘리지 않고 이름만 바꿨다(list_reference_tables →
 # list_lookup_sources): 표와 API 를 한 자리에서 보여준다. 발견 지점을 둘로 나누면
 # 모델이 한쪽만 보고 "없다" 고 단정한다 — 실측으로 이미 한 번 겪었다.
-AGENT_MANIFEST_TOKEN_CEILING = 15_900
+#
+# ── 2026-08-25 재기준선 — **자를 바꿨다. 표면은 그대로다** ──────────────────
+#
+# 아래 세 상한은 지금까지 문자수/4 로 쟀다. 그 가정이 응답 캡에서 두 번 틀렸고
+# (08-21, 08-25 — 캡이 통과시킨 응답을 호스트가 거부했다), 실행층은 식별자
+# 밀도를 반영한 추정기로 옮겼다. 예산만 옛 자를 쓰면 한쪽은 고쳐지고 한쪽은
+# 낙관적인 채로 남으므로 `measure_ai_tool_cost._tok` 이 실행층 추정기를 부르게
+# 하고, 그 자로 다시 잰 값으로 상한을 옮긴다.
+#
+#   대상                   도구    문자     옛 자(/4)   새 자    새 상한
+#   에이전트 매니페스트     113   62,953    15,738    31,595    31,800
+#   MCP 카탈로그           116   95,471    23,867    47,804    48,100
+#   등급 켠 매니페스트       20   14,896     3,724     7,511     7,600
+#
+# **도구도 설명도 늘리지 않았다** — 숫자가 두 배가 된 것은 전부 자 때문이다.
+# 그래서 여유는 예전과 같이 좁게(약 0.6~1%) 둔다.
+#
+# 여기서 드러난 것: 등급 켠 매니페스트의 "여유 26토큰" 은 실제로는 7,511 이었다.
+# 상한이 낙관적인 자로 매겨져 있으면, 예산을 지키고 있다는 표시 자체가 틀린다.
+AGENT_MANIFEST_TOKEN_CEILING = 31_800
 # 2026-08-25: query_reference_table 에 columns 파라미터가 붙어 23,554 가 됐다.
 # 23,600 으로 올린다 — 이 파라미터는 **고정비를 내고 가변비를 줄인다**:
 # ECOCROP 한 행이 41컬럼 1,152자라 5행이면 ~2,200토큰인데, 요약 컬럼으로
 # 677토큰(3.3배 감소), 필요한 컬럼만 지정하면 276토큰이다(실측 2026-08-25).
 # 스키마 몇십 토큰으로 호출당 1,500여 토큰을 아낀다.
-MCP_CATALOG_TOKEN_CEILING = 24_000
+# ── 2026-08-25 재기준선 (5) — 구획 단계 원장 8종을 MCP 에 싣는다 ────────────
+#
+#   무엇                          에이전트    MCP     도구
+#   직전                          31,399   46,707  113 / 116
+#   단계 원장 8종 MCP 배선          31,399   50,086  113 / 124
+#
+# **에이전트 쪽은 한 톨도 안 늘었다** — 도구는 2026-08-24(624fa873) 부터 있었고,
+# 없던 것은 `_MCP_TOOL_PAYLOADS` 항목뿐이다. 2026-08-22 프로그램 도구 5종과
+# **같은 함정을 같은 자리에서 다시 밟았다**(tool_registry.py 의 경고 주석이
+# 가리키는 바로 그것): 카탈로그에 없으면 서랍 인덱스에도 없고, 그러면 어떤 MCP
+# 클라이언트도 그 이름을 볼 수 없다. `get_plot` 이 `stage_proposal` 을 내며
+# "확인하라" 고 안내하는데 확인할 도구가 안 보이는 상태였다.
+#
+# 늘어난 3,379 는 **없던 기능이 아니라 닿지 않던 기능의 값**이다. 되돌리면
+# 외부 MCP 사용자에게 단계 원장은 읽기 전용으로 되돌아간다 — 전환을 확인할
+# 수도, 밀린 일정을 적을 수도 없다.
+#
+# 문구 부풀림 쪽은 먼저 봤다: 파라미터 규칙(days/shift_days/started_on 중
+# 하나, after 의 빈 문자열 규약, stage_key 의 출처)은 전부 스키마에만 두고
+# description 에서 되풀이하지 않았다. 가장 큰 것이 reschedule_plot_stage
+# 1,353자로, `SINGLE_TOOL_CHAR_CEILING` 의 40% 다.
+#
+# ⚠ 이 숫자는 **서랍을 껐을 때**의 값이다. 8종 모두 `_TIER_ASSIGNMENT` 에서
+# space/drawer 라, 서랍이 켜진 실제 `tools/list` 에는 서랍 인덱스에 **이름만**
+# 늘어난다.
+#
+# 여유는 관례대로 좁게 둔다(0.6%).
+MCP_CATALOG_TOKEN_CEILING = 50_400
 
 # 등급(`AOT_AI_TOOL_TIERING=1`)을 켰을 때의 매니페스트. 2026-08-21 실측
 # 19항목 · 14,064자 · 약 3,516토큰 — 끈 상태의 **25%** 다.
@@ -225,7 +271,7 @@ MCP_CATALOG_TOKEN_CEILING = 24_000
 # 올리지 않았다: 그것이 필요해질 때는 이미 record 서랍이 열려 있다.
 # 2026-08-24(2): main 병합 후 3,708. main 단독은 3,544(19항목), 내 쪽에서
 # knowledge_search 가 core 로 올라와 20항목이 됐다. 3,750 으로 올린다.
-TIERED_MANIFEST_TOKEN_CEILING = 3_750
+TIERED_MANIFEST_TOKEN_CEILING = 7_600
 
 # 도구 하나가 이보다 크면 설명이 아니라 문서다. 2026-08-15 에는 가장 큰 것이
 # get_plot 3,164자였고 그 정도를 상한선으로 봤다.
@@ -286,8 +332,9 @@ class TestToolSurfaceBudget(unittest.TestCase):
             else:
                 os.environ['AOT_AI_TOOL_TIERING'] = old
 
-        chars = len(json.dumps(entries, ensure_ascii=False, default=str))
-        tokens = chars // 4
+        # 위 두 상한과 **같은 자로** 잰다. 여기만 문자수/4 로 세던 탓에 이
+        # 숫자가 실제의 절반으로 보였다(2026-08-25 재기준선 주석 참조).
+        _, tokens = _tok(json.dumps(entries, ensure_ascii=False, default=str))
         self.assertLessEqual(
             tokens, TIERED_MANIFEST_TOKEN_CEILING,
             '등급을 켠 매니페스트가 예산을 넘었다 (%d토큰 > %d, 도구 %d개). '

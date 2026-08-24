@@ -7657,11 +7657,19 @@ class TestProgram(unittest.TestCase):
         """payload 에 있는 것과 AI 가 쓰는 것은 다르다.
 
         도구 설명에 없는 필드는 모델이 존재를 모르거나, 알아도 일반 재배 지식보다
-        우선할 이유를 모른다. 그래서 규칙은 도구 설명에 적혀 있어야 한다 —
-        **슬림 매니페스트와 MCP 페이로드 양쪽**이다(한쪽만 고치면 인앱 AI 와
-        외부 MCP 클라이언트가 서로 다른 계약을 읽는다).
+        우선할 이유를 모른다. 그래서 규칙이 **닿아야** 한다 — 슬림 매니페스트와
+        MCP 페이로드 양쪽에서(한쪽만 고치면 인앱 AI 와 외부 MCP 클라이언트가
+        서로 다른 계약을 읽는다).
+
+        2026-08-25: `get_plot` 과 `list_plots` 는 규칙을 응답의 `_reading` 으로
+        옮겼다. 설명에 전부 적어 두면 그 도구를 부르지 않는 대화까지 값을 치르기
+        때문이다. **불변식은 그대로다** — 옮겼다고 규칙이 안 닿으면 이 테스트가
+        지키려던 실패로 돌아간다. 그래서 두 갈래를 함께 본다: 설명에 `_reading`
+        을 따르라는 포인터가 남아 있는가, 그리고 `_reading` 이 실제로 지침
+        규칙을 내는가(지침이 있을 때와 없을 때 양쪽).
         """
         from aot.ai.services import tool_registry
+        from aot.ai.services.aot_data_tool_service import AoTDataToolService
 
         # 선언 자리를 본다 — `manifest_system_tools()` 는 등급이 켜지면
         # 서랍 도구를 걸러내므로, 그 출력으로 검사하면 등급 설정에 따라 결과가
@@ -7672,8 +7680,22 @@ class TestProgram(unittest.TestCase):
                for e in tool_registry.virtual_tools()}
         for surface, by_name in (('manifest', declared), ('mcp', mcp)):
             for name in ('get_plot', 'list_plots'):
-                self.assertIn('guidance', by_name.get(name, ''),
-                              '%s/%s 설명에 guidance 가 없다' % (surface, name))
+                # 포인터 한 줄까지 지우면 모델은 `_reading` 을 그냥 지나치는
+                # 데이터로 본다 — 이 테스트가 막으려는 바로 그것.
+                self.assertIn('_reading', by_name.get(name, ''),
+                              '%s/%s 설명에 _reading 포인터가 없다'
+                              % (surface, name))
+
+        # 그리고 포인터가 가리키는 곳이 실제로 규칙을 내야 한다 — 양쪽 분기 모두.
+        wrote = AoTDataToolService._plot_reading_notes(
+            {'stage': {'guidance': '상토가 마르지 않게 관리한다.'}})
+        self.assertTrue(any('stage.guidance' in n and 'Quote it' in n
+                            for n in wrote),
+                        '지침이 있는데 인용하라는 규칙이 안 나왔다: %r' % wrote)
+        none = AoTDataToolService._plot_reading_notes(
+            {'stage': {'guidance': None}})
+        self.assertTrue(any('null' in n for n in none),
+                        '지침이 없는데 없다고 말하라는 규칙이 안 나왔다: %r' % none)
 
         # 제어 경로에는 싣지 않는다 — 지침은 제어를 바꾸지 않는다(설계 정본).
         from aot.aot_flask.geo import coordinator_plot

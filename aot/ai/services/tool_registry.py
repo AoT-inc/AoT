@@ -225,7 +225,7 @@ TOOLS: List[Tool] = [
     Tool('search_devices', handler='search_devices', manifest={
         "tool_name": "search_devices",
         "action_type": "virtual_tool_call",
-        "description": "Search for Input/Output/Camera/Zone/complex-Device entries by name or type keyword, and/or by the measurement a device actually records. A complex device (e.g. a PLC) is one physical unit whose readings/controls are split across separate Input and Output entries — results of type 'device' list its member_ids, and any input/output result belonging to one carries parent_device_id + parent_device_name. When a result has a parent device, prefer answering/acting at that device level rather than treating the input/output as standalone.",
+        "description": "Search for Input/Output/Camera/Zone/complex-Device entries by name or type keyword, and/or by the measurement a device actually records. When the results contain a complex device (e.g. a PLC — one physical unit split across separate Input and Output entries), the reply carries a '_reading' note saying how to treat it. Follow it.",
         "usage_hint": "params.arguments: {query?: '<keyword>', measurement_type?: '<e.g. volumetric_water_content>'} — at least one. measurement_type finds every device that really records it regardless of its name; give both to intersect (e.g. query='1포장' + measurement_type='temperature'). It matches the STORED name, not the everyday word — soil moisture is 'volumetric_water_content' ('moisture' returns nothing), rain is 'precipitation'. On 0 results check the real names with get_device_measurements. Returns matching devices with their unique_ids.",
     }),
     # 구역 단위 집계. Function 을 만들지 않는다 — 대상·기간이 질문마다 달라
@@ -421,10 +421,9 @@ TOOLS: List[Tool] = [
         "description": ("Lists vegetation plots (what crop is planted where). "
                         "Growing plots only unless include_ended=true. "
                         "with_sensors=true adds each plot's sensors in one call. "
-                        "'stage.guidance' is this programme's own instruction "
-                        "for the current stage — prefer it over generic advice; "
-                        "null means none was written. "
-                        "Read-only."),
+                        "The reply carries a '_reading' list — the rules for "
+                        "reading THIS result. Follow it; it is instruction, "
+                        "not commentary. Read-only."),
         "usage_hint": ("params.arguments: {map_id?, include_ended?, "
                        "on?: 'YYYY-MM-DD', with_sensors?}"),
     }),
@@ -433,11 +432,11 @@ TOOLS: List[Tool] = [
         "action_type": "virtual_tool_call",
         "description": ("One plot in detail: crop, variety, period, area, size "
                         "(width x length), which sensors it reads (own plot or "
-                        "falls back to its zone), and which irrigation valves overlap "
-                        "it. Give both spacings to get row and plant counts. "
-                        "'stage.guidance' is this programme's own instruction "
-                        "for the current stage — prefer it over generic advice; "
-                        "null means none was written. Read-only."),
+                        "falls back to its zone), which irrigation valves overlap "
+                        "it, and its current programme stage. Give both spacings "
+                        "to get row and plant counts. The reply carries a "
+                        "'_reading' list — the rules for reading THIS result. "
+                        "Follow it; it is instruction, not commentary. Read-only."),
         "usage_hint": ("params.arguments: {plot_id, plant_spacing_cm, "
                        "row_spacing_cm? (flat only), bed_pitch_cm? + "
                        "rows_per_bed? (bed layout), edge_margin_cm?} — "
@@ -1193,7 +1192,7 @@ TOOLS: List[Tool] = [
     Tool('resolve_target', handler='resolve_target_tool', manifest={
         "tool_name": "resolve_target",
         "action_type": "virtual_tool_call",
-        "description": "Read-only, NO approval needed. Resolve a place/device name to its exact entity BEFORE calling a write tool that takes target_name (add_schedule, create_note, create_notice, ...). Returns target_type and, if the entity has finer-grained children (e.g. a site containing zones), their exact names in 'children'. A write tool call attaches to ONLY the resolved entity, never to 'children' automatically. Call this first whenever the request could apply per-sub-unit ('each zone', '구역별', 'per section') so you know whether to loop the write tool once per child instead of writing once to the container.",
+        "description": "Read-only, NO approval needed. Resolve a place/device name to its exact entity BEFORE calling a write tool that takes target_name (add_schedule, create_note, create_notice, ...). Call this first whenever the request could apply per-sub-unit ('each zone', '구역별', 'per section'). The reply gives target_type, any 'children', and a 'note' saying exactly what a write to this target would and would not touch — follow it.",
         "usage_hint": "params.arguments: {target_name: '<place/device name>'}. Returns {status, target_id, target_type, resolved_name, children, note}. A CROP name also resolves ('콩밭', '상추 재배지' → the zone that crop currently grows in) — growers name plots by what is in them, so pass the user's own words rather than translating them to a map name first. If status is 'needs_disambiguation', show available_targets AND crop_targets to the user via ask_user and retry with the exact name (a crop growing in several zones is deliberately not guessed).",
     }),
     Tool('get_device_list', handler='get_device_list_tool'),
@@ -1512,7 +1511,7 @@ _MCP_TOOL_PAYLOADS: List[Dict[str, Any]] = [
     # 안 보이는 상태로 한참 헤맸다).
     {
         "tool_name": "list_plots",
-        "description": "Lists vegetation plots — what crop is planted where, with area, size (width x length), period and the zone each plot sits in. Growing plots only unless include_ended=true. This is the ONLY source for open-field crops; get_crop_status covers greenhouses. For row/plant counts at a given spacing, call get_plot on the one plot. Pass with_sensors=true to get every plot's sensors in ONE call instead of calling get_plot per plot — the reply then carries sensors.in_plot / sensors.from_zone / sensors.source for each plot, and 'source' says whether a reading is measured in that plot ('plot') or is its zone's representative value ('zone'), which you must pass on when reporting a number. Irrigation valves are NOT included here (they are the expensive part); call get_plot on the single plot when you need them. 'stage.guidance' is what THIS programme says to do in the current stage — quote it instead of generic crop advice; null means nobody wrote any, and saying so is the honest answer. Read-only.",
+        "description": "Lists vegetation plots — what crop is planted where, with area, size (width x length), period and the zone each plot sits in. Growing plots only unless include_ended=true. This is the ONLY source for open-field crops; get_crop_status covers greenhouses. For row/plant counts at a given spacing, call get_plot on the one plot. Pass with_sensors=true to get every plot's sensors in ONE call instead of calling get_plot per plot. Irrigation valves are NOT included here (they are the expensive part); call get_plot on the single plot when you need them. The reply carries a '_reading' list: the rules for reading THIS result, narrowed to what it actually returned. Follow it — it is instruction, not commentary. Read-only.",
         "input_schema": {
             "type": "object",
             "properties": {
@@ -1525,7 +1524,7 @@ _MCP_TOOL_PAYLOADS: List[Dict[str, Any]] = [
     },
     {
         "tool_name": "get_plot",
-        "description": "One vegetation plot in detail: crop, variety, planted/expected-end dates, area, size, and which sensors it reads. 'dimensions' gives the plot's width and length in meters (bounding rectangle) — use it for any 'how many rows / will it fit' question, since area alone cannot answer one. Pass plant_spacing_cm (plus row_spacing_cm for a flat layout, or bed_pitch_cm + rows_per_bed for beds) to also get 'capacity_estimate' (rows, plants per row, total) computed here rather than in your head. Without a bed layout the reply carries an 'ask_user' field telling you to settle the layout with the grower first — follow it instead of reporting the flat-layout number, and record the agreed layout as a NOTE on the plot (create_note with target_type='plot'), which is what the next conversation reads. Read 'basis' and any 'dimensions.shape_note' and pass the caveat on — the counts are approximate. IMPORTANT: the 'sensors.source' field says whether the readings come from inside the plot ('plot') or are the zone's representative values ('zone') — say which one when you report a value, because a zone value is not measured in this plot. 'valves' lists the irrigation valves overlapping this plot with the % of the plot each covers; an entry marked unassigned means that ground has no way to be watered yet. 'stage.guidance' is what THIS programme says to do in the current stage — quote it instead of generic crop advice; null means nobody wrote any, and saying so is the honest answer. Read-only.",
+        "description": "One vegetation plot in detail: crop, variety, planted/expected-end dates, area, dimensions (width x length, for any 'how many rows / will it fit' question that area alone cannot answer), the sensors it reads, the irrigation valves covering it, and its current programme stage. Pass plant_spacing_cm — with row_spacing_cm for a flat layout, or bed_pitch_cm + rows_per_bed for beds — to also get 'capacity_estimate' counted here rather than in your head. The reply carries a '_reading' list: the rules for reading THIS result, already narrowed to the fields it actually returned. Follow it — it is instruction, not commentary. Read-only.",
         "input_schema": {
             "type": "object",
             "properties": {
@@ -1654,6 +1653,116 @@ _MCP_TOOL_PAYLOADS: List[Dict[str, Any]] = [
                 "plot_id": {"type": "string", "description": "Plot unique_id."},
                 "ended_on": {"type": "string", "description": "End date 'YYYY-MM-DD'. Default: today."},
                 "reason": {"type": "string", "description": "harvested | failed | replaced | removed. Default: harvested."}
+            },
+            "required": ["plot_id"]
+        }
+    },
+    # --- 구획 단계 원장 (@ANCHOR: PLOT_STAGE_MCP_PAYLOADS, 2026-08-25) --------
+    # 도구 8종은 2026-08-24 (624fa873) 부터 있었지만 **이 목록에 없어 어떤 MCP
+    # 클라이언트로도 못 봤다** — 프로그램 도구 5종(위 PROGRAM_MCP_PAYLOADS)이
+    # 겪은 것과 같은 함정이고, 이번에도 증상은 같았다: `get_plot` 이 이미
+    # `stage_proposal` 을 내면서 "확인하라" 고 안내하는데 정작 확인할 도구가
+    # 안 보였다. 서랍 인덱스도 이 목록에서 나오므로 `open_drawer('space')`
+    # 에조차 이름이 없었다(디스패치는 registry.TOOLS 라 실행만은 가능했다 —
+    # 이름을 아는 클라이언트가 없으니 무의미하다).
+    {
+        "tool_name": "confirm_plot_stage",
+        "description": "Records that a plot has moved into a new stage. This MOVES THE ANCHOR — every remaining stage is recomputed from the date given, so do not invent one: use get_plot's stage_proposal.started_on (which is derived from the data) unless the grower states a different day. If stage_proposal is null there is nothing to confirm. To record a stage that is still ahead, use reschedule_plot_stage instead — this tool is for what already happened. Requires human approval.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "plot_id": {"type": "string", "description": "Plot unique_id."},
+                "stage_key": {"type": "string", "description": "Which stage was entered — take it from get_plot's stage_proposal.stage_key. Stage keys are not guessable; do not compose one."},
+                "started_on": {"type": "string", "description": "The day the change happened, 'YYYY-MM-DD'. Default: stage_proposal's own date. Only override it when the grower names a different day."}
+            },
+            "required": ["plot_id", "stage_key"]
+        }
+    },
+    {
+        "tool_name": "reschedule_plot_stage",
+        "description": "Moves a stage boundary for THIS plot — 'transplanting slipped a week'. The programme is a reference only and is never changed, so other plots on it are untouched. Boundaries after the one you move shift with it; pin the next one too if it must stay put. Only boundaries still AHEAD can be moved — a change that already happened is confirm_plot_stage. Read get_plot's stage_schedule first for the current dates and keys. Requires human approval.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "plot_id": {"type": "string", "description": "Plot unique_id."},
+                "stage_key": {"type": "string", "description": "Which stage to move — from get_plot's stage_schedule."},
+                "days": {"type": "integer", "description": "Make THAT stage last this many days, e.g. 20 for 'raise the seedlings for 20 days'. Same wording as the programme, so the grower need not compute a date. Cannot be used on the last stage — when the season ends is decided by ending the plot."},
+                "shift_days": {"type": "integer", "description": "Move that stage's START boundary by this many days: positive to delay (+7), negative to bring forward (-3)."},
+                "started_on": {"type": "string", "description": "Or set that boundary to an absolute date 'YYYY-MM-DD' — for when the grower names the day."}
+            },
+            "required": ["plot_id", "stage_key"]
+        }
+    },
+    {
+        "tool_name": "set_plot_stage_guidance",
+        "description": "Writes what to do in one stage OF THIS PLOT. The programme's guidance is general advice for the crop; this is 'here, at this time, do X'. Catalogue programmes usually ship with none, so write it even when the stage currently shows nothing. An empty string clears it and the programme's own text shows again. The programme is NOT touched — use modify_program for that. Requires human approval.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "plot_id": {"type": "string", "description": "Plot unique_id."},
+                "stage_key": {"type": "string", "description": "Which stage — from get_plot's stage_schedule."},
+                "guidance": {"type": "string", "description": "What to do in that stage, in the grower's own terms. Empty string clears this plot's text and the programme's shows again."}
+            },
+            "required": ["plot_id", "stage_key"]
+        }
+    },
+    {
+        "tool_name": "add_plot_stage",
+        "description": "Adds a stage to THIS PLOT only — e.g. a top-dressing step the standard programme has no room for. The programme is NOT touched, so other plots on it keep their own stage list. The stage key is generated here; do not supply one. Requires human approval.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "plot_id": {"type": "string", "description": "Plot unique_id."},
+                "name": {"type": "string", "description": "Stage name as the grower would say it, e.g. '웃거름'."},
+                "days": {"type": "integer", "description": "How long the stage lasts, in days. 1 or more."},
+                "after": {"type": "string", "description": "stage_key of the stage this one FOLLOWS. Empty string puts it first; omit to put it last. A stage cannot be inserted before an already-confirmed transition."},
+                "guidance": {"type": "string", "description": "What to do in that stage (optional)."}
+            },
+            "required": ["plot_id", "name", "days"]
+        }
+    },
+    {
+        "tool_name": "remove_plot_stage",
+        "description": "Drops a stage from THIS PLOT only — e.g. a crop that goes straight to transplanting with no seedling stage. Stages already passed are refused: the ledger points at them, and removing one loses the answer to what was done then. The programme is NOT touched. Requires human approval.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "plot_id": {"type": "string", "description": "Plot unique_id."},
+                "stage_key": {"type": "string", "description": "Which stage to drop — from get_plot's stage_schedule."}
+            },
+            "required": ["plot_id", "stage_key"]
+        }
+    },
+    {
+        "tool_name": "save_plot_schedule_as_program",
+        "description": "Registers THIS PLOT's schedule as a reusable programme — the stages it actually follows, with the lengths as edited and the plot's own guidance. Targets are copied from the source programme unchanged. The plot is NOT moved onto the new programme: registering is a copy, and changing a running season's interpretation would silently change what it was grown for. Use modify_plot(program_uuid=...) if the grower does want to switch it. Requires human approval.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "plot_id": {"type": "string", "description": "The plot whose schedule to register."},
+                "name": {"type": "string", "description": "Name for the new programme. Omit to derive one from the plot."}
+            },
+            "required": ["plot_id"]
+        }
+    },
+    {
+        "tool_name": "undo_plot_stage",
+        "description": "Undoes the most recently confirmed stage change. The row is KEPT (marked undone); the previous confirmation becomes the anchor again and later stages are recomputed from it. Only the last confirmation can be undone. Requires human approval.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "plot_id": {"type": "string", "description": "Plot unique_id."}
+            },
+            "required": ["plot_id"]
+        }
+    },
+    {
+        "tool_name": "apply_plot_resources",
+        "description": "Starts the irrigation/fertigation Functions that the current stage needs, as resolved FROM THE SITE (the programme declares roles, not functions). THIS MAKES WATER FLOW — it is a physical action. Nothing is ever switched off, and only what the stage declares is touched. Read get_plot's stage.resources first, and then check the reply: 'failed' (did not start), 'unresolved' (no device for that role here — placement is a human job), 'ambiguous' (several candidates, so nothing was picked). Requires human approval.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "plot_id": {"type": "string", "description": "Plot unique_id."}
             },
             "required": ["plot_id"]
         }
@@ -1896,7 +2005,7 @@ _MCP_TOOL_PAYLOADS: List[Dict[str, Any]] = [
     },
     {
         "tool_name": "resolve_target",
-        "description": "Read-only, NO approval needed. Resolve a place/device name to its exact entity BEFORE calling a write tool that takes target_name (add_schedule, create_note, create_notice, ...). Write tools sit behind a human-approval gate that only checks the tool name - the actual name resolution runs only AFTER approval, too late to catch a wrong hierarchy level. Call this first to see target_type and, if the entity has finer-grained children (e.g. a site containing zones), their exact names in 'children'. A write tool call attaches to ONLY the resolved entity, never to 'children' automatically - if the request applies per sub-unit ('each zone', 'per section'), call the write tool once per entry in 'children' instead.",
+        "description": "Read-only, NO approval needed. Resolve a place/device name to its exact entity BEFORE calling a write tool that takes target_name (add_schedule, create_note, create_notice, ...). Write tools sit behind a human-approval gate that only checks the tool name - the actual name resolution runs only AFTER approval, too late to catch a wrong hierarchy level. Call this first whenever the request could apply per sub-unit ('each zone', '구역별', 'per section'). The reply gives target_type, any 'children', and a 'note' saying exactly what a write to this target would and would not touch - follow it.",
         "input_schema": {
             "type": "object",
             "properties": {
@@ -1907,7 +2016,7 @@ _MCP_TOOL_PAYLOADS: List[Dict[str, Any]] = [
     },
     {
         "tool_name": "get_zone_sensor_summary",
-        "description": "Latest reading plus period statistics (min/max/avg/count) for the sensors of MANY zones in ONE call. Use this whenever a question spans more than one zone or the whole farm — 'which plots are too dry', 'soil moisture across the farm', 'compare the zones' — instead of calling get_sensor_detail once per zone. Narrow it with measurement_type (e.g. 'volumetric_water_content' for soil moisture), otherwise every measurement in those zones comes back and the answer gets long. Each sensor entry carries 'channel' — a device can have more than one channel sharing the same measurement label (e.g. a soil probe's ambient-air channel and its soil channel both called 'temperature'), so channel is what tells them apart, not the label. Zones with no matching sensor are left out of 'zones' and listed by id+name in 'zones_without_data' (not just a count) — relay which ones rather than only how many. If 'warning' is present the readings may be missing because InfluxDB could not be read, NOT because there is no data — say so rather than reporting zero. Read-only; it computes on the fly and stores nothing.",
+        "description": "Latest reading plus period statistics (min/max/avg/count) for the sensors of MANY zones in ONE call. Use this whenever a question spans more than one zone or the whole farm — 'which plots are too dry', 'soil moisture across the farm', 'compare the zones' — instead of calling get_sensor_detail once per zone. Narrow it with measurement_type (e.g. 'volumetric_water_content' for soil moisture), otherwise every measurement in those zones comes back and the answer gets long. The reply carries a '_reading' list when this particular result needs care (repeated channels, zones that returned nothing, a degraded read) — follow it. Read-only; it computes on the fly and stores nothing.",
         "input_schema": {
             "type": "object",
             "properties": {
@@ -1919,7 +2028,7 @@ _MCP_TOOL_PAYLOADS: List[Dict[str, Any]] = [
     },
     {
         "tool_name": "search_devices",
-        "description": "Search for devices (inputs, outputs, cameras, complex devices) by name or type keyword, and/or by the measurement they actually record. A complex device (e.g. a PLC) is one physical unit whose readings/controls are split across separate Input and Output entries — its 'device' result lists member_ids, and any input/output belonging to one carries parent_device_id + parent_device_name. IMPORTANT: to find every sensor of a kind (all soil-moisture sensors, all thermometers), use measurement_type — device names are not reliable for this, the same soil probe may be called '토양온습도_1' on one plot and '온습도_1' on the next, so a name search silently misses sensors.",
+        "description": "Search for devices (inputs, outputs, cameras, complex devices) by name or type keyword, and/or by the measurement they actually record. When the results contain a complex device (e.g. a PLC), the reply carries a '_reading' note saying how to treat it — follow it. IMPORTANT: to find every sensor of a kind (all soil-moisture sensors, all thermometers), use measurement_type — device names are not reliable for this, the same soil probe may be called '토양온습도_1' on one plot and '온습도_1' on the next, so a name search silently misses sensors.",
         "input_schema": {
             "type": "object",
             "properties": {
@@ -1930,7 +2039,7 @@ _MCP_TOOL_PAYLOADS: List[Dict[str, Any]] = [
     },
     {
         "tool_name": "get_device_list",
-        "description": "List all registered devices (inputs, outputs, cameras, complex devices) in the AoT system. Use this when the user asks for a full device listing without a specific keyword. A complex device (e.g. a PLC) is one physical unit whose readings/controls are split across separate Input and Output entries — its 'device' entry lists member_ids, and any input/output belonging to one carries parent_device_id + parent_device_name.",
+        "description": "List all registered devices (inputs, outputs, cameras, complex devices) in the AoT system. Use this when the user asks for a full device listing without a specific keyword. When the list contains a complex device (e.g. a PLC), the reply carries a '_reading' note saying how to treat it — follow it.",
         "input_schema": {
             "type": "object",
             "properties": {}
@@ -2036,7 +2145,7 @@ _MCP_TOOL_PAYLOADS: List[Dict[str, Any]] = [
     },
     {
         "tool_name": "get_weather",
-        "description": "Current weather for a site or zone, read from the weather station serving it (KMA / SenseCAP / Ecowitt / OpenWeatherMap, or any input recording wind or rain). Check 'weather_source' before reporting: 'weather_station' = real observations, and 'weather_device' names the station; 'nearby_sensor' = this farm has NO weather station, so the values are an ordinary sensor's readings (no wind, rain or solar) and must not be called the weather. 'weather_device_scope' tells you whether that station stands in the requested zone ('in_zone') or not; say so when it does not. Read-only.",
+        "description": "Current weather for a site or zone, read from the weather station serving it (KMA / SenseCAP / Ecowitt / OpenWeatherMap, or any input recording wind or rain). 'weather_source' says where the numbers came from. When it is not a real station, or the station does not stand in the requested zone, the reply carries 'weather_source_warning' / 'weather_device_note' spelling out what you must say instead — follow them. Read-only.",
         "input_schema": {
             "type": "object",
             "properties": {
@@ -2152,7 +2261,7 @@ _MCP_TOOL_PAYLOADS: List[Dict[str, Any]] = [
     },
     {
         "tool_name": "get_map_equipment",
-        "description": "Equipment drawn on the geo/design map plus a per-zone irrigation design summary. Separate from controllers (Outputs). IMPORTANT - keep the two irrigation methods strictly apart and never merge them into a single 'emitter' figure: `sprinklers` (individual spray heads, each with throw radius and flow) versus `drip_emitters` (derived from drip pipe length / spacing). `method` = sprinkler | drip | mixed. Individual equipment (irrigation valves, ventilation fans, heaters/chillers, window and curtain motors) is returned with its specs (flow_lph, pressure_kpa, capacity_kw, airflow_cmh, power_w). Read-only. Use for 'what irrigation equipment is there' and 'flow / sprinklers / drip / piping in zone X'. Report sprinklers and drip separately. (For a greenhouse's calculated heating and cooling design capacity use get_facility_capacity.)",
+        "description": "Equipment drawn on the geo/design map plus a per-zone irrigation design summary. Separate from controllers (Outputs). `sprinklers` (spray heads) and `drip_emitters` (from drip pipe length / spacing) are counted separately and `method` says sprinkler | drip | mixed; when both are present the reply carries a '_reading' note — follow it. Individual equipment (irrigation valves, ventilation fans, heaters/chillers, window and curtain motors) is returned with its specs (flow_lph, pressure_kpa, capacity_kw, airflow_cmh, power_w). Read-only. Use for 'what irrigation equipment is there' and 'flow / sprinklers / drip / piping in zone X'. Report sprinklers and drip separately. (For a greenhouse's calculated heating and cooling design capacity use get_facility_capacity.)",
         "input_schema": {
             "type": "object",
             "properties": {
@@ -2847,7 +2956,7 @@ _MCP_TOOL_PAYLOADS: List[Dict[str, Any]] = [
     },
     {
         "tool_name": "get_weather_forecast",
-        "description": "KMA short-term hourly forecast. get_weather returns only current values, so pre-emptive advice (temperature about to drop - warm up in advance) needs this. The response carries the issue time, its age and a 'stale' flag; when stale is true do not base control advice on it - report that forecast collection needs checking. Read-only.",
+        "description": "KMA short-term hourly forecast. get_weather returns only current values, so pre-emptive advice (temperature about to drop - warm up in advance) needs this. The reply carries the issue time and its age, and a 'warning' when the forecast is too old to advise on — follow it. Read-only.",
         "input_schema": {
             "type": "object",
             "properties": {

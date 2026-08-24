@@ -26,16 +26,20 @@ import json
 import os
 import sys
 
-# 토큰 근사는 문자수/4 다. 한국어는 이보다 나쁘고 영어 스키마는 이보다 좋아
-# 절대값으로는 못 쓴다 — **같은 방식으로 잰 값끼리의 비교**(회귀 감시, 개선
-# 전후)에만 쓸 것. 모델별 토크나이저를 붙이면 절대값도 의미를 갖는다.
-CHARS_PER_TOKEN = 4
-
-
+# 토큰 근사는 **실행층의 것을 그대로 쓴다.** 예전에는 여기서 문자수/4 로 따로
+# 셌는데, 응답 캡이 같은 가정으로 재다가 호스트에 거부당한 응답을 두 번 통과
+# 시켰다(2026-08-21, 08-25). 원인은 JSON 의 밀도를 정하는 것이 산문이 아니라
+# UUID·날짜 같은 식별자라는 점이고, 그것은 매니페스트도 마찬가지다 — 자를 따로
+# 두면 한쪽만 고쳐지고 다른 쪽은 낙관적인 채로 남는다.
+#
+# 문자수/4 는 여기서 2.02배 낙관적이었다(등급 켠 매니페스트 3,724 대 7,511).
+# 상한을 "여유 26토큰" 으로 읽게 만들어, 실제로는 두 배 위인 상태를 정상으로
+# 보이게 했다. 자가 틀리면 예산은 예산이 아니다.
 def _tok(obj):
+    from aot.ai.services.tool_execution import _estimate_tokens
     text = obj if isinstance(obj, str) else json.dumps(obj, ensure_ascii=False,
                                                        default=str)
-    return len(text), len(text) // CHARS_PER_TOKEN
+    return len(text), _estimate_tokens(text)
 
 
 # ---------------------------------------------------------------------------
