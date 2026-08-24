@@ -252,7 +252,7 @@ class AgentLoopService:
         return {"tool_name": tool_name, "arguments": args, "result": result}
 
     @staticmethod
-    def _build_step_prompt(command_text, tool_log, step, history=None):
+    def _build_step_prompt(command_text, tool_log, step, history=None, manual_ref=None):
         """General instruction — no per-function/per-intent hardcoding. The
         model picks tools from the catalog in `context['capabilities']` on
         its own judgment; this prompt only states the RULES of the loop.
@@ -330,6 +330,24 @@ class AgentLoopService:
             "without first checking note_digests for it AND, if not found there, calling "
             "search_notes(target_name=...) — a wrong tool returning nothing is not evidence the "
             "note is absent.\n"
+            # 위 문단은 knowledge_search 를 **쓰지 말라**는 지시만 준다. 그 짝이
+            # 없으면 모델은 "지식 도서관은 웬만하면 건드리지 말 것" 으로 읽는다.
+            # 라이브러리가 실제로 답을 갖고 있어도 안 뒤지는 실패가 여기서 난다.
+            "SUBJECT / DOMAIN QUESTIONS — USE THE LIBRARY FIRST: when the user asks about a "
+            "SUBJECT rather than about this installation's live state (a crop, a breed, a pest, "
+            "a material, a structure, a cultivation or management method, a recommended value, "
+            "'what is X', 'how is X grown/managed'), call knowledge_search BEFORE answering — that is the "
+            "knowledge library (system manuals + registered domain knowledge + knowledge you or "
+            "a colleague shelved earlier). Answering such a question straight from your own "
+            "memory, when you never looked, is exactly the failure this library exists to "
+            "prevent. If knowledge_search comes back empty, SAY SO plainly and make clear that "
+            "what follows is your own unverified knowledge — never pass it off as a source.\n"
+            # 조사→비치의 짝. 밖에서 알아낸 것을 적립하지 않으면 다음 턴이 같은
+            # 조사를 처음부터 다시 한다(설계 §4 의 쓰기 동사가 있는 이유다).
+            "AND SHELVE WHAT YOU LEARNED: if you researched or worked out something reusable "
+            "this turn that the library did not have, call knowledge_shelve to save it (with "
+            "tags, and attribution naming where it came from) so the next question can find it. "
+            "It is always stored as an unconfirmed note — tell the user that is what you did.\n"
             "EQUIPMENT / 설비 DRAWN IN geo/design vs CONTROL DEVICES — the equipment placed on "
             "the map in geo/design (irrigation valves, sprinklers/drip emitters, pipes, fans, "
             "heaters/coolers, window/curtain motors) is a SEPARATE thing from control devices "
@@ -357,15 +375,27 @@ class AgentLoopService:
         if step >= MAX_STEPS - 2:
             parts.append("\nYou are near the step limit — wrap up with your best answer "
                           "or a single most-useful tool call now.")
+        # 지식 근거가 실렸으면 그 인용 규약을 함께 싣는다. 이 디렉티브는
+        # **프롬프트(goal)** 로 가는데, base_ai 는 goal 을 프롬프트 맨 앞에
+        # 두므로 100k 하드 절단에서 살아남는다(컨텍스트 꼬리와 달리).
+        if manual_ref:
+            from aot.ai.services.ai_agent_service import AIAgentService
+            parts.append(AIAgentService._MANUAL_GROUNDING_DIRECTIVE)
         return "\n".join(parts)
 
     @staticmethod
     def _finish(agent_id, command_text, insight, thread_id, actions=None,
-                extra_meta=None, steps=None, tool_log=None):
+                extra_meta=None, steps=None, tool_log=None, manual_ref=None):
         """Shared terminal path — reuses the SAME dispatch/approval mechanism
         every other pipeline uses, so AgentLoopService's return shape is
         identical to process_natural_language_command's (drop-in for the
-        chat route)."""
+        chat route).
+
+        `manual_ref` is the grounding block this turn was given (if any). It is
+        threaded in so the unconfirmed-disclosure guard runs HERE — the one
+        terminal point every exit path goes through — rather than at each of
+        the six `return _finish(...)` sites, where the next one added would
+        silently skip it."""
         from aot.ai.ai_dispatch_service import AIDispatchService
         meta = {'intent': 'AGENT_LOOP'}
         if extra_meta:
@@ -386,6 +416,16 @@ class AgentLoopService:
             meta['tool_sequence'] = [
                 t.get('tool') or t.get('tool_name')
                 for t in tool_log if isinstance(t, dict)][:40]
+        # @ANCHOR: AGENT_LOOP_UNCONFIRMED_DISCLOSURE
+        # 신뢰 표기는 모델에 맡기지 않는다(설계 §6, ai-library-redesign.md).
+        # 디렉티브가 "미확인 메모임을 먼저 밝혀라" 라고 이미 지시하지만 준수가
+        # 모델 역량에 따라 갈린다는 것이 실측됐고, 그래서 fast path 는 서버측
+        # 결정적 후처리 가드를 갖고 있다. 루프가 기본 경로가 된 뒤 그 가드가
+        # 이 경로에는 없어 계약이 깨져 있었다 — 여기서 되살린다.
+        # 인용하지 않았으면 아무것도 붙이지 않는다(원문 그대로 반환).
+        if manual_ref and insight:
+            from aot.ai.services.ai_agent_service import AIAgentService
+            insight = AIAgentService._enforce_unconfirmed_disclosure(insight, manual_ref)
         dispatch_res = AIDispatchService._dispatch_actions(
             agent_id=agent_id, goal=command_text, insight=insight or '',
             actions=actions or [], thread_id=thread_id, message_type='ai', metadata=meta)
@@ -428,6 +468,27 @@ class AgentLoopService:
             logger.warning(f"[AgentLoop] system_state build failed, continuing without it: {e}")
             system_state = {}
 
+        # @ANCHOR: AGENT_LOOP_KNOWLEDGE_GROUNDING
+        # 서버측 결정적 지식 주입(설계 §6). fast path/collab 에만 있어서 루프가
+        # 기본 경로가 된 뒤로는 "모델이 스스로 knowledge_search 를 부를 때만"
+        # 지식이 닿았다 — P2 가 세운 "검색은 서버가 보장한다" 계약이 경로
+        # 이관과 함께 조용히 깨져 있던 것을 되살린다.
+        #
+        # **한 번만 조회한다.** 검색은 결정적(LLM 비사용)이고 발화가 스텝마다
+        # 바뀌지 않으므로 매 스텝 재조회할 이유가 없다. 대신 결과는 매 스텝
+        # 컨텍스트에 싣는다: 모델이 3스텝째에 답하기로 정했는데 근거가 0스텝에만
+        # 있었으면 지금 고치려는 그 실패가 그대로 재현된다.
+        # 비용 실측(2026-08-24, 로컬): 근거 블록 1.8~2.1k자 vs
+        # system_state 95k + capabilities 72k — 스텝당 약 1.2%.
+        # 짧은 후속 발화에는 접지하지 않는다 — fast path 와 같은 이유이고,
+        # 그쪽에서 실측으로 확인된 실패다: '안내해줘' 같은 짧은 이어말에
+        # 역량 문서를 실으면 답변이 일반적인 시스템 소개로 납치된다. 대화가
+        # 진행 중인 짧은 발화는 how-to 질문이 아니라 앞 맥락의 연속이다.
+        # 루프 배선 최초 구현(2026-08-24)에 이 가드가 빠져 있었다 — 접지 자체를
+        # 옮기면서 접지를 **하지 않을 조건**은 같이 옮기지 않은 누락.
+        _short_followup = len((command_text or '').strip()) < 8 and len(history) > 0
+        manual_ref = '' if _short_followup else AIAgentService._manual_grounding(command_text)
+
         tool_log = []
         seen_calls = {}  # (tool_name, json-args) -> tool_log record already produced this run
         last_insight = ''
@@ -439,7 +500,16 @@ class AgentLoopService:
                 "user_command": command_text,
                 "page_context": page_context,
             }
-            prompt = AgentLoopService._build_step_prompt(command_text, tool_log, step, history=history)
+            if manual_ref:
+                # FRONT 배치. base_ai 는 컨텍스트를 삽입 순서대로 직렬화하고
+                # 티어 예산(standard=100k자)에서 프롬프트 **꼬리를 하드 절단**
+                # 한다. 이 설치의 루프 컨텍스트는 그것만으로 이미 ~167k라
+                # 꼬리에 붙이면 확실히 잘린다(2026-07-19 fast path 실측과 같은
+                # 함정, _inject_context_front 주석 참조).
+                context = AIAgentService._inject_context_front(
+                    context, 'manual_reference', manual_ref)
+            prompt = AgentLoopService._build_step_prompt(
+                command_text, tool_log, step, history=history, manual_ref=manual_ref)
             try:
                 result = engine.run_reasoning(context, prompt) or {}
             except Exception as e:
@@ -471,7 +541,8 @@ class AgentLoopService:
                 logger.info(f"[AgentLoop] ask_user: {question[:80]!r} options={options}")
                 return AgentLoopService._finish(
                     agent.unique_id, command_text, question or last_insight, thread_id,
-                    extra_meta={'intent': 'CLARIFY', 'ask_user_options': options})
+                    extra_meta={'intent': 'CLARIFY', 'ask_user_options': options},
+                    manual_ref=manual_ref)
 
             if not actions:
                 # Final answer — nothing left to do. If the model asked a question
@@ -483,7 +554,8 @@ class AgentLoopService:
                     _meta = {'intent': 'CLARIFY'}
                 return AgentLoopService._finish(agent.unique_id, command_text, last_insight,
                                                 thread_id, extra_meta=_meta,
-                                                steps=step + 1, tool_log=tool_log)
+                                                steps=step + 1, tool_log=tool_log,
+                                                manual_ref=manual_ref)
 
             write_actions = [a for a in actions if AIActionService.requires_approval(AgentLoopService._tool_name(a))]
             if write_actions:
@@ -498,7 +570,8 @@ class AgentLoopService:
                                 f"→ ask_user: {_q[:80]!r} options={_opts}")
                     return AgentLoopService._finish(
                         agent.unique_id, command_text, _q, thread_id,
-                        extra_meta={'intent': 'CLARIFY', 'ask_user_options': _opts})
+                        extra_meta={'intent': 'CLARIFY', 'ask_user_options': _opts},
+                        manual_ref=manual_ref)
 
                 # Boundary nudge: a recurring/conditional request that chose a one-off
                 # schedule_device_control → ask whether it should be a Function instead.
@@ -509,7 +582,8 @@ class AgentLoopService:
                                 f"→ ask_user: {_q[:80]!r} options={_opts}")
                     return AgentLoopService._finish(
                         agent.unique_id, command_text, _q, thread_id,
-                        extra_meta={'intent': 'CLARIFY', 'ask_user_options': _opts})
+                        extra_meta={'intent': 'CLARIFY', 'ask_user_options': _opts},
+                        manual_ref=manual_ref)
 
                 # Stop the loop and propose. _dispatch_actions already splits any
                 # remaining read actions in the same batch to immediate execution —
@@ -518,7 +592,8 @@ class AgentLoopService:
                             f"{[AgentLoopService._tool_name(a) for a in write_actions]} for approval")
                 return AgentLoopService._finish(agent.unique_id, command_text, last_insight,
                                                 thread_id, actions=actions,
-                                                steps=step + 1, tool_log=tool_log)
+                                                steps=step + 1, tool_log=tool_log,
+                                                manual_ref=manual_ref)
 
             # All actions are read tools — execute now, feed results back, keep looping.
             # Dedup by (tool_name, params) within this run: the model sometimes
@@ -555,7 +630,8 @@ class AgentLoopService:
                 "I went through several steps but couldn't reach a conclusion. "
                 "Could you break the request down and try again?")
         return AgentLoopService._finish(agent.unique_id, command_text, closing, thread_id,
-                                        extra_meta={'bounded_exit': True})
+                                        extra_meta={'bounded_exit': True},
+                                        manual_ref=manual_ref)
 
     @staticmethod
     def _final_synthesis(engine, command_text, history, tool_log):

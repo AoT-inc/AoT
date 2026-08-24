@@ -6803,7 +6803,8 @@ class AoTDataToolService:
     # it or it corroborates against a real source (P5, not yet built).
     @staticmethod
     def knowledge_shelve(content=None, tags=None, heading=None, entity_ref=None,
-                         attribution=None, content_kind='prose', ttl_hours=None, **extra):
+                         attribution=None, content_kind='prose', ttl_hours=None,
+                         source_url=None, **extra):
         """Save a piece of knowledge the AI just derived or was told, so a
         later query can retrieve it. Always shelved as ai_curated/unconfirmed
         — see knowledge_shelve_service.shelve_knowledge for the governance
@@ -6833,7 +6834,7 @@ class AoTDataToolService:
         result = shelve_knowledge(
             content=str(content), tags=tags, heading=heading,
             entity_ref=entity_ref, attribution=attribution,
-            content_kind=content_kind, ttl=ttl,
+            content_kind=content_kind, ttl=ttl, source_url=source_url,
         )
         if extra:
             result["ignored_args"] = list(extra.keys())
@@ -6903,6 +6904,8 @@ class AoTDataToolService:
                 "label": p.get("label", key),
                 "description": p.get("description_ko") or p.get("description", ""),
             }
+            entry["region"] = p.get("region", "any")
+            entry["topics"] = p.get("topics", ["any"])
             if p.get("is_system"):
                 entry["url"] = p.get("url_source", "")
                 entry["needs_api_key"] = True
@@ -6911,14 +6914,22 @@ class AoTDataToolService:
             else:
                 entry["source_type"] = p.get("source_type", key)
                 custom.append(entry)
+        regions = sorted({e["region"] for e in system})
         return {
             "system_presets": system,
             "custom_types": custom,
+            # 지역 축을 **결과에서 계산해** 싣는다. 상수로 "한국 전용" 이라고
+            # 적어 두면 지역 불가지 프리셋이 하나라도 생기는 순간 거짓말이 된다.
+            "system_preset_regions": regions,
             "note": "system_presets are pre-built external public-data APIs — each needs its own API "
-                    "key from that provider. custom_types let the operator ingest their OWN data: a "
-                    "document (PDF/text/markdown), a web page, any REST API, or an internal DB query. "
-                    "When the user asks what knowledge libraries they can add (or for a recommendation), "
-                    "present BOTH groups — never mention only one source.",
+                    "key from that provider, and each carries a `region`. IMPORTANT: every built-in "
+                    "preset today is region='KR' (Korean public data). If this operation is NOT in "
+                    "Korea, say so plainly instead of recommending one — the way anywhere else gets "
+                    "covered is custom_types, which ingest the operator's OWN material: a document "
+                    "(PDF/text/markdown), a web page, any REST API, or an internal DB query. Those "
+                    "work in any country and for any subject (crop, livestock, structure, "
+                    "infrastructure). When asked what can be added, present BOTH groups and match "
+                    "them to where the operator actually is and what they actually manage.",
         }
 
     # ─────────────────────────────────────────────────────────────────────
@@ -8343,7 +8354,7 @@ class AoTDataToolService:
     @staticmethod
     def create_program(name=None, subject=None, crop=None, stages=None,
                             variety=None, source_note=None, notes=None,
-                            kind=None, base_temp_c=None,
+                            kind=None, base_temp_c=None, auto_advance=None,
                             target_defs=None, resource_defs=None, tab_id=None,
                             **extra):
         """[쓰기] 관리 프로그램을 만든다. 사람 승인 필요.
@@ -8396,6 +8407,8 @@ class AoTDataToolService:
                 # 기준온도는 `photosynthesis.T_base` 에 산다(FunctionCropPreset 과
                 # 같은 키). AI 에게 그 중첩을 시키지 않고 평평한 이름으로 받는다.
                 payload['photosynthesis'] = {'T_base': base_temp_c}
+            if auto_advance is not None:
+                payload['auto_advance'] = bool(auto_advance)
             if target_defs is not None:
                 payload['target_defs'] = target_defs
             if resource_defs is not None:
@@ -8430,7 +8443,7 @@ class AoTDataToolService:
             payload = {k: v for k, v in fields.items()
                        if k in ('name', 'variety', 'stages', 'notes',
                                 'source_note', 'targets_methods', 'kind',
-                                'photosynthesis', 'tab_id',
+                                'auto_advance', 'photosynthesis', 'tab_id',
                                 # 목표 항목 정의 — 어휘가 프로그램마다 다르므로
                                 # AI 도 이것을 읽고 고칠 수 있어야 한다(고정
                                 # 항목은 서버가 되돌려 놓으므로 지워지지 않는다).
@@ -9316,8 +9329,7 @@ class AoTDataToolService:
             # `bay_id` — 시설 안에서 구역을 옮긴다(모종을 다른 동으로 옮겨
             # 심는 경우). 종료된 작기의 이동은 서버가 거부한다(VP-6).
             for k in ('subject', 'kind', 'variety', 'name', 'started_on',
-                      'expected_end_on', 'color', 'bay_id', 'program_uuid',
-                      'auto_advance'):
+                      'expected_end_on', 'color', 'bay_id', 'program_uuid'):
                 if k in fields and fields[k] is not None:
                     payload[k] = fields[k]
             # **알아듣지 못한 인자를 성공이라 답하지 않는다.** 예전에는
@@ -9327,8 +9339,7 @@ class AoTDataToolService:
             # 것" 계열이라, 바꿀 것이 없으면 이유와 함께 거절한다.
             if len(payload) <= 1:
                 known = ('subject', 'kind', 'variety', 'name', 'started_on',
-                         'expected_end_on', 'color', 'bay_id', 'program_uuid',
-                         'auto_advance')
+                         'expected_end_on', 'color', 'bay_id', 'program_uuid')
                 unknown = [k for k in fields if k not in known
                            and not k.startswith('_')]
                 msg = 'nothing to change'
@@ -9568,180 +9579,6 @@ class AoTDataToolService:
                              "computed from this date.")}
         except Exception as e:
             logger.exception("Error in confirm_plot_stage")
-            return {"status": "error", "message": str(e)}
-
-    @staticmethod
-    def reschedule_plot_stage(plot_id=None, stage_key=None, started_on=None,
-                              shift_days=None, days=None, **extra):
-        """[쓰기] 단계 일정을 고친다 — 연기·앞당김. 사람 승인 필요.
-
-        프로그램의 단계 기간은 **표준**이고 구획은 그것을 참조만 한다. "정식이
-        비 때문에 일주일 밀렸다" 를 적는 도구가 이것이다.
-
-        - `days` — 그 단계를 **며칠짜리로** 한다("육묘를 20일로"). 프로그램과
-          같은 어휘라 사람이 날짜를 계산할 필요가 없다. 마지막 단계에는 쓸 수
-          없다(끝내는 날은 재배 종료가 정한다).
-        - `shift_days` — 그 단계의 **시작 경계**를 상대로 옮긴다(연기 +, 앞당김 −).
-        - `started_on` — 절대 날짜('YYYY-MM-DD'). 사람이 날을 못박은 경우.
-
-        **명시한 경계는 고정되고 뒤가 밀린다.** 한 단계를 미루면 이후 단계가
-        통째로 따라 밀린다 — "이 단계만 늘리고 다음은 그대로" 는 다음 경계도
-        같이 정하면 된다.
-
-        고칠 수 있는 것은 **아직 오지 않은 경계**뿐이다. 이미 지나간 전환은
-        `confirm_plot_stage`/`undo_plot_stage` 가 다루는 사실의 영역이다.
-        지금 일정은 `get_plot` 의 `stage_schedule` 이 말해 준다.
-        """
-        try:
-            from aot.aot_flask.geo import plot_io
-
-            if not plot_id:
-                return {"status": "error", "message": "plot_id is required"}
-            if not stage_key:
-                return {"status": "error",
-                        "message": ("stage_key is required — read it from "
-                                    "get_plot's stage_schedule")}
-            given = [x for x in (days, shift_days, started_on)
-                     if x not in (None, '')]
-            if not given:
-                return {"status": "error",
-                        "message": "give one of days, shift_days or started_on"}
-            if len(given) > 1:
-                return {"status": "error",
-                        "message": ("give only one of days, shift_days or "
-                                    "started_on")}
-
-            if days not in (None, ''):
-                result, err = plot_io.set_stage_days(
-                    plot_id, {stage_key: days}, set_by='AI')
-            elif started_on:
-                result, err = plot_io.set_stage_plan(
-                    plot_id, {stage_key: started_on}, set_by='AI')
-            else:
-                result, err = plot_io.shift_stage(
-                    plot_id, stage_key=stage_key, days=shift_days,
-                    set_by='AI')
-            if err:
-                return {"status": "error", "message": err}
-            return {"status": "success",
-                    "stage_schedule": result.get('stage_schedule'),
-                    "note": ("Boundaries after this one moved with it. The "
-                             "programme itself is unchanged — this plot only "
-                             "references it.")}
-        except Exception as e:
-            logger.exception("Error in reschedule_plot_stage")
-            return {"status": "error", "message": str(e)}
-
-    @staticmethod
-    def set_plot_stage_guidance(plot_id=None, stage_key=None, guidance=None,
-                                **extra):
-        """[쓰기] 이 구획의 단계 지침을 적는다. 사람 승인 필요.
-
-        프로그램의 지침은 그 작물의 일반 사항이고, 이것은 **이 자리에서 이 시기에
-        무엇을 하나** 다. 카탈로그는 지침을 비운 채로 오는 경우가 대부분이라,
-        없어도 적을 수 있다. 빈 글을 주면 지운다(프로그램 지침이 다시 보인다).
-
-        프로그램은 건드리지 않는다 — 같은 프로그램을 쓰는 다른 구획이 함께
-        바뀌면 안 된다. 프로그램 자체를 고치려면 `modify_program` 이다.
-        """
-        try:
-            from aot.aot_flask.geo import plot_io
-
-            if not plot_id:
-                return {"status": "error", "message": "plot_id is required"}
-            if not stage_key:
-                return {"status": "error",
-                        "message": ("stage_key is required — read it from "
-                                    "get_plot's stage_schedule")}
-            result, err = plot_io.set_stage_guidance(
-                plot_id, stage_key=stage_key, text=guidance, set_by='AI')
-            if err:
-                return {"status": "error", "message": err}
-            return {"status": "success", "stage_key": result.get('stage_key'),
-                    "guidance": result.get('guidance')}
-        except Exception as e:
-            logger.exception("Error in set_plot_stage_guidance")
-            return {"status": "error", "message": str(e)}
-
-    @staticmethod
-    def add_plot_stage(plot_id=None, name=None, days=None, after=None,
-                       guidance=None, **extra):
-        """[쓰기] 이 구획에 단계를 더한다. 사람 승인 필요.
-
-        `after` 는 그 단계 **뒤**에 끼운다는 뜻이다(빈 문자열이면 맨 앞, 생략하면
-        맨 뒤). 키는 서버가 짓는다.
-
-        프로그램은 건드리지 않는다 — 이 구획만 한 단계를 더 갖는다.
-        """
-        try:
-            from aot.aot_flask.geo import plot_io
-
-            if not plot_id:
-                return {"status": "error", "message": "plot_id is required"}
-            result, err = plot_io.add_stage(
-                plot_id, name=name, days=days, after=after,
-                guidance=guidance, set_by='AI')
-            if err:
-                return {"status": "error", "message": err}
-            return {"status": "success", "stage_key": result.get('stage_key'),
-                    "stage_schedule": result.get('stage_schedule')}
-        except Exception as e:
-            logger.exception("Error in add_plot_stage")
-            return {"status": "error", "message": str(e)}
-
-    @staticmethod
-    def remove_plot_stage(plot_id=None, stage_key=None, **extra):
-        """[쓰기] 이 구획에서 단계를 뺀다. 사람 승인 필요.
-
-        육묘 없이 바로 정식하는 작기가 있다. **이미 지나간 단계는 뺄 수 없다** —
-        확인된 전환이 가리키는 단계를 없애면 그때 무엇을 했는지의 답이 사라진다.
-        """
-        try:
-            from aot.aot_flask.geo import plot_io
-
-            if not plot_id:
-                return {"status": "error", "message": "plot_id is required"}
-            if not stage_key:
-                return {"status": "error", "message": "stage_key is required"}
-            result, err = plot_io.remove_stage(
-                plot_id, stage_key=stage_key, set_by='AI')
-            if err:
-                return {"status": "error", "message": err}
-            return {"status": "success",
-                    "stage_schedule": result.get('stage_schedule')}
-        except Exception as e:
-            logger.exception("Error in remove_plot_stage")
-            return {"status": "error", "message": str(e)}
-
-    @staticmethod
-    def save_plot_schedule_as_program(plot_id=None, name=None, **extra):
-        """[쓰기] 이 구획의 일정을 **프로그램으로 등록한다**. 사람 승인 필요.
-
-        구획에서 기간을 맞추고 단계를 더하고 지침을 적고 나면 그 지식은 그 구획
-        안에만 있다 — 다음 작기·옆 밭이 같은 일을 처음부터 다시 하지 않게 한다.
-
-        담기는 것은 지금 **실제로 따르고 있는** 단계 목록이고, 기간은 표준이
-        아니라 경계 사이의 실제 날수다. 목표는 원본 프로그램 것을 그대로 옮긴다.
-
-        **구획을 새 프로그램으로 옮기지는 않는다** — 등록은 복사다. 진행 중인
-        작기의 해석이 등록 한 번에 바뀌면 "그때 무엇을 목표로 길렀나" 의 답이
-        달라진다. 이 구획에도 쓰려면 `modify_plot(program_uuid=...)` 이 사람의
-        결정이다.
-        """
-        try:
-            from aot.aot_flask.geo import plot_io
-
-            if not plot_id:
-                return {"status": "error", "message": "plot_id is required"}
-            result, err = plot_io.save_as_program(
-                plot_id, name=name, set_by='AI')
-            if err:
-                return {"status": "error", "message": err}
-            return {"status": "success", "program": result.get('program'),
-                    "note": ("The plot still follows what it followed before — "
-                             "registering is a copy.")}
-        except Exception as e:
-            logger.exception("Error in save_plot_schedule_as_program")
             return {"status": "error", "message": str(e)}
 
     @staticmethod

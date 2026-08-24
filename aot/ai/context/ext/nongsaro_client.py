@@ -82,8 +82,14 @@ class NongsaroClient:
         """
         api_key = config.get('api_key', '') or os.environ.get('NONGSARO_API_KEY', '')
         if not api_key:
-            return [{'parameter_name': 'nongsaro.status',
-                     'value': 'API key not configured. Set NONGSARO_API_KEY.'}]
+            # 오류는 오류로 보고한다 — 지식으로 적립하지 않는다.
+            # 예전엔 상태 '레코드'를 돌려줬는데, 디스패처는 {'error':...} 가
+            # 아닌 반환을 전부 성공으로 보므로 sync_status='ok',
+            # records_written=1 이 되고 "API key not configured..." 라는
+            # **오류 문구가 지식 레코드로 저장**됐다(실측: sync 로그 다수).
+            # {'error':...} 로 돌려주면 소스 상태·동기화 로그·라이브러리
+            # 화면에 실패로 뜬다 — 운영자에게 필요한 바로 그 신호다.
+            return {'error': 'API key not configured. Set NONGSARO_API_KEY.'}
 
         crop_seq = int(config.get('crop_seq') or _DEFAULT_CROP_SEQ)
 

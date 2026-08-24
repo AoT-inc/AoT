@@ -145,46 +145,18 @@
     // 것으로 남고, 그것을 고른 저장을 서버가 거절한다 — 화면에 보이는 선택지가
     // 저장되지 않는 상태가 된다.
     var _programs = {};
-    var _programsInflight = {};
-
-    // GET 은 공유 캐시(AoTGeoData)를 지난다 — **지도 위젯이 여러 개면 이 모듈도
-    // 그 수만큼 돈다.** 한 대시보드에 같은 지도를 보는 위젯이 3개 있는 구성이
-    // 실제로 있고(김제: 지도·위성·위성2), 그때 여기서 생 fetch 를 쓰면 완전히
-    // 같은 요청이 3벌 나간다(라즈베리파이 실측: plots 3회·programs 3회).
-    // AoTGeoData 는 진행 중인 요청을 합치고 짧은 TTL 로 캐시한다.
-    function _geoGet(url) {
-        if (window.AoTGeoData) {
-            return window.AoTGeoData.get(url).then(function (r) {
-                return r.ok ? r.json() : null;
-            });
-        }
-        return fetch(url, { credentials: 'same-origin' })
-            .then(function (r) { return r.ok ? r.json() : null; });
-    }
 
     function _loadPrograms(kind) {
         kind = kind || 'vegetation';
-        // **끝난 결과만이 아니라 진행 중인 요청도 걸러야 한다.** 예전에는
-        // `_programs[kind]` 만 봤는데, 그것은 응답이 온 뒤에야 채워진다 —
-        // 위젯 셋이 같은 순간에 부르면 셋 다 비어 있는 캐시를 보고 전부
-        // 요청했다. 조회는 이제 AoTGeoData 를 지나므로 합쳐지지만, 이 함수가
-        // 만드는 프로미스도 함께 재사용해야 파싱과 후처리까지 한 번으로 끝난다.
         if (_programs[kind]) return Promise.resolve(_programs[kind]);
-        if (_programsInflight[kind]) return _programsInflight[kind];
-
-        var p = _geoGet('/api/geo/programs?kind=' + encodeURIComponent(kind))
+        return fetch('/api/geo/programs?kind=' + encodeURIComponent(kind),
+                     { credentials: 'same-origin' })
+            .then(function (r) { return r.json(); })
             .then(function (res) {
                 _programs[kind] = (res && res.ok) ? (res.programs || []) : [];
-                delete _programsInflight[kind];
                 return _programs[kind];
             })
-            .catch(function () {
-                delete _programsInflight[kind];
-                _programs[kind] = [];
-                return _programs[kind];
-            });
-        _programsInflight[kind] = p;
-        return p;
+            .catch(function () { _programs[kind] = []; return _programs[kind]; });
     }
 
     function load(uid, map, opts) {
@@ -196,8 +168,9 @@
         // 그 자리를 정하는 화면이 지도다 — 만들자마자 사라지면 무엇을 어디에
         // 두었는지 확인할 방법이 없다. 자라는 것과는 **점선**으로 가른다
         // (`planned` 속성 → 레이어 paint).
-        return _geoGet('/api/geo/plots?include_planned=1&map_uuid=' +
-                       encodeURIComponent(opts.mapUuid))
+        return fetch('/api/geo/plots?include_planned=1&map_uuid=' +
+                     encodeURIComponent(opts.mapUuid))
+            .then(function (r) { return r.json(); })
             .then(function (res) {
                 if (!res || !res.ok) return [];
                 var rows = res.plots || [];
@@ -230,11 +203,9 @@
             if (document.hidden) return;
             var cur = STATE[uid];
             if (!cur || !cur.opts) return;
-            // 위젯마다 타이머가 따로 도는데 주기가 같아 **동시에** 깨어난다 —
-            // 여기도 공유 캐시를 지나야 5분마다 같은 요청이 위젯 수만큼 나가지
-            // 않는다. 주기(300초)가 TTL(10초)보다 훨씬 길어 신선도는 그대로다.
-            _geoGet('/api/geo/plots?include_planned=1&map_uuid=' +
-                    encodeURIComponent(cur.opts.mapUuid || ''))
+            fetch('/api/geo/plots?include_planned=1&map_uuid=' +
+                  encodeURIComponent(cur.opts.mapUuid || ''))
+                .then(function (r) { return r.json(); })
                 .then(function (res) {
                     if (!res || !res.ok) return;
                     cur.plots = res.plots || [];
@@ -306,8 +277,8 @@
         //
         // 라벨 축의 주인은 위젯의 라벨 토글(`label_hidden_plot`)이고, 그 값은
         // `setLabelVisible` 로 들어와 `st.labelVisible` 에 남아 있다. 여기서
-        // 건드리지 않으면 방금 만든 라벨에도 `_renderLabels` 안의
-        // `_applyLabelVisibility` 가 그 값을 그대로 적용한다.
+        // 건드리지 않으면 방금 만든 라벨에도 `_renderLabels` 끝의
+        // `_applyLabelZoom` 이 그 값을 그대로 적용한다.
         setShapeVisible(uid, map, opts.visible !== false);
         (STATE[uid] = STATE[uid] || {}).visible = opts.visible !== false;
     }
@@ -395,6 +366,10 @@
         if (!window.maplibregl || !window.maplibregl.Marker) return;
 
         var reg = window.AoTMapLabelLayers;
+        var desc = reg && reg.resolve
+            ? reg.resolve(!!(opts && opts.facilityCentric), 'plot')
+            : { minZoom: 16 };
+        st.labelMinZoom = desc.minZoom || 16;
         st.markers = [];
 
         (rows || []).forEach(function (p) {
@@ -436,30 +411,11 @@
             } catch (e) { /* 마커 하나 실패가 나머지를 막지 않는다 */ }
         });
 
-        // 라벨 축(사용자 토글)을 새로 만든 요소에 적용한다 — 아래 setLabelVisible
-        // 주석과 같은 이유로, 이 함수가 markers 를 다시 만들 때마다 저장된 값을
-        // 다시 입힌다.
-        _applyLabelVisibility(uid);
-
-        // ⚠ **줌 게이트는 이 모듈이 갖지 않는다.** 예전에는 여기서 자체 줌
-        // 임계(`AoTMapLabelLayers.resolve().minZoom`, 하드코딩 16)를 읽어
-        // `style.display` 로 직접 숨겼다 — 위젯의 통합 줌 게이트
-        // (`LABEL_ZOOM_GATED`/`label_min_zoom`, 기본 17)와 **다른 기준**이었다.
-        // 둘이 갈리면 사용자가 `label_min_zoom` 을 올려도 구획 라벨은 안 따라
-        // 오고, 내려도(0 = 안 숨김) 구획만 계속 숨는 식으로 "한 옵션을 고치면
-        // 다른 옵션이 안 먹는다" 는 증상이 났다.
-        //
-        // 대신 다른 라벨 종류(입력·출력·시설…)와 **같은 클래스 축**을 쓴다 —
-        // `.aot-zoom-hidden`, 위젯의 `_applyZoomGate` 가 `[data-label-kind]`
-        // 전체를 훑어 매긴다(이 라벨은 `dataset.labelKind='plot'` 로 이미
-        // 그 명부에 있다). 여기서는 방금 새로 만든 요소가 **다음 줌 이벤트를
-        // 기다리지 않고** 바로 반영되도록 그 함수를 한 번 불러 주기만 한다.
-        try {
-            var _inst = window.AoTWidgetInstances && window.AoTWidgetInstances[uid];
-            if (_inst && typeof _inst._applyZoomGate === 'function') {
-                _inst._applyZoomGate();
-            }
-        } catch (e) {}
+        _applyLabelZoom(uid, map);
+        if (!st.zoomBound) {
+            st.zoomBound = true;
+            map.on('zoom', function () { _applyLabelZoom(uid, map); });
+        }
 
         if (reg && reg.register) {
             try {
@@ -469,24 +425,16 @@
         }
     }
 
-    /** 라벨 축(사용자 토글)만 요소에 반영한다 — **줌은 보지 않는다.**
-     *
-     * 줌 숨김은 `.aot-zoom-hidden` 클래스로 위젯의 통합 게이트가 맡고, 이
-     * 함수는 `.aot-type-hidden` 클래스로 `label_hidden_plot` 하나만 맡는다.
-     * 두 클래스는 각자 독립으로 `display:none` 을 걸 수 있고(위젯 CSS의
-     * `.aot-type-hidden:not(.aot-focus-show)` / `.aot-zoom-hidden:not(...)`),
-     * `.aot-focus-show` 가 붙으면 **둘 다** 비켜간다 — 모달이 열려 있는 동안은
-     * 사용자가 껐든 줌이 가렸든 라벨이 보인다. 도형만 이 조합이 아니라
-     * 인라인 스타일로 숨었을 때는 `.aot-focus-show` 가 아무 힘이 없었다
-     * (그 결함이 이번 정리의 계기다 — 도형은 켜지는데 라벨은 안 켜졌다).
-     */
-    function _applyLabelVisibility(uid) {
+    /** 줌 게이트 — 라벨이 이미 많은 화면이라 당겨야 보인다. */
+    function _applyLabelZoom(uid, map) {
         var st = STATE[uid];
         if (!st || !st.markers) return;
-        var hidden = st.labelVisible === false;
+        // 라벨의 표시는 **라벨 축**과 줌만 본다. 예전에는 `st.visible`(도형까지
+        // 함께 뜻하던 값)을 봐서 도형을 끄면 라벨도 사라졌다.
+        var show = (st.labelVisible !== false) &&
+                   (map.getZoom() >= (st.labelMinZoom || 16));
         st.markers.forEach(function (m) {
-            try { m.getElement().classList.toggle('aot-type-hidden', hidden); }
-            catch (e) {}
+            try { m.getElement().style.display = show ? '' : 'none'; } catch (e) {}
         });
     }
 
@@ -517,21 +465,21 @@
         (STATE[uid] = STATE[uid] || {}).shapeVisible = !!visible;
     }
 
-    /** 라벨 축만 켜고 끈다. 줌 게이트와는 **다른 축**이다(둘 다 꺼야 보이지 않는다
-     * — `_applyLabelVisibility` 주석 참조).
+    /** 라벨만 켜고 끈다. 줌 게이트와는 **다른 축**이다(둘 다 꺼야 보이지 않는다).
+     *
+     * 라벨 축만 켜고 끈다.
      *
      * ⚠ **아직 이 위젯을 모를 때 불릴 수 있다.** 위젯은 새로고침 직후 저장된
      * 라벨 상태를 되살리려고 500·1500·3000ms 에 이것을 부르는데, 구획은 그때까지
      * 서버에서 안 왔을 수 있다. 예전에는 `if (st)` 라 그 호출이 **조용히 버려졌고**,
      * 뒤늦게 렌더된 라벨은 아무도 끈 적 없다는 듯 켜진 채 나왔다 — "토글을 꺼
      * 두고 새로고침하면 되돌아온다" 가 그 증상이다. 상태 칸을 먼저 만들어 두면
-     * 나중에 렌더될 때 `_renderLabels` 의 `_applyLabelVisibility` 호출이 그
-     * 값을 그대로 따른다.
+     * 나중에 렌더될 때 `_applyLabelZoom` 이 그 값을 그대로 따른다.
      */
     function setLabelVisible(uid, map, visible) {
         var st = STATE[uid] = STATE[uid] || {};
         st.labelVisible = !!visible;
-        _applyLabelVisibility(uid);
+        _applyLabelZoom(uid, map);
     }
 
     /** 도형·라벨을 함께 내리는 큰 스위치.
@@ -633,37 +581,6 @@
         var popupApi = window.AoTMapPopup;
         if (!shell || !popupApi || !popupApi.buildPlotModal) return;
 
-        // 열 탭: 명시 지정(저장 후 복귀) > 위젯 옵션 popup_default_tab.
-        var want = opts.openTab || opts.defaultTab;
-
-        // **껍데기를 먼저 띄운다.** 예전에는 조회가 끝난 뒤에야 창이 떴다 — 그
-        // 왕복 동안 화면에는 아무 일도 일어나지 않아 누른 사람은 눌린 줄을
-        // 모른다. 구역·시설 창은 이미 이렇게 한다.
-        //
-        // 이름은 목록에 있는 것을 그대로 쓴다(지도가 그 이름으로 라벨을 그리고
-        // 있다) — 조회를 기다려 이름을 채우면 껍데기의 뜻이 없다.
-        var known = ((STATE[uid] || {}).plots || []).filter(function (x) {
-            return x.unique_id === uuid;
-        })[0] || {};
-        // 세 번째 인자 = **열려 있는 동안 보이게 할 대상**. 사용자가 구획
-        // 라벨·도형을 꺼 두었어도 이 창이 떠 있는 동안은 보인다 — 어디
-        // 이야기인지 지도에서 못 찾으면 창 안의 값이 어느 자리 것인지 알 수
-        // 없다. (셸이 닫힐 때 스스로 거둔다.)
-        var popup = shell(popupApi.buildPlotModalSkeleton(
-            known.name || known.subject || '', { defaultTab: want }),
-            uid, uuid);
-        var el0 = popup && popup.getElement && popup.getElement();
-        var body = el0 && el0.querySelector('.maplibregl-popup-content');
-        if (!body) return;
-
-        // 뒤로가기를 **껍데기 단계에서** 세운다. 목록에 이미 있는 것(시설이면
-        // 이름까지, 노지면 상위 uuid)으로 위젯이 지도에서 나머지를 푼다 —
-        // 조회를 기다릴 이유가 없다. 못 풀면 조용히 넘어가고 상세가 오면
-        // 그때 다시 부른다.
-        if (typeof opts.wireUp === 'function') {
-            try { opts.wireUp(uid, body, known); } catch (e) {}
-        }
-
         // cache:'no-store' — 이 응답에는 Cache-Control 이 없어서 브라우저가
         // 휴리스틱 캐시를 걸 수 있다. 저장 직후 다시 여는 경로가 있는데
         // (일정 추가·작물 편집) 거기서 옛 사본이 나오면 "저장했는데 화면이
@@ -671,28 +588,29 @@
         fetch('/api/geo/plot/' + encodeURIComponent(uuid), { cache: 'no-store' })
             .then(function (r) { return r.json(); })
             .then(function (res) {
-                if (!res || !res.ok) return null;
+                if (!res || !res.ok) return;
                 var p = res.plot;
-                // 이 구획 종류의 목록이 아직 없으면 받아 온 뒤 그린다 — 없는
-                // 채로 그리면 프로그램 줄이 통째로 빠진다(빌더는 선택지가 없으면
-                // 줄을 내지 않는다).
-                //
-                // 여기서 `openModal` 을 다시 부르지 않는다: 껍데기가 이미 떠
-                // 있으므로 다시 부르면 창이 둘이 된다.
+                // 이 구획 종류의 목록이 아직 없으면 받아 온 뒤 다시 연다 —
+                // 없는 채로 그리면 프로그램 줄이 통째로 빠진다(빌더는 선택지가
+                // 없으면 줄을 내지 않는다).
                 var _k = p.kind || 'vegetation';
-                var ready = _programs[_k] ? Promise.resolve()
-                                          : _loadPrograms(_k);
-                return ready.then(function () { return p; });
-            })
-            .then(function (p) {
-                if (!p || !body.isConnected) return;
+                if (!_programs[_k]) {
+                    _loadPrograms(_k).then(function () {
+                        openModal(uid, map, uuid, opts);
+                    });
+                    return;
+                }
                 // 관리 프로그램 선택지를 실어 준다 — 모달 빌더는 순수 함수라
                 // 스스로 조회하지 않는다(조회는 위젯의 일이다).
-                p.program_choices = _programs[p.kind || 'vegetation'] || [];
-                // 자리막이를 진짜 내용으로 바꾼다. 껍데기가 같은 골격이라
-                // 헤더·탭은 그대로 있고 안쪽만 채워진다.
-                body.innerHTML = popupApi.buildPlotModal(
-                    p, { defaultTab: want });
+                p.program_choices = _programs[_k] || [];
+                // 열 탭: 명시 지정(저장 후 복귀) > 위젯 옵션 popup_default_tab.
+                var want = opts.openTab || opts.defaultTab;
+                // 세 번째 인자 = **열려 있는 동안 보이게 할 대상**. 사용자가
+                // 구획 라벨·도형을 꺼 두었어도 이 창이 떠 있는 동안은 보인다 —
+                // 어디 이야기인지 지도에서 못 찾으면 창 안의 값이 어느 자리
+                // 것인지 알 수 없다. (셸이 닫힐 때 스스로 거둔다.)
+                var popup = shell(popupApi.buildPlotModal(
+                    p, { defaultTab: want }), uid, p.unique_id);
                 // 연 구획이 보이도록 지도를 옮긴다. 옮기는 것은 위젯의 일이라
                 // (카메라 여백이 패널 폭을 알아야 한다) 콜백으로 위임한다.
                 // 도형은 응답의 feature 에 실려 온다 — 구획 소스는 이 모듈이
@@ -700,15 +618,9 @@
                 if (typeof opts.focus === 'function') {
                     try { opts.focus(p); } catch (e) {}
                 }
-
-                // 뒤로가기 — **여기서 배선한다.** 제어 배선(`attachControl`)은
-                // `/contents` 를 기다리는데, 그 조회는 센서·환경·밸브를 함께
-                // 끌어오는 무거운 것이라 제목줄의 화살표만 창이 다 그려진 뒤에도
-                // 한참 늦게 튀어나왔다. 상위가 누구인지는 이 응답에 이미 있다.
-                if (typeof opts.wireUp === 'function') {
-                    try { opts.wireUp(uid, body, p); } catch (e) {}
-                }
-
+                var el = popup && popup.getElement && popup.getElement();
+                var body = el && el.querySelector('.maplibregl-popup-content');
+                if (!body) return;
                 // [환경·제어] — 제어 배선은 위젯이 빌려준다. 여기서 다시
                 // 구현하면 폴링·토글·예약이 두 벌이 된다.
                 //
@@ -761,17 +673,7 @@
                     })
                     .catch(function () {});
             })
-            .catch(function () {
-                // 자리막이는 스스로 걷히지 않는다 — 실패하면 영영 도는 것처럼
-                // 보인다. 무엇이 없는지 한 줄로 말하고 멈춘다.
-                if (!body || !body.isConnected) return;
-                var pane = body.querySelector(
-                    '.aot-bay-popup-pane[data-pane="overview"]');
-                if (pane) {
-                    pane.innerHTML = '<div class="aot-ov-block aot-ov-muted">' +
-                        _t('Failed to load data.') + '</div>';
-                }
-            });
+            .catch(function () {});
     }
 
     function _csrf() {
@@ -819,30 +721,6 @@
                 slot.innerHTML = P.buildPhotoCardHtml(photo);
             })
             .catch(function () { /* 사진은 곁들이다 — 실패해도 나머지는 그대로 */ });
-    }
-
-    /**
-     * 단계 일정 저장 (P8). 본문은 둘 중 하나다 —
-     * `{days: {단계키: 일수}}`(화면의 기본 어휘) 또는
-     * `{plan: {단계키: 'YYYY-MM-DD' | null}}`(날을 못박는 [연기]·[기본으로]).
-     *
-     * 성공하면 모달을 다시 연다. 경계 하나를 옮기면 뒤가 통째로 밀리고 단계·
-     * 목표·예상 종료일이 전부 다시 계산되므로, 부분 갱신하면 어디는 새 일정
-     * 어디는 옛 일정이 된다(승인과 같은 이유).
-     */
-    function _saveSchedule(plotUuid, payload, done) {
-        return _api('POST', '/api/geo/plot/' + encodeURIComponent(plotUuid) +
-                    '/schedule', payload).then(function (res) {
-            if (res.status >= 400 || !res.data.ok) {
-                if (window.showToast) {
-                    window.showToast(res.data.message || _t('Save failed'),
-                                     'error');
-                }
-                return false;
-            }
-            if (done) done();
-            return true;
-        });
     }
 
     /**
@@ -915,240 +793,6 @@
                 });
             });
         }
-
-        // [연기] — 같은 날짜 칸을 쓰지만 **사실이 아니라 계획**을 적는다(P8).
-        // 확인은 "그 날 넘어갔다", 연기는 "그 날 넘어갈 것" 이다.
-        var btnDefer = body.querySelector('.aot-ov-plot-stage-defer');
-        if (askRow && btnDefer) {
-            btnDefer.addEventListener('click', function () {
-                var dateEl = askRow.querySelector('.aot-ov-plot-stage-date');
-                var when = dateEl && dateEl.value;
-                if (!when) {
-                    if (window.showToast) {
-                        window.showToast(_t('Pick a date first.'), 'warning');
-                    }
-                    return;
-                }
-                // 제안된 날짜 그대로 미루면 아무 일도 일어나지 않는다(그 날은
-                // 이미 지난 계산상의 전환일이다). 조용히 지나가면 사용자는
-                // 버튼이 고장 난 것으로 본다.
-                if (when <= (dateEl.defaultValue || '')) {
-                    if (window.showToast) {
-                        window.showToast(_t('Pick a later date to postpone to.'),
-                                         'warning');
-                    }
-                    return;
-                }
-                var plan = {};
-                plan[askRow.dataset.stageKey] = when;
-                _saveSchedule(p.unique_id, { plan: plan }, refresh);
-            });
-        }
-
-        // ── 단계별 [편집] (P8) ──────────────────────────────────────
-        //
-        // 누르면 기간 입력과 지침 칸이 함께 열리고, [저장] 하나로 둘 다 보낸다.
-        // 저장 버튼이 단계마다 둘이면 어느 것이 무엇을 저장하는지 매번 확인하게
-        // 된다.
-        body.querySelectorAll('.aot-ov-sched-edit').forEach(function (btn) {
-            btn.addEventListener('click', function () {
-                var item = btn.closest('.aot-ov-sched-item');
-                if (!item) return;
-                var wrap = item.querySelector('.aot-ov-sched-edit-wrap');
-                var view = item.querySelector('.aot-ov-sched-days-view');
-                var edit = item.querySelector('.aot-ov-sched-days-edit');
-                if (!wrap) return;
-                var open = wrap.hidden;
-                wrap.hidden = !open;
-                if (edit) {
-                    edit.hidden = !open;
-                    if (view) view.hidden = open;
-                }
-                if (open) {
-                    var first = (edit && edit.querySelector('input')) ||
-                                wrap.querySelector('.aot-ov-sched-guide');
-                    if (first) first.focus();
-                }
-            });
-        });
-
-        // 단계 [저장] — 기간과 지침을 함께. **바뀐 것만** 보낸다: 안 건드린
-        // 기간까지 보내면 프로그램 기본이던 경계가 계획으로 굳는다.
-        body.querySelectorAll('.aot-ov-sched-save').forEach(function (btn) {
-            btn.addEventListener('click', function () {
-                var item = btn.closest('.aot-ov-sched-item');
-                if (!item) return;
-                var key = btn.getAttribute('data-stage-key');
-                var ta = item.querySelector('.aot-ov-sched-guide');
-                var dayEl = item.querySelector('.aot-ov-sched-days');
-                var jobs = [];
-                var moved = false;
-
-                if (ta && ta.value !== (ta.defaultValue || '')) {
-                    jobs.push(_api('POST', '/api/geo/plot/' +
-                        encodeURIComponent(p.unique_id) + '/stage-guidance',
-                        { stage_key: key, guidance: ta.value }));
-                }
-                if (dayEl && dayEl.value &&
-                        dayEl.value !== (dayEl.defaultValue || '')) {
-                    var days = {};
-                    days[key] = dayEl.value;
-                    moved = true;
-                    jobs.push(_api('POST', '/api/geo/plot/' +
-                        encodeURIComponent(p.unique_id) + '/schedule',
-                        { days: days }));
-                }
-                if (!jobs.length) {
-                    if (window.showToast) {
-                        window.showToast(_t('Nothing changed.'), 'info');
-                    }
-                    return;
-                }
-                btn.disabled = true;
-                Promise.all(jobs).then(function (res) {
-                    btn.disabled = false;
-                    var bad = res.filter(function (r) {
-                        return r.status >= 400 || !r.data.ok;
-                    })[0];
-                    if (bad) {
-                        if (window.showToast) {
-                            window.showToast(bad.data.message ||
-                                             _t('Save failed'), 'error');
-                        }
-                        return;
-                    }
-                    // 기간을 고쳤으면 뒤 단계의 날짜가 전부 다시 계산된다 —
-                    // 부분 갱신하면 어디는 새 일정, 어디는 옛 일정이 된다.
-                    if (moved) { refresh(); return; }
-                    if (ta) ta.defaultValue = ta.value;
-                    if (window.showToast) window.showToast(_t('Saved'), 'success');
-                });
-            });
-        });
-
-        // 단계 빼기 — 되돌리는 수단이 화면에 없으므로 한 번 묻는다.
-        body.querySelectorAll('.aot-ov-sched-drop').forEach(function (btn) {
-            btn.addEventListener('click', function () {
-                if (!window.confirm(_t('Remove this stage from this plot?'))) {
-                    return;
-                }
-                _api('DELETE', '/api/geo/plot/' +
-                     encodeURIComponent(p.unique_id) + '/stages/' +
-                     encodeURIComponent(btn.getAttribute('data-stage-key')))
-                    .then(function (res) {
-                        if (res.status >= 400 || !res.data.ok) {
-                            if (window.showToast) {
-                                window.showToast(res.data.message ||
-                                                 _t('Save failed'), 'error');
-                            }
-                            return;
-                        }
-                        refresh();
-                    });
-            });
-        });
-
-        // 단계 더하기 — 여닫는 방식은 [편집]과 같다.
-        var btnAddOpen = body.querySelector('.aot-ov-sched-addopen');
-        if (btnAddOpen) btnAddOpen.addEventListener('click', function () {
-            var wrap = body.querySelector('.aot-ov-sched-add-wrap');
-            if (!wrap) return;
-            wrap.hidden = !wrap.hidden;
-            if (!wrap.hidden) {
-                var el = wrap.querySelector('.aot-ov-sched-newname');
-                if (el) el.focus();
-            }
-        });
-
-        var btnAdd = body.querySelector('.aot-ov-sched-addgo');
-        if (btnAdd) btnAdd.addEventListener('click', function () {
-            var nameEl = body.querySelector('.aot-ov-sched-newname');
-            var daysEl = body.querySelector('.aot-ov-sched-newdays');
-            if (!nameEl || !nameEl.value.trim()) {
-                if (window.showToast) {
-                    window.showToast(_t('Stage name'), 'warning');
-                }
-                return;
-            }
-            _api('POST', '/api/geo/plot/' +
-                 encodeURIComponent(p.unique_id) + '/stages', {
-                name: nameEl.value,
-                days: daysEl && daysEl.value
-            }).then(function (res) {
-                if (res.status >= 400 || !res.data.ok) {
-                    if (window.showToast) {
-                        window.showToast(res.data.message ||
-                                         _t('Save failed'), 'error');
-                    }
-                    return;
-                }
-                refresh();
-            });
-        });
-
-
-        // [프로그램으로 등록] — 등록은 **복사**다. 이 구획은 지금 따르던 것을
-        // 그대로 따르므로 모달을 다시 열 필요가 없다.
-        var btnRegOpen = body.querySelector('.aot-ov-sched-regopen');
-        if (btnRegOpen) btnRegOpen.addEventListener('click', function () {
-            var wrap = body.querySelector('.aot-ov-sched-reg-wrap');
-            if (!wrap) return;
-            wrap.hidden = !wrap.hidden;
-            if (!wrap.hidden) {
-                var el = wrap.querySelector('.aot-ov-sched-regname');
-                if (el) el.focus();
-            }
-        });
-
-        var btnReg = body.querySelector('.aot-ov-sched-reggo');
-        if (btnReg) btnReg.addEventListener('click', function () {
-            var nameEl = body.querySelector('.aot-ov-sched-regname');
-            btnReg.disabled = true;
-            _api('POST', '/api/geo/plot/' +
-                 encodeURIComponent(p.unique_id) + '/save-as-program',
-                 { name: nameEl && nameEl.value })
-                .then(function (res) {
-                    btnReg.disabled = false;
-                    if (res.status >= 400 || !res.data.ok) {
-                        if (window.showToast) {
-                            window.showToast(res.data.message ||
-                                             _t('Save failed'), 'error');
-                        }
-                        return;
-                    }
-                    // 만들어진 이름을 그대로 말한다 — 이름이 겹치면 서버가
-                    // 번호를 붙이므로, 사용자가 적은 것과 다를 수 있다.
-                    var nm = (res.data.program || {}).name || '';
-                    if (window.showToast) {
-                        window.showToast(
-                            _t('Registered as a programme: %(name)s')
-                                .replace('%(name)s', nm), 'success');
-                    }
-                    var wrap = body.querySelector('.aot-ov-sched-reg-wrap');
-                    if (wrap) wrap.hidden = true;
-                    if (nameEl) nameEl.value = '';
-                });
-        });
-
-        // 자동 승인 — 구획의 성질이다(P8). 켜면 확인 없이 기록되므로 바로 저장
-        // 하고 모달을 다시 연다(단계가 그 자리에서 따라잡힐 수 있다).
-        var togAuto = body.querySelector('.aot-ov-plot-auto');
-        if (togAuto) togAuto.addEventListener('change', function () {
-            _api('POST', '/api/geo/plot', {
-                unique_id: p.unique_id,
-                auto_advance: !!togAuto.checked
-            }).then(function (res) {
-                if (res.status >= 400 || !res.data.ok) {
-                    togAuto.checked = !togAuto.checked;
-                    if (window.showToast) {
-                        window.showToast(res.data.message ||
-                                         _t('Save failed'), 'error');
-                    }
-                    return;
-                }
-                refresh();
-            });
-        });
 
         // 자원 [적용] — 선언된 것만 켠다. 물이 나오는 일이라 한 번 묻는다.
         var btnRes = body.querySelector('.aot-ov-plot-res-apply');

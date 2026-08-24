@@ -67,6 +67,9 @@ def list_review_items(context_state=None):
             'content': row.digest_text,
             'tags': tag_list,
             'attribution': row.attribution,
+            # C4: 원문 주소. 리뷰어가 "이게 맞는 말인가" 를 확인할 유일한 수단이고,
+            # 그 확인이 §3.2 승격의 전제다 — 없으면 항목은 영원히 미확인으로 남는다.
+            'source_url': row.source_url,
             'context_state': row.context_state,
             'flagged_reason': row.flagged_reason,
             'reuse_count': row.reuse_count or 0,

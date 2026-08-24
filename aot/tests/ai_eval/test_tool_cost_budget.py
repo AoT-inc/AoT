@@ -120,8 +120,30 @@ from aot.scripts.measure_ai_tool_cost import measure_manifest
 # 기본 켜짐이라 `tools/list` 에 실제로 나가는 것은 core + 서랍 기계장치뿐이고,
 # 이 5종은 `_TIER_ASSIGNMENT` 에서 space/drawer 라 서랍 인덱스에 **이름만**
 # 늘어난다. 실제 고정비는 test_mcp_tool_surface.py 가 잰다.
-AGENT_MANIFEST_TOKEN_CEILING = 14_400
-MCP_CATALOG_TOKEN_CEILING = 23_100
+# ── 2026-08-24 재기준선 — 지식 도구가 조사 결과를 받게 한다 ─────────────────
+#
+#   무엇                              에이전트    MCP     도구
+#   직전                               14,316   23,004  105 / 113
+#   지식 도구 문구 정합 + source_url     14,411   23,142  105 / 113
+#
+# **도구 수는 그대로다.** 늘어난 것은 두 가지뿐이고 둘 다 문구가 아니라 계약이다:
+#
+# (1) `knowledge_shelve` 가 "네가 **조사한** 결과" 의 적립을 명시 허용한다.
+#     예전 설명은 "derived / observed / were told" 뿐이라, MCP 로 연결된 외부
+#     LLM 이 웹에서 조사한 요약을 "이 도구 대상이 아니다" 로 읽을 수 있었다.
+#     도구는 처음부터 부를 수 있었지만 **부를 이유가 안 적혀 있었다** — 2026-08-22
+#     의 "닿지 않던 기능" 과 같은 계열이고, 이번엔 배선이 아니라 문장이 막고 있었다.
+# (2) `source_url` 파라미터 신설. 출처 주소를 담을 자리가 없으면 리뷰어가 원문으로
+#     돌아갈 수 없고, 그러면 §3.2 승격 경로가 실질적으로 막혀 AI 가 비친 지식이
+#     영원히 미확인으로 남는다. 스키마 필드 하나의 값이다.
+#
+# 문구 부풀림 쪽은 **먼저 덜어냈다**(propose_plot_split 선례): 연쇄 레시피를 두
+# 표면에 중복으로 싣지 않고 나눴고 — 내장 에이전트는 루프 프롬프트가 그 지시를
+# 이미 싣는다 — read_manual 대비 설명이 description 과 usage_hint 에 두 번 있던
+# 것, attribution 안내가 description 과 스키마에 겹치던 것을 각각 한 곳으로
+# 합쳤다. 그 정리로 288토큰 중 대부분을 되찾고 남은 것이 위 숫자다.
+AGENT_MANIFEST_TOKEN_CEILING = 14_450
+MCP_CATALOG_TOKEN_CEILING = 23_200
 
 # 등급(`AOT_AI_TOOL_TIERING=1`)을 켰을 때의 매니페스트. 2026-08-21 실측
 # 19항목 · 14,064자 · 약 3,516토큰 — 끈 상태의 **25%** 다.
@@ -137,7 +159,21 @@ MCP_CATALOG_TOKEN_CEILING = 23_100
 # 도구를 하나 더 얹거나 `_TIER_ASSIGNMENT` 에서 배정을 빠뜨리면(빠뜨린 도구는
 # 서랍 기본값으로 떨어지므로 이 숫자는 안 움직이지만, 바로 아래
 # `test_every_tool_has_a_tier_assignment` 가 잡는다) 여기서 보인다.
-TIERED_MANIFEST_TOKEN_CEILING = 3_600
+# 2026-08-24: `knowledge_search` core 승격으로 3,600 → 3,679(+79: 도구 167,
+# 서랍 인덱스에서 이름 하나 빠져 -88). 상한을 3,700 으로 올린다.
+#
+# **먼저 무엇을 대신 내릴지 봤다**(이 상한이 강제하는 질문이다). 지금 등급
+# 매니페스트 20개 중 knowledge_search 보다 덜 중요한 것을 찾지 못했다 —
+# list_ai_agents(40)·list_device_types(96) 가 후보로 보였으나, 둘 다 이 작업과
+# 무관한 흐름(AI 설정, 장치 정의)이 쓰는 도구라 여기서 판단할 일이 아니다.
+# 배정표는 "주기적으로 사람이 다시 보는 판단" 이고, 곁다리로 건드릴 자리가
+# 아니다.
+#
+# 올리는 근거: 이 도구가 안 보이면 LLM 은 주제 질문에 **자기 기억으로 답한다**
+# — 라이브러리 전체가 막으려는 실패이고, 2026-08-24 에 실제로 그 상태였다
+# (docs/design/ai-library-redesign.md §10.1). 쓰기 동사(knowledge_shelve)는
+# 올리지 않았다: 그것이 필요해질 때는 이미 record 서랍이 열려 있다.
+TIERED_MANIFEST_TOKEN_CEILING = 3_700
 
 # 도구 하나가 이보다 크면 설명이 아니라 문서다. 2026-08-15 에는 가장 큰 것이
 # get_plot 3,164자였고 그 정도를 상한선으로 봤다.

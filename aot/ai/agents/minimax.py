@@ -49,16 +49,20 @@ class MiniMax_AI(AbstractAI):
         logger.info(f"Initializing MiniMax_AI with endpoint: {self.api_endpoint}")
 
     def get_context_budget(self):
-        """
-        MiniMax specific character budgets.
-        MiniMax-Text-01 supports up to 200K context.
+        """MiniMax-Text-01 은 200K **토큰** 창을 지원한다.
+
+        2026-08-24: standard 를 200,000 → 300,000자로 올렸다. 200,000자는
+        약 50k 토큰으로 창의 4분의 1만 쓰는 값인데, 이 설치의 실측 프롬프트가
+        197,267자라 **여유가 2,700자밖에 없었다** — 컨텍스트가 조금만 늘어도
+        시스템 지시가 잘리는 자리였다. 창이 넉넉한데 예산만 좁게 잡을 이유가
+        없다(base_ai.get_context_budget 의 2026-08-24 항목 참조).
         """
         budgets = {
             'lightweight': 50000,     # ~12.5k tokens
-            'standard': 200000,       # ~50k tokens
+            'standard': 300000,       # ~75k tokens
             'heavy': 500000           # ~125k tokens (within 200K ctx)
         }
-        return budgets.get(self.model_tier, 200000)
+        return budgets.get(self.model_tier, 300000)
 
     def get_max_output_tokens(self):
         """

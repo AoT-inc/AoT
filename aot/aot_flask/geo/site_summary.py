@@ -353,16 +353,6 @@ def _build_summary(site_uuid):
 
     link_status = _link_status(all_ids, partial)
 
-    # 측정값도 **한 번에** 읽는다 — 통신 상태를 한 번에 읽는 것과 같은 이유다.
-    # 자식마다 채널 수만큼 Influx 를 치면 시설 10개짜리 필지에서 100회를 넘고,
-    # 그것이 이 엔드포인트가 6~7초 걸리던 원인이었다(라즈베리파이 실측).
-    # 실패해도 값이 사라지지 않는다 — 사전 조회가 없는 것은 곧 개별 조회다.
-    try:
-        prefetched = prefetch_last_values(all_ids)
-    except Exception as exc:
-        logger.warning('[SiteSummary] 값 사전 조회 실패: %s', exc)
-        prefetched = {}
-
     children = []
     for shape in children_shapes:
         # **열 수 없는 것은 목록에 넣지 않는다.** `type='facility'` 인데
@@ -376,8 +366,7 @@ def _build_summary(site_uuid):
         if shape.type == 'facility' and not _facility_of_shape(shape.unique_id):
             continue
         children.append(_child_entry(shape, ids_by_child[shape.unique_id],
-                                     link_status, partial,
-                                     prefetched=prefetched))
+                                     link_status, partial))
 
     offline_total = sum(c['issues']['comm_fault'] for c in children)
 
@@ -484,9 +473,8 @@ def _device_ids_for(shape):
         return set()
 
 
-def _child_entry(shape, device_ids, link_status, partial, prefetched=None):
-    rep, sensors = _sensor_rollup(device_ids, partial, rep_key_of(shape),
-                                  prefetched=prefetched)
+def _child_entry(shape, device_ids, link_status, partial):
+    rep, sensors = _sensor_rollup(device_ids, partial, rep_key_of(shape))
     issues = _issue_counts(device_ids, link_status)
 
     # 이름이 없으면 **빈 문자열**로 낸다 — uuid 를 그대로 내보내면 목록에
@@ -514,91 +502,7 @@ def _child_entry(shape, device_ids, link_status, partial, prefetched=None):
 
 # ── 대표 측정값 ─────────────────────────────────────────────────────────────
 
-def prefetch_last_values(device_ids):
-    """`(device_id, measurement_id) → 값|None` 을 **한 번에** 읽어 둔다.
-
-    필지 요약은 자식(구역·시설)마다 `env_for_devices` 를 부르고, 그것이 다시
-    장치의 채널마다 Influx 를 한 번씩 친다. 채널이 곱해지므로 시설 10개짜리
-    필지에서 100회를 넘고, 한 번이 수십 ms 라 그대로 초 단위가 된다 —
-    라즈베리파이 테스트 서버 실측에서 이 엔드포인트 하나가 **6~7초**였다.
-    `query_last_values_bulk` 가 그것을 창(max_age)당 한 번으로 접는다.
-
-    Returns:
-        dict. **키가 있으면 그것이 답이다**(값 또는 None=신선한 값 없음).
-        키가 없으면 "사전 조회하지 못했다" 이므로 호출부가 개별 조회로
-        되돌아간다. 그래서 사전 조회가 실패해도 값이 사라지지 않고 느려질
-        뿐이다.
-
-    ⚠ 빈 dict 를 "값이 하나도 없다" 로 읽으면 안 된다 — 그 둘을 가르는 것이
-    `query_last_values_bulk_status` 의 `ok` 다. 측정이 아직 하나도 없는 설치
-    (갓 만든 서버)에서는 전부 miss 인데, 그것을 실패로 보면 개별 조회로 전부
-    되돌아가 **가장 느린 경우에 최적화가 통째로 꺼진다.**
-    """
-    from aot.databases.models import Conversion, DeviceMeasurements, Input
-    from aot.utils.influx import bulk_key, query_last_values_bulk_status
-    from aot.utils.measurement_freshness import effective_max_age
-    from aot.utils.system_pi import return_measurement_info
-
-    out = {}
-    ids = [d for d in (device_ids or []) if d]
-    if not ids:
-        return out
-
-    inputs = Input.query.filter(Input.unique_id.in_(ids)).all()
-    if not inputs:
-        return out
-
-    rows = DeviceMeasurements.query.filter(
-        DeviceMeasurements.device_id.in_([i.unique_id for i in inputs])).all()
-    conv_ids = {r.conversion_id for r in rows if r.conversion_id}
-    conversions = {}
-    if conv_ids:
-        conversions = {c.unique_id: c for c in Conversion.query.filter(
-            Conversion.unique_id.in_(list(conv_ids))).all()}
-    by_device = {}
-    for row in rows:
-        by_device.setdefault(row.device_id, []).append(row)
-
-    # 창(max_age)이 다르면 한 쿼리로 합칠 수 없다 — 주기가 같은 장치끼리 묶인다.
-    # 창을 가장 긴 것으로 통일해 한 번에 치지 않는 이유: 하루짜리 장치 하나가
-    # 나머지 전부의 스캔 범위까지 하루로 넓혀 버린다.
-    by_age = {}
-    for inp in inputs:
-        max_age = effective_max_age(None, inp.period, inp.max_age_s,
-                                    floor=FRESH_MAX_AGE_S,
-                                    factor=STALE_PERIOD_FACTOR)
-        for row in by_device.get(inp.unique_id, []):
-            channel, unit, measure = return_measurement_info(
-                row, conversions.get(row.conversion_id))
-            if not unit:
-                continue
-            by_age.setdefault(int(max_age), []).append(
-                (inp.unique_id, row.unique_id, unit, channel, measure))
-
-    for max_age, items in by_age.items():
-        try:
-            found, ok = query_last_values_bulk_status(
-                [(unit, dev, ch, meas) for dev, _mid, unit, ch, meas in items],
-                past_sec=max_age)
-        except Exception as exc:
-            logger.warning('[SiteSummary] 값 사전 조회 실패(max_age=%s): %s',
-                           max_age, exc)
-            continue
-        if not ok:
-            continue
-        for dev, mid, unit, ch, meas in items:
-            hit = found.get(bulk_key(unit, dev, ch, meas))
-            value = None
-            if hit is not None:
-                try:
-                    value = float(hit[1])
-                except (TypeError, ValueError):
-                    value = None
-            out[(dev, mid)] = value
-    return out
-
-
-def env_for_devices(device_ids, prefetched=None):
+def env_for_devices(device_ids):
     """장치 묶음의 현재 환경 — `{'readings': [...], 'sensors': {...}}`.
 
     구역 모달도 같은 답이 필요해서 공용으로 뺐다(routes_geo 의 zone contents).
@@ -607,17 +511,6 @@ def env_for_devices(device_ids, prefetched=None):
     readings 는 채널 key 별 평균이다. 메타 채널(rssi/snr/battery)은 뺀다 —
     빼기 전에는 하트비트 채널이 0번인 LoRaWAN 노드가 온도 대신 배터리 전압을
     대표값으로 내세웠다. 정렬은 SENSOR_KEY_PRIORITY 순이라 첫 항목이 곧 대표값이다.
-
-    `prefetched`(`prefetch_last_values` 의 결과)를 주면 Influx 를 채널마다 치지
-    않는다. **키가 있으면 그 값이 답이고**(None 이면 신선한 값 없음), 없으면
-    개별 조회로 되돌아간다 — 사전 조회를 못 한 장치가 섞여도 값이 비지 않는다.
-
-    안 주면 **여기서 한 번 뜬다.** 그래야 이 함수를 그냥 부르는 자리(구역
-    모달)도 왕복이 채널 수만큼 늘지 않는다. 여러 묶음을 도는 호출자만
-    `prefetch_last_values` 를 자기가 불러 **전체를 한 번에** 접으면 된다
-    (필지 요약이 그렇게 한다) — 묶음마다 맡기면 묶음 수만큼 쿼리가 된다.
-    빈 dict 를 넘기는 것과 None 은 다르다: 빈 dict 는 "이미 시도했고 못 얻었다"
-    이므로 다시 뜨지 않는다.
     """
     from aot.aot_flask.geo.facility_sensors import (
         META_CHANNEL_KEYS, channel_meta_for_dm)
@@ -628,29 +521,15 @@ def env_for_devices(device_ids, prefetched=None):
         return empty
 
     inputs = Input.query.filter(Input.unique_id.in_(list(device_ids))).all()
-    if not inputs:
-        return empty
-
-    # 장치마다 다시 묻지 않는다 — 자식 수 × 장치 수만큼 반복되던 자리다.
-    by_device = {}
-    for row in DeviceMeasurements.query.filter(
-            DeviceMeasurements.device_id.in_(
-                [i.unique_id for i in inputs])).all():
-        by_device.setdefault(row.device_id, []).append(row)
-
-    if prefetched is None:
-        try:
-            prefetched = prefetch_last_values([i.unique_id for i in inputs])
-        except Exception as exc:
-            logger.warning('[SiteSummary] 값 사전 조회 실패: %s', exc)
-            prefetched = {}
 
     by_key = {}
     valid = total = 0
 
     for inp in inputs:
+        measurements = DeviceMeasurements.query.filter_by(
+            device_id=inp.unique_id).all()
         renderable = []
-        for dm in by_device.get(inp.unique_id, []):
+        for dm in measurements:
             meta = channel_meta_for_dm(dm)
             key = meta.get('key')
             if not key or key in META_CHANNEL_KEYS:
@@ -662,13 +541,9 @@ def env_for_devices(device_ids, prefetched=None):
         total += 1
         fresh_here = False
         for dm, meta in renderable:
-            hit = (inp.unique_id, dm.unique_id)
-            if hit in prefetched:
-                value = prefetched[hit]
-            else:
-                value = _last_value(inp.unique_id, dm.unique_id,
-                                    period=inp.period,
-                                    device_max_age=inp.max_age_s)
+            value = _last_value(inp.unique_id, dm.unique_id,
+                                period=inp.period,
+                                device_max_age=inp.max_age_s)
             if value is None:
                 continue
             fresh_here = True
@@ -690,10 +565,10 @@ def env_for_devices(device_ids, prefetched=None):
     return {'readings': readings, 'sensors': {'valid': valid, 'total': total}}
 
 
-def _sensor_rollup(device_ids, partial, rep_key=None, prefetched=None):
+def _sensor_rollup(device_ids, partial, rep_key=None):
     """(rep, sensors) — 필지 행이 쓰는 축약형."""
     try:
-        env = env_for_devices(device_ids, prefetched=prefetched)
+        env = env_for_devices(device_ids)
     except Exception as exc:
         logger.warning('[SiteSummary] 환경 집계 실패: %s', exc)
         _mark(partial, 'children.sensors')

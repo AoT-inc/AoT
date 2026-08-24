@@ -377,100 +377,6 @@ def _read_channel(device_id: str, measurement_id: str, max_age: int):
     return None, None, False
 
 
-def _stale_value(device_id: str, measurement_id: str):
-    """창 없이 마지막 값 — `_read_channel` 의 2차 조회와 같다.
-
-    **이것만은 배치로 묶지 않는다.** 단일 계열의 무제한 조회는 Influx 가 색인
-    으로 끝내 빠르지만(실측 장치당 20ms 안팎), 같은 창을 여러 계열로 묶으면
-    보존 기간 전체를 훑어 **21계열에 11초**가 걸렸다(창을 30일로 좁혀도 같다 —
-    비용은 계열 수가 아니라 창이 만든다). 배치가 이득인 것은 창이 좁을 때뿐이다.
-    """
-    from aot.utils.influx import get_last_measurement
-    try:
-        ts, val = get_last_measurement(device_id, measurement_id, max_age=None)
-        if ts is not None and val is not None:
-            return ts, float(val), True
-    except Exception as exc:
-        logger.debug('[LinkStatus] %s/%s 이력 조회 실패: %s',
-                     device_id, measurement_id, exc)
-    return None, None, False
-
-
-def _prefetch_channels(specs, max_age: int) -> Dict[tuple, tuple]:
-    """`(device_id, measurement_id) → (ts, value, stale)` 를 **한 번에** 읽는다.
-
-    `_read_channel` 은 채널마다 Influx 를 치고, 신선한 값이 없으면 전 이력을
-    한 번 더 훑는다 — 장치당 최대 6회다. 필지 요약 하나가 그것을 장치 수만큼
-    반복해 실측 27회였고, 값이 없는 설치(갓 만든 서버)에서는 **전부 2회째까지**
-    가므로 가장 느린 경우가 가장 흔한 경우가 된다.
-
-    Returns:
-        키가 있으면 그것이 답이다. 없으면 사전 조회하지 못한 것이므로 호출부가
-        `_read_channel` 로 되돌아간다 — 실패해도 배지가 사라지지 않는다.
-    """
-    from aot.databases.models import Conversion, DeviceMeasurements
-    from aot.utils.influx import bulk_key, query_last_values_bulk_status
-    from aot.utils.system_pi import return_measurement_info
-
-    out: Dict[tuple, tuple] = {}
-    specs = [(d, m) for d, m in (specs or ()) if d and m]
-    if not specs:
-        return out
-
-    try:
-        rows = {r.unique_id: r for r in DeviceMeasurements.query.filter(
-            DeviceMeasurements.unique_id.in_([m for _d, m in specs])).all()}
-        conv_ids = {r.conversion_id for r in rows.values() if r.conversion_id}
-        conversions = {}
-        if conv_ids:
-            conversions = {c.unique_id: c for c in Conversion.query.filter(
-                Conversion.unique_id.in_(list(conv_ids))).all()}
-    except Exception as exc:
-        logger.debug('[LinkStatus] 채널 메타 조회 실패: %s', exc)
-        return out
-
-    series = {}
-    for device_id, measurement_id in specs:
-        row = rows.get(measurement_id)
-        if row is None:
-            continue
-        channel, unit, measure = return_measurement_info(
-            row, conversions.get(row.conversion_id))
-        if not unit:
-            continue
-        series[(device_id, measurement_id)] = (unit, device_id, channel, measure)
-    if not series:
-        return out
-
-    try:
-        fresh, ok = query_last_values_bulk_status(
-            list(series.values()), past_sec=max_age)
-    except Exception as exc:
-        logger.debug('[LinkStatus] 배치 조회 실패: %s', exc)
-        return out
-    if not ok:
-        return out
-
-    missing = {}
-    for key, spec in series.items():
-        hit = fresh.get(bulk_key(*spec))
-        if hit is None:
-            missing[key] = spec
-            continue
-        try:
-            out[key] = (hit[0], float(hit[1]), False)
-        except (TypeError, ValueError):
-            out[key] = (None, None, False)
-
-    # 신선한 값이 없는 채널만 개별로 한 번 더 — 창이 무제한이라 묶으면 오히려
-    # 느려진다(`_stale_value` 주석). 못 찾아도 결과를 **적어 둔다**: 비워 두면
-    # 호출부가 `_read_channel` 로 되돌아가 신선 조회부터 다시 하므로, 값이 없는
-    # 장치일수록 왕복이 늘어나는 원래 문제로 되돌아간다.
-    for device_id, measurement_id in missing:
-        out[(device_id, measurement_id)] = _stale_value(device_id, measurement_id)
-    return out
-
-
 def _iso(ts) -> Optional[str]:
     if ts is None:
         return None
@@ -480,9 +386,7 @@ def _iso(ts) -> Optional[str]:
 
 
 def read_link_status(unique_id: str, max_age: int = LINK_MAX_AGE_S,
-                     comm_fault: bool = False,
-                     resolved: Optional[Tuple[Optional[str], Dict[str, dict]]] = None,
-                     prefetched: Optional[Dict[tuple, tuple]] = None) -> dict:
+                     comm_fault: bool = False) -> dict:
     """장치 하나의 배터리/통신 상태를 배지용 형태로 반환한다.
 
     반환:
@@ -493,30 +397,18 @@ def read_link_status(unique_id: str, max_age: int = LINK_MAX_AGE_S,
           'comm_fault': bool,
         }
     battery / link 이 None 이면 근거 채널이 아예 없다는 뜻이다.
-
-    `resolved`·`prefetched` 는 여러 장치를 도는 호출부(`read_link_status_batch`)가
-    출처 해석과 값 조회를 **한 번에** 끝내 놓고 넘겨주는 것이다. 없으면 예전처럼
-    자기가 조회한다 — 장치 하나만 보는 호출부는 그대로 쓰면 된다.
     """
     result: dict = {'source_id': None, 'battery': None, 'link': None,
                     'comm_fault': bool(comm_fault)}
 
-    source_id, chans = (resolved if resolved is not None
-                        else resolve_link_source(unique_id))
+    source_id, chans = resolve_link_source(unique_id)
     if not source_id:
         return result
     result['source_id'] = source_id
 
-    def _channel(measurement_id):
-        if prefetched is not None:
-            hit = prefetched.get((source_id, measurement_id))
-            if hit is not None:
-                return hit
-        return _read_channel(source_id, measurement_id, max_age)
-
     if 'battery' in chans:
         ch = chans['battery']
-        ts, val, stale = _channel(ch['measurement_id'])
+        ts, val, stale = _read_channel(source_id, ch['measurement_id'], max_age)
         if val is not None:
             result['battery'] = {
                 'percent': battery_percent(val, ch.get('unit'), ch.get('battery_type')),
@@ -533,7 +425,7 @@ def read_link_status(unique_id: str, max_age: int = LINK_MAX_AGE_S,
     for key in ('rssi', 'snr'):
         if key not in chans:
             continue
-        ts, val, stale = _channel(chans[key]['measurement_id'])
+        ts, val, stale = _read_channel(source_id, chans[key]['measurement_id'], max_age)
         if val is None:
             continue
         if key == 'rssi':
@@ -562,42 +454,10 @@ def read_link_status(unique_id: str, max_age: int = LINK_MAX_AGE_S,
 
 def read_link_status_batch(unique_ids: List[str],
                            max_age: int = LINK_MAX_AGE_S) -> Dict[str, dict]:
-    """여러 장치를 한 번에. comm_fault 는 /inputstate 와 같은 daemon 값을 쓴다.
-
-    **이름만 배치였던 자리다.** 예전에는 장치마다 `read_link_status` 를 부르고
-    그것이 채널마다 Influx 를 쳐서, 필지 요약 하나가 27회를 왕복했다. 출처
-    해석과 값 조회를 각각 한 번으로 접는다 — 해석을 먼저 끝내야 무엇을 읽을지
-    알 수 있으므로 순서가 뒤집히지 않는다.
-    """
+    """여러 장치를 한 번에. comm_fault 는 /inputstate 와 같은 daemon 값을 쓴다."""
     faults = _comm_faults(unique_ids)
-
-    resolved = {}
-    for uid in unique_ids:
-        try:
-            resolved[uid] = resolve_link_source(uid)
-        except Exception as exc:
-            logger.debug('[LinkStatus] 출처 해석 실패(%s): %s', uid, exc)
-            resolved[uid] = (None, {})
-
-    specs = set()
-    for source_id, chans in resolved.values():
-        if not source_id:
-            continue
-        for key in ('battery', 'rssi', 'snr'):
-            ch = chans.get(key) or {}
-            if ch.get('measurement_id'):
-                specs.add((source_id, ch['measurement_id']))
-
-    try:
-        prefetched = _prefetch_channels(specs, max_age)
-    except Exception as exc:
-        logger.warning('[LinkStatus] 값 사전 조회 실패: %s', exc)
-        prefetched = {}
-
     return {uid: read_link_status(uid, max_age=max_age,
-                                  comm_fault=faults.get(uid, False),
-                                  resolved=resolved.get(uid),
-                                  prefetched=prefetched)
+                                  comm_fault=faults.get(uid, False))
             for uid in unique_ids}
 
 

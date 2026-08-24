@@ -245,6 +245,108 @@ class TestKnowledgeP6(unittest.TestCase):
         out = AIAgentService._enforce_unconfirmed_disclosure(insight, mref)
         self.assertEqual(out, insight)
 
+    # -- Korean inflection (measured 2026-08-24): whole-word containment let a
+    # -- reworded answer quote an unconfirmed note with no disclosure at all ---
+
+    # 제목에 어미 없는 형태를 넣지 않는다 — 제목이 '압력 안정'을 그대로 갖고
+    # 있으면 통짜 토큰 비교로도 걸려서, 정작 재려는 어미 변화를 못 잰다.
+    _MREF_PIPE = (
+        "[Knowledge search: 'q' — 2 section(s)]\n\n"
+        "### [AI 정리 — 미확인] 김제 포장 급수 메모  (AI 자율 비치 — 대화 2026-08-24)\n"
+        "밸브 개방 후 관로 압력이 안정되기까지 약 45초 걸림."
+        "\n\n---\n\n"
+        "### 출력 설정  (Outputs.ko.md)\n출력 장치의 일반 설정 방법."
+    )
+
+    def test_disclosure_survives_korean_inflection(self):
+        """같은 사실을 어미만 바꿔 말한 답변도 잡아야 한다.
+
+        근거는 '압력이 … 안정되기까지', 답변은 '압력은 … 안정되는' — 사람이
+        보기엔 같은 말인데 통짜 토큰 비교로는 '관로' 하나만 걸려서 발화
+        문턱(고유 숫자 1 + 고유 단어 2)에 한 개 모자랐고, 미확인 메모를
+        '확인되었습니다'로 인용한 답변이 고지 없이 나갔다."""
+        from aot.ai.services.ai_agent_service import AIAgentService
+        insight = '관로 압력은 약 45초 뒤 안정되는 것으로 확인되었습니다.'
+        out = AIAgentService._enforce_unconfirmed_disclosure(insight, self._MREF_PIPE)
+        self.assertNotEqual(out, insight)
+        self.assertIn('미확인 메모', out)
+        self.assertTrue(out.startswith(insight))
+
+    def test_disclosure_survives_korean_compounding(self):
+        """근거의 낱말을 답변이 붙여 써도 잡아야 한다 — 근거의 '밸브'가
+        답변에선 '급수밸브'로 한 낱말이 된다. (반대 방향, 즉 근거가 합성어고
+        답변이 띄어 쓴 경우는 어간을 앞 두 음절로 자르는 이상 뒷말이 남지
+        않아 못 잡는다. 문서화된 한계.)"""
+        from aot.ai.services.ai_agent_service import AIAgentService
+        insight = '급수밸브를 개방하시고 45초 정도 기다리시면 관로가 안정됩니다.'
+        out = AIAgentService._enforce_unconfirmed_disclosure(insight, self._MREF_PIPE)
+        self.assertIn('미확인 메모', out)
+
+    def test_disclosure_still_skipped_when_authoritative_section_covers_it(self):
+        """어간 비교는 빼기(고유 판정)에도 똑같이 적용돼야 한다 — 권위 섹션이
+        어미만 다르게 같은 말을 하고 있으면 그 단어는 '미확인 섹션에만 있는
+        말'이 아니다. 이쪽이 느슨해지지 않으면 매칭만 느슨해져 오탐이 는다."""
+        from aot.ai.services.ai_agent_service import AIAgentService
+        mref = (
+            "### [AI 정리 — 미확인] 관수 메모  (AI 자율 비치)\n"
+            "관수 후 환기가 결로를 줄인다."
+            "\n\n---\n\n"
+            "### [권위] 관수 가이드  (RDA)\n"
+            "관수를 한 뒤에 환기를 하면 결로가 줄어든다. 표준 지침이다."
+        )
+        insight = '관수하신 뒤에 환기를 해 주십시오. 결로가 줄어듭니다 (RDA 표준 지침).'
+        out = AIAgentService._enforce_unconfirmed_disclosure(insight, mref)
+        self.assertEqual(out, insight)
+
+    def test_disclosure_skipped_when_only_grammar_words_overlap(self):
+        """겹치는 것이 문법 형태소뿐이면 인용이 아니다. 어간을 두 음절로
+        자르면 '때문에/경우에/따라서/있습니다' 같은 것들이 통째로 겹치므로,
+        내용어가 하나도 안 겹치는 답변이 단어 문턱(5개)만으로 발화할 수 있다."""
+        from aot.ai.services.ai_agent_service import AIAgentService
+        mref = (
+            "### [AI 정리 — 미확인] 저장고 메모  (AI 자율 비치)\n"
+            "저장고 습도가 높기 때문에, 경우에 따라 제습을 위해 문을 열어 두는 것으로 되어 있습니다."
+            "\n\n---\n\n"
+            "### 출력 설정  (Outputs.ko.md)\n출력 장치의 일반 설정 방법."
+        )
+        insight = (
+            '계량기 점검이 필요하기 때문에, 경우에 따라 교체를 위해 '
+            '일정을 잡는 것으로 되어 있습니다.'
+        )
+        out = AIAgentService._enforce_unconfirmed_disclosure(insight, mref)
+        self.assertEqual(out, insight)
+
+    def test_disclosure_skipped_when_the_same_number_counts_something_else(self):
+        """숫자는 무엇을 센 숫자인지까지 같아야 근거가 된다 — 메모의 '90%'와
+        답변의 '90일'은 같은 사실이 아니다. 숫자 하나만으로 단어 문턱이
+        2로 낮아지므로, 여기서 걸러 주지 않으면 어간 비교를 느슨하게 한
+        대가를 오탐으로 치르게 된다."""
+        from aot.ai.services.ai_agent_service import AIAgentService
+        mref = (
+            "### [AI 정리 — 미확인] 저장고 메모  (AI 자율 비치)\n"
+            "저온 저장고 습도는 90% 근처로 유지한다."
+            "\n\n---\n\n"
+            "### 출력 설정  (Outputs.ko.md)\n출력 장치의 일반 설정 방법."
+        )
+        insight = '저온기 대비로 습도계 점검을 90일 안에 하시는 편이 좋겠습니다.'
+        out = AIAgentService._enforce_unconfirmed_disclosure(insight, mref)
+        self.assertEqual(out, insight)
+
+    def test_disclosure_skipped_for_words_that_only_share_a_root(self):
+        """조사·어미만 벗기고 낱말을 자르지는 않는다 — '관리기'와 '관리자',
+        '급수전'과 '급수차'는 앞이 같을 뿐 다른 말이다. 앞 두 음절로 자르는
+        방식이었다면 이 답변이 근거를 인용한 것으로 계산된다."""
+        from aot.ai.services.ai_agent_service import AIAgentService
+        mref = (
+            "### [AI 정리 — 미확인] 점검 메모  (AI 자율 비치)\n"
+            "관리기와 급수전 점검은 30일마다 한다."
+            "\n\n---\n\n"
+            "### 출력 설정  (Outputs.ko.md)\n출력 장치의 일반 설정 방법."
+        )
+        insight = '관리자 계정과 급수차 배차는 30일마다 확인하십시오.'
+        out = AIAgentService._enforce_unconfirmed_disclosure(insight, mref)
+        self.assertEqual(out, insight)
+
 
 if __name__ == '__main__':
     unittest.main()
