@@ -174,7 +174,7 @@ AoT는 유용하게 사용되길 바라지만, 상품성이나 특정 목적 적
 
 전체 라이선스 전문은 http://www.gnu.org/licenses/gpl-3.0.en.html 에서 확인할 수 있습니다.
 
-이 소프트웨어에는 타사 오픈소스 소프트웨어가 포함될 수 있습니다. 각 파일의 라이선스 정보를 참고하세요.
+이 소프트웨어에는 타사 오픈소스 소프트웨어가 포함되어 있습니다. 전체 목록과 각각의 라이선스는 `THIRD-PARTY-LICENSES.md <https://github.com/AoT-inc/AoT/blob/main/THIRD-PARTY-LICENSES.md>`__ 를 참고하세요.
 
 
 

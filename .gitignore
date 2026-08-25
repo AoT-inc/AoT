@@ -22,6 +22,7 @@
 
 # --- 추적 허용: 루트 파일 ---
 !/.gitignore
+!/THIRD-PARTY-LICENSES.md
 !/.dockerignore
 !/.gitea/
 !/.github/
