@@ -49,7 +49,7 @@ _FAMILIES = {
     'smartfarmkorea':           {'client': 'smartfarmkorea', 'key_param': 'serviceKey', 'key_required': True},
     'smartfarmkorea_outdoor':   {'client': 'smartfarmkorea', 'key_param': 'serviceKey', 'key_required': True},
     'smartfarmkorea_livestock': {'client': 'smartfarmkorea', 'key_param': 'serviceKey', 'key_required': True},
-    'openmeteo':                {'client': 'openmeteo',      'key_param': 'apikey',     'key_required': False},
+    'ext_openmeteo':            {'client': 'openmeteo',      'key_param': 'apikey',     'key_required': False},
 }
 
 _QUERYABLE_PRESETS = tuple(_FAMILIES)
@@ -59,7 +59,7 @@ _PRESET_ANSWERS = {
                       '전국 참여 농가의 실측값이라 "다른 농가는 이 시기에 어떻게 했나" 에 답한다.',
     'smartfarmkorea_outdoor': '노지 농가의 아이덴티티·작기·환경 측정·생육 측정(무·배추·마늘·양파·블루베리).',
     'smartfarmkorea_livestock': '축산 실측 — 낙농·양돈·양계·한우. 날짜 범위만으로 조회한다.',
-    'openmeteo': '좌표 하나로 전세계 어디나 — 일별/시간별 예보(기온·강수·습도·VPD), '
+    'ext_openmeteo': '좌표 하나로 전세계 어디나 — 일별/시간별 예보(기온·강수·습도·VPD), '
                  '토양 깊이별 온도·수분, 기준증발산량 ET0, 그리고 과거 기후의 월별 집계. '
                  'AoT 의 get_weather 는 자기 센서만 읽고 get_weather_forecast 는 한국 '
                  '기상청 전용이라, **기상 센서가 없거나 한국 밖인 설치에서는 이것이 '
@@ -84,7 +84,7 @@ _SFK_NOTE = ('Codes like userId / facilityId / croppingSerlNo are NOT things a '
 _PRESET_NOTES = {
     'smartfarmkorea': _SFK_NOTE, 'smartfarmkorea_outdoor': _SFK_NOTE,
     'smartfarmkorea_livestock': _SFK_NOTE,
-    'openmeteo': ('latitude/longitude default to the farm location stored on this '
+    'ext_openmeteo': ('latitude/longitude default to the farm location stored on this '
                   'source, so omit them unless you mean a different place. Dates are '
                   'YYYY-MM-DD. Units are written into each column name — read them: '
                   'soil moisture is m³/m³ (0.27), NOT percent. The first row reports '

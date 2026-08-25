@@ -7609,6 +7609,25 @@ class AoTDataToolService:
             return {"error": str(e)}
 
     @staticmethod
+    def _forecast_fallback_hint():
+        """등록된 전세계 기상 소스를 가리키는 한 문장.
+
+        등록돼 있을 때만 말한다. 없는 것을 권하면 모델이 부를 수 없는 것을
+        부르려 들고, 그 실패가 사용자에게는 그냥 '고장' 으로 보인다.
+        """
+        try:
+            from aot.ai.services import data_source_query_service as _dsq
+            for src, cfg in _dsq._sources():
+                if cfg.get('preset_key') == 'ext_openmeteo':
+                    return (" A global forecast source IS registered — call "
+                            "query_data_source(source_id=%r, operation='forecast_daily') "
+                            "(or 'forecast_hourly' for the next hours)." % src.source_id)
+        except Exception:
+            pass
+        return (" No global forecast source is registered; the operator can add "
+                "Open-Meteo on the AI Library page.")
+
+    @staticmethod
     def get_weather_forecast(hours=24, **extra):
         """[읽기전용] 기상청 단기예보 — 선제 제어 조언의 근거.
 
@@ -7627,9 +7646,13 @@ class AoTDataToolService:
             data = _load_forecast() or {}
             forecasts = data.get('forecasts') or {}
             if not forecasts:
+                # 여기서 끝내면 한국 밖 설치는 예보를 영원히 못 얻는다 — 이
+                # 경로는 기상청 단기예보 전용이고, 그런 설치에는 애초에 채워질
+                # 일이 없는 파일이다. 대안이 등록돼 있으면 그것을 가리킨다.
                 return {"status": "unavailable",
-                        "message": ("No forecast data. KMA forecast collection may not "
-                                    "be configured."),
+                        "message": ("No KMA forecast data. This path is Korea-only "
+                                    "(기상청 단기예보); outside Korea it is never "
+                                    "populated." + AoTDataToolService._forecast_fallback_hint()),
                         "checked_source": "forecast.json"}
 
             pub_raw = data.get('pub_dt')
@@ -8808,10 +8831,35 @@ class AoTDataToolService:
         return parse_widget_information()
 
     @staticmethod
+    def _jsonable(value):
+        """lazy_gettext 객체가 섞인 값을 JSON 직렬화 가능한 형태로 푼다.
+
+        위젯 정의는 사람이 읽는 문구를 전부 `lazy_gettext` 로 감싸는데, 그
+        객체는 `str` 의 하위 타입이 아니라 `json.dumps` 가 통째로 실패한다
+        (`Object of type LazyString is not JSON serializable`). 그래서
+        **필드마다 `str()` 을 손으로 붙이는 방식은 새 필드가 늘 때마다
+        조용히 깨진다** — 실제로 `options_select` 가 그렇게 빠져서
+        select 형 옵션을 가진 위젯(AoT_map·AoT_graph 등) 대부분에서
+        `get_widget`/`list_widget_types` 가 응답을 만들지 못했다.
+
+        중첩 구조를 그대로 유지한 채 lazy 객체만 문자열로 바꾼다. 튜플은
+        JSON 에 없으므로 리스트가 된다.
+        """
+        if value is None or isinstance(value, (str, int, float, bool)):
+            return value
+        if isinstance(value, (list, tuple)):
+            return [AoTDataToolService._jsonable(v) for v in value]
+        if isinstance(value, dict):
+            return {str(k): AoTDataToolService._jsonable(v)
+                    for k, v in value.items()}
+        return str(value)
+
+    @staticmethod
     def _widget_option_schema(widget_info):
         """위젯 종류 하나의 옵션 스키마 — 사람이 읽을 수 있는 형태로.
 
-        `name`/`phrase` 는 lazy_gettext 객체라 그대로 JSON 으로 못 나간다.
+        `name`/`phrase`/`options_select`/`default_value` 는 lazy_gettext
+        객체를 담을 수 있어 그대로 JSON 으로 못 나간다 — `_jsonable` 을 지난다.
         """
         out = []
         for opt in (widget_info.get('custom_options') or []):
@@ -8825,9 +8873,11 @@ class AoTDataToolService:
             if opt.get('phrase'):
                 entry['phrase'] = str(opt['phrase'])
             if 'default_value' in opt:
-                entry['default'] = opt['default_value']
+                entry['default'] = AoTDataToolService._jsonable(
+                    opt['default_value'])
             if opt.get('options_select'):
-                entry['accepts'] = opt['options_select']
+                entry['accepts'] = AoTDataToolService._jsonable(
+                    opt['options_select'])
             out.append(entry)
         return out
 

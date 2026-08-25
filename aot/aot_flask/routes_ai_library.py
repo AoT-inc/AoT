@@ -198,6 +198,44 @@ LIBRARY_PRESETS = {
     # 적재하면 매 질의에서 매뉴얼과 관련도를 다투고, 일부만 적재하면 "미리 고른
     # 것만 답할 수 있다". 그래서 **등록만 하고 물어볼 때 조회**한다 —
     # reference_table_service 의 모듈 주석 참조.
+    # ── 조회 전용 API (2026-08-25) ─────────────────────────────────────
+    # 참조표와 같은 이유로 **적재하지 않는다.** 다만 이유가 하나 더 있다:
+    # 기상은 시시각각 바뀌므로 지식 항목으로 굳히면 그 순간부터 틀린 값이
+    # 라이브러리에 영원히 남는다. 활성화가 하는 일은 좌표가 실제로 응답하는지
+    # 한 번 확인하는 것뿐이고, 조회는 AI 가 물어볼 때 일어난다.
+    'ext_openmeteo': {
+        'label': 'Open-Meteo — Weather · Soil · ET₀ (EXT-GL-02)',
+        'description': 'Global forecast, soil temperature/moisture by depth, and FAO reference '
+                       'evapotranspiration (ET₀) from coordinates alone. No API key needed.',
+        'description_ko': 'Open-Meteo — 좌표만으로 전세계 어디나 조회합니다. 일별·시간별 '
+                          '예보(기온·강수·습도·VPD), 토양 깊이별 온도·수분(0/6/18/54cm), '
+                          '기준증발산량 ET₀, 그리고 과거 기후의 월별 집계. '
+                          '**AoT 의 날씨 도구는 이 설치에 꽂힌 기상 센서만 읽고, 예보는 '
+                          '한국 기상청 전용입니다.** 기상 센서가 없거나 한국 밖이라면 이것이 '
+                          '유일한 기상 근거이고, 토양값과 ET₀ 는 센서 유무와 상관없이 '
+                          '여기서만 나옵니다.',
+        'usage': '키가 필요 없습니다. 농장 좌표는 지도 설정의 기본 위치에서 자동으로 '
+                 '채워지므로, 그대로 활성화하면 됩니다(다른 지점을 보고 싶으면 AI 에게 '
+                 '좌표를 말하면 됩니다). '
+                 '⚠ **무료 이용은 약관상 비상업 목적으로 한정됩니다.** 상업적으로 쓰신다면 '
+                 'Open-Meteo 유료 키를 발급받아 아래에 넣어 주세요 — 키를 넣으면 상업용 '
+                 '엔드포인트로 조회합니다. 자료 출처 표시(CC BY 4.0)가 필요합니다.',
+        'url_source': 'https://open-meteo.com/',
+        'url_api_key': 'https://open-meteo.com/en/pricing',
+        'source_type': 'query_api',
+        'is_system': True,
+        # 키는 **선택**이다 — 없으면 무료(비상업) 엔드포인트로 간다.
+        'needs_api_key': False,
+        'auth_key_name': 'Open-Meteo API Key (상업용, 선택)',
+        'region': 'any', 'topics': ['environment', 'crop'],
+        # 절대 주기 동기화하지 않는다. 기상을 지식으로 굳히면 안 된다.
+        'sync_interval_min': 0,
+        'defaults': {
+            'title': 'Open-Meteo — 기상·토양·증발산',
+            # 좌표는 defaults 에 못 적는다(설치마다 다르다) —
+            # _preset_computed_defaults() 가 지도 기본 위치에서 채운다.
+        },
+    },
     'csv_table': {
         'label': 'Reference Table (CSV)',
         'description': 'Register a CSV table the AI can look rows up in, instead of ingesting it as text.',
@@ -408,6 +446,72 @@ def api_list_sources():
 # API: Quick-add source (agent-style: immediate add, configure via cog)
 # ---------------------------------------------------------------------------
 
+
+def _preset_computed_defaults(preset_key):
+    """설치마다 달라서 프리셋 리터럴에 못 적는 기본값.
+
+    좌표가 그렇다. 비워 두면 운영자가 위경도를 직접 찾아 적어야 하고, 그 한
+    단계 때문에 "그대로 활성화하면 됨" 이 성립하지 않는다.
+
+    **`Misc.map_latitude`/`GeoMap.latitude` 를 읽지 않는다.** 그 컬럼들은
+    지금 어느 쓰기 경로도 채우지 않아 실제 설치에서 전부 NULL 이다
+    (`GeoMap.viewport()` 의 독스트링이 같은 함정을 경고한다 — 컬럼만 보는
+    독자는 모든 지도를 같은 기본 좌표로 보낸다). 실측(2026-08-25): 이 설치의
+    지도 5개와 Misc 모두 NULL 이었고, 그 컬럼을 읽던 첫 구현은 좌표를 하나도
+    못 채웠다.
+
+    실제로 좌표가 사는 곳 둘을 순서대로 본다:
+      1. 지도의 저장된 카메라(`state_json`) — 운영자가 마지막으로 본 자리다.
+      2. 그려 둔 도형의 대표점 — 카메라가 없어도 밭은 있다. 포함 판정과 같은
+         `containment_point()` 를 쓴다(오목한 폴리곤에서 centroid 는 도형
+         밖으로 나간다).
+
+    둘 다 없으면 빈 값을 돌려주고 조용히 넘어간다 — 활성화 때
+    `_missing_config_error` 가 무엇이 없는지 말해 준다.
+    """
+    if preset_key != 'ext_openmeteo':
+        return {}
+
+    def _fmt(lat, lng):
+        return {'latitude': '%.6f' % float(lat), 'longitude': '%.6f' % float(lng)}
+
+    try:
+        from aot.databases.models import GeoMap
+
+        for gmap in GeoMap.query.all():
+            view = gmap.viewport()
+            if view and view[0] is not None and view[1] is not None:
+                return _fmt(view[0], view[1])
+    except Exception:
+        logger.debug("map viewport unavailable for %s defaults", preset_key, exc_info=True)
+
+    try:
+        import json as _json
+
+        from shapely.geometry import shape as _shapely_shape
+
+        from aot.databases.models import GeoShape
+        from aot.utils.geo_hierarchy import containment_point
+
+        for row in GeoShape.query.all():
+            try:
+                feat = row.feature if isinstance(row.feature, dict) else _json.loads(row.feature or '{}')
+                geom = (feat or {}).get('geometry')
+                if not (geom or {}).get('coordinates'):
+                    continue
+                pt = containment_point(_shapely_shape(geom))
+                if pt is not None:
+                    # GeoJSON 은 (경도, 위도) 순이다. 뒤집으면 조회는 성공하고
+                    # 값만 엉뚱해서 — 바다 한가운데 기온을 받아도 오류가 없다.
+                    return _fmt(pt.y, pt.x)
+            except Exception:
+                continue
+    except Exception:
+        logger.debug("shape centroid unavailable for %s defaults", preset_key, exc_info=True)
+
+    return {}
+
+
 @ai_library_bp.route('/api/v1/ai/library/sources/quick-add', methods=['POST'])
 @login_required
 def api_quick_add_source():
@@ -465,6 +569,7 @@ def api_quick_add_source():
     # 정해진 소스는 운영자가 아무것도 안 적어도 바로 활성화할 수 있어야 한다.
     _cfg = {'preset_key': preset_key}
     _cfg.update(preset.get('defaults') or {})
+    _cfg.update(_preset_computed_defaults(preset_key))
     config_json = json.dumps(_cfg)
 
     try:
@@ -615,6 +720,15 @@ def _missing_config_error(source):
         config = json.loads(source.config_json or '{}')
     except (ValueError, TypeError):
         config = {}
+
+    # is_system 분기보다 **먼저** 본다. 조회 전용 API 는 전부 내장 프리셋이라
+    # 아래 분기가 먼저 걸리면 return None 으로 빠져나가 이 검사가 죽는다.
+    if source.source_type == 'query_api':
+        missing = [f for f in ('latitude', 'longitude')
+                   if not str(config.get(f) or '').strip()]
+        if missing:
+            return ('Farm coordinates are required: %s. Set the default map location, '
+                    'or enter them here.' % ', '.join(missing))
 
     preset_key = config.get('preset_key', '')
     preset = LIBRARY_PRESETS.get(preset_key)

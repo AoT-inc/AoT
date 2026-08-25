@@ -143,13 +143,13 @@ class TestFamilyDispatch(unittest.TestCase):
     def test_openmeteo_is_queryable_without_an_api_key(self):
         """무료 엔드포인트는 키를 요구하지 않는다. 키를 강제하면 아무도 못 쓴다."""
         from aot.ai.services.data_source_query_service import _FAMILIES
-        self.assertFalse(_FAMILIES['openmeteo']['key_required'])
+        self.assertFalse(_FAMILIES['ext_openmeteo']['key_required'])
         self.assertTrue(_FAMILIES['smartfarmkorea']['key_required'])
 
     def test_each_family_routes_to_its_own_client(self):
         from aot.ai.services.data_source_query_service import _client_for
-        ops_for, fetch = _client_for('openmeteo')
-        self.assertIn('soil', ops_for('openmeteo'))
+        ops_for, fetch = _client_for('ext_openmeteo')
+        self.assertIn('soil', ops_for('ext_openmeteo'))
         self.assertIs(fetch, om.fetch_operation)
 
         ops_for_sfk, fetch_sfk = _client_for('smartfarmkorea_outdoor')

@@ -899,6 +899,58 @@ def _respond_to_confirmation(arguments, agent_id, role):
     }
 
 
+_KWARG_SINK_CACHE = {}
+
+
+def _discarded_kwarg_sink(handler):
+    """핸들러가 `**extra` 로 **받기만 하고 쓰지 않는** 경우 그 이름을 돌려준다.
+
+    `aot_data_tool_service` 의 도구 함수 대부분이 `**extra` 를 단다 — 외부 AI 가
+    잉여 인자를 흔히 실어 보내고, 그것 때문에 도구가 `TypeError` 로 통째로 못
+    쓰이게 되는 일을 막기 위함이다. 그런데 그 방벽은 **이름을 틀린 경우까지
+    함께 삼킨다**: `get_zone_sensor_summary(zone_ids=…)` 를 `zone_id=…` 로 부르면
+    필터가 조용히 사라지고 **필터 없는 전체 스캔**이 정상 응답으로 돌아온다.
+    (2026-08-23 실측: 같은 오타로 9회 호출 → 9회 모두 같은 전체 스냅샷.
+    "서버가 필터를 무시한다" 로 오진하는 데 오래 걸렸다.)
+
+    그래서 아래 `_dispatch_virtual_tool` 이 그런 키를 `_ignored_arguments` 로
+    돌려준다 — 다만 **`extra` 를 실제로 쓰는 핸들러는 제외해야 한다.**
+    `create_input`/`modify_plot` 처럼 임의 설정 키를 그 자리로 받는 함수가
+    25개 있고, 거기서는 잉여 키가 오류가 아니라 **본론**이다.
+
+    판정은 소스 AST 로 한다(핸들러당 한 번, 코드 객체로 캐시). 이름으로
+    가를 수는 없다 — 쓰는 쪽도 안 쓰는 쪽도 똑같이 `extra` 다.
+    """
+    code = getattr(handler, '__code__', None)
+    if code is None:
+        return None
+    if code in _KWARG_SINK_CACHE:
+        return _KWARG_SINK_CACHE[code]
+
+    sink = None
+    try:
+        import ast
+        import inspect
+        import textwrap
+
+        params = inspect.signature(handler).parameters
+        name = next((p.name for p in params.values()
+                     if p.kind is inspect.Parameter.VAR_KEYWORD), None)
+        if name is not None:
+            tree = ast.parse(textwrap.dedent(inspect.getsource(handler)))
+            # 서명의 `**extra` 는 ast.arg 라 Name 으로 안 잡힌다 — 본문에서
+            # Name 으로 등장하면 그 핸들러는 잉여 인자를 실제로 쓴다.
+            used = any(isinstance(node, ast.Name) and node.id == name
+                       for node in ast.walk(tree))
+            sink = None if used else name
+    except Exception:
+        # 소스를 못 읽으면 아무 말도 하지 않는다 — 근거 없는 경고보다 낫다.
+        sink = None
+
+    _KWARG_SINK_CACHE[code] = sink
+    return sink
+
+
 def _dispatch_virtual_tool(tool_name, arguments):
     """Map a virtual tool name to its AoTDataToolService handler.
 
@@ -937,6 +989,12 @@ def _dispatch_virtual_tool(tool_name, arguments):
             ignored = sorted(k for k in kwargs if k not in params)
             for k in ignored:
                 kwargs.pop(k, None)
+        elif _discarded_kwarg_sink(handler):
+            # `**extra` 가 있어도 그 자리를 **쓰지 않는** 핸들러라면 잉여 키는
+            # 조용히 사라진다 — 오타로 필터가 빠진 것과 구분이 안 된다.
+            # 넘기는 것은 그대로 넘긴다(핸들러가 흡수하므로 동작은 안 바뀐다).
+            # 바뀌는 것은 **말해 준다**는 것뿐이다.
+            ignored = sorted(k for k in kwargs if k not in params)
     except (TypeError, ValueError):
         pass
 

@@ -20,6 +20,7 @@ DB·데몬·앱 컨텍스트를 쓰지 않는다 — 순수 로직과 소스 검
 """
 import ast
 import inspect
+import json
 import unittest
 
 from aot.ai.services.aot_data_tool_service import AoTDataToolService as Service
@@ -60,6 +61,96 @@ class TestWidgetOptionCoercion(unittest.TestCase):
         for value in (None, {}):
             clean, errors = Service._coerce_widget_options(self.SCHEMA, value)
             self.assertEqual((clean, errors), ({}, []))
+
+
+class TestOptionSchemaIsJsonSerializable(unittest.TestCase):
+    """옵션 스키마에 lazy_gettext 객체가 새어 나가면 도구가 응답을 못 만든다.
+
+    위젯 정의는 사람이 읽는 문구를 전부 `lazy_gettext` 로 감싸는데 그 객체는
+    `str` 의 하위 타입이 아니라 `json.dumps` 가 통째로 실패한다
+    (`Object of type LazyString is not JSON serializable`). 그런데 실패하는
+    자리는 위젯이 아니라 **응답을 직렬화하는 MCP 층**이라, 도구 코드에는
+    아무 흔적이 남지 않고 클라이언트만 에러를 본다.
+
+    2026-08-23 koat 운영 서버 실측에서 `get_widget` 이 select 형 옵션을 가진
+    위젯(AoT_map·AoT_graph 등)에서 전부 그렇게 죽었다 — `name`/`phrase` 는
+    `str()` 로 감쌌는데 `options_select` 만 빠져 있었다. 설치된 27종 중
+    **10종**이 그 상태였다(AoT_PID·AoT_advice·AoT_facility·AoT_gauge_angular·
+    AoT_graph·AoT_map·AoT_timer·widget_calendar·widget_camera·
+    widget_trigger_sequence).
+
+    그래서 필드별 `str()` 이 아니라 `_jsonable` 재귀 변환을 지나게 했고, 여기서
+    **설치된 위젯 전종**을 훑는다 — 새 위젯이 lazy 문구를 새 자리에 넣어도
+    잡히도록.
+    """
+
+    def test_lazy_labels_in_options_select_do_not_leak(self):
+        from flask_babel import lazy_gettext
+        info = {'custom_options': [
+            {'id': 'style', 'type': 'select', 'default_value': 'circle',
+             'name': lazy_gettext('Sensor Marker Style'),
+             'phrase': lazy_gettext('How the marker is drawn.'),
+             'options_select': [('circle', lazy_gettext('Circle')),
+                                ('text', lazy_gettext('Text label'))]},
+            {'id': 'map_uuid', 'type': 'select_device',
+             'options_select': ['Map']},
+        ]}
+        schema = Service._widget_option_schema(info)
+        json.dumps(schema)  # 여기서 죽으면 도구가 응답을 못 만든다
+        style = schema[0]
+        self.assertEqual(style['accepts'],
+                         [['circle', 'Circle'], ['text', 'Text label']])
+        self.assertEqual(schema[1]['accepts'], ['Map'])
+
+    def test_lazy_default_value_does_not_leak_either(self):
+        """`default_value` 도 lazy 를 담을 수 있다.
+
+        지금은 그런 항목이 전부 `id` 없는 `message` 라 걸러지지만, `id` 가 붙는
+        순간 같은 방식으로 조용히 깨진다 — 그 자리를 미리 막아 둔다.
+        """
+        from flask_babel import lazy_gettext
+        info = {'custom_options': [
+            {'id': 'note', 'type': 'text',
+             'default_value': lazy_gettext('Press Ctrl to select more')},
+        ]}
+        schema = Service._widget_option_schema(info)
+        json.dumps(schema)
+        self.assertEqual(schema[0]['default'], 'Press Ctrl to select more')
+
+    def test_every_installed_widget_type_serializes(self):
+        import glob
+        import importlib
+        import os
+
+        here = os.path.dirname(os.path.abspath(__file__))
+        widget_dir = os.path.join(os.path.dirname(here), 'widgets')
+        paths = sorted(glob.glob(os.path.join(widget_dir, '*.py')))
+        self.assertTrue(paths, '위젯 정의를 하나도 못 찾았다 — 경로가 바뀌었나')
+
+        checked, broken = 0, []
+        for path in paths:
+            mod = os.path.splitext(os.path.basename(path))[0]
+            if mod.startswith('__'):
+                continue
+            try:
+                module = importlib.import_module('aot.widgets.' + mod)
+            except Exception:
+                # 위젯 하나가 선택적 의존성 때문에 import 안 되는 것은 이
+                # 검사의 관심사가 아니다(다른 테스트가 본다).
+                continue
+            info = getattr(module, 'WIDGET_INFORMATION', None)
+            if not info:
+                continue
+            checked += 1
+            try:
+                json.dumps(Service._widget_option_schema(info))
+            except TypeError as e:
+                broken.append('%s (%s)' % (mod, e))
+        self.assertTrue(checked, '검사한 위젯이 0종이다 — 검사가 무력하다')
+        self.assertEqual(
+            broken, [],
+            '이 위젯 종류의 옵션 스키마가 JSON 으로 안 나간다 — get_widget/'
+            'list_widget_types 가 그 종류에서 통째로 실패한다: %s' % broken)
 
 
 class TestDashboardIsTheSourceOfTruth(unittest.TestCase):

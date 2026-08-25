@@ -31,6 +31,11 @@ EXT_CLIENT_MAP = {
 
 
 # @ANCHOR: SYNC_SOURCE_DISPATCHER
+# 활성화 때 한 번 불러 보는 오퍼레이션. 가장 싼 것을 고른다 — 확인이 목적이지
+# 자료를 받는 것이 목적이 아니다.
+_PRESET_PROBE = {'ext_openmeteo': 'forecast_daily'}
+
+
 def sync_source(source_id):
     """
     Load AIContextSource by source_id, dispatch to appropriate fetch handler,
@@ -125,6 +130,28 @@ def sync_source(source_id):
                     messages["warning"].append(
                         "knowledge_digest_enabled is off — fetched data was not added to the AI knowledge index."
                     )
+        elif source.source_type == 'query_api':
+            # @ANCHOR: QUERY_API_SYNC
+            # **아무것도 적재하지 않는다.** 참조표와 같은 이유(관련도 오염)에
+            # 더해 하나가 더 있다: 기상은 시시각각 바뀌므로 지식 항목으로
+            # 굳히는 순간 그 값은 틀린 채로 라이브러리에 영원히 남는다.
+            #
+            # 그래서 동기화가 하는 일은 **연결 확인** 하나다. 좌표가 실제로
+            # 응답하는지 지금 한 번 불러 본다 — 활성화는 됐는데 조회가 안 되는
+            # 상태를 나중에 AI 가 발견하게 두지 않는다.
+            from aot.ai.services import data_source_query_service as _dsq
+            _probe = _PRESET_PROBE.get(preset_key)
+            records = []
+            if not _probe:
+                err = 'no connectivity check defined for preset %r' % preset_key
+            else:
+                payload, err = _dsq.query(source.source_id, _probe, limit=1)
+                if not err:
+                    raw_payload = json.dumps(payload)[:2000]
+                    messages["info"].append(
+                        '연결을 확인했습니다. 지식으로 적재하지 않고, AI 가 물어볼 때 '
+                        '조회합니다.')
+
         elif source.source_type == 'csv_table':
             # @ANCHOR: REFERENCE_TABLE_SYNC
             # 참조표는 **지식 항목으로 잘라 넣지 않는다.** 동기화가 하는 일은
