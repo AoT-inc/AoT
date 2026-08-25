@@ -7,7 +7,6 @@
 
     window.aotScriptLoaders = window.aotScriptLoaders || {};
     window.aotCssLoaders = window.aotCssLoaders || {};
-    const DEFAULT_BUNDLE = '/static/js/map/bundles/aot-map-bundle.js?v=force_reload';
 
     function loadScript(src) {
         if (window.aotScriptLoaders[src]) {
@@ -55,62 +54,34 @@
     }
 
     /**
-     * Loads Leaflet, Leaflet Draw, MapLibre-GL, and optional internal scripts in sequence.
-     * [GIS Pure MapLibre v4.0] Leaflet CSS is loaded in layout.html or not at all.
-     * Leaflet Draw CSS not needed - MapLibre Draw is used instead.
-     * @param {Object} config - Configuration object
-     * @param {string} config.bundleUrl - URL for unified AoT map bundle (defaults to /static/js/map/bundles/aot-map-bundle.js)
-     * @param {boolean} config.enableVector - Enable MapLibre-GL vector tile support (default: true)
-     * @param {boolean} [config.loadLeaflet=false] - Load Leaflet (not required for MapLibre-only pages)
-     * @returns {Promise} Resolves when all scripts are loaded
+     * MapLibre-GL 을 로드한다. 필요하면 지도 번들도 함께.
+     *
+     * 예전에는 Leaflet·Leaflet Draw·MapClient 를 조건부로 함께 받았다. 그
+     * 갈래를 2026-08-25 에 걷어냈다 — 지도가 MapLibre 로 옮겨 간 뒤 `loadLeaflet`
+     * 을 켜는 호출부가 하나도 없었고(전수 확인), 그 안이 가리키던 것들도
+     * 이미 없어진 것들이었다: Leaflet 은 외부 unpkg CDN 에서 받고 있었고
+     * (폐쇄망 설치에서는 실패한다), MapClient 와 기본 번들 경로
+     * `/static/js/map/bundles/` 는 디렉터리째 사라진 지 오래다.
+     *
+     * @param {Object} [config]
+     * @param {string} [config.bundleUrl] - 함께 로드할 지도 번들(ES Module).
+     *   기본값 없음 — 예전 기본값은 존재하지 않는 파일을 가리키고 있었다.
+     * @returns {Promise} 모든 스크립트가 로드되면 resolve
      */
     function loadMapDependencies(config) {
         config = config || {};
-        var loadLeaflet = config.loadLeaflet === true;
 
-        // 1. Start loading MapLibre-GL CSS (Priority for 3D)
         loadCss('/static/vendor/maplibre-gl-4.1.2/maplibre-gl.css?v=' + (window.AOT_ASSET_V || ''));
-
-        // 1b. [GIS Pure MapLibre v4.0] Leaflet CSS no longer loaded by default
-        // If explicitly requested, load for backward compatibility only
-        if (loadLeaflet) {
-            loadCss('https://unpkg.com/leaflet@1.9.4/dist/leaflet.css');
-        }
-
-        // 2. Load MapLibre-GL JS (Vector Tile Support - Required for 3D)
         var pMapLibre = loadScript('/static/vendor/maplibre-gl-4.1.2/maplibre-gl.js?v=' + (window.AOT_ASSET_V || ''));
 
-        // 2b. Load Leaflet only if explicitly requested (backward compatibility)
-        var pLeaflet = Promise.resolve();
-        if (loadLeaflet) {
-            pLeaflet = loadScript('https://unpkg.com/leaflet@1.9.4/dist/leaflet.js');
-            // 3. After Leaflet, load Leaflet Draw (only if Leaflet is loaded)
-            pLeaflet = pLeaflet.then(function() {
-                return loadScript('https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js')
-                    .catch(function(err) { console.error('Failed to load Leaflet.draw:', err); });
-            }).catch(function(err) { console.error('Failed to load Leaflet:', err); });
-        }
-
-        // 5. Load MapClient (only if Leaflet is loaded)
-        var pClient = Promise.resolve();
-        if (loadLeaflet) {
-            pClient = pLeaflet.then(function() {
-                return loadScript('/static/js/map/bundles/aot-map-client.js?v=' + (window.AOT_ASSET_V || ''))
-                    .catch(function(err) { console.error('Failed to load MapClient:', err); });
-            });
-        }
-
-        const bundleUrl = config.bundleUrl || DEFAULT_BUNDLE;
-        // [GIS Pure MapLibre v4.0] ES Module Bundle may not be needed for MapLibre-only pages
         var pBundle = Promise.resolve();
-        if (bundleUrl) {
-            pBundle = Promise.all([pLeaflet, pClient, pMapLibre]).then(function() {
-                return loadModule(bundleUrl);
+        if (config.bundleUrl) {
+            pBundle = pMapLibre.then(function() {
+                return loadModule(config.bundleUrl);
             });
         }
 
-        // 6. Wait for ALL scripts (MapLibre is now the priority)
-        return Promise.all([pLeaflet, pClient, pBundle, pMapLibre]);
+        return Promise.all([pMapLibre, pBundle]);
     }
 
     /**
