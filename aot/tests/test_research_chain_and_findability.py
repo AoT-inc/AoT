@@ -84,11 +84,11 @@ class TestLookupSourcesTellsTheNextStep:
 class TestLocalNameGuard:
     """비친 항목을 사용자가 자기 말로 다시 찾을 수 있는가."""
 
-    def _check(self, app, heading, tags, lang='ko'):
+    def _check(self, app, heading, body, lang='ko'):
         from aot.ai.services.aot_data_tool_service import AoTDataToolService
 
         with app.test_request_context(headers={'Accept-Language': lang}):
-            return AoTDataToolService._missing_local_name(heading, tags)
+            return AoTDataToolService._missing_local_name(heading, body)
 
     def test_a_scientific_only_heading_is_rejected(self, app):
         """정확히 보고된 실패 — 땅콩을 조사하고 학명으로만 적은 경우."""
@@ -97,9 +97,19 @@ class TestLocalNameGuard:
     def test_the_local_name_in_the_heading_passes(self, app):
         assert self._check(app, '땅콩(Arachis hypogaea) 재배', 'arachis,groundnut') is None
 
-    def test_the_local_name_in_the_tags_alone_passes(self, app):
-        """문턱을 낮게 둔다 — 제목이든 태그든 한 글자라도 있으면 통과다."""
-        assert self._check(app, 'Arachis hypogaea', '땅콩,재배') is None
+    def test_the_local_name_in_the_body_alone_passes(self, app):
+        """본문도 점수화된다(1배) — 제목이 영문이어도 본문이 현지어면 걸린다."""
+        assert self._check(app, 'Arachis hypogaea', '땅콩은 배수가 좋은 흙을 좋아한다.') is None
+
+    def test_a_tag_does_not_count(self, app):
+        """검색은 태그를 점수화하지 않는다 — 태그에만 있는 이름으로는 이
+        항목이 걸리지 않으므로, 태그를 세면 검사가 목적을 잃는다."""
+        from aot.ai.services.aot_data_tool_service import AoTDataToolService
+
+        with app.test_request_context(headers={'Accept-Language': 'ko'}):
+            res = AoTDataToolService.knowledge_shelve(
+                content='Optimal 22-32C.', tags='땅콩,crop', heading='Arachis hypogaea')
+            assert res.get('error') == 'not findable later', res
 
     def test_a_latin_script_install_is_never_blocked(self, app):
         """판정할 수 없는 곳에서는 막지 않는다 — 이 검사는 확실한 실패만 잡는다."""
@@ -111,8 +121,7 @@ class TestLocalNameGuard:
         with app.app_context():
             assert AoTDataToolService._missing_local_name('Arachis', 'groundnut') is None
 
-    def test_tags_may_arrive_as_a_list(self, app):
-        assert self._check(app, 'Arachis hypogaea', ['땅콩', '재배']) is None
+
 
 
 class TestTheGuardActuallyBlocksTheWrite:
@@ -182,3 +191,121 @@ class TestYamlShapedResponseIsRecovered:
         out = self._parse('땅콩은 콩과 작물입니다. 배수가 잘되는 토양을 좋아합니다.')
         assert '땅콩' in out['insight']
         assert out.get('_parse_failed')
+
+
+class TestBothNamesRequired:
+    """표에서 옮긴 항목은 양쪽 이름으로 다 찾을 수 있어야 한다.
+
+    현지 이름만 요구했을 때 실측(2026-08-25): 땅콩 항목이 '땅콩 재배 기준' /
+    'crop,땅콩' 으로 저장돼 한국어 조회는 전부 걸렸지만 'peanut' 은 0건이었다.
+    그 표로 되짚어 가거나 다른 언어 사용자가 닿을 길이 없었다.
+    """
+
+    def _table(self, app, title='FAO ECOCROP — 종별 생육 적합 범위'):
+        from aot.aot_flask.extensions import db
+        from aot.databases.models import AIContextSource
+
+        src = AIContextSource(
+            facility_id='f', source_name='ECOCROP', source_type='csv_table',
+            parameter_name='ext_ecocrop.t', sync_interval_min=0,
+            is_active=True, is_enabled=True,
+            config_json=json.dumps({'preset_key': 'ext_ecocrop', 'title': title,
+                                    'data_url': 'http://x/y.csv', 'answers': 'a'}))
+        db.session.add(src)
+        db.session.commit()
+        return src.source_id
+
+    def test_a_local_name_alone_is_refused_for_a_table_note(self, app):
+        from aot.ai.services.aot_data_tool_service import AoTDataToolService
+
+        with app.test_request_context(headers={'Accept-Language': 'ko'}):
+            ref = self._table(app)
+            res = AoTDataToolService.knowledge_shelve(
+                content='최적 22~32도.', tags='땅콩',
+                heading='땅콩 재배 기준', source_ref=ref)
+
+            assert res.get('error') == 'findable in only one language', res
+            assert 'ECOCROP' in res['message'], '어느 표인지 말해야 고칠 수 있다'
+
+    def test_both_names_go_through(self, app):
+        from aot.ai.services.aot_data_tool_service import AoTDataToolService
+
+        with app.test_request_context(headers={'Accept-Language': 'ko'}):
+            ref = self._table(app)
+            res = AoTDataToolService.knowledge_shelve(
+                content='최적 22~32도.', tags='땅콩,peanut',
+                heading='땅콩(Arachis hypogaea) 재배 기준', source_ref=ref)
+
+            assert 'error' not in res or res['error'] not in (
+                'findable in only one language', 'not findable later'), res
+
+    def test_a_generic_english_scope_tag_does_not_satisfy_it(self, app):
+        """실측 사례의 태그가 정확히 'crop,땅콩' 이었다. 태그를 세면 범용
+        분류어 'crop' 이 라틴 낱말이라 통과해 버려, 잡아야 할 바로 그 항목이
+        빠져나간다."""
+        from aot.ai.services.aot_data_tool_service import AoTDataToolService
+
+        with app.test_request_context(headers={'Accept-Language': 'ko'}):
+            ref = self._table(app)
+            res = AoTDataToolService.knowledge_shelve(
+                content='최적 22~32도.', tags='crop,땅콩',
+                heading='땅콩 재배 기준', source_ref=ref)
+
+            assert res.get('error') == 'findable in only one language', res
+
+    def test_the_source_name_in_the_body_is_enough(self, app):
+        """본문도 검색이 점수화한다 — 제목에 없어도 본문에 있으면 찾을 수 있다."""
+        from aot.ai.services.aot_data_tool_service import AoTDataToolService
+
+        with app.test_request_context(headers={'Accept-Language': 'ko'}):
+            ref = self._table(app)
+            res = AoTDataToolService.knowledge_shelve(
+                content='땅콩(Arachis hypogaea) 최적 22~32도.', tags='crop,땅콩',
+                heading='땅콩 재배 기준', source_ref=ref)
+
+            assert res.get('error') != 'findable in only one language', res
+
+    def test_a_field_observation_is_not_forced_to_invent_a_foreign_name(self, app):
+        """현장 메모에는 대응하는 외국어 이름이 애초에 없다 — 요구하면
+        지어내게 된다. source_ref 가 없으면 이 검사는 돌지 않는다."""
+        from aot.ai.services.aot_data_tool_service import AoTDataToolService
+
+        with app.test_request_context(headers={'Accept-Language': 'ko'}):
+            res = AoTDataToolService.knowledge_shelve(
+                content='3동 관수 밸브가 새는 중.', tags='관수,고장',
+                heading='3동 관수 밸브 누수')
+
+            assert 'error' not in res or res['error'] not in (
+                'findable in only one language', 'not findable later'), res
+
+    def test_an_api_source_is_exempt(self, app):
+        """API 소스는 측정값이라 '이름으로 찾는' 자료가 아니고, 한국 기관
+        자료에 영문 이름을 강요할 이유도 없다."""
+        from aot.aot_flask.extensions import db
+        from aot.ai.services.aot_data_tool_service import AoTDataToolService
+        from aot.databases.models import AIContextSource
+
+        with app.test_request_context(headers={'Accept-Language': 'ko'}):
+            src = AIContextSource(
+                facility_id='f', source_name='SmartFarmKorea', source_type='rest_api',
+                parameter_name='sfk.t', sync_interval_min=0,
+                is_active=True, is_enabled=True,
+                config_json=json.dumps({'preset_key': 'smartfarmkorea'}))
+            db.session.add(src)
+            db.session.commit()
+
+            res = AoTDataToolService.knowledge_shelve(
+                content='2015년 작기 측정값.', tags='토마토,작기',
+                heading='김제 토마토 작기', source_ref=src.source_id)
+
+            assert res.get('error') != 'findable in only one language', res
+
+    def test_an_unknown_source_ref_does_not_block(self, app):
+        from aot.ai.services.aot_data_tool_service import AoTDataToolService
+
+        with app.test_request_context(headers={'Accept-Language': 'ko'}):
+            res = AoTDataToolService.knowledge_shelve(
+                content='내용.', tags='땅콩', heading='땅콩 메모',
+                source_ref='없는-소스-id')
+
+            assert res.get('error') != 'findable in only one language', res

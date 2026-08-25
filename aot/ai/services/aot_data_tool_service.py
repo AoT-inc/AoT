@@ -7008,7 +7008,7 @@ class AoTDataToolService:
     }
 
     @staticmethod
-    def _missing_local_name(heading, tags):
+    def _missing_local_name(heading, content):
         """설치 언어의 문자가 제목·태그 어디에도 없으면 그 언어 코드를 돌려준다.
 
         판정할 수 없으면(라틴 문자권, 요청 문맥 밖, 조회 실패) None — 막지
@@ -7029,12 +7029,60 @@ class AoTDataToolService:
         if not ranges:
             return None
 
-        text = '%s %s' % (heading or '', tags if isinstance(tags, str) else ' '.join(tags or []))
+        # **태그는 보지 않는다.** knowledge_search 는 제목(3배)과 본문만
+        # 점수화하고 태그는 필터일 뿐이라, 태그에만 있는 이름으로는 이 항목이
+        # 검색에 걸리지 않는다 — 그것을 통과시키면 검사가 목적을 잃는다.
+        text = '%s %s' % (heading or '', content or '')
         for ch in text:
             o = ord(ch)
             if any(lo <= o <= hi for lo, hi in ranges):
                 return None
         return code
+
+    @staticmethod
+    def _missing_source_name(heading, content, source_ref):
+        """등록된 **표**에서 옮긴 항목인데 그 표가 쓰는 이름이 제목·태그에
+        없으면 표 제목을 돌려준다(없으면 None).
+
+        왜 필요한가. 현지 이름만 달면 반대쪽이 막힌다 — 실측(2026-08-25):
+        땅콩 항목이 '땅콩 재배 기준' / 'crop,땅콩' 으로 저장돼 한국어 조회는
+        전부 걸렸지만 'peanut' 은 0건이었다. 그 표를 다시 조회하거나, 학명으로
+        찾거나, 다른 언어 사용자가 같은 항목에 닿을 길이 없다.
+
+        **표에서 옮긴 것에만 적용한다.** 현장 관찰 메모("3동 관수 밸브가 새는
+        중")에는 대응하는 외국어 이름이 애초에 없고, 그런 것까지 영문을
+        요구하면 지어내게 된다. API 소스(kind='api')도 제외한다 — 그쪽은
+        측정값이라 '이름으로 찾는' 자료가 아니고, 한국 기관 자료에 영문
+        이름을 강요할 이유도 없다.
+        """
+        if not source_ref:
+            return None
+        try:
+            import json as _json
+            import re as _re
+
+            from aot.databases.models import AIContextSource
+
+            src = AIContextSource.query.filter_by(
+                source_id=str(source_ref), source_type='csv_table').first()
+            if src is None:
+                return None
+            # 학명이든 통용명이든 상관하지 않는다 — 어느 쪽이든 그 표로 되짚어
+            # 갈 수 있다. 다만 **태그는 세지 않는다**(위 _missing_local_name 의
+            # 같은 이유). 실측에서 태그가 'crop,땅콩' 이었는데, 태그를 세면
+            # 범용 분류어 'crop' 이 라틴 낱말이라 그대로 통과했다 — 정작 잡아야
+            # 할 바로 그 사례가 빠져나갔다.
+            text = '%s %s' % (heading or '', content or '')
+            if _re.search(r'[A-Za-z]{3,}', text):
+                return None
+            try:
+                cfg = _json.loads(src.config_json or '{}')
+            except (ValueError, TypeError):
+                cfg = {}
+            return (cfg.get('title') or src.source_name or 'the source table').strip()
+        except Exception:
+            logger.debug("source-name check skipped", exc_info=True)
+            return None
 
     @staticmethod
     def knowledge_shelve(content=None, tags=None, heading=None, entity_ref=None,
@@ -7056,17 +7104,30 @@ class AoTDataToolService:
                            "surface for every unrelated query.",
             }
 
-        _lang = AoTDataToolService._missing_local_name(heading, tags)
+        _table = AoTDataToolService._missing_source_name(heading, content, source_ref)
+        if _table:
+            return {
+                "error": "findable in only one language",
+                "message": ("This came from %r, whose rows are named in that source's own "
+                            "vocabulary — but neither the heading nor the body carries that "
+                            "name (tags are not scored by search, so they do not count). "
+                            "Someone searching the scientific or English name, or tracing "
+                            "this back to the table, will not find it. Keep BOTH names, "
+                            "e.g. heading '땅콩(Arachis hypogaea) 재배 기준'. Then call this "
+                            "again." % _table),
+            }
+
+        _lang = AoTDataToolService._missing_local_name(heading, content)
         if _lang:
             return {
                 "error": "not findable later",
                 "message": ("This install's language is %r, but neither the heading nor "
-                            "the tags contain a single character of that language — a "
-                            "person searching in their own words will never get this "
-                            "back (search scores the heading 3x and the body; tags only "
-                            "filter). Put the subject's name AS THE USER SAYS IT in the "
-                            "heading, and keep the source's own name (scientific or "
-                            "English) alongside it. Then call this again."
+                            "the body contains a single character of that language — a "
+                            "person searching in their own words will never get this back "
+                            "(search scores the heading 3x and the body 1x; TAGS ARE NOT "
+                            "SCORED, so a tag does not make it findable). Put the "
+                            "subject's name AS THE USER SAYS IT in the heading, and keep "
+                            "the source's own name alongside it. Then call this again."
                             % _lang),
             }
 
