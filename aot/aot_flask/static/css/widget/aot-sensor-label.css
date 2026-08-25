@@ -66,16 +66,20 @@
   margin-bottom: 8px;
 }
 
-/* ⚠ .aot-sensor-popup-header 는 두 가지 서로 다른 내부 구조를 공유한다:
-   (1) 이 파일의 openPopup() 이 만드는 단순형 — title/badges-slot/close
-       버튼이 헤더의 **직계** 자식.
-   (2) aot-map-popup.js 의 buildModalHeader() — title 이 .aot-modal-heading
-       안에 중첩되고, 그 span 이 자체적으로 상태점(.aot-status-dot)까지
-       함께 중앙정렬한다(뒤로가기 버튼의 좌우 대칭 예약도 별도로 처리).
-   아래 title 중앙정렬/우측정렬 규칙을 위 (2)에도 걸면 title 이 제자리를
-   벗어나 상태점과 겹치고 뒤로가기 버튼 정렬이 깨진다(2026-08-25 회귀) —
-   :not(:has(.aot-modal-heading)) 로 (1) 에만 좁힌다. */
-.aot-sensor-popup-header:not(:has(.aot-modal-heading)) {
+/* ⚠ .aot-sensor-popup-header 는 서로 다른 내부 구조 세 가지를 공유한다:
+   (1) openPopup() 단순형, 뒤로가기 없음 — title/badges-slot/close 가
+       헤더의 **직계** 자식뿐.
+   (2) openPopup() 단순형 + 뒤로가기 — 같은 직계 구조에 .aot-modal-up 이
+       맨 앞자식으로 더 붙는다(구획→장치처럼 상위에서 드릴다운했을 때).
+   (3) buildModalHeader() — title 이 .aot-modal-heading 안에 중첩되고,
+       그 span 이 상태점(.aot-status-dot)까지 함께 중앙정렬 + 뒤로가기
+       좌우대칭을 별도 처리한다.
+   아래 title 절대중앙배치·헤더 우측정렬은 (1)에서만 맞다. (2)에 걸면
+   .aot-modal-up 이 flex 흐름에 남아 justify-content:flex-end 에 밀려
+   배지 옆에 붙어버리고(2026-08-25 회귀 재발), (3)에 걸면 상태점과
+   겹치고 뒤로가기 대칭이 깨진다(2026-08-25 첫 회귀) — 뒤로가기 버튼
+   유무와 .aot-modal-heading 유무 둘 다로 (1)에만 좁힌다. */
+.aot-sensor-popup-header:not(:has(.aot-modal-heading)):not(:has(.aot-modal-up)) {
   justify-content: flex-end; /* 제목이 absolute 로 빠지므로 배지·닫기만 남아 우측 정렬 */
   position: relative; /* 제목 중앙 정렬 기준 */
 }
@@ -99,7 +103,7 @@
 /* 단순형(위 주석 (1))에서만: 배지·닫기 버튼 폭이 있건 없건(배지는 있을
    때만 그려진다) 헤더 한가운데 고정 — flex 순서상 남는 공간에서만
    가운데 맞추면 배지가 있을 때 오른쪽으로 쏠려 보인다. */
-.aot-sensor-popup-header:not(:has(.aot-modal-heading)) > .aot-sensor-popup-title {
+.aot-sensor-popup-header:not(:has(.aot-modal-heading)):not(:has(.aot-modal-up)) > .aot-sensor-popup-title {
   position: absolute;
   left: 50%;
   /* 진짜 가운데 정렬(고정 left:50%)이라 좌우 여유폭이 대칭으로 든다 —

@@ -14,13 +14,32 @@
   // (roof vents, side windows, curtains). Those used to be excluded, which left
   // them reachable only as an on/off toggle in the envelope step — selecting one
   // in 3D opened nothing, because the placement panel mounts under a table row
-  // and they had no row. Irrigation pieces stay out: they are managed as a layer
-  // in the 3D tools, not as individual components.
-  var _HIDDEN_KINDS = ['irrigation_layer','irrigation_pipe','irrigation_device',
-                       'irrigation_valve','irrigation_connection'];
+  // and they had no row.
+  //
+  // Irrigation used to be excluded whole, and that left its wiring unreachable:
+  // the backend drives a circuit from irrigation_layer.actuator_id and
+  // irrigation_valve.actuator_id (irrigation_nozzles.nozzles_by_actuator), the
+  // only place in the inspector that offered the dropdown is killed by
+  // `#facility-3d-inspector .fi-dup {display:none !important}`, and with no
+  // table row there was no second chance — so a facility could hold 300 nozzles
+  // with nothing able to open them. Layers and valves are the two things that
+  // actually take an actuator, so they get rows. Pipes, joints and the nozzles
+  // themselves have no actuator of their own (they follow their circuit) and
+  // stay out; a per-nozzle dropdown would be hundreds of rows of noise.
+  var _HIDDEN_KINDS = ['irrigation_device', 'irrigation_connection'];
+
+  // Main pipes earn a row; branch pipes do not. A main is drawn by hand, one at
+  // a time, and it is the only irrigation piece with no other way out — [Clear]
+  // deliberately spares it, so without a row there was nothing to select and
+  // nothing to delete. Branches arrive by the dozen from auto-generate and leave
+  // the same way, so listing them would be noise.
+  function _isListedPipe(f) {
+    return f.kind === 'irrigation_pipe' && f.sub_type === 'main' && !f.is_vertical;
+  }
   function _getComponents() {
     if (!window.FittingsUI || !FittingsUI.readAll) return [];
-    return FittingsUI.readAll().filter(function (f) {
+    return _all().filter(function (f) {
+      if (f.kind === 'irrigation_pipe') return _isListedPipe(f);
       return _HIDDEN_KINDS.indexOf(f.kind) === -1;
     });
   }
@@ -29,14 +48,75 @@
   // Components generated together are one instance — an edit to any of them
   // applies to all. The row says so, otherwise a list of 16 roof vents reads as
   // 16 separate things to fill in.
+  // readAll() hands back a deep clone of every fitting, so calling it per row —
+  // and _rowNote used to call it four times per row — costs the whole array
+  // again each time. On a drip layer (3,000 emitters) that dominated everything
+  // else. One snapshot per render, handed down.
+  var _snap = null;
+  function _all() {
+    if (_snap) return _snap;
+    return (window.FittingsUI && FittingsUI.readAll) ? FittingsUI.readAll() : [];
+  }
+
   function _groupNote(f) {
     if (!f || !f.link_group || !window.FittingsUI || !FittingsUI.readAll) return '';
-    var n = FittingsUI.readAll().filter(function (g) { return g.link_group === f.link_group; }).length;
+    var n = _all().filter(function (g) { return g.link_group === f.link_group; }).length;
     if (n < 2) return '';
     var detached = (f.inherit_size === false) && (f.inherit_actuator === false);
     if (detached) return ' · ' + (window._ ? window._('detached') : 'detached');
     var label = (window._ ? window._('%(n)s linked') : '%(n)s linked').replace('%(n)s', n);
     return ' · ' + label;
+  }
+
+  // Both a layer and a valve take an Output, and side by side with nothing said
+  // about either it is not clear which one opens the water. They are not
+  // alternatives — the layer's Output is the circuit's supply (the pump or main
+  // solenoid) and a valve's Output is one zone inside it. The backend splits the
+  // nozzles on exactly that rule: a nozzle belongs to the nearest valve upstream
+  // of it, and whatever no valve claims is the supply's
+  // (irrigation_topology.resolve_nozzle_owners). So the note leads with the role.
+  //
+  // The layer also says what it drives, broken down by nozzle type. That is not
+  // decoration: a house split into zones, or sprinklers overhead with drip at
+  // the root, ends up with several layers whose rows are otherwise identical.
+  function _irrigationNote(f) {
+    if (!f || !window.FittingsUI || !FittingsUI.readAll) return '';
+    var all = _all();
+    var _t = function (s) { return window._ ? window._(s) : s; };
+    if (f.kind === 'irrigation_valve') {
+      var layer = all.find(function (g) { return g.id === f.layer_id; });
+      var where = layer ? (layer.name || _t('Irrigation Layer')) : '';
+      return where ? (_t('Zone') + ' · ' + where) : _t('Zone');
+    }
+    if (f.kind === 'irrigation_pipe') {
+      var segs = Array.isArray(f.segments) ? f.segments : [];
+      var len = 0;
+      segs.forEach(function (sg) {
+        if (!sg.from || !sg.to) return;
+        var dx = sg.to[0] - sg.from[0], dz = sg.to[2] - sg.from[2];
+        len += Math.sqrt(dx * dx + dz * dz);
+      });
+      return len ? (Math.round(len * 10) / 10) + ' m' : '';
+    }
+    if (f.kind !== 'irrigation_layer') return '';
+
+    var spr = 0, drip = 0;
+    all.forEach(function (g) {
+      if (g.kind !== 'irrigation_device' || g.layer_id !== f.id) return;
+      if (g.sub_type === 'drip') drip++; else spr++;
+    });
+    var parts = [_t('Water supply')];
+    if (spr)  parts.push(_t('Sprinkler') + ' ' + spr);
+    if (drip) parts.push(_t('Drip') + ' ' + drip);
+    return parts.join(' · ');
+  }
+
+  // The one sub-line a row is allowed. Irrigation rows say which circuit they
+  // are; everything else says whether it is one of a linked group.
+  function _rowNote(f) {
+    var irr = _irrigationNote(f);
+    if (irr) return irr;
+    return _groupNote(f).replace(/^ · /, '');
   }
 
   // Kind catalogue for the table. Each entry declares what the row should
@@ -50,7 +130,18 @@
     {v:'window',      l:(window._ ? window._('Window') : 'Window'),           detail:'actuator', role:null},
     {v:'side_window', l:(window._ ? window._('Side Window') : 'Side Window'), detail:'actuator', role:null},
     {v:'door',        l:(window._ ? window._('Door') : 'Door'),               detail:'actuator', role:null},
-    {v:'fixture',     l:(window._ ? window._('Fixture') : 'Fixture'),         detail:'actuator', role:null}
+    {v:'fixture',     l:(window._ ? window._('Fixture') : 'Fixture'),         detail:'actuator', role:null},
+    // Irrigation is drawn with the Irrigation tools in 3D (a layer needs a
+    // height, pipes need a path) — never spawned by the generic Add button, so
+    // these two are marked unaddable and kept out of that dropdown.
+    {v:'irrigation_layer', l:(window._ ? window._('Irrigation Layer') : 'Irrigation Layer'),
+     detail:'actuator', role:null, addable:false},
+    {v:'irrigation_valve', l:(window._ ? window._('Irrigation Valve') : 'Irrigation Valve'),
+     detail:'actuator', role:null, addable:false},
+    // A pipe carries no device of its own — the row exists to select it in 3D
+    // and to reach Delete in the panel underneath, so its settings cell is bare.
+    {v:'irrigation_pipe', l:(window._ ? window._('Main Pipe') : 'Main Pipe'),
+     detail:'none', role:null, addable:false}
   ];
   function _kindDef(kind) {
     return _KINDS.filter(function (k) { return k.v === kind; })[0] ||
@@ -301,6 +392,9 @@
   function _syncAddKind() {
     var sel = document.getElementById('fac-add-kind');
     if (!sel || !_activeKind) return;
+    // Unaddable tabs (irrigation) have no option here. Assigning one anyway
+    // blanks the select, and Add would then quietly fall back to a sensor.
+    if (!Array.prototype.some.call(sel.options, function (o) { return o.value === _activeKind; })) return;
     sel.value = _activeKind;
     // bootstrap-select draws its own button; setting .value alone leaves the
     // visible label showing the previous type.
@@ -336,7 +430,11 @@
     var tbody    = document.getElementById('sensor-config-tbody');
     var emptyRow = document.getElementById('sensor-config-empty');
     if (!tbody) return;
+    _snap = (window.FittingsUI && FittingsUI.readAll) ? FittingsUI.readAll() : [];
+    try { _render(tbody, emptyRow); } finally { _snap = null; }
+  }
 
+  function _render(tbody, emptyRow) {
     var all = _getComponents();
     _renderKindTabs(all);
     var sensors = _activeKind ? all.filter(function (f) { return f.kind === _activeKind; }) : all;
@@ -348,6 +446,7 @@
 
     sensors.forEach(function (f) {
       var def = _kindDef(f.kind);
+      var rowNote = _rowNote(f);
       var isSelected = window.FittingsUI && FittingsUI.getSelectedId && FittingsUI.getSelectedId() === f.id;
       var tr = document.createElement('tr');
       tr.dataset.sensorId = f.id;
@@ -371,12 +470,13 @@
             : '<input type="text" data-field="name" value="' + _esc(f.name || '') + '" ' +
                 'class="aot-modern-input" ' +
                 'placeholder="' + _esc(def.l) + '">' +
-              (_groupNote(f) ? '<span class="fac-cell-note">' + _groupNote(f).replace(/^ · /, '') + '</span>' : '')) +
+              (rowNote ? '<span class="fac-cell-note">' + _esc(rowNote) + '</span>' : '')) +
         '</td>' +
 
         // Link: a measurement channel for sensors, an actuator for everything else
         '<td style="padding:5px 8px;">' +
-          (def.detail === 'channel'
+          (def.detail === 'none' ? '' :
+           def.detail === 'channel'
             ? '<button type="button" data-channel-btn ' +
                 'class="btn aot-pill-btn fac-cell-select fac-cell-picker">' +
                 _esc(_channelBtnLabel(f)) +
@@ -384,6 +484,7 @@
             : '<select data-field="actuator_id" class="form-control aot-modern-select fac-cell-select">' +
                 _actuatorOptHtml(f.actuator_id || '') +
               '</select>') +
+          (def.detail === 'none' ? '' :
           (def.role === 'sensor'
             ? '<select data-field="measurement_type" class="form-control aot-modern-select fac-cell-select" style="margin-top:4px;">' +
                 _sensorMtypeOptHtml(f.measurement_type || '') +
@@ -396,7 +497,7 @@
               ? '<select data-field="fan_role" class="form-control aot-modern-select fac-cell-select" style="margin-top:4px;">' +
                   _fanRoleOptHtml(f.fan_role || 'circulation_fan') +
                 '</select>'
-              : '') +
+              : '')) +
         '</td>';
 
       tbody.appendChild(tr);
@@ -502,6 +603,17 @@
   }
 
 
+  // One rebuild per burst. A single gesture in 3D can add a whole row of roof
+  // vents or a pipe run of nozzles, each with its own fitting-added — rebuilding
+  // the table once per event would redraw it dozens of times and yank the
+  // placement panel (and the caret inside it) along each time.
+  var _renderPending = false;
+  function _renderSoon() {
+    if (_renderPending) return;
+    _renderPending = true;
+    setTimeout(function () { _renderPending = false; render(); }, 0);
+  }
+
   // Name the component the placement panel is editing — clicking a row changes
   // that panel, and without a label the change reads as a random menu swap.
   // The accordion sits directly under the selected row, which already shows the
@@ -530,7 +642,7 @@
   function _fillAddKinds() {
     var sel = document.getElementById('fac-add-kind');
     if (!sel || sel.options.length) return;
-    sel.innerHTML = _KINDS.map(function (k) {
+    sel.innerHTML = _KINDS.filter(function (k) { return k.addable !== false; }).map(function (k) {
       return '<option value="' + _esc(k.v) + '">' + _esc(k.l) + '</option>';
     }).join('');
   }
@@ -542,7 +654,10 @@
 
     // The accordion's Delete removes the fitting; rebuild the list so the row
     // and its accordion disappear together.
-    document.addEventListener('fitting-removed', function () { setTimeout(render, 0); });
+    document.addEventListener('fitting-removed', function () { _renderSoon(); });
+    // Bulk delete arrives as one event; redrawing per fitting was 3,010 table
+    // rebuilds for a single [Clear].
+    document.addEventListener('fittings-removed-batch', function () { _renderSoon(); });
     document.addEventListener('fittings-data-changed', _syncSelectionLabel);
     document.addEventListener('fittings-changed', _syncSelectionLabel);
     document.addEventListener('fittings-data-changed', function () {
@@ -575,11 +690,26 @@
       if (tab && tab.classList.contains('active')) render();
     });
 
+    // The 3D stage and this table share the layout step, so anything drawn on
+    // the left has to show up on the right straight away. Irrigation layers and
+    // valves are drawn with the Irrigation tools rather than the Add button and
+    // fire nothing else the table listens to, so without this a valve stayed
+    // invisible — and unwirable — until the step was left and re-entered.
     document.addEventListener('fitting-added', function (e) {
-      if (e.detail && e.detail.fitting && e.detail.fitting.kind === 'sensor') {
-        var tab = document.getElementById('fac-tab-sensors');
-        if (tab && tab.classList.contains('active')) render();
-      }
+      var fit = e.detail && e.detail.fitting;
+      if (!fit || _HIDDEN_KINDS.indexOf(fit.kind) !== -1) return;
+      var tab = document.getElementById('fac-tab-sensors');
+      if (tab && tab.classList.contains('active')) _renderSoon();
+    });
+    // Bulk add (nozzle placement) — the table only lists layers, main pipes and
+    // valves, so a batch of nozzles changes nothing in it; a batch that does is
+    // still just one redraw.
+    document.addEventListener('fittings-added-batch', function (e) {
+      var list = (e.detail && e.detail.fittings) || [];
+      var listed = list.some(function (f) { return f && _HIDDEN_KINDS.indexOf(f.kind) === -1; });
+      if (!listed) return;
+      var tab = document.getElementById('fac-tab-sensors');
+      if (tab && tab.classList.contains('active')) _renderSoon();
     });
 
     // Every route into this step must refresh the table: the step bar, the

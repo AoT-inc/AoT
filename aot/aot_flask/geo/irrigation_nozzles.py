@@ -30,6 +30,8 @@ from __future__ import annotations
 
 import math
 
+from .irrigation_topology import resolve_nozzle_owners
+
 # ─────────────────────────────────────────────────────────────────────────────
 # 습윤형 판정 임계
 # ─────────────────────────────────────────────────────────────────────────────
@@ -244,13 +246,17 @@ def summarize_nozzles(devices, layer_height=None) -> dict:
 def nozzles_by_actuator(fittings) -> dict:
     """관수 액추에이터(Output uuid) → 노즐 요약 맵을 만든다.
 
-    ``irrigation_layer.actuator_id`` (레이어 전체를 여닫는 펌프·밸브)와
-    ``irrigation_valve.actuator_id`` (레이어 안의 개별 밸브) 양쪽을 모두 훑는다.
-    밸브는 담당 배관(pipe_id)이 지정돼 있으면 그 배관의 노즐만, 아니면 레이어
-    전체 노즐을 대상으로 본다.
+    노즐의 임자는 ``irrigation_topology.resolve_nozzle_owners`` 가 물길로
+    정한다. 밸브는 자기가 선 자리에서 하류로 뻗은 구간을 맡고, 어떤 밸브도
+    맡지 않은 노즐만 레이어 Output(회로 공급 — 펌프·주밸브) 몫이다. 노즐
+    하나는 정확히 한 액추에이터에만 속한다.
 
-    같은 Output 이 여러 레이어에 걸쳐 있으면 노즐을 합쳐서 한 번에 평가한다
-    (한 밸브가 여는 물길 전체가 곧 그 액추에이터의 습윤 특성이다).
+    2026-08-25 이전에는 레이어에 그 레이어 노즐 전체를, 밸브에도 (붙은
+    배관에 노즐이 없으면) 레이어 노즐 전체를 붙였다. 둘 다 Output 을 물려
+    두면 같은 물이 fogger 액추에이터 두 개로 등록됐다.
+
+    같은 Output 이 여러 레이어·밸브에 걸쳐 있으면 노즐을 합쳐서 한 번에
+    평가한다 (한 밸브가 여는 물길 전체가 곧 그 액추에이터의 습윤 특성이다).
 
     Args:
         fittings: GeoFacility.fittings 목록
@@ -263,15 +269,11 @@ def nozzles_by_actuator(fittings) -> dict:
 
     layers = [f for f in fittings if f.get('kind') == 'irrigation_layer']
     valves = [f for f in fittings if f.get('kind') == 'irrigation_valve']
-    devs   = [f for f in fittings if f.get('kind') == 'irrigation_device']
-    if not devs:
+    if not any(f.get('kind') == 'irrigation_device' for f in fittings):
         return {}
 
-    devs_by_layer: dict = {}
-    for d in devs:
-        devs_by_layer.setdefault(d.get('layer_id'), []).append(d)
-
     layer_height = {L.get('id'): L.get('height_m') for L in layers}
+    by_valve, by_layer = resolve_nozzle_owners(fittings)
 
     # {output_uuid: ([devices], [heights])} — 액추에이터별로 노즐을 모은 뒤 일괄 평가
     collected: dict = {}
@@ -286,18 +288,11 @@ def nozzles_by_actuator(fittings) -> dict:
 
     for L in layers:
         lid = L.get('id')
-        _collect(L.get('actuator_id'), devs_by_layer.get(lid) or [], L.get('height_m'))
+        _collect(L.get('actuator_id'), by_layer.get(lid) or [], L.get('height_m'))
 
     for v in valves:
-        lid = v.get('layer_id')
-        layer_devs = devs_by_layer.get(lid) or []
-        pipe_id = v.get('pipe_id')
-        if pipe_id:
-            scoped = [d for d in layer_devs if d.get('pipe_id') == pipe_id]
-            # 밸브가 특정 배관에 붙어 있어도 그 배관에 노즐이 없으면
-            # (지관 생성 전 등) 레이어 전체로 폴백한다.
-            layer_devs = scoped or layer_devs
-        _collect(v.get('actuator_id'), layer_devs, layer_height.get(lid))
+        _collect(v.get('actuator_id'), by_valve.get(v.get('id')) or [],
+                 layer_height.get(v.get('layer_id')))
 
     result = {}
     for aid, entry in collected.items():

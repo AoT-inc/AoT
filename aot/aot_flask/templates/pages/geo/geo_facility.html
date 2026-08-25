@@ -711,7 +711,8 @@
           </div>
         </div>
 
-        <div class="aot-modal-body-text">{{ _('Drag the component in the 3D view to move it, or type exact coordinates below.') }}</div>
+        {# 좌표 칸이 없는 선택(관수 레이어·배관)에서는 이 안내가 거짓말이 된다. #}
+        <div class="aot-modal-body-text" id="fi-place-hint">{{ _('Drag the component in the 3D view to move it, or type exact coordinates below.') }}</div>
 
         <!-- Envelope-derived items only: editing size or position detaches them
              from the envelope's automatic geometry, so this is the way back. -->

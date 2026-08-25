@@ -262,6 +262,22 @@
   --aot-btn-radius: 18px;
   --aot-btn-radius-sm: 16px;
   --aot-control-width: 160px;
+  /* 컨트롤 폭 사다리 — 옵션 행(.aot-modal-option-row)의 컨트롤이 실제로 필요한
+     폭. 공용 160px(--aot-control-width)는 텍스트 입력/셀렉트 기준이라, 스위치
+     하나뿐인 행에서는 100px 넘게 버려지고 그만큼 라벨(제목)이 모바일에서
+     말줄임 처리된다. 라벨의 max-width 와 컨트롤의 flex-basis 가 같은 변수
+     (--aot-common-control-width)를 읽으므로, 행 단위로 이 값만 갈아끼우면
+     둘이 동시에 맞춰진다. 색상 피커=60px, 숫자 입력은 소수점 좌표까지
+     보이는 최소치 96px.
+     ⚠ 스위치는 여기서 px 을 다시 적지 않는다 — .btn-toggle 의 폭 정의가
+     components/aot-toggle.css 에서 --aot-roundbox-width 를 읽으므로 같은
+     토큰을 공유해야 한다. bootstrap-4-themes/aot.css 에도 .btn-toggle
+     width:54px 가 있지만 그쪽이 먼저 로드돼 덮이는 죽은 값이고, 그 54px 을
+     베껴 적었다가 컨트롤이 실제 토글(60px)보다 좁아져 스위치가 눌리고
+     thumb 이 4px 삐져나오는 회귀를 냈다. */
+  --aot-ctrl-w-switch: var(--aot-roundbox-width, 60px);
+  --aot-ctrl-w-color: 60px;
+  --aot-ctrl-w-num: 96px;
   --aot-btn-fixed-width: 60px;
   --aot-roundbox-width: 60px;
   --aot-base-size: 28px;

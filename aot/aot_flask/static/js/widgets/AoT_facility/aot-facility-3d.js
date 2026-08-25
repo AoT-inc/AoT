@@ -712,6 +712,8 @@
       // ── Irrigation device (sprinkler head) ──
       if (f.kind === 'irrigation_device') {
         if (!f.position) return;
+        // Drip emitters are counted, not drawn — see _buildIrrigationDeviceMesh.
+        if ((f.sub_type || 'sprinkler') === 'drip') return;
         var px = parseFloat(f.position.x) || 0, py = parseFloat(f.position.y) || 2.0, pz = parseFloat(f.position.z) || 0;
         var radiusM = parseFloat(f.radius_m) || 11;
         var tHex = _tc('equipment', 0x007bff);
@@ -1081,6 +1083,45 @@
     });
   }
 
+  // ── Display categories — the single source of truth ─────────────────────────
+  // The fittings panel counts each item into one of these rows and the scene
+  // hides by the same key, so the two MUST agree. They used to be three
+  // hand-copied maps (this file's scene builder, this file's map-layer builder,
+  // and FittingsUI._renderList) and they drifted: irrigation valves and
+  // hand-placed foggers/shade curtains were counted in a row that could not
+  // hide them. One function now, exported as AoTFacility3D.categoryOf.
+  //
+  // Category is decided by KIND, never by who created the item. Filing by
+  // `source === 'envelope'` was the bug behind "the wrong things disappear":
+  // a roof vent the envelope generated is still an opening and a thermal
+  // curtain is still a curtain, but both were swept into the "Envelope" row —
+  // which left "Openings" showing 2 in a house with 10 windows, and turning
+  // "Envelope" off stripped away every window and curtain while the cover it
+  // names stayed put.
+  var _CATEGORY_BY_KIND = {
+    window: 'opening', door: 'opening', side_window: 'opening',
+    fan: 'climate', heater: 'climate', fogger: 'climate',
+    curtain: 'climate', shade_curtain: 'climate',
+    sensor: 'sensor',
+    fixture: 'fixture',
+    irrigation_layer: 'irrig', irrigation_pipe: 'irrig', irrigation_device: 'irrig',
+    irrigation_connection: 'irrig', irrigation_valve: 'irrig',
+    // Structure — these are the shell, so they belong in the row the cover
+    // itself lives in rather than in any equipment row.
+    front_reinforcement: 'envelope', reinforcement: 'envelope',
+  };
+  function categoryOf(f) {
+    if (!f || !f.kind) return null;
+    // These rows are a display filter with an eye on them, so they may only
+    // count what is actually on screen. Drip emitters are deliberately not
+    // drawn (see _buildIrrigationDeviceMesh), so counting them here would put
+    // the row's number back out of step with what its eye can reach — the very
+    // thing this map exists to prevent. They remain in the model and in every
+    // flow and nozzle figure.
+    if (f.kind === 'irrigation_device' && f.sub_type === 'drip') return null;
+    return _CATEGORY_BY_KIND[f.kind] || null;
+  }
+
   // ── Main builder (public, backward-compat) ───────────────────────────────────
   function buildScene(canvas, facility, runtime, opts) {
     // Update FacilityState
@@ -1234,6 +1275,27 @@
     const outerCoverMat = (_outerLayer.cover) || outerEnvSpec.cover_material || 'vinyl_double';
     const innerCoverMat = (_innerLayer && _innerLayer.cover) || innerEnvSpec.cover_material || 'non_woven_fabric';
     const ghGroup = new THREE.Group(); ghGroup.name = 'greenhouse'; scene.add(ghGroup);
+
+    // Category visibility state. Declared here, before anything is built, so the
+    // shell below can tag itself as it goes — the fittings tagger further down
+    // reads the same object.
+    var _catVisibility = {
+      envelope: true, opening: true, climate: true,
+      sensor: true, fixture: true, irrig: true
+    };
+    // The cover, its edges and the structural annexes ARE the envelope, and the
+    // "Envelope" row is the one place a user can peel them away to look inside.
+    // Until now that row only ever hid fittings, so it stripped the windows and
+    // curtains and left the shell standing — the opposite of what it says.
+    // The floor stays out on purpose: it is the raycast target for dropping a
+    // device onto the ground, and hiding it would silently kill placement.
+    function _tagEnvelope(obj) {
+      if (!obj) return obj;
+      obj.userData = obj.userData || {};
+      obj.userData.category = 'envelope';
+      obj.visible = !!_catVisibility.envelope;
+      return obj;
+    }
     const clickTargets = [];
 
     // Outer cover + (optional) inner cover are extruded ONCE per unit shape
@@ -1244,12 +1306,12 @@
     // are derived from the SAME facility.fittings the vent overlays render from,
     // so holes and overlays stay consistent and never double up.
     if (P && P.buildOuterCoverPanels) {
-      ghGroup.add(P.buildOuterCoverPanels({
+      ghGroup.add(_tagEnvelope(P.buildOuterCoverPanels({
         unitCount: unitCount, unitWidth: unitWidth, effectiveSpacing: effectiveSpacing,
         meshBayCount: meshBayCount, span: span, eaveH: eaveH, ridgeH: ridgeH,
         roofType: roofType, length: length, material: MAT.cover(outerCoverMat),
         openings: P.coverOpeningsFromFittings(Array.isArray(facility.fittings) ? facility.fittings : []),
-      }));
+      })));
     } else {
       const outerShape = _buildMultiSpanShape(span, eaveH, ridgeH, roofType, meshBayCount, effectiveSpacing);
       const outerGeo = new THREE.ExtrudeGeometry(outerShape, extrudeSettings);
@@ -1259,11 +1321,11 @@
         outerMesh.name = 'outer_cover_' + u;
         outerMesh.position.x = xOff;
         outerMesh.renderOrder = 1000;
-        ghGroup.add(outerMesh);
+        ghGroup.add(_tagEnvelope(outerMesh));
         const edgeMesh = new THREE.LineSegments(new THREE.EdgesGeometry(outerGeo),
           new THREE.LineBasicMaterial({ color: 0x455a64 }));
         edgeMesh.position.x = xOff;
-        ghGroup.add(edgeMesh);
+        ghGroup.add(_tagEnvelope(edgeMesh));
       }
     }
     let innerGeo = null;
@@ -1280,7 +1342,7 @@
         innerMesh.name = 'inner_cover_' + u;
         innerMesh.position.set(xOff + inset, 0, inset);
         innerMesh.renderOrder = 900;
-        ghGroup.add(innerMesh);
+        ghGroup.add(_tagEnvelope(innerMesh));
       }
     }
 
@@ -1289,7 +1351,7 @@
       for (let b=1; b<meshBayCount; b++) {
         [length*0.25, length*0.75].forEach(z => {
           const col = new THREE.Mesh(new THREE.BoxGeometry(0.05,eaveH,0.05), gm);
-          col.position.set(b*span, eaveH/2, z); ghGroup.add(col);
+          col.position.set(b*span, eaveH/2, z); ghGroup.add(_tagEnvelope(col));
         });
       }
     }
@@ -1335,10 +1397,10 @@
               sm.userData.frXCenter     = xCenter;
               sm.userData.frZOuter      = length + d;
               sm.userData.frZCenter     = length + d / 2;
-              ghGroup.add(sm);
+              ghGroup.add(_tagEnvelope(sm));
               const se = new THREE.LineSegments(new THREE.EdgesGeometry(frontGeo), frontEdgeMat);
               se.position.copy(sm.position);
-              ghGroup.add(se);
+              ghGroup.add(_tagEnvelope(se));
             }
             if (_axSides.indexOf('y_neg') >= 0) {
               const nm = new THREE.Mesh(frontGeo, MAT.cover(outerCoverMat));
@@ -1351,10 +1413,10 @@
               nm.userData.frXCenter     = xCenter;
               nm.userData.frZOuter      = -d;
               nm.userData.frZCenter     = -d / 2;
-              ghGroup.add(nm);
+              ghGroup.add(_tagEnvelope(nm));
               const ne = new THREE.LineSegments(new THREE.EdgesGeometry(frontGeo), frontEdgeMat);
               ne.position.copy(nm.position);
-              ghGroup.add(ne);
+              ghGroup.add(_tagEnvelope(ne));
             }
           }
         });
@@ -1605,8 +1667,14 @@
         group.add(s);
       }
       ghGroup.add(group);
-      if (f.id && group.children[0]) {
-        clickTargets.push({ mesh: group.children[0], slot: 'fitting:' + f.id, fittingId: f.id });
+      // Every segment is a click target, not just the first. A main run is drawn
+      // as a polyline, so registering children[0] alone meant only its opening
+      // leg could be picked — click anywhere else along the pipe and nothing was
+      // selected, which is why a main could not be deleted by clicking it.
+      if (f.id) {
+        group.children.forEach(function (seg) {
+          clickTargets.push({ mesh: seg, slot: 'fitting:' + f.id, fittingId: f.id });
+        });
       }
       return group;
     }
@@ -1641,12 +1709,20 @@
     }
 
     function _buildIrrigationDeviceMesh(f) {
+      const subType = f.sub_type || 'sprinkler';                       // 'sprinkler' | 'drip'
+      // Drip emitters are counted, not drawn. A drip run puts one every
+      // 20-30 cm, so a house of them is hundreds of 5 cm discs that read as
+      // noise along the pipe and hide the pipe itself, and each one drops
+      // water where it stands — there is no throw to show and nothing the
+      // shape tells you that the pipe does not. The fitting stays in the
+      // model, so flow totals, nozzle counts and the wetting figures
+      // (irrigation_nozzles) all still see it.
+      if (subType === 'drip') return null;
       const px = parseFloat(f.position.x) || 0;
       const pz = parseFloat(f.position.z) || 0;
       const py = parseFloat(f.position.y) || 2.0;
       const radiusM = parseFloat(f.radius_m) || 11;
       const orientation = (f.orientation === 'up') ? 'up' : 'down';   // 'up' = upward, 'down' = downward
-      const subType = f.sub_type || 'sprinkler';                       // 'sprinkler' | 'drip'
       const isSel = (f.id === (window.FittingsUI && FittingsUI.getSelectedId ? FittingsUI.getSelectedId() : null));
       const themeHex = _themeColor('equipment', 0x007bff);
 
@@ -1659,27 +1735,17 @@
       //   → no rotation (tip = +Y), center at py + coneH/2
       //   → tip world Y = py + coneH, base world Y = py ✓
       // drip: small disc, direction irrelevant.
-      let bodyMesh;
       const coneH = 0.30;
-      if (subType === 'drip') {
-        const dg = new THREE.CylinderGeometry(0.05, 0.05, 0.04, 12);
-        const dm = new THREE.MeshStandardMaterial({
-          color: isSel ? 0xffeb3b : themeHex, roughness: 0.55, metalness: 0.25
-        });
-        bodyMesh = new THREE.Mesh(dg, dm);
-        bodyMesh.position.set(px, py - 0.02, pz);
+      const cg = new THREE.ConeGeometry(0.08, coneH, 10);
+      const cm = new THREE.MeshStandardMaterial({
+        color: isSel ? 0xffeb3b : themeHex, roughness: 0.5, metalness: 0.3
+      });
+      const bodyMesh = new THREE.Mesh(cg, cm);
+      if (orientation === 'down') {
+        bodyMesh.rotation.z = Math.PI;                           // tip toward -Y (down)
+        bodyMesh.position.set(px, py - coneH / 2, pz);           // base = py, tip = py - coneH
       } else {
-        const cg = new THREE.ConeGeometry(0.08, coneH, 10);
-        const cm = new THREE.MeshStandardMaterial({
-          color: isSel ? 0xffeb3b : themeHex, roughness: 0.5, metalness: 0.3
-        });
-        bodyMesh = new THREE.Mesh(cg, cm);
-        if (orientation === 'down') {
-          bodyMesh.rotation.z = Math.PI;                           // tip toward -Y (down)
-          bodyMesh.position.set(px, py - coneH / 2, pz);           // base = py, tip = py - coneH
-        } else {
-          bodyMesh.position.set(px, py + coneH / 2, pz);           // base = py, tip = py + coneH (up)
-        }
+        bodyMesh.position.set(px, py + coneH / 2, pz);           // base = py, tip = py + coneH (up)
       }
       bodyMesh.name = 'fitting:' + f.id;
       ghGroup.add(bodyMesh);
@@ -1689,31 +1755,16 @@
       // Rendered in a single draw call after fittings.forEach completes (see flush below).
       // Same batch principle as geo/design's single MapLibre fill layer.
       // The sprinkler coverage radius is drawn on the ground (0.02) regardless of direction (up/down).
-      const ringY = (subType === 'sprinkler') ? 0.02 : py + 0.02;
       if (!ghGroup.userData._pendingCoverage) ghGroup.userData._pendingCoverage = [];
-      ghGroup.userData._pendingCoverage.push({ px, ringY, pz, radiusM });
+      ghGroup.userData._pendingCoverage.push({ px, ringY: 0.02, pz, radiusM });
 
       return bodyMesh;
     }
 
     // ─── Category visibility (envelope / opening / climate / sensor / fixture / irrig) ─
     // Tag via mesh.userData.category → toggle in bulk with setCategoryVisibility.
-    var _catVisibility = {
-      envelope: true, opening: true, climate: true,
-      sensor: true, fixture: true, irrig: true
-    };
-    function _categoryOf(f) {
-      if (!f) return null;
-      if (f.source === 'envelope') return 'envelope';
-      var k = f.kind;
-      if (k === 'window' || k === 'door' || k === 'side_window') return 'opening';
-      if (k === 'fan' || k === 'heater' || k === 'curtain')      return 'climate';
-      if (k === 'sensor')  return 'sensor';
-      if (k === 'fixture') return 'fixture';
-      if (k === 'irrigation_layer' || k === 'irrigation_pipe' ||
-          k === 'irrigation_device' || k === 'irrigation_connection') return 'irrig';
-      return null;
-    }
+    // The mapping itself is module-level (categoryOf) so the panel that counts
+    // these rows and the scene that hides them cannot drift apart.
     function setCategoryVisibility(cat, visible) {
       if (!_catVisibility.hasOwnProperty(cat)) return;
       _catVisibility[cat] = !!visible;
@@ -1724,7 +1775,7 @@
     }
     // Helper that attaches a category tag to the mesh/group returned by _addFittingToScene.
     function _tagCategory(meshOrGroup, f) {
-      var cat = _categoryOf(f);
+      var cat = categoryOf(f);
       if (!meshOrGroup || !cat) return meshOrGroup;
       meshOrGroup.userData = meshOrGroup.userData || {};
       meshOrGroup.userData.category = cat;
@@ -1907,10 +1958,41 @@
     // ── Sprinkler coverage InstancedMesh batch flush ───────────────────────────────────
     // Like geo/design's single MapLibre fill layer, render all sprinkler radius circles
     // in one WebGL draw call (InstancedMesh: shared geometry/material).
-    (function _flushIrrigCoverage() {
+    // Named so the batch-add path can flush too — it used to run only here, at
+    // the end of a full build, which meant nozzles added incrementally piled up
+    // in _pendingCoverage and never got a circle.
+    function _flushIrrigCoverage() {
       const covers = ghGroup.userData._pendingCoverage;
-      if (!covers || !covers.length) return;
       delete ghGroup.userData._pendingCoverage;
+      _buildCoverage(covers);
+    }
+
+    // Replace the coverage circles with exactly this set. Incremental edits go
+    // through here rather than appending: deleting nozzles used to leave their
+    // rings behind (40 circles over 0 sprinklers), because the InstancedMesh is
+    // one object and removeFittingMeshes only knows about 'fitting:*' names.
+    function setIrrigationCoverage(devices) {
+      delete ghGroup.userData._pendingCoverage;
+      const covers = [];
+      (devices || []).forEach(function (d) {
+        if (!d || d.kind !== 'irrigation_device') return;
+        if ((d.sub_type || 'sprinkler') === 'drip') return;   // drip draws nothing
+        const pos = d.position || {};
+        covers.push({ px: parseFloat(pos.x) || 0, ringY: 0.02, pz: parseFloat(pos.z) || 0,
+                      radiusM: parseFloat(d.radius_m) || 11 });
+      });
+      _buildCoverage(covers);
+    }
+
+    function _buildCoverage(covers) {
+      const stale = [];
+      ghGroup.traverse(function (o) { if (o.name === 'irrig_coverage_batch') stale.push(o); });
+      stale.forEach(function (o) {
+        if (o.geometry) o.geometry.dispose();
+        if (o.material && o.material.dispose) o.material.dispose();
+        ghGroup.remove(o);
+      });
+      if (!covers || !covers.length) return;
       const themeHex = _themeColor('equipment', 0x007bff);
       const cGeo = new THREE.CircleGeometry(1, 24); // radius=1 normalized, scaled per instance
       cGeo.rotateX(-Math.PI / 2);                   // XZ horizontal plane (ground sprinkler footprint)
@@ -1933,7 +2015,8 @@
       });
       iMesh.instanceMatrix.needsUpdate = true;
       ghGroup.add(iMesh);
-    })();
+    }
+    _flushIrrigCoverage();
 
     // Wind & compass
     if (outdoor.wind_ms!=null || outdoor.wind_deg!=null) scene.add(buildWindArrow(outdoor.wind_deg||0, length));
@@ -2135,6 +2218,81 @@
       _pipePreview.visible = true;
     }
 
+    // ── Vertex snap — pipes only join where their points actually coincide ────
+    // Ortho snap fixes the DIRECTION of a run, never where it lands, so two
+    // pipes meant to meet ended up within a few centimetres of each other and
+    // the connection logic had to paper over it with a 15 cm tolerance. Snapping
+    // the cursor onto an existing endpoint, bend or tee makes them the same
+    // point, which is what the hydraulic solver reads the network from.
+    //
+    // The test is in pixels, not metres: a 30 cm world radius is a fat target
+    // zoomed in on one bay and invisible when the whole house is on screen.
+    const _SNAP_PX = 14;
+    const _snapMarker = new THREE.Mesh(
+      new THREE.SphereGeometry(0.09, 12, 8),
+      new THREE.MeshBasicMaterial({ color: 0xffc107, depthTest: false,
+                                    transparent: true, opacity: 0.95 })
+    );
+    _snapMarker.name = 'irr_snap_marker';
+    _snapMarker.renderOrder = 999;
+    _snapMarker.visible = false;
+    _snapMarker.frustumCulled = false;
+    scene.add(_snapMarker);
+
+    // Every point of the active layer a run may be tied to: pipe endpoints, the
+    // bends in between (a corner is a real place to branch from) and the tees.
+    function _snapCandidates(layerH) {
+      const out = [];
+      if (!(window.FittingsUI && FittingsUI.readAll && FittingsUI.getActiveLayerId)) return out;
+      const lid = FittingsUI.getActiveLayerId();
+      if (!lid) return out;
+      FittingsUI.readAll().forEach(function (f) {
+        if (f.layer_id !== lid) return;
+        if (f.kind === 'irrigation_pipe') {
+          const segs = Array.isArray(f.segments) ? f.segments : [];
+          segs.forEach(function (sg, i) {
+            if (i === 0 && sg.from) out.push([sg.from[0], layerH, sg.from[2]]);
+            if (sg.to) out.push([sg.to[0], layerH, sg.to[2]]);
+          });
+        } else if (f.kind === 'irrigation_connection' && f.position) {
+          out.push([f.position.x, layerH, f.position.z]);
+        }
+      });
+      return out;
+    }
+
+    // Moves v onto the nearest candidate within _SNAP_PX. Returns true if it did.
+    // Height stays at the layer plane — a riser's foot is on the floor, but the
+    // run being drawn still belongs to its own layer.
+    const _snapTmp = new THREE.Vector3();
+    function _snapToVertex(event, v, layerH) {
+      _snapMarker.visible = false;
+      const cands = _snapCandidates(layerH);
+      if (!cands.length || !v) return false;
+      const rect = canvas.getBoundingClientRect();
+      const mx = event.clientX - rect.left, my = event.clientY - rect.top;
+      let best = null;
+      for (let i = 0; i < cands.length; i++) {
+        _snapTmp.set(cands[i][0] || 0, cands[i][1] || 0, cands[i][2] || 0);
+        // The point we just placed is the anchor — snapping back onto it would
+        // add a zero-length segment and the run would look frozen.
+        if (_pipeAnchor && _snapTmp.distanceTo(_pipeAnchor) < 1e-3) continue;
+        const ndc = _snapTmp.clone().project(camera);
+        if (ndc.z > 1) continue;                       // behind the camera
+        const sx = (ndc.x + 1) / 2 * rect.width;
+        const sy = (-ndc.y + 1) / 2 * rect.height;
+        const d = Math.hypot(sx - mx, sy - my);
+        if (d <= _SNAP_PX && (best === null || d < best.d)) {
+          best = { d: d, x: _snapTmp.x, y: _snapTmp.y, z: _snapTmp.z };
+        }
+      }
+      if (!best) return false;
+      v.set(best.x, best.y, best.z);
+      _snapMarker.position.set(best.x, best.y, best.z);
+      _snapMarker.visible = true;
+      return true;
+    }
+
     // Intersection of the horizontal plane (y = h) with the mouse ray — used later for main/branch pipe and device clicks.
     // It's a virtual plane (not the floor raycast _floorRef), so the visual snap aligns to the layer height.
     function _hitLayerPlane(event, h) {
@@ -2215,6 +2373,7 @@
       // On tool switch, reset any in-progress drawing anchor/preview
       _pipeAnchor = null;
       _pipePreview.visible = false;
+      _snapMarker.visible = false;
       if (_toolMode) {
         canvas.style.cursor = 'crosshair';
         _updateChip(null);
@@ -2296,12 +2455,32 @@
                y: -((event.clientY-rect.top)/rect.height)*2+1 };
     }
 
+    // The arrows are modelled at a fixed size in metres (S = 8, so ~2.5 m long),
+    // which reads well from the default camera distance and swallows the
+    // component whole once you zoom in on it — at 3 m away the arrows are most
+    // of the screen. Scaling by the camera distance each frame keeps them the
+    // same size on screen no matter the zoom, so they stay grabbable without
+    // ever covering what they point at. camera.zoom is folded in because
+    // MapControls can zoom the projection without moving the camera.
+    const _GIZMO_REF_DIST = 40;   // distance the modelled size was drawn for
+    function _sizeGizmoToScreen() {
+      if (!_gizmoGroup || !_gizmoGroup.visible) return;
+      const d = camera.position.distanceTo(_gizmoPos);
+      const s = d / _GIZMO_REF_DIST / (camera.zoom || 1);
+      // The clamp is a guard against degenerate geometry, not a size policy —
+      // set it too high and the arrows start growing again exactly where the
+      // complaint was (measured: a 0.12 floor took a 59 px gizmo to 86 px once
+      // the camera got within ~3.5 m).
+      _gizmoGroup.scale.setScalar(Math.max(0.02, Math.min(4, s)));
+    }
+
     function showGizmo(fittingId, posObj) {
       if (!_gizmoGroup) _gizmoGroup = _buildGizmo();
       _gizmoFitId = fittingId;
       _gizmoPos.set(posObj.x||0, posObj.y||0, posObj.z||0);
       _gizmoGroup.position.copy(_gizmoPos);
       _gizmoGroup.visible = true;
+      _sizeGizmoToScreen();
       requestRender();
     }
 
@@ -2500,10 +2679,13 @@
         }
         const ph = _hitLayerPlane(event, layerH);
         if (ph) {
-          _snapOrtho(ph);
+          // Landing on an existing point beats keeping the run square — that is
+          // the whole reason to reach for it.
+          if (!_snapToVertex(event, ph, layerH)) _snapOrtho(ph);
           _updatePipePreview(ph);
         } else {
           _pipePreview.visible = false;
+          _snapMarker.visible = false;
         }
         _hlMesh.visible = false;
         _updateChip(_pipeAnchor ? (_orthoActive() ? (window._ ? window._('Ortho ON') : 'Ortho ON') : (window._ ? window._('Free') : 'Free')) : (window._ ? window._('Start point') : 'Start point'));
@@ -2609,7 +2791,9 @@
           }
           const hit = _hitLayerPlane(event, layerH);
           if (!hit) return;
-          _snapOrtho(hit);   // ortho snap — same coordinates as the preview
+          // Same order as the preview, or the click would land somewhere the
+          // dashed line never showed.
+          if (!_snapToVertex(event, hit, layerH)) _snapOrtho(hit);
           const isDouble = (event.detail && event.detail >= 2);
           const sub = (_toolMode === 'irr_main_pipe') ? 'main' : 'branch';
           document.dispatchEvent(new CustomEvent('aot-facility-irr-pipe-click', {
@@ -2780,6 +2964,7 @@
       if (_disposed) return;
       if (!_fitted) _tryFit();
       controls.update();
+      _sizeGizmoToScreen();
       renderer.render(scene, camera);
     }
 
@@ -2966,21 +3151,45 @@
     // In-place add for a single fitting — no scene rebuild.
     function addFittingMesh(f) {
       _addFittingToScene(f);
+      delete ghGroup.userData._pendingCoverage;   // setIrrigationCoverage owns the circles
+    }
+
+    // Batch form — one pass and (with the AndRender wrapper) one draw for the
+    // whole set instead of per nozzle.
+    function addFittingMeshes(list) {
+      if (!list || !list.length) return;
+      list.forEach(_addFittingToScene);
+      delete ghGroup.userData._pendingCoverage;
     }
 
     // In-place remove — find mesh + edges by name, dispose, drop click target.
     function removeFittingMesh(id) {
       if (!id) return;
-      var meshPfx = 'fitting:' + id;
-      var edgePfx = 'edges:fitting:' + id;
+      removeFittingMeshes([id]);
+    }
+
+    // Batch form. One scene traverse and one clickTargets pass for the whole
+    // set — clearing an irrigation layer deletes thousands of fittings, and
+    // per-id that is a full traverse plus a full clickTargets scan each time.
+    function removeFittingMeshes(ids) {
+      if (!ids || !ids.length) return;
+      var doomed = {};
+      ids.forEach(function (id) { if (id) doomed[id] = true; });
+      // A mesh name is 'fitting:{id}', 'edges:fitting:{id}' or a fold variant
+      // with ':L'/':R' appended — take the id back out and look it up.
+      function _idOf(name) {
+        var n = name;
+        if (n.indexOf('edges:') === 0) n = n.slice(6);
+        if (n.indexOf('fitting:') !== 0) return null;
+        n = n.slice(8);
+        var colon = n.indexOf(':');
+        return colon === -1 ? n : n.slice(0, colon);
+      }
       var toRemove = [];
       ghGroup.traverse(function (o) {
         if (!o.name) return;
-        // match exact name OR fold-variant names (fitting:{id}:L / fitting:{id}:R)
-        if (o.name === meshPfx || o.name === edgePfx ||
-            o.name.indexOf(meshPfx + ':') === 0 || o.name.indexOf(edgePfx + ':') === 0) {
-          toRemove.push(o);
-        }
+        var id = _idOf(o.name);
+        if (id && doomed[id]) toRemove.push(o);
       });
       toRemove.forEach(function (o) {
         if (o.geometry) o.geometry.dispose();
@@ -2988,13 +3197,15 @@
         ghGroup.remove(o);
       });
       for (var i = clickTargets.length - 1; i >= 0; i--) {
-        if (clickTargets[i].fittingId === id) clickTargets.splice(i, 1);
+        if (doomed[clickTargets[i].fittingId]) clickTargets.splice(i, 1);
       }
     }
 
     // ─── Externally-callable wrappers — trigger requestRender each time ────────────
     function addFittingMeshAndRender(f)  { var r = addFittingMesh(f);  requestRender(); return r; }
     function removeFittingMeshAndRender(id) { removeFittingMesh(id);   requestRender(); }
+    function removeFittingMeshesAndRender(ids) { removeFittingMeshes(ids); requestRender(); }
+    function addFittingMeshesAndRender(list) { addFittingMeshes(list); requestRender(); }
     function updateFittingSelectionAndRender(id) { updateFittingSelection(id); requestRender(); }
     function updateFittingTransformAndRender(id, position, rotation_deg) {
       updateFittingTransform(id, position, rotation_deg);
@@ -3018,6 +3229,9 @@
       updateFittingGeometry:  updateFittingGeometryAndRender,
       addFittingMesh:    addFittingMeshAndRender,
       removeFittingMesh: removeFittingMeshAndRender,
+      removeFittingMeshes: removeFittingMeshesAndRender,
+      addFittingMeshes:    addFittingMeshesAndRender,
+      setIrrigationCoverage: function (devices) { setIrrigationCoverage(devices); requestRender(); },
       showGizmo: showGizmo,
       hideGizmo: hideGizmo,
       setFittingProbe: setFittingProbe,
@@ -3030,7 +3244,7 @@
       getOrthoSnap: function () { return _orthoSnap; },
       setPipeAnchor: function (pt) {
         if (pt && pt.length >= 3) _pipeAnchor = new THREE.Vector3(pt[0], pt[1], pt[2]);
-        else { _pipeAnchor = null; _pipePreview.visible = false; }
+        else { _pipeAnchor = null; _pipePreview.visible = false; _snapMarker.visible = false; }
         requestRender();
       }
     };
@@ -3157,20 +3371,8 @@
     // Apply view_options.category_visibility
     var catVis = (facility.view_options && facility.view_options.category_visibility) || null;
     if (catVis && typeof catVis === 'object') {
-      var _catOf = function (f) {
-        if (!f) return null;
-        if (f.source === 'envelope') return 'envelope';
-        var k = f.kind;
-        if (k === 'window' || k === 'door' || k === 'side_window') return 'opening';
-        if (k === 'fan' || k === 'heater' || k === 'curtain')      return 'climate';
-        if (k === 'sensor')  return 'sensor';
-        if (k === 'fixture') return 'fixture';
-        if (k === 'irrigation_layer' || k === 'irrigation_pipe' ||
-            k === 'irrigation_device' || k === 'irrigation_connection') return 'irrig';
-        return null;
-      };
       allFittings = allFittings.filter(function (f) {
-        var c = _catOf(f);
+        var c = categoryOf(f);
         return c == null || catVis[c] !== false;
       });
     }
@@ -3187,5 +3389,5 @@
     return group;
   }
 
-  global.AoTFacility3D = { buildScene, buildFacilityMesh };
+  global.AoTFacility3D = { buildScene, buildFacilityMesh, categoryOf };
 })(window);

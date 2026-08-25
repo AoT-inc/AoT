@@ -12498,6 +12498,10 @@
                                     // 띄워 입력만 옛 방식으로 남는다.
                                     shell: _showFacilityCenterOverlay,
                                     shellUid: uniqueId,
+                                    // Input 모달만 그래프를 낮춘다(요청) — 시설 bay
+                                    // 팝업은 이 옵션을 안 주므로 공용 기본값(1.5)을
+                                    // 그대로 쓴다. 1.125 = 285px → 214px, 25% 감소.
+                                    heightScale: 1.125,
                                     note: { targetId: uniqueKey, targetType: 'device', name: displayName },
                                     onClose: function () {
                                         _clearHighlight(uniqueId);

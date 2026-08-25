@@ -898,6 +898,37 @@
         _ctx.removeFittingMesh(e.detail.id);
       }
     });
+    // Sprinkler coverage circles are one InstancedMesh for the whole facility, so
+    // any change to the nozzle set means rebuilding it from what is there now.
+    // Appending on add and ignoring delete is what left rings hanging over
+    // nozzles that no longer existed.
+    function _syncCoverage() {
+      if (!_ctx || typeof _ctx.setIrrigationCoverage !== 'function') return;
+      var all = (window.FittingsUI && FittingsUI.readAll) ? FittingsUI.readAll() : [];
+      _ctx.setIrrigationCoverage(all.filter(function (f) { return f.kind === 'irrigation_device'; }));
+    }
+
+    // Bulk add (placing nozzles across every branch) — one pass, one draw.
+    document.addEventListener('fittings-added-batch', function (e) {
+      var list = e.detail && e.detail.fittings;
+      if (!_ctx || !list || !list.length) return;
+      if (typeof _ctx.addFittingMeshes === 'function') _ctx.addFittingMeshes(list);
+      else if (typeof _ctx.addFittingMesh === 'function') list.forEach(_ctx.addFittingMesh);
+      if (list.some(function (f) { return f && f.kind === 'irrigation_device'; })) _syncCoverage();
+    });
+    document.addEventListener('fittings-removed-batch', _syncCoverage);
+    document.addEventListener('fitting-added', function (e) {
+      var f = e.detail && e.detail.fitting;
+      if (f && f.kind === 'irrigation_device') _syncCoverage();
+    });
+    // Bulk delete (clearing an irrigation layer) — one traverse for the whole
+    // set instead of one per fitting.
+    document.addEventListener('fittings-removed-batch', function (e) {
+      var ids = e.detail && e.detail.ids;
+      if (!_ctx || !ids || !ids.length) return;
+      if (typeof _ctx.removeFittingMeshes === 'function') _ctx.removeFittingMeshes(ids);
+      else if (typeof _ctx.removeFittingMesh === 'function') ids.forEach(_ctx.removeFittingMesh);
+    });
 
     // Selection is a visual-only change → update materials in place, NO rebuild.
     document.addEventListener('fitting-selection-changed', function (e) {
@@ -1510,21 +1541,22 @@
           var layerToClear = _getActiveLayer();
           if (layerToClear && window.FittingsUI && FittingsUI.readAll) {
             // Remove only branch pipes + sprinklers/drip + joints (main pipes preserved)
-            FittingsUI.readAll().filter(function (f) {
+            // One batch, not one call per fitting — see FittingsUI.removeMany.
+            FittingsUI.removeMany(FittingsUI.readAll().filter(function (f) {
               return f.layer_id === layerToClear.id && (
                 (f.kind === 'irrigation_pipe' && f.sub_type !== 'main' && !f.is_vertical) ||
                 f.kind === 'irrigation_device' ||
                 f.kind === 'irrigation_connection'
               );
-            }).forEach(function (f) { FittingsUI.remove(f.id); });
+            }).map(function (f) { return f.id; }));
           }
         } else if (action === 'irr-clear-sprinkler') {
           _applyFaceTool('');
           var layerSp = _getActiveLayer();
           if (layerSp && window.FittingsUI && FittingsUI.readAll) {
-            FittingsUI.readAll().filter(function (f) {
+            FittingsUI.removeMany(FittingsUI.readAll().filter(function (f) {
               return f.layer_id === layerSp.id && f.kind === 'irrigation_device';
-            }).forEach(function (f) { FittingsUI.remove(f.id); });
+            }).map(function (f) { return f.id; }));
           }
         } else if (action === 'irr-add-valve') {
           _applyFaceTool('');
@@ -1808,8 +1840,20 @@
     if (badge) badge.style.display = _dirty ? '' : 'none';
   }
 
+  // refreshStepStatus asks _stepIncomplete('fittings'), which calls readAll() —
+  // a deep clone of every fitting — just to learn whether anything is placed.
+  // mark() runs on every fitting-added, so placing 3,000 drip emitters cloned a
+  // growing array 3,000 times: 7.1 s of a 7.2 s placement was inside that one
+  // listener. The answer cannot change more than once per tick.
+  var _stepStatusPending = false;
+  function refreshStepStatusSoon() {
+    if (_stepStatusPending) return;
+    _stepStatusPending = true;
+    setTimeout(function () { _stepStatusPending = false; refreshStepStatus(); }, 0);
+  }
+
   function wireDirtyTracking() {
-    var mark = function () { _setDirty(true); refreshStepStatus(); };
+    var mark = function () { _setDirty(true); refreshStepStatusSoon(); };
     // Form edits anywhere in the drawer, plus scene edits from the 3D tools
     document.addEventListener('input', function (e) {
       if (e.target && e.target.closest && e.target.closest('#modal_fac_step')) mark();
@@ -1823,6 +1867,8 @@
     // fittings-data-changed.
     document.addEventListener('fitting-added',   mark);
     document.addEventListener('fitting-removed', mark);
+    document.addEventListener('fittings-added-batch',   mark);
+    document.addEventListener('fittings-removed-batch', mark);
     // Placing or dragging the facility on the map moves it without touching a
     // single form field, so nothing else here would notice the change.
     document.addEventListener('facility-placed', mark);
@@ -1965,6 +2011,17 @@
     }
   }
 
+  // Every add and every delete fires fittings-changed, and this reads the whole
+  // fitting list (readAll deep-clones it) and redraws the stats table. Placing
+  // 3,000 drip emitters therefore cloned a growing array 3,000 times. Nothing
+  // here needs to run more than once per tick.
+  var _irrBtnPending = false;
+  function _refreshIrrButtonsSoon() {
+    if (_irrBtnPending) return;
+    _irrBtnPending = true;
+    setTimeout(function () { _irrBtnPending = false; _refreshIrrButtons(); }, 0);
+  }
+
   function _refreshIrrButtons() {
     var all = (window.FittingsUI && FittingsUI.readAll) ? FittingsUI.readAll() : [];
     var hasLayer = all.some(function (f) { return f.kind === 'irrigation_layer'; });
@@ -2057,12 +2114,12 @@
 
     // Reset only existing branch pipes + joints (main pipes + sprinklers/drip preserved).
     // Per the policy that branch generation only creates branch pipes, nozzles (devices) are untouched.
-    snapshot.filter(function (f) {
+    if (window.FittingsUI) FittingsUI.removeMany(snapshot.filter(function (f) {
       return f.layer_id === layer.id && (
         (f.kind === 'irrigation_pipe' && f.sub_type !== 'main' && !f.is_vertical) ||
         f.kind === 'irrigation_connection'
       );
-    }).forEach(function (f) { if (window.FittingsUI) FittingsUI.remove(f.id); });
+    }).map(function (f) { return f.id; }));
 
     // Main pipe list — used for sweep-line collinear check
     var mainPipes = snapshot.filter(function (f) {
@@ -2139,8 +2196,9 @@
 
     // 1. Remove existing devices (keep pipes)
     var snapshot = (window.FittingsUI && FittingsUI.readAll) ? FittingsUI.readAll() : [];
-    snapshot.filter(function (f) { return f.layer_id === layer.id && f.kind === 'irrigation_device'; })
-            .forEach(function (f) { if (window.FittingsUI) FittingsUI.remove(f.id); });
+    if (window.FittingsUI) FittingsUI.removeMany(
+      snapshot.filter(function (f) { return f.layer_id === layer.id && f.kind === 'irrigation_device'; })
+              .map(function (f) { return f.id; }));
 
     // 2. After removal, get the pipe list from a fresh snapshot — branch pipes only
     //    (main pipes are for supply, so no nozzles placed)
@@ -2151,6 +2209,8 @@
           && (f.sub_type || 'branch') === 'branch';
     });
     if (pipes.length === 0) { if (!silent) alert(window._ ? window._('No branch pipes. Generate branch pipes first.') : 'No branch pipes. Generate branch pipes first.'); return; }
+
+    var _pending = [];
 
     // 3. Place sprinklers at interval spacing along each pipe
     // Cumulative arc length (cumLen) approach: convert the segs array into a point chain [p0, p1, p2, ...]
@@ -2196,12 +2256,16 @@
         frac = Math.min(1, Math.max(0, frac));
         var ix = pts[segIdx][0] + (pts[segIdx+1][0] - pts[segIdx][0]) * frac;
         var iz = pts[segIdx][2] + (pts[segIdx+1][2] - pts[segIdx][2]) * frac;
-        window.FittingsUI.addIrrigationDevice(layer.id,
-          { x: ix, y: h, z: iz },
-          { pipe_id: pipe.id, flow_lph: flowLph, radius_m: radiusM,
-            sub_type: subType, orientation: orientation });
+        // Collected across every branch and handed over in one call — see
+        // FittingsUI.addIrrigationDevices.
+        _pending.push({
+          position: { x: ix, y: h, z: iz },
+          opts: { pipe_id: pipe.id, flow_lph: flowLph, radius_m: radiusM,
+                  sub_type: subType, orientation: orientation }
+        });
       }
     });
+    if (_pending.length) window.FittingsUI.addIrrigationDevices(layer.id, _pending);
     _renderIrrStats();
   }
 
@@ -2339,7 +2403,7 @@
     });
 
     document.addEventListener('fitting-selection-changed', function (e) {
-      _refreshIrrButtons();
+      _refreshIrrButtonsSoon();
       // Delete-unit mode: clicking an irrigation item (pipe/nozzle/joint) removes it immediately
       if (!_deleteMode) return;
       var id = e.detail && e.detail.id;
@@ -2351,7 +2415,9 @@
           && sel.kind !== 'irrigation_connection') return;
       FittingsUI.remove(id);
     });
-    document.addEventListener('fittings-changed', function () { _refreshIrrButtons(); });
+    document.addEventListener('fittings-changed', function () { _refreshIrrButtonsSoon(); });
+    document.addEventListener('fittings-added-batch',   function () { _refreshIrrButtonsSoon(); });
+    document.addEventListener('fittings-removed-batch', function () { _refreshIrrButtonsSoon(); });
 
     // ── Category visibility → 3D viewport bridge ──────────────────────────────
     document.addEventListener('aot-facility-cat-visibility-changed', function (e) {

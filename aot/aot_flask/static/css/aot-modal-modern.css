@@ -205,7 +205,12 @@ a.aot-modal-section-title-collapsible + .collapse + .aot-modal-container:not(:ha
     padding: 0.4rem 0 !important;
     min-height: 2.4rem;
     border-bottom: 1px solid var(--gray); /* 통일된 경계선 */
-    gap: 15px; /* Increased for better touch separation */
+    /* gap 을 변수로 둔다 — 아래 .aot-modal-option-label 의 max-width 계산이
+       이 값을 그대로 읽어야 라벨 상한과 실제 간격이 어긋나지 않는다.
+       예전엔 상한에 데스크탑 gap(15px) 기준 상수가 박혀 있어, 모바일(gap 8px)
+       에서 22px 가량이 space-between 사이 빈 공간으로 버려졌다. */
+    --aot-row-gap: 15px;
+    gap: var(--aot-row-gap); /* Increased for better touch separation */
 }
 
 /* .d-none 등으로 숨겨야 하는 옵션 행: 위 규칙과 동일한 !important라 클래스 2개(특이도 우위)로 강제 승리시킴.
@@ -231,7 +236,7 @@ a.aot-modal-section-title-collapsible + .collapse + .aot-modal-container:not(:ha
 .aot-modal-option-label {
     flex: 0 1 auto !important; /* Shrink-only: label occupies content width, not full row */
     min-width: 100px;
-    max-width: calc(100% - var(--aot-common-control-width, 160px) - 30px);
+    max-width: calc(100% - var(--aot-common-control-width, 160px) - var(--aot-row-gap, 15px));
     font-size: 0.85rem;
     font-weight: 700;
     color: var(--aot-text-main);
@@ -756,7 +761,7 @@ textarea.aot-modern-input.aot-input-prose {
 /* SECTION 6: RESPONSIVE ADAPTATION */
 @media (max-width: 768px) {
     .aot-modal-option-row {
-        gap: 8px;
+        --aot-row-gap: 8px; /* 라벨 max-width 계산도 이 값을 읽는다 */
         flex-wrap: nowrap !important; /* 가로 레이아웃 최대한 유지 */
         height: auto !important;
         padding: 0.4rem 0 !important;
@@ -772,11 +777,70 @@ textarea.aot-modern-input.aot-input-prose {
         white-space: nowrap; /* 라벨이 너무 길면 말줄임표 처리 */
     }
 
+    /* 한 줄 말줄임 → 세 줄까지 허용. 폭을 아무리 넓혀도(아래 컨트롤 폭 사다리)
+       텍스트 입력·셀렉트 행은 컨트롤이 160px 그대로라 긴 제목이 계속 잘렸다.
+       두 줄로 재보니 Input 설정 모달에서 영문 긴 제목("JMESPath Expression" 등)
+       6행이 남았고, 세 줄로 올리자 0이 되면서 모달 전체 스크롤 높이는 2.3%
+       (5033→5150px)만 늘었다 — 상한일 뿐이라 짧은 제목은 한 줄 그대로다.
+       행 높이는 min-height 라 줄이 늘면 알아서 늘어난다.
+
+       ⚠ 대상을 "컨트롤이 있는 행"으로 한정한다. 컨트롤 없이 라벨과 설명 문단
+       (.aot-modal-body-text)만 든 비표준 행이 있는데, 거기서는 라벨이 고정폭
+       상대가 없어 min-content(26px)까지 눌린다 — 한 줄일 땐 말줄임 한 줄로
+       끝나지만 여러 줄을 허용하면 세로로 3줄까지 늘어나 더 흉해진다.
+       (그 행의 눌림 자체는 이 변경 이전부터 있던 별개 문제다.)
+       ⚠ !important 를 쓰지 않는다 — geo-program(#veg-drawer-body)·
+       geo-facility(#fac-tab-sensors) 처럼 이 규칙을 이미 국소 우회한 화면들이
+       특이도(id)로 이겨서 자기 동작을 유지해야 한다. */
+    .aot-modal-option-row:has(> .aot-modal-option-control) > .aot-modal-option-label {
+        display: -webkit-box;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 3;
+        line-height: 1.25;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: normal;
+    }
+
+    /* 제목 옆 도움말 아이콘의 여백(데스크탑 10px)이 좁은 라벨에서는 아이콘을
+       다음 줄로 혼자 밀어내, 제목은 다 들어갔는데 아이콘만 잘려 설명 접근이
+       사라졌다(TTN 채널 행 실측). 6px 이면 같은 3줄 안에 들어온다. */
+    .aot-option-tip {
+        margin-left: 6px;
+    }
+
     .aot-modal-option-control {
         flex: 0 0 var(--aot-common-control-width) !important; /* iOS: 160px 고정 유지 */
         width: var(--aot-common-control-width) !important;
         min-width: var(--aot-common-control-width) !important;
         justify-content: flex-end !important;
+    }
+
+    /* ── 컨트롤 폭 사다리 ──────────────────────────────────────────────────
+       공용 160px 은 텍스트 입력·셀렉트 기준 폭이다. 스위치(54px)·색상
+       피커(60px)·짧은 숫자 칸만 있는 행에서는 100px 안팎이 그냥 버려지고,
+       라벨 max-width 가 같은 변수를 빼서 계산하므로 그만큼 제목이 잘렸다.
+       행에 변수만 갈아끼우면 컨트롤 폭과 라벨 상한이 함께 맞춰진다 —
+       #tabScopeGroups 등에서 쓰던 방식(Section 3 참조)을 일반화한 것.
+
+       조건의 `:not(:has(> .aot-modal-option-control > * + *))` 는 "컨트롤의
+       직접 자식이 정확히 하나" 를 뜻한다. 자식이 둘 이상인 행은 값+버튼,
+       hidden+드롭다운처럼 실제로 넓은 자리가 필요하므로 160px 그대로 둔다
+       (`:only-child` 로 쓰면 hidden input 형제 하나에 규칙이 조용히 빠지거나,
+       반대로 넓은 조합 행까지 좁혀 버린다). */
+    .aot-modal-option-row:has(> .aot-modal-option-control > .btn-toggle):not(:has(> .aot-modal-option-control > * + *)) {
+        --aot-common-control-width: var(--aot-ctrl-w-switch);
+    }
+    /* 폭이 어긋나더라도 스위치가 눌리는 일은 없게 — 눌리면 thumb 이 슬라이더
+       밖으로 삐져나와 대놓고 깨져 보인다. */
+    .aot-modal-option-control > .btn-toggle {
+        flex-shrink: 0;
+    }
+    .aot-modal-option-row:has(> .aot-modal-option-control > input[type="color"]):not(:has(> .aot-modal-option-control > * + *)) {
+        --aot-common-control-width: var(--aot-ctrl-w-color);
+    }
+    .aot-modal-option-row:has(> .aot-modal-option-control > input[type="number"]):not(:has(> .aot-modal-option-control > * + *)) {
+        --aot-common-control-width: var(--aot-ctrl-w-num);
     }
 
     /* 모바일에서는 소제목 좌측 정렬 */
@@ -809,12 +873,11 @@ textarea.aot-modern-input.aot-input-prose {
     @media (max-width: 360px) {
         .aot-modal-option-row {
             flex-wrap: nowrap !important;
-            gap: 6px;
+            --aot-row-gap: 6px;
         }
         .aot-modal-option-label {
             flex: 1 1 auto !important;
             min-width: 0;
-            white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
             margin-bottom: 0 !important;

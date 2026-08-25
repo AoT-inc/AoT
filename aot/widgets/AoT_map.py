@@ -188,7 +188,7 @@ WIDGET_HEAD_HTML = """
 
 <!-- Actuator group panel -->
 <script src="/static/js/widgets/AoT_facility/aot-facility-actuator-panel.js?v=15"></script>
-<link rel="stylesheet" href="/static/css/widget/aot-facility-widget.css?v=31">
+<link rel="stylesheet" href="/static/css/widget/aot-facility-widget.css?v=32">
 
 <style>
   /* Pure MapLibre Styles */

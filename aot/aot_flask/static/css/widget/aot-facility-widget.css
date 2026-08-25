@@ -203,7 +203,7 @@
 /* ── Setpoint popup (appears on env-cell click) ─────────────────────────── */
 .iec-sp-popup {
   position: fixed;
-  background: var(--bg-off);
+  background: var(--aot-surface-card);
   border: 1px solid var(--aot-border-neutral);
   border-radius: .5rem;
   box-shadow: var(--aot-shadow-lg);
@@ -245,7 +245,7 @@
   border: 1px solid var(--aot-border-form);
   border-radius: .375rem;
   width: 72px;
-  background: var(--bg-off);
+  background: var(--aot-input-bg);
   color: var(--aot-color-text-primary);
 }
 .iec-sp-popup-input:focus {

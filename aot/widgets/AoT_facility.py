@@ -169,7 +169,7 @@ def widget_variables(widget_unique_id, widget_options):
 
 
 WIDGET_HEAD_HTML = """\
-<link rel="stylesheet" href="/static/css/widget/aot-facility-widget.css?v=27">
+<link rel="stylesheet" href="/static/css/widget/aot-facility-widget.css?v=28">
 <script>
 if (!window._aotThreeLoaded) {
   window._aotThreeLoaded = true;

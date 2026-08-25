@@ -819,32 +819,25 @@ function _T(k,f){var d=(typeof window!=="undefined"&&window._IEC)||{};return (d[
     var counter   = document.getElementById('fit-list-count');
     if (!container) return;
 
+    // Labels only. Which item lands in which row is decided by
+    // AoTFacility3D.categoryOf — the same function the scene hides by, so a row
+    // can never count something the eye cannot reach. This list used to carry
+    // its own copy of the rules and the two drifted apart; see categoryOf.
     var CAT_DEFS = [
-      { key: 'envelope', label: _T('envelope','Envelope'),     kinds: null,   isMatch: function (f) { return f.source === 'envelope'; }, n: 0 },
-      { key: 'opening',  label: _T('sec_openings','Openings'),   kinds: ['window','door','side_window'], n: 0 },
-      { key: 'climate',  label: _T('env_vent_curtain','Vent/Curtain'), kinds: ['fan','heater','fogger','curtain','shade_curtain'], n: 0 },
-      { key: 'sensor',   label: _T('m_sensor','Sensor'),     kinds: ['sensor'], n: 0 },
-      { key: 'fixture',  label: _T('m_fixture','Fixture'),     kinds: ['fixture'], n: 0 },
-      { key: 'irrig',    label: _T('m_irr_device','Irrigation Device'), kinds: null,   isMatch: function (f) { return f.kind === 'irrigation_layer'; }, n: 0 }
+      { key: 'envelope', label: _T('envelope','Envelope'), n: 0 },
+      { key: 'opening',  label: _T('sec_openings','Openings'), n: 0 },
+      { key: 'climate',  label: _T('env_vent_curtain','Vent/Curtain'), n: 0 },
+      { key: 'sensor',   label: _T('m_sensor','Sensor'), n: 0 },
+      { key: 'fixture',  label: _T('m_fixture','Fixture'), n: 0 },
+      { key: 'irrig',    label: _T('m_irr_device','Irrigation Device'), n: 0 }
     ];
+    var _byKey = {};
+    CAT_DEFS.forEach(function (c) { _byKey[c.key] = c; });
 
-    function _catFor(f) {
-      if (f.source === 'envelope') return CAT_DEFS[0];
-      for (var i = 1; i < CAT_DEFS.length; i++) {
-        var c = CAT_DEFS[i];
-        if (c.isMatch && c.isMatch(f)) return c;
-        if (c.kinds && c.kinds.indexOf(f.kind) !== -1) return c;
-      }
-      return null;
-    }
-
-    // Irrigation pieces are counted under their layer's category rather than
-    // dropped, so the row's number matches what the eye actually hides.
-    var IRR_CHILD = ['irrigation_pipe', 'irrigation_valve',
-                     'irrigation_connection', 'irrigation_device'];
     _fittings.forEach(function (f) {
-      if (IRR_CHILD.indexOf(f.kind) !== -1) { CAT_DEFS[5].n++; return; }
-      var cat = _catFor(f);
+      var key = (window.AoTFacility3D && AoTFacility3D.categoryOf)
+        ? AoTFacility3D.categoryOf(f) : null;
+      var cat = key && _byKey[key];
       if (cat) cat.n++;
     });
 
@@ -880,6 +873,23 @@ function _T(k,f){var d=(typeof window!=="undefined"&&window._IEC)||{};return (d[
     if (!el) return;
     el.classList.toggle('d-none', !on);
     el.style.removeProperty('display');
+  }
+
+  // Position / size / rotation rows. Irrigation layers and pipes carry none of
+  // that — the layer outline is drawn from height_m across the facility
+  // footprint and a pipe from its segments — so the rows come off for them and
+  // go back on for everything else. Hiding them with an inline display:none
+  // (which is what this used to do) does nothing at all: shared option rows are
+  // display:flex !important. The rows therefore stayed on screen still holding
+  // the PREVIOUS selection's numbers, which is why picking a layer showed a
+  // fan's position and size and typing in them changed nothing visible.
+  var _GEOM_ROW_IDS = ['fi-x','fi-y','fi-z','fi-w','fi-h','fi-d','fi-rot'];
+  function _geomRowsShow(on) {
+    _GEOM_ROW_IDS.forEach(function (id) {
+      var el = document.getElementById(id);
+      if (!el || !el.closest) return;
+      _rowShow(el.closest('.aot-modal-option-row'), on);
+    });
   }
 
   function _renderInspector() {
@@ -933,19 +943,21 @@ function _T(k,f){var d=(typeof window!=="undefined"&&window._IEC)||{};return (d[
     if (isIrrLayer || isIrrPipe) {
       var nmEl = document.getElementById('fi-name');
       if (nmEl && nmEl.value !== (f.name || '')) nmEl.value = f.name || '';
-      ['fi-x','fi-y','fi-z','fi-w','fi-h','fi-d','fi-rot'].forEach(function (id) {
-        var el = document.getElementById(id);
-        if (!el) return;
-        var row = el.closest && el.closest('.aot-modal-option-row');
-        if (row) row.style.display = 'none';
-      });
+      _geomRowsShow(false);
+      // The placement hint points at coordinate fields that are no longer
+      // there, and the auto-geometry notice belongs to envelope items.
+      var hintEl = document.getElementById('fi-place-hint');
+      if (hintEl) hintEl.classList.add('d-none');
+      _rowShow(document.getElementById('fi-group-auto-geom'), false);
       var kindRow = (document.getElementById('fi-kind') || {}).closest && document.getElementById('fi-kind').closest('.aot-modal-option-row');
       _rowShow(kindRow, false);
       // Irrigation layers DO bind an actuator — the valve or pump that opens the
-      // whole circuit. The backend has always read layer.actuator_id (it derives
-      // per-actuator flow and nozzle wetting from it), but this inspector used to
-      // hide the dropdown, so there was no way to set it and the binding stayed
-      // empty forever. Pipes have no actuator semantics, so they stay hidden.
+      // whole circuit (the backend derives per-actuator flow and nozzle wetting
+      // from layer.actuator_id). The dropdown itself lives in the components
+      // table now, like every other kind's wiring: this group carries .fi-dup,
+      // which geo-facility.css hides with !important, so the display flip below
+      // shows nothing. It is kept only so the row's state matches its kind.
+      // Pipes have no actuator semantics, so they stay hidden either way.
       var actG = document.getElementById('fi-group-actuator');
       var inpG = document.getElementById('fi-group-input');
       if (actG) actG.style.display = isIrrLayer ? '' : 'none';
@@ -953,6 +965,13 @@ function _T(k,f){var d=(typeof window!=="undefined"&&window._IEC)||{};return (d[
       if (inpG) inpG.style.display = 'none';
       var inheritRow = document.getElementById('fi-group-inherit');
       _rowShow(inheritRow, false);
+      // Delete is the only way out for a main pipe — [Clear] spares it on
+      // purpose. The generic path below decides this row's visibility and the
+      // irrigation branch returns before reaching it, so an envelope item
+      // selected earlier could leave the button hidden here.
+      var delRow = (document.getElementById('fi-delete') || {}).closest
+        ? document.getElementById('fi-delete').closest('.aot-modal-option-row') : null;
+      if (delRow) delRow.style.display = '';
       if (isIrrLayer) {
         var hEl = document.getElementById('fi-irr-height');
         if (hEl && hEl.value !== String(f.height_m != null ? f.height_m : 2.0)) {
@@ -989,13 +1008,11 @@ function _T(k,f){var d=(typeof window!=="undefined"&&window._IEC)||{};return (d[
     setVal('fi-z', f.position.y != null ? f.position.y : 0); // user Z = height      = Three.js Y
     setVal('fi-w', f.size.w != null ? f.size.w : 1);
     setVal('fi-h', f.size.h != null ? f.size.h : 1);
-    // Restore all standard geometry rows (may have been hidden by irrigation selection)
-    ['fi-x','fi-y','fi-z','fi-w','fi-h','fi-d','fi-rot'].forEach(function (id) {
-      var el = document.getElementById(id);
-      if (!el) return;
-      var row = el.closest && el.closest('.aot-modal-option-row');
-      if (row) row.style.display = '';
-    });
+    // Restore the geometry rows and their hint (an irrigation selection takes
+    // them off).
+    _geomRowsShow(true);
+    var hintEl2 = document.getElementById('fi-place-hint');
+    if (hintEl2) hintEl2.classList.remove('d-none');
     setVal('fi-d', f.size.d != null ? f.size.d : 0.1);
     setVal('fi-rot', f.rotation_deg || 0);
 
@@ -1035,13 +1052,6 @@ function _T(k,f){var d=(typeof window!=="undefined"&&window._IEC)||{};return (d[
     var delBtn = document.getElementById('fi-delete');
     if (delBtn && delBtn.closest('.aot-modal-option-row')) delBtn.closest('.aot-modal-option-row').style.display = isEnvItem ? 'none' : '';
 
-    // Restore geometry rows (always visible)
-    ['fi-x', 'fi-y', 'fi-z', 'fi-w', 'fi-h', 'fi-d', 'fi-rot'].forEach(function (id) {
-      var el = document.getElementById(id);
-      if (!el) return;
-      var row = el.closest && el.closest('.aot-modal-option-row');
-      if (row) row.style.display = '';
-    });
 
     // Sensors bind to an Input (measurement source), other fittings bind to an
     // Actuator (output device). Toggle the two dropdown groups accordingly.
@@ -1336,22 +1346,48 @@ function _T(k,f){var d=(typeof window!=="undefined"&&window._IEC)||{};return (d[
     return changed;
   }
 
-  function remove(id) {
-    var target = _fittings.find(function (f) { return f.id === id; });
-    var toRemove = [id];
-    // cascade: remove all child pipes when removing an irrigation layer
-    if (target && target.kind === 'irrigation_layer') {
-      _fittings.forEach(function (f) {
-        if (f.layer_id === id) toRemove.push(f.id);
-      });
-    }
-    toRemove.forEach(function (rid) {
-      _fittings = _fittings.filter(function (f) { return f.id !== rid; });
-      if (_selectedId === rid) _selectedId = null;
-      document.dispatchEvent(new CustomEvent('fitting-removed', { detail: { id: rid } }));
+  // Deleting one fitting at a time does not scale, and irrigation is where that
+  // shows: a 90 m drip run is ~300 emitters, so [Clear] on ten of them asks for
+  // 3,000 deletions. Each one used to rebuild the whole _fittings array (O(N)
+  // inside an O(N) loop), fire an event that made the components table redraw,
+  // and call _render() + _notify(). Measured on 3,010 fittings: 13.4 s frozen,
+  // 23.4 s to settle, 15,050 readAll() calls — and readAll deep-clones the whole
+  // array, which alone was 11.9 s of it.
+  //
+  // removeMany does the data pass once and tells everyone once. remove() goes
+  // through it too, so there is a single deletion path.
+  function removeMany(ids) {
+    var doomed = {};
+    (ids || []).forEach(function (id) { if (id) doomed[id] = true; });
+    // Removing a layer takes its pipes, nozzles, joints and valves with it.
+    _fittings.forEach(function (f) {
+      if (f.kind === 'irrigation_layer' && doomed[f.id]) {
+        _fittings.forEach(function (g) { if (g.layer_id === f.id) doomed[g.id] = true; });
+      }
     });
+    var removed = [];
+    var kept = [];
+    for (var i = 0; i < _fittings.length; i++) {
+      var f = _fittings[i];
+      if (doomed[f.id]) { removed.push(f.id); if (_selectedId === f.id) _selectedId = null; }
+      else kept.push(f);
+    }
+    if (!removed.length) return [];
+    _fittings = kept;
+    // One batch event for listeners that can act on the whole set (the 3D scene,
+    // the components table), and the per-id event kept for anything still wired
+    // to it — a single delete stays exactly as loud as it was.
+    document.dispatchEvent(new CustomEvent('fittings-removed-batch', { detail: { ids: removed } }));
+    if (removed.length === 1) {
+      document.dispatchEvent(new CustomEvent('fitting-removed', { detail: { id: removed[0] } }));
+    }
     _render();
     _notify();
+    return removed;
+  }
+
+  function remove(id) {
+    return removeMany([id]);
   }
 
   function select(id) {
@@ -2385,7 +2421,8 @@ function _T(k,f){var d=(typeof window!=="undefined"&&window._IEC)||{};return (d[
     for (var i = 0; i < pipes.length; i++) {
       for (var j = i + 1; j < pipes.length; j++) {
         var a = pipes[i], b = pipes[j];
-        if (a.sub_type === 'main' && b.sub_type === 'main') continue; // main-to-main handled separately, deferred
+        var bothMain = (a.sub_type === 'main' && b.sub_type === 'main');
+        if (bothMain) { _connectMains(layerId, a, b); continue; }
         var inter = _findFirstIntersection(a, b);
         if (!inter) continue;
         var main = (a.sub_type === 'main') ? a : (b.sub_type === 'main' ? b : null);
@@ -2445,6 +2482,61 @@ function _T(k,f){var d=(typeof window!=="undefined"&&window._IEC)||{};return (d[
     });
     _render();
     _notify();
+  }
+
+  // ── Main-to-main connection ───────────────────────────────────────────────
+  // Main pipes had no way to join. The pair loop skipped them outright ("main-to-
+  // main handled separately, deferred") and nothing ever handled them: two trunk
+  // lines could cross on screen with no tee, and the hydraulic solver
+  // (irrigation_topology) reads the network from pipes touching each other, so a
+  // second main that only crossed the first was a separate island — its zone
+  // valve owned nothing and its nozzles fell through to the supply.
+  //
+  // Branch behaviour does not carry over. A branch that overshoots the main gets
+  // trimmed, because the overshoot is a drawing slip; two mains are both
+  // deliberate trunk runs, so neither is cut. They just get a tee where they meet.
+  var MAIN_JOIN_M = 0.15;   // 끝점끼리 맞댔다고 볼 거리 [m]
+
+  function _connectMains(layerId, a, b) {
+    var hits = _findAllIntersections(a, b);
+    var joint = _endpointsMeet(a, b);
+    if (joint) hits.push(joint);
+    hits.forEach(function (pt) { _insertConnectionNode(layerId, pt, 'mT'); });
+  }
+
+  // Every crossing / T of the two pipes, not just the first. A trunk grid can
+  // meet the same line more than once and each of those is a real junction.
+  function _findAllIntersections(p1, p2) {
+    var s1 = p1.segments || [], s2 = p2.segments || [], out = [];
+    for (var i = 0; i < s1.length; i++) {
+      for (var j = 0; j < s2.length; j++) {
+        var pt = _segIntersectXZ(s1[i], s2[j]);
+        if (pt) out.push(pt);
+      }
+    }
+    return out;
+  }
+
+  // Two runs laid end to end. _segIntersectXZ deliberately ignores this case
+  // (it reads as a polyline vertex), and there is no endpoint snapping while
+  // drawing, so the two ends land near each other rather than exactly on top —
+  // hence a tolerance rather than an equality test.
+  function _endpointsMeet(a, b) {
+    var sa = a.segments || [], sb = b.segments || [];
+    if (!sa.length || !sb.length) return null;
+    var ends = [
+      [sa[0].from, sb[0].from], [sa[0].from, sb[sb.length - 1].to],
+      [sa[sa.length - 1].to, sb[0].from], [sa[sa.length - 1].to, sb[sb.length - 1].to]
+    ];
+    for (var i = 0; i < ends.length; i++) {
+      var p = ends[i][0], q = ends[i][1];
+      if (!p || !q) continue;
+      var dx = p[0] - q[0], dz = p[2] - q[2];
+      if (Math.sqrt(dx * dx + dz * dz) <= MAIN_JOIN_M) {
+        return [(p[0] + q[0]) / 2, (p[1] != null ? p[1] : 0), (p[2] + q[2]) / 2];
+      }
+    }
+    return null;
   }
 
   // Check all segment pairs of two pipes for intersection in the xz plane. Returns the nearest intersection.
@@ -2537,6 +2629,15 @@ function _T(k,f){var d=(typeof window!=="undefined"&&window._IEC)||{};return (d[
   }
 
   function _insertConnectionNode(layerId, pt, subType) {
+    // A junction can be found by more than one pair (a crossing that is also an
+    // endpoint meeting, say), and stacking beads on the same spot would inflate
+    // the joint count and draw the same sphere twice.
+    var dup = _fittings.some(function (f) {
+      if (f.kind !== 'irrigation_connection' || f.layer_id !== layerId) return false;
+      var q = f.position || {};
+      return Math.abs((q.x || 0) - pt[0]) <= 0.05 && Math.abs((q.z || 0) - pt[2]) <= 0.05;
+    });
+    if (dup) return;
     var id = _uid();
     var conn = {
       id: id,
@@ -2670,8 +2771,39 @@ function _T(k,f){var d=(typeof window!=="undefined"&&window._IEC)||{};return (d[
 
   // position: {x, y, z}  opts: { sub_type: 'sprinkler'|'drip', pipe_id, flow_lph }
   function addIrrigationDevice(layerId, position, opts) {
+    var ids = addIrrigationDevices(layerId, [{ position: position, opts: opts }]);
+    return ids.length ? ids[0] : null;
+  }
+
+  // Nozzle placement is always a bulk act — one [Place] fills every branch, and
+  // a 90 m drip run is ~300 emitters per pipe. Adding them one at a time fired
+  // one fitting-added each, and the step-status listener behind that event calls
+  // readAll() (a deep clone of every fitting) to ask whether the layout step is
+  // still empty. Measured: 3,000 emitters took 7.2 s, and 7.1 s of it was inside
+  // that dispatch. One pass, one event.
+  //
+  // It also fixes the sprinkler coverage circles: they are drawn as a single
+  // InstancedMesh flushed after a build, and the incremental path never flushed,
+  // so nozzles placed this way showed no radius at all until a scene rebuild.
+  // items: [{position:{x,y,z}, opts:{...}}, ...]
+  function addIrrigationDevices(layerId, items) {
     var layer = _fittings.find(function (f) { return f.id === layerId; });
-    if (!layer || layer.kind !== 'irrigation_layer') return null;
+    if (!layer || layer.kind !== 'irrigation_layer') return [];
+    var made = [];
+    (items || []).forEach(function (it) {
+      var f = _makeIrrigationDevice(layerId, it && it.position, it && it.opts);
+      if (f) { _fittings.push(f); made.push(f); }
+    });
+    if (!made.length) return [];
+    document.dispatchEvent(new CustomEvent('fittings-added-batch', {
+      detail: { fittings: JSON.parse(JSON.stringify(made)) }
+    }));
+    _notify();
+    return made.map(function (f) { return f.id; });
+  }
+
+  function _makeIrrigationDevice(layerId, position, opts) {
+    if (!position) return null;
     opts = opts || {};
     var id = _uid();
     var subType = opts.sub_type || 'sprinkler';
@@ -2693,10 +2825,7 @@ function _T(k,f){var d=(typeof window!=="undefined"&&window._IEC)||{};return (d[
       actuator_id: null,
       input_id: null
     };
-    _fittings.push(f);
-    document.dispatchEvent(new CustomEvent('fitting-added', { detail: { fitting: JSON.parse(JSON.stringify(f)) } }));
-    _notify();
-    return id;
+    return f;
   }
 
   // Valve attached to pipeId (optional). If position is unset: midpoint of the pipe first segment, or layer center if no pipe.
@@ -2748,16 +2877,11 @@ function _T(k,f){var d=(typeof window!=="undefined"&&window._IEC)||{};return (d[
 
   // Remove all pipes/devices/connections/valves in the layer (keep the layer itself)
   function clearIrrigationPipes(layerId) {
-    var toRemove = _fittings.filter(function (f) {
+    removeMany(_fittings.filter(function (f) {
       return f.layer_id === layerId &&
         (f.kind === 'irrigation_pipe' || f.kind === 'irrigation_device' ||
          f.kind === 'irrigation_connection' || f.kind === 'irrigation_valve');
-    }).map(function (f) { return f.id; });
-    toRemove.forEach(function (id) {
-      _fittings = _fittings.filter(function (f) { return f.id !== id; });
-      document.dispatchEvent(new CustomEvent('fitting-removed', { detail: { id: id } }));
-    });
-    _notify();
+    }).map(function (f) { return f.id; }));
   }
 
   // Stats: for each branch pipe in the layer { no, length_m, emitters, flow_lph, flow_lpm }
@@ -2797,7 +2921,12 @@ function _T(k,f){var d=(typeof window!=="undefined"&&window._IEC)||{};return (d[
   })();
   var _facilityUuidForVis = null;
   function _visLsKey() {
-    return 'facility-3d-cat-vis-' + (_facilityUuidForVis || 'default');
+    // v2: the rows changed meaning. 'envelope' used to hold every component the
+    // envelope generated (windows, curtains) and hid those; it now holds the
+    // cover and hides that instead. Reading a v1 state back would open a
+    // facility with its whole shell invisible for no reason the user can see,
+    // so old keys are left behind rather than migrated.
+    return 'facility-3d-cat-vis-v2-' + (_facilityUuidForVis || 'default');
   }
   function _loadVisFromLocalStorage() {
     try {
@@ -2842,7 +2971,7 @@ function _T(k,f){var d=(typeof window!=="undefined"&&window._IEC)||{};return (d[
   }
 
   window.FittingsUI = {
-    add: add, addAt: addAt, remove: remove, select: select,
+    add: add, addAt: addAt, remove: remove, removeMany: removeMany, select: select,
     getSelectedId: getSelectedId,
     importFromCatalog: importFromCatalog,
     aggregate: aggregate,
@@ -2858,6 +2987,7 @@ function _T(k,f){var d=(typeof window!=="undefined"&&window._IEC)||{};return (d[
     addIrrigationLayer: addIrrigationLayer,
     addIrrigationPipe: addIrrigationPipe,
     addIrrigationDevice: addIrrigationDevice,
+    addIrrigationDevices: addIrrigationDevices,
     addIrrigationValve: addIrrigationValve,
     clearIrrigationPipes: clearIrrigationPipes,
     getIrrigationStats: getIrrigationStats,
@@ -4496,6 +4626,8 @@ function _T(k,f){var d=(typeof window!=="undefined"&&window._IEC)||{};return (d[
     // their own events.
     document.addEventListener('fittings-data-changed',  debounced3DPreview);
     document.addEventListener('fitting-added',          debounced3DPreview);
+    document.addEventListener('fittings-added-batch',   debounced3DPreview);
+    document.addEventListener('fittings-removed-batch', debounced3DPreview);
     document.addEventListener('fitting-removed',        debounced3DPreview);
     // Aggregate panel was retired with the legacy Fittings form section.
     // (FittingsUI.aggregate() is still public for compute summary use.)
