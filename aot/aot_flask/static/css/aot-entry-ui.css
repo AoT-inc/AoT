@@ -35,9 +35,9 @@
   height: 48px !important; /* Force standardized 48px content height */
   position: relative !important;
   padding: 0 8px !important;
-  border: 1px solid var(--bd-btn-border, #B6BABA);
+  border: none;
   border-radius: 20px !important; /* 알약 모양 복구 */
-  background-color: var(--bd-primary);
+  background-color: var(--aot-surface-card, var(--bd-primary));
   color: var(--text-color-primary);
   overflow: hidden;
   align-items: center;
@@ -594,7 +594,7 @@
 
 /* ===== Output Entry ===== */
 .grid-stack-item-content:has(.aot-entry-item-header) {
-  border: 1px solid var(--bd-btn-border, #B6BABA) !important;
+  border: none !important;
   border-radius: 20px !important; /* 엔트리 배경 라운드 20px 요청 반영 */
   background-color: transparent !important;
   display: flex !important;
@@ -610,7 +610,7 @@
   margin-right: 0 !important;
   width: 100% !important;
   flex-wrap: nowrap !important;
-  background-color: var(--bd-secondary, #F3F6F5) !important; /* Phase 9-7 지시사항 반영 */
+  background-color: var(--aot-surface-card, #FFFFFF) !important; /* 카드(행 전체)와 같은 배경 기본 — 페이지가 배경 보조 */
   border-top-left-radius: 19px !important; /* 렌더링 뭉개짐 방지 */
   border-top-right-radius: 19px !important;
   display: flex !important;

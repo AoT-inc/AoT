@@ -1728,8 +1728,7 @@
              '</div></div>';
     }).join('');
 
-    return '<div class="aot-sensor-popup-header"><b>' +
-             _esc(opts.title || _t('Settings')) + '</b></div>' +
+    return buildModalHeader({ name: opts.title || _t('Settings') }) +
            '<div class="aot-bay-popup-pane">' +
              (rows
                ? '<div class="aot-modal-container">' + rows + '</div>'
@@ -2602,9 +2601,7 @@
     };
 
     var html =
-      '<div class="aot-sensor-popup-header"><b>' +
-        _esc(_t('End this plot')) + ' — ' +
-        _esc(p.subject || p.name || '') + '</b></div>' +
+      buildModalHeader({ name: _t('End this plot') + ' — ' + (p.subject || p.name || '') }) +
       '<div class="aot-bay-popup-pane">' +
         '<div class="aot-ov-block">' +
           _row(_t('End date'),
@@ -2766,7 +2763,7 @@
     // 받으면 그 짐작이 사라진다. 종료 시각은 아래 미리보기로 보여준다 — 종료로
     // 생각하는 사람도 답을 얻지만 입력하지는 않는다.
     var html =
-      '<div class="aot-sensor-popup-header"><b>' + _esc(name) + '</b></div>' +
+      buildModalHeader({ name: name }) +
       // 본문은 공용 스크롤 페인 안에, 버튼은 그 **밖에** 둔다. 공용 중앙 모달은
       // 높이가 min(80vh,760px) 로 고정이고 overflow:hidden 이라, 본문이 넘치면
       // 조용히 잘리는 곳이 하필 저장 버튼이다(세로가 짧은 창에서 실제로 잘렸다).

@@ -1689,43 +1689,18 @@ var AoTGeo = (function (exports) {
 	    }
 
 	    /**
-	     * Load @maplibre/maplibre-gl-draw from unpkg CDN.
+	     * MapLibreDrawControl 이 이미 있는지만 본다(이름은 옛 흔적).
 	     * @private
 	     * @returns {Promise<boolean>} Resolves true if MapLibreDrawControl becomes available
 	     */
 	    _loadDrawFromCDN() {
-	      return new Promise(function(resolve) {
-	        // Use AOT_MAP_LOADER if available (deduplicates concurrent loads)
-	        if (typeof window.AOT_MAP_LOADER !== 'undefined' && window.AOT_MAP_LOADER.loadMapLibreDraw) {
-	          window.AOT_MAP_LOADER.loadMapLibreDraw({ version: '1.4.3' })
-	            .then(function() { resolve(true); })
-	            .catch(function() { resolve(false); });
-	          return;
-	        }
-
-	        // Manual CDN load fallback
-	        var version = '1.4.3';
-	        var cdnBase = 'https://unpkg.com';
-
-	        // Inject CSS
-	        if (!document.querySelector('link[href*="maplibre-gl-draw"]')) {
-	          var link = document.createElement('link');
-	          link.rel = 'stylesheet';
-	          link.href = cdnBase + '/@maplibre/maplibre-gl-draw@' + version + '/dist/maplibre-gl-draw.css';
-	          document.head.appendChild(link);
-	        }
-
-	        var script = document.createElement('script');
-	        script.src = cdnBase + '/@maplibre/maplibre-gl-draw@' + version + '/dist/maplibre-gl-draw.js';
-	        script.async = true;
-	        script.onload = function() {
-	          resolve(typeof window.MapLibreDrawControl !== 'undefined');
-	        };
-	        script.onerror = function() {
-	          resolve(false);
-	        };
-	        document.head.appendChild(script);
-	      });
+	      // `@maplibre/maplibre-gl-draw` 는 npm 레지스트리에 존재하지 않는 패키지다
+	      // (2026-08-25 확인: "Package not found"). 즉 이 CDN 적재는 처음부터 한 번도
+	      // 성공한 적이 없고, 매번 왕복 하나를 버리고 실패로 떨어졌다. 그리기는 실제로
+	      // 자체 구현이 하고 있다(실행 중 MapLibreDrawControl/MapboxDraw/MapDraw 전역이
+	      // 모두 undefined 임을 실측). 스스로 이 전역을 제공하는 설치를 위해 '이미 있음'
+	      // 검사만 남기고 네트워크를 두드리는 부분을 뺀다.
+	      return Promise.resolve(typeof window.MapLibreDrawControl !== 'undefined');
 	    }
 
 	    /**
@@ -2139,20 +2114,24 @@ var AoTGeo = (function (exports) {
 	    }
 
 	    /**
-	     * Explicitly load MapLibre-GL JS and CSS from CDN.
-	     * Resolves immediately if already loaded; handles concurrent calls via deduplication.
-	     * Includes fallback handling when CDN load fails.
+	     * MapLibre-GL JS/CSS 를 적재한다. 이미 있으면 즉시 resolve 하고, 동시 호출은
+	     * 하나로 합친다.
 	     *
-	     * @param {Object} [config] - Loader configuration
-	     * @param {string} [config.version='4.1.2'] - MapLibre version
-	     * @param {string} [config.cdnBase='https://unpkg.com'] - CDN base URL
-	     * @param {number} [config.timeout=15000] - Timeout in ms
-	     * @returns {Promise<boolean>} Resolves true when maplibregl is available; rejects on failure
+	     * **기본은 동일 출처 반입본이다.** 예전 기본값은 unpkg 였는데, 같은 버전을
+	     * 이미 `static/vendor/maplibre-gl-4.1.2/` 에 두고도 외부에서 받고 있었다 —
+	     * 폐쇄망 설치에서는 지도가 아예 뜨지 않는다. layout.html 이 쓰는 정책과
+	     * 같게 맞춘다(로컬 기본, CDN 은 명시적으로 골랐을 때만).
+	     *
+	     * @param {Object} [config]
+	     * @param {string} [config.version='4.1.2'] - CDN 을 쓸 때의 버전
+	     * @param {string} [config.cdnBase] - 지정하면 그 CDN 에서 받는다(기본: 반입본)
+	     * @param {number} [config.timeout=15000]
+	     * @returns {Promise<boolean>} maplibregl 사용 가능하면 true, 실패 시 reject
 	     */
 	    function loadMapLibre(config) {
 	        config = config || {};
 	        var version = config.version || '4.1.2';
-	        var cdnBase = config.cdnBase || 'https://unpkg.com';
+	        var cdnBase = config.cdnBase || '';
 	        var timeout = config.timeout || 15000;
 
 	        // Already loaded — resolve immediately
@@ -2168,11 +2147,16 @@ var AoTGeo = (function (exports) {
 
 	        window.__aotMapLibreLoadPromise = new Promise(function(resolve, reject) {
 	            var timer = setTimeout(function() {
-	                reject(new Error('[AOT_MAP_LOADER.loadMapLibre] CDN load timed out after ' + timeout + 'ms'));
+	                reject(new Error('[AOT_MAP_LOADER.loadMapLibre] load timed out after ' + timeout + 'ms'));
 	            }, timeout);
 
-	            var cssUrl = cdnBase + '/maplibre-gl@' + version + '/dist/maplibre-gl.css';
-	            var jsUrl  = cdnBase + '/maplibre-gl@' + version + '/dist/maplibre-gl.js';
+	            var assetV = window.AOT_ASSET_V || '';
+	            var cssUrl = cdnBase
+	                ? cdnBase + '/maplibre-gl@' + version + '/dist/maplibre-gl.css'
+	                : '/static/vendor/maplibre-gl-4.1.2/maplibre-gl.css?v=' + assetV;
+	            var jsUrl = cdnBase
+	                ? cdnBase + '/maplibre-gl@' + version + '/dist/maplibre-gl.js'
+	                : '/static/vendor/maplibre-gl-4.1.2/maplibre-gl.js?v=' + assetV;
 
 	            // Load CSS first, then JS
 	            loadCss(cssUrl).then(function() {
@@ -2180,7 +2164,7 @@ var AoTGeo = (function (exports) {
 	            }).then(function() {
 	                clearTimeout(timer);
 	                if (typeof window.maplibregl === 'undefined') {
-	                    reject(new Error('[AOT_MAP_LOADER.loadMapLibre] Script loaded but window.maplibregl is undefined — CDN returned an invalid file'));
+	                    reject(new Error('[AOT_MAP_LOADER.loadMapLibre] Script loaded but window.maplibregl is undefined — the file served was not MapLibre'));
 	                } else {
 	                    console.log('[AOT_MAP_LOADER.loadMapLibre] Loaded maplibregl version: ' + window.maplibregl.version);
 	                    resolve(true);
@@ -2195,63 +2179,24 @@ var AoTGeo = (function (exports) {
 	    }
 
 	    /**
-	     * Load @maplibre/maplibre-gl-draw plugin from CDN.
-	     * Requires maplibregl to be loaded first (call loadMapLibre first).
+	     * MapLibreDrawControl 이 이미 있으면 그것을 쓰고, 없으면 false 로 끝난다.
 	     *
-	     * @param {Object} [config] - Loader configuration
-	     * @param {string} [config.version='1.4.3'] - Draw plugin version
-	     * @param {string} [config.cdnBase='https://unpkg.com'] - CDN base URL
-	     * @returns {Promise<boolean>} Resolves true when MapLibreDrawControl is available
+	     * 예전에는 CDN 에서 `@maplibre/maplibre-gl-draw` 를 받으려 했다. 존재하지 않는 npm 패키지였다. `@maplibre/maplibre-gl-draw` 는 레지스트리에
+	     * 없고(2026-08-25 확인: "Package not found"), 그래서 이 CDN 적재는 처음부터
+	     * 한 번도 성공한 적이 없다 — 매번 왕복 한 번을 버리고 실패로 떨어졌다.
+	     * 그리기는 실제로 자체 구현(AoTMapLibreDrawTool)이 하고 있고, 실행 중
+	     * MapLibreDrawControl·MapboxDraw·MapDraw 전역은 모두 undefined 다(실측).
+	     *
+	     * 함수는 남긴다 — 이 전역을 스스로 제공하는 설치가 있을 수 있으므로 위의
+	     * '이미 있음' 검사는 그대로 두고, 없을 때 네트워크를 두드리는 부분만 뺀다.
+	     *
+	     * @returns {Promise<boolean>} MapLibreDrawControl 사용 가능 여부
 	     */
-	    function loadMapLibreDraw(config) {
-	        config = config || {};
-	        var version = config.version || '1.4.3';
-	        var cdnBase = config.cdnBase || 'https://unpkg.com';
-
+	    function loadMapLibreDraw() {
 	        if (typeof window.MapLibreDrawControl !== 'undefined') {
-	            console.log('[AOT_MAP_LOADER.loadMapLibreDraw] MapLibreDrawControl already loaded');
 	            return Promise.resolve(true);
 	        }
-
-	        if (typeof window.maplibregl === 'undefined') {
-	            return Promise.reject(new Error('[AOT_MAP_LOADER.loadMapLibreDraw] maplibregl must be loaded first'));
-	        }
-
-	        if (window.__aotMapLibreDrawLoadPromise) {
-	            return window.__aotMapLibreDrawLoadPromise;
-	        }
-
-	        window.__aotMapLibreDrawLoadPromise = new Promise(function(resolve, reject) {
-	            var cssUrl = cdnBase + '/@maplibre/maplibre-gl-draw@' + version + '/dist/maplibre-gl-draw.css';
-	            var jsUrl  = cdnBase + '/@maplibre/maplibre-gl-draw@' + version + '/dist/maplibre-gl-draw.js';
-
-	            // Inject CSS (non-blocking)
-	            if (!document.querySelector('link[href*="maplibre-gl-draw"]')) {
-	                var link = document.createElement('link');
-	                link.rel = 'stylesheet';
-	                link.href = cssUrl;
-	                document.head.appendChild(link);
-	            }
-
-	            // Load JS
-	            var script = document.createElement('script');
-	            script.src = jsUrl;
-	            script.async = true;
-	            script.onload = function() {
-	                if (typeof window.MapLibreDrawControl !== 'undefined') {
-	                    console.log('[AOT_MAP_LOADER.loadMapLibreDraw] Loaded MapLibreDrawControl v' + version);
-	                    resolve(true);
-	                } else {
-	                    reject(new Error('[AOT_MAP_LOADER.loadMapLibreDraw] Script loaded but MapLibreDrawControl not found'));
-	                }
-	            };
-	            script.onerror = function() {
-	                reject(new Error('[AOT_MAP_LOADER.loadMapLibreDraw] Failed to load: ' + jsUrl));
-	            };
-	            document.head.appendChild(script);
-	        });
-
-	        return window.__aotMapLibreDrawLoadPromise;
+	        return Promise.resolve(false);
 	    }
 
 	    /**
@@ -2268,7 +2213,7 @@ var AoTGeo = (function (exports) {
 
 	        return loadMapLibre(config).then(function() {
 	            if (loadDraw) {
-	                return loadMapLibreDraw(config).catch(function(err) {
+	                return loadMapLibreDraw().catch(function(err) {
 	                    console.warn('[AOT_MAP_LOADER] MapLibreDraw load failed (fallback mode will be used):', err.message);
 	                    return false;
 	                });

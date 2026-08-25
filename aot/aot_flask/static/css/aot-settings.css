@@ -254,6 +254,11 @@
 ============================================================ */
 #sidebar-wrapper {
     border-right: 1px solid var(--border-neutral) !important;
+    /* 배경 기본(카드) — 이게 없으면 모바일 폭(max-width:767.98px, simple-
+       sidebar.css)에서 이 메뉴가 position:absolute 로 페이지 위에 겹쳐 뜨는데
+       배경이 투명해 뒤의 페이지 제목/본문 글자가 메뉴 항목과 겹쳐 보였다
+       ("시스템 관리자" 헤딩 포함 전체 패널을 불투명하게). */
+    background-color: var(--aot-surface-card, #FFFFFF);
 }
 
 #menu-toggle {

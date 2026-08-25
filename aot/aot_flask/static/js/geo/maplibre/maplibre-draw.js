@@ -106,36 +106,13 @@
      * @private
      */
     _loadDrawFromCDN() {
-      var self = this;
-      return new Promise(function(resolve) {
-        if (typeof window.AOT_MAP_LOADER !== 'undefined' && window.AOT_MAP_LOADER.loadMapLibreDraw) {
-          window.AOT_MAP_LOADER.loadMapLibreDraw({ version: '1.4.3' })
-            .then(function() { resolve(true); })
-            .catch(function() { resolve(false); });
-          return;
-        }
-
-        var version = '1.4.3';
-        var cdnBase = 'https://unpkg.com';
-
-        if (!document.querySelector('link[href*="maplibre-gl-draw"]')) {
-          var link = document.createElement('link');
-          link.rel = 'stylesheet';
-          link.href = cdnBase + '/@maplibre/maplibre-gl-draw@' + version + '/dist/maplibre-gl-draw.css';
-          document.head.appendChild(link);
-        }
-
-        var script = document.createElement('script');
-        script.src = cdnBase + '/@maplibre/maplibre-gl-draw@' + version + '/dist/maplibre-gl-draw.js';
-        script.async = true;
-        script.onload = function() {
-          resolve(typeof window.MapLibreDrawControl !== 'undefined');
-        };
-        script.onerror = function() {
-          resolve(false);
-        };
-        document.head.appendChild(script);
-      });
+      // `@maplibre/maplibre-gl-draw` 는 npm 레지스트리에 존재하지 않는 패키지다
+      // (2026-08-25 확인: "Package not found"). 즉 이 CDN 적재는 처음부터 한 번도
+      // 성공한 적이 없고, 매번 왕복 하나를 버리고 실패로 떨어졌다. 그리기는 실제로
+      // 자체 구현이 하고 있다(실행 중 MapLibreDrawControl/MapboxDraw/MapDraw 전역이
+      // 모두 undefined 임을 실측). 스스로 이 전역을 제공하는 설치를 위해 '이미 있음'
+      // 검사만 남기고 네트워크를 두드리는 부분을 뺀다.
+      return Promise.resolve(typeof window.MapLibreDrawControl !== 'undefined');
     }
 
     /**

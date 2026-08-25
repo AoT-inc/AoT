@@ -32,7 +32,9 @@
     font-weight: 400;
     color: var(--aot-text-secondary);
     line-height: 1.45;
-    margin-top: 0.2rem;
+    /* 위아래 여백 — 0.2rem 위/0(아래)이라 앞뒤 요소에 바짝 붙어 답답해
+       보였다. 균등하게 벌린다. */
+    margin: 0.6rem 0;
     word-wrap: break-word;
     overflow-wrap: break-word;
     white-space: normal;
@@ -221,6 +223,20 @@ a.aot-modal-section-title-collapsible[aria-expanded="true"] .aot-collapse-caret 
     justify-content: flex-end;
     gap: 8px;
     flex-shrink: 0 !important; /* Critical: Prevent crushing on mobile */
+}
+
+/* 그룹 부여 목록(탭/대시보드/지도/시설 — docs/design/access-scope-groups.md
+   §7 "부여 UI 재설계"의 네 자리, #tabScopeGroups·.aot-dash-scope-groups·
+   .aot-map-scope-groups·.aot-fac-scope-groups)은 행마다 스위치 하나뿐이라
+   다른 컨트롤(입력/셀렉트)과 나란히 정렬을 맞출 일이 없다. 그런데도 공용
+   --aot-common-control-width(160px)를 그대로 물려받아, 60px 남짓한 스위치
+   옆에 낭비 여백만 남고 정작 긴 그룹 이름이 모바일에서 말줄임(...) 처리된다
+   — 라벨/컨트롤이 같은 변수를 읽으므로 여기서 한 번만 좁히면 둘 다 고쳐진다. */
+#tabScopeGroups,
+.aot-dash-scope-groups,
+.aot-map-scope-groups,
+.aot-fac-scope-groups {
+    --aot-common-control-width: 60px;
 }
 
 /* SECTION 3: FORM CONTROLS (INPUTS, SELECTS) */
@@ -1128,6 +1144,11 @@ body.modal-open {
     height: auto !important;
     border-radius: 1rem !important;
     border: none !important;
+    /* Bootstrap 기본 .modal-content 배경(#fff) 대신 배경 보조 — 헤더/본문/
+       푸터와 같은 색으로 맞춰 둥근 모서리에서 흰 배경이 비치지 않게 한다.
+       (완전 투명은 시도했으나 자식 사이 레이아웃 틈에서 대시보드 페이지가
+       그대로 비쳐 모달이 조각나 보이는 회귀가 있었다 — 되돌림.) */
+    background-color: var(--aot-surface-body, #F3F6F5) !important;
     box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
     /* 높이: vh 폴백 → dvh(동적 뷰포트, 모바일 크롬 반영) */
     max-height: calc(100vh - 100px);
@@ -1145,26 +1166,100 @@ body.modal-open {
 
 /* --- modal-header: 고정 ---
    h5.modal-title: Bootstrap 기본 1.25rem/500 → 1rem/600 으로 최적화
-   min-height: 50px = main-navbar 높이와 동일 */
+   min-height: 36px = 지도 위젯 모달 헤더(.aot-sensor-popup-header)와 동일
+   (예전엔 50px = main-navbar 높이였는데, 지도 모달 헤더와 높이가 달라
+   두 모달이 다른 컴포넌트처럼 보였다 — 이제 통일).
+   위아래 padding — 지도 모달은 셸 자체에 12px 상단 여백
+   (.maplibregl-popup-content padding:12px 16px)이 있어 제목이 테두리에
+   바짝 붙지 않는다. 이 모달엔 그런 바깥 여백이 없어 padding-top:0 이면
+   제목이 화면/모서리 끝에 그대로 닿아 보였다(실측) — 헤더 자체에 위아래
+   여백을 준다.
+   padding-left 는 오른쪽과 다르다 — 닫기(×, 아래에서 원형 32px 카드색
+   버튼으로 새로 그린다)가 오른쪽 1rem 안쪽에 서므로, 왼쪽에도 같은 폭을
+   예약해야 제목(flex:1 + text-align:center, 아래)이 좌우 대칭 중앙에 온다
+   — 지도 위젯 모달 헤더와 같은 규칙(aot-sensor-label.css
+   .aot-sensor-popup-header 참조).
+   배경: 헤더·본문·푸터 전부 배경 보조(--aot-surface-body) — 지도 위젯 모달
+   셸(.aot-center-modal)이 헤더에 별도 배경을 주지 않고 셸 전체가 배경
+   보조인 것과 같은 원칙. 카드(.aot-modal-container 등)만 배경 기본으로
+   대비를 낸다. */
 .aot-option-modal .modal-header {
     flex: 0 0 auto !important;
     display: flex !important;
     align-items: center !important;    /* Bootstrap 기본 flex-start 재정의 */
-    min-height: 50px !important;
-    border-bottom: 1px solid var(--border-neutral, #dee2e6);
-    background-color: var(--aot-surface-card, #fff);
+    min-height: 36px !important;
+    border-bottom: none !important;
+    background-color: var(--aot-surface-body, #F3F6F5) !important;
     border-top-left-radius: 1rem !important;
     border-top-right-radius: 1rem !important;
-    padding: 0 1rem;
+    /* !important 필수 — 일부 모달 템플릿(예: 탭 설정)이 헤더에 Bootstrap
+       여백 유틸리티(class="pt-4 px-4")를 직접 박아 뒀다. 그 유틸리티는
+       Bootstrap 기본이 !important 라 이 규칙이 !important 없이는 진다
+       (실측: padding-top 이 0 이 아니라 1.5rem 로 새서 헤더가 60px 까지
+       늘어졌었다). */
+    padding-top: 12px !important;
+    padding-bottom: 8px !important;
+    padding-right: 1rem !important;
+    padding-left: 48px !important;
 }
 
 .aot-option-modal .modal-header .modal-title {
-    font-size: 1rem !important;
-    font-weight: 600 !important;
+    /* 지도 위젯 모달 헤더 제목(18.2px)과 같은 크기로 맞춘다. */
+    font-size: 18px !important;
+    /* 지도 위젯 모달 헤더와 같은 규칙: 제목류는 굵게 + 텍스트 보조색,
+       가운데 정렬. (위젯 이름·타입 두 조각짜리 제목은 각자 자기 색을
+       명시해 이 규칙을 넘어선다 — 아래 .aot-modal-title-widget-* 참조,
+       의도된 예외라 손대지 않는다.) */
+    font-weight: 700 !important;
+    color: var(--aot-color-text-secondary) !important;
     line-height: 1.4 !important;
+    flex: 1 1 auto;
+    text-align: center;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+}
+
+/* 닫기 — 지도 위젯 모달의 원형 닫기 버튼(.aot-center-modal-close)과 완전히
+   같은 모양: 32px 원, 배경 기본(카드색), 텍스트 보조색, 글리프 ✕(U+2715).
+   bootstrap-4-themes/aot.css 의 `.close { color: var(--text-primary)
+   !important; }` 와 Bootstrap 기본 .close(font-weight:700, text-shadow,
+   음수 margin 으로 테두리 밀착)를 모두 이기려면 !important 가 필요하다 —
+   실측: !important 없이는 색·굵기가 그대로 새서 지도 모달과 달라 보였다. */
+.aot-option-modal .modal-header .close {
+    flex: 0 0 auto;
+    width: 32px;
+    height: 32px;
+    margin: 0;
+    padding: 0;
+    border-radius: 50%;
+    background: var(--aot-surface-card, #fff) !important;
+    color: var(--aot-color-text-secondary) !important;
+    opacity: 1 !important;
+    font-weight: 400 !important;
+    /* 0 — 버튼 안의 원래 글리프(마크업이 템플릿마다 다르다: 어떤 곳은
+       <span aria-hidden>&times;</span>, 어떤 곳은 span 없이 텍스트 노드로
+       바로 &times; — 실측: 후자라 .close span{display:none} 으로는 안
+       가려지고 우리 ✕ 글리프와 겹쳐 "××" 두 개로 보였다) 를 폰트 크기로
+       뭉개 지운다. 마크업 종류를 안 가리는 유일한 방법. */
+    font-size: 0 !important;
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-shadow: none !important;
+    float: none;
+}
+/* 지도 위젯 모달과 같은 글리프(✕, U+2715)를 CSS 로 그려 넣는다 — 원래
+   글리프는 위에서 font-size:0 으로 이미 안 보인다. */
+.aot-option-modal .modal-header .close::before {
+    content: '\2715';
+    font-size: 16px;
+}
+.aot-option-modal .modal-header .close:hover,
+.aot-option-modal .modal-header .close:focus {
+    color: var(--aot-color-text-primary) !important;
+    opacity: 1 !important;
 }
 
 /* Widget config modal title: "<user-given widget name> · <widget type> Settings" —
@@ -1194,6 +1289,13 @@ body.modal-open {
     /* 스크롤은 동작하되 스크롤바는 숨김(17px 공간 차지 X) — 좁은 모달 폭 확보 */
     scrollbar-width: none !important;      /* Firefox */
     -ms-overflow-style: none !important;   /* old Edge/IE */
+    /* 배경 2단 레이어링: 헤더/푸터(배경 기본, --aot-surface-card)와 대비되는
+       배경 보조. 지금까지 이 규칙이 없어 벤더 기본값(.modal-content 흰색)을
+       그대로 물려받아 헤더·바디·푸터가 전부 흰색 한 겹이었다 — 지도위젯
+       참고 모달(.aot-center-modal)과 같은 대비를 표준 설정 모달에도 부여한다.
+       .aot-modal-container(배경 기본, 흰색) 그룹박스는 이 위에서 자동으로
+       카드처럼 보인다. */
+    background-color: var(--aot-surface-body, #F3F6F5) !important;
 }
 /* WebKit(Chrome/Safari): 모달 바디 스크롤바 트랙 자체 제거 (스크롤 동작은 유지) */
 .modal-dialog .modal-body::-webkit-scrollbar,
@@ -1224,8 +1326,9 @@ body.modal-open {
     padding-left: 1rem !important;
     /* iOS 홈 인디케이터: 안전 영역만큼 추가 (없으면 9px 유지) */
     padding-bottom: max(9px, env(safe-area-inset-bottom, 9px)) !important;
-    border-top: 1px solid var(--border-neutral, #dee2e6) !important;
-    background-color: var(--aot-surface-card, #fff) !important;
+    border-top: none !important;
+    /* 헤더와 같은 원칙 — 셸(헤더/본문/푸터)은 배경 보조, 카드만 배경 기본. */
+    background-color: var(--aot-surface-body, #F3F6F5) !important;
     border-bottom-left-radius: 1rem !important;
     border-bottom-right-radius: 1rem !important;
     /* Bootstrap default margin 제거 */
@@ -1584,6 +1687,12 @@ body { transition: padding-right 0.4s cubic-bezier(0.075, 0.82, 0.165, 1); }
     border-radius: 16px 16px 0 0 !important;         /* rounded sheet top */
     box-shadow: 0 -6px 24px rgba(0, 0, 0, 0.28) !important;
     overflow: hidden !important;
+    /* 지도 그랩바(.aot-map-sheet-grab)와 같은 원칙: 그랩바 전용 22px 을
+       콘텐츠 앞에 통째로 비워 헤더와 겹치지 않게 한다(막대는 이 여백
+       안에서 top:0 으로 앉는다 — 아래 .aot-preview-toggle). transform/
+       transition 은 안 건드리므로 문서화된 "다이얼로그 트랜지션 멈춤"
+       버그와는 무관하다. */
+    padding-top: 22px !important;
   }
   .modal.aot-option-modal.aot-widget-drawer .modal-body { flex: 1 1 auto; overflow-y: auto; }
   .modal.aot-option-modal.aot-widget-drawer .modal-header,
@@ -1660,33 +1769,52 @@ body { transition: padding-right 0.4s cubic-bezier(0.075, 0.82, 0.165, 1); }
    sense on the phone bottom-sheet layout; hidden everywhere else. */
 .aot-preview-toggle { display: none; }
 @media (max-width: 767.98px) {
-  /* Chevron handle straddling the sheet's top-centre edge. It is a direct child of
-     .modal-dialog (see dashboard_entry.html) — NOT inside the header — so it sits just
-     above the header without altering the title's position, size or alignment at all,
-     and is not clipped by .modal-content's overflow. z-index lifts it above the
-     content; it also renders above the band widget because the whole modal (z 5100)
-     is above the lifted card (z 5099). */
+  /* 지도 그랩바와 같은 정렬: 더는 시트 모서리에 반쯤 걸치지 않는다(예전
+     top:-9px, "straddle") — .modal-content 가 위에서 22px 을 비워 뒀으니
+     그 여백 **안에서** top:0 으로 얹힌다. 다이얼로그의 자식(모달 헤더가
+     아니라)이라 헤더의 위치·크기·정렬에는 전혀 영향이 없고,
+     .modal-content 의 overflow 에도 안 잘린다. z-index 는 콘텐츠보다
+     위 — 밴드 위젯보다도 위(모달 z 5100 > 들어올린 카드 z 5099). */
   .aot-widget-drawer .aot-preview-toggle {
     display: flex;
     align-items: center;
     justify-content: center;
     position: absolute;
-    top: -9px;
+    top: 0;
     left: 50%;
     transform: translateX(-50%);
     z-index: 6;
-    width: 46px;
-    height: 18px;
+    /* 96×22 — 지도 그랩바(.aot-map-sheet-grab)와 같은 터치 타깃 크기.
+       보이는 막대는 여전히 44×4(아래 ::before)지만, 손가락이 닿는 실제
+       영역은 그보다 훨씬 넉넉해야 한다는 원칙까지 같이 가져온다 — 모양만
+       베끼고 이 여백은 안 가져오면 잡기 힘든 작은 버튼으로 남는다. */
+    width: 96px;
+    height: 22px;
     padding: 0;
-    background: var(--aot-surface, #fff);
-    border: 1px solid var(--aot-color-border, #ccc);
-    border-radius: 999px;
-    color: var(--aot-color-text-secondary, #6b7280);
-    font-size: 0.7rem;
-    line-height: 1;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+    background: none;
+    border: 0;
+    cursor: pointer;
   }
-  .aot-widget-drawer .aot-preview-toggle:active { background: var(--aot-bg-off, #f3f6f5); }
+  /* 지도 위젯의 시트 그랩바(.aot-map-sheet-grab, aot-sensor-label.css)와
+     완전히 같은 모양으로 통일 — 테두리 있는 흰 알약 + 화살표 아이콘 대신,
+     단순한 가로 막대 하나. 마크업의 <i class="fa-chevron-up"> 은 지우지
+     않고(34개 자리에 흩어져 있어 손대지 않는다) 시각적으로만 숨긴다. */
+  .aot-widget-drawer .aot-preview-toggle i { display: none; }
+  .aot-widget-drawer .aot-preview-toggle::before {
+    content: "";
+    display: block;
+    width: 44px;
+    height: 4px;
+    border-radius: 2px;
+    background: var(--aot-text-secondary, #98a2b3);
+    opacity: 0.55;
+    transition: opacity 0.15s ease, width 0.15s ease;
+  }
+  .aot-widget-drawer .aot-preview-toggle:hover::before,
+  .aot-widget-drawer .aot-preview-toggle:active::before {
+    opacity: 0.85;
+    width: 56px;
+  }
 }
 
 /* ============================================================
@@ -1720,16 +1848,16 @@ body { transition: padding-right 0.4s cubic-bezier(0.075, 0.82, 0.165, 1); }
     height: 58vh !important;
     height: 58dvh !important;
   }
-  /* Handle position. Covering: the sheet top IS the viewport top, so the base
-     top:-9px (straddling the sheet edge) would sit off-screen — pull it just inside,
-     centred over the header's empty middle (title left, close ✕ right). Lowered: the
-     sheet edge is mid-screen again, so restore the straddling handle. */
-  .aot-drawer-fullcover .aot-preview-toggle { top: 6px; }
-  body.aot-drawer-lowered .aot-drawer-fullcover .aot-preview-toggle { top: -9px; }
-  /* Point the handle chevron down while covering (tap = lower); flip it up when
-     lowered (tap = raise). Rotating the existing chevron keeps one icon. */
-  .aot-drawer-fullcover .aot-preview-toggle .fa-chevron-up { transform: rotate(180deg); }
-  body.aot-drawer-lowered .aot-drawer-fullcover .aot-preview-toggle .fa-chevron-up { transform: none; }
+  /* 지도 그랩바(.aot-map-sheet-grab)와 같은 원칙: 커버링/내림 두 상태 모두 같은
+     .modal-content 이므로, 상태와 무관하게 그랩바 전용 22px 을 콘텐츠 앞에
+     통째로 비운다 — 막대는 이 여백 안에서 top:0 으로 정적으로 앉는다(더는
+     상태별로 top 값을 바꿔가며 모서리에 반쯤 걸치지 않는다). */
+  .modal.aot-option-modal.aot-widget-drawer.aot-drawer-fullcover .modal-content {
+    padding-top: 22px !important;
+  }
+  /* 화살표 아이콘을 막대로 바꾸면서(위) 방향 회전으로 상태를 알리던 방식은
+     없앴다 — 지도 그랩바처럼 막대 하나로 충분하다(끌 수 있다는 것 자체가
+     신호). */
 }
 
 /* ============================================================

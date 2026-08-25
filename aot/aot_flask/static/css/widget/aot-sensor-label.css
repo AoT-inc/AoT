@@ -68,12 +68,18 @@
 
 .aot-sensor-popup-title {
   font-weight: 700;
-  font-size: 1.1em;
+  font-size: 1.3em;
   line-height: 1.2;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  color: var(--aot-color-text-primary);
+  /* 헤더 제목 = 텍스트 보조색(굵게로 강조하고, 색은 낮춰 카드 안의 실제
+     값·본문(텍스트 기본색)보다 위계가 아래라는 것을 알린다 — 위젯 라벨
+     체계와 같은 원칙). */
+  color: var(--aot-color-text-secondary);
+  /* 미세 보정: 굵은 큰 글자의 시각적 무게중심이 실제 박스보다 위로
+     떠 보여, 옆의 뒤로가기·닫기 원형 버튼과 살짝 어긋나 보인다. */
+  transform: translateY(2px);
 }
 
 .aot-sensor-popup-close {
@@ -233,9 +239,9 @@
   -ms-overflow-style: none;
 }
 .aot-sensor-popup--docked::-webkit-scrollbar { width: 0; height: 0; display: none; }
-.aot-sensor-popup--docked .aot-sensor-popup-title { font-size: 1.1em; }
+.aot-sensor-popup--docked .aot-sensor-popup-title { font-size: 1.3em; }
 .aot-sensor-popup--docked .aot-sensor-popup-chart-wrap { flex: 0 0 auto; }
-.aot-sensor-popup--modal .aot-sensor-popup-title { font-size: 1.1em; }
+.aot-sensor-popup--modal .aot-sensor-popup-title { font-size: 1.3em; }
 .aot-sensor-popup--modal .aot-sensor-popup-chart-wrap { flex: 0 0 auto; }
 
 /* ── Center modal (시설 제어/구역 팝업 공용 셸) ───────────────────────────────
@@ -386,7 +392,11 @@
    Modal hosting sensor chart + actuator controls. New tab nav section + multiple panes. */
 
 /* 헤더(제목) 행 — 센서 팝업 헤더와 동일한 행높이/정렬. 닫기(×) 버튼
-   (popupWrap 우상단 absolute)을 회피하는 우측 여백을 헤더가 담당한다. */
+   (popupWrap 우상단 absolute)을 회피하는 우측 여백을 헤더가 담당한다.
+   왼쪽에도 같은 폭을 예약(padding-left)해 뒤로가기가 없는 헤더(필지 목록
+   등)도 제목이 좌우 대칭 중앙에 오도록 한다 — 뒤로가기가 있을 때는
+   .aot-modal-up 의 음수 margin-left 로 이 여백을 상쇄해 지금과 같은 위치를
+   유지한다. */
 .aot-center-modal > .aot-sensor-popup-header,
 .aot-center-modal .aot-sensor-popup--docked > .aot-sensor-popup-header {
   flex: 0 0 auto;
@@ -394,6 +404,7 @@
   align-items: center;
   margin: 0 0 4px 0;
   padding-right: 36px;
+  padding-left: 36px;
   padding-bottom: 6px;
   border-bottom: 1px solid var(--aot-border-light);
 }
@@ -403,15 +414,17 @@
 .aot-center-modal .aot-sensor-popup--docked > .aot-sensor-popup-header {
   /* 배지(통신·배터리)와 닫기 사이 간격을 절반으로. 공용 제목줄은 닫기를 피해
      오른쪽 36px 을 비우는데, 배지가 붙는 이 제목줄에서는 그 틈이 16px 로 떠
-     보였다. 28px 이면 8px 이 된다(닫기는 right:12px + 폭 24px). */
+     보였다. 28px 이면 8px 이 된다(닫기는 right:12px + 폭 24px). 왼쪽도 같은
+     폭으로 맞춰 뒤로가기 유무와 무관하게 제목이 대칭 중앙에 오게 한다. */
   padding-right: 28px;
+  padding-left: 28px;
   position: sticky;
   top: 0;
   z-index: 1;
   /* 셸과 **같은 배경**이어야 한다. `inherit` 은 부모(투명한 본문)를 따라가
      스크롤할 때 차트가 제목 뒤로 비친다. 값은 셸이 쓰는 토큰 그대로다
      (.maplibregl-popup-content, map.css). */
-  background: var(--bd-secondary, #F3F6F5);
+  background: var(--aot-surface-body, #F3F6F5);
 }
 
 /* Section tab navigation — 헤더와 분리된 독립 행 (상위 단계 탭) */
@@ -471,7 +484,7 @@
   padding: var(--aot-space-4) var(--aot-space-4);
   border-radius: 16px;
   margin-bottom: var(--aot-space-4);
-  background: var(--bd-primary, #FFFFFF); /* 카드 배경 = 배경 기본 (모달 페이지 배경인 배경 보조와 대비) */
+  background: var(--aot-surface-card, #FFFFFF); /* 카드 배경 = 배경 기본 (모달 페이지 배경인 배경 보조와 대비) */
   border: none;
   /* 본문 기준 크기 — AoT 모던 모달의 일반 텍스트(base)와 동일.
      하위 요소는 상속으로 균일화 (sm 은 모바일에서 너무 작음) */
@@ -512,9 +525,14 @@
  * 좌우 패딩은 박스 내부 여백(`.aot-ov-block` padding)과 같은 값이다 —
  * 그래야 제목 글자가 그 아래 박스 안 첫 줄과 같은 세로선에서 시작한다. */
 .aot-ov-card-title {
-  font-weight: 400;
-  font-size: calc(var(--aot-font-size-base) * 1.2);
-  color: var(--aot-color-text-primary);
+  /* 굵게 + 텍스트 보조색 — 헤더 제목과 같은 위계 규칙(제목류는 굵게·보조색,
+     값/본문은 텍스트 기본색). 크기는 모달 자체 em 체인 기준(카드 제목은
+     헤더 제목(1.3em)보다 작고 본문(1em)보다는 크다) — 이전에는 전역 rem
+     토큰(--aot-font-size-base)을 썼는데, 모달 본문 em 체계와 무관해 화면마다
+     비율이 어긋났다. */
+  font-weight: 700;
+  font-size: 1.05em;
+  color: var(--aot-color-text-secondary);
   padding: 0 var(--aot-space-4);
   /* 다음 박스와의 사이 — 작게 두는 이유: 박스 자신의 위쪽 안여백
      (--aot-space-4)이 이미 충분한 공기를 만든다. 둘을 더하면 박스마다
@@ -1043,8 +1061,13 @@
 .aot-bay-popup-pane .aot-act-tab-btn {
   height: var(--aot-btn-height-sm, 32px);
   padding: 0 var(--aot-btn-padding-x, 12px);
-  font-size: var(--aot-font-size-sm);
-  font-weight: 500;
+  /* 이 하위 탭은 상위 섹션탭(.aot-act-tabs-nav, 1.15em)보다 의도적으로
+     작다("전역 알약 모양으로 축소" 위 주석) — 카드 제목(1.05em)보다도
+     작게 둔다. 굵기만 상위 탭과 맞춘다(제목·탭류는 굵게).
+     이전에는 전역 rem 토큰(--aot-font-size-sm)이라 모달 자체 em 체계와
+     무관하게 따로 놀았다 — 로컬 em 체인으로 정정. */
+  font-size: 0.95em;
+  font-weight: 600;
   border-radius: var(--aot-btn-radius-sm, 16px);
   border: 1px solid var(--bd-btn-border, #B6BABA);
   background: var(--bg-btn-off, #5E6B64);
@@ -1054,7 +1077,7 @@
 }
 .aot-bay-popup-pane .aot-act-tab-btn.active {
   background: var(--bg-btn-on, #13261B);
-  font-weight: 600;
+  font-weight: 700;
 }
 
 /* 팝업 탭 내비: 버튼 폭 합이 화면(모달) 폭을 넘으면 줄바꿈하지 말고 가로 스크롤로
@@ -1073,13 +1096,13 @@
 
 /* 모바일 전체화면(≤480px): **머리 부분은 본문 확대를 따라가지 않는다.**
  *
- * 모달 본문은 모바일에서 16px 로 키운다(행·값이 읽혀야 한다). 그런데 헤더 제목과
- * 탭은 `1.1em` 이라 그 기준을 따라가면 17.6px 가 되어 탭 세 개가 한 줄을 넘긴다.
- * 예전에는 그걸 막으려고 탭만 14px·30px 로 **눌러** 놓았는데, 그러면 이번에는
- * 데스크탑(15.4px·42px)보다 작아진다 — 폰에서 오히려 작은 글씨를 보게 된다.
+ * 모달 본문은 모바일에서 16px 로 키운다(행·값이 읽혀야 한다). 그런데 헤더 제목
+ * (`1.3em`)과 탭(`1.15em`)이 그 기준을 따라가면 각각 20.8px·18.4px 가 되어
+ * 탭 세 개가 한 줄을 넘긴다. 예전에는 그걸 막으려고 탭만 눌러 놓았는데, 그러면
+ * 이번에는 데스크탑보다 작아진다 — 폰에서 오히려 작은 글씨를 보게 된다.
  *
  * 그래서 크기를 다시 정하지 않고 **기준을 데스크탑과 같게(14px) 고정**한다.
- * `1.1em` 이 양쪽에서 같은 값이 되므로 헤더·탭은 화면 크기와 무관하게 같은
+ * em 값이 양쪽에서 같은 기준을 곱하므로 헤더·탭은 화면 크기와 무관하게 같은
  * 크기이고, 본문은 16px 확대를 그대로 유지한다. */
 @media (max-width: 480px) {
   .aot-center-modal > .aot-sensor-popup-header,
@@ -1454,11 +1477,19 @@
   width: 32px;
   height: 32px;
   padding: 0;
-  margin-left: 0;
+  /* 헤더가 이제 왼쪽에도 36px 을 예약한다(뒤로가기 없는 헤더도 대칭 중앙에
+     오도록) — 뒤로가기가 있을 때는 그 여백을 상쇄해 지금까지와 같은 위치
+     (테두리에 바짝 붙는 자리)를 유지한다. */
+  margin-left: -36px;
   border-radius: 50%;
-  background: var(--bd-primary, #FFFFFF);
+  background: var(--aot-surface-card, #FFFFFF);
 }
 .aot-modal-up[hidden] { display: none; }
+/* 도킹 헤더는 오른쪽 여백이 28px(위 주석)이라 왼쪽 예약폭도 28px —
+   뒤로가기 상쇄량도 그에 맞춘다. */
+.aot-sensor-popup--docked > .aot-sensor-popup-header > .aot-modal-up {
+  margin-left: -28px;
+}
 @media (hover: hover) {
   .aot-modal-up:hover {
     color: var(--aot-color-text-primary);
@@ -1485,7 +1516,7 @@ button.aot-center-modal-close {
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  background: var(--bd-primary, #FFFFFF);
+  background: var(--aot-surface-card, #FFFFFF);
 }
 
 /* ── 현재 환경 (구역·시설 [현황] 첫 블록) ─────────────────────────────────
@@ -1594,10 +1625,13 @@ button.aot-center-modal-close {
 /* ── 모달 제목줄 공용 (site·zone·facility) ────────────────────────────────
    [← 상위] 이름 [상태 점]. 이름 묶음이 flex:1 이라 화살표는 왼쪽에 붙고
    점은 이름 바로 뒤에 따라온다(헤더가 space-between 이라 묶지 않으면 점이
-   반대편 끝으로 날아간다). */
+   반대편 끝으로 날아간다). justify-content:center 로 이 묶음을 자기
+   flex:1 영역 안에서 가운데 정렬 — 뒤로가기(32px)와 닫기 예약 여백(36px)이
+   거의 같아 헤더 전체 기준으로도 대체로 중앙에 온다. */
 .aot-modal-heading {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 6px;
   flex: 1;
   min-width: 0;
@@ -1827,8 +1861,12 @@ button.aot-center-modal-close {
    (통합 기록 블록의 '예정' 과 '지난 것'). 섹션 제목보다 한 단 낮다. */
 .aot-ov-sub-title {
   margin: 6px 0 2px;
-  font-size: var(--aot-font-size-xs);
-  font-weight: 600;
+  /* 카드 내부 제목 — 카드 제목(1.05em)보다는 작지만 본문과 크기는 같다(1em).
+     굵기(700)·보조색으로만 "제목"임을 표시한다(라벨/값이 흔히 쓰는 방식).
+     이전 전역 rem 토큰(--aot-font-size-xs, 본문보다 오히려 작았다) 대신
+     모달 자체 em 체인을 따른다. */
+  font-size: 1em;
+  font-weight: 700;
   color: var(--aot-color-text-secondary);
 }
 .aot-ov-sub-title:first-of-type { margin-top: 0; }
@@ -1917,7 +1955,7 @@ button.aot-center-modal-close {
   padding: var(--aot-space-4);
   border-radius: 16px;
   margin-bottom: var(--aot-space-4);
-  background: var(--bd-primary, #FFFFFF);
+  background: var(--aot-surface-card, #FFFFFF);
 }
 .aot-center-modal .aot-act-row {
   padding: var(--aot-space-4);

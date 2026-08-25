@@ -5,7 +5,7 @@
 
 /* --- Scheduler Card --- */
 .scheduler-card {
-    background: var(--bd-primary);
+    background: var(--aot-surface-card, var(--bd-primary));
     border: none;
     border-radius: 20px !important;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
@@ -215,7 +215,7 @@ div.vis-tooltip {
 #ai-gantt-micro-container {
     flex: 1;
     min-height: 400px;
-    background: var(--bd-primary);
+    background: var(--aot-surface-card, var(--bd-primary));
 }
 
 /* --- Proposed Tasks Table --- */
@@ -305,7 +305,7 @@ div.vis-tooltip {
         padding: 12px 16px;
     }
     .mobile-task-card {
-        background: var(--bd-primary);
+        background: var(--aot-surface-card, var(--bd-primary));
         border-radius: 12px;
         padding: 14px 16px;
         border-left: 4px solid #dee2e6;

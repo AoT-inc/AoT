@@ -159,7 +159,9 @@
   --aot-surface-modal: #ffffff;
   --aot-surface-dropdown: #ffffff;
   --aot-surface-input: #ffffff;
-  --aot-surface-body: #f8f9fa;
+  /* bd_secondary(settings/custom_ui) 기본값과 일치 — 이 값도 /custom.css 로
+     같은 필드에서 재발행된다(routes_general.py var_map). §3 "기본값 일치 계약" */
+  --aot-surface-body: #F3F6F5;
 
   /* ========================================================================
      Section 1.7: color — note (migrated from custom.css)

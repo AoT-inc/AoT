@@ -17,30 +17,30 @@
               </div>
             </div>
           </div>
-        </div>
 
-        {# 그룹 부여 — 관리자에게만 보인다.
+          {# 그룹 부여 — 관리자에게만 보인다.
 
-           부여를 그룹 화면이 아니라 여기 두는 이유: 그룹은 적고 자원은 많다.
-           그룹 쪽에서 자원을 고르게 하면 목록이 자원 수만큼 길어져 자원이
-           늘수록 못 쓰게 된다. 탭에서 그룹을 고르면 목록은 항상 그룹 수만큼
-           이고, 무엇에 영향을 주는지가 눈앞에 있다. #}
-        <div id="tabScopeSection" style="display: none;">
-          <div class="aot-modal-group-title">{{_('Groups that can operate this tab')}}</div>
-          <div class="aot-modal-container">
-            <div class="aot-modal-body-text">
-              {{_('If no group is selected, everyone can operate this tab. Selecting a group limits operation to its members. Data stays visible to everyone.')}}
+             부여를 그룹 화면이 아니라 여기 두는 이유: 그룹은 적고 자원은 많다.
+             그룹 쪽에서 자원을 고르게 하면 목록이 자원 수만큼 길어져 자원이
+             늘수록 못 쓰게 된다. 탭에서 그룹을 고르면 목록은 항상 그룹 수만큼
+             이고, 무엇에 영향을 주는지가 눈앞에 있다. #}
+          <div id="tabScopeSection" style="display: none;">
+            <div class="aot-modal-group-title">{{_('Groups that can operate this tab')}}</div>
+            <div class="aot-modal-container">
+              <div class="aot-modal-body-text">
+                {{_('If no group is selected, everyone can operate this tab. Selecting a group limits operation to its members. Data stays visible to everyone.')}}
+              </div>
+            </div>
+            <div class="aot-modal-container" id="tabScopeGroups"></div>
+            <div class="aot-modal-container">
+              <div class="aot-modal-body-text" id="tabScopeImpact"></div>
             </div>
           </div>
-          <div class="aot-modal-container" id="tabScopeGroups"></div>
-          <div class="aot-modal-container">
-            <div class="aot-modal-body-text" id="tabScopeImpact"></div>
-          </div>
-        </div>
 
-        <!-- Warning Message -->
-        <div class="alert alert-warning mx-3 mt-0" id="lastTabWarning" style="display: none;">
-          <i class="fas fa-exclamation-triangle"></i> {{_('Cannot delete the last tab on this page.')}}
+          <!-- Warning Message -->
+          <div class="alert alert-warning mx-3 mt-0" id="lastTabWarning" style="display: none;">
+            <i class="fas fa-exclamation-triangle"></i> {{_('Cannot delete the last tab on this page.')}}
+          </div>
         </div>
 
         <div class="modal-footer">

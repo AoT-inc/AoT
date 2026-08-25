@@ -1,7 +1,7 @@
 /* AI Service Registry Page Styles */
 
 .ai-card {
-    background: var(--bd-primary);
+    background: var(--aot-surface-card, var(--bd-primary));
     border: none;
     border-radius: 20px !important;
     transition: all 0.3s ease;

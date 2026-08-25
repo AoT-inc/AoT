@@ -32,7 +32,7 @@ settings/custom_ui 연동 구조를 정의한다. z-index 는 `z-index-system.md
 | brand_primary/secondary | --brand-* | --aot-color-brand-* |
 | brand_accent | --brand-accent | --aot-color-brand-accent, --bd-btn-tertiary |
 | text_color_primary/secondary/tertiary | --text-color-* | --aot-color-text-* |
-| bd_primary/secondary | --bd-* | (없음 — 페이지 배경층 전용) |
+| bd_primary/secondary | --bd-* | --aot-surface-card / --aot-surface-body (2026-08, §5-6) |
 | badge_upgrade | --bg-upgrade, --bg-btn-upgrade | --aot-bg-upgrade, --aot-btn-bg-upgrade |
 | bg_active / bg_inactive | --bg-* | --aot-bg-* |
 | bg_warning | --bg-pause | --aot-bg-pause |
@@ -62,7 +62,8 @@ settings/custom_ui 연동 구조를 정의한다. z-index 는 `z-index-system.md
   `--aot-color-text-secondary` 발행을 생략한다. custom-dark.css 의 `:root`
   재정의(같은 특이도, 더 이른 로드)를 덮어 어두운 배경에 어두운 글자가 되는
   것을 막기 위함이다. 새 토큰을 매핑에 추가할 때 custom-dark.css 가 재정의하는
-  이름이면 반드시 이 생략 목록에도 추가할 것.
+  이름이면 반드시 이 생략 목록에도 추가할 것. 2026-08 에 `--aot-surface-card`
+  /`--aot-surface-body` 도 같은 이유로 추가(§5-6).
 - 색상 필드의 단일 목록은 `forms_settings.THEME_COLOR_FIELDS` (폼·저장·프리셋
   API 공유). 필드 추가 시: THEME_COLOR_FIELDS + theme_defaults.json +
   custom_ui.html(PRESETS/CSS_VAR_MAP) + routes_general var_map 네 곳을 갱신.
@@ -617,6 +618,56 @@ AoTGeoTheme.deviceColor(t, theme)    // 위젯처럼 서버가 넘긴 theme 을 
 
 DB 에 남은 잔재 정리는 `python3 -m aot.scripts.fix_geo_theme_drift`
 (기본 dry-run, 반영은 `--apply`).
+
+## 5-6. 배경 2단 레이어링 표준화 — `--bd-*` 를 `--aot-surface-*` 실토큰에 배선 (2026-08)
+
+**배경**: "일반 웹페이지·대시보드 위젯·모든 모달창에 지도위젯 모달(참고 구현)과
+같은 외곽=배경 보조 / 카드=배경 기본 대비를 일관 적용해 달라"는 요청. 조사해보니
+같은 개념이 두 갈래로 흩어져 있었다:
+- `--bd-primary`(#FFFFFF)/`--bd-secondary`(#F3F6F5) — `settings/custom_ui` 색상
+  피커에 이미 노출된 라이브 필드지만, **다크테마 재정의가 없다**
+  (`custom-dark.css` 가 이 두 토큰을 전혀 건드리지 않음).
+- `--aot-surface-card`(#ffffff)/`--aot-surface-body`(#F3F6F5, 이번에 기본값을
+  `bd_secondary` 와 일치시킴) — 이미 `custom-dark.css` 가 각각 #1e1e1e/#121212
+  로 재정의하지만, custom_ui 에는 노출돼 있지 않았다.
+
+**결정**: `--aot-surface-card`/`--aot-surface-body` 를 유일한 실토큰으로 삼고,
+`bd_primary`/`bd_secondary` 필드가 여기에도 함께 발행되도록 `routes_general.py`
+의 `var_map` 을 확장(`['--bd-primary', '--aot-surface-card']` 등, §2 의 "레거시
+별칭 + 실토큰 양쪽 발행" 패턴 그대로). 다크 사용자는 `dark_overridden` 에 두
+토큰을 추가해 라이트 사용자의 배선을 건너뛰고 `custom-dark.css` 값을 지킨다.
+
+**규칙(신규 코드가 따를 것)**:
+1. 페이지(`body`) 는 항상 배경 보조(`--aot-surface-body`).
+2. 그 위에 얹히는 카드(위젯 카드, 목록 행, 모달 본문 안의 그룹박스 등)는
+   배경 기본(`--aot-surface-card`).
+3. 카드 안에 다시 박스가 필요하면(예: 모달 헤더/푸터는 기본인데 스크롤
+   본문 영역만 갈라야 할 때) 다시 배경 보조로 — 기본↔보조가 깊이에 따라
+   교대한다. 상태색(on/off, active/inactive 등, `bg_on`/`bg_active` 계열)은
+   이 교대 규칙과 무관한 별개 축이니 섞지 않는다.
+4. 이미 "박스 안이 비어 보이지 않게 일부러 배경을 없앤" 컴포넌트
+   (`.aot-modal-channel-group`, `.aot-notice-box-plain` 등)는 예외 — 건드리지
+   않는다.
+
+적용된 곳: `bootstrap-4-themes/aot.css`(전역 `body`/`.widget-outer`),
+`aot-modal-modern.css`(`.aot-option-modal .modal-body`, 이전엔 배경이 아예
+없어 벤더 흰색을 그대로 물려받았다), 지도위젯 모달(`map.css`/
+`aot-sensor-label.css`, 레거시 별칭→실토큰 교체만), `AoT_PID.py`(`.pid-modal-body`),
+`aot-entry-ui.css`/`ai_scheduler.css`/`geo-plots.css`/`ai_entry.css`/
+`aot-facility-widget.css`(카드류 실토큰 교체). `admin-upgrade.css` 는 페이지가
+보조색이 되면서 대비가 사라지는 충돌이 있어 박스를 배경 보조→기본으로 뒤집었다.
+`aot-base-ui.css` 의 geo/design 모드탭(고정 "Explicit White" 마스크 기법)은
+이 표준화 범위 밖 — 별개 시각 기법이라 손대지 않았다.
+
+**같은 커밋에서 함께 처리한 타이포그래피 굵기 표준화**: 모바일 가독성을 위해
+제목/버튼 굵기도 정리했다. 새 값을 만들지 않고 이미 존재하던 굵기 스케일
+(`--aot-fw-regular/medium/semibold/bold` = 400/500/600/700,
+`aot-theme-variables.css`)을 전역 기본값으로 승격만 했다 — `h1`-`h6`,
+`.btn`, `.navbar.main-navbar .nav-link` 를 `bootstrap-4-themes/aot.css` 에서
+`var(--aot-fw-semibold, 600)` 로. 지금까지 이 굵기 스케일은 모달 제목·위젯
+텍스트(`aot-widget-typography.css`)에만 쓰이고 일반 페이지 제목·플레인
+버튼(Bootstrap 기본 500/400)에는 없었다. `.aot-page-title`(의도적으로
+400, 크기로 대신 강조) 등 기존 예외는 더 높은 특이도라 그대로 유지된다.
 
 ## 6. 남은 부채 (백로그, 우선순위순)
 

@@ -753,6 +753,9 @@ WIDGET_INFORMATION = {
   overflow-x: hidden;
   padding: 0.5rem 1rem 0.75rem;
   -webkit-overflow-scrolling: touch;
+  /* 배경 2단 레이어링: 헤더/푸터(배경 기본)와 대비되는 배경 보조 —
+     .aot-option-modal 과 동일한 규칙(color-system.md 참조). */
+  background: var(--aot-surface-body, #F3F6F5);
 }
 #pid_modal_{{each_widget.unique_id}} .pid-modal-footer {
   flex: 0 0 auto;

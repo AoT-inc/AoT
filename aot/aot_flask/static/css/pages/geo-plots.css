@@ -54,7 +54,7 @@
 
 /* 목록 — 카드 하나에 행을 쌓는다(설정 화면의 항목 목록과 같은 모양). */
 .aot-plots-list {
-  background: var(--bd-primary, #FFFFFF);
+  background: var(--aot-surface-card, #FFFFFF);
   border-radius: 16px;
   padding: var(--aot-space-2) var(--aot-space-4);
 }

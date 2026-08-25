@@ -215,7 +215,7 @@ body.aot-map-fullscreen-active .grid-stack-item:not(.aot-fs-parent) {
 .maplibregl-popup-content {
   padding: 12px 16px;             /* 8→12 상하, 12→16 좌우 — 16px 라운드에 균형잡힌 여백 */
   border-radius: 16px;
-  background: var(--bd-secondary, #F3F6F5); /* 모달 페이지 배경 = 배경 보조. 안의 카드(.aot-ov-block)는 배경 기본으로 대비를 만든다 */
+  background: var(--aot-surface-body, #F3F6F5); /* 모달 페이지 배경 = 배경 보조. 안의 카드(.aot-ov-block)는 배경 기본으로 대비를 만든다 */
   color: var(--aot-color-text-primary);
   box-shadow: var(--aot-shadow-md);
   font-family: var(--aot-font-family);
@@ -225,15 +225,15 @@ body.aot-map-fullscreen-active .grid-stack-item:not(.aot-fs-parent) {
 .maplibregl-popup-anchor-top      .maplibregl-popup-tip,
 .maplibregl-popup-anchor-top-left .maplibregl-popup-tip,
 .maplibregl-popup-anchor-top-right .maplibregl-popup-tip {
-  border-bottom-color: var(--bd-secondary, #F3F6F5);
+  border-bottom-color: var(--aot-surface-body, #F3F6F5);
 }
 .maplibregl-popup-anchor-bottom      .maplibregl-popup-tip,
 .maplibregl-popup-anchor-bottom-left .maplibregl-popup-tip,
 .maplibregl-popup-anchor-bottom-right .maplibregl-popup-tip {
-  border-top-color: var(--bd-secondary, #F3F6F5);
+  border-top-color: var(--aot-surface-body, #F3F6F5);
 }
-.maplibregl-popup-anchor-left  .maplibregl-popup-tip { border-right-color: var(--bd-secondary, #F3F6F5); }
-.maplibregl-popup-anchor-right .maplibregl-popup-tip { border-left-color:  var(--bd-secondary, #F3F6F5); }
+.maplibregl-popup-anchor-left  .maplibregl-popup-tip { border-right-color: var(--aot-surface-body, #F3F6F5); }
+.maplibregl-popup-anchor-right .maplibregl-popup-tip { border-left-color:  var(--aot-surface-body, #F3F6F5); }
 
 .maplibregl-popup-close-button {
   top: 10px !important;           /* 0→10 : 라운드 모서리에서 안쪽으로 */

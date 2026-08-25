@@ -357,8 +357,8 @@
       <div class="aot-settings-group-title" id="group-background">{{_('Background Colors')}}</div>
       <div class="aot-settings-section">
         {% set bg_fields = [
-          ('bd_primary',   _('Background Primary'),   _('Input/output/function list rows, cards')),
-          ('bd_secondary', _('Background Secondary'), _('List header row background'))
+          ('bd_primary',   _('Background Primary'),   _('Page cards — widgets, list rows, modal groups')),
+          ('bd_secondary', _('Background Secondary'), _('Page background behind cards, list headers, modal body'))
         ] %}
         {% for field_name, label, desc in bg_fields %}
         <div class="aot-color-row" data-css-key="{{field_name}}">

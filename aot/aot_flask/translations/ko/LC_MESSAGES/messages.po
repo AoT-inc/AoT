@@ -30220,11 +30220,11 @@ msgstr "지도를 먼저 고르세요."
 
 #: 그룹 스코프 (docs/design/access-scope-groups.md)
 msgid "Groups that can operate this tab"
-msgstr "이 탭을 조작할 수 있는 그룹"
+msgstr "그룹 선택"
 
 #: 그룹 스코프 (docs/design/access-scope-groups.md)
 msgid "If no group is selected, everyone can operate this tab. Selecting a group limits operation to its members. Data stays visible to everyone."
-msgstr "그룹을 고르지 않으면 모두가 이 탭을 조작합니다. 그룹을 고르면 그 구성원만 조작합니다. 데이터는 모두에게 계속 보입니다."
+msgstr "그룹을 선택하지 않으면 모두가 이 탭에 접근할 수 있습니다. 그룹을 선택하면 그 구성원만 조작할 수 있습니다. 데이터는 모두에게 계속 보입니다."
 
 #: 그룹 스코프 (docs/design/access-scope-groups.md)
 msgid "No groups yet. Create one in Settings > Users > Groups."
@@ -30256,11 +30256,11 @@ msgstr "(사라진 자원)"
 
 #: 그룹 스코프 (docs/design/access-scope-groups.md)
 msgid "Groups that can operate this dashboard"
-msgstr "이 대시보드를 조작할 수 있는 그룹"
+msgstr "그룹 선택"
 
 #: 그룹 스코프 (docs/design/access-scope-groups.md)
 msgid "If no group is selected, everyone can operate this dashboard. Selecting a group limits operation to its members. Data stays visible to everyone."
-msgstr "그룹을 고르지 않으면 모두가 이 대시보드를 조작합니다. 그룹을 고르면 그 구성원만 조작합니다. 데이터는 모두에게 계속 보입니다."
+msgstr "그룹을 선택하지 않으면 모두가 이 대시보드에 접근할 수 있습니다. 그룹을 선택하면 그 구성원만 조작할 수 있습니다. 데이터는 모두에게 계속 보입니다."
 
 #: 그룹 스코프 (docs/design/access-scope-groups.md)
 msgid "Everyone can operate this dashboard (no group assigned)."
@@ -30276,11 +30276,11 @@ msgstr "지도 설정"
 
 #: 그룹 스코프 (docs/design/access-scope-groups.md)
 msgid "Groups that can operate this map"
-msgstr "이 지도를 조작할 수 있는 그룹"
+msgstr "그룹 선택"
 
 #: 그룹 스코프 (docs/design/access-scope-groups.md)
 msgid "If no group is selected, everyone can operate this map. Selecting a group limits operation to its members. Data stays visible to everyone."
-msgstr "그룹을 고르지 않으면 모두가 이 지도를 조작합니다. 그룹을 고르면 그 구성원만 조작합니다. 데이터는 모두에게 계속 보입니다."
+msgstr "그룹을 선택하지 않으면 모두가 이 지도에 접근할 수 있습니다. 그룹을 선택하면 그 구성원만 조작할 수 있습니다. 데이터는 모두에게 계속 보입니다."
 
 #: 그룹 스코프 (docs/design/access-scope-groups.md)
 msgid "Everyone can operate this map (no group assigned)."
@@ -30296,11 +30296,11 @@ msgstr "지도를 먼저 저장하세요."
 
 #: 그룹 스코프 (docs/design/access-scope-groups.md)
 msgid "Groups that can operate this facility"
-msgstr "이 시설을 조작할 수 있는 그룹"
+msgstr "그룹 선택"
 
 #: 그룹 스코프 (docs/design/access-scope-groups.md)
 msgid "If no group is selected, everyone can operate this facility. Selecting a group limits operation to its members. Data stays visible to everyone."
-msgstr "그룹을 고르지 않으면 모두가 이 시설을 조작합니다. 그룹을 고르면 그 구성원만 조작합니다. 데이터는 모두에게 계속 보입니다."
+msgstr "그룹을 선택하지 않으면 모두가 이 시설에 접근할 수 있습니다. 그룹을 선택하면 그 구성원만 조작할 수 있습니다. 데이터는 모두에게 계속 보입니다."
 
 #: 그룹 스코프 (docs/design/access-scope-groups.md)
 msgid "Everyone can operate this facility (no group assigned)."

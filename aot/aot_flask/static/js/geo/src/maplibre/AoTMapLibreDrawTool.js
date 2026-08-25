@@ -114,33 +114,11 @@
           return;
         }
 
-        // Use AOT_MAP_LOADER if available
-        if (typeof window.AOT_MAP_LOADER !== 'undefined' && window.AOT_MAP_LOADER.loadMapLibreDraw) {
-          window.AOT_MAP_LOADER.loadMapLibreDraw({ version: '1.4.3' })
-            .then(() => resolve(true))
-            .catch(() => resolve(false));
-          return;
-        }
-
-        // Manual CDN load
-        const version = '1.4.3';
-        const cdnBase = 'https://unpkg.com';
-
-        // Inject CSS
-        if (!document.querySelector('link[href*="maplibre-gl-draw"]')) {
-          const link = document.createElement('link');
-          link.rel = 'stylesheet';
-          link.href = cdnBase + '/@maplibre/maplibre-gl-draw@' + version + '/dist/maplibre-gl-draw.css';
-          document.head.appendChild(link);
-        }
-
-        // Inject JS
-        const script = document.createElement('script');
-        script.src = cdnBase + '/@maplibre/maplibre-gl-draw@' + version + '/dist/maplibre-gl-draw.js';
-        script.async = true;
-        script.onload = () => resolve(typeof MapLibreDrawControl !== 'undefined');
-        script.onerror = () => resolve(false);
-        document.head.appendChild(script);
+        // 예전에는 여기서 `@maplibre/maplibre-gl-draw` 를 CDN 에서 받으려 했다.
+        // 그 패키지는 npm 레지스트리에 존재하지 않는다(2026-08-25 확인) — 이
+        // 적재는 한 번도 성공한 적이 없고 매번 왕복 하나를 버렸다. 그리기는
+        // 아래 _initFallback 의 자체 구현이 실제로 담당한다.
+        resolve(false);
       });
     }
 

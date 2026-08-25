@@ -7930,13 +7930,20 @@
         }, true);
 
         /**
-         * 닫기(✕)를 제목줄 **한가운데**에 맞춘다.
+         * 닫기(✕)를 제목줄 **한가운데**, 뒤로가기(←)와 **좌우대칭**으로 맞춘다.
          *
          * 닫기 버튼은 셸 래퍼 기준 absolute 이고 제목줄은 셸 안쪽에 있어서,
-         * 고정 `top` 으로는 둘이 맞지 않는다 — 셸의 위 여백이 모드마다 다르고
-         * (도킹 12px · 시트 22px) 제목줄 높이도 다르다(36px · 폰 44px). 실측에서
-         * 닫기만 데스크탑 4.5px · 모바일 18.5px 위로 떠 있었다(화살표·제목·상태
-         * 점은 서로 맞아 있었다).
+         * 고정 `top`/`right` 으로는 뒤로가기와 맞지 않는다 — 셸의 위·좌우 여백이
+         * 모드마다 다르고(도킹 12px · 시트 22px) 제목줄 높이도 다르다(36px ·
+         * 폰 44px). 실측에서 닫기만 데스크탑 4.5px · 모바일 18.5px 위로 떠
+         * 있었다(화살표·제목·상태점은 서로 맞아 있었다).
+         *
+         * 가로도 마찬가지: 닫기의 `right` 는 공용 규칙(`.maplibregl-popup-
+         * close-button`, 작은 툴팁 팝업까지 공유)의 12px 고정값을 쓰는데, 이
+         * 모달의 실제 좌측 여백(`.maplibregl-popup-content` 의 padding, 보통
+         * 16px)과 달라 뒤로가기(좌측 여백 그대로 사용)와 좌우 비대칭으로
+         * 보였다. 뒤로가기가 서 있는 제목줄의 **왼쪽 여백을 그대로 오른쪽에도
+         * 적용**해 대칭을 맞춘다.
          *
          * `important` 로 넣는 이유: 폰 폭에서 닫기 위치를 잡는 규칙이
          * `!important` 라 그냥 인라인으로는 이기지 못한다.
@@ -7955,6 +7962,9 @@
                 var mid = (hb.top - wb.top) + padT + (hb.height - padT - padB) / 2;
                 var top = Math.round(mid - (closeBtn.offsetHeight || 24) / 2);
                 closeBtn.style.setProperty('top', Math.max(2, top) + 'px', 'important');
+                // 제목줄(뒤로가기가 서는 자리)의 왼쪽 여백 = 닫기의 오른쪽 여백.
+                var leftInset = Math.round(hb.left - wb.left);
+                closeBtn.style.setProperty('right', Math.max(2, leftInset) + 'px', 'important');
             } catch (e) {}
         }
 
@@ -9110,18 +9120,15 @@
             const scopedCss =
                 '<style>' +
                   '#' + sid + '{display:flex;flex-direction:column;flex:1;min-height:0;}' +
-                  '#' + sid + ' .aot-sl-title{flex:0 0 auto;font-size:1.2em;font-weight:700;' +
-                    'color:var(--aot-text-title);padding:0 28px 8px 2px;margin:0 0 8px;' +
-                    'border-bottom:1px solid var(--aot-border-light);overflow:hidden;' +
-                    'text-overflow:ellipsis;white-space:nowrap;}' +
                   '#' + sid + ' .aot-sl-list{flex:1;min-height:0;overflow-y:auto;scrollbar-width:none;padding:1px;}' +
                   '#' + sid + ' .aot-sl-list::-webkit-scrollbar{width:0;height:0;}' +
-                  // Rows = rounded cards, matching the zone device list (.aot-act-row):
-                  // 1px border, --bg-off surface, .4rem radius, gap between cards.
-                  // NO left guide bar (the previous brand-green inset read as a black line).
+                  // Rows = rounded cards, matching every other card in the app
+                  // (--aot-surface-card = 배경 기본): 1px border, .4rem radius,
+                  // gap between cards. NO left guide bar (the previous brand-green
+                  // inset read as a black line).
                   '#' + sid + ' .aot-sl-row{display:flex;align-items:center;justify-content:space-between;gap:8px;' +
                     'padding:.55rem .6rem;margin-bottom:.35rem;border-radius:.4rem;' +
-                    'border:1px solid var(--aot-border-light);background:var(--bg-off);' +
+                    'border:1px solid var(--aot-border-light);background:var(--aot-surface-card);' +
                     'cursor:pointer;color:var(--aot-text-main);font-size:1.05em;font-weight:600;' +
                     'line-height:1.3;transition:background .12s ease,border-color .12s ease;}' +
                   '#' + sid + ' .aot-sl-row:hover{background:var(--bg-active);}' +
@@ -9153,10 +9160,14 @@
                   '#' + sid + ' .aot-sl-zrow .aot-sl-grip i{font-size:11px;}' +
                   '#' + sid + ' .aot-sl-empty{padding:14px 6px;color:var(--aot-text-secondary);}' +
                 '</style>';
+            // 헤더는 공용 빌더(AoTMapPopup.buildModalHeader)로 — 다른 모든
+            // .aot-center-modal 헤더(구역/시설/필지 모달)와 같은 제목 크기·
+            // 닫기 버튼 여백을 쓴다. .aot-center-modal 의 **직속 자식**이어야
+            // 밑줄(border-bottom) 규칙이 먹는다 — #sid 래퍼 안에 넣으면 안 됨.
             const modalHtml =
                 scopedCss +
+                window.AoTMapPopup.buildModalHeader({ name: _tr('Sites') }) +
                 '<div id="' + sid + '">' +
-                  '<div class="aot-sl-title" id="aot-site-modal-title-' + uniqueId + '">' + _esc(_tr('Sites')) + '</div>' +
                   '<div id="aot-site-modal-list-' + uniqueId + '" class="aot-sl-list"></div>' +
                 '</div>';
 
@@ -9170,7 +9181,7 @@
             // media query, leaving a floating rounded box where the zone modal goes
             // fullscreen (the corner mismatch on mobile). The list scrolls inside.
 
-            const titleEl  = wrap.querySelector('#aot-site-modal-title-' + uniqueId);
+            const titleEl  = wrap.querySelector('.aot-sensor-popup-title');
             const listWrap = wrap.querySelector('#aot-site-modal-list-' + uniqueId);
 
             // A clean themed list row: [drag] name + optional chevron, hover/selected.

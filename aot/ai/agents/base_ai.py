@@ -708,6 +708,32 @@ class AbstractAI(ABC):
                     
             return result
 
+        # @ANCHOR: YAML_SHAPED_RESPONSE
+        # 모델이 **구조는 맞는데 문법만 YAML** 로 내는 일이 있다. 실측
+        # (2026-08-25, gemini-2.5-flash): "insight: …\nactions:\n  - action_type:
+        # virtual_tool_call\n    tool_name: query_reference_table" 를 그대로 냈고,
+        # JSON 파싱이 실패해 **그 원문이 사용자 답변으로 나갔다** — 화면에
+        # 내부 실행계획이 노출됐고, actions 가 비어 루프도 거기서 끝났다.
+        #
+        # 버릴 이유가 없다. 같은 스키마이므로 YAML 로 한 번 더 읽어 본다.
+        # 다만 산문을 YAML 이 관대하게 삼켜 엉뚱한 dict 가 되는 것을 막기 위해,
+        # **'insight' 키를 가진 dict 일 때만** 받아들인다.
+        try:
+            import yaml as _yaml
+
+            _y = _yaml.safe_load(raw_text)
+            if isinstance(_y, dict) and 'insight' in _y:
+                logger.warning(
+                    f"[{engine_name}] JSON parsing failed but the body is YAML of the "
+                    f"same shape — recovered.")
+                _acts = _y.get('actions')
+                return {
+                    "insight": str(_y.get('insight') or '').strip(),
+                    "actions": _acts if isinstance(_acts, list) else [],
+                }
+        except Exception:
+            pass
+
         logger.warning(f"[{engine_name}] JSON parsing failed. Falling back to raw text as insight.")
         
         # Clean up obvious markdown blocks before using as insight

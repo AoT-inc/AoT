@@ -46,7 +46,12 @@ _JS_ROOT = os.path.join(_ROOT, 'aot_flask', 'static', 'js')
 # 빌드 산출물·서드파티는 보지 않는다. `AoT_facility` 밑의 three.* 는 벤더 사본이라
 # 우리 관례(파일 내부 `_` 헬퍼)를 따르지 않는다 — 여기서 판정하면 오탐만 낸다.
 _SKIP = ('/dist/', '/vendor/', '/node_modules/', '/notes/', '/user_js/',
-         '/three.min.js', '/three-mesh-bvh.js', '/gltf_loader.js')
+         '/three.min.js', '/three-mesh-bvh.js', '/gltf_loader.js',
+         # 반입·번들 산출물이라 이름이 minify 돼 있다. minify 된 코드에서는
+         # `,_e=T.Source` 처럼 쉼표로 이어 붙인 정의를 이 검사가 못 읽어
+         # "정의 없이 불림" 으로 잘못 잡는다(2026-08-25 실제로 잡혔고,
+         # 정의가 있는 것과 모듈이 실제로 로드·인스턴스화되는 것을 확인했다).
+         '/three-gltf-exporter.js')
 
 _CALL = re.compile(r'(?<![\w.$])(_[A-Za-z][A-Za-z0-9_$]*)\s*\(')
 _DEF = (

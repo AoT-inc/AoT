@@ -424,7 +424,7 @@
   padding: .65rem .55rem;
   border-radius: .3rem;
   border: none;
-  background: var(--bd-primary, #FFFFFF);
+  background: var(--aot-surface-card, #FFFFFF);
   margin-bottom: .3rem;
 }
 .aot-act-row:last-child {
@@ -556,8 +556,10 @@
   flex: 0 0 auto;
   white-space: nowrap;
   padding: .45rem 1rem;
-  font-size: 1.1em;
-  font-weight: 500;
+  /* 지도 모달 탭(.aot-bay-popup-pane .aot-act-tab-btn, aot-sensor-label.css)과
+     같은 크기·굵기 — 같은 클래스가 두 컨텍스트에서 다르게 보이지 않도록. */
+  font-size: 1.15em;
+  font-weight: 600;
   color: var(--bd-btn-secondary, #5E6B64);
   background: var(--bg-off, #F3F6F5);
   border: none;

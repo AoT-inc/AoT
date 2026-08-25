@@ -3,8 +3,11 @@
 
 {% block head %}
 <link href="{{ url_for('static', filename='css/ai/ai_scheduler.css') }}" rel="stylesheet">
-<link rel="stylesheet" href="https://unpkg.com/vis-timeline@latest/styles/vis-timeline-graph2d.min.css" />
-<script src="https://unpkg.com/vis-timeline@latest/standalone/umd/vis-timeline-graph2d.min.js"></script>
+{#- vis-timeline 8.5.4. 예전에는 unpkg 의 `@latest` 를 받았다 — 버전을 고정하지
+   않으면 상류가 바뀌는 날 예고 없이 깨지고, 외부 CDN 이라 폐쇄망에서는 아예
+   안 뜬다. 반입본을 동일 출처로 서빙한다. -#}
+<link rel="stylesheet" href="{{ url_for('static', filename='vendor/vis-timeline-8.5.4/vis-timeline-graph2d.min.css') }}" />
+<script src="{{ url_for('static', filename='vendor/vis-timeline-8.5.4/vis-timeline-graph2d.min.js') }}"></script>
 {% endblock %}
 
 {% block body %}

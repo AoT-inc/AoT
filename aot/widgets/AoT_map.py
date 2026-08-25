@@ -188,7 +188,7 @@ WIDGET_HEAD_HTML = """
 
 <!-- Actuator group panel -->
 <script src="/static/js/widgets/AoT_facility/aot-facility-actuator-panel.js?v=15"></script>
-<link rel="stylesheet" href="/static/css/widget/aot-facility-widget.css?v=29">
+<link rel="stylesheet" href="/static/css/widget/aot-facility-widget.css?v=31">
 
 <style>
   /* Pure MapLibre Styles */
@@ -389,7 +389,7 @@ WIDGET_BODY_HTML = """
                 box.innerHTML =
                     '<div class="aot-sensor-popup-header aot-adv-modal-header">' +
                         '<span class="aot-adv-dot aot-adv-lvl-' + lvl.cls + '"></span>' +
-                        '<b>' + esc(item.scope_label) + '</b>' +
+                        '<span class="aot-sensor-popup-title">' + esc(item.scope_label) + '</span>' +
                         '<span class="aot-adv-modal-level">' + esc(lvl.label) + (ts ? ' · ' + esc(ts) : '') + '</span>' +
                     '</div>' +
                     '<div class="aot-adv-modal-body">' +

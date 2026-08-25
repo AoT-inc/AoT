@@ -1142,7 +1142,9 @@
     var name = _formFacility().name || 'facility';
     var btn = document.getElementById('btn-3d-export-glb');
     if (btn) { btn.disabled = true; btn.textContent = (window._ ? window._('Exporting…') : 'Exporting…'); }
-    import('https://cdn.jsdelivr.net/npm/three@0.155.0/examples/jsm/exporters/GLTFExporter.js')
+    // 로컬 자립 빌드. CDN 직행은 bare specifier 'three' 를 풀지 못해
+    // 이 버튼이 줄곧 깨져 있었다 — three-gltf-exporter.js 헤더 참조.
+    import('/static/js/widgets/AoT_facility/three-gltf-exporter.js?v=' + (window.AOT_ASSET_V || ''))
       .then(function (module) {
         var exporter = new module.GLTFExporter();
         exporter.parse(

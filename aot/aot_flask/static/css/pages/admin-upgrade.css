@@ -36,8 +36,12 @@ main.container > p {
    Flatten every variant on THIS page to the same neutral brand surface +
    border + text. Scoped to the upgrade page only -- other pages' notice
    boxes (e.g. facility warnings) keep full tint. */
+/* 2026-08: 페이지 배경(body) 이 배경 보조(--aot-surface-body)로 바뀌면서
+   이 박스가 배경 보조를 쓰면 페이지와 같은 색이 되어 대비가 사라진다 —
+   배경 기본(--aot-surface-card)으로 뒤집어 "보조 페이지 위의 기본 카드"
+   대비를 유지한다. */
 main.container .aot-notice-box {
-    background: var(--bd-secondary) !important;
+    background: var(--aot-surface-card) !important;
     color: var(--text-color-primary) !important;
     border-color: var(--aot-border-neutral) !important;
 }
@@ -57,7 +61,7 @@ main.container pre {
    of an invented palette. Monospace/scroll/resize stay, those are about the
    content being a raw log, not about color. */
 #upgrade_status {
-    background-color: var(--bd-secondary);
+    background-color: var(--aot-surface-card);
     color: var(--text-color-primary);
     padding: 15px;
     border-radius: 8px;

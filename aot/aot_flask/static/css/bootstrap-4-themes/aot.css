@@ -123,7 +123,23 @@ body {
      자체 color 를 지정한 컴포넌트는 이 규칙보다 우선한다(정상 동작). */
   color: var(--text-primary, #212529);
   text-align: left;
-  background-color: #FCFCFC;
+  /* 배경 2단 레이어링: 페이지(body)는 항상 배경 보조(--aot-surface-body,
+     settings/custom_ui bd_secondary) — 그 위에 얹히는 카드(.widget-outer,
+     .aot-entry-item, .aot-modal-container 등)가 배경 기본(--aot-surface-card)
+     으로 대비를 이룬다. docs/design/color-system.md 참조. */
+  background-color: var(--aot-surface-body, #F3F6F5);
+}
+
+/* 모바일 가독성: 제목/버튼류 굵기 표준화. 새 값을 만들지 않고 위젯 텍스트
+   체계(aot-widget-typography.css)·모달 제목이 이미 쓰는 --aot-fw-* 굵기
+   스케일을 전역 기본값으로 승격한다. Bootstrap 기본(제목 500, 버튼 400)
+   보다 뒤에 로드되어 동일 특이도에서 이긴다 — 더 높은 특이도(.aot-page-title
+   의 명시적 400, 모달 제목류의 !important)는 그대로 유지된다. */
+h1, h2, h3, h4, h5, h6 {
+  font-weight: var(--aot-fw-semibold, 600);
+}
+.btn {
+  font-weight: var(--aot-fw-semibold, 600);
 }
 
 .navbar-brand {
@@ -158,6 +174,7 @@ body {
 .navbar.main-navbar .nav-link {
   position: relative;
   color: var(--text-primary, #444) !important;
+  font-weight: var(--aot-fw-semibold, 600);
 
   transition: color 0.2s ease-in-out;
 }
@@ -435,10 +452,10 @@ body,
   box-shadow: 0 0 10px rgba(0, 0, 0, 0.1) !important;
   border-radius: 0.7em !important;
   border: 1px solid #c9c9c9;
-  /* 위젯 카드는 원래 배경이 없어 대시보드 페이지 배경이 그대로 비쳤다
-     (custom_ui 의 bd_primary/bd_secondary 가 위젯 카드에는 전혀 영향을
-     못 주던 지점 — color-system.md 참조). bd_primary 로 테마화. */
-  background-color: var(--bd-primary, #FFFFFF);
+  /* 위젯 카드 = 배경 기본(--aot-surface-card, bd_primary 로 배선됨) —
+     새 배경 보조(body, --aot-surface-body)와 대비되는 카드 레이어.
+     color-system.md 참조. */
+  background-color: var(--aot-surface-card, #FFFFFF);
 }
 
 /* 사이드바 메뉴 스타일 */

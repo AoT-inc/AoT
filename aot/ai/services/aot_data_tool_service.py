@@ -6927,11 +6927,19 @@ class AoTDataToolService:
         _tables = AoTDataToolService._registered_table_titles()
         _pointer = ''
         if _tables:
-            _pointer = ("\n\n[NOTE] %d lookup source(s) are registered and are NOT "
-                        "searched here — they are queried on demand: %s. If this "
-                        "question asks for a per-item value or live external data, call "
-                        "list_lookup_sources first, before concluding anything is "
-                        "unknown." % (len(_tables), '; '.join(_tables[:4])))
+            # **조건절을 붙이지 않는다.** 예전 문구는 "per-item value 나 실시간
+            # 외부 데이터를 묻는 경우" 로 조건을 달았는데, "땅콩 재배 방법을
+            # 조사해줘" 는 그 조건에 안 걸린다고 읽혔다 — 재현 2026-08-25 에서
+            # 모델이 이 안내를 받고도 조회 없이 "자료를 제공해주시면" 으로
+            # 끝냈다. 무엇을 하지 말라(모른다고 답하기·사용자에게 되묻기)를
+            # 먼저 말하고, 그 전에 무엇을 하라를 명령형으로 붙인다.
+            _pointer = ("\n\n[NOTE] This search does NOT cover the %d registered lookup "
+                        "source(s): %s. They are queried on demand and can hold exactly "
+                        "what was just missing. Do NOT say the information is "
+                        "unavailable, and do NOT ask the user to supply it, until you "
+                        "have called list_lookup_sources and queried every source whose "
+                        "'answers' text fits the question."
+                        % (len(_tables), '; '.join(_tables[:4])))
         # 두 안내는 서로 다른 것을 말한다 — 하나가 다른 하나를 덮으면 안 된다.
         _pointer = _tag_note + _pointer
 
@@ -6971,6 +6979,63 @@ class AoTDataToolService:
     # lowest trust tier (provenance='ai_curated', unconfirmed) — a low-risk,
     # reversible write, never presented with authority until a human confirms
     # it or it corroborates against a real source (P5, not yet built).
+    # @ANCHOR: SHELVE_LOCAL_NAME_GUARD
+    # 검색 가능한 이름이 없으면 저장은 성공하고 **나중에 못 찾는다** — 조용한
+    # 실패라 아무도 모른다. 사용자 보고(2026-08-25): 땅콩을 조사시켰더니 학명
+    # 기준으로 태그가 달려 "나중에 다시 찾지 못할 것 같다".
+    #
+    # 왜 지시만으로 부족한가: knowledge_search 는 제목(3배)과 본문만 점수화하고
+    # 태그는 필터일 뿐이다. 영문 자료(ECOCROP 등)를 조사하면 모델이 그 자료의
+    # 어휘로 제목을 다는 것이 자연스럽고, 그러면 사용자의 말로는 0점이 된다.
+    #
+    # 서버가 아는 결정적 신호는 설치 언어뿐이다. 그 언어가 라틴 문자를 쓰지
+    # 않는데 제목에도 태그에도 그 문자가 하나도 없으면, 그 항목은 사용자가
+    # 자기 말로 검색해서는 절대 나오지 않는다. 그때만 막는다 — 제목이든
+    # 태그든 한 글자라도 있으면 통과시키는 낮은 문턱이라, 영문 고유명사를
+    # 다루는 정당한 메모를 막지 않는다.
+    _LOCAL_SCRIPTS = {
+        'ko': ((0xAC00, 0xD7A3), (0x1100, 0x11FF)),          # 한글
+        'ja': ((0x3040, 0x30FF), (0x4E00, 0x9FFF)),          # 가나·한자
+        'zh': ((0x4E00, 0x9FFF),),                           # 한자
+        'zh_Hant': ((0x4E00, 0x9FFF),),
+        'th': ((0x0E00, 0x0E7F),),                           # 타이
+        'ru': ((0x0400, 0x04FF),), 'uk': ((0x0400, 0x04FF),),
+        'sr': ((0x0400, 0x04FF),), 'bg': ((0x0400, 0x04FF),),
+        'el': ((0x0370, 0x03FF),),                           # 그리스
+        'he': ((0x0590, 0x05FF),),                           # 히브리
+        'ar': ((0x0600, 0x06FF),),                           # 아랍
+        'hi': ((0x0900, 0x097F),),                           # 데바나가리
+    }
+
+    @staticmethod
+    def _missing_local_name(heading, tags):
+        """설치 언어의 문자가 제목·태그 어디에도 없으면 그 언어 코드를 돌려준다.
+
+        판정할 수 없으면(라틴 문자권, 요청 문맥 밖, 조회 실패) None — 막지
+        않는다. 이 검사의 목적은 확실한 실패를 잡는 것이지 의심스러운 것을
+        훈계하는 게 아니다.
+        """
+        try:
+            from flask_babel import get_locale
+            loc = get_locale()
+            if loc is None:
+                return None
+            code = str(loc)
+        except Exception:
+            return None
+
+        ranges = (AoTDataToolService._LOCAL_SCRIPTS.get(code)
+                  or AoTDataToolService._LOCAL_SCRIPTS.get(code.split('_')[0]))
+        if not ranges:
+            return None
+
+        text = '%s %s' % (heading or '', tags if isinstance(tags, str) else ' '.join(tags or []))
+        for ch in text:
+            o = ord(ch)
+            if any(lo <= o <= hi for lo, hi in ranges):
+                return None
+        return code
+
     @staticmethod
     def knowledge_shelve(content=None, tags=None, heading=None, entity_ref=None,
                          attribution=None, content_kind='prose', ttl_hours=None,
@@ -6989,6 +7054,20 @@ class AoTDataToolService:
                 "message": "Provide at least one scope tag (crop/livestock/structure/"
                            "topic this knowledge is about) — an untagged note would "
                            "surface for every unrelated query.",
+            }
+
+        _lang = AoTDataToolService._missing_local_name(heading, tags)
+        if _lang:
+            return {
+                "error": "not findable later",
+                "message": ("This install's language is %r, but neither the heading nor "
+                            "the tags contain a single character of that language — a "
+                            "person searching in their own words will never get this "
+                            "back (search scores the heading 3x and the body; tags only "
+                            "filter). Put the subject's name AS THE USER SAYS IT in the "
+                            "heading, and keep the source's own name (scientific or "
+                            "English) alongside it. Then call this again."
+                            % _lang),
             }
 
         if not attribution:
@@ -7057,12 +7136,27 @@ class AoTDataToolService:
                 "note": "Nothing is registered to look things up in. Do NOT invent values "
                         "— say the operator can add a source on the AI Library page.",
             }
+        # @ANCHOR: LOOKUP_SOURCES_NEXT_STEP
+        # 이 안내가 서술형이던 동안 실제로 이런 일이 났다(재현 2026-08-25,
+        # "땅콩 재배 방법을 조사해서 라이브러리에 정리해줘"): 모델이
+        # knowledge_search 로 0건을 받고 → 이 목록을 열어 FAO ECOCROP 을 **보고도**
+        # → 조회하지 않고 "자료를 제공해주시면 정리해 드리겠습니다" 로 끝냈다.
+        #
+        # 목록만 주면 모델은 이것을 자료 사전으로 읽는다. 그래서 **다음 행동**을
+        # 명령형으로 못박고, 별칭이 화이트리스트가 아니라는 것을 여기서 말한다 —
+        # 별칭 24개에 '땅콩' 이 없다는 사실이 "이 표로는 못 찾는다" 는 정지
+        # 신호로 작동했다.
         return {
             "sources": out + apis,
-            "note": "Pick by the 'answers' text. kind='table' -> query_reference_table "
-                    "(look a row up by name). kind='api' -> query_data_source (run one "
-                    "operation with its params; codes come from smartfarmkorea_lookup). "
-                    "Honour any 'caveat' when you cite the numbers.",
+            "note": "This IS the answer to 'how do I research that here' — you are NOT "
+                    "done until you have queried the source whose 'answers' text fits. "
+                    "kind='table' -> query_reference_table(table_id, query). "
+                    "kind='api' -> query_data_source(source_id, operation, params). "
+                    "'aliases' are EXAMPLES, not a whitelist: if the user's word is not "
+                    "listed, translate it into the table's 'name_language' yourself and "
+                    "query anyway — an absent alias is not evidence the row is absent. "
+                    "NEVER ask the user to supply material one of these sources can "
+                    "answer. Honour any 'caveat' when you cite the numbers.",
         }
 
     @staticmethod

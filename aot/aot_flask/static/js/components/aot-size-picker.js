@@ -40,10 +40,12 @@
                 this.dispatchEvent(new Event('change', { bubbles: true }));
             });
 
-            // External style injection (bootstrap)
+            // Shadow DOM 은 바깥 스타일을 물려받지 않으므로 부트스트랩을 따로
+            // 넣어 준다. 예전에는 이것을 외부 CDN 에서 받았다 — 폐쇄망 설치에서는
+            // 이 컴포넌트만 스타일 없이 떴다. 같은 파일이 이미 로컬에 있다.
             const link = document.createElement('link');
             link.rel = 'stylesheet';
-            link.href = 'https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css';
+            link.href = '/static/css/bootstrap.min.css?v=' + (window.AOT_ASSET_V || '');
             this.shadowRoot.appendChild(link);
         }
 

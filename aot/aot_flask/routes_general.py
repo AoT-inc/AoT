@@ -132,8 +132,13 @@ def custom_css():
             'text_color_primary': ['--text-color-primary', '--aot-color-text-primary'],
             'text_color_secondary': ['--text-color-secondary', '--aot-color-text-secondary'],
             'text_color_tertiary': ['--text-color-tertiary', '--aot-color-text-tertiary'],
-            'bd_primary': ['--bd-primary'],
-            'bd_secondary': ['--bd-secondary'],
+            # 2026-08 배경 2단 레이어링 통일: 이 두 필드가 페이지/카드 배경
+            # 실토큰(--aot-surface-*)에도 함께 배선된다 — 위젯·모달이
+            # --bd-* 레거시 대신 이 실토큰을 직접 소비하기 시작했기 때문
+            # (docs/design/color-system.md 참조). 다크 사용자는 아래
+            # dark_overridden 이 이 두 실토큰만 걸러 custom-dark.css 값을 지킨다.
+            'bd_primary': ['--bd-primary', '--aot-surface-card'],
+            'bd_secondary': ['--bd-secondary', '--aot-surface-body'],
             'badge_upgrade': ['--bg-upgrade', '--aot-bg-upgrade', '--bg-btn-upgrade', '--aot-btn-bg-upgrade'],
             'bg_active': ['--bg-active', '--aot-bg-active'],
             'bg_inactive': ['--bg-inactive', '--aot-bg-inactive'],
@@ -216,6 +221,11 @@ def custom_css():
             '--aot-color-warning',
             '--aot-color-danger',
             '--aot-color-info',
+            # 2026-08 배경 2단 레이어링: custom-dark.css 가 이 두 서피스 토큰을
+            # 이미 어둡게 재정의한다 — 라이트 사용자의 bd_primary/secondary 값을
+            # 그대로 발행하면 다크 배경 위에 흰 카드가 뜨는 역전이 생긴다.
+            '--aot-surface-card',
+            '--aot-surface-body',
         }
         is_dark = False
         try:
