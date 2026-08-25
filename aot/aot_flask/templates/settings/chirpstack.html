@@ -224,31 +224,33 @@
               <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
             </div>
             <div class="modal-body">
-              <div class="aot-modal-option-row">
-                <div class="aot-modal-option-label">{{_('Registered')}}</div>
-                <div class="aot-modal-option-control aot-modal-body-text">
-                  {%- set parts = [] -%}
-                  {%- if eui in reg_input %}{% set _drop = parts.append('Input') %}{% endif -%}
-                  {%- if eui in reg_output %}{% set _drop = parts.append('Output') %}{% endif -%}
-                  {%- if managed_by.get(eui) %}{% set _drop = parts.append(sched_names.get(managed_by.get(eui), 'Scheduler')) %}{% endif -%}
-                  {{ parts|join(' · ') if parts else _('Not registered') }}
+              <div class="aot-modal-container">
+                <div class="aot-modal-option-row">
+                  <div class="aot-modal-option-label">{{_('Registered')}}</div>
+                  <div class="aot-modal-option-control aot-modal-body-text">
+                    {%- set parts = [] -%}
+                    {%- if eui in reg_input %}{% set _drop = parts.append('Input') %}{% endif -%}
+                    {%- if eui in reg_output %}{% set _drop = parts.append('Output') %}{% endif -%}
+                    {%- if managed_by.get(eui) %}{% set _drop = parts.append(sched_names.get(managed_by.get(eui), 'Scheduler')) %}{% endif -%}
+                    {{ parts|join(' · ') if parts else _('Not registered') }}
+                  </div>
                 </div>
-              </div>
-              <div class="aot-modal-option-row">
-                <div class="aot-modal-option-label">DevEUI</div>
-                <div class="aot-modal-option-control aot-modal-body-text">{{ eui }}</div>
-              </div>
-              <div class="aot-modal-option-row">
-                <div class="aot-modal-option-label">{{_('Tenant')}}</div>
-                <div class="aot-modal-option-control aot-modal-body-text">{{ d.tenant_name }}</div>
-              </div>
-              <div class="aot-modal-option-row">
-                <div class="aot-modal-option-label">{{_('Application')}}</div>
-                <div class="aot-modal-option-control aot-modal-body-text">{{ d.application_name }}</div>
-              </div>
-              <div class="aot-modal-option-row">
-                <div class="aot-modal-option-label">{{_('Last Seen')}}</div>
-                <div class="aot-modal-option-control aot-modal-body-text">{{ d.last_seen }}</div>
+                <div class="aot-modal-option-row">
+                  <div class="aot-modal-option-label">DevEUI</div>
+                  <div class="aot-modal-option-control aot-modal-body-text">{{ eui }}</div>
+                </div>
+                <div class="aot-modal-option-row">
+                  <div class="aot-modal-option-label">{{_('Tenant')}}</div>
+                  <div class="aot-modal-option-control aot-modal-body-text">{{ d.tenant_name }}</div>
+                </div>
+                <div class="aot-modal-option-row">
+                  <div class="aot-modal-option-label">{{_('Application')}}</div>
+                  <div class="aot-modal-option-control aot-modal-body-text">{{ d.application_name }}</div>
+                </div>
+                <div class="aot-modal-option-row">
+                  <div class="aot-modal-option-label">{{_('Last Seen')}}</div>
+                  <div class="aot-modal-option-control aot-modal-body-text">{{ d.last_seen }}</div>
+                </div>
               </div>
             </div>
             <div class="modal-footer">

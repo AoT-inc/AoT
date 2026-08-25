@@ -309,3 +309,121 @@ class TestBothNamesRequired:
                 source_ref='없는-소스-id')
 
             assert res.get('error') != 'findable in only one language', res
+
+
+class TestToolLogKeepsTheNewestResult:
+    """다음 단계 프롬프트에 **방금 받은 결과**가 남는가.
+
+    예전에는 누적 로그를 앞에서부터 6,000자만 남겼다. 실측(2026-08-25,
+    아스파라거스 조사)에서 누적 19,251자 중 소스 목록 하나가 6,751자라 예산을
+    통째로 먹었고, 방금 조회한 표 데이터는 한 글자도 남지 않았다. 모델은 표를
+    부르고 → 결과를 못 보고 → 다시 부르고 를 반복하다 단계 상한에 걸려 저장도
+    못 하고 끝났다.
+    """
+
+    def _log(self):
+        return [
+            {'tool_name': 'knowledge_search', 'result': {'text': 'A' * 1800}},
+            {'tool_name': 'list_lookup_sources', 'result': {'text': 'B' * 6500}},
+            {'tool_name': 'query_reference_table',
+             'result': {'rows': [{'ScientificName': 'Asparagus officinalis',
+                                  'pad': 'C' * 9000}]}},
+        ]
+
+    def _render(self, **kw):
+        from aot.ai.services.agent_loop_service import AgentLoopService
+        return AgentLoopService._render_tool_log(self._log(), **kw)
+
+    def test_the_newest_result_survives(self):
+        """이것이 남지 않으면 모델은 같은 도구를 다시 부른다."""
+        assert 'Asparagus officinalis' in self._render(budget=8000)
+
+    def test_a_single_huge_entry_cannot_eat_the_whole_budget(self):
+        """실측에서 소스 목록 하나가 예산 전체를 먹었다."""
+        out = self._render(budget=8000, per_entry=3000)
+        assert 'Asparagus officinalis' in out
+        assert 'knowledge_search' in out, '항목별 상한이 없으면 나머지가 다 밀린다'
+
+    def test_order_stays_chronological(self):
+        out = self._render(budget=40000)
+        assert out.index('knowledge_search') < out.index('list_lookup_sources')
+        assert out.index('list_lookup_sources') < out.index('query_reference_table')
+
+    def test_dropping_is_announced(self):
+        out = self._render(budget=2000, per_entry=1500)
+        assert 'dropped to fit' in out
+
+    def test_everything_fits_when_the_budget_allows(self):
+        out = self._render(budget=100000, per_entry=100000)
+        assert 'dropped to fit' not in out
+        for name in ('knowledge_search', 'list_lookup_sources', 'query_reference_table'):
+            assert name in out
+
+    def test_an_empty_log_does_not_crash(self):
+        from aot.ai.services.agent_loop_service import AgentLoopService
+        assert AgentLoopService._render_tool_log([]) == "[\n\n]"
+
+    def test_the_default_budget_covers_the_measured_run(self):
+        """실측 누적이 19,251자였다 — 기본 예산이 그보다 좁으면 같은 일이
+        또 난다."""
+        from aot.ai.services.agent_loop_service import AgentLoopService
+        assert AgentLoopService._TOOL_LOG_BUDGET >= 20000
+
+
+class TestTheMiddleStepIsRemoved:
+    """조회에 필요한 것을 검색 응답이 미리 주는가.
+
+    루프에서 한 단계를 **강제하지 않기로** 한 대신(사용자 지적: 조사와 무관한
+    요청까지 표 쪽으로 끌려가 엉뚱한 답이 된다) 결정 지점을 하나 없앤다.
+    제목만 주면 모델은 id 를 얻으려 list_lookup_sources 를 한 번 더 불러야
+    하고, 실측에서 조사 요청이 바로 거기서 갈렸다.
+    """
+
+    def _pointer(self, app):
+        from aot.aot_flask.extensions import db
+        from aot.ai.services.aot_data_tool_service import AoTDataToolService
+        from aot.databases.models import AIContextSource
+
+        with app.app_context():
+            src = AIContextSource(
+                facility_id='f', source_name='ECOCROP', source_type='csv_table',
+                parameter_name='ext_ecocrop.t', sync_interval_min=0,
+                is_active=True, is_enabled=True,
+                config_json=json.dumps({
+                    'preset_key': 'ext_ecocrop', 'title': 'FAO ECOCROP',
+                    'data_url': 'http://x/y.csv', 'answers': '작물의 생육 온도·강수 한계',
+                    'name_language': '영어 통용명 또는 학명'}))
+            db.session.add(src)
+            db.session.commit()
+            res = AoTDataToolService.knowledge_search_tool(query='아스파라거스 재배 방법')
+            return res.get('result', ''), src.source_id
+
+    def test_the_table_id_is_handed_over(self, app):
+        """id 가 없으면 목록 호출이 한 번 더 필요하다 — 그 한 번이 갈림길이다."""
+        text, sid = self._pointer(app)
+        assert sid in text, 'table_id 가 안내에 없다'
+        assert 'query_reference_table' in text
+
+    def test_it_says_the_middle_call_is_unnecessary(self, app):
+        text, _ = self._pointer(app)
+        assert 'do not need list_lookup_sources first' in text
+
+    def test_the_answers_line_travels_so_the_model_can_pick(self, app):
+        text, _ = self._pointer(app)
+        assert '작물의 생육 온도' in text
+
+    def test_the_row_language_travels_with_a_translate_instruction(self, app):
+        """표가 어느 언어로 매겨졌는지 모르면 사용자의 말로 조회하고 0건을 받는다."""
+        text, _ = self._pointer(app)
+        assert '영어 통용명 또는 학명' in text
+        assert 'translate the user' in text
+
+
+class TestPresetDoesNotImplyAnAliasWhitelist:
+    def test_name_language_does_not_promise_an_alias_list(self):
+        """'한글 이름은 별칭으로 연결' 은 별칭에 없는 작물은 못 찾는다는 뜻으로
+        읽혔고, 실측에서 모델이 표를 보고도 포기했다."""
+        from aot.aot_flask.routes_ai_library import LIBRARY_PRESETS
+
+        eco = LIBRARY_PRESETS['ext_ecocrop']['defaults']['name_language']
+        assert '별칭' not in eco, eco

@@ -251,6 +251,57 @@ class AgentLoopService:
         args = p.get('arguments') if isinstance(p.get('arguments'), dict) else {}
         return {"tool_name": tool_name, "arguments": args, "result": result}
 
+    # @ANCHOR: TOOL_LOG_RENDER
+    # 도구 결과를 다음 단계 프롬프트에 싣는 자리. 예전에는 누적 로그 전체를
+    # `json.dumps(...)[:6000]` 로 **앞에서부터 6,000자만** 남겼는데, 그것이
+    # 반복 호출의 원인이었다.
+    #
+    # 실측(2026-08-25, "아스파라거스 재배 방법을 조사해서 정리해줘"):
+    #     step 0 knowledge_search      1,979자
+    #     step 1 list_lookup_sources   6,751자   ← 혼자서 예산을 넘긴다
+    #     step 2 query_reference_table 9,595자
+    #                          합계   19,251자 → 앞 6,000자만 생존
+    # 잘린 결과에는 방금 조회한 표 데이터가 **한 글자도 없었다**. 모델은 표를
+    # 부르고, 다음 단계에서 그 결과를 못 보고, 다시 부르고 — 6단계 상한까지
+    # 그러다 저장도 못 하고 끝났다. (기존 중복 호출 가드의 주석이 "이전 단계
+    # 결과가 프롬프트에서 잘려서" 를 이미 의심하고 있었지만, 캐시된 기록을
+    # 다시 tool_log 에 넣어 줄 뿐이라 그것도 같은 자리에서 또 잘렸다.)
+    #
+    # 그래서 두 가지를 바꾼다.
+    #   1. **최신 것부터** 예산을 배정한다. 방금 받은 결과가 가장 쓸모 있고,
+    #      그것이 사라지면 루프가 된다. 표시 순서는 시간순으로 되돌린다.
+    #   2. 한 항목이 예산을 독식하지 못하게 항목별 상한을 둔다 — 위 실측에서
+    #      소스 목록 하나가 예산 전체를 먹었다.
+    # 예산 자체도 올렸다. 6,000자는 약 1,500토큰으로, 이 엔진들의 컨텍스트
+    # 예산(20만~30만 토큰)에 비하면 지나치게 인색하다.
+    _TOOL_LOG_BUDGET = 24000
+    _TOOL_LOG_PER_ENTRY = 9000
+
+    @staticmethod
+    def _render_tool_log(tool_log, budget=None, per_entry=None):
+        import json
+
+        budget = budget or AgentLoopService._TOOL_LOG_BUDGET
+        per_entry = per_entry or AgentLoopService._TOOL_LOG_PER_ENTRY
+
+        kept, used, dropped = [], 0, 0
+        for entry in reversed(tool_log or []):
+            text = json.dumps(entry, ensure_ascii=False, indent=2, default=str)
+            if len(text) > per_entry:
+                text = text[:per_entry] + "\n  … (이 결과는 길어서 잘렸습니다)"
+            if used + len(text) > budget and kept:
+                dropped += 1
+                continue
+            kept.append(text)
+            used += len(text)
+
+        out = "[\n" + ",\n".join(reversed(kept)) + "\n]"
+        if dropped:
+            out = ("[NOTE] %d earlier tool result(s) were dropped to fit — the ones "
+                   "shown are the most recent. Re-call a tool only if you actually "
+                   "need something that is not here.\n" % dropped) + out
+        return out
+
     @staticmethod
     def _build_step_prompt(command_text, tool_log, step, history=None, manual_ref=None):
         """General instruction — no per-function/per-intent hardcoding. The
@@ -368,10 +419,9 @@ class AgentLoopService:
             "Respond in the SAME language as the user's request."
         ]
         if tool_log:
-            import json
             parts.append("\nTOOL RESULTS SO FAR THIS TURN (read every list here carefully "
                           "before confirming whether a specific item is present):\n" +
-                          json.dumps(tool_log, ensure_ascii=False, indent=2, default=str)[:6000])
+                          AgentLoopService._render_tool_log(tool_log))
         if step >= MAX_STEPS - 2:
             parts.append("\nYou are near the step limit — wrap up with your best answer "
                           "or a single most-useful tool call now.")

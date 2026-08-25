@@ -504,12 +504,20 @@ def get_facility_integration(facility_uuid, bypass_cache=False):
     # bay 2개 이상 시설에서 fitting position(로컬 x) → bay 슬라이스 매핑.
     # 센서는 bay_id(단일), 액추에이터는 fitting 들이 걸친 bay_ids(복수)를 갖는다.
     # 귀속 불가 항목은 bay_id=None / bay_ids=[] (= 시설 공통) 으로 남는다.
-    bay_slices  = compute_bay_slices(facility)
-    fitting_bay = build_fitting_bay_map(bay_slices, fittings)
+    bay_slices    = compute_bay_slices(facility)
+    fitting_bay   = build_fitting_bay_map(bay_slices, fittings)
+    bay_names     = {b['id']: b.get('name') for b in bay_slices}
+    facility_name = facility.get('name')
     for entry in sensors_resolved:
-        entry['bay_id'] = fitting_bay.get(entry.get('fitting_id'))
+        bay_id = fitting_bay.get(entry.get('fitting_id'))
+        entry['bay_id'] = bay_id
+        entry['bay_name'] = bay_names.get(bay_id)
+        entry['facility_name'] = facility_name
     for entry in sensors_outdoor:
-        entry['bay_id'] = fitting_bay.get(entry.get('fitting_id'))
+        bay_id = fitting_bay.get(entry.get('fitting_id'))
+        entry['bay_id'] = bay_id
+        entry['bay_name'] = bay_names.get(bay_id)
+        entry['facility_name'] = facility_name
     for act in actuators_resolved.values():
         act['bay_ids'] = sorted({
             fitting_bay[fid] for fid in (act.get('fitting_ids') or [])

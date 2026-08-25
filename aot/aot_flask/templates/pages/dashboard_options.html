@@ -1,12 +1,12 @@
 <div id="mod_widget_{{each_widget.unique_id}}">
 
-    <div class="row small-gutters" style="padding: 0.5em">
-      {% if 'message' in dict_widgets[each_widget.graph_type] %}
-      <div class="col-12" style="padding-top: 0.3em; padding-bottom: 1em">
+    {% if 'message' in dict_widgets[each_widget.graph_type] %}
+    <div class="aot-modal-container">
+      <div class="aot-modal-body-text">
         {{dict_widgets[each_widget.graph_type]['message']|safe}}
       </div>
-      {% endif %}
     </div>
+    {% endif %}
 
     <div class="aot-modal-group-title">{{_('Basic Settings')}}</div>
     <div class="aot-modal-container">

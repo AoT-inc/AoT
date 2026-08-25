@@ -525,8 +525,8 @@ WIDGET_INFORMATION = {
     'widget_dashboard_body': """<div class="not-draggable" id="container-synchronous-graph-{{each_widget.unique_id}}" style="position: absolute; left: 0; top: 0; bottom: 0; right: 0; overflow: hidden;"></div>""",
 
     'widget_dashboard_configure_options': """
+        <div class="aot-modal-section-title">{{_('Graph Series Options')}}</div>
         <div class="aot-modal-container">
-          <div class="aot-modal-section-title">{{_('Graph Series Options')}}</div>
 
           <div class="aot-modal-option-row">
             <label class="aot-modal-option-label" for="use_custom_colors">{{_('Use Custom Colors')}}</label>
@@ -607,8 +607,8 @@ WIDGET_INFORMATION = {
           </div>
         </div>
 
+        <div class="aot-modal-section-title">{{_('Y-Axis Options')}}</div>
         <div class="aot-modal-container">
-          <div class="aot-modal-section-title">{{_('Y-Axis Options')}}</div>
 
           <div class="aot-modal-option-row">
             <label class="aot-modal-option-label" for="enable_manual_y_axis">{{_('Enable Manual Y-Axis Min/Max')}}</label>

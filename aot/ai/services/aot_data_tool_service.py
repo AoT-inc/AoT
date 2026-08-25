@@ -6840,9 +6840,23 @@ class AoTDataToolService:
             return set()
 
     @staticmethod
-    def _registered_table_titles():
-        """등록된 참조표의 제목만. 표 파일을 읽지 않는다 — 이 함수는 검색
-        응답마다 불리므로 DB 한 번으로 끝나야 한다."""
+    def _registered_lookup_briefs():
+        """등록된 조회 소스를 **바로 부를 수 있는 형태**로. 표 파일은 읽지 않는다
+        — 이 함수는 검색 응답마다 불리므로 DB 한 번으로 끝나야 한다.
+
+        @ANCHOR: LOOKUP_BRIEF
+        예전에는 제목만 돌려줬다. 그러면 모델이 조회하기 전에 반드시
+        list_lookup_sources 를 한 번 더 불러 id 를 얻어야 했고, 그 한 번이
+        판단 지점 하나·단계 하나였다. 실측(2026-08-25)에서 조사 요청이 바로
+        거기서 두 번 갈렸다 — 목록까지 열고 조회로 안 넘어가거나, 목록조차
+        안 열거나.
+
+        **루프에서 한 단계를 강제하지 않는 이유**(사용자 지적): 조회 소스가
+        있다는 이유만으로 단계를 더 돌리면, 조사와 무관한 요청까지 표 쪽으로
+        끌려가 엉뚱한 답을 만든다. 그래서 강제하는 대신 **결정을 하나 없앤다**
+        — 부를 때 필요한 것을 미리 실어 주면 중간 단계 자체가 사라지고, 다른
+        요청의 동작은 아무것도 바뀌지 않는다.
+        """
         try:
             from aot.databases.models import AIContextSource
             import json as _json
@@ -6853,17 +6867,33 @@ class AoTDataToolService:
                     cfg = _json.loads(src.config_json or '{}')
                 except (ValueError, TypeError):
                     cfg = {}
-                out.append((cfg.get('title') or src.source_name or '').strip())
-            # 온디맨드로 조회되는 API 소스도 같은 안내에 넣는다 — 모델 입장에서
-            # 둘은 "검색되지 않지만 물어보면 답하는 것" 으로 같다.
+                out.append({
+                    'title': (cfg.get('title') or src.source_name or '').strip(),
+                    'call': "query_reference_table(table_id='%s', query=…)" % src.source_id,
+                    'answers': (cfg.get('answers') or '').strip(),
+                    'name_language': (cfg.get('name_language') or '').strip(),
+                })
             try:
                 from aot.ai.services import data_source_query_service as dsq
-                out += [a['label'] for a in dsq.describe_all() if a.get('label')]
+                for a in dsq.describe_all():
+                    if not a.get('label'):
+                        continue
+                    out.append({
+                        'title': a['label'],
+                        'call': "query_data_source(source_id='%s', operation=…)" % a.get('source_id'),
+                        'answers': (a.get('answers') or '').strip(),
+                        'name_language': '',
+                    })
             except Exception:
                 pass
-            return [t for t in out if t]
+            return [b for b in out if b['title']]
         except Exception:
             return []
+
+    @staticmethod
+    def _registered_table_titles():
+        """제목만 필요한 오래된 호출부를 위한 얇은 껍데기."""
+        return [b['title'] for b in AoTDataToolService._registered_lookup_briefs()]
 
     @staticmethod
     def knowledge_search_tool(query=None, top_k=3, tags=None, **extra):
@@ -6924,22 +6954,36 @@ class AoTDataToolService:
         # 없습니다" 로 끝낸다(실측 2026-08-24: 오크라 생육 온도 질문에서 그랬다).
         # 여기서 한 줄 가리켜 주는 것이 그 간극을 메우는 가장 싼 방법이다 —
         # 매니페스트가 아니라 응답이라 표가 없는 설치에서는 고정비가 0이다.
-        _tables = AoTDataToolService._registered_table_titles()
+        _briefs = AoTDataToolService._registered_lookup_briefs()
         _pointer = ''
-        if _tables:
+        if _briefs:
             # **조건절을 붙이지 않는다.** 예전 문구는 "per-item value 나 실시간
             # 외부 데이터를 묻는 경우" 로 조건을 달았는데, "땅콩 재배 방법을
             # 조사해줘" 는 그 조건에 안 걸린다고 읽혔다 — 재현 2026-08-25 에서
             # 모델이 이 안내를 받고도 조회 없이 "자료를 제공해주시면" 으로
             # 끝냈다. 무엇을 하지 말라(모른다고 답하기·사용자에게 되묻기)를
             # 먼저 말하고, 그 전에 무엇을 하라를 명령형으로 붙인다.
+            # 부르는 법을 **여기서 바로** 준다. 제목만 주면 모델이 id 를 얻으려
+            # list_lookup_sources 를 한 번 더 불러야 하고, 그 한 번이 판단
+            # 지점이자 단계 하나다(LOOKUP_BRIEF 주석 참조).
+            _lines = []
+            for b in _briefs[:3]:
+                _line = "  - %s → %s" % (b['title'], b['call'])
+                if b['answers']:
+                    _line += "\n      answers: %s" % b['answers'][:150]
+                if b['name_language']:
+                    _line += ("\n      rows are named in: %s — translate the user's word "
+                              "yourself if needed." % b['name_language'][:80])
+                _lines.append(_line)
+            _more = ("\n  (…%d more — list_lookup_sources for the rest)"
+                     % (len(_briefs) - 3)) if len(_briefs) > 3 else ""
             _pointer = ("\n\n[NOTE] This search does NOT cover the %d registered lookup "
-                        "source(s): %s. They are queried on demand and can hold exactly "
-                        "what was just missing. Do NOT say the information is "
+                        "source(s). They are queried on demand and can hold exactly what "
+                        "was just missing. Call one DIRECTLY — you do not need "
+                        "list_lookup_sources first:\n%s%s\nDo NOT say the information is "
                         "unavailable, and do NOT ask the user to supply it, until you "
-                        "have called list_lookup_sources and queried every source whose "
-                        "'answers' text fits the question."
-                        % (len(_tables), '; '.join(_tables[:4])))
+                        "have queried every source whose 'answers' fits the question."
+                        % (len(_briefs), "\n".join(_lines), _more))
         # 두 안내는 서로 다른 것을 말한다 — 하나가 다른 하나를 덮으면 안 된다.
         _pointer = _tag_note + _pointer
 

@@ -191,25 +191,37 @@ class TestAliases(unittest.TestCase):
 
 class TestSearchPointsAtTables(unittest.TestCase):
     """표는 검색되지 않으므로, 빈 검색 결과가 표를 가리켜야 한다. 이게 없으면
-    모델은 답이 표 안에 있는데도 '정보가 없습니다' 로 끝낸다(실측)."""
+    모델은 답이 표 안에 있는데도 '정보가 없습니다' 로 끝낸다(실측).
 
-    def test_empty_result_mentions_registered_tables(self):
+    2026-08-25: 제목만 가리키던 것을 **부르는 법까지** 주도록 바꿨다. 제목만
+    주면 모델이 id 를 얻으려 list_lookup_sources 를 한 번 더 불러야 했고,
+    실측에서 조사 요청이 정확히 거기서 갈렸다(목록까지 열고 조회로 안 넘어가거나,
+    목록조차 안 열거나). 루프에서 단계를 강제하는 대신 결정 지점을 없앤 것이다."""
+
+    _BRIEF = [{'title': '작물 요구조건표',
+               'call': "query_reference_table(table_id='tbl-1', query=…)",
+               'answers': '작물의 생육 온도 한계',
+               'name_language': '영어 통용명'}]
+
+    def test_empty_result_hands_over_how_to_call_it(self):
         from aot.ai.services.aot_data_tool_service import AoTDataToolService as T
-        with mock.patch.object(T, '_registered_table_titles', return_value=['작물 요구조건표']), \
+        with mock.patch.object(T, '_registered_lookup_briefs', return_value=self._BRIEF), \
              mock.patch('aot.ai.services.knowledge_search.search_as_text', return_value=''), \
              mock.patch('aot.ai.services.knowledge_search.library_is_populated', return_value=True):
             out = T.knowledge_search_tool(query='오크라 생육 온도')
-        self.assertIn('list_lookup_sources', out['result'])
         self.assertIn('작물 요구조건표', out['result'])
+        self.assertIn("table_id='tbl-1'", out['result'])
+        self.assertIn('do not need list_lookup_sources first', out['result'])
 
     def test_nothing_is_added_when_no_table_is_registered(self):
         """표가 없는 설치에서는 고정비가 0이어야 한다."""
         from aot.ai.services.aot_data_tool_service import AoTDataToolService as T
-        with mock.patch.object(T, '_registered_table_titles', return_value=[]), \
+        with mock.patch.object(T, '_registered_lookup_briefs', return_value=[]), \
              mock.patch('aot.ai.services.knowledge_search.search_as_text', return_value=''), \
              mock.patch('aot.ai.services.knowledge_search.library_is_populated', return_value=True):
             out = T.knowledge_search_tool(query='오크라 생육 온도')
-        self.assertNotIn('list_lookup_sources', out['result'])
+        self.assertNotIn('query_reference_table', out['result'])
+        self.assertNotIn('lookup source', out['result'])
 
 
 if __name__ == '__main__':
