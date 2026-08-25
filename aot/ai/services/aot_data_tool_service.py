@@ -5355,9 +5355,24 @@ class AoTDataToolService:
         except Exception as e:
             logger.error(f"[delete_output] output_del raised: {e}")
             return {"error": str(e)}
-        if isinstance(messages, dict) and messages.get("error"):
+        if not isinstance(messages, dict):
+            return {"output_id": output_id, "status": "deleted"}
+        # 삭제 여부와 뒤처리 실패는 다른 질문이다. error 만 보면 커밋까지 끝난
+        # 삭제를 "실패" 로 읽어 같은 삭제를 다시 시도하게 되고, error 가 비었다는
+        # 이유로 "deleted" 를 돌려주면 지울 것이 없었던 호출까지 성공이 된다.
+        if messages.get("deleted"):
+            out = {"output_id": output_id, "status": "deleted"}
+            if messages.get("error"):
+                # 행은 사라졌지만 데몬이 아직 이 출력을 들고 있을 수 있다 —
+                # 삼키면 재시작 전까지 유령 출력이 남는다.
+                out["cleanup_error"] = "; ".join(messages["error"])
+                out["note"] = ("The output was deleted, but post-delete cleanup "
+                               "failed. Do NOT retry the delete; report the "
+                               "cleanup_error instead.")
+            return out
+        if messages.get("error"):
             return {"error": "; ".join(messages["error"])}
-        return {"output_id": output_id, "status": "deleted"}
+        return {"error": f"output not found or not deleted: {output_id}"}
 
     @staticmethod
     def create_sequence_function(name=None, device_ids=None, state='on',
@@ -7136,9 +7151,10 @@ class AoTDataToolService:
             result["more_columns"] = ("This table has more columns than shown. "
                                       "Call again with columns='*' or a specific "
                                       "column list if you need them.")
-        for key in ('attribution', 'source_url', 'caveat'):
-            if (cfg.get(key) or '').strip():
-                result[key] = cfg[key].strip()
+        # 표기를 싣는 것만으로는 부족하다 — "답변에 적으라" 고 말하지 않으면
+        # 모델은 이것을 그냥 메타데이터로 읽는다(source_attribution 모듈 주석).
+        from aot.ai.services import source_attribution
+        source_attribution.apply(result, cfg, cfg.get('preset_key'))
         return result
 
     # ─────────────────────────────────────────────────────────────────────

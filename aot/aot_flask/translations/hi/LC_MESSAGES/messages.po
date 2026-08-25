@@ -26485,3 +26485,6 @@ msgstr "सहेजे गए"
 
 msgid "week columns"
 msgstr "सप्ताह कॉलम"
+
+msgid "Data credits"
+msgstr "डेटा क्रेडिट"

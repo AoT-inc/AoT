@@ -12,6 +12,7 @@ import logging
 from flask import Blueprint, jsonify, redirect, render_template, request, url_for
 from flask_login import login_required, current_user
 
+from aot.ai.services import source_attribution
 from aot.aot_flask.extensions import db
 from aot.aot_flask.utils import utils_general
 from aot.databases.models import AIContextSource, Misc
@@ -232,6 +233,10 @@ LIBRARY_PRESETS = {
         'sync_interval_min': 0,
         'defaults': {
             'title': 'Open-Meteo — 기상·토양·증발산',
+            # CC BY 4.0. Open-Meteo 가 licence 페이지에서 이 문구와 링크를
+            # 명시적으로 요구한다 — 임의로 줄이지 말 것.
+            'attribution': 'Weather data by Open-Meteo.com (CC BY 4.0)',
+            'source_url': 'https://open-meteo.com/',
             # 좌표는 defaults 에 못 적는다(설치마다 다르다) —
             # _preset_computed_defaults() 가 지도 기본 위치에서 채운다.
         },
@@ -361,6 +366,38 @@ LIBRARY_PRESETS = {
 }
 
 
+
+def _attribution_notices(sources):
+    """켜져 있는 소스들의 출처 표기 — 화면 아래 한 줄로 모은다.
+
+    CC BY 는 자료를 **표시하는 자리 옆에** 출처를 밝히라고 요구한다(FAO
+    ECOCROP, Open-Meteo 둘 다 CC BY 4.0). 표의 열에 끼워 넣지 않는 이유는
+    한 열에 두 정보가 들어가면 열 간격이 틀어지기 때문이고, 지도 저작권
+    표시가 이미 같은 방식(목록 밖 표기줄)을 쓴다.
+
+    **켜진 소스만** 싣는다 — 끈 소스의 자료는 지금 표시되지 않으므로 그
+    출처를 밝힐 이유가 없고, 밝히면 쓰지도 않는 자료를 쓴다고 말하는 셈이다.
+    """
+    seen, out = set(), []
+    for src in sources:
+        if not src.is_enabled:
+            continue
+        try:
+            cfg = json.loads(src.config_json or '{}') or {}
+        except (ValueError, TypeError):
+            continue
+        fallback = source_attribution.defaults_for(cfg.get('preset_key'))
+        text = (cfg.get('attribution') or '').strip() or (fallback.get('attribution') or '').strip()
+        if not text or text in seen:
+            continue
+        seen.add(text)
+        out.append({
+            'text': text,
+            'url': (cfg.get('source_url') or '').strip() or (fallback.get('source_url') or '').strip(),
+        })
+    return out
+
+
 @ai_library_bp.route('/ai/library', methods=['GET'])
 @login_required
 def page_ai_library():
@@ -391,6 +428,7 @@ def page_ai_library():
         AIContextSource.is_active.is_(True),
         AIContextSource.source_type.notin_(_RESERVED_SOURCE_TYPES),
     ).order_by(AIContextSource.created_at.desc()).all()
+    attributions = _attribution_notices(sources)
     from aot.ai.context.ext.smartfarmkorea_client import (
         OPERATIONS as smartfarmkorea_operations,
         OUTDOOR_OPERATIONS as smartfarmkorea_outdoor_operations,
@@ -399,6 +437,7 @@ def page_ai_library():
     return render_template(
         'pages/ai/ai_library.html',
         sources=sources,
+        attributions=attributions,
         active_page='ai_library',
         library_presets=LIBRARY_PRESETS,
         review_items=knowledge_promotion_service.list_review_items(),

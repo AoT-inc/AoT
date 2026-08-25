@@ -26485,3 +26485,6 @@ msgstr "salvati"
 
 msgid "week columns"
 msgstr "colonne settimana"
+
+msgid "Data credits"
+msgstr "Crediti dei dati"

@@ -26410,3 +26410,6 @@ msgstr "salvos"
 
 msgid "week columns"
 msgstr "colunas de semana"
+
+msgid "Data credits"
+msgstr "Créditos dos dados"

@@ -26483,3 +26483,6 @@ msgstr "išsaugota"
 
 msgid "week columns"
 msgstr "savaičių stulpeliai"
+
+msgid "Data credits"
+msgstr "Duomenų šaltiniai"

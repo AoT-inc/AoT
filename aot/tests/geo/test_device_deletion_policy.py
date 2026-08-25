@@ -362,5 +362,83 @@ class TestDeletionKeepsAssets(unittest.TestCase):
         self.assertEqual(B.end_all_for_device(None), 0)
 
 
+class TestDeleteReportsWhatActuallyHappened(unittest.TestCase):
+    """삭제는 커밋에서 끝나지 않는다 — 그 뒤가 실패해도 행은 사라진 뒤다.
+
+    `output_del` 은 커밋한 다음에도 할 일이 남아 있다(데몬 통보, 사용자 코드
+    파일 삭제). 그 단계가 실패하면 messages 에 success 와 error 가 **함께**
+    담기는데, error 만 보는 호출자는 "아무 일도 없었다" 로 읽는다.
+
+    2026-08-25 실측으로 두 방향 다 겪었다. 유령 출력 하나를 지우는데
+    (1) 삭제는 커밋까지 끝났으나 데몬 통보가 요청 컨텍스트 없이 터져 MCP 도구가
+        오류를 돌려줬고, 그래서 같은 삭제를 한 번 더 불렀다.
+    (2) 두 번째 호출은 지울 행이 없었는데도 error 가 비었다는 이유로
+        "deleted" 를 돌려줬다.
+    실패를 성공이라 하는 쪽도, 성공을 실패라 하는 쪽도 같은 원인이다 —
+    **삭제 여부와 뒤처리 실패를 한 목록으로 물었다.**
+
+    그래서 `output_del` 이 `deleted` 를 따로 말하고, 호출자는 그것을 본다.
+    """
+
+    def _delete_output_with(self, messages):
+        """output_del 을 주어진 결과로 갈아끼우고 MCP 핸들러를 부른다."""
+        from aot.aot_flask.utils import utils_output
+        from aot.ai.services.aot_data_tool_service import AoTDataToolService
+        original = utils_output.output_del
+        utils_output.output_del = lambda form: messages
+        try:
+            return AoTDataToolService.delete_output(output_id='out-1')
+        finally:
+            utils_output.output_del = original
+
+    def test_committed_delete_is_not_reported_as_failure(self):
+        """행이 사라졌으면 뒤처리가 실패해도 '삭제됨' 이다.
+
+        여기서 error 를 돌려주면 호출자가 삭제를 다시 시도한다 — 지울 것이
+        없는 삭제이고, 진짜 문제(데몬이 유령 출력을 들고 있는 것)는 그대로다.
+        """
+        out = self._delete_output_with(
+            {"success": ["deleted"], "error": ["daemon notify failed"],
+             "info": [], "warning": [], "deleted": True})
+        self.assertEqual(out.get("status"), "deleted",
+                         '커밋된 삭제를 실패로 보고했다: %r' % out)
+        self.assertNotIn("error", out, '재시도를 부르는 error 를 돌려줬다')
+        # 그렇다고 삼키지도 않는다 — 데몬에 남은 유령 출력은 실제 문제다.
+        self.assertIn("daemon notify failed", out.get("cleanup_error", ""),
+                      '뒤처리 실패를 통째로 삼켰다: %r' % out)
+
+    def test_nothing_deleted_is_not_reported_as_deleted(self):
+        """지울 행이 없었으면 error 가 비어 있어도 '삭제됨' 이 아니다."""
+        out = self._delete_output_with(
+            {"success": ["deleted"], "error": [],
+             "info": [], "warning": [], "deleted": False})
+        self.assertNotEqual(out.get("status"), "deleted",
+                            '지운 것이 없는데 삭제됐다고 보고했다: %r' % out)
+        self.assertIn("error", out)
+
+    def test_real_failure_is_still_a_failure(self):
+        """커밋 전에 막힌 것(권한 거부 등)은 그대로 오류다."""
+        out = self._delete_output_with(
+            {"success": [], "error": ["scope denied"],
+             "info": [], "warning": [], "deleted": False})
+        self.assertIn("scope denied", out.get("error", ""))
+        self.assertNotEqual(out.get("status"), "deleted")
+
+    def test_output_del_sets_the_flag_after_the_commit(self):
+        """플래그는 **커밋 뒤에** 세워야 한다.
+
+        앞에서 세우면 커밋이 실패해도 '삭제됨' 이 되고, 뒤처리 단계 뒤로
+        미루면 그 단계가 터졌을 때 세워지지 않아 원래 버그로 되돌아간다.
+        """
+        import inspect
+        from aot.aot_flask.utils import utils_output
+        src = inspect.getsource(utils_output.output_del)
+        commit_at = src.index('db.session.commit()')
+        flag_at = src.index('messages["deleted"] = ')
+        notify_at = src.index('manipulate_output(')
+        self.assertLess(commit_at, flag_at, 'deleted 를 커밋 전에 세웠다')
+        self.assertLess(flag_at, notify_at, 'deleted 를 데몬 통보 뒤로 미뤘다')
+
+
 if __name__ == '__main__':
     unittest.main()

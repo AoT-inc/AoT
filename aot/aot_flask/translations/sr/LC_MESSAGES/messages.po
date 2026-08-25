@@ -26486,3 +26486,6 @@ msgstr "сачувано"
 
 msgid "week columns"
 msgstr "недељне колоне"
+
+msgid "Data credits"
+msgstr "Извори података"

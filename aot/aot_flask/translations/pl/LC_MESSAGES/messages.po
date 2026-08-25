@@ -26486,3 +26486,6 @@ msgstr "zapisano"
 
 msgid "week columns"
 msgstr "kolumny tygodni"
+
+msgid "Data credits"
+msgstr "Źródła danych"

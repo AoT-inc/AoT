@@ -33,6 +33,8 @@ data_source_query_service.py — 등록된 데이터 API를 **물어볼 때** �
 import json
 import logging
 
+from aot.ai.services import source_attribution
+
 logger = logging.getLogger(__name__)
 
 _DEFAULT_LIMIT = 5
@@ -249,4 +251,7 @@ def query(source_id, operation, params=None, limit=_DEFAULT_LIMIT, columns=None)
         payload['truncated'] = ("Showing %d of %d rows. Narrow the parameters (or raise "
                                 "limit, max %d) — do NOT treat this as the complete set."
                                 % (len(rows), total, _MAX_LIMIT))
+    # 출처 표기 — CC BY 자료는 값을 보여 주는 자리 옆에 밝혀야 한다.
+    # 답변을 쓰는 것은 모델이고 모델은 이 응답에 실린 것만 아므로 여기서 싣는다.
+    source_attribution.apply(payload, cfg, cfg.get('preset_key'))
     return payload, None

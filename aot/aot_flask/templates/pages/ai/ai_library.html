@@ -139,6 +139,22 @@
     {% endfor %}
   </div>
 
+  {#- 출처 표시. CC BY 자료는 표시하는 자리 옆에 출처를 밝혀야 한다
+      (FAO ECOCROP, Open-Meteo 둘 다 CC BY 4.0). 켜진 소스만 싣는다. -#}
+  {% if attributions %}
+  <div class="aot-modal-body-text" style="clear: both; padding: 1em 0 0;">
+    {{ _('Data credits') }}:
+    {% for credit in attributions %}
+      {%- if credit.url -%}
+        <a href="{{ credit.url }}" target="_blank" rel="noopener">{{ credit.text }}</a>
+      {%- else -%}
+        {{ credit.text }}
+      {%- endif -%}
+      {{ ' · ' if not loop.last }}
+    {% endfor %}
+  </div>
+  {% endif %}
+
   <div style="clear: both; padding: 2em 0 0.5em;">
     <div class="aot-settings-title">
       <h3>{{ _('AI-Curated Knowledge Review') }}</h3>

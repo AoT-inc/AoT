@@ -26481,3 +26481,6 @@ msgstr "mentve"
 
 msgid "week columns"
 msgstr "hét oszlop"
+
+msgid "Data credits"
+msgstr "Adatforrások"

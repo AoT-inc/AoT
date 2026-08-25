@@ -26264,3 +26264,6 @@ msgstr "รายการที่บันทึกแล้ว"
 
 msgid "week columns"
 msgstr "คอลัมน์สัปดาห์"
+
+msgid "Data credits"
+msgstr "แหล่งข้อมูล"

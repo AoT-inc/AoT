@@ -26521,3 +26521,6 @@ msgstr "guardados"
 
 msgid "week columns"
 msgstr "columnas de semana"
+
+msgid "Data credits"
+msgstr "Créditos de datos"

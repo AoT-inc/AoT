@@ -26482,3 +26482,6 @@ msgstr "lagra"
 
 msgid "week columns"
 msgstr "vekekolonnar"
+
+msgid "Data credits"
+msgstr "Datakjelder"

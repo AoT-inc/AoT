@@ -1586,11 +1586,25 @@ class AIActionService:
                             self.output_id = MockField(output_id, 'output_id')
                     res_msg = utils_output.output_del(MockDelForm(target_id))
                 
-                if res_msg.get('error'):
+                # `deleted` 는 output_del 만 준다(input_del 에는 아직 없어, 없으면
+                # 예전 판정을 그대로 쓴다). 커밋 뒤에도 실패할 일이 남아 있어서
+                # (데몬 통보 등) 그때 error 와 success 가 함께 담기는데, error 만
+                # 보면 이미 끝난 삭제를 실패로 읽는다. 그러면 아래 캐시 무효화까지
+                # 건너뛰어 **지워진 장치가 공간 캐시에 계속 남는다.**
+                cleanup_error = None
+                if res_msg.get('deleted'):
+                    if res_msg.get('error'):
+                        cleanup_error = str(res_msg['error'])
+                elif res_msg.get('error'):
                     return {"status": "error", "message": str(res_msg['error'])}
                 # E-4: Invalidate spatial cache after deletion
                 from aot.ai.services.ai_context_service import AIContextService
                 AIContextService.invalidate_spatial_cache()
+                if cleanup_error:
+                    return {"status": "success",
+                            "result": (f"Device {target_id} deleted, but post-delete "
+                                       f"cleanup failed: {cleanup_error}. Do NOT retry "
+                                       f"the delete; report the cleanup failure.")}
                 return {"status": "success", "result": f"Device {target_id} deleted"}
 
             elif action_type == 'control_output':

@@ -26477,3 +26477,6 @@ msgstr "sparade"
 
 msgid "week columns"
 msgstr "veckokolumner"
+
+msgid "Data credits"
+msgstr "Datakällor"

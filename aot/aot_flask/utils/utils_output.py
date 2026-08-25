@@ -643,11 +643,19 @@ def output_mod(form_output, request_form):
 
 
 def output_del(form_output):
+    # `deleted` 는 **행이 실제로 사라졌는가** 하나만 말한다. error 목록과 따로
+    # 두는 이유는 커밋 뒤에도 실패할 일이 남아 있기 때문이다(데몬 통보, 사용자
+    # 코드 파일 삭제). 그때 messages 에는 success 와 error 가 함께 담기는데,
+    # error 만 보는 호출자는 "아무 일도 없었다" 로 읽는다 — 2026-08-25 실측:
+    # 삭제는 커밋까지 끝났는데 MCP 도구가 오류를 돌려줘 같은 삭제를 한 번 더
+    # 시도했고, 두 번째 호출은 지울 것이 없는데도 "deleted" 를 돌려줬다.
+    # 두 방향 모두 이 플래그로 갈린다.
     messages = {
         "success": [],
         "info": [],
         "warning": [],
-        "error": []
+        "error": [],
+        "deleted": False,
     }
 
     try:
@@ -706,6 +714,9 @@ def output_del(form_output):
                 flash_message=False)
 
         db.session.commit()
+        # 여기서부터는 **되돌릴 수 없다.** 아래 단계가 실패해도 행은 사라진
+        # 뒤이므로, 그 사실을 먼저 남긴다.
+        messages["deleted"] = bool(deleted_output)
         messages["success"].append('{action} {controller}'.format(
             action=TRANSLATIONS['delete']['title'],
             controller=TRANSLATIONS['output']['title']))

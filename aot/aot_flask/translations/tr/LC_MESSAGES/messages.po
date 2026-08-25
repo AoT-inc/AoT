@@ -26477,3 +26477,6 @@ msgstr "kaydedildi"
 
 msgid "week columns"
 msgstr "hafta sütunu"
+
+msgid "Data credits"
+msgstr "Veri kaynakları"

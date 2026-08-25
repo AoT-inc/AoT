@@ -26485,3 +26485,6 @@ msgstr "opgeslagen"
 
 msgid "week columns"
 msgstr "weekkolommen"
+
+msgid "Data credits"
+msgstr "Databronnen"

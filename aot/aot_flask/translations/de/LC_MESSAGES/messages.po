@@ -26426,3 +26426,6 @@ msgstr "gespeichert"
 
 msgid "week columns"
 msgstr "Wochenspalten"
+
+msgid "Data credits"
+msgstr "Datenquellen"

@@ -26328,3 +26328,6 @@ msgstr "disimpan"
 
 msgid "week columns"
 msgstr "kolom minggu"
+
+msgid "Data credits"
+msgstr "Kredit data"

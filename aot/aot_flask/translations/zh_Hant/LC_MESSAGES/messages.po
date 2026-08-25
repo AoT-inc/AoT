@@ -25467,3 +25467,6 @@ msgstr "個已儲存"
 
 msgid "week columns"
 msgstr "個週欄"
+
+msgid "Data credits"
+msgstr "資料來源"

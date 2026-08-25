@@ -30449,3 +30449,6 @@ msgstr "既定で返す列"
 #: aot_flask/templates/pages/ai/ai_library.html
 msgid "Leave blank to return every column. Narrow it if rows are wide."
 msgstr "空欄ならすべての列を返します。行が広い場合は絞ってください。"
+
+msgid "Data credits"
+msgstr "データ出典"

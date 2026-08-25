@@ -26490,3 +26490,6 @@ msgstr "сохранено"
 
 msgid "week columns"
 msgstr "столбцы недель"
+
+msgid "Data credits"
+msgstr "Источники данных"

@@ -30690,3 +30690,6 @@ msgstr "기본으로 돌려줄 컬럼"
 #: aot_flask/templates/pages/ai/ai_library.html
 msgid "Leave blank to return every column. Narrow it if rows are wide."
 msgstr "비우면 모든 컬럼을 돌려줍니다. 행이 넓으면 좁히세요."
+
+msgid "Data credits"
+msgstr "자료 출처"

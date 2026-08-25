@@ -235,12 +235,50 @@ Scope comes from **tags** instead — free text (`radish`, `north-block`,
 `bridge-a`), whatever you actually manage. AoT is not farm-only, so there is no
 fixed vocabulary; tags are how a query narrows to the right subject.
 
-### Built-in feeds are Korean
+### Region-agnostic built-in sources { #global-sources }
 
-Every pre-built public-data feed in the Add list is Korean (RDA, Nongsaro,
-NCPMS, SmartFarmKorea) and needs an API key from that provider. Everywhere else,
-the library is filled the other way: your own documents, web pages, REST APIs —
-plus whatever the AI looks up and shelves as it works.
+Most built-in sources are Korean public data (RDA, Nongsaro, NCPMS,
+SmartFarmKorea) and need an API key from that provider. Everywhere else, two
+built-ins work out of the box — **no key, anywhere on Earth:**
+
+| Source | What it answers |
+|---|---|
+| FAO ECOCROP (EXT-GL-01) | Growth temperature, rainfall, soil pH and altitude limits for 2,500+ species |
+| Open-Meteo (EXT-GL-02) | Global forecast, soil temperature/moisture by depth, reference evapotranspiration (ET₀), past climate |
+
+Open-Meteo fills a gap AoT's own weather tools cannot reach: `get_weather` reads
+only the weather sensors wired into this install, and `get_weather_forecast` is
+Korea-only (KMA). With no sensor, or outside Korea, this is the only weather
+evidence available — and soil values and ET₀ come from here regardless of what
+sensors you have.
+
+Beyond those, the library is filled the other way: your own documents, web
+pages, REST APIs — plus whatever the AI looks up and shelves as it works.
+
+### Data credits { #data-credits }
+
+Both global built-ins are **CC BY 4.0** data. That licence requires the credit
+to appear where the data is shown, so AoT shows it in two places.
+
+- **AI Library page** — a "Data credits" line under the source list, covering
+  the sources you have enabled.
+- **AI answers** — query responses carry the credit text, so the AI includes it
+  when it quotes those values.
+
+| Source | Licence | Credit |
+|---|---|---|
+| Open-Meteo | CC BY 4.0 (free tier is non-commercial) | Weather data by [Open-Meteo.com](https://open-meteo.com/) |
+| FAO ECOCROP | CC BY 4.0 | FAO ECOCROP |
+
+!!! warning "Commercial use"
+    Open-Meteo's free endpoint is **limited to non-commercial use** by its terms
+    (services with subscriptions or advertising, and integration into commercial
+    products, count as commercial). Commercial growers and services should get an
+    [Open-Meteo API key](https://open-meteo.com/en/pricing) and enter it in the
+    source settings — with a key, AoT queries the commercial endpoint instead.
+
+You can override the credit text in the source's settings (gear icon) under
+**Attribution**. Left empty, the built-in default is used.
 
 ---
 
