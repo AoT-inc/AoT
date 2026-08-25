@@ -39,7 +39,6 @@ AoT 는 GPLv3 로 배포되며(`LICENSE.txt`), 오픈소스 [Mycodo](https://git
 | Turf.js | 번들에 표기 없음 | MIT | `js/common/turf.min.js` |
 | three.js | 2023 판 (**로컬 수정본**, 아래 참고) | MIT | `js/widgets/AoT_facility/three.min.js` |
 | three-mesh-bvh | 번들에 표기 없음 | MIT | `js/widgets/AoT_facility/three-mesh-bvh.js` |
-| Leaflet.markercluster | 번들에 표기 없음 | MIT | `js/map/leaflet.markercluster.js` (**현재 미사용**, 아래 참고) |
 
 ### 확인해 둘 것
 
@@ -59,10 +58,6 @@ Highcharts 상용 라이선스를 별도로 확보해야 합니다.**
 그 파일이 저장소에 없습니다.** webpack 이 만들어 주는 사이드카를 vendoring 할 때
 가져오지 않은 것입니다. GridStack 의 라이선스는 위 표에 적어 두었지만, 다시
 vendoring 할 때는 그 파일도 함께 가져오십시오.
-
-**`leaflet.markercluster.js` 는 현재 어디에서도 로드되지 않습니다.** 지도가
-MapLibre 로 옮겨 간 뒤 남은 파일입니다(`css/map/leaflet.css` 는 이미 빈 스텁으로
-바뀌어 있습니다). 배포물에는 들어가므로 여기 적어 둡니다.
 
 ---
 

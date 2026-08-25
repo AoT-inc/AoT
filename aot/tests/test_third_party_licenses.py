@@ -29,7 +29,6 @@ _VENDOR_STRAYS = (
     'aot/aot_flask/static/js/common/turf.min.js',
     'aot/aot_flask/static/js/widgets/AoT_facility/three.min.js',
     'aot/aot_flask/static/js/widgets/AoT_facility/three-mesh-bvh.js',
-    'aot/aot_flask/static/js/map/leaflet.markercluster.js',
     'aot/aot_flask/static/css/gridstack.css',
 )
 
