@@ -30901,3 +30901,39 @@ msgstr "%(h)s시간"
 #: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
 msgid "A safety gate is holding the controls"
 msgstr "안전 장치가 걸려 제어를 잡고 있습니다"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Resting — the opposite direction is needed right now"
+msgstr "지금은 반대 방향이 필요해 쉬고 있습니다"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Indoor temperature is over the limit you set"
+msgstr "실내 온도가 설정한 상한을 넘었습니다"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Indoor temperature is under the limit you set"
+msgstr "실내 온도가 설정한 하한 아래입니다"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Humidity is over the limit you set"
+msgstr "습도가 설정한 상한을 넘었습니다"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Humidity is under the limit you set"
+msgstr "습도가 설정한 하한 아래입니다"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Light is over the limit you set"
+msgstr "광량이 설정한 상한을 넘었습니다"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Light is under the limit you set"
+msgstr "광량이 설정한 하한 아래입니다"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Easing off the misting as the sun climbs"
+msgstr "해가 오르는 동안 분무를 줄이고 있습니다"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Humidity is already high, so the misting is held"
+msgstr "습도가 이미 높아 분무를 멈춥니다"

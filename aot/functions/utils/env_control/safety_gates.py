@@ -430,29 +430,15 @@ class SafetyPostGate:
                 }
                 corrected = True
 
-        # ── 모순 검출: 냉방 + 난방 동시 ON ─────────────────────────────────
-        cooler_ids = [p.actuator_id for p in profiles if p.kind == 'cooler']
-        heater_ids = [p.actuator_id for p in profiles if p.kind == 'heater']
-
-        cooler_on = any(result.get(aid, {}).get('value', 0) > 5 for aid in cooler_ids)
-        heater_on = any(result.get(aid, {}).get('value', 0) > 5 for aid in heater_ids)
-
-        if cooler_on and heater_on:
-            # 비용이 낮은 쪽 우지, 다른 쪽 0
-            cooler_cost = min(
-                profile_map[a].cost_fn({}, 50) for a in cooler_ids if a in profile_map
-            )
-            heater_cost = min(
-                profile_map[a].cost_fn({}, 50) for a in heater_ids if a in profile_map
-            )
-            if cooler_cost <= heater_cost:
-                for aid in heater_ids:
-                    result[aid] = {'value': 0.0, 'reason': REASON_SAFETY_POST_GATE}
-            else:
-                for aid in cooler_ids:
-                    result[aid] = {'value': 0.0, 'reason': REASON_SAFETY_POST_GATE}
-            corrected = True
-            logger.warning('PostGate: cooler+heater conflict resolved')
+        # ── 모순 검출(냉방+난방 동시 ON)은 **여기가 아니다** ──────────────
+        # 2026-08-26 에 `_cycle_mixin.apply_hvac_opposition_interlock` 으로
+        # 옮겼다. 이 Post-Gate 는 임계 오버라이드보다 **앞**에서 도는데, 충돌은
+        # 그 뒤 `_force_cool` 이 냉방을 100 으로 올리면서 새로 생긴다 — 여기서
+        # 검사하면 아직 없는 것을 검사하고 통과시킨다(실측: 검사 통과 후
+        # 난방 100% + 냉방 100% 가 그대로 나갔다).
+        #
+        # ⚠ **되살리지 말 것.** 같은 규칙을 두 곳에 두면 갈라지고, 갈라지면
+        #   늦게 도는 쪽이 실질 규칙이 된다.
 
         if corrected and unique_id:
             write_decision_log(unique_id, 'safety_gate_active', CH_SAFETY_GATE, -1.0)

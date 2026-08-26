@@ -15,6 +15,7 @@ from aot.functions.utils.env_control.calibration import CalibrationRegistry
 from aot.functions.utils.env_control.coordinator import (
     coordinate, ActuatorCommand, CoordinatorState,
 )
+from aot.functions.utils.env_control import log_channels as _LC
 from aot.functions.utils.env_control.data_hygiene import DataHygieneChecker
 from aot.functions.utils.env_control.greybox.params import GreyboxParams
 from aot.functions.utils.env_control.greybox.shadow import GreyboxShadow
@@ -163,48 +164,123 @@ def apply_light_threshold_overrides(
                 final_cmds[p.actuator_id] = {'value': 100.0, 'reason': 'light_min'}
 
 
+def clamp_guide_range_to_hard_limits(
+        guide, temp_min=None, temp_max=None,
+        humid_min=None, humid_max=None):
+    """유도 범위를 하드 임계 안으로 좁힌다 → ((T_min, T_max, RH_min, RH_max), [바뀐 것]).
+
+    유도 범위(`guide_T_min/max`)와 하드 임계(`temp_max/min`)는 서로를 모르는 두
+    설정이다. 그래서 유도 상한이 하드 상한보다 높으면 **파생 목표가 하드 상한
+    밖에 떨어진다** — 코디네이터는 매 사이클 "거기까지 데워라" 를 계산하고,
+    하드 임계는 매 사이클 그것을 강제로 끈다. 설정만으로 영구 교착이고, 그
+    상태에서 나가는 명령은 서로 맞선다.
+
+    실측(2026-08-26 温室環境制御): 유도 상한 32(기본값) · `temp_max` 30 →
+    유효 목표 31.97 °C. 실내 32.7 °C 에서 난방기가 **VPD 를 이유로** 100% 로
+    돌고 냉방기는 하드 임계로 100% 로 돌았다.
+
+    목표는 하드 임계 **안에서만** 세운다. 임계에 딱 붙는 것은 괜찮다 — 판정에
+    히스테리시스(`TEMP_HYST_C`)가 있어 경계에서 떨리지 않는다.
+
+    ⚠ **여유(margin)를 임의로 빼지 말 것.** 근거 없는 상수가 하나 늘고, 그만큼
+      사용자가 정한 문턱과 실제 목표가 조용히 어긋난다.
+
+    ⚠ 좁힌 결과가 뒤집히면(하한 > 상한) 그 설정은 모순이다. 그때는 **하드
+      임계가 이긴다** — 유도 범위를 살리면 "넘지 마라" 가 무의미해진다.
+
+    ⚠ 0/None 은 "안 정했다" 로 읽는다(`Input.max_age_s` 와 같은 판단). 유효한
+      한계로 받으면 실수로 0 을 넣은 시설의 목표가 0 °C 로 눌린다.
+    """
+    T_min, T_max, RH_min, RH_max = (float(v) for v in guide)
+    changed = []
+    if temp_max and T_max > float(temp_max):
+        T_max = float(temp_max)
+        changed.append('T상한→%.1f' % T_max)
+    if temp_min and T_min < float(temp_min):
+        T_min = float(temp_min)
+        changed.append('T하한→%.1f' % T_min)
+    if T_min > T_max:
+        T_min = T_max
+    if humid_max and RH_max > float(humid_max):
+        RH_max = float(humid_max)
+        changed.append('RH상한→%.0f' % RH_max)
+    if humid_min and RH_min < float(humid_min):
+        RH_min = float(humid_min)
+        changed.append('RH하한→%.0f' % RH_min)
+    if RH_min > RH_max:
+        RH_min = RH_max
+    return (T_min, T_max, RH_min, RH_max), changed
+
+
 def apply_temp_humid_threshold_overrides(
         internal: dict, profiles: list[ActuatorProfile], final_cmds: dict) -> None:
-    """온습도 하드 임계(temp_max/min, humid_max/min) 위반 시 강제 오버라이드.
+    """온습도 하드 임계(temp_max/min, humid_max/min) — **제약**이지 목표가 아니다.
 
-    이 함수가 추가되기 전에는 `_force_cool`/`_force_heat`/`_force_dehumid`/
-    `_force_humid` 플래그가 세팅만 되고 어디서도 소비되지 않는 죽은 코드였다
-    (2026-07-29 발견) — 사용자가 설정한 temp_max/min, humid_max/min 은
-    debug_logging 이 꺼져 있으면 완전히 무효였다.
+    ## 제약과 목표는 다른 것이다 (2026-08-26 재설계)
 
-    temp_max/min 은 safety_gates.py 의 GATE_BIT_HEAT/COLD(폭염/한파 비상
-    임계)와 **동일한 액추에이터 조합**을 그대로 강제한다 — 이 로컬 임계는
-    사용자가 더 타이트하게 설정한 문턱이라, 비상 게이트가 발동하기 훨씬
-    전에 먼저 개입하는 역할이다.
+    이 시스템의 제어 중심은 **VPD** 하나다. `_decompose_vpd` 가 VPD 목표와
+    측정이 둘 다 있으면 온도·습도를 제어목표에서 빼고 `_..._constraint` 로
+    강등한다 — 그 주석이 말하는 대로 "T/RH 상·하한은 별도 constraint 검사가
+    강제" 한다. 즉 온습도는 **참고값이자 넘지 말아야 할 선**이지, 좇아야 할
+    목표가 아니다.
 
-    humid_max/min 은 opening/shade/cooler/curtain/heater 와 겹치지 않는
-    exhaust_fan/fogger 만 건드린다 — 온도 강제(위)와 액추에이터 집합이
-    아예 겹치지 않으므로 두 강제가 서로 충돌해 덮어쓸 일이 없다.
+    그런데 예전 구현은 `GATE_BIT_HEAT/COLD`(폭염·한파 **비상** 게이트)의
+    액추에이터 조합을 그대로 베껴 와서, 32°C 같은 평범한 상황에서 비상과
+    똑같은 조치를 냈다:
+
+        VPD 1.59 / 목표 1.61  → PI: 냉방기 0%      ← 제어 중심은 "할 일 없음"
+        온도 32.2 > 상한 30   → 강제: 냉방기 100%  ← 참고값이 제어를 빼앗는다
+
+    그리고 그것은 제어가 아니라 **래치**다. 관찰→비교→운전량 루프가 없어서
+    100%로 몇 시간을 돌려 아무 변화가 없어도 판정은 똑같다 — 실외 35.1°C 에서
+    실내를 30 아래로 내릴 방법이 없으니 영원히 돈다(실측: 温室環境制御).
+
+    ## 그래서 규칙은 하나다 — **막는 것은 남기고, 미는 것은 뺀다**
+
+        금지    그 방향으로 **더 밀지 못하게** 한다   (난방기 0 · 냉방기 0)
+        예방    유입을 차단해 **더 나빠지지 않게** 한다 (차광막 침 · 개구부 폐쇄 ·
+                보온커튼 침)
+        구동    ✘ 목표 추종이다. 여기서 하지 않는다    (난방기 100 · 냉방기 100 ·
+                개구부 100 · 배기팬 100 · 분무 100)
+
+    구동이 필요한 값은 **제어 중심(VPD)이 정한다.** 그래야 운전량이 편차에
+    비례하고, 결과가 안 따라오면 `_assess_strain` 이 "못 따라감" 을 말한다.
+
+    ⚠ 진짜 위험 구간은 비어 있지 않다 — 폭염·한파는 `safety_gates` 의 비상
+      게이트가 따로 맡고, 거기서는 bang-bang 이 맞다. 이 로컬 임계는 그보다
+      훨씬 앞에서 서는 **선**이다.
+
+    ⚠ **여기에 `= 100.0` 을 되살리지 말 것.** 그 한 줄이 참고값을 목표로
+      바꾸고, 제어 중심을 덮어쓴다.
     """
     if internal.get('_force_cool'):
         for p in profiles:
-            if p.kind == 'opening':
-                final_cmds[p.actuator_id] = {'value': 100.0, 'reason': 'temp_max'}
-            elif p.kind == 'shade':
+            if p.kind == 'heater':
+                # 금지 — 더워서 선을 넘었는데 가온하는 일은 없어야 한다.
                 final_cmds[p.actuator_id] = {'value': 0.0, 'reason': 'temp_max'}
-            elif p.kind == 'cooler':
-                final_cmds[p.actuator_id] = {'value': 100.0, 'reason': 'temp_max'}
+            elif p.kind == 'shade':
+                # 예방 — 차광막을 쳐서 일사 유입을 끊는다(규약: 0 = 차광막 닫음).
+                final_cmds[p.actuator_id] = {'value': 0.0, 'reason': 'temp_max'}
     if internal.get('_force_heat'):
         for p in profiles:
-            if p.kind == 'opening':
+            if p.kind == 'cooler':
+                final_cmds[p.actuator_id] = {'value': 0.0, 'reason': 'temp_min'}
+            elif p.kind == 'opening':
+                # 예방 — 찬 바깥공기 유입 차단.
                 final_cmds[p.actuator_id] = {'value': 0.0, 'reason': 'temp_min'}
             elif p.kind == 'curtain':
+                # 예방 — 보온커튼을 쳐서 열 손실을 줄인다(규약: 0 = 커튼 닫음).
                 final_cmds[p.actuator_id] = {'value': 0.0, 'reason': 'temp_min'}
-            elif p.kind == 'heater':
-                final_cmds[p.actuator_id] = {'value': 100.0, 'reason': 'temp_min'}
     if internal.get('_force_dehumid'):
         for p in profiles:
-            if p.kind == 'exhaust_fan':
-                final_cmds[p.actuator_id] = {'value': 100.0, 'reason': 'humid_max'}
+            if p.kind == 'fogger':
+                # 금지 — 습해서 선을 넘었는데 가습하는 일은 없어야 한다.
+                final_cmds[p.actuator_id] = {'value': 0.0, 'reason': 'humid_max'}
     if internal.get('_force_humid'):
         for p in profiles:
-            if p.kind == 'fogger':
-                final_cmds[p.actuator_id] = {'value': 100.0, 'reason': 'humid_min'}
+            if p.kind == 'exhaust_fan':
+                # 금지 — 건조해서 선을 넘었는데 배기로 더 말리는 일은 없어야 한다.
+                final_cmds[p.actuator_id] = {'value': 0.0, 'reason': 'humid_min'}
 
 
 def apply_nursery_fog_derate(
@@ -298,6 +374,93 @@ def apply_wetting_fog_humidity_ceiling(
         final_cmds[p.actuator_id] = {'value': 0.0, 'reason': 'fog_humidity_ceiling'}
 
 
+# ── 맞서는 짝 인터록 ─────────────────────────────────────────────────────────
+# 냉방과 난방이 동시에 도는 것은 정상 동작이 아니라 서로의 에너지를 상쇄하며
+# 버리는 상태다. PID 는 raise/lower 출력을 두고 **오차 부호가 한쪽만 고르는 것**
+# 자체가 인터록인데, 코디네이터는 액추에이터마다 따로 PI 를 돌리므로 그 성질이
+# 공짜로 따라오지 않는다.
+#
+# ⚠ **반드시 맨 마지막이다.** 예전에는 이 검사가 Post-Gate 안에 있어서 임계
+#   오버라이드보다 **앞**에서 돌았다 — 그 시점에는 아직 충돌이 없고(코디네이터가
+#   난방 100 · 냉방 0), 충돌은 그 뒤 `_force_cool` 이 냉방을 100 으로 올리면서
+#   **새로 생겼다.** 검사는 통과했는데 나가는 명령은 둘 다 100 이었다
+#   (2026-08-26 실측: 温室環境制御, temp_max=30 · 실내 32.7°C).
+#
+# ⚠ **구현을 두 벌 두지 말 것.** 같은 규칙이 Post-Gate 와 여기 양쪽에 있으면
+#   갈라지고, 갈라지면 늦게 도는 쪽이 실질 규칙이 된다. Post-Gate 의 것은
+#   이 함수로 옮기면서 지웠다.
+
+# 명령의 출처 서열. 큰 쪽이 이긴다.
+#   3 안전 게이트  — 언제나 최우선
+#   2 하드 임계    — 사용자가 정한 문턱. 수동 락보다 앞이다(오버라이드가 수동
+#                    락 뒤에 적용되는 기존 순서를 그대로 옮긴 것).
+#   1 수동 락
+#   0 그 밖(코디네이터 PI)
+# ⚠ 코드 번호를 여기 옮겨 적지 말 것 — 정본은 `log_channels` 다. 베껴 두면
+#   규약이 바뀔 때 조용히 어긋나고, 그러면 서열이 전부 0 이 되어 인터록이
+#   비용 판정으로만 돌아간다(=하드 임계가 전기요금에 진다).
+# ⚠ 온습도 하드 임계('temp_max' 등)는 여기 없다 — 그 제약은 맞서는 짝을
+#   **끄기만** 하므로(위 `apply_temp_humid_threshold_overrides`) 켜진 쪽으로
+#   나타나는 일이 없다. 없는 경우를 위한 칸을 만들어 두면 검사할 수 없는
+#   규칙이 되고, 검사할 수 없는 규칙은 조용히 틀린다.
+_INTERLOCK_RANK = {
+    _LC.REASON_SAFETY_PRE_GATE:  3,
+    _LC.REASON_SAFETY_POST_GATE: 3,
+    _LC.REASON_MANUAL_OVERRIDE:  1,
+}
+_INTERLOCK_ON_PCT = 5.0
+
+
+def apply_hvac_opposition_interlock(
+        profiles: list[ActuatorProfile], final_cmds: dict) -> bool:
+    """냉방과 난방이 동시에 돌면 한쪽을 끈다 → 껐으면 True.
+
+    이기는 쪽은 **출처가 더 센 쪽**이다(`_INTERLOCK_RANK`). 서열이 같으면
+    예전 규칙대로 **비용이 싼 쪽**이 이긴다.
+
+    ⚠ 비용만으로 정하면 안 된다 — 사용자가 정한 하드 임계로 강제된 쪽이
+      비용 때문에 꺼질 수 있다. "30°C 를 넘지 마라" 는 설정이 전기요금에
+      지는 것은 뜻이 뒤집히는 것이다.
+    """
+    cooler_ids = [p.actuator_id for p in profiles if p.kind == 'cooler']
+    heater_ids = [p.actuator_id for p in profiles if p.kind == 'heater']
+    if not cooler_ids or not heater_ids:
+        return False
+
+    def _on(ids):
+        return any((final_cmds.get(a) or {}).get('value', 0.0) > _INTERLOCK_ON_PCT
+                   for a in ids)
+
+    if not (_on(cooler_ids) and _on(heater_ids)):
+        return False
+
+    def _rank(ids):
+        best = 0
+        for a in ids:
+            c = final_cmds.get(a) or {}
+            if c.get('value', 0.0) > _INTERLOCK_ON_PCT:
+                best = max(best, _INTERLOCK_RANK.get(c.get('reason'), 0))
+        return best
+
+    pm = {p.actuator_id: p for p in profiles}
+
+    def _cost(ids):
+        vals = [pm[a].cost_fn({}, 50) for a in ids if a in pm]
+        return min(vals) if vals else float('inf')
+
+    c_rank, h_rank = _rank(cooler_ids), _rank(heater_ids)
+    if c_rank != h_rank:
+        cooler_wins = c_rank > h_rank
+    else:
+        cooler_wins = _cost(cooler_ids) <= _cost(heater_ids)
+
+    losers = heater_ids if cooler_wins else cooler_ids
+    for aid in losers:
+        final_cmds[aid] = {'value': 0.0,
+                           'reason': _LC.REASON_SAFETY_POST_GATE}
+    return True
+
+
 def apply_threshold_and_gate_overrides(
         internal: dict, profiles: list[ActuatorProfile], final_cmds: dict,
         partial_overrides: dict) -> None:
@@ -327,6 +490,9 @@ def apply_threshold_and_gate_overrides(
     if partial_overrides:
         for aid, override in partial_overrides.items():
             final_cmds[aid] = override
+    # 맞서는 짝 인터록은 **모든 것이 끝난 뒤**다 — 위 어느 단계든 충돌을 만들 수
+    # 있고, 그중 임계 오버라이드는 실제로 만들었다(위 함수 주석 참조).
+    apply_hvac_opposition_interlock(profiles, final_cmds)
 
 
 class CycleMixin:
@@ -813,6 +979,29 @@ class CycleMixin:
         T_g_max  = self.guide_T_max  if self.guide_T_max  is not None else 32.0
         RH_g_min = self.guide_RH_min if self.guide_RH_min is not None else 40.0
         RH_g_max = self.guide_RH_max if self.guide_RH_max is not None else 85.0
+
+        # 하드 임계는 **목표의 한계**다 — 판정은 아래 모듈 함수 하나에 있다.
+        (T_g_min, T_g_max, RH_g_min, RH_g_max), _clamped = \
+            clamp_guide_range_to_hard_limits(
+                (T_g_min, T_g_max, RH_g_min, RH_g_max),
+                temp_min=self.temp_min, temp_max=self.temp_max,
+                humid_min=self.humid_min, humid_max=self.humid_max)
+        # ⚠ **매 사이클 찍지 않는다.** 설정이 안 바뀌면 같은 줄이 영원히 쌓여
+        #   정작 읽어야 할 로그를 밀어낸다. 바뀔 때만 한 번 — 사용자가 자기
+        #   설정이 좁혀졌다는 것을 알아야 한다.
+        # ⚠ **`warning` 이 아니라 `error` 다.** 컨트롤러 로거는 `log_level_debug`
+        #   가 꺼져 있으면 레벨이 ERROR 라(`base_controller.py`), warning 으로
+        #   찍으면 **기본 설치에서 아무 데도 안 남는다** — 알리려고 만든 줄이
+        #   정확히 알려야 할 사람에게만 안 보인다. 등급을 올리는 근거는 두 가지다:
+        #   설정 모순이라 사람이 고쳐야 하고, 한 번만 찍으므로 시끄럽지 않다.
+        _clamp_key = ','.join(_clamped)
+        if _clamp_key != getattr(self, '_last_guide_clamp', None):
+            if _clamped:
+                self.logger.error(
+                    '유도 범위가 하드 임계를 넘어 좁혔습니다 (%s) — '
+                    '설정한 목표 범위가 그대로 쓰이지 않습니다. '
+                    '유도 범위와 온습도 상·하한 설정을 맞춰 주세요.', _clamp_key)
+            self._last_guide_clamp = _clamp_key
 
         T_int  = internal.get('T',  22.0)
         RH_int = internal.get('RH', 60.0)
@@ -1618,6 +1807,26 @@ class CycleMixin:
             acc[1] += 1
             if len(cmd_list) < self._SUMMARY_MAX_COMMANDS:
                 src = commands.get(p.actuator_id)
+                # ── 값과 근거는 **같은 시점**이어야 한다 (2026-08-26) ────────
+                # `pct` 는 `final_cmds`(오버라이드 뒤)에서, `reason`/`var` 는
+                # `commands`(오버라이드 **앞**)에서 왔다. 그래서 냉방기가
+                # "100% · 목표를 좇는 중 · VPD 때문" 으로 나왔는데, 실제로는
+                # 코디네이터가 0% 를 명령했고 100% 는 **온도 하드 상한**이
+                # 강제한 값이었다(실측: 温室環境制御, 실내 32.9°C · temp_max 30).
+                # 한 줄 안에서 값과 설명이 서로 다른 것을 가리키면, 이 탭이
+                # 없애려던 바로 그 거짓 설명이 된다.
+                #
+                # 오버라이드가 값을 바꿨으면 **그쪽 근거**를 쓴다. 그때
+                # `var`(코디네이터가 좇던 변수)는 더 이상 이 값을 설명하지
+                # 않으므로 함께 버린다 — 남기면 "온도 때문에 켜졌는데 VPD 가
+                # 이유" 라는 또 다른 거짓이 된다.
+                _fin = final_cmds.get(p.actuator_id)
+                _fin_reason = (_fin.get('reason') if isinstance(_fin, dict)
+                               else getattr(_fin, 'reason', None))
+                _src_reason = (int(getattr(src, 'reason', 0))
+                               if src is not None else None)
+                _overridden = (_fin_reason is not None
+                               and _fin_reason != _src_reason)
                 cmd_list.append({
                     'slot_key': p.slot_key or p.actuator_id[:8],
                     'kind':     p.kind,
@@ -1626,10 +1835,10 @@ class CycleMixin:
                     'area_m2':  (round(float(p.area_m2), 1)
                                  if getattr(p, 'area_m2', None) else None),
                     'pct':      round(pct, 1),
-                    'reason':   (int(getattr(src, 'reason', 0))
-                                 if src is not None else None),
-                    'var':      (getattr(src, 'var_source', None)
-                                 if src is not None else None),
+                    'reason':   (_fin_reason if _overridden else _src_reason),
+                    'var':      (None if _overridden else
+                                 (getattr(src, 'var_source', None)
+                                  if src is not None else None)),
                 })
 
         ff = getattr(self, '_last_ff_signal', None)

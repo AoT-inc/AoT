@@ -42,7 +42,14 @@ def _effect(direction, magnitude):
     return fn
 
 
-def _profile(kind='cooler', direction='↓', magnitude=2.5, slew=20.0):
+# ⚠ **맞서는 짝(냉방·난방)을 쓰지 않는다** (2026-08-26).
+# 이 파일이 재현하려는 것은 "아래쪽 레일에 눌러붙은 적분" 인데, 그 상황은
+# 냉방기를 **추운 조건에서** 돌려야 만들어진다. 그런데 코디네이터는 이제 온도
+# 축의 요구 방향으로 짝의 한쪽을 후보에서 빼므로(`coordinate` 2.55절), 추운
+# 조건의 냉방기는 파킹되어 레일에 닿지 못한다 — 그것이 옳은 동작이고, 그래서
+# 여기서는 짝이 아닌 **증발냉각(fogger)** 으로 같은 경로를 재현한다.
+# 레일 회복 로직 자체는 종류를 가리지 않는다.
+def _profile(kind='fogger', direction='↓', magnitude=2.5, slew=20.0):
     return ActuatorProfile(
         actuator_id=AID,
         kind=kind,
@@ -80,9 +87,9 @@ def _run(state, T_int, T_target, n, start=0, profile=None):
     return state, integrals, apertures
 
 
-# 실내가 목표보다 한참 차가움 → 냉방기는 완전히 닫아야 한다(아래쪽 레일).
+# 실내가 목표보다 한참 차가움 → 냉각 장치는 완전히 닫아야 한다(아래쪽 레일).
 COLD = dict(T_int=15.0, T_target=25.0)
-# 실내가 목표보다 한참 더움 → 냉방기 최대(위쪽 레일).
+# 실내가 목표보다 한참 더움 → 냉각 장치 최대(위쪽 레일).
 HOT  = dict(T_int=40.0, T_target=20.0)
 
 

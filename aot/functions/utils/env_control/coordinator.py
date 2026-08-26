@@ -71,7 +71,7 @@ from .log_channels import (
     ch_coord_cmd, ch_coord_reason, ch_integral,
     REASON_IDLE, REASON_PRIMARY, REASON_SECONDARY,
     REASON_WRONG_DIRECTION, REASON_SIDE_EFFECT, REASON_MANUAL_OVERRIDE,
-    REASON_NO_GRADIENT, REASON_NO_OUTDOOR_DATA,
+    REASON_NO_GRADIENT, REASON_NO_OUTDOOR_DATA, REASON_OPPOSING_PARKED,
 )
 from .authority import is_natural_var
 from .types import (
@@ -336,6 +336,63 @@ def coordinate(
                 '환기 우선 — 실외로 목표에 닿으므로 냉난방 %d개 파킹: %s',
                 len(hvac_ids), sorted(i[:8] for i in hvac_ids))
 
+    # ── 2.55. 맞서는 짝은 **온도 축의 요구가 한쪽만 고른다** ──────────────────
+    # 냉방과 난방은 온도 축에서 정확히 raise/lower 쌍이다. PID 는 오차 부호가
+    # 한쪽만 고르므로 **방향을 정하는 행위 자체가 인터록**인데, 코디네이터는
+    # 액추에이터마다 따로 PI 를 돌려서 그 성질이 공짜로 따라오지 않는다.
+    # 그래서 여기서 명시적으로 준다 — 요구 방향의 반대편을 이 사이클의 후보에서
+    # 뺀다(파킹).
+    #
+    # ⚠ **뒤에서 끄는 것으로는 부족하다.** 디스패치 직전 인터록
+    # (`_cycle_mixin.apply_hvac_opposition_interlock`)은 마지막 방어선이지만,
+    # 그때까지 진 쪽은 **매 사이클 100% 를 원하며 적분을 쌓는다.** 여기서 빼면
+    # 적분이 safe_default 로 풀린다(아래 NO_GRADIENT 경로).
+    #
+    # ⚠ **VPD 직접 제어 모드에서는 온도가 제어목표에 없다.** `_decompose_vpd`
+    # 가 'temperature' 를 `_temperature_constraint` 로 강등하므로
+    # `deviation_native` 에 온도가 아예 없다 — 그래서 편차 부호만 보면 이 판정이
+    # **통째로 서지 않는다.** 실측(2026-08-26 温室環境制御)에서 난방기를 100%
+    # 로 만든 근거는 온도가 아니라 VPD 였고, 그동안 실내는 하드 상한을 4°C
+    # 넘겨 있었다. 그래서 하드 임계를 **먼저** 본다.
+    #
+    #   1) 하드 임계 위반(temp_max/temp_min) — 사용자가 정한 문턱. 최우선.
+    #   2) 온도 잔여 편차의 부호 — 허용오차 밖일 때만. 제어목표에서 강등됐어도
+    #      목표·허용오차는 `_temperature_constraint` 에 그대로 남아 있다.
+    #   3) 둘 다 없으면 제한하지 않는다 — 온도가 편안한 구간이면 VPD 를 위해
+    #      가온하거나 냉방하는 것이 옳다.
+    # 파킹 사유를 구분해 두는 집합. 같은 파킹이라도 **왜** 쉬는지가 다르면
+    # 화면이 다른 말을 해야 한다(0% 로 쉬는 난방기에게 "할 수 있는 만큼 하고
+    # 있다" 는 정반대의 말이다).
+    opposing_ids: set = set()
+    _internal = (ctx.get('internal') or {})
+    _demand = None
+    if bool(_internal.get('_force_cool')):
+        _demand = 'cool'
+    elif bool(_internal.get('_force_heat')):
+        _demand = 'heat'
+    else:
+        _t_now = ctx.get('T_int')
+        _t_tv = ((situation.target or {}).get('temperature')
+                 or (situation.target or {}).get('_temperature_constraint'))
+        _tol = float(getattr(_t_tv, 'tolerance', 0.0) or 0.0) if _t_tv else 0.0
+        if _t_now is not None and _t_tv is not None and _tol > 0:
+            _t_dev = float(_t_now) - float(_t_tv.value)
+            if _t_dev > _tol:
+                _demand = 'cool'
+            elif _t_dev < -_tol:
+                _demand = 'heat'
+    if _demand:
+        _losing_kind = 'heater' if _demand == 'cool' else 'cooler'
+        _losers = {p.actuator_id for p in available
+                   if getattr(p, 'kind', '') == _losing_kind}
+        if _losers:
+            park_ids |= _losers
+            opposing_ids |= _losers
+            logger.debug(
+                '온도 축 요구=%s — 반대편 %s %d개 파킹: %s',
+                _demand, _losing_kind, len(_losers),
+                sorted(i[:8] for i in _losers))
+
     # ── 2.6. 실외 근거가 지어낸 것이면 → **제자리 유지**(hold) ──────────────────
     # 환기는 실내를 실외 쪽으로만 밀 수 있으므로, 실외를 모르면 열지 닫을지 말할
     # 근거가 없다. 그런데 지금 구조는 실외를 모를 때 fallback 이 **실외=실내**로
@@ -453,7 +510,10 @@ def coordinate(
             sd = p.safe_default
             I = sd + (prev_val - sd) * RELAX_FACTOR
             cmd_raw = _clamp(I, 0.0, 100.0)
-            reason = REASON_NO_GRADIENT
+            # 같은 감쇠 경로를 쓰되 **사유는 나눈다** — 맞서는 짝의 진 쪽은
+            # "밀어도 안 움직인다"(무구배)가 아니라 "지금 밀 방향이 아니다"다.
+            reason = (REASON_OPPOSING_PARKED
+                      if p.actuator_id in opposing_ids else REASON_NO_GRADIENT)
         else:
             e_norm = num / den
             # 데드존을 분기가 아니라 '빼기'로 적용한다 — 경계에서 P항이 0 으로

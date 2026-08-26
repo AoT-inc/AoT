@@ -8,6 +8,8 @@
 실제 강제 오버라이드를 wiring.
 """
 from aot.functions.custom_functions.env_coordinator_impl._cycle_mixin import (
+    apply_hvac_opposition_interlock,
+    clamp_guide_range_to_hard_limits,
     apply_temp_humid_threshold_overrides,
     apply_threshold_and_gate_overrides,
 )
@@ -18,16 +20,26 @@ def _profiles(*kinds):
     return [ActuatorProfile(actuator_id=f'{k}-1', kind=k) for k in kinds]
 
 
-def test_force_cool_mirrors_gate_bit_heat_actuators():
+def test_force_cool_prohibits_and_prevents_but_does_not_drive():
+    """상한 초과는 **제약**이다 — 막을 뿐 몰지 않는다 (2026-08-26 재설계).
+
+    예전에는 `GATE_BIT_HEAT`(폭염 **비상**)의 조합을 그대로 베껴 냉방기와
+    개구부를 100% 로 켰다. 그래서 VPD 가 목표에 있는데도(제어 중심은 "할 일
+    없음" 이라고 말하는데도) 참고값이 제어를 빼앗아 냉방기가 영원히 돌았다 —
+    실외 35.1°C 에서 실내를 30 아래로 내릴 방법이 없으니 래치가 안 풀린다.
+    """
     profiles = _profiles('opening', 'shade', 'cooler', 'heater', 'curtain')
     final_cmds = {}
     apply_temp_humid_threshold_overrides({'_force_cool': True}, profiles, final_cmds)
 
-    assert final_cmds.get('opening-1') == {'value': 100.0, 'reason': 'temp_max'}
+    # 금지 — 더운데 가온하는 일은 없어야 한다.
+    assert final_cmds.get('heater-1') == {'value': 0.0, 'reason': 'temp_max'}
+    # 예방 — 차광막을 쳐서 일사 유입을 끊는다(규약: 0 = 차광막 닫음).
     assert final_cmds.get('shade-1') == {'value': 0.0, 'reason': 'temp_max'}
-    assert final_cmds.get('cooler-1') == {'value': 100.0, 'reason': 'temp_max'}
-    # 한파 전용 액추에이터는 건드리지 않는다.
-    assert 'heater-1' not in final_cmds
+    # ⚠ 구동은 하지 않는다. 냉방 운전량은 **제어 중심(VPD)** 이 정한다.
+    assert 'cooler-1' not in final_cmds, '참고값이 제어를 빼앗고 있다'
+    assert 'opening-1' not in final_cmds, (
+        '실외가 더 더울 수도 있다 — 여는 판단은 코디네이터가 한다')
     assert 'curtain-1' not in final_cmds
 
 
@@ -36,11 +48,14 @@ def test_force_heat_mirrors_gate_bit_cold_actuators():
     final_cmds = {}
     apply_temp_humid_threshold_overrides({'_force_heat': True}, profiles, final_cmds)
 
+    # 예방 — 찬 바깥공기 차단 · 보온커튼으로 열 손실 감소(규약: 0 = 닫음).
     assert final_cmds.get('opening-1') == {'value': 0.0, 'reason': 'temp_min'}
     assert final_cmds.get('curtain-1') == {'value': 0.0, 'reason': 'temp_min'}
-    assert final_cmds.get('heater-1') == {'value': 100.0, 'reason': 'temp_min'}
+    # 금지 — 추운데 냉방하는 일은 없어야 한다.
+    assert final_cmds.get('cooler-1') == {'value': 0.0, 'reason': 'temp_min'}
+    # ⚠ 구동은 하지 않는다(위 테스트 주석 참조).
+    assert 'heater-1' not in final_cmds, '참고값이 제어를 빼앗고 있다'
     assert 'shade-1' not in final_cmds
-    assert 'cooler-1' not in final_cmds
 
 
 def test_force_dehumid_uses_exhaust_fan_only():
@@ -48,10 +63,10 @@ def test_force_dehumid_uses_exhaust_fan_only():
     final_cmds = {}
     apply_temp_humid_threshold_overrides({'_force_dehumid': True}, profiles, final_cmds)
 
-    assert final_cmds.get('exhaust_fan-1') == {'value': 100.0, 'reason': 'humid_max'}
-    # 온도 강제 액추에이터 집합과 겹치지 않아야 한다(충돌 방지 설계).
+    # 금지 — 습한데 가습하는 일은 없어야 한다. 배기 운전량은 VPD 가 정한다.
+    assert final_cmds.get('fogger-1') == {'value': 0.0, 'reason': 'humid_max'}
+    assert 'exhaust_fan-1' not in final_cmds, '참고값이 제어를 빼앗고 있다'
     assert 'opening-1' not in final_cmds
-    assert 'fogger-1' not in final_cmds
 
 
 def test_force_humid_uses_fogger_only():
@@ -59,22 +74,25 @@ def test_force_humid_uses_fogger_only():
     final_cmds = {}
     apply_temp_humid_threshold_overrides({'_force_humid': True}, profiles, final_cmds)
 
-    assert final_cmds.get('fogger-1') == {'value': 100.0, 'reason': 'humid_min'}
-    assert 'exhaust_fan-1' not in final_cmds
+    # 금지 — 건조한데 배기로 더 말리는 일은 없어야 한다.
+    assert final_cmds.get('exhaust_fan-1') == {'value': 0.0, 'reason': 'humid_min'}
+    assert 'fogger-1' not in final_cmds, '참고값이 제어를 빼앗고 있다'
 
 
 def test_temp_and_humid_forces_never_collide_on_same_actuator():
     # 극단 케이스: 덥고 습한 상황 동시 발생 — 온도 강제(opening/shade/cooler)와
     # 습도 강제(exhaust_fan/fogger) 액추에이터 집합이 겹치지 않으므로 서로
     # 덮어쓰지 않아야 한다.
-    profiles = _profiles('opening', 'shade', 'cooler', 'exhaust_fan')
+    profiles = _profiles('shade', 'heater', 'fogger', 'exhaust_fan')
     final_cmds = {}
     apply_temp_humid_threshold_overrides(
         {'_force_cool': True, '_force_dehumid': True}, profiles, final_cmds,
     )
 
-    assert final_cmds.get('opening-1') == {'value': 100.0, 'reason': 'temp_max'}
-    assert final_cmds.get('exhaust_fan-1') == {'value': 100.0, 'reason': 'humid_max'}
+    assert final_cmds.get('shade-1')  == {'value': 0.0, 'reason': 'temp_max'}
+    assert final_cmds.get('heater-1') == {'value': 0.0, 'reason': 'temp_max'}
+    assert final_cmds.get('fogger-1') == {'value': 0.0, 'reason': 'humid_max'}
+    assert 'exhaust_fan-1' not in final_cmds
 
 
 def test_no_breach_leaves_commands_untouched():
@@ -95,8 +113,8 @@ def test_safety_gate_wins_over_force_cool_in_high_wind():
     임계 오버라이드가 게이트보다 뒤에 적용되면 풍상측 개구부 폐쇄(0)를
     100으로 덮어써 강풍 속에 창을 활짝 열어버린다.
     """
-    profiles = _profiles('opening', 'cooler')
-    final_cmds = {}
+    profiles = _profiles('opening', 'heater')
+    final_cmds = {'opening-1': {'value': 100.0, 'reason': 1}}
     # 안전 프리게이트가 풍상측 개구부를 폐쇄하도록 강제한 상태.
     partial_overrides = {'opening-1': {'value': 0.0, 'reason': 'safety_pre_gate'}}
 
@@ -105,11 +123,11 @@ def test_safety_gate_wins_over_force_cool_in_high_wind():
     )
 
     assert final_cmds['opening-1'] == {'value': 0.0, 'reason': 'safety_pre_gate'}, (
-        '강풍 중 안전 게이트의 개구부 폐쇄를 _force_cool 이 덮어썼다 — '
-        '임계 오버라이드가 게이트보다 뒤에 적용된다는 뜻(안전 회귀).'
+        '강풍 중 안전 게이트의 개구부 폐쇄를 다른 강제가 덮어썼다 — '
+        '게이트가 마지막이 아니라는 뜻(안전 회귀).'
     )
-    # 게이트가 건드리지 않은 액추에이터는 냉방 강제가 그대로 살아 있어야 한다.
-    assert final_cmds['cooler-1'] == {'value': 100.0, 'reason': 'temp_max'}
+    # 게이트가 건드리지 않은 액추에이터는 온도 제약이 그대로 살아 있어야 한다.
+    assert final_cmds['heater-1'] == {'value': 0.0, 'reason': 'temp_max'}
 
 
 def test_safety_gate_wins_over_light_min_shade_open():
@@ -125,10 +143,155 @@ def test_safety_gate_wins_over_light_min_shade_open():
 
 
 def test_thresholds_still_apply_when_gate_inactive():
-    profiles = _profiles('opening', 'cooler')
+    profiles = _profiles('shade', 'heater')
     final_cmds = {}
 
     apply_threshold_and_gate_overrides({'_force_cool': True}, profiles, final_cmds, {})
 
-    assert final_cmds['opening-1'] == {'value': 100.0, 'reason': 'temp_max'}
-    assert final_cmds['cooler-1'] == {'value': 100.0, 'reason': 'temp_max'}
+    assert final_cmds['shade-1']  == {'value': 0.0, 'reason': 'temp_max'}
+    assert final_cmds['heater-1'] == {'value': 0.0, 'reason': 'temp_max'}
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 맞서는 짝 인터록 — 냉방과 난방이 동시에 돌지 않는다 (2026-08-26)
+# ─────────────────────────────────────────────────────────────────────────────
+# 인터록은 원래 Post-Gate 안에 있었는데, 그것은 임계 오버라이드보다 **앞**에서
+# 돈다. 그 시점에는 아직 충돌이 없고(코디네이터가 난방 100 · 냉방 0), 충돌은
+# 그 뒤 `_force_cool` 이 냉방을 100 으로 올리면서 **새로 생겼다** — 검사는
+# 통과했는데 나가는 명령은 둘 다 100 이었다(실측: 温室環境制御, temp_max=30 ·
+# 실내 32.7°C · 난방 근거는 온도가 아니라 VPD).
+
+def _cost(v):
+    return lambda env, pct: v
+
+
+def test_interlock_catches_a_conflict_created_after_the_coordinator():
+    """검사가 **모든 강제 뒤**에 있어야 한다는 것이 이 테스트의 전부다.
+
+    인터록은 원래 Post-Gate 안(=코디네이터 직후)에 있었다. 그 시점에는 아직
+    충돌이 없고, 충돌은 **그 뒤에 오는 강제**가 만든다 — 지금 그 자리는 안전
+    프리게이트다(한파 게이트가 난방기를 100% 로 강제하는데 코디네이터는
+    VPD 때문에 냉방기를 돌리고 있는 조합).
+    """
+    profiles = _profiles('cooler', 'heater')
+    # 코디네이터가 남긴 상태 — 냉방기가 VPD 때문에 돌고 있다. 충돌 없음.
+    final_cmds = {'cooler-1': {'value': 100.0, 'reason': 1},
+                  'heater-1': {'value': 0.0, 'reason': 1}}
+    apply_threshold_and_gate_overrides(
+        {}, profiles, final_cmds,
+        {'heater-1': {'value': 100.0, 'reason': 12}})   # 한파 게이트
+
+    assert final_cmds['heater-1']['value'] == 100.0
+    assert final_cmds['cooler-1']['value'] == 0.0, (
+        '게이트가 만든 모순을 아무도 검사하지 않았다')
+
+
+def test_safety_gate_beats_cost():
+    """안전 게이트로 강제된 쪽이 **비용보다 앞이다.**
+
+    예전 규칙은 "비용이 싼 쪽이 이긴다" 뿐이라, 게이트가 켠 난방기가 냉방이
+    더 싸다는 이유로 꺼질 수 있었다 — 그러면 게이트의 뜻이 뒤집힌다.
+    """
+    profiles = _profiles('cooler', 'heater')
+    profiles[0].cost_fn = _cost(1.0)   # 냉방이 훨씬 싸다
+    profiles[1].cost_fn = _cost(9.0)
+    final_cmds = {'cooler-1': {'value': 100.0, 'reason': 1}}
+    apply_threshold_and_gate_overrides(
+        {}, profiles, final_cmds,
+        {'heater-1': {'value': 100.0, 'reason': 12}})
+
+    assert final_cmds['heater-1']['value'] == 100.0
+    assert final_cmds['cooler-1']['value'] == 0.0
+
+
+def test_equal_rank_falls_back_to_cost():
+    """강제된 쪽이 없으면 예전 규칙 그대로 — 싼 쪽이 이긴다."""
+    profiles = _profiles('cooler', 'heater')
+    profiles[0].cost_fn = _cost(9.0)
+    profiles[1].cost_fn = _cost(1.0)
+    final_cmds = {'heater-1': {'value': 100.0, 'reason': 1},
+                  'cooler-1': {'value': 100.0, 'reason': 1}}
+    apply_hvac_opposition_interlock(profiles, final_cmds)
+
+    assert final_cmds['heater-1']['value'] == 100.0, '싼 쪽이 이겨야 한다'
+    assert final_cmds['cooler-1']['value'] == 0.0
+
+
+def test_interlock_has_exactly_one_implementation():
+    """같은 규칙을 두 곳에 두면 갈라지고, 갈라지면 **늦게 도는 쪽**이 실질
+    규칙이 된다. Post-Gate 의 옛 구현이 되살아나지 않는지 소스로 고정한다."""
+    import os
+    here = os.path.dirname(os.path.abspath(__file__))
+    src = open(os.path.join(here, '..', 'functions', 'utils', 'env_control',
+                            'safety_gates.py'), encoding='utf-8').read()
+    assert 'cooler_on and heater_on' not in src, (
+        'Post-Gate 에 인터록이 되살아났다 — 임계 오버라이드보다 앞이라 '
+        '그 뒤에 생기는 모순을 못 본다')
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 하드 임계는 **목표의 한계**다 (2026-08-26)
+# ─────────────────────────────────────────────────────────────────────────────
+# 유도 범위와 하드 임계는 서로를 모르는 두 설정이라, 유도 상한이 더 높으면
+# 파생 목표가 하드 상한 **밖**에 떨어진다. 그러면 코디네이터는 매 사이클
+# "거기까지 데워라" 를 계산하고 하드 임계는 매 사이클 그것을 끈다 — 설정만으로
+# 영구 교착이고, 나가는 명령은 서로 맞선다.
+
+def test_guide_ceiling_is_capped_by_the_hard_ceiling():
+    """실측 재현: 유도 상한 32(기본값) · temp_max 30 → 목표 31.97°C."""
+    (t_min, t_max, _, _), changed = clamp_guide_range_to_hard_limits(
+        (12.0, 32.0, 40.0, 85.0), temp_min=15.0, temp_max=30.0)
+
+    assert t_max == 30.0, '목표가 하드 상한 밖에 설 수 있다'
+    assert t_min == 15.0
+    assert changed, '조용히 좁히면 사용자는 자기 설정이 안 쓰인 줄 모른다'
+
+
+def test_a_guide_inside_the_hard_limits_is_left_alone():
+    guide = (18.0, 28.0, 45.0, 80.0)
+    out, changed = clamp_guide_range_to_hard_limits(
+        guide, temp_min=15.0, temp_max=30.0, humid_min=30.0, humid_max=90.0)
+
+    assert out == guide
+    assert changed == []
+
+
+def test_unset_limits_are_not_treated_as_zero():
+    """0/None 은 "안 정했다" 다 — 유효한 한계로 받으면 목표가 0°C 로 눌린다."""
+    guide = (12.0, 32.0, 40.0, 85.0)
+    assert clamp_guide_range_to_hard_limits(guide)[0] == guide
+    assert clamp_guide_range_to_hard_limits(
+        guide, temp_min=0, temp_max=0, humid_min=0, humid_max=0)[0] == guide
+
+
+def test_contradictory_settings_let_the_hard_limit_win():
+    """좁힌 결과가 뒤집히면 하드 임계가 이긴다 — 유도 범위를 살리면
+    "넘지 마라" 가 무의미해진다."""
+    (t_min, t_max, _, _), _ = clamp_guide_range_to_hard_limits(
+        (31.0, 33.0, 40.0, 85.0), temp_max=30.0)
+
+    assert t_max == 30.0
+    assert t_min <= t_max, '하한이 상한을 넘었다'
+
+
+def test_humidity_uses_the_same_rule():
+    (_, _, rh_min, rh_max), changed = clamp_guide_range_to_hard_limits(
+        (12.0, 32.0, 20.0, 95.0), humid_min=30.0, humid_max=90.0)
+
+    assert (rh_min, rh_max) == (30.0, 90.0)
+    assert len(changed) == 2
+
+
+def test_the_cycle_uses_the_shared_clamp():
+    """유도 범위를 만드는 자리에서 이 함수를 **실제로** 부르는지 고정한다.
+
+    판정이 두 벌이 되면 갈라지고, 갈라지면 느슨한 쪽이 실질 규칙이 된다.
+    """
+    import os
+    here = os.path.dirname(os.path.abspath(__file__))
+    src = open(os.path.join(here, '..', 'functions', 'custom_functions',
+                            'env_coordinator_impl', '_cycle_mixin.py'),
+               encoding='utf-8').read()
+    body = src.split('# Guide 범위', 1)[1].split('T_int  = internal.get', 1)[0]
+    assert 'clamp_guide_range_to_hard_limits(' in body, (
+        '유도 범위가 하드 임계를 안 지나간다')

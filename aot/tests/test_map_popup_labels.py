@@ -361,6 +361,26 @@ class TestInformationOrder(unittest.TestCase):
             self.assertNotIn('aot-ov-row ' + cls, js,
                              '%s 가 「이름 | 값」 두 칸으로 되돌아갔다' % cls)
 
+    def test_every_override_reason_has_a_label(self):
+        """서버가 강제한 근거는 **전부** 화면에 문장이 있어야 한다 (2026-08-26).
+
+        값과 근거가 서로 다른 시점을 가리키던 것을 고치면서, 이제 오버라이드가
+        값을 바꾼 줄은 **그쪽 근거**(문자열)를 싣는다. 표에 없는 이름이 오면
+        화면은 그 장치에 대해 아무 설명도 못 한다 — 그런데 오답이 아니라
+        **침묵**이라 아무도 눈치채지 못한다.
+        """
+        import re as _re
+        src = _read(os.path.join(_ROOT, 'functions', 'custom_functions',
+                                 'env_coordinator_impl', '_cycle_mixin.py'))
+        served = set(_re.findall(r"'reason':\s*'([a-z_]+)'", src))
+        # 진단용(화면의 이 표를 안 지나간다)은 뺀다.
+        served -= {'no_actuator', 'saturated'}
+        labels = _js_map('_REASON_TEXT')
+        missing = sorted(served - set(labels))
+        self.assertEqual([], missing,
+                         '강제 근거에 문장이 없다 — 그 장치만 조용해진다: %s'
+                         % missing)
+
     def test_scale_annotations_are_not_hidden_as_axis_labels(self):
         """3행의 덧말(왼쪽 `lead` · 오른쪽 `note`)은 **축 라벨이 아니다.**
 
@@ -567,6 +587,38 @@ class TestActionButtons(unittest.TestCase):
         self.assertIn('margin-right: auto', apart)
 
 
+class TestNoBareCallsToExportOnlyNames(unittest.TestCase):
+    """모듈 내부 이름은 `_x`, 공개 이름은 `x` 다 — 내부에서 `x()` 를 부르면
+    **ReferenceError** 다.
+
+    2026-08-26 실제로 그랬다. [시설 세부] 탭이 코디네이터 없는 시설에서
+    `emptyBlock(...)` 을 불렀는데(정의된 이름은 `_emptyBlock`), 그 자리는
+    **코디네이터가 없을 때만** 지나는 이른 반환이라 연동된 시설에서는 멀쩡했다.
+
+    던져진 예외는 `_render` 를 부르는 `.then()` 안에서 **처리되지 않은 거부**가
+    되어 조용히 사라지고, 그 뒤 줄이 통째로 실행되지 않았다 — 현재환경·구획·
+    기록·[개요] 렌더가 전부 그 아래에 있어서 **탭 세 개가 함께 비었다.**
+    콘솔을 열지 않으면 원인이 어디에도 안 보인다.
+    """
+
+    def test_module_never_calls_an_export_only_name(self):
+        import re
+        src = _read(_POPUP)
+        defined = set(re.findall(r'\n  function ([A-Za-z_$][\w$]*)\s*\(', src))
+        defined |= set(re.findall(r'\n  var ([A-Za-z_$][\w$]*)\s*=', src))
+        # 공개 객체가 `이름: _내부이름` 으로 내보내는 것들.
+        exported = dict(re.findall(
+            r'\n    ([A-Za-z_$][\w$]*):\s*(_[A-Za-z_$][\w$]*),', src))
+        offenders = []
+        for pub, priv in exported.items():
+            if pub in defined:
+                continue          # 같은 이름이 내부에도 있으면 안전하다
+            for m in re.finditer(r'(?<![.\w$])' + re.escape(pub) + r'\s*\(', src):
+                offenders.append('%d행: %s() → %s() 여야 한다'
+                                 % (src[:m.start()].count('\n') + 1, pub, priv))
+        self.assertEqual([], offenders, '\n'.join(offenders))
+
+
 if __name__ == '__main__':
     unittest.main()
 
@@ -659,3 +711,81 @@ class TestDetailDomainsMatchServer(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+_WIDGET = os.path.join(_ROOT, 'aot_flask', 'static', 'js', 'widgets',
+                       'AoT_map', 'aot-map-widget-vector.js')
+
+
+class TestDetailTabHiddenWithoutCoordinator(unittest.TestCase):
+    """[시설 세부] 탭은 **연동이 없으면 감춘다**.
+
+    이 탭이 낼 것은 전부 env_coordinator 사이클에서 온다. 연동이 없으면
+    "아직 설명할 제어 사이클이 없습니다" 한 줄만 남는데, 그것은 눌러 봐야
+    알 수 있는 빈 방이다.
+
+    판정 자체는 화면에서 확인했다. 여기서 지키는 것은 **판정의 근거와
+    배선**이다 — 어느 쪽이 조용히 어긋나도 증상이 "탭이 이상하게 나온다"
+    라서 원인에 닿기 어렵다.
+    """
+
+    def setUp(self):
+        self.src = _read(_WIDGET)
+
+    def test_the_call_lives_in_one_helper(self):
+        # 두 자리(팝업 열기 · 응답 처리)가 각자 클래스를 만지면 한쪽만
+        # 고쳐진 채 갈린다. 토글은 헬퍼 하나가 한다.
+        self.assertEqual(
+            1, self.src.count('function _applyDetailTabVisibility('),
+            '[시설 세부] 표시 판정은 헬퍼 하나여야 한다')
+
+    def test_both_paths_apply_it(self):
+        # 응답 처리만 있으면 연동 없는 시설을 열 때마다 탭이 잠깐 보였다
+        # 사라지고, 팝업 열기만 있으면 연동을 새로 붙여도 반영되지 않는다.
+        self.assertGreaterEqual(
+            self.src.count('_applyDetailTabVisibility('), 3,
+            '정의 + 팝업 열기 + 응답 처리 = 최소 3회')
+
+    def test_the_verdict_is_linkage_not_freshness(self):
+        # stale 로 감추면 사이클이 한 번 늦을 때마다 탭이 사라졌다 나타나
+        # 탭 목록이 흔들린다. env_summary 의 `function` 이 곧 연동 여부다.
+        m = re.search(r'var _hasCoord = ([^;]+);', self.src)
+        self.assertIsNotNone(m, '_hasCoord 판정을 찾지 못했다')
+        expr = m.group(1)
+        self.assertIn('.function', expr)
+        self.assertNotIn('stale', expr,
+                         '신선도로 감추면 탭 목록이 흔들린다')
+
+    def test_hiding_an_open_tab_falls_back(self):
+        # 저장된 popup_default_tab 이 'detail' 이면 감춘 탭이 열린 채
+        # 시작한다 — 되돌리지 않으면 모달이 통째로 빈 화면이 된다.
+        body = self.src.split('function _applyDetailTabVisibility(', 1)[1]
+        body = body.split('\n        function ', 1)[0]
+        self.assertIn('activateSection', body)
+        self.assertIn("'overview'", body)
+
+
+class TestBandAnchorIsAnAxisValue(unittest.TestCase):
+    """`band()` 의 눈금 `at` 은 **축 위의 값**이지 백분율이 아니다.
+
+    `band()` 는 `pct(it.at, o.min, o.max)` 로 환산한다. 백분율을 넘기면 그
+    숫자가 다시 값으로 읽혀 라벨이 엉뚱한 자리에 선다 — 광량 줄이 실제로
+    그랬다(구간 80~720 의 한가운데 20% 를 넘겼더니 축 0~2000 위의 값 20,
+    즉 1% 자리에 붙어 카드 왼쪽 끝으로 갔다).
+
+    **에러가 나지 않는다**는 것이 이 실수의 전부다. 두 수 모두 유효한
+    숫자라 그림은 그려지고, 다른 줄과 나란히 놓고 봐야 어긋난 것이 보인다.
+    """
+
+    def test_no_anchor_at_is_computed_as_a_percentage(self):
+        src = _read(_POPUP)
+        bad = []
+        for m in re.finditer(r'\bat:\s*([^,\n}]+)', src):
+            expr = m.group(1)
+            if '100' in expr:
+                line = src.count('\n', 0, m.start()) + 1
+                bad.append('%s:%d  at: %s' % (
+                    os.path.basename(_POPUP), line, expr.strip()))
+        self.assertEqual([], bad,
+                         '눈금 at 은 축 위의 값이어야 한다(백분율 금지):\n'
+                         + '\n'.join(bad))

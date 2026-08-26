@@ -5016,7 +5016,18 @@
                 // 이유가 정확히 그것이다), 열자마자 스켈레톤이 한 번 보인다.
                 var dPane = body && body.querySelector(
                     '.aot-bay-popup-pane[data-pane="detail"]');
-                if (dPane && window.AoTMapPopup.buildFacilityDetailSection) {
+
+                // ── [시설 세부] 탭 — 연동 없으면 감춘다(근거는 헬퍼 주석) ────
+                // 판정은 이 응답을 받은 **뒤에만** 가능하다(모달 골격은 그
+                // 전에 그려진다). 그래서 답을 시설별로 기억해 뒀다가 다음에
+                // 열 때 골격 단계에서 미리 적용한다 — 없으면 연동 안 된 시설을
+                // 열 때마다 탭이 잠깐 보였다 사라진다.
+                var _hasCoord = !!(res[0] && res[0].function);
+                st2._facCoord = st2._facCoord || {};
+                st2._facCoord[facilityUuid] = _hasCoord;
+                _applyDetailTabVisibility(body, _hasCoord);
+
+                if (_hasCoord && dPane && window.AoTMapPopup.buildFacilityDetailSection) {
                     var dHtml = window.AoTMapPopup.buildFacilityDetailSection(
                         res[0], {
                             irrigation: res[4],
@@ -5396,6 +5407,36 @@
             _markOverlayRow(sec, st.overlaySlot);
         }
 
+        // ── [시설 세부] 탭 표시 판정 ────────────────────────────────────────
+        //
+        // 이 탭이 답하는 질문은 "장치가 왜 지금 그 값인가" 이고 근거는 전부
+        // env_coordinator 사이클에서 나온다. 연동이 없으면 낼 것이 하나도 없어
+        // "아직 설명할 제어 사이클이 없습니다" 한 줄만 남는데, 그것은 **탭을
+        // 눌러 봐야 알 수 있는 빈 방**이다.
+        //
+        // 기준은 **연동 여부**(`env_summary.function`)이지 신선도가 아니다.
+        // stale 로 감추면 사이클이 한 번 늦을 때마다 탭이 사라졌다 나타나 탭
+        // 목록이 흔들린다 — 붙어 있는 시설은 지금 값을 못 낼 뿐이고, 그 사실은
+        // 그 탭 **안에서** 말하는 편이 맞다.
+        function _applyDetailTabVisibility(body, hasCoord) {
+            if (!body) return;
+            var btn = body.querySelector(
+                '.aot-bay-popup-nav .aot-act-tab-btn[data-sec="detail"]');
+            var pane = body.querySelector(
+                '.aot-bay-popup-pane[data-pane="detail"]');
+            if (btn) btn.style.display = hasCoord ? '' : 'none';
+            if (hasCoord) return;
+            // 감춘 탭이 **열려 있던** 경우(저장된 popup_default_tab 이 'detail'
+            // 이거나, 연동을 방금 끊었을 때) 빈 화면만 남는다. 항상 있는 탭으로
+            // 되돌린다.
+            if (btn && btn.classList.contains('active') &&
+                window.AoTMapPopup && window.AoTMapPopup.activateSection) {
+                window.AoTMapPopup.activateSection(
+                    body, 'overview', btn.closest('.aot-bay-popup-nav'));
+            }
+            if (pane) pane.style.display = 'none';
+        }
+
         function _openBayPopup(uid, facilityUuid, bayId) {
             var st = _actLabelState[uid];
             if (!st || !window.AoTMapPopup || !window.AoTMapBay) return;
@@ -5431,6 +5472,12 @@
             var popupEl = popup.getElement();
             var bodyEl = popupEl && popupEl.querySelector('.maplibregl-popup-content');
             if (bodyEl) {
+                // 지난번에 "연동 없음" 으로 확인된 시설이면 미리 감춘다.
+                // 모르면 건드리지 않는다 — 기본은 보이는 쪽이라, 연동된 시설의
+                // 탭이 응답을 기다리는 동안 사라져 보이는 일이 없다.
+                if (st._facCoord && st._facCoord[facilityUuid] === false) {
+                    _applyDetailTabVisibility(bodyEl, false);
+                }
                 window.AoTMapPopup.positionDots(bodyEl);
                 if (_activePane(bodyEl) === 'envctl') {
                     _renderBayChart(uid, facilityUuid, bayId, bodyEl);

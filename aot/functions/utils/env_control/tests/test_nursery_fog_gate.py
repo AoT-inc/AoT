@@ -666,18 +666,28 @@ class TestEveningWindow:
 
 class TestOverrideOrdering:
     def test_derate_beats_humid_min_force(self):
-        """`humid_min` 이 분무를 100%로 강제해도 육묘 감쇠가 그 뒤에 적용된다.
+        """육묘 감쇠는 **온습도 제약 뒤**에 적용된다.
 
         사용자가 설정한 최저 습도 때문에 일소 위험을 무릅쓰게 두면 안 된다.
         수정 전에는 _force_humid 가 마지막이라 100% 가 그대로 나갔다.
+
+        ⚠ 2026-08-26 재설계로 `humid_min` 은 더 이상 분무를 **구동하지 않는다**
+        (제약은 막을 뿐 몰지 않는다 — `apply_temp_humid_threshold_overrides`).
+        그래서 100% 는 이제 **코디네이터가** 낸 값이고, 감쇠는 그 위에 걸린다.
+        지키는 것은 같다: 순서.
         """
         from aot.functions.custom_functions.env_coordinator_impl._cycle_mixin \
             import apply_threshold_and_gate_overrides
         fog = make_fogger()
         internal = _internal(200.0, _force_humid=True)
-        cmds = {}
+        cmds = {fog.actuator_id: {'value': 100.0, 'reason': 1}}
         apply_threshold_and_gate_overrides(internal, [fog], cmds, {})
         assert cmds[fog.actuator_id]['value'] == pytest.approx(50.0)
+        # 제약이 분무를 켜지 않았다는 것도 함께 고정한다.
+        cmds2 = {}
+        apply_threshold_and_gate_overrides(internal, [fog], cmds2, {})
+        assert fog.actuator_id not in cmds2, (
+            'humid_min 이 분무를 구동하고 있다 — 제약이 목표가 됐다')
 
     def test_safety_partial_override_still_wins(self):
         """안전 프리게이트(하드 잠금)는 감쇠보다 뒤 = 최우선."""

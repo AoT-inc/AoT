@@ -1302,7 +1302,25 @@
     14: 'A safety gate adjusted this',
     15: 'Doing all it can here',
     16: 'Holding position until the outdoor reading returns',
-    20: 'Set by hand'
+    // ⚠ 15 와 뭉치지 말 것 — 15 는 "밀어도 안 움직인다", 17 은 "지금 밀
+    //   방향이 아니다" 다. 0% 로 쉬는 난방기에게 15 의 문구("할 수 있는 만큼
+    //   하고 있습니다")를 붙이면 정반대의 말이 된다(2026-08-26).
+    17: 'Resting — the opposite direction is needed right now',
+    20: 'Set by hand',
+    // ── 오버라이드가 값을 바꾼 경우 ───────────────────────────────────────
+    // 서버가 **값과 같은 시점의 근거**를 보낸다(`_build_cycle_summary`).
+    // 이 키들은 숫자가 아니라 문자열이다 — 코디네이터 밖에서 정해진 값이라
+    // 근거코드 체계를 공유하지 않는다.
+    // ⚠ 여기 없는 이름이 오면 화면은 아무 설명도 못 한다. 서버에서 새 강제를
+    //   만들면 이 표에도 넣을 것(`test_map_popup_labels` 가 고정한다).
+    temp_max:  'Indoor temperature is over the limit you set',
+    temp_min:  'Indoor temperature is under the limit you set',
+    humid_max: 'Humidity is over the limit you set',
+    humid_min: 'Humidity is under the limit you set',
+    light_max: 'Light is over the limit you set',
+    light_min: 'Light is under the limit you set',
+    nursery_fog_derate: 'Easing off the misting as the sun climbs',
+    fog_humidity_ceiling: 'Humidity is already high, so the misting is held'
   };
   // 같은 근거라도 **어디에 서 있느냐**로 뜻이 갈린다. 창이 활짝 열린 채
   // "쓸 만한 차이가 없음" 이라고 적으면 장치가 일하기 싫어하는 것처럼 읽힌다
@@ -1344,7 +1362,7 @@
     if (!summary || stale) {
       // [현황]이 이미 "응답 없음" 을 말한다 — 여기서 또 말하면 같은 사실이
       // 두 탭에서 두 번 나온다. 비어 있다는 것만 조용히 알린다.
-      return emptyBlock(_t('Facility detail'),
+      return _emptyBlock(_t('Facility detail'),
                         _t('No control cycle to explain yet.'));
     }
     var V = window.AoTViz;
@@ -1721,7 +1739,7 @@
     }
 
     if (!html) {
-      return emptyBlock(_t('Facility detail'),
+      return _emptyBlock(_t('Facility detail'),
                         _t('No control cycle to explain yet.'));
     }
     return html;
@@ -2335,11 +2353,20 @@
           value: _ph.light, valueText: String(_ph.light),
           valueSub: ' \u00b5mol/m\u00b2/s', min: 0, max: _lmax,
           okMin: _lok ? _lok.lo : null, okMax: _lok ? _lok.hi : null,
+          // ⚠ **`at` 를 주지 않는다.** `band()` 의 `at` 은 **축 위의 값**이고
+          // (`pct(it.at, min, max)` 로 환산한다) 백분율이 아니다. 여기서는
+          // 백분율을 넘기고 있어서 그 숫자가 다시 값으로 읽혔다 — 구간
+          // 100~2000 의 한가운데(57.5%)가 축 0~2000 위의 값 57.5, 즉
+          // **2.9% 자리**가 되어 라벨이 카드 왼쪽 끝에 붙었다.
+          //
+          // 기준이 적정 구간뿐일 때는 `at` 을 비우는 것이 이 카드의 규약이다
+          // — 온·습도·VPD 줄도 그렇게 하고(`anchorAt = null`), `band()` 가
+          // 초록 구간 한가운데에 붙인다. 값을 손으로 계산하면 그 계산이
+          // `band()` 의 것과 갈릴 자리가 하나 더 생긴다.
           scale: (_lok
                   ? [{ text: _t('Range') + ' ' +
                              Math.round(_lok.lo) + '\u2013' + Math.round(_lok.hi),
-                       anchor: true,
-                       at: (_lok.lo + _lok.hi) / 2 / _lmax * 100 }]
+                       anchor: true }]
                   : [])
         }));
       }
