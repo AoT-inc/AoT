@@ -30669,6 +30669,42 @@ msgstr "今は逆方向が必要なため停止しています"
 msgid "Target reached — easing off"
 msgstr "目標に達したため出力を下げています"
 
+#: aot/functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Closed for the night — heating and cooling take over"
+msgstr "夜間のため閉じ、冷暖房で管理しています"
+
+#: aot/functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Keep Vents Closed at Night"
+msgstr "夜間は開口部を閉じたままにする"
+
+#: aot/functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Night Vent Parking"
+msgstr "夜間の開口部パーキング"
+
+#: aot/functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Night Starts At"
+msgstr "夜間の基準"
+
+#: aot/functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Sunset to sunrise"
+msgstr "日没～日の出"
+
+#: aot/functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Fixed clock times"
+msgstr "指定した時刻"
+
+#: aot/functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Close Before Sunset (min)"
+msgstr "日没の何分前に閉じるか (分)"
+
+#: aot/functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Night Start (HH:MM)"
+msgstr "夜間の開始 (HH:MM)"
+
+#: aot/functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Night End (HH:MM)"
+msgstr "夜間の終了 (HH:MM)"
+
 #: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
 msgid "Indoor temperature is over the limit you set"
 msgstr "室内温度が設定した上限を超えました"

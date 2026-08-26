@@ -1130,6 +1130,9 @@ class CycleMixin:
             else False)
         # `hvac_interlock` 의 짝 — 환기로 닿을 수 있으면 냉난방을 쓰지 않는다.
         situation.context['vent_first'] = bool(getattr(self, 'vent_first', False))
+        # 야간에는 개구부만 닫고 냉난방·제습으로 관리한다. 하드 임계를 넘으면
+        # 스스로 풀린다(`_night_vent_parked` 의 탈출구).
+        situation.context['night_vent_park'] = self._night_vent_parked(internal)
 
         # 편차/모드/제한인자는 write_cycle_metrics(env_control, CH30~32·71·72)로 일원화 기록.
 

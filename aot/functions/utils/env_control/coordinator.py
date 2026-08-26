@@ -72,7 +72,7 @@ from .log_channels import (
     REASON_IDLE, REASON_PRIMARY, REASON_SECONDARY,
     REASON_WRONG_DIRECTION, REASON_SIDE_EFFECT, REASON_MANUAL_OVERRIDE,
     REASON_NO_GRADIENT, REASON_NO_OUTDOOR_DATA, REASON_OPPOSING_PARKED,
-    REASON_DEADZONE_BACKOFF,
+    REASON_DEADZONE_BACKOFF, REASON_NIGHT_PARKED,
 )
 from .authority import is_natural_var
 from .types import (
@@ -359,6 +359,25 @@ def coordinate(
                 '환기 무익 — 실외 상태로는 목표에 못 감, %d개 파킹: %s',
                 len(futile), sorted(i[:8] for i in futile))
 
+    # ── 야간 개구부 파킹 ─────────────────────────────────────────────────────
+    # 밤에는 습도가 오르고 이슬이 맺힌다 — 환기 대신 장치로 관리하는 시간대다.
+    # **개구부만** 닫고 냉난방·제습은 그대로 돌린다(제어의 중단이 아니라 수단의
+    # 제한이다). 넘을지 말지의 판정과 하드 임계 탈출구는 호출자에 있다
+    # (`_night_vent_parked`) — 여기 오는 것은 그 결론뿐이다.
+    #
+    # ⚠ **안전 게이트가 이긴다.** 게이트는 이 함수 앞에서 명령을 강제하거나
+    #   (triggered) 뒤에서 덮어쓰므로(partial), 파킹은 그 사이에서만 유효하다.
+    #   여름밤 고온에 창이 잠긴 채 방치되면 작물 손실이다 — 파킹이 잠금이
+    #   아니라 park_ids 인 덕분에 이 성질이 공짜로 따라온다.
+    night_parked: set = set()
+    if bool(ctx.get('night_vent_park', False)):
+        night_parked = {p.actuator_id for p in vents}
+        if night_parked:
+            park_ids |= night_parked
+            logger.debug(
+                '야간 파킹 — 개구부 %d개를 닫는다: %s',
+                len(night_parked), sorted(i[:8] for i in night_parked))
+
     if bool(ctx.get('hvac_interlock', False)) and bool(ctx.get('hvac_running', False)):
         locked = {p.actuator_id for p in vents}
         if locked:
@@ -601,8 +620,14 @@ def coordinate(
             cmd_raw = _clamp(I, 0.0, 100.0)
             # 같은 감쇠 경로를 쓰되 **사유는 나눈다** — 맞서는 짝의 진 쪽은
             # "밀어도 안 움직인다"(무구배)가 아니라 "지금 밀 방향이 아니다"다.
-            reason = (REASON_OPPOSING_PARKED
-                      if p.actuator_id in opposing_ids else REASON_NO_GRADIENT)
+            # 야간 파킹은 사용자가 켠 옵션의 결과다 — 무구배로 뭉치면
+            # "왜 밤에 창이 안 열리나" 에 화면이 답할 수 없다.
+            if p.actuator_id in night_parked:
+                reason = REASON_NIGHT_PARKED
+            elif p.actuator_id in opposing_ids:
+                reason = REASON_OPPOSING_PARKED
+            else:
+                reason = REASON_NO_GRADIENT
         else:
             e_norm = num / den
             # 데드존을 분기가 아니라 '빼기'로 적용한다 — 경계에서 P항이 0 으로

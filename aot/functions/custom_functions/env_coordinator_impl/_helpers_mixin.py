@@ -5,7 +5,7 @@ _helpers_mixin.py — HelpersMixin: small per-cycle helpers.
 
 import json
 import time
-from datetime import datetime, timezone as _tz
+from datetime import datetime, timedelta, timezone as _tz
 from typing import Any, Optional
 
 from aot.databases.models import Actions
@@ -594,6 +594,89 @@ class HelpersMixin:
                 return now >= start or now <= end   # overnight window
         except Exception:
             return True
+
+    # ── 야간 개구부 파킹 ───────────────────────────────────────────────────────
+
+    def _night_vent_parked(self, internal: dict = None) -> bool:
+        """지금 개구부를 야간 파킹해야 하는가.
+
+        밤에는 습도가 오르고 이슬이 맺힌다. 해질 무렵 "쓸모 있어 보이던" 개구도
+        아침까지 작물을 젖은 채로 둘 수 있어, 환기 대신 장치로 관리하는 편이
+        나은 시간대다. 그래서 개구부만 닫고 **냉난방·제습은 그대로 돌린다.**
+
+        ⚠ `time_enable`(시간창)과 섞지 말 것 — 그것은 창밖 시간에 제어를 통째로
+          멈춘다(`_apply_end_behaviors()` 후 return). 여기서 하는 것은 수단의
+          제한이지 제어의 중단이 아니다. 공유하는 것은 동작이 아니라 기준축뿐이다.
+
+        ## 탈출구 — 닫아 두는 것이 위험해지는 순간
+
+        밤새 잠가 두면 결로·고온이 쌓인다. 하드 임계를 넘으면 파킹을 **푼다** —
+        `_force_cool`(너무 덥다)·`_force_dehumid`(너무 습하다)가 그 신호다.
+        이것이 없으면 "여력만 묻고 결과는 안 묻는" 실패가 그대로 재현된다.
+
+        `_force_heat`(너무 춥다)는 탈출구가 아니다 — 그쪽은 하드 임계 처리가
+        이미 개구부를 0 으로 강제하므로 파킹과 방향이 같다.
+
+        ## 근거를 모르면 막지 않는다
+
+        좌표가 없어 태양시를 못 구하면 **파킹하지 않는다.** 위치를 모른다는
+        이유로 창을 밤새 잠그면, 사용자가 켠 적 없는 위험을 시스템이 만든다
+        (`_evening_fog_blocked` 과 같은 판단).
+        """
+        if not getattr(self, 'night_vent_park', False):
+            return False
+
+        internal = internal or {}
+        if internal.get('_force_cool') or internal.get('_force_dehumid'):
+            return False                      # 선을 넘었다 — 열어서 빼야 한다
+
+        basis = str(getattr(self, 'night_vent_basis', 'sun') or 'sun')
+        if basis == 'clock':
+            start = str(getattr(self, 'night_vent_start', '') or '18:00')
+            end   = str(getattr(self, 'night_vent_end', '') or '06:00')
+            try:
+                now = self._facility_local_now().strftime('%H:%M')
+            except Exception as exc:
+                self.logger.debug('야간 파킹 현지시각 실패 (파킹 안 함): %s', exc)
+                return False
+            # 자정을 넘는 구간이 정상이다 — 18:00~06:00 이 하룻밤이다.
+            if start <= end:
+                return start <= now <= end
+            return now >= start or now <= end
+
+        try:
+            from aot.utils.solar import sun_times
+            from aot.utils.timekit import utc_now
+            st = sun_times(target_id=self.unique_id)
+            if st is None or st.sunset is None:
+                return False
+            # ⚠ 음수 오프셋은 받지 않는다 — 일몰 **뒤에** 닫히게 되는데, 그
+            #   지연이야말로 이 옵션이 없애려는 것이다.
+            offset = max(0.0, float(
+                getattr(self, 'night_vent_sunset_offset_min', 0.0) or 0.0))
+            now = utc_now()
+            if now >= st.sunset - timedelta(minutes=offset):
+                return True
+            # 자정을 넘긴 이른 새벽 — 아직 일출 전이면 계속 파킹.
+            if st.sunrise is not None and now < st.sunrise:
+                return True
+            return False
+        except Exception as exc:
+            self.logger.debug('야간 파킹 판정 실패 (파킹 안 함): %s', exc)
+            return False
+
+    def _facility_local_now(self):
+        """시설 현지 시각. 시간대를 모르면 서버 시각으로 물러난다.
+
+        `_in_time_window` 은 예전부터 `datetime.now()`(서버 시각)를 쓴다. 같은
+        서버가 여러 지역의 시설을 돌리면 그 둘이 갈리는데, 여기서 서버 시각을
+        쓰면 쿠마모토 온실이 서울 시각으로 밤을 맞는다.
+        """
+        fac_tz = self._get_facility_tz()
+        if fac_tz is None:
+            return datetime.now()
+        from aot.utils.timekit import utc_now
+        return utc_now().astimezone(fac_tz)
 
     # ── Email notification helpers ─────────────────────────────────────────────────────
 

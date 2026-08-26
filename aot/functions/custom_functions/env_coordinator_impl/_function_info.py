@@ -237,6 +237,89 @@ FUNCTION_INFORMATION = {
             ),
         },
 
+        # ── Night Vent Parking ────────────────────────────────────────────────
+        # ⚠ 이것은 `time_enable`(시간창)의 확장이 **아니다.** 시간창은 창밖
+        #   시간에 제어를 통째로 멈추는데(`_apply_end_behaviors()` 후 return),
+        #   여기서 원하는 것은 **수단의 제한**이다 — 창만 닫고 냉난방·제습은
+        #   계속 돈다. 섞으면 밤에 난방까지 멈춘다.
+        {
+            'type': 'header',
+            'name': lazy_gettext('Night Vent Parking'),
+        },
+        {
+            'id': 'night_vent_park',
+            'type': 'bool',
+            'default_value': False,
+            'required': False,
+            'name': lazy_gettext('Keep Vents Closed at Night'),
+            'phrase': lazy_gettext(
+                'At night humidity climbs and dew forms, and an opening that '
+                'looked useful at dusk can leave the crop wet until morning. '
+                'With this on, vents and exhaust/intake fans park closed '
+                'overnight and heating, cooling and dehumidifying carry the '
+                'load instead. Heating and cooling are not stopped — only the '
+                'vents are. Safety gates (wind, rain, heat, cold) still '
+                'override this, and the vents also reopen on their own if the '
+                'inside crosses the temperature or humidity limits you set, so '
+                'a closed house cannot cook or drown. Off by default: some '
+                'houses need night venting to dehumidify.'
+            ),
+        },
+        {
+            'id': 'night_vent_basis',
+            'type': 'select',
+            'default_value': 'sun',
+            'required': False,
+            'options_select': [
+                ('sun',   lazy_gettext('Sunset to sunrise')),
+                ('clock', lazy_gettext('Fixed clock times')),
+            ],
+            'name': lazy_gettext('Night Starts At'),
+            'phrase': lazy_gettext(
+                'Sunset/sunrise follows the season on its own and needs the '
+                'facility coordinates to be set; if they are missing, vents are '
+                'left alone rather than guessed at. Fixed times are steady all '
+                'year and are the right choice for a house with supplementary '
+                'lighting, where the crop day is not the solar day.'
+            ),
+        },
+        {
+            'id': 'night_vent_sunset_offset_min',
+            'type': 'float',
+            'default_value': 0.0,
+            'required': False,
+            'name': lazy_gettext('Close Before Sunset (min)'),
+            'phrase': lazy_gettext(
+                'How long before sunset the vents start parking, when the basis '
+                'above is sunset/sunrise. Closing a little early lets the house '
+                'hold the day\'s warmth instead of venting it away as the sun '
+                'drops. Parking lifts at sunrise. Only positive values — a '
+                'negative one would park after sunset, which is the delay this '
+                'option exists to avoid.'
+            ),
+        },
+        {
+            'id': 'night_vent_start',
+            'type': 'text',
+            'default_value': '18:00',
+            'required': False,
+            'name': lazy_gettext('Night Start (HH:MM)'),
+            'phrase': lazy_gettext(
+                'When the basis above is fixed clock times. Crossing midnight '
+                'is normal — 18:00 to 06:00 is one night.'
+            ),
+        },
+        {
+            'id': 'night_vent_end',
+            'type': 'text',
+            'default_value': '06:00',
+            'required': False,
+            'name': lazy_gettext('Night End (HH:MM)'),
+            'phrase': lazy_gettext(
+                'When the basis above is fixed clock times.'
+            ),
+        },
+
         # ── Heating / Cooling Interlock ───────────────────────────────────────
         {
             'type': 'header',

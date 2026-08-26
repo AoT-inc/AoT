@@ -46,6 +46,73 @@ from aot.functions.custom_functions.env_coordinator_impl._cycle_mixin import (
 )
 
 
+def execute_at_modification(
+        messages,
+        mod_controller,
+        request_form,
+        custom_options_dict_presave,
+        custom_options_channels_dict_presave,
+        custom_options_dict_postsave,
+        custom_options_channels_dict_postsave):
+    """저장하는 그 자리에서 **유도 범위가 하드 임계 밖인지** 알린다.
+
+    유도 범위(`guide_T_min/max`)와 하드 임계(`temp_min/max`)는 서로 다른 섹션에
+    있는 두 설정이라 관계가 화면에 안 보인다. 출하 기본값끼리는 모순이 없지만
+    (유도 12~32 · 하드 5~35), 사용자가 하드 임계만 좁히면(예: 15~30) 유도가
+    임계 **밖으로** 나간다. 그때 코디네이터는 매 사이클 유도 범위를 조용히
+    좁혀 돌고, 사용자가 그 사실을 알 수 있는 곳은 **데몬 로그뿐**이었다
+    (2026-08-26: 두 시설 모두 그 상태였다).
+
+    ⚠ **판정을 여기서 다시 쓰지 말 것.** 같은 규칙이 두 벌이 되면 갈라지고,
+      갈라지면 화면과 실제 동작이 다른 말을 한다 — 이 도메인이 이미 크게 데인
+      실패다. `clamp_guide_range_to_hard_limits()` 하나를 부른다.
+
+    ⚠ **막지 않고 알리기만 한다.** 유도 범위가 넓은 것 자체는 유효한 설정이고
+      (코디네이터가 좁혀서 정상 동작한다), 저장을 거부하면 하드 임계를 나중에
+      넓히려는 정상 작업까지 순서 때문에 막힌다.
+    """
+    from flask_babel import gettext
+
+    from aot.functions.custom_functions.env_coordinator_impl._cycle_mixin import (
+        clamp_guide_range_to_hard_limits,
+    )
+
+    o = custom_options_dict_postsave or {}
+
+    def _f(key, fallback):
+        try:
+            v = o.get(key)
+            return float(fallback if v in (None, '') else v)
+        except (TypeError, ValueError):
+            return float(fallback)
+
+    try:
+        _, changed = clamp_guide_range_to_hard_limits(
+            (_f('guide_T_min', 12.0), _f('guide_T_max', 32.0),
+             _f('guide_RH_min', 40.0), _f('guide_RH_max', 85.0)),
+            temp_min=o.get('temp_min'), temp_max=o.get('temp_max'),
+            humid_min=o.get('humid_min'), humid_max=o.get('humid_max'))
+        if changed:
+            messages['warning'].append(str(gettext(
+                'Guide range lies outside the hard limits, so targets are '
+                'built inside the limits instead (%(changed)s). Widen the hard '
+                'limits or narrow the guide range so the two agree.',
+                changed=', '.join(changed))))
+    except Exception:
+        pass      # 알림 하나 때문에 저장을 실패시키지 않는다
+
+    return (
+        messages,
+        mod_controller,
+        custom_options_dict_postsave,
+        custom_options_channels_dict_postsave,
+        False,
+    )
+
+
+FUNCTION_INFORMATION['execute_at_modification'] = execute_at_modification
+
+
 # 작물 프리셋 속성 → 함수 옵션 매핑.
 #   (preset_attr, option_id, sp_type_attr)
 # sp_type_attr 이 있고 그 옵션이 'method' 이면 자동/강제 적용 모두 건너뛴다(메서드 우선).
@@ -102,6 +169,14 @@ class CustomModule(
         self.time_enable = None
         self.time_start  = None
         self.time_end    = None
+
+        # Night Vent Parking — 시간창(위)과 **다른 축**이다. 시간창은 제어를
+        # 통째로 멈추고, 이것은 개구부만 닫는다(냉난방·제습은 계속 돈다).
+        self.night_vent_park             = None
+        self.night_vent_basis            = None
+        self.night_vent_sunset_offset_min = None
+        self.night_vent_start            = None
+        self.night_vent_end              = None
 
         # Photoperiod Method
         self.photo_method_id_device_id = None

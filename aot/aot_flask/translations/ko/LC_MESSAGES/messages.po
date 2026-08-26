@@ -30910,6 +30910,42 @@ msgstr "지금은 반대 방향이 필요해 쉬고 있습니다"
 msgid "Target reached — easing off"
 msgstr "목표에 닿아 출력을 줄이고 있습니다"
 
+#: aot/functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Closed for the night — heating and cooling take over"
+msgstr "야간이라 닫아 두고 냉난방으로 관리합니다"
+
+#: aot/functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Keep Vents Closed at Night"
+msgstr "야간에 개구부 닫아 두기"
+
+#: aot/functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Night Vent Parking"
+msgstr "야간 개구부 파킹"
+
+#: aot/functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Night Starts At"
+msgstr "야간 기준"
+
+#: aot/functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Sunset to sunrise"
+msgstr "일몰~일출"
+
+#: aot/functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Fixed clock times"
+msgstr "지정한 시각"
+
+#: aot/functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Close Before Sunset (min)"
+msgstr "일몰 몇 분 전에 닫을지 (분)"
+
+#: aot/functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Night Start (HH:MM)"
+msgstr "야간 시작 (HH:MM)"
+
+#: aot/functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Night End (HH:MM)"
+msgstr "야간 종료 (HH:MM)"
+
 #: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
 msgid "Indoor temperature is over the limit you set"
 msgstr "실내 온도가 설정한 상한을 넘었습니다"
