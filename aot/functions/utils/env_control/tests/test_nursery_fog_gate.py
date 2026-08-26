@@ -174,27 +174,73 @@ class TestPrecipitation:
 # ─────────────────────────────────────────────────────────────────────────────
 
 class TestNozzlesByActuator:
+    """노즐의 임자는 **물길**이 정한다 (2026-08-25 재설계).
+
+    ⚠ 이 픽스처에는 **배관(`irrigation_pipe`)이 있어야 한다.** 예전에는
+      밸브의 `pipe_id` 만 맞춰 두면 그 배관 노즐을 맡는 것으로 쳤는데, 지금은
+      `resolve_nozzle_owners` 가 배관 폴리라인으로 물길을 세우고 밸브 하류를
+      계산한다. 배관이 없으면 물길을 세울 수 없어 **회로 전체가 레이어 몫**이
+      되고(그 판단은 옳다 — 밸브가 무엇을 맡는지 모르는 채 노즐을 임의로
+      나눠 주지 않는다), 밸브는 맵에 아예 나오지 않는다.
+      배관 없는 옛 픽스처가 그대로 남아 `KeyError: 'valve_B'` 로 실패하고
+      있었다(2026-08-26 정리).
+
+    ⚠ **노즐 하나는 정확히 한 액추에이터에만 속한다.** 그래서 레이어와 밸브의
+      합이 노즐 수를 넘지 않는다 — 예전 기대값(레이어가 전부 + 밸브가 자기
+      배관)은 같은 물을 두 번 세는 것이었다.
+    """
+
+    def _pipe(self, pid, pts):
+        return {'kind': 'irrigation_pipe', 'id': pid, 'layer_id': 'L1',
+                'sub_type': 'branch', 'is_vertical': False,
+                'segments': [{'from': list(pts[i]), 'to': list(pts[i + 1])}
+                             for i in range(len(pts) - 1)]}
+
     def _fittings(self):
+        H = 2.0
         return [
-            {'kind': 'irrigation_layer', 'id': 'L1', 'height_m': 2.0,
+            {'kind': 'irrigation_layer', 'id': 'L1', 'height_m': H,
              'actuator_id': 'pump_A'},
+            # 공급 → 갈래 둘. 밸브는 p2 갈래 입구에 선다.
+            self._pipe('p0', [(0, 0, 0), (0, H, 0)]),
+            self._pipe('p1', [(0, H, 0), (0, H, 6)]),
+            self._pipe('p2', [(0, H, 0), (6, H, 0)]),
             {'kind': 'irrigation_valve', 'id': 'V1', 'layer_id': 'L1',
-             'pipe_id': 'p2', 'actuator_id': 'valve_B'},
-            make_nozzle(pipe_id='p1'),
-            make_nozzle(x=1.5, pipe_id='p2', flow_lph=5.0, radius_m=0.5,
+             'pipe_id': 'p2', 'actuator_id': 'valve_B',
+             'valve_type': 'on_off', 'position': {'x': 0.5, 'y': H, 'z': 0}},
+            make_nozzle(x=0.0, z=3.0, pipe_id='p1'),
+            make_nozzle(x=3.0, z=0.0, pipe_id='p2', flow_lph=5.0, radius_m=0.5,
                         orientation='up'),
         ]
 
-    def test_layer_actuator_sees_all_nozzles(self):
+    def test_layer_takes_what_no_valve_owns(self):
+        """레이어 몫은 "어떤 밸브도 맡지 않은 노즐" 이다."""
         m = nozzles_by_actuator(self._fittings())
-        assert m['pump_A']['count'] == 2
-        assert m['pump_A']['wetting'] is True     # 습윤형 노즐이 섞여 있음
+        assert m['pump_A']['count'] == 1          # p1 갈래만
+        assert m['pump_A']['wetting'] is True     # 하향 스프링클러
 
-    def test_valve_scopes_to_its_pipe(self):
-        """밸브가 특정 배관에 붙어 있으면 그 배관 노즐만 본다."""
+    def test_valve_owns_its_downstream(self):
+        """밸브는 자기가 선 자리에서 하류로 뻗은 구간을 맡는다."""
         m = nozzles_by_actuator(self._fittings())
         assert m['valve_B']['count'] == 1
         assert m['valve_B']['wetting'] is False   # 상향 미세포그만 담당
+
+    def test_no_nozzle_is_counted_twice(self):
+        """같은 물이 액추에이터 두 개로 등록되면 fogger 가 두 벌이 된다."""
+        m = nozzles_by_actuator(self._fittings())
+        assert sum(v['count'] for v in m.values()) == 2
+
+    def test_without_pipes_the_layer_takes_everything(self):
+        """물길을 세울 수 없으면 노즐을 임의로 나눠 주지 않는다.
+
+        밸브가 무엇을 맡는지 모르는 상태에서 배관 id 만 맞춰 나누면, 화면에
+        그려진 배관망과 계산이 어긋난다.
+        """
+        no_pipes = [f for f in self._fittings()
+                    if f.get('kind') != 'irrigation_pipe']
+        m = nozzles_by_actuator(no_pipes)
+        assert m['pump_A']['count'] == 2
+        assert 'valve_B' not in m
 
     def test_no_devices_returns_empty(self):
         assert nozzles_by_actuator([

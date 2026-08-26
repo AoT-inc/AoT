@@ -183,8 +183,76 @@ def _build_cost_fn(
     return cost_fn
 
 
+def _bay_capacity_fraction(bay_slices, bay_id):
+    """구역 하나가 시설에서 차지하는 **폭 비율** → float|None.
+
+    구역은 bay 범위를 병합해 만들 수 있어 폭이 제각각이다. 개수로 나누면
+    (`1 / bay 수`) 병합 구역의 체적·외피·환기 면적이 통째로 틀어진다 —
+    4동 중 A(1~3동)·B(4동)라면 실제 3:1 이 1:1 이 된다.
+
+    분모는 **모든 구역 폭의 합**이다. 시설 전폭을 쓰면 단동 연립의 동 사이
+    간격(spacing)이 분모에 섞이는데, 나누려는 것은 실내이지 틈이 아니다.
+    합을 쓰면 조각들의 비율이 정확히 1.0 으로 닫힌다.
+
+    폭을 알 수 없으면(옛 슬라이스·계산 실패) **None** 을 돌려준다 — 0 이나 1 을
+    지어내면 그 구역만 조용히 다른 크기로 제어된다.
+    """
+    def _w(sl):
+        try:
+            w = float(sl.get('x_max')) - float(sl.get('x_min'))
+        except (TypeError, ValueError):
+            return None
+        return w if w > 0 else None
+
+    total = 0.0
+    mine = None
+    for sl in (bay_slices or []):
+        w = _w(sl)
+        if w is None:
+            return None
+        total += w
+        if sl.get('id') == bay_id:
+            mine = w
+    if mine is None or total <= 0:
+        return None
+    return mine / total
+
+
 class ProfileLoaderMixin:
     """Mixin: actuator profile loading from facility, paired outputs, and manual actions."""
+
+    # ── 형제 코디네이터가 이미 맡은 구역 ───────────────────────────────────
+    # 같은 시설에 구역을 정한 코디네이터가 따로 돌고 있으면, 구역을 안 정한
+    # 이 코디네이터는 그 구역 장치를 건드리면 안 된다. 안 그러면 같은 장치에
+    # 두 코디네이터가 다른 명령을 낸다.
+    #
+    # ⚠ **자기 자신은 뺀다.** 안 빼면 구역을 정한 코디네이터가 자기 구역을
+    #   "남이 맡았다" 로 읽는다 — 그런데 이 함수는 구역을 안 정한 쪽에서만
+    #   불리므로 실제로는 걸리지 않는다. 그래도 조건을 남겨 둔다: 나중에
+    #   호출부가 늘면 그때 조용히 틀린다.
+    def _bays_claimed_by_siblings(self, facility_uuid: str) -> set:
+        if not facility_uuid:
+            return set()
+        try:
+            from aot.databases.models import CustomController
+            rows = db_retrieve_table_daemon(CustomController)
+            mine = getattr(self, 'unique_id', None)
+            claimed = set()
+            for row in (rows.all() if hasattr(rows, 'all') else rows):
+                if row.unique_id == mine or not row.is_activated:
+                    continue
+                if (row.device or '') != 'env_coordinator':
+                    continue
+                opts = json.loads(row.custom_options or '{}')
+                if (opts.get('geo_facility_id_device_id') or '') != facility_uuid:
+                    continue
+                scope = str(opts.get('bay_scope') or '').strip()
+                if scope:
+                    claimed.add(scope)
+            return claimed
+        except Exception:
+            self.logger.debug('형제 코디네이터 조회 실패', exc_info=True)
+            return set()
 
     def _reload_profiles(self) -> None:
         """Hybrid loader: facility-derived profiles + manual env_actuator action profiles.
@@ -254,14 +322,39 @@ class ProfileLoaderMixin:
                 # integ 는 TTL 캐시 공유 dict 이므로 변형하지 않고 로컬 필터링.
                 bay_scope = str(getattr(self, 'bay_scope', '') or '').strip()
                 bays_avail = integ.get('bays') or []
+                # ── 없는 구역을 가리키면 **시설 전체로 넓히지 않는다** ─────────
+                # 예전에는 경고 한 줄만 남기고 `bay_scope = ''` 로 되돌려
+                # 시설 전체를 잡았다. 사용자는 "이 구역만 제어한다" 고 믿는데
+                # 실제로는 **온 시설의 장치를 건드린다** — 오타 하나나 구역
+                # 이름 변경이 제어 범위를 통째로 넓히는 셈이다(2026-08-26).
+                # 게다가 컨트롤러 로거는 기본이 ERROR 라 그 경고는 **아무 데도
+                # 안 남는다**(`base_controller.py`).
+                #
+                # 넓히는 대신 **아무것도 맡지 않는다.** 둘 다 사용자가 원한 것이
+                # 아니지만, 안 하는 쪽은 눈에 보이고(장치가 안 움직인다) 넓히는
+                # 쪽은 안 보인 채 남의 구역을 조작한다.
+                self._bay_scope_missing = None
                 if bay_scope and not any(
                         b.get('id') == bay_scope for b in bays_avail):
-                    self.logger.warning(
-                        '_reload_profiles: bay_scope "%s" not found in facility '
-                        '"%s" (available: %s) — falling back to whole facility',
+                    self.logger.error(
+                        '구역 "%s" 을(를) 시설 "%s" 에서 찾지 못했습니다 '
+                        '(있는 구역: %s) — 이 코디네이터는 아무 장치도 맡지 '
+                        '않습니다. 구역 이름을 확인하세요.',
                         bay_scope, facility_uuid,
                         [b.get('id') for b in bays_avail])
-                    bay_scope = ''
+                    # ⚠ 파생 상태도 함께 비운다 — 하나라도 옛 값이 남으면
+                    #   "프로필은 없는데 그룹·어댑터는 있다" 는 어긋난 상태가
+                    #   되고, 다음 사이클이 그 위에서 돈다.
+                    self._bay_scope_missing = bay_scope
+                    self._bay_scope_active  = bay_scope
+                    self._profiles     = []
+                    self._sensors_resolved = []
+                    self._vent_openings    = []
+                    self._channel_map  = {}
+                    self._actuator_idx = {}
+                    self._by_id        = {}
+                    self._groups       = []
+                    return
                 self._bay_scope_active = bay_scope or None
 
                 # D1: 캐시 — 사이클마다 wind_biased_opening() 에 재사용
@@ -319,7 +412,6 @@ class ProfileLoaderMixin:
                 vent_source = capacity_meta.get('vent_open_source') or 'none'
 
                 # ── Bay scope: 액추에이터 필터 + 물리량 bay 비례 축소 ──────────
-                # bay 슬라이스는 등폭이므로 체적/외피/환기면적을 1/bay수 로 근사.
                 # 귀속 불가(bay_ids=[]) 액추에이터는 시설 공통으로 보고 제외 —
                 # 같은 시설의 bay 코디네이터끼리 명령이 충돌하지 않도록 한다.
                 if bay_scope:
@@ -337,7 +429,27 @@ class ProfileLoaderMixin:
                         op for op in self._vent_openings
                         if op.get('actuator_id') in allowed_act_ids
                     ]
-                    bay_frac = 1.0 / max(1, len(bays_avail))
+                    # ── 배분은 **폭 비율**이다, 개수가 아니다 (2026-08-26) ────
+                    # 예전에는 `1 / bay 개수` 였는데, 구역은 bay 범위를 **병합**해
+                    # 만들 수 있어 폭이 제각각이다(`compute_bay_slices` 가
+                    # bay_start~bay_end 로 x_min/x_max 를 정확히 계산해 둔다).
+                    # 4동 중 A(1~3동)·B(4동)로 나누면 실제 3:1 인 체적·외피·환기
+                    # 면적이 1:1 로 배분됐다 — 좁은 구역은 열용량을 3배로 보고
+                    # 과열을 못 잡고, 넓은 구역은 반대로 과잉 반응한다.
+                    #
+                    # 분모는 **모든 구역 폭의 합**이다(시설 전폭이 아니다).
+                    # 단동 연립은 동 사이 간격(spacing)이 있어 전폭에는 그 틈이
+                    # 섞이는데, 나누려는 것은 실내이지 틈이 아니다. 합을 쓰면
+                    # 조각들의 비율이 정확히 1.0 으로 닫힌다.
+                    bay_frac = _bay_capacity_fraction(bays_avail, bay_scope)
+                    if bay_frac is None:
+                        # 폭을 모르면 예전처럼 개수로 나눈다 — 근거가 없다고
+                        # 배분을 포기하면 시설 전체 용량으로 제어하게 된다.
+                        bay_frac = 1.0 / max(1, len(bays_avail))
+                        self.logger.warning(
+                            '_reload_profiles: bay "%s" 의 폭을 알 수 없어 '
+                            '개수로 나눕니다(1/%d) — 구역 폭이 다르면 용량이 '
+                            '어긋납니다', bay_scope, max(1, len(bays_avail)))
                     for _k in ('volume_m3', 'envelope_m2', 'vent_open_m2',
                                'irrigation_flow_lpm'):
                         capacity_meta[_k] = capacity_meta[_k] * bay_frac
@@ -346,6 +458,39 @@ class ProfileLoaderMixin:
                         '%d indoor sensor(s), capacity x%.3f',
                         bay_scope, len(actuators_list), n_before,
                         len(self._sensors_resolved), bay_frac)
+                else:
+                    # ── 구역을 안 정한 코디네이터는 **남의 구역을 비켜 간다** ──
+                    # 구역 간 충돌 회피는 예전에 "양쪽 다 bay_scope 가 있을 때"
+                    # 만 돌았다. 한쪽이 전체 시설이면 그쪽이 남의 구역 장치까지
+                    # 그대로 잡아가, 두 코디네이터가 같은 장치에 다른 명령을
+                    # 낸다(2026-08-26 지적).
+                    #
+                    # 구역을 정한 형제가 **있을 때만** 비켜 간다 — 형제가 없으면
+                    # 예전과 똑같이 시설 전체를 맡는다. 그래야 구역을 쓰지 않는
+                    # 설치가 업그레이드로 조용히 달라지지 않는다.
+                    claimed = self._bays_claimed_by_siblings(facility_uuid)
+                    if claimed:
+                        n_before = len(actuators_list)
+                        _all_act_ids = {
+                            ar.get('output_uuid') for ar in actuators_list}
+                        actuators_list = [
+                            ar for ar in actuators_list
+                            if not (set(ar.get('bay_ids') or []) & claimed)
+                        ]
+                        allowed_act_ids = {
+                            ar.get('output_uuid') for ar in actuators_list}
+                        bay_excluded_ids = _all_act_ids - allowed_act_ids
+                        self._vent_openings = [
+                            op for op in self._vent_openings
+                            if op.get('actuator_id') in allowed_act_ids
+                        ]
+                        if bay_excluded_ids:
+                            self.logger.info(
+                                '_reload_profiles: 구역 %s 은(는) 다른 '
+                                '코디네이터가 맡고 있어 장치 %d개를 비켜 갑니다 '
+                                '(%d/%d 사용)',
+                                sorted(claimed), len(bay_excluded_ids),
+                                len(actuators_list), n_before)
 
                 # 이슈 B: fittings 권위 모드에서는 vent_open_m2 균등 분할 fallback
                 # 을 끈다 (이중 회계 방지). envelope-only 모드일 때만 균등 분할.

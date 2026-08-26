@@ -386,9 +386,13 @@ FUNCTION_INFORMATION = {
                 'Restrict this coordinator to one bay of the linked facility. '
                 'Enter the bay ID (see the facility editor bay list; e.g. "bay_1"). '
                 'Only sensors and actuators placed inside that bay are used, and '
-                'facility volume/area are scaled to the bay share. Leave empty to '
-                'control the entire facility. Create one coordinator per bay to '
-                'control multiple bays independently.'
+                'facility volume/area are scaled to that bay\'s share of the width. '
+                'If the ID does not match any bay, this coordinator controls '
+                'nothing and logs an error — it will not fall back to the whole '
+                'facility. Leave empty to control the entire facility; when other '
+                'coordinators already scope bays here, those bays are left to them. '
+                'Create one coordinator per bay to control multiple bays '
+                'independently.'
             ),
         },
 
