@@ -247,6 +247,10 @@ def action_del(form):
         try:
             action_id = Actions.query.filter(
                 Actions.unique_id == form.action_id.data).first().unique_id
+            # 액션의 사용자 코드 파일(`action_input_python_code_<uuid>.py`)도
+            # 함께 지운다 — 행을 지우기 전에(위 위젯 주석과 같은 이유).
+            from aot.utils.code_verification import delete_python_file
+            delete_python_file('action', action_id)
             delete_entry_with_id(
                 Actions, action_id, flash_message=False)
             messages["success"].append(f"{TRANSLATIONS['delete']['title']} {TRANSLATIONS['actions']['title']}")

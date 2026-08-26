@@ -25,14 +25,40 @@ def create_python_file(python_code_run, filename):
     return python_code_run, file_run
 
 
-# 사용자 코드 파일 이름 규약. 만드는 쪽과 지우는 쪽이 같은 표를 봐야 한다 —
-# 예전에는 지우는 쪽이 세 파일에 인라인으로 흩어져 있었고, 그중 출력만 아무도
-# 지우지 않았다.
-USER_CODE_FILENAME = {
-    'input': 'input_python_code_{}.py',
-    'output': 'output_{}.py',
-    'conditional': 'conditional_{}.py',
+# ─────────────────────────────────────────────────────────────────────────────
+# 사용자 코드 파일 명부 — **이름 규약과 임자 모델을 한 자리에** (2026-08-26)
+# ─────────────────────────────────────────────────────────────────────────────
+# 만드는 쪽·지우는 쪽·고아 청소가 **같은 표**를 봐야 한다. 이 명부는 이미 두 번
+# 갈라졌다:
+#
+#   1차: 지우는 쪽이 세 파일에 인라인으로 흩어져 있었고 출력만 아무도 안 지웠다
+#        → `USER_CODE_FILENAME` 표를 만들어 모았다.
+#   2차: 그 표에 **만드는 쪽 둘이 빠졌다** — 위젯(`python_code_{}.py`)과
+#        액션(`action_input_python_code_{}.py`). 그래서 위젯·액션을 지워도
+#        파일이 디스크에 남고, 고아 청소는 이름을 못 알아봐 영영 안 걷었다.
+#
+# ⚠ **파일 이름만 적는 표로 되돌리지 말 것.** 고아 청소는 "이 uuid 가 아직
+#   살아 있나" 를 물어야 하는데, 그러려면 **어느 모델의 uuid 인지**를 알아야
+#   한다. 둘을 따로 두면 이름만 추가하고 모델을 빼먹는 순간, 청소가 살아 있는
+#   위젯 64개·액션 18개의 코드 파일을 전부 고아로 판정해 **지운다.** 표를
+#   늘리는 것이 곧 사용자 코드를 날리는 일이 되는 셈이다.
+#
+#   그래서 (파일이름, 모델이름) 을 한 항목에 묶는다. 모델은 문자열로 둔다 —
+#   이 모듈은 `aot.databases.models` 를 최상위에서 import 하지 않는다(데몬·
+#   설치 스크립트가 DB 없이 부를 수 있어야 한다).
+#
+# 새 종류를 만들면 여기 한 줄만 추가하면 만들기·지우기·청소가 모두 따라온다.
+USER_CODE_FILES = {
+    'input':       ('input_python_code_{}.py',        'Input'),
+    'output':      ('output_{}.py',                   'Output'),
+    'conditional': ('conditional_{}.py',              'Conditional'),
+    'widget':      ('python_code_{}.py',              'Widget'),
+    'action':      ('action_input_python_code_{}.py', 'Actions'),
 }
+
+# 이름만 쓰는 옛 호출부를 위한 파생. **정본은 위쪽이다** — 여기에 직접 항목을
+# 더하지 말 것(모델이 빠진 채로 늘어난다).
+USER_CODE_FILENAME = {k: v[0] for k, v in USER_CODE_FILES.items()}
 
 
 def delete_python_file(kind, unique_id):
@@ -95,13 +121,27 @@ def purge_orphan_user_code(min_age_sec=600):
         if not os.path.isdir(PATH_PYTHON_CODE_USER):
             return
 
-        from aot.databases.models import (Conditional, CustomController, Input,
-                                          Output)
-        live = set()
-        for model in (Input, Output, Conditional, CustomController):
+        from aot.databases import models as _m
+
+        # ⚠ **종류마다 그 종류의 표에 물어본다.** 예전에는 모든 모델의 uuid 를
+        #   한 집합에 합쳐 놓고 파일 종류와 무관하게 대조했다. uuid4 라 실제로
+        #   섞일 일은 없지만, 그 구조에서는 "어느 모델을 봐야 하는가" 가
+        #   코드에 없어서 **모델을 빼먹어도 아무 신호가 없다** — 그 상태로
+        #   위젯·액션 종류를 명부에 추가하면 살아 있는 파일이 전부 고아가 된다.
+        live_by_kind = {}
+        for kind, (_pattern, model_name) in USER_CODE_FILES.items():
+            model = getattr(_m, model_name, None)
+            if model is None:
+                # 모델을 못 찾으면 그 종류는 **판단하지 않는다.** 근거가 없는
+                # 채로 지우는 것이 남겨 두는 것보다 훨씬 나쁘다.
+                logger.warning(
+                    "[Startup] 사용자 코드 정리: 모델 %s 를 찾지 못해 '%s' "
+                    "종류를 건너뜁니다", model_name, kind)
+                continue
             rows = model.query.with_entities(model.unique_id).all()
-            live.update(r[0] for r in rows if r[0])
-        if not live:
+            live_by_kind[kind] = {r[0] for r in rows if r[0]}
+
+        if not any(live_by_kind.values()):
             # 빈 설치이거나 조회가 비정상이다. 판단 근거가 없으므로 지우지 않는다.
             logger.debug("[Startup] 사용자 코드 정리: 장치가 하나도 없어 건너뜀")
             return
@@ -110,12 +150,22 @@ def purge_orphan_user_code(min_age_sec=600):
         removed = []
         for filename in sorted(os.listdir(PATH_PYTHON_CODE_USER)):
             unique_id = None
-            for pattern in USER_CODE_FILENAME.values():
-                prefix, suffix = pattern.split('{}')
+            kind = None
+            # 긴 접두부터 본다 — 짧은 쪽이 먼저 걸리면 종류를 잘못 집는다
+            # (`input_python_code_` 와 `action_input_python_code_` 처럼 한쪽이
+            #  다른 쪽을 품는 이름이 생기면 조용히 어긋난다).
+            for _k, (_pattern, _model) in sorted(
+                    USER_CODE_FILES.items(),
+                    key=lambda kv: -len(kv[1][0].split('{}')[0])):
+                prefix, suffix = _pattern.split('{}')
                 if filename.startswith(prefix) and filename.endswith(suffix):
                     unique_id = filename[len(prefix):len(filename) - len(suffix)]
+                    kind = _k
                     break
-            if not unique_id or unique_id in live:
+            # 그 종류를 판단할 수 없으면(모델 없음) 건드리지 않는다.
+            if not unique_id or kind not in live_by_kind:
+                continue
+            if unique_id in live_by_kind[kind]:
                 continue
 
             path = os.path.join(PATH_PYTHON_CODE_USER, filename)

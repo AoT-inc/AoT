@@ -10666,12 +10666,29 @@
         // 2D GeoJSON shapes regardless of which base/overlay map is active.
         function _promoteShapesToTop() {
             const inst = window.AoTWidgetInstances[uniqueId];
-            if (!inst || !inst.layers) return;
-            inst.layers.forEach(function(_type, layerId) {
-                if (map.getLayer(layerId)) {
-                    try { map.moveLayer(layerId); } catch (e) {}
-                }
-            });
+            if (inst && inst.layers) {
+                inst.layers.forEach(function(_type, layerId) {
+                    if (map.getLayer(layerId)) {
+                        try { map.moveLayer(layerId); } catch (e) {}
+                    }
+                });
+            }
+            // Plot (vegetation/planting) layers live in a separate module
+            // (aot-map-plot.js) and are never registered in inst.layers, so the
+            // loop above never reaches them — its own load() is intentionally
+            // un-awaited and can finish after a raster base has already been
+            // inserted above it, leaving plots stuck under the raster with no
+            // promotion ever catching them. Find them by the 'aot-plot-' naming
+            // convention instead (the same one aot-map-custom-controls.js's
+            // getLayerIdsByType('plot') relies on).
+            const style = map.getStyle && map.getStyle();
+            if (style && style.layers) {
+                style.layers.forEach(function(layer) {
+                    if (layer.id.indexOf('aot-plot-') === 0) {
+                        try { map.moveLayer(layer.id); } catch (e) {}
+                    }
+                });
+            }
             // Three.js custom layer must sit above all 2D GeoJSON shapes.
             if (map.getLayer('aot-facility-3d-layer')) {
                 try { map.moveLayer('aot-facility-3d-layer'); } catch (e) {}

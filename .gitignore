@@ -95,8 +95,18 @@ docs/upgrade/
 # --- 위젯 HTML 생성물 (aotflask 기동 시 .py 에서 자동 생성) ---
 aot/aot_flask/templates/user_templates/widget_template_*.html
 
-# --- 사용자 함수(조건/액션 등) 코드: 설치별 자동생성, __init__.py 만 추적 ---
+# --- 사용자 코드: 설치별 자동생성, __init__.py 만 추적 ---
+# 명부의 정본은 `aot/utils/code_verification.py` 의 `USER_CODE_FILES` 다.
+# 거기 종류를 추가하면 **여기에도 한 줄** 추가할 것 — 안 그러면 그 설치의
+# 사용자 코드가 소스처럼 커밋되고, 배포가 남의 설치 코드를 덮어쓴다.
+# (2026-08-26 까지 `conditional_*` 하나만 막고 있었다. 다섯 중 넷이 뚫려
+#  있었는데, 실제로 커밋된 적이 없어 드러나지 않았다.)
+# 회귀는 `aot/tests/test_user_code_roster.py` 가 고정한다.
 aot/user_python_code/conditional_*.py
+aot/user_python_code/output_*.py
+aot/user_python_code/input_python_code_*.py
+aot/user_python_code/python_code_*.py
+aot/user_python_code/action_input_python_code_*.py
 
 # --- 비배포: 루트 rak 디렉터리 (펌웨어/코덱 작업물) ---
 # (루트 화이트리스트 /* 로 이미 무시되나 의도를 명시)

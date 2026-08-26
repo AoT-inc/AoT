@@ -172,10 +172,17 @@ class TestUserCodeFilesAreDeletedWithTheDevice(unittest.TestCase):
                          '사용자 코드 파일을 직접 지운다(헬퍼를 쓸 것): %s' % offenders)
 
     def test_helper_covers_every_kind_that_writes_code(self):
-        """파일을 만드는 종류는 전부 지우는 표에도 있어야 한다."""
+        """파일을 만드는 종류는 전부 지우는 표에도 있어야 한다.
+
+        ⚠ **완전 목록으로 고정하지 말 것** (2026-08-26). 예전에는 이 검사가
+          `sorted(...) == ['conditional', 'input', 'output']` 였다. 그러면 종류를
+          빼먹었는지는 못 잡고 **추가했을 때만** 깨진다 — 정확히 거꾸로다.
+          실제로 위젯·액션이 표에 없는 채로 이 검사를 통과하고 있었다.
+
+          "만드는 쪽 전수를 훑어 명부와 대조" 는 `aot/tests/test_user_code_roster.py`
+          가 한다. 여기서는 이미 아는 종류의 이름만 확인한다.
+        """
         from aot.utils.code_verification import USER_CODE_FILENAME
-        self.assertEqual(sorted(USER_CODE_FILENAME),
-                         ['conditional', 'input', 'output'])
         # 생성 쪽 이름과 실제로 일치하는지 — 출력은 'output_<id>.py' 다
         # (aot/outputs/on_off_python.py · pwm_python.py 의 file_run).
         self.assertEqual(USER_CODE_FILENAME['output'], 'output_{}.py')
@@ -183,6 +190,9 @@ class TestUserCodeFilesAreDeletedWithTheDevice(unittest.TestCase):
                          'input_python_code_{}.py')
         self.assertEqual(USER_CODE_FILENAME['conditional'],
                          'conditional_{}.py')
+        self.assertEqual(USER_CODE_FILENAME['widget'], 'python_code_{}.py')
+        self.assertEqual(USER_CODE_FILENAME['action'],
+                         'action_input_python_code_{}.py')
 
 
 class TestStartupPurgesOrphanUserCode(unittest.TestCase):

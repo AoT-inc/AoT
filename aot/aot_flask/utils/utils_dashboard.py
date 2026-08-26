@@ -422,6 +422,14 @@ def widget_del(form_base):
         error.append(except_msg)
 
     try:
+        # 위젯의 사용자 코드 파일(`python_code_<uuid>.py`)도 함께 지운다.
+        # ⚠ **행을 지우기 전에** 부른다 — 뒤에 두면 실패했을 때 파일을 찾을
+        #   근거(uuid)는 남아 있어도 "누구 것이었나" 를 아는 사람이 없어진다.
+        #   2026-08-26 까지 이 정리가 아예 없어서, 위젯을 지워도 그 코드가
+        #   디스크에 그대로 남았다(고아 청소도 이름 규약을 몰라 못 걷었다).
+        from aot.utils.code_verification import delete_python_file
+        delete_python_file('widget', form_base.widget_id.data)
+
         delete_entry_with_id(Widget, form_base.widget_id.data)
 
         control = DaemonControl()
