@@ -4559,6 +4559,7 @@ function _T(k,f){var d=(typeof window!=="undefined"&&window._IEC)||{};return (d[
     await loadFacility(uuid);
     loadIntegration(uuid);
     _syncFacilityRef(uuid);
+    debouncedCompute();
   }
 
   // Start a blank facility in place. Every section is passed an explicit empty
@@ -4585,6 +4586,7 @@ function _T(k,f){var d=(typeof window!=="undefined"&&window._IEC)||{};return (d[
     const panel = document.getElementById('integ-panel');
     if (panel) panel.style.display = 'none';
     if (window.FacilityStep) FacilityStep.set('basic');
+    debouncedCompute();
   }
 
   async function loadFacility(uuid) {
