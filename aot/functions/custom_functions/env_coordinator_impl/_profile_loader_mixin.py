@@ -97,18 +97,34 @@ def _missing_outdoor_channels(sensors_outdoor: list) -> list:
             if mtype not in have]
 
 
-def _is_wetting_fog(kind: str, capacity_meta: dict) -> bool:
+def _is_wetting_fog(kind: str, capacity_meta: dict, *, conservative=True) -> bool:
     """잎을 적시는 분무기인가 — safety_gates.is_wetting_fogger 와 같은 기준.
 
     프로필을 만들기 *전에* 판정해야 하므로 ActuatorProfile 대신 kind 와
-    capacity_meta 로 본다. 노즐 정보가 없으면(수동 등록 등) 보수적으로 습윤형.
+    capacity_meta 로 본다.
+
+    ## "노즐 정보 없음" 의 뜻은 **부르는 자리에 따라 다르다** (2026-08-26)
+
+    `conservative=True`(기본) 는 **안전 판정용**이다 — 일소 잠금처럼 "모르면
+    잠근다" 가 옳은 자리. 잎이 타는 것보다 분무를 못 하는 편이 낫다.
+
+    `conservative=False` 는 **기능을 빼는 판정용**이다. 거기서 "모르면 습윤" 은
+    뜻이 정반대가 된다 — 노즐을 모른다는 이유로 가습기를 환경 제어에서 통째로
+    빼면, 시설에 가습기가 있는데도 코디네이터가 "이를 조절할 장치가 없습니다"
+    라고 보고한다(2026-08-26 영양 육묘장 실측).
+
+    ⚠ 그리고 이 자리에서는 **모르는 것이 아니다.** 관수 계열은 스프링클러가
+      하나라도 있어야 'fogger' 로 등록되므로(`_irrigation_actuator_kind`),
+      노즐 요약은 반드시 붙어 있다. 노즐이 비어 있는 fogger 는 설비 팔레트로
+      놓은 **가습기 그 자체**다 — 관수 노즐이 아니라 습윤 여부를 물을 대상이
+      아니다.
     """
     if kind != 'fogger':
         return False
     nozzle = (capacity_meta or {}).get('nozzle')
-    if nozzle is not None and not nozzle.get('wetting'):
-        return False
-    return True
+    if nozzle is None:
+        return conservative
+    return bool(nozzle.get('wetting'))
 
 
 def _fog_excluded_from_env(coordinator: Any, kind: str, capacity_meta: dict) -> bool:
@@ -129,7 +145,10 @@ def _fog_excluded_from_env(coordinator: Any, kind: str, capacity_meta: dict) -> 
 
     고압 미세포그(비습윤)와 그 외 액추에이터는 영향받지 않는다.
     """
-    if not _is_wetting_fog(kind, capacity_meta):
+    # ⚠ **여기서는 보수적 판정을 쓰지 않는다**(위 `_is_wetting_fog` 주석).
+    #   기능을 빼는 자리라 "모르면 습윤" 이 곧 "모르면 가습 수단을 없앤다" 가
+    #   된다. 노즐이 없는 fogger 는 설비 팔레트의 가습기이지 관수 노즐이 아니다.
+    if not _is_wetting_fog(kind, capacity_meta, conservative=False):
         return False
     val = getattr(coordinator, 'use_wetting_fog_for_humidity', True)
     if val is None:
@@ -244,7 +263,14 @@ class ProfileLoaderMixin:
                 if (row.device or '') != 'env_coordinator':
                     continue
                 opts = json.loads(row.custom_options or '{}')
-                if (opts.get('geo_facility_id_device_id') or '') != facility_uuid:
+                # ⚠ 저장되는 키는 `geo_facility_id` 다. 속성 이름
+                #   (`self.geo_facility_id_device_id`)은 select_device 옵션이
+                #   붙이는 접미사라 **DB 키와 다르다** — 속성 이름으로 조회하면
+                #   언제나 빈 손이라 이 판정이 통째로 죽는데, 증상은 "형제가
+                #   없다" 와 구분되지 않는다(2026-08-26 실측).
+                linked = (opts.get('geo_facility_id')
+                          or opts.get('geo_facility_id_device_id') or '')
+                if linked != facility_uuid:
                     continue
                 scope = str(opts.get('bay_scope') or '').strip()
                 if scope:
@@ -533,7 +559,15 @@ class ProfileLoaderMixin:
                     # safe_default(0.0) 채움조차 일어나지 않는다. 조용히 빠지면
                     # "왜 가습이 안 되나" 를 추적할 수 없으므로 반드시 남긴다.
                     if _fog_excluded_from_env(self, kind, {'nozzle': ar.get('nozzle')}):
-                        self.logger.info(
+                        # ⚠ **`info` 가 아니라 `error` 다.** 컨트롤러 로거는
+                        #   `log_level_debug` 가 꺼져 있으면 레벨이 ERROR 라
+                        #   (`base_controller.py`), info 는 **아무 데도 안
+                        #   남는다.** 바로 위 주석이 "조용히 빠지면 왜 가습이
+                        #   안 되나를 추적할 수 없으므로 반드시 남긴다" 고 적어
+                        #   두었는데 실제로는 안 남고 있었다(2026-08-26).
+                        #   장치 하나가 환경 제어에서 통째로 빠지는 일이라
+                        #   등급을 올릴 근거도 충분하다.
+                        self.logger.error(
                             '환경 제어 제외: %s (습윤형 분무 — 관수 전용으로 둠). '
                             '가습은 스크린·개구부·팬으로 처리한다.', output_uuid)
                         continue

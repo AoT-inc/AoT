@@ -145,3 +145,16 @@ class TestWiring:
             '\n    def ', 1)[0]
         assert 'row.unique_id == mine' in block
         assert 'row.is_activated' in block, '꺼진 코디네이터까지 세고 있다'
+
+    def test_sibling_query_uses_the_stored_option_key(self):
+        """저장되는 키는 `geo_facility_id` 다.
+
+        속성 이름(`self.geo_facility_id_device_id`)은 select_device 옵션이
+        붙이는 접미사라 **DB 키와 다르다.** 속성 이름으로 조회하면 언제나 빈
+        손이라 판정이 통째로 죽는데, 증상은 "형제가 없다" 와 구분되지 않는다 —
+        조용히 예전 동작으로 돌아간다(2026-08-26 실측으로 발견).
+        """
+        block = self._src().split('def _bays_claimed_by_siblings', 1)[1].split(
+            '\n    def ', 1)[0]
+        assert "opts.get('geo_facility_id')" in block, (
+            '형제 조회가 저장된 키를 안 읽는다')

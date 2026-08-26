@@ -99,9 +99,26 @@ class TestFogExclusion:
         assert _fog_excluded_from_env(
             _Coord(use_fog=False), 'fogger', NON_WETTING) is False
 
-    def test_manual_registration_without_nozzle_is_excluded(self):
-        """노즐 정보가 없으면 습윤형으로 보고 함께 제외한다."""
-        assert _fog_excluded_from_env(_Coord(use_fog=False), 'fogger', NO_NOZZLE) is True
+    def test_a_fogger_without_nozzles_is_not_excluded(self):
+        """노즐이 없는 fogger 는 **설비 팔레트의 가습기**다 (2026-08-26 재판정).
+
+        예전에는 "노즐 정보가 없으면 습윤형으로 본다" 는 보수적 판정을 여기에도
+        썼다. 안전 판정(일소 잠금)에서는 그것이 옳지만, **기능을 빼는 자리**
+        에서는 뜻이 정반대가 된다 — 노즐을 모른다는 이유로 가습기를 환경 제어
+        에서 통째로 빼면, 시설에 가습기가 있는데도 코디네이터가 "이를 조절할
+        장치가 없습니다" 라고 보고한다(실측: 영양 육묘장, VPD 편차 0.8).
+
+        게다가 이 자리에서는 **모르는 것이 아니다.** 관수 계열은 스프링클러가
+        하나라도 있어야 'fogger' 로 등록되므로(`_irrigation_actuator_kind`)
+        노즐 요약이 반드시 붙는다. 비어 있다는 것은 관수 노즐이 아니라는 뜻이다.
+        """
+        assert _fog_excluded_from_env(
+            _Coord(use_fog=False), 'fogger', NO_NOZZLE) is False
+
+    def test_the_safety_side_stays_conservative(self):
+        """일소 잠금은 그대로 "모르면 잠근다" 다 — 잎이 타는 것보다 낫다."""
+        assert _is_wetting_fog('fogger', NO_NOZZLE) is True
+        assert _is_wetting_fog('fogger', NO_NOZZLE, conservative=False) is False
 
     def test_other_actuators_untouched(self):
         """스크린·개구부·팬은 이 스위치와 무관하다 — 가습은 이들이 대신한다."""
@@ -192,3 +209,22 @@ class TestExclusionMustRemoveTheProfile:
         _, vent = self._profiles()
         cmds = self._run([vent])
         assert vent.actuator_id in cmds
+
+
+def test_exclusion_log_is_visible_by_default():
+    """제외 사실이 **기본 설치에서 보여야** 한다 (2026-08-26).
+
+    바로 그 자리 주석이 "조용히 빠지면 왜 가습이 안 되나를 추적할 수 없으므로
+    반드시 남긴다" 고 적어 두었는데, `logger.info` 라 실제로는 아무 데도 안
+    남았다 — 컨트롤러 로거는 `log_level_debug` 가 꺼져 있으면 레벨이 ERROR 다
+    (`base_controller.py`). 장치 하나가 환경 제어에서 통째로 빠지는 일이다.
+    """
+    import os
+    here = os.path.dirname(os.path.abspath(__file__))
+    src = open(os.path.join(here, '..', '..', '..', 'custom_functions',
+                            'env_coordinator_impl', '_profile_loader_mixin.py'),
+               encoding='utf-8').read()
+    block = src.split('환경 제어 제외:', 1)[0]
+    tail = block.rsplit('self.logger.', 1)[-1]
+    assert tail.startswith('error('), (
+        '제외 로그가 기본 설치에서 보이지 않는 등급이다')
