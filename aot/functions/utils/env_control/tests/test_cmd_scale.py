@@ -82,13 +82,21 @@ class TestCalmMeansNoBias:
             '풍속 없이 부르면 종전 동작이어야 한다(하위호환)')
 
     def test_문턱_위_바람은_그대로_가중된다(self):
-        """항상 1.0 이면 이 기능이 통째로 죽은 것이다."""
-        w = wind_biased_opening([_SIDE_RIGHT], 0.0,
-                                wind_speed_ms=WIND_BIAS_MIN_MS + 1.0)
-        assert w['right'] == pytest.approx(0.2)
-        w2 = wind_biased_opening([_SIDE_RIGHT], 270.0,
-                                 wind_speed_ms=WIND_BIAS_MIN_MS + 1.0)
-        assert w2['right'] == pytest.approx(1.0)
+        """항상 1.0 이면 이 기능이 통째로 죽은 것이다.
+
+        ⚠ 이 테스트가 보는 것은 **가중치가 살아 있는가** 이지 방향이 아니다.
+          `[1,0,0]` 이 어느 방위를 보는지는 `_world_normal_from_sn` 이 정하고,
+          그 방향은 `aot/tests/geo/test_facility_wind_normal.py` 가 고정한다
+          — 여기 방위를 못 박아 두면 규약이 바뀔 때 **두 곳**을 고쳐야 하고,
+          그러면 한쪽만 고쳐진 채로 갈라진다(2026-08-26 실제로 겪었다:
+          미러 보정을 걷어내자 이 테스트가 옛 방향을 붙잡고 실패했다).
+        """
+        hi = WIND_BIAS_MIN_MS + 1.0
+        got = {deg: wind_biased_opening([_SIDE_RIGHT], deg,
+                                        wind_speed_ms=hi)['right']
+               for deg in (0.0, 90.0, 180.0, 270.0)}
+        assert min(got.values()) == pytest.approx(0.2), got
+        assert max(got.values()) == pytest.approx(1.0), got
 
     def test_모르면_가중한다(self):
         """None = 모름. 모른다고 무풍으로 단정하면 강풍에 창이 안 닫힌다."""

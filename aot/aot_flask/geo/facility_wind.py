@@ -61,14 +61,30 @@ def _world_normal(face: Optional[str], orientation_deg: float):
 
 
 def _world_normal_from_sn(surface_normal, orientation_deg: float):
-    """3D surface_normal [nx, ny, nz] → 세계 좌표 2D 법선.
+    """3D surface_normal [nx, ny, nz] → 세계 좌표 2D 법선. **좌표 규약의 정본.**
 
-    좌표 규약 (GeoJSON rotatedRectRing 기준):
-      3D X → 지도 East(+X),  3D Z → 지도 North(+Y)
-    설계뷰에서 'Y+'(남쪽 레이블)이 지리적 North에 놓이는 것은 설계뷰가
-    건물 전면에서 바라보는 시점이기 때문에 생기는 좌우 반전이다.
-    surface_normal의 수치 자체는 3D 좌표계에서 올바르므로 추가 부호 반전 없이
-    (sn[0], sn[2])를 로컬 지리 법선으로 사용한다.
+    model +X → 지도 East, model +Z → 지도 South. 추가 부호 반전은 **없다.**
+
+    ## 미러 보정이 있었고, 지금은 없다 (2026-08-26 현장 재확인)
+
+    한때 "3D 미리보기에서 만든 것을 지도에 배치하면 X축이 미러된다" 는 실제
+    문제가 있었고, 그 보정으로 `_side_world_normal` 이 X 부호를 뒤집었다.
+    그 뒤 지도 렌더러의 변환(`aot-facility-map-3d.js` `_buildTransform`)이
+    정리되면서 미러가 사라졌는데, **보정만 남았다.**
+
+    남은 동안 풍향 가중치가 정확히 반대로 돌았다 — 실측(방위 11.5° · 5 m/s):
+    동풍에서 동쪽을 보는 측창이 0.2 로 깎이고 서쪽 창이 0.98 을 받았다.
+    정책("windward 높게, leeward 낮게")과 정반대다.
+
+    ⚠ **부호는 코드로 판정할 수 없다.** 직사각형 시설은 미러해도 footprint 가
+      똑같아서, 좌우가 다른 내용물(측창)이 있어야만 드러난다. 변환 행렬을 읽는
+      것도, git 이력(스쿼시)도 근거가 못 된다 — **현장에서 만들어 보고 지도와
+      대조하는 것**만이 답한다. 2026-08-26 에 그렇게 확인했다: 일치한다.
+
+    ⚠ **여기가 유일한 자리다.** 예전에는 이 함수와 `_side_world_normal` 이
+      같은 필드에 **반대 규약**을 적어 두고 있었다(전자는 "반전 없이", 후자는
+      뒤집기). 그러면 환기량 계산과 풍향 가중치가 한 시설에서 서로 다른 방향을
+      가리키는데, 화면에는 아무 신호도 없다. 부호를 바꿔야 하면 여기만 고친다.
     """
     if not (isinstance(surface_normal, (list, tuple)) and len(surface_normal) >= 3):
         return None
@@ -242,14 +258,14 @@ def _is_roof_opening(vo) -> bool:
 
 
 def _side_world_normal(vo, orientation_deg: float):
-    """측창의 세계좌표 2D 법선 — 설계뷰↔지도 미러(동-서 반전) 보정 포함.
+    """측창의 세계좌표 2D 법선.
 
-    설계뷰(3D 모형)에서 생성된 surface_normal 의 좌우(동-서, X축)가 실제 지도
-    배치에서는 반전되므로, 측창 법선의 X 성분 부호를 뒤집어 보정한다.
-    (사용자 확인: 모형 좌측 측창 = 지도상 반대편. 현장 풍향 대비 개도 로그로
-     재검증 권장 — 미러 방향이 반대였다면 nx 부호 반전을 제거할 것.)
+    좌표 규약은 `_world_normal_from_sn` 하나가 정한다 — **여기서 부호를 따로
+    정하지 말 것.** 예전에는 이 함수가 X 를 뒤집고 그쪽은 안 뒤집어서, 환기량
+    계산과 풍향 가중치가 한 시설에서 서로 다른 방향을 가리켰다(2026-08-26).
 
-    surface_normal 이 없으면 face 레이블로 폴백한다. 둘 다 없으면 None.
+    surface_normal 이 없으면 face 레이블로 폴백한다 — 그 라벨은 이미 지도
+    기준이다. 둘 다 없으면 None.
     """
     sn = vo.get('surface_normal')
     if isinstance(sn, (list, tuple)) and len(sn) >= 3:
@@ -259,8 +275,7 @@ def _side_world_normal(vo, orientation_deg: float):
         except (TypeError, ValueError):
             nx = nz = 0.0
         if abs(nx) >= 1e-6 or abs(nz) >= 1e-6:
-            # 미러 보정: 동-서(X축) 부호 반전
-            return _rotate_2d(-nx, nz, orientation_deg)
+            return _world_normal_from_sn(sn, orientation_deg)
     # 폴백: face 레이블 (이미 지도 기준이라 추가 반전 없음)
     return _world_normal(vo.get('face'), orientation_deg)
 
