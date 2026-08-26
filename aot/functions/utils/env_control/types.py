@@ -229,6 +229,11 @@ class ActuatorProfile:
     slot_key: Optional[str] = None            # 'outer_side_vent_motor' 등 (facility 슬롯 식별자)
     azimuth_deg: Optional[float] = None       # 외향 법선 방위각 (0=N, 90=E, 180=S, 270=W)
     area_m2: Optional[float] = None           # 개구부/장치 유효 면적
+    # 개구부 **형태** — 'ridge'(천창) | 'side'(측창) | None(모름).
+    # `kind` 는 둘 다 'opening' 이라 구분이 없다. 물리가 다르므로 효과 모델이
+    # 이 값을 본다(`opening_temp_effect` 의 부력 항). 모르면 예전과 같이
+    # 동작한다 — 없는 정보를 지어내지 않는다.
+    vent_form: Optional[str] = None
     capacity_meta: Dict[str, float] = field(default_factory=dict)  # u_eff, volume_m3 등 캐시
 
     # L3 가 매 사이클 채우는 필드 (Profile 원본에는 없음)

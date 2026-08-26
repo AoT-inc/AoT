@@ -361,6 +361,112 @@ class TestInformationOrder(unittest.TestCase):
             self.assertNotIn('aot-ov-row ' + cls, js,
                              '%s 가 「이름 | 값」 두 칸으로 되돌아갔다' % cls)
 
+    def test_every_strain_reason_has_a_message(self):
+        """서버가 내는 못 따라감 근거는 **전부** 화면에 문장이 있어야 한다.
+
+        `limit_breached`(선을 넘은 채 유지)를 추가하면서 그 분기를 안 만들면
+        화면은 마지막 `else`(설비 한계) 문구를 대신 쓴다 — 제어 중심이 그
+        방향을 요구하지도 않는데 "최대 출력인데 목표를 못 맞춘다" 는 거짓말이
+        된다(2026-08-26).
+
+        `saturated` 하나만 `else` 를 쓴다. 그 밖의 근거는 자기 분기를 가져야
+        한다 — 새 근거가 조용히 남의 문구를 물려받지 않도록.
+        """
+        import re as _re
+        src = _read(os.path.join(_ROOT, 'functions', 'custom_functions',
+                                 'env_coordinator_impl', '_cycle_mixin.py'))
+        block = src.split('def _assess_strain', 1)[1].split('\n    def ', 1)[0]
+        # 근거는 두 모양으로 쓰인다: `'reason': 'x'` 와 조건식
+        # `'reason': ('a' if … else 'b')`. 둘 다 걷는다.
+        served = set(_re.findall(r"'reason':\s*'([a-z_]+)'", block))
+        for a, b in _re.findall(
+                r"'reason':\s*\('([a-z_]+)' if [^)]*else '([a-z_]+)'\)", block):
+            served |= {a, b}
+        self.assertIn('limit_breached', served, '새 근거가 서버에서 사라졌다')
+        popup = _read(_POPUP)
+        for r in sorted(served - {'saturated'}):
+            self.assertIn("strain.reason === '%s'" % r, popup,
+                          '못 따라감 근거 %r 에 자기 문장이 없다 — 다른 근거의 '
+                          '문구가 대신 쓰인다' % r)
+        # 마지막 else 가 설비 한계라는 것도 함께 고정한다.
+        self.assertIn('at full output for %(min)s min', popup)
+
+    def test_every_gate_reason_has_a_sentence(self):
+        """안전 게이트 사유는 **전부** 화면에 문장이 있어야 한다 (2026-08-26).
+
+        게이트가 걸리면 코디네이터는 L1~L3 앞에서 반환하므로 요약의 환경 값이
+        갱신되지 않는다. 예전에는 화면이 그걸 "자동 제어가 응답하지 않습니다"
+        로 읽어, 가장 알려야 할 순간에 정반대를 말했다 — 제어는 매 사이클 정상
+        실행 중이고 이유도 분명한데(비·돌풍·폭염) 사용자는 고장으로 읽는다.
+        게다가 **진짜로 죽었을 때와 구분되지 않았다**(실측: 강우 게이트 45분).
+
+        표에 없는 사유가 오면 코드(`rain` 등)가 그대로 화면에 뜬다.
+        """
+        import re as _re
+        src = _read(os.path.join(_ROOT, 'functions', 'utils', 'env_control',
+                                 'safety_gates.py'))
+        served = set(_re.findall(r"reasons\.append\('([a-z_]+)'\)", src))
+        self.assertTrue(served, '게이트 사유를 하나도 못 찾았다 — 검사가 헛돈다')
+        labels = _js_map('_GATE_REASON_TEXT')
+        missing = sorted(served - set(labels))
+        self.assertEqual([], missing,
+                         '게이트 사유에 문장이 없다 — 내부 코드가 화면에 뜬다: %s'
+                         % missing)
+
+    def test_gate_stop_is_not_reported_as_no_response(self):
+        """게이트로 멈춘 것과 죽은 것은 **다른 사실**이다."""
+        js = _read(_POPUP)
+        body = js.split('function buildOverviewSection', 1)[1].split(
+            '\n  function ', 1)[0]
+        self.assertIn('summary.gate_only', body,
+                      '게이트 정지를 응답 없음과 구분하지 않는다')
+        # 환경 값을 지금 값으로 읽지 않도록 함께 말한다.
+        # ⚠ **위치를 가리키는 말('아래'·'위')을 쓰지 말 것.** 이 카드는 [환경]
+        #   뒤에 오므로 '아래' 는 방향이 반대였고(2026-08-26 지적), 카드 순서는
+        #   시설 구성에 따라 달라진다 — 위치를 가리키는 말은 언젠가 틀린다.
+        self.assertIn('Environment readings were taken just before this.', body)
+        self.assertNotIn('Readings below', js, '위치를 가리키는 문구가 남아 있다')
+        # ⚠ **'게이트' 는 코드의 이름이지 사용자의 말이 아니다** (2026-08-26 지적).
+        #   "게이트가 걸리다" 는 엔지니어만 알아듣는다. 영어 msgid 는 소스의
+        #   어휘라 그대로 두더라도, **화면에 나가는 번역**에는 쓰지 않는다.
+        for name in _js_map('_GATE_REASON_TEXT').values():
+            self.assertNotIn('gate', name.lower(),
+                             '사용자 문구에 내부 용어가 들어 있다: %r' % name)
+        # 같은 안내를 [시설 세부]에 다시 얹지 않는다 — 그 탭에는 그 문장을
+        # 뒷받침할 맥락이 없어 "설명 없이 놓인 문구" 로 읽힌다. 장치가 왜 그
+        # 값인지는 각 카드의 근거(reason 12)가 말한다.
+        detail = js.split('function buildFacilityDetailSection', 1)[1].split(
+            '\n  function ', 1)[0]
+        self.assertNotIn('_GATE_REASON_TEXT', detail,
+                         '중요한 안내가 두 탭에서 두 번 나온다')
+        # 서버가 그 표식을 실제로 싣는지도 함께 고정한다 — 한쪽만 있으면 조용하다.
+        src = _read(os.path.join(_ROOT, 'functions', 'custom_functions',
+                                 'env_coordinator_impl', '_cycle_mixin.py'))
+        self.assertIn("'gate_only': True", src)
+        self.assertIn('_write_gate_only_summary(gate_result', src,
+                      '게이트 조기 종료 경로가 요약을 안 쓴다')
+
+    def test_no_korean_string_says_gate(self):
+        """한국어 화면에 '게이트' 가 나오면 안 된다 (2026-08-26 지적).
+
+        엔지니어만 알아듣는 말이다. 실제로 "안전 게이트가 잡고 있습니다" 가
+        시설 모달에 그대로 떠 있었다.
+
+        ⚠ LoRaWAN **게이트웨이**와 502 Bad Gateway 는 다른 것이라 제외한다 —
+          그쪽은 사용자도 그 이름으로 부르는 장비·프로토콜 용어다.
+        """
+        import re as _re
+        po = _read(_KO)
+        bad = []
+        for m in _re.finditer(r'msgid "([^"]+)"\nmsgstr "([^"]*)"', po):
+            mid, msg = m.group(1), m.group(2)
+            if '게이트' not in msg:
+                continue
+            if '게이트웨이' in msg or 'Gateway' in mid or 'gateway' in mid:
+                continue
+            bad.append((mid, msg))
+        self.assertEqual([], bad, '한국어 화면 문구에 내부 용어: %s' % bad)
+
     def test_every_override_reason_has_a_label(self):
         """서버가 강제한 근거는 **전부** 화면에 문장이 있어야 한다 (2026-08-26).
 

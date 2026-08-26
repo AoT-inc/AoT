@@ -122,6 +122,27 @@ def _infer_mtype_from_dm(dm_row):
 # 관수 계열(irrigation_layer/irrigation_valve)은 노즐 구성에 따라 fogger 가
 # 되기도 하고 env 대상이 아니기도 하므로 표에 두지 않고 동적으로 해석한다
 # (_irrigation_actuator_kind 참조).
+# 개구부 **형태** — 종류(kind)는 천창도 측창도 'opening' 이라 구분이 없다.
+# 물리가 다르다:
+#   ridge(천창)  실내가 더울 때 **부력**으로 뜨거운 공기를 위로 뱉는다.
+#                실외가 더 더우면 부력이 역전돼 유입이 적다.
+#   side(측창)   외기를 **직접** 들인다. 실외가 더 더우면 그대로 가온이다.
+# 이 구분이 없으면 "측창은 닫고 천창으로 열기를 뺀다" 는 온실 운영의 기본
+# 전략을 표현할 수단이 없다 — 실제로 셋이 같은 값으로 움직였다(2026-08-26).
+_FITTING_KIND_TO_VENT_FORM = {
+    'window':      'ridge',
+    'side_window': 'side',
+    'door':        'side',
+}
+
+
+def _vent_form(fitting):
+    """fitting → 'ridge' | 'side' | None."""
+    if not isinstance(fitting, dict):
+        return None
+    return _FITTING_KIND_TO_VENT_FORM.get(fitting.get('kind'))
+
+
 _FITTING_KIND_TO_ACTUATOR_KIND = {
     'window':            'opening',
     'side_window':       'opening',
@@ -363,11 +384,17 @@ def get_facility_integration(facility_uuid, bypass_cache=False):
                 'fitting_ids':           [],
                 'vent_openings_area_m2': 0.0,
                 'vent_openings_count':   0,
+                # 개구부 **형태** — 천창(ridge)과 측창(side)은 물리가 다르다.
+                # 종류(`kind`)는 둘 다 'opening' 이라 여기서 갈라 두지 않으면
+                # 제어기가 구분할 근거를 영영 갖지 못한다(2026-08-26).
+                'vent_form':             _vent_form(f),
             }
         else:
             # 이미 slot 으로 등록된 액추에이터에 추가 fitting 이 붙은 경우 —
             # kind 가 None 이면 fitting kind 로 보강.
             entry = actuators_resolved[aid]
+            if not entry.get('vent_form'):
+                entry['vent_form'] = _vent_form(f)
             if not entry.get('kind'):
                 inferred = _fitting_actuator_kind(f, nozzle_map)
                 if inferred:

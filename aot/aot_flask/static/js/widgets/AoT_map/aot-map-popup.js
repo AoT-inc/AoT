@@ -1172,6 +1172,33 @@
     // 늘어놓으면 "그래서 지금 맞나" 에 답하지 못한 채 칸만 차지한다.
     // 전체 목표 목록은 그것을 정하는 곳(함수 설정)에서 본다.
 
+    // ── 게이트로 멈춘 것은 **응답 없음이 아니다** (2026-08-26) ─────────────
+    // 안전 게이트가 걸리면 코디네이터는 L1~L3 앞에서 반환하므로 요약의 환경
+    // 값이 갱신되지 않는다. 그것을 "응답 없음" 으로 읽으면, 가장 알려야 할
+    // 순간에 화면이 정반대를 말한다 — 제어는 매 사이클 정상 실행 중이고
+    // 이유도 분명한데(비·돌풍·폭염) 사용자는 고장으로 읽는다. 게다가 **진짜로
+    // 죽었을 때와 구분되지 않는다**(실측: 강우 게이트 45분).
+    // 서버가 `gate_only` 로 그 사실을 실어 보낸다.
+    var gateOnly = summary && summary.gate_only;
+    if (gateOnly) {
+      var g = summary.gate || {};
+      var why = (g.reasons || []).map(function (r) {
+        return _t(_GATE_REASON_TEXT[r] || r);
+      }).join(' \u00b7 ') || _t('A safety gate is holding the controls');
+      html += '<div class="aot-ov-card-title">' + _esc(_t('Automatic control')) +
+              '</div><div class="aot-ov-block">' +
+              '<div class="aot-ov-why aot-ov-gate">' + _esc(why) + '</div>' +
+              // 환경 값이 이 사이클의 것이 아님을 말한다 — 안 말하면 낡은
+              // 값을 지금 값으로 읽는다.
+              // ⚠ **'아래' 라고 쓰지 말 것.** 이 카드는 [환경] **뒤**에 오므로
+              //   가리키는 방향이 반대다. 게다가 카드 순서는 시설 구성에 따라
+              //   달라진다 — 위치를 가리키는 말은 언젠가 틀린다(2026-08-26).
+              '<div class="aot-ov-muted">' +
+              _esc(_t('Environment readings were taken just before this.')) +
+              '</div></div>';
+      return html + _ovNotesBlock();
+    }
+
     if (stale || !summary) {
       var msg = !fn.active ? _t('Automatic control inactive')
                            : _t('Automatic control not responding (no cycle in 5 minutes)');
@@ -1225,6 +1252,14 @@
       if (strain.reason === 'no_actuator') {
         msg2 = _t('%(var)s is off target and there is no device here that can move it')
                  .replace('%(var)s', vlabel);
+      } else if (strain.reason === 'limit_breached') {
+        // ⚠ '목표를 못 따라간다' 가 아니다. 이 변수는 제어 목표가 아니라
+        //   사용자가 정한 **선**이고(VPD 직접 제어 모드), 제어 중심은 그
+        //   방향을 요구하지 않고 있을 수 있다 — 그래도 선을 넘은 채라는
+        //   사실은 말해야 한다(2026-08-26).
+        msg2 = _t('%(var)s has been past the limit you set for %(min)s min')
+                 .replace('%(var)s', vlabel)
+                 .replace('%(min)s', String(Math.round((strain.since_s || 0) / 60)));
       } else {
         var kindNames = (strain.kinds || []).map(function (k) {
           return _t(_KIND_LABELS[k] || k);
@@ -1294,13 +1329,32 @@
   // 제어기가 당연히 하는 일이라, 적어 봐야 "그렇게 작동하는 게 당연한데" 로
   // 읽힌다(2026-08-26 지적). 여기 남는 것은 **뜻밖의 이유**뿐이다 — 왜 안
   // 움직이나, 왜 막혔나, 왜 반대인가. 그것이 이 카드가 답할 질문이다.
+  // 안전 게이트 사유 → 문장. 서버는 코드(`rain`·`wind` …)를 보내고 화면이
+  // 번역한다 — 이어 붙은 문자열을 그대로 그리면 번역할 수 없다.
+  // ⚠ 여기 없는 코드가 오면 코드가 그대로 보인다. `safety_gates` 에 사유를
+  //   추가하면 이 표에도 넣을 것(`test_map_popup_labels` 가 고정한다).
+  var _GATE_REASON_TEXT = {
+    rain:                 'Rain — vents closed',
+    wind:                 'High wind — vents closed',
+    ext_context_expired:  'Outdoor readings expired — holding position',
+    int_sensor_expired:   'Indoor readings expired — holding position',
+    heat_emergency:       'Extreme heat — everything is being used to cool',
+    cold_emergency:       'Extreme cold — everything is being used to warm',
+    nursery_fog_sunburn:  'Misting is locked out to avoid leaf scorch'
+  };
+
   var _REASON_TEXT = {
     10: 'Running it would move this the wrong way',
     11: 'It would upset another reading',
     12: 'A safety gate is holding this',
     13: 'The last command did not reach the device',
     14: 'A safety gate adjusted this',
-    15: 'Doing all it can here',
+    // ⚠ 15 는 `REASON_NO_GRADIENT` — "구동력 없음, 내외부 차이 부족으로
+    //   효과 없음" 이다. 예전 문구('Doing all it can here' = "할 수 있는 만큼
+    //   하고 있습니다")는 **뜻이 반대**였다. 그 장치는 애쓰고 있는 것이 아니라
+    //   지금 아무 효과가 없어서 안전 위치로 물러나는 중이다(2026-08-26 지적).
+    //   최대 출력에 닿아 있는 경우는 `_REASON_TEXT_FULL[15]` 가 따로 말한다.
+    15: 'Nothing this device can change right now',
     16: 'Holding position until the outdoor reading returns',
     // ⚠ 15 와 뭉치지 말 것 — 15 는 "밀어도 안 움직인다", 17 은 "지금 밀
     //   방향이 아니다" 다. 0% 로 쉬는 난방기에게 15 의 문구("할 수 있는 만큼
@@ -1366,6 +1420,17 @@
                         _t('No control cycle to explain yet.'));
     }
     var V = window.AoTViz;
+    // ── 게이트로 멈춘 사이클도 **설명할 것이 있다** (2026-08-26) ────────────
+    // 안전 게이트는 L1~L3 를 건너뛰므로 목표·편차가 없다. 그렇다고 "설명할
+    // 제어 사이클이 없습니다" 는 틀린 말이다 — 장치들이 지금 그 값인 이유가
+    // 어느 때보다 분명하다(비가 와서 닫았다). 그 문장을 맨 위에 두고, 아래는
+    // 평소대로 장치별로 편다(게이트가 강제한 명령이 `commands` 에 있다).
+    // ⚠ **게이트 안내를 여기 두지 말 것** (2026-08-26 지적).
+    // [현황]이 이미 같은 문장을 말한다. 여기 한 번 더 얹으면 같은 사실이 두
+    // 탭에서 두 번 나오는데, 이 탭에는 그 문장을 뒷받침할 맥락이 없어
+    // "설명 없이 놓인 문구" 로 읽힌다. 중요한 안내가 설 자리는 [현황]이다.
+    // 이 탭에서 장치가 왜 그 값인지는 **각 카드의 근거**가 말한다
+    // (`_reasonNote` → reason 12 "안전 게이트가 잡고 있습니다").
     var html = '';
 
     // ── 장치별 근거 ─────────────────────────────────────────────────────────
@@ -1559,7 +1624,12 @@
                        ? c.slot_key : kindLabel);
         // 근거 + 그 근거를 만든 변수. 변수는 근거가 '목표를 좇는 중' 일 때만
         // 뜻이 있다 — 안전 게이트가 건 값에 "VPD 때문" 을 붙이면 거짓이 된다.
-        var pctv = (c.pct != null ? c.pct : 0);
+        // ⚠ `pct` 가 **null** 이면 "이번 사이클에 명령하지 않았다" 는 뜻이다
+        //   (안전 게이트가 건드리지 않은 장치). 0 으로 읽으면 "0% 를 명령했다"
+        //   가 되어 아래 명령 대조가 거짓말을 한다 — 켜져 있는 난방기에
+        //   "명령 0%" 가 붙는다(2026-08-26).
+        var commanded = (c.pct != null);
+        var pctv = commanded ? c.pct : 0;
         // ── 명령 대 실제 ────────────────────────────────────────────────────
         // 막대는 **실제**를 그리고 눈금(target)이 **명령**이다. 둘이 벌어져
         // 있으면 그 간극이 그림으로 바로 보인다 — 2026-08-26 에 반나절을 태운
@@ -1600,7 +1670,7 @@
         if (run) left.push(_t('Last run') + ' ' + run);
         // 명령과 실제가 다를 때만 명령을 적는다. on/off 는 %가 뜻이 없으므로
         // 같은 말을 켜짐/꺼짐으로 한다.
-        if (actual != null && Math.abs(actual - pctv) >= 1) {
+        if (commanded && actual != null && Math.abs(actual - pctv) >= 1) {
           left.push(_t('commanded') + ' ' +
                     (isBinary ? (pctv > 0 ? _t('Powered on') : _t('Powered off'))
                               : pctv.toFixed(0) + '%'));
@@ -1613,6 +1683,9 @@
           : ((c.area_m2 && actual != null)
                ? _areaText(c.area_m2 * actual / 100, c.area_m2) : '');
         var shown = (actual != null ? actual : pctv);
+        // 명령도 없고 실제도 모르면 그릴 것이 없다 — 0% 로 그리면 "꺼져 있다"
+        // 는 거짓말이 된다.
+        if (!commanded && actual == null) return '';
         var body = V
           ? (isBinary
               // 밴드 — 초록이 '평소', 세로선이 '오늘'. 기준이 없으면 값도
@@ -1629,7 +1702,9 @@
                          valueSub: _t('hours'),
                          scaleLead: lead, scaleNote: rightNote })
               : V.bullet({ label: label,
-                           value: shown, target: (actual != null ? pctv : undefined),
+                           value: shown,
+                           target: ((commanded && actual != null)
+                                    ? pctv : undefined),
                            min: 0, max: 100,
                            valueText: shown.toFixed(0), valueSub: '%',
                            scaleLead: lead, scaleNote: rightNote }))

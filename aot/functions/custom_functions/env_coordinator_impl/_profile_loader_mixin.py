@@ -487,6 +487,7 @@ class ProfileLoaderMixin:
                         slot_key=slot_key or None,
                         azimuth_deg=azimuth_deg,
                         area_m2=area_m2,
+                        vent_form=ar.get('vent_form'),
                         capacity_meta=act_capacity_meta,
                     )
                     profiles.append(profile)

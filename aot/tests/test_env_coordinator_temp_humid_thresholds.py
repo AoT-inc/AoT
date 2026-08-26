@@ -7,6 +7,8 @@
 꺼진 상태에서는) 완전히 무효였다. apply_temp_humid_threshold_overrides() 로
 실제 강제 오버라이드를 wiring.
 """
+import pytest
+
 from aot.functions.custom_functions.env_coordinator_impl._cycle_mixin import (
     apply_hvac_opposition_interlock,
     clamp_guide_range_to_hard_limits,
@@ -295,3 +297,201 @@ def test_the_cycle_uses_the_shared_clamp():
     body = src.split('# Guide 범위', 1)[1].split('T_int  = internal.get', 1)[0]
     assert 'clamp_guide_range_to_hard_limits(' in body, (
         '유도 범위가 하드 임계를 안 지나간다')
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 못 따라감 보고는 **강등된 변수에도** 서야 한다 (2026-08-26)
+# ─────────────────────────────────────────────────────────────────────────────
+# VPD 직접 제어 모드에서는 `_decompose_vpd` 가 온도·습도를 제어목표에서 빼므로
+# `deviation_native` 에 없다. 그래서 이 판정이 온도로는 **한 번도 서지 않았다** —
+# 냉방기가 몇 시간째 돌고 실내가 상한을 2°C 넘긴 채여도 화면은 조용했다.
+#
+# ⚠ 이것은 온도를 목표로 되살리는 것이 아니다. 제어는 여전히 VPD 하나가 하고,
+#   여기서 하는 일은 **보고**뿐이다.
+
+class _Strain:
+    """`_assess_strain` 만 쓰는 최소 껍데기 — 데몬·DB 없이 판정을 부른다."""
+    temp_max = 30.0
+    temp_min = 15.0
+    humid_max = 90.0
+    humid_min = 30.0
+    _STRAIN_KINDS = None
+    _STRAIN_SATURATED_PCT = None
+    _STRAIN_MIN_SEC = None
+
+
+def _strain_host():
+    from aot.functions.custom_functions.env_coordinator_impl._cycle_mixin \
+        import CycleMixin as _M
+    h = _Strain()
+    h._STRAIN_KINDS = _M._STRAIN_KINDS
+    h._STRAIN_SATURATED_PCT = _M._STRAIN_SATURATED_PCT
+    h._STRAIN_MIN_SEC = _M._STRAIN_MIN_SEC
+    h._assess_strain = _M._assess_strain.__get__(h)
+    h._deviation_from_hard_limit = _M._deviation_from_hard_limit.__get__(h)
+    return h
+
+
+class _Sit:
+    def __init__(self, dev, ctx):
+        self.deviation_native = dev
+        self.context = ctx
+
+
+def _tv(value, tol):
+    from aot.functions.utils.env_control.types import TargetVar
+    return TargetVar(value=value, tolerance=tol, priority=1.0)
+
+
+def test_strain_fires_on_temperature_even_when_it_is_demoted():
+    h = _strain_host()
+    # VPD 모드: deviation 에 온도가 없다. 실내 32.6 · 상한 30 · 래치 활성.
+    sit = _Sit({'vpd': 0.01}, {'T_trend': 0.0})
+    internal = {'T': 32.6, 'RH': 60.0, '_force_cool': True}
+    target = {'temperature': _tv(30.0, 1.0), 'vpd': _tv(1.6, 0.1)}
+
+    first = h._assess_strain(sit, target, {'cooler': 0.0}, sit.context, 1000.0,
+                             internal_for_strain=internal)
+    assert first is None, '15분 지속 조건이 사라졌다'
+
+    later = h._assess_strain(sit, target, {'cooler': 0.0}, sit.context, 2000.0,
+                             internal_for_strain=internal)
+    assert later is not None, '온도로 못 따라감이 서지 않는다'
+    assert later['var'] == 'temperature'
+    assert later['reason'] == 'limit_breached'
+    assert later['dev'] == pytest.approx(2.6)
+
+
+def test_constraint_breach_does_not_require_saturation():
+    """제어 중심(VPD)이 냉방을 요구하지 않으면 냉방기는 0% 다.
+
+    포화를 요구하면 **바로 그 경우에** 화면이 조용해진다 — 고치려던 증상이다.
+    """
+    h = _strain_host()
+    sit = _Sit({}, {'T_trend': 0.0})
+    internal = {'T': 32.6, '_force_cool': True}
+    target = {'temperature': _tv(30.0, 1.0)}
+
+    h._assess_strain(sit, target, {'cooler': 0.0}, sit.context, 1000.0,
+                     internal_for_strain=internal)
+    out = h._assess_strain(sit, target, {'cooler': 0.0}, sit.context, 2000.0,
+                           internal_for_strain=internal)
+    assert out and out['reason'] == 'limit_breached'
+
+
+def test_saturated_still_reads_as_equipment_limit():
+    """최대로 밀고 있으면 '설비 한계' 다 — 사람이 할 일이 다르다."""
+    h = _strain_host()
+    sit = _Sit({}, {'T_trend': 0.0})
+    internal = {'T': 32.6, '_force_cool': True}
+    target = {'temperature': _tv(30.0, 1.0)}
+
+    h._assess_strain(sit, target, {'cooler': 100.0}, sit.context, 1000.0,
+                     internal_for_strain=internal)
+    out = h._assess_strain(sit, target, {'cooler': 100.0}, sit.context, 2000.0,
+                           internal_for_strain=internal)
+    assert out and out['reason'] == 'saturated'
+
+
+def test_no_latch_means_no_report():
+    """선을 안 넘었으면 아무 말도 하지 않는다.
+
+    래치를 근거로 삼는다 — 값을 여기서 다시 비교하면 진입/해제 문턱이 다른
+    히스테리시스 **밖**에서 판정하게 되어 경계에서 떤다.
+    """
+    h = _strain_host()
+    sit = _Sit({}, {'T_trend': 0.0})
+    target = {'temperature': _tv(30.0, 1.0)}
+    for ts in (1000.0, 2000.0):
+        out = h._assess_strain(sit, target, {'cooler': 0.0}, sit.context, ts,
+                               internal_for_strain={'T': 32.6})
+        assert out is None
+
+
+def test_improving_trend_is_not_a_limit():
+    """목표 쪽으로 오고 있으면 기다리면 된다."""
+    h = _strain_host()
+    sit = _Sit({}, {'T_trend': -0.2})     # 내려가는 중
+    internal = {'T': 32.6, '_force_cool': True}
+    target = {'temperature': _tv(30.0, 1.0)}
+
+    h._assess_strain(sit, target, {'cooler': 100.0}, sit.context, 1000.0,
+                     internal_for_strain=internal)
+    out = h._assess_strain(sit, target, {'cooler': 100.0}, sit.context, 2000.0,
+                           internal_for_strain=internal)
+    assert out is None
+
+
+def test_strain_call_site_passes_internal():
+    """`internal` 을 안 넘기면 강등된 변수의 판정이 **통째로 죽는다.**
+
+    `_deviation_from_hard_limit` 이 None 을 받아 늘 None 을 돌려주므로 strain
+    이 계속 null 이 된다 — 그런데 그것은 "선을 안 넘었다" 와 화면에서 구분되지
+    않는다. 즉 고장이 조용하다. 그래서 배선을 소스로 고정한다.
+    """
+    import os
+    here = os.path.dirname(os.path.abspath(__file__))
+    src = open(os.path.join(here, '..', 'functions', 'custom_functions',
+                            'env_coordinator_impl', '_cycle_mixin.py'),
+               encoding='utf-8').read()
+    call = src.split("'strain':", 1)[1].split('\n', 4)
+    assert any('internal_for_strain=internal' in ln for ln in call), (
+        'strain 호출부가 internal 을 안 넘긴다')
+
+
+def test_vent_form_reaches_the_profile():
+    """개구부 형태가 **프로필까지** 실려야 효과 모델이 본다.
+
+    fitting 에는 이미 `window`/`side_window` 구분이 있는데(2026-08-26 실측
+    데이터), 그것을 액추에이터 레코드→프로필로 나르지 않으면 제어기는 끝까지
+    구분을 모른다. 배선이 끊기면 조용하다 — 효과 모델은 `None` 을 받아
+    예전처럼 동작하고, 화면은 아무 말도 하지 않는다.
+    """
+    import os
+    here = os.path.dirname(os.path.abspath(__file__))
+    integ = open(os.path.join(here, '..', 'aot_flask', 'geo',
+                              'facility_integration.py'), encoding='utf-8').read()
+    loader = open(os.path.join(here, '..', 'functions', 'custom_functions',
+                               'env_coordinator_impl', '_profile_loader_mixin.py'),
+                  encoding='utf-8').read()
+    types_ = open(os.path.join(here, '..', 'functions', 'utils', 'env_control',
+                               'types.py'), encoding='utf-8').read()
+
+    assert "'window':      'ridge'" in integ, 'fitting 종류 → 형태 표가 없다'
+    assert "'vent_form':             _vent_form(f)" in integ, (
+        '액추에이터 레코드가 형태를 안 싣는다')
+    assert "vent_form=ar.get('vent_form')" in loader, (
+        '로더가 형태를 프로필로 안 나른다')
+    assert 'vent_form: Optional[str] = None' in types_, (
+        'ActuatorProfile 에 형태 칸이 없다')
+
+
+def test_gate_summary_lists_every_device_not_just_the_forced_ones():
+    """강우 게이트는 개구부·분무만 건드린다 — 냉난방기도 **여전히 거기 있다.**
+
+    강제된 것만 실으면 그 장치가 목록에서 통째로 사라져 사용자는 "어디 갔나"
+    를 묻게 된다(2026-08-26 지적).
+
+    건드리지 않은 장치의 `pct` 는 **None** 이다. 0 을 쓰면 "이번에 0 을
+    명령했다" 가 되어, 켜져 있는 난방기에 "명령 0%" 가 붙는다.
+    """
+    import os
+    here = os.path.dirname(os.path.abspath(__file__))
+    src = open(os.path.join(here, '..', 'functions', 'custom_functions',
+                            'env_coordinator_impl', '_cycle_mixin.py'),
+               encoding='utf-8').read()
+    block = src.split('def _write_gate_only_summary', 1)[1].split(
+        '\n    def ', 1)[0]
+    assert 'for p in self._profiles\n' in block, '프로필 전수를 안 돈다'
+    assert 'if p.actuator_id in (gate_result.forced_commands' not in block, (
+        '강제된 장치만 싣고 있다')
+    assert "if p.actuator_id in _fc else None)" in block, (
+        '건드리지 않은 장치의 명령을 0 으로 지어내고 있다')
+
+    popup = open(os.path.join(here, '..', 'aot_flask', 'static', 'js',
+                              'widgets', 'AoT_map', 'aot-map-popup.js'),
+                 encoding='utf-8').read()
+    assert 'var commanded = (c.pct != null);' in popup, (
+        '화면이 null 명령을 0 으로 읽는다')
+    assert 'if (commanded && actual != null' in popup, (
+        '명령하지 않은 장치에 명령 대조를 붙이고 있다')

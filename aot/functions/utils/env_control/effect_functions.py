@@ -201,8 +201,45 @@ def _gis_factor(profile, use_u: bool = True):
 # 개구부 (opening)
 # ─────────────────────────────────────────────────────────────────────────────
 
+# ── 개구부 형태별 보정 (2026-08-26) ─────────────────────────────────────────
+# 천창과 측창은 `kind` 가 둘 다 'opening' 이지만 물리가 다르다.
+#
+#   ridge(천창)  실내가 더울 때 **부력**으로 뜨거운 공기를 위로 뱉는다.
+#                실외가 더 더우면 부력이 역전돼 유입이 적다(뜨거운 공기는
+#                내려오지 않는다).
+#   side(측창)   외기를 **직접** 들인다. 실외가 더 더우면 그대로 가온이다.
+#
+# 그래서 같은 면적이라도 방향에 따라 유효도가 다르다. 이 보정이 없으면 셋이
+# 늘 같은 값으로 움직여, "측창은 닫고 천창으로 열기를 뺀다" 는 온실 운영의
+# 기본 전략을 표현할 수단이 없다(2026-08-26 실측: 80/80/80).
+#
+# ⚠ **지붕 과열층을 모델에 넣지 않는다.** 실제로는 지붕 밑 공기가 실내 평균
+#   보다 뜨거워서 실외가 더 더워도 천창이 열을 뺄 수 있지만, 그 층의 온도는
+#   **측정하지 않는다.** 없는 측정을 상수로 지어내면 그 값이 틀렸을 때
+#   근거 없이 창을 여는 제어가 된다. 여기서는 **방향에 따른 유효도 차이**만
+#   준다 — 그것은 부력의 부호만으로 말할 수 있다.
+#
+# 계수는 보수적으로 잡는다. 부력 유효도는 √ΔT 에 비례하지만(Q ∝ √(gΔhΔT/T)),
+# 여기 magnitude 는 이미 ΔT 선형이므로 배수로만 표현한다.
+VENT_FORM_GAIN = {
+    # (형태, 실내가 더 더운가) → 배수
+    ('ridge', True):  1.3,   # 부력이 돕는다 — 같은 면적이 더 많이 뺀다
+    ('ridge', False): 0.5,   # 부력 역전 — 더운 외기가 잘 안 내려온다
+    ('side',  True):  1.0,   # 기준
+    ('side',  False): 1.0,   # 직접 유입 — 그대로 가온이다
+}
+
+
+def _vent_form_gain(profile, indoor_hotter: bool) -> float:
+    """개구부 형태에 따른 유효도 배수. 형태를 모르면 1.0(예전 동작)."""
+    form = getattr(profile, 'vent_form', None)
+    if form not in ('ridge', 'side'):
+        return 1.0
+    return VENT_FORM_GAIN[(form, bool(indoor_hotter))]
+
+
 def opening_temp_effect(env: EnvContext, cmd_pct: float, profile=None) -> EffectResult:
-    """외부 온도 방향으로 내부 온도를 끌어당긴다. 풍속·면적 보정.
+    """외부 온도 방향으로 내부 온도를 끌어당긴다. 풍속·면적·형태 보정.
 
     참고: 개구부가 열리면 envelope u_eff 는 우회되므로 u_factor 미적용.
     u_factor 는 curtain/외피 단열 변경 효과에서 의미가 있다.
@@ -213,9 +250,11 @@ def opening_temp_effect(env: EnvContext, cmd_pct: float, profile=None) -> Effect
     direction = '↑' if delta > 0 else '↓'
     af, _u = _gis_factor(profile, use_u=False)
     k = _calibrated_k(profile, 'temperature', K_OPENING_T)
+    # delta < 0 = 실외가 더 차다 = 실내가 더 덥다 → 부력이 돕는 쪽.
+    gain = _vent_form_gain(profile, delta < 0)
     # 환기는 실외를 지나칠 수 없다 — 도달 한계(|내외 차|)로 자른다.
     magnitude = vent_reachable(
-        abs(delta) * (cmd_pct / 100.0) * k * _wind_boost(env) * af, delta)
+        abs(delta) * (cmd_pct / 100.0) * k * _wind_boost(env) * af * gain, delta)
     return EffectResult(direction, magnitude)
 
 
@@ -227,8 +266,12 @@ def opening_humid_effect(env: EnvContext, cmd_pct: float, profile=None) -> Effec
     direction = '↑' if delta > 0 else '↓'
     af, _u = _gis_factor(profile, use_u=False)
     k = _calibrated_k(profile, 'humidity', K_OPENING_RH)
+    # 수분도 같은 공기 교환을 타므로 형태 보정을 함께 받는다 — 온도만 보정하면
+    # 같은 개구부가 열은 적게, 수분은 그대로 옮기는 모순된 모델이 된다.
+    gain = _vent_form_gain(
+        profile, env.get('T_ext', 0.0) < env.get('T_int', 0.0))
     magnitude = vent_reachable(
-        abs(delta) * (cmd_pct / 100.0) * k * _wind_boost(env) * af, delta)
+        abs(delta) * (cmd_pct / 100.0) * k * _wind_boost(env) * af * gain, delta)
     return EffectResult(direction, magnitude)
 
 

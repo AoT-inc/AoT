@@ -19566,7 +19566,7 @@ msgstr "バッテリー管理"
 
 #: functions/lorawan_class_scheduler.py:200
 msgid "Not configured (no battery gate)"
-msgstr "未設定 (バッテリーゲートなし)"
+msgstr "未設定（バッテリー基準なし）"
 
 #: functions/lorawan_class_scheduler.py:201
 msgid "Lead-acid  (low < 11.7 V / critical < 11.4 V)"
@@ -28785,7 +28785,7 @@ msgid "Photosynthesis rate"
 msgstr "光合成速度"
 
 msgid "Safety Gate"
-msgstr "安全ゲート"
+msgstr "安全措置"
 
 msgid "Status Summary"
 msgstr "状態サマリー"
@@ -30493,7 +30493,7 @@ msgstr "他の項目への副作用"
 
 #: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
 msgid "Forced by a safety gate"
-msgstr "安全ゲートによる強制"
+msgstr "安全のため強制した値"
 
 #: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
 msgid "Device not reachable"
@@ -30501,7 +30501,7 @@ msgstr "機器に到達できません"
 
 #: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
 msgid "Corrected by a safety gate"
-msgstr "安全ゲートが補正"
+msgstr "安全のため補正した値"
 
 #: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
 msgid "No usable difference to work with"
@@ -30561,7 +30561,7 @@ msgstr "これを動かすと別の値が乱れます"
 
 #: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
 msgid "A safety gate is holding this"
-msgstr "安全ゲートが抑えています"
+msgstr "安全のため現在は動かしていません"
 
 #: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
 msgid "The last command did not reach the device"
@@ -30569,15 +30569,15 @@ msgstr "最後の命令が機器に届きませんでした"
 
 #: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
 msgid "A safety gate adjusted this"
-msgstr "安全ゲートが値を調整しました"
+msgstr "安全のため値を調整しました"
 
 #: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
-msgid "Doing all it can here"
-msgstr "この装置でできる限りのことをしています"
+msgid "Nothing this device can change right now"
+msgstr "今はこの装置で変えられるものがありません"
 
 #: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
 msgid "Holding position until the outdoor reading returns"
-msgstr "屋外測定が戻るまで位置を保ちます"
+msgstr "屋外の値を再び受け取るまでそのままにしています"
 
 #: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
 msgid "Set by hand"
@@ -30659,7 +30659,7 @@ msgstr "%(h)s時間"
 
 #: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
 msgid "A safety gate is holding the controls"
-msgstr "安全ゲートが作動して制御を止めています"
+msgstr "安全のため制御を停止しました"
 
 #: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
 msgid "Resting — the opposite direction is needed right now"
@@ -30696,3 +30696,39 @@ msgstr "日射が強まるにつれ噴霧を弱めています"
 #: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
 msgid "Humidity is already high, so the misting is held"
 msgstr "湿度が既に高いため噴霧を止めています"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "%(var)s has been past the limit you set for %(min)s min"
+msgstr "%(var)sが設定した限界を超えて%(min)s分経過しています"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Rain — vents closed"
+msgstr "雨のため開口部を閉じました"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "High wind — vents closed"
+msgstr "風が強いため開口部を閉じました"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Outdoor readings expired — holding position"
+msgstr "屋外の値が届かないため装置をそのままにしています"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Indoor readings expired — holding position"
+msgstr "室内の値が届かないため装置をそのままにしています"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Extreme heat — everything is being used to cool"
+msgstr "暑すぎるため冷却できる装置をすべて動かしています"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Extreme cold — everything is being used to warm"
+msgstr "寒すぎるため加温できる装置をすべて動かしています"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Misting is locked out to avoid leaf scorch"
+msgstr "日差しで葉が焼ける恐れがあるため噴霧を止めました"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Environment readings were taken just before this."
+msgstr "環境値はこの操作の直前に読み取ったものです。"

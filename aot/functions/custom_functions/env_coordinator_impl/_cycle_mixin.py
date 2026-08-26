@@ -956,6 +956,23 @@ class CycleMixin:
                     f'[한파 경보] 외부 {T_e:.1f}°C / 내부 {T_i:.1f}°C — '
                     f'난방 장치 최대 가동 중. 보온재 및 배관 동결 여부를 점검하세요.',
                 )
+            # ── 게이트로 멈춰도 **말은 해야 한다** (2026-08-26) ───────────────
+            # 이 경로는 L1~L3 앞에서 반환하므로 `_build_cycle_summary` 가 돌지
+            # 않는다. 그러면 요약의 `ts` 가 안 갱신되고, 화면은 그것을 보고
+            # **"자동 제어가 응답하지 않습니다"** 라고 말한다 — 제어는 매 사이클
+            # 정상 실행 중인데도.
+            #
+            # 가장 알려야 할 순간에 화면이 정반대를 말하는 셈이다. "지금 비가
+            # 와서 창을 닫았습니다" 가 나와야 할 자리이고, 게다가 **진짜로
+            # 죽었을 때와 구분되지 않는다**(실측: 강우 게이트 45분 → 화면은
+            # 응답 없음).
+            #
+            # ⚠ 여기에는 `situation` 이 없다(L2 전이다). 그래서 전체 요약을
+            #   쓸 수 없고 **게이트 사실만** 담은 축소 요약을 쓴다. 환경 값은
+            #   이 사이클의 것이 아니므로 싣지 않는다 — 낡은 값을 지금 값으로
+            #   보이게 하는 것이 침묵보다 나쁘다. 화면은 `gate_only` 를 보고
+            #   "환경 데이터는 이 사이클의 것이 아님" 을 말한다.
+            self._write_gate_only_summary(gate_result, gate_env, now_ts)
             return
         elif gate_result.gate_mask == 0:
             # P6: integral 은 액추에이터별 평형 개도(%) 기억이므로 매 사이클 지우지
@@ -1694,7 +1711,38 @@ class CycleMixin:
     _STRAIN_SATURATED_PCT = 99.0     # 이 이상이면 더 밀 여지가 없다고 본다
     _STRAIN_MIN_SEC = 900.0          # 15분 — 한두 사이클의 흔들림과 가른다
 
-    def _assess_strain(self, situation, env_target, outputs_by_kind, ctx, now_ts):
+    def _deviation_from_hard_limit(self, var, internal):
+        """사용자가 정한 선을 넘은 정도 → float|None (안 넘었으면 None).
+
+        제어목표에서 강등된 변수(VPD 직접 제어 모드의 온도·습도)에는 편차가
+        없다. 그 변수에 대해 사용자가 실제로 정한 기준은 **하드 임계** 하나뿐
+        이므로 그것을 기준으로 잰다. 부호 규약은 편차와 같다(양수 = 초과).
+
+        ⚠ 래치(`_force_cool`/`_force_heat` 등)를 근거로 삼는다 — 진입과 해제
+          문턱이 다른 히스테리시스가 이미 걸려 있어 경계에서 떨지 않는다.
+          여기서 값을 다시 비교하면 그 히스테리시스 밖에서 판정하게 된다.
+        """
+        internal = internal or {}
+        spec = {
+            'temperature': ('_force_cool', '_force_heat', 'T',
+                            self.temp_max, self.temp_min),
+            'humidity':    ('_force_dehumid', '_force_humid', 'RH',
+                            self.humid_max, self.humid_min),
+        }.get(var)
+        if not spec:
+            return None
+        hi_flag, lo_flag, key, hi, lo = spec
+        now = internal.get(key)
+        if now is None:
+            return None
+        if internal.get(hi_flag) and hi:
+            return float(now) - float(hi)
+        if internal.get(lo_flag) and lo:
+            return float(now) - float(lo)
+        return None
+
+    def _assess_strain(self, situation, env_target, outputs_by_kind, ctx, now_ts,
+                       internal_for_strain=None):
         """설비가 목표를 **못 따라가고 있는가** → dict|None.
 
         화면이 "냉각기 100%" 만 보이면 그것이 좋은 신호인지 나쁜 신호인지 알 수
@@ -1724,9 +1772,29 @@ class CycleMixin:
             if var.startswith('_'):
                 continue
             dev = dev_all.get(var)
-            if dev is None:
-                continue
             tol = float(getattr(tv, 'tolerance', 0.0) or 0.0)
+            # ── 제어목표에서 강등된 변수 (2026-08-26) ─────────────────────────
+            # VPD 직접 제어 모드에서는 `_decompose_vpd` 가 온도·습도를
+            # `_..._constraint` 로 강등하므로 `deviation_native` 에 **없다.**
+            # 그래서 이 판정이 온도로는 **한 번도 서지 않았다** — 냉방기가
+            # 몇 시간째 돌고 실내가 상한을 2°C 넘긴 채여도 화면은 조용했다
+            # (2026-08-26 실측: 温室環境制御 의 strain 이 계속 null).
+            #
+            # 그 변수에 대해 사용자가 실제로 정한 유일한 기준은 **하드 임계**다.
+            # 목표가 아니라 **선**이므로 허용오차는 없다(넘은 것 자체가 사실).
+            # 노이즈는 이미 걸러져 있다 — 진입/해제 문턱이 다른 래치
+            # (`_check_hard_constraints`)를 통과한 뒤에만 여기 온다.
+            #
+            # ⚠ 이것은 온도를 목표로 되살리는 것이 **아니다.** 제어는 여전히
+            #   VPD 하나가 한다. 여기서 하는 일은 **보고**뿐이다.
+            _by_limit = False
+            if dev is None:
+                dev = self._deviation_from_hard_limit(var, internal_for_strain)
+                if dev is None:
+                    since.pop(var, None)
+                    continue
+                tol = 0.0
+                _by_limit = True
             if abs(dev) <= tol:
                 since.pop(var, None)
                 continue
@@ -1743,8 +1811,14 @@ class CycleMixin:
                     worst = {'var': var, 'dev': round(dev, 2), 'kinds': [],
                              'reason': 'no_actuator', 'since_s': 0}
                 continue
-            if not all(outputs_by_kind[k] >= self._STRAIN_SATURATED_PCT
-                       for k in present):
+            # ⚠ **제약 위반에는 포화를 요구하지 않는다.** 목표 추종이면 "최대로
+            # 미는데 안 준다" 가 한계의 증거지만, 제약은 제어 중심이 그 방향을
+            # 아예 요구하지 않을 수 있다 — VPD 가 목표에 있으면 냉방기는 0% 다.
+            # 그때도 선을 넘은 채 있다는 사실은 그대로다. 포화를 요구하면 바로
+            # 그 경우에 화면이 조용해진다(고치려던 증상 그 자체).
+            if not _by_limit and not all(
+                    outputs_by_kind[k] >= self._STRAIN_SATURATED_PCT
+                    for k in present):
                 since.pop(var, None)
                 continue
             # 추세가 목표 쪽으로 오고 있으면 기다리면 된다 — 한계가 아니다.
@@ -1757,14 +1831,80 @@ class CycleMixin:
             held = now_ts - since[var]
             if held < self._STRAIN_MIN_SEC:
                 continue
+            # 포화까지 갔으면 '설비 한계' 이고, 아니면 '선을 넘은 채 유지' 다.
+            # 사람이 할 일이 다르다 — 앞은 장비를 늘리거나 목표를 낮추는 것이고,
+            # 뒤는 그 선이 지금 조건에서 지킬 수 있는 값인지 다시 보는 것이다.
+            _saturated = all(outputs_by_kind[k] >= self._STRAIN_SATURATED_PCT
+                             for k in present)
             cand = {'var': var, 'dev': round(dev, 2), 'kinds': present,
-                    'reason': 'saturated', 'since_s': int(held)}
+                    'reason': ('saturated' if _saturated else 'limit_breached'),
+                    'since_s': int(held)}
             if worst is None or cand['since_s'] > worst.get('since_s', 0):
                 worst = cand
         for var in list(since):
             if var not in seen:
                 since.pop(var, None)
         return worst
+
+    def _write_gate_only_summary(self, gate_result, gate_env, now_ts) -> None:
+        """안전 게이트로 조기 종료할 때 남기는 **축소 요약**.
+
+        전체 요약(`_build_cycle_summary`)은 `situation` 이 있어야 만들 수 있는데
+        이 경로는 그 앞에서 반환한다. 그래서 담을 수 있는 것만 담는다 —
+        **제어가 살아 있다는 사실과 멈춘 이유**.
+
+        ⚠ 환경 값(측정·목표·편차)은 싣지 않는다. 이 사이클에서 계산하지 않은
+          값이라, 실으면 낡은 값이 지금 값으로 읽힌다 — 침묵보다 나쁘다.
+        """
+        try:
+            mask = int(getattr(gate_result, 'gate_mask', 0) or 0)
+            # `GateResult.description` 은 사유를 ', ' 로 이어 붙인 것이다
+            # (`safety_gates` 의 `', '.join(reasons)`). 화면이 사유마다 문구를
+            # 고를 수 있게 다시 쪼개 준다 — 이어 붙은 문자열은 번역할 수 없다.
+            _fc = gate_result.forced_commands or {}
+            desc = (getattr(gate_result, 'description', '') or '')
+            reasons = [r.strip() for r in desc.split(',') if r.strip()]
+            self._last_cycle_summary = {
+                'ts': now_ts,
+                # 화면이 "환경 데이터는 이 사이클의 것이 아니다" 를 말할 근거.
+                'gate_only': True,
+                'gate': {
+                    'triggered': True,
+                    'mask': mask,
+                    'description': desc[:self._SUMMARY_MAX_TEXT],
+                    'reasons': reasons[:4],
+                },
+                # ⚠ **강제된 장치만 싣지 말 것.** 강우 게이트는 개구부와 분무만
+                # 건드리므로, 그것만 실으면 냉난방기가 목록에서 통째로
+                # 사라진다 — 사용자는 "그 장치는 어디 갔나" 를 묻게 된다
+                # (2026-08-26 지적). 게이트가 안 건드린 장치도 **여전히 거기
+                # 있고 상태가 있다.**
+                #
+                # 건드리지 않은 장치의 `pct` 는 **None** 이다. 0 을 쓰면
+                # "이번에 0 을 명령했다" 가 되어 거짓이 된다 — 이번 사이클에는
+                # 그 장치에 대해 아무 명령도 내리지 않았다. 화면은 None 을 보고
+                # 실제 상태만 그린다(명령 대조를 하지 않는다).
+                'commands': [
+                    {'slot_key': (p.slot_key or p.actuator_id[:8]),
+                     'kind': p.kind,
+                     'pct': (round(float(_fc[p.actuator_id].get('value', 0.0)), 1)
+                             if p.actuator_id in _fc else None),
+                     'reason': (_LC.REASON_SAFETY_PRE_GATE
+                                if p.actuator_id in _fc else None),
+                     'var': None}
+                    for p in self._profiles
+                ][:self._SUMMARY_MAX_COMMANDS],
+            }
+            # ⚠ **이것도 완료된 사이클이다.** 코디네이터가 돌았고, 판단했고,
+            # 명령을 내보냈다 — L1~L3 를 건너뛰었을 뿐이다. 여기서 도장을
+            # 안 찍으면 `last_cycle_ts` 가 늙어 `IEC stale (Ns ago)` 가 남고,
+            # 그 stale 하나 때문에 [시설 세부]·측정 스냅샷이 **통째로 빈다**
+            # (2026-08-26 실측: 강우 게이트 45분 → 탭이 "설명할 제어 사이클이
+            # 없습니다" 만 띄웠다).
+            self._last_cycle_ts = now_ts
+            self._save_runtime_state()
+        except Exception:
+            self.logger.debug('EnvCoordinator: 게이트 요약 기록 실패', exc_info=True)
 
     def _build_cycle_summary(self, now_ts: float, situation: SituationReport,
                              env_target: dict, final_cmds: dict,
@@ -1923,7 +2063,8 @@ class CycleMixin:
             'modes':           list(situation.modes or []),
             # "설비가 못 따라가고 있다" — 숫자만 보고하지 않고 그 뜻을 말한다.
             'strain':          self._assess_strain(
-                                   situation, env_target, obk, ctx, now_ts),
+                                   situation, env_target, obk, ctx, now_ts,
+                                   internal_for_strain=internal),
             'limiting_factor': situation.limiting_factor,
             'deviation': {k: _r(v) for k, v
                           in (situation.deviation_native or {}).items()},
