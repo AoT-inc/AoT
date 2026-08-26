@@ -3635,8 +3635,10 @@
                     // innerHTML 교체로 제어 목록 스크롤이 초기화되지 않도록 위치 보존
                     var listEl0 = body.querySelector('.aot-act-tabs-body');
                     var listScroll0 = listEl0 ? listEl0.scrollTop : 0;
-                    body.innerHTML = window.AoTMapPopup.buildActuatorTabs(
-                        activeCat, _ACT_CATS, states, canCtrl2, st._lastCmd || {}, _actKindToCat, savedOrder2);
+                    // 값이 그대로면 손대지 않는다(`_setHtmlIfChanged` 주석).
+                    if (!_setHtmlIfChanged(body, window.AoTMapPopup.buildActuatorTabs(
+                            activeCat, _ACT_CATS, states, canCtrl2, st._lastCmd || {},
+                            _actKindToCat, savedOrder2))) return;
                     var listEl1 = body.querySelector('.aot-act-tabs-body');
                     if (listEl1 && listScroll0) listEl1.scrollTop = listScroll0;
                     window.AoTMapPopup.positionDots(body);
@@ -3744,8 +3746,11 @@
                 if (body && window.AoTMapPopup) {
                     var tabsEl = body.querySelector('.aot-act-tabs');
                     var activeKey = tabsEl ? tabsEl.dataset.activeCat : null;
-                    body.innerHTML = window.AoTMapPopup.buildSensorTabs(
-                        activeKey, st.sensorsByFac[facilityUuid] || []);
+                    // 값이 그대로면 손대지 않는다(`_setHtmlIfChanged` 주석).
+                    // 센서 값은 자주 바뀌지만 **표시 자릿수까지 같은 사이클**이
+                    // 흔하다 — 그때 갈아끼우면 깜빡임만 남는다.
+                    _setHtmlIfChanged(body, window.AoTMapPopup.buildSensorTabs(
+                        activeKey, st.sensorsByFac[facilityUuid] || []));
                 }
             }
         }
@@ -4368,6 +4373,14 @@
                 if (!st2 || st2.openBayFacility !== facilityUuid) return;
                 var html = window.AoTMapPopup.buildRecordBlock(sched);
                 if (!html) return;
+                // ⚠ 견주는 것은 **지난번에 만든 문자열**이다. 아래 `outerHTML`
+                // 비교는 현재 DOM 을 보는데, 이름 번역(`aot-user-i18n.js`)이
+                // 우리가 쓴 직후 텍스트를 번역본으로 바꾸므로 원문으로 만든 새
+                // 노드와는 **영원히 다르다** — 노트 자리표시자를 옮겨 심어
+                // 한 번 막아 둔 그 깜빡임이, 번역을 켜면 그대로 되살아난다
+                // (`_setHtmlIfChanged` 주석).
+                if (pane._aotRecordHtml === html) return;
+                pane._aotRecordHtml = html;
                 var tmp = document.createElement('div');
                 tmp.innerHTML = html;
                 var node = tmp.firstElementChild;
@@ -4379,19 +4392,20 @@
                 var slotBlock = pane.querySelector('.aot-ov-record') ||
                                 pane.querySelector('.aot-ov-notes');
                 var slot = slotBlock && (slotBlock.closest('.aot-ov-card') || slotBlock);
-                // **노트 목록은 비교에서 빼야 한다.** `buildRecordBlock` 은 그
+                // **노트 목록은 비동기로 채워진다.** `buildRecordBlock` 은 그
                 // 자리를 자리표시자('…')로 두고 `_wireFacilityNotes` 가 나중에
-                // 채운다. 그대로 비교하면 새 HTML('…')과 화면(실제 노트)이 늘
-                // 달라서 폴링마다 교체 → 노트 재로딩 → 다시 교체가 무한히 돌고,
-                // 그것이 5초마다 깜빡이던 실제 원인이었다.
+                // 채운다. 교체할 때 그대로 두면 이미 받아 둔 노트가 '…' 로
+                // 되돌아갔다가 다시 채워지므로, 지금 화면의 노트를 새 노드에
+                // 옮겨 심고 나서 바꾼다 — 교체돼도 노트가 살아남는다.
                 //
-                // 지금 화면의 노트를 새 노드에 옮겨 심고 비교한다 — 나머지가
-                // 같으면 손대지 않고, 달라서 교체할 때도 노트가 살아남는다.
+                // "바꿀 필요가 있는가" 는 위에서 이미 정했다(`_aotRecordHtml`).
+                // 여기서 DOM 과 한 번 더 견주지 않는다 — 번역이 켜진 화면에서는
+                // 그 비교가 늘 "다르다" 라 아무것도 막지 못하면서, 꺼진 화면
+                // 에서는 진짜 갱신을 삼킬 수 있다.
                 if (slot) {
                     var curList = slot.querySelector('.aot-ov-notes-list');
                     var newList = node.querySelector('.aot-ov-notes-list');
                     if (curList && newList) newList.innerHTML = curList.innerHTML;
-                    if (slot.outerHTML === node.outerHTML) return;
                     slot.replaceWith(node);
                 } else {
                     pane.appendChild(node);
@@ -4723,11 +4737,18 @@
                 var existingBlock = pane.querySelector('.aot-ov-facility-plots');
                 var existing = existingBlock &&
                     (existingBlock.closest('.aot-ov-card') || existingBlock);
-                var block = _parseNode(html);
-                if (!block) return;
                 // 같은 내용이면 손대지 않는다 — 5초마다 지웠다 다시 그리면
                 // 화면이 깜빡이고, 열어 둔 심기 폼도 사라진다.
-                if (existing && existing.outerHTML === block.outerHTML) return;
+                //
+                // ⚠ 견주는 것은 **지난번에 만든 문자열**이지 현재 DOM 이 아니다.
+                // 이름 번역(`aot-user-i18n.js`)이 우리가 쓴 직후 텍스트를
+                // 번역본으로 바꿔 놓으므로, `existing.outerHTML`(번역본)과 갓
+                // 만든 노드(원문)를 견주면 **영원히 다르다** — 가드가 있는데도
+                // 매 폴링마다 갈아끼우고 있었다(`_setHtmlIfChanged` 주석).
+                if (pane._aotPlotsHtml === html) return;
+                pane._aotPlotsHtml = html;
+                var block = _parseNode(html);
+                if (!block) return;
                 if (existing) {
                     existing.replaceWith(block);
                     _wireFacilityCapacity(uid, facilityUuid, bayId, block, pane,
@@ -4849,10 +4870,18 @@
                     // 카드 전체를 집어야 제목까지 함께 교체된다 — 안 그러면
                     // (박스만 찾아 통째로 바꿔치기하면) 새 카드가 옛 박스
                     // 자리에 끼어들어 옛 제목이 고아로 남는다.
+                    //
+                    // ⚠ 견주는 것은 **지난번에 만든 문자열**이지 현재 DOM 이
+                    // 아니다. 이름 번역(`aot-user-i18n.js`)이 우리가 쓴 직후
+                    // 텍스트를 번역본으로 바꿔 놓으므로, `cur.outerHTML`
+                    // (번역본)과 갓 만든 노드(원문)를 견주면 **영원히 다르다**
+                    // — 가드가 있는데도 매 폴링마다 갈아끼우고 있었다
+                    // (`_setHtmlIfChanged` 주석).
+                    if (pane._aotEnvNowHtml === html) return;
+                    pane._aotEnvNowHtml = html;
                     var node = _parseNode(html);
                     var curBlock = pane.querySelector('.aot-ov-envnow');
                     var cur = curBlock && (curBlock.closest('.aot-ov-card') || curBlock);
-                    if (cur && node && cur.outerHTML === node.outerHTML) return;
                     if (cur && node) {
                         cur.replaceWith(node);
                     } else {
@@ -5421,9 +5450,14 @@
             var listScroll = listEl ? listEl.scrollTop : 0;
             var paneEl = section.closest ? section.closest('.aot-bay-popup-pane') : null;
             var paneScroll = paneEl ? paneEl.scrollTop : 0;
-            section.innerHTML = window.AoTMapPopup.buildActuatorTabs(
-                activeCat, _ACT_CATS, states, st.canCtrl,
-                st._lastCmd || {}, _actKindToCat, savedOrder);
+            // 값이 그대로면 손대지 않는다 — 5초마다 같은 HTML 로 갈아끼우는 것이
+            // 곧 깜빡임이다(`_setHtmlIfChanged` 주석). 실측으로 이 섹션은 폴링
+            // 사이에 글자 하나까지 같았는데도 매번 통째로 교체되고 있었다.
+            var changed = _setHtmlIfChanged(section,
+                window.AoTMapPopup.buildActuatorTabs(
+                    activeCat, _ACT_CATS, states, st.canCtrl,
+                    st._lastCmd || {}, _actKindToCat, savedOrder));
+            if (!changed) return;
             var listEl2 = section.querySelector('.aot-act-tabs-body');
             if (listEl2 && listScroll) listEl2.scrollTop = listScroll;
             if (paneEl && paneScroll) paneEl.scrollTop = paneScroll;
@@ -8193,6 +8227,47 @@
                 if (evt === 'close') _closeListeners.push(fn);
             }
         };
+    }
+
+    /**
+     * 폴링이 다시 그리는 자리에 HTML 을 넣는다 — **내용이 실제로 달라졌을 때만.**
+     * 넣었으면 true, 같아서 손대지 않았으면 false.
+     *
+     * ⚠ `innerHTML` 대입은 **내용이 같아도** 자식 노드를 전부 버리고 새로
+     * 만든다. 모달 안 여러 자리가 5초마다(`output_update_interval`) 다시
+     * 그려지는데 그 대부분은 값이 그대로다 — 실측: 열어 둔 시설 모달에서 5초
+     * 간격 두 번의 빌드 결과가 **글자 하나까지 같았는데도** 제어 섹션은 노드가
+     * 2개 지워지고 2개 생겼고, 개요 슬롯도 통째로 갈렸다.
+     *
+     * ⚠⚠ **비교 대상은 `el.innerHTML` 이 아니라 "지난번에 우리가 쓴 문자열"
+     * 이다.** 사용자 지정 이름 번역(`aot-user-i18n.js`)이 우리가 쓴 직후 그
+     * 텍스트 노드를 번역본으로 바꿔 놓기 때문이다. 그래서 현재 DOM 은 늘
+     * **번역본**이고 새로 만든 HTML 은 늘 **원문**이라, 둘을 견주면 영원히
+     * 다르다고 나온다 — 가드가 통째로 무력해지고 교체는 매번 일어난다.
+     *
+     * 그 조합이 정확히 사용자가 본 화면이다(사이트 언어 한국어 + 이름 번역
+     * 켜짐): 5초마다 원문이 잠깐 보였다가 번역본으로 바뀌는 것이 **깜빡임**의
+     * 정체다. 원문끼리 견주면 값이 안 바뀐 사이클에서는 아예 쓰지 않으므로
+     * 번역기가 다시 할 일도 없다.
+     *
+     * 기록은 DOM 속성이 아니라 JS 프로퍼티에 둔다 — 속성으로 두면 그 쓰기
+     * 자체가 또 하나의 변경이 되어 번역기의 관찰자를 깨운다.
+     *
+     * 부작용은 보기 나쁜 것만이 아니다 — 교체된 노드에서는 포커스·선택·열어 둔
+     * 폼·스크롤 위치·CSS 전환이 함께 사라진다. 그래서 호출부가 스크롤을 재서
+     * 되돌리는 코드를 덧붙여 왔는데, 애초에 안 바꾸면 그 보정도 필요 없다.
+     *
+     * 값이 **정말로** 바뀐 사이클에는 여전히 원문→번역본 전환이 한 번 보인다.
+     * 그것을 없애려면 번역을 빌드 시점으로 당겨야 하는데 다른 층의 일이라
+     * 여기서 건드리지 않는다 — 이 함수가 없애는 것은 **바뀌지 않았는데도**
+     * 나던 주기적 깜빡임이다.
+     */
+    function _setHtmlIfChanged(el, html) {
+        if (!el) return false;
+        if (el._aotLastHtml === html) return false;
+        el._aotLastHtml = html;
+        el.innerHTML = html;
+        return true;
     }
 
     // ── Unified label/key stacking order ──────────────────────────────────────

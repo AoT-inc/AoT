@@ -723,7 +723,7 @@ THEMES_DARK = [
 BAND_PALETTE = ['#2DB4FF', '#54BCC1', '#32c85a', '#FEAE5F', '#CF5C58']
 
 # 전역 차트 시리즈 팔레트 (단일 소스 — docs/design/color-system.md 5절)
-# 그래프류 위젯(AoT_graph, AoT_PID, widget_graph_synchronous)의 Highcharts
+# 그래프류 위젯(AoT_graph, AoT_PID)의 Highcharts
 # 시리즈 기본색. 앞 6색은 AoT 시맨틱 색과 정렬(#FEA60B=warning, #DF5353=danger,
 # #008DDE≈info), 이후는 Highcharts 관례 색. 앞 6색(라이트/다크 공통)은
 # settings/custom_ui 의 chart_1..6 필드로 사용자 정의 가능 — 코드에서는

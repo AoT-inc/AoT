@@ -362,7 +362,7 @@ class AbstractAI(ABC):
         
         default_instructions = (
             "1. [MISSION: Final Answer Only] You have the full 'Current Context' below. DO NOT explain that you are searching. You MUST provide the final processed answer (summary, status, or confirmation) directly in the `insight` field.\n"
-            "2. [Insight Formatting] Use natural, conversational plain text in the user's language. NO Markdown (**, -, #). NO technical IDs or raw JSON in the text.\n"
+            "2. [Insight Formatting] Use natural, conversational plain text in the user's language. NO Markdown (**, -, #). NO technical IDs or raw JSON in the text. The reader runs this farm — address them as the operator, never as a customer (no 고객님 / お客様 / 'dear customer'), and do not apologise as filler.\n"
             "3. [Comprehensive Summary] When asked about a Site or Zone, summarize ALL its children (devices, status) proactively in one response.\n"
             "4. [Viewport Awareness] Refer to `dashboards` -> `widgets` to understand what the user sees on 'this screen'.\n"
             "5. [Tool Selection PRIORITY]:\n"
@@ -722,15 +722,27 @@ class AbstractAI(ABC):
             import yaml as _yaml
 
             _y = _yaml.safe_load(raw_text)
-            if isinstance(_y, dict) and 'insight' in _y:
-                logger.warning(
-                    f"[{engine_name}] JSON parsing failed but the body is YAML of the "
-                    f"same shape — recovered.")
-                _acts = _y.get('actions')
-                return {
-                    "insight": str(_y.get('insight') or '').strip(),
-                    "actions": _acts if isinstance(_acts, list) else [],
-                }
+            # 'insight' 키를 그대로 쓰지 않는 경우가 있다 — 실사용(2026-08-25)에서
+            # 모델이 사용자 언어로 번역해 "인사이트: … actions: []" 를 냈고, 키
+            # 이름만 보던 검사가 놓쳐 그 원문이 화면에 나갔다. 우리 스키마의
+            # 구조적 표지는 'actions' 쪽이 더 튼튼하다(산문에는 거의 안 나온다).
+            if isinstance(_y, dict) and ('insight' in _y or 'actions' in _y):
+                _text = _y.get('insight')
+                if _text is None:
+                    # 번역된 키를 찾는다 — actions 를 뺀 나머지 중 첫 문자열.
+                    for _k, _v in _y.items():
+                        if _k != 'actions' and isinstance(_v, str) and _v.strip():
+                            _text = _v
+                            break
+                if _text is not None:
+                    logger.warning(
+                        f"[{engine_name}] JSON parsing failed but the body is YAML of the "
+                        f"same shape — recovered.")
+                    _acts = _y.get('actions')
+                    return {
+                        "insight": str(_text).strip(),
+                        "actions": _acts if isinstance(_acts, list) else [],
+                    }
         except Exception:
             pass
 
@@ -738,6 +750,12 @@ class AbstractAI(ABC):
         
         # Clean up obvious markdown blocks before using as insight
         clean_text = raw_text.strip()
+        # YAML 로도 못 읽은 잔해에서 스키마 라벨만이라도 지운다 — 이 문자열은
+        # 그대로 사용자 화면에 나간다. "insight:" / "인사이트:" 같은 접두와
+        # 꼬리의 "actions: []" 는 답변이 아니라 우리 내부 형식이다.
+        clean_text = re.sub(r'^\s*[^\n:]{0,12}\s*:\s*', '', clean_text, count=1) \
+            if re.match(r'^\s*(insight|인사이트|洞察|インサイト)\s*:', clean_text, re.I) else clean_text
+        clean_text = re.sub(r'\n?\s*actions\s*:\s*\[\s*\]\s*$', '', clean_text).strip()
         if clean_text.startswith('```'):
             clean_text = re.sub(r'^```(json)?\n?', '', clean_text)
         if clean_text.endswith('```'):

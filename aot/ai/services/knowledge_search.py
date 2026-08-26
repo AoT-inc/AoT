@@ -253,6 +253,135 @@ def _source_name(source_id):
     return name
 
 
+
+# @ANCHOR: PROGRAM_STAGE_SECTIONS
+# 프로그램의 단계 지침을 검색 대상에 넣는다.
+#
+# 왜. 사용자가 "설원6 정식 어떻게 하는거야" 라고 물었고, 답은 이 설치의 딸기
+# 프로그램 '정식기' 단계에 **이미 적혀 있었다**("묘 뿌리를 넓게 펴서 정식하고,
+# 약한 겨드랑눈을 제거하며, 정식 후 충분히 관수한다. 심는 깊이는 관부가 반쯤
+# 묻히게…"). 그런데 knowledge_search 는 라이브러리만 뒤지고 프로그램은 보지
+# 않았다. 그래서 AI 는 "라이브러리에 없습니다" 하고 ECOCROP 의 기온·강수
+# 범위를 대신 내놓았다 — 묻지도 않은 것을(사용자 지적, 2026-08-25).
+#
+# 프로그램은 **그 농장이 직접 쓴 재배 지침**이다. 외부 표보다 이 농장에
+# 정확하고, 재배 방법을 묻는 물음의 답은 대개 여기 있다. 도구를 새로 만들지
+# 않고 여기 합치는 이유는, 모델이 주제 질문에서 이미 부르는 것이 이 함수이기
+# 때문이다 — 새 판단 지점을 만들지 않는다.
+_program_sections = []
+_program_stamp = None
+_program_lock = threading.Lock()
+
+
+def _load_program_stage_sections():
+    """프로그램 단계 지침을 섹션으로. 지침이 비어 있는 단계는 넣지 않는다 —
+    제목만 있는 항목은 검색을 흐리기만 한다."""
+    global _program_sections, _program_stamp
+    try:
+        import json as _json
+
+        from sqlalchemy import func
+
+        from aot.aot_flask.extensions import db as _db
+        from aot.databases.models.geo_program import GeoProgram
+
+        stamp = _db.session.query(func.max(GeoProgram.updated_at)).scalar()
+        stamp_key = stamp.isoformat() if stamp else None
+
+        with _program_lock:
+            if stamp_key == _program_stamp and _program_sections:
+                return _program_sections
+
+            # 어느 구획이 이 프로그램을 쓰는가. 사용자는 프로그램 이름이 아니라
+            # **자기 구획 이름**으로 묻는다 — "설원6 정식 어떻게 하는거야" 의
+            # '설원6' 은 딸기 품종이 아니라 이 농장의 구획이고, 그 구획이 딸기
+            # 프로그램을 쓰고 있었다(실사용 2026-08-25). 제목에 구획 이름을
+            # 붙여야 그 물음이 제목 가중치(3배)로 걸린다.
+            plots_by_program = {}
+            try:
+                from aot.databases.models import GeoPlot
+                for plot in GeoPlot.query.all():
+                    pid = getattr(plot, 'program_uuid', None)
+                    label = (plot.subject or '').strip()
+                    if pid and label:
+                        plots_by_program.setdefault(pid, []).append(label)
+            except Exception:
+                pass
+
+            out = []
+            for row in GeoProgram.query.all():
+                stages = row.stages
+                if not isinstance(stages, list):
+                    try:
+                        stages = _json.loads(stages or '[]')
+                    except (ValueError, TypeError):
+                        stages = []
+                subject = (row.subject or '').strip()
+                variety = (row.variety or '').strip()
+                by_person = (row.source or 'user') != 'ai'
+                # 같은 프로그램을 여러 구획이 쓴다(실측: 콩 프로그램 하나에
+                # 구획 8개). 제목이 끝없이 길어지지 않게 셋까지만 적는다.
+                users = plots_by_program.get(row.unique_id) or []
+                plot_hint = ''
+                if users:
+                    shown = users[:3]
+                    plot_hint = ' · ' + ', '.join(shown)
+                    if len(users) > len(shown):
+                        plot_hint += ' 외 %d' % (len(users) - len(shown))
+                for stage in stages:
+                    if not isinstance(stage, dict):
+                        continue
+                    guidance = (stage.get('guidance') or '').strip()
+                    if not guidance:
+                        continue
+                    stage_name = (stage.get('name') or stage.get('key') or '').strip()
+                    days = stage.get('days')
+                    body = guidance
+                    if days:
+                        body = '%s (이 단계 %s일)' % (guidance, days)
+                    tags = [t.lower() for t in
+                            [row.name, subject, variety, stage_name] + users if t]
+                    out.append({
+                        # 구획 이름은 **출처 자리**에 둔다(파일명은 2배로
+                        # 점수화된다). 제목에 '딸기 — 정식기 · 설원6' 처럼
+                        # 붙였더니 모델이 설원6 을 **단계 이름으로** 읽었다
+                        # (실측 2026-08-26: "설원6은 딸기 재배 프로그램의 한
+                        # 단계(화아분화기, 결실기, 수확기)를 의미하는 것으로
+                        # 보입니다"). 제목은 단계만, 구획은 어디에 적용되는가로.
+                        'file': ('%s · %s 프로그램' % (plot_hint.lstrip(' ·'),
+                                                     row.name or subject)
+                                 if plot_hint else
+                                 '%s 프로그램' % (row.name or subject or '프로그램')),
+                        # 제목이 3배로 점수화된다 — 작물명과 단계명이 둘 다
+                        # 들어가야 "설원6 정식" 같은 물음이 걸린다.
+                        'heading': '%s — %s' % (row.name or subject,
+                                                stage_name or '단계'),
+                        'level': 2,
+                        'content': body,
+                        'keywords': ' '.join(tags),
+                        'origin': 'program',
+                        # 사람이 쓴 프로그램은 사용자 입력이다. AI 가 만든
+                        # 프로그램은 사람이 확인하기 전까지 미확인으로 둔다
+                        # (프로그램 검토 게이트와 같은 기준).
+                        'provenance': 'user_provided' if by_person else 'ai_curated',
+                        'trust_state': ('user_confirmed' if by_person or row.reviewed_at
+                                        else 'system_generated'),
+                        'attribution': '%s 프로그램 · %s' % (row.name or subject, stage_name),
+                        'source_ref': None,
+                        'source_ref_name': None,
+                        'content_kind': 'prose',
+                        'tags': sorted(set(tags)),
+                        'entity_ref': row.unique_id,
+                        'ttl': None,
+                        'chunk_id': None,
+                    })
+            _program_sections = out
+            _program_stamp = stamp_key
+            return out
+    except Exception as e:
+        logger.debug("[KnowledgeSearch] program sections skipped: %s", e)
+        return []
+
 def _load_library_sections():
     """Fetch AIKnowledgeChunk rows as index entries (same shape as a markdown
     section, plus 'origin': 'library' and the P1 unified-item fields —
@@ -618,6 +747,9 @@ def search(query, top_k=3, max_chars=1400, tags=None):
         _load_library_sections()
         + _load_external_authority_sections()
         + _load_semantic_note_sections()
+        # 이 농장이 직접 쓴 재배 지침 — 재배 방법을 묻는 물음의 답은 대개
+        # 외부 표가 아니라 여기 있다(PROGRAM_STAGE_SECTIONS 주석 참조).
+        + _load_program_stage_sections()
     )
     if req_tags:
         lib_sections = [

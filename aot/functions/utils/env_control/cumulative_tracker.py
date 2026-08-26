@@ -32,7 +32,9 @@ _PPFD_S_TO_MOL = 1.0 / 1_000_000.0
 # DLI 는 PPFD 통적이 필요하다. 시스템의 internal['light'] 는 관례상 W/m²(일사량)이며
 # (facility_sensors: _UNIT_BY_KEY['light']='W/m²', 실내 광센서 부재 시 실외 solar_wm2 보충).
 # 환산은 시스템 단위 정의(config_devices_units.UNIT_CONVERSIONS)를 그대로 사용한다 —
-# 별도 계수를 두지 않고 시스템 변환표를 단일 출처로 삼는다(W_m2→umol_m2_s ×4.57 등).
+# 별도 계수를 두지 않고 시스템 변환표를 단일 출처로 삼는다(W_m2→umol_m2_s ×2.02 등).
+# ⚠ `W_m2` 는 **전천일사**다. PAR 센서는 `umol_m2_s` 로 등록해야 한다 —
+# 근거는 config_devices_units 의 그 항목 주석 참조.
 
 # PPFD 의 시스템 단위 키
 _PPFD_UNIT_KEY = 'umol_m2_s'

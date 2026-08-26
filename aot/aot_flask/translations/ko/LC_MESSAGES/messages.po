@@ -30693,3 +30693,9 @@ msgstr "비우면 모든 컬럼을 돌려줍니다. 행이 넓으면 좁히세�
 
 msgid "Data credits"
 msgstr "자료 출처"
+
+msgid "Misting Sunburn Protection"
+msgstr "분무 일소 보호"
+
+msgid "Tightens the sunburn protection above for newly emerged seedlings. Droplets left on a cotyledon under strong sun focus light onto the leaf and concentrate dissolved minerals as they evaporate, and the seedling has no cuticle yet to resist either. The lockout itself is always active for wetting-type nozzles — this adds a lower threshold on groundwater, shorter sprays with a longer drying interval, and an evening cut-off."
+msgstr "위의 일소 보호를 갓 난 모종에 맞춰 더 조인다. 강한 햇빛 아래 떡잎에 남은 물방울은 렌즈처럼 빛을 모으고 마르면서 녹은 염류를 농축하는데, 모종은 아직 그것을 견딜 큐티클이 없다. 잠금 자체는 습윤형 노즐에 언제나 걸려 있고, 여기서는 지하수일 때 임계를 낮추고 분무를 더 짧게 끊어 건조 시간을 늘리며 저녁 차단을 더한다."

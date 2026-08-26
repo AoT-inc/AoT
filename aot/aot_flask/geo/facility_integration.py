@@ -68,6 +68,46 @@ _DM_NAME_TO_MTYPE = {
 }
 
 
+# 장치를 고르면 자동으로 채워도 되는 종류 (환경값만).
+# `_DM_NAME_TO_MTYPE` 에는 rssi/snr/battery 같은 **메타 채널**과 pressure 도
+# 있는데, 그것들은 사용자가 "센서로 쓴다" 고 고른 대상이 아니다. 자동으로
+# 끌어오면 고르지도 않은 채널이 센서 목록에 나타난다.
+_AUTO_RESOLVABLE_MTYPES = frozenset({
+    'temperature', 'humidity', 'co2', 'vpd',
+    'light', 'wind_speed', 'wind_direction', 'rain',
+})
+
+
+def auto_channels_for_device(dm_rows, explicit_types):
+    """고른 장치에서 아직 안 묶인 종류 중, 후보가 **하나뿐인** 것들.
+
+    사용자는 화면에서 "이 장치를 실내/실외 센서로 쓴다" 를 고른다. 그런데
+    백엔드가 체크된 채널만 읽으면, 기상대를 실외 센서로 지정해도 그때 체크된
+    채널 하나만 살고 나머지는 없는 셈이 된다 — 그리고 없으면 조용히 지어냈다.
+    장치 이름이 무엇이든 uuid + 채널로 해석할 수 있는 정보다.
+
+    ⚠ **모호하면 채우지 않는다.** 같은 종류의 채널이 둘 이상인 장치(예:
+    temp1f~temp6f 를 한꺼번에 내보내는 기상 콘솔)에서 전부 끌어오면 서로 다른
+    자리의 값이 한 평균으로 섞인다. 그건 사용자가 골라야 할 판단이다.
+
+    Args:
+        dm_rows:        그 장치의 DeviceMeasurements 행들
+        explicit_types: 사용자가 이미 명시한 measurement_type 집합 (이쪽이 이긴다)
+
+    Returns:
+        [{measurement_id, measurement_type, auto: True}, …]
+    """
+    by_type = {}
+    for r in dm_rows or []:
+        mt = _infer_mtype_from_dm(r)
+        if (mt and mt in _AUTO_RESOLVABLE_MTYPES
+                and mt not in (explicit_types or set())):
+            by_type.setdefault(mt, []).append(r)
+    return [{'measurement_id': rows[0].unique_id,
+             'measurement_type': mt, 'auto': True}
+            for mt, rows in sorted(by_type.items()) if len(rows) == 1]
+
+
 def _infer_mtype_from_dm(dm_row):
     """DeviceMeasurements 행에서 measurement_type을 자동 추론한다."""
     if dm_row is None:
@@ -365,20 +405,82 @@ def get_facility_integration(facility_uuid, bypass_cache=False):
             DeviceMeasurements.unique_id.in_(all_meas_ids)).all()
         dm_lookup = {r.unique_id: r for r in dm_rows}
 
+    # ── 고른 장치의 나머지 채널을 자동 해석한다 (2026-08-26) ────────────────────
+    # 사용자는 화면에서 **"이 장치를 실내/실외 센서로 쓴다"** 를 고른다. 그런데
+    # 백엔드는 체크된 채널만 읽었다 — 기상대를 실외 센서로 지정해도 그때 체크된
+    # 채널 하나만 살고 나머지는 없는 셈이 됐다. 그리고 없으면 조용히 지어냈다
+    # (`ext_context_fallback` 이 실외=실내로 채운다). 실측(2026-08-26 イチゴ):
+    # 기상대에 `light` 만 묶여 온도·습도·풍속·풍향이 전부 null 이었고, 그 위에서
+    # 환기 무익 판정이 서서 창이 닫히고 풍향 0°(정북)로 측창이 영구 leeward 였다.
+    # 장치 이름이 무엇이든 uuid + 채널로 해석할 수 있는 정보였다.
+    #
+    # ⚠ **모호하면 자동 해석하지 않는다.** 같은 종류의 채널이 둘 이상인 장치
+    # (예: temp1f~temp6f 를 한꺼번에 내보내는 기상 콘솔)에서 전부 끌어오면 서로
+    # 다른 자리의 값이 한 평균으로 섞인다. 그건 사용자가 골라야 할 판단이라
+    # 정확히 하나일 때만 채운다. 명시 선택은 언제나 이긴다.
+    dm_by_device = {}
+    if input_uuids:
+        for r in DeviceMeasurements.query.filter(
+                DeviceMeasurements.device_id.in_(input_uuids)).all():
+            dm_by_device.setdefault(r.device_id, []).append(r)
+
+    def _auto_channels(iid, explicit_types):
+        if not iid:
+            return []
+        return auto_channels_for_device(dm_by_device.get(iid, []), explicit_types)
+
+    def _explicit_list(f):
+        """이 fitting 에서 사용자가 **직접 고른** 채널 목록."""
+        ch_list = f.get('channel_measurements') or []
+        if not ch_list and f.get('measurement_id'):
+            ch_list = [{'measurement_id': f['measurement_id'],
+                        'measurement_type': f.get('measurement_type') or None}]
+        return list(ch_list)
+
+    def _types_of(ch_list):
+        out = set()
+        for ch in ch_list:
+            mt = ch.get('measurement_type') or _infer_mtype_from_dm(
+                dm_lookup.get(ch.get('measurement_id')))
+            if mt:
+                out.add(mt)
+        return out
+
+    # ── 명시 선택은 **역할 전체에서** 이긴다 (2026-08-26) ──────────────────────
+    # 처음에는 fitting 하나 안에서만 "이미 고른 종류" 를 셌는데, 그러면 센서를
+    # 둘로 나눠 단 설치에서 자동 해석이 남의 몫까지 끌어온다. 실측(イチゴ):
+    #
+    #   気象台1  [temperature, humidity, wind_speed, wind_direction]  ← 직접 선택
+    #   気象台2  [light, rain]                                        ← 직접 선택
+    #
+    # 여기서 気象台2 의 자동 해석이 온도·습도·바람을 또 올려, read_outdoor_sensors
+    # 가 두 장치를 **평균**했다 — 풍속 7.2 와 1.92 가 4.56 이 되고, 사용자가
+    # 직접 고른 값이 조용히 희석된다. 여러 센서를 일부러 평균하는 것은 정상
+    # 기능이지만(가중평균), 그것은 **사용자가 그렇게 고를 때**의 이야기다.
+    _explicit_by_fitting = {id(f): _explicit_list(f) for f in sensor_fittings}
+    _explicit_by_role = {}
+    for f in sensor_fittings:
+        r = f.get('sensor_role') or 'indoor'
+        _explicit_by_role.setdefault(r, set()).update(
+            _types_of(_explicit_by_fitting[id(f)]))
+
     sensors_resolved = []   # 실내 (공간 평균 계산, env_coordinator 내부 센서 보완)
     sensors_outdoor  = []   # 실외 (T_ext / RH_ext / 풍속·풍향·일사)
     sensors_forecast = []   # 기상 예보 Input 장치 바인딩 (weather_bindings 컬럼에서 로드)
+    _auto_taken = {}        # 역할별로 자동 해석이 이미 채운 종류 (중복 방지)
     for f in sensor_fittings:
         iid  = f.get('input_id')
         row  = inp_lookup.get(iid) if iid else None
         role = f.get('sensor_role') or 'indoor'
 
-        # channel_measurements: [{measurement_id, measurement_type}] (new multi-channel format)
-        # Falls back to legacy single measurement_id for backward compatibility.
-        ch_list = f.get('channel_measurements') or []
-        if not ch_list and f.get('measurement_id'):
-            ch_list = [{'measurement_id': f['measurement_id'],
-                        'measurement_type': f.get('measurement_type') or None}]
+        ch_list = _explicit_by_fitting[id(f)]
+        # 같은 역할에서 누가 직접 고른 종류, 그리고 앞선 fitting 이 자동으로
+        # 채운 종류는 다시 채우지 않는다. 장치가 여럿이어도 자동 해석은 한 번만.
+        _taken = _explicit_by_role.get(role, set()) | _auto_taken.setdefault(role, set())
+        _auto = _auto_channels(iid, _taken)
+        _auto_taken[role].update(
+            c['measurement_type'] for c in _auto if c.get('measurement_type'))
+        ch_list = ch_list + _auto
 
         for ch in ch_list:
             mid   = ch.get('measurement_id') or None
@@ -396,6 +498,10 @@ def get_facility_integration(facility_uuid, bypass_cache=False):
                 'measurement_id':   mid,
                 'input_name':       (row.name if row else None),
                 'input_device':     (row.device if row else None),
+                # 사용자가 직접 고른 채널인가, 장치에서 자동으로 해석한 것인가.
+                # 화면이 "자동" 을 표시할 수 있어야 사용자가 무엇이 어떻게 읽히는지
+                # 안다 — 자동 해석을 조용히 하면 지어내던 것과 같은 문제가 된다.
+                'auto':             bool(ch.get('auto')),
             }
             if role == 'outdoor':
                 sensors_outdoor.append(entry)

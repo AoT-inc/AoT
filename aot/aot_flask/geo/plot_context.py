@@ -1670,7 +1670,11 @@ def _stage_targets(stage, program_row=None):
         pub = _public_target_def(spec)
         base = {'key': key, 'label': pub.get('label'),
                 'unit': spec.get('unit'), 'measurement': spec.get('measurement'),
-                'shape': spec.get('shape'), 'fixed': bool(spec.get('fixed'))}
+                'shape': spec.get('shape'), 'fixed': bool(spec.get('fixed')),
+                # 'day'/'night' — 이 목표가 낮에만/밤에만 적용되는가. 빠져 있으면
+                # 읽는 쪽이 야간 목표를 한낮 실측과 견주게 된다(실측 2026-08-26:
+                # 야간 12도 목표 대 한낮 35.6도 → 23.6도 차이라는 허위 경보).
+                'when': spec.get('when')}
         curve_uuid = curves.get(key)
         if curve_uuid:
             out.append(dict(base, value=None, source='method',

@@ -269,10 +269,18 @@ class TestNurseryFogGate:
                             [make_fogger(wetting=False)])
         assert not (res.gate_mask & GATE_BIT_FOG_SUNBURN)
 
-    def test_disabled_when_nursery_mode_off(self):
+    def test_locks_even_without_nursery_mode(self):
+        """육묘 모드를 꺼도 일소 잠금은 선다 (2026-08-25 변경).
+
+        예전에는 이 잠금이 통째로 `nursery_mode` 안에 있어서, 딸기 온실이
+        육묘 모드를 끄는 순간 두상 살수의 일소 보호가 함께 사라졌다.
+        물방울이 렌즈가 되는 것은 어린 모종만의 일이 아니다 — 육묘 모드는
+        이제 이 게이트를 켜는 스위치가 아니라 **더 조이는 축**이다.
+        고정: [[test_fog_sunburn_gate]]
+        """
         gate = SafetyPreGate(PreGateConfig())
         res = gate.evaluate(gate_ctx(light_est=900.0), [make_fogger()])
-        assert not (res.gate_mask & GATE_BIT_FOG_SUNBURN)
+        assert res.gate_mask & GATE_BIT_FOG_SUNBURN
 
     def test_falls_back_to_outdoor_solar(self):
         """실내 추정 광량이 없으면 실외 일사로 판정한다."""
@@ -352,12 +360,18 @@ class TestNurseryFogGate:
         res = gate.evaluate(gate_ctx(light_est=20.0), fog)   # evening_block 해제
         assert not (res.gate_mask & GATE_BIT_FOG_SUNBURN)
 
-    def test_evening_block_ignored_when_mode_off(self):
+    def test_evening_block_is_honoured_however_it_was_set(self):
+        """저녁 차단이 선언돼 있으면 모드와 무관하게 존중한다 (2026-08-25).
+
+        실제로 이 플래그를 심는 곳은 육묘 모드뿐이라(`_cycle_mixin`)
+        비육묘 설치에서는 나타나지 않는다. 그래도 판정을 모드로 다시 나누면
+        "차단해 달라고 했는데 안 됐다" 가 생기므로 플래그를 그대로 따른다.
+        """
         gate = SafetyPreGate(PreGateConfig())
         ctx = gate_ctx(light_est=20.0)
         ctx['internal']['evening_block'] = True
         res = gate.evaluate(ctx, [make_fogger()])
-        assert not (res.gate_mask & GATE_BIT_FOG_SUNBURN)
+        assert res.gate_mask & GATE_BIT_FOG_SUNBURN
 
     def test_beats_heat_emergency(self):
         """폭염 게이트와 겹쳐도 분무 잠금이 이긴다.
@@ -561,13 +575,18 @@ class TestNurseryFogDerate:
         self._derate(_internal(200.0), [fog], cmds)
         assert cmds[fog.actuator_id]['value'] == 80.0
 
-    def test_disabled_without_nursery_mode(self):
+    def test_derates_without_nursery_mode(self):
+        """감쇠도 육묘 모드를 전제하지 않는다 (2026-08-25).
+
+        하드 잠금만 일반화하고 감쇠를 육묘에 남기면, 비육묘 설치에서 분무가
+        release~lockout 구간에서 완만히 줄지 않고 절벽처럼 끊긴다.
+        """
         fog = make_fogger()
         cmds = {fog.actuator_id: {'value': 80.0}}
         internal = _internal(200.0)
         internal.pop('_nursery_mode')
         self._derate(internal, [fog], cmds)
-        assert cmds[fog.actuator_id]['value'] == 80.0
+        assert cmds[fog.actuator_id]['value'] < 80.0
 
     def test_no_light_data_untouched(self):
         fog = make_fogger()
@@ -862,12 +881,16 @@ class TestGateEnvEndToEnd:
         assert res.triggered is False
         assert 'vent_01' not in res.forced_commands
 
-    def test_nursery_mode_off_ignores_fallback(self):
-        """육묘장 모드가 꺼져 있으면 어림값이 있어도 아무 일도 없다."""
+    def test_fallback_is_used_without_nursery_mode(self):
+        """어림값 폴백도 모드와 무관하다 (2026-08-25).
+
+        일사 센서가 없는 설치가 정확히 폴백에 의존하는데, 그것을 육묘로
+        묶어 두면 그런 설치의 일소 보호가 통째로 꺼진 채 돈다.
+        """
         res, _ = self._evaluate(
             self._internal(_nursery_light_fallback=900.0),
             self._external(), cfg=PreGateConfig())
-        assert not (res.gate_mask & GATE_BIT_FOG_SUNBURN)
+        assert res.gate_mask & GATE_BIT_FOG_SUNBURN
 
 
 # ─────────────────────────────────────────────────────────────────────────────

@@ -267,6 +267,11 @@
       <option value="{{each_output_form['value']}}"{% if (channel_options and each_output_form['value'] == custom_options_values[unique_id][channel][each_option['id']]) or (custom_options_values and each_output_form['value'] == custom_options_values[unique_id][each_option['id']]) %} selected{% endif %}>{{each_output_form['item']}}</option>
         {%- endfor -%}
       {% endif %}
+      {% if 'Output_Value_Channels_Measurements' in each_option['options_select'] %}
+        {%- for each_output_form in choices_output_channels_measurements if 'value' in each_output_form['types'] -%}
+      <option value="{{each_output_form['value']}}"{% if (channel_options and each_output_form['value'] == custom_options_values[unique_id][channel][each_option['id']]) or (custom_options_values and each_output_form['value'] == custom_options_values[unique_id][each_option['id']]) %} selected{% endif %}>{{each_output_form['item']}}</option>
+        {%- endfor -%}
+      {% endif %}
     </select>
   </div>
 </div>

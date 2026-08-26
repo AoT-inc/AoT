@@ -9762,11 +9762,198 @@ class AoTDataToolService:
                     rows_per_bed=rows_per_bed)
             except ValueError as ve:
                 return {"error": str(ve)}
+            _check = AoTDataToolService._stage_target_check(brief)
+            if _check:
+                brief['target_check'] = _check
             return {"plot": brief,
                     "_reading": AoTDataToolService._plot_reading_notes(brief)}
         except Exception as e:
             logger.exception("Error in get_plot")
             return {"error": str(e)}
+
+    # @ANCHOR: STAGE_TARGET_CHECK
+    # 프로그램의 **이 단계 목표값**과 구획의 **현재 실측값**을 나란히 놓는다.
+    #
+    # 왜. "이 구획이 이 작물에 얼마나 적합한가" 는 실사용에서 반복해서 물어본
+    # 질문인데(2026-08-26), 답이 늘 현재 센서값 나열이었다 — 목표가 옆에 없으니
+    # 모델이 판단할 근거가 없어 값만 읽고 만다. 필요한 것은 둘 다 있었다:
+    # 프로그램의 target_defs 가 무엇을 재는지(measurement)를, 단계의 targets 가
+    # 그 숫자를 갖고 있다. 이어 붙이지 않았을 뿐이다.
+    #
+    # **판정을 지어내지 않는다.** targets 는 단일 수치(예: temp_day=26.0)이고
+    # 허용폭이 어디에도 없다. '적정/높음' 을 매기려면 폭을 발명해야 하는데,
+    # 그러면 근거 없는 숫자가 조언이 된다. 목표·현재·차이만 내고 판단은
+    # 사람과 모델에게 남긴다 — "26도 목표에 현재 24.2도, 1.8도 낮음" 이면
+    # "얼마나 적합한가" 에 이미 답이 된다.
+    #
+    # 목표값이 없는 프로그램에서는 조용히 비우지 않고 그 사실을 말한다. 그것은
+    # 내부 사정이 아니라 **그 사람의 프로그램에 아직 안 채워진 칸**이고, 채우면
+    # 답이 좋아지는 행동 가능한 정보다.
+    @staticmethod
+    def _stage_target_check(brief):
+        stage = (brief or {}).get('stage') or {}
+        targets = stage.get('targets')
+
+        # plot_context._effective_targets 가 곡선 → 단계값 → 프로그램 기본값
+        # 순으로 이미 해석해 준다. 그 결과를 쓴다(원본 dict 형태도 받아 둔다).
+        items = []
+        if isinstance(targets, list):
+            items = [t for t in targets if isinstance(t, dict)]
+        elif isinstance(targets, dict):
+            defs = {d.get('key'): d
+                    for d in (((brief or {}).get('program') or {}).get('target_defs') or [])
+                    if isinstance(d, dict) and d.get('key')}
+            for k, v in targets.items():
+                d = defs.get(k) or {}
+                items.append({'key': k, 'label': d.get('label') or k,
+                              'unit': d.get('unit') or '',
+                              'measurement': d.get('measurement') or k,
+                              'when': d.get('when'), 'value': v, 'source': 'stage'})
+
+        if not items:
+            if (brief or {}).get('program'):
+                return {'state': 'no_targets',
+                        'note': ("This programme has no target values for the current "
+                                 "stage, so there is nothing to compare the readings "
+                                 "against. Say so plainly and offer that filling them "
+                                 "in on the programme would make this answerable.")}
+            return None
+
+        # 지금이 낮인가. 주/야 목표를 가르는 데만 쓴다.
+        is_day = None
+        try:
+            from aot.utils.solar import is_daytime
+            is_day = is_daytime(target_id=(brief or {}).get('unique_id'))
+        except Exception as e:
+            logger.debug("[StageTargetCheck] daylight unknown: %s", e)
+
+        sensors = (brief or {}).get('sensors') or {}
+        current = AoTDataToolService._latest_by_measurement(
+            sensors.get('in_plot') or [], sensors.get('from_zone') or [])
+
+        rows, no_reading, curves, off_period, unmeasurable = [], [], [], [], []
+        for t in items:
+            label = t.get('label') or t.get('key')
+            unit = t.get('unit') or ''
+
+            # 센서로 잴 수 없다고 선언된 항목(CO2·DLI 등)은 대조 대상이 아니다.
+            # '측정값 없음' 으로 보고하면 없는 문제를 만든다.
+            if t.get('observable') is False:
+                unmeasurable.append(label)
+                continue
+
+            # 곡선을 따르는 항목은 **숫자가 없다**(plot_context 가 값을 비운다 —
+            # 곡선의 '지금 값' 은 메서드마다 계산이 달라 그쪽에서 못 구한다).
+            # 조용히 빠뜨리면 목표가 없는 것처럼 보인다. 곡선을 따른다고 말한다.
+            if t.get('source') == 'method' or (t.get('value') is None and t.get('method_uuid')):
+                curves.append({'label': label,
+                               'curve': t.get('method_name') or '(이름 없음)'})
+                continue
+            if t.get('value') is None:
+                continue
+
+            # 주간 목표를 밤에, 야간 목표를 낮에 견주면 없는 문제가 생긴다
+            # (실측: 야간 12도 목표를 한낮 실측과 비교해 24도 차이가 났다).
+            when = t.get('when')
+            if when in ('day', 'night') and is_day is not None:
+                if (when == 'day') != bool(is_day):
+                    off_period.append({'label': label, 'target': t['value'],
+                                       'unit': unit, 'applies': when})
+                    continue
+
+            meas = str(t.get('measurement') or t.get('key')).strip().lower()
+            got = current.get(meas)
+            if got is None:
+                no_reading.append(label)
+                continue
+            row = {'key': t.get('key'), 'label': label, 'target': t['value'],
+                   'unit': unit, 'current': got['value'],
+                   # **어느 센서인가를 반드시 함께 낸다.** 실측에서 공기 온도
+                   # 목표가 토양 센서 값과 비교됐다 — 측정 이름이 둘 다
+                   # 'temperature' 라 이름만으로는 갈리지 않는다. 사람이 보고
+                   # 판단할 수 있게 출처를 밝힌다.
+                   'sensor': got.get('sensor'), 'measured_at': got.get('at')}
+            if got.get('others'):
+                row['other_sensors'] = got['others']
+            try:
+                row['delta'] = round(float(got['value']) - float(t['value']), 2)
+            except (TypeError, ValueError):
+                pass
+            rows.append(row)
+
+        out = {'state': 'compared' if rows else 'no_readings',
+               'stage': stage.get('name'), 'rows': rows}
+        if curves:
+            out['follows_curve'] = curves
+        if off_period:
+            out['not_this_period'] = off_period
+            out['now'] = 'day' if is_day else 'night'
+        if unmeasurable:
+            out['not_measurable_here'] = unmeasurable
+        if no_reading:
+            out['no_reading_for'] = no_reading
+        out['note'] = ("target vs current for THIS stage. 'delta' is current minus "
+                       "target. There is no tolerance band in the data — do NOT invent "
+                       "one. Check 'sensor' before trusting a row: several sensors can "
+                       "report the same measurement (air vs soil temperature), and "
+                       "'other_sensors' lists the rest. 'not_this_period' targets do "
+                       "not apply right now; 'follows_curve' targets track a curve, "
+                       "not a fixed number.")
+        return out
+
+    @staticmethod
+    def _latest_by_measurement(in_plot_ids, zone_ids=None):
+        """측정 종류별 최신값 — {measurement: {'value','at','sensor','others'}}.
+
+        구획 안 센서를 구역 폴백보다 **먼저** 본다(sensors_for_plot 의 우선순위와
+        같다). 평균을 내지 않는 이유는 구획 안 센서와 구역 대표 센서가 섞이면
+        평균이 어느 쪽도 아닌 값이 되기 때문이고, 같은 측정을 여러 센서가
+        재면 나머지를 `others` 로 함께 낸다 — 실측에서 공기 온도 목표가 토양
+        센서 값과 비교됐다. 어느 센서인지 보이지 않으면 그것을 알 길이 없다.
+        """
+        out = {}
+        try:
+            from aot.databases.models import Conversion, DeviceMeasurements, Input
+            from aot.utils.influx import read_influxdb_list
+            from aot.utils.system_pi import return_measurement_info
+
+            ordered = list(in_plot_ids or []) + [d for d in (zone_ids or [])
+                                                 if d not in set(in_plot_ids or [])]
+            if not ordered:
+                return out
+            rank = {d: n for n, d in enumerate(ordered)}
+            names = {i.unique_id: i.name for i in Input.query.filter(
+                Input.unique_id.in_(ordered)).all()}
+
+            found = {}
+            for m in DeviceMeasurements.query.filter(
+                    DeviceMeasurements.device_id.in_(ordered)).all():
+                conv = (Conversion.query.filter(
+                    Conversion.unique_id == m.conversion_id).first()
+                    if m.conversion_id else None)
+                channel, unit, meas = return_measurement_info(m, conv)
+                if not unit or not meas:
+                    continue
+                rows = read_influxdb_list(m.device_id, unit, channel, measure=meas,
+                                          duration_sec=3600, datetime_obj=True)
+                if not rows or rows[-1][1] is None:
+                    continue
+                found.setdefault(str(meas).strip().lower(), []).append({
+                    'value': rows[-1][1], 'at': str(rows[-1][0]),
+                    'sensor': names.get(m.device_id, m.device_id),
+                    '_rank': rank.get(m.device_id, 99)})
+
+            for meas, cands in found.items():
+                cands.sort(key=lambda c: c['_rank'])
+                best = cands[0]
+                out[meas] = {'value': best['value'], 'at': best['at'],
+                             'sensor': best['sensor']}
+                rest = [{'sensor': c['sensor'], 'value': c['value']} for c in cands[1:]]
+                if rest:
+                    out[meas]['others'] = rest
+        except Exception as e:
+            logger.debug("[StageTargetCheck] latest values unavailable: %s", e)
+        return out
 
     @staticmethod
     def _plot_reading_notes(brief):
@@ -9789,6 +9976,22 @@ class AoTDataToolService:
                 "'sensors' are the zone's representative values, NOT measured "
                 "inside this plot (sensors.source='zone'). Say so whenever you "
                 "report one of these numbers.")
+
+        # 목표 대조가 실렸으면 그것으로 답하라고 말한다. 실려 있다는 것과
+        # 닿는다는 것은 다르다 — stage.guidance 가 같은 이유로 이 자리에 있다.
+        _tc = brief.get('target_check') or {}
+        if _tc.get('state') == 'compared':
+            notes.append(
+                "'target_check' already pairs THIS stage's target with the current "
+                "reading and gives the gap ('delta'). When asked whether the place "
+                "suits the crop, or how it is doing, answer FROM THAT — do not list "
+                "raw sensor values instead. There is no tolerance band in the data, "
+                "so report the gap; do not invent 'good/bad' thresholds.")
+        elif _tc.get('state') == 'no_targets':
+            notes.append(
+                "'target_check' says this programme has no target values for the "
+                "current stage. That is why suitability cannot be judged — say that, "
+                "and that filling them in on the programme would make it answerable.")
 
         stage = brief.get('stage') or {}
         if stage:

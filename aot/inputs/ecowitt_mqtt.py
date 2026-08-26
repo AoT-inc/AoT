@@ -69,7 +69,7 @@ DEVICE_CHANNELS = {
 INPUT_INFORMATION = {
     'input_name_unique': 'ecowitt_MQTT',
     'input_manufacturer': 'Ecowitt',
-    'input_name': 'Ecowitt MQTT\(JSON payload)',
+    'input_name': 'Ecowitt MQTT (JSON payload)',
     'input_name_short': 'Ecowitt MQTT JSON',
     'input_library': 'paho-mqtt, jmespath',
     'measurements_name': 'Variable measurements',
@@ -217,16 +217,15 @@ INPUT_INFORMATION = {
     ]
 }
 
-# --- Dynamic measurement options for measurements_select ---
-def get_ecowitt_measurement_options():
+def ecowitt_measurement_options(device):
+    """선택한 기기 종류가 내보내는 (json_name, 라벨) 목록.
+
+    예전에는 `current_app.input_dev` 에서 기기를 꺼내려 했는데 Flask 에 그런
+    속성이 없다 — 부르는 순간 AttributeError 였고, 실제로 부르는 곳도 없었다.
+    기기 종류는 호출자가 넘긴다.
     """
-    Return list of (json_name, label) tuples for measurements based on selected Ecowitt device.
-    """
-    from flask import current_app
-    # current input_dev context may provide selected device
-    input_dev = current_app.input_dev  # adjust as per framework context
-    device = input_dev.option_get('ecowitt_device')
-    return [(cfg['json_name'], cfg['label']) for cfg in DEVICE_CHANNELS.get(device, [])]
+    return [(cfg['json_name'], cfg['label'])
+            for cfg in DEVICE_CHANNELS.get(device, [])]
 
 
 class InputModule(AbstractInput):
@@ -246,6 +245,10 @@ class InputModule(AbstractInput):
         self.client = None
         self.jmespath = None
         self.options_channels = None
+        # 'custom_options' 의 ecowitt_device 가 setup_custom_options 로 여기 실린다.
+        self.ecowitt_device = None
+        # 선택한 기기 종류가 내보내는 json 키 집합 (initialize 에서 한 번 계산).
+        self._allowed_json_names = None
 
         self.mqtt_hostname = None
         self.mqtt_port = None
@@ -266,13 +269,8 @@ class InputModule(AbstractInput):
             # Load custom options (including ecowitt_device)
             self.setup_custom_options(
                 INPUT_INFORMATION['custom_options'], input_dev)
-            # Immediately initialize channels based on selected device
             self.initialize()
-            # Start listener after initialization
             self.listener()
-            # Reinitialize channels on device change
-            input_dev.on_option_change('ecowitt_device', self.reinitialize)
-            self.logger.debug("Bound Ecowitt device change listener")
 
     def initialize(self):
         import paho.mqtt.client as mqtt
@@ -281,25 +279,37 @@ class InputModule(AbstractInput):
         self.jmespath = jmespath
         self.log_level_debug = self.input_dev.log_level_debug
 
-        # --- Per-device channel creation ---
-        device = self.input_dev.option_get('ecowitt_device')
-        # delete existing channels
-        existing = db_retrieve_table_daemon(
-            InputChannel).filter(InputChannel.input_id == self.input_dev.unique_id).all()
-        for ch in existing:
-            self.delete_channel(ch.unique_id)
-        # add channels defined for this device
-        for cfg in DEVICE_CHANNELS.get(device, []):
-            self.add_channel(
-                name=cfg['label'],
-                json_name=cfg['json_name']
-            )
-        # refresh channel list
+        # ── 기기 종류 → 읽을 json 키 ────────────────────────────────────────
+        # 예전에는 `self.input_dev.option_get('ecowitt_device')` 로 읽고
+        # `add_channel`/`delete_channel` 로 채널을 만들려 했는데 **그 셋 다
+        # 이 코드베이스에 존재하지 않는 함수**다. `__init__` 이 initialize() 를
+        # 부르므로 이 모듈은 여태 **생성 자체가 불가능**했다(AttributeError).
+        # 옵션은 `setup_custom_options` 가 같은 이름의 속성으로 실어 준다.
+        device = self.ecowitt_device or ''
+        allowed = {cfg['json_name'] for cfg in DEVICE_CHANNELS.get(device, [])}
+        self._allowed_json_names = allowed or None
+
         input_channels = db_retrieve_table_daemon(
             InputChannel).filter(InputChannel.input_id == self.input_dev.unique_id).all()
 
         self.options_channels = self.setup_custom_channel_options_json(
             INPUT_INFORMATION['custom_channel_options'], input_channels)
+
+        # ⚠ 거르는 것은 **말하고** 거른다. 선택한 기기 종류에 없는 키를 조용히
+        # 버리면 "채널을 만들었는데 값이 안 들어온다" 가 되고, 그때 원인이
+        # 어디인지 알 방법이 없다. 판정은 매 메시지가 아니라 여기서 한 번만
+        # 한다(초당 여러 번 오는 경로라 메시지마다 찍으면 로그를 덮는다).
+        # ERROR 로 남긴다 — 입력 로거는 log_level_debug 가 꺼져 있으면 ERROR 라
+        # warning/info 는 기본 설치에서 아무 데도 안 남는다.
+        if allowed:
+            names = self.options_channels.get('json_name', {}) or {}
+            dropped = sorted({str(v) for v in names.values()
+                              if v and str(v) not in allowed})
+            if dropped:
+                self.logger.error(
+                    "기기 종류 '%s' 에 없는 채널은 읽지 않습니다: %s. "
+                    "기기 종류를 바꾸거나 해당 채널을 지우세요.",
+                    device, ', '.join(dropped))
 
         self.client = mqtt.Client(
             self.mqtt_clientid,
@@ -392,74 +402,74 @@ class InputModule(AbstractInput):
         # Any delivered message proves the broker link is alive, recorded before
         # decoding so an undecodable payload still counts as proof of life.
         self._comm_last_ts = time.time()
-        try:
-            payload = msg.payload.decode()
-            # self.logger.debug(
-            #     "Received message: topic: {}, payload: {}".format(
-            #         msg.topic, payload))
-        except Exception as exc:
-            # self.logger.error(
-            #     "Payload could not be decoded: {}".format(exc))
-            return
 
         # Unified parsing for both JSON and URL-encoded form payloads
         from urllib.parse import parse_qsl, unquote_plus
 
-        # Determine payload format: JSON or URL form
-        raw = msg.payload.decode(errors='ignore')
-        payload = raw.strip()
+        try:
+            payload = msg.payload.decode(errors='ignore').strip()
+        except Exception as exc:
+            self.logger.error("Payload could not be decoded: {}".format(exc))
+            return
+        self.logger.debug("Received message: topic: {}, payload: {}".format(
+            msg.topic, payload))
+
         try:
             if payload.startswith('{') and payload.endswith('}'):
-                # JSON format
                 json_values = json.loads(payload)
             else:
                 # URL-encoded key=value&... format
                 items = parse_qsl(payload, keep_blank_values=True)
                 json_values = {key: unquote_plus(value) for key, value in items}
         except Exception as err:
-            # self.logger.error(
-            #     f"Error parsing payload '{payload}': {err}")
+            self.logger.error("Error parsing payload '{}': {}".format(payload, err))
             return
 
-        # --- call_back filter logic ---
-        device_filter = self.input_dev.option_get('call_back') or ''
-        allowed = [cfg['json_name'] for cfg in DEVICE_CHANNELS.get(device_filter, [])] if device_filter else None
+        allowed = self._allowed_json_names
 
         datetime_utc = datetime.datetime.utcnow()
         measurement = {}
         for each_channel in self.channels_measurement:
             json_name = self.options_channels['json_name'][each_channel]
-            # apply call_back filter
+            # 선택한 기기 종류에 없는 키는 읽지 않는다. 무엇이 걸러지는지는
+            # initialize() 가 이미 한 번 말했다 — 여기서 또 찍으면 로그를 덮는다.
             if allowed is not None and json_name not in allowed:
                 continue
-            # self.logger.debug("Searching JSON for {}".format(json_name))
 
             try:
                 jmesexpression = self.jmespath.compile(json_name)
-                value = float(jmesexpression.search(json_values))
-                # Validate the value
-                # if value is None or isinstance(value, str) or value == 0:
-                #     self.logger.warning(f"Ignored invalid value for {json_name}: {value}")
-                #     continue
-                if value is None or isinstance(value, str) or value == 0:
-                    continue
-                # self.logger.debug(
-                #     "Found key: {}, value: {}".format(json_name, value))
-                measurement[each_channel] = {}
-                measurement[each_channel]['measurement'] = self.channels_measurement[each_channel].measurement
-                measurement[each_channel]['unit'] = self.channels_measurement[each_channel].unit
-                measurement[each_channel]['value'] = value
-                measurement[each_channel]['timestamp_utc'] = datetime_utc
-                measurement = self.check_conversion(each_channel, measurement)
+                result = jmesexpression.search(json_values)
             except Exception as err:
-                # self.logger.error(
-                #     "Error in JSON '{}' finding '{}': {}".format(
-                #         json_values, json_name, err))
-                pass
+                self.logger.error("Error in JSON '{}' finding '{}': {}".format(
+                    json_values, json_name, err))
+                continue
+
+            # ⚠ **0 을 버리지 말 것.** 예전에는 `value == 0` 이면 건너뛰었는데,
+            # 이 기기가 내보내는 값의 상당수는 0 이 정상이다 — 밤의 일사·UV,
+            # 비가 안 올 때의 강우량, 무풍일 때의 풍속. 그것을 버리면 "값이
+            # 가끔 안 들어온다" 가 되고, 더 나쁘게는 **평균과 적산이 0 을 빼고
+            # 계산돼** 조용히 부풀려진다. 걸러야 할 것은 0 이 아니라 '없음' 이다.
+            if result is None or (isinstance(result, str) and not result.strip()):
+                self.logger.debug("Value for {} not found or empty; skipping.".format(json_name))
+                continue
+            try:
+                value = float(result)
+            except (TypeError, ValueError):
+                self.logger.debug("Non-numeric value for {}: {}; skipping.".format(
+                    json_name, result))
+                continue
+
+            self.logger.debug("Found key: {}, value: {}".format(json_name, value))
+            measurement[each_channel] = {}
+            measurement[each_channel]['measurement'] = self.channels_measurement[each_channel].measurement
+            measurement[each_channel]['unit'] = self.channels_measurement[each_channel].unit
+            measurement[each_channel]['value'] = value
+            measurement[each_channel]['timestamp_utc'] = datetime_utc
+            measurement = self.check_conversion(each_channel, measurement)
 
         message, measurement = run_input_actions(self.unique_id, "", measurement, self.log_level_debug)
 
-        # self.logger.debug(f"Adding measurement to influxdb: {measurement}")
+        self.logger.debug("Adding measurement to influxdb: {}".format(measurement))
         add_measurements_influxdb(
             self.unique_id,
             measurement,
@@ -496,17 +506,7 @@ class InputModule(AbstractInput):
         self.client.loop_stop()
         self.client.disconnect()
 
-    def reinitialize(self, *args, **kwargs):
-        """Recreate channels and options on device change."""
-        # Stop any running listener
-        try:
-            self.stop_input()
-        except Exception:
-            pass
-        # Re-run initialization
-        self.initialize()
-        # Restart listener if needed
-        try:
-            self.listener()
-        except Exception:
-            pass
+    # `reinitialize()` 를 되살리지 말 것 — 유일한 호출자가 존재하지 않는
+    # `input_dev.on_option_change(...)` 였다(레포에 그런 함수가 없다). 기기
+    # 종류를 바꾸면 Input 저장이 컨트롤러를 재시작하고, 그 과정에서 __init__ →
+    # initialize() 가 다시 도므로 따로 손댈 필요가 없다.

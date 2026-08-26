@@ -74,7 +74,10 @@ from .log_channels import (
     REASON_NO_GRADIENT, REASON_NO_OUTDOOR_DATA,
 )
 from .authority import is_natural_var
-from .types import ActuatorProfile, SituationReport
+from .types import (
+    ACTUATOR_DOMAIN, DEFAULT_DOMAIN, VENTILATING_KINDS,
+    ActuatorProfile, SituationReport, domain_of,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -97,6 +100,31 @@ RELAX_FACTOR = 0.6   # 평형 개도 기하 감쇠 비율. 두 자리가 쓴다 
 AW_BETA    = 0.5     # back-calculation anti-windup 강도 (포화 **직후** 한정)
 RAIL_EPS   = 0.5     # 직전 개도가 레일에 있다고 볼 허용오차 [%]
 
+# ─────────────────────────────────────────────────────────────────────────────
+# 액추에이터 도메인 — 부하분담이 미치는 범위 (2026-08-26)
+# ─────────────────────────────────────────────────────────────────────────────
+# 부하분담(accumulated)은 "앞이 이미 한 만큼 뒤가 적게 한다" 인데, 이는 둘이
+# **같은 일의 대체재**일 때만 뜻이 있다. 대체재가 아닌 것끼리 나누면, 한쪽이
+# 낸 잘못된 주장이 다른 쪽을 **거꾸로 켠다**.
+#
+# 실사고(2026-08-25 イチゴ): 측창 하나의 적분이 폭주해 88.7% 를 확정했고 그
+# 물리 기여가 accumulated['vpd']=+1.2556 — 원래 편차(−0.2215)의 5.7배였다.
+# 뒤에 처리된 분무기·냉방기는 "이미 크게 과했다" 고 읽어 반대 방향으로 켜졌다:
+# 습도 92% 인데 가습이, 목표보다 시원한데 냉방이 올라갔다. 실제 온실에서
+# 측창 모터가 고장 나도 같은 경로로 재현되고, 실패 방향이 최악이다 — 하나가
+# 고장 나면 나머지가 그 몫까지 떠안아야 하는데 정확히 반대로 나머지를 끈다.
+#
+# 그래서 누적은 **도메인 안에서만** 흐른다. 표의 정본은 `types.ACTUATOR_DOMAIN`
+# 이다 — effect_functions 의 도달 한계 클램프가 같은 표를 본다.
+#
+# ⚠ **도메인을 넘는 조율은 명시적 인터록이 맡는다** — `hvac_interlock`(냉난방
+# 가동 중 개구부 잠금)·`vent_futility_gate` 가 이미 그 자리에 있다. 인터록은
+# 선언돼 있어 감사 가능하고 안전한 쪽으로 실패하지만, 효과 누적은 암묵적이라
+# **조용히** 실패한다. 이번 사고가 정확히 그것이었다.
+# **여기에 "에너지 절약" 을 이유로 도메인 간 누적을 되살리지 말 것.** 그것을
+# 원하면 인터록으로 선언할 것 — 그래야 왜 그렇게 됐는지 답할 수 있다.
+
+
 # ── 환기 무익 게이트 (사용자 옵션 vent_futility_gate) ─────────────────────────
 # 외기와 공기를 바꾸는 장치는 실내 상태를 **실외 상태 쪽으로**밖에 못 민다.
 # 목표가 실외의 반대쪽에 있으면 아무리 열어도 목표에 가까워질 수 없다 — 야간
@@ -104,12 +132,33 @@ RAIL_EPS   = 0.5     # 직전 개도가 레일에 있다고 볼 허용오차 [%]
 # G_MIN_EFFECT 는 '구동력 크기'만 보므로 이 경우를 못 걸러낸다: 면적이 큰 천창은
 # 방향이 반대라도 magnitude 가 커서 항상 문턱을 통과한다. 실측(2026-08-06 aot-005)
 # 에서 밤새 근거코드가 전부 PRIMARY 였고 창이 40~70% 열린 채 유지됐다.
-VENTILATING_KINDS = frozenset({'opening', 'exhaust_fan', 'intake_fan'})
+#
+# 어휘를 둘로 두지 않는다 — types 의 도메인 명부에서 파생한 것을 재수출한다.
+# (기존 import 경로를 유지하려고 여기 이름을 남긴다)
 
 # 판정 문턱 — 잡음으로 게이트가 깜빡이지 않게 한다.
 #   need  : |목표-측정| 이 tolerance×VENT_NEED_FRAC 미만이면 '중립'(찬반 근거 아님)
 #   avail : |실외-측정| 이 tolerance 미만이면 환기로 의미 있게 못 옮긴다고 본다
 VENT_NEED_FRAC = HOLD_FRAC   # 데드존과 같은 기준 — 제어가 쉬는 구간은 판정도 쉰다
+
+# ── 환기 우선 (사용자 옵션 vent_first) ────────────────────────────────────────
+# `hvac_interlock`(냉난방 가동 중 창 잠금)의 짝이다. 실외가 목표 **너머**에
+# 있으면 환기만으로 목표에 닿을 수 있고, 그때 냉난방을 함께 돌리는 것은 바깥
+# 공기가 공짜로 할 일을 돈 주고 하는 것이다.
+#
+# 실측(2026-08-26 イチゴ): 실내 VPD 0.253 · 목표 0.579 · 실외 0.895 에서 창을
+# 다 열면 한 사이클에 0.588 kPa 를 옮길 수 있는데, 난방기가 80% 로 올라가고
+# 있었다. 도메인 분리 이후 난방기는 창이 하는 일을 모르기 때문이다 —
+# 도메인 간 조율은 암묵적 누적이 아니라 **이렇게 선언된 인터록**이 맡는다.
+#
+# 파킹 조건 셋을 모두 만족해야 한다(하나라도 어긋나면 냉난방을 그대로 둔다):
+#   ① 실외가 목표를 **여유(tolerance×VENT_REACH_MARGIN)만큼 지나** 있다.
+#      딱 걸치면 환기는 목표에 점근할 뿐 닿지 못하고 경계에서 깜빡인다.
+#   ② 제어 대상 변수가 **전부** 그렇다. 하나라도 환기로 못 가면 냉난방이 필요하다.
+#   ③ 환기에 **여력이 남아 있다**. 창이 이미 만개인데 편차가 남으면 그때는
+#      냉난방이 도와야 한다 — 여기서 파킹하면 아무도 일하지 않는다.
+VENT_REACH_MARGIN  = 1.0     # 실외가 목표를 넘어서야 할 여유 (tolerance 배수)
+VENT_HEADROOM_PCT  = 90.0    # 직전 평균 개도가 이보다 낮아야 '여력 있음'
 
 G_MIN_EFFECT = 0.025 # 유효도(g=magnitude/pband) 하한. 100% 가동해도 변수를 비례밴드의
                      # 2.5%/cycle 미만으로밖에 못 움직이면(예: 환기인데 내외차 거의 없음)
@@ -131,6 +180,10 @@ class CoordinatorState:
     prev_commands: Dict[str, float] = field(default_factory=dict)
     integral:      Dict[str, float] = field(default_factory=dict)
     active_vars:   Dict[str, bool]  = field(default_factory=dict)  # 텔레메트리/hysteresis
+    # 직전 사이클의 구동 방향(+1 더 열기 / −1 닫기). 방향 전환 감지 전용.
+    # **일부러 영속화하지 않는다** — 재시작 직후 한 사이클만 전환 감지를 쉬면
+    # 되고(보수적), 그것 때문에 마이그레이션을 만들 값어치가 없다.
+    drive_sign:    Dict[str, int]   = field(default_factory=dict)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -143,6 +196,10 @@ class ActuatorCommand:
     reason: int
     var_source: Optional[str] = None   # the variable that triggered this command
     aperture: Optional[float] = None   # control coordinate (aperture %, for slew/prev computation)
+    slewed: Optional[float] = None     # 슬루까지만 적용한 개도 (min-ON 스냅 **전**).
+                                       # 적분 되먹임이 "속도에 막힌 것"과 "너무 작아
+                                       # 버린 것"을 갈라 보기 위한 값 — 섞으면 안 된다
+                                       # (coordinate() 의 되먹임 주석 참조).
 
     def control_value(self) -> float:
         """Coordinate value for slew/prev_commands computation — aperture preferred, otherwise value."""
@@ -195,6 +252,7 @@ def coordinate(
         prev_commands=dict(state.prev_commands),
         integral=migrated_integral,
         active_vars=dict(state.active_vars),
+        drive_sign=dict(state.drive_sign or {}),
     )
 
     # 개구부 평균 개도(직전 명령 기준)를 ctx 에 주입 → 배기팬 압력 모델이 사용.
@@ -263,6 +321,21 @@ def coordinate(
                 '냉난방 연동 — 가동 중이라 개구부 %d개 잠금: %s',
                 len(locked), sorted(i[:8] for i in locked))
 
+    # ── 환기 우선 — 실외가 목표 너머면 냉난방을 쉬게 한다 ──────────────────────
+    # `hvac_interlock` 의 짝이다. 둘 다 켜도 교착하지 않는다: 이 판정은 실외
+    # 조건만 보므로 냉난방이 파킹되면 hvac_running 이 내려가고 개구부 잠금이
+    # 풀린다. 반대로 환기 여력이 없으면 여기서 파킹하지 않으므로 냉난방이 계속
+    # 일한다 — 아무도 일하지 않는 상태로 떨어지지 않는다.
+    if bool(ctx.get('vent_first', False)) and _ventilation_reaches_all_targets(
+            situation, ctx, vents, state.prev_commands):
+        hvac_ids = {p.actuator_id for p in available
+                    if ACTUATOR_DOMAIN.get(getattr(p, 'kind', '')) == 'hvac'}
+        if hvac_ids:
+            park_ids |= hvac_ids
+            logger.debug(
+                '환기 우선 — 실외로 목표에 닿으므로 냉난방 %d개 파킹: %s',
+                len(hvac_ids), sorted(i[:8] for i in hvac_ids))
+
     # ── 2.6. 실외 근거가 지어낸 것이면 → **제자리 유지**(hold) ──────────────────
     # 환기는 실내를 실외 쪽으로만 밀 수 있으므로, 실외를 모르면 열지 닫을지 말할
     # 근거가 없다. 그런데 지금 구조는 실외를 모를 때 fallback 이 **실외=실내**로
@@ -293,12 +366,20 @@ def coordinate(
     # 편차는 deviation **+** accumulated 다 — 편차가 current−target 이고
     # accumulated 가 current 에 더해질 변화량이므로, 확정 후 예상 편차는
     # (current + accumulated) − target 이다.
-    accumulated: Dict[str, float] = {var: 0.0 for var in situation.deviation_native}
+    #
+    # **도메인마다 따로 쌓는다**(ACTUATOR_DOMAIN 주석 참조). 창의 기여는 창끼리만
+    # 보고, 냉방·가습은 그것을 아예 모른다 — 한 장비의 오작동이 남을 거꾸로
+    # 켜는 경로를 구조적으로 없앤다.
+    accumulated: Dict[str, Dict[str, float]] = {
+        dom: {var: 0.0 for var in situation.deviation_native}
+        for dom in set(ACTUATOR_DOMAIN.values()) | {DEFAULT_DOMAIN}
+    }
 
     # 저렴한 액추에이터부터 확정 → 이후 것들은 잔여 편차를 보고 적게 동작(부하분담).
     order = sorted(available, key=lambda p: p.cost_fn(ctx, 100.0))
 
     for p in order:
+        accum = accumulated[domain_of(p)]
         prev_val = state.prev_commands.get(p.actuator_id, 0.0)
         I = new_state.integral.get(p.actuator_id, 0.0)
         kp = p.gains.get('kp', POS_KP)
@@ -332,7 +413,7 @@ def coordinate(
             # 더 세게 돈다. 실제로 2026-08-20 로컬 육묘장에서 분무 64.9%(모델상
             # −29.6°C)가 냉방기에 +29.6°C 로 넘어가 편차 0 인데도 냉방 100%,
             # 난방 0% 로 고착됐다. 위 주석의 "적게 동작"과도 반대였다.
-            residual_v  = situation.deviation_native[v] + accumulated.get(v, 0.0)
+            residual_v  = situation.deviation_native[v] + accum.get(v, 0.0)
             effect_sign = 1.0 if eff.direction == '↑' else -1.0
             pband_v     = max(PBAND_MULT * t.tolerance, 1e-9)
             e_v         = (-residual_v * effect_sign) / pband_v    # + = 더 열기
@@ -385,6 +466,23 @@ def coordinate(
                 cmd_raw = _clamp(I, 0.0, 100.0)
                 reason = REASON_PRIMARY
             else:
+                # ── 방향 전환 시 적분을 실제 개도로 되앉힌다 (PID 컨트롤러 차용)
+                # PID 는 direction='both' 에서 올림↔내림이 뒤집히는 순간
+                # `integrator = 0.0` 으로 지운다. 한쪽에서 쌓은 누적이 반대쪽으로
+                # 넘어가면, 이미 방향이 바뀌었는데도 그 값이 명령을 계속 밀기
+                # 때문이다 — 실측: 냉방기가 I=97.9 를 들고 있어, VPD 를 올려야
+                # 하는 상황으로 바뀐 뒤에도 계속 돌았다.
+                #
+                # ⚠ **0 으로 지우면 안 된다.** 여기서 적분은 PID 의 '누적 오차'가
+                # 아니라 **'기억된 평형 개도(%)'** 다. 0 = "완전히 닫아라" 라서,
+                # 그대로 베끼면 방향이 바뀔 때마다 창이 쾅 닫혔다 다시 열린다.
+                # 같은 뜻을 갖는 조치는 **실제 서 있는 자리로 되앉히는 것**이다:
+                # 옛 방향의 기억은 지우면서 물리적 연속성은 지킨다.
+                _sign = 1 if e_eff > 0 else -1
+                if new_state.drive_sign.get(p.actuator_id, 0) == -_sign:
+                    I = _clamp(prev_val, 0.0, 100.0)
+                new_state.drive_sign[p.actuator_id] = _sign
+
                 I = _clamp(I + ki * e_eff, 0.0, 100.0)
                 p_term = kp * e_eff * 100.0
                 cmd_unclamped = p_term + I
@@ -405,17 +503,47 @@ def coordinate(
                                    0.0, 100.0)
                 reason = REASON_PRIMARY
 
-        new_state.integral[p.actuator_id] = I
-
         cmd = finalize_command(p, cmd_raw, prev_val, cycle_sec,
                                reason=reason, var_source=primary_var)
         commands[p.actuator_id] = cmd
+        cmd_ap = cmd.control_value()
+
+        # ── 속도에 막힌 몫만 적분에 되먹인다 (2026-08-26) ────────────────────
+        # 적분의 뜻은 '기억된 평형 개도'다. 그런데 anti-windup 이 [0,100] 클램프
+        # 만 되먹이고 **슬루(변화율) 제한은 되먹이지 않아**, PI 가 88.7% 를
+        # 원하고 실제로는 25% 만 나가도 적분은 88.7 이 나간 것처럼 계속 자랐다.
+        # 그렇게 부풀려진 적분은 자기 정의를 잃고(실측: 側面窓右 I=67.9 인데
+        # 실제 개도 25.0), 그 값이 만든 과장된 물리 기여가 부하분담을 타고
+        # 남을 거꾸로 켰다 — 2026-08-25 사고의 근원이다.
+        #
+        # ⚠⚠ **min-ON 스냅은 되먹이면 안 된다.** 둘은 "요구만큼 못 나갔다" 로
+        # 같아 보이지만 뜻이 정반대다.
+        #
+        #   슬루     장치가 **가고는 있다**. 덜 간 몫은 허구이므로 되돌린다.
+        #   min-ON  장치가 **아무것도 안 했다**. 몇 초 켜서는 실제 출력이 안
+        #           나오는 장치가 많아 일부러 버린 것이다. 여기서 적분까지
+        #           깎으면 적분이 문턱을 **영영 못 넘어** 장치가 한 번도 안
+        #           도는 교착이 된다.
+        #
+        # 그래서 버린 몫은 적분에 남긴다 — 쌓여서 의미 있는 한 번을 만들 때
+        # 몰아서 켜진다. 펄스 **폭**이 아니라 **빈도**로 조절하는 것이고,
+        # PID 컨트롤러의 on/off 경로가 같은 판단을 한다(`raise_min_duration`
+        # 미만이면 출력을 건너뛰되 integrator 는 그대로 쌓는다). 적분은
+        # [0,100] 하드클램프가 있으므로 이래도 무한히 자라지 않는다.
+        #
+        # ⚠ 세 분기(hold·무구배·평형)는 적분을 이미 자기 규칙으로 정했으므로
+        # 건드리지 않는다 — 그 값들은 요구가 아니라 **의도된 위치**다.
+        reachable = cmd.slewed if cmd.slewed is not None else cmd_ap
+        if reason == REASON_PRIMARY and abs(cmd_raw - reachable) > 1e-9:
+            I = _clamp(I - (cmd_raw - reachable) * AW_BETA, 0.0, 100.0)
+
+        new_state.integral[p.actuator_id] = I
 
         # 확정 효과 누적 (모든 변수) — 부하분담용. slew 적용된 개도 사용.
-        cmd_ap = cmd.aperture if cmd.aperture is not None else cmd.value
+        # **자기 도메인 안에만** 쌓는다(위 accumulated 주석 참조).
         for v, e in p.live_effect.items():
             s = 1.0 if e.direction == '↑' else (-1.0 if e.direction == '↓' else 0.0)
-            accumulated[v] = accumulated.get(v, 0.0) + e.magnitude_native * (cmd_ap / 100.0) * s
+            accum[v] = accum.get(v, 0.0) + e.magnitude_native * (cmd_ap / 100.0) * s
 
         _log_cmd(unique_id, p.actuator_id, a_idx, cmd_ap, reason)
 
@@ -453,6 +581,28 @@ def finalize_command(
     - min-ON: 미세 개도(0<x<min_on)는 0 으로 스냅
     - operating-range: aperture 0–100 을 실제 모터 작동범위로 선형 매핑
     """
+    # ── 이 사이클의 전달 비율을 **먼저** 반영한다 (2026-08-26) ──────────────────
+    # 풍향 가중치·게이트 차단처럼 "요구대로 다 못 나가는" 물리 제약은 반드시
+    # 여기를 지나야 한다. coordinate() **밖**에서 명령에 곱하면 코디네이터는
+    # 원래 값이 나갔다고 믿어 ① 적분이 영영 수렴하지 못하고 ② 부하분담에
+    # 과장된 효과가 실리고 ③ 제약이 풀리는 순간 쌓인 적분이 계단으로 튀어나온다.
+    # 셋 다 실측했다 — 側面窓右(24.6% 명령 / 5.0% 실제, 풍향 가중치 0.2)와
+    # 습윤형 분무기(61% 명령 / 0% 실제, 습도 상한 게이트).
+    #
+    # 슬루보다 앞이다: 실제 움직임이 속도 한계를 받아야 하기 때문이다.
+    # ⚠ **0 은 슬루를 지나지 않는다.** 비율(0<s<1)은 "위치 목표를 이만큼 낮춰라"
+    # 라서 장치가 자기 속도로 이동하는 게 맞지만, 0 은 "이번 사이클엔 아예 주지
+    # 마라"(게이트 차단)라 중간 위치를 거칠 것이 없다. 슬루를 태우면 직전 60%
+    # 였던 분무기가 차단 후에도 40% → 20% 로 계속 뿌리고, 코디네이터는 그 값이
+    # 나갔다고 배워 적분도 안 내려간다 — 막았다는 사실이 아무 데도 안 닿는다.
+    scale = getattr(p, 'cmd_scale', 1.0)
+    if scale is not None and float(scale) <= 0.0:
+        return ActuatorCommand(
+            value=p.cmd_constraints.map_aperture_to_motor(0.0), reason=reason,
+            var_source=var_source, aperture=0.0, slewed=0.0)
+    if scale is not None and scale != 1.0:
+        aperture_pct = _clamp(aperture_pct * float(scale), 0.0, 100.0)
+
     # 스크린(curtain/shade)은 디스패치에서 0/100 binary 로 스냅된다. slew 를 적용하면
     # 50% 경계를 못 넘어(예: 100→80→여전히 열림) 닫힘/열림 전환이 봉쇄되므로 우회한다.
     if getattr(p, 'kind', '') in ('curtain', 'shade'):
@@ -460,11 +610,13 @@ def finalize_command(
     else:
         slew = p.cmd_constraints.effective_slew(cycle_sec)
         cmd_slew = _clamp(aperture_pct, prev_aperture - slew, prev_aperture + slew)
+    reachable = cmd_slew                 # 속도 한계까지만 반영 — 되먹임의 기준
     if 0.0 < cmd_slew < p.cmd_constraints.min_on_pct:
         cmd_slew = 0.0
     cmd_motor = p.cmd_constraints.map_aperture_to_motor(cmd_slew)
     return ActuatorCommand(value=cmd_motor, reason=reason,
-                           var_source=var_source, aperture=cmd_slew)
+                           var_source=var_source, aperture=cmd_slew,
+                           slewed=reachable)
 
 
 def _clamp(val: float, lo: float, hi: float) -> float:
@@ -495,6 +647,50 @@ def _outdoor_reachable(var: str, ctx: Dict) -> Optional[float]:
         svp = 0.6108 * math.exp(17.27 * float(T_e) / (float(T_e) + 237.3))
         return svp * (1.0 - float(RH_e) / 100.0)
     return None
+
+
+def _ventilation_reaches_all_targets(
+        situation: SituationReport, ctx: Dict, vents: List[ActuatorProfile],
+        prev_commands: Dict[str, float]) -> bool:
+    """환기만으로 **모든** 제어 목표에 닿을 수 있는가 (vent_first 판정).
+
+    닿는다 = 실외가 목표를 tolerance×VENT_REACH_MARGIN 만큼 **지나** 있다.
+    딱 걸치면 환기는 목표에 점근할 뿐이라 닿았다고 할 수 없고, 경계에서
+    켜졌다 꺼졌다 한다.
+
+    ⚠ 판정 대상은 **벗어난 변수만**이다. 이미 범위 안인 변수는 찬반 근거가
+    못 되므로 건너뛴다 — 포함시키면 "평형이라 avail 이 0" 이라는 이유로 항상
+    False 가 되어 이 기능이 한 번도 서지 않는다.
+
+    ⚠ 벗어난 변수가 하나도 없으면 False 다. 평형 상태에서 냉난방을 파킹하는
+    것은 이 옵션이 하려는 일이 아니다(그건 데드존이 이미 한다).
+    """
+    if not vents:
+        return False
+    # 환기 여력이 없으면(창이 이미 만개) 냉난방이 도와야 한다.
+    aps = [prev_commands.get(p.actuator_id, 0.0) for p in vents]
+    if aps and (sum(aps) / len(aps)) >= VENT_HEADROOM_PCT:
+        return False
+
+    decisive = False
+    for var, dev in situation.deviation_native.items():
+        t = situation.target.get(var)
+        if t is None or t.tolerance <= 0:
+            continue
+        need = -dev                                  # + = 값을 올려야 함
+        if abs(need) <= t.tolerance * VENT_NEED_FRAC:
+            continue                                 # 범위 안 — 판정 대상 아님
+        reachable = _outdoor_reachable(var, ctx)
+        if reachable is None:
+            return False                             # 실외를 모르면 단정하지 않는다
+        measured = t.value + dev
+        avail = float(reachable) - measured
+        decisive = True
+        if not _same_sign(need, avail):
+            return False                             # 방향이 반대 — 환기로는 못 간다
+        if abs(avail) < abs(need) + t.tolerance * VENT_REACH_MARGIN:
+            return False                             # 목표에 못 미친다(점근만)
+    return decisive
 
 
 def _ventilation_is_futile(profile: ActuatorProfile,

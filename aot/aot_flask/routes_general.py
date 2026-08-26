@@ -35,6 +35,7 @@ from aot.utils.database import db_retrieve_table
 from aot.utils.influx import (bulk_key, influx_to_list, influxdb_get_count_points,
                                  influxdb_get_first_point, query_last_values_bulk,
                                  query_string)
+from aot.utils.outputs import get_pwm_invert_signal
 from aot.utils.service_control import reload_frontend, restart_daemon
 from aot.utils.system_pi import (assure_path_exists, is_int,
                                     return_measurement_info, str_is_float)
@@ -299,12 +300,19 @@ def output_mod(output_id, channel, state, output_type, amount):
                 (output_type == 'pwm' and float(amount) >= 0) or
                 output_type in ['sec', 'vol', 'value']
             )):
+        # source='manual': this route only exists to let a person click a
+        # dashboard widget. Without it, actuator_paired's output_switch()
+        # defaults additional_options.get('source') to 'system' (see
+        # aot/outputs/actuator_paired.py), so a user-driven open/close/set
+        # shows up as "System" in the widget's target label — indistinguishable
+        # from env_coordinator's automatic control.
         out_status = daemon.output_on_off(
             output_id,
             state,
             output_type=output_type,
             amount=float(amount),
-            output_channel=output_channel)
+            output_channel=output_channel,
+            additional_options={'source': 'manual'})
 
         # Manual device control is an audited action. Only the on/off
         # transition is recorded — PWM/PID channels change continuously and
@@ -505,7 +513,7 @@ def gpio_state_unique_id(unique_id, channel_id):
     channel = OutputChannel.query.filter(OutputChannel.unique_id == channel_id).first()
     daemon_control = DaemonControl()
     if channel:
-        state = daemon_control.output_state(unique_id, channel.channel)
+        chan_idx = channel.channel
     else:
         # If looking up by channel UUID failed, try using channel_id as int if possible, or default to 0
         # This is a fallback for legacy or mismatched data
@@ -513,9 +521,54 @@ def gpio_state_unique_id(unique_id, channel_id):
              chan_idx = int(channel_id)
         except:
              chan_idx = 0
-        state = daemon_control.output_state(unique_id, chan_idx)
-    
+    state = daemon_control.output_state(unique_id, chan_idx)
+
+    # PWM 채널의 'Invert Signal' 옵션은 물리 신호만 반전한다(pwm_gpio.py
+    # output_switch) — daemon 의 실시간 상태는 그 반전된 물리 duty 를 그대로
+    # 돌려주므로, 사용자에게 보여줄 때는 되돌려야 요청한 값과 일치한다.
+    # (측정 로그 값은 별개 옵션 pwm_invert_stored_signal 로 저장 시점에 이미
+    # 보정돼 있어 여기서는 건드리지 않는다.)
+    if isinstance(state, (int, float)) and not isinstance(state, bool):
+        if get_pwm_invert_signal(unique_id, chan_idx):
+            state = 100.0 - abs(state)
+
     return jsonify(state)
+
+
+@blueprint.route('/output_target_pct/<unique_id>/<channel_id>')
+@flask_login.login_required
+def output_target_pct(unique_id, channel_id):
+    """Return {value, source} for the last commanded target of a 'value'-type
+    output (e.g. actuator_paired) — for dashboard output.
+
+    Distinct from /outputstate_unique_id: that returns the *actual* real-time
+    position (daemon output_state), this returns what was last *commanded*
+    (daemon.output_target_pct) and by whom (manual/system). A positional
+    actuator takes time to travel, so the two can legitimately disagree while
+    it's moving — the map widget's actuator card shows both for the same
+    reason (routes_geo.py api_facility_runtime's last_target_pct/last_target_source).
+    """
+    if unique_id and '::' in unique_id:
+        unique_id = unique_id.split('::')[0]
+
+    channel = OutputChannel.query.filter(OutputChannel.unique_id == channel_id).first()
+    if channel:
+        chan_idx = channel.channel
+    else:
+        try:
+            chan_idx = int(channel_id)
+        except Exception:
+            chan_idx = 0
+
+    daemon_control = DaemonControl()
+    try:
+        result = daemon_control.output_target_pct(unique_id, chan_idx)
+        if isinstance(result, tuple) and len(result) == 2:
+            value, source = result
+            return jsonify({'value': float(value) if value is not None else None, 'source': source})
+    except Exception:
+        pass
+    return jsonify({'value': None, 'source': None})
 
 
 @blueprint.route('/inputstate')

@@ -266,6 +266,42 @@ def outputs_volume():
     return outputs
 
 
+def get_output_channel_custom_option(output_uuid, channel, option, default=None):
+    """Read one custom-channel-option value for an Output channel (Flask/API side).
+
+    Mirrors AbstractBaseController._get_custom_channel_option() (used daemon-side
+    via a session_scope) but queries through the request-scoped db.session instead,
+    since Flask routes don't have a daemon session.
+    """
+    import json
+    from aot.databases.models import OutputChannel
+    channel_row = OutputChannel.query.filter_by(output_id=output_uuid, channel=channel).first()
+    if not channel_row or not channel_row.custom_options:
+        return default
+    try:
+        opts = json.loads(channel_row.custom_options) or {}
+    except (ValueError, TypeError):
+        return default
+    return opts.get(option, default)
+
+
+def get_pwm_invert_signal(output_uuid, channel=0):
+    """True if this PWM output channel's 'Invert Signal' option is enabled.
+
+    pwm_gpio.py (and the other pwm_* drivers) apply this by flipping the duty
+    cycle before it reaches the physical GPIO/PWM signal — the daemon's
+    real-time output_state()/is_on() therefore reports the already-inverted
+    physical value, not the value the user asked for. Callers that surface
+    that real-time state to a user (dashboard widgets, the map widget) must
+    flip it back with this flag so 80% requested reads back as 80%, not 20%.
+
+    This does NOT apply to the InfluxDB-logged measurement — that's a
+    separate option (pwm_invert_stored_signal) applied once at write time in
+    the driver, so the stored value is already what should be displayed.
+    """
+    return bool(get_output_channel_custom_option(output_uuid, channel, 'pwm_invert_signal', False))
+
+
 def output_types():
     return {
         'on_off': outputs_on_off(),

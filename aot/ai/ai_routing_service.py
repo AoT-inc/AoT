@@ -611,6 +611,30 @@ class AIRoutingService:
         if not tool_name:
             return False, "Missing mandatory metadata: tool_name"
 
+        # @ANCHOR: ACTION_ENVELOPE_AS_TOOL
+        # 모델이 **액션 봉투를 도구 이름 자리에** 넣는 일이 있다. 도구 카탈로그가
+        # 액션 종류(mcp_tool_call / virtual_tool_call)와 도구 이름을 둘 다 보여
+        # 주므로 앞엣것을 도구로 착각하는 것이다. 실측(2026-08-26):
+        #
+        #   tool=mcp_tool_call
+        #   args={'tool_name': 'get_plot', 'arguments': {'plot_id': …}, 'target_id': …}
+        #   → [resolve_action] Unknown tool: 'mcp_tool_call'
+        #
+        # 진짜 호출은 그 안에 **온전히** 들어 있다 — 버릴 이유가 없다. 봉투를
+        # 벗겨 정상 액션으로 되돌린다. 사용자에게는 "도구 실행에 문제가 발생
+        # 했습니다" 로만 보이던 실패다.
+        _ENVELOPE_NAMES = {'mcp_tool_call', 'virtual_tool_call'}
+        _inner = (action.get('params') or {}).get('arguments')
+        if (tool_name in _ENVELOPE_NAMES and isinstance(_inner, dict)
+                and _inner.get('tool_name')):
+            action['action_type'] = tool_name
+            if _inner.get('target_id'):
+                action['target_id'] = _inner['target_id']
+            action['params'] = {k: v for k, v in _inner.items() if k != 'target_id'}
+            tool_name = action['params']['tool_name']
+            logger.info(f"[Normalize] Unwrapped action envelope used as a tool name "
+                        f"→ '{tool_name}'")
+
         # [VIRTUAL_TOOL_MISCLASSIFY_FIX] The SSOT virtual registry is authoritative
         # about what is an internal tool. The LLM sometimes emits
         # action_type='mcp_tool_call' with a target guessed from the tool-name

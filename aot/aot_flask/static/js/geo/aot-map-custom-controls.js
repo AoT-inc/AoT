@@ -1057,6 +1057,34 @@
                         .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
                 }
 
+                /* 사용자 지정 이름(시설명·장치명)을 **그릴 때 이미 번역해서** 넣는다.
+                 *
+                 * 이것이 없으면 순서가 "원문으로 그림 → 번역기가 되씀" 이 되어,
+                 * 이 행이 다시 그려질 때마다 원문이 한 프레임 보였다가 번역본으로
+                 * 바뀐다 — 그것이 번역을 켰을 때만 보이던 패널 깜빡임이다
+                 * (실측: 원문 `イチゴ`·`バルブ1` 이 찍혔다가 `딸기`·`밸브1` 로).
+                 *
+                 * 값이 하나만 바뀌어도 행은 통째로 다시 그려지므로 이름 열 개가
+                 * 매번 함께 깜빡였다. 여기서 번역본을 넣으면 다시 그려도 이름은
+                 * 처음부터 최종 모습이라 깜빡일 것이 없다 — 번역기의 관찰자도
+                 * 되쓸 것이 없어 깨어나지 않는다.
+                 *
+                 * ⚠ `title` 속성에는 **원문**을 남긴다. 번역 사전에 없는 이름은
+                 * 그대로 나오는데, 툴팁까지 번역본으로 덮으면 원문을 확인할 길이
+                 * 사라진다.
+                 *
+                 * 번역이 꺼져 있거나 사전에 없으면 원문을 그대로 돌려주므로 이
+                 * 호출은 그때 아무 일도 하지 않는다. */
+                function _nameSum(s) {
+                    var t = s;
+                    try {
+                        if (window.AoTUserI18n && window.AoTUserI18n.translate) {
+                            t = window.AoTUserI18n.translate(s);
+                        }
+                    } catch (e) { t = s; }
+                    return _escSum(t);
+                }
+
                 return {
                     panel: panel,
                     setCollapsed: function(c) { if (isDock) _applyCollapsed(c, false); },
@@ -1077,7 +1105,7 @@
                         }
                         let html = '';
                         if (title) {
-                            html += '<span class="aot-meas-summary-title">' + _escSum(title) + '</span>';
+                            html += '<span class="aot-meas-summary-title">' + _nameSum(title) + '</span>';
                         }
                         items.forEach(function(it) {
                             // Binary controls ({on: bool}) render as a round
@@ -1095,7 +1123,7 @@
                             // Long control names are clipped with an ellipsis
                             // (CSS max-width); keep the full name in a tooltip.
                             html += '<span class="aot-meas-summary-item">' +
-                                    '<span class="aot-meas-summary-label" title="' + _escSum(it.label) + '">' + _escSum(it.label) + '</span> ' +
+                                    '<span class="aot-meas-summary-label" title="' + _escSum(it.label) + '">' + _nameSum(it.label) + '</span> ' +
                                     '<span class="' + valClass + '">' + valHtml + '</span>' +
                                     '</span>';
                         });
@@ -1112,13 +1140,25 @@
                             if (isBearing) {
                                 const deg = parseFloat(value);
                                 if (!isNaN(deg)) {
-                                    valSpan.style.transform = 'rotate(' + deg + 'deg)';
+                                    const t = 'rotate(' + deg + 'deg)';
+                                    if (entry._lastTransform !== t) {
+                                        entry._lastTransform = t;
+                                        valSpan.style.transform = t;
+                                    }
                                 }
                             } else {
-                                valSpan.innerText = typeof value === 'number' ? parseFloat(value.toFixed(2)) : value;
+                                const txt = String(typeof value === 'number'
+                                    ? parseFloat(value.toFixed(2)) : value);
+                                if (entry._lastText !== txt) {
+                                    entry._lastText = txt;
+                                    valSpan.innerText = txt;
+                                }
                             }
                         } else {
-                            if (!isBearing) valSpan.innerText = '-';
+                            if (!isBearing && entry._lastText !== '-') {
+                                entry._lastText = '-';
+                                valSpan.innerText = '-';
+                            }
                         }
                     },
                     destroy: function() {

@@ -15,6 +15,7 @@
      0점이 된다 — 저장은 성공하고 나중에 조용히 못 찾는다.
 """
 import json
+from datetime import date
 
 import pytest
 
@@ -427,3 +428,258 @@ class TestPresetDoesNotImplyAnAliasWhitelist:
 
         eco = LIBRARY_PRESETS['ext_ecocrop']['defaults']['name_language']
         assert '별칭' not in eco, eco
+
+
+class TestItAnswersInsteadOfComplaining:
+    """실사용에서 나온 실패(2026-08-25). 사용자가 "설원6 정식 어떻게 하는거냐"
+    고 물었는데 AI 가 한 것:
+
+      - 좌표를 못 구한다·API 키가 없다며 자기 사정을 설명
+      - 묻지도 않은 대시보드 센서값을 두 번 들이밈
+      - `인사이트: … actions: []` 원시 출력 유출
+      - 결국 사용자에게 더 구체적으로 말해 달라고 요구
+
+    사용자: "내가 니가 못하는 능력치를 알 필요가 없어", "왜 사용자에게 불평이지?"
+
+    원인은 지시문 두 개였다. 하나는 "도구로 얻지 않은 **사실**은 말하지 말라"
+    라서 일반 상식까지 막았고, 다른 하나는 라이브러리가 비면 "그 사실을 밝히라"
+    고 시켰다.
+    """
+
+    def _prompt(self):
+        from aot.ai.services.agent_loop_service import AgentLoopService
+        return AgentLoopService._build_step_prompt('설원6 정식 방법', [], 0)
+
+    def test_general_knowledge_is_not_forbidden(self):
+        """예전 문구의 '사실' 이 도메인 지식까지 덮었다."""
+        p = self._prompt()
+        assert 'This does NOT restrict general knowledge' in p
+        assert 'you ANSWER, using what you know' in p
+
+    def test_the_ban_is_scoped_to_this_installation_state(self):
+        """지어내면 안 되는 것은 센서값·장치 상태·여기 있는 것들이다."""
+        p = self._prompt()
+        assert "NEVER FABRICATE THIS INSTALLATION'S STATE" in p
+
+    def test_saying_it_could_not_find_it_is_called_a_failure(self):
+        p = self._prompt()
+        assert 'is a failure, not caution' in p
+
+    def test_the_empty_library_no_longer_orders_an_explanation(self):
+        """'SAY SO plainly' 가 사용자에게 하는 해명을 시키고 있었다."""
+        p = self._prompt()
+        assert 'ANSWER ANYWAY from your own' in p
+        assert 'NOT an explanation of what the library lacks' in p
+
+
+class TestTranslatedSchemaLabelsDoNotLeak:
+    def _parse(self, raw):
+        from aot.ai.agents.base_ai import AbstractAI
+
+        class _Shim:
+            _extract_json_from_text = AbstractAI._extract_json_from_text
+            _get_available_tool_names = AbstractAI._get_available_tool_names
+
+        return AbstractAI._safe_api_result(_Shim(), raw, 'TestEngine')
+
+    def test_a_translated_insight_key_is_recovered(self):
+        """실사용에서 모델이 키를 사용자 언어로 옮겨 '인사이트:' 로 냈고,
+        키 이름만 보던 검사가 놓쳐 원문이 화면에 나갔다."""
+        out = self._parse('인사이트: 설원6은 9월 상순에 정식합니다.\nactions: []\n')
+        assert out['insight'] == '설원6은 9월 상순에 정식합니다.'
+        assert out['actions'] == []
+        assert '인사이트' not in out['insight']
+
+    def test_a_trailing_empty_actions_is_stripped_from_raw_text(self):
+        """YAML 로도 못 읽은 잔해라도 내부 형식은 사용자에게 보이면 안 된다."""
+        out = self._parse('인사이트: 답변 본문 — 콜론: 포함\n  actions: []')
+        assert 'actions: []' not in out['insight']
+
+    def test_ordinary_prose_is_untouched(self):
+        out = self._parse('설원6은 9월 상순에 정식합니다. 깊이는 크라운이 묻히지 않게 합니다.')
+        assert out['insight'].startswith('설원6은')
+
+
+class TestProgramGuidanceIsSearchable:
+    """이 농장이 직접 쓴 재배 지침이 검색에 걸리는가.
+
+    사용자 지적(2026-08-25): "설원6 프로그램에 정식 방법이 있음에도 안 보는 것
+    같아." 실제로 딸기 프로그램의 '정식기' 단계에 답이 적혀 있었는데
+    knowledge_search 가 라이브러리만 뒤져, AI 는 "라이브러리에 없습니다" 하고
+    ECOCROP 의 기온·강수 범위를 대신 내놓았다 — 묻지도 않은 것을.
+    """
+
+    def _program(self, app, name='딸기', source='user'):
+        from aot.aot_flask.extensions import db
+        from aot.databases.models.geo_program import GeoProgram
+
+        row = GeoProgram(name=name)
+        row.subject = 'strawberry'
+        row.source = source
+        row.stages = [
+            {'key': 'planting', 'name': '정식기', 'days': 14,
+             'guidance': '묘 뿌리를 넓게 펴서 정식하고, 관부가 반쯤 묻히게 심는다.'},
+            {'key': 'harvest', 'name': '수확기',
+             'guidance': ''},  # 지침 없는 단계
+        ]
+        db.session.add(row)
+        db.session.commit()
+        return row
+
+    def test_stage_guidance_is_found_by_the_method_question(self, app):
+        from aot.ai.services import knowledge_search as ks
+
+        with app.app_context():
+            self._program(app)
+            ks._program_stamp = None
+            secs = ks._load_program_stage_sections()
+
+            headings = [s['heading'] for s in secs]
+            assert '딸기 — 정식기' in headings, headings
+            body = [s['content'] for s in secs if s['heading'] == '딸기 — 정식기'][0]
+            assert '관부가 반쯤' in body
+
+    def test_a_stage_without_guidance_is_not_indexed(self, app):
+        """제목만 있는 항목은 검색을 흐리기만 한다."""
+        from aot.ai.services import knowledge_search as ks
+
+        with app.app_context():
+            self._program(app)
+            ks._program_stamp = None
+            secs = ks._load_program_stage_sections()
+
+            assert not [s for s in secs if s['heading'].endswith('수확기')]
+
+    def test_the_heading_carries_both_crop_and_stage(self, app):
+        """제목이 3배로 점수화된다 — 둘 다 있어야 '딸기 정식' 이 걸린다."""
+        from aot.ai.services import knowledge_search as ks
+
+        with app.app_context():
+            self._program(app)
+            ks._program_stamp = None
+            h = ks._load_program_stage_sections()[0]['heading']
+            assert '딸기' in h and '정식기' in h
+
+    def test_a_person_written_program_counts_as_user_input(self, app):
+        from aot.ai.services import knowledge_search as ks
+
+        with app.app_context():
+            self._program(app, source='user')
+            ks._program_stamp = None
+            sec = ks._load_program_stage_sections()[0]
+            assert sec['provenance'] == 'user_provided'
+            assert sec['trust_state'] == 'user_confirmed'
+
+    def test_an_ai_written_program_stays_unconfirmed(self, app):
+        """프로그램 검토 게이트와 같은 기준 — 사람이 확인하기 전까지 미확인."""
+        from aot.ai.services import knowledge_search as ks
+
+        with app.app_context():
+            self._program(app, name='AI딸기', source='ai')
+            ks._program_stamp = None
+            sec = [s for s in ks._load_program_stage_sections()
+                   if s['heading'].startswith('AI딸기')][0]
+            assert sec['provenance'] == 'ai_curated'
+            assert sec['trust_state'] == 'system_generated'
+
+    def test_search_actually_returns_it(self, app):
+        from aot.ai.services import knowledge_search as ks
+
+        with app.app_context():
+            self._program(app)
+            ks._program_stamp = None
+            hits = ks.search('딸기 정식 방법', top_k=5)
+            assert any('정식기' in (h.get('heading') or '') for h in hits), hits
+
+
+class TestPlotNameReachesItsProgramGuidance:
+    """사용자는 프로그램 이름이 아니라 **자기 구획 이름**으로 묻는다.
+
+    실사용(2026-08-25): "설원6 정식 어떻게 하는거야". 설원6 은 딸기 품종이
+    아니라 이 농장의 구획이고, 그 구획이 딸기 프로그램을 쓰고 있었으며, 그
+    프로그램의 '정식기' 단계에 답이 적혀 있었다. 그런데 검색은 프로그램
+    이름으로만 걸려서 닿지 못했고, AI 는 "라이브러리에 없다" 고 답했다.
+    """
+
+    def _setup(self, app, plot_count=1):
+        from aot.aot_flask.extensions import db
+        from aot.databases.models import GeoPlot
+        from aot.databases.models.geo_program import GeoProgram
+
+        prog = GeoProgram(name='딸기')
+        prog.subject = 'strawberry'
+        prog.source = 'user'
+        prog.stages = [{'key': 'planting', 'name': '정식기', 'days': 14,
+                        'guidance': '관부가 반쯤 묻히게 심고 정식 후 충분히 관수한다.'}]
+        db.session.add(prog)
+        db.session.commit()
+
+        for i in range(plot_count):
+            plot = GeoPlot()
+            plot.geo_id = 'map-1'
+            plot.kind = 'vegetation'
+            plot.subject = '설원%d' % (6 + i)
+            plot.variety = '딸기'
+            plot.started_on = date(2026, 8, 26)
+            plot.program_uuid = prog.unique_id
+            db.session.add(plot)
+        db.session.commit()
+        return prog
+
+    def test_the_plot_name_is_in_the_source_not_the_heading(self, app):
+        """구획 이름을 제목에 붙였더니 모델이 그것을 **단계 이름으로** 읽었다.
+
+        실측(2026-08-26), 제목이 '딸기 — 정식기 · 설원6' 이던 동안:
+          "설원6은 딸기 재배 프로그램의 한 단계(화아분화기, 결실기, 수확기)를
+           의미하는 것으로 보입니다"
+
+        제목은 단계만 담고, 구획은 '어디에 적용되는가'(출처 자리, 2배 점수)로
+        옮긴다. 이름으로 걸리는 것은 그대로다."""
+        from aot.ai.services import knowledge_search as ks
+
+        with app.app_context():
+            self._setup(app)
+            ks._program_stamp = None
+            sec = [x for x in ks._load_program_stage_sections()
+                   if '정식기' in x['heading']][0]
+
+            assert '설원6' not in sec['heading'], sec['heading']
+            assert '설원6' in sec['file'], sec['file']
+
+    def test_searching_by_plot_name_returns_the_stage_guidance(self, app):
+        from aot.ai.services import knowledge_search as ks
+
+        with app.app_context():
+            self._setup(app)
+            ks._program_stamp = None
+            hits = ks.search('설원6 정식 어떻게 하는거야', top_k=3)
+
+            assert hits, '구획 이름으로 아무것도 안 걸린다'
+            assert '관부가 반쯤' in (hits[0].get('content') or ''), hits[0]
+
+    def test_many_plots_do_not_make_an_endless_source_line(self, app):
+        """콩 프로그램 하나를 구획 8개가 함께 쓰는 설치가 실재한다."""
+        from aot.ai.services import knowledge_search as ks
+
+        with app.app_context():
+            self._setup(app, plot_count=8)
+            ks._program_stamp = None
+            f = ks._load_program_stage_sections()[0]['file']
+            assert '외 5' in f, f
+            assert len(f) < 80, f
+
+    def test_the_plot_name_is_also_a_tag(self, app):
+        """태그로 좁혀 묻는 경로에서도 닿아야 한다."""
+        from aot.ai.services import knowledge_search as ks
+
+        with app.app_context():
+            self._setup(app)
+            ks._program_stamp = None
+            tags = ks._load_program_stage_sections()[0]['tags']
+            assert '설원6' in tags, tags
+
+
+# 내부 사정 서술·묻지 않은 데이터·호칭 규칙은 단계 프롬프트에서 **끝의 자기
+# 점검**으로 옮겼다(test_answer_self_review.py). 옛 위치를 계속 검사하면
+# 이동을 되돌리는 압력이 된다 — 실제로 옮긴 직후 이 검사들이 함께 붉어졌다.
+

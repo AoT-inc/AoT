@@ -165,6 +165,49 @@ ACTUATOR_KINDS = frozenset({
 })
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# 액추에이터 도메인 — 부하분담이 미치는 범위 (2026-08-26)
+# ─────────────────────────────────────────────────────────────────────────────
+# 부하분담(coordinator.accumulated)은 둘이 **같은 일의 대체재**일 때만 뜻이
+# 있다. 대체재가 아닌 것끼리 나누면 한쪽의 잘못된 주장이 다른 쪽을 거꾸로 켠다
+# (2026-08-25 실사고 — coordinator.py 의 accumulated 주석 참조).
+#
+# 가르는 기준은 "비슷한 장치인가" 가 아니라 **종착점이 같은가** 다.
+#   vent   창·팬은 전부 실내를 **실외 쪽으로만** 민다. 종착점이 실외 하나라
+#          서로 완전 대체재다. 이 성질이 effect_functions 의 도달 한계
+#          클램프 근거이기도 하다 — 실외를 지나칠 수 없다.
+#   screen 차광막·보온커튼은 들어오는(나가는) 복사를 막는다.
+#   hvac   난방·냉방·가습은 외기와 무관하게 열·수분을 직접 넣고 뺀다.
+#          종착점이 실외에 묶여 있지 않다. **셋은 서로 알아야 맞서지 않는다.**
+#   aux    각자 자기 축만 건드려 겨룰 상대가 없다.
+#
+# ⚠ **여기가 정본이다.** coordinator(부하분담·환기 게이트)와 effect_functions
+# (도달 한계 클램프)가 같은 표를 본다. 어휘를 두 벌 두면 갈라지고, 갈라지면
+# 한쪽만 고쳐진 채로 굴러간다.
+ACTUATOR_DOMAIN = {
+    'opening':         'vent',
+    'exhaust_fan':     'vent',
+    'intake_fan':      'vent',
+    'shade':           'screen',
+    'curtain':         'screen',
+    'heater':          'hvac',
+    'cooler':          'hvac',
+    'fogger':          'hvac',
+    'co2_injector':    'aux',
+    'lighting':        'aux',
+    'circulation_fan': 'aux',
+}
+DEFAULT_DOMAIN = 'aux'   # 명부에 없는 새 kind — 남을 오염시키지 못하는 쪽이 안전하다
+
+VENTILATING_KINDS = frozenset(
+    k for k, d in ACTUATOR_DOMAIN.items() if d == 'vent')
+
+
+def domain_of(profile) -> str:
+    """이 액추에이터의 부하분담 도메인. 모르는 kind 는 격리한다."""
+    return ACTUATOR_DOMAIN.get(getattr(profile, 'kind', ''), DEFAULT_DOMAIN)
+
+
 @dataclass
 class ActuatorProfile:
     """Output 플러그인이 자기 자신을 신고하는 메타데이터."""
@@ -190,6 +233,15 @@ class ActuatorProfile:
 
     # L3 가 매 사이클 채우는 필드 (Profile 원본에는 없음)
     live_effect: Dict[str, EffectResult] = field(default_factory=dict, repr=False)
+    # 이 사이클에 명령이 실제로 전달되는 비율 (0.0~1.0). 풍향 가중치처럼 매
+    # 사이클 달라지는 물리 제약을 담는다. **호출자가 매 사이클 다시 채운다** —
+    # 남겨 두면 바람이 멎은 뒤에도 옛 가중치가 계속 걸린다.
+    #
+    # ⚠ 이 값은 반드시 `finalize_command` 를 지나야 한다. coordinate() 밖에서
+    # 명령에 곱하면 코디네이터는 원래 값이 나갔다고 믿어 적분이 영영 수렴하지
+    # 못하고, 부하분담에도 과장된 효과가 실린다(2026-08-26 側面窓右: 24.6% 를
+    # 명령했는데 장치는 5.0% — 풍향 가중치 0.2 가 밖에서 곱해지고 있었다).
+    cmd_scale: float = 1.0
 
 
 # ─────────────────────────────────────────────────────────────────────────────

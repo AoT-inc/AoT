@@ -110,8 +110,7 @@
 
   /**
    * Highcharts 전역 lang·날짜 라벨 서식을 현재 언어로 세운다.
-   * applyGlobalDefaults() 가 자동으로 부르지만, 색 불투명도 조정을 자체적으로
-   * 하는 위젯(widget_graph_synchronous)은 이것만 따로 부른다.
+   * applyGlobalDefaults() 가 자동으로 부른다.
    */
   AoTChart.applyLangDefaults = function () {
     if (AoTChart._langApplied || typeof window.Highcharts === 'undefined') return;

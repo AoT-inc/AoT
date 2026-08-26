@@ -34,8 +34,7 @@
       ],
       "Control": [
         "AoT_controller",
-        "widget_controller_activate_deactivate",
-        "widget_output_pwm_slider",
+        "AoT_output_pwm",
         "widget_trigger_sequence"
       ],
       "Environment": [
@@ -45,9 +44,6 @@
       ],
       "Scheduling": [
         "widget_calendar"
-      ],
-      "Intelligence": [
-        "widget_ai_insight"
       ]
     }
   },

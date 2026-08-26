@@ -358,9 +358,21 @@ class AgentLoopService:
             "original request now (e.g. you asked which zone to save a note in, they "
             "replied with a zone name → now actually call create_note for that zone — "
             "do NOT treat the zone name as a new query about that zone).\n"
-            "CRITICAL: Never state a sensor reading, status, or fact you have not just "
-            "retrieved via a tool THIS turn or already have in conversation history. If "
-            "you don't know, call a tool or call ask_user — do not invent an answer.\n"
+            # @ANCHOR: NO_FABRICATED_STATE
+            # 예전 문구는 "도구로 얻지 않은 **사실**은 말하지 말라" 였다. 그 "사실" 이
+            # 일반 상식까지 덮어, 딸기 정식법처럼 어느 모델이나 아는 것도 답하지
+            # 못하게 만들었다(실사용 2026-08-25: "설원6 정식 어떻게 하는거냐" 에
+            # 좌표·API 키 사정만 늘어놓고 끝냈다). 금지해야 하는 것은 **이 설치의
+            # 상태를 지어내는 것**이지, 도메인 지식을 쓰는 것이 아니다.
+            "CRITICAL — NEVER FABRICATE THIS INSTALLATION'S STATE: sensor readings, "
+            "device/function status, what exists here (zones, plots, devices, notes, "
+            "schedules), and what was recorded — these you may state ONLY from a tool "
+            "result this turn or from conversation history. Never guess them.\n"
+            "This does NOT restrict general knowledge. A question about a subject — how "
+            "a crop is grown, transplanted, pruned, fed; what a pest is; what a term "
+            "means — you ANSWER, using what you know, even when no tool returned "
+            "anything. Answering 'I could not find it' to a question you can answer is "
+            "a failure, not caution.\n"
             "CRITICAL — VERIFY, DON'T ASSUME, WHEN CONFIRMING SOMETHING EXISTS: a tool call "
             "succeeding is NOT the same as the specific thing you're being asked about being "
             "present in its result. If the user asks whether something specific was recorded/"
@@ -391,10 +403,10 @@ class AgentLoopService:
             "knowledge library (system manuals + registered domain knowledge + knowledge you or "
             "a colleague shelved earlier). Answering such a question straight from your own "
             "memory, when you never looked, is exactly the failure this library exists to "
-            "prevent. If knowledge_search comes back empty, SAY SO plainly and make clear that "
-            "what follows is your own unverified knowledge — never pass it off as a source.\n"
-            # 조사→비치의 짝. 밖에서 알아낸 것을 적립하지 않으면 다음 턴이 같은
-            # 조사를 처음부터 다시 한다(설계 §4 의 쓰기 동사가 있는 이유다).
+            "prevent. If knowledge_search comes back empty, ANSWER ANYWAY from your own "
+            "knowledge and mark it briefly as unverified — a short tag or one closing "
+            "sentence, NOT an explanation of what the library lacks. Never pass your own "
+            "knowledge off as a cited source.\n"
             "AND SHELVE WHAT YOU LEARNED: if you researched or worked out something reusable "
             "this turn that the library did not have, call knowledge_shelve to save it (with "
             "tags, and attribution naming where it came from) so the next question can find it. "
@@ -602,6 +614,11 @@ class AgentLoopService:
                 _meta = None
                 if AgentLoopService._looks_like_question(last_insight):
                     _meta = {'intent': 'CLARIFY'}
+                # 내보내기 전에 스스로 본다(SELF_REVIEW). 승인 카드·되묻기
+                # 경로에는 걸지 않는다 — 거기서 바뀌는 것은 답변 문장이 아니라
+                # 사용자가 눌러야 하는 것이라, 다시 쓰면 오히려 어긋난다.
+                last_insight = AgentLoopService._self_review(
+                    engine, command_text, last_insight)
                 return AgentLoopService._finish(agent.unique_id, command_text, last_insight,
                                                 thread_id, extra_meta=_meta,
                                                 steps=step + 1, tool_log=tool_log,
@@ -682,6 +699,60 @@ class AgentLoopService:
         return AgentLoopService._finish(agent.unique_id, command_text, closing, thread_id,
                                         extra_meta={'bounded_exit': True},
                                         manual_ref=manual_ref)
+
+    # @ANCHOR: SELF_REVIEW
+    # 답을 내보내기 전에 **목표를 달성했는지 스스로 본다.**
+    #
+    # 왜 규칙을 앞에 더 얹지 않는가. 오늘 하루 동안 "이렇게 하지 말라" 를
+    # 계속 추가했고, 단계 프롬프트가 8,300자·CRITICAL 류 지시 14개까지
+    # 늘었는데도 실사용에서 그 지시들이 나란히 무시됐다(2026-08-26: 묻지 않은
+    # 센서값 나열, 내부 설정 용어 설명, 새 존칭 만들어 쓰기, 채우기 사과).
+    # 지시가 많아질수록 서로를 희석시킨다 — 사용자 지적: "많이 준다고 다
+    # 잘하는게 아니야. 스스로 목표를 달성했는지 검토하고 답변을 제공하는게
+    # 더 합리적."
+    #
+    # 그래서 "답변이 어떠해야 하는가" 부류의 지시는 단계 프롬프트에서 빼고
+    # 여기로 옮겼다. 이 프롬프트는 짧고 초점이 하나라, 앞에서 열네 번째로
+    # 읽히던 규칙과 달리 묻히지 않는다.
+    #
+    # 실패해도 초안을 그대로 쓴다 — 점검이 답을 잃는 일은 없어야 한다.
+    @staticmethod
+    def _self_review(engine, command_text, draft):
+        if not (draft or '').strip():
+            return draft
+        try:
+            prompt = (
+                f'THE PERSON ASKED: "{command_text}"\n\n'
+                "YOUR DRAFT ANSWER:\n" + draft.strip() + "\n\n"
+                "Before this goes out, check it against what they actually asked:\n"
+                "1. Does it answer THAT question? A related fact is not an answer — if "
+                "they asked HOW to do something, the steps must be there; if they asked "
+                "whether something is SUITABLE, give the judgement, not raw readings.\n"
+                "2. Does it open with the answer? If it opens with what you could not "
+                "find, move that to the end or drop it.\n"
+                "3. Does it mention this system's plumbing — the knowledge library, "
+                "registered sources, API keys, coordinates, tool names, settings like "
+                "stale/period/max-age? They run a farm; that is not their concern. Cut it.\n"
+                "4. Does it include anything they did not ask for (current sensor values, "
+                "dashboard contents, caveats nobody requested)? Cut it.\n"
+                "5. Does it address them as a customer (고객님 / お客様 / dear customer) or "
+                "apologise without an actual mistake? They are the grower who runs this "
+                "place — write to them directly.\n\n"
+                "Return ONLY the final answer text in their language — the draft "
+                "unchanged if it is already right, otherwise the corrected version. "
+                "No preamble, no explanation of what you changed, no labels."
+            )
+            result = engine.run_reasoning({"user_command": command_text}, prompt) or {}
+            reviewed = (result.get('insight') or '').strip()
+            if not reviewed:
+                return draft
+            if reviewed != draft.strip():
+                logger.info("[AgentLoop] self-review rewrote the answer "
+                            "(%d → %d chars)", len(draft.strip()), len(reviewed))
+            return reviewed
+        except Exception as e:
+            logger.debug(f"[AgentLoop] self-review skipped: {e}")
+            return draft
 
     @staticmethod
     def _final_synthesis(engine, command_text, history, tool_log):

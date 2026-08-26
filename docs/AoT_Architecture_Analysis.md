@@ -496,18 +496,14 @@ def create_app(config=ProdConfig):
 | Timer | AoT_timer.py | 타이머 위젯 (~65KB) |
 | Wind Angular | AoT_wind_angular.py | 윈드 앵귤러 (~36KB) |
 | Weather Forecast | AoT_weather_fcst_announcement.py | 날씨 예보 |
-| Graph Synchronous | widget_graph_synchronous.py | 동기 그래프 |
 | Gauge Solid | widget_gauge_solid.py | 솔리드 게이지 |
-| Gauge Angular | widget_gauge_angular.py | 앵귤러 게이지 |
 | Camera | widget_camera.py | 카메라 |
 | Indicator | widget_indicator.py | 인디케이터 |
 | Measurement | widget_measurement.py | 측정값 |
 | Measurement Multi | widget_measurement_multi.py | 다중 측정 |
-| Output PWM Slider | widget_output_pwm_slider.py | PWM 슬라이더 |
+| PWM Output | AoT_output_pwm.py | PWM 출력 슬라이더 |
 | Python Code | widget_python_code.py | Python 코드 |
 | Trigger Sequence | widget_trigger_sequence.py | 트리거 시퀀스 (~32KB) |
-| AI Insight | widget_ai_insight.py | AI 인사이트 |
-| Controller Activate/Deactivate | widget_controller_activate_deactivate.py | 컨트롤러 활성화/비활성화 |
 | Function Status | widget_function_status.py | 함수 상태 |
 | Spacer | widget_spacer.py | 스페이서 |
 

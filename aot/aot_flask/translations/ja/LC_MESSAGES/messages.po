@@ -30452,3 +30452,9 @@ msgstr "空欄ならすべての列を返します。行が広い場合は絞っ
 
 msgid "Data credits"
 msgstr "データ出典"
+
+msgid "Misting Sunburn Protection"
+msgstr "ミスト日焼け防止"
+
+msgid "Tightens the sunburn protection above for newly emerged seedlings. Droplets left on a cotyledon under strong sun focus light onto the leaf and concentrate dissolved minerals as they evaporate, and the seedling has no cuticle yet to resist either. The lockout itself is always active for wetting-type nozzles — this adds a lower threshold on groundwater, shorter sprays with a longer drying interval, and an evening cut-off."
+msgstr "上の日焼け防止を、発芽したばかりの苗に合わせてさらに強める。強い日差しの下で子葉に残った水滴はレンズのように光を集め、乾く際に溶けた塩類を濃縮するが、苗にはまだそれに耐えるクチクラがない。ロックアウト自体は湿潤型ノズルに常に掛かっており、ここでは地下水の場合に閾値を下げ、噴霧をより短く区切って乾燥時間を延ばし、夕方の遮断を加える。"

@@ -61,6 +61,22 @@ class CustomModule(
 ):
     """Integrated facility environment control — L1+L2+L3 single Function."""
 
+    # ⚠ **여기 있는 이름은 옵션 스키마(`_function_info.py`)에 있어야 한다.**
+    #
+    # `setup_custom_options_json` 은 **스키마를 순회**하지 저장된 JSON 키를
+    # 순회하지 않는다. 그래서 스키마에 없는 이름은 아무것도 설정하지 않고
+    # 영원히 None 인데, 선언은 남아 있어 **읽는 사람에게는 설정처럼 보인다.**
+    #
+    # 2026-08-26 에 그 함정을 실제로 밟았다. `sensor_T_int`·`sensor_RH_int`·
+    # `sensor_vpd`·`sensor_light`·`sensor_CO2_int`·`sensor_wind`·
+    # `sensor_wind_dir` 7개가 스키마 없이 선언만 남아 있었고, DB 의
+    # `custom_options` 에도 옛 값(OpenWeather 를 가리키는)이 남아 있었다.
+    # 화면에 나오지도, 읽히지도 않는 값인데 그것을 보고 "코디네이터가 실내
+    # 센서로 기상 API 를 쓰고 있다" 고 오진했다. 실제 실내값은 시설 바인딩
+    # (`_collect_internal` → `sensors_resolved`)에서 정상적으로 온다.
+    #
+    # 회귀는 `aot/tests/test_env_coordinator_dead_options.py` 가 고정한다 —
+    # 스키마에 없고 코드도 안 읽는 이름을 여기 새로 만들면 그때 깨진다.
     def __init__(self, function: CustomController, testing: bool = False) -> None:
         super().__init__(function, testing=testing, name=__name__)
 
@@ -94,17 +110,14 @@ class CustomModule(
         self._photo_loaded_method_id   = None
 
         # VPD
-        self.sensor_vpd              = None
         self.priority_vpd            = None
         self.tolerance_vpd           = None
 
         # Light
-        self.sensor_light = None
         self.light_max    = None
         self.light_min    = None
 
         # CO₂
-        self.sensor_CO2_int          = None
         self.priority_co2            = None
         self.tolerance_co2           = None
 
@@ -114,12 +127,10 @@ class CustomModule(
         self._co2_loaded_method_id  = None
 
         # Temperature (constraints)
-        self.sensor_T_int = None
         self.temp_max     = None
         self.temp_min     = None
 
         # Humidity (constraints)
-        self.sensor_RH_int = None
         self.humid_max     = None
         self.humid_min     = None
         # 관수 겸용 분무기를 환경 제어에서 빼는 스위치 (기본 True = 종전 동작).
@@ -153,8 +164,6 @@ class CustomModule(
         self.guide_RH_max = None
 
         # Wind
-        self.sensor_wind         = None
-        self.sensor_wind_dir     = None
         self.gate_wind_threshold = None
 
         # Forecast Feedforward (P3-4)
@@ -165,6 +174,7 @@ class CustomModule(
         # 냉·난방 연동 — 가동 중 개구부 잠금. 수동 조작 장치를 위해 감지 신호를
         # 따로 받는다(_helpers_mixin 상단 주석 참조). select_measurement 는
         # 프레임워크가 <id>_device_id / <id>_measurement_id 로 풀어 넣는다.
+        self.vent_first                                  = None
         self.hvac_interlock                              = None
         self.hvac_interlock_signal_device_id             = None
         self.hvac_interlock_signal_measurement_id        = None
@@ -198,6 +208,9 @@ class CustomModule(
         # 만들면 그 상태를 먼저 읽는 경로가 생겼을 때 AttributeError 가 난다.
         self._constraint_breach_state: dict = {
             'T_max': False, 'T_min': False, 'RH_max': False, 'RH_min': False,
+            # 습윤형 분무 습도 상한 래치 — 목표가 사이클마다 달라질 수 있어
+            # (프로그램·VPD 분해) 정적 임계와 달리 assess 뒤에 판정한다.
+            'fog_RH': False,
         }
         self._light_breach_state: dict = {'max': False, 'min': False}
         self._groups: list = []
@@ -223,7 +236,12 @@ class CustomModule(
         # 그래서 원수가 지하수면 잠금 임계를 자동으로 더 보수적으로 내린다.
         _lockout = float(self.nursery_solar_lockout or 250.0)
         _release = float(self.nursery_solar_release or 150.0)
-        if (self.nursery_water_source or 'groundwater') == 'groundwater':
+        # 일소 잠금 자체는 습윤형 분무기가 있으면 늘 선다(육묘 모드 무관).
+        # 지하수 원수의 추가 하향은 **육묘 모드에서만** 적용한다 — 근거가
+        # 어린 모종(염류 잔류·저온 충격)이라 성체 작물까지 150 W/m² 로 묶으면
+        # 흐린 아침부터 분무가 막힌다.
+        if (bool(self.nursery_mode)
+                and (self.nursery_water_source or 'groundwater') == 'groundwater'):
             _lockout = min(_lockout, 150.0)
             _release = min(_release, 100.0)
         cfg = PreGateConfig(

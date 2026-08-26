@@ -2222,7 +2222,7 @@ def api_facility_runtime(facility_uuid):
     from aot.aot_client import DaemonControl
     from aot.aot_flask.geo.facility_sensors import read_facility_sensors, compute_spatial_internal, read_fitting_sensors, build_sensor_snapshot
     from aot.aot_flask.geo.facility_integration import get_facility_integration
-    from aot.utils.outputs import parse_output_information
+    from aot.utils.outputs import parse_output_information, get_pwm_invert_signal
 
     facility = GeoFacility.query.filter_by(unique_id=facility_uuid).first()
     if not facility:
@@ -2312,6 +2312,14 @@ def api_facility_runtime(facility_uuid):
                 label = act.get('output_name') or slot_key
 
                 ctrl_type   = _resolve_control_type(act.get('output_type') or '')
+
+                # PWM 채널의 'Invert Signal' 옵션은 물리 신호만 반전한다(pwm_gpio.py
+                # output_switch) — daemon 의 실시간 상태(all_states, 위 raw_state)는
+                # 그 반전된 물리 duty 를 그대로 담고 있으므로, 지도에 보여줄 때는
+                # 되돌려야 사용자가 요청한 값과 일치한다.
+                if ctrl_type == 'pwm' and pct is not None and get_pwm_invert_signal(uuid, 0):
+                    pct = 100.0 - abs(pct)
+
                 last_pct, last_src = _get_target_pct(uuid) if ctrl_type == 'value' else (None, None)
                 actuator_states[slot_key] = {
                     'output_uuid':        uuid,
@@ -4387,6 +4395,8 @@ def api_geo_output_runtimes():
         return jsonify({'ok': True, 'runtimes': {}})
 
     from aot.utils import runtime as _runtime
+    from aot.utils.system_pi import is_int
+    from aot.databases.models import OutputChannel
 
     out = {}
     for it in items[:60]:
@@ -4398,17 +4408,27 @@ def api_geo_output_runtimes():
         ch = it.get('channel', 0)
         key = '%s::%s' % (oid, ch)
 
+        # get_elapsed_seconds()/get_last_duration() 은 정수 채널 인덱스를 요구한다
+        # (daemon output_state 경유). 위젯 쪽은 select_measurement_channel 옵션이
+        # OutputChannel.unique_id 를 주므로, output_mod 라우트와 같은 방식으로
+        # 여기서도 UUID → 정수를 변환한다. 응답 key(oid::ch)는 요청자가 보낸
+        # raw 값 그대로 유지 — 클라이언트가 자기가 보낸 값으로 그대로 찾는다.
+        ch_idx = ch
+        if not is_int(ch):
+            ch_row = OutputChannel.query.filter_by(unique_id=str(ch)).first()
+            ch_idx = ch_row.channel if ch_row else 0
+
         entry = {'elapsed_sec': None, 'last_duration_sec': None,
                  'next_schedule': None, 'schedules': []}
         try:
-            entry['elapsed_sec'] = _runtime.get_elapsed_seconds(oid, ch) or None
+            entry['elapsed_sec'] = _runtime.get_elapsed_seconds(oid, ch_idx) or None
         except Exception:
             pass
         # 작동 중이면 마지막 작동은 굳이 읽지 않는다 — 화면에 쓰지 않는 값에
         # influx 왕복을 쓸 이유가 없다(우선순위: 작동 중 > 예약 > 마지막).
         if not entry['elapsed_sec']:
             try:
-                entry['last_duration_sec'] = _runtime.get_last_duration(oid, ch) or None
+                entry['last_duration_sec'] = _runtime.get_last_duration(oid, ch_idx) or None
             except Exception:
                 pass
         entry['schedules'] = pending_schedules(oid)

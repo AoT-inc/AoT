@@ -68,6 +68,35 @@ _FOG_DEFAULT_MAX_ON_SEC  = 30.0
 _FOG_DEFAULT_MIN_OFF_SEC = 180.0
 
 
+# 실외 센서가 하나라도 연결돼 있으면 있어야 할 채널.
+# 없으면 `ext_context_fallback` 이 **실외=실내로 지어낸다** — 그러면 내외 차가
+# 0 이라 환기 무익 판정이 서서 창이 닫히고, 풍향은 기본 0°(정북)로 들어가
+# 북향이 아닌 측창이 영구 leeward 가 된다. 화면은 "기상대 연결됨" 으로 보이고
+# 제어는 지어낸 숫자로 도는데 **아무 경고도 없었다**(2026-08-26 イチゴ: 기상대에
+# `light` 채널 하나만 묶여 있었고 온도·습도·풍속·풍향이 전부 null 이었다).
+_OUTDOOR_REQUIRED_MTYPES = {
+    'temperature':    '실외 온도',
+    'humidity':       '실외 습도',
+    'wind_speed':     '풍속',
+    'wind_direction': '풍향',
+}
+
+
+def _missing_outdoor_channels(sensors_outdoor: list) -> list:
+    """실외 센서는 붙었는데 채널이 안 묶인 것들의 한국어 이름.
+
+    실외 센서 자체가 하나도 없으면 빈 목록이다 — 그건 "실외를 안 쓰는 설치" 라
+    정상이고, 여기서 경고하면 노이즈가 된다. 경고할 값이 있는 경우는
+    **연결해 놓고 반만 묶은** 상태 하나뿐이다.
+    """
+    if not sensors_outdoor:
+        return []
+    have = {(s.get('measurement_type') or '').strip()
+            for s in sensors_outdoor}
+    return [label for mtype, label in _OUTDOOR_REQUIRED_MTYPES.items()
+            if mtype not in have]
+
+
 def _is_wetting_fog(kind: str, capacity_meta: dict) -> bool:
     """잎을 적시는 분무기인가 — safety_gates.is_wetting_fogger 와 같은 기준.
 
@@ -248,6 +277,18 @@ class ProfileLoaderMixin:
                 ]
                 # 실외 센서 캐시 — _cycle_mixin 에서 T_ext/RH_ext 직접 판독
                 self._sensors_resolved_outdoor = integ.get('sensors_outdoor') or []
+                self._outdoor_missing = _missing_outdoor_channels(
+                    self._sensors_resolved_outdoor)
+                if self._outdoor_missing:
+                    # ⚠ ERROR 로 남긴다. 입력·컨트롤러 로거는 log_level_debug 가
+                    # 꺼져 있으면 ERROR 로 설정되므로(base_controller), warning 은
+                    # 기본 설치에서 **아무 데도 안 남는다**.
+                    self.logger.error(
+                        '실외 센서가 연결돼 있는데 채널이 비어 있습니다: %s. '
+                        '이 값들은 측정되지 않으며 제어기가 "실외=실내" 로 '
+                        '지어냅니다 — 환기 판정·풍향 가중치가 그 위에서 돕니다. '
+                        '시설 편집기에서 기상 센서의 해당 채널을 함께 선택하세요.',
+                        ', '.join(self._outdoor_missing))
                 # 기상/예보 바인딩 캐시 — forecast_feedforward 가 KMA 파일 대신 소비
                 self._sensors_forecast = integ.get('sensors_forecast') or []
 

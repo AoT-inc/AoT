@@ -326,11 +326,13 @@ class DaemonControl:
             # See output_off — invalidate regardless of outcome.
             DaemonControl.invalidate_states_cache()
 
-    def output_on_off(self, output_id, state, output_type=None, amount=0.0, output_channel=None):
+    def output_on_off(self, output_id, state, output_type=None, amount=0.0, output_channel=None,
+                       additional_options=None):
         """Turn an output on or off."""
         if state in ['on', 1, True]:
             return self.output_on(
-                output_id, amount=amount, output_type=output_type, output_channel=output_channel)
+                output_id, amount=amount, output_type=output_type, output_channel=output_channel,
+                additional_options=additional_options)
         elif state in ['off', 0, False]:
             return self.output_off(output_id, output_channel=output_channel)
         else:

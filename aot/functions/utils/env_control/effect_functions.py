@@ -12,7 +12,7 @@ K_* 계수는 모듈 기본값. 실제 사용 시 apply_calibration()으로 장�
 
 import math
 
-from .types import EffectResult, EnvContext
+from .types import VENTILATING_KINDS, EffectResult, EnvContext
 
 
 def _svp_kpa(T: float) -> float:
@@ -28,7 +28,47 @@ def _svp_kpa(T: float) -> float:
 _THERMAL_RH_KINDS = frozenset({'heater', 'cooler'})
 
 
-def make_vpd_effect(temp_fn, humid_fn, humid_is_moisture: bool = True):
+def _vpd_gap(env: EnvContext):
+    """실내 → 실외 VPD 폭. 실외를 모르면 None(클램프하지 않는다).
+
+    실외를 모를 때 0 으로 두면 환기 효과가 통째로 0 이 되어 창이 영영 안 열린다.
+    모르는 것과 없는 것을 구분한다.
+    """
+    T_e, RH_e = env.get('T_ext'), env.get('RH_ext')
+    T_i, RH_i = env.get('T_int'), env.get('RH_int')
+    if None in (T_e, RH_e, T_i, RH_i):
+        return None
+    vpd_ext = _svp_kpa(float(T_e)) * (1.0 - float(RH_e) / 100.0)
+    vpd_int = _svp_kpa(float(T_i)) * (1.0 - float(RH_i) / 100.0)
+    return vpd_ext - vpd_int
+
+
+def vent_reachable(magnitude: float, gap: float) -> float:
+    """환기 효과를 **도달 가능한 끝점**으로 자른다 (2026-08-26).
+
+    환기는 실내 공기를 실외 공기로 바꾸는 것이므로 종착점이 실외 하나다 —
+    아무리 크게 열어도 실외를 **지나칠 수 없다**. 그런데 개구부 효과식은
+
+        magnitude = |내외 차| × (개도/100) × k × 풍속보정 × 면적계수
+
+    라서 `k × 풍속보정 × 면적계수` 가 1 을 넘으면 도달 한계를 넘어선 값이 나온다.
+    면적계수는 기준 면적 대비 비율이라 큰 측창에서는 쉽게 10 을 넘는다.
+
+    실측(2026-08-26 イチゴ): 측창 하나의 VPD 유효도가 **2.0 kPa** 였는데
+    실제로 갈 수 있는 폭은 실내 0.28 → 실외 0.895, 즉 **0.615 kPa** 였다
+    (3.3배 과대). 결과는 조용했다 — 측창 둘이 7.4%·10.6% 만 열려도 부하분담
+    누적이 편차를 넘어서서, 가장 유효한 **천창이 "이미 다 됐다" 로 읽고
+    닫힌 채** 있었다(e_norm = −0.146). 창이 덜 열리니 그 몫은 난방기가 졌다.
+
+    ⚠ 이 클램프는 **환기 계열에만** 옳다. 난방기·냉방기·분무기는 외기와 무관하게
+    열·수분을 직접 넣고 빼므로 실외를 지나칠 수 있다 — 거기에 걸면 폭염에
+    냉방이 실외 온도에서 멈춘다. 판정은 `types.ACTUATOR_DOMAIN` 의 'vent' 다.
+    """
+    return min(abs(magnitude), abs(gap))
+
+
+def make_vpd_effect(temp_fn, humid_fn, humid_is_moisture: bool = True,
+                    vent_bounded: bool = False):
     """액추에이터의 T·RH effect 로부터 VPD effect 를 연쇄법칙으로 유도한다.
 
     VPD = svp(T) − ea 로 두고 **(T, ea) 좌표**에서 미분한다.
@@ -67,7 +107,18 @@ def make_vpd_effect(temp_fn, humid_fn, humid_is_moisture: bool = True):
         dVPD = dVPD_dT * _signed(temp_fn) + dVPD_dRH * dRH
         if abs(dVPD) < 1e-6:
             return EffectResult('0', 0.0)
-        return EffectResult('↑' if dVPD > 0 else '↓', abs(dVPD))
+        mag = abs(dVPD)
+        if vent_bounded:
+            # 환기는 실외 VPD 를 지나칠 수 없다. dT·dRH 를 각각 잘라도 부족하다 —
+            # 연쇄법칙은 1차 근사라 큰 이동에서 두 항이 합쳐지며 실제 도달폭을
+            # 넘어선다(실측: 개별 클램프 후에도 1.28 vs 실제 0.615).
+            # 그래서 VPD 축에서 직접 자른다.
+            gap = _vpd_gap(env)
+            if gap is not None:
+                mag = vent_reachable(mag, gap)
+                if mag < 1e-6:
+                    return EffectResult('0', 0.0)
+        return EffectResult('↑' if dVPD > 0 else '↓', mag)
 
     return vpd_effect
 
@@ -162,7 +213,9 @@ def opening_temp_effect(env: EnvContext, cmd_pct: float, profile=None) -> Effect
     direction = '↑' if delta > 0 else '↓'
     af, _u = _gis_factor(profile, use_u=False)
     k = _calibrated_k(profile, 'temperature', K_OPENING_T)
-    magnitude = abs(delta) * (cmd_pct / 100.0) * k * _wind_boost(env) * af
+    # 환기는 실외를 지나칠 수 없다 — 도달 한계(|내외 차|)로 자른다.
+    magnitude = vent_reachable(
+        abs(delta) * (cmd_pct / 100.0) * k * _wind_boost(env) * af, delta)
     return EffectResult(direction, magnitude)
 
 
@@ -174,7 +227,8 @@ def opening_humid_effect(env: EnvContext, cmd_pct: float, profile=None) -> Effec
     direction = '↑' if delta > 0 else '↓'
     af, _u = _gis_factor(profile, use_u=False)
     k = _calibrated_k(profile, 'humidity', K_OPENING_RH)
-    magnitude = abs(delta) * (cmd_pct / 100.0) * k * _wind_boost(env) * af
+    magnitude = vent_reachable(
+        abs(delta) * (cmd_pct / 100.0) * k * _wind_boost(env) * af, delta)
     return EffectResult(direction, magnitude)
 
 
@@ -199,7 +253,8 @@ def opening_co2_effect(env: EnvContext, cmd_pct: float, profile=None) -> EffectR
         return EffectResult('0', 0.0)
     af, _ = _gis_factor(profile, use_u=False)
     k = _calibrated_k(profile, 'co2', K_OPENING_CO2)
-    magnitude = excess * (cmd_pct / 100.0) * k * af
+    # 환기로 갈 수 있는 끝점은 외기 농도다 — 초과분을 넘겨 내릴 수 없다.
+    magnitude = vent_reachable(excess * (cmd_pct / 100.0) * k * af, excess)
     return EffectResult('↓', magnitude)
 
 
@@ -246,9 +301,52 @@ _CYCLE_REF_S   = 60.0
 # 참조 체적 (m³) — K_FOG_* 상수 기준 (소형 온실 기준)
 _VOLUME_REF_M3 = 100.0
 
+# 포화수증기밀도 계산용 (물 몰질량 kg/mol, 기체상수 J/mol·K)
+_M_WATER_KG_MOL = 0.018
+_R_GAS          = 8.314
+
 # 증발 가용도의 기준 습도 [%] — K_FOG_* 상수가 서 있는 조건.
 # 이 습도 이하에서는 계수를 그대로 쓰고(가용도 1.0), 위로 갈수록 줄어 포화에서 0.
 _EVAP_REF_RH = 70.0
+
+
+def _absorbable_liters(env: EnvContext, volume_m3: float) -> float:
+    """이 공기가 **더 받아들일 수 있는 물의 총량** [L]. 증발의 물리 상한이다.
+
+    `_evaporation_availability` 는 증발 **속도**의 구동력을 비율로 낮출 뿐,
+    증발할 수 있는 **총량**은 막지 않는다. 그래서 습한 공기에 아무리 많이
+    뿌려도 모델은 그 전부가 증발한 것으로 계산한다 — RH 89% · 5,463 m³ 온실이
+    실제로는 12.8 L 밖에 못 받는데 82 L 가 증발한 것으로 잡혔다(실측).
+
+    포화수증기밀도에서 현재 수증기밀도를 뺀 만큼이 여유이고, 거기에 체적을
+    곱한 것이 상한이다. 온도·습도를 모르면 상한을 걸 근거가 없으므로 무한대를
+    돌려준다 — 모르는 값을 지어내 자르면 그것대로 틀린 제어가 된다.
+
+    ⚠ 이것은 **닫힌 공간 기준의 상한**이다. 환기 중이면 수증기가 빠져나가
+    실제로는 더 증발할 수 있다. 그쪽으로 틀리는 것(과소평가)은 분무를 덜 쓰게
+    만들 뿐이지만, 반대로 틀리면 결합 drive 에서 이 항이 나머지를 압도한다
+    (2026-08-20 육묘장 사고). 그래서 보수적인 쪽을 택한다.
+    """
+    if volume_m3 <= 0.0:
+        return float('inf')
+    t = env.get('T_int')
+    if t is None:
+        t = env.get('T')
+    rh = env.get('RH_int')
+    if rh is None:
+        rh = env.get('RH')
+    if t is None or rh is None:
+        return float('inf')
+    try:
+        t = float(t)
+        rh = max(0.0, min(100.0, float(rh)))
+    except (TypeError, ValueError):
+        return float('inf')
+    # 포화수증기압 [Pa] → 포화수증기밀도 [g/m³]
+    svp = 610.78 * math.exp(17.27 * t / (t + 237.3))
+    rho_sat = svp * _M_WATER_KG_MOL / (_R_GAS * (t + 273.15)) * 1000.0
+    head_g_m3 = rho_sat * (1.0 - rh / 100.0)
+    return max(0.0, head_g_m3 * volume_m3 / 1000.0)
 
 
 def _evaporation_availability(env: EnvContext) -> float:
@@ -295,7 +393,31 @@ def _fog_liters(env: EnvContext, cmd_pct: float, profile=None):
     if flow <= 0.0:
         return None
     cycle = float(env.get('cycle_sec', _CYCLE_REF_S) or _CYCLE_REF_S)
-    return flow * cycle * (cmd_pct / 100.0) / 60.0
+
+    # ── 펄스 도징이면 사이클 전체가 아니라 1회 분무 시간만 뿌린다 ────────────
+    # 습윤형 분무기는 `PulseDosingAdapter` 가 1회 가동을 `max_on_sec` 로 끊는다
+    # (기본 30초, 육묘 모드 20초). 그런데 이 계산은 `cycle_sec`(기본 600초)로
+    # 곱하고 있었다 — **결정하는 쪽과 실제 뿌리는 쪽이 분무 시간을 다르게 안
+    # 상태**이고, 그 배율이 그대로 효과 과대평가가 된다(600/30 = 20배).
+    #
+    # 2026-08-20 육묘장 사고 기록에 "그 한 값이 결합 drive 가중치를 20배로
+    # 지배했다" 고 적혀 있는데, 그때 고친 것은 유량 출처(`fog_flow_lpm` 분리)
+    # 였고 지속 시간은 남아 있었다. 실측(2026-08-25 イチゴ, 164 L/min ·
+    # 5,463 m³): 명령 100% 에서 ΔT −219.7 °C/사이클.
+    #
+    # 정본은 `CmdConstraints` 하나다 — capacity_meta 에 값을 복사해 두면
+    # 두 벌이 되고 갈라진다. 펄스가 꺼진 장치(고압 미세포그)는 max_on_sec 이
+    # 0 이라 종전대로 사이클 전체로 돈다.
+    cc     = getattr(profile, 'cmd_constraints', None)
+    max_on = float(getattr(cc, 'max_on_sec', 0.0) or 0.0)
+    run_sec = min(cycle, max_on) if max_on > 0.0 else cycle
+
+    sprayed = flow * run_sec * (cmd_pct / 100.0) / 60.0
+
+    # ── 공기가 받아들일 수 있는 양을 넘길 수 없다 ──────────────────────────
+    # `_evaporation_availability` 는 비율이라 총량을 막지 못한다. 여기서 자른다.
+    cap_l = _absorbable_liters(env, float(cap.get('volume_m3') or 0.0))
+    return min(sprayed, cap_l)
 
 
 def fogger_humid_effect(env: EnvContext, cmd_pct: float, profile=None) -> EffectResult:
@@ -586,13 +708,17 @@ DEFAULT_EFFECT_MODELS = {
 def _inject_vpd(model: dict, kind: str = None) -> dict:
     """effect_model 에 'vpd' 키가 없고 T/RH effect 가 있으면 유도 VPD effect 추가.
 
-    kind 를 넘겨야 난방·냉방의 '열에 의한 RH 이동' 신고를 dea 에서 뺄 수 있다
-    (`_THERMAL_RH_KINDS`). kind 미상이면 신고를 그대로 수분으로 본다.
+    kind 를 넘겨야 두 가지가 갈린다.
+      · 난방·냉방의 '열에 의한 RH 이동' 신고를 dea 에서 뺀다(`_THERMAL_RH_KINDS`)
+      · 환기 계열에만 **도달 한계 클램프**를 건다(실외를 지나칠 수 없다).
+        난방·냉방·분무에 걸면 폭염에 냉방이 실외 온도에서 멈춘다.
+    kind 미상이면 신고를 그대로 수분으로 보고, 클램프는 걸지 않는다(보수적).
     """
     if 'vpd' not in model and ('temperature' in model or 'humidity' in model):
         model['vpd'] = make_vpd_effect(
             model.get('temperature'), model.get('humidity'),
             humid_is_moisture=(kind not in _THERMAL_RH_KINDS),
+            vent_bounded=(kind in VENTILATING_KINDS),
         )
     return model
 
@@ -636,23 +762,24 @@ def _build_effect_model_raw(kind: str, k: dict) -> dict:
             if abs(d) < 0.5:
                 return EffectResult('0', 0.0)
             af, _u = _gis_factor(profile, use_u=False)
-            return EffectResult('↑' if d > 0 else '↓',
-                                abs(d) * (pct/100) * _k * _wind_boost(env) * af)
+            return EffectResult('↑' if d > 0 else '↓', vent_reachable(
+                abs(d) * (pct/100) * _k * _wind_boost(env) * af, d))
 
         def _rh(env, pct, profile=None, _k=k_rh):
             d = env.get('RH_ext', 0) - env.get('RH_int', 0)
             if abs(d) < 1.0:
                 return EffectResult('0', 0.0)
             af, _u = _gis_factor(profile, use_u=False)
-            return EffectResult('↑' if d > 0 else '↓',
-                                abs(d) * (pct/100) * _k * _wind_boost(env) * af)
+            return EffectResult('↑' if d > 0 else '↓', vent_reachable(
+                abs(d) * (pct/100) * _k * _wind_boost(env) * af, d))
 
         def _co2(env, pct, profile=None, _k=k_co2):
             ex = _co2_excess(env)
             if ex <= 20:
                 return EffectResult('0', 0.0)
             af, _u = _gis_factor(profile, use_u=False)
-            return EffectResult('↓', ex * (pct/100) * _k * af)
+            return EffectResult('↓', vent_reachable(
+                ex * (pct/100) * _k * af, ex))
 
         return {'temperature': _t, 'humidity': _rh, 'co2': _co2}
 

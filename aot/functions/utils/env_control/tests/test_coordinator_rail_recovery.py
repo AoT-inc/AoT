@@ -183,15 +183,24 @@ class TestRecoveryIsProportional:
         assert apertures[-1] == pytest.approx(16.7, abs=1.0)
         assert max(apertures) < 30.0, '유령 계단이 남아 있다: %s' % apertures
 
-    def test_stale_integral_would_have_saturated(self):
-        """대조군 — 굳은 적분을 그대로 두면 같은 편차에서 100% 까지 간다.
+    def test_stale_integral_still_overshoots_without_recovery(self):
+        """대조군 — 회복을 못 거친 굳은 적분은 편차가 정당화하는 것보다 훨씬 높다.
 
-        회복 경로가 지우는 것이 무엇인지 고정한다.
+        위 `test_no_phantom_step_…` 이 공허하지 않다는 것을 고정한다. 같은 편차
+        (P ≈ 16.7%)인데 굳은 적분이 남아 있으면 개도가 그 몇 배까지 간다.
+
+        ⚠ 2026-08-26 상한이 100 → 약 54 로 내려갔다. **회복 경로가 약해진 것이
+        아니라 막는 수단이 하나 늘었다** — 슬루 되먹임(적분을 실제로 나간 개도로
+        back-calculate)이 같은 허구를 다른 자리에서 함께 깎는다. 여기서 보는
+        것은 절대값이 아니라 "편차가 정당화하는 수준을 넘는가" 이므로, 형제
+        테스트의 문턱(30%)을 기준으로 삼는다.
         """
         st = CoordinatorState(prev_commands={AID: 0.0}, integral={AID: 100.0})
         # 감쇠가 돌지 않도록 포화되지 않는 완만한 편차만 준다.
         st, _, apertures = _run(st, T_int=26.5, T_target=25.0, n=6)
-        assert max(apertures) > 90.0, apertures
+        assert max(apertures) > 30.0, (
+            '굳은 적분이 아무 영향도 못 준다 — 형제 테스트가 공허해졌다: %s'
+            % apertures)
 
 
 class TestInvariants:

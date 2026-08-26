@@ -38,12 +38,11 @@
     // handler rebinds + chart/instance destroy before rebuild).
     'widget_notice', 'AoT_pid', 'widget_calendar',
     // Legacy Highcharts widgets (same idempotent preamble as AoT_gauge/graph).
-    'widget_gauge_angular', 'widget_gauge_solid', 'widget_graph_synchronous',
+    'widget_gauge_solid',
     // Controllers / PWM slider / advice: interval stores + document-delegated
-    // (or namespaced .off().on()) handlers that survive a body swap. ai_insight
-    // uses inline onclick + global fns only, so a plain body swap suffices.
-    'widget_output_pwm_slider', 'widget_controller_activate_deactivate',
-    'AoT_controller_act_deact', 'AoT_advice', 'AoT_ai_insight'
+    // (or namespaced .off().on()) handlers that survive a body swap.
+    'AoT_output_pwm', 'AoT_output_value',
+    'AoT_controller_act_deact', 'AoT_advice'
   ];
   // Widgets whose body is filled by a js_ready_end init script (chart/interactive),
   // so swapping the body isn't enough — the returned (idempotent) js_ready_end must
@@ -53,11 +52,10 @@
     'AoT_gauge_angular', 'AoT_graph', 'AoT_wind_angular',
     'AoT_timer', 'widget_trigger_sequence',
     'widget_notice', 'AoT_pid', 'widget_calendar',
-    'widget_gauge_angular', 'widget_gauge_solid', 'widget_graph_synchronous',
+    'widget_gauge_solid',
     // Re-run js_ready_end to restart polling / rebind delegated handlers with the
-    // new options. (AoT_ai_insight is NOT here: its js_ready_end is empty; a body
-    // swap alone suffices.)
-    'widget_output_pwm_slider', 'widget_controller_activate_deactivate',
+    // new options.
+    'AoT_output_pwm', 'AoT_output_value',
     'AoT_controller_act_deact', 'AoT_advice'
   ];
   var DEBOUNCE_MS = 450;

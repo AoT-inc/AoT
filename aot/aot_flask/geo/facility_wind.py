@@ -25,6 +25,11 @@ from typing import Optional
 Cd  = 0.60   # 개구부 방류계수 (discharge coefficient, windows/vents)
 RHO = 1.20   # 공기 밀도 kg/m³ (20°C, 해면 기준)
 
+# 이 미만이면 무풍으로 보고 풍향 가중치를 걸지 않는다 [m/s].
+# 풍압 ∝ ρv²/2 이므로 0.5 m/s 에서 약 0.15 Pa — 개구부 개도를 80% 깎을 근거가
+# 못 된다. 사람이 "바람이 없다" 고 말하는 구간과도 대체로 맞는다(蒲福 0~1).
+WIND_BIAS_MIN_MS = 0.5
+
 # 풍압계수 기준값 (직사각형 온실 경험식, ASHRAE 2009)
 Cp_WINDWARD = 0.60   # 풍상면(windward): 양압
 Cp_LEEWARD  = 0.30   # 풍하면(leeward):  부압
@@ -260,17 +265,36 @@ def _side_world_normal(vo, orientation_deg: float):
     return _world_normal(vo.get('face'), orientation_deg)
 
 
-def wind_biased_opening(vent_openings, wind_dir_deg, orientation_deg=0.0):
+def wind_biased_opening(vent_openings, wind_dir_deg, orientation_deg=0.0,
+                        wind_speed_ms=None):
     """각 개구부의 풍향 기여도(0.0~1.0) 반환 — env_coordinator 명령 가중치용.
 
     정책:
+      - 무풍         : 전부 1.0 (아래 참조)
       - 천창(roof)   : 풍향 무관 → 1.0 (명령대로 개방, 내부 열기 배출 역할)
       - 측창(side)   : surface_normal(미러 보정) × 풍향 → windward 높게, leeward 낮게
                        weight = 0.2 + 0.8·max(0, cosα)  (leeward 최소 20% 유지)
       - 방향 불명    : 1.0 (반토막 금지 — 정보 없다고 환기를 절반으로 깎지 않음)
 
-    반환: {actuator_id: weight_0_to_1}  (actuator_id가 없는 항목은 제외)
+    ⚠ **바람이 없으면 가중치를 걸지 않는다** (2026-08-26). 이 가중치의 근거는
+    풍압이므로 풍속이 0 이면 깎을 이유가 없다. 그런데 기상 소스는 무풍일 때
+    풍향을 `0.0`(정북)으로 내보내는 일이 흔하고 — OpenWeather 가 그렇다 —
+    `0.0` 은 `None` 이 아니라서 "정보 없음" 분기에도 안 걸린다. 그러면 북향이
+    아닌 측창이 **영구히 leeward** 로 판정돼 하한 0.2 에 갇힌다.
+
+    실측(2026-08-26 イチゴ): 풍속 0.0 m/s · 풍향 0.0° 인데 側面窓右 가 가중치
+    0.2 를 받아, 코디네이터가 24.6% 를 명령해도 장치는 계속 5.0% 였다
+    (24.6 × 0.2 = 4.92). 코디네이터는 24.6 이 나갔다고 믿으므로 적분이 영영
+    수렴하지 못하고, 화면에서는 "창이 안 풀린다" 로 보인다.
+
+    Args:
+        wind_speed_ms: 풍속 [m/s]. None = 모름(가중치 적용 — 종전 동작).
+                       WIND_BIAS_MIN_MS 미만이면 무풍으로 보고 전부 1.0.
     """
+    if wind_speed_ms is not None and float(wind_speed_ms) < WIND_BIAS_MIN_MS:
+        return {vo['actuator_id']: 1.0
+                for vo in vent_openings if vo.get('actuator_id')}
+
     wind_vec = _wind_from_vector(wind_dir_deg)
     weights  = {}
 

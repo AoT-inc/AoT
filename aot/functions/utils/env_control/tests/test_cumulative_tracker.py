@@ -17,22 +17,34 @@ class TestLightConversion:
     """시스템 단위 변환표(config_devices_units.UNIT_CONVERSIONS)를 그대로 사용."""
 
     def test_wm2_to_ppfd(self):
-        # 시스템: W_m2 → umol_m2_s ×4.57
-        assert abs(light_to_ppfd(500, 'W/m²') - 500 * 4.57) < 1e-6
-        assert abs(light_to_ppfd(500, 'w_m2') - 500 * 4.57) < 1e-6
+        """시스템: W_m2 → umol_m2_s ×2.02 (2026-08-25 4.57 에서 정정).
+
+        `W_m2` 는 **전천일사**다. 4.57 은 PAR 대역 W/m² 계수라, 일사계 값에
+        곱하면 PPFD 가 2.26 배로 나왔다(정오 800 W/m² → 3,656 μmol, 지표면
+        상한 약 2,000 을 넘는 값). 근거는 config_devices_units 주석 참조.
+        """
+        assert abs(light_to_ppfd(500, 'W/m²') - 500 * 2.02) < 1e-6
+        assert abs(light_to_ppfd(500, 'w_m2') - 500 * 2.02) < 1e-6
+
+    def test_맑은날_정오가_물리적_상한_안에_있다(self):
+        """계수가 다시 커지면 여기서 걸린다.
+
+        지표면 PPFD 는 맑은 날 정오에도 약 2,000 μmol/m²/s 를 넘지 않는다.
+        """
+        assert light_to_ppfd(1000, 'W/m²') <= 2100.0
 
     def test_ppfd_passthrough(self):
         assert light_to_ppfd(800, 'umol_m2_s') == 800
         assert light_to_ppfd(800, 'ppfd') == 800
 
     def test_lux(self):
-        # 시스템 경로 lux→W_m2(×0.0079)→umol(×4.57) = ×0.036103
-        assert abs(light_to_ppfd(30000, 'lux') - 30000 * 0.0079 * 4.57) < 1.0
+        # 시스템 경로 lux→W_m2(×0.0079)→umol(×2.02) = ×0.015958
+        assert abs(light_to_ppfd(30000, 'lux') - 30000 * 0.0079 * 2.02) < 1.0
 
     def test_unknown_unit_defaults_to_wm2(self):
         # 시스템 관례: internal['light'] 는 W/m²
-        assert abs(light_to_ppfd(500, None) - 500 * 4.57) < 1e-6
-        assert abs(light_to_ppfd(500, 'bogus') - 500 * 4.57) < 1e-6
+        assert abs(light_to_ppfd(500, None) - 500 * 2.02) < 1e-6
+        assert abs(light_to_ppfd(500, 'bogus') - 500 * 2.02) < 1e-6
 
     def test_none_value(self):
         assert light_to_ppfd(None, 'W/m²') is None
@@ -59,8 +71,8 @@ class TestLocalDateBoundary:
                                   T_mean=25, VPD=1.0, CO2=600, cycle_sec=60,
                                   T_base=10, tz=seoul)
         assert rolled is False
-        # DLI = (500 W/m² × 4.57 = 2285 PPFD) × 60s × 1e-6 = 0.13710 mol/m²
-        assert abs(acc.dli - 0.13710) < 1e-4
+        # DLI = (500 W/m² × 2.02 = 1010 PPFD) × 60s × 1e-6 = 0.06060 mol/m²
+        assert abs(acc.dli - 0.06060) < 1e-4
         # GDD = (25-10) × 60/86400
         assert abs(acc.gdd - 15 * 60 / 86400.0) < 1e-6
 

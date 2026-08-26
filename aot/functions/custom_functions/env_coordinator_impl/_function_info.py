@@ -243,6 +243,27 @@ FUNCTION_INFORMATION = {
             'name': lazy_gettext('Heating / Cooling Interlock'),
         },
         {
+            'id': 'vent_first',
+            'type': 'bool',
+            'default_value': False,
+            'required': False,
+            'name': lazy_gettext('Rest Heating and Cooling When Venting Can Reach the Target'),
+            'phrase': lazy_gettext(
+                'When the outdoor air is already past your target, venting '
+                'alone gets you there and running a heater or cooler at the '
+                'same time pays for what the weather does for free. With this '
+                'on, heating, cooling and misting park whenever three things '
+                'hold at once: the outdoor reading is past the target with '
+                'margin, every controlled variable is reachable that way, and '
+                'the vents still have room to open further. If the vents are '
+                'already wide open and the gap remains, heating and cooling '
+                'keep working — this never leaves the greenhouse with nothing '
+                'running. Safety gates and your temperature and humidity '
+                'limits still override it. Leave this off if your vents are '
+                'undersized or the outdoor reading is not trustworthy.'
+            ),
+        },
+        {
             'id': 'hvac_interlock',
             'type': 'bool',
             'default_value': False,
@@ -605,30 +626,10 @@ FUNCTION_INFORMATION = {
             ),
         },
 
-        # ── Nursery (Seedling Protection) ─────────────────────────────────────
+        # ── 습윤형 분무 일소 보호 (육묘 여부와 무관) ───────────────────────────
         {
             'type': 'header',
-            'name': lazy_gettext('Nursery Mode'),
-        },
-        {
-            'id': 'nursery_mode',
-            'type': 'bool',
-            'default_value': False,
-            'required': False,
-            'name': lazy_gettext('Nursery (Seedling) Mode'),
-            'phrase': lazy_gettext(
-                'Protects newly emerged seedlings from leaf scorch. Droplets '
-                'left on a cotyledon under strong sun focus light onto the leaf '
-                'and concentrate dissolved minerals as they evaporate, and the '
-                'seedling has no cuticle yet to resist either. When enabled, '
-                'wetting-type misting is locked out above the irradiance '
-                'threshold, tapered below it, and always broken into short '
-                'pulses with an enforced drying interval. '
-                'Whether a nozzle counts as wetting type is decided by the '
-                'nozzle layout in the facility design (flow rate, spray radius, '
-                'spray direction) — drip lines and true high-pressure fog are '
-                'left alone.'
-            ),
+            'name': lazy_gettext('Misting Sunburn Protection'),
         },
         {
             'id': 'nursery_solar_lockout',
@@ -653,6 +654,27 @@ FUNCTION_INFORMATION = {
                 'level, and is tapered linearly between here and the lockout '
                 'threshold. The gap between the two prevents the mist from '
                 'switching on and off as clouds pass.'
+            ),
+        },
+        # ── Nursery (Seedling Protection) ─────────────────────────────────────
+        {
+            'type': 'header',
+            'name': lazy_gettext('Nursery Mode'),
+        },
+        {
+            'id': 'nursery_mode',
+            'type': 'bool',
+            'default_value': False,
+            'required': False,
+            'name': lazy_gettext('Nursery (Seedling) Mode'),
+            'phrase': lazy_gettext(
+                'Tightens the sunburn protection above for newly emerged '
+                'seedlings. Droplets left on a cotyledon under strong sun focus '
+                'light onto the leaf and concentrate dissolved minerals as they '
+                'evaporate, and the seedling has no cuticle yet to resist either. '
+                'The lockout itself is always active for wetting-type nozzles — '
+                'this adds a lower threshold on groundwater, shorter sprays with '
+                'a longer drying interval, and an evening cut-off.'
             ),
         },
         {

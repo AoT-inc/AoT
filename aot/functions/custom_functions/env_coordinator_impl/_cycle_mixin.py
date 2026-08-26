@@ -222,8 +222,9 @@ def apply_nursery_fog_derate(
     사용자가 설정한 최저 습도 때문에 일소 위험을 무릅쓰게 두면 안 된다.
     습도 하한 자체는 잠금 해제 시각(아침·저녁)에 회복된다.
     """
-    if not internal.get('_nursery_mode'):
-        return
+    # 육묘 모드를 전제하지 않는다 — 하드 잠금(safety_gates._eval_nursery_lock)
+    # 과 같은 이유다. 잠금과 감쇠가 서로 다른 조건에서 서면, 잠기지도 감쇠되지도
+    # 않는 구간이나 감쇠 없이 절벽처럼 끊기는 구간이 생긴다.
     if internal.get('evening_block'):
         # 저녁 차단은 안전 게이트가 0 으로 강제한다 — 여기서 감쇠할 대상이 아니다.
         return
@@ -255,6 +256,48 @@ def apply_nursery_fog_derate(
         }
 
 
+def apply_wetting_fog_humidity_ceiling(
+        internal: dict, profiles: list[ActuatorProfile], final_cmds: dict) -> None:
+    """습도가 이미 허용 범위 위면 **습윤형 분무를 쓰지 않는다**.
+
+    결합 drive 는 각 축을 자기 허용오차로 정규화해 겨루게 하므로, "이미 한참
+    벗어난 축을 더 나빠지게 하면 안 된다" 는 개념이 없다. 실측(2026-08-25
+    イチゴ): 습도 편차 +26.5%(허용 5) · 온도 편차 +1.4°C(허용 1) 상황에서
+
+        온도  e=+0.233  g=0.285  w=0.1425     ← 냉각 방향
+        습도  e=-0.883  g=0.014  w=0.0072     ← 가습 방향(반대)
+        e_norm = +0.180 → 분무 20% 켜짐   (가중치 20 : 1)
+
+    방향 신호는 습도가 4배 강한데 **유효도 가중치가 20배**라 온도가 이긴다.
+    분무기의 습도 효과가 물리적으로 작기 때문이고(RH 89%에서 ΔRH 0.43%),
+    그 작음이 곧 "습도는 어차피 못 건드리니 온도나 잡자" 로 읽힌 것이다.
+
+    얻는 것은 1.71°C 냉각인데, 대가는 이미 포화에 가까운 공기에서 잎이 젖고
+    마를 틈이 없는 것이다 — 딸기·토마토에 잿빛곰팡이가 오는 조건이다. 그
+    거래는 성립하지 않는다.
+
+    **왜 drive 가 아니라 게이트인가.** 결합 drive 에 "초과 축 페널티" 를 넣는
+    일반해도 있지만 그것은 **모든 액추에이터의 거동을 바꾼다.** 여기서 막고
+    싶은 것은 한 종류(습윤형 분무기)의 한 상황이고, 이유도 습도 숫자가 아니라
+    **젖은 잎**이다 — 일소 잠금과 같은 성격이라 같은 자리에 같은 모양으로 둔다.
+
+    고압 미세포그와 드립은 대상이 아니다. 전자는 잎을 적시지 않아 VPD 제어의
+    정당한 수단이고, 후자는 애초에 대기 액추에이터가 아니다.
+    """
+    if not internal.get('_fog_humidity_block'):
+        return
+    for p in profiles:
+        if not is_wetting_fogger(p):
+            continue
+        cmd = final_cmds.get(p.actuator_id)
+        if not cmd:
+            continue
+        value = cmd.get('value', 0.0) if isinstance(cmd, dict) else getattr(cmd, 'value', 0.0)
+        if value <= 0.0:
+            continue
+        final_cmds[p.actuator_id] = {'value': 0.0, 'reason': 'fog_humidity_ceiling'}
+
+
 def apply_threshold_and_gate_overrides(
         internal: dict, profiles: list[ActuatorProfile], final_cmds: dict,
         partial_overrides: dict) -> None:
@@ -278,6 +321,9 @@ def apply_threshold_and_gate_overrides(
     apply_light_threshold_overrides(internal, profiles, final_cmds)
     apply_temp_humid_threshold_overrides(internal, profiles, final_cmds)
     apply_nursery_fog_derate(internal, profiles, final_cmds)
+    # 감쇠(비율)보다 뒤 = 더 강한 규칙(0 으로 끊는다). 안전 프리게이트보다
+    # 앞 = 게이트가 여전히 최우선.
+    apply_wetting_fog_humidity_ceiling(internal, profiles, final_cmds)
     if partial_overrides:
         for aid, override in partial_overrides.items():
             final_cmds[aid] = override
@@ -383,14 +429,18 @@ class CycleMixin:
         if light_val is not None:
             internal['light_est'] = light_val
 
+        # 일소 임계와 광량 폴백은 **육묘 여부와 무관하게** 심는다. 습윤형
+        # 분무기가 있으면 언제나 잠금·감쇠가 서야 하기 때문이다. 육묘 모드는
+        # 그 위에서 더 조이는 축이다(임계 하향·짧은 펄스·저녁 차단).
+        internal['_nursery_solar_lockout'] = float(
+            getattr(self, 'nursery_solar_lockout', 250.0) or 250.0)
+        internal['_nursery_solar_release'] = float(
+            getattr(self, 'nursery_solar_release', 150.0) or 150.0)
+        if light_val is None:
+            internal['_nursery_light_fallback'] = self._clear_sky_light_fallback()
+
         if getattr(self, 'nursery_mode', False):
             internal['_nursery_mode'] = True
-            internal['_nursery_solar_lockout'] = float(
-                getattr(self, 'nursery_solar_lockout', 250.0) or 250.0)
-            internal['_nursery_solar_release'] = float(
-                getattr(self, 'nursery_solar_release', 150.0) or 150.0)
-            if light_val is None:
-                internal['_nursery_light_fallback'] = self._clear_sky_light_fallback()
             if self._evening_fog_blocked():
                 internal['evening_block'] = True
 
@@ -832,6 +882,35 @@ class CycleMixin:
             light_sat=self.light_max if (self.light_max and self.light_max > 0) else None,
         )
 
+        # ── 습윤형 분무 습도 상한 판정 ──────────────────────────────────────
+        # `_check_hard_constraints`(정적 humid_max)와 달리 **여기서** 판정한다 —
+        # 유효 목표는 프로그램·VPD 분해를 거쳐 `assess` 가 정하므로, 함수 옵션의
+        # `target_humidity` 로 판정하면 실제로 쓰인 목표와 어긋난다(실측: 설정
+        # 65.0 인데 유효 목표 62.5).
+        #
+        # ⚠ **VPD 직접 제어 모드에서는 'humidity' 키가 없다.** VPD 목표+측정이
+        # 둘 다 있으면 `situation._decompose_vpd` 가 'humidity'/'temperature' 를
+        # 제어목표에서 빼고 `_humidity_constraint`/`_temperature_constraint` 로
+        # 이름만 바꿔 진단용으로 남긴다(TargetVar 는 그대로). 원래 코드는
+        # 'humidity' 만 봐서 VPD 모드가 걸린 뒤로 **항상 "목표 없음"으로 빠져
+        # 게이트가 한 번도 서지 않았다** — 습도 91%(목표+허용오차 대비 초과)에서
+        # 분무 67% 가 그대로 나간 실사고로 발견했다(2026-08-25 イチゴ).
+        # 값·허용오차는 옮겨진 뒤에도 같은 TargetVar 이므로 폴백으로 집는다.
+        _rh_now = internal.get('RH')
+        _rh_tv = ((situation.target or {}).get('humidity')
+                 or (situation.target or {}).get('_humidity_constraint'))
+        if _rh_now is not None and _rh_tv is not None and _rh_tv.tolerance > 0:
+            _ceiling = float(_rh_tv.value) + float(_rh_tv.tolerance)
+            _cbs = self._constraint_breach_state
+            _cbs['fog_RH'] = latch_threshold(
+                float(_rh_now), _ceiling, RH_HYST_PCT, _cbs.get('fog_RH', False),
+                'max')
+            if _cbs['fog_RH']:
+                internal['_fog_humidity_block'] = True
+        else:
+            # 습도 목표가 없으면 막을 근거가 없다 — 종전대로 둔다.
+            self._constraint_breach_state['fog_RH'] = False
+
         # 개구부 파킹 관련 옵션 — coordinator 가 ctx 에서 읽는다. ctx 경유인
         # 이유는 coordinate() 시그니처를 늘리지 않기 위해서다(vent_open_frac 과
         # 같은 방식).
@@ -843,6 +922,8 @@ class CycleMixin:
             self._hvac_running(self._coord_state.prev_commands)
             if (_interlock and getattr(self, '_coord_state', None) is not None)
             else False)
+        # `hvac_interlock` 의 짝 — 환기로 닿을 수 있으면 냉난방을 쓰지 않는다.
+        situation.context['vent_first'] = bool(getattr(self, 'vent_first', False))
 
         # 편차/모드/제한인자는 write_cycle_metrics(env_control, CH30~32·71·72)로 일원화 기록.
 
@@ -876,6 +957,17 @@ class CycleMixin:
         # 움직이므로, 제어 직전에 장치 실측 위치로 맞춘다.
         self._sync_prev_from_devices()
 
+        # ── 이 사이클의 전달 비율을 프로필에 싣는다 (coordinate() 앞) ──────────
+        # 명령이 요구대로 다 못 나가는 물리 제약은 **코디네이터가 알아야 한다**.
+        # 예전에는 coordinate() 뒤에서 명령에 직접 곱했는데, 그러면 코디네이터는
+        # 원래 값이 나갔다고 믿어 적분이 영영 수렴하지 못하고 부하분담에도
+        # 과장된 효과가 실린다. 실측 두 건이 같은 모양이었다(2026-08-26 イチゴ):
+        #   側面窓右  24.6% 명령 / 5.0% 실제  — 풍향 가중치 0.2 를 밖에서 곱함
+        #   バルブ3   61%   명령 / 0%   실제  — 습도 상한 게이트가 밖에서 끊음
+        # 후자는 적분이 64.3 에 실린 채 얼어붙어, 게이트가 풀리는 순간 분무가
+        # 60% 로 튀어나오는 상태였다.
+        self._apply_cmd_scales(internal, external)
+
         # ── L3: Coordination (MPC → greybox-PI → legacy) ──────────────────────
         commands, new_state = self._run_control(situation, uid)
         self._coord_state = new_state
@@ -885,28 +977,8 @@ class CycleMixin:
             commands = expand_group_commands(
                 commands, self._groups, new_state.prev_commands)
 
-        # ── D1: 풍향 가중치 (opening 액추에이터 개방량 조정) ──────────────────────
-        # vent_openings 가 프로파일 로드 시 캐시된 경우에만 적용.
-        # wind_dir 는 외부 환경 컨텍스트에서 읽음 (기상 관측/예보 소스).
-        _wind_dir_now = internal.get('wind_dir', external.get('wind_dir'))
-        _vos = getattr(self, '_vent_openings', [])
-        if _vos and _wind_dir_now is not None:
-            from aot.aot_flask.geo.facility_wind import wind_biased_opening
-            from aot.functions.utils.env_control.coordinator import ActuatorCommand
-            _orient = getattr(self, '_facility_orientation_deg', 0.0)
-            _bias   = wind_biased_opening(_vos, float(_wind_dir_now), _orient)
-            for _aid, _cmd in list(commands.items()):
-                _w = _bias.get(_aid)
-                if _w is None:
-                    continue
-                _prof = (self._profiles[self._actuator_idx[_aid]]
-                         if _aid in self._actuator_idx else None)
-                if _prof and _prof.kind == 'opening':
-                    commands[_aid] = ActuatorCommand(
-                        value=round(max(0.0, min(100.0, _cmd.value * _w)), 1),
-                        reason=_cmd.reason,
-                        var_source=_cmd.var_source,
-                    )
+        # (D1 풍향 가중치는 coordinate() **앞**의 `_apply_cmd_scales` 로 옮겼다.
+        #  여기서 곱하면 코디네이터가 그 사실을 배우지 못한다 — 위 주석 참조.)
 
         # ── Stage 1: 능동 탐색 적용 ──────────────────────────────────────────
         # Post-Gate **앞**이어야 한다. 예전에는 뒤에 있었는데, final_cmds 는
@@ -1008,6 +1080,49 @@ class CycleMixin:
             final_cmds=final_cmds,
             is_probe=is_probe,
         ))
+
+    def _apply_cmd_scales(self, internal: dict, external: dict) -> None:
+        """이 사이클에 명령이 실제로 전달되는 비율을 프로필에 싣는다.
+
+        `coordinate()` 는 `finalize_command` 에서 이 값을 곱하므로, 슬루·부하분담·
+        anti-windup 이 전부 **실제로 나가는 값**을 기준으로 돈다. 반대로 이것을
+        `coordinate()` 뒤에서 곱하면 코디네이터는 원래 값이 나갔다고 믿는다 —
+        적분이 수렴하지 못하고, 제약이 풀리는 순간 쌓인 적분이 계단으로 튀어나온다.
+
+        ⚠ **매 사이클 전부 1.0 으로 되돌린 뒤 다시 채운다.** 남겨 두면 바람이
+        멎거나 게이트가 풀린 뒤에도 옛 제약이 계속 걸린다.
+        """
+        for p in self._profiles:
+            p.cmd_scale = 1.0
+
+        # ── 습윤형 분무: 습도 상한 게이트 ────────────────────────────────────
+        # 잎을 적시는 분무는 습도가 이미 넘쳤을 때 쓰지 않는다(잿빛곰팡이).
+        # 판정은 `assess` 뒤에서 이미 끝나 있다 — 여기서는 그 결론만 싣는다.
+        if internal.get('_fog_humidity_block'):
+            for p in self._profiles:
+                if is_wetting_fogger(p):
+                    p.cmd_scale = 0.0
+
+        # ── 개구부: 풍향 가중치 (D1) ────────────────────────────────────────
+        # 풍속을 함께 넘긴다 — 무풍이면 풍압이 없으므로 깎을 근거가 없는데,
+        # 기상 소스가 무풍일 때 풍향을 0.0(정북)으로 내보내면 북향이 아닌 측창이
+        # 영구히 leeward 로 판정돼 하한 0.2 에 갇힌다(2026-08-26 실측).
+        _vos = getattr(self, '_vent_openings', [])
+        _wind_dir = internal.get('wind_dir', external.get('wind_dir'))
+        if not _vos or _wind_dir is None:
+            return
+        from aot.aot_flask.geo.facility_wind import wind_biased_opening
+        _speed = internal.get('wind', external.get('wind'))
+        _bias = wind_biased_opening(
+            _vos, float(_wind_dir),
+            getattr(self, '_facility_orientation_deg', 0.0),
+            wind_speed_ms=None if _speed is None else float(_speed))
+        for p in self._profiles:
+            if p.kind != 'opening':
+                continue
+            w = _bias.get(p.actuator_id)
+            if w is not None:
+                p.cmd_scale = min(p.cmd_scale, max(0.0, min(1.0, float(w))))
 
     def _apply_forecast_feedforward(
             self, env_target: dict, internal: dict,

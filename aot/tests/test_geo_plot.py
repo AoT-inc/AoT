@@ -5093,11 +5093,13 @@ class TestFacilityPlotRendering(unittest.TestCase):
         widget = _read(os.path.join(_ROOT, 'aot_flask', 'static', 'js', 'widgets',
                                     'AoT_map', 'aot-map-widget-vector.js'))
         # [현황] 본문 · 환경 · 식생 · 기록 네 자리 모두 같으면 손대지 않는다.
-        self.assertIn('var ovSame =', widget)
+        # 넷 다 **지난번에 만든 문자열**과 견준다 — 이유는
+        # `test_comparison_is_build_to_build_not_against_the_live_dom` 참조.
+        self.assertIn('var ovSame = (st2._ovHtml === ovHtml)', widget)
         self.assertIn('if (!ovSame)', widget)
-        self.assertIn("cur.outerHTML === node.outerHTML", widget)
-        self.assertIn("existing.outerHTML === block.outerHTML", widget)
-        self.assertIn("slot.outerHTML === node.outerHTML", widget)
+        self.assertIn('if (pane._aotEnvNowHtml === html) return;', widget)
+        self.assertIn('if (pane._aotPlotsHtml === html) return;', widget)
+        self.assertIn('if (pane._aotRecordHtml === html) return;', widget)
 
     def test_comparison_parses_before_comparing(self):
         """문자열 HTML 과 DOM 의 `outerHTML` 을 직접 비교하면 안 된다.
@@ -5112,6 +5114,40 @@ class TestFacilityPlotRendering(unittest.TestCase):
         # 원본 문자열과 DOM 을 직접 비교하던 형태가 되살아나면 잡는다.
         self.assertNotIn('existing.outerHTML === html', widget)
         self.assertNotIn('cur.outerHTML === html', widget)
+
+    def test_comparison_is_build_to_build_not_against_the_live_dom(self):
+        """**깜빡임이 되살아났던 진짜 이유.**
+
+        예전 가드는 갓 만든 노드를 **현재 DOM**(`cur.outerHTML` 등)과 견줬다.
+        그 자체로는 옳았는데, 나중에 들어온 사용자 지정 이름 번역
+        (`aot-user-i18n.js`, p6_53)이 전제를 깨뜨렸다 — 그 층은 우리가 쓴
+        **직후** 텍스트 노드를 번역본으로 바꿔 놓는다. 그래서 현재 DOM 은 늘
+        번역본이고 새로 만든 HTML 은 늘 원문이라 **영원히 다르다고 나오고**,
+        가드가 있는데도 매 폴링(5초)마다 통째로 교체됐다.
+
+        사용자가 본 화면이 정확히 그 조합이다(사이트 언어 한국어 + 이름 번역
+        켜짐): 5초마다 원문이 잠깐 보였다가 번역본으로 바뀌는 것이 깜빡임의
+        정체였다. 번역을 끄면 안 보이니 재현 조건이 좁아 오래 남았다.
+
+        그래서 비교는 **원문 대 원문**(지난번에 우리가 만든 문자열)으로 한다 —
+        번역기가 DOM 을 어떻게 바꾸든 영향받지 않는다.
+        """
+        widget = _read(os.path.join(_ROOT, 'aot_flask', 'static', 'js', 'widgets',
+                                    'AoT_map', 'aot-map-widget-vector.js'))
+        # 폴링이 다시 그리는 자리는 전부 이 규칙을 지난다.
+        self.assertIn('function _setHtmlIfChanged(el, html)', widget)
+        self.assertIn('if (el._aotLastHtml === html) return false;', widget)
+        # 살아 있는 DOM 과 견주는 형태가 되살아나면 잡는다 — 번역을 켜는 순간
+        # 조용히 무력해지는 비교다.
+        for dead in ('cur.outerHTML === node.outerHTML',
+                     'existing.outerHTML === block.outerHTML',
+                     'slot.outerHTML === node.outerHTML'):
+            self.assertNotIn(dead, widget,
+                             '살아 있는 DOM 과 견주면 번역이 켜진 화면에서 무력하다: %s'
+                             % dead)
+        # 기록은 DOM 속성이 아니라 JS 프로퍼티에 둔다 — 속성으로 두면 그 쓰기
+        # 자체가 또 하나의 변경이 되어 번역기의 관찰자를 깨운다.
+        self.assertNotIn("setAttribute('data-aot-last-html'", widget)
 
     def test_async_note_list_is_excluded_from_the_comparison(self):
         """노트 목록은 비동기로 채워진다 — 비교에 넣으면 무한 재교체가 된다.

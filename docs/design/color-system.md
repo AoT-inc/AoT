@@ -428,7 +428,7 @@ paused/held 를 모두 pause-background 로만 보내 hold 분기는 아직
    `GRAPH_SERIES_PALETTE` / `GRAPH_SERIES_PALETTE_DARK` 단일 소스 +
    custom_ui `chart_1..6` 오버레이. 코드에서는
    `utils_theme.get_graph_series_palette(dark=…)` 로 읽을 것
-   (AoT_graph·widget_graph_synchronous 는 Python 호출, AoT_PID 템플릿은
+   (AoT_graph 는 Python 호출, AoT_PID 템플릿은
    inject_variables 가 주입하는 `graph_series_palette(_dark)`).
    새 차트 위젯도 이 경로를 쓸 것 — 팔레트 재하드코딩 금지.
    `utils_theme._theme_dict` 는 ORM 이 아닌 Core SELECT 로 misc 를 읽는다
@@ -438,7 +438,7 @@ paused/held 를 모두 pause-background 로만 보내 hold 분기는 아직
    ② Highcharts/SVG 속성 등 CSS var 가 닿지 않는 차트 크롬(눈금·다이얼),
    ③ `var(--토큰, #폴백)` 의 폴백값,
    ④ **고정 다크 패널/글래스 컴포넌트**(AI 드로어 액션 카드, AoT_advice 위젯,
-   widget_ai_insight, 사진 갤러리 라이트박스) — 배경이 항상 어두워 라이트모드
+   사진 갤러리 라이트박스) — 배경이 항상 어두워 라이트모드
    전역 텍스트 토큰(어두운 색)을 쓰면 텍스트가 안 보임. 흰색/밝은 회색
    리터럴을 유지하고 주석으로 사유를 남긴다,
    ⑤ **영상/3D 오버레이 HUD**(카메라 위젯 상태 텍스트, 시설 3D 힌트) —
@@ -674,31 +674,26 @@ DB 에 남은 잔재 정리는 `python3 -m aot.scripts.fix_geo_theme_drift`
 1. `ai/ai_scheduler.css`(66), `map/map.css`(148), `pages/mcp_servers.css`(39),
    `ai/aot-ai-global.css`(33) 등 비브랜드 하드코딩 잔여 — 표면/보더/텍스트
    토큰으로 단계 치환 (대부분 var() 폴백이 아닌 순수 리터럴).
-2. ~~Highcharts 시리즈 팔레트 중복~~ → 완료(2026-07, GRAPH_SERIES_PALETTE 통합.
-   주의: widget_graph_synchronous 는 구 Highcharts 기본 팔레트에서 AoT 팔레트로
-   변경되어 기본 시리즈색이 달라짐 — 미설치 레거시 위젯이라 영향 없음).
+2. ~~Highcharts 시리즈 팔레트 중복~~ → 완료(2026-07, GRAPH_SERIES_PALETTE 통합).
 3. `widget_gauge_solid.py` 는 독자 4단계 팔레트(#33CCFF…) — 5단계 밴드 토큰
    통일 여부 결정 필요(위젯 동작 변화라 사용자 결정 사안).
-4. `widget_ai_insight.py` 의 #007bff/#28a745 그라데이션 등 Bootstrap 색 —
-   AoT 상태색으로 교체(시각 변화 수반).
-5. 폴백 전용 미정의 변수 정리: `--aot-accent`, `--aot-color-border`,
+4. 폴백 전용 미정의 변수 정리: `--aot-accent`, `--aot-color-border`,
    `--aot-text-muted` 등 — 실토큰으로 개명 또는 정식 정의.
-6. `:root[data-theme="dark"]` 휴면 블록 — 서버측 다크 로드 방식과 통합하거나 제거.
-7. 레거시 별칭 소비처를 실토큰으로 점진 이관 → 별칭 제거.
-8. 다크 Bootswatch 스킨(cyborg/darkly/slate/solar/superhero)은 5-4절 body 연결
+5. `:root[data-theme="dark"]` 휴면 블록 — 서버측 다크 로드 방식과 통합하거나 제거.
+6. 레거시 별칭 소비처를 실토큰으로 점진 이관 → 별칭 제거.
+7. 다크 Bootswatch 스킨(cyborg/darkly/slate/solar/superhero)은 5-4절 body 연결
    대상에서 제외됨 — 그 스킨을 쓰는 사용자는 custom_ui 텍스트색 설정이 여전히
    전혀 반영되지 않는다. 필요시 각 스킨 파일에 상응하는 배선 추가.
-9. ~~Highcharts 위젯 데이터 라벨/축 텍스트색 하드코딩~~ → 2026-07 해결.
-   `AoT_gauge_angular`(dataLabels + yAxis.labels), `AoT_graph`/`AoT_PID`/
-   `widget_graph_synchronous`(xAxis.labels, yAxis 공용 헬퍼 `AoTChart.
-   unitYAxis`, rangeSelector 버튼/라벨 각 상태)에 `style.color: 'var(--aot-
-   color-text-primary/secondary)'` 를 명시. `widget_gauge_solid` 는 애초
-   `format` HTML 문자열에 이미 var() 를 쓰고 있어 손댈 것 없었음.
-   `AoT_wind_angular` 는 Highcharts 를 아예 안 쓰는 순수 SVG/HTML 위젯이라
-   대상 아님. **남은 한계**: `useHTML:true` 라벨(대부분의 dataLabels)은
-   `style.color` 가 실제 CSS `color` 로 적용돼 정상 작동하지만, `useHTML`
-   이 아닌 **SVG 렌더링 축 타이틀 일부**는 Highcharts 가 내부적으로
-   `fill`(SVG 전용 속성, `color` 와 별개)로 그려 우리가 설정한 `style.color`
-   가 반영되지 않는 사례가 하나 남음(`widget_graph_synchronous` 의 y축
-   단위 타이틀 "°C" 등, 발생 위젯·빈도 낮음) — SVG `fill` vs CSS `color`
-   불일치는 Highcharts 렌더 모드에 따라 갈리므로 필요시 개별 확인 요망.
+8. ~~Highcharts 위젯 데이터 라벨/축 텍스트색 하드코딩~~ → 2026-07 해결.
+   `AoT_gauge_angular`(dataLabels + yAxis.labels), `AoT_graph`/`AoT_PID`
+   (xAxis.labels, yAxis 공용 헬퍼 `AoTChart.unitYAxis`, rangeSelector
+   버튼/라벨 각 상태)에 `style.color: 'var(--aot-color-text-primary/
+   secondary)'` 를 명시. `widget_gauge_solid` 는 애초 `format` HTML
+   문자열에 이미 var() 를 쓰고 있어 손댈 것 없었음. `AoT_wind_angular` 는
+   Highcharts 를 아예 안 쓰는 순수 SVG/HTML 위젯이라 대상 아님. **남은
+   한계**: `useHTML:true` 라벨(대부분의 dataLabels)은 `style.color` 가
+   실제 CSS `color` 로 적용돼 정상 작동하지만, `useHTML` 이 아닌 **SVG
+   렌더링 축 타이틀 일부**는 Highcharts 가 내부적으로 `fill`(SVG 전용
+   속성, `color` 와 별개)로 그려 우리가 설정한 `style.color` 가 반영되지
+   않는 사례가 있을 수 있음 — SVG `fill` vs CSS `color` 불일치는
+   Highcharts 렌더 모드에 따라 갈리므로 필요시 개별 확인 요망.

@@ -59,6 +59,33 @@ class VirtualToolResolver(BaseActionResolver):
         if not handler:
             return {"status": "error", "message": f"Unknown virtual tool: {tool_name}"}
 
+        # @ANCHOR: DOUBLE_WRAPPED_ARGUMENTS
+        # 인자가 `arguments` 안에 한 겹 더 들어오는 일이 있다. 도구 설명이
+        # `params.arguments: {...}` 라고 알려 주므로 모델이 그 모양대로 보내는데,
+        # 엔진 어댑터가 그것을 다시 `{'arguments': raw_args}` 로 감싸기 때문이다
+        # (gemini.py, anthropic.py 둘 다 같은 패턴).
+        #
+        # 결과는 조용한 실패였다. 한 겹만 벗기면 handler(arguments={...}) 가 되고,
+        # 핸들러 대부분이 **extra 를 받으므로 예외 없이 통과하면서 정작 필수
+        # 인자는 비어 있다. 실사용(2026-08-26): 모델이 올바른 구획 id 로
+        # get_plot 을 불렀는데 "plot_id is required" 가 났고, 사용자는 AI 가
+        # "정보를 가져올 수 없다" 고 하는 것만 봤다.
+        #
+        # **핸들러가 실제로 `arguments` 를 받는 도구는 벗기지 않는다** —
+        # use_tool(tool_name, arguments) 이 그렇다. 서명을 보고 판단한다.
+        if (isinstance(arguments, dict) and len(arguments) == 1
+                and isinstance(arguments.get('arguments'), dict)):
+            try:
+                import inspect
+                _takes_arguments = 'arguments' in inspect.signature(handler).parameters
+            except (TypeError, ValueError):
+                _takes_arguments = False
+            if not _takes_arguments:
+                logger.debug(
+                    f"[VirtualToolResolver] unwrapped double-nested arguments for "
+                    f"'{tool_name}': {list(arguments['arguments'].keys())}")
+                arguments = arguments['arguments']
+
         # @ANCHOR: ARGUMENT_ALIAS_NORMALIZERS
         # LLM sometimes generates parameter names that differ from the actual
         # function signature.  Normalize them here before dispatch so the handler
