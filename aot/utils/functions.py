@@ -47,8 +47,19 @@ logger = logging.getLogger("aot.utils.functions")
 
 from functools import lru_cache
 
-@lru_cache(maxsize=4)
-def parse_function_information(exclude_custom=False, custom_only=False):
+
+def _current_locale_str():
+    """현재 Babel 로케일을 문자열로. 요청 컨텍스트가 없는 데몬에서는 'en'."""
+    try:
+        from flask_babel import get_locale
+        locale = get_locale()
+        return str(locale) if locale else 'en'
+    except Exception:
+        return 'en'
+
+
+@lru_cache(maxsize=64)
+def _parse_function_information_cached(exclude_custom, custom_only, locale):
     """Parse function module information and return a dictionary of function IDs and metadata.
 
     @phase active
@@ -138,6 +149,18 @@ def parse_function_information(exclude_custom=False, custom_only=False):
             dict_controllers = dict_has_value(dict_controllers, function_custom, 'custom_commands')
 
     return dict_controllers
+
+
+def parse_function_information(exclude_custom=False, custom_only=False):
+    """function name 등이 lazy_gettext 를 f-string/format 으로 즉시 문자열화하는
+    모듈이 섞여 있어, 캐시 키에 로케일을 넣지 않으면 프로세스가 맨 처음
+    로드했을 때의 언어로 이름이 영구 고정된다. 로케일별로 캐시."""
+    return _parse_function_information_cached(
+        exclude_custom, custom_only, _current_locale_str())
+
+
+parse_function_information.cache_clear = _parse_function_information_cached.cache_clear
+parse_function_information.cache_info = _parse_function_information_cached.cache_info
 
 
 def device_module_names(dict_controllers=None):

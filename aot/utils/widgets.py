@@ -31,8 +31,19 @@ logger = logging.getLogger("aot.utils.widgets")
 
 from functools import lru_cache
 
-@lru_cache(maxsize=4)
-def parse_widget_information(exclude_custom=False, custom_only=False):
+
+def _current_locale_str():
+    """현재 Babel 로케일을 문자열로. 요청 컨텍스트가 없는 데몬에서는 'en'."""
+    try:
+        from flask_babel import get_locale
+        locale = get_locale()
+        return str(locale) if locale else 'en'
+    except Exception:
+        return 'en'
+
+
+@lru_cache(maxsize=64)
+def _parse_widget_information_cached(exclude_custom, custom_only, locale):
     """Parse all widget modules and return a dictionary of widget IDs and their metadata.
 
     @phase active
@@ -143,3 +154,15 @@ def parse_widget_information(exclude_custom=False, custom_only=False):
             dict_widgets = dict_has_value(dict_widgets, widget_custom, 'mobile_full_width')
 
     return dict_widgets
+
+
+def parse_widget_information(exclude_custom=False, custom_only=False):
+    """widget name 등이 lazy_gettext 를 f-string/format 으로 즉시 문자열화하는
+    모듈이 섞여 있어, 캐시 키에 로케일을 넣지 않으면 프로세스가 맨 처음
+    로드했을 때의 언어로 이름이 영구 고정된다. 로케일별로 캐시."""
+    return _parse_widget_information_cached(
+        exclude_custom, custom_only, _current_locale_str())
+
+
+parse_widget_information.cache_clear = _parse_widget_information_cached.cache_clear
+parse_widget_information.cache_info = _parse_widget_information_cached.cache_info
