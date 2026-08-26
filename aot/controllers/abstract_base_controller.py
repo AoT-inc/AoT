@@ -176,13 +176,23 @@ class AbstractBaseController(object):
 
                 if 'type' not in each_option_default:
                     error.append("'type' not found in custom_options")
+                # ⚠ **화면 배치 표식은 값을 싣지 않는다.** `collapse_start`/
+                #   `collapse_end` 를 여기 빼먹으면 id·기본값이 없다고 에러를
+                #   쌓고 아래 `if error: return` 이 **옵션 파싱을 통째로
+                #   중단한다** — 그 표식 뒤의 옵션이 전부 None 이 되는데
+                #   에러 로그 두 줄 말고는 아무 신호가 없다(2026-08-27 실측:
+                #   통합환경제어 62개 중 9개만 설정되고 멈췄다).
                 if ('id' not in each_option_default and
                         ('type' in each_option_default and
-                         each_option_default['type'] not in ['new_line', 'message', 'header'])):
+                         each_option_default['type'] not in [
+                             'new_line', 'message', 'header',
+                             'collapse_start', 'collapse_end'])):
                     error.append("'id' not found in custom_options")
                 if ('default_value' not in each_option_default and
                         ('type' in each_option_default and
-                         each_option_default['type'] not in ['new_line', 'header', 'button'])):
+                         each_option_default['type'] not in [
+                             'new_line', 'header', 'button',
+                             'collapse_start', 'collapse_end'])):
                     error.append("'default_value' not found in custom_options")
 
                 for each_error in error:
@@ -190,7 +200,9 @@ class AbstractBaseController(object):
                 if error:
                     return
 
-                if each_option_default['type'] in ['new_line', 'message', 'header', 'button']:
+                if each_option_default['type'] in [
+                        'new_line', 'message', 'header', 'button',
+                        'collapse_start', 'collapse_end']:
                     continue
 
                 if 'required' in each_option_default and each_option_default['required']:
@@ -310,13 +322,23 @@ class AbstractBaseController(object):
 
                 if 'type' not in each_option_default:
                     error.append(f"'type' not found in custom_options: {each_option_default}")
+                # ⚠ **화면 배치 표식은 값을 싣지 않는다.** `collapse_start`/
+                #   `collapse_end` 를 여기 빼먹으면 id·기본값이 없다고 에러를
+                #   쌓고 아래 `if error: return` 이 **옵션 파싱을 통째로
+                #   중단한다** — 그 표식 뒤의 옵션이 전부 None 이 되는데
+                #   에러 로그 두 줄 말고는 아무 신호가 없다(2026-08-27 실측:
+                #   통합환경제어 62개 중 9개만 설정되고 멈췄다).
                 if ('id' not in each_option_default and
                         ('type' in each_option_default and
-                         each_option_default['type'] not in ['new_line', 'message', 'header'])):
+                         each_option_default['type'] not in [
+                             'new_line', 'message', 'header',
+                             'collapse_start', 'collapse_end'])):
                     error.append(f"'id' not found in custom_options: {each_option_default}")
                 if ('default_value' not in each_option_default and
                         ('type' in each_option_default and
-                         each_option_default['type'] not in ['new_line', 'header', 'button'])):
+                         each_option_default['type'] not in [
+                             'new_line', 'header', 'button',
+                             'collapse_start', 'collapse_end'])):
                     error.append(f"'default_value' not found in custom_options: {each_option_default}")
 
                 for each_error in error:
@@ -324,7 +346,9 @@ class AbstractBaseController(object):
                 if error:
                     return
 
-                if each_option_default['type'] in ['new_line', 'message', 'header', 'button']:
+                if each_option_default['type'] in [
+                        'new_line', 'message', 'header', 'button',
+                        'collapse_start', 'collapse_end']:
                     continue
 
                 if 'required' in each_option_default and each_option_default['required']:
@@ -453,13 +477,23 @@ class AbstractBaseController(object):
 
                 if 'type' not in each_option_default:
                     error.append(f"'type' not found in custom_options: {each_option_default}")
+                # ⚠ **화면 배치 표식은 값을 싣지 않는다.** `collapse_start`/
+                #   `collapse_end` 를 여기 빼먹으면 id·기본값이 없다고 에러를
+                #   쌓고 아래 `if error: return` 이 **옵션 파싱을 통째로
+                #   중단한다** — 그 표식 뒤의 옵션이 전부 None 이 되는데
+                #   에러 로그 두 줄 말고는 아무 신호가 없다(2026-08-27 실측:
+                #   통합환경제어 62개 중 9개만 설정되고 멈췄다).
                 if ('id' not in each_option_default and
                         ('type' in each_option_default and
-                         each_option_default['type'] not in ['new_line', 'message', 'header'])):
+                         each_option_default['type'] not in [
+                             'new_line', 'message', 'header',
+                             'collapse_start', 'collapse_end'])):
                     error.append(f"'id' not found in custom_options: {each_option_default}")
                 if ('default_value' not in each_option_default and
                         ('type' in each_option_default and
-                         each_option_default['type'] not in ['new_line', 'header', 'button'])):
+                         each_option_default['type'] not in [
+                             'new_line', 'header', 'button',
+                             'collapse_start', 'collapse_end'])):
                     error.append(f"'default_value' not found in custom_options: {each_option_default}")
 
                 for each_error in error:
@@ -467,7 +501,9 @@ class AbstractBaseController(object):
                 if error:
                     return
 
-                if each_option_default['type'] in ['new_line', 'message', 'header', 'button']:
+                if each_option_default['type'] in [
+                        'new_line', 'message', 'header', 'button',
+                        'collapse_start', 'collapse_end']:
                     continue
 
                 dict_values[each_option_default['id']] = _ChannelValues(

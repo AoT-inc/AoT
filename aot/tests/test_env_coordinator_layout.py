@@ -40,7 +40,10 @@ def _options():
 
 
 def _ids(opts):
-    return [o['id'] for o in opts if o.get('id')]
+    """값을 싣는 옵션만. 배치 표식(접힘 앵커)도 id 를 가지므로 걸러야 한다."""
+    markers = ('collapse_start', 'collapse_end', 'header')
+    return [o['id'] for o in opts
+            if o.get('id') and o.get('type') not in markers]
 
 
 def _always_visible(opts):
@@ -144,10 +147,12 @@ class TestTheLayoutDoesNotChangeBehaviour:
         같은 객체를 재배치하기만 해야 한다."""
         fi = _info()
         opts = fi.FUNCTION_INFORMATION['custom_options']
-        by_id = {o['id']: o for o in opts if o.get('id')}
+        by_id = {o['id']: o for o in opts if o.get('id')
+                 and o.get('type') not in ('collapse_start', 'collapse_end')}
         rebuilt = fi._apply_layout(opts, fi._LAYOUT)
         for o in rebuilt:
-            if o.get('id'):
+            if o.get('id') and o.get('type') not in (
+                    'collapse_start', 'collapse_end', 'header'):
                 assert o is by_id[o['id']], '%s 정의가 복제됐다' % o['id']
 
     def test_applying_twice_is_stable(self):
@@ -161,3 +166,55 @@ class TestTheLayoutDoesNotChangeBehaviour:
 
 if __name__ == '__main__':
     pytest.main([__file__, '-v'])
+
+
+class TestEachFoldOpensItsOwnSection:
+    """접힘마다 **고유한 id** 가 있어야 한다 (2026-08-27 사용자 신고).
+
+    템플릿이 DOM 앵커를 `name_prefix ~ (id or 'advanced')` 로 만든다. id 를
+    안 주면 8개가 전부 `…_advanced` 를 가리켜 **어느 버튼을 눌러도 맨 위 것만
+    펼쳐진다.** 처음 배치를 만들 때 실제로 그랬다.
+    """
+
+    def _folds(self):
+        return [o for o in _options() if o.get('type') == 'collapse_start']
+
+    def test_every_fold_has_an_id(self):
+        missing = [str(o.get('name')) for o in self._folds() if not o.get('id')]
+        assert not missing, '앵커가 없는 접힘: %s' % missing
+
+    def test_fold_ids_are_unique(self):
+        ids = [o['id'] for o in self._folds()]
+        assert len(ids) == len(set(ids)), (
+            '접힘 앵커가 겹친다 — 겹치는 만큼 다른 묶음이 안 열린다: %s'
+            % sorted({i for i in ids if ids.count(i) > 1}))
+
+    def test_fold_ids_are_ascii_and_not_derived_from_the_title(self):
+        """제목은 번역된다 — 제목에서 만들면 언어를 바꿀 때 앵커가 달라진다."""
+        for o in self._folds():
+            assert o['id'].isascii(), '%r 이 ASCII 가 아니다' % o['id']
+            assert str(o['id']) not in str(o.get('name', '')), (
+                '앵커가 제목에서 파생됐다: %r' % o['id'])
+
+
+class TestLayoutMarkersAreNotOptions:
+    """배치 표식도 `id` 를 갖는다 — 값을 싣는 옵션과 섞이면 안 된다."""
+
+    def test_markers_never_become_attributes(self):
+        """데몬 파서가 표식을 옵션으로 읽으면 `grp_*` 속성이 생기고, 더 나쁘게는
+        id·기본값이 없다고 판단해 **파싱을 통째로 중단한다**(2026-08-27 실측:
+        62개 중 9개만 설정되고 멈췄다)."""
+        parser = _read_parser()
+        for fn in ('setup_custom_options_csv', 'setup_custom_options_json'):
+            block = parser.split('def %s' % fn, 1)[1].split('\n    def ', 1)[0]
+            assert block.count("'collapse_start'") >= 3, (
+                '%s 가 배치 표식을 면제하지 않는다 — 세 자리 모두 필요하다'
+                '(id 검사 · default_value 검사 · continue)' % fn)
+
+
+def _read_parser():
+    import os
+    here = os.path.dirname(os.path.abspath(__file__))
+    with open(os.path.join(here, '..', 'controllers',
+                           'abstract_base_controller.py'), encoding='utf-8') as fh:
+        return fh.read()

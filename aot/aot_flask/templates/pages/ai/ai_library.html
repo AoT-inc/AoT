@@ -357,7 +357,12 @@
 <div class="modal fade aot-option-modal" id="addKnowledgeModal" tabindex="-1" role="dialog" aria-hidden="true">
   <div class="modal-dialog modal-lg aot-modal-dialog" role="document">
     <div class="modal-content">
-      <div class="modal-header aot-modal-header">
+      {#- 현대화는 컨테이너의 `.aot-option-modal` 이 한다 — `aot-modal-modern.css`
+          가 `.aot-option-modal .modal-header` 를 겨냥해 높이·제목·닫기 버튼을
+          다시 그린다. 여기에 `aot-modal-header` 를 덧붙이면 **CSS 가 없는
+          유령 클래스**라 아무 일도 안 하면서, 읽는 사람에게 "이것이 골격" 이라는
+          잘못된 신호를 준다(2026-08-27 실제로 그렇게 오해했다). -#}
+      <div class="modal-header">
         <h5 class="modal-title">{{ _('Add Knowledge') }}</h5>
       </div>
       <div class="modal-body aot-modal-body">
@@ -388,7 +393,7 @@
           </div>
         </div>
       </div>
-      <div class="modal-footer aot-modal-footer">
+      <div class="modal-footer">
         <button type="button" class="btn aot-pill-btn" data-dismiss="modal">{{ _('Close') }}</button>
         <button type="button" class="btn aot-pill-btn aot-pill-btn-primary" onclick="saveAddKnowledge()">{{ _('Save') }}</button>
       </div>

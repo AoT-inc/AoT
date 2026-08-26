@@ -1192,11 +1192,28 @@ def _apply_layout(options, layout):
       바꾼다 — 무에러다. 빠진 것은 맨 끝에 모아 두고
       `test_option_layout.py` 가 그 사실을 잡는다.
     """
-    by_id = {o['id']: o for o in options if o.get('id')}
+    # ⚠ 배치 표식도 `id` 를 갖는다(접힘 앵커) — **옵션으로 세면 안 된다.**
+    #   두 번 적용될 때 그 표식이 '분류 안 됨' 으로 밀려나 화면에 새 묶음이
+    #   생긴다. 값을 싣는 종류만 본다.
+    _MARKERS = ('collapse_start', 'collapse_end', 'header')
+    real = [o for o in options if o.get('id') and o.get('type') not in _MARKERS]
+    by_id = {o['id']: o for o in real}
     out, used = [], set()
     for folded, title, blocks in layout:
-        out.append({'type': 'collapse_start' if folded else 'header',
-                    'name': title})
+        if folded:
+            # ⚠ **접힘마다 고유한 id 가 있어야 한다.** 템플릿이 DOM 앵커를
+            #   `name_prefix ~ (id or 'advanced')` 로 만들므로, id 가 없으면
+            #   모든 접힘이 같은 `…_advanced` 를 가리켜 **어느 버튼을 눌러도
+            #   맨 위 것만 펼쳐진다**(2026-08-27 사용자 신고).
+            #
+            # ⚠ 제목에서 만들면 안 된다 — 제목은 번역되므로 언어를 바꾸면
+            #   앵커가 달라진다. 그 묶음의 **첫 옵션 id** 를 쓴다: 유일하고,
+            #   ASCII 이고, 번역과 무관하며, 옵션을 옮기면 자연히 따라간다.
+            first_id = next((i for _s, ids in blocks for i in ids), 'advanced')
+            out.append({'type': 'collapse_start',
+                        'id': 'grp_%s' % first_id, 'name': title})
+        else:
+            out.append({'type': 'header', 'name': title})
         first = True
         for subtitle, ids in blocks:
             if subtitle is not None:
@@ -1210,7 +1227,7 @@ def _apply_layout(options, layout):
                     used.add(oid)
         if folded:
             out.append({'type': 'collapse_end'})
-    leftover = [o for o in options if o.get('id') and o['id'] not in used]
+    leftover = [o for o in real if o['id'] not in used]
     if leftover:
         out.append({'type': 'collapse_start',
                     'name': lazy_gettext('Not Yet Categorised')})
