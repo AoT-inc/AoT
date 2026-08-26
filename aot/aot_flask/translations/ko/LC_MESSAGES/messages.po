@@ -30910,6 +30910,18 @@ msgstr "지금은 반대 방향이 필요해 쉬고 있습니다"
 msgid "Target reached — easing off"
 msgstr "목표에 닿아 출력을 줄이고 있습니다"
 
+#: aot/functions/custom_functions/env_coordinator.py
+msgid "The guide range for %(what)s (%(guide)s) lies outside your hard limits (%(hard)s), so targets are only built inside %(effective)s. Widen the hard limits or narrow the guide range so the two agree."
+msgstr "%(what)s 유도 범위(%(guide)s)가 하드 임계(%(hard)s) 밖이라, 목표는 %(effective)s 안에서만 세워집니다. 하드 임계를 넓히거나 유도 범위를 좁혀 서로 맞춰 주세요."
+
+#: aot/functions/custom_functions/env_coordinator.py
+msgid "temperature"
+msgstr "온도"
+
+#: aot/functions/custom_functions/env_coordinator.py
+msgid "humidity"
+msgstr "습도"
+
 #: aot/functions/custom_functions/env_coordinator_impl/_function_info.py
 msgid "Closed for the night — heating and cooling take over"
 msgstr "야간이라 닫아 두고 냉난방으로 관리합니다"

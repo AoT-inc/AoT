@@ -226,3 +226,101 @@ class TestOptionSchema:
 
 if __name__ == '__main__':
     pytest.main([__file__, '-v'])
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 저장 시 경고 — 문구가 **번역 가능**해야 한다 (2026-08-26)
+# ─────────────────────────────────────────────────────────────────────────────
+
+class TestGuideRangeWarningIsTranslatable:
+    """경고에 끼워 넣는 조각까지 번역돼야 한다.
+
+    처음 만들 때 `clamp_guide_range_to_hard_limits()` 가 돌려주는 `changed`
+    (`'T상한→30.0'`)를 화면에 그대로 실었다. 그것은 **로그용 한국어 조각**이라,
+    일본어 화면에서 일본어 문장 안에 한국어가 섞여 나온다.
+
+    지금은 클램프의 **결과**와 입력을 비교해 축을 가려내고, 문장은 번역 가능한
+    msgid 하나로 만든다 — 판정을 다시 하는 것이 아니라 이미 나온 답을 읽는
+    것이므로 정본은 여전히 클램프 하나다.
+    """
+
+    def _src(self):
+        import inspect
+        from aot.functions.custom_functions import env_coordinator as m
+        return inspect.getsource(m.execute_at_modification)
+
+    def test_the_log_fragments_are_not_shown_to_the_user(self):
+        src = self._src()
+        code = '\n'.join(ln.split('#', 1)[0] for ln in src.splitlines())
+        assert 'join(changed)' not in code and "'.join(_changed)" not in code, (
+            '로그용 한국어 조각을 화면에 그대로 싣고 있다')
+
+    def test_the_axis_words_go_through_gettext(self):
+        code = '\n'.join(ln.split('#', 1)[0] for ln in self._src().splitlines())
+        assert "gettext('temperature')" in code
+        assert "gettext('humidity')" in code
+
+    def test_the_msgid_carries_no_literal_percent(self):
+        """⚠ 리터럴 `%` 는 python-format 판정을 깨서 `pybabel compile` 이
+        그 언어 **전체**를 거부한다. 단위(`%`)는 값 쪽에 붙인다."""
+        code = self._src()
+        msg = code.split("messages['warning'].append(str(gettext(", 1)[1]
+        msgid = msg.split('what=', 1)[0]
+        import re
+        # `%(name)s` 는 정상 자리표시자 — 그 밖의 `%` 만 본다.
+        assert not re.search(r'%(?!\(\w+\)s)', msgid), (
+            'msgid 에 리터럴 %% 가 있다: %r' % msgid)
+
+    def test_both_catalogs_have_it(self):
+        import gettext as g
+        MSG = ('The guide range for %(what)s (%(guide)s) lies outside your '
+               'hard limits (%(hard)s), so targets are only built inside '
+               '%(effective)s. Widen the hard limits or narrow the guide '
+               'range so the two agree.')
+        import os
+        here = os.path.dirname(os.path.abspath(__file__))
+        d = os.path.join(here, '..', '..', '..', '..', 'aot_flask', 'translations')
+        for lang in ('ko', 'ja'):
+            t = g.translation('messages', d, languages=[lang])
+            for src in (MSG, 'temperature', 'humidity'):
+                assert t.gettext(src) != src, '%s: %r 이 번역되지 않았다' % (lang, src[:40])
+
+
+class TestTheWarningOnlyFiresOnRelevantEdits:
+    """조건이 아니라 **이번 저장에서 손댄 것**을 기준으로 말한다.
+
+    조건(유도가 임계 밖)은 한 번 만들어지면 계속 참이라, 그것만 보면 **저장할
+    때마다** 뜬다. 야간 파킹 토글 하나를 켰는데 온도 경고가 같이 나오고,
+    사용자는 "이것 때문에 안 켜지나" 로 읽는다(2026-08-26 실제로 그랬다).
+    기존 경고들(`nursery_evening_fog` 계열)은 자기 설정을 건드릴 때만 뜬다.
+    """
+
+    def _src(self):
+        import inspect
+        from aot.functions.custom_functions import env_coordinator as m
+        return inspect.getsource(m.execute_at_modification)
+
+    def _code(self):
+        return '\n'.join(ln.split('#', 1)[0] for ln in self._src().splitlines())
+
+    def test_it_reads_the_presave_values(self):
+        assert 'custom_options_dict_presave' in self._code(), (
+            '직전 값을 안 읽는다 — 무엇이 바뀌었는지 알 수 없다')
+
+    def test_each_axis_checks_its_own_four_values(self):
+        code = self._code()
+        assert "_touched(lo_key, hi_key, g_lo, g_hi)" in code, (
+            '축마다 자기 값이 바뀌었는지 보지 않는다')
+
+    def test_the_comparison_is_numeric(self):
+        """폼에서 온 값은 문자열일 수 있다 — `'30.0' != 30.0` 이면 언제나
+        "바뀜" 이라 검사가 통째로 무력해진다."""
+        block = self._code().split('def _touched', 1)[1].split('\n    _fresh', 1)[0]
+        assert 'float(a) != float(b)' in block
+
+    def test_the_first_save_still_warns(self):
+        """presave 가 비어 있는 것은 "안 바뀌었다" 가 아니라 "비교할 것이
+        없다" 다. 새로 만든 설정이 이미 어긋나 있으면 그때 말해야 한다."""
+        code = self._code()
+        assert '_fresh = not was' in code
+        assert '_fresh or _touched' in code

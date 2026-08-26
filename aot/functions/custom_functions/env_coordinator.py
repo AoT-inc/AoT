@@ -78,6 +78,7 @@ def execute_at_modification(
     )
 
     o = custom_options_dict_postsave or {}
+    was = custom_options_dict_presave or {}
 
     def _f(key, fallback):
         try:
@@ -86,18 +87,65 @@ def execute_at_modification(
         except (TypeError, ValueError):
             return float(fallback)
 
+    def _touched(*keys):
+        """이번 저장에서 이 값들 중 하나라도 실제로 바뀌었나.
+
+        ⚠ **이 검사가 없으면 저장할 때마다 뜬다.** 조건(유도가 임계 밖)은 한
+          번 만들어지면 계속 참이므로, 야간 파킹 토글 하나를 켜도 온도 경고가
+          같이 나온다 — 무관한 행동에 붙은 경고는 "이것 때문에 안 되나" 로
+          읽힌다(2026-08-26 실제로 그렇게 읽혔다). 기존 경고들
+          (`nursery_evening_fog` 계열)은 자기 설정을 건드릴 때만 뜬다.
+
+        ⚠ 값 비교는 **숫자로** 한다 — 폼에서 온 postsave 는 문자열일 수 있어
+          `'30.0' != 30.0` 으로 항상 "바뀜" 이 된다(= 검사가 무력해진다).
+        """
+        for k in keys:
+            a, b = was.get(k), o.get(k)
+            try:
+                if float(a) != float(b):
+                    return True
+            except (TypeError, ValueError):
+                if a != b:
+                    return True
+        return False
+
+    # 처음 저장(presave 가 비어 있음)은 "안 바뀌었다" 가 아니라 "비교할 것이
+    # 없다" 이므로 알린다 — 새로 만든 설정이 이미 어긋나 있으면 그때 말해야 한다.
+    _fresh = not was
+
     try:
-        _, changed = clamp_guide_range_to_hard_limits(
-            (_f('guide_T_min', 12.0), _f('guide_T_max', 32.0),
-             _f('guide_RH_min', 40.0), _f('guide_RH_max', 85.0)),
+        guide = (_f('guide_T_min', 12.0), _f('guide_T_max', 32.0),
+                 _f('guide_RH_min', 40.0), _f('guide_RH_max', 85.0))
+        eff, _changed = clamp_guide_range_to_hard_limits(
+            guide,
             temp_min=o.get('temp_min'), temp_max=o.get('temp_max'),
             humid_min=o.get('humid_min'), humid_max=o.get('humid_max'))
-        if changed:
+        # ⚠ **`changed` 의 문자열을 화면에 그대로 쓰지 말 것.** 그것은
+        #   `'T상한→30.0'` 처럼 한국어가 박힌 로그용 조각이라, 일본어 화면에
+        #   일본어 문장과 한국어가 섞여 나온다. 여기서는 클램프의 **결과**
+        #   (eff)와 입력을 비교해 축을 가려내고, 문장은 번역 가능한 msgid
+        #   하나로 만든다 — 판정을 다시 하는 것이 아니라 이미 나온 답을 읽는
+        #   것이므로 정본은 여전히 하나다.
+        for i_lo, i_hi, what, unit, lo_key, hi_key, g_lo, g_hi in (
+                (0, 1, gettext('temperature'), '°C', 'temp_min', 'temp_max',
+                 'guide_T_min', 'guide_T_max'),
+                (2, 3, gettext('humidity'), '%', 'humid_min', 'humid_max',
+                 'guide_RH_min', 'guide_RH_max')):
+            if guide[i_lo] == eff[i_lo] and guide[i_hi] == eff[i_hi]:
+                continue          # 이 축은 안 좁혀졌다
+            # 그 축의 네 값 중 하나라도 이번에 손댔을 때만 말한다.
+            if not (_fresh or _touched(lo_key, hi_key, g_lo, g_hi)):
+                continue
+            fmt = (lambda lo, hi: '%g~%g%s' % (lo, hi, unit))
             messages['warning'].append(str(gettext(
-                'Guide range lies outside the hard limits, so targets are '
-                'built inside the limits instead (%(changed)s). Widen the hard '
-                'limits or narrow the guide range so the two agree.',
-                changed=', '.join(changed))))
+                'The guide range for %(what)s (%(guide)s) lies outside your '
+                'hard limits (%(hard)s), so targets are only built inside '
+                '%(effective)s. Widen the hard limits or narrow the guide '
+                'range so the two agree.',
+                what=what,
+                guide=fmt(guide[i_lo], guide[i_hi]),
+                hard=fmt(_f(lo_key, guide[i_lo]), _f(hi_key, guide[i_hi])),
+                effective=fmt(eff[i_lo], eff[i_hi]))))
     except Exception:
         pass      # 알림 하나 때문에 저장을 실패시키지 않는다
 

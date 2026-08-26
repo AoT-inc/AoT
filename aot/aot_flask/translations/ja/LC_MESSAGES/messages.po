@@ -30669,6 +30669,18 @@ msgstr "今は逆方向が必要なため停止しています"
 msgid "Target reached — easing off"
 msgstr "目標に達したため出力を下げています"
 
+#: aot/functions/custom_functions/env_coordinator.py
+msgid "The guide range for %(what)s (%(guide)s) lies outside your hard limits (%(hard)s), so targets are only built inside %(effective)s. Widen the hard limits or narrow the guide range so the two agree."
+msgstr "%(what)sの誘導範囲(%(guide)s)がハード閾値(%(hard)s)の外にあるため、目標は%(effective)sの範囲内でのみ設定されます。ハード閾値を広げるか、誘導範囲を狭めて揃えてください。"
+
+#: aot/functions/custom_functions/env_coordinator.py
+msgid "temperature"
+msgstr "温度"
+
+#: aot/functions/custom_functions/env_coordinator.py
+msgid "humidity"
+msgstr "湿度"
+
 #: aot/functions/custom_functions/env_coordinator_impl/_function_info.py
 msgid "Closed for the night — heating and cooling take over"
 msgstr "夜間のため閉じ、冷暖房で管理しています"
