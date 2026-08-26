@@ -137,11 +137,18 @@
  * 'collapse_end' option types — used by AoT_map's "Advanced" settings group and
  * reusable by any future widget's custom_options) ----
  *
- * [발견] $(el).collapse('toggle') 를 직접 호출하면 정상 동작하지만(jQuery의 collapse
- * 플러그인 자체는 로드됨), Bootstrap의 표준 [data-toggle="collapse"] 클릭 위임(data-api)이
- * 이 빌드에서는 실제로 연결되어 있지 않다 — 트리거를 클릭해도 aria-expanded/표시 상태가
- * 전혀 바뀌지 않음(실브라우저 검증으로 확인). 따라서 직접 위임 클릭 핸들러로 토글한다.
- * jQuery 유무와 무관하게 동작하도록 폴백 포함. */
+ * [2026-08-26 재조사] 위 "data-api 미연결" 진단은 틀렸다 — jQuery 이벤트 레지스트리로
+ * 확인해보면 bootstrap의 bs.collapse.data-api 버블 핸들러가 실제로 붙어 있고 정상
+ * 동작한다(단독으로도 aria-expanded/collapsed 클래스를 올바르게 토글). 문제는 이 파일의
+ * 핸들러가 버블 단계에서 "두 번째로" 같이 실행돼 경쟁하는 것이었다: bootstrap이 먼저
+ * 토글+aria 동기화를 올바르게 끝내면, 이 핸들러가 그 결과(이미 바뀐 'collapsed' 클래스)를
+ * "토글 전 상태"로 오인해 aria/collapsed 를 도로 뒤집어버린다. 화면 표시는 bootstrap의
+ * 실제 토글이 이겨서 맞아 보이지만(2차 .collapse('toggle') 호출은 _isTransitioning 가드에
+ * 막혀 무시됨), 캐럿 회전과 aria-expanded 는 어긋난 채로 남는다 — 기본 펼침 상태로 시작하는
+ * 아코디언(예: custom_ui.html 브랜딩)에서 처음 클릭 시 바로 드러남.
+ * 해결: 캡처 단계에서 먼저 가로채 stopPropagation 으로 bootstrap 의 버블 핸들러가 아예
+ * 실행되지 않게 한다 — 토글 주체를 이 핸들러 하나로 고정. jQuery 유무와 무관하게
+ * 동작하도록 폴백 포함. */
 (function () {
   'use strict';
 
@@ -155,6 +162,7 @@
     if (!target) { return; }
 
     e.preventDefault();
+    e.stopPropagation(); // bootstrap의 bs.collapse.data-api 버블 핸들러가 같은 클릭을 또 처리하지 못하게 막는다
 
     // Determine intent from the trigger's current 'collapsed' state BEFORE toggling —
     // jQuery's collapse animation finishes asynchronously, so reading target's 'show'
@@ -170,5 +178,5 @@
 
     trigger.setAttribute('aria-expanded', willExpand ? 'true' : 'false');
     trigger.classList.toggle('collapsed', !willExpand);
-  });
+  }, true); // capture: bootstrap의 data-api보다 먼저 가로채야 stopPropagation이 의미가 있다
 })();

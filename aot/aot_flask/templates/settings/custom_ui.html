@@ -7,6 +7,28 @@
 
 {% block head %}
   <link rel="stylesheet" href="/static/css/aot-custom-ui-preview.css?v=20260804a">
+  <style>
+    /* Color group tabs — same underline pattern as #userSettingsTabs (settings/users.html) */
+    #colorGroupTabs {
+      border-bottom: 2px solid var(--border-neutral, #dee2e6);
+      margin-bottom: 1rem;
+      flex-wrap: wrap;
+    }
+    #colorGroupTabs .nav-link {
+      border: none;
+      color: var(--aot-text-secondary, #6c757d);
+      font-weight: 500;
+      padding: 0.6rem 1.1rem;
+      border-radius: 0;
+      border-bottom: 2px solid transparent;
+      cursor: pointer;
+    }
+    #colorGroupTabs .nav-link.active {
+      color: var(--brand-secondary);
+      background: transparent;
+      border-bottom: 2px solid var(--brand-secondary);
+    }
+  </style>
 {% endblock %}
 
 {% block settings %}
@@ -278,350 +300,22 @@
 
 
       <!-- ============================================================
-           ZONE 2 — Color Group Panels
+           ZONE 2 — Branding (moved above Colors; collapsible accordion,
+           same style as the dashboard widget option drawer's
+           'collapse_start'/'collapse_end' groups — Custom_Options.html).
+           Default collapsed.
       ============================================================ -->
-
-      <!-- Group: Brand Colors -->
-      <div class="aot-settings-group-title" id="group-brand">{{_('Brand Colors')}}</div>
-      <div class="aot-settings-section">
-        {% set brand_fields = [
-          ('brand_primary',   _('Brand Primary'),   _('AI action buttons, accent icons, Gantt chart headers')),
-          ('brand_secondary', _('Brand Secondary'), _('Drag handles, hint icons — secondary brand tone')),
-          ('brand_accent',    _('Brand Accent'),    _('Light brand background (AI chat bubbles) and the tertiary button background'))
-        ] %}
-        {% for field_name, label, desc in brand_fields %}
-        <div class="aot-color-row" data-css-key="{{field_name}}">
-          <div class="aot-color-row-text">
-            <label class="aot-color-label" for="swatch_{{field_name}}">{{label}}</label>
-            <div class="aot-color-desc">{{desc}}</div>
-          </div>
-          <div class="aot-color-control">
-            <input type="text"
-                   class="aot-color-hex"
-                   id="hex_{{field_name}}"
-                   data-field="{{field_name}}"
-                   value="{{(form_settings_custom_ui[field_name].data or '#000000') | upper}}"
-                   maxlength="7"
-                   pattern="#[0-9A-Fa-f]{6}"
-                   aria-label="{{label}} {{_('hex value')}}"
-                   spellcheck="false">
-            <input type="color"
-                   class="aot-color-swatch"
-                   id="swatch_{{field_name}}"
-                   data-field="{{field_name}}"
-                   value="{{form_settings_custom_ui[field_name].data or '#000000'}}"
-                   aria-label="{{label}} {{_('color picker')}}">
-          </div>
-          {{form_settings_custom_ui[field_name](type='hidden', id=field_name, class='aot-theme-hidden-input')}}
-        </div>
-        {% endfor %}
-      </div>
-
-      <!-- Group: Text Colors -->
-      <div class="aot-settings-group-title" id="group-text">{{_('Text Colors')}}</div>
-      <div class="aot-settings-section">
-        {% set text_fields = [
-          ('text_color_primary',   _('Text Primary'),   _('Titles and body text')),
-          ('text_color_secondary', _('Text Secondary'), _('Descriptions, units, subdued labels')),
-          ('text_color_tertiary',  _('Text Tertiary'),  _('Light text inside filled buttons and badges'))
-        ] %}
-        {% for field_name, label, desc in text_fields %}
-        <div class="aot-color-row" data-css-key="{{field_name}}">
-          <div class="aot-color-row-text">
-            <label class="aot-color-label" for="swatch_{{field_name}}">{{label}}</label>
-            <div class="aot-color-desc">{{desc}}</div>
-          </div>
-          <div class="aot-color-control">
-            <input type="text"
-                   class="aot-color-hex"
-                   id="hex_{{field_name}}"
-                   data-field="{{field_name}}"
-                   value="{{(form_settings_custom_ui[field_name].data or '#000000') | upper}}"
-                   maxlength="7"
-                   pattern="#[0-9A-Fa-f]{6}"
-                   aria-label="{{label}} {{_('hex value')}}"
-                   spellcheck="false">
-            <input type="color"
-                   class="aot-color-swatch"
-                   id="swatch_{{field_name}}"
-                   data-field="{{field_name}}"
-                   value="{{form_settings_custom_ui[field_name].data or '#000000'}}"
-                   aria-label="{{label}} {{_('color picker')}}">
-          </div>
-          {{form_settings_custom_ui[field_name](type='hidden', id=field_name, class='aot-theme-hidden-input')}}
-        </div>
-        {% endfor %}
-      </div>
-
-      <!-- Group: Background Colors (page surfaces — cards, list rows) -->
-      <div class="aot-settings-group-title" id="group-background">{{_('Background Colors')}}</div>
-      <div class="aot-settings-section">
-        {% set bg_fields = [
-          ('bd_primary',   _('Background Primary'),   _('Page cards — widgets, list rows, modal groups')),
-          ('bd_secondary', _('Background Secondary'), _('Page background behind cards, list headers, modal body'))
-        ] %}
-        {% for field_name, label, desc in bg_fields %}
-        <div class="aot-color-row" data-css-key="{{field_name}}">
-          <div class="aot-color-row-text">
-            <label class="aot-color-label" for="swatch_{{field_name}}">{{label}}</label>
-            <div class="aot-color-desc">{{desc}}</div>
-          </div>
-          <div class="aot-color-control">
-            <input type="text"
-                   class="aot-color-hex"
-                   id="hex_{{field_name}}"
-                   data-field="{{field_name}}"
-                   value="{{(form_settings_custom_ui[field_name].data or '#000000') | upper}}"
-                   maxlength="7"
-                   pattern="#[0-9A-Fa-f]{6}"
-                   aria-label="{{label}} {{_('hex value')}}"
-                   spellcheck="false">
-            <input type="color"
-                   class="aot-color-swatch"
-                   id="swatch_{{field_name}}"
-                   data-field="{{field_name}}"
-                   value="{{form_settings_custom_ui[field_name].data or '#000000'}}"
-                   aria-label="{{label}} {{_('color picker')}}">
-          </div>
-          {{form_settings_custom_ui[field_name](type='hidden', id=field_name, class='aot-theme-hidden-input')}}
-        </div>
-        {% endfor %}
-      </div>
-
-      <!-- Group: State Colors (row background by device/task state — distinct from
-           the Button group below, which colors the button itself, not the row) -->
-      <div class="aot-settings-group-title" id="group-state">{{_('State Colors')}}</div>
-      <div class="aot-settings-section">
-        {% set state_fields = [
-          ('bg_active',   _('Active State'),   _('Whole-card highlight when active (IEC focus row, badges) — not the per-channel row below')),
-          ('bg_inactive', _('Inactive State'), _('Whole-card highlight when inactive, PID container background — not the per-channel row below')),
-          ('bg_warning',  _('Warning State'),  _('Row/card background for paused or held controllers (PID pause/hold, pending AI drafts). Offline devices use Danger Tint below.')),
-          ('bg_on',       _('Channel On'),     _('Output/input channel row background when on; also a general surface color in facility widgets')),
-          ('bg_off',      _('Channel Off'),    _('Output/input channel row background when off; also a general surface color in facility widgets')),
-          ('bg_pending',  _('Pending'),        _('Row background while a command awaits device confirmation')),
-          ('tint_warning_bg', _('Unverified Running Tint'), _('Overrides Channel On when a device with no confirmation path is running — forces this color even over bg_on')),
-          ('tint_warning_fg', _('Unverified Running Tint Text'), _('Text color used with the tint above, and on map-popup device name warnings')),
-          ('color_success', _('Success'), _('Semantic color for success/normal results — a different axis from the device-state colors above')),
-          ('color_warning', _('Warning'), _('Semantic color for warnings and attention marks')),
-          ('color_danger',  _('Danger'),  _('Semantic color for destructive actions and errors (delete buttons, failures)')),
-          ('color_info',    _('Info'),    _('Semantic color for informational marks and in-progress states')),
-          ('tint_success_bg', _('Success Tint'), _('Soft badge background for success — pairs with the text color below')),
-          ('tint_success_fg', _('Success Tint Text'), _('Text color used on the success tint')),
-          ('tint_danger_bg',  _('Danger Tint'),  _('Soft background for failures — also the row/card background and map-popup name highlight for offline or unresponsive devices')),
-          ('tint_danger_fg',  _('Danger Tint Text'), _('Text color used on the danger tint')),
-          ('tint_info_bg',    _('Info Tint'),    _('Soft badge background for in-progress/informational states')),
-          ('tint_info_fg',    _('Info Tint Text'), _('Text color used on the info tint')),
-          ('tint_success_border', _('Success Tint Border'), _('Border color for success notice boxes (Admin pages, e.g. Upgrade)')),
-          ('tint_warning_border', _('Warning Tint Border'), _('Border color for warning/default notice boxes')),
-          ('tint_danger_border',  _('Danger Tint Border'),  _('Border color for danger/error notice boxes')),
-          ('tint_info_border',    _('Info Tint Border'),    _('Border color for info notice boxes'))
-        ] %}
-        {% for field_name, label, desc in state_fields %}
-        <div class="aot-color-row" data-css-key="{{field_name}}">
-          <div class="aot-color-row-text">
-            <label class="aot-color-label" for="swatch_{{field_name}}">{{label}}</label>
-            <div class="aot-color-desc">{{desc}}</div>
-          </div>
-          <div class="aot-color-control">
-            <input type="text"
-                   class="aot-color-hex"
-                   id="hex_{{field_name}}"
-                   data-field="{{field_name}}"
-                   value="{{(form_settings_custom_ui[field_name].data or '#000000') | upper}}"
-                   maxlength="7"
-                   pattern="#[0-9A-Fa-f]{6}"
-                   aria-label="{{label}} {{_('hex value')}}"
-                   spellcheck="false">
-            <input type="color"
-                   class="aot-color-swatch"
-                   id="swatch_{{field_name}}"
-                   data-field="{{field_name}}"
-                   value="{{form_settings_custom_ui[field_name].data or '#000000'}}"
-                   aria-label="{{label}} {{_('color picker')}}">
-          </div>
-          {{form_settings_custom_ui[field_name](type='hidden', id=field_name, class='aot-theme-hidden-input')}}
-        </div>
-        {% endfor %}
-      </div>
-
-      <!-- Group: Button Colors
-           2026-07 통합: btn_primary_bg 는 bd_tertiary+bd_btn_primary+bg_btn_active,
-           btn_secondary_bg 는 bd_btn_secondary+bg_btn_inactive 를 흡수했다
-           (color-system.md §3-2). ON/OFF 는 장치 상태 표시라 값이 갈릴 수 있어
-           별도 필드로 남겼다. -->
-      <div class="aot-settings-group-title" id="group-buttons">{{_('Button Colors')}}</div>
-      <div class="aot-settings-section">
-        {% set btn_fields = [
-          ('btn_primary_bg',   _('Primary Button Background'),   _('Save, activate, tab — filled primary buttons app-wide')),
-          ('btn_secondary_bg', _('Secondary Button Background'), _('Cancel, deactivate — secondary buttons')),
-          ('bg_btn_on',        _('Button On'),                   _('Output row ON button')),
-          ('bg_btn_off',       _('Button Off'),                  _('Output row OFF button')),
-          ('bg_btn_pause',     _('Button Pause'),                _('PID controller pause button')),
-          ('bg_btn_hold',      _('Button Hold'),                 _('PID controller hold button')),
-          ('bd_btn_border',    _('Button Border'),               _('Border for all buttons and list rows'))
-        ] %}
-        {% for field_name, label, desc in btn_fields %}
-        <div class="aot-color-row" data-css-key="{{field_name}}">
-          <div class="aot-color-row-text">
-            <label class="aot-color-label" for="swatch_{{field_name}}">{{label}}</label>
-            <div class="aot-color-desc">{{desc}}</div>
-          </div>
-          <div class="aot-color-control">
-            <input type="text"
-                   class="aot-color-hex"
-                   id="hex_{{field_name}}"
-                   data-field="{{field_name}}"
-                   value="{{(form_settings_custom_ui[field_name].data or '#000000') | upper}}"
-                   maxlength="7"
-                   pattern="#[0-9A-Fa-f]{6}"
-                   aria-label="{{label}} {{_('hex value')}}"
-                   spellcheck="false">
-            <input type="color"
-                   class="aot-color-swatch"
-                   id="swatch_{{field_name}}"
-                   data-field="{{field_name}}"
-                   value="{{form_settings_custom_ui[field_name].data or '#000000'}}"
-                   aria-label="{{label}} {{_('color picker')}}">
-          </div>
-          {{form_settings_custom_ui[field_name](type='hidden', id=field_name, class='aot-theme-hidden-input')}}
-        </div>
-        {% endfor %}
-      </div>
-
-      <!-- Group: Badge Colors
-           2026-07 통합: badge_upgrade 는 bg_upgrade(nav 배지)+bg_btn_upgrade(버튼)
-           를 흡수했다 (color-system.md §3-2). -->
-      <div class="aot-settings-group-title" id="group-badge">{{_('Badge Colors')}}</div>
-      <div class="aot-settings-section">
-        {% set badge_fields = [
-          ('badge_upgrade', _('Upgrade Badge'), _('Nav upgrade badge and upgrade button background')),
-          ('bg_llm',        _('LLM Badge'),     _('AI model (LLM) badge background')),
-          ('bg_mcp',        _('MCP Badge'),     _('MCP tool badge background'))
-        ] %}
-        {% for field_name, label, desc in badge_fields %}
-        <div class="aot-color-row" data-css-key="{{field_name}}">
-          <div class="aot-color-row-text">
-            <label class="aot-color-label" for="swatch_{{field_name}}">{{label}}</label>
-            <div class="aot-color-desc">{{desc}}</div>
-          </div>
-          <div class="aot-color-control">
-            <input type="text"
-                   class="aot-color-hex"
-                   id="hex_{{field_name}}"
-                   data-field="{{field_name}}"
-                   value="{{(form_settings_custom_ui[field_name].data or '#000000') | upper}}"
-                   maxlength="7"
-                   pattern="#[0-9A-Fa-f]{6}"
-                   aria-label="{{label}} {{_('hex value')}}"
-                   spellcheck="false">
-            <input type="color"
-                   class="aot-color-swatch"
-                   id="swatch_{{field_name}}"
-                   data-field="{{field_name}}"
-                   value="{{form_settings_custom_ui[field_name].data or '#000000'}}"
-                   aria-label="{{label}} {{_('color picker')}}">
-          </div>
-          {{form_settings_custom_ui[field_name](type='hidden', id=field_name, class='aot-theme-hidden-input')}}
-        </div>
-        {% endfor %}
-      </div>
-
-      <!-- Group: Measurement Band Colors (--aot-band-1..5, 게이지/센서 라벨) -->
-      <div class="aot-settings-group-title" id="group-band">{{_('Measurement Band Colors')}}</div>
-      <p class="aot-modal-body-text">{{_('Gauge widget bands and sensor label thresholds')}}</p>
-      <div class="aot-settings-section">
-        {% set band_fields = [
-          ('band_1', _('Band 1 (Very Low)')),
-          ('band_2', _('Band 2 (Low)')),
-          ('band_3', _('Band 3 (Optimal)')),
-          ('band_4', _('Band 4 (High)')),
-          ('band_5', _('Band 5 (Very High)'))
-        ] %}
-        {% for field_name, label in band_fields %}
-        <div class="aot-color-row" data-css-key="{{field_name}}">
-          <label class="aot-color-label" for="swatch_{{field_name}}">{{label}}</label>
-          <div class="aot-color-control">
-            <input type="text"
-                   class="aot-color-hex"
-                   id="hex_{{field_name}}"
-                   data-field="{{field_name}}"
-                   value="{{(form_settings_custom_ui[field_name].data or '#000000') | upper}}"
-                   maxlength="7"
-                   pattern="#[0-9A-Fa-f]{6}"
-                   aria-label="{{label}} {{_('hex value')}}"
-                   spellcheck="false">
-            <input type="color"
-                   class="aot-color-swatch"
-                   id="swatch_{{field_name}}"
-                   data-field="{{field_name}}"
-                   value="{{form_settings_custom_ui[field_name].data or '#000000'}}"
-                   aria-label="{{label}} {{_('color picker')}}">
-          </div>
-          {{form_settings_custom_ui[field_name](type='hidden', id=field_name, class='aot-theme-hidden-input')}}
-        </div>
-        {% endfor %}
-      </div>
-
-      <!-- Group: Chart Series Colors (--aot-chart-1..6, 그래프/PID 시리즈) -->
-      <div class="aot-settings-group-title" id="group-chart">{{_('Chart Series Colors')}}</div>
-      <p class="aot-modal-body-text">{{_('Default series colors for graph, PID, and calendar widgets')}}</p>
-      <div class="aot-settings-section">
-        {% set chart_fields = [
-          ('chart_1', _('Chart Series 1')),
-          ('chart_2', _('Chart Series 2')),
-          ('chart_3', _('Chart Series 3')),
-          ('chart_4', _('Chart Series 4')),
-          ('chart_5', _('Chart Series 5')),
-          ('chart_6', _('Chart Series 6'))
-        ] %}
-        {% for field_name, label in chart_fields %}
-        <div class="aot-color-row" data-css-key="{{field_name}}">
-          <label class="aot-color-label" for="swatch_{{field_name}}">{{label}}</label>
-          <div class="aot-color-control">
-            <input type="text"
-                   class="aot-color-hex"
-                   id="hex_{{field_name}}"
-                   data-field="{{field_name}}"
-                   value="{{(form_settings_custom_ui[field_name].data or '#000000') | upper}}"
-                   maxlength="7"
-                   pattern="#[0-9A-Fa-f]{6}"
-                   aria-label="{{label}} {{_('hex value')}}"
-                   spellcheck="false">
-            <input type="color"
-                   class="aot-color-swatch"
-                   id="swatch_{{field_name}}"
-                   data-field="{{field_name}}"
-                   value="{{form_settings_custom_ui[field_name].data or '#000000'}}"
-                   aria-label="{{label}} {{_('color picker')}}">
-          </div>
-          {{form_settings_custom_ui[field_name](type='hidden', id=field_name, class='aot-theme-hidden-input')}}
-        </div>
-        {% endfor %}
-      </div>
-
-      <!-- ============================================================
-           ZONE 2 — Reset / Save actions (between color groups and branding)
-      ============================================================ -->
-      <div class="aot-settings-actions" style="padding-bottom: 0.25rem;">
-        <button type="button"
-                class="btn aot-pill-btn"
-                id="btn-reset-defaults"
-                aria-label="{{_('Reset all theme colors to defaults')}}">
-          {{_('Reset to Defaults')}}
-        </button>
-        <button type="submit"
-                form="form-custom_ui"
-                class="btn aot-pill-btn aot-pill-btn-primary aot-w-60"
-                aria-label="{{_('Save theme settings')}}">
-          {{_('Save')}}
-        </button>
-      </div>
-
-
-      <!-- ============================================================
-           ZONE 3 — Branding (preserved from original)
-      ============================================================ -->
-      <div class="aot-settings-group-title">{{_('Branding')}}</div>
+      <a class="aot-modal-section-title aot-modal-section-title-collapsible collapsed" data-toggle="collapse"
+         href="#branding-collapse" role="button" aria-expanded="false" aria-controls="branding-collapse">
+        <span class="aot-collapse-caret-btn" aria-hidden="true">
+          <svg class="aot-collapse-caret" viewBox="0 0 24 24"
+               fill="none" stroke="currentColor" stroke-width="2.6"
+               stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9.5 5.5 16 12l-6.5 6.5"/>
+          </svg>
+        </span>{{_('Branding')}}
+      </a>
+      <div class="collapse" id="branding-collapse">
       <div class="aot-settings-section">
 
         <div class="aot-settings-row">
@@ -693,10 +387,376 @@
         </div>
 
       </div><!-- /.aot-settings-section (Branding) -->
+      </div><!-- /.collapse (Branding) -->
 
 
-      <!-- Zone 3 — Custom Code (preserved from original) -->
-      <div class="aot-settings-group-title">{{_('Custom Code')}}</div>
+      <!-- ============================================================
+           ZONE 3 — Colors
+           3.1 Core Colors (Brand palette) — always visible, no tab/accordion.
+           3.2 Group Tabs — the remaining 7 groups, one panel shown at a time,
+               so the page doesn't force a long scroll through every field.
+      ============================================================ -->
+
+      <!-- 3.1 Core Colors -->
+      <div class="aot-settings-group-title" id="group-brand">{{_('Brand Colors')}}</div>
+      <div class="aot-settings-section">
+        {% set brand_fields = [
+          ('brand_primary',   _('Brand Primary'),   _('AI action buttons, accent icons, Gantt chart headers')),
+          ('brand_secondary', _('Brand Secondary'), _('Drag handles, hint icons — secondary brand tone')),
+          ('brand_accent',    _('Brand Accent'),    _('Light brand background (AI chat bubbles) and the tertiary button background'))
+        ] %}
+        {% for field_name, label, desc in brand_fields %}
+        <div class="aot-color-row" data-css-key="{{field_name}}">
+          <div class="aot-color-row-text">
+            <label class="aot-color-label" for="swatch_{{field_name}}">{{label}}</label>
+            <div class="aot-color-desc">{{desc}}</div>
+          </div>
+          <div class="aot-color-control">
+            <input type="text"
+                   class="aot-color-hex"
+                   id="hex_{{field_name}}"
+                   data-field="{{field_name}}"
+                   value="{{(form_settings_custom_ui[field_name].data or '#000000') | upper}}"
+                   maxlength="7"
+                   pattern="#[0-9A-Fa-f]{6}"
+                   aria-label="{{label}} {{_('hex value')}}"
+                   spellcheck="false">
+            <input type="color"
+                   class="aot-color-swatch"
+                   id="swatch_{{field_name}}"
+                   data-field="{{field_name}}"
+                   value="{{form_settings_custom_ui[field_name].data or '#000000'}}"
+                   aria-label="{{label}} {{_('color picker')}}">
+          </div>
+          {{form_settings_custom_ui[field_name](type='hidden', id=field_name, class='aot-theme-hidden-input')}}
+        </div>
+        {% endfor %}
+      </div>
+
+      <!-- 3.2 Group Tabs -->
+      <ul class="nav nav-tabs" id="colorGroupTabs" role="tablist">
+        <li class="nav-item"><a class="nav-link active" id="tab-color-text" data-toggle="tab" href="#pane-color-text" role="tab">{{_('Text Colors')}}</a></li>
+        <li class="nav-item"><a class="nav-link" id="tab-color-background" data-toggle="tab" href="#pane-color-background" role="tab">{{_('Background Colors')}}</a></li>
+        <li class="nav-item"><a class="nav-link" id="tab-color-state" data-toggle="tab" href="#pane-color-state" role="tab">{{_('State Colors')}}</a></li>
+        <li class="nav-item"><a class="nav-link" id="tab-color-buttons" data-toggle="tab" href="#pane-color-buttons" role="tab">{{_('Button Colors')}}</a></li>
+        <li class="nav-item"><a class="nav-link" id="tab-color-badge" data-toggle="tab" href="#pane-color-badge" role="tab">{{_('Badge Colors')}}</a></li>
+        <li class="nav-item"><a class="nav-link" id="tab-color-band" data-toggle="tab" href="#pane-color-band" role="tab">{{_('Measurement Band Colors')}}</a></li>
+        <li class="nav-item"><a class="nav-link" id="tab-color-chart" data-toggle="tab" href="#pane-color-chart" role="tab">{{_('Chart Series Colors')}}</a></li>
+      </ul>
+
+      <div class="tab-content" id="colorGroupTabContent">
+
+        <!-- Text Colors -->
+        <div class="tab-pane fade show active" id="pane-color-text" role="tabpanel">
+          <div class="aot-settings-section" id="group-text">
+            {% set text_fields = [
+              ('text_color_primary',   _('Text Primary'),   _('Titles and body text')),
+              ('text_color_secondary', _('Text Secondary'), _('Descriptions, units, subdued labels')),
+              ('text_color_tertiary',  _('Text Tertiary'),  _('Light text inside filled buttons and badges'))
+            ] %}
+            {% for field_name, label, desc in text_fields %}
+            <div class="aot-color-row" data-css-key="{{field_name}}">
+              <div class="aot-color-row-text">
+                <label class="aot-color-label" for="swatch_{{field_name}}">{{label}}</label>
+                <div class="aot-color-desc">{{desc}}</div>
+              </div>
+              <div class="aot-color-control">
+                <input type="text"
+                       class="aot-color-hex"
+                       id="hex_{{field_name}}"
+                       data-field="{{field_name}}"
+                       value="{{(form_settings_custom_ui[field_name].data or '#000000') | upper}}"
+                       maxlength="7"
+                       pattern="#[0-9A-Fa-f]{6}"
+                       aria-label="{{label}} {{_('hex value')}}"
+                       spellcheck="false">
+                <input type="color"
+                       class="aot-color-swatch"
+                       id="swatch_{{field_name}}"
+                       data-field="{{field_name}}"
+                       value="{{form_settings_custom_ui[field_name].data or '#000000'}}"
+                       aria-label="{{label}} {{_('color picker')}}">
+              </div>
+              {{form_settings_custom_ui[field_name](type='hidden', id=field_name, class='aot-theme-hidden-input')}}
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+
+        <!-- Background Colors -->
+        <div class="tab-pane fade" id="pane-color-background" role="tabpanel">
+          <div class="aot-settings-section" id="group-background">
+            {% set bg_fields = [
+              ('bd_primary',   _('Background Primary'),   _('Page cards — widgets, list rows, modal groups')),
+              ('bd_secondary', _('Background Secondary'), _('Page background behind cards, list headers, modal body'))
+            ] %}
+            {% for field_name, label, desc in bg_fields %}
+            <div class="aot-color-row" data-css-key="{{field_name}}">
+              <div class="aot-color-row-text">
+                <label class="aot-color-label" for="swatch_{{field_name}}">{{label}}</label>
+                <div class="aot-color-desc">{{desc}}</div>
+              </div>
+              <div class="aot-color-control">
+                <input type="text"
+                       class="aot-color-hex"
+                       id="hex_{{field_name}}"
+                       data-field="{{field_name}}"
+                       value="{{(form_settings_custom_ui[field_name].data or '#000000') | upper}}"
+                       maxlength="7"
+                       pattern="#[0-9A-Fa-f]{6}"
+                       aria-label="{{label}} {{_('hex value')}}"
+                       spellcheck="false">
+                <input type="color"
+                       class="aot-color-swatch"
+                       id="swatch_{{field_name}}"
+                       data-field="{{field_name}}"
+                       value="{{form_settings_custom_ui[field_name].data or '#000000'}}"
+                       aria-label="{{label}} {{_('color picker')}}">
+              </div>
+              {{form_settings_custom_ui[field_name](type='hidden', id=field_name, class='aot-theme-hidden-input')}}
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+
+        <!-- State Colors -->
+        <div class="tab-pane fade" id="pane-color-state" role="tabpanel">
+          <div class="aot-settings-section" id="group-state">
+            {% set state_fields = [
+              ('bg_active',   _('Active State'),   _('Whole-card highlight when active (IEC focus row, badges) — not the per-channel row below')),
+              ('bg_inactive', _('Inactive State'), _('Whole-card highlight when inactive, PID container background — not the per-channel row below')),
+              ('bg_warning',  _('Warning State'),  _('Row/card background for paused or held controllers (PID pause/hold, pending AI drafts). Offline devices use Danger Tint below.')),
+              ('bg_on',       _('Channel On'),     _('Output/input channel row background when on; also a general surface color in facility widgets')),
+              ('bg_off',      _('Channel Off'),    _('Output/input channel row background when off; also a general surface color in facility widgets')),
+              ('bg_pending',  _('Pending'),        _('Row background while a command awaits device confirmation')),
+              ('tint_warning_bg', _('Unverified Running Tint'), _('Overrides Channel On when a device with no confirmation path is running — forces this color even over bg_on')),
+              ('tint_warning_fg', _('Unverified Running Tint Text'), _('Text color used with the tint above, and on map-popup device name warnings')),
+              ('color_success', _('Success'), _('Semantic color for success/normal results — a different axis from the device-state colors above')),
+              ('color_warning', _('Warning'), _('Semantic color for warnings and attention marks')),
+              ('color_danger',  _('Danger'),  _('Semantic color for destructive actions and errors (delete buttons, failures)')),
+              ('color_info',    _('Info'),    _('Semantic color for informational marks and in-progress states')),
+              ('tint_success_bg', _('Success Tint'), _('Soft badge background for success — pairs with the text color below')),
+              ('tint_success_fg', _('Success Tint Text'), _('Text color used on the success tint')),
+              ('tint_danger_bg',  _('Danger Tint'),  _('Soft background for failures — also the row/card background and map-popup name highlight for offline or unresponsive devices')),
+              ('tint_danger_fg',  _('Danger Tint Text'), _('Text color used on the danger tint')),
+              ('tint_info_bg',    _('Info Tint'),    _('Soft badge background for in-progress/informational states')),
+              ('tint_info_fg',    _('Info Tint Text'), _('Text color used on the info tint')),
+              ('tint_success_border', _('Success Tint Border'), _('Border color for success notice boxes (Admin pages, e.g. Upgrade)')),
+              ('tint_warning_border', _('Warning Tint Border'), _('Border color for warning/default notice boxes')),
+              ('tint_danger_border',  _('Danger Tint Border'),  _('Border color for danger/error notice boxes')),
+              ('tint_info_border',    _('Info Tint Border'),    _('Border color for info notice boxes'))
+            ] %}
+            {% for field_name, label, desc in state_fields %}
+            <div class="aot-color-row" data-css-key="{{field_name}}">
+              <div class="aot-color-row-text">
+                <label class="aot-color-label" for="swatch_{{field_name}}">{{label}}</label>
+                <div class="aot-color-desc">{{desc}}</div>
+              </div>
+              <div class="aot-color-control">
+                <input type="text"
+                       class="aot-color-hex"
+                       id="hex_{{field_name}}"
+                       data-field="{{field_name}}"
+                       value="{{(form_settings_custom_ui[field_name].data or '#000000') | upper}}"
+                       maxlength="7"
+                       pattern="#[0-9A-Fa-f]{6}"
+                       aria-label="{{label}} {{_('hex value')}}"
+                       spellcheck="false">
+                <input type="color"
+                       class="aot-color-swatch"
+                       id="swatch_{{field_name}}"
+                       data-field="{{field_name}}"
+                       value="{{form_settings_custom_ui[field_name].data or '#000000'}}"
+                       aria-label="{{label}} {{_('color picker')}}">
+              </div>
+              {{form_settings_custom_ui[field_name](type='hidden', id=field_name, class='aot-theme-hidden-input')}}
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+
+        <!-- Button Colors
+             2026-07 통합: btn_primary_bg 는 bd_tertiary+bd_btn_primary+bg_btn_active,
+             btn_secondary_bg 는 bd_btn_secondary+bg_btn_inactive 를 흡수했다
+             (color-system.md §3-2). ON/OFF 는 장치 상태 표시라 값이 갈릴 수 있어
+             별도 필드로 남겼다. -->
+        <div class="tab-pane fade" id="pane-color-buttons" role="tabpanel">
+          <div class="aot-settings-section" id="group-buttons">
+            {% set btn_fields = [
+              ('btn_primary_bg',   _('Primary Button Background'),   _('Save, activate, tab — filled primary buttons app-wide')),
+              ('btn_secondary_bg', _('Secondary Button Background'), _('Cancel, deactivate — secondary buttons')),
+              ('bg_btn_on',        _('Button On'),                   _('Output row ON button')),
+              ('bg_btn_off',       _('Button Off'),                  _('Output row OFF button')),
+              ('bg_btn_pause',     _('Button Pause'),                _('PID controller pause button')),
+              ('bg_btn_hold',      _('Button Hold'),                 _('PID controller hold button')),
+              ('bd_btn_border',    _('Button Border'),               _('Border for all buttons and list rows'))
+            ] %}
+            {% for field_name, label, desc in btn_fields %}
+            <div class="aot-color-row" data-css-key="{{field_name}}">
+              <div class="aot-color-row-text">
+                <label class="aot-color-label" for="swatch_{{field_name}}">{{label}}</label>
+                <div class="aot-color-desc">{{desc}}</div>
+              </div>
+              <div class="aot-color-control">
+                <input type="text"
+                       class="aot-color-hex"
+                       id="hex_{{field_name}}"
+                       data-field="{{field_name}}"
+                       value="{{(form_settings_custom_ui[field_name].data or '#000000') | upper}}"
+                       maxlength="7"
+                       pattern="#[0-9A-Fa-f]{6}"
+                       aria-label="{{label}} {{_('hex value')}}"
+                       spellcheck="false">
+                <input type="color"
+                       class="aot-color-swatch"
+                       id="swatch_{{field_name}}"
+                       data-field="{{field_name}}"
+                       value="{{form_settings_custom_ui[field_name].data or '#000000'}}"
+                       aria-label="{{label}} {{_('color picker')}}">
+              </div>
+              {{form_settings_custom_ui[field_name](type='hidden', id=field_name, class='aot-theme-hidden-input')}}
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+
+        <!-- Badge Colors
+             2026-07 통합: badge_upgrade 는 bg_upgrade(nav 배지)+bg_btn_upgrade(버튼)
+             를 흡수했다 (color-system.md §3-2). -->
+        <div class="tab-pane fade" id="pane-color-badge" role="tabpanel">
+          <div class="aot-settings-section" id="group-badge">
+            {% set badge_fields = [
+              ('badge_upgrade', _('Upgrade Badge'), _('Nav upgrade badge and upgrade button background')),
+              ('bg_llm',        _('LLM Badge'),     _('AI model (LLM) badge background')),
+              ('bg_mcp',        _('MCP Badge'),     _('MCP tool badge background'))
+            ] %}
+            {% for field_name, label, desc in badge_fields %}
+            <div class="aot-color-row" data-css-key="{{field_name}}">
+              <div class="aot-color-row-text">
+                <label class="aot-color-label" for="swatch_{{field_name}}">{{label}}</label>
+                <div class="aot-color-desc">{{desc}}</div>
+              </div>
+              <div class="aot-color-control">
+                <input type="text"
+                       class="aot-color-hex"
+                       id="hex_{{field_name}}"
+                       data-field="{{field_name}}"
+                       value="{{(form_settings_custom_ui[field_name].data or '#000000') | upper}}"
+                       maxlength="7"
+                       pattern="#[0-9A-Fa-f]{6}"
+                       aria-label="{{label}} {{_('hex value')}}"
+                       spellcheck="false">
+                <input type="color"
+                       class="aot-color-swatch"
+                       id="swatch_{{field_name}}"
+                       data-field="{{field_name}}"
+                       value="{{form_settings_custom_ui[field_name].data or '#000000'}}"
+                       aria-label="{{label}} {{_('color picker')}}">
+              </div>
+              {{form_settings_custom_ui[field_name](type='hidden', id=field_name, class='aot-theme-hidden-input')}}
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+
+        <!-- Measurement Band Colors (--aot-band-1..5, 게이지/센서 라벨) -->
+        <div class="tab-pane fade" id="pane-color-band" role="tabpanel">
+          <p class="aot-modal-body-text">{{_('Gauge widget bands and sensor label thresholds')}}</p>
+          <div class="aot-settings-section" id="group-band">
+            {% set band_fields = [
+              ('band_1', _('Band 1 (Very Low)')),
+              ('band_2', _('Band 2 (Low)')),
+              ('band_3', _('Band 3 (Optimal)')),
+              ('band_4', _('Band 4 (High)')),
+              ('band_5', _('Band 5 (Very High)'))
+            ] %}
+            {% for field_name, label in band_fields %}
+            <div class="aot-color-row" data-css-key="{{field_name}}">
+              <label class="aot-color-label" for="swatch_{{field_name}}">{{label}}</label>
+              <div class="aot-color-control">
+                <input type="text"
+                       class="aot-color-hex"
+                       id="hex_{{field_name}}"
+                       data-field="{{field_name}}"
+                       value="{{(form_settings_custom_ui[field_name].data or '#000000') | upper}}"
+                       maxlength="7"
+                       pattern="#[0-9A-Fa-f]{6}"
+                       aria-label="{{label}} {{_('hex value')}}"
+                       spellcheck="false">
+                <input type="color"
+                       class="aot-color-swatch"
+                       id="swatch_{{field_name}}"
+                       data-field="{{field_name}}"
+                       value="{{form_settings_custom_ui[field_name].data or '#000000'}}"
+                       aria-label="{{label}} {{_('color picker')}}">
+              </div>
+              {{form_settings_custom_ui[field_name](type='hidden', id=field_name, class='aot-theme-hidden-input')}}
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+
+        <!-- Chart Series Colors (--aot-chart-1..6, 그래프/PID 시리즈) -->
+        <div class="tab-pane fade" id="pane-color-chart" role="tabpanel">
+          <p class="aot-modal-body-text">{{_('Default series colors for graph, PID, and calendar widgets')}}</p>
+          <div class="aot-settings-section" id="group-chart">
+            {% set chart_fields = [
+              ('chart_1', _('Chart Series 1')),
+              ('chart_2', _('Chart Series 2')),
+              ('chart_3', _('Chart Series 3')),
+              ('chart_4', _('Chart Series 4')),
+              ('chart_5', _('Chart Series 5')),
+              ('chart_6', _('Chart Series 6'))
+            ] %}
+            {% for field_name, label in chart_fields %}
+            <div class="aot-color-row" data-css-key="{{field_name}}">
+              <label class="aot-color-label" for="swatch_{{field_name}}">{{label}}</label>
+              <div class="aot-color-control">
+                <input type="text"
+                       class="aot-color-hex"
+                       id="hex_{{field_name}}"
+                       data-field="{{field_name}}"
+                       value="{{(form_settings_custom_ui[field_name].data or '#000000') | upper}}"
+                       maxlength="7"
+                       pattern="#[0-9A-Fa-f]{6}"
+                       aria-label="{{label}} {{_('hex value')}}"
+                       spellcheck="false">
+                <input type="color"
+                       class="aot-color-swatch"
+                       id="swatch_{{field_name}}"
+                       data-field="{{field_name}}"
+                       value="{{form_settings_custom_ui[field_name].data or '#000000'}}"
+                       aria-label="{{label}} {{_('color picker')}}">
+              </div>
+              {{form_settings_custom_ui[field_name](type='hidden', id=field_name, class='aot-theme-hidden-input')}}
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+
+      </div><!-- /.tab-content (colorGroupTabContent) -->
+
+      <!-- Reset / Save actions (end of Colors zone) -->
+      <div class="aot-settings-actions" style="padding-bottom: 0.25rem;">
+        <button type="button"
+                class="btn aot-pill-btn"
+                id="btn-reset-defaults"
+                aria-label="{{_('Reset all theme colors to defaults')}}">
+          {{_('Reset to Defaults')}}
+        </button>
+        <button type="submit"
+                form="form-custom_ui"
+                class="btn aot-pill-btn aot-pill-btn-primary aot-w-60"
+                aria-label="{{_('Save theme settings')}}">
+          {{_('Save')}}
+        </button>
+      </div>
+
+
+      <!-- ============================================================
+           ZONE 4 — 사용자 CSS (preserved from original)
+      ============================================================ -->
+      <div class="aot-settings-group-title">{{_('Custom CSS')}}</div>
       <div class="aot-settings-section">
 
         <div class="aot-settings-row" style="flex-wrap: wrap; height: auto;">
@@ -713,7 +773,7 @@
           </div>
         </div>
 
-      </div><!-- /.aot-settings-section (Custom Code) -->
+      </div><!-- /.aot-settings-section (Custom CSS) -->
 
       <!-- Footer Save -->
       <div class="aot-settings-actions">
@@ -828,9 +888,9 @@
       badge_upgrade:        'badge-upgrade',
       bg_active:            'bg-active',
       bg_inactive:          'bg-inactive',
-      bg_warning:           'bg-warning',
+      bg_warning:            'bg-warning',
       bg_on:                'bg-on',
-      bg_off:               'bg-off',
+      bg_off:                'bg-off',
       bg_pending:           'bg-pending',
       tint_warning_bg:      'tint-warning-bg',
       tint_warning_fg:      'tint-warning-fg',
