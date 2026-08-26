@@ -2540,6 +2540,37 @@ def api_facility_actuator_order(facility_uuid):
     return jsonify({'ok': True, 'order': clean})
 
 
+@blueprint.route('/api/aot/facility/<facility_uuid>/bays', methods=['GET'])
+@login_required
+def api_facility_bays(facility_uuid):
+    """시설의 구역 목록 → `{ok, bays:[{id, name}]}` (읽기 전용).
+
+    통합환경제어의 `bay_scope` 드롭다운이 쓴다. `/runtime` 에도 같은 목록이
+    있지만 그쪽은 센서 스냅샷·액추에이터 상태까지 만드는 무거운 응답이라,
+    설정 화면이 선택지 몇 개를 채우려고 부를 것이 아니다.
+
+    ⚠ 이름은 **보여 주기용**이고 저장되는 값은 `id` 다. 사용자가 구역 이름을
+      바꿔도 이미 저장된 코디네이터가 계속 같은 구역을 가리킨다.
+    """
+    from aot.databases.models import GeoFacility
+    from aot.aot_flask.geo.facility_bays import compute_bay_slices
+    # ⚠ `spec_from_row` 가 이 용도의 정본이다 — 구역 유효성 검사
+    #   (`facility_io` 의 bay_id 검증)가 쓰는 것과 **같은 입력**이어야 화면의
+    #   선택지와 서버의 판정이 갈리지 않는다.
+    from aot.aot_flask.geo.facility_bays import spec_from_row
+
+    facility = GeoFacility.query.filter_by(unique_id=facility_uuid).first()
+    if not facility:
+        return jsonify({'ok': False, 'message': 'Facility not found'}), 404
+    try:
+        slices = compute_bay_slices(spec_from_row(facility)) or []
+    except Exception as exc:                                    # noqa: BLE001
+        return jsonify({'ok': False, 'message': str(exc)}), 500
+    return jsonify({'ok': True, 'bays': [
+        {'id': s.get('id'), 'name': s.get('name') or s.get('id')}
+        for s in slices if s.get('id')]})
+
+
 @blueprint.route('/api/aot/facility/<facility_uuid>/bay_capacity', methods=['POST'])
 @login_required
 def api_facility_bay_capacity(facility_uuid):

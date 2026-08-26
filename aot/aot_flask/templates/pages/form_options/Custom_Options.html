@@ -394,6 +394,25 @@
   </div>
 </div>
 
+    {% elif each_option['type'] == 'select_bay' %}
+
+{# 연결된 시설의 구역 목록을 그 자리에서 불러 채우는 드롭다운.
+   ⚠ **저장된 값을 먼저 넣어 둔다.** 목록을 못 받아도(시설 미선택·통신 실패)
+     폼이 그대로 제출되면 기존 설정이 살아 있어야 한다 — 빈 select 를 제출하면
+     사용자가 손대지도 않은 구역 설정이 지워진다. #}
+<div class="aot-modal-option-row">
+  <label class="aot-modal-option-label" title="{{each_option.get('phrase', '')}}">{{each_option['name']}}{% if each_option.get('phrase') %}<span class="fas fa-info-circle aot-option-tip" aria-hidden="true"></span>{% endif %}</label>
+  <div class="aot-modal-option-control">
+    {% set _cur = (custom_options_values[unique_id][channel][each_option['id']] if channel_options else (custom_options_values[unique_id][each_option['id']] if custom_options_values else '')) %}
+    <select class="form-control aot-modern-select aot-bay-select" id="{{name_prefix}}{{each_option['id']}}" name="{% if channel_options %}{{name_prefix}}{% endif %}{{each_option['id']}}" title="{{each_option['phrase']}}"
+            data-bay-source="{{name_prefix}}{{each_option.get('bay_source_option', 'geo_facility_id')}}"
+            data-bay-current="{{_cur or ''}}">
+      <option value=""{% if not _cur %} selected{% endif %}>{{dict_translation['select_one']['title']}}</option>
+      {% if _cur %}<option value="{{_cur}}" selected>{{_cur}}</option>{% endif %}
+    </select>
+  </div>
+</div>
+
     {% elif each_option['type'] == 'select_device' %}
 
       {% set form_choices = [

@@ -378,13 +378,20 @@ FUNCTION_INFORMATION = {
         },
         {
             'id': 'bay_scope',
-            'type': 'text',
+            # ⚠ 자유 텍스트가 아니다 (2026-08-26). 오타 하나가 "이 구역만
+            #   제어한다" 를 무너뜨리는데, 화면에는 아무 표시도 안 났다.
+            #   `select_bay` 는 연결된 시설의 구역을 그 자리에서 불러 채운다
+            #   (`/api/aot/facility/<uuid>/bays`). 시설 선택을 바꾸면 목록도
+            #   따라 바뀐다.
+            'type': 'select_bay',
             'default_value': '',
             'required': False,
+            # 목록을 어느 시설에서 가져올지 — 같은 폼의 옵션 id 를 가리킨다.
+            'bay_source_option': 'geo_facility_id',
             'name': lazy_gettext('Bay Scope (optional)'),
             'phrase': lazy_gettext(
                 'Restrict this coordinator to one bay of the linked facility. '
-                'Enter the bay ID (see the facility editor bay list; e.g. "bay_1"). '
+                'Pick a bay of the linked facility. '
                 'Only sensors and actuators placed inside that bay are used, and '
                 'facility volume/area are scaled to that bay\'s share of the width. '
                 'If the ID does not match any bay, this coordinator controls '

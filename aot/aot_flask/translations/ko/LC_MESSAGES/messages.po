@@ -30973,3 +30973,11 @@ msgstr "햇빛에 잎이 델 수 있어 분무를 멈췄습니다"
 #: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
 msgid "Environment readings were taken just before this."
 msgstr "환경 값은 이 조치 직전에 읽은 것입니다."
+
+#: aot/aot_flask/static/js/common/aot-bay-select.js
+msgid "Entire facility"
+msgstr "시설 전체"
+
+#: aot/aot_flask/static/js/common/aot-bay-select.js
+msgid "not in this facility"
+msgstr "이 시설에 없음"

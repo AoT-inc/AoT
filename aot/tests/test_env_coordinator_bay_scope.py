@@ -158,3 +158,64 @@ class TestWiring:
             '\n    def ', 1)[0]
         assert "opts.get('geo_facility_id')" in block, (
             '형제 조회가 저장된 키를 안 읽는다')
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# bay_scope 는 **고르는 것**이지 적는 것이 아니다 (2026-08-26)
+# ─────────────────────────────────────────────────────────────────────────────
+# 자유 텍스트일 때는 오타 하나가 "이 구역만 제어한다" 를 무너뜨리는데 화면에
+# 아무 표시도 안 났다. 선택지를 주면 틀릴 자리가 없어진다.
+
+def _read(*parts):
+    import os
+    here = os.path.dirname(os.path.abspath(__file__))
+    with open(os.path.join(here, '..', *parts), encoding='utf-8') as fh:
+        return fh.read()
+
+
+def test_bay_scope_is_a_dropdown():
+    src = _read('functions', 'custom_functions', 'env_coordinator_impl',
+                '_function_info.py')
+    block = src.split("'id': 'bay_scope'", 1)[1].split("'phrase'", 1)[0]
+    assert "'type': 'select_bay'" in block, 'bay_scope 가 자유 텍스트로 되돌아갔다'
+    assert "'bay_source_option': 'geo_facility_id'" in block, (
+        '목록을 어느 시설에서 가져올지 가리키지 않는다')
+
+
+def test_the_template_keeps_the_saved_value():
+    """목록을 못 받아도(시설 미선택·통신 실패) 저장된 값이 살아 있어야 한다.
+
+    빈 select 를 제출하면 사용자가 손대지도 않은 구역 설정이 지워진다 —
+    무에러다.
+    """
+    tpl = _read('aot_flask', 'templates', 'pages', 'form_options',
+                'Custom_Options.html')
+    block = tpl.split("== 'select_bay'", 1)[1].split('{% elif', 1)[0]
+    assert 'data-bay-current' in block
+    assert '{% if _cur %}<option value="{{_cur}}" selected>' in block, (
+        '저장된 값을 미리 넣어 두지 않는다 — 목록 조회가 실패하면 설정이 '
+        '조용히 지워진다')
+
+
+def test_the_script_never_drops_an_unknown_value():
+    """목록에 없는 저장값을 지우지 않고 **표시를 붙여** 남긴다.
+
+    조용히 사라지면 사용자는 자기가 무엇을 골랐는지 알 수 없고, 서버는 그
+    값으로 "아무것도 맡지 않음" 판정을 내린다.
+    """
+    js = _read('aot_flask', 'static', 'js', 'common', 'aot-bay-select.js')
+    assert "if (cur && !seen)" in js
+    assert 'not in this facility' in js
+
+
+def test_the_bays_endpoint_is_read_only_and_light():
+    """설정 화면이 선택지 몇 개를 채우려고 `/runtime` 을 부를 것이 아니다 —
+    그쪽은 센서 스냅샷·액추에이터 상태까지 만든다."""
+    src = _read('aot_flask', 'routes_geo.py')
+    block = src.split("def api_facility_bays", 1)[1].split('\n@blueprint', 1)[0]
+    assert "methods=['GET']" in src.split('def api_facility_bays', 1)[0][-400:]
+    assert 'compute_bay_slices(spec_from_row(facility))' in block, (
+        '구역 목록의 정본(spec_from_row)을 안 쓴다 — 화면 선택지와 서버 판정이 '
+        '갈릴 수 있다')
+    for w in ('db.session.add', 'db.session.commit', 'flag_modified'):
+        assert w not in block, '읽기 전용이어야 한다: %s' % w

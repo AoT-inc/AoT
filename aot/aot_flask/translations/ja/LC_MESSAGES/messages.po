@@ -30732,3 +30732,11 @@ msgstr "日差しで葉が焼ける恐れがあるため噴霧を止めました
 #: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
 msgid "Environment readings were taken just before this."
 msgstr "環境値はこの操作の直前に読み取ったものです。"
+
+#: aot/aot_flask/static/js/common/aot-bay-select.js
+msgid "Entire facility"
+msgstr "施設全体"
+
+#: aot/aot_flask/static/js/common/aot-bay-select.js
+msgid "not in this facility"
+msgstr "この施設にありません"
