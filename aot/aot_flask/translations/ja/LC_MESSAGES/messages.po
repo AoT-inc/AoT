@@ -30666,6 +30666,10 @@ msgid "Resting — the opposite direction is needed right now"
 msgstr "今は逆方向が必要なため停止しています"
 
 #: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Target reached — easing off"
+msgstr "目標に達したため出力を下げています"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
 msgid "Indoor temperature is over the limit you set"
 msgstr "室内温度が設定した上限を超えました"
 

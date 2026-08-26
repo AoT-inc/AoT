@@ -198,6 +198,28 @@ class TestSharedByFacilityAndField(unittest.TestCase):
         self.assertEqual(2, js.count('buildIrrigationHtml('),
                          '시설·노지 중 한쪽만 그리고 있다')
 
+    def test_the_facility_card_is_not_tied_to_the_coordinator(self):
+        """관수 카드는 **[현황]** 에 있어야 한다.
+
+        [시설 세부] 탭은 코디네이터가 연동된 시설에만 뜬다. "제어 정보니까
+        저쪽" 이 그럴듯해서 실제로 한 번 옮겼는데(2026-08-26 `03febc9d`),
+        그 순간 연동 안 된 시설은 관수 상태를 볼 자리가 아예 없어졌다 —
+        관수 판정(`irrigation_status`)은 코디네이터와 무관하다.
+
+        빠져도 에러가 없고, 코디네이터가 있는 시설에서는 멀쩡해 보인다.
+        """
+        js = self._read('aot_flask/static/js/widgets/AoT_map/'
+                        'aot-map-widget-vector.js')
+        # 시설 [현황] 을 만드는 자리(`ovHtml`)가 직접 그려야 한다.
+        block = js.split('var ovHtml =', 1)[1].split('var ovSame', 1)[0]
+        self.assertIn('buildIrrigationHtml', block,
+                      '시설 [현황] 이 관수 카드를 안 그린다')
+        # 넘겨만 주고 안 쓰는 자리를 남기지 않는다 — 그 상태로도 "전달은
+        # 하고 있다" 로 보여 원인에 닿기 어렵다.
+        detail = js.split('buildFacilityDetailSection(', 1)[-1][:800]
+        self.assertNotIn('irrigation:', detail,
+                         '[시설 세부]로 넘기지만 쓰이지 않는다')
+
     def test_renderer_says_nothing_without_evidence(self):
         js = self._read('aot_flask/static/js/widgets/AoT_map/aot-map-popup.js')
         body = js.split('function buildIrrigationHtml', 1)[1].split(

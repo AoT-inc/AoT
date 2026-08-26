@@ -3246,6 +3246,39 @@
             } catch (e) { return null; }
         }
 
+        // Distance from (lng,lat) to a facility's footprint: 0 if the point falls
+        // inside the polygon, otherwise the distance to the nearest edge (works for
+        // both open and closed rings — same ray-casting/wraparound approach as
+        // _ringContainsPoint below). Falls back to center-point distance when no
+        // footprint is available. Using the footprint instead of a single center
+        // point matters for long/large facilities (e.g. a 3-span connected
+        // greenhouse) whose centroid can sit far from a point that is still well
+        // inside the building's outline.
+        function _facilityDistToPoint(fac, lng, lat) {
+            var ring = _facilityFootprintRing(fac);
+            if (ring && ring.length >= 3) {
+                if (_ringContainsPoint([lng, lat], ring)) return 0;
+                var best = Infinity;
+                for (var i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+                    var ax = ring[j][0], ay = ring[j][1];
+                    var bx = ring[i][0], by = ring[i][1];
+                    var dx = bx - ax, dy = by - ay;
+                    var lenSq = dx * dx + dy * dy;
+                    var t = lenSq > 0
+                        ? Math.max(0, Math.min(1, ((lng - ax) * dx + (lat - ay) * dy) / lenSq))
+                        : 0;
+                    var px = ax + t * dx, py = ay + t * dy;
+                    var d = Math.sqrt((px - lng) * (px - lng) + (py - lat) * (py - lat));
+                    if (d < best) best = d;
+                }
+                return best;
+            }
+            var c = _facilityCenter_act(fac);
+            if (!c) return Infinity;
+            var dLng = c[0] - lng, dLat = c[1] - lat;
+            return Math.sqrt(dLng * dLng + dLat * dLat);
+        }
+
         // Poll period comes from opts via _runtimePollSeconds — no separate
         // refreshSeconds argument, so the caller cannot pick a rate that disagrees
         // with the fitting sensor labels reading the same /runtime response.
@@ -4990,10 +5023,17 @@
                     '<div class="aot-ov-slot" data-slot="plots"></div>' +
                     // ② 데이터
                     '<div class="aot-ov-slot" data-slot="now"></div>' +
-                    // 마지막 관수·분무는 **제어 정보**라 [시설 세부]로 옮겼다
-                    // (2026-08-26). [현황]은 "지금 어떤가"(목표·값·추세)이고
-                    // "무엇을 했나/왜 그랬나" 는 저쪽이다.
-                    // ③ 제어 상태 + ④ 기록물(노트)
+                    // ③ 제어 — 직전에 한 일(관수) 다음에 지금 하는 일
+                    //
+                    // ⚠ **[시설 세부]로 옮기지 말 것** (2026-08-26 한 번 옮겼다
+                    // 되돌림). "제어 정보니까 저쪽" 이 그럴듯해 보이지만 그
+                    // 탭은 **코디네이터가 있는 시설에만** 뜬다 — 옮기는 순간
+                    // 연동 안 된 시설은 관수 상태를 볼 자리가 아예 없어진다.
+                    // 관수 판정(`irrigation_status`)은 코디네이터와 무관하다.
+                    // 노지 [현황]도 같은 자리에서 같은 렌더러를 쓴다.
+                    (window.AoTMapPopup.buildIrrigationHtml
+                       ? window.AoTMapPopup.buildIrrigationHtml(res[4]) : '') +
+                    // ④ 제어 상태 + ⑤ 기록물(노트)
                     window.AoTMapPopup.buildOverviewSection(
                         res[0], res[1], {
                             canToggle: st2.canCtrl,
@@ -5030,7 +5070,6 @@
                 if (_hasCoord && dPane && window.AoTMapPopup.buildFacilityDetailSection) {
                     var dHtml = window.AoTMapPopup.buildFacilityDetailSection(
                         res[0], {
-                            irrigation: res[4],
                             // 이름·실제 개도는 여기서만 안다. 시설 공통까지
                             // 포함해야 한다 — 동을 고른 상태에서도 이 탭은
                             // 시설 전체의 제어를 설명하는 자리다.
@@ -5584,19 +5623,64 @@
             if (!st || !handle || typeof handle.setSummary !== 'function') return;
             var map = st.map;
             if (!map) return;
+            // 지도가 이동/줌 애니메이션 중이면 건너뛴다. 이 함수는 moveend에서도
+            // 호출되지만, 액추에이터 폴링 타이머는 사용자가 드래그하는 도중에도
+            // 그대로 만료되어 그 순간의 중간 뷰포트를 기준으로 재계산한다 — 이때
+            // 직전까지 표시되던 시설이 잠깐 후보에서 빠지면 패널이 비었다가
+            // moveend 직후 다시 채워지며 떨려 보인다. 이동이 끝나면 moveend
+            // 리스너가 정확한 최종 위치로 다시 호출해주므로 여기서 건너뛰어도
+            // 안전하다.
+            if (map.isMoving && map.isMoving()) return;
 
             var mc = map.getCenter();
             var bounds = map.getBounds();
-            var best = null, bestD = Infinity;
+            var candidates = [];
             (st.facilities || []).forEach(function (fac) {
-                var c = _facilityCenter_act(fac);
-                if (!c) return;
-                // 뷰포트 밖 시설은 제외 — c = [lng, lat]
-                if (bounds && !bounds.contains([c[0], c[1]])) return;
-                var d = (c[0] - mc.lng) * (c[0] - mc.lng) + (c[1] - mc.lat) * (c[1] - mc.lat);
-                if (d < bestD) { bestD = d; best = fac; }
+                var ring = _facilityFootprintRing(fac);
+                var center = _facilityCenter_act(fac);
+                if (!ring && !center) return;
+                // 시설이 뷰포트와 관련 있는지 판단 — 중심점이 뷰포트 안이거나,
+                // 폴리곤 꼭짓점 중 하나라도 뷰포트 안이거나(부분적으로만 화면에
+                // 걸친 큰 시설), 혹은 화면 중심 자체가 그 폴리곤 내부인 경우(꼭짓점이
+                // 전부 화면 밖으로 나갈 만큼 큰 시설이 화면을 통째로 덮은 경우) 중
+                // 하나라도 해당하면 후보로 포함한다.
+                var inView = !!(center && bounds.contains([center[0], center[1]]));
+                if (!inView && ring) {
+                    for (var k = 0; k < ring.length && !inView; k++) {
+                        if (bounds.contains([ring[k][0], ring[k][1]])) inView = true;
+                    }
+                }
+                if (!inView && ring && _ringContainsPoint([mc.lng, mc.lat], ring)) inView = true;
+                if (!inView) return;
+
+                var dist = _facilityDistToPoint(fac, mc.lng, mc.lat);
+                var ctrlCount = Object.keys((st.statesByFac && st.statesByFac[fac.unique_id]) || {}).length;
+                var sensorCount = ((st.sensorsByFac && st.sensorsByFac[fac.unique_id]) || []).length;
+                candidates.push({ fac: fac, dist: dist, ctrlCount: ctrlCount, sensorCount: sensorCount });
             });
-            if (!best) { handle.setSummary([]); return; }
+            if (!candidates.length) { handle.setSummary([]); return; }
+
+            // 거리는 시설 폴리곤 외곽선까지의 최단거리(내부면 0, _facilityDistToPoint)로
+            // 계산해, 폭보다 길이가 훨씬 긴 시설(예: 3연동 온실)이 중심점 하나로만
+            // 비교할 때 부당하게 밀리는 문제를 피한다.
+            candidates.sort(function (a, b) { return a.dist - b.dist; });
+            var nearest = candidates[0];
+            var best;
+            if (nearest.ctrlCount > 0 || nearest.sensorCount > 0) {
+                // 화면 중심에 실제로 있는(가장 가까운) 시설에 제어값이든 측정값이든
+                // 뭔가 있으면 그 시설을 그대로 보여준다 — 사용자가 실제로 이동해 간
+                // 시설을 존중한다. 그 시설에 제어장치가 없어 이 칸(제어 요약)에 표시할
+                // 게 없더라도, 엉뚱한 다른 시설의 제어값을 대신 보여주는 것보다는
+                // 비어 있는 편이 정직하다.
+                best = nearest.fac;
+            } else {
+                // 가장 가까운 시설에 제어값도 측정값도 전혀 없을 때만(예: 빈 창고),
+                // 제어장치가 있는 다른 시설로 대체한다 — 그중 제어장치가 가장 많은
+                // 시설을 우선하고, 동률이면 더 가까운 쪽을 택한다.
+                var withCtrl = candidates.filter(function (c) { return c.ctrlCount > 0; });
+                withCtrl.sort(function (a, b) { return b.ctrlCount - a.ctrlCount || a.dist - b.dist; });
+                best = (withCtrl.length ? withCtrl[0] : nearest).fac;
+            }
 
             var states = (st.statesByFac && st.statesByFac[best.unique_id]) || {};
             var slots = Object.keys(states);

@@ -374,6 +374,16 @@ class AbstractBaseController(object):
                                                    'select_multi_measurement',
                                                    'text',
                                                    'select',
+                                                   # 값은 그냥 문자열(구역 id)이다 —
+                                                   # 목록을 어디서 채우는지는 화면
+                                                   # 쪽 사정이고 데몬은 값만 받는다.
+                                                   # ⚠ 여기 빠지면 `setattr` 자체가
+                                                   # 일어나지 않아 그 옵션이 **없는
+                                                   # 것처럼** 동작한다 — bay_scope 는
+                                                   # 기본값이 ''(시설 전체)라, 구역을
+                                                   # 지정해 둔 코디네이터가 조용히
+                                                   # 시설 전체를 제어했다(2026-08-26).
+                                                   'select_bay',
                                                    'select_custom_choices']:
                     # If this is a time input field, parse it to seconds
                     if (each_option_default['type'] == 'text' and

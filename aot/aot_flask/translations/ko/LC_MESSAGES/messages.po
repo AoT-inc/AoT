@@ -30907,6 +30907,10 @@ msgid "Resting — the opposite direction is needed right now"
 msgstr "지금은 반대 방향이 필요해 쉬고 있습니다"
 
 #: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Target reached — easing off"
+msgstr "목표에 닿아 출력을 줄이고 있습니다"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
 msgid "Indoor temperature is over the limit you set"
 msgstr "실내 온도가 설정한 상한을 넘었습니다"
 

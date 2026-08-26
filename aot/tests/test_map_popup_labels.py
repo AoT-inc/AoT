@@ -230,10 +230,16 @@ class TestInformationOrder(unittest.TestCase):
         self.assertLess(i_hz, i_plots, '날씨(지역)가 구획(시설)보다 뒤에 있다')
         self.assertLess(i_plots, i_now, '위치·시간 층이 데이터 층보다 뒤에 있다')
         self.assertLess(i_now, i_ctrl, '데이터 층이 제어 층보다 뒤에 있다')
-        # 마지막 관수·분무는 **제어 정보**라 [시설 세부]로 옮겼다(2026-08-26).
-        # [현황]은 "지금 어떤가"(목표·값·추세)만 답한다.
-        self.assertNotIn('buildIrrigationHtml', body,
-                         '[현황]에 제어 이력이 되돌아왔다')
+        # ⚠ **관수 카드의 자리는 여기서 정하지 않는다.** 한때 이 검사가
+        #   "[현황]에 있으면 안 된다" 를 주장했는데(제어 정보니까 [시설 세부]
+        #   라는 판단), 그 이동이 연동 안 된 시설에서 관수 상태를 통째로
+        #   없앤다는 것이 나중에 드러났다. 계약은
+        #   `test_irrigation_status.py` 하나가 갖는다 — 같은 사실을 두 곳이
+        #   주장하면 되돌릴 때 한쪽만 고쳐져 서로 반대를 말하게 된다
+        #   (2026-08-26 실제로 그 상태가 됐다).
+        i_irr = body.index('buildIrrigationHtml')
+        self.assertLess(i_now, i_irr, '데이터 층이 제어 층보다 뒤에 있다')
+        self.assertLess(i_irr, i_ctrl, '직전에 한 일이 지금 하는 일보다 뒤에 있다')
         # 마지막 작동은 **그 장치 트랙 바로 아래**다(2026-08-26 재배치).
         # 한 줄로 맨 위에 두면 어느 장치 이야기인지 이름으로 이어붙여야 했다.
         detail = _read(_POPUP).split(

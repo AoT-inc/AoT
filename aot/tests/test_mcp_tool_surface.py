@@ -422,5 +422,232 @@ class TestResponseCap(unittest.TestCase):
         self.assertGreater(self.server._MAX_RESPONSE_TOKENS, 0)
 
 
+class TestCapThinsColumnsBeforeRows(unittest.TestCase):
+    """상한을 넘기면 **행보다 열을 먼저** 줄인다.
+
+    행을 자르면 남는 것은 "몇 건 중 몇 건" 이다. 실측(2026-08-26, 로컬
+    get_system_brief 21,485 토큰): 예전 캡은 공간 계층을 **루트 47개 중 1개**
+    로 잘랐다 — 농장이 몇 개 대지로 나뉘는지조차 답할 수 없는 응답이다.
+    열로 줄이면 같은 상한에서 47개가 다 남는다.
+    """
+
+    def setUp(self):
+        self.server = _load_exec()
+
+    def _payload(self, n=40):
+        """항목마다 무거운 중첩(heavy)과 짧은 스칼라를 함께 가진 목록."""
+        return {'rows': [{
+            'unique_id': 'id-%d' % i,
+            'name': 'row %d' % i,
+            'heavy': [{'k': j, 'blob': 'x' * 200} for j in range(6)],
+            'mid': {'note': 'y' * 300},
+        } for i in range(n)]}
+
+    def test_every_row_survives_when_columns_are_enough(self):
+        cap = self.server._cap_result(self._payload(), 'x', max_tokens=3000)
+        self.assertEqual(40, len(cap['rows']), '행이 잘렸다')
+        self.assertNotIn('rows_truncated', cap)
+        self.assertIn('heavy', cap['rows_fields_omitted'])
+
+    def test_scalars_that_identify_the_row_are_kept(self):
+        """이름·식별자까지 떨어뜨리면 남은 행이 무엇인지 알 수 없어져,
+        행을 자른 것과 다를 바가 없어진다."""
+        cap = self.server._cap_result(self._payload(), 'x', max_tokens=3000)
+        for i, row in enumerate(cap['rows']):
+            self.assertEqual('id-%d' % i, row['unique_id'])
+            self.assertEqual('row %d' % i, row['name'])
+
+    def test_the_response_says_which_fields_left(self):
+        """빠진 필드를 말하지 않으면 모델이 "그 값이 없다" 로 읽는다."""
+        cap = self.server._cap_result(self._payload(), 'x', max_tokens=3000)
+        note = cap['rows_fields_omitted']
+        self.assertIn('heavy', note)
+        self.assertIn('40', note, '전 건이 남았다는 사실이 없다')
+        trim = cap['_truncated']['lists_trimmed'][0]
+        self.assertEqual(trim['kept'], trim['total'],
+                         '열만 줄였는데 행이 준 것처럼 기록된다')
+        self.assertIn('heavy', trim['fields_dropped'])
+
+    def test_the_note_accumulates_across_rounds(self):
+        """두 번째 열을 뺄 때 안내를 덮어쓰면, 먼저 빠진 필드는 '원래 없던
+        값' 이 된다."""
+        cap = self.server._cap_result(self._payload(), 'x', max_tokens=900)
+        note = cap['rows_fields_omitted']
+        self.assertIn('heavy', note)
+        self.assertIn('mid', note)
+
+    def test_rows_are_cut_only_after_columns_run_out(self):
+        """열을 다 빼도 안 되면 행 자르기가 이어진다 — 그때 그 목록은 이미
+        얇아져 있어 같은 상한에 더 많은 행이 남는다."""
+        cap = self.server._cap_result(self._payload(200), 'x', max_tokens=600)
+        self.assertLess(len(cap['rows']), 200, '줄지 않았다')
+        self.assertIn('rows_truncated', cap)
+        trim = next(d for d in cap['_truncated']['lists_trimmed']
+                    if d['path'] == 'rows')
+        self.assertEqual(200, trim['total'], '원래 건수를 잃었다')
+        # 열로 줄인 사실이 행 자르기 기록에 덮이면 안 된다 — 진단에서
+        # "왜 이 항목에 이 필드가 없나" 의 답이 사라진다.
+        self.assertTrue(trim.get('fields_dropped'))
+
+    def test_a_column_only_trim_does_not_claim_the_list_is_incomplete(self):
+        """열만 줄인 응답은 목록이 온전하다. 거기에 "INCOMPLETE, 좁혀서 다시
+        부르라" 고 하면 모델은 없는 항목을 찾아 같은 조회를 되풀이하고, 그
+        재조회는 같은 상한에 걸려 같은 답을 받는다."""
+        cap = self.server._cap_result(self._payload(), 'x', max_tokens=3000)
+        advice = cap['_truncated']['advice']
+        self.assertNotIn('INCOMPLETE', advice)
+        self.assertIn('COMPLETE', advice)
+        self.assertIn('fields_omitted', advice, '어디를 보라는 말이 없다')
+
+    def test_a_row_trim_still_warns(self):
+        """행이 잘렸는데 경고를 빼면 모델이 일부를 전부로 읽는다 — 열만
+        줄인 경우와 반드시 갈라야 하는 이유가 이쪽에 있다."""
+        cap = self.server._cap_result(self._payload(200), 'x', max_tokens=600)
+        self.assertIn('INCOMPLETE', cap['_truncated']['advice'])
+
+    def test_a_truncated_body_still_warns(self):
+        """긴 본문이 잘린 것도 불완전이다 — 목록이 아니라고 놓치면 안 된다."""
+        cap = self.server._cap_result({'document': '가' * 20000, 'title': 'm'},
+                                      'x', max_tokens=1200)
+        self.assertIn('INCOMPLETE', cap['_truncated']['advice'])
+
+    def test_a_list_of_scalars_is_not_thinned(self):
+        """열이 없는 목록(스칼라 배열)은 예전대로 행으로 줄인다."""
+        cap = self.server._cap_result(
+            {'rows': ['z' * 400 for _ in range(50)]}, 'x', max_tokens=600)
+        self.assertLess(len(cap['rows']), 50)
+        self.assertIn('rows_truncated', cap)
+
+    def test_one_huge_string_still_goes_down_the_old_path(self):
+        """긴 본문 하나가 대부분인 응답(문서·매뉴얼)은 컨테이너가 없어 열
+        자르기에 걸리지 않는다. 그 부류는 문자열 절삭이 맡는다."""
+        cap = self.server._cap_result({'document': '가' * 20000, 'title': 'm'},
+                                      'x', max_tokens=1200)
+        self.assertLessEqual(
+            self.server._estimate_tokens(json.dumps(cap, ensure_ascii=False)),
+            1200)
+        self.assertIn('document_truncated', cap)
+
+    def test_several_lists_share_the_overflow(self):
+        """**이번 설계의 핵심.** 목록 하나에 초과분 전체를 떠넘기면 어느
+        목록도 열만으로는 예산에 못 들어와 전부 행 자르기로 떨어진다(처음에
+        그렇게 만들었다가 공간 계층이 다시 1/47 로 잘리는 것을 보고 고쳤다).
+        응답 전체를 놓고 고르면 셋이 초과분을 나눠 지고 전 건이 남는다."""
+        payload = {
+            'a': [{'id': i, 'big': ['x' * 100] * 5} for i in range(20)],
+            'b': [{'id': i, 'big': ['y' * 100] * 5} for i in range(20)],
+            'c': [{'id': i, 'big': ['z' * 100] * 5} for i in range(20)],
+        }
+        cap = self.server._cap_result(payload, 'x', max_tokens=2000)
+        for k in ('a', 'b', 'c'):
+            self.assertEqual(20, len(cap[k]), '%s 가 행으로 잘렸다' % k)
+
+
+class TestSpatialTreeDepth(unittest.TestCase):
+    """공간 계층은 깊이로 접힌다.
+
+    왜. 이 트리는 농장이 커질수록 장치가 대부분을 차지한다(실측 2026-08-26:
+    노드 154개 중 68개가 장치, 13,978 토큰 중 6,859). 다 펴서 응답 상한을
+    넘기면 캡이 **루트 목록**을 잘라 47개 중 2개만 나가고, 그러면 농장 구조
+    자체를 못 본다 — 깊이를 접는 쪽이 훨씬 적게 잃는다.
+    """
+
+    def setUp(self):
+        from aot.ai.services.aot_data_tool_service import AoTDataToolService
+        self.svc = AoTDataToolService
+        # site > zone > device 3단. 잎(빈 자식)도 하나 둔다.
+        self.tree = [{
+            'name': '1포장', 'type': 'site', 'unique_id': 's1', 'children': [
+                {'name': '1-1', 'type': 'zone', 'unique_id': 'z1', 'children': [
+                    {'name': 'v111', 'type': 'aot_device', 'unique_id': 'd1',
+                     'children': []},
+                    {'name': 'v112', 'type': 'device', 'unique_id': 'd2',
+                     'children': [
+                         {'name': 'ch', 'type': 'aot_device',
+                          'unique_id': 'd3', 'children': []}]},
+                ]},
+                {'name': '펌프실', 'type': 'facility', 'unique_id': 'f1',
+                 'children': []},
+            ]}]
+
+    def _depth(self, nodes, lvl=1):
+        best = 0
+        for n in nodes:
+            kids = n.get('children') or []
+            best = max(best, lvl if not kids else self._depth(kids, lvl + 1))
+        return best
+
+    def test_depth_two_stops_at_zones(self):
+        out = self.svc._prune_depth(self.tree, 2)
+        self.assertEqual(2, self._depth(out))
+
+    def test_the_original_is_not_modified(self):
+        """`get_spatial_hierarchy` 는 캐시 미스일 때 **캐시에 넣은 그 객체**를
+        돌려준다. 제자리에서 자르면 잘린 트리가 캐시에 남아, 그 다음부터는
+        depth 를 크게 줘도 전체를 볼 수 없다."""
+        self.svc._prune_depth(self.tree, 2)
+        zone = self.tree[0]['children'][0]
+        self.assertEqual(2, len(zone['children']), '원본이 잘렸다')
+        self.assertNotIn('children_omitted', zone)
+
+    def test_cut_nodes_say_what_was_below_them(self):
+        """빈 `children` 만 남기면 "이 구역에는 아무것도 없다" 로 읽힌다.
+        잘린 것과 없는 것은 다르다."""
+        out = self.svc._prune_depth(self.tree, 2)
+        zone = out[0]['children'][0]
+        self.assertEqual([], zone['children'])
+        # 손자(d3)까지 세야 "이 아래 장치가 몇 개인가" 에 답이 된다.
+        self.assertEqual({'aot_device': 2, 'device': 1},
+                         zone['children_omitted'])
+
+    def test_a_leaf_does_not_claim_it_was_cut(self):
+        """자식이 없는 노드에 안내를 붙이면, 없는 것을 잘렸다고 말하게 된다."""
+        out = self.svc._prune_depth(self.tree, 2)
+        facility = out[0]['children'][1]
+        self.assertNotIn('children_omitted', facility)
+
+    def _patched(self, **kw):
+        from unittest import mock
+        from aot.ai.services.ai_context_service import AIContextService
+        with mock.patch.object(AIContextService, 'get_spatial_hierarchy',
+                               staticmethod(lambda *a, **k: self.tree)):
+            return self.svc.get_spatial_tree(**kw)
+
+    def test_zero_means_no_limit(self):
+        """`if depth:` 로 쓰면 0 이 falsy 라 기본값으로 되살아나, 끄는 수단이
+        조용히 사라진다."""
+        out = self._patched(depth=0)
+        self.assertEqual(4, self._depth(out['hierarchy']))
+        self.assertNotIn('_reading', out)
+
+    def test_a_cut_tree_says_so(self):
+        out = self._patched(depth=2)
+        self.assertEqual(2, out['depth'])
+        self.assertIn('children_omitted', out['_reading'])
+
+    def test_filter_type_is_not_cut_by_depth(self):
+        """종류를 찾아 달라는 요청인데 깊이에서 먼저 끊으면 찾을 것이 사라진다 —
+        결과가 비는데 '없다' 와 구분되지 않는다."""
+        out = self._patched(depth=2, filter_type='aot_device')
+        found = []
+
+        def walk(ns):
+            for n in ns:
+                if n.get('type') == 'aot_device':
+                    found.append(n['unique_id'])
+                walk(n.get('children') or [])
+        walk(out['hierarchy'])
+        self.assertEqual({'d1', 'd3'}, set(found))
+
+    def test_the_schema_documents_the_contract(self):
+        """설명이 기본 깊이를 말하지 않으면 모델은 트리가 전부인 줄 알고,
+        구역 아래가 비어 보이는 것을 '장치 없음' 으로 답한다."""
+        spec = next(t for t in registry._MCP_TOOL_PAYLOADS
+                    if t['tool_name'] == 'get_spatial_tree')
+        depth = spec['input_schema']['properties']['depth']['description']
+        self.assertIn('children_omitted', depth)
+        self.assertIn('0', depth, '무제한을 어떻게 주는지 없다')
+
+
 if __name__ == '__main__':
     unittest.main()

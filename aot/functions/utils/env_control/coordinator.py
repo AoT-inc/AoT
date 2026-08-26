@@ -72,6 +72,7 @@ from .log_channels import (
     REASON_IDLE, REASON_PRIMARY, REASON_SECONDARY,
     REASON_WRONG_DIRECTION, REASON_SIDE_EFFECT, REASON_MANUAL_OVERRIDE,
     REASON_NO_GRADIENT, REASON_NO_OUTDOOR_DATA, REASON_OPPOSING_PARKED,
+    REASON_DEADZONE_BACKOFF,
 )
 from .authority import is_natural_var
 from .types import (
@@ -93,9 +94,19 @@ POS_KI     = 0.2     # 적분 이득 (사이클당 e_norm 만큼 평형 개도 �
 HOLD_FRAC  = 0.5     # 데드존 반폭 = tolerance×HOLD_FRAC. 이 안에서는 P·I 모두 0 이라
                      # 직전 평형 개도를 유지한다. 데드존은 '분기'가 아니라 유효오차에서
                      # '빼는' 방식이라 경계에서 P항이 연속이다(모듈 docstring 참조).
-RELAX_FACTOR = 0.6   # 평형 개도 기하 감쇠 비율. 두 자리가 쓴다 —
+# 데드존 안에서 잔여 편차의 부호가 **반대쪽**으로 넘어간 채 몇 사이클 이어지면
+# 그 장치는 물러난다(REASON_DEADZONE_BACKOFF). 단위가 초가 아니라 **사이클**인
+# 이유는 여기서 거르려는 것이 시간이 아니라 **잡음**이기 때문이다 — 잡음은
+# 사이클마다 부호가 뒤집히므로 표본 수로 세는 것이 맞다. 데드존이 존재하는 이유가
+# 그 잡음이고, 한 사이클의 부호로 물러나면 데드존을 만든 이유가 사라진다.
+# 3 = 잡음으로 세 번 연속 같은 쪽이 나올 확률이 낮으면서, 편차가 허용오차 안이라
+#     그동안의 손해가 제한적인 지점.
+DEADZONE_BACKOFF_CYCLES = 3
+
+RELAX_FACTOR = 0.6   # 평형 개도 기하 감쇠 비율. **세** 자리가 쓴다 —
                      #  (a) 무구배·파킹: safe_default 로 수렴
                      #  (b) 레일 고착 회복: 실제 개도(0 또는 100)로 수렴
+                     #  (c) 데드존 역부호 물러남: safe_default 로 수렴 (a 와 같다)
                      # 100 → 1 미만까지 약 11 사이클.
 AW_BETA    = 0.5     # back-calculation anti-windup 강도 (포화 **직후** 한정)
 RAIL_EPS   = 0.5     # 직전 개도가 레일에 있다고 볼 허용오차 [%]
@@ -157,8 +168,27 @@ VENT_NEED_FRAC = HOLD_FRAC   # 데드존과 같은 기준 — 제어가 쉬는 �
 #   ② 제어 대상 변수가 **전부** 그렇다. 하나라도 환기로 못 가면 냉난방이 필요하다.
 #   ③ 환기에 **여력이 남아 있다**. 창이 이미 만개인데 편차가 남으면 그때는
 #      냉난방이 도와야 한다 — 여기서 파킹하면 아무도 일하지 않는다.
+#   ④ 파킹한 지 얼마 안 됐다. 아래 '실패하면 넘긴다' 참조.
 VENT_REACH_MARGIN  = 1.0     # 실외가 목표를 넘어서야 할 여유 (tolerance 배수)
-VENT_HEADROOM_PCT  = 90.0    # 직전 평균 개도가 이보다 낮아야 '여력 있음'
+
+# ⚠ **평균이 아니라 최댓값이다.** 평균을 쓰면 안 열리는 창 하나가 escalation 을
+#   통째로 막는다 — 개구부 셋 중 하나가 0% 에 고착되면 나머지 둘이 만개해도
+#   평균은 67% 라 90% 에 영영 못 닿고, 냉난방은 어떤 경우에도 안 켜진다
+#   (2026-08-26 実測: 側面窓 9%/33% · 天窓 0% 인 채로 난방기가 계속 파킹됐다).
+#   한 창이라도 만개면 그 창은 더 밀 데가 없다 — 그것이 '여력 없음' 의 뜻이다.
+VENT_HEADROOM_PCT  = 90.0    # 직전 **최대** 개도가 이보다 낮아야 '여력 있음'
+
+# ── 실패하면 넘긴다 ──────────────────────────────────────────────────────────
+# ③ 만으로는 부족하다. "여력이 있나" 는 물어도 "실제로 되고 있나" 는 안 묻기
+# 때문에, 창이 조금 열린 채 목표에 안 닿아도 냉난방은 무한정 파킹된다.
+# 예측(실외가 목표 너머)이 맞다면 편차는 줄어들어 판정이 스스로 꺼진다 —
+# 그러지 않고 계속 벗어나 있다는 것은 **예측이 틀렸다**는 뜻이고, 그때는
+# 냉난방에 넘긴다.
+#
+# 값은 strain 판정(`_STRAIN_MIN_SEC`)과 같은 15분이다. 둘 다 "한두 사이클의
+# 흔들림과 가른다" 는 같은 이유이고, 다르게 두면 화면이 "못 따라가고 있다"고
+# 말하는 동안에도 냉난방은 파킹돼 있는 구간이 생긴다.
+VENT_FIRST_PATIENCE_S = 900.0
 
 G_MIN_EFFECT = 0.025 # 유효도(g=magnitude/pband) 하한. 100% 가동해도 변수를 비례밴드의
                      # 2.5%/cycle 미만으로밖에 못 움직이면(예: 환기인데 내외차 거의 없음)
@@ -184,6 +214,17 @@ class CoordinatorState:
     # **일부러 영속화하지 않는다** — 재시작 직후 한 사이클만 전환 감지를 쉬면
     # 되고(보수적), 그것 때문에 마이그레이션을 만들 값어치가 없다.
     drive_sign:    Dict[str, int]   = field(default_factory=dict)
+    # 환기 우선이 냉난방을 파킹한 채 목표를 못 맞추고 있는 누적 시간(초).
+    # 판정이 꺼지면(=편차가 사라졌거나 환기로 못 간다고 판단) 0 으로 되돌린다.
+    # **영속화하지 않는다** — 재시작 직후 인내를 처음부터 세는 것은 보수적인
+    # 쪽이고(냉난방을 늦게 켠다), 그 때문에 마이그레이션을 만들 값어치가 없다.
+    vent_first_held_s: float = 0.0
+    # 데드존 안에서 잔여 편차가 **반대쪽**으로 넘어간 연속 사이클 수.
+    # 한 번이라도 되돌아오면 0 이다 — 잡음으로 한 사이클 뒤집힌 것과
+    # 진짜로 넘어간 것을 가르는 유일한 수단이다.
+    # `drive_sign` 과 같은 이유로 **영속화하지 않는다**(재시작 후 한 사이클만
+    # 보수적으로 쉬면 된다).
+    deadzone_wrong_side: Dict[str, int] = field(default_factory=dict)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -253,6 +294,11 @@ def coordinate(
         integral=migrated_integral,
         active_vars=dict(state.active_vars),
         drive_sign=dict(state.drive_sign or {}),
+        vent_first_held_s=float(getattr(state, 'vent_first_held_s', 0.0) or 0.0),
+        # ⚠ **복사하지 않는다 — 매 사이클 새로 센다.** 이 카운터는 "지금
+        # 데드존 안에서 반대쪽에 있다" 의 연속 횟수인데, 복사해 들고 다니면
+        # 데드존을 벗어났다 돌아온 장치가 **옛 횟수를 이어받아** 한 사이클
+        # 만에 물러난다. 이번 사이클에 그 경로를 지난 장치만 항목을 갖는다.
     )
 
     # 개구부 평균 개도(직전 명령 기준)를 ctx 에 주입 → 배기팬 압력 모델이 사용.
@@ -326,15 +372,50 @@ def coordinate(
     # 조건만 보므로 냉난방이 파킹되면 hvac_running 이 내려가고 개구부 잠금이
     # 풀린다. 반대로 환기 여력이 없으면 여기서 파킹하지 않으므로 냉난방이 계속
     # 일한다 — 아무도 일하지 않는 상태로 떨어지지 않는다.
-    if bool(ctx.get('vent_first', False)) and _ventilation_reaches_all_targets(
-            situation, ctx, vents, state.prev_commands):
+    #
+    # ⚠ 판정이 참인 동안 **인내 시간을 센다.** 예측이 맞다면 편차가 줄어 판정이
+    #   스스로 꺼지므로 시간은 쌓이지 않는다. 쌓인다는 것은 곧 예측이 틀렸다는
+    #   뜻이고, 그때는 파킹을 풀어 냉난방에 넘긴다(VENT_FIRST_PATIENCE_S).
+    #
+    # ⚠ **의지하는 정도는 둘이 아니라 연속이다** (2026-08-26). 예전에는
+    #   "전부 된다"(파킹) 아니면 "아니다"(냉난방이 전체 편차를 혼자 계산)뿐이라,
+    #   흔한 중간(실외가 목표의 일부를 메운다)에서 냉난방이 과다 가동했다.
+    #   `_ventilation_credit` 이 그 몫을 재서 냉난방의 편차에서 뺀다.
+    #   판단 기준은 스위치가 아니라 **내외 환경 차이**다 — 실외가 못 도우면
+    #   크레딧이 0 이라 저절로 예전 동작이 된다.
+    vent_credit: Dict[str, float] = {}
+    if bool(ctx.get('vent_first', False)):
         hvac_ids = {p.actuator_id for p in available
                     if ACTUATOR_DOMAIN.get(getattr(p, 'kind', '')) == 'hvac'}
-        if hvac_ids:
-            park_ids |= hvac_ids
-            logger.debug(
-                '환기 우선 — 실외로 목표에 닿으므로 냉난방 %d개 파킹: %s',
-                len(hvac_ids), sorted(i[:8] for i in hvac_ids))
+        _reaches = _ventilation_reaches_all_targets(
+            situation, ctx, vents, state.prev_commands)
+        _credit = ({} if _reaches else
+                   _ventilation_credit(situation, ctx, vents, park_ids))
+        if _reaches or _credit:
+            # 환기에 **의지하고 있는** 동안 인내를 센다. 전부 맡기든 일부만
+            # 맡기든, 목표에 못 닿은 채 시간이 흐르면 예측이 틀린 것이다.
+            new_state.vent_first_held_s += float(cycle_sec)
+            if new_state.vent_first_held_s >= VENT_FIRST_PATIENCE_S:
+                # 넘겼다는 사실은 남긴다 — 안 그러면 "왜 갑자기 켜졌나" 에
+                # 답할 근거가 어디에도 없다.
+                logger.error(
+                    '환기 우선 — %.0f분째 목표에 못 닿아 냉난방 %d개에 '
+                    '전부 넘깁니다(실외 예측이 빗나갔습니다)',
+                    new_state.vent_first_held_s / 60.0, len(hvac_ids))
+            elif _reaches and hvac_ids:
+                park_ids |= hvac_ids
+                logger.debug(
+                    '환기 우선 — 실외로 목표에 닿으므로 냉난방 %d개 파킹: %s',
+                    len(hvac_ids), sorted(i[:8] for i in hvac_ids))
+            else:
+                vent_credit = _credit
+                logger.debug(
+                    '환기 우선 — 실외가 대신 해 주는 몫: %s',
+                    {k: round(v, 3) for k, v in _credit.items()})
+        else:
+            new_state.vent_first_held_s = 0.0
+    else:
+        new_state.vent_first_held_s = 0.0
 
     # ── 2.55. 맞서는 짝은 **온도 축의 요구가 한쪽만 고른다** ──────────────────
     # 냉방과 난방은 온도 축에서 정확히 raise/lower 쌍이다. PID 는 오차 부호가
@@ -437,6 +518,7 @@ def coordinate(
 
     for p in order:
         accum = accumulated[domain_of(p)]
+        _is_hvac = ACTUATOR_DOMAIN.get(getattr(p, 'kind', '')) == 'hvac'
         prev_val = state.prev_commands.get(p.actuator_id, 0.0)
         I = new_state.integral.get(p.actuator_id, 0.0)
         kp = p.gains.get('kp', POS_KP)
@@ -471,6 +553,13 @@ def coordinate(
             # −29.6°C)가 냉방기에 +29.6°C 로 넘어가 편차 0 인데도 냉방 100%,
             # 난방 0% 로 고착됐다. 위 주석의 "적게 동작"과도 반대였다.
             residual_v  = situation.deviation_native[v] + accum.get(v, 0.0)
+            if _is_hvac:
+                # 실외가 대신 해 주는 몫만큼 냉난방의 짐을 던다. 부호는 편차를
+                # **0 쪽으로** 옮기는 방향이고(`_ventilation_credit` 이 need 를
+                # 넘지 않게 잘라 놓는다), 그래서 부호가 뒤집힐 수 없다.
+                # ⚠ 환기 자신에게는 적용하지 않는다 — 자기가 할 일을 자기
+                #   편차에서 빼면 창이 열리지 않는다.
+                residual_v += vent_credit.get(v, 0.0)
             effect_sign = 1.0 if eff.direction == '↑' else -1.0
             pband_v     = max(PBAND_MULT * t.tolerance, 1e-9)
             e_v         = (-residual_v * effect_sign) / pband_v    # + = 더 열기
@@ -522,9 +611,42 @@ def coordinate(
             e_eff = math.copysign(
                 max(0.0, abs(e_norm) - HOLD_FRAC / PBAND_MULT), e_norm)
             if e_eff == 0.0:
-                # 평형 근방(결합오차 작음) → 적분 동결, 직전 평형 개도 유지
-                cmd_raw = _clamp(I, 0.0, 100.0)
-                reason = REASON_PRIMARY
+                # ── 평형 근방(결합오차 작음) → 적분 동결, 직전 평형 개도 유지
+                #
+                # ⚠ 그런데 **넘어선 채로 얼어붙을 수 있다.** 데드존 안에서는
+                # e_eff=0 이라 구동이 없고, 구동이 없으면 방향 판정도 서지
+                # 않는다 — 그래서 잔여 편차가 부호를 넘어가도 그 순간의 명령이
+                # 그대로 유지되고 근거는 PRIMARY 로 남는다.
+                #
+                # 실측(2026-08-26 영양 육묘장): 낮에 VPD 가 목표보다 높아 냉방기
+                # 적분이 100% 까지 감겼고, VPD 가 목표로 내려와 편차가 −0.0 이
+                # 된 순간 그 100% 가 얼어붙었다. 그 시점의 냉방기는 VPD 를
+                # **내리는** 쪽(모델: vpd ↓0.484)이라 방향이 이미 반대였다.
+                # **목표에 도달했다는 사실이 잘못된 출력을 고정한 것이다.**
+                #
+                # 그래서 데드존 안이라도 부호가 반대면 물러난다. 다만 **한
+                # 사이클의 부호로 판단하지 않는다** — 데드존이 있는 이유가
+                # 센서 잡음이고, 잡음은 매 사이클 부호가 뒤집힌다. 연속으로
+                # 같은 쪽이어야 "넘어갔다" 이고, 한 번이라도 되돌아오면 0 이다.
+                # 읽기는 직전 상태, 쓰기는 새 상태 — 새 상태는 비어서 출발하므로
+                # 이 경로를 안 지난 장치는 자동으로 0 이 된다.
+                if e_norm < 0.0:
+                    _n = (state.deadzone_wrong_side or {}).get(
+                        p.actuator_id, 0) + 1
+                    new_state.deadzone_wrong_side[p.actuator_id] = _n
+                else:
+                    _n = 0
+                if _n >= DEADZONE_BACKOFF_CYCLES:
+                    # 파킹과 **같은 감쇠 경로**를 쓴다(RELAX_FACTOR, safe_default
+                    # 기준). 감쇠율을 여기만 따로 두면 "왜 이 장치만 다르게
+                    # 내려오는가" 에 답할 자리가 없어진다.
+                    sd = p.safe_default
+                    I = sd + (prev_val - sd) * RELAX_FACTOR
+                    cmd_raw = _clamp(I, 0.0, 100.0)
+                    reason = REASON_DEADZONE_BACKOFF
+                else:
+                    cmd_raw = _clamp(I, 0.0, 100.0)
+                    reason = REASON_PRIMARY
             else:
                 # ── 방향 전환 시 적분을 실제 개도로 되앉힌다 (PID 컨트롤러 차용)
                 # PID 는 direction='both' 에서 올림↔내림이 뒤집히는 순간
@@ -728,8 +850,10 @@ def _ventilation_reaches_all_targets(
     if not vents:
         return False
     # 환기 여력이 없으면(창이 이미 만개) 냉난방이 도와야 한다.
+    # ⚠ **최댓값**이다 — 평균이면 0% 에 고착된 창 하나가 escalation 을 영영
+    #   막는다(VENT_HEADROOM_PCT 주석 참조).
     aps = [prev_commands.get(p.actuator_id, 0.0) for p in vents]
-    if aps and (sum(aps) / len(aps)) >= VENT_HEADROOM_PCT:
+    if aps and max(aps) >= VENT_HEADROOM_PCT:
         return False
 
     decisive = False
@@ -751,6 +875,79 @@ def _ventilation_reaches_all_targets(
         if abs(avail) < abs(need) + t.tolerance * VENT_REACH_MARGIN:
             return False                             # 목표에 못 미친다(점근만)
     return decisive
+
+
+def _ventilation_credit(
+        situation: SituationReport, ctx: Dict, vents: List[ActuatorProfile],
+        blocked: set) -> Dict[str, float]:
+    """실외가 **대신 해 줄 수 있는 몫** → {변수: 편차 보정값}.
+
+    ## 왜 필요한가 — `vent_first` 는 이분법이었다
+
+    파킹 판정은 "환기로 **전부** 되는가" 하나만 묻는다. 그래서 상태가 둘뿐이다:
+
+        전부 된다  → 냉난방 파킹
+        아니다     → 냉난방이 **전체 편차**를 자기 혼자 메울 값으로 계산
+
+    실제로 흔한 것은 그 중간이다. 실측(2026-08-26 쿠마모토 イチゴ):
+
+        실내 VPD 0.67   목표 1.0   실외 0.897
+        실외가 메울 수 있는 몫 = (0.897−0.67)/(1.0−0.67) = 69%
+
+    실외가 목표까지의 69% 를 공짜로 해 주는데, 난방기는 그것을 **모른 채**
+    −0.33 전부를 자기 몫으로 계산해 46.5% 로 돌고 있었다. 창은 열려 있고
+    난방기는 과다 가동 — 열을 버리며 데운다.
+
+    ## 왜 `hvac_interlock`(창 잠금)이 답이 아닌가
+
+    잠그면 그 69% 를 통째로 버리고 난방 부하가 3배가 된다. 열 손실은 막지만
+    더 많은 에너지를 쓴다. 판단 기준은 스위치가 아니라 **내외 환경 차이**여야
+    한다 — 실외가 도울 수 있으면 맡기고, 못 하면 그만큼만 냉난방이 진다.
+    실외가 전혀 못 도우면 이 함수가 0 을 돌려주므로 냉난방이 전부 맡는다
+    (= 잠금 없이도 겨울에는 저절로 예전 동작이 된다).
+
+    ## ⚠ 도메인 간 부하분담을 되살리는 것이 아니다
+
+    2026-08-25 사고는 액추에이터가 **주장한 효과**(모델 출력)를 도메인 너머로
+    넘기다 부호가 뒤집혀 반대편을 켰다. 여기서 넘기는 것은 모델 출력이 아니라
+    **실외 측정값**이다 — 어떤 액추에이터의 주장도 아닌 독립적인 물리 상한이고,
+    한 장치가 고장 나도 값이 바뀌지 않는다. 그래서 그 사고의 성립 조건
+    ("남의 주장을 근거로 내 방향을 정한다")이 여기엔 없다.
+
+    ## 안전 조건 — 하나라도 어긋나면 그 변수는 크레딧 0
+
+    창이 못 열리면(비·바람 게이트, 무익 판정, 실외 근거 없음) 실외는 아무것도
+    못 해 준다. 그때 크레딧을 주면 **냉난방이 있지도 않은 도움을 믿고 물러난다**
+    — 비 오는 날 난방이 모자라는 모양이 된다.
+    """
+    out: Dict[str, float] = {}
+    live = [p for p in vents if p.actuator_id not in blocked]
+    if not live:
+        return out                          # 창이 하나도 못 움직인다 → 도움 없음
+    if bool((ctx.get('external') or {}).get('_ext_synthetic')):
+        return out                          # 실외를 지어낸 값이면 근거가 아니다
+
+    for var, dev in situation.deviation_native.items():
+        t = situation.target.get(var)
+        if t is None or t.tolerance <= 0:
+            continue
+        need = -dev                                  # + = 값을 올려야 함
+        if abs(need) <= t.tolerance * VENT_NEED_FRAC:
+            continue                                 # 범위 안 — 나눌 것이 없다
+        reachable = _outdoor_reachable(var, ctx)
+        if reachable is None:
+            continue
+        measured = t.value + dev
+        help_ = float(reachable) - measured          # 실외가 데려다 줄 수 있는 거리
+        if not _same_sign(need, help_):
+            continue                                 # 방향이 반대 — 도움이 아니다
+        # ⚠ **need 를 넘겨선 안 된다.** 넘기면 보정된 편차의 부호가 뒤집혀
+        #   냉난방이 반대로 돈다 — 2026-08-25 사고와 같은 모양이다.
+        #   목표를 지나는 경우는 파킹 판정이 이미 전부 맡으므로 여기선 자른다.
+        if abs(help_) > abs(need):
+            help_ = need
+        out[var] = help_
+    return out
 
 
 def _ventilation_is_futile(profile: ActuatorProfile,

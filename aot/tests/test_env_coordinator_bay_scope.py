@@ -12,6 +12,8 @@
 3. **구역을 안 정한 코디네이터가 남의 구역을 잡아갔다** — 충돌 회피가 "양쪽 다
    구역을 정했을 때" 만 돌았다.
 """
+import re
+
 import pytest
 
 from aot.functions.custom_functions.env_coordinator_impl._profile_loader_mixin \
@@ -206,6 +208,30 @@ def test_the_script_never_drops_an_unknown_value():
     js = _read('aot_flask', 'static', 'js', 'common', 'aot-bay-select.js')
     assert "if (cur && !seen)" in js
     assert 'not in this facility' in js
+
+
+def test_the_daemon_knows_every_option_type_this_function_declares():
+    """화면에 옵션 종류를 추가하고 **데몬 파서에 등록하지 않으면**, 그 옵션은
+    `setattr` 자체가 일어나지 않아 **없는 것처럼** 동작한다.
+
+    `bay_scope` 가 실제로 그랬다(2026-08-26). 드롭다운(`select_bay`)으로 바꾼
+    커밋이 `abstract_base_controller.setup_custom_options_json()` 의 종류
+    목록을 안 늘려서, 구역을 지정해 둔 코디네이터가 `getattr(self,
+    'bay_scope', '')` → `''` 로 읽고 **시설 전체를 제어했다.**
+
+    ⚠ 완전히 조용하지는 않다 — 기동 로그에 ERROR 한 줄이 남는다. 하지만
+      그 줄은 기동 때 한 번뿐이고, 제어는 그 뒤로 계속 틀린 범위로 돈다.
+      게다가 형제 조회는 `opts.get('bay_scope')` 로 DB 를 직접 읽어 **여전히
+      구역을 본다** — 두 경로가 서로 다른 답을 갖는다.
+    """
+    info = _read('functions', 'custom_functions', 'env_coordinator_impl',
+                 '_function_info.py')
+    parser = _read('controllers', 'abstract_base_controller.py')
+    block = parser.split('def setup_custom_options_json', 1)[1]
+    declared = set(re.findall(r"'type':\s*'(\w+)'", info))
+    for t in sorted(declared):
+        assert "'%s'" % t in block, (
+            "옵션 종류 %r 을 데몬 파서가 모른다 — 그 옵션은 값이 안 실린다" % t)
 
 
 def test_the_bays_endpoint_is_read_only_and_light():

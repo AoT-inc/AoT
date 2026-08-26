@@ -9532,3 +9532,113 @@ class TestPlotScheduleWiring(unittest.TestCase):
         self.assertTrue(
             _os.path.exists(_os.path.join(vers, ALEMBIC_VERSION + '.py')),
             'ALEMBIC_VERSION 이 가리키는 파일이 없다: %s' % ALEMBIC_VERSION)
+
+
+# ---------------------------------------------------------------------------
+# 목록·브리프의 얇은 구획 뷰 — 응답 상한을 넘기지 않기 위한 장치
+# ---------------------------------------------------------------------------
+
+_TOOL_SERVICE = os.path.join(_ROOT, 'ai', 'services',
+                             'aot_data_tool_service.py')
+
+
+class TestPlotSummaryView(unittest.TestCase):
+    """`_plot_summary` 는 순수 dict 변환이라 DB 를 켜지 않는다.
+
+    왜 이 테스트가 있나. 실측(2026-08-26): get_system_brief 79,707 토큰 중
+    구획 36건이 60,480(75.9%)이었고, 항목의 76%가 stage_schedule/timeline/
+    stage 라는 **같은 단계 정보 세 벌**이었다. 상한(15,000)을 넘으면 캡이
+    목록을 잘라 "31건 중 1건" 이 나간다 — 구획이 몇 개인지조차 답이 안 된다.
+    """
+
+    def _summarize(self, d):
+        from aot.ai.services.aot_data_tool_service import AoTDataToolService
+        return AoTDataToolService._plot_summary(d)
+
+    def _full(self):
+        return {
+            'unique_id': 'p-1', 'subject': '콩', 'variety': '백태',
+            'kind': 'vegetation', 'zone_name': '3-2', 'zone_kind': 'zone',
+            'area_m2': 1024.6, 'started_on': '2026-06-15',
+            'days_since_planted': 73, 'planned': False, 'active': True,
+            'expected_end_on': '2026-09-06', 'days_to_expected_end': 11,
+            # 아래는 화면 배선이거나 상세의 몫이다.
+            'geo_id': 'g-1', 'map_id': 'm-1', 'source_ref': 'z-1',
+            'source_kind': 'copied', 'color': '#71c45a',
+            'location_source': 'own', 'facility_uuid': None,
+            'expected_end_source': 'program', 'auto_advance': True,
+            'stage_history': [{'stage_key': 'stage_6'}],
+            'stage_proposal': None,
+            'stage_schedule': [{'index': i, 'editable': True,
+                                'removable': False} for i in range(1, 7)],
+            'timeline': {'stages': [{'key': 'stage_%d' % i}
+                                    for i in range(1, 7)]},
+            'program': {'name': '콩', 'version': 3, 'stage_count': 6,
+                        'usable_for_control': True},
+            'stage': {'name': '수확', 'index': 6, 'total': 6, 'days_left': 11,
+                      'day_in_stage': 3, 'targets': [], 'resources': [],
+                      'guidance': None, 'state': 'running'},
+        }
+
+    def test_the_three_copies_of_the_stage_plan_do_not_ship(self):
+        out = self._summarize(self._full())
+        for k in ('stage_schedule', 'timeline', 'stage_history',
+                  'stage_proposal', 'auto_advance'):
+            self.assertNotIn(k, out, '목록에 상세가 실린다: %s' % k)
+
+    def test_screen_wiring_does_not_ship(self):
+        """LLM 이 이것으로 답하는 질문은 없다. 행 수만큼 곱해질 뿐이다."""
+        out = self._summarize(self._full())
+        for k in ('geo_id', 'source_ref', 'source_kind', 'color',
+                  'location_source', 'expected_end_source'):
+            self.assertNotIn(k, out, '화면 배선이 AI 로 간다: %s' % k)
+
+    def test_what_the_list_must_still_answer(self):
+        """무엇이 어디에 얼마나, 언제 심어 지금 어느 단계인가 — 목록이
+        스스로 답해야 하는 것들이다. 여기서 빠지면 모델이 상세를 36번 부른다."""
+        out = self._summarize(self._full())
+        for k in ('unique_id', 'subject', 'variety', 'zone_name', 'area_m2',
+                  'started_on', 'days_since_planted', 'expected_end_on',
+                  'days_to_expected_end', 'active', 'stage'):
+            self.assertIn(k, out, '목록에서 답할 수 없게 된다: %s' % k)
+        # 상세로 넘어가는 열쇠는 절대 빠지면 안 된다.
+        self.assertEqual('p-1', out['unique_id'])
+
+    def test_the_stage_is_thinned_but_keeps_the_program_name(self):
+        out = self._summarize(self._full())
+        self.assertEqual({'name', 'index', 'total', 'day_in_stage',
+                          'days_left'}, set(out['stage']))
+        # 프로그램은 이름만 — 버전·단계수는 프로그램을 고르는 화면의 값이다.
+        self.assertEqual('콩', out['program_name'])
+        self.assertNotIn('program', out)
+
+    def test_guidance_survives_because_a_note_is_keyed_off_it(self):
+        """list_plots 는 "지침이 하나라도 있는가" 로 안내문을 가른다. 요약이
+        guidance 를 지우면 그 판정이 뒤집혀 안내가 거짓이 된다."""
+        d = self._full()
+        d['stage']['guidance'] = '꼬투리가 마르면 수확한다'
+        out = self._summarize(d)
+        self.assertEqual('꼬투리가 마르면 수확한다', out['stage']['guidance'])
+
+    def test_the_facility_split_reads_the_row_not_the_summary(self):
+        """시설/노지 분류는 `facility_uuid`·`source_kind` 로 하는데 **둘 다
+        요약에 실리지 않는다.** dict 를 보고 판정하면 시설 구획이 통째로 노지로
+        넘어가고, 아무 오류 없이 온실 작물이 노지 작물로 보고된다."""
+        src = _read(_TOOL_SERVICE)
+        body = src.split('def get_crop_status(', 1)[1].split('\n    @staticmethod', 1)[0]
+        split = body.split('def _in_facility(', 1)[1].split('\n\n', 1)[0]
+        self.assertIn('row.facility_uuid', split)
+        self.assertIn('row.source_kind', split)
+        self.assertNotIn("d.get('facility_uuid')", split)
+
+    def test_the_list_paths_summarize_and_the_detail_path_does_not(self):
+        """get_plot 까지 요약으로 접으면 단계 일정·치수를 볼 자리가 사라진다 —
+        목록이 얇아도 되는 이유가 상세가 남아 있다는 것이기 때문이다."""
+        src = _read(_TOOL_SERVICE)
+        for fn in ('get_crop_status', 'list_plots', 'get_plot_history'):
+            body = src.split('def %s(' % fn, 1)[1] \
+                      .split('\n    @staticmethod', 1)[0]
+            self.assertIn('summary=True', body, '%s 가 상세를 싣는다' % fn)
+        detail = src.split('def get_plot(', 1)[1] \
+                    .split('\n    @staticmethod', 1)[0]
+        self.assertNotIn('summary=True', detail)

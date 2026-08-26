@@ -2422,7 +2422,14 @@ class CycleMixin:
         if unmodeled:
             um_state = CoordinatorState(
                 prev_commands=dict(self._coord_state.prev_commands),
-                integral=integral, active_vars=active_vars)
+                integral=integral, active_vars=active_vars,
+                # ⚠ 사이클을 넘어 쌓이는 값은 **여기서도 이어 받아야** 한다.
+                #   빠뜨리면 매 사이클 0 에서 다시 세어 환기 우선의 인내가
+                #   영영 차지 않는다(= 냉난방에 넘기는 경로가 죽는다).
+                vent_first_held_s=getattr(
+                    self._coord_state, 'vent_first_held_s', 0.0) or 0.0,
+                deadzone_wrong_side=dict(getattr(
+                    self._coord_state, 'deadzone_wrong_side', None) or {}))
             um_cmds, um_new = coordinate(
                 situation=situation, profiles=unmodeled, state=um_state,
                 unique_id=uid, actuator_index=self._actuator_idx)
@@ -2433,7 +2440,13 @@ class CycleMixin:
             active_vars = um_new.active_vars
 
         return commands, CoordinatorState(
-            prev_commands=new_prev, integral=integral, active_vars=active_vars)
+            prev_commands=new_prev, integral=integral, active_vars=active_vars,
+            vent_first_held_s=(um_new.vent_first_held_s if unmodeled
+                               else (getattr(self._coord_state,
+                                             'vent_first_held_s', 0.0) or 0.0)),
+            deadzone_wrong_side=(um_new.deadzone_wrong_side if unmodeled
+                                 else dict(getattr(self._coord_state,
+                                           'deadzone_wrong_side', None) or {})))
 
     # ── 0.4: circulation_fan 독립 혼합 제어 ───────────────────────────────────
 

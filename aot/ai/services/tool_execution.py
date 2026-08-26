@@ -472,6 +472,79 @@ def _str_slots(obj, out, path=""):
             _str_slots(v, out, "%s[%d]" % (path, i))
 
 
+def _heaviest_column(lst):
+    """목록 항목들이 공유하는 키 중 **가장 무거운 컨테이너 열** → (키, 토큰).
+
+    떨어뜨릴 후보를 컨테이너(dict/list) 값으로 한정한다. 무거운 것은 늘 중첩
+    구조이고(단계 일정·타임라인·자식 노드·제어 사이클 요약), 스칼라는 짧은
+    데다 그 항목이 **무엇인지** 말하는 이름·식별자·날짜다. 스칼라까지 손대면
+    남은 행이 무엇인지 알 수 없어져, 행을 자른 것과 다를 바가 없어진다.
+
+    긴 문자열 하나가 대부분인 항목(문서·매뉴얼)은 여기 걸리지 않는다 —
+    컨테이너가 없어 None 이 나가고, 그 부류는 뒤쪽 문자열 절삭이 맡는다.
+    """
+    if len(lst) < 2 or not all(isinstance(it, dict) for it in lst):
+        return None
+    weights = {}
+    for item in lst:
+        for k, v in item.items():
+            if isinstance(v, (dict, list)):
+                weights[k] = weights.get(k, 0) + _estimate_tokens(
+                    json.dumps(v, ensure_ascii=False))
+    if not weights:
+        return None
+    k = max(weights, key=lambda x: weights[x])
+    return k, weights[k]
+
+
+def _thin_lists(result, target):
+    """상한을 넘긴 응답에서 목록의 **열**부터 줄인다 → {경로: [뺀 키…]}.
+
+    행을 자르면 남는 것은 "몇 건 중 몇 건" 이다. 실측(2026-08-26, 로컬
+    get_system_brief): 21,485 토큰을 캡에 태우자 공간 계층이 **루트 47개 중
+    1개**로 잘렸다 — 그 응답으로는 농장이 몇 개 대지로 나뉘는지조차 답할 수
+    없다. 같은 목록을 열로 줄이면 47개가 다 남고 각자의 이름·종류를 지킨다.
+    목록에서 나오는 질문은 대개 "무엇이 몇 개 있나" 라서, 잃는 쪽을 고른다면
+    행이 아니라 열이다.
+
+    **응답 전체를 놓고 고른다.** 목록 하나에 초과분 전체를 떠넘기면(행 자르기
+    가 그렇게 한다) 어느 목록도 열만으로는 예산에 못 들어와 전부 행 자르기로
+    떨어진다 — 실제로 그렇게 만들어 보고 나서야 알았다. 여러 목록이 초과분을
+    나눠 지면 셋 다 전 건을 지킬 수 있다.
+
+    열을 다 빼도 상한 아래로 못 내려가면 남은 몫은 호출부의 행 자르기가
+    맡는다. 그때 그 목록은 이미 얇아져 있으므로, 같은 상한 안에 **더 많은
+    행**이 남는다.
+    """
+    omitted = {}
+    for _ in range(24):
+        total = _estimate_tokens(json.dumps(result, ensure_ascii=False))
+        if total <= target:
+            break
+        slots = []
+        _list_slots(result, slots)
+        best = None
+        for parent, key, path, lst in slots:
+            col = _heaviest_column(lst)
+            if col and (best is None or col[1] > best[0]):
+                best = (col[1], parent, key, path, lst, col[0])
+        if best is None:
+            break
+        _, parent, key, path, lst, col_key = best
+        for item in lst:
+            item.pop(col_key, None)
+        keys = omitted.setdefault(path, {"keys": [], "count": len(lst)})["keys"]
+        keys.append(col_key)
+        # 안내는 **누적**해서 다시 쓴다. 마지막에 뺀 것만 적으면 앞서 빠진
+        # 필드는 "원래 없던 값" 으로 읽힌다.
+        parent[key + "_fields_omitted"] = (
+            "all %d entries are here, but these fields were dropped from each "
+            "to fit the client's size limit: %s. They exist — a field missing "
+            "here says nothing about the entry. Ask for a single entry (or a "
+            "narrower scope) to see them." % (len(lst), ", ".join(keys)))
+    return omitted
+
+
 def _cap_result(result, tool_name, max_tokens=None):
     """응답을 클라이언트 상한 아래로 줄인다. 이미 작으면 그대로 돌려준다.
 
@@ -496,7 +569,24 @@ def _cap_result(result, tool_name, max_tokens=None):
     # 딱 맞추면 그 안내를 붙이는 순간 다시 넘을 수 있으므로 자리를 비워 둔다.
     target = max(1, max_tokens - 400)
     dropped = []
+
+    # 열을 먼저 줄인다. 여기서 상한 아래로 내려가면 행은 하나도 안 잘리고,
+    # 못 내려가더라도 목록이 얇아진 만큼 아래 행 자르기가 더 많이 남긴다.
+    for path, info in _thin_lists(result, target).items():
+        # 열만 줄인 목록은 **전 건이 남아 있다** — kept 와 total 을 같이 적어
+        # 진단에서 "몇 건 중 몇 건" 과 한눈에 구분되게 한다.
+        dropped.append({"path": path, "kept": info["count"],
+                        "total": info["count"],
+                        "fields_dropped": info["keys"]})
+    total = _estimate_tokens(json.dumps(result, ensure_ascii=False))
+
     for _ in range(24):
+        # 들어오자마자 확인한다. 예전에는 이 검사가 **루프 끝**에만 있었다 —
+        # 진입 시점이 늘 초과 상태였기 때문이다. 이제 열 자르기가 앞서 돌면서
+        # 이미 상한 아래로 내려놓을 수 있고, 그때 이 검사가 없으면 자를 필요가
+        # 없는 목록에서 행이 한 건 잘려 나간다.
+        if total <= target:
+            break
         slots = []
         _list_slots(result, slots)
         if not slots:
@@ -511,6 +601,7 @@ def _cap_result(result, tool_name, max_tokens=None):
         # 계층은 첫 노드 하나가 나머지 40개를 합친 것보다 크다), 평균으로 셈하면
         # 한 번에 두어 개씩만 줄어 반복 상한에 걸린 채 여전히 큰 응답이 나간다.
         budget = max(0, lst_tokens - excess)
+
         acc = 0
         keep = 0
         for item in lst:
@@ -523,14 +614,20 @@ def _cap_result(result, tool_name, max_tokens=None):
 
         # 같은 목록을 두 번 자르게 되더라도 **처음 개수**를 유지한다. 잘린
         # 길이를 total 로 다시 쓰면 "36건 중 34건" 처럼 원래 규모가 사라진다.
-        original_len = next((d["total"] for d in dropped if d["path"] == path), len(lst))
+        prev = next((d for d in dropped if d["path"] == path), None)
+        original_len = (prev or {}).get("total", len(lst))
         parent[key] = lst[:keep]
         parent[key + "_truncated"] = (
             "showing first %d of %d — the response exceeded the client's size limit. "
             "Re-run with a narrower scope (a filter, a limit, or a single target) "
             "to see the rest." % (keep, original_len))
         dropped = [d for d in dropped if d["path"] != path]
-        dropped.append({"path": path, "kept": keep, "total": original_len})
+        entry = {"path": path, "kept": keep, "total": original_len}
+        # 이 목록을 앞서 열로도 줄였다면 그 사실을 잃지 않는다 — 진단에서
+        # "왜 이 항목에 이 필드가 없나" 의 답이 거기 있다.
+        if prev and prev.get("fields_dropped"):
+            entry["fields_dropped"] = prev["fields_dropped"]
+        dropped.append(entry)
 
         text = json.dumps(result, ensure_ascii=False)
         total = _estimate_tokens(text)
@@ -568,14 +665,30 @@ def _cap_result(result, tool_name, max_tokens=None):
                 break
 
     if dropped:
+        # 무엇을 잃었는지에 따라 말이 달라야 한다. 열만 줄인 응답은 **목록이
+        # 온전하다** — 거기에 "INCOMPLETE, 좁혀서 다시 부르라" 고 하면 모델은
+        # 없는 항목을 찾아 같은 조회를 되풀이하고, 그 재조회는 같은 상한에
+        # 걸려 또 같은 답을 받는다. 반대로 행이나 본문이 잘렸을 때 이 경고를
+        # 빼면 모델이 일부를 전부로 읽는다 — 그쪽이 훨씬 위험하므로 판정이
+        # 애매하면 경고를 남기는 쪽으로 기운다.
+        rows_cut = any(d["kept"] != d["total"] for d in dropped if "kept" in d)
+        text_cut = any("kept_chars" in d for d in dropped)
+        if rows_cut or text_cut:
+            advice = ("This result is INCOMPLETE. Do not describe it as the full "
+                      "picture — narrow the query and call again for the rest.")
+        else:
+            advice = ("Every list here is COMPLETE — no entries were dropped. "
+                      "Only some FIELDS were removed from each entry to fit the "
+                      "size limit (see the '*_fields_omitted' notes for which). "
+                      "Do not re-query looking for missing entries; ask for a "
+                      "single entry if you need the dropped fields.")
         result["_truncated"] = {
             "reason": "response exceeded the MCP response size limit",
             "estimated_tokens_before": original,
             "estimated_tokens_after": total,
             "limit": max_tokens,
             "lists_trimmed": dropped,
-            "advice": ("This result is INCOMPLETE. Do not describe it as the full "
-                       "picture — narrow the query and call again for the rest."),
+            "advice": advice,
         }
     return result
 

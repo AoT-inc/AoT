@@ -1994,12 +1994,12 @@ _MCP_TOOL_PAYLOADS: List[Dict[str, Any]] = [
     },
     {
         "tool_name": "get_spatial_tree",
-        "description": "Retrieve the spatial hierarchy (Site > Zone > Device) tree structure with optional depth and type filtering.",
+        "description": "Retrieve the spatial hierarchy (Site > Zone > Device) tree structure with optional depth and type filtering. Answers how the farm is divided; to find a device by name use get_device_list or search_devices instead.",
         "input_schema": {
             "type": "object",
             "properties": {
-                "depth": {"type": "integer", "description": "Maximum tree depth to return. Default: 2"},
-                "filter_type": {"type": "string", "description": "Filter nodes by type (e.g. 'zone', 'device'). Optional."}
+                "depth": {"type": "integer", "description": "Maximum tree depth, root = 1. Default 2 (sites and their zones). Use 3+ to expand devices, 0 for no limit. Cut nodes carry 'children_omitted' — a per-type count of what is below them."},
+                "filter_type": {"type": "string", "description": "Filter nodes by type (e.g. 'zone', 'device'). Optional. When given, depth is not applied — otherwise the matches could be cut away before they are found."}
             }
         }
     },

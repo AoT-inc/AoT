@@ -219,7 +219,14 @@ def main(argv=None):
             except Exception as exc:                            # noqa: BLE001
                 sys.stderr.write('%s 조회 실패: %s\n' % (cc.name, exc))
                 return 2
-            result[cc.name] = rows(cycles, actuators, LC, args.limit)
+            # ⚠ **이름으로 키잉하지 말 것.** 이름은 유일하지 않다 —
+            #   같은 이름의 코디네이터가 둘이면 뒤엣것이 앞엣것을 덮어써,
+            #   살아 있는 코디네이터의 로그가 통째로 사라지고 화면에는
+            #   '기록 없음' 만 남는다(2026-08-26 실제로 영양 육묘장이
+            #   그랬다 — 비활성 사본이 활성 쪽을 가렸다).
+            label = '%s (%s%s)' % (cc.name, cc.unique_id[:8],
+                                   '' if cc.is_activated else ', 비활성')
+            result[label] = rows(cycles, actuators, LC, args.limit)
 
     if args.json:
         sys.__stdout__.write(json.dumps(result, ensure_ascii=False, indent=1) + '\n')

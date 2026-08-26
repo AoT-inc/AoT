@@ -677,14 +677,61 @@ class AoTDataToolService:
         return {"drawer": drawer, "description": known[drawer],
                 "count": len(tools), "tools": tools}
 
+    # @ANCHOR: SPATIAL_TREE_DEPTH
+    # 깊이 가지치기. **새 노드를 만든다 — 제자리에서 고치면 안 된다.**
+    # `get_spatial_hierarchy` 는 캐시 미스일 때 캐시에 넣은 바로 그 객체를
+    # 돌려주므로(ai_context_service 의 `_SPATIAL_CACHE = hierarchy`), 반환값을
+    # 잘라내면 잘린 트리가 캐시에 남아 그 다음 호출부터 전체를 못 본다.
+    @staticmethod
+    def _prune_depth(nodes, depth):
+        """`depth` 단계까지만 남기고, 잘라낸 자리에 무엇이 있었는지 적는다.
+
+        빈 `children` 만 남기면 "이 구역에는 아무것도 없다" 로 읽힌다 — 잘린
+        것과 없는 것은 다르고, 그 차이를 응답이 말하지 않으면 모델이 대신
+        지어낸다. 그래서 자손을 **종류별로 세어** 남긴다: "이 구역 아래
+        장치 5개" 를 알면 더 파야 할지 스스로 판단할 수 있다.
+        """
+        def descendants_by_type(node):
+            counts = {}
+            for child in node.get('children') or []:
+                t = child.get('type') or 'unknown'
+                counts[t] = counts.get(t, 0) + 1
+                for t2, n in descendants_by_type(child).items():
+                    counts[t2] = counts.get(t2, 0) + n
+            return counts
+
+        def cut(node, level):
+            children = node.get('children') or []
+            if level >= depth:
+                if not children:
+                    return node
+                out = dict(node, children=[])
+                out['children_omitted'] = descendants_by_type(node)
+                return out
+            return dict(node, children=[cut(c, level + 1) for c in children])
+
+        return [cut(n, 1) for n in nodes]
+
     @staticmethod
     def get_spatial_tree(depth=2, filter_type=None):
-        """
-        시스템의 공간 계층 구조를 트리 형태로 반환합니다.
+        """[읽기전용] 공간 계층(대지 > 구역 > 장치) 트리.
+
+        `depth` 는 **최대 깊이**다(루트가 1). 기본 2 — 대지와 그 바로 아래
+        구역까지다. 장치까지 펴려면 3 이상, 전부 보려면 0 을 준다.
+
+        기본값을 얕게 두는 이유. 이 트리는 농장이 커질수록 장치 노드가
+        대부분을 차지한다(실측 2026-08-26: 노드 154개 중 68개가 장치, 전체
+        13,978 토큰 중 6,859). 그런데 장치를 이름·종류로 찾는 일은
+        `get_device_list`/`search_devices` 가 더 잘한다 — 이 도구가 답하는
+        질문은 "이 농장이 어떻게 나뉘어 있나" 다. 깊이를 다 펴서 응답 상한을
+        넘기면 캡이 트리를 잘라 **루트 47개 중 2개**만 나가고, 그러면 구조
+        자체를 못 본다.
+
+        `filter_type` 을 주면 깊이로 자르지 않는다. 특정 종류를 찾아 달라는
+        요청인데 깊이에서 먼저 끊으면 찾을 것이 사라진다.
         """
         try:
             full_tree = AIContextService.get_spatial_hierarchy()
-            # depth 에 따른 가지치기는 추후 복잡도에 따라 구현 가능
             if filter_type:
                 # 모든 노드가 "children" 키를 항상 갖고 있어(빈 리스트라도)
                 # 예전 조건 `c.get('type') == filter_type or 'children' in c`
@@ -703,7 +750,29 @@ class AoTDataToolService:
                     return None
                 full_tree = [n for n in (filter_node(root) for root in full_tree) if n is not None]
 
-            return {"hierarchy": full_tree}
+            out = {"hierarchy": full_tree}
+            try:
+                lvl = int(depth)
+            except (TypeError, ValueError):
+                lvl = 2
+            # 0(과 음수)은 "제한 없음". `if depth:` 로 쓰면 0 이 falsy 라
+            # 기본값으로 되살아나 끄는 수단이 조용히 사라진다.
+            if lvl > 0 and not filter_type:
+                full_tree = AoTDataToolService._prune_depth(full_tree, lvl)
+                out["hierarchy"] = full_tree
+                if any('children_omitted' in n or
+                       any('children_omitted' in c
+                           for c in (n.get('children') or []))
+                       for n in full_tree):
+                    out["depth"] = lvl
+                    out["_reading"] = (
+                        "This tree is cut at depth %d. A node's "
+                        "'children_omitted' counts what sits below it by type — "
+                        "those entries exist, they are just not expanded here. "
+                        "Call get_spatial_tree with a larger depth (0 = no "
+                        "limit) for the rest, or get_device_list / "
+                        "search_devices to find devices by name." % lvl)
+            return out
         except Exception as e:
             return {"error": str(e)}
 
@@ -8213,18 +8282,6 @@ class AoTDataToolService:
             # 노지 구획(GeoPlot) — 시설 밖에 심긴 것은 위 두 소스에 **없다**.
             # env_coordinator 도 facility_registry 도 시설 단위라, 여기를 더하지
             # 않으면 AI 는 노지 구역에 대해 "작물 없음" 으로 답한다.
-            plots = []
-            try:
-                from aot.databases.models import GeoMap
-                from aot.aot_flask.geo import plot_context
-                for m in GeoMap.query.all():
-                    for row in plot_context.active_plots(m.unique_id):
-                        d = AoTDataToolService._plot_brief(row)
-                        d['map_id'] = m.unique_id
-                        plots.append(d)
-            except Exception as exc:
-                logger.warning("get_crop_status: 식생 구획 조회 실패: %s", exc)
-
             # 시설 구획은 노지가 아니다 — 이름을 섞으면 AI 가 온실 작물을
             # 노지로 읽는다. 판별 축이 **둘**이라는 것이 함정이다:
             #   - `facility_uuid` — 시설 구역에 직접 매단 구획(p6_39)
@@ -8233,15 +8290,43 @@ class AoTDataToolService:
             # 한쪽만 보면 나머지 절반이 조용히 노지로 분류된다.
             # `bays[].crop` 은 아직 살아 있어(폴백) 같은 작물이 facilities 와
             # 여기 양쪽에 보일 수 있다. 그 사실을 note 로 밝힌다.
-            def _in_facility(d):
-                return bool(d.get('facility_uuid')) or \
-                    d.get('source_kind') == 'bay_snapshot'
+            #
+            # 판정은 **행**으로 한다. 예전에는 `_plot_brief` 결과 dict 의
+            # `facility_uuid`/`source_kind` 를 봤는데, 그 둘은 화면 배선이라
+            # 목록용 요약 뷰에 실리지 않는다 — dict 를 보면 시설 구획이 통째로
+            # 노지로 넘어간다. 같은 값이 행에 그대로 있으므로 거기서 읽는다.
+            def _in_facility(row):
+                return bool(row.facility_uuid) or \
+                    row.source_kind == 'bay_snapshot'
 
-            bay_plots = [d for d in plots if _in_facility(d)]
-            open_plots = [d for d in plots if not _in_facility(d)]
+            open_plots, bay_plots = [], []
+            try:
+                from aot.databases.models import GeoMap
+                from aot.aot_flask.geo import plot_context
+                for m in GeoMap.query.all():
+                    for row in plot_context.active_plots(m.unique_id):
+                        # 브리프는 어디를 팔지 고르는 지도다 — 구획 상세는
+                        # get_plot 이 낸다. 상세를 행마다 실으면 상한을 넘고,
+                        # 넘으면 캡이 목록을 잘라 "31건 중 1건" 이 나간다.
+                        d = AoTDataToolService._plot_brief(row, summary=True)
+                        d['map_id'] = m.unique_id
+                        (bay_plots if _in_facility(row) else
+                         open_plots).append(d)
+            except Exception as exc:
+                logger.warning("get_crop_status: 식생 구획 조회 실패: %s", exc)
 
             result = {"status": "success", "count": len(rows), "facilities": rows,
                       "open_field_plots": open_plots, "plot_count": len(open_plots)}
+            if open_plots or bay_plots:
+                # 요약이라는 사실을 응답이 직접 말한다. 이것이 없으면 모델은
+                # 목록에 없는 필드를 "없는 값" 으로 읽고 — 단계 일정도 치수도
+                # 여기서는 빠져 있다 — 상세를 부르지 않은 채 그렇게 답한다.
+                result["plot_detail"] = (
+                    "Plots here are summaries: crop, place, period and current "
+                    "stage only. Stage schedule, timeline, dimensions and "
+                    "planting capacity are NOT in this response — call get_plot "
+                    "with the plot's unique_id for those. Absence of a field "
+                    "here does not mean the plot lacks it.")
             if bay_plots:
                 result["facility_bay_plots"] = bay_plots
                 result["facility_bay_plot_note"] = (
@@ -8252,11 +8337,11 @@ class AoTDataToolService:
                     "may still appear under 'facilities' because the legacy "
                     "bays[].crop field is kept until the migration is verified in "
                     "production — do not count it twice.")
-            if not rows and not plots:
+            if not rows and not open_plots and not bay_plots:
                 result["message"] = (
                     "No active env_coordinator carries crop information. Check whether an "
                     "environment-control coordinator is configured for the facility.")
-            elif not rows and plots:
+            elif not rows:
                 result["message"] = (
                     "No greenhouse crop info, but open-field vegetation plots exist — "
                     "see open_field_plots (crop, period, area). Use get_plot_history "
@@ -8780,11 +8865,76 @@ class AoTDataToolService:
     # 쓰기는 게이트웨이(plot_io)를 지나간다. 라우트가 하던 검증(VP-1~VP-6)
     # 을 여기서 다시 구현하지 않는다 — 두 벌이 되면 반드시 갈린다.
 
+    # @ANCHOR: PLOT_SUMMARY_VIEW
+    # 목록·브리프가 쓰는 **얇은** 구획 뷰.
+    #
+    # 왜. `_plot_brief` 는 지도 모달용 `plot_context.to_dict` 를 그대로 쓴다.
+    # 상세 하나를 그릴 때는 옳지만, 목록이 그것을 행 수만큼 실으면 응답이
+    # 사람 손을 떠난다 — 실측(2026-08-26, 로컬): get_system_brief 79,707 토큰
+    # 중 crops 가 60,480(75.9%)이고, 그 안이 구획 36건이었다. 항목당 1,437
+    # (노지) ~ 3,081(시설) 토큰. 구획이 10건만 있어도 15,000 상한을 넘는다.
+    #
+    # 항목 안을 다시 가르면 stage_schedule 35.7% + timeline 25.2% + stage
+    # 15.4% = 76% 로, **같은 단계 정보가 세 벌**이었다. 나머지도 대부분
+    # 화면 배선이다(editable·removable·color·facility_bays·source_ref).
+    # LLM 이 그것으로 답하는 질문은 없다.
+    #
+    # 그래서 여기서 고르는 기준은 하나다: **목록에서 답할 수 있어야 하는
+    # 질문에 쓰이는가.** 무엇이 어디에 얼마나 심겼고(subject/variety/zone/
+    # area), 언제 심어 지금 어느 단계이며(started_on/stage), 언제 끝나는가
+    # (expected_end). 그보다 깊은 것은 `get_plot` 이 낸다 — 목록은 어디를
+    # 팔지 고르는 자리이지 파는 자리가 아니다.
+    #
+    # ⚠ 키를 더할 때는 "이것이 없으면 목록만 보고 답할 수 없는 질문이
+    # 무엇인가" 에 답할 수 있어야 한다. 답이 "상세를 열면 된다" 면 넣지 않는다.
+    _PLOT_SUMMARY_KEYS = (
+        # 상세로 넘어가는 열쇠. 이것만은 뺄 수 없다(get_plot 의 plot_id).
+        'unique_id',
+        'name', 'kind', 'subject', 'variety',
+        # 위치. uuid 가 아니라 이름으로 낸다 — 사람에게 그대로 옮길 수 있고,
+        # 도구로 넘길 id 가 필요하면 resolve_target 이 이름에서 찾아 준다.
+        'zone_name', 'zone_kind', 'facility_name', 'bay_name', 'allocation',
+        'area_m2',
+        # 기간. 달력만 보는 값이라 목록에서도 항상 답에 쓰인다.
+        'started_on', 'days_since_planted', 'planned', 'days_until_start',
+        'expected_end_on', 'days_to_expected_end',
+        'active', 'ended_on', 'ended_reason',
+        # 센서는 부른 쪽이 with_sensors 로 **명시적으로 요청했을 때만** 실린다.
+        # 요약이라고 지우면 list_plots 의 sensors.source 안내가 거짓이 된다.
+        'sensors',
+    )
+
+    # stage 는 통째로 싣지 않는다 — 목록에서 쓰는 것은 "지금 어느 단계이고
+    # 얼마 남았나" 뿐이다. targets/resources 는 상세의 몫이다.
+    # guidance 는 값이 있을 때만 남긴다: list_plots 가 "지침이 하나라도
+    # 있는가" 로 안내문을 갈라 내므로, 지우면 그 판정이 뒤집힌다.
+    _PLOT_SUMMARY_STAGE_KEYS = ('name', 'index', 'total', 'day_in_stage',
+                                'days_left', 'guidance')
+
+    @staticmethod
+    def _plot_summary(d):
+        """`_plot_brief` 결과 → 목록용 얇은 dict. 원본은 건드리지 않는다."""
+        out = {k: d[k] for k in AoTDataToolService._PLOT_SUMMARY_KEYS
+               if d.get(k) is not None}
+        st = d.get('stage')
+        if isinstance(st, dict):
+            thin = {k: st[k] for k in AoTDataToolService._PLOT_SUMMARY_STAGE_KEYS
+                    if st.get(k) is not None}
+            if thin:
+                out['stage'] = thin
+        # 프로그램은 이름만. 버전·단계수·usable_for_control 은 프로그램을
+        # 고르는 화면의 값이지, 구획 목록을 읽는 값이 아니다.
+        prog = d.get('program')
+        if isinstance(prog, dict) and prog.get('name'):
+            out['program_name'] = prog['name']
+        return out
+
     @staticmethod
     def _plot_brief(row, with_sensors=False, row_spacing_cm=None,
                         plant_spacing_cm=None, edge_margin_cm=None,
                         bed_pitch_cm=None, rows_per_bed=None,
-                        containers=None, markers=None, with_valves=None):
+                        containers=None, markers=None, with_valves=None,
+                        summary=False):
         from aot.aot_flask.geo import plot_context
         # with_dims=False 로 못 박는다 — 아래에서 `dimensions` 키로 직접 싣기
         # 때문이다(그쪽은 with_sensors 와 무관하게 **항상** 나가야 한다).
@@ -8807,6 +8957,13 @@ class AoTDataToolService:
         # `dimensions`/`capacity_estimate` 를 **직접** 부르므로 그 방어를
         # 우회한다. 새 파생값을 여기 얹을 때도 이 분기를 먼저 볼 것.
         if not row.has_own_geometry():
+            # 목록은 여기서 끝낸다. 아래 둘은 **구획마다** 붙는데, 하나는
+            # 조회를 한 번씩 더 하고(facility_control) 하나는 같은 문장을
+            # 행 수만큼 복사한다(scale_unavailable, 건당 60여 토큰). 목록의
+            # 안내는 항목이 아니라 리스트에 한 번 붙어야 한다 — 그 자리는
+            # get_crop_status 의 facility_bay_plot_note 다.
+            if summary:
+                return AoTDataToolService._plot_summary(d)
             # 노지 구획의 `valves` 자리다. 시설 안에서는 밸브 하나가 아니라
             # 코디네이터가 환경을 맡으므로 그쪽을 낸다(읽기 전용).
             try:
@@ -8821,6 +8978,13 @@ class AoTDataToolService:
                 "the actual layout (bed count, rows, tiers) instead of "
                 "estimating from area.")
             return d
+
+        # 목록에서는 치수도 식재량도 세지 않는다. 치수는 구획마다 최소회전
+        # 외접사각형을 구하는 기하 계산이고(to_dict 가 with_dims 를 목록에서
+        # 끄는 것과 같은 이유), 식재량은 사용자가 간격을 준 조회 — 곧
+        # get_plot — 에서만 성립한다.
+        if summary:
+            return AoTDataToolService._plot_summary(d)
 
         # 면적 하나만 남기면 방향이 있는 질문("몇 줄 들어가나")에 답할 수
         # 없다. 좌표를 되살리는 대신 **계산된 요약 두 숫자**를 얹는다.
@@ -9678,13 +9842,20 @@ class AoTDataToolService:
                 _c, _mk = _cached(r.geo_id)
                 items.append(AoTDataToolService._plot_brief(
                     r, with_sensors=with_sensors, with_valves=False,
-                    containers=_c, markers=_mk))
+                    containers=_c, markers=_mk, summary=True))
             out = {"count": len(items), "plots": items,
                    "note": ("Only plots currently growing are listed. "
                             "Pass include_ended=true for history.")
                            if not include_ended else None}
             # get_plot 과 같은 규칙이되, 목록에서 실제로 걸리는 것만 싣는다.
             notes = []
+            if items:
+                notes.append(
+                    "Each plot here is a summary: crop, place, period and "
+                    "current stage. Stage schedule, timeline, dimensions and "
+                    "planting capacity are not included — call get_plot with a "
+                    "plot's unique_id for those. A field missing here does not "
+                    "mean the plot lacks it.")
             if with_sensors and any(
                     (p.get('sensors') or {}).get('source') == 'zone' for p in items):
                 notes.append(
@@ -10059,7 +10230,7 @@ class AoTDataToolService:
             pairs = plot_context.plots_overlapping(geo_id, geom)
             items = []
             for row, overlap in pairs:
-                d = AoTDataToolService._plot_brief(row)
+                d = AoTDataToolService._plot_brief(row, summary=True)
                 d['overlap_m2'] = round(overlap, 1)
                 items.append(d)
             return {"count": len(items), "history": items}

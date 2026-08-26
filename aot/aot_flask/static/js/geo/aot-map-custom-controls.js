@@ -1064,17 +1064,16 @@
                  * 바뀐다 — 그것이 번역을 켰을 때만 보이던 패널 깜빡임이다
                  * (실측: 원문 `イチゴ`·`バルブ1` 이 찍혔다가 `딸기`·`밸브1` 로).
                  *
-                 * 값이 하나만 바뀌어도 행은 통째로 다시 그려지므로 이름 열 개가
-                 * 매번 함께 깜빡였다. 여기서 번역본을 넣으면 다시 그려도 이름은
-                 * 처음부터 최종 모습이라 깜빡일 것이 없다 — 번역기의 관찰자도
-                 * 되쓸 것이 없어 깨어나지 않는다.
+                 * 값이 하나만 바뀌어도 행은 통째로 다시 그려지므로(키가 값까지
+                 * 포함한다) 이름 열 개가 매번 함께 깜빡였다. 여기서 번역본을 넣으면
+                 * 다시 그려도 이름은 처음부터 최종 모습이라 깜빡일 것이 없다.
                  *
                  * ⚠ `title` 속성에는 **원문**을 남긴다. 번역 사전에 없는 이름은
                  * 그대로 나오는데, 툴팁까지 번역본으로 덮으면 원문을 확인할 길이
-                 * 사라진다.
+                 * 사라진다 — 번역기 자신도 원문을 되돌릴 수 있게 기록해 둔다.
                  *
-                 * 번역이 꺼져 있거나 사전에 없으면 원문을 그대로 돌려주므로 이
-                 * 호출은 그때 아무 일도 하지 않는다. */
+                 * 번역이 꺼져 있거나(`isOff`) 사전에 없으면 원문을 그대로 돌려주므로
+                 * 이 호출은 그때 아무 일도 하지 않는다. */
                 function _nameSum(s) {
                     var t = s;
                     try {
@@ -1084,6 +1083,12 @@
                     } catch (e) { t = s; }
                     return _escSum(t);
                 }
+
+                // Last rendered content, so a repeat call with identical data (a poll
+                // tick or a moveend landing back on the same facility) is a no-op
+                // instead of tearing down and rebuilding the row — that rebuild is
+                // what makes the panel look like it "trembles" while panning.
+                let _lastSummaryKey = null;
 
                 return {
                     panel: panel,
@@ -1096,6 +1101,14 @@
                     // are no measurement items either).
                     setSummary: function(items, title) {
                         const has = Array.isArray(items) && items.length > 0;
+                        const key = has
+                            ? String(title || '') + '|' + items.map(function(it) {
+                                return it.label + ':' + (it.value != null ? it.value : (it.on ? '1' : '0'));
+                            }).join(',')
+                            : '';
+                        if (key === _lastSummaryKey) return;
+                        _lastSummaryKey = key;
+
                         panel.classList.toggle('has-summary', has);
                         summaryRow.style.display = has ? '' : 'none';
                         if (!has) {
@@ -1132,6 +1145,22 @@
                         // user's explicit hide wins over summary auto-show.
                         if (panel.dataset.aotHidden !== '1') panel.style.display = '';
                     },
+                    // 값이 그대로면 DOM 을 건드리지 않는다.
+                    //
+                    // `innerText` 대입은 **같은 글자를 넣어도** 기존 텍스트 노드를
+                    // 버리고 새로 만든다. 이 패널은 주기적으로(기본 refreshSeconds)
+                    // 항목마다 한 번씩 불리므로, 값이 안 바뀐 사이클에도 항목 수만큼
+                    // 교체가 일어난다 — 실측(Kumamoto, 40초): 값 칸에서 childList
+                    // 변경 4건이 그것이었다.
+                    //
+                    // 눈에 띄는 깜빡임이 아니더라도 공짜가 아니다: 이름 번역
+                    // (`aot-user-i18n.js`)이 MutationObserver 로 document.body 를
+                    // 보고 있어서, 의미 없는 변경 하나하나가 그 관찰자를 깨우고
+                    // 서브트리를 다시 훑게 만든다.
+                    //
+                    // 마지막으로 **쓴 값**을 기억해 견준다(DOM 을 읽지 않는다) —
+                    // 숫자 칸은 번역 대상이 아니지만, 규칙을 한 가지로 두는 편이
+                    // 나중에 번역되는 칸이 생겨도 안전하다.
                     updateValue: function(id, value, unit) {
                         const entry = items[id];
                         if (!entry) return;
