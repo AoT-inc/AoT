@@ -2236,6 +2236,65 @@ def api_facility_runtime(facility_uuid):
         _dc = None
         all_states = {}
 
+    _RUN_CACHE_TTL = 120.0     # 초. 마지막 작동은 초 단위로 바뀌지 않는다.
+    _run_cache = getattr(api_facility_runtime, '_run_cache', None)
+    if _run_cache is None:
+        _run_cache = {}
+        api_facility_runtime._run_cache = _run_cache
+
+    _DUTY_BASELINE_DAYS = 7    # 비교 대상. 한 주면 요일 주기(주말 관수 등)를 담는다.
+
+    def _history_cached(uuid, want_duty):
+        """{'last_run_at', 'duty_24h_s', 'duty_avg_s'} — 프로세스 캐시.
+
+        **on/off 장치의 "얼마나" 는 시간축에만 있다.** 지금 켜졌다/꺼졌다는 0
+        아니면 100 이라, 그것을 출력 %로 그리면 비례 장치의 개도와 같은 모양이
+        되어 "절반쯤 돌고 있다" 같은 없는 뜻이 생긴다.
+
+        ⚠ 그런데 **"24시간 중 0.6시간" 도 그 자체로는 아무 말을 하지 않는다.**
+          난방기의 하루 0.6시간은 여름이면 흔한 일이고 겨울이면 고장 신호다.
+          24시간은 비교 기준이 아니라 그냥 하루의 길이다(2026-08-26 지적).
+          기준은 **그 장치 자신의 최근 실적**이어야 한다 —
+
+              평소(최근 7일 일평균)  ·  가장 많이 돈 날(그 기간 최대)
+
+          그래야 "평소보다 덜 돈다" 를 화면이 말할 수 있다.
+
+        ⚠ 오늘(진행 중인 날)은 **평균·최대에서 뺀다.** 아직 안 끝난 하루를
+          지난 날들과 같은 무게로 섞으면 기준이 아침마다 낮아진다 — 그러면
+          "평소보다 많다" 가 오후에 저절로 참이 된다.
+
+        ⚠ 비례 장치(개도·PWM)에는 계산하지 않는다. 그쪽은 지금 개도가 이미
+          "얼마나" 이고, 여기서까지 이력을 캐면 조회만 늘어난다.
+
+        한 캐시 항목에 함께 담는다. 따로 두면 TTL 이 어긋나 같은 줄의 값과
+        기준이 서로 다른 시점을 가리킨다.
+        """
+        now = _time.time()
+        hit = _run_cache.get(uuid)
+        if hit and (now - hit[0]) < _RUN_CACHE_TTL and (hit[1].get('duty_24h_s')
+                                                        is not None
+                                                        or not want_duty):
+            return hit[1]
+        rec = {'last_run_at': None, 'duty_24h_s': None, 'duty_avg_s': None}
+        try:
+            from aot.utils import runtime as _rt
+            rec['last_run_at'] = _rt.get_started_at(uuid, 0, lookback_days=30)
+            if want_duty:
+                rec['duty_24h_s'] = _rt.get_operational_seconds(uuid, 86400, 0)
+                # 오늘까지 포함해 받고 **마지막 버킷(진행 중인 하루)을 버린다.**
+                daily = _rt.get_daily_operational_seconds(
+                    uuid, _DUTY_BASELINE_DAYS + 1, 0)
+                past = daily[:-1] if daily else []
+                # 하루치로는 "평소" 라고 부를 수 없다. 근거가 없으면 기준을
+                # 만들지 않는다 — 화면은 기준 없이 시간만 적는다.
+                if len(past) >= 2:
+                    rec['duty_avg_s'] = sum(past) / len(past)
+        except Exception:
+            pass
+        _run_cache[uuid] = (now, rec)
+        return rec
+
     def _get_target_pct(uuid):
         """Return actuator_paired's (last_target_pct, last_target_source). (None, None) if absent.
 
@@ -2321,7 +2380,25 @@ def api_facility_runtime(facility_uuid):
                     pct = 100.0 - abs(pct)
 
                 last_pct, last_src = _get_target_pct(uuid) if ctrl_type == 'value' else (None, None)
+                # ── 마지막 작동 시각 (2026-08-26) ──────────────────────────
+                # 예전에는 `last_irrigation` 만 있어서 **관수 계열 한 대만**
+                # "마지막 작동" 이 보였다 — 같은 목록의 다른 장치는 그 칸이
+                # 비어 있어, 사용자는 "왜 이것만 나오나" 를 묻게 됐다.
+                # 쉬고 있는 장치일수록 그 값이 필요하다(지금 0% 인 것이 방금
+                # 껐기 때문인지 며칠째 안 돈 것인지가 갈린다).
+                #
+                # ⚠ 조회는 **한 번만** 하고 캐시한다. 이 응답은 주기 폴링을
+                # 받으므로 장치 수만큼 InfluxDB 를 매번 때리면 폴링 비용이
+                # 장치 수에 비례해 커진다. 마지막 작동은 초 단위로 바뀌는 값이
+                # 아니라 캐시가 값의 뜻을 해치지 않는다.
+                _hist = _history_cached(uuid, ctrl_type == 'binary')
                 actuator_states[slot_key] = {
+                    'last_run_at':        _hist['last_run_at'],
+                    # on/off 장치만. 비례 장치는 지금 개도가 곧 "얼마나" 다.
+                    # 기준(평소·최대)이 없으면 None — 화면이 없는 기준을
+                    # 지어내지 않도록 24시간 같은 임의의 축을 주지 않는다.
+                    'duty_24h_s':         _hist['duty_24h_s'],
+                    'duty_avg_s':         _hist['duty_avg_s'],
                     'output_uuid':        uuid,
                     'name':               label,
                     'on':                 on_val,

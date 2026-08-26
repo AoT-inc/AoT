@@ -1188,12 +1188,15 @@ class CycleMixin:
         if self.photosynth_mode_enabled and internal.get('light') is not None:
             from aot.functions.utils.env_control.photosynthesis import (
                 boost_limiting_priority, decay_priorities,
-                find_limiting_factor,
+                find_limiting_factor, ppfd_from_wm2,
             )
             crop = self._crop_params()
             vpd_now = internal.get('VPD') or 0.0
             limiting = find_limiting_factor(
-                L=internal.get('light', 0.0),
+                # ⚠ 단위 경계. internal['light'] 는 W/m²(전천일사)인데 crop 의
+                # K_L 은 µmol/m²/s 다 — 변환 없이 넣으면 다른 단위를 같은 축에서
+                # 비교하게 되고, 광이 제한 인자인지 아닌지가 통째로 뒤집힌다.
+                L=ppfd_from_wm2(internal.get('light', 0.0)),
                 CO2=internal.get('CO2', 400.0),
                 T=internal.get('T', 22.0),
                 VPD=vpd_now,
@@ -1618,6 +1621,10 @@ class CycleMixin:
                 cmd_list.append({
                     'slot_key': p.slot_key or p.actuator_id[:8],
                     'kind':     p.kind,
+                    # 개구부의 유효 면적 — 화면이 장치마다 "열린/전체 면적" 을
+                    # 3행에 적는다(시설 합계와 같은 모양). 없으면 안 적는다.
+                    'area_m2':  (round(float(p.area_m2), 1)
+                                 if getattr(p, 'area_m2', None) else None),
                     'pct':      round(pct, 1),
                     'reason':   (int(getattr(src, 'reason', 0))
                                  if src is not None else None),
@@ -1661,9 +1668,12 @@ class CycleMixin:
         photo = {'enabled': bool(getattr(self, 'photosynth_mode_enabled', False))}
         try:
             from aot.functions.utils.env_control.photosynthesis import (
-                estimate_net_photosynthesis)
+                estimate_net_photosynthesis, ppfd_from_wm2)
             crop = self._crop_params()
-            L   = internal.get('light')
+            # 화면이 이 값을 µmol/m²/s 목표(K_L) 옆에 나란히 놓으므로 **여기서**
+            # 바꿔 싣는다. 요약이 W/m² 를 담고 화면이 µmol 라벨을 붙이던 것이
+            # 2026-08-26 에 발견된 문제다.
+            L   = ppfd_from_wm2(internal.get('light'))
             CO2 = internal.get('CO2')
             T   = internal.get('T')
             VPD = internal.get('VPD')

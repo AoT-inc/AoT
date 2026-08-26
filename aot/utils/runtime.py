@@ -164,6 +164,44 @@ def get_operational_seconds(device_unique_id, past_seconds, channel_id=0):
         logger.error(f"get_operational_seconds error for {device_unique_id}: {e}")
         return 0
 
+def get_daily_operational_seconds(device_unique_id, days=7, channel_id=0):
+    """최근 `days` 일의 **하루치 작동 초** 목록 → [초, 초, …].
+
+    "이 장치가 오늘 0.6시간 돌았다" 는 그 자체로는 많은지 적은지 말하지 않는다.
+    난방기의 하루 0.6시간은 여름이면 흔한 일이고 겨울이면 고장 신호다. 비교할
+    기준은 **그 장치 자신의 최근 실적**이다 — 평소 얼마나 돌았고, 가장 많이 돈
+    날이 얼마였나.
+
+    ⚠ 창마다 **합(sum)** 이어야 한다. 평균으로 내면 "한 번 켤 때 평균 몇 초"
+      라는 전혀 다른 값이 나오는데, 단위가 같아서 틀린 줄 모른다.
+
+    기록이 없는 날은 **빠진다**(aggregateWindow 의 빈 버킷은 걸러진다). 그래서
+    돌려주는 길이가 `days` 보다 짧을 수 있고, 그것은 "그날 안 돌았다" 가 아니라
+    "그날 기록이 없다" 이다 — 판단은 부르는 쪽이 한다.
+    """
+    try:
+        ch_index = _resolve_channel_index(device_unique_id, channel_id)
+        if ch_index is None:
+            ch_index = 0
+        data = query_string(
+            's', device_unique_id,
+            measure='duration_time',
+            channel=ch_index,
+            past_sec=int(days) * 86400,
+            group_sec=86400,
+            group_fn='sum')
+        out = []
+        if data:
+            for table in data:
+                for row in table.records:
+                    val = row.values.get('_value')
+                    if val is not None:
+                        out.append(float(val))
+        return out
+    except Exception as e:
+        logger.error(f"get_daily_operational_seconds error for {device_unique_id}: {e}")
+        return []
+
 def _resolve_channel_index(device_unique_id, channel_id):
     """
     채널 ID(숫자 또는 UUID)를 채널 인덱스(int)로 변환합니다.

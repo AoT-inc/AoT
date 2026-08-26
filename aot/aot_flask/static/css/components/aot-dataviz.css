@@ -353,6 +353,20 @@
 .aot-viz-scale > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .aot-viz-scale > span:nth-child(2):not(:last-child) { text-align: center; }
 .aot-viz-scale > span:last-child:not(:first-child) { text-align: right; }
+/* 눈금 줄 오른쪽 끝의 덧말(추세). 기준 라벨은 절대배치라 흐름에서 빠지므로
+   `:last-child` 규칙이 닿지 않는다 — 스스로 오른쪽으로 민다. */
+.aot-viz-scale-note {
+  margin-left: auto;
+  text-align: right;
+  white-space: nowrap;
+}
+/* 같은 줄 **왼쪽 끝**의 덧말(마지막 작동 등). 기준 라벨이 절대배치라 흐름에
+   빈자리를 남기므로, 스스로 왼쪽을 잡고 나머지를 밀어낸다. */
+.aot-viz-scale-lead {
+  margin-right: auto;
+  text-align: left;
+  white-space: nowrap;
+}
 /* 기준 라벨은 **눈금의 다른 글자와 똑같이** 그린다.
    무엇이 기준인지는 색이나 굵기가 아니라 **마커 아래에 서 있다는 위치**가
    말한다. 여기에 강조를 하나 더 얹으면 한 줄에서 시선이 갈 곳이 둘이 되고,
@@ -400,8 +414,12 @@
 /* ⚠ 기준 라벨 **자신**은 숨기지 않는다. 눈금에 항목이 기준 하나뿐이고 그것이
    축 끝에 붙으면 first-child 이자 last-child 가 되어, 이 규칙이 가리려던 축
    라벨 대신 기준을 지워 버린다 — 그러면 그 줄만 눈금이 통째로 빈다. */
-.aot-viz-scale.is-anchor-start > span:first-child:not(.aot-viz-scale-anchor),
-.aot-viz-scale.is-anchor-end   > span:last-child:not(.aot-viz-scale-anchor) {
+/* ⚠ **덧말(lead/note)은 축 라벨이 아니다.** 이 규칙은 "기준이 가리는 축 끝을
+   감춘다" 는 뜻인데, 덧말까지 걸리면 목표가 0%/100% 인 줄에서만 그 글자가
+   조용히 사라진다 — 창이 다 열린 동안에만 '마지막 작동' 이 안 보였다
+   (2026-08-26). 덧말은 자기 슬롯을 쓰므로 여기서 제외한다. */
+.aot-viz-scale.is-anchor-start > span:first-child:not(.aot-viz-scale-anchor):not(.aot-viz-scale-lead):not(.aot-viz-scale-note),
+.aot-viz-scale.is-anchor-end   > span:last-child:not(.aot-viz-scale-anchor):not(.aot-viz-scale-lead):not(.aot-viz-scale-note) {
   visibility: hidden;
 }
 .aot-viz-scale--anchored .aot-viz-scale-anchor { padding-left: 0; }

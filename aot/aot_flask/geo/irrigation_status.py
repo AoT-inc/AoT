@@ -143,6 +143,28 @@ def last_irrigation(facility_uuid=None, plot=None):
         best['device'] = row.name if row else None
     except Exception:                                       # noqa: BLE001
         best['device'] = None
+
+    # ── 이 장치가 실제로 하는 일 (2026-08-26) ─────────────────────────────
+    # `_IRRIGATION_FITTING_KINDS` 는 **fitting 종류**만 본다 — 노즐이 무엇인지는
+    # 보지 않는다. 그래서 습윤형 스프링클러가 달린 밸브도 `irrigation_valve` 라
+    # 여기 잡히고, 화면은 그것을 "마지막 관수" 라고 부른다. 그런데 같은 장치를
+    # 환경 제어는 **가습기(fogger)** 로 쓴다(`_is_wetting_fog`) — 한 장치를 두
+    # 화면이 다른 이름으로 부르면 사용자는 자기가 무엇을 설정했는지 의심하게
+    # 된다(실측: '마지막 관수 밸브3' — 그 밸브는 가습용으로 설정돼 있었다).
+    #
+    # 판정은 노즐 명부 하나로 한다(`nozzles_by_actuator` — 습윤 여부의 정본).
+    best['wetting'] = False
+    try:
+        from aot.databases.models import GeoFacility
+        from aot.aot_flask.geo.irrigation_nozzles import nozzles_by_actuator
+        fac = (GeoFacility.query.filter_by(unique_id=facility_uuid).first()
+               if facility_uuid else None)
+        if fac:
+            summary = nozzles_by_actuator(fac.fittings or {}).get(
+                best['output_uuid']) or {}
+            best['wetting'] = bool(summary.get('wetting'))
+    except Exception as exc:                                # noqa: BLE001
+        logger.debug('[irrigation] 노즐 판정 실패: %s', exc)
     best['hours_ago'] = round((time.time() - best['at']) / 3600.0, 1)
     best.pop('output_uuid', None)
     return best

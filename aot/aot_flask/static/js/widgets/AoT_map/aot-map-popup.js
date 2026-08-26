@@ -943,9 +943,13 @@
     degraded:     'Partial Control', natural: 'Natural Ventilation',
     unattainable: 'Target Unattainable'
   };
+  // ⚠ **서버가 두 어휘를 쓴다.** `limiting_factor` 는 'water' 라고 부르고
+  // `commands[].var`(var_source)는 같은 축을 'vpd' 라고 부른다. 둘 다 여기
+  // 담는다 — 예전에는 'water' 만 있어서 [시설 세부]의 근거 줄이 "목표를 좇는
+  // 중 (vpd)" 처럼 내부 키를 그대로 노출했다.
   var _LIMIT_LABELS = {
     light: 'Light Level', co2: 'CO2', temperature: 'Temperature',
-    water: 'Water (VPD)', humidity: 'Humidity'
+    water: 'Water (VPD)', vpd: 'Water (VPD)', humidity: 'Humidity'
   };
   // 액추에이터 종류 라벨. **키는 서버 어휘(`_KIND_CAPABILITIES`)와 같아야 한다** —
   // 예전에는 여기 'heating'/'cooling'/'humidifier' 라고 적혀 있어 서버가 보내는
@@ -966,10 +970,18 @@
   // 손으로 그리기 시작하면 탭 키·순서·클래스가 조용히 갈리고, 구역이 시설과
   // 탭을 맞추느라 한 번 겪은 일이 그대로 재발한다.
   function buildSectionNav(active, secs) {
-    // 마지막 탭의 이름은 **'개요'가 아니라 '설정'** 이다. 그 탭에 들어 있는 것은
-    // 기본 정보와 **편집 폼**(이름·기간·프로그램·몫·사진·설명)이라, '개요' 라는
-    // 이름은 "읽기만 하는 요약" 을 약속하고 배신한다. 사용자가 "설정을 어디서
-    // 하느냐" 를 물었을 때 화면이 스스로 답해야 한다.
+    // 기본값의 마지막 탭 이름이 **'설정'** 인 것은 **구획 모달 기준**이다. 거기
+    // 마지막 탭에 들어 있는 것은 이름·기간·프로그램·몫을 고치는 **편집 폼**이라,
+    // '개요' 라는 이름은 "읽기만 하는 요약" 을 약속하고 배신한다.
+    //
+    // ⚠ **다른 계층은 이 기본값을 쓰면 안 된다.** 구역·대지·시설의 마지막 탭은
+    // 기초 정보를 담는 자리이고(시설: 사진·크기·면적·용적·설명), 편집은 그
+    // 옆에 붙은 버튼 몇 개다. 자주 볼 것이 아니라 마지막에 둔 것이지 "설정하러
+    // 가는 곳" 이 아니다 — 셋 다 `secs` 로 'About' 을 넘긴다.
+    // 규칙은 하나다: **편집 폼이 본체인 곳만 '설정'.**
+    // (2026-08-26: 시설이 기본값을 쓰고 있어 같은 자리의 탭 이름이 계층마다
+    //  갈려 있었다 — 구역·대지는 '개요', 시설·구획은 '설정'.)
+    //
     // 키(`about`)는 그대로 둔다 — 위젯 옵션(`popup_default_tab`)에 저장된 값이라
     // 바꾸면 기존 대시보드가 존재하지 않는 탭을 요구하게 된다.
     secs = secs || [
@@ -1123,9 +1135,16 @@
                    '%(n)s', String(Math.max(1, Math.round(irr.duration_s / 60))));
       }
     }
-    // 한 줄짜리 블록이다 — 제목을 따로 두면 "마지막 관수 / 마지막 관수" 가 된다.
+    // ── 이름은 그 장치가 **실제로 하는 일**을 따른다 (2026-08-26) ──────────
+    // 관수 목록은 fitting 종류(`irrigation_valve`)만 보므로, 습윤형 스프링클러가
+    // 달린 밸브도 여기 잡힌다. 그런데 환경 제어는 같은 장치를 **가습기**로
+    // 쓴다 — "마지막 관수 밸브3" 이라고 적으면 가습용으로 설정해 둔 사용자가
+    // 자기가 무엇을 설정했는지 의심하게 된다. 서버가 노즐로 판정한
+    // `wetting` 을 그대로 따른다.
+    //
+    // 한 줄짜리 블록이다 — 제목을 따로 두면 "마지막 분무 / 마지막 분무" 가 된다.
     return '<div class="aot-ov-block aot-ov-row aot-ov-irrigation"><span>' +
-           _esc(_t('Last watering')) +
+           _esc(irr.wetting ? _t('Last misting') : _t('Last watering')) +
            (irr.device ? ' <span class="aot-ov-muted">' + _esc(irr.device) +
                          '</span>' : '') +
            '</span><span>' + _esc(right) + '</span></div>';
@@ -1178,59 +1197,21 @@
     //   안전 게이트 → 제어 상태 블록 맨 위(제어가 막힌 이유이므로)
     // 추세·예보 선행은 제어 내부 사정이라 [현황]에서 뺐다.
 
-    // ── 블록 2: 광합성 목표 대비 (시설의 최우선 목표) ───────────────────
-    // 행 순서: 효율 → 광량 → VPD → CO2 → 온도 → 습도 → DLI.
-    // 값이 있는 행만 출력 (테스트 환경은 설정·센서가 부족할 수 있음).
-    var ph  = summary.photo || {};
-    var tgt = summary.targets || {};
-    var opt = ph.opt || {};
-    var phRows = '';
-    // 각 행은 `현재 / 목표` 다. 제목에 또 적으면 같은 말이 두 번 나온다.
-    function _vs(label, cur, target, unit) {
-      if (cur == null && target == null) return '';
-      var c = cur != null ? String(cur) : '—';
-      var g = target != null ? String(target) : '—';
-      return '<div class="aot-ov-row"><span>' + _esc(label) +
-             ' <span class="aot-ov-muted">' + _esc(_t('now / target')) +
-             '</span></span><span>' +
-             _esc(c + ' / ' + g + (unit || '')) + '</span></div>';
-    }
-    if (ph.rate_rel_pct != null) {
-      phRows += '<div class="aot-ov-row"><span>' + _esc(_t('Photosynthesis rate')) +
-                '</span><span>' + _esc(ph.rate_rel_pct + '%') + '</span></div>';
-    }
-    // 목표값은 summary.targets(매 사이클 산출 — VPD/CO2 메서드 곡선이면
-    // 그 시점의 메서드 값, 온/습도는 VPD 분해 결과) 우선.
-    // 작물 상수(opt.*)는 환경 목표가 없을 때의 참고값 폴백.
-    phRows += _vs(_t('Light Level'), ph.light, opt.light_k, ' \u00b5mol/m\u00b2/s');
-    phRows += _vs('VPD', ph.vpd, tgt.vpd != null ? tgt.vpd : opt.vpd_half, ' kPa');
-    phRows += _vs('CO2', ph.co2, tgt.co2 != null ? tgt.co2 : opt.co2_k, ' ppm');
-    phRows += _vs(_t('Temperature'), ph.temp,
-                  tgt.temperature != null ? tgt.temperature : opt.t_opt, '°C');
-    phRows += _vs(_t('Humidity'), ph.rh, tgt.humidity, '%');
-    phRows += _vs('DLI', ph.dli_today, ph.dli_target, ' mol/m\u00b2/d');
-    // 작물명은 서버가 `crop` 으로 보낸다. 예전에는 `subject` 를 읽어 작물명이
-    // 영영 붙지 않았다.
-    var phCrop = ph.crop || ph.subject;
-    // 꺼져 있으면 **아무 말도 하지 않는다.** 그것은 지금 상태가 아니라 설정이라
-    // 함수 설정에서 볼 일이고, "꺼져 있습니다" 한 줄이 [현황]에서 자리를 차지할
-    // 이유가 없다(꺼진 기능의 목표를 표로 늘어놓지 않는 것과 같은 이유).
-    if (ph.enabled && phRows) {
-      html += '<div class="aot-ov-card-title">' + _esc(_t('Photosynthesis')) +
-              (phCrop ? ' · ' + _esc(phCrop) : '') + '</div>' +
-              '<div class="aot-ov-block aot-ov-photo-goal">' + phRows + '</div>';
-    }
+    // 광합성 지표는 [환경] 카드가 함께 낸다(`buildEnvNowHtml`) — 그 줄들도
+    // 전부 "지금 값 / 목표" 라 같은 질문에 답한다. 카드를 갈라 두면 사용자가
+    // 환경 하나를 읽으려고 두 카드를 오가야 했다(2026-08-26 지적).
 
     // ── 블록 3: 제어 상태 (환기/팬/커튼 등 의미 단위) ───────────────────
     // 제목 옆 [설정] — 감출 수 있는 것은 아래 **환기 면적·장치 개도**뿐이다.
     // 편차·안전 게이트는 목록에 없다(`controlRowChoices` 주석).
-    var ctrlHidden = _hiddenSet(opts.hiddenControl);
-    var ctrlChoices = controlRowChoices(summary);
-    html += '<div class="aot-ov-card-title aot-ov-card-title--row">' +
-            '<span>' + _esc(_t('Control Status')) + '</span>' +
-            '<span class="aot-ov-title-actions">' +
-            (opts.configurable && ctrlChoices.length ? _cardCfgBtn('control') : '') +
-            '</span></div>' +
+    // 감출 항목이 없으므로 [설정] 버튼도 없다 — 아래 둘(못 따라감·안전
+    // 게이트)은 목록에 넣지 않는다(`controlRowChoices` 주석).
+    var _strain0 = summary.strain;
+    var _gate0   = summary.gate || {};
+    var _hasCtrl = !!((_strain0 && _strain0.var) || _gate0.triggered);
+    if (_hasCtrl) {
+    html += '<div class="aot-ov-card-title">' +
+            _esc(_t('Control Status')) + '</div>' +
             '<div class="aot-ov-block aot-ov-ctrl">';
     // **설비가 못 따라가고 있으면 그렇다고 말한다.** "냉각기 100%" 만 보여
     // 주면 그것이 좋은 신호인지 나쁜 신호인지 알 수 없다 — 최대로 밀고 있는데도
@@ -1253,70 +1234,497 @@
                  .replace('%(min)s', String(Math.round((strain.since_s || 0) / 60)))
                  .replace('%(var)s', vlabel);
       }
-      html += '<div class="aot-ov-row aot-ov-strain"><span>' +
-              _esc(_t('Not keeping up')) + '</span><span>' + _esc(msg2) +
-              '</span></div>';
+      // ⚠ **문장은 값이 아니다.** `.aot-ov-row` 는 「이름 | 값」 두 칸이라
+      //   오른쪽 칸이 우측 정렬로 접힌다 — 긴 문장을 넣었더니 "수분(VPD)가
+      //   목표를 벗어났는데 이를 / 움직일 장치가 없습니다" 로 들쭉날쭉하게
+      //   찢어졌다(2026-08-26 영양 지적). 설명 문구는 [시설 세부]가 쓰는
+      //   `.aot-ov-why` 하나로 통일한다 — 같은 성격의 글이 화면마다 다른
+      //   모양으로 서면 사용자는 둘이 다른 것인 줄 안다.
+      // ⚠ **'못 따라감' 이라는 앞말을 다시 붙이지 말 것.** 두 칸이던 시절의
+      //   이름 칸이었는데, 한 문단이 된 뒤로는 뒤 문장이 이미 같은 말을 하고
+      //   있어 "못 따라감 · …가 목표를 벗어났지만…" 처럼 겹쳐 읽힌다
+      //   (2026-08-26 지적). 무슨 카드인지는 제목이 말한다.
+      html += '<div class="aot-ov-why aot-ov-strain">' + _esc(msg2) + '</div>';
     }
 
     // 안전 게이트가 걸렸으면 **맨 위**에 말한다 — 아래 숫자들이 왜 그런지의
     // 이유이고, 사람이 지금 알아야 할 것도 그것이다(바람 때문에 창을 못 연다).
     var gate = summary.gate || {};
     if (gate.triggered) {
-      html += '<div class="aot-ov-row aot-ov-gate"><span>' +
-              _esc(_t('Safety Gate')) + '</span><span>' +
-              _esc(gate.description || _t('Active')) + '</span></div>';
+      // 설명이 없을 때 '활성' 만 적으면 문장이 아니다 — 상태 칸이던 시절의
+      // 낱말이라 한 문단 안에서는 뚝 끊긴다(2026-08-26 지적).
+      html += '<div class="aot-ov-why aot-ov-gate">' +
+              (gate.description
+                 ? _esc(_t('Safety Gate')) + ' \u00b7 ' + _esc(gate.description)
+                 : _esc(_t('A safety gate is holding the controls'))) + '</div>';
     }
-    // 환기는 **면적**이고 아래 목록은 **장치별 개도**다. 둘 다 %로 적어 두면
-    // 같은 것을 두 번 말하는 것처럼 보이는데 실제로는 다른 값이다(전체 개구
-    // 면적 대비 열린 면적 vs 그 장치가 몇 % 열렸는가). 라벨로 구분한다.
-    // 환기 면적·장치 개도 — **막대**로 그린다. 둘 다 "얼마나 열려 있나" 이고,
-    // 숫자만 보면 40%가 큰지 작은지 판단하려고 사람이 매번 100 을 떠올려야
-    // 한다. 축이 있으면 그 계산이 사라진다.
+    // ── 환기 면적도 [시설 세부]로 옮겼다 (2026-08-26) ─────────────────────
+    // "831.7 / 831.7 m²" 를 3초에 읽고 판단할 사람은 없다. 그 숫자가 필요해
+    // 지는 것은 "왜 더 못 여나" 를 물을 때이고, 그 질문에 답하는 자리는
+    // 장치별 근거가 있는 [시설 세부]다.
     //
-    // 환기는 **면적**이고 아래 목록은 **장치별 개도**다. 둘 다 %로 적어 두면
-    // 같은 것을 두 번 말하는 것처럼 보이는데 실제로는 다른 값이다(전체 개구
-    // 면적 대비 열린 면적 vs 그 장치가 몇 % 열렸는가). 라벨로 구분한다.
-    //
-    // 목표 눈금은 없다 — 개도에는 "얼마여야 한다" 가 없다. 제어가 지금 그만큼
-    // 열어 둔 것이고, 그것이 옳은지는 위의 편차·한계 줄이 말한다.
+    // 그래서 이 카드에는 **문제 신호만** 남는다 — 못 따라감과 안전 게이트.
+    // 둘 다 없으면 카드 자체가 나오지 않는다. 이상이 없다는 것을 굳이 한 줄로
+    // 적으면, 매번 읽어야 하는 줄이 하나 늘 뿐 판단은 바뀌지 않는다.
     var V = window.AoTViz;
-    var v = summary.vent || {};
-    var ctrlRows = [];
-    if (ctrlHidden.vent) { v = {}; }
-    if (v.total_area_m2 > 0 && V) {
-      ctrlRows.push(V.bullet({
-        label: _t('Vent area open'),
-        value: (v.effective_area_m2 != null ? v.effective_area_m2 : 0),
-        min: 0, max: v.total_area_m2,
-        valueText: (v.effective_area_m2 != null
-                    ? v.effective_area_m2.toFixed(1) : '?'),
-        valueSub: '/ ' + v.total_area_m2.toFixed(1) + ' m²' +
-                  (v.open_ratio_pct != null
-                   ? ' \u00b7 ' + v.open_ratio_pct.toFixed(0) + '%' : '')
-      }));
-    } else if (v.total_area_m2 > 0) {
-      ctrlRows.push(_pRow(_t('Vent area open'),
-        _esc((v.effective_area_m2 != null ? v.effective_area_m2.toFixed(1) : '?') +
-             ' / ' + v.total_area_m2.toFixed(1) + ' m²')));
-    }
-    if (ctrlRows.length) html += V ? V.group(ctrlRows) : ctrlRows.join('');
-
-    var obk = summary.outputs_by_kind || {};
-    var kinds = Object.keys(obk).filter(function (k) { return !ctrlHidden[k]; });
-    if (kinds.length) {
-      html += '<div class="aot-ov-sub-title">' + _esc(_t('Device opening')) +
-              '</div>';
-      var openRows = kinds.map(function (k) {
-        var label = _t(_KIND_LABELS[k] || k);
-        if (!V) return _pRow(label, _esc(obk[k].toFixed(0) + '%'));
-        return V.bullet({ label: label, value: obk[k], min: 0, max: 100,
-                          valueText: obk[k].toFixed(0), valueSub: '%' });
-      });
-      html += V ? V.group(openRows) : openRows.join('');
-    }
     html += '</div>';
+    }
 
     return html + _ovNotesBlock();
+  }
+
+
+  // ── [시설 세부] 탭 ─────────────────────────────────────────────────────────
+  // [현황]이 "지금 괜찮은가" 를 3초에 답하는 자리라면, 여기는 **"왜 이렇게 하고
+  // 있나"** 를 묻고 들어오는 자리다. 이상할 때만 열린다.
+  //
+  // 이 탭이 생기기 전, 서버는 매 사이클 `commands[]`(장치별 개도 + **근거코드**
+  // + 어느 변수 때문인지)를 브라우저까지 보내 놓고 화면은 통째로 버리고 있었다.
+  // 그래서 "냉방기 100%" 는 보이는데 **왜** 100% 인지는 로그를 파야 알 수 있었다.
+  //
+  // 모드·제한인자는 여기에도 두지 않는다 — 2026-08-20 에 [현황]에서 걷어낸
+  // 이유가 "내부 운전 모드 어휘라 뜻이 전달되지 않는다" 였고, 탭을 옮긴다고
+  // 그것이 해결되지 않는다. 같은 정보를 전달 가능한 형태로 주는 방법이
+  // **근거코드를 문장으로 푸는 것**이다.
+
+  // 근거코드 → 사람이 읽는 문장. 키는 `log_channels.REASON_*` 와 같아야 한다.
+  // ⚠ 숫자를 그대로 노출하지 않는다. 모르는 코드는 줄 자체를 비운다 —
+  // "근거 15" 라고 적으면 사용자는 그것이 오류 코드인 줄 안다.
+  // ⚠ **정상 동작에는 근거를 적지 않는다.** 0·1·2(범위 안·목표 추종·보조)는
+  // 제어기가 당연히 하는 일이라, 적어 봐야 "그렇게 작동하는 게 당연한데" 로
+  // 읽힌다(2026-08-26 지적). 여기 남는 것은 **뜻밖의 이유**뿐이다 — 왜 안
+  // 움직이나, 왜 막혔나, 왜 반대인가. 그것이 이 카드가 답할 질문이다.
+  var _REASON_TEXT = {
+    10: 'Running it would move this the wrong way',
+    11: 'It would upset another reading',
+    12: 'A safety gate is holding this',
+    13: 'The last command did not reach the device',
+    14: 'A safety gate adjusted this',
+    15: 'Doing all it can here',
+    16: 'Holding position until the outdoor reading returns',
+    20: 'Set by hand'
+  };
+  // 같은 근거라도 **어디에 서 있느냐**로 뜻이 갈린다. 창이 활짝 열린 채
+  // "쓸 만한 차이가 없음" 이라고 적으면 장치가 일하기 싫어하는 것처럼 읽힌다
+  // — 실제로는 **최대로 밀고 있는데 그 이상 낼 것이 없는** 상태다
+  // (2026-08-26 지적). 반대로 닫혀 있으면 "지금 움직여도 소용없다" 가 맞다.
+  var _FULL_OUTPUT_PCT = 95.0;
+  var _REASON_TEXT_FULL = {
+    15: 'Fully open and giving all it can'
+  };
+  // 근거를 한 번 더 풀어야 뜻이 서는 것.
+  var _REASON_HINT = {
+    16: 'Opening or closing on a guess would do more harm than waiting'
+  };
+
+  /* 시설 세부 — env_summary 를 근거 중심으로 편다.
+   *   env  GET /api/aot/facility/<uuid>/env_summary 응답
+   *   opts { } (예약)
+   */
+  function buildFacilityDetailSection(env, opts) {
+    opts = opts || {};
+    // 장치 이름·실제 개도는 **런타임 상태**(`/runtime` actuator_states)에 있고
+    // 명령·근거는 **요약**(env_summary)에 있다. 둘을 잇는 키가 다르다 —
+    // 런타임은 slot_key 또는 **전체 uuid**, 요약은 slot_key 또는 **uuid 앞 8자**
+    // 다(`p.slot_key || p.actuator_id[:8]`). 그래서 접두로 잇는다.
+    // ⚠ 서버가 두 어휘를 쓰는 한 여기서 한 번만 잇는다 — 잇는 코드가 두 벌이
+    // 되면 한쪽만 고쳐진 채로 이름이 빈 화면이 나온다.
+    var states = opts.states || {};
+    var byPrefix = {};
+    Object.keys(states).forEach(function (k) {
+      byPrefix[k] = states[k];
+      var u = states[k].output_uuid;
+      if (u) byPrefix[String(u).slice(0, 8)] = states[k];
+    });
+    function _live(slotKey) {
+      return byPrefix[slotKey] || null;
+    }
+    var summary = env && env.summary;
+    var stale   = !env || env.stale;
+    if (!summary || stale) {
+      // [현황]이 이미 "응답 없음" 을 말한다 — 여기서 또 말하면 같은 사실이
+      // 두 탭에서 두 번 나온다. 비어 있다는 것만 조용히 알린다.
+      return emptyBlock(_t('Facility detail'),
+                        _t('No control cycle to explain yet.'));
+    }
+    var V = window.AoTViz;
+    var html = '';
+
+    // ── 장치별 근거 ─────────────────────────────────────────────────────────
+    // [현황]의 '장치별 개도' 는 **종류별 평균**(outputs_by_kind)이라 "개구부
+    // 100%" 까지만 말한다. 여기는 **장치 하나하나**다 — 측창 우는 100%인데
+    // 천창은 0% 인 것, 그리고 그 차이의 이유가 이 자리에서만 보인다.
+    // "열린 면적 / 전체 면적" 한 조각 — 시설 합계와 장치별 줄이 **같은 모양**을
+    // 쓴다. 두 곳이 따로 문자열을 만들면 소수 자릿수와 단위 위치가 갈린다.
+    function _areaText(open_m2, total_m2) {
+      if (!(total_m2 > 0)) return '';
+      return open_m2.toFixed(1) + ' / ' + total_m2.toFixed(1) + ' m\u00b2';
+    }
+
+    /* on/off 장치의 작동 시간과 **그것을 견줄 기준**.
+     *
+     * ⚠ "24시간 중 0.6시간" 은 아무 말도 하지 않는다 — 난방기의 하루 0.6시간은
+     *   여름이면 흔한 일이고 겨울이면 고장 신호다. 24시간은 비교 기준이 아니라
+     *   그냥 하루의 길이다(2026-08-26 지적). 기준은 **그 장치 자신의 최근
+     *   실적**에서 온다(서버 `_history_cached`).
+     *
+     * ⚠ **이 줄에서 "지금 켜졌나" 는 값이 아니다.** 줄 전체가 "얼마나 일했나"
+     *   를 답하는데 1행만 순간 상태(켜짐/꺼짐)를 말하면, 값과 축이 서로 다른
+     *   것을 가리킨다(2026-08-26 지적). 켜짐 여부는 [환경·제어] 탭의 토글과
+     *   하단 독이 이미 말한다.
+     *
+     *     1행 값   = 오늘 누적 작동 시간
+     *     초록     = 왼쪽부터 **평소(최근 7일 일평균)** 까지 채운 길이
+     *     세로선   = 오늘 누적       — 초록 끝보다 왼쪽이면 평소보다 덜 돌았다
+     *     축의 끝  = 기준을 **올림**한 시간 (오늘이 더 크면 오늘을 올림)
+     *     3행      = 왼쪽 마지막 작동 · 오른쪽 "평소 N시간"
+     *
+     * ⚠ **밴드다, 불릿이 아니다.** 이 모달의 환경 줄이 전부 밴드라 사용자는
+     *   초록을 "기준", 세로선을 "지금" 으로 읽는다. 불릿(막대=값, 눈금=목표)
+     *   으로 그렸더니 정확히 **반대로** 읽혔다(2026-08-26 지적).
+     *
+     * ⚠ 기준을 눈금 위 라벨로 따로 세우지 말 것 — 3행에 왼쪽·오른쪽이 이미
+     *   있어 가운데 절대배치 라벨을 더하면 셋이 포개진다("평소 2.8시간 시간").
+     *
+     * ⚠ 기준이 없으면(기록 2일 미만) **축을 그리지 않는다.** 없는 축을 지어내면
+     *   바로 그 24시간짜리 거짓말로 되돌아간다. 그때는 누적 시간만 적는다.
+     */
+    function _dutyOf(lv) {
+      if (!lv || lv.duty_24h_s == null) return null;
+      var h = Number(lv.duty_24h_s) / 3600;
+      if (lv.duty_avg_s == null) {
+        return { h: h, hasBase: false, note: '' };
+      }
+      var avgH = Number(lv.duty_avg_s) / 3600;
+      // 축의 끝은 **올림한 시간**이다 — 2.8시간이면 3시간. 눈금이 딱 떨어져야
+      // 길이를 어림할 수 있고, 오늘이 기준을 넘으면 축도 따라 올라간다
+      // (고정 축이면 세로선이 축을 뚫고 나가 얼마나 넘었는지가 안 보인다).
+      var axisH = Math.max(1, Math.ceil(Math.max(avgH, h)));
+      return { h: h, avgH: avgH, axisH: axisH, hasBase: true,
+               note: _t('usually %(h)s h').replace('%(h)s', avgH.toFixed(1)) };
+    }
+
+    // 환기 면적 — 개구부 총량 대비 열린 면적. 장치별 개도(그 장치가 몇 %)와
+    // **다른 값**이라 라벨로 구분한다.
+    function _ventRows() {
+      var v = summary.vent || {};
+      if (!(v.total_area_m2 > 0)) return [];
+      // ⚠ 줄의 골격은 셋이 같다(components/aot-dataviz.css):
+      //   1행 이름 + **지금 값**  ·  2행 트랙  ·  3행 범위·기타
+      // 전에는 "/ 831.7 m² · 100%" 를 1행 값 옆(valueSub)에 붙였는데, 그것은
+      // 지금 값이 아니라 **축과 비율**이라 3행 몫이다 — 다른 줄과 골격이
+      // 갈렸다(2026-08-26 지적).
+      // 1행은 **비율**이다 — 다른 줄이 전부 %로 서므로 여기만 m² 를 크게
+      // 적으면 눈이 한 번 더 환산해야 한다. 실제 면적은 3행 오른쪽에 둔다
+      // (장치별 줄도 같은 구성이다 — `_areaNote`).
+      var eff = (v.effective_area_m2 != null ? v.effective_area_m2 : 0);
+      return [V
+        ? V.bullet({ label: _t('Vent area open'),
+                     value: eff, min: 0, max: v.total_area_m2,
+                     valueText: (v.open_ratio_pct != null
+                                 ? v.open_ratio_pct.toFixed(0)
+                                 : (eff / v.total_area_m2 * 100).toFixed(0)),
+                     valueSub: '%',
+                     scaleNote: _areaText(eff, v.total_area_m2) })
+        : _pRow(_t('Vent area open'), _esc(_areaText(eff, v.total_area_m2)))];
+    }
+
+    // 그 장치가 **지금 실제로** 몇 %인가 — 명령이 아니라 상태다.
+    //
+    // ⚠ **on/off 장치는 `percent` 가 null 이다.** 데몬이 돌려주는 상태가
+    //   'on'/'off' 문자열이라 서버가 숫자로 못 바꾼다(routes_geo 의 `pct`).
+    //   그것을 "모름" 으로 두고 명령값으로 폴백했더니 **꺼져 있는 냉방기가
+    //   100% 로 보였고**(2026-08-26 지적), 같은 폴백을 쓰던 요약과 설명문도
+    //   "3대 중 2대 가동" · "난방과 냉방이 서로 맞서고 있다" 를 함께 지어냈다.
+    //   켜짐 여부는 `on` 이 말한다.
+    // ⚠ **판정을 여기 하나로 둔다.** 네 자리가 각자 폴백을 들고 있어서, 장치
+    //   줄만 고쳤을 때 그 줄은 0% 인데 바로 위 요약은 "가동 중" 이라고 말했다 —
+    //   같은 카드 안에서 서로 다른 답이 나온 셈이다.
+    function _actualOf(lv) {
+      if (lv && lv.percent != null) return Number(lv.percent);
+      if (lv && typeof lv.on === 'boolean') return lv.on ? 100 : 0;
+      return null;
+    }
+
+    // ── 집계 막대는 **같은 단위로 더해지는 무리**에만 ────────────────────
+    // 환기에는 '열린 환기 면적' 이 있다 — 창 셋의 개도는 m² 로 실제로 더해지고,
+    // 그 합이 곧 물리량이다. 냉난방·가습은 그렇지 않다: 난방기·냉방기·가습기는
+    // 공통 단위가 없어서 셋을 하나로 뭉치면 아무것도 가리키지 않는다.
+    //
+    // 예전에는 여기에 '가동 출력' 이라는 막대가 있었고 값은 **지금 개도의 평균**
+    // 이었다. on/off 장치는 0 아니면 100 이라, 난방기 하나가 켜진 상태가
+    // "33%" 로 나왔다 — 셋이 3분의 1씩 돌고 있다는 뜻으로 읽히지만 그런 일은
+    // 일어나지 않았다(2026-08-26 지적). 지금 몇 대가 도는지는 **문장**이 말한다
+    // (`_domainNote`), 각 장치가 얼마나 일했는지는 **그 장치 줄**이 말한다.
+    //
+    // ⚠ 이 자리에 다시 평균 막대를 넣지 말 것. 넣으려면 먼저 "그 무리가 공유하는
+    //   단위가 무엇인가" 에 답해야 한다 — 답이 없으면 그 막대도 없다.
+
+    // 근거가 하나도 없을 때(=전부 정상 동작) 그 무리가 **지금 무엇을 하고
+    // 있는지**를 한 줄로 말한다. 아무 말도 없으면 막대만 남아, 왜 이 카드가
+    // [시설 세부]에 있는지 알 수 없다.
+    function _domainNote(key, list) {
+      if (key !== 'hvac') return '';
+      var byKind = {};
+      list.forEach(function (c) {
+        var lv = _live(c.slot_key);
+        var a = _actualOf(lv);
+        var v = (a != null) ? a : (c.pct != null ? c.pct : 0);
+        if (v > 0) byKind[c.kind] = Math.max(byKind[c.kind] || 0, v);
+      });
+      // ⚠ **맞서는 짝이 함께 돌고 있으면 그것부터 말한다.** 난방과 냉방이
+      // 동시에 100% 인 것은 정상 동작이 아니라 에너지를 서로 상쇄하며 버리는
+      // 상태인데, 막대만 보면 둘 다 "잘 돌고 있다" 로 보인다.
+      if (byKind.heater && byKind.cooler) {
+        // ⚠ 설명 문구는 **한 스타일**이다. 무리마다 다른 클래스를 붙였더니
+        // 카드마다 글자 굵기가 달라 보였다(2026-08-26 지적) — 무엇이 더
+        // 중요한지는 **문장이** 말하지 클래스가 말하지 않는다.
+        return '<div class="aot-ov-why">' +
+               _esc(_t('Heating and cooling are both running against each other')) +
+               '</div>';
+      }
+      var doing = [];
+      if (byKind.heater) doing.push(_t('warming'));
+      if (byKind.cooler) doing.push(_t('cooling'));
+      if (byKind.fogger) doing.push(_t('adding moisture'));
+      if (!doing.length) {
+        return '<div class="aot-ov-why">' + _esc(_t('Nothing running right now')) +
+               '</div>';
+      }
+      // 몇 대가 도는지는 걷어낸 막대가 달고 있던 말이다 — 막대는 뜻이 없었지만
+      // 이 사실은 있다. 문장 뒤에 붙인다.
+      var running = 0;
+      list.forEach(function (c) {
+        var a = _actualOf(_live(c.slot_key));
+        if ((a != null ? a : (c.pct != null ? c.pct : 0)) > 0) running += 1;
+      });
+      return '<div class="aot-ov-why">' +
+             _esc(_t('Currently %(what)s').replace('%(what)s', doing.join(' \u00b7 ')) +
+                  ' \u00b7 ' +
+                  _t('%(on)s of %(all)s running')
+                    .replace('%(on)s', String(running))
+                    .replace('%(all)s', String(list.length))) +
+             '</div>';
+    }
+
+    // 마지막 작동 — **모든 장치**가 갖는다(`/runtime` 의 last_run_at).
+    // 예전에는 관수 payload 하나만 보고 이름이 맞는 한 대에만 붙였는데, 같은
+    // 목록의 나머지는 그 칸이 비어 "왜 이것만 나오나" 가 됐다(2026-08-26 지적).
+    // 쉬고 있는 장치일수록 이 값이 필요하다 — 지금 0% 인 것이 방금 껐기
+    // 때문인지 며칠째 안 돈 것인지가 갈린다.
+    function _lastRunOf(lv) {
+      var at = lv && lv.last_run_at;
+      if (!at) return '';
+      var h = (Date.now() / 1000 - Number(at)) / 3600;
+      if (h < 0) return '';
+      if (h < 1) {
+        return _t('%(n)s min ago').replace(
+          '%(n)s', String(Math.max(1, Math.round(h * 60))));
+      }
+      if (h < 24) {
+        return _t('%(n)s h ago').replace('%(n)s', String(Math.round(h)));
+      }
+      return _t('%(n)s d ago').replace('%(n)s', String(Math.round(h / 24)));
+    }
+
+    var cmds = summary.commands || [];
+    if (cmds.length) {
+
+      var _rowOf = function (c) {
+        var kindLabel = _t(_KIND_LABELS[c.kind] || c.kind || '');
+        var lv = _live(c.slot_key);
+        // 이름은 런타임의 것을 쓴다. 요약의 slot_key 는 uuid 앞 8자인 경우가
+        // 많아, 그대로 쓰면 개구부 셋이 전부 '개구부' 로 보인다 — 서로 다른
+        // 값을 갖는 장치들이 한 이름으로 뭉쳐 이 카드의 존재 이유가 없어진다.
+        var label = (lv && lv.name) ||
+                    (c.slot_key && !/^[0-9a-f]{8}$/.test(c.slot_key)
+                       ? c.slot_key : kindLabel);
+        // 근거 + 그 근거를 만든 변수. 변수는 근거가 '목표를 좇는 중' 일 때만
+        // 뜻이 있다 — 안전 게이트가 건 값에 "VPD 때문" 을 붙이면 거짓이 된다.
+        var pctv = (c.pct != null ? c.pct : 0);
+        // ── 명령 대 실제 ────────────────────────────────────────────────────
+        // 막대는 **실제**를 그리고 눈금(target)이 **명령**이다. 둘이 벌어져
+        // 있으면 그 간극이 그림으로 바로 보인다 — 2026-08-26 에 반나절을 태운
+        // 버그가 정확히 이것이었다(코디네이터가 24.6% 를 명령했는데 장치는
+        // 5.0%. 풍향 가중치가 코디네이터 밖에서 곱해지고 있었다).
+        // 실제를 모르면 명령만 그린다 — 없는 값을 0 으로 그리면 "장치가 꺼져
+        // 있다" 는 거짓말이 된다.
+        // on/off 장치의 처리는 `_actualOf` 에 있다(그 주석 참조).
+        var actual = _actualOf(lv);
+        // ⚠ 골격은 다른 줄과 같다 — 1행은 **지금 값**만, 명령·마지막 작동은
+        // 3행이다. 마지막 작동을 별도 줄로 냈더니 장치 하나가 두 줄을 차지해
+        // 목록이 늘어졌다(2026-08-26 지적). 그것은 이 장치에 딸린 곁가지라
+        // 자기 줄을 가질 만한 것이 아니다.
+        // 3행 — 왼쪽에 마지막 작동·명령(`scaleLead`), 오른쪽에 면적(`scaleNote`).
+        // ⚠ **`scale` 에 넣지 말 것.** 그 배열은 *축의 눈금*이라, 목표가 축 끝에
+        //   붙는 줄에서는 그쪽 끝 항목이 CSS 로 감춰진다 — 창이 100% 로 열린
+        //   동안에만 '마지막 작동' 이 사라졌다(2026-08-26). 덧말은 자기 슬롯이
+        //   있고, 왼쪽 것들은 **한 조각**으로 합친다.
+        // ── on/off 장치는 **축이 다르다** (2026-08-26) ──────────────────────
+        // 비례 장치(개구부·PWM)는 지금 개도가 곧 "얼마나" 라 막대가 그것을
+        // 그리면 된다. on/off 장치에는 그런 양이 없다 — 켜짐은 0 아니면 100
+        // 이라, 같은 막대에 그리면 "난방기가 100% 출력" 처럼 읽히지만 실은
+        // "켜져 있다" 뿐이다. 그 장치의 "얼마나" 는 **시간축**에 있다:
+        // 지난 24시간 중 실제로 돈 시간을 막대에 채운다.
+        //
+        // ⚠ **골격은 다른 줄과 똑같다.** 축만 바뀔 뿐 자리는 그대로다 —
+        //   3행 오른쪽은 언제나 「지금 값 / 전체」이고, 개구부의
+        //   "831.7 / 831.7 m²" 와 같은 자리에 "0.5 / 24시간" 이 선다.
+        //   왼쪽은 마지막 작동(+명령)이다. 이것을 왼쪽에 몰아넣으면 오른쪽이
+        //   비어 그 줄만 다른 규칙으로 서 있게 된다(2026-08-26 지적).
+        //
+        // 가동률을 모르면(자료 없음) 막대를 그리지 않는다 — 0% 로 그리면 하루
+        // 종일 쉰 장치와 구분되지 않는다.
+        var isBinary = !!(lv && lv.control_type === 'binary');
+        var duty = isBinary ? _dutyOf(lv) : null;
+        var left = [];
+        var run = _lastRunOf(lv);
+        if (run) left.push(_t('Last run') + ' ' + run);
+        // 명령과 실제가 다를 때만 명령을 적는다. on/off 는 %가 뜻이 없으므로
+        // 같은 말을 켜짐/꺼짐으로 한다.
+        if (actual != null && Math.abs(actual - pctv) >= 1) {
+          left.push(_t('commanded') + ' ' +
+                    (isBinary ? (pctv > 0 ? _t('Powered on') : _t('Powered off'))
+                              : pctv.toFixed(0) + '%'));
+        }
+        var lead = left.join(' \u00b7 ');
+        // 3행 오른쪽 — 개구부는 면적, on/off 는 작동 시간. **같은 자리**이고
+        // 둘 다 「지금 값 / 축의 끝」이다.
+        var rightNote = isBinary
+          ? (duty ? duty.note : '')
+          : ((c.area_m2 && actual != null)
+               ? _areaText(c.area_m2 * actual / 100, c.area_m2) : '');
+        var shown = (actual != null ? actual : pctv);
+        var body = V
+          ? (isBinary
+              // 밴드 — 초록이 '평소', 세로선이 '오늘'. 기준이 없으면 값도
+              // 주지 않는다(축을 지어내지 않는다).
+              ? V.band({ label: label,
+                         value: (duty && duty.hasBase) ? duty.h : null,
+                         min: 0,
+                         max: (duty && duty.hasBase) ? duty.axisH : undefined,
+                         // 왼쪽 끝부터 평소까지 채운다 — 초록의 **길이**가 기준
+                         // 이고, 세로선이 그보다 왼쪽이면 평소보다 덜 돌았다.
+                         okMin: (duty && duty.hasBase) ? 0 : undefined,
+                         okMax: (duty && duty.hasBase) ? duty.avgH : undefined,
+                         valueText: (duty ? duty.h.toFixed(1) : '\u2014'),
+                         valueSub: _t('hours'),
+                         scaleLead: lead, scaleNote: rightNote })
+              : V.bullet({ label: label,
+                           value: shown, target: (actual != null ? pctv : undefined),
+                           min: 0, max: 100,
+                           valueText: shown.toFixed(0), valueSub: '%',
+                           scaleLead: lead, scaleNote: rightNote }))
+          : _pRow(label, _esc(isBinary
+                              ? (duty ? duty.h.toFixed(1) : '\u2014')
+                              : shown.toFixed(0) + '%'));
+        return body;
+      };
+      // 같은 근거를 장치마다 되풀이하지 않는다. 개구부 셋이 모두 같은 이유로
+      // 그 값이면 그 문장은 **한 번**이면 된다 — 셋에 붙이면 같은 줄이 세 번
+      // 나와 정작 다른 장치의 다른 이유가 파묻힌다(2026-08-26 지적).
+      var _reasonNote = function (list) {
+        var codes = {};
+        list.forEach(function (c) { if (_REASON_TEXT[c.reason]) codes[c.reason] = 1; });
+        var keys = Object.keys(codes);
+        if (!keys.length) return '';
+        return keys.map(function (r) {
+          var n = list.filter(function (c) { return String(c.reason) === r; });
+          // 무리 전체가 같은 이유면 장치 이름을 다시 적지 않는다.
+          var who = (n.length === list.length) ? '' :
+                    n.map(function (c) {
+                      var lv = _live(c.slot_key);
+                      return (lv && lv.name) || c.slot_key;
+                    }).join(' \u00b7 ') + ': ';
+          // 그 이유에 해당하는 장치가 **전부 최대 출력**이면 문장을 바꾼다.
+          var allFull = n.every(function (c) {
+            var lv = _live(c.slot_key);
+            var a = _actualOf(lv);
+            var v = (a != null) ? a : (c.pct != null ? c.pct : 0);
+            return v >= _FULL_OUTPUT_PCT;
+          });
+          var msg = (allFull && _REASON_TEXT_FULL[r]) || _REASON_TEXT[r];
+          return '<div class="aot-ov-why">' + _esc(who + _t(msg)) +
+                 (!allFull && _REASON_HINT[r]
+                    ? ' \u00b7 ' + _esc(_t(_REASON_HINT[r])) : '') +
+                 '</div>';
+        }).join('');
+      };
+      // ── 도메인마다 **별도 카드** ─────────────────────────────────────────
+      // 이 탭이 답하는 질문이 "왜 이렇게 하고 있나" 이므로, 무리를 짓는 기준도
+      // 제어기가 실제로 쓰는 경계여야 한다 — **부하분담이 도메인 안에서만**
+      // 일어난다(2026-08-26 `types.ACTUATOR_DOMAIN`). 창끼리는 서로의 기여를
+      // 보고 조율하지만 공조는 그것을 모른다. 그 경계가 곧 "왜" 의 경계다.
+      //
+      // 한 카드에 소제목으로 나누는 것보다 카드를 나눈다 — 무리마다 근거가
+      // 따로 붙으므로, 한 컨테이너 안에서는 어느 근거가 어느 무리의 것인지
+      // 눈으로 이어붙여야 한다.
+      //
+      // ⚠ **`types.ACTUATOR_DOMAIN` 과 같은 배정이어야 한다.** 갈리면 화면이
+      //   설명하는 무리와 제어기가 실제로 묶는 무리가 달라진다 —
+      //   `test_map_popup_labels.py` 가 소스로 고정한다.
+      var _catOrder = [
+        { key: 'vent',   label: 'Ventilation', kinds: ['opening', 'exhaust_fan', 'intake_fan'] },
+        { key: 'screen', label: 'Screens',     kinds: ['curtain', 'shade'] },
+        // ⚠ 'Climate' 를 쓰지 않는다 — 그 msgid 는 장치 분류 화면에서 '기후장치'
+        //   로 번역돼 있어 여기 붙이면 뜻이 어긋난다. 뜻이 다르면 msgid 를 나눈다.
+        { key: 'hvac',   label: 'Heating, cooling and misting',
+          kinds: ['heater', 'cooler', 'fogger'] },
+        { key: 'aux',    label: 'Other',       kinds: null }
+      ];
+      var _bucket = {};
+      cmds.forEach(function (c) {
+        var key = 'facility';
+        for (var i = 0; i < _catOrder.length; i++) {
+          if (_catOrder[i].kinds &&
+              _catOrder[i].kinds.indexOf(c.kind) !== -1) { key = _catOrder[i].key; break; }
+        }
+        (_bucket[key] = _bucket[key] || []).push(c);
+      });
+      _catOrder.forEach(function (g) {
+        var list = _bucket[g.key] || [];
+        if (!list.length) return;
+        // ── 무리의 **요약이 먼저, 장치별이 나중** ──────────────────────────
+        // 그 무리가 지금 통틀어 어떤 상태인지(환기 면적)를 먼저 보고, 그
+        // 다음에 장치 하나하나를 본다. 요약을 맨 아래 두었더니 장치는 위에
+        // 있는데 총량이 화면 끝에 떨어져 같이 읽어야 할 둘이 갈렸다
+        // (2026-08-26 지적). 요약을 갖는 무리는 **환기 하나뿐**이다 —
+        // 위 `집계 막대는 …` 주석 참조.
+        var head = (g.key === 'vent') ? _ventRows() : [];
+        var note = _reasonNote(list) || _domainNote(g.key, list);
+        // ── 설명이 **맨 위** ─────────────────────────────────────────────
+        // 이 카드가 답하는 것은 "왜 이렇게 하고 있나" 다. 그 답을 숫자 뒤에
+        // 두면 사용자는 막대를 먼저 읽고 스스로 해석한 뒤에야 설명을 만난다 —
+        // 순서가 거꾸로다. 문장 먼저, 그 근거가 되는 요약과 장치별이 뒤다
+        // (2026-08-26 지적).
+        html += '<div class="aot-ov-card-title">' + _esc(_t(g.label)) + '</div>' +
+                '<div class="aot-ov-block">' +
+                note +
+                // 요약과 장치별을 **한 묶음**에 넣는다 — 줄 사이 간격(32px)과
+                // 가로 구분선은 `.aot-viz + .aot-viz` 가 준다(dataviz 규약).
+                // 따로 감싸면 그 규칙이 끊겨 두 덩어리가 붙어 보인다.
+                (V ? V.group(head.concat(list.map(_rowOf)))
+                   : head.concat(list.map(_rowOf)).join('')) +
+                '</div>';
+      });
+    }
+
+    // 추세는 [현황]의 [환경] 카드가 그린다 — 값과 방향은 함께 읽어야
+    // 뜻이 서기 때문이다(`buildEnvNowHtml` 의 추세 주석). 여기 두었더니
+    // 둘이 탭으로 갈렸다(2026-08-26 지적).
+    var ff = summary.feedforward || {};
+    if (ff.active) {
+      html += '<div class="aot-ov-card-title">' + _esc(_t('Acting on the forecast')) +
+              '</div><div class="aot-ov-block">' +
+              '<div class="aot-ov-why">' + _esc(ff.reason || '') + '</div>' +
+              '</div>';
+    }
+
+    if (!html) {
+      return emptyBlock(_t('Facility detail'),
+                        _t('No control cycle to explain yet.'));
+    }
+    return html;
   }
 
   // [개요] 섹션 — 정적 정보: 대표사진 / 시설 정보 / 설명 / 노트.
@@ -1518,6 +1926,34 @@
     return lead.concat(rest);
   }
 
+  // 측정 키 → 추세 키·자릿수. VPD 는 서버가 추세를 내지 않는다(파생값이라
+  // T·RH 추세가 이미 그 방향을 말한다).
+  //
+  // ⚠ **모듈 스코프에 둔다.** 처음에는 `buildEnvNowHtml` 안에 두었는데, 이 값을
+  // 쓰는 곳은 그 함수가 아니라 **행 빌더**(`_envNowRowHtml`)라 클로저가 닿지
+  // 않았다 — `_trendNote is not defined` 로 환경 카드가 통째로 안 그려졌다
+  // (에러는 호출부 try 가 삼켜 화면에는 "카드 없음" 으로만 보였다).
+  // 맑은 날 정오의 전천일사에 해당하는 PPFD [µmol/m²/s]. 광량 트랙의 축 끝이다
+  // — 그날의 최대치가 아니라 **사람이 아는 상한**이라야 값이 커도 축이 흔들리지
+  // 않는다(축이 값 따라 늘면 언제나 절반쯤에 서 있는 것처럼 보인다).
+  var _LIGHT_FULL_SUN = 2000;
+
+  var _TREND_OF = { T: ['T_per_min', ' \u00b0C/min', 2],
+                    RH: ['RH_per_min', ' %/min', 2],
+                    CO2: ['CO2_per_min', ' ppm/min', 1] };
+
+  function _trendNote(key, trend) {
+    var spec = _TREND_OF[key];
+    if (!spec) return '';
+    var val = (trend || {})[spec[0]];
+    if (val == null) return '';
+    // 반올림해서 0 으로 보일 값은 내지 않는다 — "→ 0" 은 아무 말도 아니다.
+    var eps = Math.pow(10, -spec[2]) / 2;
+    if (Math.abs(val) < eps) return '';
+    return (val > 0 ? '\u2191' : '\u2193') + ' ' +
+           Math.abs(val).toFixed(spec[2]) + spec[1];
+  }
+
   function _envNowRowHtml(r, opts) {
     opts = opts || {};
     var V = window.AoTViz;
@@ -1628,7 +2064,13 @@
         // 나누려고 정한 값이라 사람이 읽을 뜻이 없고, 기준 라벨이 그 자리로
         // 움직이다 보면 끝 숫자와 겹쳐 "0.40 0.80–1.20" 처럼 한 덩어리로
         // 읽힌다. 이 줄에서 알아야 하는 것은 **기준과 지금 위치**뿐이다.
-        scale: [ { text: anchorText, anchor: true, at: anchorAt } ]
+        scale: [ { text: anchorText, anchor: true, at: anchorAt } ],
+        // ── 3행 오른쪽: 이 측정의 **추세** ────────────────────────────────
+        // 값과 방향은 함께 읽어야 뜻이 선다 — 32.8°C 가 괜찮은지는 오르는
+        // 중인지 내리는 중인지로 갈린다. 카드 하나로 몰아 두면 어느 줄의
+        // 추세인지 눈으로 이어붙여야 하지만, 여기서는 자기 값 바로 아래다
+        // (2026-08-26 지적).
+        scaleNote: _trendNote(r.key, opts.trend)
       });
     } else if (V) {
       // 축을 만들 수 없는 지표 — 값만 낸다. 다만 **추세는 범위를 몰라도 그릴 수
@@ -1832,6 +2274,93 @@
     // 바깥 — 시설에만 있다(구역은 실내/실외 구분이 없다). 한 줄로 붙이는 이유:
     // 안이 더운 것이 문제인지 그냥 바깥이 더운 날인지는 둘을 나란히 놔야
     // 판단할 수 있는데, 값을 크게 넣으면 실내값과 구분이 안 된다.
+    // ── 광합성 지표도 이 카드다 (2026-08-26) ──────────────────────────────
+    // 따로 카드를 두었는데 그 안의 줄도 전부 "지금 값 / 목표" 였다 — [환경]과
+    // 같은 질문에 답하면서 카드만 갈라져 있었다.
+    // 남는 것은 **센서로 재지 못하는 축**뿐이다 — 광량·CO2·DLI·효율.
+    //
+    // ⚠ **공용 프리미티브로 만든다**(components/aot-dataviz.css 규약).
+    // 축을 그릴 수 있으면 `band`, 없으면 `value` 다. 손수 `.aot-ov-row` 를
+    // 짜면 같은 카드 안에서 글자 크기가 위 측정줄과 갈리고, 줄 사이 간격과
+    // 가로 구분선을 주는 `.aot-viz + .aot-viz` 규칙도 안 걸린다.
+    var _V   = window.AoTViz;
+    var _ph  = opts.photo || {};
+    var _pht = opts.targets || {};
+    var _phOpt = _ph.opt || {};
+    var _phRows = [];
+    // ⚠ **줄은 `.aot-env-now-item` 으로 감싼다**(aot-sensor-label.css 규약).
+    // 줄 사이 구분선은 `.aot-env-now-item + .aot-env-now-item::before` 가
+    // 그린다 — 감싸지 않으면 위 측정줄들과 나란히 서면서 선만 빠진다.
+    function _phItem(inner) {
+      _phRows.push('<div class="aot-env-now-item">' + inner + '</div>');
+    }
+    function _phValue(label, cur, target, unit) {
+      if (cur == null && target == null) return;
+      _phItem(_V.value({
+        label: label,
+        valueText: (cur != null ? String(cur) : '\u2014') +
+                   (target != null ? ' / ' + target : ''),
+        valueSub: unit
+      }));
+    }
+    if (_ph.enabled && _V) {
+      // 광량은 실외 일사에서 오므로 값이 늘 있다 — 축을 그릴 수 있으면 그린다.
+      // 축의 끝은 **맑은 날 정오**(_LIGHT_FULL_SUN)로 고정한다. 그날 최대치로
+      // 잡으면 축이 값 따라 늘어 언제나 절반쯤에 서 있는 것처럼 보인다.
+      // 기준선은 작물의 광 반포화 상수(K_L) — 목표라기보다 **넘어야 할 선**이다.
+      if (_ph.light != null) {
+        var _lmax = Math.max(_LIGHT_FULL_SUN, _ph.light * 1.1);
+        // ── 광량도 **적정 구간**으로 그린다 (2026-08-26) ──────────────────
+        // 사람이 이 줄에서 알고 싶은 것은 "지금 정상 범위인가" 다. 기준선 하나
+        // ("반포화 100")로는 그 답이 안 나온다 — 100 보다 크면 좋은 건지,
+        // 얼마나 커야 충분한지, 너무 큰 건 아닌지를 말하지 못한다.
+        //
+        // 구간은 지어내지 않는다. 시스템이 이미 `K_L`(광 반포화 상수)을 주고
+        // 있고, 광 응답이 직각쌍곡선(A/A_max = L/(K_L+L))이라 거기서 나온다:
+        //
+        //     L = 1×K_L  → 최대의 50%   ← 이 아래는 광이 확실한 제한 인자
+        //     L = 3×K_L  → 75%
+        //     L = 9×K_L  → 90%          ← 이 위로는 두 배 늘려도 5% 남짓
+        //
+        // 그래서 **K_L ~ 9×K_L** 을 적정 구간으로 둔다. 위쪽 끝을 두는 이유는
+        // 남는 광이 공짜가 아니기 때문이다 — 그만큼 열이 되고, 광저해도 온다.
+        // 온도·습도 줄과 같은 `okMin/okMax` 를 쓰므로 그림도 같다.
+        var _lk  = _phOpt.light_k;
+        var _lok = (_lk != null && _lk > 0)
+                     ? { lo: _lk, hi: Math.min(_lk * 9, _lmax) } : null;
+        _phItem(_V.band({
+          label: _t('Light Level'),
+          // ⚠ `value` 를 반드시 준다 — `valueText` 만 주면 마커를 놓을 자리를
+          //   몰라 `is-empty` 로 빈 트랙이 나온다(실제로 그렇게 나왔다).
+          value: _ph.light, valueText: String(_ph.light),
+          valueSub: ' \u00b5mol/m\u00b2/s', min: 0, max: _lmax,
+          okMin: _lok ? _lok.lo : null, okMax: _lok ? _lok.hi : null,
+          scale: (_lok
+                  ? [{ text: _t('Range') + ' ' +
+                             Math.round(_lok.lo) + '\u2013' + Math.round(_lok.hi),
+                       anchor: true,
+                       at: (_lok.lo + _lok.hi) / 2 / _lmax * 100 }]
+                  : [])
+        }));
+      }
+      // ⚠ **CO2 는 잴 수 없으면 내지 않는다.** "— / 600" 은 목표만 알려 줄 뿐
+      // 지금 어떤지는 아무 말도 못 한다 — 값이 없는 칸이 남아 사용자가 매번
+      // "왜 비어 있지" 를 다시 묻게 된다(2026-08-26 지적).
+      if (_ph.co2 != null) {
+        _phValue('CO2', _ph.co2, _pht.co2 != null ? _pht.co2 : _phOpt.co2_k, ' ppm');
+      }
+      _phValue('DLI', _ph.dli_today, _ph.dli_target, ' mol/m\u00b2/d');
+      if (_ph.rate_rel_pct != null) {
+        _phItem(_V.value({ label: _t('Photosynthesis rate'),
+                           valueText: String(_ph.rate_rel_pct), valueSub: '%' }));
+      }
+    }
+    // 측정 줄과 **같은 묶음**에 넣는다 — 줄 사이 간격(32px)과 가로 구분선은
+    // `.aot-viz + .aot-viz` 가 준다. 따로 감싸면 그 규칙이 끊긴다.
+    if (_phRows.length && body.slice(-6) === '</div>') {
+      body = body.slice(0, -6) + _phRows.join('') + '</div>';
+    }
+
     var outdoor = (env.outdoor || []).filter(function (r) {
       return r && r.value != null;
     });
@@ -4101,6 +4630,7 @@
     sectionPane:           sectionPane,
     skeleton:              skeleton,
     buildOverviewSection:  buildOverviewSection,
+    buildFacilityDetailSection: buildFacilityDetailSection,
     buildHazardsHtml:      buildHazardsHtml,
     buildIrrigationHtml:   buildIrrigationHtml,
     buildAboutSection:     buildAboutSection,

@@ -239,7 +239,11 @@ def query_flux(unit, unique_id,
         # 그래프가 쓰는 평균이다. 'max'/'min' 은 일별 최고·최저가 필요한 자리
         # (GDD = (Tmax+Tmin)/2)에서 쓴다. 여기서 만들지 않으면 그 자리가 Flux
         # 쿼리를 한 벌 더 짜게 되고, 버킷·필터 규약이 두 곳으로 갈린다.
-        _fn = group_fn if group_fn in ('max', 'min', 'mean', 'median') else None
+        # 'sum' 은 **길이의 합**이 필요한 자리다(장치가 하루에 몇 초 돌았나 —
+        # `runtime.get_daily_operational_seconds`). 평균으로 내면 "한 번 켤 때
+        # 평균 몇 초" 가 되어 전혀 다른 값이다.
+        _fn = group_fn if group_fn in ('max', 'min', 'mean', 'median',
+                                       'sum') else None
         if _fn:
             query += f' |> aggregateWindow(every: {group_sec}s, fn: {_fn})'
         elif settings.measurement_db_version == '1':

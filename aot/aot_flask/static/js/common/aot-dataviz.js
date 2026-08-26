@@ -66,8 +66,19 @@
        양 끝 12% 안쪽이면 끝에 붙여 세운다 — 그대로 두면 잘린다. 그 경우 같은
        쪽 축 라벨을 가리게 되는데, 가려도 되는 쪽이다(축의 끝은 트랙이 이미
        보여 주지만 기준은 이 라벨 말고 적을 자리가 없다). */
-    function scaleHtml(items, anchorPct) {
-        if (!items || !items.length) return '';
+    /* note: 눈금 줄 **오른쪽 끝**에 붙는 짧은 덧말(추세·면적 등).
+       lead: 같은 줄 **왼쪽 끝**의 덧말(마지막 작동 등).
+       눈금이 하나도 없어도 덧말만으로 줄을 만든다 — 축을 못 그리는 지표도
+       방향은 말할 수 있기 때문이다.
+
+       ⚠ **덧말을 `items` 로 넣지 말 것.** items 는 *축의 눈금*이라, 기준이 축
+       끝에 붙는 줄에서는 그쪽 끝 항목이 CSS 로 감춰진다(is-anchor-start/end).
+       거기에 덧말을 넣으면 목표가 0% 나 100% 인 장치에서만 그 글자가 조용히
+       사라진다 — 2026-08-26 에 실제로 그랬다(창이 100% 로 열린 동안에만
+       '마지막 작동' 이 안 보였다). 덧말은 축이 아니므로 자기 슬롯을 쓴다. */
+    function scaleHtml(items, anchorPct, note, lead) {
+        items = items || [];
+        if (!items.length && !note && !lead) return '';
         var anchored = isNum(anchorPct);
         // 끝에 붙는 경우 그쪽 축 라벨을 **감춘다.** 예전에는 배경만 깔았는데,
         // 기준 라벨이 짧으면(예: '오늘') 그 옆으로 축 라벨이 삐져나와
@@ -80,6 +91,9 @@
         }
         var html = '<div class="aot-viz-scale' +
                    (anchored ? ' aot-viz-scale--anchored' : '') + edge + '">';
+        if (lead) {
+            html += '<span class="aot-viz-scale-lead">' + esc(lead) + '</span>';
+        }
         for (var i = 0; i < items.length; i++) {
             var it = items[i];
             var obj  = it && typeof it === 'object';
@@ -100,6 +114,9 @@
                 attr = ' class="aot-viz-scale-anchor"';
             }
             html += '<span' + attr + '>' + esc(text) + '</span>';
+        }
+        if (note) {
+            html += '<span class="aot-viz-scale-note">' + esc(note) + '</span>';
         }
         return html + '</div>';
     }
@@ -183,7 +200,8 @@
         }
         html += scaleHtml(o.scale,
                           (at !== null) ? at
-                          : ((os !== null && oe !== null) ? (os + oe) / 2 : null));
+                          : ((os !== null && oe !== null) ? (os + oe) / 2 : null),
+                          o.scaleNote, o.scaleLead);
         return html + '</div>';
     }
 
@@ -238,7 +256,7 @@
         }
         html += '</div>';
         // 불릿의 기준은 목표다.
-        html += scaleHtml(o.scale, t);
+        html += scaleHtml(o.scale, t, o.scaleNote, o.scaleLead);
         return html + '</div>';
     }
 

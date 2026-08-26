@@ -29254,10 +29254,10 @@ msgid "Not keeping up"
 msgstr "못 따라감"
 
 msgid "%(kinds)s at full output for %(min)s min, %(var)s still off target"
-msgstr "%(kinds)s 최대 출력 %(min)s분째인데 %(var)s가 목표를 벗어나 있습니다"
+msgstr "%(kinds)s를 %(min)s분째 최대로 돌리고 있지만 %(var)s가 아직 목표에 닿지 않았습니다"
 
 msgid "%(var)s is off target and there is no device here that can move it"
-msgstr "%(var)s가 목표를 벗어났는데 이를 움직일 장치가 없습니다"
+msgstr "%(var)s가 목표를 벗어났지만, 이를 조절할 장치가 없습니다"
 
 msgid "Coming weather"
 msgstr "다가오는 날씨"
@@ -30699,3 +30699,205 @@ msgstr "분무 일소 보호"
 
 msgid "Tightens the sunburn protection above for newly emerged seedlings. Droplets left on a cotyledon under strong sun focus light onto the leaf and concentrate dissolved minerals as they evaporate, and the seedling has no cuticle yet to resist either. The lockout itself is always active for wetting-type nozzles — this adds a lower threshold on groundwater, shorter sprays with a longer drying interval, and an evening cut-off."
 msgstr "위의 일소 보호를 갓 난 모종에 맞춰 더 조인다. 강한 햇빛 아래 떡잎에 남은 물방울은 렌즈처럼 빛을 모으고 마르면서 녹은 염류를 농축하는데, 모종은 아직 그것을 견딜 큐티클이 없다. 잠금 자체는 습윤형 노즐에 언제나 걸려 있고, 여기서는 지하수일 때 임계를 낮추고 분무를 더 짧게 끊어 건조 시간을 늘리며 저녁 차단을 더한다."
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Facility detail"
+msgstr "시설 세부"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Why each device is where it is"
+msgstr "장치가 지금 그 값인 이유"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "No control cycle to explain yet."
+msgstr "아직 설명할 제어 사이클이 없습니다."
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Within range"
+msgstr "범위 안"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Working on the target"
+msgstr "목표를 좇는 중"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Helping the main device"
+msgstr "주 장치를 돕는 중"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Would push the wrong way"
+msgstr "반대 방향으로 밀게 됨"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Side effect on another variable"
+msgstr "다른 항목에 부작용"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Forced by a safety gate"
+msgstr "안전 게이트가 강제"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Device not reachable"
+msgstr "장치에 닿지 않음"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Corrected by a safety gate"
+msgstr "안전 게이트가 보정"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "No usable difference to work with"
+msgstr "쓸 만한 차이가 없음"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "No outdoor reading to judge by"
+msgstr "판단할 실외 측정이 없음"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Indoor and outdoor are too close, or the device cannot move this variable"
+msgstr "실내외 차이가 거의 없거나, 이 장치가 이 항목을 움직이지 못합니다"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Vents hold position rather than guess"
+msgstr "짐작 대신 개구부가 제자리를 지킵니다"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "The last command did not get through"
+msgstr "마지막 명령이 전달되지 않았습니다"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Trend"
+msgstr "추세"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Acting on the forecast"
+msgstr "예보에 따른 선제 조치"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "commanded"
+msgstr "명령"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "%(why)s (%(var)s)"
+msgstr "%(why)s (%(var)s)"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Control by device"
+msgstr "장치별 제어"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Screens"
+msgstr "차폐"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Heating, cooling and misting"
+msgstr "냉난방·가습"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Running it would move this the wrong way"
+msgstr "지금 돌리면 오히려 목표에서 더 멀어집니다"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "It would upset another reading"
+msgstr "이걸 움직이면 다른 값이 흐트러집니다"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "A safety gate is holding this"
+msgstr "안전 게이트가 잡고 있습니다"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "The last command did not reach the device"
+msgstr "마지막 명령이 장치에 닿지 않았습니다"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "A safety gate adjusted this"
+msgstr "안전 게이트가 값을 조정했습니다"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Doing all it can here"
+msgstr "이 장치로 할 수 있는 만큼 하고 있습니다"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Holding position until the outdoor reading returns"
+msgstr "실외 측정이 돌아올 때까지 제자리를 지킵니다"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Set by hand"
+msgstr "사람이 직접 정한 값입니다"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Fully open and giving all it can"
+msgstr "최대로 열어 한계까지 쓰고 있습니다"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Opening or closing on a guess would do more harm than waiting"
+msgstr "짐작으로 여닫는 것보다 기다리는 편이 낫습니다"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Output in use"
+msgstr "가동 출력"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "%(on)s of %(all)s running"
+msgstr "%(all)s대 중 %(on)s대 가동"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Heating and cooling are both running against each other"
+msgstr "난방과 냉방이 서로 맞서며 함께 돌고 있습니다"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Nothing running right now"
+msgstr "지금 돌고 있는 장치가 없습니다"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Currently %(what)s"
+msgstr "지금 %(what)s 중입니다"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "warming"
+msgstr "가온"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "cooling"
+msgstr "냉각"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "adding moisture"
+msgstr "가습"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Last misting"
+msgstr "마지막 분무"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "half-saturation %(n)s"
+msgstr "반포화 %(n)s"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "of %(n)s m²"
+msgstr "전체 %(n)s m²"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "%(n)s d ago"
+msgstr "%(n)s일 전"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "usually %(h)s h"
+msgstr "평소 %(h)s시간"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Powered on"
+msgstr "켜짐"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Powered off"
+msgstr "꺼짐"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "%(h)s h"
+msgstr "%(h)s시간"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "A safety gate is holding the controls"
+msgstr "안전 장치가 걸려 제어를 잡고 있습니다"

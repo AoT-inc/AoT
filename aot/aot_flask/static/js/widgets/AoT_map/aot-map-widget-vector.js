@@ -3928,11 +3928,35 @@
                 _bayNav += '</div>';
             }
 
+            // 마지막 탭은 **'개요'** 다(2026-08-26 되돌림). 이 탭이 담는 것은
+            // 시설의 기초 정보 — 사진·크기·면적·용적·설명이고, 편집은 그 옆에
+            // 붙은 버튼 둘뿐이다. 자주 볼 것이 아니라서 마지막에 둔 자리이지
+            // "설정하러 가는 곳" 이 아니다.
+            //
+            // 기본값('Settings')은 **구획** 모달을 위한 이름이다 — 거기 마지막
+            // 탭은 이름·기간·프로그램·몫을 고치는 진짜 편집 폼이라 그 이름이
+            // 맞다. 구역·대지는 이미 'About' 을 넘기고 있었으므로, 시설이
+            // 기본값을 쓰는 동안 같은 자리의 탭 이름이 계층마다 갈려 있었다.
+            // 규칙은 하나다 — **편집 폼이 본체인 곳만 '설정'**.
+            // 키(`about`)는 그대로다. 바꾸면 기존 대시보드의
+            // `popup_default_tab` 저장값이 없는 탭을 가리킨다.
             return window.AoTMapPopup.buildModalHeader({ name: title, up: true }) +
                    _bayNav +
-                   window.AoTMapPopup.buildSectionNav(defSec) +
+                   window.AoTMapPopup.buildSectionNav(defSec, [
+                       { key: 'overview', label: 'Overview' },
+                       // [현황]과 [환경·제어] **사이**다. 왼쪽은 "지금 괜찮은가",
+                       // 오른쪽은 "내가 직접 만지겠다" 이고, 그 사이에 놓이는
+                       // 질문이 "왜 이렇게 하고 있나" 다. 순서가 곧 그 흐름이다.
+                       { key: 'detail',   label: 'Facility detail' },
+                       { key: 'envctl',   label: 'Environment & Control' },
+                       { key: 'about',    label: 'About' }
+                   ]) +
                    '<div class="aot-bay-popup-pane" data-pane="overview"' +
                        (defSec === 'overview' ? '' : ' style="display:none"') + '>' +
+                       _skel +
+                   '</div>' +
+                   '<div class="aot-bay-popup-pane" data-pane="detail"' +
+                       (defSec === 'detail' ? '' : ' style="display:none"') + '>' +
                        _skel +
                    '</div>' +
                    '<div class="aot-bay-popup-pane" data-pane="envctl"' +
@@ -4773,6 +4797,7 @@
                 // 정해진 자리(위치·시간 층)에 넣는다. 예전에는 "환경 블록이 첫
                 // 자식" 이라는 가정으로 그 뒤에 끼웠는데, 그 블록이 없는 시설
                 // (센서 미등록)이나 응답이 늦는 날에는 자리가 달라졌다.
+                // 같은 내용인지는 위에서 이미 걸렀다.
                 var slot = pane.querySelector('[data-slot="plots"]');
                 if (slot) {
                     slot.innerHTML = '';
@@ -4859,7 +4884,10 @@
                     ranges: _facilityRanges_act(uid, facilityUuid),
                     // 프로그램이 정한 한계 — 온도·습도는 목표가 아니라 이쪽이다
                     // (build_env_target 의 R3 주석 참조).
-                    limits: st._lastProgramLimits
+                    limits:  st._lastProgramLimits,
+                    trend:   st._lastTrend,
+                    photo:   st._lastPhoto,
+                    targets: st._lastTargets
                 });
                 if (html) {
                     // 같은 값이면 DOM 을 건드리지 않는다(위 _loadOverview 주석).
@@ -4962,9 +4990,9 @@
                     '<div class="aot-ov-slot" data-slot="plots"></div>' +
                     // ② 데이터
                     '<div class="aot-ov-slot" data-slot="now"></div>' +
-                    // ③ 제어 — 직전에 한 일(관수) 다음에 지금 하는 일
-                    (window.AoTMapPopup.buildIrrigationHtml
-                       ? window.AoTMapPopup.buildIrrigationHtml(res[4]) : '') +
+                    // 마지막 관수·분무는 **제어 정보**라 [시설 세부]로 옮겼다
+                    // (2026-08-26). [현황]은 "지금 어떤가"(목표·값·추세)이고
+                    // "무엇을 했나/왜 그랬나" 는 저쪽이다.
                     // ③ 제어 상태 + ④ 기록물(노트)
                     window.AoTMapPopup.buildOverviewSection(
                         res[0], res[1], {
@@ -4980,6 +5008,32 @@
                 if (!ovSame) {
                     st2._ovHtml = ovHtml;
                     pane.innerHTML = ovHtml;
+                }
+
+                // [시설 세부] — 같은 env_summary 를 근거 중심으로 편다.
+                // **여기서 함께 그린다.** 탭을 누를 때 따로 받아오면 같은
+                // 응답을 두 번 조회하게 되고(그 요청이 /overview 로 묶인
+                // 이유가 정확히 그것이다), 열자마자 스켈레톤이 한 번 보인다.
+                var dPane = body && body.querySelector(
+                    '.aot-bay-popup-pane[data-pane="detail"]');
+                if (dPane && window.AoTMapPopup.buildFacilityDetailSection) {
+                    var dHtml = window.AoTMapPopup.buildFacilityDetailSection(
+                        res[0], {
+                            irrigation: res[4],
+                            // 이름·실제 개도는 여기서만 안다. 시설 공통까지
+                            // 포함해야 한다 — 동을 고른 상태에서도 이 탭은
+                            // 시설 전체의 제어를 설명하는 자리다.
+                            states: (st2.statesByFac &&
+                                     st2.statesByFac[facilityUuid]) || {}
+                        });
+                    // ⚠ 렌더 여부는 **요소에** 새긴다(위젯 상태가 아니라).
+                    // 위젯 상태에 두면 팝업을 닫았다 다시 열 때 DOM 은 새
+                    // 스켈레톤인데 상태는 "이미 그렸다" 로 남아, 탭이 영영
+                    // 비어 있다(실제로 겪음). 요소에 붙이면 DOM 과 함께 죽는다.
+                    if (dPane._detailHtml !== dHtml) {
+                        dPane._detailHtml = dHtml;
+                        dPane.innerHTML = dHtml;
+                    }
                 }
                 // 현재 환경 + 센서 신뢰도를 맨 위에. 자동제어가 안 걸린 시설의
                 // [현황]은 예전에 "연동된 자동제어 없음" 한 줄이 전부여서, 수동
@@ -5108,6 +5162,16 @@
                         st0.repEditByFac[facilityUuid] = !!j.can_edit;
                         st0.hiddenByFac = st0.hiddenByFac || {};
                         st0.hiddenByFac[facilityUuid] = j.hidden_rows || {};
+                    }
+                    // 추세는 [환경] 카드가 그린다 — 그 카드는 별도 주기로
+                    // 다시 그려지므로(_prependFacilityEnvNow) 여기서 상태에
+                    // 실어 두고 그쪽이 읽는다.
+                    if (st0) {
+                        var _sm = (j.env_summary || {}).summary || {};
+                        st0._lastTrend   = _sm.trend   || null;
+                        st0._lastPhoto   = _sm.photo   || null;
+                        st0._lastTargets = _sm.targets || null;
+                        st0._lastIrr     = j.irrigation || null;
                     }
                     _render([j.env_summary || null, j.status || null,
                              j.info || null, j.hazards || null,

@@ -19,6 +19,8 @@ _POPUP = os.path.join(_ROOT, 'aot_flask', 'static', 'js', 'widgets',
                       'AoT_map', 'aot-map-popup.js')
 _KO = os.path.join(_ROOT, 'aot_flask', 'translations', 'ko',
                    'LC_MESSAGES', 'messages.po')
+_VIZ_CSS = os.path.join(_ROOT, 'aot_flask', 'static', 'css', 'components',
+                        'aot-dataviz.css')
 
 
 def _read(path):
@@ -71,10 +73,16 @@ class TestOverviewReadsServerFields(unittest.TestCase):
     """서버가 보내는 키를 화면이 실제로 읽는지 — 이름이 갈리면 그 값은 영영
     안 뜨는데 에러는 나지 않는다."""
 
-    def test_photosynthesis_reads_crop_not_subject(self):
+    def test_photosynthesis_title_carries_no_crop_name(self):
+        """제목에 작물·구획 이름을 붙이지 않는다 (2026-08-26).
+
+        그 이름은 [구획] 카드가 이미 말하고, 사용자가 지은 **데이터**라
+        번역되지 않는다 — 한국어 화면에 "광합성 · クサイチゴ" 처럼 다른
+        언어가 섞여 보였다.
+        """
         src = _read(_POPUP)
-        self.assertIn('ph.crop', src,
-                      '서버는 photo.crop 으로 보낸다 — subject 만 읽으면 작물명이 안 뜬다')
+        self.assertNotIn('ph.crop || ph.subject', src,
+                         '작물명을 제목에 다시 붙이고 있다')
 
     def test_status_tab_keeps_only_what_answers_now(self):
         """[현황]은 "지금 어떤가 · 무엇이 움직이나" 만 답한다.
@@ -120,16 +128,30 @@ class TestOverviewReadsServerFields(unittest.TestCase):
         # 축을 모르는 지표는 **지어내지 않는다** — 머리줄만 낸다.
         self.assertIn('V.value(', body)
 
-    def test_control_status_leads_with_why(self):
-        """숫자를 늘어놓기 전에 **왜 그런지**를 먼저 말한다 — 설비 한계와 안전
-        게이트가 그 이유다. 둘 다 장치 목록보다 앞이어야 한다."""
+    def test_control_status_is_problem_signals_only(self):
+        """[현황]의 '제어 상태' 는 **문제 신호만** 낸다 (2026-08-26).
+
+        예전에는 여기에 '장치별 개도'(`outputs_by_kind` = 종류별 **평균**)가
+        함께 있었는데, [시설 세부]의 장치별 카드와 **같은 그림**이라 사용자가
+        무엇이 다른지 알 수 없었다. 게다가 평균이라 측창 우 100% · 천창 0% 가
+        "개구부 50%" 한 줄로 뭉쳐 아무것도 말하지 않았다.
+
+        남는 것은 못 따라감과 안전 게이트뿐이고, 둘 다 없으면 카드가 나오지
+        않는다 — 이상이 없다는 것을 한 줄로 적어 봐야 판단은 바뀌지 않는다.
+        """
         body = _read(_POPUP).split("_t('Control Status')", 1)[1].split(
             '\n  function ', 1)[0]
-        i_strain = body.index("_t('Not keeping up')")
-        i_gate = body.index("_t('Safety Gate')")
-        i_kinds = body.index("_t('Device opening')")
-        self.assertLess(i_strain, i_kinds, '한계 경고가 장치 목록 뒤에 있다')
-        self.assertLess(i_gate, i_kinds, '게이트가 장치 목록 뒤에 있다')
+        # 못 따라감은 **문장 자체**로 말한다 — 두 칸이던 시절의 '못 따라감'
+        # 이름 칸은 뒤 문장과 같은 말을 두 번 하게 돼 걷어냈다(2026-08-26).
+        self.assertIn("is off target and there is no device here", body)
+        self.assertIn("_t('Safety Gate')", body)
+        self.assertNotIn("_t('Device opening')", body,
+                         '종류별 평균 목록이 되살아났다 — [시설 세부]와 겹친다')
+        self.assertNotIn('outputs_by_kind', body)
+        # 카드를 감추는 판정은 제목보다 **앞**에서 나므로 함수 전체에서 본다.
+        fn = _read(_POPUP).split('function buildOverviewSection', 1)[1].split(
+            '\n  function ', 1)[0]
+        self.assertIn('_hasCtrl', fn, '문제가 없을 때 카드를 감추지 않는다')
 
     def test_dates_are_not_repeated_next_to_the_axis(self):
         """시작일은 [구획] 의 기간 축이 보인다. 축이 있는데 같은 날짜를 표로 또
@@ -145,11 +167,25 @@ class TestOverviewReadsServerFields(unittest.TestCase):
 
     def test_disabled_photosynthesis_says_nothing(self):
         """꺼진 기능은 설정이지 상태가 아니다 — [현황]에서 자리를 차지할 이유가
-        없다."""
+        없다.
+
+        2026-08-26: 광합성 줄은 [환경] 카드로 들어갔다(`buildEnvNowHtml`).
+        그 줄들도 전부 "지금 값 / 목표" 라 [환경]과 같은 질문에 답하는데
+        카드만 갈라져 있었다.
+        """
         src = _read(_POPUP)
-        body = src.split('function buildOverviewSection', 1)[1].split(
+        body = src.split('function buildEnvNowHtml', 1)[1].split(
             '\n  function ', 1)[0]
-        self.assertIn('if (ph.enabled && phRows) {', body)
+        self.assertIn('if (_ph.enabled && _V) {', body)
+        # ⚠ 손수 만든 `.aot-ov-row` 가 아니라 **공용 프리미티브**여야 한다
+        # (components/aot-dataviz.css 규약) — 축이 있으면 band, 없으면 value.
+        # 손수 짜면 같은 카드 안에서 글자 크기·간격·구분선이 위 측정줄과 갈린다.
+        self.assertIn('_V.band(', body)
+        self.assertIn('_V.value(', body)
+        # 여는 태그로만 본다 — `aot-ov-card-title--row`(제목 클래스)와
+        # 규약을 설명하는 주석 문구까지 걸리면 검사가 제 뜻을 잃는다.
+        self.assertNotIn('<div class="aot-ov-row"', body,
+                         '카드 안에서 공용 줄 대신 자체 마크업을 쓰고 있다')
         self.assertNotIn('Photosynthesis-oriented control is off', body)
 
     def test_plot_block_shows_what_is_growing(self):
@@ -190,12 +226,157 @@ class TestInformationOrder(unittest.TestCase):
         i_hz = body.index('buildHazardsHtml')
         i_plots = body.index('data-slot="plots"')
         i_now = body.index('data-slot="now"')
-        i_irr = body.index('buildIrrigationHtml')
         i_ctrl = body.index('buildOverviewSection')
         self.assertLess(i_hz, i_plots, '날씨(지역)가 구획(시설)보다 뒤에 있다')
         self.assertLess(i_plots, i_now, '위치·시간 층이 데이터 층보다 뒤에 있다')
-        self.assertLess(i_now, i_irr, '데이터 층이 제어 층보다 뒤에 있다')
-        self.assertLess(i_irr, i_ctrl, '마지막 관수는 제어 층 맨 위다')
+        self.assertLess(i_now, i_ctrl, '데이터 층이 제어 층보다 뒤에 있다')
+        # 마지막 관수·분무는 **제어 정보**라 [시설 세부]로 옮겼다(2026-08-26).
+        # [현황]은 "지금 어떤가"(목표·값·추세)만 답한다.
+        self.assertNotIn('buildIrrigationHtml', body,
+                         '[현황]에 제어 이력이 되돌아왔다')
+        # 마지막 작동은 **그 장치 트랙 바로 아래**다(2026-08-26 재배치).
+        # 한 줄로 맨 위에 두면 어느 장치 이야기인지 이름으로 이어붙여야 했다.
+        detail = _read(_POPUP).split(
+            'function buildFacilityDetailSection', 1)[1].split(
+            '\n  function ', 1)[0]
+        # 근거는 **모든 장치**가 갖는 `/runtime` 의 last_run_at 이다. 예전에는
+        # 관수 payload(`opts.irrigation`) 하나만 보고 이름이 맞는 한 대에만
+        # 붙였는데, 같은 목록의 나머지는 그 칸이 비어 "왜 이것만 나오나" 가
+        # 됐다(2026-08-26 지적). 쉬는 장치일수록 이 값이 필요하다.
+        self.assertIn('lv.last_run_at', detail,
+                      '[시설 세부]가 장치별 마지막 작동을 말하지 않는다')
+        self.assertNotIn('opts.irrigation', detail,
+                         '관수 한 대만 특별대우하던 경로가 되돌아왔다')
+        # 마지막 작동은 그 장치 줄의 **3행 왼쪽**이다 — 별도 줄로 내면 장치
+        # 하나가 두 줄을 차지해 목록이 늘어진다(2026-08-26 재배치).
+        # ⚠ `scaleNote`(오른쪽)가 아니다. 거기는 면적 몫이고, 마지막 작동은
+        #   왼쪽 정렬이라야 다른 줄의 3행과 시작점이 맞는다.
+        # ⚠⚠ **`scale` 배열도 아니다.** 그것은 *축의 눈금*이라, 목표가 0%/100%
+        #   인 줄에서는 그쪽 끝 항목을 CSS 가 감춘다(is-anchor-start/end) —
+        #   창이 다 열린 동안에만 '마지막 작동' 이 사라졌다(2026-08-26).
+        self.assertIn("left.push(_t('Last run')", detail,
+                      '마지막 작동이 3행 왼쪽이 아니다')
+        self.assertIn('scaleLead: lead', detail,
+                      '마지막 작동이 축 눈금 자리로 되돌아갔다 — 그 자리는 '
+                      '목표가 축 끝에 붙는 줄에서 감춰진다')
+
+    def test_onoff_devices_are_measured_on_the_time_axis(self):
+        """on/off 장치의 "얼마나" 는 **지난 24시간 가동률**이지 지금의 0/100 이
+        아니다.
+
+        예전에는 켜진 장치를 100%, 꺼진 장치를 0% 로 놓고 평균을 내 '가동 출력'
+        막대를 그렸다 — 난방기 하나가 켜진 상태가 "33%" 로 나와, 셋이 3분의
+        1씩 돌고 있다는 뜻으로 읽혔다(2026-08-26 지적). 그런 일은 일어나지
+        않는다: 그 장치에는 중간값이 없다.
+        """
+        detail = _read(_POPUP).split(
+            'function buildFacilityDetailSection', 1)[1].split(
+            '\n  function ', 1)[0]
+        self.assertIn("lv.control_type === 'binary'", detail,
+                      '장치 종류를 가리지 않고 한 축으로 그리고 있다')
+        self.assertIn('duty_24h_s', detail, '가동률(시간축)을 읽지 않는다')
+        # ⚠ 골격은 다른 줄과 **똑같다** — 축만 바뀌고 자리는 그대로다.
+        #   3행 오른쪽은 언제나 「지금 값 / 전체」이고(개구부의 면적과 같은
+        #   자리), 왼쪽은 마지막 작동이다. 작동 시간을 왼쪽에 몰아넣었더니
+        #   오른쪽이 비어 그 줄만 다른 규칙으로 섰다(2026-08-26 지적).
+        self.assertIn('scaleNote: rightNote', detail,
+                      '3행 오른쪽이 「지금 값 / 축의 끝」 자리가 아니다')
+        self.assertIn('_dutyOf(', detail)
+        self.assertNotIn("h of the last 24 h", detail,
+                         '작동 시간이 3행 왼쪽으로 되돌아갔다')
+        # 집계 막대는 **같은 단위로 더해지는 무리**에만 — 환기는 m² 로 더해지고
+        # 냉난방·가습은 공통 단위가 없다.
+        self.assertNotIn("_t('Output in use')", detail,
+                         '뜻 없는 평균 막대가 되살아났다')
+        self.assertNotIn('_hvacRows', detail)
+
+    def test_run_time_is_compared_against_the_device_own_history(self):
+        """작동 시간에는 **견줄 기준**이 있어야 한다 (2026-08-26).
+
+        "24시간 중 0.6시간" 은 아무 말도 하지 않는다 — 난방기의 하루 0.6시간은
+        여름이면 흔한 일이고 겨울이면 고장 신호다. 24시간은 비교 기준이 아니라
+        그냥 하루의 길이다. 기준은 그 장치 자신의 최근 실적(7일 일평균·최대)
+        에서 온다.
+
+        기록이 모자라면 **막대를 그리지 않는다** — 없는 축을 지어내면 바로 그
+        24시간짜리 거짓말로 되돌아간다.
+        """
+        js = _read(_POPUP)
+        fn = js.split('function _dutyOf', 1)[1].split('\n    function ', 1)[0]
+        self.assertIn('duty_avg_s', fn, '평소(일평균) 기준을 읽지 않는다')
+        self.assertIn('hasBase', fn)
+        self.assertIn('Math.ceil(Math.max(avgH, h))', fn,
+                      '축의 끝은 기준을 올림한 시간이어야 한다 — 눈금이 딱 '
+                      '떨어져야 길이를 어림할 수 있고, 오늘이 기준을 넘으면 '
+                      '축도 따라 올라가야 세로선이 축을 안 뚫는다')
+        detail = js.split('function buildFacilityDetailSection', 1)[1].split(
+            '\n  function ', 1)[0]
+        self.assertIn('(duty && duty.hasBase) ? duty.h : null', detail,
+                      '기준 없이 값을 그리고 있다')
+        # ⚠ **밴드다, 불릿이 아니다.** 이 모달의 환경 줄이 전부 밴드라 사용자는
+        #   초록을 "기준 구간", 세로선을 "지금" 으로 읽는다. 불릿(막대=값,
+        #   눈금=목표)으로 그렸더니 정확히 반대로 읽혔다(2026-08-26 지적).
+        self.assertIn('V.band({ label: label', detail,
+                      'on/off 줄이 불릿으로 되돌아갔다 — 초록과 세로선의 뜻이 '
+                      '같은 화면의 환경 줄과 반대가 된다')
+        # 초록은 **왼쪽 끝부터 평소까지** 채운 길이다 — 그 길이가 기준이고,
+        # 세로선이 그보다 왼쪽이면 평소보다 덜 돌았다.
+        self.assertIn('okMin: (duty && duty.hasBase) ? 0 : undefined', detail)
+        self.assertIn('okMax: (duty && duty.hasBase) ? duty.avgH', detail)
+        # ⚠ 이 줄이 답하는 것은 "얼마나 일했나" 다. 1행만 순간 상태(켜짐/꺼짐)
+        #   를 말하면 값과 축이 서로 다른 것을 가리킨다(2026-08-26 지적).
+        self.assertIn("valueText: (duty ? duty.h.toFixed(1)", detail,
+                      '1행 값이 오늘 누적 시간이 아니다')
+
+    def test_baseline_excludes_the_day_in_progress(self):
+        """아직 안 끝난 하루를 지난 날들과 같은 무게로 섞으면 기준이 아침마다
+        낮아진다 — 그러면 "평소보다 많다" 가 오후에 저절로 참이 된다."""
+        src = _read(os.path.join(_ROOT, 'aot_flask', 'routes_geo.py'))
+        self.assertIn('daily[:-1]', src, '진행 중인 하루가 기준에 섞여 있다')
+        self.assertIn('len(past) >= 2', src,
+                      '하루치로 "평소" 를 만들고 있다')
+
+    def test_duty_cycle_is_served_only_for_onoff_devices(self):
+        """비례 장치(개도·PWM)는 지금 개도가 이미 "얼마나" 다 — 거기까지 이력을
+        캐면 폴링마다 조회만 늘어난다."""
+        src = _read(os.path.join(_ROOT, 'aot_flask', 'routes_geo.py'))
+        self.assertIn("_history_cached(uuid, ctrl_type == 'binary')", src)
+        self.assertIn("'duty_24h_s'", src)
+        # 기준도 서버가 만든다 — 화면이 축을 지어내지 않도록.
+        self.assertIn("'duty_avg_s'", src)
+
+    def test_problem_sentences_use_one_shared_style(self):
+        """못 따라감·안전 게이트는 **문장**이지 「이름 | 값」이 아니다.
+
+        `.aot-ov-row` 의 오른쪽 칸에 넣었더니 우측 정렬로 들쭉날쭉 접혔다 —
+        "수분(VPD)가 목표를 벗어났는데 이를 / 움직일 장치가 없습니다"
+        (2026-08-26 영양 지적). [시설 세부]의 설명 문구와 **같은 성격의 글**
+        이므로 같은 `.aot-ov-why` 를 쓴다. 화면마다 다른 모양으로 서면
+        사용자는 둘이 다른 것인 줄 안다.
+        """
+        js = _read(_POPUP)
+        for cls in ('aot-ov-strain', 'aot-ov-gate'):
+            self.assertIn('aot-ov-why ' + cls, js,
+                          '%s 가 공용 문장 스타일을 쓰지 않는다' % cls)
+            self.assertNotIn('aot-ov-row ' + cls, js,
+                             '%s 가 「이름 | 값」 두 칸으로 되돌아갔다' % cls)
+
+    def test_scale_annotations_are_not_hidden_as_axis_labels(self):
+        """3행의 덧말(왼쪽 `lead` · 오른쪽 `note`)은 **축 라벨이 아니다.**
+
+        `is-anchor-start/end` 는 "기준 라벨이 가리는 축 끝을 감춘다" 는 규칙인데,
+        덧말까지 걸리면 **목표가 0%/100% 인 줄에서만** 그 글자가 사라진다 —
+        창이 다 열린 동안에만 '마지막 작동' 이 안 보였다(2026-08-26). 조건이
+        값에 달려 있어 한 번 보고 넘어가면 정상으로 읽힌다.
+        """
+        css = _read(_VIZ_CSS)
+        for rule in ('.aot-viz-scale.is-anchor-start > span:first-child',
+                     '.aot-viz-scale.is-anchor-end   > span:last-child'):
+            i = css.index(rule)
+            line = css[i:css.index('\n', i)]
+            for keep in ('.aot-viz-scale-lead', '.aot-viz-scale-note'):
+                self.assertIn(':not(' + keep + ')', line,
+                              '덧말이 축 라벨로 취급돼 감춰진다: ' + rule)
 
     def test_zone_uses_the_same_layers(self):
         js = _read(_POPUP)
@@ -397,6 +578,11 @@ class TestSentenceRowsDoNotSplitTheirLabel(unittest.TestCase):
     것이 없어 이름은 멀쩡한데, 값이 문장이면 이름까지 눌려 낱말 한가운데가
     갈라진다. 실측(300px 폭): 이름 칸이 36px·2줄이 되어 "못 따라감" 이
     "못 따 / 라감" 으로 보였다. 규칙을 넣은 뒤 63px·1줄이다.
+
+    ⚠ **긴 문장은 이 문법을 아예 떠났다**(2026-08-26 영양 지적). 두 칸으로
+      버티게 해도 오른쪽 칸이 우측 정렬로 들쭉날쭉 접힌다 — 못 따라감·안전
+      게이트는 `.aot-ov-why` 한 문단으로 옮겼다. 여기 남는 것은 **값이 짧은**
+      줄뿐이다(위험 칩 "강풍 · 오늘 21시").
     """
 
     _CSS = os.path.join(_ROOT, 'aot_flask', 'static', 'css', 'widget',
@@ -405,22 +591,71 @@ class TestSentenceRowsDoNotSplitTheirLabel(unittest.TestCase):
     def test_sentence_rows_keep_their_label_on_one_line(self):
         css = _read(self._CSS)
         # 이름은 줄이지 않는다.
-        block = css.split('.aot-ov-strain,', 1)[1].split('\n}', 3)
+        block = css.split('.aot-hz {', 1)[1].split('\n}', 3)
         self.assertIn('flex-wrap: wrap', block[0])
         self.assertIn('white-space: nowrap', block[1])
         # 문장은 자리가 모자라면 자기 줄로 내려간다(basis 아래로 눌리면 wrap).
         self.assertIn('flex: 1 1 14em', block[2])
 
     def test_every_sentence_row_class_is_covered(self):
-        """값이 **문장**인 줄을 새로 만들면 이 명부에도 넣을 것.
+        """값이 **짧은 문장**인 줄을 새로 만들면 이 명부에도 넣을 것.
 
         빠뜨리면 증상이 조용하다 — 넓은 화면에서는 멀쩡하고, 좁은 폭에서만
         낱말이 갈라진다. 자동 판정은 두지 않는다: "이 값이 문장인가" 는
         마크업이 말해 주지 않고 사람이 아는 것이다.
+
+        값이 **긴 문장**이면 이 명부가 아니라 `.aot-ov-why` 다.
         """
         css = _read(self._CSS)
         popup = _read(_POPUP)
-        for cls in ('aot-ov-strain', 'aot-ov-gate', 'aot-hz'):
+        for cls in ('aot-hz',):
             self.assertIn(cls, popup, '%s 를 쓰는 자리가 사라졌다' % cls)
             self.assertIn('.%s > span:first-child' % cls, css,
                           '%s 가 문장 줄 규칙 명부에 없다' % cls)
+
+
+class TestDetailDomainsMatchServer(unittest.TestCase):
+    """[시설 세부]의 카드 구분은 **제어기의 도메인**과 같아야 한다.
+
+    이 탭은 "왜 이렇게 하고 있나" 에 답하는 자리이고, 그 "왜" 의 경계가 곧
+    부하분담 도메인이다 — 창끼리는 서로의 기여를 보고 조율하지만 공조는 그것을
+    모른다(`types.ACTUATOR_DOMAIN`, 2026-08-26).
+
+    갈리면 조용하다. 화면은 여전히 카드를 그리고 장치도 어딘가에 들어가지만,
+    **설명하는 무리와 제어기가 실제로 묶는 무리가 달라진다** — 사용자는 같이
+    움직일 것이라 기대한 장치들이 따로 노는 것을 보게 된다.
+    """
+
+    def _js_domains(self):
+        """`var _catOrder = [...]` → {kind: domain_key}."""
+        src = _read(_POPUP)
+        body = src.split('var _catOrder = [', 1)[1].split('\n      ];', 1)[0]
+        out = {}
+        for key, kinds in re.findall(
+                r"key:\s*'(\w+)'.*?kinds:\s*(\[[^\]]*\]|null)", body, re.S):
+            if kinds == 'null':
+                continue
+            for k in re.findall(r"'(\w+)'", kinds):
+                out[k] = key
+        return out
+
+    def test_kind_domain_assignment_matches(self):
+        from aot.functions.utils.env_control.types import ACTUATOR_DOMAIN
+        js = self._js_domains()
+        for kind, dom in js.items():
+            self.assertEqual(
+                ACTUATOR_DOMAIN.get(kind), dom,
+                "'%s' 이 화면에서는 '%s', 제어기에서는 '%s' 다" % (
+                    kind, dom, ACTUATOR_DOMAIN.get(kind)))
+
+    def test_every_load_sharing_domain_is_shown(self):
+        """명부에 없는 도메인이 생기면 그 장치들이 'Other' 로 뭉친다."""
+        from aot.functions.utils.env_control.types import ACTUATOR_DOMAIN
+        js_doms = set(self._js_domains().values()) | {'aux'}
+        missing = set(ACTUATOR_DOMAIN.values()) - js_doms
+        self.assertFalse(
+            missing, '화면에 없는 도메인: %s' % sorted(missing))
+
+
+if __name__ == '__main__':
+    unittest.main()

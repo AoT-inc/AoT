@@ -724,8 +724,11 @@
 .aot-ov-row.aot-ov-plot-link { padding: 12px 0; }
 
 /* Gate state: warning-like color */
+/* 안전 게이트 — `.aot-ov-strain` 과 같은 규칙이다(2026-08-26).
+   모달 안에서는 색이 아니라 **굵기**로 눈에 걸리게 한다. */
 .aot-ov-gate {
-  color: var(--aot-color-warning, #ff9f43);
+  color: inherit;
+  font-weight: 600;
 }
 
 /* Device reference: extra left margin */
@@ -742,6 +745,44 @@
 .aot-ov-ff {
   color: var(--aot-color-text-secondary);
   margin-top: 2px;
+}
+/* [시설 세부] 장치 무리 아래 붙는 근거 문구.
+   `.aot-ov-trend`(2px)를 쓰면 막대에 달라붙어 답답하다 — 이것은 값에 딸린
+   보조 숫자가 아니라 **한 무리 전체에 대한 문장**이라 자기 간격이 필요하다. */
+/* ⚠ 간격은 **양쪽** 다 준다. 이 문구는 무리의 위(요약 다음)에도 아래에도
+   올 수 있어(2026-08-26 배치 변경) 한쪽만 주면 반대편이 막대에 달라붙는다.
+   인접 마진은 접히므로 두 배로 벌어지지 않는다. */
+/* 카드 안 덩어리 구분은 **공용 규칙**이 준다 — `.aot-viz + .aot-viz` 가 줄
+   사이 간격(32px)과 가로 구분선을 이미 갖고 있다(components/aot-dataviz.css).
+   여기에 `.aot-ov-sec`·`.aot-ov-lastrun` 같은 전용 클래스를 새로 만들지 말 것:
+   같은 카드 안에서 글자 크기와 간격이 공용 줄과 갈린다. 축을 그릴 수 있으면
+   `V.band`, 없으면 `V.value` — 그 둘로 만들면 이 규칙이 저절로 걸린다. */
+
+/* [시설 세부] 카드의 **설명 문구** — 무리 전체에 대한 한 문장.
+   아래에 트랙 묶음이 이어지므로 **자기 아래에 간격과 구분선을 갖는다.**
+   카드 안에서 성격이 다른 덩어리가 이어지면 거리와 선으로 갈라야 한다는 것이
+   이 파일의 규칙인데(.aot-env-now-item 의 ::before 와 같은 이유), 설명 문구만
+   그 규칙 밖에 있어 트랙에 달라붙어 있었다(2026-08-26 지적 · 반복).
+   ⚠ 무리마다 다른 클래스를 붙이지 말 것 — 카드마다 굵기가 달라 보인다. */
+.aot-ov-why {
+  color: var(--aot-color-text-secondary);
+  line-height: 1.5;
+  margin-bottom: var(--aot-space-4);
+  padding-bottom: var(--aot-space-4);
+  border-bottom: 1px solid var(--aot-border-neutral, var(--aot-border-light));
+}
+.aot-ov-why:last-child {
+  margin-bottom: 0;
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+/* [환경] 카드의 **실외 한 줄** — 위 측정 묶음과 성격이 다르다(안 vs 밖).
+   묶음 바로 뒤에 붙어 있어 마지막 측정줄의 꼬리처럼 읽혔다. */
+.aot-ov-envnow > .aot-ov-trend {
+  margin-top: var(--aot-space-4);
+  padding-top: var(--aot-space-4);
+  border-top: 1px solid var(--aot-border-neutral, var(--aot-border-light));
 }
 
 /* ── 시설 대표사진 / 치수 / 설명 (현황 pane 최상단) ─────────────────────── */
@@ -1923,11 +1964,14 @@ button.aot-center-modal-close {
    기준 눈금이 그 **위치에** 적고, 편차는 마커가 목표에서 얼마나 떨어져 있는지로
    보인다. 작은 글씨 두 줄을 더 읽지 않아도 된다. */
 
-/* "설비가 못 따라감" — 숫자 나열 위에 그 뜻을 말하는 줄. 경고색이되 위험이
-   아니라 **판단이 필요하다**는 신호다. */
+/* "설비가 못 따라감" 같은 **판단이 필요한 줄**.
+   ⚠ 색으로 말하지 않는다 (2026-08-26). 모달 안에서 경고색 텍스트는 위험
+   신호로 읽히는데 이 줄이 말하는 것은 위험이 아니라 "봐 둘 것" 이다.
+   게다가 색만 다른 문장은 색각·저대비 환경에서 그냥 사라진다.
+   기본 텍스트 색을 쓰고 **굵기만 한 단계** 올려 눈에 걸리게 한다. */
 .aot-ov-strain {
-  color: var(--aot-color-warning, #b26a00);
-  font-weight: 500;
+  color: inherit;
+  font-weight: 600;
 }
 
 /* 문장을 담는 줄은 "이름 | 숫자" 문법이 아니다.
@@ -1936,21 +1980,21 @@ button.aot-center-modal-close {
  * 것이 없어 이름 쪽은 멀쩡한데, 값이 문장이면 이름까지 눌려 낱말 한가운데가
  * 쪼개진다 — 실제로 시설 모달 [현황]의 좁은 폭에서 "못 따라감" 이
  * "못 따 / 라감" 으로 보였다. 이름은 줄이지 않고, 문장이 들어갈 자리가
- * 모자라면 **자기 줄로 내린다**(flex-basis 아래로 눌리면 wrap 이 받는다). */
-.aot-ov-strain,
-.aot-ov-gate,
+ * 모자라면 **자기 줄로 내린다**(flex-basis 아래로 눌리면 wrap 이 받는다).
+ *
+ * ⚠ 못 따라감·안전 게이트는 이 문법을 **떠났다**(2026-08-26). 두 칸으로
+ *   버티게 해도 오른쪽 칸이 우측 정렬로 들쭉날쭉 접혀("수분(VPD)가 목표를
+ *   벗어났는데 이를 / 움직일 장치가 없습니다") 읽기 나빴다. 지금은 [시설
+ *   세부]와 같은 `.aot-ov-why` 한 문단이다. 남은 것은 위험 칩(`.aot-hz`)
+ *   뿐인데, 그쪽은 값이 짧아("강풍 · 오늘 21시") 두 칸이 맞는다. */
 .aot-hz {
   flex-wrap: wrap;
   gap: 2px var(--aot-space-3, 12px);
 }
-.aot-ov-strain > span:first-child,
-.aot-ov-gate > span:first-child,
 .aot-hz > span:first-child {
   flex: 0 0 auto;
   white-space: nowrap;
 }
-.aot-ov-strain > span:last-child,
-.aot-ov-gate > span:last-child,
 .aot-hz > span:last-child {
   flex: 1 1 14em;
   min-width: 0;

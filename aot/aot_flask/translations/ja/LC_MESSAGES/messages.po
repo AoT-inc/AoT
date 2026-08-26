@@ -29013,10 +29013,10 @@ msgid "Not keeping up"
 msgstr "追いつかず"
 
 msgid "%(kinds)s at full output for %(min)s min, %(var)s still off target"
-msgstr "%(kinds)sが最大出力で%(min)s分経過、%(var)sは目標から外れたままです"
+msgstr "%(kinds)sを%(min)s分間フル稼働させていますが、%(var)sはまだ目標に届いていません"
 
 msgid "%(var)s is off target and there is no device here that can move it"
-msgstr "%(var)sが目標から外れていますが、動かせる装置がありません"
+msgstr "%(var)sが目標から外れていますが、これを動かせる装置がありません"
 
 msgid "Coming weather"
 msgstr "これからの天気"
@@ -30458,3 +30458,205 @@ msgstr "ミスト日焼け防止"
 
 msgid "Tightens the sunburn protection above for newly emerged seedlings. Droplets left on a cotyledon under strong sun focus light onto the leaf and concentrate dissolved minerals as they evaporate, and the seedling has no cuticle yet to resist either. The lockout itself is always active for wetting-type nozzles — this adds a lower threshold on groundwater, shorter sprays with a longer drying interval, and an evening cut-off."
 msgstr "上の日焼け防止を、発芽したばかりの苗に合わせてさらに強める。強い日差しの下で子葉に残った水滴はレンズのように光を集め、乾く際に溶けた塩類を濃縮するが、苗にはまだそれに耐えるクチクラがない。ロックアウト自体は湿潤型ノズルに常に掛かっており、ここでは地下水の場合に閾値を下げ、噴霧をより短く区切って乾燥時間を延ばし、夕方の遮断を加える。"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Facility detail"
+msgstr "施設の詳細"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Why each device is where it is"
+msgstr "各機器が今その値である理由"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "No control cycle to explain yet."
+msgstr "説明できる制御サイクルがまだありません。"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Within range"
+msgstr "範囲内"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Working on the target"
+msgstr "目標に向けて動作中"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Helping the main device"
+msgstr "主機器を補助中"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Would push the wrong way"
+msgstr "逆方向に動かしてしまう"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Side effect on another variable"
+msgstr "他の項目への副作用"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Forced by a safety gate"
+msgstr "安全ゲートによる強制"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Device not reachable"
+msgstr "機器に到達できません"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Corrected by a safety gate"
+msgstr "安全ゲートが補正"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "No usable difference to work with"
+msgstr "利用できる差がありません"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "No outdoor reading to judge by"
+msgstr "判断できる屋外測定がありません"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Indoor and outdoor are too close, or the device cannot move this variable"
+msgstr "屋内外の差がほとんどないか、この機器がこの項目を動かせません"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Vents hold position rather than guess"
+msgstr "推測せず開口部は位置を保ちます"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "The last command did not get through"
+msgstr "最後の命令が届きませんでした"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Trend"
+msgstr "傾向"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Acting on the forecast"
+msgstr "予報に基づく先行制御"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "commanded"
+msgstr "命令"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "%(why)s (%(var)s)"
+msgstr "%(why)s (%(var)s)"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Control by device"
+msgstr "機器別の制御"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Screens"
+msgstr "遮蔽"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Heating, cooling and misting"
+msgstr "冷暖房・加湿"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Running it would move this the wrong way"
+msgstr "今動かすと、かえって目標から遠ざかります"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "It would upset another reading"
+msgstr "これを動かすと別の値が乱れます"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "A safety gate is holding this"
+msgstr "安全ゲートが抑えています"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "The last command did not reach the device"
+msgstr "最後の命令が機器に届きませんでした"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "A safety gate adjusted this"
+msgstr "安全ゲートが値を調整しました"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Doing all it can here"
+msgstr "この装置でできる限りのことをしています"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Holding position until the outdoor reading returns"
+msgstr "屋外測定が戻るまで位置を保ちます"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Set by hand"
+msgstr "人が直接決めた値です"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Fully open and giving all it can"
+msgstr "全開で限界まで使っています"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Opening or closing on a guess would do more harm than waiting"
+msgstr "推測で開閉するより待つ方が安全です"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Output in use"
+msgstr "稼働出力"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "%(on)s of %(all)s running"
+msgstr "%(all)s台中 %(on)s台 稼働"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Heating and cooling are both running against each other"
+msgstr "暖房と冷房が互いに打ち消し合って同時に動いています"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Nothing running right now"
+msgstr "今稼働している装置はありません"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Currently %(what)s"
+msgstr "現在 %(what)s 中です"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "warming"
+msgstr "加温"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "cooling"
+msgstr "冷却"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "adding moisture"
+msgstr "加湿"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Last misting"
+msgstr "最後の散霧"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "half-saturation %(n)s"
+msgstr "半飽和 %(n)s"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "of %(n)s m²"
+msgstr "全体 %(n)s m²"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "%(n)s d ago"
+msgstr "%(n)s日前"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "usually %(h)s h"
+msgstr "通常 %(h)s時間"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Powered on"
+msgstr "オン"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Powered off"
+msgstr "オフ"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "%(h)s h"
+msgstr "%(h)s時間"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "A safety gate is holding the controls"
+msgstr "安全ゲートが作動して制御を止めています"
