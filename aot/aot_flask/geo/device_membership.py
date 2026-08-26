@@ -183,6 +183,42 @@ def container_for_geometry(map_uuid, geom, containers=None):
     return _best_container((pt.x, pt.y), containers)
 
 
+def site_for_geometry(map_uuid, geom, containers=None):
+    """폴리곤을 감싸는 **site** GeoShape (없으면 None) — zone 안에 있어도 그
+    zone 을 감싸는 site 까지 올라간다.
+
+    `container_for_geometry` 는 zone 이 site 를 이기므로, zone 안의 구획은
+    그 결과만으로 site 를 알 수 없다(zone 이 나온다). 필터 화면이 "site"와
+    "zone"을 별개 축으로 보이려면 이 둘을 각자 구해야 한다 — site 후보만
+    남기고 같은 대표점으로 다시 판정한다.
+    """
+    from shapely.geometry import shape as shapely_shape
+
+    from aot.utils.geo_hierarchy import containment_point
+
+    geom = geom or {}
+    if geom.get('type') not in ('Polygon', 'MultiPolygon'):
+        return None
+    try:
+        pt = containment_point(shapely_shape(geom))
+    except Exception as exc:
+        logger.warning('membership: 기하 해석 실패(site 판정): %s', exc)
+        return None
+    if pt is None:
+        return None
+    if containers is None:
+        containers = load_containers(map_uuid)
+    for s, kind, poly in containers:
+        if kind != 'site':
+            continue
+        try:
+            if poly.contains(pt):
+                return s
+        except Exception:
+            continue
+    return None
+
+
 def device_ids_in_geometry(map_uuid, geom, _label='geometry', markers=None):
     """임의 폴리곤 안에 마커가 있는 device_id 집합.
 

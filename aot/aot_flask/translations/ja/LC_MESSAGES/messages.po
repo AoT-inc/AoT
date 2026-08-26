@@ -28406,6 +28406,9 @@ msgid "until the end"
 msgstr "最後まで"
 
 #: aot/aot_flask/templates/pages/geo/vegetation.html
+msgid "Already past — this boundary is fixed."
+msgstr "過ぎた区切りは変えられません。確認・取り消しでのみ変わります。"
+
 msgid "Add stage"
 msgstr "段階を追加"
 
@@ -29962,6 +29965,12 @@ msgstr "区画"
 msgid "All maps"
 msgstr "すべての地図"
 
+msgid "All sites"
+msgstr "すべてのサイト"
+
+msgid "All zones"
+msgstr "すべてのゾーン"
+
 msgid "All kinds"
 msgstr "すべての種類"
 
@@ -30692,6 +30701,30 @@ msgstr "夜間は開口部を閉じたままにする"
 #: aot/functions/custom_functions/env_coordinator_impl/_function_info.py
 msgid "Night Vent Parking"
 msgstr "夜間の開口部パーキング"
+
+#: aot/functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Limits Never to Cross"
+msgstr "越えてはいけない線"
+
+#: aot/functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Ventilation Strategy"
+msgstr "換気戦略"
+
+#: aot/functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Schedule and Time"
+msgstr "日程と時間"
+
+#: aot/functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Light and CO₂"
+msgstr "光量とCO₂"
+
+#: aot/functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Model and Calibration"
+msgstr "モデルと補正"
+
+#: aot/functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Not Yet Categorised"
+msgstr "未分類"
 
 #: aot/functions/custom_functions/env_coordinator_impl/_function_info.py
 msgid "Night Starts At"

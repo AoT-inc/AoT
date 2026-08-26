@@ -1088,3 +1088,136 @@ FUNCTION_INFORMATION = {
         },
     ],
 }
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 화면 배치 — 위 목록의 **순서를 여기서 다시 정한다** (2026-08-26)
+# ─────────────────────────────────────────────────────────────────────────────
+# 옵션이 62개인데 순서가 "필요한 순서" 가 아니라 **"추가된 순서"** 였다. 그래서
+# 스크롤만 하다 지치고, 관계 있는 것끼리 멀리 떨어져 있었다:
+#
+#   · 시설 연결이 6번째 — 센서·액추에이터·구역이 전부 여기 딸려 있어서 이것을
+#     안 고르면 나머지가 의미가 없다.
+#   · 온습도 하드 임계(11·12번)와 유도 범위(17번)가 다섯 섹션 떨어져 있었다.
+#     **둘은 서로 간섭한다** — 저장 시 경고(`execute_at_modification`)가 필요했던
+#     이유가 정확히 그 거리다.
+#   · `vent_futility_gate` 가 "구동 주기" 안에 있었다. 환기 전략인데 모터 주기
+#     설정에 숨어 있어 찾을 수가 없다.
+#
+# **목록 자체는 건드리지 않는다.** 여기서 순서만 바꾸므로 옵션 정의와 배치가
+# 한 파일 안에서 분리돼, 배치를 고칠 때 정의를 실수로 망가뜨릴 일이 없다.
+#
+# ⚠ **옵션 id 는 그대로다** — 저장된 값도 동작도 바뀌지 않는다. 되돌리려면 이
+#   블록만 지우면 원래 순서로 돌아간다.
+#
+# ⚠ 이 화면은 "무엇을 목표로 할지" 가 아니라 **"어떻게 제어할지"** 를 정하는
+#   곳이다. 목표 곡선은 구획의 프로그램(`GeoProgram.targets_methods`)이 갖는다
+#   — 옛 `vpd_sp_type`/`vpd_method_id` 가 하던 일이 그리로 옮겨갔다.
+
+#   (접힘?, 제목, [(소제목|None, [옵션 id …]) …])
+_LAYOUT = [
+    # ── 항상 보이는 것 — 이것만 채우면 돈다 ──────────────────────────────────
+    (False, lazy_gettext('Facility'), [
+        (None, ['geo_facility_id', 'bay_scope']),
+    ]),
+    (False, lazy_gettext('Basic'), [
+        (None, ['update_period', 'sensor_max_age']),
+    ]),
+    # 하드 임계는 "목표" 가 아니라 **넘지 말아야 할 선**이다. 제목이 그것을
+    # 말해야 유도 범위와 헷갈리지 않는다.
+    (False, lazy_gettext('Limits Never to Cross'), [
+        (None, ['temp_max', 'temp_min', 'humid_max', 'humid_min']),
+    ]),
+    (False, lazy_gettext('VPD'), [
+        (None, ['tolerance_vpd']),
+    ]),
+
+    # ── 접어 두는 것 ─────────────────────────────────────────────────────────
+    # 유도 범위는 하드 임계 **바로 다음**이다 — 둘이 어긋나면 목표가 조용히
+    # 좁혀지므로, 하나를 고칠 때 다른 하나가 눈에 보여야 한다.
+    (True, lazy_gettext('Guide Ranges (T / RH)'), [
+        (None, ['guide_T_min', 'guide_T_max', 'guide_RH_min', 'guide_RH_max']),
+    ]),
+    (True, lazy_gettext('Ventilation Strategy'), [
+        (None, ['vent_futility_gate', 'vent_first']),
+        (lazy_gettext('Heating / Cooling Interlock'),
+         ['hvac_interlock', 'hvac_interlock_signal', 'hvac_interlock_on_value']),
+        (lazy_gettext('Night Vent Parking'),
+         ['night_vent_park', 'night_vent_basis',
+          'night_vent_sunset_offset_min', 'night_vent_start', 'night_vent_end']),
+    ]),
+    (True, lazy_gettext('Schedule and Time'), [
+        (lazy_gettext('Growth Schedule'),
+         ['schedule_end_time', 'schedule_week_offset']),
+        (lazy_gettext('Time Control'),
+         ['time_enable', 'time_start', 'time_end',
+          'photo_method_id', 'photo_anchor']),
+    ]),
+    (True, lazy_gettext('Nursery'), [
+        (None, ['nursery_mode', 'nursery_max_on_sec', 'nursery_min_off_sec',
+                'nursery_water_source', 'use_wetting_fog_for_humidity']),
+        (lazy_gettext('Misting Sunburn Protection'),
+         ['nursery_solar_lockout', 'nursery_solar_release',
+          'nursery_evening_fog', 'nursery_evening_cutoff_min']),
+    ]),
+    (True, lazy_gettext('Light and CO₂'), [
+        (None, ['light_max', 'light_min', 'shade_transmittance',
+                'priority_co2', 'tolerance_co2']),
+    ]),
+    (True, lazy_gettext('Actuation Rate'), [
+        (None, ['actuation_profile', 'actuation_period_sec',
+                'emergency_period_sec', 'emergency_deviation_mult',
+                'emergency_rate_c_per_10min', 'gate_wind_threshold']),
+    ]),
+    (True, lazy_gettext('Model and Calibration'), [
+        (None, ['photosynth_mode_enabled', 'source_plot_id', 'vpd_weight_T',
+                'priority_vpd', 'cumulative_tracker_enabled']),
+        (lazy_gettext('Effect Calibration'),
+         ['effect_engine', 'calibration_enabled',
+          'enable_active_probing', 'probe_interval_sec']),
+        (lazy_gettext('Forecast Feedforward'),
+         ['forecast_feedforward_enabled', 'forecast_lookahead_h']),
+    ]),
+    (True, lazy_gettext('Diagnostics'), [
+        (None, ['debug_logging']),
+    ]),
+]
+
+
+def _apply_layout(options, layout):
+    """선언한 배치대로 옵션을 다시 늘어놓는다 → 새 목록.
+
+    ⚠ **배치에서 빠진 옵션을 버리지 않는다.** 옵션을 추가하고 배치에 안 넣으면
+      화면에서 조용히 사라지는데, 그러면 저장 폼에도 없어 그 설정을 영영 못
+      바꾼다 — 무에러다. 빠진 것은 맨 끝에 모아 두고
+      `test_option_layout.py` 가 그 사실을 잡는다.
+    """
+    by_id = {o['id']: o for o in options if o.get('id')}
+    out, used = [], set()
+    for folded, title, blocks in layout:
+        out.append({'type': 'collapse_start' if folded else 'header',
+                    'name': title})
+        first = True
+        for subtitle, ids in blocks:
+            if subtitle is not None:
+                out.append({'type': 'header', 'name': subtitle})
+            elif not first:
+                out.append({'type': 'header', 'name': title})
+            first = False
+            for oid in ids:
+                if oid in by_id and oid not in used:
+                    out.append(by_id[oid])
+                    used.add(oid)
+        if folded:
+            out.append({'type': 'collapse_end'})
+    leftover = [o for o in options if o.get('id') and o['id'] not in used]
+    if leftover:
+        out.append({'type': 'collapse_start',
+                    'name': lazy_gettext('Not Yet Categorised')})
+        out.extend(leftover)
+        out.append({'type': 'collapse_end'})
+    return out
+
+
+FUNCTION_INFORMATION['custom_options'] = _apply_layout(
+    FUNCTION_INFORMATION['custom_options'], _LAYOUT)

@@ -1646,14 +1646,15 @@ def page_plots():
     `/api/geo/plots` 를 그대로 쓴다(`map_uuid` 없으면 전체). 서버 렌더 목록을
     또 만들면 같은 필터·정렬이 두 벌이 되고, 이 도메인은 그 실패를 이미 겪었다.
     """
-    from aot.databases.models import GeoMap
-
-    maps = GeoMap.query.order_by(GeoMap.sort_order.asc(),
-                                 GeoMap.name.asc()).all()
+    # 화면이 좁히는 수단은 **검색 하나**다 — 지도·대지·구역·종류 드롭다운을
+    # 없앴다. 다섯 개를 조합해야 답이 나오는 화면은 "무엇을 고르면 되는지"부터
+    # 배워야 하는데, 정작 사람은 찾는 것의 이름을 이미 알고 있다. 검색이
+    # 대지·구역 이름까지 훑으므로(`plots-page.js` 의 `_matches`, 목록 응답의
+    # `site_name`/`zone_name`) 드롭다운으로 하던 일이 전부 타이핑으로 된다.
+    # 그래서 선택지 목록을 서버가 미리 만들 이유가 없어졌다.
     return render_template(
         'pages/geo/plots.html',
         active_page='plots',
-        maps=[{'unique_id': m.unique_id, 'name': m.name} for m in maps],
         can_edit=utils_general.user_has_permission('edit_plots', silent=True),
         can_design=utils_general.user_has_permission('edit_settings',
                                                      silent=True))

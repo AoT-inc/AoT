@@ -2931,6 +2931,17 @@ def to_dict(row, containers=None, with_sensors=False, markers=None,
         # 기다려야 하고, 그동안 제목줄의 화살표만 늦게 나타난다.
         out['zone_name'] = _shape_name(zone) if zone is not None else None
         out['zone_kind'] = getattr(zone, 'type', None) if zone is not None else None
+        # site — zone 과 별개 축으로 낸다. zone 이 site 를 이기므로 위 zone 이
+        # 이미 site 종류면 그 자신이 site 다. zone 종류면 그 zone 을 감싸는
+        # site 를 따로 찾는다(device_membership.site_for_geometry).
+        if zone is not None and getattr(zone, 'type', None) == 'site':
+            site = zone
+        else:
+            site = device_membership.site_for_geometry(
+                row.geo_id, geometry_of(row, facilities=facilities),
+                containers=containers)
+        out['site_uuid'] = site.unique_id if site is not None else None
+        out['site_name'] = _shape_name(site) if site is not None else None
     if with_valves:
         # 목록에서 구획마다 지도 도형을 전량 훑으면 구획 수 × 도형 수가 된다.
         out['valves'] = valves_for_plot(row)

@@ -24,8 +24,11 @@
   color: var(--text-color-primary, #13261B);
 }
 
-/* 필터 한 줄 — 좁아지면 접히되 **감추지는 않는다.** 접어 두면 "왜 이것만
-   보이지" 를 사람이 스스로 찾아내야 한다. */
+/* 좁히는 수단은 **검색 하나**다. 드롭다운 필터(지도·대지·구역·종류)와
+   [종료된 것 포함] 체크박스는 없앴다 — 다섯 개를 조합해야 답이 나오는 화면은
+   "무엇을 고르면 되는지"부터 배워야 하는데, 사람은 찾는 것의 이름을 이미 알고
+   있다. 검색창은 노트 페이지와 **같은 알약형 입력 그룹**을 쓴다
+   (`note-search-input-group`, aot-base.css) — 새 모양을 만들지 않는다. */
 .aot-plots-filters {
   display: flex;
   flex-wrap: wrap;
@@ -33,17 +36,7 @@
   gap: var(--aot-space-3);
   margin-bottom: var(--aot-space-4);
 }
-.aot-plots-filters > input[type="search"] { flex: 1 1 220px; min-width: 0; }
-.aot-plots-filters > select { flex: 0 1 180px; }
-
-.aot-plots-ended {
-  display: flex;
-  align-items: center;
-  gap: var(--aot-space-2);
-  margin: 0;
-  white-space: nowrap;
-  color: var(--aot-color-text-secondary);
-}
+.aot-plots-filters > .note-search-input-group { flex: 1 1 240px; min-width: 0; }
 
 .aot-plots-count {
   margin-left: auto;

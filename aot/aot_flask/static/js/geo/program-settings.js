@@ -62,11 +62,11 @@
     // (layout 의 tooltip 초기화가 `[data-toggle="tooltip"]` 을 잡는다.)
     var tipAttr = tip
       ? ' data-toggle="tooltip" title="' + _esc(note) + '"' : '';
-    return '<div class="aot-modal-option-row veg-row' +
+    return '<div class="aot-modal-option-row aot-drawer-row' +
              (cls ? ' ' + cls : '') + '"' + tipAttr + '>' +
            '<div class="aot-modal-option-label">' + _esc(label) + '</div>' +
            '<div class="aot-modal-option-control">' + control + '</div>' +
-           (note && !tip ? '<div class="aot-modal-body-text veg-row-note">' +
+           (note && !tip ? '<div class="aot-modal-body-text aot-drawer-row-note">' +
                    _esc(note) + '</div>' : '') +
            '</div>';
   }
@@ -76,9 +76,9 @@
    * — 여러 줄 입력은 제목과 나란히 설 수 없으므로 설명을 먼저 읽고 쓰게 한다.
    */
   function _wideRow(label, note, control) {
-    return '<div class="aot-modal-option-row veg-row veg-row-wide">' +
+    return '<div class="aot-modal-option-row aot-drawer-row aot-drawer-row-wide">' +
            '<div class="aot-modal-option-label">' + _esc(label) + '</div>' +
-           (note ? '<div class="aot-modal-body-text veg-row-note">' +
+           (note ? '<div class="aot-modal-body-text aot-drawer-row-note">' +
                    _esc(note) + '</div>' : '') +
            '<div class="aot-modal-option-control">' + control + '</div>' +
            '</div>';
@@ -105,7 +105,7 @@
    *  "여기부터 여기까지가 한 덩이" 라는 말이 된다. */
   function _group(title, note) {
     return '<div class="aot-modal-group-title">' + _esc(title) + '</div>' +
-           (note ? '<div class="aot-modal-body-text aot-prog-group-note">' +
+           (note ? '<div class="aot-modal-body-text aot-drawer-group-note">' +
                    _esc(note) + '</div>' : '');
   }
 
@@ -176,39 +176,39 @@
       // 한 구간 = [이름 / 막대 조각 / 일수]. **버튼이지만 버튼처럼 그리지
       // 않는다** — 테두리도 배경도 없고, 보이는 것은 가운데 막대 조각뿐이라
       // 여섯 개가 이어져 하나의 트랙으로 읽힌다.
-      return '<button type="button" class="veg-track-seg' +
+      return '<button type="button" class="aot-stage-seg' +
                (i === State.curStage ? ' is-current' : '') +
                '" style="flex:1 1 ' + w.toFixed(2) + '%"' +
                ' data-act="stage-pick" data-stage-i="' + i + '"' +
                ' title="' + _esc(name + ' \u00b7 ' + days) + '"' +
                ' aria-pressed="' + (i === State.curStage) + '">' +
-               '<span class="veg-track-name">' + _esc(name) + '</span>' +
-               '<span class="veg-track-bar"></span>' +
-               '<span class="veg-track-days">' + _esc(days) + '</span>' +
+               '<span class="aot-stage-seg-name">' + _esc(name) + '</span>' +
+               '<span class="aot-stage-seg-bar"></span>' +
+               '<span class="aot-stage-seg-days">' + _esc(days) + '</span>' +
              '</button>';
     }).join('');
 
     // 겉모양은 공용 기간 바 그대로다 — 컨테이너에 `aot-viz` 를 함께 붙여
     // **그 토큰을 상속받는다**(트랙 굵기·구간 색·표면색·다크 override).
     // 색을 여기에 다시 적으면 공용 팔레트가 바뀔 때 이 화면만 남는다.
-    return '<div class="aot-viz veg-track-wrap">' +
+    return '<div class="aot-viz aot-stage-track-wrap">' +
              '<div class="aot-viz-head">' +
                '<span class="aot-viz-label">' +
                  _esc(_T('total_span', 'Whole run')) + '</span>' +
                '<span class="aot-viz-value">' + _esc(text) + '</span>' +
              '</div>' +
-             '<div class="veg-track" role="tablist">' + segs + '</div>' +
+             '<div class="aot-stage-track" role="tablist">' + segs + '</div>' +
            '</div>';
   }
 
   /** 트랙만 다시 그린다(이름·기간을 고치는 즉시 폭과 숫자가 따라온다). */
   function _refreshTrack(host) {
-    var box = host && host.querySelector('.veg-track-host');
+    var box = host && host.querySelector('.aot-stage-track-host');
     if (!box) return;
     box.innerHTML = _trackHtml();
     // 단계가 많으면 트랙이 가로로 넘친다 — 고른 구간이 화면 밖에 있으면
     // "아무것도 안 골랐다" 로 보인다.
-    var cur = box.querySelector('.veg-track-seg.is-current');
+    var cur = box.querySelector('.aot-stage-seg.is-current');
     if (cur && cur.scrollIntoView) {
       try { cur.scrollIntoView({ block: 'nearest', inline: 'nearest' }); }
       catch (e) {}
@@ -630,7 +630,7 @@
     var st = (State.stages || [])[State.curStage];
     if (!st) return '';
     var res = _resourceRows(st);
-    return '<div class="veg-stage-panel" data-stage-panel>' +
+    return '<div class="aot-stage-panel" data-stage-panel>' +
              // **한 줄에 설정 하나.** 같은 줄에 칸이 둘이면 어느 라벨이 어느
              // 칸의 것인지 한 번 확인하게 되고, 위쪽 기본 정보와 문법이 갈린다.
              _stageField(_T('stage_name', 'Stage name'), 'name', 'text',
@@ -648,18 +648,18 @@
              // (tool_registry), **AI 를 쓰지 않아도** 지도에서 그 구획을 누르면
              // 사람이 읽는다(`aot-map-popup.js` 의 `.aot-ov-guidance`).
              _wideRow(_T('guidance', 'Guidance'), _T('guidance_note', ''),
-                      '<textarea class="form-control aot-modern-input veg-guidance" ' +
+                      '<textarea class="form-control aot-modern-input aot-drawer-textarea" ' +
                         'rows="4" data-guidance placeholder="' +
                         _esc(_T('guidance_ph', '')) + '">' +
                         _esc(st.guidance || '') + '</textarea>') +
              // 목표·자원은 "단계마다 다르게" 를 켰을 때만 나온다(`_applyPerStage`).
              '<div class="veg-stage-targets-block" hidden>' +
-               '<div class="veg-stage-sub">' +
+               '<div class="aot-stage-sub">' +
                  _esc(_T('stage_targets', 'Different in this stage')) + '</div>' +
                _targetInputs(st.targets) +
              '</div>' +
              (res ? '<div class="veg-stage-res-block" hidden>' +
-                      '<div class="veg-stage-sub">' +
+                      '<div class="aot-stage-sub">' +
                         _esc(_T('resources', 'Resources')) + '</div>' + res +
                     '</div>' : '') +
              // 식별 코드는 **사람에게 물을 것이 아니다** — 비워 두면 이름에서
@@ -674,7 +674,7 @@
              '</details>' +
              // 순서는 **트랙에서 끌어** 바꾼다 — 버튼을 여기 두면 같은 일을
              // 하는 수단이 둘이 된다. 삭제만 남긴다.
-             '<div class="aot-ov-desc-actions">' +
+             '<div class="aot-stage-actions">' +
                '<button type="button" class="btn aot-pill-btn aot-pill-btn-sm" ' +
                  'data-act="stage-del">' +
                  _esc(_T('stage_delete', 'Delete this stage')) + '</button>' +
@@ -718,7 +718,7 @@
   function _redrawStages(host) {
     if (!host) return;
     _refreshTrack(host);
-    var box = host.querySelector('.veg-stage-panel-host');
+    var box = host.querySelector('.aot-stage-panel-host');
     if (box) box.innerHTML = _stagePanel();
     _applyPerStage(host);
   }
@@ -901,7 +901,7 @@
         // 설명(`notes`)은 서버가 예전부터 받아 왔는데 **화면에만 없었다.**
         var intentRow = _wideRow(
           _T('intent', 'Description'), _T('intent_note', ''),
-          '<textarea class="form-control aot-modern-input veg-intent" rows="3" ' +
+          '<textarea class="form-control aot-modern-input aot-drawer-textarea" rows="3" ' +
             'data-pf-notes placeholder="' + _esc(_T('intent_ph', '')) + '"' +
             (ro ? ' disabled' : '') + '>' + _esc(p.notes || '') + '</textarea>');
 
@@ -920,15 +920,15 @@
 
         // 단계 추가는 **트랙과 패널 사이의 한 행**이다.
         var actions = ro ? ''
-          : '<div class="veg-stage-add-row aot-ov-desc-actions">' +
+          : '<div class="aot-stage-add-row aot-stage-actions">' +
             '<button type="button" class="btn aot-pill-btn" data-act="stage-add">' +
             _esc(_T('add_stage', 'Add stage')) + '</button></div>';
 
         var gStages =
           _group(_T('stages', 'Program stages'), _T('stages_note', '')) +
-          _box('<div class="veg-track-host">' + _trackHtml() + '</div>' +
+          _box('<div class="aot-stage-track-host">' + _trackHtml() + '</div>' +
                actions +
-               '<div class="veg-stage-panel-host">' + _stagePanel() + '</div>');
+               '<div class="aot-stage-panel-host">' + _stagePanel() + '</div>');
 
         // ── 3. 목표 ────────────────────────────────────────────────────
         // 설명은 상자 **밖**, 제목 바로 아래다. "단계마다 다른 값" 은 이름만으로
@@ -1094,13 +1094,13 @@
            '<button type="button" class="btn aot-pill-btn aot-pill-btn-sm" ' +
            'data-act="def-del" data-key="' + _esc(d.key) + '">' +
            _esc(_T('del', 'Delete')) + '</button>');
-      return '<div class="aot-modal-option-row veg-row veg-def-row' +
+      return '<div class="aot-modal-option-row aot-drawer-row veg-def-row' +
                (on ? '' : ' is-hidden') + '" data-def-i="' + i + '">' +
                '<div class="aot-modal-option-label">' +
                  _esc(d.label || d.key) + '</div>' +
                '<div class="aot-modal-option-control veg-def-ctl">' +
                  valBox + right + '</div>' +
-               (meta ? '<div class="aot-modal-body-text veg-row-note">' +
+               (meta ? '<div class="aot-modal-body-text aot-drawer-row-note">' +
                        _esc(meta) + '</div>' : '') +
              '</div>';
     }).join('');
@@ -1177,7 +1177,7 @@
     // 좁아서(폰에서 ~10자) "곡선을 연결하면 그 / 항목은 단계 값 대신" 처럼
     // 끊긴다. 단계 상세와 같은 골격 — 제목 줄, 설명 줄, 그리고 격자.
     return '<div class="veg-curves">' +
-           '<div class="veg-stage-sub">' + _esc(_T('curves', 'Target curves')) +
+           '<div class="aot-stage-sub">' + _esc(_T('curves', 'Target curves')) +
            '</div>' +
            '<div class="aot-modal-body-text veg-adv-note">' +
              _esc(_T('curves_note',
@@ -1615,7 +1615,7 @@
           // 기본값이 있으면 그것을 넣고 시작한다 — 빈 칸에서 시작하면 "덮어쓴다"
           // 는 뜻이 아니라 "비운다" 로 읽힌다.
           cur[el.value] = (d && d['default'] != null) ? d['default'] : '';
-          host.innerHTML = '<div class="veg-stage-sub">' +
+          host.innerHTML = '<div class="aot-stage-sub">' +
             _esc(_T('stage_targets', 'Different in this stage')) + '</div>' +
             _targetInputs(cur);
           var added = host.querySelector('[data-tf="' + el.value + '"]');
@@ -1739,12 +1739,12 @@
           if (Math.abs(_x(e) - dg.startX) < DRAG_SLOP) return;
           dg.moved = true;
           var el = drawer.querySelector(
-            '.veg-track-seg[data-stage-i="' + dg.from + '"]');
+            '.aot-stage-seg[data-stage-i="' + dg.from + '"]');
           if (el) el.classList.add('is-dragging');
         }
         e.preventDefault();       // 끌기 시작 뒤에만 — 그 전에는 스크롤을 막지 않는다
         var x = _x(e);
-        var segs = drawer.querySelectorAll('.veg-track-seg');
+        var segs = drawer.querySelectorAll('.aot-stage-seg');
         for (var i = 0; i < segs.length; i++) {
           var r = segs[i].getBoundingClientRect();
           if (x >= r.left && x <= r.right) {
@@ -1762,7 +1762,7 @@
               dg.from = to;
               _redrawStages(drawer);
               var el2 = drawer.querySelector(
-                '.veg-track-seg[data-stage-i="' + to + '"]');
+                '.aot-stage-seg[data-stage-i="' + to + '"]');
               if (el2) el2.classList.add('is-dragging');
             }
             break;
@@ -1775,7 +1775,7 @@
         document.removeEventListener('mouseup', _onUp, true);
         document.removeEventListener('touchmove', _onMove, { capture: true });
         document.removeEventListener('touchend', _onUp, true);
-        drawer.querySelectorAll('.veg-track-seg.is-dragging').forEach(function (x) {
+        drawer.querySelectorAll('.aot-stage-seg.is-dragging').forEach(function (x) {
           x.classList.remove('is-dragging');
         });
         // 움직이지 않았으면 클릭으로 남긴다 — `stage-pick` 이 그것을 받는다.
@@ -1784,7 +1784,7 @@
 
       var _onDown = function (e) {
         if (e.type === 'mousedown' && e.button !== 0) return;
-        var seg = e.target.closest && e.target.closest('.veg-track-seg');
+        var seg = e.target.closest && e.target.closest('.aot-stage-seg');
         if (!seg || !drawer.contains(seg)) return;
         var i = parseInt(seg.getAttribute('data-stage-i'), 10);
         if (isNaN(i)) return;

@@ -69,110 +69,15 @@
    빌더(`AoTViz.timeline`)를 쓰지 않는 이유는 그것이 **읽기 전용**이라서다.
    고르고 끌 수 있는 컨트롤은 다른 물건이고, 상호작용을 넣자고 공용 빌더를
    고치면 그것을 쓰는 지도 위젯까지 함께 흔들린다. */
-.veg-track-wrap { padding: 0.2em 0 0.4em; }
-
-.veg-track {
-  display: flex;
-  /* 조각 사이를 벌리지 않는다 — 벌리면 하나의 막대가 아니라 칩 여섯 개가
-     된다. 경계는 아래에서 표면색으로 **파낸다**(공용 `.aot-viz-tick` 과 같은
-     방식). */
-  gap: 0;
-  /* 단계가 많으면 최소폭 합이 상자를 넘는다. 줄바꿈하면 비율 감각이 깨지므로
-     가로로 흐르게 두고, 스크롤바는 감춘다(이 저장소 규칙). */
-  overflow-x: auto;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-}
-.veg-track::-webkit-scrollbar { display: none; }
-
-/* 구간은 버튼이지만 **버튼처럼 그리지 않는다** — 테두리도 배경도 없고, 보이는
-   것은 가운데 막대 조각뿐이다. 폭은 비율이되 최소폭이 있다: 7일짜리 단계는
-   80일 중 8.75% 라 520px 드로어에서 45px 다 — 이름도 안 보이고 끌기도 어렵다.
-   비율 감각보다 조작 가능성이 먼저다. */
-.veg-track-seg {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25em;
-  min-width: 4.4em;
-  padding: 0;
-  border: 0;
-  background: none;
-  cursor: grab;
-  text-align: center;
-  overflow: hidden;
-}
-.veg-track-seg:active { cursor: grabbing; }
-.veg-track-seg.is-dragging { opacity: 0.45; }
-
-/* 막대 조각 — 이어 붙으면 공용 기간 바와 같은 하나의 트랙이 된다. 양 끝만
-   둥글게 해 알약 모양을 유지한다(`.aot-viz-track` 과 같은 반경). */
-.veg-track-bar {
-  height: var(--aot-viz-track-h, 8px);
-  background: color-mix(in srgb, var(--aot-color-text-primary)
-                        var(--aot-viz-track-mix, 10%), transparent);
-}
-.veg-track-seg:first-child .veg-track-bar {
-  border-top-left-radius: calc(var(--aot-viz-track-h, 8px) / 2);
-  border-bottom-left-radius: calc(var(--aot-viz-track-h, 8px) / 2);
-}
-.veg-track-seg:last-child .veg-track-bar {
-  border-top-right-radius: calc(var(--aot-viz-track-h, 8px) / 2);
-  border-bottom-right-radius: calc(var(--aot-viz-track-h, 8px) / 2);
-}
-/* 구간 경계 — 표면색으로 1px 파낸다(공용 `.aot-viz-tick` 과 같은 방식). */
-.veg-track-seg + .veg-track-seg .veg-track-bar {
-  border-left: 1px solid var(--aot-viz-surface, #fff);
-}
-/* 고른 구간 — 공용 기간 바의 "현재 단계" 와 같은 색(`--aot-viz-zone`). */
-.veg-track-seg.is-current .veg-track-bar {
-  background: var(--aot-viz-zone, #32c85a);
-}
-.veg-track-seg.is-drop .veg-track-bar {
-  background: color-mix(in srgb, var(--aot-viz-zone, #32c85a) 45%, transparent);
-}
-
-/* 이름은 트랙 **위**, 일수는 **아래**. 둘 다 가운데 정렬이다 — 한쪽만 왼쪽으로
-   붙으면 구간마다 글자가 어긋나 보인다. 공용 `.aot-viz-segs` 와 같은 서체. */
-.veg-track-name,
-.veg-track-days {
-  display: block;
-  max-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: var(--aot-font-size-xs, 0.8em);
-  color: var(--aot-color-text-secondary);
-  line-height: 1.3;
-}
-.veg-track-seg.is-current .veg-track-name {
-  color: var(--aot-color-text-primary);
-  font-weight: 600;
-}
-
-/* 고른 단계의 설정 — 화면에 **한 벌만** 있다. */
-.veg-stage-panel { padding-top: 0.2em; }
-
-.veg-stage-sub {
-  margin: 0.4em 0 0.3em;
-  font-size: var(--aot-font-size-xs, 0.8em);
-  font-weight: 600;
-  opacity: 0.75;
-}
+/* 단계 트랙(`.aot-stage-track*`)과 단계 설정 패널(`.aot-stage-panel`)은
+   **공용 컴포넌트로 옮겼다** — `components/aot-stage-track.css`.
+   구획 운영 페이지(`/plots`)가 같은 블록을 쓰기 때문이다. 여기 두면
+   그쪽이 베껴야 하고, 베끼는 순간 두 화면이 갈리기 시작한다. */
 
 /* ── 단계 목표 ───────────────────────────────────────────────────────
    **한 줄에 하나**다(2026-08-21). 예전에는 3열 격자였는데 좁은 폭에서 라벨과
    칸이 어긋나고, 같은 드로어의 다른 줄들과 문법도 갈렸다. 격자 클래스는
    남기지 않는다 — 남겨 두면 다음에 누가 다시 격자로 돌린다. */
-
-/* ── 자원(관수·시비) ───────────────────────────────────────────────── */
-/* 공용 option-row(label|value 2열)를 그대로 쓴다 — 라벨이 짧아 454px 에서도
-   눌리지 않고, 드로어 위쪽 줄들(이름·종류·적용 대상)과 같은 모양이 된다.
-   여기서 세로로 쌓으면 같은 드로어 안에 두 가지 행 모양이 생긴다.
-
-   `select` 만 남은 폭을 채우게 한다 — 기본값은 내용 크기라 "없음" 하나면
-   칸이 우스꽝스럽게 좁아진다. */
-.veg-stage-panel .aot-modal-option-control select,
-.veg-stage-panel .aot-modal-option-control input { width: 100%; }
 
 /* ── 목록 카드 ─────────────────────────────────────────────────────── */
 /* 부가정보는 **한 줄로 자른다.** input 카드의 같은 열에는 짧은 것(측정 칩·장치
@@ -266,22 +171,11 @@
   max-width: 20rem;
 }
 
-/* 마지막 줄이 바닥에 붙지 않게 — 스크롤 끝에서 버튼이 모서리에 닿으면
-   누르기도 어렵고 잘린 것처럼 보인다. */
-#veg-drawer-body {
-  padding-bottom: 2em;
-}
-
 
 /* ── 그룹 골격 (2026-08-21) ──────────────────────────────────────────────
    드로어를 네 덩이 + 고급으로 나눈다(기본 · 단계 · 목표 · 자원 · 고급).
    그룹 제목은 공용 `.aot-modal-group-title` 이고, **그룹 설명은 상자 밖**
    제목 바로 아래에 온다 — 상자 안에 넣으면 첫 항목의 설명처럼 읽힌다. */
-.aot-prog-group-note {
-  padding: 0 16px 0.4rem;   /* 그룹 제목의 좌측 정렬(16px)과 맞춘다 */
-  margin-top: 0;
-}
-
 /* 읽기 전용 안내는 맨 위에 — 고칠 수 없다는 사실을 칸을 만지기 전에 안다. */
 .aot-prog-ro {
   padding: 0 16px 0.4rem;
@@ -290,9 +184,11 @@
 /* **상자의 라운드는 내용의 최소 여백이다.** 공용 `.aot-modal-container` 는
    `border-radius: 16px` 인데 상하 여백이 0 이라, 첫 행과 마지막 행이 둥근
    모서리 안쪽을 파고들어 글자가 테두리에 닿는다. 같은 값만큼 띄운다. */
-#veg-drawer-body .aot-modal-container {
-  padding: 16px !important;
-}
+/* 설정 드로어 본문의 행 레이아웃(긴 제목·설명 줄·여러 줄 입력)은
+   **공용 컴포넌트로 옮겼다** — `components/aot-drawer-form.css`.
+   본문에 `.aot-drawer-rows` 를 붙이면 걸린다. 구획 운영 페이지의
+   설정 드로어가 같은 골격을 쓰기 때문이다 — 예전처럼 `#veg-drawer-body`
+   로 묶어 두면 골격만 같고 그 골격을 성립시키는 규칙은 안 따라간다. */
 
 /* ── 설정 한 줄 ──────────────────────────────────────────────────────────
    **1행 [제목][컨트롤] · 2행 [설명]**, 구분선은 그 아래.
@@ -302,38 +198,9 @@
    글자마다 끊긴다. 그래서 행 안·라벨 밖 세 번째 자식으로 두고 `wrap` 으로
    내린다. 폭으로 분기하지 않는다 — 좁은 쪽(폰)에 맞춘 이 배치가 넓은 쪽에서도
    그대로 읽힌다. */
-#veg-drawer-body .veg-row {
-  flex-wrap: wrap !important;
-}
-#veg-drawer-body .veg-row-note {
-  flex: 1 1 100%;
-  margin-top: 0.15rem;
-}
-
-/* 여러 줄 입력은 제목과 나란히 설 수 없다 — 설명을 먼저 읽고 쓰게 한다. */
-#veg-drawer-body .veg-row-wide > .aot-modal-option-label,
-#veg-drawer-body .veg-row-wide > .veg-row-note {
-  flex: 1 1 100%;
-  max-width: 100%;
-}
-#veg-drawer-body .veg-row-wide > .aot-modal-option-control {
-  flex: 1 1 100% !important;
-  width: 100% !important;
-  min-width: 100% !important;
-  max-width: 100% !important;
-  margin-top: 0.3rem;
-}
-
 /* 공용 라벨 규칙 둘은 "라벨은 짧은 한 줄" 을 전제한다 — 폰에서 한 줄로 자르고
    (`nowrap` + ellipsis), 컨트롤 열 자리를 `max-width` 로 비워 둔다. 이 화면의
    제목은 짧지만 그 두 규칙이 긴 제목("VPD 반포화 상수")까지 잘라 버렸다. */
-#veg-drawer-body .aot-modal-option-label {
-  white-space: normal;
-  overflow: visible;
-  text-overflow: clip;
-  max-width: 100%;
-}
-
 /* ── 목표 항목 행 ────────────────────────────────────────────────────────
    공용 컨트롤 열은 160px 고정인데, 이 행은 [값][사용 토글] 또는 [값][삭제] 로
    둘이 들어간다. 폭을 내용에 맡겨 값 칸이 찌그러지지 않게 한다. */
@@ -346,7 +213,7 @@
 /* 끈 항목은 **지운 것이 아니다.** 흐리게 두어 "여기 있지만 안 쓴다" 를 말한다
    — 아예 감추면 나중에 센서를 달았을 때 되살릴 생각을 못 한다. */
 .veg-def-row.is-hidden .aot-modal-option-label,
-.veg-def-row.is-hidden .veg-row-note {
+.veg-def-row.is-hidden .aot-drawer-row-note {
   opacity: 0.55;
 }
 
@@ -354,17 +221,6 @@
    `.aot-modern-input` 은 **한 줄 입력용**이라 알약 반경을 `!important` 로
    건다. 여러 줄 textarea 에 그것이 걸리면 좌우가 통째로 둥글어져 거대한
    타원이 된다 — 이 저장소가 반복해서 겪는 문제다. */
-#veg-drawer-body .veg-intent,
-#veg-drawer-body .veg-guidance {
-  width: 100%;
-  resize: vertical;
-  border-radius: 16px !important;
-  /* 공용 textarea 규칙은 코드 편집기용이라 `white-space: pre` 로 줄을 안 접는다.
-     산문이라 가로 스크롤이 아니라 줄바꿈이 맞다. */
-  white-space: pre-wrap !important;
-  overflow-wrap: break-word !important;
-}
-
 /* ── 접는 고급 블록 ──────────────────────────────────────────────────────
    `<details class="aot-prog-adv">` — 광합성 모델 상수와 단계 식별 코드가 쓴다.
 
@@ -414,7 +270,7 @@
    지침 줄(공용 행)이 이미 아래쪽 선을 갖는데 그 다음 `<details>` 가 위쪽 선을
    또 그으면 두 줄이 된다. 사이에 숨겨진 블록(`hidden`)이 있어도 `+` 는 그것을
    형제로 세므로, 인접 선택자 대신 **자리로** 끈다. */
-.veg-stage-panel > .aot-prog-adv {
+.aot-stage-panel > .aot-prog-adv {
   border-top: none;
   margin-top: 0;
 }
@@ -425,12 +281,6 @@
    구분선을 위에 둬 "이 줄도 목록의 일부" 로 읽히게 한다. */
 /* 단계 추가는 트랙과 패널 사이의 한 행이다 — 트랙에서 고른 단계 **바로 뒤**에
    들어가므로, 그 둘 사이가 자리로도 맞다. */
-.veg-stage-add-row {
-  border-bottom: 1px solid var(--aot-color-border, #e5e5e5);
-  padding-bottom: 0.6em;
-  margin-bottom: 0.2em;
-}
-
 /* ## 항목 추가 — 1행 제목·버튼 / 2행 설명 / 3행 입력 셋
 
    앞의 세 칸(측정 종류·이름·단위)은 한 덩이라 나란히 둔다. 제목 줄은 위쪽

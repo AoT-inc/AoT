@@ -54,3 +54,39 @@
 /* "아무것도 지워지지 않는다" — 이 창에서 사람이 가장 알고 싶은 것이라 선택지
    **위**에 둔다. 아래 두면 이미 고른 뒤에 읽는다. */
 .aot-pe-note { padding-bottom: var(--aot-space-2); }
+
+/* ── 칸 아래 안내 ─────────────────────────────────────────────────────────
+   마크업은 공용 폼의 `_hint`/`_note` 가 만든다(`common/aot-plot-form.js`).
+
+   ⚠ 이 규칙은 원래 `widget/aot-sensor-label.css` 에 있었다. 마크업은 공용
+   폼이 만드는데 스타일만 지도 위젯 파일에 있어서, 같은 폼을 쓰는 다른 화면
+   (/plots)에서는 안내가 통째로 **스타일 없이** 렌더됐다 — 공용 컨트롤 열은
+   폭이 고정(`--aot-common-control-width`)이고 오른쪽 정렬이라, 문장이 그
+   좁은 칸에 갇혀 두 줄로 접히고 한쪽으로 쏠렸다. */
+
+/* (가) 짧은 링크 — 컨트롤 칸에만 온다. 라벨과 같은 세로선에서 시작하면 그것도
+   하나의 항목처럼 읽혀 무엇에 딸린 설명인지 흐려지므로, 바로 위 칸에 딸린
+   말이라는 것이 들여쓰기로 드러나야 한다. */
+.aot-ov-field-hint {
+  margin-top: calc(var(--aot-space-2) * -1);
+  min-height: 0;
+}
+.aot-ov-field-hint .aot-modal-option-control {
+  font-size: var(--aot-font-size-sm);
+  color: var(--aot-color-text-secondary);
+}
+.aot-ov-field-hint a {
+  color: var(--aot-color-text-secondary);
+  text-decoration: underline;
+}
+.aot-ov-field-hint a:hover { color: var(--text-color-primary, #13261B); }
+
+/* (나) 문장 — **한 줄을 다 쓴다.** 라벨/컨트롤 두 열 구조에 넣지 않는다:
+   컨트롤 열은 폭이 고정이라 문장이 거기 갇히면 두 줄로 접히고 오른쪽으로
+   쏠린다. 설명은 열이 아니라 줄이다. */
+.aot-pf-note {
+  padding: 0 0 var(--aot-space-2);
+  margin-top: calc(var(--aot-space-2) * -1);
+  font-size: var(--aot-font-size-sm);
+  color: var(--aot-color-text-secondary);
+}

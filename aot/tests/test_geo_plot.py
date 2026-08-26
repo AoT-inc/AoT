@@ -5470,7 +5470,7 @@ class TestProgram(unittest.TestCase):
         self.assertNotIn('.veg-stage-head', css)
         self.assertNotIn('veg-stage-row', js)
         # 트랙이 메뉴다 — 구간을 고르고 끌 수 있어야 한다.
-        self.assertIn('veg-track-seg', js)
+        self.assertIn('aot-stage-seg', js)
         self.assertIn("data-act=\"stage-pick\"", js)
         # 순서는 **끌어서** 바꾼다. HTML5 네이티브 DnD 는 쓰지 않는다 — 터치에서
         # 안 되고(폰에서 순서를 못 바꾸면 절반만 있는 기능이다), 위젯·팝업
@@ -7540,11 +7540,28 @@ class TestProgram(unittest.TestCase):
 
         그리고 공용 textarea 규칙은 코드 편집기용이라 `white-space: pre` 로 줄을
         접지 않는다. 지침은 산문이라 가로 스크롤이 아니라 줄바꿈이 맞다.
+
+        규칙은 **공용 컴포넌트**에 있다(`components/aot-drawer-form.css`) —
+        구획 운영 페이지(`/plots`)의 설정 드로어가 같은 골격을 쓰기 때문이다.
+        예전처럼 `#veg-drawer-body` 로 묶어 두면 골격만 같고 그 골격을
+        성립시키는 규칙이 안 따라가, 그쪽 지침 칸이 다시 타원이 된다.
         """
-        css = _read(os.path.join(_ROOT, 'aot_flask', 'static', 'css', 'pages',
-                                 'geo-program.css'))
+        css = _read(os.path.join(_ROOT, 'aot_flask', 'static', 'css',
+                                 'components', 'aot-drawer-form.css'))
         self.assertIn('border-radius: 16px !important', css)
         self.assertIn('white-space: pre-wrap !important', css)
+        # id 가 아니라 클래스로 걸려야 두 드로어가 함께 받는다. 주석에는
+        # 그 내력이 남아 있으므로 **셀렉터 줄만** 본다.
+        self.assertIn('.aot-drawer-rows', css)
+        selectors = [ln for ln in css.splitlines()
+                     if '#veg-drawer-body' in ln and not ln.lstrip().startswith('*')]
+        self.assertEqual([], selectors)
+        # 두 드로어 모두 그 클래스를 달고 있어야 한다.
+        for page in ('programs.html', 'plots.html'):
+            html = _read(os.path.join(_ROOT, 'aot_flask', 'templates', 'pages',
+                                      'geo', page))
+            self.assertIn('aot-drawer-rows', html, page)
+            self.assertIn('aot-drawer-form.css', html, page)
 
     def test_program_css_uses_only_defined_variables(self):
         """없는 CSS 변수를 쓰면 그 선언이 **통째로 무시된다** — gap 이 아예 안 걸리는데

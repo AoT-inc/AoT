@@ -2166,19 +2166,7 @@ button.aot-center-modal-close {
 }
 .aot-ov-alloc-bar > .aot-ov-alloc-left { min-width: 0; }
 
-/* 칸 아래 한 줄 안내 — 라벨 칸은 비우고 컨트롤 칸에만 글이 온다. 라벨과 같은
-   세로선에서 시작하면 그것도 하나의 항목처럼 읽혀, 무엇에 딸린 설명인지 흐려진다.
-   바로 위 칸에 딸린 말이라는 것이 들여쓰기로 드러나야 한다. */
-.aot-ov-field-hint {
-  margin-top: calc(var(--aot-space-2) * -1);
-  min-height: 0;
-}
-.aot-ov-field-hint .aot-modal-option-control {
-  font-size: var(--aot-font-size-sm);
-  color: var(--aot-color-text-secondary);
-}
-.aot-ov-field-hint a {
-  color: var(--aot-color-text-secondary);
-  text-decoration: underline;
-}
-.aot-ov-field-hint a:hover { color: var(--text-color-primary, #13261B); }
+/* 칸 아래 한 줄 안내(`.aot-ov-field-hint`)는 **공용 폼 CSS 로 옮겼다** —
+   `components/aot-plot-form.css`. 마크업을 만드는 것이 공용 폼
+   (`common/aot-plot-form.js` 의 `_hint`)인데 스타일만 이 위젯 파일에 있어서,
+   같은 폼을 쓰는 다른 화면(/plots)에서는 안내가 통째로 스타일 없이 렌더됐다. */

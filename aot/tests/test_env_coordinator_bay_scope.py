@@ -224,11 +224,23 @@ def test_the_daemon_knows_every_option_type_this_function_declares():
       게다가 형제 조회는 `opts.get('bay_scope')` 로 DB 를 직접 읽어 **여전히
       구역을 본다** — 두 경로가 서로 다른 답을 갖는다.
     """
-    info = _read('functions', 'custom_functions', 'env_coordinator_impl',
-                 '_function_info.py')
+    # ⚠ **`id` 가 있는 항목만 본다.** 소스를 통째로 훑으면 배치 표식
+    #   (`header`·`collapse_start`·`collapse_end`)까지 걸리는데, 그것들은 값을
+    #   싣지 않는 **표시**라 파서가 알 필요가 없다 — 그대로 두면 화면 구조를
+    #   바꿀 때마다 이 검사가 헛되이 깨진다(2026-08-26 실제로 그랬다).
+    import sys
+    import types
+    if 'flask_babel' not in sys.modules:
+        _b = types.ModuleType('flask_babel')
+        _b.lazy_gettext = lambda x: x
+        _b.gettext = lambda x, **k: x
+        sys.modules['flask_babel'] = _b
+    from aot.functions.custom_functions.env_coordinator_impl._function_info \
+        import FUNCTION_INFORMATION as _F
     parser = _read('controllers', 'abstract_base_controller.py')
     block = parser.split('def setup_custom_options_json', 1)[1]
-    declared = set(re.findall(r"'type':\s*'(\w+)'", info))
+    declared = {o['type'] for o in _F['custom_options']
+                if o.get('id') and o.get('type')}
     for t in sorted(declared):
         assert "'%s'" % t in block, (
             "옵션 종류 %r 을 데몬 파서가 모른다 — 그 옵션은 값이 안 실린다" % t)

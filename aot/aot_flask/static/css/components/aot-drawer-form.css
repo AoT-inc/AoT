@@ -1,0 +1,92 @@
+/* 설정 드로어 본문의 **행 레이아웃** — 공용 컴포넌트.
+ *
+ * 관리 프로그램(`/geo/programs`)과 구획 운영(`/plots`)의 설정 드로어가 **같은
+ * 정의**를 쓴다. 본문 컨테이너에 `.aot-drawer-rows` 를 붙이면 아래 규칙이
+ * 통째로 걸린다.
+ *
+ * ⚠ 예전에는 이 규칙들이 전부 `#veg-drawer-body` (프로그램 드로어의 id) 로
+ * 묶여 있었다. 그래서 다른 화면이 같은 골격(`aot-modal-option-row` +
+ * `aot-modern-input`)으로 드로어를 만들어도 **레이아웃 규칙만 안 걸렸고**,
+ * 긴 라벨이 잘리고 설명이 컨트롤 열에 찌그러지고 여러 줄 입력이 거대한 타원이
+ * 됐다. 골격을 공유하면서 그 골격을 성립시키는 규칙은 한 화면에 묶어 둔 것이
+ * 문제였다 — 그래서 id 가 아니라 클래스로 푼다.
+ *
+ * ## 왜 공용 모달 규칙만으로 부족한가
+ *
+ * 공용 `.aot-modal-option-row` 는 **[제목][컨트롤] 두 열**을 전제한다. 설정
+ * 드로어에는 그 아래 **설명 한 줄**이 더 붙고(무엇을 적는 칸인지 물어서
+ * 말한다), 여러 줄 입력도 온다. 그 둘이 두 열짜리 규칙에 그대로 들어가면
+ * 대여섯 글자마다 끊긴다.
+ */
+
+/* 마지막 줄이 바닥에 붙지 않게 — 스크롤 끝에서 버튼이 모서리에 닿으면 누르기도
+   어렵고 잘린 것처럼 보인다. */
+.aot-drawer-rows { padding-bottom: 2em; }
+
+/* **상자의 라운드는 내용의 최소 여백이다.** 공용 `.aot-modal-container` 는
+   `border-radius: 16px` 인데 상하 여백이 0 이라, 첫 행과 마지막 행이 둥근
+   모서리 안쪽을 파고들어 글자가 테두리에 닿는다. 같은 값만큼 띄운다. */
+.aot-drawer-rows .aot-modal-container {
+  padding: 16px !important;
+}
+
+/* ── 설정 한 줄 ──────────────────────────────────────────────────────────
+   **1행 [제목][컨트롤] · 2행 [설명]**, 구분선은 그 아래.
+
+   설명이 행 밖이면 공용 구분선이 제목과 설명 사이를 갈라 설명이 다음 항목의
+   것처럼 읽히고, 라벨 안이면 라벨 열(160px 컨트롤을 뺀 나머지)에 갇혀 대여섯
+   글자마다 끊긴다. 그래서 행 안·라벨 밖 세 번째 자식으로 두고 `wrap` 으로
+   내린다. 폭으로 분기하지 않는다 — 좁은 쪽(폰)에 맞춘 이 배치가 넓은 쪽에서도
+   그대로 읽힌다. */
+.aot-drawer-rows .aot-drawer-row {
+  flex-wrap: wrap !important;
+}
+.aot-drawer-rows .aot-drawer-row-note {
+  flex: 1 1 100%;
+  margin-top: 0.15rem;
+}
+
+/* 여러 줄 입력은 제목과 나란히 설 수 없다 — 설명을 먼저 읽고 쓰게 한다. */
+.aot-drawer-rows .aot-drawer-row-wide > .aot-modal-option-label,
+.aot-drawer-rows .aot-drawer-row-wide > .aot-drawer-row-note {
+  flex: 1 1 100%;
+  max-width: 100%;
+}
+.aot-drawer-rows .aot-drawer-row-wide > .aot-modal-option-control {
+  flex: 1 1 100% !important;
+  width: 100% !important;
+  min-width: 100% !important;
+  max-width: 100% !important;
+  margin-top: 0.3rem;
+}
+
+/* 공용 라벨 규칙 둘은 "라벨은 짧은 한 줄" 을 전제한다 — 폰에서 한 줄로 자르고
+   (`nowrap` + ellipsis), 컨트롤 열 자리를 `max-width` 로 비워 둔다. 설정
+   드로어의 제목은 짧지만 그 두 규칙이 긴 제목("VPD 반포화 상수")까지 잘라
+   버렸다. */
+.aot-drawer-rows .aot-modal-option-label {
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+  max-width: 100%;
+}
+
+/* 그룹 제목 아래의 설명 — 제목의 좌측 정렬(16px)과 맞춘다. */
+.aot-drawer-group-note {
+  padding: 0 16px 0.4rem;
+  margin-top: 0;
+}
+
+/* ── 여러 줄 입력 ────────────────────────────────────────────────────────
+   `.aot-modern-input` 은 **한 줄 입력용**이라 알약 반경을 `!important` 로
+   건다. 여러 줄 textarea 에 그것이 걸리면 좌우가 통째로 둥글어져 거대한
+   타원이 된다 — 이 저장소가 반복해서 겪는 문제다. */
+.aot-drawer-rows .aot-drawer-textarea {
+  width: 100%;
+  resize: vertical;
+  border-radius: 16px !important;
+  /* 공용 textarea 규칙은 코드 편집기용이라 `white-space: pre` 로 줄을 안 접는다.
+     산문이라 가로 스크롤이 아니라 줄바꿈이 맞다. */
+  white-space: pre-wrap !important;
+  overflow-wrap: break-word !important;
+}

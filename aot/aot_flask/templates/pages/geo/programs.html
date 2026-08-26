@@ -10,6 +10,13 @@
 {#- 단계 기간 바가 쓰는 공용 시각화(밴드·불릿·기간 바). 지도 위젯의 작기
     진행 바와 **같은 모양**이라 사용자가 따로 배울 것이 없다. -#}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/components/aot-dataviz.css') }}" />
+{#- 단계 트랙·단계 설정 패널 — 구획 운영 페이지(`/plots`)와 **같은 정의**를 쓴다.
+    같은 것(단계로 나뉜 재배 일정)을 다루는 화면이 서로 다른 문법을 쓰면 사용자가
+    화면마다 다시 배워야 한다. -#}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/components/aot-stage-track.css') }}" />
+{#- 설정 드로어 본문의 행 레이아웃(긴 제목·설명 줄·여러 줄 입력) — 구획 운영
+    페이지의 설정 드로어와 **같은 정의**를 쓴다. -#}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/components/aot-drawer-form.css') }}" />
 <link rel="stylesheet" href="{{ url_for('static', filename='css/pages/geo-program.css') }}" />
 {% endblock %}
 
@@ -131,7 +138,7 @@
           <span aria-hidden="true">&times;</span>
         </button>
       </div>
-      <div class="modal-body" id="veg-drawer-body"></div>
+      <div class="modal-body aot-drawer-rows" id="veg-drawer-body"></div>
       {#- 삭제·복제가 카드가 아니라 여기 있는 이유는 input 카드와 같다: 좁은
           화면에서 밀리는 것은 버튼 수이므로, 카드에는 자주 쓰는 것 하나(편집)만
           두고 나머지는 열어 본 뒤에 고르게 한다. 순서도 input 모달과 맞춘다. -#}

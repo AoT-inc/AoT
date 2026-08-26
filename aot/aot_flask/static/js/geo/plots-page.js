@@ -39,6 +39,24 @@
     return el ? el.getAttribute('content') : '';
   }
 
+  /** 이 화면의 쓰기 경로 하나. `{status, data}` 로 풀어 준다 — 호출부마다
+   *  `r.json()` 과 실패 판정을 다시 적으면 어느 한 곳이 조용히 빠진다.
+   *  공용 단계 편집 블록(`AoTPlotStageEditor.wire`)에도 이것을 넘긴다. */
+  function _api(method, url, body) {
+    return fetch(url, {
+      method: method, credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json',
+                 'X-Requested-With': 'XMLHttpRequest',
+                 'X-CSRFToken': _csrf() },
+      body: body === undefined ? undefined : JSON.stringify(body)
+    }).then(function (r) {
+      return r.json().catch(function () { return {}; })
+        .then(function (d) { return { status: r.status, data: d || {} }; });
+    }).catch(function () {
+      return { status: 0, data: {} };
+    });
+  }
+
   var S = {
     canEdit: false,
     canDesign: false,
@@ -65,20 +83,15 @@
   }
 
   function reload() {
-    var qs = [];
-    var mapId = el.map.value;
-    if (mapId) qs.push('map_uuid=' + encodeURIComponent(mapId));
-    if (el.ended.checked) qs.push('include_ended=1');
-    // 계획(시작 전)은 **언제나** 받는다. 지도는 안 그리지만 이 화면은 목록이고,
-    // 앞으로 심을 것이 빠지면 계획을 세운 사람이 자기가 만든 것을 어디서도 못
-    // 찾는다(예전에는 [종료 포함] 을 켜야 겨우 보였다 — 종료와 예정이 같은
-    // 칸에 있으니 찾을 이유가 없는 자리였다).
-    qs.push('include_planned=1');
+    // **전부 받는다** — 좁히는 수단이 검색 하나뿐이라(필터 드롭다운을 없앴다),
+    // 데이터가 빠져 있으면 아무리 쳐도 안 나온다. 지나간 것(종료)과 올 것
+    // (계획)은 목록의 배지가 구분하므로 섞여 있어도 읽힌다.
+    var qs = ['include_ended=1', 'include_planned=1'];
     el.list.innerHTML = '<div class="aot-plots-empty">' +
                         _esc(el.list.dataset.loading || '') + '</div>';
     // cache:'no-store' — 저장 직후 다시 부르는 경로가 있다. 브라우저 휴리스틱
     // 캐시가 옛 사본을 주면 "저장했는데 목록이 그대로" 가 된다.
-    return fetch('/api/geo/plots' + (qs.length ? '?' + qs.join('&') : ''),
+    return fetch('/api/geo/plots?' + qs.join('&'),
                  { cache: 'no-store', credentials: 'same-origin' })
       .then(function (r) { return r.json(); })
       .then(function (res) {
@@ -112,15 +125,14 @@
   }
 
   // ── 목록 ──────────────────────────────────────────────────────────────
+  /** 검색 하나로 좁힌다 — 드롭다운 필터는 없앴다(템플릿 주석 참조). */
   function _matches(p) {
-    var kind = el.kind.value;
-    if (kind && (p.kind || 'vegetation') !== kind) return false;
     var q = (el.q.value || '').trim().toLowerCase();
     if (!q) return true;
-    // 사람이 기억하는 말로 찾는다 — 작물·품종·이름·시설·지도. uuid 는 넣지
-    // 않는다(사람이 그것으로 찾지 않고, 넣으면 무관한 항목이 걸린다).
+    // 사람이 기억하는 말로 찾는다 — 작물·품종·이름·시설·구역·대지·지도·프로그램.
+    // uuid 는 넣지 않는다(사람이 그것으로 찾지 않고, 넣으면 무관한 항목이 걸린다).
     return [p.subject, p.variety, p.name, p.facility_name, p.bay_name,
-            p.map_name, (p.program || {}).name]
+            p.map_name, p.site_name, p.zone_name, (p.program || {}).name]
       .some(function (x) { return x && String(x).toLowerCase().indexOf(q) >= 0; });
   }
 
@@ -200,16 +212,23 @@
     el.list.innerHTML = rows.map(_rowHtml).join('');
   }
 
-  // ── 편집 ──────────────────────────────────────────────────────────────
+  // ── 편집 드로어 ────────────────────────────────────────────────────────
+  //
+  // 셸·문법은 **관리 프로그램 드로어와 같다**(`/geo/programs`). 같은 성격의 일
+  // (재배 일정을 정하는 일)을 하는 두 화면이 서로 다른 모달 문법을 쓰면
+  // 사용자가 화면마다 다시 배워야 한다.
+  //
+  // ⚠ 값은 **[저장]을 눌러야 반영된다** — 프로그램 드로어와 같은 약속이다.
+  // 기본 정보와 단계 일정이 한 번에 나가므로, 한 드로어에 저장 규칙이 둘이 되는
+  // 일이 없다.
   function openEdit(p) {
     p = p || {};
-    S.editing = p.unique_id || null;
+    if (!p.unique_id) return;
+    S.editing = p.unique_id;
     var facUuid = p.facility_uuid || null;
     loadFacility(facUuid).then(function (fac) {
       var ctx = {
         attr: 'data-pf',
-        // 시설이 붙어 있으면 시설 구획이다 — 구역·몫이 나온다. 새로 만들 때는
-        // 노지로 시작한다(지도에 그리는 것은 이 화면의 일이 아니다).
         target: facUuid ? 'facility' : 'ground',
         values: p,
         kind: p.kind || 'vegetation',
@@ -222,55 +241,98 @@
         today: _today(),
         loadPrograms: loadPrograms
       };
-      el.editBody.innerHTML = '<div class="aot-modal-container">' +
-        root.AoTPlotForm.rowsHtml(ctx) + '</div>';
-      el.editTitle.textContent = p.unique_id
-        ? (p.subject || _t('Plot')) : _t('Add a plot');
-      el.editBody._ctx = ctx;
-      root.AoTPlotForm.wire(el.editBody, ctx);
-      if (root.jQuery) root.jQuery('#plotEditModal').modal('show');
+
+      // 그룹 제목 + 상자 — 프로그램 드로어의 `_group`/`_box` 와 같은 골격이다.
+      var basics = '<div class="aot-modal-group-title">' + _esc(_t('Basics')) +
+                   '</div><div class="aot-modal-container">' +
+                   root.AoTPlotForm.rowsHtml(ctx) + '</div>';
+
+      var stages = root.AoTPlotStages;
+      stages.load(p);
+      el.body.innerHTML = basics + stages.html();
+      el.title.textContent = p.subject || p.name || _t('Plot');
+
+      var form = el.body.querySelector('.aot-modal-container');
+      el.body._ctx = ctx;
+      root.AoTPlotForm.wire(form, ctx);
+      stages.wire(el.body);
+
+      // 프로그램이 없으면 등록할 일정도 없다.
+      if (el.btnReg) el.btnReg.hidden = !stages.has();
+
+      if (root.jQuery) root.jQuery('#plot-drawer').modal('show');
     });
   }
 
+  /** 기본 정보 + 단계 일정을 **한 번에** 저장한다. */
   function save() {
-    var ctx = el.editBody._ctx || { attr: 'data-pf' };
-    var payload = root.AoTPlotForm.collect(el.editBody, ctx);
+    var ctx = el.body._ctx || { attr: 'data-pf' };
+    var form = el.body.querySelector('.aot-modal-container');
+    var payload = root.AoTPlotForm.collect(form, ctx);
     if (!payload.subject) {
       _toast(_t('Enter what is planted.'), 'warning');
-      return;
+      return Promise.resolve(false);
     }
-    if (S.editing) payload.unique_id = S.editing;
-    // 새로 만들 때는 지도가 필요하다. 시설을 고른 경우에는 서버가 시설에서
-    // 지도를 안다(`plot_io.save_plot`) — 그래서 여기서는 필터의 지도만 쓴다.
-    if (!S.editing && !payload.facility_uuid) {
-      var mapId = el.map.value;
-      if (!mapId) {
-        // 지도 없이 노지 구획을 만들 수는 없다(기하가 어디에 그려질지 모른다).
-        // 이 화면은 도형을 그리지 않으므로, 새로 만들기는 시설 구획만 받는다.
-        _toast(_t('Pick a map first.'), 'warning');
-        return;
+    payload.unique_id = S.editing;
+
+    var stages = root.AoTPlotStages;
+    // 구획 자신의 값(자동 전환)은 기본 정보와 같은 저장에 실린다.
+    var extra = stages.plotFields();
+    Object.keys(extra).forEach(function (k) { payload[k] = extra[k]; });
+
+    // 프로그램을 바꾸면 일정이 통째로 그 프로그램의 것으로 바뀐다 — 옛 단계
+    // 키를 가리키는 편집을 함께 보내면 서버가 없는 키로 거절한다.
+    var was = (S.rows.filter(function (x) {
+      return x.unique_id === S.editing;
+    })[0] || {});
+    var progChanged = (payload.program_uuid || '') !==
+                      ((was.program || {}).unique_id || '');
+
+    if (el.btnSave) el.btnSave.disabled = true;
+    return _api('POST', '/api/geo/plot', payload).then(function (res) {
+      if (res.status >= 400 || !res.data.ok) {
+        // 서버가 거절한 이유를 그대로 보인다 — 권한이든 검증이든 화면이
+        // 지어내지 않는다(원칙 4).
+        return { ok: false, message: res.data.message || _t('Save failed') };
       }
-      payload.map_uuid = mapId;
-    }
-    fetch('/api/geo/plot', {
-      method: 'POST', credentials: 'same-origin',
-      headers: { 'Content-Type': 'application/json',
-                 'X-Requested-With': 'XMLHttpRequest',
-                 'X-CSRFToken': _csrf() },
-      body: JSON.stringify(payload)
-    }).then(function (r) { return r.json().catch(function () { return {}; }); })
-      .then(function (j) {
-        if (!j || !j.ok) {
-          // 서버가 거절한 이유를 그대로 보인다 — 권한이든 검증이든 화면이
-          // 지어내지 않는다(원칙 4).
-          _toast((j && j.message) || _t('Save failed'), 'error');
+      if (progChanged) return { ok: true };
+      return stages.save(el.body, _api);
+    }).then(function (out) {
+      if (el.btnSave) el.btnSave.disabled = false;
+      if (!out.ok) {
+        _toast(out.message || _t('Save failed'), 'error');
+        return false;
+      }
+      _toast(_t('Saved.'), 'success');
+      return reload().then(function () { return true; });
+    });
+  }
+
+  /** 이 구획의 일정을 프로그램으로 — 프로그램 드로어의 [복제]와 같은 성격이다.
+   *
+   * 등록은 **복사**다(서버가 지금 저장된 일정을 읽는다). 그래서 고치던 것이
+   * 남아 있으면 먼저 저장한다 — 안 그러면 화면에서 본 것과 다른 것이 등록된다.
+   * 이름은 서버가 짓는다(겹치면 번호를 붙인다) — 프로그램 페이지에서 고친다. */
+  function registerAsProgram() {
+    var stages = root.AoTPlotStages;
+    var pre = stages.dirty(el.body) ? save() : Promise.resolve(true);
+    pre.then(function (okToGo) {
+      if (!okToGo) return;
+      if (el.btnReg) el.btnReg.disabled = true;
+      _api('POST', '/api/geo/plot/' + encodeURIComponent(S.editing) +
+           '/save-as-program', {}).then(function (res) {
+        if (el.btnReg) el.btnReg.disabled = false;
+        if (res.status >= 400 || !res.data.ok) {
+          _toast(res.data.message || _t('Save failed'), 'error');
           return;
         }
-        if (root.jQuery) root.jQuery('#plotEditModal').modal('hide');
-        _toast(_t('Saved.'), 'success');
-        reload();
-      })
-      .catch(function () { _toast(_t('Save failed'), 'error'); });
+        // 만들어진 이름을 그대로 말한다 — 겹치면 서버가 번호를 붙이므로
+        // 사용자가 짐작한 것과 다를 수 있다.
+        var nm = (res.data.program || {}).name || '';
+        _toast(_t('Registered as a programme: %(name)s').replace('%(name)s', nm),
+               'success');
+      });
+    });
   }
 
   function _today() {
@@ -290,27 +352,23 @@
     S.canDesign = !!opts.canDesign;
 
     el.q = document.getElementById('plot-q');
-    el.map = document.getElementById('plot-map');
-    el.kind = document.getElementById('plot-kind');
-    el.ended = document.getElementById('plot-ended');
     el.count = document.getElementById('plot-count');
     el.list = document.getElementById('plot-list');
-    el.editBody = document.getElementById('plot-edit-body');
-    el.editTitle = document.getElementById('plot-edit-title');
+    el.body = document.getElementById('plot-drawer-body');
+    el.title = document.getElementById('plotDrawerLabel');
+    el.btnSave = document.getElementById('plot-drawer-save');
+    el.btnReg = document.getElementById('plot-drawer-reg');
     if (!el.list) return;
 
-    // 검색·종류는 **받아 둔 목록 안에서** 거른다(왕복 없음). 지도·이력은
-    // 서버가 정하는 축이라 다시 받는다.
+    // 좁히는 수단은 검색 하나다 — **받아 둔 목록 안에서** 거른다(왕복 없음).
     el.q.addEventListener('input', render);
-    el.kind.addEventListener('change', render);
-    el.map.addEventListener('change', reload);
-    el.ended.addEventListener('change', reload);
 
-    var btnNew = document.getElementById('plot-new');
-    if (btnNew) btnNew.addEventListener('click', function () { openEdit(null); });
-
-    var btnSave = document.getElementById('plot-edit-save');
-    if (btnSave) btnSave.addEventListener('click', save);
+    if (el.btnSave) el.btnSave.addEventListener('click', function () {
+      save().then(function (ok) {
+        if (ok && root.jQuery) root.jQuery('#plot-drawer').modal('hide');
+      });
+    });
+    if (el.btnReg) el.btnReg.addEventListener('click', registerAsProgram);
 
     // 목록은 매번 다시 그려지므로 위임으로 듣는다.
     el.list.addEventListener('click', function (e) {

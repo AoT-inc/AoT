@@ -9,84 +9,86 @@
 {#- 기간 바(단계·오늘 위치)는 지도 위젯의 구획 모달과 **같은 공용 시각화**를
     쓴다 — 같은 것이 두 화면에서 다르게 보이면 사용자가 따로 배워야 한다. -#}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/components/aot-dataviz.css') }}" />
+{#- 단계 트랙·단계 설정 패널 — 관리 프로그램 페이지(`/geo/programs`)와 **같은
+    정의**를 쓴다. 프로그램은 표준을 정하고 구획은 그 표준을 자기 사정에 맞게
+    고치는 자리라, 두 화면의 단계 편집은 같은 물건이어야 한다. -#}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/components/aot-stage-track.css') }}" />
+{#- 설정 드로어 본문의 행 레이아웃 — 프로그램 페이지와 **같은 정의**다.
+    이것이 없으면 골격만 같고 긴 제목이 잘리고 설명이 컨트롤 열에 찌그러진다. -#}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/components/aot-drawer-form.css') }}" />
 {#- 공용 구획 폼의 스타일 — 지도 위젯과 **같은 파일**을 쓴다. -#}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/components/aot-plot-form.css') }}" />
 <link rel="stylesheet" href="{{ url_for('static', filename='css/pages/geo-plots.css') }}" />
 {% endblock %}
 
 {% block body %}
-<div class="container-fluid aot-page">
+<main role="main" class="container aot-page">
 
   <div class="aot-page-head">
     <h1 class="aot-page-title">{{ _('Plots') }}</h1>
-    <div class="aot-page-actions">
-      {#- 편집 권한이 없으면 버튼을 내지 않는다. 목록은 그대로 보인다 —
-          보기는 전원 공개이고, 그룹은 조작만 제한한다. -#}
-      {% if can_edit %}
-      <button type="button" class="btn aot-pill-btn aot-pill-btn-primary"
-              id="plot-new">{{ _('Add a plot') }}</button>
-      {% endif %}
-    </div>
   </div>
 
-  {#- 필터 — 한 줄에 둔다. 접어 두면 "왜 이것만 보이지" 를 사람이 스스로
-      찾아내야 하는데, 목록 화면에서 그 질문이 가장 자주 나온다. -#}
+  {#- 좁히는 수단은 **검색 하나**다.
+      예전에는 지도·대지·구역·종류 드롭다운과 [종료된 것 포함] 체크박스가 한
+      줄에 있었다. 다섯 개를 조합해야 답이 나오는 화면은 "무엇을 고르면 되는지"
+      부터 배워야 하고, 정작 사람은 찾는 것의 **이름을 이미 알고 있다.**
+      검색은 작물·품종·구획 이름·시설·구역·대지·지도·프로그램을 한 번에 훑으므로
+      (plots-page.js `_matches`), 드롭다운으로 하던 일이 전부 타이핑으로 된다.
+
+      그래서 목록은 종료·예정까지 **전부 실어 온다** — 검색이 유일한 수단인데
+      데이터가 빠져 있으면 아무리 쳐도 안 나온다. 지나간 것과 올 것은 행의
+      배지가 구분한다. -#}
   <div class="aot-plots-filters">
-    <input type="search" class="aot-modern-input form-control" id="plot-q"
-           placeholder="{{ _('Search') }}" autocomplete="off">
-
-    <select class="aot-modern-input form-control" id="plot-map">
-      <option value="">{{ _('All maps') }}</option>
-      {% for m in maps %}
-      <option value="{{ m.unique_id }}">{{ m.name }}</option>
-      {% endfor %}
-    </select>
-
-    <select class="aot-modern-input form-control" id="plot-kind">
-      <option value="">{{ _('All kinds') }}</option>
-      <option value="vegetation">{{ _('Vegetation') }}</option>
-      <option value="livestock">{{ _('Livestock') }}</option>
-      <option value="facility">{{ _('Facility') }}</option>
-      <option value="other">{{ _('Other') }}</option>
-    </select>
-
-    {#- 이력은 **요청해야 온다.** 기본으로 실으면 몇 년 지난 설치에서 목록이
-        옛 작기로 뒤덮인다(`/api/geo/plots` 의 include_ended 와 같은 판단). -#}
-    <label class="aot-plots-ended">
-      <input type="checkbox" id="plot-ended">
-      <span>{{ _('Include ended') }}</span>
-    </label>
-
+    <div class="note-search-input-group ui-pill">
+      <span class="note-search-icon"><i class="fas fa-search"></i></span>
+      <input type="text" id="plot-q" class="note-search-input"
+             placeholder="{{ _('Search') }}" autocomplete="off"
+             aria-label="{{ _('Search') }}">
+    </div>
     <span class="aot-plots-count" id="plot-count"></span>
   </div>
 
   <div id="plot-list" class="aot-plots-list"
        data-loading="{{ _('Loading…') }}"
        data-empty="{{ _('Nothing recorded yet.') }}"></div>
-</div>
+</main>
 
-{#- 편집 모달 — 공용 폼(`AoTPlotForm`)이 본문을 채운다. 이 화면이 폼을 또
-    적으면 4단계에서 한 벌로 모은 것이 다시 갈린다. -#}
-<div class="modal fade aot-option-modal" id="plotEditModal" tabindex="-1" role="dialog">
-  <div class="modal-dialog modal-dialog-centered" role="document">
+{#- 설정 드로어 — **프로그램 페이지(`/geo/programs`)와 같은 셸**이다.
+    같은 성격의 일(재배 일정을 정하는 일)을 하는 두 화면이 서로 다른 모달
+    문법을 쓰면 사용자가 화면마다 다시 배워야 한다.
+
+    본문은 공용 폼(`AoTPlotForm`)과 공용 단계 편집기(`AoTPlotStages`)가 채운다.
+    ⚠ 드로어의 값은 **[저장]을 눌러야 반영된다** — 프로그램 드로어와 같은
+    약속이다. 그래서 잘못 고쳐도 닫으면 원래 값이 남는다. -#}
+<div class="modal fade aot-option-modal aot-widget-drawer aot-drawer-fullcover"
+     data-backdrop="false" id="plot-drawer" tabindex="-1" role="dialog"
+     aria-labelledby="plotDrawerLabel" aria-hidden="true">
+  <div class="modal-dialog modal-xl aot-modal-dialog" role="document">
     <div class="modal-content">
-      <div class="aot-modal-header">
-        <span class="aot-modal-title" id="plot-edit-title">{{ _('Plot') }}</span>
-        <button type="button" class="aot-modal-close" data-dismiss="modal"
-                aria-label="{{ _('Close') }}">&#x2715;</button>
+      <div class="modal-header">
+        <h5 class="modal-title" id="plotDrawerLabel">{{ _('Plot') }}</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="{{ _('Close') }}">
+          <span aria-hidden="true">&times;</span>
+        </button>
       </div>
-      <div class="aot-modal-body" id="plot-edit-body"></div>
-      <div class="aot-modal-footer">
-        <button type="button" class="btn aot-pill-btn" data-dismiss="modal">{{ _('Cancel') }}</button>
-        <button type="button" class="btn aot-pill-btn aot-pill-btn-primary"
-                id="plot-edit-save">{{ _('Save') }}</button>
+      <div class="modal-body aot-drawer-rows" id="plot-drawer-body"></div>
+      {#- 순서·모양은 프로그램 드로어의 푸터와 맞춘다. [프로그램으로 등록]은
+          그쪽 [복제]와 같은 성격이다 — 지금 것을 바탕으로 **새 것을 만든다**. -#}
+      <div class="modal-footer">
+        <button type="button" class="btn aot-pill-btn" data-dismiss="modal">{{ _('Close') }}</button>
+        <button type="button" id="plot-drawer-reg"
+                class="btn aot-pill-btn">{{ _('Register as programme') }}</button>
+        <button type="button" id="plot-drawer-save"
+                class="btn aot-pill-btn aot-pill-btn-primary">{{ _('Save') }}</button>
       </div>
     </div>
   </div>
 </div>
 
+<script src="{{ url_for('static', filename='js/common/aot-widget-drawer.js') }}"></script>
 <script src="{{ url_for('static', filename='js/common/aot-plot-labels.js') }}"></script>
 <script src="{{ url_for('static', filename='js/common/aot-plot-form.js') }}"></script>
+<script src="{{ url_for('static', filename='js/common/aot-plot-stages.js') }}"></script>
 <script src="{{ url_for('static', filename='js/geo/plots-page.js') }}"></script>
 <script>
   AoTPlots.init({

@@ -311,9 +311,33 @@
     return html;
   }
 
+  /** 고른 프로그램이 그 뒤 갱신됐다는 **사실만** 알린다.
+   *
+   * 해석은 계속 고정 버전으로 한다 — 진행 중인 작기의 해석이 조용히 달라지면
+   * "그때 무엇을 목표로 길렀나" 의 답이 바뀐다. 그래서 자동으로 따라가지 않고,
+   * 대신 그 사실을 프로그램 칸 바로 아래에서 말한다(다시 고르면 새 버전이
+   * 적용된다).
+   *
+   * 안내는 `canDesign` 과 무관하다 — 위쪽 [새 프로그램 만들기] 는 갈 수 있는
+   * 사람에게만 내는 **링크**지만, 이것은 지금 이 구획의 상태를 말하는 문장이라
+   * 권한과 상관없이 알아야 한다.
+   */
+  function _staleProgramHint(ctx) {
+    var prog = (ctx.values || {}).program;
+    if (!prog || !prog.newer_version) return '';
+    // **문장이라 한 줄을 다 쓴다.** 위 [새 프로그램 만들기] 처럼 라벨/컨트롤
+    // 두 열 구조(`.aot-ov-field-hint`)에 넣으면 컨트롤 열은 폭이 고정이라
+    // 문장이 그 좁은 칸에 갇혀 두 줄로 접히고 오른쪽으로 쏠린다 — 짧은 링크와
+    // 문장은 같은 물건이 아니다.
+    return '<div class="aot-pf-note">' +
+           _esc(_t('A newer version of this program exists (not applied).')) +
+           '</div>';
+  }
+
   function _fieldHtml(f, ctx) {
     var label = (typeof f.label === 'function') ? f.label(ctx) : _t(f.label);
     var html = _row(_esc(label), _control(f, ctx)) + _hint(f.hint, ctx);
+    if (f.key === 'program_uuid') html += _staleProgramHint(ctx);
     if (f.type === 'alloc') html += _allocHintHtml();
     return html;
   }

@@ -28647,6 +28647,9 @@ msgid "until the end"
 msgstr "끝까지"
 
 #: aot/aot_flask/templates/pages/geo/vegetation.html
+msgid "Already past — this boundary is fixed."
+msgstr "지나간 경계는 고칠 수 없습니다. 확인·되돌리기로만 바뀝니다."
+
 msgid "Add stage"
 msgstr "단계 추가"
 
@@ -30203,6 +30206,12 @@ msgstr "구획"
 msgid "All maps"
 msgstr "모든 지도"
 
+msgid "All sites"
+msgstr "모든 대지"
+
+msgid "All zones"
+msgstr "모든 구역"
+
 msgid "All kinds"
 msgstr "모든 종류"
 
@@ -30933,6 +30942,30 @@ msgstr "야간에 개구부 닫아 두기"
 #: aot/functions/custom_functions/env_coordinator_impl/_function_info.py
 msgid "Night Vent Parking"
 msgstr "야간 개구부 파킹"
+
+#: aot/functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Limits Never to Cross"
+msgstr "넘으면 안 되는 선"
+
+#: aot/functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Ventilation Strategy"
+msgstr "환기 전략"
+
+#: aot/functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Schedule and Time"
+msgstr "일정과 시간"
+
+#: aot/functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Light and CO₂"
+msgstr "광량과 CO₂"
+
+#: aot/functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Model and Calibration"
+msgstr "모델과 보정"
+
+#: aot/functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Not Yet Categorised"
+msgstr "분류 안 됨"
 
 #: aot/functions/custom_functions/env_coordinator_impl/_function_info.py
 msgid "Night Starts At"
