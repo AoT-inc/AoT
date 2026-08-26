@@ -1238,3 +1238,65 @@ def _apply_layout(options, layout):
 
 FUNCTION_INFORMATION['custom_options'] = _apply_layout(
     FUNCTION_INFORMATION['custom_options'], _LAYOUT)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 조건부로 **안 쓰이는** 옵션 — "내가 정한 값이 무시되는데 알 방법이 없다"
+# ─────────────────────────────────────────────────────────────────────────────
+# 어떤 옵션은 다른 옵션이 특정 값일 때만 읽힌다. 그 조건이 아니면 사용자가
+# 입력한 값이 **조용히 버려진다** — 화면에는 그대로 남아 있으므로 자기가 정한
+# 대로 돌고 있다고 믿는다.
+#
+# 실측(2026-08-27 쿠마모토 イチゴ):
+#
+#     저장된 actuation_profile      'gentle'
+#     저장된 actuation_period_sec   1200      ← 화면에 이 값이 보인다
+#     실제로 쓰이는 주기            600       ← gentle 의 값
+#
+# `profile != 'custom'` 이면 코드가 숫자 칸을 아예 보지 않는다. 20분마다
+# 움직이라고 적어 뒀는데 10분마다 움직이고, 그 사실이 어디에도 안 드러난다.
+#
+# ⚠ **한 건이 아니라 부류다.** `night_vent_basis` 도 같은 모양이라
+#   (일몰 기준이면 시각 칸이, 시각 기준이면 오프셋이 안 쓰인다) 명부로 둔다.
+#   조건부 옵션을 새로 만들면 **여기 등록할 것** — 등록하지 않으면 그 옵션은
+#   같은 방식으로 조용히 무시된다.
+#
+#   (값 옵션, 조건 옵션, 조건이 이 값일 때만 쓰임, 이 기능 토글이 켜졌을 때만 따짐)
+_INERT_UNLESS = (
+    ('actuation_period_sec',         'actuation_profile', 'custom', None),
+    ('night_vent_sunset_offset_min', 'night_vent_basis',  'sun',   'night_vent_park'),
+    ('night_vent_start',             'night_vent_basis',  'clock', 'night_vent_park'),
+    ('night_vent_end',               'night_vent_basis',  'clock', 'night_vent_park'),
+)
+
+
+def inert_options(values):
+    """지금 설정에서 **입력됐지만 안 쓰이는** 옵션 → [(값 옵션, 조건 옵션, 필요값)].
+
+    `values` 는 저장된 custom_options dict.
+
+    ⚠ **기본값은 보고하지 않는다.** 사용자가 정한 적 없는 값이 안 쓰이는 것은
+      알릴 일이 아니다 — 그것까지 말하면 매번 네 줄이 뜨고 아무도 안 읽는다.
+    ⚠ **기능 토글이 꺼져 있으면 보고하지 않는다.** 야간 파킹을 안 쓰는 사람에게
+      그 하위 설정이 안 쓰인다고 말하는 것은 당연한 소리다.
+    """
+    defaults = {o['id']: o.get('default_value')
+                for o in FUNCTION_INFORMATION['custom_options'] if o.get('id')}
+    values = values or {}
+    out = []
+    for opt, cond, need, gate in _INERT_UNLESS:
+        if gate is not None and not values.get(gate):
+            continue
+        if str(values.get(cond, defaults.get(cond)) or '') == need:
+            continue                       # 조건이 맞다 — 이 값은 쓰인다
+        if opt not in values:
+            continue
+        cur, dflt = values.get(opt), defaults.get(opt)
+        try:
+            same = float(cur) == float(dflt)
+        except (TypeError, ValueError):
+            same = str(cur or '') == str(dflt or '')
+        if same:
+            continue                       # 손댄 적 없는 값이다
+        out.append((opt, cond, need))
+    return out

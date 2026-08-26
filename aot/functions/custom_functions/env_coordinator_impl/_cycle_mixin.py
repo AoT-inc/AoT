@@ -1020,6 +1020,8 @@ class CycleMixin:
                     '유도 범위와 온습도 상·하한 설정을 맞춰 주세요.', _clamp_key)
             self._last_guide_clamp = _clamp_key
 
+        self._warn_inert_options_once()
+
         T_int  = internal.get('T',  22.0)
         RH_int = internal.get('RH', 60.0)
 

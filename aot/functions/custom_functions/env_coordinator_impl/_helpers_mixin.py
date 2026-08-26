@@ -678,6 +678,38 @@ class HelpersMixin:
         from aot.utils.timekit import utc_now
         return utc_now().astimezone(fac_tz)
 
+    def _warn_inert_options_once(self) -> None:
+        """입력됐지만 **안 쓰이는** 값을 기동 후 한 번 알린다.
+
+        저장 화면이 이 상태를 만들지 못하게 막지만, **이미 그런 설치**는 아무도
+        알려 주지 않는다 — 실측(2026-08-27 쿠마모토): `actuation_period_sec`
+        1200 을 적어 두고 실제로는 `gentle` 의 600 으로 돌고 있었다.
+
+        ⚠ **한 번만 찍는다.** 매 사이클이면 정작 읽어야 할 로그를 밀어낸다.
+        ⚠ **등급은 error 다.** 컨트롤러 로거는 `log_level_debug` 가 꺼져 있으면
+          ERROR 라, warning 으로 찍으면 기본 설치에서 아무 데도 안 남는다.
+        ⚠ **DB 행이 아니라 파싱된 속성을 본다.** 그것이 실제로 적용된 값이고,
+          행을 어디에 들고 있는지에 의존하지 않는다.
+        """
+        if getattr(self, '_inert_logged', False):
+            return
+        self._inert_logged = True
+        try:
+            from aot.functions.custom_functions.env_coordinator_impl \
+                ._function_info import _INERT_UNLESS, inert_options
+            saved = {}
+            for opt, cond, _need, gate in _INERT_UNLESS:
+                for key in (opt, cond, gate):
+                    if key and key not in saved:
+                        saved[key] = getattr(self, key, None)
+            for opt, cond, need in inert_options(saved):
+                self.logger.error(
+                    "설정한 '%s' 값(%r)은 지금 쓰이지 않습니다 — "
+                    "'%s' 가 '%s' 일 때만 적용됩니다.",
+                    opt, saved.get(opt), cond, need)
+        except Exception:
+            self.logger.debug('안 쓰이는 옵션 점검 실패', exc_info=True)
+
     # ── Email notification helpers ─────────────────────────────────────────────────────
 
     def _get_email_actions(self) -> list:

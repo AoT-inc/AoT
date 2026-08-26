@@ -149,6 +149,29 @@ def execute_at_modification(
     except Exception:
         pass      # 알림 하나 때문에 저장을 실패시키지 않는다
 
+    # ── 입력했지만 안 쓰이는 값 ──────────────────────────────────────────────
+    # 조건이 맞지 않아 조용히 버려지는 값을 그 자리에서 말한다. 여기서 걸러야
+    # 그 상태가 애초에 안 생긴다 — 이미 그런 설치는 데몬이 기동 때 한 번 알린다.
+    try:
+        from aot.functions.custom_functions.env_coordinator_impl._function_info \
+            import inert_options
+        # ⚠ 바깥 `o`(저장값 dict)를 가리지 않게 이름을 나눈다. 파이썬3 의
+        #   컴프리헨션은 자기 스코프라 실제로 새지는 않지만, 읽는 사람이
+        #   그것을 매번 확인해야 한다 — 이 레포가 같은 모양으로 데인 적이 있다.
+        names = {_opt['id']: _opt.get('name')
+                 for _opt in FUNCTION_INFORMATION['custom_options']
+                 if _opt.get('id')}
+        for opt, cond, need in inert_options(o):
+            # ⚠ msgid 에 큰따옴표를 넣지 말 것 — `.po` 의 문자열 구분자라
+            #   이스케이프 없이 넣으면 그 카탈로그가 깨진다(2026-08-27 실측).
+            messages['warning'].append(str(gettext(
+                'The value you set for %(opt)s is not being used: it applies '
+                'only when %(cond)s is set to the matching option. Change that '
+                'first, or this value has no effect.',
+                opt=str(names.get(opt, opt)), cond=str(names.get(cond, cond)))))
+    except Exception:
+        pass
+
     return (
         messages,
         mod_controller,

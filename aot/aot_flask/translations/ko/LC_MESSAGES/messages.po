@@ -30920,6 +30920,10 @@ msgid "Target reached — easing off"
 msgstr "목표에 닿아 출력을 줄이고 있습니다"
 
 #: aot/functions/custom_functions/env_coordinator.py
+msgid "The value you set for %(opt)s is not being used: it applies only when %(cond)s is set to the matching option. Change that first, or this value has no effect."
+msgstr "지금 쓰이지 않는 값 — %(opt)s. %(cond)s 설정이 그에 맞는 항목일 때만 적용됩니다. 그쪽을 먼저 바꾸지 않으면 이 값은 아무 효과가 없습니다."
+
+#: aot/functions/custom_functions/env_coordinator.py
 msgid "The guide range for %(what)s (%(guide)s) lies outside your hard limits (%(hard)s), so targets are only built inside %(effective)s. Widen the hard limits or narrow the guide range so the two agree."
 msgstr "%(what)s 유도 범위(%(guide)s)가 하드 임계(%(hard)s) 밖이라, 목표는 %(effective)s 안에서만 세워집니다. 하드 임계를 넓히거나 유도 범위를 좁혀 서로 맞춰 주세요."
 
