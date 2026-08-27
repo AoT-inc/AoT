@@ -1630,8 +1630,10 @@ body.aot-map-fullscreen-active .grid-stack-item:not(.aot-fs-parent) {
     border-top: none;
     animation: none;
     justify-content: center;
-    /* 좌: 크기 손잡이 자리, 우: 같은 폭(내용이 가운데 오게). */
-    padding: 4px 28px 6px 28px;
+    /* 좌: 크기 손잡이, 우: 접기 버튼. 둘 다 24px 이고 여백은 **대칭**이어야
+       한다 — 한쪽만 넓히면 그만큼 내용이 밀려 현재 시각이 가운데를 벗어난다
+       (측정값 독은 내용이 가운데일 필요가 없어 좌 24 / 우 36 으로 다르다). */
+    padding: 4px 32px 6px 32px;
     /* 시계 크기 — 손잡이 휠이 --aot-time-scale 을 바꾼다. 독 안의 글자는
        전부 em 이라 이 한 줄로 독 전체가 함께 커지고 작아진다. */
     font-size: calc(1em * var(--aot-time-scale, 1));
@@ -1727,36 +1729,96 @@ body.aot-map-fullscreen-active .grid-stack-item:not(.aot-fs-parent) {
    작게 되돌릴수록 잡을 곳이 작아진다. */
 .aot-time-dock .aot-time-scale-handle {
     position: absolute;
-    left: 7px;
-    bottom: 7px;
-    width: 14px;
-    height: 14px;
+    left: 4px;
+    bottom: 0;
+    /* 히트영역 24px, 보이는 원 8px — 측정값 독의 .aot-meas-scale-handle 과
+       같은 치수다. 잡는 곳은 넉넉하고 그려지는 것은 작다. */
+    width: 24px;
+    height: 24px;
     padding: 0;
     border: none;
     outline: none;
-    border-radius: 50%;
-    background: var(--aot-color-text-primary, #333);
-    opacity: 0.18;
+    background: transparent;
     cursor: ns-resize;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     z-index: 1;
     touch-action: none;
+}
+.aot-time-dock .aot-time-scale-handle::before {
+    content: '';
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    border: none;
+    background: var(--aot-color-text-primary, #333);
+    opacity: 0.25;
     transition: opacity 0.15s ease;
 }
-.aot-time-dock .aot-time-scale-handle:hover,
-.aot-time-dock .aot-time-scale-handle:focus-visible {
-    opacity: 0.6;
+.aot-time-dock .aot-time-scale-handle:hover::before,
+.aot-time-dock .aot-time-scale-handle:focus-visible::before {
+    opacity: 0.7;
 }
-/* 터치 기기: 손가락으로 잡을 수 있는 크기로 키우고, 그만큼 안쪽 여백도 넓힌다. */
+
+/* 접기 버튼(우하단) — 측정값 독과 같은 24px 버튼. 쉐브론 방향만 반대다:
+   이 독은 위로 접히므로 펼침이 아래쪽 쉐브론이다. */
+.aot-time-dock .aot-dock-collapse-btn {
+    position: absolute;
+    right: 4px;
+    bottom: 0;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    outline: none;
+    background: transparent;
+    color: var(--aot-color-text-primary, #333);
+    opacity: 0.55;
+    cursor: pointer;
+    font-size: 0.917em;
+    padding: 0;
+    z-index: 1;
+}
+.aot-time-dock .aot-dock-collapse-btn:hover { opacity: 1; }
+
+/* 접힘: 상단에 얇은 탭만 남는다. 값 줄과 크기 손잡이는 감추고 접기 버튼만
+   남겨 다시 펼 수 있게 한다(측정값 독의 접힘과 같은 규칙). */
+.aot-measurement-panel.aot-time-dock.aot-dock-collapsed {
+    height: 22px !important;
+    /* 접힌 탭은 40px 다 — 측정값 독의 120px 을 그대로 쓰면 지도 위에 빈 흰 바가
+       남는다(그쪽은 접혀도 폭이 그 자리를 지켜야 하는 하단 도크라 넓다).
+       여기서는 안에 남는 것이 쉐브론 하나뿐이므로, 그 하나가 들어갈 만큼만
+       차지한다. 펼치기 전에는 지도를 최대한 돌려주는 것이 접기의 목적이다. */
+    min-width: 40px;
+    padding: 0;
+}
+.aot-time-dock.aot-dock-collapsed .aot-meas-body-row {
+    display: none !important;
+}
+.aot-time-dock.aot-dock-collapsed .aot-time-scale-handle {
+    display: none;
+}
+/* 접힘: 버튼이 탭 전체를 채운다 — 좌우 여백을 0 으로 줄였으므로 오른쪽에
+   붙여 두면 쉐브론이 한쪽으로 쏠린다. */
+.aot-time-dock.aot-dock-collapsed .aot-dock-collapse-btn {
+    left: 0;
+    right: 0;
+    width: auto;
+    height: 22px;
+}
+
+/* 터치 기기: 잡는 곳을 넓히고 그만큼 안쪽 여백도 대칭으로 넓힌다. */
 @media (pointer: coarse) {
-    .aot-time-dock .aot-time-scale-handle {
-        left: 9px;
-        bottom: 9px;
-        width: 20px;
-        height: 20px;
+    .aot-time-dock .aot-time-scale-handle,
+    .aot-time-dock .aot-dock-collapse-btn {
+        width: 34px;
     }
     .aot-measurement-panel.aot-time-dock {
-        padding-left: 38px;
-        padding-right: 38px;
+        padding-left: 40px;
+        padding-right: 40px;
     }
 }
 
@@ -1775,8 +1837,8 @@ body.aot-map-fullscreen-active .grid-stack-item:not(.aot-fs-parent) {
    가운데를 벗어난다. */
 .aot-map-w-sm .aot-measurement-panel.aot-time-dock {
     font-size: calc(0.82em * var(--aot-time-scale, 1));
-    padding-left: 24px;
-    padding-right: 24px;
+    padding-left: 28px;
+    padding-right: 28px;
 }
 .aot-map-w-sm .aot-time-dock .aot-meas-body-row {
     gap: 9px;

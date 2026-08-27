@@ -1101,7 +1101,15 @@ def set_stage_days(plot_uuid, days, set_by=None):
 
 
 def _save_overrides(row, ov):
-    """구성(뺀 것·더한 것·지침)을 저장 → error|None. 빈 것은 NULL 로 눕힌다."""
+    """구성(뺀 것·더한 것·지침·목표)을 저장 → error|None.
+
+    빈 것은 NULL 로 눕힌다 — 빈 dict 를 남기면 "손댄 적 있음" 과 "없음" 이
+    데이터에서 구분되지 않는다.
+
+    ⚠ **읽는 쪽(`stage_override_map`)이 아는 키를 여기서 빠뜨리지 말 것.**
+      빠뜨리면 화면에서 고친 것이 저장은 되는 듯 보이고 다시 열면 사라진다 —
+      에러가 없어서 어디를 봐야 할지 알 수 없다.
+    """
     out = {}
     if ov['removed']:
         out['removed'] = sorted(ov['removed'])
@@ -1109,6 +1117,8 @@ def _save_overrides(row, ov):
         out['added'] = ov['added']
     if ov['guidance']:
         out['guidance'] = ov['guidance']
+    if ov.get('targets'):
+        out['targets'] = ov['targets']
     try:
         row.stage_overrides = out or None
         db.session.commit()
@@ -1153,6 +1163,62 @@ def set_stage_guidance(plot_uuid, stage_key=None, text=None, set_by=None):
         return None, err
     return {'stage_key': stage_key,
             'guidance': text or None,
+            'stage_schedule': plot_context.stage_schedule_view(row)}, None
+
+
+def set_stage_target(plot_uuid, stage_key=None, target_key=None,
+                     value=None, set_by=None):
+    """이 구획의 **단계 목표**를 정한다 → (dict, error).
+
+    **프로그램은 참고 계획이고 실제 계획은 구획이다**(2026-08-27). 같은
+    프로그램으로 두 동을 길러도 목표가 같아야 할 이유가 없고, 작기 중에 사람이
+    조정하는 것이 정상이다. 제어는 이 값을 받는다 —
+    `effective_stages` → `_stage_targets` → `stage_of` → `control_targets`.
+
+    ⚠ **프로그램을 고치지 않는다.** 구획 화면에서 템플릿을 건드리면 같은
+      프로그램을 쓰는 다른 구획이 조용히 함께 바뀐다(`set_stage_guidance` 와
+      같은 규칙).
+
+    ⚠ 값을 비우면 **프로그램 값으로 돌아간다**. 되돌리기 버튼을 따로 두지
+      않는 이유가 이것이다 — 같은 일을 하는 수단이 둘이면 사람이 어느 쪽이
+      정본인지 묻는다(`set_stage_plan` 의 판단 그대로).
+
+    ⚠ 목표 **항목**은 만들 수 없다. 어휘는 프로그램의 `target_defs` 가 정하고,
+      거기 없는 키는 조용히 무시되는 대신 여기서 거절한다 — 저장은 됐는데
+      화면에 안 나오는 것이 가장 나쁘다.
+    """
+    row, prog, stages, first, err = _plan_context(plot_uuid)
+    if err:
+        return None, err
+    if not stage_key:
+        return None, '단계를 지정해야 합니다'
+    if stage_key not in {st.get('key') for st in stages}:
+        return None, '이 구획에 없는 단계입니다: %s' % stage_key
+    if not target_key:
+        return None, '목표 항목을 지정해야 합니다'
+
+    defs = (prog.target_def_list()
+            if prog is not None and hasattr(prog, 'target_def_list') else [])
+    known = {d.get('key') for d in defs}
+    if target_key not in known:
+        return None, ('이 프로그램에 없는 목표 항목입니다: %s' % target_key)
+
+    ov = row.stage_override_map()
+    if value in (None, ''):
+        ov['targets'].get(stage_key, {}).pop(target_key, None)
+        if stage_key in ov['targets'] and not ov['targets'][stage_key]:
+            ov['targets'].pop(stage_key)
+    else:
+        try:
+            num = float(value)
+        except (TypeError, ValueError):
+            return None, '숫자를 입력해 주세요'
+        ov['targets'].setdefault(stage_key, {})[target_key] = num
+    err = _save_overrides(row, ov)
+    if err:
+        return None, err
+    return {'stage_key': stage_key, 'target_key': target_key,
+            'value': ov['targets'].get(stage_key, {}).get(target_key),
             'stage_schedule': plot_context.stage_schedule_view(row)}, None
 
 

@@ -16434,6 +16434,8 @@ msgid "Subtext Color"
 msgstr "보조 문자색"
 
 #: aot_flask/templates/settings/diagnostic.html:14
+msgid "Diagnostics"
+msgstr "진단"
 
 #: aot_flask/templates/settings/diagnostic.html:25
 msgid "Control Element Reset"
@@ -31042,6 +31044,8 @@ msgid "Which model computes the effect of each actuator. Change only while testi
 msgstr "각 액추에이터의 효과를 무엇으로 계산할지. 시험 중이 아니면 바꾸지 마십시오."
 
 #: aot/functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Record every cycle decision. Turn on while diagnosing, off afterwards."
+msgstr "사이클마다 판단을 기록합니다. 진단할 때만 켜고 끝나면 끄십시오."
 
 #: aot/functions/custom_functions/env_coordinator_impl/_function_info.py
 msgid "Longest single spray. Humidification is regulated by how often it sprays, not by how long."
@@ -31262,6 +31266,8 @@ msgid "Light and CO₂"
 msgstr "광량과 CO₂"
 
 #: aot/functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Model and Calibration"
+msgstr "모델과 보정"
 
 #: aot/functions/custom_functions/env_coordinator_impl/_function_info.py
 msgid "Not Yet Categorised"
@@ -31475,6 +31481,8 @@ msgstr "천 투과율 개별 지정 (0-1, 차광막 전용)"
 msgid "Only for this screen, when its cloth differs from the rest. Leave 0 to use the value set on the linked facility. Used when there is no indoor light sensor: the indoor level is estimated from outdoor irradiance and the screen position."
 msgstr "이 차광막의 천이 나머지와 다를 때만 씁니다. 0 으로 두면 연동 시설에 정해 둔 값을 씁니다. 실내 광센서가 없을 때, 실외 일사와 차광막 개도로 실내 광량을 추정하는 데 쓰입니다."
 
+msgid "When Control Runs"
+msgstr "제어를 돌리는 시간대"
 
 msgid "Control ends"
 msgstr "제어 종료"
@@ -31520,6 +31528,3 @@ msgstr "극야"
 
 msgid "Timezone for this location could not be resolved — showing the farm timezone."
 msgstr "이 위치의 시간대를 찾지 못해 농장 시간대로 표시합니다."
-
-msgid "Working Hours"
-msgstr "작동 시간"

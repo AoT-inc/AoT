@@ -16329,6 +16329,8 @@ msgid "Subtext Color"
 msgstr "サブテキスト色"
 
 #: aot_flask/templates/settings/diagnostic.html:14
+msgid "Diagnostics"
+msgstr "診断"
 
 #: aot_flask/templates/settings/diagnostic.html:25
 msgid "Control Element Reset"
@@ -30801,6 +30803,8 @@ msgid "Which model computes the effect of each actuator. Change only while testi
 msgstr "各アクチュエーターの効果を何で計算するか。試験中でなければ変更しないでください。"
 
 #: aot/functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Record every cycle decision. Turn on while diagnosing, off afterwards."
+msgstr "サイクルごとの判断を記録します。診断時のみオンにし、終わったらオフに。"
 
 #: aot/functions/custom_functions/env_coordinator_impl/_function_info.py
 msgid "Longest single spray. Humidification is regulated by how often it sprays, not by how long."
@@ -31021,6 +31025,8 @@ msgid "Light and CO₂"
 msgstr "光量とCO₂"
 
 #: aot/functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Model and Calibration"
+msgstr "モデルと補正"
 
 #: aot/functions/custom_functions/env_coordinator_impl/_function_info.py
 msgid "Not Yet Categorised"
@@ -31234,6 +31240,8 @@ msgstr "生地の透過率の個別指定 (0-1, 遮光カーテンのみ)"
 msgid "Only for this screen, when its cloth differs from the rest. Leave 0 to use the value set on the linked facility. Used when there is no indoor light sensor: the indoor level is estimated from outdoor irradiance and the screen position."
 msgstr "この遮光カーテンの生地が他と異なるときだけ使います。0 のままなら連動施設に設定した値を使います。室内の光センサーがないとき、外の日射と開度から室内の光量を推定するのに使われます。"
 
+msgid "When Control Runs"
+msgstr "制御を動かす時間帯"
 
 msgid "Control ends"
 msgstr "制御の終了"
@@ -31279,6 +31287,3 @@ msgstr "極夜"
 
 msgid "Timezone for this location could not be resolved — showing the farm timezone."
 msgstr "この位置のタイムゾーンが特定できないため、農場のタイムゾーンで表示します。"
-
-msgid "Working Hours"
-msgstr "稼働時間"

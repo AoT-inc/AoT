@@ -11704,12 +11704,34 @@
             }, 600);
         }
 
+        // 접힘 상태: 서버 옵션 우선, localStorage 는 폴백
+        // (meas_dock_collapsed 와 같은 이중 보관 방식).
+        const _lsColKey = 'aot_map_toggle_' + widgetId + '_time_dock_collapsed';
+        let initCollapsed;
+        const _sv = innerVars.time_dock_collapsed;
+        if (_sv === true || _sv === 'true') initCollapsed = true;
+        else if (_sv === false || _sv === 'false') initCollapsed = false;
+        else {
+            try { initCollapsed = localStorage.getItem(_lsColKey) === 'true'; } catch (e) { initCollapsed = false; }
+        }
+
         const handle = window.AoTMapCustomControls.createTimeDock(map, {
             scale: initScale,
+            collapsed: initCollapsed,
             locale: document.documentElement.lang || undefined,
             onScaleChange: function(s) {
                 _persistScale(s);
                 // 글자가 커지면 독도 커진다 — 검색바·조언 칩이 따라 내려가야 한다.
+                _updateTopDockHeightVar(uniqueId);
+            },
+            onCollapsedChange: function(c) {
+                try { localStorage.setItem(_lsColKey, c ? 'true' : 'false'); } catch (e) {}
+                fetch('/save_widget_custom_options', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ widget_id: widgetId, options: { time_dock_collapsed: c } })
+                }).catch(function() {});
+                // 접으면 상단이 그만큼 비어 검색바·조언 칩이 올라와야 한다.
                 _updateTopDockHeightVar(uniqueId);
             }
         });

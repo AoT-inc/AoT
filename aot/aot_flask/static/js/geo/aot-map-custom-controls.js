@@ -1211,8 +1211,9 @@
              * 여기서는 그것을 초당 다시 그리기만 한다. 시계가 서버 폴링이 되면
              * 지도 위젯 하나가 초당 요청 하나를 만든다.
              *
-             * options: { scale, onScaleChange(scale), locale }
-             * 반환:    { panel, update(payload), tick()->stale, getScale, setScale, destroy }
+             * options: { scale, onScaleChange(scale), collapsed, onCollapsedChange(c), locale }
+             * 반환:    { panel, update(payload), tick()->stale, getScale, setScale,
+             *            isCollapsed, setCollapsed, destroy }
              */
             createTimeDock: function(map, options) {
                 options = options || {};
@@ -1224,7 +1225,38 @@
                 // 자료가 오기 전에는 빈 알약을 띄우지 않는다. update() 가 켠다.
                 panel.style.display = 'none';
 
-                // ── 크기 손잡이(좌하단 원형 버튼) ──────────────────────────────
+                // ── 접기 버튼(우하단) ─────────────────────────────────────────
+                // 측정값 독과 같은 조작이다. 방향만 뒤집혀 있다 — 그쪽은 아래
+                // 가장자리에 붙어 위로 자라므로 펼침이 아래쪽 쉐브론이고, 이쪽은
+                // 위 가장자리에 붙어 아래로 자라므로 펼침이 위쪽 쉐브론이다.
+                // 접으면 상단에 얇은 탭만 남아 지도가 그만큼 더 보인다.
+                let collapsed = false;
+                const collapseBtn = document.createElement('button');
+                collapseBtn.type = 'button';
+                collapseBtn.className = 'aot-dock-collapse-btn';
+                collapseBtn.innerHTML = '<i class="fas fa-chevron-up"></i>';
+
+                function _applyCollapsed(c, fireCallback) {
+                    collapsed = !!c;
+                    panel.classList.toggle('aot-dock-collapsed', collapsed);
+                    const icon = collapseBtn.querySelector('i');
+                    if (icon) icon.className = collapsed ? 'fas fa-chevron-down' : 'fas fa-chevron-up';
+                    const lbl = collapsed ? _t('Expand panel') : _t('Collapse panel');
+                    collapseBtn.setAttribute('aria-label', lbl);
+                    if (window.AoTSetTitle) window.AoTSetTitle(collapseBtn, lbl); else collapseBtn.title = lbl;
+                    if (fireCallback && typeof options.onCollapsedChange === 'function') {
+                        try { options.onCollapsedChange(collapsed); } catch (e) {}
+                    }
+                }
+                collapseBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    _applyCollapsed(!collapsed, true);
+                });
+                panel.appendChild(collapseBtn);
+                _applyCollapsed(options.collapsed === true, false);
+
+                // ── 크기 손잡이(좌하단) ────────────────────────────────────────
                 // 측정값 독의 글자 균형 손잡이(.aot-meas-scale-handle)와 같은
                 // 조작을 시계에 준다: 손잡이 위에서 휠(모바일은 세로 드래그).
                 // 다만 여기서 움직이는 것은 두 행의 '균형' 이 아니라 독 전체의
@@ -1568,6 +1600,8 @@
                     },
                     getScale: function() { return scale; },
                     setScale: function(s) { _applyScale(s, false); },
+                    isCollapsed: function() { return collapsed; },
+                    setCollapsed: function(c) { _applyCollapsed(c, false); },
                     destroy: function() {
                         panel.remove();
                     }

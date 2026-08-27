@@ -315,10 +315,28 @@ class GeoPlot(CRUDMixin, db.Model):
         return out
 
     def stage_override_map(self):
-        """단계 구성 → `{removed: set, added: [dict], guidance: {키: 글}}`.
+        """단계 구성 → `{removed, added, guidance, targets}`.
 
         깨진 값은 조용히 버린다 — 그 구획은 프로그램 그대로 동작할 뿐이다
         (`stage_plan_map` 과 같은 태도).
+
+        ## `targets` — `{단계키: {목표키: 값}}`
+
+        **프로그램은 참고 계획이고 실제 계획은 구획이 갖는다**(2026-08-27).
+        같은 프로그램으로 두 동을 길러도 목표가 같아야 할 이유가 없고, 작기가
+        도는 중에 사람이 목표를 조정하는 것이 정상이다.
+
+        ⚠ 예전에는 목표를 구획이 **못 건드렸다**. 근거는 *"제어로 흐르는 값이라
+          구획마다 손대기 시작하면 무엇을 목표로 길렀나 의 답이 흩어진다"* 였다.
+          그 걱정은 옳지만 답이 반대다 — 흩어지는 것을 막는 방법은 구획이 못
+          고치게 막는 것이 아니라 **구획을 그 답의 자리로 삼는 것**이다. 못
+          고치게 두면 사람은 프로그램을 고치고, 그러면 그 프로그램을 쓰는
+          **다른 구획까지** 함께 바뀐다.
+
+        ⚠ **어휘는 프로그램이 정한다**(`target_defs`). 여기 없는 목표키는
+          `_stage_targets` 가 내지 않으므로 조용히 무시된다 — 그것이 맞다.
+          구획이 새 목표 **항목**을 만들 수 있으면 시설·화면·제어가 각자 다른
+          어휘를 갖게 된다.
         """
         raw = self.stage_overrides
         if not isinstance(raw, dict):
@@ -326,12 +344,17 @@ class GeoPlot(CRUDMixin, db.Model):
         removed = raw.get('removed')
         added = raw.get('added')
         guidance = raw.get('guidance')
+        targets = raw.get('targets')
         return {
             'removed': {str(k) for k in removed} if isinstance(removed, list) else set(),
             'added': [a for a in added if isinstance(a, dict) and a.get('key')]
                      if isinstance(added, list) else [],
             'guidance': {str(k): v for k, v in guidance.items() if v}
                         if isinstance(guidance, dict) else {},
+            'targets': {str(k): {str(tk): tv for tk, tv in v.items()
+                                 if tv is not None}
+                        for k, v in targets.items() if isinstance(v, dict)}
+                       if isinstance(targets, dict) else {},
         }
 
     def has_own_geometry(self):

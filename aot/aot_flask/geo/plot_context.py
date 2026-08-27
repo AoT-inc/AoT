@@ -936,21 +936,32 @@ def effective_stages(plot, program_row):
     (`GeoPlot.stage_overrides`). 목록을 복제하지 않고 **차이만** 얹으므로,
     손대지 않은 단계는 프로그램을 고치면 그대로 따라온다.
 
-    ## 지침은 덮어쓴다, 목표는 아니다
+    ## 지침도 목표도 구획이 이긴다
 
     구획이 적는 지침은 "이 자리에서 이 시기에 무엇을 하나" 이고, 프로그램의
     지침은 그 작물의 일반 사항이다. 둘을 나란히 보이면 화면이 같은 자리에서 두
     가지를 말하게 되므로, **구획이 적었으면 그것이 이긴다**(적지 않았으면
     프로그램 것이 그대로 보인다).
 
-    목표(`targets`)는 여기서 건드리지 않는다 — 그것은 제어로 흐르는 값이라
-    구획마다 손대기 시작하면 "무엇을 목표로 길렀나" 의 답이 흩어진다.
+    **목표(`targets`)도 같다**(2026-08-27 방향 전환). 예전에는 여기서 건드리지
+    않았고 근거는 *"제어로 흐르는 값이라 구획마다 손대기 시작하면 무엇을
+    목표로 길렀나 의 답이 흩어진다"* 였다. 걱정은 옳지만 답이 반대였다 —
+
+      · 구획이 못 고치면 사람은 **프로그램을 고친다**. 그러면 그 프로그램을
+        쓰는 **다른 구획까지** 함께 바뀐다. 흩어짐을 막으려던 규칙이 오히려
+        남의 작기를 건드리게 만든다.
+      · 프로그램은 **참고 계획**이고 실제 계획은 구획이다. "무엇을 목표로
+        길렀나" 의 답도 그러므로 구획에 있어야 한다.
+
+    ⚠ 이 함수가 **유일한 삽입점**이다. 여기서 얹으면 `_stage_targets` →
+      `stage_of` → 화면·AI·제어가 전부 같은 값을 본다. 소비처마다 따로 얹으면
+      갈라지고, 갈라지면 화면과 제어가 다른 목표를 말한다.
     """
     stages = program_row.stage_list() if program_row is not None else []
     if plot is None or not hasattr(plot, 'stage_override_map'):
         return list(stages)
     ov = plot.stage_override_map()
-    if not (ov['removed'] or ov['added'] or ov['guidance']):
+    if not (ov['removed'] or ov['added'] or ov['guidance'] or ov['targets']):
         return list(stages)
 
     out = []
@@ -976,9 +987,19 @@ def effective_stages(plot, program_row):
         out.insert(pos, item)
 
     for st in out:
-        text = ov['guidance'].get(st.get('key'))
+        key = st.get('key')
+        text = ov['guidance'].get(key)
         if text:
             st['guidance'] = text
+        # 목표는 **항목 단위로** 덮는다. 단계의 dict 를 통째로 갈아치우면
+        # 사람이 손대지 않은 항목까지 사라진다 — 프로그램이 정한 나머지는
+        # 그대로 따라와야 한다.
+        over = ov['targets'].get(key)
+        if over:
+            base = st.get('targets')
+            merged = dict(base) if isinstance(base, dict) else {}
+            merged.update(over)
+            st['targets'] = merged
     return out
 
 
