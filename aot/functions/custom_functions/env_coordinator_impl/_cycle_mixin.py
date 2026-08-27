@@ -586,7 +586,7 @@ class CycleMixin:
         if light_val is not None and is_outdoor:
             est = estimate_indoor_light(
                 light_val, self._profiles, self._coord_state.prev_commands,
-                default_tau=float(getattr(self, 'shade_transmittance', 0.0) or 0.0))
+                default_tau=self._facility_shade_transmittance())
             if est != light_val and getattr(self, 'debug_logging', False):
                 self.logger.debug(
                     '실내광 추정: 실외 %.0f → %.0f W/m² (차광막 개도 반영)',
@@ -630,7 +630,7 @@ class CycleMixin:
                 return None
             return estimate_indoor_light(
                 outdoor, self._profiles, self._coord_state.prev_commands,
-                default_tau=float(getattr(self, 'shade_transmittance', 0.0) or 0.0))
+                default_tau=self._facility_shade_transmittance())
         except Exception as exc:
             if getattr(self, 'debug_logging', False):
                 self.logger.debug('맑은날 광량 어림 실패(폴백 없음): %s', exc)
@@ -830,6 +830,10 @@ class CycleMixin:
         # 다른 목표**를 보게 된다.
         self._plot_targets_cache = None
         self._crop_params_cache = None
+        # 차광막 투과율도 같은 규칙이다 — 사이클당 한 번 읽되, **사이클을
+        # 넘겨 들고 있지 않는다.** 프로세스가 도는 내내 들고 있으면 시설에서
+        # 값을 고쳐도 데몬은 영영 옛 값으로 돈다(무에러).
+        self._shade_tau_cache = None
 
         if not self._profiles:
             if getattr(self, 'debug_logging', False):

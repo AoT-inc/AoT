@@ -556,17 +556,6 @@ FUNCTION_INFORMATION = {
                 '0 = disabled (most facilities — natural light only).'
             ),
         },
-        {
-            'id': 'shade_transmittance',
-        'advanced_only': True,
-            'type': 'float',
-            'default_value': 0.0,
-            'required': False,
-            'name': lazy_gettext('Shade Cloth Transmittance (0-1)'),
-            'phrase': lazy_gettext(
-                'How much light the closed shade cloth lets through. Only used without an indoor light sensor.'
-            ),
-        },
 
         # ── CO₂ ───────────────────────────────────────────────────────────────
         {
@@ -1348,10 +1337,14 @@ _LAYOUT = [
     # ⚠ **접지 않는다.** 항목이 둘뿐인데 접으면 여는 수고가 내용보다 크다
     #   (2026-08-27 사용자 지적: *"이거 옵션도 몇 개 안되는데 아코디언 해야
     #   되나?"*).
-    # ⚠ `shade_transmittance` 는 **시설로 간다**(D9) — 차광막은 시설의 물건
-    #   이고 그 성질은 시설이 안다. 옮기기 전까지만 여기 둔다.
+    # ⚠ `shade_transmittance` 는 **시설로 갔다**(D9, 2026-08-27). 차광막은
+    #   시설의 물건이고 그 성질은 시설이 안다 — 자리는 시설 편집기의
+    #   [차광 커튼] 아래이고, 저장은 `envelope.curtain.shade.transmittance` 다.
+    #   함수는 `_facility_shade_transmittance()` 로 읽는다.
+    #   같은 값을 시설의 냉방부하 계산이 **0.50 으로 하드코딩**하고 있었으므로,
+    #   옮기면서 그 상수도 함께 사라졌다.
     (False, lazy_gettext('Light and Shading'), [
-        (None, ['@range:light', 'shade_transmittance']),
+        (None, ['@range:light']),
     ]),
 
     # ── 도메인 4: CO₂ (aux) ───────────────────────────────────────────────

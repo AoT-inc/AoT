@@ -252,6 +252,34 @@ def inward_absorbed_fraction(u_value):
 # ----------------------------------------------------------------
 # Main entry
 # ----------------------------------------------------------------
+# ─────────────────────────────────────────────────────────────────────────────
+# 차광 커튼 투과율 — **시설이 아는 값이다**
+# ─────────────────────────────────────────────────────────────────────────────
+# 닫힌 차광막을 빛이 얼마나 통과하는가(0~1). 0.30 = 70% 차광.
+#
+# 예전에는 두 곳이 각자 알고 있었다:
+#   · 이 파일이 냉방부하 계산에 **0.50 을 하드코딩**했고,
+#   · 통합환경제어 함수가 사용자에게 `shade_transmittance` 를 **또 물었다**.
+# 차광막은 시설의 물건이고 그 성질은 시설이 안다 — 설계문서 D9(2026-08-27).
+# 이제 정본은 `envelope.curtain.shade.transmittance` 하나이고, 함수는 그것을
+# 읽는다.
+#
+# ⚠ 미설정은 **0 이 아니라 기본 가정**이다. 0 으로 읽으면 "빛이 하나도 안
+#   통과한다" 가 되어 실내 광량 추정이 0 으로 굳는다 — 보광등이 대낮에 켜진다.
+DEFAULT_SHADE_TRANSMITTANCE = 0.50
+
+
+def _shade_tau(shade_spec):
+    """`envelope.curtain.shade` → 투과율(0~1). 없거나 범위 밖이면 기본값."""
+    try:
+        tau = float((shade_spec or {}).get('transmittance'))
+    except (TypeError, ValueError):
+        return DEFAULT_SHADE_TRANSMITTANCE
+    if not (0.0 < tau <= 1.0):
+        return DEFAULT_SHADE_TRANSMITTANCE
+    return tau
+
+
 def _normalize_envelope(envelope):
     """Return a view of envelope normalized to the new layers/stages schema.
 
@@ -265,7 +293,7 @@ def _normalize_envelope(envelope):
       roof_vent_enabled,
       curtain_ceiling_enabled, curtain_ceiling_layers,
       curtain_wall_enabled, curtain_wall_sides,
-      curtain_shade_enabled
+      curtain_shade_enabled, curtain_shade_transmittance
     """
     if envelope.get('layers') is not None:
         layers = envelope.get('layers') or []
@@ -295,6 +323,7 @@ def _normalize_envelope(envelope):
             'curtain_wall_enabled': bool(tw.get('enabled')),
             'curtain_wall_sides': tw.get('sides') or [],
             'curtain_shade_enabled': bool(sh.get('enabled')),
+            'curtain_shade_transmittance': _shade_tau(sh),
         }
     # Legacy format
     outer = envelope.get('outer') or {}
@@ -330,6 +359,8 @@ def _normalize_envelope(envelope):
         'curtain_wall_enabled': False,
         'curtain_wall_sides': [],
         'curtain_shade_enabled': bool(curtain.get('shade')),
+        # 옛 형식은 켬/끔 불리언뿐이라 값이 없다 — 기본 가정으로 돌아간다.
+        'curtain_shade_transmittance': DEFAULT_SHADE_TRANSMITTANCE,
     }
 
 
@@ -562,7 +593,9 @@ def compute_capacity(spec):
     solar = ASSUMPTIONS['solar_radiation_W_m2']
     t_for_cooling = t_eff
     if envelope['curtain_shade_enabled']:
-        t_for_cooling *= 0.50  # 50% shade reduction assumption
+        # 시설이 아는 값이다 — 예전에는 여기 0.50 이 박혀 있었고, 같은 값을
+        # 통합환경제어 함수가 사용자에게 따로 물었다(설계문서 D9).
+        t_for_cooling *= envelope['curtain_shade_transmittance']
 
     absorptance = solar_absorptance(outer_mat)
     absorbed_W_m2 = solar * absorptance * inward_absorbed_fraction(u_eff)

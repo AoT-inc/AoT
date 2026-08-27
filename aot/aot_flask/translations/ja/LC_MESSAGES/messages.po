@@ -31161,8 +31161,6 @@ msgstr "湿度範囲"
 msgid "Rest Heating and Cooling When Venting Can Reach the Target"
 msgstr "換気だけで目標に届くときは冷暖房を休ませる"
 
-msgid "Shade Cloth Transmittance (0-1)"
-msgstr "遮光カーテンの透過率 (0-1)"
 
 msgid "Adjustment applied on top of the weeks elapsed since the plot started. Positive fast-forwards (the system was installed mid-cycle), negative compensates for downtime. Default 0."
 msgstr "区画の開始からの経過週数に加える補正です。正の値は前倒し（作期の途中で導入した場合）、負の値は停止期間の分を戻します。既定 0。"
@@ -31241,3 +31239,15 @@ msgstr "カーブ"
 
 msgid "Which plot this coordinator follows, when more than one is growing in its scope. Leave empty when there is only one — it is picked automatically. When more than one is growing, pick it from the summary under the linked facility above."
 msgstr "スコープ内で複数の区画が育っているとき、どれに従うかを指定します。一つだけなら空のままにしてください — 自動で選ばれます。複数あるときは、上の［連動施設］の下の要約から選べます。"
+
+msgid "Transmittance"
+msgstr "透過率"
+
+msgid "Fraction of light that passes through the shade cloth when fully closed. 0.30 lets three tenths through."
+msgstr "完全に閉じた遮光カーテンを光がどれだけ通るか。0.30 なら十分の三が通ります。"
+
+msgid "Cloth Transmittance Override (0-1, Shade only)"
+msgstr "生地の透過率の個別指定 (0-1, 遮光カーテンのみ)"
+
+msgid "Only for this screen, when its cloth differs from the rest. Leave 0 to use the value set on the linked facility. Used when there is no indoor light sensor: the indoor level is estimated from outdoor irradiance and the screen position."
+msgstr "この遮光カーテンの生地が他と異なるときだけ使います。0 のままなら連動施設に設定した値を使います。室内の光センサーがないとき、外の日射と開度から室内の光量を推定するのに使われます。"

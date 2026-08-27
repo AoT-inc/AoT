@@ -89,7 +89,15 @@ class TestItIsAMarkerNotAnOption:
                     % (fn, name))
 
     def test_the_option_count_is_unchanged(self):
-        """머리말은 옵션이 아니다 — 62개 그대로여야 한다.
+        """머리말은 옵션이 아니다 — 표식을 더해도 개수가 안 늘어야 한다.
+
+        숫자는 **스냅샷**이다. 옵션을 더하거나 빼는 것은 정상이지만, 그때는
+        여기 숫자도 같은 커밋에서 고치면서 "정말 빼도 되는가" 를 한 번 묻게
+        된다. 표식(`env_status`·`scale_group`·`range_band`)이 옵션으로 새면
+        고치지 않았는데도 숫자가 늘어난다 — 그것이 이 검사가 잡는 것이다.
+
+        이력: 62 → **61** (2026-08-27, `shade_transmittance` 가 시설로 갔다 —
+        설계문서 D9).
 
         ⚠ 표식 목록을 여기 손으로 적지 말 것. `range_band` 는 `id` 를 갖는데
           (어느 밴드인지) 옵션이 아니라, 손으로 적은 목록에서 빠지자 **옵션으로
@@ -104,7 +112,7 @@ class TestItIsAMarkerNotAnOption:
             _re.search(r"_MARKERS = \(([^)]*)\)", src, _re.S).group(1)))
         opts = fi.FUNCTION_INFORMATION['custom_options']
         vals = [o for o in opts if o.get('id') and o.get('type') not in markers]
-        assert len(vals) == 62, len(vals)
+        assert len(vals) == 61, len(vals)
 
 
 class TestTheTemplateOnlyLaysTheSpot:

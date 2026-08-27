@@ -999,9 +999,15 @@ class TestOutdoorSolarShadeConsistency:
             nursery_mode        = True
             nursery_solar_lockout = 250.0
             nursery_solar_release = 150.0
-            shade_transmittance = TestOutdoorSolarShadeConsistency.TAU
             _profiles           = profiles
             _coord_state        = _State()
+
+            # 차광막 투과율은 **시설이 아는 값**이다(설계문서 D9, 2026-08-27).
+            # 예전에는 함수 옵션 `shade_transmittance` 였다 — 그 시절의 대역은
+            # 클래스 속성 하나였는데, 지금은 `_HelpersMixin` 의 조회를 지난다.
+            # 여기서는 DB 를 타지 않도록 고정한다.
+            def _facility_shade_transmittance(self):
+                return TestOutdoorSolarShadeConsistency.TAU
 
             def _evening_fog_blocked(self):
                 return False

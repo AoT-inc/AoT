@@ -239,6 +239,11 @@ function _T(k,f){var d=(typeof window!=="undefined"&&window._IEC)||{};return (d[
   // fitting the hardcoded fallback (buildCurtain w=totalWidth*0.02) rendered
   // a thin sliver at the left edge — the "stray long thin model on one side of the outer ceiling".
   function onCurtainShadeToggle() {
+    // 투과율은 차광막이 **있을 때만** 물을 값이다. 늘 보이면 차광막이 없는
+    // 시설에도 물성을 정하라고 하는 셈이 된다.
+    var enabled = !!((document.getElementById('curtain-shade') || {}).checked);
+    var detail = document.getElementById('curtain-shade-detail');
+    if (detail) detail.style.display = enabled ? '' : 'none';
     _notify();
   }
 
@@ -311,7 +316,10 @@ function _T(k,f){var d=(typeof window!=="undefined"&&window._IEC)||{};return (d[
       curtain: {
         thermal_ceiling: { enabled: ceilEnabled, layers: ceilLayers },
         thermal_wall:    { enabled: wallEnabled },
-        shade:           { enabled: shadeEnabled }
+        // ⚠ 투과율은 **범위 안일 때만** 싣는다. 빈 칸이나 0 을 그대로 보내면
+        //   서버가 "빛이 하나도 안 통과한다" 로 읽어 실내 광량 추정이 0 으로
+        //   굳는다 — 대낮에 보광등이 켜진다. 없으면 기본 가정(0.50)이 선다.
+        shade:           _shadeSpec(shadeEnabled)
       }
     };
   }
@@ -378,6 +386,18 @@ function _T(k,f){var d=(typeof window!=="undefined"&&window._IEC)||{};return (d[
 
     var shadeEl = document.getElementById('curtain-shade');
     if (shadeEl) shadeEl.checked = !!sh.enabled;
+    var tauEl = document.getElementById('curtain-shade-tau');
+    if (tauEl) tauEl.value = (sh.transmittance != null ? sh.transmittance : '');
+    onCurtainShadeToggle();
+  }
+
+  /** 차광막 사양 — 투과율은 유효할 때만 싣는다(위 read() 의 주석 참조). */
+  function _shadeSpec(enabled) {
+    var spec = {enabled: enabled};
+    var el = document.getElementById('curtain-shade-tau');
+    var v = el ? parseFloat(el.value) : NaN;
+    if (isFinite(v) && v > 0 && v <= 1) spec.transmittance = v;
+    return spec;
   }
 
   // ── Migrate old flat envelope → new layers format ─────────

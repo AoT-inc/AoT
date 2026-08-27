@@ -998,6 +998,48 @@ class HelpersMixin:
                 self.control.output_on(device_id, output_type='value',
                                        amount=pct, output_channel=ch_obj)
 
+    def _facility_shade_transmittance(self) -> float:
+        """연동 시설이 정한 차광막 투과율(0~1). 사이클마다 한 번만 읽는다.
+
+        **차광막은 시설의 물건이고 그 성질은 시설이 안다** — 설계문서 D9
+        (2026-08-27). 예전에는 이 함수가 사용자에게 `shade_transmittance` 를
+        따로 물었고, 시설의 냉방부하 계산은 같은 값을 0.50 으로 하드코딩하고
+        있었다. 같은 물성을 두 곳이 각자 알면 갈라지고, 갈라지면 화면마다
+        다른 답이 나온다.
+
+        ⚠ **못 읽으면 0 이 아니라 기본 가정으로 돌아간다.** 0 은 "빛이 하나도
+          안 통과한다" 라서 실내 광량 추정이 0 으로 굳고, 그러면 대낮에
+          보광등이 켜진다.
+
+        ⚠ 액추에이터별 값(`capacity_meta['shade_transmittance']`)이 있으면
+          그쪽이 이긴다 — 차광막이 여럿이고 천이 다를 수 있다. 이 값은 그것이
+          없을 때의 기본값이다(`estimate_indoor_light(default_tau=...)`).
+        """
+        cached = getattr(self, '_shade_tau_cache', None)
+        if cached is not None:
+            return cached
+        from aot.aot_flask.geo.facility_calc import (
+            DEFAULT_SHADE_TRANSMITTANCE, _shade_tau)
+        tau = DEFAULT_SHADE_TRANSMITTANCE
+        facility_id = getattr(self, 'geo_facility_id_device_id', None) or ''
+        if facility_id:
+            try:
+                from aot.databases.models.geo import GeoFacility
+                from aot.config import AOT_DB_PATH
+                from aot.databases.utils import session_scope
+                with session_scope(AOT_DB_PATH) as sess:
+                    fac = sess.query(GeoFacility).filter(
+                        GeoFacility.unique_id == facility_id).first()
+                    env = (getattr(fac, 'envelope', None) or {}) if fac else {}
+                    shade = ((env.get('curtain') or {}).get('shade') or {})
+                    # 차광막이 없다고 선언한 시설이면 추정할 것이 없다 —
+                    # 실내 광량은 실외 그대로다.
+                    tau = _shade_tau(shade) if shade.get('enabled') else 1.0
+            except Exception as exc:                            # noqa: BLE001
+                self.logger.debug('차광막 투과율 조회 실패: %s', exc)
+        self._shade_tau_cache = tau
+        return tau
+
     def _hvac_running(self, prev_commands: dict = None) -> bool:
         """냉·난방이 지금 돌고 있는가. 근거가 없으면 False (모듈 상단 주석 참조).
 

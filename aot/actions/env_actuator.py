@@ -100,14 +100,12 @@ ACTION_INFORMATION = {
             'type': 'float',
             'default_value': 0.0,
             'required': False,
-            'name': lazy_gettext('Shade Cloth Transmittance (0-1, Shade only)'),
+            'name': lazy_gettext('Cloth Transmittance Override (0-1, Shade only)'),
             'phrase': lazy_gettext(
-                'Fraction of light that passes through the shade cloth when fully '
-                'closed. 0.30 = 70% shading. Used only when there is NO indoor light '
-                'sensor: the indoor light level is then estimated from outdoor '
-                'irradiance and the shade position, so the light thresholds can see '
-                'the shading the screen itself creates. '
-                '0 = disabled (indoor light is assumed equal to outdoor irradiance).'
+                'Only for this screen, when its cloth differs from the rest. Leave 0 to '
+                'use the value set on the linked facility. Used when there is no '
+                'indoor light sensor: the indoor level is estimated from outdoor '
+                'irradiance and the screen position.'
             ),
         },
         {

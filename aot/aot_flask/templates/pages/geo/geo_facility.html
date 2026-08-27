@@ -666,6 +666,23 @@
               <span class="btn-toggle-slider"><span class="btn-toggle-thumb"></span></span>
             </label>
           </div>
+          {#- 차광막의 물성이다 — 시설이 아는 값이므로 여기 있다. 예전에는
+              냉방부하 계산에 0.50 이 박혀 있었고, 같은 값을 통합환경제어
+              함수가 사용자에게 또 물었다(설계문서 D9). -#}
+          <div class="aot-modal-detail-body" id="curtain-shade-detail" style="display:none">
+            <div class="aot-modal-option-row">
+              <label class="aot-modal-option-label" for="curtain-shade-tau"
+                     title="{{ _('Fraction of light that passes through the shade cloth when fully closed. 0.30 lets three tenths through.') }}">
+                {{ _('Transmittance') }}
+                <span class="fas fa-info-circle aot-option-tip" aria-hidden="true"></span>
+              </label>
+              <div class="aot-modal-option-control">
+                <input type="number" class="form-control aot-modern-input"
+                       id="curtain-shade-tau" min="0.01" max="1" step="0.01"
+                       onchange="EnvelopeUI.onCurtainShadeToggle()">
+              </div>
+            </div>
+          </div>
         </div>
 
       </div>

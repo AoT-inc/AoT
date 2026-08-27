@@ -31402,8 +31402,6 @@ msgstr "습도 범위"
 msgid "Rest Heating and Cooling When Venting Can Reach the Target"
 msgstr "환기만으로 목표에 갈 수 있으면 냉·난방 쉬기"
 
-msgid "Shade Cloth Transmittance (0-1)"
-msgstr "차광막 투과율 (0-1)"
 
 msgid "Adjustment applied on top of the weeks elapsed since the plot started. Positive fast-forwards (the system was installed mid-cycle), negative compensates for downtime. Default 0."
 msgstr "구획을 시작한 뒤 지난 주 수에 더해 보정합니다. 양수는 앞당기고(작기 도중에 설치한 경우), 음수는 멈춰 있던 기간을 되돌립니다. 기본 0."
@@ -31482,3 +31480,15 @@ msgstr "곡선"
 
 msgid "Which plot this coordinator follows, when more than one is growing in its scope. Leave empty when there is only one — it is picked automatically. When more than one is growing, pick it from the summary under the linked facility above."
 msgstr "범위 안에서 여러 구획이 자라고 있을 때 어느 것을 따를지 정합니다. 하나뿐이면 비워 두세요 — 자동으로 골라집니다. 여럿이면 위 [연동 시설] 아래 요약에서 고를 수 있습니다."
+
+msgid "Transmittance"
+msgstr "투과율"
+
+msgid "Fraction of light that passes through the shade cloth when fully closed. 0.30 lets three tenths through."
+msgstr "완전히 닫힌 차광막을 빛이 얼마나 통과하는지. 0.30 이면 십분의 삼이 통과합니다."
+
+msgid "Cloth Transmittance Override (0-1, Shade only)"
+msgstr "천 투과율 개별 지정 (0-1, 차광막 전용)"
+
+msgid "Only for this screen, when its cloth differs from the rest. Leave 0 to use the value set on the linked facility. Used when there is no indoor light sensor: the indoor level is estimated from outdoor irradiance and the screen position."
+msgstr "이 차광막의 천이 나머지와 다를 때만 씁니다. 0 으로 두면 연동 시설에 정해 둔 값을 씁니다. 실내 광센서가 없을 때, 실외 일사와 차광막 개도로 실내 광량을 추정하는 데 쓰입니다."
