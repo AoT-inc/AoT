@@ -5733,8 +5733,6 @@ msgid "Schedule Start (start date)"
 msgstr "スケジュール開始(定植日)"
 
 #: aot_flask/forms/forms_pid.py:132
-msgid "Week Offset"
-msgstr "週オフセット"
 
 #: aot_flask/forms/forms_pid.py:142
 msgid "Min Duration (Raise)"
@@ -24193,8 +24191,6 @@ msgstr ""
 "のままで構いません。電力(W)や電流(A)の場合は装置の待機電力より高く設定し、待機状態が稼働として読まれないようにしてください。"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:235
-msgid "Growth Schedule"
-msgstr "生育スケジュール"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:245
 msgid ""
@@ -24265,8 +24261,6 @@ msgstr ""
 "\"bay_1\")。そのベイ内に配置されたセンサーとアクチュエーターのみが使用され、施設の容積/面積はベイの割合に縮小されます。施設全体を制御する場合は空欄のままにしてください。複数のベイを個別に制御するには、ベイごとにコーディネーターを1つずつ作成してください。"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:322
-msgid "Time Control"
-msgstr "時間制御"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:329
 msgid "Enable Time Window"
@@ -31025,8 +31019,6 @@ msgid "Ventilation Strategy"
 msgstr "換気戦略"
 
 #: aot/functions/custom_functions/env_coordinator_impl/_function_info.py
-msgid "Schedule and Time"
-msgstr "日程と時間"
 
 #: aot/functions/custom_functions/env_coordinator_impl/_function_info.py
 msgid "Light and CO₂"
@@ -31149,8 +31141,6 @@ msgstr "冷暖房・加湿"
 msgid "Light and Shading"
 msgstr "光と遮光"
 
-msgid "Sensing and Cycle"
-msgstr "検知と周期"
 
 msgid "Temperature Range"
 msgstr "温度範囲"
@@ -31162,8 +31152,6 @@ msgid "Rest Heating and Cooling When Venting Can Reach the Target"
 msgstr "換気だけで目標に届くときは冷暖房を休ませる"
 
 
-msgid "Adjustment applied on top of the weeks elapsed since the plot started. Positive fast-forwards (the system was installed mid-cycle), negative compensates for downtime. Default 0."
-msgstr "区画の開始からの経過週数に加える補正です。正の値は前倒し（作期の途中で導入した場合）、負の値は停止期間の分を戻します。既定 0。"
 
 msgid "Which plot this coordinator follows, when more than one is growing in its scope. Leave empty when there is only one — it is picked automatically. Set from the comparison card at the top of this page."
 msgstr "スコープ内で複数の区画が育っているとき、どれに従うかを指定します。一つだけなら空のままにしてください — 自動で選ばれます。このページ上部の比較カードから設定できます。"
@@ -31251,3 +31239,33 @@ msgstr "生地の透過率の個別指定 (0-1, 遮光カーテンのみ)"
 
 msgid "Only for this screen, when its cloth differs from the rest. Leave 0 to use the value set on the linked facility. Used when there is no indoor light sensor: the indoor level is estimated from outdoor irradiance and the screen position."
 msgstr "この遮光カーテンの生地が他と異なるときだけ使います。0 のままなら連動施設に設定した値を使います。室内の光センサーがないとき、外の日射と開度から室内の光量を推定するのに使われます。"
+
+msgid "When Control Runs"
+msgstr "制御を動かす時間帯"
+
+msgid "Control ends"
+msgstr "制御の終了"
+
+msgid "Stops on {date}"
+msgstr "{date} に停止します"
+
+msgid "Stopped on {date} — past the stop date"
+msgstr "{date} に停止しました — 終了日を過ぎています"
+
+msgid "Outside this window the coordinator stops entirely — heating and cooling included. Safety limits still act."
+msgstr "この時間帯の外では調整機が丸ごと止まります — 暖房も冷房も含みます。安全の上下限はそのまま働きます。"
+
+msgid "When the coordinator starts working each day."
+msgstr "調整機が一日のいつから働くか。"
+
+msgid "When it stops. What each device does at that moment is set in its Action."
+msgstr "いつ止まるか。その時に各機器が何をするかは、その機器のアクションで決めます。"
+
+msgid "Sets the window above from a day-length curve instead of fixed times. Careful: a short day length means the coordinator runs for only those hours, so nothing is heated overnight."
+msgstr "上の時間帯を固定時刻ではなく日長のカーブから決めます。注意：日長が短いと調整機もその時間しか動かず、夜通し暖房されません。"
+
+msgid "The window is centred on this time."
+msgstr "時間帯はこの時刻を中心に取られます。"
+
+msgid "Control stops for good after this date. Leave blank to keep running."
+msgstr "この日付を過ぎると制御が完全に止まります。空欄なら動き続けます。"

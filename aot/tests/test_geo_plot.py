@@ -8460,12 +8460,20 @@ class TestControlReadsTheProgram(_CoordPlotFixture, unittest.TestCase):
 
     def test_the_safety_options_stay(self):
         """걷어낸 것은 목표뿐이다. 안전 가이드라인과 장비는 이 시설의 것이라
-        프로그램으로 옮기면 그 프로그램을 다른 시설에 못 쓴다."""
+        프로그램으로 옮기면 그 프로그램을 다른 시설에 못 쓴다.
+
+        ⚠ `schedule_week_offset` 은 2026-08-27 에 **뺐다**(설계문서 D19).
+          그것은 안전 설정이 아니라 **구획 시작일의 보정값**이었다 — 작기
+          도중에 설치했다면 구획 `started_on` 에 실제 파종일을 적으면 되고,
+          같은 사실을 두 곳에 적으면 갈라진다. 로컬 3개 전부 0 이었다.
+        """
         src = _read(self._INFO)
         for oid in ('temp_max', 'temp_min', 'humid_max', 'humid_min',
                     'guide_T_min', 'guide_T_max', 'guide_RH_min', 'guide_RH_max',
-                    'schedule_end_time', 'schedule_week_offset'):
+                    'schedule_end_time'):
             self.assertIn("'id': '%s'" % oid, src, '%s 가 사라졌다' % oid)
+        self.assertNotIn("'id': 'schedule_week_offset'", src,
+                         '주차 오프셋이 되살아났다 — 구획 시작일이 정본이다')
 
     def test_preset_no_longer_writes_targets(self):
         """프리셋이 목표를 채우던 경로(자동 동기화·강제 적용 버튼)는 없어졌다.

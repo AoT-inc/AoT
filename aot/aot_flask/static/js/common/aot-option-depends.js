@@ -27,9 +27,22 @@
   }
 
   function apply(row, source) {
-    // ⚠ `hidden` 속성이 아니라 클래스 — 부트스트랩 그리드가 `display` 를
-    //    다시 정하는 자리가 있어 인라인 스타일이 안전하다.
-    row.style.display = isOn(source) ? '' : 'none';
+    /* ⚠ **인라인 스타일로 감출 수 없다.** `.aot-modal-option-row` 가
+     *   `display: flex !important` 를 갖는데(`aot-modal-modern.css`),
+     *   `!important` 는 인라인 선언을 이긴다. 그래서 예전 코드
+     *   (`row.style.display = 'none'`)는 **한 번도 아무것도 감추지 못했다** —
+     *   에러 없이. 2026-08-27 실측: 시간창을 껐는데 시작·종료·광주기 4칸이
+     *   그대로 보였다.
+     *
+     *   야간 파킹 하위가 감춰져 보였던 것은 그것들이 `.aot-advanced-only`
+     *   (클래스 + `!important`)를 함께 갖고 있었기 때문이지 이 코드 덕이
+     *   아니었다 — 그래서 고장이 더 오래 가려졌다.
+     *
+     *   클래스로 바꾸고, 그 규칙에 행 클래스를 함께 적어 특이도를 올린다.
+     */
+    row.classList.toggle('aot-depends-hidden', !isOn(source));
+    // 인라인 잔재를 지운다 — 예전 코드가 남긴 것이 있으면 계속 이긴다.
+    if (row.style.display === 'none') row.style.display = '';
   }
 
   function wire(row) {

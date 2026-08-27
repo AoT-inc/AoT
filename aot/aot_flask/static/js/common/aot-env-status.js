@@ -86,6 +86,34 @@
     return row(label, parts.join('  ·  '));
   }
 
+  /* ── 제어가 **끝나는 날** ────────────────────────────────────────────────
+   *
+   * `schedule_end_time` 은 그 날짜가 지나면 제어를 통째로 멈춘다. 그런데
+   * 화면 어디에도 그 사실이 없었다 — 설정을 열어 접힌 묶음을 펼쳐야 보인다.
+   *
+   * 2026-08-27 로컬 실측: 살아 있는 코디네이터 둘이 **나흘 뒤** 멈추도록
+   * 설정돼 있었고(2026-08-31), 아무도 그것을 모르고 있었다. 지나 버린 것도
+   * 하나 있었다(2026-07-08).
+   *
+   * ⚠ **평소에는 아무 말도 하지 않는다.** 늘 보이면 그냥 한 줄이 되어, 정작
+   *   임박했을 때 눈에 안 띈다. 2주 안쪽이거나 이미 지났을 때만 말한다.
+   */
+  var _ENDS_SOON_DAYS = 14;
+
+  function endsLine(d) {
+    var sched = (((d.env || {}).summary || {}).schedule) || {};
+    var raw = sched.end;
+    if (!raw) return '';
+    var t = Date.parse(raw + 'T23:59:59');
+    if (isNaN(t)) return '';
+    var days = Math.floor((t - Date.now()) / 86400000);
+    if (days > _ENDS_SOON_DAYS) return '';
+    var txt = days < 0
+      ? _t('Stopped on {date} — past the stop date').replace('{date}', raw)
+      : _t('Stops on {date}').replace('{date}', raw);
+    return row(_t('Control ends'), esc(txt), true);
+  }
+
   function nowLine(d) {
     var env = d.env || {};
     var fn = env.function;
@@ -128,7 +156,7 @@
     }
     // 구획·목표는 바로 아래 요약이 말한다 — 같은 사실을 두 곳이
     // 각자 적으면 어느 쪽이 최신인지 사람이 판단해야 한다.
-    el.innerHTML = nowLine(d);
+    el.innerHTML = nowLine(d) + endsLine(d);
   }
 
   function load(el) {

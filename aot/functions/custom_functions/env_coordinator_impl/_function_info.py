@@ -172,6 +172,7 @@ FUNCTION_INFORMATION = {
         },
         {
             'id': 'actuation_period_sec',
+            'advanced_only': True,
             'type': 'float',
             'default_value': 0.0,
             'required': False,
@@ -183,6 +184,7 @@ FUNCTION_INFORMATION = {
         },
         {
             'id': 'emergency_period_sec',
+            'advanced_only': True,
             'type': 'float',
             'default_value': 60.0,
             'required': False,
@@ -384,19 +386,7 @@ FUNCTION_INFORMATION = {
             'required': False,
             'name': lazy_gettext('Stop Control On'),
             'phrase': lazy_gettext(
-                'A safety stop: control halts after this date. Leave blank to run indefinitely.'
-            ),
-        },
-        {
-            'id': 'schedule_week_offset',
-            'type': 'float',
-            'default_value': 0.0,
-            'required': False,
-            'name': lazy_gettext('Week Offset'),
-            'phrase': lazy_gettext(
-                'Adjustment applied on top of the weeks elapsed since the plot '
-                'started. Positive fast-forwards (the system was installed '
-                'mid-cycle), negative compensates for downtime. Default 0.'
+                'Control stops for good after this date. Leave blank to keep running.'
             ),
         },
 
@@ -446,54 +436,54 @@ FUNCTION_INFORMATION = {
             'required': False,
             'name': lazy_gettext('Enable Time Window'),
             'phrase': lazy_gettext(
-                'When enabled, control only runs between Start and End times.'
+                'Outside this window the coordinator stops entirely — heating and cooling included. Safety limits still act.'
             ),
         },
         {
             'id': 'time_start',
+            'depends_on': 'time_enable',
             'type': 'text',
             'default_value': '06:00',
             'required': False,
             'name': lazy_gettext('Start Time (HH:MM)'),
             'phrase': lazy_gettext(
-                'Control period start time (24-hour format). '
-                'Only active when Enable Time Window is turned on.'
+                'When the coordinator starts working each day.'
             ),
         },
         {
             'id': 'time_end',
+            'depends_on': 'time_enable',
             'type': 'text',
             'default_value': '20:00',
             'required': False,
             'name': lazy_gettext('End Time (HH:MM)'),
             'phrase': lazy_gettext(
-                'On-end behavior per actuator is configured in each Action. '
-                'Ignored when Photoperiod Method is set.'
+                'When it stops. What each device does at that moment is set in its Action.'
             ),
         },
         {
             'id': 'photo_method_id',
+            'depends_on': 'time_enable',
             'type': 'select_device',
             'default_value': '',
             'required': False,
             'options_select': ['Method'],
             'name': lazy_gettext('Photoperiod Method'),
             'phrase': lazy_gettext(
-                'Optional. Select an AoT Method that returns photoperiod length in hours '
-                '(e.g. 14.0 = 14 h light). The function computes time_start/end '
-                'symmetrically around the Anchor time. '
-                'When set, the static Start/End times above are overridden.'
+                'Sets the window above from a day-length curve instead of fixed times. '
+                'Careful: a short day length means the coordinator runs for '
+                'only those hours, so nothing is heated overnight.'
             ),
         },
         {
             'id': 'photo_anchor',
+            'depends_on': 'time_enable',
             'type': 'text',
             'default_value': '12:00',
             'required': False,
             'name': lazy_gettext('Photoperiod Anchor (HH:MM)'),
             'phrase': lazy_gettext(
-                'Solar-noon equivalent. The photoperiod window is centred on this time. '
-                'Default 12:00. Adjust for your latitude / season if needed.'
+                'The window is centred on this time.'
             ),
         },
 
@@ -1075,8 +1065,13 @@ _SCALE_GROUPS = [
         ),
         'axis_low':  lazy_gettext('Moves equipment less'),
         'axis_high': lazy_gettext('Tracks the target closely'),
+        # ⚠ 뒤 둘은 **단계가 정하지 않는다.** 같은 축의 미세 조정이라 자리만
+        #   여기이고(핵심의 [고급] 을 열면 바로 나온다), 단계를 눌러도 안
+        #   바뀐다. `actuation_period_sec` 는 프로파일이 '직접 지정' 일 때만
+        #   쓰이므로 그 옆이 아니면 찾을 수가 없다.
         'members': ['update_period', 'actuation_profile', 'tolerance_vpd',
-                    'emergency_deviation_mult', 'emergency_rate_c_per_10min'],
+                    'emergency_deviation_mult', 'emergency_rate_c_per_10min',
+                    'actuation_period_sec', 'emergency_period_sec'],
         'steps': [
             (lazy_gettext('Relaxed'), {
                 'update_period': 600.0, 'actuation_profile': 'gentle',
@@ -1358,19 +1353,21 @@ _LAYOUT = [
     # ── 도메인을 가리지 않는 것 ───────────────────────────────────────────
     # 아래는 특정 장치가 아니라 **판단 방식**에 걸린다. 도메인으로 나눌 수
     # 없으므로 나누지 않는다 — 억지로 배정하면 그 도메인만의 설정인 줄 안다.
-    (True, lazy_gettext('Schedule and Time'), [
-        (lazy_gettext('Growth Schedule'),
-         ['schedule_end_time', 'schedule_week_offset']),
-        (lazy_gettext('Time Control'),
-         ['time_enable', 'time_start', 'time_end',
-          'photo_method_id', 'photo_anchor']),
+    # ⚠ **"시간 제어" 가 아니라 "언제 돌릴 것인가" 다.** 창 밖 시간에는
+    #   난방·냉방을 포함해 제어가 **통째로** 멈춘다(`_run_cycle` 의 시간창
+    #   게이트). "시간 제어" 라고 부르면 시간대별로 다르게 제어한다는 말로
+    #   읽히는데, 실제로는 켜고 끄는 스위치다.
+    (True, lazy_gettext('When Control Runs'), [
+        (None, ['schedule_end_time']),
+        (None, ['time_enable', 'time_start', 'time_end',
+                'photo_method_id', 'photo_anchor']),
     ]),
-    (True, lazy_gettext('Sensing and Cycle'), [
-        (None, ['sensor_max_age', 'actuation_period_sec',
-                'emergency_period_sec']),
-    ]),
+    # ⚠ **"감지와 주기" 묶음을 없앴다.** 구동 주기 둘은 제어 성향이 정하는
+    #   축이라 그 아래로 갔고, 남은 `sensor_max_age` 하나를 위해 접힘 제목을
+    #   두면 껍데기가 내용보다 크다.
     (True, lazy_gettext('Model and Calibration'), [
-        (None, ['photosynth_mode_enabled', 'source_plot_id', 'vpd_weight_T',
+        (None, ['sensor_max_age',
+                'photosynth_mode_enabled', 'source_plot_id', 'vpd_weight_T',
                 'priority_vpd', 'priority_co2', 'cumulative_tracker_enabled']),
         (lazy_gettext('Effect Calibration'),
          ['effect_engine', 'calibration_enabled',

@@ -432,8 +432,12 @@ class TestTheScreenFollowsTheDomainVocabulary:
         fi = _info()
         order = [str(title) for _f, title, _b in fi._LAYOUT]
         doms = [i for i, t in enumerate(order) if t in fi._DOMAIN_GROUPS]
-        cross = order.index('Schedule and Time')
-        assert max(doms) < cross, '도메인 묶음이 판단 방식 뒤에 있다'
+        # 판단 방식 묶음 = 도메인 표에 없는 접힘들. 이름으로 못 박지 말 것 —
+        # 제목은 바뀐다("Schedule and Time" → "When Control Runs", 2026-08-27).
+        cross = [i for i, (folded, t, _b) in enumerate(fi._LAYOUT)
+                 if folded and str(t) not in fi._DOMAIN_GROUPS]
+        assert cross, '판단 방식 묶음이 하나도 없다'
+        assert max(doms) < min(cross), '도메인 묶음이 판단 방식 뒤에 있다'
 
 
 class TestTemperatureIsNotCalledAGrowingTarget:
@@ -458,6 +462,60 @@ class TestTemperatureIsNotCalledAGrowingTarget:
         msg = str(_info().FUNCTION_INFORMATION['message'])
         assert 'VPD is the primary control target' in msg
         assert 'safety constraints' in msg
+
+class TestHidingUsesAClassNotAnInlineStyle:
+    """감추는 수단은 **클래스**여야 한다 — 인라인 `display:none` 은 진다.
+
+    `.aot-modal-option-row` 가 `display: flex !important` 를 갖는데
+    (`aot-modal-modern.css`), `!important` 는 인라인 선언을 이긴다. 그래서
+    `row.style.display = 'none'` 은 **한 번도 아무것도 감추지 못했다** —
+    에러 없이. 2026-08-27 실측: 시간창을 껐는데 시작·종료·광주기 4칸이 그대로
+    보였다.
+
+    ⚠ 고장이 오래 가려진 이유: 야간 파킹 하위는 `.aot-advanced-only` 를 함께
+      갖고 있어 **그쪽 클래스 덕에** 감춰져 보였다. 그래서 "감춤은 되고 있다"
+      고 믿었다.
+
+    같은 실패를 이 레포는 지도 라벨에서도 겪었다(`aot-map-plot.js` 가
+    `style.display` 로 직접 숨겨 `.aot-focus-show` 가 안 먹던 것).
+    """
+
+    def _css(self):
+        import os
+        here = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        with open(os.path.join(here, 'aot_flask', 'static', 'css',
+                               'components', 'aot-dataviz.css'),
+                  encoding='utf-8') as fh:
+            return fh.read()
+
+    def _js(self):
+        import os
+        here = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        with open(os.path.join(here, 'aot_flask', 'static', 'js', 'common',
+                               'aot-option-depends.js'), encoding='utf-8') as fh:
+            return fh.read()
+
+    def test_the_handler_toggles_a_class(self):
+        js = self._js()
+        assert 'aot-depends-hidden' in js, '클래스를 안 쓴다'
+        body = js.split('function apply(', 1)[1].split('\n  function ', 1)[0]
+        assert "style.display = isOn" not in body, (
+            '인라인 스타일로 감춘다 — `!important` 에 진다')
+
+    def test_both_hiding_rules_carry_the_row_class(self):
+        """행 클래스를 함께 적지 않으면 같은 특이도에서 나중 파일이 이긴다."""
+        css = self._css()
+        for cls in ('aot-depends-hidden', 'aot-advanced-only'):
+            assert '.aot-modal-option-row.%s' % cls in css, (
+                '%s 규칙에 행 클래스가 없다' % cls)
+
+    def test_the_two_axes_are_separate(self):
+        """`depends_on` 은 "그 기능을 켰는가", `advanced_only` 는 "세부까지
+        볼 것인가" 다. 한 클래스로 합치면 고급을 켜는 순간 안 쓰는 기능의
+        하위 설정까지 쏟아진다."""
+        css = self._css()
+        assert '.aot-depends-hidden' in css and '.aot-advanced-only' in css
+        assert '.aot-depends-hidden,\n.aot-advanced-only' not in css
 
 
 if __name__ == '__main__':

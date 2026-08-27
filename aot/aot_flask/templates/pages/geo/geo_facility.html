@@ -666,21 +666,25 @@
               <span class="btn-toggle-slider"><span class="btn-toggle-thumb"></span></span>
             </label>
           </div>
-          {#- 차광막의 물성이다 — 시설이 아는 값이므로 여기 있다. 예전에는
-              냉방부하 계산에 0.50 이 박혀 있었고, 같은 값을 통합환경제어
-              함수가 사용자에게 또 물었다(설계문서 D9). -#}
-          <div class="aot-modal-detail-body" id="curtain-shade-detail" style="display:none">
-            <div class="aot-modal-option-row">
-              <label class="aot-modal-option-label" for="curtain-shade-tau"
-                     title="{{ _('Fraction of light that passes through the shade cloth when fully closed. 0.30 lets three tenths through.') }}">
-                {{ _('Transmittance') }}
-                <span class="fas fa-info-circle aot-option-tip" aria-hidden="true"></span>
-              </label>
-              <div class="aot-modal-option-control">
-                <input type="number" class="form-control aot-modern-input"
-                       id="curtain-shade-tau" min="0.01" max="1" step="0.01"
-                       onchange="EnvelopeUI.onCurtainShadeToggle()">
-              </div>
+          {#- ⚠ **이 페이지의 골격은 `fac-*` 다.** `aot-modal-option-row` 를
+              끼워 넣었더니 그 규칙(`display:flex !important` + 컨트롤 160px
+              고정)이 이 절의 정렬을 통째로 밀어, 오른쪽에 있어야 할 버튼들이
+              엉뚱한 자리로 갔다(2026-08-27 사용자 신고). 형제 항목
+              (`curtain-ceiling-detail`)과 **같은 골격**을 쓴다.
+
+              차광막의 물성이라 여기 있다 — 시설이 아는 값이고, 예전에는 냉방
+              부하 계산에 0.50 이 박혀 있었다(설계문서 D9). -#}
+          <div id="curtain-shade-detail" style="display:none;margin-top:8px;">
+            <div class="fac-inline-toggle">
+              <span title="{{ _('Fraction of light that passes through the shade cloth when fully closed. 0.30 lets three tenths through.') }}">{{ _('Transmittance') }}</span>
+              <input type="number" id="curtain-shade-tau"
+                     min="0.01" max="1" step="0.01" placeholder="0.50"
+                     style="width:64px;font-size:var(--aot-font-size-xs);padding:1px 4px;"
+                     title="{{ _('Fraction of light that passes through the shade cloth when fully closed. 0.30 lets three tenths through.') }}"
+                     onchange="EnvelopeUI.onCurtainShadeToggle()">
+            </div>
+          </div>
+        </div>
             </div>
           </div>
         </div>

@@ -5771,8 +5771,6 @@ msgid "Schedule Start (start date)"
 msgstr "일정 시작 (정식일)"
 
 #: aot_flask/forms/forms_pid.py:132
-msgid "Week Offset"
-msgstr "주차 오프셋"
 
 #: aot_flask/forms/forms_pid.py:142
 msgid "Min Duration (Raise)"
@@ -24390,8 +24388,6 @@ msgstr ""
 "장치의 대기전력보다 높게 잡아 대기 상태가 가동으로 읽히지 않게 하십시오."
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:235
-msgid "Growth Schedule"
-msgstr "생육 일정"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:245
 msgid ""
@@ -24468,8 +24464,6 @@ msgstr ""
 "제어하려면 비워두세요. 여러 구역을 독립적으로 제어하려면 구역마다 코디네이터를 하나씩 만드세요."
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:322
-msgid "Time Control"
-msgstr "시간 제어"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:329
 msgid "Enable Time Window"
@@ -31266,8 +31260,6 @@ msgid "Ventilation Strategy"
 msgstr "환기 전략"
 
 #: aot/functions/custom_functions/env_coordinator_impl/_function_info.py
-msgid "Schedule and Time"
-msgstr "일정과 시간"
 
 #: aot/functions/custom_functions/env_coordinator_impl/_function_info.py
 msgid "Light and CO₂"
@@ -31390,8 +31382,6 @@ msgstr "냉난방·가습"
 msgid "Light and Shading"
 msgstr "빛과 차광"
 
-msgid "Sensing and Cycle"
-msgstr "감지와 주기"
 
 msgid "Temperature Range"
 msgstr "온도 범위"
@@ -31403,8 +31393,6 @@ msgid "Rest Heating and Cooling When Venting Can Reach the Target"
 msgstr "환기만으로 목표에 갈 수 있으면 냉·난방 쉬기"
 
 
-msgid "Adjustment applied on top of the weeks elapsed since the plot started. Positive fast-forwards (the system was installed mid-cycle), negative compensates for downtime. Default 0."
-msgstr "구획을 시작한 뒤 지난 주 수에 더해 보정합니다. 양수는 앞당기고(작기 도중에 설치한 경우), 음수는 멈춰 있던 기간을 되돌립니다. 기본 0."
 
 msgid "Which plot this coordinator follows, when more than one is growing in its scope. Leave empty when there is only one — it is picked automatically. Set from the comparison card at the top of this page."
 msgstr "범위 안에서 여러 구획이 자라고 있을 때 어느 것을 따를지 정합니다. 하나뿐이면 비워 두세요 — 자동으로 골라집니다. 이 페이지 위쪽의 비교 카드에서 정할 수 있습니다."
@@ -31492,3 +31480,33 @@ msgstr "천 투과율 개별 지정 (0-1, 차광막 전용)"
 
 msgid "Only for this screen, when its cloth differs from the rest. Leave 0 to use the value set on the linked facility. Used when there is no indoor light sensor: the indoor level is estimated from outdoor irradiance and the screen position."
 msgstr "이 차광막의 천이 나머지와 다를 때만 씁니다. 0 으로 두면 연동 시설에 정해 둔 값을 씁니다. 실내 광센서가 없을 때, 실외 일사와 차광막 개도로 실내 광량을 추정하는 데 쓰입니다."
+
+msgid "When Control Runs"
+msgstr "제어를 돌리는 시간대"
+
+msgid "Control ends"
+msgstr "제어 종료"
+
+msgid "Stops on {date}"
+msgstr "{date} 에 멈춥니다"
+
+msgid "Stopped on {date} — past the stop date"
+msgstr "{date} 에 멈췄습니다 — 종료일이 지났습니다"
+
+msgid "Outside this window the coordinator stops entirely — heating and cooling included. Safety limits still act."
+msgstr "이 시간대 밖에서는 조율기가 통째로 멈춥니다 — 난방과 냉방도 함께입니다. 안전 한계는 그대로 작동합니다."
+
+msgid "When the coordinator starts working each day."
+msgstr "조율기가 하루 중 언제부터 일하는지."
+
+msgid "When it stops. What each device does at that moment is set in its Action."
+msgstr "언제 멈추는지. 그 순간 각 장치가 무엇을 할지는 그 장치의 액션에서 정합니다."
+
+msgid "Sets the window above from a day-length curve instead of fixed times. Careful: a short day length means the coordinator runs for only those hours, so nothing is heated overnight."
+msgstr "위 시간대를 고정 시각 대신 낮 길이 곡선에서 정합니다. 주의: 낮이 짧으면 조율기도 그 시간만 돌아서, 밤새 난방이 되지 않습니다."
+
+msgid "The window is centred on this time."
+msgstr "시간대는 이 시각을 가운데 두고 잡힙니다."
+
+msgid "Control stops for good after this date. Leave blank to keep running."
+msgstr "이 날짜가 지나면 제어가 완전히 멈춥니다. 비워 두면 계속 돕니다."

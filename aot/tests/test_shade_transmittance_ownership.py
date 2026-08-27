@@ -134,6 +134,22 @@ class TestTheFacilityScreenCanSetIt(unittest.TestCase):
         self.assertIn('id="curtain-shade-tau"', tpl)
         self.assertIn('id="curtain-shade-detail"', tpl)
 
+    def test_it_uses_the_page_skeleton_not_the_modal_one(self):
+        """⚠ 이 페이지의 골격은 `fac-*` 다.
+
+        `aot-modal-option-row` 를 끼워 넣었더니 그 규칙(`display:flex
+        !important` + 컨트롤 160px 고정)이 이 절의 정렬을 통째로 밀어,
+        **오른쪽에 있어야 할 버튼들이 엉뚱한 자리로 갔다**(2026-08-27 사용자
+        신고). 형제 항목과 같은 골격을 써야 한다.
+        """
+        tpl = _read('aot_flask', 'templates', 'pages', 'geo', 'geo_facility.html')
+        i = tpl.index('id="curtain-shade-detail"')
+        block = tpl[i:tpl.index('</div>', tpl.index('curtain-shade-tau'))]
+        self.assertIn('fac-inline-toggle', block,
+                      '페이지 골격을 안 쓴다')
+        self.assertNotIn('aot-modal-option-row', block,
+                         '모달 골격을 끼워 넣었다 — 이 절의 정렬이 깨진다')
+
     def test_the_field_is_read_and_filled(self):
         js = _read('aot_flask', 'static', 'js', 'geo', 'aot-facility-design.js')
         self.assertIn('curtain-shade-tau', js)
