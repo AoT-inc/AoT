@@ -583,3 +583,45 @@ class TestOneSwitchPerThing:
 
 if __name__ == '__main__':
     pytest.main([__file__, '-v'])
+
+
+class TestMergingSwitchesCarriesTheValue:
+    """스위치를 합칠 때 **값을 함께 옮긴다** (2026-08-27).
+
+    `debug_logging`(함수 옵션)과 `log_level_debug`(컬럼)를 하나로 합치면서
+    **값을 옮기지 않았다.** 옛 옵션이 켜져 있던 코디네이터가 꺼진 컬럼을 읽게
+    되어, 켜 둔 사람이 아무것도 안 했는데 **사이클 결정 로그 기록이 멈췄다.**
+
+    증상이 조용하다 — 제어는 그대로 돌고 화면도 그대로다. 없어지는 것은
+    나중에 "왜 그렇게 했나" 를 묻을 근거뿐이라, **물어볼 일이 생겼을 때**
+    비로소 드러난다. 실제로 그렇게 발견했다(영양·쿠마모토 점검 중 편차·적분
+    채널이 통째로 비어 있었다).
+
+    ⚠ 이 저장소가 반복해서 겪는 모양이다: 두 벌을 하나로 합치는 것은 옳지만,
+      **합치는 순간 두 벌의 값이 하나로 접힌다.** 어느 쪽이 이기는지 정하지
+      않으면 조용한 쪽(기본값)이 이긴다.
+    """
+
+    def test_the_migration_exists(self):
+        import os
+        here = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        path = os.path.join(here, 'scripts', 'migrate_debug_logging.py')
+        assert os.path.exists(path), '값을 옮기는 수단이 없다'
+
+    def test_it_only_turns_on_what_was_on(self):
+        """⚠ 아무도 켠 적 없는 로그를 켜면 그것도 사람이 정하지 않은 변경이다."""
+        import os
+        here = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        with open(os.path.join(here, 'scripts', 'migrate_debug_logging.py'),
+                  encoding='utf-8') as fh:
+            src = fh.read()
+        assert "was_on and not fn.log_level_debug" in src, (
+            '켜져 있던 것만 켜는 조건이 없다')
+
+    def test_it_previews_by_default(self):
+        import os
+        here = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        with open(os.path.join(here, 'scripts', 'migrate_debug_logging.py'),
+                  encoding='utf-8') as fh:
+            src = fh.read()
+        assert "'--apply', action='store_true'" in src
