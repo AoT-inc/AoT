@@ -97,6 +97,7 @@
   --aot-viz-track-h: 8px;
   --aot-viz-mark-w: 3px;   /* 마커 — 세로 선 */
   --aot-viz-mark-h: 24px;  /* 2026-08-21 트랙 확대에 맞춰 2배로 */
+  --aot-viz-handle-d: 12px; /* 조작 손잡이 — 원형 지름 */
 
   display: block;
   font-size: var(--aot-font-size-base);
@@ -481,3 +482,119 @@
   .aot-viz-fill, .aot-viz-ok { transition: left 0.25s ease, width 0.25s ease; }
   .aot-viz-now, .aot-viz-target { transition: left 0.25s ease; }
 }
+
+/* ── 입력형 눈금 (`.aot-viz--scale-input`) ─────────────────────────────────
+ *
+ * 위 프리미티브는 전부 **읽는 것**이다. 이것만 **고르는 것**이다 — 같은 트랙
+ * 위에서 단계를 누른다. 설계: docs/design/env-coordinator-settings-redesign.md §3-5.
+ *
+ * 왜 같은 골격을 쓰나: 설정 화면의 눈금과 모달의 밴드 바가 다른 모양이면,
+ * 사용자는 같은 개념(축 위의 한 지점)을 두 번 배워야 한다. 마크업이 같으므로
+ * 색·높이·눈금 규칙이 저절로 따라온다.
+ *
+ * 새로 더하는 것은 **누를 수 있게 만드는 것**뿐이다:
+ *   .aot-viz-step        단계 지점 (버튼) — 트랙 위에 얹힌다
+ *   .is-picked           지금 고른 단계
+ *   .aot-viz--custom     어느 단계와도 안 맞는 값(= 직접 지정)
+ */
+.aot-viz--scale-input .aot-viz-track {
+  cursor: pointer;
+}
+/* ── 조작 손잡이 ─────────────────────────────────────────────────────────
+ * ⚠ `.aot-viz-now` 와 **역할이 다르다.** now 는 "여기가 지금 값" 을 표시하는
+ *   세로 선이고, 이것은 **사용자가 끄는 것**이다. 표시와 조작이 같은 모양이면
+ *   무엇을 만질 수 있는지 알 수 없다.
+ *
+ *   표시(now)   세로 선 3×24
+ *   조작(step)  원형 ⌀12 · 보조 버튼 배경색
+ */
+.aot-viz-step {
+  position: absolute;
+  top: 50%;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  /* 손가락 표적 — 보이지 않는다. 44px 은 터치 최소 권장치다. */
+  width: 44px;
+  height: 44px;
+  transform: translate(-50%, -50%);
+  /* 마커와 **같은 보정**(트랙 라운드 안쪽) — 숫자를 따로 적으면 트랙 높이를
+     바꿀 때 조용히 어긋난다. */
+  left: calc(var(--aot-viz-track-h) / 2 +
+             (100% - var(--aot-viz-track-h)) * var(--aot-viz-pos, 0) / 100);
+}
+.aot-viz-step::before {
+  content: '';
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  /* 고르지 **않은** 자리는 눈금이다 — 트랙 위의 "여기로 갈 수 있다" 표시일 뿐,
+     끌 수 있는 것이 아니다. 손잡이와 같은 크기로 그리면 어느 것이 지금 값인지
+     알 수 없다(보조 버튼 배경색과 브랜드 보조색이 같은 값이라 색으로는 못 가른다). */
+  width: 2px;
+  height: var(--aot-viz-track-h);
+  /* `.aot-viz-tick` 과 **같은 방식** — 색을 더하지 않고 배경으로 파낸다.
+     단계마다 색을 주면 단계 수만큼 색이 늘어난다(위 그 규칙의 주석). */
+  background: var(--aot-viz-surface);
+  opacity: 0.85;
+}
+/* 지금 고른 단계 = **조작 손잡이**. 원형 ⌀12 · 보조 버튼 배경색. */
+.aot-viz-step.is-picked::before {
+  width: var(--aot-viz-handle-d);
+  height: var(--aot-viz-handle-d);
+  border-radius: 50%;
+  background: var(--aot-btn-bg-secondary);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--aot-color-text-primary) 15%,
+                                  transparent);
+}
+.aot-viz-step:hover::before {
+  background: var(--aot-btn-bg-secondary);
+}
+.aot-viz-step:focus-visible { outline: none; }
+.aot-viz-step:focus-visible::before {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--aot-color-brand-secondary) 40%,
+                                  transparent);
+}
+/* 어느 단계와도 안 맞는 값 — 고른 단계가 없다. 눈금만 남는다. */
+
+/* 직접 지정 칸 — [고급] 을 켜야 보인다. 숨길 뿐 지우지 않으므로 값은 계속
+   제출된다(토글을 껐다 켤 때 설정이 사라지면 안 된다). */
+/* 눈금은 **행 전체**를 쓴다. `.aot-viz` 는 자기 라벨·값·눈금을 다 갖는
+   컴포넌트라, 옵션 행의 오른쪽 컨트롤 칸(실측 160px)에 넣으면 트랙이 눌린다.
+   그래서 행에 직접 놓고 폭을 100% 로 잡는다. */
+.aot-scale-input,
+.aot-range-band { flex: 1 1 100%; min-width: 0; }
+.aot-scale-input .aot-viz,
+.aot-range-band .aot-viz { margin-top: 0; }
+
+.aot-scale-number {
+  display: none;
+  flex: 1 1 100%;
+  align-items: center;
+  gap: var(--aot-space-3);
+  margin-top: var(--aot-viz-inner, 6px);
+}
+.aot-advanced .aot-scale-number { display: flex; }
+.aot-scale-number input { max-width: 12ch; }
+
+/* 세부 옵션 — 핵심 옵션이 대신 정하므로 [고급] 을 켜야 보인다.
+   숨길 뿐 지우지 않으므로 값은 계속 제출된다. */
+.aot-advanced-only { display: none !important; }
+.aot-advanced .aot-advanced-only { display: flex !important; }
+/* 핵심 옵션의 한 줄 설명 — 눈금 아래. */
+.aot-scale-hint { margin-top: var(--aot-viz-inner, 6px); }
+
+/* ── 입력형 구간 (`.aot-viz--range-band`) ─────────────────────────────────
+ * 상·하한과 권장 범위를 **한 트랙 위에서** 끈다. 숫자 네 칸으로는 둘의 관계가
+ * 안 보였고, 권장이 하드 임계 밖으로 나가면 목표가 조용히 좁혀졌다. */
+.aot-viz--range-band .aot-viz-track {
+  cursor: pointer;
+}
+/* 바깥 = 넘으면 안 되는 선(옅게), 안쪽 = 권장 범위(진하게).
+   같은 색의 농도 차로 "안에 든다" 를 말한다 — 색을 하나 더 쓰면 이 파일이
+   지키는 3색 규칙이 깨진다. */
+.aot-viz-ok--hard  { opacity: 0.35; }
+.aot-viz-ok--guide { opacity: 1; }
+.aot-viz-handle { touch-action: none; }
+/* 권장 손잡이도 같은 원형이다 — 위 `.aot-viz-step::before` 가 그린다. */

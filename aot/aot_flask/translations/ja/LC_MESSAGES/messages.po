@@ -30678,6 +30678,266 @@ msgstr "今は逆方向が必要なため停止しています"
 msgid "Target reached — easing off"
 msgstr "目標に達したため出力を下げています"
 
+#: aot/functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Growing Range"
+msgstr "栽培範囲"
+
+#: aot/functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Growing Temperature"
+msgstr "栽培温度"
+
+#: aot/functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Growing Humidity"
+msgstr "栽培湿度"
+
+#: aot/functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "never past"
+msgstr "限界"
+
+#: aot/functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Control Temperament"
+msgstr "制御の性格"
+
+#: aot/functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Misting Caution"
+msgstr "噴霧の慎重さ"
+
+#: aot/functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Control Strategy"
+msgstr "制御の方式"
+
+#: aot/functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Cycle and Response"
+msgstr "周期と反応"
+
+#: aot/functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Bold"
+msgstr "大胆に"
+
+#: aot/functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Careful"
+msgstr "慎重に"
+
+#: aot/functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Gentler on the leaves"
+msgstr "葉にやさしく"
+
+#: aot/functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "How hard the system chases the target. Sets the cycle, how often vents may move, the dead-band and the emergency thresholds together."
+msgstr "目標をどれだけ強く追うか。制御周期・窓の駆動間隔・デッドバンド・緊急閾値をまとめて設定します。"
+
+#: aot/functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "How careful misting is with the leaves. Sets spray length, drying interval and the sunburn thresholds together."
+msgstr "噴霧が葉をどれだけ気遣うか。噴霧の長さ・乾燥間隔・日焼け閾値をまとめて設定します。"
+
+#: aot/functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Which facility this coordinator runs. Actuators and sensors come from it."
+msgstr "このコーディネーターが制御する施設。アクチュエーターとセンサーはここから取得します。"
+
+#: aot/functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Limit this coordinator to one bay. Leave blank for the whole facility."
+msgstr "このコーディネーターを一棟に限定します。空欄なら施設全体です。"
+
+#: aot/functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Rest heating and cooling while the outdoor air alone can reach the target."
+msgstr "外気だけで目標に届く間、冷暖房を休ませます。"
+
+#: aot/functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Close the vents when the outdoor air cannot move the reading toward the target."
+msgstr "外気では目標へ近づけないとき、窓を閉じます。"
+
+#: aot/functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Close the vents while heating or cooling is running."
+msgstr "冷暖房が動いている間、窓を閉じておきます。"
+
+#: aot/functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "A measurement that rises when a hand-operated unit runs, so the system can tell."
+msgstr "手動で入れる装置が動くと値が上がる測定。それで稼働を判定します。"
+
+#: aot/functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Above this value the unit counts as running."
+msgstr "この値を超えると稼働中とみなします。"
+
+#: aot/functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Keep the vents closed overnight and let heating, cooling and drying carry the load."
+msgstr "夜間は窓を閉じ、冷暖房・除湿に任せます。"
+
+#: aot/functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Whether night is measured from sunset to sunrise, or by fixed clock times."
+msgstr "夜を日没～日の出で見るか、決めた時刻で見るか。"
+
+#: aot/functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Start closing this many minutes before sunset."
+msgstr "日没の何分前から閉じ始めるか。"
+
+#: aot/functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "When night starts, if you chose fixed clock times."
+msgstr "決めた時刻を選んだ場合の、夜の開始時刻。"
+
+#: aot/functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "When night ends, if you chose fixed clock times."
+msgstr "決めた時刻を選んだ場合の、夜の終了時刻。"
+
+#: aot/functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Tighter misting limits for seedlings, which scorch more easily than grown leaves."
+msgstr "苗は成葉より焼けやすいため、噴霧の制限を厳しくします。"
+
+#: aot/functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Harder or colder water needs a lower sunburn threshold, which this sets for you."
+msgstr "硬度が高い水や冷たい水は日焼け閾値を下げる必要があります。選ぶと自動で下げます。"
+
+#: aot/functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Allow misting near sunset. Turn off to leave the leaves dry overnight."
+msgstr "日没前後の噴霧を許可します。オフにすると葉を乾いたまま夜を越します。"
+
+#: aot/functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "How long before sunset misting stops."
+msgstr "日没の何分前に噴霧を止めるか。"
+
+#: aot/functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Use the misting nozzles for humidity too. Turn off when they are your irrigation."
+msgstr "噴霧ノズルを加湿にも使います。そのノズルが灌水設備なら오프にしてください。"
+
+#: aot/functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "A safety stop: control halts after this date. Leave blank to run indefinitely."
+msgstr "安全停止です。この日付を過ぎると制御が止まります。空欄なら動き続けます。"
+
+#: aot/functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "How often the vents may move. Emergencies and safety gates ignore this."
+msgstr "窓が動ける間隔。緊急時と安全ゲートはこの値を無視します。"
+
+#: aot/functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "How much light the closed shade cloth lets through. Only used without an indoor light sensor."
+msgstr "完全に閉じた遮光幕が通す光の割合。屋内光センサーがない場合のみ使います。"
+
+#: aot/functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Let the model decide which of light, CO₂, temperature or VPD is limiting right now."
+msgstr "光・CO₂・温度・VPDのうち、今どれが制限要因かをモデルに判定させます。"
+
+#: aot/functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Which model computes the effect of each actuator. Change only while testing."
+msgstr "各アクチュエーターの効果を何で計算するか。試験中でなければ変更しないでください。"
+
+#: aot/functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Record every cycle decision. Turn on while diagnosing, off afterwards."
+msgstr "サイクルごとの判断を記録します。診断時のみオンにし、終わったらオフに。"
+
+#: aot/functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Longest single spray. Humidification is regulated by how often it sprays, not by how long."
+msgstr "一度に噴霧できる最大時間。加湿は長さではなく回数で調節します。"
+
+#: aot/functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "No spraying at all for this long after one finishes, so the leaves get time to dry."
+msgstr "一度終わってからこの時間は噴霧しません。葉が乾く時間を確保します。"
+
+#: aot/functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Dead-band half-width around the VPD setpoint. Adjustments are skipped when the deviation is within this range."
+msgstr "VPD目標周辺のデッドバンド半幅。偏差がこの範囲内なら調整しません。"
+
+#: aot/functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Advisory lower bound for temperature. Triggers forced heating when exceeded downward, and narrows the derived target range."
+msgstr "温度の推奨下限。下回ると加温を強制し、派生目標範囲を狭めます。"
+
+#: aot/functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Advanced"
+msgstr "詳細"
+
+#: aot/functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Early"
+msgstr "早め"
+
+#: aot/functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Late"
+msgstr "遅め"
+
+#: aot/functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Long"
+msgstr "長め"
+
+#: aot/functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Short"
+msgstr "短め"
+
+#: aot/functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Very long"
+msgstr "かなり長め"
+
+#: aot/functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Loose"
+msgstr "ゆるめ"
+
+#: aot/functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Tight"
+msgstr "きつめ"
+
+#: aot/functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Relaxed"
+msgstr "ゆったり"
+
+#: aot/functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Slow"
+msgstr "ゆっくり"
+
+#: aot/functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Responsive"
+msgstr "敏感に"
+
+#: aot/functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Often"
+msgstr "頻繁に"
+
+#: aot/functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Rare"
+msgstr "まれに"
+
+#: aot/functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Fewer decisions"
+msgstr "判断を少なく"
+
+#: aot/functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Faster response"
+msgstr "より速く反応"
+
+#: aot/functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Moves equipment less"
+msgstr "装置をあまり動かさない"
+
+#: aot/functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Tracks the target closely"
+msgstr "目標に近く追従"
+
+#: aot/functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Reacts later"
+msgstr "遅く反応"
+
+#: aot/functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Reacts sooner"
+msgstr "早く反応"
+
+#: aot/functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Humidity rises faster"
+msgstr "湿度が早く上がる"
+
+#: aot/functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "More time for leaves to dry"
+msgstr "葉が乾く時間が増える"
+
+#: aot/functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Probes more often"
+msgstr "より頻繁に探査"
+
+#: aot/functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Probes rarely"
+msgstr "まれに探査"
+
+#: aot/functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Reacts to what is here now"
+msgstr "今の状況に反応"
+
+#: aot/functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Prepares further ahead"
+msgstr "より先を見て備える"
+
 #: aot/aot_flask/static/js/common/aot-env-status.js
 msgid "%(n)s s ago"
 msgstr "%(n)s秒前"

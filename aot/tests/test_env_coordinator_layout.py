@@ -17,6 +17,7 @@
 배치는 `_LAYOUT` 한 곳에서 정하고 `_apply_layout()` 이 적용한다. 옵션 정의
 자체는 건드리지 않으므로 **id 도 저장된 값도 동작도 바뀌지 않는다.**
 """
+import re
 import sys
 import types
 
@@ -39,11 +40,28 @@ def _options():
     return _info().FUNCTION_INFORMATION['custom_options']
 
 
+# ⚠ **`_function_info` 에서 가져온다.** 여기 손으로 적으면 표식 종류가 늘 때
+#   조용히 갈라지고, 그때 이 검사는 새 표식을 '옵션' 으로 세어 통과해 버린다 —
+#   `range_band` 가 실제로 그랬다(id 를 갖는데 옵션이 아니다).
+def _markers():
+    import inspect
+    src = inspect.getsource(_info()._apply_layout)
+    m = re.search(r"_MARKERS = \(([^)]*)\)", src, re.S)
+    return tuple(re.findall(r"'([a-z_]+)'", m.group(1)))
+
+
 def _ids(opts):
     """값을 싣는 옵션만. 배치 표식(접힘 앵커)도 id 를 가지므로 걸러야 한다."""
-    markers = ('collapse_start', 'collapse_end', 'header', 'env_status')
+    markers = _markers()
     return [o['id'] for o in opts
             if o.get('id') and o.get('type') not in markers]
+
+
+def _by_id(opts, oid):
+    for o in opts:
+        if o.get('id') == oid and o.get('type') not in _markers():
+            return o
+    raise AssertionError('%s 옵션이 없다' % oid)
 
 
 def _always_visible(opts):
@@ -51,8 +69,13 @@ def _always_visible(opts):
 
     접힘 밖이면서 `depends_on` 이 없는 것. 종속 옵션은 그 토글을 켜야 나오므로
     "항상 보인다" 가 아니다 — 세면 이 검사가 뜻을 잃는다.
+
+    ⚠ `advanced_only` 도 빼야 한다. 핵심 옵션(눈금·범위 밴드)의 **세부**는
+      [고급] 을 켜야 나오고, 안 켜면 핵심 하나만 보인다 — 그것이 이 구조의
+      요점이다. 세면 "핵심으로 묶었더니 첫 화면이 늘었다" 는 거꾸로 된 판정이
+      나온다(2026-08-27: 묶고 나서 23개로 세어졌다).
     """
-    markers = ('collapse_start', 'collapse_end', 'header', 'env_status')
+    markers = _markers()
     out, depth = [], 0
     for o in opts:
         t = o.get('type')
@@ -60,8 +83,9 @@ def _always_visible(opts):
             depth += 1
         elif t == 'collapse_end':
             depth -= 1
-        elif o.get('id') and t not in markers and depth == 0 \
-                and not o.get('depends_on'):
+        elif (o.get('id') and t not in markers and depth == 0
+                and not o.get('depends_on')
+                and not o.get('advanced_only')):
             out.append(o['id'])
     return out
 
@@ -92,7 +116,21 @@ class TestNothingIsLost:
         assert len(declared) == len(set(declared)), (
             '_LAYOUT 에 같은 옵션이 두 번 있다: %s'
             % sorted({i for i in declared if declared.count(i) > 1}))
-        assert set(declared) == set(_ids(_options()))
+        # `@group:x` · `@range:y` 는 옵션이 아니라 **핵심 옵션의 자리**다. 그
+        # 세부는 배치에 적지 않는다 — 핵심 바로 뒤로 따라가므로(`_emit_members`)
+        # 배치에도 적으면 어느 쪽이 정본인지 갈린다.
+        placed = {i for i in declared if not i.startswith('@')}
+        members = set()
+        for g in fi._SCALE_GROUPS:
+            members |= set(g['members'])
+        for b in fi._RANGE_BANDS:
+            members |= {b[k] for k in
+                        ('guide_min', 'guide_max', 'hard_min', 'hard_max')
+                        if b.get(k)}
+        assert not (placed & members), (
+            '세부 옵션이 배치에도 적혀 있다 — 핵심 뒤로만 따라가야 한다: %s'
+            % sorted(placed & members))
+        assert placed | members == set(_ids(_options()))
 
 
 class TestTheFirstScreenStaysSmall:
@@ -118,11 +156,27 @@ class TestTheFirstScreenStaysSmall:
           있어 안 정해도 돌아가므로 "반드시 정해야 하는 것" 이 아니다(D3).
           여기 남은 것은 **사람이 정하지 않으면 값이 있을 수 없는 것**뿐이다 —
           어느 시설인가, 어느 선을 넘으면 안 되는가.
+
+        ⚠ 온습도 넷은 2026-08-27 에 **범위 밴드가 대신한다.** 숫자 여덟 칸이
+          아니라 손잡이 둘이고, 하드 임계는 거기서 파생한다. 그래서 여기서
+          보는 것은 `temp_min` 이 아니라 **밴드가 첫 화면에 있는가** 다 —
+          숫자 칸이 접혀 있어도 답할 수 있으면 된다.
         """
-        vis = set(_always_visible(_options()))
-        for oid in ('geo_facility_id',
-                    'temp_max', 'temp_min', 'humid_max', 'humid_min'):
-            assert oid in vis, '%s 가 첫 화면에서 사라졌다' % oid
+        opts = _options()
+        vis = set(_always_visible(opts))
+        assert 'geo_facility_id' in vis, '연동 시설이 첫 화면에서 사라졌다'
+        fi = _info()
+        depth, bands = 0, set()
+        for o in opts:
+            t = o.get('type')
+            if t == 'collapse_start':
+                depth += 1
+            elif t == 'collapse_end':
+                depth -= 1
+            elif t == 'range_band' and depth == 0:
+                bands.add(o['id'])
+        for b in fi._RANGE_BANDS:
+            assert b['id'] in bands, '%s 범위가 첫 화면에서 사라졌다' % b['id']
 
 
 class TestOrderThatMatters:
@@ -134,15 +188,50 @@ class TestOrderThatMatters:
 
     def test_guide_ranges_sit_next_to_the_hard_limits(self):
         """둘이 어긋나면 목표가 조용히 좁혀진다. 하나를 고칠 때 다른 하나가
-        눈에 보여야 한다 — 다섯 섹션 떨어져 있던 것이 원래 문제였다."""
-        ids = _ids(_options())
-        last_limit = max(ids.index(i) for i in
-                         ('temp_max', 'temp_min', 'humid_max', 'humid_min'))
-        first_guide = min(ids.index(i) for i in
-                          ('guide_T_min', 'guide_T_max',
-                           'guide_RH_min', 'guide_RH_max'))
-        assert 0 < first_guide - last_limit <= 3, (
-            '하드 임계와 유도 범위가 %d칸 떨어져 있다' % (first_guide - last_limit))
+        눈에 보여야 한다 — 다섯 섹션 떨어져 있던 것이 원래 문제였다.
+
+        지금은 **범위 밴드가 넷을 다 가진다.** 그래서 "온도 넷이 붙어 있고,
+        습도 넷이 붙어 있는가" 를 밴드마다 본다 — 전체를 하나로 보면 온도와
+        습도가 섞여 있어도 통과한다.
+
+        ⚠ 사용자 신고(2026-08-27): *"심지어 온도는 반복되어 여러 곳에서
+          확인함."* 슬라이더 · 유도 · 하드가 세 자리에 흩어져 있었다.
+        """
+        fi = _info()
+        opts = _options()
+        ids = _ids(opts)
+        for b in fi._RANGE_BANDS:
+            members = [b[k] for k in
+                       ('guide_min', 'guide_max', 'hard_min', 'hard_max')
+                       if b.get(k)]
+            pos = sorted(ids.index(m) for m in members)
+            assert pos == list(range(pos[0], pos[0] + len(pos))), (
+                '%s 의 유도·하드가 붙어 있지 않다: %s' % (b['id'], pos))
+            # 그리고 그 앞이 밴드 자신이어야 한다 — 세부가 자기 핵심에서
+            # 떨어지면 [고급] 을 눌러도 열 것이 그 자리에 없다.
+            band_at = [i for i, o in enumerate(opts)
+                       if o.get('type') == 'range_band' and o.get('id') == b['id']]
+            assert band_at, '%s 밴드가 배치에 없다' % b['id']
+            first = opts.index(_by_id(opts, members[0]))
+            assert 0 < first - band_at[0] <= 2, (
+                '%s 의 세부가 밴드에서 떨어져 있다' % b['id'])
+
+    def test_group_members_follow_their_core_option(self):
+        """핵심 옵션의 [고급] 이 열어 줄 것이 **그 자리에** 있어야 한다.
+
+        멤버가 화면 저편에 있으면 눌러도 아무 일이 안 일어난 것처럼 보인다 —
+        *"고급을 눌러서 따라다니던 그 하위 옵션들은 어디에 있는거야?"*
+        """
+        fi = _info()
+        opts = _options()
+        for g in fi._SCALE_GROUPS:
+            at = [i for i, o in enumerate(opts)
+                  if o.get('type') == 'scale_group'
+                  and (o.get('group') or {}).get('id') == g['id']]
+            assert at, '%s 눈금 그룹이 배치에 없다' % g['id']
+            pos = [opts.index(_by_id(opts, m)) for m in g['members']]
+            assert pos == list(range(at[0] + 1, at[0] + 1 + len(pos))), (
+                '%s 의 세부가 핵심 바로 뒤에 있지 않다' % g['id'])
 
     def test_the_futility_gate_is_a_ventilation_option(self):
         """모터 주기 설정 안에 숨어 있어 찾을 수 없었다."""
@@ -190,12 +279,12 @@ class TestTheLayoutDoesNotChangeBehaviour:
         같은 객체를 재배치하기만 해야 한다."""
         fi = _info()
         opts = fi.FUNCTION_INFORMATION['custom_options']
-        by_id = {o['id']: o for o in opts if o.get('id')
-                 and o.get('type') not in ('collapse_start', 'collapse_end')}
+        markers = _markers()
+        by_id = {o['id']: o for o in opts
+                 if o.get('id') and o.get('type') not in markers}
         rebuilt = fi._apply_layout(opts, fi._LAYOUT)
         for o in rebuilt:
-            if o.get('id') and o.get('type') not in (
-                    'collapse_start', 'collapse_end', 'header'):
+            if o.get('id') and o.get('type') not in markers:
                 assert o is by_id[o['id']], '%s 정의가 복제됐다' % o['id']
 
     def test_applying_twice_is_stable(self):
@@ -246,13 +335,38 @@ class TestLayoutMarkersAreNotOptions:
     def test_markers_never_become_attributes(self):
         """데몬 파서가 표식을 옵션으로 읽으면 `grp_*` 속성이 생기고, 더 나쁘게는
         id·기본값이 없다고 판단해 **파싱을 통째로 중단한다**(2026-08-27 실측:
-        62개 중 9개만 설정되고 멈췄다)."""
+        62개 중 9개만 설정되고 멈췄다).
+
+        ⚠ 면제 목록을 **손으로 여섯 벌** 두던 시절의 검사는 "각 파서 안에
+          `'collapse_start'` 가 세 번 나오는가" 였다. 그 여섯 벌이 바로
+          문제였으므로(반쪽만 추가하면 조용히 멈춘다) 이제 상수 하나이고,
+          검사도 *그 상수에 들어 있고 파서가 그것을 쓰는가* 로 바뀐다.
+        """
+        from aot.controllers import abstract_base_controller as abc
+        for t in ('collapse_start', 'collapse_end'):
+            for name in ('NO_ID_REQUIRED_TYPES', 'NO_DEFAULT_REQUIRED_TYPES',
+                         'DISPLAY_ONLY_TYPES'):
+                assert t in getattr(abc, name), '%s 에 %s 가 없다' % (name, t)
         parser = _read_parser()
         for fn in ('setup_custom_options_csv', 'setup_custom_options_json'):
             block = parser.split('def %s' % fn, 1)[1].split('\n    def ', 1)[0]
-            assert block.count("'collapse_start'") >= 3, (
-                '%s 가 배치 표식을 면제하지 않는다 — 세 자리 모두 필요하다'
-                '(id 검사 · default_value 검사 · continue)' % fn)
+            for name in ('NO_ID_REQUIRED_TYPES', 'NO_DEFAULT_REQUIRED_TYPES',
+                         'DISPLAY_ONLY_TYPES'):
+                assert name in block, (
+                    '%s 가 %s 를 쓰지 않는다 — 목록을 손으로 다시 적었는가?'
+                    % (fn, name))
+
+    def test_every_declared_option_type_is_known_to_the_parser(self):
+        """선언한 종류를 파서가 모르면 "Unknown option type" 으로 그 옵션이
+        조용히 `None` 이 된다 — `select_bay` 가 실제로 그랬고, 그 결과 동
+        범위를 정한 코디네이터가 시설 **전체**를 제어했다."""
+        from aot.controllers import abstract_base_controller as abc
+        parser = _read_parser()
+        declared = {o.get('type') for o in _options() if o.get('type')}
+        for t in sorted(declared):
+            known = (t in abc.DISPLAY_ONLY_TYPES
+                     or ("'%s'" % t) in parser)
+            assert known, '파서가 %r 종류를 모른다' % t
 
 
 def _read_parser():

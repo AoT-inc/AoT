@@ -76,6 +76,34 @@ class _ChannelValues(OrderedDict):
             f"{detail}. Add the channel, or delete the device.")
 
 
+# ⚠ **표시 전용 옵션 종류 — 목록은 여기 하나뿐이다.**
+#
+# 이 종류들은 값을 싣지 않는다(구분선·머리말·접힘 앵커·눈금 그룹·범위 밴드).
+# 파서는 세 자리에서 이것을 봐야 한다 — `id` 검사 · `default_value` 검사 ·
+# 값 해석 건너뛰기. 그리고 파서가 **둘**(CSV·JSON)이라 자리가 여섯이다.
+#
+# 예전에는 여섯 곳에 손으로 적혀 있었고, 새 종류를 넣을 때마다 일부를
+# 빠뜨렸다. 그 실패는 조용하지 않고 **치명적**이다: `id` 없음이 error 로
+# 쌓이고 `if error: return` 이 **남은 옵션 파싱을 통째로 중단**한다 —
+# 2026-08-27 에 접힘 표식으로 62개 중 9개만 설정되는 일이 실제로 났고,
+# 같은 날 `scale_group`/`range_band` 로 또 났다.
+#
+# 두 검사에서 갈리는 것은 하나뿐이라 따로 둔다: `message` 는 `default_value`
+# 가 필요 없는 것이 아니라 **`id` 가 필요 없는** 종류다(반대로 `button` 은
+# `id` 는 있고 `default_value` 가 없다).
+_DISPLAY_ONLY_BASE = [
+    'new_line', 'header',
+    'collapse_start', 'collapse_end', 'env_status',
+    'scale_group', 'range_band',
+]
+# `id` 를 요구하지 않는 종류
+NO_ID_REQUIRED_TYPES = _DISPLAY_ONLY_BASE + ['message']
+# `default_value` 를 요구하지 않는 종류
+NO_DEFAULT_REQUIRED_TYPES = _DISPLAY_ONLY_BASE + ['button']
+# 값 해석 자체를 건너뛰는 종류 (= 위 둘의 합집합)
+DISPLAY_ONLY_TYPES = _DISPLAY_ONLY_BASE + ['message', 'button']
+
+
 class AbstractBaseController(object):
     """Provide base template for all controller, input, and output classes.
 
@@ -184,15 +212,13 @@ class AbstractBaseController(object):
                 #   통합환경제어 62개 중 9개만 설정되고 멈췄다).
                 if ('id' not in each_option_default and
                         ('type' in each_option_default and
-                         each_option_default['type'] not in [
-                             'new_line', 'message', 'header',
-                             'collapse_start', 'collapse_end', 'env_status'])):
+                         each_option_default['type']
+                         not in NO_ID_REQUIRED_TYPES)):
                     error.append("'id' not found in custom_options")
                 if ('default_value' not in each_option_default and
                         ('type' in each_option_default and
-                         each_option_default['type'] not in [
-                             'new_line', 'header', 'button',
-                             'collapse_start', 'collapse_end', 'env_status'])):
+                         each_option_default['type']
+                         not in NO_DEFAULT_REQUIRED_TYPES)):
                     error.append("'default_value' not found in custom_options")
 
                 for each_error in error:
@@ -200,9 +226,7 @@ class AbstractBaseController(object):
                 if error:
                     return
 
-                if each_option_default['type'] in [
-                        'new_line', 'message', 'header', 'button',
-                        'collapse_start', 'collapse_end', 'env_status']:
+                if each_option_default['type'] in DISPLAY_ONLY_TYPES:
                     continue
 
                 if 'required' in each_option_default and each_option_default['required']:
@@ -249,7 +273,9 @@ class AbstractBaseController(object):
                 if each_option_default['type'] == 'integer':
                     setattr(self, each_option_default['id'], int(option_value))
 
-                elif each_option_default['type'] == 'float':
+                # ⚠ 눈금 입력의 값은 **숫자**다 — 단계 이름을 저장하지 않는다.
+                #   `select` 쪽에 넣으면 문자열로 굳어 제어가 그 값을 못 쓴다.
+                elif each_option_default['type'] in ['float', 'select_scale']:
                     setattr(self, each_option_default['id'], float(option_value))
 
                 elif each_option_default['type'] == 'bool':
@@ -330,15 +356,13 @@ class AbstractBaseController(object):
                 #   통합환경제어 62개 중 9개만 설정되고 멈췄다).
                 if ('id' not in each_option_default and
                         ('type' in each_option_default and
-                         each_option_default['type'] not in [
-                             'new_line', 'message', 'header',
-                             'collapse_start', 'collapse_end', 'env_status'])):
+                         each_option_default['type']
+                         not in NO_ID_REQUIRED_TYPES)):
                     error.append(f"'id' not found in custom_options: {each_option_default}")
                 if ('default_value' not in each_option_default and
                         ('type' in each_option_default and
-                         each_option_default['type'] not in [
-                             'new_line', 'header', 'button',
-                             'collapse_start', 'collapse_end', 'env_status'])):
+                         each_option_default['type']
+                         not in NO_DEFAULT_REQUIRED_TYPES)):
                     error.append(f"'default_value' not found in custom_options: {each_option_default}")
 
                 for each_error in error:
@@ -346,9 +370,7 @@ class AbstractBaseController(object):
                 if error:
                     return
 
-                if each_option_default['type'] in [
-                        'new_line', 'message', 'header', 'button',
-                        'collapse_start', 'collapse_end', 'env_status']:
+                if each_option_default['type'] in DISPLAY_ONLY_TYPES:
                     continue
 
                 if 'required' in each_option_default and each_option_default['required']:
@@ -398,6 +420,11 @@ class AbstractBaseController(object):
                                                    'select_multi_measurement',
                                                    'text',
                                                    'select',
+                                                   # 눈금 입력 — 값은
+                                                   # 그냥 숫자다(단계
+                                                   # 이름을 저장하지
+                                                   # 않는다).
+                                                   'select_scale',
                                                    # 값은 그냥 문자열(구역 id)이다 —
                                                    # 목록을 어디서 채우는지는 화면
                                                    # 쪽 사정이고 데몬은 값만 받는다.
@@ -485,15 +512,13 @@ class AbstractBaseController(object):
                 #   통합환경제어 62개 중 9개만 설정되고 멈췄다).
                 if ('id' not in each_option_default and
                         ('type' in each_option_default and
-                         each_option_default['type'] not in [
-                             'new_line', 'message', 'header',
-                             'collapse_start', 'collapse_end', 'env_status'])):
+                         each_option_default['type']
+                         not in NO_ID_REQUIRED_TYPES)):
                     error.append(f"'id' not found in custom_options: {each_option_default}")
                 if ('default_value' not in each_option_default and
                         ('type' in each_option_default and
-                         each_option_default['type'] not in [
-                             'new_line', 'header', 'button',
-                             'collapse_start', 'collapse_end', 'env_status'])):
+                         each_option_default['type']
+                         not in NO_DEFAULT_REQUIRED_TYPES)):
                     error.append(f"'default_value' not found in custom_options: {each_option_default}")
 
                 for each_error in error:
@@ -501,9 +526,7 @@ class AbstractBaseController(object):
                 if error:
                     return
 
-                if each_option_default['type'] in [
-                        'new_line', 'message', 'header', 'button',
-                        'collapse_start', 'collapse_end', 'env_status']:
+                if each_option_default['type'] in DISPLAY_ONLY_TYPES:
                     continue
 
                 dict_values[each_option_default['id']] = _ChannelValues(

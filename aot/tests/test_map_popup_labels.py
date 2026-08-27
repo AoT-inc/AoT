@@ -35,6 +35,44 @@ def _js_map(name):
     return dict(re.findall(r"(\w+)\s*:\s*'([^']*)'", body))
 
 
+def _po_entries(po):
+    """`.po` 를 훑어 (msgid, msgstr) 를 낸다 — **접힌 여러 줄을 이어 붙인다.**
+
+    표준 라이브러리만 쓴다. fuzzy 는 건너뛴다(사람이 확인하지 않은 추측이라
+    화면에 나가지 않는다 — `check_po_mo_sync.py` 와 같은 판단).
+    """
+    import re as _re
+    out = []
+    cur, key, fuzzy = {'msgid': [], 'msgstr': []}, None, False
+
+    def flush():
+        if key and cur['msgid'] and not fuzzy:
+            mid, msg = ''.join(cur['msgid']), ''.join(cur['msgstr'])
+            if mid and msg:
+                out.append((mid, msg))
+
+    for line in po.split('\n'):
+        t = line.strip()
+        if t.startswith('#'):
+            if t.startswith('#,') and 'fuzzy' in t:
+                fuzzy = True
+            continue
+        if not t:
+            flush()
+            cur, key, fuzzy = {'msgid': [], 'msgstr': []}, None, False
+            continue
+        m = _re.match(r'(msgid|msgstr)(?:\[\d+\])?\s+"(.*)"$', t)
+        if m:
+            key = 'msgid' if m.group(1) == 'msgid' else 'msgstr'
+            cur[key].append(m.group(2))
+            continue
+        m = _re.match(r'"(.*)"$', t)
+        if m and key:
+            cur[key].append(m.group(1))
+    flush()
+    return out
+
+
 class TestKindLabelsMatchServer(unittest.TestCase):
 
     def test_every_server_kind_has_a_label(self):
@@ -460,17 +498,20 @@ class TestInformationOrder(unittest.TestCase):
 
         ⚠ LoRaWAN **게이트웨이**와 502 Bad Gateway 는 다른 것이라 제외한다 —
           그쪽은 사용자도 그 이름으로 부르는 장비·프로토콜 용어다.
+
+        ⚠ **한 줄짜리만 보면 안 된다.** `.po` 는 긴 문구를 여러 줄로 접으므로
+          `msgid "..."\nmsgstr "..."` 로 훑으면 **긴 문구가 통째로 안 보인다** —
+          그리고 내부 용어가 들어가기 쉬운 것은 짧은 라벨이 아니라 긴 설명이다.
+          실제로 그 상태에서 '안전 게이트' 4건이 통과하고 있었다(2026-08-27).
+          같은 맹점이 이 세션에서 중복 항목을 만든 적도 있다.
         """
-        import re as _re
-        po = _read(_KO)
         bad = []
-        for m in _re.finditer(r'msgid "([^"]+)"\nmsgstr "([^"]*)"', po):
-            mid, msg = m.group(1), m.group(2)
+        for mid, msg in _po_entries(_read(_KO)):
             if '게이트' not in msg:
                 continue
             if '게이트웨이' in msg or 'Gateway' in mid or 'gateway' in mid:
                 continue
-            bad.append((mid, msg))
+            bad.append((mid[:60], msg[:60]))
         self.assertEqual([], bad, '한국어 화면 문구에 내부 용어: %s' % bad)
 
     def test_every_override_reason_has_a_label(self):

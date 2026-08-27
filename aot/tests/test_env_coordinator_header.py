@@ -51,17 +51,42 @@ class TestItIsAMarkerNotAnOption:
 
     def test_the_parser_skips_it(self):
         """빠지면 "Unknown option type" 으로 **파싱이 통째로 멈춘다** —
-        2026-08-27 에 collapse 표식이 실제로 그랬다(62개 중 9개만 설정)."""
+        2026-08-27 에 collapse 표식이 실제로 그랬다(62개 중 9개만 설정).
+
+        ⚠ 예전에는 "세 자리에 `'env_status'` 가 적혀 있는가" 로 봤다. 자리가
+          여섯이고(CSV·JSON × 세 검사) 손으로 적혀 있었으니, 새 종류를 넣을
+          때마다 일부를 빠뜨렸다 — 2026-08-27 하루에 두 번 났다. 이제 목록은
+          **상수 하나**이고, 검사는 *그 상수가 실제로 쓰이는가* 를 본다.
+        """
+        from aot.controllers import abstract_base_controller as abc
+        for name in ('NO_ID_REQUIRED_TYPES', 'NO_DEFAULT_REQUIRED_TYPES',
+                     'DISPLAY_ONLY_TYPES'):
+            assert 'env_status' in getattr(abc, name), (
+                '%s 에 머리말 표식이 없다' % name)
         parser = _read('controllers', 'abstract_base_controller.py')
         for fn in ('setup_custom_options_csv', 'setup_custom_options_json'):
             block = parser.split('def %s' % fn, 1)[1].split('\n    def ', 1)[0]
-            assert block.count("'env_status'") >= 3, (
-                '%s 가 머리말 표식을 면제하지 않는다 — 세 자리 모두 필요하다' % fn)
+            for name in ('NO_ID_REQUIRED_TYPES', 'NO_DEFAULT_REQUIRED_TYPES',
+                         'DISPLAY_ONLY_TYPES'):
+                assert name in block, (
+                    '%s 가 %s 를 쓰지 않는다 — 목록을 손으로 다시 적었는가?'
+                    % (fn, name))
 
     def test_the_option_count_is_unchanged(self):
-        """머리말은 옵션이 아니다 — 62개 그대로여야 한다."""
-        opts = _fi().FUNCTION_INFORMATION['custom_options']
-        markers = ('header', 'collapse_start', 'collapse_end', 'env_status')
+        """머리말은 옵션이 아니다 — 62개 그대로여야 한다.
+
+        ⚠ 표식 목록을 여기 손으로 적지 말 것. `range_band` 는 `id` 를 갖는데
+          (어느 밴드인지) 옵션이 아니라, 손으로 적은 목록에서 빠지자 **옵션으로
+          세어져 64가 됐다.** 정본은 `_apply_layout` 의 `_MARKERS` 하나다.
+        """
+        import inspect
+        import re as _re
+        fi = _fi()
+        src = inspect.getsource(fi._apply_layout)
+        markers = tuple(_re.findall(
+            r"'([a-z_]+)'",
+            _re.search(r"_MARKERS = \(([^)]*)\)", src, _re.S).group(1)))
+        opts = fi.FUNCTION_INFORMATION['custom_options']
         vals = [o for o in opts if o.get('id') and o.get('type') not in markers]
         assert len(vals) == 62, len(vals)
 

@@ -60,9 +60,75 @@
 <div class="{{ custom_opt_container }}">
 
 
+    {#- 눈금 입력(단계 C′) — `AoTViz` 의 입력형.
+        ⚠ **폼 필드는 아래 숫자 칸 하나뿐이다.** 눈금은 그 위에 얹힌 조작기이고
+          누르면 그 칸의 값을 바꾼다. 단계 이름을 따로 저장하면 둘이 어긋나고,
+          어긋나면 어느 쪽이 이기는지 화면에 안 보인다(`actuation_profile` 이
+          실제로 그랬다 — 쿠마모토의 1200 이 죽은 값이었다). -#}
+    {#- 핵심 옵션 — **한 번 고르면 그 그룹의 세부 값이 함께 바뀐다**(로봇
+        청소기의 운전모드). 그룹 선택 자체는 **저장하지 않는다** — 저장되는
+        것은 세부 옵션의 값들이고, 어느 단계인지는 그 값에서 되짚는다. -#}
+    {#- 구간 입력 — 상·하한과 권장 범위를 한 트랙에서 끈다.
+        ⚠ 폼 필드는 **네 숫자 칸 그대로**다(아래 advanced_only 행들). 이 컨트롤은
+          그 위에 얹힌 조작기라 따로 저장하는 값이 없다. -#}
+    {% elif each_option['type'] == 'range_band' %}
+
+<div class="aot-modal-option-row aot-modal-option-row-wrap">
+  <div class="aot-range-band"
+       data-prefix="{{name_prefix}}"
+       data-label="{{each_option['name']}}"
+       data-guide-label="{{each_option.get('guide_label', '')}}"
+       data-unit="{{each_option.get('unit', '')}}"
+       data-min="{{each_option['axis_min']}}" data-max="{{each_option['axis_max']}}"
+       data-step="{{each_option.get('step', 1)}}"
+       data-margin="{{each_option.get('margin', 5)}}"
+       data-hardmin="{{each_option.get('hard_min', '')}}"
+       data-hardmax="{{each_option.get('hard_max', '')}}"
+       data-guidemin="{{each_option.get('guide_min', '')}}"
+       data-guidemax="{{each_option.get('guide_max', '')}}"></div>
+</div>
+
+    {% elif each_option['type'] == 'scale_group' %}
+
+<div class="aot-modal-option-row aot-modal-option-row-wrap"{% if each_option.get('depends_on') %} data-depends-on="{{name_prefix}}{{each_option['depends_on']}}"{% endif %}>
+  <div class="aot-scale-input aot-scale-group"
+       data-prefix="{{name_prefix}}"
+       data-label="{{each_option['group']['name']}}"
+       data-hint="{{each_option['group'].get('phrase', '')}}"
+       data-axis-low="{{each_option['group']['axis_low']}}"
+       data-axis-high="{{each_option['group']['axis_high']}}"
+       data-steps='{{ each_option['group']['steps'] | tojson }}'></div>
+</div>
+
+    {% elif each_option['type'] == 'select_scale' %}
+
+{#- ⚠ **컨트롤 칸에 넣지 말 것.** `.aot-viz` 는 자기 라벨·값·눈금을 다 갖는
+    **행 전체짜리 컴포넌트**다. `.aot-modal-option-control`(오른쪽 좁은 칸,
+    실측 160px)에 넣으면 트랙이 그 안에서 눌린다 — 2026-08-27 에 실제로
+    그렇게 만들었다. 라벨 칸을 두지 않고 행을 통째로 쓴다. -#}
+<div class="aot-modal-option-row aot-modal-option-row-wrap{% if each_option.get('advanced_only') %} aot-advanced-only{% endif %}"{% if each_option.get('depends_on') %} data-depends-on="{{name_prefix}}{{each_option['depends_on']}}"{% endif %}>
+  <div class="aot-scale-input"
+       data-for="{{name_prefix}}{{each_option['id']}}"
+       data-label="{{each_option['name']}}"
+       data-unit="{{each_option.get('unit', '')}}"
+       data-axis-low="{{each_option.get('axis_low', '')}}"
+       data-axis-high="{{each_option.get('axis_high', '')}}"
+       data-steps='{{ each_option.get('steps', []) | tojson }}'></div>
+  {#- 직접 지정 — [고급] 을 켜야 보인다. 값은 언제나 여기 있다. -#}
+  <div class="aot-scale-number">
+    <input id="{{name_prefix}}{{each_option['id']}}"
+           name="{% if channel_options %}{{name_prefix}}{% endif %}{{each_option['id']}}"
+           type="number" step="any" class="aot-modern-input form-control"
+           value="{%- if custom_options_values and custom_options_values[unique_id][each_option['id']] is not none -%}
+                    {{custom_options_values[unique_id][each_option['id']]}}
+                  {%- elif force_default_value -%}{{each_option['default_value']}}{%- endif -%}">
+    {% if each_option.get('unit') %}<span class="aot-modal-body-text">{{each_option['unit']}}</span>{% endif %}
+  </div>
+</div>
+
     {% elif each_option['type'] in ['float', 'integer', 'text', 'color'] %}
 
-<div class="aot-modal-option-row"{% if each_option.get('depends_on') %} data-depends-on="{{name_prefix}}{{each_option['depends_on']}}"{% endif %}>
+<div class="aot-modal-option-row{% if each_option.get('advanced_only') %} aot-advanced-only{% endif %}"{% if each_option.get('depends_on') %} data-depends-on="{{name_prefix}}{{each_option['depends_on']}}"{% endif %}>
   <label class="aot-modal-option-label" title="{{each_option.get('phrase', '')}}">{{each_option['name']}}{% if each_option.get('phrase') %}<span class="fas fa-info-circle aot-option-tip" aria-hidden="true"></span>{% endif %}</label>
   <div class="aot-modal-option-control {% if 'api_key' in each_option['id'].lower() or 'token' in each_option['id'].lower() %}aot-api-key-group{% endif %}">
       <input class="form-control aot-modern-input" id="{{name_prefix}}{{each_option['id']}}" name="{% if channel_options %}{{name_prefix}}{% endif %}{{each_option['id']}}" title="{{each_option['phrase']}}" type="
@@ -121,7 +187,7 @@
 
     {% elif each_option['type'] == 'bool' %}
 
-<div class="aot-modal-option-row"{% if each_option.get('depends_on') %} data-depends-on="{{name_prefix}}{{each_option['depends_on']}}"{% endif %}>
+<div class="aot-modal-option-row{% if each_option.get('advanced_only') %} aot-advanced-only{% endif %}"{% if each_option.get('depends_on') %} data-depends-on="{{name_prefix}}{{each_option['depends_on']}}"{% endif %}>
   <label class="aot-modal-option-label" title="{{each_option.get('phrase', '')}}">{{each_option['name']}}{% if each_option.get('phrase') %}<span class="fas fa-info-circle aot-option-tip" aria-hidden="true"></span>{% endif %}</label>
   <div class="aot-modal-option-control">
     <label class="btn-toggle mb-0">
@@ -140,7 +206,7 @@
 
     {% elif each_option['type'] == 'select' %}
 
-<div class="aot-modal-option-row"{% if each_option.get('depends_on') %} data-depends-on="{{name_prefix}}{{each_option['depends_on']}}"{% endif %}>
+<div class="aot-modal-option-row{% if each_option.get('advanced_only') %} aot-advanced-only{% endif %}"{% if each_option.get('depends_on') %} data-depends-on="{{name_prefix}}{{each_option['depends_on']}}"{% endif %}>
   <label class="aot-modal-option-label" title="{{each_option.get('phrase', '')}}">{{each_option['name']}}{% if each_option.get('phrase') %}<span class="fas fa-info-circle aot-option-tip" aria-hidden="true"></span>{% endif %}</label>
   <div class="aot-modal-option-control">
     <select class="form-control aot-modern-select selectpicker aot-standard-select" data-style="btn-white" id="{{name_prefix}}{{each_option['id']}}" name="{% if channel_options %}{{name_prefix}}{% endif %}{{each_option['id']}}" title="{{each_option['phrase']}}">
@@ -167,7 +233,7 @@
 
     {% elif each_option['type'] == 'select_custom_choices' %}
 
-<div class="aot-modal-option-row"{% if each_option.get('depends_on') %} data-depends-on="{{name_prefix}}{{each_option['depends_on']}}"{% endif %}>
+<div class="aot-modal-option-row{% if each_option.get('advanced_only') %} aot-advanced-only{% endif %}"{% if each_option.get('depends_on') %} data-depends-on="{{name_prefix}}{{each_option['depends_on']}}"{% endif %}>
   <label class="aot-modal-option-label" title="{{each_option.get('phrase', '')}}">{{each_option['name']}}{% if each_option.get('phrase') %}<span class="fas fa-info-circle aot-option-tip" aria-hidden="true"></span>{% endif %}</label>
   <div class="aot-modal-option-control">
     <select class="form-control aot-modern-select" id="{{name_prefix}}{{each_option['id']}}" name="{% if channel_options %}{{name_prefix}}{% endif %}{{each_option['id']}}" title="{{each_option['phrase']}}"
@@ -211,7 +277,7 @@
         ("PID", choices_pid)
       ] %}
 
-<div class="aot-modal-option-row"{% if each_option.get('depends_on') %} data-depends-on="{{name_prefix}}{{each_option['depends_on']}}"{% endif %}>
+<div class="aot-modal-option-row{% if each_option.get('advanced_only') %} aot-advanced-only{% endif %}"{% if each_option.get('depends_on') %} data-depends-on="{{name_prefix}}{{each_option['depends_on']}}"{% endif %}>
   <label class="aot-modal-option-label" title="{{each_option.get('phrase', '')}}">{{each_option['name']}}{% if each_option.get('phrase') %}<span class="fas fa-info-circle aot-option-tip" aria-hidden="true"></span>{% endif %}</label>
   <div class="aot-modal-option-control">
     <select class="form-control aot-modern-select" id="{{name_prefix}}{{each_option['id']}}" name="{% if channel_options %}{{name_prefix}}{% endif %}{{each_option['id']}}" title="{{each_option['phrase']}}"
@@ -231,7 +297,7 @@
 
     {% elif each_option['type'] == 'select_measurement_from_this_input' %}
 
-<div class="aot-modal-option-row"{% if each_option.get('depends_on') %} data-depends-on="{{name_prefix}}{{each_option['depends_on']}}"{% endif %}>
+<div class="aot-modal-option-row{% if each_option.get('advanced_only') %} aot-advanced-only{% endif %}"{% if each_option.get('depends_on') %} data-depends-on="{{name_prefix}}{{each_option['depends_on']}}"{% endif %}>
   <label class="aot-modal-option-label" title="{{each_option.get('phrase', '')}}">{{each_option['name']}}{% if each_option.get('phrase') %}<span class="fas fa-info-circle aot-option-tip" aria-hidden="true"></span>{% endif %}</label>
   <div class="aot-modal-option-control">
     <select class="form-control aot-modern-select" id="{{name_prefix}}{{each_option['id']}}" name="{% if channel_options %}{{name_prefix}}{% endif %}{{each_option['id']}}" title="{{each_option['phrase']}}"
@@ -247,7 +313,7 @@
 
     {% elif each_option['type'] == 'select_channel' %}
 
-<div class="aot-modal-option-row"{% if each_option.get('depends_on') %} data-depends-on="{{name_prefix}}{{each_option['depends_on']}}"{% endif %}>
+<div class="aot-modal-option-row{% if each_option.get('advanced_only') %} aot-advanced-only{% endif %}"{% if each_option.get('depends_on') %} data-depends-on="{{name_prefix}}{{each_option['depends_on']}}"{% endif %}>
   <label class="aot-modal-option-label" title="{{each_option.get('phrase', '')}}">{{each_option['name']}}{% if each_option.get('phrase') %}<span class="fas fa-info-circle aot-option-tip" aria-hidden="true"></span>{% endif %}</label>
   <div class="aot-modal-option-control">
     <select class="form-control aot-modern-select" id="{{name_prefix}}{{each_option['id']}}" name="{% if channel_options %}{{name_prefix}}{% endif %}{{each_option['id']}}" title="{{each_option['phrase']}}"
@@ -265,7 +331,7 @@
 
     {% elif each_option['type'] == 'select_measurement_channel' %}
 
-<div class="aot-modal-option-row"{% if each_option.get('depends_on') %} data-depends-on="{{name_prefix}}{{each_option['depends_on']}}"{% endif %}>
+<div class="aot-modal-option-row{% if each_option.get('advanced_only') %} aot-advanced-only{% endif %}"{% if each_option.get('depends_on') %} data-depends-on="{{name_prefix}}{{each_option['depends_on']}}"{% endif %}>
   <label class="aot-modal-option-label" title="{{each_option.get('phrase', '')}}">{{each_option['name']}}{% if each_option.get('phrase') %}<span class="fas fa-info-circle aot-option-tip" aria-hidden="true"></span>{% endif %}</label>
   <div class="aot-modal-option-control">
     <select class="form-control aot-modern-select" id="{{name_prefix}}{{each_option['id']}}" name="{% if channel_options %}{{name_prefix}}{% endif %}{{each_option['id']}}" title="{{each_option['phrase']}}"
@@ -415,7 +481,7 @@
    ⚠ **저장된 값을 먼저 넣어 둔다.** 목록을 못 받아도(시설 미선택·통신 실패)
      폼이 그대로 제출되면 기존 설정이 살아 있어야 한다 — 빈 select 를 제출하면
      사용자가 손대지도 않은 구역 설정이 지워진다. #}
-<div class="aot-modal-option-row"{% if each_option.get('depends_on') %} data-depends-on="{{name_prefix}}{{each_option['depends_on']}}"{% endif %}>
+<div class="aot-modal-option-row{% if each_option.get('advanced_only') %} aot-advanced-only{% endif %}"{% if each_option.get('depends_on') %} data-depends-on="{{name_prefix}}{{each_option['depends_on']}}"{% endif %}>
   <label class="aot-modal-option-label" title="{{each_option.get('phrase', '')}}">{{each_option['name']}}{% if each_option.get('phrase') %}<span class="fas fa-info-circle aot-option-tip" aria-hidden="true"></span>{% endif %}</label>
   <div class="aot-modal-option-control">
     {% set _cur = (custom_options_values[unique_id][channel][each_option['id']] if channel_options else (custom_options_values[unique_id][each_option['id']] if custom_options_values else '')) %}
@@ -442,7 +508,7 @@
         ("GeoFacility", table_geofacility.query.all() if table_geofacility else [])
       ] %}
 
-<div class="aot-modal-option-row"{% if each_option.get('depends_on') %} data-depends-on="{{name_prefix}}{{each_option['depends_on']}}"{% endif %}>
+<div class="aot-modal-option-row{% if each_option.get('advanced_only') %} aot-advanced-only{% endif %}"{% if each_option.get('depends_on') %} data-depends-on="{{name_prefix}}{{each_option['depends_on']}}"{% endif %}>
   <label class="aot-modal-option-label" title="{{each_option.get('phrase', '')}}">{{each_option['name']}}{% if each_option.get('phrase') %}<span class="fas fa-info-circle aot-option-tip" aria-hidden="true"></span>{% endif %}</label>
   <div class="aot-modal-option-control">
     <select class="form-control aot-modern-select" id="{{name_prefix}}{{each_option['id']}}" name="{% if channel_options %}{{name_prefix}}{% endif %}{{each_option['id']}}" title="{{each_option['phrase']}}"
@@ -471,7 +537,7 @@
 
       {% elif each_option['type'] == 'select_type_measurement' %}
 
-<div class="aot-modal-option-row"{% if each_option.get('depends_on') %} data-depends-on="{{name_prefix}}{{each_option['depends_on']}}"{% endif %}>
+<div class="aot-modal-option-row{% if each_option.get('advanced_only') %} aot-advanced-only{% endif %}"{% if each_option.get('depends_on') %} data-depends-on="{{name_prefix}}{{each_option['depends_on']}}"{% endif %}>
   <label class="aot-modal-option-label" title="{{each_option.get('phrase', '')}}">{{each_option['name']}}{% if each_option.get('phrase') %}<span class="fas fa-info-circle aot-option-tip" aria-hidden="true"></span>{% endif %}</label>
   <div class="aot-modal-option-control">
     <select class="form-control aot-modern-select" id="{{name_prefix}}{{each_option['id']}}" name="{% if channel_options %}{{name_prefix}}{% endif %}{{each_option['id']}}" title="{{each_option['phrase']}}"
@@ -493,7 +559,7 @@
 
     {% elif each_option['type'] == 'select_type_unit' %}
 
-<div class="aot-modal-option-row"{% if each_option.get('depends_on') %} data-depends-on="{{name_prefix}}{{each_option['depends_on']}}"{% endif %}>
+<div class="aot-modal-option-row{% if each_option.get('advanced_only') %} aot-advanced-only{% endif %}"{% if each_option.get('depends_on') %} data-depends-on="{{name_prefix}}{{each_option['depends_on']}}"{% endif %}>
   <label class="aot-modal-option-label" title="{{each_option.get('phrase', '')}}">{{each_option['name']}}{% if each_option.get('phrase') %}<span class="fas fa-info-circle aot-option-tip" aria-hidden="true"></span>{% endif %}</label>
   <div class="aot-modal-option-control">
     <select class="form-control aot-modern-select" id="{{name_prefix}}{{each_option['id']}}" name="{% if channel_options %}{{name_prefix}}{% endif %}{{each_option['id']}}" title="{{each_option['phrase']}}"
@@ -515,7 +581,7 @@
 
     {% elif each_option['type'] == 'button' %}
 
-<div class="aot-modal-option-row"{% if each_option.get('depends_on') %} data-depends-on="{{name_prefix}}{{each_option['depends_on']}}"{% endif %}>
+<div class="aot-modal-option-row{% if each_option.get('advanced_only') %} aot-advanced-only{% endif %}"{% if each_option.get('depends_on') %} data-depends-on="{{name_prefix}}{{each_option['depends_on']}}"{% endif %}>
   <label class="aot-modal-option-label" title="{{each_option.get('phrase', '')}}">{{each_option['name']}}{% if each_option.get('phrase') %}<span class="fas fa-info-circle aot-option-tip" aria-hidden="true"></span>{% endif %}</label>
   <div class="aot-modal-option-control">
       <input onclick="return $(this).processRequest(this, 'custom_button_{{each_option['id']}}');" name="custom_button_{{each_option['id']}}" title="{{each_option['phrase']}}" class="btn aot-pill-btn aot-pill-btn-primary" type="button" value="{{each_option['name']}}"
