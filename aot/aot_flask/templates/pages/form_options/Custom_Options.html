@@ -591,12 +591,21 @@
 
     {% elif each_option['type'] == 'button' %}
 
-<div class="aot-modal-option-row{% if each_option.get('advanced_only') %} aot-advanced-only{% endif %}"{% if each_option.get('depends_on') %} data-depends-on="{{name_prefix}}{{each_option['depends_on']}}"{% endif %}>
-  <label class="aot-modal-option-label" title="{{each_option.get('phrase', '')}}">{{each_option['name']}}{% if each_option.get('phrase') %}<span class="fas fa-info-circle aot-option-tip" aria-hidden="true"></span>{% endif %}</label>
+{#- ⚠ **버튼에는 라벨 칸을 두지 않는다** (설계문서 §3-6, 2026-08-27 구현).
+    버튼의 글자가 곧 그 이름이라, 왼쪽에 라벨을 또 두면 **같은 말이 한 줄에
+    두 번** 나온다 — 실제로 그랬다:
+
+        액추에이터 다시 불러오기 │ [액추에이터 다시 불러오기]
+        지금 실행               │ [지금 실행]
+        긴급 정지               │ [긴급 정지]
+
+    설명(`phrase`)은 버튼의 `title` 로 이미 간다. 라벨을 없애면 그 도움말
+    아이콘도 함께 사라지므로, 설명이 있으면 버튼 옆에 그대로 붙인다. -#}
+<div class="aot-modal-option-row aot-modal-option-row-button{% if each_option.get('advanced_only') %} aot-advanced-only{% endif %}"{% if each_option.get('depends_on') %} data-depends-on="{{name_prefix}}{{each_option['depends_on']}}"{% endif %}>
   <div class="aot-modal-option-control">
       <input onclick="return $(this).processRequest(this, 'custom_button_{{each_option['id']}}');" name="custom_button_{{each_option['id']}}" title="{{each_option['phrase']}}" class="btn aot-pill-btn aot-pill-btn-primary" type="button" value="{{each_option['name']}}"
       {%- if 'disabled' in each_option and each_option['disabled'] %} disabled{% endif -%}
-      />
+      />{% if each_option.get('phrase') %}<span class="fas fa-info-circle aot-option-tip" title="{{each_option['phrase']}}" aria-hidden="true"></span>{% endif %}
   </div>
 </div>
 

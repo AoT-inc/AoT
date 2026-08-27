@@ -187,6 +187,86 @@ class TestNoDoubleVersionedAssets(unittest.TestCase):
         self.assertGreater(found, 0,
                            '리터럴 참조의 버전이 통째로 사라졌다')
 
+class TestThePageBaseIsOnTheLadder(unittest.TestCase):
+    """**페이지 기본 크기도 사다리 위**여야 한다 (2026-08-27).
+
+    `body { font-size: 0.87rem }` 이었다 — `sm`(0.85)과 `base`(0.95) 사이라
+    어느 칸도 아니다. 그런데 이것이 **거의 모든 글자의 출발점**이라, 크기를
+    상속으로 받는 요소가 전부 사다리 밖에 앉았다.
+
+    실제로 그렇게 보였다: 알약 버튼 13.92px. 그 버튼에 크기를 주는 규칙을
+    찾다가 **자기 규칙이 없다**는 것을 알았다 — `body` 를 상속할 뿐이었다.
+    컴포넌트를 하나씩 고쳐도 근원이 어긋나 있으면 끝이 없다.
+
+    ⚠ 여기는 **테마 파일**이다. 다른 부트스트랩 테마를 고른 설치는 그 테마의
+      값을 쓴다 — 그것이 맞다(테마를 고른다는 것이 그런 뜻이다).
+    """
+
+    def test_the_theme_body_uses_a_token(self):
+        css = _css('bootstrap-4-themes', 'aot.css')
+        body = _rule(css, 'body')
+        self.assertIsNotNone(body, 'aot 테마에 body 규칙이 없다')
+        got = re.search(r'font-size:\s*var\((--aot-font-size-[\w-]+)\)', body)
+        self.assertIsNotNone(got, '페이지 기본 크기가 리터럴이다 — 상속받는 '
+                                  '모든 글자가 사다리 밖에 앉는다')
+        self.assertEqual(got.group(1), '--aot-font-size-sm')
+
+    def test_the_theme_link_carries_a_manual_version(self):
+        """⚠ 테마는 **리터럴 참조**다(`{{ effective_theme }}`) — `url_for` 를
+        지나지 않아 내용 해시가 안 붙는다. 그래서 내용을 고치면 `?v=` 를
+        **손으로 올려야** 한다.
+
+        이번에 그것을 잊고 "왜 안 바뀌지" 를 한 번 겪었다. 검사가 값을 강제할
+        수는 없지만(무엇으로 올릴지는 사람이 정한다) **있는지**는 본다.
+        """
+        base = os.path.join(_ROOT, 'aot_flask', 'templates')
+        for name in ('layout_default.html', 'layout.html'):
+            with open(os.path.join(base, name), encoding='utf-8') as fh:
+                src = fh.read()
+            self.assertRegex(src, r'\{\{\s*effective_theme\s*\}\}\?v=',
+                             '%s: 테마 링크에 버전이 없다 — 고쳐도 브라우저가 '
+                             '옛 테마를 계속 쓴다' % name)
+
+
+class TestButtonRowsHaveNoDuplicateLabel(unittest.TestCase):
+    """버튼의 글자가 곧 그 이름이다 — 왼쪽에 라벨을 또 두면 **같은 말이 한
+    줄에 두 번** 나온다 (설계문서 §3-6).
+
+        액추에이터 다시 불러오기 │ [액추에이터 다시 불러오기]
+        지금 실행               │ [지금 실행]
+        긴급 정지               │ [긴급 정지]
+
+    설계문서에 *"버튼에는 라벨 칸을 두지 않는다 — 중복 3건 해소"* 라고 적어
+    두고 **구현하지 않은 채** 남아 있었다.
+    """
+
+    def _branch(self):
+        path = os.path.join(_ROOT, 'aot_flask', 'templates', 'pages',
+                            'form_options', 'Custom_Options.html')
+        with open(path, encoding='utf-8') as fh:
+            src = fh.read()
+        return src.split("== 'button' %}", 1)[1].split('{% elif', 1)[0]
+
+    def test_the_row_has_no_label(self):
+        self.assertNotIn('aot-modal-option-label', self._branch(),
+                         '버튼 행에 라벨 칸이 되살아났다 — 이름이 두 번 나온다')
+
+    def test_the_button_still_carries_its_name(self):
+        self.assertIn("value=\"{{each_option['name']}}\"", self._branch())
+
+    def test_the_hint_survives(self):
+        """라벨을 없애면 그 옆의 도움말 아이콘도 함께 사라진다 — 설명이 있는
+        버튼은 그것을 잃으면 안 된다."""
+        b = self._branch()
+        self.assertIn('aot-option-tip', b, '도움말 아이콘이 사라졌다')
+        self.assertIn("title=\"{{each_option['phrase']}}\"", b)
+
+    def test_the_control_spans_the_row(self):
+        """컨트롤이 고정폭이라 그대로 두면 버튼이 오른쪽 끝에 홀로 떨어진다."""
+        css = _css('aot-modal-modern.css')
+        self.assertIn('.aot-modal-option-row-button', css,
+                      '버튼 행 폭 규칙이 없다')
+
 
 if __name__ == '__main__':
     unittest.main()

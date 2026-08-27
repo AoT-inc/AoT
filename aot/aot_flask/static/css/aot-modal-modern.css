@@ -2216,3 +2216,14 @@ body { transition: padding-right 0.4s cubic-bezier(0.075, 0.82, 0.165, 1); }
     word-break: break-all;
 }
 .aot-lib-kind { font-size: var(--aot-font-size-2xs); color: var(--aot-color-text-secondary); }
+
+/* 버튼만 있는 행 — 라벨 칸이 없다(설계문서 §3-6). 컨트롤이 고정폭
+   (`--aot-common-control-width`)이라 그대로 두면 버튼이 오른쪽 끝에 홀로
+   떨어져, 옆줄들과 층이 어긋나 보인다. 행 전체를 쓰고 왼쪽에 세운다 —
+   라벨이 서던 자리다. */
+.aot-modal-option-row.aot-modal-option-row-button > .aot-modal-option-control {
+    flex: 1 1 100% !important;
+    width: auto !important;
+    min-width: 0 !important;
+    justify-content: flex-start;
+}
