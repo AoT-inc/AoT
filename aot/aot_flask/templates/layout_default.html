@@ -87,7 +87,7 @@ IMPORTANT: This is the SOURCE TEMPLATE file.
 
   <link href="{{ url_for('static', filename='css/bootstrap.min.css') }}" rel="stylesheet">
   <link href="{{ url_for('static', filename='css/simple-sidebar.css') }}" rel="stylesheet">
-  <link href="{{ url_for('static', filename='css/aot-theme-variables.css') }}?v=20260825a" rel="stylesheet">
+  <link href="{{ url_for('static', filename='css/aot-theme-variables.css') }}" rel="stylesheet">
 
   {% set effective_theme = current_user.theme if current_user.is_authenticated and current_user.theme else
   '/static/css/bootstrap-4-themes/aot.css' %}
@@ -101,11 +101,11 @@ IMPORTANT: This is the SOURCE TEMPLATE file.
   <link href="{{ effective_theme }}?v=20260825a" rel="stylesheet">
 
   <link href="/static/css/custom.css?v=20260603" rel="stylesheet">
-  <link href="{{ url_for('static', filename='css/aot-base.css') }}?v=20260813a" rel="stylesheet">
-  <link href="{{ url_for('static', filename='css/widget/aot-widget-typography.css') }}?v=20260606" rel="stylesheet">
-  <link href="{{ url_for('static', filename='css/components/aot-base-ui.css') }}?v=20260702z" rel="stylesheet">
+  <link href="{{ url_for('static', filename='css/aot-base.css') }}" rel="stylesheet">
+  <link href="{{ url_for('static', filename='css/widget/aot-widget-typography.css') }}" rel="stylesheet">
+  <link href="{{ url_for('static', filename='css/components/aot-base-ui.css') }}" rel="stylesheet">
   <link href="{{ url_for('static', filename='css/components/aot-toggle.css') }}" rel="stylesheet">
-  <link href="{{ url_for('static', filename='css/components/aot-3way.css') }}?v=20260527d" rel="stylesheet">
+  <link href="{{ url_for('static', filename='css/components/aot-3way.css') }}" rel="stylesheet">
   {#- 눈금 입력(select_scale)이 `AoTViz` 골격을 그대로 쓴다 — 설정 화면에서도
       필요하다. 예전에는 지도 위젯·구획 화면만 실었다. -#}
   <link href="{{ url_for('static', filename='css/components/aot-dataviz.css') }}" rel="stylesheet">
@@ -499,12 +499,12 @@ IMPORTANT: This is the SOURCE TEMPLATE file.
     setInterval(check_daemon_status, 60000);
   </script>
   <!-- AoT Modern Design System (Override Bootstrap) - Load Check: Ensure this is last in head -->
-  <link href="{{ url_for('static', filename='css/aot-modal-modern.css') }}?v=20260825a" rel="stylesheet">
+  <link href="{{ url_for('static', filename='css/aot-modal-modern.css') }}" rel="stylesheet">
   
   <!-- Shared drawer shell (AI chat, Notes) -->
-  <link href="{{ url_for('static', filename='css/components/aot-drawer.css') }}?v=20260722a" rel="stylesheet">
+  <link href="{{ url_for('static', filename='css/components/aot-drawer.css') }}" rel="stylesheet">
   <!-- AI Global Styles -->
-  <link href="{{ url_for('static', filename='css/ai/aot-ai-global.css') }}?v=20260718i" rel="stylesheet">
+  <link href="{{ url_for('static', filename='css/ai/aot-ai-global.css') }}" rel="stylesheet">
 </head>
 
 <body class="{% if active_page in ['geo_design', 'settings'] %}body-no-gap{% endif %}" style="width: 100%; max-width: 100vw !important; overflow-x: hidden !important; overflow-y: auto;">
@@ -1229,7 +1229,7 @@ IMPORTANT: This is the SOURCE TEMPLATE file.
     </div>
   </div>
 
-  <script src="{{ url_for('static', filename='js/ai/aot-ai-global.js') }}?v=20260719b"></script>
+  <script src="{{ url_for('static', filename='js/ai/aot-ai-global.js') }}"></script>
   {% endif %}
   
   <script>

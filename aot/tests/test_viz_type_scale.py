@@ -140,6 +140,53 @@ class TestTheModalUsesTheScale(unittest.TestCase):
         for name in sorted(used):
             self.assertIn('%s:' % name, tokens, '없는 토큰: %s' % name)
 
+class TestNoDoubleVersionedAssets(unittest.TestCase):
+    """`url_for('static', …)` 뒤에 손으로 `?v=` 를 또 붙이지 않는다 (2026-08-27).
+
+    프레임워크가 이미 **내용 해시**를 붙인다(`app._static_cache_bust`,
+    `@app.url_defaults` 로 `endpoint == 'static'` 전부를 덮는다). 그 위에 손으로
+    붙이면 `...css?v=<해시>?v=20260825a` 가 된다.
+
+    ## 고장은 아니었다 — 그래서 더 오래 남았다
+
+    해시가 여전히 바뀌므로 캐시 무효화는 계속 작동한다. 대가는 다른 것이다:
+
+      · 손으로 붙인 값이 **아무 일도 안 하는데 관리 대상처럼 보인다.** 파일을
+        고친 사람이 그 날짜를 올려야 하나 망설이고, 안 올려도 아무 일이 없다.
+      · 어느 쪽이 실제 버전인지 URL 만 보고 알 수 없다.
+
+    ⚠ **리터럴 `/static/…?v=` 는 반대다.** 그쪽은 `url_for` 를 지나지 않아
+      프레임워크 해시가 안 붙으므로 `?v=` 가 **반드시 있어야** 한다
+      (`check_static_cache_busting.py` 가 그것을 요구한다). 이 검사가 그것까지
+      지우게 만들면 안 된다.
+    """
+
+    def _templates(self):
+        base = os.path.join(_ROOT, 'aot_flask', 'templates')
+        for dirpath, _d, names in os.walk(base):
+            for n in names:
+                if n.endswith('.html'):
+                    path = os.path.join(dirpath, n)
+                    with open(path, encoding='utf-8') as fh:
+                        yield os.path.relpath(path, base), fh.read()
+
+    def test_no_manual_version_after_url_for_static(self):
+        bad = []
+        for name, src in self._templates():
+            if re.search(r"url_for\('static'[^)]*\)\s*\}\}\?v=", src):
+                bad.append(name)
+        self.assertEqual(sorted(bad), [],
+                         'url_for 뒤에 손으로 붙인 ?v= 가 있다')
+
+    def test_literal_references_keep_theirs(self):
+        """이 검사가 리터럴의 `?v=` 까지 지우게 만들면 안 된다 — 그쪽은
+        프레임워크 해시가 안 붙어 1년 캐시가 곧 "1년간 옛 코드" 가 된다."""
+        found = 0
+        for _name, src in self._templates():
+            found += len(re.findall(r'"/static/[^"]*\?v=', src))
+        self.assertGreater(found, 0,
+                           '리터럴 참조의 버전이 통째로 사라졌다')
+
 
 if __name__ == '__main__':
     unittest.main()

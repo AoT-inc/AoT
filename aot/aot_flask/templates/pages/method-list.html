@@ -5,7 +5,7 @@
 {% block title %} - {{dict_translation['method']['title']}}{% endblock %}
 
 {% block head %}
-  <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/aot-settings.css') }}?v=15" />
+  <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/aot-settings.css') }}" />
   {% if method %}
   <script src="{{ url_for('static', filename='js/vendor/user_js/highcharts-9.1.2.js') }}"></script>
     {% if current_user.theme in dark_themes %}
