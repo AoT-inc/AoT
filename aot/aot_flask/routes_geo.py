@@ -5177,6 +5177,99 @@ def api_geo_map_site_order_save(map_uuid):
     return jsonify({'ok': True})
 
 
+
+
+# ──────────────────────────────────────────────────────────────────────────
+# 지도 중심의 현지 시각 — 지도 위젯 상단 시간 독이 쓰는 유일한 서버 경로.
+#
+# 지도는 세계 어디로든 간다. 그러면 "지금 몇 시인가"는 농장의 시간대가 아니라
+# **화면 한가운데가 있는 곳의 시간대**로 답해야 한다. 그 판정(좌표→IANA)과
+# 태양시 계산은 이미 서버에 하나씩 있으므로(device_tz.resolve_tz_from_coords,
+# solar.sun_times) 여기서는 그 둘을 묶어 내보내기만 한다 — 클라이언트가 다시
+# 추측하면 시스템 안에 시간대 해석이 두 벌 생긴다.
+#
+# 시계는 이 응답으로 **초당 폴링하지 않는다.** tz 이름을 받아 브라우저가
+# Intl 로 직접 째깍이고, 서버는 좌표가 의미 있게 바뀌거나 현지 날짜가 넘어갈
+# 때만 다시 불린다. server_epoch_ms 는 그 째깍임의 기준점 — 브라우저 시계가
+# 틀어져 있어도 서버 시각을 따라가게 하는 보정값이다.
+# ──────────────────────────────────────────────────────────────────────────
+# 좌표 반올림 자릿수. 3자리 ≈ 110m — 그 거리에서 일출/일몰 차이는 1초 미만이라
+# 표시에 영향이 없고, solar/device_tz 양쪽 캐시의 적중률만 올라간다.
+_LOCAL_TIME_COORD_ROUND = 3
+
+
+@blueprint.route('/api/geo/local_time', methods=['GET'])
+@login_required
+def api_geo_local_time():
+    """지도 중심 좌표의 현지 시각·시간대·태양시를 반환.
+
+    쿼리: lat, lng (필수).
+    응답: tz / tz_abbrev / utc_offset_minutes / server_epoch_ms / local_date
+          + status + sunrise_ms / sunset_ms + events(어제~모레의 일출·일몰,
+          시각 오름차순 — 독이 직전/다음 사건을 여기서 고른다).
+
+    극야·백야는 오류가 아니라 status('always_day' / 'always_night')로 나간다.
+    좌표에서 시간대를 못 찾으면(바다 한가운데 등) 농장 전역 tz 로 떨어지고
+    tz_resolved=false 로 알린다 — 표시 쪽이 그걸 밝힐 수 있어야 한다.
+    """
+    from datetime import timedelta
+
+    from aot.utils.device_tz import resolve_tz_from_coords
+    from aot.utils.solar import (EVENT_SUNRISE, EVENT_SUNSET, STATUS_UNKNOWN,
+                                 sun_times)
+    from aot.utils.timekit import as_tz, system_tz, utc_now
+
+    try:
+        lat = round(float(request.args.get('lat')), _LOCAL_TIME_COORD_ROUND)
+        lng = round(float(request.args.get('lng')), _LOCAL_TIME_COORD_ROUND)
+    except (TypeError, ValueError):
+        return jsonify({'error': 'lat and lng are required'}), 400
+    if not (-90.0 <= lat <= 90.0 and -180.0 <= lng <= 180.0):
+        return jsonify({'error': 'lat/lng out of range'}), 400
+
+    tz_name = resolve_tz_from_coords(lat, lng)
+    tzinfo = as_tz(tz_name) if tz_name else system_tz()
+    now = utc_now()
+    local_now = now.astimezone(tzinfo)
+    offset = local_now.utcoffset()
+
+    times = sun_times(latitude=lat, longitude=lng)
+
+    def _ms(dt):
+        return int(dt.timestamp() * 1000) if dt is not None else None
+
+    # 독은 현재 시각을 가운데 두고 **직전 사건은 왼쪽, 다음 사건은 오른쪽**에
+    # 놓는다. 그러려면 오늘치 일출/일몰만으로는 모자라다: 자정 직후의 직전
+    # 사건은 어제 일몰이고, 일몰 직후의 다음 사건은 내일 일출이다. 어제부터
+    # 모레까지 한 벌을 보내면 클라이언트는 자정을 넘겨도 목록 안에서 계속
+    # 고를 수 있어, 사건이 지날 때마다 서버를 다시 부르지 않아도 된다.
+    events = []
+    base_date = local_now.date()
+    for day_offset in (-1, 0, 1, 2):
+        day = sun_times(latitude=lat, longitude=lng,
+                        date=base_date + timedelta(days=day_offset))
+        if day is None:
+            continue
+        for kind in (EVENT_SUNRISE, EVENT_SUNSET):
+            at = day.event(kind)
+            if at is not None:
+                events.append({'kind': kind, 'at': _ms(at)})
+    events.sort(key=lambda e: e['at'])
+
+    return jsonify({
+        'tz': str(tzinfo),
+        'tz_resolved': bool(tz_name),
+        'tz_abbrev': local_now.strftime('%Z'),
+        'utc_offset_minutes': int(offset.total_seconds() // 60) if offset else 0,
+        'server_epoch_ms': int(now.timestamp() * 1000),
+        'local_date': local_now.date().isoformat(),
+        'status': times.status if times else STATUS_UNKNOWN,
+        'sunrise_ms': _ms(times.sunrise) if times else None,
+        'sunset_ms': _ms(times.sunset) if times else None,
+        'events': events,
+        'day_length_seconds': times.day_length_seconds if times else None,
+    })
+
 # ── Sub-module route registrations ────────────────────────────────────────
 from aot.aot_flask import routes_geo_commissioning  # noqa: E402,F401
 from aot.aot_flask import routes_geo_iec            # noqa: E402,F401

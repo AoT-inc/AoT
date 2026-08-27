@@ -1196,6 +1196,384 @@
                 };
             },
 
+
+            /**
+             * Create Time Dock (top center)
+             *
+             * 지도 중심 좌표의 현지 시각·일출·일몰을 상단 가장자리에 붙은 독으로
+             * 보여준다. 하단 측정값 독(createMeasurementPanel)을 위아래로 뒤집은
+             * 형태이고 셀 구조(.aot-measurement-item / .aot-meas-value /
+             * .aot-meas-name-row)를 그대로 공유한다 — 한 지도 안에서 값을 읽는
+             * 방식이 두 가지가 되면 안 된다.
+             *
+             * **이 팩토리는 서버를 부르지 않는다.** 시각 자료(tz·일출·일몰)는
+             * 호출부가 /api/geo/local_time 에서 받아 update() 로 넣어 주고,
+             * 여기서는 그것을 초당 다시 그리기만 한다. 시계가 서버 폴링이 되면
+             * 지도 위젯 하나가 초당 요청 하나를 만든다.
+             *
+             * options: { scale, onScaleChange(scale), locale }
+             * 반환:    { panel, update(payload), tick()->stale, getScale, setScale, destroy }
+             */
+            createTimeDock: function(map, options) {
+                options = options || {};
+                const mapContainer = map.getContainer();
+                const _t = function(s) { return window._ ? window._(s) : s; };
+
+                const panel = document.createElement('div');
+                panel.className = 'aot-measurement-panel aot-time-dock';
+                // 자료가 오기 전에는 빈 알약을 띄우지 않는다. update() 가 켠다.
+                panel.style.display = 'none';
+
+                // ── 크기 손잡이(좌하단 원형 버튼) ──────────────────────────────
+                // 측정값 독의 글자 균형 손잡이(.aot-meas-scale-handle)와 같은
+                // 조작을 시계에 준다: 손잡이 위에서 휠(모바일은 세로 드래그).
+                // 다만 여기서 움직이는 것은 두 행의 '균형' 이 아니라 독 전체의
+                // 크기다 — 시계는 행이 하나뿐이라 나눠 줄 상대가 없고, 사람이
+                // 원하는 것도 "멀리서도 보이게 크게" 이기 때문이다.
+                // 배율은 덧셈이 아니라 곱으로 움직인다(exp): 작을 때는 잘게,
+                // 클 때는 성큼 — 어느 크기에서도 휠 한 칸의 체감이 같다.
+                const SCALE_MIN = 0.7;
+                const SCALE_MAX = 2.4;
+                let scale = parseFloat(options.scale);
+                if (!isFinite(scale)) scale = 1;
+
+                function _applyScale(s, fireCallback) {
+                    scale = Math.min(SCALE_MAX, Math.max(SCALE_MIN, s));
+                    panel.style.setProperty('--aot-time-scale', String(scale));
+                    if (fireCallback && typeof options.onScaleChange === 'function') {
+                        try { options.onScaleChange(scale); } catch (e) {}
+                    }
+                }
+
+                const scaleHandle = document.createElement('button');
+                scaleHandle.type = 'button';
+                scaleHandle.className = 'aot-time-scale-handle';
+                const hLbl = _t('Scroll to resize the clock');
+                if (window.AoTSetTitle) window.AoTSetTitle(scaleHandle, hLbl); else scaleHandle.title = hLbl;
+                scaleHandle.setAttribute('aria-label', hLbl);
+                // 버튼이지만 눌러서 하는 일은 없다 — 폼 제출/지도 클릭으로 새지 않게 막는다.
+                scaleHandle.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                });
+                scaleHandle.addEventListener('wheel', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    _applyScale(scale * Math.exp(-e.deltaY * 0.0012), true);
+                }, { passive: false });
+                // 터치: 손잡이 위 세로 드래그. 위로 끌면 커진다(휠 방향과 같다).
+                let _touchY = null;
+                scaleHandle.addEventListener('touchstart', function(e) {
+                    if (e.touches.length === 1) _touchY = e.touches[0].clientY;
+                }, { passive: true });
+                scaleHandle.addEventListener('touchmove', function(e) {
+                    if (_touchY === null || e.touches.length !== 1) return;
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const y = e.touches[0].clientY;
+                    _applyScale(scale * Math.exp(-(y - _touchY) * 0.005), true);
+                    _touchY = y;
+                }, { passive: false });
+                scaleHandle.addEventListener('touchend', function() { _touchY = null; });
+                scaleHandle.addEventListener('touchcancel', function() { _touchY = null; });
+                panel.appendChild(scaleHandle);
+                _applyScale(scale, false);
+
+                // ── 칸 ────────────────────────────────────────────────────────
+                const row = document.createElement('div');
+                row.className = 'aot-meas-body-row';
+                panel.appendChild(row);
+
+                // 일출·일몰 아이콘. FontAwesome 무료판에는 일출/일몰 전용 글리프가
+                // 없어(fa-sunrise/fa-sunset 은 유료) 여기서 직접 그린다. currentColor
+                // 로 칠하고 크기를 em 으로 두었으므로 문자 보조색과 시계 크기를
+                // 그대로 따라간다.
+                //
+                // 지평선 하나와 화살표 하나뿐이다. 해 모양(반원)까지 그려 넣어 봤지만
+                // 13px 에서는 획이 뭉쳐 오히려 읽기 어려웠다 — 옆에 시각이 붙어 있는
+                // 자리에서 필요한 것은 '해가 뜨는가 지는가' 한 가지뿐이다.
+                const _SUN_PATHS = {
+                    sunrise: ['M3 20h18', 'M12 4v11', 'M7.5 8.5L12 4l4.5 4.5'],
+                    sunset: ['M3 20h18', 'M12 4v11', 'M7.5 10.5L12 15l4.5-4.5']
+                };
+                const SVG_NS = 'http://www.w3.org/2000/svg';
+
+                function _sunIcon(kind) {
+                    const key = (kind === 'sunset') ? 'sunset' : 'sunrise';
+                    const label = (key === 'sunset') ? _t('Sunset') : _t('Sunrise');
+                    const svg = document.createElementNS(SVG_NS, 'svg');
+                    svg.setAttribute('class', 'aot-time-icon');
+                    svg.setAttribute('viewBox', '0 0 24 24');
+                    svg.setAttribute('fill', 'none');
+                    svg.setAttribute('stroke', 'currentColor');
+                    svg.setAttribute('stroke-width', '2');
+                    svg.setAttribute('stroke-linecap', 'round');
+                    svg.setAttribute('stroke-linejoin', 'round');
+                    // 글자를 아이콘으로 바꾼 자리다 — 읽어 주는 쪽과 마우스를 올린
+                    // 쪽에는 원래의 말이 그대로 남아 있어야 한다.
+                    svg.setAttribute('role', 'img');
+                    svg.setAttribute('aria-label', label);
+                    const title = document.createElementNS(SVG_NS, 'title');
+                    title.textContent = label;
+                    svg.appendChild(title);
+                    _SUN_PATHS[key].forEach(function(d) {
+                        const path = document.createElementNS(SVG_NS, 'path');
+                        path.setAttribute('d', d);
+                        svg.appendChild(path);
+                    });
+                    return svg;
+                }
+
+                function _cell(extraClass) {
+                    const item = document.createElement('div');
+                    item.className = 'aot-measurement-item aot-time-item' +
+                        (extraClass ? ' ' + extraClass : '');
+                    const valueDiv = document.createElement('div');
+                    valueDiv.className = 'aot-meas-value';
+                    const valueSpan = document.createElement('span');
+                    valueDiv.appendChild(valueSpan);
+                    const nameRow = document.createElement('div');
+                    nameRow.className = 'aot-meas-name-row';
+                    const nameSpan = document.createElement('span');
+                    nameSpan.className = 'aot-meas-name';
+                    nameRow.appendChild(nameSpan);
+                    // 이름이 위, 값이 아래다 — 측정값 독(값이 위)과 반대로 놓는다.
+                    // 이 독은 위 가장자리에 고정돼 아래로 자라므로, 움직이지 않는
+                    // 기준선은 위쪽이다. 거기에는 크기가 변하지 않는 이름줄을 두고,
+                    // 크기 손잡이로 커지고 작아지는 시각은 아래로 늘어나게 한다.
+                    item.appendChild(nameRow);
+                    item.appendChild(valueDiv);
+                    row.appendChild(item);
+
+                    let iconKind = null;
+                    return {
+                        item: item,
+                        value: valueSpan,
+                        name: nameSpan,
+                        /** 이름줄을 일출/일몰 아이콘으로 채운다(글자는 비운다). */
+                        setIcon: function(kind) {
+                            const key = (kind === 'sunset') ? 'sunset' : 'sunrise';
+                            if (iconKind === key) return;   // 초당 다시 그리므로 같은 것은 두 번 만들지 않는다
+                            iconKind = key;
+                            nameSpan.innerText = '';
+                            const old = nameRow.querySelector('.aot-time-icon');
+                            if (old) nameRow.removeChild(old);
+                            nameRow.appendChild(_sunIcon(key));
+                        },
+                        /** 이름줄을 글자로 채운다(아이콘은 걷어낸다). */
+                        setText: function(text) {
+                            if (iconKind !== null) {
+                                iconKind = null;
+                                const old = nameRow.querySelector('.aot-time-icon');
+                                if (old) nameRow.removeChild(old);
+                            }
+                            if (nameSpan.innerText !== text) nameSpan.innerText = text;
+                        }
+                    };
+                }
+
+                // 세 칸이고, 왼쪽에서 오른쪽으로 시간이 흐른다: 직전 사건 → 지금 →
+                // 다음 사건. 즉 낮에는 `일출 · 지금 · 일몰`, 밤에는 `일몰 · 지금 ·
+                // 일출` 이 된다. 오늘의 일출·일몰을 고정 순서로 늘어놓지 않는 이유가
+                // 여기 있다 — 밤 10시에 "오늘 일출 06:41" 은 이미 지난 이야기고,
+                // 그 자리에 있어야 하는 것은 내일 일출이다.
+                //
+                // 양옆 칸은 글자 크기도, 값의 글자 수(HH:MM)도, 이름의 글자 수도
+                // 같다. 그래서 폭이 서로 같고, 결과적으로 **현재 시각이 독의 정중앙**
+                // 에 선다 — 칸을 하나 더 붙이면 그 대칭이 깨진다.
+                const cPrev = _cell();
+                const cClock = _cell('aot-time-clock');
+                const cNext = _cell();
+                const cPolar = _cell();
+
+                // ── 상태 ──────────────────────────────────────────────────────
+                let data = null;
+                // 서버 시각 − 브라우저 시각. 브라우저 시계가 틀어져 있어도 독은
+                // 서버(=농장 기록)와 같은 시각을 말해야 한다.
+                let skewMs = 0;
+                // Intl 포맷터는 만드는 비용이 있고 초당 다시 그리므로 tz 별로 캐시한다.
+                let fmtCache = { tz: null, time: null, date: null };
+                let browserDateFmt = null;
+
+                function _fmts(tz) {
+                    if (fmtCache.tz !== tz) {
+                        let time = null, date = null;
+                        try {
+                            time = new Intl.DateTimeFormat(options.locale || undefined, {
+                                timeZone: tz, hour: '2-digit', minute: '2-digit', hourCycle: 'h23'
+                            });
+                            // en-CA 는 YYYY-MM-DD 를 준다 — 서버의 local_date 와
+                            // 그대로 비교하기 위한 것이지 사람에게 보일 값이 아니다.
+                            date = new Intl.DateTimeFormat('en-CA', {
+                                timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit'
+                            });
+                        } catch (e) {
+                            // Intl 이 모르는 tz 이름(오래된 브라우저 등) — 아래에서
+                            // 서버가 준 오프셋으로 직접 계산한다.
+                            time = null;
+                            date = null;
+                        }
+                        fmtCache = { tz: tz, time: time, date: date };
+                    }
+                    return fmtCache;
+                }
+
+                function _hhmm(ms) {
+                    if (ms === null || ms === undefined || !data) return '—';
+                    const f = _fmts(data.tz).time;
+                    if (f) {
+                        try { return f.format(new Date(ms)); } catch (e) {}
+                    }
+                    const d = new Date(ms + (data.utc_offset_minutes || 0) * 60000);
+                    return ('0' + d.getUTCHours()).slice(-2) + ':' + ('0' + d.getUTCMinutes()).slice(-2);
+                }
+
+                function _localDate(ms) {
+                    if (!data) return null;
+                    const f = _fmts(data.tz).date;
+                    if (f) {
+                        try { return f.format(new Date(ms)); } catch (e) {}
+                    }
+                    return new Date(ms + (data.utc_offset_minutes || 0) * 60000)
+                        .toISOString().slice(0, 10);
+                }
+
+                function _browserDate(ms) {
+                    if (!browserDateFmt) {
+                        try {
+                            browserDateFmt = new Intl.DateTimeFormat('en-CA', {
+                                year: 'numeric', month: '2-digit', day: '2-digit'
+                            });
+                        } catch (e) { return null; }
+                    }
+                    try { return browserDateFmt.format(new Date(ms)); } catch (e) { return null; }
+                }
+
+                /** events 에서 지금을 사이에 둔 {prev, next} 한 쌍. 서버가 시각순으로 보낸다. */
+                function _around(now) {
+                    const evs = (data && Array.isArray(data.events)) ? data.events : [];
+                    let prev = null, next = null;
+                    for (let i = 0; i < evs.length; i++) {
+                        const e = evs[i];
+                        if (!e || typeof e.at !== 'number') continue;
+                        if (e.at <= now) prev = e;
+                        else if (next === null) next = e;
+                    }
+                    return { prev: prev, next: next };
+                }
+
+
+                function _render() {
+                    if (!data) {
+                        panel.style.display = 'none';
+                        return;
+                    }
+                    panel.style.display = '';
+                    const now = Date.now() + skewMs;
+
+                    // 1) 현재 시각 — 이름줄은 평소에 비워 둔다.
+                    //
+                    // 시간대 약칭('KST')을 적어 두지 않는 이유: 이 독에서 사람이
+                    // 읽는 것은 시각 하나이고, 그 옆에 늘 붙어 있는 넉 자는 읽히지
+                    // 않으면서 자리만 차지한다. 시간대는 마우스를 올리면 전체 이름
+                    // (Asia/Seoul)으로 나온다.
+                    cClock.value.innerText = _hhmm(now);
+
+                    // 다만 **지도 중심의 현지 날짜가 이 브라우저의 날짜와 다를 때**는
+                    // 날짜를 적는다. 날짜변경선을 넘겼다는 것은 시각만 봐서는 알 수
+                    // 없고, 모르면 그냥 틀린 값으로 읽히기 때문이다.
+                    const ld = _localDate(now);
+                    const bd = _browserDate(now);
+                    if (ld && bd && ld !== bd) {
+                        const dp = ld.split('-');
+                        cClock.setText(parseInt(dp[1], 10) + '/' + parseInt(dp[2], 10));
+                    } else {
+                        cClock.setText('');
+                    }
+
+                    const tzTip = data.tz_resolved
+                        ? (data.tz + (data.tz_abbrev ? ' (' + data.tz_abbrev + ')' : ''))
+                        : _t('Timezone for this location could not be resolved — showing the farm timezone.');
+                    if (window.AoTSetTitle) window.AoTSetTitle(cClock.item, tzTip);
+                    else cClock.item.title = tzTip;
+
+                    // 직전(왼쪽) / 다음(오른쪽) / 다음까지 남은 시간(맨 오른쪽).
+                    const polar = (data.status === 'always_day' || data.status === 'always_night');
+                    const known = !polar && data.status !== 'unknown';
+                    const around = known ? _around(now) : { prev: null, next: null };
+
+                    cPolar.item.style.display = polar ? '' : 'none';
+                    if (polar) {
+                        cPolar.value.innerText = '—';
+                        // 극야·백야에는 대응하는 아이콘이 없다 — 글자로 적는다.
+                        cPolar.setText(data.status === 'always_day'
+                            ? _t('Midnight sun') : _t('Polar night'));
+                    }
+
+                    if (around.prev) {
+                        cPrev.value.innerText = _hhmm(around.prev.at);
+                        cPrev.setIcon(around.prev.kind);
+                        cPrev.item.style.display = '';
+                    } else {
+                        // 목록 안에 지나간 사건이 없다(첫 조회 직후의 드문 경계).
+                        // 빈 칸을 세워 두지 않고 그냥 뺀다 — 그러면 시계가 왼쪽
+                        // 끝에 서고, 그것 자체가 "아직 아무 일도 없었다" 는 뜻이다.
+                        cPrev.item.style.display = 'none';
+                    }
+
+                    if (around.next) {
+                        cNext.value.innerText = _hhmm(around.next.at);
+                        cNext.setIcon(around.next.kind);
+                        cNext.item.style.display = '';
+                    } else {
+                        cNext.item.style.display = 'none';
+                    }
+                }
+
+                /** 서버 자료를 다시 받아야 하는가. */
+                function _isStale() {
+                    if (!data) return true;
+                    const now = Date.now() + skewMs;
+                    // 현지 자정을 넘겼다 — 오늘의 일출/일몰이 어제 것이 되었다.
+                    const ld = _localDate(now);
+                    if (ld && data.local_date && ld !== data.local_date) return true;
+                    // 사건 목록이 바닥났다 — 어제~모레 한 벌을 다 써 버린 경우다.
+                    // 사건 하나가 지나는 것만으로는 다시 받지 않는다: 다음 것이
+                    // 이미 목록 안에 있기 때문이다(서버가 나흘치를 보낸다).
+                    // 극야·백야에는 사건 자체가 없으므로 이 검사를 건너뛴다 —
+                    // 안 그러면 목록이 빈 채로 영원히 '낡음' 이 된다.
+                    if (data.status === 'normal' && !_around(now).next) return true;
+                    return false;
+                }
+
+                mapContainer.style.position = mapContainer.style.position || 'relative';
+                mapContainer.appendChild(panel);
+
+                return {
+                    panel: panel,
+                    update: function(payload) {
+                        data = payload || null;
+                        if (data && typeof data.server_epoch_ms === 'number') {
+                            const skew = data.server_epoch_ms - Date.now();
+                            // 1초 미만은 보정하지 않는다 — 그 정도는 왕복 지연이지
+                            // 시계 오차가 아니고, 매 갱신마다 흔들리면 초가 튄다.
+                            skewMs = Math.abs(skew) < 1000 ? 0 : skew;
+                        }
+                        _render();
+                    },
+                    /** 1초마다 호출. 서버 자료를 다시 받아야 하면 true 를 돌려준다. */
+                    tick: function() {
+                        _render();
+                        return _isStale();
+                    },
+                    getScale: function() { return scale; },
+                    setScale: function(s) { _applyScale(s, false); },
+                    destroy: function() {
+                        panel.remove();
+                    }
+                };
+            },
+
             /**
              * Add standard custom controls to map
              */

@@ -865,7 +865,10 @@ body.aot-map-fullscreen-active .grid-stack-item:not(.aot-fs-parent) {
 /* [Fix] Map Search Overlay Layout - Centered with margins to clear side controls */
 .map-search-overlay {
   position: absolute;
-  top: 20px; /* Increased from 15px for better top spacing */
+  /* 20px = 기본 여백. --aot-top-dock-h 는 시간 독이 켜져 있을 때 그 높이로,
+     꺼져 있거나 xs 로 숨겨졌으면 0 으로 JS 가 채운다. 시간은 상주하고 검색은
+     필요할 때만 여는 것이라, 자리를 비켜 주는 쪽은 검색바다. */
+  top: calc(20px + var(--aot-top-dock-h, 0px));
   left: 60px; /* Space for Left Tools */
   right: 60px; /* Space for Right Tools */
   width: calc(100% - 120px); /* Fill remaining space */
@@ -1592,6 +1595,202 @@ body.aot-map-fullscreen-active .grid-stack-item:not(.aot-fs-parent) {
     display: none !important;
 }
 
+/* ==========================================================================
+   Time dock (top center) — 지도 중심 위치의 현지 시각·일출·일몰.
+
+   측정값 독을 위아래로 뒤집은 형태다: 상단 가장자리에 붙고 아래 모서리만
+   둥글다. 셀 구조(.aot-measurement-item / .aot-meas-value / .aot-meas-name-row)
+   와 배경·테두리 토큰(--panel-bg-rgba / --panel-border)은 측정값 독과 그대로
+   공유한다 — 한 지도 안에서 값을 읽는 방식이 두 가지가 되면 안 된다. 여기
+   있는 규칙은 '위치를 뒤집는 차이' 뿐이다.
+
+   상단 중앙은 원래 주소 검색바와 AI 조언 칩이 쓰던 자리다. 이 독이 켜지면
+   그 둘은 --aot-top-dock-h 만큼 아래로 내려간다(아래 소비자 규칙). 그 값은
+   JS 가 실제 렌더 높이로 채운다(_updateTopDockHeightVar) — 크기 손잡이로
+   사람이 독을 키우면 높이가 변하므로 상수로 둘 수 없다.
+   ========================================================================== */
+.aot-measurement-panel.aot-time-dock {
+    top: 0;
+    /* bottom 을 명시적으로 푸는 것이 필수다. 폰 폭에서 base
+       `@media (max-width:768px) .aot-measurement-panel { bottom: 50px }` 가
+       걸리는데, 절대 위치 요소에 top 과 bottom 이 둘 다 잡히면 height:auto 는
+       무시되고 상자가 그 사이를 꽉 채운다 — 독이 지도 높이만큼 세로로 늘어났다
+       (실측: 230px 위젯에서 독 180px). 아래 가장자리는 이 독의 것이 아니다. */
+    bottom: auto !important;
+    left: 50% !important;
+    right: auto !important;
+    transform: translateX(-50%) !important;
+    margin: 0;
+    width: max-content;
+    /* 좌우 툴레일을 넘지 않는다 — 주소 검색바와 같은 여백(60px x 2). */
+    max-width: calc(100% - 120px) !important;
+    /* 높이는 내용이 정한다. 시계는 크기 손잡이로 커지고 작아진다. */
+    height: auto !important;
+    border-radius: 0 0 12px 12px;
+    border-top: none;
+    animation: none;
+    justify-content: center;
+    /* 좌: 크기 손잡이 자리, 우: 같은 폭(내용이 가운데 오게). */
+    padding: 4px 28px 6px 28px;
+    /* 시계 크기 — 손잡이 휠이 --aot-time-scale 을 바꾼다. 독 안의 글자는
+       전부 em 이라 이 한 줄로 독 전체가 함께 커지고 작아진다. */
+    font-size: calc(1em * var(--aot-time-scale, 1));
+}
+.aot-time-dock .aot-meas-body-row {
+    /* 넘칠 때는 가운데 정렬을 포기한다. 시계를 크게 키우면 칸들이 위젯 폭을
+       넘는데, 그때 'center' 는 넘친 만큼을 **양쪽으로** 잘라 내고 잘린 왼쪽은
+       스크롤로도 닿지 않는다(실측: scale 2.4 에서 시계 왼쪽 97px 이 영영 사라짐).
+       'safe center' 는 넘치는 순간에만 flex-start 로 떨어져 앞부분을 지킨다 —
+       잘려도 되는 것은 뒤쪽 칸이지 시계가 아니다. */
+    justify-content: center;
+    justify-content: safe center;
+    /* 위 기준으로 맞춘다. 칸의 1행은 이름(KST·일출·일몰·일몰까지)으로 네 칸이
+       모두 같은 글자 크기라 한 줄에 정확히 선다. 2행인 시각은 시계만 한 단 커서
+       칸마다 높이가 다른데, 그 차이는 **아래쪽으로** 벌어진다 — 위 가장자리에
+       붙어 아래로 자라는 이 독에서 크기가 변하는 쪽이 가야 할 방향이다. */
+    align-items: flex-start;
+    height: auto;
+    gap: 14px;
+}
+/* 측정값 독의 칸은 폭이 균일하다(.aot-measurement-item: flex:1 + 데스크톱
+   max-width:80px) — 값 여러 개를 나란히 읽기 위한 규칙이다. 시간 독의 칸은
+   반대로 **내용이 폭을 정해야** 한다: 시계를 손잡이로 키우면 80px 를 금세
+   넘고, 고정 상한이 남아 있으면 '14:38' 이 '14:3' 으로 잘린다(실측).
+   그래서 여기서만 균일폭 계약을 푼다. */
+.aot-time-dock .aot-time-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex: 0 0 auto;
+    min-width: 3.4em;
+    max-width: none;
+    padding: 0;
+}
+/* 같은 이유로 값 칸의 자르기(base .aot-meas-value: overflow hidden)도 푼다. */
+.aot-time-dock .aot-meas-value,
+.aot-time-dock .aot-meas-name-row {
+    max-width: none;
+    overflow: visible;
+}
+/* 현재 시각만 본문색으로 크게, 일출·일몰은 **문자 보조색**으로 작게.
+
+   세 칸을 같은 무게로 두면 눈이 어디를 먼저 볼지 정하지 못해 독 전체가 빽빽해
+   보인다(실측 후 반려됨). 사람이 이 독에서 매번 읽는 것은 현재 시각 하나이고,
+   일출·일몰은 곁눈으로 확인하는 값이다 — 그 차이를 색과 크기로 못박아 두면
+   칸 수를 줄이지 않고도 한 덩어리로 읽힌다. */
+.aot-time-dock .aot-meas-value {
+    font-size: 1.15em;
+    font-weight: 600;
+    line-height: 1.15;
+    color: var(--aot-color-text-secondary, #666);
+    /* 분이 바뀔 때 폭이 흔들리면 옆 칸까지 밀린다. */
+    font-variant-numeric: tabular-nums;
+}
+.aot-time-dock .aot-time-clock .aot-meas-value {
+    font-size: 1.95em;
+    font-weight: 700;
+    color: var(--aot-color-text-primary, #333);
+}
+/* 이름줄은 아이콘(일출·일몰) / 날짜(날짜변경선을 넘겼을 때) / 백야·극야 글자가
+   번갈아 들어오는 자리다. 어느 것이 들어오든 높이가 같아야 세 칸의 값 줄이
+   한 줄에 선다 — 그래서 높이를 고정하고 가운데 정렬한다. */
+.aot-time-dock .aot-meas-name-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 1.5em;
+    font-size: 0.72em;
+    line-height: 1.2;
+    /* 이름이 위, 값이 아래 — 여백도 아래쪽으로. */
+    margin-top: 0;
+    margin-bottom: 2px;
+    white-space: nowrap;
+    color: var(--aot-color-text-secondary, #666);
+}
+.aot-time-dock .aot-time-icon {
+    display: block;
+    width: 1.35em;
+    height: 1.35em;
+    flex: 0 0 auto;
+}
+
+/* 크기 손잡이(좌하단 원형 버튼): 이 위에서 휠을 굴리면 시계가 커지고 작아진다
+   (모바일은 세로 드래그). 측정값 독의 글자 균형 손잡이와 같은 조작이다.
+
+   **아래 모서리에 붙는 것이 요점이다.** 이 독은 위 가장자리에 고정돼 아래로
+   자란다 — 손잡이를 위에 두면 잡은 곳은 가만히 있고 독만 아래로 늘어나서,
+   내가 무엇을 끌고 있는지가 어긋나 보인다. 아래 모서리에 두면 손잡이가
+   자라는 쪽 끝과 함께 움직인다(측정값 독은 아래 가장자리에 붙어 위로 자라므로
+   손잡이가 위에 있다 — 방향만 뒤집힌 같은 규칙이다).
+
+   치수를 px 로 두는 것도 의도다 — em 이면 시계를 키울 때 손잡이도 같이 커져,
+   작게 되돌릴수록 잡을 곳이 작아진다. */
+.aot-time-dock .aot-time-scale-handle {
+    position: absolute;
+    left: 7px;
+    bottom: 7px;
+    width: 14px;
+    height: 14px;
+    padding: 0;
+    border: none;
+    outline: none;
+    border-radius: 50%;
+    background: var(--aot-color-text-primary, #333);
+    opacity: 0.18;
+    cursor: ns-resize;
+    z-index: 1;
+    touch-action: none;
+    transition: opacity 0.15s ease;
+}
+.aot-time-dock .aot-time-scale-handle:hover,
+.aot-time-dock .aot-time-scale-handle:focus-visible {
+    opacity: 0.6;
+}
+/* 터치 기기: 손가락으로 잡을 수 있는 크기로 키우고, 그만큼 안쪽 여백도 넓힌다. */
+@media (pointer: coarse) {
+    .aot-time-dock .aot-time-scale-handle {
+        left: 9px;
+        bottom: 9px;
+        width: 20px;
+        height: 20px;
+    }
+    .aot-measurement-panel.aot-time-dock {
+        padding-left: 38px;
+        padding-right: 38px;
+    }
+}
+
+/* 폰 폭: 좌우 툴레일이 54px 로 좁아진다(.map-search-overlay 의 모바일 규칙과
+   같은 값) — 독도 그만큼 넓게 쓸 수 있다. */
+@media (max-width: 768px) {
+    .aot-measurement-panel.aot-time-dock {
+        max-width: calc(100% - 108px) !important;
+    }
+}
+
+/* 좁은 위젯(폭 420px 미만): 글자를 한 단 줄인다. 툴레일을 비켜 주고 나면
+   390px 위젯에 남는 폭은 270px 뿐이라 기본 크기로는 양옆 칸이 잘린다(실측).
+   스크롤바를 숨기는 지도에서 잘린 칸은 있는 줄도 모르게 되므로, 넘치게 두지
+   않고 맞춘다. 세 칸은 어느 것도 뺄 수 없다 — 하나를 빼면 현재 시각이
+   가운데를 벗어난다. */
+.aot-map-w-sm .aot-measurement-panel.aot-time-dock {
+    font-size: calc(0.82em * var(--aot-time-scale, 1));
+    padding-left: 24px;
+    padding-right: 24px;
+}
+.aot-map-w-sm .aot-time-dock .aot-meas-body-row {
+    gap: 9px;
+}
+.aot-map-w-sm .aot-time-dock .aot-time-item {
+    min-width: 3em;
+}
+/* xs 컴팩트 모드(높이 260px 미만): 좌측 툴레일이 상단 가로줄로 바뀌는 자리다.
+   그 크기에서는 지도 자체가 거의 안 보이므로 시간 독은 통째로 숨긴다.
+   높이 변수는 JS 가 0 으로 되돌린다(setupCompactMode -> _updateTopDockHeightVar). */
+.aot-map-h-xs .aot-measurement-panel.aot-time-dock {
+    display: none !important;
+}
+
 /* Dock height var consumers — all default to 0px so pages without the dock
    (Leaflet v3, geo design) are unaffected. --aot-dock-h is set by the vector
    widget JS (_updateDockHeightVar). */
@@ -1780,10 +1979,11 @@ body.aot-map-fullscreen-active .grid-stack-item:not(.aot-fs-parent) {
    ========================================================================== */
 .aot-map-advice-chips {
     position: absolute;
-    top: 16px;
+    top: calc(16px + var(--aot-top-dock-h, 0px));   /* 시간 독이 켜져 있으면 그 아래로 */
     left: 60px;
     right: 60px;
-    max-height: calc(50% - 16px);   /* stack never covers more than the top half */
+    /* stack never covers more than the top half */
+    max-height: calc(50% - 16px - var(--aot-top-dock-h, 0px));
     z-index: 15;                 /* below tool buttons (20), above labels/legend */
     display: flex;
     justify-content: center;
@@ -1792,7 +1992,7 @@ body.aot-map-fullscreen-active .grid-stack-item:not(.aot-fs-parent) {
 /* Address search coexistence: when the search overlay is open (top: 20px,
    ~44px tall), push the chip bar below it so they never overlap. */
 .aot-map-container:has(.map-search-overlay:not(.d-none)) .aot-map-advice-chips {
-    top: 72px;
+    top: calc(72px + var(--aot-top-dock-h, 0px));
 }
 /* xs compact mode: the left tool rail becomes a horizontal row along the top
    edge — drop the chips below it. */

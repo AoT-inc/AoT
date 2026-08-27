@@ -587,7 +587,7 @@ class CycleMixin:
             est = estimate_indoor_light(
                 light_val, self._profiles, self._coord_state.prev_commands,
                 default_tau=self._facility_shade_transmittance())
-            if est != light_val and getattr(self, 'debug_logging', False):
+            if est != light_val and getattr(self, 'log_level_debug', False):
                 self.logger.debug(
                     '실내광 추정: 실외 %.0f → %.0f W/m² (차광막 개도 반영)',
                     light_val, est)
@@ -632,7 +632,7 @@ class CycleMixin:
                 outdoor, self._profiles, self._coord_state.prev_commands,
                 default_tau=self._facility_shade_transmittance())
         except Exception as exc:
-            if getattr(self, 'debug_logging', False):
+            if getattr(self, 'log_level_debug', False):
                 self.logger.debug('맑은날 광량 어림 실패(폴백 없음): %s', exc)
             return None
 
@@ -667,7 +667,7 @@ class CycleMixin:
                 return True
             return False
         except Exception as exc:
-            if getattr(self, 'debug_logging', False):
+            if getattr(self, 'log_level_debug', False):
                 self.logger.debug('저녁 분무 차단 판정 실패 (차단 안 함): %s', exc)
             return False
 
@@ -816,7 +816,7 @@ class CycleMixin:
         # 인라인으로 두면 단위 검증이 안 되고, 이 결함은 조용해서 검증이 필요하다.)
         _carried = carry_forward_outdoor(
             external, getattr(self._ext_cache, 'values', None) or {})
-        if _carried and getattr(self, 'debug_logging', False):
+        if _carried and getattr(self, 'log_level_debug', False):
             self.logger.debug(
                 'EnvCoordinator: 실외 %s 를 마지막 유효값으로 승계 (관측 지연)',
                 ','.join(_carried))
@@ -836,7 +836,7 @@ class CycleMixin:
         self._shade_tau_cache = None
 
         if not self._profiles:
-            if getattr(self, 'debug_logging', False):
+            if getattr(self, 'log_level_debug', False):
                 self.logger.debug(
                     'EnvCoordinator: no actuators registered — skipping cycle')
             return
@@ -886,7 +886,7 @@ class CycleMixin:
         # outdoor_data 전달 → _collect_internal 내부의 중복 read_outdoor_sensors 호출 생략
         internal = self._collect_internal(max_age, outdoor_data=_od_cache or None)
         if not internal:
-            if getattr(self, 'debug_logging', False):
+            if getattr(self, 'log_level_debug', False):
                 self.logger.warning(
                     'EnvCoordinator: no internal sensor data — skipping cycle')
             return
@@ -1239,8 +1239,8 @@ class CycleMixin:
         apply_threshold_and_gate_overrides(
             internal, self._profiles, final_cmds, partial_overrides)
 
-        # ── P1-3: 사이클 메트릭 일괄 기록 (debug_logging 활성 시에만) ─────────────
-        if getattr(self, 'debug_logging', False):
+        # ── P1-3: 사이클 메트릭 일괄 기록 (디버그 로깅 활성 시에만) ─────────────
+        if getattr(self, 'log_level_debug', False):
             ctx_metrics = {
                 'T_int':    internal.get('T',        0.0),
                 'RH_int':   internal.get('RH',       0.0),
@@ -1279,7 +1279,7 @@ class CycleMixin:
             self.logger.warning(
                 'EnvCoordinator: 신뢰도 낮은 액추에이터 %d개 — %s',
                 len(suspicious), suspicious[:5])
-        if getattr(self, 'debug_logging', False):
+        if getattr(self, 'log_level_debug', False):
             write_decision_log(self.unique_id, 'actuator_mismatch_count',
                                CH_ACTUATOR_MISMATCH, float(len(suspicious)))
 
@@ -1378,7 +1378,7 @@ class CycleMixin:
                     wind_threshold = self.gate_wind_threshold or 12.0,
                 )
             if ff_sig.valid and ff_sig.reason != '정상 범위':
-                if getattr(self, 'debug_logging', False):
+                if getattr(self, 'log_level_debug', False):
                     self.logger.debug('Feedforward: %s', ff_sig.reason)
                 apply_feedforward(
                     env_target,
@@ -1432,7 +1432,7 @@ class CycleMixin:
                 priority_ewa_state=self._priority_ewa_state,
                 base_priorities=base_priorities,
             )
-            if getattr(self, 'debug_logging', False):
+            if getattr(self, 'log_level_debug', False):
                 self.logger.debug(
                     'Photosynthesis limiting factor: %s', limiting)
         elif self.photosynth_mode_enabled:
@@ -1472,7 +1472,7 @@ class CycleMixin:
                         self.logger.warning(
                             'T=%.1f > max=%.1f — forcing cooling', t_val, self.temp_max)
                     internal['_force_cool'] = True
-                elif cbs['T_max'] and getattr(self, 'debug_logging', False):
+                elif cbs['T_max'] and getattr(self, 'log_level_debug', False):
                     self.logger.debug(
                         'T=%.1f — max=%.1f 강제 해제(히스테리시스 %.1f)',
                         t_val, self.temp_max, TEMP_HYST_C)
@@ -1485,7 +1485,7 @@ class CycleMixin:
                         self.logger.warning(
                             'T=%.1f < min=%.1f — forcing heating', t_val, self.temp_min)
                     internal['_force_heat'] = True
-                elif cbs['T_min'] and getattr(self, 'debug_logging', False):
+                elif cbs['T_min'] and getattr(self, 'log_level_debug', False):
                     self.logger.debug(
                         'T=%.1f — min=%.1f 강제 해제(히스테리시스 %.1f)',
                         t_val, self.temp_min, TEMP_HYST_C)
@@ -1509,7 +1509,7 @@ class CycleMixin:
         light_val = internal.get('light_est', internal.get('light'))
         lbs = self._light_breach_state
         if light_val is not None:
-            dbg = getattr(self, 'debug_logging', False)
+            dbg = getattr(self, 'log_level_debug', False)
             if self.light_max and self.light_max > 0:
                 breached = latch_threshold(
                     light_val, self.light_max, self.light_max * LIGHT_HYST_FRAC,
@@ -1572,7 +1572,7 @@ class CycleMixin:
             for aid, cmd in final_cmds.items()
         }
         clean = self._hygiene_checker.check(external, internal, current_cmd_pcts)
-        if getattr(self, 'debug_logging', False):
+        if getattr(self, 'log_level_debug', False):
             write_decision_log(self.unique_id, 'clean_for_learning',
                                CH_CLEAN_FOR_LEARNING, 1.0 if clean else 0.0)
         self._last_clean_for_learning = clean

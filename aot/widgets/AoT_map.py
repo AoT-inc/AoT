@@ -571,6 +571,23 @@ WIDGET_INFORMATION = {
                 'Display the latest periodic AI advice summary for this map\'s facility/site.'
             )
         },
+        {
+            # 지도는 세계 어디로든 간다 — 그래서 이 독이 답하는 "지금 몇 시인가"는
+            # 농장의 시간이 아니라 **화면 한가운데가 있는 곳의 현지 시각**이다.
+            # 시간대 해석과 태양시는 전부 서버 몫이다(/api/geo/local_time).
+            # 기본값이 꺼짐인 이유: 지도 상단 중앙은 주소 검색바와 AI 조언 칩이
+            # 이미 쓰는 자리다. 켜면 시간 독이 그 자리의 상주자가 되고 나머지가
+            # 아래로 밀린다(map.css --aot-top-dock-h) — 시간을 늘 띄워 두겠다고
+            # 정한 사람만 그 대가를 치르면 된다.
+            'id': 'show_local_time',
+            'type': 'bool',
+            'default_value': False,
+            'name': lazy_gettext('Show Local Time'),
+            'phrase': lazy_gettext(
+                'Show a dock at the top of the map with the current time, sunrise '
+                'and sunset for wherever the map is centered.'
+            )
+        },
         # --- Data Transfer Period ---
         # [Restore] These three refresh knobs used to be scattered/removed
         # during earlier simplification passes (input_update_interval was

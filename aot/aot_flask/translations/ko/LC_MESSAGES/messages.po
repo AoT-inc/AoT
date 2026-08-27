@@ -16434,8 +16434,6 @@ msgid "Subtext Color"
 msgstr "보조 문자색"
 
 #: aot_flask/templates/settings/diagnostic.html:14
-msgid "Diagnostics"
-msgstr "진단"
 
 #: aot_flask/templates/settings/diagnostic.html:25
 msgid "Control Element Reset"
@@ -24571,6 +24569,8 @@ msgid "Max Light Threshold"
 msgstr "최대 광량 임계값"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:455
+msgid "Activate shade screen when light exceeds this value. 0 = disabled."
+msgstr "광량이 이 값을 초과하면 차광 스크린을 작동시킵니다. 0 = 비활성화."
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:463
 msgid "Min Light Threshold (Supplemental)"
@@ -31042,8 +31042,6 @@ msgid "Which model computes the effect of each actuator. Change only while testi
 msgstr "각 액추에이터의 효과를 무엇으로 계산할지. 시험 중이 아니면 바꾸지 마십시오."
 
 #: aot/functions/custom_functions/env_coordinator_impl/_function_info.py
-msgid "Record every cycle decision. Turn on while diagnosing, off afterwards."
-msgstr "사이클마다 판단을 기록합니다. 진단할 때만 켜고 끝나면 끄십시오."
 
 #: aot/functions/custom_functions/env_coordinator_impl/_function_info.py
 msgid "Longest single spray. Humidification is regulated by how often it sprays, not by how long."
@@ -31264,8 +31262,6 @@ msgid "Light and CO₂"
 msgstr "광량과 CO₂"
 
 #: aot/functions/custom_functions/env_coordinator_impl/_function_info.py
-msgid "Model and Calibration"
-msgstr "모델과 보정"
 
 #: aot/functions/custom_functions/env_coordinator_impl/_function_info.py
 msgid "Not Yet Categorised"
@@ -31479,8 +31475,6 @@ msgstr "천 투과율 개별 지정 (0-1, 차광막 전용)"
 msgid "Only for this screen, when its cloth differs from the rest. Leave 0 to use the value set on the linked facility. Used when there is no indoor light sensor: the indoor level is estimated from outdoor irradiance and the screen position."
 msgstr "이 차광막의 천이 나머지와 다를 때만 씁니다. 0 으로 두면 연동 시설에 정해 둔 값을 씁니다. 실내 광센서가 없을 때, 실외 일사와 차광막 개도로 실내 광량을 추정하는 데 쓰입니다."
 
-msgid "When Control Runs"
-msgstr "제어를 돌리는 시간대"
 
 msgid "Control ends"
 msgstr "제어 종료"
@@ -31509,8 +31503,23 @@ msgstr "시간대는 이 시각을 가운데 두고 잡힙니다."
 msgid "Control stops for good after this date. Leave blank to keep running."
 msgstr "이 날짜가 지나면 제어가 완전히 멈춥니다. 비워 두면 계속 돕니다."
 
-msgid "Close the shade screen above this light level. 0 = never shade. This is a shading choice only — how much light the crop can use comes from its program."
-msgstr "이 광량을 넘으면 차광막을 닫습니다. 0 이면 차광하지 않습니다. 차광 여부만 정하는 값입니다 — 작물이 쓸 수 있는 빛의 양은 그 작물의 프로그램에서 옵니다."
+msgid "Show Local Time"
+msgstr "현지 시각 표시"
 
-msgid "Switch supplemental lighting on below this light level. 0 = no supplemental lighting, which is most facilities."
-msgstr "이 광량 아래로 내려가면 보광등을 켭니다. 0 이면 보광하지 않으며, 대부분의 시설이 그렇습니다."
+msgid "Show a dock at the top of the map with the current time, sunrise and sunset for wherever the map is centered."
+msgstr "지도가 보고 있는 곳의 현재 시각과 일출·일몰을 지도 위쪽에 띄웁니다."
+
+msgid "Scroll to resize the clock"
+msgstr "스크롤하여 시계 크기 조절"
+
+msgid "Midnight sun"
+msgstr "백야"
+
+msgid "Polar night"
+msgstr "극야"
+
+msgid "Timezone for this location could not be resolved — showing the farm timezone."
+msgstr "이 위치의 시간대를 찾지 못해 농장 시간대로 표시합니다."
+
+msgid "Working Hours"
+msgstr "작동 시간"

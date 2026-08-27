@@ -995,16 +995,6 @@ FUNCTION_INFORMATION = {
             'type': 'header',
             'name': lazy_gettext('Diagnostics'),
         },
-        {
-            'id': 'debug_logging',
-            'type': 'bool',
-            'default_value': False,
-            'required': False,
-            'name': lazy_gettext('Enable Debug Logging'),
-            'phrase': lazy_gettext(
-                'Record every cycle decision. Turn on while diagnosing, off afterwards.'
-            ),
-        },
     ],
 }
 
@@ -1357,16 +1347,30 @@ _LAYOUT = [
     #   난방·냉방을 포함해 제어가 **통째로** 멈춘다(`_run_cycle` 의 시간창
     #   게이트). "시간 제어" 라고 부르면 시간대별로 다르게 제어한다는 말로
     #   읽히는데, 실제로는 켜고 끄는 스위치다.
-    (True, lazy_gettext('When Control Runs'), [
-        (None, ['schedule_end_time']),
+    # ⚠ **이 묶음은 "하루 중 언제" 하나만 다룬다.** `schedule_end_time` 은
+    #   날짜(제어를 영영 멈추는 날)라 여기 있으면 시각과 날짜가 섞여, 묶음
+    #   이름이 무엇이든 애매해진다 — 아래 [고급 설정] 으로 갔다.
+    #   (2026-08-27 사용자 지적: *"시간이긴 하지만 일반적으로 시간이라고 하면
+    #   1시, 2시를 생각하므로 애매함"*)
+    #
+    # ⚠ 창 밖 시간에는 난방·냉방을 포함해 제어가 **통째로** 멈춘다.
+    (True, lazy_gettext('Working Hours'), [
         (None, ['time_enable', 'time_start', 'time_end',
                 'photo_method_id', 'photo_anchor']),
     ]),
     # ⚠ **"감지와 주기" 묶음을 없앴다.** 구동 주기 둘은 제어 성향이 정하는
     #   축이라 그 아래로 갔고, 남은 `sensor_max_age` 하나를 위해 접힘 제목을
     #   두면 껍데기가 내용보다 크다.
-    (True, lazy_gettext('Model and Calibration'), [
-        (None, ['sensor_max_age',
+    # ⚠ **이 묶음은 엔지니어용이다** (2026-08-27 사용자 지적: *"모델과 보정
+    #   옵션들은 엔지니어용 고급 옵션임. 그룹 자체가 '고급 설정' 이 맞아
+    #   보임"*). 효과 모델·RLS 보정·능동 프로빙·예보 선행은 재배자가 판단할
+    #   값이 아니라 이 함수를 시험하는 사람이 만지는 값이다. 이름이 그것을
+    #   말하면 나머지 사람이 열어 보고 지나갈 수 있다.
+    #
+    # `schedule_end_time` 도 여기 있다 — 자주 쓰는 값이 아니고, 임박하면
+    # 화면 위 상태 줄이 알아서 말한다.
+    (True, lazy_gettext('Advanced Settings'), [
+        (None, ['schedule_end_time', 'sensor_max_age',
                 'photosynth_mode_enabled', 'source_plot_id', 'vpd_weight_T',
                 'priority_vpd', 'priority_co2', 'cumulative_tracker_enabled']),
         (lazy_gettext('Effect Calibration'),
@@ -1375,9 +1379,12 @@ _LAYOUT = [
         (lazy_gettext('Forecast Feedforward'),
          ['forecast_feedforward_enabled', 'forecast_lookahead_h']),
     ]),
-    (True, lazy_gettext('Diagnostics'), [
-        (None, ['debug_logging']),
-    ]),
+    # ⚠ **"진단" 묶음을 없앴다** (2026-08-27). 안에 있던 `debug_logging` 은
+    #   화면 위쪽 [고급 설정] 의 `log_level_debug` 와 **같은 스위치가 둘**인
+    #   상태였다 — 게다가 `debug_logging` 이 감싸던 것은 거의 전부
+    #   `logger.debug(...)` 라, 프레임워크 쪽을 켜지 않으면 **혼자서는 아무
+    #   것도 출력하지 않았다**(기본 로거 레벨이 ERROR 다). 이제 프레임워크
+    #   스위치 하나가 둘 다 한다.
 ]
 
 

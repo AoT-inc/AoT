@@ -150,6 +150,7 @@ Filter, Measurement Panel, Label Style, Shapes, 3D Map) expand when clicked.
 | Show Labels | The master switch for all site/zone/facility/device/sensor labels. Fine-tune which types show up under **Layers → Labels** in the map's right-hand tools. |
 | Display Data Only (Hide Map) | Hides the map background and overlays, showing only the side measurement panel. |
 | Show AI Advice | Shows the latest AI advice summary for this map's facility/site as a clickable chip at the top of the map (requires the global AI to be configured). |
+| Show Local Time | Shows a three-cell dock at the top-centre of the map with the time **for wherever the map is centred** — the current time in the middle, the sun event that just passed on the left, and the next one on the right. So it reads `sunrise · now · sunset` during the day and `sunset · now · tomorrow's sunrise` at night. Pan the map and it recomputes for that location's timezone. Scroll the wheel over the small circle at its bottom-left (drag vertically on a phone) to resize the clock; the size is saved with the widget. While it is on, the address search bar and AI advice chips move below it. |
 | Period (Seconds) | How often device state is refreshed. **Set to 0 to disable auto-refresh.** (Default: 5s) |
 
 !!! note

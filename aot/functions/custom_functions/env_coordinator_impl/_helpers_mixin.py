@@ -1208,7 +1208,7 @@ class HelpersMixin:
                 _vpd_ema = smooth_vpd(_prev, float(_vpd_raw))
                 self._vpd_ema = _vpd_ema
                 if abs(_vpd_ema - float(_vpd_raw)) > 1e-9 and getattr(
-                        self, 'debug_logging', False):
+                        self, 'log_level_debug', False):
                     self.logger.debug(
                         'VPD 잡음필터: 원값 %.3f → %.3f kPa',
                         float(_vpd_raw), _vpd_ema)
@@ -1579,7 +1579,7 @@ class HelpersMixin:
                     'EnvCoordinator: dispatch failed actuator=%s val=%s ch=%s err=%s',
                     actuator_id, val, ch, exc)
 
-        if skipped and getattr(self, 'debug_logging', False):
+        if skipped and getattr(self, 'log_level_debug', False):
             self.logger.debug(
                 'EnvCoordinator: dispatch deadband skip %d/%d actuators',
                 skipped, len(commands))

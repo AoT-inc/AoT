@@ -517,6 +517,69 @@ class TestHidingUsesAClassNotAnInlineStyle:
         assert '.aot-depends-hidden' in css and '.aot-advanced-only' in css
         assert '.aot-depends-hidden,\n.aot-advanced-only' not in css
 
+class TestOneSwitchPerThing:
+    """같은 뜻의 스위치를 둘 두지 않는다 (2026-08-27).
+
+    화면 위 [기본 설정] 의 `log_level_debug`(프레임워크)와 접힌 [진단] 의
+    `debug_logging`(이 함수)이 **둘 다 "디버그 로깅 활성화"** 였다. 게다가
+    `debug_logging` 이 감싸던 것은 거의 전부 `logger.debug(...)` 라, 프레임워크
+    쪽을 켜지 않으면 **혼자서는 아무것도 출력하지 못했다** — 기본 로거 레벨이
+    ERROR 이기 때문이다(CLAUDE.md 의 "입력 로거의 기본 레벨은 ERROR").
+
+    즉 켠 사람은 켰다고 믿는데 아무 일도 안 일어난다. 스위치가 둘이면 언제나
+    "어느 쪽이 진짜인가" 가 남는다.
+    """
+
+    def test_the_function_does_not_declare_its_own(self):
+        assert 'debug_logging' not in set(_ids(_options())), (
+            '같은 뜻의 두 번째 스위치가 되살아났다')
+
+    def test_the_code_reads_the_framework_flag(self):
+        import os
+        here = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        impl = os.path.join(here, 'functions', 'custom_functions',
+                            'env_coordinator_impl')
+        hits = 0
+        for name in os.listdir(impl):
+            if not name.endswith('.py') or name == '_function_info.py':
+                continue
+            with open(os.path.join(impl, name), encoding='utf-8') as fh:
+                src = fh.read()
+            assert "'debug_logging'" not in src, (
+                '%s 가 아직 옛 스위치를 읽는다' % name)
+            hits += src.count("'log_level_debug'")
+        assert hits > 0, '프레임워크 스위치를 아무도 안 읽는다'
+
+    def test_it_sits_in_basic_settings(self):
+        """문제가 생겼을 때 가장 먼저 켜는 스위치다 — 찾아 내려가야 하는
+        자리에 둘 이유가 없다."""
+        import os
+        here = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        with open(os.path.join(here, 'aot_flask', 'templates', 'pages',
+                               'function_options',
+                               'custom_function_options.html'),
+                  encoding='utf-8') as fh:
+            tpl = fh.read()
+        basic = tpl.index("_('Basic Settings')")
+        adv = tpl.index("_('Advanced Settings')")
+        dbg = tpl.index('name="log_level_debug"')
+        assert basic < dbg < adv, '디버그 로깅이 [기본 설정] 밖에 있다'
+
+    def test_an_empty_advanced_group_is_not_drawn(self):
+        """⚠ 디버그 로깅을 옮긴 뒤 그 묶음은 **제목만 남은 빈 카드**가 됐다.
+        게다가 이 함수는 자기 [고급 설정] 접힘을 따로 가져서 같은 이름이 한
+        화면에 두 번 나온다 — 사용자가 이미 지적한 "제목이 똑같이 두 번
+        중복" 이 그 모양이다."""
+        import os
+        here = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        with open(os.path.join(here, 'aot_flask', 'templates', 'pages',
+                               'function_options',
+                               'custom_function_options.html'),
+                  encoding='utf-8') as fh:
+            tpl = fh.read()
+        assert '_advanced_body' in tpl, '빈 묶음을 그대로 그린다'
+        assert '{% if _advanced_body | trim %}' in tpl
+
 
 if __name__ == '__main__':
     pytest.main([__file__, '-v'])

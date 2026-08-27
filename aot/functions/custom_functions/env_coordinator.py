@@ -327,7 +327,7 @@ class CustomModule(
         self.hvac_interlock_on_value                     = None
 
         # Diagnostics — gates per-cycle INFO/DEBUG noise
-        self.debug_logging                = None
+        self.log_level_debug                = None
 
         # Internal state
         self._vpd_method_handler = None

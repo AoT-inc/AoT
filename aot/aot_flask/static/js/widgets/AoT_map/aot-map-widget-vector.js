@@ -469,6 +469,9 @@
             try { addMeasurementPanel(uniqueId, map, vars); } catch (e) {
                 console.warn('[AoT Map] addMeasurementPanel failed:', e);
             }
+            try { addTimeDock(uniqueId, map, vars); } catch (e) {
+                console.warn('[AoT Map] addTimeDock failed:', e);
+            }
 
             // Expose live-refresh hooks for the settings-drawer's auto-save
             // (dashboard-widget-live-preview.js) — Device Filter and Measurement
@@ -486,6 +489,11 @@
                     // aot-map-custom-controls.js), so a selection change tears the
                     // existing panel down (DOM node + its interval + ResizeObserver)
                     // and rebuilds it, rather than trying to patch it in place.
+                    // 시간 독은 켜고 끄는 토글 하나뿐이라 통째로 다시 만든다
+                    // (addTimeDock 이 먼저 이전 것을 걷어낸다).
+                    _instRefresh._refreshTimeDock = function () {
+                        try { addTimeDock(uniqueId, map, vars); } catch (eTime) {}
+                    };
                     _instRefresh._refreshMeasurementPanel = function (newMeasurementsMap) {
                         var iv = (vars && vars.vars) || {};
                         iv.measurements_map = newMeasurementsMap || {};
@@ -9679,6 +9687,9 @@
             // got the cramped one. Measure the widget itself.
             const w = widgetWrap.clientWidth;
             widgetWrap.classList.toggle('aot-map-w-sm', w > 0 && w < 420);
+            // xs 에서 시간 독은 CSS 로 숨는다(.aot-map-h-xs .aot-time-dock).
+            // 숨은 높이는 0 이어야 검색바·조언 칩이 원래 자리로 돌아간다.
+            try { _updateTopDockHeightVar(uniqueId); } catch (e) {}
             try { map.resize(); } catch (e) {}
         }
         const ro = new ResizeObserver(function() {
@@ -11565,6 +11576,216 @@
 
         // Dock visibility decides legend chip-vs-expanded mode — keep in sync
         if (typeof instance._syncLegendMode === 'function') instance._syncLegendMode();
+    }
+
+    // ── 시간 독(상단 중앙) ──────────────────────────────────────────────────
+    // 지도 중심이 있는 곳의 현지 시각·일출·일몰. 지도가 세계 어디로든 가므로
+    // "지금 몇 시인가"의 답은 화면이 어디를 보고 있느냐에 따라 바뀐다.
+    //
+    // 서버(/api/geo/local_time)는 **위치가 바뀔 때만** 부른다. 초당 갱신은
+    // 브라우저가 tz 이름으로 직접 한다(createTimeDock.tick) — 시계를 서버
+    // 폴링으로 만들면 지도 위젯 하나가 초당 요청 하나를 만든다.
+
+    // 재조회 문턱. 이보다 덜 움직였으면 일출/일몰은 표시 분해능(분) 안에서
+    // 같은 값이다 — 지도를 조금씩 미는 동안 서버를 두들기지 않게 한다.
+    const _TIME_DOCK_REFETCH_KM = 2;
+    // 자료가 낡았는데 조회가 계속 실패할 때의 재시도 간격(초당 재시도 방지).
+    const _TIME_DOCK_STALE_COOLDOWN_MS = 30000;
+
+    /** 두 좌표 사이 거리(km). 재조회할 만큼 움직였는지만 보므로 구면 근사로 충분하다. */
+    function _kmBetween(a, b) {
+        const R = 6371;
+        const rad = Math.PI / 180;
+        const dLat = (b.lat - a.lat) * rad;
+        const dLng = (b.lng - a.lng) * rad;
+        const h = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                  Math.cos(a.lat * rad) * Math.cos(b.lat * rad) *
+                  Math.sin(dLng / 2) * Math.sin(dLng / 2);
+        return 2 * R * Math.asin(Math.min(1, Math.sqrt(h)));
+    }
+
+    /**
+     * Sync --aot-top-dock-h on the map container with the time dock's height.
+     *
+     * 상단 중앙은 원래 주소 검색바(.map-search-overlay)와 AI 조언 칩
+     * (.aot-map-advice-chips)이 쓰던 자리다. 시간 독이 켜지면 그 둘이 독 높이만큼
+     * 아래로 내려가야 하는데, 독 높이는 크기 손잡이로 사람이 바꾼다 — 그래서
+     * 고정 상수가 아니라 실제 렌더 높이를 변수로 내보낸다(하단 --aot-dock-h 와
+     * 같은 방식). 독이 꺼졌거나 xs 컴팩트 모드로 숨겨졌으면 0 이라 두 요소는
+     * 원래 자리로 돌아간다.
+     */
+    function _updateTopDockHeightVar(uniqueId) {
+        const instance = window.AoTWidgetInstances[uniqueId];
+        if (!instance || !instance.map) return;
+        const container = instance.map.getContainer();
+        if (!container) return;
+        const panel = instance.timeDock && instance.timeDock.panel;
+        const h = (panel && panel.offsetParent !== null) ? panel.offsetHeight : 0;
+        // --aot-dock-h 와 같은 이유로 공통 조상에 건다: 독은 지도 컨테이너
+        // 안이지만 검색바·조언 칩은 그 부모(.aot-map-container)의 자식이다.
+        const varHost = container.closest('.aot-map-container') || container;
+        varHost.style.setProperty('--aot-top-dock-h', h + 'px');
+    }
+
+    /** 시간 독과 그것이 건 타이머·관찰자·지도 이벤트를 전부 걷어낸다. */
+    function _destroyTimeDock(uniqueId) {
+        const instance = window.AoTWidgetInstances[uniqueId];
+        if (!instance) return;
+        if (instance._timeDockTimer) {
+            clearInterval(instance._timeDockTimer);
+            instance._timeDockTimer = null;
+        }
+        if (instance._timeDockVisHandler) {
+            document.removeEventListener('visibilitychange', instance._timeDockVisHandler);
+            instance._timeDockVisHandler = null;
+        }
+        if (instance._timeDockResizeObserver) {
+            try { instance._timeDockResizeObserver.disconnect(); } catch (e) {}
+            instance._timeDockResizeObserver = null;
+        }
+        if (instance._timeDockMoveTimer) {
+            clearTimeout(instance._timeDockMoveTimer);
+            instance._timeDockMoveTimer = null;
+        }
+        if (instance._timeDockMoveHandler && instance.map) {
+            try { instance.map.off('moveend', instance._timeDockMoveHandler); } catch (e) {}
+            instance._timeDockMoveHandler = null;
+        }
+        if (instance.timeDock) {
+            try { instance.timeDock.destroy(); } catch (e) {}
+            instance.timeDock = null;
+        }
+    }
+
+    /**
+     * Add the top-center time dock (custom option `show_local_time`).
+     * 꺼져 있으면 아무것도 만들지 않고 --aot-top-dock-h 만 0 으로 되돌린다.
+     */
+    function addTimeDock(uniqueId, map, vars) {
+        const instance = window.AoTWidgetInstances[uniqueId];
+        if (!instance) return;
+
+        // 설정 즉시반영으로 다시 불릴 수 있다 — 항상 이전 것을 먼저 걷어낸다.
+        _destroyTimeDock(uniqueId);
+
+        const innerVars = (vars && vars.vars) || {};
+        const on = (innerVars.show_local_time === true || innerVars.show_local_time === 'true');
+        if (!on) {
+            _updateTopDockHeightVar(uniqueId);
+            return;
+        }
+        if (!window.AoTMapCustomControls ||
+            typeof window.AoTMapCustomControls.createTimeDock !== 'function') {
+            return;
+        }
+
+        const widgetId = (vars && vars.widgetId) || uniqueId;
+
+        // 시계 크기: 서버 옵션 우선, localStorage 는 폴백
+        // (meas_panel_balance 와 같은 이중 보관 방식).
+        const _lsScaleKey = 'aot_map_toggle_' + widgetId + '_time_dock_scale';
+        let initScale = parseFloat(innerVars.time_dock_scale);
+        if (!isFinite(initScale)) {
+            try { initScale = parseFloat(localStorage.getItem(_lsScaleKey)); } catch (e) { initScale = NaN; }
+        }
+        if (!isFinite(initScale)) initScale = 1;
+
+        // 휠은 다발로 들어온다 — localStorage 에는 즉시, 서버에는 멎은 뒤에 한 번.
+        let _scaleSaveTimer = null;
+        function _persistScale(s) {
+            try { localStorage.setItem(_lsScaleKey, String(s)); } catch (e) {}
+            if (_scaleSaveTimer) clearTimeout(_scaleSaveTimer);
+            _scaleSaveTimer = setTimeout(function() {
+                fetch('/save_widget_custom_options', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ widget_id: widgetId, options: { time_dock_scale: s } })
+                }).catch(function() {});
+            }, 600);
+        }
+
+        const handle = window.AoTMapCustomControls.createTimeDock(map, {
+            scale: initScale,
+            locale: document.documentElement.lang || undefined,
+            onScaleChange: function(s) {
+                _persistScale(s);
+                // 글자가 커지면 독도 커진다 — 검색바·조언 칩이 따라 내려가야 한다.
+                _updateTopDockHeightVar(uniqueId);
+            }
+        });
+        instance.timeDock = handle;
+
+        let lastFetchCenter = null;
+        let fetchInFlight = false;
+        let lastStaleFetch = 0;
+
+        function _fetchNow(force) {
+            if (fetchInFlight) return;
+            let c;
+            try {
+                c = map.getCenter();
+                // 지구를 몇 바퀴 돌면 경도가 ±180 을 넘어간다 — 서버는 범위 밖을
+                // 400 으로 되돌려 보내므로 여기서 접어 준다.
+                if (c && typeof c.wrap === 'function') c = c.wrap();
+            } catch (e) { return; }
+            if (!c) return;
+            const center = { lat: c.lat, lng: c.lng };
+            if (!force && lastFetchCenter &&
+                _kmBetween(lastFetchCenter, center) < _TIME_DOCK_REFETCH_KM) {
+                return;
+            }
+            fetchInFlight = true;
+            fetch('/api/geo/local_time?lat=' + encodeURIComponent(center.lat.toFixed(4)) +
+                  '&lng=' + encodeURIComponent(center.lng.toFixed(4)))
+                .then(function(res) { return res.ok ? res.json() : null; })
+                .then(function(d) {
+                    fetchInFlight = false;
+                    if (!d || d.error) return;
+                    lastFetchCenter = center;
+                    handle.update(d);
+                    _updateTopDockHeightVar(uniqueId);
+                })
+                .catch(function() { fetchInFlight = false; });
+        }
+
+        // 지도가 멎은 뒤에만 묻는다. 드래그하는 내내 중심이 바뀌므로 moveend
+        // 자체도 연달아 오고, 그래서 한 번 더 디바운스한다.
+        const _onMoveEnd = function() {
+            if (instance._timeDockMoveTimer) clearTimeout(instance._timeDockMoveTimer);
+            instance._timeDockMoveTimer = setTimeout(function() { _fetchNow(false); }, 600);
+        };
+        instance._timeDockMoveHandler = _onMoveEnd;
+        try { map.on('moveend', _onMoveEnd); } catch (e) {}
+
+        function _tick() {
+            // 안 보이는 위젯의 시계는 멈춰 있어도 된다 — 다시 보일 때 아래
+            // visibilitychange/스크롤 진입에서 한 번에 따라잡는다.
+            if (document.hidden) return;
+            if (!_isWidgetVisible(instance)) return;
+            if (handle.tick()) {
+                const t = Date.now();
+                if (t - lastStaleFetch > _TIME_DOCK_STALE_COOLDOWN_MS) {
+                    lastStaleFetch = t;
+                    _fetchNow(true);
+                }
+            }
+        }
+        instance._timeDockTimer = setInterval(_tick, 1000);
+
+        // 탭이 다시 보이면 즉시 따라잡는다(1초를 기다리지 않는다).
+        instance._timeDockVisHandler = function() {
+            if (document.hidden) return;
+            _tick();
+        };
+        document.addEventListener('visibilitychange', instance._timeDockVisHandler);
+
+        if (typeof ResizeObserver !== 'undefined' && handle.panel) {
+            const ro = new ResizeObserver(function() { _updateTopDockHeightVar(uniqueId); });
+            ro.observe(handle.panel);
+            instance._timeDockResizeObserver = ro;
+        }
+
+        _fetchNow(true);
     }
 
     function addMeasurementPanel(uniqueId, map, vars) {

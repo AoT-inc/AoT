@@ -141,6 +141,23 @@
         </div>
         {% endif %}
 
+        {#- 디버그 로깅은 **기본 설정**이다(2026-08-27). "고급" 아래 있었지만
+            문제가 생겼을 때 가장 먼저 켜는 스위치라, 찾아 내려가야 하는 자리에
+            둘 이유가 없다. 통합환경제어에는 같은 뜻의 두 번째 스위치
+            (`debug_logging`)가 따로 있었는데 그것도 없앴다 — 그쪽은 혼자서는
+            아무것도 출력하지 못했다(기본 로거 레벨이 ERROR 다). -#}
+        {% if each_function.device != 'function_spacer' %}
+        <div class="aot-modal-option-row">
+            <label class="aot-modal-option-label">{{form_function.log_level_debug.label(class_='mb-0')}}</label>
+            <div class="aot-modal-option-control">
+                <label class="btn-toggle mb-0">
+                    <input id="log_level_debug" name="log_level_debug" type="checkbox" class="btn-toggle-input" value="y" {% if each_function.log_level_debug %}checked{% endif %}>
+                    <div class="btn-toggle-slider"><div class="btn-toggle-thumb"></div></div>
+                </label>
+            </div>
+        </div>
+        {% endif %}
+
         <!-- Add Note Management button -->
         <div class="aot-modal-option-row">
             <label class="aot-modal-option-label">{{_('Manage Notes')}}</label>
@@ -209,23 +226,16 @@
     </div>
     {% endif %}
 
-    <div class="aot-modal-group-title">{{_('Advanced Settings')}}</div>
-    <div class="aot-modal-container">
-        
+    {#- ⚠ **비어 있으면 그리지 않는다.** 디버그 로깅을 [기본 설정] 으로 옮긴
+        뒤(2026-08-27) 이 묶음은 채널·측정 설정이 없는 함수에서 **제목만 남은
+        빈 카드**가 됐다. 게다가 통합환경제어는 자기 [고급 설정] 접힘을 따로
+        가져서, 같은 이름이 한 화면에 두 번 나왔다 — 사용자가 이미 지적한
+        "제목이 똑같이 두 번 중복" 이 그 모양이다.
 
-
-        {% if each_function.device != 'function_spacer' %}
-        <div class="aot-modal-option-row">
-            <label class="aot-modal-option-label">{{form_function.log_level_debug.label(class_='mb-0')}}</label>
-            <div class="aot-modal-option-control">
-                <label class="btn-toggle mb-0">
-                    <input id="log_level_debug" name="log_level_debug" type="checkbox" class="btn-toggle-input" value="y" {% if each_function.log_level_debug %}checked{% endif %}>
-                    <div class="btn-toggle-slider"><div class="btn-toggle-thumb"></div></div>
-                </label>
-            </div>
-        </div>
-        {% endif %}
-
+        먼저 렌더해서 내용이 있는지 보고 제목을 붙인다. CSS `:has()` 로 빈
+        상자를 숨기는 방법도 있지만, 이 파일은 **JS 가 나중에 채우는 빈
+        플레이스홀더**도 담아서(그 규칙의 주석 참조) 그쪽은 안전하지 않다. -#}
+    {% set _advanced_body %}
         {% include 'pages/form_options/Num_channels.html' %}
         {% include 'pages/form_options/Measurements_Enabled.html' %}
 
@@ -237,8 +247,13 @@
         {% include 'pages/form_options/Custom_Options.html' %}
         {% endfor %}
         {% endif %}
-
+    {% endset %}
+    {% if _advanced_body | trim %}
+    <div class="aot-modal-group-title">{{_('Advanced Settings')}}</div>
+    <div class="aot-modal-container">
+        {{ _advanced_body }}
     </div>
+    {% endif %}
 
     {% endif %}
 

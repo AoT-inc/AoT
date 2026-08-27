@@ -320,6 +320,8 @@
     default_zoom: 1, default_pitch: 1, default_bearing: 1,
     active_layers: 1, selected_base_layer: 1, ai_advice_enabled: 1,
     show_labels: 1, overlay_data_only: 1,
+    // 시간 독 — 인스턴스의 _refreshTimeDock 으로 즉시 켜고 끈다(아래 mapLiveApply).
+    show_local_time: 1,
     enable_label_collision: 1,
     global_label_size: 1, label_priority_facility: 1, label_min_zoom: 1,
     sensor_label_style: 1, sensor_popup_enabled: 1,
@@ -441,6 +443,13 @@
       else if (inst.map && key === 'default_zoom') { inst.map.easeTo({ zoom: parseFloat(value) }); }
       else if (inst.map && key === 'default_pitch') { inst.map.easeTo({ pitch: parseFloat(value) }); }
       else if (inst.map && key === 'default_bearing') { inst.map.easeTo({ bearing: parseFloat(value) }); }
+      // 시간 독 on/off -> 독을 통째로 다시 만든다. 지도의 다른 토글들과 같은
+      // 이유로 살아 있는 옵션 객체를 FIRST 로 갱신한다 — addTimeDock 이 켜짐
+      // 여부를 그 객체에서 다시 읽기 때문에, 안 쓰면 켜도 꺼진 값을 본다.
+      else if (key === 'show_local_time' && typeof inst._refreshTimeDock === 'function') {
+        if (inst.vars && inst.vars.vars) { inst.vars.vars.show_local_time = !!value; }
+        inst._refreshTimeDock();
+      }
       else if (key === 'show_labels' && typeof inst._setLabel === 'function' && inst._labelKeys) {
         inst._labelKeys.forEach(function (k) { inst._setLabel(k, !value); });
       }

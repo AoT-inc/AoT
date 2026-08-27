@@ -98,8 +98,12 @@ class TestItIsAMarkerNotAnOption:
 
         이력: 62 → **61** (`shade_transmittance` 가 시설로 갔다 — D9)
               61 → **60** (`schedule_week_offset` 제거 — 구획 `started_on` 을
-                           고치면 되는 값이다. 로컬 3개 전부 0 이었다).
-        둘 다 2026-08-27.
+                           고치면 되는 값이다. 로컬 3개 전부 0 이었다)
+              60 → **59** (`debug_logging` 제거 — 화면 위 [기본 설정] 의
+                           `log_level_debug` 와 같은 스위치가 둘이었고,
+                           그쪽을 켜지 않으면 혼자서는 아무것도 출력하지
+                           못했다. 기본 로거 레벨이 ERROR 다).
+        전부 2026-08-27.
 
         ⚠ 표식 목록을 여기 손으로 적지 말 것. `range_band` 는 `id` 를 갖는데
           (어느 밴드인지) 옵션이 아니라, 손으로 적은 목록에서 빠지자 **옵션으로
@@ -114,7 +118,7 @@ class TestItIsAMarkerNotAnOption:
             _re.search(r"_MARKERS = \(([^)]*)\)", src, _re.S).group(1)))
         opts = fi.FUNCTION_INFORMATION['custom_options']
         vals = [o for o in opts if o.get('id') and o.get('type') not in markers]
-        assert len(vals) == 60, len(vals)
+        assert len(vals) == 59, len(vals)
 
 
 class TestTheTemplateOnlyLaysTheSpot:
