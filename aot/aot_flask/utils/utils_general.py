@@ -1674,6 +1674,14 @@ def form_output_channel_measurement_choices(
                          DeviceMeasurements.channel == measurement_channel)).first()
 
             if not device_measurement:
+                # Output/OutputChannel exist but the matching DeviceMeasurements row
+                # is missing, so this channel silently drops out of Output dropdowns
+                # (e.g. graph widget data source). Log it so the gap is discoverable
+                # instead of just looking like the device was never added.
+                logger.warning(
+                    "form_output_channel_measurement_choices: output %s (%s) channel %s "
+                    "has no matching DeviceMeasurements row — dropped from choices",
+                    each_output.unique_id, each_output.name, measurement_channel)
                 continue
 
             conversion = None
