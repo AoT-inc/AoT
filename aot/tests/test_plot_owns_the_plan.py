@@ -184,3 +184,87 @@ class TestTheVersionPinIsNotAContentPin(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class TestTheEditorReachesTheSameContract(unittest.TestCase):
+    """화면이 고친 것이 제어까지 가야 한다 — 저장 경로가 한 벌이어야 한다."""
+
+    def _js(self):
+        return _read('aot_flask', 'static', 'js', 'common', 'aot-plot-stages.js')
+
+    def test_the_view_carries_targets(self):
+        """편집기는 `stage_schedule` 만 받는다. 거기 목표가 없으면 화면이 고칠
+        대상 자체가 없다."""
+        src = _read('aot_flask', 'geo', 'plot_context.py')
+        body = src.split('def stage_schedule_view', 1)[1].split('\ndef ', 1)[0]
+        self.assertIn("'targets': _view_targets(", body)
+
+    def test_the_view_reuses_the_one_target_builder(self):
+        """⚠ 항목 어휘·단위·곡선 처리가 `_stage_targets` 에 못 박혀 있다.
+        화면용으로 다시 조립하면 항목을 늘릴 때 한쪽만 늘어난다."""
+        src = _read('aot_flask', 'geo', 'plot_context.py')
+        body = src.split('def _view_targets', 1)[1].split('\ndef ', 1)[0]
+        self.assertIn('_stage_targets(', body)
+
+    def test_a_curve_backed_target_is_not_editable(self):
+        """숫자를 받아도 곡선이 이긴다 — 고칠 수 있는 것처럼 보이면 사람이
+        값을 넣고 왜 안 먹는지 묻는다."""
+        src = _read('aot_flask', 'geo', 'plot_context.py')
+        body = src.split('def _view_targets', 1)[1].split('\ndef ', 1)[0]
+        self.assertIn("t.get('source') != 'method'", body)
+
+    def test_a_fixed_definition_is_still_editable(self):
+        """⚠ `fixed` 는 "이 **정의**가 시스템 소유"(라벨·단위·범위)라는 뜻이지
+        값을 못 고친다는 뜻이 아니다. 온도·습도·CO₂·DLI·VPD 가 전부 `fixed`
+        정의라, 그것으로 막으면 **고칠 수 있는 항목이 하나도 남지 않는다** —
+        2026-08-27 실측으로 그렇게 됐다.
+        """
+        from aot.aot_flask.geo.plot_context import _view_targets
+        import aot.aot_flask.geo.plot_context as pc
+        real = pc._stage_targets
+        pc._stage_targets = lambda st, pr: [
+            {'key': 'co2', 'label': 'CO2', 'unit': 'ppm', 'value': 700,
+             'source': 'stage', 'fixed': True},
+            {'key': 'vpd', 'label': 'VPD', 'unit': 'kPa', 'value': None,
+             'source': 'method', 'fixed': True, 'method_name': '곡선'},
+        ]
+        try:
+            got = {t['key']: t['editable']
+                   for t in _view_targets({'key': 'x'}, None)}
+        finally:
+            pc._stage_targets = real
+        self.assertTrue(got['co2'], 'fixed 정의라고 값까지 막혔다')
+        self.assertFalse(got['vpd'], '곡선 항목이 고칠 수 있다고 나온다')
+
+    def test_the_editor_copies_targets_deeply(self):
+        """원본을 그대로 고치면 무엇이 바뀌었는지 가릴 기준이 사라진다."""
+        js = self._js()
+        body = js.split('function _copy(', 1)[1].split('\n  function ', 1)[0]
+        self.assertIn('targets:', body)
+        self.assertIn('.map(function (t)', body)
+
+    def test_only_changed_targets_are_sent(self):
+        js = self._js()
+        body = js.split("'/stage-target'", 1)[0][-700:]
+        self.assertIn('wasBy[t.key]', body, '바뀐 것만 보내지 않는다')
+
+    def test_clearing_sends_null(self):
+        """비운 것은 "프로그램 값으로 돌아가라" 는 뜻이다 — 빈 문자열을 보내면
+        서버가 0 으로 읽을 수 있다."""
+        js = self._js()
+        self.assertIn("value: t.value === '' ? null : t.value", js)
+
+    def test_dirty_counts_targets(self):
+        """⚠ 빠뜨리면 목표만 고친 사람이 [프로그램으로 등록] 을 눌렀을 때
+        저장되지 않은 채 등록된다(무에러)."""
+        js = self._js()
+        body = js.split('function dirty(', 1)[1]
+        self.assertIn('targets', body)
+
+    def test_the_route_exists_and_guards_edit(self):
+        src = _read('aot_flask', 'routes_geo_plot.py')
+        self.assertIn("/stage-target'", src)
+        body = src.split('def api_plot_stage_target', 1)[1].split('\n@blueprint', 1)[0]
+        self.assertIn('_require_edit()', body, '권한 검사가 없다')
+        self.assertIn('set_stage_target', body)
+        self.assertIn('invalidate_plot_contents', body, '요약 캐시를 안 비운다')

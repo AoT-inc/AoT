@@ -31287,3 +31287,6 @@ msgstr "極夜"
 
 msgid "Timezone for this location could not be resolved — showing the farm timezone."
 msgstr "この位置のタイムゾーンが特定できないため、農場のタイムゾーンで表示します。"
+
+msgid "program value"
+msgstr "プログラムの値"

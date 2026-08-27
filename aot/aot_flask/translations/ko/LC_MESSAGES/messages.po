@@ -31528,3 +31528,6 @@ msgstr "극야"
 
 msgid "Timezone for this location could not be resolved — showing the farm timezone."
 msgstr "이 위치의 시간대를 찾지 못해 농장 시간대로 표시합니다."
+
+msgid "program value"
+msgstr "프로그램 값"

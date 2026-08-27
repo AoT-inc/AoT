@@ -1127,6 +1127,37 @@ def api_plot_stage_guidance(plot_uuid):
     return jsonify(dict({'ok': True}, **result))
 
 
+@blueprint.route('/api/geo/plot/<string:plot_uuid>/stage-target',
+                 methods=['POST'])
+@login_required
+def api_plot_stage_target(plot_uuid):
+    """이 구획의 단계 **목표**를 정한다 (2026-08-27).
+
+    프로그램은 참고 계획이고 실제 계획은 구획이다. 같은 프로그램으로 두 동을
+    길러도 목표가 같아야 할 이유가 없고, 작기 중에 조정하는 것이 정상이다.
+
+    ⚠ **제어가 이 값을 받는다** — `effective_stages` → `stage_of` →
+      `control_targets`. 지침과 달리 표시용이 아니다.
+
+    값을 비우면 프로그램 값으로 돌아간다.
+    """
+    denied = _require_edit()
+    if denied:
+        return denied
+
+    data = request.get_json(silent=True) or {}
+    result, error = plot_io.set_stage_target(
+        plot_uuid, stage_key=data.get('stage_key'),
+        target_key=data.get('target_key'), value=data.get('value'),
+        set_by=_current_user_name())
+    if error:
+        status = 404 if '찾을 수 없습니다' in error else 400
+        return jsonify({'ok': False, 'message': error}), status
+    from aot.aot_flask.geo.site_summary import invalidate_plot_contents
+    invalidate_plot_contents(plot_uuid)
+    return jsonify(dict({'ok': True}, **result))
+
+
 @blueprint.route('/api/geo/plot/<string:plot_uuid>/stages', methods=['POST'])
 @login_required
 def api_plot_stage_add(plot_uuid):

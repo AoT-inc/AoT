@@ -1226,6 +1226,38 @@ def _as_date(iso):
         return None
 
 
+def _view_targets(stage, program_row):
+    """단계 하나의 목표 → 화면이 **고칠 수 있는** 목록.
+
+    `_stage_targets` 가 낸 것에서 편집에 필요한 것만 남긴다.
+
+    ⚠ **못 고치는 것은 곡선이 걸린 항목뿐이다.** 숫자를 받아도 곡선이 이기므로,
+      고칠 수 있는 것처럼 보이면 사람이 값을 넣고 왜 안 먹는지 묻게 된다.
+
+    ⚠ **`fixed` 로 판정하지 말 것.** 그것은 "이 **정의**가 시스템 소유" 라는
+      뜻이지(라벨·단위·범위) 값을 못 고친다는 뜻이 아니다 —
+      `program_io._merge_target_defs` 가 *"라벨·단위·범위는 시스템 소유지만
+      기본 목표값은 사람의 것"* 이라고 적어 두고 있다. 온도·습도·CO₂·DLI·VPD
+      가 전부 `fixed` 정의라, 그것으로 막으면 **고칠 수 있는 항목이 하나도
+      남지 않는다**(2026-08-27 실측: 다섯 항목 전부 읽기 전용이었다).
+    """
+    if not stage:
+        return []
+    out = []
+    for t in _stage_targets(stage, program_row):
+        out.append({
+            'key': t.get('key'),
+            'label': t.get('label'),
+            'unit': t.get('unit'),
+            'value': t.get('value'),
+            'source': t.get('source'),
+            'method_name': t.get('method_name'),
+            # 곡선이 걸린 항목만 못 고친다(위 주석 참조).
+            'editable': t.get('source') != 'method',
+        })
+    return out
+
+
 def stage_schedule_view(plot, program=None, on=None, sched=None, events=None,
                         stage=None):
     """화면·AI 가 그대로 읽는 일정 → list. 없으면 `[]`.
@@ -1262,6 +1294,11 @@ def stage_schedule_view(plot, program=None, on=None, sched=None, events=None,
 
     # 지나간 경계는 고칠 수 없다 — 그것은 원장(확인·되돌리기)이 다루는 사실이다.
     first_editable = len(bounds) - len(sched['boundaries'])
+
+    # 목표는 경계(`bounds`)가 아니라 **단계 정의**에 있다. 경계는 날짜만 담는다.
+    program_row = sched.get('program_row')
+    full_by_key = {st.get('key'): st
+                   for st in effective_stages(plot, program_row)}
 
     out = []
     for i, b in enumerate(bounds):
@@ -1306,6 +1343,13 @@ def stage_schedule_view(plot, program=None, on=None, sched=None, events=None,
             # 지나간 단계는 뺄 수 없다 — 확인된 전환이 그것을 가리킨다.
             # 지침은 지나간 단계에도 적을 수 있다(관찰의 기록이다).
             'removable': i >= first_editable and len(bounds) > 1,
+            # 이 단계의 **목표**. 구획이 정했으면 그것이, 아니면 프로그램의
+            # 것이 온다(`effective_stages`) — 지침과 같은 규칙이다.
+            #
+            # ⚠ **`_stage_targets` 를 재사용한다.** 항목 어휘·단위·곡선 처리가
+            #   거기 못 박혀 있어, 화면용으로 다시 조립하면 항목을 늘릴 때 한쪽만
+            #   늘어난다(그 함수 주석의 경고 그대로).
+            'targets': _view_targets(full_by_key.get(b['key']), program_row),
         })
     return out
 

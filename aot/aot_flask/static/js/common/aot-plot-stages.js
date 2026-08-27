@@ -110,7 +110,17 @@
         key: s.key || '', name: s.name || '', days: (s.days == null ? '' : String(s.days)),
         guidance: s.guidance || '', starts_on: s.starts_on || '',
         editable: !!s.editable, removable: !!s.removable,
-        state: s.state || '', isNew: false
+        state: s.state || '', isNew: false,
+        // 목표도 **깊은 사본**이다 — 원본을 그대로 고치면 무엇이 바뀌었는지
+        // 가릴 기준이 사라진다(위 주석과 같은 이유).
+        targets: (s.targets || []).map(function (t) {
+          return {
+            key: t.key, label: t.label || t.key, unit: t.unit || '',
+            value: (t.value == null ? '' : String(t.value)),
+            source: t.source || '', method_name: t.method_name || '',
+            editable: !!t.editable
+          };
+        })
       };
     });
   }
@@ -243,6 +253,35 @@
       ' placeholder="' + _esc(_t('What to do in this stage, here.')) + '">' +
       _esc(st.guidance) + '</textarea>');
 
+    // ── 목표 ──────────────────────────────────────────────────────────
+    // **프로그램은 참고 계획이고 실제 계획은 구획이다.** 같은 프로그램으로 두
+    // 동을 길러도 목표가 같아야 할 이유가 없고, 작기 중에 조정하는 것이
+    // 정상이다. 제어가 이 값을 받는다(지침과 달리 표시용이 아니다).
+    //
+    // ⚠ 곡선이 걸린 항목은 **못 고친다**(`editable=false`). 숫자를 받아도
+    //   곡선이 이기므로, 고칠 수 있는 것처럼 보이면 사람이 값을 넣고 왜 안
+    //   먹는지 묻게 된다 — 그 자리에 곡선 이름을 대신 보인다.
+    var targetRows = (st.targets || []).map(function (t) {
+      var label = t.label + (t.unit ? ' (' + t.unit + ')' : '');
+      if (!t.editable) {
+        return _optRow(label, '',
+          '<span class="aot-modal-body-text">' +
+          _esc(t.source === 'method'
+                 ? (t.method_name || _t('Follows a curve'))
+                 : (t.value === '' ? '—' : t.value)) + '</span>');
+      }
+      return _optRow(label, '',
+        '<input type="number" step="any" class="form-control aot-modern-input"' +
+        ' data-tk="' + _esc(t.key) + '"' +
+        // 비우면 프로그램 값으로 돌아간다 — 되돌리기 버튼을 따로 두지 않는다.
+        ' placeholder="' + _esc(_t('program value')) + '"' +
+        ' value="' + _esc(t.value) + '">');
+    }).join('');
+    var targetsBlock = targetRows
+      ? '<div class="aot-modal-subgroup-title">' + _esc(_t('Targets')) +
+        '</div>' + targetRows
+      : '';
+
     var del = st.removable
       ? '<div class="aot-stage-actions">' +
         '<button type="button" class="btn aot-pill-btn aot-pill-btn-sm"' +
@@ -250,7 +289,7 @@
       : '';
 
     return '<div class="aot-stage-panel" data-stage-panel>' +
-             nameRow + daysRow + startRow + guideRow + del +
+             nameRow + daysRow + startRow + guideRow + targetsBlock + del +
            '</div>';
   }
 
@@ -266,6 +305,13 @@
     // 지침은 **빈 문자열도 담는다** — 지운 것을 반영해야 한다.
     var g = panel.querySelector('[data-guidance]');
     if (g) st.guidance = g.value || '';
+    // 목표도 같다 — 비운 것은 "프로그램 값으로 돌아가라" 는 뜻이다.
+    panel.querySelectorAll('[data-tk]').forEach(function (el) {
+      var key = el.getAttribute('data-tk');
+      (st.targets || []).forEach(function (t) {
+        if (t.key === key) t.value = (el.value || '').trim();
+      });
+    });
   }
 
   // ── 본문 ──────────────────────────────────────────────────────────────
@@ -439,6 +485,26 @@
       });
     });
 
+    // 5) 목표 — **항목 하나씩** 보낸다(엔드포인트가 그 단위다). 지침과 같이
+    //    바뀐 것만 보내고, 비운 것은 `null` 로 보내 프로그램 값으로 되돌린다.
+    State.stages.forEach(function (st) {
+      if (st.isNew || !st.key) return;
+      var was = origByKey[st.key];
+      if (!was) return;
+      var wasBy = {};
+      (was.targets || []).forEach(function (t) { wasBy[t.key] = t.value; });
+      (st.targets || []).forEach(function (t) {
+        if (!t.editable) return;
+        if ((wasBy[t.key] || '') === (t.value || '')) return;
+        step(function () {
+          return api('POST', base + '/stage-target', {
+            stage_key: st.key, target_key: t.key,
+            value: t.value === '' ? null : t.value
+          }).then(check);
+        });
+      });
+    });
+
     return chain;
   }
 
@@ -458,8 +524,15 @@
       if (st.isNew) return true;
       var was = origByKey[st.key];
       if (!was) return true;
-      return String(was.days) !== String(st.days) ||
-             (was.guidance || '') !== (st.guidance || '');
+      if (String(was.days) !== String(st.days)) return true;
+      if ((was.guidance || '') !== (st.guidance || '')) return true;
+      // ⚠ 목표도 세어야 한다 — 빠뜨리면 목표만 고친 사람이 [프로그램으로
+      //   등록] 을 눌렀을 때 저장되지 않은 채 등록된다(무에러).
+      var wasBy = {};
+      (was.targets || []).forEach(function (t) { wasBy[t.key] = t.value; });
+      return (st.targets || []).some(function (t) {
+        return t.editable && (wasBy[t.key] || '') !== (t.value || '');
+      });
     }) || State.autoAdvance !== !!(State.plot || {}).auto_advance;
   }
 
