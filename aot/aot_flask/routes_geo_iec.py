@@ -794,20 +794,29 @@ def api_facility_estop(facility_uuid):
 # ── 맵 팝업 [현황] 탭 APIs ──────────────────────────────────────────────────────
 
 
-def _function_belongs_to_facility(fn, facility_uuid):
-    """fn(env_coordinator CustomController) 이 facility_uuid 에 연결된 것인지 확인.
+def _function_facility_uuid(fn):
+    """이 env_coordinator 가 붙은 시설 uuid → str|None.
 
-    custom_options 의 geo_facility_id_device_id (또는 legacy geo_facility_id)
-    로 링크를 판정한다 — status/env_summary 공용 기준.
+    ⚠ **키가 둘이다.** `select_device` 옵션이 저장 시 `_device_id` 접미사를
+      붙이므로 신규는 `geo_facility_id_device_id` 이고, 예전 값은
+      `geo_facility_id` 다. 둘을 읽는 자리가 여럿이면 갈라지고, 갈라지면
+      "붙었는데 안 붙은 것으로 보이는" 시설이 생긴다 — 읽는 곳은 여기 하나다.
     """
     import json as _json
     try:
         opts = _json.loads(fn.custom_options or '{}') or {}
     except (TypeError, ValueError):
-        return False
-    fac_id = (opts.get('geo_facility_id_device_id')
-              or opts.get('geo_facility_id') or '')
-    return fac_id == facility_uuid
+        return None
+    return (opts.get('geo_facility_id_device_id')
+            or opts.get('geo_facility_id') or None)
+
+
+def _function_belongs_to_facility(fn, facility_uuid):
+    """fn(env_coordinator CustomController) 이 facility_uuid 에 연결된 것인지 확인.
+
+    판정 기준은 `_function_facility_uuid` 하나다 — status/env_summary 공용.
+    """
+    return _function_facility_uuid(fn) == facility_uuid
 
 
 def _find_facility_env_coordinator(facility_uuid):
@@ -1468,3 +1477,89 @@ def serve_facility_photo(filename):
     if not file_path.startswith(base + os.sep) or not os.path.isfile(file_path):
         return abort(404)
     return send_file(file_path)
+
+
+@blueprint.route('/api/aot/coordinator/<function_uuid>/overview', methods=['GET'])
+@login_required
+def api_coordinator_overview(function_uuid):
+    """통합환경제어 **설정 화면 머리말** — 지금 무엇을 하고 있고 목표는 어디 있나.
+
+    설계: `docs/design/env-coordinator-settings-redesign.md` §3-1 (단계 A).
+
+    ## 왜 필요한가
+
+    설정 화면이 "어떤 값을 설정했나" 만 보여 주고 **"그래서 어떻게 도는가" 는
+    다른 화면(지도 위젯 모달)에 있었다.** 62개를 설정하고 저장했는데 결과를
+    확인할 방법이 그 화면에 없으면, 설정이 맞는지 알 수 없고 **확인할 수 없는
+    것은 믿을 수 없다.**
+
+    그리고 목표(VPD·온도 곡선)는 이 화면이 아니라 **구획에 붙은 프로그램**이
+    갖는데(`GeoProgram.targets_methods`), 화면이 그 사실을 말하지 않아서
+    사용자가 "몇 도로 맞출까" 를 여기서 찾으면 영영 못 찾는다.
+
+    ## ⚠ 요약 판정을 다시 쓰지 않는다
+
+    `api_facility_env_summary` 를 그대로 부르고 결과만 푼다. 같은 사실을 두
+    곳에서 계산하면 갈라지고, 갈라지면 설정 화면과 지도 모달이 **다른 말을
+    한다** — 이 도메인이 이미 크게 데인 실패다.
+
+    ## ⚠ 가벼워야 한다
+
+    `/api/aot/facility/<uuid>/overview` 는 대지 요약·기상 위험·관수·면적까지
+    묶어 30초 캐시로 낸다(실측 534~641ms). 설정 화면 머리말에는 과하다 —
+    여기서는 런타임 요약 1행 + 구획 조회만 한다.
+    """
+    import time as _time
+
+    from aot.databases.models import GeoFacility, GeoPlot, GeoProgram
+    from aot.databases.models.controller import CustomController
+
+    fn = CustomController.query.filter_by(unique_id=function_uuid).first()
+    if fn is None or fn.device != 'env_coordinator':
+        return jsonify({'ok': False, 'message': 'Not an env coordinator'}), 404
+
+    facility_uuid = _function_facility_uuid(fn)
+    if not facility_uuid:
+        # 시설을 안 고른 상태도 **말해야 한다.** 침묵하면 "아직 안 붙었다" 와
+        # "붙었는데 안 돈다" 를 화면이 구분하지 못한다.
+        return jsonify({'ok': True, 'facility': None, 'env': None,
+                        'plots': [], 'ts': _time.time()})
+
+    facility = GeoFacility.query.filter_by(unique_id=facility_uuid).first()
+    env = _unwrap_json(api_facility_env_summary(facility_uuid))
+
+    # 목표가 어디서 오는지 — 이 시설의 **살아 있는** 구획과 그 프로그램.
+    plots = []
+    try:
+        rows = GeoPlot.query.filter_by(facility_uuid=facility_uuid).all()
+        progs = {}
+        for row in rows:
+            if row.ended_on is not None:
+                continue                       # 끝난 작기는 목표를 정하지 않는다
+            prog = None
+            if row.program_uuid:
+                if row.program_uuid not in progs:
+                    progs[row.program_uuid] = GeoProgram.query.filter_by(
+                        unique_id=row.program_uuid).first()
+                prog = progs[row.program_uuid]
+            plots.append({
+                'uuid':    row.unique_id,
+                'name':    row.name or row.subject or '',
+                'subject': row.subject or '',
+                'bay_id':  row.bay_id,
+                'program': ({'uuid': prog.unique_id, 'name': prog.name}
+                            if prog is not None else None),
+            })
+    except Exception as exc:                                    # noqa: BLE001
+        logger.warning('[coordinator overview] plot lookup: %s', exc)
+
+    return jsonify({
+        'ok': True,
+        'facility': ({'uuid': facility_uuid,
+                      'name': getattr(facility, 'name', '') or ''}
+                     if facility is not None else
+                     {'uuid': facility_uuid, 'name': '', 'missing': True}),
+        'env':   env,
+        'plots': plots,
+        'ts':    _time.time(),
+    })

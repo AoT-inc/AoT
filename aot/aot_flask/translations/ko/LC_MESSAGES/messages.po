@@ -30919,6 +30919,66 @@ msgstr "지금은 반대 방향이 필요해 쉬고 있습니다"
 msgid "Target reached — easing off"
 msgstr "목표에 닿아 출력을 줄이고 있습니다"
 
+#: aot/aot_flask/static/js/common/aot-env-status.js
+msgid "%(n)s s ago"
+msgstr "%(n)s초 전"
+
+#: aot/aot_flask/static/js/common/aot-env-status.js
+msgid "Control is switched off."
+msgstr "제어가 꺼져 있습니다."
+
+#: aot/aot_flask/static/js/common/aot-env-status.js
+msgid "Could not read the current state."
+msgstr "현재 상태를 읽지 못했습니다."
+
+#: aot/aot_flask/static/js/common/aot-env-status.js
+msgid "Intake fan"
+msgstr "흡기팬"
+
+#: aot/aot_flask/static/js/common/aot-env-status.js
+msgid "Last decision %(when)s"
+msgstr "마지막 판단 %(when)s"
+
+#: aot/aot_flask/static/js/common/aot-env-status.js
+msgid "Misting"
+msgstr "분무"
+
+#: aot/aot_flask/static/js/common/aot-env-status.js
+msgid "No active plot yet, so no targets are set."
+msgstr "아직 진행 중인 구획이 없어 목표가 정해지지 않았습니다."
+
+#: aot/aot_flask/static/js/common/aot-env-status.js
+msgid "No cycle to report yet."
+msgstr "아직 알릴 제어 사이클이 없습니다."
+
+#: aot/aot_flask/static/js/common/aot-env-status.js
+msgid "No facility is linked yet. Choose one below to start."
+msgstr "아직 시설이 연결되지 않았습니다. 아래에서 시설을 고르면 시작됩니다."
+
+#: aot/aot_flask/static/js/common/aot-env-status.js
+msgid "No integrated environment control is linked to this facility."
+msgstr "이 시설에 연결된 통합환경제어가 없습니다."
+
+#: aot/aot_flask/static/js/common/aot-env-status.js
+msgid "No programme attached"
+msgstr "프로그램 없음"
+
+#: aot/aot_flask/static/js/common/aot-env-status.js
+msgid "Not responding — no decision in the last few minutes."
+msgstr "응답이 없습니다 — 최근 몇 분간 판단이 없었습니다."
+
+#: aot/aot_flask/static/js/common/aot-env-status.js
+msgid "Targets come from the programme on this facility’s plots — not from this screen."
+msgstr "목표는 이 시설의 구획에 붙은 프로그램이 정합니다 — 이 화면이 아닙니다."
+
+#: aot/aot_flask/static/js/common/aot-env-status.js
+msgid "Vents"
+msgstr "개구부"
+
+#: aot/aot_flask/static/js/common/aot-env-status.js
+msgid "Where targets come from"
+msgstr "목표는 어디서 정하나"
+
 #: aot/functions/custom_functions/env_coordinator.py
 msgid "The value you set for %(opt)s is not being used: it applies only when %(cond)s is set to the matching option. Change that first, or this value has no effect."
 msgstr "지금 쓰이지 않는 값 — %(opt)s. %(cond)s 설정이 그에 맞는 항목일 때만 적용됩니다. 그쪽을 먼저 바꾸지 않으면 이 값은 아무 효과가 없습니다."

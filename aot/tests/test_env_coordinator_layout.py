@@ -41,13 +41,18 @@ def _options():
 
 def _ids(opts):
     """값을 싣는 옵션만. 배치 표식(접힘 앵커)도 id 를 가지므로 걸러야 한다."""
-    markers = ('collapse_start', 'collapse_end', 'header')
+    markers = ('collapse_start', 'collapse_end', 'header', 'env_status')
     return [o['id'] for o in opts
             if o.get('id') and o.get('type') not in markers]
 
 
 def _always_visible(opts):
-    """접힘 밖에 있는 옵션 = 첫 화면에 보이는 것."""
+    """첫 화면에 **실제로** 보이는 옵션.
+
+    접힘 밖이면서 `depends_on` 이 없는 것. 종속 옵션은 그 토글을 켜야 나오므로
+    "항상 보인다" 가 아니다 — 세면 이 검사가 뜻을 잃는다.
+    """
+    markers = ('collapse_start', 'collapse_end', 'header', 'env_status')
     out, depth = [], 0
     for o in opts:
         t = o.get('type')
@@ -55,7 +60,8 @@ def _always_visible(opts):
             depth += 1
         elif t == 'collapse_end':
             depth -= 1
-        elif o.get('id') and depth == 0:
+        elif o.get('id') and t not in markers and depth == 0 \
+                and not o.get('depends_on'):
             out.append(o['id'])
     return out
 
@@ -93,16 +99,28 @@ class TestTheFirstScreenStaysSmall:
     """이 검사가 이 파일의 존재 이유다 — 하나씩 늘어나면 다시 62개가 된다."""
 
     def test_at_most_a_dozen_options_are_always_visible(self):
+        """한도는 **연결 2 + 약속 5 + 전략 토글**이다.
+
+        전략 토글을 하나 늘리면 이 숫자도 하나 는다 — 그때는 "정말 사용자가
+        고를 정책인가" 를 먼저 묻고, 맞으면 한도를 올리며 근거를 남긴다.
+        하위 설정은 `depends_on` 으로 붙이므로 여기 안 세어진다.
+        """
         vis = _always_visible(_options())
-        assert len(vis) <= 12, (
+        assert len(vis) <= 13, (
             '첫 화면 옵션이 %d개다. 새 옵션은 접힘 안에 넣을 것 — 정말 첫 '
             '화면에 있어야 한다면 이 한도를 올리는 근거를 함께 남길 것: %s'
             % (len(vis), vis))
 
     def test_the_essentials_are_visible(self):
-        """이것들이 접히면 "무엇부터 채워야 하나" 에 답이 없어진다."""
+        """이것들이 접히면 "무엇부터 채워야 하나" 에 답이 없어진다.
+
+        ⚠ `update_period` 는 2026-08-27 에 **뺐다**. 안전한 일반 기본값(60초)이
+          있어 안 정해도 돌아가므로 "반드시 정해야 하는 것" 이 아니다(D3).
+          여기 남은 것은 **사람이 정하지 않으면 값이 있을 수 없는 것**뿐이다 —
+          어느 시설인가, 어느 선을 넘으면 안 되는가.
+        """
         vis = set(_always_visible(_options()))
-        for oid in ('geo_facility_id', 'update_period',
+        for oid in ('geo_facility_id',
                     'temp_max', 'temp_min', 'humid_max', 'humid_min'):
             assert oid in vis, '%s 가 첫 화면에서 사라졌다' % oid
 
@@ -131,12 +149,37 @@ class TestOrderThatMatters:
         ids = _ids(_options())
         assert abs(ids.index('vent_futility_gate') - ids.index('vent_first')) <= 1
 
-    def test_night_parking_is_not_near_the_top(self):
-        """2026-08-26 에 새 기능을 3번째 섹션에 넣었다 — 고급 옵션이
-        시설 연결보다 앞에 있었다."""
+    def test_strategy_toggles_are_visible_and_their_details_are_not(self):
+        """전략은 **고르는 것**이라 보이고, 그 하위 설정은 켜야 나온다."""
+        vis = set(_always_visible(_options()))
+        for oid in ('vent_futility_gate', 'vent_first', 'hvac_interlock',
+                    'night_vent_park', 'nursery_mode'):
+            assert oid in vis, '전략 토글 %s 가 안 보인다' % oid
+        for oid in ('night_vent_basis', 'night_vent_start',
+                    'hvac_interlock_on_value', 'nursery_max_on_sec'):
+            assert oid not in vis, '%s 가 토글과 무관하게 늘 보인다' % oid
+
+    def test_every_dependency_points_at_a_real_toggle(self):
+        """오타 하나면 그 행이 **영영 안 보인다** — 대상이 없으면 JS 가
+        감추지 않게 해 뒀지만, 명부가 맞는지는 여기서 본다."""
+        opts = _options()
+        ids = {o['id'] for o in opts if o.get('id')}
+        for o in opts:
+            dep = o.get('depends_on')
+            if dep:
+                assert dep in ids, '%s 의 depends_on %r 이 없는 옵션이다' % (
+                    o['id'], dep)
+
+    def test_night_parking_comes_after_the_facility(self):
+        """2026-08-26 에 새 기능을 3번째 섹션에 넣었다 — 고급 옵션이 시설
+        연결보다 앞에 있었다.
+
+        ⚠ 2026-08-27: 야간 파킹은 이제 **보이는 것이 맞다** — 전략 토글이다.
+          감춰야 할 것은 그 하위 설정이고, 그쪽은
+          `test_strategy_toggles_are_visible_and_their_details_are_not` 가 본다.
+        """
         ids = _ids(_options())
         assert ids.index('night_vent_park') > ids.index('geo_facility_id')
-        assert 'night_vent_park' not in _always_visible(_options())
 
 
 class TestTheLayoutDoesNotChangeBehaviour:

@@ -186,13 +186,13 @@ class AbstractBaseController(object):
                         ('type' in each_option_default and
                          each_option_default['type'] not in [
                              'new_line', 'message', 'header',
-                             'collapse_start', 'collapse_end'])):
+                             'collapse_start', 'collapse_end', 'env_status'])):
                     error.append("'id' not found in custom_options")
                 if ('default_value' not in each_option_default and
                         ('type' in each_option_default and
                          each_option_default['type'] not in [
                              'new_line', 'header', 'button',
-                             'collapse_start', 'collapse_end'])):
+                             'collapse_start', 'collapse_end', 'env_status'])):
                     error.append("'default_value' not found in custom_options")
 
                 for each_error in error:
@@ -202,7 +202,7 @@ class AbstractBaseController(object):
 
                 if each_option_default['type'] in [
                         'new_line', 'message', 'header', 'button',
-                        'collapse_start', 'collapse_end']:
+                        'collapse_start', 'collapse_end', 'env_status']:
                     continue
 
                 if 'required' in each_option_default and each_option_default['required']:
@@ -332,13 +332,13 @@ class AbstractBaseController(object):
                         ('type' in each_option_default and
                          each_option_default['type'] not in [
                              'new_line', 'message', 'header',
-                             'collapse_start', 'collapse_end'])):
+                             'collapse_start', 'collapse_end', 'env_status'])):
                     error.append(f"'id' not found in custom_options: {each_option_default}")
                 if ('default_value' not in each_option_default and
                         ('type' in each_option_default and
                          each_option_default['type'] not in [
                              'new_line', 'header', 'button',
-                             'collapse_start', 'collapse_end'])):
+                             'collapse_start', 'collapse_end', 'env_status'])):
                     error.append(f"'default_value' not found in custom_options: {each_option_default}")
 
                 for each_error in error:
@@ -348,7 +348,7 @@ class AbstractBaseController(object):
 
                 if each_option_default['type'] in [
                         'new_line', 'message', 'header', 'button',
-                        'collapse_start', 'collapse_end']:
+                        'collapse_start', 'collapse_end', 'env_status']:
                     continue
 
                 if 'required' in each_option_default and each_option_default['required']:
@@ -487,13 +487,13 @@ class AbstractBaseController(object):
                         ('type' in each_option_default and
                          each_option_default['type'] not in [
                              'new_line', 'message', 'header',
-                             'collapse_start', 'collapse_end'])):
+                             'collapse_start', 'collapse_end', 'env_status'])):
                     error.append(f"'id' not found in custom_options: {each_option_default}")
                 if ('default_value' not in each_option_default and
                         ('type' in each_option_default and
                          each_option_default['type'] not in [
                              'new_line', 'header', 'button',
-                             'collapse_start', 'collapse_end'])):
+                             'collapse_start', 'collapse_end', 'env_status'])):
                     error.append(f"'default_value' not found in custom_options: {each_option_default}")
 
                 for each_error in error:
@@ -503,7 +503,7 @@ class AbstractBaseController(object):
 
                 if each_option_default['type'] in [
                         'new_line', 'message', 'header', 'button',
-                        'collapse_start', 'collapse_end']:
+                        'collapse_start', 'collapse_end', 'env_status']:
                     continue
 
                 dict_values[each_option_default['id']] = _ChannelValues(

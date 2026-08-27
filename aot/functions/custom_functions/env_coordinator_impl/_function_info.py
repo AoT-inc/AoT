@@ -267,6 +267,7 @@ FUNCTION_INFORMATION = {
         },
         {
             'id': 'night_vent_basis',
+            'depends_on': 'night_vent_park',
             'type': 'select',
             'default_value': 'sun',
             'required': False,
@@ -285,6 +286,7 @@ FUNCTION_INFORMATION = {
         },
         {
             'id': 'night_vent_sunset_offset_min',
+            'depends_on': 'night_vent_park',
             'type': 'float',
             'default_value': 0.0,
             'required': False,
@@ -300,6 +302,7 @@ FUNCTION_INFORMATION = {
         },
         {
             'id': 'night_vent_start',
+            'depends_on': 'night_vent_park',
             'type': 'text',
             'default_value': '18:00',
             'required': False,
@@ -311,6 +314,7 @@ FUNCTION_INFORMATION = {
         },
         {
             'id': 'night_vent_end',
+            'depends_on': 'night_vent_park',
             'type': 'text',
             'default_value': '06:00',
             'required': False,
@@ -369,6 +373,7 @@ FUNCTION_INFORMATION = {
         },
         {
             'id': 'hvac_interlock_signal',
+            'depends_on': 'hvac_interlock',
             'type': 'select_measurement',
             'default_value': '',
             'required': False,
@@ -390,6 +395,7 @@ FUNCTION_INFORMATION = {
         },
         {
             'id': 'hvac_interlock_on_value',
+            'depends_on': 'hvac_interlock',
             'type': 'float',
             'default_value': 0.5,
             'required': False,
@@ -727,6 +733,7 @@ FUNCTION_INFORMATION = {
         },
         {
             'id': 'nursery_solar_lockout',
+            'depends_on': 'nursery_mode',
             'type': 'float',
             'default_value': 250.0,
             'required': False,
@@ -739,6 +746,7 @@ FUNCTION_INFORMATION = {
         },
         {
             'id': 'nursery_solar_release',
+            'depends_on': 'nursery_mode',
             'type': 'float',
             'default_value': 150.0,
             'required': False,
@@ -773,6 +781,7 @@ FUNCTION_INFORMATION = {
         },
         {
             'id': 'nursery_max_on_sec',
+            'depends_on': 'nursery_mode',
             'type': 'float',
             'default_value': 20.0,
             'required': False,
@@ -785,6 +794,7 @@ FUNCTION_INFORMATION = {
         },
         {
             'id': 'nursery_min_off_sec',
+            'depends_on': 'nursery_mode',
             'type': 'float',
             'default_value': 600.0,
             'required': False,
@@ -796,6 +806,7 @@ FUNCTION_INFORMATION = {
         },
         {
             'id': 'nursery_evening_fog',
+            'depends_on': 'nursery_mode',
             'type': 'bool',
             'default_value': True,
             'required': False,
@@ -814,6 +825,7 @@ FUNCTION_INFORMATION = {
         },
         {
             'id': 'nursery_evening_cutoff_min',
+            'depends_on': 'nursery_mode',
             'type': 'float',
             'default_value': 120.0,
             'required': False,
@@ -828,6 +840,7 @@ FUNCTION_INFORMATION = {
         },
         {
             'id': 'nursery_water_source',
+            'depends_on': 'nursery_mode',
             'type': 'select',
             'default_value': 'groundwater',
             'required': False,
@@ -1116,36 +1129,46 @@ FUNCTION_INFORMATION = {
 
 #   (접힘?, 제목, [(소제목|None, [옵션 id …]) …])
 _LAYOUT = [
-    # ── 항상 보이는 것 — 이것만 채우면 돈다 ──────────────────────────────────
+    # ── 층 1·2: 항상 보인다 — 이것만 정하면 돈다 ─────────────────────────────
     (False, lazy_gettext('Facility'), [
         (None, ['geo_facility_id', 'bay_scope']),
     ]),
-    (False, lazy_gettext('Basic'), [
-        (None, ['update_period', 'sensor_max_age']),
-    ]),
     # 하드 임계는 "목표" 가 아니라 **넘지 말아야 할 선**이다. 제목이 그것을
-    # 말해야 유도 범위와 헷갈리지 않는다.
+    # 말해야 유도 범위와 헷갈리지 않는다. VPD 허용오차를 같이 두는 이유도
+    # 같다 — 셋 다 "내가 지켜야 할 선" 이다.
     (False, lazy_gettext('Limits Never to Cross'), [
-        (None, ['temp_max', 'temp_min', 'humid_max', 'humid_min']),
+        (None, ['temp_max', 'temp_min', 'humid_max', 'humid_min',
+                'tolerance_vpd']),
     ]),
-    (False, lazy_gettext('VPD'), [
-        (None, ['tolerance_vpd']),
-    ]),
-
-    # ── 접어 두는 것 ─────────────────────────────────────────────────────────
-    # 유도 범위는 하드 임계 **바로 다음**이다 — 둘이 어긋나면 목표가 조용히
-    # 좁혀지므로, 하나를 고칠 때 다른 하나가 눈에 보여야 한다.
+    # ⚠ **유도 범위는 하드 임계 바로 뒤다.** 둘이 어긋나면 목표가 조용히
+    #   좁혀지므로(저장 시 경고가 필요했던 이유가 그 거리다), 하나를 고칠 때
+    #   다른 하나가 손 닿는 곳에 있어야 한다. 접혀 있지만 **바로 다음 줄**이다.
     (True, lazy_gettext('Guide Ranges (T / RH)'), [
         (None, ['guide_T_min', 'guide_T_max', 'guide_RH_min', 'guide_RH_max']),
     ]),
-    (True, lazy_gettext('Ventilation Strategy'), [
+
+    # ── 층 3: 전략 — 이해하고 고르는 정책 ────────────────────────────────────
+    # ⚠ **토글만 보이고 하위 설정은 켜야 나온다**(`depends_on`). 야간 파킹을
+    #   쓰지 않는 사람에게 기준·오프셋·시각 4개가 늘 보이면, 자기가 안 쓰는
+    #   것까지 정해야 하는 줄 안다.
+    # ⚠ 하위 설정을 **다른 곳으로 빼지 않는다** — 토글 바로 아래가 그 값의
+    #   자리다(설계문서 §3-2).
+    (False, lazy_gettext('Control Strategy'), [
         (None, ['vent_futility_gate', 'vent_first']),
-        (lazy_gettext('Heating / Cooling Interlock'),
-         ['hvac_interlock', 'hvac_interlock_signal', 'hvac_interlock_on_value']),
-        (lazy_gettext('Night Vent Parking'),
-         ['night_vent_park', 'night_vent_basis',
-          'night_vent_sunset_offset_min', 'night_vent_start', 'night_vent_end']),
+        (None, ['hvac_interlock', 'hvac_interlock_signal',
+                'hvac_interlock_on_value']),
+        (None, ['night_vent_park', 'night_vent_basis',
+                'night_vent_sunset_offset_min', 'night_vent_start',
+                'night_vent_end']),
+        (None, ['nursery_mode', 'nursery_max_on_sec', 'nursery_min_off_sec',
+                'nursery_water_source', 'nursery_evening_fog',
+                'nursery_evening_cutoff_min', 'nursery_solar_lockout',
+                'nursery_solar_release', 'use_wetting_fog_for_humidity']),
     ]),
+
+    # ── 층 4: 튜닝 — 안 건드리는 게 정상 ─────────────────────────────────────
+    # 유도 범위는 하드 임계와 **서로 간섭**하므로 맨 앞에 둔다(둘이 어긋나면
+    # 목표가 조용히 좁혀진다 — 저장 시 경고가 필요했던 이유가 그 거리다).
     (True, lazy_gettext('Schedule and Time'), [
         (lazy_gettext('Growth Schedule'),
          ['schedule_end_time', 'schedule_week_offset']),
@@ -1153,21 +1176,15 @@ _LAYOUT = [
          ['time_enable', 'time_start', 'time_end',
           'photo_method_id', 'photo_anchor']),
     ]),
-    (True, lazy_gettext('Nursery'), [
-        (None, ['nursery_mode', 'nursery_max_on_sec', 'nursery_min_off_sec',
-                'nursery_water_source', 'use_wetting_fog_for_humidity']),
-        (lazy_gettext('Misting Sunburn Protection'),
-         ['nursery_solar_lockout', 'nursery_solar_release',
-          'nursery_evening_fog', 'nursery_evening_cutoff_min']),
+    (True, lazy_gettext('Cycle and Response'), [
+        (None, ['update_period', 'sensor_max_age', 'actuation_profile',
+                'actuation_period_sec', 'emergency_period_sec',
+                'emergency_deviation_mult', 'emergency_rate_c_per_10min',
+                'gate_wind_threshold']),
     ]),
     (True, lazy_gettext('Light and CO₂'), [
         (None, ['light_max', 'light_min', 'shade_transmittance',
                 'priority_co2', 'tolerance_co2']),
-    ]),
-    (True, lazy_gettext('Actuation Rate'), [
-        (None, ['actuation_profile', 'actuation_period_sec',
-                'emergency_period_sec', 'emergency_deviation_mult',
-                'emergency_rate_c_per_10min', 'gate_wind_threshold']),
     ]),
     (True, lazy_gettext('Model and Calibration'), [
         (None, ['photosynth_mode_enabled', 'source_plot_id', 'vpd_weight_T',
@@ -1199,6 +1216,17 @@ def _apply_layout(options, layout):
     real = [o for o in options if o.get('id') and o.get('type') not in _MARKERS]
     by_id = {o['id']: o for o in real}
     out, used = [], set()
+    # ── 머리말 — 설정이 아니라 **답**이다 (단계 A) ───────────────────────────
+    # "지금 뭘 하고 있나" 와 "목표는 어디서 정하나" 에 화면이 답한다. 설정 62개
+    # 위에 놓이는 이유: 결과를 확인할 수 없으면 설정이 맞는지 알 수 없고,
+    # **확인할 수 없는 것은 믿을 수 없다**(설계문서 §2-2).
+    #
+    # ⚠ **옵션이 아니라 표식이다.** 값을 싣지 않으므로 `header` 와 같은 부류이고,
+    #   파서의 표시 전용 목록에 함께 있어야 한다 — 빠지면 "Unknown option type"
+    #   으로 파싱이 통째로 멈춘다(2026-08-27 collapse 표식이 실제로 그랬다).
+    # ⚠ `message` 로는 안 된다 — 그쪽은 import 시점에 고정된 문자열이라 모든
+    #   코디네이터가 같은 것을 보게 된다. 자리만 깔고 JS 가 채운다.
+    out.append({'type': 'env_status'})
     for folded, title, blocks in layout:
         if folded:
             # ⚠ **접힘마다 고유한 id 가 있어야 한다.** 템플릿이 DOM 앵커를

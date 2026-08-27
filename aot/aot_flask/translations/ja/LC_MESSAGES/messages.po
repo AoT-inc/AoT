@@ -30678,6 +30678,66 @@ msgstr "今は逆方向が必要なため停止しています"
 msgid "Target reached — easing off"
 msgstr "目標に達したため出力を下げています"
 
+#: aot/aot_flask/static/js/common/aot-env-status.js
+msgid "%(n)s s ago"
+msgstr "%(n)s秒前"
+
+#: aot/aot_flask/static/js/common/aot-env-status.js
+msgid "Control is switched off."
+msgstr "制御がオフになっています。"
+
+#: aot/aot_flask/static/js/common/aot-env-status.js
+msgid "Could not read the current state."
+msgstr "現在の状態を読み取れませんでした。"
+
+#: aot/aot_flask/static/js/common/aot-env-status.js
+msgid "Intake fan"
+msgstr "吸気ファン"
+
+#: aot/aot_flask/static/js/common/aot-env-status.js
+msgid "Last decision %(when)s"
+msgstr "最後の判断 %(when)s"
+
+#: aot/aot_flask/static/js/common/aot-env-status.js
+msgid "Misting"
+msgstr "噴霧"
+
+#: aot/aot_flask/static/js/common/aot-env-status.js
+msgid "No active plot yet, so no targets are set."
+msgstr "まだ進行中の区画がないため、目標が設定されていません。"
+
+#: aot/aot_flask/static/js/common/aot-env-status.js
+msgid "No cycle to report yet."
+msgstr "まだ報告する制御サイクルがありません。"
+
+#: aot/aot_flask/static/js/common/aot-env-status.js
+msgid "No facility is linked yet. Choose one below to start."
+msgstr "まだ施設が連携されていません。下で施設を選ぶと始まります。"
+
+#: aot/aot_flask/static/js/common/aot-env-status.js
+msgid "No integrated environment control is linked to this facility."
+msgstr "この施設に連携された統合環境制御がありません。"
+
+#: aot/aot_flask/static/js/common/aot-env-status.js
+msgid "No programme attached"
+msgstr "プログラムなし"
+
+#: aot/aot_flask/static/js/common/aot-env-status.js
+msgid "Not responding — no decision in the last few minutes."
+msgstr "応答がありません — ここ数分間、判断がありません。"
+
+#: aot/aot_flask/static/js/common/aot-env-status.js
+msgid "Targets come from the programme on this facility’s plots — not from this screen."
+msgstr "目標はこの施設の区画に付いたプログラムが決めます — この画面ではありません。"
+
+#: aot/aot_flask/static/js/common/aot-env-status.js
+msgid "Vents"
+msgstr "開口部"
+
+#: aot/aot_flask/static/js/common/aot-env-status.js
+msgid "Where targets come from"
+msgstr "目標はどこで決まるか"
+
 #: aot/functions/custom_functions/env_coordinator.py
 msgid "The value you set for %(opt)s is not being used: it applies only when %(cond)s is set to the matching option. Change that first, or this value has no effect."
 msgstr "使われていない値 — %(opt)s。%(cond)s の設定が対応する項目のときだけ適用されます。そちらを先に変更しないと、この値は効果がありません。"
