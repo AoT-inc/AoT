@@ -102,6 +102,41 @@ CROP_PRESETS: Dict[str, CropParams] = {
 DEFAULT_CROP = CROP_PRESETS['tomato']
 
 
+# 광포화 판정용 배수 — `A = A_max·L/(L+K_L)` 에서 `L = SAT_K_L_MULT·K_L` 이면
+# `A = A_max × 9/10`. 즉 여기서부터는 빛을 더 줘도 10% 미만만 남는다.
+#
+# ⚠ 이 상수를 자리마다 다시 적지 말 것. 배수를 바꾸면 "광 제한" 판정이 통째로
+#   움직이므로, 근거가 한 곳에 있어야 다음 사람이 왜 9인지 물을 자리가 있다.
+SAT_K_L_MULT = 9.0
+
+
+def light_saturation_wm2(params: 'CropParams') -> Optional[float]:
+    """이 작물의 **광포화점** [W/m² 전천일사] — `K_L` 에서 파생한다.
+
+    **작물 성질은 프로그램이 안다**(`GeoProgram.photosynthesis.K_L`). 예전에는
+    함수 옵션 `light_max` 가 이 값을 겸했는데, 그 칸의 본뜻은 **차광막을 닫는
+    광량**이라 뜻이 둘이었다 — 차광을 일찍 하려고 낮추면 광합성 모델이 "빛은
+    이미 충분하다" 로 판정해 버린다. 2026-08-27 실측: `light_max=250` 인
+    코디네이터 둘이 실측 일사 542·650 W/m² 아래에서 **광 제한을 영영 못 봤다.**
+
+    ⚠ `K_L` 이 없으면 **None** 이다. 그때 판정은 시스템 기본
+      (`situation._LIGHT_SAT`)으로 돌아간다 — 0 을 돌려주면 "언제나 광 충분"
+      이 되어 정확히 위 사고가 재현된다.
+
+    단위: `K_L` 은 PPFD(µmol/m²/s)이고 판정은 전천일사(W/m²)라 시스템 변환표를
+    지난다(`cumulative_tracker.light_to_wm2`). 여기서 계수를 직접 곱하지 말 것.
+    """
+    k_l = getattr(params, 'K_L', None)
+    try:
+        k_l = float(k_l)
+    except (TypeError, ValueError):
+        return None
+    if k_l <= 0:
+        return None
+    from aot.functions.utils.env_control.cumulative_tracker import light_to_wm2
+    return light_to_wm2(SAT_K_L_MULT * k_l, 'umol_m2_s')
+
+
 def get_crop_params(crop_key: Optional[str]) -> CropParams:
     """crop_key로 프리셋을 반환한다. 없으면 tomato(기본)."""
     if not crop_key:

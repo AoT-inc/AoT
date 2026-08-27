@@ -24571,8 +24571,6 @@ msgid "Max Light Threshold"
 msgstr "최대 광량 임계값"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:455
-msgid "Activate shade screen when light exceeds this value. 0 = disabled."
-msgstr "광량이 이 값을 초과하면 차광 스크린을 작동시킵니다. 0 = 비활성화."
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:463
 msgid "Min Light Threshold (Supplemental)"
@@ -31510,3 +31508,9 @@ msgstr "시간대는 이 시각을 가운데 두고 잡힙니다."
 
 msgid "Control stops for good after this date. Leave blank to keep running."
 msgstr "이 날짜가 지나면 제어가 완전히 멈춥니다. 비워 두면 계속 돕니다."
+
+msgid "Close the shade screen above this light level. 0 = never shade. This is a shading choice only — how much light the crop can use comes from its program."
+msgstr "이 광량을 넘으면 차광막을 닫습니다. 0 이면 차광하지 않습니다. 차광 여부만 정하는 값입니다 — 작물이 쓸 수 있는 빛의 양은 그 작물의 프로그램에서 옵니다."
+
+msgid "Switch supplemental lighting on below this light level. 0 = no supplemental lighting, which is most facilities."
+msgstr "이 광량 아래로 내려가면 보광등을 켭니다. 0 이면 보광하지 않으며, 대부분의 시설이 그렇습니다."

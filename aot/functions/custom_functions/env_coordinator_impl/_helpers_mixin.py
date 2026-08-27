@@ -401,6 +401,35 @@ class HelpersMixin:
         self._crop_params_cache = params
         return params
 
+    def _light_saturation(self):
+        """지금 기르는 작물의 광포화점 [W/m²] — 없으면 None.
+
+        ⚠ **`light_max` 가 이 값을 겸하면 안 된다.** 그 칸의 뜻은 "차광막을
+          닫는 광량"(설비·운영 정책)이고 광포화점은 **작물 성질**이라 출처가
+          다르다. 겸하게 두면 차광을 일찍 하려고 낮추는 순간 광합성 모델이
+          "빛은 이미 충분하다" 로 판정한다.
+
+          2026-08-27 실측: `light_max=250` 인 코디네이터 둘이, 실측 일사가
+          542·650 W/m² 인 환경에서 **광 제한을 영영 못 봤다**. 둘 다
+          `photosynth_mode_enabled` 가 켜져 있어 그 판정이 제어로 흘렀다.
+
+        정본은 구획의 프로그램(`photosynthesis.K_L`)이다 — 프리셋이 아니다.
+        `_crop_params()` 가 이미 그 JSON 을 얹어 두므로 여기서 다시 읽지
+        않는다: 두 벌이 되면 갈라지고, 갈라지면 화면과 제어가 다른 포화점을
+        본다.
+
+        None 이면 판정은 시스템 기본(`situation._LIGHT_SAT`, 600)으로
+        돌아간다. **0 을 돌려주지 말 것** — 0 을 유효한 포화점으로 읽는 자리가
+        생기면 "언제나 광 충분" 이 되어 위 사고가 그대로 재현된다.
+        """
+        from aot.functions.utils.env_control.photosynthesis import (
+            light_saturation_wm2)
+        try:
+            return light_saturation_wm2(self._crop_params())
+        except Exception as exc:                                # noqa: BLE001
+            self.logger.debug('광포화점 파생 실패: %s', exc)
+            return None
+
     # ── CO₂ setpoint ─────────────────────────────────────────────────────────
 
     def _get_co2_setpoint(self) -> 'float | None':

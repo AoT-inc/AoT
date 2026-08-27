@@ -1091,7 +1091,8 @@ class CycleMixin:
             last_int_ts=None,
             trend_state=self._trend_state,
             authority=authority,
-            light_sat=self.light_max if (self.light_max and self.light_max > 0) else None,
+            # ⚠ `light_max` 가 아니다 — `_light_saturation` 주석 참조.
+            light_sat=self._light_saturation(),
         )
 
         # ── 습윤형 분무 습도 상한 판정 ──────────────────────────────────────

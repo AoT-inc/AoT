@@ -24367,8 +24367,6 @@ msgid "Max Light Threshold"
 msgstr "最大光量しきい値"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:455
-msgid "Activate shade screen when light exceeds this value. 0 = disabled."
-msgstr "光量がこの値を超えると遮光スクリーンを作動させます。0 = 無効。"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:463
 msgid "Min Light Threshold (Supplemental)"
@@ -31269,3 +31267,9 @@ msgstr "時間帯はこの時刻を中心に取られます。"
 
 msgid "Control stops for good after this date. Leave blank to keep running."
 msgstr "この日付を過ぎると制御が完全に止まります。空欄なら動き続けます。"
+
+msgid "Close the shade screen above this light level. 0 = never shade. This is a shading choice only — how much light the crop can use comes from its program."
+msgstr "この光量を超えると遮光カーテンを閉じます。0 なら遮光しません。遮光の可否だけを決める値です — 作物が使える光の量はその作物のプログラムから来ます。"
+
+msgid "Switch supplemental lighting on below this light level. 0 = no supplemental lighting, which is most facilities."
+msgstr "この光量を下回ると補光灯を点けます。0 なら補光せず、ほとんどの施設がそうです。"

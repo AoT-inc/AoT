@@ -531,7 +531,7 @@ FUNCTION_INFORMATION = {
             'required': False,
             'name': lazy_gettext('Max Light Threshold'),
             'phrase': lazy_gettext(
-                'Activate shade screen when light exceeds this value. 0 = disabled.'
+                'Close the shade screen above this light level. 0 = never shade. This is a shading choice only — how much light the crop can use comes from its program.'
             ),
         },
         {
@@ -542,8 +542,8 @@ FUNCTION_INFORMATION = {
             'required': False,
             'name': lazy_gettext('Min Light Threshold (Supplemental)'),
             'phrase': lazy_gettext(
-                'Activate supplemental lighting when light falls below this value. '
-                '0 = disabled (most facilities — natural light only).'
+                'Switch supplemental lighting on below this light level. '
+                '0 = no supplemental lighting, which is most facilities.'
             ),
         },
 
