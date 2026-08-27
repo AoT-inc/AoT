@@ -111,6 +111,32 @@ def light_to_ppfd(value: Optional[float], unit: Optional[str] = None) -> Optiona
     return converted if converted is not None else value
 
 
+_WM2_UNIT_KEY = 'W_m2'
+
+
+def light_to_wm2(value: Optional[float], unit: Optional[str] = None) -> Optional[float]:
+    """광 측정값을 전천일사(W/m²)로 환산 — `light_to_ppfd` 와 **같은 변환표**.
+
+    제어가 쓰는 광량 임계(`light_min`/`light_max`)와 차광막 추정이 전부 W/m²
+    를 전제한다. 그런데 `_MEAS_LIGHT_NAMES` 는 `lux`·`ppfd`·`par` 도 광량으로
+    받아들이므로, 그런 채널의 값을 그대로 쓰면 **자릿수가 다른 숫자를 임계와
+    비교하게 된다** — 조도계 50,000 lux 가 50,000 W/m² 로 읽혀 차광막이 영구히
+    닫힌다. 에러는 나지 않는다.
+
+    ⚠ **변환표를 여기서 새로 만들지 말 것.** `_convert_via_system` 이 시스템
+      변환표(`config_devices_units.UNIT_CONVERSIONS`)를 단일 출처로 쓴다 —
+      두 벌이 되면 갈라지고, 갈라지면 화면과 제어가 다른 값을 본다.
+
+    ⚠ 단위 미상이면 **바꾸지 않는다**(W/m² 로 가정). 모르는 것을 추측해서
+      곱하면 원래 맞던 값까지 틀어진다.
+    """
+    if value is None:
+        return None
+    from_key = _normalize_light_unit(unit)
+    converted = _convert_via_system(value, from_key, _WM2_UNIT_KEY)
+    return converted if converted is not None else value
+
+
 def local_today(tz=None) -> date:
     """tz 기준 오늘 날짜. tz 미지정 시 UTC(하위 호환)."""
     if tz is None:

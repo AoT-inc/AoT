@@ -628,6 +628,52 @@ def read_fitting_sensors(
     return [grouped[fid] for fid in order]
 
 
+def _dm_row(measurement_id):
+    """measurement_id → DeviceMeasurements 행 (없으면 None)."""
+    if not measurement_id:
+        return None
+    try:
+        from aot.databases.models.measurement import DeviceMeasurements
+        from aot.utils.database import db_retrieve_table_daemon
+        return db_retrieve_table_daemon(DeviceMeasurements).filter(
+            DeviceMeasurements.unique_id == measurement_id).first()
+    except Exception:                                           # noqa: BLE001
+        return None
+
+
+def _normalise_light(value, dm):
+    """광량 값을 **전천일사(W/m²)로** 맞춘다.
+
+    ⚠ **`light` 결과 키는 W/m² 로 약속돼 있다**(`_UNIT_BY_KEY`). 그런데
+      `_MEAS_LIGHT_NAMES` 는 `lux`·`ppfd`·`par` 도 광량으로 받아들이므로,
+      값을 그대로 실으면 **자릿수가 다른 숫자가 임계와 비교된다** — 조도계
+      50,000 lux 가 50,000 W/m² 로 읽혀 `light_max`(기본 800)를 언제나 넘고,
+      차광막이 영구히 닫힌다. 에러는 나지 않는다.
+
+      같은 값이 실내 광량 추정(`estimate_indoor_light`)·일소 잠금·DLI 로도
+      흘러가므로, 어긋나면 그 셋이 함께 틀어진다.
+
+    ⚠ **변환표를 여기서 만들지 말 것.** `cumulative_tracker` 가 이미 시스템
+      변환표(`config_devices_units.UNIT_CONVERSIONS`)를 단일 출처로 쓰고
+      있다. 두 벌이 되면 갈라지고, 갈라지면 화면과 제어가 다른 값을 본다.
+
+    ⚠ 단위를 모르면 **바꾸지 않는다.** 모르는 것을 추측해서 곱하면 원래 맞던
+      값까지 틀어진다(변환기 쪽도 같은 규칙이다).
+    """
+    if value is None or dm is None:
+        return value
+    unit = _effective_raw_unit(dm)      # conversion 이 걸렸으면 변환 단위
+    if not unit:
+        return value
+    try:
+        from aot.functions.utils.env_control.cumulative_tracker import (
+            light_to_wm2)
+        out = light_to_wm2(float(value), unit)
+        return float(value) if out is None else out
+    except Exception:                                           # noqa: BLE001
+        return value
+
+
 def _read_one_sensor(
     input_uuid: str,
     measurement_type: Optional[str],
@@ -663,7 +709,10 @@ def _read_one_sensor(
         try:
             ts, val = get_last_measurement(input_uuid, measurement_id, max_age=max_age)
             if ts is not None and val is not None:
-                result[rkey] = float(val)
+                val = float(val)
+                if rkey == 'light':
+                    val = _normalise_light(val, _dm_row(measurement_id))
+                result[rkey] = val
         except Exception:
             pass
         return result
@@ -683,19 +732,24 @@ def _read_one_sensor(
         for dm in dm_rows:
             meas_lower = (dm.measurement or '').lower()
             matched = meas_lower in target_names
-            # 이름 불일치 시 변환 후 단위로 재확인 — 변환 설정된 채널은 저장 단위 기준으로 판별
+            # 이름 불일치 시 **저장 단위**로 재확인 — 변환이 걸린 채널은 이름이
+            # 원시 그대로여도 단위가 목표 단위다.
+            #
+            # ⚠ 예전에는 `return_measurement_info(dm.unique_id)` 였다. 그 함수의
+            #   시그니처는 `(행, conversion)` 이라 **TypeError** 가 났고, 바로
+            #   아래 `except` 가 그것을 삼켜 이 재확인은 **한 번도 성립한 적이
+            #   없었다**(2026-08-27 실측). `_effective_raw_unit` 이 같은 답을
+            #   행 하나로 준다.
             if not matched and measurement_type == 'rain':
-                try:
-                    from aot.utils.influx import return_measurement_info
-                    minfo = return_measurement_info(dm.unique_id)
-                    matched = (minfo.get('unit') or '').lower() in _RAIN_UNITS
-                except Exception:
-                    pass
+                matched = _effective_raw_unit(dm).lower() in _RAIN_UNITS
             if matched:
                 try:
                     ts, val = get_last_measurement(input_uuid, dm.unique_id, max_age=max_age)
                     if ts is not None and val is not None:
-                        result[rkey] = float(val)
+                        val = float(val)
+                        if rkey == 'light':
+                            val = _normalise_light(val, dm)
+                        result[rkey] = val
                 except Exception:
                     pass
                 break
@@ -972,7 +1026,7 @@ def read_outdoor_sensors(
     if not buckets['rain_mm'] and outdoor_device_ids:
         from aot.databases.models.measurement import DeviceMeasurements
         from aot.utils.database import db_retrieve_table_daemon
-        from aot.utils.influx import get_last_measurement, return_measurement_info
+        from aot.utils.influx import get_last_measurement
         try:
             dm_rows = db_retrieve_table_daemon(DeviceMeasurements).filter(
                 DeviceMeasurements.device_id.in_(outdoor_device_ids)
@@ -981,11 +1035,11 @@ def read_outdoor_sensors(
                 meas_lower = (dm.measurement or '').lower()
                 is_rain = meas_lower in _MEAS_RAIN_NAMES
                 if not is_rain:
-                    try:
-                        minfo = return_measurement_info(dm.unique_id)
-                        is_rain = (minfo.get('unit') or '').lower() in _RAIN_UNITS
-                    except Exception:
-                        pass
+                    # ⚠ 같은 깨진 호출이 여기에도 있었다(위 `_read_one_sensor`
+                    #   의 주석 참조) — 두 곳 다 TypeError 를 삼키고 있었으므로
+                    #   **이름이 원시 그대로인 강수 채널은 어느 경로로도 안
+                    #   잡혔다.** 한 곳만 고치면 나머지 하나가 그대로 남는다.
+                    is_rain = _effective_raw_unit(dm).lower() in _RAIN_UNITS
                 if is_rain:
                     try:
                         ts, val = get_last_measurement(
