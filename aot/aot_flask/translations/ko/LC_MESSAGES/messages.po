@@ -29070,8 +29070,6 @@ msgstr "단계 목표"
 msgid "Current setting"
 msgstr "지금 설정"
 
-msgid "For reference — this coordinator aims at VPD, so these are not settings here."
-msgstr "참고 — 이 코디네이터는 VPD 를 목표로 하므로 아래는 여기 설정이 아닙니다."
 
 msgid "Shown for comparison. Nothing here changes control."
 msgstr "비교용으로만 보입니다. 여기서 제어가 바뀌지 않습니다."
@@ -29130,8 +29128,6 @@ msgstr "광합성 모델 작물"
 msgid "Targets in effect"
 msgstr "적용 중인 목표"
 
-msgid "Targets come from the program. Safety limits below stay with this facility."
-msgstr "목표는 프로그램에서 옵니다. 아래 안전 한계는 이 시설의 설정입니다."
 
 msgid "This plot has no program, so there are no stage targets to follow."
 msgstr "이 구획에 프로그램이 없어 따를 단계 목표가 없습니다."
@@ -31414,3 +31410,75 @@ msgstr "구획을 시작한 뒤 지난 주 수에 더해 보정합니다. 양수
 
 msgid "Which plot this coordinator follows, when more than one is growing in its scope. Leave empty when there is only one — it is picked automatically. Set from the comparison card at the top of this page."
 msgstr "범위 안에서 여러 구획이 자라고 있을 때 어느 것을 따를지 정합니다. 하나뿐이면 비워 두세요 — 자동으로 골라집니다. 이 페이지 위쪽의 비교 카드에서 정할 수 있습니다."
+
+msgid "Ventilation and HVAC Teamwork"
+msgstr "환기와 냉난방 조율"
+
+msgid "How much the outdoor air is trusted before heating or cooling is used. Higher settings save energy; lower settings chase the target harder."
+msgstr "냉난방을 쓰기 전에 바깥 공기를 얼마나 믿을지 정합니다. 높일수록 에너지를 아끼고, 낮출수록 목표를 바짝 쫓습니다."
+
+msgid "Chases the target harder"
+msgstr "목표를 바짝 쫓음"
+
+msgid "Saves more energy"
+msgstr "에너지를 더 아낌"
+
+msgid "Save energy"
+msgstr "아낌"
+
+msgid "Save more"
+msgstr "많이 아낌"
+
+msgid "Close at Night"
+msgstr "야간에 닫아 두기"
+
+msgid "Misting Limit Irradiance"
+msgstr "분무 제한 일사량"
+
+msgid "Light Range"
+msgstr "광량 범위"
+
+msgid "no supplemental light"
+msgstr "보광 안 함"
+
+msgid "no shading"
+msgstr "차광 안 함"
+
+msgid "How careful misting is with the leaves. Sets spray length and drying interval together. Sunburn protection runs either way."
+msgstr "분무가 잎을 얼마나 조심스럽게 다룰지 정합니다. 1회 분무 시간과 건조 간격을 함께 정합니다. 일소 보호는 어느 쪽이든 늘 작동합니다."
+
+msgid "No active plot yet"
+msgstr "활성 구획 없음"
+
+msgid "Opening helps only when the outdoor air is on the target side. When it is not, wider vents drag the reading further away."
+msgstr "바깥 공기가 목표 쪽에 있을 때만 여는 것이 도움이 됩니다. 반대편이면 열수록 목표에서 멀어집니다."
+
+msgid "No point burning fuel for what an open vent already does."
+msgstr "창을 열어 되는 일에 연료를 태울 이유가 없습니다."
+
+msgid "Venting against a running unit throws that heat or cold straight outside."
+msgstr "가동 중인 기계와 맞서 환기하면 그 열이나 냉기를 그대로 밖으로 버립니다."
+
+msgid "Only for units this coordinator does not switch itself — it already knows about the ones it commands. Not an indoor temperature: something that reports the unit running, such as a power reading or a relay state."
+msgstr "이 조율기가 직접 켜지 않는 기계에만 필요합니다 — 스스로 명령하는 기계는 이미 알고 있습니다. 내부 온도가 아니라, 그 기계가 돌고 있음을 알려주는 값입니다(전력 측정값이나 릴레이 상태 같은 것)."
+
+msgid "Read on the signal chosen above, in whatever unit that signal uses. For an on/off signal (0 or 1) leave it at 0.5."
+msgstr "위에서 고른 신호를 그 신호의 단위 그대로 읽습니다. 켬/끔 신호(0 또는 1)라면 0.5 그대로 두면 됩니다."
+
+msgid "Not used"
+msgstr "안 함"
+
+msgid "For reference"
+msgstr "참고용"
+
+msgid "Aims at photosynthesis (VPD); other values are used as reference. Targets come from the program."
+msgstr "이 코디네이터는 광합성(VPD)을 목표로 하며, 다른 값은 참고로 씁니다. 목표는 프로그램에서 옵니다."
+
+msgid "Growing"
+msgstr "재배 중"
+
+msgid "curve"
+msgstr "곡선"
+
+msgid "Which plot this coordinator follows, when more than one is growing in its scope. Leave empty when there is only one — it is picked automatically. When more than one is growing, pick it from the summary under the linked facility above."
+msgstr "범위 안에서 여러 구획이 자라고 있을 때 어느 것을 따를지 정합니다. 하나뿐이면 비워 두세요 — 자동으로 골라집니다. 여럿이면 위 [연동 시설] 아래 요약에서 고를 수 있습니다."

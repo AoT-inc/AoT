@@ -72,10 +72,10 @@ IMPORTANT: This is the SOURCE TEMPLATE file.
   <script src="/static/js/common/aot-modal-scroll-lock.js?v=20260826a"></script>
   <!-- select_bay 옵션: 연결된 시설의 구역 목록을 채운다 (통합환경제어 bay_scope) -->
   <script src="/static/js/common/aot-bay-select.js?v=20260826a"></script>
-  <script src="/static/js/common/aot-env-status.js?v=20260827a"></script>
+  <script src="/static/js/common/aot-env-status.js?v=20260827h"></script>
   <script src="/static/js/common/aot-option-depends.js?v=20260827a"></script>
-  <script src="/static/js/common/aot-scale-input.js?v=20260827e"></script>
-  <script src="/static/js/common/aot-range-band.js?v=20260827d"></script>
+  <script src="/static/js/common/aot-scale-input.js?v=20260827g"></script>
+  <script src="/static/js/common/aot-range-band.js?v=20260827f"></script>
   <!-- 서버 다운 감지 워치독: 연결 끊기면 폴링 정지 → 복구 시 1회 새로고침 (재연결 폭주 방지). jQuery 이후 로드. -->
   <script src="/static/js/common/aot-server-health.js?v=20260702b"></script>
   <!-- CSRF 토큰 주기적 갱신: WTF_CSRF_TIME_LIMIT(12h)보다 오래 열린 탭에서 폼 제출이 만료 오류로
@@ -108,7 +108,7 @@ IMPORTANT: This is the SOURCE TEMPLATE file.
   <link href="{{ url_for('static', filename='css/components/aot-3way.css') }}?v=20260527d" rel="stylesheet">
   {#- 눈금 입력(select_scale)이 `AoTViz` 골격을 그대로 쓴다 — 설정 화면에서도
       필요하다. 예전에는 지도 위젯·구획 화면만 실었다. -#}
-  <link href="{{ url_for('static', filename='css/components/aot-dataviz.css') }}?v=20260827e" rel="stylesheet">
+  <link href="{{ url_for('static', filename='css/components/aot-dataviz.css') }}?v=20260827h" rel="stylesheet">
   <!-- FontAwesome 5.11.2 webfont (구 SVG-JS 빌드 대체): MutationObserver 상주 제거 + 페이지당 JS 파싱 1.1MB 감소 -->
   <link href="{{ url_for('static', filename='vendor/fontawesome-5.11.2/css/all.min.css') }}" rel="stylesheet">
   <link href="{{ url_for('static', filename='vendor/fontawesome-5.11.2/css/v4-shims.min.css') }}" rel="stylesheet">
@@ -235,7 +235,12 @@ IMPORTANT: This is the SOURCE TEMPLATE file.
        max-age 동안 옛 언어 카탈로그를 계속 쓴다(HTML 은 no-cache 라 언어가 바뀌면
        이 URL 은 즉시 새로 렌더된다). 계정 언어 변경처럼 Accept-Language 도 쿠키도
        안 바뀌는 경로까지 이 한 줄이 덮는다 — Vary 만으로는 못 덮는다. #}
-    <script src="{{ url_for('routes_locale_api.get_js_translations', lang=current_locale) }}"></script>
+    {#- ⚠ **버전 쿼리가 반드시 붙어야 한다.** 이 응답은 `max-age=600` 이고
+    URL 이 그대로면 브라우저가 **10분간 옛 카탈로그**를 쓴다 — 번역을
+    추가하고 재시작해도 화면 일부만 영어로 남고, 에러가 없어서 원인이
+    어디에도 안 드러난다(2026-08-27 실측: 서버엔 있는데 화면엔 영어).
+    바로 아래 `user_strings.js` 는 처음부터 지문을 달고 있었다. -#}
+    <script src="{{ url_for('routes_locale_api.get_js_translations', lang=current_locale, v=static_build_id) }}"></script>
     {# 사용자 지정 이름(장치명·구역명·작물명)의 번역 사전. 위 카탈로그가 소스에 박힌
        문구를 덮는다면 이쪽은 사용자가 지은 이름을 덮는다. ?v= 지문은 번역이
        추가될 때마다 바뀌고, 기능이 꺼져 있으면 'off' 로 고정된다.

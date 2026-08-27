@@ -238,14 +238,36 @@ class TestOrderThatMatters:
         ids = _ids(_options())
         assert abs(ids.index('vent_futility_gate') - ids.index('vent_first')) <= 1
 
-    def test_strategy_toggles_are_visible_and_their_details_are_not(self):
-        """전략은 **고르는 것**이라 보이고, 그 하위 설정은 켜야 나온다."""
+    def test_strategy_is_asked_as_one_question_not_a_row_of_toggles(self):
+        """전략은 **고르는 것**이지 하나씩 켜는 것이 아니다 (2026-08-27).
+
+        사용자 지적: *"환기부터는 여전히 예전 방식이야. 일일이 사용자가 옵션을
+        설정해야 함."* 맞다 — 환기 토글 셋(무익 판정·환기 우선·냉난방 연동)은
+        따로 생각할 정책이 아니라 **같은 질문의 세기**다: "밖의 공기를 얼마나
+        믿고 냉난방을 얼마나 아낄 것인가."
+
+        육묘장 모드도 같다 — 코드가 스스로 *"육묘 모드는 게이트를 켜는
+        스위치가 아니라 더 조이는 축"* 이라고 쓴다(`safety_gates.py`).
+        """
+        fi = _info()
         vis = set(_always_visible(_options()))
-        for oid in ('vent_futility_gate', 'vent_first', 'hvac_interlock',
-                    'night_vent_park', 'nursery_mode'):
-            assert oid in vis, '전략 토글 %s 가 안 보인다' % oid
+        # 핵심 옵션은 보인다 — 이것만 골라도 끝난다.
+        for gid in ('vent_economy', 'misting_care', 'responsiveness'):
+            assert any(g['id'] == gid for g in fi._SCALE_GROUPS), (
+                '%s 눈금 묶음이 없다' % gid)
+        # 묶인 토글은 **하나씩 보이지 않는다** — 보이면 같은 것을 두 곳에서
+        # 정하게 되고, 어느 쪽이 이기는지 알 수 없다.
+        merged = set()
+        for g in fi._SCALE_GROUPS:
+            merged |= set(g['members'])
+        for oid in sorted(merged):
+            assert oid not in vis, (
+                '%s 는 핵심 옵션이 정하는데 따로도 보인다' % oid)
+        # 켜는 토글 자체는 보인다.
+        for oid in ('night_vent_park', 'use_wetting_fog_for_humidity'):
+            assert oid in vis, '%s 가 안 보인다' % oid
         for oid in ('night_vent_basis', 'night_vent_start',
-                    'hvac_interlock_on_value', 'nursery_max_on_sec'):
+                    'hvac_interlock_on_value'):
             assert oid not in vis, '%s 가 토글과 무관하게 늘 보인다' % oid
 
     def test_every_dependency_points_at_a_real_toggle(self):

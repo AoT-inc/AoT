@@ -237,3 +237,39 @@ def test_every_scale_string_is_translated():
                    'messages.po')
         missing = [m for m in sorted(ids) if '\nmsgid "%s"\n' % m not in po]
         assert not missing, '%s 카탈로그에 없는 문구: %s' % (lang, missing)
+
+class TestTheAdvancedToggleMatchesTheRealOne:
+    """[고급] 스위치는 **화면의 다른 토글과 같은 골격**이어야 한다.
+
+    2026-08-27 사용자 신고: *"고급의 토글 버튼 스타일 적용이 잘못 된 것 같아.
+    계속 핸들이 안 보여."* 손으로 마크업을 줄이면서 슬라이더 안의 손잡이
+    (`btn-toggle-thumb`)를 빠뜨렸다 — 홈만 그려지고 스위치가 어느 쪽인지
+    알 수 없다. CSS 가 그 요소를 움직여 켬/끔을 표현하므로, 없으면 표현할
+    것 자체가 없다.
+    """
+
+    def _parts(self):
+        tpl = _read('aot_flask', 'templates', 'pages', 'form_options',
+                    'Custom_Options.html')
+        block = tpl.split("== 'bool'", 1)[1].split('{% elif', 1)[0]
+        import re as _re
+        return [c for c in _re.findall(r'btn-toggle[a-z-]*', block)]
+
+    def test_it_uses_every_piece_the_template_uses(self):
+        js = _read('aot_flask', 'static', 'js', 'common', 'aot-scale-input.js')
+        for cls in set(self._parts()):
+            assert cls in js, (
+                '[고급] 스위치에 %s 가 없다 — 정본은 Custom_Options.html 의 '
+                'bool 옵션 마크업이다' % cls)
+
+    def test_the_thumb_sits_inside_the_slider(self):
+        """손잡이는 홈 **안**에 있어야 한다 — 밖에 두면 CSS 가 못 움직인다.
+
+        ⚠ 파일 전체에서 첫 등장 위치를 비교하지 말 것. 이 규칙을 설명하는
+          **주석**이 마크업보다 앞에 있어서, 그렇게 재면 규칙을 적어 둔 것만
+          으로 검사가 깨진다(2026-08-27 실제로 그랬다). 중첩 그 자체를 본다.
+        """
+        js = _read('aot_flask', 'static', 'js', 'common', 'aot-scale-input.js')
+        assert 'btn-toggle-slider"><div class="btn-toggle-thumb"' in js, (
+            '손잡이가 슬라이더 안에 없다')
+

@@ -772,9 +772,6 @@ class TestNoBareCallsToExportOnlyNames(unittest.TestCase):
         self.assertEqual([], offenders, '\n'.join(offenders))
 
 
-if __name__ == '__main__':
-    unittest.main()
-
 
 class TestSentenceRowsDoNotSplitTheirLabel(unittest.TestCase):
     """문장을 값으로 갖는 줄은 이름 칸이 쪼개지면 안 된다.
@@ -862,9 +859,6 @@ class TestDetailDomainsMatchServer(unittest.TestCase):
             missing, '화면에 없는 도메인: %s' % sorted(missing))
 
 
-if __name__ == '__main__':
-    unittest.main()
-
 
 _WIDGET = os.path.join(_ROOT, 'aot_flask', 'static', 'js', 'widgets',
                        'AoT_map', 'aot-map-widget-vector.js')
@@ -942,3 +936,33 @@ class TestBandAnchorIsAnAxisValue(unittest.TestCase):
         self.assertEqual([], bad,
                          '눈금 at 은 축 위의 값이어야 한다(백분율 금지):\n'
                          + '\n'.join(bad))
+
+class TestTheJsTranslationCatalogIsVersioned(unittest.TestCase):
+    """`/api/v1/locale/js` 는 **버전 쿼리 없이 부르면 안 된다** (2026-08-27).
+
+    그 응답은 `max-age=600` 이라, URL 이 그대로면 브라우저가 **10분 동안 옛
+    카탈로그**를 쓴다. 번역을 추가하고 서버를 재시작해도 화면 일부만 영어로
+    남고 **에러가 없어서** 원인이 어디에도 안 드러난다 — 실측으로 확인했다:
+    서버 응답에는 새 문구가 있는데 화면에는 영어였다.
+
+    같은 파일의 `user_strings.js` 는 처음부터 지문(`user_i18n_fingerprint`)을
+    달고 있었다. 이쪽만 빠져 있었다.
+    """
+
+    def test_the_script_tag_carries_a_build_id(self):
+        import os
+        here = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        for name in ('layout_default.html', 'layout.html'):
+            path = os.path.join(here, 'aot_flask', 'templates', name)
+            with open(path, encoding='utf-8') as fh:
+                src = fh.read()
+            i = src.find('get_js_translations')
+            self.assertNotEqual(i, -1, '%s 가 카탈로그를 안 부른다' % name)
+            tag = src[i:src.find('>', i)]
+            self.assertIn('static_build_id', tag,
+                          '%s: 카탈로그 URL 에 버전이 없다 — 10분간 옛 번역이 '
+                          '나간다' % name)
+
+
+if __name__ == '__main__':
+    unittest.main()

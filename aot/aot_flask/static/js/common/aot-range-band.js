@@ -54,8 +54,16 @@
 
   function values(el) {
     var m = el._inputs, v = {};
-    ORDER.forEach(function (k) { v[k] = m[k] ? num(m[k].value, null) : null; });
+    ORDER.forEach(function (k) {
+      v[k] = m[k] ? toAxis(el, k, num(m[k].value, null)) : null;
+    });
     return v;
+  }
+
+  /** 저장된 그대로(끔 표시용). */
+  function stored(el, key) {
+    var inp = el._inputs[key];
+    return inp ? num(inp.value, null) : null;
   }
 
   function limitsFor(el, key, v) {
@@ -73,15 +81,49 @@
     return clamp((value - el._min) / (el._max - el._min) * 100, 0, 100);
   }
 
+  /* ⚠ **"안 함" 은 0 으로 저장되는데 축에서의 자리는 끝마다 다르다.**
+   *
+   *   `light_min = 0`  보광 안 함  → 축의 **아래** 끝  (0 이 곧 그 자리다)
+   *   `light_max = 0`  차광 안 함  → 축의 **위**  끝  (0 은 그 자리가 아니다)
+   *
+   * 그래서 상한 쪽만 변환이 필요하다. 없이 그리면 상한을 끝까지 올린 사람이
+   * "항상 차광" 을 설정한 줄 알지만 저장되는 값은 축 최대치라 **끔이 아니다**
+   * — 화면과 동작이 조용히 갈린다.
+   */
+  function toAxis(el, key, stored) {
+    if (stored === null) return null;
+    if (key === 'guideMax' && el._offAtMax && Number(stored) === 0) {
+      return el._max;
+    }
+    return stored;
+  }
+
+  function toStored(el, key, axis) {
+    if (key === 'guideMax' && el._offAtMax && axis >= el._max) return 0;
+    if (key === 'guideMin' && el._offAtMin && axis <= el._min) return 0;
+    return axis;
+  }
+
+  function isOff(el, key, stored) {
+    if (stored === null) return false;
+    if (key === 'guideMax') return !!el._offAtMax && Number(stored) === 0;
+    if (key === 'guideMin') return !!el._offAtMin && Number(stored) === 0;
+    return false;
+  }
+
   function render(el) {
     var v = values(el);
     var unit = el.getAttribute('data-unit') || '';
     var hs = v.hardMin, he = v.hardMax, gs = v.guideMin, ge = v.guideMax;
 
+    var lowTxt  = isOff(el, 'guideMin', stored(el, 'guideMin'))
+                    ? el._offMinLabel : (gs != null ? gs + unit : '?');
+    var highTxt = isOff(el, 'guideMax', stored(el, 'guideMax'))
+                    ? el._offMaxLabel : (ge != null ? ge + unit : '?');
     var html = '<div class="aot-viz aot-viz--band aot-viz--range-band">';
     html += '<div class="aot-viz-head"><span class="aot-viz-label">' +
             esc(el._label) + '</span><span class="aot-viz-value">' +
-            esc((gs != null ? gs : '?') + '~' + (ge != null ? ge : '?') + unit) +
+            esc(lowTxt + ' ~ ' + highTxt) +
             (hs != null && he != null
                ? ' <small>' + esc(el._hardLabel + ' ' + hs + '~' + he + unit) +
                  '</small>'
@@ -128,7 +170,7 @@
   function write(el, key, value) {
     var inp = el._inputs[key];
     if (!inp) return;
-    var next = Math.round(value * 1e6) / 1e6;
+    var next = Math.round(toStored(el, key, value) * 1e6) / 1e6;
     if (String(inp.value) === String(next)) return;
     inp.value = next;
     inp.dispatchEvent(new Event('change', {bubbles: true}));
@@ -160,6 +202,10 @@
     el._label = el.getAttribute('data-label') || '';
     el._hardLabel = el.getAttribute('data-hard-label') || '';
     el._margin = num(el.getAttribute('data-margin'), 5);
+    el._offAtMin = el.getAttribute('data-off-at-min') === '1';
+    el._offAtMax = el.getAttribute('data-off-at-max') === '1';
+    el._offMinLabel = el.getAttribute('data-off-min-label') || '—';
+    el._offMaxLabel = el.getAttribute('data-off-max-label') || '—';
     el._names = {
       hardMin: el.getAttribute('data-name-hardmin') || '',
       hardMax: el.getAttribute('data-name-hardmax') || '',

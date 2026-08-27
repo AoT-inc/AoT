@@ -28,10 +28,12 @@
         자리와 함수 uuid 만 넘긴다 — 라이브 데이터라 서버 렌더로는 저장할
         때만 갱신된다. -#}
     {% elif each_option['type'] == 'env_status' %}
-</div>
-<div class="aot-env-status" data-function-id="{{unique_id}}"
-     data-loading="{{ _('Loading…') }}"></div>
-<div class="{{ custom_opt_container }}">
+{#- ⚠ **컨테이너를 닫고 나가지 말 것.** 예전에는 여기서 `</div>` 로 상자를
+    빠져나갔다 — 맨 위에 있던 시절에는 자기 카드였으니 맞았지만, 지금은
+    [연동 시설] 바로 아래 한 줄이라 **그 상자 안**에 있어야 한다. 나가면
+    테두리 밖에 떠서 설정의 일부로 안 읽힌다(2026-08-27 사용자 지적). -#}
+<div class="aot-env-status" data-function-id="{{unique_id}}"></div>
+<div class="aot-coord-plot" data-function="{{unique_id}}" data-summary="1"></div>
 
     {% elif each_option['type'] == 'header' %}
 </div>
@@ -77,11 +79,19 @@
   <div class="aot-range-band"
        data-prefix="{{name_prefix}}"
        data-label="{{each_option['name']}}"
-       data-guide-label="{{each_option.get('guide_label', '')}}"
+       {#- ⚠ JS 는 `data-hard-label` 로 읽는다. 예전에는 `data-guide-label` 을
+           내보내고 있어서 그 라벨이 **늘 빈 문자열**이었다 — 에러 없이. -#}
+       data-hard-label="{{each_option.get('hard_label', '')}}"
        data-unit="{{each_option.get('unit', '')}}"
        data-min="{{each_option['axis_min']}}" data-max="{{each_option['axis_max']}}"
        data-step="{{each_option.get('step', 1)}}"
        data-margin="{{each_option.get('margin', 5)}}"
+       data-off-at-min="{{ '1' if each_option.get('off_at_min') else '' }}"
+       data-off-at-max="{{ '1' if each_option.get('off_at_max') else '' }}"
+       data-off-min-label="{{each_option.get('off_min_label', '')}}"
+       data-off-max-label="{{each_option.get('off_max_label', '')}}"
+       data-name-guidemin="{{each_option.get('name_guide_min', '')}}"
+       data-name-guidemax="{{each_option.get('name_guide_max', '')}}"
        data-hardmin="{{each_option.get('hard_min', '')}}"
        data-hardmax="{{each_option.get('hard_max', '')}}"
        data-guidemin="{{each_option.get('guide_min', '')}}"

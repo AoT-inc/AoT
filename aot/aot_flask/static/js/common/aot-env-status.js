@@ -51,10 +51,6 @@
   // ⚠ **새 CSS 를 만들지 않는다.** 이 화면의 공용 골격(`aot-modal-*`)을 그대로
   //    쓴다 — 설정 행과 같은 자리·같은 간격이라야 머리말이 이 화면의 일부로
   //    읽힌다. 자체 클래스를 만들면 화면마다 모양이 갈린다.
-  function card(title, body) {
-    return '<div class="aot-modal-group-title">' + esc(title) + '</div>' +
-           '<div class="aot-modal-container">' + body + '</div>';
-  }
 
   function line(text, muted) {
     return '<div class="aot-modal-option-row"><div class="aot-modal-body-text">' +
@@ -69,91 +65,76 @@
            (raw ? value : esc(value)) + '</div></div>';
   }
 
-  /** "지금" — 편차 · 장치 · 마지막 판단. */
-  function nowCard(d) {
+  /* ── 여긴 **설정하는 곳**이다 ─────────────────────────────────────────
+   *
+   * 2026-08-27 사용자 지적: *"옵션 초반에 정보가 너무 많아. 이미 설정에서
+   * 사용자가 결정하는데 여기서 또 안내하고 있어. 여긴 설정하는 곳이지
+   * 확인하는 곳은 아니야."*
+   *
+   * 예전에는 카드 둘(지금 · 목표는 어디서 정하나)이 변수마다 한 줄씩,
+   * 구획마다 한 줄씩 냈다 — 설정을 시작하기 전에 열 줄을 읽어야 했다.
+   * 지금은 **두 줄**이고, 자리도 맨 위가 아니라 [연동 시설] **바로 아래**다
+   * (*"설정하고 그 위치에서 확인"*).
+   *
+   * 그래도 지우지 않는 이유: 시설을 안 고르면 나머지 설정이 전부 무의미한데,
+   * 침묵하면 사용자가 다 채우고도 왜 안 도는지 모른다.
+   */
+
+  /** 한 줄로 잇는다 — 라벨 + 값들. 값이 없으면 아무것도 안 낸다. */
+  function compact(label, parts) {
+    if (!parts.length) return '';
+    return row(label, parts.join('  ·  '));
+  }
+
+  function nowLine(d) {
     var env = d.env || {};
     var fn = env.function;
-    if (!fn) {
-      return card(_t('Now'),
-        line(_t('No integrated environment control is linked to this facility.')));
-    }
-    if (!fn.active) {
-      return card(_t('Now'), line(_t('Control is switched off.')));
-    }
+    if (!fn) return line(_t('No integrated environment control is linked to this facility.'));
+    if (!fn.active) return line(_t('Control is switched off.'));
     if (env.stale) {
-      // ⚠ "응답 없음" 과 "꺼짐" 은 다른 사실이다. 뭉치면 사용자가 스위치를
-      //    찾아 헤맨다.
-      return card(_t('Now'),
-        line(_t('Not responding — no decision in the last few minutes.')) +
-        (env.last_cycle_ts
-          ? line(_t('Last decision %(when)s').replace('%(when)s',
-                                                      ago(env.last_cycle_ts)))
-          : ''));
+      // ⚠ "응답 없음" 과 "꺼짐" 은 다른 사실이다. 뭉치면 스위치를 찾아 헤맨다.
+      return line(_t('Not responding — no decision in the last few minutes.'));
     }
-
     var s = env.summary || {};
-    var out = '';
-    var dev = s.deviation || {};
-    var tg = s.targets || {};
+    var dev = s.deviation || {}, tg = s.targets || {}, parts = [];
     Object.keys(dev).forEach(function (k) {
-      var target = tg[k];
-      var delta = Number(dev[k]);
+      var target = tg[k], delta = Number(dev[k]);
       if (target == null || isNaN(delta)) return;
       // 편차는 측정−목표다. 사용자에게는 "지금 값 → 목표" 가 읽기 쉽다.
       var cur = Math.round((Number(target) + delta) * 100) / 100;
-      out += row(k.toUpperCase(),
-                 cur + ' → ' + target + '  (' +
-                 (delta > 0 ? '+' : '') + (Math.round(delta * 100) / 100) + ')');
+      parts.push(k.toUpperCase() + ' ' + cur + '\u2192' + target);
     });
-
     var kinds = s.outputs_by_kind || {};
-    var parts = Object.keys(kinds).sort().map(function (k) {
-      return _t(KIND_LABEL[k] || k) + ' ' + Math.round(Number(kinds[k])) + '%';
+    Object.keys(kinds).sort().forEach(function (k) {
+      parts.push(_t(KIND_LABEL[k] || k) + ' ' + Math.round(Number(kinds[k])) + '%');
     });
-    if (parts.length) out += line(parts.join(' · '));
-    if (env.last_cycle_ts) {
-      out += line(_t('Last decision %(when)s')
-                    .replace('%(when)s', ago(env.last_cycle_ts)));
-    }
-    return card(_t('Now'), out || line(_t('No cycle to report yet.')));
+    if (env.last_cycle_ts) parts.push(ago(env.last_cycle_ts));
+    return parts.length ? compact(_t('Now'), parts)
+                        : line(_t('No cycle to report yet.'));
   }
 
-  /** "목표는 어디서 정하나" — 이 화면이 아니라는 사실을 말하는 것이 요점이다. */
-  function targetCard(d) {
-    var plots = d.plots || [];
-    var body = line(_t('Targets come from the programme on this facility’s plots — not from this screen.'));
-    if (!plots.length) {
-      body += line(_t('No active plot yet, so no targets are set.'));
-      return card(_t('Where targets come from'), body);
-    }
-    plots.forEach(function (p) {
-      var name = p.name || p.subject || _t('Plot');
-      var prog = p.program && p.program.name;
-      body += row(name, prog ? prog : _t('No programme attached'));
-    });
-    return card(_t('Where targets come from'), body);
-  }
 
   function render(el, d) {
     if (!d || !d.ok) {
-      el.innerHTML = card(_t('Now'),
-        line(_t('Could not read the current state.')));
+      el.innerHTML = line(_t('Could not read the current state.'));
       return;
     }
     if (!d.facility) {
-      // 시설 미선택 — 아래 [연동 시설] 을 고르라고 말한다. 침묵하면 사용자는
-      // 62개를 다 채우고도 왜 안 도는지 모른다.
-      el.innerHTML = card(_t('Now'),
-        line(_t('No facility is linked yet. Choose one below to start.')));
+      // 시설 미선택 — **아무것도 내지 않는다.** 바로 위가 [연동 시설] 이라
+      // 고르라는 말이 그 자리에 이미 있다. 예전에는 맨 위에 있어서 안내가
+      // 필요했다.
+      el.innerHTML = '';
       return;
     }
-    el.innerHTML = nowCard(d) + targetCard(d);
+    // 구획·목표는 바로 아래 요약이 말한다 — 같은 사실을 두 곳이
+    // 각자 적으면 어느 쪽이 최신인지 사람이 판단해야 한다.
+    el.innerHTML = nowLine(d);
   }
 
   function load(el) {
     var uid = el.getAttribute('data-function-id');
     if (!uid) return;
-    el.innerHTML = line(el.getAttribute('data-loading') || '…');
+    el.innerHTML = '';   // 로딩 문구도 소음이다 — 두 줄짜리를 기다릴 이유가 없다
     fetch('/api/aot/coordinator/' + encodeURIComponent(uid) + '/overview',
           {cache: 'no-store', credentials: 'same-origin'})
       .then(function (r) { return r.ok ? r.json() : null; })

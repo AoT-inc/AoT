@@ -230,12 +230,13 @@ FUNCTION_INFORMATION = {
         },
         {
             'id': 'vent_futility_gate',
+        'advanced_only': True,
             'type': 'bool',
             'default_value': True,
             'required': False,
             'name': lazy_gettext('Close Vents When Ventilation Cannot Help'),
             'phrase': lazy_gettext(
-                'Close the vents when the outdoor air cannot move the reading toward the target.'
+                'Opening helps only when the outdoor air is on the target side. When it is not, wider vents drag the reading further away.'
             ),
         },
 
@@ -253,13 +254,14 @@ FUNCTION_INFORMATION = {
             'type': 'bool',
             'default_value': False,
             'required': False,
-            'name': lazy_gettext('Keep Vents Closed at Night'),
+            'name': lazy_gettext('Close at Night'),
             'phrase': lazy_gettext(
                 'Keep the vents closed overnight and let heating, cooling and drying carry the load.'
             ),
         },
         {
             'id': 'night_vent_basis',
+        'advanced_only': True,
             'depends_on': 'night_vent_park',
             'type': 'select',
             'default_value': 'sun',
@@ -275,6 +277,7 @@ FUNCTION_INFORMATION = {
         },
         {
             'id': 'night_vent_sunset_offset_min',
+        'advanced_only': True,
             'depends_on': 'night_vent_park',
             'type': 'float',
             'default_value': 0.0,
@@ -286,6 +289,7 @@ FUNCTION_INFORMATION = {
         },
         {
             'id': 'night_vent_start',
+        'advanced_only': True,
             'depends_on': 'night_vent_park',
             'type': 'text',
             'default_value': '18:00',
@@ -297,6 +301,7 @@ FUNCTION_INFORMATION = {
         },
         {
             'id': 'night_vent_end',
+        'advanced_only': True,
             'depends_on': 'night_vent_park',
             'type': 'text',
             'default_value': '06:00',
@@ -314,26 +319,29 @@ FUNCTION_INFORMATION = {
         },
         {
             'id': 'vent_first',
+        'advanced_only': True,
             'type': 'bool',
             'default_value': False,
             'required': False,
             'name': lazy_gettext('Rest Heating and Cooling When Venting Can Reach the Target'),
             'phrase': lazy_gettext(
-                'Rest heating and cooling while the outdoor air alone can reach the target.'
+                'No point burning fuel for what an open vent already does.'
             ),
         },
         {
             'id': 'hvac_interlock',
+            'advanced_only': True,
             'type': 'bool',
             'default_value': False,
             'required': False,
             'name': lazy_gettext('Keep Vents Closed While Heating or Cooling Runs'),
             'phrase': lazy_gettext(
-                'Close the vents while heating or cooling is running.'
+                'Venting against a running unit throws that heat or cold straight outside.'
             ),
         },
         {
             'id': 'hvac_interlock_signal',
+        'advanced_only': True,
             'depends_on': 'hvac_interlock',
             'type': 'select_measurement',
             'default_value': '',
@@ -344,18 +352,19 @@ FUNCTION_INFORMATION = {
             ],
             'name': lazy_gettext('Heating / Cooling Running Signal'),
             'phrase': lazy_gettext(
-                'A measurement that rises when a hand-operated unit runs, so the system can tell.'
+                'Only for units this coordinator does not switch itself — it already knows about the ones it commands. Not an indoor temperature: something that reports the unit running, such as a power reading or a relay state.'
             ),
         },
         {
             'id': 'hvac_interlock_on_value',
+        'advanced_only': True,
             'depends_on': 'hvac_interlock',
             'type': 'float',
             'default_value': 0.5,
             'required': False,
             'name': lazy_gettext('Running Signal Threshold'),
             'phrase': lazy_gettext(
-                'Above this value the unit counts as running.'
+                'Read on the signal chosen above, in whatever unit that signal uses. For an on/off signal (0 or 1) leave it at 0.5.'
             ),
         },
 
@@ -526,6 +535,7 @@ FUNCTION_INFORMATION = {
         },
         {
             'id': 'light_max',
+            'advanced_only': True,
             'type': 'float',
             'default_value': 800.0,
             'required': False,
@@ -536,6 +546,7 @@ FUNCTION_INFORMATION = {
         },
         {
             'id': 'light_min',
+        'advanced_only': True,
             'type': 'float',
             'default_value': 0.0,
             'required': False,
@@ -547,6 +558,7 @@ FUNCTION_INFORMATION = {
         },
         {
             'id': 'shade_transmittance',
+        'advanced_only': True,
             'type': 'float',
             'default_value': 0.0,
             'required': False,
@@ -563,6 +575,7 @@ FUNCTION_INFORMATION = {
         },
         {
             'id': 'priority_co2',
+        'advanced_only': True,
             'type': 'float',
             'default_value': 0.8,
             'required': False,
@@ -694,6 +707,7 @@ FUNCTION_INFORMATION = {
         },
         {
             'id': 'nursery_mode',
+            'advanced_only': True,
             'type': 'bool',
             'default_value': False,
             'required': False,
@@ -735,6 +749,7 @@ FUNCTION_INFORMATION = {
         },
         {
             'id': 'nursery_evening_fog',
+        'advanced_only': True,
             'depends_on': 'nursery_mode',
             'type': 'bool',
             'default_value': True,
@@ -746,6 +761,7 @@ FUNCTION_INFORMATION = {
         },
         {
             'id': 'nursery_evening_cutoff_min',
+        'advanced_only': True,
             'depends_on': 'nursery_mode',
             'type': 'float',
             'default_value': 120.0,
@@ -757,6 +773,7 @@ FUNCTION_INFORMATION = {
         },
         {
             'id': 'nursery_water_source',
+        'advanced_only': True,
             'depends_on': 'nursery_mode',
             'type': 'select',
             'default_value': 'groundwater',
@@ -814,7 +831,7 @@ FUNCTION_INFORMATION = {
             'phrase': lazy_gettext(
                 'Which plot this coordinator follows, when more than one is growing '
                 'in its scope. Leave empty when there is only one — it is picked '
-                'automatically. Set from the comparison card at the top of this page.'
+                'automatically. When more than one is growing, pick it from the summary under the linked facility above.'
             ),
         },
 
@@ -1086,28 +1103,78 @@ _SCALE_GROUPS = [
                 'emergency_rate_c_per_10min': 1.5}),
         ],
     },
+    # ⚠ **"육묘장 모드" 를 이 축이 흡수했다** (2026-08-27 사용자 지적:
+    #   *"육묘장 모드와 분무 조심도가 모두 있어야 해? 조심모드 켜면
+    #   육묘장 모드인 것 같은데..."*). 맞다 — 코드가 스스로 그렇게 말한다:
+    #   *"육묘 모드는 이 게이트를 켜는 스위치가 아니라 **더 조이는 축**"*
+    #   (`safety_gates.py`). 켜는 스위치와 그 세기를 따로 물으면, 세기를
+    #   정해 놓고 스위치를 안 켠 사람이 자기 설정이 도는 줄 안다.
+    #
+    # ⚠ **일소 잠금 자체는 이 축과 무관하게 늘 돈다.** 물방울이 렌즈가 되어
+    #   빛을 모으는 것은 작물과 무관한 물리다 — 예전에 그 잠금이 통째로
+    #   `nursery_mode` 안에 있어서, 딸기 온실이 모드를 끄는 순간 두상 살수의
+    #   일소 보호가 함께 사라졌다(2026-08-25 イチゴ). 이 축이 바꾸는 것은
+    #   **임계와 분무 길이**이지 보호의 유무가 아니다.
+    # ⚠ **토글 셋을 한 축으로 묶었다** (2026-08-27 사용자 지적: *"환기부터는
+    #   여전히 예전 방식이야. 일일이 사용자가 옵션을 설정해야 함."*).
+    #
+    # 셋은 따로 생각할 정책이 아니라 **같은 질문의 세기**다 — "밖의 공기를
+    # 얼마나 믿고 냉난방을 얼마나 아낄 것인가."
+    #
+    #   무익 판정   소용없는 환기를 안 한다      (창만 아낀다)
+    #   환기 우선   환기로 되면 냉난방을 쉰다    (에너지를 아낀다)
+    #   냉난방 연동 냉난방 중에는 창을 닫는다    (버리는 에너지를 막는다)
+    #
+    # 기본값(True/False/False)이 곧 "표준" 칸이라, 업그레이드로 동작이 바뀌지
+    # 않는다.
+    #
+    # ⚠ **`hvac_interlock` 은 감지 신호가 없어도 작동한다.** 코디네이터가
+    #   냉난방을 직접 명령하면 그 명령으로 판단한다(`_hvac_running` 경로 1).
+    #   신호는 **손으로 켜는 기계** 전용이다 — 그래서 [고급] 에 있다.
+    {
+        'id': 'vent_economy',
+        'name': lazy_gettext('Ventilation and HVAC Teamwork'),
+        'phrase': lazy_gettext(
+            'How much the outdoor air is trusted before heating or cooling is '
+            'used. Higher settings save energy; lower settings chase the '
+            'target harder.'
+        ),
+        'axis_low':  lazy_gettext('Chases the target harder'),
+        'axis_high': lazy_gettext('Saves more energy'),
+        'members': ['vent_futility_gate', 'vent_first', 'hvac_interlock'],
+        'steps': [
+            (lazy_gettext('Standard'), {
+                'vent_futility_gate': True, 'vent_first': False,
+                'hvac_interlock': False}),
+            (lazy_gettext('Save energy'), {
+                'vent_futility_gate': True, 'vent_first': True,
+                'hvac_interlock': False}),
+            (lazy_gettext('Save more'), {
+                'vent_futility_gate': True, 'vent_first': True,
+                'hvac_interlock': True}),
+        ],
+    },
     {
         'id': 'misting_care',
-        'depends_on': 'nursery_mode',
         'name': lazy_gettext('Misting Caution'),
         'phrase': lazy_gettext(
-            'How careful misting is with the leaves. Sets spray length, drying '
-            'interval and the sunburn thresholds together.'
+            'How careful misting is with the leaves. Sets spray length and '
+            'drying interval together. Sunburn protection runs either way.'
         ),
         'axis_low':  lazy_gettext('Humidity rises faster'),
         'axis_high': lazy_gettext('Gentler on the leaves'),
-        'members': ['nursery_max_on_sec', 'nursery_min_off_sec',
-                    'nursery_solar_lockout', 'nursery_solar_release'],
+        'members': ['nursery_mode',
+                    'nursery_max_on_sec', 'nursery_min_off_sec'],
         'steps': [
-            (lazy_gettext('Bold'), {
-                'nursery_max_on_sec': 30.0, 'nursery_min_off_sec': 300.0,
-                'nursery_solar_lockout': 400.0, 'nursery_solar_release': 250.0}),
+            # 첫 칸은 **끄는 칸**이다. 나머지 값은 읽히지 않으므로 싣지 않는다
+            # — 실으면 "안 함" 을 골랐다가 되돌릴 때 그 값이 덮어써진다.
+            (lazy_gettext('Not used'), {'nursery_mode': False}),
             (lazy_gettext('Standard'), {
-                'nursery_max_on_sec': 20.0, 'nursery_min_off_sec': 600.0,
-                'nursery_solar_lockout': 250.0, 'nursery_solar_release': 150.0}),
+                'nursery_mode': True,
+                'nursery_max_on_sec': 20.0, 'nursery_min_off_sec': 600.0}),
             (lazy_gettext('Careful'), {
-                'nursery_max_on_sec': 10.0, 'nursery_min_off_sec': 900.0,
-                'nursery_solar_lockout': 150.0, 'nursery_solar_release': 80.0}),
+                'nursery_mode': True,
+                'nursery_max_on_sec': 10.0, 'nursery_min_off_sec': 900.0}),
         ],
     },
 ]
@@ -1122,6 +1189,21 @@ _RANGE_BANDS = [
         'guide_min': 'guide_T_min', 'guide_max': 'guide_T_max',
         'hard_min': 'temp_min', 'hard_max': 'temp_max',
     },
+    # 일사가 셀수록 젖은 잎이 탄다. 두 값(해제·잠금)은 **한 구간의 양 끝**
+    # 이지 따로 생각할 값이 아니다 — 사이에서 선형으로 줄어들고, 둘 사이를
+    # 벌려 두는 이유는 구름이 지날 때 분무가 켜졌다 꺼졌다 하지 않게 하려는
+    # 것뿐이다. 그래서 손잡이 둘인 구간으로 묻는다(사용자 지적: *"분무
+    # 잠금/해제도 하나로 만들 수 있잖아. 밴드 슬라이더로 설정"*).
+    #
+    # ⚠ 하드 임계가 없다 — 파생할 것이 없으므로 `margin` 은 0 이다.
+    {
+        'id': 'misting_light',
+        'name': lazy_gettext('Misting Limit Irradiance'),
+        'unit': ' W/m\u00b2', 'axis_min': 0.0, 'axis_max': 800.0, 'step': 10.0,
+        'margin': 0.0,
+        'guide_min': 'nursery_solar_release',
+        'guide_max': 'nursery_solar_lockout',
+    },
     {
         'id': 'humidity',
         'name': lazy_gettext('Humidity Range'),
@@ -1130,6 +1212,23 @@ _RANGE_BANDS = [
         'margin': 5.0,
         'guide_min': 'guide_RH_min', 'guide_max': 'guide_RH_max',
         'hard_min': 'humid_min', 'hard_max': 'humid_max',
+    },
+    # 빛도 한 구간이다 — 아래로 내려가면 보광, 위로 올라가면 차광.
+    # ⚠ **0 은 "안 함" 이고, 두 끝에서 뜻이 반대다.** `light_min=0` 은 축의
+    #   맨 아래라 자연스럽지만, `light_max=0` 은 "차광 안 함" 이라 축의 맨
+    #   **위**에 놓여야 한다. 그래서 위쪽 끝에 그 표식이 따로 있다 —
+    #   `off_at_max`. 없이 그리면 상한을 끝까지 올린 사람이 "항상 차광" 을
+    #   설정한 줄 알고, 실제로는 그 값이 0(끔)으로 저장되지 않아 조용히
+    #   다르게 돈다.
+    {
+        'id': 'light',
+        'name': lazy_gettext('Light Range'),
+        'unit': ' W/m\u00b2', 'axis_min': 0.0, 'axis_max': 1200.0,
+        'step': 10.0, 'margin': 0.0,
+        'off_at_min': True, 'off_at_max': True,
+        'off_min_label': lazy_gettext('no supplemental light'),
+        'off_max_label': lazy_gettext('no shading'),
+        'guide_min': 'light_min', 'guide_max': 'light_max',
     },
 ]
 
@@ -1155,11 +1254,16 @@ _GROUP_MEMBERS = {m for g in _SCALE_GROUPS for m in g['members']}
 # 것은 `light_min` 이 보광등과 차광막을 함께 움직이기 때문이고, `aux` 를
 # 통째로 내지 않고 "CO₂" 만 내는 것은 나머지(보광등·유동팬)에 이 화면이
 # 물을 설정이 없기 때문이다. **그 어긋남을 표가 드러낸다.**
+#
+# ⚠ **`aux` 에는 묶음이 없다.** 이 화면이 CO₂ 주입기에 대해 묻는 것은 허용
+#   오차 하나뿐이고, 그것은 "얼마나 바짝 쫓을 것인가" 라 **목표** 쪽에 있다.
+#   보광등은 빛 구간이 함께 정하고, 유동팬에는 설정이 없다. 항목 하나를 위해
+#   묶음을 만들면 껍데기가 내용보다 크다 — 그렇다고 이 표에 없는 도메인을
+#   "빠뜨렸다" 고 읽으면 안 되므로 여기 적어 둔다.
 _DOMAIN_GROUPS = {
     'Ventilation':                  'vent',
     'Heating, Cooling and Misting': 'hvac',
     'Light and Shading':            'screen',
-    'CO\u2082':                      'aux',
 }
 
 _LAYOUT = [
@@ -1189,8 +1293,11 @@ _LAYOUT = [
     #   `_cycle_mixin.apply_light_threshold_overrides`) 둘을 갈라 두면 한쪽만
     #   고친 사람이 다른 쪽이 함께 움직인 것을 이해할 수 없다.
 
+    # ⚠ 상태 한 줄은 **여기**다 — 시설을 고른 그 자리에서 확인한다
+    #   (2026-08-27 사용자 지적: *"시설을 연동하면 연동한 시설 정보가 그 아래에
+    #   나오는게 더 자연스러워. 설정하고 그 위치에서 확인."*).
     (False, lazy_gettext('Facility'), [
-        (None, ['geo_facility_id', 'bay_scope']),
+        (None, ['geo_facility_id', 'bay_scope', '@status']),
     ]),
 
     # ── 목표 ─────────────────────────────────────────────────────────────
@@ -1208,7 +1315,7 @@ _LAYOUT = [
     #   (`clamp_guide_range_to_hard_limits` 주석의 温室環境制御 실측).
     (False, lazy_gettext('Target and Temperament'), [
         (None, ['@range:temperature', '@range:humidity',
-                '@group:responsiveness']),
+                'tolerance_co2', '@group:responsiveness']),
     ]),
 
     # ── 도메인 1: 환기 (vent) ─────────────────────────────────────────────
@@ -1221,8 +1328,7 @@ _LAYOUT = [
     #   (냉·난방이 도는 동안 창을 닫아 둔다). 도메인은 이름이 아니라
     #   **무엇이 움직이는가** 로 가른다.
     (False, lazy_gettext('Ventilation'), [
-        (None, ['vent_futility_gate', 'vent_first']),
-        (None, ['hvac_interlock', 'hvac_interlock_signal',
+        (None, ['@group:vent_economy', 'hvac_interlock_signal',
                 'hvac_interlock_on_value']),
         (None, ['night_vent_park', 'night_vent_basis',
                 'night_vent_sunset_offset_min', 'night_vent_start',
@@ -1232,21 +1338,29 @@ _LAYOUT = [
 
     # ── 도메인 2: 냉난방·가습 (hvac) ──────────────────────────────────────
     (False, lazy_gettext('Heating, Cooling and Misting'), [
-        (None, ['nursery_mode', '@group:misting_care',
+        (None, ['@group:misting_care', '@range:misting_light',
                 'nursery_water_source', 'nursery_evening_fog',
                 'nursery_evening_cutoff_min',
                 'use_wetting_fog_for_humidity']),
     ]),
 
     # ── 도메인 3: 빛 (screen + 보광) ──────────────────────────────────────
-    (True, lazy_gettext('Light and Shading'), [
-        (None, ['light_max', 'light_min', 'shade_transmittance']),
+    # ⚠ **접지 않는다.** 항목이 둘뿐인데 접으면 여는 수고가 내용보다 크다
+    #   (2026-08-27 사용자 지적: *"이거 옵션도 몇 개 안되는데 아코디언 해야
+    #   되나?"*).
+    # ⚠ `shade_transmittance` 는 **시설로 간다**(D9) — 차광막은 시설의 물건
+    #   이고 그 성질은 시설이 안다. 옮기기 전까지만 여기 둔다.
+    (False, lazy_gettext('Light and Shading'), [
+        (None, ['@range:light', 'shade_transmittance']),
     ]),
 
     # ── 도메인 4: CO₂ (aux) ───────────────────────────────────────────────
-    (True, lazy_gettext('CO₂'), [
-        (None, ['priority_co2', 'tolerance_co2']),
-    ]),
+    # ⚠ **묶음을 없앴다.** 남는 것이 허용 오차 하나인데 접힘 제목까지 붙으면
+    #   내용보다 껍데기가 크다. 허용 오차는 "얼마나 바짝 쫓을 것인가" 라
+    #   목표 쪽으로 갔고(사용자 지적: *"CO2 사용하는 시설이면 목표에 있어야
+    #   함"*), 처리 순서 가중치는 VPD 쪽 짝과 같은 자리로 갔다 — 하나만 따로
+    #   보이면 *"CO₂ 에만 중요도가 있다는 게 이상함"* 이 된다. 맞는 지적이고,
+    #   답은 **둘 다 [고급]** 이다: 1.2 대 0.8 은 재배자가 판단할 값이 아니다.
 
     # ── 도메인을 가리지 않는 것 ───────────────────────────────────────────
     # 아래는 특정 장치가 아니라 **판단 방식**에 걸린다. 도메인으로 나눌 수
@@ -1264,7 +1378,7 @@ _LAYOUT = [
     ]),
     (True, lazy_gettext('Model and Calibration'), [
         (None, ['photosynth_mode_enabled', 'source_plot_id', 'vpd_weight_T',
-                'priority_vpd', 'cumulative_tracker_enabled']),
+                'priority_vpd', 'priority_co2', 'cumulative_tracker_enabled']),
         (lazy_gettext('Effect Calibration'),
          ['effect_engine', 'calibration_enabled',
           'enable_active_probing', 'probe_interval_sec']),
@@ -1331,7 +1445,6 @@ def _apply_layout(options, layout):
     #   으로 파싱이 통째로 멈춘다(2026-08-27 collapse 표식이 실제로 그랬다).
     # ⚠ `message` 로는 안 된다 — 그쪽은 import 시점에 고정된 문자열이라 모든
     #   코디네이터가 같은 것을 보게 된다. 자리만 깔고 JS 가 채운다.
-    out.append({'type': 'env_status'})
     for folded, title, blocks in layout:
         if folded:
             # ⚠ **접힘마다 고유한 id 가 있어야 한다.** 템플릿이 DOM 앵커를
@@ -1362,12 +1475,27 @@ def _apply_layout(options, layout):
                 #   옆에 자동으로 놓았는데, 멤버가 전부 접힘(튜닝) 안에 있어서
                 #   **핵심 옵션까지 접혀 버렸다**(2026-08-27 화면 실측). 핵심은
                 #   항상 보이는 층에 있어야 그것만으로 끝낼 수 있다.
+                if oid == '@status':
+                    # ⚠ **자리는 배치가 정한다.** 예전에는 무조건 맨 위였다 —
+                    #   설정을 시작하기 전에 열 줄을 읽어야 했고, 정작 시설을
+                    #   고르는 칸은 그 아래 있었다. 지금은 [연동 시설] 바로
+                    #   뒤다: 고르고, 그 자리에서 확인한다.
+                    out.append({'type': 'env_status'})
+                    continue
                 if oid.startswith('@range:'):
                     rid = oid.split(':', 1)[1]
                     for bnd in _RANGE_BANDS:
                         if bnd['id'] == rid:
                             item = dict(bnd)
                             item['type'] = 'range_band'
+                            # 손잡이의 읽어 주는 이름(aria)은 **그 옵션의
+                            # 이름**이다. 여기서 잇지 않으면 화면 낭독기가
+                            # "손잡이" 라고만 읽어, 둘 중 어느 쪽인지 알 수
+                            # 없다 — 눈으로 보는 사람에게는 안 보이는 결함이다.
+                            for _k in ('guide_min', 'guide_max'):
+                                _o = by_id.get(bnd.get(_k))
+                                if _o:
+                                    item['name_' + _k] = _o.get('name')
                             out.append(item)
                             _emit_members(
                                 out, used, by_id,

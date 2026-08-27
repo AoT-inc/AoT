@@ -8279,9 +8279,29 @@ class TestCoordinatorPlotWiring(unittest.TestCase):
                         'function_options', 'custom_function_options.html')
 
     def test_settings_page_has_the_anchor(self):
-        src = _read(self._TPL)
-        self.assertIn("each_function.device == 'env_coordinator'", src)
+        """앵커는 **[연동 시설] 바로 아래**다 (2026-08-27 자리 이동).
+
+        예전에는 함수 옵션 맨 위(`custom_function_options.html`)였다. 시설을
+        고르면 따라오는 정보인데 고르기도 전에 읽게 됐다 — 사용자 지적:
+        *"시설 옵션에서 시설을 선택하면 해당 시설에 달려오는 정보이므로 그
+        이후에 짧은 요약만 제공하는 게 나아보임."*
+
+        지금 자리는 옵션 배치의 `@status` 이고, 그 표식을 그리는 것이
+        `Custom_Options.html` 의 `env_status` 갈래다. **요약 모드**로 붙는다 —
+        표가 아니라 두 줄이다.
+        """
+        import os
+        opts = os.path.join(
+            os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+            'aot_flask', 'templates', 'pages', 'form_options',
+            'Custom_Options.html')
+        src = _read(opts)
         self.assertIn('class="aot-coord-plot"', src)
+        self.assertIn('data-summary="1"', src,
+                      '요약 모드로 붙지 않았다 — 설정 화면에 표가 통째로 나온다')
+        # 옛 자리에 되살아나면 같은 사실을 두 곳이 말한다.
+        self.assertNotIn('class="aot-coord-plot"', _read(self._TPL),
+                         '함수 옵션 맨 위에 다시 생겼다')
 
     def test_facility_modal_no_longer_lists_targets(self):
         """목표 목록은 [현황]에서 뺐다(2026-08-20) — 목표만 나열하면 "그래서

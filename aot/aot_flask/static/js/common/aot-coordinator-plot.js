@@ -74,7 +74,78 @@
   // compact = 지도 위젯의 시설 모달. 그 화면에는 [구획] 블록이 이미 있어
   // 무엇이 자라는지 말하고 있으므로, 여기서는 **목표 대비**만 낸다. 같은 사실을
   // 두 블록이 각자 적으면 어느 쪽이 최신인지 사람이 판단해야 한다.
+  /** 설정 행과 같은 골격의 한 줄. `summary` 모드 전용. */
+  function _sumRow(label, value) {
+    return '<div class="aot-modal-option-row">' +
+           '<div class="aot-modal-option-label">' + _esc(label) + '</div>' +
+           '<div class="aot-modal-option-control">' + value + '</div></div>';
+  }
+
+  /* ── 요약 모드 (`data-summary="1"`) ───────────────────────────────────────
+   *
+   * 자리는 설정 화면의 **[연동 시설] 바로 아래**다. 시설을 고르면 따라오는
+   * 정보이므로 고르기 전에 읽힐 이유가 없다 — 2026-08-27 사용자 지적:
+   * *"시설 옵션에서 시설을 선택하면 해당 시설에 달려오는 정보이므로 그 이후에
+   * 짧은 요약만 제공하는 게 나아보임."*
+   *
+   * 그래서 표가 아니라 **두 줄**이다. 자세한 표는 시설 화면이 맡는다.
+   *
+   * ⚠ 후보가 둘 이상일 때의 [이걸로] 버튼은 요약에도 남긴다 — 그것이 이
+   *   블록의 유일한 쓰기이고, 대체 수단(`source_plot_id`)은 [고급] 안에 있다.
+   *   여기서 빼면 막다른 안내가 된다.
+   */
+  function _renderSummary(el, d) {
+    if (!d.plot) {
+      if (d.reason === 'ambiguous' && d.can_pick) {
+        var h = '<div class="aot-coord-plot-note">' + _esc(_reasonText(d)) +
+                '</div>';
+        (d.candidates || []).forEach(function (c) {
+          h += '<div class="aot-coord-plot-cand">' +
+               '<span>' + _esc(c.subject || c.name || '') +
+               (c.program_name ? ' \u00b7 ' + _esc(c.program_name) : '') + '</span>' +
+               '<button type="button" class="btn aot-pill-btn aot-coord-plot-pick"' +
+               ' data-plot="' + _esc(c.unique_id) + '">' +
+               _esc(_t('Follow this one')) + '</button></div>';
+        });
+        el.innerHTML = h;
+        _wirePick(el);
+        return;
+      }
+      // 시설을 아직 안 골랐거나 붙일 구획이 없다 — 바로 위 칸이 그 말을 이미
+      // 하고 있으므로 **아무것도 내지 않는다.**
+      el.innerHTML = '';
+      return;
+    }
+    var p = d.plot;
+    var what = (p.subject || p.name || '');
+    if (p.variety) what += ' (' + p.variety + ')';
+    if (d.stage && d.stage.name) {
+      what += ' \u00b7 ' + d.stage.name +
+              (d.stage.index ? ' (' + d.stage.index + '/' + d.stage.total + ')' : '');
+    }
+    var out = _sumRow(_t('Growing'), _esc(what));
+
+    var vals = (d.targets || []).map(function (r) {
+      return (r.label || r.key) + ' ' +
+             (r.method_id ? (r.method_name || _t('curve'))
+                          : _num(r.value) + (r.unit ? ' ' + r.unit : ''));
+    });
+    if ((d.unmapped || []).length) {
+      vals.push(_t('For reference') + ' ' + d.unmapped.map(function (u) {
+        return (u.label || u.key) + ' ' + _num(u.value) +
+               (u.unit ? ' ' + u.unit : '');
+      }).join(' \u00b7 '));
+    }
+    if (vals.length) out += _sumRow(_t('Targets'), _esc(vals.join('  \u00b7  ')));
+    if (d.pinned_missing) {
+      out += '<div class="aot-coord-plot-note">' +
+             _esc(_t('The plot you pinned is no longer here.')) + '</div>';
+    }
+    el.innerHTML = out;
+  }
+
   function render(el, d) {
+    if (el.getAttribute('data-summary') === '1') return _renderSummary(el, d);
     var compact = el.getAttribute('data-compact') === '1';
     var html = '<div class="aot-coord-plot-title">' +
                _esc(compact ? _t('Targets in effect')
@@ -125,28 +196,34 @@
               _esc(_t('The plot you pinned is no longer here.')) + '</div>';
     }
 
-    if ((d.targets || []).length) {
-      html += '<table class="aot-coord-plot-table"><tbody>' +
-              d.targets.map(_rowHtml).join('') + '</tbody></table>';
+    // ⚠ **문장으로 변명하지 말 것.** 예전에는 참고값 앞에 "이 코디네이터는
+    //   VPD 를 목표로 하므로 아래는 여기 설정이 아닙니다" 를 붙였는데,
+    //   *"여기 설정이 아닌데 여기서 설정한다는 거야? 이런 설명이면 이 정보는
+    //   왜 여기에 표시하는 거지?"* 가 됐다(2026-08-27). 설명이 길수록 왜 여기
+    //   있는지가 더 흐려진다.
+    //
+    //   지금은 **표 안의 한 줄**이다 — 라벨이 "참고용" 이면 그 줄이 목표가
+    //   아니라는 사실을 문장 없이 말한다. 무엇을 목표로 삼는지는 표 아래
+    //   한 문장이 한 번만 말한다.
+    if ((d.targets || []).length || (d.unmapped || []).length) {
+      var rows = (d.targets || []).map(_rowHtml).join('');
+      if ((d.unmapped || []).length) {
+        rows += '<tr><td>' + _esc(_t('For reference')) + '</td><td>' +
+                '<span class="aot-ov-muted">' +
+                d.unmapped.map(function (u) {
+                  return _esc((u.label || u.key) + ' ' + _num(u.value) +
+                              (u.unit ? ' ' + u.unit : ''));
+                }).join(' · ') + '</span></td></tr>';
+      }
+      html += '<table class="aot-coord-plot-table"><tbody>' + rows +
+              '</tbody></table>';
     } else {
       html += '<div class="aot-coord-plot-note">' +
               _esc(_reasonText(d)) + '</div>';
     }
 
-    if ((d.unmapped || []).length) {
-      // 이 코디네이터는 온도·습도를 목표로 쓰지 않는다(그 칸은 한계다). 숨기면
-      // "왜 안 잡히지" 가 되므로 참고로 보이고 이유를 적는다.
-      html += '<div class="aot-coord-plot-note">' +
-              _esc(_t('For reference — this coordinator aims at VPD, so these are not settings here.')) +
-              ' ' +
-              d.unmapped.map(function (u) {
-                return _esc((u.label || u.key) + ' ' + _num(u.value) +
-                            (u.unit ? ' ' + u.unit : ''));
-              }).join(' · ') + '</div>';
-    }
-
     html += '<div class="aot-coord-plot-note">' +
-            _esc(_t('Targets come from the program. Safety limits below stay with this facility.')) +
+            _esc(_t('Aims at photosynthesis (VPD); other values are used as reference. Targets come from the program.')) +
             '</div>';
     el.innerHTML = html;
     // 내용을 그렸을 때만 블록 테두리를 붙인다(빈 상자 방지 — 시설 모달의

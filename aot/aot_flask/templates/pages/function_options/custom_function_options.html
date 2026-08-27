@@ -113,13 +113,11 @@
 
 
 
-    {# 코디네이터가 따르는 구획과 그 단계 목표 — **표시 전용**이다.
-       설정은 여기(함수)에 있고 작물 목표는 프로그램에 있어, 둘을 나란히 두지
-       않으면 "어느 쪽이 실제로 도는 값인가" 를 화면이 답하지 못한다.
-       정본: docs/design/coordinator-plot-targets.md #}
-    {% if each_function.device == 'env_coordinator' %}
-    <div class="aot-coord-plot" data-function="{{each_function.unique_id}}"></div>
-    {% endif %}
+    {# ⚠ 구획·목표 요약은 **[연동 시설] 바로 아래**다(옵션 배치의 `@status`).
+       예전에는 여기 맨 위였는데, 시설을 고르면 따라오는 정보라 고르기도 전에
+       읽게 됐다 — 2026-08-27 사용자 지적: *"시설 옵션에서 시설을 선택하면
+       해당 시설에 달려오는 정보이므로 그 이후에 짧은 요약만 제공하는 게
+       나아보임."* 정본: docs/design/coordinator-plot-targets.md #}
 
     <div class="aot-modal-group-title">{{_('Basic Settings')}}</div>
     <div class="aot-modal-container">

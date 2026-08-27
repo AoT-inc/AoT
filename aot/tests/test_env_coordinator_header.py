@@ -37,10 +37,26 @@ def _fi():
 class TestItIsAMarkerNotAnOption:
     """값을 싣지 않으므로 `header` 와 같은 부류다."""
 
-    def test_it_comes_first(self):
+    def test_it_sits_right_under_the_facility_picker(self):
+        """맨 위가 아니라 **[연동 시설] 바로 뒤**다 (2026-08-27).
+
+        사용자 지적: *"옵션 초반에 정보가 너무 많아 … 여긴 설정하는 곳이지
+        확인하는 곳은 아니야."* 그리고 *"시설을 연동하면 연동한 시설 정보가
+        그 아래에 나오는게 더 자연스러워. 설정하고 그 위치에서 확인."*
+
+        ⚠ 그래도 **첫 묶음 안**이어야 한다. 더 밀리면 시설을 안 고른 사람이
+          왜 아무것도 안 도는지 알 수 없다.
+        """
         opts = _fi().FUNCTION_INFORMATION['custom_options']
-        assert opts[0].get('type') == 'env_status', (
-            '머리말이 맨 앞이 아니다 — 설정 아래로 밀리면 아무도 안 본다')
+        at = [i for i, o in enumerate(opts)
+              if o.get('type') == 'env_status']
+        assert len(at) == 1, '상태 줄이 %d개다' % len(at)
+        ids = [o.get('id') for o in opts[:at[0]]]
+        assert 'geo_facility_id' in ids, '시설 고르는 칸보다 앞에 있다'
+        # 두 번째 묶음 제목이 오기 전이어야 한다.
+        heads = [i for i, o in enumerate(opts) if o.get('type') == 'header']
+        assert len(heads) >= 2 and at[0] < heads[1], (
+            '상태 줄이 첫 묶음 밖으로 밀렸다')
 
     def test_it_carries_no_value(self):
         """`id` 를 주면 값 옵션으로 세어져 파서가 attribute 를 만든다."""
@@ -122,19 +138,36 @@ class TestTheRendererReusesSharedClasses:
             '자체 CSS 클래스를 만들었다 — 공용 골격(aot-modal-*)을 쓸 것')
 
     def test_it_uses_the_shared_skeleton(self):
+        """자체 클래스를 만들면 화면마다 모양이 갈린다.
+
+        ⚠ 묶음 제목(`aot-modal-group-title`)은 **이제 안 쓴다** — 카드 둘이
+          두 줄이 되면서 제목이 내용보다 커졌다. 남는 것은 설정 행과 같은
+          골격이다.
+        """
         js = self._js()
-        for cls in ('aot-modal-group-title', 'aot-modal-container',
-                    'aot-modal-option-row', 'aot-modal-option-label'):
+        for cls in ('aot-modal-option-row', 'aot-modal-option-label',
+                    'aot-modal-body-text'):
             assert cls in js, '%s 를 안 쓴다' % cls
+        # `.aot-env-status` 는 **담는 그릇**이라 예외다(템플릿이 그 자리를
+        # 깐다). 그 밖의 `aot-env-*` 는 자체 모양을 만든 것이다.
+        import re as _re
+        made = {c for c in _re.findall(r'aot-env-[a-z-]+', js)
+                if c != 'aot-env-status'}
+        assert not made, '자체 클래스를 만들었다 — 공용 골격을 쓸 것: %s' % made
 
 
 class TestItSpeaksWhenNothingIsRunning:
     """침묵하면 "아직 안 붙었다" 와 "붙었는데 안 돈다" 를 구분할 수 없다."""
 
     def test_every_dead_state_has_its_own_sentence(self):
+        """"안 돈다" 는 이유가 여럿이고, 뭉치면 사용자가 엉뚱한 곳을 고친다.
+
+        ⚠ **"시설 미선택" 은 예외다.** 그 상태에서는 아무 말도 하지 않는다 —
+          바로 위가 [연동 시설] 칸이라 고르라는 말이 그 자리에 이미 있다.
+          맨 위에 있던 시절에는 필요했다(2026-08-27 자리 이동).
+        """
         js = _read('aot_flask', 'static', 'js', 'common', 'aot-env-status.js')
-        for needle in ('No facility is linked yet',
-                       'No integrated environment control is linked',
+        for needle in ('No integrated environment control is linked',
                        'Control is switched off',
                        'Not responding'):
             assert needle in js, '%r 상태를 말하지 않는다' % needle

@@ -104,12 +104,46 @@
   }
 
   function sameValue(a, b) {
+    // 불리언을 먼저 눕힌다 — 파이썬이 실은 `true`/`false` 와 체크박스가
+    // 돌려주는 JS 불리언, 그리고 폼이 문자열로 낸 `'True'` 가 섞인다.
+    var ba = asBool(a), bb = asBool(b);
+    if (ba !== null || bb !== null) return ba === bb;
     var na = Number(a), nb = Number(b);
     if (isFinite(na) && isFinite(nb)) return na === nb;
     return String(a) === String(b);
   }
 
+  function asBool(v) {
+    if (v === true || v === 'True' || v === 'true') return true;
+    if (v === false || v === 'False' || v === 'false') return false;
+    return null;
+  }
+
   /** 지금 값들이 어느 단계인가 → index | -1. */
+  /* ⚠ **체크박스는 `.value` 로 읽고 쓰지 않는다.** 체크박스의 `.value` 는
+   *   체크 여부와 무관하게 늘 같은 문자열이라(`'y'`), 그대로 쓰면 판정이
+   *   언제나 참이 되고 클릭해도 아무 일이 안 일어난다.
+   *
+   * 묶음에 토글이 들어가는 이유: "육묘장 모드" 와 "분무 조심도" 처럼 **켜는
+   * 스위치와 그 세기**가 따로 있던 것을 한 축으로 합치기 위해서다. 첫 칸이
+   * "안 함"(토글 끔)이고 나머지가 세기다.
+   */
+  function readMember(inp) {
+    return inp.type === 'checkbox' ? inp.checked : inp.value;
+  }
+
+  function writeMember(inp, v) {
+    if (inp.type === 'checkbox') {
+      var on = (v === true || v === 'True' || v === 'true' || v === 1);
+      if (inp.checked === on) return false;
+      inp.checked = on;
+      return true;
+    }
+    if (String(inp.value) === String(v)) return false;
+    inp.value = v;
+    return true;
+  }
+
   function groupIndex(el) {
     var list = el._steps;
     for (var i = 0; i < list.length; i++) {
@@ -119,7 +153,7 @@
         // 그 옵션이 이 화면에 없으면 **판정에서 뺀다** — 없는 것을 불일치로
         // 세면 어떤 단계와도 안 맞아 늘 '직접 지정' 이 된다.
         if (!inp) continue;
-        if (!sameValue(inp.value, vals[oid])) { ok = false; break; }
+        if (!sameValue(readMember(inp), vals[oid])) { ok = false; break; }
       }
       if (ok) return i;
     }
@@ -175,9 +209,11 @@
       for (var oid in vals) {
         var inp = memberInput(el, oid);
         if (!inp) continue;              // 없는 옵션은 건너뛴다
-        inp.value = vals[oid];
         // 세부 옵션의 **자기 이벤트**로 알린다 — 그 값에 붙은 다른 장치
-        // (개별 눈금·`depends_on`)가 그것을 듣고 있다.
+        // (개별 눈금·`depends_on`)가 그것을 듣고 있다. 값이 안 바뀌었어도
+        // 보낸다: 토글이 이미 맞는 상태여도 `depends_on` 이 다시 계산돼야
+        // 방금 고른 단계에 맞는 세부만 남는다.
+        writeMember(inp, vals[oid]);
         inp.dispatchEvent(new Event('change', {bubbles: true}));
       }
       renderGroup(el);
@@ -283,9 +319,16 @@
     row.className = 'aot-modal-option-row aot-advanced-switch';
     row.innerHTML =
       '<div class="aot-modal-option-label">' + esc(_t('Advanced')) + '</div>' +
+      // ⚠ **골격을 손으로 줄이지 말 것.** 손잡이(`btn-toggle-thumb`)는
+      //   슬라이더 **안**에 있어야 하고, 그것이 없으면 홈만 그려지고 **손잡이가
+      //   안 보인다** — 스위치가 어느 쪽인지 알 수 없다(2026-08-27 사용자
+      //   신고). 정본은 `Custom_Options.html` 의 bool 옵션 마크업이고, 여기는
+      //   그것을 그대로 옮긴 것이다.
       '<div class="aot-modal-option-control"><label class="btn-toggle mb-0">' +
-      '<input type="checkbox" class="btn-toggle-input aot-advanced-input"' + (on ? ' checked' : '') +
-      '><div class="btn-toggle-slider"></div></label></div>';
+      '<input type="checkbox" class="btn-toggle-input aot-advanced-input"' +
+      (on ? ' checked' : '') + '>' +
+      '<div class="btn-toggle-slider"><div class="btn-toggle-thumb"></div></div>' +
+      '</label></div>';
     var anchor = host.closest('.aot-modal-option-row') || host;
     var box = anchor.parentNode;
     box.insertBefore(row, box.firstChild);

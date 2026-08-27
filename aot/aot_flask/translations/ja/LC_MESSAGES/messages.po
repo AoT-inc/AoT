@@ -28829,8 +28829,6 @@ msgstr "ステージ目標"
 msgid "Current setting"
 msgstr "現在の設定"
 
-msgid "For reference — this coordinator aims at VPD, so these are not settings here."
-msgstr "参考 — このコーディネーターはVPDを目標にするため、以下はここの設定ではありません。"
 
 msgid "Shown for comparison. Nothing here changes control."
 msgstr "比較用の表示です。ここで制御は変わりません。"
@@ -28889,8 +28887,6 @@ msgstr "光合成モデルの作物"
 msgid "Targets in effect"
 msgstr "適用中の目標"
 
-msgid "Targets come from the program. Safety limits below stay with this facility."
-msgstr "目標はプログラムから来ます。下の安全制限はこの施設の設定です。"
 
 msgid "This plot has no program, so there are no stage targets to follow."
 msgstr "この区画にプログラムがないため、従うステージ目標がありません。"
@@ -31173,3 +31169,75 @@ msgstr "区画の開始からの経過週数に加える補正です。正の値
 
 msgid "Which plot this coordinator follows, when more than one is growing in its scope. Leave empty when there is only one — it is picked automatically. Set from the comparison card at the top of this page."
 msgstr "スコープ内で複数の区画が育っているとき、どれに従うかを指定します。一つだけなら空のままにしてください — 自動で選ばれます。このページ上部の比較カードから設定できます。"
+
+msgid "Ventilation and HVAC Teamwork"
+msgstr "換気と冷暖房の連携"
+
+msgid "How much the outdoor air is trusted before heating or cooling is used. Higher settings save energy; lower settings chase the target harder."
+msgstr "冷暖房を使う前に外気をどれだけ当てにするかを決めます。高くするほど省エネ、低くするほど目標に近づけます。"
+
+msgid "Chases the target harder"
+msgstr "目標を強く追う"
+
+msgid "Saves more energy"
+msgstr "省エネを優先"
+
+msgid "Save energy"
+msgstr "省エネ"
+
+msgid "Save more"
+msgstr "さらに省エネ"
+
+msgid "Close at Night"
+msgstr "夜間は閉じておく"
+
+msgid "Misting Limit Irradiance"
+msgstr "噴霧制限日射量"
+
+msgid "Light Range"
+msgstr "光量の範囲"
+
+msgid "no supplemental light"
+msgstr "補光しない"
+
+msgid "no shading"
+msgstr "遮光しない"
+
+msgid "How careful misting is with the leaves. Sets spray length and drying interval together. Sunburn protection runs either way."
+msgstr "噴霧が葉をどれだけ丁寧に扱うかを決めます。1回の噴霧時間と乾燥間隔をまとめて設定します。日焼け防止はどちらでも常に働きます。"
+
+msgid "No active plot yet"
+msgstr "有効な区画なし"
+
+msgid "Opening helps only when the outdoor air is on the target side. When it is not, wider vents drag the reading further away."
+msgstr "外気が目標側にあるときだけ開けることが役に立ちます。逆側なら、開けるほど目標から遠ざかります。"
+
+msgid "No point burning fuel for what an open vent already does."
+msgstr "窓を開けて済むことに燃料を使う理由はありません。"
+
+msgid "Venting against a running unit throws that heat or cold straight outside."
+msgstr "稼働中の機器に逆らって換気すると、その熱や冷気をそのまま外へ捨てます。"
+
+msgid "Only for units this coordinator does not switch itself — it already knows about the ones it commands. Not an indoor temperature: something that reports the unit running, such as a power reading or a relay state."
+msgstr "この調整機が自分で入れない機器にだけ必要です — 自ら命令する機器はすでに把握しています。室内温度ではなく、その機器が動いていることを示す値です（電力の測定値やリレーの状態など）。"
+
+msgid "Read on the signal chosen above, in whatever unit that signal uses. For an on/off signal (0 or 1) leave it at 0.5."
+msgstr "上で選んだ信号を、その信号の単位のまま読みます。オン／オフ信号（0 または 1）なら 0.5 のままで構いません。"
+
+msgid "Not used"
+msgstr "使わない"
+
+msgid "For reference"
+msgstr "参考"
+
+msgid "Aims at photosynthesis (VPD); other values are used as reference. Targets come from the program."
+msgstr "この調整機は光合成（VPD）を目標とし、他の値は参考として使います。目標はプログラムから来ます。"
+
+msgid "Growing"
+msgstr "栽培中"
+
+msgid "curve"
+msgstr "カーブ"
+
+msgid "Which plot this coordinator follows, when more than one is growing in its scope. Leave empty when there is only one — it is picked automatically. When more than one is growing, pick it from the summary under the linked facility above."
+msgstr "スコープ内で複数の区画が育っているとき、どれに従うかを指定します。一つだけなら空のままにしてください — 自動で選ばれます。複数あるときは、上の［連動施設］の下の要約から選べます。"
