@@ -60,8 +60,11 @@ def inject_dictionary():
 @flask_login.login_required
 def save_dashboard_layout():
     """Save positions and sizes of widgets of a particular dashboard."""
-    if not utils_general.user_has_permission('edit_controllers'):
-        return redirect(url_for('routes_general.home'))
+    # AJAX-only endpoint: flash() here would only surface on some later,
+    # unrelated page load (the client silently follows a redirect and
+    # never sees it). Stay silent and let the client react to the 403.
+    if not utils_general.user_has_permission('edit_controllers', silent=True):
+        return jsonify({"status": "forbidden"}), 403
     data = request.get_json()
     keys = ('id', 'x', 'y', 'w', 'h')
     for index, each_widget in enumerate(data):
@@ -243,7 +246,10 @@ def get_aot_map_measurements_panel(widget_id):
 def save_dashboard_order():
     """Persist user-defined dashboard ordering and return server order."""
     try:
-        if not utils_general.user_has_permission('edit_controllers'):
+        # AJAX-only endpoint: keep the permission check silent (see
+        # save_dashboard_layout) so a denial doesn't get queued as a flash
+        # that pops up on some later, unrelated page load.
+        if not utils_general.user_has_permission('edit_controllers', silent=True):
             return jsonify({"status": "forbidden"}), 403
 
         try:
@@ -639,6 +645,8 @@ def _build_dashboard_render_context(this_dashboard, dashboard_id, form_base, for
                            input=input_dev,
                            tags=tags,
                            this_dashboard=this_dashboard,
+                           can_edit_controllers=utils_general.user_has_permission(
+                               'edit_controllers', silent=True),
                            use_unit=use_unit,
                            widgets_dash=widgets_dash,
                            widget_types_on_dashboard=widget_types_on_dashboard,
@@ -686,7 +694,10 @@ def preview_widget_options(dashboard_id, widget_id):
     so toggling options in the settings modal updates the on-dashboard widget
     without persisting anything until the user explicitly saves.
     """
-    if not utils_general.user_has_permission('edit_controllers'):
+    # AJAX-only endpoint: keep the permission check silent (see
+    # save_dashboard_layout) so a denial doesn't get queued as a flash
+    # that pops up on some later, unrelated page load.
+    if not utils_general.user_has_permission('edit_controllers', silent=True):
         return jsonify({'error': 'permission denied'}), 403
     this_dashboard = Dashboard.query.filter(
         Dashboard.unique_id == dashboard_id).first()
