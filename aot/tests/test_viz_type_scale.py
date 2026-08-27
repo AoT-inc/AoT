@@ -81,20 +81,17 @@ class TestTheAdapterSetsTheSize(unittest.TestCase):
         """견줄 대상은 **옆줄 라벨**이다 — 사용자가 이질감을 느낀 자리가
         거기다(밴드가 그 옆에 나란히 선다).
 
-        ⚠ 모달은 토큰을 안 쓰고 리터럴 rem 을 쓴다(26곳). 그래서 값으로
-          비교한다 — 한쪽만 바뀌면 여기서 갈린다.
+        ⚠ **토큰 이름으로 견준다.** 값으로 견주면 둘 다 같은 칸을 가리켜도
+          한쪽이 리터럴로 되돌아간 것을 못 잡는다 — 그때는 사다리가 다시
+          갈라지기 시작한 것이고, 그 조짐이 여기서 보여야 한다.
         """
-        tokens = _css('aot-theme-variables.css')
-        m = re.search(r'--aot-font-size-sm:\s*([\d.]+)rem', tokens)
-        self.assertIsNotNone(m)
-        sm = float(m.group(1))
         label = _rule(_css('aot-modal-modern.css'), '.aot-modal-option-label')
         self.assertIsNotNone(label, '모달 옵션 라벨 규칙이 없다')
-        got = re.search(r'font-size:\s*([\d.]+)rem', label)
-        self.assertIsNotNone(got, '모달 옵션 라벨에 크기가 없다')
-        self.assertAlmostEqual(float(got.group(1)), sm, places=3,
-                               msg='어댑터 토큰(sm)과 모달 라벨이 갈렸다 — '
-                                   'viz 가 다시 옆줄과 달라진다')
+        got = re.search(r'font-size:\s*var\((--aot-font-size-[\w-]+)\)', label)
+        self.assertIsNotNone(got, '모달 옵션 라벨이 토큰을 안 쓴다')
+        self.assertEqual(got.group(1), '--aot-font-size-sm',
+                         '어댑터(sm)와 모달 라벨이 다른 칸을 가리킨다 — '
+                         'viz 가 다시 옆줄과 달라진다')
 
 
 class TestContainersThatNeedTheirOwnSizeStillHaveIt(unittest.TestCase):
@@ -110,6 +107,38 @@ class TestContainersThatNeedTheirOwnSizeStillHaveIt(unittest.TestCase):
         self.assertIsNotNone(body, '.aot-ov-block 규칙이 없다')
         self.assertIn('--aot-font-size-base', body,
                       '지도 팝업 그릇이 크기를 잃었다 — viz 가 페이지 크기를 받는다')
+
+class TestTheModalUsesTheScale(unittest.TestCase):
+    """모달이 **토큰만** 쓴다 (2026-08-27, 사용자 요청 C).
+
+    예전에는 리터럴 rem 26곳에 서로 다른 크기가 **10가지**였다(1.4 · 1.05 ·
+    0.95 · 0.85 · 0.82 · 0.8 · 0.75 · 0.72 · 0.7 · 0.66). 사다리는 다섯
+    칸인데 절반이 그 밖이었고, 그 어긋남이 "정돈이 안 됐다" 로 보인다.
+
+    ⚠ **px 는 남는다.** iOS 는 16px 미만 입력칸에서 화면을 확대하므로 그
+      16px 은 크기가 아니라 **동작**이다. 사다리에 넣으면 그 이유가 사라지고
+      다음 사람이 "왜 여기만 px 인가" 를 물을 자리도 없어진다.
+    """
+
+    def test_no_literal_rem_remains(self):
+        css = _css('aot-modal-modern.css')
+        bad = re.findall(r'font-size:\s*([\d.]+rem)', css)
+        self.assertEqual(bad, [], '리터럴 rem 이 되살아났다: %s' % bad)
+
+    def test_the_px_ones_are_still_px(self):
+        """16px 은 iOS 확대 방지다 — 토큰으로 바꾸면 그 동작이 깨진다."""
+        css = _css('aot-modal-modern.css')
+        self.assertIn('font-size: 16px !important', css,
+                      '입력칸 16px 이 사라졌다 — iOS 가 화면을 확대한다')
+
+    def test_every_token_used_exists(self):
+        """없는 토큰을 쓰면 그 규칙은 조용히 **상속**으로 떨어진다."""
+        css = _css('aot-modal-modern.css')
+        tokens = _css('aot-theme-variables.css')
+        used = set(re.findall(r'var\((--aot-font-size-[\w-]+)\)', css))
+        self.assertTrue(used, '토큰을 하나도 안 쓴다')
+        for name in sorted(used):
+            self.assertIn('%s:' % name, tokens, '없는 토큰: %s' % name)
 
 
 if __name__ == '__main__':

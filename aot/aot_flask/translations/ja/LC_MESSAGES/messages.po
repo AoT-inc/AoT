@@ -31290,3 +31290,6 @@ msgstr "この位置のタイムゾーンが特定できないため、農場の
 
 msgid "program value"
 msgstr "プログラムの値"
+
+msgid "Working Hours"
+msgstr "稼働時間"

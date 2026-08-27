@@ -28,7 +28,7 @@
 
 /* SECTION 1b: BODY / DESCRIPTION TEXT */
 .aot-modal-body-text {
-    font-size: 0.8rem;
+    font-size: var(--aot-font-size-xs);
     font-weight: 400;
     color: var(--aot-text-secondary);
     line-height: 1.45;
@@ -42,7 +42,7 @@
 
 /* SECTION 2: TOPOGRAPHY & LAYOUT HIERARCHY */
 .aot-modal-title {
-    font-size: 1.4rem;
+    font-size: var(--aot-font-size-xl);
     font-weight: 700;
     color: var(--aot-text-title);
     margin-top: 1rem;
@@ -52,7 +52,7 @@
 }
 
 .aot-modal-group-title {
-    font-size: 1.05rem;
+    font-size: var(--aot-font-size-lg);
     font-weight: 700;
     color: var(--gray-dark);
     margin-top: 1.6rem; /* 2:1 비율 - 위쪽 */
@@ -64,7 +64,7 @@
     background: none !important;
     color: var(--gray-dark) !important;
     font-weight: 700 !important;
-    font-size: 1.05rem !important;
+    font-size: var(--aot-font-size-lg) !important;
     padding: 0 0 0 16px !important; /* 박스 내부 레이블과 정렬 통일 (16px) */
     border-radius: 0 !important;
     border-left: none !important;
@@ -135,7 +135,7 @@ a.aot-modal-section-title-collapsible + .collapse + .aot-modal-container:not(:ha
 }
 
 .aot-modal-subgroup-title {
-    font-size: 0.95rem;
+    font-size: var(--aot-font-size-base);
     font-weight: 700;
     color: var(--aot-text-main);
     background: none !important;
@@ -167,7 +167,7 @@ a.aot-modal-section-title-collapsible + .collapse + .aot-modal-container:not(:ha
 
 /* 채널 타이틀 스타일 (밑줄 없음, 중제목과 좌측 정렬) */
 .aot-modal-channel-title {
-    font-size: 0.95rem;
+    font-size: var(--aot-font-size-base);
     font-weight: 700;
     color: var(--aot-text-main);
     background: none !important;
@@ -237,7 +237,7 @@ a.aot-modal-section-title-collapsible + .collapse + .aot-modal-container:not(:ha
     flex: 0 1 auto !important; /* Shrink-only: label occupies content width, not full row */
     min-width: 100px;
     max-width: calc(100% - var(--aot-common-control-width, 160px) - var(--aot-row-gap, 15px));
-    font-size: 0.85rem;
+    font-size: var(--aot-font-size-sm);
     font-weight: 700;
     color: var(--aot-text-main);
     line-height: 1.3;
@@ -278,7 +278,7 @@ a.aot-modal-section-title-collapsible + .collapse + .aot-modal-container:not(:ha
     border-radius: var(--aot-btn-pill-radius) !important;
     border: 1px solid var(--gray) !important;
     padding: 0 1rem !important;
-    font-size: 0.85rem !important;
+    font-size: var(--aot-font-size-sm) !important;
     background-color: var(--aot-input-bg) !important;
     color: var(--aot-text-main) !important;
     text-align: left;
@@ -423,7 +423,7 @@ textarea.aot-modern-input.aot-input-prose {
     background: var(--aot-input-bg) !important;
     border: 1px solid var(--gray) !important;
     color: var(--aot-text-main) !important;
-    font-size: 0.85rem !important;
+    font-size: var(--aot-font-size-sm) !important;
     text-align: center !important;
     display: flex !important;
     justify-content: center !important;
@@ -568,7 +568,7 @@ textarea.aot-modern-input.aot-input-prose {
     padding: 0 14px;
     width: auto;
     min-width: 54px;
-    font-size: 0.8rem;
+    font-size: var(--aot-font-size-xs);
     font-weight: 600;
     touch-action: manipulation;  /* 터치 탭 지연/모호성 제거 */
     white-space: nowrap;
@@ -609,7 +609,7 @@ textarea.aot-modern-input.aot-input-prose {
     .grid-stack-item .btn.aot-pill-btn {
         padding: 0 7px;
         min-width: 44px;
-        font-size: 0.75rem;
+        font-size: var(--aot-font-size-xs);
     }
 }
 
@@ -727,7 +727,7 @@ textarea.aot-modern-input.aot-input-prose {
     flex: 0 0 var(--aot-btn-fixed-width) !important;
     width: var(--aot-btn-fixed-width) !important;
     padding: 0 !important;
-    font-size: 0.75rem !important;
+    font-size: var(--aot-font-size-xs) !important;
 }
 
 /* Standalone items in groups take full 160px */
@@ -771,7 +771,7 @@ textarea.aot-modern-input.aot-input-prose {
         flex: 1 1 auto !important;
         min-width: 0; /* 라벨이 공간에 맞춰 줄어들 수 있도록 허용 */
         margin-bottom: 0 !important;
-        font-size: 0.85rem !important; /* 좁은 화면에서 가독성 확보 */
+        font-size: var(--aot-font-size-sm) !important; /* 좁은 화면에서 가독성 확보 */
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap; /* 라벨이 너무 길면 말줄임표 처리 */
@@ -1042,7 +1042,7 @@ textarea.aot-modern-input.aot-input-prose {
 
 .aot-camera-preview-media .aot-camera-no-image {
     color: var(--gray-dark);
-    font-size: 0.8rem;
+    font-size: var(--aot-font-size-xs);
     text-align: center;
     padding: 8px;
 }
@@ -1052,7 +1052,7 @@ textarea.aot-modern-input.aot-input-prose {
     display: flex;
     flex-direction: column;
     gap: 4px;
-    font-size: 0.82rem;
+    font-size: var(--aot-font-size-sm);
     color: var(--aot-text-main);
 }
 
@@ -1076,7 +1076,7 @@ textarea.aot-modern-input.aot-input-prose {
 .aot-camera-preview-toggle .btn {
     flex: 1;
     height: 28px;
-    font-size: 0.75rem;
+    font-size: var(--aot-font-size-xs);
     border-radius: var(--aot-btn-pill-radius);
     display: flex;
     align-items: center;
@@ -1106,7 +1106,7 @@ textarea.aot-modern-input.aot-input-prose {
     flex: 1;
     height: 36px;
     border-radius: var(--aot-btn-pill-radius);
-    font-size: 0.82rem;
+    font-size: var(--aot-font-size-sm);
     font-weight: 600;
     display: flex;
     align-items: center;
@@ -1432,7 +1432,7 @@ body.modal-open {
 .aot-center-modal .modal-footer .btn.aot-pill-btn {
     flex: 0 0 auto !important;
     min-width: 56px !important;
-    font-size: 0.8rem !important;
+    font-size: var(--aot-font-size-xs) !important;
     height: 32px !important;
     min-height: 32px !important;
     padding: 0 0.75rem !important;
@@ -1568,7 +1568,7 @@ body.modal-open {
 .aot-option-tip {
     display: inline-block;
     color: var(--aot-color-text-secondary, #6c757d);
-    font-size: 0.7rem;
+    font-size: var(--aot-font-size-2xs);
     margin-left: 10px;
     vertical-align: middle;
     pointer-events: none; /* pass-through: mouse events reach the parent label, not the icon */
@@ -2001,7 +2001,7 @@ body { transition: padding-right 0.4s cubic-bezier(0.075, 0.82, 0.165, 1); }
 
 /* 1줄: 세부항목 제목 */
 .aot-modal-detail-head {
-  font-size: 0.85rem;
+  font-size: var(--aot-font-size-sm);
   font-weight: 700;
   color: var(--aot-text-main);
   margin-bottom: 0.45rem;
@@ -2027,7 +2027,7 @@ body { transition: padding-right 0.4s cubic-bezier(0.075, 0.82, 0.165, 1); }
 }
 
 .aot-modal-detail-field > label {
-  font-size: 0.72rem;
+  font-size: var(--aot-font-size-2xs);
   font-weight: 600;
   color: var(--aot-text-secondary);
   margin: 0 0 0 0.1rem;
@@ -2095,7 +2095,7 @@ body { transition: padding-right 0.4s cubic-bezier(0.075, 0.82, 0.165, 1); }
     min-width: 0 !important;
   }
   .aot-modal-detail-field > label {
-    font-size: 0.66rem;
+    font-size: var(--aot-font-size-2xs);
     white-space: normal;
     line-height: 1.2;
   }
@@ -2114,7 +2114,7 @@ body { transition: padding-right 0.4s cubic-bezier(0.075, 0.82, 0.165, 1); }
     display: inline-block;
     padding: 1px 7px;
     border-radius: 10px;
-    font-size: 0.75rem;
+    font-size: var(--aot-font-size-xs);
     font-weight: 700;
     letter-spacing: 0.02em;
     background: var(--aot-color-brand-accent);
@@ -2155,7 +2155,7 @@ body { transition: padding-right 0.4s cubic-bezier(0.075, 0.82, 0.165, 1); }
     display: inline-block;
     padding: 2px 8px;
     border-radius: 10px;
-    font-size: 0.75rem;
+    font-size: var(--aot-font-size-xs);
     background: var(--aot-color-brand-accent);
     color: var(--aot-color-text-primary);
     white-space: nowrap;
@@ -2210,9 +2210,9 @@ body { transition: padding-right 0.4s cubic-bezier(0.075, 0.82, 0.165, 1); }
 }
 .aot-lib-thumb img { width: 100%; height: 100%; object-fit: cover; }
 .aot-lib-name {
-    font-size: 0.8rem;
+    font-size: var(--aot-font-size-xs);
     font-weight: 600;
     color: var(--aot-color-text-primary);
     word-break: break-all;
 }
-.aot-lib-kind { font-size: 0.72rem; color: var(--aot-color-text-secondary); }
+.aot-lib-kind { font-size: var(--aot-font-size-2xs); color: var(--aot-color-text-secondary); }

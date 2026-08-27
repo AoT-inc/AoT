@@ -247,6 +247,13 @@
   --aot-ls-tight: -0.01em;
 
   /* legacy aliases — kept for backward compat */
+  /* ⚠ **크기는 이 사다리에서만 고른다.** 임의의 rem 을 쓰면 값들이 서로
+     어긋나고, 그 어긋남이 "정돈이 안 됐다" 로 보인다 — `aot-modal-modern.css`
+     가 실제로 그 길을 갔다(리터럴 26곳, 서로 다른 크기 10가지). 2026-08-27 에
+     전부 이 토큰으로 돌렸다.
+     ⚠ `16px`/`18px` 처럼 **px 로 남아야 하는 것**이 있다: iOS 는 16px 미만
+     입력칸에서 화면을 확대한다. 그것은 크기가 아니라 동작이라 사다리 밖이다. */
+  --aot-font-size-2xs: 0.7rem;   /* 조밀한 상세 라벨 — xs 아래 */
   --aot-font-size-xs: 0.75rem;
   --aot-font-size-sm: 0.85rem;
   --aot-font-size-base: 0.95rem;

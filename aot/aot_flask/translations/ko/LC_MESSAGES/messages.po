@@ -31531,3 +31531,6 @@ msgstr "이 위치의 시간대를 찾지 못해 농장 시간대로 표시합�
 
 msgid "program value"
 msgstr "프로그램 값"
+
+msgid "Working Hours"
+msgstr "작동 시간"
