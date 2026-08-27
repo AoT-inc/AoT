@@ -296,9 +296,6 @@ class TestTheLayoutDoesNotChangeBehaviour:
         assert _always_visible(once) == _always_visible(twice)
 
 
-if __name__ == '__main__':
-    pytest.main([__file__, '-v'])
-
 
 class TestEachFoldOpensItsOwnSection:
     """접힘마다 **고유한 id** 가 있어야 한다 (2026-08-27 사용자 신고).
@@ -375,3 +372,71 @@ def _read_parser():
     with open(os.path.join(here, '..', 'controllers',
                            'abstract_base_controller.py'), encoding='utf-8') as fh:
         return fh.read()
+
+class TestTheScreenFollowsTheDomainVocabulary:
+    """화면 묶음의 축은 **도메인**이다 — 옵션 종류가 아니라 (2026-08-27).
+
+    사용자 지적: *"각 도메인을 제어하기 위해 사용자에게 설정을 확인하기 위한
+    것이 이 설정의 목표 아니었나?"* 맞다. 그런데 화면은 옵션 종류로 묶여
+    있어서(범위 / 전략 / 주기 / 광량과 CO₂ / 모델), "환기를 어떻게 쓸
+    것인가" 에 답하려면 세 묶음을 오가야 했다.
+
+    ⚠ 정본은 `env_control/types.py` 의 `ACTUATOR_DOMAIN` 이고, 그 파일이
+      "어휘를 두 벌 두지 말라" 고 못박고 있다. 화면이 자기 도메인을 새로
+      만들면 갈라지고, 갈라지면 한쪽만 고쳐진 채 굴러간다.
+    """
+
+    def test_every_domain_group_names_a_real_domain(self):
+        from aot.functions.utils.env_control import types as t
+        fi = _info()
+        real = set(t.ACTUATOR_DOMAIN.values())
+        for title, dom in fi._DOMAIN_GROUPS.items():
+            assert dom in real, (
+                '%r 이 없는 도메인 %r 을 가리킨다 — types.ACTUATOR_DOMAIN 에 '
+                '있는 것은 %s' % (title, dom, sorted(real)))
+
+    def test_every_named_group_is_actually_in_the_layout(self):
+        """표에만 있고 화면에 없으면 유령 항목이다 — 제목을 고치고 표를
+        안 고치면 그 묶음은 도메인 대조 밖으로 조용히 빠진다."""
+        fi = _info()
+        titles = {str(title) for _f, title, _b in fi._LAYOUT}
+        for title in fi._DOMAIN_GROUPS:
+            assert title in titles, '%r 묶음이 배치에 없다' % title
+
+    def test_the_domain_groups_come_before_the_cross_cutting_ones(self):
+        """도메인은 "무엇을 움직이나" 이고 나머지는 "어떻게 판단하나" 다.
+        판단 방식이 앞에 오면 장치 이야기를 하러 온 사람이 먼저 모델 설정을
+        지나야 한다."""
+        fi = _info()
+        order = [str(title) for _f, title, _b in fi._LAYOUT]
+        doms = [i for i, t in enumerate(order) if t in fi._DOMAIN_GROUPS]
+        cross = order.index('Schedule and Time')
+        assert max(doms) < cross, '도메인 묶음이 판단 방식 뒤에 있다'
+
+
+class TestTemperatureIsNotCalledAGrowingTarget:
+    """이 함수의 목표는 **광합성**이고 1차 제어변수는 **VPD** 다. 온·습도는
+    VPD 를 풀어낼 범위이자 넘지 말아야 할 선이다 — `_decompose_vpd` 가 VPD 를
+    쓸 수 있을 때 둘을 `_..._constraint` 로 강등한다.
+
+    그래서 "재배 온도"(Growing Temperature)는 틀린 이름이다. 사용자가 그것을
+    목표로 읽으면 "온도를 맞춰 주는 함수" 로 이해하는데, 실제로는 VPD 를 위해
+    온도가 움직인다 — 그 오해는 "왜 설정한 온도로 안 가나" 로 나타난다.
+    """
+
+    def test_the_bands_do_not_claim_to_be_growing_targets(self):
+        fi = _info()
+        for b in fi._RANGE_BANDS:
+            name = str(b['name'])
+            assert 'Growing' not in name, (
+                '%r 이 재배 목표를 자처한다 — 이 함수의 목표는 VPD 다' % name)
+
+    def test_the_function_still_declares_vpd_as_the_primary_target(self):
+        """위 판단의 근거다. 이 문장이 바뀌면 이름도 다시 봐야 한다."""
+        msg = str(_info().FUNCTION_INFORMATION['message'])
+        assert 'VPD is the primary control target' in msg
+        assert 'safety constraints' in msg
+
+
+if __name__ == '__main__':
+    pytest.main([__file__, '-v'])

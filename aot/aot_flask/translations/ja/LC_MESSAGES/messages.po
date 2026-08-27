@@ -30679,16 +30679,10 @@ msgid "Target reached — easing off"
 msgstr "目標に達したため出力を下げています"
 
 #: aot/functions/custom_functions/env_coordinator_impl/_function_info.py
-msgid "Growing Range"
-msgstr "栽培範囲"
 
 #: aot/functions/custom_functions/env_coordinator_impl/_function_info.py
-msgid "Growing Temperature"
-msgstr "栽培温度"
 
 #: aot/functions/custom_functions/env_coordinator_impl/_function_info.py
-msgid "Growing Humidity"
-msgstr "栽培湿度"
 
 #: aot/functions/custom_functions/env_coordinator_impl/_function_info.py
 msgid "never past"
@@ -31149,3 +31143,33 @@ msgstr "施設全体"
 #: aot/aot_flask/static/js/common/aot-bay-select.js
 msgid "not in this facility"
 msgstr "この施設にありません"
+
+msgid "Target and Temperament"
+msgstr "目標と応答性"
+
+msgid "Heating, Cooling and Misting"
+msgstr "冷暖房・加湿"
+
+msgid "Light and Shading"
+msgstr "光と遮光"
+
+msgid "Sensing and Cycle"
+msgstr "検知と周期"
+
+msgid "Temperature Range"
+msgstr "温度範囲"
+
+msgid "Humidity Range"
+msgstr "湿度範囲"
+
+msgid "Rest Heating and Cooling When Venting Can Reach the Target"
+msgstr "換気だけで目標に届くときは冷暖房を休ませる"
+
+msgid "Shade Cloth Transmittance (0-1)"
+msgstr "遮光カーテンの透過率 (0-1)"
+
+msgid "Adjustment applied on top of the weeks elapsed since the plot started. Positive fast-forwards (the system was installed mid-cycle), negative compensates for downtime. Default 0."
+msgstr "区画の開始からの経過週数に加える補正です。正の値は前倒し（作期の途中で導入した場合）、負の値は停止期間の分を戻します。既定 0。"
+
+msgid "Which plot this coordinator follows, when more than one is growing in its scope. Leave empty when there is only one — it is picked automatically. Set from the comparison card at the top of this page."
+msgstr "スコープ内で複数の区画が育っているとき、どれに従うかを指定します。一つだけなら空のままにしてください — 自動で選ばれます。このページ上部の比較カードから設定できます。"

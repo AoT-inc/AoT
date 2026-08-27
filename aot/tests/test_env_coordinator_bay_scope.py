@@ -224,10 +224,14 @@ def test_the_daemon_knows_every_option_type_this_function_declares():
       게다가 형제 조회는 `opts.get('bay_scope')` 로 DB 를 직접 읽어 **여전히
       구역을 본다** — 두 경로가 서로 다른 답을 갖는다.
     """
-    # ⚠ **`id` 가 있는 항목만 본다.** 소스를 통째로 훑으면 배치 표식
-    #   (`header`·`collapse_start`·`collapse_end`)까지 걸리는데, 그것들은 값을
-    #   싣지 않는 **표시**라 파서가 알 필요가 없다 — 그대로 두면 화면 구조를
-    #   바꿀 때마다 이 검사가 헛되이 깨진다(2026-08-26 실제로 그랬다).
+    # ⚠ **`id` 가 있다고 전부 값을 싣는 것은 아니다.** 접힘 앵커와 범위
+    #   밴드는 `id` 를 갖는데 표시 전용이다 — 파서는 그것을 **면제 목록**
+    #   으로 알지, 값 종류로 알지 않는다. 그래서 두 갈래로 본다.
+    #
+    # ⚠ 면제를 소스에서 리터럴로 찾지 말 것. 예전에는 파서 본문에
+    #   `'collapse_start'` 가 적혀 있는지 봤는데, 그 목록이 **여섯 벌** 손으로
+    #   적혀 있던 것이 원래 문제였다(반쪽만 늘리면 파싱이 통째로 멈춘다).
+    #   상수 하나로 모으자 이 검사만 깨졌다 — 서식을 본 탓이다(2026-08-27).
     import sys
     import types
     if 'flask_babel' not in sys.modules:
@@ -237,11 +241,14 @@ def test_the_daemon_knows_every_option_type_this_function_declares():
         sys.modules['flask_babel'] = _b
     from aot.functions.custom_functions.env_coordinator_impl._function_info \
         import FUNCTION_INFORMATION as _F
+    from aot.controllers import abstract_base_controller as abc
     parser = _read('controllers', 'abstract_base_controller.py')
     block = parser.split('def setup_custom_options_json', 1)[1]
     declared = {o['type'] for o in _F['custom_options']
                 if o.get('id') and o.get('type')}
     for t in sorted(declared):
+        if t in abc.DISPLAY_ONLY_TYPES:
+            continue          # 표시 전용 — 값이 없으니 해석할 것도 없다
         assert "'%s'" % t in block, (
             "옵션 종류 %r 을 데몬 파서가 모른다 — 그 옵션은 값이 안 실린다" % t)
 

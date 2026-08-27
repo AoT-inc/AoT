@@ -891,6 +891,8 @@ FUNCTION_INFORMATION = {
         },
         {
             'id': 'gate_wind_threshold',
+        # 도메인은 환기가 맞지만 온당한 기본값이 있는 숫자다 — [고급] 에서만.
+        'advanced_only': True,
             'type': 'float',
             'default_value': 12.0,
             'required': False,
@@ -1113,7 +1115,7 @@ _SCALE_GROUPS = [
 _RANGE_BANDS = [
     {
         'id': 'temperature',
-        'name': lazy_gettext('Growing Temperature'),
+        'name': lazy_gettext('Temperature Range'),
         'hard_label': lazy_gettext('never past'),
         'unit': '°C', 'axis_min': 0.0, 'axis_max': 45.0, 'step': 0.5,
         'margin': 5.0,
@@ -1122,7 +1124,7 @@ _RANGE_BANDS = [
     },
     {
         'id': 'humidity',
-        'name': lazy_gettext('Growing Humidity'),
+        'name': lazy_gettext('Humidity Range'),
         'hard_label': lazy_gettext('never past'),
         'unit': '%', 'axis_min': 10.0, 'axis_max': 100.0, 'step': 1.0,
         'margin': 5.0,
@@ -1138,46 +1140,117 @@ _RANGE_MEMBERS = {v for b in _RANGE_BANDS
 _GROUP_MEMBERS = {m for g in _SCALE_GROUPS for m in g['members']}
 
 #   (접힘?, 제목, [(소제목|None, [옵션 id …]) …])
+# ─────────────────────────────────────────────────────────────────────────────
+# 화면의 도메인 묶음 → `env_control/types.py` 의 도메인
+# ─────────────────────────────────────────────────────────────────────────────
+# ⚠ **화면은 도메인을 정의하지 않는다. 따르기만 한다.** 정본은 그 파일의
+#   `ACTUATOR_DOMAIN` 이고, 주석이 "여기가 정본이다 — 어휘를 두 벌 두면
+#   갈라지고, 갈라지면 한쪽만 고쳐진 채로 굴러간다" 고 못박고 있다.
+#
+# 이 표가 있는 이유는 화면 제목이 **번역되기 때문**이다. 제목 문자열로는
+# 어느 도메인인지 알 수 없으므로, 여기서 한 번 이어 두고 검사가 그것을
+# 정본과 대조한다(`test_env_coordinator_layout.py`).
+#
+# 제목은 도메인 이름 그대로가 아니다 — `screen` 을 "빛과 차광" 으로 부르는
+# 것은 `light_min` 이 보광등과 차광막을 함께 움직이기 때문이고, `aux` 를
+# 통째로 내지 않고 "CO₂" 만 내는 것은 나머지(보광등·유동팬)에 이 화면이
+# 물을 설정이 없기 때문이다. **그 어긋남을 표가 드러낸다.**
+_DOMAIN_GROUPS = {
+    'Ventilation':                  'vent',
+    'Heating, Cooling and Misting': 'hvac',
+    'Light and Shading':            'screen',
+    'CO\u2082':                      'aux',
+}
+
 _LAYOUT = [
-    # ── 층 1·2: 항상 보인다 — 이것만 정하면 돈다 ─────────────────────────────
+    # ═══════════════════════════════════════════════════════════════════════
+    # 축은 **도메인**이다 — 옵션 종류가 아니라 (2026-08-27 재구성)
+    # ═══════════════════════════════════════════════════════════════════════
+    # 사용자 지적: *"각 도메인을 제어하기 위해 사용자에게 설정을 확인하기 위한
+    # 것이 이 설정의 목표 아니었나?"* 맞다. 그런데 화면은 **옵션 종류**로
+    # 묶여 있었다(범위 / 전략 / 주기 / 광량과 CO₂ / 모델). 그래서 "환기를
+    # 어떻게 쓸 것인가" 에 답하려면 세 묶음을 오가야 했다 — 무익 판정은
+    # 전략에, 구동 프로파일은 성향 안에, 풍속 임계는 주기에 있었다.
+    #
+    # 도메인 어휘의 정본은 `env_control/types.py` 의 `ACTUATOR_DOMAIN` 이다.
+    # 가르는 기준은 장치가 비슷한가가 아니라 **종착점이 같은가** 다:
+    #
+    #   vent    개구부·배기팬·흡기팬 — 실내를 실외 쪽으로만 민다
+    #   hvac    난방기·냉방기·포그  — 외기와 무관하게 직접 넣고 뺀다
+    #   screen  차광막·보온커튼      — 들고 나는 복사를 막는다
+    #   aux     CO₂·보광등·유동팬    — 각자 자기 축, 겨룰 상대 없음
+    #
+    # ⚠ **여기서 도메인을 새로 정의하지 말 것.** 그 표를 두 벌 두면 갈라지고,
+    #   갈라지면 한쪽만 고쳐진 채 굴러간다(그 파일 주석의 경고 그대로).
+    #   화면이 그 표를 **따르기만** 한다.
+    #
+    # ⚠ `screen` 은 화면에서 **"빛"** 으로 묶는다. `light_min` 이 보광등과
+    #   차광막을 **함께** 움직이므로(보광 시 차광막 강제 개방 —
+    #   `_cycle_mixin.apply_light_threshold_overrides`) 둘을 갈라 두면 한쪽만
+    #   고친 사람이 다른 쪽이 함께 움직인 것을 이해할 수 없다.
+
     (False, lazy_gettext('Facility'), [
         (None, ['geo_facility_id', 'bay_scope']),
     ]),
-    # 하드 임계는 "목표" 가 아니라 **넘지 말아야 할 선**이다. 제목이 그것을
-    # 말해야 유도 범위와 헷갈리지 않는다. VPD 허용오차를 같이 두는 이유도
-    # 같다 — 셋 다 "내가 지켜야 할 선" 이다.
-    # 사용자가 답할 수 있는 질문은 **"몇 도에서 몇 도로 기를 것인가"** 하나다.
-    # 넘으면 안 되는 선은 그 범위에서 여유를 둔 값이지 따로 생각해서 넣는 값이
-    # 아니다 — 슬라이더 손잡이는 둘이고 하드 임계는 ∓여유로 따라온다.
-    (False, lazy_gettext('Growing Range'), [
-        (None, ['@range:temperature', '@range:humidity']),
-    ]),
-    # ⚠ **유도 범위는 하드 임계 바로 뒤다.** 둘이 어긋나면 목표가 조용히
-    #   좁혀지므로(저장 시 경고가 필요했던 이유가 그 거리다), 하나를 고칠 때
-    #   다른 하나가 손 닿는 곳에 있어야 한다. 접혀 있지만 **바로 다음 줄**이다.
 
-    # ── 층 3: 전략 — 이해하고 고르는 정책 ────────────────────────────────────
-    # ⚠ **토글만 보이고 하위 설정은 켜야 나온다**(`depends_on`). 야간 파킹을
+    # ── 목표 ─────────────────────────────────────────────────────────────
+    # ⚠ **온·습도는 이 함수의 목표가 아니다.** 목표는 광합성이고 1차 제어
+    #   변수는 VPD 다(`FUNCTION_INFORMATION['message']`). 온·습도는 VPD 를
+    #   풀어낼 범위이자 넘지 말아야 할 선이다 — `situation._decompose_vpd`
+    #   가 VPD 를 쓸 수 있을 때 둘을 `_..._constraint` 로 강등한다.
+    #   그래서 이름이 "재배 온도" 가 아니라 **"온도 범위"** 다(2026-08-27
+    #   사용자 지적: *"재배 범위가 맞은 어휘인지 모르겠음"*).
+    #
+    # 손잡이는 둘(권장 하한·상한)이고 넘으면 안 되는 선은 ∓여유로 따라온다.
+    # ⚠ 그래서 **하드가 유도보다 좁을 수 없다.** "12~32 에서 기르되 30 은
+    #   넘기지 마라" 는 표현할 수 없고, 그것은 의도한 대가다 — 그 설정이
+    #   난방기와 냉방기를 동시에 100% 로 맞서게 한 원인이었다
+    #   (`clamp_guide_range_to_hard_limits` 주석의 温室環境制御 실측).
+    (False, lazy_gettext('Target and Temperament'), [
+        (None, ['@range:temperature', '@range:humidity',
+                '@group:responsiveness']),
+    ]),
+
+    # ── 도메인 1: 환기 (vent) ─────────────────────────────────────────────
+    # ⚠ **토글만 보이고 하위 설정은 켜야 나온다**(`depends_on`). 야간 닫기를
     #   쓰지 않는 사람에게 기준·오프셋·시각 4개가 늘 보이면, 자기가 안 쓰는
-    #   것까지 정해야 하는 줄 안다.
-    # ⚠ 하위 설정을 **다른 곳으로 빼지 않는다** — 토글 바로 아래가 그 값의
-    #   자리다(설계문서 §3-2).
-    (False, lazy_gettext('Control Strategy'), [
-        # 핵심 옵션 — 이것만 정하면 세부 5개가 따라온다.
-        (None, ['@group:responsiveness']),
+    #   것까지 정해야 하는 줄 안다. 하위 설정을 다른 곳으로 빼지 않는다 —
+    #   토글 바로 아래가 그 값의 자리다(설계문서 §3-2).
+    #
+    # ⚠ `hvac_interlock` 은 이름이 hvac 지만 **움직이는 것은 창**이다
+    #   (냉·난방이 도는 동안 창을 닫아 둔다). 도메인은 이름이 아니라
+    #   **무엇이 움직이는가** 로 가른다.
+    (False, lazy_gettext('Ventilation'), [
         (None, ['vent_futility_gate', 'vent_first']),
         (None, ['hvac_interlock', 'hvac_interlock_signal',
                 'hvac_interlock_on_value']),
         (None, ['night_vent_park', 'night_vent_basis',
                 'night_vent_sunset_offset_min', 'night_vent_start',
                 'night_vent_end']),
-        (None, ['nursery_mode', '@group:misting_care',                'nursery_water_source', 'nursery_evening_fog',
-                'nursery_evening_cutoff_min',                'use_wetting_fog_for_humidity']),
+        (None, ['gate_wind_threshold']),
     ]),
 
-    # ── 층 4: 튜닝 — 안 건드리는 게 정상 ─────────────────────────────────────
-    # 유도 범위는 하드 임계와 **서로 간섭**하므로 맨 앞에 둔다(둘이 어긋나면
-    # 목표가 조용히 좁혀진다 — 저장 시 경고가 필요했던 이유가 그 거리다).
+    # ── 도메인 2: 냉난방·가습 (hvac) ──────────────────────────────────────
+    (False, lazy_gettext('Heating, Cooling and Misting'), [
+        (None, ['nursery_mode', '@group:misting_care',
+                'nursery_water_source', 'nursery_evening_fog',
+                'nursery_evening_cutoff_min',
+                'use_wetting_fog_for_humidity']),
+    ]),
+
+    # ── 도메인 3: 빛 (screen + 보광) ──────────────────────────────────────
+    (True, lazy_gettext('Light and Shading'), [
+        (None, ['light_max', 'light_min', 'shade_transmittance']),
+    ]),
+
+    # ── 도메인 4: CO₂ (aux) ───────────────────────────────────────────────
+    (True, lazy_gettext('CO₂'), [
+        (None, ['priority_co2', 'tolerance_co2']),
+    ]),
+
+    # ── 도메인을 가리지 않는 것 ───────────────────────────────────────────
+    # 아래는 특정 장치가 아니라 **판단 방식**에 걸린다. 도메인으로 나눌 수
+    # 없으므로 나누지 않는다 — 억지로 배정하면 그 도메인만의 설정인 줄 안다.
     (True, lazy_gettext('Schedule and Time'), [
         (lazy_gettext('Growth Schedule'),
          ['schedule_end_time', 'schedule_week_offset']),
@@ -1185,13 +1258,9 @@ _LAYOUT = [
          ['time_enable', 'time_start', 'time_end',
           'photo_method_id', 'photo_anchor']),
     ]),
-    (True, lazy_gettext('Cycle and Response'), [
-        (None, [                'sensor_max_age',                'actuation_period_sec', 'emergency_period_sec',
-                'gate_wind_threshold']),
-    ]),
-    (True, lazy_gettext('Light and CO₂'), [
-        (None, ['light_max', 'light_min', 'shade_transmittance',
-                'priority_co2', 'tolerance_co2']),
+    (True, lazy_gettext('Sensing and Cycle'), [
+        (None, ['sensor_max_age', 'actuation_period_sec',
+                'emergency_period_sec']),
     ]),
     (True, lazy_gettext('Model and Calibration'), [
         (None, ['photosynth_mode_enabled', 'source_plot_id', 'vpd_weight_T',

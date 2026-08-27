@@ -30920,16 +30920,10 @@ msgid "Target reached — easing off"
 msgstr "목표에 닿아 출력을 줄이고 있습니다"
 
 #: aot/functions/custom_functions/env_coordinator_impl/_function_info.py
-msgid "Growing Range"
-msgstr "재배 범위"
 
 #: aot/functions/custom_functions/env_coordinator_impl/_function_info.py
-msgid "Growing Temperature"
-msgstr "재배 온도"
 
 #: aot/functions/custom_functions/env_coordinator_impl/_function_info.py
-msgid "Growing Humidity"
-msgstr "재배 습도"
 
 #: aot/functions/custom_functions/env_coordinator_impl/_function_info.py
 msgid "never past"
@@ -31390,3 +31384,33 @@ msgstr "시설 전체"
 #: aot/aot_flask/static/js/common/aot-bay-select.js
 msgid "not in this facility"
 msgstr "이 시설에 없음"
+
+msgid "Target and Temperament"
+msgstr "목표와 성향"
+
+msgid "Heating, Cooling and Misting"
+msgstr "냉난방·가습"
+
+msgid "Light and Shading"
+msgstr "빛과 차광"
+
+msgid "Sensing and Cycle"
+msgstr "감지와 주기"
+
+msgid "Temperature Range"
+msgstr "온도 범위"
+
+msgid "Humidity Range"
+msgstr "습도 범위"
+
+msgid "Rest Heating and Cooling When Venting Can Reach the Target"
+msgstr "환기만으로 목표에 갈 수 있으면 냉·난방 쉬기"
+
+msgid "Shade Cloth Transmittance (0-1)"
+msgstr "차광막 투과율 (0-1)"
+
+msgid "Adjustment applied on top of the weeks elapsed since the plot started. Positive fast-forwards (the system was installed mid-cycle), negative compensates for downtime. Default 0."
+msgstr "구획을 시작한 뒤 지난 주 수에 더해 보정합니다. 양수는 앞당기고(작기 도중에 설치한 경우), 음수는 멈춰 있던 기간을 되돌립니다. 기본 0."
+
+msgid "Which plot this coordinator follows, when more than one is growing in its scope. Leave empty when there is only one — it is picked automatically. Set from the comparison card at the top of this page."
+msgstr "범위 안에서 여러 구획이 자라고 있을 때 어느 것을 따를지 정합니다. 하나뿐이면 비워 두세요 — 자동으로 골라집니다. 이 페이지 위쪽의 비교 카드에서 정할 수 있습니다."
