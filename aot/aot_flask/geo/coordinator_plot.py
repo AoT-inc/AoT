@@ -299,6 +299,81 @@ def program_targets(plot_row, on=None):
         for k, v in _coordinator_live_targets(fac).items():
             if k in missing and v is not None:
                 out[k] = v
+        missing = [k for k in missing if k not in out]
+
+    # 코디네이터가 못 풀어 준 곡선은 **여기서 직접 푼다**.
+    #
+    # 노지 구획에는 코디네이터가 아예 없고(`facility_uuid` 가 None), 시설이어도
+    # 코디네이터가 한 번도 안 돌았으면 스냅샷이 비어 있다. 그때 화면은 곡선
+    # 이름만 받아 "곡선을 따름: vpd" 로만 적었다 — **목표가 정해져 있는데도
+    # 숫자를 못 보여 주는 상태**다(2026-08-28 지적).
+    #
+    # 계산은 코디네이터가 하는 것과 **같은 호출**이다(`_helpers_mixin` 의 VPD·
+    # CO₂ 경로): 같은 핸들러에 경과 주차와 시간대를 넘긴다. 그래야 시설 화면과
+    # 구획 화면이 같은 숫자를 말한다 — 여기서 다르게 계산하면 두 화면이 갈린다.
+    if missing:
+        for k, v in _resolve_curve_targets(plot_row, missing, on=on).items():
+            if v is not None:
+                out[k] = v
+    return out
+
+
+def _resolve_curve_targets(plot_row, keys, on=None):
+    """곡선이 걸린 항목의 **지금 값** → `{env_key: value}`.
+
+    작기가 기준점이다 — 곡선의 몇 주차인지는 심은 날부터 센다(코디네이터는
+    자기 시작 시각을 쓰지만, 구획에는 그것이 곧 작기다). 못 풀면 그 항목을
+    빼고 돌려준다: 지어낸 숫자를 목표라고 적는 것보다 이름만 적는 편이 낫다.
+    """
+    import time as _time
+    from datetime import date as _date, datetime as _dt, time as _t
+    from aot.databases.models import GeoProgram
+
+    puuid = getattr(plot_row, 'program_uuid', None)
+    if not puuid:
+        return {}
+    prog = GeoProgram.query.filter_by(unique_id=puuid).first()
+    curves = (getattr(prog, 'targets_methods', None) or {}) if prog else {}
+    if not isinstance(curves, dict) or not curves:
+        return {}
+
+    started = getattr(plot_row, 'started_on', None)
+    ref = on or _date.today()
+    weeks = None
+    start_dt = None
+    if started is not None:
+        weeks = max(0, (ref - started).days // 7)
+        start_dt = _dt.combine(started, _t.min)
+
+    out = {}
+    for key in keys:
+        uuid = curves.get(key)
+        if not uuid:
+            continue
+        try:
+            from aot.utils.method import load_method_handler
+            handler = load_method_handler(uuid)
+            if handler is None:
+                continue
+            value, ended = handler.calculate_setpoint(
+                _time.time(), method_start_time=start_dt,
+                weeks_elapsed=weeks, facility_tz=None)
+            # 끝난 곡선은 값을 내지 않는다 — 마지막 값을 붙들고 있는 것은
+            # 제어의 일이지(코디네이터가 `_vpd_last_sp` 로 한다) 표시의 일이
+            # 아니다. 화면은 "곡선을 따름" 으로 돌아간다.
+            if not ended and value is not None:
+                out[key] = round(float(value), 2)
+        except TypeError:
+            # 인자를 그만큼 안 받는 곡선 종류(주차·시간대가 없는 것들).
+            try:
+                value, ended = handler.calculate_setpoint(
+                    _time.time(), method_start_time=start_dt)
+                if not ended and value is not None:
+                    out[key] = round(float(value), 2)
+            except Exception as exc:                        # noqa: BLE001
+                logger.debug('곡선 목표 계산 실패(%s/%s): %s', key, uuid, exc)
+        except Exception as exc:                            # noqa: BLE001
+            logger.debug('곡선 목표 계산 실패(%s/%s): %s', key, uuid, exc)
     return out
 
 
@@ -353,13 +428,17 @@ def program_target_methods(plot_row, on=None):
     usable = {k for k, _u in TARGET_MAP}
     out = {k: v for k, v in methods.items() if k in usable}
 
-    # 코디네이터가 그 곡선을 이미 풀어 놓았으면 여기서 뺀다 — `program_targets`
-    # 가 숫자를 내므로 두 목록에 같은 키가 남으면 화면이 "무엇을 먼저 볼지" 를
-    # 또 정해야 한다. 판정은 한 곳에서 끝낸다.
-    fac = getattr(plot_row, 'facility_uuid', None)
-    if out and fac:
-        live = _coordinator_live_targets(fac)
-        out = {k: v for k, v in out.items() if live.get(k) is None}
+    # 곡선이 이미 **숫자로 풀렸으면 여기서 뺀다** — `program_targets` 가 그
+    # 숫자를 내므로, 두 목록에 같은 키가 남으면 화면이 "목표 0.99" 와 "곡선을
+    # 따름: vpd" 를 동시에 말하게 되고 사용자는 어느 것이 목표인지 다시 골라야
+    # 한다. 판정은 한 곳에서 끝낸다.
+    #
+    # 푸는 길이 둘이라(코디네이터 스냅샷 · 여기서 직접 계산) 그 둘을 각각
+    # 물어보지 않고 **결과 하나**를 본다 — 어느 길로 풀렸든 숫자가 있으면
+    # 곡선 이름은 낼 일이 없다.
+    if out:
+        resolved = program_targets(plot_row, on=on)
+        out = {k: v for k, v in out.items() if resolved.get(k) is None}
     return out
 
 

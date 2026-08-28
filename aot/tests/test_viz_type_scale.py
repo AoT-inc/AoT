@@ -228,16 +228,21 @@ class TestThePageBaseIsOnTheLadder(unittest.TestCase):
                              '옛 테마를 계속 쓴다' % name)
 
 
-class TestButtonRowsHaveNoDuplicateLabel(unittest.TestCase):
-    """버튼의 글자가 곧 그 이름이다 — 왼쪽에 라벨을 또 두면 **같은 말이 한
-    줄에 두 번** 나온다 (설계문서 §3-6).
+class TestCommandRowsLookLikeEveryOtherRow(unittest.TestCase):
+    """명령 행도 **왼쪽에 이름, 오른쪽에 조작**이다.
 
-        액추에이터 다시 불러오기 │ [액추에이터 다시 불러오기]
-        지금 실행               │ [지금 실행]
-        긴급 정지               │ [긴급 정지]
+    한때는 반대로 갔다 — 버튼 글자가 곧 이름이라 라벨을 두면 같은 말이 한 줄에
+    두 번 나온다는 이유로 라벨 칸을 없애고 컨트롤을 행 전체로 늘렸다(§3-6).
+    중복은 사라졌지만 **이 행만 골격이 달라 목록에서 튀었다**(2026-08-28 사용자
+    지적: *"버튼 스타일이 전역 스타일이 아님. 제목 - '실행' 버튼 식으로 구성하는게
+    더 나아보임"*).
 
-    설계문서에 *"버튼에는 라벨 칸을 두지 않는다 — 중복 3건 해소"* 라고 적어
-    두고 **구현하지 않은 채** 남아 있었다.
+    지금은 중복을 예외 CSS 가 아니라 **버튼 글자를 줄여서** 푼다 —
+    `button_label`(기본 '실행', 긴급 정지는 '정지').
+
+        액추에이터 다시 불러오기 │ [실행]
+        지금 실행               │ [실행]
+        긴급 정지               │ [정지]
     """
 
     def _branch(self):
@@ -247,25 +252,27 @@ class TestButtonRowsHaveNoDuplicateLabel(unittest.TestCase):
             src = fh.read()
         return src.split("== 'button' %}", 1)[1].split('{% elif', 1)[0]
 
-    def test_the_row_has_no_label(self):
-        self.assertNotIn('aot-modal-option-label', self._branch(),
-                         '버튼 행에 라벨 칸이 되살아났다 — 이름이 두 번 나온다')
+    def test_the_row_has_a_label_like_the_others(self):
+        self.assertIn('aot-modal-option-label', self._branch(),
+                      '명령 행만 라벨 칸이 없으면 목록에서 튄다')
 
-    def test_the_button_still_carries_its_name(self):
-        self.assertIn("value=\"{{each_option['name']}}\"", self._branch())
+    def test_the_button_says_a_short_verb_not_the_name(self):
+        b = self._branch()
+        self.assertNotIn("value=\"{{each_option['name']}}\"", b,
+                         '버튼이 이름을 되풀이합니다 — 한 줄에 같은 말이 두 번')
+        self.assertIn('button_label', b)
 
     def test_the_hint_survives(self):
-        """라벨을 없애면 그 옆의 도움말 아이콘도 함께 사라진다 — 설명이 있는
-        버튼은 그것을 잃으면 안 된다."""
+        """설명이 있는 명령은 도움말을 잃으면 안 된다 — 이제 라벨 옆에 붙는다."""
         b = self._branch()
         self.assertIn('aot-option-tip', b, '도움말 아이콘이 사라졌다')
-        self.assertIn("title=\"{{each_option['phrase']}}\"", b)
 
-    def test_the_control_spans_the_row(self):
-        """컨트롤이 고정폭이라 그대로 두면 버튼이 오른쪽 끝에 홀로 떨어진다."""
+    def test_no_per_row_width_exception_remains(self):
+        """행 폭 예외가 곧 "전역 스타일이 아님" 의 정체였다."""
         css = _css('aot-modal-modern.css')
-        self.assertIn('.aot-modal-option-row-button', css,
-                      '버튼 행 폭 규칙이 없다')
+        block = css.split('.aot-modal-option-row.aot-modal-option-row-button', 1)
+        if len(block) > 1:
+            self.fail('명령 행 전용 폭 규칙이 되살아났습니다')
 
 
 if __name__ == '__main__':

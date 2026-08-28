@@ -58,8 +58,13 @@
     {{form_add_input.hidden_tag()}}
     <div class="row aot-main-selection-row">
       <div class="col-auto">
-        {{form_add_input.input_type(class_='selectpicker aot-standard-select', **{'data-style': 'btn btn-primary aot-roundbox',
-        'data-live-search': 'true', 'title': _('Input') + ': ' + _('Select')}) }}
+        {# 목록이 200개 가까이 되므로 optgroup(측정 대상별) + 검색 토큰으로 찾는다.
+           선택지는 utils_device_catalog 가 만든다. data-size 로 메뉴 높이를 묶어
+           목록이 화면을 덮지 않게 한다. #}
+        {{form_add_input.input_type(class_='selectpicker aot-standard-select aot-device-select', **{'data-style': 'btn btn-primary aot-roundbox',
+        'data-live-search': 'true', 'data-size': '12',
+        'data-live-search-placeholder': _('Search by name or measurement'),
+        'title': _('Input') + ': ' + _('Select')}) }}
       </div>
       <div class="col-auto">
         <input onclick="return $(this).processRequest(this, 'input_add');" name="input_add" value="{{_('Add')}}"
@@ -229,7 +234,8 @@
         // inside the existing one with .html()), matching output.html.
         $('#mod_' + type + '_' + id).replaceWith(new_options);
         var $container = $('#mod_' + type + '_' + id);
-        $container.find('.selectpicker').selectpicker();
+        // 껍데기만 온다 — `.aot-viz` 는 클라이언트가 만든다(모듈 주석 참조).
+        if (window.AoTModalEnhance) AoTModalEnhance.apply($container);
         if (window.AoTMapModalController) {
           setTimeout(function () { AoTMapModalController.initAll(); }, 100);
         }

@@ -11,6 +11,7 @@ from sqlalchemy import and_
 from aot.databases.models import DeviceMeasurements
 from aot.databases.models import OutputChannel
 from aot.outputs.base_output import AbstractOutput
+from aot.outputs.mqtt_publisher import PersistentMqttPublisher
 from aot.utils.constraints_pass import constraints_pass_positive_or_zero_value
 from aot.utils.database import db_retrieve_table_daemon
 from aot.utils.influx import add_measurements_influxdb
@@ -135,6 +136,25 @@ OUTPUT_INFORMATION = {
             'phrase': 'Password for connecting to the server.'
         },
         {
+            'id': 'mqtt_use_tls',
+            'type': 'bool',
+            'default_value': False,
+            'required': False,
+            'name': 'Use TLS',
+            'phrase': 'Encrypt the connection with TLS (broker port is usually 8883). '
+                      'Required when the broker is reachable over the internet.'
+        },
+        {
+            'id': 'mqtt_tls_ca_cert',
+            'type': 'text',
+            'default_value': '',
+            'required': False,
+            'name': lazy_gettext('TLS CA Certificate'),
+            'phrase': 'Path to the CA certificate file that signed the broker certificate. '
+                      'Leave blank to use the system CA store (for brokers with a '
+                      'publicly-trusted certificate, e.g. Let\'s Encrypt).'
+        },
+        {
             'id': 'mqtt_use_websockets',
             'type': 'bool',
             'default_value': False,
@@ -232,7 +252,7 @@ class OutputModule(AbstractOutput):
     def __init__(self, output, testing=False):
         super().__init__(output, testing=testing, name=__name__)
 
-        self.publish = None
+        self.publisher = None
 
         output_channels = db_retrieve_table_daemon(
             OutputChannel).filter(OutputChannel.output_id == self.output.unique_id).all()
@@ -241,11 +261,10 @@ class OutputModule(AbstractOutput):
 
     def initialize(self):
         """Import paho MQTT client and apply startup duty cycle state."""
-        import paho.mqtt.publish as publish
-
-        self.publish = publish
 
         self.setup_output_variables(OUTPUT_INFORMATION)
+
+        self._start_publisher()
         self.output_setup = True
 
         try:
@@ -285,20 +304,44 @@ class OutputModule(AbstractOutput):
         except Exception as except_msg:
             self.logger.exception("Output was unable to be setup: {err}".format(err=except_msg))
 
+    def _auth_dict(self):
+        if self.options_channels['login'][0]:
+            pwd = self.options_channels['password'][0] or None
+            return {"username": self.options_channels['username'][0], "password": pwd}
+        return None
+
+    def _start_publisher(self):
+        """Bring up the persistent publish client.
+
+        publish.single() 을 쓰지 않는 이유는 mqtt_publisher.py 의 설명 참고 —
+        요약하면 자체 타임아웃이 없어 브로커가 CONNACK 를 주지 않는 오설정에서
+        출력 컨트롤러 스레드가 영구 블로킹된다."""
+        self.publisher = PersistentMqttPublisher(
+            self.logger,
+            self.options_channels['hostname'][0],
+            self.options_channels['port'][0],
+            self.options_channels['clientid'][0],
+            keepalive=self.options_channels['keepalive'][0],
+            auth=self._auth_dict(),
+            tls=self._tls_dict(),
+            transport='websockets' if self.options_channels['mqtt_use_websockets'][0] else 'tcp')
+        self.publisher.start()
+
+    def _tls_dict(self):
+        """TLS settings for paho's publish helper, or None for a plaintext connection.
+
+        ca_certs=None makes paho fall back to the system CA store, which is what
+        a publicly-trusted broker certificate needs. A private/self-signed broker
+        needs its CA file given explicitly."""
+        if not self.options_channels.get('mqtt_use_tls', {}).get(0):
+            return None
+        return {"ca_certs": self.options_channels.get('mqtt_tls_ca_cert', {}).get(0) or None}
+
     def output_switch(self, state, output_type=None, amount=None, output_channel=0):
         """Publish duty cycle value to the configured MQTT topic."""
         measure_dict = copy.deepcopy(measurements_dict)
 
         try:
-            auth_dict = None
-            if self.options_channels['login'][0]:
-                if not self.options_channels['password'][0]:
-                    self.options_channels['password'][0] = None
-                auth_dict = {
-                    "username": self.options_channels['username'][0],
-                    "password": self.options_channels['password'][0]
-                }
-
             if state == 'on':
                 if self.options_channels['pwm_invert_signal'][0]:
                     amount = 100.0 - abs(amount)
@@ -316,15 +359,13 @@ class OutputModule(AbstractOutput):
             elif self.options_channels['round_integer'][0] == "down":
                 amount = int(math.floor(amount))
 
-            self.publish.single(
-                self.options_channels['topic'][0],
-                amount,
-                hostname=self.options_channels['hostname'][0],
-                port=self.options_channels['port'][0],
-                client_id=self.options_channels['clientid'][0],
-                keepalive=self.options_channels['keepalive'][0],
-                auth=auth_dict,
-                transport='websockets' if self.options_channels['mqtt_use_websockets'][0] else 'tcp')
+            if self.publisher is None:
+                self.logger.error("Publisher not set up; cannot publish")
+                return
+
+            # 발행에 실패했으면 듀티도 측정값도 기록하지 않는다.
+            if not self.publisher.publish(self.options_channels['topic'][0], amount):
+                return
 
             self.logger.debug("Duty cycle set to {dc:.2f} %".format(dc=amount))
 
@@ -358,6 +399,9 @@ class OutputModule(AbstractOutput):
                 self.output_switch('off')
             elif self.options_channels['state_shutdown'][0] == 'set_duty_cycle':
                 self.output_switch('on', amount=self.options_channels['shutdown_value'][0])
+        if self.publisher is not None:
+            self.publisher.stop()
+            self.publisher = None
         self.running = False
 
     def set_duty_cycle(self, args_dict):

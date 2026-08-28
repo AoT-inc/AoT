@@ -161,3 +161,24 @@ def test_run_finally_forces_off_when_trigger_row_missing(temp_runtime_db, monkey
     inst.run_finally()
 
     inst.stop_all_active.assert_called_once()
+
+
+def test_resume_resyncs_against_the_real_output_state(temp_runtime_db, monkeypatch):
+    """재개는 복원으로 끝나지 않고 장치의 실제 상태와 맞춰야 한다.
+
+    출력의 state_shutdown 이 OFF 면 장치는 꺼진 채 올라오는데, 재개가
+    "이미 돌고 있다" 고만 보면 그 사이클의 남은 시간이 통째로 사라진다.
+    """
+    import time as _time
+
+    inst = make_controller()
+    inst.cycle_start_time = _time.time() - 100
+    inst.active_actions = {'act-1'}
+    inst._save_runtime_state()
+
+    fresh = make_controller()
+    fresh._resync_after_resume = MagicMock()
+    fresh._load_runtime_state()
+
+    assert fresh.cycle_start_time is not None      # 재개했고
+    fresh._resync_after_resume.assert_called_once()  # 실제 상태와 맞췄다

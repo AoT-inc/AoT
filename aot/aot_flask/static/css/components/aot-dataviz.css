@@ -334,6 +334,103 @@
   opacity: 0.85;
 }
 
+/* 사건 표식 (기간 바) — "그날 실제로 무엇을 했다".
+ *
+ * **마커와 같은 색이고 모양만 다르다**(오늘 = 세로 선, 사건 = 점). 색을 하나
+ * 더 두면 이 파일의 세 색 규칙이 넷이 되고, 나란히 선 밴드·불릿과 톤이 갈린다
+ * — 파일 머리의 "역할이 같으면 색도 모양도 같아야 한다" 의 뒷면이다.
+ *
+ * 트랙 안에 들어가는 크기다(지름 = 트랙 높이 − 2px). 마커처럼 트랙 밖으로
+ * 나가면 사건이 여럿인 축에서 점들이 오늘 마커와 같은 무게로 서서, 무엇이
+ * 기준인지 모양이 말해 주지 못한다.
+ *
+ * 좌표는 마커와 **같은 식**이다(캡 보정 — 위 .aot-viz-now 주석 참조). */
+.aot-viz-event {
+  position: absolute;
+  top: 50%;
+  width: calc(var(--aot-viz-track-h) - 2px);
+  height: calc(var(--aot-viz-track-h) - 2px);
+  border-radius: 50%;
+  background: var(--aot-viz-mark, var(--aot-color-brand-secondary));
+  transform: translate(-50%, -50%);
+  left: calc(var(--aot-viz-track-h) / 2 +
+             (100% - var(--aot-viz-track-h)) * var(--aot-viz-pos, 0) / 100);
+}
+
+/* 구간 표적 (기간 바, `pickable`) — **보이지 않는 칸**이다.
+ *
+ * 압축 축의 트랙은 6px 이라 손가락으로 정확히 누를 수 없다. 그렇다고 트랙을
+ * 굵히면 "지금 어디쯤" 을 말하는 선이 덩어리가 된다 — 표적만 키운다.
+ * 칸은 구간 폭 그대로라 누른 자리와 고른 단계가 어긋나지 않는다.
+ *
+ * 고른 구간은 **밑줄 하나**로만 표시한다. 면을 칠하면 현재 단계를 말하는
+ * 초록과 겹쳐 어느 것이 '지금' 이고 어느 것이 '고른 것' 인지 모양이 말해
+ * 주지 못한다(색을 늘리지 않는다는 규칙의 같은 이유). */
+.aot-viz-seg-hit {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  height: 22px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  appearance: none;
+}
+.aot-viz-seg-hit:focus { outline: none; }
+.aot-viz-seg-hit.is-picked::after,
+.aot-viz-seg-hit:focus-visible::after {
+  content: '';
+  position: absolute;
+  left: 2px;
+  right: 2px;
+  bottom: 0;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--aot-viz-mark, var(--aot-color-brand-secondary));
+}
+
+/* ── 압축 기간 바 ────────────────────────────────────────────────────────
+ * 구간 이름 줄과 눈금 줄을 뺀 기간 바(`timeline({compact:true})`). 좁은 카드
+ * 에서는 그 둘이 트랙보다 자리를 더 먹는데, 정작 답해야 하는 것은 "지금
+ * 어디쯤" 하나다. 구간 이름은 트랙의 title 로 남는다. */
+.aot-viz--timeline.aot-viz--compact .aot-viz-track {
+  height: 6px;
+  border-radius: 3px;
+  margin-top: var(--aot-space-1, 4px);
+}
+.aot-viz--timeline.aot-viz--compact .aot-viz-now {
+  width: 2px;
+  height: 14px;
+}
+.aot-viz--timeline.aot-viz--compact .aot-viz-event {
+  width: 5px;
+  height: 5px;
+}
+
+/* ── 격자 ────────────────────────────────────────────────────────────────
+ * 여러 줄을 **가로로도** 늘어놓는다. `.aot-viz-group` 이 세로 목록이라면
+ * 이것은 한 화면에서 여러 지표를 동시에 보는 자리다(구획 위젯의 종합 뷰).
+ *
+ * 목록으로만 두면 지표가 여덟일 때 여덟 줄 스크롤이라 "한 눈에" 가 성립하지
+ * 않는다. 그렇다고 각 화면이 자기 그리드를 인라인으로 짜면 열 간격이 줄 사이
+ * 간격(32px)과 어긋나, 같은 프리미티브가 화면마다 다른 리듬으로 선다.
+ *
+ * **가로 구분선은 긋지 않는다.** 그 선(`.aot-viz-group` 규칙)은 세로로 이어진
+ * 줄들을 가르는 것이라, 격자에서는 열마다 선이 다른 높이에서 끊겨 오히려
+ * 어지럽다. 격자에서는 거리가 이미 묶음을 말한다.
+ *
+ * 열 수는 폭이 정한다 — 좁으면 한 열이다(폰에서 두 열로 우겨 넣으면 같은
+ * 데이터가 덜 읽힌다, 파일 머리 간격 주석과 같은 이유). */
+.aot-viz-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--aot-space-6) var(--aot-space-5);
+}
+/* 간격은 격자가 준다 — 줄 사이 규칙(`.aot-viz + .aot-viz`)이 함께 걸리면
+   행 간격이 두 벌 쌓여 위아래가 어긋난다. */
+.aot-viz-grid > .aot-viz + .aot-viz { margin-top: 0; }
+
 /* ── 스파크라인 ───────────────────────────────────────────────────────────
    축이 없는 지표의 **추세**. 트랙과 같은 자리(높이)를 차지해 다른 줄과 리듬이
    어긋나지 않는다. 색은 마커와 같은 하나 — 여기서 색을 늘리면 "이 줄만 다른

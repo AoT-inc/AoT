@@ -31542,3 +31542,222 @@ msgstr "프로그램 값"
 
 msgid "Working Hours"
 msgstr "작동 시간"
+
+# ── AoT_plot 위젯 (구획 종합 모니터링) ───────────────────────────────────
+msgid "AoT Plot"
+msgstr "AoT 구획"
+
+msgid ""
+"One plot at a glance: stage timeline, targets against current readings, "
+"trends, and accumulated heat. Edit its schedule, guidance and targets from "
+"here."
+msgstr ""
+"구획 하나를 한 눈에 — 단계 기간 바, 목표 대비 실측, 추세, 적산온도. 일정·"
+"지침·목표를 여기서 고칩니다."
+
+msgid "What to monitor"
+msgstr "무엇을 볼까요"
+
+msgid "Stage timeline with today and past transitions marked."
+msgstr "단계 기간 바에 오늘과 지나간 전환을 함께 표시합니다."
+
+msgid "Targets vs now"
+msgstr "목표 대비 지금"
+
+msgid "Current readings against the targets and limits this stage declares."
+msgstr "이 단계가 정한 목표·한계에 지금 실측을 대어 봅니다."
+
+msgid "Trends"
+msgstr "추세"
+
+msgid ""
+"Fills the rows that have no axis with a recent trend line. Needs the targets "
+"block."
+msgstr "축이 없는 줄을 최근 추세선으로 채웁니다. [목표 대비 지금]이 필요합니다."
+
+msgid ""
+"How far this stage has come in growing degree days. Shown only when the "
+"programme declares a base temperature."
+msgstr ""
+"이 단계가 적산온도로 얼마나 왔는지. 프로그램에 기준온도가 있을 때만 나옵니다."
+
+msgid ""
+"Minutes between reloads. Stages move by the day, so short intervals only add "
+"load."
+msgstr "다시 받는 주기(분). 단계는 하루 단위로 변하므로 짧게 잡아도 부하만 늡니다."
+
+msgid "Moved on to %(name)s?"
+msgstr "%(name)s(으)로 넘어갔나요?"
+
+msgid "Open-ended"
+msgstr "끝까지"
+
+msgid "No programme is linked."
+msgstr "연결된 프로그램이 없습니다."
+
+msgid "The programme has no base temperature."
+msgstr "프로그램에 기준온도가 없습니다."
+
+msgid "No planting date yet."
+msgstr "아직 파종일이 없습니다."
+
+msgid "Not started yet."
+msgstr "아직 시작하지 않았습니다."
+
+msgid "Too early to accumulate."
+msgstr "아직 쌓을 날이 모자랍니다."
+
+msgid "No temperature sensor reaches this plot."
+msgstr "이 구획에 닿는 온도 센서가 없습니다."
+
+msgid "Not enough daily temperature data."
+msgstr "일별 온도 자료가 모자랍니다."
+
+msgid "%(n)s days left"
+msgstr "%(n)s일 남음"
+
+msgid "%(n)s days over"
+msgstr "%(n)s일 지남"
+
+msgid "Against target"
+msgstr "목표 대비"
+
+msgid "All within range"
+msgstr "모두 적정"
+
+msgid "%(n)s off"
+msgstr "%(n)s개 벗어남"
+
+msgid "In range"
+msgstr "적정"
+
+msgid "Back to now"
+msgstr "지금 단계로"
+
+msgid "Gauge metric"
+msgstr "게이지로 볼 값"
+
+msgid "Soil moisture"
+msgstr "토양수분"
+
+msgid ""
+"Which measurement gets the gauge. The rest are listed as text. If this plot "
+"does not measure it, the first one with a range is shown instead."
+msgstr ""
+"어느 값을 게이지로 볼지. 나머지는 글로 적습니다. 이 구획이 그 값을 재지 않으면 "
+"범위가 있는 첫 값을 대신 보입니다."
+
+msgid ""
+"Current readings against the targets and limits this stage declares. One "
+"gets the gauge, the rest are listed as text."
+msgstr ""
+"이 단계가 정한 목표·한계에 지금 실측을 대어 봅니다. 하나는 게이지로, 나머지는 "
+"글로 적습니다."
+
+msgid "Control is switched off. This facility is run by: {name}"
+msgstr "제어가 꺼져 있습니다. 이 시설은 다른 코디네이터가 제어하고 있습니다: {name}"
+
+msgid "Aims to stay inside this range. Past a limit it stops whatever pushes the wrong way — too damp: misting off; too dry: exhaust fans off. It does not slam anything to full."
+msgstr "이 범위 안에 머무는 것을 목표로 합니다. 한계를 넘으면 반대로 미는 장치를 멈춥니다 — 습하면 분무를 끄고, 건조하면 배기팬을 멈춥니다. 어느 장치도 최대로 올리지는 않습니다."
+
+msgid "Aims to stay inside this range. Past a limit it stops whatever pushes the wrong way — too warm: heating off and the shade screen drawn; too cold: cooling off, vents and thermal curtain closed. It does not slam anything to full."
+msgstr "이 범위 안에 머무는 것을 목표로 합니다. 한계를 넘으면 반대로 미는 장치를 멈춥니다 — 더우면 난방을 끄고 차광막을 치며, 추우면 냉방을 끄고 개구부와 보온커튼을 닫습니다. 어느 장치도 최대로 올리지는 않습니다."
+
+msgid "Drier"
+msgstr "건조하게"
+
+msgid "Energy saving"
+msgstr "절전"
+
+msgid "Frequent"
+msgstr "자주"
+
+msgid "Gentle"
+msgstr "약하게"
+
+msgid "High performance"
+msgstr "고성능"
+
+msgid "Infrequent"
+msgstr "드물게"
+
+msgid "Misting Frequency"
+msgstr "분무 빈도"
+
+msgid "Misting by Sunlight Level"
+msgstr "햇빛 강도에 따른 분무 조절"
+
+msgid "Moderate"
+msgstr "보통"
+
+msgid "Moister"
+msgstr "습하게"
+
+msgid "No {equipment} is linked, so the {purpose} threshold takes no part in operation."
+msgstr "연동된 {equipment} 설비가 없기 때문에 {purpose} 기준은 작동에 관여하지 않습니다."
+
+msgid "No {equipment} is linked, so this setting takes no part in operation."
+msgstr "연동된 {equipment} 설비가 없기 때문에 이 설정은 작동에 관여하지 않습니다."
+
+msgid "Reaches the target sooner"
+msgstr "목표에 빨리 닿음"
+
+msgid "Shading and Supplemental Light"
+msgstr "차광·보광 기준"
+
+msgid "Use Micro Sprinklers to Raise Humidity"
+msgstr "가습에 미니스프링클러 사용"
+
+msgid "Use the micro sprinklers for humidity too. Turn off when they are your irrigation."
+msgstr "미니스프링클러를 가습에도 씁니다. 관수용으로만 쓴다면 끄세요."
+
+msgid "Very frequent"
+msgstr "아주 자주"
+
+msgid "Wastes less"
+msgstr "낭비가 적음"
+
+msgid "lower"
+msgstr "아래쪽"
+
+msgid "shade screen"
+msgstr "차광막"
+
+msgid "shading"
+msgstr "차광"
+
+msgid "supplemental light"
+msgstr "보광"
+
+msgid "supplemental lights"
+msgstr "보광등"
+
+msgid "upper"
+msgstr "위쪽"
+
+msgid "Control seems stopped — no decision for over {n} min."
+msgstr "제어가 멈춘 것 같습니다 — {n}분 넘게 판단이 없었습니다."
+
+msgid "Control seems stopped — no recent decision."
+msgstr "제어가 멈춘 것 같습니다 — 최근 판단이 없습니다."
+
+msgid "Has not run a cycle yet."
+msgstr "아직 한 번도 돌지 않았습니다."
+
+msgid "These values do not match any step — see them under [Advanced]."
+msgstr "어느 단계와도 맞지 않는 값입니다 — 세부 값은 [고급 설정] 에서 볼 수 있습니다."
+
+msgid "Applies to leaf-wetting misting only — fog-type misting runs in strong sun too. Darker than the range it runs freely; brighter than the range it stops; inside the range it tapers off."
+msgstr "잎을 적시는 분무(미니스프링클러)에만 적용됩니다 — 안개형 분무는 햇빛이 강해도 작동합니다. 구간보다 어두우면 자유롭게, 구간보다 밝으면 멈추며, 구간 안에서는 점점 줄입니다."
+
+msgid "Darker than the range: the supplemental lights come on and the shade screen opens. Brighter than the range: the shade screen closes. Inside the range nothing happens. Either end can be turned off."
+msgstr "구간보다 어두우면 보광등을 켜고 차광막을 엽니다. 구간보다 밝으면 차광막을 닫습니다. 구간 안에서는 아무것도 하지 않습니다. 양쪽 다 끌 수 있습니다."
+
+msgid "How often the misting runs — the run time and the gap until the next run."
+msgstr "분무를 얼마나 자주 작동시킬지 정합니다 — 작동하는 시간과 다음 작동까지의 간격을 조절합니다."
+
+msgid "Keeps venting and HVAC from working against each other. At [Energy saving] the HVAC rests when venting alone can reach the target, and the vents close while it runs. At [High performance] both act freely so the target is reached sooner."
+msgstr "환기와 냉난방이 서로를 방해하지 않게 맞춥니다. [절전]에서는 환기만으로 목표에 닿을 수 있을 때 냉난방을 쉬게 하고, 냉난방이 도는 동안 개구부를 닫습니다. [고성능]에서는 둘 다 자유롭게 움직여 목표에 더 빨리 닿습니다."
+
+msgid "Misting is locked out overnight to keep leaves dry"
+msgstr "밤새 잎을 마른 채로 두려고 분무를 멈췄습니다"

@@ -68,8 +68,16 @@ def record(entry):
 
 def _flush_one(entry):
     from aot.utils.audit import audit_log, OUTPUT_CONTROL
+    from aot.utils.command_origin import normalize_origin
 
-    origin = entry.get('origin') or {}
+    raw_origin = entry.get('origin')
+    origin = normalize_origin(raw_origin)
+    if origin.get('_coerced'):
+        # 여기서 터뜨려 항목을 버리는 대신 기록은 남기고, 어떤 값이 왔는지
+        # 남겨 둔다 — 원인을 못 찾은 채로 유실만 계속되는 것이 제일 나쁘다.
+        logger.warning(
+            "output 감사: origin 이 dict 가 아닙니다(%r, output=%s) — "
+            "unknown 으로 기록합니다", raw_origin, entry.get('output_id'))
     detail = (
         "channel={} state={} type={} amount={} origin={}".format(
             entry.get('channel'),
@@ -79,6 +87,9 @@ def _flush_one(entry):
             origin.get('type'),
         )
     )
+    if origin.get('_coerced'):
+        # 원래 값을 detail 에 남겨야 나중에 어느 경로가 이걸 보내는지 찾을 수 있다.
+        detail += f" origin_raw={origin.get('_raw')}"
     origin_id = origin.get('id')
     if origin_id is not None:
         detail += f" origin_id={origin_id}"

@@ -119,6 +119,16 @@ INPUT_INFORMATION = {
             'phrase': 'Send login credentials using TLS'
         },
         {
+            'id': 'mqtt_tls_ca_cert',
+            'type': 'text',
+            'default_value': '',
+            'required': False,
+            'name': lazy_gettext('TLS CA Certificate'),
+            'phrase': 'Path to the CA certificate file that signed the broker certificate. '
+                      'Leave blank to use the system CA store (for brokers with a '
+                      'publicly-trusted certificate, e.g. Let\'s Encrypt).'
+        },
+        {
             'id': 'mqtt_username',
             'type': 'text',
             'default_value': 'user',
@@ -188,6 +198,7 @@ class InputModule(AbstractInput):
         self.mqtt_clientid = None
         self.mqtt_login = None
         self.mqtt_use_tls = None
+        self.mqtt_tls_ca_cert = None
         self.mqtt_username = None
         self.mqtt_password = None
         self.mqtt_use_websockets = None
@@ -223,7 +234,7 @@ class InputModule(AbstractInput):
             self.logger.debug("Sending username and password credentials")
             self.client.username_pw_set(self.mqtt_username, self.mqtt_password)
         if self.mqtt_use_tls:
-            self.client.tls_set()
+            self.client.tls_set(ca_certs=self.mqtt_tls_ca_cert or None)
 
     def listener(self):
         self.callbacks_connect()

@@ -15,6 +15,12 @@
 (function () {
   'use strict';
 
+  // 한 번만 정의한다 — 이 모듈은 순수 빌더라 두 번 실행해도 결과는 같지만,
+  // 구획 위젯(AoT_plot)이 [환경] 블록 하나를 쓰려고 같은 파일을 자기 번들에
+  // 담고 있어 지도 위젯과 한 대시보드에 서면 두 번 돈다. 가드는 그 두 번째를
+  // 건너뛴다(두 벌은 같은 소스에서 나온 같은 코드다).
+  if (window.AoTMapPopup) return;
+
   // Half of the 16 px thumb — used by the dot-left formula.
   var THUMB_R = 8;
 
@@ -1340,7 +1346,13 @@
     int_sensor_expired:   'Indoor readings expired — holding position',
     heat_emergency:       'Extreme heat — everything is being used to cool',
     cold_emergency:       'Extreme cold — everything is being used to warm',
-    nursery_fog_sunburn:  'Misting is locked out to avoid leaf scorch'
+    nursery_fog_sunburn:  'Misting is locked out to avoid leaf scorch',
+    // ⚠ **`nursery_fog_sunburn` 과 뭉치지 말 것.** 습윤형 분무 잠금은 사유가
+    //   둘이다 — 광량 임계(진짜 일소)와 저녁 시간대(잎마름병 방지, 광량과
+    //   무관)는 동시에 참일 이유가 없다. 뭉치면 비 오는 밤에도 "햇빛에 잎이
+    //   델 수 있어" 가 나간다(2026-08-28 사용자 지적 — 실제로 그렇게 나갔다:
+    //   강우+저녁 차단이 겹친 사이클에서 두 안내가 나란히 떴다).
+    nursery_fog_evening:  'Misting is locked out overnight to keep leaves dry'
   };
 
   var _REASON_TEXT = {
@@ -2056,21 +2068,37 @@
            Math.abs(val).toFixed(spec[2]) + spec[1];
   }
 
-  function _envNowRowHtml(r, opts) {
+  /* 환경 줄 하나의 **판정**을 낸다 — 그림은 그리지 않는다.
+   *
+   * ## 왜 그림과 갈라 두는가
+   *
+   * 이 판정에는 이 화면이 여러 번 데어 가며 굳힌 규칙이 들어 있다:
+   *
+   *   - 온도·습도는 **목표가 아니라 한계**다(`_NOW_TO_LIMIT`). 목표 칸에
+   *     넣으면 아무도 정한 적 없는 숫자가 목표로 둔갑한다.
+   *   - 프로그램이 값을 정했으면 앱 기본 밴드를 그리지 않는다(두 기준을
+   *     동시에 말하게 된다).
+   *   - 곡선이 걸린 항목은 구간을 비우고 곡선 이름만 적는다.
+   *   - 값이 하나뿐이면 ±10% 를 구간으로 삼는다 — 이 화면의 약속이다.
+   *
+   * 이 판정을 화면마다 다시 조립하면 그 넷을 각자 틀린다. 그래서 **판정은
+   * 여기 하나**, 그림은 부르는 쪽이 자기 자리에 맞게 그린다 — 큰 모달은
+   * 밴드 줄로(`_envNowRowHtml`), 좁은 위젯은 타일로(`AoTViz.tile`).
+   *
+   * 반환: `{key, name, dec, unit, valueText, value, stale, hasAxis,
+   *         min, max, okMin, okMax, anchorText, anchorAt, methodName,
+   *         trendNote}` — 값이 없으면 null.
+   */
+  function envRowSpec(r, opts) {
     opts = opts || {};
-    var V = window.AoTViz;
     var SL = window.AoTSensorLabel;
     var ML = window.AoTMapSensorLabels;
+    if (!r || r.value == null) return null;
     var dec  = (SL && SL.defaultDecimals) ? SL.defaultDecimals(r.key) : 1;
     var name = (SL && SL.keyDisplay) ? SL.keyDisplay(r.key) : r.key;
     // 단위 정규화는 공용 함수 하나만 쓴다(값 라벨·차트 레전드와 같은 판단).
     var unit = (SL && SL.displayUnit) ? SL.displayUnit(r.unit)
                                       : String(r.unit || '').trim();
-    var isRep = !!(opts.repKey && r.key === opts.repKey);
-    // 지정 가능할 때만 버튼처럼 보이게 한다 — 권한이 없는 사람에게 눌리는
-    // 시늉을 보여 주면 눌러 보고 아무 일도 안 일어나는 것을 겪는다.
-    var hint = isRep ? _t('Representative measurement')
-                     : (opts.selectable ? _t('Set as representative') : '');
 
     var tkey = _NOW_TO_TARGET[r.key];
     var tval = tkey ? (opts.targets || {})[tkey] : null;
@@ -2097,10 +2125,13 @@
     // 같은 이유로 범위 밖 표시(is-out)도 하지 않는다 — 목표와 다르다는 것은
     // "벗어났다" 가 아니라 "여기서 저기까지" 다. 그 거리는 마커와 목표 눈금
     // 사이가 이미 보여 준다.
-    var inner;
-    var hasTarget = (tval != null);
-    var sc = (V && ML && ML.bandScale) ? ML.bandScale(r.key, opts.ranges) : null;
-    if (V && sc) {
+    var sc = (ML && ML.bandScale) ? ML.bandScale(r.key, opts.ranges) : null;
+    var spec = { key: r.key, name: name, dec: dec, unit: unit,
+                 valueText: (+r.value).toFixed(dec), value: +r.value,
+                 stale: !!r.stale, hasAxis: false,
+                 methodName: null, anchorText: null, anchorAt: null,
+                 trendNote: _trendNote(r.key, opts.trend) };
+    if (sc) {
       // 판정 축과 같은 공간으로 환산한 뒤 위치를 잡는다(Pa 로 저장된 VPD 등).
       var v = ML.bandValue ? ML.bandValue(r.key, +r.value, r.unit) : +r.value;
       // 가운데 눈금은 **그 줄의 기준**이다 — 목표가 설정돼 있으면 그것이
@@ -2154,36 +2185,61 @@
         anchorText = _fmtBand(sc.okMin, dec) + '\u2013' + _fmtBand(sc.okMax, dec);
         anchorAt = null;                 // band() 가 적정 구간 중앙에 붙인다
       }
+      spec.hasAxis = true;
+      spec.value = v;                    // 판정 축으로 환산한 값
+      spec.min = sc.min; spec.max = sc.max;
+      spec.okMin = okLo; spec.okMax = okHi;
+      spec.anchorText = anchorText;
+      spec.anchorAt = anchorAt;
+      spec.methodName = mname || null;
+    }
+    return spec;
+  }
+
+  function _envNowRowHtml(r, opts) {
+    opts = opts || {};
+    var V = window.AoTViz;
+    var s = envRowSpec(r, opts);
+    if (!s) return '';
+    var isRep = !!(opts.repKey && r.key === opts.repKey);
+    // 지정 가능할 때만 버튼처럼 보이게 한다 — 권한이 없는 사람에게 눌리는
+    // 시늉을 보여 주면 눌러 보고 아무 일도 안 일어나는 것을 겪는다.
+    var hint = isRep ? _t('Representative measurement')
+                     : (opts.selectable ? _t('Set as representative') : '');
+    var name = s.name, dec = s.dec, unit = s.unit;
+
+    var inner;
+    if (V && s.hasAxis) {
       inner = V.band({
         label: name,
-        value: v,
-        valueText: (+r.value).toFixed(dec),
+        value: s.value,
+        valueText: s.valueText,
         valueSub: unit,
-        min: sc.min, max: sc.max,
-        okMin: okLo, okMax: okHi,
-        stale: !!r.stale,
+        min: s.min, max: s.max,
+        okMin: s.okMin, okMax: s.okMax,
+        stale: s.stale,
         // **축의 끝을 적지 않는다.** 밴드 축의 양 끝(10~45°C 등)은 5단계 색을
         // 나누려고 정한 값이라 사람이 읽을 뜻이 없고, 기준 라벨이 그 자리로
         // 움직이다 보면 끝 숫자와 겹쳐 "0.40 0.80–1.20" 처럼 한 덩어리로
         // 읽힌다. 이 줄에서 알아야 하는 것은 **기준과 지금 위치**뿐이다.
-        scale: [ { text: anchorText, anchor: true, at: anchorAt } ],
+        scale: [ { text: s.anchorText, anchor: true, at: s.anchorAt } ],
         // ── 3행 오른쪽: 이 측정의 **추세** ────────────────────────────────
         // 값과 방향은 함께 읽어야 뜻이 선다 — 32.8°C 가 괜찮은지는 오르는
         // 중인지 내리는 중인지로 갈린다. 카드 하나로 몰아 두면 어느 줄의
         // 추세인지 눈으로 이어붙여야 하지만, 여기서는 자기 값 바로 아래다
         // (2026-08-26 지적).
-        scaleNote: _trendNote(r.key, opts.trend)
+        scaleNote: s.trendNote
       });
     } else if (V) {
       // 축을 만들 수 없는 지표 — 값만 낸다. 다만 **추세는 범위를 몰라도 그릴 수
       // 있으므로**, 최근 값이 도착하면 이 자리를 스파크라인으로 바꾼다
       // (fillEnvSparklines). 표식만 남기고 여기서 조회하지 않는다 — 빌더는
       // 순수 함수다.
-      inner = V.value({ label: name, valueText: (+r.value).toFixed(dec),
-                        valueSub: unit, stale: !!r.stale,
+      inner = V.value({ label: name, valueText: s.valueText,
+                        valueSub: unit, stale: s.stale,
                         className: 'aot-viz--sparkable' });
     } else {
-      inner = _pRow(name, _esc((+r.value).toFixed(dec) + ' ' + unit));
+      inner = _pRow(name, _esc(s.valueText + ' ' + unit));
     }
 
     return '<div class="aot-env-now-item' +
@@ -4750,6 +4806,9 @@
     buildZoneAboutHtml:    buildZoneAboutHtml,
     buildDescriptionHtml:  buildDescriptionHtml,
     buildEnvNowHtml:       buildEnvNowHtml,
+    // 환경 줄의 **판정만** — 좁은 화면이 자기 그림을 그리되 목표/한계 구분은
+    // 여기 하나를 쓰게 하려는 것이다(envRowSpec 주석 참조).
+    envRowSpec:            envRowSpec,
     envRowChoices:         envRowChoices,
     controlRowChoices:     controlRowChoices,
     buildRowPickerHtml:    buildRowPickerHtml,

@@ -137,11 +137,42 @@ def test_writer_batches_many_entries(app):
     assert len(rows) == total
 
 
+def test_bad_origin_is_recorded_not_dropped(app):
+    """dict 가 아닌 origin 이 와도 그 명령의 기록은 남아야 한다.
+
+    실제로 이런 항목이 들어오는 경로가 있고(2026-08, 로컬 36건), 예전에는
+    `_flush_one` 이 AttributeError 로 터져 항목이 통째로 버려졌다. 그러면
+    "명령은 있었는데 기록이 없다" 가 되고, 읽는 쪽은 "명령이 없었다" 로
+    잘못 읽는다 — 감사로그에서 가장 나쁜 실패다.
+    """
+    output_audit.start_writer(app)
+    output_audit.record({
+        'output_id': 'out-bad',
+        'output_name': '이상한 출처',
+        'channel': 0, 'state': 'on', 'output_type': 'sec', 'amount': 0,
+        'origin': 'not-a-dict',
+        'ip_address': None, 'result': 'success',
+    })
+    output_audit.record({
+        'output_id': 'out-ok',
+        'output_name': '정상',
+        'channel': 0, 'state': 'on', 'output_type': 'sec', 'amount': 0,
+        'origin': {'type': 'user', 'id': 1, 'name': 'aot'},
+        'ip_address': None, 'result': 'success',
+    })
+
+    rows = _wait_for_rows(app, 2, timeout=10.0)
+    assert sorted(r.target_id for r in rows) == ['out-bad', 'out-ok']
+    bad = next(r for r in rows if r.target_id == 'out-bad')
+    # 형태만 바꿔 남기되, 어떤 출처였는지는 detail 에 보인다.
+    assert 'not-a-dict' in bad.detail
+
+
 def test_one_bad_entry_does_not_lose_the_batch(app):
     """한 건이 터져도 나머지는 기록돼야 한다 — 감사 유실은 조용해서 위험하다."""
     output_audit.start_writer(app)
-    # origin 이 dict 가 아니라 _flush_one 안에서 AttributeError 가 난다.
-    output_audit.record({'output_id': 'out-bad', 'origin': 'not-a-dict'})
+    # entry 자체가 dict 가 아니라 _flush_one 안에서 AttributeError 가 난다.
+    output_audit.record('not-an-entry')
     output_audit.record({
         'output_id': 'out-ok',
         'output_name': '정상',

@@ -62,6 +62,21 @@
       "widgets/AoT_map/aot-map-widget-vector.js"
     ]
   },
+  "aot-plot-widget": {
+    "output": "dist/aot-plot-widget.bundle.js",
+    "comment": "AoT_plot 위젯. 앞의 넷은 지도 위젯 번들과 겹친다 — 한 대시보드에 둘 다 있으면 바이트는 두 번 내려오지만 실행은 각 모듈의 가드가 건너뛴다. 겹침을 없애려면 이 넷을 공용 번들로 빼야 하는데, 그것은 AoT_map head 의 document.write 가드 구간을 건드리는 일이라 따로 다룬다. 순서 고정: 라벨→폼→단계→viz→센서라벨→지도라벨→팝업→위젯(뒤가 앞을 전제한다).",
+    "inputs": [
+      "common/aot-plot-labels.js",
+      "common/aot-plot-form.js",
+      "common/aot-dataviz.js",
+      "common/sensor-label.js",
+      "common/aot-plot-stages.js",
+      "widgets/AoT_map/aot-geo-data.js",
+      "widgets/AoT_map/aot-map-sensor-labels.js",
+      "widgets/AoT_map/aot-map-popup.js",
+      "widgets/AoT_plot/aot-plot-widget.js"
+    ]
+  },
   "geo-design": {
     "output": "dist/geo-design.bundle.js",
     "comment": "geo_design 페이지 전용 design 스크립트(소스 순서). vendor turf·공유 aot-map-custom-controls는 제외(외부 유지). 코어/어댑터/dist번들은 별개.",

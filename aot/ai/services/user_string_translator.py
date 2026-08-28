@@ -176,9 +176,45 @@ def catalog_terms(lang):
     except Exception:
         logger.exception("catalog_terms: failed to load catalog for %s", lang)
 
+    if not terms:
+        # 영어는 원문이라 `translations/en` 자체가 없다. 그대로 두면 영어 화면
+        # 에서는 이 가드가 통째로 꺼진다 — 사용자가 장치를 "Temperature" 라고
+        # 지으면 그 시스템 문구까지 번역기가 건드릴 수 있다. msgid 는 어느
+        # 로케일에서 읽어도 같은 영어 원문이므로, 아무 카탈로그에서나 그것만
+        # 가져와 채운다.
+        terms = _source_msgids()
+
     terms.discard('')
     _CATALOG_CACHE[lang] = terms
     return terms
+
+
+_SOURCE_MSGIDS = None
+
+
+def _source_msgids():
+    """카탈로그의 msgid(영어 원문) 집합. 로케일과 무관하게 같다."""
+    global _SOURCE_MSGIDS
+    if _SOURCE_MSGIDS is not None:
+        return set(_SOURCE_MSGIDS)
+
+    ids = set()
+    try:
+        from babel.support import Translations
+        for probe in ('ko', 'ja', 'de'):
+            catalog = getattr(
+                Translations.load(_translations_dir(), [probe]),
+                '_catalog', {}) or {}
+            if catalog:
+                for msgid in catalog:
+                    if isinstance(msgid, str) and msgid:
+                        ids.add(normalize(msgid))
+                break
+    except Exception:
+        logger.exception("_source_msgids: failed")
+
+    _SOURCE_MSGIDS = ids
+    return set(ids)
 
 
 def collides_with_catalog(text, lang):
@@ -254,6 +290,54 @@ def _geoshape_names():
     return out
 
 
+def _geoprogram_strings():
+    """관리 프로그램의 이름들은 JSON 컬럼 안에 있어 별도로 꺼낸다.
+
+    `stages[].name` — 단계 이름("육묘" "정식" "개화" "녹협"). 프로그램 화면에서
+    가장 자주 보이는 문자열이고, 사용자가 작목에 맞춰 직접 짓는다.
+
+    `target_defs[].label` — 목표 항목 이름. 기본 항목은 영어라 대개 gettext
+    카탈로그와 충돌해 걸러지고, 사용자가 추가한 항목만 남는다.
+
+    의도적으로 빼는 것:
+      - `resource_defs[].role` — 'irrigation' 같은 역할 **식별자**다. 코드가
+        이 값으로 함수를 찾으므로 번역하면 연결이 끊긴다.
+      - `stages[].guidance`, `notes` — 문단 단위 지침이다. 이 번역기는 텍스트
+        노드 전체가 사전 키와 정확히 같을 때만 치환하는데, 긴 문단은 줄바꿈·
+        공백 처리로 일치가 쉽게 깨진다. 길이 상한에도 걸린다. 장문은 별도
+        설계가 필요하다(설계 문서 P6).
+    """
+    out = []
+    try:
+        from aot.databases.models import GeoProgram
+        rows = GeoProgram.query.with_entities(
+            GeoProgram.stages, GeoProgram.target_defs).all()
+    except Exception:
+        logger.exception("_geoprogram_strings: query failed")
+        return out
+
+    def _as_list(value):
+        if isinstance(value, str):
+            try:
+                value = json.loads(value)
+            except (ValueError, TypeError):
+                return []
+        return value if isinstance(value, list) else []
+
+    for stages, target_defs in rows:
+        for stage in _as_list(stages):
+            if isinstance(stage, dict):
+                name = stage.get('name')
+                if isinstance(name, str) and name.strip():
+                    out.append((name, 'program'))
+        for target in _as_list(target_defs):
+            if isinstance(target, dict):
+                label = target.get('label')
+                if isinstance(label, str) and label.strip():
+                    out.append((label, 'measurement'))
+    return out
+
+
 def collect_source_strings():
     """번역 대상 원문 전부를 모은다.
 
@@ -291,6 +375,9 @@ def collect_source_strings():
     for value, domain in _geoshape_names():
         add(value, domain)
 
+    for value, domain in _geoprogram_strings():
+        add(value, domain)
+
     return collected
 
 
@@ -307,13 +394,32 @@ def _settings():
 
 
 def is_enabled():
-    """기능 전역 스위치. AI 가 꺼져 있으면 번역도 없다."""
+    """**표시** 스위치 — 사전에 있는 번역을 화면에 쓸 것인가.
+
+    AI 를 보지 않는다. 번역본을 보여주는 데에는 LLM 이 필요 없기 때문이다.
+    사람이 관리 화면에서 손으로 넣은 번역만으로도 이 기능은 성립한다 — AI 를
+    쓰지 않는 설치가 적지 않고, 그런 곳에서도 자기가 쓰는 한두 언어는 직접
+    채워 넣을 수 있어야 한다.
+
+    (처음에는 이것을 `ai_enabled` 에 함께 걸었는데, 그러면 손으로 넣은 번역이
+    저장은 되고 화면에는 안 나오는 상태가 된다 — 사용자에게는 고장으로 보인다.)
+    """
     settings = _settings()
     if not settings:
         return False
-    if not getattr(settings, 'ai_enabled', False):
-        return False
     return bool(getattr(settings, 'user_string_translation_enabled', False))
+
+
+def can_auto_translate():
+    """**자동 번역** 스위치 — 엔진을 불러 새 번역을 만들 것인가.
+
+    이쪽만 AI 를 요구한다. 꺼져 있으면 미번역 문자열은 큐에 남고, 관리 화면에서
+    사람이 채울 때까지 원문이 표시된다.
+    """
+    if not is_enabled():
+        return False
+    settings = _settings()
+    return bool(settings and getattr(settings, 'ai_enabled', False))
 
 
 def _resolve_engine():
@@ -652,8 +758,10 @@ def run_batch(target_lang=None, limit=BATCH_SIZE):
     Returns:
         dict — {'translated': n, 'remaining': n, 'reason': str|None}
     """
-    if not is_enabled():
-        return {'translated': 0, 'remaining': 0, 'reason': 'disabled'}
+    if not can_auto_translate():
+        # 표시만 켜져 있고 AI 가 없는 설치. 큐는 그대로 두어, 관리 화면에서
+        # 사람이 채우거나 나중에 AI 를 붙였을 때 이어서 처리되게 한다.
+        return {'translated': 0, 'remaining': 0, 'reason': 'no_engine'}
 
     used = _daily_used()
     cap = _daily_limit()
@@ -705,12 +813,18 @@ def translate_now(texts, target_lang, domain='misc', max_items=BATCH_SIZE):
     if not is_enabled():
         return {'entries': {}, 'pending': []}
 
+    # 캐시 조회는 AI 와 무관하다 — 사람이 넣은 번역도 여기서 나온다.
     hits = lookup(normed, target_lang)
     misses = [t for t in normed if t not in hits]
     if not misses:
         return {'entries': hits, 'pending': []}
 
+    # 미번역은 엔진이 없어도 적재한다. 그래야 관리 화면의 목록에 올라와
+    # 사람이 채울 수 있다.
     enqueue({t: domain for t in misses}, target_lang)
+
+    if not can_auto_translate():
+        return {'entries': hits, 'pending': misses}
 
     used = _daily_used()
     cap = _daily_limit()

@@ -31301,3 +31301,223 @@ msgstr "プログラムの値"
 
 msgid "Working Hours"
 msgstr "稼働時間"
+
+# ── AoT_plot ウィジェット（区画の総合モニタリング） ─────────────────────
+msgid "AoT Plot"
+msgstr "AoT 区画"
+
+msgid ""
+"One plot at a glance: stage timeline, targets against current readings, "
+"trends, and accumulated heat. Edit its schedule, guidance and targets from "
+"here."
+msgstr ""
+"区画ひとつを一目で — ステージ期間バー、目標と実測、推移、積算温度。日程・"
+"指針・目標をここで編集できます。"
+
+msgid "What to monitor"
+msgstr "何を見るか"
+
+msgid "Stage timeline with today and past transitions marked."
+msgstr "ステージ期間バーに今日と過去の切り替えを表示します。"
+
+msgid "Targets vs now"
+msgstr "目標と現在"
+
+msgid "Current readings against the targets and limits this stage declares."
+msgstr "このステージが定めた目標・限界に現在の実測を当てます。"
+
+msgid "Trends"
+msgstr "推移"
+
+msgid ""
+"Fills the rows that have no axis with a recent trend line. Needs the targets "
+"block."
+msgstr "軸のない行を直近の推移線で埋めます。[目標と現在] が必要です。"
+
+msgid ""
+"How far this stage has come in growing degree days. Shown only when the "
+"programme declares a base temperature."
+msgstr ""
+"このステージが積算温度でどこまで来たか。プログラムに基準温度がある場合のみ"
+"表示します。"
+
+msgid ""
+"Minutes between reloads. Stages move by the day, so short intervals only add "
+"load."
+msgstr "再取得の間隔（分）。ステージは日単位で動くため、短くしても負荷が増えるだけです。"
+
+msgid "Moved on to %(name)s?"
+msgstr "%(name)s に移りましたか？"
+
+msgid "Open-ended"
+msgstr "終わりまで"
+
+msgid "No programme is linked."
+msgstr "紐づくプログラムがありません。"
+
+msgid "The programme has no base temperature."
+msgstr "プログラムに基準温度がありません。"
+
+msgid "No planting date yet."
+msgstr "まだ播種日がありません。"
+
+msgid "Not started yet."
+msgstr "まだ始まっていません。"
+
+msgid "Too early to accumulate."
+msgstr "積算するには日数が足りません。"
+
+msgid "No temperature sensor reaches this plot."
+msgstr "この区画に届く温度センサーがありません。"
+
+msgid "Not enough daily temperature data."
+msgstr "日別の温度データが足りません。"
+
+msgid "%(n)s days left"
+msgstr "残り %(n)s 日"
+
+msgid "%(n)s days over"
+msgstr "%(n)s 日超過"
+
+msgid "Against target"
+msgstr "目標との差"
+
+msgid "All within range"
+msgstr "すべて適正"
+
+msgid "%(n)s off"
+msgstr "%(n)s 件が外れ"
+
+msgid "In range"
+msgstr "適正"
+
+msgid "Back to now"
+msgstr "現在のステージへ"
+
+msgid "Gauge metric"
+msgstr "ゲージに出す値"
+
+msgid "Soil moisture"
+msgstr "土壌水分"
+
+msgid ""
+"Which measurement gets the gauge. The rest are listed as text. If this plot "
+"does not measure it, the first one with a range is shown instead."
+msgstr ""
+"どの測定をゲージに出すか。残りは文字で並べます。この区画がその値を測っていない"
+"場合は、範囲のある最初の値を代わりに表示します。"
+
+msgid ""
+"Current readings against the targets and limits this stage declares. One "
+"gets the gauge, the rest are listed as text."
+msgstr ""
+"このステージが定めた目標・限界に現在の実測を当てます。ひとつはゲージ、残りは"
+"文字で並べます。"
+
+msgid "Control is switched off. This facility is run by: {name}"
+msgstr "制御はオフです。この施設は別のコーディネーターが制御しています: {name}"
+
+msgid "Aims to stay inside this range. Past a limit it stops whatever pushes the wrong way — too damp: misting off; too dry: exhaust fans off. It does not slam anything to full."
+msgstr "この範囲の中にとどまることを目標にします。限界を超えると逆方向に働く装置を止めます — 湿っていれば噴霧を切り、乾いていれば排気ファンを止めます。どの装置も最大にはしません。"
+
+msgid "Aims to stay inside this range. Past a limit it stops whatever pushes the wrong way — too warm: heating off and the shade screen drawn; too cold: cooling off, vents and thermal curtain closed. It does not slam anything to full."
+msgstr "この範囲の中にとどまることを目標にします。限界を超えると逆方向に働く装置を止めます — 暑ければ暖房を切り遮光カーテンを閉じ、寒ければ冷房を切り開口部と保温カーテンを閉じます。どの装置も最大にはしません。"
+
+msgid "Drier"
+msgstr "乾き気味"
+
+msgid "Energy saving"
+msgstr "省エネ"
+
+msgid "Frequent"
+msgstr "ひんぱんに"
+
+msgid "Gentle"
+msgstr "弱め"
+
+msgid "High performance"
+msgstr "高性能"
+
+msgid "Infrequent"
+msgstr "まれに"
+
+msgid "Misting Frequency"
+msgstr "噴霧の頻度"
+
+msgid "Misting by Sunlight Level"
+msgstr "日差しの強さによる噴霧調節"
+
+msgid "Moderate"
+msgstr "ふつう"
+
+msgid "Moister"
+msgstr "湿り気味"
+
+msgid "No {equipment} is linked, so the {purpose} threshold takes no part in operation."
+msgstr "連携された{equipment}の設備がないため、{purpose}の基準は動作に関与しません。"
+
+msgid "No {equipment} is linked, so this setting takes no part in operation."
+msgstr "連携された{equipment}の設備がないため、この設定は動作に関与しません。"
+
+msgid "Reaches the target sooner"
+msgstr "目標に早く届く"
+
+msgid "Shading and Supplemental Light"
+msgstr "遮光・補光の基準"
+
+msgid "Use Micro Sprinklers to Raise Humidity"
+msgstr "加湿にミニスプリンクラーを使う"
+
+msgid "Use the micro sprinklers for humidity too. Turn off when they are your irrigation."
+msgstr "ミニスプリンクラーを加湿にも使います。かん水専用ならオフにしてください。"
+
+msgid "Very frequent"
+msgstr "かなりひんぱんに"
+
+msgid "Wastes less"
+msgstr "むだが少ない"
+
+msgid "lower"
+msgstr "下側"
+
+msgid "shade screen"
+msgstr "遮光カーテン"
+
+msgid "shading"
+msgstr "遮光"
+
+msgid "supplemental light"
+msgstr "補光"
+
+msgid "supplemental lights"
+msgstr "補光灯"
+
+msgid "upper"
+msgstr "上側"
+
+msgid "Control seems stopped — no decision for over {n} min."
+msgstr "制御が止まっているようです — {n}分以上、判断がありません。"
+
+msgid "Control seems stopped — no recent decision."
+msgstr "制御が止まっているようです — 最近の判断がありません。"
+
+msgid "Has not run a cycle yet."
+msgstr "まだ一度も動いていません。"
+
+msgid "These values do not match any step — see them under [Advanced]."
+msgstr "どの段階とも一致しない値です — 詳細な値は[詳細設定]で確認できます。"
+
+msgid "Applies to leaf-wetting misting only — fog-type misting runs in strong sun too. Darker than the range it runs freely; brighter than the range it stops; inside the range it tapers off."
+msgstr "葉をぬらす噴霧（ミニスプリンクラー）にのみ適用されます — 霧タイプの噴霧は日差しが強くても作動します。区間より暗ければ自由に、区間より明るければ停止し、区間の中では徐々に減らします。"
+
+msgid "Darker than the range: the supplemental lights come on and the shade screen opens. Brighter than the range: the shade screen closes. Inside the range nothing happens. Either end can be turned off."
+msgstr "区間より暗ければ補光灯を点け、遮光カーテンを開きます。区間より明るければ遮光カーテンを閉じます。区間の中では何もしません。どちらの端もオフにできます。"
+
+msgid "How often the misting runs — the run time and the gap until the next run."
+msgstr "噴霧をどれくらいの頻度で作動させるかを決めます — 作動する時間と、次の作動までの間隔を調節します。"
+
+msgid "Keeps venting and HVAC from working against each other. At [Energy saving] the HVAC rests when venting alone can reach the target, and the vents close while it runs. At [High performance] both act freely so the target is reached sooner."
+msgstr "換気と冷暖房が互いに邪魔しないように調整します。[省エネ]では換気だけで目標に届くとき冷暖房を休ませ、冷暖房が動く間は開口部を閉じます。[高性能]では両方が自由に動き、目標により早く届きます。"
+
+msgid "Misting is locked out overnight to keep leaves dry"
+msgstr "葉を夜通し乾いた状態に保つため噴霧を止めました"

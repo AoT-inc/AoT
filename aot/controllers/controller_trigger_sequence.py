@@ -19,10 +19,13 @@ from aot.utils.actions import parse_action_information, trigger_controller_actio
 from aot.utils.system_pi import time_between_range
 from aot.utils.influx import get_last_measurement
 from aot.utils.device_tz import get_device_tz
+from aot.utils.command_origin import TYPE_SEQUENCE as SOURCE_SEQUENCE
+from aot.utils.execution_context import set_execution_context, clear_execution_context
 from aot.utils.weekly_schedule import (
     DAY_NAMES, active_entry_now, day_action_enabled, day_action_group,
     day_action_duration, from_legacy, is_continuity_boundary, get_today_idx,
-    parse_schedule, time_to_minutes, to_legacy
+    parse_schedule, time_to_minutes, to_legacy, window_bounds_epoch,
+    window_start_epoch
 )
 
 logger = logging.getLogger(__name__)
@@ -249,6 +252,7 @@ class SequenceTriggerController(AbstractController, threading.Thread):
         self.activation_timestamp = 0
         self.current_schedule = []
         self.active_actions = set()
+        self._close_grace_started = None
         self.all_actions_cache = []
         self._chan_idx_cache = {}  # OutputChannel.unique_id -> channel index
         self.logger = logger # Use module-level logger initially
@@ -716,6 +720,9 @@ class SequenceTriggerController(AbstractController, threading.Thread):
             # the very continuity we're restoring).
             self.build_cycle_schedule()
 
+            # 복원한 믿음을 장치의 실제 상태와 맞춘다.
+            self._resync_after_resume()
+
             self.logger.info(
                 f"Sequence {self.unique_id}: resumed cycle from persisted state "
                 f"(elapsed={time.time() - ts:.0f}s, {len(restored_actions)} "
@@ -1067,16 +1074,23 @@ class SequenceTriggerController(AbstractController, threading.Thread):
                 last_log_time = time.time()
 
             if not active:
+                # 자연 종료가 코앞이면 잠깐 기다린다 — 여기서 바로 끄면 드라이버가
+                # 남길 개방 시간 기록을 빼앗는다.
+                if self._within_close_grace(now):
+                    time.sleep(0.2)
+                    continue
+                self._close_grace_started = None
                 if time.time() - last_log_time > 60:
                     self.logger.debug(f"Sequence {self.unique_id}: outside scheduled window.")
                     last_log_time = time.time()
                 self.cycle_start_time = None
                 self.active_weekday = None
-                self.stop_all_active()
+                self.stop_all_active(reason='예정 시간대(창)가 닫혔습니다')
                 time.sleep(1.0)
                 continue
 
             current_day, current_entry = active
+            self._close_grace_started = None
 
             # Detect day transition
             if self.active_weekday is not None and self.active_weekday != current_day:
@@ -1099,13 +1113,139 @@ class SequenceTriggerController(AbstractController, threading.Thread):
                 self.active_weekday = current_day
 
             # Inside Window
-            if self.cycle_start_time is None or (now - self.cycle_start_time >= self.sequence_cycle_duration):
-                self.logger.debug(f"Starting new cycle. now={now}, cycle_start={self.cycle_start_time}, limit={self.sequence_cycle_duration}")
-                self.start_new_cycle(now, period=float(current_entry.get('period', self.sequence_cycle_duration)))
+            period = self._entry_period(current_entry)
+            next_start = self._next_cycle_start(current_entry, now, period)
+            if next_start is not None:
+                self.logger.debug(
+                    f"Starting new cycle. now={now}, cycle_start={self.cycle_start_time}, "
+                    f"grid_start={next_start}, limit={period}")
+                self.start_new_cycle(next_start, period=period)
             
             self.process_cycle(now)
             
             time.sleep(0.1)
+
+    # OFF 재시도 정책 (turn_off_action). 루프가 0.1초마다 도므로 간격 없이
+    # 재시도하면 장치를 두들기게 된다.
+    OFF_RETRY_INTERVAL_SEC = 5.0
+    OFF_MAX_ATTEMPTS = 5
+
+    # 창이 닫혔을 때 자연 종료를 기다려 주는 시간 (_within_close_grace).
+    WINDOW_CLOSE_GRACE_SEC = 5.0
+
+    def _entry_period(self, entry):
+        """이 요일 항목의 사이클 주기. 0/None 은 신뢰하지 않고 컨트롤러 값으로."""
+        try:
+            period = float((entry or {}).get('period') or 0)
+        except (TypeError, ValueError):
+            period = 0.0
+        return period if period > 0 else float(self.sequence_cycle_duration or 3600)
+
+    def _next_cycle_start(self, entry, now, period):
+        """새 사이클을 시작해야 하면 그 **격자 위 시작 시각**을, 아니면 None.
+
+        기준점을 `now` 로 잡지 않는 것이 요점이다. 스텝 전환마다 붙는 지연
+        (원격 출력은 동기 HTTP 라 왕복이 0.2초일 수도 60초일 수도 있다)이
+        `= now` 에서는 그대로 다음 기준점에 상속돼 영구 누적되고, 그 누적량이
+        매번 달라 "설정한 시각과 다르게 들쭉날쭉" 이 된다. 여기서는
+
+          - 첫 사이클: 창 시작 앵커에서 `now` 이전 최근 격자점
+          - 이후: 직전 기준점에 `+= period` (지연이 길면 건너뛰되 격자는 유지)
+
+        로 잡는다. 타이머 트리거가 `+= period` / `epoch_of_next_time` 으로
+        격자를 지키는 것과 같은 방식이며, 그래서 같은 원격 출력을 써도 타이머만
+        시각이 맞았다.
+        """
+        if self.cycle_start_time is None:
+            anchor = window_start_epoch(entry, self.device_tz, now)
+            if anchor is None or anchor > now:
+                # 창 시작을 계산할 수 없거나(스키마 손상) 아직 이르면 지금부터.
+                return now
+            # 앵커에서 now 를 넘지 않는 마지막 격자점.
+            return self._reject_runt(entry, anchor + (int((now - anchor) // period) * period), now)
+
+        if now - self.cycle_start_time >= period:
+            start = self.cycle_start_time
+            skipped = 0
+            while start + period <= now:
+                start += period
+                skipped += 1
+            if skipped > 1:
+                # 격자는 지켰지만 사이클을 통째로 건너뛴 것은 조용히 넘기면 안 된다.
+                self.logger.error(
+                    f"Sequence {self.unique_id}: {skipped - 1} cycle(s) skipped — "
+                    f"a step transition took longer than one period ({period:.0f}s).")
+            return self._reject_runt(entry, start, now)
+
+        return None
+
+    def _within_close_grace(self, now):
+        """창이 닫혔지만 진행 중 스텝이 **자연 종료를 코앞에 둔** 경우 True.
+
+        창 길이와 한 pass 가 딱 맞아떨어지는 설정 — 문서가 권하는 기본형이다 —
+        에서는 마지막 스텝의 duration 만료와 창 종료가 같은 순간에 온다. 창
+        판정이 먼저 이기면 드라이버가 스스로 끝내기 전에 바깥에서 OFF 가 들어가고,
+        그 세션의 **개방 시간이 기록되지 않는다**. 실측(2026-08-27): 창 07:30 에
+        걸린 v12 와 펌프는 ON 마커만 남고 duration 없이 사라진 반면, 06:30 에
+        창 안에서 끝난 v11 은 3600.09초로 남았다.
+
+        몇 초만 기다리면 드라이버가 정상 종료하며 기록을 남긴다. 기다리는 것은
+        자연 종료가 임박한 경우뿐이고, 유예를 넘기면 기다리지 않는다 —
+        밸브를 열어 둔 채로 두는 쪽이 기록을 잃는 것보다 나쁘다.
+        """
+        if not self.active_actions or self.cycle_start_time is None:
+            return False
+
+        elapsed = now - self.cycle_start_time
+        pending = [i for i in self.current_schedule
+                   if i['action'].unique_id in self.active_actions]
+        if not pending:
+            return False
+
+        # 아직 한참 남은 스텝이 있으면 그것은 자연 종료가 아니라 진짜 절단이다.
+        # 기다려 봐야 창만 넘긴다.
+        try:
+            if any(float(i['end']) - elapsed > self.WINDOW_CLOSE_GRACE_SEC
+                   for i in pending):
+                return False
+        except (TypeError, ValueError, KeyError):
+            return False
+
+        if self._close_grace_started is None:
+            self._close_grace_started = now
+            return True
+        return (now - self._close_grace_started) < self.WINDOW_CLOSE_GRACE_SEC
+
+    def _one_pass_seconds(self):
+        """직전에 세운 계획에서 한 pass 가 걸리는 시간."""
+        try:
+            schedule = getattr(self, 'current_schedule', None) or []
+            return max((float(i['end']) for i in schedule), default=0.0)
+        except (TypeError, ValueError, KeyError):
+            return 0.0
+
+    def _reject_runt(self, entry, start, now):
+        """남은 창이 한 pass 를 못 담으면 그 사이클을 아예 시작하지 않는다.
+
+        `창 길이 % 주기` 가 0 이 아니면 창 끝에 반드시 짧은 사이클이 생긴다.
+        그때 밸브는 열리자마자 창이 닫혀 강제로 끊기고, 그렇게 끊긴 스텝은
+        개방 시간이 기록되지 않아 흔적조차 남지 않는다. 물을 주다 만 것도
+        문제지만, 준 적 없다고 보이는 쪽이 더 위험하다.
+
+        한 pass 길이를 모르면(첫 사이클이라 계획이 아직 없음) 판단하지 않고
+        그대로 진행한다 — 모른다고 멈추는 것이 더 나쁘다.
+        """
+        one_pass = self._one_pass_seconds()
+        if not one_pass:
+            return start
+        _, win_end = window_bounds_epoch(entry, self.device_tz, now)
+        if win_end is None or start + one_pass <= win_end:
+            return start
+        self.logger.error(
+            f"Sequence {self.unique_id}: 남은 창이 한 번 돌기에 부족해 "
+            f"({win_end - start:.0f}초 남음 / {one_pass:.0f}초 필요) "
+            "이번 사이클은 건너뜁니다.")
+        return None
 
     def start_new_cycle(self, now, period=None):
         if period is not None:
@@ -1157,61 +1297,212 @@ class SequenceTriggerController(AbstractController, threading.Thread):
                     self.turn_off_action(found_item['action'], found_item)
                 else:
                     # Zombie action? just remove from set
-                    self.active_actions.remove(act_id)
+                    self.active_actions.discard(act_id)
 
     def turn_on_action(self, action, item):
         self.logger.debug(f"Action ON: {action.unique_id}")
         duration = item['end'] - item['start']
-        trigger_action(self.dict_actions, action.unique_id, value={
-            'message': f"Sequence {self.unique_id}: ",
-            'duration': duration
-        })
+        # 출처를 밝히고 명령한다. 안 심으면 `resolve_origin()` 이 판정을 전부
+        # 흘려보내 'unknown' 으로 남는다 — 행위자도 IP 도 없는 감사 기록은
+        # 정상적인 시퀀스 동작과 진짜 인증 우회를 구별하지 못하게 만든다.
+        set_execution_context(source_type=SOURCE_SEQUENCE, source_id=self.unique_id)
+        try:
+            trigger_action(self.dict_actions, action.unique_id, value={
+                'message': f"Sequence {self.unique_id}: ",
+                'duration': duration
+            })
+        finally:
+            # 스레드는 재사용된다. 안 지우면 다음 명령이 이 출처를 뒤집어쓴다.
+            clear_execution_context()
         self.active_actions.add(action.unique_id)
         self._save_runtime_state()
 
+    def _resolve_output_target(self, action):
+        """스텝이 가리키는 `(출력 unique_id, 채널 index)`. 못 구하면 None."""
+        target_id = action.do_unique_id
+        if not target_id and action.custom_options:
+            try:
+                target_id = json.loads(action.custom_options).get('output', None)
+            except Exception:
+                pass
+        if not target_id:
+            return None
+
+        out_id = target_id
+        channel_index = 0
+        if ',' in str(target_id):
+            parts = str(target_id).split(',')
+            out_id = parts[0]
+            if len(parts) > 1:
+                raw_chan = parts[1]
+                try:
+                    channel_index = int(raw_chan)
+                except (TypeError, ValueError):
+                    try:
+                        resolved = self.get_output_channel_from_channel_id(raw_chan)
+                        if resolved is not None:
+                            channel_index = resolved
+                        else:
+                            self.logger.warning(
+                                f"Could not resolve channel index from UUID {raw_chan}")
+                    except Exception as e:
+                        self.logger.error(f"Error resolving channel: {e}")
+        return out_id, channel_index
+
+    def _resync_after_resume(self):
+        """재개 직후, 켜져 있다고 복원한 스텝이 **실제로도** 켜져 있는지 맞춘다.
+
+        데몬이 내려갈 때 출력의 `state_shutdown` 이 OFF 면 장치는 꺼진 채로
+        올라온다. 그런데 재개는 "이미 돌고 있다" 고 보고 재전송을 하지 않으므로,
+        컨트롤러의 믿음과 장치의 실제가 어긋난 채 그 사이클의 남은 시간이 통째로
+        사라진다 — 관수라면 그날 물을 덜 준 것이고, 개방 시간 기록도 남지 않아
+        아무도 모른다. 실측(2026-08-28): 재시작 시점에 52분째 열려 있던 밸브가
+        꺼진 채 올라왔고, 남은 8분은 그대로 증발했다.
+
+        다시 켤 때는 **남은 시간만큼만** 켠다. 원래 지속시간으로 켜면 재시작할
+        때마다 그 스텝의 총 개방시간이 늘어난다.
+
+        상태를 못 읽으면(통신 오류) 건드리지 않는다 — 모르는 채로 켜면 이미 열린
+        밸브를 연장하게 되고, 그쪽이 더 나쁘다.
+        """
+        if not self.active_actions or self.cycle_start_time is None:
+            return
+        elapsed = time.time() - self.cycle_start_time
+
+        for act_id in list(self.active_actions):
+            item = next((i for i in self.current_schedule
+                         if i['action'].unique_id == act_id), None)
+            if item is None or not item.get('is_output'):
+                continue
+
+            remaining = float(item['end']) - elapsed
+            if remaining <= 0:
+                # 데몬이 내려가 있는 사이에 이 스텝의 시간이 다 지났다.
+                self.active_actions.discard(act_id)
+                continue
+
+            target = self._resolve_output_target(item['action'])
+            if not target:
+                continue
+            out_id, channel_index = target
+
+            try:
+                state = self.control.output_state(out_id, channel_index)
+            except Exception as err:
+                self.logger.error(f"Action {act_id}: 재개 상태 조회 실패 — {err}")
+                continue
+            if state != 'off':
+                continue        # 켜져 있거나 알 수 없다 — 그대로 둔다
+
+            self.logger.error(
+                f"Action {act_id}: 재개했으나 출력이 꺼져 있습니다"
+                f"(종료 시 state_shutdown 으로 내려간 것으로 보입니다). "
+                f"남은 {remaining:.0f}초만큼 다시 켭니다.")
+            set_execution_context(source_type=SOURCE_SEQUENCE, source_id=self.unique_id)
+            try:
+                self.control.output_on(
+                    out_id, output_type='sec', amount=remaining,
+                    output_channel=channel_index)
+            except Exception as err:
+                self.logger.error(f"Action {act_id}: 재개 재전송 실패 — {err}")
+            finally:
+                clear_execution_context()
+
+    def _dispatch_off(self, action, item):
+        """실제 OFF 명령을 보내고 **성공했는지** 돌려준다.
+
+        `DaemonControl.output_off` 는 `(code, msg)` 를 준다 — code 1 이 실패이고,
+        Pyro5 타임아웃·통신오류도 예외가 아니라 `(1, msg)` 로 돌아온다. 예전에는
+        이 반환값을 통째로 버려서, 명령이 나가지 못한 경우에도 호출자가 성공으로
+        읽었다.
+        """
+        if not item.get('is_output'):
+            return True
+
+        target = self._resolve_output_target(action)
+        if not target:
+            # 재시도해도 대상이 생기지 않는다. 되풀이 대신 한 번 크게 남긴다 —
+            # 이 경우 출력은 켜진 채로 남아 있을 수 있다.
+            self.logger.error(
+                f"Action {action.unique_id}: 출력 스텝인데 대상 ID 가 없어 OFF 를 "
+                "보내지 못했습니다. 해당 출력이 켜진 채 남아 있을 수 있습니다 — "
+                "스텝의 출력 지정을 확인하십시오.")
+            return False
+        out_id, channel_index = target
+
+        set_execution_context(source_type=SOURCE_SEQUENCE, source_id=self.unique_id)
+        try:
+            ret = self.control.output_off(out_id, output_channel=channel_index)
+        except Exception as err:
+            self.logger.error(f"Action {action.unique_id}: OFF 전송 실패 — {err}")
+            return False
+        finally:
+            clear_execution_context()
+
+        # (code, msg): code 0 만 성공. 튜플이 아닌 구현은 성공으로 본다.
+        if isinstance(ret, (tuple, list)) and ret and ret[0]:
+            self.logger.error(
+                f"Action {action.unique_id}: OFF 가 거부되었습니다 — {ret[1] if len(ret) > 1 else ret[0]}")
+            return False
+        return True
+
     def turn_off_action(self, action, item):
+        """OFF 를 보내고, **성공했을 때만** active 에서 뺀다.
+
+        예전에는 결과와 무관하게 `active_actions.remove()` 를 해서, 명령이 나가지
+        못했는데도 컨트롤러는 "껐다" 고 간주했다. 그러면 밸브가 열린 채 남고
+        아무도 그것을 모른다. 실패하면 active 로 남겨 다음 주기에 다시 시도한다.
+
+        무한 재시도는 하지 않는다. `process_cycle` 은 0.1초마다 도는데 실패할
+        때마다 명령을 쏘면 그 자체가 장치를 두들기는 꼴이라, 재시도는
+        `OFF_RETRY_INTERVAL_SEC` 간격으로만 하고 `OFF_MAX_ATTEMPTS` 회에서 멈춘다.
+        멈출 때는 조용히 지우지 않고 ERROR 를 남긴다.
+        """
         self.logger.debug(f"Action OFF: {action.unique_id}")
-        if item['is_output']:
-            target_id = action.do_unique_id
-            if not target_id and action.custom_options:
-                 try:
-                     opts = json.loads(action.custom_options)
-                     target_id = opts.get('output', None)
-                 except Exception:
-                     pass
-            
-            if target_id:
-                out_id = target_id
-                channel_index = 0
-                
-                if ',' in str(target_id):
-                    parts = str(target_id).split(',')
-                    out_id = parts[0]
-                    if len(parts) > 1:
-                        raw_chan = parts[1]
-                        try:
-                            # Check if it's already an integer index
-                            channel_index = int(raw_chan)
-                        except:
-                            # Assume it's a UUID and try to resolve
-                            try:
-                                resolved = self.get_output_channel_from_channel_id(raw_chan)
-                                if resolved is not None:
-                                    channel_index = resolved
-                                else:
-                                    self.logger.warning(f"Could not resolve channel index from UUID {raw_chan}")
-                            except Exception as e:
-                                self.logger.error(f"Error resolving channel: {e}")
+        if not hasattr(self, '_off_failures'):
+            self._off_failures = {}
 
-                self.control.output_off(out_id, output_channel=channel_index)
-            else:
-                 self.logger.warning(f"Action {action.unique_id} marked as output but no target ID found for OFF.")
+        aid = action.unique_id
+        fail = self._off_failures.get(aid)
+        if fail and (time.time() - fail['last']) < self.OFF_RETRY_INTERVAL_SEC:
+            return False       # 백오프 중 — 이번 턴은 건너뛴다
 
-        self.active_actions.remove(action.unique_id)
-        self._save_runtime_state()
+        if self._dispatch_off(action, item):
+            self._off_failures.pop(aid, None)
+            self.active_actions.discard(aid)
+            self._save_runtime_state()
+            return True
 
-    def stop_all_active(self):
-        # Force stop all, pump (total) before valves -- see _off_order.
+        attempts = (fail['count'] if fail else 0) + 1
+        self._off_failures[aid] = {'count': attempts, 'last': time.time()}
+        if attempts >= self.OFF_MAX_ATTEMPTS:
+            self.logger.error(
+                f"Action {aid}: OFF 를 {attempts}회 시도했으나 모두 실패했습니다. "
+                "재시도를 멈춥니다 — 이 출력은 켜진 채 남아 있을 수 있으니 "
+                "직접 확인하십시오.")
+            self._off_failures.pop(aid, None)
+            self.active_actions.discard(aid)
+            self._save_runtime_state()
+            return False
+
+        self.logger.error(
+            f"Action {aid}: OFF 실패({attempts}/{self.OFF_MAX_ATTEMPTS}) — "
+            f"{self.OFF_RETRY_INTERVAL_SEC:.0f}초 뒤 다시 시도합니다.")
+        return False
+
+    def stop_all_active(self, reason=''):
+        """진행 중인 것을 전부 끈다(펌프 먼저 — `_off_order` 참조).
+
+        창이 닫혀서 부를 때는 **아직 끝나지 않은 스텝을 중간에 끊는 것**이다.
+        그 사실을 남기지 않으면 아무 기록도 없이 사라진다 — 실제로 창 끝에
+        걸린 스텝은 duration 이 기록되지 않아, 얼마나 열려 있었는지가 통째로
+        유실된다.
+        """
+        if self.active_actions and reason:
+            self.logger.error(
+                f"Sequence {self.unique_id}: {reason} — 진행 중이던 스텝 "
+                f"{len(self.active_actions)}개를 중간에 끊습니다. 이 스텝들의 "
+                "개방 시간은 기록되지 않습니다.")
         for act_id in self._off_order(self.active_actions):
             # Find action info 
             found_item = next((i for i in self.current_schedule if i['action'].unique_id == act_id), None)
@@ -1228,10 +1519,10 @@ class SequenceTriggerController(AbstractController, threading.Thread):
                         fake_item = {'is_output': True}
                         self.turn_off_action(action, fake_item)
                     else:
-                        self.active_actions.remove(act_id)
-                except:
+                        self.active_actions.discard(act_id)
+                except Exception:
                      self.logger.warning(f"Could not retrieve action {act_id} for force stop. Removing from active set.")
-                     self.active_actions.remove(act_id)
+                     self.active_actions.discard(act_id)
 
     def run_finally(self):
         # Distinguish a process-level stop (daemon restart, e.g. `systemctl

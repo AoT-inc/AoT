@@ -405,6 +405,20 @@ textarea.aot-modern-input.aot-input-prose {
     margin-bottom: 10px !important;
 }
 
+/* 장치 추가 드롭다운(input/output/function). 선택지가 200개 가까워 목록이 반드시
+   스크롤되는데, 스크롤은 되되 스크롤바는 보이지 않는다는 전역 규칙을 따른다.
+   메뉴 높이 자체는 data-size 로 묶어 두었다. */
+.bootstrap-select.aot-device-select .dropdown-menu,
+.bootstrap-select.aot-device-select .dropdown-menu .inner {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+.bootstrap-select.aot-device-select .dropdown-menu::-webkit-scrollbar,
+.bootstrap-select.aot-device-select .dropdown-menu .inner::-webkit-scrollbar {
+    display: none;
+}
+
 /* Bootstrap Select Override (Fix Double Box Look) */
 .aot-modal-option-control .bootstrap-select.aot-standard-select {
     border: none !important; /* Remove outer border if selectpicker is used */
@@ -2217,13 +2231,9 @@ body { transition: padding-right 0.4s cubic-bezier(0.075, 0.82, 0.165, 1); }
 }
 .aot-lib-kind { font-size: var(--aot-font-size-2xs); color: var(--aot-color-text-secondary); }
 
-/* 버튼만 있는 행 — 라벨 칸이 없다(설계문서 §3-6). 컨트롤이 고정폭
-   (`--aot-common-control-width`)이라 그대로 두면 버튼이 오른쪽 끝에 홀로
-   떨어져, 옆줄들과 층이 어긋나 보인다. 행 전체를 쓰고 왼쪽에 세운다 —
-   라벨이 서던 자리다. */
-.aot-modal-option-row.aot-modal-option-row-button > .aot-modal-option-control {
-    flex: 1 1 100% !important;
-    width: auto !important;
-    min-width: 0 !important;
-    justify-content: flex-start;
-}
+/* ⚠ **명령 행에 이 행만의 예외를 다시 만들지 말 것.**
+   한때 라벨 칸을 없애고 컨트롤을 행 전체로 늘렸다(설계문서 §3-6). 그러면 이
+   행만 골격이 달라 목록에서 튄다 — 사용자 지적: *"버튼 스타일이 전역 스타일이
+   아님"*(2026-08-28). 지금은 다른 행과 같다: 왼쪽에 이름, 오른쪽 고정폭 자리에
+   짧은 동사 버튼(`button_label`). 이름 중복은 예외 CSS 가 아니라 **버튼 글자를
+   줄여서** 푼다. */

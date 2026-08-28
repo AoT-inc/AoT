@@ -89,6 +89,7 @@ FUNCTION_INFORMATION = {
             'id': 'cmd_reload',
             'type': 'button',
             'wait_for_return': True,
+            'button_label': lazy_gettext('Execute'),
             'name': lazy_gettext('Reload Actuators'),
             'phrase': lazy_gettext(
                 'Re-read the Actions table and rebuild actuator profiles.'
@@ -98,6 +99,7 @@ FUNCTION_INFORMATION = {
             'id': 'cmd_run_now',
             'type': 'button',
             'wait_for_return': False,
+            'button_label': lazy_gettext('Execute'),
             'name': lazy_gettext('Run Now'),
             'phrase': lazy_gettext(
                 'Execute one coordination cycle immediately using current sensor readings.'
@@ -107,6 +109,7 @@ FUNCTION_INFORMATION = {
             'id': 'cmd_emergency_stop',
             'type': 'button',
             'wait_for_return': True,
+            'button_label': lazy_gettext('Stop'),
             'name': lazy_gettext('Emergency Stop'),
             'phrase': lazy_gettext(
                 'Immediately set all actuators to safe_default and pause control for 60 s.'
@@ -648,9 +651,9 @@ FUNCTION_INFORMATION = {
             'type': 'bool',
             'default_value': True,
             'required': False,
-            'name': lazy_gettext('Use Wetting Misting to Raise Humidity'),
+            'name': lazy_gettext('Use Micro Sprinklers to Raise Humidity'),
             'phrase': lazy_gettext(
-                'Use the misting nozzles for humidity too. Turn off when they are your irrigation.'
+                'Use the micro sprinklers for humidity too. Turn off when they are your irrigation.'
             ),
         },
 
@@ -1117,47 +1120,85 @@ _SCALE_GROUPS = [
     {
         'id': 'vent_economy',
         'name': lazy_gettext('Ventilation and HVAC Teamwork'),
+        # ⚠ **"바깥 공기를 얼마나 믿을지" 로 쓰지 말 것** — 센서를 못 믿는다는
+        #   뜻으로 읽힌다(2026-08-28 사용자 지적). 이 축은 신뢰가 아니라
+        #   **둘이 서로를 방해하지 않게 하는 정도**다.
+        # ⚠ **방향을 화면과 맞출 것.** "높일수록 에너지를 아낀다" 는 왼쪽이
+        #   고성능인 지금 배치와 반대로 읽힌다. 단계 이름으로 말한다.
         'phrase': lazy_gettext(
-            'How much the outdoor air is trusted before heating or cooling is '
-            'used. Higher settings save energy; lower settings chase the '
-            'target harder.'
+            'Keeps venting and HVAC from working against each other. At '
+            '[Energy saving] the HVAC rests when venting alone can reach the '
+            'target, and the vents close while it runs. At [High performance] '
+            'both act freely so the target is reached sooner.'
         ),
-        'axis_low':  lazy_gettext('Chases the target harder'),
-        'axis_high': lazy_gettext('Saves more energy'),
+        'axis_low':  lazy_gettext('Reaches the target sooner'),
+        'axis_high': lazy_gettext('Wastes less'),
         'members': ['vent_futility_gate', 'vent_first', 'hvac_interlock'],
+        # ⚠ **속도로 이름 붙이지 말 것**(빠르게·보통·천천히). 바로 위 [제어 성향]
+        #   이 이미 속도 축이다(느긋하게·표준·민감하게) — 한 화면에 속도 축이
+        #   둘이면 무엇이 다른지 알 수 없다. 이 축은 **에너지**다.
+        # ⚠ 왼쪽 끝 이름이 축 라벨과 맞아야 한다. 예전에는 가장 왼쪽이 '표준'
+        #   인데 축은 "목표를 바짝 쫓음" 이라고 써 있어, 없는 선택지를 약속했다.
         'steps': [
-            (lazy_gettext('Standard'), {
+            (lazy_gettext('High performance'), {
                 'vent_futility_gate': True, 'vent_first': False,
                 'hvac_interlock': False}),
-            (lazy_gettext('Save energy'), {
+            (lazy_gettext('Standard'), {
                 'vent_futility_gate': True, 'vent_first': True,
                 'hvac_interlock': False}),
-            (lazy_gettext('Save more'), {
+            (lazy_gettext('Energy saving'), {
                 'vent_futility_gate': True, 'vent_first': True,
                 'hvac_interlock': True}),
         ],
     },
     {
         'id': 'misting_care',
-        'name': lazy_gettext('Misting Caution'),
+        # ⚠ **id 는 그대로 둔다** — `_LAYOUT` 의 `@group:misting_care` 가 이
+        #   이름으로 자리를 잡는다. 화면에 나가는 것은 `name` 뿐이다.
+        'name': lazy_gettext('Misting Frequency'),
+        # '조심도' → '세기' → **'빈도'** 로 두 번 고쳤다.
+        #
+        # ⚠ **'세기' 도 틀렸다.** 관수·분무 밸브는 거의 전부 on/off 제어라 PWM 이
+        #   안 된다 — 물살을 줄일 방법이 없다(사용자 지적, 2026-08-28). 조절할
+        #   수 있는 것은 **한 번에 몇 초 켜느냐**와 **얼마나 자주 켜느냐** 뿐이고,
+        #   그것이 곧 빈도다. `nursery_max_on_sec` 의 설명이 이미 그렇게 적혀
+        #   있었는데("regulated by how often it sprays, not by how long")
+        #   그룹 이름만 어긋나 있었다.
+        # 일소 방지는 이 축과 **무관하게 항상** 돈다 — 옛 이름('조심도')은 그것
+        # 까지 이 옵션의 일인 것처럼 읽히게 했다.
+        # ⚠ **짧게 유지할 것.** 설명이 길면 폰에서 한 화면을 통째로 먹는다
+        #   (2026-08-28 사용자 지적). on/off 라는 사실은 옵션 이름('빈도')이
+        #   이미 말하고, 자세한 것은 아래 두 세부 옵션의 설명이 맡는다.
         'phrase': lazy_gettext(
-            'How careful misting is with the leaves. Sets spray length and '
-            'drying interval together. Sunburn protection runs either way.'
+            'How often the misting runs — the run time and the gap until the '
+            'next run.'
         ),
-        'axis_low':  lazy_gettext('Humidity rises faster'),
-        'axis_high': lazy_gettext('Gentler on the leaves'),
+        'axis_low':  lazy_gettext('Drier'),
+        'axis_high': lazy_gettext('Moister'),
         'members': ['nursery_mode',
                     'nursery_max_on_sec', 'nursery_min_off_sec'],
+        # ⚠ 축 방향이 뒤집혔다(순함 → 셈). **기존 설치는 안전하다** — 단계는
+        #   순서가 아니라 **값으로** 되짚는다(안 맞으면 '사용자 지정').
         'steps': [
             # 첫 칸은 **끄는 칸**이다. 나머지 값은 읽히지 않으므로 싣지 않는다
             # — 실으면 "안 함" 을 골랐다가 되돌릴 때 그 값이 덮어써진다.
             (lazy_gettext('Not used'), {'nursery_mode': False}),
-            (lazy_gettext('Standard'), {
+            # ⚠ **`Standard`·`Strong` 같은 흔한 낱말을 쓰지 말 것.** 카탈로그에
+            #   이미 다른 문맥의 번역이 있어(표준·강함) 이 사다리만 어휘가
+            #   어긋난다 — 실제로 `약하게 · 표준 · 강함 · 아주 강하게` 가 나왔다.
+            #   한 사다리는 말투가 하나여야 읽힌다.
+            (lazy_gettext('Infrequent'), {
                 'nursery_mode': True,
-                'nursery_max_on_sec': 20.0, 'nursery_min_off_sec': 600.0}),
-            (lazy_gettext('Careful'), {
+                'nursery_max_on_sec': 5.0, 'nursery_min_off_sec': 1200.0}),
+            (lazy_gettext('Moderate'), {
                 'nursery_mode': True,
                 'nursery_max_on_sec': 10.0, 'nursery_min_off_sec': 900.0}),
+            (lazy_gettext('Frequent'), {
+                'nursery_mode': True,
+                'nursery_max_on_sec': 20.0, 'nursery_min_off_sec': 600.0}),
+            (lazy_gettext('Very frequent'), {
+                'nursery_mode': True,
+                'nursery_max_on_sec': 30.0, 'nursery_min_off_sec': 450.0}),
         ],
     },
 ]
@@ -1166,6 +1207,9 @@ _RANGE_BANDS = [
     {
         'id': 'temperature',
         'name': lazy_gettext('Temperature Range'),
+        'phrase': lazy_gettext(
+            'Aims to stay inside this range. Past a limit it stops whatever pushes the wrong way — too warm: heating off and the shade screen drawn; too cold: cooling off, vents and thermal curtain closed. It does not slam anything to full.'
+        ),
         'hard_label': lazy_gettext('never past'),
         'unit': '°C', 'axis_min': 0.0, 'axis_max': 45.0, 'step': 0.5,
         'margin': 5.0,
@@ -1181,7 +1225,18 @@ _RANGE_BANDS = [
     # ⚠ 하드 임계가 없다 — 파생할 것이 없으므로 `margin` 은 0 이다.
     {
         'id': 'misting_light',
-        'name': lazy_gettext('Misting Limit Irradiance'),
+        'name': lazy_gettext('Misting by Sunlight Level'),
+        # 두 손잡이가 **해제**와 **잠금**인데 화면이 그것을 말하지 않았다 —
+        # 숫자 둘만 보이니 무엇이 무엇인지 알 수 없다.
+        # ⚠ **대상은 잎을 적시는 분무(미니스프링클러)뿐이다.** 안개형은 강한
+        #   햇빛에도 돌아야 맞고, 실제로 `is_wetting_fogger` 가 그렇게 가른다
+        #   — 화면이 그 사실을 말하지 않아 모든 분무에 걸리는 것처럼 보였다
+        #   (2026-08-28 사용자 지적).
+        'phrase': lazy_gettext(
+            'Applies to leaf-wetting misting only — fog-type misting runs in '
+            'strong sun too. Darker than the range it runs freely; brighter '
+            'than the range it stops; inside the range it tapers off.'
+        ),
         'unit': ' W/m\u00b2', 'axis_min': 0.0, 'axis_max': 800.0, 'step': 10.0,
         'margin': 0.0,
         'guide_min': 'nursery_solar_release',
@@ -1190,6 +1245,9 @@ _RANGE_BANDS = [
     {
         'id': 'humidity',
         'name': lazy_gettext('Humidity Range'),
+        'phrase': lazy_gettext(
+            'Aims to stay inside this range. Past a limit it stops whatever pushes the wrong way — too damp: misting off; too dry: exhaust fans off. It does not slam anything to full.'
+        ),
         'hard_label': lazy_gettext('never past'),
         'unit': '%', 'axis_min': 10.0, 'axis_max': 100.0, 'step': 1.0,
         'margin': 5.0,
@@ -1205,12 +1263,28 @@ _RANGE_BANDS = [
     #   다르게 돈다.
     {
         'id': 'light',
-        'name': lazy_gettext('Light Range'),
+        'name': lazy_gettext('Shading and Supplemental Light'),
+        # ⚠ **이것은 "이 안에 머물러라" 가 아니라 기준선 둘이다.** 이름이
+        #   '광량 범위' 였을 때 사용자가 그렇게 읽었고, 벗어나면 무엇을 하는지
+        #   화면 어디에도 없었다(*"기본값도 0~1200 인데 어떻게 한다는 건지
+        #   나도 모르겠다"*). 0~1200 은 기본값이 아니라 **슬라이더 축의 끝**
+        #   이라는 오해까지 겹쳤다.
+        'phrase': lazy_gettext(
+            'Darker than the range: the supplemental lights come on and the '
+            'shade screen opens. Brighter than the range: the shade screen '
+            'closes. Inside the range nothing happens. Either end can be '
+            'turned off.'
+        ),
         'unit': ' W/m\u00b2', 'axis_min': 0.0, 'axis_max': 1200.0,
         'step': 10.0, 'margin': 0.0,
         'off_at_min': True, 'off_at_max': True,
         'off_min_label': lazy_gettext('no supplemental light'),
         'off_max_label': lazy_gettext('no shading'),
+        # 이 손잡이가 실제로 무엇을 움직이는가. 그 종류가 이 시설에 등록돼
+        # 있지 않으면 화면이 그렇게 말한다 — 없으면 무엇을 넣어도 아무 일이
+        # 안 일어나는데, 예전에는 그 칸이 똑같이 보였다.
+        'requires_min': 'lighting',
+        'requires_max': 'shade',
         'guide_min': 'light_min', 'guide_max': 'light_max',
     },
 ]

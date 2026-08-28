@@ -4,6 +4,15 @@ For a complete list of supported input devices, see [Supported Inputs](Supported
 
 Inputs, such as sensors, ADC signals, or the responses of commands, measure conditions in the environment or at other locations and store them in the time-series database (InfluxDB). This database provides the measurements needed to operate [dashboard widgets](Data-Viewing.md#dashboard), [Functions](Functions.md), and other parts of AoT. Add, configure, and activate inputs to record measurements to the database and make them available throughout AoT.
 
+### Finding a device in the add list
+
+The dropdown at the top of the page groups the supported devices by what they measure
+(Soil & Nutrient, Air Quality, Power & Energy, Weather & Light, Temperature & Humidity,
+Motion & Position, System & Other), with AoT's own devices listed first. Type in the search
+box to filter the list: it matches the device and manufacturer name, the module name, the
+interface (I2C, UART, ...), and the measurement names **in your own language** - searching
+for the translated name of a measurement finds every sensor that reports it.
+
 ### Custom Inputs
 
 See the [Building a Custom Input Module](https://github.com/AoT-inc/AoT/wiki/Building-a-Custom-Input-Module) Wiki page.

@@ -192,6 +192,15 @@
       html += '<div class="aot-modal-body-text aot-scale-hint">' +
               esc(hint) + '</div>';
     }
+    // ⚠ **'사용자 지정' 만 띄우면 막다른 길이다.** 단계가 하나도 안 잡히면
+    //   손잡이도 안 켜지고 값도 안 보인다 — 세부 옵션은 [고급 설정] 안에 숨어
+    //   있어서, 무엇이 설정돼 있는지 알 방법이 화면에 없다(실측: 영양의
+    //   [제어 성향] 이 그 상태였다). 어디를 봐야 하는지 말한다.
+    if (idx < 0) {
+      html += '<div class="aot-modal-body-text aot-scale-hint">' +
+              esc(_t('These values do not match any step — see them under '
+                     + '[Advanced].')) + '</div>';
+    }
     el._view.innerHTML = html + '</div>';
   }
 

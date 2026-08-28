@@ -18,37 +18,26 @@ from wtforms.validators import DataRequired
 from wtforms.widgets import NumberInput
 
 from aot.config_translations import TRANSLATIONS
-from aot.aot_flask.utils.utils_general import generate_form_output_list
-from aot.utils.outputs import parse_output_information
-from aot.utils.utils import sort_tuple
+from aot.aot_flask.utils.utils_device_catalog import output_add_choices
 
 
 class OutputAdd(FlaskForm):
-    choices_outputs = []
-    dict_outputs = parse_output_information()
-    list_outputs_sorted = generate_form_output_list(dict_outputs)
-    for each_output in list_outputs_sorted:
-        value = '{inp},'.format(inp=each_output)
-        name = '{name}'.format(name=dict_outputs[each_output]['output_name'])
+    """출력 추가 드롭다운.
 
-        if 'output_library' in dict_outputs[each_output]:
-            name += ' ({lib})'.format(lib=dict_outputs[each_output]['output_library'])
-
-        if 'interfaces' in dict_outputs[each_output] and dict_outputs[each_output]['interfaces']:
-            for each_interface in dict_outputs[each_output]['interfaces']:
-                tmp_value = '{val}{int}'.format(val=value, int=each_interface)
-                tmp_name = '{name} [{int}]'.format(name=name, int=each_interface)
-                choices_outputs.append((tmp_value, tmp_name))
-        else:
-            choices_outputs.append((value, name))
-
-    choices_outputs = sort_tuple(choices_outputs)
-
+    선택지는 utils_device_catalog 가 optgroup + 검색 토큰까지 붙여서 만든다.
+    클래스 본문이 아니라 __init__ 에서 채우는 이유는 InputAdd 와 같다(그룹
+    라벨이 요청 언어로 번역되어야 하는데 클래스 본문은 import 시점에 한 번만
+    돈다).
+    """
     output_type = SelectField(
-        choices=choices_outputs,
+        choices=[],
         validators=[DataRequired()]
     )
     output_add = SubmitField(lazy_gettext('Add'))
+
+    def __init__(self, *args, **kwargs):
+        super(OutputAdd, self).__init__(*args, **kwargs)
+        self.output_type.choices = output_add_choices()
 
 
 class OutputMod(FlaskForm):

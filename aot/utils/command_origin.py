@@ -46,13 +46,19 @@ logger = logging.getLogger(__name__)
 # 않는다(예: on_off_gpio 는 initialize() 안에서 GPIO.output() 을 그냥 호출한다).
 # 빈도는 낮은데 물리 상태를 바꾸므로, 안 남기면 "아무도 안 켰는데 켜져 있다" 가
 # 그대로 재현된다.
-AUDITED_TYPES = frozenset({'user', 'api', 'ai', 'unknown', 'lifecycle'})
+#
+# `sequence` 가 여기 있는 이유: 관수 시퀀스는 밸브를 열고 닫는다 — 물리적
+# 결과가 가장 큰 동작인데, 예전에는 출처를 안 심어 'unknown' 으로 남거나
+# 데몬 판정에 걸려 'automation' 으로 빠져 아예 안 남았다. 빈도로 보면 PID
+# (30초마다)와 달리 시간당 몇 건이라 관계형 테이블을 잠글 이유가 없다.
+AUDITED_TYPES = frozenset({'user', 'api', 'ai', 'unknown', 'lifecycle', 'sequence'})
 
 TYPE_UNKNOWN = 'unknown'
 TYPE_AUTOMATION = 'automation'
 TYPE_USER = 'user'
 TYPE_LIFECYCLE = 'lifecycle'
 TYPE_AI = 'ai'
+TYPE_SEQUENCE = 'sequence'
 
 ROLE_DAEMON = 'daemon'
 ROLE_WEB = 'web'
@@ -137,9 +143,33 @@ def resolve_origin():
         return {'type': TYPE_UNKNOWN, 'id': None, 'name': None}
 
 
+def normalize_origin(origin):
+    """어떤 형태로 들어오든 감사에 쓸 수 있는 dict 로 만든다.
+
+    dict 가 아닌 출처가 실제로 관측됐다(2026-08, 로컬 36건). 그대로 두면
+    `output_audit._flush_one` 이 `origin.get('type')` 에서 AttributeError 로 터지고
+    writer 가 그 항목을 통째로 버린다 — **"명령은 있었는데 기록이 없다" 는 감사
+    로그에서 가장 나쁜 실패다.** 기록이 빠진 걸 모르면 "기록이 없다 = 명령이
+    없었다" 로 잘못 읽게 된다.
+
+    형태가 이상해도 버리지 않고 문자열로 취해 남긴다. 어디서 온 값인지는
+    `_coerced` 로 표시해 두어, 나중에 원인을 추적할 수 있게 한다.
+    """
+    if isinstance(origin, dict):
+        return origin
+    if origin is None:
+        return {}
+    # 알 수 없는 형태다. 타입을 그대로 문자열로 쓰면 AUDITED_TYPES 에 없어서
+    # `should_audit` 이 False 를 돌려주고, 유실을 막으려던 것이 도로 걸러진다.
+    # 출처 불명은 이미 `unknown` 이 담당하므로 그것으로 다루고(감사 대상),
+    # 원래 값은 추적용으로 따로 보존한다.
+    return {'type': TYPE_UNKNOWN, 'id': None, 'name': None,
+            '_coerced': True, '_raw': str(origin)}
+
+
 def should_audit(origin):
     """이 출처를 관계형 감사로그에 남길 것인가."""
     try:
-        return (origin or {}).get('type', TYPE_UNKNOWN) in AUDITED_TYPES
+        return normalize_origin(origin).get('type', TYPE_UNKNOWN) in AUDITED_TYPES
     except Exception:
         return True  # 판단이 안 서면 남기는 쪽 (누락보다 과잉이 낫다)

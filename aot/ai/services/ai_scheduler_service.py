@@ -745,6 +745,9 @@ def _user_string_translation_job() -> None:
     with _flask_app.app_context():
         try:
             from aot.ai.services import user_string_translator as ust
+            # 수집(sync_sources)은 DB 만 읽으므로 AI 가 없어도 의미가 있다 —
+            # 관리 화면에서 사람이 채울 목록이 된다. 번역(run_batch)만 엔진을
+            # 요구하고, 없으면 그 안에서 조용히 반환한다.
             if not ust.is_enabled():
                 return
 

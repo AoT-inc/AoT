@@ -392,6 +392,36 @@ class TestNurseryFogGate:
         res = gate.evaluate(ctx, [fog])
         assert res.gate_mask & GATE_BIT_FOG_SUNBURN
         assert res.forced_commands[fog.actuator_id]['value'] == 0.0
+        # ⚠ 비트는 같아도 사유 문자열은 다르다. 광량 임계 잠금과 저녁 시간대
+        #   잠금을 같은 사유('nursery_fog_sunburn')로 뭉치면, 비 오는 밤에도
+        #   화면이 "햇빛에 잎이 델 수 있어 분무를 멈췄습니다" 를 낸다 — 실제로
+        #   그렇게 나갔다(2026-08-28 사용자 지적: 강우+저녁 차단이 겹친
+        #   사이클에서 "비가 와서 닫았다" 와 "햇빛에 델 수 있어 멈췄다" 가
+        #   한 카드에 나란히 떠 모순으로 읽혔다).
+        assert 'nursery_fog_evening' in res.description
+        assert 'nursery_fog_sunburn' not in res.description
+
+    def test_sunburn_lock_reports_the_sunburn_reason(self):
+        """광량 임계로 잠겼을 때는 반대로 sunburn 사유가 나가야 한다 —
+        저녁 사유로 뭉뚱그리면 대낮의 진짜 일소 경고가 사라진다."""
+        gate = SafetyPreGate(_nursery_cfg())
+        fog = make_fogger()
+        res = gate.evaluate(gate_ctx(light_est=600.0), [fog])
+        assert 'nursery_fog_sunburn' in res.description
+        assert 'nursery_fog_evening' not in res.description
+
+    def test_rain_and_evening_block_do_not_produce_a_sunburn_reason(self):
+        """강우 + 저녁 차단이 겹친 사이클에서 실제로 모순이 나갔다(2026-08-28
+        실측: 영양 코디네이터, 강우 27.6mm + 일몰 후)."""
+        gate = SafetyPreGate(_nursery_cfg(nursery_evening_fog=False))
+        fog = make_fogger()
+        ctx = gate_ctx(light_est=0.0, solar=0.0)   # 비 오는 밤 — 광량 0
+        ctx['external']['rain'] = 10.0
+        ctx['internal']['evening_block'] = True
+        res = gate.evaluate(ctx, [fog])
+        assert 'rain' in res.description
+        assert 'nursery_fog_evening' in res.description
+        assert 'nursery_fog_sunburn' not in res.description
 
     def test_evening_block_does_not_latch(self):
         """저녁 차단은 시간 기반이라 조건이 사라지면 즉시 풀린다.

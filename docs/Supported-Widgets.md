@@ -54,6 +54,11 @@ Displays the location of the selected device on a map. Highlights the operating 
 
 Displays and allows control of a PID Controller.
 
+### AoT Plot
+
+
+One plot at a glance: stage timeline, targets against current readings, trends, and accumulated heat. Edit its schedule, guidance and targets from here.
+
 ### AoT Timer
 
 - Libraries: timer

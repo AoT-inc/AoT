@@ -1281,7 +1281,8 @@ def settings_translations():
                            langs=sorted(langs),
                            status=status,
                            counts=counts,
-                           enabled=ust.is_enabled())
+                           enabled=ust.is_enabled(),
+                           can_auto=ust.can_auto_translate())
 
 
 @blueprint.route('/settings/translations/save', methods=['POST'])

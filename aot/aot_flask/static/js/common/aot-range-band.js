@@ -111,6 +111,82 @@
     return false;
   }
 
+  function _t(k) { return (window._ ? window._(k) : k); }
+
+  /* 이 코디네이터 시설에 등록된 액추에이터 종류. 함수당 한 번만 묻고
+   * 결과를 나눠 쓴다 — 구간이 여럿이면 같은 질문이 그만큼 반복된다. */
+  var KINDS = {};        // functionId → {list: [...] } | 'pending'
+
+  function _kindLabel(kind) {
+    var names = {shade: _t('shade screen'), lighting: _t('supplemental lights')};
+    return names[kind] || kind;
+  }
+
+  function _kindPurpose(kind) {
+    var names = {shade: _t('shading'), lighting: _t('supplemental light')};
+    return names[kind] || kind;
+  }
+
+  /* 이 구간이 장비를 요구하는 손잡이 수. 전부 없으면 설정 자체가 무의미하다. */
+  function declaredCount(el) {
+    var n = 0;
+    DRAG.forEach(function (k) { if ((el._requires || {})[k]) n++; });
+    return n;
+  }
+
+  /* 없는 장비 안내 — **한 줄**로 돌려준다.
+   *
+   * ⚠ 손잡이를 **위/아래로 부르지 말 것.** 트랙은 가로라 손잡이는 좌우인데,
+   *   설명은 트랙 **아래**에 있다 — "아래 값" 이 어느 것을 가리키는지 알 수
+   *   없다(2026-08-28 사용자 지적). 위치 대신 **하는 일**로 부른다(보광·차광).
+   *
+   * ⚠ 장비 이름 뒤에 조사를 붙이지 않는다. `{equipment}이(가)` 로 쓰면 화면에
+   *   그대로 나온다 — 한국어는 앞말 받침에 따라 갈리는데 번역 문자열은 그것을
+   *   모른다. 뒤에 낱말('설비가')을 두면 갈리지 않는다.
+   */
+  function inertNotice(el) {
+    var known = KINDS[el._functionId];
+    if (!known || known === 'pending' || !known.list) return null;
+    var kinds = [], purposes = [];
+    DRAG.forEach(function (k) {
+      var need = (el._requires || {})[k];
+      if (!need || known.list.indexOf(need) >= 0) return;
+      kinds.push(_kindLabel(need));
+      purposes.push(_kindPurpose(need));
+    });
+    if (!kinds.length) return null;
+    var all = kinds.length === declaredCount(el);
+    return {
+        all: all,
+        text: all
+          ? _t('No {equipment} is linked, so this setting takes no part in operation.')
+              .replace('{equipment}', kinds.join(' \u00b7 '))
+          : _t('No {equipment} is linked, so the {purpose} threshold takes no part in operation.')
+              .replace('{equipment}', kinds.join(' \u00b7 '))
+              .replace('{purpose}', purposes.join(' \u00b7 '))
+    };
+  }
+
+  function loadKinds(el) {
+    var fid = el._functionId;
+    if (!fid) return;
+    if (!el._requires || (!el._requires.guideMin && !el._requires.guideMax)) return;
+    if (KINDS[fid]) return;                       // 이미 물었다(또는 묻는 중)
+    KINDS[fid] = 'pending';
+    fetch('/api/aot/coordinator/' + encodeURIComponent(fid) + '/overview',
+          {cache: 'no-store', credentials: 'same-origin'})
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (d) {
+        var list = (d && d.facility && d.facility.actuator_kinds) || null;
+        // ⚠ 못 읽었으면 **빈 목록이 아니라 미지**로 둔다. 빈 목록으로 두면
+        //   조회 실패가 "장비가 하나도 없다" 로 둔갑해, 멀쩡한 설정에
+        //   "쓰이지 않습니다" 를 붙인다.
+        KINDS[fid] = list ? {list: list} : {};
+        render(el);
+      })
+      .catch(function () { KINDS[fid] = {}; });
+  }
+
   function render(el) {
     var v = values(el);
     var unit = el.getAttribute('data-unit') || '';
@@ -120,7 +196,9 @@
                     ? el._offMinLabel : (gs != null ? gs + unit : '?');
     var highTxt = isOff(el, 'guideMax', stored(el, 'guideMax'))
                     ? el._offMaxLabel : (ge != null ? ge + unit : '?');
-    var html = '<div class="aot-viz aot-viz--band aot-viz--range-band">';
+    var inert = inertNotice(el);
+    var html = '<div class="aot-viz aot-viz--band aot-viz--range-band' +
+               (inert && inert.all ? ' is-inert' : '') + '">';
     html += '<div class="aot-viz-head"><span class="aot-viz-label">' +
             esc(el._label) + '</span><span class="aot-viz-value">' +
             esc(lowTxt + ' ~ ' + highTxt) +
@@ -129,6 +207,12 @@
                  '</small>'
                : '') +
             '</span></div>';
+    // ⚠ **안내는 트랙 위다.** 아래에 두면 설명을 끝까지 읽어야 이 설정이
+    //   무의미하다는 것을 안다(2026-08-28 사용자 지적). 맨 먼저 말한다.
+    if (inert) {
+        html += '<div class="aot-modal-body-text aot-band-inert">' +
+                esc(inert.text) + '</div>';
+    }
     html += '<div class="aot-viz-track">';
     if (hs != null && he != null) {
       html += '<div class="aot-viz-ok aot-viz-ok--hard" style="left:' +
@@ -152,6 +236,16 @@
     html += '<div class="aot-viz-scale"><span>' + esc(el._min + unit) +
             '</span><span class="aot-viz-scale-note">' + esc(el._max + unit) +
             '</span></div>';
+    // 설명 — 눈금 입력(`aot-scale-input`)에는 처음부터 있었는데 구간 입력에는
+    // **자리가 없었다.** 그래서 [빛과 차광] 은 "설정을 안 한 것" 이 아니라
+    // **설명을 넣을 곳이 없던 것**이다(사용자 지적: *"설정한 범위에서 어떻게
+    // 작동하는지 설명도 없고"*). 온도·습도 구간도 같은 처지였다.
+    // 동작 설명은 **할 수 있는 일이 있을 때만** 보인다. 아무것도 못 하는
+    // 설정에 "이렇게 동작합니다" 를 세 줄 붙이면 읽는 사람을 속이는 것이다.
+    if (el._hint && !(inert && inert.all)) {
+        html += '<div class="aot-modal-body-text aot-scale-hint">' +
+                esc(el._hint) + '</div>';
+    }
     el._view.innerHTML = html + '</div>';
   }
 
@@ -200,6 +294,12 @@
     el._max = num(el.getAttribute('data-max'), 100);
     el._step = num(el.getAttribute('data-step'), 1) || 1;
     el._label = el.getAttribute('data-label') || '';
+    el._hint = el.getAttribute('data-hint') || '';
+    el._requires = {
+        guideMin: el.getAttribute('data-requires-min') || '',
+        guideMax: el.getAttribute('data-requires-max') || ''
+    };
+    el._functionId = el.getAttribute('data-function-id') || '';
     el._hardLabel = el.getAttribute('data-hard-label') || '';
     el._margin = num(el.getAttribute('data-margin'), 5);
     el._offAtMin = el.getAttribute('data-off-at-min') === '1';
@@ -266,6 +366,7 @@
       inp.addEventListener('input', run);
     });
     render(el);
+    loadKinds(el);      // 답이 오면 스스로 다시 그린다
   }
 
   function init(root) {

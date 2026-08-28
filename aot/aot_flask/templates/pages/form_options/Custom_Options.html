@@ -79,6 +79,10 @@
   <div class="aot-range-band"
        data-prefix="{{name_prefix}}"
        data-label="{{each_option['name']}}"
+       {#- 설명. 눈금 입력에는 처음부터 있었는데 구간 입력에는 자리가 없었다 —
+           그래서 [빛과 차광] 은 설명을 **안 넣은** 것이 아니라 **넣을 곳이
+           없었다**(2026-08-28 사용자 지적). -#}
+       data-hint="{{each_option.get('phrase', '')}}"
        {#- ⚠ JS 는 `data-hard-label` 로 읽는다. 예전에는 `data-guide-label` 을
            내보내고 있어서 그 라벨이 **늘 빈 문자열**이었다 — 에러 없이. -#}
        data-hard-label="{{each_option.get('hard_label', '')}}"
@@ -95,7 +99,12 @@
        data-hardmin="{{each_option.get('hard_min', '')}}"
        data-hardmax="{{each_option.get('hard_max', '')}}"
        data-guidemin="{{each_option.get('guide_min', '')}}"
-       data-guidemax="{{each_option.get('guide_max', '')}}"></div>
+       data-guidemax="{{each_option.get('guide_max', '')}}"
+       {#- 이 손잡이가 움직이는 장비 종류. 그 종류가 시설에 없으면 화면이
+           그렇게 말한다 — 없으면 무엇을 넣어도 아무 일이 안 일어난다. -#}
+       data-requires-min="{{each_option.get('requires_min', '')}}"
+       data-requires-max="{{each_option.get('requires_max', '')}}"
+       data-function-id="{{unique_id}}"></div>
 </div>
 
     {% elif each_option['type'] == 'scale_group' %}
@@ -591,21 +600,17 @@
 
     {% elif each_option['type'] == 'button' %}
 
-{#- ⚠ **버튼에는 라벨 칸을 두지 않는다** (설계문서 §3-6, 2026-08-27 구현).
-    버튼의 글자가 곧 그 이름이라, 왼쪽에 라벨을 또 두면 **같은 말이 한 줄에
-    두 번** 나온다 — 실제로 그랬다:
-
-        액추에이터 다시 불러오기 │ [액추에이터 다시 불러오기]
-        지금 실행               │ [지금 실행]
-        긴급 정지               │ [긴급 정지]
-
-    설명(`phrase`)은 버튼의 `title` 로 이미 간다. 라벨을 없애면 그 도움말
-    아이콘도 함께 사라지므로, 설명이 있으면 버튼 옆에 그대로 붙인다. -#}
+{#- 명령은 **다른 행과 같은 골격**이다 — 왼쪽에 이름, 오른쪽에 짧은 동사 버튼.
+    처음에는 라벨 칸을 없앴다(버튼 글자가 곧 이름이라 "액추에이터 다시 불러오기 │
+    [액추에이터 다시 불러오기]" 로 같은 말이 두 번 나왔다). 그런데 그러면 이 행만
+    골격이 달라 목록에서 튄다(2026-08-28 사용자 지적). 이름은 왼쪽 열에 두고
+    **버튼은 짧은 동사**(`button_label`, 기본 '실행')로 줄여 중복을 없앤다. -#}
 <div class="aot-modal-option-row aot-modal-option-row-button{% if each_option.get('advanced_only') %} aot-advanced-only{% endif %}"{% if each_option.get('depends_on') %} data-depends-on="{{name_prefix}}{{each_option['depends_on']}}"{% endif %}>
+  <label class="aot-modal-option-label" title="{{each_option.get('phrase', '')}}">{{each_option['name']}}{% if each_option.get('phrase') %}<span class="fas fa-info-circle aot-option-tip" aria-hidden="true"></span>{% endif %}</label>
   <div class="aot-modal-option-control">
-      <input onclick="return $(this).processRequest(this, 'custom_button_{{each_option['id']}}');" name="custom_button_{{each_option['id']}}" title="{{each_option['phrase']}}" class="btn aot-pill-btn aot-pill-btn-primary" type="button" value="{{each_option['name']}}"
+      <input onclick="return $(this).processRequest(this, 'custom_button_{{each_option['id']}}');" name="custom_button_{{each_option['id']}}" title="{{each_option.get('phrase', '')}}" class="btn aot-pill-btn aot-pill-btn-primary" type="button" value="{{each_option.get('button_label') or _('Execute')}}"
       {%- if 'disabled' in each_option and each_option['disabled'] %} disabled{% endif -%}
-      />{% if each_option.get('phrase') %}<span class="fas fa-info-circle aot-option-tip" title="{{each_option['phrase']}}" aria-hidden="true"></span>{% endif %}
+      />
   </div>
 </div>
 

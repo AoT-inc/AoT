@@ -9,6 +9,7 @@
    `action_type='output'` 은 폐기됐다. 껍데기를 벗기지 않으면 파라미터 상한도
    일일 한도도 공간 충돌도 전부 서버를 검사하며 헛돈다(SEC-001 이 이름만 남는다).
 """
+import logging
 from datetime import datetime, timedelta, timezone
 
 import pytest
@@ -148,12 +149,23 @@ def test_unwrapped_duration_is_actually_capped():
 
 
 def test_failure_is_logged_not_raised(monkeypatch, caplog):
-    """fail-open 은 유지하되, 조용히 죽지는 않는다(ERROR + 트레이스백)."""
+    """fail-open 은 유지하되, 조용히 죽지는 않는다(ERROR + 트레이스백).
+
+    caplog 는 루트 로거로 전파(propagate)된 레코드만 잡는다. 'aot' 로거는
+    configure_aot_file_logging() 이 (다른 테스트가 먼저 Flask 앱을 만들면서)
+    한 번이라도 실행되면 프로세스 전역에서 propagate=False 로 굳어버리므로,
+    테스트 순서에 따라 이 assert 가 조용히 실패할 수 있다. caplog 핸들러를
+    대상 로거에 직접 붙여 전파 여부와 무관하게 잡는다."""
     def _boom():
         raise RuntimeError('geo down')
     monkeypatch.setattr(SafetyService, '_active_plan_jobs', staticmethod(_boom))
 
-    with caplog.at_level('ERROR', logger=safety_service.__name__):
-        assert SafetyService._check_spatial_conflicts('output', 'dev-1') == []
+    logger = logging.getLogger(safety_service.__name__)
+    logger.addHandler(caplog.handler)
+    try:
+        with caplog.at_level('ERROR', logger=safety_service.__name__):
+            assert SafetyService._check_spatial_conflicts('output', 'dev-1') == []
+    finally:
+        logger.removeHandler(caplog.handler)
 
     assert any(r.levelname == 'ERROR' and r.exc_info for r in caplog.records)

@@ -19,62 +19,28 @@ from wtforms.validators import DataRequired
 from wtforms.widgets import NumberInput
 
 from aot.config_translations import TRANSLATIONS
-from aot.config import PATH_INPUTS_GIS
-from aot.aot_flask.utils.utils_general import generate_form_input_list
-from aot.utils.inputs import parse_input_information
+from aot.aot_flask.utils.utils_device_catalog import input_add_choices
 
 logger = logging.getLogger("aot.forms_input")
 
 
 class InputAdd(FlaskForm):
-    choices_builtin = []
-    choices_inputs = []
-    dict_inputs = parse_input_information()
-    list_inputs_sorted = generate_form_input_list(dict_inputs)
+    """입력 추가 드롭다운.
 
-    for each_input in list_inputs_sorted:
-        # Exclude input_gis from the list
-        if dict_inputs[each_input].get('file_path', '').startswith(PATH_INPUTS_GIS):
-            continue
-
-        is_aot = False
-        value = '{inp},'.format(inp=each_input)
-        if 'input_manufacturer' in dict_inputs[each_input] and dict_inputs[each_input]['input_manufacturer']:
-            name = '{manuf}: {name}'.format(
-                manuf=dict_inputs[each_input]['input_manufacturer'],
-                name=dict_inputs[each_input]['input_name'])
-            if dict_inputs[each_input]['input_manufacturer'] == "AoT":
-                is_aot = True
-        else:
-            name = dict_inputs[each_input]['input_name']
-
-        if ('measurements_name' in dict_inputs[each_input] and
-                dict_inputs[each_input]['measurements_name']):
-            name += ': {meas}'.format(meas=dict_inputs[each_input]['measurements_name'])
-
-        if ('input_library' in dict_inputs[each_input] and
-                dict_inputs[each_input]['input_library']):
-            name += ' ({lib})'.format(lib=dict_inputs[each_input]['input_library'])
-
-        if 'interfaces' in dict_inputs[each_input] and dict_inputs[each_input]['interfaces']:
-            for each_interface in dict_inputs[each_input]['interfaces']:
-                tmp_value = '{val}{int}'.format(val=value, int=each_interface)
-                tmp_name = '{name} [{int}]'.format(name=name, int=each_interface)
-                if is_aot:
-                    choices_builtin.append((tmp_value, tmp_name))
-                else:
-                    choices_inputs.append((tmp_value, tmp_name))
-        else:
-            if is_aot:
-                choices_builtin.append((value, name))
-            else:
-                choices_inputs.append((value, name))
-
+    선택지는 utils_device_catalog 가 optgroup + 검색 토큰까지 붙여서 만든다.
+    클래스 본문이 아니라 __init__ 에서 채우는 이유: 그룹 라벨과 측정명이
+    요청 언어로 번역되어야 하는데, 클래스 본문은 import 시점에 한 번만 돌기
+    때문에 맨 처음 요청의 언어로 고정돼 버린다.
+    """
     input_type = SelectField(
-        choices=choices_builtin + choices_inputs,
+        choices=[],
         validators=[DataRequired()]
     )
     input_add = SubmitField(lazy_gettext('Add'))
+
+    def __init__(self, *args, **kwargs):
+        super(InputAdd, self).__init__(*args, **kwargs)
+        self.input_type.choices = input_add_choices()
 
 
 class InputMod(FlaskForm):

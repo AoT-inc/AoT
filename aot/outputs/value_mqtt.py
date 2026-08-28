@@ -8,6 +8,7 @@ from flask_babel import lazy_gettext
 
 from aot.databases.models import OutputChannel
 from aot.outputs.base_output import AbstractOutput
+from aot.outputs.mqtt_publisher import PersistentMqttPublisher
 from aot.utils.constraints_pass import constraints_pass_positive_or_zero_value
 from aot.utils.database import db_retrieve_table_daemon
 from aot.utils.influx import add_measurements_influxdb
@@ -122,6 +123,25 @@ OUTPUT_INFORMATION = {
             'phrase': 'Password for connecting to the server.'
         },
         {
+            'id': 'mqtt_use_tls',
+            'type': 'bool',
+            'default_value': False,
+            'required': False,
+            'name': 'Use TLS',
+            'phrase': 'Encrypt the connection with TLS (broker port is usually 8883). '
+                      'Required when the broker is reachable over the internet.'
+        },
+        {
+            'id': 'mqtt_tls_ca_cert',
+            'type': 'text',
+            'default_value': '',
+            'required': False,
+            'name': lazy_gettext('TLS CA Certificate'),
+            'phrase': 'Path to the CA certificate file that signed the broker certificate. '
+                      'Leave blank to use the system CA store (for brokers with a '
+                      'publicly-trusted certificate, e.g. Let\'s Encrypt).'
+        },
+        {
             'id': 'mqtt_use_websockets',
             'type': 'bool',
             'default_value': False,
@@ -143,7 +163,7 @@ class OutputModule(AbstractOutput):
     def __init__(self, output, testing=False):
         super().__init__(output, testing=testing, name=__name__)
 
-        self.publish = None
+        self.publisher = None
 
         output_channels = db_retrieve_table_daemon(
             OutputChannel).filter(OutputChannel.output_id == self.output.unique_id).all()
@@ -151,55 +171,84 @@ class OutputModule(AbstractOutput):
             OUTPUT_INFORMATION['custom_channel_options'], output_channels)
 
     def initialize(self):
-        import paho.mqtt.publish as publish
-
-        self.publish = publish
 
         self.setup_output_variables(OUTPUT_INFORMATION)
+
+        self._start_publisher()
         self.output_setup = True
+
+    def _auth_dict(self):
+        if self.options_channels['login'][0]:
+            pwd = self.options_channels['password'][0] or None
+            return {"username": self.options_channels['username'][0], "password": pwd}
+        return None
+
+    def _start_publisher(self):
+        """Bring up the persistent publish client.
+
+        publish.single() 을 쓰지 않는 이유는 mqtt_publisher.py 의 설명 참고 —
+        요약하면 자체 타임아웃이 없어 브로커가 CONNACK 를 주지 않는 오설정에서
+        출력 컨트롤러 스레드가 영구 블로킹된다."""
+        self.publisher = PersistentMqttPublisher(
+            self.logger,
+            self.options_channels['hostname'][0],
+            self.options_channels['port'][0],
+            self.options_channels['clientid'][0],
+            keepalive=self.options_channels['keepalive'][0],
+            auth=self._auth_dict(),
+            tls=self._tls_dict(),
+            transport='websockets' if self.options_channels['mqtt_use_websockets'][0] else 'tcp')
+        self.publisher.start()
+
+    def _tls_dict(self):
+        """TLS settings for paho's publish helper, or None for a plaintext connection.
+
+        ca_certs=None makes paho fall back to the system CA store, which is what
+        a publicly-trusted broker certificate needs. A private/self-signed broker
+        needs its CA file given explicitly."""
+        if not self.options_channels.get('mqtt_use_tls', {}).get(0):
+            return None
+        return {"ca_certs": self.options_channels.get('mqtt_tls_ca_cert', {}).get(0) or None}
 
     def output_switch(self, state, output_type=None, amount=None, output_channel=0):
         measure_dict = copy.deepcopy(measurements_dict)
 
         try:
-            auth_dict = None
-            if self.options_channels['login'][0]:
-                if not self.options_channels['password'][0]:
-                    self.options_channels['password'][0] = None
-                auth_dict = {
-                    "username": self.options_channels['username'][0],
-                    "password": self.options_channels['password'][0]
-                }
-
             if state == 'on' and amount is not None:
-                self.publish.single(
-                    self.options_channels['topic'][0],
-                    amount,
-                    hostname=self.options_channels['hostname'][0],
-                    port=self.options_channels['port'][0],
-                    client_id=self.options_channels['clientid'][0],
-                    keepalive=self.options_channels['keepalive'][0],
-                    auth=auth_dict,
-                    transport='websockets' if self.options_channels['mqtt_use_websockets'][0] else 'tcp')
-                self.output_states[output_channel] = amount
-                measure_dict[0]['value'] = amount
+                value = amount
+                new_state = amount
             elif state == 'off':
-                self.publish.single(
-                    self.options_channels['topic'][0],
-                    payload=self.options_channels['off_value'][0],
-                    hostname=self.options_channels['hostname'][0],
-                    port=self.options_channels['port'][0],
-                    client_id=self.options_channels['clientid'][0],
-                    keepalive=self.options_channels['keepalive'][0],
-                    auth=auth_dict,
-                    transport='websockets' if self.options_channels['mqtt_use_websockets'][0] else 'tcp')
-                self.output_states[output_channel] = False
-                measure_dict[0]['value'] = self.options_channels['off_value'][0]
+                value = self.options_channels['off_value'][0]
+                new_state = False
+            else:
+                return
+
+            if self.publisher is None:
+                self.logger.error("Publisher not set up; cannot publish")
+                return
+
+            # 발행에 실패했으면 상태도 측정값도 남기지 않는다 — 나가지 않은
+            # 명령을 기록하면 이후 판단이 전부 어긋난다.
+            if not self.publisher.publish(self.options_channels['topic'][0], value):
+                return
+
+            self.output_states[output_channel] = new_state
+            measure_dict[0]['value'] = value
         except Exception as e:
             self.logger.error("State change error: {}".format(e))
             return
 
         add_measurements_influxdb(self.unique_id, measure_dict)
+
+    def stop_output(self):
+        """Called when Output is stopped.
+
+        이 드라이버는 종료 상태를 발행하지 않는다(원래 동작). 다만 지속 연결
+        발행기는 정리해야 백그라운드 네트워크 스레드가 남지 않는다."""
+        if self.publisher is not None:
+            self.publisher.stop()
+            self.publisher = None
+        self.running = False
 
     def is_on(self, output_channel=0):
         if self.is_setup():

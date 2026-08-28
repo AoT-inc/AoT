@@ -181,9 +181,11 @@ class TestItSpeaksWhenNothingIsRunning:
           맨 위에 있던 시절에는 필요했다(2026-08-27 자리 이동).
         """
         js = _read('aot_flask', 'static', 'js', 'common', 'aot-env-status.js')
+        # '응답 없음' → '멈춘 것 같음' 으로 고쳤다(2026-08-28). "응답이 없다" 는
+        # 통신 문제로 읽히는데, 실제 뜻은 **그 시간 동안 판단이 없었다** 다.
         for needle in ('No integrated environment control is linked',
                        'Control is switched off',
-                       'Not responding'):
+                       'Control seems stopped'):
             assert needle in js, '%r 상태를 말하지 않는다' % needle
 
 
@@ -242,3 +244,75 @@ def test_no_ui_string_carries_a_double_quote():
     js = _read('aot_flask', 'static', 'js', 'common', 'aot-env-status.js')
     for m in re.findall(r"_t\('((?:[^'\\]|\\.)+)'\)", js):
         assert '"' not in m, m
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 데이터에 따라 달라지는 문구
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 데이터에 따라 달라지는 문구
+# ─────────────────────────────────────────────────────────────────────────────
+
+class TestDynamicTextIsHonest:
+    """옵션·시설 데이터에 따라 달라지는 문구는 **틀리기 쉽고 조용하다.**
+
+    늘 나오는 문구는 눈에 띄지만, 조건이 맞아야 나오는 문구는 그 조건을 만난
+    사람만 본다 — 그리고 그 사람은 대개 뭔가 잘못된 상황에 있다.
+    """
+
+    def _js(self, name):
+        return _read('aot_flask', 'static', 'js', 'common', name)
+
+    def test_the_stale_line_names_the_real_threshold(self):
+        """"최근 몇 분간" 은 거짓이다 — 기준은 `max(300초, 제어주기×3)` 이라
+        10분 주기 코디네이터에서는 **30분**이다. 뭉뚱그리면 사용자가 3분 뒤에
+        다시 보고 "여전히 멈춰 있다" 고 판단한다. 제어가 살아 있는지를 말하는
+        가장 중요한 줄이라 여기서 모호하면 안 된다.
+        """
+        js = self._js('aot-env-status.js')
+        assert 'stale_after_s' in js, '서버가 보낸 실제 기준을 쓰지 않습니다'
+        assert 'last few minutes' not in js, '뭉뚱그리는 옛 문구가 남아 있습니다'
+        assert "'stale_after_s'" in _read('aot_flask', 'routes_geo_iec.py'), \
+            '서버가 기준을 보내지 않습니다'
+
+    def test_every_actuator_kind_has_a_label(self):
+        """명부에 없는 종류는 **영어 원문 그대로** 나온다("circulation_fan 30%").
+        조용하고, 그 종류를 가진 시설에서만 보인다."""
+        block = re.search(
+            r'ACTUATOR_DOMAIN = \{(.*?)\}',
+            _read('functions', 'utils', 'env_control', 'types.py'), re.S).group(1)
+        kinds = set(re.findall(r"'([a-z_0-9]+)':", block))
+        labels = set(re.findall(
+            r'([a-z_0-9]+):',
+            self._js('aot-env-status.js').split('var KIND_LABEL = {', 1)[1]
+                .split('};', 1)[0]))
+        assert kinds - labels == set(), (
+            'KIND_LABEL 에 이름이 없는 종류: ' + str(sorted(kinds - labels)))
+
+    def test_an_unmatched_scale_group_says_where_to_look(self):
+        """'사용자 지정' 만 띄우면 막다른 길이다 — 손잡이도 안 켜지고 값도 안
+        보이는데, 세부 옵션은 [고급 설정] 안에 숨어 있다."""
+        body = self._js('aot-scale-input.js') \
+            .split('function renderGroup', 1)[1].split('\n  function ', 1)[0]
+        assert 'idx < 0' in body
+        assert 'Advanced' in body, '어디를 봐야 하는지 말하지 않습니다'
+
+    def test_the_header_speaks_for_this_coordinator_not_the_facility(self):
+        """시설 요약은 코디네이터가 여럿이면 **활성 우선**으로 하나를 고른다.
+
+        그래서 한 시설을 가리키는 코디네이터가 둘이면, **꺼져 있는 쪽의 설정
+        창이 켜져 있는 쪽의 상태를 자기 것처럼** 보여 준다 — 2026-08-28 실측:
+        비활성 코디네이터가 "현재 9분 전" 을 띄웠다. 설정 창은 시설이 아니라
+        **이 코디네이터**를 말해야 한다.
+        """
+        src = _read('aot_flask', 'routes_geo_iec.py')
+        body = src.split('def api_coordinator_overview', 1)[1].split('\n@', 1)[0]
+        assert "reported != function_uuid" in body, (
+            '시설 대표 코디네이터의 상태를 그대로 내보냅니다')
+        assert "'other_coordinator'" in body, (
+            '실제로 도는 쪽을 알려 주지 않으면 "왜 꺼져 있나" 에 답이 없습니다')
+
+        js = _read('aot_flask', 'static', 'js', 'common', 'aot-env-status.js')
+        assert 'other_coordinator' in js, '화면이 그 사실을 쓰지 않습니다'

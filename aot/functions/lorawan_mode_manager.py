@@ -451,11 +451,6 @@ class ModeOpts:
     link_snr_min: int = -10
 
 
-def _is_daytime(now_hour: int, s: int, e: int) -> bool:
-    if s <= e:
-        return s <= now_hour < e
-    return (now_hour >= s) or (now_hour < e)
-
 def _is_daytime_minutes(now_minute: int, s_hour: int, e_hour: int) -> bool:
     start = (s_hour % 24) * 60
     end = (e_hour % 24) * 60

@@ -139,6 +139,19 @@ class TestCatalogCollision(unittest.TestCase):
         # 카탈로그 로드가 조용히 실패하면 위의 두 검사가 무의미해진다.
         self.assertGreater(len(ust.catalog_terms('ko')), 100)
 
+    def test_english_falls_back_to_source_msgids(self):
+        """영어는 원문이라 translations/en 이 없다 — 가드가 꺼지면 안 된다.
+
+        그대로 두면 영어 화면에서만 이 검사가 통째로 무력해져, 사용자가 장치를
+        "Temperature" 라고 지었을 때 같은 시스템 문구까지 번역기가 건드린다.
+        msgid 는 어느 로케일에서 읽어도 같은 영어 원문이므로 그것으로 채운다.
+        """
+        self.assertGreater(len(ust.catalog_terms('en')), 100)
+        self.assertTrue(ust.collides_with_catalog('Temperature', 'en'))
+        # 사용자 고유 이름은 여전히 통과해야 한다 — 가드가 과하게 잡으면
+        # 번역할 것이 없어진다.
+        self.assertFalse(ust.collides_with_catalog('1번 하우스 동편', 'en'))
+
 
 class TestResponseParsing(unittest.TestCase):
     """엔진 응답은 믿지 않는다. 어긋나면 저장하지 않는다."""
@@ -191,6 +204,43 @@ class TestSourceRegistry(unittest.TestCase):
         listed = {name for name, _f, _d in ust.SOURCE_SPECS}
         self.assertEqual(listed & forbidden, set())
 
+
+
+class TestGeoProgramStrings(unittest.TestCase):
+    """관리 프로그램의 이름은 JSON 컬럼 안에 있다 — 레지스트리로는 안 잡힌다.
+
+    단계 이름("육묘" "정식" "개화")은 프로그램 화면에서 가장 자주 보이는
+    사용자 문자열인데 `stages` JSON 안에 들어 있어, 모델·컬럼 레지스트리만으로는
+    통째로 빠진다.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        path = os.path.join(os.path.dirname(__file__), '..', 'ai', 'services',
+                            'user_string_translator.py')
+        with open(path, encoding='utf-8') as fh:
+            cls.source = fh.read()
+
+    def test_extractor_is_wired_into_collection(self):
+        # 함수만 있고 부르지 않으면 조용히 아무 일도 하지 않는다.
+        body = self.source.split('def collect_source_strings()')[1]
+        self.assertIn('_geoprogram_strings()', body)
+
+    def test_role_identifiers_are_not_collected(self):
+        """resource_defs[].role 은 'irrigation' 같은 식별자다 — 코드가 이 값으로
+        함수를 찾으므로 번역하면 연결이 끊긴다."""
+        fn = self.source.split('def _geoprogram_strings')[1] \
+                        .split('def collect_source_strings')[0]
+        self.assertNotIn("resource_defs", fn.split('"""')[2])
+
+    def test_long_form_fields_are_not_collected(self):
+        """guidance·notes 는 문단이다 — 완전 일치 치환에 맞지 않고 길이 상한에도
+        걸린다. 넣으려면 별도 설계가 필요하다."""
+        fn = self.source.split('def _geoprogram_strings')[1] \
+                        .split('def collect_source_strings')[0]
+        code = fn.split('"""')[2]
+        self.assertNotIn("'guidance'", code)
+        self.assertNotIn("'notes'", code)
 
 
 class TestFormSafety(unittest.TestCase):
@@ -345,6 +395,81 @@ class TestDatabaseRoundTrip(unittest.TestCase):
         db.session.commit()
 
         self.assertNotEqual(before, ust.catalog_fingerprint('ja'))
+
+    def test_program_stage_names_are_collected(self):
+        """단계 이름은 stages JSON 안에 있다 — 화면에서 가장 자주 보인다."""
+        from aot.aot_flask.extensions import db
+        from aot.databases.models import GeoProgram
+
+        prog = GeoProgram(
+            unique_id='test-prog-ust', name='콩 재배', subject='콩',
+            stages=[{'key': 'stage_1', 'name': '육묘', 'days': 20},
+                    {'key': 'stage_2', 'name': '녹협', 'days': 15}],
+            target_defs=[{'key': 'custom_ec', 'label': '배양액 농도',
+                          'unit': 'dS/m'}],
+            resource_defs=[{'role': 'irrigation', 'default': True}])
+        db.session.add(prog)
+        db.session.commit()
+
+        try:
+            sources = ust.collect_source_strings()
+            self.assertIn('육묘', sources)
+            self.assertIn('녹협', sources)
+            self.assertEqual(sources['육묘'], 'program')
+            # 사용자가 만든 목표 항목의 라벨도 화면에 보인다.
+            self.assertIn('배양액 농도', sources)
+            self.assertEqual(sources['배양액 농도'], 'measurement')
+            # 역할 식별자는 코드가 함수를 찾는 데 쓴다 — 번역하면 끊긴다.
+            self.assertNotIn('irrigation', sources)
+        finally:
+            GeoProgram.query.filter_by(unique_id='test-prog-ust').delete()
+            db.session.commit()
+
+    def test_program_json_survives_string_columns(self):
+        """JSON 이 문자열로 저장된 설치에서도 읽어야 한다(SQLite 는 둘 다 온다)."""
+        import json as _json
+        from aot.aot_flask.extensions import db
+        from aot.databases.models import GeoProgram
+
+        prog = GeoProgram(unique_id='test-prog-ust2', name='p', subject='s',
+                          stages=[])
+        db.session.add(prog)
+        db.session.commit()
+        db.session.execute(db.text(
+            "UPDATE geo_program SET stages = :v WHERE unique_id = :u"),
+            {'v': _json.dumps([{'key': 'k', 'name': '문자열단계'}]),
+             'u': 'test-prog-ust2'})
+        db.session.commit()
+
+        try:
+            self.assertIn('문자열단계', ust.collect_source_strings())
+        finally:
+            GeoProgram.query.filter_by(unique_id='test-prog-ust2').delete()
+            db.session.commit()
+
+    def test_malformed_program_json_does_not_break_collection(self):
+        """망가진 JSON 하나가 전체 수집을 멈추면 안 된다."""
+        from aot.aot_flask.extensions import db
+        from aot.databases.models import GeoProgram, Input
+
+        prog = GeoProgram(unique_id='test-prog-ust3', name='p', subject='s',
+                          stages=[])
+        db.session.add(prog)
+        probe = Input(name='정상 장치 이름', unique_id='test-input-ust3')
+        db.session.add(probe)
+        db.session.commit()
+        db.session.execute(db.text(
+            "UPDATE geo_program SET stages = :v WHERE unique_id = :u"),
+            {'v': 'not json at all', 'u': 'test-prog-ust3'})
+        db.session.commit()
+
+        try:
+            sources = ust.collect_source_strings()
+            self.assertIn('정상 장치 이름', sources)
+        finally:
+            GeoProgram.query.filter_by(unique_id='test-prog-ust3').delete()
+            Input.query.filter_by(unique_id='test-input-ust3').delete()
+            db.session.commit()
 
     def test_translation_never_writes_back_to_source_models(self):
         """번역이 원본 이름을 건드리지 않는다 — 이 기능의 제1 원칙."""

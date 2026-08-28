@@ -273,3 +273,189 @@ class TestTheAdvancedToggleMatchesTheRealOne:
         assert 'btn-toggle-slider"><div class="btn-toggle-thumb"' in js, (
             '손잡이가 슬라이더 안에 없다')
 
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 구간 입력(range band) — 설명과 "없는 장비" 안내
+# ─────────────────────────────────────────────────────────────────────────────
+
+class TestEveryBandExplainsItself:
+    """구간 입력에는 **설명 자리가 아예 없었다.**
+
+    눈금 입력(`aot-scale-input`)은 처음부터 `phrase` 를 가졌는데 구간은 안
+    가졌다. 그래서 [빛과 차광] 은 설명을 **안 넣은** 것이 아니라 **넣을 곳이
+    없었다** — 사용자는 "설정한 범위에서 어떻게 작동하는지 설명도 없고, 기본값도
+    0~1200 인데 어떻게 한다는 건지 나도 모르겠다" 고 했다(2026-08-28).
+
+    그 값은 범위가 아니라 **기준선 둘**이다. 아래로 벗어나면 보광·개방, 위로
+    벗어나면 차광, 사이에서는 아무것도 하지 않는다.
+    """
+
+    def test_every_band_has_a_phrase(self):
+        info = _fi()
+        for band in info._RANGE_BANDS:
+            assert band.get('phrase'), (
+                f"{band['id']} 구간에 설명이 없습니다 — 손잡이 둘이 무엇을 "
+                f"뜻하는지 화면에서 알 방법이 없습니다")
+
+    def test_the_template_passes_the_phrase(self):
+        tpl = _read('aot_flask', 'templates', 'pages', 'form_options',
+                    'Custom_Options.html')
+        band = tpl.split("== 'range_band'", 1)[1].split('{% elif', 1)[0]
+        assert 'data-hint=' in band, '설명을 markup 으로 내보내지 않습니다'
+        assert "each_option.get('phrase'" in band
+
+    def test_the_script_reads_the_phrase(self):
+        """`data-hard-label` 이 정확히 이 모양으로 죽어 있었다 — 템플릿은
+        `data-guide-label` 을 내보내고 JS 는 `data-hard-label` 을 읽어, 그
+        라벨이 **늘 빈 문자열**이었다(에러 없이). 이름이 어긋나면 조용하다."""
+        js = _read('aot_flask', 'static', 'js', 'common', 'aot-range-band.js')
+        assert "getAttribute('data-hint')" in js
+        assert '_hint' in js
+
+
+class TestInertHandlesSaySo:
+    """움직일 장비가 없는 손잡이는 그렇게 말해야 한다.
+
+    2026-08-28 실측: 세 시설 모두 `shade`(차광막)도 `lighting`(보광등)도 등록돼
+    있지 않았다. 그런데도 [차광·보광 기준] 은 평범하게 보였다 — 무엇을 넣어도
+    아무 일이 일어나지 않는데 화면은 아무 말이 없었다.
+
+    (영양의 '보온커튼'은 `curtain` 이라 해당하지 않는다. 사용자는 아주 강한
+    일사일 때만 **수동으로** 쓴다 — 자동 차광용으로 재분류하면 코디네이터가
+    멋대로 닫는다.)
+    """
+
+    def test_the_light_band_declares_what_it_needs(self):
+        info = _fi()
+        band = [b for b in info._RANGE_BANDS if b['id'] == 'light'][0]
+        assert band.get('requires_min') == 'lighting'
+        assert band.get('requires_max') == 'shade'
+
+    def test_the_template_passes_it_with_the_function_id(self):
+        tpl = _read('aot_flask', 'templates', 'pages', 'form_options',
+                    'Custom_Options.html')
+        band = tpl.split("== 'range_band'", 1)[1].split('{% elif', 1)[0]
+        for attr in ('data-requires-min', 'data-requires-max', 'data-function-id'):
+            assert attr in band, f'{attr} 를 내보내지 않습니다'
+
+    def test_the_endpoint_reports_actuator_kinds(self):
+        """출처는 코디네이터가 쓰는 것과 **같아야 한다**.
+
+        `env.summary.commands` 로 대신하면 "이번 사이클에 명령을 받은 것" 만
+        보이므로, 아직 한 번도 안 돈 코디네이터에서는 전부 없다고 말한다.
+        """
+        src = _read('aot_flask', 'routes_geo_iec.py')
+        block = src.split('def api_coordinator_overview', 1)[1].split('\n@', 1)[0]
+        assert "'actuator_kinds'" in block
+        assert 'actuators_resolved' in block, (
+            '코디네이터와 다른 출처를 씁니다')
+
+    def test_a_failed_lookup_is_unknown_not_empty(self):
+        """조회 실패를 빈 목록으로 두면 **"장비가 하나도 없다" 로 둔갑**해,
+        멀쩡한 설정에 "쓰이지 않습니다" 를 붙인다."""
+        js = _read('aot_flask', 'static', 'js', 'common', 'aot-range-band.js')
+        body = js.split('function loadKinds', 1)[1].split('\n  function ', 1)[0]
+        assert 'list ? {list: list} : {}' in body, (
+            '조회 실패와 "장비 없음" 이 구분되지 않습니다')
+        assert 'known.list' in js, '미지 상태에서 안내를 내면 안 됩니다'
+
+
+class TestLadderVocabularyIsConsistent:
+    """한 사다리는 말투가 하나여야 읽힌다.
+
+    `Standard`·`Strong` 같은 흔한 낱말을 쓰면 카탈로그에 이미 있는 다른 문맥의
+    번역이 붙는다 — 실제로 분무 사다리가 `약하게 · 표준 · 강함 · 아주 강하게`
+    로 나왔다(2026-08-28). 값은 맞는데 말투만 어긋나서, 화면을 봐야만 안다.
+    """
+
+    def test_no_step_label_repeats_inside_a_group(self):
+        info = _fi()
+        for group in info._SCALE_GROUPS:
+            labels = [str(s[0]) for s in group['steps']]
+            assert len(labels) == len(set(labels)), f"{group['id']} 단계 이름 중복"
+
+    def test_the_misting_ladder_goes_up_in_frequency(self):
+        info = _fi()
+        g = [x for x in info._SCALE_GROUPS if x['id'] == 'misting_care'][0]
+        assert len(g['steps']) == 5
+        assert str(g['steps'][0][0]) == 'Not used', '첫 칸은 끄는 칸이다'
+        # 오른쪽으로 갈수록 **더 자주** 돌아야 한다 — 축 라벨이 그렇게 말한다.
+        on = [s[1].get('nursery_max_on_sec') for s in g['steps'][1:]]
+        assert on == sorted(on), f'1회 작동 시간이 단조 증가하지 않습니다: {on}'
+        off = [s[1].get('nursery_min_off_sec') for s in g['steps'][1:]]
+        assert off == sorted(off, reverse=True), f'쉬는 시간이 단조 감소하지 않습니다: {off}'
+
+    def test_misting_is_never_called_a_strength(self):
+        """관수·분무 밸브는 거의 전부 **on/off 제어**라 PWM 이 안 된다 — 물살을
+        줄일 방법이 없다. 조절할 수 있는 것은 작동 시간과 빈도뿐이라 '세기' 는
+        물리적으로 틀린 말이다(사용자 지적, 2026-08-28). 한 번 그렇게 붙였다가
+        고쳤고, `nursery_max_on_sec` 의 설명은 처음부터 옳게 적혀 있었는데
+        그룹 이름만 어긋나 있었다."""
+        info = _fi()
+        g = [x for x in info._SCALE_GROUPS if x['id'] == 'misting_care'][0]
+        text = (str(g['name']) + ' ' + str(g.get('phrase') or '')).lower()
+        for bad in ('strength', 'how much water', 'intensity'):
+            assert bad not in text, f'분무를 세기로 설명합니다: {bad!r}'
+        assert 'frequen' in text, '빈도로 설명하지 않습니다'
+
+    def test_the_leftmost_vent_step_matches_the_axis(self):
+        """축 왼쪽 끝이 "목표를 바짝 쫓음" 인데 가장 왼쪽 칸이 '표준' 이었다 —
+        없는 선택지를 약속했다."""
+        info = _fi()
+        g = [x for x in info._SCALE_GROUPS if x['id'] == 'vent_economy'][0]
+        assert str(g['steps'][0][0]) == 'High performance'
+        assert str(g['steps'][-1][0]) == 'Energy saving'
+
+
+class TestBandTextDoesNotUsePositions:
+    """트랙은 **가로**인데 설명은 트랙 **아래**에 있다.
+
+    그래서 "아래 값" 이 어느 것을 가리키는지 알 수 없다 — 왼쪽 손잡이인지,
+    설명 아래의 숫자 칸인지(사용자 지적, 2026-08-28). 손잡이는 위치가 아니라
+    **하는 일**이나 **구간과의 관계**로 부른다.
+    """
+
+    POSITIONAL = ('lower value', 'upper value', 'the limits below',
+                  'the value below', 'value above this')
+
+    def test_no_band_phrase_names_a_position(self):
+        info = _fi()
+        for band in info._RANGE_BANDS:
+            text = str(band.get('phrase') or '').lower()
+            for bad in self.POSITIONAL:
+                assert bad not in text, (
+                    f"{band['id']} 설명이 위치로 가리킵니다: {bad!r}")
+
+    def test_the_inert_notice_names_the_purpose_not_the_side(self):
+        js = _read('aot_flask', 'static', 'js', 'common', 'aot-range-band.js')
+        body = js.split('function inertNotice', 1)[1].split('\n  function ', 1)[0]
+        assert '_kindPurpose' in body, '하는 일(보광·차광)로 부르지 않습니다'
+        for bad in ("_t('lower')", "_t('upper')"):
+            assert bad not in js, f'위치 낱말이 남아 있습니다: {bad}'
+
+
+class TestTheInertNoticeComesFirst:
+    """설명 끝에 두면 **끝까지 읽어야** 이 설정이 무의미하다는 것을 안다.
+
+    사용자 지적(2026-08-28): *"결국 이 시설에는 아무 설비가 없기 때문에 이
+    옵션은 무의미한건데, 사용자가 끝까지 읽어야 알 수 있음."*
+    """
+
+    def _render_body(self):
+        js = _read('aot_flask', 'static', 'js', 'common', 'aot-range-band.js')
+        return js.split('function render(el)', 1)[1].split('\n  /*', 1)[0]
+
+    def test_the_notice_is_emitted_before_the_track(self):
+        body = self._render_body()
+        notice = body.find('aot-band-inert')
+        track = body.find("'<div class=\"aot-viz-track\">'")
+        assert notice > 0 and track > 0
+        assert notice < track, (
+            '안내가 트랙 뒤에 나옵니다 — 맨 먼저 말해야 합니다')
+
+    def test_the_how_it_works_text_is_dropped_when_nothing_can_act(self):
+        """아무것도 못 하는 설정에 "이렇게 동작합니다" 를 붙이면 속이는 것이다."""
+        body = self._render_body()
+        assert 'inert && inert.all' in body, (
+            '전부 무의미할 때도 동작 설명을 그대로 보여 줍니다')

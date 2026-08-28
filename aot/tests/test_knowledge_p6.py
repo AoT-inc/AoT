@@ -347,6 +347,14 @@ class TestKnowledgeP6(unittest.TestCase):
         out = AIAgentService._enforce_unconfirmed_disclosure(insight, mref)
         self.assertEqual(out, insight)
 
+    def test_disclosure_ignores_shelving_metadata_in_the_header(self):
+        """헤더 괄호(비치 경위·날짜)는 인용 대상이 아니다. 그 안의 날짜
+        숫자는 미확인 블록에만 있으므로, 그냥 두면 '24일'을 말한 무관한
+        답변이 고유 숫자 일치로 계산된다."""
+        from aot.ai.services.ai_agent_service import AIAgentService
+        insight = '자율 주행 대화 기록은 2026년 8월 24일 자로 정리해 두었습니다.'
+        out = AIAgentService._enforce_unconfirmed_disclosure(insight, self._MREF_PIPE)
+        self.assertEqual(out, insight)
 
 if __name__ == '__main__':
     unittest.main()

@@ -509,7 +509,11 @@
                     };
                     _instRefresh._refreshMeasurementPanel = function (newMeasurementsMap) {
                         var iv = (vars && vars.vars) || {};
-                        iv.measurements_map = newMeasurementsMap || {};
+                        // 인자 없이 부르는 호출(예: show_measurement_panel 마스터
+                        // 스위치 라이브 적용)도 있다 — 그때는 측정값 선택을 건드리지
+                        // 않는다. `|| {}` 로 무조건 덮으면 그 호출이 현재 선택을
+                        // 지워 버린다.
+                        if (newMeasurementsMap != null) iv.measurements_map = newMeasurementsMap;
                         var inst = window.AoTWidgetInstances[uniqueId];
                         if (!inst) return;
                         if (inst.panelRefreshTimer) { clearInterval(inst.panelRefreshTimer); inst.panelRefreshTimer = null; }
@@ -11853,6 +11857,14 @@
             return;
         }
         const innerVars = (vars && vars.vars) || {};
+        // 마스터 스위치 — 기본값 true(예전 동작 그대로). 꺼져 있으면 아래에서
+        // 만들 것 자체를 만들지 않는다(선택을 비우는 것과 달리, 다시 켜면
+        // 고르던 항목이 그대로 돌아온다). 초기 로드·라이브 재적용
+        // (_refreshMeasurementPanel) 둘 다 이 함수를 거치므로 여기 한 곳만
+        // 지키면 된다.
+        if (innerVars.show_measurement_panel === false || innerVars.show_measurement_panel === 'false') {
+            return;
+        }
         const panelMeasurements = buildPanelMeasurements(innerVars.measurements_map, vars.devices);
         // No early return on empty: the panel also hosts the facility control
         // summary row (setSummary), which must work without user measurements.

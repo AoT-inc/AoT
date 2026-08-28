@@ -118,10 +118,27 @@
     var env = d.env || {};
     var fn = env.function;
     if (!fn) return line(_t('No integrated environment control is linked to this facility.'));
-    if (!fn.active) return line(_t('Control is switched off.'));
+    if (!fn.active) {
+      var other = env.other_coordinator;
+      // 같은 시설을 가리키는 코디네이터가 둘일 때 — 왜 꺼져 있는데 시설은
+      // 돌고 있는지 답이 없으면 사용자가 스위치를 찾아 헤맨다.
+      if (other && other.name) {
+        return line(_t('Control is switched off. This facility is run by: {name}')
+                    .replace('{name}', other.name));
+      }
+      return line(_t('Control is switched off.'));
+    }
     if (env.stale) {
       // ⚠ "응답 없음" 과 "꺼짐" 은 다른 사실이다. 뭉치면 스위치를 찾아 헤맨다.
-      return line(_t('Not responding — no decision in the last few minutes.'));
+      // ⚠ **"몇 분" 이라고 말하지 말 것.** 기준은 `max(300초, 제어주기×3)` 이라
+      //   10분 주기 코디네이터에서는 30분이다 — 뭉뚱그리면 사용자가 3분 뒤에
+      //   다시 보고 "여전히 멈춰 있다" 고 판단한다. 서버가 보낸 실제 기준을 쓴다.
+      var after = Number(env.stale_after_s);
+      if (isFinite(after) && after > 0) {
+        return line(_t('Control seems stopped — no decision for over {n} min.')
+                    .replace('{n}', String(Math.round(after / 60))));
+      }
+      return line(_t('Control seems stopped — no recent decision.'));
     }
     var s = env.summary || {};
     var dev = s.deviation || {}, tg = s.targets || {}, parts = [];
@@ -138,7 +155,7 @@
     });
     if (env.last_cycle_ts) parts.push(ago(env.last_cycle_ts));
     return parts.length ? compact(_t('Now'), parts)
-                        : line(_t('No cycle to report yet.'));
+                        : line(_t('Has not run a cycle yet.'));
   }
 
 

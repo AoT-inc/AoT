@@ -180,7 +180,7 @@
           </div>
           <div class="aot-modal-option-control">
             <label class="btn-toggle mb-0">
-              <input type="checkbox" class="btn-toggle-input" id="user_string_translation_enabled" name="user_string_translation_enabled" title="{{_('Names you typed in yourself — device, zone and crop names — stay in the language you wrote them in. Turn this on to have them shown in the interface language as well. The stored names are never changed.')}}"{% if ai_settings and ai_settings.user_string_translation_enabled %} checked{% endif %}>
+              <input type="checkbox" class="btn-toggle-input" id="user_string_translation_enabled" name="user_string_translation_enabled" title="{{_('Names you typed in yourself — device, zone and crop names — stay in the language you wrote them in. Turn this on to have them shown in the interface language as well. The stored names are never changed. Without an AI engine they are not translated automatically, but translations you enter under Settings > Name Translations are still shown.')}}"{% if ai_settings and ai_settings.user_string_translation_enabled %} checked{% endif %}>
               <span class="btn-toggle-slider"><span class="btn-toggle-thumb"></span></span>
             </label>
           </div>

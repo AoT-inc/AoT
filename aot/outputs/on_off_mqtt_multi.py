@@ -10,6 +10,7 @@ from flask_babel import lazy_gettext
 
 from aot.databases.models import DeviceMeasurements, OutputChannel
 from aot.outputs.base_output import AbstractOutput
+from aot.outputs.mqtt_publisher import PersistentMqttPublisher
 from aot.utils.constraints_pass import constraints_pass_positive_or_zero_value
 from aot.utils.database import db_retrieve_table_daemon
 from aot.utils.utils import random_alphanumeric
@@ -147,6 +148,25 @@ OUTPUT_INFORMATION = {
             'required': False,
             'name': lazy_gettext('Password'),
             'phrase': 'Password for connecting to the server. Leave blank to disable.'
+        },
+        {
+            'id': 'mqtt_use_tls',
+            'type': 'bool',
+            'default_value': False,
+            'required': False,
+            'name': 'Use TLS',
+            'phrase': 'Encrypt the connection with TLS (broker port is usually 8883). '
+                      'Required when the broker is reachable over the internet.'
+        },
+        {
+            'id': 'mqtt_tls_ca_cert',
+            'type': 'text',
+            'default_value': '',
+            'required': False,
+            'name': lazy_gettext('TLS CA Certificate'),
+            'phrase': 'Path to the CA certificate file that signed the broker certificate. '
+                      'Leave blank to use the system CA store (for brokers with a '
+                      'publicly-trusted certificate, e.g. Let\'s Encrypt).'
         },
         {
             'id': 'mqtt_use_websockets',
@@ -353,7 +373,7 @@ class OutputModule(AbstractOutput):
     def __init__(self, output, testing=False):
         super().__init__(output, testing=testing, name=__name__)
 
-        self.publish = None
+        self.publisher = None
         self.status_client = None
         self._status_lock = threading.Lock()
 
@@ -368,6 +388,8 @@ class OutputModule(AbstractOutput):
         self.login = None
         self.username = None
         self.password = None
+        self.mqtt_use_tls = None
+        self.mqtt_tls_ca_cert = None
         self.mqtt_use_websockets = None
 
         output_channels = db_retrieve_table_daemon(
@@ -376,12 +398,10 @@ class OutputModule(AbstractOutput):
             OUTPUT_INFORMATION['custom_channel_options'], output_channels)
 
     def initialize(self):
-        import paho.mqtt.publish as publish
-
-        self.publish = publish
-
         self.setup_output_variables(OUTPUT_INFORMATION)
         self.setup_custom_options(OUTPUT_INFORMATION['custom_options'], self.output)
+
+        self._start_publisher()
 
         # Register all runtime channels in base class dicts (channels_dict only defines ch0)
         for ch in self.options_channels.get('payload_on', {}):
@@ -416,6 +436,23 @@ class OutputModule(AbstractOutput):
         if self.topic_status:
             self._start_status_subscriber()
 
+    def _start_publisher(self):
+        """Bring up the persistent publish client.
+
+        publish.single() 을 쓰지 않는 이유는 mqtt_publisher.py 의 설명 참고 —
+        요약하면 자체 타임아웃이 없어 브로커가 CONNACK 를 주지 않는 오설정에서
+        출력 컨트롤러 스레드가 영구 블로킹된다."""
+        self.publisher = PersistentMqttPublisher(
+            self.logger,
+            self.hostname,
+            self.port,
+            "{}_pub_{}".format(self.clientid or 'aot', random_alphanumeric(4)),
+            keepalive=self.keepalive or 60,
+            auth=self._auth_dict(),
+            tls=self._tls_dict(),
+            transport='websockets' if self.mqtt_use_websockets else 'tcp')
+        self.publisher.start()
+
     def _start_status_subscriber(self):
         """Connect a paho-mqtt Client and subscribe to the status topic."""
         try:
@@ -430,6 +467,9 @@ class OutputModule(AbstractOutput):
             if self.login:
                 pwd = self.password if self.password else None
                 self.status_client.username_pw_set(self.username, pwd)
+
+            if self.mqtt_use_tls:
+                self.status_client.tls_set(ca_certs=self.mqtt_tls_ca_cert or None)
 
             self.status_client.on_connect = self._on_status_connect
             self.status_client.on_message = self._on_status_message
@@ -489,26 +529,32 @@ class OutputModule(AbstractOutput):
             return {"username": self.username, "password": pwd}
         return None
 
+    def _tls_dict(self):
+        """TLS settings for paho's publish helper, or None for a plaintext connection.
+
+        ca_certs=None makes paho fall back to the system CA store, which is what
+        a publicly-trusted broker certificate needs. A private/self-signed broker
+        needs its CA file given explicitly."""
+        if not self.mqtt_use_tls:
+            return None
+        return {"ca_certs": self.mqtt_tls_ca_cert or None}
+
     def _publish_state(self, state, output_channel):
         """Publish the control payload for one channel. Returns True on success.
         Raw transport only (no state bookkeeping) — used by output_switch and by
         the base retransmission (_resend_command)."""
-        transport = 'websockets' if self.mqtt_use_websockets else 'tcp'
         if state == 'on':
-            self.publish.single(
-                self.topic_control,
-                self.options_channels['payload_on'][output_channel],
-                hostname=self.hostname, port=self.port, client_id=self.clientid,
-                keepalive=self.keepalive, auth=self._auth_dict(), transport=transport)
-            return True
+            payload = self.options_channels['payload_on'][output_channel]
         elif state == 'off':
-            self.publish.single(
-                self.topic_control,
-                payload=self.options_channels['payload_off'][output_channel],
-                hostname=self.hostname, port=self.port, client_id=self.clientid,
-                keepalive=self.keepalive, auth=self._auth_dict(), transport=transport)
-            return True
-        return False
+            payload = self.options_channels['payload_off'][output_channel]
+        else:
+            return False
+
+        if self.publisher is None:
+            self.logger.error("Publisher not set up; cannot publish")
+            return False
+
+        return self.publisher.publish(self.topic_control, payload)
 
     def _resend_command(self, output_channel, intent_state):
         try:
@@ -557,5 +603,10 @@ class OutputModule(AbstractOutput):
                 except Exception as err:
                     self.logger.warning("Status subscriber stop error: {}".format(err))
                 self.status_client = None
+
+            # Stop publish client (after the shutdown state has been sent)
+            if self.publisher is not None:
+                self.publisher.stop()
+                self.publisher = None
 
         self.running = False

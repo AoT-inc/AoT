@@ -39,6 +39,12 @@
     <div class="aot-modal-body-text" style="padding-left:4px; margin-bottom:0.75rem;">
       {{_('Name translation is currently turned off. Turn it on under General Settings.')}}
     </div>
+    {% elif not can_auto %}
+    {# AI 가 없어도 이 화면은 쓸모가 있다 — 목록을 모으는 것은 DB 만 읽으면
+       되고, 번역은 사람이 직접 넣을 수 있다. #}
+    <div class="aot-modal-body-text" style="padding-left:4px; margin-bottom:0.75rem;">
+      {{_('No AI engine is set up, so translations are not filled in automatically. You can still collect the names in use and type the translations yourself — what you enter here is shown on screen just the same.')}}
+    </div>
     {% endif %}
 
     <div class="d-flex flex-wrap align-items-center" style="gap:8px; margin-bottom:0.75rem;">
@@ -56,15 +62,17 @@
           <option value="failed"{% if status == 'failed' %} selected{% endif %}>{{_('Failed')}}</option>
         </select>
       </form>
-      <button type="button" class="btn aot-pill-btn aot-pill-btn-primary" id="btn-sync">{{_('Translate now')}}</button>
+      <button type="button" class="btn aot-pill-btn aot-pill-btn-primary" id="btn-sync">{% if can_auto %}{{_('Translate now')}}{% else %}{{_('Collect names')}}{% endif %}</button>
+      {% if can_auto %}
       <button type="button" class="btn aot-pill-btn" id="btn-retranslate-all">{{_('Retranslate all')}}</button>
+      {% endif %}
       <span class="aot-modal-body-text" style="margin-left:auto;">
         {{counts.done}} / {{counts.total}}
       </span>
     </div>
 
     {% if not rows %}
-    <p class="aot-modal-body-text" style="padding-left:4px;">{{_('Nothing here yet. Press "Translate now" to collect the names in use.')}}</p>
+    <p class="aot-modal-body-text" style="padding-left:4px;">{% if can_auto %}{{_('Nothing here yet. Press "Translate now" to collect the names in use.')}}{% else %}{{_('Nothing here yet. Press "Collect names" to gather the names in use.')}}{% endif %}</p>
     {% else %}
     <div class="table-responsive">
       <table class="table table-sm">
@@ -99,7 +107,7 @@
               {% else %}{{_('Failed')}}{% endif %}
             </td>
             <td>
-              {% if row.status != 'skipped' %}
+              {% if can_auto and row.status != 'skipped' %}
               <button type="button" class="btn btn-sm aot-pill-btn js-retranslate">{{_('Retranslate')}}</button>
               {% endif %}
             </td>

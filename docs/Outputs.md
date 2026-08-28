@@ -4,6 +4,13 @@ For a complete list of supported output devices, see [Supported Output Devices](
 
 Outputs can generate a variety of signals that operate devices. Outputs can switch relays that operate at radio frequency using HIGH/LOW signals on GPIO pins, pulse-width modulation (PWM) signals, or 315/433 MHz signals; drive pumps and motors; execute Linux or Python commands; and more.
 
+### Finding a device in the add list
+
+The dropdown at the top of the page groups the supported devices by how they drive a load
+(Pump & Dosing, Proportional (PWM), Value Setting, On/Off Switching), with AoT's own devices
+listed first. The search box matches the device name, the module name, the interface, and
+the measurement names in your own language.
+
 ## Custom Outputs
 
 AoT has a custom output import system that lets you create and use custom outputs within the AoT system. Custom outputs can be uploaded and imported on the `[gear icon] -> Configure -> Custom Outputs` page. Once imported, they can be used on the `Setup -> Output` page.

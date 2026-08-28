@@ -887,6 +887,11 @@ def api_facility_env_summary(facility_uuid):
         },
         'summary':       summary,
         'stale':         stale,
+        # 판정에 쓴 **실제 기준**을 함께 보낸다. 화면이 "최근 몇 분간" 이라고만
+        # 말하면 거짓이 된다 — 이 값은 `max(300, 제어주기×3)` 이라 10분 주기
+        # 코디네이터에서는 30분이다(2026-08-28). 제어가 살아 있는지를 말하는
+        # 가장 중요한 줄이라 여기서 모호하면 안 된다.
+        'stale_after_s': int(_iec_stale_threshold(fn)),
         'last_cycle_ts': last_cycle_ts,
         'ts':            now,
     })
@@ -1528,6 +1533,23 @@ def api_coordinator_overview(function_uuid):
     facility = GeoFacility.query.filter_by(unique_id=facility_uuid).first()
     env = _unwrap_json(api_facility_env_summary(facility_uuid))
 
+    # ⚠ **이 화면은 시설이 아니라 이 코디네이터를 말한다.**
+    # 시설 요약은 코디네이터가 여럿이면 "활성 우선" 으로 하나를 고른다
+    # (`_find_facility_env_coordinator`). 그래서 한 시설을 가리키는 코디네이터가
+    # 둘이면, **꺼져 있는 쪽의 설정 창이 켜져 있는 쪽의 상태를 자기 것처럼**
+    # 보여 준다 — 2026-08-28 실측: 비활성 코디네이터가 "현재 9분 전" 을 띄웠다.
+    # 신원은 요청받은 함수의 것으로 되돌리고, 실제로 도는 쪽이 따로 있으면
+    # 그 사실을 함께 싣는다(침묵하면 "왜 안 도나" 에 답할 근거가 없다).
+    if isinstance(env, dict):
+        reported = (env.get('function') or {}).get('uuid')
+        if reported and reported != function_uuid:
+            other_name = (env.get('function') or {}).get('name') or ''
+            env = dict(env)
+            env['function'] = {'uuid': function_uuid,
+                               'name': fn.name,
+                               'active': bool(fn.is_activated)}
+            env['other_coordinator'] = {'uuid': reported, 'name': other_name}
+
     # 목표가 어디서 오는지 — 이 시설의 **살아 있는** 구획과 그 프로그램.
     plots = []
     try:
@@ -1553,12 +1575,35 @@ def api_coordinator_overview(function_uuid):
     except Exception as exc:                                    # noqa: BLE001
         logger.warning('[coordinator overview] plot lookup: %s', exc)
 
+    # 이 시설에 **어떤 종류의 액추에이터가 등록돼 있는가.** 설정 화면이
+    # "없는 장비를 설정하고 있다" 를 말해 주려면 이것이 필요하다 — 차광막이
+    # 없는 시설에서 차광 기준을 아무리 정해도 아무 일이 안 일어나는데, 화면은
+    # 그 칸을 똑같이 보여 준다(2026-08-28: 세 시설 모두 shade·lighting 이
+    # 하나도 없었다).
+    #
+    # ⚠ 출처는 **코디네이터가 쓰는 것과 같아야 한다**(`actuators_resolved`).
+    #   `env.summary.commands` 로 대신하면 "이번 사이클에 명령을 받은 것" 만
+    #   보이므로, 아직 한 번도 안 돈 코디네이터에서는 전부 없다고 말한다.
+    actuator_kinds = []
+    try:
+        from aot.aot_flask.geo.facility_integration import (
+            get_facility_integration as _gfi_kinds)
+        _integ, _err = _gfi_kinds(facility_uuid)
+        if not _err and isinstance(_integ, dict):
+            actuator_kinds = sorted({
+                a.get('kind') for a in (_integ.get('actuators_resolved') or [])
+                if a.get('kind')})
+    except Exception as exc:                                    # noqa: BLE001
+        logger.warning('[coordinator overview] actuator kinds: %s', exc)
+
     return jsonify({
         'ok': True,
         'facility': ({'uuid': facility_uuid,
-                      'name': getattr(facility, 'name', '') or ''}
+                      'name': getattr(facility, 'name', '') or '',
+                      'actuator_kinds': actuator_kinds}
                      if facility is not None else
-                     {'uuid': facility_uuid, 'name': '', 'missing': True}),
+                     {'uuid': facility_uuid, 'name': '', 'missing': True,
+                      'actuator_kinds': []}),
         'env':   env,
         'plots': plots,
         'ts':    _time.time(),

@@ -59,9 +59,9 @@ from aot.aot_flask.forms import (forms_action, forms_conditional,
                                        forms_pid, forms_trigger)
 from aot.aot_flask.routes_static import inject_variables
 from aot.aot_flask.utils import (utils_action, utils_conditional,
-                                       utils_controller, utils_function,
-                                       utils_general, utils_http, utils_pid,
-                                       utils_trigger)
+                                       utils_controller, utils_device_catalog,
+                                       utils_function, utils_general,
+                                       utils_http, utils_pid, utils_trigger)
 from aot.aot_flask.geo.device_membership import map_for_device
 from aot.aot_flask.utils.utils_map_config import ensure_map_config
 from aot.aot_flask.utils.utils_general import generate_form_action_list
@@ -762,6 +762,11 @@ def page_function():
     choices_functions_add.append({'value': 'trigger_sequence', 'item': _('Sequence')})
     # Sort combined list
     choices_functions_add = sorted(choices_functions_add, key=lambda i: i['item'])
+    # 목록이 40개를 넘어가 평면 나열로는 훑기 어렵다. 제어·자동화 / 트리거 /
+    # 사용자 함수로 묶고 검색 토큰을 붙여 템플릿에 넘긴다.
+    choices_functions_grouped = utils_device_catalog.function_add_groups(
+        choices_functions_add,
+        builtin_values={choice_function[0] for choice_function in FUNCTIONS})
 
     custom_commands = {}
     _custom_commands_source = list(function)
@@ -926,6 +931,7 @@ def page_function():
                                choices_function=choices_function,
                                choices_functions=choices_functions,
                                choices_functions_add=choices_functions_add,
+                               choices_functions_grouped=choices_functions_grouped,
                                choices_input=choices_input,
                                choices_input_devices=choices_input_devices,
                                choices_measurements_units=choices_measurements_units,
@@ -1027,6 +1033,7 @@ def page_function():
                                choices_function=choices_function,
                                choices_functions=choices_functions,
                                choices_functions_add=choices_functions_add,
+                               choices_functions_grouped=choices_functions_grouped,
                                choices_input=choices_input,
                                choices_input_devices=choices_input_devices,
                                choices_measurements_units=choices_measurements_units,
@@ -1129,6 +1136,7 @@ def page_function():
                                choices_function=choices_function,
                                choices_functions=choices_functions,
                                choices_functions_add=choices_functions_add,
+                               choices_functions_grouped=choices_functions_grouped,
                                choices_input=choices_input,
                                choices_input_devices=choices_input_devices,
                                choices_measurements_units=choices_measurements_units,
@@ -1229,6 +1237,7 @@ def page_function():
                                choices_function=choices_function,
                                choices_functions=choices_functions,
                                choices_functions_add=choices_functions_add,
+                               choices_functions_grouped=choices_functions_grouped,
                                choices_input=choices_input,
                                choices_input_devices=choices_input_devices,
                                choices_measurements_units=choices_measurements_units,
@@ -1312,6 +1321,7 @@ def page_function():
                                choices_function=choices_function,
                                choices_functions=choices_functions,
                                choices_functions_add=choices_functions_add,
+                               choices_functions_grouped=choices_functions_grouped,
                                choices_input=choices_input,
                                choices_input_devices=choices_input_devices,
                                choices_measurements_units=choices_measurements_units,

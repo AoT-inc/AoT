@@ -420,3 +420,33 @@ def test_old_daemon_without_origin_still_controls(method):
     assert err == 0
     assert len(old.calls) == 1
     assert 'origin' not in old.calls[0]
+
+
+# ---- origin 정규화: 어떤 형태가 와도 기록은 남긴다 ----
+
+def test_normalize_origin_passes_dicts_through():
+    src = {'type': 'user', 'id': 3, 'name': 'aot'}
+    assert command_origin.normalize_origin(src) is src
+
+
+def test_normalize_origin_treats_none_as_empty():
+    assert command_origin.normalize_origin(None) == {}
+
+
+def test_normalize_origin_coerces_a_non_dict_instead_of_raising():
+    """dict 가 아닌 출처가 실제로 들어온다(2026-08 관측).
+
+    예전에는 `_flush_one` 이 여기서 터져 그 항목이 통째로 버려졌다.
+    """
+    got = command_origin.normalize_origin('not-a-dict')
+    # 출처 불명은 unknown 이 담당한다 — 문자열을 그대로 type 에 넣으면
+    # AUDITED_TYPES 에 없어 should_audit 이 걸러 버린다.
+    assert got['type'] == command_origin.TYPE_UNKNOWN
+    assert got['_coerced'] is True
+    assert got['_raw'] == 'not-a-dict'
+
+
+def test_should_audit_survives_a_non_dict_origin():
+    # 판단이 안 서면 남기는 쪽 — 누락보다 과잉이 낫다.
+    assert command_origin.should_audit('not-a-dict')
+    assert command_origin.should_audit(None)

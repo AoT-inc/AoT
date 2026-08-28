@@ -25233,3 +25233,68 @@ msgstr ""
 #: aot_flask/templates/settings/user_detail.html:193
 msgid "Copy it now — it is shown only once and cannot be retrieved later."
 msgstr ""
+
+#: aot/aot_flask/utils/utils_device_catalog.py
+msgid "AoT Devices"
+msgstr ""
+
+#: aot/aot_flask/utils/utils_device_catalog.py
+msgid "Soil & Nutrient"
+msgstr ""
+
+#: aot/aot_flask/utils/utils_device_catalog.py
+msgid "Air Quality"
+msgstr ""
+
+#: aot/aot_flask/utils/utils_device_catalog.py
+msgid "Power & Energy"
+msgstr ""
+
+#: aot/aot_flask/utils/utils_device_catalog.py
+msgid "Weather & Light"
+msgstr ""
+
+#: aot/aot_flask/utils/utils_device_catalog.py
+msgid "Temperature & Humidity"
+msgstr ""
+
+#: aot/aot_flask/utils/utils_device_catalog.py
+msgid "Motion & Position"
+msgstr ""
+
+#: aot/aot_flask/utils/utils_device_catalog.py
+msgid "System & Other"
+msgstr ""
+
+#: aot/aot_flask/utils/utils_device_catalog.py
+msgid "Pump & Dosing"
+msgstr ""
+
+#: aot/aot_flask/utils/utils_device_catalog.py
+msgid "Proportional (PWM)"
+msgstr ""
+
+#: aot/aot_flask/utils/utils_device_catalog.py
+msgid "Value Setting"
+msgstr ""
+
+#: aot/aot_flask/utils/utils_device_catalog.py
+msgid "On/Off Switching"
+msgstr ""
+
+#: aot/aot_flask/utils/utils_device_catalog.py
+msgid "Control & Automation"
+msgstr ""
+
+#: aot/aot_flask/utils/utils_device_catalog.py
+msgid "Triggers"
+msgstr ""
+
+#: aot/aot_flask/utils/utils_device_catalog.py
+msgid "Custom Functions"
+msgstr ""
+
+#: aot/aot_flask/templates/pages/input.html:61
+#: aot/aot_flask/templates/pages/output.html:397
+msgid "Search by name or measurement"
+msgstr ""

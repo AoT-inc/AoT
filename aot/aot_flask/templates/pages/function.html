@@ -60,10 +60,18 @@
 
     <div class="row aot-main-selection-row">
       <div class="col-auto">
-        <select class="selectpicker aot-standard-select" data-style="btn btn-primary aot-roundbox"
-          data-live-search="true" title="{{ _('Function') }}: {{ _('Select') }}" id="function_type" name="function_type">
-          {% for each_controller in choices_functions_add -%}
-          <option value="{{each_controller['value']}}">{{each_controller['item']}}</option>
+        {# 제어·자동화 / 트리거 / 사용자 함수로 묶어 그린다(routes_function 에서
+           utils_device_catalog.function_add_groups 로 만든 구조). data-tokens 는
+           모듈 이름으로도 검색이 걸리게 하고, data-size 로 메뉴 높이를 묶는다. #}
+        <select class="selectpicker aot-standard-select aot-device-select" data-style="btn btn-primary aot-roundbox"
+          data-live-search="true" data-size="12" data-live-search-placeholder="{{ _('Search') }}"
+          title="{{ _('Function') }}: {{ _('Select') }}" id="function_type" name="function_type">
+          {% for each_group in choices_functions_grouped -%}
+          <optgroup label="{{each_group['label']}}">
+            {% for each_controller in each_group['options'] -%}
+            <option value="{{each_controller['value']}}" data-tokens="{{each_controller['tokens']}}">{{each_controller['item']}}</option>
+            {% endfor -%}
+          </optgroup>
           {% endfor -%}
         </select>
       </div>
@@ -188,9 +196,15 @@
       type: "GET",
       url: _url,
       success: function (new_options) {
+        // ⚠ `.html()` 로 넣지 말 것 — 조각의 뿌리가 이 컨테이너와 **같은 id**
+        // 라, 저장할 때마다 같은 id 가 한 겹씩 깊어진다(input/output 은 이미
+        // `replaceWith` 로 고쳐져 있었다).
+        $('#mod_' + type + '_' + id).replaceWith(new_options);
         var $container = $('#mod_' + type + '_' + id);
-        $container.html(new_options);
-        $container.find('.selectpicker').selectpicker();
+        // 서버는 껍데기만 낸다 — `.aot-viz`(눈금·핸들·밴드·현재값)는 클라이언트가
+        // 만들고, 그 초기화는 DOMContentLoaded 에 한 번 붙는 것이 전부다. 여기서
+        // 다시 부르지 않으면 **저장한 뒤 모달이 텅 빈 것처럼 보인다**.
+        if (window.AoTModalEnhance) AoTModalEnhance.apply($container);
         if (window.AoTMapModalController) {
           setTimeout(function () { AoTMapModalController.initAll(); }, 100);
         }

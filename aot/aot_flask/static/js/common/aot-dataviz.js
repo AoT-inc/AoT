@@ -277,6 +277,18 @@
      *
      * segments[].name 을 주면 **트랙 위**에 구간 이름 줄이 생긴다(구간 폭에
      * 맞춰 늘어선다). 하나도 없으면 그 줄을 만들지 않는다.
+     *
+     * events 는 축 위에 찍는 **사건**이다 — `[{ pct, label }]`.
+     *
+     *   events: [{ pct: 22.4, label: '2026-04-03 정식 확인' }, …]
+     *
+     * 단계 경계(tick)와 다른 것을 말한다: 경계는 "계획이 여기서 갈린다" 이고
+     * 사건은 "그날 실제로 무엇을 했다" 이다. 둘이 겹칠 수는 있지만 같지 않다 —
+     * 승인을 미루면 경계는 그대로인데 사건만 뒤로 간다.
+     *
+     * **색을 늘리지 않는다.** 사건은 '이 지점' 이므로 오늘 마커와 같은 마커
+     * 색이고, 구분은 모양이 한다(오늘=세로 선, 사건=점). 색으로 가르면 이
+     * 파일의 세 색 규칙이 넷이 되고, 나란히 놓인 밴드·불릿과 톤이 갈린다.
      */
     function timeline(o) {
         o = o || {};
@@ -289,13 +301,23 @@
 
         var p = isNum(o.positionPct) ? Math.max(0, Math.min(100, o.positionPct)) : null;
 
+        // compact — 구간 이름 줄과 눈금 줄을 뺀다. 좁은 카드에서는 그 둘이
+        // 트랙보다 자리를 더 먹는데, 정작 답해야 하는 것은 "지금 어디쯤" 하나다.
+        // 단계 이름은 머리줄이 이미 말하고(부르는 쪽이 넣는다), 구간 이름은
+        // 트랙의 title 로 남는다.
+        var compact = !!o.compact;
+
         var html = '<div class="' +
                    cls('aot-viz aot-viz--timeline', { stale: o.stale, empty: !total,
                                                       className: o.className }) +
+                   (compact ? ' aot-viz--compact' : '') +
 '">';
         html += headHtml(o.label, o.valueText, o.valueSub);
-        html += segNamesHtml(segs, total);
-        html += '<div class="aot-viz-track">';
+        if (!compact) html += segNamesHtml(segs, total);
+        html += '<div class="aot-viz-track"' +
+                (compact ? ' title="' + esc(segs.map(function (x) {
+                    return x && x.name;
+                }).filter(Boolean).join(' \u203a ')) + '"' : '') + '>';
 
         if (total > 0) {
             // 현재 구간을 먼저 칠하고 경계를 나중에 얹는다. 순서를 바꾸면
@@ -317,13 +339,49 @@
                 html += '<div class="aot-viz-tick" style="left:' + edges[i].toFixed(2) + '%"></div>';
             }
         }
+        // 사건은 **오늘 마커보다 먼저** 얹는다. 같은 날 전환을 확인했으면 둘이
+        // 정확히 겹치는데, 그때 가려져야 하는 쪽은 사건이다 — 오늘이 어디인지는
+        // 축 전체를 읽는 기준이라 무엇에도 가려지면 안 된다.
+        var evs = Array.isArray(o.events) ? o.events : [];
+        for (i = 0; i < evs.length; i++) {
+            var ep = Number(evs[i] && evs[i].pct);
+            if (!isNum(ep)) continue;
+            ep = Math.max(0, Math.min(100, ep));
+            html += '<div class="aot-viz-event" style="--aot-viz-pos:' +
+                    ep.toFixed(2) + '"' +
+                    (evs[i].label ? ' title="' + esc(evs[i].label) + '"' : '') +
+                    '></div>';
+        }
         if (p !== null) {
             html += '<div class="aot-viz-now" style="--aot-viz-pos:' +
                     p.toFixed(2) + '"></div>';
         }
+
+        /* 구간을 **누를 수 있게** 한다(`pickable`). 축은 지금까지 "현재 단계"
+           하나만 말했는데, 다음에 무엇이 오는지가 궁금한 것이 정상이다.
+
+           표적은 트랙보다 **훨씬 크다.** 압축 축의 트랙은 6px 이라 손가락으로
+           정확히 누를 수 없다 — 보이지 않는 칸을 위아래로 넉넉히 얹는다.
+           칸은 구간 폭 그대로라, 누른 자리와 고른 단계가 어긋나지 않는다. */
+        if (o.pickable && total > 0) {
+            var cur2 = 0;
+            for (i = 0; i < segs.length; i++) {
+                var sp2 = Number(segs[i] && segs[i].span);
+                if (!isNum(sp2) || sp2 <= 0) continue;
+                var w2 = (sp2 / total) * 100;
+                html += '<button type="button" class="aot-viz-seg-hit' +
+                        (segs[i].picked ? ' is-picked' : '') + '"' +
+                        (segs[i].key ? ' data-viz-key="' + esc(segs[i].key) + '"' : '') +
+                        (segs[i].name ? ' title="' + esc(segs[i].name) + '"' +
+                                        ' aria-label="' + esc(segs[i].name) + '"' : '') +
+                        ' style="left:' + cur2.toFixed(2) + '%;width:' +
+                        w2.toFixed(2) + '%"></button>';
+                cur2 += w2;
+            }
+        }
         html += '</div>';
         // 기간 바의 기준은 오늘이다.
-        html += scaleHtml(o.scale, p);
+        if (!compact) html += scaleHtml(o.scale, p);
         return html + '</div>';
     }
 

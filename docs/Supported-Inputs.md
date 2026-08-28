@@ -37,6 +37,19 @@ Overlay a user-uploaded aerial or drone photo on the map. On upload, GPS and cam
 This Input stores a 0 (off) or 1 (on) for the selected On/Off Output.
 <table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Period (Seconds)</td><td>Decimal</td><td>The duration between measurements or actions</td></tr><tr><td>On/Off Output Channel</td><td>Select Channel (Output_Channels)</td><td>Select an output to measure</td></tr></tbody></table>
 
+### AoT: Remote AoT: Measurements
+
+- Manufacturer: AoT
+- Measurements: Variable measurements
+- Libraries: requests
+- Dependencies: [requests](https://pypi.org/project/requests)
+
+Collect measurements from another AoT server over the network using its API. Enter the host and API key, set the number of measurements, and save — the Remote Measurement dropdown is then filled with the channels available on that server. Pick one per channel and set its Measurement Unit to match the unit shown in the dropdown. Values arrive with the remote timestamp, and any conversion configured on the remote channel is already applied.
+<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Measurements Enabled</td><td>Multi-Select</td><td>The measurements to record</td></tr><tr><td>Period (Seconds)</td><td>Decimal</td><td>The duration between measurements or actions</td></tr><tr><td>Start Offset (Seconds)</td><td>Integer</td><td>The duration to wait before the first operation</td></tr><tr><td>Pre Output</td><td>Select</td><td>Turn the selected output on before taking every measurement</td></tr><tr><td>Pre Out Duration (Seconds)</td><td>Decimal</td><td>If a Pre Output is selected, set the duration to turn the Pre Output on for before every measurement is acquired.</td></tr><tr><td>Pre During Measure</td><td>Boolean</td><td>Check to turn the output off after (opposed to before) the measurement is complete</td></tr><tr><td>Remote AoT Host</td><td>Text</td><td>The host or IP address of the remote AoT (a port may be included, e.g. 192.168.0.9:8084)</td></tr><tr><td>Remote AoT API Key</td><td>Text</td><td>The API key of the remote AoT, exactly as shown on that server</td></tr><tr><td>Protocol</td><td>Select(Options: [<strong>HTTPS</strong> | HTTP] (Default in <strong>bold</strong>)</td><td>Use HTTPS unless the remote AoT is only reachable over plain HTTP on a trusted network</td></tr><tr><td>Verify TLS Certificate</td><td>Boolean
+- Default Value: True</td><td>Verify the remote server certificate. Turn this off only for a self-signed certificate on a trusted network — while off, the API key can be read by a man in the middle</td></tr><tr><td>Request Timeout (Seconds)</td><td>Integer
+- Default Value: 30</td><td>HTTP read timeout. Raise it if the remote server is slow to answer a large batch</td></tr><tr><td>Initial Backfill (Hours)</td><td>Integer
+- Default Value: 24</td><td>How far back to collect on the first run. Later runs only fetch what has arrived since the last collection</td></tr><tr><td colspan="3">Channel Options</td></tr><tr><td>Name</td><td>Text</td><td>A name to distinguish this from others</td></tr><tr><td>Remote Measurement</td></td><td>The measurement on the remote AoT to collect into this channel</td></tr></tbody></table>
+
 ### AoT: Server Ping
 
 - Manufacturer: AoT
@@ -355,7 +368,7 @@ This is an alternate method to calculate RPM from pulses on a pin using pigpio, 
 - Measurements: Electrical Conductivity
 - Interfaces: UART
 - Libraries: anyleaf
-- Dependencies: [libjpeg-dev](https://packages.debian.org/search?keywords=libjpeg-dev), [zlib1g-dev](https://packages.debian.org/search?keywords=zlib1g-dev), [Pillow](https://pypi.org/project/Pillow), [scipy](https://pypi.org/project/scipy), [pyusb](https://pypi.org/project/pyusb), [Adafruit-extended-bus](https://pypi.org/project/Adafruit-extended-bus), [anyleaf](https://pypi.org/project/anyleaf)
+- Dependencies: [libjpeg-dev](https://packages.debian.org/search?keywords=libjpeg-dev), [zlib1g-dev](https://packages.debian.org/search?keywords=zlib1g-dev), [Pillow](https://pypi.org/project/Pillow), [scipy>=1.7.0](https://pypi.org/project/scipy>=1.7.0), [pyusb](https://pypi.org/project/pyusb), [Adafruit-extended-bus](https://pypi.org/project/Adafruit-extended-bus), [anyleaf](https://pypi.org/project/anyleaf)
 - Manufacturer URL: [Link](https://www.anyleaf.org/ec-module)
 - Datasheet URL: [Link](https://www.anyleaf.org/static/ec-module-datasheet.pdf)
 <table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>UART Device</td><td>Text</td><td>The UART device location (e.g. /dev/ttyUSB1)</td></tr><tr><td>Period (Seconds)</td><td>Decimal</td><td>The duration between measurements or actions</td></tr><tr><td>Conductivity Constant</td><td>Decimal
@@ -367,7 +380,7 @@ This is an alternate method to calculate RPM from pulses on a pin using pigpio, 
 - Measurements: Oxidation Reduction Potential
 - Interfaces: I<sup>2</sup>C
 - Libraries: anyleaf
-- Dependencies: [libjpeg-dev](https://packages.debian.org/search?keywords=libjpeg-dev), [zlib1g-dev](https://packages.debian.org/search?keywords=zlib1g-dev), [Pillow](https://pypi.org/project/Pillow), [scipy](https://pypi.org/project/scipy), [pyusb](https://pypi.org/project/pyusb), [Adafruit-extended-bus](https://pypi.org/project/Adafruit-extended-bus), [anyleaf](https://pypi.org/project/anyleaf)
+- Dependencies: [libjpeg-dev](https://packages.debian.org/search?keywords=libjpeg-dev), [zlib1g-dev](https://packages.debian.org/search?keywords=zlib1g-dev), [Pillow](https://pypi.org/project/Pillow), [scipy>=1.7.0](https://pypi.org/project/scipy>=1.7.0), [pyusb](https://pypi.org/project/pyusb), [Adafruit-extended-bus](https://pypi.org/project/Adafruit-extended-bus), [anyleaf](https://pypi.org/project/anyleaf)
 - Manufacturer URL: [Link](https://anyleaf.org/ph-module)
 - Datasheet URL: [Link](https://anyleaf.org/static/ph-module-datasheet.pdf)
 <table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>I<sup>2</sup>C Address</td><td>Text</td><td>The address of the I<sup>2</sup>C device.</td></tr><tr><td>I<sup>2</sup>C Bus</td><td>Integer</td><td>The Bus the I<sup>2</sup>C device is connected.</td></tr><tr><td>Period (Seconds)</td><td>Decimal</td><td>The duration between measurements or actions</td></tr><tr><td>Calibrate: Voltage (Internal)</td><td>Decimal
@@ -381,7 +394,7 @@ This is an alternate method to calculate RPM from pulses on a pin using pigpio, 
 - Measurements: Ion concentration
 - Interfaces: I<sup>2</sup>C
 - Libraries: anyleaf
-- Dependencies: [libjpeg-dev](https://packages.debian.org/search?keywords=libjpeg-dev), [zlib1g-dev](https://packages.debian.org/search?keywords=zlib1g-dev), [Pillow](https://pypi.org/project/Pillow), [scipy](https://pypi.org/project/scipy), [pyusb](https://pypi.org/project/pyusb), [Adafruit-extended-bus](https://pypi.org/project/Adafruit-extended-bus), [anyleaf](https://pypi.org/project/anyleaf)
+- Dependencies: [libjpeg-dev](https://packages.debian.org/search?keywords=libjpeg-dev), [zlib1g-dev](https://packages.debian.org/search?keywords=zlib1g-dev), [Pillow](https://pypi.org/project/Pillow), [scipy>=1.7.0](https://pypi.org/project/scipy>=1.7.0), [pyusb](https://pypi.org/project/pyusb), [Adafruit-extended-bus](https://pypi.org/project/Adafruit-extended-bus), [anyleaf](https://pypi.org/project/anyleaf)
 - Manufacturer URL: [Link](https://anyleaf.org/ph-module)
 - Datasheet URL: [Link](https://anyleaf.org/static/ph-module-datasheet.pdf)
 <table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>I<sup>2</sup>C Address</td><td>Text</td><td>The address of the I<sup>2</sup>C device.</td></tr><tr><td>I<sup>2</sup>C Bus</td><td>Integer</td><td>The Bus the I<sup>2</sup>C device is connected.</td></tr><tr><td>Period (Seconds)</td><td>Decimal</td><td>The duration between measurements or actions</td></tr><tr><td>Temperature Compensation: Measurement</td><td>Select Measurement (Input, Function)</td><td>Select a measurement for temperature compensation</td></tr><tr><td>Temperature Compensation: Max Age (Seconds)</td><td>Integer
@@ -691,7 +704,7 @@ Subscribes to the ChirpStack v4 MQTT broker topic (application/+/device/+/event/
 <table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Measurements Enabled</td><td>Multi-Select</td><td>The measurements to record</td></tr><tr><td>Period (Seconds)</td><td>Decimal</td><td>The duration between measurements or actions</td></tr><tr><td>Pre Output</td><td>Select</td><td>Turn the selected output on before taking every measurement</td></tr><tr><td>Pre Out Duration (Seconds)</td><td>Decimal</td><td>If a Pre Output is selected, set the duration to turn the Pre Output on for before every measurement is acquired.</td></tr><tr><td>Pre During Measure</td><td>Boolean</td><td>Check to turn the output off after (opposed to before) the measurement is complete</td></tr><tr><td>MQTT Host</td><td>Text
 - Default Value: localhost</td><td>MQTT broker hostname or IP address (e.g. localhost)</td></tr><tr><td>MQTT Port</td><td>Text
 - Default Value: 1883</td><td>MQTT broker port (default 1883, 8883 recommended for TLS)</td></tr><tr><td>MQTT Username</td><td>Text</td><td>Optional: broker authentication username</td></tr><tr><td>MQTT Password</td><td>Text</td><td>Optional: broker authentication password</td></tr><tr><td>Enable TLS</td><td>Boolean</td><td>Whether to use a TLS (SSL) connection (default off)</td></tr><tr><td>CA Certificate Path</td><td>Text</td><td>Optional: path to the CA certificate when using TLS</td></tr><tr><td>Client ID</td><td>Text
-- Default Value: client_2bn2BmuN</td><td>Unique client ID for connecting to the server</td></tr><tr><td>Keepalive (sec)</td><td>Text
+- Default Value: client_DO5rFAOA</td><td>Unique client ID for connecting to the server</td></tr><tr><td>Keepalive (sec)</td><td>Text
 - Default Value: 60</td><td>MQTT keepalive in seconds (default 60 sec)</td></tr><tr><td>Subscribe Topics</td><td>Text
 - Default Value: application/+/device/+/event/up</td><td>Comma-separated subscription topics (e.g. application/+/device/+/event/up)</td></tr><tr><td>QoS</td><td>Text</td><td>MQTT QoS level (0, 1, 2)</td></tr><tr><td>Device EUIs (comma-separated)</td><td>Text</td><td>Optional: process only specific devices. Enter EUIs separated by commas</td></tr><tr><td colspan="3">Channel Options</td></tr><tr><td>Name</td><td>Text</td><td>A name to distinguish this from others</td></tr><tr><td>JMESPath Expression</td><td>Text</td><td>Evaluated against the entire received event (JSON)</td></tr></tbody></table>
 
@@ -752,7 +765,7 @@ Subscribes to channels automatically generated based on the selected Ecowitt dev
 - Default Value: 1883</td><td>Host port number</td></tr><tr><td>Topic</td><td>Text
 - Default Value: gw</td><td>The topic to subscribe to</td></tr><tr><td>Keep Alive</td><td>Integer
 - Default Value: 60</td><td>Maximum amount of time between received signals. Set to 0 to disable.</td></tr><tr><td>Client ID</td><td>Text
-- Default Value: client_LWyMe8HO</td><td>Unique client ID for connecting to the server</td></tr><tr><td>Use Login</td><td>Boolean</td><td>Send login credentials</td></tr><tr><td>Use TLS</td><td>Boolean</td><td>Send login credentials using TLS</td></tr><tr><td>Username</td><td>Text
+- Default Value: client_dYdAZd3O</td><td>Unique client ID for connecting to the server</td></tr><tr><td>Use Login</td><td>Boolean</td><td>Send login credentials</td></tr><tr><td>Use TLS</td><td>Boolean</td><td>Send login credentials using TLS</td></tr><tr><td>Username</td><td>Text
 - Default Value: user</td><td>Username for connecting to the server</td></tr><tr><td>Password</td><td>Text</td><td>Password for connecting to the server. Leave blank to disable.</td></tr><tr><td>Use Websockets</td><td>Boolean</td><td>Use websockets to connect to the server.</td></tr><tr><td colspan="3">Channel Options</td></tr><tr><td>Name</td><td>Text</td><td>A name to distinguish this from others</td></tr><tr><td>JMESPATH Expression</td><td>Text</td><td>JMESPATH expression to find value in JSON response</td></tr></tbody></table>
 
 ### Ecowitt: Ecowitt soil_sensor
@@ -845,8 +858,7 @@ After issuing a free API key from the KMA API Hub, data is requested based on th
 - Default Value: 300</td><td>Enter the measurement interval in seconds.</td></tr><tr><td>Enable Quality Control (QC)</td><td>Boolean
 - Default Value: True</td><td>Ignore or correct obvious outliers (e.g. humidity 0%, pressure 0hPa, etc.).</td></tr><tr><td>QC Hold Time (sec)</td><td>Decimal
 - Default Value: 1800</td><td>Replace with the last valid value within this time window.</td></tr><tr><td>Manual Backfill Period (min)</td><td>Decimal
-- Default Value: 1440</td><td>On user request, load this much past data. Default 1440 min (1 day).</td></tr><tr><td>Run Backfill Now</td><td>Boolean</td><td>When enabled after saving, performs a single backfill immediately and then turns off automatically.</td></tr><tr><td>Separate Precipitation Series</td><td>Boolean
-- Default Value: True</td><td>Record the precipitation indicator (rn_ox) and 15-min precipitation (rn_15m) under different measurement names to avoid conflicts.</td></tr><tr><td>QC: 0°C Accept Range (±°C)</td><td>Decimal
+- Default Value: 1440</td><td>On user request, load this much past data. Default 1440 min (1 day).</td></tr><tr><td>Run Backfill Now</td><td>Boolean</td><td>When enabled after saving, performs a single backfill immediately and then turns off automatically.</td></tr><tr><td>QC: 0°C Accept Range (±°C)</td><td>Decimal
 - Default Value: 3.0</td><td>Accept 0°C only when the previous valid value is within this range of 0°C. Default ±3°C.</td></tr></tbody></table>
 
 ### KMA: KMA Short-term Forecast
@@ -1077,7 +1089,7 @@ A single topic is subscribed to and the returned JSON payload contains one or mo
 - Default Value: 1883</td><td>Host port number</td></tr><tr><td>Topic</td><td>Text
 - Default Value: mqtt/test/input</td><td>The topic to subscribe to</td></tr><tr><td>Keep Alive</td><td>Integer
 - Default Value: 60</td><td>Maximum amount of time between received signals. Set to 0 to disable.</td></tr><tr><td>Client ID</td><td>Text
-- Default Value: client_wrlD9vGD</td><td>Unique client ID for connecting to the server</td></tr><tr><td>Use Login</td><td>Boolean</td><td>Send login credentials</td></tr><tr><td>Use TLS</td><td>Boolean</td><td>Send login credentials using TLS</td></tr><tr><td>Username</td><td>Text
+- Default Value: client_mh1Gh0Uc</td><td>Unique client ID for connecting to the server</td></tr><tr><td>Use Login</td><td>Boolean</td><td>Send login credentials</td></tr><tr><td>Use TLS</td><td>Boolean</td><td>Send login credentials using TLS</td></tr><tr><td>TLS CA Certificate</td><td>Text</td><td>Path to the CA certificate file that signed the broker certificate. Leave blank to use the system CA store (for brokers with a publicly-trusted certificate, e.g. Let's Encrypt).</td></tr><tr><td>Username</td><td>Text
 - Default Value: user</td><td>Username for connecting to the server</td></tr><tr><td>Password</td><td>Text</td><td>Password for connecting to the server. Leave blank to disable.</td></tr><tr><td>Use Websockets</td><td>Boolean</td><td>Use websockets to connect to the server.</td></tr><tr><td colspan="3">Channel Options</td></tr><tr><td>Name</td><td>Text</td><td>A name to distinguish this from others</td></tr><tr><td>JMESPATH Expression</td><td>Text</td><td>JMESPATH expression to find value in JSON response</td></tr></tbody></table>
 
 ### MQTT: MQTT Subscribe (Value payload)
@@ -1093,7 +1105,7 @@ A topic is subscribed to for each channel Subscription Topic and the returned pa
 - Default Value: localhost</td><td>Host or IP address</td></tr><tr><td>Port</td><td>Integer
 - Default Value: 1883</td><td>Host port number</td></tr><tr><td>Keep Alive</td><td>Integer
 - Default Value: 60</td><td>Maximum amount of time between received signals. Set to 0 to disable.</td></tr><tr><td>Client ID</td><td>Text
-- Default Value: client_EcwdHFZF</td><td>Unique client ID for connecting to the server</td></tr><tr><td>Use Login</td><td>Boolean</td><td>Send login credentials</td></tr><tr><td>Use TLS</td><td>Boolean</td><td>Send login credentials using TLS</td></tr><tr><td>Username</td><td>Text
+- Default Value: client_y5fyodVu</td><td>Unique client ID for connecting to the server</td></tr><tr><td>Use Login</td><td>Boolean</td><td>Send login credentials</td></tr><tr><td>Use TLS</td><td>Boolean</td><td>Send login credentials using TLS</td></tr><tr><td>TLS CA Certificate</td><td>Text</td><td>Path to the CA certificate file that signed the broker certificate. Leave blank to use the system CA store (for brokers with a publicly-trusted certificate, e.g. Let's Encrypt).</td></tr><tr><td>Username</td><td>Text
 - Default Value: user</td><td>Username for connecting to the server</td></tr><tr><td>Password</td><td>Text</td><td>Password for connecting to the server. Leave blank to disable.</td></tr><tr><td>Use Websockets</td><td>Boolean</td><td>Use websockets to connect to the server.</td></tr><tr><td colspan="3">Channel Options</td></tr><tr><td>Name</td><td>Text</td><td>A name to distinguish this from others</td></tr><tr><td>Subscription Topic</td><td>Text</td><td>The MQTT topic to subscribe to</td></tr></tbody></table>
 
 ### MapTiler: GL: MapTiler Vector
@@ -1384,7 +1396,7 @@ Directly decodes the RAK3172 valve controller's heartbeat (FPort 225) payload fr
 <table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Measurements Enabled</td><td>Multi-Select</td><td>The measurements to record</td></tr><tr><td>Pre Output</td><td>Select</td><td>Turn the selected output on before taking every measurement</td></tr><tr><td>Pre Out Duration (Seconds)</td><td>Decimal</td><td>If a Pre Output is selected, set the duration to turn the Pre Output on for before every measurement is acquired.</td></tr><tr><td>Pre During Measure</td><td>Boolean</td><td>Check to turn the output off after (opposed to before) the measurement is complete</td></tr><tr><td>MQTT Host</td><td>Text
 - Default Value: localhost</td><td>ChirpStack MQTT broker hostname or IP address</td></tr><tr><td>MQTT Port</td><td>Integer
 - Default Value: 1883</td><td>MQTT port (default 1883)</td></tr><tr><td>MQTT Username</td><td>Text</td><td>Broker authentication username (leave empty if none)</td></tr><tr><td>MQTT Password</td><td>Text</td><td>Broker authentication password</td></tr><tr><td>Enable TLS</td><td>Boolean</td><td>Whether to use a TLS (SSL) connection</td></tr><tr><td>CA Certificate Path</td><td>Text</td><td>Path to the CA certificate file when using TLS</td></tr><tr><td>Client ID</td><td>Text
-- Default Value: aot_rak3172hb_GPXM9I</td><td>Unique MQTT client ID</td></tr><tr><td>Application ID (MQTT Topic)</td><td>Text
+- Default Value: aot_rak3172hb_qOy8Hw</td><td>Unique MQTT client ID</td></tr><tr><td>Application ID (MQTT Topic)</td><td>Text
 - Default Value: +</td><td>Enter an ID to subscribe to a specific app only. Leave empty to use "+" (all).</td></tr><tr><td>Device EUI Filter</td><td>Text</td><td>Process only specific devices. Leave empty to receive all (multiple can be specified, comma-separated).</td></tr><tr><td>Decode Base HB Frame</td><td>Boolean
 - Default Value: True</td><td>Decode the 0xA5 base frame (battery + class) on FPort 225.</td></tr><tr><td>Decode Ext HB Frame</td><td>Boolean
 - Default Value: True</td><td>Decode the 0xA6 ext frame (HB period, actual class, valve states, etc.) on FPort 225.</td></tr></tbody></table>
@@ -1501,7 +1513,7 @@ Polls the SenseCAP OpenAPI directly for a SenseCAP LoRaWAN sensor node, bypassin
 - Measurements: Humidity/Temperature
 - Interfaces: GROVE
 - Libraries: grovepi
-- Dependencies: [libatlas-base-dev](https://packages.debian.org/search?keywords=libatlas-base-dev), [grovepi](https://pypi.org/project/grovepi)
+- Dependencies: [grovepi](https://pypi.org/project/grovepi)
 - Manufacturer URLs: [Link 1](https://wiki.seeedstudio.com/Grove-Temperature_and_Humidity_Sensor_Pro/), [Link 2](https://wiki.seeedstudio.com/Grove-TemperatureAndHumidity_Sensor/)
 
 Enter the Grove Pi+ GPIO pin connected to the sensor and select the sensor type.
@@ -1751,7 +1763,7 @@ Statistical geographic information service from Statistics Korea (SGIS). Optimal
 This measures from several Kasa power devices (plugs/strips) capable of measuring energy consumption. These include, but are not limited to the KP115 and HS600.
 <table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Measurements Enabled</td><td>Multi-Select</td><td>The measurements to record</td></tr><tr><td>Period (Seconds)</td><td>Decimal</td><td>The duration between measurements or actions</td></tr><tr><td>Pre Output</td><td>Select</td><td>Turn the selected output on before taking every measurement</td></tr><tr><td>Pre Out Duration (Seconds)</td><td>Decimal</td><td>If a Pre Output is selected, set the duration to turn the Pre Output on for before every measurement is acquired.</td></tr><tr><td>Pre During Measure</td><td>Boolean</td><td>Check to turn the output off after (opposed to before) the measurement is complete</td></tr><tr><td>Device Type</td><td>Select</td><td>The type of Kasa device</td></tr><tr><td>Host</td><td>Text
 - Default Value: 0.0.0.0</td><td>Host or IP address</td></tr><tr><td>Asyncio RPC Port</td><td>Integer
-- Default Value: 18220</td><td>The port to start the asyncio RPC server. Must be unique from other Kasa Outputs.</td></tr><tr><td colspan="3">Commands</td></tr><tr><td colspan="3">The total kWh can be cleared with the following button or with the Clear Total kWh Function Action. This will also clear all energy stats on the device, not just the total kWh.</td></tr><tr><td>Clear Total: Kilowatt-hour</td><td>Button</td><td></td></tr></tbody></table>
+- Default Value: 18050</td><td>The port to start the asyncio RPC server. Must be unique from other Kasa Outputs.</td></tr><tr><td colspan="3">Commands</td></tr><tr><td colspan="3">The total kWh can be cleared with the following button or with the Clear Total kWh Function Action. This will also clear all energy stats on the device, not just the total kWh.</td></tr><tr><td>Clear Total: Kilowatt-hour</td><td>Button</td><td></td></tr></tbody></table>
 
 ### Tasmota: Tasmota Outlet Energy Monitor (HTTP)
 

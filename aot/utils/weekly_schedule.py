@@ -320,6 +320,68 @@ def active_entry_now(schedule: dict, tz) -> Optional[Tuple[int, dict]]:
     return (today_idx, entry) if in_window else None
 
 
+def _epoch_of_wall_minutes(minutes: int, tz, now_epoch: float) -> Optional[float]:
+    """`now_epoch` 가 속한 기기-로컬 날짜의 자정 + `minutes` 를 epoch 로.
+
+    `minutes` 는 1440("24:00", 다음날 자정)까지 허용한다. 벽시계 → UTC 변환은
+    `timekit.wall_to_utc` 에 맡긴다 — `naive.replace(tzinfo=)` 로 붙이면 DST
+    경계에서 과거 offset 이 고정되는 pytz 함정에 걸린다.
+    """
+    try:
+        from datetime import timedelta
+
+        from aot.utils.timekit import wall_to_utc
+
+        tz_obj = pytz.timezone(str(tz)) if isinstance(tz, str) else (tz or pytz.utc)
+        midnight = datetime.fromtimestamp(now_epoch, tz_obj).replace(
+            hour=0, minute=0, second=0, microsecond=0, tzinfo=None)
+        return wall_to_utc(midnight + timedelta(minutes=int(minutes)), tz_obj).timestamp()
+    except Exception:
+        logger.exception("_epoch_of_wall_minutes: 벽시계 → epoch 변환 실패")
+        return None
+
+
+def window_bounds_epoch(entry: dict, tz, now_epoch: float):
+    """(창 시작 epoch, 창 끝 epoch). 어느 쪽이든 못 구하면 그 자리는 None.
+
+    끝을 아는 것이 왜 필요한가: 남은 창이 한 pass 보다 짧은데 새 사이클을
+    시작하면, 밸브가 열리자마자 창이 닫혀 강제로 끊긴다. 그렇게 끊긴 스텝은
+    개방 시간이 기록되지 않아 흔적조차 남지 않는다.
+    """
+    start = end = None
+    try:
+        start = _epoch_of_wall_minutes(time_to_minutes(entry["start"]), tz, now_epoch)
+    except (KeyError, TypeError, ValueError):
+        pass
+    try:
+        end = _epoch_of_wall_minutes(time_to_minutes(entry["end"]), tz, now_epoch)
+    except (KeyError, TypeError, ValueError):
+        pass
+    return start, end
+
+
+def window_start_epoch(entry: dict, tz, now_epoch: float) -> Optional[float]:
+    """`now_epoch` 가 속한 기기-로컬 날짜의 창 시작 시각을 epoch 로 돌려준다.
+
+    시퀀스 사이클 **격자의 원점**이다. 격자를 창 시작에 고정해야 실행 지연이
+    다음 사이클 시작으로 새지 않는다. 기준점을 매번 `= now` 로 다시 잡으면
+    한 번 늦은 만큼이 그대로 다음 기준점에 상속돼 영구히 누적된다 — 원격
+    출력처럼 왕복이 들쭉날쭉한 경로에서는 그 누적이 하루 수십 분에 이른다.
+    타이머 트리거(`controller_trigger.py`)가 `+= period` / `epoch_of_next_time`
+    으로 격자를 지키는 것과 같은 이유다.
+
+    벽시계 → UTC 변환은 `timekit.wall_to_utc` 에 맡긴다. `naive.replace(tzinfo=)`
+    로 붙이면 DST 경계에서 과거 offset 이 고정되는 pytz 함정에 걸린다.
+
+    :return: 창 시작의 UTC epoch. start 가 없거나 파싱 불가면 None.
+    """
+    try:
+        start_min = time_to_minutes(entry["start"])
+    except (KeyError, TypeError, ValueError):
+        return None
+    return _epoch_of_wall_minutes(start_min, tz, now_epoch)
+
+
 def is_continuity_boundary(schedule: dict, prev_day_idx: int, next_day_idx: int) -> bool:
     """
     Return True if the transition from prev_day to next_day is a continuity boundary:

@@ -307,6 +307,78 @@ class TestTranslateEndpoint(_TranslationAppFixture):
             self.assertEqual(row.target_lang, 'ja')
 
 
+class TestWorksWithoutAI(_TranslationAppFixture):
+    """AI 가 없는 설치에서도 사람이 넣은 번역은 화면에 나와야 한다.
+
+    처음에는 표시와 자동 번역을 `ai_enabled` 하나에 함께 걸었다. 그러면 관리
+    화면에서 번역을 입력해도 사전이 빈 채로 나가, **저장은 되는데 화면은 그대로**
+    인 상태가 된다 — 사용자에게는 고장으로 보인다. AI 를 쓰지 않는 설치가 적지
+    않으므로, 표시는 AI 와 무관해야 한다.
+    """
+
+    def _disable_ai(self):
+        from aot.aot_flask.extensions import db
+        from aot.databases.models import AIGlobalSettings
+        with self.app.app_context():
+            AIGlobalSettings.query.first().ai_enabled = False
+            db.session.commit()
+
+    def test_manual_translation_is_served_without_ai(self):
+        self._seed('1번 하우스', '1号ハウス')
+        self._disable_ai()
+        js = self._catalog_js()
+        self.assertIn('1号ハウス', js)
+        self.assertIn('"ja"', js)
+
+    def test_display_gate_is_independent_of_ai(self):
+        from aot.ai.services import user_string_translator as ust
+        self._disable_ai()
+        with self.app.app_context():
+            self.assertTrue(ust.is_enabled())          # 표시는 살아 있고
+            self.assertFalse(ust.can_auto_translate())  # 자동 번역만 꺼진다
+
+    def test_collection_still_works_without_ai(self):
+        """목록을 모으는 것은 DB 만 읽는다 — 사람이 채울 대상이 된다."""
+        from aot.ai.services import user_string_translator as ust
+        from aot.databases.models import Input
+        from aot.aot_flask.extensions import db
+        from aot.databases.models.user_string_translation import \
+            UserStringTranslation
+
+        self._disable_ai()
+        with self.app.app_context():
+            db.session.add(Input(name='남쪽 온실 온습도', unique_id='u-noai'))
+            db.session.commit()
+            added = ust.sync_sources('ja')
+            self.assertGreater(added, 0)
+            self.assertIsNotNone(UserStringTranslation.query.filter_by(
+                source_text='남쪽 온실 온습도', target_lang='ja').first())
+
+    def test_batch_reports_missing_engine_without_consuming_queue(self):
+        from aot.ai.services import user_string_translator as ust
+        from aot.databases.models.user_string_translation import \
+            UserStringTranslation
+        self._seed('동편 밸브', None, status='pending')
+        self._disable_ai()
+        with self.app.app_context():
+            result = ust.run_batch(target_lang='ja')
+            self.assertEqual(result['reason'], 'no_engine')
+            # 큐는 남아 있어야 한다 — 나중에 AI 를 붙이면 이어서 처리된다.
+            self.assertEqual(UserStringTranslation.query.filter_by(
+                status='pending').count(), 1)
+
+    def test_translate_endpoint_returns_cache_hits_without_ai(self):
+        self._seed('1번 하우스', '1号ハウス')
+        self._disable_ai()
+        response = self.client.post(
+            '/api/v1/locale/user_strings/translate',
+            data=json.dumps({'texts': ['1번 하우스', '처음 보는 이름']}),
+            content_type='application/json')
+        body = response.get_json()
+        self.assertEqual(body['entries'], {'1번 하우스': '1号ハウス'})
+        self.assertIn('처음 보는 이름', body['pending'])
+
+
 class TestManagementPage(_TranslationAppFixture):
 
     def test_page_hands_the_template_what_it_needs(self):

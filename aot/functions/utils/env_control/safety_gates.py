@@ -107,6 +107,12 @@ class SafetyPreGate:
         self._last_triggered = False
         self._triggered_until: float = 0.0  # gate_ttl 보장용
         self._nursery_locked = False        # 육묘 일소 잠금 래치 (히스테리시스)
+        # 잠금 사유 — 'sunburn'(광량 임계) | 'evening'(저녁 잎마름병 방지) | None.
+        # ⚠ **`_nursery_locked` bool 하나로는 화면에 거짓말을 하게 된다.**
+        #   저녁 차단은 광량과 **무관하게** 잠그는데, 이 값이 없으면 호출자가
+        #   무조건 "햇빛에 잎이 델 수 있어" 라고 말한다 — 비 오는 밤에도 그
+        #   문장이 나갔다(2026-08-28 사용자 지적: 강우 중 "일소" 안내는 모순).
+        self._nursery_lock_reason: str | None = None
 
     def _eval_nursery_lock(self, env: EnvContext) -> bool:
         """육묘 일소 잠금 상태를 갱신하고 반환한다.
@@ -139,6 +145,7 @@ class SafetyPreGate:
 
         if env.get('internal', {}).get('evening_block'):
             # 래치는 건드리지 않는다 — 저녁 차단은 시간 기반이라 자체 해제된다.
+            self._nursery_lock_reason = 'evening'
             return True
 
         light = env.get('internal', {}).get('light_est')
@@ -171,6 +178,8 @@ class SafetyPreGate:
                 self._nursery_locked = False
         elif light >= cfg.nursery_solar_lockout:
             self._nursery_locked = True
+        if self._nursery_locked:
+            self._nursery_lock_reason = 'sunburn'
         return self._nursery_locked
 
     def evaluate(
@@ -234,7 +243,14 @@ class SafetyPreGate:
         nursery_lock = self._eval_nursery_lock(env)
         if nursery_lock and any(is_wetting_fogger(p) for p in profiles):
             mask |= GATE_BIT_FOG_SUNBURN
-            reasons.append('nursery_fog_sunburn')
+            # ⚠ **비트 이름(`_SUNBURN`)과 화면 문구를 혼동하지 말 것.** 비트는
+            #   "습윤형 분무가 잠겨 있다" 는 사실 하나를 담지만, 잠근 이유는
+            #   둘이다 — 광량 임계(진짜 일소)와 저녁 시간대(잎마름병 방지)는
+            #   서로 무관하고 동시에 참일 이유가 없다(맑은 대낮 vs 비 오는
+            #   밤). 사유 문자열은 실제로 잠근 근거를 따라간다.
+            reasons.append('nursery_fog_evening'
+                           if self._nursery_lock_reason == 'evening'
+                           else 'nursery_fog_sunburn')
 
         # 아래 판정들은 "시설 비상 게이트"만 대상으로 한다. 육묘 분무 잠금이
         # 함께 켜졌다고 해서 풍향 차등 폐쇄 같은 기존 동작이 바뀌면 안 된다.

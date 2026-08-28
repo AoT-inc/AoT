@@ -33,7 +33,8 @@ from aot.databases.models import Output
 from aot.databases.models import SMTP
 from aot.aot_client import DaemonControl
 from aot.utils import output_audit
-from aot.utils.command_origin import TYPE_LIFECYCLE, should_audit
+from aot.utils.command_origin import (TYPE_LIFECYCLE, normalize_origin,
+                                      should_audit)
 from aot.utils.database import db_retrieve_table_daemon
 from aot.utils.execution_context import clear_execution_context
 from aot.utils.execution_context import set_execution_context
@@ -524,8 +525,8 @@ class OutputController(AbstractController, threading.Thread):
                 'state': state,
                 'output_type': output_type,
                 'amount': amount,
-                'origin': origin or {},
-                'ip_address': (origin or {}).get('ip'),
+                'origin': normalize_origin(origin),
+                'ip_address': normalize_origin(origin).get('ip'),
                 'result': result,
             })
         except Exception:

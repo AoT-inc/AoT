@@ -7,6 +7,11 @@ Function controllers often perform tasks that use inputs and outputs.
 !!! note
     "Last" means the function retrieves only the last (most recent) measurement from the database. "Past" means the function retrieves all measurements from the present back to the configured "Max Age (seconds)" (for example, if measurements are collected every 10 seconds and Max Age is set to 60 seconds, then on average 6 measurements are returned for the function to operate on).
 
+### Finding a function in the add list
+
+The dropdown at the top of the page groups functions into Control & Automation, Triggers,
+and Custom Functions. The search box matches both the displayed name and the module name.
+
 ## Custom Functions
 
 AoT has a custom function import system that lets user-created functions be used within the AoT system. Custom functions can be uploaded on the `[Gear Icon] -> Configure -> Custom Functions` page. Once imported, they become available on the `Setup -> Function` page.
@@ -981,6 +986,8 @@ Time rules:
 
 !!! note
     If the period (`period`) is longer than that day's operating-window length, the cycle is cut short within the window. The settings screen displays a warning in this case.
+
+    If the time left before the window closes is not enough for one full pass, that cycle is **skipped rather than started**. Previously it was started anyway, so a valve opened only to be cut off when the window closed — and a step cut off that way records no on-time, leaving no way to tell how much water was actually delivered.
 
 ### Unified Modal · Time Wheel
 
