@@ -16445,6 +16445,13 @@ msgstr "AIサービス"
 
 #: aot_flask/templates/settings/general.html:160
 msgid ""
+"This is an experimental feature. Behavior may change without notice, and "
+"availability may be limited or interrupted."
+msgstr ""
+"実験的な機能です。予告なく動作が変更されたり、利用が制限・中断されたりすることがあります。"
+
+#: aot_flask/templates/settings/general.html:161
+msgid ""
 "Enable or disable the global AI service. When disabled, the AI menu will be "
 "hidden from the navigation bar and AI features will be unavailable. All AI "
 "settings and configurations are preserved when the service is disabled."
@@ -24030,8 +24037,9 @@ msgid "Max Sensor Age (seconds)"
 msgstr "センサーデータの最大有効時間(秒)"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:153
-msgid "Reject sensor readings older than this value. 0 = no limit."
-msgstr "この値より古いセンサー値は無視されます。0 = 制限なし。"
+msgid "Reject sensor readings older than this. Leave at 0 to let "
+"each sensor decide from its own update interval."
+msgstr "これより古いセンサー値は使用しません。0 のままにすると、センサーごとに自身の更新周期で判定します。"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:160
 msgid "Actuation Rate"
@@ -26725,8 +26733,8 @@ msgid "AI Service Operation"
 msgstr "AIサービス稼働"
 
 #: aot/aot_flask/templates/pages/ai/ai_agent.html
-msgid "Start or stop autonomous AI operation. Chat and advice requests you make yourself are unaffected."
-msgstr "AIの自律稼働を開始または停止します。ユーザーが自分で送るチャット・アドバイス要求には影響しません。"
+msgid "Start or stop the AI model. While stopped, chat, advice requests and background AI work are all unavailable."
+msgstr "AIモデルを開始または停止します。停止中はチャット・アドバイス要求とバックグラウンドAI処理がすべて利用できません。"
 
 #: aot/aot_flask/templates/pages/ai/ai_agent.html
 msgid "The AI service is disabled. Enable it in Settings > General first."
@@ -26737,12 +26745,12 @@ msgid "No AI model is registered yet. Add and activate at least one agent below,
 msgstr "AIモデルが登録されていません。下でエージェントを1つ以上追加・有効化してから、サービスを開始してください。"
 
 #: aot/aot_flask/templates/pages/ai/ai_agent.html
-msgid "Running. Periodic summaries, context broadcast and alerts are active."
-msgstr "稼働中です。定期サマリー、コンテキストブロードキャスト、アラートが動作します。"
+msgid "Running. Chat, advice requests and background AI work are all active."
+msgstr "稼働中です。チャット・アドバイス要求とバックグラウンドAI処理がすべて動作します。"
 
 #: aot/aot_flask/templates/pages/ai/ai_agent.html
-msgid "Stopped. No background AI work runs; chat and advice requests you make yourself still work."
-msgstr "停止中です。バックグラウンドのAI処理は動きません。ユーザーが自分で送るチャット・アドバイス要求はそのまま動作します。"
+msgid "Stopped. Chat, advice requests and background AI work are all unavailable until you start it."
+msgstr "停止中です。開始するまでチャット・アドバイス要求とバックグラウンドAI処理はすべて利用できません。"
 
 #: aot/aot_flask/templates/pages/ai/ai_agent.html
 msgid "AI service started"

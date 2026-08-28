@@ -327,7 +327,21 @@ class CustomModule(
         self.hvac_interlock_on_value                     = None
 
         # Diagnostics — gates per-cycle INFO/DEBUG noise
-        self.log_level_debug                = None
+        #
+        # ⚠ **이것은 옵션이 아니라 Function 행의 컬럼이다**
+        #   (`custom_controller.log_level_debug`). 위 이름들과 달리
+        #   `setup_custom_options_json` 이 채워 주지 않는다 — 그 함수는 **옵션
+        #   스키마를 순회**하는데 여기 해당하는 옵션이 없기 때문이다. 그래서
+        #   `None` 으로 두면 **영원히 None** 이고, 이 값을 보는 진단 기록
+        #   (`write_cycle_metrics` → `env_control`)이 통째로 죽는다.
+        #
+        #   실제로 그랬다: `debug_logging` 옵션을 이 컬럼으로 합치면서 여기를
+        #   None 으로 남겼고, 두 코디네이터의 `env_control` 이 24시간 넘게 한
+        #   줄도 안 남았다(2026-08-27 09:54 UTC 이후). 액추에이터 명령·근거는
+        #   계속 기록되므로 **화면상 아무 이상이 없고**, 없어진 것은 모드·편차·
+        #   목표·제한인자 — 즉 "왜 그렇게 했는가" 뿐이다. 그것이 사라졌다는
+        #   사실은 그 로그를 실제로 읽으려 할 때에야 드러난다.
+        self.log_level_debug = bool(getattr(function, 'log_level_debug', False))
 
         # Internal state
         self._vpd_method_handler = None

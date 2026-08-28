@@ -14,6 +14,7 @@ from aot.functions.utils.env_control import (
     write_decision_log,
 )
 from aot.functions.utils.env_control.types import SituationReport
+from aot.utils import measurement_freshness as _freshness
 from aot.utils.database import db_retrieve_table_daemon
 
 
@@ -1098,7 +1099,13 @@ class HelpersMixin:
         if not dev or not meas:
             return False
         try:
-            max_age = float(getattr(self, 'sensor_max_age', 0) or 0) or 600.0
+            # 상한을 안 정했으면 이 신호의 **자기 주기**로 판정한다. 예전에는
+            # 600초 고정이라, 10분보다 느린 접점 신호는 늘 만료로 읽혀 개구부
+            # 잠금이 조용히 풀렸다.
+            from aot.utils import measurement_freshness as _fresh
+            _f = _fresh.lookup(_fresh.freshness_by_device([dev]), dev)
+            max_age = _fresh.effective_max_age(
+                self._sensor_max_age(), _f[0], _f[1], floor=300, factor=2.0)
             ts, val = self.get_last_measurement(dev, meas, max_age=int(max_age))
         except Exception as exc:
             self.logger.debug('냉난방 감지 신호 조회 실패: %s', exc)
@@ -1114,7 +1121,24 @@ class HelpersMixin:
         except (TypeError, ValueError):
             return False
 
-    def _collect_internal(self, max_age: float, outdoor_data: dict = None) -> dict:
+    def _sensor_max_age(self):
+        """신선도 상한 — **정하지 않았으면 `None`** 이다(센서가 정한다).
+
+        ⚠ **여기에 `or 120.0` 같은 폴백을 되살리지 말 것.** 그것이 이 옵션의
+        자동 경로를 통째로 막고 있었다. `effective_max_age` 는 `requested=None`
+        을 받으면 그 센서의 주기로 판정하는데(주기×2), 호출부가 항상 숫자를
+        만들어 넘기면 그 분기에 **영영 도달하지 못한다.** 실제로 두 곳이 서로
+        다른 폴백(120·600)을 들고 있었고, 그래서 같은 설정에 대해 제어 경로와
+        감지 경로가 다르게 판정했다.
+
+        `0` 은 '제한 없음' 이 아니라 **'안 정했다'** 로 읽는다 —
+        `Input.max_age_s` 와 같은 판단이다. 제한 없음으로 받으면 실수로 0 을
+        넣은 코디네이터가 몇 시간 전 값으로 물리 장비를 움직이게 된다.
+        """
+        # 규칙(0 = 미지정)은 정본에 있다 — 여기 다시 쓰면 갈라진다.
+        return _freshness.as_seconds(getattr(self, 'sensor_max_age', None))
+
+    def _collect_internal(self, max_age=None, outdoor_data: dict = None) -> dict:
         """실내 센서 데이터 수집.
 
         Args:
@@ -1129,7 +1153,7 @@ class HelpersMixin:
         if _sr:
             try:
                 from aot.aot_flask.geo.facility_sensors import compute_spatial_internal
-                spatial = compute_spatial_internal(_sr, max_age=int(max_age))
+                spatial = compute_spatial_internal(_sr, max_age=_freshness.as_seconds(max_age))
                 for _k in ('T', 'RH', 'CO2', 'VPD', 'light'):
                     if spatial.get(_k) is not None:
                         result[_k] = spatial[_k]
@@ -1152,7 +1176,7 @@ class HelpersMixin:
         if not any(k in result for k in ('T', 'RH', 'CO2')) and _sr:
             try:
                 from aot.aot_flask.geo.facility_sensors import read_facility_sensors
-                role_data = read_facility_sensors(_sr, max_age=int(max_age))
+                role_data = read_facility_sensors(_sr, max_age=_freshness.as_seconds(max_age))
                 indoor = role_data.get('indoor') or {}
                 if indoor.get('temp_c') is not None and 'T' not in result:
                     result['T'] = indoor['temp_c']
@@ -1175,7 +1199,7 @@ class HelpersMixin:
             if od is None:
                 try:
                     from aot.aot_flask.geo.facility_sensors import read_outdoor_sensors
-                    od = read_outdoor_sensors(_sr_out, max_age=int(max_age))
+                    od = read_outdoor_sensors(_sr_out, max_age=_freshness.as_seconds(max_age))
                 except Exception as _se:
                     self.logger.debug('facility outdoor collect (wind/solar) failed: %s', _se)
                     od = {}

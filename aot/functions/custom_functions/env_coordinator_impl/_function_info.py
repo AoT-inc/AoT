@@ -140,11 +140,20 @@ FUNCTION_INFORMATION = {
         {
             'id': 'sensor_max_age',
             'type': 'float',
-            'default_value': 120.0,
+            'default_value': 0.0,
             'required': False,
             'name': lazy_gettext('Max Sensor Age (seconds)'),
+            # ⚠ **기본값을 다시 숫자로 만들지 말 것.** 120 초였는데, 그보다
+            #   느린 센서는 전부 만료로 걸려 그 축이 통째로 죽었다 — 기상청
+            #   300초·OpenWeather 600초라 실외 데이터원은 사실상 전부다.
+            #   육묘장3 은 이 기본값 그대로였고, 측창 둘이 24시간 내내
+            #   '실외 값 없음' 으로 서 있었다(2026-08-28). 영양·쿠마모토가
+            #   1200 인 것은 누군가 같은 일을 겪고 손으로 고쳤다는 뜻이다.
+            # 0 = "안 정했다" 로 읽는다(`Input.max_age_s` 와 같은 판단).
+            #   '제한 없음' 이 아니다 — 센서마다 자기 주기로 판정한다.
             'phrase': lazy_gettext(
-                'Reject sensor readings older than this value. 0 = no limit.'
+                'Reject sensor readings older than this. Leave at 0 to let '
+                'each sensor decide from its own update interval.'
             ),
         },
 

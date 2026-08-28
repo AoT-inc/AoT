@@ -5,6 +5,7 @@ from flask_login import login_required
 from aot.databases.models import Input, Output, Function, CustomController, PID, Trigger, Conditional
 from aot.config import AI_AGENT_ENABLED, LANGUAGES
 from aot.databases.models import AIGlobalSettings
+from aot.ai.services import ai_runtime_state
 from aot.ai.services.ai_context_service import AIContextService
 from aot.ai.services.ai_action_service import AIActionService
 from aot.ai.services.ai_reasoning_service import AIReasoningService
@@ -266,6 +267,8 @@ def check_ai_enabled():
     ai_settings = AIGlobalSettings.query.first()
     if ai_settings and not ai_settings.ai_enabled:
         return jsonify({'error': 'AI service is disabled'}), 403
+    if not ai_runtime_state.ai_autonomy_enabled(ai_settings):
+        return jsonify({'error': 'AI model is not running yet. Start it on the AI page.'}), 403
 
 @blueprint.route('/api/v1/ai/discovery', methods=['GET'])
 @login_required

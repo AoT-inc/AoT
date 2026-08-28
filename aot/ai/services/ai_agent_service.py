@@ -923,10 +923,14 @@ class AIAgentService:
         _pnc_t0 = time.monotonic()
         # [v26.0] Check if AI features are enabled before processing any command
         from aot.databases.models import AIGlobalSettings, AIAgent
+        from aot.ai.services import ai_runtime_state
         ai_settings = AIGlobalSettings.query.first()
         if not ai_settings or not ai_settings.ai_enabled:
             logger.info("AI features are disabled. Blocking command execution.")
             return {"status": "error", "message": "AI features are currently disabled. Please enable them in AI Settings."}
+        if not ai_runtime_state.ai_autonomy_enabled(ai_settings):
+            logger.info("AI model is not running. Blocking command execution.")
+            return {"status": "error", "message": "The AI model is not running yet. Start it on the AI page."}
 
         # v3.1 Phase 6: budget hard-stop gate (flag-gated → no work when off).
         # If the active worker's connection is at hard-stop for the month, block
@@ -1415,10 +1419,13 @@ class AIAgentService:
         """
         # Check if AI features are enabled
         from aot.databases.models import AIGlobalSettings
+        from aot.ai.services import ai_runtime_state
         ai_settings = AIGlobalSettings.query.first()
         if not ai_settings or not ai_settings.ai_enabled:
             return {"status": "error", "message": "AI features are disabled"}
-        
+        if not ai_runtime_state.ai_autonomy_enabled(ai_settings):
+            return {"status": "error", "message": "The AI model is not running yet. Start it on the AI page."}
+
         from aot.databases.models import AIAgent
         agent_cfg = AIAgent.query.filter_by(unique_id=agent_id).first()
         if not agent_cfg:

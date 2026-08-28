@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from datetime import timedelta
 from typing import Any
 
+from aot.utils import measurement_freshness as _freshness
 from aot.functions.utils.env_control.active_probe import ActiveProbeScheduler
 from aot.functions.utils.env_control.actuator_feedback import ActuatorFeedbackRegistry
 from aot.functions.utils.env_control.authority import authority_summary, derive_authority
@@ -750,7 +751,8 @@ class CycleMixin:
         if _outdoor_sr:
             try:
                 from aot.aot_flask.geo.facility_sensors import read_outdoor_sensors
-                _od_cache = read_outdoor_sensors(_outdoor_sr, max_age=int(max_age)) or {}
+                _od_cache = read_outdoor_sensors(
+                    _outdoor_sr, max_age=_freshness.as_seconds(max_age)) or {}
                 _od_fresh = False
                 # T/RH: 두 키 모두 채워 situation.py('T') 와 _build_gate_env('T_ext') 양쪽 호환
                 if _od_cache.get('T_ext') is not None:
@@ -824,7 +826,10 @@ class CycleMixin:
 
     def _run_cycle(self, cycle_sec: float) -> None:
         uid     = self.unique_id
-        max_age = self.sensor_max_age or 120.0
+        # 정하지 않았으면 **None 그대로** 아래로 흘린다 — 센서마다 자기 주기로
+        # 판정한다(`_sensor_max_age` 주석 참조). 여기 폴백을 되살리면 그 자동
+        # 경로에 영영 도달하지 못한다.
+        max_age = self._sensor_max_age()
         # 구획 목표는 사이클당 한 번만 읽는다. 항목마다 따로 읽으면 DB 를 여러
         # 번 치는 것도 문제지만, 그 사이에 값이 바뀌면 **한 사이클 안에서 서로
         # 다른 목표**를 보게 된다.

@@ -394,12 +394,25 @@
                     // 사람의 레이어가 업그레이드에서 조용히 다시 켜진다.
                     const _vegOpt = (_vegOpts.show_plots !== undefined)
                         ? _vegOpts.show_plots : _vegOpts.show_vegetation;
+                    // 라벨 숨김값도 도형의 `visible` 과 같은 자리에서 넘긴다 —
+                    // addLayerPanel(loadGeoJSONLayers/loadGeoDesignLabels 를
+                    // 기다린 뒤 실행)의 시딩보다 구획 fetch 가 먼저 끝나면,
+                    // 시딩이 즉시 적용으로 바뀌었어도(아래 addLayerPanel 주석
+                    // 참조) 그 자체가 아직 안 돌았으니 라벨이 잠깐 보인 채로
+                    // 그려진다. 여기서 넘기면 load() 가 fetch 를 걸기도 전에
+                    // 미리 심어 둘 수 있어 그 창이 아예 없어진다. addLayerPanel
+                    // 의 `_readLabelHidden`(legacy 폴백까지 갖춘 정본)이 뒤이어
+                    // 다시 한 번 정확한 값을 덮어쓰므로, 여기서는 흔한 경우만
+                    // 본다.
+                    const _vegLabelHidden = _vegOpts.label_hidden_plot === true ||
+                                             _vegOpts.label_hidden_plot === 'true';
                     window.AoTMapPlot.load(uniqueId, map, {
                         mapUuid: _vegMapUuid,
                         shell: _showFacilityCenterOverlay,
                         facilityCentric: !!_vegOpts.label_priority_facility,
                         labelSizeEm: _vegOpts.global_label_size,
                         visible: !(_vegOpt === false || _vegOpt === 'false'),
+                        labelHidden: _vegLabelHidden,
                         // 구역·시설과 같은 옵션을 식생 모달도 따른다(탭 세 키가
                         // 같아 매핑이 없다).
                         defaultTab: _vegOpts.popup_default_tab,
@@ -10100,9 +10113,17 @@
         }
         // Expose the shape-category toggle so the settings modal can live-apply the
         // show_*_shape options (the in-map shape toggles already call this).
+        //
+        // `_applyShapeLOD` 도 함께 노출한다 — 구획(plot)은 자기 폴링/rehydrate 로
+        // 도형 레이어를 직접 켜는데(줌을 보지 않는다), 그 직후 이 함수를 불러야
+        // 줌 컬링이 즉시 재적용된다(라벨의 `_applyZoomGate` 노출과 같은 이유,
+        // `aot-map-plot.js` 의 `_renderLabels` 참조).
         try {
             var _shInst = window.AoTWidgetInstances[uniqueId];
-            if (_shInst) { _shInst._applyShapeVisible = _applyShapeVisible; }
+            if (_shInst) {
+                _shInst._applyShapeVisible = _applyShapeVisible;
+                _shInst._applyShapeLOD = _applyShapeLOD;
+            }
         } catch (e) {}
 
         // Seed persisted SHAPE-hidden state into the registry. _applyShapeLOD (called
@@ -10496,8 +10517,23 @@
             })();
 
             // Seed persisted hidden state for EVERY label key (whether or not it has a
-            // quick-button), re-applying on a few delays since labels/markers/sensor
-            // render asynchronously after the toolbar is built.
+            // quick-button).
+            //
+            // ⚠ **즉시 한 번 적용한다** (지연 재적용뿐이던 예전 방식 대신). 이
+            // 함수(addLayerPanel)는 loadGeoJSONLayers/loadGeoDesignLabels 를
+            // 기다린 뒤 실행되므로, 그 로더들이 만든 라벨은 이 시점에 이미
+            // 존재한다 — 즉시 적용이 그 종류엔 원래도 충분했다.
+            //
+            // 구획(plot)은 다르다: 자기 fetch(AoTMapPlot.load)를 따로,
+            // await 없이 돌리므로 이 시딩보다 먼저 끝날 수도 늦게 끝날 수도
+            // 있다. **그래서 그 모듈은 이제 이 시딩을 기다리지 않는다** —
+            // `load()` 를 부를 때 넘기는 opts(`labelHidden`/`visible`)로
+            // fetch 걸기 전에 스스로 미리 심어 둔다(aot-map-plot.js 머리말의
+            // "초기 표시 상태 계약" 참조). 그래서 여기 `_applyLabel(key,true)`
+            // 즉시 호출은 plot 에게는 이제 **확인**일 뿐이고(같은 값을 한 번
+            // 더 적용, 무해), 원래 목적대로 다른 라벨 종류를 위해 남겨 둔다.
+            // 지연 재적용도 그대로 둔다 — 센서값 라벨처럼 이 시점 이후에도
+            // 한참 늦게 붙는 종류의 안전망이다.
             (function() {
                 var inst = window.AoTWidgetInstances[uniqueId];
                 if (!inst) return;
@@ -10508,6 +10544,7 @@
                     inst._hiddenLabels[key] = hidden;
                     if (_LABEL_DEVICE[key]) inst._hiddenTypes[key] = hidden;
                     if (hidden) {
+                        _applyLabel(key, true);
                         [500, 1500, 3000].forEach(function(ms) {
                             setTimeout(function() { _applyLabel(key, true); }, ms);
                         });

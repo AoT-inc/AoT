@@ -6509,8 +6509,15 @@ class TestProgram(unittest.TestCase):
                                 'widgets', 'AoT_map', 'aot-map-plot.js'))
         render = js.split('function _render(uid, map, rows, opts)', 1)[1] \
                    .split('\n    // ── 라벨', 1)[0]
-        self.assertIn('setShapeVisible(uid, map, opts.visible !== false)', render)
+        # 도형 축만 건드린다(라벨 축을 함께 내리지 않는다).
         self.assertNotIn('setVisible(uid, map, opts.visible', render)
+        # ⚠ `opts.visible` 은 **페이지 로드 당시 스냅샷**이다. 렌더가 그것으로
+        #   매번 되쓰면 5분 폴링·베이스맵 전환·모달 저장 후 재로드가 돌 때마다
+        #   방금 끈 도형이 되살아난다. 저장된 상태가 있으면 그것이 이긴다.
+        self.assertIn("typeof _stNow.shapeVisible === 'boolean'", render,
+                      '렌더가 저장된 도형 상태보다 옵션 스냅샷을 앞세웁니다')
+        self.assertIn('opts.visible !== false', render,
+                      '선-시딩이 안 됐을 때의 폴백이 사라졌습니다')
 
     def test_plot_label_axis_survives_being_set_before_render(self):
         """새로고침 직후 위젯은 저장된 라벨 상태를 되살리려고 500·1500·3000ms 에
@@ -6526,8 +6533,16 @@ class TestProgram(unittest.TestCase):
         sets = js.split('function setShapeVisible', 1)[1].split('\n    }', 1)[0]
         self.assertIn('.shapeVisible = !!visible', sets)
         self.assertNotIn('if (st) st.shapeVisible', sets)
-        # 레이어가 나중에 생겨도 그 전에 정해진 뜻을 따른다.
-        self.assertIn('if (_stv === false) setShapeVisible(uid, map, false);', js)
+        # 레이어가 나중에 생겨도 그 전에 정해진 뜻을 따른다 — 이 모듈은 자기만의
+        # fetch 를 쓰므로 위젯의 나머지 초기화와 시간이 어긋난 채 끝난다. 그래서
+        # `load()` 가 **fetch 를 걸기 전에** opts 로 받은 초기 상태를 STATE 에
+        # 미리 심는다(파일 머리말 "초기 표시 상태 계약"). 나중에 오는
+        # `addLayerPanel` 의 적용은 확인이지 최초 통보가 아니다.
+        load = js.split('function load(', 1)[1].split('\n    function ', 1)[0]
+        self.assertIn("typeof st.shapeVisible !== 'boolean'", load,
+                      'fetch 전에 도형 축을 선-시딩하지 않습니다')
+        self.assertIn("typeof st.labelVisible !== 'boolean'", load,
+                      'fetch 전에 라벨 축을 선-시딩하지 않습니다')
 
     def test_focus_prefers_the_area_over_the_marker(self):
         """장치는 한 uuid 에 피처가 **둘**이다 — 위치 마커(Point)와 그 장치가 맡은

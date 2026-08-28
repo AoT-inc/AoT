@@ -36,15 +36,18 @@ class AIGlobalSettings(CRUDMixin, db.Model):
     # Cost Management
     budget_limit_usd = db.Column(db.Float, default=10.0)
     
-    # Feature Toggle — "AI 를 쓸 수 있게 한다". Settings > General 에서 켠다.
-    # 메뉴 노출, AI 페이지 접근, 채팅/조언 요청이 여기에 달려 있다.
+    # Feature Toggle (1단계) — "AI 메뉴/페이지를 노출한다". Settings > General 에서 켠다.
+    # 메뉴 노출과 AI 페이지 접근만 이 스위치에 달려 있다. 이것만으로는 채팅도,
+    # 백그라운드 작동도 실제로 동작하지 않는다 — 2단계(ai_running)가 별도로 필요하다.
     ai_enabled = db.Column(db.Boolean, default=False, nullable=False)
 
-    # Operation Toggle — "AI 가 스스로 돈다". AI 페이지에서 켠다.
+    # Operation Toggle (2단계) — "LLM 모델이 설정되고 작동한다". AI 페이지에서 켠다.
+    # 활성 AIAgent(=LLM 모델)가 하나 이상 있어야 켤 수 있다(라우트에서 강제).
     # 사람이 부르지 않아도 도는 백그라운드 잡(주기 요약, 컨텍스트 브로드캐스트,
-    # 날씨 요약, MCP 헬스체크, 실시간 알림)만 이 스위치에 달려 있다. 사용자가
-    # 직접 보내는 채팅/조언 요청은 ai_enabled 만 보고 동작한다 — 모델을 막
-    # 등록한 사람이 켜기 전에 시험해 볼 수 있어야 하기 때문.
+    # 날씨 요약, MCP 헬스체크, 실시간 알림)뿐 아니라, 사용자가 직접 보내는
+    # 채팅/조언/명령 요청도 이 스위치가 꺼져 있으면 동작하지 않는다.
+    # 외부 LLM 클라이언트(Claude Desktop 등)가 쓰는 MCP 서버(mcp_http_enabled)는
+    # 이 판정과 무관 — 그쪽은 항상 별도 축이다.
     # 판정은 반드시 aot/ai/services/ai_runtime_state.py 를 거칠 것.
     ai_running = db.Column(db.Boolean, default=False, nullable=True)
 

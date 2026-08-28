@@ -16550,6 +16550,13 @@ msgstr "AI 서비스"
 
 #: aot_flask/templates/settings/general.html:160
 msgid ""
+"This is an experimental feature. Behavior may change without notice, and "
+"availability may be limited or interrupted."
+msgstr ""
+"실험적인 기능입니다. 예고 없이 동작이 바뀌거나 이용이 제한·중단될 수 있습니다."
+
+#: aot_flask/templates/settings/general.html:161
+msgid ""
 "Enable or disable the global AI service. When disabled, the AI menu will be "
 "hidden from the navigation bar and AI features will be unavailable. All AI "
 "settings and configurations are preserved when the service is disabled."
@@ -24222,8 +24229,9 @@ msgid "Max Sensor Age (seconds)"
 msgstr "최대 센서 유효 시간 (초)"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:153
-msgid "Reject sensor readings older than this value. 0 = no limit."
-msgstr "이 값보다 오래된 센서 값은 무시합니다. 0 = 제한 없음."
+msgid "Reject sensor readings older than this. Leave at 0 to let "
+"each sensor decide from its own update interval."
+msgstr "이보다 오래된 센서 값은 쓰지 않습니다. 0 으로 두면 센서마다 자기 갱신 주기로 판단합니다."
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:160
 msgid "Actuation Rate"
@@ -26974,8 +26982,8 @@ msgid "AI Service Operation"
 msgstr "AI 서비스 작동"
 
 #: aot/aot_flask/templates/pages/ai/ai_agent.html
-msgid "Start or stop autonomous AI operation. Chat and advice requests you make yourself are unaffected."
-msgstr "AI 자율 작동을 시작하거나 중지합니다. 사용자가 직접 보내는 대화·조언 요청은 영향을 받지 않습니다."
+msgid "Start or stop the AI model. While stopped, chat, advice requests and background AI work are all unavailable."
+msgstr "AI 모델을 시작하거나 중지합니다. 중지 중에는 대화·조언 요청과 백그라운드 AI 작업이 모두 동작하지 않습니다."
 
 #: aot/aot_flask/templates/pages/ai/ai_agent.html
 msgid "The AI service is disabled. Enable it in Settings > General first."
@@ -26986,12 +26994,12 @@ msgid "No AI model is registered yet. Add and activate at least one agent below,
 msgstr "등록된 AI 모델이 없습니다. 아래에서 에이전트를 하나 이상 추가·활성화한 뒤 서비스를 시작하세요."
 
 #: aot/aot_flask/templates/pages/ai/ai_agent.html
-msgid "Running. Periodic summaries, context broadcast and alerts are active."
-msgstr "작동 중입니다. 주기 요약, 컨텍스트 브로드캐스트, 알림이 동작합니다."
+msgid "Running. Chat, advice requests and background AI work are all active."
+msgstr "작동 중입니다. 대화·조언 요청과 백그라운드 AI 작업이 모두 동작합니다."
 
 #: aot/aot_flask/templates/pages/ai/ai_agent.html
-msgid "Stopped. No background AI work runs; chat and advice requests you make yourself still work."
-msgstr "중지 상태입니다. 백그라운드 AI 작업은 돌지 않으며, 사용자가 직접 보내는 대화·조언 요청은 그대로 동작합니다."
+msgid "Stopped. Chat, advice requests and background AI work are all unavailable until you start it."
+msgstr "중지 상태입니다. 시작하기 전까지 대화·조언 요청과 백그라운드 AI 작업이 모두 동작하지 않습니다."
 
 #: aot/aot_flask/templates/pages/ai/ai_agent.html
 msgid "AI service started"
@@ -29334,7 +29342,7 @@ msgid "Control hysteresis around setpoint. Applied as setpoint +/- band value. 0
 msgstr "목표값 주변의 불감대입니다. 목표값 ± 밴드 값으로 적용됩니다. 0이면 쓰지 않습니다."
 
 msgid "Create Method"
-msgstr "방법 만들기"
+msgstr "메서드 만들기"
 
 msgid "Danger"
 msgstr "위험"
@@ -29418,13 +29426,13 @@ msgid "Max measure age"
 msgstr "측정값 최대 나이"
 
 msgid "Method End"
-msgstr "방법 종료"
+msgstr "메서드 종료"
 
 msgid "Method called to calculate this method value"
-msgstr "이 방법 값을 계산할 때 부르는 방법"
+msgstr "이 메서드 값을 계산할 때 부르는 메서드"
 
 msgid "Methods are used to reference various types of setpoints in a PID controller. Typically, a PID controller controls a device to a fixed setpoint. If you want the setpoint to change over time, you can change the setpoint over time in the method and use it for control by tracking the value in the PID controller."
-msgstr "방법은 PID 제어기에서 여러 형태의 목표값을 참조하는 데 씁니다. 보통 PID 제어기는 고정된 목표값으로 장치를 제어합니다. 목표값이 시간에 따라 달라지기를 바란다면, 방법에서 목표값을 시간에 따라 바꾸고 PID 제어기가 그 값을 따라가게 해 제어할 수 있습니다."
+msgstr "메서드는 PID 제어기에서 여러 형태의 목표값을 참조하는 데 씁니다. 보통 PID 제어기는 고정된 목표값으로 장치를 제어합니다. 목표값이 시간에 따라 달라지기를 바란다면, 메서드에서 목표값을 시간에 따라 바꾸고 PID 제어기가 그 값을 따라가게 해 제어할 수 있습니다."
 
 msgid "No assets registered. Upload one using the button above."
 msgstr "등록된 자산이 없습니다. 위 버튼으로 올리십시오."
@@ -29433,7 +29441,7 @@ msgid "No results"
 msgstr "결과 없음"
 
 msgid "No saved methods."
-msgstr "저장된 방법이 없습니다."
+msgstr "저장된 메서드가 없습니다."
 
 msgid "None Selected"
 msgstr "선택 안 함"
@@ -29475,13 +29483,13 @@ msgid "Regenerate Thumbnail"
 msgstr "썸네일 다시 만들기"
 
 msgid "Return to Method Management"
-msgstr "방법 관리로 돌아가기"
+msgstr "메서드 관리로 돌아가기"
 
 msgid "Row/card background for paused or held controllers (PID pause/hold, pending AI drafts). Offline devices use Danger Tint below."
 msgstr "멈추거나 보류된 제어기(PID 일시정지·보류, 대기 중인 AI 초안)의 행·카드 배경색입니다. 두절된 장치는 아래 위험 배경색을 씁니다."
 
 msgid "Saved Methods"
-msgstr "저장된 방법"
+msgstr "저장된 메서드"
 
 msgid "Searching"
 msgstr "검색 중"

@@ -67,21 +67,57 @@ def freshness_by_device(device_ids) -> Dict[str, Freshness]:
     ids = sorted({i for i in (device_ids or []) if i})
     if not ids:
         return {}
+
+    # ⚠ **`Input.query` 만으로는 데몬에서 아무것도 못 읽는다.** 그것은 Flask
+    #   앱 컨텍스트를 요구하는데 데몬 프로세스에는 그것이 없어, 아래 `except`
+    #   가 조용히 삼키고 `{}` 를 돌려준다. 그러면 호출자는 "이 장치를 모른다"
+    #   로 읽고 자기 기본값으로 떨어진다 — 즉 **`Input.max_age_s` 와
+    #   `Input.period` 가 제어 경로에서 통째로 죽는다.** 화면에서는 잘 되므로
+    #   증상이 "설정했는데 제어만 안 먹는다" 로 나타나고, 에러는 어디에도
+    #   안 남는다(2026-08-28 실측: 데몬에서 `freshness_by_device()` → `{}`).
+    #   데몬 안전 접근자를 **먼저** 쓰고 그것이 못 도는 자리(앱 컨텍스트만 있는
+    #   단위 테스트)에서만 `Input.query` 로 떨어진다.
+    for reader in (_rows_via_daemon, _rows_via_orm):
+        try:
+            rows = reader(ids)
+        except Exception as exc:                             # noqa: BLE001
+            logger.debug('[Freshness] 조회 실패(%s) — 다음 경로 시도: %s',
+                         reader.__name__, exc)
+            continue
+        if rows:
+            return rows
+    logger.debug('[Freshness] 장치 신선도를 읽지 못했습니다 — 호출자 기본값 사용')
+    return {}
+
+
+def _rows_via_daemon(ids) -> Dict[str, Freshness]:
+    """데몬 경로 — 앱 컨텍스트 없이 돈다."""
+    from aot.databases.models import Input
+    from aot.utils.database import db_retrieve_table_daemon
+
+    table = db_retrieve_table_daemon(Input)
+    if table is None or isinstance(table, list):
+        return {}                       # 조회 실패는 빈 결과로 온다(예외가 아니다)
+    out: Dict[str, Freshness] = {}
+    for row in table.filter(Input.unique_id.in_(ids)).all():
+        # `max_age_s` 는 p6_55 에서 생겼다 — 컬럼이 없는 DB(업그레이드 전)에서는
+        # 속성이 없을 수 있으므로 주기만이라도 살린다.
+        out[row.unique_id] = (row.period, getattr(row, 'max_age_s', None))
+    return out
+
+
+def _rows_via_orm(ids) -> Dict[str, Freshness]:
+    """Flask 경로 — 앱 컨텍스트가 있을 때."""
+    from aot.databases.models import Input
+
     try:
-        from aot.databases.models import Input
         rows = Input.query.filter(Input.unique_id.in_(ids)).with_entities(
             Input.unique_id, Input.period, Input.max_age_s).all()
         return {uid: (period, max_age) for uid, period, max_age in rows}
-    except Exception as exc:
-        logger.debug('[Freshness] 장치 신선도 조회 실패 — 주기만 시도: %s', exc)
-    try:
-        from aot.databases.models import Input
+    except Exception:                                        # noqa: BLE001
         rows = Input.query.filter(Input.unique_id.in_(ids)).with_entities(
             Input.unique_id, Input.period).all()
         return {uid: (period, None) for uid, period in rows}
-    except Exception as exc:
-        logger.debug('[Freshness] 장치 주기 조회 실패 — 호출자 기본값 사용: %s', exc)
-        return {}
 
 
 def lookup(table: Dict[str, Freshness], device_id) -> Freshness:
@@ -91,6 +127,26 @@ def lookup(table: Dict[str, Freshness], device_id) -> Freshness:
     쓰고 None 을 튜플처럼 풀다 터진다.
     """
     return table.get(device_id) or UNKNOWN
+
+
+def as_seconds(value) -> Optional[int]:
+    """초 단위 정수로 바꾸되 **미지정을 보존한다**(`None` → `None`).
+
+    `int(max_age)` 로 감싸는 호출부가 미지정을 0 이나 예외로 바꿔 버리는 것이
+    이 모듈의 자동 경로를 막는 실제 원인이었다 — `requested=None` 분기에
+    영영 도달하지 못한다. 변환을 한 곳에 둔다.
+
+    `0` 은 '제한 없음' 이 아니라 **'안 정했다'** 다. `Input.max_age_s` 저장
+    핸들러가 0 을 NULL 로 눕히는 것과 같은 판단이고, 반대로 읽으면 실수로 0 을
+    넣은 장치의 값이 영원히 유효해져 몇 시간 전 값으로 장비가 움직인다.
+    """
+    if value is None:
+        return None
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return None
+    return int(number) if number > 0 else None
 
 
 def effective_max_age(requested: Optional[float],
@@ -107,8 +163,8 @@ def effective_max_age(requested: Optional[float],
         floor:          주기 파생의 하한. 주기를 모를 때의 기본값이기도 하다.
         factor:         주기에 곱할 배수.
 
-    장치값이 호출자 요청보다 앞이다. 제어(env_coordinator)는 **항상** 숫자를
-    들고 오므로, 요청을 앞에 두면 제어 경로에서 장치별 설정이 통째로 무시된다
+    장치값이 호출자 요청보다 앞이다. 제어(env_coordinator)도 숫자를 들고 올 수
+    있으므로, 요청을 앞에 두면 제어 경로에서 장치별 설정이 통째로 무시된다
     — 그러면 컬럼을 만든 의미가 없다. 현장 센서는 갱신 주기가 제각각이라
     (LoRaWAN 하트비트 30~60분 · MQTT 60초 · 기상청 10분) 호출자가 든 숫자
     하나로 전부를 판정할 수 없다는 것이 이 순서의 근거다.

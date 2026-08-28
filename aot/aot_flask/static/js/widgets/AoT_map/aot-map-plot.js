@@ -11,6 +11,32 @@
  *   - 라벨은 줌 16 이상에서만(label-layers 프리셋의 plot.pin='gated').
  *   - 라벨 문구는 작물 이름 하나. 이름·품종·면적은 모달에서 본다.
  *   - 채움은 옅게(겹침이 정상이라 진하면 아래 구획이 안 보인다).
+ *
+ * ── 초기 표시 상태 계약(반복해서 깨졌던 자리) ──────────────────────────────
+ *
+ * 이 모듈은 site/zone/facility/equipment/device/drawn 6개 도형·9개 라벨
+ * 종류와 달리 **자기만의 fetch**(`/api/geo/plots`)로 따로 데이터를 받는다.
+ * 위젯 본체(aot-map-widget-vector.js)의 `loadGeoJSONLayers`/
+ * `loadGeoDesignLabels` 는 `await` 되지만, 이 모듈의 `load()`는 의도적으로
+ * `await` 하지 않는다(느린 로더 하나가 식생까지 함께 막던 사고가 있었다) —
+ * 그래서 이 fetch 는 위젯의 나머지 초기화와 **시간이 어긋난 채** 끝난다.
+ *
+ * 다른 종류는 이 문제가 없다: `loadGeoJSONLayers` 가 꺼진 카테고리의 레이어를
+ * 아예 만들지 않거나(그 종류엔 "숨길 것"이 없다), 만들더라도 그 직후(같은
+ * await 사슬 안, 재실행 지연 없이) `addLayerPanel` 의 시딩이 곧바로 뒤따른다.
+ *
+ * **그래서 이 모듈은 "누가 나중에 와서 내 상태를 알려주길" 기다리면 안 된다.**
+ * `load(uid, map, opts)` 를 부를 때 넘기는 `opts` 가 이 종류의 전체 초기
+ * 표시 상태(도형: `opts.visible`, 라벨: `opts.labelHidden`)를 **전부** 담고
+ * 있어야 하고, 이 모듈은 fetch 를 걸기도 전에 그 값을 `STATE[uid]` 에 먼저
+ * 적어 둬야 한다 — 그래야 나중에 무엇이 먼저 끝나든(이 fetch 대 위젯의
+ * 다른 초기화) 결과가 같다. `addLayerPanel` 이 뒤이어 다시 한 번 적용하는
+ * 것은 **확인(legacy 폴백 포함 정본과 대조)**이지 **최초 통보**가 아니다.
+ *
+ * 이 계약이 깨질 때마다(도형 축 2026-08, 라벨 축 2026-08) "설정은 꺼져
+ * 있는데 로드하면 잠깐 켜졌다 꺼진다"가 재발했다 — 새 축을 추가하거나 이
+ * 모듈을 고칠 때는 반드시 이 순서(opts 로 받기 → fetch 전에 STATE 에 적기)
+ * 를 지킬 것.
  */
 (function () {
     'use strict';
@@ -192,6 +218,28 @@
         if (!map || !opts.mapUuid) return Promise.resolve([]);
         _loadPrograms();
 
+        // ⚠ **두 축(도형·라벨) 모두 fetch 걸기 전에 미리 심어 둔다.** 파일
+        // 머리말의 "초기 표시 상태 계약" 참조 — 이 모듈은 위젯의 나머지
+        // 초기화와 시간이 어긋난 채 끝나므로, 외부(addLayerPanel)가 나중에
+        // 와서 알려주길 기다리면 그 사이 잘못된 기본값(보임)으로 그려진다.
+        // `opts.visible`/`opts.labelHidden` 은 위젯이 이 함수를 부르는 시점에
+        // 이미 갖고 있는 값(흔한 경우만, legacy 폴백은 없음)이므로 여기서
+        // 먼저 적어 두면 그 창이 아예 생기지 않는다. 이미 사용자가 그 사이에
+        // 직접 정한 값이 있으면 건드리지 않는다(`typeof ... !== 'boolean'`
+        // 가드 — 아직 안 정해졌을 때만 채운다). `addLayerPanel` 의
+        // `_applyShapeVisible`/`_readLabelHidden`(legacy 폴백까지 갖춘
+        // 정본)이 뒤이어 다시 한 번 적용하는 것은 **확인**이지 **최초
+        // 통보**가 아니다 — 여기서 이미 옳았어야 한다.
+        (function () {
+            var st = STATE[uid] = STATE[uid] || {};
+            if (opts.visible != null && typeof st.shapeVisible !== 'boolean') {
+                st.shapeVisible = !!opts.visible;
+            }
+            if (opts.labelHidden != null && typeof st.labelVisible !== 'boolean') {
+                st.labelVisible = !opts.labelHidden;
+            }
+        })();
+
         // **계획(시작 전)도 함께 받는다.** 자리를 정하는 일이 곧 계획이고,
         // 그 자리를 정하는 화면이 지도다 — 만들자마자 사라지면 무엇을 어디에
         // 두었는지 확인할 방법이 없다. 자라는 것과는 **점선**으로 가른다
@@ -287,11 +335,6 @@
                 // 팬을 시작하려고 짚은 것까지 창이 떴다. 커서도 pointer 로
                 // 바꾸지 않는다 — 누를 수 없는 것을 누를 수 있다고 말하는 셈이다.
             }
-            // 레이어가 방금 생겼다면 그 전에 정해진 뜻을 여기서 반영한다 —
-            // 새로고침 직후 위젯이 `setShapeVisible(false)` 를 먼저 부르는데,
-            // 그때는 아직 레이어가 없어 `setLayoutProperty` 가 아무것도 못 한다.
-            var _stv = (STATE[uid] || {}).shapeVisible;
-            if (_stv === false) setShapeVisible(uid, map, false);
         } catch (e) {
             console.warn('[AoT Map] 식생 레이어 렌더 실패:', e);
             return;
@@ -308,8 +351,44 @@
         // `setLabelVisible` 로 들어와 `st.labelVisible` 에 남아 있다. 여기서
         // 건드리지 않으면 방금 만든 라벨에도 `_renderLabels` 안의
         // `_applyLabelVisibility` 가 그 값을 그대로 적용한다.
-        setShapeVisible(uid, map, opts.visible !== false);
-        (STATE[uid] = STATE[uid] || {}).visible = opts.visible !== false;
+        //
+        // ⚠ **`opts.visible` 은 위젯이 처음 로드될 때 찍힌 스냅샷이다** — 레이어
+        // 패널·설정모달에서 [구획]을 껐다 켜면 `AoTMapPlot.setShapeVisible` 로
+        // `st.shapeVisible` 만 바뀌고, `opts`(= `st.opts`, `load()` 때 넣은 그대로)는
+        // 절대 갱신되지 않는다. 예전에는 이 자리에서 매번 `opts.visible` 로
+        // 되썼기 때문에, 5분 폴링(`_scheduleRefresh` → `_render`)·베이스맵 전환
+        // rehydrate·모달 저장 후 재로드가 돌 때마다 방금 끈 도형이 페이지 로드
+        // 당시 값으로 되살아났다("구획만 제멋대로 켜졌다 꺼졌다"의 근본 원인).
+        // 이미 사용자가 정한 값(`st.shapeVisible`)이 있으면 그것을 따른다 —
+        // `load()` 앞머리의 선-시딩(파일 머리말 계약 참조) 덕에 첫 렌더에서도
+        // 보통 이미 정해져 있고, 옵션 스냅샷(`opts.visible`)은 그 선-시딩이
+        // 어떤 이유로든 안 됐을 때만 쓰는 마지막 폴백이다.
+        var _stNow = STATE[uid] = STATE[uid] || {};
+        var _wantShapeVisible = (typeof _stNow.shapeVisible === 'boolean')
+            ? _stNow.shapeVisible : (opts.visible !== false);
+        setShapeVisible(uid, map, _wantShapeVisible);
+        _stNow.visible = _wantShapeVisible;
+
+        // 도형 축 적용은 줌을 모른다(`setShapeVisible` 은 무조건 'visible' 을
+        // 쓴다) — 위젯의 줌 LOD(`_applyShapeLOD`, [도형] 카테고리를
+        // `equipment_cull_zoom` 아래에서 컬링한다)를 즉시 재적용하지 않으면,
+        // 멀리 줌아웃한 채로 폴링/rehydrate 가 돌 때마다 컬링돼 있어야 할 구획
+        // 도형이 다음 zoomend 까지 잠깐 다시 나타난다. 라벨의 `_applyZoomGate`
+        // 노출(위 `_renderLabels`)과 같은 이유.
+        //
+        // ⚠ **첫 렌더(addLayerPanel 이 아직 카테고리 레지스트리를 못 시딩했을
+        // 수 있는 시점)에는 이 함수가 아직 노출 전이라 `typeof` 가드가 자연히
+        // 건너뛴다** — 그래서 안전하다. `addLayerPanel`(loadGeoJSONLayers 를
+        // 기다린 뒤 실행)이 노출과 레지스트리 시딩을 항상 같은 동기 실행
+        // 안에서 순서대로 하므로, 이 함수가 존재하는 시점에는 레지스트리도
+        // 이미 옳다 — 노출 전 값(기본 true)을 읽어 방금 끈 도형을 되살리는
+        // 일은 없다(실측: 콘솔 트레이스로 3개 위젯 전부 확인).
+        try {
+            var _inst2 = window.AoTWidgetInstances && window.AoTWidgetInstances[uid];
+            if (_inst2 && typeof _inst2._applyShapeLOD === 'function') {
+                _inst2._applyShapeLOD();
+            }
+        } catch (e) {}
     }
 
     // ── 라벨 ────────────────────────────────────────────────────────────────

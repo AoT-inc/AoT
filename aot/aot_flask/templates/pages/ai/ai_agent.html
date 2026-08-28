@@ -39,17 +39,18 @@
   </div>
   <p class="aot-modal-body-text">{{_('AI Agents orchestration layer. Manage your AI services and agents to automate complex tasks.')}}</p>
 
-  <!-- AI 작동 시작/중지 — Settings > General 의 "AI 서비스 사용"(기능 활성화)과
-       분리된 스위치. 여기가 꺼져 있으면 사람이 부르지 않아도 도는 백그라운드
-       작동(주기 요약·컨텍스트 브로드캐스트·날씨 요약·MCP 헬스체크·실시간 알림)이
-       전부 멈춘다. 사용자가 직접 보내는 채팅/조언 요청은 그대로 동작한다. -->
+  <!-- AI 작동 시작/중지 — Settings > General 의 "AI 서비스 사용"(1단계, 메뉴/페이지
+       노출)과 분리된 스위치(2단계). 여기가 꺼져 있으면 LLM 모델이 작동하지 않아
+       백그라운드 작동(주기 요약·컨텍스트 브로드캐스트·날씨 요약·MCP 헬스체크·
+       실시간 알림)뿐 아니라 사용자가 직접 보내는 채팅/조언/명령 요청도 멈춘다.
+       외부 LLM 클라이언트가 쓰는 MCP 서버는 이 스위치와 무관하게 계속 동작한다. -->
   <div class="aot-modal-container" id="aiRuntimeBlock">
     <div class="aot-modal-option-row">
       <div class="aot-modal-option-label">{{ _('AI Service Operation') }}</div>
       <div class="aot-modal-option-control">
         <label class="btn-toggle mb-0">
           <input type="checkbox" class="btn-toggle-input" id="toggleAiRunning"
-                 title="{{ _('Start or stop autonomous AI operation. Chat and advice requests you make yourself are unaffected.') }}"
+                 title="{{ _('Start or stop the AI model. While stopped, chat, advice requests and background AI work are all unavailable.') }}"
                  {% if ai_runtime and ai_runtime.ai_running %} checked{% endif %}
                  {% if not ai_runtime or not ai_runtime.can_start %} disabled{% endif %}>
           <span class="btn-toggle-slider"><span class="btn-toggle-thumb"></span></span>
@@ -62,9 +63,9 @@
       {%- elif ai_runtime.agent_count == 0 -%}
         {{ _('No AI model is registered yet. Add and activate at least one agent below, then start the service.') }}
       {%- elif ai_runtime.ai_running -%}
-        {{ _('Running. Periodic summaries, context broadcast and alerts are active.') }}
+        {{ _('Running. Chat, advice requests and background AI work are all active.') }}
       {%- else -%}
-        {{ _('Stopped. No background AI work runs; chat and advice requests you make yourself still work.') }}
+        {{ _('Stopped. Chat, advice requests and background AI work are all unavailable until you start it.') }}
       {%- endif -%}
     </div>
   </div>
@@ -687,8 +688,8 @@
       $input.prop('disabled', false);
       if (out.ok && out.res.status === 'success') {
         $('#aiRuntimeHint').text(desired
-          ? '{{ _("Running. Periodic summaries, context broadcast and alerts are active.") }}'
-          : '{{ _("Stopped. No background AI work runs; chat and advice requests you make yourself still work.") }}');
+          ? '{{ _("Running. Chat, advice requests and background AI work are all active.") }}'
+          : '{{ _("Stopped. Chat, advice requests and background AI work are all unavailable until you start it.") }}');
         window.showToast(desired
           ? '{{ _("AI service started") }}'
           : '{{ _("AI service stopped") }}', 'success');

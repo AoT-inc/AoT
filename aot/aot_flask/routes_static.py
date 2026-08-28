@@ -310,6 +310,16 @@ def inject_variables():
         perm_edit_settings or user_has_permission('edit_controllers', silent=True)
     ) else []
     ai_settings = _cached_ai_settings()
+    # 2단계("LLM 모델 작동") 여부 — "AI에게 물어보기" 류 호출 버튼(플로팅 챗,
+    # 각 설정 모달의 AI Utilization 섹션, 로그뷰 AI 진단바)은 전부 이 값으로
+    # 노출을 결정한다. 1단계(ai_settings.ai_enabled)만으로는 메뉴/AI 페이지
+    # 접근만 열리고, 실제로 호출 가능한 버튼은 여기 안 걸리면 눌러도 서버가
+    # 거부한다 — 그 불일치를 막기 위해 버튼 노출도 같은 판정을 쓴다.
+    try:
+        from aot.ai.services import ai_runtime_state
+        ai_operational = ai_runtime_state.ai_autonomy_enabled(ai_settings)
+    except Exception:
+        ai_operational = False
 
     # MapLibre(~775KB) 전역 스택은 head 에서 동기 로드되어 렌더를 차단한다. 지도가
     # 전혀 없는 텍스트 페이지에서는 불필요하므로 끈다. 기본은 로드(True)로 두어
@@ -360,6 +370,7 @@ def inject_variables():
                 map_global_keys=map_global_keys,
                 api_keys=api_keys,
                 ai_settings=ai_settings,
+                ai_operational=ai_operational,
                 now_timestamp=int(time.time()))
 
 

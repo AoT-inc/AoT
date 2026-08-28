@@ -23,7 +23,8 @@ import pathlib
 import pytest
 
 from aot.utils.measurement_freshness import (
-    UNKNOWN, effective_max_age, lookup, widen_window,
+    UNKNOWN, as_seconds, effective_max_age, freshness_by_device, lookup,
+    widen_window,
 )
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
@@ -228,3 +229,92 @@ def test_소스에_옛_단락이_되살아나지_않았다():
 
 if __name__ == '__main__':
     pytest.main([__file__, '-v'])
+
+
+class TestUnsetSurvivesTheTripToTheRule:
+    """"안 정했다" 가 호출부에서 숫자로 굳으면 자동 경로는 죽은 코드가 된다.
+
+    `effective_max_age(requested=None, ...)` 이 센서 주기로 판정해 주는데,
+    코디네이터가 `self.sensor_max_age or 120.0` 로 **항상** 숫자를 만들어
+    넘겨서 그 분기에 영영 도달하지 못했다. 기본값이 120 초라 그보다 느린
+    센서는 전부 만료로 걸렸고 — 기상청 300초 · OpenWeather 600초라 실외
+    데이터원은 사실상 전부다 — 육묘장3 의 측창 둘이 24시간 내내 '실외 값
+    없음' 으로 서 있었다(2026-08-28).
+    """
+
+    def test_as_seconds_keeps_unset_unset(self):
+        assert as_seconds(None) is None
+        assert as_seconds(0) is None, "0 은 '제한 없음' 이 아니라 '안 정했다' 다"
+        assert as_seconds(0.0) is None
+        assert as_seconds('') is None
+        assert as_seconds(120) == 120
+        assert as_seconds(120.7) == 120
+
+    def test_unset_falls_through_to_the_sensor_period(self):
+        # 주기 300초 센서 → 표본 1회 유실까지 정상(×2).
+        assert effective_max_age(None, 300.0, None, floor=300, factor=2.0) == 600
+        # 숫자를 들고 오면 그대로 이긴다(안전 결정이므로 넓히지 않는다).
+        assert effective_max_age(120, 300.0, None, floor=300, factor=2.0) == 120
+        # 장치값은 그 위다.
+        assert effective_max_age(120, 300.0, 900, floor=300, factor=2.0) == 900
+
+    def test_the_coordinator_option_default_is_not_a_number(self):
+        src = (ROOT / 'functions/custom_functions/env_coordinator_impl'
+                      '/_function_info.py').read_text(encoding='utf-8')
+        block = src[src.index("'id': 'sensor_max_age'"):]
+        block = block[:block.index('},')]
+        default = [ln for ln in block.splitlines() if 'default_value' in ln]
+        assert default, 'sensor_max_age 의 default_value 를 찾지 못했습니다'
+        assert '0' in default[0] and '120' not in default[0], (
+            '기본값이 다시 숫자가 됐습니다 — 그보다 느린 센서는 전부 죽습니다')
+
+    def test_no_numeric_fallback_reintroduced_in_the_control_path(self):
+        import re
+        for name in ('_cycle_mixin.py', '_helpers_mixin.py'):
+            path = (ROOT / 'functions/custom_functions/env_coordinator_impl'
+                    / name)
+            for i, line in enumerate(path.read_text(encoding='utf-8').splitlines(), 1):
+                code = line.split('#', 1)[0]
+                if 'sensor_max_age' not in code:
+                    continue
+                assert not re.search(r'\bor\s+\d', code), (
+                    f'{name}:{i} 에 숫자 폴백이 되살아났습니다 — '
+                    f'그러면 미지정이 규칙에 도달하지 못합니다: {line.strip()}')
+
+
+class TestTheLookupWorksInTheDaemonToo:
+    """`Input.query` 만 쓰면 **제어 경로에서 통째로 죽는다**.
+
+    그것은 Flask 앱 컨텍스트를 요구하는데 데몬 프로세스에는 그것이 없어,
+    `except` 가 조용히 삼키고 `{}` 를 돌려준다. 호출자는 그것을 "이 장치를
+    모른다" 로 읽고 자기 기본값으로 떨어지므로, `Input.max_age_s` 와
+    `Input.period` 가 **화면에서만 동작하고 제어에는 닿지 않는다.**
+
+    2026-08-28 실측: 데몬 컨테이너에서 `freshness_by_device()` → `{}`.
+    같은 순간 앱 컨테이너에서는 `{uid: (300.0, 900)}` 였다. 증상은 "설정했는데
+    제어만 안 먹는다" 이고 에러는 어디에도 안 남는다.
+    """
+
+    def test_the_daemon_safe_accessor_is_used(self):
+        src = (ROOT / 'utils/measurement_freshness.py').read_text(encoding='utf-8')
+        code = '\n'.join(ln.split('#', 1)[0] for ln in src.splitlines())
+        assert 'db_retrieve_table_daemon' in code, (
+            '데몬 안전 접근자를 쓰지 않습니다 — 제어 경로에서 장치별 설정이 '
+            '통째로 무시됩니다')
+
+    def test_the_daemon_path_is_tried_first(self):
+        """앱 컨텍스트가 없는 곳이 **제어**다. 그쪽을 먼저 시도해야 한다."""
+        src = (ROOT / 'utils/measurement_freshness.py').read_text(encoding='utf-8')
+        body = src[src.index('def freshness_by_device'):]
+        body = body[:body.index('\ndef _rows_via_daemon')]
+        code = '\n'.join(ln.split('#', 1)[0] for ln in body.splitlines())
+        assert '_rows_via_daemon' in code and '_rows_via_orm' in code
+        assert code.index('_rows_via_daemon') < code.index('_rows_via_orm'), (
+            'ORM 경로를 먼저 시도합니다 — 데몬에서는 그것이 예외를 내므로 '
+            '매 호출이 헛돕니다')
+
+    def test_a_failed_lookup_is_empty_not_wrong(self):
+        # 조회가 안 되면 "모른다"(빈 dict)여야 한다. 억지 기본값을 지어내면
+        # 호출자가 그것을 사실로 믿는다.
+        assert freshness_by_device([]) == {}
+        assert freshness_by_device(None) == {}

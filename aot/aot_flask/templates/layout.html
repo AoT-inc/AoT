@@ -1172,8 +1172,9 @@ IMPORTANT: This is the SOURCE TEMPLATE file.
   <div id="aot-notes-widget-root"></div>
   <script type="module" src="/static/js/notes/notes-widget.js?v=prod_v23"></script>
   
-  {% if ai_settings and ai_settings.ai_enabled %}
-  <!-- AI Global Assistant -->
+  {% if ai_operational %}
+  <!-- AI Global Assistant — 2단계(LLM 모델 작동)가 꺼져 있으면 눌러도 서버가
+       거부하므로, 버튼 자체를 노출하지 않는다. -->
   <button id="ai-fab" class="ai-fab" type="button" title="{{ _('AI Assistant') }}" aria-label="{{ _('AI Assistant') }}">
     <span class="ai-fab-label">AI</span>
   </button>

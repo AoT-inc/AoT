@@ -163,6 +163,22 @@
             width: calc(100% - 4vw);
             max-width: none;
         }
+
+        /* 편집/삭제/저장 버튼이 지도 선택 셀렉트박스와 한 줄에 끼여 찌그러짐 —
+           폰에서는 셀렉트를 한 줄 전체로, 버튼 3개는 다음 줄 오른쪽 정렬로 뺀다. */
+        .geo-map-toolbar-row {
+            flex-wrap: wrap;
+            row-gap: 8px;
+        }
+
+        .geo-map-toolbar-select {
+            width: 100% !important;
+        }
+
+        .geo-map-toolbar-buttons {
+            width: 100%;
+            justify-content: flex-end;
+        }
     }
 
     /* Tool Alignment Override (Decouple Width) */
@@ -395,8 +411,8 @@
             <hr class="mt-0 mb-3">
 
             <!-- Map Selector Row -->
-            <div class="d-flex align-items-center w-100 justify-content-between">
-                <div style="width: 160px; flex-shrink: 0;">
+            <div class="d-flex align-items-center w-100 justify-content-between geo-map-toolbar-row">
+                <div class="geo-map-toolbar-select" style="width: 160px; flex-shrink: 0;">
                     <select id="map-selector" class="selectpicker" data-width="100%" data-style="btn-white border">
                         <option value="" disabled selected>{{ _('Select a Map') }}</option>
                         <option value="new" data-icon="fas fa-plus-circle" class="text-primary font-weight-bold">{{ _('Create New Map') }}</option>
@@ -408,7 +424,7 @@
                     </select>
                 </div>
 
-                <div class="d-flex align-items-center">
+                <div class="d-flex align-items-center geo-map-toolbar-buttons">
                     <!-- Edit Name Button (Hidden initially) -->
                     <button class="btn btn-primary mr-1 ml-1" id="btn-edit-map-name" style="min-width: 60px;"
                         title="{{ _('Rename') }}">
