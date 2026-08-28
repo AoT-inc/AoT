@@ -981,7 +981,8 @@ class CycleMixin:
             #   이 사이클의 것이 아니므로 싣지 않는다 — 낡은 값을 지금 값으로
             #   보이게 하는 것이 침묵보다 나쁘다. 화면은 `gate_only` 를 보고
             #   "환경 데이터는 이 사이클의 것이 아님" 을 말한다.
-            self._write_gate_only_summary(gate_result, gate_env, now_ts)
+            self._write_gate_only_summary(gate_result, gate_env, now_ts,
+                                          internal=internal)
             return
         elif gate_result.gate_mask == 0:
             # P6: integral 은 액추에이터별 평형 개도(%) 기억이므로 매 사이클 지우지
@@ -1861,15 +1862,81 @@ class CycleMixin:
                 since.pop(var, None)
         return worst
 
-    def _write_gate_only_summary(self, gate_result, gate_env, now_ts) -> None:
+    def _build_photo_snapshot(self, internal: dict) -> dict:
+        """작물 파라미터 + 현재 환경으로 광합성 목표 대비 스냅샷을 만든다.
+
+        `internal`(이번 사이클에 이미 모은 측정 집계)만 있으면 계산할 수
+        있다 — `situation`/`env_target`(L1~L3 결과)에 기대지 않는다.
+
+        ⚠ **게이트로 조기 종료해도 이 값은 그대로 쓴다** (2026-08-28). 게이트는
+          "이번 사이클에 제어 명령을 내리지 않았다" 는 뜻이지 "환경을 재지
+          않았다" 는 뜻이 아니다 — `internal` 은 게이트 평가보다 앞서 이미
+          수집돼 있다(`_run_cycle`). 광량/온습도/VPD 는 센서 값이지 제어
+          결과가 아니므로, 게이트 상태와 묶어 감출 이유가 없다.
+        """
+        def _r(v: Any, nd: int = 2) -> 'float | None':
+            try:
+                return round(float(v), nd)
+            except (TypeError, ValueError):
+                return None
+
+        internal = internal or {}
+        photo = {'enabled': bool(getattr(self, 'photosynth_mode_enabled', False))}
+        try:
+            from aot.functions.utils.env_control.photosynthesis import (
+                estimate_net_photosynthesis, ppfd_from_wm2)
+            crop = self._crop_params()
+            # 화면이 이 값을 µmol/m²/s 목표(K_L) 옆에 나란히 놓으므로 **여기서**
+            # 바꿔 싣는다. 요약이 W/m² 를 담고 화면이 µmol 라벨을 붙이던 것이
+            # 2026-08-26 에 발견된 문제다.
+            L   = ppfd_from_wm2(internal.get('light'))
+            CO2 = internal.get('CO2')
+            T   = internal.get('T')
+            VPD = internal.get('VPD')
+            photo.update({
+                'crop':  crop.name,
+                'light': _r(L, 0),
+                'co2':   _r(CO2, 0),
+                'temp':  _r(T, 1),
+                'rh':    _r(internal.get('RH'), 1),
+                'vpd':   _r(VPD, 2),
+                'opt': {
+                    't_opt':    _r(crop.T_opt, 1),
+                    'light_k':  _r(crop.K_L, 0),     # half-saturation PPFD
+                    'co2_k':    _r(crop.K_C, 0),     # half-saturation ppm
+                    'vpd_half': _r(crop.VPD_half, 2),
+                },
+            })
+            if None not in (L, CO2, T, VPD) and crop.A_max > 0:
+                a_n = estimate_net_photosynthesis(
+                    L=float(L), CO2=float(CO2), T=float(T), VPD=float(VPD),
+                    crop_params=crop)
+                photo['rate_rel_pct'] = _r(a_n / crop.A_max * 100.0, 0)
+        except Exception:
+            pass
+        try:
+            acc = getattr(self, '_daily_acc', None)
+            if acc is not None and getattr(acc, 'dli', None) is not None:
+                photo['dli_today'] = _r(acc.dli, 1)
+            dli_t = float(getattr(self, 'dli_target', 0) or 0.0)
+            if dli_t > 0:
+                photo['dli_target'] = _r(dli_t, 1)
+        except Exception:
+            pass
+        return photo
+
+    def _write_gate_only_summary(self, gate_result, gate_env, now_ts,
+                                 internal: dict = None) -> None:
         """안전 게이트로 조기 종료할 때 남기는 **축소 요약**.
 
         전체 요약(`_build_cycle_summary`)은 `situation` 이 있어야 만들 수 있는데
-        이 경로는 그 앞에서 반환한다. 그래서 담을 수 있는 것만 담는다 —
-        **제어가 살아 있다는 사실과 멈춘 이유**.
+        이 경로는 그 앞에서 반환한다. 그래서 L1~L3 결과에 기대는 것(목표·편차·
+        strain 등)은 담지 못한다 — **제어가 살아 있다는 사실과 멈춘 이유**만.
 
-        ⚠ 환경 값(측정·목표·편차)은 싣지 않는다. 이 사이클에서 계산하지 않은
-          값이라, 실으면 낡은 값이 지금 값으로 읽힌다 — 침묵보다 나쁘다.
+        ⚠ 하지만 `photo`(광량/온습도/VPD 등 현재 환경)는 싣는다 — `internal`
+          만으로 계산되고, 게이트와 무관하게 이번 사이클에 실제로 잰 값이다
+          (2026-08-28: 게이트 상태와 환경 표시를 묶었던 것을 풀었다 — 게이트가
+          걸려도 센서는 계속 재고 있는데 화면만 비어 보였다).
         """
         try:
             mask = int(getattr(gate_result, 'gate_mask', 0) or 0)
@@ -1881,7 +1948,8 @@ class CycleMixin:
             reasons = [r.strip() for r in desc.split(',') if r.strip()]
             self._last_cycle_summary = {
                 'ts': now_ts,
-                # 화면이 "환경 데이터는 이 사이클의 것이 아니다" 를 말할 근거.
+                # 화면이 "목표·편차·strain 은 이 사이클의 것이 아니다" 를 말할
+                # 근거 — `photo`(현재 환경)는 아래에서 따로 싣는다.
                 'gate_only': True,
                 'gate': {
                     'triggered': True,
@@ -1889,6 +1957,7 @@ class CycleMixin:
                     'description': desc[:self._SUMMARY_MAX_TEXT],
                     'reasons': reasons[:4],
                 },
+                'photo': self._build_photo_snapshot(internal),
                 # ⚠ **강제된 장치만 싣지 말 것.** 강우 게이트는 개구부와 분무만
                 # 건드리므로, 그것만 실으면 냉난방기가 목록에서 통째로
                 # 사라진다 — 사용자는 "그 장치는 어디 갔나" 를 묻게 된다
@@ -2029,48 +2098,9 @@ class CycleMixin:
                 pass
 
         # ── Photosynthesis 목표 대비 (작물 파라미터 + 현재 환경) ──────────────
-        photo = {'enabled': bool(getattr(self, 'photosynth_mode_enabled', False))}
-        try:
-            from aot.functions.utils.env_control.photosynthesis import (
-                estimate_net_photosynthesis, ppfd_from_wm2)
-            crop = self._crop_params()
-            # 화면이 이 값을 µmol/m²/s 목표(K_L) 옆에 나란히 놓으므로 **여기서**
-            # 바꿔 싣는다. 요약이 W/m² 를 담고 화면이 µmol 라벨을 붙이던 것이
-            # 2026-08-26 에 발견된 문제다.
-            L   = ppfd_from_wm2(internal.get('light'))
-            CO2 = internal.get('CO2')
-            T   = internal.get('T')
-            VPD = internal.get('VPD')
-            photo.update({
-                'crop':  crop.name,
-                'light': _r(L, 0),
-                'co2':   _r(CO2, 0),
-                'temp':  _r(T, 1),
-                'rh':    _r(internal.get('RH'), 1),
-                'vpd':   _r(VPD, 2),
-                'opt': {
-                    't_opt':    _r(crop.T_opt, 1),
-                    'light_k':  _r(crop.K_L, 0),     # half-saturation PPFD
-                    'co2_k':    _r(crop.K_C, 0),     # half-saturation ppm
-                    'vpd_half': _r(crop.VPD_half, 2),
-                },
-            })
-            if None not in (L, CO2, T, VPD) and crop.A_max > 0:
-                a_n = estimate_net_photosynthesis(
-                    L=float(L), CO2=float(CO2), T=float(T), VPD=float(VPD),
-                    crop_params=crop)
-                photo['rate_rel_pct'] = _r(a_n / crop.A_max * 100.0, 0)
-        except Exception:
-            pass
-        try:
-            acc = getattr(self, '_daily_acc', None)
-            if acc is not None and getattr(acc, 'dli', None) is not None:
-                photo['dli_today'] = _r(acc.dli, 1)
-            dli_t = float(getattr(self, 'dli_target', 0) or 0.0)
-            if dli_t > 0:
-                photo['dli_target'] = _r(dli_t, 1)
-        except Exception:
-            pass
+        # `_build_photo_snapshot` 이 `_write_gate_only_summary` 와 공유하는
+        # 정본이다 — 게이트로 조기 종료해도 같은 값이 나가야 한다.
+        photo = self._build_photo_snapshot(internal)
 
         obk = {k: round(s / n, 1) for k, (s, n) in kind_acc.items() if n}
         return {

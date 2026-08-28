@@ -294,6 +294,12 @@ class FunctionRuntimeState(CRUDMixin, db.Model):
     # 맵 위젯 /runtime 용 센서 스냅샷 (indoor/outdoor/sensors/fitting_sensors).
     # 사이클마다 갱신 — 웹이 InfluxDB 를 직접 조회하지 않게 한다. NULL = 미존재.
     runtime_json     = db.Column(db.Text, default=None, nullable=True)
+    # 추세(변화율) 계산용 관측 히스토리 (situation.py TrendState.history).
+    # 코디네이터가 사이클마다 재생성되므로(로그: "EnvCoordinator initialised"
+    # 반복) 이것도 다른 상태와 같이 사이클 간 보존해야 한다 — 안 그러면 매
+    # 사이클 빈 히스토리로 시작해 회귀에 필요한 점 2개를 영원히 못 모으고
+    # 추세가 항상 0(=화면에서 안 보임)이 된다. NULL = 아직 없음(신선한 시작).
+    trend_state_json = db.Column(db.Text, default=None, nullable=True)
 
     def __repr__(self):
         return f'<FunctionRuntimeState function_id={self.function_id}>'

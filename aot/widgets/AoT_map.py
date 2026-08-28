@@ -699,6 +699,20 @@ WIDGET_INFORMATION = {
             'name': lazy_gettext('Measurement Panel')
         },
         {
+            # 그룹 전체의 마스터 스위치 — 아래 선택은 그대로 둔 채 패널만
+            # 통째로 숨긴다(선택을 비우는 것과 다르다: 다시 켜면 고르던
+            # 항목이 그대로 돌아온다).
+            'id': 'show_measurement_panel',
+            'type': 'bool',
+            'default_value': True,
+
+            'name': lazy_gettext('Show Measurement Panel'),
+            'phrase': lazy_gettext(
+                'Show the measurement panel dock. Turn off to hide it entirely, '
+                'even if measurements are selected below.'
+            )
+        },
+        {
             'id': 'measurements_input',
             'type': 'select_multi_measurement',
             'options_select': ['Input'],

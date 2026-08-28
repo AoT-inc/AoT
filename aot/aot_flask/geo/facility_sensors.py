@@ -544,12 +544,7 @@ def read_fitting_sensors(
         if not fid:
             continue
         if fid not in grouped:
-            facility_name = s.get('facility_name')
-            bay_name = s.get('bay_name')
-            if facility_name and bay_name and bay_name != facility_name:
-                display_name = '%s-%s' % (facility_name, bay_name)
-            else:
-                display_name = facility_name or s.get('name') or s.get('input_name') or fid
+            display_name = s.get('name') or s.get('input_name') or fid
             grouped[fid] = {
                 'fitting_id':  fid,
                 'name':        display_name,

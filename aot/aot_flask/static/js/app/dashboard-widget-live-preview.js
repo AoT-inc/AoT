@@ -335,7 +335,9 @@
     // instance hooks the map exposes (_fetchAndRenderDevices /
     // _refreshMeasurementPanel — see mapLiveApply below), so they belong here now.
     device_selection_input: 1, device_selection_output: 1, device_selection_function: 1,
-    measurements_input: 1, measurements_output: 1, measurements_function: 1
+    measurements_input: 1, measurements_output: 1, measurements_function: 1,
+    // 측정값 패널 마스터 스위치 — show_local_time 과 같은 패턴으로 즉시 적용.
+    show_measurement_panel: 1
   };
 
   var DEVICE_SELECTION_KEYS = {
@@ -449,6 +451,14 @@
       else if (key === 'show_local_time' && typeof inst._refreshTimeDock === 'function') {
         if (inst.vars && inst.vars.vars) { inst.vars.vars.show_local_time = !!value; }
         inst._refreshTimeDock();
+      }
+      // 측정값 패널 마스터 스위치 -> 도크를 통째로 다시 만든다(addMeasurementPanel
+      // 이 이 옵션을 보고 아예 안 만들거나 다시 만든다). show_local_time 과 같은
+      // 이유로 살아 있는 옵션 객체를 먼저 갱신 — 인자 없이 부르므로 측정값
+      // 선택(measurements_map)은 그대로 둔다(_refreshMeasurementPanel 참조).
+      else if (key === 'show_measurement_panel' && typeof inst._refreshMeasurementPanel === 'function') {
+        if (inst.vars && inst.vars.vars) { inst.vars.vars.show_measurement_panel = !!value; }
+        inst._refreshMeasurementPanel();
       }
       else if (key === 'show_labels' && typeof inst._setLabel === 'function' && inst._labelKeys) {
         inst._labelKeys.forEach(function (k) { inst._setLabel(k, !value); });

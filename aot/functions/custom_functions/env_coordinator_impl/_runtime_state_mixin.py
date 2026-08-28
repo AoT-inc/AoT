@@ -40,12 +40,28 @@ class RuntimeStateMixin:
                 active_vars   = json.loads(row.active_vars_json or '{}')
                 last_ts       = row.last_cycle_ts or 0.0
                 cal_raw       = row.calibration_state_json or None
+                trend_raw     = row.trend_state_json or None
                 sess.expunge_all()
 
             self._coord_state.integral      = integral
             self._coord_state.prev_commands = prev_commands
             self._coord_state.active_vars   = active_vars
             self._last_cycle_ts             = last_ts
+
+            # 추세 히스토리 — 이게 없으면 이 코디네이터는 매 사이클 새로
+            # 만들어지므로(재생성 패턴, 아래 calibration 복원과 같은 이유)
+            # `self._trend_state` 가 매번 빈 채로 시작해 회귀에 필요한 점
+            # 2개를 영원히 못 모은다(추세가 항상 0 → 화면에서 안 보임).
+            if trend_raw:
+                try:
+                    from aot.functions.utils.env_control.situation import TrendState
+                    hist = json.loads(trend_raw)
+                    # JSON 은 튜플을 배열로 낸다 — `_slope_per_min` 이 `for t, v
+                    # in points` 로 그대로 풀어 쓰므로 튜플로 되돌릴 필요는 없다.
+                    self._trend_state = TrendState(history=hist)
+                except Exception as trend_exc:
+                    self.logger.warning(
+                        'EnvCoordinator: trend state restore failed: %s', trend_exc)
 
             if cal_raw:
                 try:
@@ -90,6 +106,18 @@ class RuntimeStateMixin:
                         {k: bool(v) for k, v in self._coord_state.active_vars.items()})
                     row.last_cycle_ts    = self._last_cycle_ts
                     row.updated_at       = now
+
+                    # 추세 히스토리 — `_load_runtime_state` 와 같은 이유(이
+                    # 코디네이터는 사이클마다 재생성된다). `window_sec` 은
+                    # 저장하지 않는다 — assess() 가 매 호출마다 그 사이클의
+                    # cycle_sec 기준으로 다시 정하므로 저장해 봐야 곧바로
+                    # 덮어써진다(situation.py 주석 참조).
+                    _trend = getattr(self, '_trend_state', None)
+                    if _trend is not None:
+                        try:
+                            row.trend_state_json = json.dumps(_trend.history)
+                        except (TypeError, ValueError):
+                            pass
 
                     # 맵 팝업 [현황] 요약 — 사이클이 산출한 경우에만 갱신
                     _summary = getattr(self, '_last_cycle_summary', None)

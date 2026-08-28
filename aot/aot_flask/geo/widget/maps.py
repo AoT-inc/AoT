@@ -709,11 +709,15 @@ def generate_page_variables_logic(widget_unique_id, widget_options):
     # Rule: NO HARDCODING — all dimensions and offsets from mcp_config.UI_MAP_ADVICE_PANEL
     ai_advice_list = []
 
-    # Check global AI setting from AIGlobalSettings
+    # Check global AI setting — 1단계(ai_enabled) 뿐 아니라 2단계(ai_running)까지
+    # 켜져 있어야 한다. 안 그러면 "AI 조언 숨김" 툴바 버튼이 2단계 꺼진 채로도
+    # 나타나는데, 눌러 봐야 숨길 조언 자체가 없다(요약 생성 자체가 2단계에
+    # 걸려 있다 — aot/ai/services/ai_scheduler_service.py).
     ai_globally_enabled = False
     try:
+        from aot.ai.services import ai_runtime_state
         ai_settings = AIGlobalSettings.query.first()
-        ai_globally_enabled = ai_settings and ai_settings.ai_enabled
+        ai_globally_enabled = ai_runtime_state.ai_autonomy_enabled(ai_settings)
     except Exception:
         ai_globally_enabled = False
 

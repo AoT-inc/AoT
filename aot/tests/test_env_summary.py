@@ -75,6 +75,9 @@ def _make_dummy_self(profiles, last_ff_signal):
     obj._STRAIN_SATURATED_PCT = CycleMixin._STRAIN_SATURATED_PCT
     obj._STRAIN_MIN_SEC = CycleMixin._STRAIN_MIN_SEC
     obj._assess_strain = CycleMixin._assess_strain.__get__(obj)
+    # `_build_cycle_summary` 와 `_write_gate_only_summary` 가 photo 스냅샷을
+    # 공유하는 정본(2026-08-28) — 이 스텁도 같은 표면을 가져야 한다.
+    obj._build_photo_snapshot = CycleMixin._build_photo_snapshot.__get__(obj)
     return obj
 
 

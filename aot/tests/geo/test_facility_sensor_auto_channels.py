@@ -56,6 +56,37 @@ def test_추론표가_기상_채널을_안다():
         assert fi._infer_mtype_from_dm(_DM('m', 'd', name)) == expect, name
 
 
+class TestCompositeNamesFallBackToWordMatching(object):
+    """미러(MQTT_PAHO_JSON) 등 원시 이름이 그대로 들어오는 장치는
+    `solar_radiation` 처럼 알려진 낱말에 접두/접미가 붙은 복합 이름을 쓴다.
+    완전일치가 실패하면 '_'/'-'/공백/'.' 로 나눈 낱말 단위로 다시 찾는다.
+    """
+
+    def test_a_compound_name_resolves_via_its_word(self):
+        assert fi._infer_mtype_from_dm(
+            _DM('m', 'd', 'solar_radiation')) == 'light'
+        assert fi._infer_mtype_from_dm(
+            _DM('m', 'd', 'wind-speed-avg')) == 'wind_speed'
+
+    def test_exact_match_is_tried_first(self):
+        """낱말 단위 폴백을 켰다고 완전일치 우선순위가 바뀌면 안 된다."""
+        assert fi._infer_mtype_from_dm(_DM('m', 'd', 'light')) == 'light'
+
+    def test_it_never_matches_a_substring(self):
+        """`par` 는 표에 있는 낱말이다('light' 로 매핑) — 부분 문자열까지
+        허용하면 `parameter` 안에서 우연히 걸린다. 낱말 전체가 '_'/'-'/공백/
+        '.' 로 갈라져 나와야만 그 낱말로 인정한다."""
+        assert fi._infer_mtype_from_dm(_DM('m', 'd', 'parameter')) is None
+        assert fi._infer_mtype_from_dm(_DM('m', 'd', 'some_parameter_x')) is None
+
+    def test_no_word_in_the_table_returns_none(self):
+        assert fi._infer_mtype_from_dm(_DM('m', 'd', 'unknown_channel_9')) is None
+
+    def test_empty_or_missing_name_does_not_raise(self):
+        assert fi._infer_mtype_from_dm(_DM('m', 'd', '')) is None
+        assert fi._infer_mtype_from_dm(None) is None
+
+
 class TestAutoChannelSelection:
     """실제 함수(`auto_channels_for_device`)를 부른다 — 규칙을 재현하지 않는다.
 

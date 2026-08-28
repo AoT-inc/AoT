@@ -4917,6 +4917,7 @@
                 var outdoor = [];
                 if (od.temp_c != null) outdoor.push({ key: 'T', value: od.temp_c, unit: '°C' });
                 if (od.humidity_pct != null) outdoor.push({ key: 'RH', value: od.humidity_pct, unit: '%' });
+                if (od.solar_wm2 != null) outdoor.push({ key: 'light', value: od.solar_wm2, unit: 'W/m²' });
                 if (od.wind_ms != null) outdoor.push({ key: 'wind_ms', value: od.wind_ms, unit: 'm/s' });
 
                 var canEdit = !!(st.repEditByFac && st.repEditByFac[facilityUuid]);
@@ -7917,7 +7918,13 @@
         { sel: '[id^="map-tools-right-"]', side: 'right'  },
         { sel: '[id^="map-attrib-"]',      side: 'right'  },
         { sel: '.aot-meas-dock',           side: 'bottom' },
-        { sel: '.aot-map-advice-chips',    side: 'top'    }
+        { sel: '.aot-map-advice-chips',    side: 'top'    },
+        // 시계 독(.aot-time-dock)도 상단 중앙을 가로지른다 — 측정값 도크와
+        // 같은 이유로 넣는다. 조언 칩이 --aot-top-dock-h 만큼 밀려 내려가는
+        // 것만으로는 부족하다: 조언 칩이 꺼져 있거나 렌더 전이면(width<=0 이라
+        // 스킵됨) 시계 독의 점유가 이 표 어디에도 안 잡혀 상단이 빈 것으로
+        // 오판됐다.
+        { sel: '.aot-time-dock',           side: 'top'    }
     ];
     // **범례는 일부러 넣지 않는다.** 우하단 구석의 상자일 뿐인데 높이가 꽤 되어,
     // 이것을 아래 경계로 삼으면 가시 영역이 크게 줄고 도형이 작아지면서 위로
@@ -10592,39 +10599,51 @@
 
             // AI advice hide button (replaced the old measurements-hide toggle) —
             // toggles the top advice chip stack (#aot-map-advice-chips-<id>,
-            // rendered by the widget body's inline script).
-            var savedAdviceHidden = _readSaved('ai_advice_chips_hidden');
-            var adviceBtn = _toolBtn('tool-ai-advice-hide-' + uniqueId, 'aot-ai-tool-icon', (window._ ? window._('Hide AI advice') : 'Hide AI advice'));
-            var adviceIcon = adviceBtn.querySelector('i');
-            if (adviceIcon) adviceIcon.textContent = 'AI';
-            customGroup.appendChild(adviceBtn);
-            if (savedAdviceHidden) adviceBtn.style.opacity = '0.4';
-
-            function _adviceChipsEl() {
-                return document.getElementById('aot-map-advice-chips-' + widgetId);
-            }
-            // Apply saved hidden state (the chips element exists in the template DOM;
-            // the inline renderer also reads the same flag to avoid a show flash).
-            if (savedAdviceHidden) {
-                var advEl0 = _adviceChipsEl();
-                if (advEl0) advEl0.style.display = 'none';
+            // rendered by the widget body's inline script). Only shown when the
+            // widget actually has AI advice to show: `enable_ai_advice` (embedded
+            // JSON, #aot-map-ai-advice-<id>) is false whenever AI 2단계
+            // (ai_running) is off — nothing to hide, so the button doesn't
+            // render at all (aot/aot_flask/geo/widget/maps.py: ai_globally_enabled).
+            var _adviceDataEl = document.getElementById('aot-map-ai-advice-' + widgetId);
+            var _adviceAvailable = false;
+            if (_adviceDataEl) {
+                try { _adviceAvailable = !!JSON.parse(_adviceDataEl.textContent).enable_ai_advice; } catch (e) {}
             }
 
-            adviceBtn.addEventListener('click', function(e) {
-                e.preventDefault();
-                e.stopPropagation();
-                var inst = window.AoTWidgetInstances[uniqueId];
-                if (!inst) return;
-                inst._adviceHidden = !inst._adviceHidden;
-                adviceBtn.style.opacity = inst._adviceHidden ? '0.4' : '1';
-                var advEl = _adviceChipsEl();
-                if (advEl) advEl.style.display = inst._adviceHidden ? 'none' : '';
-                _saveToggleState({ ai_advice_chips_hidden: inst._adviceHidden });
-            });
+            if (_adviceAvailable) {
+                var savedAdviceHidden = _readSaved('ai_advice_chips_hidden');
+                var adviceBtn = _toolBtn('tool-ai-advice-hide-' + uniqueId, 'aot-ai-tool-icon', (window._ ? window._('Hide AI advice') : 'Hide AI advice'));
+                var adviceIcon = adviceBtn.querySelector('i');
+                if (adviceIcon) adviceIcon.textContent = 'AI';
+                customGroup.appendChild(adviceBtn);
+                if (savedAdviceHidden) adviceBtn.style.opacity = '0.4';
 
-            // Initialise _adviceHidden on instance
-            var inst0 = window.AoTWidgetInstances[uniqueId];
-            if (inst0) inst0._adviceHidden = savedAdviceHidden;
+                var _adviceChipsEl = function() {
+                    return document.getElementById('aot-map-advice-chips-' + widgetId);
+                };
+                // Apply saved hidden state (the chips element exists in the template DOM;
+                // the inline renderer also reads the same flag to avoid a show flash).
+                if (savedAdviceHidden) {
+                    var advEl0 = _adviceChipsEl();
+                    if (advEl0) advEl0.style.display = 'none';
+                }
+
+                adviceBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    var inst = window.AoTWidgetInstances[uniqueId];
+                    if (!inst) return;
+                    inst._adviceHidden = !inst._adviceHidden;
+                    adviceBtn.style.opacity = inst._adviceHidden ? '0.4' : '1';
+                    var advEl = _adviceChipsEl();
+                    if (advEl) advEl.style.display = inst._adviceHidden ? 'none' : '';
+                    _saveToggleState({ ai_advice_chips_hidden: inst._adviceHidden });
+                });
+
+                // Initialise _adviceHidden on instance
+                var inst0 = window.AoTWidgetInstances[uniqueId];
+                if (inst0) inst0._adviceHidden = savedAdviceHidden;
+            }
 
             toolbar.appendChild(customGroup);
         })();

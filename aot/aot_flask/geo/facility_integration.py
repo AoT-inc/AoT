@@ -14,6 +14,7 @@ A 30-second in-memory cache reduces redundant DB round-trips for rapid status
 polling (5-second widget) and concurrent HTTP calls.
 Call invalidate_facility_integration_cache(uuid) after any facility write.
 """
+import re
 import threading
 import time as _time
 
@@ -109,11 +110,29 @@ def auto_channels_for_device(dm_rows, explicit_types):
 
 
 def _infer_mtype_from_dm(dm_row):
-    """DeviceMeasurements 행에서 measurement_type을 자동 추론한다."""
+    """DeviceMeasurements 행에서 measurement_type을 자동 추론한다.
+
+    완전일치를 먼저 시도한다. 실패하면 '_'/'-'/공백/'.'으로 나눈 낱말 단위로
+    다시 찾는다 — 미러(MQTT_PAHO_JSON) 등 원시 이름이 외부에서 그대로 들어오는
+    장치는 `solar_radiation`처럼 알려진 낱말(`solar`)에 접두/접미가 붙은 복합
+    이름을 쓰기도 한다(실측: 영양 육묘장 — Open-Meteo 드라이버는 코드가
+    `measurement='light'`를 고정해 항상 성공하지만, 미러 장치는 그렇지 않다).
+    부분 문자열(substring)이 아니라 낱말 단위로만 맞춘다 — `par`가
+    `parameter` 안에서 우연히 걸리는 식의 오탐을 막기 위해서다.
+    """
     if dm_row is None:
         return None
     name_key = (dm_row.measurement or '').lower().strip()
-    return _DM_NAME_TO_MTYPE.get(name_key)
+    if not name_key:
+        return None
+    direct = _DM_NAME_TO_MTYPE.get(name_key)
+    if direct:
+        return direct
+    for token in re.split(r'[_\-\s.]+', name_key):
+        mt = _DM_NAME_TO_MTYPE.get(token)
+        if mt:
+            return mt
+    return None
 
 
 # Fitting.kind → ActuatorProfile.kind 추론 (slot_key 미설정 시 fallback).
