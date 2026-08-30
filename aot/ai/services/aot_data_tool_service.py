@@ -1422,7 +1422,13 @@ class AoTDataToolService:
                 return {"error": f"Invalid state value: {state}. Allowed values: {ALLOWED_STATES}"}
 
             # 2. 장치 존재 여부 확인 (UUID 또는 이름)
-            target = Output.query.filter(or_(Output.unique_id == device_id, Output.name == device_id)).first()
+            # 이름이 겹치면 고르지 않는다 — `.first()` 로 아무거나 집으면
+            # 엉뚱한 밸브를 연다(2026-08-28: v11 이 두 개였다).
+            from aot.services.resolvers.device_resolver import resolve_output
+            match = resolve_output(device_id)
+            if match.error:
+                return {"error": match.error}
+            target = match.row
             if not target:
                 return {"error": f"Device (output) to control not found: {device_id}"}
 
@@ -2631,10 +2637,13 @@ class AoTDataToolService:
             from aot.ai.services.ai_scheduler_service import AISchedulerService
 
             # 1. 장치 확인 (UUID, 정확한 이름, 부분 이름 순서로 조회)
-            output = Output.query.filter(or_(Output.unique_id == device_id, Output.name == device_id)).first()
-            if not output:
-                # Fuzzy fallback: ILIKE partial match
-                output = Output.query.filter(Output.name.ilike(f'%{device_id}%')).first()
+            # 각 단계에서 둘 이상 걸리면 멈춘다. 예약은 나중에 혼자 실행되므로
+            # 잘못 고르면 사람이 지켜보지 않는 시각에 엉뚱한 장치가 움직인다.
+            from aot.services.resolvers.device_resolver import resolve_output
+            match = resolve_output(device_id, allow_partial=True)
+            if match.error:
+                return {"error": match.error}
+            output = match.row
             if not output:
                 return {"error": f"Device not found: {device_id}"}
 
@@ -3698,10 +3707,15 @@ class AoTDataToolService:
 
         steps = []
         for s in status.get('steps') or []:
+            # '-' 는 "가리키는 장치를 못 찾았다" 는 뜻인데, 그대로 넘기면
+            # 모델은 그냥 빈 값으로 읽고 사용자에게 아무 말도 하지 않는다.
+            _detail = s.get('device_detail')
+            if _detail == '-':
+                _detail = "missing — the referenced device no longer exists"
             step = {
                 "action_id": s.get('unique_id'),
-                "device": s.get('device_detail'),
-                "label": s.get('display_name') or s.get('device_detail'),
+                "device": _detail,
+                "label": s.get('display_name') or _detail,
                 # 'single' takes its turn in the running order; 'total' spans
                 # the whole cycle (a field's pump, typically).
                 "mode": s.get('type'),

@@ -117,7 +117,7 @@ For outputs that require a new measurement/unit, you can add them on the `[gear 
 </tr>
 <tr>
 <td>Shutdown State</td>
-<td>Specifies whether the output should be on or off when AoT shuts down. Some outputs have additional options.</td>
+<td>Specifies whether the output should be on or off when AoT shuts down. Some outputs have additional options. When the shutdown state is <strong>Off</strong> and the output was on at the time, the on-time up to that moment is recorded — so a run that spans a restart can still be totalled from its pieces.</td>
 </tr>
 <tr>
 <td>Shutdown Value</td>
@@ -343,3 +343,23 @@ The Python Command output works similarly to the Linux Command output, but runs 
 ## Output Notes
 
 Wireless and command (Linux/Python) outputs: because the wireless protocol only allows one-way communication with 315/433 MHz devices, a wireless relay is assumed to be off until it is turned on, and is displayed in red (off) when added. If a wireless relay is turned on or off outside of AoT (for example, with a remote), AoT cannot verify the relay's state and displays its last known state. For example, if AoT turns a wireless relay on and you turn the relay off with the remote, AoT still assumes the relay is on.
+
+### An output in use cannot be deleted
+
+If a sequence step, conditional, PID, or widget still points at an output,
+deletion is refused and AoT tells you where it is used. Remove or repoint
+those references first, then delete. The same applies to deleting a whole
+output tab — if anything outside the tab uses a device inside it, the tab
+is not deleted.
+
+Previously the output was simply deleted, and everything pointing at it was
+left holding a device that no longer existed. Nothing raises an error, so
+this is hard to notice, and an activated sequence keeps issuing commands
+every cycle that reach nothing.
+
+### A duplicated name is not operated by name
+
+If two or more outputs share a name, AoT operates none of them when you
+refer to that name — it asks which one you mean. Device lists show the
+owning tab alongside the name only in that case (`v11 (Naju)`); names that
+do not collide are shown as they are.

@@ -71,6 +71,7 @@ def _make_dummy_self(profiles, last_ff_signal):
                                  'plot_name': None, 'stage': None,
                                  'reason': 'none'}
     obj._crop_params = HelpersMixin._crop_params.__get__(obj)
+    obj._build_photo_snapshot = CycleMixin._build_photo_snapshot.__get__(obj)
     obj._STRAIN_KINDS = CycleMixin._STRAIN_KINDS
     obj._STRAIN_SATURATED_PCT = CycleMixin._STRAIN_SATURATED_PCT
     obj._STRAIN_MIN_SEC = CycleMixin._STRAIN_MIN_SEC

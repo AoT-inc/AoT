@@ -436,6 +436,17 @@ def create_app(config=ProdConfig):
             'google_login_configured': google_oauth.is_configured(),
         }
 
+    @app.template_global('disambiguated_name')
+    def _disambiguated_name(row):
+        """이름이 겹칠 때만 소속 탭을 덧붙인 표시용 이름.
+
+        장치 픽커는 이름만 보여 줬다. 탭 복제가 사본 이름을 그대로 두던
+        시절에 같은 이름이 여럿 생겼고, 화면에서는 구분할 방법이 전혀
+        없었다(2026-08-28).
+        """
+        from aot.services.device_references import disambiguated_name
+        return disambiguated_name(row)
+
     @app.template_filter('from_json_safe')
     def from_json_safe(value):
         import json

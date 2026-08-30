@@ -26369,18 +26369,34 @@ msgid ""
 "10%, past the knee; lead-acid 12 V: 11.40 V)"
 msgstr "초절전 모드로 전환하는 전압 임계값 (4S 인산철: 12.80V ≈ 10%, 무릎 아래, 납산 12V: 11.40V)"
 
-#. AoT_map: label zoom gate option
-msgid "Hide Labels When Zoomed Out"
-msgstr "축소 시 라벨 숨기기"
+#. AoT_map: label zoom gate option (L1 — facility/device/value keys)
+msgid "Hide Labels When Zoomed Out — L1"
+msgstr "축소 시 라벨 숨기기 L1"
 
-#. AoT_map: label zoom gate option
+#. AoT_map: label zoom gate option (L1 — facility/device/value keys)
 msgid ""
-"Below this zoom level, facility / output / input / function labels and value"
-" keys are hidden. Site and zone labels always stay visible so the map keeps "
-"its bearings. Set 0 to never hide."
+"Below this zoom level, output / input / function / equipment / sensor / "
+"plot / bay / note labels and value keys are hidden. Site labels always "
+"stay visible so the map keeps its bearings. Zone and facility labels have "
+"their own threshold below (L2). Set 0 to never hide."
 msgstr ""
-"이 줌 단계보다 축소하면 시설 / 출력 / 입력 / 함수 라벨과 값 키를 숨깁니다. 대지와 구역 라벨은 위치를 가늠할 수 있도록 항상 "
-"표시됩니다. 0 이면 숨기지 않습니다."
+"이 줌 단계보다 축소하면 출력 / 입력 / 함수 / 장비 / 센서 / 구획 / 동 / 노트 라벨과 값 키를 숨깁니다. 대지 라벨은 위치를 "
+"가늠할 수 있도록 항상 표시됩니다. 구역과 시설 라벨은 아래(L2)에서 별도 기준을 갖습니다. 0 이면 숨기지 않습니다."
+
+#. AoT_map: label+shape zoom gate option (L2 — zone/facility labels, zone/plot/equipment shapes)
+msgid "Hide Labels & Shapes When Zoomed Out — L2"
+msgstr "축소 시 라벨·도형 숨기기 L2"
+
+#. AoT_map: label+shape zoom gate option (L2 — zone/facility labels, zone/plot/equipment shapes)
+msgid ""
+"A second, independent zoom threshold — currently for zone/facility "
+"labels and zone/plot/equipment shapes. They need to stay visible at "
+"a wider zoom than L1 above, so they get their own value here. More "
+"label and shape kinds may be added to this tier later. Set 0 to "
+"never hide."
+msgstr ""
+"구역·시설 라벨과 구역·구획·설비 도형을 위한 두 번째 독립 줌 기준입니다. 위 L1보다 더 넓은 축척에서부터 계속 보여야 하므로 "
+"별도 값을 갖습니다. 앞으로 다른 라벨·도형 종류가 이 단계에 추가될 수 있습니다. 0 이면 숨기지 않습니다."
 
 #: aot/aot_flask/templates/pages/function_options/trigger_sequence_actions.html
 msgid "Lead"
@@ -31761,3 +31777,41 @@ msgstr "환기와 냉난방이 서로를 방해하지 않게 맞춥니다. [절�
 
 msgid "Misting is locked out overnight to keep leaves dry"
 msgstr "밤새 잎을 마른 채로 두려고 분무를 멈췄습니다"
+
+# --- 복제·참조 무결성 (2026-08-28) ---
+
+#: aot/services/resolvers/device_resolver.py
+msgid "output"
+msgstr "출력"
+
+#: aot/services/resolvers/device_resolver.py
+msgid "input"
+msgstr "입력"
+
+#: aot/services/resolvers/device_resolver.py
+msgid "no tab"
+msgstr "탭 없음"
+
+#: aot/services/device_references.py
+msgid "%(kind)s '%(name)s'"
+msgstr "%(kind)s '%(name)s'"
+
+#: aot/services/device_references.py
+msgid "%(kind)s of '%(parent)s'"
+msgstr "'%(parent)s'의 %(kind)s"
+
+#: aot/services/device_references.py
+msgid "%(list)s and %(count)d more"
+msgstr "%(list)s 외 %(count)d곳"
+
+#: aot/services/device_references.py
+msgid "Cannot delete '%(device)s' — it is still used by: %(referrers)s. Remove or repoint those references first."
+msgstr "'%(device)s'을(를) 지울 수 없습니다 — 아직 %(referrers)s에서 쓰고 있습니다. 먼저 그쪽의 참조를 지우거나 다른 장치로 바꿔 주십시오."
+
+#: aot/services/resolvers/device_resolver.py
+msgid "More than one %(kind)s is named '%(name)s' (tabs: %(tabs)s). Say which one you mean, or use its exact id."
+msgstr "'%(name)s'이라는 이름의 %(kind)s이(가) 여럿입니다 (탭: %(tabs)s). 어느 것인지 알려 주시거나 정확한 id로 지정해 주십시오."
+
+#: aot/widgets/widget_trigger_sequence.py
+msgid "Device is gone"
+msgstr "장치가 없어졌습니다"

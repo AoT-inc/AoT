@@ -299,7 +299,11 @@ def api_geo_design_delete(map_uuid):
     result, error = GeoDesignManager.delete_design_map(map_uuid)
     
     if error:
-        status_code = 404 if "not found" in error else 500
+        if isinstance(result, dict) and result.get('blocked'):
+            # 아직 쓰는 곳이 있어 거절한 것 — 서버 오류가 아니다.
+            status_code = 409
+        else:
+            status_code = 404 if "not found" in error else 500
         return jsonify({'ok': False, 'message': error}), status_code
         
     return jsonify(result)

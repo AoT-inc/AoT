@@ -728,6 +728,11 @@ def generate_page_variables_logic(widget_unique_id, widget_options):
         widget_ai_advice_enabled = widget_ai_advice_enabled.lower() in ('true', '1', 't', 'yes')
     else:
         widget_ai_advice_enabled = bool(widget_ai_advice_enabled)
+    # 위젯에 저장된 값은 "끄기"만 할 수 있어야 한다 — 전역 2단계가 꺼져 있는데
+    # 위젯 옵션에 예전에 저장된 True 가 남아 있으면(과거엔 2단계 개념이 없었다)
+    # 그 값이 전역 OFF 를 덮어써 버튼이 계속 나타났다(2026-08-30 재발 보고).
+    # 전역 스위치가 위젯 옵션보다 항상 우선한다.
+    widget_ai_advice_enabled = widget_ai_advice_enabled and ai_globally_enabled
 
     # Fetch AI summaries only if both global and widget settings allow it.
     # One advisory per relevant scope: facility (legacy option) > this map (farm) > system.

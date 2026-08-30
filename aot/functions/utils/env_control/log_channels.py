@@ -85,8 +85,16 @@ CH_SITUATION_DEV_VPD     = 33   # VPD 직접 제어 모드의 편차(측정-목�
                                  # 실제로 액추에이터를 움직이는 이 값만 로그에 없었다
                                  # (2026-08-29 영양 육묘장 — 난방기가 VPD 편차와 반대로
                                  # 40분간 올라간 사건을 사후에 재구성할 수 없었던 원인).
-CH_COORD_CMD_BASE        = 40   # + actuator_idx × 2
+CH_COORD_CMD_BASE        = 40   # + actuator_idx × 2 — 코디네이터가 **요청한** 값
 CH_COORD_REASON_BASE     = 41   # + actuator_idx × 2
+# 요청과 실제로 나간 값은 다르다. coordinate() 가 낸 명령은 그 뒤
+# `apply_threshold_and_gate_overrides`(임계·육묘 분무 감쇠·안전 프리게이트·
+# 냉난방 인터록)와 Post-Gate 를 지나며 통째로 0 이 될 수 있고, 위 40/41 은
+# 그 **앞**에서 기록된다. 그래서 40 만 읽으면 "요청했다" 를 "작동했다" 로
+# 오독한다 — 2026-08-30 영양·쿠마모토 점검에서 실제로 그렇게 오보했다
+# (분무 게이트가 98% 잠겨 이틀간 한 번도 안 나갔는데 "평균 23% 작동 중").
+CH_COORD_FINAL_BASE      = 100  # + actuator_idx × 2 — 디스패치 직전 **최종** 값
+CH_COORD_FINAL_REASON_BASE = 101  # + actuator_idx × 2
 CH_INTEGRAL_BASE         = 60   # + VAR_INDEX[var]
 CH_SAFETY_GATE           = 70
 CH_DISPATCH_FAIL         = 71   # 한 사이클에서 dispatch 실패한 액추에이터 수
@@ -182,6 +190,14 @@ def ch_coord_cmd(actuator_idx: int) -> int:
 
 def ch_coord_reason(actuator_idx: int) -> int:
     return CH_COORD_REASON_BASE + actuator_idx * 2
+
+
+def ch_coord_final(actuator_idx: int) -> int:
+    return CH_COORD_FINAL_BASE + actuator_idx * 2
+
+
+def ch_coord_final_reason(actuator_idx: int) -> int:
+    return CH_COORD_FINAL_REASON_BASE + actuator_idx * 2
 
 
 def ch_integral(var: str) -> int:
@@ -294,3 +310,45 @@ def write_cycle_metrics(
     _w(71, float(LIMIT_CODES.get(limiting_factor, 0)))
     primary_mode = modes[0] if modes else 'conservation'
     _w(72, float(MODE_CODES.get(primary_mode, 0)))
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 최종 명령 기록 — 게이트·감쇠·인터록을 **모두 지난 뒤**의 값
+# ─────────────────────────────────────────────────────────────────────────────
+
+def write_final_commands(unique_id: str, final_cmds: Dict,
+                         actuator_index: Dict[str, int]):
+    """디스패치 직전의 최종 명령을 기록한다.
+
+    `coord_actuator_<id8>_command`(CH40+) 는 coordinate() 안에서 찍히므로
+    **요청값**이다. 그 뒤 임계 오버라이드·육묘 분무 감쇠·습윤 분무 상한·
+    안전 프리게이트·냉난방 인터록이 값을 바꾸거나 0 으로 끊는다. 그 결과를
+    남기지 않으면 "왜 장치가 안 돌았는가" 를 로그로 답할 수 없다.
+
+    둘을 **함께** 남기는 이유: 차이 자체가 진단이다. 요청 23% · 최종 0% 이면
+    코디네이터 판단이 아니라 게이트를 봐야 한다는 뜻이고, 둘이 같으면
+    코디네이터를 봐야 한다는 뜻이다. 한쪽만 남기면 그 갈림길이 사라진다.
+
+    Args:
+        unique_id:      Function unique_id
+        final_cmds:     {actuator_id: {'value':…, 'reason':…}} 또는 ActuatorCommand
+        actuator_index: {actuator_id: idx} — CH40 계열과 **같은 인덱스**여야
+                        요청/최종이 같은 장치로 짝지어진다.
+    """
+    if not unique_id or not actuator_index:
+        return
+    for aid, cmd in (final_cmds or {}).items():
+        idx = actuator_index.get(aid)
+        if idx is None:
+            continue
+        if isinstance(cmd, dict):
+            value = cmd.get('value', 0.0)
+            reason = cmd.get('reason', REASON_IDLE)
+        else:
+            value = getattr(cmd, 'value', 0.0)
+            reason = getattr(cmd, 'reason', REASON_IDLE)
+        short = aid[:8]
+        _safe_write(unique_id, 'coord_actuator_%s_final' % short,
+                    float(value or 0.0), ch_coord_final(idx))
+        _safe_write(unique_id, 'coord_actuator_%s_final_reason' % short,
+                    float(reason or 0), ch_coord_final_reason(idx))

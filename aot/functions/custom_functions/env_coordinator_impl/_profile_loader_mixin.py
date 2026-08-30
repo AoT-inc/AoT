@@ -167,16 +167,22 @@ def _fog_pulse_constraints(coordinator: Any, kind: str, capacity_meta: dict) -> 
     """
     if not _is_wetting_fog(kind, capacity_meta):
         return {}
-    if getattr(coordinator, 'nursery_mode', False):
-        return {
-            'max_on_sec':  float(
-                getattr(coordinator, 'nursery_max_on_sec', 20.0) or 20.0),
-            'min_off_sec': float(
-                getattr(coordinator, 'nursery_min_off_sec', 600.0) or 600.0),
-        }
+    # **`nursery_mode` 로 가르지 않는다** (2026-08-30).
+    #
+    # 이 두 값은 "분무 빈도" 축(`misting_care`)이 단계마다 심는 것이고, 그
+    # 축은 육묘부터 성체까지 **모든 단계**에서 쓴다. 예전에는 여기서
+    # `nursery_mode` 가 False 면 축이 심어 둔 값을 무시하고 기본값으로
+    # 돌아갔다 — 육묘 모드를 "드물게" 한 단계에만 두는 순간, 보통·자주·
+    # 아주 자주를 고른 사람의 설정이 조용히 안 먹는다.
+    #
+    # 미설정이면 종전 기본값 그대로다(업그레이드로 달라지는 설치 없음).
     return {
-        'max_on_sec':  _FOG_DEFAULT_MAX_ON_SEC,
-        'min_off_sec': _FOG_DEFAULT_MIN_OFF_SEC,
+        'max_on_sec':  float(
+            getattr(coordinator, 'nursery_max_on_sec', None)
+            or _FOG_DEFAULT_MAX_ON_SEC),
+        'min_off_sec': float(
+            getattr(coordinator, 'nursery_min_off_sec', None)
+            or _FOG_DEFAULT_MIN_OFF_SEC),
     }
 
 

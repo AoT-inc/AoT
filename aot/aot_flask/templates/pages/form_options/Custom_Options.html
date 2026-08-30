@@ -45,13 +45,13 @@
 </div>
 {% set _collapse_id = (name_prefix ~ (each_option.get('id') or 'advanced')) | replace(' ', '_') %}
 <a class="aot-modal-section-title aot-modal-section-title-collapsible collapsed" data-toggle="collapse" href="#{{_collapse_id}}" role="button" aria-expanded="false" aria-controls="{{_collapse_id}}">
-  <span class="aot-collapse-caret-btn" aria-hidden="true">
+  {{each_option['name']}}<span class="aot-collapse-caret-btn" aria-hidden="true">
     <svg class="aot-collapse-caret" viewBox="0 0 24 24"
          fill="none" stroke="currentColor" stroke-width="2.6"
          stroke-linecap="round" stroke-linejoin="round">
       <path d="M9.5 5.5 16 12l-6.5 6.5"/>
     </svg>
-  </span>{{each_option['name']}}
+  </span>
 </a>
 <div class="collapse" id="{{_collapse_id}}">
 <div class="{{ custom_opt_container }}">

@@ -296,3 +296,109 @@ class TestDecisionMetricsAreNotSilentlyDisabled(unittest.TestCase):
             'env_coordinator_impl', '_function_info.py'))
         code = '\n'.join(ln.split('#', 1)[0] for ln in src.splitlines())
         self.assertNotIn("'id': 'log_level_debug'", code)
+
+
+class TestReportsWhatRanNotWhatWasAsked(unittest.TestCase):
+    """검사기는 **실제로 나간 값**을 보고해야 한다.
+
+    2026-08-30 영양·쿠마모토 점검이 정확히 여기서 틀렸다. 검사기가
+    `coord_actuator_*_command`(CH40, coordinate() 안에서 기록 = 게이트 이전)만
+    읽어 "밸브: 영양 평균 23% · 최대 100% 작동 중"이라고 보고했는데, 실제
+    출력 기록으로는 **이틀간 한 번도 나가지 않았다**. 분무 게이트가 98%
+    잠겨 요청이 전부 버려지고 있었다.
+
+    요청과 최종을 둘 다 읽고, 그 차이를 세고, 최종을 기준으로 통계를 내는
+    것 — 세 가지가 함께 있어야 이 오보가 재발하지 않는다.
+    """
+
+    def test_the_analyser_reads_the_final_channel(self):
+        src = _source(_SCRIPT)
+        self.assertIn("endswith('_final')", src,
+                      '최종값(CH100 계열)을 읽지 않으면 요청값을 작동으로 오독한다')
+        self.assertIn('final_by_act', src)
+
+    def test_final_reason_is_matched_before_plain_reason(self):
+        """`_final_reason` 은 `_reason` 으로도 끝난다 — 긴 접미사를 먼저 보지
+        않으면 최종 근거가 요청 근거 통계에 섞여 들어간다(무에러)."""
+        src = _source(_SCRIPT)
+        i_final = src.index("endswith('_final_reason')")
+        i_plain = src.index("endswith('_reason')", i_final + 1)
+        self.assertLess(i_final, i_plain,
+                        "'_final_reason' 분기가 '_reason' 보다 뒤에 있으면 "
+                        "영원히 도달하지 못한다")
+
+    def test_statistics_prefer_final_over_requested(self):
+        src = _source(_SCRIPT)
+        self.assertIn('samples = final or requested', src,
+                      '통계 기준이 최종값이 아니면 이 사고가 그대로 재발한다')
+
+    def test_falling_back_to_requested_is_announced(self):
+        """최종값이 없는 옛 구간은 요청값으로 보이되 **그 사실을 말해야** 한다.
+        조용히 폴백하면 옛 데이터와 새 데이터가 같은 뜻으로 보인다."""
+        src = _source(_SCRIPT)
+        self.assertIn("'source'", src)
+        self.assertIn('실제 작동이 아닙니다', src)
+
+    def test_suppressed_cycles_are_counted_and_reported(self):
+        src = _source(_SCRIPT)
+        self.assertIn('def _count_suppressed', src)
+        self.assertIn('게이트·감쇠·인터록을 확인하세요', src,
+                      '요청이 버려진 사실을 화면이 말하지 않으면 사람은 '
+                      '코디네이터를 들여다보며 시간을 쓴다')
+
+    def test_count_suppressed_flags_a_blocked_request(self):
+        """요청 23% → 최종 0% = 버려진 사이클 1건."""
+        ns = _load_helpers('_count_suppressed')
+        t0 = datetime(2026, 8, 30, 3, 0, tzinfo=timezone.utc)
+        requested = [(t0, 23.0)]
+        final = [(t0 + timedelta(seconds=1), 0.0)]
+        self.assertEqual(ns['_count_suppressed'](requested, final), 1)
+
+    def test_count_suppressed_ignores_an_honoured_request(self):
+        ns = _load_helpers('_count_suppressed')
+        t0 = datetime(2026, 8, 30, 3, 0, tzinfo=timezone.utc)
+        self.assertEqual(
+            ns['_count_suppressed']([(t0, 23.0)],
+                                    [(t0 + timedelta(seconds=1), 23.0)]), 0)
+
+    def test_count_suppressed_ignores_a_zero_request(self):
+        """애초에 0 을 요청했으면 버려진 것이 아니다."""
+        ns = _load_helpers('_count_suppressed')
+        t0 = datetime(2026, 8, 30, 3, 0, tzinfo=timezone.utc)
+        self.assertEqual(
+            ns['_count_suppressed']([(t0, 0.0)],
+                                    [(t0 + timedelta(seconds=1), 0.0)]), 0)
+
+    def test_count_suppressed_does_not_pair_across_cycles(self):
+        """다음 사이클의 최종값을 이번 요청의 짝으로 삼으면 안 된다."""
+        ns = _load_helpers('_count_suppressed')
+        t0 = datetime(2026, 8, 30, 3, 0, tzinfo=timezone.utc)
+        self.assertEqual(
+            ns['_count_suppressed']([(t0, 23.0)],
+                                    [(t0 + timedelta(minutes=10), 0.0)]), 0)
+
+
+class TestFinalCommandsAreActuallyLogged(unittest.TestCase):
+    """기록이 없으면 위 검사는 영원히 요청값 폴백으로 돈다."""
+
+    def test_the_cycle_logs_final_commands_after_the_overrides(self):
+        src = _source(_CYCLE_MIXIN)
+        i_override = src.index('apply_threshold_and_gate_overrides(\n')
+        i_write = src.index('write_final_commands(')
+        self.assertLess(
+            i_override, i_write,
+            '오버라이드보다 먼저 기록하면 그 값은 최종값이 아니다 — '
+            'CH40 과 똑같아져 이 채널의 존재 이유가 사라진다')
+
+    def test_final_logging_is_not_behind_the_debug_flag(self):
+        """`write_cycle_metrics` 와 달리 이 기록은 디버그 로깅과 무관해야 한다.
+        장치가 왜 안 돌았는지는 기본 설치에서도 답할 수 있어야 한다."""
+        src = _source(_CYCLE_MIXIN)
+        i_write = src.index('write_final_commands(')
+        # 디버그 분기(`if getattr(self, 'log_level_debug', False):`) 안이면
+        # 한 단계 더 들여써져 12칸이 된다. 메서드 본문 직속은 8칸이다.
+        line_start = src.rindex('\n', 0, i_write) + 1
+        line = src[line_start:i_write]
+        self.assertEqual(len(line) - len(line.lstrip()), 8,
+                         '디버그 분기 안으로 들어가 있습니다 — 기본 설치에서 '
+                         '최종 명령 기록이 통째로 사라집니다')

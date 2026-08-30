@@ -15,6 +15,12 @@ from flask import current_app
 from aot.databases.models import Tab, Input, Output, Function, Widget, Trigger, Conditional, PID, CustomController, InputChannel, OutputChannel, FunctionChannel, Actions, ConditionalConditions, DeviceMeasurements, GeoProgram
 from aot.aot_flask.extensions import db
 from aot.aot_flask.utils.utils_general import delete_entry_with_id
+from aot.services.duplication import (
+    clone_function_entry,
+    clone_input_entry,
+    clone_output_entry,
+    unique_copy_name,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -223,6 +229,55 @@ class TabService:
             return False
 
     @staticmethod
+    def _blocking_referrers(tab_id: str, page_type: str) -> Optional[str]:
+        """탭을 지우면 끊어질 참조가 있으면 그 사연을 문장으로, 없으면 None.
+
+        장치 탭(입력·출력)만 본다. 함수 탭은 자기 자식(동작·조건)을 함께
+        지우므로 밖으로 끊어지는 참조가 없고, 대시보드 탭의 위젯은 아무도
+        가리키지 않는다.
+        """
+        model = {'input': Input, 'output': Output}.get(page_type)
+        if model is None:
+            return None
+
+        device_ids = [row[0] for row in model.query.filter_by(
+            tab_id=tab_id).with_entities(model.unique_id).all() if row[0]]
+        if not device_ids:
+            return None
+
+        from aot.services.device_references import (
+            deletion_blocked_message, find_device_referrers)
+
+        # 같은 탭의 장치는 함께 사라진다 — 서로를 가리키는 것은 막지 않는다.
+        referrers = find_device_referrers(device_ids, ignore_ids=device_ids)
+        if not referrers:
+            return None
+
+        names = {row[0]: row[1] for row in model.query.filter_by(
+            tab_id=tab_id).with_entities(model.unique_id, model.name).all()}
+        first = next(iter(referrers))
+        return deletion_blocked_message(
+            names.get(first) or first, referrers[first])
+
+    @staticmethod
+    def _existing_names(*models) -> set:
+        """주어진 모델들에 이미 쓰이고 있는 이름 전부.
+
+        사본 이름이 겹치지 않게 하려면 **화면에 함께 나오는 범위**를 다
+        봐야 한다. 탭 하나만 보면 다른 탭에 같은 이름이 남고, 그 상태가
+        바로 사용자가 v11 두 개를 구분하지 못한 상황이다.
+        """
+        names = set()
+        for model in models:
+            try:
+                names.update(
+                    row[0] for row in model.query.with_entities(model.name).all()
+                    if row[0])
+            except Exception as e:
+                logger.error(f"Error collecting names from {model.__name__}: {e}")
+        return names
+
+    @staticmethod
     def duplicate_tab(source_tab_id: str) -> Optional[Tab]:
         """Duplicate a tab and all its entries with deactivated state."""
         # 그룹 스코프(A1b) — **원본**으로 판정한다. 복제본은 부여가 없는 새 탭
@@ -248,152 +303,53 @@ class TabService:
             if not new_tab:
                 return None
 
-            # Duplicate entries based on page type
+            # Duplicate entries based on page type.
+            #
+            # 여기서 컬럼을 직접 베끼지 않는다 — 전부 `services.duplication`
+            # 을 거친다. 예전에는 `setattr` 로 컬럼을 통째로 옮겼는데, 그
+            # 경로는 `clone_model` 의 교차참조 거부목록([I10])을 우회해서
+            # 사본의 `map_overlay_id`/`map_config_id` 가 **원본의 지도
+            # 도형**을 가리켰고, 자식(측정 정의·액션)은 아예 옮기지 않았다.
+            # 복제된 시퀀스가 스텝 0개인 껍데기가 된 것이 그 결과다.
             if source_tab.page_type == 'input':
                 entries = Input.query.filter_by(tab_id=source_tab_id).all()
+                taken = TabService._existing_names(Input)
                 for entry in entries:
-                    old_unique_id = entry.unique_id
-                    new_entry = Input()
-                    # Copy all fields
-                    for column in Input.__table__.columns:
-                        if column.name not in ['id', 'unique_id', 'tab_id', 'is_activated']:
-                            setattr(new_entry, column.name, getattr(entry, column.name))
-
-                    new_unique_id = str(uuid.uuid4())
-                    new_entry.unique_id = new_unique_id
-                    new_entry.tab_id = new_tab.unique_id
-                    new_entry.is_activated = False
-                    new_entry.save()
-                    
-                    # Duplicate InputChannels
-                    channels = InputChannel.query.filter_by(input_id=old_unique_id).all()
-                    for channel in channels:
-                        new_channel = InputChannel()
-                        for column in InputChannel.__table__.columns:
-                            if column.name not in ['id', 'unique_id', 'input_id']:
-                                setattr(new_channel, column.name, getattr(channel, column.name))
-                        new_channel.unique_id = str(uuid.uuid4())
-                        new_channel.input_id = new_unique_id
-                        new_channel.save()
+                    new_name = unique_copy_name(entry.name, taken, style='prefix')
+                    taken.add(new_name)
+                    clone_input_entry(
+                        entry, tab_id=new_tab.unique_id, name=new_name)
 
                 logger.info(f"Duplicated {len(entries)} Input entries to new tab {new_tab.unique_id}")
 
             elif source_tab.page_type == 'output':
                 entries = Output.query.filter_by(tab_id=source_tab_id).all()
+                taken = TabService._existing_names(Output)
                 for entry in entries:
-                    old_unique_id = entry.unique_id
-                    new_entry = Output()
-                    # Copy all fields including map location data
-                    for column in Output.__table__.columns:
-                        if column.name not in ['id', 'unique_id', 'tab_id', 'is_activated']:
-                            setattr(new_entry, column.name, getattr(entry, column.name))
-
-                    new_unique_id = str(uuid.uuid4())
-                    new_entry.unique_id = new_unique_id
-                    new_entry.tab_id = new_tab.unique_id
-                    new_entry.is_activated = False
-                    new_entry.save()
-
-                    # Duplicate OutputChannels
-                    channels = OutputChannel.query.filter_by(output_id=old_unique_id).all()
-                    for channel in channels:
-                        new_channel = OutputChannel()
-                        for column in OutputChannel.__table__.columns:
-                            if column.name not in ['id', 'unique_id', 'output_id']:
-                                setattr(new_channel, column.name, getattr(channel, column.name))
-                        new_channel.unique_id = str(uuid.uuid4())
-                        new_channel.output_id = new_unique_id
-                        new_channel.save()
+                    new_name = unique_copy_name(entry.name, taken, style='prefix')
+                    taken.add(new_name)
+                    clone_output_entry(
+                        entry, tab_id=new_tab.unique_id, name=new_name)
 
                 logger.info(f"Duplicated {len(entries)} Output entries to new tab {new_tab.unique_id}")
 
             elif source_tab.page_type == 'function':
-                # Duplicate Function entries
-                function_entries = Function.query.filter_by(tab_id=source_tab_id).all()
-                for entry in function_entries:
-                    new_entry = Function()
-                    for column in Function.__table__.columns:
-                        if column.name not in ['id', 'unique_id', 'tab_id']:
-                            setattr(new_entry, column.name, getattr(entry, column.name))
-                    new_entry.unique_id = str(uuid.uuid4())
-                    new_entry.tab_id = new_tab.unique_id
-                    new_entry.save()
-                logger.info(f"Duplicated {len(function_entries)} Function entries to new tab {new_tab.unique_id}")
+                # 이름은 함수 페이지 **전체**를 놓고 고른다 — 다섯 모델이 한
+                # 화면에 섞여 나오므로 모델별로 따로 세면 화면에서는 여전히
+                # 같은 이름이 둘 보인다.
+                taken = TabService._existing_names(
+                    Function, Trigger, Conditional, PID, CustomController)
 
-                # Duplicate Trigger entries (includes trigger_sequence)
-                trigger_entries = Trigger.query.filter_by(tab_id=source_tab_id).all()
-                for entry in trigger_entries:
-                    new_entry = Trigger()
-                    for column in Trigger.__table__.columns:
-                        if column.name not in ['id', 'unique_id', 'tab_id', 'is_activated']:
-                            setattr(new_entry, column.name, getattr(entry, column.name))
-                    new_entry.unique_id = str(uuid.uuid4())
-                    new_entry.tab_id = new_tab.unique_id
-                    new_entry.is_activated = False
-                    new_entry.save()
-                logger.info(f"Duplicated {len(trigger_entries)} Trigger entries (including sequences) to new tab {new_tab.unique_id}")
-
-                # Duplicate Conditional entries
-                conditional_entries = Conditional.query.filter_by(tab_id=source_tab_id).all()
-                for entry in conditional_entries:
-                    new_entry = Conditional()
-                    for column in Conditional.__table__.columns:
-                        if column.name not in ['id', 'unique_id', 'tab_id', 'is_activated']:
-                            setattr(new_entry, column.name, getattr(entry, column.name))
-                    new_entry.unique_id = str(uuid.uuid4())
-                    new_entry.tab_id = new_tab.unique_id
-                    new_entry.is_activated = False
-                    new_entry.save()
-                logger.info(f"Duplicated {len(conditional_entries)} Conditional entries to new tab {new_tab.unique_id}")
-
-                # Duplicate PID entries
-                pid_entries = PID.query.filter_by(tab_id=source_tab_id).all()
-                for entry in pid_entries:
-                    new_entry = PID()
-                    for column in PID.__table__.columns:
-                        if column.name not in ['id', 'unique_id', 'tab_id', 'is_activated']:
-                            setattr(new_entry, column.name, getattr(entry, column.name))
-                    new_entry.unique_id = str(uuid.uuid4())
-                    new_entry.tab_id = new_tab.unique_id
-                    new_entry.is_activated = False
-                    # device_tz_listeners before_insert가 좌표 기반으로 timezone을 채움.
-                    # 좌표가 없는 경우엔 Misc.timezone fallback을 직접 기록.
-                    if not new_entry.timezone and not new_entry.latitude:
-                        try:
-                            from aot.databases.models import Misc
-                            misc = Misc.query.first()
-                            if misc and misc.timezone:
-                                new_entry.timezone = misc.timezone
-                        except Exception:
-                            pass
-                    new_entry.save()
-                logger.info(f"Duplicated {len(pid_entries)} PID entries to new tab {new_tab.unique_id}")
-
-                # Duplicate CustomController entries
-                custom_entries = CustomController.query.filter_by(tab_id=source_tab_id).all()
-                for entry in custom_entries:
-                    old_unique_id = entry.unique_id
-                    new_entry = CustomController()
-                    for column in CustomController.__table__.columns:
-                        if column.name not in ['id', 'unique_id', 'tab_id', 'is_activated']:
-                            setattr(new_entry, column.name, getattr(entry, column.name))
-                    new_unique_id = str(uuid.uuid4())
-                    new_entry.unique_id = new_unique_id
-                    new_entry.tab_id = new_tab.unique_id
-                    new_entry.is_activated = False
-                    new_entry.save()
-                    
-                    # Duplicate FunctionChannels
-                    channels = FunctionChannel.query.filter_by(function_id=old_unique_id).all()
-                    for channel in channels:
-                        new_channel = FunctionChannel()
-                        for column in FunctionChannel.__table__.columns:
-                            if column.name not in ['id', 'unique_id', 'function_id']:
-                                setattr(new_channel, column.name, getattr(channel, column.name))
-                        new_channel.unique_id = str(uuid.uuid4())
-                        new_channel.function_id = new_unique_id
-                        new_channel.save()
-                logger.info(f"Duplicated {len(custom_entries)} CustomController entries to new tab {new_tab.unique_id}")
+                for model in (Function, Trigger, Conditional, PID, CustomController):
+                    entries = model.query.filter_by(tab_id=source_tab_id).all()
+                    for entry in entries:
+                        new_name = unique_copy_name(entry.name, taken, style='suffix')
+                        taken.add(new_name)
+                        clone_function_entry(
+                            entry, tab_id=new_tab.unique_id, name=new_name)
+                    logger.info(
+                        f"Duplicated {len(entries)} {model.__name__} entries "
+                        f"to new tab {new_tab.unique_id}")
 
             elif source_tab.page_type == 'dashboard':
                 # For dashboard, widgets can be duplicated separately if needed
@@ -469,6 +425,18 @@ class TabService:
                     break
 
             page_type = tab.page_type
+
+            # ===== 참조자 확인: 남을 곳이 아직 쓰는 장치는 못 지운다 =====
+            # 같은 탭 안의 장치끼리 서로를 가리키는 것(예: 짝 액추에이터가
+            # 같은 탭의 열림/닫힘 채널을 쓰는 경우)은 함께 사라지므로
+            # 막지 않는다 — 그것까지 막으면 탭을 영영 못 지운다.
+            blocked = TabService._blocking_referrers(tab_id, page_type)
+            if blocked:
+                return {
+                    'success': False,
+                    'message': blocked,
+                    'redirect_tab_id': tab_id
+                }
 
             # ===== PRE-CLEANUP: 기존 고아 장치 정리 =====
             TabService._cleanup_orphans_for_page(page_type)

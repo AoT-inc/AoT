@@ -129,6 +129,30 @@ class GeoDesignManager:
         had already been sent to the DB, leaving a half-deleted map (facility
         rows orphaned, map+shapes gone) instead of rolling back cleanly.
         """
+        # 이 지도를 아직 쓰는 위젯이 있으면 지우지 않는다.
+        #
+        # 도형·시설은 트리거(I3~I5)가 연쇄 정리하고, 장치의 map_config_id 도
+        # 트리거가 NULL 로 되돌린다. 그런데 **위젯은 지도 uuid 를
+        # custom_options JSON 안에 둔다** — 트리거도 FK 도 거기까지 닿지
+        # 못한다. 그래서 지도를 지우면 그 지도를 보던 위젯이 오류 없이 빈
+        # 지도를 보여주고, 사용자는 원인을 알 수 없었다.
+        # (docs/design/geo-data-integrity.md 의 '잔여 위험' 항목)
+        try:
+            from aot.services.device_references import (
+                deletion_blocked_message, find_referrers)
+            referrers = find_referrers([map_uuid]).get(map_uuid)
+            if referrers:
+                geo_map = db.session.query(GeoMap).filter_by(
+                    unique_id=map_uuid).first()
+                # 서버 오류가 아니라 **거절**이다. 호출자가 상태 코드를
+                # 가릴 수 있도록 result 에 표식을 남긴다(error 만 보는
+                # 기존 호출자도 그대로 동작한다).
+                return {'blocked': True}, deletion_blocked_message(
+                    getattr(geo_map, 'name', None) or map_uuid, referrers)
+        except Exception as e:
+            # 검사가 깨져도 삭제 자체를 막지는 않는다 — 예전 동작으로 돌아갈 뿐이다.
+            current_app.logger.error(f"Geo Design Delete 참조 검사 실패: {e}")
+
         try:
             facility_uuids = [
                 row[0] for row in db.session.query(GeoFacility.unique_id)

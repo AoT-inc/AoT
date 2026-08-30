@@ -28,7 +28,7 @@ from aot.functions.utils.env_control.log_channels import (
     CH_ACTUATOR_MISMATCH, CH_CLEAN_FOR_LEARNING, CH_GREYBOX_KPI_PASSED,
     CH_SAFETY_GATE,
     GATE_BIT_WIND, GATE_BIT_RAIN, GATE_BIT_HEAT, GATE_BIT_COLD,
-    write_cycle_metrics, write_decision_log,
+    write_cycle_metrics, write_decision_log, write_final_commands,
 )
 from aot.functions.utils.env_control.forecast_feedforward import (
     build_feedforward_signal_from_forecast,
@@ -299,9 +299,12 @@ def apply_nursery_fog_derate(
     사용자가 설정한 최저 습도 때문에 일소 위험을 무릅쓰게 두면 안 된다.
     습도 하한 자체는 잠금 해제 시각(아침·저녁)에 회복된다.
     """
-    # 육묘 모드를 전제하지 않는다 — 하드 잠금(safety_gates._eval_nursery_lock)
-    # 과 같은 이유다. 잠금과 감쇠가 서로 다른 조건에서 서면, 잠기지도 감쇠되지도
-    # 않는 구간이나 감쇠 없이 절벽처럼 끊기는 구간이 생긴다.
+    # 육묘 모드에서만 감쇠한다 — 하드 잠금(safety_gates._eval_nursery_lock)과
+    # **반드시 같은 조건**이어야 한다. 둘이 갈라지면 잠기지도 감쇠되지도 않는
+    # 구간이나, 감쇠 없이 절벽처럼 끊기는 구간이 생긴다. 되돌린 근거는 그쪽
+    # 주석에 있다(2026-08-30 — 성체 작물에는 과한 적용이었다).
+    if not internal.get('_nursery_mode'):
+        return
     if internal.get('evening_block'):
         # 저녁 차단은 안전 게이트가 0 으로 강제한다 — 여기서 감쇠할 대상이 아니다.
         return
@@ -1244,6 +1247,7 @@ class CycleMixin:
         # ── 임계 오버라이드 + 안전 프리게이트 (순서 보장은 헬퍼 안에) ───────────
         apply_threshold_and_gate_overrides(
             internal, self._profiles, final_cmds, partial_overrides)
+        write_final_commands(uid, final_cmds, self._actuator_idx)
 
         # ── P1-3: 사이클 메트릭 일괄 기록 (디버그 로깅 활성 시에만) ─────────────
         if getattr(self, 'log_level_debug', False):

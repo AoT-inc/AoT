@@ -237,6 +237,19 @@ Click the **Lock** button in the upper right to lock map panning and zooming. Th
 
 ---
 
+## Deleting a map
+
+If a map widget still shows the map, deletion is refused and AoT tells you
+which widgets those are. Delete or repoint them first, then delete the map.
+
+Deleting a map also deletes the shapes and facilities on it. Previously the
+map was deleted even while widgets were showing it, and those widgets then
+displayed an empty map with no error — there was no way to tell why. Shapes
+and device references are cleaned up by the database, but a widget's map
+reference sits where that cleanup cannot reach.
+
+---
+
 ## Related Pages
 
 - [Facility Management](facility.md) — 3D setup for buildings placed in Facility mode

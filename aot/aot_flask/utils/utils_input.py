@@ -15,6 +15,11 @@ from sqlalchemy import or_
 
 from aot.config_translations import TRANSLATIONS
 from aot.databases import clone_model
+from aot.services.device_references import (
+    deletion_blocked_message,
+    find_device_referrers,
+)
+from aot.services.duplication import unique_copy_name
 from aot.databases import set_uuid
 from aot.databases.models import Actions
 from aot.databases.models import DeviceMeasurements
@@ -335,9 +340,13 @@ def input_duplicate(form_mod):
     # max+1 so the clone lands at the bottom of the grid; otherwise it
     # inherits the source's position_y and causes overlap + tied ORDER BY.
     max_pos = db.session.query(db.func.max(Input.position_y)).scalar()
+    # 이름은 이미 있는 입력 전부를 놓고 고른다 — output_duplicate() 와 같은
+    # 이유다. 화면에는 이름밖에 안 나오므로 같은 이름이 둘 생기면 사용자가
+    # 구분할 수 없다.
+    taken = {row[0] for row in db.session.query(Input.name).all() if row[0]}
     new_input = clone_model(
         source_input, unique_id=set_uuid(),
-        name=f"Copy of {source_input.name}",
+        name=unique_copy_name(source_input.name, taken, style='prefix'),
         position_y=(max_pos or 0) + 1)
 
     duplicated_input = Input.query.filter(
@@ -805,9 +814,19 @@ def input_del(input_id):
         messages["error"].append(scope.deny_message())
         return messages
 
+    # 아직 이 입력을 쓰는 곳이 있으면 지우지 않는다 — output_del() 과 같은
+    # 이유다. 입력은 특히 조용하다: 조건·PID·그래프 위젯이 입력 자체가 아니라
+    # 그 **측정 정의** id 를 가리키므로, 지우고 나면 판정이 값을 못 읽는 채로
+    # 계속 돈다.
+    input_dev = Input.query.filter(Input.unique_id == input_id).first()
+    if input_dev is not None:
+        referrers = find_device_referrers([input_id]).get(input_id)
+        if referrers:
+            messages["error"].append(
+                deletion_blocked_message(input_dev.name, referrers))
+            return messages
+
     try:
-        input_dev = Input.query.filter(
-            Input.unique_id == input_id).first()
         map_config_id = input_dev.map_config_id if input_dev else None
 
         if input_dev.is_activated:

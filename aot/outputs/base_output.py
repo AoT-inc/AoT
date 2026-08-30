@@ -331,7 +331,126 @@ class AbstractOutput(AbstractBaseController, ConfirmableOutputMixin):
             # Don't interrupt main flow if metrics fail
             pass
 
+    def _record_on_duration(self, output_channel, current_time):
+        """켜져 있던 시간을 기록하고 세션 장부를 닫는다.
+
+        OFF 경로와 종료(`shutdown`) 경로가 함께 쓴다. 장부를 지우므로 한 세션에
+        두 번 부르면 두 번째는 아무것도 하지 않는다 — 중복 기록은 나지 않는다.
+        """
+        if not (self.output_time_turned_on.get(output_channel) is not None or
+                self.output_on_duration.get(output_channel)):
+            return False
+
+        duration_sec = None
+        timestamp = None
+
+        if self.output_on_duration[output_channel]:
+            remaining_time = 0
+            if self.output_on_until[output_channel] > current_time:
+                remaining_time = (
+                    self.output_on_until[output_channel] - current_time).total_seconds()
+            duration_sec = (abs(self.output_last_duration[output_channel]) - remaining_time)
+            timestamp = (utc_now() - timedelta(seconds=duration_sec))
+
+            # Store negative amount if a negative amount is received
+            if self.output_last_duration[output_channel] < 0:
+                duration_sec = -duration_sec
+
+            self.output_on_duration[output_channel] = False
+            self.output_on_until[output_channel] = current_time
+            self.output_session_start[output_channel] = None
+            self.output_session_max[output_channel] = 0
+
+        if self.output_time_turned_on[output_channel] is not None:
+            # Write the amount the output was ON to the database
+            # at the timestamp it turned ON
+            duration_sec = (
+                current_time - self.output_time_turned_on[output_channel]).total_seconds()
+            timestamp = utc_now() - timedelta(seconds=duration_sec)
+
+            self.output_time_turned_on[output_channel] = None
+
+        # determine which measurement of the output_channel is a duration.
+        # Some multi-channel MQTT outputs declare channels_dict[0]
+        # as a template and register runtime channels 1..N dynamically — a
+        # bare channels_dict[output_channel] lookup raises KeyError for any
+        # ch>=1 and silently kills the DB-write path. Mirror the ON-side
+        # fallback (line 179): default to output_channel so each runtime
+        # channel writes a distinct series tag; only override when
+        # channels_dict has an explicit per-channel definition.
+        measurement_channel = output_channel
+        try:
+            if ('channels_dict' in self.OUTPUT_INFORMATION and
+                    'measurements_dict' in self.OUTPUT_INFORMATION):
+                ch_def = self.OUTPUT_INFORMATION['channels_dict'].get(output_channel)
+                if ch_def:
+                    for each_measure_channel in ch_def.get('measurements', []):
+                        if self.OUTPUT_INFORMATION['measurements_dict'][each_measure_channel]['unit'] == 's':
+                            measurement_channel = each_measure_channel
+                            break
+                # else: template-only channels_dict → keep output_channel
+                # so per-channel series stays separate.
+        except Exception as e:
+            self.logger.warning(
+                f"measurement_channel resolve failed for ch={output_channel}: {e}")
+
+        write_db = threading.Thread(
+            target=write_influxdb_value,
+            args=(self.unique_id,
+                  's',
+                  duration_sec,),
+            kwargs={'measure': 'duration_time',
+                    'channel': measurement_channel,
+                    'timestamp': timestamp,
+                    'extra_tags': get_extra_tags()})
+        write_db.start()
+        return True
+
+    def _shutdown_turns_channel_off(self, output_channel):
+        """종료할 때 이 채널이 실제로 꺼지는가(Startup/Shutdown State = Off)."""
+        try:
+            return self.options_channels['state_shutdown'][output_channel] == 0
+        except (AttributeError, KeyError, TypeError):
+            return False
+
+    def _record_open_time_before_shutdown(self):
+        """데몬이 내려가며 끄는 출력의 개방 시간을 남긴다.
+
+        종료 경로는 드라이버의 `stop_output()` 이 하드웨어를 **직접** 끈다 —
+        `output_on_off()` 를 지나지 않으므로 개방 시간을 적는 코드가 돌지 않는다.
+        그 결과 재시작을 낀 세션은 조각조각 사라진다.
+
+        실측(2026-08-30 로컬): 12:30~13:00 로 예정된 30분 관수가 12:51 과 12:54
+        두 번의 재시작을 거치며 마지막 조각 301초만 기록됐다. 앞의 21분과 3분은
+        어디에도 남지 않아, 조회하면 **5분만 물을 준 것으로 보인다.**
+
+        여기서 적는 것은 "직전 명령 이후 실제로 열려 있던 시간"이다. 재시작 뒤
+        시퀀스가 남은 시간만큼만 다시 켜므로(`_resync_after_resume`), 조각의
+        합이 실제 개방 시간이 된다.
+
+        꺼지지 않는 채널(Shutdown State = On/무변경)은 적지 않는다 — 아직 열려
+        있는데 닫혔다고 적으면 그거야말로 틀린 기록이다.
+        """
+        try:
+            channels = list(self.output_time_turned_on.keys())
+        except AttributeError:
+            return
+        current_time = utc_now()
+        for output_channel in channels:
+            if not self._shutdown_turns_channel_off(output_channel):
+                continue
+            try:
+                if self._record_on_duration(output_channel, current_time):
+                    self.logger.info(
+                        f"Output {self.unique_id} CH{output_channel} "
+                        f"({self.output_name}): 종료로 꺼지기 전까지의 개방 시간을 기록했습니다.")
+            except Exception:
+                # 기록 실패가 종료를 막아서는 안 된다.
+                self.logger.exception(
+                    f"Could not record on-time for CH{output_channel} before shutdown")
+
     def shutdown(self, shutdown_timer):
+        self._record_open_time_before_shutdown()
         self.stop_output()
         self.logger.info(f"Stopped in {(timeit.default_timer() - shutdown_timer) * 1000:.1f} ms")
 
@@ -684,72 +803,7 @@ class AbstractOutput(AbstractBaseController, ConfirmableOutputMixin):
             self.logger.debug(msg)
 
             # Write output amount to database
-            if (self.output_time_turned_on[output_channel] is not None or
-                    self.output_on_duration[output_channel]):
-                duration_sec = None
-                timestamp = None
-
-                if self.output_on_duration[output_channel]:
-                    remaining_time = 0
-                    if self.output_on_until[output_channel] > current_time:
-                        remaining_time = (
-                            self.output_on_until[output_channel] - current_time).total_seconds()
-                    duration_sec = (abs(self.output_last_duration[output_channel]) - remaining_time)
-                    timestamp = (utc_now() - timedelta(seconds=duration_sec))
-
-
-                    # Store negative amount if a negative amount is received
-                    if self.output_last_duration[output_channel] < 0:
-                        duration_sec = -duration_sec
-
-                    self.output_on_duration[output_channel] = False
-                    self.output_on_until[output_channel] = current_time
-                    self.output_session_start[output_channel] = None
-                    self.output_session_max[output_channel] = 0
-
-                if self.output_time_turned_on[output_channel] is not None:
-                    # Write the amount the output was ON to the database
-                    # at the timestamp it turned ON
-                    duration_sec = (
-                        current_time - self.output_time_turned_on[output_channel]).total_seconds()
-                    timestamp = utc_now() - timedelta(seconds=duration_sec)
-
-                    self.output_time_turned_on[output_channel] = None
-
-                # determine which measurement of the output_channel is a duration.
-                # Some multi-channel MQTT outputs declare channels_dict[0]
-                # as a template and register runtime channels 1..N dynamically — a
-                # bare channels_dict[output_channel] lookup raises KeyError for any
-                # ch>=1 and silently kills the DB-write path. Mirror the ON-side
-                # fallback (line 179): default to output_channel so each runtime
-                # channel writes a distinct series tag; only override when
-                # channels_dict has an explicit per-channel definition.
-                measurement_channel = output_channel
-                try:
-                    if ('channels_dict' in self.OUTPUT_INFORMATION and
-                            'measurements_dict' in self.OUTPUT_INFORMATION):
-                        ch_def = self.OUTPUT_INFORMATION['channels_dict'].get(output_channel)
-                        if ch_def:
-                            for each_measure_channel in ch_def.get('measurements', []):
-                                if self.OUTPUT_INFORMATION['measurements_dict'][each_measure_channel]['unit'] == 's':
-                                    measurement_channel = each_measure_channel
-                                    break
-                        # else: template-only channels_dict → keep output_channel
-                        # so per-channel series stays separate.
-                except Exception as e:
-                    self.logger.warning(
-                        f"measurement_channel resolve failed for ch={output_channel}: {e}")
-
-                write_db = threading.Thread(
-                    target=write_influxdb_value,
-                    args=(self.unique_id,
-                          's',
-                          duration_sec,),
-                    kwargs={'measure': 'duration_time',
-                            'channel': measurement_channel,
-                            'timestamp': timestamp,
-                            'extra_tags': get_extra_tags()})
-                write_db.start()
+            self._record_on_duration(output_channel, current_time)
 
             self.output_off_triggered[output_channel] = False
             # Allow next ON to record a fresh start marker

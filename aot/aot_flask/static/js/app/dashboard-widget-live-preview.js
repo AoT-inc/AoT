@@ -296,8 +296,9 @@
   // AoT_map: partial auto-save of SAFE options only.
   //
   // The map is a maplibre WebGL widget and is deliberately NOT in
-  // LIVE_PREVIEW_TYPES — a body swap would tear down the GL context (its
-  // teardown, destroyAoTMapVectorWidget, is never called on swap). So instead of
+  // LIVE_PREVIEW_TYPES — a body swap would tear down the GL context, and the map
+  // widget has no teardown to run on swap (it deliberately keeps none; see the
+  // closing comment in aot-map-widget-vector.js). So instead of
   // re-rendering, a changed SAFE option is persisted on its own via
   // /save_widget_custom_options (arbitrary partial merge — the same endpoint the
   // in-map layer/lock/label toggles already use), with no reload and no map
@@ -324,6 +325,7 @@
     show_local_time: 1,
     enable_label_collision: 1,
     global_label_size: 1, label_priority_facility: 1, label_min_zoom: 1,
+    label_min_zoom_l2: 1,
     sensor_label_style: 1, sensor_popup_enabled: 1,
     show_site_shape: 1, show_zone_shape: 1, show_plots: 1, show_facility_shape: 1,
     show_equipment_shape: 1, show_device_shapes: 1, show_drawn_shapes: 1,
@@ -508,11 +510,19 @@
         if (inst.vars && inst.vars.vars) { inst.vars.vars[key] = value; }
         inst._reattachSensorLabels();
       }
-      // 라벨 숨김 기준 줌 -> 저장된 옵션만 갱신하고 게이트를 즉시 재평가.
-      // 라벨을 다시 만들 필요가 없다(클래스 토글만 바뀐다).
-      else if (key === 'label_min_zoom' && typeof inst._applyZoomGate === 'function') {
+      // 라벨 숨김 기준 줌(L1: 시설·장치·값 키 / L2: 구역·시설, aot-map-widget-vector.js
+      // LABEL_ZOOM_GATED/_L2 참조) -> 저장된 옵션만 갱신하고 게이트를 즉시
+      // 재평가. 라벨을 다시 만들 필요가 없다(클래스 토글만 바뀐다).
+      else if ((key === 'label_min_zoom' || key === 'label_min_zoom_l2') &&
+               typeof inst._applyZoomGate === 'function') {
         if (inst.vars && inst.vars.vars) { inst.vars.vars[key] = value; }
         inst._applyZoomGate();
+        // L2(label_min_zoom_l2)는 라벨뿐 아니라 도형 축(구역·구획·설비,
+        // aot-map-widget-vector.js `_SHAPE_LOD_L2`)도 같은 옵션을 읽는다 —
+        // 도형 컬링도 즉시 재평가해야 값을 바꾼 순간 반영된다.
+        if (key === 'label_min_zoom_l2' && typeof inst._applyShapeLOD === 'function') {
+          inst._applyShapeLOD();
+        }
       }
       // Input value refresh period -> mutate the shared options object FIRST (same
       // pattern as MAP_SENSOR_LABEL_KEYS above), then restart every consumer that

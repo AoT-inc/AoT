@@ -315,18 +315,18 @@ class TestNurseryFogGate:
                             [make_fogger(wetting=False)])
         assert not (res.gate_mask & GATE_BIT_FOG_SUNBURN)
 
-    def test_locks_even_without_nursery_mode(self):
-        """육묘 모드를 꺼도 일소 잠금은 선다 (2026-08-25 변경).
+    def test_does_not_lock_without_nursery_mode(self):
+        """육묘 모드를 끄면 일소 잠금도 서지 않는다 (2026-08-30 되돌림).
 
-        예전에는 이 잠금이 통째로 `nursery_mode` 안에 있어서, 딸기 온실이
-        육묘 모드를 끄는 순간 두상 살수의 일소 보호가 함께 사라졌다.
-        물방울이 렌즈가 되는 것은 어린 모종만의 일이 아니다 — 육묘 모드는
-        이제 이 게이트를 켜는 스위치가 아니라 **더 조이는 축**이다.
+        2026-08-25 에 이 잠금을 육묘 밖으로 꺼냈다가 되돌렸다. 이미 자란
+        개체에서는 강일사가 곧 증산이 가장 심한 때라, 그때 분무를 끊으면
+        일소를 막으려다 건조 스트레스를 만든다 — 보호가 아니라 역효과다.
+        두상 살수를 쓰는 설치는 육묘 모드를 켜서 보호를 받는다.
         고정: [[test_fog_sunburn_gate]]
         """
         gate = SafetyPreGate(PreGateConfig())
         res = gate.evaluate(gate_ctx(light_est=900.0), [make_fogger()])
-        assert res.gate_mask & GATE_BIT_FOG_SUNBURN
+        assert not (res.gate_mask & GATE_BIT_FOG_SUNBURN)
 
     def test_falls_back_to_outdoor_solar(self):
         """실내 추정 광량이 없으면 실외 일사로 판정한다."""
@@ -582,13 +582,31 @@ class TestFogPulseConstraints:
     def test_wetting_fogger_pulses_even_without_nursery_mode(self):
         """습윤형 분무는 육묘가 아니어도 건조 간격이 필요하다 (병해 예방)."""
         c = self._call(_FakeCoordinator())
-        assert c['max_on_sec'] == 30.0
-        assert c['min_off_sec'] == 180.0
+        assert c['max_on_sec'] > 0.0
+        assert c['min_off_sec'] > 0.0
 
-    def test_nursery_mode_tightens_the_pulse(self):
-        c = self._call(_FakeCoordinator(nursery_mode=True))
-        assert c['max_on_sec'] == 20.0
-        assert c['min_off_sec'] == 600.0
+    def test_the_axis_values_are_used_whatever_the_nursery_flag(self):
+        """펄스 두 값은 "분무 빈도" 축이 단계마다 심는 것이고, 그 축은 육묘부터
+        성체까지 모든 단계에서 쓴다 (2026-08-30).
+
+        예전에는 `nursery_mode` 가 False 면 축이 심어 둔 값을 무시하고 기본값
+        으로 돌아갔다. 육묘 모드를 "드물게" 한 칸에만 두는 순간, 보통·자주·
+        아주 자주를 고른 사람의 설정이 조용히 안 먹는다 — 세 단계가 전부 같은
+        리듬(30/180)이 되어 사다리가 뜻을 잃는다.
+        """
+        off = self._call(_FakeCoordinator(
+            nursery_mode=False, nursery_max_on_sec=10.0,
+            nursery_min_off_sec=900.0))
+        on = self._call(_FakeCoordinator(
+            nursery_mode=True, nursery_max_on_sec=10.0,
+            nursery_min_off_sec=900.0))
+        assert off == on == {'max_on_sec': 10.0, 'min_off_sec': 900.0}
+
+    def test_unset_falls_back_to_the_system_default(self):
+        """미설정이면 종전 기본값 그대로다 — 업그레이드로 달라지는 설치 없음."""
+        c = self._call(_FakeCoordinator(nursery_max_on_sec=None,
+                                        nursery_min_off_sec=None))
+        assert c == {'max_on_sec': 30.0, 'min_off_sec': 180.0}
 
     def test_non_wetting_fogger_keeps_continuous_modulation(self):
         """고압 미세포그는 연속 변조가 정상 — 펄스로 바꾸지 않는다."""
@@ -602,7 +620,7 @@ class TestFogPulseConstraints:
     def test_missing_nozzle_info_is_conservative(self):
         """노즐 정보가 없으면 습윤형으로 보고 펄스를 건다."""
         c = self._call(_FakeCoordinator(), wetting=None)
-        assert c['max_on_sec'] == 30.0
+        assert c['max_on_sec'] > 0.0 and c['min_off_sec'] > 0.0
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -651,18 +669,18 @@ class TestNurseryFogDerate:
         self._derate(_internal(200.0), [fog], cmds)
         assert cmds[fog.actuator_id]['value'] == 80.0
 
-    def test_derates_without_nursery_mode(self):
-        """감쇠도 육묘 모드를 전제하지 않는다 (2026-08-25).
+    def test_does_not_derate_without_nursery_mode(self):
+        """감쇠도 육묘 모드에서만 (2026-08-30 되돌림).
 
-        하드 잠금만 일반화하고 감쇠를 육묘에 남기면, 비육묘 설치에서 분무가
-        release~lockout 구간에서 완만히 줄지 않고 절벽처럼 끊긴다.
+        하드 잠금과 **반드시 같은 조건**이어야 한다 — 갈라지면 잠기지도
+        감쇠되지도 않는 구간이나 감쇠 없이 절벽처럼 끊기는 구간이 생긴다.
         """
         fog = make_fogger()
         cmds = {fog.actuator_id: {'value': 80.0}}
         internal = _internal(200.0)
         internal.pop('_nursery_mode')
         self._derate(internal, [fog], cmds)
-        assert cmds[fog.actuator_id]['value'] < 80.0
+        assert cmds[fog.actuator_id]['value'] == 80.0
 
     def test_no_light_data_untouched(self):
         fog = make_fogger()
@@ -967,15 +985,22 @@ class TestGateEnvEndToEnd:
         assert res.triggered is False
         assert 'vent_01' not in res.forced_commands
 
-    def test_fallback_is_used_without_nursery_mode(self):
-        """어림값 폴백도 모드와 무관하다 (2026-08-25).
+    def test_fallback_still_needs_nursery_mode(self):
+        """어림값 폴백은 **육묘 모드 안에서만** 쓰인다 (2026-08-30 되돌림).
 
-        일사 센서가 없는 설치가 정확히 폴백에 의존하는데, 그것을 육묘로
-        묶어 두면 그런 설치의 일소 보호가 통째로 꺼진 채 돈다.
+        폴백은 "일사 센서가 없어도 잠글 수 있게" 하는 장치이지 잠금을 켜는
+        스위치가 아니다. 모드가 꺼져 있으면 폴백이 있어도 잠기지 않는다.
         """
         res, _ = self._evaluate(
             self._internal(_nursery_light_fallback=900.0),
             self._external(), cfg=PreGateConfig())
+        assert not (res.gate_mask & GATE_BIT_FOG_SUNBURN)
+
+    def test_fallback_locks_in_nursery_mode(self):
+        """모드가 켜져 있으면 센서가 없어도 어림값으로 잠근다 — 폴백의 목적."""
+        res, _ = self._evaluate(
+            self._internal(_nursery_light_fallback=900.0),
+            self._external())
         assert res.gate_mask & GATE_BIT_FOG_SUNBURN
 
 

@@ -78,6 +78,40 @@ def clear_thread_default():
             delattr(_context, attr)
 
 
+def run_in_thread(target, args=(), kwargs=None):
+    """현재 스레드의 실행 컨텍스트를 물려주는 스레드를 띄운다.
+
+    액션 모듈들은 장치 명령을 백그라운드 스레드로 넘긴다(`threading.Thread(
+    target=self.control.output_on_off, ...)`). 컨텍스트는 thread-local 이라 그
+    경계를 넘지 못하고, 명령이 나가는 시점에는 비어 있다 — `resolve_origin()`
+    이 데몬 프로세스 판정으로 떨어져 'automation' 이 되고, 그 타입은 감사
+    대상이 아니라 기록이 통째로 사라진다.
+
+    실측(2026-08-30 로컬): 시퀀스의 OFF 는 컨트롤러가 직접 보내 91건이 남았는데
+    ON 은 이 스레드를 타서 한 건도 남지 않았다. 밸브를 **끈 기록만 있고 켠
+    기록이 없는** 상태다.
+
+    컨텍스트는 스레드를 만들기 전에 **호출자 스레드에서** 캡처한다. 자식이
+    읽으러 가면 그때는 이미 호출자가 `clear_execution_context()` 를 지났을 수
+    있다.
+    """
+    ctx = get_context()
+    kwargs = kwargs or {}
+
+    def _run():
+        if ctx.get('source_type'):
+            set_execution_context(
+                ctx['source_type'], ctx.get('source_id'), ctx.get('job_meta_id'))
+        try:
+            target(*args, **kwargs)
+        finally:
+            clear_execution_context()
+
+    thread = threading.Thread(target=_run)
+    thread.start()
+    return thread
+
+
 def get_extra_tags():
     """Return InfluxDB-ready tags dict (only non-None values)."""
     ctx = get_context()

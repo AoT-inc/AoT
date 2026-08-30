@@ -989,6 +989,8 @@ Time rules:
 
     If the time left before the window closes is not enough for one full pass, that cycle is **skipped rather than started**. Previously it was started anyway, so a valve opened only to be cut off when the window closed — and a step cut off that way records no on-time, leaving no way to tell how much water was actually delivered.
 
+    When the window length and one full pass match exactly, the last step's end and the window's close land on the same moment. If the window check wins that race, the step is switched off before it can finish on its own and no on-time is recorded — so a step that is about to finish is given a few seconds to end normally. A step with time still left is not waited for: that is a genuine cut-off, not a natural end, and waiting would only overrun the window.
+
 ### Unified Modal · Time Wheel
 
 Time, group, name, and weekday schedule are edited from a **single unified modal** in the sequence widget's step list.

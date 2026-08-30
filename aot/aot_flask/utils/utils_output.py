@@ -18,6 +18,14 @@ from aot.databases.models import OutputChannel
 from aot.databases.models import Tab
 from aot.aot_client import DaemonControl
 from aot.outputs.paired_actuator_common import PAIRED_ACTUATOR_OUTPUT_TYPES
+from aot.services.device_references import (
+    deletion_blocked_message,
+    find_device_referrers,
+)
+from aot.services.duplication import (
+    blank_paired_channel_refs,
+    unique_copy_name,
+)
 from aot.aot_flask.extensions import db
 from aot.aot_flask.utils.utils_general import custom_channel_options_return_json
 from aot.aot_flask.utils.utils_general import custom_options_return_json
@@ -347,9 +355,15 @@ def output_duplicate(form_mod):
     # bottom of the grid; otherwise it inherits the source's position_y and
     # causes GridStack cards to overlap and ORDER BY to tie.
     max_pos = db.session.query(db.func.max(Output.position_y)).scalar()
+    # 이름은 **이미 있는 출력 전부**를 놓고 고른다. "Copy of X" 를 무조건
+    # 붙이면 두 번 복제했을 때 화면에 똑같은 이름이 둘 생기는데, 출력 목록은
+    # 이름밖에 보여 주지 않으므로 그 순간 사용자는 어느 쪽이 어느 밸브인지
+    # 알 수 없다(2026-08-28: v11 두 개 중 꺼진 쪽을 보고 "밸브가 안 열렸다"
+    # 고 판단한 사례).
+    taken = {row[0] for row in db.session.query(Output.name).all() if row[0]}
     new_output = clone_model(
         source_output, unique_id=set_uuid(),
-        name=f"Copy of {source_output.name}",
+        name=unique_copy_name(source_output.name, taken, style='prefix'),
         position_y=(max_pos or 0) + 1)
 
     duplicated_output = Output.query.filter(
@@ -375,21 +389,14 @@ def output_duplicate(form_mod):
             new_ch = clone_model(
                 each_dev, unique_id=set_uuid(),
                 output_id=duplicated_output.unique_id)
-            # For paired actuators, blank out the underlying open/close/selector
-            # refs and any position state on the duplicate so it doesn't share
-            # physical channels with the source. User must reconfigure on the copy.
-            if is_paired and new_ch and new_ch.custom_options:
-                try:
-                    import json as _json
-                    co = _json.loads(new_ch.custom_options)
-                    for k in ('output_open_id', 'output_close_id',
-                              'selector_output_id', 'last_position_pct'):
-                        if k in co:
-                            co[k] = '' if k != 'last_position_pct' else 0.0
-                    new_ch.custom_options = _json.dumps(co)
-                except Exception:
-                    pass
-            
+            # 짝 액추에이터는 열림/닫힘/셀렉터 참조를 비운다 — 그대로 두면
+            # 사본이 **원본의 물리 채널**을 움직인다. 판정과 비우기는
+            # services.duplication 하나에만 둔다(탭 복제도 같은 함수를
+            # 쓴다). 예전 인라인 판본은 마지막 채널의 변경을 저장하지
+            # 않아 조용히 되돌아가기도 했다.
+            if is_paired and new_ch and blank_paired_channel_refs(new_ch):
+                new_ch.save()
+
         # [I10/I12] 복제본은 '미배치'로 시작한다 — 지도 도형을 복사하지 않는다.
         # 과거에는 clone_model 이 geo_id 를 그대로 물려줘, 복제된 밸브의 마커가
         # **원본 지도**에 생겼다(유니크 위반이 아니라 조용한 오염). 게다가
@@ -678,8 +685,19 @@ def output_del(form_output):
         messages["error"].append(scope.deny_message())
         return messages
 
+    # 아직 이 출력을 쓰는 곳이 있으면 지우지 않는다. 예전에는 참조자를 보지
+    # 않고 지웠고, 그 결과 시퀀스 스텝·위젯이 죽은 id 를 든 채 남았다 —
+    # 오류는 나지 않으므로 사용자는 알 수 없고, 활성 시퀀스는 매 주기 아무
+    # 데도 닿지 않는 명령을 계속 낸다(2026-08-28 실측).
+    target_output = Output.query.filter(Output.unique_id == output_id).first()
+    if target_output is not None:
+        referrers = find_device_referrers([output_id]).get(output_id)
+        if referrers:
+            messages["error"].append(
+                deletion_blocked_message(target_output.name, referrers))
+            return messages
+
     try:
-        target_output = Output.query.filter(Output.unique_id == output_id).first()
         map_config_id = target_output.map_config_id if target_output else None
 
         device_measurements = DeviceMeasurements.query.filter(

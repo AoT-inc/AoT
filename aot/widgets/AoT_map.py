@@ -263,6 +263,18 @@ WIDGET_HEAD_HTML = """
     display: none !important;
   }
 
+  /* L2 게이트의 "켜짐-단독" 제한 (FOCUS_LIMIT_L2, 지금은 출력만).
+     위 `.aot-zoom-hidden` 은 그대로 두고(안 켜진 출력은 여전히 줌 17에서
+     접힌다) 이 클래스를 그 위에 추가로 얹는다 — 켜져 있어서(active) 임시
+     표시 중이던 것이 아주 멀리 줌아웃하면(L2 기준, 기본 15.5) 다시 접히게
+     하기 위해서다. `:not(.aot-focus-show-modal)` 이라 **모달이 열려 있으면**
+     (그 순간엔 "어디 이야기인지" 를 보여줘야 하므로) 이 게이트도 비켜간다 —
+     `.aot-focus-show`(이유 불문) 대신 이 클래스를 쓰는 것이 핵심: active
+     단독으로는 못 이기고 modal 이 있어야 이긴다. */
+  .aot-zoom-hidden-l2:not(.aot-focus-show-modal) {
+    display: none !important;
+  }
+
   /* 임시 표시 — 사용자가 꺼 둔 라벨이라도 **지금 봐야 할 이유**가 있으면 보인다
      (그 대상의 모달이 열려 있다 · 그 출력이 켜져 있다).
 
@@ -767,15 +779,39 @@ WIDGET_INFORMATION = {
             'constraints': {'min': 1.0, 'max': 3.0}
         },
         {
+            # L1 — 시설/장치/값 키. 가까이 가야 읽히는 것들이라 기준 줌이 높다
+            # (기본 17). 구역·시설은 더 넓은 축척부터 계속 보여야 뜻이 있어
+            # 같은 줌 하나로 못 묶는다 — 그래서 L2(아래)로 따로 뺐다.
             'id': 'label_min_zoom',
             'type': 'integer',
             'default_value': 17,
 
-            'name': lazy_gettext('Hide Labels When Zoomed Out'),
+            'name': lazy_gettext('Hide Labels When Zoomed Out — L1'),
             'phrase': lazy_gettext(
-                'Below this zoom level, facility / output / input / function labels '
-                'and value keys are hidden. Site and zone labels always stay visible '
-                'so the map keeps its bearings. Set 0 to never hide.'
+                'Below this zoom level, output / input / function / equipment / '
+                'sensor / plot / bay / note labels and value keys are hidden. '
+                'Site labels always stay visible so the map keeps its bearings. '
+                'Zone and facility labels have their own threshold below (L2). '
+                'Set 0 to never hide.'
+            ),
+            'constraints': {'min': 0, 'max': 22}
+        },
+        {
+            # L2 — 구역·시설 라벨 + 구역·구획·설비 도형(_SHAPE_LOD_L2, 2026-08-29
+            # 도형 축 편입). 지금은 이 다섯뿐이지만 이름을 "L2"로 둔 이유는
+            # 앞으로 다른 라벨·키·도형이 이 축척대에서 접혀야 한다고 밝혀지면
+            # 여기 추가할 자리이기 때문이다(L1 은 건드리지 않는다).
+            'id': 'label_min_zoom_l2',
+            'type': 'float',
+            'default_value': '15.5',
+
+            'name': lazy_gettext('Hide Labels & Shapes When Zoomed Out — L2'),
+            'phrase': lazy_gettext(
+                'A second, independent zoom threshold — currently for zone/facility '
+                'labels and zone/plot/equipment shapes. They need to stay visible at '
+                'a wider zoom than L1 above, so they get their own value here. More '
+                'label and shape kinds may be added to this tier later. Set 0 to '
+                'never hide.'
             ),
             'constraints': {'min': 0, 'max': 22}
         },

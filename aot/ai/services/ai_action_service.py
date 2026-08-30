@@ -674,20 +674,32 @@ class AIActionService:
                 logger.info(f"[TargetResolver] Resolved '{target_id}' to GeoShape: {match.id}")
                 return match.id, 'geoshape'
 
-        # Device matching
-        output_match = Output.query.filter(or_(Output.unique_id == target_id, Output.name == target_id)).first()
-        if output_match:
-            logger.info(f"[TargetResolver] Resolved '{target_id}' to Output: {output_match.unique_id}")
-            # [TASK_8 056_] Update TTL on successful resolution (Discovery)
-            _ID_TTL_CACHE[output_match.unique_id] = time.time()
-            return output_match.unique_id, 'output'
+        # Device matching.
+        # 이름이 겹치면 **고르지 않고 멈춘다.** 이 함수가 돌려준 id 로 곧장
+        # 물리 제어가 나가므로, 아무거나 집으면 엉뚱한 장치가 움직인다
+        # (2026-08-28: 탭 복제가 이름을 그대로 둬 v11 이 두 개였다).
+        # execute_action 의 except 가 이 예외를 {"status": "error"} 로 바꿔
+        # 사용자에게 그대로 전달한다 — 위 dict 가드와 같은 규율이다.
+        from aot.services.resolvers.device_resolver import (
+            resolve_input, resolve_output)
 
-        input_match = Input.query.filter(or_(Input.unique_id == target_id, Input.name == target_id)).first()
-        if input_match:
-            logger.info(f"[TargetResolver] Resolved '{target_id}' to Input: {input_match.unique_id}")
+        output_match = resolve_output(target_id)
+        if output_match.error:
+            raise ValueError(output_match.error)
+        if output_match.row:
+            logger.info(f"[TargetResolver] Resolved '{target_id}' to Output: {output_match.row.unique_id}")
             # [TASK_8 056_] Update TTL on successful resolution (Discovery)
-            _ID_TTL_CACHE[input_match.unique_id] = time.time()
-            return input_match.unique_id, 'input'
+            _ID_TTL_CACHE[output_match.row.unique_id] = time.time()
+            return output_match.row.unique_id, 'output'
+
+        input_match = resolve_input(target_id)
+        if input_match.error:
+            raise ValueError(input_match.error)
+        if input_match.row:
+            logger.info(f"[TargetResolver] Resolved '{target_id}' to Input: {input_match.row.unique_id}")
+            # [TASK_8 056_] Update TTL on successful resolution (Discovery)
+            _ID_TTL_CACHE[input_match.row.unique_id] = time.time()
+            return input_match.row.unique_id, 'input'
 
         func_match = Function.query.filter(or_(Function.unique_id == target_id, Function.name == target_id)).first()
         if func_match:

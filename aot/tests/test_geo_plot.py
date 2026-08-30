@@ -6163,10 +6163,12 @@ class TestProgram(unittest.TestCase):
         self.assertIn("_wireLabelStacking(_uidInstTop, bEl, 'bay')", vec)
         # 구획 칩도 종류를 새긴다(모듈이 달라 스택 배선을 못 부르므로 표식만).
         self.assertIn("el.dataset.labelKind = 'plot'", plot)
-        # 줌 임계는 하나(label_min_zoom) — 시설과 **같은 축척에서** 함께 접힌다.
         self.assertIn('label_min_zoom', vec)
-        for k in ('facility', 'bay', 'plot'):
+        for k in ('bay', 'plot'):
             self.assertRegex(vec, r'LABEL_ZOOM_GATED = \{[\s\S]{0,200}%s:' % k)
+        # 시설은 L2 축(더 넓은 축척부터 계속 보임)으로 옮겨졌다(60e1671a) —
+        # L1 표가 아니라 L2 표에서 찾는다.
+        self.assertRegex(vec, r'LABEL_ZOOM_GATED_L2 = \{[\s\S]{0,200}facility:')
 
     def test_space_words_do_not_collide(self):
         """다섯 낱말이 각자 다른 것을 가리킨다 — 대지(site) · 구역(zone) ·

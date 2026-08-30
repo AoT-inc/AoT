@@ -254,43 +254,31 @@
                 st.mapUuid = opts.mapUuid;
                 st.opts = opts;          // 스타일 전환 후 재생성에 그대로 쓴다
                 _render(uid, map, rows, opts);
-                _scheduleRefresh(uid, map, opts);
                 return rows;
             })
             .catch(function () { return []; });
     }
 
-    // 구획 목록을 주기적으로 다시 받는다.
+    // ⚠ **주기 폴링을 두지 않는다** — 다른 도형과 같이 한 번만 받는다.
     //
-    // 식생은 geo/design 이나 다른 브라우저에서 바뀐다(새로 그리기·재배 종료).
-    // 한 번만 받으면 위젯은 그때 상태에 머물러, **종료한 구획이 지도에 계속
-    // 남는다** — 실제로 그렇게 보였다. 다만 자주 바뀌는 데이터가 아니므로
-    // 센서값처럼 몇 초 주기로 돌 이유는 없다. 5분이면 충분하고, 그보다 급한
-    // 갱신은 이 위젯 안에서 편집했을 때인데 그 경로는 즉시 load() 를 부른다.
-    var REFRESH_MS = 300000;
-
-    function _scheduleRefresh(uid, map, opts) {
-        var st = STATE[uid] = STATE[uid] || {};
-        if (st.timer) return;                    // 이미 걸려 있다
-        st.timer = setInterval(function () {
-            // 탭이 숨겨져 있으면 건너뛴다 — 안 보이는 화면을 위해 폴링할 이유가
-            // 없고, 폰에서는 그 한 번이 라디오를 깨운다.
-            if (document.hidden) return;
-            var cur = STATE[uid];
-            if (!cur || !cur.opts) return;
-            // 위젯마다 타이머가 따로 도는데 주기가 같아 **동시에** 깨어난다 —
-            // 여기도 공유 캐시를 지나야 5분마다 같은 요청이 위젯 수만큼 나가지
-            // 않는다. 주기(300초)가 TTL(10초)보다 훨씬 길어 신선도는 그대로다.
-            _geoGet('/api/geo/plots?include_planned=1&map_uuid=' +
-                    encodeURIComponent(cur.opts.mapUuid || ''))
-                .then(function (res) {
-                    if (!res || !res.ok) return;
-                    cur.plots = res.plots || [];
-                    _render(uid, map, cur.plots, cur.opts);
-                })
-                .catch(function () {});
-        }, REFRESH_MS);
-    }
+    // 예전에는 여기 5분 주기 setInterval 이 있었다. 이유는 "식생은 geo/design 이나
+    // 다른 브라우저에서 바뀌는데(새로 그리기·재배 종료) 한 번만 받으면 종료한
+    // 구획이 지도에 계속 남는다" 였다. 그 증상 자체는 사실이지만, **다른 도형
+    // 종류가 전부 그렇다** — 대지·구역·시설·설비는 `loadGeoJSONLayers` 가 위젯
+    // 초기화에서 딱 한 번 받고 두 번 다시 받지 않는다(그 함수를 부르는 곳은
+    // `aot-map-widget-vector.js` 한 자리뿐이다). 구획만 폴링을 가진 것은 근거
+    // 없는 예외였고, 값은 그 예외로 다음을 치렀다:
+    //
+    //   `_render` 는 라벨을 **통째로 다시 만든다**(`_clearLabels` 로 마커를 전부
+    //   지우고 구획 수만큼 `new maplibregl.Marker` + DOM + 클릭 리스너를 새로
+    //   만든다). 다른 종류는 레이어를 한 번 만든 뒤 visibility 만 토글하거나
+    //   기존 DOM 의 클래스만 바꾼다. 그 재생성이 위젯마다 5분마다 돌았다.
+    //
+    // 구획이 바뀌는 주기는 분·시가 아니라 **일·주** 단위다(사용자 확인,
+    // 2026-08-29). 그 정도 신선도를 위해 5분마다 라벨을 다 버리고 다시 만들
+    // 이유가 없다 — 새로고침하면 최신이고, 이 위젯 안에서 편집한 경우는
+    // `_wireEdit` 의 `refresh()` 가 그 자리에서 `load()` 를 다시 불러 즉시
+    // 반영한다(그 경로는 그대로 남아 있다).
 
     function _render(uid, map, rows, opts) {
         var id = _ids(uid);
@@ -356,9 +344,10 @@
         // 패널·설정모달에서 [구획]을 껐다 켜면 `AoTMapPlot.setShapeVisible` 로
         // `st.shapeVisible` 만 바뀌고, `opts`(= `st.opts`, `load()` 때 넣은 그대로)는
         // 절대 갱신되지 않는다. 예전에는 이 자리에서 매번 `opts.visible` 로
-        // 되썼기 때문에, 5분 폴링(`_scheduleRefresh` → `_render`)·베이스맵 전환
-        // rehydrate·모달 저장 후 재로드가 돌 때마다 방금 끈 도형이 페이지 로드
-        // 당시 값으로 되살아났다("구획만 제멋대로 켜졌다 꺼졌다"의 근본 원인).
+        // 되썼기 때문에, `_render` 가 다시 돌 때마다(당시엔 5분 폴링도 있었고,
+        // 지금은 베이스맵 전환 rehydrate·모달 저장 후 재로드) 방금 끈 도형이
+        // 페이지 로드 당시 값으로 되살아났다("구획만 제멋대로 켜졌다 꺼졌다"의
+        // 근본 원인).
         // 이미 사용자가 정한 값(`st.shapeVisible`)이 있으면 그것을 따른다 —
         // `load()` 앞머리의 선-시딩(파일 머리말 계약 참조) 덕에 첫 렌더에서도
         // 보통 이미 정해져 있고, 옵션 스냅샷(`opts.visible`)은 그 선-시딩이
@@ -475,6 +464,8 @@
 
         var reg = window.AoTMapLabelLayers;
         st.markers = [];
+        // 위젯이 빌려주는 공용 라벨 배선(`_installZoomGate` 에서 노출).
+        var inst = (window.AoTWidgetInstances || {})[uid];
 
         (rows || []).forEach(function (p) {
             var geom = _geomOf(p);
@@ -490,13 +481,24 @@
             el.innerHTML = '<div class="aot-bay-chip-name"></div>';
             el.querySelector('.aot-bay-chip-name').textContent = p.subject;
             el.style.fontSize = _labelEm(opts) + 'em';
-            // **위젯의 라벨 관리에 등록한다.** 이 종류를 새기지 않으면 위젯의
-            // 줌 게이트(`[data-label-kind]` 를 훑는다)·쌓임·충돌이 이 라벨을
-            // 아예 못 본다 — 구획 라벨이 그동안 그 밖에 있었다(자체 줌 규칙만
-            // 있었고, 시설·장치 라벨이 다 접힌 축척에서 홀로 남았다).
-            // 값은 위젯의 `LABEL_Z` / `LABEL_ZOOM_GATED` 가 쓰는 이름과 같아야
-            // 한다(`plot`).
-            el.dataset.labelKind = 'plot';
+            // **위젯의 라벨 관리에 등록한다.** 종류(`plot`)를 새기지 않으면
+            // 위젯의 줌 게이트(`[data-label-kind]` 를 훑는다)·쌓임·충돌이 이
+            // 라벨을 아예 못 본다 — 구획 라벨이 그동안 그 밖에 있었다.
+            //
+            // 배선은 **위젯 것을 그대로 빌려 쓴다**(`_wireLabelStacking`):
+            // 종류 새기기 + 기준 z(LABEL_Z.plot) + 호버하면 앞으로 + 만든 즉시
+            // 줌 게이트 적용. 예전에는 여기서 `dataset.labelKind` 만 손으로
+            // 찍었는데, 그러면 종류는 새겨져도 **쌓임 순서와 호버 반응이
+            // 없다** — 다른 라벨은 호버하면 앞으로 오는데 구획만 가만히 있었고,
+            // z 도 안 정해져 CSS 가 정하는 순서에 맡겨졌다(그 CSS 는 이미
+            // "z-index 는 JS 공용 표가 정한다" 고 비워 둔 자리다,
+            // `aot-sensor-label.css` `.aot-bay-chip`).
+            var restoreZ = null;
+            if (inst && typeof inst._wireLabelStacking === 'function') {
+                restoreZ = inst._wireLabelStacking(el, 'plot');
+            } else {
+                el.dataset.labelKind = 'plot';   // 위젯을 못 찾은 경우의 폴백
+            }
             // 임시 표시(focus)가 이 칩을 uuid 로 찾는다 — 그 구획의 모달이
             // 열려 있는 동안은 라벨을 꺼 두었어도 보여야 한다.
             el.dataset.plotUuid = p.unique_id;
@@ -506,7 +508,16 @@
             el.style.cursor = 'pointer';
             el.addEventListener('click', function (ev) {
                 ev.stopPropagation();
-                openModal(uid, map, p.unique_id, st.opts || opts);
+                var popup = openModal(uid, map, p.unique_id, st.opts || opts);
+                // 연 라벨은 **창이 닫힐 때까지** 앞에 남긴다 — 호버 복귀에만
+                // 맡기면 팝업을 만지러 포인터가 라벨을 벗어나는 순간 뒤로
+                // 돌아간다. 구역 칩과 같은 규약(`_openBayPopup` 호출부).
+                if (restoreZ && inst && inst._pinLabelToFront) {
+                    inst._pinLabelToFront(el, restoreZ);
+                    if (popup && popup.on) {
+                        popup.on('close', function () { inst._unpinLabel(el); });
+                    }
+                }
             });
 
             try {
@@ -735,6 +746,19 @@
         var body = el0 && el0.querySelector('.maplibregl-popup-content');
         if (!body) return;
 
+        // 뒤로가기가 이 모달을 닫을 때 쓴다(`close()` 아래). 이 셸(`_showFacility
+        // CenterOverlay`)은 같은 uid 의 다음 모달이 뜰 때 자기 DOM id 로 알아서
+        // 갈아 끼우지만, 뒤로가기가 **다음 모달을 열지 않는 경우**(bay 1개 시설
+        // 뒤로가기처럼 지도로 그냥 돌아가는 경로)에는 그 자동 교체가 안 일어나
+        // 아무도 이 모달을 못 닫는다 — 참조가 이 함수 지역 변수뿐이었다.
+        var st0 = STATE[uid] = STATE[uid] || {};
+        st0.popup = popup;
+        if (popup.on) {
+            popup.on('close', function () {
+                if (STATE[uid] && STATE[uid].popup === popup) STATE[uid].popup = null;
+            });
+        }
+
         // 뒤로가기를 **껍데기 단계에서** 세운다. 목록에 이미 있는 것(시설이면
         // 이름까지, 노지면 상위 uuid)으로 위젯이 지도에서 나머지를 푼다 —
         // 조회를 기다릴 이유가 없다. 못 풀면 조용히 넘어가고 상세가 오면
@@ -851,6 +875,11 @@
                         _t('Failed to load data.') + '</div>';
                 }
             });
+
+        // 껍데기를 돌려준다 — 부른 쪽이 닫힘에 무언가를 걸 수 있어야 한다
+        // (구획 칩은 여기에 라벨 핀 해제를 건다). 위 조회는 비동기라 이 반환을
+        // 기다리지 않는다.
+        return popup;
     }
 
     function _csrf() {
@@ -1400,6 +1429,15 @@
         _render(uid, map, st.plots, st.opts || {});
     }
 
+    // 지금 열려 있는 구획 모달을 닫는다 — 뒤로가기가 **다음 모달을 열지 않는**
+    // 경로(bay 1개 시설처럼 지도로 그냥 돌아가는 경우)에서 쓴다. 다음 모달을
+    // 여는 경로는 그 모달의 셸이 같은 DOM id 로 알아서 갈아 끼우므로 이 호출이
+    // 필요 없다(무해하지만 중복이다).
+    function close(uid) {
+        var st = STATE[uid];
+        if (st && st.popup) { try { st.popup.remove(); } catch (e) {} }
+    }
+
     window.AoTMapPlot = {
         load: load,
         rehydrate: rehydrate,
@@ -1408,6 +1446,7 @@
         setLabelVisible: setLabelVisible,
         isVisible: isVisible,
         openModal: openModal,
+        close: close,
         refreshProgramChoices: refreshProgramChoices,
         // 공용 폼(`AoTPlotForm.wire`)이 `loadPrograms(kind) -> Promise<list>` 를
         // 받는다. 목록 캐시가 여기 있으므로 조회는 계속 이 모듈이 맡는다 —

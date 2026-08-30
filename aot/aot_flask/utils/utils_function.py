@@ -38,7 +38,7 @@ from aot.aot_flask.utils.utils_map_config import (
     delete_map_config,
 )
 from aot.aot_flask.utils.utils_misc import determine_controller_type
-from aot.databases import clone_model
+from aot.services.duplication import clone_function_entry, unique_copy_name
 from aot.databases.models.tab import Tab
 
 
@@ -70,6 +70,22 @@ def _get_next_position_y():
         return max_y + 1
     except Exception:
         return 999
+
+
+def _existing_function_names():
+    """함수 페이지에 이미 쓰이고 있는 이름 전부.
+
+    `_get_next_position_y()` 와 같은 다섯 모델을 본다 — 한 화면에 섞여
+    나오므로 이름 충돌도 그 범위에서 판정해야 한다.
+    """
+    names = set()
+    for table in (Conditional, PID, Trigger, Function, CustomController):
+        try:
+            names.update(
+                row[0] for row in db.session.query(table.name).all() if row[0])
+        except Exception:
+            logger.debug("이름 수집 실패: %s", table.__name__, exc_info=True)
+    return names
 
 
 def function_add(form_add_func, tab_id=None):
@@ -715,51 +731,31 @@ def function_duplicate(form):
                 CustomController.unique_id == function_id).first()
 
         if func:
-            new_unique_id = set_uuid()
-            clone_kwargs = {
-                'unique_id': new_unique_id,
-                'position_y': _get_next_position_y()
-            }
-
+            # 이름은 함수 페이지 **전체**를 놓고 고른다 — 다섯 모델이 한
+            # 화면에 섞여 나오므로, "(Copy)" 를 무조건 붙이면 두 번째
+            # 복제부터 화면에 똑같은 이름이 둘 생긴다(실제로 같은 이름의
+            # 시퀀스가 셋까지 쌓여 있었다).
+            new_name = None
             if hasattr(func, 'name') and func.name:
-                clone_kwargs['name'] = f"{func.name} (Copy)"
+                taken = _existing_function_names()
+                new_name = unique_copy_name(func.name, taken, style='suffix')
 
             # [P1] 복제본은 미배치로 시작한다 — 빈 지도를 만들어 붙이지
             # 않는다. clone_model 의 교차참조 거부목록(I10)과 같은 원칙.
+            #
+            # 자식 복제와 **참조 재배선**은 services.duplication 이 맡는다.
+            # 액션을 새 id 로 복제해 놓고 `timer_schedule` 의 요일별 맵과
+            # Conditional 코드 안의 id 리터럴을 그대로 두면, 사본의 요일별
+            # 설정이 원본 스텝을 가리키고(조용히 기본값으로 떨어진다)
+            # 사본의 코드가 **원본의 액션을 실행한다**. 탭 복제도 같은
+            # 함수를 부르므로 두 경로가 다시 갈리지 않는다.
+            new_func, _id_maps = clone_function_entry(
+                func,
+                name=new_name,
+                position_y=_get_next_position_y())
 
-            new_func = clone_model(func, **clone_kwargs)
             if new_func:
                 new_function_id = new_func.unique_id
-
-                # 복제본은 사용자가 다시 활성화하기 전까지 비활성 상태여야
-                # 한다. clone_model()은 원본의 is_activated를 그대로 복사하므로
-                # (Function 모델처럼 이 필드가 없는 경우도 있어 hasattr로 방어),
-                # 여기서 강제로 되돌린다. input_duplicate()의 동일 원칙 참고.
-                if hasattr(new_func, 'is_activated') and new_func.is_activated:
-                    new_func.is_activated = False
-                    new_func.save()
-
-                # Clone Children: Actions
-                actions = Actions.query.filter(
-                    Actions.function_id == function_id).all()
-                for each_action in actions:
-                    clone_model(each_action, unique_id=set_uuid(),
-                                function_id=new_unique_id)
-
-                # Clone Children: DeviceMeasurements
-                measurements = DeviceMeasurements.query.filter(
-                    DeviceMeasurements.device_id == function_id).all()
-                for each_meas in measurements:
-                    clone_model(each_meas, unique_id=set_uuid(),
-                                device_id=new_unique_id)
-
-                # Clone Children: FunctionChannel
-                channels = FunctionChannel.query.filter(
-                    FunctionChannel.function_id == function_id).all()
-                for each_chan in channels:
-                    clone_model(each_chan, unique_id=set_uuid(),
-                                function_id=new_unique_id)
-
                 messages["success"].append(
                     f"{TRANSLATIONS['duplicate']['title']} {TRANSLATIONS['function']['title']}")
         else:

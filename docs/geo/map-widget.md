@@ -178,7 +178,8 @@ switch above.
 | :--- | :--- | :--- |
 | Prevent Label Collision | On | Clusters overlapping labels automatically. **The more specific label survives** — function > input > output > equipment > facility > zone > site claim space in that order, and whatever yields is surfaced as a `name +N` badge rather than disappearing silently. |
 | Label Text Size | 1.0 | Font size (em) of every map label and value key. 1.0–3.0. |
-| Hide Labels When Zoomed Out | 17 | Below this zoom level, facility / output / input / function labels and value keys are hidden. Site and zone labels always stay visible so the map keeps its bearings, and **while input labels are hidden the zone label carries the reading instead** (see [Zone Labels](#zone-label-value) below). **Set 0 to never hide.** |
+| Hide Labels When Zoomed Out — L1 | 17 | Below this zoom level, output / input / function / equipment / sensor / plot / bay / note labels and value keys are hidden. Site labels always stay visible so the map keeps its bearings, and **while input labels are hidden the zone label carries the reading instead** (see [Zone Labels](#zone-label-value) below). Zone and facility labels use the wider L2 threshold below. **Set 0 to never hide.** |
+| Hide Labels & Shapes When Zoomed Out — L2 | 15.5 | A second, independent threshold for the things that need to stay readable at a wider view than L1: **zone and facility labels**, and **zone / plot / equipment shapes**. Site shapes and device markers are never culled by zoom. A running output normally keeps its label and shape visible even when hidden — but below this zoom it folds away too, unless its window is open. **Set 0 to never hide.** |
 | Facility-centric Labels | Off | Switches the per-zoom exposure rules between outdoor-centric (off, default) and facility-centric (on). Stacking order — which label draws on top — is unaffected and is always site > zone > facility > equipment > output > input > function. |
 | Sensor Marker Style | Circle | Circle (a compact round marker showing the representative value as an integer, colored by measurement band) or Text (value with unit). |
 | Enable Sensor Popup | On | Clicking a value key opens a detail window with a 24-hour chart. |
@@ -194,7 +195,7 @@ A zone label carries a reading **only while input labels are not visible**.
 | Input labels | Zone label |
 | :--- | :--- |
 | Visible | Name only (`3-2`) |
-| Hidden — turned off in the label controller, or zoomed out past **Hide Labels When Zoomed Out** above | Name + representative reading + measurement-band colour (`3-2` / `32.4°C`), plus a corner dot when something needs attention |
+| Hidden — turned off in the label controller, or zoomed out past **Hide Labels When Zoomed Out — L1** above | Name + representative reading + measurement-band colour (`3-2` / `32.4°C`), plus a corner dot when something needs attention |
 
 If the input labels are already stating the readings, a zone label repeating one
 puts the same number on screen twice and paints the band colour in two layers, so

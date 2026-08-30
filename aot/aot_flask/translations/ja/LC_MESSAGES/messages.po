@@ -31521,3 +31521,41 @@ msgstr "換気と冷暖房が互いに邪魔しないように調整します。
 
 msgid "Misting is locked out overnight to keep leaves dry"
 msgstr "葉を夜通し乾いた状態に保つため噴霧を止めました"
+
+# --- 복제·참조 무결성 (2026-08-28) ---
+
+#: aot/services/resolvers/device_resolver.py
+msgid "output"
+msgstr "出力"
+
+#: aot/services/resolvers/device_resolver.py
+msgid "input"
+msgstr "入力"
+
+#: aot/services/resolvers/device_resolver.py
+msgid "no tab"
+msgstr "タブなし"
+
+#: aot/services/device_references.py
+msgid "%(kind)s '%(name)s'"
+msgstr "%(kind)s '%(name)s'"
+
+#: aot/services/device_references.py
+msgid "%(kind)s of '%(parent)s'"
+msgstr "'%(parent)s' の%(kind)s"
+
+#: aot/services/device_references.py
+msgid "%(list)s and %(count)d more"
+msgstr "%(list)s ほか %(count)d 件"
+
+#: aot/services/device_references.py
+msgid "Cannot delete '%(device)s' — it is still used by: %(referrers)s. Remove or repoint those references first."
+msgstr "'%(device)s' を削除できません — %(referrers)s がまだ使用しています。先にその参照を削除するか、別の機器に切り替えてください。"
+
+#: aot/services/resolvers/device_resolver.py
+msgid "More than one %(kind)s is named '%(name)s' (tabs: %(tabs)s). Say which one you mean, or use its exact id."
+msgstr "'%(name)s' という名前の%(kind)sが複数あります (タブ: %(tabs)s)。どれかを指定するか、正確な id を使用してください。"
+
+#: aot/widgets/widget_trigger_sequence.py
+msgid "Device is gone"
+msgstr "機器がなくなりました"

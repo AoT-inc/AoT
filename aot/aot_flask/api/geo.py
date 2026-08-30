@@ -109,7 +109,9 @@ class GeoDesignDetail(Resource):
         from aot.aot_flask.geo import GeoDesignManager
         result, error = GeoDesignManager.delete_design_map(map_uuid)
         if error:
-            abort(500, message=error)
+            # 아직 쓰는 곳이 있어 거절한 것은 서버 오류가 아니다.
+            blocked = isinstance(result, dict) and result.get('blocked')
+            abort(409 if blocked else 500, message=error)
         return result
 
 

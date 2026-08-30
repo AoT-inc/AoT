@@ -911,10 +911,6 @@
                     // 서버가 캐시를 비웠으니 클라이언트 캐시도 함께 버린다 —
                     // 안 버리면 창을 닫았다 다시 열 때 옛 지정이 돌아온다.
                     invalidateModal('zone', zoneUuid);
-                    // 지도 구역 라벨도 이 값을 쓴다. 상태는 60초 주기라
-                    // 다음 tick 까지 기다리면 방금 고른 것이 라벨에 안 뜬다.
-                    var inst = window.AoTWidgetInstances[uid];
-                    if (inst && inst._refreshZoneStatusNow) inst._refreshZoneStatusNow();
                 })
                 .catch(function () {
                     // 되돌린다 — 저장 안 된 지정을 켜 둔 채로 두면 다음에 열었을
@@ -1967,15 +1963,21 @@
                     var _pl = data.plot || {};
                     var _up;
                     if (_pl.facility_uuid) {
+                        // bayId — 이 구획이 속한 동. 뒤로가기가 방금 보던 동이
+                        // 아니라 늘 첫 번째 동으로 돌아가던 문제(아래 `_wireUpBtn`
+                        // 의 `kind === 'facility'` 분기 주석 참조)를 여기서
+                        // 원천을 실어 고친다.
                         _up = { kind: 'facility', uuid: _pl.facility_uuid,
-                                name: _pl.facility_name };
+                                name: _pl.facility_name, bayId: _pl.bay_id };
                     } else {
                         _up = { kind: (_pl.zone_kind === 'site') ? 'site' : 'zone',
                                 uuid: _pl.zone_uuid, name: _pl.zone_name };
                     }
+                    // 닫기는 이 구획 모달 자신(인자로 받은 `popup`)으로 한다 —
+                    // `_zonePopupState[uid].popup` 을 거치면 아래서 곧 그 값을
+                    // 이 popup 으로 채우기 **전**에 눌렸을 때 남의 것을 닫는다.
                     _wireUpBtn(body, uid, _up, function () {
-                        var z2 = _zonePopupState[uid];
-                        if (z2 && z2.popup) { try { z2.popup.remove(); } catch (e) {} }
+                        try { popup.remove(); } catch (e) {}
                     });
 
                     // 지금 이 탭이 열려 있으면 센서 차트를 바로 그린다(탭 클릭
@@ -2032,7 +2034,7 @@
             var _up = null;
             if (_pl.facility_uuid) {
                 _up = { kind: 'facility', uuid: _pl.facility_uuid,
-                        name: _pl.facility_name };
+                        name: _pl.facility_name, bayId: _pl.bay_id };
             } else if (_sn.zone_uuid) {
                 // 상세가 왔다 — 종류를 **서버가 준 값**으로 정한다. `zone_uuid`
                 // 는 zone 이 아닐 수 있다: 구역이 없는 지도에서는 서버가
@@ -2050,9 +2052,12 @@
                 _up = _upFromMap(_pl.zone_uuid);
             }
             if (!_up) return;
+            // 닫기는 이 구획 모달 자신의 참조(AoTMapPlot.close)로 한다.
+            // `_zonePopupState[uid].popup` 은 [환경·제어] 탭이 나중에
+            // (`/contents` 응답 후) 채우는 값이라, 이 뒤로가기는 그보다 먼저
+            // 배선되는 경우가 있어 그 시점엔 아직 이 구획의 것이 아닐 수 있다.
             _wireUpBtn(body, uniqueId, _up, function () {
-                var z2 = _zonePopupState[uniqueId];
-                if (z2 && z2.popup) { try { z2.popup.remove(); } catch (e) {} }
+                if (window.AoTMapPlot) window.AoTMapPlot.close(uniqueId);
             });
         };
 
@@ -2098,9 +2103,25 @@
                 } else if (kind === 'zone') {
                     _openZonePopup(uid, parent.uuid, parent.name);
                 } else if (kind === 'facility') {
+                    // bay 가 1개뿐인 시설은 그 bay 모달이 곧 시설 모달이다 —
+                    // 구획에서 올라오면 방금 거쳐 온 화면과 완전히 같은 것이
+                    // 다시 뜬다. 사용자에게는 "뒤로가기가 제자리로 돌아온다"로
+                    // 보인다. bay 가 여럿일 때만 그 상위(시설/bay 통합 모달)를
+                    // 다시 연다 — 1개일 때는 그냥 닫아 지도로 돌아간다.
                     var slices = _facilityBaySlices(uid, parent.uuid);
-                    _openBayPopup(uid, parent.uuid,
-                                  slices.length ? slices[0].id : null);
+                    if (slices.length > 1) {
+                        // 구획이 속한 동(parent.bayId, `plot.bay_id` 에서 옴)으로
+                        // 돌아간다. 예전에는 항상 slices[0]으로 고정해, 3번째
+                        // 동의 구획을 보다가 뒤로가면 1번째 동으로 튀었다.
+                        // "시설 전체" 구획(bay_id 없음)이거나 동 구성이 그새
+                        // 바뀌어 못 찾으면 첫 동으로 되돌아간다.
+                        var wantId = parent.bayId;
+                        var found = wantId && slices.some(function (sl) {
+                            return sl.id === wantId;
+                        });
+                        _openBayPopup(uid, parent.uuid,
+                                      found ? wantId : slices[0].id);
+                    }
                 } else {
                     _openSitePopup(uid, parent.uuid, parent.name);
                 }
@@ -2118,187 +2139,6 @@
                 }
             }
             return [];
-        }
-
-        // ── 구역 라벨의 대표값·상태 ────────────────────────────────────────────
-        //
-        // 시설 bay 칩이 이미 하는 일(2행: 이름 + 대표값, 밴드색 배경)을 구역
-        // 라벨로 올린다. 예전에는 구역 라벨이 이름만 달고 있어, 지도를 열어도
-        // "어디가 문제인가"를 알려면 구역을 하나씩 눌러 봐야 했다.
-        //
-        // 서버가 60초 캐시를 들고 있으므로 그보다 자주 물어도 새 값이 오지
-        // 않는다. 값이 없는 구역은 2행을 그리지 않는다 — "—" 만 있는 줄은
-        // 라벨만 키우고 아무것도 알려주지 않는다.
-        function _startZoneLabelStatus(uid, mapUuid) {
-            if (!mapUuid) return;
-            var inst = window.AoTWidgetInstances[uid];
-            if (!inst || inst._zoneStatusTimer) return;
-
-            // 이 폴러는 **위젯 인스턴스마다** 돈다. 한 대시보드에 같은 지도를
-            // 보는 지도 위젯이 여럿이면(김제: 지도·위성·위성2) 완전히 같은
-            // 요청이 위젯 수만큼 같은 순간에 나갔다 — 생 fetch 라 공유 캐시를
-            // 지나지 않았기 때문이다. 주기(60초)가 TTL(10초)보다 길어 신선도는
-            // 그대로이고, 합쳐지는 것은 동시에 깨어난 위젯들의 중복뿐이다.
-            //
-            // `force` 는 다음 주기를 기다릴 수 없는 자리(대표 측정 변경 직후)용
-            // 이다 — 캐시를 건너뛰지 않으면 방금 바꾼 것이 최대 10초 안 보인다.
-            function _tick(force) {
-                var i2 = window.AoTWidgetInstances[uid];
-                if (!i2 || !i2.map) return;
-                var _u = '/api/geo/zones/status?map_uuid=' + encodeURIComponent(mapUuid);
-                var _p = window.AoTGeoData
-                    ? window.AoTGeoData.get(_u, { force: !!force })
-                          .then(function (r) { return r.ok ? r.json() : null; })
-                    : fetch(_u).then(function (r) { return r.ok ? r.json() : null; });
-                _p
-                    .then(function (j) {
-                        if (!j || !j.ok) return;
-                        // 라벨이 아직 안 만들어졌을 수 있다 — 이 조회는 구역
-                        // GeoJSON 이 도착하자마자 시작하는데, 라벨은 별도의
-                        // label_aux 조회가 끝나야 생긴다. 응답을 들고 있다가
-                        // 라벨이 생기면 그때 칠한다(예전에는 60초 뒤 다음
-                        // 갱신까지 값이 안 나왔다).
-                        var i3 = window.AoTWidgetInstances[uid];
-                        if (i3) i3._zoneStatus = j.zones || {};
-                        _applyZoneLabelStatusSoon(uid, 0);
-                    })
-                    .catch(function () {});
-            }
-            _tick();
-            inst._zoneStatusTimer = setInterval(_tick, 60000);
-            // 대표 측정을 바꾼 직후처럼 다음 주기를 기다릴 수 없는 자리를 위해.
-            // 서버 캐시(60초)도 함께 비워졌을 때만 새 값이 온다.
-            inst._refreshZoneStatusNow = function () { _tick(true); };
-        }
-
-        // 라벨이 나타날 때까지 짧게 재시도. 라벨 생성은 다른 비동기 경로라
-        // 정확한 완료 시점을 알 수 없다.
-        function _applyZoneLabelStatusSoon(uid, attempt) {
-            var inst = window.AoTWidgetInstances[uid];
-            if (!inst || !inst._zoneStatus) return;
-            var painted = _applyZoneLabelStatus(uid, inst._zoneStatus);
-            if (painted > 0 || attempt >= 6) return;
-            setTimeout(function () {
-                _applyZoneLabelStatusSoon(uid, attempt + 1);
-            }, 1500);
-        }
-
-        // 구역 라벨이 값을 달지, 이름만 달지 — **입력 라벨이 켜져 있는가**가
-        // 정한다.
-        //
-        // 입력 라벨(“1-1 28.7°C”)이 지도에 떠 있으면 구역 라벨의 대표값은 바로
-        // 옆 숫자를 한 번 더 말하는 것이다. 같은 값이 두 번 뜨면 어느 쪽이
-        // 기준인지 헷갈리고, 밴드색까지 두 겹으로 칠해져 지도가 시끄러워진다.
-        // 그래서 그때는 예전처럼 이름만 남기고, 입력 라벨을 껐을 때만 구역
-        // 라벨이 그 몫을 대신 진다.
-        // 기준은 토글이 아니라 **지금 실제로 보이는가**다. 입력 라벨은 두 가지로
-        // 사라진다: 사람이 토글로 끄거나, 줌 게이트(label_min_zoom)가 가리거나.
-        // 처음에는 토글만 봤는데, "축소 시 라벨 숨기기"로 입력 라벨이 사라진
-        // 화면에서는 구역 라벨이 이름만 단 채 남아 **아무도 값을 말하지 않았다**
-        // — 정작 줌 아웃은 값이 가장 필요한 순간이다.
-        function _zoneLabelDetailOn(inst) {
-            if (!inst) return false;
-            if (inst._hiddenLabels && inst._hiddenLabels.input) return true;
-            return _inputLabelsZoomHidden(inst);
-        }
-
-        // 줌 게이트가 지금 입력 라벨을 가리고 있는가(_applyZoomGate 와 같은 판정).
-        function _inputLabelsZoomHidden(inst) {
-            var map = inst && inst.map;
-            if (!map || typeof map.getZoom !== 'function') return false;
-            var min = _labelMinZoom(inst);
-            return min > 0 && map.getZoom() < min;
-        }
-
-        // 이름만 남기기 — 값 줄·문제 점·밴드색을 모두 걷는다. 토글은 언제든
-        // 뒤집히므로 "안 그리기"로는 부족하고 이미 칠한 것을 되돌려야 한다.
-        //
-        // 배경은 **비우는 게 아니라 구역 기본색으로 되돌린다.** 라벨의 기본
-        // 배경은 CSS 가 아니라 생성 시 인라인으로 박히므로(labelTheme 의 zone
-        // 색), 그냥 지우면 투명한 글자만 남는다. 원래 색은 만들 때
-        // dataset.labelColor 에 남겨 뒀다.
-        function _stripZoneLabel(el) {
-            var valEl = el.querySelector('.aot-zone-label-val');
-            if (valEl) { valEl.style.display = 'none'; valEl.textContent = ''; }
-            var dot = el.querySelector('.aot-zone-label-flag');
-            if (dot) dot.remove();
-            el.removeAttribute('title');
-            _resetZoneLabelColor(el);
-        }
-
-        function _resetZoneLabelColor(el) {
-            el.style.backgroundColor = el.dataset.labelColor || '';
-            el.style.color = 'white';
-        }
-
-        function _applyZoneLabelStatus(uid, zones) {
-            var inst = window.AoTWidgetInstances[uid];
-            if (!inst) return 0;
-            var byNode = inst._zonesByNodeId || {};
-            var container = inst.map && inst.map.getContainer();
-            if (!container) return 0;
-            var detail = _zoneLabelDetailOn(inst);
-
-            var painted = 0;
-            container.querySelectorAll('.geo-label-marker[data-zone-node-id]')
-                .forEach(function (el) {
-                    painted++;
-                    if (!detail) { _stripZoneLabel(el); return; }
-                    var uuid = byNode[el.dataset.zoneNodeId];
-                    var info = uuid && zones[uuid];
-                    var valEl = el.querySelector('.aot-zone-label-val');
-                    if (!valEl) return;
-                    if (!info || !info.rep || info.rep.value == null) {
-                        valEl.style.display = 'none';
-                        // 값이 사라졌으면 밴드색도 함께 물러난다 — 안 그러면
-                        // 센서가 끊긴 구역이 마지막 밴드색을 계속 달고 있다.
-                        _resetZoneLabelColor(el);
-                        _setZoneLabelFlag(el, info);
-                        return;
-                    }
-                    var rep = info.rep;
-                    valEl.style.display = '';
-                    valEl.textContent = rep.value + (rep.unit || '');
-                    // 밴드색은 지도 칩과 같은 함수가 낸다(경계·색표는 사용자가
-                    // 바꿀 수 있고 그 정본은 JS 와 --aot-band-* 토큰이다).
-                    if (window.AoTMapSensorLabels &&
-                        window.AoTMapSensorLabels.bandColor) {
-                        var c = window.AoTMapSensorLabels.bandColor(
-                            rep.key, +rep.value, null, rep.unit);
-                        if (c) {
-                            el.style.backgroundColor = c;
-                            el.style.color = window.AoTMapSensorLabels.textOn(c);
-                        }
-                    }
-                    _setZoneLabelFlag(el, info);
-                });
-            return painted;
-        }
-
-        // 문제 표시 — 주의·이상일 때만. 라벨은 좁아서 글자를 더 넣을 수 없으니
-        // 점 하나로 알리고, 자세한 것은 눌러서 본다(모달 제목줄과 같은 규칙).
-        function _setZoneLabelFlag(el, info) {
-            var head = el.querySelector('.aot-zone-label-head');
-            if (!head) return;
-            var status = info && info.status;
-            var dot = head.querySelector('.aot-zone-label-flag');
-            if (status !== 'warning' && status !== 'fault') {
-                if (dot) dot.remove();
-                el.removeAttribute('title');
-                return;
-            }
-            if (!dot) {
-                dot = document.createElement('span');
-                dot.className = 'aot-zone-label-flag';
-                head.appendChild(dot);
-            }
-            dot.className = 'aot-zone-label-flag is-' + status;
-            var iss = (info && info.issues) || {};
-            var sen = (info && info.sensors) || {};
-            var why = iss.comm_fault ? _tr('Offline') + ' ' + iss.comm_fault
-                    : iss.battery_low ? _tr('Battery') + ' ' + iss.battery_low
-                    : (sen.total ? sen.valid + '/' + sen.total : _tr('Attention'));
-            el.title = why;
         }
 
         // ── 장치 상세 모달 ─────────────────────────────────────────────────────
@@ -2349,12 +2189,6 @@
             // 형제 스코프다).
             _inst._facilityUuidOfShape = function (shapeUuid) {
                 return _facilityUuidOfShape(uniqueId, shapeUuid);
-            };
-            // 입력 라벨 토글(addLayerPanel 은 형제 스코프다)이 구역 라벨을
-            // 다시 칠하게 하는 통로. 캐시해 둔 상태를 쓰므로 재조회는 없다.
-            _inst._repaintZoneLabels = function () {
-                var i = window.AoTWidgetInstances[uniqueId];
-                _applyZoneLabelStatus(uniqueId, (i && i._zoneStatus) || {});
             };
         }());
 
@@ -5904,7 +5738,6 @@
                                 var zoneUuid = _zonesByNodeId[nodeId];
                                 if (zoneUuid) _openZonePopup(uniqueId, zoneUuid, zoneName);
                             };
-                            _startZoneLabelStatus(uniqueId, mapUuid);
                         }
                     }
                 }
@@ -6821,24 +6654,6 @@
                     valSpan.className = 'aot-3way-pct';
                     valSpan.style.cssText = 'margin-left:4px;font-weight:bold;display:none;';
                     nameDiv.appendChild(valSpan);
-                }
-
-                // 구역 라벨 2행 — 1행 이름, 2행 대표값. 시설 bay 칩과 같은
-                // 문법이다(_updateZoneLabelStatus 가 값·색을 채운다). 구역
-                // 라벨이 이름만 달고 있어서, 어디가 문제인지 알려면 하나씩
-                // 열어 봐야 했다.
-                if (pType === 'zone') {
-                    // 구역 uuid 는 라벨에 직접 없다 — node_id 로만 이어진다
-                    // (클릭 콜백도 같은 경로를 쓴다: _zonesByNodeId).
-                    el.dataset.zoneNodeId = String(props.parent_node_id || '');
-                    // 문제 점의 기준 상자는 이름 줄이다 — 라벨 요소 자체에
-                    // position 을 주면 maplibre 의 절대배치를 덮어써서 라벨이
-                    // 전체 폭 막대로 흘러내린다.
-                    nameDiv.classList.add('aot-zone-label-head');
-                    const zValDiv = document.createElement('div');
-                    zValDiv.className = 'aot-zone-label-val';
-                    zValDiv.style.display = 'none';
-                    el.appendChild(zValDiv);
                 }
 
                 const marker = new maplibregl.Marker({ element: el, anchor: 'center' })
@@ -8574,11 +8389,12 @@
     //   ZOOM 누락    → **줌아웃에서도 화면을 덮는다** ← bay·plot 이 그랬다
     //   KEYS 누락    → 라벨 컨트롤에 그 종류가 아예 안 나온다
     //
-    // 이 표는 "줌 기준의 적용을 받는 종류" 다. 대지·구역은 멀리서 위치를 잡는
-    // 기준이라 빠져 있고(항상 보인다), 나머지는 그 축척에서 읽히지도 않으면서
-    // 화면만 덮으므로 접는다. 기준 줌 자체는 위젯 옵션(label_min_zoom, 기본 17).
+    // 이 표는 "줌 기준(L1)의 적용을 받는 종류" 다. 대지·구역은 멀리서 위치를
+    // 잡는 기준이라 빠져 있고(항상 보인다), 시설도 L2 표로 옮겼다(아래) —
+    // 나머지는 그 축척에서 읽히지도 않으면서 화면만 덮으므로 접는다. 기준
+    // 줌 자체는 위젯 옵션(label_min_zoom, 기본 17).
     var LABEL_ZOOM_GATED = {
-        facility: 1, bay: 1, plot: 1,
+        bay: 1, plot: 1,
         device: 1, output: 1, input: 1, 'function': 1, equipment: 1, sensor: 1,
         // 노트 핀도 함께 접힌다. 멀리서 보는 화면에서 위치를 잡는 기준은
         // 대지·구역이고(그 둘만 게이트 밖이다), 노트는 그 자리에 가까이
@@ -8587,11 +8403,41 @@
     };
     var LABEL_MIN_ZOOM_DEFAULT = 17;
 
-    /** 이 위젯의 라벨 숨김 기준 줌. 0(또는 미설정 0) = 숨기지 않음. */
+    // 줌 기준 **두 번째 축(L2)**. L1(label_min_zoom, 기본 17)은 시설/장치/
+    // 값 키처럼 가까이 가야 읽히는 것들이 대상이었는데, 구역은 그 축에 없어서
+    // "줌을 줄여도 구역 라벨만 안 접힌다"는 신고가 있었다(2026-08-29). 구역을
+    // 그냥 L1 표에 넣지 않는 이유: L1 은 이미 시설을 포함해 기준 줌이 17(아주
+    // 가까이 가야 켜짐)로 맞춰져 있고, 구역은 그보다 넓은 축척(15.5)에서부터
+    // 계속 보여야 뜻이 있다 — 같은 줌 하나로 둘을 묶으면 어느 한쪽 취향에
+    // 맞춰 나머지가 틀어진다. 그래서 별도 줌 값을 갖는 두 번째 표로 둔다.
+    // 이름이 "L2"인 이유: 지금은 구역·시설뿐이지만 앞으로 다른 라벨·키가
+    // 이 축척대에서 접혀야 한다고 밝혀지면 여기 추가하면 된다(L1 은 그대로).
+    var LABEL_ZOOM_GATED_L2 = { zone: 1, facility: 1 };
+    var LABEL_MIN_ZOOM_L2_DEFAULT = 15.5;
+
+    // 출력(output)은 L1(17)에 남아 그 기준은 그대로다 — 안 켜진 출력은 지금처럼
+    // 줌 17 밑에서 접힌다. 문제는 **켜진 출력**: "임시 표시(focus)"가 이유
+    // 불문 L1 을 이겨서, 아무리 줌아웃해도 계속 떠 있었다(2026-08-29 신고).
+    // 이 표는 그 켜짐-단독 이유(reason='active', 모달은 없음)의 예외를 L2
+    // 기준(15.5)에서 한 번 더 끊는다 — `.aot-zoom-hidden-l2` 를 L1 게이트
+    // **위에 추가로** 씌우고, 그 클래스는 모달 이유(`.aot-focus-show-modal`)
+    // 로만 비켜간다. 그래서: z<15.5 이면 켜져 있어도 접히고, 모달을 열면
+    // (그 순간엔 "어디 이야기인지" 를 보여줘야 하므로) 어떤 줌에서도 다시 뜬다.
+    var FOCUS_LIMIT_L2 = { output: 1 };
+
+    /** 이 위젯의 라벨 숨김 기준 줌 — L1. 0(또는 미설정 0) = 숨기지 않음. */
     function _labelMinZoom(instance) {
         var o = (instance && instance.vars && instance.vars.vars) || {};
         var v = parseFloat(o.label_min_zoom);
         if (isNaN(v)) return LABEL_MIN_ZOOM_DEFAULT;
+        return Math.max(0, Math.min(22, v));
+    }
+
+    /** 라벨 숨김 기준 줌 — L2(구역·시설, 향후 확장). 0 = 숨기지 않음. */
+    function _labelMinZoomL2(instance) {
+        var o = (instance && instance.vars && instance.vars.vars) || {};
+        var v = parseFloat(o.label_min_zoom_l2);
+        if (isNaN(v)) return LABEL_MIN_ZOOM_L2_DEFAULT;
         return Math.max(0, Math.min(22, v));
     }
     // 사용자가 고른(호버/클릭) 라벨은 종류와 무관하게 최상단으로 올린다.
@@ -8661,14 +8507,30 @@
         _applyZoomGateTo(el, instance);
     }
 
+    /** 이 종류가 L1·L2 중 어느 축의 대상인지에 맞는 기준 줌보다 지금 줌이
+     *  낮은가. 어느 표에도 없으면(대지 등) 항상 false — 절대 접히지 않는다. */
+    function _labelZoomGatedNow(kind, z, min1, min2) {
+        if (LABEL_ZOOM_GATED[kind]) return min1 > 0 && z < min1;
+        if (LABEL_ZOOM_GATED_L2[kind]) return min2 > 0 && z < min2;
+        return false;
+    }
+
     /** 한 요소에 줌 게이트를 적용한다. 감춤은 .aot-zoom-hidden 클래스로만 한다 —
-     *  충돌 회피가 인라인 display 를 직접 건드리므로 그것과 섞이면 안 된다. */
+     *  충돌 회피가 인라인 display 를 직접 건드리므로 그것과 섞이면 안 된다.
+     *  `FOCUS_LIMIT_L2` 에 속한 종류는 `.aot-zoom-hidden-l2` 도 함께 얹는다 —
+     *  L1 게이트는 그대로 두고(안 켜진 상태는 기존과 동일), 켜짐-단독 임시
+     *  표시가 그 게이트를 이기는 것만 L2 기준에서 한 번 더 막는다. */
     function _applyZoomGateTo(el, instance) {
         var map = instance && instance.map;
         if (!el || !map || typeof map.getZoom !== 'function') return;
-        var min = _labelMinZoom(instance);
+        var z = map.getZoom();
+        var kind = el.dataset.labelKind;
         el.classList.toggle('aot-zoom-hidden',
-            min > 0 && !!LABEL_ZOOM_GATED[el.dataset.labelKind] && map.getZoom() < min);
+            _labelZoomGatedNow(kind, z, _labelMinZoom(instance), _labelMinZoomL2(instance)));
+        if (FOCUS_LIMIT_L2[kind]) {
+            var min2 = _labelMinZoomL2(instance);
+            el.classList.toggle('aot-zoom-hidden-l2', min2 > 0 && z < min2);
+        }
     }
 
     /**
@@ -8679,22 +8541,15 @@
         var map = instance && instance.map;
         if (!map || typeof map.getContainer !== 'function') return;
         var z = map.getZoom();
-        var min = _labelMinZoom(instance);
-        var gated = min > 0 && z < min;
+        var min1 = _labelMinZoom(instance);
+        var min2 = _labelMinZoomL2(instance);
         map.getContainer().querySelectorAll('[data-label-kind]').forEach(function (el) {
-            el.classList.toggle('aot-zoom-hidden',
-                gated && !!LABEL_ZOOM_GATED[el.dataset.labelKind]);
-        });
-
-        // 입력 라벨이 줌으로 가려지는 순간 구역 라벨이 그 몫을 넘겨받고, 다시
-        // 드러나면 돌려준다(구역 라벨은 줌 게이트 대상이 아니라 계속 떠 있다).
-        // **바뀐 때만** 다시 칠한다 — 이 함수는 줌 제스처 내내 프레임마다 돈다.
-        if (instance._inputZoomGated !== gated) {
-            instance._inputZoomGated = gated;
-            if (instance._repaintZoneLabels) {
-                try { instance._repaintZoneLabels(); } catch (e) {}
+            var kind = el.dataset.labelKind;
+            el.classList.toggle('aot-zoom-hidden', _labelZoomGatedNow(kind, z, min1, min2));
+            if (FOCUS_LIMIT_L2[kind]) {
+                el.classList.toggle('aot-zoom-hidden-l2', min2 > 0 && z < min2);
             }
-        }
+        });
     }
 
     // ── 임시 표시(focus) ──────────────────────────────────────────────────────
@@ -8867,8 +8722,15 @@
         var map = instance && instance.map;
         var st = _focusState(uid);
         if (!map) return;
+        var z = typeof map.getZoom === 'function' ? map.getZoom() : null;
+        var min2 = _labelMinZoomL2(instance);
         var feats = [];
         Object.keys(st.targets).forEach(function (uuid) {
+            var box = st.targets[uuid] || {};
+            // 켜짐(active) 단독 이유는 라벨과 같은 규칙을 도형에도 적용한다 —
+            // 모달이 안 열려 있고 L2 기준보다 멀리 줌아웃했으면 그리지 않는다.
+            // 모달이 함께 있으면(둘 다) 지금처럼 어떤 줌에서도 그린다.
+            if (box.active && !box.modal && z != null && min2 > 0 && z < min2) return;
             var f = st.feats[uuid];
             // 면이 없는 장치는 점이라도 그린다(위 `aot-focus-pt-` 고리).
             if (!f || !f.geometry || !/Polygon|Point/.test(f.geometry.type)) return;
@@ -8994,8 +8856,13 @@
             }
         }
         var show = !!st.targets[uuid];
+        // 모달 이유는 따로 표시한다(`.aot-focus-show-modal`) — `FOCUS_LIMIT_L2`
+        // 종류(출력)의 L2 게이트는 이 클래스로만 비켜간다. 켜짐(active) 단독
+        // 이유는 이 클래스가 없으므로 L2 아래로 줌아웃하면 다시 접힌다.
+        var showModal = !!(st.targets[uuid] && st.targets[uuid].modal);
         _focusLabelEls(instance, uuid).forEach(function (el) {
             el.classList.toggle('aot-focus-show', show);
+            el.classList.toggle('aot-focus-show-modal', showModal);
         });
         _repaintFocus(instance, uid);
     }
@@ -9051,7 +8918,14 @@
         var raf = null;
         instance._zoomGateHandler = function () {
             if (raf) return;
-            raf = requestAnimationFrame(function () { raf = null; _applyZoomGate(instance); });
+            raf = requestAnimationFrame(function () {
+                raf = null;
+                _applyZoomGate(instance);
+                // 켜짐-단독 임시 표시 도형도 줌에 맞춰 다시 그린다(`FOCUS_LIMIT_L2`
+                // 주석) — 지금까지는 `_setFocus` 가 불릴 때만 다시 그렸으므로,
+                // 켜진 채로 줌만 움직이는 흔한 경우엔 다시 그려질 계기가 없었다.
+                _repaintFocus(instance, uid);
+            });
         };
         // 'zoom' 은 제스처 중에도 계속 발화 — 축척이 기준을 넘는 순간 바로 반응한다.
         // 'zoomend' 는 마지막 상태를 확실히 맞추는 보정.
@@ -9060,6 +8934,17 @@
         // 설정 모달의 라이브 적용이 부르는 훅 — 옵션(label_min_zoom)만 바뀌면
         // 라벨을 다시 만들 필요 없이 클래스만 재평가하면 된다.
         instance._applyZoomGate = function () { _applyZoomGate(instance); };
+        // 공용 라벨 배선을 **다른 모듈에 빌려준다.** 구획(plot) 칩은
+        // `aot-map-plot.js` 가 만드는데 그쪽은 IIFE 가 달라 이 함수를 이름으로
+        // 못 부른다 — 그래서 그동안 `dataset.labelKind` 만 손으로 찍고 나머지
+        // (쌓임 순서·호버하면 앞으로)는 통째로 빠져 있었다. `_applyZoomGate`/
+        // `_applyShapeLOD` 를 노출한 것과 같은 이유·같은 방식이다.
+        //
+        // ⚠ 이 자리(위젯 초기화 앞머리, `map.on('load')` 보다 먼저)에서 노출해야
+        // 한다 — 구획 로드는 load 핸들러 안에서 도므로 그때는 이미 있어야 한다.
+        instance._wireLabelStacking = function (el, kind) {
+            return _wireLabelStacking(instance, el, kind);
+        };
         _applyZoomGate(instance);
     }
 
@@ -10061,19 +9946,33 @@
             return isNaN(t) ? 15 : t;
         })();
 
+        // 이 종류의 도형은 위 하드코딩 문턱(equipment_cull_zoom) 대신 **L2 축**
+        // (label_min_zoom_l2, 기본 15.5 — 라벨과 같은 옵션, `_labelMinZoomL2`
+        // 참조)을 쓴다. 구역·구획·설비는 별도 로직(이 문턱)으로 숨김이
+        // 하드코딩돼 있었는데, 라벨 쪽에 이미 있는 L2 축척대(넓은 축척부터
+        // 계속 보여야 하는 것들)와 뜻이 같아서 한 곳(옵션 하나)으로 합친다
+        // (2026-08-29 요청). 시설·기타 도형(facility/drawn)은 요청 밖이라
+        // 그대로 `_shapeLodThreshold` 를 쓴다 — 나중에 옮겨야 한다고 밝혀지면
+        // 여기 추가하면 된다(라벨 쪽 `LABEL_ZOOM_GATED_L2` 표와 같은 자리).
+        var _SHAPE_LOD_L2 = { zone: 1, plot: 1, equipment: 1 };
+
         // Single source of truth for shape-layer visibility: combines the per-category
         // toggle (registry) with the zoom LOD. Non-site categories are hidden when
         // zoomed out past the threshold; site shapes always follow only their toggle.
         function _applyShapeLOD() {
             var z = (map && typeof map.getZoom === 'function') ? map.getZoom() : 99;
+            var inst = window.AoTWidgetInstances && window.AoTWidgetInstances[uniqueId];
+            var l2Threshold = _labelMinZoomL2(inst);
             _CAT_DEFS.forEach(function (def) {
                 if (!def.layers || !def.layers.length) return; // shape categories only
                 var catVisible = window.AoTMapLabelLayers
                     ? window.AoTMapLabelLayers.isShapeVisible(uniqueId, def.cat)
                     : !_catHidden[def.cat];
                 // site (land) and device shapes are guaranteed across zoom (devices
-                // must stay visible up to max zoom); the rest cull when zoomed out.
-                var zoomOk = (def.cat === 'land' || def.cat === 'device') || (z >= _shapeLodThreshold);
+                // must stay visible up to max zoom); the rest cull when zoomed out —
+                // L2 종류는 L2 문턱으로, 나머지는 기존 하드코딩 문턱으로.
+                var threshold = _SHAPE_LOD_L2[def.cat] ? l2Threshold : _shapeLodThreshold;
+                var zoomOk = (def.cat === 'land' || def.cat === 'device') || (z >= threshold);
                 var vis = catVisible && zoomOk;
                 def.layers.forEach(function (lid) {
                     if (map.getLayer(lid)) {
@@ -10473,11 +10372,6 @@
                 }
                 if (!inst._hiddenLabels) inst._hiddenLabels = {};
                 inst._hiddenLabels[key] = hidden;
-                // 입력 라벨을 켜면 구역 라벨은 이름만, 끄면 대표값까지.
-                // 같은 값을 두 겹으로 띄우지 않기 위한 맞물림이다.
-                if (key === 'input' && inst._repaintZoneLabels) {
-                    try { inst._repaintZoneLabels(); } catch (e) {}
-                }
             }
 
             function _readLabelHidden(key) {
@@ -11303,7 +11197,6 @@
                         }
                     });
                 };
-                inst._rvVisHandler = _overlayVisHandler;
                 document.addEventListener('visibilitychange', _overlayVisHandler);
             }
         }
@@ -13850,113 +13743,17 @@
         document.addEventListener('visibilitychange', instance._deviceRefreshVisHandler);
     }
 
-    /**
-     * Clean up widget instance
-     */
-    window.destroyAoTMapVectorWidget = function(uniqueId) {
-        const instance = window.AoTWidgetInstances?.[uniqueId];
-        if (!instance) return;
-
-        // Clear refresh timers
-        if (_actPollTimers[uniqueId]) {
-            clearInterval(_actPollTimers[uniqueId]);
-            delete _actPollTimers[uniqueId];
-        }
-        if (instance.layerRefreshTimers) {
-            Object.values(instance.layerRefreshTimers).forEach(function(t) { clearInterval(t); });
-            instance.layerRefreshTimers = {};
-        }
-        if (instance._rvVisHandler) {
-            document.removeEventListener('visibilitychange', instance._rvVisHandler);
-            instance._rvVisHandler = null;
-        }
-        if (instance._deviceRefreshVisHandler) {
-            document.removeEventListener('visibilitychange', instance._deviceRefreshVisHandler);
-            instance._deviceRefreshVisHandler = null;
-        }
-        if (instance.refreshTimer) {
-            clearInterval(instance.refreshTimer);
-        }
-        if (instance.panelRefreshTimer) {
-            clearInterval(instance.panelRefreshTimer);
-        }
-        if (instance._panelRefreshVisHandler) {
-            document.removeEventListener('visibilitychange', instance._panelRefreshVisHandler);
-            instance._panelRefreshVisHandler = null;
-        }
-        if (instance.outputStateTimer) {
-            clearInterval(instance.outputStateTimer);
-        }
-        // Detach sensor labels
-        if (window.AoTMapSensorLabels) {
-            try { AoTMapSensorLabels.detach(uniqueId); } catch (e) {}
-        }
-
-        // Remove all markers
-        for (const marker of instance.markers.values()) {
-            marker.remove();
-        }
-
-        // Remove unified collision handler
-        if (instance._unifiedCollisionHandler && instance.map) {
-            instance.map.off('moveend', instance._unifiedCollisionHandler);
-            instance.map.off('zoomend', instance._unifiedCollisionHandler);
-            instance._unifiedCollisionHandler = null;
-        }
-
-        // Remove zoom gate handler
-        if (instance._zoomGateHandler && instance.map) {
-            instance.map.off('zoom', instance._zoomGateHandler);
-            instance.map.off('zoomend', instance._zoomGateHandler);
-            instance._zoomGateHandler = null;
-        }
-
-        // Remove geo/design label markers and cluster badges
-        [
-            'labelMarkers', 'siteZoneLabelMarkers', 'geoDeviceLabelMarkers',
-            'labelClusterMarkers', 'siteZoneClusterMarkers', 'geoDeviceClusterMarkers',
-            'deviceLabelMarkers', 'deviceClusterMarkers', 'absorbBadges'
-        ].forEach(function(key) {
-            if (instance[key]) {
-                instance[key].forEach(function(m) { try { m.remove(); } catch (e) {} });
-                instance[key] = [];
-            }
-        });
-
-        // Tear down restored UI
-        if (instance.measurementPanel && typeof instance.measurementPanel.destroy === 'function') {
-            try { instance.measurementPanel.destroy(); } catch (e) {}
-        }
-        if (instance.legendEl && instance.legendEl.parentNode) {
-            instance.legendEl.parentNode.removeChild(instance.legendEl);
-        }
-        if (instance.toolbarLeft && instance.toolbarLeft.parentNode) {
-            instance.toolbarLeft.parentNode.removeChild(instance.toolbarLeft);
-        }
-        if (instance.notePollTimer) {
-            clearInterval(instance.notePollTimer);
-            instance.notePollTimer = null;
-        }
-        if (instance.noteMarkers) {
-            instance.noteMarkers.forEach(function(m) { try { m.remove(); } catch (e) {} });
-            instance.noteMarkers.clear();
-        }
-        if (instance.layerPanelContainer && instance.layerPanelContainer.parentNode) {
-            instance.layerPanelContainer.parentNode.removeChild(instance.layerPanelContainer);
-        }
-
-        // Drop label layer registry
-        if (window.AoTMapLabelLayers) {
-            try { window.AoTMapLabelLayers.clear(uniqueId); } catch (e) {}
-        }
-
-        // Remove map
-        if (instance.map) {
-            instance.map.remove();
-        }
-
-        delete window.AoTWidgetInstances[uniqueId];
-    };
-
-
+    // ⚠ **위젯 해체(teardown) 함수는 두지 않는다.**
+    //
+    // 예전에는 `window.destroyAoTMapVectorWidget(uniqueId)` 가 있었다 — 타이머를
+    // 걷고 마커를 지우고 `map.remove()` 까지 하는 100줄짜리였는데, **아무도
+    // 부르지 않았다**(전 저장소 검색으로 확인: 정의 한 곳과 "never called" 라고
+    // 적어 둔 주석 한 줄뿐). 대시보드 전환은 전체 페이지 이동이라 브라우저가
+    // 정리하고, 설정 모달의 라이브 적용은 지도를 일부러 갈아끼우지 않는다
+    // (`dashboard-widget-live-preview.js` — 지도는 LIVE_PREVIEW_TYPES 밖이다).
+    //
+    // 불리지 않는 해체 코드는 조용히 낡는다: 실제로 그 함수는 구획 모듈의
+    // 타이머·`_focus` 상태·`AoTMapPlot` STATE 를 걷지 않아, 언젠가 배선하는
+    // 사람에게 "이미 다 정리된다" 는 잘못된 인상만 줬을 것이다. 정말 해체가
+    // 필요해지면 그때 부르는 자리와 함께 새로 쓰는 편이 낫다.
 })();

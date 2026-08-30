@@ -55,6 +55,7 @@ def make_controller():
     inst.device_tz = TZ_NAME
     inst.sequence_cycle_duration = PERIOD
     inst.active_actions = set()
+    inst._runt_logged_start = None
     return inst
 
 
@@ -539,3 +540,95 @@ def test_grace_covers_a_step_that_already_passed_its_end():
     """만료 시각을 막 지난 스텝도 기다린다 — 드라이버 기록이 도착할 참이다."""
     inst = make_grace_controller(end=7200.0)
     assert inst._within_close_grace(CYCLE_T0 + 7201.0) is True
+
+
+# ---- 자투리 스킵은 한 격자점당 한 번만 남긴다 ----
+#
+# `_reject_runt` 가 None 을 돌려주면 호출자는 `cycle_start_time` 을 갱신하지
+# 않는다. 그래서 0.1초짜리 `loop()` 는 창이 닫힐 때까지 같은 판정을 되풀이하고,
+# 매번 ERROR 를 찍는다. 실측(2026-08-29 로컬, 20:30~21:00 창): 같은 한 문장이
+# **17,118줄** 남아 로그 3.4MB 를 채웠다. 판정은 옳았지만 그 옆의 진짜 경고가
+# 묻힌다.
+
+RUNT_ENTRY = {'enabled': True, 'start': '05:00', 'end': '15:03', 'period': 3600}
+
+
+def _runt_setup():
+    inst = _with_plan(make_controller(), 2400)
+    inst.cycle_start_time = ANCHOR + 9 * PERIOD           # 14:00 사이클 진행 중
+    return inst
+
+
+def test_runt_skip_is_logged_once_not_every_loop():
+    inst = _runt_setup()
+    now = ANCHOR + 10 * PERIOD + 1                        # 15:00 격자점 직후
+    for tick in range(200):                               # 루프 20초치
+        assert inst._next_cycle_start(RUNT_ENTRY, now + tick * 0.1, PERIOD) is None
+    assert inst.logger.error.call_count == 1
+
+
+def test_a_later_grid_point_is_logged_again():
+    """다음 격자점은 별개의 사건이다 — 억제가 다음 사이클까지 먹으면 안 된다."""
+    inst = _runt_setup()
+    inst._next_cycle_start(RUNT_ENTRY, ANCHOR + 10 * PERIOD + 1, PERIOD)
+    inst.cycle_start_time = ANCHOR + 10 * PERIOD
+    inst._next_cycle_start(RUNT_ENTRY, ANCHOR + 11 * PERIOD + 1, PERIOD)
+    assert inst.logger.error.call_count == 2
+
+
+# ---- 유예 중에도 스텝은 정상적으로 끝나야 한다 ----
+#
+# `_within_close_grace` 가 True 인 동안 `loop()` 이 `process_cycle` 을 건너뛰면
+# `active_actions` 는 영영 비지 않는다. 유예는 매번 만료되고, 자연 종료한 스텝이
+# "중간에 끊겼다" 로 보고된다. 실측(2026-08-30): 창 끝 07:30 에 매일 절단 ERROR 가
+# 떴지만 v12 의 개방 시간은 3605초로 멀쩡히 기록돼 있었다 — 경고가 사실과 달랐다.
+
+def _plan_two_steps():
+    """0~3600 v11, 3600~7200 v12."""
+    return [
+        {'action': _act('act-a', 'out-a,0'), 'start': 0.0, 'end': 3600.0,
+         'is_output': True, 'type': 'single'},
+        {'action': _act('act-b', 'out-b,0'), 'start': 3600.0, 'end': 7200.0,
+         'is_output': True, 'type': 'single'},
+    ]
+
+
+def make_off_only_controller():
+    inst = make_controller()
+    inst.cycle_start_time = CYCLE_T0
+    inst.current_schedule = _plan_two_steps()
+    inst.turn_on_action = MagicMock()
+    inst.turn_off_action = MagicMock()
+    inst._off_order = lambda ids: list(ids)
+    return inst
+
+
+def test_off_only_finishes_a_step_that_reached_its_end():
+    inst = make_off_only_controller()
+    inst.active_actions = {'act-b'}
+    inst.process_cycle(CYCLE_T0 + 7200.0, off_only=True)
+    assert inst.turn_off_action.call_count == 1
+    assert inst.turn_off_action.call_args[0][0].unique_id == 'act-b'
+
+
+def test_off_only_never_opens_a_valve_outside_the_window():
+    """창이 닫힌 뒤 다음 스텝이 시작 시각에 들어와도 켜지 않는다."""
+    inst = make_off_only_controller()
+    inst.active_actions = set()
+    inst.process_cycle(CYCLE_T0 + 3600.0, off_only=True)   # act-b 의 시작 시각
+    inst.turn_on_action.assert_not_called()
+
+
+def test_normal_cycle_still_turns_steps_on():
+    inst = make_off_only_controller()
+    inst.active_actions = set()
+    inst.process_cycle(CYCLE_T0 + 3600.0)
+    assert inst.turn_on_action.call_count == 1
+    assert inst.turn_on_action.call_args[0][0].unique_id == 'act-b'
+
+
+def test_off_only_leaves_a_step_that_is_still_running():
+    inst = make_off_only_controller()
+    inst.active_actions = {'act-b'}
+    inst.process_cycle(CYCLE_T0 + 5000.0, off_only=True)   # 아직 진행 중
+    inst.turn_off_action.assert_not_called()

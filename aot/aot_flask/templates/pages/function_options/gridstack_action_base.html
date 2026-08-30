@@ -94,7 +94,7 @@
                                               {% for name, devices in form_choices_raw %}
                                                 {% if name in each_option['options_select'] %}
                                                   {% for each_dev in devices %}
-                                                    <option value="{{each_dev.unique_id}}" {% if each_dev.unique_id|string == opt_val|string %}selected{% endif %}>{{each_dev.name}}</option>
+                                                    <option value="{{each_dev.unique_id}}" {% if each_dev.unique_id|string == opt_val|string %}selected{% endif %}>{{disambiguated_name(each_dev)}}</option>
                                                   {% endfor %}
                                                 {% endif %}
                                               {% endfor %}
@@ -231,7 +231,7 @@
                                       {% for name, devices in form_choices_raw %}
                                         {% if name in each_option['options_select'] %}
                                           {% for each_dev in devices %}
-                                            <option value="{{each_dev.unique_id}}" {% if each_dev.unique_id|string == opt_val|string %}selected{% endif %}>{{each_dev.name}}</option>
+                                            <option value="{{each_dev.unique_id}}" {% if each_dev.unique_id|string == opt_val|string %}selected{% endif %}>{{disambiguated_name(each_dev)}}</option>
                                           {% endfor %}
                                         {% endif %}
                                       {% endfor %}

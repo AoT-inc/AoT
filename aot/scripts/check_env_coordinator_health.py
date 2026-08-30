@@ -222,6 +222,35 @@ def _activity_flags(values, reason_counter):
     }
 
 
+def _count_suppressed(requested, final):
+    """코디네이터가 켜라고 했는데 실제로는 0 이 나간 사이클 수.
+
+    이 숫자가 이 검사기의 존재 이유다. 요청만 보면 "평균 23% 로 돌고 있다"
+    이고 최종만 보면 "0% 로 쉰다"인데, 둘 다 참이면서 서로 다른 곳을
+    가리킨다 — 전자는 코디네이터가 정상이라는 뜻이고 후자는 그 판단이
+    게이트에 버려졌다는 뜻이다. 그 간극을 세지 않으면 사람이 둘 중 어디를
+    봐야 하는지 알 수 없다(2026-08-30 영양: 가습이 필요한 31 사이클 전부에서
+    분무 요청이 게이트에 버려졌고, 검사기는 "작동 중"이라고 보고했다).
+
+    ⚠ **타임스탬프로 짝짓지 않는다.** 요청과 최종은 같은 사이클 안에서도
+    수백 ms 떨어져 기록되므로 정확히 같은 시각이 아니다. 사이클 경계로
+    묶는 대신 5 초 안의 가장 가까운 최종값을 그 요청의 짝으로 본다.
+    """
+    if not requested or not final:
+        return 0
+    finals = sorted(final)
+    n = 0
+    for ts, want in requested:
+        if want <= 0.0:
+            continue
+        nearest = min(finals, key=lambda fv: abs((fv[0] - ts).total_seconds()))
+        if abs((nearest[0] - ts).total_seconds()) > 5.0:
+            continue
+        if nearest[1] <= 0.0:
+            n += 1
+    return n
+
+
 def _count_reversals(samples, min_delta):
     """방향을 뒤집은 횟수. 잔물결은 `min_delta` 로 걸러 낸다.
 
@@ -254,8 +283,10 @@ def analyse(row, hours, min_delta):
 
     rows = _fetch_series(row.unique_id, hours)
 
-    cmd_by_act = defaultdict(list)
+    cmd_by_act = defaultdict(list)          # 코디네이터가 **요청한** 값 (CH40+)
     reason_by_act = defaultdict(list)
+    final_by_act = defaultdict(list)        # 게이트까지 지난 **최종** 값 (CH100+)
+    final_reason_by_act = defaultdict(list)
     env_by_channel = defaultdict(list)
     gate_events = []
     dispatch_fail = []
@@ -265,7 +296,14 @@ def analyse(row, hours, min_delta):
     for ts, measurement, channel, value in rows:
         if measurement.startswith('coord_actuator_'):
             body = measurement[len('coord_actuator_'):]
-            if body.endswith('_command'):
+            # ⚠ 순서 주의 — '_final_reason' 은 '_reason' 으로도 끝난다.
+            # 긴 접미사를 먼저 보지 않으면 최종 근거가 요청 근거로 섞여 들어간다.
+            if body.endswith('_final_reason'):
+                final_reason_by_act[body[:-len('_final_reason')]].append(
+                    (ts, int(value)))
+            elif body.endswith('_final'):
+                final_by_act[body[:-len('_final')]].append((ts, float(value)))
+            elif body.endswith('_command'):
                 cmd_by_act[body[:-len('_command')]].append((ts, float(value)))
             elif body.endswith('_reason'):
                 reason_by_act[body[:-len('_reason')]].append((ts, int(value)))
@@ -298,23 +336,40 @@ def analyse(row, hours, min_delta):
     span_h = hours if hours else 1
     actuators = []
     kind_by_prefix = {}
-    for prefix, samples in sorted(cmd_by_act.items()):
+    for prefix in sorted(set(cmd_by_act) | set(final_by_act)):
+        requested = cmd_by_act.get(prefix, [])
+        final = final_by_act.get(prefix, [])
         name, kind = directory.get(prefix) or _name_from_db(prefix)
         kind_by_prefix[prefix] = kind
+
+        # **통계는 최종값 기준이다.** 요청값(CH40)은 게이트·감쇠·인터록을 지나기
+        # 전이라 "요청했다"이지 "작동했다"가 아니다. 최종값이 없는 구간(이 기록을
+        # 넣기 전에 돈 코디네이터)만 요청값으로 되돌아가고, 그 사실을 함께 낸다 —
+        # 조용히 폴백하면 옛 데이터와 새 데이터가 같은 뜻으로 보인다.
+        samples = final or requested
+        source = 'final' if final else 'requested'
         values = [v for _t, v in samples]
-        reasons = Counter(code for _t, code in reason_by_act.get(prefix, []))
+        rsrc = final_reason_by_act.get(prefix) if final else None
+        reasons = Counter(code for _t, code in
+                          (rsrc if rsrc else reason_by_act.get(prefix, [])))
         total_reasons = sum(reasons.values()) or 1
         top = [(REASON_LABEL.get(c, f'코드 {c}'), n * 100.0 / total_reasons)
                for c, n in reasons.most_common(3)]
         flags = _activity_flags(values, reasons)
+        req_values = [v for _t, v in requested]
         actuators.append({
             'prefix': prefix,
             'name': name,
             'kind': kind,
             'domain': ACTUATOR_DOMAIN.get(kind, DEFAULT_DOMAIN),
             'samples': len(values),
+            'source': source,
             'mean': sum(values) / len(values) if values else 0.0,
             'max': max(values) if values else 0.0,
+            'requested_mean': (sum(req_values) / len(req_values)
+                               if req_values else 0.0),
+            'requested_max': max(req_values) if req_values else 0.0,
+            'suppressed': _count_suppressed(requested, final),
             'reversals': _count_reversals(samples, min_delta),
             'reversals_per_h': _count_reversals(samples, min_delta) / span_h,
             'top_reasons': top,
@@ -527,6 +582,24 @@ def report(results, hours, min_delta):
             mark = ' !' if (a['always_idle'] or a['idle_while_claiming_work']) else ''
             print(f'   {label:<26}{a["mean"]:>6.1f}%{a["max"]:>6.0f}%'
                   f'{a["reversals_per_h"]:>8.1f}   {reasons}{mark}')
+
+        # ── 요청은 했는데 나가지 않은 것 ──────────────────────────────────
+        # 이 표의 숫자는 **최종값**(게이트까지 지난 값)이다. 코디네이터가
+        # 켜라고 한 것이 게이트에 막혔다면 그 사실을 여기서 말해야 한다 —
+        # 안 그러면 "이 장치는 쉬고 있다"로만 읽혀 원인이 코디네이터에
+        # 있는 것처럼 보인다(정작 봐야 할 곳은 게이트다).
+        blocked = [a for a in r['actuators'] if a.get('suppressed')]
+        for a in sorted(blocked, key=lambda x: -x['suppressed']):
+            problems += 1
+            print(f'   ! {a["name"]} 은 {a["suppressed"]}개 사이클에서 코디네이터가'
+                  f' 최대 {a["requested_max"]:.0f}% 를 요청했으나 실제로는 0% 가'
+                  f' 나갔습니다 — 게이트·감쇠·인터록을 확인하세요')
+
+        stale = [a['name'] for a in r['actuators']
+                 if a.get('source') == 'requested']
+        if stale:
+            print(f'   · 최종값 기록이 없어 요청값으로 표시한 장치:'
+                  f' {", ".join(stale)} (이 값은 실제 작동이 아닙니다)')
 
         idle = [a['name'] for a in r['actuators'] if a['always_idle']]
         if idle:

@@ -1358,7 +1358,12 @@ WIDGET_INFORMATION = {
                     listHtml += '<div class="' + rowClass + '" data-uid="' + s.unique_id + '" data-block="' + blockKey + '" title="' + window._('Press and hold to reorder') + '">';
                     listHtml += '<div class="seq-col-enable"><input type="checkbox" ' + checked + ' class="seq-square-toggle" data-id="' + s.unique_id + '" onchange="toggle_seq_action(this.dataset.id, this, \\'' + widget_id + '\\', \\'' + function_id + '\\')"></div>';
 
+                    // '-' 는 서버가 "가리키는 장치를 못 찾았다" 고 말하는 값이다.
+                    // 그대로 두면 화면에 이유 없는 대시 하나만 남아, 설정이
+                    // 비어 있는 것인지 장치가 사라진 것인지 알 수 없다 —
+                    // 실제로 활성 시퀀스의 스텝 8개가 이 상태였다.
                     var deviceDetail = s.device_detail || s.action_name || window._("Unknown");
+                    if (deviceDetail === '-') deviceDetail = window._("Device is gone");
                     var displayName = s.display_name || deviceDetail;
                     var nameCls = 'seq-text-name';
                     if (isTotal) nameCls += ' seq-name-total';

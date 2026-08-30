@@ -31,6 +31,42 @@ from aot.utils.weekly_schedule import (
 logger = logging.getLogger(__name__)
 
 
+def _ambiguous_output_tabs(rows):
+    """이름이 겹치는 출력만 `{unique_id: 탭 이름}`. 안 겹치면 빈 dict.
+
+    집계 한 번으로 겹치는 이름을 먼저 추리고, 걸린 것이 있을 때만 탭을
+    읽는다. 이 함수를 부르는 자리는 시퀀스 위젯이 5초마다 두드리는 경로라
+    "혹시 몰라 다 읽는" 조회를 넣으면 안 된다.
+    """
+    rows = [r for r in (rows or []) if getattr(r, 'name', None)]
+    if not rows:
+        return {}
+    try:
+        from sqlalchemy import func
+        with session_scope(AOT_DB_PATH) as sess:
+            names = {r.name for r in rows}
+            dupes = {
+                name for (name,) in sess.query(Output.name)
+                .filter(Output.name.in_(list(names)))
+                .group_by(Output.name)
+                .having(func.count(Output.id) > 1).all()}
+            if not dupes:
+                return {}
+            tab_ids = {r.tab_id for r in rows
+                       if r.name in dupes and getattr(r, 'tab_id', None)}
+            if not tab_ids:
+                return {}
+            from aot.databases.models import Tab
+            tab_names = {t.unique_id: t.name for t in sess.query(Tab).filter(
+                Tab.unique_id.in_(list(tab_ids))).all()}
+        return {r.unique_id: tab_names.get(r.tab_id)
+                for r in rows
+                if r.name in dupes and tab_names.get(getattr(r, 'tab_id', None))}
+    except Exception as e:
+        logger.error(f"_ambiguous_output_tabs failed: {e}")
+        return {}
+
+
 def resolve_device_details(target_ids):
     """여러 target_id → `{target_id: 사람이 읽는 문자열}` 을 **한 번에**.
 
@@ -69,6 +105,11 @@ def resolve_device_details(target_ids):
 
     main_ids = set(main_of.values())
     outputs = _by_uid(Output, main_ids)
+    # 이름이 겹치는 출력만 소속 탭을 덧붙인다. 늘 붙이면 목록이 시끄럽고,
+    # 안 붙이면 같은 이름 둘을 구분할 방법이 없다 — 사용자가 v11 두 개 중
+    # 꺼져 있는 쪽을 보고 "밸브가 안 열렸다" 고 판단한 것이 그래서였다.
+    # 집계 한 번이라 겹치는 이름이 없으면 뒤 조회도 돌지 않는다.
+    tab_of = _ambiguous_output_tabs(outputs.values())
     # Output 에서 찾은 것은 나머지 표에서 다시 찾을 필요가 없다.
     rest = {m for m in main_ids if m not in outputs}
     inputs = _by_uid(Input, rest)
@@ -82,6 +123,9 @@ def resolve_device_details(target_ids):
         row = outputs.get(main_id)
         if row is not None:
             detail = row.name
+            tab_name = tab_of.get(row.unique_id)
+            if tab_name:
+                detail += f" ({tab_name})"
             if raw_chan:
                 chan_obj = channels.get(raw_chan)
                 if chan_obj is not None:
@@ -253,6 +297,7 @@ class SequenceTriggerController(AbstractController, threading.Thread):
         self.current_schedule = []
         self.active_actions = set()
         self._close_grace_started = None
+        self._runt_logged_start = None
         self.all_actions_cache = []
         self._chan_idx_cache = {}  # OutputChannel.unique_id -> channel index
         self.logger = logger # Use module-level logger initially
@@ -1077,9 +1122,16 @@ class SequenceTriggerController(AbstractController, threading.Thread):
                 # 자연 종료가 코앞이면 잠깐 기다린다 — 여기서 바로 끄면 드라이버가
                 # 남길 개방 시간 기록을 빼앗는다.
                 if self._within_close_grace(now):
+                    # 기다리기만 하면 아무 일도 일어나지 않는다. 스텝을 끝내는
+                    # 것은 `process_cycle` 이고, 그것을 건너뛰면 `active_actions`
+                    # 는 영영 비지 않아 유예는 매번 만료되고 멀쩡히 끝난 스텝이
+                    # "중간에 끊겼다" 로 보고된다. 끄기만 시킨다 — 창 밖에서
+                    # 다음 스텝을 새로 켜서는 안 되기 때문이다.
+                    self.process_cycle(now, off_only=True)
                     time.sleep(0.2)
                     continue
                 self._close_grace_started = None
+                self._runt_logged_start = None
                 if time.time() - last_log_time > 60:
                     self.logger.debug(f"Sequence {self.unique_id}: outside scheduled window.")
                     last_log_time = time.time()
@@ -1234,6 +1286,11 @@ class SequenceTriggerController(AbstractController, threading.Thread):
 
         한 pass 길이를 모르면(첫 사이클이라 계획이 아직 없음) 판단하지 않고
         그대로 진행한다 — 모른다고 멈추는 것이 더 나쁘다.
+
+        **한 격자점당 한 번만 남긴다.** 여기서 `None` 을 돌려주면 호출자는
+        `cycle_start_time` 을 갱신하지 않으므로, 0.1초짜리 루프가 창이 닫힐
+        때까지 같은 판정을 되풀이한다. 로그로 치면 초당 열 줄이다 — 실측에서
+        30분 창 하나가 17,118줄을 남겼고, 그 사이 진짜 경고는 묻힌다.
         """
         one_pass = self._one_pass_seconds()
         if not one_pass:
@@ -1241,10 +1298,12 @@ class SequenceTriggerController(AbstractController, threading.Thread):
         _, win_end = window_bounds_epoch(entry, self.device_tz, now)
         if win_end is None or start + one_pass <= win_end:
             return start
-        self.logger.error(
-            f"Sequence {self.unique_id}: 남은 창이 한 번 돌기에 부족해 "
-            f"({win_end - start:.0f}초 남음 / {one_pass:.0f}초 필요) "
-            "이번 사이클은 건너뜁니다.")
+        if self._runt_logged_start != start:
+            self._runt_logged_start = start
+            self.logger.error(
+                f"Sequence {self.unique_id}: 남은 창이 한 번 돌기에 부족해 "
+                f"({win_end - start:.0f}초 남음 / {one_pass:.0f}초 필요) "
+                "이번 사이클은 건너뜁니다.")
         return None
 
     def start_new_cycle(self, now, period=None):
@@ -1271,16 +1330,24 @@ class SequenceTriggerController(AbstractController, threading.Thread):
                    for item in self.current_schedule}
         return sorted(action_ids, key=lambda a: 0 if type_of.get(a) == 'total' else 1)
 
-    def process_cycle(self, now):
+    def process_cycle(self, now, off_only=False):
+        """스텝을 켜고 끈다.
+
+        `off_only` 는 창이 닫힌 뒤 유예 중에 쓴다. 끝난 스텝은 정상적으로
+        끄되 새 스텝은 켜지 않는다 — 창 밖에서 밸브를 여는 것은 유예의 취지가
+        아니다.
+        """
         elapsed = now - self.cycle_start_time
-        
+
         desired_active = set()
-        
+
         for item in self.current_schedule:
             if item['start'] <= elapsed < item['end']:
                 desired_active.add(item['action'].unique_id)
                 # ensure ON
                 if item['action'].unique_id not in self.active_actions:
+                    if off_only:
+                        continue
                     self.logger.debug(f"Desired matched: Action {item['action'].unique_id} at elapsed {elapsed}")
                     self.turn_on_action(item['action'], item)
         
@@ -1494,15 +1561,19 @@ class SequenceTriggerController(AbstractController, threading.Thread):
         """진행 중인 것을 전부 끈다(펌프 먼저 — `_off_order` 참조).
 
         창이 닫혀서 부를 때는 **아직 끝나지 않은 스텝을 중간에 끊는 것**이다.
-        그 사실을 남기지 않으면 아무 기록도 없이 사라진다 — 실제로 창 끝에
-        걸린 스텝은 duration 이 기록되지 않아, 얼마나 열려 있었는지가 통째로
-        유실된다.
+        그 사실을 남기지 않으면 아무 기록도 없이 사라진다 — 창 끝에 걸린 스텝은
+        duration 이 남지 않는 경우가 있어, 얼마나 열려 있었는지를 확인할 방법이
+        사라진다.
+
+        자연 종료가 코앞이었던 스텝은 여기까지 오지 않는다 — 창이 닫히면 유예
+        동안 `process_cycle(off_only=True)` 가 정상적으로 끝내 준다. 그러고도
+        남아 있다면 그건 진짜 절단이다.
         """
         if self.active_actions and reason:
             self.logger.error(
                 f"Sequence {self.unique_id}: {reason} — 진행 중이던 스텝 "
-                f"{len(self.active_actions)}개를 중간에 끊습니다. 이 스텝들의 "
-                "개방 시간은 기록되지 않습니다.")
+                f"{len(self.active_actions)}개를 중간에 끊습니다. 이 스텝들은 "
+                "개방 시간 기록이 남지 않을 수 있습니다.")
         for act_id in self._off_order(self.active_actions):
             # Find action info 
             found_item = next((i for i in self.current_schedule if i['action'].unique_id == act_id), None)

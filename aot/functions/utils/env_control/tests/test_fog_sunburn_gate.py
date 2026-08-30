@@ -53,21 +53,36 @@ def _gate(nursery=False, lockout=250.0, release=150.0):
     ))
 
 
-class TestLockoutDoesNotRequireNurseryMode:
-    """① 회귀의 본체 — 육묘 모드를 꺼도 잠긴다."""
+class TestLockoutIsNurseryOnly:
+    """육묘 모드에서만 잠근다 (2026-08-30 되돌림).
 
-    def test_육묘_꺼짐에도_강일사면_잠긴다(self):
+    2026-08-25 에 이 잠금을 육묘 밖으로 꺼냈다가 되돌렸다. 물방울이 렌즈가
+    되는 물리 자체는 작물과 무관하지만, 이미 자란 개체에서는 강일사가 곧
+    증산이 가장 심한 때라 그때 분무를 끊으면 일소를 막으려다 건조
+    스트레스를 만든다 — 보호가 아니라 역효과다.
+
+    실측(2026-08-30 영양): 저녁 차단과 이어 붙어 분무 허용 창이 하루 한
+    시간 남짓으로 좁혀졌고, 가습이 필요한 31 사이클 **전부**에서
+    코디네이터의 요청이 버려졌다.
+    """
+
+    def test_육묘_꺼짐이면_강일사여도_잠기지_않는다(self):
         g = _gate(nursery=False)
+        assert g._eval_nursery_lock(_env(light=300.0)) is False
+
+    def test_육묘_켜짐이면_강일사에_잠긴다(self):
+        g = _gate(nursery=True)
         assert g._eval_nursery_lock(_env(light=300.0)) is True
 
-    def test_육묘_켜짐과_같은_판정이다(self):
-        """육묘 여부로 **잠금 유무**가 갈리면 안 된다(임계는 갈릴 수 있다)."""
+    def test_보호의_유무는_사람이_정한다(self):
+        """육묘 모드를 끈 채 두상 살수를 쓰는 설치(2026-08-25 イチゴ)는
+        모드를 켜서 보호를 받는다. 코드가 대신 정하지 않는다."""
         off = _gate(nursery=False)._eval_nursery_lock(_env(light=300.0))
         on = _gate(nursery=True)._eval_nursery_lock(_env(light=300.0))
-        assert off == on is True
+        assert (off, on) == (False, True)
 
     def test_약한_빛에서는_잠기지_않는다(self):
-        g = _gate(nursery=False)
+        g = _gate(nursery=True)
         assert g._eval_nursery_lock(_env(light=100.0)) is False
 
 
@@ -75,7 +90,7 @@ class TestHysteresisSurvives:
     """래치는 그대로여야 한다 — 구름에 켜졌다 꺼졌다 하면 안 된다."""
 
     def test_해제_임계_아래로_내려가야_풀린다(self):
-        g = _gate(nursery=False)
+        g = _gate(nursery=True)
         assert g._eval_nursery_lock(_env(light=300.0)) is True
         assert g._eval_nursery_lock(_env(light=200.0)) is True, (
             '잠금(250)과 해제(150) 사이에서는 잠금이 유지돼야 한다')
@@ -90,7 +105,7 @@ class TestFallbacksUnchanged:
     """센서가 없는 설치에서 잠금이 통째로 죽지 않아야 한다."""
 
     def test_실외_일사_양수는_측정값으로_인정한다(self):
-        g = _gate(nursery=False)
+        g = _gate(nursery=True)
         assert g._eval_nursery_lock(_env(solar=400.0)) is True
 
     def test_실외_일사_0은_측정값이_아니다(self):
@@ -137,17 +152,24 @@ class TestOnlyWettingNozzlesAreGated:
         assert 'is_wetting_fogger(p) for p in profiles' in src
 
 
-def test_감쇠도_육묘_모드를_전제하지_않는다():
+def test_감쇠와_하드잠금은_같은_조건에_선다():
     """하드 잠금과 감쇠가 서로 다른 조건에서 서면 구간이 어긋난다.
 
-    잠금만 일반화하고 감쇠를 육묘에 남기면, 비육묘 설치에서 분무가 절벽처럼
-    끊긴다(release~lockout 사이의 완만한 감소가 사라진다).
+    한쪽만 육묘에 묶으면 잠기지도 감쇠되지도 않는 구간이 생기거나, 감쇠 없이
+    절벽처럼 끊기는 구간(release~lockout 사이의 완만한 감소가 사라짐)이
+    생긴다. 어느 쪽으로 정하든 **둘이 같아야 한다**는 것이 이 테스트다 —
+    2026-08-30 되돌림에서 둘 다 육묘 모드로 돌아갔다.
     """
     import inspect
     from aot.functions.custom_functions.env_coordinator_impl import _cycle_mixin
-    src = inspect.getsource(_cycle_mixin.apply_nursery_fog_derate)
-    assert "if not internal.get('_nursery_mode'):" not in src, (
-        '감쇠가 다시 육묘 모드 안으로 들어갔다')
+    from aot.functions.utils.env_control import safety_gates
+
+    derate = inspect.getsource(_cycle_mixin.apply_nursery_fog_derate)
+    lock = inspect.getsource(safety_gates.SafetyPreGate._eval_nursery_lock)
+    assert "if not internal.get('_nursery_mode'):" in derate, (
+        '감쇠가 육묘 게이트를 잃었다 — 하드 잠금과 갈라진다')
+    assert 'if not cfg.nursery_mode:' in lock, (
+        '하드 잠금이 육묘 게이트를 잃었다 — 감쇠와 갈라진다')
 
 
 if __name__ == '__main__':

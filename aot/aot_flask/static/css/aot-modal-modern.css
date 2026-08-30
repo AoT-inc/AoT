@@ -93,6 +93,7 @@ a.aot-modal-section-title-collapsible {
     user-select: none;
     text-decoration: none !important;
     gap: 0.4rem;
+    justify-content: space-between; /* 제목은 왼쪽, 카렛은 오른쪽 끝 */
 }
 a.aot-modal-section-title-collapsible:hover,
 a.aot-modal-section-title-collapsible:focus {
@@ -863,6 +864,13 @@ textarea.aot-modern-input.aot-input-prose {
     .aot-modal-channel-title {
         justify-content: flex-start !important; /* 좌측 정렬 */
         padding-left: 16px !important; /* 좌측 여백 추가 */
+    }
+
+    /* 접기 카렛이 있는 헤더는 모바일에서도 카렛을 오른쪽 끝에 유지
+       (위 규칙이 justify-content 를 flex-start 로 되돌려 카렛이 제목
+       옆에 붙어버리는 것을 다시 space-between 으로 되돌림) */
+    a.aot-modal-section-title-collapsible {
+        justify-content: space-between !important;
     }
 
     /* Phase 6: Anti-Zoom for iOS Input Fields */

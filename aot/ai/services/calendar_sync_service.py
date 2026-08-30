@@ -294,12 +294,15 @@ def _resolve_target_by_name(name):
     if not name:
         return (None, None, None)
     try:
-        from sqlalchemy import or_
-        from aot.databases.models import Output
-        o = (Output.query.filter(or_(Output.unique_id == name, Output.name == name)).first()
-             or Output.query.filter(Output.name.ilike('%{}%'.format(name))).first())
-        if o is not None:
-            return (o.unique_id, 'output', o.name)
+        # 이름이 겹치면 고르지 않는다 — 여기서 잘못 엮이면 캘린더의 한 줄이
+        # 영구히 엉뚱한 장치에 붙는다(이 링크는 이후 동기화에서 재사용된다).
+        from aot.services.resolvers.device_resolver import resolve_output
+        match = resolve_output(name, allow_partial=True)
+        if match.error:
+            logger.warning("[CalendarSync] %s", match.error)
+            return (None, None, None)
+        if match.row is not None:
+            return (match.row.unique_id, 'output', match.row.name)
     except Exception:
         pass
     try:
@@ -536,10 +539,13 @@ def _build_imported_job(connection, fields, event, start, end):
     if fields.get('device'):
         output = None
         try:
-            from aot.databases.models import Output
-            dn = fields['device']
-            output = (Output.query.filter(or_(Output.unique_id == dn, Output.name == dn)).first()
-                      or Output.query.filter(Output.name.ilike('%{}%'.format(dn))).first())
+            # 이름이 겹치면 예약을 만들지 않는다 — 나중에 사람이 지켜보지 않는
+            # 시각에 실행되므로, 잘못 고르면 알아채기 어렵다.
+            from aot.services.resolvers.device_resolver import resolve_output
+            _m = resolve_output(fields['device'], allow_partial=True)
+            if _m.error:
+                logger.warning("[CalendarSync] %s", _m.error)
+            output = _m.row
         except Exception:
             output = None
         if output is not None:

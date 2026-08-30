@@ -33,6 +33,7 @@
 | I8 | `geo_shape.geo_id` 는 실존하는 `geo_map` 을 가리킴 (유령 지도 금지) | 트리거 | Tier-2 |
 | I9 | 삭제는 명시 목록으로만 — "페이로드 누락 = 삭제" 프로토콜 폐지 | 앱 계층 (저장 프로토콜 교정) + CI | S3 |
 | I10 | `clone_model` 은 교차참조 컬럼(map_overlay_id·map_config_id·geo_id)을 암묵 복사하지 않음 | 앱 계층 + 단위 테스트 | S3 |
+| I10a | **모든 복제 경로는 `clone_model` 을 거친다** — 컬럼 직접 복사 금지 | `services/duplication.py` 단일 통로 + `test_duplication_reference_integrity.py` | S3 (2026-08-28 보강) |
 | I11 | 소속(장치↔zone)은 저장하지 않고 마커 좌표에서 파생 | 컬럼 미사용 + `device_membership` 단일 리졸버 | S3 |
 | I12 | 지도 데이터 쓰기는 geo 패키지 안에서만 — 밖은 게이트웨이 경유 | `check_geo_writes.py` (AST) + pre-commit + CI | S5 |
 
@@ -213,7 +214,18 @@ S5 ✅ 단일 배치 게이트웨이 + 소유권 검사(I12) + pre-commit/CI
   N+1 이 되므로 컬럼 드롭과 동시에 정리).
 - `check_geo_writes.py` 의 `GRANDFATHERED` 3건(장치 삭제 시 자기 마커 정리)을
   `unplace_device` 로 이관 — 예외 목록을 0 으로.
-- 위젯 `custom_options` JSON 참조 검사 추가(잔여 위험 표 참조).
+- ~~위젯 `custom_options` JSON 참조 검사 추가~~ → **삭제 쪽은 완료**
+  (`services/device_references.py`). 지도를 지우기 전에 그 지도를 가리키는
+  위젯이 있는지 본다 — 예전에는 그냥 지워졌고 위젯은 오류 없이 빈 지도를
+  보여줬다.
+
+  **복제 쪽은 고칠 것이 없었다.** 1차 조사에서 "`dashboard_copy`/
+  `widget_duplicate` 가 사본에 원본 `map_uuid` 를 물려준다" 를 결함으로
+  적었으나, 위젯은 **보기**이지 장치가 아니다 — 같은 지도를 두 위젯이
+  다른 줌으로 보는 것은 정상 용법이고, 여기서 참조를 끊으면 복제한 위젯이
+  빈 채로 태어난다. 장치 복제(I10)와는 반대 방향의 요구다.
+  같은 조사에서 적은 "위젯 28개가 죽은 참조" 도 틀렸다(임시 스캔이 아는
+  id 목록에 `geo_map` 등을 빠뜨린 탓). 실제 값은 2개다.
 - 유령 지도 도형 처분(phantom-map 보고 대상) — 위젯 참조 확인 후 사람이 판단.
 - 미사용 `Copy of` 지도 정리, 잔여 duplicate/orphan-label — 참조 확인 후 수동.
 

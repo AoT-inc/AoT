@@ -1,5 +1,4 @@
 # coding=utf-8
-import threading
 
 from flask_babel import lazy_gettext
 
@@ -8,6 +7,7 @@ from aot.databases.models import Output
 from aot.actions.base_action import AbstractFunctionAction
 from aot.utils.constraints_pass import constraints_pass_positive_or_zero_value
 from aot.utils.database import db_retrieve_table_daemon
+from aot.utils.execution_context import run_in_thread
 
 ACTION_INFORMATION = {
     'name_unique': 'output_actuator_paired',
@@ -136,19 +136,18 @@ class ActionModule(AbstractFunctionAction):
             dict_vars['message'] += (
                 f" Actuator Paired output {output_id} CH{channel} ({output.name}): Stop."
             )
-            t = threading.Thread(
-                target=self.control.output_off,
+            run_in_thread(
+                self.control.output_off,
                 args=(output_id,),
                 kwargs={'output_channel': channel},
             )
-            t.start()
         else:
             dict_vars['message'] += (
                 f" Actuator Paired output {output_id} CH{channel} ({output.name}): "
                 f"set position to {position:.1f} %."
             )
-            t = threading.Thread(
-                target=self.control.output_on,
+            run_in_thread(
+                self.control.output_on,
                 args=(output_id,),
                 kwargs={
                     'output_type': 'value',
@@ -156,7 +155,6 @@ class ActionModule(AbstractFunctionAction):
                     'output_channel': channel,
                 },
             )
-            t.start()
 
         self.logger.debug(f"Message: {dict_vars['message']}")
         return dict_vars

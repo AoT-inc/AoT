@@ -1,5 +1,4 @@
 # coding=utf-8
-import threading
 
 from flask_babel import lazy_gettext
 
@@ -9,6 +8,7 @@ from aot.databases.models import Output
 from aot.actions.base_action import AbstractFunctionAction
 from aot.utils.constraints_pass import constraints_pass_positive_or_zero_value
 from aot.utils.database import db_retrieve_table_daemon
+from aot.utils.execution_context import run_in_thread
 
 ACTION_INFORMATION = {
     'name_unique': 'output_on_off',
@@ -132,13 +132,14 @@ class ActionModule(AbstractFunctionAction):
             dict_vars['message'] += f" for {duration} seconds"
         dict_vars['message'] += "."
 
-        output_on_off = threading.Thread(
-            target=self.control.output_on_off,
+        # 명령을 그냥 스레드로 넘기면 실행 컨텍스트(출처)가 따라가지 못해
+        # 감사에 안 남는다 — `run_in_thread` 참조.
+        run_in_thread(
+            self.control.output_on_off,
             args=(output_id, state,),
             kwargs={'output_type': 'sec',
                     'amount': duration,
                     'output_channel': channel})
-        output_on_off.start()
 
         self.logger.debug(f"Message: {dict_vars['message']}")
 

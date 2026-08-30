@@ -1,5 +1,4 @@
 # coding=utf-8
-import threading
 
 from flask_babel import lazy_gettext
 
@@ -9,6 +8,7 @@ from aot.databases.models import Output
 from aot.actions.base_action import AbstractFunctionAction
 from aot.utils.constraints_pass import constraints_pass_positive_value
 from aot.utils.database import db_retrieve_table_daemon
+from aot.utils.execution_context import run_in_thread
 
 ACTION_INFORMATION = {
     'name_unique': 'output_volume',
@@ -106,13 +106,12 @@ class ActionModule(AbstractFunctionAction):
 
         dict_vars['message'] += f" Turn output {output_id} CH{channel} ({output.name}) with volume of {volume}."
 
-        output_on = threading.Thread(
-            target=self.control.output_on,
+        run_in_thread(
+            self.control.output_on,
             args=(output_id,),
             kwargs={'output_type': 'vol',
                     'amount': volume,
                     'output_channel': channel})
-        output_on.start()
 
         self.logger.debug(f"Message: {dict_vars['message']}")
 

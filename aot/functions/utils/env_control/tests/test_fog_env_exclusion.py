@@ -141,10 +141,15 @@ class TestPulseConstraintsUnaffected:
         assert _fog_pulse_constraints(c, 'fogger', NON_WETTING) == {}
 
     def test_refactor_kept_missing_nozzle_conservative(self):
-        """_is_wetting_fog 추출 과정에서 보수적 기본값이 뒤집히지 않았는지."""
+        """_is_wetting_fog 추출 과정에서 보수적 기본값이 뒤집히지 않았는지.
+
+        ⚠ 펄스 값 자체는 2026-08-30 부터 `nursery_mode` 와 무관하게 스텁이
+        들고 있는 값(20/600)을 그대로 쓴다 — 여기서 보는 것은 "노즐 정보가
+        없어도 펄스가 걸리는가" 하나다.
+        """
         c = _Coord(use_fog=True, nursery=False)
         assert _fog_pulse_constraints(c, 'fogger', NO_NOZZLE) == {
-            'max_on_sec': 30.0, 'min_off_sec': 180.0}
+            'max_on_sec': 20.0, 'min_off_sec': 600.0}
 
 
 # ─────────────────────────────────────────────────────────────────────────────

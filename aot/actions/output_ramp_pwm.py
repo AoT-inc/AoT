@@ -1,5 +1,4 @@
 # coding=utf-8
-import threading
 import time
 
 from flask_babel import lazy_gettext
@@ -11,6 +10,7 @@ from aot.actions.base_action import AbstractFunctionAction
 from aot.utils.constraints_pass import constraints_pass_positive_or_zero_value
 from aot.utils.constraints_pass import constraints_pass_positive_value
 from aot.utils.database import db_retrieve_table_daemon
+from aot.utils.execution_context import run_in_thread
 
 ACTION_INFORMATION = {
     'name_unique': 'output_ramp_pwm',
@@ -161,13 +161,12 @@ class ActionModule(AbstractFunctionAction):
 
         current_duty_cycle = start
 
-        output_on = threading.Thread(
-            target=self.control.output_on,
+        run_in_thread(
+            self.control.output_on,
             args=(output_id,),
             kwargs={'output_type': 'pwm',
                     'amount': start,
                     'output_channel': channel})
-        output_on.start()
 
         loop_running = True
         timer = time.time() + seconds_per_step
@@ -186,13 +185,12 @@ class ActionModule(AbstractFunctionAction):
                             current_duty_cycle = end
                             loop_running = False
 
-                output_on = threading.Thread(
-                    target=self.control.output_on,
+                run_in_thread(
+                    self.control.output_on,
                     args=(output_id,),
                     kwargs={'output_type': 'pwm',
                             'amount': current_duty_cycle,
                             'output_channel': channel})
-                output_on.start()
 
                 if not loop_running:
                     break
