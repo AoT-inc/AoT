@@ -15,9 +15,10 @@ from aot.functions.utils.env_control.coordinator import ActuatorCommand
 from aot.functions.utils.env_control.log_channels import (
     CH_COORD_CMD_BASE, CH_COORD_REASON_BASE, CH_INTEGRAL_BASE,
     CH_SITUATION_DEV_BASE,
+    REASON_LIMIT_HUMID_MAX, REASON_UNKNOWN, STRING_REASON_CODES,
     ch_coord_cmd, ch_coord_reason, ch_goal_target, ch_integral,
     ch_situation_deviation,
-    write_cycle_metrics,
+    write_cycle_metrics, write_final_commands,
 )
 
 from .conftest import make_ctx, make_target
@@ -296,3 +297,74 @@ class TestWriteCycleMetrics:
             )
 
         assert all(t is None for t in tags_seen)
+
+
+class TestFinalCommandLoggingNeverBreaksTheCycle:
+    """`write_final_commands` 는 `_dispatch` **앞**에 있다 — 여기서 예외가 나면
+    이미 계산된 명령이 통째로 전송되지 않는다.
+
+    2026-08-30 에 실제로 그랬다. 임계 오버라이드 헬퍼들은 근거를 문자열로
+    남기는데(`{'value': 0.0, 'reason': 'humid_max'}`), 그것을 `float()` 에
+    넘겨 ValueError 가 났다. 하필 **하드 임계가 걸린 그 사이클**의 명령이
+    미실행됐다 — 안전 동작이 필요한 순간에 정확히 멈춘 것이다.
+    """
+
+    def _capture(self, final_cmds):
+        recorded = {}
+
+        def _fake_write(uid, meas, value, channel, extra_tags=None):
+            recorded[meas] = value
+
+        with patch(_PATCH_TARGET, side_effect=_fake_write):
+            write_final_commands('fn', final_cmds, {'aaaaaaaa-1111': 0})
+        return recorded
+
+    def test_a_string_reason_does_not_raise(self):
+        rec = self._capture({'aaaaaaaa-1111': {'value': 0.0,
+                                               'reason': 'humid_max'}})
+        assert rec['coord_actuator_aaaaaaaa_final'] == pytest.approx(0.0)
+        assert rec['coord_actuator_aaaaaaaa_final_reason'] == pytest.approx(
+            REASON_LIMIT_HUMID_MAX)
+
+    def test_every_string_reason_in_the_codebase_is_mapped(self):
+        """소스가 실제로 쓰는 문자열 근거 전수를 표와 대조한다.
+
+        새 문자열 근거를 만들고 표에 안 넣으면 '근거 미상'으로 떨어져
+        화면이 이유를 말하지 못한다 — 죽지는 않으니 조용하다.
+        """
+        import ast
+        import inspect
+        from aot.functions.custom_functions.env_coordinator_impl \
+            import _cycle_mixin
+        tree = ast.parse(inspect.getsource(_cycle_mixin))
+        found = set()
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.Dict):
+                continue
+            for k, v in zip(node.keys, node.values):
+                if (isinstance(k, ast.Constant) and k.value == 'reason'
+                        and isinstance(v, ast.Constant)
+                        and isinstance(v.value, str)):
+                    found.add(v.value)
+        assert found, '문자열 근거를 하나도 못 찾았습니다 — 탐지가 깨졌습니다'
+        assert found <= set(STRING_REASON_CODES), (
+            '표에 없는 문자열 근거: %s' % sorted(found - set(STRING_REASON_CODES)))
+
+    def test_an_unknown_reason_is_recorded_not_swallowed(self):
+        rec = self._capture({'aaaaaaaa-1111': {'value': 5.0,
+                                               'reason': 'brand_new_rule'}})
+        assert rec['coord_actuator_aaaaaaaa_final_reason'] == pytest.approx(
+            REASON_UNKNOWN)
+
+    def test_a_broken_entry_does_not_stop_the_others(self):
+        """한 액추에이터가 망가져도 나머지는 기록돼야 한다."""
+        rec = self._capture({
+            'aaaaaaaa-1111': {'value': 7.0, 'reason': 1},
+            'bbbbbbbb-2222': None,
+        })
+        assert rec['coord_actuator_aaaaaaaa_final'] == pytest.approx(7.0)
+
+    def test_a_non_numeric_value_is_skipped_quietly(self):
+        rec = self._capture({'aaaaaaaa-1111': {'value': 'open',
+                                               'reason': 1}})
+        assert 'coord_actuator_aaaaaaaa_final' not in rec

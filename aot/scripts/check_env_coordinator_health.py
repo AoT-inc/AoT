@@ -74,6 +74,19 @@ REASON_LABEL = {
     LC.REASON_DEADZONE_BACKOFF: '데드존 후퇴',
     LC.REASON_NIGHT_PARKED:     '야간 파킹',
     LC.REASON_MANUAL_OVERRIDE:  '수동 잠금',
+    # 임계 오버라이드 계열 — coordinate() 가 아니라
+    # `apply_threshold_and_gate_overrides` 가 붙이는 근거다. 최종 명령
+    # 로그(CH100 계열)에만 나타난다.
+    LC.REASON_LIMIT_LIGHT_MAX:      '광량 상한',
+    LC.REASON_LIMIT_LIGHT_MIN:      '광량 하한',
+    LC.REASON_LIMIT_TEMP_MAX:       '온도 상한',
+    LC.REASON_LIMIT_TEMP_MIN:       '온도 하한',
+    LC.REASON_LIMIT_HUMID_MAX:      '습도 상한',
+    LC.REASON_LIMIT_HUMID_MIN:      '습도 하한',
+    LC.REASON_FOG_DERATE:           '분무 감쇠',
+    LC.REASON_FOG_HUMIDITY_CEILING: '분무 습도 상한',
+    LC.REASON_NO_ACTUATOR:          '장치 없음',
+    LC.REASON_UNKNOWN:              '근거 미상',
 }
 
 # 창 내내 이것 하나로만 살았다면 그 장치는 사실상 참여하지 않은 것이다.

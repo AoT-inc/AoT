@@ -139,6 +139,58 @@ REASON_NIGHT_PARKED     = 19   # 야간 개구부 파킹 — 밤에는 환기 �
                                # 답이 없다.
 REASON_MANUAL_OVERRIDE  = 20   # 수동 오버라이드 — 락 활성
 
+# ── 임계 오버라이드 계열 (30~) ────────────────────────────────────────────────
+# `apply_threshold_and_gate_overrides` 가 지나는 헬퍼들은 근거를 **문자열**로
+# 남긴다(`{'value': 0.0, 'reason': 'humid_max'}`). coordinate() 가 내는 정수
+# 코드와 어휘가 갈라져 있는데, 최종 명령 로그(CH100 계열)는 그 둘을 한 채널에
+# 싣는다 — 그래서 여기서 정수로 옮긴다.
+#
+# ⚠ 2026-08-30: 이 표가 없던 사이 `write_final_commands` 가 문자열을
+#   `float()` 에 넘겨 **사이클을 통째로 죽였다**. 예외가 디스패치 앞에서
+#   터지므로, 하필 하드 임계가 걸린 그 사이클의 명령이 전송되지 않았다.
+REASON_LIMIT_LIGHT_MAX     = 30
+REASON_LIMIT_LIGHT_MIN     = 31
+REASON_LIMIT_TEMP_MAX      = 32
+REASON_LIMIT_TEMP_MIN      = 33
+REASON_LIMIT_HUMID_MAX     = 34
+REASON_LIMIT_HUMID_MIN     = 35
+REASON_FOG_DERATE          = 36
+REASON_FOG_HUMIDITY_CEILING = 37
+REASON_NO_ACTUATOR         = 38
+REASON_UNKNOWN             = 39   # 표에 없는 근거 — 삼키지 않고 '모른다'로 남긴다
+
+# 문자열 근거 → 정수 코드. **새 문자열 근거를 만들면 여기 넣을 것** — 빠뜨려도
+# 이제 죽지는 않지만(REASON_UNKNOWN 으로 떨어진다) 화면이 이유를 말하지 못한다.
+STRING_REASON_CODES = {
+    'light_max':            REASON_LIMIT_LIGHT_MAX,
+    'light_min':            REASON_LIMIT_LIGHT_MIN,
+    'temp_max':             REASON_LIMIT_TEMP_MAX,
+    'temp_min':             REASON_LIMIT_TEMP_MIN,
+    'humid_max':            REASON_LIMIT_HUMID_MAX,
+    'humid_min':            REASON_LIMIT_HUMID_MIN,
+    'nursery_fog_derate':   REASON_FOG_DERATE,
+    'fog_humidity_ceiling': REASON_FOG_HUMIDITY_CEILING,
+    'no_actuator':          REASON_NO_ACTUATOR,
+    'unavailable':          REASON_UNAVAILABLE,
+}
+
+
+def reason_code(reason) -> float:
+    """근거를 정수 코드로 옮긴다. **어떤 입력에도 예외를 던지지 않는다.**
+
+    최종 명령의 근거는 정수(coordinate())일 수도 문자열(임계 오버라이드)일
+    수도 있다. 여기서 터지면 로그 한 줄이 제어를 멈춘다 — 실제로 그렇게
+    했다(2026-08-30, 'humid_max' → ValueError → 디스패치 미실행).
+    """
+    if reason is None:
+        return float(REASON_IDLE)
+    if isinstance(reason, str):
+        return float(STRING_REASON_CODES.get(reason, REASON_UNKNOWN))
+    try:
+        return float(reason)
+    except (TypeError, ValueError):
+        return float(REASON_UNKNOWN)
+
 # 안전 게이트 비트마스크 (CH_SAFETY_GATE)
 GATE_BIT_RAIN    = 1 << 0
 GATE_BIT_WIND    = 1 << 1
@@ -338,17 +390,31 @@ def write_final_commands(unique_id: str, final_cmds: Dict,
     if not unique_id or not actuator_index:
         return
     for aid, cmd in (final_cmds or {}).items():
-        idx = actuator_index.get(aid)
-        if idx is None:
-            continue
-        if isinstance(cmd, dict):
-            value = cmd.get('value', 0.0)
-            reason = cmd.get('reason', REASON_IDLE)
-        else:
-            value = getattr(cmd, 'value', 0.0)
-            reason = getattr(cmd, 'reason', REASON_IDLE)
-        short = aid[:8]
-        _safe_write(unique_id, 'coord_actuator_%s_final' % short,
-                    float(value or 0.0), ch_coord_final(idx))
-        _safe_write(unique_id, 'coord_actuator_%s_final_reason' % short,
-                    float(reason or 0), ch_coord_final_reason(idx))
+        # ⚠ **한 액추에이터의 기록 실패가 사이클을 멈춰서는 안 된다.**
+        # 이 호출은 `_dispatch` **앞**에 있으므로, 여기서 예외가 나면 이미
+        # 계산된 명령이 통째로 전송되지 않는다. 실제로 그렇게 됐다
+        # (2026-08-30, 문자열 근거 'humid_max' → ValueError → 하드 임계가
+        # 걸린 그 사이클의 명령이 미실행). `_safe_write` 는 **쓰기**만
+        # 감싸므로 값을 만드는 이 구간도 함께 감싼다.
+        try:
+            idx = actuator_index.get(aid)
+            if idx is None:
+                continue
+            if isinstance(cmd, dict):
+                value = cmd.get('value', 0.0)
+                reason = cmd.get('reason', REASON_IDLE)
+            else:
+                value = getattr(cmd, 'value', 0.0)
+                reason = getattr(cmd, 'reason', REASON_IDLE)
+            try:
+                value = float(value or 0.0)
+            except (TypeError, ValueError):
+                continue        # 값이 숫자가 아니면 남길 것이 없다
+            short = aid[:8]
+            _safe_write(unique_id, 'coord_actuator_%s_final' % short,
+                        value, ch_coord_final(idx))
+            _safe_write(unique_id, 'coord_actuator_%s_final_reason' % short,
+                        reason_code(reason), ch_coord_final_reason(idx))
+        except Exception as exc:   # noqa: BLE001 — 제어를 막지 않는 것이 우선
+            logger.warning(
+                '최종 명령 기록 실패 — 제어는 계속한다 (%s): %s', aid, exc)
