@@ -1791,40 +1791,6 @@ button.aot-center-modal-close {
 }
 .aot-site-empty { padding: 0; margin-top: 6px; }
 
-/* ── 구역 라벨의 대표값·문제 표시 ─────────────────────────────────────────
-   시설 bay 칩과 같은 2행 문법(1행 이름, 2행 대표값). 배경 밴드색은 CSS 가
-   정하지 않는다 — AoTMapSensorLabels.bandColor() 결과를 인라인으로 받는다. */
-/* 플래그의 기준 상자는 라벨 자체가 아니라 **이름 줄**이다.
-   .geo-label-marker 에 position:relative 를 주면 maplibre 의 .maplibregl-marker
-   (position:absolute)를 덮어써서, 라벨이 전부 전체 폭 막대로 흘러내린다.
-   같은 특정도(클래스 하나)라 나중에 로드되는 이 파일이 이겨 버린다. */
-.aot-zone-label-head { position: relative; }
-/* 값 줄은 이름보다 작고 굵지 않다 — 시설 bay 칩(.aot-bay-chip-val)과 같은
-   비율이다. 이름과 같은 크기·굵기로 두었더니 구역 라벨만 알약이 통째로
-   커져서, 같은 지도의 필지·시설 라벨보다 눈에 먼저 들어왔다. 이름이 주인공이고
-   값은 그 아래 딸린 정보다. */
-.aot-zone-label-val {
-  font-size: 0.92em;
-  font-weight: 400;
-  opacity: 0.95;
-  font-variant-numeric: tabular-nums;
-  line-height: 1.15;
-}
-/* 라벨은 좁아서 글자를 더 넣을 수 없다 — 점 하나로 알리고 title 로 이유를 준다.
-   모서리에 얹어 이름·값의 가로폭을 건드리지 않는다. */
-.aot-zone-label-flag {
-  position: absolute;
-  top: -3px;
-  right: -3px;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: currentColor;
-  box-shadow: 0 0 0 1.5px rgba(255, 255, 255, 0.9);
-}
-.aot-zone-label-flag.is-fault   { color: var(--aot-tint-danger-fg); }
-.aot-zone-label-flag.is-warning { color: var(--aot-color-warning, #ff9f43); }
-
 /* 장치 모달의 제어 블록 — 탭 없는 단일 창이라 행이 블록 안에 바로 놓인다.
    블록 제목 아래 첫 행의 윗 여백만 없앤다. */
 .aot-device-ctrl .aot-act-row:first-of-type { padding-top: 0; }

@@ -734,6 +734,18 @@ def valid_date_str(date_str):
 
 
 def influx_to_list(data):
+    """[(ts, value), ...] — 시간순 정렬 보장.
+
+    같은 device_id/measure 라도 일부 쓰기에만 source_id/source_type 같은
+    extra_tags 가 붙어 있으면(예: Function 이 제어를 넘겨받은 구간), Flux 는
+    태그 집합이 다른 레코드를 별도 테이블로 쪼갠다 — 값은 하나의 논리적
+    시계열인데 물리적으로는 여러 테이블에 나뉘어 온다는 뜻이다. 테이블을
+    순서대로 이어 붙이면 뒤 테이블이 앞 테이블보다 과거일 때 배열 끝이
+    시간 역행한다. Highcharts 는 xData 가 오름차순이라고 가정하고 이진탐색으로
+    구간을 찾으므로, 이 역행 구간 때문에 실제로는 존재하는 최신 데이터를
+    "범위 밖"으로 오판해 그래프에서 통째로 사라진다(1일 확대 시 사용량이
+    안 보이던 문제가 이것이었다). 반환 전에 정렬해 이 가정을 지켜준다.
+    """
     list_data = []
     for table in data:
         for row in table.records:
@@ -741,19 +753,30 @@ def influx_to_list(data):
             if val is None:
                 continue
             list_data.append((row.values['_time'].timestamp(), val))
+    list_data.sort(key=lambda point: point[0])
     return list_data
 
 
 def influxdb_get_count_points(data):
+    """전체 개수 — 태그 집합이 갈라져 여러 테이블로 와도 합산한다(위 참조)."""
+    total = 0
+    found = False
     for table in data:
         for record in table.records:
-            return record.values['_value']
+            total += record.values['_value']
+            found = True
+    return total if found else None
 
 
 def influxdb_get_first_point(data):
+    """가장 이른 시각 — 여러 테이블 중 최솟값(위 참조, 테이블 순서는 신뢰 불가)."""
+    earliest = None
     for table in data:
         for record in table.records:
-            return record.values['_time']
+            ts = record.values['_time']
+            if earliest is None or ts < earliest:
+                earliest = ts
+    return earliest
 
 
 #

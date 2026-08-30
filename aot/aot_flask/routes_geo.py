@@ -4343,22 +4343,6 @@ def api_geo_output_states():
     return jsonify({'ok': True, 'states': states})
 
 
-@blueprint.route('/api/geo/zones/status', methods=['GET'])
-@login_required
-def api_geo_zones_status():
-    """지도의 구역별 대표값·상태 일괄 — 지도 라벨용.
-
-    구역 라벨이 이름만 달고 있어, 어느 구역이 문제인지 알려면 하나씩 열어
-    봐야 했다. 시설 bay 칩이 이미 하는 일(대표값 + 밴드색)을 구역으로 올린다.
-    """
-    from aot.aot_flask.geo.site_summary import zone_status_for_map
-
-    map_uuid = request.args.get('map_uuid', '').strip()
-    if not map_uuid:
-        return jsonify({'ok': False, 'error': 'map_uuid required'}), 422
-    return jsonify({'ok': True, 'zones': zone_status_for_map(map_uuid)})
-
-
 @blueprint.route('/api/geo/device/<string:device_uuid>/detail', methods=['GET'])
 @login_required
 def api_geo_device_detail(device_uuid):

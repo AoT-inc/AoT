@@ -893,62 +893,6 @@ _STATUS_CACHE = {}
 _STATUS_TTL_S = 30
 
 
-_ZONE_STATUS_CACHE = {}
-_ZONE_STATUS_TTL_S = 60
-
-
-def zone_status_for_map(map_uuid):
-    """지도의 구역별 대표값·상태 — `{zone_uuid: {...}}`. 60초 캐시.
-
-    지도 라벨이 쓴다. **구역마다 따로 물으면 안 된다** — 통신 상태를 읽는
-    read_link_status_batch 가 호출마다 데몬 왕복을 한 번 하므로, 구역 수만큼
-    데몬을 두들기게 된다. 여기서는 지도 전체 장치를 모아 한 번만 읽는다.
-
-    캐시 수명이 site 요약(30초)보다 긴 것은 의도적이다. 이건 지도 위에 늘
-    떠 있는 라벨이라 갱신이 잦고, 구역 하나가 아니라 전부를 계산한다.
-    """
-    from aot.databases.models import GeoShape
-
-    now = time.time()
-    with _CACHE_LOCK:
-        hit = _ZONE_STATUS_CACHE.get(map_uuid)
-    if hit and hit[0] > now:
-        return hit[1]
-
-    result = {}
-    try:
-        zones = GeoShape.query.filter(
-            GeoShape.geo_id == map_uuid, GeoShape.type == 'zone').all()
-
-        ids_by_zone, all_ids = {}, set()
-        for zone in zones:
-            ids = _device_ids_for(zone)
-            ids_by_zone[zone.unique_id] = ids
-            all_ids |= ids
-
-        link_status = _link_status(all_ids, [])
-
-        for zone in zones:
-            ids = ids_by_zone[zone.unique_id]
-            env = env_for_devices(ids) if ids else {
-                'readings': [], 'sensors': {'valid': 0, 'total': 0}}
-            issues = _issue_counts(ids, link_status)
-            result[zone.unique_id] = {
-                'status': _child_status(ids, env['sensors'], issues),
-                'rep': _pick_rep(env['readings'], rep_key_of(zone)),
-                'sensors': env['sensors'],
-                'issues': issues,
-            }
-    except Exception as exc:
-        logger.warning('[SiteSummary] 구역 상태 일괄 계산 실패(map=%s): %s',
-                       map_uuid, exc)
-        return {}
-
-    with _CACHE_LOCK:
-        _ZONE_STATUS_CACHE[map_uuid] = (now + _ZONE_STATUS_TTL_S, result)
-    return result
-
-
 def status_for_shape(shape_uuid):
     """도형(구역·시설) uuid → 상태. 30초 캐시.
 
