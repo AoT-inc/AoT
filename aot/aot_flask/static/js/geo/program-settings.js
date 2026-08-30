@@ -343,7 +343,7 @@
 
   function _kindRow(p, ro) {
     var cur = p.kind || 'vegetation';
-    var sel = '<select class="form-control aot-modern-input" data-pf="kind"' +
+    var sel = '<select class="form-control aot-modern-input selectpicker" data-pf="kind"' +
               (ro ? ' disabled' : '') + '>';
     _KINDS.forEach(function (k) {
       sel += '<option value="' + k + '"' + (k === cur ? ' selected' : '') + '>' +
@@ -372,7 +372,7 @@
              _esc(t.name) + '</option>';
     }).join('');
     return _optRow(_T('tab', 'Tab'), '',
-      '<select class="form-control aot-modern-input" id="veg-tab-move">' +
+      '<select class="form-control aot-modern-input selectpicker" id="veg-tab-move">' +
       opts + '</select>');
   }
 
@@ -538,7 +538,12 @@
     var rest = defs.filter(function (d) { return t[d.key] == null; });
     var picker = '';
     if (rest.length) {
-      var opts = '<option value=""></option>';
+      // 빈 옵션에 글자가 없으면 bootstrap-select 는 "Nothing selected" 라는
+      // 영어 기본 문구를 그대로 보인다(원래 native select 는 빈 칸이 그냥
+      // 빈 칸으로 보였다) — 카탈로그에 있는 낱말을 재사용해 새 msgid 를
+      // 만들지 않는다.
+      var opts = '<option value="">' + _esc(window._ ? window._('Select') : '') +
+                 '</option>';
       rest.forEach(function (d) {
         var base = (d['default'] == null) ? '' :
                    ' (' + _T('default_is', 'default {v}')
@@ -547,7 +552,7 @@
                 _esc((d.label || d.key) + base) + '</option>';
       });
       picker = _optRow(_T('override_pick', 'Set a different value here…'), '',
-        '<select class="form-control aot-modern-input" data-tf-add>' +
+        '<select class="form-control aot-modern-input selectpicker" data-tf-add>' +
         opts + '</select>');
     }
     return rows + picker;
@@ -719,7 +724,15 @@
     if (!host) return;
     _refreshTrack(host);
     var box = host.querySelector('.aot-stage-panel-host');
-    if (box) box.innerHTML = _stagePanel();
+    if (box) {
+      box.innerHTML = _stagePanel();
+      // "다르게 정하기" select 도 여기서 다시 그려진다 — init 을 안 부르면
+      // bootstrap-select 자체 CSS(`select.selectpicker { display: none }`)에
+      // 걸려 화면에서 사라진다.
+      if (window.jQuery && window.jQuery.fn && window.jQuery.fn.selectpicker) {
+        window.jQuery(box).find('.selectpicker').selectpicker();
+      }
+    }
     _applyPerStage(host);
   }
 
@@ -1014,6 +1027,12 @@
           : '';
 
         host.innerHTML = roNote + gBasic + gStages + gTargets + gRes + gAdvanced;
+        // 매번 드로어 본문을 통째로 다시 그리므로 이전 bootstrap-select DOM 도
+        // 함께 사라진다 — `refresh` 가 아니라 새 초기화를 부른다(탭·종류·측정
+        // 항목 select 가 전부 여기서 걸린다).
+        if (window.jQuery && window.jQuery.fn && window.jQuery.fn.selectpicker) {
+          window.jQuery(host).find('.selectpicker').selectpicker();
+        }
         _applyPerStage(host);
       });
   }
@@ -1143,7 +1162,8 @@
                 '<button type="button" class="btn aot-pill-btn" data-act="def-add">' +
                   _esc(_T('add_item', 'Add item')) + '</button>') +
         '<div class="veg-def-add">' +
-          '<select class="form-control aot-modern-input" data-def-new="measurement">' +
+          '<select class="form-control aot-modern-input selectpicker" ' +
+            'data-live-search="true" data-width="100%" data-def-new="measurement">' +
             opts + '</select>' +
           '<input type="text" class="form-control aot-modern-input" data-def-new="label" ' +
             'placeholder="' + _esc(_T('item_name', 'Item name')) + '">' +
@@ -1170,7 +1190,7 @@
       });
       // **한 줄에 하나.** 예전에는 3열 격자라 좁은 폭에서 라벨과 칸이 어긋났다.
       return _optRow(d.label || d.key, '',
-        '<select class="form-control aot-modern-input" data-cf="' + _esc(d.key) + '"' +
+        '<select class="form-control aot-modern-input selectpicker" data-cf="' + _esc(d.key) + '"' +
           (ro ? ' disabled' : '') + '>' + opts + '</select>');
     }).join('');
     // 제목·설명을 **라벨 열 안에** 넣지 않는다. 공용 option-row 의 라벨 열은
@@ -1206,7 +1226,15 @@
     (State.defs || []).forEach(function (d) { d._used = !!used[d.key]; });
 
     var box = drawer.querySelector('.veg-defs');
-    if (box) box.innerHTML = _targetDefsSection(false);
+    if (box) {
+      box.innerHTML = _targetDefsSection(false);
+      // 측정 종류 select 도 여기서 다시 그려진다 — init 을 안 부르면
+      // bootstrap-select 자체 CSS(`select.selectpicker { display: none }`)에
+      // 걸려 화면에서 사라진다(전체 드로어를 다시 그릴 때와 같은 함정).
+      if (window.jQuery && window.jQuery.fn && window.jQuery.fn.selectpicker) {
+        window.jQuery(box).find('.selectpicker').selectpicker();
+      }
+    }
     _redrawStages(drawer);
   }
 
@@ -1618,6 +1646,12 @@
           host.innerHTML = '<div class="aot-stage-sub">' +
             _esc(_T('stage_targets', 'Different in this stage')) + '</div>' +
             _targetInputs(cur);
+          // 방금 고른 select 자신이 이 재렌더로 새로 그려진다 — 그대로 두면
+          // bootstrap-select 자체 CSS(`select.selectpicker { display: none }`)
+          // 에 걸려 다음 오버라이드를 고를 수단이 사라진다.
+          if (window.jQuery && window.jQuery.fn && window.jQuery.fn.selectpicker) {
+            window.jQuery(host).find('.selectpicker').selectpicker();
+          }
           var added = host.querySelector('[data-tf="' + el.value + '"]');
           if (added) added.focus();
         }

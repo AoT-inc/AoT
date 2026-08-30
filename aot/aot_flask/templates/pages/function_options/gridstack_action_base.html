@@ -9,7 +9,8 @@
 
 <div class="grid-stack-item" id="mod_action_{{unique_id}}" gs-id="{{unique_id}}" gs-w="12" gs-h="{{ gs_h }}"{% if saved_gs_y != '' %} gs-y="{{ saved_gs_y }}"{% endif %}>
   <div class="grid-stack-item-content">
-  <form id="form_action_{{unique_id}}" method="post" action="{{post_action}}">
+  <form id="form_action_{{unique_id}}" method="post" action="{{post_action}}"
+        onsubmit="event.preventDefault(); var b = this.querySelector('[name=save_action]'); if (b) { b.click(); } return false;">
   {{form_actions.csrf_token}}
   {{form_actions.device_id(class_='form-control', value=each_function.unique_id, id='device_id_' + unique_id)}}
   {{form_actions.action_id(class_='form-control', value=unique_id, id='action_id_' + unique_id)}}

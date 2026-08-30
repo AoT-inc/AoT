@@ -3,7 +3,8 @@
   <!-- processRequest 는 data-form-id 가 없으면 "모달 안의 첫 번째 form"을 집는다.
        조건 편집 폼은 함수 설정 모달 안에 있으므로 id 를 명시하지 않으면 저장/삭제가
        엉뚱한 폼(함수 본체)으로 전송돼 조용히 실패한다. -->
-  <form id="form_condition_{{each_condition.unique_id}}" method="post" action="/function">
+  <form id="form_condition_{{each_condition.unique_id}}" method="post" action="/function"
+        onsubmit="event.preventDefault(); var b = this.querySelector('[name=save_condition]'); if (b) { b.click(); } return false;">
     {{form_conditional_conditions.csrf_token}}
     {{form_conditional_conditions.conditional_id(class_='form-control', value=each_function.unique_id)}}
     {{form_conditional_conditions.conditional_condition_id(class_='form-control', value=each_condition.unique_id)}}

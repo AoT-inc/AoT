@@ -502,8 +502,12 @@ textarea.aot-modern-input.aot-input-prose {
    Popper.js가 인라인 transform/top/left 를 심으므로 이를 무력화하려면 !important 가 불가피하다.
    action-group(조건/액션 추가) 셀렉트는 data-container="body" 로 목록을 body 로 빼므로
    이 in-modal 규칙과는 애초에 매칭되지 않는다(아래 SECTION 12 참조).
-   목록은 모달 내부 콘텐츠보다 위에 떠야 하므로 --aot-z-modal-nested 사용. */
-.modal .aot-modal-option-control .bootstrap-select .dropdown-menu {
+   목록은 모달 내부 콘텐츠보다 위에 떠야 하므로 --aot-z-modal-nested 사용.
+   `.veg-def-add`(프로그램 드로어의 "항목 직접 추가" 줄)는 `.aot-modal-option-control`
+   골격을 쓰지 않는 3칸 나열이라 별도로 여기 얹는다 — 같은 Popper 오작동을 같은
+   방식으로 무력화해야, 드로어 안 select 마다 위치가 갈리지 않는다. */
+.modal .aot-modal-option-control .bootstrap-select .dropdown-menu,
+.modal .veg-def-add .bootstrap-select .dropdown-menu {
     border-radius: 12px !important;
     z-index: var(--aot-z-modal-nested) !important;
     left: auto !important;

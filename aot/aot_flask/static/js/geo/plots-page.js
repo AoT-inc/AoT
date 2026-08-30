@@ -252,6 +252,14 @@
       el.body.innerHTML = basics + stages.html();
       el.title.textContent = p.subject || p.name || _t('Plot');
 
+      // 매번 드로어 본문을 통째로 다시 그리므로 이전 bootstrap-select DOM 도
+      // 함께 사라진다 — `refresh` 가 아니라 새 초기화를 부른다. 이것이 없으면
+      // 프로그램 select 는 bootstrap-select 자체 CSS(`select.selectpicker
+      // { display: none }`)에 걸려 화면에서 통째로 사라진다.
+      if (root.jQuery && root.jQuery.fn && root.jQuery.fn.selectpicker) {
+        root.jQuery(el.body).find('.selectpicker').selectpicker();
+      }
+
       var form = el.body.querySelector('.aot-modal-container');
       el.body._ctx = ctx;
       root.AoTPlotForm.wire(form, ctx);

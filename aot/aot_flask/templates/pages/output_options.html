@@ -1,5 +1,6 @@
 <div id="mod_output_{{each_output.unique_id}}">
-  <form id="mod_output_form_{{each_output.unique_id}}" method="post" action="/output">
+  <form id="mod_output_form_{{each_output.unique_id}}" method="post" action="/output"
+        onsubmit="event.preventDefault(); var b = document.getElementById('mod_output_save_{{each_output.unique_id}}'); if (b) { b.click(); } return false;">
     {{form_mod_output.csrf_token}}
     {{form_mod_output.output_id(class_='form-control', value=each_output.unique_id)}}
     {{form_mod_output.output_pin(class_='form-control', value=each_output.pin)}}

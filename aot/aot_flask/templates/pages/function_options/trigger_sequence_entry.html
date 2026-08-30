@@ -65,7 +65,7 @@
         <button data-form-id="form_function_{{each_function.unique_id}}"
           data-aot-confirm="{{_('Are you sure you want to duplicate?')}}" data-aot-action="function_duplicate"
           class="btn aot-pill-btn" type="button">{{_('Duplicate')}}</button>
-        <button data-form-id="form_function_{{each_function.unique_id}}"
+        <button data-form-id="form_function_{{each_function.unique_id}}" id="mod_function_save_{{each_function.unique_id}}"
           onclick="return $(this).processRequest(this, 'function_mod');"
           class="btn aot-pill-btn aot-pill-btn-primary" type="button">{{_('Save')}}</button>
       </div>

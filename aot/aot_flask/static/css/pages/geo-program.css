@@ -202,12 +202,19 @@
    (`nowrap` + ellipsis), 컨트롤 열 자리를 `max-width` 로 비워 둔다. 이 화면의
    제목은 짧지만 그 두 규칙이 긴 제목("VPD 반포화 상수")까지 잘라 버렸다. */
 /* ── 목표 항목 행 ────────────────────────────────────────────────────────
-   공용 컨트롤 열은 160px 고정인데, 이 행은 [값][사용 토글] 또는 [값][삭제] 로
-   둘이 들어간다. 폭을 내용에 맡겨 값 칸이 찌그러지지 않게 한다. */
-.veg-def-row .aot-modal-option-control {
-  flex: 0 0 auto !important;
-  width: auto !important;
-  min-width: 0 !important;
+   공용 컨트롤 열은 `--aot-common-control-width`(기본 160px) 한 값을 셀렉트
+   자신의 폭(`.aot-modal-option-control`)과 라벨의 최대폭 계산(`calc(100% -
+   그 값 - gap)`, `aot-modal-modern.css` 의 `.aot-modal-option-label`) 둘 다
+   가 함께 읽는다 — "컨트롤 폭 사다리"(같은 파일, 스위치/색상/숫자 칸 전용
+   폭 좁히기)도 이 변수를 갈아 끼우는 방식으로 그 둘을 맞춘다.
+   이 행만 그 변수를 안 쓰고 `.aot-modal-option-control` 의 flex/width 를
+   직접 덮어썼었다 — 그러면 실제 폭(값 7.5rem + 토글/삭제 60px 안팎)과
+   라벨이 "믿고 있는" 폭(여전히 160px)이 어긋나, **라벨 글자가 짧아도** 그
+   차이(약 46px)만큼 행 전체가 넘쳐 토글이 화면 밖으로 밀려났다(실측:
+   "주간 온도" — 라벨은 줄지도 않았는데 토글만 화면 오른쪽 밖으로 잘림).
+   변수 자체를 이 폭에 맞게 바꾸면 둘이 항상 같은 값을 본다. */
+.veg-def-row {
+  --aot-common-control-width: calc(7.5rem + 0.5em + 60px);
 }
 
 /* 끈 항목은 **지운 것이 아니다.** 흐리게 두어 "여기 있지만 안 쓴다" 를 말한다

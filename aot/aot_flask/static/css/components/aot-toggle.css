@@ -4,6 +4,12 @@
   width: var(--aot-roundbox-width, 60px);
   height: var(--aot-base-size, 28px);
   cursor: pointer;
+  /* 이 토글은 여러 곳에서 다른 컨트롤과 한 행을 나눠 쓴다(예: 목표 항목의
+     [값 입력][토글]). 그 행이 좁아져 flex-shrink 가 걸리면 폭이 고정된
+     이 박스도 기본값(shrink:1)으로는 함께 눌린다 — 안의 슬라이더·손잡이는
+     %/inset 기준이라 눌린 채로 그대로 작아져 알약 모양이 무너진다. 줄어들
+     차례는 항상 값 입력 쪽에 양보한다. */
+  flex-shrink: 0;
 }
 
 .switch-label {

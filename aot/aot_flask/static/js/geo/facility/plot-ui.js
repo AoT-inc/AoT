@@ -270,8 +270,8 @@
 
     // 매번 컨테이너를 통째로 다시 그리므로 이전 bootstrap-select DOM은 함께
     // 사라진다 — `refresh`가 아니라 새 초기화(`.selectpicker()`)를 부른다.
-    // (공용 폼은 일반 select 를 내므로 여기 걸리는 것이 없다 — 다른 화면과
-    //  같은 모양을 쓰는 것이 우선이고, 검색이 필요해지면 공용 폼에 넣는다.)
+    // (공용 폼의 프로그램 select 가 `.selectpicker` 를 낸다 — 목록이 한없이
+    //  늘 수 있어 검색이 필요해졌다. 여기서 걸어 준다.)
     if (window.jQuery && window.jQuery.fn && window.jQuery.fn.selectpicker) {
       window.jQuery(box).find('.selectpicker').selectpicker();
     }

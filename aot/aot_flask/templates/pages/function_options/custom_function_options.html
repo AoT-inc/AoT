@@ -6,7 +6,8 @@
 {% set custom_opts = custom_options_values_controllers.get(each_function.unique_id, {}) %}
 
 <div id="mod_function_{{each_function.unique_id}}">
-  <form id="form_function_{{each_function.unique_id}}" method="post" action="/function">
+  <form id="form_function_{{each_function.unique_id}}" method="post" action="/function"
+        onsubmit="event.preventDefault(); var b = document.getElementById('mod_function_save_{{each_function.unique_id}}'); if (b) { b.click(); } return false;">
     {{form_function.csrf_token}}
     {{form_function.function_id(value=each_function.unique_id)}}
     {{form_function.function_type(value='function')}}

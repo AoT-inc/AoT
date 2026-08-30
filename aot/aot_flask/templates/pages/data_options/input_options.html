@@ -1,5 +1,6 @@
 <div id="mod_input_{{each_input.unique_id}}">
-  <form id="mod_input_form_{{each_input.unique_id}}" method="post" action="/input">
+  <form id="mod_input_form_{{each_input.unique_id}}" method="post" action="/input"
+        onsubmit="event.preventDefault(); var b = document.getElementById('mod_input_save_{{each_input.unique_id}}'); if (b) { b.click(); } return false;">
     {{form_mod_input.csrf_token}}
     {{form_mod_input.input_id(value=each_input.unique_id)}}
 

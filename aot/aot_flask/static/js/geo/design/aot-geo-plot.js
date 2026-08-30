@@ -543,6 +543,14 @@ class AoTGeoPlot {
         const p = this.data.get(uuid);
         if (!p) return;
 
+        // 원래 색을 지정한 적 없는 구획이면(NULL) 폼에는 그 순간의 테마
+        // 기본색이 미리 채워져 보인다(`colorOf`). 사용자가 그 칸을 손대지
+        // 않았는데도 그대로 저장하면 그 값이 각인돼, 나중에 테마 기본색이
+        // 바뀌어도 이 구획만 안 따라가고 옛 색에 멈춘다 — `_openCreateForm`과
+        // 같은 규칙으로 막는다.
+        const hadColor = !!p.color;
+        const shownColor = this.colorOf(p);
+
         const body = this._shell(this._t('Plot'));
         const draw = (over) => {
             body.innerHTML = this._formHtml(Object.assign({}, p, over || {}));
@@ -554,6 +562,10 @@ class AoTGeoPlot {
         this._loadPrograms(p.kind).then(() => draw());
 
         this._wireForm(body, (values) => {
+            if (!hadColor && values.color &&
+                values.color.toLowerCase() === shownColor.toLowerCase()) {
+                delete values.color;
+            }
             if (!values.subject) {
                 this._toast(this._t('Subject is required'), 'warning');
                 return;

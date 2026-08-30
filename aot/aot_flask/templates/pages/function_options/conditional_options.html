@@ -1,6 +1,7 @@
 <div id="mod_function_{{each_function.unique_id}}">
     {% from 'pages/map/map_option_macros.html' import render_device_map with context %}
-    <form id="form_function_{{each_function.unique_id}}" method="post" action="/function">
+    <form id="form_function_{{each_function.unique_id}}" method="post" action="/function"
+          onsubmit="event.preventDefault(); var b = document.getElementById('mod_function_save_{{each_function.unique_id}}'); if (b) { b.click(); } return false;">
         {{form_conditional.csrf_token}}
         {{form_conditional.function_id(value=each_function.unique_id)}}
         {{form_conditional.function_type(value='conditional')}}

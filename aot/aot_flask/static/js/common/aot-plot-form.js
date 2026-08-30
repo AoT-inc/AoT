@@ -193,7 +193,7 @@
              (k[0] === (ctx.kind || 'vegetation') ? ' selected' : '') + '>' +
              _esc(_t(k[1])) + '</option>';
       });
-      return '<select class="aot-modern-input form-control" ' + a + '>' + o + '</select>';
+      return '<select class="aot-modern-input form-control selectpicker" ' + a + '>' + o + '</select>';
     }
 
     if (f.key === 'bay_id') {
@@ -208,7 +208,7 @@
              (b.id === cur ? ' selected' : '') + '>' +
              _esc(b.name || b.id) + '</option>';
       });
-      return '<select class="aot-modern-input form-control" ' + a + '>' + s + '</select>';
+      return '<select class="aot-modern-input form-control selectpicker" ' + a + '>' + s + '</select>';
     }
 
     if (f.key === 'program_uuid') {
@@ -220,7 +220,12 @@
               (p.unique_id === val ? ' selected' : '') + '>' +
               _esc(p.name + (p.variety ? ' · ' + p.variety : '')) + '</option>';
       });
-      return '<select class="aot-modern-input form-control" ' + a + '>' + po + '</select>';
+      // `selectpicker` — 프로그램 목록은 한없이 늘어날 수 있어(사용자가 계속
+      // 만든다) 스크롤로 찾게 두면 안 된다. `data-live-search` 는 `geo/programs`
+      // 상단의 템플릿 고르기 select 와 같은 검색 방식이라 사용자가 다시 배울
+      // 것이 없다.
+      return '<select class="aot-modern-input form-control selectpicker" ' +
+             'data-live-search="true" ' + a + '>' + po + '</select>';
     }
 
     if (f.type === 'alloc') {
@@ -430,8 +435,16 @@
           ? (ctx.values.program_uuid ||
              (ctx.values.program && ctx.values.program.unique_id) || '')
           : '';
-        if (selProg.innerHTML !== html) selProg.innerHTML = html;
+        var changed = selProg.innerHTML !== html;
+        if (changed) selProg.innerHTML = html;
         if (keep) selProg.value = keep;
+        // selectpicker 는 원본 select 를 복제해 자기 목록을 그린다. innerHTML 을
+        // 갈아끼운 뒤 알리지 않으면 화면에는 옛 목록(또는 옛 선택)이 남는다
+        // (`program-settings.js` 의 `renderBase()` 와 같은 함정).
+        if ((changed || keep) && window.jQuery && window.jQuery.fn &&
+            window.jQuery.fn.selectpicker && window.jQuery(selProg).data('selectpicker')) {
+          window.jQuery(selProg).selectpicker('refresh');
+        }
         filled = true;
       });
     };
