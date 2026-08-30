@@ -28,7 +28,7 @@
       <h3>{{_('System Information')}}</h3>
     </div>
 
-    <div style="padding-bottom: 1.5em">
+    <div class="aot-page-section">
       <div style="padding-bottom: 0.5em; font-size: 1.15em">
         {{_('AoT Version')}}: <span style="color: var(--aot-color-dark, #141414); font-weight: bold;">{{aot_version}}</span>
         <br>{{_('Python Version')}}: <span style="color: var(--aot-color-dark, #141414); font-weight: bold;">{{python_version}}</span>
@@ -47,10 +47,10 @@
         {%- if system_env.platform_type == 'docker' %} <span style="color: var(--aot-color-text-secondary, #777);">({{_('container limit')}})</span>{% endif %}
         {% endif %}
         <br>{{_('Database Version')}}:&nbsp;
-        {%- if database_version == correct_database_version -%}<span style="color: var(--aot-color-dark, #141414); font-weight: bold;">{{database_version}}</span>
-            {%- else -%}<span style="color: var(--aot-color-danger, #F70D1A); font-weight: bold;">{{database_version}}</span> ({{_('Incorrect Version. Should be')}} {{correct_database_version}}) <a href="{{ manual_url('Troubleshooting/#incorrect-database-version') }}"><span style="font-size: 16px" class="fas fa-question-circle"></span></a>
+        {%- if database_version == correct_database_version -%}<span style="color: var(--aot-color-dark, #141414); font-weight: bold; overflow-wrap: anywhere;">{{database_version}}</span>
+            {%- else -%}<span style="color: var(--aot-color-danger, #F70D1A); font-weight: bold; overflow-wrap: anywhere;">{{database_version}}</span> ({{_('Incorrect Version. Should be')}} {{correct_database_version}}) <a href="{{ manual_url('Troubleshooting/#incorrect-database-version') }}"><span style="font-size: 16px" class="fas fa-question-circle"></span></a>
             {%- endif -%}
-        <br>{{_('Database URL')}}: <span class="hide" style="font-weight: bold;">{{database_url}}</span>
+        <br>{{_('Database URL')}}: <span class="hide" style="font-weight: bold; overflow-wrap: anywhere;">{{database_url}}</span>
         <br>{{_('Daemon Status')}}:&nbsp
         {%- if daemon_status == "alive" %}<span style="color: var(--aot-color-dark, #141414); font-weight: bold;">{{_('Running')}}</span>
         {%- else %}<span style="color: var(--aot-color-danger, #F70D1A); font-weight: bold;">{{_('Not Running')}}</span> <a href="{{ manual_url('Troubleshooting/#daemon-not-running') }}"><span style="font-size: 16px" class="fas fa-question-circle"></span></a>

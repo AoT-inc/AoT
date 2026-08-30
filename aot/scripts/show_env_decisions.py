@@ -117,6 +117,9 @@ def rows(cycles, actuators, LC, limit):
         20~23  목표값   (VPD, 온도, 습도, CO2)
         24~27  우선순위 (VPD, 온도, 습도, CO2) — 동적 격상 반영
         30~32  편차     (온도, 습도, CO2)
+        33     편차     (VPD) — VPD 직접 제어 모드에서만 값이 실린다.
+                          이 모드에서는 30/31 이 항상 0(온습도가 제어목표에서
+                          빠짐)이라, 실제로 액추에이터를 움직이는 값은 이것뿐이다.
         71     제한 인자 코드
         72     운전 모드 코드
 
@@ -135,7 +138,7 @@ def rows(cycles, actuators, LC, limit):
 
         target = {'vpd': env(20), 'temp': env(21), 'humi': env(22), 'co2': env(23)}
         prio = {'vpd': env(24), 'temp': env(25), 'humi': env(26), 'co2': env(27)}
-        dev = {'temp': env(30), 'humi': env(31), 'co2': env(32)}
+        dev = {'temp': env(30), 'humi': env(31), 'co2': env(32), 'vpd': env(33)}
         cmds = []
         for meas, (ch, name) in sorted(actuators.items(), key=lambda x: int(x[1][0])):
             val = c.get((meas, ch))

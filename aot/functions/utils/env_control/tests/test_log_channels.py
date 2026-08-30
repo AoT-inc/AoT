@@ -176,6 +176,49 @@ class TestWriteCycleMetrics:
         assert recorded[31] == pytest.approx(-5.0)
         assert recorded[32] == pytest.approx(100.0)
 
+    def test_vpd_deviation_channel(self):
+        """VPD 직접 제어 모드에서는 CH30/31 이 0(온습도가 제어목표에서 빠짐)
+        이라, 실제로 액추에이터를 움직이는 편차는 CH33 뿐이다 — 이 채널이
+        빠지면 '왜 그 명령이 나왔는지'를 사후에 재구성할 방법이 없다
+        (2026-08-29 영양 육묘장: VPD 편차와 반대로 난방기가 40분간 올라간
+        사건을 로그로 못 잡았다)."""
+        ctx = {
+            'T_int': 29.0, 'RH_int': 65.0, 'VPD_int': 1.2, 'CO2_int': 700.0,
+            'T_ext': 25.0, 'RH_ext': 70.0, 'wind': 0.0, 'wind_dir': 0.0, 'rain': 0.0,
+        }
+        deviation = {'vpd': 0.61}
+        recorded = {}
+
+        def _fake_write(uid, meas, value, channel, extra_tags=None):
+            recorded[channel] = value
+
+        with patch(_PATCH_TARGET, side_effect=_fake_write):
+            write_cycle_metrics(
+                unique_id='fn', ctx=ctx, target={}, deviation=deviation,
+                commands={}, limiting_factor=None, modes=[],
+            )
+
+        assert recorded[30] == pytest.approx(0.0), 'temperature 는 demote 돼 없음 — 0 이 맞다'
+        assert recorded[31] == pytest.approx(0.0)
+        assert recorded[33] == pytest.approx(0.61)
+
+    def test_vpd_deviation_channel_defaults_to_zero_when_absent(self):
+        """온습도 직접 제어 모드(VPD 미사용)에서는 CH33 이 0 — 값이 없다고
+        채널 자체를 건너뛰면 '기록 안 됨'과 '편차 0'을 구분할 수 없다."""
+        recorded = {}
+
+        def _fake_write(uid, meas, value, channel, extra_tags=None):
+            recorded[channel] = value
+
+        with patch(_PATCH_TARGET, side_effect=_fake_write):
+            write_cycle_metrics(
+                unique_id='fn', ctx={}, target={},
+                deviation={'temperature': 1.0, 'humidity': -2.0},
+                commands={}, limiting_factor=None, modes=[],
+            )
+
+        assert recorded[33] == pytest.approx(0.0)
+
     def test_mode_channel_cooling(self):
         """cooling 모드 → CH 72 = 1."""
         ctx = {

@@ -79,6 +79,12 @@ CH_GOAL_PRIORITY_BASE    = 10   # + VAR_INDEX[var]
 CH_SITUATION_DEV_BASE    = 20   # + VAR_INDEX[var]
 CH_SITUATION_LIMIT       = 30
 CH_SITUATION_MODE        = 31
+CH_SITUATION_DEV_VPD     = 33   # VPD 직접 제어 모드의 편차(측정-목표) — write_cycle_metrics 전용.
+                                 # T/RH 는 VPD 모드에서 '_temperature_constraint' 로 강등돼
+                                 # deviation_native 에서 빠지므로 CH30/31 은 항상 0 이 찍히고,
+                                 # 실제로 액추에이터를 움직이는 이 값만 로그에 없었다
+                                 # (2026-08-29 영양 육묘장 — 난방기가 VPD 편차와 반대로
+                                 # 40분간 올라간 사건을 사후에 재구성할 수 없었던 원인).
 CH_COORD_CMD_BASE        = 40   # + actuator_idx × 2
 CH_COORD_REASON_BASE     = 41   # + actuator_idx × 2
 CH_INTEGRAL_BASE         = 60   # + VAR_INDEX[var]
@@ -230,6 +236,7 @@ def write_cycle_metrics(
       CH 20~23 : 목표값 (VPD_diag, T_aux, RH_aux, CO2)
       CH 24~27 : 우선순위 (VPD, T, RH, CO2) — 동적 격상(광합성 모드) 반영
       CH 30~32 : 편차 residual (temperature, humidity, co2)
+      CH 33    : 편차 residual (vpd) — VPD 직접 제어 모드에서만 값이 실린다
       CH 41+   : 액추에이터 근거 코드 (ch_coord_reason — value 없음)
       CH 71    : 제한 인자 코드
       CH 72    : 운전 모드 코드 (첫 번째 모드)
@@ -274,6 +281,10 @@ def write_cycle_metrics(
     _w(30, deviation.get('temperature', 0.0))
     _w(31, deviation.get('humidity',    0.0))
     _w(32, deviation.get('co2',         0.0))
+    # VPD 직접 제어 모드(vpd_sp_type=method)에서는 온습도가 '_temperature_constraint'
+    # 로 강등돼 위 두 줄이 항상 0 을 찍는다 — 실제로 액추에이터를 움직이는 값은
+    # 이 채널뿐이다. deviation 에 'vpd' 가 없으면(T/RH 직접 제어 모드) 0.0.
+    _w(CH_SITUATION_DEV_VPD, deviation.get('vpd', 0.0))
 
     # ── 액추에이터 근거 코드만 (명령 percent 는 Output 컨트롤러가 기록) ──
     for idx, (aid, cmd) in enumerate(sorted(commands.items())):
