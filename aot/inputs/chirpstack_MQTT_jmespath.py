@@ -540,7 +540,3 @@ class InputModule(AbstractInput):
         Here we simply return True so the controller recognizes listener mode.
         """
         return True
-
-    def get_measurement(self):
-        """Polling is not used (MQTT receive approach)."""
-        return {}

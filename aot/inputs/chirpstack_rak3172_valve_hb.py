@@ -638,7 +638,3 @@ class InputModule(AbstractInput):
     def listener(self) -> bool:
         """The MQTT loop is already started in a separate thread in initialize()."""
         return True
-
-    def get_measurement(self):
-        """Polling is not used because this is an MQTT push approach."""
-        return {}

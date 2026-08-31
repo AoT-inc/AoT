@@ -514,7 +514,7 @@ def read_fitting_sensors(
     # ── DeviceMeasurements 이름/단위 일괄 조회 (UUID 노출 방지) ───────────────
     # measurement_type 매핑(_MTYPE_KEY) 에 없는 채널도 사용자가 부여한 이름을
     # 그대로 표시한다. measurement_id → (display_name, unit) 사전.
-    meta: Dict[str, Tuple[str, str]] = {}
+    meta: Dict[str, Tuple[str, str, str]] = {}
     try:
         from aot.databases.models.measurement import DeviceMeasurements
         from aot.utils.database import db_retrieve_table_daemon
@@ -527,7 +527,7 @@ def read_fitting_sensors(
             for r in rows:
                 display = (r.name or '').strip() or (r.measurement or '').strip() or ''
                 # conversion_id 있으면 변환 단위(convert_unit_to)로 라벨링
-                meta[r.unique_id] = (display, _effective_raw_unit(r))
+                meta[r.unique_id] = (display, _effective_raw_unit(r), (r.measurement or '').strip())
     except Exception as exc:
         logger.debug('[FittingSensors] DeviceMeasurements lookup failed: %s', exc)
 
@@ -563,15 +563,14 @@ def read_fitting_sensors(
         if not iid or not meas_id:
             continue
 
-        key  = _MTYPE_KEY.get(mtype) if mtype else None
-        unit = _UNIT_BY_KEY.get(key, '') if key else ''
-
         # 매핑 안 된 채널은 DeviceMeasurements 의 name/measurement 으로 라벨링.
         # UUID(measurement_id) 가 사용자에게 노출되지 않도록 한다.
-        m_name, m_unit = meta.get(meas_id, ('', ''))
-        display_key = key or m_name or (mtype or '')
-        if not unit:
-            unit = _RAW_UNIT_DISPLAY.get((m_unit or '').lower(), m_unit)
+        # 표시 단위는 channel_label_meta 가 실제 저장 단위(m_unit)를 우선하고,
+        # 저장 단위가 없을 때만 _UNIT_BY_KEY 표준 단위로 메운다 — 이 규칙을
+        # 여기서 다시 구현하면(과거처럼 표준 단위를 무조건 먼저 채우면) 저장
+        # 단위가 다른 채널(예: bar 로 저장된 압력)에서 라벨이 거짓말을 한다.
+        m_name, m_unit, m_measurement = meta.get(meas_id, ('', '', ''))
+        display_key, unit = channel_label_meta(mtype, m_name, m_unit, m_measurement)
 
         ch: dict = {
             'measurement_id':   meas_id,
