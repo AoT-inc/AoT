@@ -31559,3 +31559,165 @@ msgstr "'%(name)s' という名前の%(kind)sが複数あります (タブ: %(ta
 #: aot/widgets/widget_trigger_sequence.py
 msgid "Device is gone"
 msgstr "機器がなくなりました"
+
+msgid "3D preview is not ready."
+msgstr ""
+
+msgid "A second, independent zoom threshold — currently for zone/facility labels and zone/plot/equipment shapes. They need to stay visible at a wider zoom than L1 above, so they get their own value here. More label and shape kinds may be added to this tier later. Set 0 to never hide."
+msgstr ""
+
+msgid "API Key (optional)"
+msgstr ""
+
+msgid "An error occurred while deleting: "
+msgstr ""
+
+msgid "AoT Actuator Position"
+msgstr ""
+
+msgid "AoT PWM Output"
+msgstr ""
+
+msgid "Below this zoom level, output / input / function / equipment / sensor / plot / bay / note labels and value keys are hidden. Site labels always stay visible so the map keeps its bearings. Zone and facility labels have their own threshold below (L2). Set 0 to never hide."
+msgstr ""
+
+msgid "Close the shade screen above this light level. 0 = never shade. This is a shading choice only — how much light the crop can use comes from its program."
+msgstr ""
+
+msgid "Collect names"
+msgstr ""
+
+msgid "Delete failed: "
+msgstr ""
+
+msgid "Displays and controls a PWM output with a single slider."
+msgstr ""
+
+msgid "Displays and controls a positional (open/close) actuator: close/stop/open buttons plus a fine-adjust slider."
+msgstr ""
+
+msgid "Exporting…"
+msgstr ""
+
+msgid "Failed Login"
+msgstr ""
+
+msgid "Failed to load GLTFExporter: "
+msgstr ""
+
+msgid "Fast Preview"
+msgstr ""
+
+msgid "GLB export failed: "
+msgstr ""
+
+msgid "Hide Labels & Shapes When Zoomed Out — L2"
+msgstr ""
+
+msgid "Hide Labels When Zoomed Out — L1"
+msgstr ""
+
+msgid "Humidity (%)"
+msgstr ""
+
+msgid "Loading model…"
+msgstr ""
+
+msgid "Names you typed in yourself — device, zone and crop names — stay in the language you wrote them in. Turn this on to have them shown in the interface language as well. The stored names are never changed. Without an AI engine they are not translated automatically, but translations you enter under Settings > Name Translations are still shown."
+msgstr ""
+
+msgid "No AI engine is set up, so translations are not filled in automatically. You can still collect the names in use and type the translations yourself — what you enter here is shown on screen just the same."
+msgstr ""
+
+msgid "No branch pipes. Generate branch pipes first."
+msgstr ""
+
+msgid "Nothing here yet. Press \"Collect names\" to gather the names in use."
+msgstr ""
+
+msgid "Page background behind cards, list headers, modal body"
+msgstr ""
+
+msgid "Page cards — widgets, list rows, modal groups"
+msgstr ""
+
+msgid "Popup Default Tab"
+msgstr ""
+
+msgid "Precipitation probability (%)"
+msgstr ""
+
+msgid "Select an irrigation layer first."
+msgstr ""
+
+msgid "Select or add an irrigation layer first."
+msgstr ""
+
+msgid "Select the actuator to display and control"
+msgstr ""
+
+msgid "Show Measurement Panel"
+msgstr ""
+
+msgid "Show plots (what is where) on the map. Plot labels appear when zoomed in."
+msgstr ""
+
+msgid "Show the measurement panel dock. Turn off to hide it entirely, even if measurements are selected below."
+msgstr ""
+
+msgid "Solar radiation (W/m²)"
+msgstr ""
+
+msgid "Spec JSON parse error: "
+msgstr ""
+
+msgid "Stacked (stacked)"
+msgstr ""
+
+msgid "Staged (multi_stage)"
+msgstr ""
+
+msgid "Switch supplemental lighting on below this light level. 0 = no supplemental lighting, which is most facilities."
+msgstr ""
+
+msgid "Synchronous (symmetric)"
+msgstr ""
+
+msgid "THREE.GLTFLoader is not available."
+msgstr ""
+
+msgid "TLS CA Certificate"
+msgstr ""
+
+msgid "Temperature (°C)"
+msgstr ""
+
+msgid "The two pipes are at the same height (level), so they cannot be connected vertically.\nSelect pipes on different levels."
+msgstr ""
+
+msgid "Undo"
+msgstr ""
+
+msgid "Undo last move (Ctrl+Z)"
+msgstr ""
+
+msgid "Unknown error"
+msgstr ""
+
+msgid "Which tab opens first in the zone and facility modals. The device modal has no tabs."
+msgstr ""
+
+msgid "Wind direction"
+msgstr ""
+
+msgid "Wind speed"
+msgstr ""
+
+msgid "Wind speed (m/s)"
+msgstr ""
+
+msgid "error"
+msgstr ""
+
+msgid "label"
+msgstr ""

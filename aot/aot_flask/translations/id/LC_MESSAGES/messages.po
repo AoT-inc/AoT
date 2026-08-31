@@ -4096,9 +4096,8 @@ msgid "Error: %(err)s"
 msgstr "Error: %(err)s"
 
 #: aot_flask/routes_admin.py:220
-#, fuzzy
 msgid "Backup deleted"
-msgstr "Backup Restore"
+msgstr "Cadangan dihapus"
 
 #: aot_flask/routes_admin.py:227
 msgid "Deletion of backup in progress"
@@ -4336,9 +4335,8 @@ msgid "Alias not found"
 msgstr "Alias tidak ditemukan"
 
 #: aot_flask/routes_ai_api.py:1658
-#, fuzzy
 msgid "Advice not found."
-msgstr "Pemberitahuan tidak ditemukan"
+msgstr "Saran tidak ditemukan."
 
 #: aot_flask/routes_ai_api.py:1661
 #, python-format
@@ -4525,18 +4523,18 @@ msgid "No devices to inspect"
 msgstr "Tidak ada perangkat untuk diperiksa"
 
 #: aot_flask/routes_integrations.py:135
-#, fuzzy, python-format
+#, python-format
 msgid "Google sign-in was denied or failed: %(err)s"
-msgstr "Test email failed: %(err)s"
+msgstr "Masuk dengan Google ditolak atau gagal: %(err)s"
 
 #: aot_flask/routes_integrations.py:140
 msgid "No authorization code returned by Google."
 msgstr ""
 
 #: aot_flask/routes_integrations.py:146
-#, fuzzy, python-format
+#, python-format
 msgid "Google sign-in failed: %(err)s"
-msgstr "Test email failed: %(err)s"
+msgstr "Masuk dengan Google gagal: %(err)s"
 
 #: aot_flask/routes_integrations.py:235 aot_flask/templates/layout.html:515
 #: aot_flask/templates/layout_default.html:515
@@ -6415,9 +6413,8 @@ msgstr "Add User"
 #: aot_flask/forms/forms_settings.py:460 aot_flask/forms/forms_settings.py:481
 #: aot_flask/templates/layout.html:755
 #: aot_flask/templates/layout_default.html:755
-#, fuzzy
 msgid "Timezone"
-msgstr "Garis Waktu"
+msgstr "Zona Waktu"
 
 #: aot_flask/forms/forms_settings.py:486
 #: aot_flask/templates/pages/ai/ai_library.html:432
@@ -6724,16 +6721,14 @@ msgstr "Lencana Upgrade"
 #: aot_flask/templates/settings/custom_ui.html:79
 #: aot_flask/templates/settings/custom_ui.html:115
 #: aot_flask/templates/settings/custom_ui.html:343
-#, fuzzy
 msgid "Primary Button Background"
-msgstr "Latar Belakang Label"
+msgstr "Latar Belakang Tombol Utama"
 
 #: aot_flask/forms/forms_settings.py:620
 #: aot_flask/templates/settings/custom_ui.html:121
 #: aot_flask/templates/settings/custom_ui.html:344
-#, fuzzy
 msgid "Secondary Button Background"
-msgstr "Kartu Sekunder"
+msgstr "Latar Belakang Tombol Sekunder"
 
 #: aot_flask/forms/forms_settings.py:623
 msgid "Btn BG On"
@@ -7497,9 +7492,8 @@ msgstr "Alihkan label Function"
 
 #: aot_flask/static/js/dist/aot-map-widget.bundle.js:23
 #: aot_flask/static/js/widgets/AoT_map/aot-map-widget-vector.js:5415
-#, fuzzy
 msgid "Toggle Facility labels"
-msgstr "Alihkan label Input"
+msgstr "Alihkan Label Fasilitas"
 
 #: aot_flask/static/js/dist/aot-map-widget.bundle.js:23
 #: aot_flask/static/js/widgets/AoT_map/aot-map-widget-vector.js:5438
@@ -8855,9 +8849,8 @@ msgstr "API Key Management"
 #: aot_flask/templates/layout-settings.html:25
 #: aot_flask/templates/settings/integrations.html:5
 #: aot_flask/templates/settings/integrations.html:11
-#, fuzzy
 msgid "Integrations"
-msgstr "Integrator Min"
+msgstr "Integrasi"
 
 #: aot_flask/templates/layout-settings.html:26
 #: aot_flask/templates/settings/users.html:199
@@ -8986,18 +8979,16 @@ msgstr "AoT Github"
 #: aot_flask/templates/pages/landing.html:228
 #: aot_flask/templates/pages/privacy_policy.html:4
 #: aot_flask/templates/pages/privacy_policy.html:13
-#, fuzzy
 msgid "Privacy Policy"
-msgstr "Kebijakan Kelas LoRa"
+msgstr "Kebijakan Privasi"
 
 #: aot_flask/templates/layout.html:643
 #: aot_flask/templates/layout_default.html:643
 #: aot_flask/templates/pages/landing.html:230
 #: aot_flask/templates/pages/terms_of_service.html:4
 #: aot_flask/templates/pages/terms_of_service.html:13
-#, fuzzy
 msgid "Terms of Service"
-msgstr "Ketentuan Penggunaan"
+msgstr "Ketentuan Layanan"
 
 #: aot_flask/templates/layout.html:649
 #: aot_flask/templates/layout_default.html:649
@@ -9094,21 +9085,18 @@ msgstr "Preferences"
 
 #: aot_flask/templates/layout.html:708
 #: aot_flask/templates/layout_default.html:708
-#, fuzzy
 msgid "Account Name"
-msgstr "Unit Name"
+msgstr "Nama Akun"
 
 #: aot_flask/templates/layout.html:715
 #: aot_flask/templates/layout_default.html:715
-#, fuzzy
 msgid "Account Email"
-msgstr "ID Akun"
+msgstr "Email Akun"
 
 #: aot_flask/templates/layout.html:723
 #: aot_flask/templates/layout_default.html:723
-#, fuzzy
 msgid "Set Password"
-msgstr "Reset Password"
+msgstr "Atur Kata Sandi"
 
 #: aot_flask/templates/layout.html:726
 #: aot_flask/templates/layout_default.html:726
@@ -9119,7 +9107,6 @@ msgstr ""
 
 #: aot_flask/templates/layout.html:738
 #: aot_flask/templates/layout_default.html:738
-#, fuzzy
 msgid "Selecting a language will override the web browser's language"
 msgstr "Memilih bahasa akan menggantikan bahasa peramban web"
 
@@ -9140,9 +9127,8 @@ msgstr ""
 #: aot_flask/templates/layout_default.html:772
 #: aot_flask/templates/layout_default.html:776
 #: aot_flask/templates/settings/users.html:218
-#, fuzzy
 msgid "Google Account"
-msgstr "Jumlah Zona"
+msgstr "Akun Google"
 
 #: aot_flask/templates/layout.html:778
 #: aot_flask/templates/layout_default.html:778
@@ -9153,9 +9139,8 @@ msgstr ""
 
 #: aot_flask/templates/layout.html:784
 #: aot_flask/templates/layout_default.html:784
-#, fuzzy
 msgid "Sync Google Calendar Now"
-msgstr "Clear"
+msgstr "Sinkronkan Google Kalender Sekarang"
 
 #: aot_flask/templates/layout.html:785
 #: aot_flask/templates/layout_default.html:785
@@ -9166,15 +9151,13 @@ msgstr ""
 #: aot_flask/templates/layout.html:790
 #: aot_flask/templates/layout_default.html:790
 #: aot_flask/templates/settings/integrations.html:61
-#, fuzzy
 msgid "Sync Now"
-msgstr "Sync"
+msgstr "Sinkronkan Sekarang"
 
 #: aot_flask/templates/layout.html:795
 #: aot_flask/templates/layout_default.html:795
-#, fuzzy
 msgid "Disconnect Google Account"
-msgstr "Jumlah Zona"
+msgstr "Putuskan Akun Google"
 
 #: aot_flask/templates/layout.html:800
 #: aot_flask/templates/layout_default.html:800
@@ -9184,9 +9167,8 @@ msgstr ""
 #: aot_flask/templates/layout.html:800
 #: aot_flask/templates/layout_default.html:800
 #: aot_flask/templates/settings/integrations.html:66
-#, fuzzy
 msgid "Disconnect"
-msgstr "terhubung"
+msgstr "Putuskan"
 
 #: aot_flask/templates/layout.html:807
 #: aot_flask/templates/layout_default.html:807
@@ -9200,9 +9182,8 @@ msgstr ""
 
 #: aot_flask/templates/layout.html:811
 #: aot_flask/templates/layout_default.html:811
-#, fuzzy
 msgid "Connect"
-msgstr "terhubung"
+msgstr "Hubungkan"
 
 #: aot_flask/templates/layout.html:833
 #: aot_flask/templates/layout_default.html:833
@@ -9263,39 +9244,33 @@ msgstr "Asisten AI"
 
 #: aot_flask/templates/layout.html:990
 #: aot_flask/templates/layout_default.html:990
-#, fuzzy
 msgid "New conversation"
-msgstr "No Conversion"
+msgstr "Percakapan baru"
 
 #: aot_flask/templates/layout.html:1003
 #: aot_flask/templates/layout_default.html:1003
-#, fuzzy
 msgid "Response depth"
-msgstr "respons"
+msgstr "Kedalaman respons"
 
 #: aot_flask/templates/layout.html:1004
 #: aot_flask/templates/layout_default.html:1004
-#, fuzzy
 msgid "Fast"
-msgstr "Past"
+msgstr "Cepat"
 
 #: aot_flask/templates/layout.html:1005
 #: aot_flask/templates/layout_default.html:1005
-#, fuzzy
 msgid "Deep"
-msgstr "Kedalaman"
+msgstr "Mendalam"
 
 #: aot_flask/templates/layout.html:1007
 #: aot_flask/templates/layout_default.html:1007
-#, fuzzy
 msgid "Autonomy"
-msgstr "Otomatis"
+msgstr "Otonomi"
 
 #: aot_flask/templates/layout.html:1008
 #: aot_flask/templates/layout_default.html:1008
-#, fuzzy
 msgid "Advice"
-msgstr "Device"
+msgstr "Saran"
 
 #: aot_flask/templates/layout.html:1010
 #: aot_flask/templates/layout_default.html:1010
@@ -9312,9 +9287,8 @@ msgstr "Otomatis"
 
 #: aot_flask/templates/layout.html:1017
 #: aot_flask/templates/layout_default.html:1017
-#, fuzzy
 msgid "Attach image"
-msgstr "Attachments"
+msgstr "Lampirkan gambar"
 
 #: aot_flask/templates/layout.html:1021
 #: aot_flask/templates/layout_default.html:1021
@@ -9371,9 +9345,8 @@ msgid "90 Days"
 msgstr "90 Days"
 
 #: aot_flask/templates/login_password.html:147
-#, fuzzy
 msgid "Sign in with AoT Account"
-msgstr "Original widget not found."
+msgstr "Masuk dengan Akun AoT"
 
 #: aot_flask/templates/login_password.html:162
 msgid "Sign in with Google"
@@ -9398,9 +9371,8 @@ msgstr ""
 "Export/Import page."
 
 #: aot_flask/templates/admin/backup.html:30
-#, fuzzy
 msgid "Saved Backups"
-msgstr "AoT backup"
+msgstr "Cadangan Tersimpan"
 
 #: aot_flask/templates/admin/backup.html:33
 msgid "No backups found."
@@ -10246,14 +10218,12 @@ msgstr "Drag"
 
 #: aot_flask/templates/pages/dashboard_entry.html:62
 #: aot_flask/templates/pages/dashboard_entry.html:63
-#, fuzzy
 msgid "Hide preview"
-msgstr "Pratinjau 3D"
+msgstr "Sembunyikan pratinjau"
 
 #: aot_flask/templates/pages/dashboard_entry.html:62
-#, fuzzy
 msgid "Show preview"
-msgstr "Show Preview"
+msgstr "Tampilkan pratinjau"
 
 #: aot_flask/templates/pages/dashboard_entry.html:74
 #: aot_flask/templates/pages/dashboard_entry.html:76
@@ -10725,9 +10695,8 @@ msgid "Sign Up"
 msgstr "Daftar"
 
 #: aot_flask/templates/pages/landing.html:236
-#, fuzzy
 msgid "All rights reserved."
-msgstr "Belum ada tugas yang terdaftar."
+msgstr "Hak cipta dilindungi undang-undang."
 
 #: aot_flask/templates/pages/live.html:16
 msgid "No Data"
@@ -10797,9 +10766,8 @@ msgid "Function (%(type)s)"
 msgstr "Function (%(type)s)"
 
 #: aot_flask/templates/pages/output.html:130
-#, fuzzy
 msgid "Confirming"
-msgstr "Konfirmasi"
+msgstr "Mengonfirmasi"
 
 #: aot_flask/templates/pages/ai/ai_entry.html:56
 #: aot_flask/templates/pages/function_options/conditional_entry.html:20
@@ -10864,9 +10832,8 @@ msgstr "Are you sure you want to duplicate?"
 
 #: aot_flask/templates/pages/privacy_policy.html:16
 #: aot_flask/templates/pages/terms_of_service.html:16
-#, fuzzy
 msgid "Effective Date"
-msgstr "Nilai Efektif"
+msgstr "Tanggal Berlaku"
 
 #: aot_flask/templates/pages/wait_and_autoload.html:5
 msgid "Please wait 10 seconds"
@@ -12421,9 +12388,8 @@ msgstr "Save Changes"
 #: aot_flask/templates/pages/ai/mcp_review.html:3
 #: aot_flask/templates/pages/ai/mcp_review.html:12
 #: aot_flask/templates/pages/ai/mcp_servers.html:19
-#, fuzzy
 msgid "AI Requests & Advice"
-msgstr "Permintaan gagal"
+msgstr "Permintaan & Saran AI"
 
 #: aot_flask/templates/pages/ai/mcp_review.html:19
 msgid ""
@@ -12443,9 +12409,8 @@ msgid ""
 msgstr ""
 
 #: aot_flask/templates/pages/ai/mcp_review.html:30
-#, fuzzy
 msgid "AI advice ledger"
-msgstr "Saran AI"
+msgstr "Buku catatan saran AI"
 
 #: aot_flask/templates/pages/ai/mcp_review.html:32
 msgid ""
@@ -12454,23 +12419,20 @@ msgid ""
 msgstr ""
 
 #: aot_flask/templates/pages/ai/mcp_review.html:37
-#, fuzzy
 msgid "Recent AI tool calls"
-msgstr "Recipient Email Address"
+msgstr "Panggilan alat AI terbaru"
 
 #: aot_flask/templates/pages/ai/mcp_review.html:44
 msgid "No control requests are waiting."
 msgstr ""
 
 #: aot_flask/templates/pages/ai/mcp_review.html:45
-#, fuzzy
 msgid "No advice has been submitted yet."
-msgstr "Belum ada Layanan AI yang terdaftar."
+msgstr "Belum ada saran yang diajukan."
 
 #: aot_flask/templates/pages/ai/mcp_review.html:46
-#, fuzzy
 msgid "No tool calls recorded yet."
-msgstr "No API keys stored yet."
+msgstr "Belum ada panggilan alat yang tercatat."
 
 #: aot_flask/templates/pages/ai/mcp_review.html:49
 msgid "Accept"
@@ -12482,19 +12444,16 @@ msgid "expires in {sec}s"
 msgstr ""
 
 #: aot_flask/templates/pages/ai/mcp_review.html:58
-#, fuzzy
 msgid "Reason"
 msgstr "Alasan"
 
 #: aot_flask/templates/pages/ai/mcp_review.html:59
-#, fuzzy
 msgid "Rationale"
-msgstr "Rotation Angle"
+msgstr "Dasar Pemikiran"
 
 #: aot_flask/templates/pages/ai/mcp_review.html:60
-#, fuzzy
 msgid "Proposed action"
-msgstr "Diusulkan Oleh"
+msgstr "Tindakan yang diusulkan"
 
 #: aot_flask/templates/pages/ai/mcp_review.html:62
 msgid "Approve this control request? The AI will be able to execute it once."
@@ -12560,29 +12519,24 @@ msgid "Scheduler"
 msgstr "Scheduler"
 
 #: aot_flask/templates/pages/ai/scheduler.html:40
-#, fuzzy
 msgid "Draft"
-msgstr "Drag"
+msgstr "Draf"
 
 #: aot_flask/templates/pages/ai/scheduler.html:45
-#, fuzzy
 msgid "Archived"
-msgstr "Active"
+msgstr "Diarsipkan"
 
 #: aot_flask/templates/pages/ai/scheduler.html:50
-#, fuzzy
 msgid "Work Task"
-msgstr "Tugas Baru"
+msgstr "Tugas Kerja"
 
 #: aot_flask/templates/pages/ai/scheduler.html:51
-#, fuzzy
 msgid "Device Control"
-msgstr "Peran Perangkat"
+msgstr "Kontrol Perangkat"
 
 #: aot_flask/templates/pages/ai/scheduler.html:52
-#, fuzzy
 msgid "Automated Trigger"
-msgstr "Otomatis"
+msgstr "Pemicu Otomatis"
 
 #: aot_flask/templates/pages/ai/scheduler.html:69
 #: aot_flask/templates/pages/ai/scheduler.html:541
@@ -12636,23 +12590,20 @@ msgstr "Diusulkan Oleh"
 #: aot_flask/templates/pages/ai/scheduler.html:280
 #: aot_flask/templates/pages/ai/scheduler.html:376
 #: aot_flask/templates/user_templates/widget_template_widget_calendar_body.html:23
-#, fuzzy
 msgid "e.g. 3-1, Zone A"
-msgstr "cth. My OpenAI"
+msgstr "mis. 3-1, Zona A"
 
 #: aot_flask/templates/pages/ai/scheduler.html:307
 #: aot_flask/templates/pages/ai/scheduler.html:403
-#, fuzzy
 msgid "Device-local time"
-msgstr "Garis Waktu Perangkat"
+msgstr "Waktu lokal perangkat"
 
 #: aot_flask/templates/pages/ai/scheduler.html:315
 #: aot_flask/templates/pages/ai/scheduler.html:411
 #: aot_flask/templates/pages/ai/scheduler.html:498
 #: utils/calendar_event_format.py:287
-#, fuzzy
 msgid "min"
-msgstr "Min:"
+msgstr "mnt"
 
 #: aot_flask/templates/pages/ai/scheduler.html:321
 #: aot_flask/templates/pages/ai/scheduler.html:324
@@ -12786,19 +12737,16 @@ msgid "Target Zone/Site"
 msgstr "Zona/Situs Target"
 
 #: aot_flask/templates/pages/ai/scheduler.html:771
-#, fuzzy
 msgid "No items available"
-msgstr "None Available"
+msgstr "Tidak ada item yang tersedia"
 
 #: aot_flask/templates/pages/ai/scheduler.html:826
-#, fuzzy
 msgid "Device-local"
-msgstr "Peran Perangkat"
+msgstr "Lokal perangkat"
 
 #: aot_flask/templates/pages/ai/scheduler.html:829
-#, fuzzy
 msgid "Your time"
-msgstr "Bounce Time"
+msgstr "Waktu Anda"
 
 #: aot_flask/templates/pages/ai/scheduler.html:864
 msgid "Approve this job?"
@@ -12810,9 +12758,8 @@ msgstr "Alasan penolakan (opsional):"
 
 #: aot_flask/templates/pages/ai/scheduler.html:894
 #: aot_flask/templates/user_templates/widget_template_widget_calendar_js_ready_end.html:15
-#, fuzzy
 msgid "Cancellation reason (optional):"
-msgstr "Alasan penolakan (opsional):"
+msgstr "Alasan pembatalan (opsional):"
 
 #: aot_flask/templates/pages/ai/scheduler.html:902
 msgid "Please enter a command"
@@ -12842,9 +12789,8 @@ msgid "By: "
 msgstr "Oleh:"
 
 #: aot_flask/templates/pages/ai/scheduler.html:995
-#, fuzzy
 msgid "Local time: "
-msgstr "Sepanjang Waktu"
+msgstr "Waktu lokal: "
 
 #: aot_flask/templates/pages/ai/scheduler.html:996
 msgid "Reasoning: "
@@ -13584,29 +13530,24 @@ msgid ""
 msgstr "Fungsi kondisional tidak hanya dapat menjalankan kode Python 3, tetapi juga berinteraksi dengan AoT menggunakan kondisi dan aksi di dalam kode."
 
 #: aot_flask/templates/pages/function_options/conditional_options.html:46
-#, fuzzy
 msgid "For more information, see the"
-msgstr "untuk informasi lebih lanjut."
+msgstr "Untuk informasi lebih lanjut, lihat"
 
 #: aot_flask/templates/pages/function_options/conditional_options.html:46
-#, fuzzy
 msgid "Conditional Functions documentation"
-msgstr "Ion Concentration"
+msgstr "dokumentasi Fungsi Kondisional"
 
 #: aot_flask/templates/pages/function_options/conditional_options.html:83
-#, fuzzy
 msgid "Interval between Python code executions"
-msgstr "Time interval between actions."
+msgstr "Interval antar eksekusi kode Python"
 
 #: aot_flask/templates/pages/function_options/conditional_options.html:90
-#, fuzzy
 msgid "Time to wait before the first operation"
-msgstr "The duration to wait before the first operation"
+msgstr "Waktu tunggu sebelum operasi pertama"
 
 #: aot_flask/templates/pages/function_options/conditional_options.html:97
-#, fuzzy
 msgid "Timeout for Python code execution"
-msgstr "The Python 3 code to execute"
+msgstr "Batas waktu untuk eksekusi kode Python"
 
 #: aot_flask/templates/pages/function_options/conditional_options.html:112
 #: aot_flask/templates/pages/function_options/function_options.html:87
@@ -13630,14 +13571,12 @@ msgid "View Context"
 msgstr "Lihat Konteks"
 
 #: aot_flask/templates/pages/function_options/conditional_options.html:199
-#, fuzzy
 msgid "Conditions"
-msgstr "Condition"
+msgstr "Kondisi"
 
 #: aot_flask/templates/pages/function_options/conditional_options.html:212
-#, fuzzy
 msgid "Add Condition"
-msgstr "Condition"
+msgstr "Tambah Kondisi"
 
 #: aot_flask/templates/pages/function_options/conditional_options.html:249
 #: aot_flask/templates/pages/function_options/function_options.html:140
@@ -14182,9 +14121,8 @@ msgid "This is the GIS detailed settings screen. (To be implemented)"
 msgstr "This is the GIS detailed settings screen. (To be implemented)"
 
 #: aot_flask/templates/pages/geo/geo_design.html:2
-#, fuzzy
 msgid "Design Tool"
-msgstr "Detail Desain"
+msgstr "Alat Desain"
 
 #: aot_flask/templates/pages/geo/geo_design.html:3
 msgid "Geo Design"
@@ -14355,9 +14293,8 @@ msgid "Save as Site"
 msgstr "Simpan sebagai Site"
 
 #: aot_flask/templates/pages/geo/geo_facility.html:2
-#, fuzzy
 msgid "Facility Management"
-msgstr "Manajemen Baterai"
+msgstr "Manajemen Fasilitas"
 
 #: aot_flask/templates/pages/geo/geo_facility.html:1067
 #: aot_flask/templates/pages/geo/geo_facility.html:1965
@@ -16511,9 +16448,8 @@ msgstr "Pratinjau warna tema"
 
 #: aot_flask/templates/settings/custom_ui.html:80
 #: aot_flask/templates/settings/custom_ui.html:116
-#, fuzzy
 msgid "Click to edit Primary Button Background colors"
-msgstr "Klik untuk mengedit warna Tombol Nyala"
+msgstr "Klik untuk mengedit warna Latar Belakang Tombol Utama"
 
 #: aot_flask/templates/settings/custom_ui.html:103
 #: aot_flask/templates/settings/custom_ui.html:345
@@ -16534,9 +16470,8 @@ msgid "Click to edit Button Off colors"
 msgstr "Klik untuk mengedit warna Tombol Mati"
 
 #: aot_flask/templates/settings/custom_ui.html:122
-#, fuzzy
 msgid "Click to edit Secondary Button Background colors"
-msgstr "Klik untuk mengedit warna Tombol Nyala"
+msgstr "Klik untuk mengedit warna Latar Belakang Tombol Sekunder"
 
 #: aot_flask/templates/settings/custom_ui.html:127
 #: aot_flask/templates/settings/custom_ui.html:347
@@ -16651,9 +16586,8 @@ msgid "Text Primary"
 msgstr "Teks Utama"
 
 #: aot_flask/templates/settings/custom_ui.html:232
-#, fuzzy
 msgid "Titles and body text"
-msgstr "Teks Isi"
+msgstr "Judul dan teks isi"
 
 #: aot_flask/templates/settings/custom_ui.html:233
 msgid "Text Secondary"
@@ -16688,14 +16622,12 @@ msgid "Background Secondary"
 msgstr "Latar Belakang Sekunder"
 
 #: aot_flask/templates/settings/custom_ui.html:269
-#, fuzzy
 msgid "List header row background"
-msgstr "Latar Belakang Label"
+msgstr "Latar belakang baris header daftar"
 
 #: aot_flask/templates/settings/custom_ui.html:301
-#, fuzzy
 msgid "State Colors"
-msgstr "Site Color"
+msgstr "Warna Status"
 
 #: aot_flask/templates/settings/custom_ui.html:304
 msgid "Active State"
@@ -16726,24 +16658,20 @@ msgid "Cancel, deactivate — secondary buttons"
 msgstr ""
 
 #: aot_flask/templates/settings/custom_ui.html:345
-#, fuzzy
 msgid "Output row ON button"
-msgstr "Output Menyala Selama"
+msgstr "Tombol ON baris output"
 
 #: aot_flask/templates/settings/custom_ui.html:346
-#, fuzzy
 msgid "Output row OFF button"
-msgstr "Output Duration"
+msgstr "Tombol OFF baris output"
 
 #: aot_flask/templates/settings/custom_ui.html:347
-#, fuzzy
 msgid "PID controller pause button"
-msgstr "PID Controller [Paused]"
+msgstr "Tombol jeda pengontrol PID"
 
 #: aot_flask/templates/settings/custom_ui.html:348
-#, fuzzy
 msgid "PID controller hold button"
-msgstr "PID Controller [Hold]"
+msgstr "Tombol tahan pengontrol PID"
 
 #: aot_flask/templates/settings/custom_ui.html:349
 msgid "Button Border"
@@ -16766,9 +16694,8 @@ msgid "AI model (LLM) badge background"
 msgstr ""
 
 #: aot_flask/templates/settings/custom_ui.html:387
-#, fuzzy
 msgid "MCP tool badge background"
-msgstr "Latar Belakang Upgrade"
+msgstr "Latar belakang lencana alat MCP"
 
 #: aot_flask/templates/settings/custom_ui.html:418
 msgid "Measurement Band Colors"
@@ -16850,19 +16777,16 @@ msgid "Preset deleted"
 msgstr "Preset dihapus"
 
 #: aot_flask/templates/settings/custom_ui.html:1004
-#, fuzzy
 msgid "Background Color"
 msgstr "Warna Latar Belakang"
 
 #: aot_flask/templates/settings/custom_ui.html:1005
-#, fuzzy
 msgid "Text Color"
 msgstr "Warna Teks"
 
 #: aot_flask/templates/settings/custom_ui.html:1006
-#, fuzzy
 msgid "Subtext Color"
-msgstr "Warna Teks"
+msgstr "Warna Subteks"
 
 #: aot_flask/templates/settings/diagnostic.html:14
 msgid "Diagnostics"
@@ -17124,9 +17048,8 @@ msgstr "Measurements"
 
 #: aot_flask/templates/settings/integrations.html:18
 #: aot_flask/templates/user_templates/widget_template_widget_calendar_js_ready_end.html:19
-#, fuzzy
 msgid "Google Calendar"
-msgstr "Clear"
+msgstr "Google Kalender"
 
 #: aot_flask/templates/settings/integrations.html:24
 msgid "Google Calendar is not configured yet."
@@ -17141,9 +17064,8 @@ msgid "Ask an administrator to configure it."
 msgstr "Minta administrator untuk mengonfigurasinya."
 
 #: aot_flask/templates/settings/integrations.html:41
-#, fuzzy
 msgid "Sync Direction"
-msgstr "Arah Angin"
+msgstr "Arah Sinkronisasi"
 
 #: aot_flask/templates/settings/integrations.html:43
 msgid "AoT → Google"
@@ -17154,9 +17076,8 @@ msgid "Google → AoT"
 msgstr "Google → AoT"
 
 #: aot_flask/templates/settings/integrations.html:49
-#, fuzzy
 msgid "Last Synced"
-msgstr "Terakhir Terlihat"
+msgstr "Terakhir Disinkronkan"
 
 #: aot_flask/templates/settings/integrations.html:64
 msgid ""
@@ -17175,9 +17096,8 @@ msgid "Connect Google Calendar"
 msgstr "Hubungkan Google Kalender"
 
 #: aot_flask/templates/settings/integrations.html:84
-#, fuzzy
 msgid "Google OAuth Configuration"
-msgstr "Konfigurasi SMTP"
+msgstr "Konfigurasi Google OAuth"
 
 #: aot_flask/templates/settings/integrations.html:89
 msgid ""
@@ -17201,14 +17121,12 @@ msgid ""
 msgstr "Beberapa nilai disediakan oleh variabel lingkungan dan menimpa bidang di bawah."
 
 #: aot_flask/templates/settings/integrations.html:106
-#, fuzzy
 msgid "Public Base URL"
-msgstr "API Base URL"
+msgstr "URL Dasar Publik"
 
 #: aot_flask/templates/settings/integrations.html:115
-#, fuzzy
 msgid "OAuth Client ID"
-msgstr "Client ID"
+msgstr "ID Klien OAuth"
 
 #: aot_flask/templates/settings/integrations.html:124
 msgid "OAuth Client Secret"
@@ -17426,16 +17344,12 @@ msgid "Export AoT settings data as ZIP file"
 msgstr "Export AoT settings data as ZIP file"
 
 #: aot_flask/templates/tools/export.html:80
-#, fuzzy
 msgid ""
 "This feature creates a ZIP file of the setup database containing AoT "
 "configuration and user info. Custom functions, inputs, outputs, and "
 "widgets are also included, as well as uploaded files (note/notice "
 "attachments, facility and zone photos, and facility 3D model assets)."
-msgstr ""
-"This feature creates a ZIP file of the setup database containing AoT "
-"configuration and user info. Custom functions, inputs, outputs, and "
-"widgets are also included."
+msgstr "Fitur ini membuat file ZIP dari database pengaturan yang berisi konfigurasi AoT dan informasi pengguna. Fungsi kustom, input, output, dan widget juga disertakan, begitu pula file yang diunggah (lampiran catatan/pemberitahuan, foto fasilitas dan zona, serta aset model 3D fasilitas)."
 
 #: aot_flask/templates/tools/export.html:91
 msgid "Import AoT settings data from ZIP file"
@@ -18291,19 +18205,16 @@ msgid "Data Position Offset (%%)"
 msgstr "Offset Posisi Data (%%)"
 
 #: aot_flask/templates/user_templates/widget_template_widget_calendar_body.html:12
-#, fuzzy
 msgid "Edit Schedule"
-msgstr "Penjadwal AI"
+msgstr "Edit Jadwal"
 
 #: aot_flask/templates/user_templates/widget_template_widget_calendar_js_ready_end.html:13
-#, fuzzy
 msgid "Open in Scheduler"
-msgstr "Penjadwal AI"
+msgstr "Buka di Penjadwal"
 
 #: aot_flask/templates/user_templates/widget_template_widget_calendar_js_ready_end.html:18
-#, fuzzy
 msgid "Calendars"
-msgstr "Clear"
+msgstr "Kalender"
 
 #: aot_flask/templates/user_templates/widget_template_widget_camera_js.html:25
 msgid "Still"
@@ -19132,9 +19043,8 @@ msgid "Another user already has that email address."
 msgstr "Another user already has that email address."
 
 #: aot_flask/utils/utils_settings.py:323
-#, fuzzy
 msgid "That username is already taken."
-msgstr "Dashboard name is already in use."
+msgstr "Nama pengguna tersebut sudah digunakan."
 
 #: aot_flask/utils/utils_settings.py:334 aot_flask/utils/utils_settings.py:407
 msgid "Invalid password"
@@ -19145,9 +19055,8 @@ msgid "Cannot demote the last Administrator."
 msgstr "Cannot demote the last Administrator."
 
 #: aot_flask/utils/utils_settings.py:460
-#, fuzzy
 msgid "User not found"
-msgstr "File Tidak Ditemukan"
+msgstr "Pengguna tidak ditemukan"
 
 #: aot_flask/utils/utils_settings.py:463
 #, python-format
@@ -21857,79 +21766,64 @@ msgid "BCM"
 msgstr "BCM"
 
 #: inputs/sensecap_weather.py:30
-#, fuzzy
 msgid "Air Humidity"
-msgstr "Kelembapan Dalam Ruangan"
+msgstr "Kelembapan Udara"
 
 #: inputs/sensecap_weather.py:31
-#, fuzzy
 msgid "Light Intensity"
-msgstr "Intensitas Hujan/Salju"
+msgstr "Intensitas Cahaya"
 
 #: inputs/sensecap_weather.py:33
-#, fuzzy
 msgid "Barometric Pressure"
-msgstr "Tekanan Relatif"
+msgstr "Tekanan Barometrik"
 
 #: inputs/sensecap_weather.py:34
-#, fuzzy
 msgid "Soil Temperature"
-msgstr "Color Temperature"
+msgstr "Suhu Tanah"
 
 #: inputs/sensecap_weather.py:39
-#, fuzzy
 msgid "Soil Electrical Conductivity"
-msgstr "Electrical Conductivity"
+msgstr "Konduktivitas Listrik Tanah"
 
 #: inputs/sensecap_weather.py:40
-#, fuzzy
 msgid "Soil Volumetric Water Content"
-msgstr "Volumetric Water Content"
+msgstr "Kadar Air Volumetrik Tanah"
 
 #: inputs/sensecap_weather.py:41
-#, fuzzy
 msgid "Rainfall Hourly"
-msgstr "Rainfall:"
+msgstr "Curah Hujan per Jam"
 
 #: inputs/sensecap_weather.py:42
-#, fuzzy
 msgid "Soil Moisture 10cm"
-msgstr "Soil Moisture"
+msgstr "Kelembapan Tanah 10cm"
 
 #: inputs/sensecap_weather.py:43
-#, fuzzy
 msgid "Soil Moisture 20cm"
-msgstr "Soil Moisture"
+msgstr "Kelembapan Tanah 20cm"
 
 #: inputs/sensecap_weather.py:44
-#, fuzzy
 msgid "Soil Moisture 30cm"
-msgstr "Soil Moisture"
+msgstr "Kelembapan Tanah 30cm"
 
 #: inputs/sensecap_weather.py:45
-#, fuzzy
 msgid "Soil Moisture 40cm"
-msgstr "Soil Moisture"
+msgstr "Kelembapan Tanah 40cm"
 
 #: inputs/sensecap_weather.py:46
-#, fuzzy
 msgid "Soil Temperature 10cm"
-msgstr "Color Temperature"
+msgstr "Suhu Tanah 10cm"
 
 #: inputs/sensecap_weather.py:47
-#, fuzzy
 msgid "Soil Temperature 20cm"
-msgstr "Color Temperature"
+msgstr "Suhu Tanah 20cm"
 
 #: inputs/sensecap_weather.py:48
-#, fuzzy
 msgid "Soil Temperature 30cm"
-msgstr "Color Temperature"
+msgstr "Suhu Tanah 30cm"
 
 #: inputs/sensecap_weather.py:49
-#, fuzzy
 msgid "Soil Temperature 40cm"
-msgstr "Color Temperature"
+msgstr "Suhu Tanah 40cm"
 
 #: inputs/sensecap_weather.py:50
 msgid "PM2.5"
@@ -21944,49 +21838,40 @@ msgid "Peak Wind Gust"
 msgstr ""
 
 #: inputs/sensecap_weather.py:54
-#, fuzzy
 msgid "Dew Point Temperature"
-msgstr "Suhu Minimum"
+msgstr "Suhu Titik Embun"
 
 #: inputs/sensecap_weather.py:56
-#, fuzzy
 msgid "Rain Accumulation"
-msgstr "Akumulasi curah hujan (mm)"
+msgstr "Akumulasi Hujan"
 
 #: inputs/sensecap_weather.py:71
-#, fuzzy
 msgid "Air Temperature and Humidity Sensor"
-msgstr "Sensor Suhu/Kelembapan"
+msgstr "Sensor Suhu dan Kelembapan Udara"
 
 #: inputs/sensecap_weather.py:72
-#, fuzzy
 msgid "Light Intensity Sensor"
-msgstr "Sensor Kualitas Udara"
+msgstr "Sensor Intensitas Cahaya"
 
 #: inputs/sensecap_weather.py:73
-#, fuzzy
 msgid "CO2 Sensor"
-msgstr "Sensor"
+msgstr "Sensor CO2"
 
 #: inputs/sensecap_weather.py:74
-#, fuzzy
 msgid "Barometric Pressure Sensor"
-msgstr "Tekanan Relatif"
+msgstr "Sensor Tekanan Barometrik"
 
 #: inputs/sensecap_weather.py:75
-#, fuzzy
 msgid "Soil Moisture and Temperature Sensor"
-msgstr "Sensor Kelembapan Tanah"
+msgstr "Sensor Kelembapan dan Suhu Tanah"
 
 #: inputs/sensecap_weather.py:76
-#, fuzzy
 msgid "Wind Direction Sensor"
-msgstr "Arah Angin"
+msgstr "Sensor Arah Angin"
 
 #: inputs/sensecap_weather.py:78
-#, fuzzy
 msgid "Rain Gauge"
-msgstr "Rotation Angle"
+msgstr "Pengukur Curah Hujan"
 
 #: inputs/sensecap_weather.py:79
 msgid "Compact Weather Station 5-in-1 (S500)"
@@ -22001,19 +21886,16 @@ msgid "Compact Weather Station 4-in-1 (S400)"
 msgstr ""
 
 #: inputs/sensecap_weather.py:82
-#, fuzzy
 msgid "Soil Temperature and VWC Sensor"
-msgstr "Sensor Suhu"
+msgstr "Sensor Suhu Tanah dan VWC"
 
 #: inputs/sensecap_weather.py:83
-#, fuzzy
 msgid "Multilayer Soil Moisture and Temperature Sensor"
-msgstr "Sensor Suhu Eksternal"
+msgstr "Sensor Kelembapan dan Suhu Tanah Multilapis"
 
 #: inputs/sensecap_weather.py:84
-#, fuzzy
 msgid "Soil Moisture, Temperature and EC Sensor"
-msgstr "Sensor Kelembapan Tanah"
+msgstr "Sensor Kelembapan, Suhu, dan EC Tanah"
 
 #: inputs/sensecap_weather.py:85
 msgid "LoRaWAN 8-in-1 Compact Weather Station (S2120)"
@@ -22028,9 +21910,8 @@ msgid "pH Sensor (S2106)"
 msgstr ""
 
 #: inputs/sensecap_weather.py:88
-#, fuzzy
 msgid "Air Temperature, Humidity and Dew Point Sensor"
-msgstr "Sensor Suhu/Kelembapan"
+msgstr "Sensor Suhu Udara, Kelembapan, dan Titik Embun"
 
 #: inputs/sensecap_weather.py:105
 msgid ""
@@ -22042,9 +21923,8 @@ msgid ""
 msgstr ""
 
 #: inputs/sensecap_weather.py:123
-#, fuzzy
 msgid "Device Type"
-msgstr "Device Shape"
+msgstr "Jenis Perangkat"
 
 #: inputs/sensecap_weather.py:124
 msgid ""
@@ -22061,9 +21941,8 @@ msgid "Enter the SenseCAP device Node EUI."
 msgstr ""
 
 #: inputs/sensecap_weather.py:139
-#, fuzzy
 msgid "API ID"
-msgstr "API Key ID"
+msgstr "ID API"
 
 #: inputs/sensecap_weather.py:140
 msgid ""
@@ -22072,14 +21951,12 @@ msgid ""
 msgstr ""
 
 #: inputs/sensecap_weather.py:147
-#, fuzzy
 msgid "Access API Key"
-msgstr "Map API Key"
+msgstr "Kunci API Akses"
 
 #: inputs/sensecap_weather.py:148
-#, fuzzy
 msgid "Enter the Access API Key issued by the SenseCAP portal."
-msgstr "Masukkan API Key yang diterbitkan oleh platform Ecowitt."
+msgstr "Masukkan Kunci API Akses yang diterbitkan oleh portal SenseCAP."
 
 #: inputs/sensecap_weather.py:157
 msgid "Fetch Historical Data"
@@ -22997,69 +22874,56 @@ msgid "Keep the 'Key: Value' lines so AoT can apply your edits."
 msgstr ""
 
 #: utils/calendar_event_format.py:269
-#, fuzzy
 msgid "pid"
-msgstr "PID"
+msgstr "pid"
 
 #: utils/calendar_event_format.py:271
-#, fuzzy
 msgid "setting"
-msgstr "Pengaturan"
+msgstr "pengaturan"
 
 #: utils/calendar_event_format.py:272 utils/calendar_event_format.py:283
-#, fuzzy
 msgid "value"
-msgstr "Value"
+msgstr "nilai"
 
 #: utils/calendar_event_format.py:274
-#, fuzzy
 msgid "setpoint"
-msgstr "Setpoint"
+msgstr "titik setel"
 
 #: utils/calendar_event_format.py:277
-#, fuzzy
 msgid "function"
-msgstr "Function"
+msgstr "fungsi"
 
 #: utils/calendar_event_format.py:278 utils/calendar_event_format.py:285
-#, fuzzy
 msgid "state"
-msgstr "State"
+msgstr "status"
 
 #: utils/calendar_event_format.py:281
-#, fuzzy
 msgid "device"
-msgstr "Device"
+msgstr "perangkat"
 
 #: utils/calendar_event_format.py:287
-#, fuzzy
 msgid "duration"
-msgstr "Duration"
+msgstr "durasi"
 
 #: utils/calendar_event_format.py:290
-#, fuzzy
 msgid "location"
-msgstr "Location"
+msgstr "lokasi"
 
 #: utils/calendar_event_format.py:292
-#, fuzzy
 msgid "content"
-msgstr "Content"
+msgstr "konten"
 
 #: utils/calendar_event_format.py:294
-#, fuzzy
 msgid "worker"
-msgstr "Worker"
+msgstr "pekerja"
 
 #: utils/calendar_event_format.py:315 utils/calendar_event_format.py:317
-#, fuzzy
 msgid "Device control"
-msgstr "Peran Perangkat"
+msgstr "Kontrol perangkat"
 
 #: utils/outputs.py:226
-#, fuzzy
 msgid "Command Timeout (seconds)"
-msgstr "Batas Waktu Perintah"
+msgstr "Batas Waktu Perintah (detik)"
 
 #: utils/outputs.py:228
 msgid ""
@@ -23882,9 +23746,8 @@ msgid "Refresh the widget every N seconds. 0 to disable."
 msgstr "Refresh the widget every N seconds. 0 to disable."
 
 #: widgets/AoT_map.py:710
-#, fuzzy
 msgid "Device Filter"
-msgstr "Filter Device EUI"
+msgstr "Filter Perangkat"
 
 #: widgets/AoT_map.py:715
 msgid ""
@@ -23921,9 +23784,8 @@ msgid "Select function measurements to display in the panel."
 msgstr "Select function measurements to display in the panel."
 
 #: widgets/AoT_map.py:791
-#, fuzzy
 msgid "Label Style"
-msgstr "Gaya Label Sensor"
+msgstr "Gaya Label"
 
 #: widgets/AoT_map.py:798
 msgid "Prevent Label Collision"
@@ -24102,9 +23964,8 @@ msgid "Select the Output to control."
 msgstr "Select the Output to control."
 
 #: widgets/AoT_timer.py:1146
-#, fuzzy
 msgid "Sync (seconds)"
-msgstr "Delay (seconds)"
+msgstr "Sinkronisasi (detik)"
 
 #: widgets/AoT_timer.py:1147
 msgid ""
@@ -24350,9 +24211,8 @@ msgstr ""
 "untuk menonaktifkan."
 
 #: widgets/widget_calendar.py:42
-#, fuzzy
 msgid "Calendar"
-msgstr "Clear"
+msgstr "Kalender"
 
 #: widgets/widget_calendar.py:47
 msgid ""
@@ -24362,28 +24222,24 @@ msgid ""
 msgstr ""
 
 #: widgets/widget_calendar.py:61
-#, fuzzy
 msgid "Show Scheduled Events"
-msgstr "Waktu Terjadwal"
+msgstr "Tampilkan Acara Terjadwal"
 
 #: widgets/widget_calendar.py:62
 msgid "Include scheduled jobs on the calendar"
 msgstr ""
 
 #: widgets/widget_calendar.py:69
-#, fuzzy
 msgid "Month"
-msgstr "Monthly"
+msgstr "Bulan"
 
 #: widgets/widget_calendar.py:71
-#, fuzzy
 msgid "List (Week)"
-msgstr "Minggu Lalu"
+msgstr "Daftar (Minggu)"
 
 #: widgets/widget_calendar.py:73
-#, fuzzy
 msgid "Default View"
-msgstr "Situs Default"
+msgstr "Tampilan Default"
 
 #: widgets/widget_calendar.py:74
 msgid ""
@@ -24400,9 +24256,8 @@ msgid "How often to re-fetch events for the currently visible range"
 msgstr ""
 
 #: widgets/widget_calendar.py:89
-#, fuzzy
 msgid "List View Look-ahead (days)"
-msgstr "Tinjauan-Depan Prakiraan (jam)"
+msgstr "Rentang Lihat-ke-Depan Tampilan Daftar (hari)"
 
 #: widgets/widget_calendar.py:90
 msgid "How many days ahead the List view queries"
@@ -25078,9 +24933,8 @@ msgid "Input value validity duration"
 msgstr "Input value validity duration"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:69
-#, fuzzy
 msgid "Integrated Environment Control"
-msgstr "Integrated Environment Control (IEC)"
+msgstr "Kontrol Lingkungan Terpadu"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:73
 msgid ""
@@ -25097,27 +24951,24 @@ msgid "Trigger an immediate cycle, reload actuators, or issue an emergency stop.
 msgstr ""
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:92
-#, fuzzy
 msgid "Reload Actuators"
-msgstr "Tidak ada aktuator"
+msgstr "Muat Ulang Aktuator"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:94
 msgid "Re-read the Actions table and rebuild actuator profiles."
 msgstr ""
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:101
-#, fuzzy
 msgid "Run Now"
-msgstr "tidak diketahui"
+msgstr "Jalankan Sekarang"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:103
 msgid "Execute one coordination cycle immediately using current sensor readings."
 msgstr ""
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:110
-#, fuzzy
 msgid "Emergency Stop"
-msgstr "Tampilkan Tombol Berhenti Darurat"
+msgstr "Penghentian Darurat"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:112
 msgid "Immediately set all actuators to safe_default and pause control for 60 s."
@@ -25141,28 +24992,24 @@ msgid ""
 msgstr ""
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:151
-#, fuzzy
 msgid "Max Sensor Age (seconds)"
-msgstr "Max Age (sec)"
+msgstr "Usia Maksimum Sensor (detik)"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:153
 msgid "Reject sensor readings older than this value. 0 = no limit."
 msgstr ""
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:160
-#, fuzzy
 msgid "Actuation Rate"
-msgstr "Jenis Aktuator"
+msgstr "Laju Aktuasi"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:168
-#, fuzzy
 msgid "Responsive (60s)"
-msgstr "respons"
+msgstr "Responsif (60 dtk)"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:169
-#, fuzzy
 msgid "Standard (180s)"
-msgstr "Standar"
+msgstr "Standar (180 dtk)"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:170
 msgid "Gentle — extend vent motor life (600s)"
@@ -25173,9 +25020,8 @@ msgid "Custom (set seconds below)"
 msgstr ""
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:173
-#, fuzzy
 msgid "Vent Actuation Profile"
-msgstr "Penonaktifan gagal"
+msgstr "Profil Aktuasi Ventilasi"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:175
 #, python-format
@@ -25189,9 +25035,8 @@ msgid ""
 msgstr ""
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:188
-#, fuzzy
 msgid "Custom Actuation Period (seconds)"
-msgstr "Periode evaluasi dan penerapan (detik)"
+msgstr "Periode Aktuasi Kustom (detik)"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:190
 msgid ""
@@ -25200,9 +25045,8 @@ msgid ""
 msgstr ""
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:200
-#, fuzzy
 msgid "Emergency Minimum Interval (seconds)"
-msgstr "Interval Perintah Minimum (dtk)"
+msgstr "Interval Minimum Darurat (detik)"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:202
 msgid ""
@@ -25232,9 +25076,8 @@ msgid ""
 msgstr ""
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:235
-#, fuzzy
 msgid "Growth Schedule"
-msgstr "Penjadwal AI"
+msgstr "Jadwal Pertumbuhan"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:245
 msgid ""
@@ -25246,9 +25089,8 @@ msgid ""
 msgstr ""
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:259
-#, fuzzy
 msgid "Schedule End (harvest date)"
-msgstr "Jadwal diperbarui"
+msgstr "Akhir Jadwal (tanggal panen)"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:261
 msgid ""
@@ -25267,14 +25109,12 @@ msgid ""
 msgstr ""
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:285
-#, fuzzy
 msgid "Facility (optional)"
-msgstr "Informasi Fasilitas"
+msgstr "Fasilitas (opsional)"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:293
-#, fuzzy
 msgid "Linked Facility"
-msgstr "Fasilitas Baru"
+msgstr "Fasilitas Tertaut"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:295
 msgid ""
@@ -25287,9 +25127,8 @@ msgid ""
 msgstr ""
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:308
-#, fuzzy
 msgid "Bay Scope (optional)"
-msgstr "Catatan (opsional)"
+msgstr "Cakupan Bay (opsional)"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:310
 msgid ""
@@ -25301,14 +25140,12 @@ msgid ""
 msgstr ""
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:322
-#, fuzzy
 msgid "Time Control"
-msgstr "Hide Controls"
+msgstr "Kontrol Waktu"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:329
-#, fuzzy
 msgid "Enable Time Window"
-msgstr "Akhir Jendela Waktu Aktif"
+msgstr "Aktifkan Jendela Waktu"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:331
 msgid "When enabled, control only runs between Start and End times."
@@ -25327,9 +25164,8 @@ msgid ""
 msgstr ""
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:362
-#, fuzzy
 msgid "Photoperiod Method"
-msgstr "Other Methods"
+msgstr "Metode Fotoperiode"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:364
 msgid ""
@@ -25351,9 +25187,8 @@ msgstr ""
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:393
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:481
-#, fuzzy
 msgid "Static Target"
-msgstr "AI Agent"
+msgstr "Target Statis"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:394
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:482
@@ -25361,9 +25196,8 @@ msgid "Method (time-varying)"
 msgstr ""
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:396
-#, fuzzy
 msgid "Setpoint Type"
-msgstr "Setpoint"
+msgstr "Jenis Titik Setel"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:398
 msgid ""
@@ -25372,9 +25206,8 @@ msgid ""
 msgstr ""
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:407
-#, fuzzy
 msgid "Target VPD (kPa)"
-msgstr "ID Target"
+msgstr "Target VPD (kPa)"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:408
 msgid "Used when Setpoint Type = Static. 0 = disable VPD control."
@@ -25387,9 +25220,8 @@ msgid ""
 msgstr ""
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:427
-#, fuzzy
 msgid "VPD Priority"
-msgstr "Prioritas"
+msgstr "Prioritas VPD"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:428
 msgid "Higher value = processed first. Default 1.2."
@@ -25425,14 +25257,12 @@ msgid ""
 msgstr ""
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:473
-#, fuzzy
 msgid "CO₂"
-msgstr "CO2"
+msgstr "CO₂"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:484
-#, fuzzy
 msgid "CO₂ Setpoint Type"
-msgstr "Setpoint Tracking Type"
+msgstr "Jenis Titik Setel CO₂"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:486
 msgid ""
@@ -25441,19 +25271,16 @@ msgid ""
 msgstr ""
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:495
-#, fuzzy
 msgid "Target CO₂ (ppm)"
-msgstr "Posisi Target (%)"
+msgstr "Target CO₂ (ppm)"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:496
-#, fuzzy
 msgid "Used when CO₂ Setpoint Type = Static."
-msgstr "Set the Setpoint of a PID."
+msgstr "Digunakan saat Jenis Titik Setel CO₂ = Statis."
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:504
-#, fuzzy
 msgid "CO₂ Method"
-msgstr "Method"
+msgstr "Metode CO₂"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:506
 msgid ""
@@ -25462,9 +25289,8 @@ msgid ""
 msgstr ""
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:515
-#, fuzzy
 msgid "CO₂ Priority"
-msgstr "Prioritas"
+msgstr "Prioritas CO₂"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:517
 msgid ""
@@ -25484,50 +25310,45 @@ msgid ""
 msgstr ""
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:545
-#, fuzzy
 msgid "Max Temperature (°C)"
-msgstr "Suhu Maksimum"
+msgstr "Suhu Maksimum (°C)"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:547
 msgid "Hard upper limit. Forces cooling when exceeded, regardless of VPD target."
 msgstr ""
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:555
-#, fuzzy
 msgid "Min Temperature (°C)"
-msgstr "Suhu Minimum"
+msgstr "Suhu Minimum (°C)"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:557
 msgid "Hard lower limit. Forces heating when below, regardless of VPD target."
 msgstr ""
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:571
-#, fuzzy, python-format
+#, python-format
 msgid "Max Humidity (%)"
-msgstr "Prakiraan kelembapan (%%)"
+msgstr "Kelembapan Maksimum (%)"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:573
 msgid "Hard upper limit. Prevents VPD bypass via extreme humidity."
 msgstr ""
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:581
-#, fuzzy
 msgid "Min Humidity (%)"
-msgstr "Kelembapan Dalam Ruangan"
+msgstr "Kelembapan Minimum (%)"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:583
 msgid "Hard lower limit. Prevents VPD bypass via extreme dryness."
 msgstr ""
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:590
-#, fuzzy
 msgid "VPD Decomposition"
-msgstr "Posisi"
+msgstr "Dekomposisi VPD"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:597
-#, fuzzy
 msgid "T Weight (0-1)"
-msgstr "Tinggi Cucuran Atap (m)"
+msgstr "Bobot T (0-1)"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:599
 msgid ""
@@ -25540,9 +25361,8 @@ msgid "Photosynthesis Model"
 msgstr ""
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:614
-#, fuzzy
 msgid "Enable Photosynthesis-Oriented Control"
-msgstr "Enable Output Controls"
+msgstr "Aktifkan Kontrol Berorientasi Fotosintesis"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:616
 msgid ""
@@ -25553,9 +25373,8 @@ msgid ""
 msgstr ""
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:628
-#, fuzzy
 msgid "Tomato"
-msgstr "Otomatis"
+msgstr "Tomat"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:629
 msgid "Lettuce / Leafy greens"
@@ -25566,18 +25385,16 @@ msgid "Cucumber"
 msgstr ""
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:631
-#, fuzzy
 msgid "Strawberry"
-msgstr "Raspberry Pi"
+msgstr "Stroberi"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:632
 msgid "Pepper / Paprika"
 msgstr ""
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:634
-#, fuzzy
 msgid "Crop Preset"
-msgstr "Preset"
+msgstr "Preset Tanaman"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:636
 msgid ""
@@ -25609,9 +25426,8 @@ msgid "Guide T Max (°C)"
 msgstr ""
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:667
-#, fuzzy
 msgid "Advisory upper bound for temperature."
-msgstr "Suhu Dalam Ruangan"
+msgstr "Batas atas anjuran untuk suhu."
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:674
 msgid "Guide RH Min (%)"
@@ -25630,14 +25446,12 @@ msgid "Advisory upper bound for relative humidity."
 msgstr ""
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:689
-#, fuzzy
 msgid "Cumulative Goal Tracker"
-msgstr "Pelacak Tujuan Kolaboratif"
+msgstr "Pelacak Target Kumulatif"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:696
-#, fuzzy
 msgid "Enable DLI / GDD Tracker"
-msgstr "Enable Align Ticks"
+msgstr "Aktifkan Pelacak DLI / GDD"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:698
 msgid ""
@@ -25671,18 +25485,16 @@ msgid ""
 msgstr ""
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:739
-#, fuzzy
 msgid "Strong Wind Threshold (m/s)"
-msgstr "Ambang Hemat Daya Ekstra (V)"
+msgstr "Ambang Batas Angin Kencang (m/s)"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:741
 msgid "Openings (vents, side walls) are forced closed above this wind speed."
 msgstr ""
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:748
-#, fuzzy
 msgid "Effect Calibration"
-msgstr "Calibration"
+msgstr "Kalibrasi Efek"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:756
 msgid "Legacy (built-in K constants)"
@@ -25697,9 +25509,8 @@ msgid "Grey-box (physics model controls)"
 msgstr ""
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:760
-#, fuzzy
 msgid "Effect Engine"
-msgstr "U-efektif"
+msgstr "Mesin Efek"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:762
 msgid ""
@@ -25713,9 +25524,8 @@ msgid ""
 msgstr ""
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:776
-#, fuzzy
 msgid "Enable RLS Calibration"
-msgstr "Clear Calibration"
+msgstr "Aktifkan Kalibrasi RLS"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:778
 msgid ""
@@ -25725,9 +25535,8 @@ msgid ""
 msgstr ""
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:788
-#, fuzzy
 msgid "Enable Active Probing"
-msgstr "Aktifkan Layanan AI"
+msgstr "Aktifkan Pengujian Aktif"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:790
 #, python-format
@@ -25738,23 +25547,20 @@ msgid ""
 msgstr ""
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:800
-#, fuzzy
 msgid "Probe Interval (seconds)"
-msgstr "Capture Interval (sec)"
+msgstr "Interval Pengujian (detik)"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:802
 msgid "Minimum time between active probing events. Default 3600 s (1 hour)."
 msgstr ""
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:809
-#, fuzzy
 msgid "Forecast Feedforward"
-msgstr "Jam Prakiraan ke Depan"
+msgstr "Feedforward Prakiraan"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:816
-#, fuzzy
 msgid "Enable Forecast Feedforward"
-msgstr "Unable to load forecast data."
+msgstr "Aktifkan Feedforward Prakiraan"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:818
 msgid ""
@@ -25764,9 +25570,8 @@ msgid ""
 msgstr ""
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:828
-#, fuzzy
 msgid "Forecast Lookahead (hours)"
-msgstr "Jam Prakiraan ke Depan"
+msgstr "Rentang Lihat-ke-Depan Prakiraan (jam)"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:830
 msgid ""
@@ -26331,3 +26136,2187 @@ msgstr "kolom minggu"
 
 msgid "Data credits"
 msgstr "Kredit data"
+
+msgid " stages"
+msgstr ""
+
+msgid "%(n)s created together"
+msgstr ""
+
+msgid "%(n)s days"
+msgstr ""
+
+msgid "%(n)s hidden"
+msgstr ""
+
+msgid "%(n)s stages"
+msgstr ""
+
+msgid "(missing resource)"
+msgstr ""
+
+msgid "3D preview is not ready."
+msgstr ""
+
+msgid "A backup is taken before the image is swapped, and the previous version is restored automatically if the new one does not come up."
+msgstr ""
+
+msgid "A backup is taken before the image is swapped. If the new version does not come up, the previous one is restored automatically."
+msgstr ""
+
+msgid "A curve overrides the stage value for that item. Time runs from the start date."
+msgstr ""
+
+msgid "A device was removed here but the fitting stayed. Select a row to open it and pick a device."
+msgstr ""
+
+msgid "A few numbers describing how this crop responds to light, temperature and CO2. These do not compete with the targets above — a target is the number to reach, these describe how the crop behaves on the way there, and only the environment coordinator reads them when it is set to control for photosynthesis. Leave the whole block empty if you do not run that. Do not guess: a wrong number makes control quietly wrong. Templates come filled in from published figures."
+msgstr ""
+
+msgid "A group with that name already exists."
+msgstr ""
+
+msgid "A new version is available and its image has been published."
+msgstr ""
+
+msgid "A normal restart is usually done within a minute. This may mean the update failed and an automatic rollback is in progress."
+msgstr ""
+
+msgid "A second, independent zoom threshold — currently for zone/facility labels and zone/plot/equipment shapes. They need to stay visible at a wider zoom than L1 above, so they get their own value here. More label and shape kinds may be added to this tier later. Set 0 to never hide."
+msgstr ""
+
+msgid "AI Service Operation"
+msgstr ""
+
+msgid "AI notes reviewed"
+msgstr ""
+
+msgid "AI service started"
+msgstr ""
+
+msgid "AI service stopped"
+msgstr ""
+
+msgid "AI-curated"
+msgstr ""
+
+msgid "API Key (optional)"
+msgstr ""
+
+msgid "About"
+msgstr ""
+
+msgid "Absorptance"
+msgstr ""
+
+msgid "Access all groups"
+msgstr ""
+
+msgid "Account Enabled"
+msgstr ""
+
+msgid "Accumulated heat"
+msgstr ""
+
+msgid "Add Component"
+msgstr ""
+
+msgid "Add Knowledge"
+msgstr ""
+
+msgid "Add a plot"
+msgstr ""
+
+msgid "Add item"
+msgstr ""
+
+msgid "Add stage"
+msgstr ""
+
+msgid "Add your own item"
+msgstr ""
+
+msgid "Added to the library."
+msgstr ""
+
+msgid "Advanced settings"
+msgstr ""
+
+msgid "After the daemon starts, switch off any selector or bus relay still reporting on — a restart during travel would otherwise leave a motor running. Only relays actually reporting on are commanded, so toggle-protocol outputs are not phantom-activated."
+msgstr ""
+
+msgid "Aims to stay inside this range. Past a limit it stops whatever pushes the wrong way — too damp: misting off; too dry: exhaust fans off. It does not slam anything to full."
+msgstr ""
+
+msgid "Aims to stay inside this range. Past a limit it stops whatever pushes the wrong way — too warm: heating off and the shade screen drawn; too cold: cooling off, vents and thermal curtain closed. It does not slam anything to full."
+msgstr ""
+
+msgid "Air cushion"
+msgstr ""
+
+msgid "All sources"
+msgstr ""
+
+msgid "Allow Misting Before Sunset"
+msgstr ""
+
+msgid "Allow Parallel Driving"
+msgstr ""
+
+msgid "Allow external MCP clients (e.g. Claude Desktop) to reach this AoT instance over HTTP. Toggling this takes effect immediately, without restarting anything."
+msgstr ""
+
+msgid "Allow misting near sunset. Turn off to leave the leaves dry overnight."
+msgstr ""
+
+msgid "An error occurred while deleting: "
+msgstr ""
+
+msgid "An update is already in progress."
+msgstr ""
+
+msgid "AoT Actuator Position"
+msgstr ""
+
+msgid "AoT PWM Output"
+msgstr ""
+
+msgid "AoT Plot"
+msgstr ""
+
+msgid "AoT is an open-source monitoring and control system built around a GIS digital twin and an MCP-based AI assistant. Some parts derive from the open-source Mycodo project; a warranty for the software added by AoT is available under a separate contract. The parts related to AoT follow the warranty information below."
+msgstr ""
+
+msgid "AoT is currently updating."
+msgstr ""
+
+msgid "Applies to"
+msgstr ""
+
+msgid "Applies to leaf-wetting misting only — fog-type misting runs in strong sun too. Darker than the range it runs freely; brighter than the range it stops; inside the range it tapers off."
+msgstr ""
+
+msgid "Approved and carried out."
+msgstr ""
+
+msgid "Approved, but it failed to run"
+msgstr ""
+
+msgid "Are you sure you want to delete this group?"
+msgstr ""
+
+msgid "Assign device"
+msgstr ""
+
+msgid "Assign resources from each tab or resource settings dialog. This list is read-only."
+msgstr ""
+
+msgid "Assigns a device to the zone you selected on the map."
+msgstr ""
+
+msgid "At least one role must keep access to all groups. Grant it to another role first."
+msgstr ""
+
+msgid "At least one tag is required."
+msgstr ""
+
+msgid "Authoritative"
+msgstr ""
+
+msgid "Auto (by voltage)"
+msgstr ""
+
+msgid "Automatic updates are off."
+msgstr ""
+
+msgid "Automatic updates are on. A published update will be installed at %(time)s each day."
+msgstr ""
+
+msgid "Back to automatic"
+msgstr ""
+
+msgid "Basic settings"
+msgstr ""
+
+msgid "Basics"
+msgstr ""
+
+msgid "Batch Window (s)"
+msgstr ""
+
+msgid "Below this zoom level, output / input / function / equipment / sensor / plot / bay / note labels and value keys are hidden. Site labels always stay visible so the map keeps its bearings. Zone and facility labels have their own threshold below (L2). Set 0 to never hide."
+msgstr ""
+
+msgid "Black film"
+msgstr ""
+
+msgid "Border color for danger/error notice boxes"
+msgstr ""
+
+msgid "Border color for info notice boxes"
+msgstr ""
+
+msgid "Border color for success notice boxes (Admin pages, e.g. Upgrade)"
+msgstr ""
+
+msgid "Border color for warning/default notice boxes"
+msgstr ""
+
+msgid "Branch at 90 degrees"
+msgstr ""
+
+msgid "Brick"
+msgstr ""
+
+msgid "Built-in and external programs are read-only. Copy it to make your own."
+msgstr ""
+
+msgid "CO2 half-saturation"
+msgstr ""
+
+msgid "Cancel the schedules"
+msgstr ""
+
+msgid "Cannot disable the currently logged-in account."
+msgstr ""
+
+msgid "Cannot disable the last Administrator."
+msgstr ""
+
+msgid "Caveat to quote with the numbers"
+msgstr ""
+
+msgid "Check for updates now"
+msgstr ""
+
+msgid "Checked once a day at this local time. If a newer version has been published, it is installed the same way the button above does it: back up, swap the image, verify, and restore the previous version if it does not come up."
+msgstr ""
+
+msgid "Choose a category, then pick the part to place on the map."
+msgstr ""
+
+msgid "Civil Dawn"
+msgstr ""
+
+msgid "Civil Dusk"
+msgstr ""
+
+msgid "Clear selection"
+msgstr ""
+
+msgid "Click on the map to set the facility center"
+msgstr ""
+
+msgid "Close Before Sunset (min)"
+msgstr ""
+
+msgid "Close at Night"
+msgstr ""
+
+msgid "Close the shade screen above this light level. 0 = never shade. This is a shading choice only — how much light the crop can use comes from its program."
+msgstr ""
+
+msgid "Cloth Transmittance Override (0-1, Shade only)"
+msgstr ""
+
+msgid "Collect names"
+msgstr ""
+
+msgid "Colour"
+msgstr ""
+
+msgid "Columns to look up by"
+msgstr ""
+
+msgid "Columns to return by default"
+msgstr ""
+
+msgid "Command not available on this system: %(command)s"
+msgstr ""
+
+msgid "Commands arriving within this window are planned together, so a control cycle that targets every actuator on the bus becomes one batch instead of a queue of separate moves."
+msgstr ""
+
+msgid "Common"
+msgstr ""
+
+msgid "Components"
+msgstr ""
+
+msgid "Concrete"
+msgstr ""
+
+msgid "Connect data sources so the AI answers from a source instead of its own general knowledge. The built-in public-data feeds are Korean; anywhere else, bring your own documents, web pages or APIs."
+msgstr ""
+
+msgid "Connections"
+msgstr ""
+
+msgid "Control Temperament"
+msgstr ""
+
+msgid "Control pauses for a few minutes while the containers restart, so pick an hour when nothing important is running."
+msgstr ""
+
+msgid "Control stops for good after this date. Leave blank to keep running."
+msgstr ""
+
+msgid "Could not read the published image list from the container registry, so update availability is unknown. Check the network connection and try again."
+msgstr ""
+
+msgid "Covering & Ventilation"
+msgstr ""
+
+msgid "Crop"
+msgstr ""
+
+msgid "Current readings against the targets and limits this stage declares. One gets the gauge, the rest are listed as text."
+msgstr ""
+
+msgid "DLI"
+msgstr ""
+
+msgid "Danger Tint Border"
+msgstr ""
+
+msgid "Darker than the range: the supplemental lights come on and the shade screen opens. Brighter than the range: the shade screen closes. Inside the range nothing happens. Either end can be turned off."
+msgstr ""
+
+msgid "Data (database, uploaded files, backups) lives in Docker volumes and is preserved across image swaps. The database schema is migrated automatically when the new containers start."
+msgstr ""
+
+msgid "Day {n}"
+msgstr ""
+
+msgid "Days"
+msgstr ""
+
+msgid "Daytime"
+msgstr ""
+
+msgid "Delete facility \"%(name)s\"?"
+msgstr ""
+
+msgid "Delete failed: "
+msgstr ""
+
+msgid "Delete this item?"
+msgstr ""
+
+msgid "Delete this item? {n} stage value(s) will be removed."
+msgstr ""
+
+msgid "Delete this program?"
+msgstr ""
+
+msgid "Delete this stage"
+msgstr ""
+
+msgid "Delete this tab? Its programmes are not deleted — they move to the page's default tab."
+msgstr ""
+
+msgid "Deleting removes all facility data and linked geometry information, and cannot be undone."
+msgstr ""
+
+msgid "Derive from period"
+msgstr ""
+
+msgid "Derived from data"
+msgstr ""
+
+msgid "Design the structure, covering and actuators of the selected facility."
+msgstr ""
+
+msgid "Device Tab"
+msgstr ""
+
+msgid "Device kind"
+msgstr ""
+
+msgid "Diagnose the cause"
+msgstr ""
+
+msgid "Diagnose these log lines: what is failing, and why?"
+msgstr ""
+
+msgid "Different in this stage"
+msgstr ""
+
+msgid "Different per stage"
+msgstr ""
+
+msgid "Discard every translation for this language and translate again? Names you edited by hand are kept."
+msgstr ""
+
+msgid "Display Name"
+msgstr ""
+
+msgid "Displays and controls a PWM output with a single slider."
+msgstr ""
+
+msgid "Displays and controls a positional (open/close) actuator: close/stop/open buttons plus a fine-adjust slider."
+msgstr ""
+
+msgid "Download"
+msgstr ""
+
+msgid "Drag the component in the 3D view to move it, or type exact coordinates below."
+msgstr ""
+
+msgid "Draw"
+msgstr ""
+
+msgid "Draw the reference line and the main pipe first — branches are generated from them."
+msgstr ""
+
+msgid "Drier"
+msgstr ""
+
+msgid "Dwell between a selector relay changing and the shared bus being energized (and again after the bus stops, before the selector is released), so the contacts never switch under load."
+msgstr ""
+
+msgid "Dwell inserted when the shared bus changes direction (open↔close) to protect the motors. Both bus relays stay off for this long before the new direction starts."
+msgstr ""
+
+msgid "Early"
+msgstr ""
+
+msgid "Edit API Key"
+msgstr ""
+
+msgid "Edit Group"
+msgstr ""
+
+msgid "Edit Plots"
+msgstr ""
+
+msgid "Edit Role"
+msgstr ""
+
+msgid "Edit User"
+msgstr ""
+
+msgid "Edited"
+msgstr ""
+
+msgid "Empty program"
+msgstr ""
+
+msgid "Enable External MCP Server"
+msgstr ""
+
+msgid "Enable the AI service in Settings > General first."
+msgstr ""
+
+msgid "Enable when this actuator has limit switches at both ends. An end-stop target (0%, 100%) may then be driven longer than its calculated travel time, letting several actuators reach their end stop in a single bus run — an emergency close of every window finishes in one run instead of one per window. Disable when there is no limit switch, or the motor would stall."
+msgstr ""
+
+msgid "Enabling here only makes the AI available. Autonomous operation — periodic summaries, context broadcast and alerts — is started separately on the AI page, after at least one AI model is registered."
+msgstr ""
+
+msgid "End Anchor"
+msgstr ""
+
+msgid "End Offset (min)"
+msgstr ""
+
+msgid "End this plot? The record stays as history."
+msgstr ""
+
+msgid "Energy saving"
+msgstr ""
+
+msgid "Enforced Drying Interval (s)"
+msgstr ""
+
+msgid "Engages this actuator's selector and drives it in the selected direction. Refused while the shared bus is busy. Click Stop when done."
+msgstr ""
+
+msgid "Enter a date"
+msgstr ""
+
+msgid "Enter a name"
+msgstr ""
+
+msgid "Enter a new one…"
+msgstr ""
+
+msgid "Enter the update time as HH:MM (24-hour), e.g. 03:00."
+msgstr ""
+
+msgid "Enter what is here."
+msgstr ""
+
+msgid "Enter what to do"
+msgstr ""
+
+msgid "Entered by a person"
+msgstr ""
+
+msgid "Environment & Control"
+msgstr ""
+
+msgid "Equipment Layout"
+msgstr ""
+
+msgid "Event Offset (min)"
+msgstr ""
+
+msgid "Every fitting has a device."
+msgstr ""
+
+msgid "Everyone can operate this dashboard (no group assigned)."
+msgstr ""
+
+msgid "Everyone can operate this facility (no group assigned)."
+msgstr ""
+
+msgid "Everyone can operate this map (no group assigned)."
+msgstr ""
+
+msgid "Everyone can operate this tab (no group assigned)."
+msgstr ""
+
+msgid "Everything placed in this facility, grouped by type. Select a row to open its 3D placement right below it."
+msgstr ""
+
+msgid "Everything the AI can cite — synced from sources, shelved by the AI, or written in by hand. Search and filter to see what is actually in here."
+msgstr ""
+
+msgid "Excluded"
+msgstr ""
+
+msgid "Exit fullscreen"
+msgstr ""
+
+msgid "Expected end"
+msgstr ""
+
+msgid "Explain"
+msgstr ""
+
+msgid "Explain what these log lines mean."
+msgstr ""
+
+msgid "Exporting…"
+msgstr ""
+
+msgid "Failed Login"
+msgstr ""
+
+msgid "Failed to load GLTFExporter: "
+msgstr ""
+
+msgid "Failed to save"
+msgstr ""
+
+msgid "Fans, heaters and other fixtures"
+msgstr ""
+
+msgid "Fast Preview"
+msgstr ""
+
+msgid "Faster response"
+msgstr ""
+
+msgid "Fertigation"
+msgstr ""
+
+msgid "Fewer decisions"
+msgstr ""
+
+msgid "Fills the rows that have no axis with a recent trend line. Needs the targets block."
+msgstr ""
+
+msgid "Fixed clock times"
+msgstr ""
+
+msgid "Fixed hours keep the same clock times all year. Sunrise to sunset follows the daylight at this device's location, so performance mode tracks the season without being re-entered each month. The location is inherited from the map; if it cannot be resolved, the fixed hours below are used instead."
+msgstr ""
+
+msgid "Fixed hours — the start and end hours below"
+msgstr ""
+
+msgid "Fixed time"
+msgstr ""
+
+msgid "Fixed value"
+msgstr ""
+
+msgid "Follows a curve"
+msgstr ""
+
+msgid "For anything the list above does not cover — EC, pH, stocking density. Pick a measurement type and the system reads it from your sensors; leave it blank and the item is yours to read."
+msgstr ""
+
+msgid "For your security, log out and log in again before changing this. Your session was restored from the \"Remember Me\" cookie rather than a password."
+msgstr ""
+
+msgid "Force Relays Off At Startup"
+msgstr ""
+
+msgid "Fraction of light that passes through the shade cloth when fully closed. 0.30 lets three tenths through."
+msgstr ""
+
+msgid "Frequent"
+msgstr ""
+
+msgid "From a template"
+msgstr ""
+
+msgid "GDD"
+msgstr ""
+
+msgid "GLB export failed: "
+msgstr ""
+
+msgid "Gable ×2"
+msgstr ""
+
+msgid "Gauge metric"
+msgstr ""
+
+msgid "Generate branches"
+msgstr ""
+
+msgid "Geometry"
+msgstr ""
+
+msgid "Glass"
+msgstr ""
+
+msgid "Granted Resources"
+msgstr ""
+
+msgid "Grey film"
+msgstr ""
+
+msgid "Groundwater (untreated)"
+msgstr ""
+
+msgid "Group ID"
+msgstr ""
+
+msgid "Group not found."
+msgstr ""
+
+msgid "Groups restrict who can operate a resource. Every user can still view all data."
+msgstr ""
+
+msgid "Groups that can operate this dashboard"
+msgstr ""
+
+msgid "Groups that can operate this facility"
+msgstr ""
+
+msgid "Groups that can operate this map"
+msgstr ""
+
+msgid "Groups that can operate this tab"
+msgstr ""
+
+msgid "Guidance"
+msgstr ""
+
+msgid "Harder or colder water needs a lower sunburn threshold, which this sets for you."
+msgstr ""
+
+msgid "Heat unit base temperature"
+msgstr ""
+
+msgid "Heat units"
+msgstr ""
+
+msgid "Heating, Cooling and Misting"
+msgstr ""
+
+msgid "Hide Labels & Shapes When Zoomed Out — L2"
+msgstr ""
+
+msgid "Hide Labels When Zoomed Out — L1"
+msgstr ""
+
+msgid "Hide automated records (%(n)s)"
+msgstr ""
+
+msgid "Hide model"
+msgstr ""
+
+msgid "Hides this kind of shape while you work on another mode."
+msgstr ""
+
+msgid "High performance"
+msgstr ""
+
+msgid "How do I fix it?"
+msgstr ""
+
+msgid "How far from the optimum it still does well. Larger means less fussy about temperature."
+msgstr ""
+
+msgid "How far this stage has come in growing degree days. Shown only when the programme declares a base temperature."
+msgstr ""
+
+msgid "How fast this crop can photosynthesise when light and CO2 are plentiful."
+msgstr ""
+
+msgid "How hard the system chases the target. Sets the cycle, how often vents may move, the dead-band and the emergency thresholds together."
+msgstr ""
+
+msgid "How long before sunset misting stops."
+msgstr ""
+
+msgid "How long this stage lasts, counted from when the one before it ended. Leave the last one blank to run until the end."
+msgstr ""
+
+msgid "How long to wait for a selector or bus relay to report its new state before giving up on this actuator. Wired relays confirm immediately; radio-linked relays confirm when the device acknowledges. The bus is never energized against an unconfirmed selector."
+msgstr ""
+
+msgid "How often the misting runs — the run time and the gap until the next run."
+msgstr ""
+
+msgid "How often the vents may move. Emergencies and safety gates ignore this."
+msgstr ""
+
+msgid "How old a measurement may be and still be used, in seconds. Leave blank to derive it from the measurement period — that is right for most devices. Set a number only when this device needs its own rule (a LoRaWAN node that reports every 30-60 minutes, for example)."
+msgstr ""
+
+msgid "Humidity (%)"
+msgstr ""
+
+msgid "Humidity Range"
+msgstr ""
+
+msgid "Humidity rises faster"
+msgstr ""
+
+msgid "If no group is selected, everyone can operate this dashboard. Selecting a group limits operation to its members. Data stays visible to everyone."
+msgstr ""
+
+msgid "If no group is selected, everyone can operate this facility. Selecting a group limits operation to its members. Data stays visible to everyone."
+msgstr ""
+
+msgid "If no group is selected, everyone can operate this map. Selecting a group limits operation to its members. Data stays visible to everyone."
+msgstr ""
+
+msgid "If no group is selected, everyone can operate this tab. Selecting a group limits operation to its members. Data stays visible to everyone."
+msgstr ""
+
+msgid "If you are replacing broken hardware with the same model, update the connection settings (DevEUI, address) on the existing device instead. The shape, the history and every function link stay intact."
+msgstr ""
+
+msgid "In use"
+msgstr ""
+
+msgid "In-app upgrade is not available without the updater service. On the host, pull the new image and recreate the containers (docker compose pull && docker compose up -d) instead."
+msgstr ""
+
+msgid "Include notes on the calendar (read-only)"
+msgstr ""
+
+msgid "Include notice posts on the calendar (read-only)"
+msgstr ""
+
+msgid "Include set-aside items"
+msgstr ""
+
+msgid "Info Tint Border"
+msgstr ""
+
+msgid "Infrequent"
+msgstr ""
+
+msgid "Install updates automatically"
+msgstr ""
+
+msgid "Irrigation layers, pipes and devices"
+msgstr ""
+
+msgid "Item name"
+msgstr ""
+
+msgid "Joints"
+msgstr ""
+
+msgid "Keep the schedules"
+msgstr ""
+
+msgid "Keep the vents closed overnight and let heating, cooling and drying carry the load."
+msgstr ""
+
+msgid "Keeps venting and HVAC from working against each other. At [Energy saving] the HVAC rests when venting alone can reach the target, and the vents close while it runs. At [High performance] both act freely so the target is reached sooner."
+msgstr ""
+
+msgid "Kind"
+msgstr ""
+
+msgid "Knowledge"
+msgstr ""
+
+msgid "Knowledge Items"
+msgstr ""
+
+msgid "Lag"
+msgstr ""
+
+msgid "Last update attempt"
+msgstr ""
+
+msgid "Late"
+msgstr ""
+
+msgid "Lays branches square to the main pipe instead of following the reference line."
+msgstr ""
+
+msgid "Lead"
+msgstr ""
+
+msgid "Lead-acid 12 V (11.4–12.7 V)"
+msgstr ""
+
+msgid "Leave blank to return every column. Narrow it if rows are wide."
+msgstr ""
+
+msgid "Left side"
+msgstr ""
+
+msgid "Let the model decide which of light, CO₂, temperature or VPD is limiting right now."
+msgstr ""
+
+msgid "Let this actuator move at the same time as others on the same bus, when they are driving the same relay. Enable only if the bus and its supply can carry all of those motors at once. Opposite directions are never run together regardless of this setting. If any actuator on a bus disables this, the whole bus moves one actuator at a time."
+msgstr ""
+
+msgid "LiFePO4 4S (12.0–13.4 V)"
+msgstr ""
+
+msgid "Light and Shading"
+msgstr ""
+
+msgid "Light half-saturation"
+msgstr ""
+
+msgid "Limit Switch Fitted"
+msgstr ""
+
+msgid "Limit this coordinator to one bay. Leave blank for the whole facility."
+msgstr ""
+
+msgid "Lines"
+msgstr ""
+
+msgid "Lists the zones that still have no device assigned."
+msgstr ""
+
+msgid "Lithium-ion 1S (3.0–3.9 V)"
+msgstr ""
+
+msgid "Live"
+msgstr ""
+
+msgid "Livestock"
+msgstr ""
+
+msgid "Loading model…"
+msgstr ""
+
+msgid "Local word = table name, comma separated. e.g. 무=radish, 배추=cabbage. Only common anchors are needed — the AI works out synonyms itself."
+msgstr ""
+
+msgid "Login account"
+msgstr ""
+
+msgid "Long"
+msgstr ""
+
+msgid "Longest single spray. Humidification is regulated by how often it sprays, not by how long — the same way irrigation doses a fixed amount at intervals."
+msgstr ""
+
+msgid "Looks up a parcel by address and draws its boundary for you."
+msgstr ""
+
+msgid "Loose"
+msgstr ""
+
+msgid "Losing operation"
+msgstr ""
+
+msgid "Lower stage"
+msgstr ""
+
+msgid "Made by AI — check it before using it for control."
+msgstr ""
+
+msgid "Management Programs"
+msgstr ""
+
+msgid "Map Settings"
+msgstr ""
+
+msgid "Map is still loading. Try again in a moment."
+msgstr ""
+
+msgid "Mark as checked"
+msgstr ""
+
+msgid "Matched to irrigation valves placed on the facility plan."
+msgstr ""
+
+msgid "Max Measurement Age"
+msgstr ""
+
+msgid "Max Spray Duration (s)"
+msgstr ""
+
+msgid "Max photosynthesis"
+msgstr ""
+
+msgid "Members"
+msgstr ""
+
+msgid "Members and granted resources are set after the group is created."
+msgstr ""
+
+msgid "Minimum level"
+msgstr ""
+
+msgid "Minutes between reloads. Stages move by the day, so short intervals only add load."
+msgstr ""
+
+msgid "Minutes to shift the end of daytime. A negative value brings it forward (-30 means night starts 30 minutes before sunset)."
+msgstr ""
+
+msgid "Minutes to shift the event. A negative value counts down to before the event (-60 means one hour before)."
+msgstr ""
+
+msgid "Minutes to shift the start of daytime. A positive value delays it (30 means daytime starts 30 minutes after sunrise)."
+msgstr ""
+
+msgid "Misting Frequency"
+msgstr ""
+
+msgid "Misting Lockout Irradiance (W/m²)"
+msgstr ""
+
+msgid "Misting Release Irradiance (W/m²)"
+msgstr ""
+
+msgid "Misting Sunburn Protection"
+msgstr ""
+
+msgid "Misting Water Source"
+msgstr ""
+
+msgid "Misting by Sunlight Level"
+msgstr ""
+
+msgid "Misting is released again once the light falls below this level, and is tapered linearly between here and the lockout threshold. The gap between the two prevents the mist from switching on and off as clouds pass."
+msgstr ""
+
+msgid "Moderate"
+msgstr ""
+
+msgid "Moister"
+msgstr ""
+
+msgid "More time for leaves to dry"
+msgstr ""
+
+msgid "Most retrieved"
+msgstr ""
+
+msgid "Motor lifespan protection for automatic environment control. The motor moves only when the target differs from the last sent position by at least this much, and commands snap to this grid (e.g. 5% → 0, 5, 10 …). Set to 0 to disable — every minor fluctuation then drives the motor."
+msgstr ""
+
+msgid "Moves equipment less"
+msgstr ""
+
+msgid "Name Translations"
+msgstr ""
+
+msgid "Name aliases"
+msgstr ""
+
+msgid "Name translation is currently turned off. Turn it on under General Settings."
+msgstr ""
+
+msgid "Names you typed in yourself are stored exactly as you wrote them. This table holds the translation shown for each of them in the selected language. Editing one here locks it, so it is never overwritten again. The stored name is never changed."
+msgstr ""
+
+msgid "Names you typed in yourself — device, zone and crop names — stay in the language you wrote them in. Turn this on to have them shown in the interface language as well. The stored names are never changed."
+msgstr ""
+
+msgid "Names you typed in yourself — device, zone and crop names — stay in the language you wrote them in. Turn this on to have them shown in the interface language as well. The stored names are never changed. Without an AI engine they are not translated automatically, but translations you enter under Settings > Name Translations are still shown."
+msgstr ""
+
+msgid "New program"
+msgstr ""
+
+msgid "Next Execution"
+msgstr ""
+
+msgid "Next event"
+msgstr ""
+
+msgid "Night End (HH:MM)"
+msgstr ""
+
+msgid "Night Start (HH:MM)"
+msgstr ""
+
+msgid "Night Starts At"
+msgstr ""
+
+msgid "Night Vent Parking"
+msgstr ""
+
+msgid "Nighttime"
+msgstr ""
+
+msgid "No AI engine is set up, so translations are not filled in automatically. You can still collect the names in use and type the translations yourself — what you enter here is shown on screen just the same."
+msgstr ""
+
+msgid "No AI model is registered yet. Add and activate at least one agent below, then start the service."
+msgstr ""
+
+msgid "No AI model remains, so autonomous AI operation was stopped."
+msgstr ""
+
+msgid "No branch pipes. Generate branch pipes first."
+msgstr ""
+
+msgid "No groups yet. Create one in Settings > Users > Groups."
+msgstr ""
+
+msgid "No groups yet. Without a group, every user operates every resource their role allows."
+msgstr ""
+
+msgid "No point burning fuel for what an open vent already does."
+msgstr ""
+
+msgid "No program"
+msgstr ""
+
+msgid "No programs match your search."
+msgstr ""
+
+msgid "No sensors are linked to this place yet."
+msgstr ""
+
+msgid "No spraying at all for this long after one finishes, so the leaves get a chance to dry."
+msgstr ""
+
+msgid "No target items yet. Add one below to track a value for each stage."
+msgstr ""
+
+msgid "No updater service is running on this system yet, so this schedule is saved but will not run until one is set up -- see below."
+msgstr ""
+
+msgid "No users."
+msgstr ""
+
+msgid "No weather services connected — use [+ Add Connection] below"
+msgstr ""
+
+msgid "Nobody loses operation with this change."
+msgstr ""
+
+msgid "Non-woven fabric"
+msgstr ""
+
+msgid "None of this is needed. Leave it empty unless you already know the numbers."
+msgstr ""
+
+msgid "Not Yet Categorised"
+msgstr ""
+
+msgid "Not saved yet"
+msgstr ""
+
+msgid "Not translated yet"
+msgstr ""
+
+msgid "Not used"
+msgstr ""
+
+msgid "Nothing here yet. Press \"Collect names\" to gather the names in use."
+msgstr ""
+
+msgid "Nothing here yet. Press \"Translate now\" to collect the names in use."
+msgstr ""
+
+msgid "Nothing here yet. Write down how you grow something once — the stages and how long each takes — and every plot you attach it to will track its own stage, days left and harvest date, and show your notes for the stage it is in."
+msgstr ""
+
+msgid "Nothing matches those filters."
+msgstr ""
+
+msgid "Nothing placed yet"
+msgstr ""
+
+msgid "Nothing placed yet — add one above, or use the 3D tools"
+msgstr ""
+
+msgid "Nothing recorded here yet."
+msgstr ""
+
+msgid "Nothing recorded yet."
+msgstr ""
+
+msgid "Nursery (Seedling) Mode"
+msgstr ""
+
+msgid "Nursery Mode"
+msgstr ""
+
+msgid "Off, every stage aims for the numbers above. On, each stage gets its own box where you set only what differs."
+msgstr ""
+
+msgid "Off, every stage uses what is switched on above. On, each stage can turn one of them off — a dry-down before harvest, for instance."
+msgstr ""
+
+msgid "Often"
+msgstr ""
+
+msgid "One actuator drives the whole group. Uncheck to wire this one separately."
+msgstr ""
+
+msgid "One plot at a glance: stage timeline, targets against current readings, trends, and accumulated heat. Edit its schedule, guidance and targets from here."
+msgstr ""
+
+msgid "Only for this screen, when its cloth differs from the rest. Leave 0 to use the value set on the linked facility. Used when there is no indoor light sensor: the indoor level is estimated from outdoor irradiance and the screen position."
+msgstr ""
+
+msgid "Only for units this coordinator does not switch itself — it already knows about the ones it commands. Not an indoor temperature: something that reports the unit running, such as a power reading or a relay state."
+msgstr ""
+
+msgid "Only what differs from the programme target. Anything left out follows the value set under Targets."
+msgstr ""
+
+msgid "Opaque white film"
+msgstr ""
+
+msgid "Open source"
+msgstr ""
+
+msgid "Opening helps only when the outdoor air is on the target side. When it is not, wider vents drag the reading further away."
+msgstr ""
+
+msgid "Operating Hours Basis"
+msgstr ""
+
+msgid "Optimum temperature"
+msgstr ""
+
+msgid "Original"
+msgstr ""
+
+msgid "Output: Close (shared bus)"
+msgstr ""
+
+msgid "Output: Open (shared bus)"
+msgstr ""
+
+msgid "Output: Selector"
+msgstr ""
+
+msgid "Outside this window the coordinator stops entirely — heating and cooling included. Safety limits still act."
+msgstr ""
+
+msgid "Overview"
+msgstr ""
+
+msgid "PE film"
+msgstr ""
+
+msgid "PO film"
+msgstr ""
+
+msgid "Page background behind cards, list headers, modal body"
+msgstr ""
+
+msgid "Page cards — widgets, list rows, modal groups"
+msgstr ""
+
+msgid "Phase Anchor"
+msgstr ""
+
+msgid "Phase Offset (min)"
+msgstr ""
+
+msgid "Photosynthesis model"
+msgstr ""
+
+msgid "Pick a part, then click the map to place it."
+msgstr ""
+
+msgid "Pick which devices of this kind appear on the map."
+msgstr ""
+
+msgid "Pipe labels"
+msgstr ""
+
+msgid "Place on map"
+msgstr ""
+
+msgid "Places with no device"
+msgstr ""
+
+msgid "Plot"
+msgstr ""
+
+msgid "Plot Shape"
+msgstr ""
+
+msgid "Plots"
+msgstr ""
+
+msgid "Plots without a zone after this change: {list}"
+msgstr ""
+
+msgid "Polycarbonate"
+msgstr ""
+
+msgid "Popup Default Tab"
+msgstr ""
+
+msgid "Position & Structure"
+msgstr ""
+
+msgid "Pre-update backup"
+msgstr ""
+
+msgid "Precipitation probability (%)"
+msgstr ""
+
+msgid "Prepares further ahead"
+msgstr ""
+
+msgid "Preview view"
+msgstr ""
+
+msgid "Probes more often"
+msgstr ""
+
+msgid "Probes rarely"
+msgstr ""
+
+msgid "Program stages"
+msgstr ""
+
+msgid "Programs"
+msgstr ""
+
+msgid "Progress"
+msgstr ""
+
+msgid "Public data — Korea"
+msgstr ""
+
+msgid "Published images"
+msgstr ""
+
+msgid "Put back"
+msgstr ""
+
+msgid "Rainwater"
+msgstr ""
+
+msgid "Rare"
+msgstr ""
+
+msgid "Reaches the target sooner"
+msgstr ""
+
+msgid "Reacts later"
+msgstr ""
+
+msgid "Reacts sooner"
+msgstr ""
+
+msgid "Reacts to what is here now"
+msgstr ""
+
+msgid "Read on the signal chosen above, in whatever unit that signal uses. For an on/off signal (0 or 1) leave it at 0.5."
+msgstr ""
+
+msgid "Reconnection has been failing for several minutes."
+msgstr ""
+
+msgid "Record what is in each zone. Facility plots need no drawing — the zone itself is the location."
+msgstr ""
+
+msgid "Recorded as intent — there is no way to recognise this equipment yet."
+msgstr ""
+
+msgid "Reference Plot (optional)"
+msgstr ""
+
+msgid "Reference only (informational). Motor position (%) at which the mechanism visually begins to open. The command value is used as the motor position directly and is NOT rescaled by this field."
+msgstr ""
+
+msgid "Reference only (informational). Motor position (%) regarded as fully open. The command value is NOT capped by this field. A command of 0% moves to the physical end stop regardless (emergency fully-closed)."
+msgstr ""
+
+msgid "Reference target only"
+msgstr ""
+
+msgid "Register and activate at least one AI model before starting the service."
+msgstr ""
+
+msgid "Register as programme"
+msgstr ""
+
+msgid "Reject any new target arriving within this many seconds of the previous one. Prevents queued-up motor whiplash from rapid button presses. Stop is always accepted regardless of this interval."
+msgstr ""
+
+msgid "Reject sensor readings older than this. Leave at 0 to let each sensor decide from its own update interval."
+msgstr ""
+
+msgid "Relaxed"
+msgstr ""
+
+msgid "Relay Confirm Timeout (s)"
+msgstr ""
+
+msgid "Removes the generated pipes so you can start over."
+msgstr ""
+
+msgid "Replace hardware"
+msgstr ""
+
+msgid "Resources"
+msgstr ""
+
+msgid "Resources changed"
+msgstr ""
+
+msgid "Responsive"
+msgstr ""
+
+msgid "Rest Heating and Cooling When Venting Can Reach the Target"
+msgstr ""
+
+msgid "Retranslate"
+msgstr ""
+
+msgid "Retranslate all"
+msgstr ""
+
+msgid "Retrieved at least once"
+msgstr ""
+
+msgid "Returns True during the day and False at night. The location is inherited from this Conditional Function."
+msgstr ""
+
+msgid "Returns the number of seconds until the next selected sun event. The location is inherited from this Conditional Function."
+msgstr ""
+
+msgid "Reviewed knowledge only: OFF"
+msgstr ""
+
+msgid "Reviewed knowledge only: ON"
+msgstr ""
+
+msgid "Right now"
+msgstr ""
+
+msgid "Right side"
+msgstr ""
+
+msgid "Roof vent"
+msgstr ""
+
+msgid "Roughly how much warmth this crop banks on a normal day."
+msgstr ""
+
+msgid "Running Image"
+msgstr ""
+
+msgid "Running. Chat, advice requests and background AI work are all active."
+msgstr ""
+
+msgid "Sandwich panel"
+msgstr ""
+
+msgid "Save the facility first to see the integration summary and run a device check."
+msgstr ""
+
+msgid "Save the facility first, then record what is in each zone."
+msgstr ""
+
+msgid "Save the map first."
+msgstr ""
+
+msgid "Saved, but the daemon could not be notified. The new schedule takes effect after the daemon restarts."
+msgstr ""
+
+msgid "Search knowledge…"
+msgstr ""
+
+msgid "Search programs…"
+msgstr ""
+
+msgid "Select a map and place the facility on it"
+msgstr ""
+
+msgid "Select an irrigation layer first."
+msgstr ""
+
+msgid "Select or add an irrigation layer first."
+msgstr ""
+
+msgid "Select some text first"
+msgstr ""
+
+msgid "Select the actuator to display and control"
+msgstr ""
+
+msgid "Selector Settle Time (s)"
+msgstr ""
+
+msgid "Set a different value here…"
+msgstr ""
+
+msgid "Set aside"
+msgstr ""
+
+msgid "Set aside — the AI will not cite this."
+msgstr ""
+
+msgid "Sets the mode-switching thresholds. Defaults assume a 4S LiFePO4 pack (12.8 V nominal). For a 12 V lead-acid pack use 12.00 / 11.70 / 11.40 instead — the two chemistries have completely different voltage curves."
+msgstr ""
+
+msgid "Sets the window above from a day-length curve instead of fixed times. Careful: a short day length means the coordinator runs for only those hours, so nothing is heated overnight."
+msgstr ""
+
+msgid "Setting saved."
+msgstr ""
+
+msgid "Setup steps"
+msgstr ""
+
+msgid "Shade Night"
+msgstr ""
+
+msgid "Shades the periods between sunset and sunrise so readings can be read against the solar day rather than the clock. Sun times come from this farm's location."
+msgstr ""
+
+msgid "Shading and Supplemental Light"
+msgstr ""
+
+msgid "Shifts the end of the operating window relative to sunset. Positive ends later (30 keeps performance mode for 30 minutes after sunset). Only used when the basis is sunrise to sunset."
+msgstr ""
+
+msgid "Shifts the start of the operating window relative to sunrise. Negative starts earlier (-30 begins 30 minutes before sunrise). Only used when the basis is sunrise to sunset."
+msgstr ""
+
+msgid "Short"
+msgstr ""
+
+msgid "Show Local Time"
+msgstr ""
+
+msgid "Show Measurement Panel"
+msgstr ""
+
+msgid "Show Notice"
+msgstr ""
+
+msgid "Show a dock at the top of the map with the current time, sunrise and sunset for wherever the map is centered."
+msgstr ""
+
+msgid "Show automated records (%(n)s)"
+msgstr ""
+
+msgid "Show in 3D"
+msgstr ""
+
+msgid "Show length labels"
+msgstr ""
+
+msgid "Show model"
+msgstr ""
+
+msgid "Show more"
+msgstr ""
+
+msgid "Show on map"
+msgstr ""
+
+msgid "Show original names"
+msgstr ""
+
+msgid "Show plots (what is where) on the map. Plot labels appear when zoomed in."
+msgstr ""
+
+msgid "Show the measurement panel dock. Turn off to hide it entirely, even if measurements are selected below."
+msgstr ""
+
+msgid "Show translated names"
+msgstr ""
+
+msgid "Show/hide the display filter"
+msgstr ""
+
+msgid "Showing"
+msgstr ""
+
+msgid "Shown in lists. Leave blank to show the login account instead."
+msgstr ""
+
+msgid "Shown on the map when someone opens a plot that is in this stage."
+msgstr ""
+
+msgid "Shows the measured length of each edge on the map."
+msgstr ""
+
+msgid "Side window"
+msgstr ""
+
+msgid "Size & shape"
+msgstr ""
+
+msgid "Size and position are set by hand — the envelope no longer updates them."
+msgstr ""
+
+msgid "Size, shape and name follow the group. Uncheck to size this one on its own."
+msgstr ""
+
+msgid "Slow"
+msgstr ""
+
+msgid "Soil moisture"
+msgstr ""
+
+msgid "Solar Noon"
+msgstr ""
+
+msgid "Solar radiation (W/m²)"
+msgstr ""
+
+msgid "Source URL"
+msgstr ""
+
+msgid "Spacing and angle"
+msgstr ""
+
+msgid "Spec JSON parse error: "
+msgstr ""
+
+msgid "Specification"
+msgstr ""
+
+msgid "Split the run into stretches you manage differently, and give each one how many days it lasts. One stage is completely fine."
+msgstr ""
+
+msgid "Sprinklers"
+msgstr ""
+
+msgid "Stacked (stacked)"
+msgstr ""
+
+msgid "Stage"
+msgstr ""
+
+msgid "Stage code"
+msgstr ""
+
+msgid "Stage name"
+msgstr ""
+
+msgid "Stage timeline with today and past transitions marked."
+msgstr ""
+
+msgid "Staged (multi_stage)"
+msgstr ""
+
+msgid "Start Anchor"
+msgstr ""
+
+msgid "Start Offset (min)"
+msgstr ""
+
+msgid "Start closing this many minutes before sunset."
+msgstr ""
+
+msgid "Start date"
+msgstr ""
+
+msgid "Start or stop the AI model. While stopped, chat, advice requests and background AI work are all unavailable."
+msgstr ""
+
+msgid "Start this many seconds after the sequence begins"
+msgstr ""
+
+msgid "Starting from a template is easiest — it comes with stages and lengths already filled in, and you change what differs. Nothing is installed until you add it."
+msgstr ""
+
+msgid "Still reconnecting"
+msgstr ""
+
+msgid "Stop Control On"
+msgstr ""
+
+msgid "Stop Misting Before Sunset (min)"
+msgstr ""
+
+msgid "Stop this many seconds before the sequence ends"
+msgstr ""
+
+msgid "Stopped. Chat, advice requests and background AI work are all unavailable until you start it."
+msgstr ""
+
+msgid "Stops the bus, releases the selector and saves the elapsed time to Travel Time Open or Travel Time Close."
+msgstr ""
+
+msgid "Strong"
+msgstr ""
+
+msgid "Success Tint Border"
+msgstr ""
+
+msgid "Suggested DLI"
+msgstr ""
+
+msgid "Suggested GDD per day"
+msgstr ""
+
+msgid "Sun Event"
+msgstr ""
+
+msgid "Sun: Day or Night"
+msgstr ""
+
+msgid "Sun: Time Until Event"
+msgstr ""
+
+msgid "Sunrise Offset (min)"
+msgstr ""
+
+msgid "Sunrise to sunset — follows the season at this location"
+msgstr ""
+
+msgid "Sunset Offset (min)"
+msgstr ""
+
+msgid "Sunset to sunrise"
+msgstr ""
+
+msgid "Swap the Open and Close relays in software. Enable when 0% physically deploys the actuator and 100% pulls it back. An inverted actuator is never driven in parallel with a non-inverted one, because they energize opposite relays."
+msgstr ""
+
+msgid "Switch supplemental lighting on below this light level. 0 = no supplemental lighting, which is most facilities."
+msgstr ""
+
+msgid "Synchronous (symmetric)"
+msgstr ""
+
+msgid "THREE.GLTFLoader is not available."
+msgstr ""
+
+msgid "TLS CA Certificate"
+msgstr ""
+
+msgid "Table URL (CSV)"
+msgstr ""
+
+msgid "Table name"
+msgstr ""
+
+msgid "Target and Temperament"
+msgstr ""
+
+msgid "Target curves"
+msgstr ""
+
+msgid "Target items"
+msgstr ""
+
+msgid "Targets"
+msgstr ""
+
+msgid "Targets vs now"
+msgstr ""
+
+msgid "Tell me the concrete steps to fix what these log lines show."
+msgstr ""
+
+msgid "Temperature (°C)"
+msgstr ""
+
+msgid "Temperature Range"
+msgstr ""
+
+msgid "Temperature width"
+msgstr ""
+
+msgid "That item already exists."
+msgstr ""
+
+msgid "That text is no longer in the note"
+msgstr ""
+
+msgid "The AI reads only this to decide whether to use the table. e.g. Growing temperature, rainfall and soil pH ranges per plant species."
+msgstr ""
+
+msgid "The AI service is disabled. Enable it in Settings > General first."
+msgstr ""
+
+msgid "The CO2 concentration at which it reaches half the maximum."
+msgstr ""
+
+msgid "The automatic rollback may have failed too. Manual recovery is likely needed -- check the host directly:"
+msgstr ""
+
+msgid "The containers are being recreated on the new image. The web interface may briefly become unreachable; this page reconnects on its own."
+msgstr ""
+
+msgid "The containers will be recreated on the new image and control will pause briefly. A backup is taken first. Continue?"
+msgstr ""
+
+msgid "The dryness of the air at which the stomata are half closed. Lower means it suffers sooner in dry air."
+msgstr ""
+
+msgid "The installed version is the latest version published to the container registry."
+msgstr ""
+
+msgid "The knowledge library is empty. Until something is in here, the AI answers subject questions from its own general knowledge — with no source to cite."
+msgstr ""
+
+msgid "The light level at which it reaches half that maximum. Lower means it does well in weaker light."
+msgstr ""
+
+msgid "The name the system uses for this stage. Leave it blank and it is made from the stage name. Changing it on a stage already in use cuts the link to what has been recorded."
+msgstr ""
+
+msgid "The numbers this programme aims for. Switch on what you manage, and fill in a number when you have decided one — anything switched off is simply not part of this programme."
+msgstr ""
+
+msgid "The one-click update button requires the optional updater service, which is not running on this system."
+msgstr ""
+
+msgid "The security token for this page had expired. Nothing was saved — please try again."
+msgstr ""
+
+msgid "The selected log lines are sent to the AI model you configured. Do not send lines containing credentials."
+msgstr ""
+
+msgid "The starting line for counting heat units. Each day banks the average temperature minus this number: base 10, a day averaging 18, banks 8. Set this and the heat units on each stage, and stages advance on warmth banked instead of days on the calendar. Leave it blank and stages go by days."
+msgstr ""
+
+msgid "The temperature at which photosynthesis is fastest."
+msgstr ""
+
+msgid "The total light worth aiming for in a day."
+msgstr ""
+
+msgid "The two pipes are at the same height (level), so they cannot be connected vertically.\nSelect pipes on different levels."
+msgstr ""
+
+msgid "The update failed and the previous version was restored."
+msgstr ""
+
+msgid "The update failed."
+msgstr ""
+
+msgid "The update has been requested. The containers will be recreated on the new image; this page shows progress."
+msgstr ""
+
+msgid "The window is centred on this time."
+msgstr ""
+
+msgid "Thermal"
+msgstr ""
+
+msgid "These have NOT been executed. Approving runs it immediately with exactly the arguments shown — you do not need to go back to the AI and tell it."
+msgstr ""
+
+msgid "These plots sit in zones this change removes: {list}. They stay recorded but lose their zone. Save anyway?"
+msgstr ""
+
+msgid "These schedules lose their text"
+msgstr ""
+
+msgid "This account has been disabled. Contact an administrator."
+msgstr ""
+
+msgid "This group has no resources yet. Everyone can still operate what is not assigned."
+msgstr ""
+
+msgid "This is a Docker deployment, so the update is applied on the host."
+msgstr ""
+
+msgid "This is an experimental feature. Behavior may change without notice, and availability may be limited or interrupted."
+msgstr ""
+
+msgid "This moves real equipment (valves, pumps) as soon as you approve. Run it now?"
+msgstr ""
+
+msgid "This resource is assigned to another group. Ask an administrator for access."
+msgstr ""
+
+msgid "This source is already in your library. Configure it via the settings cog."
+msgstr ""
+
+msgid "Three ways to fill it: connect a source above, press Add Knowledge to write in what you already know, or just ask the AI to look something up — it saves what it finds."
+msgstr ""
+
+msgid "Tight"
+msgstr ""
+
+msgid "Tighter misting limits for seedlings, which scorch more easily than grown leaves."
+msgstr ""
+
+msgid "Time-based opening control (0–100%) for a vent, curtain or valve whose Open and Close relays are SHARED with other actuators, each picked by its own selector relay — so a 6-channel relay board drives four windows. Add one of these outputs per actuator, give them the same Open/Close channels, and they schedule against each other automatically. Selector contacts are only ever switched while the shared bus is de-energized. Use \"Actuator Paired\" instead when the actuator has its own dedicated Open/Close relays."
+msgstr ""
+
+msgid "To update, run the following on the host in the directory holding the compose file, after setting the desired version in AOT_IMAGE_TAG:"
+msgstr ""
+
+msgid "Toggle Plot labels"
+msgstr ""
+
+msgid "Tracks the target closely"
+msgstr ""
+
+msgid "Translate User-Defined Names"
+msgstr ""
+
+msgid "Translate now"
+msgstr ""
+
+msgid "Translated"
+msgstr ""
+
+msgid "Translation"
+msgstr ""
+
+msgid "Transmittance"
+msgstr ""
+
+msgid "Treated (RO, softened, filtered)"
+msgstr ""
+
+msgid "Trends"
+msgstr ""
+
+msgid "Undo"
+msgstr ""
+
+msgid "Undo last move (Ctrl+Z)"
+msgstr ""
+
+msgid "Unknown error"
+msgstr ""
+
+msgid "Unnamed"
+msgstr ""
+
+msgid "Unsaved changes"
+msgstr ""
+
+msgid "Update connection settings"
+msgstr ""
+
+msgid "Update time"
+msgstr ""
+
+msgid "Update to %(version)s"
+msgstr ""
+
+msgid "Updated successfully."
+msgstr ""
+
+msgid "Upper stage"
+msgstr ""
+
+msgid "Use Micro Sprinklers to Raise Humidity"
+msgstr ""
+
+msgid "Use different values per stage"
+msgstr ""
+
+msgid "Use the micro sprinklers for humidity too. Turn off when they are your irrigation."
+msgstr ""
+
+msgid "Used to log in. Letters and numbers only, and cannot be changed later."
+msgstr ""
+
+msgid "User Group"
+msgstr ""
+
+msgid "VPD half-saturation"
+msgstr ""
+
+msgid "Values set on individual stages will be removed. Continue?"
+msgstr ""
+
+msgid "Variety"
+msgstr ""
+
+msgid "Vegetation"
+msgstr ""
+
+msgid "Ventilation"
+msgstr ""
+
+msgid "Ventilation and HVAC Teamwork"
+msgstr ""
+
+msgid "Venting against a running unit throws that heat or cold straight outside."
+msgstr ""
+
+msgid "Very frequent"
+msgstr ""
+
+msgid "Very long"
+msgstr ""
+
+msgid "Vinyl (double)"
+msgstr ""
+
+msgid "Vinyl (single)"
+msgstr ""
+
+msgid "Voltage alone cannot tell the chemistry apart. Set this so the battery badge reads correctly."
+msgstr ""
+
+msgid "Voltage threshold at which stable operation is possible (4S LiFePO4: 13.20 V ≈ 70%; lead-acid 12 V: 12.00 V)"
+msgstr ""
+
+msgid "Voltage threshold for switching to power-saving mode (4S LiFePO4: 13.00 V ≈ 25%; lead-acid 12 V: 11.70 V)"
+msgstr ""
+
+msgid "Voltage threshold for switching to ultra-saving mode (4S LiFePO4: 12.80 V ≈ 10%, past the knee; lead-acid 12 V: 11.40 V)"
+msgstr ""
+
+msgid "Waiting for the updater to start..."
+msgstr ""
+
+msgid "Warning Tint Border"
+msgstr ""
+
+msgid "Warning: nobody would be able to operate this dashboard."
+msgstr ""
+
+msgid "Warning: nobody would be able to operate this facility."
+msgstr ""
+
+msgid "Warning: nobody would be able to operate this map."
+msgstr ""
+
+msgid "Warning: nobody would be able to operate this tab."
+msgstr ""
+
+msgid "Wastes less"
+msgstr ""
+
+msgid "Watering"
+msgstr ""
+
+msgid "Weak"
+msgstr ""
+
+msgid "Wetting-type misting is blocked outright at or above this indoor light level. The estimated indoor level is used, so closing the shade screen relaxes the lockout."
+msgstr ""
+
+msgid "What is here"
+msgstr ""
+
+msgid "What names the table is keyed by"
+msgstr ""
+
+msgid "What this group is for. Without it, nobody can tell later whether the group is still needed."
+msgstr ""
+
+msgid "What this programme is and why. Only the name is needed — everything else can wait."
+msgstr ""
+
+msgid "What this programme is for and how you want it to run. Written in your own words and read back whenever the programme comes up — by you, and by the AI when it advises on a plot using it."
+msgstr ""
+
+msgid "What this programme needs. Nothing is switched on here — a plot using this programme looks at where it sits and reports whether the equipment for each of these is actually there, so you find out before the crop does. Only watering can be found that way today, and only inside a facility: it is matched to irrigation valves placed on the facility plan. The others are recorded as intent until there is a way to recognise them."
+msgstr ""
+
+msgid "What this table can answer"
+msgstr ""
+
+msgid "What to monitor"
+msgstr ""
+
+msgid "What to place"
+msgstr ""
+
+msgid "What you write here is treated as confirmed — you are the source. Tag it so it only comes up for the right questions."
+msgstr ""
+
+msgid "When it stops. What each device does at that moment is set in its Action."
+msgstr ""
+
+msgid "When night ends, if you chose fixed clock times."
+msgstr ""
+
+msgid "When night starts, if you chose fixed clock times."
+msgstr ""
+
+msgid "When on, the AI may not cite notes it wrote itself until a person confirms them. Authoritative and hand-entered knowledge is unaffected."
+msgstr ""
+
+msgid "When the coordinator starts working each day."
+msgstr ""
+
+msgid "Whether night is measured from sunset to sunrise, or by fixed clock times."
+msgstr ""
+
+msgid "Which facility this coordinator runs. Actuators and sensors come from it."
+msgstr ""
+
+msgid "Which measurement gets the gauge. The rest are listed as text. If this plot does not measure it, the first one with a range is shown instead."
+msgstr ""
+
+msgid "Which model computes the effect of each actuator. Change only while testing."
+msgstr ""
+
+msgid "Which plot this coordinator follows, when more than one is growing in its scope. Leave empty when there is only one — it is picked automatically. When more than one is growing, pick it from the summary under the linked facility above."
+msgstr ""
+
+msgid "Which sun event should this Trigger fire on?"
+msgstr ""
+
+msgid "Which sun event to count down to"
+msgstr ""
+
+msgid "Which tab opens first in the zone and facility modals. The device modal has no tabs."
+msgstr ""
+
+msgid "Whole facility"
+msgstr ""
+
+msgid "Whole run"
+msgstr ""
+
+msgid "Wind direction"
+msgstr ""
+
+msgid "Wind speed"
+msgstr ""
+
+msgid "Wind speed (m/s)"
+msgstr ""
+
+msgid "Windows, doors and curtains"
+msgstr ""
+
+msgid "With a source link"
+msgstr ""
+
+msgid "Working Hours"
+msgstr ""
+
+msgid "Write the knowledge text."
+msgstr ""
+
+msgid "You are already on the latest version (%(version)s)."
+msgstr ""
+
+msgid "Your own material — anywhere"
+msgstr ""
+
+msgid "Your session has expired. Please log in again."
+msgstr ""
+
+msgid "blank = go by days"
+msgstr ""
+
+msgid "built-in"
+msgstr ""
+
+msgid "comma-separated, required"
+msgstr ""
+
+msgid "device was deleted"
+msgstr ""
+
+msgid "e.g. English common names or scientific names"
+msgstr ""
+
+msgid "e.g. Keep it on the dry side. Vent early on sunny mornings. Watch for aphids under the leaves."
+msgstr ""
+
+msgid "e.g. Started early so it finishes before the summer heat. Ease off the water once it starts to bolt."
+msgstr ""
+
+msgid "e.g. These are survival ranges, not greenhouse setpoints."
+msgstr ""
+
+msgid "e.g. radish, autumn, irrigation"
+msgstr ""
+
+msgid "error"
+msgstr ""
+
+msgid "external"
+msgstr ""
+
+msgid "follows the programme"
+msgstr ""
+
+msgid "label"
+msgstr ""
+
+msgid "map_load_failed"
+msgstr ""
+
+msgid "min so far"
+msgstr ""
+
+msgid "never past"
+msgstr ""
+
+msgid "no shading"
+msgstr ""
+
+msgid "no supplemental light"
+msgstr ""
+
+msgid "no target"
+msgstr ""
+
+msgid "of"
+msgstr ""
+
+msgid "on/off Output channel connected to the CLOSE relay. Every actuator naming the same Open and Close channels shares one bus and is scheduled against the others."
+msgstr ""
+
+msgid "on/off Output channel connected to the OPEN relay. Every actuator naming the same Open and Close channels shares one bus and is scheduled against the others."
+msgstr ""
+
+msgid "on/off Output channel that connects the shared bus to THIS actuator. It is switched on before the bus starts and off after the bus stops, never under load. Leave empty only if this actuator has the bus to itself."
+msgstr ""
+
+msgid "optional"
+msgstr ""
+
+msgid "programme target {v}"
+msgstr ""
+
+msgid "reinforcement face"
+msgstr ""
+
+msgid "retired"
+msgstr ""
+
+msgid "sensor-linked"
+msgstr ""
+
+msgid "set for this stage"
+msgstr ""
+
+msgid "solar absorbed"
+msgstr ""
+
+msgid "until the end"
+msgstr ""
+
+msgid "“Retrieved” means the knowledge search returned it — not that the answer quoted it."
+msgstr ""
