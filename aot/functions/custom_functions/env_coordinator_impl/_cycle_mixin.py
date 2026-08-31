@@ -827,6 +827,51 @@ class CycleMixin:
                 ','.join(_carried))
         return external, _od_cache
 
+    def _intentional_stop(self) -> 'str | None':
+        """제어를 **일부러** 쉬는 중인가 — 그렇다면 사유, 아니면 None.
+
+        사이클이 안 도는 데는 두 가지가 있다. 고장(센서 두절·예외)과 의도된
+        정지다. 워치독이 그 둘을 구분하지 못해, 재배 종료일에 정상적으로 멈춘
+        코디네이터가 30시간 동안 10분마다 "no cycle" 과 "29.9h outage
+        detected — plants continued growing" 을 찍었다(2026-08-30 영양·
+        쿠마모토). 로그만 보면 30시간째 고장이고, 권하는 조치(생육 주차 보정)는
+        이 상황과 무관하다.
+
+        **판정은 여기 한 곳뿐이다.** 워치독은 `_control_paused` 를 읽기만
+        한다 — 각자 판정하면 갈라지고, 갈라지면 느슨한 쪽이 실질 동작이 된다.
+
+        ⚠ 여기 넣어도 되는 것은 "쉬기로 한 것" 뿐이다. 내부 센서 없음은
+        **고장**이라 워치독이 울려야 하고, 안전게이트 발동은 완료된 사이클이라
+        스스로 `_last_cycle_ts` 도장을 찍는다. 둘 다 여기 넣지 말 것.
+        """
+        if not self._profiles:
+            if getattr(self, 'log_level_debug', False):
+                self.logger.debug(
+                    'EnvCoordinator: no actuators registered — skipping cycle')
+            return 'no_actuators'
+
+        # 종료 날짜가 지나면 제어를 정지한다: 각 액추에이터를 end_behavior 로
+        # 복귀시키고 이후 사이클을 건너뛴다. Method 는 종료 전까지 실제 경과
+        # 주차를 그대로 따른다.
+        if self._schedule_ended():
+            if not getattr(self, '_schedule_ended_logged', False):
+                self.logger.info(
+                    'EnvCoordinator: 종료 날짜(%s) 도달 — 제어 정지, '
+                    '액추에이터 end_behavior 복귀', self.schedule_end_time)
+                self._schedule_ended_logged = True
+            self._apply_end_behaviors()
+            return 'schedule_ended'
+        # 종료일 이전(또는 종료일 재설정)으로 복귀 시 재가동 로그 재무장
+        if getattr(self, '_schedule_ended_logged', False):
+            self._schedule_ended_logged = False
+            self.logger.info('EnvCoordinator: 종료 날짜 이전 — 제어 재개')
+
+        if self.time_enable and not self._in_time_window():
+            self._apply_end_behaviors()
+            return 'outside_time_window'
+
+        return None
+
     def _run_cycle(self, cycle_sec: float) -> None:
         uid     = self.unique_id
         # 정하지 않았으면 **None 그대로** 아래로 흘린다 — 센서마다 자기 주기로
@@ -843,34 +888,11 @@ class CycleMixin:
         # 값을 고쳐도 데몬은 영영 옛 값으로 돈다(무에러).
         self._shade_tau_cache = None
 
-        if not self._profiles:
-            if getattr(self, 'log_level_debug', False):
-                self.logger.debug(
-                    'EnvCoordinator: no actuators registered — skipping cycle')
-            return
-
-        # ── Schedule end gate ─────────────────────────────────────────────────
-        # 종료 날짜가 지나면 제어를 정지한다: 각 액추에이터를 end_behavior 로
-        # 복귀시키고 이후 사이클을 건너뛴다. Method 는 종료 전까지 실제 경과
-        # 주차를 그대로 따른다.
-        if self._schedule_ended():
-            if not getattr(self, '_schedule_ended_logged', False):
-                self.logger.info(
-                    'EnvCoordinator: 종료 날짜(%s) 도달 — 제어 정지, '
-                    '액추에이터 end_behavior 복귀', self.schedule_end_time)
-                self._schedule_ended_logged = True
-            self._apply_end_behaviors()
-            return
-        else:
-            # 종료일 이전(또는 종료일 재설정)으로 복귀 시 재가동 로그 재무장
-            if getattr(self, '_schedule_ended_logged', False):
-                self._schedule_ended_logged = False
-                self.logger.info(
-                    'EnvCoordinator: 종료 날짜 이전 — 제어 재개')
-
-        # ── Time window gate ──────────────────────────────────────────────────
-        if self.time_enable and not self._in_time_window():
-            self._apply_end_behaviors()
+        # 의도된 정지(장치 없음·종료일·운전 시간대 밖)는 사유를 남긴다 —
+        # 워치독이 고장과 구분하는 근거다(`env_coordinator.loop`). 정상
+        # 진행이면 None 이 들어가 사유가 지워진다.
+        self._control_paused = self._intentional_stop()
+        if self._control_paused:
             return
 
         # ── External context ──────────────────────────────────────────────────

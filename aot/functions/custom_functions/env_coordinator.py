@@ -379,6 +379,9 @@ class CustomModule(
         self._pre_gate: SafetyPreGate   = None
         self._post_gate: SafetyPostGate = SafetyPostGate()
         self._last_cycle_ts: float      = 0.0
+        # 의도된 정지의 사유(None = 정상 제어 중). `_run_cycle` 만 쓰고
+        # 워치독이 읽는다 — 판정자를 둘로 만들지 않기 위함이다.
+        self._control_paused: 'str | None' = None
         self._ext_cache = ExtContextCache()
         self._cached_tz = self._CACHED_TZ_SENTINEL  # initialize()에서 1회 결정, 이후 재사용
 
@@ -574,7 +577,29 @@ class CustomModule(
         period = self.update_period or 60.0
         self.timer_loop = now + period
 
-        # Watchdog: 마지막 사이클로부터 3×period 이상 경과 시 경고
+        try:
+            self._run_cycle(period)
+        except Exception:
+            self.logger.exception('EnvCoordinator cycle error')
+
+        # ── Watchdog — **`_run_cycle` 뒤에서** 본다 ───────────────────────────
+        # 사이클이 안 도는 데는 두 가지가 있다. 고장(멈춤·예외)과 **의도된
+        # 정지**(종료일 도달·운전 시간대 밖·액추에이터 미설정)다. 예전에는
+        # 이 둘을 구분하지 않아, 정상 종료한 코디네이터가 10분마다
+        # "no cycle" 과 "29.9h outage detected — plants continued growing"
+        # 을 찍었다(2026-08-30 영양·쿠마모토, 30시간 연속). 로그만 보면
+        # 30시간째 고장 난 것으로 읽히고, 조치랍시고 생육 주차 보정을
+        # 권하는데 그것은 이 상황과 무관하다.
+        #
+        # 판정을 여기서 다시 하지 않는다 — `_run_cycle` 이 의도적으로
+        # 멈출 때 `_control_paused` 에 사유를 남기고, 정상 진행하면 지운다.
+        # 판정자가 둘이면 갈라지고, 갈라지면 느슨한 쪽이 실질 동작이 된다.
+        #
+        # **`_run_cycle` 뒤에 두는 것이 핵심이다.** 앞에 두면 그 플래그가
+        # 직전 사이클 것이라 재시작 직후 한 번은 반드시 헛울린다(플래그는
+        # 메모리에만 있고 `_last_cycle_ts` 는 DB 에서 복원되기 때문).
+        if getattr(self, '_control_paused', None):
+            return
         if self._last_cycle_ts > 0 and (now - self._last_cycle_ts) > period * 3:
             gap = now - self._last_cycle_ts
             self.logger.warning(
@@ -587,8 +612,3 @@ class CustomModule(
                     'EnvCoordinator: %.1fh outage detected — plants continued growing. '
                     'Correct growth week via schedule_week_offset.',
                     gap_h)
-
-        try:
-            self._run_cycle(period)
-        except Exception:
-            self.logger.exception('EnvCoordinator cycle error')
