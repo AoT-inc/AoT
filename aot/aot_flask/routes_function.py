@@ -53,6 +53,7 @@ from aot.databases.models import (PID, Actions, Camera, Conditional,
                                      Unit, User)
 from aot.services.tab_service import TabService
 from aot.aot_client import DaemonControl
+from aot.aot_flask.access import scope
 from aot.aot_flask.extensions import db
 from aot.aot_flask.forms import (forms_action, forms_conditional,
                                        forms_custom_controller, forms_function,
@@ -1713,6 +1714,51 @@ def function_sequence_update_schedule():
         if not trigger:
             return jsonify({'error': 'Trigger not found'}), 404
 
+        # per_day → shared 로 돌아갈 때, 요일별로 잡아 둔 그룹·작동시간을 전역
+        # custom_options 로 끌어올린다.
+        #
+        # 예전에는 창 시간(start/end/period)만 대표 요일에서 shared 로 옮기고
+        # groups/durations 는 그대로 버렸다. shared 모드는 요일별 맵을 아예 읽지
+        # 않으므로, 요일별로 공들여 짠 그룹 구성과 관수 시간이 버튼 한 번에
+        # 조용히 사라졌다 — 되돌릴 방법도 없었다(전역값은 이미 다른 값이다).
+        # 대표 요일은 창 시간과 **같은 규칙**(첫 활성 요일)을 쓴다. 그래야
+        # "이 요일 설정이 공통이 된다" 는 한 가지 이야기로 읽힌다.
+        try:
+            _old = parse_schedule(trigger.timer_schedule) if trigger.timer_schedule else None
+            if (_old and _old.get('mode') == 'per_day'
+                    and isinstance(schedule, dict) and schedule.get('mode') == 'shared'):
+                _rep = None
+                for _d in range(7):
+                    _e = (_old.get('days') or {}).get(str(_d))
+                    if _e and _e.get('enabled') is not False:
+                        _rep = _e
+                        break
+                if _rep:
+                    _groups = _rep.get('groups') or {}
+                    _durations = _rep.get('durations') or {}
+                    if _groups or _durations:
+                        for _act in Actions.query.filter(
+                                Actions.function_id == function_id).all():
+                            try:
+                                _o = json.loads(_act.custom_options) if _act.custom_options else {}
+                            except Exception:
+                                continue
+                            _changed = False
+                            if _act.unique_id in _groups:
+                                _o['group_name'] = (_groups[_act.unique_id] or '').strip()
+                                _changed = True
+                            if _act.unique_id in _durations:
+                                try:
+                                    _o['action_duration'] = float(_durations[_act.unique_id])
+                                    _changed = True
+                                except (TypeError, ValueError):
+                                    pass
+                            if _changed:
+                                _act.custom_options = json.dumps(_o)
+        except Exception as _e:
+            logger.warning(
+                f"per_day→shared 전환에서 요일별 그룹·작동시간을 옮기지 못했다: {_e}")
+
         # Persist schedule JSON
         import json as _json
         trigger.timer_schedule = _json.dumps(schedule)
@@ -2119,22 +2165,58 @@ def sequence_activate_toggle(function_id, state):
     if not utils_general.user_has_permission('edit_controllers'):
         return jsonify({'error': 'Permission denied'}), 403
 
+    # 그룹 스코프(A1a) — 이 라우트는 이제 컨트롤러를 실제로 켜고 끈다(물리 제어).
+    # 위젯의 같은 토글(widget_trigger_sequence.sequence_func_activate_toggle)과
+    # 같은 게이트를 받아야 한다.
+    if not scope.can_operate_device(function_id):
+        return jsonify({'error': scope.deny_message()}), 403
+
     try:
         trigger = Trigger.query.filter_by(unique_id=function_id).first()
         if not trigger:
             return jsonify({'error': 'Trigger not found'}), 404
         
-        if state == 'activate':
-            trigger.is_activated = True
-        else:
-            trigger.is_activated = False
-            
+        activate = (state == 'activate')
+        trigger.is_activated = activate
         db.session.commit()
-        
-        # Refresh Daemon
+
+        # 데몬의 컨트롤러를 **실제로** 켜고 끈다.
+        #
+        # 예전에는 여기서 refresh_daemon_trigger_settings() 만 불렀다. 그건
+        # 데몬 쪽에서 예외를 통째로 삼키고(aot_daemon.refresh_daemon_trigger_settings),
+        # 이 라우트는 반환값을 보지도 않은 채 무조건 success 를 돌려줬다.
+        # 그래서 RPC 가 실패하면 DB 는 '비활성'인데 돌고 있는 컨트롤러는 여전히
+        # is_activated=True 라, 화면에는 꺼진 것으로 보이면서 실제 밸브는 계속
+        # 동작했다 — 운영 농장에서 실제로 발생한 사고다.
         control = DaemonControl()
-        control.refresh_daemon_trigger_settings(function_id)
-        
+        if activate:
+            control.controller_activate(function_id)
+        else:
+            control.controller_deactivate(function_id)
+
+        # 반환 코드만으로는 판정하지 않는다 — "안 돌고 있다" 도 1 로 오는데,
+        # 비활성화에서 그건 정상이다. 실제 상태를 되물어 의도대로 됐는지 본다.
+        try:
+            still_running = bool(control.controller_is_active(function_id))
+        except Exception as err:
+            logger.error(f"Sequence Toggle: 데몬 상태 확인 실패 {function_id}: {err}")
+            return jsonify({
+                'error': _("Saved, but the daemon could not be reached — the sequence "
+                           "may still be running. Check the daemon."),
+                'daemon_unreachable': True,
+            }), 502
+
+        if still_running != activate:
+            logger.error(
+                f"Sequence Toggle: {function_id} 요청={state} 이나 데몬 실제 상태는 "
+                f"{'실행 중' if still_running else '정지'} — 반영되지 않았다.")
+            return jsonify({
+                'error': (_("The sequence is still running — the daemon did not apply the change.")
+                          if still_running else
+                          _("The sequence did not start — the daemon did not apply the change.")),
+                'daemon_mismatch': True,
+            }), 502
+
         return jsonify({'status': 'success'})
     except Exception as e:
         logger.error(f"Sequence Toggle Error: {e}")

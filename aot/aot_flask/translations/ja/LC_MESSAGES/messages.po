@@ -31721,3 +31721,79 @@ msgstr ""
 
 msgid "label"
 msgstr ""
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Copied to all days"
+msgstr "すべての曜日にコピーしました"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Create group"
+msgstr "グループを作成"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Deactivated"
+msgstr "無効化しました"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Duration updated"
+msgstr "動作時間を変更しました"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Failed to save schedule"
+msgstr "スケジュールを保存できませんでした"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Failed to toggle Sequence"
+msgstr "シーケンスを切り替えられませんでした"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Failed to toggle action"
+msgstr "アクションを切り替えられませんでした"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Failed to update"
+msgstr "更新できませんでした"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Failed to update duration"
+msgstr "動作時間を更新できませんでした"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "JS Error in List"
+msgstr "リストのスクリプトエラー"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "New group name"
+msgstr "新しいグループ名"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "No actions found"
+msgstr "アクションがありません"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "No group"
+msgstr "グループなし"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Output Type"
+msgstr "出力タイプ"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Runs the whole sequence"
+msgstr "シーケンス全体の間に動作します"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "SINGLE"
+msgstr "単独"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Select Group"
+msgstr "グループを選択"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "TOTAL"
+msgstr "全体"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Time wheel not loaded"
+msgstr "時刻ホイールを読み込めませんでした"

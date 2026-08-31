@@ -26888,3 +26888,187 @@ msgstr "Напредна подешавања"
 msgid "Not Yet Categorised"
 msgstr "Још није категорисано"
 
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Activate or deactivate this sequence"
+msgstr "Укључите или искључите ову секвенцу"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Activated"
+msgstr "Укључена"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "All weekdays share the same start, end, and period"
+msgstr "Сви дани имају исти почетак, крај и период"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Copied to all days"
+msgstr "Копирано на све дане"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Copy the selected day's settings to all weekdays"
+msgstr "Копирај подешавања изабраног дана на све дане у недељи"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Copy to All"
+msgstr "Копирај на све"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Create group"
+msgstr "Направи групу"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Deactivated"
+msgstr "Искључена"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Device is gone"
+msgstr "Уређај недостаје"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Duration updated"
+msgstr "Трајање је ажурирано"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Failed to save schedule"
+msgstr "Није успело чување распореда"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Failed to toggle Sequence"
+msgstr "Није успело мењање стања секвенце"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Failed to toggle action"
+msgstr "Није успело мењање стања радње"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Failed to update"
+msgstr "Ажурирање није успело"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Failed to update duration"
+msgstr "Ажурирање трајања није успело"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Fri"
+msgstr "пет"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "JS Error in List"
+msgstr "Грешка скрипте у листи"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Margins (seconds)"
+msgstr "Резерва (секунде)"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Mon"
+msgstr "пон"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "New group name"
+msgstr "Нови назив групе"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "No actions found"
+msgstr "Нема радњи"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "No group"
+msgstr "Без групе"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Offline"
+msgstr "Ван мреже"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Output Type"
+msgstr "Тип излаза"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Per Day"
+msgstr "По данима"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Press and hold to reorder"
+msgstr "Притисните и држите да промените редослед"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Run the sequence on this weekday. Unchecked days are skipped."
+msgstr "Покрени секвенцу овог дана. Неозначени дани се прескачу."
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Runs the whole sequence"
+msgstr "Ради током целе секвенце"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "SINGLE"
+msgstr "ПОЈЕДИНАЧНО"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Sat"
+msgstr "суб"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Select Group"
+msgstr "Изабери групу"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Select this weekday to view and edit its times and actions"
+msgstr "Изаберите овај дан да видите и измените његова времена и радње"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Set a different start, end, and period for each weekday"
+msgstr "Подесите различит почетак, крај и период за сваки дан"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Set the duration of one cycle. Cycles repeat until the end time."
+msgstr "Подесите трајање једног циклуса. Циклуси се понављају до времена завршетка."
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Set the time of day the sequence starts for the selected day"
+msgstr "Подесите време почетка секвенце за изабрани дан"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Set the time of day the sequence stops. Select 00:00 for 24:00 (end of day)."
+msgstr "Подесите време заустављања секвенце. Изаберите 00:00 за 24:00 (крај дана)."
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Shared"
+msgstr "Заједничко"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Show or hide the action list"
+msgstr "Прикажи или сакриј листу радњи"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Sun"
+msgstr "нед"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "TOTAL"
+msgstr "УКУПНО"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Thu"
+msgstr "чет"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Time wheel not loaded"
+msgstr "Бирач времена није учитан"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Tue"
+msgstr "уто"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Updated"
+msgstr "Ажурирано"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Waiting for data..."
+msgstr "Чекање података..."
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Wed"
+msgstr "сре"

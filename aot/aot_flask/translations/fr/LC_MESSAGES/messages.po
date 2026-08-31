@@ -28792,3 +28792,187 @@ msgstr "Paramètres avancés"
 msgid "Not Yet Categorised"
 msgstr "Non encore classé"
 
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Activate or deactivate this sequence"
+msgstr "Activer ou désactiver cette séquence"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Activated"
+msgstr "Activée"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "All weekdays share the same start, end, and period"
+msgstr "Tous les jours partagent les mêmes début, fin et période"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Copied to all days"
+msgstr "Copié sur tous les jours"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Copy the selected day's settings to all weekdays"
+msgstr "Copier les réglages du jour sélectionné sur tous les jours"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Copy to All"
+msgstr "Copier partout"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Create group"
+msgstr "Créer un groupe"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Deactivated"
+msgstr "Désactivée"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Device is gone"
+msgstr "Appareil introuvable"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Duration updated"
+msgstr "Durée mise à jour"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Failed to save schedule"
+msgstr "Échec de l'enregistrement du planning"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Failed to toggle Sequence"
+msgstr "Échec du basculement de la séquence"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Failed to toggle action"
+msgstr "Échec du basculement de l'action"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Failed to update"
+msgstr "Échec de la mise à jour"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Failed to update duration"
+msgstr "Échec de la mise à jour de la durée"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Fri"
+msgstr "Ven"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "JS Error in List"
+msgstr "Erreur de script dans la liste"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Margins (seconds)"
+msgstr "Marges (secondes)"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Mon"
+msgstr "Lun"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "New group name"
+msgstr "Nouveau nom de groupe"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "No actions found"
+msgstr "Aucune action"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "No group"
+msgstr "Aucun groupe"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Offline"
+msgstr "Hors ligne"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Output Type"
+msgstr "Type de sortie"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Per Day"
+msgstr "Par jour"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Press and hold to reorder"
+msgstr "Maintenir appuyé pour réordonner"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Run the sequence on this weekday. Unchecked days are skipped."
+msgstr "Exécuter la séquence ce jour. Les jours non cochés sont ignorés."
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Runs the whole sequence"
+msgstr "Fonctionne pendant toute la séquence"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "SINGLE"
+msgstr "SIMPLE"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Sat"
+msgstr "Sam"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Select Group"
+msgstr "Choisir un groupe"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Select this weekday to view and edit its times and actions"
+msgstr "Sélectionner ce jour pour voir et modifier ses horaires et ses actions"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Set a different start, end, and period for each weekday"
+msgstr "Définir un début, une fin et une période différents pour chaque jour"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Set the duration of one cycle. Cycles repeat until the end time."
+msgstr "Définir la durée d'un cycle. Les cycles se répètent jusqu'à l'heure de fin."
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Set the time of day the sequence starts for the selected day"
+msgstr "Définir l'heure de démarrage de la séquence pour le jour sélectionné"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Set the time of day the sequence stops. Select 00:00 for 24:00 (end of day)."
+msgstr "Définir l'heure d'arrêt de la séquence. Choisir 00:00 pour 24:00 (fin de journée)."
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Shared"
+msgstr "Commun"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Show or hide the action list"
+msgstr "Afficher ou masquer la liste des actions"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Sun"
+msgstr "Dim"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "TOTAL"
+msgstr "TOTAL"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Thu"
+msgstr "Jeu"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Time wheel not loaded"
+msgstr "Sélecteur d'heure non chargé"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Tue"
+msgstr "Mar"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Updated"
+msgstr "Mis à jour"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Waiting for data..."
+msgstr "En attente de données..."
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Wed"
+msgstr "Mer"

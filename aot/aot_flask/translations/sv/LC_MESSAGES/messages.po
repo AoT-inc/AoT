@@ -26890,3 +26890,187 @@ msgstr "Avancerade inställningar"
 msgid "Not Yet Categorised"
 msgstr "Ännu inte kategoriserad"
 
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Activate or deactivate this sequence"
+msgstr "Aktivera eller inaktivera den här sekvensen"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Activated"
+msgstr "Aktiverad"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "All weekdays share the same start, end, and period"
+msgstr "Alla veckodagar har samma start, slut och period"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Copied to all days"
+msgstr "Kopierat till alla dagar"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Copy the selected day's settings to all weekdays"
+msgstr "Kopiera den valda dagens inställningar till alla veckodagar"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Copy to All"
+msgstr "Kopiera till alla"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Create group"
+msgstr "Skapa grupp"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Deactivated"
+msgstr "Inaktiverad"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Device is gone"
+msgstr "Enheten saknas"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Duration updated"
+msgstr "Varaktigheten uppdaterad"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Failed to save schedule"
+msgstr "Det gick inte att spara schemat"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Failed to toggle Sequence"
+msgstr "Det gick inte att växla sekvensen"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Failed to toggle action"
+msgstr "Det gick inte att växla åtgärden"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Failed to update"
+msgstr "Uppdateringen misslyckades"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Failed to update duration"
+msgstr "Det gick inte att uppdatera varaktigheten"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Fri"
+msgstr "fre"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "JS Error in List"
+msgstr "Skriptfel i listan"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Margins (seconds)"
+msgstr "Marginaler (sekunder)"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Mon"
+msgstr "mån"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "New group name"
+msgstr "Nytt gruppnamn"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "No actions found"
+msgstr "Inga åtgärder"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "No group"
+msgstr "Ingen grupp"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Offline"
+msgstr "Offline"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Output Type"
+msgstr "Utgångstyp"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Per Day"
+msgstr "Per dag"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Press and hold to reorder"
+msgstr "Håll ned för att ändra ordning"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Run the sequence on this weekday. Unchecked days are skipped."
+msgstr "Kör sekvensen den här veckodagen. Omarkerade dagar hoppas över."
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Runs the whole sequence"
+msgstr "Körs under hela sekvensen"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "SINGLE"
+msgstr "ENSKILD"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Sat"
+msgstr "lör"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Select Group"
+msgstr "Välj grupp"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Select this weekday to view and edit its times and actions"
+msgstr "Välj den här veckodagen för att se och redigera dess tider och åtgärder"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Set a different start, end, and period for each weekday"
+msgstr "Ange olika start, slut och period för varje veckodag"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Set the duration of one cycle. Cycles repeat until the end time."
+msgstr "Ange längden på en cykel. Cyklerna upprepas till sluttiden."
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Set the time of day the sequence starts for the selected day"
+msgstr "Ange när sekvensen startar den valda dagen"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Set the time of day the sequence stops. Select 00:00 for 24:00 (end of day)."
+msgstr "Ange när sekvensen stoppar. Välj 00:00 för 24:00 (dygnets slut)."
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Shared"
+msgstr "Gemensam"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Show or hide the action list"
+msgstr "Visa eller dölj åtgärdslistan"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Sun"
+msgstr "sön"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "TOTAL"
+msgstr "TOTAL"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Thu"
+msgstr "tor"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Time wheel not loaded"
+msgstr "Tidsväljaren är inte laddad"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Tue"
+msgstr "tis"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Updated"
+msgstr "Uppdaterad"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Waiting for data..."
+msgstr "Väntar på data..."
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Wed"
+msgstr "ons"

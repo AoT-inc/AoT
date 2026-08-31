@@ -33,14 +33,36 @@ def sequence_func_activate_toggle(unique_id, state):
     if not scope.can_operate_device(unique_id):
         return (jsonify({'error': scope.deny_message()}), 403)
 
-    daemon = DaemonControl()
-    if state == 'activate':
-        daemon.controller_activate(unique_id)
-    elif state == 'deactivate':
-        daemon.controller_deactivate(unique_id)
-    else:
+    if state not in ('activate', 'deactivate'):
         return jsonify({'error': 'Invalid State'}), 400
-        
+    activate = (state == 'activate')
+
+    daemon = DaemonControl()
+    if activate:
+        daemon.controller_activate(unique_id)
+    else:
+        daemon.controller_deactivate(unique_id)
+
+    # 성공을 단정하지 않고 실제 상태를 되묻는다. 데몬 RPC 가 실패해도 예전에는
+    # 무조건 success 를 돌려줘서, 화면에는 꺼진 것으로 보이는데 실제로는 계속
+    # 동작하는 상태가 만들어졌다(운영 농장 사고). 반환 코드만 보면 안 된다 —
+    # "안 돌고 있다" 도 1 로 오고, 비활성화에선 그게 정상이다.
+    try:
+        still_running = bool(daemon.controller_is_active(unique_id))
+    except Exception as err:
+        logger.error(f"Sequence toggle: 데몬 상태 확인 실패 {unique_id}: {err}")
+        return jsonify({'error': 'Daemon unreachable — the sequence may still be running.'}), 502
+
+    if still_running != activate:
+        logger.error(
+            f"Sequence toggle: {unique_id} 요청={state} 이나 데몬 실제 상태는 "
+            f"{'실행 중' if still_running else '정지'} — 반영되지 않았다.")
+        return jsonify({
+            'error': ('The sequence is still running — the daemon did not apply the change.'
+                      if still_running else
+                      'The sequence did not start — the daemon did not apply the change.')
+        }), 502
+
     return jsonify({'status': 'success'})
 
 def sequence_func_toggle_details(unique_id, state):
@@ -52,6 +74,12 @@ def sequence_func_toggle_details(unique_id, state):
     """
     if not current_user.is_authenticated:
         return jsonify({'error': 'Auth Required'}), 401
+
+    # 이 엔드포인트는 임의의 Widget 행의 custom_options 를 쓴다 — unique_id 만
+    # 알면 남의 위젯도 바꿀 수 있었다. 표시 설정이라 제어 안전과는 무관하지만,
+    # 같은 파일의 다른 엔드포인트들과 같은 게이트를 받아야 한다.
+    if not user_has_permission('edit_controllers'):
+        return jsonify({'error': 'Permission Denied'}), 403
 
     widget = db.session.query(Widget).filter_by(unique_id=unique_id).first()
     if not widget:
@@ -222,6 +250,97 @@ def execute_at_modification(mod_widget, request_form, custom_options_presave, cu
                     logger.info("No user changes detected. Widget synced from Trigger.")
 
     return True, True, mod_widget, final_options
+
+
+# ---------------------------------------------------------------------------
+# 이 위젯이 사용자에게 보여주는 문구 전체.
+#
+# 본문의 문구는 JS(`window._('...')`)와 Jinja(`{{ _('...') }}`) 안에 들어 있는데,
+# 그 둘은 파이썬 **삼중따옴표 문자열 안**이라 pybabel 의 파이썬 추출기가 보지
+# 못한다. 생성물인 widget_template_*.html 에서 뽑는 것도 성립하지 않는다 — 그건
+# 배포 대상이 아니라 실행 시 재생성되는 파일이고 .gitignore 대상이라, 클린
+# 체크아웃에는 아예 없다. 그래서 문구는 **이 .py 안에서** 추출 가능해야 한다.
+#
+# 이 선언이 없어서 시퀀스 위젯 문구 70개 중 46개가 카탈로그에 아예 없었고,
+# 그 탓에 번역률 통계에도 안 잡혀("5494/5494 완성" 으로 집계된 언어에서도)
+# 위젯 절반이 영어로 나왔다.
+#
+# 런타임 조회는 여전히 JS/Jinja 쪽에서 같은 msgid 로 이뤄진다 — 여기 선언은
+# 오직 추출용이다. **본문에 새 문구를 넣으면 여기에도 넣을 것**:
+# aot/tests/test_widget_sequence_i18n_declared.py 가 둘의 일치를 강제한다.
+# ---------------------------------------------------------------------------
+TRANSLATABLE_STRINGS = [
+    lazy_gettext('Actions'),
+    lazy_gettext('Activate or deactivate this sequence'),
+    lazy_gettext('Activated'),
+    lazy_gettext('All weekdays share the same start, end, and period'),
+    lazy_gettext('Cancel'),
+    lazy_gettext('Confirming'),
+    lazy_gettext('Copied to all days'),
+    lazy_gettext("Copy the selected day's settings to all weekdays"),
+    lazy_gettext('Copy to All'),
+    lazy_gettext('Create group'),
+    lazy_gettext('Deactivated'),
+    lazy_gettext('Device is gone'),
+    lazy_gettext('Duration'),
+    lazy_gettext('Duration updated'),
+    lazy_gettext('End'),
+    lazy_gettext('Error'),
+    lazy_gettext('Failed to save schedule'),
+    lazy_gettext('Failed to toggle Sequence'),
+    lazy_gettext('Failed to toggle action'),
+    lazy_gettext('Failed to update'),
+    lazy_gettext('Failed to update duration'),
+    lazy_gettext('Fri'),
+    lazy_gettext('Group'),
+    lazy_gettext('JS Error in List'),
+    lazy_gettext('Lag'),
+    lazy_gettext('Lead'),
+    lazy_gettext('Margins (seconds)'),
+    lazy_gettext('Mon'),
+    lazy_gettext('Name'),
+    lazy_gettext('New group name'),
+    lazy_gettext('No actions found'),
+    lazy_gettext('No group'),
+    lazy_gettext('No response'),
+    lazy_gettext('Offline'),
+    lazy_gettext('Output Type'),
+    lazy_gettext('Per Day'),
+    lazy_gettext('Period'),
+    lazy_gettext('Press and hold to reorder'),
+    lazy_gettext('Run the sequence on this weekday. Unchecked days are skipped.'),
+    lazy_gettext('Runs the whole sequence'),
+    lazy_gettext('SINGLE'),
+    lazy_gettext('Sat'),
+    lazy_gettext('Save'),
+    lazy_gettext('Select Group'),
+    lazy_gettext('Select this weekday to view and edit its times and actions'),
+    lazy_gettext('Sequence'),
+    lazy_gettext('Set a different start, end, and period for each weekday'),
+    lazy_gettext('Set the duration of one cycle. Cycles repeat until the end time.'),
+    lazy_gettext('Set the time of day the sequence starts for the selected day'),
+    lazy_gettext('Set the time of day the sequence stops. Select 00:00 for 24:00 (end of day).'),
+    lazy_gettext('Settings'),
+    lazy_gettext('Shared'),
+    lazy_gettext('Show or hide the action list'),
+    lazy_gettext('Single'),
+    lazy_gettext('Start'),
+    lazy_gettext('Start this many seconds after the sequence begins'),
+    lazy_gettext('Stop this many seconds before the sequence ends'),
+    lazy_gettext('Sun'),
+    lazy_gettext('TOTAL'),
+    lazy_gettext('Thu'),
+    lazy_gettext('Time'),
+    lazy_gettext('Time wheel not loaded'),
+    lazy_gettext('Total'),
+    lazy_gettext('Tue'),
+    lazy_gettext('Type'),
+    lazy_gettext('Unknown'),
+    lazy_gettext('Update failed'),
+    lazy_gettext('Updated'),
+    lazy_gettext('Waiting for data...'),
+    lazy_gettext('Wed'),
+]
 
 
 WIDGET_INFORMATION = {
@@ -1052,8 +1171,16 @@ WIDGET_INFORMATION = {
                     checkbox.checked = !checkbox.checked; // Revert
                 }
             },
-            error: function(err) {
-                safe_toast('error', window._("Failed to toggle Sequence"));
+            error: function(xhr) {
+                // 서버가 "아직 동작 중" 같은 구체적인 이유를 준다면 그걸 그대로
+                // 보여 준다 — 끄려던 관수가 안 꺼졌다는 건 일반 실패 문구로
+                // 뭉뚱그리면 안 되는 정보다.
+                var msg = window._("Failed to toggle Sequence");
+                try {
+                    var r = xhr && xhr.responseJSON;
+                    if (r && r.error) { msg = r.error; }
+                } catch (e) {}
+                safe_toast('error', msg);
                 checkbox.checked = !checkbox.checked; // Revert
             }
         });
@@ -1076,6 +1203,19 @@ WIDGET_INFORMATION = {
             localStorage.setItem('seq_details_' + widget_id, 'hide');
             $.get('/sequence_func_toggle_details/' + widget_id + '/0');
         }
+    }
+
+    // 목록은 문자열을 이어 붙여 innerHTML 로 넣는다. 스텝 표시이름·그룹명·장치명은
+    // 사용자가 정하는 값이라 그대로 넣으면 임의 HTML 이 실행된다(속성값 안에서도
+    // 따옴표를 닫고 빠져나갈 수 있다). 텍스트로 쓰든 속성값으로 쓰든 항상 이걸
+    // 거쳐야 한다.
+    function seq_esc(v) {
+        return String(v == null ? '' : v)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
     }
 
     // --- Per-widget schedule state ---
@@ -1191,9 +1331,25 @@ WIDGET_INFORMATION = {
         if (!ss.schedule) return;
         var src = ss.schedule.days[String(ss.selectedDay)];
         if (!src) return;
+        // 창 시간뿐 아니라 **요일별 스텝 설정까지** 복사한다. 예전에는
+        // start/end/period 만 옮겨서, 스텝 on/off·그룹·작동시간을 맞춰 놓고
+        // '전체 복사' 를 눌러도 그 요일에만 남았다 — 버튼 설명("선택한 요일의
+        // 설정을 모든 요일에 복사")과 어긋나는 동작이었다.
+        // `enabled`(그 요일을 아예 돌릴지)는 복사하지 않는다. 그건 요일 체크박스로
+        // 따로 고르는 축이고, 같이 덮으면 사용자의 요일 선택이 날아간다.
+        var copyMap = function(m) { return (m && typeof m === 'object') ? JSON.parse(JSON.stringify(m)) : undefined; };
         for (var d = 0; d < 7; d++) {
             var e = ss.schedule.days[String(d)];
-            if (e) { e.start = src.start; e.end = src.end; e.period = src.period; }
+            if (!e || e === src) continue;
+            e.start = src.start; e.end = src.end; e.period = src.period;
+            // 맵은 **깊은 복사**로 넣는다. 참조를 그대로 나눠 주면 이후 한 요일을
+            // 편집할 때 일곱 요일이 같이 바뀐다.
+            var acts = copyMap(src.actions);
+            var grps = copyMap(src.groups);
+            var durs = copyMap(src.durations);
+            if (acts !== undefined) { e.actions = acts; } else { delete e.actions; }
+            if (grps !== undefined) { e.groups = grps; } else { delete e.groups; }
+            if (durs !== undefined) { e.durations = durs; } else { delete e.durations; }
         }
         seq_sync_schedule_to_server(widget_id, function_id, function() {
             seq_refresh_day_ui(widget_id);
@@ -1369,10 +1525,14 @@ WIDGET_INFORMATION = {
                     if (isTotal) nameCls += ' seq-name-total';
                     // Group tint + connection classes go on the name CELL; --gc set inline.
                     var nameCellStyle = inGroup ? ' style="--gc:' + groupColor + '"' : '';
-                    listHtml += '<div class="seq-col-name seq-name-editable' + grpCellCls + '"' + nameCellStyle + ' title="' + displayName + '" data-uid="' + s.unique_id + '" data-name="' + displayName + '" data-device="' + deviceDetail + '" data-group="' + (effGroup || '') + '" data-type="' + s.type + '" data-lead="' + (s.total_lead || 0) + '" data-lag="' + (s.total_lag || 0) + '" data-wid="' + widget_id + '" data-fid="' + function_id + '" onclick="seq_open_name_modal(this)"><span class="' + nameCls + '">' + displayName + '</span>' + devBadge + '</div>';
+                    // 사용자 지정 값(표시이름·장치명·그룹명)은 전부 seq_esc 를 거친다.
+                    var eName = seq_esc(displayName);
+                    var eDevice = seq_esc(deviceDetail);
+                    var eGroup = seq_esc(effGroup || '');
+                    listHtml += '<div class="seq-col-name seq-name-editable' + grpCellCls + '"' + nameCellStyle + ' title="' + eName + '" data-uid="' + s.unique_id + '" data-name="' + eName + '" data-device="' + eDevice + '" data-group="' + eGroup + '" data-type="' + seq_esc(s.type) + '" data-lead="' + (s.total_lead || 0) + '" data-lag="' + (s.total_lag || 0) + '" data-wid="' + widget_id + '" data-fid="' + function_id + '" onclick="seq_open_name_modal(this)"><span class="' + nameCls + '">' + eName + '</span>' + devBadge + '</div>';
 
                     var timeShown = isTotal ? window._('Total') : timeStr;
-                    listHtml += '<div class="seq-col-time seq-time-editable" data-uid="' + s.unique_id + '" data-dur="' + durationSec + '" data-type="' + s.type + '" data-group="' + (effGroup || '') + '" data-name="' + displayName + '" data-wid="' + widget_id + '" data-fid="' + function_id + '" onclick="seq_open_time_modal(this)"><span class="seq-text-time">' + timeShown + '</span></div>';
+                    listHtml += '<div class="seq-col-time seq-time-editable" data-uid="' + s.unique_id + '" data-dur="' + durationSec + '" data-type="' + seq_esc(s.type) + '" data-group="' + eGroup + '" data-name="' + eName + '" data-wid="' + widget_id + '" data-fid="' + function_id + '" onclick="seq_open_time_modal(this)"><span class="seq-text-time">' + timeShown + '</span></div>';
                     listHtml += '</div>';
                 }
             } else {

@@ -208,6 +208,28 @@ def action_mod(form, request_form):
 
             mod_action.custom_options = custom_options
 
+            # 장치 그룹은 작동시간 하나를 공유한다 — 어느 멤버를 고쳤든 전원에게
+            # 퍼뜨려야 불변식이 선다. AJAX 경로(function_sequence_update_action_duration)
+            # 는 이미 그렇게 하는데 이 폼 저장 경로만 빠져 있었다: 그 결과 위젯에는
+            # 그룹원끼리 다른 시간이 표시되지만 실제 실행은 대표 하나의 값만 쓰므로
+            # (controller_trigger_sequence._build_slots), 화면의 시간 중 하나는
+            # 거짓말이 됐다. 물리 제어 시간이라 현장에서 오판을 부른다.
+            _group = (options_dict.get('group_name') or '').strip()
+            _duration = options_dict.get('action_duration')
+            if _group and 'action_duration' in request_form and _duration is not None:
+                _members = Actions.query.filter(
+                    Actions.function_id == mod_action.function_id,
+                    Actions.unique_id != mod_action.unique_id
+                ).all()
+                for _member in _members:
+                    try:
+                        _mopts = json.loads(_member.custom_options) if _member.custom_options else {}
+                    except Exception:
+                        continue
+                    if (_mopts.get('group_name') or '').strip() == _group:
+                        _mopts['action_duration'] = _duration
+                        _member.custom_options = json.dumps(_mopts)
+
     if not messages["error"]:
         try:
             db.session.commit()

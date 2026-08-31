@@ -344,6 +344,24 @@ The Python Command output works similarly to the Linux Command output, but runs 
 
 Wireless and command (Linux/Python) outputs: because the wireless protocol only allows one-way communication with 315/433 MHz devices, a wireless relay is assumed to be off until it is turned on, and is displayed in red (off) when added. If a wireless relay is turned on or off outside of AoT (for example, with a remote), AoT cannot verify the relay's state and displays its last known state. For example, if AoT turns a wireless relay on and you turn the relay off with the remote, AoT still assumes the relay is on.
 
+### Accepted is not the same as confirmed
+
+Outputs that share a gateway — LoRaWAN ones — send their commands **in a single
+queue**. A site normally has one gateway and it is half-duplex, so overlapping
+downlinks drown out the replies coming back from the devices. Operating several
+valves at once therefore answers immediately on screen while the actual
+transmissions go out a few seconds apart.
+
+The "success" you see means the command was **accepted for sending**. Whether the
+device actually switched is decided by the confirmation the device sends back. If
+none arrives, the command is retransmitted within its window; if it never
+arrives, the output is marked as a communication fault and reverted.
+
+**On-time is recorded from the moment the device confirms**, not from when the
+command was sent — only the times it actually opened and closed tell you how much
+water was delivered. One-way outputs, which have nothing that could confirm, are
+still recorded at send time.
+
 ### An output in use cannot be deleted
 
 If a sequence step, conditional, PID, or widget still points at an output,

@@ -28590,3 +28590,187 @@ msgstr "Расширенные настройки"
 msgid "Not Yet Categorised"
 msgstr "Ещё не категоризировано"
 
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Activate or deactivate this sequence"
+msgstr "Включить или отключить эту последовательность"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Activated"
+msgstr "Включена"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "All weekdays share the same start, end, and period"
+msgstr "У всех дней одинаковые начало, конец и период"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Copied to all days"
+msgstr "Скопировано на все дни"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Copy the selected day's settings to all weekdays"
+msgstr "Скопировать настройки выбранного дня на все дни недели"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Copy to All"
+msgstr "Копировать на все"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Create group"
+msgstr "Создать группу"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Deactivated"
+msgstr "Отключена"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Device is gone"
+msgstr "Устройство отсутствует"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Duration updated"
+msgstr "Длительность обновлена"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Failed to save schedule"
+msgstr "Не удалось сохранить расписание"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Failed to toggle Sequence"
+msgstr "Не удалось переключить последовательность"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Failed to toggle action"
+msgstr "Не удалось переключить действие"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Failed to update"
+msgstr "Не удалось обновить"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Failed to update duration"
+msgstr "Не удалось обновить длительность"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Fri"
+msgstr "Пт"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "JS Error in List"
+msgstr "Ошибка скрипта в списке"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Margins (seconds)"
+msgstr "Запас (секунды)"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Mon"
+msgstr "Пн"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "New group name"
+msgstr "Новое название группы"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "No actions found"
+msgstr "Действий нет"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "No group"
+msgstr "Без группы"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Offline"
+msgstr "Нет связи"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Output Type"
+msgstr "Тип выхода"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Per Day"
+msgstr "По дням"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Press and hold to reorder"
+msgstr "Нажмите и удерживайте, чтобы изменить порядок"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Run the sequence on this weekday. Unchecked days are skipped."
+msgstr "Выполнять последовательность в этот день. Неотмеченные дни пропускаются."
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Runs the whole sequence"
+msgstr "Работает всю последовательность"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "SINGLE"
+msgstr "ОДИНОЧНЫЙ"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Sat"
+msgstr "Сб"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Select Group"
+msgstr "Выбрать группу"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Select this weekday to view and edit its times and actions"
+msgstr "Выберите этот день, чтобы посмотреть и изменить его время и действия"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Set a different start, end, and period for each weekday"
+msgstr "Задать своё начало, конец и период для каждого дня недели"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Set the duration of one cycle. Cycles repeat until the end time."
+msgstr "Задайте длительность одного цикла. Циклы повторяются до времени окончания."
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Set the time of day the sequence starts for the selected day"
+msgstr "Задайте время начала последовательности для выбранного дня"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Set the time of day the sequence stops. Select 00:00 for 24:00 (end of day)."
+msgstr "Задайте время остановки последовательности. Выберите 00:00 для 24:00 (конец суток)."
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Shared"
+msgstr "Общее"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Show or hide the action list"
+msgstr "Показать или скрыть список действий"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Sun"
+msgstr "Вс"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "TOTAL"
+msgstr "ОБЩИЙ"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Thu"
+msgstr "Чт"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Time wheel not loaded"
+msgstr "Выбор времени не загружен"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Tue"
+msgstr "Вт"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Updated"
+msgstr "Обновлено"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Waiting for data..."
+msgstr "Ожидание данных..."
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Wed"
+msgstr "Ср"

@@ -28451,3 +28451,187 @@ msgstr "Gelişmiş Ayarlar"
 msgid "Not Yet Categorised"
 msgstr "Henüz Kategorize Edilmedi"
 
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Activate or deactivate this sequence"
+msgstr "Bu diziyi etkinleştir veya devre dışı bırak"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Activated"
+msgstr "Etkinleştirildi"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "All weekdays share the same start, end, and period"
+msgstr "Tüm günler aynı başlangıç, bitiş ve periyodu kullanır"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Copied to all days"
+msgstr "Tüm günlere kopyalandı"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Copy the selected day's settings to all weekdays"
+msgstr "Seçili günün ayarlarını tüm günlere kopyala"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Copy to All"
+msgstr "Tümüne kopyala"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Create group"
+msgstr "Grup oluştur"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Deactivated"
+msgstr "Devre dışı bırakıldı"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Device is gone"
+msgstr "Cihaz bulunamıyor"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Duration updated"
+msgstr "Süre güncellendi"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Failed to save schedule"
+msgstr "Zamanlama kaydedilemedi"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Failed to toggle Sequence"
+msgstr "Dizi durumu değiştirilemedi"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Failed to toggle action"
+msgstr "Eylem durumu değiştirilemedi"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Failed to update"
+msgstr "Güncellenemedi"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Failed to update duration"
+msgstr "Süre güncellenemedi"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Fri"
+msgstr "Cum"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "JS Error in List"
+msgstr "Listede betik hatası"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Margins (seconds)"
+msgstr "Pay (saniye)"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Mon"
+msgstr "Pzt"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "New group name"
+msgstr "Yeni grup adı"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "No actions found"
+msgstr "Eylem yok"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "No group"
+msgstr "Grup yok"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Offline"
+msgstr "Çevrimdışı"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Output Type"
+msgstr "Çıkış türü"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Per Day"
+msgstr "Güne göre"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Press and hold to reorder"
+msgstr "Sıralamak için basılı tutun"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Run the sequence on this weekday. Unchecked days are skipped."
+msgstr "Diziyi bu gün çalıştır. İşaretsiz günler atlanır."
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Runs the whole sequence"
+msgstr "Dizinin tamamı boyunca çalışır"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "SINGLE"
+msgstr "TEKLİ"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Sat"
+msgstr "Cmt"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Select Group"
+msgstr "Grup seç"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Select this weekday to view and edit its times and actions"
+msgstr "Bu günün saatlerini ve eylemlerini görmek ve düzenlemek için seçin"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Set a different start, end, and period for each weekday"
+msgstr "Her gün için farklı başlangıç, bitiş ve periyot ayarla"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Set the duration of one cycle. Cycles repeat until the end time."
+msgstr "Bir döngünün süresini ayarlayın. Döngüler bitiş saatine kadar tekrarlanır."
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Set the time of day the sequence starts for the selected day"
+msgstr "Seçili günde dizinin başlayacağı saati ayarlayın"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Set the time of day the sequence stops. Select 00:00 for 24:00 (end of day)."
+msgstr "Dizinin duracağı saati ayarlayın. 24:00 (gün sonu) için 00:00 seçin."
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Shared"
+msgstr "Ortak"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Show or hide the action list"
+msgstr "Eylem listesini göster veya gizle"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Sun"
+msgstr "Paz"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "TOTAL"
+msgstr "TOPLAM"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Thu"
+msgstr "Per"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Time wheel not loaded"
+msgstr "Saat seçici yüklenmedi"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Tue"
+msgstr "Sal"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Updated"
+msgstr "Güncellendi"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Waiting for data..."
+msgstr "Veri bekleniyor..."
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Wed"
+msgstr "Çar"

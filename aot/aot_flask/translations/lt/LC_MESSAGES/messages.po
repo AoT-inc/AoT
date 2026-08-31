@@ -26900,3 +26900,187 @@ msgstr "Išplėstiniai nustatymai"
 msgid "Not Yet Categorised"
 msgstr "Dar nesuskirstyta"
 
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Activate or deactivate this sequence"
+msgstr "Įjungti arba išjungti šią seką"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Activated"
+msgstr "Įjungta"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "All weekdays share the same start, end, and period"
+msgstr "Visos savaitės dienos naudoja tą pačią pradžią, pabaigą ir periodą"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Copied to all days"
+msgstr "Nukopijuota į visas dienas"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Copy the selected day's settings to all weekdays"
+msgstr "Kopijuoti pasirinktos dienos nustatymus į visas savaitės dienas"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Copy to All"
+msgstr "Kopijuoti į visas"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Create group"
+msgstr "Sukurti grupę"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Deactivated"
+msgstr "Išjungta"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Device is gone"
+msgstr "Įrenginio nėra"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Duration updated"
+msgstr "Trukmė atnaujinta"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Failed to save schedule"
+msgstr "Nepavyko išsaugoti tvarkaraščio"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Failed to toggle Sequence"
+msgstr "Nepavyko perjungti sekos"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Failed to toggle action"
+msgstr "Nepavyko perjungti veiksmo"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Failed to update"
+msgstr "Nepavyko atnaujinti"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Failed to update duration"
+msgstr "Nepavyko atnaujinti trukmės"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Fri"
+msgstr "pn"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "JS Error in List"
+msgstr "Scenarijaus klaida sąraše"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Margins (seconds)"
+msgstr "Atsarga (sekundėmis)"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Mon"
+msgstr "pr"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "New group name"
+msgstr "Naujas grupės pavadinimas"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "No actions found"
+msgstr "Veiksmų nėra"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "No group"
+msgstr "Be grupės"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Offline"
+msgstr "Neprisijungęs"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Output Type"
+msgstr "Išvesties tipas"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Per Day"
+msgstr "Pagal dienas"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Press and hold to reorder"
+msgstr "Palaikykite, kad pertvarkytumėte"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Run the sequence on this weekday. Unchecked days are skipped."
+msgstr "Vykdyti seką šią savaitės dieną. Nepažymėtos dienos praleidžiamos."
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Runs the whole sequence"
+msgstr "Veikia visą seką"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "SINGLE"
+msgstr "ATSKIRAS"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Sat"
+msgstr "št"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Select Group"
+msgstr "Pasirinkti grupę"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Select this weekday to view and edit its times and actions"
+msgstr "Pasirinkite šią dieną, kad matytumėte ir keistumėte jos laikus bei veiksmus"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Set a different start, end, and period for each weekday"
+msgstr "Nustatyti skirtingą pradžią, pabaigą ir periodą kiekvienai dienai"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Set the duration of one cycle. Cycles repeat until the end time."
+msgstr "Nustatykite vieno ciklo trukmę. Ciklai kartojasi iki pabaigos laiko."
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Set the time of day the sequence starts for the selected day"
+msgstr "Nustatykite, kada seka prasideda pasirinktą dieną"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Set the time of day the sequence stops. Select 00:00 for 24:00 (end of day)."
+msgstr "Nustatykite, kada seka sustoja. Pasirinkite 00:00 vietoje 24:00 (dienos pabaiga)."
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Shared"
+msgstr "Bendra"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Show or hide the action list"
+msgstr "Rodyti arba slėpti veiksmų sąrašą"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Sun"
+msgstr "sk"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "TOTAL"
+msgstr "VISAS"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Thu"
+msgstr "kt"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Time wheel not loaded"
+msgstr "Laiko parinkiklis neįkeltas"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Tue"
+msgstr "an"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Updated"
+msgstr "Atnaujinta"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Waiting for data..."
+msgstr "Laukiama duomenų..."
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Wed"
+msgstr "tr"

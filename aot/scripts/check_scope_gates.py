@@ -76,6 +76,7 @@ GATED_CONTROL_VIEWS = {
     ('aot/widgets/AoT_timer.py', 'aot_timer_cycle_start'),
     ('aot/widgets/AoT_timer.py', 'aot_timer_cycle_stop'),
     ('aot/widgets/widget_trigger_sequence.py', 'sequence_func_activate_toggle'),
+    ('aot/aot_flask/routes_function.py', 'sequence_activate_toggle'),
 }
 
 #: 제어 호출이 있지만 스코프를 묻지 않아도 되는 자리. **근거를 함께 적을 것** —

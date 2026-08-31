@@ -26901,3 +26901,187 @@ msgstr "Speciális beállítások"
 msgid "Not Yet Categorised"
 msgstr "Még nem kategorizált"
 
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Activate or deactivate this sequence"
+msgstr "A szekvencia be- vagy kikapcsolása"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Activated"
+msgstr "Bekapcsolva"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "All weekdays share the same start, end, and period"
+msgstr "Minden nap ugyanazt a kezdést, véget és periódust használja"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Copied to all days"
+msgstr "Átmásolva minden napra"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Copy the selected day's settings to all weekdays"
+msgstr "A kiválasztott nap beállításainak másolása minden napra"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Copy to All"
+msgstr "Másolás mindre"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Create group"
+msgstr "Csoport létrehozása"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Deactivated"
+msgstr "Kikapcsolva"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Device is gone"
+msgstr "Az eszköz hiányzik"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Duration updated"
+msgstr "Időtartam frissítve"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Failed to save schedule"
+msgstr "Az ütemezés mentése nem sikerült"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Failed to toggle Sequence"
+msgstr "A szekvencia átkapcsolása nem sikerült"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Failed to toggle action"
+msgstr "A művelet átkapcsolása nem sikerült"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Failed to update"
+msgstr "A frissítés nem sikerült"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Failed to update duration"
+msgstr "Az időtartam frissítése nem sikerült"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Fri"
+msgstr "P"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "JS Error in List"
+msgstr "Szkripthiba a listában"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Margins (seconds)"
+msgstr "Ráhagyás (másodperc)"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Mon"
+msgstr "H"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "New group name"
+msgstr "Új csoportnév"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "No actions found"
+msgstr "Nincs művelet"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "No group"
+msgstr "Nincs csoport"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Offline"
+msgstr "Offline"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Output Type"
+msgstr "Kimenet típusa"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Per Day"
+msgstr "Naponként"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Press and hold to reorder"
+msgstr "Tartsa nyomva az átrendezéshez"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Run the sequence on this weekday. Unchecked days are skipped."
+msgstr "A szekvencia futtatása ezen a napon. A be nem jelölt napok kimaradnak."
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Runs the whole sequence"
+msgstr "A teljes szekvencia alatt működik"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "SINGLE"
+msgstr "EGYEDI"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Sat"
+msgstr "Szo"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Select Group"
+msgstr "Csoport kiválasztása"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Select this weekday to view and edit its times and actions"
+msgstr "Válassza ki ezt a napot az időpontok és műveletek megtekintéséhez és szerkesztéséhez"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Set a different start, end, and period for each weekday"
+msgstr "Napokként eltérő kezdés, vég és periódus beállítása"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Set the duration of one cycle. Cycles repeat until the end time."
+msgstr "Egy ciklus hosszának beállítása. A ciklusok a befejezési időig ismétlődnek."
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Set the time of day the sequence starts for the selected day"
+msgstr "A szekvencia indulási időpontja a kiválasztott napon"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Set the time of day the sequence stops. Select 00:00 for 24:00 (end of day)."
+msgstr "A szekvencia leállási időpontja. A 24:00 (nap vége) helyett válassza a 00:00-t."
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Shared"
+msgstr "Közös"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Show or hide the action list"
+msgstr "A műveletlista megjelenítése vagy elrejtése"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Sun"
+msgstr "V"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "TOTAL"
+msgstr "TELJES"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Thu"
+msgstr "Cs"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Time wheel not loaded"
+msgstr "Az időválasztó nem töltődött be"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Tue"
+msgstr "K"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Updated"
+msgstr "Frissítve"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Waiting for data..."
+msgstr "Várakozás adatokra..."
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Wed"
+msgstr "Sze"

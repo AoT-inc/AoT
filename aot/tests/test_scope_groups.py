@@ -1423,6 +1423,11 @@ class EnforcementBoundaryTest(unittest.TestCase):
         'aot/aot_flask/api/output.py',          # REST 출력 제어
         'aot/aot_flask/api/controller.py',      # REST 컨트롤러 활성/비활성
         'aot/aot_flask/utils/utils_general.py',  # controller_activate_deactivate 초크포인트
+        # 시퀀스 활성 토글. 예전에는 DB 플래그만 바꾸고 설정 새로고침만 걸어서
+        # 제어로 잡히지 않았는데, 그 탓에 데몬에 반영되지 않아도 성공으로 보고돼
+        # **꺼 놓은 시퀀스가 계속 관수하는** 사고가 났다. 이제 컨트롤러를 실제로
+        # 켜고 끄므로 다른 제어 경로와 같은 게이트를 받는다.
+        'aot/aot_flask/routes_function.py',
         'aot/widgets/',                         # 위젯 제어(타이머·PID·시퀀스 등)
         # --- A1a: 예약 발화 재검사(§8-7) ---
         'aot/ai/services/ai_scheduler_service.py',

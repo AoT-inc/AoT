@@ -38,9 +38,9 @@ GRPC_ENQUEUE_TIMEOUT_S = 15
 # Site-wide downlink pacing is shared with the LoRaWAN class scheduler via
 # aot.utils.lorawan_pacing so that valve-control downlinks AND scheduler CFG
 # downlinks are paced together on the one half-duplex gateway. See that module.
-from aot.utils.lorawan_pacing import MAX_PACE_WAIT_S
 from aot.utils.lorawan_pacing import MIN_GLOBAL_DOWNLINK_INTERVAL_S
-from aot.utils.lorawan_pacing import pace_send
+from aot.utils.lorawan_pacing import (backlog_seconds, queue_depth,
+                                      submit_downlink)
 
 from flask_babel import lazy_gettext
 
@@ -255,6 +255,9 @@ class OutputModule(AbstractOutput):
             OUTPUT_INFORMATION['custom_channel_options'], output_channels)
 
         # Runtime state
+        # 병합하지 않는 전송(설정 명령)에 붙일 고유 번호. 제어와 달리 내용이
+        # 제각각이라 큐에서 서로를 덮어써서는 안 된다.
+        self._raw_seq = 0
         self.output_states = {ch: False for ch in channels_dict.keys()}
         self.output_setup = False
         self.running = False
@@ -604,7 +607,7 @@ class OutputModule(AbstractOutput):
         resends the SAME command (idempotent for valves) until ingest_uplink()
         confirms. Interval/attempts are derived from the command timeout."""
         try:
-            ok = bool(self._enqueue(intent_state))
+            ok = bool(self._enqueue(intent_state, output_channel))
             self._log_info(
                 f"[AoT] resend ch={output_channel} state={intent_state} "
                 f"({'ok' if ok else 'enqueue_failed'})")
@@ -855,7 +858,24 @@ class OutputModule(AbstractOutput):
         except Exception:
             pass
 
-    def _enqueue_raw(self, f_port, confirmed, payload_bytes):
+    def _enqueue_raw(self, f_port, confirmed, payload_bytes,
+                     merge_key=None, label=None):
+        """전송을 사이트 디스패처에 맡기고 **즉시** 돌아간다.
+
+        반환값은 **접수 여부**이지 전송 성공이 아니다. 예전에는 여기서
+        `pace_send()` 로 최대 30초를 기다린 뒤 실제 전송까지 마치고 돌아왔는데,
+        이 함수는 Pyro5 RPC(예산 8초) 안쪽에 있다 — 페이싱 간격이 4초라 **밸브
+        3개를 함께 조작하는 순간부터** 호출자가 타임아웃을 봤다. 명령은 결국
+        나가는데 호출자는 실패로 읽고 재시도했고, 그 재시도가 큐를 늘려 다음
+        명령을 또 타임아웃시켰다(`lorawan_pacing` 상단 주석 참조).
+
+        실제 전송 성공/실패는 장치 확인(`ConfirmableOutputMixin`)이 판정한다.
+        확인이 안 오면 창 안에서 재전송하고, 끝내 없으면 fault·revert 한다.
+
+        :param merge_key: 같은 키의 미전송 항목을 대체한다(밸브 제어처럼 마지막
+            의도만 의미 있는 명령). None 이면 병합하지 않고 줄을 선다 — 설정
+            명령은 내용이 제각각이라 덮어쓰면 조용히 유실된다.
+        """
         token = self._normalize_token()
         dev_eui = self._normalize_deveui()
         f_port_int = int(f_port) if f_port is not None else 0
@@ -864,18 +884,27 @@ class OutputModule(AbstractOutput):
 
         self._record_enqueue('raw', f_port_int, bool(confirmed), payload_bytes)
 
-        # Site-wide pacing: wait for the next global send slot so the half-duplex
-        # gateway is never flooded and device ACK uplinks have airtime. Shared by
-        # ALL chirpstack_downlink outputs (control + retries). The wait happens
-        # OUTSIDE any lock so a slow send never stalls the site. A False here
-        # means the backlog is deeper than MAX_PACE_WAIT_S: fail the command
-        # rather than add to the flood.
-        if not pace_send():
+        payload = bytes(payload_bytes)
+
+        def _send():
+            self._send_downlink(f_port_int, confirmed, payload, token, dev_eui)
+
+        if merge_key is None:
+            self._raw_seq += 1
+            key = (self.unique_id, 'raw', f_port_int, self._raw_seq)
+            merge = False
+        else:
+            key = merge_key
+            merge = True
+
+        accepted = submit_downlink(
+            key, _send, label=label or f"{self.output_name} fport={f_port_int}",
+            merge=merge)
+        if not accepted:
             self._log_error(
-                "Downlink dropped: site-wide pacing backlog exceeded "
-                f"{MAX_PACE_WAIT_S:.0f}s")
-            return False
-        return self._send_downlink(f_port_int, confirmed, payload_bytes, token, dev_eui)
+                "Downlink not accepted: site-wide queue is full "
+                f"({queue_depth()} items)")
+        return accepted
 
     def _send_downlink(self, f_port_int, confirmed, payload_bytes, token, dev_eui):
         """Perform the actual gRPC/REST enqueue. Globally paced by _enqueue_raw."""
@@ -959,7 +988,13 @@ class OutputModule(AbstractOutput):
             pass
         return False
 
-    def _enqueue(self, desired_state):
+    def _enqueue(self, desired_state, output_channel=0):
+        """제어 명령 하나를 접수한다.
+
+        병합 키는 `(출력, 채널, 'ctrl')` — 이 밸브에게 의미 있는 것은 마지막
+        의도 하나뿐이라, 아직 안 나간 명령이 있으면 새 의도가 그것을 대신한다.
+        확인 창 안의 재전송도 같은 키로 들어와 자연히 흡수된다.
+        """
         server = self._normalize_server()
         token = self._normalize_token()
         dev_eui = self._normalize_deveui()
@@ -969,7 +1004,10 @@ class OutputModule(AbstractOutput):
         payload = self._payload_bytes('on' if desired_state == 'on' else 'off')
         if not server or not token or not dev_eui or f_port <= 0 or not payload:
             return False
-        return self._enqueue_raw(f_port, confirmed, payload)
+        return self._enqueue_raw(
+            f_port, confirmed, payload,
+            merge_key=(self.unique_id, output_channel, 'ctrl'),
+            label=f"{self.output_name} ch{output_channel} {desired_state}")
 
     def set_mode_period(self, mode: int, period_min: int, confirmed: bool = False):
         """Enqueue CFG command (0xD0, mode, period) on FPORT_CFG.
@@ -1000,9 +1038,15 @@ class OutputModule(AbstractOutput):
         confirmation via ingest_uplink -> confirm_command).
 
         Returns the (code, msg) tuple AbstractOutput._switch_failed() reads:
-        code 0 = dispatched, non-zero = the command never reached the air. A
-        plain string here is read as success no matter what it says, which is
-        how a dropped downlink used to be recorded as a completed command.
+        **code 0 = 사이트 전송 큐가 명령을 받아들였다**, non-zero = 받아들이지
+        못했다(설정 누락·큐 포화). 여기서 평문 문자열을 돌려주면 무슨 내용이든
+        성공으로 읽히고, 그것이 폐기된 다운링크가 완료로 기록되던 경로다.
+
+        ⚠ 0 은 **전파를 마쳤다는 뜻이 아니다.** 전송은 사이트 페이싱을 지키는
+        전용 워커가 나중에 수행한다 — 이 함수가 그것을 기다리면 Pyro5 RPC 예산
+        (8초)을 넘겨, 밸브 셋만 함께 조작해도 호출자가 타임아웃을 본다
+        (`lorawan_pacing.submit_downlink` 주석). 실제 전달 여부는 장치 확인이
+        판정하고, 확인이 없으면 창 안에서 재전송한 뒤 fault·revert 한다.
         """
         try:
             # ensure key exists
@@ -1013,10 +1057,19 @@ class OutputModule(AbstractOutput):
 
             ok = False
             if state in ('on', 'off'):
-                ok = bool(self._enqueue(state))
+                # 큐 대기는 접수 **전에** 재야 한다. 넣고 나서 재면 방금 넣은
+                # 자기 자신까지 세어 창이 한 슬롯씩 부풀고, 병합으로 자리를
+                # 물려받은 경우에는 아예 틀린 값이 된다.
+                backlog = backlog_seconds()
+                ok = bool(self._enqueue(state, output_channel))
                 # begin_command sets the optimistic state and arms the window
                 # only when the dispatch actually succeeded (no phantom 'on').
-                self.begin_command(output_channel, state, prev_state, dispatched_ok=ok)
+                # 창은 전송이 아니라 접수 시점에 열리므로, 앞에 선 명령들이
+                # 나가는 데 걸리는 시간만큼 넓혀 준다 — 그러지 않으면 페이싱
+                # 때문에 늦게 나간 명령이 **창이 닫힌 뒤에** 전파돼, 멀쩡한
+                # 장치가 통신 장애로 판정된다.
+                self.begin_command(output_channel, state, prev_state,
+                                   dispatched_ok=ok, extra_window_s=backlog)
             if not ok:
                 # Ungated: a command that never went out must be visible even
                 # with 'Enable Debug Logging' off.

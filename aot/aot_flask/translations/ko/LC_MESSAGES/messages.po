@@ -31965,3 +31965,79 @@ msgstr ""
 
 msgid "label"
 msgstr ""
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Copied to all days"
+msgstr "모든 요일에 복사했습니다"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Create group"
+msgstr "그룹 만들기"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Deactivated"
+msgstr "비활성화됨"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Duration updated"
+msgstr "작동시간을 변경했습니다"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Failed to save schedule"
+msgstr "일정을 저장하지 못했습니다"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Failed to toggle Sequence"
+msgstr "시퀀스를 전환하지 못했습니다"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Failed to toggle action"
+msgstr "동작을 전환하지 못했습니다"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Failed to update"
+msgstr "변경하지 못했습니다"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Failed to update duration"
+msgstr "작동시간을 변경하지 못했습니다"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "JS Error in List"
+msgstr "목록 스크립트 오류"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "New group name"
+msgstr "새 그룹 이름"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "No actions found"
+msgstr "동작이 없습니다"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "No group"
+msgstr "그룹 없음"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Output Type"
+msgstr "출력 유형"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Runs the whole sequence"
+msgstr "시퀀스 전체 구간 동안 작동합니다"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "SINGLE"
+msgstr "단독"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Select Group"
+msgstr "그룹 선택"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "TOTAL"
+msgstr "전체"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Time wheel not loaded"
+msgstr "시간 선택기를 불러오지 못했습니다"

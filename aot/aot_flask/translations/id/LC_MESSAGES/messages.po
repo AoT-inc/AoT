@@ -28320,3 +28320,99 @@ msgstr ""
 
 msgid "“Retrieved” means the knowledge search returned it — not that the answer quoted it."
 msgstr ""
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Copied to all days"
+msgstr "Disalin ke semua hari"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Create group"
+msgstr "Buat grup"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Deactivated"
+msgstr "Dinonaktifkan"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Device is gone"
+msgstr "Perangkat tidak ditemukan"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Duration updated"
+msgstr "Durasi diperbarui"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Failed to save schedule"
+msgstr "Gagal menyimpan jadwal"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Failed to toggle Sequence"
+msgstr "Gagal mengubah status sekuens"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Failed to toggle action"
+msgstr "Gagal mengubah status aksi"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Failed to update"
+msgstr "Gagal memperbarui"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Failed to update duration"
+msgstr "Gagal memperbarui durasi"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "JS Error in List"
+msgstr "Galat skrip pada daftar"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Margins (seconds)"
+msgstr "Margin (detik)"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "New group name"
+msgstr "Nama grup baru"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "No actions found"
+msgstr "Tidak ada aksi"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "No group"
+msgstr "Tanpa grup"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Offline"
+msgstr "Luring"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Output Type"
+msgstr "Jenis keluaran"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Press and hold to reorder"
+msgstr "Tekan dan tahan untuk mengurutkan ulang"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Runs the whole sequence"
+msgstr "Berjalan selama seluruh sekuens"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "SINGLE"
+msgstr "TUNGGAL"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Select Group"
+msgstr "Pilih grup"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "TOTAL"
+msgstr "TOTAL"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Time wheel not loaded"
+msgstr "Pemilih waktu belum dimuat"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Updated"
+msgstr "Diperbarui"

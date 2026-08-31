@@ -28256,3 +28256,99 @@ msgstr ""
 
 msgid "“Retrieved” means the knowledge search returned it — not that the answer quoted it."
 msgstr ""
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Copied to all days"
+msgstr "คัดลอกไปยังทุกวันแล้ว"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Create group"
+msgstr "สร้างกลุ่ม"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Deactivated"
+msgstr "ปิดใช้งานแล้ว"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Device is gone"
+msgstr "ไม่พบอุปกรณ์"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Duration updated"
+msgstr "อัปเดตระยะเวลาแล้ว"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Failed to save schedule"
+msgstr "บันทึกตารางเวลาไม่สำเร็จ"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Failed to toggle Sequence"
+msgstr "สลับสถานะลำดับไม่สำเร็จ"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Failed to toggle action"
+msgstr "สลับสถานะการทำงานไม่สำเร็จ"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Failed to update"
+msgstr "อัปเดตไม่สำเร็จ"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Failed to update duration"
+msgstr "อัปเดตระยะเวลาไม่สำเร็จ"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "JS Error in List"
+msgstr "ข้อผิดพลาดสคริปต์ในรายการ"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Margins (seconds)"
+msgstr "ระยะเผื่อ (วินาที)"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "New group name"
+msgstr "ชื่อกลุ่มใหม่"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "No actions found"
+msgstr "ไม่มีการทำงาน"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "No group"
+msgstr "ไม่มีกลุ่ม"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Offline"
+msgstr "ออฟไลน์"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Output Type"
+msgstr "ชนิดเอาต์พุต"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Press and hold to reorder"
+msgstr "กดค้างเพื่อจัดลำดับใหม่"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Runs the whole sequence"
+msgstr "ทำงานตลอดทั้งลำดับ"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "SINGLE"
+msgstr "เดี่ยว"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Select Group"
+msgstr "เลือกกลุ่ม"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "TOTAL"
+msgstr "ทั้งหมด"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Time wheel not loaded"
+msgstr "ยังไม่ได้โหลดตัวเลือกเวลา"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Updated"
+msgstr "อัปเดตแล้ว"

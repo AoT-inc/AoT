@@ -803,7 +803,21 @@ class AbstractOutput(AbstractBaseController, ConfirmableOutputMixin):
             self.logger.debug(msg)
 
             # Write output amount to database
-            self._record_on_duration(output_channel, current_time)
+            #
+            # 확인 가능한 출력에서는 여기가 **아직 꺼진 시점이 아니다.** 큐를
+            # 쓰는 전송(LoRaWAN 등)에서 `output_switch` 가 돌려주는 0 은 "사이트
+            # 전송 큐가 받아들였다" 는 뜻이고, 실제 전파와 장치 동작은 그 뒤에
+            # 온다. 여기서 장부를 닫으면 개방 시간이 실제보다 짧게 남고, 명령이
+            # 끝내 전달되지 않은 경우에는 **밸브가 열려 있는데 "껐다" 고
+            # 기록된다** — 이 도메인에서 가장 나쁜 기록이다.
+            #
+            # 그래서 확인이 오는 출력은 `confirm_command()` 가 닫는다(ON 쪽
+            # 시계는 이미 그렇게 ACK 에 앵커돼 있다). 확인이 영영 안 오면 장부는
+            # 열린 채 남고, 데몬 종료 시 `_record_open_time_before_shutdown()`
+            # 이 마지막으로 거둔다. 단방향 출력은 확인해 줄 것이 없으므로
+            # 예전처럼 여기서 닫는다.
+            if not self.confirmation_capable():
+                self._record_on_duration(output_channel, current_time)
 
             self.output_off_triggered[output_channel] = False
             # Allow next ON to record a fresh start marker

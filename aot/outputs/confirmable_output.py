@@ -165,7 +165,8 @@ class ConfirmableOutputMixin:
     # ------------------------------------------------------------------ #
     # Core machinery
     # ------------------------------------------------------------------ #
-    def begin_command(self, output_channel, intent_state, prev_state, dispatched_ok=True):
+    def begin_command(self, output_channel, intent_state, prev_state,
+                      dispatched_ok=True, extra_window_s=0.0):
         """Record intent and arm the optimistic window after a dispatch.
 
         :param intent_state: 'on' or 'off'
@@ -173,6 +174,12 @@ class ConfirmableOutputMixin:
         :param dispatched_ok: whether the transport accepted the command. If
             False, nothing is armed and no optimistic flip happens — the caller
             must keep the prior state (no phantom 'on' on a failed send).
+        :param extra_window_s: 접수와 실제 전송 사이에 예상되는 지연. 전송이
+            큐를 거치는 출력(사이트 전역 페이싱을 쓰는 LoRaWAN 등)에서는 이
+            함수가 **전송 시점이 아니라 접수 시점**에 불린다. 그 지연만큼
+            창을 넓혀 두지 않으면 늦게 나간 명령이 창이 닫힌 뒤에 전파돼,
+            확인이 도착할 수 없고 멀쩡한 장치가 통신 장애로 판정된다.
+            동기 전송(GPIO 등)은 0 이므로 동작이 달라지지 않는다.
         """
         if not dispatched_ok:
             return
@@ -186,6 +193,10 @@ class ConfirmableOutputMixin:
             self.output_states[output_channel] = want_on
 
             timeout = self.command_timeout_s(output_channel)
+            try:
+                timeout += max(0.0, float(extra_window_s))
+            except (TypeError, ValueError):
+                pass
             if timeout <= 0:
                 # Immediate/synchronous: no window, state is already authoritative.
                 self._cmd_pending.pop(output_channel, None)
@@ -378,6 +389,16 @@ class ConfirmableOutputMixin:
 
         # Anchor the *actual runtime clock* to the response, not the dispatch.
         try:
+            if not want_on:
+                # 장치가 실제로 꺼졌다고 알려온 지금이 개방 시간을 확정할
+                # 자리다. `output_on_off` 의 OFF 경로는 큐 접수만 마친 시점이라
+                # 거기서 닫으면 실제보다 짧게 남고, 명령이 전달되지 않은
+                # 경우에는 열려 있는 밸브를 "껐다" 고 기록하게 된다.
+                try:
+                    self._record_on_duration(output_channel, utc_now())
+                except AttributeError:
+                    # AbstractOutput 과 함께 쓰이지 않는 구성 — 기록할 장부가 없다.
+                    pass
             if want_on:
                 now = utc_now()
                 self.output_time_turned_on[output_channel] = now

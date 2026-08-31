@@ -27654,3 +27654,99 @@ msgstr ""
 
 msgid "“Retrieved” means the knowledge search returned it — not that the answer quoted it."
 msgstr ""
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Copied to all days"
+msgstr "已複製到所有星期"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Create group"
+msgstr "建立群組"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Deactivated"
+msgstr "已停用"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Device is gone"
+msgstr "裝置已遺失"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Duration updated"
+msgstr "已更新運作時間"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Failed to save schedule"
+msgstr "儲存排程失敗"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Failed to toggle Sequence"
+msgstr "切換序列失敗"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Failed to toggle action"
+msgstr "切換動作失敗"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Failed to update"
+msgstr "更新失敗"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Failed to update duration"
+msgstr "更新運作時間失敗"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "JS Error in List"
+msgstr "清單腳本錯誤"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Margins (seconds)"
+msgstr "餘裕（秒）"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "New group name"
+msgstr "新群組名稱"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "No actions found"
+msgstr "沒有動作"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "No group"
+msgstr "無群組"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Offline"
+msgstr "離線"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Output Type"
+msgstr "輸出類型"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Press and hold to reorder"
+msgstr "長按以調整順序"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Runs the whole sequence"
+msgstr "在整個序列期間運作"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "SINGLE"
+msgstr "單獨"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Select Group"
+msgstr "選擇群組"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "TOTAL"
+msgstr "整體"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Time wheel not loaded"
+msgstr "時間選擇器未載入"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Updated"
+msgstr "已更新"

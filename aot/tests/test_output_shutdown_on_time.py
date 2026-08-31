@@ -144,3 +144,66 @@ def test_missing_shutdown_option_is_treated_as_stays_on(spy_thread):
     out.shutdown(0.0)
 
     spy_thread.assert_not_called()
+
+
+# ---- 개방 시간은 "껐다고 보낸 때"가 아니라 "꺼졌다고 확인된 때" 닫힌다 ----
+#
+# 큐를 쓰는 전송에서 `output_switch` 의 0 은 **접수**를 뜻한다. 실제 전파는 사이트
+# 페이싱을 거쳐 그 뒤에 일어나므로, 접수 시점에 장부를 닫으면 개방 시간이 실제보다
+# 짧게 남는다. 명령이 끝내 전달되지 않으면 **열려 있는 밸브를 "껐다" 고 기록**하게
+# 되는데, 그것이 aot-004 에서 실제로 나타난 모양이다(2026-09-01: 감사에는 OFF 가
+# success 로 남았는데 밸브는 20시간 열려 있었고 개방 시간은 어디에도 없었다).
+
+def make_confirmable(turned_on_ago=600.0):
+    """확인 가능한 출력 — OFF 는 확인이 와야 장부가 닫힌다."""
+    out = make_output(turned_on_ago=turned_on_ago)
+    out.confirmation_capable = lambda: True
+    out.output_states = {CH: True}
+    out._started_at_written = {CH: True}
+    out._confirm_init()
+    return out
+
+
+def test_confirmed_off_closes_the_ledger(spy_thread):
+    out = make_confirmable()
+    out.confirm_command(CH, False, source='device')
+    assert spy_thread.call_count == 1
+    assert spy_thread.call_args.kwargs['args'][2] == pytest.approx(600.0, abs=2.0)
+
+
+def test_an_unconfirmed_off_leaves_the_ledger_open(spy_thread):
+    """확인이 안 왔으면 아직 열려 있을 수 있다 — 껐다고 적으면 거짓이 된다."""
+    out = make_confirmable()
+    out.output_switch = lambda *a, **kw: (0, 'accepted')
+    # 접수만 된 상태: 아직 아무 확인도 오지 않았다.
+    spy_thread.assert_not_called()
+    # 장부가 살아 있어야 나중에 실제로 꺼질 때 그 시간이 남는다.
+    assert out.output_time_turned_on[CH] is not None
+
+
+def test_a_late_confirmation_still_records(spy_thread):
+    """창을 넘겨 도착한 확인도 개방 시간을 남긴다 — 늦은 것이지 없는 게 아니다."""
+    out = make_confirmable(turned_on_ago=3600.0)
+    out._cmd_fault_at[CH] = utc_now()      # 이미 fault 로 포기한 뒤
+    out.confirm_command(CH, False, source='device')
+    assert spy_thread.call_count == 1
+    assert spy_thread.call_args.kwargs['args'][2] == pytest.approx(3600.0, abs=2.0)
+
+
+def test_confirming_off_twice_does_not_double_count(spy_thread):
+    out = make_confirmable()
+    out.confirm_command(CH, False, source='device')
+    out.confirm_command(CH, False, source='device')
+    assert spy_thread.call_count == 1
+
+
+def test_a_one_way_output_still_records_at_send_time(spy_thread):
+    """단방향 출력은 확인해 줄 것이 없으므로 예전 자리에서 닫아야 한다.
+
+    여기까지 확인 대기로 바꾸면 그 출력들의 개방 시간이 통째로 사라진다.
+    """
+    import pathlib
+    src = (pathlib.Path(__file__).parent.parent
+           / 'outputs' / 'base_output.py').read_text()
+    assert 'if not self.confirmation_capable():' in src, (
+        "단방향 출력의 즉시 기록 분기가 사라졌다")

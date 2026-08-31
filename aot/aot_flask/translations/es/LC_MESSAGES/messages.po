@@ -28511,3 +28511,99 @@ msgstr ""
 
 msgid "“Retrieved” means the knowledge search returned it — not that the answer quoted it."
 msgstr ""
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Copied to all days"
+msgstr "Copiado a todos los días"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Create group"
+msgstr "Crear grupo"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Deactivated"
+msgstr "Desactivada"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Device is gone"
+msgstr "Dispositivo no encontrado"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Duration updated"
+msgstr "Duración actualizada"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Failed to save schedule"
+msgstr "No se pudo guardar la programación"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Failed to toggle Sequence"
+msgstr "No se pudo cambiar la secuencia"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Failed to toggle action"
+msgstr "No se pudo cambiar la acción"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Failed to update"
+msgstr "No se pudo actualizar"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Failed to update duration"
+msgstr "No se pudo actualizar la duración"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "JS Error in List"
+msgstr "Error de script en la lista"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Margins (seconds)"
+msgstr "Márgenes (segundos)"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "New group name"
+msgstr "Nuevo nombre de grupo"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "No actions found"
+msgstr "No hay acciones"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "No group"
+msgstr "Sin grupo"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Offline"
+msgstr "Sin conexión"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Output Type"
+msgstr "Tipo de salida"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Press and hold to reorder"
+msgstr "Mantén pulsado para reordenar"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Runs the whole sequence"
+msgstr "Funciona durante toda la secuencia"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "SINGLE"
+msgstr "INDIVIDUAL"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Select Group"
+msgstr "Seleccionar grupo"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "TOTAL"
+msgstr "TOTAL"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Time wheel not loaded"
+msgstr "Selector de hora no cargado"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Updated"
+msgstr "Actualizado"

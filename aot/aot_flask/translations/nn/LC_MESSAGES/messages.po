@@ -26892,3 +26892,187 @@ msgstr "Avanserte innstillingar"
 msgid "Not Yet Categorised"
 msgstr "Ikkje kategorisert enno"
 
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Activate or deactivate this sequence"
+msgstr "Aktiver eller deaktiver denne sekvensen"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Activated"
+msgstr "Aktivert"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "All weekdays share the same start, end, and period"
+msgstr "Alle vekedagar har same start, slutt og periode"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Copied to all days"
+msgstr "Kopiert til alle dagar"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Copy the selected day's settings to all weekdays"
+msgstr "Kopier innstillingane for den valde dagen til alle vekedagar"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Copy to All"
+msgstr "Kopier til alle"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Create group"
+msgstr "Lag gruppe"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Deactivated"
+msgstr "Deaktivert"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Device is gone"
+msgstr "Eininga manglar"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Duration updated"
+msgstr "Varigheita er oppdatert"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Failed to save schedule"
+msgstr "Klarte ikkje å lagre timeplanen"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Failed to toggle Sequence"
+msgstr "Klarte ikkje å veksle sekvensen"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Failed to toggle action"
+msgstr "Klarte ikkje å veksle handlinga"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Failed to update"
+msgstr "Oppdateringa mislukkast"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Failed to update duration"
+msgstr "Klarte ikkje å oppdatere varigheita"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Fri"
+msgstr "fre"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "JS Error in List"
+msgstr "Skriptfeil i lista"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Margins (seconds)"
+msgstr "Margin (sekund)"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Mon"
+msgstr "måo"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "New group name"
+msgstr "Nytt gruppenamn"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "No actions found"
+msgstr "Ingen handlingar"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "No group"
+msgstr "Inga gruppe"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Offline"
+msgstr "Fråkopla"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Output Type"
+msgstr "Utgangstype"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Per Day"
+msgstr "Per dag"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Press and hold to reorder"
+msgstr "Hald inne for å endre rekkjefølgje"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Run the sequence on this weekday. Unchecked days are skipped."
+msgstr "Køyr sekvensen denne vekedagen. Dagar utan avkryssing vert hoppa over."
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Runs the whole sequence"
+msgstr "Går gjennom heile sekvensen"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "SINGLE"
+msgstr "ENKEL"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Sat"
+msgstr "lau"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Select Group"
+msgstr "Vel gruppe"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Select this weekday to view and edit its times and actions"
+msgstr "Vel denne vekedagen for å sjå og endre tidene og handlingane"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Set a different start, end, and period for each weekday"
+msgstr "Set ulik start, slutt og periode for kvar vekedag"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Set the duration of one cycle. Cycles repeat until the end time."
+msgstr "Set lengda på éin syklus. Syklusane vert gjentekne til sluttida."
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Set the time of day the sequence starts for the selected day"
+msgstr "Set klokkeslettet sekvensen startar den valde dagen"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Set the time of day the sequence stops. Select 00:00 for 24:00 (end of day)."
+msgstr "Set klokkeslettet sekvensen stoppar. Vel 00:00 for 24:00 (slutten av døgnet)."
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Shared"
+msgstr "Felles"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Show or hide the action list"
+msgstr "Vis eller skjul handlingslista"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Sun"
+msgstr "sun"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "TOTAL"
+msgstr "TOTAL"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Thu"
+msgstr "tor"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Time wheel not loaded"
+msgstr "Tidsveljaren er ikkje lasta"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Tue"
+msgstr "tys"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Updated"
+msgstr "Oppdatert"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Waiting for data..."
+msgstr "Ventar på data..."
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Wed"
+msgstr "ons"

@@ -30,6 +30,14 @@ from aot.utils.weekly_schedule import (
 
 logger = logging.getLogger(__name__)
 
+# 안전장치가 **정상적으로 개입한** 사건을 남기는 알림 로거. 오류가 아니므로
+# warning 이 맞지만, 컨트롤러 로거(`self.logger`)는 log_level_debug 가 꺼지면
+# ERROR 로 올라가기 때문에(base_controller.set_log_level_debug — 기본값이 꺼짐)
+# 거기에 warning 으로 남기면 한 줄도 기록되지 않는다. 이 로거는 그 게이트를
+# 받지 않는 `aot` 의 직계 자식이라(모듈 로거의 자식으로 만들면 ERROR 를 그대로
+# 물려받는다) 기본 설정에서도 warning 이 그대로 남는다.
+notice_logger = logging.getLogger('aot.sequence_notice')
+
 
 def _ambiguous_output_tabs(rows):
     """이름이 겹치는 출력만 `{unique_id: 탭 이름}`. 안 겹치면 빈 dict.
@@ -718,7 +726,20 @@ class SequenceTriggerController(AbstractController, threading.Thread):
 
         # Resume an in-progress cycle across a daemon restart (see
         # _load_runtime_state) instead of always starting fresh at elapsed=0.
-        self._load_runtime_state()
+        #
+        # **비활성 시퀀스는 절대 재개하지 않는다.** initialize_variables 는 데몬
+        # 기동 때만 도는 게 아니라 refresh_settings() 를 통해 설정 변경·순서
+        # 저장·활성 토글에서도 돈다. 예전에는 여기에 가드가 없어서, 꺼 놓은
+        # 시퀀스에 대해서도 _load_runtime_state → _resync_after_resume →
+        # output_on 까지 내려가 **밸브를 남은 시간만큼 다시 열었다**.
+        # active_actions 는 이 함수가 지우지 않으므로, 로드를 건너뛰어도 돌고
+        # 있던 스텝은 loop() 의 비활성 분기가 stop_all_active() 로 끝까지 끈다.
+        if self.is_activated:
+            self._load_runtime_state()
+        elif self.active_actions:
+            self.logger.debug(
+                f"Sequence {self.unique_id}: 비활성 상태라 사이클을 재개하지 않는다 "
+                f"(진행 중이던 스텝 {len(self.active_actions)}개는 loop 이 끈다).")
 
         self.ready.set()
         self.running = True
@@ -1432,6 +1453,11 @@ class SequenceTriggerController(AbstractController, threading.Thread):
         상태를 못 읽으면(통신 오류) 건드리지 않는다 — 모르는 채로 켜면 이미 열린
         밸브를 연장하게 되고, 그쪽이 더 나쁘다.
         """
+        # 이 함수는 밸브를 **여는** 경로다. 호출부가 이미 걸러 주지만, 여기서도
+        # 한 번 더 막는다 — 비활성 시퀀스가 어떤 경로로든 출력을 켜는 일은 없어야
+        # 한다(실제로 그런 사고가 있었다).
+        if not self.is_activated:
+            return
         if not self.active_actions or self.cycle_start_time is None:
             return
         elapsed = time.time() - self.cycle_start_time
@@ -1461,7 +1487,10 @@ class SequenceTriggerController(AbstractController, threading.Thread):
             if state != 'off':
                 continue        # 켜져 있거나 알 수 없다 — 그대로 둔다
 
-            self.logger.error(
+            # 오류가 아니라 안전장치가 제대로 작동한 것이다 — 재시작으로 꺼진
+            # 출력을 남은 시간만큼 되살린다. 등급은 warning 이되 기본 설정에서도
+            # 보이도록 notice_logger 로 남긴다(위 정의 참조).
+            notice_logger.warning(
                 f"Action {act_id}: 재개했으나 출력이 꺼져 있습니다"
                 f"(종료 시 state_shutdown 으로 내려간 것으로 보입니다). "
                 f"남은 {remaining:.0f}초만큼 다시 켭니다.")
@@ -1482,6 +1511,13 @@ class SequenceTriggerController(AbstractController, threading.Thread):
         Pyro5 타임아웃·통신오류도 예외가 아니라 `(1, msg)` 로 돌아온다. 예전에는
         이 반환값을 통째로 버려서, 명령이 나가지 못한 경우에도 호출자가 성공으로
         읽었다.
+
+        **큐를 쓰는 출력에서 code 0 은 "접수됐다" 는 뜻이다**(LoRaWAN 등,
+        `on_off_chirpstack.output_switch` 참조). 전파 실패는 여기가 아니라 장치
+        확인이 판정하고, 그쪽이 재전송과 fault·revert 를 담당한다. 그래서 아래
+        재시도는 **접수 자체가 안 된 경우**를 위한 것이지 전파 재시도가 아니다 —
+        전파까지 여기서 다시 시도하면 한 명령을 세 계층이 각자 재시도하게 되고,
+        그 중복이 곧 다운링크 포화였다.
         """
         if not item.get('is_output'):
             return True

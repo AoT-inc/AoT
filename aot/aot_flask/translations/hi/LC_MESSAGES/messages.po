@@ -28354,3 +28354,187 @@ msgstr "उन्नत सेटिंग्स"
 msgid "Not Yet Categorised"
 msgstr "अभी तक वर्गीकृत नहीं"
 
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Activate or deactivate this sequence"
+msgstr "इस अनुक्रम को सक्रिय या निष्क्रिय करें"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Activated"
+msgstr "सक्रिय किया गया"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "All weekdays share the same start, end, and period"
+msgstr "सभी दिनों में एक ही आरंभ, समाप्ति और अवधि रहती है"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Copied to all days"
+msgstr "सभी दिनों में कॉपी किया गया"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Copy the selected day's settings to all weekdays"
+msgstr "चुने गए दिन की सेटिंग सभी दिनों में कॉपी करें"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Copy to All"
+msgstr "सभी में कॉपी करें"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Create group"
+msgstr "समूह बनाएँ"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Deactivated"
+msgstr "निष्क्रिय किया गया"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Device is gone"
+msgstr "डिवाइस नहीं मिला"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Duration updated"
+msgstr "अवधि अपडेट की गई"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Failed to save schedule"
+msgstr "शेड्यूल सहेजा नहीं जा सका"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Failed to toggle Sequence"
+msgstr "अनुक्रम की स्थिति नहीं बदली जा सकी"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Failed to toggle action"
+msgstr "क्रिया की स्थिति नहीं बदली जा सकी"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Failed to update"
+msgstr "अपडेट नहीं हो सका"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Failed to update duration"
+msgstr "अवधि अपडेट नहीं हो सकी"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Fri"
+msgstr "शुक्र"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "JS Error in List"
+msgstr "सूची में स्क्रिप्ट त्रुटि"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Margins (seconds)"
+msgstr "मार्जिन (सेकंड)"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Mon"
+msgstr "सोम"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "New group name"
+msgstr "नया समूह नाम"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "No actions found"
+msgstr "कोई क्रिया नहीं"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "No group"
+msgstr "कोई समूह नहीं"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Offline"
+msgstr "ऑफ़लाइन"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Output Type"
+msgstr "आउटपुट प्रकार"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Per Day"
+msgstr "दिन के अनुसार"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Press and hold to reorder"
+msgstr "क्रम बदलने के लिए दबाकर रखें"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Run the sequence on this weekday. Unchecked days are skipped."
+msgstr "इस दिन अनुक्रम चलाएँ। बिना चुने दिन छोड़ दिए जाते हैं।"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Runs the whole sequence"
+msgstr "पूरे अनुक्रम के दौरान चलता है"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "SINGLE"
+msgstr "एकल"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Sat"
+msgstr "शनि"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Select Group"
+msgstr "समूह चुनें"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Select this weekday to view and edit its times and actions"
+msgstr "इस दिन के समय और क्रियाएँ देखने और बदलने के लिए इसे चुनें"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Set a different start, end, and period for each weekday"
+msgstr "हर दिन के लिए अलग आरंभ, समाप्ति और अवधि सेट करें"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Set the duration of one cycle. Cycles repeat until the end time."
+msgstr "एक चक्र की अवधि तय करें। चक्र समाप्ति समय तक दोहराए जाते हैं।"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Set the time of day the sequence starts for the selected day"
+msgstr "चुने गए दिन अनुक्रम के शुरू होने का समय तय करें"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Set the time of day the sequence stops. Select 00:00 for 24:00 (end of day)."
+msgstr "अनुक्रम के रुकने का समय तय करें। 24:00 (दिन के अंत) के लिए 00:00 चुनें।"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Shared"
+msgstr "साझा"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Show or hide the action list"
+msgstr "क्रिया सूची दिखाएँ या छिपाएँ"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Sun"
+msgstr "रवि"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "TOTAL"
+msgstr "कुल"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Thu"
+msgstr "गुरु"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Time wheel not loaded"
+msgstr "समय चयनकर्ता लोड नहीं हुआ"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Tue"
+msgstr "मंगल"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Updated"
+msgstr "अपडेट किया गया"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Waiting for data..."
+msgstr "डेटा की प्रतीक्षा..."
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Wed"
+msgstr "बुध"

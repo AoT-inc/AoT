@@ -86,7 +86,9 @@ def _make_output(enqueue_result, enqueue_raises=None):
     out.debug_logging = False
     out.began = []
 
-    def _enqueue(state):
+    def _enqueue(state, output_channel=0):
+        # 채널을 받는다 — 제어 명령의 병합 키가 `(출력, 채널, 'ctrl')` 이라
+        # 드라이버가 채널을 함께 넘긴다(lorawan_pacing.submit_downlink).
         if enqueue_raises is not None:
             raise enqueue_raises
         return enqueue_result

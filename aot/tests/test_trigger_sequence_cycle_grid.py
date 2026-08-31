@@ -56,6 +56,10 @@ def make_controller():
     inst.sequence_cycle_duration = PERIOD
     inst.active_actions = set()
     inst._runt_logged_start = None
+    # 활성 시퀀스가 기본이다 — 재개 재동기화는 활성일 때만 돈다(비활성 시퀀스가
+    # 밸브를 여는 사고가 있어 가드가 붙었다, test_trigger_sequence_restart_resume
+    # 의 test_deactivated_sequence_does_not_reopen_outputs 참조).
+    inst.is_activated = True
     return inst
 
 

@@ -26902,3 +26902,187 @@ msgstr "Geavanceerde instellingen"
 msgid "Not Yet Categorised"
 msgstr "Nog niet gecategoriseerd"
 
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Activate or deactivate this sequence"
+msgstr "Deze reeks in- of uitschakelen"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Activated"
+msgstr "Ingeschakeld"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "All weekdays share the same start, end, and period"
+msgstr "Alle weekdagen gebruiken dezelfde start, eind en periode"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Copied to all days"
+msgstr "Naar alle dagen gekopieerd"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Copy the selected day's settings to all weekdays"
+msgstr "Instellingen van de gekozen dag naar alle weekdagen kopiëren"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Copy to All"
+msgstr "Naar alle kopiëren"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Create group"
+msgstr "Groep aanmaken"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Deactivated"
+msgstr "Uitgeschakeld"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Device is gone"
+msgstr "Apparaat ontbreekt"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Duration updated"
+msgstr "Duur bijgewerkt"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Failed to save schedule"
+msgstr "Schema opslaan mislukt"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Failed to toggle Sequence"
+msgstr "Reeks omschakelen mislukt"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Failed to toggle action"
+msgstr "Actie omschakelen mislukt"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Failed to update"
+msgstr "Bijwerken mislukt"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Failed to update duration"
+msgstr "Duur bijwerken mislukt"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Fri"
+msgstr "vr"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "JS Error in List"
+msgstr "Scriptfout in lijst"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Margins (seconds)"
+msgstr "Marges (seconden)"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Mon"
+msgstr "ma"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "New group name"
+msgstr "Nieuwe groepsnaam"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "No actions found"
+msgstr "Geen acties"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "No group"
+msgstr "Geen groep"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Offline"
+msgstr "Offline"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Output Type"
+msgstr "Uitgangstype"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Per Day"
+msgstr "Per dag"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Press and hold to reorder"
+msgstr "Ingedrukt houden om te herschikken"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Run the sequence on this weekday. Unchecked days are skipped."
+msgstr "De reeks op deze weekdag uitvoeren. Niet-aangevinkte dagen worden overgeslagen."
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Runs the whole sequence"
+msgstr "Loopt gedurende de hele reeks"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "SINGLE"
+msgstr "ENKEL"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Sat"
+msgstr "za"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Select Group"
+msgstr "Groep kiezen"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Select this weekday to view and edit its times and actions"
+msgstr "Kies deze weekdag om de tijden en acties te bekijken en te bewerken"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Set a different start, end, and period for each weekday"
+msgstr "Stel per weekdag een andere start, eind en periode in"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Set the duration of one cycle. Cycles repeat until the end time."
+msgstr "Stel de duur van één cyclus in. Cycli herhalen tot de eindtijd."
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Set the time of day the sequence starts for the selected day"
+msgstr "Stel in hoe laat de reeks op de gekozen dag start"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Set the time of day the sequence stops. Select 00:00 for 24:00 (end of day)."
+msgstr "Stel in hoe laat de reeks stopt. Kies 00:00 voor 24:00 (einde van de dag)."
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Shared"
+msgstr "Gedeeld"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Show or hide the action list"
+msgstr "Actielijst tonen of verbergen"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Sun"
+msgstr "zo"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "TOTAL"
+msgstr "TOTAAL"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Thu"
+msgstr "do"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Time wheel not loaded"
+msgstr "Tijdkiezer niet geladen"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Tue"
+msgstr "di"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Updated"
+msgstr "Bijgewerkt"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Waiting for data..."
+msgstr "Wachten op gegevens..."
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Wed"
+msgstr "wo"
