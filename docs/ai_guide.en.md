@@ -23,6 +23,7 @@ How AoT's AI agent observes, diagnoses, and controls greenhouses and growing fac
 | Observe | `list_available_devices` | Devices available for AI judgment (native) | No |
 | Observe | `get_sensor_reading` | Latest reading for a sensor (native) | No |
 | Notes | `search_notes` | Read zone/device notes and work logs | No |
+| Notes | `get_note_attachment` | View a photo attached to a note as an actual image | No |
 | Notes | `create_note` | Save a memo/note attached to an entity | No |
 | Notices | `list_notices` | Notice board post list | No |
 | System | `get_system_update_status` | Installed version vs latest GitHub release | No |

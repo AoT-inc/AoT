@@ -60,6 +60,7 @@ Tools exposed by the external MCP server and the internal `mcp_aot` engine. Read
 | `get_energy_report` | Energy usage report by period/zone |
 | `get_cumulative_status` | EnvCoordinator DLI / GDD cumulative status |
 | `search_notes` | Read notes/memos/work logs attached to a zone or device |
+| `get_note_attachment` | View a photo attached to a note as an actual image (one per call) |
 | `list_notices` | Notice board post list |
 | `get_system_update_status` | Installed version vs latest GitHub release |
 | `list_available_devices` | Devices available for AI judgment (native bridge) |

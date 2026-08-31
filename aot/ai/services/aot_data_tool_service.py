@@ -2013,7 +2013,7 @@ class AoTDataToolService:
                         _date = to_local(r.date_time).strftime("%Y-%m-%d %H:%M")
                 else:
                     _date = None
-                results.append({
+                entry = {
                     "note_id": r.unique_id,
                     "date": _date,
                     "date_tz": _ntz,
@@ -2026,7 +2026,16 @@ class AoTDataToolService:
                     "target_id": r.target_id,
                     "target_type": r.target_type,
                     "target_name": _note_target_name(r.target_id),
-                })
+                }
+                # 첨부파일. 예전에는 이 줄이 없어서, 사진이 붙은 노트도 AI 에게는
+                # 텍스트만 보였다 — 사진 캡션만 남은 노트("왼쪽부터 산포, 채흔
+                # ...")를 AI 가 영영 해석할 수 없었던 원인이다. 첨부가 없을 때는
+                # 키 자체를 넣지 않는다(대부분의 노트가 그렇고, 빈 배열이 결과마다
+                # 붙으면 그게 곧 응답 비대화다).
+                _files = [f.strip() for f in (r.files or "").split(",") if f.strip()]
+                if _files:
+                    entry["files"] = _files
+                results.append(entry)
 
             out = {
                 "status": "success",
@@ -2035,12 +2044,140 @@ class AoTDataToolService:
                 "query": query,
                 "target": resolved_name or target_name or target_id,
             }
+            # 파일명만으로는 AI 가 "사진이 있다"는 사실까지만 알고 내용을 못 본다.
+            # 실제 픽셀을 가져오는 경로를 결과에 실어 준다 — 설명(고정비)이 아니라
+            # 첨부가 실제로 있을 때만 나가는 조건부 안내다.
+            if any("files" in _e for _e in results):
+                out.setdefault("_reading", []).append(
+                    "Some notes carry 'files' — image/photo attachments. The filename "
+                    "alone is not the content: call get_note_attachment(note_id, filename) "
+                    "to actually SEE one. Do that before answering a question the photo "
+                    "would settle, and before saying a note has no detail.")
             if scope is not None:
                 out["scope"] = scope
             return out
         except Exception as e:
             logger.error(f"Error in search_notes_tool: {e}")
             return {"error": f"Error while querying notes: {str(e)}"}
+
+    @staticmethod
+    def get_note_attachment_tool(note_id=None, filename=None, max_dimension=1024,
+                                 **extra):
+        """[분류 A - 읽기 도구] 노트에 첨부된 사진을 실제로 본다.
+
+        `search_notes` 는 첨부 **파일명**까지만 준다. 이 도구가 그 파일을 열어
+        이미지 블록으로 돌려주므로, 여기까지 와야 AI 가 사진의 내용을 본다.
+
+        **왜 한 장씩인가.** 응답 캡(_MAX_RESPONSE_TOKENS)은 글자 수로 재는데
+        base64 이미지는 한 장이 수십만 자다. 여러 장을 한 응답에 실으면 캡이
+        터지거나 클라이언트가 거부한다. 이미지는 `_content_blocks` 로 실려
+        캡의 자를 비껴가고(tool_execution._execute_tool 참조), 대신 호출당
+        한 장으로 묶어 총량을 사람이 통제하게 둔다.
+        """
+        import base64
+        import io
+        import os as _os
+
+        try:
+            from PIL import Image
+            from aot.config import PATH_NOTE_ATTACHMENTS
+            from aot.databases.models import Notes
+
+            if not note_id:
+                return {"status": "error",
+                        "message": "note_id is required. Get it from search_notes."}
+
+            note = Notes.query.filter_by(unique_id=str(note_id).strip()).first()
+            if note is None:
+                return {"status": "error",
+                        "message": f"No note found with note_id '{note_id}'."}
+
+            available = [f.strip() for f in (note.files or "").split(",") if f.strip()]
+            if not available:
+                return {"status": "error", "note_id": note.unique_id,
+                        "message": "This note has no attachments."}
+
+            if filename:
+                # 요청한 이름은 **반드시 이 노트가 실제로 가진 목록 안**이어야
+                # 한다. 이 대조가 곧 경로 탈출 방어다 — 사용자가 준 문자열로
+                # 경로를 만들지 않고, 목록에서 고른 값으로만 만든다.
+                want = _os.path.basename(str(filename).strip())
+                match = next((f for f in available
+                              if f == want or _os.path.basename(f) == want), None)
+                if match is None:
+                    return {"status": "error", "note_id": note.unique_id,
+                            "requested": filename, "files": available,
+                            "message": "That filename is not attached to this note. "
+                                       "Pick one from 'files'."}
+                target = match
+            else:
+                target = available[0]
+
+            path = _os.path.join(PATH_NOTE_ATTACHMENTS, target)
+            # 심볼릭 링크·상대경로로 첨부 디렉터리를 벗어나지 않았는지 최종 확인.
+            _root = _os.path.realpath(PATH_NOTE_ATTACHMENTS)
+            if _os.path.commonpath([_os.path.realpath(path), _root]) != _root:
+                return {"status": "error",
+                        "message": "Resolved path escapes the attachment directory."}
+            if not _os.path.isfile(path):
+                return {"status": "error", "note_id": note.unique_id,
+                        "filename": target, "files": available,
+                        "message": "The note references this file but it is missing "
+                                   "on disk (DB row and uploads/ are out of sync)."}
+
+            size_on_disk = _os.path.getsize(path)
+            base = {"status": "success", "note_id": note.unique_id,
+                    "note_name": note.name, "filename": target,
+                    "bytes_on_disk": size_on_disk,
+                    "attachment_count": len(available)}
+            if len(available) > 1:
+                base["files"] = available
+                base["note"] = ("This note has %d attachments; this call returned "
+                                "one. Call again with another filename to see the "
+                                "rest." % len(available))
+
+            try:
+                img = Image.open(path)
+                img.load()
+            except Exception:
+                # 이미지가 아닌 첨부(PDF·문서 등)는 정상 상태다. 실패가 아니라
+                # "이건 그림이 아니다"라고 분명히 말한다.
+                base["status"] = "not_an_image"
+                base["message"] = ("This attachment is not a readable image, so it "
+                                   "cannot be shown. Its name and size are above.")
+                return base
+
+            orig_w, orig_h = img.size
+            try:
+                limit = int(max_dimension)
+            except (TypeError, ValueError):
+                limit = 1024
+            limit = max(256, min(limit, 2048))
+
+            # JPEG 는 알파·팔레트를 못 싣는다. 변환을 안 하면 PNG 스크린샷류에서
+            # 그대로 터진다.
+            if img.mode not in ("RGB", "L"):
+                img = img.convert("RGB")
+            if max(orig_w, orig_h) > limit:
+                img.thumbnail((limit, limit), Image.LANCZOS)
+
+            buf = io.BytesIO()
+            img.save(buf, format="JPEG", quality=80, optimize=True)
+            data = buf.getvalue()
+
+            base["original_dimensions"] = f"{orig_w}x{orig_h}"
+            base["returned_dimensions"] = f"{img.size[0]}x{img.size[1]}"
+            base["returned_bytes"] = len(data)
+            base["_content_blocks"] = [{
+                "type": "image",
+                "data": base64.b64encode(data).decode("ascii"),
+                "mimeType": "image/jpeg",
+            }]
+            return base
+        except Exception as e:
+            logger.error(f"Error in get_note_attachment_tool: {e}", exc_info=True)
+            return {"status": "error",
+                    "message": f"Error while reading the attachment: {str(e)}"}
 
     @staticmethod
     def get_facility_capacity_tool(facility_name=None, **extra):

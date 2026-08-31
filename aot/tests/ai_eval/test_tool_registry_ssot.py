@@ -426,6 +426,12 @@ _GEO_DISTANCE_TOOL_ADDITIONS = {'distance_between', 'nearest'}
 # comm_* 와 분리해 두는 것이 이 도구의 목적이다. 읽기 전용.
 _DEVICE_FRESHNESS_TOOL_ADDITIONS = {'get_device_freshness'}
 
+# 노트 첨부 이미지 (2026-08-31). search_notes 는 첨부 **파일명**까지만 준다 —
+# 사진이 붙은 노트가 AI 에게는 텍스트만 보였고, 캡션만 남은 노트는 영영 해석할
+# 수 없었다. 이 도구가 파일을 열어 이미지 블록으로 돌려준다. 읽기 전용이라
+# 승인 집합에는 넣지 않는다.
+_NOTE_ATTACHMENT_TOOL_ADDITIONS = {'get_note_attachment'}
+
 # 4. _VIRTUAL_APPROVAL_TOOLS (ai_dispatch_service.py) — 17 mutations, no physical.
 _ORIG_VIRTUAL_APPROVAL_TOOLS = {
     'create_function', 'create_sequence_function', 'modify_function_options',
@@ -498,7 +504,8 @@ def _check_dispatch_map(R):
            | _TAB_READ_TOOL_ADDITIONS | _TAB_WRITE_TOOL_ADDITIONS | _TAB_DELETE_TOOL_ADDITIONS
            | _WIDGET_READ_TOOL_ADDITIONS | _WIDGET_WRITE_TOOL_ADDITIONS | _WIDGET_DELETE_TOOL_ADDITIONS
            | _ZONE_SUMMARY_TOOL_ADDITIONS | _GEO_DISTANCE_TOOL_ADDITIONS
-           | _DRAWER_TOOL_ADDITIONS | _DEVICE_FRESHNESS_TOOL_ADDITIONS,
+           | _DRAWER_TOOL_ADDITIONS | _DEVICE_FRESHNESS_TOOL_ADDITIONS
+           | _NOTE_ATTACHMENT_TOOL_ADDITIONS,
            set(R.build_tool_map().keys()))
 
 
@@ -527,7 +534,8 @@ def _check_declarations(R):
            | _TAB_READ_TOOL_ADDITIONS | _TAB_WRITE_TOOL_ADDITIONS | _TAB_DELETE_TOOL_ADDITIONS
            | _WIDGET_READ_TOOL_ADDITIONS | _WIDGET_WRITE_TOOL_ADDITIONS | _WIDGET_DELETE_TOOL_ADDITIONS
            | _ZONE_SUMMARY_TOOL_ADDITIONS | _GEO_DISTANCE_TOOL_ADDITIONS
-           | _DRAWER_TOOL_ADDITIONS | _DEVICE_FRESHNESS_TOOL_ADDITIONS,
+           | _DRAWER_TOOL_ADDITIONS | _DEVICE_FRESHNESS_TOOL_ADDITIONS
+           | _NOTE_ATTACHMENT_TOOL_ADDITIONS,
            set(R.virtual_tool_registry()))
 
     # 4. dispatch approval set — original PLUS the mutating post-Phase-1 additions,

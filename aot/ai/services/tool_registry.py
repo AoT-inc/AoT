@@ -1202,6 +1202,10 @@ TOOLS: List[Tool] = [
         "description": "Reads FULL/older notes for one entity, or free-text searches notes. Read-only — NO approval needed. NOTE: a per-entity digest (each entity's INITIAL note + a few RECENT notes + total count) is ALREADY pre-injected in context under system_state.note_digests — use that to answer broad questions like '각 장치의 노트 확인' or 'which devices have notes' WITHOUT any tool call. Call this tool only to DRILL DOWN: read the full text or older notes of a SPECIFIC entity (pass target_name with that zone/device name — notes bind by target_id so keyword search alone misses them), or free-text keyword search (query). When target_name resolves to a SITE (포장), results automatically include every descendant zone's notes too (a site rarely has its own notes; per-zone notes like crop info live on the zones) — each result's target_name tells you which zone it came from, so attribute info per-zone rather than treating results as one undifferentiated pile.",
         "usage_hint": "params.arguments: {target_name (location/entity to read notes for, e.g. '3-1', '1포장 1-1', '밸브1'), query (optional keyword), category (optional), limit (optional, default 10)}. Returns note contents (up to 2000 chars each) for summarization.",
     }),
+    # search_notes 의 읽기 짝. 파일명까지만 주는 그 도구에서 실제 픽셀로 내려가는
+    # 유일한 경로다. manifest=None 이라 인앱 프롬프트 고정비는 0 이고, 발견은
+    # search_notes 응답의 조건부 _reading 이 담당한다(첨부가 있을 때만 안내).
+    Tool('get_note_attachment', handler='get_note_attachment_tool'),
     Tool('get_energy_report', handler='get_energy_report'),
     Tool('operate_device', handler='operate_device_tool', physical=True),
     Tool('get_weather', handler='get_weather_tool'),
@@ -1340,6 +1344,9 @@ _TIER_ASSIGNMENT = {
     # --- 기록 ---------------------------------------------------------------
     'create_note':               ('record', 'core', False),
     'search_notes':              ('record', 'core', False),
+    # core 가 아닌 이유: 첨부가 있는 노트에서만 필요하고, 그때는 search_notes
+    # 응답이 이름을 직접 알려 준다. 조건부 안내가 있는 드릴다운은 서랍이 맞다.
+    'get_note_attachment':       ('record', 'drawer', False),
     'note':                      ('record', 'drawer', False),
     'archive_note':              ('record', 'drawer', False),
     'restore_note_from_archive': ('record', 'drawer', False),
@@ -2127,6 +2134,19 @@ _MCP_TOOL_PAYLOADS: List[Dict[str, Any]] = [
                 "category": {"type": "string", "description": "Category filter: 'schedule', 'general', etc. Omit for all."},
                 "limit": {"type": "integer", "description": "Maximum number of results (default 10)."}
             }
+        }
+    },
+    {
+        "tool_name": "get_note_attachment",
+        "description": "Shows one photo/image attached to a note — the actual picture, returned as an image you can look at. Read-only. search_notes only lists attachment FILENAMES; a filename is not the content, so call this whenever a note's photo could settle the question (what the damage looks like, which row is which, what was written on a board). One image per call by design: images are large, so ask for the next filename in a second call. Non-image attachments come back as status 'not_an_image' with their name and size, which is a normal answer, not a failure.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "note_id": {"type": "string", "description": "unique_id of the note holding the attachment (from search_notes)."},
+                "filename": {"type": "string", "description": "Which attachment to show — one of the names in that note's 'files'. Omit to get the first one. A name that is not attached to this note is refused and the real list is returned."},
+                "max_dimension": {"type": "integer", "description": "Longest edge in pixels for the returned image (default 1024, clamped 256-2048). Lower it for a quick look, raise it only when fine detail matters (reading small text, spotting lesions)."}
+            },
+            "required": ["note_id"]
         }
     },
     {

@@ -23,6 +23,7 @@ AoT의 AI 에이전트가 온실·재배 시설을 관찰·진단·제어하는 
 | 관찰 | `list_available_devices` | AI 판단 대상 장치 목록(네이티브) | 불필요 |
 | 관찰 | `get_sensor_reading` | 특정 센서 최신 측정값(네이티브) | 불필요 |
 | 노트 | `search_notes` | 구역·장치 노트/작업기록 조회 | 불필요 |
+| 노트 | `get_note_attachment` | 노트에 첨부된 사진을 실제 이미지로 조회 | 불필요 |
 | 노트 | `create_note` | 메모/노트를 대상에 부착해 저장 | 불필요 |
 | 공지 | `list_notices` | 공지 게시판 글 목록 | 불필요 |
 | 시스템 | `get_system_update_status` | 설치 버전 vs GitHub 최신 비교 | 불필요 |

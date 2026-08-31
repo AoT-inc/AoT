@@ -60,6 +60,7 @@ AoT의 AI는 두 가지 경로로 도구를 사용합니다.
 | `get_energy_report` | 기간·구역별 에너지 사용량 리포트 |
 | `get_cumulative_status` | EnvCoordinator DLI(일적산광량)·GDD(누적온도) 상태 |
 | `search_notes` | 구역·장치에 부착된 노트/메모/작업기록 조회 |
+| `get_note_attachment` | 노트에 첨부된 사진을 실제 이미지로 조회 (한 번에 한 장) |
 | `list_notices` | 공지 게시판 글 목록 |
 | `get_system_update_status` | 설치 버전 vs GitHub 최신 릴리스 비교 |
 | `list_available_devices` | AI 판단 대상 장치 목록 (네이티브 브리지) |

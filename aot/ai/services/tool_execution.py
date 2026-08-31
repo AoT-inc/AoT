@@ -826,14 +826,28 @@ def _execute_tool(app, tool_name, arguments, agent_id="unknown", role=None,
         _record_audit(audit, tool_name, arguments, agent_id, permission,
                       reason, blocked, result, error_text)
 
+    # 텍스트가 아닌 블록(이미지 등)을 실어 보내는 통로. 도구가 결과 dict 에
+    # `_content_blocks` 로 담아 두면 여기서 꺼내 MCP 블록으로 나란히 붙인다.
+    #
+    # **캡보다 먼저 꺼내는 것이 이 코드의 핵심이다.** _cap_result 는 dict 를
+    # json 으로 덤프해 글자 수로 토큰을 어림하는데, base64 이미지는 한 장에
+    # 수십만 자라 그대로 두면 캡이 즉시 발동해 이미지도 잘리고 정작 남겨야 할
+    # 텍스트 필드까지 함께 버려진다. 이미지는 클라이언트에서 이미지 토큰으로
+    # 계산되지 텍스트 글자 수로 계산되지 않으므로, 애초에 캡의 자에 올리지
+    # 않는 것이 옳다.
+    _blocks = None
     if isinstance(result, dict):
+        _blocks = result.pop("_content_blocks", None)
         result.setdefault("server_host", SERVER_HOST)
         # 호출이 실제로 돌았는지를 도구별 어휘와 무관하게 한 키로 알린다.
         # 여기가 stdio/HTTP 양쪽이 반드시 지나는 단일 지점이라 한 번만 찍으면 된다.
         result["call_state"] = gate.call_state(blocked, result, error_text)
         # 감사 기록(위)이 끝난 뒤에 줄인다 — 진단에는 잘리지 않은 원본이 필요하다.
         result = _cap_result(result, tool_name)
-    return [{"type": "text", "text": json.dumps(result, ensure_ascii=False)}]
+    out = [{"type": "text", "text": json.dumps(result, ensure_ascii=False)}]
+    if _blocks:
+        out.extend(_blocks)
+    return out
 
 
 def _current_request_user_uuid():
