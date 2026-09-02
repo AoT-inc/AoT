@@ -376,14 +376,22 @@ class TestLadderVocabularyIsConsistent:
             assert len(labels) == len(set(labels)), f"{group['id']} 단계 이름 중복"
 
     def test_the_misting_ladder_goes_up_in_frequency(self):
+        """이 축은 순수 타이밍이다 (2026-09-02) — `nursery_mode`(일소 방지)
+        는 더 이상 이 축에 없다. "드물게" 로만 보호를 켤 수 있어서 자주
+        뿌리며 보호도 켜고 싶다는 요구를 표현할 수 없던 것이 실제 사고였다
+        (사용자 지적). 그래서 '끄는 칸'(Not used)도 없다 — 타이밍만 다루는
+        축에 켜고 끄는 칸은 뜻이 없다(끄려면 use_wetting_fog_for_humidity).
+        """
         info = _fi()
         g = [x for x in info._SCALE_GROUPS if x['id'] == 'misting_care'][0]
-        assert len(g['steps']) == 5
-        assert str(g['steps'][0][0]) == 'Not used', '첫 칸은 끄는 칸이다'
+        assert len(g['steps']) == 4
+        for _label, vals in g['steps']:
+            assert 'nursery_mode' not in vals, (
+                '분무 빈도가 일소 방지를 다시 건드립니다 — 둘은 독립이어야 합니다')
         # 오른쪽으로 갈수록 **더 자주** 돌아야 한다 — 축 라벨이 그렇게 말한다.
-        on = [s[1].get('nursery_max_on_sec') for s in g['steps'][1:]]
+        on = [s[1].get('nursery_max_on_sec') for s in g['steps']]
         assert on == sorted(on), f'1회 작동 시간이 단조 증가하지 않습니다: {on}'
-        off = [s[1].get('nursery_min_off_sec') for s in g['steps'][1:]]
+        off = [s[1].get('nursery_min_off_sec') for s in g['steps']]
         assert off == sorted(off, reverse=True), f'쉬는 시간이 단조 감소하지 않습니다: {off}'
 
     def test_misting_is_never_called_a_strength(self):

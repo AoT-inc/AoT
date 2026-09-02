@@ -178,6 +178,43 @@ def test_vent_effective_area(two_profile_setup):
     assert vent["effective_area_m2"] == pytest.approx(1.125, abs=0.01)
 
 
+def test_vent_with_unset_area_is_not_invisible(two_profile_setup):
+    """면적을 안 적은 개구부도 열려 있으면 환기 요약에 잡혀야 한다.
+
+    `effect_functions._gis_factor` 는 면적 미상을 "기준 개구부 1면"
+    (`REFERENCE_OPENING_AREA_M2`, 10 m²) 으로 보고 물리 효과를 계산한다 —
+    즉 이미 실제로 작동하는 개구부다. 그런데 이 요약이 면적 없는 개구부를
+    `vent_total`/`vent_eff` 에서 통째로 빼면, 그 개구부가 40% 열려 있어도
+    화면은 "환기 0%" 라고 말한다(2026-09-02 영양 — side_window_motor 가
+    40%였는데 면적 미상이라 빠져, 나머지 두 개구부(둘 다 0%)만으로
+    0/2.0=0% 가 나왔다). 물리 모델과 같은 가정을 여기서도 써야 한다.
+    """
+    from aot.functions.utils.env_control.effect_functions import (
+        REFERENCE_OPENING_AREA_M2)
+
+    profiles = [
+        _make_profile("aid1", "opening", area_m2=None, slot_key="side_window"),
+    ]
+    ff = _make_ff_signal()
+    dummy = _make_dummy_self(profiles, ff)
+    situation = _make_situation()
+    env_target = _make_env_target()
+    final_cmds = {"aid1": {"value": 40.0}}
+    commands = {"aid1": types.SimpleNamespace(reason=1, var_source="temperature")}
+    gate_result = _make_gate_result()
+
+    result = CycleMixin._build_cycle_summary(
+        dummy, now_ts=0.0, situation=situation, env_target=env_target,
+        final_cmds=final_cmds, commands=commands, gate_result=gate_result,
+    )
+    vent = result["vent"]
+    assert vent["total_area_m2"] == pytest.approx(REFERENCE_OPENING_AREA_M2)
+    assert vent["effective_area_m2"] == pytest.approx(
+        REFERENCE_OPENING_AREA_M2 * 0.40)
+    assert vent["open_ratio_pct"] == pytest.approx(40.0), (
+        '면적 미상 개구부가 40% 열려 있는데 환기 개도가 0% 로 보입니다')
+
+
 def test_open_ratio_pct(two_profile_setup):
     """open_ratio_pct = effective / total * 100."""
     dummy, situation, env_target, final_cmds, commands, gate_result = two_profile_setup

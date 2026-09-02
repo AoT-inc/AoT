@@ -14,9 +14,12 @@
 //   - in-flight dedup: concurrent get(uuid) calls share ONE network request
 //     (collapses the page-load burst across both modules),
 //   - short TTL cache: a second caller within TTL_MS reuses the result.
-// Because the actuator poller runs every >=5s and the sensor poller every
-// >=30s, the 8s TTL means the sensor poller almost always reuses the actuator
-// poller's fresh data instead of issuing its own request -> 2N drops toward N.
+// Both pollers now run every >=5s (2026-09-01 — the sensor-label poller used
+// to floor at 30s, a leftover from before this cache existed; that made the
+// facility environment markers visibly lag the actuator on/off chips even
+// though both read the same cached response). With matched cadence, whichever
+// module ticks first fills the cache and the other reuses it within TTL_MS ->
+// 2N requests drop toward N regardless of which poller "wins" the race.
 //
 // Runtime data (actuator on/off, sensor readings) changes slowly, so serving
 // data up to TTL_MS old in the labels is acceptable.

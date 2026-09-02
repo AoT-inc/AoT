@@ -1042,7 +1042,16 @@ The reference weekday follows the same rule as the window (first active day). An
 differences you configured on the other weekdays are not preserved, so decide
 which day should become the shared one before switching.
 
-### Unified Modal · Time Wheel
+### The settings modal always shows the current values { #sequence-widget-live-values }
+
+Start/end time, period, crossing time, and the resume behaviour can also change
+through a path other than this widget — the day-schedule editor (time wheel), or
+the function settings page. Such a change takes effect on irrigation immediately,
+and this widget's settings modal re-reads those values every time the dashboard
+is opened — it never sits on a value saved earlier until you happen to save this
+widget again.
+
+
 
 Time, group, name, and weekday schedule are edited from a **single unified modal** in the sequence widget's step list.
 

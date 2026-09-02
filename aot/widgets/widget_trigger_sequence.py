@@ -102,6 +102,58 @@ def sequence_func_toggle_details(unique_id, state):
         logger.error(f"Error toggling details: {e}")
         return jsonify({'error': str(e)}), 500
 
+def refresh_display_values(widget_unique_id, options_values):
+    """대시보드를 열 때, 저장된 위젯 캐시가 아니라 **Trigger 의 지금 값**을 보여준다.
+
+    이 위젯의 시간·주기 필드는 Trigger 를 정본으로 삼아 복사해 둔 캐시다
+    (`execute_at_modification` 이 저장 시점에만 동기화한다). 그런데 대시보드의
+    요일별 시간 편집기(시간휠)는 Trigger 를 **직접** 고친다 — 실제 관수는
+    그 즉시 바뀌는데, 이 위젯을 다시 저장하기 전까지 설정 모달은 저장 당시의
+    옛 값을 계속 보여준다.
+
+    실측(aot-004, 2026-09-02): Trigger.timer_end_time 은 15:00 이고 데몬도
+    15:00 으로 돌고 있었는데, 이 위젯의 설정 모달은 16:00 을 보여주고 있었다 —
+    output_duration(0.0 vs 실제 20.0)·time_offset_minutes(300 vs 실제 0)도
+    같이 밀려 있었다.
+
+    저장을 하면 스스로 맞춰지지만(`execute_at_modification` 의 스마트 동기화가
+    "안 건드린 필드는 Trigger 값으로 되돌린다"), 그건 저장한 뒤에나 맞다 —
+    보고 있는 화면이 이미 옛 값이면 사용자는 그것이 실제 동작이라고 믿는다.
+    그래서 여기서는 **페이지를 열 때마다** 같은 필드를 Trigger 에서 다시 읽어
+    캐시를 대신한다. 저장하지 않으므로 되먹임은 없다 — 다음에 사용자가 이
+    위젯을 저장하면 그 시점의 Trigger 값을 또 그대로 반영할 뿐이다.
+
+    function_id 가 비어 있거나 그 Trigger 가 없으면(아직 설정 안 한 위젯,
+    시퀀스가 삭제된 경우) 저장된 값을 그대로 둔다 — 무엇을 보여줄 정본이
+    없는데 지우거나 0 으로 덮으면 더 나쁘다.
+    """
+    values = dict(options_values or {})
+    func_id = values.get('function_id')
+    if not func_id:
+        return values
+
+    trigger = db.session.query(Trigger).filter_by(unique_id=func_id).first()
+    if not trigger:
+        return values
+
+    # `or 기본값` 을 쓰면 0 이 정당한 값인 필드(time_offset_minutes 등)에서
+    # 0 을 "없음" 으로 오인해 기본값으로 덮어쓴다 — 컨트롤러의
+    # initialize_variables 가 같은 필드에 쓰는 `is not None` 검사와 맞춘다.
+    values['timer_start_time'] = trigger.timer_start_time or '00:00'
+    values['timer_end_time'] = trigger.timer_end_time or '23:59'
+    values['sequence_period'] = float(trigger.period) if trigger.period is not None else 3600.0
+    values['timer_start_offset'] = (
+        int(trigger.timer_start_offset) if trigger.timer_start_offset is not None else 0)
+    values['output_duration'] = (
+        float(trigger.output_duration) if trigger.output_duration is not None else 0.0)
+    values['time_offset_minutes'] = (
+        int(trigger.time_offset_minutes) if trigger.time_offset_minutes is not None else 300)
+    values['resume_on_activate'] = (
+        'resume' if getattr(trigger, 'resume_on_activate', True) in (None, True, 1)
+        else 'restart')
+    return values
+
+
 def execute_at_modification(mod_widget, request_form, custom_options_presave, custom_options_postsave):
     """Synchronize settings between Widget Options and the Sequence Function (Trigger).
 
@@ -391,7 +443,8 @@ WIDGET_INFORMATION = {
     'widget_width': 24,
     'widget_height': 10,
     'execute_at_modification': execute_at_modification,
-    
+    'refresh_display_values': refresh_display_values,
+
     'endpoints': [
         ("/sequence_func_activate_toggle/<unique_id>/<state>", "sequence_func_activate_toggle", sequence_func_activate_toggle, ["GET"]),
         ("/sequence_func_toggle_details/<unique_id>/<state>", "sequence_func_toggle_details", sequence_func_toggle_details, ["GET"])

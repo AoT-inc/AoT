@@ -136,6 +136,13 @@ def _parse_widget_information_cached(exclude_custom, custom_only, locale):
             dict_widgets = dict_has_value(dict_widgets, widget_custom, 'execute_at_modification')
             dict_widgets = dict_has_value(dict_widgets, widget_custom, 'execute_at_deletion')
             dict_widgets = dict_has_value(dict_widgets, widget_custom, 'generate_page_variables')
+            # 위젯 모듈이 WIDGET_INFORMATION 에 이 키를 선언해도, 여기 명시적으로
+            # 옮겨 담지 않으면 이 함수가 조용히 버린다 — 모듈에는 있는데 호출자가
+            # 받는 dict 에는 없는 상태가 된다. 새 훅을 추가하면 반드시 여기도
+            # 같이 고칠 것(실제로 이 자리를 빠뜨려 한 번 재현됐다: 2026-09-02,
+            # refresh_display_values 를 모듈에만 추가하고 여기를 안 고쳐
+            # parse_widget_information() 결과에 훅이 아예 없었다).
+            dict_widgets = dict_has_value(dict_widgets, widget_custom, 'refresh_display_values')
 
             dict_widgets = dict_has_value(dict_widgets, widget_custom, 'custom_options_message')
             dict_widgets = dict_has_value(dict_widgets, widget_custom, 'custom_options')

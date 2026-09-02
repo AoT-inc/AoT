@@ -508,6 +508,27 @@ def _build_dashboard_render_context(this_dashboard, dashboard_id, form_base, for
         if each_dash_widget.graph_type not in widget_types_on_dashboard:
             widget_types_on_dashboard.append(each_dash_widget.graph_type)
 
+        # Some widget fields mirror a *linked* record (e.g. the sequence widget's
+        # timer_start_time/timer_end_time mirror Trigger). That record can be
+        # edited through a path other than this widget's own save — the sequence
+        # widget's own day-schedule editor writes straight to Trigger — leaving
+        # widget.custom_options (what this modal is about to render) stale until
+        # someone next saves *this* widget. execute_at_modification's smart-sync
+        # already self-heals that on save, but a page load never called it, so
+        # the settings modal kept showing the value from before the drift.
+        # Real incident (aot-004, 2026-09-02): the sequence widget's end-time
+        # showed 16:00 in the modal while the daemon — and the widget's own
+        # inline schedule editor — were both running 15:00.
+        if 'refresh_display_values' in meta:
+            try:
+                custom_options_values_widgets[each_dash_widget.unique_id] = meta['refresh_display_values'](
+                    each_dash_widget.unique_id, custom_options_values_widgets[each_dash_widget.unique_id])
+            except Exception:
+                logger.exception(
+                    "refresh_display_values failed for widget %s (%s) — showing "
+                    "the stored (possibly stale) values instead of failing the page.",
+                    each_dash_widget.unique_id, each_dash_widget.graph_type)
+
         # Generate dictionary of returned values from widget modules on this particular dashboard
         if 'generate_page_variables' in meta:
             custom_widget_variables[each_dash_widget.unique_id] = meta['generate_page_variables'](

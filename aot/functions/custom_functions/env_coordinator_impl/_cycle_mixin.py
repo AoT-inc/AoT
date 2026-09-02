@@ -2033,16 +2033,28 @@ class CycleMixin:
 
         cmd_pcts = {aid: _pct(c) for aid, c in final_cmds.items()}
 
+        # 면적을 안 적은 개구부는 **없는 셈 치지 않는다.** `effect_functions.
+        # _gis_factor` 가 이미 면적 미상을 "기준 개구부 1면"(10 m²) 으로
+        # 취급해 물리 효과를 계산한다 — 그런데 이 요약은 면적이 없으면
+        # `vent_total`/`vent_eff` 에서 통째로 뺐다. 그 결과 진짜로 40% 열려
+        # 작동 중인 개구부가 있어도 화면은 "환기 0%" 라고 말했다(2026-09-02
+        # 영양 — side_window_motor 가 40%였는데 면적 미상이라 빠져, 나머지
+        # 면적 있는 두 개구부(둘 다 0%)만으로 0/2.0=0% 가 나왔다). 물리 모델과
+        # 같은 가정(면적 미상 = 기준 개구부 1면)을 여기서도 써서 둘을 맞춘다.
+        from aot.functions.utils.env_control.effect_functions import (
+            REFERENCE_OPENING_AREA_M2)
+
         vent_total = 0.0
         vent_eff   = 0.0
         kind_acc   = {}      # kind → [pct 합, 개수]
         cmd_list   = []
         for p in self._profiles:
             pct = cmd_pcts.get(p.actuator_id)
-            if p.kind == 'opening' and p.area_m2:
-                vent_total += float(p.area_m2)
+            if p.kind == 'opening':
+                area = float(p.area_m2) if p.area_m2 else REFERENCE_OPENING_AREA_M2
+                vent_total += area
                 if pct is not None:
-                    vent_eff += float(p.area_m2) * pct / 100.0
+                    vent_eff += area * pct / 100.0
             if pct is None:
                 continue
             acc = kind_acc.setdefault(p.kind, [0.0, 0])

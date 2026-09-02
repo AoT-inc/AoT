@@ -453,7 +453,16 @@
     }
 
     _refreshAll(uniqueId);
-    var interval = Math.max(30, parseInt(opts.refresh_seconds || 60, 10)) * 1000;
+    // ⚠ 바닥을 30초가 아니라 5초로 둔다 — 같은 /runtime 을 쓰는 액추에이터
+    // 라벨 폴러(aot-map-widget-vector.js `_actuatorPollMs`)는 이미 5초다.
+    // 예전엔 "N개 시설 × 2개 모듈 = 요청 폭주" 우려로 여기만 30초로 눌러
+    // 뒀는데, 그 우려는 지금 AoTFacilityRuntime 의 TTL(8초)+ETag 캐시가
+    // 막는다 — 실제 네트워크 요청 빈도를 정하는 것은 이 setInterval 이 아니라
+    // 그 캐시다(액추에이터 폴러 쪽 주석: "네트워크 속도는 8초 TTL 이 정한다").
+    // 그래서 여기만 30초로 두면, 이미 5~8초마다 새로 받아 캐시에 들어와 있는
+    // 값을 화면에는 30초에 한 번만 반영하는 꼴이 된다 — 캐시는 최신인데
+    // 렌더만 안 한 것이다(2026-09-01 "환경데이터 마커가 느리다" 신고).
+    var interval = Math.max(5, parseInt(opts.refresh_seconds || 60, 10)) * 1000;
     STATE[uniqueId].pollTimer = setInterval(function () { _refreshAll(uniqueId); }, interval);
   }
 

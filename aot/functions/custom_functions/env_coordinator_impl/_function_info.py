@@ -638,14 +638,33 @@ FUNCTION_INFORMATION = {
             ),
         },
 
-        # ── 습윤형 분무 일소 보호 (육묘 모드 전용) ─────────────────────────────
-        # 두 필드는 `depends_on: nursery_mode` 라 육묘 모드를 꺼면 보이지 않는다.
-        # 2026-08-25~08-30 사이에는 **화면만 그랬고 로직은 전원에게 적용**됐다 —
-        # 화면이 "육묘 전용"이라 말하면서 동작은 아니었다. 되돌린 근거는
-        # `safety_gates._eval_nursery_lock` 주석에 있다.
+        # ── 습윤형 분무 일소 보호 (독립 토글) ───────────────────────────────
+        # `nursery_mode` 가 이 스위치다 — 이름은 옛 것이지만(설정값 키를 바꾸면
+        # 마이그레이션이 필요해진다) 실제 뜻은 "육묘 중이다" 가 아니라 "이
+        # 습윤형 분무에 일소·저녁 보호를 적용한다" 다.
+        #
+        # 2026-08-30 에는 "분무 빈도" 축의 가장 낮은 칸("드물게")에만 이 값을
+        # 심어서, 보호를 켜려면 빈도도 함께 최저로 낮춰야 했다 — 육묘장을
+        # 자주 뿌리는데도 강한 햇빛엔 잠그고 싶다는, 흔한 요구를 표현할 수
+        # 없었다(사용자 지적, 2026-09-02). 이제 빈도(분무 시간)와 보호
+        # (이 토글)는 서로 무관한 축이다 — 어떤 빈도에서도 켜고 끌 수 있다.
         {
             'type': 'header',
             'name': lazy_gettext('Misting Sunburn Protection'),
+        },
+        {
+            'id': 'nursery_mode',
+            'advanced_only': True,
+            'type': 'bool',
+            'default_value': False,
+            'required': False,
+            'name': lazy_gettext('Enable Sunburn/Evening Protection'),
+            'phrase': lazy_gettext(
+                'Blocks wetting-type misting in strong light (droplets can '
+                'lens sunlight onto leaves) and, if set below, before sunset. '
+                'Independent of how often misting runs — turn this on or off '
+                'at any misting frequency.'
+            ),
         },
         {
             'id': 'nursery_solar_lockout',
@@ -676,21 +695,12 @@ FUNCTION_INFORMATION = {
                 'switching on and off as clouds pass.'
             ),
         },
-        # ── Nursery (Seedling Protection) ─────────────────────────────────────
+        # ── Misting Timing (1회 몇 초 · 다음까지 몇 초) ─────────────────────
+        # `nursery_mode` 는 여기 없다(2026-09-02) — 아래 "Misting Sunburn
+        # Protection" 로 옮겼다. 타이밍과 일소 방지는 별개의 결정이다.
         {
             'type': 'header',
-            'name': lazy_gettext('Nursery Mode'),
-        },
-        {
-            'id': 'nursery_mode',
-            'advanced_only': True,
-            'type': 'bool',
-            'default_value': False,
-            'required': False,
-            'name': lazy_gettext('Nursery (Seedling) Mode'),
-            'phrase': lazy_gettext(
-                'Tighter misting limits for seedlings, which scorch more easily than grown leaves.'
-            ),
+            'name': lazy_gettext('Misting Timing'),
         },
         {
             'id': 'nursery_max_on_sec',
@@ -1161,43 +1171,28 @@ _SCALE_GROUPS = [
         ),
         'axis_low':  lazy_gettext('Drier'),
         'axis_high': lazy_gettext('Moister'),
-        'members': ['nursery_mode',
-                    'nursery_max_on_sec', 'nursery_min_off_sec'],
-        # ⚠ 축 방향이 뒤집혔다(순함 → 셈). **기존 설치는 안전하다** — 단계는
-        #   순서가 아니라 **값으로** 되짚는다(안 맞으면 '사용자 지정').
+        # ⚠ **`nursery_mode` 를 여기 넣지 말 것** (2026-09-02 재정정).
+        #
+        # 08-30 되돌림에서 "드물게" 한 칸에만 `nursery_mode: True` 를 심었다 —
+        # 그때는 "분무를 쓰면 대개 육묘" 로 가정했다. 그런데 이러면 **일소
+        # 방지와 분무 빈도가 하나로 묶여**, "자주 뿌리되 강한 햇빛에는
+        # 잠가 달라" 는 흔한 요구를 표현할 방법이 없어진다 — 빈도를 "자주"로
+        # 올리는 순간 보호가 강제로 꺼진다. 사용자 지적대로, 육묘장 모드를
+        # 켠 채로 "드물게" 이상의 빈도를 고를 수 없는 것이 정확히 그 결과다.
+        #
+        # 일소 방지(`nursery_mode`)는 **몇 초·얼마나 자주 뿌리는가와 무관한
+        # 별개의 결정**이다 — 아래 "Misting Sunburn Protection" 헤더에 독립
+        # 토글로 둔다. 이 축은 순수하게 타이밍(1회 몇 초 · 다음까지 몇 초)만
+        # 정한다.
+        'members': ['nursery_max_on_sec', 'nursery_min_off_sec'],
         'steps': [
-            # 첫 칸은 **육묘 보호를 끄는 칸**이다. 펄스 두 값은 싣지 않는다 —
-            # 실으면 "안 함" 을 골랐다가 되돌릴 때 그 값이 덮어써진다.
-            # (그 두 값은 이제 `nursery_mode` 와 무관하게 늘 쓰이므로, 이 칸을
-            #  골라도 직전에 고른 리듬은 그대로 유지된다.)
-            (lazy_gettext('Not used'), {'nursery_mode': False}),
-            # ⚠ **`Standard`·`Strong` 같은 흔한 낱말을 쓰지 말 것.** 카탈로그에
-            #   이미 다른 문맥의 번역이 있어(표준·강함) 이 사다리만 어휘가
-            #   어긋난다 — 실제로 `약하게 · 표준 · 강함 · 아주 강하게` 가 나왔다.
-            #   한 사다리는 말투가 하나여야 읽힌다.
-            # ⚠ **`nursery_mode` 가 서는 칸은 여기 하나뿐이다** (2026-08-30).
-            #
-            # 육묘 모드는 더 이상 독립 옵션이 아니다 — 이 축으로 접혔고
-            # `advanced_only` 라 일반 화면에 안 보인다. 그래서 "육묘장이다"
-            # 를 묻는 자리가 사라졌는데, 예전 배선은 **활성 네 칸 전부**에
-            # True 를 심어 "분무를 조금이라도 쓰면 육묘" 가 돼 있었다.
-            # 그 위에 일소 잠금·저녁 차단·지하수 임계 하향이 얹히니, 성체
-            # 작물을 기르는 시설이 강일사마다 분무를 잃었다.
-            #
-            # 가장 드물고 짧게 주는 이 칸이 **사실상 육묘 설정**이다(사용자
-            # 판단, 2026-08-30). 보통 이상은 이미 자란 개체를 기르는 쪽이라
-            # 육묘 보호를 얹지 않는다.
             (lazy_gettext('Infrequent'), {
-                'nursery_mode': True,
                 'nursery_max_on_sec': 5.0, 'nursery_min_off_sec': 1200.0}),
             (lazy_gettext('Moderate'), {
-                'nursery_mode': False,
                 'nursery_max_on_sec': 10.0, 'nursery_min_off_sec': 900.0}),
             (lazy_gettext('Frequent'), {
-                'nursery_mode': False,
                 'nursery_max_on_sec': 20.0, 'nursery_min_off_sec': 600.0}),
             (lazy_gettext('Very frequent'), {
-                'nursery_mode': False,
                 'nursery_max_on_sec': 30.0, 'nursery_min_off_sec': 450.0}),
         ],
     },
@@ -1416,7 +1411,11 @@ _LAYOUT = [
 
     # ── 도메인 2: 냉난방·가습 (hvac) ──────────────────────────────────────
     (False, lazy_gettext('Heating, Cooling and Misting'), [
-        (None, ['@group:misting_care', '@range:misting_light',
+        # ⚠ **`nursery_mode` 를 여기서 빠뜨리면 안 된다** (2026-09-02).
+        #   `@group:misting_care` 가 더 이상 이 id 를 물어 가지 않으므로(축은
+        #   순수 타이밍이다), 여기 적지 않으면 `_apply_layout` 이 "분류 안 됨"
+        #   접힘(id 없음)으로 밀어내 `test_every_fold_has_an_id` 가 잡는다.
+        (None, ['nursery_mode', '@group:misting_care', '@range:misting_light',
                 'nursery_water_source', 'nursery_evening_fog',
                 'nursery_evening_cutoff_min',
                 'use_wetting_fog_for_humidity']),
