@@ -32063,3 +32063,9 @@ msgstr "처음부터 시작"
 #: widgets/widget_trigger_sequence.py:0
 msgid "What happens when this sequence is turned off and on again. Continuing resumes the interrupted cycle; starting over runs it from the first step. A daemon restart always continues, regardless of this setting."
 msgstr "이 시퀀스를 껐다가 다시 켤 때의 동작입니다. 이어서는 중단된 사이클을 그대로 재개하고, 처음부터는 첫 단계부터 새로 실행합니다. 데몬 재시작은 이 설정과 무관하게 언제나 이어서 진행합니다."
+
+#: aot_flask/templates/pages/function_options/custom_function_options.html:17
+msgid ""
+"This controller is active. Deactivate it before saving changes, or they "
+"will not be applied."
+msgstr "이 컨트롤러는 활성 상태입니다. 저장 전에 비활성화하세요. 그렇지 않으면 변경사항이 적용되지 않습니다."

@@ -253,10 +253,14 @@ def trigger_mod(form):
                                     # Update specific fields
                                     opts['timer_start_time'] = trigger.timer_start_time or "00:00"
                                     opts['timer_end_time'] = trigger.timer_end_time or "23:59"
-                                    opts['sequence_period'] = float(trigger.period or 3600)
-                                    opts['timer_start_offset'] = int(trigger.timer_start_offset or 0)
-                                    opts['output_duration'] = float(trigger.output_duration or 0)
-                                    opts['time_offset_minutes'] = int(trigger.time_offset_minutes or 300)
+                                    opts['sequence_period'] = (
+                                        float(trigger.period) if trigger.period is not None else 3600.0)
+                                    opts['timer_start_offset'] = (
+                                        int(trigger.timer_start_offset) if trigger.timer_start_offset is not None else 0)
+                                    opts['output_duration'] = (
+                                        float(trigger.output_duration) if trigger.output_duration is not None else 0.0)
+                                    opts['time_offset_minutes'] = (
+                                        int(trigger.time_offset_minutes) if trigger.time_offset_minutes is not None else 300)
                                     
                                     w.custom_options = json.dumps(opts)
                                     sys_updated += 1

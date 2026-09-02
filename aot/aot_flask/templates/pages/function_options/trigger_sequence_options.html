@@ -141,21 +141,21 @@
                 <label class="aot-modal-option-label">{{_('Period (seconds)')}}</label>
                 <div class="aot-modal-option-control">
                     <input type="text" class="form-control aot-modern-input aot-time-input" name="period"
-                        value="{{ each_function.period or 600 }}">
+                        value="{{ each_function.period if each_function.period is not none else 600 }}">
                 </div>
             </div>
             <div class="aot-modal-option-row">
                 <label class="aot-modal-option-label">{{_('Delay (seconds)')}}</label>
                 <div class="aot-modal-option-control">
                     <input type="text" class="form-control aot-modern-input aot-time-input" name="timer_start_offset"
-                        value="{{ each_function.timer_start_offset or 10 }}">
+                        value="{{ each_function.timer_start_offset if each_function.timer_start_offset is not none else 10 }}">
                 </div>
             </div>
             <div class="aot-modal-option-row">
                 <label class="aot-modal-option-label">{{_('Overlap (seconds)')}}</label>
                 <div class="aot-modal-option-control">
                     <input type="text" class="form-control aot-modern-input aot-time-input" name="output_duration"
-                        value="{{ each_function.output_duration or 0 }}">
+                        value="{{ each_function.output_duration if each_function.output_duration is not none else 0 }}">
                 </div>
             </div>
             <div class="aot-modal-option-row">

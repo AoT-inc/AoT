@@ -102,8 +102,11 @@ class TestItIsAMarkerNotAnOption:
               60 → **59** (`debug_logging` 제거 — 화면 위 [기본 설정] 의
                            `log_level_debug` 와 같은 스위치가 둘이었고,
                            그쪽을 켜지 않으면 혼자서는 아무것도 출력하지
-                           못했다. 기본 로거 레벨이 ERROR 다).
-        전부 2026-08-27.
+                           못했다. 기본 로거 레벨이 ERROR 다). 2026-08-27.
+              59 → **58** (`schedule_end_time` 제거 — 구획이 없으면 자기
+                           guide 범위로 도는 R2 가 이미 "빈 온실도 안전
+                           한계는 지킨다" 를 만족하고 있어, 별도의 하드
+                           정지가 필요했던 적이 없었다. 2026-09-02).
 
         ⚠ 표식 목록을 여기 손으로 적지 말 것. `range_band` 는 `id` 를 갖는데
           (어느 밴드인지) 옵션이 아니라, 손으로 적은 목록에서 빠지자 **옵션으로
@@ -118,7 +121,7 @@ class TestItIsAMarkerNotAnOption:
             _re.search(r"_MARKERS = \(([^)]*)\)", src, _re.S).group(1)))
         opts = fi.FUNCTION_INFORMATION['custom_options']
         vals = [o for o in opts if o.get('id') and o.get('type') not in markers]
-        assert len(vals) == 59, len(vals)
+        assert len(vals) == 58, len(vals)
 
 
 class TestTheTemplateOnlyLaysTheSpot:

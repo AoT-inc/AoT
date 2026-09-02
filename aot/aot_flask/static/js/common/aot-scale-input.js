@@ -74,6 +74,7 @@
               (i === idx ? ' is-picked' : '') +
               '" style="--aot-viz-pos:' + p.toFixed(2) + '"' +
               ' data-i="' + i + '" title="' + esc(list[i][1]) + '"' +
+              ' aria-pressed="' + (i === idx ? 'true' : 'false') + '"' +
               ' aria-label="' + esc(list[i][1]) + '"></button>';
     }
     html += '</div>';
@@ -180,6 +181,7 @@
               (i === idx ? ' is-picked' : '') +
               '" style="--aot-viz-pos:' + p.toFixed(2) + '"' +
               ' data-i="' + i + '" title="' + esc(list[i][0]) + '"' +
+              ' aria-pressed="' + (i === idx ? 'true' : 'false') + '"' +
               ' aria-label="' + esc(list[i][0]) + '"></button>';
     }
     html += '</div>';

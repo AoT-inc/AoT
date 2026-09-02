@@ -27074,3 +27074,9 @@ msgstr "Väntar på data..."
 #: widgets/widget_trigger_sequence.py:0
 msgid "Wed"
 msgstr "ons"
+
+#: aot_flask/templates/pages/function_options/custom_function_options.html:17
+msgid ""
+"This controller is active. Deactivate it before saving changes, or they "
+"will not be applied."
+msgstr ""

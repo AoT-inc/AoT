@@ -31803,3 +31803,9 @@ msgstr "全体"
 #: widgets/widget_trigger_sequence.py:0
 msgid "Time wheel not loaded"
 msgstr "時刻ホイールを読み込めませんでした"
+
+#: aot_flask/templates/pages/function_options/custom_function_options.html:17
+msgid ""
+"This controller is active. Deactivate it before saving changes, or they "
+"will not be applied."
+msgstr "このコントローラーは有効になっています。保存前に無効化してください。無効化しないと変更は適用されません。"

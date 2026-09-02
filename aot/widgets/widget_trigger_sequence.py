@@ -192,11 +192,15 @@ def execute_at_modification(mod_widget, request_form, custom_options_presave, cu
                 # Case A: Function Changed (or Init) -> Pull ALL from Function
                 final_options['timer_start_time'] = trigger.timer_start_time or "00:00"
                 final_options['timer_end_time'] = trigger.timer_end_time or "23:59"
-                final_options['sequence_period'] = float(trigger.period or 3600)
-                final_options['timer_start_offset'] = int(trigger.timer_start_offset or 0)
-                final_options['output_duration'] = float(trigger.output_duration or 0)
+                final_options['sequence_period'] = (
+                    float(trigger.period) if trigger.period is not None else 3600.0)
+                final_options['timer_start_offset'] = (
+                    int(trigger.timer_start_offset) if trigger.timer_start_offset is not None else 0)
+                final_options['output_duration'] = (
+                    float(trigger.output_duration) if trigger.output_duration is not None else 0.0)
                 # Using time_offset_minutes for validity
-                final_options['time_offset_minutes'] = int(trigger.time_offset_minutes or 300)
+                final_options['time_offset_minutes'] = (
+                    int(trigger.time_offset_minutes) if trigger.time_offset_minutes is not None else 300)
                 final_options['resume_on_activate'] = (
                     'resume' if getattr(trigger, 'resume_on_activate', True) in (None, True, 1)
                     else 'restart')

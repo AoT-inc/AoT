@@ -69,6 +69,7 @@ def controller_mod(form_mod, request_form):
 
         if mod_controller.is_activated and not mod_without_deactivate:
             messages["error"].append("컨트롤러를 수정하기 전에 비활성화하세요.")
+            return messages, page_refresh
 
         mod_controller.name = form_mod.name.data
         messages["name"] = form_mod.name.data

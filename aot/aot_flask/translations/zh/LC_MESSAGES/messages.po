@@ -27744,3 +27744,9 @@ msgstr "时间选择器未加载"
 #: widgets/widget_trigger_sequence.py:0
 msgid "Updated"
 msgstr "已更新"
+
+#: aot_flask/templates/pages/function_options/custom_function_options.html:17
+msgid ""
+"This controller is active. Deactivate it before saving changes, or they "
+"will not be applied."
+msgstr ""

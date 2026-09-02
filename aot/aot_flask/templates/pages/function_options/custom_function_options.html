@@ -12,6 +12,11 @@
     {{form_function.function_id(value=each_function.unique_id)}}
     {{form_function.function_type(value='function')}}
 
+    {% if each_function.is_activated and not dict_options.get('modify_settings_without_deactivating') %}
+    <div class="aot-notice-box" style="margin-bottom: 15px;">
+      <p>{{_('This controller is active. Deactivate it before saving changes, or they will not be applied.')}}</p>
+    </div>
+    {% endif %}
 
     {% if each_function.device != 'function_spacer' %}
     {% from 'pages/map/map_option_macros.html' import render_device_map with context %}
