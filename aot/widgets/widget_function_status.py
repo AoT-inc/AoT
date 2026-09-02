@@ -263,14 +263,6 @@ WIDGET_INFORMATION = {
             'name': lazy_gettext('{} ({})').format(lazy_gettext("Refresh"), lazy_gettext("Seconds")),
             'phrase': lazy_gettext('The period of time between refreshing the widget')
         },
-        {
-            'id': 'font_em_value',
-            'type': 'float',
-            'default_value': 1.2,
-            'constraints_pass': constraints_pass_positive_value,
-            'name': lazy_gettext('Value Font Size (em)'),
-            'phrase': lazy_gettext('The font size of the measurement')
-        },
     ],
 
     'widget_dashboard_head': """<!-- No head content -->""",
@@ -280,12 +272,23 @@ WIDGET_INFORMATION = {
     'widget_dashboard_body': """<link rel="stylesheet" href="/static/css/components/aot-toggle.css?v=20260814a">
 <style>
 #fsw-body-{{each_widget.unique_id}} .aot-w-body {
-  font-size: {{widget_options['font_em_value']}}em;
+  font-size: {{each_widget.font_em_name or 1.0}}em;
+  white-space: pre-line;
 }
 </style>
-<div id="fsw-body-{{each_widget.unique_id}}">
-  {{_('Activated')}}: <span class="aot-w-body" id="status_activated-{{each_widget.unique_id}}"></span><br>
-  {{_('Always')}}: <span class="aot-w-body" id="status_always-{{each_widget.unique_id}}"></span>
+<div class="aot-modal-container" id="fsw-body-{{each_widget.unique_id}}">
+  <div class="aot-modal-option-row">
+    <label class="aot-modal-option-label">{{_('Activated')}}</label>
+    <div class="aot-modal-option-control">
+      <span class="aot-w-body" id="status_activated-{{each_widget.unique_id}}"></span>
+    </div>
+  </div>
+  <div class="aot-modal-option-row">
+    <label class="aot-modal-option-label">{{_('Always')}}</label>
+    <div class="aot-modal-option-control">
+      <span class="aot-w-body" id="status_always-{{each_widget.unique_id}}"></span>
+    </div>
+  </div>
 </div>
 <button type="button" class="btn aot-pill-btn aot-fsw-detail-btn" data-toggle="modal" data-target="#fsw-modal-{{each_widget.unique_id}}">{{_('Details')}}</button>
 
@@ -314,20 +317,26 @@ WIDGET_INFORMATION = {
       const url = '/function_status_activated/' + function_id;
       $.getJSON(url,
         function(data, responseText, jqXHR) {
+          var el = document.getElementById("status_activated-" + widget_id);
+          if (!el) return;
           if (jqXHR.status !== 204) {
-            let string_display = "";
+            let lines = [];
             if ('error' in data) {
               for (var i = 0, size = data['error'].length; i < size; i++){
-                string_display += "<p>{{_('Error')}}: " + data['error'][i] + "</p>";
+                lines.push("{{_('Error')}}: " + data['error'][i]);
               }
             }
             if ('string_status' in data) {
-              string_display += data['string_status'].replace(/(?:\\r\\n|\\r|\\n)/g, "<br>");
+              lines.push(data['string_status']);
             }
-            document.getElementById("status_activated-" + widget_id).innerHTML = string_display;
+            // Plain text (no <p>/<br>), so this stays a leaf node — the
+            // dashboard's live-save body swap only preserves leaf-node text
+            // across a re-render (dashboard-widget-live-preview.js), otherwise
+            // this goes blank every time an option is changed and saved.
+            el.textContent = lines.join('\\n');
           }
           else {
-            document.getElementById("status_activated-" + widget_id).innerHTML = "{{_('Error')}}";
+            el.textContent = "{{_('Error')}}";
           }
         }
       );
@@ -343,20 +352,23 @@ WIDGET_INFORMATION = {
       const url_2 = '/function_status_always/' + function_id;
       $.getJSON(url_2,
         function(data, responseText, jqXHR) {
+          var el = document.getElementById("status_always-" + widget_id);
+          if (!el) return;
           if (jqXHR.status !== 204) {
-            let string_display = "";
+            let lines = [];
             if ('error' in data) {
               for (var i = 0, size = data['error'].length; i < size; i++){
-                string_display += "<p>{{_('Error')}}: " + data['error'][i] + "</p>";
+                lines.push("{{_('Error')}}: " + data['error'][i]);
               }
             }
             if ('string_status' in data) {
-              string_display += data['string_status'].replace(/(?:\\r\\n|\\r|\\n)/g, "<br>");
+              lines.push(data['string_status']);
             }
-            document.getElementById("status_always-" + widget_id).innerHTML = string_display;
+            // Plain text, not HTML — see function_status_activated() above.
+            el.textContent = lines.join('\\n');
           }
           else {
-            document.getElementById("status_always-" + widget_id).innerHTML = "{{_('Error')}}";
+            el.textContent = "{{_('Error')}}";
           }
         }
       );
