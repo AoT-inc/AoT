@@ -277,7 +277,7 @@ WIDGET_INFORMATION = {
 
     'widget_dashboard_title_bar': """<span class="aot-w-title" style="padding-right:0.5em">{{each_widget.name}}</span>""",
 
-    'widget_dashboard_body': """{% if "aot_function_status_toggle_css" not in dashboard_dict %}{% set _dummy = dashboard_dict.update({"aot_function_status_toggle_css": 1}) %}<link rel="stylesheet" href="/static/css/components/aot-toggle.css?v=20260814a">{% endif %}
+    'widget_dashboard_body': """<link rel="stylesheet" href="/static/css/components/aot-toggle.css?v=20260814a">
 <style>
 #fsw-body-{{each_widget.unique_id}} .aot-w-body {
   font-size: {{widget_options['font_em_value']}}em;
@@ -304,9 +304,6 @@ WIDGET_INFORMATION = {
       </div>
       <div class="modal-footer">
         <button type="button" class="btn aot-pill-btn" data-dismiss="modal">{{_('Close')}}</button>
-        {% if permission_edit_settings %}
-        <button type="button" class="btn aot-pill-btn aot-pill-btn-primary d-none" id="fsw-save-{{each_widget.unique_id}}" onclick="functionStatusSaveOptions('{{each_widget.unique_id}}')">{{_('Save')}}</button>
-        {% endif %}
       </div>
     </div>
   </div>
@@ -401,6 +398,12 @@ WIDGET_INFORMATION = {
       return '<div class="aot-modal-option-row">' + label + control + '</div>';
     }
 
+    function functionStatusSetOptionsDisabled(container, disabled) {
+      container.querySelectorAll('[data-opt-id]').forEach(function(el) {
+        el.disabled = disabled;
+      });
+    }
+
     function functionStatusLoadOptions(widgetId) {
       var modal = document.getElementById('fsw-modal-' + widgetId);
       if (!modal) return;
@@ -408,10 +411,7 @@ WIDGET_INFORMATION = {
       var canEdit = modal.getAttribute('data-can-edit') === 'true';
       var statusEl = document.getElementById('fsw-modal-status-' + widgetId);
       var container = document.getElementById('fsw-modal-options-' + widgetId);
-      var saveBtn = document.getElementById('fsw-save-' + widgetId);
       var titleEl = document.getElementById('fsw-modal-title-' + widgetId);
-
-      if (saveBtn) saveBtn.classList.add('d-none');
 
       if (!functionId) {
         statusEl.textContent = '';
@@ -442,9 +442,17 @@ WIDGET_INFORMATION = {
         }
         container.innerHTML = html;
 
-        if (saveBtn && canEdit) {
-          saveBtn.classList.remove('d-none');
-          saveBtn.disabled = !data.editable;
+        // Options auto-save on change, the same as every other widget setting
+        // in this app — no separate Save button.
+        var editable = canEdit && data.editable;
+        functionStatusSetOptionsDisabled(container, !editable);
+        if (editable) {
+          container.querySelectorAll('[data-opt-id]').forEach(function(el) {
+            var evt = (el.getAttribute('data-opt-type') === 'bool') ? 'change' : 'input';
+            el.addEventListener(evt, function() {
+              functionStatusScheduleSave(widgetId);
+            });
+          });
         }
         if (!data.editable) {
           statusEl.textContent += ' — {{_('This controller is active. Deactivate it before saving changes, or they will not be applied.')}}';
@@ -454,13 +462,21 @@ WIDGET_INFORMATION = {
       });
     }
 
+    var functionStatusSaveTimers = {};
+
+    function functionStatusScheduleSave(widgetId) {
+      clearTimeout(functionStatusSaveTimers[widgetId]);
+      functionStatusSaveTimers[widgetId] = setTimeout(function() {
+        functionStatusSaveOptions(widgetId);
+      }, 500);
+    }
+
     function functionStatusSaveOptions(widgetId) {
       var modal = document.getElementById('fsw-modal-' + widgetId);
       if (!modal) return;
       var functionId = modal.getAttribute('data-function-id');
       var controllerType = modal.getAttribute('data-controller-type');
       var container = document.getElementById('fsw-modal-options-' + widgetId);
-      var saveBtn = document.getElementById('fsw-save-' + widgetId);
       if (!functionId || !controllerType) return;
 
       var inputs = container.querySelectorAll('[data-opt-id]');
@@ -487,7 +503,6 @@ WIDGET_INFORMATION = {
         payload = {values: values};
       }
 
-      if (saveBtn) saveBtn.disabled = true;
       $.ajax({
         type: 'POST',
         url: url,
@@ -495,15 +510,11 @@ WIDGET_INFORMATION = {
         data: JSON.stringify(payload),
         success: function() {
           if (window.showToast) { window.showToast('{{_('Saved')}}', 'success'); }
-          $('#fsw-modal-' + widgetId).modal('hide');
         },
         error: function(err) {
           var msg = '{{_('Save failed')}}';
           try { msg = JSON.parse(err.responseText).message || msg; } catch(e) {}
           if (window.showToast) { window.showToast(msg, 'error'); }
-        },
-        complete: function() {
-          if (saveBtn) saveBtn.disabled = false;
         }
       });
     }
