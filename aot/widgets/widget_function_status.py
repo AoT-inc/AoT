@@ -271,26 +271,44 @@ WIDGET_INFORMATION = {
 
     'widget_dashboard_body': """<link rel="stylesheet" href="/static/css/components/aot-toggle.css?v=20260814a">
 <style>
+#fsw-body-{{each_widget.unique_id}} {
+  background-color: var(--aot-input-bg);
+  border: 1px solid var(--gray);
+  border-radius: 16px;
+  padding: 14px 16px;
+  margin: 12px;
+}
+#fsw-body-{{each_widget.unique_id}} .fsw-row {
+  padding: 8px 0;
+  border-bottom: 1px solid var(--gray);
+}
+#fsw-body-{{each_widget.unique_id}} .fsw-row:last-child {
+  border-bottom: none;
+}
+#fsw-body-{{each_widget.unique_id}} .fsw-row-label {
+  font-size: var(--aot-fs-md);
+  font-weight: var(--aot-fw-medium);
+  color: var(--aot-text-secondary, var(--aot-color-text-secondary));
+  margin-bottom: 4px;
+}
 #fsw-body-{{each_widget.unique_id}} .aot-w-body {
   font-size: {{each_widget.font_em_name or 1.0}}em;
   white-space: pre-line;
 }
 </style>
-<div class="aot-modal-container" id="fsw-body-{{each_widget.unique_id}}">
-  <div class="aot-modal-option-row">
-    <label class="aot-modal-option-label">{{_('Activated')}}</label>
-    <div class="aot-modal-option-control">
-      <span class="aot-w-body" id="status_activated-{{each_widget.unique_id}}"></span>
-    </div>
+<div id="fsw-body-{{each_widget.unique_id}}">
+  <div class="fsw-row">
+    <div class="fsw-row-label">{{_('Activated')}}</div>
+    <span class="aot-w-body" id="status_activated-{{each_widget.unique_id}}"></span>
   </div>
-  <div class="aot-modal-option-row">
-    <label class="aot-modal-option-label">{{_('Always')}}</label>
-    <div class="aot-modal-option-control">
-      <span class="aot-w-body" id="status_always-{{each_widget.unique_id}}"></span>
-    </div>
+  <div class="fsw-row">
+    <div class="fsw-row-label">{{_('Always')}}</div>
+    <span class="aot-w-body" id="status_always-{{each_widget.unique_id}}"></span>
   </div>
 </div>
-<button type="button" class="btn aot-pill-btn aot-fsw-detail-btn" data-toggle="modal" data-target="#fsw-modal-{{each_widget.unique_id}}">{{_('Details')}}</button>
+<div style="display: flex; justify-content: flex-end; margin: 0 12px 12px;">
+  <button type="button" class="btn aot-pill-btn aot-fsw-detail-btn" data-toggle="modal" data-target="#fsw-modal-{{each_widget.unique_id}}">{{_('Details')}}</button>
+</div>
 
 <div class="modal fade aot-option-modal" id="fsw-modal-{{each_widget.unique_id}}" tabindex="-1" role="dialog" aria-hidden="true" data-function-id="{{widget_options['function_id']}}" data-can-edit="{{ 'true' if permission_edit_settings else 'false' }}">
   <div class="modal-dialog aot-modal-dialog" role="document">
