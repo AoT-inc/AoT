@@ -369,6 +369,14 @@
         <xhtml:link rel="alternate" hreflang="ko" href="https://aot-inc.github.io/AoT/ko/geo/getting-started/"/>
     </url>
     <url>
+        <loc>https://aot-inc.github.io/AoT/geo/journal/</loc>
+        <lastmod>2026-09-02</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="en" href="https://aot-inc.github.io/AoT/geo/journal/"/>
+        <xhtml:link rel="alternate" hreflang="ja" href="https://aot-inc.github.io/AoT/ja/geo/journal/"/>
+        <xhtml:link rel="alternate" hreflang="ko" href="https://aot-inc.github.io/AoT/ko/geo/journal/"/>
+    </url>
+    <url>
         <loc>https://aot-inc.github.io/AoT/geo/layers/</loc>
         <lastmod>2026-09-02</lastmod>
         <changefreq>daily</changefreq>
@@ -791,6 +799,14 @@
         <xhtml:link rel="alternate" hreflang="ja" href="https://aot-inc.github.io/AoT/ja/geo/getting-started/"/>
     </url>
     <url>
+        <loc>https://aot-inc.github.io/AoT/ko/geo/journal/</loc>
+        <lastmod>2026-09-02</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="ko" href="https://aot-inc.github.io/AoT/ko/geo/journal/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="https://aot-inc.github.io/AoT/geo/journal/"/>
+        <xhtml:link rel="alternate" hreflang="ja" href="https://aot-inc.github.io/AoT/ja/geo/journal/"/>
+    </url>
+    <url>
         <loc>https://aot-inc.github.io/AoT/ko/geo/layers/</loc>
         <lastmod>2026-09-02</lastmod>
         <changefreq>daily</changefreq>
@@ -1205,6 +1221,14 @@
         <xhtml:link rel="alternate" hreflang="ja" href="https://aot-inc.github.io/AoT/ja/geo/getting-started/"/>
         <xhtml:link rel="alternate" hreflang="en" href="https://aot-inc.github.io/AoT/geo/getting-started/"/>
         <xhtml:link rel="alternate" hreflang="ko" href="https://aot-inc.github.io/AoT/ko/geo/getting-started/"/>
+    </url>
+    <url>
+        <loc>https://aot-inc.github.io/AoT/ja/geo/journal/</loc>
+        <lastmod>2026-09-02</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="ja" href="https://aot-inc.github.io/AoT/ja/geo/journal/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="https://aot-inc.github.io/AoT/geo/journal/"/>
+        <xhtml:link rel="alternate" hreflang="ko" href="https://aot-inc.github.io/AoT/ko/geo/journal/"/>
     </url>
     <url>
         <loc>https://aot-inc.github.io/AoT/ja/geo/layers/</loc>
