@@ -31359,7 +31359,7 @@ msgid "Open-ended"
 msgstr "終わりまで"
 
 msgid "No programme is linked."
-msgstr "紐づくプログラムがありません。"
+msgstr "登録されているプログラムがありません。"
 
 msgid "The programme has no base temperature."
 msgstr "プログラムに基準温度がありません。"
