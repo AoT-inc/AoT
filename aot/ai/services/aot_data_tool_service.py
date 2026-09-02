@@ -177,6 +177,27 @@ def _plot_started_on(controller):
         return None
 
 
+def _plot_ended_on(controller):
+    """이 코디네이터가 따르는 구획의 종료 신호 → (ISO 문자열|None, 확정 여부).
+
+    2026-09-01 부로 코디네이터에는 별도 종료일 옵션(`schedule_end_time`)이
+    없다 — 구획을 새로 심어도 그 날짜를 사람이 다시 고치기 전까지 계속 멈춰
+    있던 것이 실제 사고였다. `ended_on`(사람이 확정한 실제 종료일)이 있으면
+    그것을, 없으면 `expected_end_on`(진행 중인 구획의 예상치)을 낸다 — AI 가
+    이 값을 예상이 아니라 확정으로 오인하지 않도록 두 번째 항목으로 구분한다.
+    """
+    try:
+        from aot.aot_flask.geo import coordinator_plot
+        t = coordinator_plot.control_targets(controller)
+        ended = t.get('ended_on')
+        if ended:
+            return ended.isoformat(), True
+        expected = t.get('expected_end_on')
+        return (expected.isoformat() if expected else None), False
+    except Exception:                                       # noqa: BLE001
+        return None, False
+
+
 class AoTDataToolService:
     """
     AoT 내부 데이터를 AI 도구 규격에 맞게 제공하는 서비스 레이어.
@@ -7938,8 +7959,11 @@ class AoTDataToolService:
                         "guide_humid_pct": [o.get('guide_RH_min'), o.get('guide_RH_max')],
                     },
                     "window": {
-                        # 시작일은 구획에서 온다 — 함수 옵션에는 없다.
-                        "season": [_plot_started_on(c), o.get('schedule_end_time')],
+                        # 시작일·종료일 모두 구획에서 온다 — 함수 옵션에는
+                        # 둘 다 없다(2026-09-01). season_end_confirmed=False 면
+                        # 예상치일 뿐 실제 종료가 아니다.
+                        "season": [_plot_started_on(c), _plot_ended_on(c)[0]],
+                        "season_end_confirmed": _plot_ended_on(c)[1],
                         "daily_enabled": o.get('time_enable'),
                         "daily": [o.get('time_start'), o.get('time_end')],
                     },
@@ -8405,7 +8429,7 @@ class AoTDataToolService:
                     "stage": _control_targets_for(c).get('stage'),
                     "controlled_by": c.unique_id,
                     "season_window": [_plot_started_on(c),
-                                      o.get('schedule_end_time')],
+                                      _plot_ended_on(c)[0]],
                 })
 
             # 도메인 레지스트리로 생육단계 보강 (있을 때만)

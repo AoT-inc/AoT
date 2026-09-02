@@ -226,7 +226,6 @@ class CustomModule(
         self.sensor_max_age = None
 
         # Growth Schedule
-        self.schedule_end_time     = None
         self.schedule_week_offset  = None
         self._schedule_ended_logged = False
 

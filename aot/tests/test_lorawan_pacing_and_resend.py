@@ -126,13 +126,21 @@ def test_default_floor_is_unchanged_for_ordinary_outputs():
 ACK_LATENCY_S = 1.7   # device status uplink after dispatch, measured on site
 
 
-def simulate_dispatches(timeout, floor, pacing=4.0):
+def simulate_dispatches(timeout, floor, pacing=None):
     """When each attempt of one command actually reaches the air.
 
     begin_command() ticks a resend timer every max(floor, timeout/3), but a
     dispatch only leaves at its pacing slot — that gap between "scheduled" and
     "actually sent" is what the retuning is about, so the test has to model it.
+
+    `pacing` 을 비우면 **현재 사이트 간격**을 쓴다. 여기에 숫자를 박아 두면
+    RX2 데이터레이트를 바꿔 간격이 달라져도 테스트는 옛 전제로 계속 통과하거나
+    (더 나쁘게) 엉뚱한 이유로 실패한다 — 실제로 SF12→SF10 전환 때 그랬다.
+    옛 동작을 재현하는 테스트만 그 시절 값을 명시한다.
     """
+    if pacing is None:
+        from aot.utils.lorawan_pacing import MIN_GLOBAL_DOWNLINK_INTERVAL_S
+        pacing = MIN_GLOBAL_DOWNLINK_INTERVAL_S
     interval = max(floor, timeout / 3.0)
     next_slot = 0.0
     dispatches = []
@@ -163,12 +171,12 @@ def test_the_old_resend_floor_wasted_an_attempt():
     """Guards the fix: at the previous 2 s floor the last resend hit the air
     exactly as the command was faulted — 1.32 s of SF12 airtime spent on a
     command already given up on, taking a slot another device needed."""
-    dispatches = simulate_dispatches(timeout=8.0, floor=2.0)
+    dispatches = simulate_dispatches(timeout=8.0, floor=2.0, pacing=4.0)
     assert max(dispatches) + ACK_LATENCY_S > 8.0
     assert len(dispatches) == 3
 
 
 def test_the_new_floor_drops_that_wasted_attempt():
-    dispatches = simulate_dispatches(timeout=8.0, floor=4.0)
+    dispatches = simulate_dispatches(timeout=8.0, floor=4.0, pacing=4.0)
     assert len(dispatches) == 2, "one dispatch per command should have gone away"
     assert max(dispatches) + ACK_LATENCY_S <= 8.0

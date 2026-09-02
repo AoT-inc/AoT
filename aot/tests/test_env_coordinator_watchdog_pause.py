@@ -69,13 +69,17 @@ class TestEveryIntentionalStopRecordsItsReason(unittest.TestCase):
                 return node
         raise AssertionError('_run_cycle 을 찾지 못했습니다')
 
-    def test_all_three_gates_return_a_reason(self):
+    def test_both_gates_return_a_reason(self):
+        """`schedule_ended` 는 2026-09-01 에 없앴다 — 구획이 없으면 이미
+        R2(guide 범위로 계속 돈다)가 그 역할을 한다, 별도 사유가 필요 없다."""
         s = _src(_CYCLE)
         i = s.index('def _intentional_stop')
         body = s[i:s.index('\n    def ', i + 10)]
-        for reason in ('no_actuators', 'schedule_ended', 'outside_time_window'):
+        for reason in ('no_actuators', 'outside_time_window'):
             self.assertIn("return '%s'" % reason, body,
                           '정지 사유 %r 를 남기지 않습니다' % reason)
+        self.assertNotIn("return 'schedule_ended'", body,
+                         '제어 종료일 사유가 되살아났다 — 구획이 정본이다')
 
     def test_the_normal_path_returns_none(self):
         """지우지 않으면 한 번 멈춘 코디네이터는 이후 진짜 고장에도 조용하다."""
@@ -123,13 +127,13 @@ class TestTheOtherEarlyReturnsAreClassified(unittest.TestCase):
                       '게이트 전용 요약이 사이클 도장을 안 찍습니다')
         self.assertNotIn('_control_paused', body)
 
-    def test_exactly_three_gates_carry_a_reason(self):
+    def test_exactly_two_gates_carry_a_reason(self):
         """관문을 새로 만들면 사유도 함께 남겨야 한다 — 개수로 고정한다."""
         s = _src(_CYCLE)
         i = s.index('def _intentional_stop')
         body = s[i:s.index('\n    def ', i + 10)]
         self.assertEqual(len([1 for ln in body.split('\n')
-                              if ln.strip().startswith("return '")]), 3,
+                              if ln.strip().startswith("return '")]), 2,
                          '의도된 정지의 수가 바뀌었습니다 — 새 관문이라면 '
                          '사유를 남기고 이 수를 갱신하세요')
 

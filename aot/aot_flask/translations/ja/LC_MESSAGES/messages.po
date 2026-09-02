@@ -31251,14 +31251,14 @@ msgstr "この遮光カーテンの生地が他と異なるときだけ使いま
 msgid "When Control Runs"
 msgstr "制御を動かす時間帯"
 
-msgid "Control ends"
-msgstr "制御の終了"
+msgid "This plot"
+msgstr "この区画"
 
-msgid "Stops on {date}"
-msgstr "{date} に停止します"
+msgid "Ends on {date}"
+msgstr "{date} に終わります"
 
-msgid "Stopped on {date} — past the stop date"
-msgstr "{date} に停止しました — 終了日を過ぎています"
+msgid "Expected to end around {date}"
+msgstr "{date} 頃に終わる見込みです"
 
 msgid "Outside this window the coordinator stops entirely — heating and cooling included. Safety limits still act."
 msgstr "この時間帯の外では調整機が丸ごと止まります — 暖房も冷房も含みます。安全の上下限はそのまま働きます。"

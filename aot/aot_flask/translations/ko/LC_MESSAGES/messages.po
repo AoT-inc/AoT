@@ -31508,14 +31508,14 @@ msgstr "이 차광막의 천이 나머지와 다를 때만 씁니다. 0 으로 �
 msgid "When Control Runs"
 msgstr "제어를 돌리는 시간대"
 
-msgid "Control ends"
-msgstr "제어 종료"
+msgid "This plot"
+msgstr "이 구획"
 
-msgid "Stops on {date}"
-msgstr "{date} 에 멈춥니다"
+msgid "Ends on {date}"
+msgstr "{date} 에 끝납니다"
 
-msgid "Stopped on {date} — past the stop date"
-msgstr "{date} 에 멈췄습니다 — 종료일이 지났습니다"
+msgid "Expected to end around {date}"
+msgstr "{date} 무렵 끝날 예정입니다"
 
 msgid "Outside this window the coordinator stops entirely — heating and cooling included. Safety limits still act."
 msgstr "이 시간대 밖에서는 조율기가 통째로 멈춥니다 — 난방과 냉방도 함께입니다. 안전 한계는 그대로 작동합니다."
@@ -32041,3 +32041,19 @@ msgstr "전체"
 #: widgets/widget_trigger_sequence.py:0
 msgid "Time wheel not loaded"
 msgstr "시간 선택기를 불러오지 못했습니다"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "When Switched Back On"
+msgstr "다시 켤 때"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Continue where it stopped"
+msgstr "멈춘 지점부터 이어서"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "Start from the beginning"
+msgstr "처음부터 시작"
+
+#: widgets/widget_trigger_sequence.py:0
+msgid "What happens when this sequence is turned off and on again. Continuing resumes the interrupted cycle; starting over runs it from the first step. A daemon restart always continues, regardless of this setting."
+msgstr "이 시퀀스를 껐다가 다시 켤 때의 동작입니다. 이어서는 중단된 사이클을 그대로 재개하고, 처음부터는 첫 단계부터 새로 실행합니다. 데몬 재시작은 이 설정과 무관하게 언제나 이어서 진행합니다."

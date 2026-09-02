@@ -382,25 +382,6 @@ FUNCTION_INFORMATION = {
             ),
         },
 
-        # ── Growth Schedule ───────────────────────────────────────────────────
-        # 시작일은 여기 없다 — 구획의 시작일이 정본이다. 남은 둘은 일정이
-        # 아니라 **운영 결정**이다: 언제 제어를 멈출 것인가, 경과 주차를
-        # 얼마나 보정할 것인가.
-        {
-            'type': 'header',
-            'name': lazy_gettext('Growth Schedule'),
-        },
-        {
-            'id': 'schedule_end_time',
-            'type': 'text',
-            'html_type': 'date',
-            'default_value': '',
-            'required': False,
-            'name': lazy_gettext('Stop Control On'),
-            'phrase': lazy_gettext(
-                'Control stops for good after this date. Leave blank to keep running.'
-            ),
-        },
 
         # ── Facility (optional) ──────────────────────────────────────────────
         {
@@ -1389,8 +1370,9 @@ _LAYOUT = [
     #   제어한다는 말로 읽히는데, 실제로는 **켜고 끄는 스위치**다.
     #
     # ⚠ 보이는 것은 토글 하나뿐이다 — 나머지 넷은 `depends_on` 이라 켜야 나온다.
-    #   `schedule_end_time` 은 여기 없다: 날짜(제어를 영영 멈추는 날)라 시각과
-    #   섞이면 묶음 이름이 무엇이든 애매해진다.
+    #   날짜(제어를 영영 멈추는 날)를 여기 두지 않는다 — 2026-09-01 부로
+    #   그런 필드가 없다. 제어 지속 여부는 구획 프로그램이 정한다
+    #   (`coordinator-plot-targets.md` R2: 구획이 없으면 자기 값으로 돈다).
     (False, lazy_gettext('Working Hours'), [
         (None, ['time_enable', 'time_start', 'time_end',
                 'photo_method_id', 'photo_anchor']),
@@ -1474,10 +1456,8 @@ _LAYOUT = [
     #   값이 아니라 이 함수를 시험하는 사람이 만지는 값이다. 이름이 그것을
     #   말하면 나머지 사람이 열어 보고 지나갈 수 있다.
     #
-    # `schedule_end_time` 도 여기 있다 — 자주 쓰는 값이 아니고, 임박하면
-    # 화면 위 상태 줄이 알아서 말한다.
     (True, lazy_gettext('Advanced Settings'), [
-        (None, ['schedule_end_time', 'sensor_max_age',
+        (None, ['sensor_max_age',
                 'photosynth_mode_enabled', 'source_plot_id', 'vpd_weight_T',
                 'priority_vpd', 'priority_co2', 'cumulative_tracker_enabled']),
         (lazy_gettext('Effect Calibration'),

@@ -452,26 +452,35 @@ def analyse(row, hours, min_delta):
         'dispatch_fail_total': int(sum(v for _t, v in dispatch_fail)),
         'actuator_mismatch_max': int(max((v for _t, v in mismatch), default=0)),
         'clean_ratio': clean_ratio,
-        'settings': _check_settings(opts, facility_uuid),
+        'settings': _check_settings(opts, facility_uuid, row),
     }
 
 
 # ── 설정 점검 ───────────────────────────────────────────────────────────────
 
-def _check_settings(opts, facility_uuid):
+def _check_settings(opts, facility_uuid, row=None):
     """오늘 실제로 밟은 지뢰들만 본다. 추측으로 항목을 늘리지 않는다."""
     findings = []
 
-    end = (opts.get('schedule_end_time') or '').strip()
-    if end:
+    # `schedule_end_time`(코디네이터 자기 종료일)은 2026-09-01 부로 없다 —
+    # 구획을 새로 심어도 사람이 그 날짜를 다시 고치기 전까지 계속 멈춰
+    # 있던 것이 실제 사고였다(영양·쿠마모토, 구획을 갈아 심었는데도 8월
+    # 31일 종료로 굳어 있었다). 대신 구획의 `expected_end_on`(진행 중인
+    # 구획의 예상 종료 — 실제로 끝난 것이 아니라 아직 임박 여부만 알린다)
+    # 이 임박했는지만 본다. `ended_on` 이 지난 구획은 R2 가 이미 걷어내
+    # 여기까지 올라오지 않으므로 '지나서 제어가 멈춘다' 는 경우 자체가 없다.
+    if row is not None:
         try:
-            left = (date.fromisoformat(end) - date.today()).days
-            if left < 0:
-                findings.append(('severe', f'종료일 {end} 이 지났습니다 — 제어가 멈춥니다'))
-            elif left <= 7:
-                findings.append(('warn', f'종료일 {end} 까지 {left}일 남았습니다'))
-        except ValueError:
-            findings.append(('warn', f'종료일 형식을 읽을 수 없습니다: {end!r}'))
+            from aot.aot_flask.geo import coordinator_plot
+            expected = coordinator_plot.control_targets(row).get('expected_end_on')
+        except Exception:                                     # noqa: BLE001
+            expected = None
+        if expected:
+            left = (expected - date.today()).days
+            if 0 <= left <= 7:
+                findings.append(('warn',
+                    f'구획 예상 종료일 {expected} 까지 {left}일 남았습니다 — '
+                    f'제어는 멈추지 않고 다음 구획/guide 범위로 넘어갑니다'))
 
     # 유도 범위가 하드 임계 밖이면 매 사이클 ERROR 를 찍는다. 슬라이더 한 번이면
     # 풀리는데, 로그만 보면 제어 결함처럼 읽힌다.

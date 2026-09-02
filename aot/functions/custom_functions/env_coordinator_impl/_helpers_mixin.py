@@ -139,67 +139,6 @@ class HelpersMixin:
             self.logger.warning('_get_weeks_elapsed parse error: %s', exc)
             return 0.0
 
-    def _parse_schedule_dt(self, raw: str) -> 'datetime | None':
-        """Parse a Growth Schedule date string into a timezone-aware datetime.
-
-        Accepts the same formats as schedule_start_time:
-          - date only (YYYY-MM-DD): facility-local midnight 00:00.
-          - date+time ISO 8601: used as-is; naive times → facility-local tz.
-        Returns None when raw is empty or the timezone cannot be resolved.
-        """
-        raw = (raw or '').strip()
-        if not raw:
-            return None
-        import re as _re
-        from dateutil.parser import isoparse
-
-        date_only = bool(_re.fullmatch(r'\d{4}-\d{2}-\d{2}', raw))
-        fac_tz = self._get_facility_tz()
-
-        if date_only:
-            if fac_tz is None:
-                self.logger.warning(
-                    '_parse_schedule_dt: no device location coordinates — '
-                    'cannot resolve date timezone. Set location coordinates or a GeoFacility.')
-                return None
-            import datetime as _dt
-            year, month, day = map(int, raw.split('-'))
-            local_midnight = _dt.datetime(year, month, day, 0, 0, 0)
-            try:
-                return fac_tz.localize(local_midnight)
-            except AttributeError:
-                return local_midnight.replace(tzinfo=fac_tz)
-
-        dt = isoparse(raw)
-        if dt.tzinfo is None:
-            if fac_tz is not None:
-                try:
-                    return fac_tz.localize(dt)
-                except AttributeError:
-                    return dt.replace(tzinfo=fac_tz)
-            self.logger.warning('_parse_schedule_dt: no device location, falling back to UTC')
-            return dt.replace(tzinfo=_tz.utc)
-        return dt
-
-    def _schedule_ended(self) -> bool:
-        """Return True when schedule_end_time is set and the current time is past it.
-
-        End date marks the harvest / cycle end. After it passes, the coordinator
-        stops control (actuators return to their end-behavior, cycles halt).
-        Returns False when no end date is configured or it cannot be parsed.
-        """
-        raw = (getattr(self, 'schedule_end_time', None) or '').strip()
-        if not raw:
-            return False
-        try:
-            end_dt = self._parse_schedule_dt(raw)
-            if end_dt is None:
-                return False
-            return datetime.now(_tz.utc) >= end_dt
-        except Exception as exc:
-            self.logger.warning('_schedule_ended parse error: %s', exc)
-            return False
-
     def _get_facility_tz(self) -> 'Any | None':
         """Resolve the timezone from device/facility location coordinates and return a pytz object.
 

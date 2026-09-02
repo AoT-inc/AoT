@@ -822,6 +822,45 @@ class SequenceTriggerController(AbstractController, threading.Thread):
                 f"Sequence {self.unique_id}: runtime state save failed — "
                 "a restart before the next successful save will start fresh.")
 
+    @staticmethod
+    def _resume_on_activate(db_trigger):
+        """다시 켤 때 이어서 가는가. 알 수 없으면 **이어서**(기존 동작)로 본다.
+
+        컬럼이 없는 설치나 조회 실패에서 '처음부터' 로 넘어가면, 아무도 그렇게
+        정하지 않았는데 진행 중이던 관수가 사라진다.
+        """
+        try:
+            value = getattr(db_trigger, 'resume_on_activate', None)
+        except Exception:
+            return True
+        return True if value is None else bool(value)
+
+    def _clear_runtime_state(self):
+        """저장된 사이클을 지운다 — 다음에 켜면 처음부터 시작한다.
+
+        비활성화가 "잠깐 멈춤" 인지 "그만" 인지는 시스템이 알 수 없다. 그래서
+        시퀀스의 `resume_on_activate` 로 사용자가 정한다. 지우지 않으면
+        `_load_runtime_state()` 가 주기 안에서는 그 사이클을 되살리므로, 설정을
+        고치고 다시 돌리려는 사람은 주기가 지나기를 기다리는 수밖에 없었다.
+        """
+        try:
+            with session_scope(AOT_DB_PATH) as sess:
+                row = sess.query(FunctionRuntimeState).filter(
+                    FunctionRuntimeState.function_id == self.unique_id).first()
+                if row is None:
+                    return
+                row.last_cycle_ts = 0.0
+                row.active_vars_json = json.dumps({})
+                row.updated_at = time.time()
+                sess.commit()
+            self.logger.info(
+                f"Sequence {self.unique_id}: 저장된 사이클을 지웠습니다 — "
+                "다시 켜면 처음부터 시작합니다.")
+        except Exception:
+            self.logger.exception(
+                f"Sequence {self.unique_id}: runtime state clear failed — "
+                "다시 켤 때 이전 사이클을 이어서 갈 수 있습니다.")
+
     def get_dynamic_duration(self, source_id):
         if not source_id:
             return None
@@ -1654,6 +1693,13 @@ class SequenceTriggerController(AbstractController, threading.Thread):
                 "activated -- state persisted for resume, outputs left running.")
         else:
             self.stop_all_active()
+            # 사용자가 의도적으로 끈 경우다. 다시 켤 때 이어서 갈지 처음부터
+            # 갈지는 시퀀스 설정이 정한다 — 기본은 이어서(기존 동작).
+            #
+            # 데몬 재시작은 여기까지 오지 않는다(위 분기에서 still_activated).
+            # 그래서 이 옵션은 재시작 재개를 건드리지 않는다.
+            if not self._resume_on_activate(db_trigger):
+                self._clear_runtime_state()
 
 
     def refresh_settings(self):

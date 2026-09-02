@@ -8475,6 +8475,20 @@ class TestControlReadsTheProgram(_CoordPlotFixture, unittest.TestCase):
             self.assertNotIn("'id': '%s'" % oid, src,
                              '%s 가 되살아났다 — 설정이 다시 두 곳이 된다' % oid)
 
+    def test_schedule_end_time_is_gone(self):
+        """`schedule_end_time` 은 2026-09-01 에 뺐다.
+
+        코디네이터 자기 옵션의 별도 종료일이었는데, 구획을 새로 심어도 그
+        날짜를 사람이 다시 고치기 전까지 계속 멈춰 있는 것이 실제 사고였다
+        (영양·쿠마모토, 구획을 토마토·クサイチゴ로 갈아 심었는데도 8월 31일
+        종료로 굳어 있었다). `schedule_week_offset`(D19)과 같은 이유·같은
+        모양이다 — 정본을 구획으로 옮기면 코디네이터가 따로 들 이유가 없다.
+        """
+        src = _read(self._INFO)
+        self.assertNotIn("'id': 'schedule_end_time'", src,
+                         '제어 종료일이 되살아났다 — 구획의 ended_on/'
+                         'expected_end_on 이 정본이다')
+
     def test_the_safety_options_stay(self):
         """걷어낸 것은 목표뿐이다. 안전 가이드라인과 장비는 이 시설의 것이라
         프로그램으로 옮기면 그 프로그램을 다른 시설에 못 쓴다.
@@ -8486,8 +8500,7 @@ class TestControlReadsTheProgram(_CoordPlotFixture, unittest.TestCase):
         """
         src = _read(self._INFO)
         for oid in ('temp_max', 'temp_min', 'humid_max', 'humid_min',
-                    'guide_T_min', 'guide_T_max', 'guide_RH_min', 'guide_RH_max',
-                    'schedule_end_time'):
+                    'guide_T_min', 'guide_T_max', 'guide_RH_min', 'guide_RH_max'):
             self.assertIn("'id': '%s'" % oid, src, '%s 가 사라졌다' % oid)
         self.assertNotIn("'id': 'schedule_week_offset'", src,
                          '주차 오프셋이 되살아났다 — 구획 시작일이 정본이다')

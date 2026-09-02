@@ -843,28 +843,21 @@ class CycleMixin:
         ⚠ 여기 넣어도 되는 것은 "쉬기로 한 것" 뿐이다. 내부 센서 없음은
         **고장**이라 워치독이 울려야 하고, 안전게이트 발동은 완료된 사이클이라
         스스로 `_last_cycle_ts` 도장을 찍는다. 둘 다 여기 넣지 말 것.
+
+        ⚠ **"영영 멈추는 날"(`schedule_end_time`)은 2026-09-01 부로 없다.**
+        코디네이터 자기 옵션의 날짜가 정본이던 시절에는 구획을 새로 심어도
+        그 날짜를 사람이 다시 고치기 전까지 계속 멈춰 있었다(2026-08-30
+        영양·쿠마모토 — 구획을 토마토·クサイチゴ로 갈아 심었는데도 8월 31일
+        종료로 굳어 있었다). 이제 지속 여부는 구획 프로그램이 정한다 —
+        구획이 없으면(R2, `coordinator-plot-targets.md`) 자기 guide 범위로
+        돌 뿐이고, 그것이 이미 "정지" 가 아니라 "목표 없이 계속 도는" 정상
+        동작이다. 별도의 하드 정지가 필요 없다.
         """
         if not self._profiles:
             if getattr(self, 'log_level_debug', False):
                 self.logger.debug(
                     'EnvCoordinator: no actuators registered — skipping cycle')
             return 'no_actuators'
-
-        # 종료 날짜가 지나면 제어를 정지한다: 각 액추에이터를 end_behavior 로
-        # 복귀시키고 이후 사이클을 건너뛴다. Method 는 종료 전까지 실제 경과
-        # 주차를 그대로 따른다.
-        if self._schedule_ended():
-            if not getattr(self, '_schedule_ended_logged', False):
-                self.logger.info(
-                    'EnvCoordinator: 종료 날짜(%s) 도달 — 제어 정지, '
-                    '액추에이터 end_behavior 복귀', self.schedule_end_time)
-                self._schedule_ended_logged = True
-            self._apply_end_behaviors()
-            return 'schedule_ended'
-        # 종료일 이전(또는 종료일 재설정)으로 복귀 시 재가동 로그 재무장
-        if getattr(self, '_schedule_ended_logged', False):
-            self._schedule_ended_logged = False
-            self.logger.info('EnvCoordinator: 종료 날짜 이전 — 제어 재개')
 
         if self.time_enable and not self._in_time_window():
             self._apply_end_behaviors()
@@ -2106,13 +2099,18 @@ class CycleMixin:
         internal = internal or {}
 
         # ── Growth Schedule (시작/종료일 + 경과 주차) ────────────────────────
-        # 시작일은 구획의 것이다(함수에는 그 칸이 없다). 종료일은 성격이 달라
-        # 남아 있다 — 수확일이 아니라 "이후 제어 정지" 라는 안전 결정이다.
+        # 시작일도 종료일도 구획의 것이다(함수에는 둘 다 칸이 없다, 2026-09-01).
+        # `ended_on`(실제 종료, 사람이 확정) 이 있으면 그것을, 없으면
+        # `expected_end_on`(진행 중인 구획의 예상치) 을 보인다 — 화면 문구는
+        # 둘을 구분해서 말한다(`_sched_ended` 참조).
         _pt = self._plot_targets()
         _started = _pt.get('started_on')
+        _ended = _pt.get('ended_on')
+        _expected = _pt.get('expected_end_on')
         sched = {
             'start': _started.isoformat() if _started else None,
-            'end':   (getattr(self, 'schedule_end_time', '') or '').strip() or None,
+            'end':   (_ended or _expected).isoformat() if (_ended or _expected) else None,
+            'end_confirmed': bool(_ended),
             'week':  None,
             'plot':  _pt.get('plot_name'),
             'stage': (_pt.get('stage') or {}).get('name'),

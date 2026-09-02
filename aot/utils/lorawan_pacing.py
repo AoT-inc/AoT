@@ -43,10 +43,25 @@ logger = logging.getLogger(__name__)
 # 4.0 s => ~1.32 s TX + ~2.7 s listening per slot (33 % TX duty), so both the
 # ctrl_ack (~1.7 s) and a valve's completion status land in a quiet window.
 #
-# This constant is tied to the RX2 data rate. If rx2_dr is raised (SF12 -> SF9 is
-# ~165 ms, SF7 ~51 ms), the airtime collapses and this can come back down toward
-# the original 1.5 s.
-MIN_GLOBAL_DOWNLINK_INTERVAL_S = 4.0
+# ⚠ **이 상수는 RX2 데이터레이트에 묶여 있다.** 둘은 함께 움직여야 한다 —
+# 한쪽만 바꾸면 게이트웨이가 포화되거나(간격만 줄임) 이득이 없다(DR만 올림).
+#
+#     rx2_dr=0 (SF12)  airtime ~1.32 s  ->  간격 4.0 s
+#     rx2_dr=2 (SF10)  airtime ~0.37 s  ->  간격 1.5 s   ← 현재
+#     rx2_dr=3 (SF9)   airtime ~0.19 s  ->  간격 0.8 s
+#
+# RX2 DR 은 ChirpStack 쪽 설정이다(`/etc/chirpstack/region_kr920.toml` 의
+# `rx2_dr`). **거기를 SF12 로 되돌린다면 이 값도 4.0 으로 되돌릴 것** — 안 그러면
+# 1.32초짜리 송신을 1.5초 간격으로 쏘게 되어(88 % duty) 게이트웨이가 사실상 내내
+# 귀먹고, 이 모듈이 막으려던 바로 그 붕괴가 재현된다.
+#
+# 1.5 s => ~0.37 s TX + ~1.13 s listening (25 % TX duty). SF12 시절의 33 % 보다
+# 오히려 여유가 있고, 업링크는 ADR 로 SF7 근처까지 내려가 ACK 자체도 훨씬 짧다
+# (실측 2026-09-02 aot-004: RX1 다운링크가 SF7 로 나가고 있었다).
+#
+# aot-004 실측(2026-09-01 rx2_dr 0->2 전환, 밤새 관수 검증): 전환 뒤 확인 실패
+# 0건. 전환 전 같은 서버는 관수 시간대마다 시간당 6~15건이었다.
+MIN_GLOBAL_DOWNLINK_INTERVAL_S = 1.5
 # Cap how long a single send may block waiting for its slot. Past this the
 # downlink is DROPPED, not sent late.
 #

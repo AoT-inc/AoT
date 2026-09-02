@@ -145,6 +145,9 @@ def execute_at_modification(mod_widget, request_form, custom_options_presave, cu
                 final_options['output_duration'] = float(trigger.output_duration or 0)
                 # Using time_offset_minutes for validity
                 final_options['time_offset_minutes'] = int(trigger.time_offset_minutes or 300)
+                final_options['resume_on_activate'] = (
+                    'resume' if getattr(trigger, 'resume_on_activate', True) in (None, True, 1)
+                    else 'restart')
                 
                 logger.info(f"Widget {mod_widget.unique_id}: Initialised/Pulled settings from Function {func_id}")
             else:
@@ -153,7 +156,11 @@ def execute_at_modification(mod_widget, request_form, custom_options_presave, cu
                 # compared to what was previously stored in the widget.
                 
                 updates_to_push = False
-                
+                # 어느 칸이 실제로 바뀌었는지 기억한다. per_day 스케줄 동기화가
+                # 이것을 봐야 한다 — "무언가 바뀌었다" 만으로 주기를 만지면
+                # 색을 고쳐도 관수 주기가 따라 바뀐다.
+                pushed_fields = set()
+
                 def smart_sync_field(field_key, attr_name, cast_func=str, db_cast=str):
                     nonlocal updates_to_push
                     
@@ -176,6 +183,7 @@ def execute_at_modification(mod_widget, request_form, custom_options_presave, cu
                         try:
                             setattr(trigger, attr_name, cast_func(val_submitted))
                             updates_to_push = True
+                            pushed_fields.add(field_key)
                             logger.info(f"User updated {field_key}: {val_stored} -> {val_submitted}. Pushing to Trigger.")
                         except Exception as e:
                             logger.error(f"Error setting {attr_name}: {e}")
@@ -206,6 +214,20 @@ def execute_at_modification(mod_widget, request_form, custom_options_presave, cu
                     final_options['timer_end_time']   = trigger.timer_end_time or "23:59"
                     smart_sync_field('sequence_period', 'period', float, float)
 
+                # 이 옵션만 표현이 다르다: 화면은 'resume'/'restart', DB 는 불리언.
+                # smart_sync_field 의 문자열 비교에 그대로 태우면 True 와
+                # 'resume' 이 늘 달라 보여 매 저장마다 push 로 판정된다.
+                _sub = final_options.get('resume_on_activate')
+                _stored = options.get('resume_on_activate')
+                _db = 'resume' if getattr(trigger, 'resume_on_activate', True) in (None, True, 1) else 'restart'
+                if _sub is not None and str(_sub) != str(_stored):
+                    trigger.resume_on_activate = (str(_sub) != 'restart')
+                    updates_to_push = True
+                    logger.info(
+                        f"User updated resume_on_activate: {_stored} -> {_sub}. Pushing to Trigger.")
+                else:
+                    final_options['resume_on_activate'] = _db
+
                 smart_sync_field('timer_start_offset', 'timer_start_offset', int, int)
                 smart_sync_field('output_duration', 'output_duration', float, float)
                 smart_sync_field('time_offset_minutes', 'time_offset_minutes', int, int)
@@ -233,12 +255,27 @@ def execute_at_modification(mod_widget, request_form, custom_options_presave, cu
                                 sched['days'][str(i)]['period'] = new_period
                             trigger.timer_schedule = _j.dumps(sched)
                         elif sched.get('mode') == 'per_day':
-                            # Only propagate period to all days (preserve per-day start/end)
-                            new_period = int(float(trigger.period or 3600))
-                            sched['shared']['period'] = new_period
-                            for i in range(7):
-                                sched['days'][str(i)]['period'] = new_period
-                            trigger.timer_schedule = _j.dumps(sched)
+                            # 요일마다 주기가 다른 것이 per_day 의 존재 이유다.
+                            # `trigger.period` 는 그중 **오늘의 주기** 하나일
+                            # 뿐인데(routes_function 이 그렇게 동기화한다), 예전에는
+                            # 그것을 7일 전부에 덮어썼다 — 위젯에서 아무 칸이나
+                            # 고쳐 저장하면 요일별로 짜 둔 주기가 통째로 하나가
+                            # 됐다. 실측(2026-09-01 로컬): 10800×6 + 금 1200 이
+                            # 옵션 하나를 바꾼 저장 뒤 전부 60 이 됐다.
+                            #
+                            # 주기 칸을 실제로 고쳤을 때만, 그것도 그 값이 가리키는
+                            # **오늘 요일에만** 반영한다. 다른 요일은 건드리지 않는다.
+                            if 'sequence_period' in pushed_fields:
+                                from aot.utils.weekly_schedule import get_today_idx
+                                from aot.utils.device_tz import get_device_tz
+                                new_period = int(float(trigger.period or 3600))
+                                today_idx = str(get_today_idx(str(get_device_tz(trigger))))
+                                if today_idx in sched.get('days', {}):
+                                    sched['days'][today_idx]['period'] = new_period
+                                    trigger.timer_schedule = _j.dumps(sched)
+                                    logger.info(
+                                        f"per_day: 오늘({today_idx}) 주기만 {new_period}s 로 "
+                                        "갱신 — 다른 요일은 그대로 둔다.")
                     except Exception as _e:
                         logger.error(f"execute_at_modification: timer_schedule sync failed: {_e}")
                     db.session.commit()
@@ -437,6 +474,21 @@ WIDGET_INFORMATION = {
             'default_value': 300,
             'name': lazy_gettext('Input Validity (s)'),
             'phrase': lazy_gettext('Input value validity duration')
+        },
+        {
+            'id': 'resume_on_activate',
+            'type': 'select',
+            'options_select': [
+                ('resume', lazy_gettext('Continue where it stopped')),
+                ('restart', lazy_gettext('Start from the beginning'))
+            ],
+            'default_value': 'resume',
+            'name': lazy_gettext('When Switched Back On'),
+            'phrase': lazy_gettext(
+                'What happens when this sequence is turned off and on again. '
+                'Continuing resumes the interrupted cycle; starting over runs it '
+                'from the first step. A daemon restart always continues, '
+                'regardless of this setting.')
         }
     ],
 

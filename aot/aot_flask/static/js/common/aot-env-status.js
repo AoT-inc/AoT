@@ -86,17 +86,24 @@
     return row(label, parts.join('  ·  '));
   }
 
-  /* ── 제어가 **끝나는 날** ────────────────────────────────────────────────
+  /* ── 구획이 **끝나는 날** ────────────────────────────────────────────────
    *
-   * `schedule_end_time` 은 그 날짜가 지나면 제어를 통째로 멈춘다. 그런데
-   * 화면 어디에도 그 사실이 없었다 — 설정을 열어 접힌 묶음을 펼쳐야 보인다.
+   * 2026-09-01 부로 코디네이터에는 "이 날 이후 제어 정지" 라는 별도 옵션
+   * (`schedule_end_time`)이 없다 — 구획을 새로 심어도 그 날짜를 사람이 다시
+   * 고치기 전까지 계속 멈춰 있던 것이 실제 사고였다(2026-08-30 영양·
+   * 쿠마모토, 구획을 갈아 심었는데도 8월 31일 종료로 굳어 있었다). 이제
+   * 지속 여부는 구획 자체가 정한다 — 구획이 끝나면(또는 없으면) 코디네이터는
+   * **멈추지 않고** guide 범위로 계속 돈다. 그래서 이 줄은 "제어가 멈춘다"
+   * 가 아니라 **"이 구획이 끝난다"**(그 뒤엔 다음 구획이나 guide 범위로
+   * 넘어간다)는 사실만 말한다.
    *
-   * 2026-08-27 로컬 실측: 살아 있는 코디네이터 둘이 **나흘 뒤** 멈추도록
-   * 설정돼 있었고(2026-08-31), 아무도 그것을 모르고 있었다. 지나 버린 것도
-   * 하나 있었다(2026-07-08).
+   * `end_confirmed` 로 확정(구획의 `ended_on`, 사람이 수확 등으로 확정한
+   * 날)과 예상(`expected_end_on`, 진행 중인 구획의 어림값)을 가른다 — 어림값을
+   * 확정처럼 말하면 예상이 며칠 어긋날 때마다 화면이 거짓말을 한 셈이 된다.
    *
    * ⚠ **평소에는 아무 말도 하지 않는다.** 늘 보이면 그냥 한 줄이 되어, 정작
-   *   임박했을 때 눈에 안 띈다. 2주 안쪽이거나 이미 지났을 때만 말한다.
+   *   임박했을 때 눈에 안 띈다. 2주 안쪽일 때만 말한다(지난 날짜는 R2 가
+   *   이미 그 구획을 걷어내 `sched.end` 자체가 안 온다).
    */
   var _ENDS_SOON_DAYS = 14;
 
@@ -107,11 +114,11 @@
     var t = Date.parse(raw + 'T23:59:59');
     if (isNaN(t)) return '';
     var days = Math.floor((t - Date.now()) / 86400000);
-    if (days > _ENDS_SOON_DAYS) return '';
-    var txt = days < 0
-      ? _t('Stopped on {date} — past the stop date').replace('{date}', raw)
-      : _t('Stops on {date}').replace('{date}', raw);
-    return row(_t('Control ends'), esc(txt), true);
+    if (days > _ENDS_SOON_DAYS || days < 0) return '';
+    var txt = sched.end_confirmed
+      ? _t('Ends on {date}').replace('{date}', raw)
+      : _t('Expected to end around {date}').replace('{date}', raw);
+    return row(_t('This plot'), esc(txt), true);
   }
 
   function nowLine(d) {

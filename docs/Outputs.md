@@ -362,7 +362,15 @@ command was sent — only the times it actually opened and closed tell you how m
 water was delivered. One-way outputs, which have nothing that could confirm, are
 still recorded at send time.
 
-### An output in use cannot be deleted
+!!! note
+    The gap between commands is set **together with the RX2 data rate.** Raising
+    the data rate shortens the time each command occupies the air, which allows a
+    shorter gap and therefore more valves operated at once. Lowering it requires
+    lengthening the gap again — changing only one of the two saturates the
+    gateway so it cannot hear the replies. The two values live in the LNS
+    (ChirpStack) config and in AoT respectively, so both must be adjusted.
+
+
 
 If a sequence step, conditional, PID, or widget still points at an output,
 deletion is refused and AoT tells you where it is used. Remove or repoint

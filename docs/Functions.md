@@ -991,6 +991,57 @@ Time rules:
 
     When the window length and one full pass match exactly, the last step's end and the window's close land on the same moment. If the window check wins that race, the step is switched off before it can finish on its own and no on-time is recorded — so a step that is about to finish is given a few seconds to end normally. A step with time still left is not waited for: that is a genuine cut-off, not a natural end, and waiting would only overrun the window.
 
+### Turning a sequence off stops it immediately { #sequence-deactivate }
+
+Deactivating a sequence from the function list or the widget **stops the running
+control right there**, and any step that was open at that moment is closed
+normally. It will not start again when the next window comes around.
+
+If the request never reached the control daemon, the screen tells you the
+sequence is **still running**. The setting may be saved while valves keep
+cycling, so retry shortly or check the outputs directly. Previously this case
+also reported "saved", producing a state where the screen showed the sequence as
+off while irrigation carried on.
+
+!!! warning
+    **In per-day mode, changing the period from the widget applies to that day
+    only.** The period the widget shows is today's value, so the other weekdays
+    keep theirs. To set them individually, change the period with that weekday
+    selected, or use the per-day settings in the unified modal.
+
+
+
+Turning a sequence off and on again **continues from where it stopped** by
+default — the behaviour you want when a run was paused briefly. To change
+settings and run the whole thing again from the top, set **When Switched Back
+On** in the sequence widget's options to "Start from the beginning".
+
+| Value | On switching back on |
+|---|---|
+| **Continue where it stopped** (default) | Picks up the interrupted cycle at its remaining steps |
+| **Start from the beginning** | Runs from the first step |
+
+Even on "continue", a cycle interrupted for longer than one period starts fresh —
+there is no cycle left to rejoin after that long.
+
+!!! note
+    **A daemon restart is not affected by this setting.** Control pausing for a
+    system update or reboot is not the user turning it off, so irrigation in
+    progress always continues. This setting governs only a deliberate off/on by a
+    person.
+
+
+
+Going from per-day back to shared mode promotes the settings of the **first
+active weekday** to the shared values — not only the window (start, end, period)
+but that weekday's **device groups and per-step durations** as well. Shared mode
+never reads the per-day map, so anything left behind would vanish at the press of
+a button.
+
+The reference weekday follows the same rule as the window (first active day). Any
+differences you configured on the other weekdays are not preserved, so decide
+which day should become the shared one before switching.
+
 ### Unified Modal · Time Wheel
 
 Time, group, name, and weekday schedule are edited from a **single unified modal** in the sequence widget's step list.

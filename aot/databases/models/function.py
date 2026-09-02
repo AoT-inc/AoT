@@ -182,6 +182,9 @@ class Trigger(CRUDMixin, db.Model):
     timer_end_time = db.Column(db.Text, default='19:00')
     timer_weekday = db.Column(db.Text, default=None)  # '0,1,2,3,4,5,6' Mon-Sun; None = all days
     timer_schedule = db.Column(db.Text, default=None)  # JSON weekly_schedule v1; None = use legacy columns
+    # 다시 켤 때 중단된 사이클을 이어서 갈지(True, 기존 동작) 처음부터 갈지(False).
+    # 데몬 재시작 재개와는 다른 축이다 — 그쪽은 이 값과 무관하게 늘 이어서 간다.
+    resume_on_activate = db.Column(db.Boolean, default=True)
 
     # Receive infrared from remote (deprecated, TODO: remove)
     program = db.Column(db.Text, default='aot')

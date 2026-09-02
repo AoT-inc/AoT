@@ -156,7 +156,8 @@ def control_targets(fn, on=None):
     목표 없이 guide 범위 안에서 돈다.
     """
     out = {'plot_uuid': None, 'plot_name': None, 'reason': 'none',
-           'started_on': None, 'stage': None,
+           'started_on': None, 'ended_on': None, 'expected_end_on': None,
+           'stage': None,
            'vpd': {'value': None, 'method_id': None},
            'co2': {'value': None, 'method_id': None},
            'dli': None, 'gdd_daily': None, 'T_base': None, 'model': {}}
@@ -175,6 +176,16 @@ def control_targets(fn, on=None):
     out['plot_uuid'] = row.unique_id
     out['plot_name'] = row.subject or row.name
     out['started_on'] = row.started_on
+    # **제어 지속 여부는 이 두 값이 정본이다** (2026-09-01, 구획 프로그램
+    # 아키텍처). 코디네이터 자기 옵션의 별도 종료일(`schedule_end_time`)은
+    # 없앴다 — 구획을 새로 심어도 사람이 그 날짜를 다시 고치기 전까지 계속
+    # 멈춰 있던 것이 실제 사고였다(2026-08-30 영양·쿠마모토). `ended_on` 은
+    # 이 구획이 실제로 끝난 날(사람이 확정)이고, `expected_end_on` 은 아직
+    # 진행 중인 구획의 예상치일 뿐이라 제어를 멈추는 근거로 쓰지 않는다 —
+    # R2(`plot_context.plot_for_coordinator`)가 이미 종료된 구획은 애초에
+    # 여기까지 올려보내지 않는다.
+    out['ended_on'] = row.ended_on
+    out['expected_end_on'] = row.expected_end_on
 
     if not row.program_uuid:
         out['reason'] = 'no-program'
