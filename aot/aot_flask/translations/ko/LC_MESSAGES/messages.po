@@ -32078,3 +32078,166 @@ msgstr "선택된 함수가 없습니다."
 #: aot_flask/templates/user_templates/widget_template_widget_function_status_js.html:121
 msgid "This function type has no editable options."
 msgstr "이 함수 유형에는 편집 가능한 옵션이 없습니다."
+
+#: aot/aot_flask/utils/utils_function_status.py
+msgid "Paused — no actuators registered"
+msgstr "일시 정지 — 등록된 액추에이터 없음"
+
+#: aot/aot_flask/utils/utils_function_status.py
+msgid "Paused — outside the operating time window"
+msgstr "일시 정지 — 운전 시간대 밖"
+
+#: aot/aot_flask/utils/utils_function_status.py
+#, python-format
+msgid "Paused (%(reason)s)"
+msgstr "일시 정지 (%(reason)s)"
+
+#: aot/aot_flask/utils/utils_function_status.py
+msgid "Waiting for the first control cycle."
+msgstr "첫 제어 사이클을 기다리는 중입니다."
+
+#: aot/aot_flask/utils/utils_function_status.py
+#, python-format
+msgid "Mode: %(modes)s"
+msgstr "모드: %(modes)s"
+
+#: aot/aot_flask/utils/utils_function_status.py
+#, python-format
+msgid "Environment: %(values)s"
+msgstr "환경: %(values)s"
+
+#: aot/aot_flask/utils/utils_function_status.py
+#, python-format
+msgid "Deviation: %(values)s"
+msgstr "편차: %(values)s"
+
+#: aot/aot_flask/utils/utils_function_status.py
+#, python-format
+msgid "Actuators: %(values)s"
+msgstr "액추에이터: %(values)s"
+
+#: aot/aot_flask/utils/utils_function_status.py
+#, python-format
+msgid "Ventilation: %(ratio)s open (%(area)s)"
+msgstr "환기: %(ratio)s 개방 (%(area)s)"
+
+#: aot/aot_flask/utils/utils_function_status.py
+#, python-format
+msgid "Safety gate: %(reason)s — control stopped"
+msgstr "안전 조치: %(reason)s — 제어 중지"
+
+#: aot/aot_flask/utils/utils_function_status.py
+#, python-format
+msgid "Safety gate (partial): %(reason)s"
+msgstr "안전 조치(일부): %(reason)s"
+
+#: aot/aot_flask/utils/utils_function_status.py
+msgid "triggered"
+msgstr "발동함"
+
+#: aot/aot_flask/utils/utils_function_status.py
+#, python-format
+msgid "Equipment at its limit: %(detail)s"
+msgstr "설비 한계 도달: %(detail)s"
+
+#: aot/aot_flask/utils/utils_function_status.py
+#, python-format
+msgid "Beyond the set limit: %(detail)s"
+msgstr "설정한 한계를 넘음: %(detail)s"
+
+#: aot/aot_flask/utils/utils_function_status.py
+#, python-format
+msgid "No actuator to control %(target)s"
+msgstr "%(target)s을(를) 제어할 장치가 없음"
+
+#: aot/aot_flask/utils/utils_function_status.py
+#, python-format
+msgid "Last cycle: %(when)s"
+msgstr "마지막 사이클: %(when)s"
+
+#: aot/aot_flask/utils/utils_function_status.py
+#, python-format
+msgid "%(n)s s"
+msgstr "%(n)s초"
+
+#: aot/aot_flask/utils/utils_function_status.py
+#, python-format
+msgid "Sequence: %(state)s"
+msgstr "시퀀스: %(state)s"
+
+#: aot/aot_flask/utils/utils_function_status.py
+#, python-format
+msgid "Waiting (%(time)s)"
+msgstr "대기 중 (%(time)s)"
+
+#: aot/aot_flask/utils/utils_function_status.py
+msgid "Outside the time window"
+msgstr "운전 시간대 밖"
+
+#: aot/aot_flask/utils/utils_function_status.py
+msgid "Idle"
+msgstr "유휴"
+
+#: aot/aot_flask/utils/utils_function_status.py
+msgid "Standby"
+msgstr "대기"
+
+#: aot/aot_flask/utils/utils_function_status.py
+msgid "Ready"
+msgstr "준비됨"
+
+#: aot/aot_flask/utils/utils_function_status.py
+msgid "Initializing"
+msgstr "초기화 중"
+
+#: aot/aot_flask/utils/utils_function_status.py
+#, python-format
+msgid "Today's window: %(start)s – %(end)s"
+msgstr "오늘 운전 시간대: %(start)s – %(end)s"
+
+#: aot/aot_flask/utils/utils_function_status.py
+#, python-format
+msgid "Today's window: %(start)s – %(end)s (cycle %(period)s)"
+msgstr "오늘 운전 시간대: %(start)s – %(end)s (주기 %(period)s)"
+
+#: aot/aot_flask/utils/utils_function_status.py
+#, python-format
+msgid "Elapsed in cycle: %(elapsed)s"
+msgstr "사이클 경과: %(elapsed)s"
+
+#: aot/aot_flask/utils/utils_function_status.py
+#, python-format
+msgid "Steps: %(running)s of %(total)s running"
+msgstr "단계: %(total)s개 중 %(running)s개 동작 중"
+
+#: aot/aot_flask/utils/utils_function_status.py
+#, python-format
+msgid "Conditional: %(state)s"
+msgstr "조건부: %(state)s"
+
+#: aot/aot_flask/utils/utils_function_status.py
+#, python-format
+msgid "Period: %(period)s"
+msgstr "주기: %(period)s"
+
+#: aot/aot_flask/utils/utils_function_status.py
+#, python-format
+msgid "Last check: %(when)s"
+msgstr "마지막 판정: %(when)s"
+
+#: aot/aot_flask/utils/utils_function_status.py
+msgid "The last check ran an action."
+msgstr "마지막 판정에서 동작을 실행했습니다."
+
+#: aot/aot_flask/utils/utils_function_status.py
+msgid "The last check ran no action."
+msgstr "마지막 판정에서 실행한 동작이 없습니다."
+
+#: aot/aot_flask/utils/utils_function_status.py
+msgid "Not checked yet."
+msgstr "아직 판정한 적이 없습니다."
+
+#: aot/aot_flask/utils/utils_function_status.py
+#, python-format
+msgid "Next check in: %(time)s"
+msgstr "다음 판정까지: %(time)s"

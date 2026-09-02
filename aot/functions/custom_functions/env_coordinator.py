@@ -564,6 +564,41 @@ class CustomModule(
         """
         self.cmd_emergency_stop({})
 
+    # ── 함수 상태 요약 (`/function_status_activated`) ──────────────────────────
+
+    def function_status(self) -> dict:
+        """함수 상태 위젯이 5~30초마다 읽는 요약.
+
+        `CustomController.function_status()` 가 이 이름을 그대로 위임한다 —
+        없으면 위젯에 "function_status() missing from Function Class" 만 뜬다.
+
+        ⚠ **문장을 여기서 만들지 말 것.** 데몬에는 요청 컨텍스트가 없어
+          `gettext` 가 뷰어의 언어로 풀리지 않는다 — 여기서 만들면 무슨 짓을
+          해도 영어로 나간다. 사실만 내보내고 문장은 Flask 쪽
+          (`aot_flask/utils/utils_function_status.py`)이 만든다.
+
+        ⚠ **근거는 이번 사이클이 이미 만들어 둔 `_last_cycle_summary` 뿐이다.**
+          여기서 센서를 다시 읽거나 판정을 다시 하면 두 번째 판정자가 생기고,
+          그러면 화면과 실제 제어가 다른 말을 하게 된다 — 이 도메인이 이미
+          크게 데인 실패다. 요약이 아직 없으면 없다고 말한다.
+
+        ⚠ 사유 코드(`_control_paused`)를 여기서 다시 판정하지 말 것. "쉬는
+          중인가" 의 정본은 `_intentional_stop()` 하나다.
+        """
+        summary = getattr(self, '_last_cycle_summary', None)
+        age = None
+        if summary and summary.get('ts'):
+            age = max(0.0, time.time() - float(summary['ts']))
+        return {
+            'status_facts': {
+                'kind': 'env_coordinator',
+                'paused': getattr(self, '_control_paused', None),
+                'summary': summary,
+                'age_s': age,
+            },
+            'error': [],
+        }
+
     # ─────────────────────────────────────────────────────────────────────────
     def loop(self) -> None:
         now = time.time()

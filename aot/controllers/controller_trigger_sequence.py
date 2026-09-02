@@ -248,6 +248,38 @@ def _build_slots(single_actions, group_of=None):
     return slots
 
 
+def build_sequence_status_facts(status, state, wait_s=None):
+    """시퀀스 상태 dict → 함수 상태 위젯이 읽을 **사실 묶음**.
+
+    이 컨트롤러의 상태 dict 는 `status_text`·`steps` 같은 **구조**로 되어 있고
+    시퀀스 위젯은 그것을 표로 그린다. 그런데 공용 "함수 상태" 위젯의 JS 는
+    `string_status` 와 `error` **두 키만** 읽으므로, 구조만 있고 그 키가 없으면
+    폴링이 정상 200 을 받는데도 화면에는 **아무것도 안 뜬다**(에러도 없다).
+
+    ⚠ **문장은 여기서 만들지 않는다.** 데몬에는 요청 컨텍스트가 없어 `gettext`
+      가 뷰어의 언어로 풀리지 않는다 — 사실만 내보내고 문장은 Flask 쪽
+      (`aot_flask/utils/utils_function_status.py`)이 만든다.
+
+    ⚠ **`function_status()`(데몬 살아 있음)와 `get_static_status()`(데몬 정지)가
+      같은 함수를 쓴다.** 두 벌로 적으면 갈라지고, 그러면 같은 시퀀스가 데몬
+      상태에 따라 다른 말을 한다 — 사용자는 그것을 시퀀스가 바뀐 것으로 읽는다.
+
+    ⚠ 스텝 수는 여기서 세지 않는다. 라우트가 데몬 응답에 정적 스텝을 나중에
+      합쳐 넣는 경로가 있어(`function_status_activated`), 여기서 세면 합쳐진
+      뒤와 어긋난다 — 렌더러가 응답의 `steps` 를 직접 센다.
+    """
+    return {
+        'kind': 'sequence',
+        'state': state,
+        'wait_s': wait_s,
+        'window_start': status.get('window_start'),
+        'window_end': status.get('window_end'),
+        'period_s': status.get('period'),
+        'in_cycle': bool(status.get('cycle_start_time')),
+        'elapsed_s': status.get('elapsed'),
+    }
+
+
 class SequenceTriggerController(AbstractController, threading.Thread):
     """Sequence trigger controller that executes ordered actions in a timed cycle.
 
@@ -318,20 +350,33 @@ class SequenceTriggerController(AbstractController, threading.Thread):
         now = time.time()
         elapsed = now - cycle_start if cycle_start else 0
         
-        # Determine status text
+        # Determine status text.
+        # `status_code` 는 화면 문구를 고를 **코드**이고 `status_text` 는 로그·
+        # 진단용 영어다. 문구는 Flask 쪽이 코드로 고른다 — 여기서 만든 영어는
+        # 뷰어의 언어로 바뀔 방법이 없다.
+        status_code = 'idle'
         status_text = "Idle"
+        wait_s = None
         if self.is_activated:
             if self.start_latency > 0 and (now - self.activation_timestamp) < self.start_latency:
-                 status_text = f"Waiting ({self.start_latency - (now - self.activation_timestamp):.0f}s)"
+                 wait_s = self.start_latency - (now - self.activation_timestamp)
+                 status_code = 'waiting'
+                 status_text = f"Waiting ({wait_s:.0f}s)"
             elif not active_entry_now(self.schedule, self.device_tz):
+                 status_code = 'outside_window'
                  status_text = "Outside Window"
             elif cycle_start:
+                 status_code = 'running'
                  status_text = "Running"
             else:
+                 status_code = 'activated'
                  status_text = "Activated"
 
         if not hasattr(self, 'all_actions_cache'):
-             return {'is_activated': self.is_activated, 'status_text': 'Initializing'}
+             return {'is_activated': self.is_activated,
+                     'status_text': 'Initializing',
+                     'status_code': 'initializing',
+                     'status_facts': {'kind': 'sequence', 'state': 'initializing'}}
 
         # One snapshot of all output states per status build (not per step) so the
         # widget can show each step's actual device state (pending/fault/offline).
@@ -389,9 +434,10 @@ class SequenceTriggerController(AbstractController, threading.Thread):
         today_idx = get_today_idx(self.device_tz)
         active = active_entry_now(self.schedule, self.device_tz)
         today_entry = self.schedule.get('days', {}).get(str(today_idx), {})
-        return {
+        status = {
             'is_activated': self.is_activated,
             'status_text': status_text,
+            'status_code': status_code,
             'window_start': today_entry.get('start', self.window_start_time),
             'window_end': today_entry.get('end', self.window_end_time),
             'period': self.sequence_cycle_duration,
@@ -403,6 +449,9 @@ class SequenceTriggerController(AbstractController, threading.Thread):
             'today_window': {'start': active[1]['start'], 'end': active[1]['end'], 'period': active[1]['period']} if active else None,
             'steps': steps
         }
+        status['status_facts'] = build_sequence_status_facts(
+            status, status_code, wait_s=wait_s)
+        return status
 
     @staticmethod
     def get_static_status(unique_id):
@@ -540,9 +589,11 @@ class SequenceTriggerController(AbstractController, threading.Thread):
 
         today_entry = sched.get('days', {}).get(str(today_idx), {})
         active = active_entry_now(sched, tz)
-        return {
+        status_code = 'ready' if trigger.is_activated else 'standby'
+        status = {
             'is_activated': trigger.is_activated,
-            'status_text': "Standby" if not trigger.is_activated else "Ready",
+            'status_text': "Ready" if trigger.is_activated else "Standby",
+            'status_code': status_code,
             'window_start': today_entry.get('start', trigger.timer_start_time or "00:00"),
             'window_end': today_entry.get('end', trigger.timer_end_time or "00:00"),
             'period': float(today_entry.get('period', trigger.period or 3600)),
@@ -554,6 +605,8 @@ class SequenceTriggerController(AbstractController, threading.Thread):
             'today_window': {'start': active[1]['start'], 'end': active[1]['end'], 'period': active[1]['period']} if active else None,
             'steps': steps
         }
+        status['status_facts'] = build_sequence_status_facts(status, status_code)
+        return status
 
     @staticmethod
     def plan_for_day(unique_id, day_idx):

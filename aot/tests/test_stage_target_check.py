@@ -218,3 +218,34 @@ class TestInPlotSensorsWinOverZoneFallback:
         body = inspect.getsource(S._latest_by_measurement)
         assert 'in_plot_ids' in body and 'zone_ids' in body
         assert 'rank' in body
+
+
+class TestFacilityPlotSensorsAreNotSkipped:
+    """시설 구획은 `sensors['in_plot']` 이 항상 비어 있다(기하가 없어서 —
+    plot_context.sensors_for_plot 참조). 호출부가 'in_plot' 만 보고 그걸
+    'zone_ids' 로만 채우면, 그 구획이 속한 bay/시설 센서의 현재값이
+    대조에서 통째로 빠지고 조용히 zone 대표값으로 뒤바뀐다."""
+
+    def _captured(self, monkeypatch):
+        calls = []
+        monkeypatch.setattr(S, '_latest_by_measurement', staticmethod(
+            lambda a, b=None: calls.append((list(a or []), list(b or [])))
+            or {'temperature': _reading(25.0)}))
+        return calls
+
+    def test_bay_sensors_are_passed_as_the_narrow_scope(self, monkeypatch):
+        calls = self._captured(monkeypatch)
+        S._stage_target_check(_brief(
+            [{'key': 'temp_day', 'label': 'Day temp', 'measurement': 'temperature',
+              'value': 26.0, 'observable': True}],
+            sensors={'in_plot': [], 'in_bay': ['bay-dev-1'], 'from_zone': ['zone-dev-1']}))
+        assert calls[0][0] == ['bay-dev-1']
+
+    def test_facility_sensors_are_passed_when_there_is_no_bay(self, monkeypatch):
+        calls = self._captured(monkeypatch)
+        S._stage_target_check(_brief(
+            [{'key': 'temp_day', 'label': 'Day temp', 'measurement': 'temperature',
+              'value': 26.0, 'observable': True}],
+            sensors={'in_plot': [], 'in_bay': [], 'from_facility': ['fac-dev-1'],
+                     'from_zone': ['zone-dev-1']}))
+        assert calls[0][0] == ['fac-dev-1']

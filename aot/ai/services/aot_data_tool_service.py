@@ -10174,8 +10174,13 @@ class AoTDataToolService:
             logger.debug("[StageTargetCheck] daylight unknown: %s", e)
 
         sensors = (brief or {}).get('sensors') or {}
+        # sensors_for_plot 의 우선순위(구획 → bay → 시설 → zone)와 같은 순서로
+        # 좁은 스코프를 고른다 — 시설 구획은 'in_plot' 이 항상 비어 있어 이
+        # 없이는 bay/시설 센서의 현재값이 대조에서 통째로 빠진다.
+        narrow = (sensors.get('in_plot') or sensors.get('in_bay')
+                  or sensors.get('from_facility') or [])
         current = AoTDataToolService._latest_by_measurement(
-            sensors.get('in_plot') or [], sensors.get('from_zone') or [])
+            narrow, sensors.get('from_zone') or [])
 
         rows, no_reading, curves, off_period, unmeasurable = [], [], [], [], []
         for t in items:

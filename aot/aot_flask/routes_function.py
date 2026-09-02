@@ -61,8 +61,9 @@ from aot.aot_flask.forms import (forms_action, forms_conditional,
 from aot.aot_flask.routes_static import inject_variables
 from aot.aot_flask.utils import (utils_action, utils_conditional,
                                        utils_controller, utils_device_catalog,
-                                       utils_function, utils_general,
-                                       utils_http, utils_pid, utils_trigger)
+                                       utils_function, utils_function_status,
+                                       utils_general, utils_http, utils_pid,
+                                       utils_trigger)
 from aot.aot_flask.geo.device_membership import map_for_device
 from aot.aot_flask.utils.utils_map_config import ensure_map_config
 from aot.aot_flask.utils.utils_general import generate_form_action_list
@@ -1397,6 +1398,20 @@ def page_function():
         return "Could not determine template"
 
 
+def _function_is_activated(unique_id):
+    """네 테이블 중 어디에 있든 활성 여부. 어디에도 없으면 None(삭제됨).
+
+    데몬은 **활성화된 컨트롤러만** 들고 있으므로 꺼진 함수를 물으면 "Function
+    ID not found. Is the Function activated?" 라고 답한다. 그 문장을 그대로
+    화면에 흘리면 사용자는 고장으로 읽는데, 실제로는 그냥 꺼져 있는 것이다.
+    """
+    for model in (CustomController, Conditional, PID, Trigger):
+        row = model.query.filter(model.unique_id == unique_id).first()
+        if row:
+            return bool(row.is_activated)
+    return None
+
+
 @blueprint.route('/function_status_activated/<unique_id>', methods=('GET', 'POST'))
 @flask_login.login_required
 def function_status_activated(unique_id):
@@ -1415,6 +1430,16 @@ def function_status_activated(unique_id):
                      data['steps'] = fallback_data.get('steps', [])
                 else:
                      data = fallback_data
+
+        # 예전에는 이 경우 `jsonify(None)` 이 나가 소비처가 `'error' in null`
+        # 에서 죽었다 — 200 이라 화면에는 아무 일도 안 일어난 것처럼 보인다.
+        if not data:
+            data = {'error': ["No response from the daemon."]}
+
+        # ⚠ **에러일 때만 조회한다.** 이 라우트는 위젯이 5~30초마다 부르므로,
+        #   정상 경로에까지 조회를 얹으면 폴링 하나마다 DB 왕복이 늘어난다.
+        if isinstance(data, dict) and data.get('error') and 'is_activated' not in data:
+            data['is_activated'] = _function_is_activated(unique_id)
 
         # Polyfill/Augment device details
         #
@@ -1516,6 +1541,11 @@ def function_status_activated(unique_id):
             except Exception as e:
                 logger.error(f"Error polyfilling device details: {e}")
 
+        # 문장은 **여기서** 만든다 — 데몬에는 요청 컨텍스트가 없어 뷰어의 언어를
+        # 알 수 없다. 스텝 병합보다 **뒤**여야 한다: 렌더러가 `steps` 를 직접
+        # 세므로, 앞에 두면 병합 전 개수로 "0개" 라고 적는다.
+        data = utils_function_status.localize(data)
+
         # 시퀀스/함수 상태 위젯이 5초마다 다시 받는데 실측 5,734 B 가 폴링 사이에
         # 그대로다(3회 연속 해시 동일). GET 에만 조건부 응답을 얹는다 — POST 는
         # 캐시 검증 대상이 아니고, 조건부 응답을 붙이면 의미가 어긋난다.
@@ -1530,6 +1560,19 @@ def function_status_activated(unique_id):
 @blueprint.route('/function_status_always/<unique_id>', methods=('GET', 'POST'))
 @flask_login.login_required
 def function_status_always(unique_id):
+    """활성화 여부와 무관한 상태 — Function 모듈이 **모듈 수준** `function_status`
+    를 선언했을 때만 있다(`FUNCTION_INFORMATION['function_status']`).
+
+    ⚠ **"이 유형은 그런 상태가 없다" 를 오류로 답하지 말 것.** 예전에는 둘 다
+      `{'error': ["Could not get status from Function."]}` 였는데, 그것을
+      가진 종류는 `camera_libcamera` 하나뿐이라 **나머지 전부**(PID·
+      Conditional·Trigger·거의 모든 Function)가 함수 상태 위젯에서 빨간 오류
+      한 줄을 상시 달고 있었다. 그 줄은 고칠 것이 없는 오류라서, 진짜 오류가
+      떴을 때 구별할 수단까지 함께 없앤다.
+
+      함수 설정 페이지(`function.html`)는 선언한 종류만 이 라우트를 부르므로
+      이 문제가 안 보였다 — 위젯만 모든 종류에 대해 무조건 부른다.
+    """
     try:
         function = CustomController.query.filter(
             CustomController.unique_id == unique_id).first()
@@ -1540,7 +1583,9 @@ def function_status_always(unique_id):
     except Exception as err:
         logger.error("Function Status Error: {}".format(err))
         return jsonify({'error': [str(err)]})
-    return jsonify({'error': ["Could not get status from Function."]})
+    # 지원하지 않음 = 보여 줄 것이 없음. `error` 도 `string_status` 도 싣지
+    # 않으므로 두 소비처(위젯·함수 페이지)가 모두 빈 칸으로 렌더한다.
+    return jsonify({'supported': False})
 
 
 @blueprint.route('/function_sequence_update_settings', methods=['POST'])

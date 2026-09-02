@@ -1534,7 +1534,13 @@ def measurable_in_plot(plot):
         found = sensors_for_plot(plot) or {}
     except Exception:
         return set()
-    ids = list(found.get('in_plot') or []) or list(found.get('from_zone') or [])
+    # sensors_for_plot 의 우선순위(구역 → 시설 → zone, 좁은 쪽이 이긴다)와
+    # 같아야 한다 — 시설 구획은 `in_plot` 이 항상 비어 있어 `in_bay`/
+    # `from_facility` 를 보지 않으면 무조건 zone 폴백으로 떨어진다.
+    ids = (list(found.get('in_plot') or [])
+           or list(found.get('in_bay') or [])
+           or list(found.get('from_facility') or [])
+           or list(found.get('from_zone') or []))
     if not ids:
         return set()
     try:
@@ -3072,7 +3078,10 @@ def _daily_extremes(device_id, channel, measure, start_ts, end_ts):
 def _plot_temperature_channels(plot):
     """구획이 참조하는 온도 채널 → [(device_id, channel)].
 
-    구획 안 센서가 1순위, 없으면 zone 폴백(`sensors_for_plot` 과 같은 규율).
+    구획 안 센서가 1순위, 없으면 bay → 시설 → zone 순으로 폴백한다
+    (`sensors_for_plot` 의 `source` 우선순위와 같은 규율 — 시설 구획은
+    `in_plot` 이 항상 비어 있어 `in_bay`/`from_facility` 를 빼먹으면 무조건
+    zone 폴백으로 떨어진다).
     """
     from aot.databases.models import DeviceMeasurements
 
@@ -3080,7 +3089,10 @@ def _plot_temperature_channels(plot):
         found = sensors_for_plot(plot) or {}
     except Exception:
         return []
-    ids = list(found.get('in_plot') or []) or list(found.get('from_zone') or [])
+    ids = (list(found.get('in_plot') or [])
+           or list(found.get('in_bay') or [])
+           or list(found.get('from_facility') or [])
+           or list(found.get('from_zone') or []))
     out = []
     seen = set()
     for did in ids:

@@ -31818,3 +31818,166 @@ msgstr "関数が選択されていません。"
 #: aot_flask/templates/user_templates/widget_template_widget_function_status_js.html:121
 msgid "This function type has no editable options."
 msgstr "この関数タイプには編集可能なオプションがありません。"
+
+#: aot/aot_flask/utils/utils_function_status.py
+msgid "Paused — no actuators registered"
+msgstr "一時停止 — アクチュエーター未登録"
+
+#: aot/aot_flask/utils/utils_function_status.py
+msgid "Paused — outside the operating time window"
+msgstr "一時停止 — 運転時間帯外"
+
+#: aot/aot_flask/utils/utils_function_status.py
+#, python-format
+msgid "Paused (%(reason)s)"
+msgstr "一時停止 (%(reason)s)"
+
+#: aot/aot_flask/utils/utils_function_status.py
+msgid "Waiting for the first control cycle."
+msgstr "最初の制御サイクルを待っています。"
+
+#: aot/aot_flask/utils/utils_function_status.py
+#, python-format
+msgid "Mode: %(modes)s"
+msgstr "モード: %(modes)s"
+
+#: aot/aot_flask/utils/utils_function_status.py
+#, python-format
+msgid "Environment: %(values)s"
+msgstr "環境: %(values)s"
+
+#: aot/aot_flask/utils/utils_function_status.py
+#, python-format
+msgid "Deviation: %(values)s"
+msgstr "偏差: %(values)s"
+
+#: aot/aot_flask/utils/utils_function_status.py
+#, python-format
+msgid "Actuators: %(values)s"
+msgstr "アクチュエーター: %(values)s"
+
+#: aot/aot_flask/utils/utils_function_status.py
+#, python-format
+msgid "Ventilation: %(ratio)s open (%(area)s)"
+msgstr "換気: %(ratio)s 開放 (%(area)s)"
+
+#: aot/aot_flask/utils/utils_function_status.py
+#, python-format
+msgid "Safety gate: %(reason)s — control stopped"
+msgstr "安全措置: %(reason)s — 制御停止"
+
+#: aot/aot_flask/utils/utils_function_status.py
+#, python-format
+msgid "Safety gate (partial): %(reason)s"
+msgstr "安全措置(一部): %(reason)s"
+
+#: aot/aot_flask/utils/utils_function_status.py
+msgid "triggered"
+msgstr "作動"
+
+#: aot/aot_flask/utils/utils_function_status.py
+#, python-format
+msgid "Equipment at its limit: %(detail)s"
+msgstr "設備の限界に到達: %(detail)s"
+
+#: aot/aot_flask/utils/utils_function_status.py
+#, python-format
+msgid "Beyond the set limit: %(detail)s"
+msgstr "設定した限界を超過: %(detail)s"
+
+#: aot/aot_flask/utils/utils_function_status.py
+#, python-format
+msgid "No actuator to control %(target)s"
+msgstr "%(target)s を制御する装置がありません"
+
+#: aot/aot_flask/utils/utils_function_status.py
+#, python-format
+msgid "Last cycle: %(when)s"
+msgstr "最終サイクル: %(when)s"
+
+#: aot/aot_flask/utils/utils_function_status.py
+#, python-format
+msgid "%(n)s s"
+msgstr "%(n)s秒"
+
+#: aot/aot_flask/utils/utils_function_status.py
+#, python-format
+msgid "Sequence: %(state)s"
+msgstr "シーケンス: %(state)s"
+
+#: aot/aot_flask/utils/utils_function_status.py
+#, python-format
+msgid "Waiting (%(time)s)"
+msgstr "待機中 (%(time)s)"
+
+#: aot/aot_flask/utils/utils_function_status.py
+msgid "Outside the time window"
+msgstr "運転時間帯外"
+
+#: aot/aot_flask/utils/utils_function_status.py
+msgid "Idle"
+msgstr "アイドル"
+
+#: aot/aot_flask/utils/utils_function_status.py
+msgid "Standby"
+msgstr "待機"
+
+#: aot/aot_flask/utils/utils_function_status.py
+msgid "Ready"
+msgstr "準備完了"
+
+#: aot/aot_flask/utils/utils_function_status.py
+msgid "Initializing"
+msgstr "初期化中"
+
+#: aot/aot_flask/utils/utils_function_status.py
+#, python-format
+msgid "Today's window: %(start)s – %(end)s"
+msgstr "本日の運転時間帯: %(start)s – %(end)s"
+
+#: aot/aot_flask/utils/utils_function_status.py
+#, python-format
+msgid "Today's window: %(start)s – %(end)s (cycle %(period)s)"
+msgstr "本日の運転時間帯: %(start)s – %(end)s (周期 %(period)s)"
+
+#: aot/aot_flask/utils/utils_function_status.py
+#, python-format
+msgid "Elapsed in cycle: %(elapsed)s"
+msgstr "サイクル経過: %(elapsed)s"
+
+#: aot/aot_flask/utils/utils_function_status.py
+#, python-format
+msgid "Steps: %(running)s of %(total)s running"
+msgstr "ステップ: %(total)s 件中 %(running)s 件動作中"
+
+#: aot/aot_flask/utils/utils_function_status.py
+#, python-format
+msgid "Conditional: %(state)s"
+msgstr "条件付き: %(state)s"
+
+#: aot/aot_flask/utils/utils_function_status.py
+#, python-format
+msgid "Period: %(period)s"
+msgstr "周期: %(period)s"
+
+#: aot/aot_flask/utils/utils_function_status.py
+#, python-format
+msgid "Last check: %(when)s"
+msgstr "最終判定: %(when)s"
+
+#: aot/aot_flask/utils/utils_function_status.py
+msgid "The last check ran an action."
+msgstr "最終判定でアクションを実行しました。"
+
+#: aot/aot_flask/utils/utils_function_status.py
+msgid "The last check ran no action."
+msgstr "最終判定で実行したアクションはありません。"
+
+#: aot/aot_flask/utils/utils_function_status.py
+msgid "Not checked yet."
+msgstr "まだ判定していません。"
+
+#: aot/aot_flask/utils/utils_function_status.py
+#, python-format
+msgid "Next check in: %(time)s"
+msgstr "次の判定まで: %(time)s"

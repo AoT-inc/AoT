@@ -175,10 +175,16 @@ if measurement is not None:  # If measurement exists
         # Replace "qwer5678" with the appropriate action ID
         self.run_action("qwer5678", message=self.message)  # Execute specific action'''
             
+            # ⚠ **여기에 `_()` 를 쓰지 말 것.** 이 문자열은 UI 문구가 아니라
+            # 사용자에게 그대로 보여 주는 **예제 코드**이고, 그 코드는
+            # `save_conditional_code()` 가 만든 독립 모듈 안에서 실행된다 —
+            # 거기에는 번역 함수가 없다. 예전에는 `_(...)` 가 들어 있어 새로
+            # 만든 Conditional 이 전부 `NameError: name '_' is not defined` 로
+            # 상태 조회에 실패했다(활성화해야 드러나므로 조용하다).
             new_func.conditional_status = '''
 # Example code to provide return status to other controllers and widgets.
 status_dict = {
-    'string_status': _("Controller has executed {} loops. Current time: {}").format(self.loop_count, datetime.now()),
+    'string_status': f"Controller has executed {self.loop_count} loops. Current time: {datetime.now()}",
     'loop_count': self.loop_count,
     'error': []
 }

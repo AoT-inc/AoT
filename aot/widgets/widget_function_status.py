@@ -278,33 +278,21 @@ WIDGET_INFORMATION = {
   padding: 14px 16px;
   margin: 12px;
 }
-#fsw-body-{{each_widget.unique_id}} .fsw-row {
-  padding: 8px 0;
-  border-bottom: 1px solid var(--gray);
-}
-#fsw-body-{{each_widget.unique_id}} .fsw-row:last-child {
-  border-bottom: none;
-}
-#fsw-body-{{each_widget.unique_id}} .fsw-row-label {
-  font-size: var(--aot-fs-md);
-  font-weight: var(--aot-fw-medium);
-  color: var(--aot-text-secondary, var(--aot-color-text-secondary));
-  margin-bottom: 4px;
-}
 #fsw-body-{{each_widget.unique_id}} .aot-w-body {
   font-size: {{each_widget.font_em_name or 1.0}}em;
   white-space: pre-line;
 }
 </style>
-<div id="fsw-body-{{each_widget.unique_id}}">
-  <div class="fsw-row">
-    <div class="fsw-row-label">{{_('Activated')}}</div>
-    <span class="aot-w-body" id="status_activated-{{each_widget.unique_id}}"></span>
-  </div>
-  <div class="fsw-row">
-    <div class="fsw-row-label">{{_('Always')}}</div>
-    <span class="aot-w-body" id="status_always-{{each_widget.unique_id}}"></span>
-  </div>
+<!-- 상태는 **한 덩이**다. 예전에는 "활성화됨"/"항상" 두 줄이었는데, 그 구분은
+     값이 어느 엔드포인트에서 왔는가(`_activated` = 돌고 있는 컨트롤러,
+     `_always` = 함수 모듈이 선언한 모듈 수준 함수)라는 구현 사실이지 사용자가
+     가진 개념이 아니다. 게다가 "always" 는 "컨트롤러가 안 돌아도 **항상** 물어볼
+     수 있다" 는 뜻이라 꾸미는 대상이 상태가 아니라 조회 시점이고, 한국어
+     라벨 "항상" 은 무엇이 항상인지 말하지 못했다. 모듈 수준 상태를 가진 종류는
+     `camera_libcamera` 하나뿐이라 나머지 전부가 빈 줄(예전에는 오류 한 줄)을
+     달고 있었다. 둘 다 있으면 같은 블록에 이어 붙인다. -->
+<div id="fsw-body-{{each_widget.unique_id}}" data-function-id="{{widget_options['function_id']}}">
+  <span class="aot-w-body" id="fsw-status-{{each_widget.unique_id}}"></span>
 </div>
 <div style="display: flex; justify-content: flex-end; margin: 0 12px 12px;">
   <button type="button" class="btn aot-pill-btn aot-fsw-detail-btn" data-toggle="modal" data-target="#fsw-modal-{{each_widget.unique_id}}">{{_('Details')}}</button>
@@ -331,70 +319,109 @@ WIDGET_INFORMATION = {
 </div>""",
 
     'widget_dashboard_js': """
-    function function_status_activated(function_id, widget_id) {
+    // function_id is read fresh from the DOM on every call (not passed in and
+    // captured by closure) because changing the widget's "함수" option
+    // auto-saves and swaps the body in place without reloading the page or
+    // re-running this init script — a captured function_id would keep polling
+    // the function selected at the last full page load forever.
+    function functionStatusCurrentId(widget_id) {
+      var el = document.getElementById("fsw-body-" + widget_id);
+      return el ? el.getAttribute("data-function-id") : null;
+    }
+
+    // 두 엔드포인트가 한 칸을 함께 채운다. 각자 자기 몫만 갈아 끼우고 다시
+    // 그리므로, 한쪽이 늦게 와도 다른 쪽 내용을 지우지 않는다.
+    var functionStatusParts = {};
+
+    function functionStatusRender(widget_id) {
+      var el = document.getElementById("fsw-status-" + widget_id);
+      if (!el) return;
+      var parts = functionStatusParts[widget_id] || {};
+      var lines = (parts.activated || []).concat(parts.always || []);
+      // Plain text (no <p>/<br>), so this stays a leaf node — the dashboard's
+      // live-save body swap only preserves leaf-node text across a re-render
+      // (dashboard-widget-live-preview.js), otherwise this goes blank every
+      // time an option is changed and saved.
+      el.textContent = lines.join('\\n');
+    }
+
+    function functionStatusLinesOf(data) {
+      var lines = [];
+      if (data && 'error' in data) {
+        for (var i = 0, size = data['error'].length; i < size; i++){
+          lines.push("{{_('Error')}}: " + data['error'][i]);
+        }
+      }
+      if (data && 'string_status' in data) {
+        lines.push(data['string_status']);
+      }
+      return lines;
+    }
+
+    function function_status_activated(widget_id) {
+      var function_id = functionStatusCurrentId(widget_id);
+      if (!function_id) return;
       const url = '/function_status_activated/' + function_id;
       $.getJSON(url,
         function(data, responseText, jqXHR) {
-          var el = document.getElementById("status_activated-" + widget_id);
-          if (!el) return;
+          var parts = functionStatusParts[widget_id] || (functionStatusParts[widget_id] = {});
           if (jqXHR.status !== 204) {
-            let lines = [];
-            if ('error' in data) {
-              for (var i = 0, size = data['error'].length; i < size; i++){
-                lines.push("{{_('Error')}}: " + data['error'][i]);
-              }
+            // 데몬은 활성화된 컨트롤러만 들고 있으므로, 꺼진 함수에는 "모르는
+            // id" 라고 답한다. 그 문장을 그대로 보이면 사용자는 고장으로 읽는다
+            // — 서버가 실제 활성 여부를 함께 실어 보내므로 그것으로 말한다.
+            if (data && data.is_activated === false) {
+              parts.activated = ["{{_('Deactivated')}}"];
+            } else {
+              parts.activated = functionStatusLinesOf(data);
             }
-            if ('string_status' in data) {
-              lines.push(data['string_status']);
-            }
-            // Plain text (no <p>/<br>), so this stays a leaf node — the
-            // dashboard's live-save body swap only preserves leaf-node text
-            // across a re-render (dashboard-widget-live-preview.js), otherwise
-            // this goes blank every time an option is changed and saved.
-            el.textContent = lines.join('\\n');
           }
           else {
-            el.textContent = "{{_('Error')}}";
+            parts.activated = ["{{_('Error')}}"];
           }
+          functionStatusRender(widget_id);
         }
       );
     }
     // Repeat function for function_status()
-    function repeat_function_status_activated(function_id, widget_id, period_sec) {
+    function repeat_function_status_activated(widget_id, period_sec) {
       setInterval(function () {
-        function_status_activated(function_id, widget_id)
+        function_status_activated(widget_id)
       }, period_sec * 1000);
     }
 
-    function function_status_always(function_id, widget_id) {
+    // 이 함수를 마지막으로 "이 유형에는 없다" 는 답을 받은 function_id.
+    // 없는 것을 5초마다 다시 묻지 않되, 위젯의 함수를 바꾸면(그때 id 가 달라
+    // 진다) 자동으로 다시 묻는다.
+    var functionStatusAlwaysUnsupported = {};
+
+    function function_status_always(widget_id) {
+      var function_id = functionStatusCurrentId(widget_id);
+      if (!function_id) return;
+      if (functionStatusAlwaysUnsupported[widget_id] === function_id) return;
       const url_2 = '/function_status_always/' + function_id;
       $.getJSON(url_2,
         function(data, responseText, jqXHR) {
-          var el = document.getElementById("status_always-" + widget_id);
-          if (!el) return;
-          if (jqXHR.status !== 204) {
-            let lines = [];
-            if ('error' in data) {
-              for (var i = 0, size = data['error'].length; i < size; i++){
-                lines.push("{{_('Error')}}: " + data['error'][i]);
-              }
-            }
-            if ('string_status' in data) {
-              lines.push(data['string_status']);
-            }
-            // Plain text, not HTML — see function_status_activated() above.
-            el.textContent = lines.join('\\n');
+          var parts = functionStatusParts[widget_id] || (functionStatusParts[widget_id] = {});
+          if (data && data.supported === false) {
+            // 이 함수 유형은 모듈 수준 상태가 없다. 실패가 아니므로 아무것도
+            // 보이지 않는다 — 예전에는 여기서 오류 한 줄이 상시 떠 있었다.
+            functionStatusAlwaysUnsupported[widget_id] = function_id;
+            parts.always = [];
+          }
+          else if (jqXHR.status !== 204) {
+            parts.always = functionStatusLinesOf(data);
           }
           else {
-            el.textContent = "{{_('Error')}}";
+            parts.always = [];
           }
+          functionStatusRender(widget_id);
         }
       );
     }
     // Repeat function for function_status_always()
-    function repeat_function_status_always(function_id, widget_id, period_sec) {
+    function repeat_function_status_always(widget_id, period_sec) {
       setInterval(function () {
-        function_status_always(function_id, widget_id)
+        function_status_always(widget_id)
       }, period_sec * 1000);
     }
 
@@ -556,9 +583,9 @@ WIDGET_INFORMATION = {
     'widget_dashboard_js_ready': """<!-- No JS ready content -->""",
 
     'widget_dashboard_js_ready_end': """
-  function_status_activated('{{widget_options['function_id']}}', '{{each_widget.unique_id}}');
-  repeat_function_status_activated('{{widget_options['function_id']}}', '{{each_widget.unique_id}}', {{widget_options['refresh_seconds']}});
-  function_status_always('{{widget_options['function_id']}}', '{{each_widget.unique_id}}');
-  repeat_function_status_always('{{widget_options['function_id']}}', '{{each_widget.unique_id}}', {{widget_options['refresh_seconds']}});
+  function_status_activated('{{each_widget.unique_id}}');
+  repeat_function_status_activated('{{each_widget.unique_id}}', {{widget_options['refresh_seconds']}});
+  function_status_always('{{each_widget.unique_id}}');
+  repeat_function_status_always('{{each_widget.unique_id}}', {{widget_options['refresh_seconds']}});
 """
 }

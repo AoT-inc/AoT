@@ -73,6 +73,7 @@ class ConditionalController(AbstractController, threading.Thread):
         self.sample_rate = None
         self.time_conditional = None
         self.conditional_run = None
+        self._last_run_ts = None
 
     def loop(self):
         """Check elapsed period and execute conditional code when due."""
@@ -224,10 +225,60 @@ class ConditionalController(AbstractController, threading.Thread):
             self.conditional_run.conditional_code_run()
         except Exception:
             self.logger.exception("Exception executing Run Python Code")
+        # `time_conditional` 은 loop() 가 **매 tick** 덮어쓰므로(주기가 아니라
+        # sample_rate 마다) "마지막으로 판정한 때" 가 아니다. 상태 요약이 그
+        # 값을 쓰면 주기가 1시간인 Conditional 도 "방금 실행" 으로 보인다.
+        self._last_run_ts = time.time()
 
     def function_status(self):
-        """Return the current status of the conditional function."""
-        return self.conditional_run.function_status()
+        """Return the current status of the conditional function.
+
+        정본은 사용자 코드다 — Conditional 설정의 "Status" 칸이 생성된
+        `ConditionalRun.function_status()` 본문이 된다(`utils/conditional.py`).
+
+        ⚠ **그 칸은 비어 있을 수 있고, 그때 생성된 메서드는 `pass` 라 `None` 을
+          돌려준다.** 그러면 라우트가 `null` 을 내보내고 위젯 JS 는 `'error' in
+          data` 에서 죽는다 — 응답은 200 이고 콘솔에만 남으므로 화면에서는
+          **아무 일도 일어나지 않은 것처럼 보인다.** 사용자가 상태 코드를 안
+          적었다는 것이 "이 Conditional 이 도는지 알 수 없다" 가 되어서는 안
+          되므로, 그때는 컨트롤러가 아는 실행 상태로 대신 답한다.
+        """
+        status = None
+        user_status = getattr(self.conditional_run, 'function_status', None)
+        if callable(user_status):
+            try:
+                status = user_status()
+            except Exception as err:
+                # 사용자 코드의 실패는 감추지 않는다 — 여기서 조용히 아래
+                # 기본 요약으로 넘어가면 "상태 코드를 고쳤는데 화면이 안
+                # 바뀐다" 가 되고, 원인이 코드에 있다는 사실이 사라진다.
+                self.logger.exception("Exception executing function_status")
+                return {'error': [f"Status code error: {err}"]}
+
+        # 사용자 코드가 실제로 할 말이 있을 때만 그것을 쓴다. 빈 문자열은
+        # 위젯에서 "받은 것이 없음" 과 구별되지 않는다.
+        if isinstance(status, dict) and (status.get('string_status')
+                                         or status.get('error')):
+            return status
+
+        # ⚠ **문장을 여기서 만들지 말 것.** 데몬에는 요청 컨텍스트가 없어
+        #   `gettext` 가 뷰어의 언어로 풀리지 않는다. 사실만 내보내고 문장은
+        #   Flask 쪽(`aot_flask/utils/utils_function_status.py`)이 만든다.
+        now = time.time()
+        last_run = getattr(self, '_last_run_ts', None)
+        return {
+            'status_facts': {
+                'kind': 'conditional',
+                'is_activated': bool(self.is_activated),
+                'period_s': self.period,
+                'last_run_age_s': (now - last_run) if last_run else None,
+                'action_fired': bool(
+                    getattr(self.conditional_run, 'action_fired', False)),
+                'next_check_s': (max(0.0, self.timer_period - now)
+                                 if self.is_activated and self.timer_period else None),
+            },
+            'error': [],
+        }
 
     def stop_controller(self):
         """Stop the conditional controller and its running code."""

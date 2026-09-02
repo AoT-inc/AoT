@@ -4541,6 +4541,63 @@ class TestFacilityParentPlot(unittest.TestCase):
         # 어딘가의 장치가 전부 이 구획의 것으로 잡힌다.
         self.assertEqual(out['in_plot'], [])
 
+    def test_facility_plot_observable_uses_bay_sensor_not_zone_fallback(self):
+        """시설 구획은 `in_plot` 이 항상 비므로, `measurable_in_plot` 이
+        `in_bay`/`from_facility` 를 보지 않으면 무조건 zone 폴백으로 떨어진다
+        (plot_context.py:1531 회귀 — 일지 기능 검토 중 발견).
+
+        `sensors_for_plot` 은 이미 `in_bay` 를 정확히 낸다
+        (test_bay_plot_sees_only_its_own_bay_sensor) — 여기서 고정하는 것은
+        그 값을 실제로 쓰는 소비자(`measurable_in_plot` → `observable`)다.
+        """
+        from aot.aot_flask.extensions import db
+        from aot.aot_flask.geo import plot_context
+        from aot.databases.models import DeviceMeasurements, GeoPlot
+
+        fac, ids = self._facility_with_sensors()
+        # bay_1 센서(ids[0])만 습도를 잰다. zone 에는 이 시설을 감싸는 도형이
+        # 없으므로 원래 버그에서는 from_zone 도 빈 채로 measurable 이 빈
+        # set 이 되어 observable 이 None(모른다)으로 잘못 나온다.
+        dm = DeviceMeasurements(device_id=ids[0], measurement='humidity',
+                                unit='percent', channel=0)
+        db.session.add(dm)
+        db.session.commit()
+
+        saved, err = self._save(facility_uuid=fac.unique_id, bay_id='bay_1')
+        self.assertIsNone(err)
+        row = GeoPlot.query.filter_by(unique_id=saved['unique_id']).first()
+
+        have = plot_context.measurable_in_plot(row)
+        self.assertIn('humidity', have,
+                       'bay 센서 측정값이 measurable_in_plot 에 반영되지 않았다')
+
+        out = {'targets': [{'measurement': 'humidity'}]}
+        plot_context._mark_observable(out, row)
+        self.assertTrue(out['targets'][0]['observable'],
+                         'bay 센서가 있는데도 observable 이 False/None 이다')
+
+    def test_facility_plot_gdd_uses_bay_sensor_not_zone_fallback(self):
+        """`_plot_temperature_channels` 도 `measurable_in_plot` 과 같은
+        회귀를 가졌었다 — GDD 온도 채널을 찾을 때 `in_bay`/`from_facility`
+        를 건너뛰고 zone 폴백으로만 떨어졌다."""
+        from aot.aot_flask.extensions import db
+        from aot.aot_flask.geo import plot_context
+        from aot.databases.models import DeviceMeasurements, GeoPlot
+
+        fac, ids = self._facility_with_sensors()
+        dm = DeviceMeasurements(device_id=ids[0], measurement='temperature',
+                                unit='C', channel=1)
+        db.session.add(dm)
+        db.session.commit()
+
+        saved, err = self._save(facility_uuid=fac.unique_id, bay_id='bay_1')
+        self.assertIsNone(err)
+        row = GeoPlot.query.filter_by(unique_id=saved['unique_id']).first()
+
+        channels = plot_context._plot_temperature_channels(row)
+        self.assertEqual(channels, [(ids[0], 1)],
+                          'bay 센서의 온도 채널이 GDD 계산에 반영되지 않았다')
+
     def test_a_plot_never_sees_the_weather_station(self):
         """구획은 **기르는 대상이 겪는 환경**만 묻는 자리다.
 
