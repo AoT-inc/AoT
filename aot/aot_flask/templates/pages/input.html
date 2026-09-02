@@ -309,7 +309,7 @@
         headers: { "X-CSRFToken": "{{form_mod_input.csrf_token._value()}}" },
         data: $form.serialize() + '&' + action + '=1',
         success: function (data) {
-          if ((action === 'input_add' || action === 'input_duplicate') && 'input_id' in data.data) {
+          if ((action === 'input_add' || action === 'input_duplicate') && data.data.input_id) {
             if ('dep_unmet' in data.data && data.data.dep_unmet.length > 0) {
               $(".dependencies_device_name").text(data.data.dep_name);
               $(".dependencies_device").text(data.data.dep_unmet);

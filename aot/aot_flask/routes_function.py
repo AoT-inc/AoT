@@ -230,7 +230,11 @@ def page_function_submit():
             # Get current tab_id from request
             tab_id = request.args.get('tab_id', None)
             if not tab_id:
-                current_tab = TabService.get_default_tab('function')
+                # 화면(`page_function`)은 스코프로 걸러진 탭을 보여준다. 제출의 기본값도
+                # 같은 기준이어야 한다 — 전역 position 0 을 쓰면 사용자가 보고 있던
+                # 탭이 아닌 남의 탭이 대상이 되어, 조작할 수 없다며 거부된다.
+                current_tab = (TabService.default_visible_tab('function') or
+                               TabService.get_default_tab('function'))
                 tab_id = current_tab.unique_id if current_tab else None
             
             (messages,

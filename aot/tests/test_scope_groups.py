@@ -1514,5 +1514,172 @@ class EnforcementBoundaryTest(unittest.TestCase):
                 result.get('findings', {}).get('missing-gate')))
 
 
+class _UnusableForm(object):
+    """게이트에서 막히면 폼은 **건드려지지 않는다.**
+
+    게이트가 사라지면 여기서 AssertionError 가 나므로, "거부됐다" 를 폼을
+    읽지 않았다는 사실로도 함께 확인한다.
+    """
+
+    def __getattr__(self, name):
+        raise AssertionError('거부됐어야 하는데 폼(%s)까지 갔다' % name)
+
+
+class DeviceAddGateTest(_ScopeFixture, unittest.TestCase):
+    """장치 **추가**의 거부는 메시지여야지 500 이면 안 된다 (2026-09-02).
+
+    실제로 겪은 모양이다: 출력 추가가 화면에 "Error: Could not communicate
+    with server" 만 띄웠다. 데몬도 서버도 멀쩡했고, 진짜 원인은 스코프 거부
+    경로가 `dep_name` 을 **초기화하기 전에** 그것으로 return 해
+    `UnboundLocalError` 로 500 이 난 것이었다.
+
+    거부는 이 기능에서 정상 경로다. 정상 경로가 예외로 나가면 사용자는 원인을
+    영영 못 본다 — "권한 없음" 이 "서버 고장" 으로 보이기 때문이다.
+    """
+
+    #: 추가 함수 → 그 함수를 부르는 방법. 셋이 같은 실수를 공유했다.
+    ADDERS = ('output', 'input', 'function')
+
+    def _call_add(self, kind, tab_id):
+        if kind == 'output':
+            from aot.aot_flask.utils.utils_output import output_add
+            return output_add(_UnusableForm(), {}, tab_id)
+        if kind == 'input':
+            from aot.aot_flask.utils.utils_input import input_add
+            return input_add(_UnusableForm(), tab_id)
+        from aot.aot_flask.utils.utils_function import function_add
+        return function_add(_UnusableForm(), tab_id)
+
+    def test_denied_add_reports_the_reason(self):
+        from aot.aot_flask.access import scope
+
+        theirs = self._group('1동반', members=[self.alice])
+        self._grant(theirs, RESOURCE_TAB, 'tab-1')
+
+        for kind in self.ADDERS:
+            with self.subTest(kind=kind):
+                with self.app.test_request_context('/'):
+                    with self._logged_in(self.bob):
+                        result = self._call_add(kind, 'tab-1')
+                        expected = scope.deny_message()
+                messages = result[0]
+                self.assertEqual(messages["error"], [expected])
+                self.assertFalse(messages["success"])
+
+    def test_denied_add_returns_usable_dependency_fields(self):
+        """**여기가 터졌던 자리다.**
+
+        호출자(`page_*_submit`)는 반환값을 그대로 펼쳐 `dep_list` 를 검사한다.
+        거부일 때 그 자리에 값이 없으면 `UnboundLocalError` 가 나고, 그것이
+        브라우저에는 통신 오류로 보인다. 그래서 "거부됐는가" 만 보지 않고
+        **반환값을 실제로 펼쳐 본다.**
+        """
+        theirs = self._group('1동반', members=[self.alice])
+        self._grant(theirs, RESOURCE_TAB, 'tab-1')
+
+        for kind in self.ADDERS:
+            with self.subTest(kind=kind):
+                with self.app.test_request_context('/'):
+                    with self._logged_in(self.bob):
+                        result = self._call_add(kind, 'tab-1')
+                if kind == 'output':
+                    _msg, dep_name, dep_list, dep_message, new_id, size_y = result
+                    self.assertIsNone(size_y)
+                else:
+                    _msg, dep_name, dep_list, dep_message, new_id = result
+                self.assertIsNone(dep_name)
+                self.assertEqual(dep_list, [])
+                self.assertEqual(dep_message, '')
+                self.assertIsNone(new_id)
+
+    def test_member_is_not_blocked_by_the_gate(self):
+        """거부만 검사하면 게이트를 항상-거부로 만들어도 통과한다."""
+        from aot.aot_flask.access import scope
+
+        theirs = self._group('1동반', members=[self.alice])
+        self._grant(theirs, RESOURCE_TAB, 'tab-1')
+        with self.app.test_request_context('/'):
+            with self._logged_in(self.alice):
+                self.assertTrue(scope.can_operate(RESOURCE_TAB, 'tab-1'))
+                # 통과하면 폼을 읽으므로 `_UnusableForm` 이 그것을 증명한다.
+                with self.assertRaises(AssertionError):
+                    self._call_add('output', 'tab-1')
+
+
+class SubmitDefaultTabTest(unittest.TestCase):
+    """제출의 기본 탭은 **화면이 보여주는 것**과 같아야 한다 (소스 검사).
+
+    `page_*` 는 스코프로 걸러진 탭을 보여주는데(`default_visible_tab`),
+    제출은 전역 position 0(`get_default_tab`)으로 갔다. URL 에 `tab_id` 가
+    없는 첫 진입에서 둘이 갈리면, 사용자는 자기 탭을 보면서 **남의 탭에**
+    장치를 만들려고 하게 된다 — 부여가 걸린 탭이면 거부되고, 안 걸렸으면
+    보고 있지도 않은 탭에 장치가 생긴다. 둘 다 틀렸다.
+
+    소스로 고정하는 이유: 라우트 세 개가 같은 다섯 줄을 복사해 갖고 있어
+    한 곳만 고치면 나머지가 조용히 갈린다.
+    """
+
+    ROUTES = {
+        'output': ('aot/aot_flask/routes_output.py', 'page_output_submit'),
+        'input': ('aot/aot_flask/routes_input.py', 'page_input_submit'),
+        'function': ('aot/aot_flask/routes_function.py', 'page_function_submit'),
+    }
+
+    def _submit_source(self, rel, func_name):
+        import os
+        src = open(os.path.join(_REPO, rel), encoding='utf-8').read()
+        tree = ast.parse(src)
+        for node in ast.walk(tree):
+            if isinstance(node, ast.FunctionDef) and node.name == func_name:
+                return ast.get_source_segment(src, node)
+        self.fail('%s 에 %s 가 없다' % (rel, func_name))
+
+    def test_fallback_prefers_the_visible_tab(self):
+        for kind, (rel, func_name) in self.ROUTES.items():
+            with self.subTest(kind=kind):
+                body = self._submit_source(rel, func_name)
+                self.assertIn(
+                    'default_visible_tab', body,
+                    '%s: tab_id 없는 제출이 전역 기본 탭으로 간다' % kind)
+                self.assertLess(
+                    body.index('default_visible_tab'),
+                    body.index('get_default_tab'),
+                    '%s: 보이는 탭보다 전역 기본 탭을 먼저 본다' % kind)
+
+
+class AddFailureIsNotACardTest(unittest.TestCase):
+    """id 없는 응답을 "추가 성공" 으로 읽으면 진짜 메시지가 덮인다 (소스 검사).
+
+    응답 JSON 은 실패해도 `output_id` **키를 항상 담는다**(값이 None 일 뿐).
+    그래서 `'output_id' in data.data` 로 판정하면 거부 응답이 "새 카드 조회"
+    분기로 새고, 그 조회가 실패하면 화면에는 권한 안내 대신 엉뚱한 오류가
+    뜬다. 값의 참/거짓으로 봐야 한다.
+    """
+
+    PAGES = {
+        'output': ('aot/aot_flask/templates/pages/output.html',
+                   "(action === 'output_add' || action === 'output_duplicate') &&",
+                   'data.data.output_id'),
+        'input': ('aot/aot_flask/templates/pages/input.html',
+                  "(action === 'input_add' || action === 'input_duplicate') &&",
+                  'data.data.input_id'),
+        'function': ('aot/aot_flask/templates/pages/function.html',
+                     "action === 'function_add' &&", 'data.data.function_id'),
+    }
+
+    def test_add_branch_checks_the_id_value(self):
+        import os
+        for kind, (rel, marker, expected) in self.PAGES.items():
+            with self.subTest(kind=kind):
+                src = open(os.path.join(_REPO, rel), encoding='utf-8').read()
+                start = src.index(marker)
+                line = src[start:src.index('\n', start)]
+                self.assertIn(expected, line,
+                              '%s: 추가 분기가 id 값을 보지 않는다' % kind)
+                self.assertNotIn(' in data.data', line,
+                                 '%s: 키 존재만 보면 실패 응답이 새 카드로 샌다' % kind)
+
+
+
 if __name__ == '__main__':
     unittest.main()

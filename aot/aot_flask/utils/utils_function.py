@@ -96,6 +96,11 @@ def function_add(form_add_func, tab_id=None):
         "error": []
     }
 
+    new_function_id = None
+    list_unmet_deps = []
+    dep_name = None
+    dep_message = ''
+
     # 그룹 스코프(A1b) — 만들어 넣을 **탭**으로 판정한다.
     #
     # 새 장치가 어느 탭에 들어가는지가 곧 누가 그것을 조작할 수 있는지다
@@ -105,10 +110,6 @@ def function_add(form_add_func, tab_id=None):
     if tab_id and not scope.can_operate('tab', tab_id):
         messages["error"].append(scope.deny_message())
         return messages, dep_name, list_unmet_deps, dep_message, None
-    new_function_id = None
-    list_unmet_deps = []
-    dep_name = None
-    dep_message = ''
 
     function_name = form_add_func.function_type.data
 
