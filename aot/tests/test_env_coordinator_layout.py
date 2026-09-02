@@ -625,3 +625,31 @@ class TestMergingSwitchesCarriesTheValue:
                   encoding='utf-8') as fh:
             src = fh.read()
         assert "'--apply', action='store_true'" in src
+
+
+class TestNurseryModeIsNeverHidden:
+    """일소 방지 스위치(`nursery_mode`)는 `advanced_only` 로 접히면 안 된다.
+
+    2026-08-30 에 이 값을 끄는 유일한 수단이 "분무 빈도"에서 '드물게' 를
+    고르는 것뿐이던 시절이 있었다. 2026-09-02 에 그 결합을 풀어 독립
+    토글로 만들면서 `advanced_only` 를 그대로 남겼는데, 그러면 [고급] 을
+    펼쳐야만 보인다 — 사용자가 이 스위치에 닿을 방법이 사실상 없어졌다.
+    영양이 43°C·VPD 3.37 로 치닫는 동안 분무·가습이 강일사마다 통째로
+    잠겨 있었고, 사용자는 화면에서 끌 방법을 찾지 못했다. 켜고 끄면 장비가
+    실제로 멈추고 도는 안전 관련 값은 접혀서 안 보이면 안 된다.
+    """
+
+    def test_nursery_mode_is_not_advanced_only(self):
+        opt = _by_id(_options(), 'nursery_mode')
+        assert opt is not None, 'nursery_mode 옵션 자체가 없다'
+        assert not opt.get('advanced_only'), (
+            'nursery_mode 가 advanced_only 로 숨어 있습니다 — 접근 수단이 없습니다')
+
+    def test_the_misting_frequency_axis_no_longer_needs_it(self):
+        """빈도 축이 다시 이 값을 대신 켜고 끄게 하지 말 것 — 그러면 원래
+        문제(자주 뿌리며 보호도 켜고 싶다는 요구를 표현 못 함)로 돌아간다.
+        직접 켜고 끌 수 있어야 이 축과 무관해도 괜찮다."""
+        info = _info()
+        g = [x for x in info._SCALE_GROUPS if x['id'] == 'misting_care'][0]
+        for _label, vals in g['steps']:
+            assert 'nursery_mode' not in vals

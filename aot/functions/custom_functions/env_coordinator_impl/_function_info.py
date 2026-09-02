@@ -648,13 +648,25 @@ FUNCTION_INFORMATION = {
         # 자주 뿌리는데도 강한 햇빛엔 잠그고 싶다는, 흔한 요구를 표현할 수
         # 없었다(사용자 지적, 2026-09-02). 이제 빈도(분무 시간)와 보호
         # (이 토글)는 서로 무관한 축이다 — 어떤 빈도에서도 켜고 끌 수 있다.
-        {
-            'type': 'header',
-            'name': lazy_gettext('Misting Sunburn Protection'),
-        },
+        #
+        # ⚠ **여기 'header' 를 두지 않는다.** 이 도메인("Heating, Cooling and
+        # Misting")의 실제 화면 순서는 raw 선언이 아니라 `_LAYOUT` 의
+        # id 나열이 정한다(`_apply_layout` 이 'header' 타입 마커를 걸러내고
+        # 통째로 다시 짠다) — 여기 헤더를 심어도 **화면에 나오지 않는다.**
+        # 실제로 08-30~09-02 사이 이 헤더가 그런 죽은 장식이었다. 순서를
+        # 바꾸려면 `_LAYOUT` 의 `['use_wetting_fog_for_humidity', 'nursery_mode',
+        # ...]` 나열을 고칠 것.
         {
             'id': 'nursery_mode',
-            'advanced_only': True,
+            # ⚠ **`advanced_only` 를 달지 않는다** (2026-09-02, 사용자 실사고).
+            # 이 값을 끄는 유일한 방법이 "분무 빈도"에서 '드물게'를 고르는
+            # 것뿐이던 시절이 있었다(2026-08-30). 그걸 없애고 독립 토글로
+            # 만들면서 `advanced_only` 를 그대로 남겼는데, 그러면 [고급] 을
+            # 펼쳐야만 보인다 — 실질적으로 **접근 수단이 하나도 없어졌다**.
+            # 영양이 43°C·VPD 3.37 로 치닫는데 분무·가습이 강일사마다 통째로
+            # 잠겨 있었고, 사용자는 이 스위치에 닿을 방법이 없었다. 켜고 끄면
+            # 장비(분무기)가 실제로 멈추고 도는 안전 관련 값이라 — 접혀서
+            # 안 보이면 안 되는 축에 든다.
             'type': 'bool',
             'default_value': False,
             'required': False,
@@ -696,12 +708,9 @@ FUNCTION_INFORMATION = {
             ),
         },
         # ── Misting Timing (1회 몇 초 · 다음까지 몇 초) ─────────────────────
-        # `nursery_mode` 는 여기 없다(2026-09-02) — 아래 "Misting Sunburn
+        # `nursery_mode` 는 여기 없다(2026-09-02) — 위 "Misting Sunburn
         # Protection" 로 옮겼다. 타이밍과 일소 방지는 별개의 결정이다.
-        {
-            'type': 'header',
-            'name': lazy_gettext('Misting Timing'),
-        },
+        # (헤더를 두지 않는 이유는 위 nursery_mode 주석 참조 — 화면에 안 나온다.)
         {
             'id': 'nursery_max_on_sec',
             'advanced_only': True,
@@ -1415,10 +1424,21 @@ _LAYOUT = [
         #   `@group:misting_care` 가 더 이상 이 id 를 물어 가지 않으므로(축은
         #   순수 타이밍이다), 여기 적지 않으면 `_apply_layout` 이 "분류 안 됨"
         #   접힘(id 없음)으로 밀어내 `test_every_fold_has_an_id` 가 잡는다.
-        (None, ['nursery_mode', '@group:misting_care', '@range:misting_light',
-                'nursery_water_source', 'nursery_evening_fog',
-                'nursery_evening_cutoff_min',
-                'use_wetting_fog_for_humidity']),
+        #
+        # ⚠ **순서 재정리(2026-09-02, 사용자 지적)** — `_LAYOUT` 이 실제 화면
+        #   순서다. 원본 선언 목록의 'header' 마커는 `_apply_layout` 이 버리므로
+        #   ("Misting Sunburn Protection" 헤더를 여기 옆에 심어 봐야 화면에는
+        #   안 나온다), 자리는 오직 이 id 나열로만 정해진다.
+        #     1) 토글끼리 먼저 묶는다 — 켜고 끄는 결정이 숫자 설정보다 앞선다.
+        #        (`use_wetting_fog_for_humidity` = 이 분무기를 습도에 쓸지,
+        #         `nursery_mode` = 강일사·저녁에 잠글지 — 둘 다 최상위 스위치.)
+        #     2) 빈도(타이밍) — 그 다음 "얼마나 자주".
+        #     3) `nursery_mode` 에 딸린 것들 — 일사 임계 → 저녁 차단(토글+분)
+        #        → 수원(원수 종류로 임계를 자동 조정).
+        (None, ['use_wetting_fog_for_humidity', 'nursery_mode',
+                '@group:misting_care', '@range:misting_light',
+                'nursery_evening_fog', 'nursery_evening_cutoff_min',
+                'nursery_water_source']),
     ]),
 
     # ── 도메인 3: 빛 (screen + 보광) ──────────────────────────────────────

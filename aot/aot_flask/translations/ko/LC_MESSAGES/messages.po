@@ -25623,6 +25623,12 @@ msgid ""
 msgstr "버스를 정지하고 선택 릴레이를 해제한 뒤, 경과 시간을 열기 주행시간 또는 닫기 주행시간에 저장합니다."
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:612
+msgid "Enable Sunburn/Evening Protection"
+msgstr "일소·저녁 보호 사용"
+
+msgid "Blocks wetting-type misting in strong light (droplets can lens sunlight onto leaves) and, if set below, before sunset. Independent of how often misting runs — turn this on or off at any misting frequency."
+msgstr "강한 빛에서 습윤형 분무를 차단합니다(물방울이 렌즈처럼 빛을 모아 잎을 태울 수 있습니다). 아래에서 설정하면 일몰 전에도 차단합니다. 분무 빈도와 무관하게 어떤 빈도에서도 켜고 끌 수 있습니다."
+
 msgid "Nursery Mode"
 msgstr "육묘장 모드"
 

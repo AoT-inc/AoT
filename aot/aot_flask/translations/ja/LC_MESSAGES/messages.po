@@ -25392,6 +25392,12 @@ msgid ""
 msgstr "バスを停止し、セレクターを解放してから、経過時間を開走行時間または閉走行時間に保存します。"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:612
+msgid "Enable Sunburn/Evening Protection"
+msgstr "日焼け・夜間保護を有効化"
+
+msgid "Blocks wetting-type misting in strong light (droplets can lens sunlight onto leaves) and, if set below, before sunset. Independent of how often misting runs — turn this on or off at any misting frequency."
+msgstr "強い光の中で湿式ミスティングを遮断します（水滴が太陽光をレンズのように集め、葉を焦がすことがあります）。下で設定すると日没前にも遮断します。ミスティングの頻度に関係なく、どの頻度でもオン・オフできます。"
+
 msgid "Nursery Mode"
 msgstr "育苗場モード"
 
