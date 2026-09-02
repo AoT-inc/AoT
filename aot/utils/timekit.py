@@ -424,12 +424,155 @@ def utc_to_wall(dt: Optional[datetime],
     return to_tz(dt, tz)
 
 
+# ---------------------------------------------------------------------------
+# 집계 창(bucket) ↔ 현지 일자
+# ---------------------------------------------------------------------------
+#
+# InfluxDB(Flux) 의 `aggregateWindow` 는 **UTC 에폭 정렬**이고 기본 라벨이
+# `_stop`(구간의 오른쪽 경계)이다. 그래서 `group_sec=86400` 으로 "하루" 를
+# 물으면 KST 에서는 09:00~익일 09:00 이 한 칸이 되고, 그 칸에 붙는 날짜는
+# **끝날**이다. 값을 합계로만 쓰는 자리(GDD)는 이것이 드러나지 않지만,
+# 날짜 라벨을 사람에게 보여주는 자리(일지)는 그대로 쓰면 하루가 밀린다.
+#
+# 해법은 **시간 단위 창으로 받아 여기서 현지 일자에 접는 것**이다. Flux 에
+# `offset`/`timeSrc`/`timezone.location()` 을 얹는 안은 두 이유로 버렸다:
+# 이 저장소는 InfluxDB 1.x/2.x 를 모두 지원하는데 그 구문을 쓴 선례가 없고,
+# 그러려면 공유 쿼리 빌더(`influx.py`)를 고쳐야 해서 그래프·GDD·runtime 이
+# 전부 회귀 표면이 된다.
+#
+# 접는 쪽을 고른 덕에 **서머타임도 정확해진다** — 각 창을 실제 tz 로 변환해
+# 접으므로 전환일의 23시간/25시간짜리 하루가 그대로 맞는다.
+#
+# 이 헬퍼가 `timekit` 에 있는 이유: `aot/utils/runtime.py`(데몬도 쓰는 저수준
+# 모듈)와 `aot/aot_flask/geo/plot_journal.py`(Flask 계층)가 **둘 다** 필요로
+# 한다. 한쪽에 두면 다른 쪽이 그것을 임포트하게 되어 계층이 뒤집히고, 실제로
+# 순환 임포트가 된다.
+
+def bucket_seconds_for(tz: Union[str, pytz.BaseTzInfo, None],
+                       *dates) -> int:
+    """현지 자정이 창 경계에 떨어지는 **가장 큰** 창 크기 → 초.
+
+    창은 UTC 에폭 정렬이므로, 창 크기가 그 시간대의 UTC 오프셋을 나누어
+    떨어뜨려야 현지 자정이 창 **경계** 위에 온다. 대부분(한국·일본 등)은
+    정시 오프셋이라 3600 이면 되고, 인도(+5:30)·네팔(+5:45) 같은 곳만 더
+    잘게 썬다. 큰 쪽을 고르는 이유는 반환 행 수가 그만큼 늘기 때문이다.
+
+    기간 안에 서머타임 전환이 있으면 오프셋이 둘이 되므로 **주는 날짜를 전부**
+    본다(보통 기간의 시작일과 종료일을 넘긴다).
+    """
+    tzinfo = as_tz(tz)
+    offsets = set()
+    for d in dates:
+        if d is None:
+            continue
+        try:
+            off = tzinfo.utcoffset(datetime(d.year, d.month, d.day, 12, 0, 0))
+        except Exception:
+            continue
+        if off is not None:
+            offsets.add(int(off.total_seconds()))
+    if not offsets:
+        return 3600
+    for size in (3600, 1800, 900):
+        if all(o % size == 0 for o in offsets):
+            return size
+    return 900
+
+
+def local_day_bounds_utc(start_date, end_date,
+                         tz: Union[str, pytz.BaseTzInfo, None],
+                         as_str: bool = True):
+    """현지 [시작일 00:00, 종료일 다음날 00:00) → UTC 구간 (반열림).
+
+    **종료일을 포함**하려면 다음날 자정까지 열어야 한다. 같은 구간을 측정값
+    조회와 노트 조회가 함께 써야 두 줄이 같은 하루를 말한다.
+
+    `as_str=True`  → InfluxDB 용 RFC3339 문자열 쌍.
+    `as_str=False` → **naive UTC datetime** 쌍(=DB 비교용).
+
+    ⚠ naive 로 내는 것이 실수가 아니다. 이 저장소의 시각 컬럼은 **naive UTC**
+      로 저장된다(`Notes.date_time` 실측: tzinfo=None, `2026-08-26 08:59:37`).
+      tz-aware 값을 그대로 비교에 넣으면 SQLite 가 `+00:00` 이 붙은 문자열로
+      렌더해 **조용히 어긋난 비교**를 한다 — 예외가 안 나서 결과가 빈 것을
+      "그 기간에 없었다" 로 읽게 된다.
+    """
+    from datetime import timedelta as _td
+
+    a = wall_to_utc(datetime(start_date.year, start_date.month,
+                             start_date.day, 0, 0, 0), tz)
+    nxt = end_date + _td(days=1)
+    b = wall_to_utc(datetime(nxt.year, nxt.month, nxt.day, 0, 0, 0), tz)
+    if as_str:
+        return (a.strftime('%Y-%m-%dT%H:%M:%SZ'),
+                b.strftime('%Y-%m-%dT%H:%M:%SZ'))
+    return a.replace(tzinfo=None), b.replace(tzinfo=None)
+
+
+def bucket_local_key(rec_time: Optional[datetime], bucket_sec: int,
+                     tz: Union[str, pytz.BaseTzInfo, None],
+                     granularity: str = 'day'):
+    """집계 레코드 하나 → 그것이 속한 현지 버킷 키(date). 못 정하면 None.
+
+    ⚠ **`aggregateWindow` 의 라벨은 구간의 오른쪽 경계(`_stop`)다.** 로컬
+      InfluxDB 2.7 에서 원자료와 대조해 확인했다. 그래서 시작 시각으로 되돌린
+      다음 시간대를 입힌다 — **이 뺄셈을 빼면 모든 날짜가 하루씩 밀린다.**
+
+    `granularity='week'` 면 그 주의 월요일(현지 기준)을 키로 쓴다.
+    """
+    from datetime import timedelta as _td
+
+    if rec_time is None:
+        return None
+    try:
+        start = ensure_utc(rec_time) - _td(seconds=int(bucket_sec))
+        local_day = to_tz(start, tz).date()
+    except Exception:
+        return None
+    if granularity == 'week':
+        return local_day - _td(days=local_day.weekday())
+    return local_day
+
+
+def buckets_expected(key, granularity: str,
+                     tz: Union[str, pytz.BaseTzInfo, None], bucket_sec: int,
+                     period_start=None, period_end=None) -> int:
+    """이 버킷이 **원래 몇 개의 창으로 이뤄지는가** → int (커버리지의 분모).
+
+    24 를 상수로 박지 않는 이유가 둘이다.
+
+    - **서머타임**: 전환일은 23시간 또는 25시간이다. 24 로 나누면 그날만
+      조용히 틀린 비율이 나온다.
+    - **구간 가장자리**: 주간 롤업의 첫 주·마지막 주는 기간에 일부만 걸친다.
+      온전한 7일로 나누면 멀쩡한 주가 "절반만 잰" 것으로 보인다.
+    """
+    from datetime import timedelta as _td
+
+    days = [key] if granularity != 'week' else [key + _td(days=n)
+                                                for n in range(7)]
+    total = 0
+    for d in days:
+        if period_start is not None and d < period_start:
+            continue
+        if period_end is not None and d > period_end:
+            continue
+        try:
+            a = wall_to_utc(datetime(d.year, d.month, d.day, 0, 0, 0), tz)
+            nxt = d + _td(days=1)
+            b = wall_to_utc(datetime(nxt.year, nxt.month, nxt.day, 0, 0, 0), tz)
+            total += int((b - a).total_seconds() // int(bucket_sec))
+        except Exception:
+            total += int(86400 // int(bucket_sec))
+    return total
+
+
 __all__ = [
     "utc_now", "now_utc", "ensure_utc",
     "as_tz", "to_tz", "iso_utc",
     "system_tz", "system_tz_name", "current_user_tz",
     "resolve_tz", "resolve_coords",
     "wall_to_utc", "utc_to_wall",
+    "bucket_seconds_for", "local_day_bounds_utc",
+    "bucket_local_key", "buckets_expected",
     "SOURCE_EXPLICIT", "SOURCE_INHERITED", "SOURCE_COORDS",
     "SOURCE_USER", "SOURCE_SYSTEM", "SOURCE_UTC",
 ]

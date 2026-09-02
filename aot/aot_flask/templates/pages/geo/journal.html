@@ -1,0 +1,109 @@
+{% extends "layout.html" %}
+{% set active_page = "geo_journal" %}
+{% set help_page = [manual_url("geo/journal/"), _('Journals')] %}
+
+{% block title %}{{ _('Journals') }}{% endblock %}
+
+{% block head %}
+{#- 대상 선택 폼은 시설/프로그램 페이지와 같은 폼 요소를 쓴다
+    (aot-modal-modern.css 는 layout.html 이 전역으로 이미 실어 온다). -#}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/geo-plots.css') }}" />
+{% endblock %}
+
+{% block body %}
+<main role="main" class="container aot-page">
+
+  <div class="aot-page-head">
+    <h1 class="aot-page-title">{{ _('Journals') }}</h1>
+  </div>
+
+  <p class="text-muted">
+    {{ _('Pick a plot, zone, or site and a period, and generate a snapshot of what was grown, measured, and controlled — a document you can hand off or print.') }}
+  </p>
+
+  <div class="aot-modal-container" id="journal-form">
+    <div class="aot-modal-option-row">
+      <label class="aot-modal-option-label" for="journal-area">{{ _('Area') }}</label>
+      <div class="aot-modal-option-control">
+        <select id="journal-area" class="form-control aot-modern-select">
+          <option value="">{{ _('Select…') }}</option>
+          {% set ns = namespace(kind=None) %}
+          {% for a in area_choices %}
+            {% if a.kind != ns.kind %}
+              {% if ns.kind %}</optgroup>{% endif %}
+              <optgroup label="{{ _('Sites') if a.kind == 'site' else _('Zones') }}">
+              {% set ns.kind = a.kind %}
+            {% endif %}
+            <option value="{{ a.value }}" data-kind="{{ a.kind }}">{{ a.item }}</option>
+          {% endfor %}
+          {% if ns.kind %}</optgroup>{% endif %}
+        </select>
+      </div>
+    </div>
+
+    <div class="aot-modal-option-row" id="journal-plot-row" style="display:none;">
+      <label class="aot-modal-option-label" for="journal-plot">{{ _('Plot') }}</label>
+      <div class="aot-modal-option-control">
+        <select id="journal-plot" class="form-control aot-modern-select">
+          <option value="">{{ _('Whole area') }}</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="aot-modal-option-row">
+      <label class="aot-modal-option-label" for="journal-start">{{ _('Start date') }}</label>
+      <div class="aot-modal-option-control">
+        <input type="date" id="journal-start" class="form-control aot-modern-input">
+      </div>
+    </div>
+
+    <div class="aot-modal-option-row" style="border-bottom:none;">
+      <label class="aot-modal-option-label" for="journal-end">{{ _('End date') }}</label>
+      <div class="aot-modal-option-control">
+        <input type="date" id="journal-end" class="form-control aot-modern-input">
+      </div>
+    </div>
+  </div>
+
+  <p class="text-muted small" id="journal-plot-note" style="display:none;"></p>
+  <p class="text-danger small" id="journal-form-error" style="display:none;"></p>
+
+  <div class="mb-4">
+    <button type="button" id="journal-generate"
+            class="btn aot-pill-btn aot-pill-btn-primary">{{ _('Generate journal') }}</button>
+  </div>
+
+  <h2 class="aot-page-title" style="font-size:1.1rem;">{{ _('Saved journals') }}</h2>
+
+  <div class="aot-plots-list" id="journal-list">
+    {% if not journals %}
+    <div class="aot-plots-empty">{{ _('Nothing recorded yet.') }}</div>
+    {% endif %}
+    {% for j in journals %}
+    <a class="aot-plots-row text-decoration-none text-reset" href="{{ url_for('routes_geo.geo_journal_view', journal_uuid=j.unique_id) }}">
+      <div class="aot-plots-main">
+        <span class="aot-plots-subject">{{ j.title or _('Untitled') }}</span>
+        {% if j.status in ('pending', 'running') %}
+        <span class="aot-plots-planned-badge">{{ _('Generating…') }}</span>
+        {% elif j.status == 'error' %}
+        <span class="aot-plots-ended-badge">{{ _('Generation failed') }}</span>
+        {% endif %}
+        <span class="aot-plots-where">{{ j.period_start.isoformat() }} – {{ j.period_end.isoformat() }}</span>
+      </div>
+      <div class="aot-plots-meta" data-summary="{{ j.summary or '' }}">
+        {#- 요약은 숫자만 담은 JSON(§7) — 여기서 사람이 읽는 문장으로 조립한다. -#}
+      </div>
+    </a>
+    {% endfor %}
+  </div>
+
+</main>
+
+<script src="{{ url_for('static', filename='js/geo/journal-page.js') }}"></script>
+<script>
+  AoTJournalPage.initHub({
+    createUrl: {{ url_for('routes_geo.geo_journal_create') | tojson }},
+    historyUrlBase: {{ url_for('routes_geo.geo_journal_plot_history') | tojson }}
+  });
+</script>
+{% endblock %}

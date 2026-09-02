@@ -19,7 +19,7 @@ from datetime import date
 
 from aot.aot_flask.geo import device_membership
 from aot.aot_flask.geo.facility_calc import _ring_area_m2
-from aot.databases.models import GeoPlot, GeoShape, Input
+from aot.databases.models import GeoPlot, GeoShape, Input, Output
 
 logger = logging.getLogger(__name__)
 
@@ -660,6 +660,21 @@ def _only_sensor_ids(device_ids):
         return set()
     rows = Input.query.with_entities(Input.unique_id).filter(
         Input.unique_id.in_(list(device_ids))).all()
+    return {r[0] for r in rows}
+
+
+def _only_output_ids(device_ids):
+    """장치 참조 집합에서 Output(액추에이터)만 남긴다 — `_only_sensor_ids`의 대칭.
+
+    `device_membership.device_ids_in_area()`는 PID·CustomController의 uuid도
+    함께 낸다(구역을 참조하는 제어기까지 잡는 것이 그 함수의 목적이다). 여기서
+    거르지 않으면 그 uuid들이 'control' 목록에 섞여 화면이 존재하지 않는
+    가동시간을 조회하려 든다 — 모델에 없는 uuid는 이 필터로 자연히 탈락한다.
+    """
+    if not device_ids:
+        return set()
+    rows = Output.query.with_entities(Output.unique_id).filter(
+        Output.unique_id.in_(list(device_ids))).all()
     return {r[0] for r in rows}
 
 
@@ -1769,6 +1784,34 @@ def _stage_targets(stage, program_row=None):
     return out
 
 
+def stage_targets_full(stage, program_row=None, plot=None):
+    """단계 목표를 **필드를 깎지 않고** 낸다 → `_stage_targets` 그대로 + observable.
+
+    `stage_schedule_view()` 가 화면에 낼 때 거치는 `_view_targets` 는 **편집
+    UI 전용**이라 `key/label/unit/value/source/method_name/editable` 만 남기고
+    `measurement`·`when`·`shape`·`observable` 을 전부 버린다. 그런데 그 넷이
+    일지의 목표 대비 편차 규칙(§4-5) 전부의 근거다 — measurement 가 없으면
+    그날 실측과 맞출 수 없고, when/shape 가 없으면 주야 전용·적산 목표를
+    가려낼 수 없다.
+
+    그래서 정본(`_stage_targets`) 위에 얇은 공개 창구를 하나 둔다. 새 판정은
+    없다 — `plot` 을 주면 `measurable_in_plot(plot)` 한 번으로 전 항목에
+    `observable` 을 얹을 뿐이다(`_mark_observable` 과 같은 규칙, 구획 단위
+    집합이라 단계마다 다시 세지 않는다).
+    """
+    targets = _stage_targets(stage, program_row=program_row)
+    if plot is None or not targets:
+        return targets
+    have = measurable_in_plot(plot)
+    for t in targets:
+        m = t.get('measurement')
+        if not m or not have:
+            t['observable'] = None
+        else:
+            t['observable'] = m in have
+    return targets
+
+
 def expected_end(plot, program=None, sched=None, programs=None, anchors=None):
     """예상 종료일 → `(date, source)`. 없으면 `(None, None)`.
 
@@ -2461,6 +2504,54 @@ def valves_for_plot(plot):
 
     out.sort(key=lambda v: v['overlap_m2'], reverse=True)
     return out
+
+
+def actuators_for_plot(plot):
+    """구획에 닿는 출력 장치 → `[{'output_id','name','kind','scope'}]`.
+
+    `valves_for_plot()`(노지)와 `facility_control_for_plot()`(시설) 두 정본을
+    **합치기만 한다** — 지도 위젯(`routes_geo_plot.py`
+    `_build_plot_contents`/`_build_facility_plot_contents`)이 쓰는 것과 다른
+    두 번째 판정 기준을 만들지 않는다.
+
+    ⚠ **`channel` 을 내지 않는다.** 두 정본 중 어느 쪽도 채널을 주지 않으므로
+      여기서 지어내지 않는다 — 가동시간을 조회하는 쪽이 채널 0
+      (`_resolve_channel_index` 의 기본)으로 간다는 사실은 그 조회부가 문구로
+      밝힌다.
+
+    ⚠ `valves_for_plot()` 의 항목은 **`device_id` 가 `None` 일 수 있다**(밸브가
+      안 정해진 영역 = `unassigned`). 그런 항목은 이 목록에서 제외하되, 몇
+      개나 뺐는지는 `unassigned_areas` 로 함께 낸다 — 조용히 버리면 "제어가
+      없는 구획" 과 "제어를 아직 안 이은 구획" 이 화면에서 같아 보인다.
+
+    반환은 `(actuators, unassigned_areas)`.
+    """
+    out = []
+    unassigned = 0
+    for v in valves_for_plot(plot):
+        if v.get('device_id') is None:
+            unassigned += 1
+            continue
+        out.append({
+            'output_id': v['device_id'],
+            'name': v.get('device_name'),
+            'kind': None,          # valves_for_plot 은 장치 종류를 모른다(문서화됨)
+            'scope': 'plot',
+        })
+
+    fc = facility_control_for_plot(plot)
+    for a in (fc.get('actuators') or []):
+        oid = a.get('output_id')
+        if not oid:
+            continue
+        out.append({
+            'output_id': oid,
+            'name': a.get('name'),
+            'kind': a.get('kind'),
+            'scope': a.get('scope'),
+        })
+
+    return out, unassigned
 
 
 def plots_covered_by_shape(shape_geom, map_uuid, on=None,

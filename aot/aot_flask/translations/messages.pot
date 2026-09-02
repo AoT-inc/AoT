@@ -27020,3 +27020,187 @@ msgstr ""
 #: aot_flask/templates/user_templates/widget_template_widget_function_status_js.html:121
 msgid "This function type has no editable options."
 msgstr ""
+
+#: aot_flask/templates/pages/geo/journal.html:4 aot_flask/templates/pages/geo/journal.html:16
+#: aot_flask/templates/layout.html:671
+msgid "Journals"
+msgstr ""
+
+#: aot_flask/templates/pages/geo/journal.html:20
+msgid "Pick a plot, zone, or site and a period, and generate a snapshot of what was grown, measured, and controlled — a document you can hand off or print."
+msgstr ""
+
+#: aot_flask/templates/pages/geo/journal.html:28
+msgid "Select…"
+msgstr ""
+
+#: aot_flask/templates/pages/geo/journal.html:47 aot_flask/static/js/geo/journal-page.js:78
+msgid "Whole area"
+msgstr ""
+
+#: aot_flask/templates/pages/geo/journal.html:72
+msgid "Generate journal"
+msgstr ""
+
+#: aot_flask/templates/pages/geo/journal.html:75
+msgid "Saved journals"
+msgstr ""
+
+#: aot_flask/templates/pages/geo/journal.html:86
+msgid "Generating…"
+msgstr ""
+
+#: aot_flask/templates/pages/geo/journal.html:88
+msgid "Generation failed"
+msgstr ""
+
+#: aot_flask/templates/pages/geo/journal_view.html:32
+msgid "This journal is still being generated. This page will refresh automatically."
+msgstr ""
+
+#: aot_flask/templates/pages/geo/journal_view.html:35
+msgid "This journal could not be generated."
+msgstr ""
+
+#: aot_flask/templates/pages/geo/journal_view.html:43
+msgid "Print (save as PDF)"
+msgstr ""
+
+#: aot_flask/templates/pages/geo/journal_view.html:89
+msgid "Time zone"
+msgstr ""
+
+#: aot_flask/templates/pages/geo/journal_view.html:114
+#, python-format
+msgid "Follows curve: %(name)s"
+msgstr ""
+
+#: aot_flask/templates/pages/geo/journal_view.html:120
+msgid "No sensor for this"
+msgstr ""
+
+#: aot_flask/templates/pages/geo/journal_view.html:137
+msgid "No data recorded for this period."
+msgstr ""
+
+#: aot_flask/templates/pages/geo/journal_view.html:145
+msgid "Min"
+msgstr ""
+
+#: aot_flask/templates/pages/geo/journal_view.html:145
+msgid "Max"
+msgstr ""
+
+#: aot_flask/templates/pages/geo/journal_view.html:145
+msgid "Avg"
+msgstr ""
+
+#: aot_flask/templates/pages/geo/journal_view.html:153
+msgid "usage"
+msgstr ""
+
+#: aot_flask/templates/pages/geo/journal_view.html:158
+msgid "partial coverage"
+msgstr ""
+
+#: aot_flask/templates/pages/geo/journal_view.html:161
+#, python-format
+msgid "curve: %(name)s"
+msgstr ""
+
+#: aot_flask/templates/pages/geo/journal_view.html:166
+msgid "day/night target"
+msgstr ""
+
+#: aot_flask/templates/pages/geo/journal_view.html:167
+msgid "cumulative target"
+msgstr ""
+
+#: aot_flask/templates/pages/geo/journal_view.html:168
+msgid "no sensor"
+msgstr ""
+
+#: aot_flask/templates/pages/geo/journal_view.html:179
+msgid "Runtime"
+msgstr ""
+
+#: aot_flask/templates/pages/geo/journal_view.html:182
+msgid "h"
+msgstr ""
+
+#: aot_flask/templates/pages/geo/journal_view.html:194
+msgid "attachment(s)"
+msgstr ""
+
+#: aot_flask/templates/pages/geo/journal_view.html:212
+msgid "Additional notes"
+msgstr ""
+
+#: aot_flask/routes_geo_journal.py:155
+msgid "Permission Denied"
+msgstr ""
+
+#: aot_flask/routes_geo_journal.py:164 aot_flask/routes_geo_journal.py:166
+msgid "Select what the journal is about."
+msgstr ""
+
+#: aot_flask/routes_geo_journal.py:168 aot_flask/static/js/geo/journal-page.js:128
+msgid "Enter both a start and an end date."
+msgstr ""
+
+#: aot_flask/routes_geo_journal.py:170
+msgid "The start date is after the end date."
+msgstr ""
+
+#: aot_flask/routes_geo_journal.py:181
+msgid "Could not find what this journal is about."
+msgstr ""
+
+#: aot_flask/routes_geo_journal.py:184
+msgid "Could not read this target."
+msgstr ""
+
+#: aot_flask/routes_geo_journal.py:188
+#, python-format
+msgid "That period is too long (%(days)s days). Try a shorter period."
+msgstr ""
+
+#: aot_flask/routes_geo_journal.py:192
+#, python-format
+msgid "That selection has too many devices (%(n)s channels). Narrow the area, or pick a single plot instead."
+msgstr ""
+
+#: aot_flask/routes_geo_journal.py:197
+msgid "That selection would read too much data. Try a shorter period or a narrower area."
+msgstr ""
+
+#: aot_flask/routes_geo_journal.py:247
+msgid "This journal is still being generated."
+msgstr ""
+
+#: aot_flask/routes_geo_journal.py:81
+msgid "Could not find that area."
+msgstr ""
+
+#: aot_flask/routes_geo_journal.py:103
+msgid "Facilities without a mapped location won't appear here — add their location in Facility settings first."
+msgstr ""
+
+#: aot_flask/static/js/geo/journal-page.js:123
+msgid "Select an area first."
+msgstr ""
+
+#: aot_flask/static/js/geo/journal-page.js:72 aot_flask/static/js/geo/journal-page.js:146
+#: aot_flask/static/js/geo/journal-page.js:150
+msgid "Something went wrong."
+msgstr ""
+
+#: aot_flask/static/js/geo/journal-page.js:32
+#, python-format
+msgid "%(n)s periods"
+msgstr ""
+
+#: aot_flask/static/js/geo/journal-page.js:33
+#, python-format
+msgid "%(n)s notes"
+msgstr ""

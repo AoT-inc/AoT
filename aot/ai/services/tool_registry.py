@@ -449,6 +449,22 @@ TOOLS: List[Tool] = [
                         "rotation and soil-borne disease judgement. Read-only."),
         "usage_hint": "params.arguments: {plot_id} or {zone_id}",
     }),
+    Tool('list_plot_journals', handler='list_plot_journals', manifest={
+        "tool_name": "list_plot_journals",
+        "action_type": "virtual_tool_call",
+        "description": ("Saved journals (title, period, status) for a plot/zone/site. "
+                        "journal_id is an internal handle for get_plot_journal — do "
+                        "not show it; use title/period instead. Read-only."),
+        "usage_hint": "params.arguments: {target_type: plot|zone|site, target_id}",
+    }),
+    Tool('get_plot_journal', handler='get_plot_journal', manifest={
+        "tool_name": "get_plot_journal",
+        "action_type": "virtual_tool_call",
+        "description": ("One saved journal in full — the snapshot from generation "
+                        "time. status may be pending/running/error; only 'done' has "
+                        "data. Read-only."),
+        "usage_hint": "params.arguments: {journal_id}",
+    }),
     Tool('list_programs', handler='list_programs', manifest={
         "tool_name": "list_programs",
         "action_type": "virtual_tool_call",
@@ -1393,6 +1409,8 @@ _TIER_ASSIGNMENT = {
     'delete_program':       ('space', 'drawer', False),
     'get_plot':              ('space', 'core', False),
     'get_plot_history':      ('space', 'drawer', False),
+    'list_plot_journals':    ('space', 'drawer', False),
+    'get_plot_journal':      ('space', 'drawer', False),
     'create_plot':           ('space', 'drawer', False),
     'modify_plot':           ('space', 'drawer', False),
     'end_plot':              ('space', 'drawer', False),
@@ -1555,6 +1573,29 @@ _MCP_TOOL_PAYLOADS: List[Dict[str, Any]] = [
                 "zone_id": {"type": "string", "description": "Or use a zone's outline (GeoShape unique_id)."},
                 "map_id": {"type": "string", "description": "Optional map hint."}
             }
+        }
+    },
+    {
+        "tool_name": "list_plot_journals",
+        "description": "Saved journals for a plot/zone/site — title, period, status only, no content. A journal is a point-in-time snapshot of what was grown, measured, and controlled (never recomputed after generation). journal_id here is an internal handle for get_plot_journal — do not show it to the user, refer to journals by their title and period instead. Read-only.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "target_type": {"type": "string", "enum": ["plot", "zone", "site"], "description": "What the journal is about."},
+                "target_id": {"type": "string", "description": "unique_id of the plot/zone/site."}
+            },
+            "required": ["target_type", "target_id"]
+        }
+    },
+    {
+        "tool_name": "get_plot_journal",
+        "description": "One saved journal, in full — the exact snapshot from when it was generated (environment, control runtime, notes, stage targets and deltas). Use it to summarize, translate, or reformat a journal for the user. status may be pending/running/error; only 'done' carries data. Read-only.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "journal_id": {"type": "string", "description": "From list_plot_journals — an internal handle, not something to show the user."}
+            },
+            "required": ["journal_id"]
         }
     },
     {

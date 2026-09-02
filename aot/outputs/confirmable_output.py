@@ -381,6 +381,12 @@ class ConfirmableOutputMixin:
             # Device reported back -> it is online again; resume normal (retrying)
             # command delivery.
             self._offline.discard(output_channel)
+            # Captured before the overwrite below: distinguishes a genuine
+            # off->on transition from a periodic re-confirmation of a state
+            # we already knew (e.g. remote_state_query() re-polling a device
+            # that has been on for a while) -- the latter must not reset the
+            # runtime clock.
+            was_already_on = self.output_states.get(output_channel) is True
             self.output_states[output_channel] = want_on
             duration = self._cmd_duration.pop(output_channel, None) if want_on else None
             if not want_on:
@@ -401,11 +407,13 @@ class ConfirmableOutputMixin:
                     pass
             if want_on:
                 now = utc_now()
-                self.output_time_turned_on[output_channel] = now
-                # Allow the (previously deferred) start marker to be written now.
-                if hasattr(self, '_started_at_written'):
-                    self._started_at_written[output_channel] = False
-                self._ensure_started_marked(output_channel)
+                if not was_already_on:
+                    # A genuine off->on transition: (re)anchor the runtime
+                    # clock and let the start marker be written again.
+                    self.output_time_turned_on[output_channel] = now
+                    if hasattr(self, '_started_at_written'):
+                        self._started_at_written[output_channel] = False
+                    self._ensure_started_marked(output_channel)
                 # Arm the deferred auto-off from the confirmed-on moment so the
                 # runtime is >= N seconds (the output controller loop turns it
                 # off once output_on_until passes).

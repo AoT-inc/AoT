@@ -5262,5 +5262,6 @@ def api_geo_local_time():
 from aot.aot_flask import routes_geo_commissioning  # noqa: E402,F401
 from aot.aot_flask import routes_geo_iec            # noqa: E402,F401
 from aot.aot_flask import routes_geo_plot       # noqa: E402,F401
+from aot.aot_flask import routes_geo_journal    # noqa: E402,F401
 # routes_geo_plot 뒤에 와야 한다 — 공용 분할 파라미터 계층을 그쪽에서 가져온다.
 from aot.aot_flask import routes_geo_device_split   # noqa: E402,F401

@@ -432,6 +432,12 @@ _DEVICE_FRESHNESS_TOOL_ADDITIONS = {'get_device_freshness'}
 # 승인 집합에는 넣지 않는다.
 _NOTE_ATTACHMENT_TOOL_ADDITIONS = {'get_note_attachment'}
 
+# 구획/구역 일지(Journal) 읽기 도구 (2026-09-02, 일지 기능 계획서 §12). 일지는
+# 생성 시점의 스냅샷이라(재계산하지 않는다) 두 도구 다 저장된 GeoJournal 을
+# 읽기만 한다 — 생성(쓰기)은 사람이 대상·기간을 고르는 상호작용이 핵심이라
+# 이번 범위에서 MCP 로 열지 않는다. 둘 다 읽기 전용이라 승인 집합에는 안 넣는다.
+_JOURNAL_TOOL_ADDITIONS = {'list_plot_journals', 'get_plot_journal'}
+
 # 4. _VIRTUAL_APPROVAL_TOOLS (ai_dispatch_service.py) — 17 mutations, no physical.
 _ORIG_VIRTUAL_APPROVAL_TOOLS = {
     'create_function', 'create_sequence_function', 'modify_function_options',
@@ -505,7 +511,7 @@ def _check_dispatch_map(R):
            | _WIDGET_READ_TOOL_ADDITIONS | _WIDGET_WRITE_TOOL_ADDITIONS | _WIDGET_DELETE_TOOL_ADDITIONS
            | _ZONE_SUMMARY_TOOL_ADDITIONS | _GEO_DISTANCE_TOOL_ADDITIONS
            | _DRAWER_TOOL_ADDITIONS | _DEVICE_FRESHNESS_TOOL_ADDITIONS
-           | _NOTE_ATTACHMENT_TOOL_ADDITIONS,
+           | _NOTE_ATTACHMENT_TOOL_ADDITIONS | _JOURNAL_TOOL_ADDITIONS,
            set(R.build_tool_map().keys()))
 
 
@@ -535,7 +541,7 @@ def _check_declarations(R):
            | _WIDGET_READ_TOOL_ADDITIONS | _WIDGET_WRITE_TOOL_ADDITIONS | _WIDGET_DELETE_TOOL_ADDITIONS
            | _ZONE_SUMMARY_TOOL_ADDITIONS | _GEO_DISTANCE_TOOL_ADDITIONS
            | _DRAWER_TOOL_ADDITIONS | _DEVICE_FRESHNESS_TOOL_ADDITIONS
-           | _NOTE_ATTACHMENT_TOOL_ADDITIONS,
+           | _NOTE_ATTACHMENT_TOOL_ADDITIONS | _JOURNAL_TOOL_ADDITIONS,
            set(R.virtual_tool_registry()))
 
     # 4. dispatch approval set — original PLUS the mutating post-Phase-1 additions,

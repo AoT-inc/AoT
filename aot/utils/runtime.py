@@ -202,6 +202,63 @@ def get_daily_operational_seconds(device_unique_id, days=7, channel_id=0):
         logger.error(f"get_daily_operational_seconds error for {device_unique_id}: {e}")
         return []
 
+def get_operational_seconds_by_day(device_unique_id, start_str, end_str,
+                                   channel_id=0, tz=None,
+                                   granularity='day', bucket_sec=3600):
+    """지정 구간의 **버킷별 작동 초** → `{date: 초}`.
+
+    `get_daily_operational_seconds` 와 무엇이 다른가: 그쪽은 "지금부터 N일" 만
+    받고 **날짜 키가 없다**(리스트다). 일지는 임의 구간을 날짜에 붙여 적어야
+    하므로 키가 필요하다. 그 함수는 그대로 두고 여기서 따로 낸다 — 반환 모양을
+    바꾸면 그것을 쓰는 화면이 조용히 깨진다.
+
+    ⚠ **창마다 합(sum)** 이어야 한다(그쪽 함수의 경고와 같다). 평균으로 내면
+      "한 번 켤 때 평균 몇 초" 라는 전혀 다른 값이 나오는데 단위가 같아서 틀린
+      줄 모른다.
+
+    ⚠ **시간 버킷으로 받아 파이썬에서 현지 일자에 접는다.** Influx 의 창은
+      UTC 에폭 정렬이라 `group_sec=86400` 을 그대로 쓰면 KST 에서 하루가
+      09:00~09:00 이 되고 날짜가 하루 밀린다. 접는 규칙의 근거와 대가는
+      `aot/utils/timekit` 의 집계 창 절에 있다. 합은 결합적이라
+      이 값은 **근사가 아니라 정확**하다.
+
+    기록이 없는 버킷은 **빠진다**(aggregateWindow 의 빈 버킷은 걸러진다).
+    그것은 "안 돌았다" 가 아니라 "기록이 없다" 이고, 판단은 부르는 쪽이 한다.
+
+    `tz` 가 없으면 UTC 로 접는다(단독 호출·시험용).
+    """
+    from aot.utils.timekit import bucket_local_key
+
+    if tz is None:
+        tz = timezone('UTC')
+    try:
+        ch_index = _resolve_channel_index(device_unique_id, channel_id)
+        if ch_index is None:
+            ch_index = 0
+        data = query_string(
+            's', device_unique_id,
+            measure='duration_time',
+            channel=ch_index,
+            start_str=start_str,
+            end_str=end_str,
+            group_sec=bucket_sec,
+            group_fn='sum')
+        out = {}
+        if data:
+            for table in data:
+                for row in table.records:
+                    val = row.values.get('_value')
+                    if val is None:
+                        continue
+                    key = bucket_local_key(row.get_time(), bucket_sec, tz, granularity)
+                    if key is None:
+                        continue
+                    out[key] = out.get(key, 0.0) + float(val)
+        return out
+    except Exception as e:
+        logger.error(f"get_operational_seconds_by_day error for {device_unique_id}: {e}")
+        return {}
+
 def _resolve_channel_index(device_unique_id, channel_id):
     """
     채널 ID(숫자 또는 UUID)를 채널 인덱스(int)로 변환합니다.

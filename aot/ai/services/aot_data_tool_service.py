@@ -10419,6 +10419,63 @@ class AoTDataToolService:
             return {"error": str(e)}
 
     @staticmethod
+    def list_plot_journals(target_type=None, target_id=None, **extra):
+        """[읽기전용] 그 대상에 저장된 일지 목록 — 제목·기간만, 본문은 뺀다.
+
+        일지는 생성 시점의 사실을 뜬 스냅샷이다(재계산하지 않는다). `journal_id`
+        는 이 목록에서 얻어 `get_plot_journal` 에 그대로 넘기는 **내부 연결용
+        값**이지, 사람에게 읽어 줄 정보가 아니다 — 응답할 때는 제목·기간으로
+        말하고 id 를 대화에 그대로 옮기지 않는다.
+        """
+        try:
+            from aot.databases.models import GeoJournal
+
+            if target_type not in ('plot', 'zone', 'site'):
+                return {"error": "target_type must be plot, zone, or site"}
+            if not target_id:
+                return {"error": "target_id is required"}
+
+            rows = (GeoJournal.query
+                    .filter_by(target_type=target_type, target_id=target_id)
+                    .order_by(GeoJournal.created_at.desc()).all())
+            items = [{
+                "journal_id": r.unique_id,
+                "title": r.title,
+                "period_start": r.period_start.isoformat() if r.period_start else None,
+                "period_end": r.period_end.isoformat() if r.period_end else None,
+                "status": r.status,
+            } for r in rows]
+            return {"count": len(items), "journals": items}
+        except Exception as e:
+            logger.exception("Error in list_plot_journals")
+            return {"error": str(e)}
+
+    @staticmethod
+    def get_plot_journal(journal_id=None, **extra):
+        """[읽기전용] 저장된 일지 한 건 — 스냅샷 그대로, 재계산하지 않는다.
+
+        `status` 가 `'done'` 이 아니면 아직 완성되지 않았거나 생성에 실패한
+        것이다(`error_message` 참조) — 그때는 `data` 가 비어 있다.
+        """
+        try:
+            from aot.databases.models import GeoJournal
+            from aot.aot_flask.geo.plot_journal import journal_to_jsonable
+
+            if not journal_id:
+                return {"error": "journal_id is required"}
+
+            row = GeoJournal.query.filter_by(unique_id=journal_id).first()
+            if row is None:
+                return {"error": f"journal not found: {journal_id}"}
+            if row.status != 'done' or row.data is None:
+                return {"status": row.status, "error_message": row.error_message}
+
+            return journal_to_jsonable(row.data)
+        except Exception as e:
+            logger.exception("Error in get_plot_journal")
+            return {"error": str(e)}
+
+    @staticmethod
     def create_plot(map_id=None, geometry=None, zone_id=None, subject=None,
                         started_on=None, variety=None, name=None,
                         expected_end_on=None, color=None,

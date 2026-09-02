@@ -1,0 +1,227 @@
+{% extends "layout.html" %}
+{% set active_page = "geo_journal" %}
+{% set help_page = [manual_url("geo/journal/"), _('Journals')] %}
+{% set d = journal.data %}
+
+{% block title %}{{ journal.title or _('Journal') }}{% endblock %}
+
+{% block head %}
+{#- 인쇄 규칙은 이 페이지 하나만 쓰는 것이라 별도 CSS 파일을 두지 않는다
+    (계획 §10) — 화면 전용 UI(내비·인쇄 버튼·노트 블록)를 인쇄에서 숨기고,
+    표 행이 페이지 경계에서 잘리지 않게만 한다. -#}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/widget/aot-sensor-label.css') }}" />
+<style>
+  @media print {
+    .main-navbar, #ai-fab, #ai-chat-drawer,
+    .aot-journal-print-bar, .aot-journal-notes { display: none !important; }
+    .aot-journal-bucket { page-break-inside: avoid; }
+    .aot-journal-table { page-break-inside: auto; }
+    .aot-journal-table tr { page-break-inside: avoid; }
+  }
+</style>
+{% endblock %}
+
+{% block body %}
+<main role="main" class="container aot-page">
+
+  <div class="aot-page-head">
+    <h1 class="aot-page-title">{{ journal.title or _('Journal') }}</h1>
+  </div>
+
+  {% if journal.status in ('pending', 'running') %}
+  <meta http-equiv="refresh" content="5">
+  <p class="text-muted">{{ _('This journal is still being generated. This page will refresh automatically.') }}</p>
+
+  {% elif journal.status == 'error' %}
+  <p class="text-danger">{{ _('This journal could not be generated.') }}</p>
+  {% if journal.error_message %}
+  <p class="text-muted small">{{ journal.error_message }}</p>
+  {% endif %}
+
+  {% elif journal.status == 'done' and d %}
+
+  <div class="aot-journal-print-bar mb-3">
+    <button type="button" class="btn aot-pill-btn" id="journal-print-btn">{{ _('Print (save as PDF)') }}</button>
+  </div>
+
+  {% if d.caveats %}
+  <ul class="text-muted small">
+    {% for c in d.caveats %}
+    <li>{{ caveat_texts.get(c, c) }}</li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+
+  {# ── 개요 ──────────────────────────────────────────────────────────── #}
+  <div class="aot-modal-container mb-4">
+    <div class="aot-modal-option-row">
+      <span class="aot-modal-option-label">{{ _('Type') }}</span>
+      <span>{{ d.target.kind_label }}</span>
+    </div>
+    {% if d.target.subject %}
+    <div class="aot-modal-option-row">
+      <span class="aot-modal-option-label">{{ _('Item') }}</span>
+      <span>{{ d.target.subject }}{% if d.target.variety %} — {{ d.target.variety }}{% endif %}</span>
+    </div>
+    {% endif %}
+    {% if d.target.location %}
+    <div class="aot-modal-option-row">
+      <span class="aot-modal-option-label">{{ _('Location') }}</span>
+      <span>{{ [d.target.location.zone_name, d.target.location.facility_name, d.target.location.bay_name] | select | join(' · ') }}</span>
+    </div>
+    {% endif %}
+    <div class="aot-modal-option-row">
+      <span class="aot-modal-option-label">{{ _('Period') }}</span>
+      <span>{{ d.target.period.start }} – {{ d.target.period.end }}{% if d.target.period.ongoing %} ({{ _('ongoing') }}){% endif %}</span>
+    </div>
+    {% if d.target.program %}
+    <div class="aot-modal-option-row">
+      <span class="aot-modal-option-label">{{ _('Program') }}</span>
+      <span>{{ d.target.program.name }}{% if d.target.program.version %} (v{{ d.target.program.version }}){% endif %}</span>
+    </div>
+    {% endif %}
+    {% if d.target.area_m2 is not none %}
+    <div class="aot-modal-option-row">
+      <span class="aot-modal-option-label">{{ _('Area') }}</span>
+      <span>{{ '%.1f'|format(d.target.area_m2) }} m²</span>
+    </div>
+    {% endif %}
+    <div class="aot-modal-option-row" style="border-bottom:none;">
+      <span class="aot-modal-option-label">{{ _('Time zone') }}</span>
+      <span>{{ d.target.tz_name }}</span>
+    </div>
+  </div>
+
+  {# ── 단계별 요약 (plot만) ──────────────────────────────────────────── #}
+  {% if d.stages %}
+  <h2 class="aot-page-title" style="font-size:1.1rem;">{{ _('Stages') }}</h2>
+  {% for st in d.stages %}
+  <div class="aot-modal-container mb-3">
+    <div class="aot-modal-option-row">
+      <span class="aot-modal-option-label">{{ st.name or st.key }}</span>
+      <span class="text-muted small">{{ st.starts_on or '—' }} – {{ st.ends_on or _('ongoing') }}</span>
+    </div>
+    {% if st.guidance %}
+    <p class="small mb-2">{{ st.guidance }}</p>
+    {% endif %}
+    {% if st.targets %}
+    <table class="table table-sm aot-journal-table mb-0">
+      <tbody>
+        {% for t in st.targets %}
+        <tr>
+          <td>{{ t.label }}</td>
+          <td>
+            {% if t.source == 'method' %}
+            {{ _('Follows curve: %(name)s', name=t.method_name or '—') }}
+            {% elif t.value is not none %}
+            {{ t.value }} {{ t.unit or '' }}
+            {% endif %}
+          </td>
+          <td class="text-muted small">
+            {% if t.observable == False %}{{ _('No sensor for this') }}{% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% endif %}
+  </div>
+  {% endfor %}
+  {% endif %}
+
+  {# ── 버킷 루프 ─────────────────────────────────────────────────────── #}
+  {% for b in d.buckets %}
+  <div class="aot-journal-bucket mb-4">
+    <h3 class="aot-page-title" style="font-size:1rem;">{{ b.date_label }}</h3>
+
+    {% if b.empty %}
+    <p class="text-muted small">{{ _('No data recorded for this period.') }}</p>
+    {% else %}
+
+    {% if b.env %}
+    <table class="table table-sm aot-journal-table">
+      <thead>
+        <tr>
+          <th>{{ _('Sensor') }}</th><th>{{ _('Measurement') }}</th>
+          <th>{{ _('Min') }}</th><th>{{ _('Max') }}</th><th>{{ _('Avg') }}</th>
+          <th>{{ _('Target') }}</th><th>Δ</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for e in b.env %}
+        <tr>
+          <td>{{ e.sensor }}</td>
+          <td>{{ e.measurement }}{% if e.usage %} ({{ _('usage') }}: {{ e.usage.amount }} {{ e.usage.unit }}){% endif %}</td>
+          <td>{{ e.min }}</td>
+          <td>{{ e.max }}</td>
+          <td>
+            {{ e.avg }}{{ ' ' ~ e.unit if e.unit else '' }}
+            {% if e.coverage_low %}<span class="text-muted small">({{ _('partial coverage') }})</span>{% endif %}
+          </td>
+          <td>
+            {% if e.follows_curve %}{{ _('curve: %(name)s', name=e.follows_curve) }}
+            {% elif e.target is not none %}{{ e.target }}{% endif %}
+          </td>
+          <td>
+            {% if e.delta is not none %}{{ e.delta }}
+            {% elif e.delta_skipped == 'when' %}<span class="text-muted small">{{ _('day/night target') }}</span>
+            {% elif e.delta_skipped == 'daily-shape' %}<span class="text-muted small">{{ _('cumulative target') }}</span>
+            {% elif e.delta_skipped == 'unobservable' %}<span class="text-muted small">{{ _('no sensor') }}</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% endif %}
+
+    {% if b.control %}
+    <table class="table table-sm aot-journal-table">
+      <thead><tr><th>{{ _('Device') }}</th><th>{{ _('Runtime') }}</th></tr></thead>
+      <tbody>
+        {% for c in b.control %}
+        <tr><td>{{ c.name }}</td><td>{{ c.hours }} {{ _('h') }}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% endif %}
+
+    {% if b.notes %}
+    <ul class="small">
+      {% for n in b.notes %}
+      <li>
+        <strong>{{ n.time[11:16] if n.time else '' }}</strong>
+        {% if n.title %}{{ n.title }} — {% endif %}{{ n.body }}
+        {% if n.image_files %}({{ n.image_files|length }} {{ _('attachment(s)') }}){% endif %}
+      </li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+
+    {% endif %}
+  </div>
+  {% endfor %}
+
+  {# ── 추가 의견 (노트 재사용, §10) ──────────────────────────────────── #}
+  <div class="aot-journal-notes" id="journal-notes-mount"></div>
+
+  <script src="{{ url_for('static', filename='js/common/sensor-label.js') }}"></script>
+  <script>
+    (function () {
+      var mount = document.getElementById('journal-notes-mount');
+      if (!mount || !window.AoTNotesBlock) return;
+      mount.innerHTML = window.AoTNotesBlock.html({ title: {{ _('Additional notes') | tojson }} });
+      window.AoTNotesBlock.wire(mount, {
+        targetId: {{ journal.unique_id | tojson }},
+        targetType: 'journal',
+        name: {{ (journal.title or '') | tojson }}
+      });
+      var printBtn = document.getElementById('journal-print-btn');
+      if (printBtn) printBtn.addEventListener('click', function () { window.print(); });
+    })();
+  </script>
+
+  {% endif %}
+
+</main>
+{% endblock %}

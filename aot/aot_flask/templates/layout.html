@@ -664,6 +664,12 @@ IMPORTANT: This is the SOURCE TEMPLATE file.
               href="{{ url_for('routes_geo.page_plots') }}">
               {{ _('Plots') }}
             </a>
+            {#- 일지도 구획과 같은 운영 화면이다 — 같은 이유(그룹은 조작만
+                제한한다)로 설정이 아니라 이 자리에 둔다. -#}
+            <a class="dropdown-item {% if active_page == 'geo_journal' %} active{% endif %}"
+              href="{{ url_for('routes_geo.geo_journal_hub') }}">
+              {{ _('Journals') }}
+            </a>
             <a class="dropdown-item {% if active_page == 'notes' %} active{% endif %}"
               href="{{ url_for('routes_page.page_notes') }}">
               {{ _('Notes') }}

@@ -82,6 +82,7 @@ from .geo import GeoLayer
 from .geo import GeoFacility
 from .geo import GeoModelAsset
 from .geo_binding import GeoBinding
+from .geo_journal import GeoJournal
 from .geo_plot import GeoPlot
 from .geo_plot_stage_event import GeoPlotStageEvent
 from .geo_program import GeoProgram

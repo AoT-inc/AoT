@@ -32241,3 +32241,187 @@ msgstr "아직 판정한 적이 없습니다."
 #, python-format
 msgid "Next check in: %(time)s"
 msgstr "다음 판정까지: %(time)s"
+
+#: aot_flask/templates/pages/geo/journal.html:4 aot_flask/templates/pages/geo/journal.html:16
+#: aot_flask/templates/layout.html:671
+msgid "Journals"
+msgstr "일지"
+
+#: aot_flask/templates/pages/geo/journal.html:20
+msgid "Pick a plot, zone, or site and a period, and generate a snapshot of what was grown, measured, and controlled — a document you can hand off or print."
+msgstr "구획·구역·필지와 기간을 고르면 무엇을 어떻게 키우고 재고 제어했는지 스냅샷으로 만들어 드립니다 — 다른 사람에게 넘기거나 인쇄할 수 있는 문서입니다."
+
+#: aot_flask/templates/pages/geo/journal.html:28
+msgid "Select…"
+msgstr "선택…"
+
+#: aot_flask/templates/pages/geo/journal.html:47 aot_flask/static/js/geo/journal-page.js:78
+msgid "Whole area"
+msgstr "구역 전체"
+
+#: aot_flask/templates/pages/geo/journal.html:72
+msgid "Generate journal"
+msgstr "일지 생성"
+
+#: aot_flask/templates/pages/geo/journal.html:75
+msgid "Saved journals"
+msgstr "저장된 일지"
+
+#: aot_flask/templates/pages/geo/journal.html:86
+msgid "Generating…"
+msgstr "생성 중…"
+
+#: aot_flask/templates/pages/geo/journal.html:88
+msgid "Generation failed"
+msgstr "생성 실패"
+
+#: aot_flask/templates/pages/geo/journal_view.html:32
+msgid "This journal is still being generated. This page will refresh automatically."
+msgstr "일지를 생성하고 있습니다. 이 페이지는 자동으로 새로고침됩니다."
+
+#: aot_flask/templates/pages/geo/journal_view.html:35
+msgid "This journal could not be generated."
+msgstr "이 일지는 생성할 수 없었습니다."
+
+#: aot_flask/templates/pages/geo/journal_view.html:43
+msgid "Print (save as PDF)"
+msgstr "인쇄(PDF로 저장)"
+
+#: aot_flask/templates/pages/geo/journal_view.html:89
+msgid "Time zone"
+msgstr "시간대"
+
+#: aot_flask/templates/pages/geo/journal_view.html:114
+#, python-format
+msgid "Follows curve: %(name)s"
+msgstr "곡선을 따름: %(name)s"
+
+#: aot_flask/templates/pages/geo/journal_view.html:120
+msgid "No sensor for this"
+msgstr "이 항목을 잴 센서가 없습니다"
+
+#: aot_flask/templates/pages/geo/journal_view.html:137
+msgid "No data recorded for this period."
+msgstr "이 기간에 기록된 데이터가 없습니다."
+
+#: aot_flask/templates/pages/geo/journal_view.html:145
+msgid "Min"
+msgstr "최소"
+
+#: aot_flask/templates/pages/geo/journal_view.html:145
+msgid "Max"
+msgstr "최대"
+
+#: aot_flask/templates/pages/geo/journal_view.html:145
+msgid "Avg"
+msgstr "평균"
+
+#: aot_flask/templates/pages/geo/journal_view.html:153
+msgid "usage"
+msgstr "사용량"
+
+#: aot_flask/templates/pages/geo/journal_view.html:158
+msgid "partial coverage"
+msgstr "일부 구간만"
+
+#: aot_flask/templates/pages/geo/journal_view.html:161
+#, python-format
+msgid "curve: %(name)s"
+msgstr "곡선: %(name)s"
+
+#: aot_flask/templates/pages/geo/journal_view.html:166
+msgid "day/night target"
+msgstr "주야 목표"
+
+#: aot_flask/templates/pages/geo/journal_view.html:167
+msgid "cumulative target"
+msgstr "누적 목표"
+
+#: aot_flask/templates/pages/geo/journal_view.html:168
+msgid "no sensor"
+msgstr "센서 없음"
+
+#: aot_flask/templates/pages/geo/journal_view.html:179
+msgid "Runtime"
+msgstr "가동시간"
+
+#: aot_flask/templates/pages/geo/journal_view.html:182
+msgid "h"
+msgstr "시간"
+
+#: aot_flask/templates/pages/geo/journal_view.html:194
+msgid "attachment(s)"
+msgstr "개 첨부"
+
+#: aot_flask/templates/pages/geo/journal_view.html:212
+msgid "Additional notes"
+msgstr "추가 의견"
+
+#: aot_flask/routes_geo_journal.py:155
+msgid "Permission Denied"
+msgstr "권한이 없습니다"
+
+#: aot_flask/routes_geo_journal.py:164 aot_flask/routes_geo_journal.py:166
+msgid "Select what the journal is about."
+msgstr "일지 대상을 선택하세요."
+
+#: aot_flask/routes_geo_journal.py:168 aot_flask/static/js/geo/journal-page.js:128
+msgid "Enter both a start and an end date."
+msgstr "시작일과 종료일을 모두 입력하세요."
+
+#: aot_flask/routes_geo_journal.py:170
+msgid "The start date is after the end date."
+msgstr "시작일이 종료일보다 늦습니다."
+
+#: aot_flask/routes_geo_journal.py:181
+msgid "Could not find what this journal is about."
+msgstr "일지 대상을 찾을 수 없습니다."
+
+#: aot_flask/routes_geo_journal.py:184
+msgid "Could not read this target."
+msgstr "이 대상을 읽을 수 없습니다."
+
+#: aot_flask/routes_geo_journal.py:188
+#, python-format
+msgid "That period is too long (%(days)s days). Try a shorter period."
+msgstr "그 기간이 너무 깁니다(%(days)s일). 더 짧은 기간으로 다시 시도하세요."
+
+#: aot_flask/routes_geo_journal.py:192
+#, python-format
+msgid "That selection has too many devices (%(n)s channels). Narrow the area, or pick a single plot instead."
+msgstr "선택한 범위에 장치가 너무 많습니다(%(n)s채널). 구역을 좁히거나 구획 하나만 선택하세요."
+
+#: aot_flask/routes_geo_journal.py:197
+msgid "That selection would read too much data. Try a shorter period or a narrower area."
+msgstr "선택한 범위는 데이터양이 너무 많습니다. 더 짧은 기간이나 좁은 구역으로 다시 시도하세요."
+
+#: aot_flask/routes_geo_journal.py:247
+msgid "This journal is still being generated."
+msgstr "이 일지는 아직 생성 중입니다."
+
+#: aot_flask/routes_geo_journal.py:81
+msgid "Could not find that area."
+msgstr "그 구역을 찾을 수 없습니다."
+
+#: aot_flask/routes_geo_journal.py:103
+msgid "Facilities without a mapped location won't appear here — add their location in Facility settings first."
+msgstr "지도에 위치가 없는 시설은 여기 나오지 않습니다 — 시설 설정에서 위치를 먼저 채워 주세요."
+
+#: aot_flask/static/js/geo/journal-page.js:123
+msgid "Select an area first."
+msgstr "먼저 구역을 선택하세요."
+
+#: aot_flask/static/js/geo/journal-page.js:72 aot_flask/static/js/geo/journal-page.js:146
+#: aot_flask/static/js/geo/journal-page.js:150
+msgid "Something went wrong."
+msgstr "문제가 발생했습니다."
+
+#: aot_flask/static/js/geo/journal-page.js:32
+#, python-format
+msgid "%(n)s periods"
+msgstr "%(n)s개 구간"
+
+#: aot_flask/static/js/geo/journal-page.js:33
+#, python-format
+msgid "%(n)s notes"
+msgstr "노트 %(n)s건"

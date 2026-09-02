@@ -145,4 +145,4 @@ def test_the_migration_is_the_alembic_head():
     않는다 — 앱은 'up to date' 를 남기고 정상 기동하며, 모델은 존재하지 않는
     컬럼을 참조한 채 돈다."""
     from aot.config import ALEMBIC_VERSION
-    assert ALEMBIC_VERSION == 'p6_61_sequence_resume_on_activate_20260901'
+    assert ALEMBIC_VERSION == 'p6_62_geo_journal_20260902'
