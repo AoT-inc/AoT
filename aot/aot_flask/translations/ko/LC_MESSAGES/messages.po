@@ -32425,3 +32425,29 @@ msgstr "%(n)s개 구간"
 #, python-format
 msgid "%(n)s notes"
 msgstr "노트 %(n)s건"
+
+#: aot_flask/geo/plot_journal.py
+msgid "Daily averages are the mean of hourly means, not a true time-weighted average of every reading."
+msgstr "일일 평균은 시간별 평균의 평균입니다 — 매 측정값의 진짜 시간가중 평균이 아닙니다."
+
+#: aot_flask/geo/plot_journal.py
+msgid "Runtime is read from the first channel only, even for multi-channel outputs."
+msgstr "가동시간은 다채널 출력이라도 첫 채널만 읽습니다."
+
+#: aot_flask/geo/plot_journal.py
+#, python-format
+msgid "%(n)s channel(s) could not be read and are missing from this journal."
+msgstr "%(n)s개 채널을 읽지 못해 이 일지에서 빠졌습니다."
+
+#: aot_flask/geo/plot_journal.py
+#, python-format
+msgid "%(n)s device area(s) overlap this plot with no device assigned yet."
+msgstr "이 구획과 겹치는 장치 구역 %(n)s곳에 아직 장치가 배정되지 않았습니다."
+
+#: aot_flask/geo/plot_journal.py
+msgid "Notes pinned to a map location are not included for facility plots — their outline is derived from the facility, not their own."
+msgstr "시설 구획은 지도 위치에 꽂힌 노트를 포함하지 않습니다 — 윤곽이 시설에서 파생된 것이라 자기 것이 아닙니다."
+
+#: aot_flask/geo/plot_journal.py
+msgid "Notes pinned to a map location were not checked."
+msgstr "지도 위치에 꽂힌 노트는 확인하지 않았습니다."

@@ -266,10 +266,20 @@ def geo_journal_view(journal_uuid):
 
     # caveat 키 → 뷰어 언어 문장. 여기서 번역하는 이유는 §7 의 title/summary
     # 와 같다 — 저장 시점 언어로 굳지 않게 열람할 때마다 만든다.
+    #
+    # `target_kind_label` 도 같은 이유로 여기서 만든다 — 저장된 `kind`
+    # (원문 코드값)만 스냅샷에 있고, 사람이 읽는 라벨은 `_target_summary()`
+    # 가 실행되는 백그라운드 생성 스레드에 요청 컨텍스트가 없어 저장 시점에
+    # 만들면 영어로 굳는다(실제 브라우저 검증으로 발견).
     caveat_texts = {}
+    target_kind_label = None
     if row.is_ready():
         for key in (row.data.get('caveats') or []):
             caveat_texts[key] = plot_journal.caveat_text(key)
+        target = row.data.get('target') or {}
+        target_kind_label = plot_journal._target_kind_label(
+            target.get('type'), target.get('kind'))
 
     return render_template('pages/geo/journal_view.html', journal=row,
-                           caveat_texts=caveat_texts)
+                           caveat_texts=caveat_texts,
+                           target_kind_label=target_kind_label)

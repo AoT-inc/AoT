@@ -27204,3 +27204,29 @@ msgstr ""
 #, python-format
 msgid "%(n)s notes"
 msgstr ""
+
+#: aot_flask/geo/plot_journal.py
+msgid "Daily averages are the mean of hourly means, not a true time-weighted average of every reading."
+msgstr ""
+
+#: aot_flask/geo/plot_journal.py
+msgid "Runtime is read from the first channel only, even for multi-channel outputs."
+msgstr ""
+
+#: aot_flask/geo/plot_journal.py
+#, python-format
+msgid "%(n)s channel(s) could not be read and are missing from this journal."
+msgstr ""
+
+#: aot_flask/geo/plot_journal.py
+#, python-format
+msgid "%(n)s device area(s) overlap this plot with no device assigned yet."
+msgstr ""
+
+#: aot_flask/geo/plot_journal.py
+msgid "Notes pinned to a map location are not included for facility plots — their outline is derived from the facility, not their own."
+msgstr ""
+
+#: aot_flask/geo/plot_journal.py
+msgid "Notes pinned to a map location were not checked."
+msgstr ""

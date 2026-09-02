@@ -847,6 +847,16 @@ def _target_summary(target_type, target_row, unassigned_areas=0):
     `location`·`program`·`area_m2` 는 plot 에서만 값을 갖는다(zone/site 는
     구조상 그 개념이 없다 — 단계도 마찬가지라 `stages` 는 호출부가 따로
     `None` 을 채운다).
+
+    ⚠ **`kind_label`(번역된 라벨)을 여기서 계산해 저장하지 않는다 — 실제
+      브라우저 검증에서 잡은 결함이다.** 이 함수는 백그라운드 생성 스레드
+      (`_run_journal_build`)에서 불린다. 그 스레드는 앱 컨텍스트는 있어도
+      **요청 컨텍스트가 없어** `flask_babel.gettext`가 로케일을 못 정하고
+      영어로 떨어지는데, 그 값이 스냅샷에 그대로 굳어 저장된다 — §7 에서
+      `title`/`summary`에 대해 이미 고친 것과 **같은 함정**을 `kind_label`
+      에서는 놓쳤다. 원문 코드(`kind`)만 저장하고, 사람이 읽는 라벨은 열람
+      시점(라우트·Markdown 렌더)에 `_target_kind_label()`을 다시 불러
+      얻는다 — `caveat_text()`와 같은 패턴이다.
     """
     out = {
         'type': target_type,
@@ -857,7 +867,6 @@ def _target_summary(target_type, target_row, unassigned_areas=0):
         out.update({
             'name': target_row.name or target_row.subject,
             'kind': target_row.kind or 'vegetation',
-            'kind_label': _target_kind_label('plot', target_row.kind or 'vegetation'),
             'subject': target_row.subject,
             'variety': target_row.variety,
             'location': None,
@@ -884,7 +893,6 @@ def _target_summary(target_type, target_row, unassigned_areas=0):
         out.update({
             'name': plot_context._shape_name(target_row) or target_row.unique_id,
             'kind': target_type,
-            'kind_label': _target_kind_label(target_type, None),
             'subject': None, 'variety': None,
             'location': None, 'program': None, 'area_m2': None,
         })
@@ -1257,7 +1265,8 @@ def render_plot_journal_markdown(journal_data):
     lines.append('')
     lines.append('| | |')
     lines.append('|---|---|')
-    lines.append('| Type | %s |' % _md_escape(t.get('kind_label')))
+    lines.append('| Type | %s |' % _md_escape(
+        _target_kind_label(t.get('type'), t.get('kind'))))
     if t.get('subject'):
         item = t['subject'] + (' — %s' % t['variety'] if t.get('variety') else '')
         lines.append('| Item | %s |' % _md_escape(item))
