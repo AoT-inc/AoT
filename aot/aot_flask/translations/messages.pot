@@ -27006,3 +27006,17 @@ msgid ""
 "This controller is active. Deactivate it before saving changes, or they "
 "will not be applied."
 msgstr ""
+
+#: aot_flask/templates/user_templates/widget_template_AoT_pid_body.html:393
+#: widgets/widget_function_status.py:59
+msgid "Band"
+msgstr ""
+
+#: aot_flask/templates/user_templates/widget_template_widget_function_status_js.html:104
+msgid "No Function selected."
+msgstr ""
+
+#: widgets/widget_function_status.py:165
+#: aot_flask/templates/user_templates/widget_template_widget_function_status_js.html:121
+msgid "This function type has no editable options."
+msgstr ""

@@ -31809,3 +31809,12 @@ msgid ""
 "This controller is active. Deactivate it before saving changes, or they "
 "will not be applied."
 msgstr "このコントローラーは有効になっています。保存前に無効化してください。無効化しないと変更は適用されません。"
+
+#: aot_flask/templates/user_templates/widget_template_widget_function_status_js.html:104
+msgid "No Function selected."
+msgstr "関数が選択されていません。"
+
+#: widgets/widget_function_status.py:165
+#: aot_flask/templates/user_templates/widget_template_widget_function_status_js.html:121
+msgid "This function type has no editable options."
+msgstr "この関数タイプには編集可能なオプションがありません。"

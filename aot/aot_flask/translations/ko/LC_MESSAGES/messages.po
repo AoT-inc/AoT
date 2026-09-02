@@ -32069,3 +32069,12 @@ msgid ""
 "This controller is active. Deactivate it before saving changes, or they "
 "will not be applied."
 msgstr "이 컨트롤러는 활성 상태입니다. 저장 전에 비활성화하세요. 그렇지 않으면 변경사항이 적용되지 않습니다."
+
+#: aot_flask/templates/user_templates/widget_template_widget_function_status_js.html:104
+msgid "No Function selected."
+msgstr "선택된 함수가 없습니다."
+
+#: widgets/widget_function_status.py:165
+#: aot_flask/templates/user_templates/widget_template_widget_function_status_js.html:121
+msgid "This function type has no editable options."
+msgstr "이 함수 유형에는 편집 가능한 옵션이 없습니다."
