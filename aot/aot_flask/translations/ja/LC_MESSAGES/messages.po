@@ -29002,8 +29002,8 @@ msgid "Estimated"
 msgstr "推定"
 
 #: aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:2470
-msgid "Cumulative since planting"
-msgstr "定植日からの累積"
+msgid "Cumulative since start"
+msgstr "開始日からの累積"
 
 #: aot/aot_flask/templates/pages/geo/journal.html
 msgid "Weather station measurements to include"
@@ -34229,3 +34229,24 @@ msgstr "飽差(VPD)"
 #: aot/aot_flask/geo/plot_journal.py
 msgid "How dry the air feels to the plant, in kPa. It combines temperature and humidity, because the same humidity is drying on a warm day and not on a cool one. High VPD pushes the plant to transpire; too high and it closes up and stops growing."
 msgstr "植物が感じる空気の乾きをkPaで表した値です。同じ湿度でも暖かい日は乾いて感じ、涼しい日はそうでないため、温度と湿度を合わせて見ます。VPDが高いと蒸散が進み、高すぎると気孔を閉じて生長が止まります。"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Set a base temperature in the program to see this."
+msgstr "プログラムに基準温度を設定すると表示されます。"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "No temperature sensor covers this plot."
+msgstr "この区画を担当する温度センサーがありません。"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "%(v)s so far, but only %(pct)s of the days have data."
+msgstr "現在%(v)sですが、データのある日が%(pct)sしかありません。"
+
+#: aot/aot_flask/geo/plot_journal.py
+msgid "Water volume is only filled in for devices whose flow rate is known, and none here is — so this journal shows run times only. Facilities get flow from their piping layout; equipment drawn straight onto the map carries a flow rate but is not linked to the valve that opens it, so it cannot be attributed."
+msgstr "水量は流量が分かる装置にのみ記載されますが、ここにはそれがないため、この日誌は稼働時間のみを載せています。施設は配管図から流量を得られますが、地図に直接描いた設備は流量を持っていても、それを開くバルブと結び付いていないため配分できません。"
+
+
+#: aot/aot_flask/geo/plot_journal.py
+msgid "Water volumes are estimated from the sprinklers drawn on the map inside the area each valve covers, and how long that valve ran — not measured by a flow meter. Only the part that overlaps this plot is counted, so no share is guessed."
+msgstr "水量は地図で各バルブが担当する区域内に描かれたスプリンクラーと、そのバルブの稼働時間から推定した値です — 流量計の実測ではありません。この区画と重なる部分のみを数えるため、配分を推測しません。"

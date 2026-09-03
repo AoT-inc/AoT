@@ -599,7 +599,8 @@ def _merge_bucket_group(box, to):
             if water and water.get('litres') is not None:
                 box = ctrl_acc[key].setdefault(
                     'water', {'litres': 0.0, 'share': water.get('share', 1.0),
-                              'estimated': True})
+                              'estimated': True,
+                              'source': water.get('source')})
                 box['litres'] += float(water['litres'])
     control_rows = []
     for key in ctrl_order:
@@ -1451,6 +1452,11 @@ def control_rows_by_bucket(actuators, start_str, end_str, tz,   # noqa: C901
                     'litres': round(litres, 1),
                     'share': flow.get('share', 1.0),
                     'estimated': True,
+                    # 근거가 배관 도면인지 지도 장비인지 — 나누는 방식이
+                    # 아예 달라(동의 몫 · 구획 안 노즐) 문서 문장이 갈린다.
+                    # 여기서 안 실으면 조립부가 알 길이 없어 시설용 문장이
+                    # 노지 문서에 붙는다(실측으로 그랬다).
+                    'source': flow.get('source'),
                 }
             out[key].append(row)
         time.sleep(QUERY_PACING_SEC)
@@ -2295,8 +2301,26 @@ def build_journal_for_target(target_type, target_id, start_date, end_date,
                  if e.get('measurement') == 'dli']
     # 물량이 설계 유량 추정임을 문서가 말한다 — 유량계 실측과 섞여 보이면
     # 사람은 둘을 같은 신뢰도로 읽는다.
-    if any(c.get('water') for b in buckets for c in (b.get('control') or [])):
-        caveats.append('water-estimated')
+    _ctrl_rows = [c for b in buckets for c in (b.get('control') or [])]
+    _waters = [c['water'] for c in _ctrl_rows if c.get('water')]
+    if _waters:
+        # 근거가 배관 도면인지 지도 장비인지에 따라 문장이 다르다 — 나누는
+        # 방식(동의 몫 · 구획 안 노즐)이 아예 달라서, 한 문장으로 뭉치면
+        # 어느 쪽으로 나눈 값인지 알 수 없다.
+        if any(w.get('source') == 'map-equipment' for w in _waters):
+            caveats.append('water-estimated-map')
+        if any(w.get('source') != 'map-equipment' for w in _waters):
+            caveats.append('water-estimated')
+    elif _ctrl_rows:
+        # 물량 칸이 하나도 안 채워졌다. 화면은 그 열을 아예 내지 않고(§10),
+        # 문서는 왜 없는지를 여기서 말한다 — 예전에는 열이 빈 채로 남아
+        # "관수량이 계산되지 않는다" 로 읽혔다(실제로 그 보고를 받았다).
+        #
+        # ⚠ **어느 장치가 관수인지 판정하지 않는다.** Output 은 통신 방식만
+        #   알 뿐 의미 분류가 없고(실측: 노지 밸브 `v331` 의 `kind` 가
+        #   `None`), 이름으로 맞히려 하면 `v331` 같은 이름에서 조용히 틀린다.
+        #   그래서 문장을 **관수 여부가 아니라 그 열에 대한 사실**로 쓴다.
+        caveats.append('water-no-flow-basis')
 
     if _dli_rows:
         if any(e.get('estimated') for e in _dli_rows):
@@ -2825,6 +2849,19 @@ def caveat_text(key):
                 "facility plots — their outline is derived from the "
                 "facility, not their own.")
         return _gettext_safe("Notes pinned to a map location were not checked.")
+    if base == 'water-no-flow-basis':
+        return _gettext_safe(
+            "Water volume is only filled in for devices whose flow rate is "
+            "known, and none here is — so this journal shows run times only. "
+            "Facilities get flow from their piping layout; equipment drawn "
+            "straight onto the map carries a flow rate but is not linked to "
+            "the valve that opens it, so it cannot be attributed.")
+    if base == 'water-estimated-map':
+        return _gettext_safe(
+            "Water volumes are estimated from the sprinklers drawn on the "
+            "map inside the area each valve covers, and how long that valve "
+            "ran — not measured by a flow meter. Only the part that overlaps "
+            "this plot is counted, so no share is guessed.")
     if base == 'water-estimated':
         return _gettext_safe(
             "Water volumes are estimated from the designed nozzle flow and "
@@ -3679,6 +3716,173 @@ def render_plot_journal_odt(journal_data, granularity=None):
 
 # ── 관수량 ───────────────────────────────────────────────────────────────
 
+def _open_field_flow(plot):
+    """노지 구획 → `{output_id: {'lph', 'share', 'source'}}`.
+
+    ## 밸브는 자기가 맡은 구역을 **이미 알고 있다**
+
+    지도에 놓인 출력은 `GeoShape(type='device')` — **담당 폴리곤**을 갖는다
+    (`device_binding.SHAPE_TYPE_ROLES` 의 `'area'`). "이 밸브가 어디에 물을
+    주는가" 는 그 도형이 답한다. 노즐 임자를 정하려고 별도의 지정을 만들
+    이유가 없다 — 담당 폴리곤 안에 있는 노즐이 그 밸브 것이다.
+
+    ⚠ **두 번째 판정자를 만들지 말 것.** 한때 구역 도형에 밸브를 매는 별도
+      지정을 만들었다가 걷어냈다. 담당 폴리곤이 이미 있는데 구역 단위로
+      묶었더니 **틀린 값**이 나왔다 — 나주 배밭은 v11·v12 가 각각 절반
+      (510,000 / 512,900 L/h)을 맡는데, 구역으로 묶으면 2,205개가 통째로
+      한 밸브에 얹혀 918,750 L/h 가 됐다.
+
+    ## 몫으로 나누지 않는다 — 구획과 겹치는 만큼만 센다
+
+    노지 구획은 폴리곤을 갖는다. **담당 폴리곤 ∩ 구획** 안의 노즐만 세면
+    "그 밸브의 물 중 이 구획에 떨어진 몫" 이 곧 나온다 — 면적 비율로 어림할
+    필요가 없다(구획 한쪽에 노즐이 몰린 배치가 흔하다).
+    """
+    from aot.aot_flask.geo import device_binding
+    from aot.databases.models import GeoShape
+
+    feature = getattr(plot, 'feature', None) or {}
+    geom = feature.get('geometry') or {}
+    if not geom:
+        return {}
+    try:
+        from shapely.geometry import shape as _shape
+        poly = _shape(geom)
+        if poly.is_empty:
+            return {}
+    except Exception:
+        logger.exception('journal: 구획 기하 해석 실패')
+        return {}
+
+    # 이 구획을 맡는 출력들 — 일지가 가동시간을 내는 것과 **같은 목록**이다.
+    # 여기서 따로 찾으면 두 목록이 갈라져, 표에 있는 장치의 물량이 비거나
+    # 없는 장치의 물량이 생긴다.
+    try:
+        actuators, _unassigned = plot_context.actuators_for_plot(plot)
+    except Exception:
+        logger.exception('journal: 구획 액추에이터 조회 실패')
+        return {}
+    output_ids = [a.get('output_id') for a in actuators if a.get('output_id')]
+    if not output_ids:
+        return {}
+
+    sprinklers = _map_sprinklers(getattr(plot, 'geo_id', None)
+                                 or _map_of_plot(plot))
+    if not sprinklers:
+        return {}
+
+    out = {}
+    for oid in output_ids:
+        region = None
+        for sh in _device_area_shapes(oid):
+            try:
+                area = _shape((sh.feature or {}).get('geometry') or {})
+            except Exception:
+                continue
+            if area.is_empty:
+                continue
+            # 한 밸브가 담당 도형을 여럿 가질 수 있다(구역이 나뉜 배치).
+            # 합집합으로 모아야 겹치는 노즐을 두 번 세지 않는다.
+            region = area if region is None else region.union(area)
+        if region is None:
+            continue
+        region = region.intersection(poly)
+        if region.is_empty:
+            continue
+        lph = sum(flow for pt, flow in sprinklers if region.contains(pt))
+        if lph > 0:
+            out[oid] = {'lph': round(lph, 1), 'share': 1.0,
+                        'source': 'map-equipment'}
+    return out
+
+
+def _device_area_shapes(output_id):
+    """출력이 맡는 **담당 폴리곤** 도형들 → [GeoShape].
+
+    마커(`aot_device`, 점)는 뺀다 — 위치일 뿐 담당 구역이 아니다.
+    """
+    from aot.aot_flask.geo import device_binding
+    from aot.databases.models import GeoShape
+
+    out = []
+    try:
+        found = device_binding.shapes_for_device(output_id) or []
+    except Exception:
+        logger.exception('journal: 담당 도형 조회 실패 (%s)', output_id)
+        return out
+    for item in found:
+        row = item
+        if not hasattr(row, 'feature'):
+            row = GeoShape.query.filter_by(unique_id=str(item)).first()
+        if row is None or row.type != 'device':
+            continue
+        out.append(row)
+    return out
+
+
+def _map_sprinklers(map_uuid):
+    """지도의 스프링클러 → `[(Point, L/h)]`. 유량이 0 인 것은 빼고 낸다.
+
+    노지 관수 장비는 지도에 직접 그린다 —
+    `GeoShape(type='equipment_collection')` 안의 `sub_type='sprinkler'` 가
+    각자 `flow`(L/h)를 들고 있다.
+    """
+    from aot.databases.models import GeoShape
+
+    q = GeoShape.query.filter_by(type='equipment_collection')
+    if map_uuid:
+        q = q.filter(GeoShape.geo_id == map_uuid)
+    out = []
+    for coll in q.all():
+        for f in ((coll.feature or {}).get('features') or []):
+            pr = f.get('properties') or {}
+            if pr.get('sub_type') != 'sprinkler':
+                continue
+            try:
+                flow = float(pr.get('flow') or 0)
+            except (TypeError, ValueError):
+                continue
+            if flow <= 0:
+                continue
+            pt = _sprinkler_point(f, pr)
+            if pt is not None:
+                out.append((pt, flow))
+    return out
+
+
+def _sprinkler_point(feature, props):
+    """스프링클러 하나의 위치 → shapely Point. 못 얻으면 None.
+
+    그리기 도구가 원(circle)으로 저장한 것은 기하가 아니라
+    `center_lat`/`center_lng` 에 중심을 둔다 — 그것을 먼저 본다.
+    """
+    from shapely.geometry import Point, shape as _shape
+    try:
+        if props.get('center_lat') is not None:
+            return Point(float(props['center_lng']), float(props['center_lat']))
+        geom = feature.get('geometry') or {}
+        if geom.get('type') == 'Point':
+            return Point(*geom['coordinates'][:2])
+        if geom:
+            return _shape(geom).centroid
+    except Exception:
+        return None
+    return None
+
+
+def _map_of_plot(plot):
+    """구획이 놓인 지도 uuid → str 또는 None.
+
+    구획은 지도를 직접 들지 않는다 — 감싸는 도형이 든다.
+    """
+    from aot.databases.models import GeoShape
+    uid = getattr(plot, 'zone_uuid', None)
+    if not uid:
+        return None
+    row = GeoShape.query.filter_by(unique_id=uid).first()
+    return row.geo_id if row is not None else None
+
+
 def irrigation_flow_for_plot(plot):
     """구획 → `{output_id: {'lph', 'share', 'source'}}`.
 
@@ -3708,7 +3912,8 @@ def irrigation_flow_for_plot(plot):
 
     facility_uuid = getattr(plot, 'facility_uuid', None)
     if not facility_uuid:
-        return {}                      # 노지 — 설계 유량이라는 것이 없다
+        # 노지 — 배관 도면은 없지만 지도에 그린 스프링클러가 유량을 갖고 있다.
+        return _open_field_flow(plot)
     facility = GeoFacility.query.filter_by(unique_id=facility_uuid).first()
     if facility is None:
         return {}

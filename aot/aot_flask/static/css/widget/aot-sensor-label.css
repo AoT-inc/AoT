@@ -2164,3 +2164,15 @@ button.aot-center-modal-close {
 /* 적용 줄 — 안내문(왼쪽)과 버튼(오른쪽)은 `.aot-ov-row` 기본 배치 그대로다. */
 .aot-ov-row.aot-ov-pick-foot { align-items: center; }
 .aot-ov-weather-msg { color: var(--aot-color-text-secondary); }
+
+/* 파생값(DLI·GDD)이 **왜 안 나오는지** 말하는 줄.
+ *
+ * 값 줄(`.aot-env-now-item`)이 아니라 주석이므로 눈금·막대를 갖지 않는다.
+ * 그렇다고 지워 두면 사용자는 계산이 고장난 것으로 읽는다 — 실측에서 구획
+ * 44개 중 36개가 근거가 없어 빈 상태였고, 실제로 그 보고를 받았다. */
+.aot-ov-now-note {
+  padding: var(--aot-space-2) 0;
+  color: var(--aot-color-text-secondary);
+  font-size: var(--aot-font-size-sm);
+  line-height: 1.5;
+}

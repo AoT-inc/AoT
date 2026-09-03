@@ -28471,7 +28471,7 @@ msgid "Estimated"
 msgstr ""
 
 #: aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:2470
-msgid "Cumulative since planting"
+msgid "Cumulative since start"
 msgstr ""
 
 #: aot/aot_flask/templates/pages/geo/journal.html
@@ -28768,4 +28768,25 @@ msgstr ""
 
 #: aot/aot_flask/geo/plot_journal.py
 msgid "How dry the air feels to the plant, in kPa. It combines temperature and humidity, because the same humidity is drying on a warm day and not on a cool one. High VPD pushes the plant to transpire; too high and it closes up and stops growing."
+msgstr ""
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Set a base temperature in the program to see this."
+msgstr ""
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "No temperature sensor covers this plot."
+msgstr ""
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "%(v)s so far, but only %(pct)s of the days have data."
+msgstr ""
+
+#: aot/aot_flask/geo/plot_journal.py
+msgid "Water volume is only filled in for devices whose flow rate is known, and none here is — so this journal shows run times only. Facilities get flow from their piping layout; equipment drawn straight onto the map carries a flow rate but is not linked to the valve that opens it, so it cannot be attributed."
+msgstr ""
+
+
+#: aot/aot_flask/geo/plot_journal.py
+msgid "Water volumes are estimated from the sprinklers drawn on the map inside the area each valve covers, and how long that valve ran — not measured by a flow meter. Only the part that overlaps this plot is counted, so no share is guessed."
 msgstr ""

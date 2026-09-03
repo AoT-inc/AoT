@@ -30827,8 +30827,8 @@ msgid "Estimated"
 msgstr "Apytiksliai"
 
 #: aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:2470
-msgid "Cumulative since planting"
-msgstr "Sukauptas nuo sodinimo"
+msgid "Cumulative since start"
+msgstr "Sukaupta nuo pradžios"
 
 
 

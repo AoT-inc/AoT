@@ -30908,8 +30908,8 @@ msgid "Estimated"
 msgstr "Szacunkowo"
 
 #: aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:2470
-msgid "Cumulative since planting"
-msgstr "Skumulowane od sadzenia"
+msgid "Cumulative since start"
+msgstr "Skumulowane od początku"
 
 
 

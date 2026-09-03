@@ -3169,11 +3169,26 @@ _GDD_MIN_COVERAGE = 0.8
 _GDD_TEMP_MEASURE = 'temperature'
 
 
-def _daily_extremes(device_id, channel, measure, start_ts, end_ts):
+def _daily_extremes(device_id, channel, measure, start_ts, end_ts, tz,
+                    bucket_sec):
     """장치 채널의 **일별 최고·최저** → {date: (tmax, tmin)}.
 
     Influx 에 창 집계를 시킨다 — 원자료를 다 받아 파이썬에서 접으면 몇 달치가
     수만 점이 된다. 쿼리는 장치당 2회(최고·최저)지, 날짜당 2회가 아니다.
+
+    **하루는 현지 달력의 하루다.** 예전에는 `group_sec=86400` 으로 Influx 에
+    직접 하루를 시켰는데, 창은 UTC 에폭에 정렬되므로 한국·일본에서는 그
+    "하루" 가 현지 09:00~09:00 이었다. 최고기온(오후)은 제자리에 들어가지만
+    **최저기온(새벽)이 전날 통에 들어가** 짝이 어긋난다.
+
+    ⚠ 게다가 `aggregateWindow` 의 라벨은 구간의 **오른쪽 경계**라(`bucket_
+      local_key` 주석) 빼지 않으면 모든 날짜가 하루씩 밀린다 — 예전 코드가
+      `rec.get_time().date()` 를 그대로 썼다. 두 결함이 겹쳐 실측에서
+      쿠마모토 딸기가 270.4(11일)로 나왔고, 현지일로 접으면 292.0(12일)이다.
+
+    그래서 **시간별로 받아 파이썬에서 현지 일로 접는다**(`plot_journal.
+    daily_channel_stats` 와 같은 방식). 쿼리 수는 그대로 채널당 2회다 —
+    돌려받는 행이 24배가 될 뿐이고, 그 규모는 일지가 이미 감당하고 있다.
 
     **마지막 버킷은 버린다.** 오늘은 아직 안 끝났고, 그대로 두면 하루가 절반만
     쌓인 채 더해진다(그날의 Tmax 가 낮게 잡혀 GDD 가 과소평가된다).
@@ -3203,22 +3218,26 @@ def _daily_extremes(device_id, channel, measure, start_ts, end_ts):
     except Exception:
         pass   # 못 찾으면 호출자가 준 이름 그대로 시도(과거 동작 유지)
 
+    from aot.utils.timekit import bucket_local_key
+
     out = {}
     for fn in ('max', 'min'):
         try:
             tables = query_string(
                 'C', device_id, channel=channel, measure=measure,
                 start_str=start_ts, end_str=end_ts,
-                group_sec=86400, group_fn=fn)
+                group_sec=bucket_sec, group_fn=fn)
         except Exception as exc:
             logger.debug('GDD: %s 조회 실패(%s): %s', device_id, fn, exc)
             return {}
         for table in (tables or []):
             for rec in table.records:
                 try:
-                    day = rec.get_time().date()
+                    day = bucket_local_key(rec.get_time(), bucket_sec, tz)
                     val = float(rec.get_value())
                 except (TypeError, ValueError, AttributeError):
+                    continue
+                if day is None:
                     continue
                 cur = out.get(day) or [None, None]
                 idx = 0 if fn == 'max' else 1
@@ -3317,7 +3336,17 @@ def gdd_accumulated(plot, program_row=None, on=None, with_series=False):
     end = min(getattr(plot, 'ended_on', None) or today, today)
     if end < start:
         return dict(info, reason='not-started')
-    info['days_expected'] = (end - start).days      # 오늘(미완성)은 세지 않는다
+    # ⚠ **기대일수와 집계 범위가 같은 날들을 가리켜야 한다.** 예전에는
+    #   기대일수만 오늘을 빼고(`(end-start).days`) 집계는 오늘까지 담아,
+    #   현지일로 접자마자 커버리지가 109% 로 나왔다 — 분모와 분자가 다른
+    #   날 집합을 세고 있었다는 뜻이다.
+    #
+    #   오늘을 빼는 이유는 아직 안 끝났기 때문이므로, **끝난 작기(ended_on
+    #   이 과거)에는 마지막 날도 온전한 하루**라 그대로 센다.
+    last = end - timedelta(days=1) if end >= today else end
+    if last < start:
+        return dict(info, reason='too-early')
+    info['days_expected'] = (last - start).days + 1
     if gdd_daily is not None:
         info['target'] = round(gdd_daily * info['days_expected'], 1)
     if info['days_expected'] <= 0:
@@ -3328,16 +3357,25 @@ def gdd_accumulated(plot, program_row=None, on=None, with_series=False):
     if not channels:
         return dict(info, reason='no-temperature-sensor')
 
-    start_ts = start.isoformat() + 'T00:00:00Z'
-    end_ts = (end + timedelta(days=1)).isoformat() + 'T00:00:00Z'
+    # 구간도 **현지 자정** 기준이다 — UTC 자정으로 자르면 첫날의 새벽과
+    # 마지막 날의 저녁이 통째로 빠진다(그 자체로 하루가 덜 세어진다).
+    from aot.utils.device_tz import resolve_location_tz
+    from aot.utils.timekit import as_tz, bucket_seconds_for, local_day_bounds_utc
+
+    tz = as_tz(resolve_location_tz(getattr(plot, 'unique_id', None)))
+    # 창 크기는 **기간 전체를 보고** 정한다 — 서머타임 전환이 끼면 오프셋이
+    # 둘이라, 한쪽만 보면 나머지 절반에서 현지 자정이 창 경계를 벗어난다.
+    bucket_sec = bucket_seconds_for(tz, start, end)
+    start_ts, end_ts = local_day_bounds_utc(start, end, tz)
 
     # 채널이 여럿이면 **날마다 평균**한다. 최고끼리·최저끼리 평균하는 것이라
     # 한 센서의 이상값이 그날을 통째로 끌고 가지 않는다.
     per_day = {}
     for did, ch in channels:
         for day, (tmax, tmin) in _daily_extremes(
-                did, ch, _GDD_TEMP_MEASURE, start_ts, end_ts).items():
-            if day < start or day > end:
+                did, ch, _GDD_TEMP_MEASURE, start_ts, end_ts,
+                tz, bucket_sec).items():
+            if day < start or day > last:
                 continue
             acc = per_day.setdefault(day, [[], []])
             acc[0].append(tmax)

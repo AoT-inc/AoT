@@ -2457,6 +2457,39 @@
         scaleNote: _dli.assumed ? _t('Estimated') : null
       }) + '</div>';
     }
+    // ── 못 낼 때는 **왜인지 말한다** ──────────────────────────────────
+    //
+    // 예전에는 `usable` 이 아니면 줄을 통째로 지웠다. 그런데 실측에서 구획
+    // 44개 중 **36개가 그 상태**였고(프로그램 없음 19 · 기준온도 없음 11 ·
+    // 자료 부족 5 · 온도 센서 없음 1), 화면에는 아무것도 안 나오니 "적산온도가
+    // 계산되지 않는다" 로 읽힌다 — 실제로 그 보고를 받았다. 계산은 맞게 돌고
+    // 있었고, 없는 것은 **근거**였다.
+    //
+    // 다만 이유마다 사람이 할 일이 다르므로 문장도 다르다. `no-program` 은
+    // 여기서 말하지 않는다 — 프로그램 칸이 이미 비어 있어 같은 말을 두 번
+    // 하게 된다.
+    var _gddReason = (opts.gdd || {}).reason;
+    if (!_gddUsable && !hidden.GDD && _gddReason && _gddReason !== 'no-program'
+        && _gddReason !== 'too-early' && _gddReason !== 'not-started') {
+      var _why = null;
+      if (_gddReason === 'no-t-base') {
+        // 지어내지 않는다 — 작물마다 다르고, 틀리면 적산이 통째로 어긋나는데
+        // 에러가 안 난다. 어디서 정하는지를 알려주는 것이 할 수 있는 전부다.
+        _why = _t('Set a base temperature in the program to see this.');
+      } else if (_gddReason === 'no-temperature-sensor') {
+        _why = _t('No temperature sensor covers this plot.');
+      } else if (_gddReason === 'low-coverage') {
+        // **값은 있다.** 숨기면 사람은 고장으로 읽는다 — 오래된 값을 숨기지
+        // 않고 흐리게 두는 규칙(측정값 신선도)과 같은 판단이다.
+        _why = _t('%(v)s so far, but only %(pct)s of the days have data.')
+                 .replace('%(v)s', String((opts.gdd || {}).value))
+                 .replace('%(pct)s', String((opts.gdd || {}).coverage_pct) + '%');
+      }
+      if (_why) {
+        _gddRowHtml = '<div class="aot-ov-now-note">' +
+                      _esc(_t('GDD')) + ' — ' + _esc(_why) + '</div>';
+      }
+    }
     if (_gddUsable && !hidden.GDD) {
       var _gdd = opts.gdd;
       // 목표(target) — 프로그램의 하루 권장 GDD × 지난 날수(plot_context.
@@ -2467,7 +2500,7 @@
         value: _gdd.value, target: _gdd.target,
         valueText: String(_gdd.value),
         valueSub: (_gdd.target != null ? ' / ' + _gdd.target : '') + ' °C·d',
-        scaleLead: _t('Cumulative since planting')
+        scaleLead: _t('Cumulative since start')
       }) + '</div>';
     }
 

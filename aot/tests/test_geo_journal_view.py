@@ -1663,3 +1663,216 @@ class TestJournalTableColumns(unittest.TestCase):
         알 수 없다 — 그 행에서 달라지는 것이 센서다."""
         src = self._view()
         self.assertIn('{% if grp.summary %}{{ e.sensor }}', src)
+
+
+class TestMissingValuesSayWhy(unittest.TestCase):
+    """못 낸 값은 **빈칸으로 두지 않는다** — 빈칸은 고장으로 읽힌다.
+
+    실측에서 적산온도는 구획 44개 중 36개가 비어 있었고(프로그램 없음 19 ·
+    기준온도 없음 11 · 자료 부족 5 · 온도 센서 없음 1), 관수량은 노지 구획의
+    밸브가 가동시간만 남긴 채 열이 통째로 비어 있었다. 계산은 둘 다 맞게
+    돌고 있었고 없는 것은 **근거**였는데, 화면이 그 말을 하지 않아 "계산이
+    되지 않는다" 는 보고가 왔다.
+    """
+
+    def _view(self):
+        import io as _io
+        return _io.open(os.path.join(
+            os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+            'aot_flask', 'templates', 'pages', 'geo',
+            'journal_view.html'), encoding='utf-8').read()
+
+    def test_water_column_is_dropped_when_nothing_fills_it(self):
+        """빈 열을 남기면 "계산이 안 된다" 로 읽힌다. 없는 이유는 안내가
+        한 번 말한다."""
+        src = self._view()
+        self.assertEqual(src.count("selectattr('water')"), 2)   # 단계 절 + 일자별
+        self.assertIn("{% if has_water %}<th>{{ _('Water') }}</th>{% endif %}",
+                      src)
+
+    def test_the_reason_is_written_down(self):
+        text = PJ.caveat_text('water-no-flow-basis')
+        self.assertNotEqual(text, 'water-no-flow-basis')
+        self.assertIn('flow', text)
+
+    def test_the_reason_does_not_claim_irrigation_happened(self):
+        """어느 장치가 관수인지 판정하지 않는다 — Output 은 의미 분류가 없고
+        (실측: 노지 밸브 `v331` 의 `kind` 가 None), 이름으로 맞히려 하면
+        그런 이름에서 조용히 틀린다. 문장은 관수 여부가 아니라 **그 열에
+        대한 사실**이어야 한다."""
+        text = PJ.caveat_text('water-no-flow-basis')
+        for word in ('watered', 'irrigated', 'irrigation ran'):
+            self.assertNotIn(word, text)
+
+    def test_no_name_based_irrigation_guessing_came_back(self):
+        import inspect
+        src = inspect.getsource(PJ)
+        self.assertNotIn('IRRIGATION_OUTPUT_HINTS', src)
+
+    def test_gdd_card_explains_itself(self):
+        """카드가 이유를 말한다. `no-program` 은 빼는데, 프로그램 칸이 이미
+        비어 있어 같은 말을 두 번 하게 된다."""
+        import io as _io
+        src = _io.open(os.path.join(
+            os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+            'aot_flask', 'static', 'js', 'widgets', 'AoT_map',
+            'aot-map-popup.js'), encoding='utf-8').read()
+        self.assertIn("_gddReason === 'no-t-base'", src)
+        self.assertIn("_gddReason === 'low-coverage'", src)
+        self.assertIn("_gddReason !== 'no-program'", src)
+
+    def test_low_coverage_still_shows_the_number(self):
+        """값은 있다. 숨기면 사람은 고장으로 읽는다 — 오래된 값을 숨기지 않고
+        흐리게 두는 규칙(측정값 신선도)과 같은 판단이다."""
+        import io as _io
+        src = _io.open(os.path.join(
+            os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+            'aot_flask', 'static', 'js', 'widgets', 'AoT_map',
+            'aot-map-popup.js'), encoding='utf-8').read()
+        i = src.index("_gddReason === 'low-coverage'")
+        self.assertIn('(opts.gdd || {}).value', src[i:i + 600])
+
+
+class TestGddDayBoundary(unittest.TestCase):
+    """적산온도의 "하루" 는 **현지 달력의 하루**다.
+
+    예전에는 `group_sec=86400` 으로 InfluxDB 에 직접 하루를 시켰는데, 창은
+    UTC 에폭에 정렬되므로 한국·일본에서는 그 하루가 현지 09:00~09:00 이었다.
+    최고기온(오후)은 제자리에 들어가지만 **최저기온(새벽)이 전날 통에 들어가**
+    짝이 어긋난다. 게다가 `aggregateWindow` 라벨이 구간의 오른쪽 경계인데
+    빼지 않아 모든 날짜가 하루씩 밀려 있었다.
+    """
+
+    def _src(self):
+        """⚠ **독스트링을 빼고 본다.** 그 함수의 설명이 바로 이 두 이름을
+        "쓰지 않는다" 고 적고 있어, 문자열로 검사하면 자기 설명에 걸린다
+        (같은 함정을 앞서 두 번 밟았다)."""
+        import ast
+        import inspect
+        from aot.aot_flask.geo import plot_context
+        tree = ast.parse(inspect.getsource(plot_context._daily_extremes))
+        fn = tree.body[0]
+        body = fn.body[1:] if (isinstance(fn.body[0], ast.Expr)
+                               and isinstance(fn.body[0].value, ast.Constant)
+                               and isinstance(fn.body[0].value.value, str)) else fn.body
+        return '\n'.join(ast.unparse(n) for n in body)
+
+    def test_influx_is_not_asked_for_a_whole_day(self):
+        """`group_sec=86400` 은 UTC 에 정렬된 하루라 현지 하루가 아니다."""
+        self.assertNotIn('group_sec=86400', self._src())
+
+    def test_the_window_label_is_rewound(self):
+        """라벨은 구간의 **오른쪽 경계**다 — 빼지 않으면 모든 날짜가 하루씩
+        밀린다. `bucket_local_key` 가 그 뺄셈을 갖고 있다."""
+        src = self._src()
+        self.assertIn('bucket_local_key', src)
+        self.assertNotIn('rec.get_time().date()', src)
+
+    def test_the_period_is_cut_at_local_midnight(self):
+        """UTC 자정으로 자르면 첫날의 새벽과 마지막 날의 저녁이 통째로 빠진다."""
+        import inspect
+        from aot.aot_flask.geo import plot_context
+        src = inspect.getsource(plot_context.gdd_accumulated)
+        self.assertIn('local_day_bounds_utc', src)
+        self.assertNotIn("+ 'T00:00:00Z'", src)
+
+    def test_bucket_size_looks_at_the_whole_period(self):
+        """서머타임 전환이 끼면 오프셋이 둘이다 — 한쪽만 보면 나머지 절반에서
+        현지 자정이 창 경계를 벗어난다."""
+        import inspect
+        from aot.aot_flask.geo import plot_context
+        src = inspect.getsource(plot_context.gdd_accumulated)
+        self.assertIn('bucket_seconds_for(tz, start, end)', src)
+
+    def test_expected_days_and_counted_days_span_the_same_dates(self):
+        """분모와 분자가 다른 날 집합을 세면 커버리지가 100% 를 넘는다
+        (실측: 12/11 = 109.1%)."""
+        import inspect
+        from aot.aot_flask.geo import plot_context
+        src = inspect.getsource(plot_context.gdd_accumulated)
+        self.assertIn("info['days_expected'] = (last - start).days + 1", src)
+        self.assertIn('day > last', src)
+
+    def test_a_finished_season_counts_its_last_day(self):
+        """오늘을 빼는 이유는 아직 안 끝났기 때문이다 — 끝난 작기의 마지막
+        날은 온전한 하루라 그대로 센다."""
+        import inspect
+        from aot.aot_flask.geo import plot_context
+        src = inspect.getsource(plot_context.gdd_accumulated)
+        self.assertIn('if end >= today else end', src)
+
+
+class TestOpenFieldIrrigation(unittest.TestCase):
+    """노지 관수량 — **밸브의 담당 폴리곤**이 이미 답을 갖고 있다.
+
+    지도에 놓인 출력은 `GeoShape(type='device')` 담당 폴리곤을 갖는다
+    (`device_binding.SHAPE_TYPE_ROLES` 의 `'area'`). "이 밸브가 어디에 물을
+    주는가" 는 그 도형이 답하므로, 노즐 임자를 정하는 별도의 지정을 만들
+    이유가 없다.
+
+    ⚠ **한때 구역 도형에 밸브를 매는 두 번째 판정자를 만들었다가 걷어냈다.**
+      담당 폴리곤이 이미 있는데 구역 단위로 묶었더니 값이 틀렸다 — 나주
+      배밭은 v11·v12 가 각각 절반(510,000 / 512,900 L/h)을 맡는데, 구역으로
+      묶으면 2,205개가 통째로 한 밸브에 얹혀 918,750 L/h 가 됐다.
+    """
+
+    def _src(self, name):
+        import inspect
+        return inspect.getsource(getattr(PJ, name))
+
+    def test_open_field_no_longer_gives_up(self):
+        self.assertIn('_open_field_flow(plot)',
+                      self._src('irrigation_flow_for_plot'))
+
+    def test_the_valve_area_decides_the_owner(self):
+        """담당 폴리곤이 정본이다 — 노즐 임자를 다시 정하지 않는다."""
+        src = self._src('_open_field_flow')
+        self.assertIn('_device_area_shapes(oid)', src)
+        self.assertIn('region.intersection(poly)', src)
+
+    def test_no_second_owner_rule_came_back(self):
+        """구역↔밸브 지정을 되살리지 말 것 — 담당 폴리곤과 갈라지고,
+        갈라지면 한쪽이 틀린 값을 낸다."""
+        import inspect
+        from aot.aot_flask.geo import device_binding
+        self.assertFalse(hasattr(device_binding, 'set_zone_valve'))
+        self.assertFalse(hasattr(device_binding, 'ZONE_IRRIGATION_ROLE'))
+        self.assertNotIn('zone_id', self._src('_open_field_flow'))
+
+    def test_markers_are_not_treated_as_coverage(self):
+        """`aot_device`(점)는 위치일 뿐 담당 구역이 아니다."""
+        self.assertIn("row.type != 'device'", self._src('_device_area_shapes'))
+
+    def test_several_areas_for_one_valve_are_unioned(self):
+        """한 밸브가 담당 도형을 여럿 가질 수 있다 — 합집합으로 모아야
+        겹치는 노즐을 두 번 세지 않는다."""
+        self.assertIn('region.union(area)', self._src('_open_field_flow'))
+
+    def test_the_actuator_list_is_the_same_one_the_table_uses(self):
+        """여기서 따로 찾으면 두 목록이 갈라져, 표에 있는 장치의 물량이
+        비거나 없는 장치의 물량이 생긴다."""
+        self.assertIn('plot_context.actuators_for_plot(plot)',
+                      self._src('_open_field_flow'))
+
+    def test_circle_sprinklers_use_their_stored_centre(self):
+        """그리기 도구가 원으로 저장한 것은 기하가 아니라 center_lat/lng 에
+        중심을 둔다 — 기하만 보면 그 노즐이 통째로 빠진다."""
+        self.assertIn("props.get('center_lat')", self._src('_sprinkler_point'))
+
+    def test_zero_flow_nozzles_are_dropped_early(self):
+        """유량 0 은 커버리지 원(sprinkler_coverage) 같은 장식이다."""
+        self.assertIn('if flow <= 0:', self._src('_map_sprinklers'))
+
+    def test_the_document_says_which_basis_it_used(self):
+        """나누는 방식이 아예 다르다(동의 몫 · 담당 폴리곤 ∩ 구획) — 한
+        문장으로 뭉치면 어느 쪽으로 나눈 값인지 알 수 없다."""
+        facility = PJ.caveat_text('water-estimated')
+        field = PJ.caveat_text('water-estimated-map')
+        self.assertNotEqual(facility, field)
+        self.assertIn('sprinkler', field)
+
+    def test_the_source_rides_along_with_the_volume(self):
+        """물량 행이 근거를 들고 다니지 않으면 조립부가 알 길이 없어,
+        시설용 문장이 노지 문서에 붙는다(실측으로 그랬다)."""
+        self.assertIn("'source': flow.get('source')",
+                      self._src('control_rows_by_bucket'))

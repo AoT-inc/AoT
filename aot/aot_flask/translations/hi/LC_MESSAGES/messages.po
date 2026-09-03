@@ -30664,8 +30664,8 @@ msgid "Estimated"
 msgstr "अनुमानित"
 
 #: aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:2470
-msgid "Cumulative since planting"
-msgstr "रोपाई के बाद से संचयी"
+msgid "Cumulative since start"
+msgstr "शुरुआत से संचयी"
 
 
 

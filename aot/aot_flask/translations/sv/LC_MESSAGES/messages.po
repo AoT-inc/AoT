@@ -30689,8 +30689,8 @@ msgid "Estimated"
 msgstr "Uppskattat"
 
 #: aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:2470
-msgid "Cumulative since planting"
-msgstr "Ackumulerat sedan plantering"
+msgid "Cumulative since start"
+msgstr "Ackumulerat sedan start"
 
 
 

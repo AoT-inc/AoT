@@ -29205,7 +29205,7 @@ msgid "Estimated"
 msgstr "추정"
 
 #: aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:2470
-msgid "Cumulative since planting"
+msgid "Cumulative since start"
 msgstr "시작일부터 누적"
 
 #: aot/aot_flask/templates/pages/geo/journal.html
@@ -34641,3 +34641,24 @@ msgstr "수증기압 부족(VPD)"
 #: aot/aot_flask/geo/plot_journal.py
 msgid "How dry the air feels to the plant, in kPa. It combines temperature and humidity, because the same humidity is drying on a warm day and not on a cool one. High VPD pushes the plant to transpire; too high and it closes up and stops growing."
 msgstr "식물이 느끼는 공기의 건조함을 kPa로 나타낸 값입니다. 같은 습도라도 따뜻한 날은 건조하게, 서늘한 날은 그렇지 않게 느껴지므로 온도와 습도를 함께 봅니다. VPD가 높으면 식물이 증산을 많이 하고, 너무 높으면 기공을 닫아 생장을 멈춥니다."
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Set a base temperature in the program to see this."
+msgstr "프로그램에 기준온도를 정하면 표시됩니다."
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "No temperature sensor covers this plot."
+msgstr "이 구획을 맡는 온도 센서가 없습니다."
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "%(v)s so far, but only %(pct)s of the days have data."
+msgstr "지금까지 %(v)s이지만 자료가 있는 날이 %(pct)s뿐입니다."
+
+#: aot/aot_flask/geo/plot_journal.py
+msgid "Water volume is only filled in for devices whose flow rate is known, and none here is — so this journal shows run times only. Facilities get flow from their piping layout; equipment drawn straight onto the map carries a flow rate but is not linked to the valve that opens it, so it cannot be attributed."
+msgstr "물량은 유량을 아는 장치에만 채워지는데 여기에는 그런 장치가 없어, 이 일지는 가동시간만 싣습니다. 시설은 배관 도면에서 유량을 얻지만, 지도에 바로 그린 장비는 유량을 갖고 있어도 그것을 여는 밸브와 연결돼 있지 않아 나눌 수가 없습니다."
+
+
+#: aot/aot_flask/geo/plot_journal.py
+msgid "Water volumes are estimated from the sprinklers drawn on the map inside the area each valve covers, and how long that valve ran — not measured by a flow meter. Only the part that overlaps this plot is counted, so no share is guessed."
+msgstr "물량은 지도에서 각 밸브가 맡은 구역 안에 그려진 스프링클러와 그 밸브의 가동시간으로 추정한 값입니다 — 유량계 실측이 아닙니다. 이 구획과 겹치는 부분만 세므로 몫을 어림하지 않습니다."

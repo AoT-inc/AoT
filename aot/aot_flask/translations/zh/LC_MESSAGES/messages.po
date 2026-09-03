@@ -29176,8 +29176,8 @@ msgid "Estimated"
 msgstr "估算"
 
 #: aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:2470
-msgid "Cumulative since planting"
-msgstr "自定植以来累计"
+msgid "Cumulative since start"
+msgstr "自开始以来累计"
 
 
 #: config_devices_units.py:342

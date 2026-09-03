@@ -29837,8 +29837,8 @@ msgid "Estimated"
 msgstr "ค่าประมาณ"
 
 #: aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:2470
-msgid "Cumulative since planting"
-msgstr "สะสมตั้งแต่ปลูก"
+msgid "Cumulative since start"
+msgstr "สะสมตั้งแต่เริ่ม"
 
 
 #: config_devices_units.py:342

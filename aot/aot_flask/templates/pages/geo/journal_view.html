@@ -508,18 +508,25 @@
 
     {% if sec.control %}
     <table class="table table-sm aot-journal-table aot-journal-runtime mb-2">
+      {#- 물량 열은 **채워질 때만** 낸다. 유량을 아는 장치가 하나도 없으면
+          열이 통째로 비는데, 빈 열은 "계산이 안 된다" 로 읽힌다(실제로 그
+          보고를 받았다). 없는 이유는 문서 안내가 한 번 말한다. -#}
+      {% set has_water = sec.control | selectattr('water') | list %}
       <thead><tr>
-        <th>{{ _('Device') }}</th><th>{{ _('Runtime') }}</th><th>{{ _('Water') }}</th>
+        <th>{{ _('Device') }}</th><th>{{ _('Runtime') }}</th>
+        {% if has_water %}<th>{{ _('Water') }}</th>{% endif %}
       </tr></thead>
       <tbody>
         {% for c in sec.control %}
         <tr>
           <td>{{ c.name }}</td>
           <td>{{ runtime_text(c) }}</td>
+          {% if has_water %}
           <td>
             {% if c.water %}{{ c.water.litres }} L
             <span class="text-muted small">({{ _('estimated') }})</span>{% endif %}
           </td>
+          {% endif %}
         </tr>
         {% endfor %}
       </tbody>
@@ -764,8 +771,11 @@
 
     {% if b.control %}
     <table class="table table-sm aot-journal-table aot-journal-runtime">
+      {#- 물량 열은 **채워질 때만** 낸다(단계 절과 같은 규칙). -#}
+      {% set has_water = b.control | selectattr('water') | list %}
       <thead><tr>
-        <th>{{ _('Device') }}</th><th>{{ _('Runtime') }}</th><th>{{ _('Water') }}</th>
+        <th>{{ _('Device') }}</th><th>{{ _('Runtime') }}</th>
+        {% if has_water %}<th>{{ _('Water') }}</th>{% endif %}
       </tr></thead>
       <tbody>
         {% for c in b.control %}
@@ -774,12 +784,14 @@
           <td>{{ runtime_text(c) }}</td>
           {#- 설계 유량 × 가동시간 × 구획 몫. **실측이 아니라 추정**이라
               그렇게 표시한다 — 유량계 값과 같은 신뢰도로 읽히면 안 된다. -#}
+          {% if has_water %}
           <td>
             {% if c.water %}
               {{ c.water.litres }} L
               <span class="text-muted small">({{ _('estimated') }}{% if c.water.share < 1 %}, {{ (c.water.share * 100) | round | int }}%{% endif %})</span>
             {% endif %}
           </td>
+          {% endif %}
         </tr>
         {% endfor %}
       </tbody>

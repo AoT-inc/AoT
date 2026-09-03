@@ -31161,8 +31161,8 @@ msgid "Estimated"
 msgstr "Geschätzt"
 
 #: aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:2470
-msgid "Cumulative since planting"
-msgstr "Kumuliert seit der Pflanzung"
+msgid "Cumulative since start"
+msgstr "Kumuliert seit Beginn"
 
 
 
