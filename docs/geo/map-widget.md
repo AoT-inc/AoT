@@ -64,7 +64,7 @@ Clicking a Zone or Site shape opens a popup listing every sensor and output devi
 
 Plots drawn in the design tool's [Plot mode](design-tool.md#plot) appear on the map; clicking one opens its operational view.
 
-- **[Status]** — subject and variety, days elapsed, start date.
+- **[Status]** — subject and variety, days elapsed, start date, plus a live **Environment** card with day-of-target readings including **GDD** (accumulated heat since the season started, [see Journals](journal.md#gdd)) and **DLI** (today's light vs. target, [see Journals](journal.md#dli)) where the program and sensors support them. If either can't be calculated, the card says why (no program, no base temperature, not enough measured days) instead of just showing nothing.
 - **[Overview] > Program** — current and next stage, accumulated heat, stage targets, and the actual state of the declared resources. Confirming, logging and undoing stage changes happens here too. See [Management Programs](programs.md#stage-events).
 - **[Settings] > Stage schedule** — where the real schedule is edited. Programme lengths are only a reference, so stages can be **postponed or pulled forward**, and this one plot can be set to advance automatically. See [Editing the schedule](programs.md#stage-schedule).
 
@@ -251,7 +251,19 @@ A legend is displayed automatically in the bottom-right of the map — there's n
 
 ## 3D Facility Popup { #3d-facility-popup }
 
-Clicking a Facility marker or polygon shows a brief 3D preview and an environment-data summary in a popup. For the full facility view, use the [AoT_facility widget](facility-widget.md).
+Clicking a Facility marker or polygon shows a brief 3D preview and an environment-data summary in a popup. The **Overview** pane's environment card includes GDD and DLI the same way a [plot's does](#plot) — for the facility as a whole, regardless of which bay you're looking at. For the full facility view, use the [AoT_facility widget](facility-widget.md).
+
+---
+
+## Site Weather Station { #site-weather }
+
+A site's popup has an **About** pane, and in it a **Weather station** section for telling AoT which of the site's own devices to trust for sunlight and rainfall — values a plot or zone inside that site borrows rather than measuring itself (see [Journals](journal.md#dli) and [day/night targets](journal.md#daylight)).
+
+- **Left unset**, AoT infers a source automatically from what each device measures — a safety net for installations where nobody has touched this setting, not a guarantee. If the site has two solar sensors, or one of them is experimental, there is no way to tell AoT which one is authoritative without setting it here.
+- **Checking one or more devices** designates them explicitly; that designation now overrides the automatic guess.
+- **Unchecking everything is "not designated," not "off."** It returns the site to automatic inference — it does not stop weather values from showing.
+
+---
 
 ---
 
@@ -266,3 +278,4 @@ You can add multiple `AoT_map` widgets to the same dashboard, each showing a dif
 - [Design Tool](design-tool.md) — Placing devices and shapes
 - [Facility Widget](facility-widget.md) — The dedicated 3D facility widget
 - [GIS Layers](layers.md) — Registering overlay layers
+- [Journals](journal.md) — Snapshot documents built from the same GDD/DLI/irrigation data

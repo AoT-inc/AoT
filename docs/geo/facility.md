@@ -51,7 +51,7 @@ Set the physical structure of the building. These values are used as inputs for 
 | `single` | Single-span greenhouse (standalone structure) |
 | `connected` | Multi-span greenhouse (multiple spans sharing side walls) |
 
-### Covering Materials
+### Covering Materials { #covering-materials }
 
 | Code | Name | U-value (W/m²K) | Light transmittance |
 |------|------|----------------|---------------------|
