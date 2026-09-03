@@ -8,15 +8,17 @@ msgstr ""
 "Project-Id-Version: AoT 8.15.0\n"
 "Report-Msgid-Bugs-To: aot@kylegabriel.com\n"
 "POT-Creation-Date: 2026-09-03 13:54+0900\n"
-"PO-Revision-Date: 2024-03-28 19:00+0000\n"
-"Last-Translator: Kyle Gabriel <business@kylegabriel.com>\n"
-"Language-Team: Korean <http://translate.kylegabriel.com/projects/aot/translations/ko/>\n"
+"PO-Revision-Date: 2026-09-04 07:51+0000\n"
+"Last-Translator: AoT-inc <aot.inc.kr@gmail.com>\n"
+"Language-Team: Korean <https://hosted.weblate.org/projects/aot/multi-lang/"
+"ko/>\n"
 "Language: ko\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
 "Generated-By: Babel 2.17.0\n"
+"X-Generator: Weblate 2026.9\n"
 
 #: config_devices_units.py:13 config_devices_units.py:17
 #: config_devices_units.py:21 config_devices_units.py:25
@@ -3910,6 +3912,9 @@ msgid ""
 "wire format but does not have a dedicated engine here yet. Use this to "
 "connect a new provider without writing code."
 msgstr ""
+"OpenAI Chat Completions 통신 규격을 쓰지만 아직 전용 엔진이 없는 제공자를 "
+"위한 범용 드라이버입니다. 코드를 작성하지 않고 새 제공자를 연결할 때 "
+"사용하세요."
 
 #: ai/services/agent_loop_service.py:173
 #, python-format
@@ -29228,7 +29233,6 @@ msgstr "일간·주간·월간 중에서 고르세요."
 msgid "%(n)s notes"
 msgstr "노트 %(n)s개"
 
-
 #: config_devices_units.py:342
 msgid "Vapor Pressure Deficit"
 msgstr "수증기압 부족"
@@ -30772,7 +30776,6 @@ msgstr "승인하는 즉시 실제 장비(밸브·펌프)가 움직입니다. �
 msgid "Assign another channel"
 msgstr "다른 채널에 배정"
 
-
 #: aot_flask/static/js/geo/design/aot-geo-binding-ui.js:0
 msgid "Currently assigned"
 msgstr "현재 배정"
@@ -30804,7 +30807,6 @@ msgstr "같은 기종으로 바꾸는 것입니까?"
 #: aot_flask/static/js/geo/design/aot-geo-binding-ui.js:0
 msgid "Map area"
 msgstr "지도 구역"
-
 
 #: aot_flask/static/js/geo/design/aot-geo-binding-ui.js:0
 msgid "No device is assigned to this slot."
@@ -30853,7 +30855,6 @@ msgstr "장치 선택"
 #: aot_flask/static/js/geo/design/aot-geo-binding-ui.js:0
 msgid "Select an area on the map first"
 msgstr "먼저 지도에서 구역을 선택하십시오"
-
 
 #: aot_flask/static/js/geo/design/aot-geo-binding-ui.js:0
 msgid "This slot already has a device. Use Replace to swap it."
@@ -31749,7 +31750,6 @@ msgstr "이 자리와 겹치는 지난·현재 구획입니다. 돌려짓기 판
 msgid "Overlap"
 msgstr "겹친 면적"
 
-
 #: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
 msgid "Zone area"
 msgstr "구역 면적"
@@ -32118,7 +32118,6 @@ msgstr "로그를 불러오지 못했습니다"
 msgid "There are no log lines to ask about."
 msgstr "질문할 로그 줄이 없습니다."
 
-
 #: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
 msgid "irrigation"
 msgstr "관수"
@@ -32127,11 +32126,9 @@ msgstr "관수"
 msgid "{pct} of this plot"
 msgstr "이 구획의 {pct}"
 
-
 #: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
 msgid "Nothing is planted in this zone."
 msgstr "이 구역에 심겨 있는 것이 없습니다."
-
 
 #: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
 msgid "Outside this plot, but it waters this plot"
@@ -32144,7 +32141,6 @@ msgstr "가장 가까움"
 #: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
 msgid "Nothing in this plot — showing the closest one"
 msgstr "이 구획 안에 없어 가장 가까운 것을 보여줍니다"
-
 
 #: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
 msgid "The sensor in this plot is not reporting — showing the closest one"
@@ -32238,7 +32234,6 @@ msgstr "예정 취소"
 msgid "%(n)s more"
 msgstr "외 %(n)s건"
 
-
 #: aot/aot_flask/templates/pages/geo/geo_facility.html
 msgid "Plant here"
 msgstr "여기에 심기"
@@ -32246,7 +32241,6 @@ msgstr "여기에 심기"
 #: aot/aot_flask/templates/pages/geo/geo_facility.html
 msgid "Nothing planted here yet."
 msgstr "아직 심은 것이 없습니다."
-
 
 #: aot/aot_flask/templates/pages/geo/geo_facility.html
 msgid "Save the facility first, then record what is planted in each zone."
@@ -32268,7 +32262,6 @@ msgstr "이 변경으로 사라지는 구역에 심긴 것이 있습니다: {lis
 msgid "Where"
 msgstr "위치"
 
-
 #: aot/aot_flask/templates/pages/geo/geo_facility.html
 msgid "Enter what is planted."
 msgstr "심은 것을 입력하세요."
@@ -32276,7 +32269,6 @@ msgstr "심은 것을 입력하세요."
 #: aot/aot_flask/templates/pages/geo/geo_facility.html
 msgid "Floor area alone does not tell you how much fits inside a facility — record the layout (beds, rows, tiers) in the notes."
 msgstr "시설은 바닥 면적만으로 얼마나 들어가는지 알 수 없습니다 — 배치(베드·줄·단)는 노트에 적어 두세요."
-
 
 #: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
 msgid "Programme length"
@@ -32622,7 +32614,6 @@ msgstr "단계 목표"
 msgid "Current setting"
 msgstr "지금 설정"
 
-
 msgid "Shown for comparison. Nothing here changes control."
 msgstr "비교용으로만 보입니다. 여기서 제어가 바뀌지 않습니다."
 
@@ -32676,7 +32667,6 @@ msgstr "광합성 모델 작물"
 
 msgid "Targets in effect"
 msgstr "적용 중인 목표"
-
 
 msgid "This plot has no program, so there are no stage targets to follow."
 msgstr "이 구획에 프로그램이 없어 따를 단계 목표가 없습니다."
@@ -33397,7 +33387,6 @@ msgstr "지도"
 #: 그룹 스코프 (docs/design/access-scope-groups.md)
 msgid "At least one role must keep access to all groups. Grant it to another role first."
 msgstr "모든 그룹 접근 권한을 가진 역할이 최소 하나는 있어야 합니다. 다른 역할에 먼저 부여하세요."
-
 
 #: 그룹 스코프 (docs/design/access-scope-groups.md)
 msgid "This resource is assigned to another group. Ask an administrator for access."
