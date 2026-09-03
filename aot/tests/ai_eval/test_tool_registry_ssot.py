@@ -434,9 +434,24 @@ _NOTE_ATTACHMENT_TOOL_ADDITIONS = {'get_note_attachment'}
 
 # 구획/구역 일지(Journal) 읽기 도구 (2026-09-02, 일지 기능 계획서 §12). 일지는
 # 생성 시점의 스냅샷이라(재계산하지 않는다) 두 도구 다 저장된 GeoJournal 을
-# 읽기만 한다 — 생성(쓰기)은 사람이 대상·기간을 고르는 상호작용이 핵심이라
-# 이번 범위에서 MCP 로 열지 않는다. 둘 다 읽기 전용이라 승인 집합에는 안 넣는다.
+# 읽기만 한다. 둘 다 읽기 전용이라 승인 집합에는 안 넣는다.
 _JOURNAL_TOOL_ADDITIONS = {'list_plot_journals', 'get_plot_journal'}
+
+# 생성 도구 (2026-09-03) — **위 판단의 번복이다.**
+#
+# 처음에는 "생성은 사람이 대상·기간을 고르는 상호작용이 핵심" 이라 열지
+# 않았다. 그런데 그 결과는 "AI 가 남이 만든 일지를 읽을 수만 있고, 사용자가
+# 만들어 달라고 하면 화면으로 안내하는 수밖에 없는" 상태였다 — 기능의 주
+# 동작이 도구 표면에서 통째로 빠진 것이다.
+#
+# 상호작용이 핵심이라는 판단 자체는 틀리지 않았고, 그것을 지키는 수단이
+# 이미 있다: **승인 게이트**다. `mutating=True` 라 사람이 대상·기간을 보고
+# 승인해야 실제로 돈다. 그래서 "사람이 고른다" 는 성질은 그대로 남는다.
+#
+# `physical` 은 아니다 — 아무것도 작동시키지 않는다. 다만 InfluxDB 를 크게
+# 읽으므로(채널 수 × 기간) 비용 게이트(`estimate_journal_cost`)를 화면과
+# 같은 함수로 지난다.
+_JOURNAL_CREATE_TOOL_ADDITIONS = {'create_plot_journal'}
 
 # 4. _VIRTUAL_APPROVAL_TOOLS (ai_dispatch_service.py) — 17 mutations, no physical.
 _ORIG_VIRTUAL_APPROVAL_TOOLS = {
@@ -511,7 +526,8 @@ def _check_dispatch_map(R):
            | _WIDGET_READ_TOOL_ADDITIONS | _WIDGET_WRITE_TOOL_ADDITIONS | _WIDGET_DELETE_TOOL_ADDITIONS
            | _ZONE_SUMMARY_TOOL_ADDITIONS | _GEO_DISTANCE_TOOL_ADDITIONS
            | _DRAWER_TOOL_ADDITIONS | _DEVICE_FRESHNESS_TOOL_ADDITIONS
-           | _NOTE_ATTACHMENT_TOOL_ADDITIONS | _JOURNAL_TOOL_ADDITIONS,
+           | _NOTE_ATTACHMENT_TOOL_ADDITIONS | _JOURNAL_TOOL_ADDITIONS
+           | _JOURNAL_CREATE_TOOL_ADDITIONS,
            set(R.build_tool_map().keys()))
 
 
@@ -541,7 +557,8 @@ def _check_declarations(R):
            | _WIDGET_READ_TOOL_ADDITIONS | _WIDGET_WRITE_TOOL_ADDITIONS | _WIDGET_DELETE_TOOL_ADDITIONS
            | _ZONE_SUMMARY_TOOL_ADDITIONS | _GEO_DISTANCE_TOOL_ADDITIONS
            | _DRAWER_TOOL_ADDITIONS | _DEVICE_FRESHNESS_TOOL_ADDITIONS
-           | _NOTE_ATTACHMENT_TOOL_ADDITIONS | _JOURNAL_TOOL_ADDITIONS,
+           | _NOTE_ATTACHMENT_TOOL_ADDITIONS | _JOURNAL_TOOL_ADDITIONS
+           | _JOURNAL_CREATE_TOOL_ADDITIONS,
            set(R.virtual_tool_registry()))
 
     # 4. dispatch approval set — original PLUS the mutating post-Phase-1 additions,
@@ -555,7 +572,8 @@ def _check_declarations(R):
             | _PLOT_STAGE_TOOL_ADDITIONS | _PLOT_STAGE_EDIT_TOOL_ADDITIONS
             | _CROP_PROGRAM_WRITE_TOOL_ADDITIONS | _CROP_PROGRAM_DELETE_TOOL_ADDITIONS
             | _TAB_WRITE_TOOL_ADDITIONS | _TAB_DELETE_TOOL_ADDITIONS
-            | _WIDGET_WRITE_TOOL_ADDITIONS | _WIDGET_DELETE_TOOL_ADDITIONS)
+            | _WIDGET_WRITE_TOOL_ADDITIONS | _WIDGET_DELETE_TOOL_ADDITIONS
+            | _JOURNAL_CREATE_TOOL_ADDITIONS)
            - _CONFIG_ONLY_APPROVAL_EXEMPTIONS,
            set(R.virtual_approval_tools()))
 
@@ -572,7 +590,8 @@ def _check_declarations(R):
             | _PLOT_STAGE_EDIT_TOOL_ADDITIONS
             | _CROP_PROGRAM_WRITE_TOOL_ADDITIONS | _CROP_PROGRAM_DELETE_TOOL_ADDITIONS
             | _TAB_WRITE_TOOL_ADDITIONS | _TAB_DELETE_TOOL_ADDITIONS
-            | _WIDGET_WRITE_TOOL_ADDITIONS | _WIDGET_DELETE_TOOL_ADDITIONS)
+            | _WIDGET_WRITE_TOOL_ADDITIONS | _WIDGET_DELETE_TOOL_ADDITIONS
+            | _JOURNAL_CREATE_TOOL_ADDITIONS)
            - _CONFIG_ONLY_APPROVAL_EXEMPTIONS,
            set(R.approval_required_tools()))
 

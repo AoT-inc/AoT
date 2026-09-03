@@ -10419,8 +10419,13 @@ class AoTDataToolService:
             return {"error": str(e)}
 
     @staticmethod
-    def list_plot_journals(target_type=None, target_id=None, **extra):
-        """[읽기전용] 그 대상에 저장된 일지 목록 — 제목·기간만, 본문은 뺀다.
+    def list_plot_journals(target_type=None, target_id=None, limit=None,
+                           **extra):
+        """[읽기전용] 저장된 일지 목록 — 제목·기간만, 본문은 뺀다.
+
+        **대상은 선택이다.** 비우면 전체 목록이다 — "저장된 일지 보여줘" 에
+        답하려고 먼저 구획 uuid 를 알아내야 했다(화면의 허브는 전체를 보여
+        주는데 도구만 못 봤다).
 
         일지는 생성 시점의 사실을 뜬 스냅샷이다(재계산하지 않는다). `journal_id`
         는 이 목록에서 얻어 `get_plot_journal` 에 그대로 넘기는 **내부 연결용
@@ -10430,20 +10435,31 @@ class AoTDataToolService:
         try:
             from aot.databases.models import GeoJournal
 
-            if target_type not in ('plot', 'zone', 'site'):
+            if target_type is not None and target_type not in (
+                    'plot', 'zone', 'site'):
                 return {"error": "target_type must be plot, zone, or site"}
-            if not target_id:
-                return {"error": "target_id is required"}
+            if target_id and not target_type:
+                return {"error": "target_type is required with target_id"}
 
-            rows = (GeoJournal.query
-                    .filter_by(target_type=target_type, target_id=target_id)
-                    .order_by(GeoJournal.created_at.desc()).all())
+            q = GeoJournal.query
+            if target_type:
+                q = q.filter_by(target_type=target_type)
+            if target_id:
+                q = q.filter_by(target_id=target_id)
+            q = q.order_by(GeoJournal.created_at.desc())
+            try:
+                q = q.limit(max(1, min(int(limit), 200))) if limit else q.limit(50)
+            except (TypeError, ValueError):
+                q = q.limit(50)
+            rows = q.all()
             items = [{
                 "journal_id": r.unique_id,
                 "title": r.title,
                 "period_start": r.period_start.isoformat() if r.period_start else None,
                 "period_end": r.period_end.isoformat() if r.period_end else None,
                 "status": r.status,
+                "target_type": r.target_type,
+                "target_id": r.target_id,
             } for r in rows]
             return {"count": len(items), "journals": items}
         except Exception as e:
@@ -10451,15 +10467,30 @@ class AoTDataToolService:
             return {"error": str(e)}
 
     @staticmethod
-    def get_plot_journal(journal_id=None, **extra):
+    def get_plot_journal(journal_id=None, granularity=None,
+                         date_from=None, date_to=None, **extra):
         """[읽기전용] 저장된 일지 한 건 — 스냅샷 그대로, 재계산하지 않는다.
 
         `status` 가 `'done'` 이 아니면 아직 완성되지 않았거나 생성에 실패한
         것이다(`error_message` 참조) — 그때는 `data` 가 비어 있다.
+
+        ## 왜 단위·기간 인자가 필요한가
+
+        일지 하나는 MCP 응답 상한을 쉽게 넘는다. 그러면 캡이 가장 큰 필드를
+        떨어뜨리는데 그것이 하필 `env`(측정값)라, **6일짜리 일지도 측정값이
+        0개인 채로 나갔다**(실측: 20,153토큰 → 잘린 뒤 2,168토큰, 버킷 6개
+        전부 `env` 없음). 캡의 안내는 "필요하면 하나씩 물어봐라" 인데 좁힐
+        인자가 없었다.
+
+        `granularity` 는 **화면이 쓰는 그 접기**다(`fold_buckets`) — 저장된
+        스냅샷은 그대로 두고 열람 시점에 접는 순수 계산이라, 스냅샷 불변
+        계약을 깨지 않는다. 저장 단위보다 잘게는 못 간다.
         """
         try:
+            from datetime import date as _date
+
             from aot.databases.models import GeoJournal
-            from aot.aot_flask.geo.plot_journal import journal_to_jsonable
+            from aot.aot_flask.geo import plot_journal as PJ
 
             if not journal_id:
                 return {"error": "journal_id is required"}
@@ -10470,9 +10501,160 @@ class AoTDataToolService:
             if row.status != 'done' or row.data is None:
                 return {"status": row.status, "error_message": row.error_message}
 
-            return journal_to_jsonable(row.data)
+            data = dict(row.data)
+            stored = data.get('granularity') or 'day'
+            buckets = list(data.get('buckets') or [])
+
+            def _parse(v):
+                if not v:
+                    return None
+                try:
+                    return _date(*[int(x) for x in str(v)[:10].split('-')])
+                except (TypeError, ValueError):
+                    return None
+
+            lo, hi = _parse(date_from), _parse(date_to)
+            if lo or hi:
+                kept = []
+                for b in buckets:
+                    d = _parse(b.get('key'))
+                    if d is None:
+                        continue
+                    if lo and d < lo:
+                        continue
+                    if hi and d > hi:
+                        continue
+                    kept.append(b)
+                buckets = kept
+                data['period_filter'] = {
+                    'from': lo.isoformat() if lo else None,
+                    'to': hi.isoformat() if hi else None,
+                    'kept': len(kept),
+                    'of': len(data.get('buckets') or []),
+                }
+
+            if granularity:
+                if granularity not in PJ.VIEW_GRANULARITIES:
+                    return {"error": "granularity must be one of %s"
+                                     % ', '.join(PJ.VIEW_GRANULARITIES)}
+                order = {'day': 0, 'week': 1, 'month': 2, 'all': 3}
+                if order.get(granularity, 0) < order.get(stored, 0):
+                    # 없는 정보를 지어내지 않는다 — 저장 단위가 무엇인지
+                    # 말해 주어야 호출자가 다시 부를 수 있다.
+                    return {"error": "this journal is stored by '%s'; it cannot "
+                                     "be shown by '%s'" % (stored, granularity)}
+                buckets = PJ.fold_buckets(buckets, to=granularity,
+                                          granularity=stored)
+                data['granularity_view'] = granularity
+
+            data['buckets'] = buckets
+
+            # 좁히지 않고 부른 긴 일지는 응답 캡에 걸려 `env`(측정값)가
+            # 통째로 빠진다. 캡의 안내는 "하나씩 물어봐라" 인데 **무엇으로
+            # 좁히는지**는 그 자리에서 알 수 없다 — 여기서 말해 준다.
+            # 이 힌트는 최상위 문자열이라 캡이 리스트 필드를 떨어뜨려도 남는다.
+            if not granularity and not (lo or hi) and len(buckets) > 3:
+                data['hint'] = (
+                    "This journal has %d periods and may be trimmed to fit the "
+                    "response limit — the measurements (env) are dropped first. "
+                    "Call again with granularity='week'|'month'|'all' to fold "
+                    "them, or date_from/date_to to narrow the range."
+                    % len(buckets))
+
+            return PJ.journal_to_jsonable(data)
         except Exception as e:
             logger.exception("Error in get_plot_journal")
+            return {"error": str(e)}
+
+    @staticmethod
+    def create_plot_journal(target_type=None, target_id=None, start=None,
+                            end=None, granularity=None, **extra):
+        """일지를 만든다 — 그 기간의 사실을 뜬 **스냅샷**을 남긴다.
+
+        생성은 InfluxDB 를 크게 읽으므로(채널 수 × 기간) 승인 대상이다.
+        화면의 생성 경로(`routes_geo_journal.geo_journal_create`)와 **같은
+        게이트를 지난다** — 여기서 따로 세면 통과해 놓고 다른 규모로 돈다.
+
+        집계는 백그라운드에서 돈다. 이 도구는 `journal_id` 와 `status`
+        (`pending`)를 즉시 돌려주므로, 잠시 뒤 `get_plot_journal` 로 다시
+        물어 `status == 'done'` 을 확인해야 한다.
+        """
+        try:
+            from datetime import date as _date
+
+            from aot.aot_flask.extensions import db
+            from aot.aot_flask.geo import plot_journal as PJ
+            from aot.databases.models import GeoJournal
+
+            if target_type not in ('plot', 'zone', 'site'):
+                return {"error": "target_type must be plot, zone, or site"}
+            if not target_id:
+                return {"error": "target_id is required"}
+
+            def _parse(v):
+                try:
+                    return _date(*[int(x) for x in str(v)[:10].split('-')])
+                except (TypeError, ValueError, AttributeError):
+                    return None
+
+            s_date, e_date = _parse(start), _parse(end)
+            if s_date is None or e_date is None:
+                return {"error": "start and end are required (YYYY-MM-DD)"}
+            if s_date > e_date:
+                return {"error": "start is after end"}
+            if granularity is not None and granularity not in (
+                    'day', 'week', 'month'):
+                return {"error": "granularity must be day, week or month"}
+
+            # ── 승인 게이트보다 앞에 오는 것은 없다. 비용 게이트는 화면과
+            #    같은 함수다 — 통과하지 못하면 집계를 **시작조차 하지 않는다**.
+            try:
+                cost = PJ.estimate_journal_cost(target_type, target_id,
+                                                s_date, e_date)
+            except ValueError as exc:
+                return {"error": "could not resolve that target: %s" % exc}
+            if not cost.get('ok'):
+                return {"error": "that selection is too large to build",
+                        "reason": cost.get('reason'),
+                        "days": cost.get('days'),
+                        "channels": (cost.get('env_channels', 0)
+                                     + cost.get('control_channels', 0)),
+                        "advice": ("Try a shorter period, a single plot instead "
+                                   "of a zone, or granularity='week'.")}
+
+            row = GeoJournal(target_type=target_type, target_id=target_id,
+                             period_start=s_date, period_end=e_date,
+                             title='', status='pending')
+            db.session.add(row)
+            db.session.commit()
+
+            # ⚠ **여기서 끝까지 돌린다(`wait=True`).** 백그라운드로 띄우면
+            #   MCP stdio 연결이 끊기는 순간 프로세스와 함께 스레드가 죽고,
+            #   행은 영영 'running' 으로 남는다(실측: 5분 뒤에도 버킷 0).
+            #   비용 게이트가 규모를 이미 막고 있어 여기서 기다려도 된다.
+            PJ.start_journal_build(row.unique_id, granularity=granularity,
+                                   wait=True)
+
+            # ⚠ **세션을 비우고 다시 읽는다.** 빌드는 자기 app context 에서
+            #   따로 커밋하므로, 바깥 세션의 identity map 에는 아직 'pending'
+            #   인 옛 행이 남아 있다 — 그대로 읽으면 다 만들어 놓고 "아직
+            #   만드는 중" 이라고 답한다(실측으로 그랬다).
+            db.session.expire_all()
+            row = GeoJournal.query.filter_by(unique_id=row.unique_id).first()
+            if row is None:
+                return {"error": "journal disappeared while building"}
+            if row.status != 'done':
+                return {"status": row.status, "journal_id": row.unique_id,
+                        "error_message": row.error_message}
+            return {"status": "done", "journal_id": row.unique_id,
+                    "title": row.title,
+                    "period": {"start": s_date.isoformat(),
+                               "end": e_date.isoformat()},
+                    "note": ("Built. Read it with get_plot_journal — pass "
+                             "granularity for a long period so the "
+                             "measurements survive the response limit.")}
+        except Exception as e:
+            logger.exception("Error in create_plot_journal")
             return {"error": str(e)}
 
     @staticmethod

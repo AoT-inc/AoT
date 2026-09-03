@@ -1936,3 +1936,181 @@ class TestSilentOutputs(unittest.TestCase):
     def test_the_caveat_only_fires_when_something_is_missing(self):
         src = self._src('build_journal_for_target')
         self.assertIn('if silent_outputs:', src)
+
+
+class TestTargetColumns(unittest.TestCase):
+    """목표·Δ 열은 **목표가 실제로 있을 때만** 낸다.
+
+    구획이라는 이유만으로 켜면 프로그램이 없는 구획에서 두 열이 문서 내내
+    빈다 — 빈 열은 "계산이 안 된다" 로 읽힌다(관수량 열과 같은 판단).
+    실측: 나주 배 구획은 프로그램이 없어 10개 구간 전부가 빈 열 둘을 달고
+    있었다.
+    """
+
+    def test_no_program_means_no_target_columns(self):
+        doc = {'buckets': [{'env': [{'measurement': 'temperature',
+                                     'target': None}]}]}
+        self.assertFalse(PJ.has_any_target(doc))
+
+    def test_a_plain_target_counts(self):
+        doc = {'buckets': [{'env': [{'measurement': 'temperature',
+                                     'target': 25.0}]}]}
+        self.assertTrue(PJ.has_any_target(doc))
+
+    def test_a_target_that_is_not_differenced_still_counts(self):
+        """주야 목표·곡선 목표는 **있지만 견주지 않는** 것이다 — 그때 화면은
+        "주야 목표" 라고 적어야 하고, 적을 자리가 없으면 그 사실이 사라진다."""
+        for row in ({'delta_skipped': 'when'}, {'follows_curve': 'vpd'}):
+            self.assertTrue(PJ.has_any_target({'buckets': [{'env': [row]}]}))
+
+    def test_stages_alone_are_enough(self):
+        """단계가 있으면 단계 절이 목표를 낸다 — 버킷에 없어도 열이 필요하다."""
+        self.assertTrue(PJ.has_any_target({'buckets': [], 'stages': [{}]}))
+
+    def test_the_template_asks_for_both(self):
+        import io as _io
+        src = _io.open(os.path.join(
+            os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+            'aot_flask', 'templates', 'pages', 'geo',
+            'journal_view.html'), encoding='utf-8').read()
+        self.assertIn(
+            "{% set show_target = (d.target.type == 'plot') and has_targets %}",
+            src)
+
+
+class TestNearestSensorFallback(unittest.TestCase):
+    """구획 안에 센서가 없으면 **같은 구역에서 가장 가까운 하나**를 쓴다.
+
+    지도 위젯이 그렇게 한다(`routes_geo_plot` → `plot_context.nearest_devices`,
+    scope 'nearest' 배지). 일지가 구역 센서를 전부 쓰면 한 구역에 든 구획들의
+    문서가 서로 같아진다 — 실측으로 21개 구획이 그 상태였고 셋씩 같은 센서
+    목록을 갖고 있었다.
+    """
+
+    def _src(self, name):
+        import inspect
+        return inspect.getsource(getattr(PJ, name))
+
+    def test_the_zone_step_uses_the_shared_resolver(self):
+        """판정을 새로 만들지 않는다 — 위젯이 쓰는 함수를 그대로 부른다."""
+        src = self._src('_plot_sensor_ids')
+        self.assertIn('plot_context.nearest_devices(', src)
+        self.assertIn('limit=1', src)
+
+    def test_the_nearer_steps_are_untouched(self):
+        """구획 안·동·시설 센서가 있으면 그것이 그대로 이긴다 — 최근접은
+        **구역으로 내려갈 때만** 끼어든다."""
+        src = self._src('_plot_sensor_ids')
+        i = src.index("get('from_facility')")
+        j = src.index('nearest_devices(')
+        self.assertLess(i, j)
+
+    def test_a_plot_without_geometry_keeps_the_whole_zone(self):
+        """시설 구획은 자기 기하가 없어 "가깝다" 를 말할 수 없다 — 그때
+        빈 손으로 두면 센서가 통째로 사라진다."""
+        self.assertIn('ids = zone_ids', self._src('_plot_sensor_ids'))
+
+    def test_liveness_is_not_copied_from_the_widget(self):
+        """위젯은 "지금 값을 안 주면 없는 것으로 친다"(stale)를 함께 쓰지만
+        일지는 지나간 기간의 기록이다 — 오늘 죽은 센서가 그때는 값을 냈을 수
+        있고, 오늘 상태로 과거 문서의 센서를 바꾸면 같은 기간의 일지가 만들
+        때마다 달라진다."""
+        import ast
+        import inspect
+        # ⚠ 주석을 빼고 본다 — 그 함수의 설명이 바로 "stale 규칙은 따르지
+        #   않는다" 라고 적고 있어, 문자열로 검사하면 자기 설명에 걸린다.
+        tree = ast.parse(inspect.getsource(PJ._plot_sensor_ids))
+        self.assertNotIn('stale', ast.unparse(tree).lower())
+
+    def test_the_distance_is_written_down(self):
+        text = PJ.caveat_text('sensor-from-zone:36')
+        self.assertIn('36', text)
+        self.assertIn('zone', text)
+
+    def test_the_document_does_not_call_it_a_reading_of_this_plot(self):
+        """"가장 가까운 값" 과 "이 구획의 값" 은 다르다 — 인증 문서로 나간다."""
+        text = PJ.caveat_text('sensor-from-zone:36')
+        self.assertIn('not a reading of this plot', text)
+
+
+class TestJournalMcpTools(unittest.TestCase):
+    """MCP 로 LLM 에게 열린 일지 도구 3종.
+
+    실측으로 드러난 것들을 고정한다 — 도구가 있다는 것과 쓸 수 있다는 것은
+    다르다.
+    """
+
+    def _svc(self):
+        import inspect
+        from aot.ai.services.aot_data_tool_service import AoTDataToolService
+        return AoTDataToolService, inspect
+
+    def test_reading_a_long_journal_can_be_narrowed(self):
+        """캡이 가장 큰 필드를 떨어뜨리는데 그것이 하필 `env`(측정값)라,
+        **6일짜리 일지도 측정값 0개**로 나갔다(20,153토큰 → 2,168). 캡의
+        안내는 "하나씩 물어봐라" 인데 좁힐 인자가 없었다."""
+        S, inspect = self._svc()
+        src = inspect.getsource(S.get_plot_journal)
+        self.assertIn('granularity', src)
+        self.assertIn('date_from', src)
+        self.assertIn('PJ.fold_buckets(', src)
+
+    def test_it_cannot_ask_for_finer_than_stored(self):
+        """없는 정보를 지어내지 않는다 — 저장 단위가 무엇인지 말해 준다."""
+        S, inspect = self._svc()
+        self.assertIn('cannot ', inspect.getsource(S.get_plot_journal))
+
+    def test_a_long_journal_says_how_to_narrow(self):
+        """캡의 안내는 무엇으로 좁히는지 모른다 — 도구가 말해 준다.
+        최상위 문자열이라 캡이 리스트 필드를 떨어뜨려도 남는다."""
+        S, inspect = self._svc()
+        self.assertIn("data['hint']", inspect.getsource(S.get_plot_journal))
+
+    def test_listing_does_not_demand_a_target(self):
+        """화면의 허브는 전체를 보여 주는데 도구만 못 봤다 — "저장된 일지
+        보여줘" 에 답하려고 먼저 구획 uuid 를 알아내야 했다."""
+        S, inspect = self._svc()
+        src = inspect.getsource(S.list_plot_journals)
+        self.assertIn('if target_type is not None', src)
+        self.assertNotIn('return {"error": "target_id is required"}', src)
+
+    def test_creating_waits_instead_of_forking(self):
+        """MCP stdio 는 연결이 끊기면 프로세스가 죽는다 — 백그라운드 스레드를
+        띄우면 시작하자마자 함께 죽고 행이 영영 'running' 으로 남는다
+        (실측: 5분 뒤에도 버킷 0)."""
+        S, inspect = self._svc()
+        self.assertIn('wait=True', inspect.getsource(S.create_plot_journal))
+
+    def test_creating_rereads_with_a_fresh_session(self):
+        """빌드는 자기 app context 에서 따로 커밋한다 — 바깥 세션의 identity
+        map 에는 아직 'pending' 인 옛 행이 남아, 다 만들어 놓고 "아직 만드는
+        중" 이라고 답했다(실측)."""
+        S, inspect = self._svc()
+        self.assertIn('db.session.expire_all()',
+                      inspect.getsource(S.create_plot_journal))
+
+    def test_creating_uses_the_same_cost_gate_as_the_screen(self):
+        """게이트가 따로 세면 통과해 놓고 다른 규모로 돈다."""
+        S, inspect = self._svc()
+        self.assertIn('PJ.estimate_journal_cost(',
+                      inspect.getsource(S.create_plot_journal))
+
+    def test_creating_needs_approval(self):
+        """처음에는 "생성은 사람이 고르는 상호작용" 이라 열지 않았다. 열면서
+        그 성질을 지키는 수단이 승인 게이트다 — 사람이 대상·기간을 보고
+        승인해야 실제로 돈다."""
+        from aot.ai.services import tool_registry as R
+        self.assertIn('create_plot_journal', R.virtual_approval_tools())
+
+    def test_creating_is_not_marked_physical(self):
+        """아무것도 작동시키지 않는다 — 비싼 조회일 뿐이다."""
+        from aot.ai.services import tool_registry as R
+        t = next(t for t in R.TOOLS if t.name == 'create_plot_journal')
+        self.assertTrue(t.mutating)
+        self.assertFalse(getattr(t, 'physical', False))
+
+    def test_the_background_path_still_exists_for_the_web(self):
+        """웹은 요청을 막으면 안 된다 — 거기서는 스레드가 맞다."""
+        import inspect
+        self.assertIn('threading.Thread(target=_work',
+                      inspect.getsource(PJ._run_journal_build))

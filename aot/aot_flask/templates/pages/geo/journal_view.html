@@ -628,7 +628,10 @@
 
   {#- 목표·편차 열은 **plot 에서만** 값을 가진다 — 대지·구역은 프로그램이 없어
       구조적으로 항상 빈다. 빈 열 둘을 계속 그리면 표만 넓어지고 읽을 것이 없다. -#}
-  {% set show_target = (d.target.type == 'plot') %}
+  {#- 목표·Δ 열은 **목표가 실제로 있을 때만** 낸다. 구획이라는 이유만으로
+      켜면 프로그램이 없는 구획에서 두 열이 문서 내내 비고, 빈 열은 "계산이
+      안 된다" 로 읽힌다(관수량 열과 같은 판단). -#}
+  {% set show_target = (d.target.type == 'plot') and has_targets %}
 
   {% for b in view_buckets %}
   <div class="aot-journal-bucket mb-4">

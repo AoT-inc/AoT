@@ -391,6 +391,7 @@ def geo_journal_view(journal_uuid):
     # 만들면 영어로 굳는다(실제 브라우저 검증으로 발견).
     caveat_texts = {}
     glossary = []
+    has_targets = False
     target_kind_label = None
     view_buckets = []
     stage_sections = []
@@ -419,6 +420,11 @@ def geo_journal_view(journal_uuid):
         # 열기만 하면 설명이 붙는다.
         glossary = plot_journal.glossary_terms(row.data)
 
+        # 목표·Δ 열을 낼지 — **목표가 실제로 있을 때만** 낸다. 구획이라는
+        # 이유만으로 켜면 프로그램이 없는 구획에서 두 열이 문서 내내 비고,
+        # 빈 열은 "계산이 안 된다" 로 읽힌다(관수량 열과 같은 판단).
+        has_targets = plot_journal.has_any_target(row.data)
+
     # 저장 단위보다 잘게는 못 보므로 그 선택지는 **아예 내주지 않는다** —
     # 눌러도 아무 일 없는 버튼을 두면 고장으로 읽힌다.
     order = {'day': 0, 'week': 1, 'month': 2, 'all': 3}
@@ -428,6 +434,7 @@ def geo_journal_view(journal_uuid):
     return render_template('pages/geo/journal_view.html', journal=row,
                            caveat_texts=caveat_texts,
                            glossary=glossary,
+                           has_targets=has_targets,
                            target_kind_label=target_kind_label,
                            view_buckets=view_buckets,
                            stage_sections=stage_sections,

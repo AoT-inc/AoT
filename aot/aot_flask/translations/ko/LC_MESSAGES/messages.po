@@ -34666,3 +34666,7 @@ msgstr "물량은 지도에서 각 밸브가 맡은 구역 안에 그려진 스�
 #: aot/aot_flask/geo/plot_journal.py
 msgid "These devices belong to this target but left no record in this period, so they are not in the tables: %(names)s. That is not the same as running for zero hours — it means nothing was written."
 msgstr "이 대상의 장치이지만 이 기간에 기록을 남기지 않아 표에 없습니다: %(names)s. 0시간 가동과는 다릅니다 — 아무것도 기록되지 않았다는 뜻입니다."
+
+#: aot/aot_flask/geo/plot_journal.py
+msgid "No sensor sits inside this plot, so the nearest one in the same zone was used — about %(m)s m away. It is the closest reading available, not a reading of this plot."
+msgstr "이 구획 안에는 센서가 없어 같은 구역에서 가장 가까운 센서를 썼습니다 — 약 %(m)s m 떨어져 있습니다. 구할 수 있는 가장 가까운 값이지 이 구획을 잰 값은 아닙니다."

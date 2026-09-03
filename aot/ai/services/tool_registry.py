@@ -455,15 +455,32 @@ TOOLS: List[Tool] = [
         "description": ("Saved journals (title, period, status) for a plot/zone/site. "
                         "journal_id is an internal handle for get_plot_journal — do "
                         "not show it; use title/period instead. Read-only."),
-        "usage_hint": "params.arguments: {target_type: plot|zone|site, target_id}",
+        "usage_hint": ("params.arguments: {target_type?: plot|zone|site, "
+                       "target_id?, limit?} — omit the target for all journals"),
     }),
     Tool('get_plot_journal', handler='get_plot_journal', manifest={
         "tool_name": "get_plot_journal",
         "action_type": "virtual_tool_call",
-        "description": ("One saved journal in full — the snapshot from generation "
-                        "time. status may be pending/running/error; only 'done' has "
-                        "data. Read-only."),
-        "usage_hint": "params.arguments: {journal_id}",
+        "description": ("One saved journal — the snapshot from generation time. "
+                        "For a long period pass granularity so the measurements "
+                        "survive the response limit. status may be pending/"
+                        "running/error; only 'done' has data. Read-only."),
+        "usage_hint": ("params.arguments: {journal_id, granularity?: day|week|"
+                       "month|all, date_from?, date_to?}"),
+    }),
+    # 생성은 InfluxDB 를 크게 읽는다(채널 수 × 기간) — 승인 대상이다.
+    # 물리 작동은 없으므로 `physical` 은 아니다.
+    Tool('create_plot_journal', handler='create_plot_journal', mutating=True,
+         manifest={
+        "tool_name": "create_plot_journal",
+        "action_type": "virtual_tool_call",
+        "description": ("Builds a journal — a snapshot of what was grown, "
+                        "measured and controlled over a period. Runs in the "
+                        "background; poll get_plot_journal for status 'done'. "
+                        "Requires human approval."),
+        "usage_hint": ("params.arguments: {target_type: plot|zone|site, "
+                       "target_id, start: YYYY-MM-DD, end: YYYY-MM-DD, "
+                       "granularity?: day|week|month}"),
     }),
     Tool('list_programs', handler='list_programs', manifest={
         "tool_name": "list_programs",
@@ -1411,6 +1428,7 @@ _TIER_ASSIGNMENT = {
     'get_plot_history':      ('space', 'drawer', False),
     'list_plot_journals':    ('space', 'drawer', False),
     'get_plot_journal':      ('space', 'drawer', False),
+    'create_plot_journal':   ('space', 'drawer', True),
     'create_plot':           ('space', 'drawer', False),
     'modify_plot':           ('space', 'drawer', False),
     'end_plot':              ('space', 'drawer', False),
@@ -1577,25 +1595,44 @@ _MCP_TOOL_PAYLOADS: List[Dict[str, Any]] = [
     },
     {
         "tool_name": "list_plot_journals",
-        "description": "Saved journals for a plot/zone/site — title, period, status only, no content. A journal is a point-in-time snapshot of what was grown, measured, and controlled (never recomputed after generation). journal_id here is an internal handle for get_plot_journal — do not show it to the user, refer to journals by their title and period instead. Read-only.",
+        "description": "Saved journals — title, period, status only, no content. Omit target_type/target_id to list every journal on this system; give both to list one plot/zone/site. A journal is a point-in-time snapshot of what was grown, measured, and controlled (never recomputed after generation). journal_id here is an internal handle for get_plot_journal — do not show it to the user, refer to journals by their title and period instead. Read-only.",
         "input_schema": {
             "type": "object",
             "properties": {
-                "target_type": {"type": "string", "enum": ["plot", "zone", "site"], "description": "What the journal is about."},
-                "target_id": {"type": "string", "description": "unique_id of the plot/zone/site."}
+                "target_type": {"type": "string", "enum": ["plot", "zone", "site"], "description": "What the journal is about. Omit for all journals."},
+                "target_id": {"type": "string", "description": "unique_id of the plot/zone/site. Requires target_type."},
+                "limit": {"type": "integer", "description": "Newest first. Default 50, max 200."}
             },
-            "required": ["target_type", "target_id"]
+            "required": []
         }
     },
     {
         "tool_name": "get_plot_journal",
-        "description": "One saved journal, in full — the exact snapshot from when it was generated (environment, control runtime, notes, stage targets and deltas). Use it to summarize, translate, or reformat a journal for the user. status may be pending/running/error; only 'done' carries data. Read-only.",
+        "description": "One saved journal — the exact snapshot from when it was generated (environment, control runtime, notes, stage targets and deltas). IMPORTANT: a journal covering more than a few days does not fit the response limit, and the measurements (env) are the first thing dropped — pass granularity='week'|'month'|'all' to fold the periods, or date_from/date_to to narrow, whenever the period is longer than about three days. Folding is a view-time calculation; the stored snapshot is never altered. status may be pending/running/error; only 'done' carries data. Read-only.",
         "input_schema": {
             "type": "object",
             "properties": {
-                "journal_id": {"type": "string", "description": "From list_plot_journals — an internal handle, not something to show the user."}
+                "journal_id": {"type": "string", "description": "From list_plot_journals — an internal handle, not something to show the user."},
+                "granularity": {"type": "string", "enum": ["day", "week", "month", "all"], "description": "Fold the daily records into coarser periods. Cannot be finer than the journal was stored at."},
+                "date_from": {"type": "string", "description": "YYYY-MM-DD — drop periods before this date."},
+                "date_to": {"type": "string", "description": "YYYY-MM-DD — drop periods after this date."}
             },
             "required": ["journal_id"]
+        }
+    },
+    {
+        "tool_name": "create_plot_journal",
+        "description": "Builds a journal for a plot/zone/site over a period — a snapshot of what was grown, measured and controlled, meant to be handed to someone else or printed. Reading that much sensor history is expensive, so this requires human approval and runs in the background: it returns a journal_id with status 'pending', and you poll get_plot_journal until status is 'done'. Pass granularity to store weekly or monthly instead of daily when the period is long — that is what makes a season-length journal possible. Requires human approval.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "target_type": {"type": "string", "enum": ["plot", "zone", "site"], "description": "What the journal is about."},
+                "target_id": {"type": "string", "description": "unique_id of the plot/zone/site."},
+                "start": {"type": "string", "description": "YYYY-MM-DD, first day covered."},
+                "end": {"type": "string", "description": "YYYY-MM-DD, last day covered."},
+                "granularity": {"type": "string", "enum": ["day", "week", "month"], "description": "How finely to record. Omit to let the system choose (daily, or weekly if that would be too much data). Coarser makes a smaller document; daily detail cannot be recovered later."}
+            },
+            "required": ["target_type", "target_id", "start", "end"]
         }
     },
     {

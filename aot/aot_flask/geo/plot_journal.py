@@ -1770,6 +1770,12 @@ def notes_by_bucket(notes, labels, tz, granularity='day'):
 #   유량계를 그 자체로 하나의 env 행으로 두고 `usage` 를 거기 싣는다
 #   (`env_rows_by_bucket` 참조). control 행에서는 `usage` 키를 아예 뺐다.
 
+#: 마지막으로 해소한 구획의 "구획 밖 최근접 거리(m)". `_plot_sensor_ids` 가
+#: 채우고 조립부가 읽는다 — 반환값을 3-튜플로 늘리면 호출부 셋을 모두
+#: 고쳐야 하고, 그중 둘은 이 값을 쓰지 않는다.
+_NEAREST_M = {}
+
+
 def _plot_sensor_ids(plot, with_weather=True):
     """구획이 참조할 센서 id → `(실내 set, 실외 set)`.
 
@@ -1789,12 +1795,39 @@ def _plot_sensor_ids(plot, with_weather=True):
         return set(), set()
     ids = (list(found.get('in_plot') or [])
            or list(found.get('in_bay') or [])
-           or list(found.get('from_facility') or [])
-           or list(found.get('from_zone') or []))
+           or list(found.get('from_facility') or []))
+    nearest_m = None
+    if not ids:
+        # ── 구역으로 내려갈 때는 **가장 가까운 하나**만 ──────────────────
+        # 지도 위젯이 그렇게 한다(`routes_geo_plot` → `nearest_devices`).
+        # "이 구역에 있다" 는 이유만으로 전부 넣으면 한 구역에 든 구획들의
+        # 일지가 서로 같은 문서가 된다 — 실측으로 21개 구획이 그 상태였고,
+        # 셋씩 같은 센서 목록을 갖고 있었다.
+        #
+        # ⚠ **위젯의 "값을 안 주면 없는 것으로 친다"(stale) 규칙은 따르지
+        #   않는다.** 그것은 지금 살아 있는가를 보는데, 일지는 지나간 기간의
+        #   기록이라 오늘 죽은 센서가 그때는 값을 냈을 수 있다. 오늘 상태로
+        #   과거 문서의 센서를 바꾸면 같은 기간의 일지가 만들 때마다 달라진다.
+        zone_ids = list(found.get('from_zone') or [])
+        if zone_ids:
+            near = []
+            try:
+                near = plot_context.nearest_devices(
+                    plot, set(zone_ids), limit=1) or []
+            except Exception:
+                logger.exception('journal: 최근접 센서 조회 실패')
+            if near:
+                ids = [near[0][0]]
+                nearest_m = near[0][1]
+            else:
+                # 기하가 없는 구획(시설 구획)은 "가깝다" 를 말할 수 없다 —
+                # 그때는 예전처럼 구역 전체를 쓴다(빈 손보다 낫다).
+                ids = zone_ids
     outdoor = set(found.get('from_weather') or []) if with_weather else set()
     # 같은 장치가 양쪽에 잡히면(대지에 기상대만 있고 그것이 구역 센서로도
     # 걸리는 설치) **실내에서 뺀다** — 실외로 보는 편이 사실에 가깝고, 양쪽에
     # 두면 같은 값이 표에 두 번 나온다.
+    _NEAREST_M[getattr(plot, 'unique_id', None)] = nearest_m
     return set(ids) - outdoor, outdoor
 
 
@@ -2348,6 +2381,13 @@ def build_journal_for_target(target_type, target_id, start_date, end_date,
         # 일 단위로는 예산을 넘겨 접어서 저장했다 — 열람 화면이 "일간" 을
         # 못 고르는 이유가 여기 있으므로 문서가 그 사실을 말해야 한다.
         caveats.append('stored-weekly-too-large')
+    # 구획 밖 센서를 끌어왔으면 **거리를 문서에 적는다** — 지도 위젯이
+    # 'nearest' 배지로 하는 말과 같다. 얼마나 믿을 값인지 판단할 근거다.
+    # ⚠ `_plot_sensor_ids` 는 `resolve_devices` 안에서 불린다(다른 함수다) —
+    #   그래서 지역변수가 아니라 `_NEAREST_M` 으로 건너온다.
+    _near_m = _NEAREST_M.get(target_id) if target_type == 'plot' else None
+    if _near_m is not None:
+        caveats.append('sensor-from-zone:%d' % round(_near_m))
     if silent_outputs:
         # ⚠ **0 시간으로 적지 않는다.** 안 돌았다는 것과 기록이 없다는 것은
         #   다르고, 0 으로 적으면 "그 기간에 한 번도 안 켰다" 는 거짓 사실이
@@ -2780,6 +2820,27 @@ def cover_material_label(key):
     return _gettext_safe(name) if name else str(key or '?')
 
 
+def has_any_target(journal_data):
+    """이 문서에 목표가 **하나라도** 있는가 → bool.
+
+    구획이라는 이유만으로 목표·Δ 열을 내면, 프로그램이 없는 구획에서 두 열이
+    문서 내내 빈다 — 빈 열은 "계산이 안 된다" 로 읽힌다(관수량 열과 같은
+    판단). 실측: 나주 배 구획은 프로그램이 없어 10개 구간 전부가 빈 열
+    둘을 달고 있었다.
+
+    `delta_skipped`(주야 목표·곡선 목표처럼 **있지만 견주지 않는 것**)도
+    목표가 있는 것으로 본다 — 그때 화면은 "주야 목표" 라고 적어야 하고,
+    적을 자리가 없으면 그 사실이 사라진다.
+    """
+    for bucket in (journal_data.get('buckets') or []):
+        for row in (bucket.get('env') or []):
+            if row.get('target') is not None or row.get('delta_skipped'):
+                return True
+            if row.get('follows_curve'):
+                return True
+    return bool(journal_data.get('stages'))
+
+
 def glossary_terms(journal_data):
     """이 문서에 **실제로 나오는** 전문용어만 → `[{'term', 'text'}, …]`.
 
@@ -2862,6 +2923,11 @@ def caveat_text(key):
                 "facility plots — their outline is derived from the "
                 "facility, not their own.")
         return _gettext_safe("Notes pinned to a map location were not checked.")
+    if base == 'sensor-from-zone':
+        return _gettext_safe(
+            "No sensor sits inside this plot, so the nearest one in the same "
+            "zone was used — about %(m)s m away. It is the closest reading "
+            "available, not a reading of this plot.") % {'m': suffix or '?'}
     if base == 'outputs-no-record':
         return _gettext_safe(
             "These devices belong to this target but left no record in this "
@@ -3370,7 +3436,7 @@ def reclaim_stale_builds(minutes=None):
 
 
 def _run_journal_build(app, journal_uuid, measurements=None,
-                       granularity=None):
+                       granularity=None, wait=False):
     """백그라운드에서 일지 하나를 채운다. 선례: `routes_geo._start_overlay_tiling`.
 
     ## 잠금이 바깥이 아니라 **안**에 있는 이유
@@ -3432,11 +3498,20 @@ def _run_journal_build(app, journal_uuid, measurements=None,
             finally:
                 db.session.remove()
 
+    if wait:
+        # 부르는 쪽이 오래 사는 프로세스가 아닐 때(MCP stdio)는 **여기서
+        # 끝낸다.** 스레드로 띄우면 연결이 끊기는 순간 프로세스와 함께 죽고,
+        # 행은 영영 'running' 으로 남는다(실측: MCP 로 만든 일지가 5분 뒤에도
+        # running, 버킷 0). `reclaim_stale_builds` 가 나중에 error 로 회수해
+        # 주지만 그것은 청소이지 생성이 아니다.
+        _work()
+        return
     threading.Thread(target=_work, daemon=True,
                      name='journal_%s' % str(journal_uuid)[:8]).start()
 
 
-def start_journal_build(journal_uuid, measurements=None, granularity=None):
+def start_journal_build(journal_uuid, measurements=None, granularity=None,
+                        wait=False):
     """요청 스레드에서 부른다 — 앱 객체를 잡아 백그라운드로 넘긴다.
 
     `current_app` 은 요청 컨텍스트에 매여 있어 스레드로 그대로 넘기면 안 된다
@@ -3444,14 +3519,20 @@ def start_journal_build(journal_uuid, measurements=None, granularity=None):
 
     `measurements`(고른 측정값)는 **행에 저장하지 않고 클로저로 넘긴다.**
     스레드가 같은 프로세스 안에서 돌기 때문이고, 새 컬럼과 마이그레이션을
-    만들 이유가 없다. 재시작으로 중단된 빌드는 재시도하지 않고 `error` 로
+    만들 이유가 없다.
+
+    ⚠ `wait=True` 는 **스레드를 띄우지 않고 여기서 끝낸다.** 부르는 쪽이
+    오래 사는 프로세스가 아닐 때(MCP stdio 는 연결이 끊기면 프로세스가 죽는다)
+    필요하다 — 그때 백그라운드 스레드는 시작하자마자 함께 죽고, 행은 영영
+    'running' 으로 남는다. 재시작으로 중단된 빌드는 재시도하지 않고 `error` 로
     회수되므로(§13d) 나중에 다시 읽을 일도 없다. **무엇을 실었는가는 완성된
     스냅샷(`data['measurements']`)에 남는다** — 그쪽이 문서의 기록이다.
     """
     from flask import current_app
 
     _run_journal_build(current_app._get_current_object(), journal_uuid,
-                       measurements=measurements, granularity=granularity)
+                       measurements=measurements, granularity=granularity,
+                       wait=wait)
 
 
 # ── 내보내기: 열린 형식 ──────────────────────────────────────────────────

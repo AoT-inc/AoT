@@ -34254,3 +34254,7 @@ msgstr "水量は地図で各バルブが担当する区域内に描かれたス
 #: aot/aot_flask/geo/plot_journal.py
 msgid "These devices belong to this target but left no record in this period, so they are not in the tables: %(names)s. That is not the same as running for zero hours — it means nothing was written."
 msgstr "この対象の装置ですが、この期間に記録を残さなかったため表にありません: %(names)s。0時間稼働とは異なります — 何も記録されなかったという意味です。"
+
+#: aot/aot_flask/geo/plot_journal.py
+msgid "No sensor sits inside this plot, so the nearest one in the same zone was used — about %(m)s m away. It is the closest reading available, not a reading of this plot."
+msgstr "この区画内にはセンサーがないため、同じ区域で最も近いセンサーを使いました — 約%(m)s m 離れています。入手できる最も近い値であり、この区画を測った値ではありません。"
