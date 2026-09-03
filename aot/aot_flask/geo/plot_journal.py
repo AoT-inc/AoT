@@ -3839,34 +3839,91 @@ def _device_area_shapes(output_id):
     return out
 
 
-def _map_sprinklers(map_uuid):
-    """지도의 스프링클러 → `[(Point, L/h)]`. 유량이 0 인 것은 빼고 낸다.
+#: 정본 이미터. `aot-geo-stats.js` 의 규칙 그대로다 —
+#:   "sprinkler_coverage is the canonical emitter;
+#:    sprinkler dot markers are ephemeral"
+#: 디자인 개요가 이 규칙으로 수량을 세고 그 값이 맞다.
+_EMITTER_SUB_TYPE = 'sprinkler_coverage'
 
-    노지 관수 장비는 지도에 직접 그린다 —
-    `GeoShape(type='equipment_collection')` 안의 `sub_type='sprinkler'` 가
-    각자 `flow`(L/h)를 들고 있다.
+
+def _map_sprinklers(map_uuid):
+    """지도의 **이미터** → `[(Point, L/h)]`.
+
+    ⚠ **`sub_type='sprinkler'` 를 세지 말 것.** 그것은 그리기 도중의 점
+      마커라 같은 자리에 여러 벌이 쌓인다 — 실측(나주)에서 이미터 274개짜리
+      과수원에 마커가 2,466개였고, 그것을 세는 바람에 일지가 513,630 L 를
+      냈다(사람이 셈한 값은 19,180 L). 정본은 `sprinkler_coverage` 하나이고,
+      그 규칙은 `aot-geo-stats.js` 에 이미 적혀 있다(디자인 개요가 그것으로
+      센다). **두 번째 계수 규칙을 만들지 말 것.**
+
+    유량이 비어 있는 옛 이미터는 그 이미터가 든 구역의 기본값
+    (`gen_config_sprinkler.flow`)으로 채운다 — 디자인 개요가 하는 backfill
+    과 같다.
     """
+    from shapely.geometry import Point
+
     from aot.databases.models import GeoShape
 
     q = GeoShape.query.filter_by(type='equipment_collection')
     if map_uuid:
         q = q.filter(GeoShape.geo_id == map_uuid)
+
     out = []
+    zone_default = None          # 필요할 때만 만든다(대부분 flow 가 있다)
     for coll in q.all():
         for f in ((coll.feature or {}).get('features') or []):
             pr = f.get('properties') or {}
-            if pr.get('sub_type') != 'sprinkler':
+            if pr.get('sub_type') != _EMITTER_SUB_TYPE:
+                continue
+            pt = _sprinkler_point(f, pr)
+            if pt is None:
                 continue
             try:
                 flow = float(pr.get('flow') or 0)
             except (TypeError, ValueError):
-                continue
+                flow = 0.0
             if flow <= 0:
-                continue
-            pt = _sprinkler_point(f, pr)
-            if pt is not None:
+                if zone_default is None:
+                    zone_default = _zone_emitter_defaults(map_uuid)
+                flow = _default_flow_at(pt, zone_default)
+            if flow > 0:
                 out.append((pt, flow))
     return out
+
+
+def _zone_emitter_defaults(map_uuid):
+    """구역 도형 → `[(polygon, 기본 유량)]`. 옛 이미터의 폴백용이다."""
+    from shapely.geometry import shape as _shape
+
+    from aot.databases.models import GeoShape
+
+    q = GeoShape.query.filter_by(type='zone')
+    if map_uuid:
+        q = q.filter(GeoShape.geo_id == map_uuid)
+    out = []
+    for z in q.all():
+        pr = ((z.feature or {}).get('properties') or {})
+        cfg = pr.get('gen_config_sprinkler') or {}
+        try:
+            flow = float(cfg.get('flow') or 0)
+        except (TypeError, ValueError):
+            continue
+        if flow <= 0:
+            continue
+        try:
+            poly = _shape((z.feature or {}).get('geometry') or {})
+        except Exception:
+            continue
+        if not poly.is_empty:
+            out.append((poly, flow))
+    return out
+
+
+def _default_flow_at(pt, zone_defaults):
+    for poly, flow in (zone_defaults or []):
+        if poly.contains(pt):
+            return flow
+    return 0.0
 
 
 def _sprinkler_point(feature, props):

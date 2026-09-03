@@ -1859,9 +1859,35 @@ class TestOpenFieldIrrigation(unittest.TestCase):
         중심을 둔다 — 기하만 보면 그 노즐이 통째로 빠진다."""
         self.assertIn("props.get('center_lat')", self._src('_sprinkler_point'))
 
-    def test_zero_flow_nozzles_are_dropped_early(self):
-        """유량 0 은 커버리지 원(sprinkler_coverage) 같은 장식이다."""
-        self.assertIn('if flow <= 0:', self._src('_map_sprinklers'))
+    def test_the_canonical_emitter_is_counted(self):
+        """`sub_type='sprinkler'` 은 그리기 도중의 점 마커라 같은 자리에
+        여러 벌이 쌓인다 — 실측(나주)에서 이미터 274개짜리 과수원에 마커가
+        2,466개였고, 그것을 세는 바람에 일지가 513,630 L 를 냈다(사람이 셈한
+        값은 19,180 L). 정본은 `sprinkler_coverage` 이고 그 규칙은
+        `aot-geo-stats.js` 에 이미 적혀 있다(디자인 개요가 그것으로 센다)."""
+        self.assertEqual(PJ._EMITTER_SUB_TYPE, 'sprinkler_coverage')
+        self.assertIn('_EMITTER_SUB_TYPE', self._src('_map_sprinklers'))
+
+    def test_the_ephemeral_marker_is_not_counted(self):
+        src = self._src('_map_sprinklers')
+        self.assertNotIn("== 'sprinkler'", src)
+
+    def test_the_counting_rule_matches_the_design_panel(self):
+        """두 번째 계수 규칙을 만들지 말 것 — 갈라지면 디자인 개요와 일지가
+        서로 다른 수량을 말한다."""
+        import io as _io
+        path = os.path.join(
+            os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+            'aot_flask', 'static', 'js', 'geo', 'design', 'aot-geo-stats.js')
+        js = _io.open(path, encoding='utf-8').read()
+        self.assertIn('sprinkler_coverage is the canonical emitter', js)
+        self.assertIn("subType === 'sprinkler_coverage'", js)
+
+    def test_legacy_emitters_fall_back_to_the_zone_default(self):
+        """유량이 비어 있는 옛 이미터는 그 구역의 기본값으로 채운다 —
+        디자인 개요가 하는 backfill 과 같다."""
+        self.assertIn('gen_config_sprinkler',
+                      self._src('_zone_emitter_defaults'))
 
     def test_the_document_says_which_basis_it_used(self):
         """나누는 방식이 아예 다르다(동의 몫 · 담당 폴리곤 ∩ 구획) — 한
