@@ -1876,3 +1876,37 @@ class TestOpenFieldIrrigation(unittest.TestCase):
         시설용 문장이 노지 문서에 붙는다(실측으로 그랬다)."""
         self.assertIn("'source': flow.get('source')",
                       self._src('control_rows_by_bucket'))
+
+
+class TestSilentOutputs(unittest.TestCase):
+    """기록을 남기지 않은 장치는 **표에서 빠지고, 문서가 그것을 말한다.**
+
+    나주 배 구획이 그랬다 — v11·v12 가 구획을 반씩 맡는데 v11 은 기록이
+    2026-08-19 하루뿐이라 8/28~9/2 문서에서 통째로 빠졌다. 표만 보면 밸브가
+    하나뿐인 것처럼 보이고, 나머지가 없는 것인지 고장인지 알 수 없다.
+    """
+
+    def _src(self, name):
+        import inspect
+        return inspect.getsource(getattr(PJ, name))
+
+    def test_silent_devices_are_collected(self):
+        src = self._src('control_rows_by_bucket')
+        self.assertIn('silent.append(', src)
+        self.assertIn('return out, errors, silent', src)
+
+    def test_they_are_not_written_down_as_zero_hours(self):
+        """안 돌았다는 것과 기록이 없다는 것은 다르다 — 0 으로 적으면
+        "그 기간에 한 번도 안 켰다" 는 거짓 사실이 문서에 남는다."""
+        text = PJ.caveat_text('outputs-no-record:v11')
+        self.assertIn('v11', text)
+        self.assertIn('zero hours', text)
+
+    def test_several_names_are_listed(self):
+        text = PJ.caveat_text('outputs-no-record:v11,v21')
+        self.assertIn('v11', text)
+        self.assertIn('v21', text)
+
+    def test_the_caveat_only_fires_when_something_is_missing(self):
+        src = self._src('build_journal_for_target')
+        self.assertIn('if silent_outputs:', src)

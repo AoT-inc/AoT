@@ -1419,6 +1419,11 @@ def control_rows_by_bucket(actuators, start_str, end_str, tz,   # noqa: C901
 
     out = {key: [] for key in (labels or [])}
     errors = []
+    # 이 기간에 **한 줄도 안 나온** 장치를 따로 모은다. 표는 기록이 있는 것만
+    # 내므로, 두 밸브가 구획을 반씩 맡는데 한쪽만 나오면 읽는 사람은 나머지가
+    # 없는 것인지 고장인지 알 수 없다 — 나주 배 구획이 실제로 그랬다(v11 은
+    # 기록이 2026-08-19 하루뿐이라 8/28~9/2 문서에서 통째로 빠졌다).
+    silent = []
     for a in (actuators or []):
         oid = a.get('output_id')
         if not oid:
@@ -1460,9 +1465,11 @@ def control_rows_by_bucket(actuators, start_str, end_str, tz,   # noqa: C901
                 }
             out[key].append(row)
         time.sleep(QUERY_PACING_SEC)
+        if not any(key in out for key in by_bucket):
+            silent.append(a.get('name') or oid[:8])
     for key in out:
         out[key].sort(key=lambda r: str(r.get('name') or ''))
-    return out, errors
+    return out, errors, silent
 
 
 def stage_at(stages, on_day):
@@ -2230,7 +2237,7 @@ def build_journal_for_target(target_type, target_id, start_date, end_date,
     flows = (irrigation_flow_for_plot(target_row)
              if target_type == 'plot' else {})
 
-    control_by_bucket, ctrl_errors = control_rows_by_bucket(
+    control_by_bucket, ctrl_errors, silent_outputs = control_rows_by_bucket(
         actuators, s_str, e_str, tz, granularity=granularity,
         bucket_sec=bucket_sec, labels=labels, flows=flows)
     errors.extend({'kind': 'control', **e} for e in ctrl_errors)
@@ -2341,6 +2348,12 @@ def build_journal_for_target(target_type, target_id, start_date, end_date,
         # 일 단위로는 예산을 넘겨 접어서 저장했다 — 열람 화면이 "일간" 을
         # 못 고르는 이유가 여기 있으므로 문서가 그 사실을 말해야 한다.
         caveats.append('stored-weekly-too-large')
+    if silent_outputs:
+        # ⚠ **0 시간으로 적지 않는다.** 안 돌았다는 것과 기록이 없다는 것은
+        #   다르고, 0 으로 적으면 "그 기간에 한 번도 안 켰다" 는 거짓 사실이
+        #   문서에 남는다(측정값 신선도 절의 "없는 것을 0 으로 보고하지
+        #   않는다" 와 같은 규칙).
+        caveats.append('outputs-no-record:%s' % ','.join(silent_outputs))
     if actuators:
         # `control_rows_by_bucket` 은 항상 채널 0 으로 간다(§4-4) — 다채널
         # 출력에서는 첫 채널만 본다는 사실을 조용히 넘기지 않는다.
@@ -2849,6 +2862,12 @@ def caveat_text(key):
                 "facility plots — their outline is derived from the "
                 "facility, not their own.")
         return _gettext_safe("Notes pinned to a map location were not checked.")
+    if base == 'outputs-no-record':
+        return _gettext_safe(
+            "These devices belong to this target but left no record in this "
+            "period, so they are not in the tables: %(names)s. That is not "
+            "the same as running for zero hours — it means nothing was "
+            "written.") % {'names': suffix.replace(',', ' · ')}
     if base == 'water-no-flow-basis':
         return _gettext_safe(
             "Water volume is only filled in for devices whose flow rate is "

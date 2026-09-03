@@ -28790,3 +28790,7 @@ msgstr ""
 #: aot/aot_flask/geo/plot_journal.py
 msgid "Water volumes are estimated from the sprinklers drawn on the map inside the area each valve covers, and how long that valve ran — not measured by a flow meter. Only the part that overlaps this plot is counted, so no share is guessed."
 msgstr ""
+
+#: aot/aot_flask/geo/plot_journal.py
+msgid "These devices belong to this target but left no record in this period, so they are not in the tables: %(names)s. That is not the same as running for zero hours — it means nothing was written."
+msgstr ""
