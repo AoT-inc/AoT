@@ -109,7 +109,14 @@ def _in_bounds(key, val):
     except Exception:
         return False
 
-# Helper: safely parse float or return None if invalid/empty
+# KMA marks a missing/not-yet-reported observation with -999 (seen as -999.0
+# in sfc_nc_var.php). Every QC_BOUNDS lower limit above is well clear of -900,
+# so treating anything at or below that as missing can't mistake a real
+# reading for the sentinel.
+KMA_MISSING_SENTINEL_MAX = -900.0
+
+
+# Helper: safely parse float or return None if invalid/empty/missing-sentinel
 def _to_float_or_none(s):
     try:
         if s is None:
@@ -117,7 +124,10 @@ def _to_float_or_none(s):
         s = str(s).strip()
         if s == "" or s.lower() == "nan":
             return None
-        return float(s.replace(',', ''))
+        val = float(s.replace(',', ''))
+        if val <= KMA_MISSING_SENTINEL_MAX:
+            return None
+        return val
     except Exception:
         return None
 
