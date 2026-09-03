@@ -29323,16 +29323,6 @@ msgstr "測定値なし"
 msgid "confirm_remove_pin"
 msgstr "ピンの削除を確認"
 
-#: aot_flask/templates/create_admin.html:55
-msgid ""
-"AoT is an open-source monitoring and control system built around a GIS "
-"digital twin and an MCP-based AI assistant. Some parts derive from the "
-"open-source Mycodo project; a warranty for the software added by AoT is "
-"available under a separate contract. The parts related to AoT follow the "
-"warranty information below."
-msgstr ""
-"AoTはGISデジタルツインとMCPベースのAIアシスタントを中心に構築されたオープンソースの監視・制御システムです。一部の構成はオープンソースのMycodoプロジェクトに由来します。AoTで追加されたソフトウェアは別契約で保証を受けられる場合があります。AoTに関連する部分は以下の保証情報に従います。"
-
 #: aot_flask/templates/modals/tab_settings.html:110
 msgid "Tab name unchanged"
 msgstr "タブ名は変更されていません"
@@ -29350,12 +29340,6 @@ msgstr "システムライブラリ"
 #: aot_flask/templates/pages/ai/ai_library.html:51
 msgid "Custom Source"
 msgstr "カスタムソース"
-
-#: aot_flask/templates/pages/ai/_mcp_pending_approvals.html:20
-msgid ""
-"These have NOT been executed. Approving runs it immediately with exactly the "
-"arguments shown — you do not need to go back to the AI and tell it."
-msgstr "まだ実行されていません。承認すると、画面に表示された引数のまま直ちに実行されます — AI に伝え直す必要はありません。"
 
 #: aot_flask/templates/pages/ai/mcp_review.html:62
 msgid "Approve this control request? The AI will be able to execute it once."
@@ -29380,13 +29364,6 @@ msgstr "施設3Dプレビュー"
 #: aot_flask/templates/pages/geo/geo_facility.html:1140
 msgid "Position & Orientation"
 msgstr "位置と向き"
-
-#: aot_flask/templates/pages/geo/geo_facility.html:1211
-msgid ""
-"Click \"Place on Map\" then click the facility center on the map. Drag the "
-"placed facility to move it. Form dimensions and rotation update the rectangle "
-"in real time."
-msgstr "\"地図に配置\"をクリックした後、地図で施設の中心をクリックしてください。配置した施設はドラッグして移動できます。フォームの寸法と回転がリアルタイムで長方形に反映されます。"
 
 #: aot_flask/templates/pages/geo/geo_facility.html:1229
 msgid "Open/close actuator control panel"
@@ -29867,11 +29844,6 @@ msgstr ""
 "選択した作物プリセットの値でVPD / CO₂ / 温度 / DLI / "
 "GDDの目標フィールドを強制的に上書きします(現在値を上書きし、メソッドを使用中の変数はスキップされます)。作物プリセットを変更した直後の場合は、先に関数を保存してください。"
 
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:153
-msgid "Reject sensor readings older than this. Leave at 0 to let "
-"each sensor decide from its own update interval."
-msgstr "これより古いセンサー値は使用しません。0 のままにすると、センサーごとに自身の更新周期で判定します。"
-
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:175
 #, python-format
 msgid ""
@@ -30247,9 +30219,6 @@ msgstr "接続された下位デバイス"
 msgid "Available devices to link"
 msgstr "接続可能なデバイス"
 
-msgid "Blocks wetting-type misting in strong light (droplets can lens sunlight onto leaves) and, if set below, before sunset. Independent of how often misting runs — turn this on or off at any misting frequency."
-msgstr "強い光の中で湿式ミスティングを遮断します（水滴が太陽光をレンズのように集め、葉を焦がすことがあります）。下で設定すると日没前にも遮断します。ミスティングの頻度に関係なく、どの頻度でもオン・オフできます。"
-
 msgid "Nursery Mode"
 msgstr "育苗場モード"
 
@@ -30306,12 +30275,6 @@ msgstr ""
 #: aot/aot_flask/templates/pages/geo/geo_facility.html
 msgid "Show/hide the fitting list"
 msgstr "構成要素リストの表示/非表示"
-
-#: aot/aot_flask/templates/pages/geo/geo_facility.html
-msgid ""
-"Use \"Place on Map\" above the map to set the facility center, then drag "
-"the facility on the map to adjust it."
-msgstr "施設の中心は地図上の\"地図に配置\"ボタンで指定し、地図上の施設をドラッグして位置を調整してください。"
 
 #: aot/aot_flask/templates/pages/geo/geo_facility.html
 msgid "Enter a name and select a map"
@@ -30470,10 +30433,6 @@ msgstr ""
 "このズームレベルより縮小すると、施設 / 出力 / 入力 / 関数のラベルと値キーを隠します。敷地とゾーンのラベルは位置の把握のため常に表示されます。0"
 " なら隠しません。"
 
-#: aot_flask/templates/pages/ai/_mcp_pending_approvals.html
-msgid "This moves real equipment (valves, pumps) as soon as you approve. Run it now?"
-msgstr "承認すると直ちに実際の機器（バルブ・ポンプ）が動きます。今すぐ実行しますか？"
-
 #: aot_flask/static/js/geo/design/aot-geo-binding-ui.js:0
 msgid "Assign another channel"
 msgstr "別のチャネルに割り当て"
@@ -30498,10 +30457,6 @@ msgstr "装置を解除しました。このエリアは未割り当てになり
 #: aot_flask/static/js/geo/design/aot-geo-binding-ui.js:0
 msgid "Every slot has a device."
 msgstr "すべてのスロットに装置が割り当てられています。"
-
-#: aot_flask/static/js/geo/design/aot-geo-binding-ui.js:0
-msgid "If you are replacing broken hardware with the same model, update the connection settings (DevEUI, address) on the existing device instead. The shape, the history and every function link stay intact."
-msgstr "同じ機種への故障交換であれば、新しい装置を作らず既存装置の接続情報（DevEUI・アドレス）だけを変更してください。図形・履歴・関数の接続はすべて維持されます。"
 
 #: aot_flask/static/js/geo/design/aot-geo-binding-ui.js:0
 msgid "Is this a like-for-like hardware swap?"
@@ -30683,10 +30638,6 @@ msgstr "装置交換をまたいで接続"
 msgid "Joins the segments recorded in the binding history. Past data is never rewritten."
 msgstr "バインディング履歴に記録された区間を接続します。過去のデータは書き換えません。"
 
-#: aot/aot_flask/templates/pages/geo/geo_facility.html
-msgid "A device was removed here but the fitting stayed. Select a row to open it and pick a device."
-msgstr "ここにあった装置は削除されましたが設備は残っています。行を選ぶとその設備を開いて装置を選べます。"
-
 #: aot/aot_flask/templates/pages/graph-async.html
 msgid "Hardware changes"
 msgstr "ハードウェア変更"
@@ -30799,28 +30750,6 @@ msgstr "記録なし"
 msgid "Site list"
 msgstr "筆地一覧"
 
-#: aot/aot_flask/templates/admin/upgrade.html
-msgid ""
-"Could not read the published image list from the container registry, "
-"so update availability is unknown. Check the network connection and "
-"try again."
-msgstr "コンテナレジストリから公開イメージ一覧を読み取れず、アップデートの有無を判定できません。ネットワーク接続を確認して再試行してください。"
-
-#: aot/aot_flask/templates/admin/upgrade.html
-msgid ""
-"The one-click update button requires the optional updater service, "
-"which is not running on this system."
-msgstr "ワンクリック更新ボタンには任意導入のアップデータサービスが必要ですが、このシステムでは動作していません。"
-
-#: aot/aot_flask/templates/admin/upgrade.html
-msgid ""
-"Data (database, uploaded files, backups) lives in Docker volumes and "
-"is preserved across image swaps. The database schema is migrated "
-"automatically when the new containers start."
-msgstr ""
-"データ（データベース、アップロードファイル、バックアップ）は Docker "
-"ボリュームにあり、イメージを入れ替えても保持されます。データベースのスキーマは新しいコンテナの起動時に自動で移行されます。"
-
 #: aot/aot_flask/routes_admin.py
 msgid ""
 "In-app upgrade is not available in Docker. On the host, pull the new "
@@ -30830,73 +30759,6 @@ msgstr ""
 "Docker ではアプリ内からのアップグレードはできません。ホストで新しいイメージを pull し、コンテナを作り直してください "
 "(docker compose pull && docker compose up -d)。"
 
-#: aot/aot_flask/templates/admin/upgrade.html
-msgid ""
-"The containers are being recreated on the new image. The web interface "
-"may briefly become unreachable; this page reconnects on its own."
-msgstr "新しいイメージでコンテナを作り直しています。Web 画面が一時的に切れることがありますが、このページは自動で再接続します。"
-
-#: aot/aot_flask/templates/admin/upgrade.html
-msgid ""
-"A backup is taken before the image is swapped. If the new version does "
-"not come up, the previous one is restored automatically."
-msgstr "イメージを入れ替える前にバックアップを取得します。新しいバージョンが正常に起動しない場合は、以前のバージョンへ自動で復旧します。"
-
-#: aot/aot_flask/templates/admin/upgrade.html
-msgid ""
-"A backup is taken before the image is swapped, and the previous "
-"version is restored automatically if the new one does not come up."
-msgstr "イメージを入れ替える前にバックアップを取得し、新しいバージョンが起動しない場合は以前のバージョンへ自動で復旧します。"
-
-#: aot/aot_flask/templates/admin/upgrade.html
-msgid ""
-"The containers will be recreated on the new image and control will "
-"pause briefly. A backup is taken first. Continue?"
-msgstr "新しいイメージでコンテナを作り直すため、制御が一時的に停止します。先にバックアップを取得します。続行しますか？"
-
-#: aot/aot_flask/routes_admin.py
-msgid ""
-"In-app upgrade is not available without the updater service. On the "
-"host, pull the new image and recreate the containers (docker compose "
-"pull && docker compose up -d) instead."
-msgstr ""
-"アップデータサービスがないとアプリ内からのアップグレードはできません。ホストで新しいイメージを pull し、コンテナを作り直してください "
-"(docker compose pull && docker compose up -d)。"
-
-#: aot/aot_flask/routes_admin.py
-msgid ""
-"The update has been requested. The containers will be recreated on the "
-"new image; this page shows progress."
-msgstr "アップデートを要求しました。新しいイメージでコンテナを作り直し、進行状況はこのページに表示されます。"
-
-#: aot/aot_flask/templates/admin/upgrade.html
-msgid ""
-"Checked once a day at this local time. If a newer version has been "
-"published, it is installed the same way the button above does it: back "
-"up, swap the image, verify, and restore the previous version if it "
-"does not come up."
-msgstr ""
-"毎日この時刻（現地時刻）に一度確認します。新しいバージョンが公開されていれば、上のボタンと同じ手順で導入します — "
-"バックアップし、イメージを入れ替え、確認し、起動しなければ以前のバージョンへ戻します。"
-
-#: aot/aot_flask/templates/admin/upgrade.html
-msgid ""
-"Control pauses for a few minutes while the containers restart, so pick "
-"an hour when nothing important is running."
-msgstr "コンテナが再起動する数分間は制御が停止するため、重要な動作がない時刻を選んでください。"
-
-#: aot/aot_flask/routes_admin.py
-msgid ""
-"Automatic updates are on. A published update will be installed at "
-"%(time)s each day."
-msgstr "自動アップデートを有効にしました。毎日 %(time)s に公開済みのアップデートを導入します。"
-
-#: aot/aot_flask/routes_admin.py
-msgid ""
-"Saved, but the daemon could not be notified. The new schedule takes "
-"effect after the daemon restarts."
-msgstr "保存しましたが、デーモンへ通知できませんでした。新しいスケジュールはデーモンの再起動後に反映されます。"
-
 #: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
 msgid "Representative measurement"
 msgstr "代表測定値"
@@ -30904,26 +30766,6 @@ msgstr "代表測定値"
 #: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
 msgid "Set as representative"
 msgstr "代表に指定"
-
-#: aot/aot_flask/templates/pages/ai/ai_agent.html
-msgid "Start or stop the AI model. While stopped, chat, advice requests and background AI work are all unavailable."
-msgstr "AIモデルを開始または停止します。停止中はチャット・アドバイス要求とバックグラウンドAI処理がすべて利用できません。"
-
-#: aot/aot_flask/templates/pages/ai/ai_agent.html
-msgid "No AI model is registered yet. Add and activate at least one agent below, then start the service."
-msgstr "AIモデルが登録されていません。下でエージェントを1つ以上追加・有効化してから、サービスを開始してください。"
-
-#: aot/aot_flask/templates/pages/ai/ai_agent.html
-msgid "Stopped. Chat, advice requests and background AI work are all unavailable until you start it."
-msgstr "停止中です。開始するまでチャット・アドバイス要求とバックグラウンドAI処理はすべて利用できません。"
-
-#: aot/aot_flask/routes_ai_agent.py
-msgid "Register and activate at least one AI model before starting the service."
-msgstr "サービスを開始する前に、AIモデルを1つ以上登録・有効化してください。"
-
-#: aot/aot_flask/templates/settings/general.html
-msgid "Enabling here only makes the AI available. Autonomous operation — periodic summaries, context broadcast and alerts — is started separately on the AI page, after at least one AI model is registered."
-msgstr "ここで有効にしてもAIが使えるようになるだけです。定期サマリー・コンテキストブロードキャスト・アラートなどの自律稼働は、AIモデルを1つ以上登録したうえでAIページから別途開始します。"
 
 #: aot/aot_flask/static/apps/notes-widget/src
 msgid "Failed to load notes."
@@ -30973,114 +30815,6 @@ msgstr "ファイルは最大{max}件まで添付できます。"
 msgid "At most {max} files. Only the first {n} will be added."
 msgstr "ファイルは最大{max}件です。先頭の{n}件のみ追加します。"
 
-#: inputs/remote_aot_input.py
-msgid ""
-"Collect measurements from another AoT server over the network using its API. Enter the host and API key, set the number of measurements, and save — the Remote Measurement dropdown is then filled with the channels available on that server. Pick one per channel and set its Measurement Unit to match the unit shown in the dropdown. Values arrive with the remote timestamp, and any conversion configured on the remote channel is already applied."
-msgstr ""
-"別のAoTサーバーの測定値をAPI経由で収集します。ホストとAPIキーを入力し、測定数を設定して保存すると、リモート測定のドロップダウンにそのサーバーで利用できるチャンネルが表示されます。チャンネルごとに1つ選び、ドロップダウンに表示された単位に合わせて測定単位を設定してください。値はリモートのタイムスタンプのまま保存され、リモート側チャンネルに設定された変換は適用済みで届きます。"
-
-#: inputs/remote_aot_input.py
-msgid ""
-"SECURITY: an AoT API key carries every permission of the user it belongs to. For a collect-only connection, create a user on the remote server whose role has only \"View Settings\" and use that user's key — a key from an admin account would also grant control of that server's devices. Keep TLS verification enabled unless you understand the risk."
-msgstr ""
-"セキュリティ: AoT APIキーは、そのキーが属するユーザーの全権限をそのまま渡します。収集専用の接続であれば、リモートサーバーに「設定の閲覧」権限のみを持つロールのユーザーを作成し、そのユーザーのキーを使用してください — 管理者アカウントのキーではそのサーバーの機器制御権限も渡ります。リスクを理解している場合を除き、TLS検証は有効のままにしてください。"
-
-#: inputs/remote_aot_input.py
-msgid ""
-"Remote AoT Host"
-msgstr ""
-"リモートAoTホスト"
-
-#: inputs/remote_aot_input.py outputs/remote_output_on_off.py outputs/remote_output_pwm.py
-msgid ""
-"The host or IP address of the remote AoT (a port may be included, e.g. 192.168.0.9:8084)"
-msgstr ""
-"リモートAoTのホストまたはIPアドレス（ポートを含められます。例: 192.168.0.9:8084）"
-
-#: inputs/remote_aot_input.py
-msgid ""
-"Remote AoT API Key"
-msgstr ""
-"リモートAoT APIキー"
-
-#: inputs/remote_aot_input.py outputs/remote_output_on_off.py outputs/remote_output_pwm.py
-msgid ""
-"The API key of the remote AoT, exactly as shown on that server"
-msgstr ""
-"リモートAoTのAPIキー。そのサーバーに表示された値をそのまま入力します"
-
-#: inputs/remote_aot_input.py outputs/remote_output_on_off.py outputs/remote_output_pwm.py
-msgid ""
-"Use HTTPS unless the remote AoT is only reachable over plain HTTP on a trusted network"
-msgstr ""
-"信頼できるネットワークで平文HTTPからのみ到達できる場合を除き、HTTPSを使用してください"
-
-#: inputs/remote_aot_input.py outputs/remote_output_on_off.py outputs/remote_output_pwm.py
-msgid ""
-"Verify TLS Certificate"
-msgstr ""
-"TLS証明書を検証"
-
-#: inputs/remote_aot_input.py outputs/remote_output_on_off.py outputs/remote_output_pwm.py
-msgid ""
-"Verify the remote server certificate. Turn this off only for a self-signed certificate on a trusted network — while off, the API key can be read by a man in the middle"
-msgstr ""
-"リモートサーバーの証明書を検証します。信頼できるネットワーク上の自己署名証明書の場合のみ無効にしてください — 無効の間は中間者にAPIキーを読み取られる可能性があります"
-
-#: inputs/remote_aot_input.py outputs/remote_output_pwm.py
-msgid ""
-"Request Timeout (Seconds)"
-msgstr ""
-"リクエストタイムアウト（秒）"
-
-#: inputs/remote_aot_input.py
-msgid ""
-"HTTP read timeout. Raise it if the remote server is slow to answer a large batch"
-msgstr ""
-"HTTP読み取りタイムアウト。リモートサーバーが大きな一括要求への応答に時間がかかる場合は延ばしてください"
-
-#: inputs/remote_aot_input.py
-msgid ""
-"Initial Backfill (Hours)"
-msgstr ""
-"初回の遡り収集（時間）"
-
-#: inputs/remote_aot_input.py
-msgid ""
-"How far back to collect on the first run. Later runs only fetch what has arrived since the last collection"
-msgstr ""
-"初回実行時に何時間前まで収集するかを指定します。以降の実行では前回の収集以降に届いた値のみ取得します"
-
-#: inputs/remote_aot_input.py
-msgid ""
-"Remote Measurement"
-msgstr ""
-"リモート測定"
-
-#: inputs/remote_aot_input.py
-msgid ""
-"The measurement on the remote AoT to collect into this channel"
-msgstr ""
-"このチャンネルに収集するリモートAoTの測定"
-
-#: outputs/remote_output_on_off.py
-msgid ""
-"Enter the API key and IP/Host address of your remote AoT and save to populate the Remote Output dropdown selection. You will need to refresh the page after saving for the Remote AoT Output dropdown to populate. Configure which Remote AoT Output you would like to control and save again. You must select an On/Off Output Channel for this to work. Selecting a PWM, Volume, or other channel will cause an error. SECURITY: an AoT API key carries every permission of the user it belongs to, so this key grants control of the remote server. Keep TLS verification enabled unless you understand the risk — with it off, anyone who can intercept the connection can read the key."
-msgstr ""
-"リモートAoTのAPIキーとIP/ホストアドレスを入力して保存すると、リモート出力のドロップダウンが設定されます。ドロップダウンに反映するには保存後にページを再読み込みする必要があります。制御したいリモートAoT出力を選んで再度保存してください。この機能が動作するにはOn/Off出力チャンネルを選択する必要があります。PWM、容量などの他のチャンネルを選ぶとエラーになります。セキュリティ: AoT APIキーはそのキーが属するユーザーの全権限をそのまま渡すため、このキーはリモートサーバーの制御権限でもあります。リスクを理解している場合を除き、TLS検証は有効のままにしてください — 無効にすると、接続を傍受できる者がキーを読み取れます。"
-
-#: outputs/remote_output_pwm.py
-msgid ""
-"Enter the API key and IP/Host address of your remote AoT and save to populate the Remote Output dropdown selection. You will need to refresh the page after saving for the Remote AoT Output dropdown to populate. Configure which Remote AoT Output you would like to control and save again. You must select a PWM Output Channel for this to work. Selecting an On/Off, Volume, or other channel will cause an error. SECURITY: an AoT API key carries every permission of the user it belongs to, so this key grants control of the remote server. Keep TLS verification enabled unless you understand the risk — with it off, anyone who can intercept the connection can read the key."
-msgstr ""
-"リモートAoTのAPIキーとIP/ホストアドレスを入力して保存すると、リモート出力のドロップダウンが設定されます。ドロップダウンに反映するには保存後にページを再読み込みする必要があります。制御したいリモートAoT出力を選んで再度保存してください。この機能が動作するにはPWM出力チャンネルを選択する必要があります。On/Off、容量などの他のチャンネルを選ぶとエラーになります。セキュリティ: AoT APIキーはそのキーが属するユーザーの全権限をそのまま渡すため、このキーはリモートサーバーの制御権限でもあります。リスクを理解している場合を除き、TLS検証は有効のままにしてください — 無効にすると、接続を傍受できる者がキーを読み取れます。"
-
-#: outputs/remote_output_pwm.py
-msgid ""
-"HTTP read timeout for duty cycle commands. Must be longer than the slowest command on the remote host"
-msgstr ""
-"デューティ比コマンドのHTTP読み取りタイムアウト。リモートホストで最も時間のかかるコマンドより長く設定してください"
-
 #: aot_flask/templates/settings/user_detail.html
 msgid "API Keys"
 msgstr "APIキー"
@@ -31089,27 +30823,9 @@ msgstr "APIキー"
 msgid "A newly issued key appears here once"
 msgstr "新しく発行したキーはここに一度だけ表示されます"
 
-#: aot_flask/templates/settings/user_detail.html
-msgid "Name the client this key is for, so you know what you are cutting off later."
-msgstr "このキーの用途に名前を付けておくと、後で何を停止するのか分かります。"
-
 #: aot_flask/static/js/widgets/AoT_map/aot-map-widget-v3.js:2051
 msgid "Load Failed"
 msgstr "読み込み失敗"
-
-#: aot_flask/app.py:1141
-msgid ""
-"The security token for this page had expired. Nothing was saved — please "
-"try again."
-msgstr "このページのセキュリティトークンの有効期限が切れました。保存された内容はありません。もう一度お試しください。"
-
-#: aot/aot_flask/templates/admin/upgrade.html
-msgid ""
-"No updater service is running on this system yet, so this schedule is "
-"saved but will not run until one is set up -- see below."
-msgstr ""
-"このシステムにはまだアップデータサービスがないため、このスケジュールは保存されますが、アップデータが設定されるまでは実行されません — "
-"下記を参照してください。"
 
 #: aot_flask/static/js/geo/facility/sensor-ui.js
 msgid "%(n)s channels"
@@ -31474,18 +31190,6 @@ msgstr "重ねて植えた区画があるため、割合の合計が100%を超�
 msgid "Unassigned"
 msgstr "未割当"
 
-#: aot/aot_flask/templates/admin/upgrade.html
-msgid ""
-"A normal restart is usually done within a minute. This may mean the "
-"update failed and an automatic rollback is in progress."
-msgstr "通常の再起動は1分以内に終わります。アップデートが失敗し、自動ロールバックが進行中の可能性があります。"
-
-#: aot/aot_flask/templates/admin/upgrade.html
-msgid ""
-"The automatic rollback may have failed too. Manual recovery is likely "
-"needed -- check the host directly:"
-msgstr "自動ロールバックも失敗した可能性があります。手動復旧が必要な可能性が高いです — ホストで直接確認してください:"
-
 #: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
 msgid "Same shape, new period."
 msgstr "同じ形で新しい期間を始めます。"
@@ -31699,14 +31403,6 @@ msgid "Divides a zone you already drew into several plots, instead of drawing ea
 msgstr "すでに描いた区域を複数の区画に分割します（一つずつ描く必要はありません）。"
 
 #: aot/aot_flask/static/js/geo/aot-geo-panel.js:1
-msgid "Draw the reference line and the main pipe first — branches are generated from them."
-msgstr "先に基準線と主管を描きます。枝管はそれを基準に生成されます。"
-
-#: aot/aot_flask/static/js/geo/aot-geo-panel.js:1
-msgid "Lays branches square to the main pipe instead of following the reference line."
-msgstr "基準線ではなく主管に直角に枝管を配置します。"
-
-#: aot/aot_flask/static/js/geo/aot-geo-panel.js:1
 msgid "The map updates as you drag — branches follow the reference line at this angle."
 msgstr "ドラッグ中に地図がすぐ追従します。枝管はこの角度で基準線に沿います。"
 
@@ -31793,10 +31489,6 @@ msgstr "不明なログソースです"
 #: aot_flask/templates/tools/logview.html aot_flask/static/js/tools/aot-logview.js aot_flask/routes_page.py
 msgid "Timed out reading this log source"
 msgstr "ログの読み取りがタイムアウトしました"
-
-#: aot_flask/templates/tools/logview.html aot_flask/static/js/tools/aot-logview.js aot_flask/routes_page.py
-msgid "The selected log lines are sent to the AI model you configured. Do not send lines containing credentials."
-msgstr "選択したログ行は設定済みのAIモデルに送信されます。認証情報を含む行は送らないでください。"
 
 #: aot_flask/templates/tools/logview.html aot_flask/static/js/tools/aot-logview.js aot_flask/routes_page.py
 msgid "No log entries match the current filter."
@@ -31965,16 +31657,8 @@ msgid "Save the facility first, then record what is planted in each zone."
 msgstr "先に施設を保存してから、各区画に植えた作物を記録してください。"
 
 #: aot/aot_flask/templates/pages/geo/geo_facility.html
-msgid "Delete this record? Use \"End\" instead if it was actually grown — deleting removes it from the history."
-msgstr "この記録を削除しますか？実際に栽培したものなら「終了」を使ってください — 削除すると履歴からも消えます。"
-
-#: aot/aot_flask/templates/pages/geo/geo_facility.html
 msgid "Record what is planted in each zone. Greenhouse plots need no drawing — the zone itself is the location."
 msgstr "各区画に何が植えられているかを記録します。施設の区画は描く必要がありません — 区画そのものが位置です。"
-
-#: aot/aot_flask/templates/pages/geo/geo_facility.html
-msgid "These plots sit in zones this change removes: {list}. They stay recorded but lose their zone. Save anyway?"
-msgstr "この変更で無くなる区画に植えられているものがあります: {list}。記録は残りますが区画を失います。それでも保存しますか？"
 
 #: aot/aot_flask/templates/pages/geo/geo_facility.html
 msgid "Where"
@@ -32035,10 +31719,6 @@ msgid "Already past — this boundary is fixed."
 msgstr "過ぎた区切りは変えられません。確認・取り消しでのみ変わります。"
 
 #: aot/aot_flask/templates/pages/geo/vegetation.html
-msgid "Built-in and external programs are read-only. Copy it to make your own."
-msgstr "組み込み・外部プログラムは編集できません。複製して自分のものにしてください。"
-
-#: aot/aot_flask/templates/pages/geo/vegetation.html
 msgid "Used for display and advice. Control is not changed automatically."
 msgstr "表示とアドバイスに使われます。制御が自動で変わることはありません。"
 
@@ -32073,9 +31753,6 @@ msgstr "プログラムを選ぶと段階と予想終了日が付いてきます
 msgid "Show plots (what is where). Plot labels appear when zoomed in."
 msgstr "区画（どこに何があるか）を表示します。拡大すると区画名が表示されます。"
 
-msgid "A curve overrides the stage value for that item. Time runs from the start date."
-msgstr "カーブを接続すると、その項目はステージ値ではなくカーブに従います。時間軸は開始日が基準です。"
-
 msgid "Start / germination date. Used as week-0 for DailyMultiPoint keyframe progression. Interpreted in the device local timezone."
 msgstr "開始日 / 発芽日。DailyMultiPoint キーフレーム進行の 0 週目の基準です。デバイスの現地タイムゾーンで解釈されます。"
 
@@ -32090,9 +31767,6 @@ msgstr "まだ開始していません"
 
 msgid "Nothing recorded in this zone."
 msgstr "このゾーンに登録されたものがありません。"
-
-msgid "Record what is in each zone. Facility plots need no drawing — the zone itself is the location."
-msgstr "各ゾーンに何があるかを記録してください。施設区画は図形を描く必要がありません — ゾーン自体が位置です。"
 
 msgid "Dates"
 msgstr "期間"
@@ -32573,9 +32247,6 @@ msgstr "微分ゲイン"
 msgid "Display Graph"
 msgstr "グラフを表示"
 
-msgid "Duplicate the facility currently open in the editor. Connected sensors/outputs are not carried over."
-msgstr "エディタで開いている施設を複製します。接続されたセンサー・出力は引き継がれません。"
-
 msgid "Every Period of the Input, each Action is executed with the returned measurements."
 msgstr "入力の周期ごとに、返された測定値で各アクションが実行されます。"
 
@@ -32684,20 +32355,11 @@ msgstr "測定値を下げる出力を選んでください"
 msgid "Select output to raise the measured value"
 msgstr "測定値を上げる出力を選んでください"
 
-msgid "Semantic color for destructive actions and errors (delete buttons, failures)"
-msgstr "取り消せない操作とエラーに使う意味色です（削除ボタン、失敗）"
-
-msgid "Semantic color for success/normal results — a different axis from the device-state colors above"
-msgstr "成功・正常な結果に使う意味色です — 上の機器状態の色とは別の軸です"
-
 msgid "Send Lower as Negative to Output."
 msgstr "下げる値を負の値として出力に送ります。"
 
 msgid "Setpoint Tracking"
 msgstr "設定値の追従"
-
-msgid "Soft background for failures — also the row/card background and map-popup name highlight for offline or unresponsive devices"
-msgstr "失敗に使う淡い背景色です — 切断または応答のない機器の行・カード背景と、地図ポップアップの名前強調にも使います"
 
 msgid "Store Lower measurement as Negative."
 msgstr "下げる測定値を負の値として保存します。"
@@ -32774,9 +32436,6 @@ msgstr "グラフは週・月・年単位のデータを目で見るのに向い
 msgid "Methods are used to reference various types of setpoints in a PID controller. Typically, a PID controller controls a device to a fixed setpoint. If you want the setpoint to change over time, you can change the setpoint over time in the method and use it for control by tracking the value in the PID controller."
 msgstr "メソッドは PID コントローラでさまざまな設定値を参照するために使います。通常 PID コントローラは固定した設定値へ機器を制御します。設定値を時間とともに変えたい場合は、メソッドで設定値を時間に沿って変え、PID コントローラがその値を追従することで制御できます。"
 
-msgid "Row/card background for paused or held controllers (PID pause/hold, pending AI drafts). Offline devices use Danger Tint below."
-msgstr "停止・保留中のコントローラ（PID の一時停止・保留、承認待ちの AI 下書き）の行・カード背景色です。切断された機器は下の危険背景色を使います。"
-
 msgid "This is the desired state of the particular environmental condition. For example, you might enter a desired temperature in degrees Celsius."
 msgstr "この環境条件に達してほしい状態です。たとえば望む温度を摂氏で入力します。"
 
@@ -32825,9 +32484,6 @@ msgstr "この役割に対応する機器の種類がまだありません"
 msgid "Not found here"
 msgstr "この場所では見つかりません"
 
-msgid "Delete this tab? Its programmes are not deleted — they move to the page's default tab."
-msgstr "このタブを削除しますか？ プログラムは削除されず、既定のタブに移動します。"
-
 #: aot/aot_flask/templates/pages/geo/programs.html
 msgid "A few numbers describing how this crop responds to light, temperature and CO2. Only the environment coordinator reads them, and only when it is set to control for photosynthesis — nothing else on this page uses them. Leave the whole block empty if you do not run that. Do not guess: a wrong number makes control quietly wrong. Templates come filled in from published figures."
 msgstr "この作物が光・温度・CO2 にどう反応するかを数個の数字でまとめたものです。環境コーディネーターが光合成基準で制御するときだけ読み、この画面の他のものは一切使いません。その制御を使わないなら丸ごと空で構いません。当てずっぽうで入れないでください — 誤った値一つが制御を静かに狂わせます。テンプレートから作ると公開された数値がすでに入っています。"
@@ -32845,24 +32501,8 @@ msgid "Heat units for this stage"
 msgstr "このステージの積算温度"
 
 #: aot/aot_flask/templates/pages/geo/programs.html
-msgid "How far from the optimum it still does well. Larger means less fussy about temperature."
-msgstr "最適温度からどれだけ外れても耐えられるかです。大きいほど温度に鈍感です。"
-
-#: aot/aot_flask/templates/pages/geo/programs.html
-msgid "How fast this crop can photosynthesise when light and CO2 are plentiful."
-msgstr "光と CO2 が十分なときにこの作物が出せる光合成速度です。"
-
-#: aot/aot_flask/templates/pages/geo/programs.html
 msgid "In your own words — what you are aiming for, what you learned the hard way, anything you would tell someone taking over. Read back whenever this programme comes up."
 msgstr "自分の言葉で書いてください — 何を狙っているか、経験してわかったこと、引き継ぐ人に伝えたいこと。このプログラムを開くたびに読み返すことになります。"
-
-#: aot/aot_flask/templates/pages/geo/programs.html
-msgid "None of this is needed. Leave it empty unless you already know the numbers."
-msgstr "ここにあるものは一つも必要ありません。値をすでに知っている場合を除き、空のままにしてください。"
-
-#: aot/aot_flask/templates/pages/geo/programs.html
-msgid "Nothing here yet. Write down how you grow something once — the stages and how long each takes — and every plot you attach it to will track its own stage, days left and harvest date, and show your notes for the stage it is in."
-msgstr "まだ何もありません。何をどう育てるかを一度書いておけば — ステージと各ステージの日数 — このプログラムを付けた区画ごとに現在のステージ・残り日数・収穫予定日が付いてきて、そのステージに書いた内容が地図に表示されます。"
 
 #: aot/aot_flask/templates/pages/geo/programs.html
 msgid "On, a stage change is recorded as soon as the data says it is due. Off, you get a suggestion and it only counts once you confirm it. Either way the date comes from the data, not from when you happen to look."
@@ -32871,10 +32511,6 @@ msgstr "オンにすると、データ上その時期になった時点でステ
 #: aot/aot_flask/templates/pages/geo/programs.html
 msgid "One row per item; the number is what you aim for through the whole programme, and stages that need a different number set it themselves. Sensor-linked items are read from your sensors and shown against this number; the rest are notes to yourself. Turn off what you do not measure here, and leave a number blank if you have not decided. All of it can stay empty."
 msgstr "一行が項目一つで、数字はこのプログラム全体で合わせたい目標です。ステージごとに変わる値はそのステージで別に決めます。センサー連動の項目はセンサーから読み取ってこの数字と並べて表示し、残りは自分用の参考目標です。ここで測らない項目はオフにし、まだ決めていない値は空のままにしてください。すべて空でも構いません。"
-
-#: aot/aot_flask/templates/pages/geo/programs.html
-msgid "Only what differs from the programme target. Anything left out follows the value set under Targets."
-msgstr "プログラム目標と違うものだけ書きます。書かなかった項目は「目標」で決めた値に従います。"
 
 #: aot/aot_flask/templates/pages/geo/programs.html
 msgid "Say what this needs — watering, feeding. Which device actually does it is worked out from where the plot is, so one programme works in more than one place. Nothing is switched on here; a person still presses the button."
@@ -32889,22 +32525,6 @@ msgid "Stages normally advance on days elapsed. Fill in a base temperature — t
 msgstr "ステージは通常、経過日数で進みます。基準温度 — この作物がそれ以下では育たない温度 — とステージごとの積算温度を埋めると、暦ではなく実際に積み上がった温度で進みます。空欄なら日数基準のままです。"
 
 #: aot/aot_flask/templates/pages/geo/programs.html
-msgid "Starting from a template is easiest — it comes with stages and lengths already filled in, and you change what differs. Nothing is installed until you add it."
-msgstr "テンプレートから始めるのが一番簡単です — ステージと期間がすでに入っているので、違うところだけ直します。追加するまで何もインストールされません。"
-
-#: aot/aot_flask/templates/pages/geo/programs.html
-msgid "The dryness of the air at which the stomata are half closed. Lower means it suffers sooner in dry air."
-msgstr "気孔が半分ほど閉じる空気の乾き具合です。低いほど乾いた空気で早く弱ります。"
-
-#: aot/aot_flask/templates/pages/geo/programs.html
-msgid "The light level at which it reaches half that maximum. Lower means it does well in weaker light."
-msgstr "その最大値の半分に達する光量です。低いほど弱い光でもよく育ちます。"
-
-#: aot/aot_flask/templates/pages/geo/programs.html
-msgid "The name the system uses for this stage. Leave it blank and it is made from the stage name. Changing it on a stage already in use cuts the link to what has been recorded."
-msgstr "システムがこのステージを指す名前です。空欄にするとステージ名から作られます。すでに使われているステージのコードを変えると、それまで記録されたものとのつながりが切れます。"
-
-#: aot/aot_flask/templates/pages/geo/programs.html
 msgid "What this programme is for. Only the name and what it applies to are needed — everything else can wait."
 msgstr "このプログラムが何のためのものかを書きます。名前と対象さえあれば十分で、残りは後から埋めても構いません。"
 
@@ -32917,60 +32537,24 @@ msgid "Why you do it this way"
 msgstr "なぜこのやり方なのか"
 
 #: aot/aot_flask/templates/pages/geo/programs.html
-msgid "e.g. Keep it on the dry side. Vent early on sunny mornings. Watch for aphids under the leaves."
-msgstr "例: 少し乾かし気味に管理する。晴れた朝は早めに換気する。葉裏にアブラムシが付いていないか見る。"
-
-#: aot/aot_flask/templates/pages/geo/programs.html
 msgid "e.g. Sown early so it heads up before the summer heat. Water goes down once it starts bolting."
 msgstr "例: 暑くなる前に結球するよう早めに播種する。抽苔が始まったら水を減らす。"
-
-#: aot/aot_flask/templates/pages/geo/programs.html
-msgid "A few numbers describing how this crop responds to light, temperature and CO2. These do not compete with the targets above — a target is the number to reach, these describe how the crop behaves on the way there, and only the environment coordinator reads them when it is set to control for photosynthesis. Leave the whole block empty if you do not run that. Do not guess: a wrong number makes control quietly wrong. Templates come filled in from published figures."
-msgstr "この作物が光・温度・CO2 にどう反応するかを数個の数字でまとめたものです。上の目標とぶつかることはありません — 目標は合わせたい値で、これらはそこへ向かう途中で作物がどう振る舞うかを書いたものなので、環境コーディネーターが光合成基準で制御するときだけ読みます。その制御を使わないなら丸ごと空で構いません。当てずっぽうで入れないでください — 誤った値一つが制御を静かに狂わせます。テンプレートから作ると公開された数値がすでに入っています。"
 
 #: aot/aot_flask/templates/pages/geo/programs.html
 msgid "Different values per stage"
 msgstr "ステージごとに違う値"
 
 #: aot/aot_flask/templates/pages/geo/programs.html
-msgid "How long this stage lasts, counted from when the one before it ended. Leave the last one blank to run until the end."
-msgstr "このステージが続く期間です。前のステージが終わった時から数えます。最後のステージは空欄にすると最後まで続きます。"
-
-#: aot/aot_flask/templates/pages/geo/programs.html
 msgid "In your own words — what you are aiming for, what you learned the hard way, anything you would tell someone taking over. It is read back every time this programme comes up."
 msgstr "自分の言葉で書いてください — 何を狙っているか、経験してわかったこと、引き継ぐ人に伝えたいこと。このプログラムを見るたびに読み返すことになります。"
-
-#: aot/aot_flask/templates/pages/geo/programs.html
-msgid "Off, every stage aims for the numbers above. On, each stage gets its own box where you set only what differs."
-msgstr "オフならすべてのステージが上の値を目標にします。オンにするとステージごとに欄ができ、違うところだけ書きます。"
-
-#: aot/aot_flask/templates/pages/geo/programs.html
-msgid "Off, every stage uses what is switched on above. On, each stage can turn one of them off — a dry-down before harvest, for instance."
-msgstr "オフならすべてのステージが上でオンにしたものをそのまま使います。オンにするとステージごとにそのうち一つをオフにできます — 収穫前の断水などです。"
 
 #: aot/aot_flask/templates/pages/geo/programs.html
 msgid "One row per item, and the number is what this programme aims for. Switch on what you actually manage here and fill in the ones you have decided — anything left off or blank simply is not tracked. Sensor-linked items are read from your sensors and shown against the number; the rest are there for you to read."
 msgstr "一行が項目一つで、数字はこのプログラムが合わせたい目標です。ここで実際に管理するものだけをオンにし、決めた値を入れてください — オフのままや空欄のものは単に追いかけません。センサー連動の項目はセンサーから読み取ってこの数字と並べて表示し、残りは人が読むためのものです。"
 
 #: aot/aot_flask/templates/pages/geo/programs.html
-msgid "The starting line for counting heat units. Each day banks the average temperature minus this number: base 10, a day averaging 18, banks 8. Set this and the heat units on each stage, and stages advance on warmth banked instead of days on the calendar. Leave it blank and stages go by days."
-msgstr "積算温度を数え始める基準線です。一日の平均気温からこの値を引いた分がその日に積み上がります — 基準10度で平均18度の日なら8が積み上がります。この値とステージごとの積算温度を両方入れると、ステージが暦の日数ではなく積み上がった温度で進みます。空欄なら日数で進みます。"
-
-#: aot/aot_flask/templates/pages/geo/programs.html
-msgid "What this programme is and why. Only the name is needed — everything else can wait."
-msgstr "このプログラムが何で、なぜこうするのかを書きます。名前さえあれば十分で、残りは後から埋めても構いません。"
-
-#: aot/aot_flask/templates/pages/geo/programs.html
 msgid "Why it is done this way"
 msgstr "なぜこのやり方なのか"
-
-#: aot/aot_flask/templates/pages/geo/programs.html
-msgid "e.g. Started early so it finishes before the summer heat. Ease off the water once it starts to bolt."
-msgstr "例: 暑くなる前に終わるよう早めに始める。抽苔が始まったら水を減らす。"
-
-#: aot/aot_flask/templates/pages/geo/programs.html
-msgid "For anything the list above does not cover — EC, pH, stocking density. Pick a measurement type and the system reads it from your sensors; leave it blank and the item is yours to read."
-msgstr "上の一覧にないものを作ります — EC、pH、飼養密度など。測定種類を選ぶとシステムがセンサーから読み取り、空欄にすると人が読む値になります。"
 
 #: aot/aot_flask/templates/pages/geo/programs.html
 msgid "Move down"
@@ -32979,22 +32563,6 @@ msgstr "下へ"
 #: aot/aot_flask/templates/pages/geo/programs.html
 msgid "Move up"
 msgstr "上へ"
-
-#: aot/aot_flask/templates/pages/geo/programs.html
-msgid "Split the run into stretches you manage differently, and give each one how many days it lasts. One stage is completely fine."
-msgstr "管理の仕方が変わる区切りで分け、それぞれ何日続くかを書きます。ステージが一つだけでも全く問題ありません。"
-
-#: aot/aot_flask/templates/pages/geo/programs.html
-msgid "The numbers this programme aims for. Switch on what you manage, and fill in a number when you have decided one — anything switched off is simply not part of this programme."
-msgstr "このプログラムが合わせたい値です。実際に管理するものをオンにし、決めた値があれば入れてください — オフのものはこのプログラムでは扱いません。"
-
-#: aot/aot_flask/templates/pages/geo/programs.html
-msgid "What this programme is for and how you want it to run. Written in your own words and read back whenever the programme comes up — by you, and by the AI when it advises on a plot using it."
-msgstr "このプログラムが何のためのもので、どう動いてほしいかを自分の言葉で書きます。このプログラムを開くたびに読み返すことになり、このプログラムを使う区画に AI がアドバイスするときもそのまま読みます。"
-
-#: aot/aot_flask/templates/pages/geo/programs.html
-msgid "What this programme needs. Nothing is switched on here — a plot using this programme looks at where it sits and reports whether the equipment for each of these is actually there, so you find out before the crop does. Only watering can be found that way today, and only inside a facility: it is matched to irrigation valves placed on the facility plan. The others are recorded as intent until there is a way to recognise them."
-msgstr "このプログラムに何が必要かを書きます。ここで何かが入ることはありません — このプログラムを使う区画が自分の場所を見て、その設備が実際にあるかを知らせます。今そうやって探せるのはかん水だけで、施設内の区画に限ります（施設図面に配置したかん水バルブと突き合わせます）。残りは見分ける手段ができるまで記録するだけです。"
 
 #: aot/aot_flask/static/js/widgets/AoT_map/aot-map-widget-vector.js
 msgid "Expand"
@@ -33051,18 +32619,6 @@ msgstr "下で区域の総量を設定すると個数で入力できます"
 msgid "Facility settings"
 msgstr "施設設定を開く"
 
-msgid "Names you typed in yourself — device, zone and crop names — stay in the language you wrote them in. Turn this on to have them shown in the interface language as well. The stored names are never changed."
-msgstr "自分で付けた名前（機器名・区域名・作物名）は、入力した言語のまま残ります。これを有効にすると、その名前も画面の言語で表示されます。保存されている名前自体は変更されません。"
-
-msgid "Names you typed in yourself are stored exactly as you wrote them. This table holds the translation shown for each of them in the selected language. Editing one here locks it, so it is never overwritten again. The stored name is never changed."
-msgstr "自分で付けた名前は入力したとおりに保存されます。この表には、選択した言語で代わりに表示する翻訳が入っています。ここで編集するとその値は固定され、二度と上書きされません。保存されている名前自体は変更されません。"
-
-msgid "Name translation is currently turned off. Turn it on under General Settings."
-msgstr "名前の翻訳は現在オフです。一般設定から有効にできます。"
-
-msgid "Discard every translation for this language and translate again? Names you edited by hand are kept."
-msgstr "この言語の翻訳をすべて破棄して、もう一度翻訳しますか？手動で修正した名前はそのまま残ります。"
-
 msgid "Appearance"
 msgstr "表示"
 
@@ -33073,18 +32629,6 @@ msgstr "影響"
 #: 그룹 스코프 (docs/design/access-scope-groups.md)
 msgid "This group setting restricts operation. Every user can still view all data."
 msgstr "このグループ設定は操作を制限します。すべてのユーザーは引き続き全データを閲覧できます。"
-
-#: 그룹 스코프 (docs/design/access-scope-groups.md)
-msgid "What this group is for. Without it, nobody can tell later whether the group is still needed."
-msgstr "このグループの用途。記載がないと、後でこのグループがまだ必要か判断できません。"
-
-#: 그룹 스코프 (docs/design/access-scope-groups.md)
-msgid "Groups restrict who can operate a resource. Every user can still view all data."
-msgstr "グループはリソースを操作できる人を制限します。すべてのユーザーは引き続き全データを閲覧できます。"
-
-#: 그룹 스코프 (docs/design/access-scope-groups.md)
-msgid "No groups yet. Without a group, every user operates every resource their role allows."
-msgstr "まだグループがありません。グループがない場合、すべてのユーザーは自分の役割が許可するすべてのリソースを操作します。"
 
 #: 그룹 스코프 (docs/design/access-scope-groups.md)
 msgid "No resources granted — every user operates them as their role allows."
@@ -33106,15 +32650,6 @@ msgstr "デバイスタブ"
 msgid "Maps"
 msgstr "地図"
 
-#: 그룹 스코프 (docs/design/access-scope-groups.md)
-msgid "At least one role must keep access to all groups. Grant it to another role first."
-msgstr "全グループへのアクセス権を持つ役割が最低1つ必要です。先に別の役割へ付与してください。"
-
-
-#: 그룹 스코프 (docs/design/access-scope-groups.md)
-msgid "This resource is assigned to another group. Ask an administrator for access."
-msgstr "このリソースは別のグループに割り当てられています。管理者にアクセスを依頼してください。"
-
 msgid "All maps"
 msgstr "すべての地図"
 
@@ -33135,30 +32670,6 @@ msgstr "%(n)s件"
 
 msgid "Pick a map first."
 msgstr "先に地図を選んでください。"
-
-#: 그룹 스코프 (docs/design/access-scope-groups.md)
-msgid "If no group is selected, everyone can operate this tab. Selecting a group limits operation to its members. Data stays visible to everyone."
-msgstr "グループを選ばない場合は全員がこのタブを操作できます。グループを選ぶとそのメンバーだけが操作できます。データは引き続き全員に表示されます。"
-
-#: 그룹 스코프 (docs/design/access-scope-groups.md)
-msgid "Assign resources from each tab or resource settings dialog. This list is read-only."
-msgstr "付与は各タブやリソースの設定画面で行います。この一覧は読み取り専用です。"
-
-#: 그룹 스코프 (docs/design/access-scope-groups.md)
-msgid "This group has no resources yet. Everyone can still operate what is not assigned."
-msgstr "このグループに付与されたリソースはありません。未割り当てのリソースは引き続き全員が操作できます。"
-
-#: 그룹 스코프 (docs/design/access-scope-groups.md)
-msgid "If no group is selected, everyone can operate this dashboard. Selecting a group limits operation to its members. Data stays visible to everyone."
-msgstr "グループを選ばない場合は全員がこのダッシュボードを操作できます。グループを選ぶとそのメンバーだけが操作できます。データは引き続き全員に表示されます。"
-
-#: 그룹 스코프 (docs/design/access-scope-groups.md)
-msgid "If no group is selected, everyone can operate this map. Selecting a group limits operation to its members. Data stays visible to everyone."
-msgstr "グループを選ばない場合は全員がこの地図を操作できます。グループを選ぶとそのメンバーだけが操作できます。データは引き続き全員に表示されます。"
-
-#: 그룹 스코프 (docs/design/access-scope-groups.md)
-msgid "If no group is selected, everyone can operate this facility. Selecting a group limits operation to its members. Data stays visible to everyone."
-msgstr "グループを選ばない場合は全員がこの施設を操作できます。グループを選ぶとそのメンバーだけが操作できます。データは引き続き全員に表示されます。"
 
 #: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
 msgid "Latest photo"
@@ -33284,56 +32795,13 @@ msgstr "不作・損失"
 msgid "No programs yet — create one"
 msgstr "プログラムがまだありません — 作成"
 
-msgid "How old a measurement may be and still be used, in seconds. Leave blank to derive it from the measurement period — that is right for most devices. Set a number only when this device needs its own rule (a LoRaWAN node that reports every 30-60 minutes, for example)."
-msgstr "測定値を何秒前のものまで使えるか。空欄にすると測定周期から導出する — ほとんどの装置はそれで正しい。この装置だけの規則が必要なときにだけ数値を入れる(例: 30~60分ごとに報告する LoRaWAN ノード)。"
-
-#: aot_flask/templates/pages/ai/ai_library.html
-msgid "Connect data sources so the AI answers from a source instead of its own general knowledge. The built-in public-data feeds are Korean; anywhere else, bring your own documents, web pages or APIs."
-msgstr "AI が自身の一般知識ではなく出典に基づいて答えるよう、データソースを接続します。組み込みの公共データフィードは韓国のものです。それ以外の地域では、自分の文書・Web ページ・API をお使いください。"
-
-#: aot_flask/templates/pages/ai/ai_library.html
-msgid "Everything the AI can cite — synced from sources, shelved by the AI, or written in by hand. Search and filter to see what is actually in here."
-msgstr "AI が引用できるすべてです — ソースから同期したもの、AI が保存したもの、手で書いたもの。検索と絞り込みで実際の中身を確認できます。"
-
-#: aot_flask/templates/pages/ai/ai_library.html
-msgid "The knowledge library is empty. Until something is in here, the AI answers subject questions from its own general knowledge — with no source to cite."
-msgstr "知識ライブラリが空です。ここに何か入るまで、AI は主題に関する質問に自身の一般知識で答え、引用できる出典がありません。"
-
-#: aot_flask/templates/pages/ai/ai_library.html
-msgid "This source is already in your library. Configure it via the settings cog."
-msgstr "このソースはすでにライブラリにあります。設定の歯車から構成してください。"
-
-#: aot_flask/templates/pages/ai/ai_library.html
-msgid "Three ways to fill it: connect a source above, press Add Knowledge to write in what you already know, or just ask the AI to look something up — it saves what it finds."
-msgstr "満たす方法は 3 つです。上でソースを接続する、「知識を追加」で既に知っていることを書く、または AI に調べてもらう — 見つけたものを自分で保存します。"
-
-#: aot_flask/templates/pages/ai/ai_library.html
-msgid "What you write here is treated as confirmed — you are the source. Tag it so it only comes up for the right questions."
-msgstr "ここに書いた内容は確認済みとして扱われます — あなたが出典です。適切な質問にだけ出るようタグを付けてください。"
-
-#: aot_flask/templates/pages/ai/ai_library.html
-msgid "When on, the AI may not cite notes it wrote itself until a person confirms them. Authoritative and hand-entered knowledge is unaffected."
-msgstr "オンにすると、AI が自分で書いたメモは人が確認するまで引用できません。権威ある知識と手入力の知識は影響を受けません。"
-
-#: aot_flask/templates/pages/ai/ai_library.html
-msgid "“Retrieved” means the knowledge search returned it — not that the answer quoted it."
-msgstr "「検索に掛かった」は知識検索がその項目を返したという意味で、回答が引用したという意味ではありません。"
-
 #: aot_flask/templates/pages/ai/ai_library.html
 msgid "Reference Table (CSV)"
 msgstr "参照表 (CSV)"
 
 #: aot_flask/templates/pages/ai/ai_library.html
-msgid "The AI reads only this to decide whether to use the table. e.g. Growing temperature, rainfall and soil pH ranges per plant species."
-msgstr "AI はこの説明だけを見て表を使うか判断します。例: 植物種ごとの生育温度・降水量・土壌 pH の範囲。"
-
-#: aot_flask/templates/pages/ai/ai_library.html
 msgid "FAO ECOCROP — Crop Requirements (EXT-GL-01)"
 msgstr "FAO ECOCROP — 作物要求条件 (EXT-GL-01)"
-
-#: aot_flask/templates/pages/ai/ai_library.html
-msgid "Local word = table name, comma separated. e.g. 무=radish, 배추=cabbage. Only common anchors are needed — the AI works out synonyms itself."
-msgstr "現地語 = 表の名前、カンマ区切り。例: 대根=radish。よく使うものだけで十分です — 同義語は AI が自分で解決します。"
 
 msgid "Misting Sunburn Protection"
 msgstr "ミスト日焼け防止"
@@ -33574,16 +33042,8 @@ msgid "Gentler on the leaves"
 msgstr "葉にやさしく"
 
 #: aot/functions/custom_functions/env_coordinator_impl/_function_info.py
-msgid "How hard the system chases the target. Sets the cycle, how often vents may move, the dead-band and the emergency thresholds together."
-msgstr "目標をどれだけ強く追うか。制御周期・窓の駆動間隔・デッドバンド・緊急閾値をまとめて設定します。"
-
-#: aot/functions/custom_functions/env_coordinator_impl/_function_info.py
 msgid "How careful misting is with the leaves. Sets spray length, drying interval and the sunburn thresholds together."
 msgstr "噴霧が葉をどれだけ気遣うか。噴霧の長さ・乾燥間隔・日焼け閾値をまとめて設定します。"
-
-#: aot/functions/custom_functions/env_coordinator_impl/_function_info.py
-msgid "Which facility this coordinator runs. Actuators and sensors come from it."
-msgstr "このコーディネーターが制御する施設。アクチュエーターとセンサーはここから取得します。"
 
 #: aot/functions/custom_functions/env_coordinator_impl/_function_info.py
 msgid "Rest heating and cooling while the outdoor air alone can reach the target."
@@ -33606,20 +33066,8 @@ msgid "Above this value the unit counts as running."
 msgstr "この値を超えると稼働中とみなします。"
 
 #: aot/functions/custom_functions/env_coordinator_impl/_function_info.py
-msgid "Keep the vents closed overnight and let heating, cooling and drying carry the load."
-msgstr "夜間は窓を閉じ、冷暖房・除湿に任せます。"
-
-#: aot/functions/custom_functions/env_coordinator_impl/_function_info.py
-msgid "Whether night is measured from sunset to sunrise, or by fixed clock times."
-msgstr "夜を日没～日の出で見るか、決めた時刻で見るか。"
-
-#: aot/functions/custom_functions/env_coordinator_impl/_function_info.py
 msgid "Tighter misting limits for seedlings, which scorch more easily than grown leaves."
 msgstr "苗は成葉より焼けやすいため、噴霧の制限を厳しくします。"
-
-#: aot/functions/custom_functions/env_coordinator_impl/_function_info.py
-msgid "Harder or colder water needs a lower sunburn threshold, which this sets for you."
-msgstr "硬度が高い水や冷たい水は日焼け閾値を下げる必要があります。選ぶと自動で下げます。"
 
 #: aot/functions/custom_functions/env_coordinator_impl/_function_info.py
 msgid "Use the misting nozzles for humidity too. Turn off when they are your irrigation."
@@ -33630,20 +33078,8 @@ msgid "A safety stop: control halts after this date. Leave blank to run indefini
 msgstr "安全停止です。この日付を過ぎると制御が止まります。空欄なら動き続けます。"
 
 #: aot/functions/custom_functions/env_coordinator_impl/_function_info.py
-msgid "How often the vents may move. Emergencies and safety gates ignore this."
-msgstr "窓が動ける間隔。緊急時と安全ゲートはこの値を無視します。"
-
-#: aot/functions/custom_functions/env_coordinator_impl/_function_info.py
 msgid "How much light the closed shade cloth lets through. Only used without an indoor light sensor."
 msgstr "完全に閉じた遮光幕が通す光の割合。屋内光センサーがない場合のみ使います。"
-
-#: aot/functions/custom_functions/env_coordinator_impl/_function_info.py
-msgid "Let the model decide which of light, CO₂, temperature or VPD is limiting right now."
-msgstr "光・CO₂・温度・VPDのうち、今どれが制限要因かをモデルに判定させます。"
-
-#: aot/functions/custom_functions/env_coordinator_impl/_function_info.py
-msgid "Which model computes the effect of each actuator. Change only while testing."
-msgstr "各アクチュエーターの効果を何で計算するか。試験中でなければ変更しないでください。"
 
 #: aot/functions/custom_functions/env_coordinator_impl/_function_info.py
 msgid "Record every cycle decision. Turn on while diagnosing, off afterwards."
@@ -33871,18 +33307,6 @@ msgstr "噴霧が葉をどれだけ丁寧に扱うかを決めます。1回の�
 msgid "No active plot yet"
 msgstr "有効な区画なし"
 
-msgid "Opening helps only when the outdoor air is on the target side. When it is not, wider vents drag the reading further away."
-msgstr "外気が目標側にあるときだけ開けることが役に立ちます。逆側なら、開けるほど目標から遠ざかります。"
-
-msgid "Venting against a running unit throws that heat or cold straight outside."
-msgstr "稼働中の機器に逆らって換気すると、その熱や冷気をそのまま外へ捨てます。"
-
-msgid "Only for units this coordinator does not switch itself — it already knows about the ones it commands. Not an indoor temperature: something that reports the unit running, such as a power reading or a relay state."
-msgstr "この調整機が自分で入れない機器にだけ必要です — 自ら命令する機器はすでに把握しています。室内温度ではなく、その機器が動いていることを示す値です（電力の測定値やリレーの状態など）。"
-
-msgid "Read on the signal chosen above, in whatever unit that signal uses. For an on/off signal (0 or 1) leave it at 0.5."
-msgstr "上で選んだ信号を、その信号の単位のまま読みます。オン／オフ信号（0 または 1）なら 0.5 のままで構いません。"
-
 msgid "Not used"
 msgstr "使わない"
 
@@ -33898,15 +33322,6 @@ msgstr "栽培中"
 msgid "curve"
 msgstr "カーブ"
 
-msgid "Which plot this coordinator follows, when more than one is growing in its scope. Leave empty when there is only one — it is picked automatically. When more than one is growing, pick it from the summary under the linked facility above."
-msgstr "スコープ内で複数の区画が育っているとき、どれに従うかを指定します。一つだけなら空のままにしてください — 自動で選ばれます。複数あるときは、上の［連動施設］の下の要約から選べます。"
-
-msgid "Fraction of light that passes through the shade cloth when fully closed. 0.30 lets three tenths through."
-msgstr "完全に閉じた遮光カーテンを光がどれだけ通るか。0.30 なら十分の三が通ります。"
-
-msgid "Only for this screen, when its cloth differs from the rest. Leave 0 to use the value set on the linked facility. Used when there is no indoor light sensor: the indoor level is estimated from outdoor irradiance and the screen position."
-msgstr "この遮光カーテンの生地が他と異なるときだけ使います。0 のままなら連動施設に設定した値を使います。室内の光センサーがないとき、外の日射と開度から室内の光量を推定するのに使われます。"
-
 msgid "When Control Runs"
 msgstr "制御を動かす時間帯"
 
@@ -33916,20 +33331,8 @@ msgstr "{date} に終わります"
 msgid "Expected to end around {date}"
 msgstr "{date} 頃に終わる見込みです"
 
-msgid "Outside this window the coordinator stops entirely — heating and cooling included. Safety limits still act."
-msgstr "この時間帯の外では調整機が丸ごと止まります — 暖房も冷房も含みます。安全の上下限はそのまま働きます。"
-
-msgid "When it stops. What each device does at that moment is set in its Action."
-msgstr "いつ止まるか。その時に各機器が何をするかは、その機器のアクションで決めます。"
-
-msgid "Sets the window above from a day-length curve instead of fixed times. Careful: a short day length means the coordinator runs for only those hours, so nothing is heated overnight."
-msgstr "上の時間帯を固定時刻ではなく日長のカーブから決めます。注意：日長が短いと調整機もその時間しか動かず、夜通し暖房されません。"
-
 msgid "Control stops for good after this date. Leave blank to keep running."
 msgstr "この日付を過ぎると制御が完全に止まります。空欄なら動き続けます。"
-
-msgid "Show a dock at the top of the map with the current time, sunrise and sunset for wherever the map is centered."
-msgstr "地図が表示している場所の現在時刻と日の出・日の入りを地図の上部に表示します。"
 
 msgid "Scroll to resize the clock"
 msgstr "スクロールで時計の大きさを変更"
@@ -33948,16 +33351,6 @@ msgstr "プログラムの値"
 
 msgid "Current readings against the targets and limits this stage declares."
 msgstr "このステージが定めた目標・限界に現在の実測を当てます。"
-
-msgid ""
-"Fills the rows that have no axis with a recent trend line. Needs the targets "
-"block."
-msgstr "軸のない行を直近の推移線で埋めます。[目標と現在] が必要です。"
-
-msgid ""
-"Minutes between reloads. Stages move by the day, so short intervals only add "
-"load."
-msgstr "再取得の間隔（分）。ステージは日単位で動くため、短くしても負荷が増えるだけです。"
 
 msgid "Moved on to %(name)s?"
 msgstr "%(name)s に移りましたか？"
@@ -34010,12 +33403,6 @@ msgstr "現在のステージへ"
 msgid "Control is switched off. This facility is run by: {name}"
 msgstr "制御はオフです。この施設は別のコーディネーターが制御しています: {name}"
 
-msgid "Aims to stay inside this range. Past a limit it stops whatever pushes the wrong way — too damp: misting off; too dry: exhaust fans off. It does not slam anything to full."
-msgstr "この範囲の中にとどまることを目標にします。限界を超えると逆方向に働く装置を止めます — 湿っていれば噴霧を切り、乾いていれば排気ファンを止めます。どの装置も最大にはしません。"
-
-msgid "Aims to stay inside this range. Past a limit it stops whatever pushes the wrong way — too warm: heating off and the shade screen drawn; too cold: cooling off, vents and thermal curtain closed. It does not slam anything to full."
-msgstr "この範囲の中にとどまることを目標にします。限界を超えると逆方向に働く装置を止めます — 暑ければ暖房を切り遮光カーテンを閉じ、寒ければ冷房を切り開口部と保温カーテンを閉じます。どの装置も最大にはしません。"
-
 msgid "Gentle"
 msgstr "弱め"
 
@@ -34024,9 +33411,6 @@ msgstr "連携された{equipment}の設備がないため、{purpose}の基準�
 
 msgid "No {equipment} is linked, so this setting takes no part in operation."
 msgstr "連携された{equipment}の設備がないため、この設定は動作に関与しません。"
-
-msgid "Use the micro sprinklers for humidity too. Turn off when they are your irrigation."
-msgstr "ミニスプリンクラーを加湿にも使います。かん水専用ならオフにしてください。"
 
 msgid "lower"
 msgstr "下側"
@@ -34057,18 +33441,6 @@ msgstr "まだ一度も動いていません。"
 
 msgid "These values do not match any step — see them under [Advanced]."
 msgstr "どの段階とも一致しない値です — 詳細な値は[詳細設定]で確認できます。"
-
-msgid "Applies to leaf-wetting misting only — fog-type misting runs in strong sun too. Darker than the range it runs freely; brighter than the range it stops; inside the range it tapers off."
-msgstr "葉をぬらす噴霧（ミニスプリンクラー）にのみ適用されます — 霧タイプの噴霧は日差しが強くても作動します。区間より暗ければ自由に、区間より明るければ停止し、区間の中では徐々に減らします。"
-
-msgid "Darker than the range: the supplemental lights come on and the shade screen opens. Brighter than the range: the shade screen closes. Inside the range nothing happens. Either end can be turned off."
-msgstr "区間より暗ければ補光灯を点け、遮光カーテンを開きます。区間より明るければ遮光カーテンを閉じます。区間の中では何もしません。どちらの端もオフにできます。"
-
-msgid "How often the misting runs — the run time and the gap until the next run."
-msgstr "噴霧をどれくらいの頻度で作動させるかを決めます — 作動する時間と、次の作動までの間隔を調節します。"
-
-msgid "Keeps venting and HVAC from working against each other. At [Energy saving] the HVAC rests when venting alone can reach the target, and the vents close while it runs. At [High performance] both act freely so the target is reached sooner."
-msgstr "換気と冷暖房が互いに邪魔しないように調整します。[省エネ]では換気だけで目標に届くとき冷暖房を休ませ、冷暖房が動く間は開口部を閉じます。[高性能]では両方が自由に動き、目標により早く届きます。"
 
 msgid "Misting is locked out overnight to keep leaves dry"
 msgstr "葉を夜通し乾いた状態に保つため噴霧を止めました"
@@ -34104,12 +33476,6 @@ msgstr "'%(device)s' を削除できません — %(referrers)s がまだ使用�
 #: aot/services/resolvers/device_resolver.py
 msgid "More than one %(kind)s is named '%(name)s' (tabs: %(tabs)s). Say which one you mean, or use its exact id."
 msgstr "'%(name)s' という名前の%(kind)sが複数あります (タブ: %(tabs)s)。どれかを指定するか、正確な id を使用してください。"
-
-#: aot_flask/templates/pages/function_options/custom_function_options.html:17
-msgid ""
-"This controller is active. Deactivate it before saving changes, or they "
-"will not be applied."
-msgstr "このコントローラーは有効になっています。保存前に無効化してください。無効化しないと変更は適用されません。"
 
 #: aot/aot_flask/static/js/widgets/AoT_map/aot-map-widget-vector.js
 msgid "Weather station"

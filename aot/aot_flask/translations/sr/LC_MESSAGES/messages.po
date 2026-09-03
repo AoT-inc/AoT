@@ -30607,7 +30607,3 @@ msgstr "Строжа ограничења прскања за расад, кој
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:1192
 msgid "Not used"
 msgstr "Не користи се"
-
-#: widgets/widget_trigger_sequence.py:0
-msgid "Set the time of day the sequence stops. Select 00:00 for 24:00 (end of day)."
-msgstr "Подесите време заустављања секвенце. Изаберите 00:00 за 24:00 (крај дана)."

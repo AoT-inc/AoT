@@ -31049,7 +31049,3 @@ msgstr "Engere Vernebelungsgrenzen für Sämlinge, die leichter verbrennen als a
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:1192
 msgid "Not used"
 msgstr "Nicht verwendet"
-
-#: widgets/widget_trigger_sequence.py:0
-msgid "Set the time of day the sequence stops. Select 00:00 for 24:00 (end of day)."
-msgstr "Uhrzeit festlegen, zu der die Sequenz endet. Für 24:00 (Tagesende) 00:00 wählen."

@@ -30571,7 +30571,3 @@ msgstr "Strengare grenser for tåkelegging for frøplantar, som svir seg lettare
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:1192
 msgid "Not used"
 msgstr "Ikkje i bruk"
-
-#: widgets/widget_trigger_sequence.py:0
-msgid "Set the time of day the sequence stops. Select 00:00 for 24:00 (end of day)."
-msgstr "Set klokkeslettet sekvensen stoppar. Vel 00:00 for 24:00 (slutten av døgnet)."

@@ -30579,7 +30579,3 @@ msgstr "Striktare dimningsgränser för plantor, som bränns lättare än fullvu
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:1192
 msgid "Not used"
 msgstr "Används inte"
-
-#: widgets/widget_trigger_sequence.py:0
-msgid "Set the time of day the sequence stops. Select 00:00 for 24:00 (end of day)."
-msgstr "Ange när sekvensen stoppar. Välj 00:00 för 24:00 (dygnets slut)."

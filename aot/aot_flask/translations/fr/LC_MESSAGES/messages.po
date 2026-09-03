@@ -31115,7 +31115,3 @@ msgstr "Limites de brumisation plus strictes pour les semis, qui brûlent plus f
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:1192
 msgid "Not used"
 msgstr "Non utilisé"
-
-#: widgets/widget_trigger_sequence.py:0
-msgid "Set the time of day the sequence stops. Select 00:00 for 24:00 (end of day)."
-msgstr "Définir l'heure d'arrêt de la séquence. Choisir 00:00 pour 24:00 (fin de journée)."

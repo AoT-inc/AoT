@@ -30554,7 +30554,3 @@ msgstr "पौध के लिए सख्त मिस्टिंग सी�
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:1192
 msgid "Not used"
 msgstr "उपयोग में नहीं"
-
-#: widgets/widget_trigger_sequence.py:0
-msgid "Set the time of day the sequence stops. Select 00:00 for 24:00 (end of day)."
-msgstr "अनुक्रम के रुकने का समय तय करें। 24:00 (दिन के अंत) के लिए 00:00 चुनें।"

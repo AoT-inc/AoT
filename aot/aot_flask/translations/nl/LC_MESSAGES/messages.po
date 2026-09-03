@@ -30903,7 +30903,3 @@ msgstr "Strengere vernevelingslimieten voor zaailingen, die gemakkelijker versch
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:1192
 msgid "Not used"
 msgstr "Niet gebruikt"
-
-#: widgets/widget_trigger_sequence.py:0
-msgid "Set the time of day the sequence stops. Select 00:00 for 24:00 (end of day)."
-msgstr "Stel in hoe laat de reeks stopt. Kies 00:00 voor 24:00 (einde van de dag)."
