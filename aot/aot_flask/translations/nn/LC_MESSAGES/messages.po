@@ -4652,13 +4652,10 @@ msgid "Group"
 msgstr "Gruppe"
 
 #: aot_flask/routes_function.py:2253
-#, fuzzy
 msgid ""
 "Saved, but the daemon could not be reached — the sequence may still be "
 "running. Check the daemon."
-msgstr ""
-"Lagra, men daemonen kunne ikkje varslast. Den nye tidsplanen trer i kraft"
-" når daemonen startar på nytt."
+msgstr "Lagra, men klarte ikkje å nå daemonen — sekvensen køyrer kanskje framleis. Sjekk daemonen."
 
 #: aot_flask/routes_function.py:2263
 msgid "The sequence is still running — the daemon did not apply the change."
@@ -4734,9 +4731,8 @@ msgid "No devices to inspect"
 msgstr "Ingen einingar å inspisere"
 
 #: aot_flask/routes_geo_journal.py:132
-#, fuzzy
 msgid "Could not find that area."
-msgstr "Fann ikkje knapp-ID."
+msgstr "Fann ikkje det området."
 
 #: aot_flask/routes_geo_journal.py:154
 msgid ""
@@ -4745,20 +4741,17 @@ msgid ""
 msgstr ""
 
 #: aot_flask/routes_geo_journal.py:223 aot_flask/routes_geo_journal.py:451
-#, fuzzy
 msgid "Permission Denied"
 msgstr "Tilgang nekta"
 
 #: aot_flask/routes_geo_journal.py:243
-#, fuzzy
 msgid "Pick at least one measurement."
-msgstr "Lagre måling"
+msgstr "Vel minst éi måling."
 
 #: aot_flask/routes_geo_journal.py:246 aot_flask/routes_geo_journal.py:248
 #: aot_flask/routes_geo_journal.py:499
-#, fuzzy
 msgid "Select what the journal is about."
-msgstr "Vel kva rolle denne utgangen har."
+msgstr "Vel kva journalen handlar om."
 
 #: aot_flask/routes_geo_journal.py:250
 msgid "Enter both a start and an end date."
@@ -4773,9 +4766,8 @@ msgid "Could not find what this journal is about."
 msgstr ""
 
 #: aot_flask/routes_geo_journal.py:266
-#, fuzzy
 msgid "Could not read this target."
-msgstr "Fann ikkje API-nøkkelen som skulle slettast."
+msgstr "Klarte ikkje å lese målet."
 
 #: aot_flask/routes_geo_journal.py:271
 #, python-format
@@ -4800,14 +4792,12 @@ msgid "This journal is still being generated."
 msgstr ""
 
 #: aot_flask/routes_geo_journal.py:456
-#, fuzzy
 msgid "Journal not found."
-msgstr "Kjelde ikkje funnen."
+msgstr "Fann ikkje journalen."
 
 #: aot_flask/routes_geo_journal.py:470
-#, fuzzy
 msgid "Could not delete this journal."
-msgstr "Slette denne kjelda?"
+msgstr "Klarte ikkje å slette journalen."
 
 #: aot_flask/routes_geo_plot.py:184
 #: aot_flask/templates/pages/ai/components/onboarding_flow.html:67
@@ -9441,9 +9431,8 @@ msgstr "Teigar"
 #: aot_flask/templates/pages/geo/journal.html:5
 #: aot_flask/templates/pages/geo/journal.html:57
 #: aot_flask/templates/pages/geo/journal_view.html:3
-#, fuzzy
 msgid "Journals"
-msgstr "Original"
+msgstr "Journalar"
 
 #: aot_flask/templates/layout.html:683
 #: aot_flask/templates/layout_default.html:683
@@ -17724,16 +17713,14 @@ msgid ""
 msgstr ""
 
 #: aot_flask/templates/pages/geo/journal.html:77
-#, fuzzy
 msgid "Change"
-msgstr "Endringslogg"
+msgstr "Endre"
 
 #: aot_flask/templates/pages/geo/journal.html:80
 msgid "Search by crop, variety, name, zone…"
 msgstr ""
 
 #: aot_flask/templates/pages/geo/journal.html:94
-#, fuzzy
 msgid "End date"
 msgstr "Sluttdato"
 
@@ -17742,38 +17729,32 @@ msgid "Or make a journal for a whole site or zone"
 msgstr ""
 
 #: aot_flask/templates/pages/geo/journal.html:113
-#, fuzzy
 msgid "Site or zone"
-msgstr "Del soner"
+msgstr "Anlegg eller sone"
 
 #: aot_flask/templates/pages/geo/journal.html:116
-#, fuzzy
 msgid "Select…"
-msgstr "Vel"
+msgstr "Vel…"
 
 #: aot_flask/templates/pages/geo/journal.html:118
-#, fuzzy
 msgid "Unmapped"
-msgstr "Namnlaus"
+msgstr "Ikkje kartlagt"
 
 #: aot_flask/templates/pages/geo/journal.html:133
 msgid "The whole site or zone is covered, including every plot inside it."
 msgstr ""
 
 #: aot_flask/templates/pages/geo/journal.html:147
-#, fuzzy
 msgid "Measurements to include"
-msgstr "Målings-ID"
+msgstr "Målingar som skal takast med"
 
 #: aot_flask/templates/pages/geo/journal.html:158
-#, fuzzy
 msgid "Generate journal"
-msgstr "Generer video"
+msgstr "Generer journal"
 
 #: aot_flask/templates/pages/geo/journal.html:161
-#, fuzzy
 msgid "Saved journals"
-msgstr "Lagre namn"
+msgstr "Lagra journalar"
 
 #: aot_flask/templates/pages/geo/journal.html:165
 #: aot_flask/templates/pages/geo/plots.html:53
@@ -17787,22 +17768,19 @@ msgid "Untitled"
 msgstr "Utan tittel"
 
 #: aot_flask/templates/pages/geo/journal.html:174
-#, fuzzy
 msgid "Generating…"
-msgstr "Generelle innstillingar"
+msgstr "Genererer…"
 
 #: aot_flask/templates/pages/geo/journal.html:176
-#, fuzzy
 msgid "Generation failed"
-msgstr "Handlinga mislykkast"
+msgstr "Generering mislykkast"
 
 #: aot_flask/templates/pages/geo/journal_view.html:6
 #: aot_flask/templates/pages/geo/journal_view.html:177
 #: aot_flask/templates/pages/geo/journal_view.html:184
 #: aot_flask/templates/pages/geo/journal_view.html:198
-#, fuzzy
 msgid "Journal"
-msgstr "Original"
+msgstr "Journal"
 
 #: aot_flask/templates/pages/geo/journal_view.html:180
 msgid ""
@@ -17817,37 +17795,31 @@ msgstr ""
 #: aot_flask/templates/pages/geo/journal_view.html:204
 #: aot_flask/templates/pages/geo/journal_view.html:368
 #: aot_flask/templates/pages/geo/journal_view.html:561
-#, fuzzy
 msgid "ongoing"
-msgstr "Opning"
+msgstr "pågåande"
 
 #: aot_flask/templates/pages/geo/journal_view.html:219
 #: aot_flask/templates/pages/geo/journal_view.html:378
-#, fuzzy
 msgid "Area"
-msgstr "Sjeldan"
+msgstr "Areal"
 
 #: aot_flask/templates/pages/geo/journal_view.html:221
 #: aot_flask/templates/pages/geo/journal_view.html:407
-#, fuzzy
 msgid "Time zone"
 msgstr "Tidssone"
 
 #: aot_flask/templates/pages/geo/journal_view.html:226
-#, fuzzy
 msgid "Generated"
-msgstr "Generer"
+msgstr "Generert"
 
 #: aot_flask/templates/pages/geo/journal_view.html:238
-#, fuzzy
 msgid "About this document"
-msgstr "Relaterte dokument"
+msgstr "Om dette dokumentet"
 
 #: aot_flask/templates/pages/geo/journal_view.html:244
 #: aot_flask/templates/pages/geo/journal_view.html:326
-#, fuzzy
 msgid "Contents"
-msgstr "innhald"
+msgstr "Innhald"
 
 #: aot_flask/templates/pages/geo/journal_view.html:246
 msgid "Each section below starts on a new page, in this order."
@@ -17880,15 +17852,14 @@ msgstr "%(n)s steg"
 #: aot_flask/templates/pages/geo/journal_view.html:257
 #: aot_flask/templates/pages/geo/journal_view.html:330
 #: aot_flask/templates/pages/geo/journal_view.html:602
-#, fuzzy
 msgid "Daily log"
-msgstr "Dagleg"
+msgstr "Dagleg logg"
 
 #: aot_flask/templates/pages/geo/journal_view.html:255
 #: aot_flask/templates/pages/geo/journal_view.html:258
-#, fuzzy, python-format
+#, python-format
 msgid "%(n)s periods"
-msgstr "%(n)s dagar"
+msgstr "%(n)s periodar"
 
 #: aot_flask/templates/pages/geo/journal_view.html:262
 msgid "How to read this"
@@ -17917,9 +17888,8 @@ msgid ""
 msgstr ""
 
 #: aot_flask/templates/pages/geo/journal_view.html:270
-#, fuzzy
 msgid "Target and Δ"
-msgstr "Mål-ID"
+msgstr "Mål og Δ"
 
 #: aot_flask/templates/pages/geo/journal_view.html:271
 msgid ""
@@ -17932,9 +17902,8 @@ msgstr ""
 #: aot_flask/templates/pages/geo/journal_view.html:273
 #: aot_flask/templates/pages/geo/journal_view.html:510
 #: aot_flask/templates/pages/geo/journal_view.html:753
-#, fuzzy
 msgid "Runtime"
-msgstr "Tid"
+msgstr "Driftstid"
 
 #: aot_flask/templates/pages/geo/journal_view.html:274
 msgid "Hours a device was on during the period, read from its first channel."
@@ -17951,18 +17920,16 @@ msgid ""
 msgstr ""
 
 #: aot_flask/templates/pages/geo/journal_view.html:286
-#, fuzzy
 msgid "Terms used here"
-msgstr "Bruksvilkår"
+msgstr "Omgrep brukt her"
 
 #: aot_flask/templates/pages/geo/journal_view.html:295
 msgid "Where the numbers come from"
 msgstr ""
 
 #: aot_flask/templates/pages/geo/journal_view.html:297
-#, fuzzy
 msgid "Source"
-msgstr "Ressursar"
+msgstr "Kjelde"
 
 #: aot_flask/templates/pages/geo/journal_view.html:298
 msgid ""
@@ -17971,9 +17938,8 @@ msgid ""
 msgstr ""
 
 #: aot_flask/templates/pages/geo/journal_view.html:299
-#, fuzzy
 msgid "Snapshot"
-msgstr "Spot"
+msgstr "Augneblinksbilete"
 
 #: aot_flask/templates/pages/geo/journal_view.html:300
 msgid ""
@@ -17990,34 +17956,29 @@ msgid "Print (save as PDF)"
 msgstr ""
 
 #: aot_flask/templates/pages/geo/journal_view.html:315
-#, fuzzy
 msgid "Markdown"
-msgstr "Ned"
+msgstr "Markdown"
 
 #: aot_flask/templates/pages/geo/journal_view.html:316
-#, fuzzy
 msgid "ODT"
-msgstr "AoT"
+msgstr "ODT"
 
 #: aot_flask/templates/pages/geo/journal_view.html:317
 msgid "CSV"
 msgstr ""
 
 #: aot_flask/templates/pages/geo/journal_view.html:318
-#, fuzzy
 msgid "JSON"
-msgstr "På"
+msgstr "JSON"
 
 #: aot_flask/templates/pages/geo/journal_view.html:331
 #: aot_flask/templates/pages/geo/journal_view.html:818
-#, fuzzy
 msgid "Additional notes"
-msgstr "Tilleggsfunksjonar"
+msgstr "Tilleggsnotat"
 
 #: aot_flask/templates/pages/geo/journal_view.html:356
-#, fuzzy
 msgid "Item"
-msgstr " element"
+msgstr "Emne"
 
 #: aot_flask/templates/pages/geo/journal_view.html:387
 msgid "Growing degree days"
@@ -18039,14 +18000,12 @@ msgid "%(p)s%% of days measured"
 msgstr ""
 
 #: aot_flask/templates/pages/geo/journal_view.html:398
-#, fuzzy
 msgid "No program attached"
-msgstr "Ingen program"
+msgstr "Ingen program tilknytt"
 
 #: aot_flask/templates/pages/geo/journal_view.html:399
-#, fuzzy
 msgid "The program has no base temperature"
-msgstr "Basistemperatur for varmeeiningar"
+msgstr "Programmet har ingen basistemperatur"
 
 #: aot_flask/templates/pages/geo/journal_view.html:400
 msgid "Not enough measured days"
@@ -18059,93 +18018,82 @@ msgstr ""
 
 #: aot_flask/templates/pages/geo/journal_view.html:448
 #: aot_flask/templates/pages/geo/journal_view.html:664
-#, fuzzy
 msgid "Min"
-msgstr "min"
+msgstr "Min"
 
 #: aot_flask/templates/pages/geo/journal_view.html:448
 #: aot_flask/templates/pages/geo/journal_view.html:664
-#, fuzzy
 msgid "Max"
-msgstr "Maks:"
+msgstr "Maks"
 
 #: aot_flask/templates/pages/geo/journal_view.html:448
 #: aot_flask/templates/pages/geo/journal_view.html:664
-#, fuzzy
 msgid "Avg"
-msgstr "Tagg"
+msgstr "Snitt"
 
 #: aot_flask/templates/pages/geo/journal_view.html:458
 #: aot_flask/templates/pages/geo/journal_view.html:677
-#, fuzzy, python-format
+#, python-format
 msgid "%(n)s sensors"
-msgstr "%(n)s steg"
+msgstr "%(n)s sensorar"
 
 #: aot_flask/templates/pages/geo/journal_view.html:471
 #: aot_flask/templates/pages/geo/journal_view.html:685
 #: aot_flask/templates/pages/geo/journal_view.html:720
-#, fuzzy
 msgid "partial coverage"
-msgstr "Dekning"
+msgstr "delvis dekning"
 
 #: aot_flask/templates/pages/geo/journal_view.html:474
 #: aot_flask/templates/pages/geo/journal_view.html:689
 #: aot_flask/templates/pages/geo/journal_view.html:732
-#, fuzzy, python-format
+#, python-format
 msgid "curve: %(name)s"
-msgstr "Merkelappar: %(names)s"
+msgstr "kurve: %(name)s"
 
 #: aot_flask/templates/pages/geo/journal_view.html:482
 #: aot_flask/templates/pages/geo/journal_view.html:487
 #: aot_flask/templates/pages/geo/journal_view.html:697
 #: aot_flask/templates/pages/geo/journal_view.html:737
-#, fuzzy
 msgid "day/night target"
-msgstr "Natta startar klokka"
+msgstr "dag/natt-mål"
 
 #: aot_flask/templates/pages/geo/journal_view.html:483
 #: aot_flask/templates/pages/geo/journal_view.html:488
 #: aot_flask/templates/pages/geo/journal_view.html:698
 #: aot_flask/templates/pages/geo/journal_view.html:738
-#, fuzzy
 msgid "cumulative target"
-msgstr "Akkumulert varme"
+msgstr "kumulativt mål"
 
 #: aot_flask/templates/pages/geo/journal_view.html:502
-#, fuzzy
 msgid "No sensor for:"
-msgstr "CO2-sensor"
+msgstr "Ingen sensor for:"
 
 #: aot_flask/templates/pages/geo/journal_view.html:510
 #: aot_flask/templates/pages/geo/journal_view.html:753
-#, fuzzy
 msgid "Water"
-msgstr "Vêr"
+msgstr "Vatn"
 
 #: aot_flask/templates/pages/geo/journal_view.html:519
 #: aot_flask/templates/pages/geo/journal_view.html:765
-#, fuzzy
 msgid "estimated"
-msgstr "Estimert"
+msgstr "estimert"
 
 #: aot_flask/templates/pages/geo/journal_view.html:562
 msgid "before this journal"
 msgstr ""
 
 #: aot_flask/templates/pages/geo/journal_view.html:563
-#, fuzzy
 msgid "planned"
-msgstr "Planleggjar"
+msgstr "planlagt"
 
 #: aot_flask/templates/pages/geo/journal_view.html:583
-#, fuzzy, python-format
+#, python-format
 msgid "Follows curve: %(name)s"
-msgstr "Følgjer ein kurve"
+msgstr "Følgjer kurve: %(name)s"
 
 #: aot_flask/templates/pages/geo/journal_view.html:587
-#, fuzzy
 msgid "No sensor for this"
-msgstr "Ingen sesongar funne for denne garden."
+msgstr "Ingen sensor for dette"
 
 #: aot_flask/templates/pages/geo/journal_view.html:612
 #: aot_flask/templates/settings/general.html:376
@@ -18158,9 +18106,8 @@ msgid "Monthly"
 msgstr "Månadleg"
 
 #: aot_flask/templates/pages/geo/journal_view.html:614
-#, fuzzy
 msgid "Whole period"
-msgstr "Heile forløpet"
+msgstr "Heile perioden"
 
 #: aot_flask/templates/pages/geo/journal_view.html:631
 #, python-format
@@ -18173,25 +18120,22 @@ msgid "GDD %(v)s"
 msgstr ""
 
 #: aot_flask/templates/pages/geo/journal_view.html:644
-#, fuzzy, python-format
+#, python-format
 msgid "No data recorded — %(n)s periods skipped."
-msgstr "Ingen data for dei siste %(period)s sekunda"
+msgstr "Ingen data registrerte — %(n)s periodar hoppa over."
 
 #: aot_flask/templates/pages/geo/journal_view.html:646
-#, fuzzy
 msgid "No data recorded for this period."
-msgstr "Ingen gardar vart returnerte for denne nøkkelen."
+msgstr "Ingen data registrerte for denne perioden."
 
 #: aot_flask/templates/pages/geo/journal_view.html:680
 #: aot_flask/templates/pages/geo/journal_view.html:710
-#, fuzzy
 msgid "usage"
-msgstr "Bruk"
+msgstr "bruk"
 
 #: aot_flask/templates/pages/geo/journal_view.html:690
-#, fuzzy
 msgid "varies"
-msgstr "Sort"
+msgstr "varierer"
 
 #: aot_flask/templates/pages/geo/journal_view.html:726
 #, python-format
@@ -18199,16 +18143,12 @@ msgid "outdoors %(out)s × cover %(tau)s"
 msgstr ""
 
 #: aot_flask/templates/pages/geo/journal_view.html:739
-#, fuzzy
 msgid "no sensor"
-msgstr "CO2-sensor"
+msgstr "ingen sensor"
 
 #: aot_flask/templates/pages/geo/journal_view.html:863
-#, fuzzy
 msgid "Delete this journal? This cannot be undone."
-msgstr ""
-"Vil du slette denne fana og alle oppføringane i ho? Dette kan ikkje "
-"angrast."
+msgstr "Vil du slette denne journalen? Dette kan ikkje angrast."
 
 #: aot_flask/templates/pages/geo/journal_view.html:869
 #: aot_flask/templates/pages/geo/journal_view.html:873
@@ -21251,14 +21191,12 @@ msgid ""
 msgstr ""
 
 #: aot_flask/templates/user_templates/widget_template_AoT_advice_body.html:22
-#, fuzzy
 msgid "Retry"
-msgstr "Trekk tilbake"
+msgstr "Prøv igjen"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_advice_body.html:72
-#, fuzzy
 msgid "Teach AI"
-msgstr "ADC-forsterking"
+msgstr "Lær opp AI"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_advice_body.html:79
 msgid "Add a note to help the AI understand this facility..."
@@ -21268,46 +21206,38 @@ msgstr ""
 #: aot_flask/templates/user_templates/widget_template_AoT_advice_js.html:233
 #: aot_flask/templates/user_templates/widget_template_AoT_advice_js.html:242
 #: aot_flask/templates/user_templates/widget_template_AoT_advice_js.html:249
-#, fuzzy
 msgid "Updating..."
-msgstr "Startar …"
+msgstr "Oppdaterer …"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_advice_js.html:61
-#, fuzzy
 msgid "recently"
-msgstr "Sentrer på nytt"
+msgstr "nyleg"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_advice_js.html:62
-#, fuzzy
 msgid "1 hour ago"
-msgstr "1 time"
+msgstr "1 time sidan"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_advice_js.html:63
-#, fuzzy
 msgid "hours ago"
-msgstr "Timar"
+msgstr "timar sidan"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_advice_js.html:64
-#, fuzzy
 msgid "days ago"
-msgstr "7 dagar sidan"
+msgstr "dagar sidan"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_advice_js.html:95
 #: aot_flask/templates/user_templates/widget_template_AoT_advice_js.html:107
-#, fuzzy
 msgid "No analysis available yet."
-msgstr "Ingen element tilgjengelege"
+msgstr "Ingen analyse tilgjengeleg enno."
 
 #: aot_flask/templates/user_templates/widget_template_AoT_advice_js.html:159
-#, fuzzy
 msgid "Changes observed:"
-msgstr "Endre passord"
+msgstr "Observerte endringar:"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_advice_js.html:166
 #: aot_flask/templates/user_templates/widget_template_AoT_advice_js.html:207
-#, fuzzy
 msgid "Confidence:"
-msgstr "Tillit"
+msgstr "Tillit:"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_advice_js.html:192
 msgid "The analysis may suggest the following changes occurred:"
@@ -21318,86 +21248,72 @@ msgid "Unable to load advice. Check connection."
 msgstr ""
 
 #: aot_flask/templates/user_templates/widget_template_AoT_advice_js.html:288
-#, fuzzy
 msgid "Please enter a note before submitting."
-msgstr "Skriv inn ein kommando"
+msgstr "Skriv inn eit notat før du sender inn."
 
 #: aot_flask/templates/user_templates/widget_template_AoT_advice_js.html:304
 msgid "Note saved - will inform the next AI cycle."
 msgstr ""
 
 #: aot_flask/templates/user_templates/widget_template_AoT_advice_js.html:309
-#, fuzzy
 msgid "Submission failed."
-msgstr "Handlinga mislykkast"
+msgstr "Innsending mislykkast."
 
 #: aot_flask/templates/user_templates/widget_template_AoT_advice_js.html:314
-#, fuzzy
 msgid "Unable to save note. Please try again."
-msgstr "Klarte ikkje å lagre. Prøv igjen."
+msgstr "Klarte ikkje å lagre notatet. Prøv igjen."
 
 #: aot_flask/templates/user_templates/widget_template_AoT_ai_insight_body.html:5
 msgid "Envision a goal (e.g., Save energy in Zone A)"
 msgstr ""
 
 #: aot_flask/templates/user_templates/widget_template_AoT_ai_insight_body.html:8
-#, fuzzy
 msgid "Analyze"
-msgstr "Vinkel"
+msgstr "Analyser"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_ai_insight_body.html:23
 msgid "Ready for intelligent analysis."
 msgstr ""
 
 #: aot_flask/templates/user_templates/widget_template_AoT_ai_insight_js.html:65
-#, fuzzy
 msgid "AI analysis failed"
-msgstr "Delvis mislukka"
+msgstr "AI-analysen mislykkast"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_ai_insight_js.html:86
-#, fuzzy
 msgid "Execution failed"
-msgstr "Avvising mislukkast"
+msgstr "Køyring mislykkast"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_ai_insight_js.html:90
-#, fuzzy
 msgid "Communication error"
-msgstr "Tilkoplingsfeil"
+msgstr "Kommunikasjonsfeil"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_camera_body.html:6
-#, fuzzy
 msgid "Connecting..."
-msgstr "Tilkopling"
+msgstr "Koplar til …"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_camera_js.html:13
-#, fuzzy
 msgid "LIVE"
-msgstr "Direkte"
+msgstr "DIREKTE"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_camera_js.html:17
-#, fuzzy
 msgid "SNAPSHOT"
-msgstr "Spot"
+msgstr "STILLBILETE"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_controller_act_deact_title_bar.html:5
-#, fuzzy
 msgid "Controller Switch"
-msgstr "AoT kontrollerbrytar"
+msgstr "Kontrollerbrytar"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_facility_body.html:26
-#, fuzzy
 msgid "Facility 3D View"
-msgstr "Anleggs-ID"
+msgstr "3D-visning av anlegg"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_facility_body.html:29
-#, fuzzy
 msgid "connected"
 msgstr "Tilkopla"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_facility_body.html:32
-#, fuzzy
 msgid "double layer"
-msgstr "Slett lag"
+msgstr "dobbeltlag"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_facility_body.html:39
 msgid "Right-click: rotate"
@@ -21408,12 +21324,10 @@ msgid "Left-click: pan"
 msgstr ""
 
 #: aot_flask/templates/user_templates/widget_template_AoT_facility_body.html:39
-#, fuzzy
 msgid "Scroll: zoom"
-msgstr "Jamn zoom"
+msgstr "Rull: zoom"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_facility_body.html:41
-#, fuzzy
 msgid "Drag to resize"
 msgstr "Dra for å endre høgd"
 
@@ -21421,106 +21335,87 @@ msgstr "Dra for å endre høgd"
 #: aot_flask/templates/user_templates/widget_template_AoT_facility_body.html:64
 #: aot_flask/templates/user_templates/widget_template_AoT_facility_body.html:73
 #: aot_flask/templates/user_templates/widget_template_AoT_facility_body.html:82
-#, fuzzy
 msgid "set"
 msgstr "Sett"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_facility_body.html:61
-#, fuzzy
 msgid "Indoor temp"
 msgstr "Innandørstemperatur"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_facility_body.html:70
-#, fuzzy
 msgid "Indoor humidity"
 msgstr "Innandørsluftfukt"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_facility_body.html:86
-#, fuzzy
 msgid "Outdoor temp"
 msgstr "Utandørstemperatur"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_facility_body.html:103
-#, fuzzy
 msgid "Actuator Control"
-msgstr "Aktuatortype"
+msgstr "Aktuatorstyring"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_facility_body.html:113
-#, fuzzy
 msgid "AI Advice"
-msgstr "Råd"
+msgstr "AI-råd"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_facility_body.html:122
-#, fuzzy
 msgid "No facility selected. Register one at"
-msgstr "Ingen AI-tenester registrerte enno."
+msgstr "Ingen anlegg valt. Registrer eitt på"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_gauge_angular_configure_options.html:6
-#, fuzzy
 msgid "Section Start"
-msgstr "Utvalsliste"
+msgstr "Seksjonsstart"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_gauge_angular_configure_options.html:36
-#, fuzzy
 msgid "Saved as global band colors"
-msgstr "Fargar for målingsband"
+msgstr "Lagra som globale bandfargar."
 
 #: aot_flask/templates/user_templates/widget_template_AoT_gauge_angular_configure_options.html:38
-#, fuzzy
 msgid "Save as Global Band Colors"
-msgstr "Fargar for målingsband"
+msgstr "Lagre som globale bandfargar"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_gauge_angular_configure_options.html:39
 msgid "Applies the first 5 section colors to Settings > Custom UI band colors."
 msgstr ""
 
 #: aot_flask/templates/user_templates/widget_template_AoT_graph_configure_options.html:2
-#, fuzzy
 msgid "Graph Series Options"
-msgstr "Tenesteval"
+msgstr "Val for grafseriar"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_graph_configure_options.html:6
-#, fuzzy
 msgid "Use Custom Colors"
-msgstr "Tilpassa CSS"
+msgstr "Bruk eigendefinerte fargar"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_graph_configure_options.html:35
-#, fuzzy
 msgid "Select Color"
-msgstr "Tekstfarge"
+msgstr "Vel farge"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_graph_configure_options.html:40
 #: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:39
-#, fuzzy
 msgid "Disable Data Grouping"
-msgstr "Deaktiver SPI"
+msgstr "Deaktiver datagruppering"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_graph_configure_options.html:47
 #: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:45
-#, fuzzy
 msgid "Series Type"
-msgstr "Kjeldetype"
+msgstr "Serietype"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_graph_configure_options.html:50
-#, fuzzy
 msgid "Step (Left)"
-msgstr "Anleggsliste"
+msgstr "Steg (venstre)"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_graph_configure_options.html:51
-#, fuzzy
 msgid "Step (Center)"
-msgstr "Sentrer på nytt"
+msgstr "Steg (senter)"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_graph_configure_options.html:52
-#, fuzzy
 msgid "Step (Right)"
-msgstr "Skugglegg natt"
+msgstr "Steg (høgre)"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_graph_configure_options.html:53
 #: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:52
-#, fuzzy
 msgid "Column"
-msgstr "Volum"
+msgstr "Søyle"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_graph_configure_options.html:77
 msgid "Saved as global chart colors"
@@ -21536,9 +21431,8 @@ msgstr ""
 
 #: aot_flask/templates/user_templates/widget_template_AoT_graph_configure_options.html:84
 #: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:62
-#, fuzzy
 msgid "Y-Axis Options"
-msgstr "Brukarval"
+msgstr "Val for Y-akse"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_graph_configure_options.html:88
 #: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:65
@@ -21546,32 +21440,26 @@ msgid "Enable Manual Y-Axis Min/Max"
 msgstr ""
 
 #: aot_flask/templates/user_templates/widget_template_AoT_graph_configure_options.html:97
-#, fuzzy
 msgid "Enable Align Ticks"
-msgstr "Slå på AI-teneste"
+msgstr "Aktiver justerte målestrekar"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_graph_configure_options.html:106
-#, fuzzy
 msgid "Enable Start On Tick"
-msgstr "Standard startstad"
+msgstr "Aktiver start på målestrek"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_graph_configure_options.html:115
-#, fuzzy
 msgid "Enable End On Tick"
-msgstr "Slå på teiknforklaring"
+msgstr "Aktiver slutt på målestrek"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_graph_configure_options.html:131
-#, fuzzy
 msgid "Y-Axis Min"
-msgstr "Y-akseforskyving"
+msgstr "Y-akse min"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_graph_configure_options.html:135
-#, fuzzy
 msgid "Y-Axis Max"
-msgstr "Y-akseforskyving"
+msgstr "Y-akse maks"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_map_body.html:16
-#, fuzzy
 msgid "Enter an address."
 msgstr "Skriv inn adresse."
 
@@ -21580,69 +21468,57 @@ msgid "Ask a question about this advisory (e.g., what should I do?)"
 msgstr ""
 
 #: aot_flask/templates/user_templates/widget_template_AoT_map_body.html:125
-#, fuzzy
 msgid "Ask AI what to do"
-msgstr "Skriv inn kva som skal gjerast"
+msgstr "Spør AI kva som skal gjerast"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_map_body.html:155
 msgid "What concrete actions should I take based on this advisory?"
 msgstr ""
 
 #: aot_flask/templates/user_templates/widget_template_AoT_map_title_bar.html:14
-#, fuzzy
 msgid "Show Controls"
-msgstr "Stopp styring den"
+msgstr "Vis kontrollar"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_map_title_bar.html:14
-#, fuzzy
 msgid "Hide Controls"
-msgstr "PID-kontroll"
+msgstr "Skjul kontrollar"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_pid_body.html:284
-#, fuzzy
 msgid "PID Detail Settings"
-msgstr "PID-innstillingar"
+msgstr "Detaljerte PID-innstillingar"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_pid_body.html:349
-#, fuzzy
 msgid "Gains"
 msgstr "Forsterking"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_pid_body.html:381
-#, fuzzy
 msgid "Timing & Limits"
-msgstr "beholdargrense"
+msgstr "Tidsstyring og grenser"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_pid_body.html:393
 #: widgets/widget_function_status.py:59
-#, fuzzy
 msgid "Band"
-msgstr "Sand"
+msgstr "Band"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_pid_body.html:438
-#, fuzzy
 msgid "activate"
 msgstr "Aktiver"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_pid_body.html:443
-#, fuzzy
 msgid "deactivate"
 msgstr "Deaktiver"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_pid_js.html:143
-#, fuzzy
 msgid "No PID selected"
-msgstr "Ikkje vald"
+msgstr "Ingen PID vald"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_pid_js.html:150
-#, fuzzy
 msgid "No PID found or no measurement"
-msgstr "Talet på målingar"
+msgstr "Fann ikkje PID eller måling"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_pid_js_ready_end.html:167
-#, fuzzy
 msgid "5m"
-msgstr "M"
+msgstr "5m"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_pid_js_ready_end.html:168
 msgid "30m"
@@ -21661,9 +21537,8 @@ msgid "1d"
 msgstr ""
 
 #: aot_flask/templates/user_templates/widget_template_AoT_pid_js_ready_end.html:201
-#, fuzzy
 msgid "Actual"
-msgstr "Aktuator"
+msgstr "Faktisk"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_timer_body.html:165
 #: aot_flask/templates/user_templates/widget_template_AoT_timer_body.html:173
@@ -21673,65 +21548,54 @@ msgstr "Køyr"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_timer_body.html:179
 #: aot_flask/templates/user_templates/widget_template_AoT_timer_body.html:187
-#, fuzzy
 msgid "Rest"
-msgstr "Tilbakestill"
+msgstr "Kvile"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_timer_body.html:192
-#, fuzzy
 msgid "Cycles"
-msgstr "Ja"
+msgstr "Syklusar"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_timer_body.html:205
 #: aot_flask/templates/user_templates/widget_template_AoT_timer_body.html:213
-#, fuzzy
 msgid "Start at"
-msgstr "Startdato"
+msgstr "Start ved"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_timer_body.html:222
-#, fuzzy
 msgid "Select the Output to control in the widget options."
-msgstr "Vel utgangen som skal styrast."
+msgstr "Vel utgangen som skal styrast, i widget-vala."
 
 #: aot_flask/templates/user_templates/widget_template_AoT_wind_angular_configure_options.html:29
-#, fuzzy, python-format
+#, python-format
 msgid "Data Position Offset (%%)"
-msgstr "Posisjonsforskyving for data (%)"
+msgstr "Posisjonsforskyving for data (%%)"
 
 #: aot_flask/templates/user_templates/widget_template_widget_calendar_body.html:12
-#, fuzzy
 msgid "Edit Schedule"
-msgstr "AI-tidsplanleggjar"
+msgstr "Rediger tidsplan"
 
 #: aot_flask/templates/user_templates/widget_template_widget_calendar_js_ready_end.html:15
-#, fuzzy
 msgid "Open in Scheduler"
-msgstr "AI-tidsplanleggjar"
+msgstr "Opne i tidsplanleggjaren"
 
 #: aot_flask/templates/user_templates/widget_template_widget_calendar_js_ready_end.html:20
-#, fuzzy
 msgid "Calendars"
-msgstr "Kalender"
+msgstr "Kalendrar"
 
 #: aot_flask/templates/user_templates/widget_template_widget_camera_js.html:25
-#, fuzzy
 msgid "Still"
-msgstr "Installer"
+msgstr "Stillbilete"
 
 #: aot_flask/templates/user_templates/widget_template_widget_camera_js.html:33
-#, fuzzy
 msgid "Max Age Exceeded"
-msgstr "Maks alder (sek)"
+msgstr "Maks alder overskriden"
 
 #: aot_flask/templates/user_templates/widget_template_widget_camera_js.html:38
-#, fuzzy
 msgid "File Not Found"
 msgstr "Fann ikkje fila"
 
 #: aot_flask/templates/user_templates/widget_template_widget_camera_js.html:57
-#, fuzzy
 msgid "Error Getting Image"
-msgstr "Feil ved sletting av fane"
+msgstr "Feil ved henting av bilete"
 
 #: aot_flask/templates/user_templates/widget_template_widget_camera_js.html:113
 msgid "Error: HLS library failed to load"
@@ -21757,9 +21621,8 @@ msgid "Deactivated"
 msgstr "Deaktivert"
 
 #: aot_flask/templates/user_templates/widget_template_widget_function_status_js.html:155
-#, fuzzy
 msgid "No Function selected."
-msgstr "Ingen plassering vald"
+msgstr "Ingen funksjon vald."
 
 #: aot_flask/templates/user_templates/widget_template_widget_function_status_js.html:169
 #: aot_flask/utils/utils_function_status.py:215
@@ -21781,14 +21644,12 @@ msgid ""
 msgstr ""
 
 #: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:4
-#, fuzzy
 msgid "Series Options"
-msgstr "Tenesteval"
+msgstr "Serieval"
 
 #: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:7
-#, fuzzy
 msgid "Enable Custom Colors"
-msgstr "Aktiver TLS"
+msgstr "Aktiver eigendefinerte fargar"
 
 #: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:49
 msgid "Line (Step, Left)"
@@ -21803,27 +21664,22 @@ msgid "Line (Step, Right)"
 msgstr ""
 
 #: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:71
-#, fuzzy
 msgid "Enable Y-Axis Align Ticks"
-msgstr "Slå på nullstilling av X-akse"
+msgstr "Aktiver justerte målestrekar for Y-akse"
 
 #: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:77
-#, fuzzy
 msgid "Enable Y-Axis Start On Tick"
-msgstr "Slå på nullstilling av X-akse"
+msgstr "Aktiver start på målestrek for Y-akse"
 
 #: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:83
-#, fuzzy
 msgid "Enable Y-Axis End On Tick"
-msgstr "Slå på nullstilling av X-akse"
+msgstr "Aktiver slutt på målestrek for Y-akse"
 
 #: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:101
-#, fuzzy
 msgid "Y-Axis Minimum"
 msgstr "Minimum"
 
 #: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:107
-#, fuzzy
 msgid "Y-Axis Maximum"
 msgstr "Maksimum"
 
@@ -21835,21 +21691,18 @@ msgstr "Maksimum"
 #: aot_flask/templates/user_templates/widget_template_widget_measurement_multi_js.html:49
 #: aot_flask/templates/user_templates/widget_template_widget_output_pwm_slider_js.html:51
 #: aot_flask/templates/user_templates/widget_template_widget_output_pwm_slider_js.html:72
-#, fuzzy
 msgid "NO DATA"
-msgstr "Ingen data"
+msgstr "INGEN DATA"
 
 #: aot_flask/templates/user_templates/widget_template_widget_measurement_js.html:32
 #: aot_flask/templates/user_templates/widget_template_widget_measurement_multi_js.html:32
 #: aot_flask/templates/user_templates/widget_template_widget_output_pwm_slider_js.html:52
-#, fuzzy
 msgid "MAX AGE EXCEEDED"
-msgstr "Maks alder (sek)"
+msgstr "MAKS ALDER OVERSKRIDEN"
 
 #: aot_flask/templates/user_templates/widget_template_widget_notice_configure_options.html:2
-#, fuzzy
 msgid "Category Filter"
-msgstr "Taggfilter"
+msgstr "Kategorifilter"
 
 #: aot_flask/templates/user_templates/widget_template_widget_notice_configure_options.html:5
 msgid ""
@@ -21862,25 +21715,21 @@ msgid "No categories yet. Set one when creating a post to filter by it here."
 msgstr ""
 
 #: aot_flask/templates/user_templates/widget_template_widget_notice_js.html:415
-#, fuzzy
 msgid "Notice updated"
-msgstr "Kunngjeringa er sletta"
+msgstr "Kunngjeringa er oppdatert"
 
 #: aot_flask/templates/user_templates/widget_template_widget_notice_js.html:415
-#, fuzzy
 msgid "Notice created"
-msgstr "Kunngjeringa er sletta"
+msgstr "Kunngjeringa er oppretta"
 
 #: aot_flask/templates/user_templates/widget_template_widget_python_code_js.html:10
-#, fuzzy
 msgid "NO DATA ERROR"
-msgstr "Ingen dato"
+msgstr "INGEN DATA-FEIL"
 
 #: aot_flask/templates/user_templates/widget_template_widget_python_code_js.html:13
 #: aot_flask/templates/user_templates/widget_template_widget_python_code_js.html:17
-#, fuzzy
 msgid "CONNECTION ERROR"
-msgstr "Tilkoplingsfeil"
+msgstr "TILKOPLINGSFEIL"
 
 #: aot_flask/templates/user_templates/widget_template_widget_trigger_sequence_body.html:12
 #: widgets/widget_trigger_sequence.py:367
@@ -22260,29 +22109,28 @@ msgid "Function not found"
 msgstr "Fann ikkje funksjonen"
 
 #: aot_flask/utils/utils_function_status.py:94
-#, fuzzy, python-format
+#, python-format
 msgid "%(n)s s"
-msgstr "%(n)s dagar"
+msgstr "%(n)s s"
 
 #: aot_flask/utils/utils_function_status.py:108
-#, fuzzy, python-format
+#, python-format
 msgid "%(n)s s ago"
-msgstr "%(n)s steg"
+msgstr "%(n)s s sidan"
 
 #: aot_flask/utils/utils_function_status.py:110
-#, fuzzy, python-format
+#, python-format
 msgid "%(n)s min ago"
-msgstr "%(n)s steg"
+msgstr "%(n)s min sidan"
 
 #: aot_flask/utils/utils_function_status.py:111
-#, fuzzy, python-format
+#, python-format
 msgid "%(n)s h ago"
-msgstr "%(n)s steg"
+msgstr "%(n)s t sidan"
 
 #: aot_flask/utils/utils_function_status.py:117
-#, fuzzy
 msgid "Paused — no actuators registered"
-msgstr "Ingen oppgåver registrerte."
+msgstr "Sett på pause — ingen aktuatorar registrerte"
 
 #: aot_flask/utils/utils_function_status.py:118
 msgid "Paused — outside the operating time window"
@@ -22294,29 +22142,28 @@ msgid "Paused (%(reason)s)"
 msgstr ""
 
 #: aot_flask/utils/utils_function_status.py:132
-#, fuzzy
 msgid "Waiting for the first control cycle."
-msgstr "Ventetida før den første handlinga"
+msgstr "Ventar på den første styringssyklusen."
 
 #: aot_flask/utils/utils_function_status.py:140
-#, fuzzy, python-format
+#, python-format
 msgid "Mode: %(modes)s"
-msgstr "Merkelappar: %(names)s"
+msgstr "Modus: %(modes)s"
 
 #: aot_flask/utils/utils_function_status.py:155
-#, fuzzy, python-format
+#, python-format
 msgid "Environment: %(values)s"
-msgstr "Miljøvariablar"
+msgstr "Miljø: %(values)s"
 
 #: aot_flask/utils/utils_function_status.py:163
-#, fuzzy, python-format
+#, python-format
 msgid "Deviation: %(values)s"
-msgstr "Varigheit (minutt)"
+msgstr "Avvik: %(values)s"
 
 #: aot_flask/utils/utils_function_status.py:171
-#, fuzzy, python-format
+#, python-format
 msgid "Actuators: %(values)s"
-msgstr "Merkelappar: %(names)s"
+msgstr "Aktuatorar: %(values)s"
 
 #: aot_flask/utils/utils_function_status.py:176
 #, python-format
@@ -22329,9 +22176,8 @@ msgid "Safety gate: %(reason)s — control stopped"
 msgstr ""
 
 #: aot_flask/utils/utils_function_status.py:187
-#, fuzzy
 msgid "triggered"
-msgstr "Utløysar"
+msgstr "utløyst"
 
 #: aot_flask/utils/utils_function_status.py:189
 #, python-format
@@ -22359,39 +22205,34 @@ msgid "Last cycle: %(when)s"
 msgstr ""
 
 #: aot_flask/utils/utils_function_status.py:213
-#, fuzzy
 msgid "Idle"
-msgstr "Gøym"
+msgstr "Inaktiv"
 
 #: aot_flask/utils/utils_function_status.py:214
-#, fuzzy
 msgid "Outside the time window"
-msgstr "Aktiver tidsvindauge"
+msgstr "Utanfor tidsvindauget"
 
 #: aot_flask/utils/utils_function_status.py:216
-#, fuzzy
 msgid "Initializing"
-msgstr "AI-bruk"
+msgstr "Initialiserer"
 
 #: aot_flask/utils/utils_function_status.py:217
-#, fuzzy
 msgid "Standby"
-msgstr "Sand"
+msgstr "Standby"
 
 #: aot_flask/utils/utils_function_status.py:218
-#, fuzzy
 msgid "Ready"
-msgstr "Raud"
+msgstr "Klar"
 
 #: aot_flask/utils/utils_function_status.py:225
-#, fuzzy, python-format
+#, python-format
 msgid "Waiting (%(time)s)"
-msgstr "Funksjon (%(type)s)"
+msgstr "Ventar (%(time)s)"
 
 #: aot_flask/utils/utils_function_status.py:230
-#, fuzzy, python-format
+#, python-format
 msgid "Sequence: %(state)s"
-msgstr "Vellykka: %(action)s"
+msgstr "Sekvens: %(state)s"
 
 #: aot_flask/utils/utils_function_status.py:236
 #, python-format
@@ -22414,14 +22255,14 @@ msgid "Steps: %(running)s of %(total)s running"
 msgstr ""
 
 #: aot_flask/utils/utils_function_status.py:257
-#, fuzzy, python-format
+#, python-format
 msgid "Conditional: %(state)s"
-msgstr "Betinga"
+msgstr "Betinga: %(state)s"
 
 #: aot_flask/utils/utils_function_status.py:262
-#, fuzzy, python-format
+#, python-format
 msgid "Period: %(period)s"
-msgstr "Periode: %(label)s"
+msgstr "Periode: %(period)s"
 
 #: aot_flask/utils/utils_function_status.py:266
 #, python-format
@@ -22437,9 +22278,8 @@ msgid "The last check ran no action."
 msgstr ""
 
 #: aot_flask/utils/utils_function_status.py:270
-#, fuzzy
 msgid "Not checked yet."
-msgstr "Ingenting registrert enno."
+msgstr "Ikkje sjekka enno."
 
 #: aot_flask/utils/utils_function_status.py:274
 #, python-format
@@ -29577,9 +29417,8 @@ msgid "Input value validity duration"
 msgstr "Varigheit for gyldigheita til inngangsverdien"
 
 #: widgets/widget_trigger_sequence.py:539
-#, fuzzy
 msgid "Continue where it stopped"
-msgstr "Opptak stoppa"
+msgstr "Hald fram der det stoppa"
 
 #: widgets/widget_trigger_sequence.py:540
 msgid "Start from the beginning"
@@ -30127,9 +29966,8 @@ msgstr ""
 "ditt."
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:673
-#, fuzzy
 msgid "Enable Sunburn/Evening Protection"
-msgstr "Solskadevern for tåkelegging"
+msgstr "Aktiver solskade-/kveldsvern"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:675
 msgid ""

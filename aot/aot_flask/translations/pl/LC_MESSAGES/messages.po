@@ -4674,13 +4674,10 @@ msgid "Group"
 msgstr "Grupa"
 
 #: aot_flask/routes_function.py:2253
-#, fuzzy
 msgid ""
 "Saved, but the daemon could not be reached — the sequence may still be "
 "running. Check the daemon."
-msgstr ""
-"Zapisano, ale nie udało się powiadomić demona. Nowy harmonogram zacznie "
-"obowiązywać po ponownym uruchomieniu demona."
+msgstr "Zapisano, ale nie udało się połączyć z demonem — sekwencja może nadal działać. Sprawdź demona."
 
 #: aot_flask/routes_function.py:2263
 msgid "The sequence is still running — the daemon did not apply the change."
@@ -4756,9 +4753,8 @@ msgid "No devices to inspect"
 msgstr "Brak urządzeń do sprawdzenia"
 
 #: aot_flask/routes_geo_journal.py:132
-#, fuzzy
 msgid "Could not find that area."
-msgstr "Nie znaleziono ID przycisku."
+msgstr "Nie znaleziono tego obszaru."
 
 #: aot_flask/routes_geo_journal.py:154
 msgid ""
@@ -4767,20 +4763,17 @@ msgid ""
 msgstr ""
 
 #: aot_flask/routes_geo_journal.py:223 aot_flask/routes_geo_journal.py:451
-#, fuzzy
 msgid "Permission Denied"
 msgstr "Odmowa dostępu"
 
 #: aot_flask/routes_geo_journal.py:243
-#, fuzzy
 msgid "Pick at least one measurement."
-msgstr "Zapisz pomiar"
+msgstr "Wybierz co najmniej jeden pomiar."
 
 #: aot_flask/routes_geo_journal.py:246 aot_flask/routes_geo_journal.py:248
 #: aot_flask/routes_geo_journal.py:499
-#, fuzzy
 msgid "Select what the journal is about."
-msgstr "Wybierz rolę, jaką pełni to wyjście."
+msgstr "Wybierz, czego dotyczy dziennik."
 
 #: aot_flask/routes_geo_journal.py:250
 msgid "Enter both a start and an end date."
@@ -4795,9 +4788,8 @@ msgid "Could not find what this journal is about."
 msgstr ""
 
 #: aot_flask/routes_geo_journal.py:266
-#, fuzzy
 msgid "Could not read this target."
-msgstr "Nie znaleziono klucza API do usunięcia."
+msgstr "Nie udało się odczytać tego celu."
 
 #: aot_flask/routes_geo_journal.py:271
 #, python-format
@@ -4822,14 +4814,12 @@ msgid "This journal is still being generated."
 msgstr ""
 
 #: aot_flask/routes_geo_journal.py:456
-#, fuzzy
 msgid "Journal not found."
-msgstr "Nie znaleziono źródła."
+msgstr "Nie znaleziono dziennika."
 
 #: aot_flask/routes_geo_journal.py:470
-#, fuzzy
 msgid "Could not delete this journal."
-msgstr "Usunąć to źródło?"
+msgstr "Nie udało się usunąć tego dziennika."
 
 #: aot_flask/routes_geo_plot.py:184
 #: aot_flask/templates/pages/ai/components/onboarding_flow.html:67
@@ -9463,9 +9453,8 @@ msgstr "Działki"
 #: aot_flask/templates/pages/geo/journal.html:5
 #: aot_flask/templates/pages/geo/journal.html:57
 #: aot_flask/templates/pages/geo/journal_view.html:3
-#, fuzzy
 msgid "Journals"
-msgstr "Oryginał"
+msgstr "Dzienniki"
 
 #: aot_flask/templates/layout.html:683
 #: aot_flask/templates/layout_default.html:683
@@ -17797,16 +17786,14 @@ msgid ""
 msgstr ""
 
 #: aot_flask/templates/pages/geo/journal.html:77
-#, fuzzy
 msgid "Change"
-msgstr "Dziennik zmian"
+msgstr "Zmień"
 
 #: aot_flask/templates/pages/geo/journal.html:80
 msgid "Search by crop, variety, name, zone…"
 msgstr ""
 
 #: aot_flask/templates/pages/geo/journal.html:94
-#, fuzzy
 msgid "End date"
 msgstr "Data końcowa"
 
@@ -17815,38 +17802,32 @@ msgid "Or make a journal for a whole site or zone"
 msgstr ""
 
 #: aot_flask/templates/pages/geo/journal.html:113
-#, fuzzy
 msgid "Site or zone"
-msgstr "Podziel strefy"
+msgstr "Teren lub strefa"
 
 #: aot_flask/templates/pages/geo/journal.html:116
-#, fuzzy
 msgid "Select…"
-msgstr "Wybierz"
+msgstr "Wybierz…"
 
 #: aot_flask/templates/pages/geo/journal.html:118
-#, fuzzy
 msgid "Unmapped"
-msgstr "Bez nazwy"
+msgstr "Bez mapy"
 
 #: aot_flask/templates/pages/geo/journal.html:133
 msgid "The whole site or zone is covered, including every plot inside it."
 msgstr ""
 
 #: aot_flask/templates/pages/geo/journal.html:147
-#, fuzzy
 msgid "Measurements to include"
-msgstr "Identyfikator pomiaru"
+msgstr "Pomiary do uwzględnienia"
 
 #: aot_flask/templates/pages/geo/journal.html:158
-#, fuzzy
 msgid "Generate journal"
-msgstr "Generuj wideo"
+msgstr "Generuj dziennik"
 
 #: aot_flask/templates/pages/geo/journal.html:161
-#, fuzzy
 msgid "Saved journals"
-msgstr "Zapisz nazwę"
+msgstr "Zapisane dzienniki"
 
 #: aot_flask/templates/pages/geo/journal.html:165
 #: aot_flask/templates/pages/geo/plots.html:53
@@ -17860,22 +17841,19 @@ msgid "Untitled"
 msgstr "Bez tytułu"
 
 #: aot_flask/templates/pages/geo/journal.html:174
-#, fuzzy
 msgid "Generating…"
-msgstr "Ustawienia ogólne"
+msgstr "Generowanie…"
 
 #: aot_flask/templates/pages/geo/journal.html:176
-#, fuzzy
 msgid "Generation failed"
-msgstr "Akcja nie powiodła się"
+msgstr "Generowanie nie powiodło się"
 
 #: aot_flask/templates/pages/geo/journal_view.html:6
 #: aot_flask/templates/pages/geo/journal_view.html:177
 #: aot_flask/templates/pages/geo/journal_view.html:184
 #: aot_flask/templates/pages/geo/journal_view.html:198
-#, fuzzy
 msgid "Journal"
-msgstr "Oryginał"
+msgstr "Dziennik"
 
 #: aot_flask/templates/pages/geo/journal_view.html:180
 msgid ""
@@ -17890,37 +17868,31 @@ msgstr ""
 #: aot_flask/templates/pages/geo/journal_view.html:204
 #: aot_flask/templates/pages/geo/journal_view.html:368
 #: aot_flask/templates/pages/geo/journal_view.html:561
-#, fuzzy
 msgid "ongoing"
-msgstr "Otwieranie"
+msgstr "w toku"
 
 #: aot_flask/templates/pages/geo/journal_view.html:219
 #: aot_flask/templates/pages/geo/journal_view.html:378
-#, fuzzy
 msgid "Area"
-msgstr "Rzadko"
+msgstr "Powierzchnia"
 
 #: aot_flask/templates/pages/geo/journal_view.html:221
 #: aot_flask/templates/pages/geo/journal_view.html:407
-#, fuzzy
 msgid "Time zone"
 msgstr "Strefa czasowa"
 
 #: aot_flask/templates/pages/geo/journal_view.html:226
-#, fuzzy
 msgid "Generated"
-msgstr "Generuj"
+msgstr "Wygenerowano"
 
 #: aot_flask/templates/pages/geo/journal_view.html:238
-#, fuzzy
 msgid "About this document"
-msgstr "Powiązane dokumenty"
+msgstr "O tym dokumencie"
 
 #: aot_flask/templates/pages/geo/journal_view.html:244
 #: aot_flask/templates/pages/geo/journal_view.html:326
-#, fuzzy
 msgid "Contents"
-msgstr "treść"
+msgstr "Spis treści"
 
 #: aot_flask/templates/pages/geo/journal_view.html:246
 msgid "Each section below starts on a new page, in this order."
@@ -17953,15 +17925,14 @@ msgstr "%(n)s etapów"
 #: aot_flask/templates/pages/geo/journal_view.html:257
 #: aot_flask/templates/pages/geo/journal_view.html:330
 #: aot_flask/templates/pages/geo/journal_view.html:602
-#, fuzzy
 msgid "Daily log"
-msgstr "Codziennie"
+msgstr "Zapisy dzienne"
 
 #: aot_flask/templates/pages/geo/journal_view.html:255
 #: aot_flask/templates/pages/geo/journal_view.html:258
-#, fuzzy, python-format
+#, python-format
 msgid "%(n)s periods"
-msgstr "%(n)s dni"
+msgstr "%(n)s okresów"
 
 #: aot_flask/templates/pages/geo/journal_view.html:262
 msgid "How to read this"
@@ -17990,9 +17961,8 @@ msgid ""
 msgstr ""
 
 #: aot_flask/templates/pages/geo/journal_view.html:270
-#, fuzzy
 msgid "Target and Δ"
-msgstr "ID celu"
+msgstr "Cel i Δ"
 
 #: aot_flask/templates/pages/geo/journal_view.html:271
 msgid ""
@@ -18005,9 +17975,8 @@ msgstr ""
 #: aot_flask/templates/pages/geo/journal_view.html:273
 #: aot_flask/templates/pages/geo/journal_view.html:510
 #: aot_flask/templates/pages/geo/journal_view.html:753
-#, fuzzy
 msgid "Runtime"
-msgstr "Czas"
+msgstr "Czas pracy"
 
 #: aot_flask/templates/pages/geo/journal_view.html:274
 msgid "Hours a device was on during the period, read from its first channel."
@@ -18024,18 +17993,16 @@ msgid ""
 msgstr ""
 
 #: aot_flask/templates/pages/geo/journal_view.html:286
-#, fuzzy
 msgid "Terms used here"
-msgstr "Warunki użytkowania"
+msgstr "Użyte terminy"
 
 #: aot_flask/templates/pages/geo/journal_view.html:295
 msgid "Where the numbers come from"
 msgstr ""
 
 #: aot_flask/templates/pages/geo/journal_view.html:297
-#, fuzzy
 msgid "Source"
-msgstr "Zasoby"
+msgstr "Źródło"
 
 #: aot_flask/templates/pages/geo/journal_view.html:298
 msgid ""
@@ -18044,9 +18011,8 @@ msgid ""
 msgstr ""
 
 #: aot_flask/templates/pages/geo/journal_view.html:299
-#, fuzzy
 msgid "Snapshot"
-msgstr "Punktowy"
+msgstr "Migawka"
 
 #: aot_flask/templates/pages/geo/journal_view.html:300
 msgid ""
@@ -18063,34 +18029,29 @@ msgid "Print (save as PDF)"
 msgstr ""
 
 #: aot_flask/templates/pages/geo/journal_view.html:315
-#, fuzzy
 msgid "Markdown"
-msgstr "W dół"
+msgstr "Markdown"
 
 #: aot_flask/templates/pages/geo/journal_view.html:316
-#, fuzzy
 msgid "ODT"
-msgstr "AoT"
+msgstr "ODT"
 
 #: aot_flask/templates/pages/geo/journal_view.html:317
 msgid "CSV"
 msgstr ""
 
 #: aot_flask/templates/pages/geo/journal_view.html:318
-#, fuzzy
 msgid "JSON"
-msgstr "Włączone"
+msgstr "JSON"
 
 #: aot_flask/templates/pages/geo/journal_view.html:331
 #: aot_flask/templates/pages/geo/journal_view.html:818
-#, fuzzy
 msgid "Additional notes"
-msgstr "Dodatkowe funkcje"
+msgstr "Dodatkowe notatki"
 
 #: aot_flask/templates/pages/geo/journal_view.html:356
-#, fuzzy
 msgid "Item"
-msgstr " elementów"
+msgstr "Pozycja"
 
 #: aot_flask/templates/pages/geo/journal_view.html:387
 msgid "Growing degree days"
@@ -18112,14 +18073,12 @@ msgid "%(p)s%% of days measured"
 msgstr ""
 
 #: aot_flask/templates/pages/geo/journal_view.html:398
-#, fuzzy
 msgid "No program attached"
-msgstr "Brak programu"
+msgstr "Brak przypisanego programu"
 
 #: aot_flask/templates/pages/geo/journal_view.html:399
-#, fuzzy
 msgid "The program has no base temperature"
-msgstr "Temperatura bazowa jednostek cieplnych"
+msgstr "Program nie ma temperatury bazowej"
 
 #: aot_flask/templates/pages/geo/journal_view.html:400
 msgid "Not enough measured days"
@@ -18132,72 +18091,63 @@ msgstr ""
 
 #: aot_flask/templates/pages/geo/journal_view.html:448
 #: aot_flask/templates/pages/geo/journal_view.html:664
-#, fuzzy
 msgid "Min"
-msgstr "min"
+msgstr "Min"
 
 #: aot_flask/templates/pages/geo/journal_view.html:448
 #: aot_flask/templates/pages/geo/journal_view.html:664
-#, fuzzy
 msgid "Max"
-msgstr "Maks.:"
+msgstr "Maks."
 
 #: aot_flask/templates/pages/geo/journal_view.html:448
 #: aot_flask/templates/pages/geo/journal_view.html:664
-#, fuzzy
 msgid "Avg"
-msgstr "Tag"
+msgstr "Śr."
 
 #: aot_flask/templates/pages/geo/journal_view.html:458
 #: aot_flask/templates/pages/geo/journal_view.html:677
-#, fuzzy, python-format
+#, python-format
 msgid "%(n)s sensors"
-msgstr "%(n)s etapów"
+msgstr "%(n)s czujników"
 
 #: aot_flask/templates/pages/geo/journal_view.html:471
 #: aot_flask/templates/pages/geo/journal_view.html:685
 #: aot_flask/templates/pages/geo/journal_view.html:720
-#, fuzzy
 msgid "partial coverage"
-msgstr "Pokrycie"
+msgstr "częściowe pokrycie"
 
 #: aot_flask/templates/pages/geo/journal_view.html:474
 #: aot_flask/templates/pages/geo/journal_view.html:689
 #: aot_flask/templates/pages/geo/journal_view.html:732
-#, fuzzy, python-format
+#, python-format
 msgid "curve: %(name)s"
-msgstr "Tagi: %(names)s"
+msgstr "krzywa: %(name)s"
 
 #: aot_flask/templates/pages/geo/journal_view.html:482
 #: aot_flask/templates/pages/geo/journal_view.html:487
 #: aot_flask/templates/pages/geo/journal_view.html:697
 #: aot_flask/templates/pages/geo/journal_view.html:737
-#, fuzzy
 msgid "day/night target"
-msgstr "Noc zaczyna się o"
+msgstr "cel dzień/noc"
 
 #: aot_flask/templates/pages/geo/journal_view.html:483
 #: aot_flask/templates/pages/geo/journal_view.html:488
 #: aot_flask/templates/pages/geo/journal_view.html:698
 #: aot_flask/templates/pages/geo/journal_view.html:738
-#, fuzzy
 msgid "cumulative target"
-msgstr "Skumulowane ciepło"
+msgstr "cel skumulowany"
 
 #: aot_flask/templates/pages/geo/journal_view.html:502
-#, fuzzy
 msgid "No sensor for:"
-msgstr "Czujnik CO2"
+msgstr "Brak czujnika dla:"
 
 #: aot_flask/templates/pages/geo/journal_view.html:510
 #: aot_flask/templates/pages/geo/journal_view.html:753
-#, fuzzy
 msgid "Water"
-msgstr "Pogoda"
+msgstr "Woda"
 
 #: aot_flask/templates/pages/geo/journal_view.html:519
 #: aot_flask/templates/pages/geo/journal_view.html:765
-#, fuzzy
 msgid "estimated"
 msgstr "Szacunkowo"
 
@@ -18206,19 +18156,17 @@ msgid "before this journal"
 msgstr ""
 
 #: aot_flask/templates/pages/geo/journal_view.html:563
-#, fuzzy
 msgid "planned"
-msgstr "Planista"
+msgstr "zaplanowane"
 
 #: aot_flask/templates/pages/geo/journal_view.html:583
-#, fuzzy, python-format
+#, python-format
 msgid "Follows curve: %(name)s"
-msgstr "Podąża za krzywą"
+msgstr "Podąża za krzywą: %(name)s"
 
 #: aot_flask/templates/pages/geo/journal_view.html:587
-#, fuzzy
 msgid "No sensor for this"
-msgstr "Nie znaleziono sezonów dla tego gospodarstwa."
+msgstr "Brak czujnika dla tego"
 
 #: aot_flask/templates/pages/geo/journal_view.html:612
 #: aot_flask/templates/settings/general.html:376
@@ -18231,9 +18179,8 @@ msgid "Monthly"
 msgstr "Miesięcznie"
 
 #: aot_flask/templates/pages/geo/journal_view.html:614
-#, fuzzy
 msgid "Whole period"
-msgstr "Cały przebieg"
+msgstr "Cały okres"
 
 #: aot_flask/templates/pages/geo/journal_view.html:631
 #, python-format
@@ -18246,25 +18193,22 @@ msgid "GDD %(v)s"
 msgstr ""
 
 #: aot_flask/templates/pages/geo/journal_view.html:644
-#, fuzzy, python-format
+#, python-format
 msgid "No data recorded — %(n)s periods skipped."
-msgstr "Brak danych z ostatnich %(period)s sekund"
+msgstr "Brak zapisanych danych — pominięto %(n)s okresów."
 
 #: aot_flask/templates/pages/geo/journal_view.html:646
-#, fuzzy
 msgid "No data recorded for this period."
-msgstr "Brak gospodarstw zwróconych dla tego klucza."
+msgstr "Brak zapisanych danych dla tego okresu."
 
 #: aot_flask/templates/pages/geo/journal_view.html:680
 #: aot_flask/templates/pages/geo/journal_view.html:710
-#, fuzzy
 msgid "usage"
-msgstr "Użycie"
+msgstr "zużycie"
 
 #: aot_flask/templates/pages/geo/journal_view.html:690
-#, fuzzy
 msgid "varies"
-msgstr "Odmiana"
+msgstr "zmienny"
 
 #: aot_flask/templates/pages/geo/journal_view.html:726
 #, python-format
@@ -18272,14 +18216,12 @@ msgid "outdoors %(out)s × cover %(tau)s"
 msgstr ""
 
 #: aot_flask/templates/pages/geo/journal_view.html:739
-#, fuzzy
 msgid "no sensor"
-msgstr "Czujnik CO2"
+msgstr "brak czujnika"
 
 #: aot_flask/templates/pages/geo/journal_view.html:863
-#, fuzzy
 msgid "Delete this journal? This cannot be undone."
-msgstr "Usunąć tę kartę i wszystkie jej wpisy? Tej operacji nie można cofnąć."
+msgstr "Usunąć ten dziennik? Tej operacji nie można cofnąć."
 
 #: aot_flask/templates/pages/geo/journal_view.html:869
 #: aot_flask/templates/pages/geo/journal_view.html:873
@@ -21349,14 +21291,12 @@ msgid ""
 msgstr ""
 
 #: aot_flask/templates/user_templates/widget_template_AoT_advice_body.html:22
-#, fuzzy
 msgid "Retry"
-msgstr "Wycofaj"
+msgstr "Ponów"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_advice_body.html:72
-#, fuzzy
 msgid "Teach AI"
-msgstr "Wzmocnienie ADC"
+msgstr "Naucz AI"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_advice_body.html:79
 msgid "Add a note to help the AI understand this facility..."
@@ -21366,46 +21306,38 @@ msgstr ""
 #: aot_flask/templates/user_templates/widget_template_AoT_advice_js.html:233
 #: aot_flask/templates/user_templates/widget_template_AoT_advice_js.html:242
 #: aot_flask/templates/user_templates/widget_template_AoT_advice_js.html:249
-#, fuzzy
 msgid "Updating..."
-msgstr "Uruchamianie..."
+msgstr "Aktualizowanie..."
 
 #: aot_flask/templates/user_templates/widget_template_AoT_advice_js.html:61
-#, fuzzy
 msgid "recently"
-msgstr "Wyśrodkuj ponownie"
+msgstr "niedawno"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_advice_js.html:62
-#, fuzzy
 msgid "1 hour ago"
-msgstr "1 godzina"
+msgstr "1 godzinę temu"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_advice_js.html:63
-#, fuzzy
 msgid "hours ago"
-msgstr "Godziny"
+msgstr "godzin temu"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_advice_js.html:64
-#, fuzzy
 msgid "days ago"
-msgstr "7 dni temu"
+msgstr "dni temu"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_advice_js.html:95
 #: aot_flask/templates/user_templates/widget_template_AoT_advice_js.html:107
-#, fuzzy
 msgid "No analysis available yet."
-msgstr "Brak dostępnych pozycji"
+msgstr "Analiza nie jest jeszcze dostępna."
 
 #: aot_flask/templates/user_templates/widget_template_AoT_advice_js.html:159
-#, fuzzy
 msgid "Changes observed:"
-msgstr "Zmień hasło"
+msgstr "Zaobserwowane zmiany:"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_advice_js.html:166
 #: aot_flask/templates/user_templates/widget_template_AoT_advice_js.html:207
-#, fuzzy
 msgid "Confidence:"
-msgstr "Pewność"
+msgstr "Pewność:"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_advice_js.html:192
 msgid "The analysis may suggest the following changes occurred:"
@@ -21416,86 +21348,72 @@ msgid "Unable to load advice. Check connection."
 msgstr ""
 
 #: aot_flask/templates/user_templates/widget_template_AoT_advice_js.html:288
-#, fuzzy
 msgid "Please enter a note before submitting."
-msgstr "Wprowadź polecenie"
+msgstr "Wpisz notatkę przed przesłaniem."
 
 #: aot_flask/templates/user_templates/widget_template_AoT_advice_js.html:304
 msgid "Note saved - will inform the next AI cycle."
 msgstr ""
 
 #: aot_flask/templates/user_templates/widget_template_AoT_advice_js.html:309
-#, fuzzy
 msgid "Submission failed."
-msgstr "Akcja nie powiodła się"
+msgstr "Przesłanie nie powiodło się."
 
 #: aot_flask/templates/user_templates/widget_template_AoT_advice_js.html:314
-#, fuzzy
 msgid "Unable to save note. Please try again."
-msgstr "Nie udało się zapisać. Spróbuj ponownie."
+msgstr "Nie udało się zapisać notatki. Spróbuj ponownie."
 
 #: aot_flask/templates/user_templates/widget_template_AoT_ai_insight_body.html:5
 msgid "Envision a goal (e.g., Save energy in Zone A)"
 msgstr ""
 
 #: aot_flask/templates/user_templates/widget_template_AoT_ai_insight_body.html:8
-#, fuzzy
 msgid "Analyze"
-msgstr "Kąt"
+msgstr "Analizuj"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_ai_insight_body.html:23
 msgid "Ready for intelligent analysis."
 msgstr ""
 
 #: aot_flask/templates/user_templates/widget_template_AoT_ai_insight_js.html:65
-#, fuzzy
 msgid "AI analysis failed"
-msgstr "Częściowo nieudane"
+msgstr "Analiza AI nie powiodła się"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_ai_insight_js.html:86
-#, fuzzy
 msgid "Execution failed"
-msgstr "Odrzucenie nie powiodło się"
+msgstr "Wykonanie nie powiodło się"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_ai_insight_js.html:90
-#, fuzzy
 msgid "Communication error"
-msgstr "Błąd połączenia"
+msgstr "Błąd komunikacji"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_camera_body.html:6
-#, fuzzy
 msgid "Connecting..."
-msgstr "Połączenie"
+msgstr "Łączenie..."
 
 #: aot_flask/templates/user_templates/widget_template_AoT_camera_js.html:13
-#, fuzzy
 msgid "LIVE"
 msgstr "Na żywo"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_camera_js.html:17
-#, fuzzy
 msgid "SNAPSHOT"
-msgstr "Punktowy"
+msgstr "Migawka"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_controller_act_deact_title_bar.html:5
-#, fuzzy
 msgid "Controller Switch"
-msgstr "AoT Przełącznik sterownika"
+msgstr "Przełącznik sterownika"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_facility_body.html:26
-#, fuzzy
 msgid "Facility 3D View"
-msgstr "ID obiektu"
+msgstr "Widok 3D obiektu"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_facility_body.html:29
-#, fuzzy
 msgid "connected"
-msgstr "Połączono"
+msgstr "połączony"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_facility_body.html:32
-#, fuzzy
 msgid "double layer"
-msgstr "Usuń warstwy"
+msgstr "podwójna warstwa"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_facility_body.html:39
 msgid "Right-click: rotate"
@@ -21506,119 +21424,98 @@ msgid "Left-click: pan"
 msgstr ""
 
 #: aot_flask/templates/user_templates/widget_template_AoT_facility_body.html:39
-#, fuzzy
 msgid "Scroll: zoom"
-msgstr "Płynne przybliżanie"
+msgstr "Kółko: powiększanie"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_facility_body.html:41
-#, fuzzy
 msgid "Drag to resize"
-msgstr "Przeciągnij, aby zmienić wysokość"
+msgstr "Przeciągnij, aby zmienić rozmiar"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_facility_body.html:55
 #: aot_flask/templates/user_templates/widget_template_AoT_facility_body.html:64
 #: aot_flask/templates/user_templates/widget_template_AoT_facility_body.html:73
 #: aot_flask/templates/user_templates/widget_template_AoT_facility_body.html:82
-#, fuzzy
 msgid "set"
-msgstr "Ustaw"
+msgstr "ustaw"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_facility_body.html:61
-#, fuzzy
 msgid "Indoor temp"
 msgstr "Temperatura wewnętrzna"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_facility_body.html:70
-#, fuzzy
 msgid "Indoor humidity"
 msgstr "Wilgotność wewnętrzna"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_facility_body.html:86
-#, fuzzy
 msgid "Outdoor temp"
 msgstr "Temperatura zewnętrzna"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_facility_body.html:103
-#, fuzzy
 msgid "Actuator Control"
-msgstr "Typ siłownika"
+msgstr "Sterowanie siłownikami"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_facility_body.html:113
-#, fuzzy
 msgid "AI Advice"
-msgstr "Porady"
+msgstr "Porady AI"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_facility_body.html:122
-#, fuzzy
 msgid "No facility selected. Register one at"
-msgstr "Nie zarejestrowano jeszcze żadnych usług AI."
+msgstr "Nie wybrano obiektu. Zarejestruj go pod adresem"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_gauge_angular_configure_options.html:6
-#, fuzzy
 msgid "Section Start"
-msgstr "Lista wyboru"
+msgstr "Początek sekcji"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_gauge_angular_configure_options.html:36
-#, fuzzy
 msgid "Saved as global band colors"
-msgstr "Kolory pasm pomiarowych"
+msgstr "Zapisano jako globalne kolory pasm"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_gauge_angular_configure_options.html:38
-#, fuzzy
 msgid "Save as Global Band Colors"
-msgstr "Kolory pasm pomiarowych"
+msgstr "Zapisz jako globalne kolory pasm"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_gauge_angular_configure_options.html:39
 msgid "Applies the first 5 section colors to Settings > Custom UI band colors."
 msgstr ""
 
 #: aot_flask/templates/user_templates/widget_template_AoT_graph_configure_options.html:2
-#, fuzzy
 msgid "Graph Series Options"
-msgstr "Opcje usługi"
+msgstr "Opcje serii wykresu"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_graph_configure_options.html:6
-#, fuzzy
 msgid "Use Custom Colors"
-msgstr "Niestandardowy CSS"
+msgstr "Użyj niestandardowych kolorów"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_graph_configure_options.html:35
-#, fuzzy
 msgid "Select Color"
-msgstr "Kolor tekstu"
+msgstr "Wybierz kolor"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_graph_configure_options.html:40
 #: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:39
-#, fuzzy
 msgid "Disable Data Grouping"
-msgstr "Wyłącz SPI"
+msgstr "Wyłącz grupowanie danych"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_graph_configure_options.html:47
 #: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:45
-#, fuzzy
 msgid "Series Type"
-msgstr "Typ źródła"
+msgstr "Typ serii"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_graph_configure_options.html:50
-#, fuzzy
 msgid "Step (Left)"
-msgstr "Lista terenów"
+msgstr "Schodkowa (lewa)"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_graph_configure_options.html:51
-#, fuzzy
 msgid "Step (Center)"
-msgstr "Wyśrodkuj ponownie"
+msgstr "Schodkowa (środek)"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_graph_configure_options.html:52
-#, fuzzy
 msgid "Step (Right)"
-msgstr "Zacienienie nocy"
+msgstr "Schodkowa (prawa)"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_graph_configure_options.html:53
 #: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:52
-#, fuzzy
 msgid "Column"
-msgstr "Objętość"
+msgstr "Słupkowa"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_graph_configure_options.html:77
 msgid "Saved as global chart colors"
@@ -21634,9 +21531,8 @@ msgstr ""
 
 #: aot_flask/templates/user_templates/widget_template_AoT_graph_configure_options.html:84
 #: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:62
-#, fuzzy
 msgid "Y-Axis Options"
-msgstr "Opcje użytkownika"
+msgstr "Opcje osi Y"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_graph_configure_options.html:88
 #: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:65
@@ -21644,32 +21540,26 @@ msgid "Enable Manual Y-Axis Min/Max"
 msgstr ""
 
 #: aot_flask/templates/user_templates/widget_template_AoT_graph_configure_options.html:97
-#, fuzzy
 msgid "Enable Align Ticks"
-msgstr "Włącz usługę AI"
+msgstr "Włącz wyrównywanie znaczników"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_graph_configure_options.html:106
-#, fuzzy
 msgid "Enable Start On Tick"
-msgstr "Domyślna lokalizacja początkowa"
+msgstr "Włącz rozpoczynanie od znacznika"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_graph_configure_options.html:115
-#, fuzzy
 msgid "Enable End On Tick"
-msgstr "Włącz legendę"
+msgstr "Włącz kończenie na znaczniku"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_graph_configure_options.html:131
-#, fuzzy
 msgid "Y-Axis Min"
-msgstr "Przesunięcie osi Y"
+msgstr "Min. osi Y"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_graph_configure_options.html:135
-#, fuzzy
 msgid "Y-Axis Max"
-msgstr "Przesunięcie osi Y"
+msgstr "Maks. osi Y"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_map_body.html:16
-#, fuzzy
 msgid "Enter an address."
 msgstr "Wprowadź adres."
 
@@ -21678,69 +21568,57 @@ msgid "Ask a question about this advisory (e.g., what should I do?)"
 msgstr ""
 
 #: aot_flask/templates/user_templates/widget_template_AoT_map_body.html:125
-#, fuzzy
 msgid "Ask AI what to do"
-msgstr "Wpisz, co zrobić"
+msgstr "Zapytaj AI, co robić"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_map_body.html:155
 msgid "What concrete actions should I take based on this advisory?"
 msgstr ""
 
 #: aot_flask/templates/user_templates/widget_template_AoT_map_title_bar.html:14
-#, fuzzy
 msgid "Show Controls"
-msgstr "Zatrzymaj sterowanie, gdy"
+msgstr "Pokaż sterowanie"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_map_title_bar.html:14
-#, fuzzy
 msgid "Hide Controls"
-msgstr "Sterowanie PID"
+msgstr "Ukryj sterowanie"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_pid_body.html:284
-#, fuzzy
 msgid "PID Detail Settings"
-msgstr "Ustawienia PID"
+msgstr "Szczegółowe ustawienia PID"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_pid_body.html:349
-#, fuzzy
 msgid "Gains"
-msgstr "Wzmocnienie"
+msgstr "Wzmocnienia"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_pid_body.html:381
-#, fuzzy
 msgid "Timing & Limits"
-msgstr "limit kontenera"
+msgstr "Czas i limity"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_pid_body.html:393
 #: widgets/widget_function_status.py:59
-#, fuzzy
 msgid "Band"
-msgstr "Piasek"
+msgstr "Pasmo"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_pid_body.html:438
-#, fuzzy
 msgid "activate"
 msgstr "Aktywuj"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_pid_body.html:443
-#, fuzzy
 msgid "deactivate"
 msgstr "Dezaktywuj"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_pid_js.html:143
-#, fuzzy
 msgid "No PID selected"
-msgstr "Nie wybrano"
+msgstr "Nie wybrano regulatora PID"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_pid_js.html:150
-#, fuzzy
 msgid "No PID found or no measurement"
-msgstr "Liczba pomiarów"
+msgstr "Nie znaleziono regulatora PID lub brak pomiaru"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_pid_js_ready_end.html:167
-#, fuzzy
 msgid "5m"
-msgstr "M"
+msgstr "5m"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_pid_js_ready_end.html:168
 msgid "30m"
@@ -21759,9 +21637,8 @@ msgid "1d"
 msgstr ""
 
 #: aot_flask/templates/user_templates/widget_template_AoT_pid_js_ready_end.html:201
-#, fuzzy
 msgid "Actual"
-msgstr "Siłownik"
+msgstr "Wartość rzeczywista"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_timer_body.html:165
 #: aot_flask/templates/user_templates/widget_template_AoT_timer_body.html:173
@@ -21771,65 +21648,54 @@ msgstr "Uruchom"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_timer_body.html:179
 #: aot_flask/templates/user_templates/widget_template_AoT_timer_body.html:187
-#, fuzzy
 msgid "Rest"
-msgstr "Resetuj"
+msgstr "Odpoczynek"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_timer_body.html:192
-#, fuzzy
 msgid "Cycles"
-msgstr "Tak"
+msgstr "Cykle"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_timer_body.html:205
 #: aot_flask/templates/user_templates/widget_template_AoT_timer_body.html:213
-#, fuzzy
 msgid "Start at"
-msgstr "Data rozpoczęcia"
+msgstr "Rozpocznij o"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_timer_body.html:222
-#, fuzzy
 msgid "Select the Output to control in the widget options."
-msgstr "Wybierz wyjście do sterowania."
+msgstr "Wybierz wyjście do sterowania w opcjach widżetu."
 
 #: aot_flask/templates/user_templates/widget_template_AoT_wind_angular_configure_options.html:29
-#, fuzzy, python-format
+#, python-format
 msgid "Data Position Offset (%%)"
-msgstr "Przesunięcie pozycji danych (%)"
+msgstr "Przesunięcie pozycji danych (%%)"
 
 #: aot_flask/templates/user_templates/widget_template_widget_calendar_body.html:12
-#, fuzzy
 msgid "Edit Schedule"
-msgstr "Harmonogram SI"
+msgstr "Edytuj harmonogram"
 
 #: aot_flask/templates/user_templates/widget_template_widget_calendar_js_ready_end.html:15
-#, fuzzy
 msgid "Open in Scheduler"
-msgstr "Harmonogram SI"
+msgstr "Otwórz w harmonogramie"
 
 #: aot_flask/templates/user_templates/widget_template_widget_calendar_js_ready_end.html:20
-#, fuzzy
 msgid "Calendars"
-msgstr "Kalendarz"
+msgstr "Kalendarze"
 
 #: aot_flask/templates/user_templates/widget_template_widget_camera_js.html:25
-#, fuzzy
 msgid "Still"
-msgstr "Zainstaluj"
+msgstr "Zdjęcie"
 
 #: aot_flask/templates/user_templates/widget_template_widget_camera_js.html:33
-#, fuzzy
 msgid "Max Age Exceeded"
-msgstr "Maksymalny wiek (s)"
+msgstr "Przekroczono maksymalny wiek"
 
 #: aot_flask/templates/user_templates/widget_template_widget_camera_js.html:38
-#, fuzzy
 msgid "File Not Found"
 msgstr "Nie znaleziono pliku"
 
 #: aot_flask/templates/user_templates/widget_template_widget_camera_js.html:57
-#, fuzzy
 msgid "Error Getting Image"
-msgstr "Błąd podczas usuwania karty"
+msgstr "Błąd pobierania obrazu"
 
 #: aot_flask/templates/user_templates/widget_template_widget_camera_js.html:113
 msgid "Error: HLS library failed to load"
@@ -21855,9 +21721,8 @@ msgid "Deactivated"
 msgstr "Wyłączona"
 
 #: aot_flask/templates/user_templates/widget_template_widget_function_status_js.html:155
-#, fuzzy
 msgid "No Function selected."
-msgstr "Nie wybrano lokalizacji"
+msgstr "Nie wybrano funkcji."
 
 #: aot_flask/templates/user_templates/widget_template_widget_function_status_js.html:169
 #: aot_flask/utils/utils_function_status.py:215
@@ -21879,14 +21744,12 @@ msgid ""
 msgstr ""
 
 #: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:4
-#, fuzzy
 msgid "Series Options"
-msgstr "Opcje usługi"
+msgstr "Opcje serii"
 
 #: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:7
-#, fuzzy
 msgid "Enable Custom Colors"
-msgstr "Włącz TLS"
+msgstr "Włącz niestandardowe kolory"
 
 #: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:49
 msgid "Line (Step, Left)"
@@ -21901,29 +21764,24 @@ msgid "Line (Step, Right)"
 msgstr ""
 
 #: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:71
-#, fuzzy
 msgid "Enable Y-Axis Align Ticks"
-msgstr "Włącz resetowanie osi X"
+msgstr "Włącz wyrównywanie znaczników osi Y"
 
 #: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:77
-#, fuzzy
 msgid "Enable Y-Axis Start On Tick"
-msgstr "Włącz resetowanie osi X"
+msgstr "Włącz rozpoczynanie od znacznika (oś Y)"
 
 #: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:83
-#, fuzzy
 msgid "Enable Y-Axis End On Tick"
-msgstr "Włącz resetowanie osi X"
+msgstr "Włącz kończenie na znaczniku (oś Y)"
 
 #: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:101
-#, fuzzy
 msgid "Y-Axis Minimum"
-msgstr "Minimum"
+msgstr "Minimum osi Y"
 
 #: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:107
-#, fuzzy
 msgid "Y-Axis Maximum"
-msgstr "Maksimum"
+msgstr "Maksimum osi Y"
 
 #: aot_flask/templates/user_templates/widget_template_widget_indicator_js.html:42
 #: aot_flask/templates/user_templates/widget_template_widget_indicator_js.html:53
@@ -21933,21 +21791,18 @@ msgstr "Maksimum"
 #: aot_flask/templates/user_templates/widget_template_widget_measurement_multi_js.html:49
 #: aot_flask/templates/user_templates/widget_template_widget_output_pwm_slider_js.html:51
 #: aot_flask/templates/user_templates/widget_template_widget_output_pwm_slider_js.html:72
-#, fuzzy
 msgid "NO DATA"
 msgstr "Brak danych"
 
 #: aot_flask/templates/user_templates/widget_template_widget_measurement_js.html:32
 #: aot_flask/templates/user_templates/widget_template_widget_measurement_multi_js.html:32
 #: aot_flask/templates/user_templates/widget_template_widget_output_pwm_slider_js.html:52
-#, fuzzy
 msgid "MAX AGE EXCEEDED"
-msgstr "Maksymalny wiek (s)"
+msgstr "Przekroczono maksymalny wiek"
 
 #: aot_flask/templates/user_templates/widget_template_widget_notice_configure_options.html:2
-#, fuzzy
 msgid "Category Filter"
-msgstr "Filtr tagów"
+msgstr "Filtr kategorii"
 
 #: aot_flask/templates/user_templates/widget_template_widget_notice_configure_options.html:5
 msgid ""
@@ -21960,23 +21815,19 @@ msgid "No categories yet. Set one when creating a post to filter by it here."
 msgstr ""
 
 #: aot_flask/templates/user_templates/widget_template_widget_notice_js.html:415
-#, fuzzy
 msgid "Notice updated"
-msgstr "Ogłoszenie usunięte"
+msgstr "Ogłoszenie zaktualizowane"
 
 #: aot_flask/templates/user_templates/widget_template_widget_notice_js.html:415
-#, fuzzy
 msgid "Notice created"
-msgstr "Ogłoszenie usunięte"
+msgstr "Ogłoszenie utworzone"
 
 #: aot_flask/templates/user_templates/widget_template_widget_python_code_js.html:10
-#, fuzzy
 msgid "NO DATA ERROR"
-msgstr "Brak daty"
+msgstr "Błąd: brak danych"
 
 #: aot_flask/templates/user_templates/widget_template_widget_python_code_js.html:13
 #: aot_flask/templates/user_templates/widget_template_widget_python_code_js.html:17
-#, fuzzy
 msgid "CONNECTION ERROR"
 msgstr "Błąd połączenia"
 
@@ -22358,29 +22209,28 @@ msgid "Function not found"
 msgstr "Nie znaleziono funkcji"
 
 #: aot_flask/utils/utils_function_status.py:94
-#, fuzzy, python-format
+#, python-format
 msgid "%(n)s s"
-msgstr "%(n)s dni"
+msgstr "%(n)s s"
 
 #: aot_flask/utils/utils_function_status.py:108
-#, fuzzy, python-format
+#, python-format
 msgid "%(n)s s ago"
-msgstr "%(n)s etapów"
+msgstr "%(n)s s temu"
 
 #: aot_flask/utils/utils_function_status.py:110
-#, fuzzy, python-format
+#, python-format
 msgid "%(n)s min ago"
-msgstr "%(n)s etapów"
+msgstr "%(n)s min temu"
 
 #: aot_flask/utils/utils_function_status.py:111
-#, fuzzy, python-format
+#, python-format
 msgid "%(n)s h ago"
-msgstr "%(n)s etapów"
+msgstr "%(n)s godz. temu"
 
 #: aot_flask/utils/utils_function_status.py:117
-#, fuzzy
 msgid "Paused — no actuators registered"
-msgstr "Nie zarejestrowano żadnych zadań."
+msgstr "Wstrzymano — brak zarejestrowanych siłowników"
 
 #: aot_flask/utils/utils_function_status.py:118
 msgid "Paused — outside the operating time window"
@@ -22392,29 +22242,28 @@ msgid "Paused (%(reason)s)"
 msgstr ""
 
 #: aot_flask/utils/utils_function_status.py:132
-#, fuzzy
 msgid "Waiting for the first control cycle."
-msgstr "Czas oczekiwania przed pierwszym działaniem"
+msgstr "Oczekiwanie na pierwszy cykl sterowania."
 
 #: aot_flask/utils/utils_function_status.py:140
-#, fuzzy, python-format
+#, python-format
 msgid "Mode: %(modes)s"
-msgstr "Tagi: %(names)s"
+msgstr "Tryb: %(modes)s"
 
 #: aot_flask/utils/utils_function_status.py:155
-#, fuzzy, python-format
+#, python-format
 msgid "Environment: %(values)s"
-msgstr "Zmienne środowiskowe"
+msgstr "Środowisko: %(values)s"
 
 #: aot_flask/utils/utils_function_status.py:163
-#, fuzzy, python-format
+#, python-format
 msgid "Deviation: %(values)s"
-msgstr "Czas trwania (minuty)"
+msgstr "Odchylenie: %(values)s"
 
 #: aot_flask/utils/utils_function_status.py:171
-#, fuzzy, python-format
+#, python-format
 msgid "Actuators: %(values)s"
-msgstr "Tagi: %(names)s"
+msgstr "Siłowniki: %(values)s"
 
 #: aot_flask/utils/utils_function_status.py:176
 #, python-format
@@ -22427,9 +22276,8 @@ msgid "Safety gate: %(reason)s — control stopped"
 msgstr ""
 
 #: aot_flask/utils/utils_function_status.py:187
-#, fuzzy
 msgid "triggered"
-msgstr "Wyzwalacz"
+msgstr "wyzwolona"
 
 #: aot_flask/utils/utils_function_status.py:189
 #, python-format
@@ -22457,39 +22305,34 @@ msgid "Last cycle: %(when)s"
 msgstr ""
 
 #: aot_flask/utils/utils_function_status.py:213
-#, fuzzy
 msgid "Idle"
-msgstr "Ukryj"
+msgstr "Bezczynna"
 
 #: aot_flask/utils/utils_function_status.py:214
-#, fuzzy
 msgid "Outside the time window"
-msgstr "Włącz okno czasowe"
+msgstr "Poza oknem czasowym"
 
 #: aot_flask/utils/utils_function_status.py:216
-#, fuzzy
 msgid "Initializing"
-msgstr "Wykorzystanie SI"
+msgstr "Inicjalizacja"
 
 #: aot_flask/utils/utils_function_status.py:217
-#, fuzzy
 msgid "Standby"
-msgstr "Piasek"
+msgstr "Nieaktywna"
 
 #: aot_flask/utils/utils_function_status.py:218
-#, fuzzy
 msgid "Ready"
-msgstr "Czerwony"
+msgstr "Gotowa"
 
 #: aot_flask/utils/utils_function_status.py:225
-#, fuzzy, python-format
+#, python-format
 msgid "Waiting (%(time)s)"
-msgstr "Funkcja (%(type)s)"
+msgstr "Oczekiwanie (%(time)s)"
 
 #: aot_flask/utils/utils_function_status.py:230
-#, fuzzy, python-format
+#, python-format
 msgid "Sequence: %(state)s"
-msgstr "Sukces: %(action)s"
+msgstr "Sekwencja: %(state)s"
 
 #: aot_flask/utils/utils_function_status.py:236
 #, python-format
@@ -22512,14 +22355,14 @@ msgid "Steps: %(running)s of %(total)s running"
 msgstr ""
 
 #: aot_flask/utils/utils_function_status.py:257
-#, fuzzy, python-format
+#, python-format
 msgid "Conditional: %(state)s"
-msgstr "Warunkowy"
+msgstr "Warunkowy: %(state)s"
 
 #: aot_flask/utils/utils_function_status.py:262
-#, fuzzy, python-format
+#, python-format
 msgid "Period: %(period)s"
-msgstr "Okres: %(label)s"
+msgstr "Okres: %(period)s"
 
 #: aot_flask/utils/utils_function_status.py:266
 #, python-format
@@ -22535,9 +22378,8 @@ msgid "The last check ran no action."
 msgstr ""
 
 #: aot_flask/utils/utils_function_status.py:270
-#, fuzzy
 msgid "Not checked yet."
-msgstr "Nic jeszcze nie zapisano."
+msgstr "Jeszcze nie sprawdzono."
 
 #: aot_flask/utils/utils_function_status.py:274
 #, python-format
@@ -29785,9 +29627,8 @@ msgid "Input value validity duration"
 msgstr "Czas ważności wartości wejścia"
 
 #: widgets/widget_trigger_sequence.py:539
-#, fuzzy
 msgid "Continue where it stopped"
-msgstr "Przechwytywanie zatrzymane"
+msgstr "Kontynuuj od miejsca zatrzymania"
 
 #: widgets/widget_trigger_sequence.py:540
 msgid "Start from the beginning"
@@ -30342,9 +30183,8 @@ msgstr ""
 "funkcję nawadniania."
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:673
-#, fuzzy
 msgid "Enable Sunburn/Evening Protection"
-msgstr "Ochrona przed poparzeniem słonecznym przez zamgławianie"
+msgstr "Włącz ochronę przed poparzeniem słonecznym/wieczorną"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:675
 msgid ""

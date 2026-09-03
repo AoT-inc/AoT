@@ -4659,13 +4659,10 @@ msgid "Group"
 msgstr "Grup"
 
 #: aot_flask/routes_function.py:2253
-#, fuzzy
 msgid ""
 "Saved, but the daemon could not be reached — the sequence may still be "
 "running. Check the daemon."
-msgstr ""
-"Kaydedildi, ancak arka plan servisi (daemon) bilgilendirilemedi. Yeni "
-"zamanlama, daemon yeniden başladıktan sonra etkin olur."
+msgstr "Kaydedildi, ancak arka plan servisine (daemon) ulaşılamadı — sekans hâlâ çalışıyor olabilir. Daemon'u kontrol edin."
 
 #: aot_flask/routes_function.py:2263
 msgid "The sequence is still running — the daemon did not apply the change."
@@ -4741,9 +4738,8 @@ msgid "No devices to inspect"
 msgstr "İncelenecek cihaz yok"
 
 #: aot_flask/routes_geo_journal.py:132
-#, fuzzy
 msgid "Could not find that area."
-msgstr "Buton kimliği bulunamadı."
+msgstr "Bu alan bulunamadı."
 
 #: aot_flask/routes_geo_journal.py:154
 msgid ""
@@ -4752,20 +4748,17 @@ msgid ""
 msgstr ""
 
 #: aot_flask/routes_geo_journal.py:223 aot_flask/routes_geo_journal.py:451
-#, fuzzy
 msgid "Permission Denied"
 msgstr "İzin reddedildi"
 
 #: aot_flask/routes_geo_journal.py:243
-#, fuzzy
 msgid "Pick at least one measurement."
-msgstr "Ölçümü Sakla"
+msgstr "En az bir ölçüm seçin."
 
 #: aot_flask/routes_geo_journal.py:246 aot_flask/routes_geo_journal.py:248
 #: aot_flask/routes_geo_journal.py:499
-#, fuzzy
 msgid "Select what the journal is about."
-msgstr "Bu Çıkışın gerçekleştireceği rolü seçin."
+msgstr "Günlüğün ne hakkında olduğunu seçin."
 
 #: aot_flask/routes_geo_journal.py:250
 msgid "Enter both a start and an end date."
@@ -4780,9 +4773,8 @@ msgid "Could not find what this journal is about."
 msgstr ""
 
 #: aot_flask/routes_geo_journal.py:266
-#, fuzzy
 msgid "Could not read this target."
-msgstr "Silinecek API anahtarı bulunamadı."
+msgstr "Bu hedef okunamadı."
 
 #: aot_flask/routes_geo_journal.py:271
 #, python-format
@@ -4807,14 +4799,12 @@ msgid "This journal is still being generated."
 msgstr ""
 
 #: aot_flask/routes_geo_journal.py:456
-#, fuzzy
 msgid "Journal not found."
-msgstr "Kaynak bulunamadı."
+msgstr "Günlük bulunamadı."
 
 #: aot_flask/routes_geo_journal.py:470
-#, fuzzy
 msgid "Could not delete this journal."
-msgstr "Bu kaynak silinsin mi?"
+msgstr "Bu günlük silinemedi."
 
 #: aot_flask/routes_geo_plot.py:184
 #: aot_flask/templates/pages/ai/components/onboarding_flow.html:67
@@ -9446,9 +9436,8 @@ msgstr "Ekim Alanları"
 #: aot_flask/templates/pages/geo/journal.html:5
 #: aot_flask/templates/pages/geo/journal.html:57
 #: aot_flask/templates/pages/geo/journal_view.html:3
-#, fuzzy
 msgid "Journals"
-msgstr "Orijinal"
+msgstr "Günlükler"
 
 #: aot_flask/templates/layout.html:683
 #: aot_flask/templates/layout_default.html:683
@@ -17750,16 +17739,14 @@ msgid ""
 msgstr ""
 
 #: aot_flask/templates/pages/geo/journal.html:77
-#, fuzzy
 msgid "Change"
-msgstr "Değişiklik Günlüğü"
+msgstr "Değiştir"
 
 #: aot_flask/templates/pages/geo/journal.html:80
 msgid "Search by crop, variety, name, zone…"
 msgstr ""
 
 #: aot_flask/templates/pages/geo/journal.html:94
-#, fuzzy
 msgid "End date"
 msgstr "Bitiş Tarihi"
 
@@ -17768,38 +17755,32 @@ msgid "Or make a journal for a whole site or zone"
 msgstr ""
 
 #: aot_flask/templates/pages/geo/journal.html:113
-#, fuzzy
 msgid "Site or zone"
-msgstr "Bölgeleri ayır"
+msgstr "Site veya bölge"
 
 #: aot_flask/templates/pages/geo/journal.html:116
-#, fuzzy
 msgid "Select…"
-msgstr "Seç"
+msgstr "Seç…"
 
 #: aot_flask/templates/pages/geo/journal.html:118
-#, fuzzy
 msgid "Unmapped"
-msgstr "Adsız"
+msgstr "Haritasız"
 
 #: aot_flask/templates/pages/geo/journal.html:133
 msgid "The whole site or zone is covered, including every plot inside it."
 msgstr ""
 
 #: aot_flask/templates/pages/geo/journal.html:147
-#, fuzzy
 msgid "Measurements to include"
-msgstr "Ölçüm Kimliği"
+msgstr "Dahil edilecek ölçümler"
 
 #: aot_flask/templates/pages/geo/journal.html:158
-#, fuzzy
 msgid "Generate journal"
-msgstr "Video Oluştur"
+msgstr "Günlük Oluştur"
 
 #: aot_flask/templates/pages/geo/journal.html:161
-#, fuzzy
 msgid "Saved journals"
-msgstr "Adı Kaydet"
+msgstr "Kaydedilen Günlükler"
 
 #: aot_flask/templates/pages/geo/journal.html:165
 #: aot_flask/templates/pages/geo/plots.html:53
@@ -17813,22 +17794,19 @@ msgid "Untitled"
 msgstr "Başlıksız"
 
 #: aot_flask/templates/pages/geo/journal.html:174
-#, fuzzy
 msgid "Generating…"
-msgstr "Genel Ayarlar"
+msgstr "Oluşturuluyor…"
 
 #: aot_flask/templates/pages/geo/journal.html:176
-#, fuzzy
 msgid "Generation failed"
-msgstr "Eylem başarısız oldu"
+msgstr "Oluşturma başarısız oldu"
 
 #: aot_flask/templates/pages/geo/journal_view.html:6
 #: aot_flask/templates/pages/geo/journal_view.html:177
 #: aot_flask/templates/pages/geo/journal_view.html:184
 #: aot_flask/templates/pages/geo/journal_view.html:198
-#, fuzzy
 msgid "Journal"
-msgstr "Orijinal"
+msgstr "Günlük"
 
 #: aot_flask/templates/pages/geo/journal_view.html:180
 msgid ""
@@ -17843,37 +17821,31 @@ msgstr ""
 #: aot_flask/templates/pages/geo/journal_view.html:204
 #: aot_flask/templates/pages/geo/journal_view.html:368
 #: aot_flask/templates/pages/geo/journal_view.html:561
-#, fuzzy
 msgid "ongoing"
-msgstr "Açıklık"
+msgstr "devam ediyor"
 
 #: aot_flask/templates/pages/geo/journal_view.html:219
 #: aot_flask/templates/pages/geo/journal_view.html:378
-#, fuzzy
 msgid "Area"
-msgstr "Nadir"
+msgstr "Alan"
 
 #: aot_flask/templates/pages/geo/journal_view.html:221
 #: aot_flask/templates/pages/geo/journal_view.html:407
-#, fuzzy
 msgid "Time zone"
 msgstr "Saat Dilimi"
 
 #: aot_flask/templates/pages/geo/journal_view.html:226
-#, fuzzy
 msgid "Generated"
-msgstr "Oluştur"
+msgstr "Oluşturuldu"
 
 #: aot_flask/templates/pages/geo/journal_view.html:238
-#, fuzzy
 msgid "About this document"
-msgstr "İlgili Belgeler"
+msgstr "Bu belge hakkında"
 
 #: aot_flask/templates/pages/geo/journal_view.html:244
 #: aot_flask/templates/pages/geo/journal_view.html:326
-#, fuzzy
 msgid "Contents"
-msgstr "içerik"
+msgstr "İçindekiler"
 
 #: aot_flask/templates/pages/geo/journal_view.html:246
 msgid "Each section below starts on a new page, in this order."
@@ -17906,15 +17878,14 @@ msgstr "%(n)s aşama"
 #: aot_flask/templates/pages/geo/journal_view.html:257
 #: aot_flask/templates/pages/geo/journal_view.html:330
 #: aot_flask/templates/pages/geo/journal_view.html:602
-#, fuzzy
 msgid "Daily log"
-msgstr "Günlük"
+msgstr "Günlük Kayıtlar"
 
 #: aot_flask/templates/pages/geo/journal_view.html:255
 #: aot_flask/templates/pages/geo/journal_view.html:258
-#, fuzzy, python-format
+#, python-format
 msgid "%(n)s periods"
-msgstr "%(n)s gün"
+msgstr "%(n)s dönem"
 
 #: aot_flask/templates/pages/geo/journal_view.html:262
 msgid "How to read this"
@@ -17943,9 +17914,8 @@ msgid ""
 msgstr ""
 
 #: aot_flask/templates/pages/geo/journal_view.html:270
-#, fuzzy
 msgid "Target and Δ"
-msgstr "Hedef ID"
+msgstr "Hedef ve Δ"
 
 #: aot_flask/templates/pages/geo/journal_view.html:271
 msgid ""
@@ -17958,9 +17928,8 @@ msgstr ""
 #: aot_flask/templates/pages/geo/journal_view.html:273
 #: aot_flask/templates/pages/geo/journal_view.html:510
 #: aot_flask/templates/pages/geo/journal_view.html:753
-#, fuzzy
 msgid "Runtime"
-msgstr "Zaman"
+msgstr "Çalışma Süresi"
 
 #: aot_flask/templates/pages/geo/journal_view.html:274
 msgid "Hours a device was on during the period, read from its first channel."
@@ -17977,18 +17946,16 @@ msgid ""
 msgstr ""
 
 #: aot_flask/templates/pages/geo/journal_view.html:286
-#, fuzzy
 msgid "Terms used here"
-msgstr "Kullanım Şartları"
+msgstr "Burada kullanılan terimler"
 
 #: aot_flask/templates/pages/geo/journal_view.html:295
 msgid "Where the numbers come from"
 msgstr ""
 
 #: aot_flask/templates/pages/geo/journal_view.html:297
-#, fuzzy
 msgid "Source"
-msgstr "Kaynaklar"
+msgstr "Kaynak"
 
 #: aot_flask/templates/pages/geo/journal_view.html:298
 msgid ""
@@ -17997,9 +17964,8 @@ msgid ""
 msgstr ""
 
 #: aot_flask/templates/pages/geo/journal_view.html:299
-#, fuzzy
 msgid "Snapshot"
-msgstr "Nokta"
+msgstr "Anlık Görüntü"
 
 #: aot_flask/templates/pages/geo/journal_view.html:300
 msgid ""
@@ -18016,34 +17982,29 @@ msgid "Print (save as PDF)"
 msgstr ""
 
 #: aot_flask/templates/pages/geo/journal_view.html:315
-#, fuzzy
 msgid "Markdown"
-msgstr "Aşağı"
+msgstr "Markdown"
 
 #: aot_flask/templates/pages/geo/journal_view.html:316
-#, fuzzy
 msgid "ODT"
-msgstr "AoT"
+msgstr "ODT"
 
 #: aot_flask/templates/pages/geo/journal_view.html:317
 msgid "CSV"
 msgstr ""
 
 #: aot_flask/templates/pages/geo/journal_view.html:318
-#, fuzzy
 msgid "JSON"
-msgstr "Açık"
+msgstr "JSON"
 
 #: aot_flask/templates/pages/geo/journal_view.html:331
 #: aot_flask/templates/pages/geo/journal_view.html:818
-#, fuzzy
 msgid "Additional notes"
-msgstr "Ek Özellikler"
+msgstr "Ek notlar"
 
 #: aot_flask/templates/pages/geo/journal_view.html:356
-#, fuzzy
 msgid "Item"
-msgstr " öğe"
+msgstr "Öğe"
 
 #: aot_flask/templates/pages/geo/journal_view.html:387
 msgid "Growing degree days"
@@ -18065,14 +18026,12 @@ msgid "%(p)s%% of days measured"
 msgstr ""
 
 #: aot_flask/templates/pages/geo/journal_view.html:398
-#, fuzzy
 msgid "No program attached"
-msgstr "Program yok"
+msgstr "Bağlı program yok"
 
 #: aot_flask/templates/pages/geo/journal_view.html:399
-#, fuzzy
 msgid "The program has no base temperature"
-msgstr "Isı birimi taban sıcaklığı"
+msgstr "Program için taban sıcaklığı tanımlanmamış"
 
 #: aot_flask/templates/pages/geo/journal_view.html:400
 msgid "Not enough measured days"
@@ -18085,93 +18044,82 @@ msgstr ""
 
 #: aot_flask/templates/pages/geo/journal_view.html:448
 #: aot_flask/templates/pages/geo/journal_view.html:664
-#, fuzzy
 msgid "Min"
-msgstr "dk"
+msgstr "Min"
 
 #: aot_flask/templates/pages/geo/journal_view.html:448
 #: aot_flask/templates/pages/geo/journal_view.html:664
-#, fuzzy
 msgid "Max"
-msgstr "Maks.:"
+msgstr "Maks."
 
 #: aot_flask/templates/pages/geo/journal_view.html:448
 #: aot_flask/templates/pages/geo/journal_view.html:664
-#, fuzzy
 msgid "Avg"
-msgstr "Etiket"
+msgstr "Ort."
 
 #: aot_flask/templates/pages/geo/journal_view.html:458
 #: aot_flask/templates/pages/geo/journal_view.html:677
-#, fuzzy, python-format
+#, python-format
 msgid "%(n)s sensors"
-msgstr "%(n)s aşama"
+msgstr "%(n)s sensör"
 
 #: aot_flask/templates/pages/geo/journal_view.html:471
 #: aot_flask/templates/pages/geo/journal_view.html:685
 #: aot_flask/templates/pages/geo/journal_view.html:720
-#, fuzzy
 msgid "partial coverage"
-msgstr "Kapsama"
+msgstr "kısmi kapsama"
 
 #: aot_flask/templates/pages/geo/journal_view.html:474
 #: aot_flask/templates/pages/geo/journal_view.html:689
 #: aot_flask/templates/pages/geo/journal_view.html:732
-#, fuzzy, python-format
+#, python-format
 msgid "curve: %(name)s"
-msgstr "Etiketler: %(names)s"
+msgstr "eğri: %(name)s"
 
 #: aot_flask/templates/pages/geo/journal_view.html:482
 #: aot_flask/templates/pages/geo/journal_view.html:487
 #: aot_flask/templates/pages/geo/journal_view.html:697
 #: aot_flask/templates/pages/geo/journal_view.html:737
-#, fuzzy
 msgid "day/night target"
-msgstr "Gece Başlangıcı"
+msgstr "gündüz/gece hedefi"
 
 #: aot_flask/templates/pages/geo/journal_view.html:483
 #: aot_flask/templates/pages/geo/journal_view.html:488
 #: aot_flask/templates/pages/geo/journal_view.html:698
 #: aot_flask/templates/pages/geo/journal_view.html:738
-#, fuzzy
 msgid "cumulative target"
-msgstr "Birikmiş ısı"
+msgstr "kümülatif hedef"
 
 #: aot_flask/templates/pages/geo/journal_view.html:502
-#, fuzzy
 msgid "No sensor for:"
-msgstr "CO2 Sensörü"
+msgstr "Şunlar için sensör yok:"
 
 #: aot_flask/templates/pages/geo/journal_view.html:510
 #: aot_flask/templates/pages/geo/journal_view.html:753
-#, fuzzy
 msgid "Water"
-msgstr "Hava Durumu"
+msgstr "Su"
 
 #: aot_flask/templates/pages/geo/journal_view.html:519
 #: aot_flask/templates/pages/geo/journal_view.html:765
-#, fuzzy
 msgid "estimated"
-msgstr "Tahmini"
+msgstr "tahmini"
 
 #: aot_flask/templates/pages/geo/journal_view.html:562
 msgid "before this journal"
 msgstr ""
 
 #: aot_flask/templates/pages/geo/journal_view.html:563
-#, fuzzy
 msgid "planned"
-msgstr "Planlayıcı"
+msgstr "planlandı"
 
 #: aot_flask/templates/pages/geo/journal_view.html:583
-#, fuzzy, python-format
+#, python-format
 msgid "Follows curve: %(name)s"
-msgstr "Bir eğriyi izler"
+msgstr "Eğriyi izler: %(name)s"
 
 #: aot_flask/templates/pages/geo/journal_view.html:587
-#, fuzzy
 msgid "No sensor for this"
-msgstr "Bu çiftlik için sezon bulunamadı."
+msgstr "Bunun için sensör yok"
 
 #: aot_flask/templates/pages/geo/journal_view.html:612
 #: aot_flask/templates/settings/general.html:376
@@ -18184,7 +18132,6 @@ msgid "Monthly"
 msgstr "Aylık"
 
 #: aot_flask/templates/pages/geo/journal_view.html:614
-#, fuzzy
 msgid "Whole period"
 msgstr "Tüm dönem"
 
@@ -18199,25 +18146,22 @@ msgid "GDD %(v)s"
 msgstr ""
 
 #: aot_flask/templates/pages/geo/journal_view.html:644
-#, fuzzy, python-format
+#, python-format
 msgid "No data recorded — %(n)s periods skipped."
-msgstr "Son %(period)s saniyede veri yok"
+msgstr "Veri kaydedilmedi — %(n)s dönem atlandı."
 
 #: aot_flask/templates/pages/geo/journal_view.html:646
-#, fuzzy
 msgid "No data recorded for this period."
-msgstr "Bu anahtar için hiçbir çiftlik döndürülmedi."
+msgstr "Bu dönem için veri kaydedilmedi."
 
 #: aot_flask/templates/pages/geo/journal_view.html:680
 #: aot_flask/templates/pages/geo/journal_view.html:710
-#, fuzzy
 msgid "usage"
-msgstr "Kullanım"
+msgstr "kullanım"
 
 #: aot_flask/templates/pages/geo/journal_view.html:690
-#, fuzzy
 msgid "varies"
-msgstr "Çeşit"
+msgstr "değişken"
 
 #: aot_flask/templates/pages/geo/journal_view.html:726
 #, python-format
@@ -18225,14 +18169,12 @@ msgid "outdoors %(out)s × cover %(tau)s"
 msgstr ""
 
 #: aot_flask/templates/pages/geo/journal_view.html:739
-#, fuzzy
 msgid "no sensor"
-msgstr "CO2 Sensörü"
+msgstr "sensör yok"
 
 #: aot_flask/templates/pages/geo/journal_view.html:863
-#, fuzzy
 msgid "Delete this journal? This cannot be undone."
-msgstr "Bu sekme ve tüm girişleri silinsin mi? Bu işlem geri alınamaz."
+msgstr "Bu günlük silinsin mi? Bu işlem geri alınamaz."
 
 #: aot_flask/templates/pages/geo/journal_view.html:869
 #: aot_flask/templates/pages/geo/journal_view.html:873
@@ -21293,14 +21235,12 @@ msgid ""
 msgstr ""
 
 #: aot_flask/templates/user_templates/widget_template_AoT_advice_body.html:22
-#, fuzzy
 msgid "Retry"
-msgstr "Geri Çek"
+msgstr "Tekrar Dene"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_advice_body.html:72
-#, fuzzy
 msgid "Teach AI"
-msgstr "ADC Kazancı"
+msgstr "AI'ya Öğret"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_advice_body.html:79
 msgid "Add a note to help the AI understand this facility..."
@@ -21310,46 +21250,38 @@ msgstr ""
 #: aot_flask/templates/user_templates/widget_template_AoT_advice_js.html:233
 #: aot_flask/templates/user_templates/widget_template_AoT_advice_js.html:242
 #: aot_flask/templates/user_templates/widget_template_AoT_advice_js.html:249
-#, fuzzy
 msgid "Updating..."
-msgstr "Başlatılıyor..."
+msgstr "Güncelleniyor..."
 
 #: aot_flask/templates/user_templates/widget_template_AoT_advice_js.html:61
-#, fuzzy
 msgid "recently"
-msgstr "Yeniden Ortala"
+msgstr "az önce"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_advice_js.html:62
-#, fuzzy
 msgid "1 hour ago"
-msgstr "1 Saat"
+msgstr "1 saat önce"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_advice_js.html:63
-#, fuzzy
 msgid "hours ago"
-msgstr "Saat"
+msgstr "saat önce"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_advice_js.html:64
-#, fuzzy
 msgid "days ago"
-msgstr "7 Gün Önce"
+msgstr "gün önce"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_advice_js.html:95
 #: aot_flask/templates/user_templates/widget_template_AoT_advice_js.html:107
-#, fuzzy
 msgid "No analysis available yet."
-msgstr "Kullanılabilir öğe yok"
+msgstr "Henüz kullanılabilir analiz yok."
 
 #: aot_flask/templates/user_templates/widget_template_AoT_advice_js.html:159
-#, fuzzy
 msgid "Changes observed:"
-msgstr "Parolayı Değiştir"
+msgstr "Gözlemlenen değişiklikler:"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_advice_js.html:166
 #: aot_flask/templates/user_templates/widget_template_AoT_advice_js.html:207
-#, fuzzy
 msgid "Confidence:"
-msgstr "Güven"
+msgstr "Güven:"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_advice_js.html:192
 msgid "The analysis may suggest the following changes occurred:"
@@ -21360,86 +21292,72 @@ msgid "Unable to load advice. Check connection."
 msgstr ""
 
 #: aot_flask/templates/user_templates/widget_template_AoT_advice_js.html:288
-#, fuzzy
 msgid "Please enter a note before submitting."
-msgstr "Lütfen bir komut girin"
+msgstr "Göndermeden önce bir not girin."
 
 #: aot_flask/templates/user_templates/widget_template_AoT_advice_js.html:304
 msgid "Note saved - will inform the next AI cycle."
 msgstr ""
 
 #: aot_flask/templates/user_templates/widget_template_AoT_advice_js.html:309
-#, fuzzy
 msgid "Submission failed."
-msgstr "Eylem başarısız oldu"
+msgstr "Gönderim başarısız oldu."
 
 #: aot_flask/templates/user_templates/widget_template_AoT_advice_js.html:314
-#, fuzzy
 msgid "Unable to save note. Please try again."
-msgstr "Kaydedilemedi. Lütfen tekrar deneyin."
+msgstr "Not kaydedilemedi. Lütfen tekrar deneyin."
 
 #: aot_flask/templates/user_templates/widget_template_AoT_ai_insight_body.html:5
 msgid "Envision a goal (e.g., Save energy in Zone A)"
 msgstr ""
 
 #: aot_flask/templates/user_templates/widget_template_AoT_ai_insight_body.html:8
-#, fuzzy
 msgid "Analyze"
-msgstr "Açı"
+msgstr "Analiz Et"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_ai_insight_body.html:23
 msgid "Ready for intelligent analysis."
 msgstr ""
 
 #: aot_flask/templates/user_templates/widget_template_AoT_ai_insight_js.html:65
-#, fuzzy
 msgid "AI analysis failed"
-msgstr "Kısmen başarısız"
+msgstr "AI analizi başarısız oldu"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_ai_insight_js.html:86
-#, fuzzy
 msgid "Execution failed"
-msgstr "Reddetme başarısız oldu"
+msgstr "Yürütme başarısız oldu"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_ai_insight_js.html:90
-#, fuzzy
 msgid "Communication error"
-msgstr "Bağlantı hatası"
+msgstr "İletişim hatası"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_camera_body.html:6
-#, fuzzy
 msgid "Connecting..."
-msgstr "Bağlantı"
+msgstr "Bağlanıyor..."
 
 #: aot_flask/templates/user_templates/widget_template_AoT_camera_js.html:13
-#, fuzzy
 msgid "LIVE"
 msgstr "Canlı"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_camera_js.html:17
-#, fuzzy
 msgid "SNAPSHOT"
-msgstr "Nokta"
+msgstr "Anlık Görüntü"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_controller_act_deact_title_bar.html:5
-#, fuzzy
 msgid "Controller Switch"
-msgstr "AoT Kontrolör Anahtarı"
+msgstr "Kontrolör Anahtarı"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_facility_body.html:26
-#, fuzzy
 msgid "Facility 3D View"
-msgstr "Tesis Kimliği"
+msgstr "Tesis 3D Görünümü"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_facility_body.html:29
-#, fuzzy
 msgid "connected"
 msgstr "Bağlı"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_facility_body.html:32
-#, fuzzy
 msgid "double layer"
-msgstr "Katmanları Sil"
+msgstr "çift katman"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_facility_body.html:39
 msgid "Right-click: rotate"
@@ -21450,12 +21368,10 @@ msgid "Left-click: pan"
 msgstr ""
 
 #: aot_flask/templates/user_templates/widget_template_AoT_facility_body.html:39
-#, fuzzy
 msgid "Scroll: zoom"
-msgstr "Yumuşak Yakınlaştırma"
+msgstr "Kaydırma: yakınlaştır"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_facility_body.html:41
-#, fuzzy
 msgid "Drag to resize"
 msgstr "Yüksekliği yeniden boyutlandırmak için sürükleyin"
 
@@ -21463,106 +21379,87 @@ msgstr "Yüksekliği yeniden boyutlandırmak için sürükleyin"
 #: aot_flask/templates/user_templates/widget_template_AoT_facility_body.html:64
 #: aot_flask/templates/user_templates/widget_template_AoT_facility_body.html:73
 #: aot_flask/templates/user_templates/widget_template_AoT_facility_body.html:82
-#, fuzzy
 msgid "set"
 msgstr "Ayarla"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_facility_body.html:61
-#, fuzzy
 msgid "Indoor temp"
 msgstr "İç Mekan Sıcaklığı"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_facility_body.html:70
-#, fuzzy
 msgid "Indoor humidity"
 msgstr "İç Mekan Nemi"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_facility_body.html:86
-#, fuzzy
 msgid "Outdoor temp"
 msgstr "Dış Mekan Sıcaklığı"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_facility_body.html:103
-#, fuzzy
 msgid "Actuator Control"
-msgstr "Aktüatör Türü"
+msgstr "Aktüatör Kontrolü"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_facility_body.html:113
-#, fuzzy
 msgid "AI Advice"
-msgstr "Öneri"
+msgstr "AI Tavsiyesi"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_facility_body.html:122
-#, fuzzy
 msgid "No facility selected. Register one at"
-msgstr "Henüz kayıtlı AI Hizmeti yok."
+msgstr "Seçili tesis yok. Şuradan bir tane kaydedin:"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_gauge_angular_configure_options.html:6
-#, fuzzy
 msgid "Section Start"
-msgstr "Seçim listesi"
+msgstr "Bölüm Başlangıcı"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_gauge_angular_configure_options.html:36
-#, fuzzy
 msgid "Saved as global band colors"
-msgstr "Ölçüm Bandı Renkleri"
+msgstr "Genel bant renkleri olarak kaydedildi"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_gauge_angular_configure_options.html:38
-#, fuzzy
 msgid "Save as Global Band Colors"
-msgstr "Ölçüm Bandı Renkleri"
+msgstr "Genel Bant Renkleri Olarak Kaydet"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_gauge_angular_configure_options.html:39
 msgid "Applies the first 5 section colors to Settings > Custom UI band colors."
 msgstr ""
 
 #: aot_flask/templates/user_templates/widget_template_AoT_graph_configure_options.html:2
-#, fuzzy
 msgid "Graph Series Options"
-msgstr "Servis Seçenekleri"
+msgstr "Grafik Seri Seçenekleri"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_graph_configure_options.html:6
-#, fuzzy
 msgid "Use Custom Colors"
-msgstr "Özel CSS"
+msgstr "Özel Renkleri Kullan"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_graph_configure_options.html:35
-#, fuzzy
 msgid "Select Color"
-msgstr "Metin Rengi"
+msgstr "Renk Seç"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_graph_configure_options.html:40
 #: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:39
-#, fuzzy
 msgid "Disable Data Grouping"
-msgstr "SPI'yi Devre Dışı Bırak"
+msgstr "Veri Gruplamayı Devre Dışı Bırak"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_graph_configure_options.html:47
 #: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:45
-#, fuzzy
 msgid "Series Type"
-msgstr "Kaynak Türü"
+msgstr "Seri Türü"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_graph_configure_options.html:50
-#, fuzzy
 msgid "Step (Left)"
-msgstr "Alan Listesi"
+msgstr "Basamak (Sol)"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_graph_configure_options.html:51
-#, fuzzy
 msgid "Step (Center)"
-msgstr "Yeniden Ortala"
+msgstr "Basamak (Orta)"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_graph_configure_options.html:52
-#, fuzzy
 msgid "Step (Right)"
-msgstr "Geceyi Gölgelendir"
+msgstr "Basamak (Sağ)"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_graph_configure_options.html:53
 #: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:52
-#, fuzzy
 msgid "Column"
-msgstr "Hacim"
+msgstr "Sütun"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_graph_configure_options.html:77
 msgid "Saved as global chart colors"
@@ -21578,9 +21475,8 @@ msgstr ""
 
 #: aot_flask/templates/user_templates/widget_template_AoT_graph_configure_options.html:84
 #: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:62
-#, fuzzy
 msgid "Y-Axis Options"
-msgstr "Kullanıcı Seçenekleri"
+msgstr "Y Ekseni Seçenekleri"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_graph_configure_options.html:88
 #: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:65
@@ -21588,32 +21484,26 @@ msgid "Enable Manual Y-Axis Min/Max"
 msgstr ""
 
 #: aot_flask/templates/user_templates/widget_template_AoT_graph_configure_options.html:97
-#, fuzzy
 msgid "Enable Align Ticks"
-msgstr "Yapay Zeka Hizmetini Etkinleştir"
+msgstr "Eksen İşaretlerini Hizalamayı Etkinleştir"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_graph_configure_options.html:106
-#, fuzzy
 msgid "Enable Start On Tick"
-msgstr "Varsayılan Başlangıç Konumu"
+msgstr "Başlangıcı İşarete Hizalamayı Etkinleştir"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_graph_configure_options.html:115
-#, fuzzy
 msgid "Enable End On Tick"
-msgstr "Lejantı Etkinleştir"
+msgstr "Bitişi İşarete Hizalamayı Etkinleştir"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_graph_configure_options.html:131
-#, fuzzy
 msgid "Y-Axis Min"
-msgstr "Y Ekseni Kayması"
+msgstr "Y Ekseni Min"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_graph_configure_options.html:135
-#, fuzzy
 msgid "Y-Axis Max"
-msgstr "Y Ekseni Kayması"
+msgstr "Y Ekseni Maks"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_map_body.html:16
-#, fuzzy
 msgid "Enter an address."
 msgstr "Adres girin."
 
@@ -21622,69 +21512,57 @@ msgid "Ask a question about this advisory (e.g., what should I do?)"
 msgstr ""
 
 #: aot_flask/templates/user_templates/widget_template_AoT_map_body.html:125
-#, fuzzy
 msgid "Ask AI what to do"
-msgstr "Ne yapılacağını girin"
+msgstr "AI'ya ne yapılacağını sor"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_map_body.html:155
 msgid "What concrete actions should I take based on this advisory?"
 msgstr ""
 
 #: aot_flask/templates/user_templates/widget_template_AoT_map_title_bar.html:14
-#, fuzzy
 msgid "Show Controls"
-msgstr "Kontrol Açıkken Durdur"
+msgstr "Kontrolleri Göster"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_map_title_bar.html:14
-#, fuzzy
 msgid "Hide Controls"
-msgstr "PID Kontrolü"
+msgstr "Kontrolleri Gizle"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_pid_body.html:284
-#, fuzzy
 msgid "PID Detail Settings"
-msgstr "PID Ayarları"
+msgstr "PID Detay Ayarları"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_pid_body.html:349
-#, fuzzy
 msgid "Gains"
-msgstr "Kazanç"
+msgstr "Kazançlar"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_pid_body.html:381
-#, fuzzy
 msgid "Timing & Limits"
-msgstr "konteyner sınırı"
+msgstr "Zamanlama ve Sınırlar"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_pid_body.html:393
 #: widgets/widget_function_status.py:59
-#, fuzzy
 msgid "Band"
-msgstr "Kum"
+msgstr "Bant"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_pid_body.html:438
-#, fuzzy
 msgid "activate"
 msgstr "Etkinleştir"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_pid_body.html:443
-#, fuzzy
 msgid "deactivate"
 msgstr "Devre Dışı Bırak"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_pid_js.html:143
-#, fuzzy
 msgid "No PID selected"
-msgstr "Seçilmedi"
+msgstr "Seçili PID yok"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_pid_js.html:150
-#, fuzzy
 msgid "No PID found or no measurement"
-msgstr "Ölçüm sayısı"
+msgstr "PID bulunamadı veya ölçüm yok"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_pid_js_ready_end.html:167
-#, fuzzy
 msgid "5m"
-msgstr "M"
+msgstr "5m"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_pid_js_ready_end.html:168
 msgid "30m"
@@ -21703,9 +21581,8 @@ msgid "1d"
 msgstr ""
 
 #: aot_flask/templates/user_templates/widget_template_AoT_pid_js_ready_end.html:201
-#, fuzzy
 msgid "Actual"
-msgstr "Aktüatör"
+msgstr "Gerçek"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_timer_body.html:165
 #: aot_flask/templates/user_templates/widget_template_AoT_timer_body.html:173
@@ -21715,65 +21592,54 @@ msgstr "Çalıştır"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_timer_body.html:179
 #: aot_flask/templates/user_templates/widget_template_AoT_timer_body.html:187
-#, fuzzy
 msgid "Rest"
-msgstr "Sıfırla"
+msgstr "Dinlenme"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_timer_body.html:192
-#, fuzzy
 msgid "Cycles"
-msgstr "Evet"
+msgstr "Döngüler"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_timer_body.html:205
 #: aot_flask/templates/user_templates/widget_template_AoT_timer_body.html:213
-#, fuzzy
 msgid "Start at"
-msgstr "Başlangıç tarihi"
+msgstr "Başlangıç Saati"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_timer_body.html:222
-#, fuzzy
 msgid "Select the Output to control in the widget options."
-msgstr "Kontrol edilecek Çıkışı seçin."
+msgstr "Kontrol edilecek Çıkışı widget seçeneklerinden seçin."
 
 #: aot_flask/templates/user_templates/widget_template_AoT_wind_angular_configure_options.html:29
-#, fuzzy, python-format
+#, python-format
 msgid "Data Position Offset (%%)"
-msgstr "Veri Konum Kaydırması (%)"
+msgstr "Veri Konum Kaydırması (%%)"
 
 #: aot_flask/templates/user_templates/widget_template_widget_calendar_body.html:12
-#, fuzzy
 msgid "Edit Schedule"
-msgstr "AI Zamanlayıcısı"
+msgstr "Zamanlamayı Düzenle"
 
 #: aot_flask/templates/user_templates/widget_template_widget_calendar_js_ready_end.html:15
-#, fuzzy
 msgid "Open in Scheduler"
-msgstr "AI Zamanlayıcısı"
+msgstr "Zamanlayıcıda Aç"
 
 #: aot_flask/templates/user_templates/widget_template_widget_calendar_js_ready_end.html:20
-#, fuzzy
 msgid "Calendars"
-msgstr "Takvim"
+msgstr "Takvimler"
 
 #: aot_flask/templates/user_templates/widget_template_widget_camera_js.html:25
-#, fuzzy
 msgid "Still"
-msgstr "Kur"
+msgstr "Sabit"
 
 #: aot_flask/templates/user_templates/widget_template_widget_camera_js.html:33
-#, fuzzy
 msgid "Max Age Exceeded"
-msgstr "Maks. Yaş (sn)"
+msgstr "Maksimum Yaş Aşıldı"
 
 #: aot_flask/templates/user_templates/widget_template_widget_camera_js.html:38
-#, fuzzy
 msgid "File Not Found"
 msgstr "Dosya bulunamadı"
 
 #: aot_flask/templates/user_templates/widget_template_widget_camera_js.html:57
-#, fuzzy
 msgid "Error Getting Image"
-msgstr "Sekme silinirken hata oluştu"
+msgstr "Görüntü alınırken hata oluştu"
 
 #: aot_flask/templates/user_templates/widget_template_widget_camera_js.html:113
 msgid "Error: HLS library failed to load"
@@ -21799,9 +21665,8 @@ msgid "Deactivated"
 msgstr "Devre dışı bırakıldı"
 
 #: aot_flask/templates/user_templates/widget_template_widget_function_status_js.html:155
-#, fuzzy
 msgid "No Function selected."
-msgstr "Seçili konum yok"
+msgstr "Seçili fonksiyon yok."
 
 #: aot_flask/templates/user_templates/widget_template_widget_function_status_js.html:169
 #: aot_flask/utils/utils_function_status.py:215
@@ -21823,14 +21688,12 @@ msgid ""
 msgstr ""
 
 #: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:4
-#, fuzzy
 msgid "Series Options"
-msgstr "Servis Seçenekleri"
+msgstr "Seri Seçenekleri"
 
 #: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:7
-#, fuzzy
 msgid "Enable Custom Colors"
-msgstr "TLS'yi Etkinleştir"
+msgstr "Özel Renkleri Etkinleştir"
 
 #: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:49
 msgid "Line (Step, Left)"
@@ -21845,29 +21708,24 @@ msgid "Line (Step, Right)"
 msgstr ""
 
 #: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:71
-#, fuzzy
 msgid "Enable Y-Axis Align Ticks"
-msgstr "X Ekseni Sıfırlamayı Etkinleştir"
+msgstr "Y Ekseni İşaretlerini Hizalamayı Etkinleştir"
 
 #: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:77
-#, fuzzy
 msgid "Enable Y-Axis Start On Tick"
-msgstr "X Ekseni Sıfırlamayı Etkinleştir"
+msgstr "Y Ekseni Başlangıcını İşarete Hizalamayı Etkinleştir"
 
 #: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:83
-#, fuzzy
 msgid "Enable Y-Axis End On Tick"
-msgstr "X Ekseni Sıfırlamayı Etkinleştir"
+msgstr "Y Ekseni Bitişini İşarete Hizalamayı Etkinleştir"
 
 #: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:101
-#, fuzzy
 msgid "Y-Axis Minimum"
-msgstr "Minimum"
+msgstr "Y Ekseni Minimumu"
 
 #: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:107
-#, fuzzy
 msgid "Y-Axis Maximum"
-msgstr "Maksimum"
+msgstr "Y Ekseni Maksimumu"
 
 #: aot_flask/templates/user_templates/widget_template_widget_indicator_js.html:42
 #: aot_flask/templates/user_templates/widget_template_widget_indicator_js.html:53
@@ -21877,21 +21735,18 @@ msgstr "Maksimum"
 #: aot_flask/templates/user_templates/widget_template_widget_measurement_multi_js.html:49
 #: aot_flask/templates/user_templates/widget_template_widget_output_pwm_slider_js.html:51
 #: aot_flask/templates/user_templates/widget_template_widget_output_pwm_slider_js.html:72
-#, fuzzy
 msgid "NO DATA"
 msgstr "Veri Yok"
 
 #: aot_flask/templates/user_templates/widget_template_widget_measurement_js.html:32
 #: aot_flask/templates/user_templates/widget_template_widget_measurement_multi_js.html:32
 #: aot_flask/templates/user_templates/widget_template_widget_output_pwm_slider_js.html:52
-#, fuzzy
 msgid "MAX AGE EXCEEDED"
-msgstr "Maks. Yaş (sn)"
+msgstr "Maksimum Yaş Aşıldı"
 
 #: aot_flask/templates/user_templates/widget_template_widget_notice_configure_options.html:2
-#, fuzzy
 msgid "Category Filter"
-msgstr "Etiket Filtresi"
+msgstr "Kategori Filtresi"
 
 #: aot_flask/templates/user_templates/widget_template_widget_notice_configure_options.html:5
 msgid ""
@@ -21904,23 +21759,19 @@ msgid "No categories yet. Set one when creating a post to filter by it here."
 msgstr ""
 
 #: aot_flask/templates/user_templates/widget_template_widget_notice_js.html:415
-#, fuzzy
 msgid "Notice updated"
-msgstr "Duyuru silindi"
+msgstr "Duyuru güncellendi"
 
 #: aot_flask/templates/user_templates/widget_template_widget_notice_js.html:415
-#, fuzzy
 msgid "Notice created"
-msgstr "Duyuru silindi"
+msgstr "Duyuru oluşturuldu"
 
 #: aot_flask/templates/user_templates/widget_template_widget_python_code_js.html:10
-#, fuzzy
 msgid "NO DATA ERROR"
-msgstr "Tarih yok"
+msgstr "Veri Yok Hatası"
 
 #: aot_flask/templates/user_templates/widget_template_widget_python_code_js.html:13
 #: aot_flask/templates/user_templates/widget_template_widget_python_code_js.html:17
-#, fuzzy
 msgid "CONNECTION ERROR"
 msgstr "Bağlantı hatası"
 
@@ -22302,29 +22153,28 @@ msgid "Function not found"
 msgstr "Fonksiyon bulunamadı"
 
 #: aot_flask/utils/utils_function_status.py:94
-#, fuzzy, python-format
+#, python-format
 msgid "%(n)s s"
-msgstr "%(n)s gün"
+msgstr "%(n)s sn"
 
 #: aot_flask/utils/utils_function_status.py:108
-#, fuzzy, python-format
+#, python-format
 msgid "%(n)s s ago"
-msgstr "%(n)s aşama"
+msgstr "%(n)s sn önce"
 
 #: aot_flask/utils/utils_function_status.py:110
-#, fuzzy, python-format
+#, python-format
 msgid "%(n)s min ago"
-msgstr "%(n)s aşama"
+msgstr "%(n)s dk önce"
 
 #: aot_flask/utils/utils_function_status.py:111
-#, fuzzy, python-format
+#, python-format
 msgid "%(n)s h ago"
-msgstr "%(n)s aşama"
+msgstr "%(n)s sa önce"
 
 #: aot_flask/utils/utils_function_status.py:117
-#, fuzzy
 msgid "Paused — no actuators registered"
-msgstr "Kayıtlı görev yok."
+msgstr "Duraklatıldı — kayıtlı aktüatör yok"
 
 #: aot_flask/utils/utils_function_status.py:118
 msgid "Paused — outside the operating time window"
@@ -22336,29 +22186,28 @@ msgid "Paused (%(reason)s)"
 msgstr ""
 
 #: aot_flask/utils/utils_function_status.py:132
-#, fuzzy
 msgid "Waiting for the first control cycle."
-msgstr "İlk eylemden önceki bekleme süresi"
+msgstr "İlk kontrol döngüsü bekleniyor."
 
 #: aot_flask/utils/utils_function_status.py:140
-#, fuzzy, python-format
+#, python-format
 msgid "Mode: %(modes)s"
-msgstr "Etiketler: %(names)s"
+msgstr "Mod: %(modes)s"
 
 #: aot_flask/utils/utils_function_status.py:155
-#, fuzzy, python-format
+#, python-format
 msgid "Environment: %(values)s"
-msgstr "Ortam Değişkenleri"
+msgstr "Ortam: %(values)s"
 
 #: aot_flask/utils/utils_function_status.py:163
-#, fuzzy, python-format
+#, python-format
 msgid "Deviation: %(values)s"
-msgstr "Süre (Dakika)"
+msgstr "Sapma: %(values)s"
 
 #: aot_flask/utils/utils_function_status.py:171
-#, fuzzy, python-format
+#, python-format
 msgid "Actuators: %(values)s"
-msgstr "Etiketler: %(names)s"
+msgstr "Aktüatörler: %(values)s"
 
 #: aot_flask/utils/utils_function_status.py:176
 #, python-format
@@ -22371,9 +22220,8 @@ msgid "Safety gate: %(reason)s — control stopped"
 msgstr ""
 
 #: aot_flask/utils/utils_function_status.py:187
-#, fuzzy
 msgid "triggered"
-msgstr "Tetikleyici"
+msgstr "tetiklendi"
 
 #: aot_flask/utils/utils_function_status.py:189
 #, python-format
@@ -22401,39 +22249,34 @@ msgid "Last cycle: %(when)s"
 msgstr ""
 
 #: aot_flask/utils/utils_function_status.py:213
-#, fuzzy
 msgid "Idle"
-msgstr "Gizle"
+msgstr "Boşta"
 
 #: aot_flask/utils/utils_function_status.py:214
-#, fuzzy
 msgid "Outside the time window"
-msgstr "Zaman Penceresini Etkinleştir"
+msgstr "Zaman penceresi dışında"
 
 #: aot_flask/utils/utils_function_status.py:216
-#, fuzzy
 msgid "Initializing"
-msgstr "AI Kullanımı"
+msgstr "Başlatılıyor"
 
 #: aot_flask/utils/utils_function_status.py:217
-#, fuzzy
 msgid "Standby"
-msgstr "Kum"
+msgstr "Bekleme modu"
 
 #: aot_flask/utils/utils_function_status.py:218
-#, fuzzy
 msgid "Ready"
-msgstr "Kırmızı"
+msgstr "Hazır"
 
 #: aot_flask/utils/utils_function_status.py:225
-#, fuzzy, python-format
+#, python-format
 msgid "Waiting (%(time)s)"
-msgstr "Fonksiyon (%(type)s)"
+msgstr "Bekliyor (%(time)s)"
 
 #: aot_flask/utils/utils_function_status.py:230
-#, fuzzy, python-format
+#, python-format
 msgid "Sequence: %(state)s"
-msgstr "Başarılı: %(action)s"
+msgstr "Sekans: %(state)s"
 
 #: aot_flask/utils/utils_function_status.py:236
 #, python-format
@@ -22456,14 +22299,14 @@ msgid "Steps: %(running)s of %(total)s running"
 msgstr ""
 
 #: aot_flask/utils/utils_function_status.py:257
-#, fuzzy, python-format
+#, python-format
 msgid "Conditional: %(state)s"
-msgstr "Koşullu"
+msgstr "Koşullu: %(state)s"
 
 #: aot_flask/utils/utils_function_status.py:262
-#, fuzzy, python-format
+#, python-format
 msgid "Period: %(period)s"
-msgstr "Periyot: %(label)s"
+msgstr "Periyot: %(period)s"
 
 #: aot_flask/utils/utils_function_status.py:266
 #, python-format
@@ -22479,9 +22322,8 @@ msgid "The last check ran no action."
 msgstr ""
 
 #: aot_flask/utils/utils_function_status.py:270
-#, fuzzy
 msgid "Not checked yet."
-msgstr "Henüz bir şey kaydedilmedi."
+msgstr "Henüz kontrol edilmedi."
 
 #: aot_flask/utils/utils_function_status.py:274
 #, python-format
@@ -29664,9 +29506,8 @@ msgid "Input value validity duration"
 msgstr "Giriş değeri geçerlilik süresi"
 
 #: widgets/widget_trigger_sequence.py:539
-#, fuzzy
 msgid "Continue where it stopped"
-msgstr "Yakalama durduruldu"
+msgstr "Kaldığı yerden devam et"
 
 #: widgets/widget_trigger_sequence.py:540
 msgid "Start from the beginning"
@@ -30217,9 +30058,8 @@ msgid ""
 msgstr "Mikro fıskiyeleri nem için de kullanın. Sulamanız onlarsa kapatın."
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:673
-#, fuzzy
 msgid "Enable Sunburn/Evening Protection"
-msgstr "Sisleme Güneş Yanığı Koruması"
+msgstr "Güneş Yanığı/Akşam Korumasını Etkinleştir"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:675
 msgid ""

@@ -4425,11 +4425,10 @@ msgid "Group"
 msgstr "グループ"
 
 #: aot_flask/routes_function.py:2253
-#, fuzzy
 msgid ""
 "Saved, but the daemon could not be reached — the sequence may still be "
 "running. Check the daemon."
-msgstr "保存しましたが、デーモンへ通知できませんでした。新しいスケジュールはデーモンの再起動後に反映されます。"
+msgstr "保存しましたが、デーモンに接続できませんでした。シーケンスがまだ動作している可能性があります。デーモンを確認してください。"
 
 #: aot_flask/routes_function.py:2263
 msgid "The sequence is still running — the daemon did not apply the change."
@@ -4505,9 +4504,8 @@ msgid "No devices to inspect"
 msgstr "点検するデバイスがありません"
 
 #: aot_flask/routes_geo_journal.py:132
-#, fuzzy
 msgid "Could not find that area."
-msgstr "ボタンIDが見つかりませんでした。"
+msgstr "その区域が見つかりませんでした。"
 
 #: aot_flask/routes_geo_journal.py:154
 msgid ""
@@ -4516,20 +4514,17 @@ msgid ""
 msgstr ""
 
 #: aot_flask/routes_geo_journal.py:223 aot_flask/routes_geo_journal.py:451
-#, fuzzy
 msgid "Permission Denied"
 msgstr "権限が拒否されました"
 
 #: aot_flask/routes_geo_journal.py:243
-#, fuzzy
 msgid "Pick at least one measurement."
-msgstr "測定値を保存"
+msgstr "測定項目を1つ以上選んでください。"
 
 #: aot_flask/routes_geo_journal.py:246 aot_flask/routes_geo_journal.py:248
 #: aot_flask/routes_geo_journal.py:499
-#, fuzzy
 msgid "Select what the journal is about."
-msgstr "このOutputが担う役割を選択してください。"
+msgstr "日誌の対象を選択してください。"
 
 #: aot_flask/routes_geo_journal.py:250
 msgid "Enter both a start and an end date."
@@ -4544,9 +4539,8 @@ msgid "Could not find what this journal is about."
 msgstr ""
 
 #: aot_flask/routes_geo_journal.py:266
-#, fuzzy
 msgid "Could not read this target."
-msgstr "目標を取り込めませんでした。"
+msgstr "この対象を読み込めませんでした。"
 
 #: aot_flask/routes_geo_journal.py:271
 #, python-format
@@ -4571,14 +4565,12 @@ msgid "This journal is still being generated."
 msgstr ""
 
 #: aot_flask/routes_geo_journal.py:456
-#, fuzzy
 msgid "Journal not found."
-msgstr "ソースが見つかりません。"
+msgstr "日誌が見つかりません。"
 
 #: aot_flask/routes_geo_journal.py:470
-#, fuzzy
 msgid "Could not delete this journal."
-msgstr "現在の状態を読み取れませんでした。"
+msgstr "この日誌を削除できませんでした。"
 
 #: aot_flask/routes_geo_plot.py:184
 #: aot_flask/templates/pages/ai/components/onboarding_flow.html:67
@@ -9160,9 +9152,8 @@ msgstr "区画"
 #: aot_flask/templates/pages/geo/journal.html:5
 #: aot_flask/templates/pages/geo/journal.html:57
 #: aot_flask/templates/pages/geo/journal_view.html:3
-#, fuzzy
 msgid "Journals"
-msgstr "原文"
+msgstr "日誌"
 
 #: aot_flask/templates/layout.html:683
 #: aot_flask/templates/layout_default.html:683
@@ -17103,9 +17094,8 @@ msgid ""
 msgstr ""
 
 #: aot_flask/templates/pages/geo/journal.html:77
-#, fuzzy
 msgid "Change"
-msgstr "変更履歴"
+msgstr "変更"
 
 #: aot_flask/templates/pages/geo/journal.html:80
 msgid "Search by crop, variety, name, zone…"
@@ -17120,38 +17110,32 @@ msgid "Or make a journal for a whole site or zone"
 msgstr ""
 
 #: aot_flask/templates/pages/geo/journal.html:113
-#, fuzzy
 msgid "Site or zone"
-msgstr "筆地・区域"
+msgstr "サイトまたはゾーン"
 
 #: aot_flask/templates/pages/geo/journal.html:116
-#, fuzzy
 msgid "Select…"
-msgstr "Select"
+msgstr "選択…"
 
 #: aot_flask/templates/pages/geo/journal.html:118
-#, fuzzy
 msgid "Unmapped"
-msgstr "未指定"
+msgstr "地図なし"
 
 #: aot_flask/templates/pages/geo/journal.html:133
 msgid "The whole site or zone is covered, including every plot inside it."
 msgstr ""
 
 #: aot_flask/templates/pages/geo/journal.html:147
-#, fuzzy
 msgid "Measurements to include"
-msgstr "測定ID"
+msgstr "含める測定項目"
 
 #: aot_flask/templates/pages/geo/journal.html:158
-#, fuzzy
 msgid "Generate journal"
-msgstr "サムネイルを再生成"
+msgstr "日誌を生成"
 
 #: aot_flask/templates/pages/geo/journal.html:161
-#, fuzzy
 msgid "Saved journals"
-msgstr "名前を保存"
+msgstr "保存済みの日誌"
 
 #: aot_flask/templates/pages/geo/journal.html:165
 #: aot_flask/templates/pages/geo/plots.html:53
@@ -17165,22 +17149,19 @@ msgid "Untitled"
 msgstr "無題"
 
 #: aot_flask/templates/pages/geo/journal.html:174
-#, fuzzy
 msgid "Generating…"
-msgstr "一般設定"
+msgstr "生成中…"
 
 #: aot_flask/templates/pages/geo/journal.html:176
-#, fuzzy
 msgid "Generation failed"
-msgstr "操作に失敗しました"
+msgstr "生成に失敗しました"
 
 #: aot_flask/templates/pages/geo/journal_view.html:6
 #: aot_flask/templates/pages/geo/journal_view.html:177
 #: aot_flask/templates/pages/geo/journal_view.html:184
 #: aot_flask/templates/pages/geo/journal_view.html:198
-#, fuzzy
 msgid "Journal"
-msgstr "原文"
+msgstr "日誌"
 
 #: aot_flask/templates/pages/geo/journal_view.html:180
 msgid ""
@@ -17188,9 +17169,8 @@ msgid ""
 msgstr ""
 
 #: aot_flask/templates/pages/geo/journal_view.html:186
-#, fuzzy
 msgid "This journal could not be generated."
-msgstr "一部の機能を開始できませんでした。"
+msgstr "この日誌を生成できませんでした。"
 
 #: aot_flask/templates/pages/geo/journal_view.html:204
 #: aot_flask/templates/pages/geo/journal_view.html:368
@@ -17205,19 +17185,16 @@ msgstr "面積"
 
 #: aot_flask/templates/pages/geo/journal_view.html:221
 #: aot_flask/templates/pages/geo/journal_view.html:407
-#, fuzzy
 msgid "Time zone"
 msgstr "タイムゾーン"
 
 #: aot_flask/templates/pages/geo/journal_view.html:226
-#, fuzzy
 msgid "Generated"
-msgstr "生成"
+msgstr "生成日時"
 
 #: aot_flask/templates/pages/geo/journal_view.html:238
-#, fuzzy
 msgid "About this document"
-msgstr "関連ドキュメント"
+msgstr "この文書について"
 
 #: aot_flask/templates/pages/geo/journal_view.html:244
 #: aot_flask/templates/pages/geo/journal_view.html:326
@@ -17255,15 +17232,14 @@ msgstr "%(n)s段階"
 #: aot_flask/templates/pages/geo/journal_view.html:257
 #: aot_flask/templates/pages/geo/journal_view.html:330
 #: aot_flask/templates/pages/geo/journal_view.html:602
-#, fuzzy
 msgid "Daily log"
-msgstr "日次"
+msgstr "日次記録"
 
 #: aot_flask/templates/pages/geo/journal_view.html:255
 #: aot_flask/templates/pages/geo/journal_view.html:258
-#, fuzzy, python-format
+#, python-format
 msgid "%(n)s periods"
-msgstr "%(n)s秒"
+msgstr "%(n)s期間"
 
 #: aot_flask/templates/pages/geo/journal_view.html:262
 msgid "How to read this"
@@ -17292,9 +17268,8 @@ msgid ""
 msgstr ""
 
 #: aot_flask/templates/pages/geo/journal_view.html:270
-#, fuzzy
 msgid "Target and Δ"
-msgstr "ターゲットID"
+msgstr "目標とΔ"
 
 #: aot_flask/templates/pages/geo/journal_view.html:271
 msgid ""
@@ -17307,7 +17282,6 @@ msgstr ""
 #: aot_flask/templates/pages/geo/journal_view.html:273
 #: aot_flask/templates/pages/geo/journal_view.html:510
 #: aot_flask/templates/pages/geo/journal_view.html:753
-#, fuzzy
 msgid "Runtime"
 msgstr "運転時間"
 
@@ -17330,14 +17304,12 @@ msgid "Terms used here"
 msgstr "この文書で使う用語"
 
 #: aot_flask/templates/pages/geo/journal_view.html:295
-#, fuzzy
 msgid "Where the numbers come from"
-msgstr "目標はどこで決まるか"
+msgstr "数値の出どころ"
 
 #: aot_flask/templates/pages/geo/journal_view.html:297
-#, fuzzy
 msgid "Source"
-msgstr "リソース"
+msgstr "出典"
 
 #: aot_flask/templates/pages/geo/journal_view.html:298
 msgid ""
@@ -17346,7 +17318,6 @@ msgid ""
 msgstr ""
 
 #: aot_flask/templates/pages/geo/journal_view.html:299
-#, fuzzy
 msgid "Snapshot"
 msgstr "スナップショット"
 
@@ -17365,36 +17336,31 @@ msgid "Print (save as PDF)"
 msgstr ""
 
 #: aot_flask/templates/pages/geo/journal_view.html:315
-#, fuzzy
 msgid "Markdown"
-msgstr "下"
+msgstr "Markdown"
 
 #: aot_flask/templates/pages/geo/journal_view.html:316
-#, fuzzy
 msgid "ODT"
-msgstr "10月"
+msgstr "ODT"
 
 #: aot_flask/templates/pages/geo/journal_view.html:317
 msgid "CSV"
 msgstr ""
 
 #: aot_flask/templates/pages/geo/journal_view.html:318
-#, fuzzy
 msgid "JSON"
-msgstr "オン"
+msgstr "JSON"
 
 #: aot_flask/templates/pages/geo/journal_view.html:331
 #: aot_flask/templates/pages/geo/journal_view.html:818
-#, fuzzy
 msgid "Additional notes"
-msgstr "追加情報"
+msgstr "追加ノート"
 
 #: aot_flask/templates/pages/geo/journal_view.html:356
 msgid "Item"
 msgstr "品目"
 
 #: aot_flask/templates/pages/geo/journal_view.html:387
-#, fuzzy
 msgid "Growing degree days"
 msgstr "積算温度(GDD)"
 
@@ -17404,103 +17370,91 @@ msgid "this journal: %(v)s"
 msgstr ""
 
 #: aot_flask/templates/pages/geo/journal_view.html:392
-#, fuzzy, python-format
+#, python-format
 msgid "base %(t)s°"
-msgstr "%(n)s日目"
+msgstr "基準 %(t)s°"
 
 #: aot_flask/templates/pages/geo/journal_view.html:394
-#, fuzzy, python-format
+#, python-format
 msgid "%(p)s%% of days measured"
-msgstr "%(n)s日超過"
+msgstr "測定日数 %(p)s%%"
 
 #: aot_flask/templates/pages/geo/journal_view.html:398
-#, fuzzy
 msgid "No program attached"
 msgstr "プログラムなし"
 
 #: aot_flask/templates/pages/geo/journal_view.html:399
-#, fuzzy
 msgid "The program has no base temperature"
 msgstr "プログラムに基準温度がありません。"
 
 #: aot_flask/templates/pages/geo/journal_view.html:400
-#, fuzzy
 msgid "Not enough measured days"
 msgstr "温度履歴が不足"
 
 #: aot_flask/templates/pages/geo/journal_view.html:433
-#, fuzzy, python-format
+#, python-format
 msgid "%(n)s days in this journal"
-msgstr "%(n)s 日超過"
+msgstr "この日誌内で%(n)s日間"
 
 #: aot_flask/templates/pages/geo/journal_view.html:448
 #: aot_flask/templates/pages/geo/journal_view.html:664
-#, fuzzy
 msgid "Min"
-msgstr "分"
+msgstr "最小"
 
 #: aot_flask/templates/pages/geo/journal_view.html:448
 #: aot_flask/templates/pages/geo/journal_view.html:664
-#, fuzzy
 msgid "Max"
-msgstr "最大:"
+msgstr "最大"
 
 #: aot_flask/templates/pages/geo/journal_view.html:448
 #: aot_flask/templates/pages/geo/journal_view.html:664
-#, fuzzy
 msgid "Avg"
-msgstr "タグ"
+msgstr "平均"
 
 #: aot_flask/templates/pages/geo/journal_view.html:458
 #: aot_flask/templates/pages/geo/journal_view.html:677
-#, fuzzy, python-format
+#, python-format
 msgid "%(n)s sensors"
-msgstr "%(n)s段階"
+msgstr "センサー%(n)s台"
 
 #: aot_flask/templates/pages/geo/journal_view.html:471
 #: aot_flask/templates/pages/geo/journal_view.html:685
 #: aot_flask/templates/pages/geo/journal_view.html:720
-#, fuzzy
 msgid "partial coverage"
-msgstr "一部のみ制御"
+msgstr "一部のみ測定"
 
 #: aot_flask/templates/pages/geo/journal_view.html:474
 #: aot_flask/templates/pages/geo/journal_view.html:689
 #: aot_flask/templates/pages/geo/journal_view.html:732
-#, fuzzy, python-format
+#, python-format
 msgid "curve: %(name)s"
-msgstr "交換: %(name)s"
+msgstr "カーブ: %(name)s"
 
 #: aot_flask/templates/pages/geo/journal_view.html:482
 #: aot_flask/templates/pages/geo/journal_view.html:487
 #: aot_flask/templates/pages/geo/journal_view.html:697
 #: aot_flask/templates/pages/geo/journal_view.html:737
-#, fuzzy
 msgid "day/night target"
-msgstr "目標との差"
+msgstr "昼夜別目標"
 
 #: aot_flask/templates/pages/geo/journal_view.html:483
 #: aot_flask/templates/pages/geo/journal_view.html:488
 #: aot_flask/templates/pages/geo/journal_view.html:698
 #: aot_flask/templates/pages/geo/journal_view.html:738
-#, fuzzy
 msgid "cumulative target"
-msgstr "固定目標値"
+msgstr "累積目標"
 
 #: aot_flask/templates/pages/geo/journal_view.html:502
-#, fuzzy
 msgid "No sensor for:"
-msgstr "近くにセンサーがありません"
+msgstr "センサーなし:"
 
 #: aot_flask/templates/pages/geo/journal_view.html:510
 #: aot_flask/templates/pages/geo/journal_view.html:753
-#, fuzzy
 msgid "Water"
-msgstr "天気"
+msgstr "水量"
 
 #: aot_flask/templates/pages/geo/journal_view.html:519
 #: aot_flask/templates/pages/geo/journal_view.html:765
-#, fuzzy
 msgid "estimated"
 msgstr "推定"
 
@@ -17509,19 +17463,17 @@ msgid "before this journal"
 msgstr ""
 
 #: aot_flask/templates/pages/geo/journal_view.html:563
-#, fuzzy
 msgid "planned"
 msgstr "予定"
 
 #: aot_flask/templates/pages/geo/journal_view.html:583
-#, fuzzy, python-brace-format, python-format
+#, python-brace-format, python-format
 msgid "Follows curve: %(name)s"
-msgstr "カーブに従う: {name}"
+msgstr "カーブに従う: %(name)s"
 
 #: aot_flask/templates/pages/geo/journal_view.html:587
-#, fuzzy
 msgid "No sensor for this"
-msgstr "測定値なし"
+msgstr "センサーなし"
 
 #: aot_flask/templates/pages/geo/journal_view.html:612
 #: aot_flask/templates/settings/general.html:376
@@ -17534,40 +17486,36 @@ msgid "Monthly"
 msgstr "毎月"
 
 #: aot_flask/templates/pages/geo/journal_view.html:614
-#, fuzzy
 msgid "Whole period"
-msgstr "全体期間"
+msgstr "全期間"
 
 #: aot_flask/templates/pages/geo/journal_view.html:631
-#, fuzzy, python-format
+#, python-format
 msgid "daylight %(h)s h"
-msgstr "通常 %(h)s時間"
+msgstr "日照 %(h)s時間"
 
 #: aot_flask/templates/pages/geo/journal_view.html:633
-#, fuzzy, python-format
+#, python-format
 msgid "GDD %(v)s"
-msgstr "%(n)s日目"
+msgstr "GDD %(v)s"
 
 #: aot_flask/templates/pages/geo/journal_view.html:644
-#, fuzzy, python-format
+#, python-format
 msgid "No data recorded — %(n)s periods skipped."
-msgstr "直近 %(period)s 秒間のデータがありません"
+msgstr "データが記録されていません — %(n)s期間をスキップしました。"
 
 #: aot_flask/templates/pages/geo/journal_view.html:646
-#, fuzzy
 msgid "No data recorded for this period."
-msgstr "このキーでは農場が返ってきませんでした。"
+msgstr "この期間のデータは記録されていません。"
 
 #: aot_flask/templates/pages/geo/journal_view.html:680
 #: aot_flask/templates/pages/geo/journal_view.html:710
-#, fuzzy
 msgid "usage"
 msgstr "使用量"
 
 #: aot_flask/templates/pages/geo/journal_view.html:690
-#, fuzzy
 msgid "varies"
-msgstr "品種"
+msgstr "変動"
 
 #: aot_flask/templates/pages/geo/journal_view.html:726
 #, python-format
@@ -17575,14 +17523,12 @@ msgid "outdoors %(out)s × cover %(tau)s"
 msgstr "屋外 %(out)s × 被覆 %(tau)s"
 
 #: aot_flask/templates/pages/geo/journal_view.html:739
-#, fuzzy
 msgid "no sensor"
-msgstr "CO2センサー"
+msgstr "センサーなし"
 
 #: aot_flask/templates/pages/geo/journal_view.html:863
-#, fuzzy
 msgid "Delete this journal? This cannot be undone."
-msgstr "このタブとすべての項目を削除しますか? この操作は元に戻せません。"
+msgstr "この日誌を削除しますか? この操作は元に戻せません。"
 
 #: aot_flask/templates/pages/geo/journal_view.html:869
 #: aot_flask/templates/pages/geo/journal_view.html:873
@@ -27999,9 +27945,8 @@ msgid "Input value validity duration"
 msgstr "入力値有効期間"
 
 #: widgets/widget_trigger_sequence.py:539
-#, fuzzy
 msgid "Continue where it stopped"
-msgstr "キャプチャを停止しました"
+msgstr "停止した位置から再開"
 
 #: widgets/widget_trigger_sequence.py:540
 msgid "Start from the beginning"

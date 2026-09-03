@@ -4653,13 +4653,10 @@ msgid "Group"
 msgstr "Група"
 
 #: aot_flask/routes_function.py:2253
-#, fuzzy
 msgid ""
 "Saved, but the daemon could not be reached — the sequence may still be "
 "running. Check the daemon."
-msgstr ""
-"Сачувано, али демон није могао бити обавештен. Нови распоред ступа на "
-"снагу након поновног покретања демона."
+msgstr "Сачувано, али демон није доступан — секвенца можда и даље ради. Проверите демон."
 
 #: aot_flask/routes_function.py:2263
 msgid "The sequence is still running — the daemon did not apply the change."
@@ -4735,9 +4732,8 @@ msgid "No devices to inspect"
 msgstr "Нема уређаја за преглед"
 
 #: aot_flask/routes_geo_journal.py:132
-#, fuzzy
 msgid "Could not find that area."
-msgstr "ID дугмета није пронађен."
+msgstr "Тражено подручје није пронађено."
 
 #: aot_flask/routes_geo_journal.py:154
 msgid ""
@@ -4746,20 +4742,17 @@ msgid ""
 msgstr ""
 
 #: aot_flask/routes_geo_journal.py:223 aot_flask/routes_geo_journal.py:451
-#, fuzzy
 msgid "Permission Denied"
 msgstr "Приступ одбијен"
 
 #: aot_flask/routes_geo_journal.py:243
-#, fuzzy
 msgid "Pick at least one measurement."
-msgstr "Сачувај мерење"
+msgstr "Изаберите бар једно мерење."
 
 #: aot_flask/routes_geo_journal.py:246 aot_flask/routes_geo_journal.py:248
 #: aot_flask/routes_geo_journal.py:499
-#, fuzzy
 msgid "Select what the journal is about."
-msgstr "Изаберите улогу коју овај излаз обавља."
+msgstr "Изаберите на шта се дневник односи."
 
 #: aot_flask/routes_geo_journal.py:250
 msgid "Enter both a start and an end date."
@@ -4774,9 +4767,8 @@ msgid "Could not find what this journal is about."
 msgstr ""
 
 #: aot_flask/routes_geo_journal.py:266
-#, fuzzy
 msgid "Could not read this target."
-msgstr "API кључ за брисање није пронађен."
+msgstr "Није могуће очитати изабрани циљ."
 
 #: aot_flask/routes_geo_journal.py:271
 #, python-format
@@ -4801,14 +4793,12 @@ msgid "This journal is still being generated."
 msgstr ""
 
 #: aot_flask/routes_geo_journal.py:456
-#, fuzzy
 msgid "Journal not found."
-msgstr "Извор није пронађен."
+msgstr "Дневник није пронађен."
 
 #: aot_flask/routes_geo_journal.py:470
-#, fuzzy
 msgid "Could not delete this journal."
-msgstr "Обрисати овај извор?"
+msgstr "Није могуће обрисати овај дневник."
 
 #: aot_flask/routes_geo_plot.py:184
 #: aot_flask/templates/pages/ai/components/onboarding_flow.html:67
@@ -9439,9 +9429,8 @@ msgstr "Парцеле"
 #: aot_flask/templates/pages/geo/journal.html:5
 #: aot_flask/templates/pages/geo/journal.html:57
 #: aot_flask/templates/pages/geo/journal_view.html:3
-#, fuzzy
 msgid "Journals"
-msgstr "Оригинал"
+msgstr "Дневници"
 
 #: aot_flask/templates/layout.html:683
 #: aot_flask/templates/layout_default.html:683
@@ -17722,16 +17711,14 @@ msgid ""
 msgstr ""
 
 #: aot_flask/templates/pages/geo/journal.html:77
-#, fuzzy
 msgid "Change"
-msgstr "Дневник измена"
+msgstr "Промени"
 
 #: aot_flask/templates/pages/geo/journal.html:80
 msgid "Search by crop, variety, name, zone…"
 msgstr ""
 
 #: aot_flask/templates/pages/geo/journal.html:94
-#, fuzzy
 msgid "End date"
 msgstr "Датум завршетка"
 
@@ -17740,38 +17727,32 @@ msgid "Or make a journal for a whole site or zone"
 msgstr ""
 
 #: aot_flask/templates/pages/geo/journal.html:113
-#, fuzzy
 msgid "Site or zone"
-msgstr "Подели зоне"
+msgstr "Локација или зона"
 
 #: aot_flask/templates/pages/geo/journal.html:116
-#, fuzzy
 msgid "Select…"
-msgstr "Изабери"
+msgstr "Изабери…"
 
 #: aot_flask/templates/pages/geo/journal.html:118
-#, fuzzy
 msgid "Unmapped"
-msgstr "Без назива"
+msgstr "Без мапе"
 
 #: aot_flask/templates/pages/geo/journal.html:133
 msgid "The whole site or zone is covered, including every plot inside it."
 msgstr ""
 
 #: aot_flask/templates/pages/geo/journal.html:147
-#, fuzzy
 msgid "Measurements to include"
-msgstr "ID мерења"
+msgstr "Мерења за укључивање"
 
 #: aot_flask/templates/pages/geo/journal.html:158
-#, fuzzy
 msgid "Generate journal"
-msgstr "Генериши видео"
+msgstr "Направи дневник"
 
 #: aot_flask/templates/pages/geo/journal.html:161
-#, fuzzy
 msgid "Saved journals"
-msgstr "Сачувај назив"
+msgstr "Сачувани дневници"
 
 #: aot_flask/templates/pages/geo/journal.html:165
 #: aot_flask/templates/pages/geo/plots.html:53
@@ -17785,22 +17766,19 @@ msgid "Untitled"
 msgstr "Без наслова"
 
 #: aot_flask/templates/pages/geo/journal.html:174
-#, fuzzy
 msgid "Generating…"
-msgstr "Општа подешавања"
+msgstr "Генерисање…"
 
 #: aot_flask/templates/pages/geo/journal.html:176
-#, fuzzy
 msgid "Generation failed"
-msgstr "Радња није успела"
+msgstr "Генерисање није успело"
 
 #: aot_flask/templates/pages/geo/journal_view.html:6
 #: aot_flask/templates/pages/geo/journal_view.html:177
 #: aot_flask/templates/pages/geo/journal_view.html:184
 #: aot_flask/templates/pages/geo/journal_view.html:198
-#, fuzzy
 msgid "Journal"
-msgstr "Оригинал"
+msgstr "Дневник"
 
 #: aot_flask/templates/pages/geo/journal_view.html:180
 msgid ""
@@ -17815,37 +17793,31 @@ msgstr ""
 #: aot_flask/templates/pages/geo/journal_view.html:204
 #: aot_flask/templates/pages/geo/journal_view.html:368
 #: aot_flask/templates/pages/geo/journal_view.html:561
-#, fuzzy
 msgid "ongoing"
-msgstr "Отвор"
+msgstr "у току"
 
 #: aot_flask/templates/pages/geo/journal_view.html:219
 #: aot_flask/templates/pages/geo/journal_view.html:378
-#, fuzzy
 msgid "Area"
-msgstr "Ретко"
+msgstr "Површина"
 
 #: aot_flask/templates/pages/geo/journal_view.html:221
 #: aot_flask/templates/pages/geo/journal_view.html:407
-#, fuzzy
 msgid "Time zone"
 msgstr "Временска зона"
 
 #: aot_flask/templates/pages/geo/journal_view.html:226
-#, fuzzy
 msgid "Generated"
-msgstr "Генериши"
+msgstr "Генерисано"
 
 #: aot_flask/templates/pages/geo/journal_view.html:238
-#, fuzzy
 msgid "About this document"
-msgstr "Повезани документи"
+msgstr "О овом документу"
 
 #: aot_flask/templates/pages/geo/journal_view.html:244
 #: aot_flask/templates/pages/geo/journal_view.html:326
-#, fuzzy
 msgid "Contents"
-msgstr "садржај"
+msgstr "Садржај"
 
 #: aot_flask/templates/pages/geo/journal_view.html:246
 msgid "Each section below starts on a new page, in this order."
@@ -17878,15 +17850,14 @@ msgstr "%(n)s фаза"
 #: aot_flask/templates/pages/geo/journal_view.html:257
 #: aot_flask/templates/pages/geo/journal_view.html:330
 #: aot_flask/templates/pages/geo/journal_view.html:602
-#, fuzzy
 msgid "Daily log"
-msgstr "Дневно"
+msgstr "Дневни преглед"
 
 #: aot_flask/templates/pages/geo/journal_view.html:255
 #: aot_flask/templates/pages/geo/journal_view.html:258
-#, fuzzy, python-format
+#, python-format
 msgid "%(n)s periods"
-msgstr "%(n)s дана"
+msgstr "%(n)s периода"
 
 #: aot_flask/templates/pages/geo/journal_view.html:262
 msgid "How to read this"
@@ -17915,9 +17886,8 @@ msgid ""
 msgstr ""
 
 #: aot_flask/templates/pages/geo/journal_view.html:270
-#, fuzzy
 msgid "Target and Δ"
-msgstr "ID циља"
+msgstr "Циљ и Δ"
 
 #: aot_flask/templates/pages/geo/journal_view.html:271
 msgid ""
@@ -17930,9 +17900,8 @@ msgstr ""
 #: aot_flask/templates/pages/geo/journal_view.html:273
 #: aot_flask/templates/pages/geo/journal_view.html:510
 #: aot_flask/templates/pages/geo/journal_view.html:753
-#, fuzzy
 msgid "Runtime"
-msgstr "Време"
+msgstr "Време рада"
 
 #: aot_flask/templates/pages/geo/journal_view.html:274
 msgid "Hours a device was on during the period, read from its first channel."
@@ -17949,18 +17918,16 @@ msgid ""
 msgstr ""
 
 #: aot_flask/templates/pages/geo/journal_view.html:286
-#, fuzzy
 msgid "Terms used here"
-msgstr "Услови коришћења"
+msgstr "Појмови коришћени овде"
 
 #: aot_flask/templates/pages/geo/journal_view.html:295
 msgid "Where the numbers come from"
 msgstr ""
 
 #: aot_flask/templates/pages/geo/journal_view.html:297
-#, fuzzy
 msgid "Source"
-msgstr "Ресурси"
+msgstr "Извор"
 
 #: aot_flask/templates/pages/geo/journal_view.html:298
 msgid ""
@@ -17969,9 +17936,8 @@ msgid ""
 msgstr ""
 
 #: aot_flask/templates/pages/geo/journal_view.html:299
-#, fuzzy
 msgid "Snapshot"
-msgstr "Тачкасто"
+msgstr "Снимак"
 
 #: aot_flask/templates/pages/geo/journal_view.html:300
 msgid ""
@@ -17988,34 +17954,29 @@ msgid "Print (save as PDF)"
 msgstr ""
 
 #: aot_flask/templates/pages/geo/journal_view.html:315
-#, fuzzy
 msgid "Markdown"
-msgstr "Доле"
+msgstr "Markdown"
 
 #: aot_flask/templates/pages/geo/journal_view.html:316
-#, fuzzy
 msgid "ODT"
-msgstr "AoT"
+msgstr "ODT"
 
 #: aot_flask/templates/pages/geo/journal_view.html:317
 msgid "CSV"
 msgstr ""
 
 #: aot_flask/templates/pages/geo/journal_view.html:318
-#, fuzzy
 msgid "JSON"
-msgstr "Укључено"
+msgstr "JSON"
 
 #: aot_flask/templates/pages/geo/journal_view.html:331
 #: aot_flask/templates/pages/geo/journal_view.html:818
-#, fuzzy
 msgid "Additional notes"
-msgstr "Додатне функције"
+msgstr "Додатне белешке"
 
 #: aot_flask/templates/pages/geo/journal_view.html:356
-#, fuzzy
 msgid "Item"
-msgstr " ставки"
+msgstr "Ставка"
 
 #: aot_flask/templates/pages/geo/journal_view.html:387
 msgid "Growing degree days"
@@ -18037,14 +17998,12 @@ msgid "%(p)s%% of days measured"
 msgstr ""
 
 #: aot_flask/templates/pages/geo/journal_view.html:398
-#, fuzzy
 msgid "No program attached"
-msgstr "Без програма"
+msgstr "Није додељен програм"
 
 #: aot_flask/templates/pages/geo/journal_view.html:399
-#, fuzzy
 msgid "The program has no base temperature"
-msgstr "Базна температура топлотних јединица"
+msgstr "Програм нема базну температуру"
 
 #: aot_flask/templates/pages/geo/journal_view.html:400
 msgid "Not enough measured days"
@@ -18057,93 +18016,82 @@ msgstr ""
 
 #: aot_flask/templates/pages/geo/journal_view.html:448
 #: aot_flask/templates/pages/geo/journal_view.html:664
-#, fuzzy
 msgid "Min"
-msgstr "мин"
+msgstr "Мин."
 
 #: aot_flask/templates/pages/geo/journal_view.html:448
 #: aot_flask/templates/pages/geo/journal_view.html:664
-#, fuzzy
 msgid "Max"
-msgstr "Макс:"
+msgstr "Макс."
 
 #: aot_flask/templates/pages/geo/journal_view.html:448
 #: aot_flask/templates/pages/geo/journal_view.html:664
-#, fuzzy
 msgid "Avg"
-msgstr "Ознака"
+msgstr "Просек"
 
 #: aot_flask/templates/pages/geo/journal_view.html:458
 #: aot_flask/templates/pages/geo/journal_view.html:677
-#, fuzzy, python-format
+#, python-format
 msgid "%(n)s sensors"
-msgstr "%(n)s фаза"
+msgstr "%(n)s сензора"
 
 #: aot_flask/templates/pages/geo/journal_view.html:471
 #: aot_flask/templates/pages/geo/journal_view.html:685
 #: aot_flask/templates/pages/geo/journal_view.html:720
-#, fuzzy
 msgid "partial coverage"
-msgstr "Покривеност"
+msgstr "делимична покривеност"
 
 #: aot_flask/templates/pages/geo/journal_view.html:474
 #: aot_flask/templates/pages/geo/journal_view.html:689
 #: aot_flask/templates/pages/geo/journal_view.html:732
-#, fuzzy, python-format
+#, python-format
 msgid "curve: %(name)s"
-msgstr "Ознаке: %(names)s"
+msgstr "крива: %(name)s"
 
 #: aot_flask/templates/pages/geo/journal_view.html:482
 #: aot_flask/templates/pages/geo/journal_view.html:487
 #: aot_flask/templates/pages/geo/journal_view.html:697
 #: aot_flask/templates/pages/geo/journal_view.html:737
-#, fuzzy
 msgid "day/night target"
-msgstr "Ноћ почиње у"
+msgstr "дневни/ноћни циљ"
 
 #: aot_flask/templates/pages/geo/journal_view.html:483
 #: aot_flask/templates/pages/geo/journal_view.html:488
 #: aot_flask/templates/pages/geo/journal_view.html:698
 #: aot_flask/templates/pages/geo/journal_view.html:738
-#, fuzzy
 msgid "cumulative target"
-msgstr "Акумулирана топлота"
+msgstr "кумулативни циљ"
 
 #: aot_flask/templates/pages/geo/journal_view.html:502
-#, fuzzy
 msgid "No sensor for:"
-msgstr "CO2 сензор"
+msgstr "Нема сензора за:"
 
 #: aot_flask/templates/pages/geo/journal_view.html:510
 #: aot_flask/templates/pages/geo/journal_view.html:753
-#, fuzzy
 msgid "Water"
-msgstr "Време"
+msgstr "Вода"
 
 #: aot_flask/templates/pages/geo/journal_view.html:519
 #: aot_flask/templates/pages/geo/journal_view.html:765
-#, fuzzy
 msgid "estimated"
-msgstr "Процењено"
+msgstr "процењено"
 
 #: aot_flask/templates/pages/geo/journal_view.html:562
 msgid "before this journal"
 msgstr ""
 
 #: aot_flask/templates/pages/geo/journal_view.html:563
-#, fuzzy
 msgid "planned"
-msgstr "Планер"
+msgstr "планирано"
 
 #: aot_flask/templates/pages/geo/journal_view.html:583
-#, fuzzy, python-format
+#, python-format
 msgid "Follows curve: %(name)s"
-msgstr "Прати криву"
+msgstr "Прати криву: %(name)s"
 
 #: aot_flask/templates/pages/geo/journal_view.html:587
-#, fuzzy
 msgid "No sensor for this"
-msgstr "За ову фарму нису пронађене сезоне."
+msgstr "Нема сензора за ово"
 
 #: aot_flask/templates/pages/geo/journal_view.html:612
 #: aot_flask/templates/settings/general.html:376
@@ -18156,9 +18104,8 @@ msgid "Monthly"
 msgstr "Месечно"
 
 #: aot_flask/templates/pages/geo/journal_view.html:614
-#, fuzzy
 msgid "Whole period"
-msgstr "Цео циклус"
+msgstr "Цео период"
 
 #: aot_flask/templates/pages/geo/journal_view.html:631
 #, python-format
@@ -18171,25 +18118,22 @@ msgid "GDD %(v)s"
 msgstr ""
 
 #: aot_flask/templates/pages/geo/journal_view.html:644
-#, fuzzy, python-format
+#, python-format
 msgid "No data recorded — %(n)s periods skipped."
-msgstr "Нема података за последњих %(period)s секунди"
+msgstr "Нема забележених података — прескочено %(n)s периода."
 
 #: aot_flask/templates/pages/geo/journal_view.html:646
-#, fuzzy
 msgid "No data recorded for this period."
-msgstr "За овај кључ нису враћене фарме."
+msgstr "Нема забележених података за овај период."
 
 #: aot_flask/templates/pages/geo/journal_view.html:680
 #: aot_flask/templates/pages/geo/journal_view.html:710
-#, fuzzy
 msgid "usage"
-msgstr "Употреба"
+msgstr "потрошња"
 
 #: aot_flask/templates/pages/geo/journal_view.html:690
-#, fuzzy
 msgid "varies"
-msgstr "Сорта"
+msgstr "варира"
 
 #: aot_flask/templates/pages/geo/journal_view.html:726
 #, python-format
@@ -18197,14 +18141,12 @@ msgid "outdoors %(out)s × cover %(tau)s"
 msgstr ""
 
 #: aot_flask/templates/pages/geo/journal_view.html:739
-#, fuzzy
 msgid "no sensor"
-msgstr "CO2 сензор"
+msgstr "нема сензора"
 
 #: aot_flask/templates/pages/geo/journal_view.html:863
-#, fuzzy
 msgid "Delete this journal? This cannot be undone."
-msgstr "Обрисати ову картицу и све њене ставке? Ово се не може поништити."
+msgstr "Обрисати овај дневник? Ово се не може поништити."
 
 #: aot_flask/templates/pages/geo/journal_view.html:869
 #: aot_flask/templates/pages/geo/journal_view.html:873
@@ -21249,14 +21191,12 @@ msgid ""
 msgstr ""
 
 #: aot_flask/templates/user_templates/widget_template_AoT_advice_body.html:22
-#, fuzzy
 msgid "Retry"
-msgstr "Повуци"
+msgstr "Покушај поново"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_advice_body.html:72
-#, fuzzy
 msgid "Teach AI"
-msgstr "ADC појачање"
+msgstr "Научи AI"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_advice_body.html:79
 msgid "Add a note to help the AI understand this facility..."
@@ -21266,46 +21206,38 @@ msgstr ""
 #: aot_flask/templates/user_templates/widget_template_AoT_advice_js.html:233
 #: aot_flask/templates/user_templates/widget_template_AoT_advice_js.html:242
 #: aot_flask/templates/user_templates/widget_template_AoT_advice_js.html:249
-#, fuzzy
 msgid "Updating..."
-msgstr "Покретање..."
+msgstr "Ажурирање..."
 
 #: aot_flask/templates/user_templates/widget_template_AoT_advice_js.html:61
-#, fuzzy
 msgid "recently"
-msgstr "Поново центрирај"
+msgstr "недавно"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_advice_js.html:62
-#, fuzzy
 msgid "1 hour ago"
-msgstr "1 сат"
+msgstr "пре 1 сат"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_advice_js.html:63
-#, fuzzy
 msgid "hours ago"
-msgstr "Сати"
+msgstr "сати пре"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_advice_js.html:64
-#, fuzzy
 msgid "days ago"
-msgstr "Пре 7 дана"
+msgstr "дана пре"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_advice_js.html:95
 #: aot_flask/templates/user_templates/widget_template_AoT_advice_js.html:107
-#, fuzzy
 msgid "No analysis available yet."
-msgstr "Нема доступних ставки"
+msgstr "Анализа још није доступна."
 
 #: aot_flask/templates/user_templates/widget_template_AoT_advice_js.html:159
-#, fuzzy
 msgid "Changes observed:"
-msgstr "Промени лозинку"
+msgstr "Уочене промене:"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_advice_js.html:166
 #: aot_flask/templates/user_templates/widget_template_AoT_advice_js.html:207
-#, fuzzy
 msgid "Confidence:"
-msgstr "Поузданост"
+msgstr "Поузданост:"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_advice_js.html:192
 msgid "The analysis may suggest the following changes occurred:"
@@ -21316,86 +21248,72 @@ msgid "Unable to load advice. Check connection."
 msgstr ""
 
 #: aot_flask/templates/user_templates/widget_template_AoT_advice_js.html:288
-#, fuzzy
 msgid "Please enter a note before submitting."
-msgstr "Унесите команду"
+msgstr "Унесите белешку пре слања."
 
 #: aot_flask/templates/user_templates/widget_template_AoT_advice_js.html:304
 msgid "Note saved - will inform the next AI cycle."
 msgstr ""
 
 #: aot_flask/templates/user_templates/widget_template_AoT_advice_js.html:309
-#, fuzzy
 msgid "Submission failed."
-msgstr "Радња није успела"
+msgstr "Слање није успело."
 
 #: aot_flask/templates/user_templates/widget_template_AoT_advice_js.html:314
-#, fuzzy
 msgid "Unable to save note. Please try again."
-msgstr "Чување није успело. Покушајте поново."
+msgstr "Није могуће сачувати белешку. Покушајте поново."
 
 #: aot_flask/templates/user_templates/widget_template_AoT_ai_insight_body.html:5
 msgid "Envision a goal (e.g., Save energy in Zone A)"
 msgstr ""
 
 #: aot_flask/templates/user_templates/widget_template_AoT_ai_insight_body.html:8
-#, fuzzy
 msgid "Analyze"
-msgstr "Угао"
+msgstr "Анализирај"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_ai_insight_body.html:23
 msgid "Ready for intelligent analysis."
 msgstr ""
 
 #: aot_flask/templates/user_templates/widget_template_AoT_ai_insight_js.html:65
-#, fuzzy
 msgid "AI analysis failed"
-msgstr "Делимично неуспешно"
+msgstr "AI анализа није успела"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_ai_insight_js.html:86
-#, fuzzy
 msgid "Execution failed"
-msgstr "Одбијање није успело"
+msgstr "Извршење није успело"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_ai_insight_js.html:90
-#, fuzzy
 msgid "Communication error"
-msgstr "Грешка везе"
+msgstr "Грешка у комуникацији"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_camera_body.html:6
-#, fuzzy
 msgid "Connecting..."
-msgstr "Веза"
+msgstr "Повезивање..."
 
 #: aot_flask/templates/user_templates/widget_template_AoT_camera_js.html:13
-#, fuzzy
 msgid "LIVE"
-msgstr "Уживо"
+msgstr "УЖИВО"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_camera_js.html:17
-#, fuzzy
 msgid "SNAPSHOT"
-msgstr "Тачкасто"
+msgstr "СНИМАК"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_controller_act_deact_title_bar.html:5
-#, fuzzy
 msgid "Controller Switch"
-msgstr "AoT прекидач контролера"
+msgstr "Прекидач контролера"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_facility_body.html:26
-#, fuzzy
 msgid "Facility 3D View"
-msgstr "ИД објекта"
+msgstr "3D приказ објекта"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_facility_body.html:29
-#, fuzzy
 msgid "connected"
-msgstr "Повезано"
+msgstr "повезано"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_facility_body.html:32
-#, fuzzy
 msgid "double layer"
-msgstr "Обриши слојеве"
+msgstr "двослојно"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_facility_body.html:39
 msgid "Right-click: rotate"
@@ -21406,119 +21324,98 @@ msgid "Left-click: pan"
 msgstr ""
 
 #: aot_flask/templates/user_templates/widget_template_AoT_facility_body.html:39
-#, fuzzy
 msgid "Scroll: zoom"
-msgstr "Глатко увећање"
+msgstr "Скроловање: зум"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_facility_body.html:41
-#, fuzzy
 msgid "Drag to resize"
-msgstr "Превуците да промените висину"
+msgstr "Превуците за промену величине"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_facility_body.html:55
 #: aot_flask/templates/user_templates/widget_template_AoT_facility_body.html:64
 #: aot_flask/templates/user_templates/widget_template_AoT_facility_body.html:73
 #: aot_flask/templates/user_templates/widget_template_AoT_facility_body.html:82
-#, fuzzy
 msgid "set"
-msgstr "Постављено"
+msgstr "подеси"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_facility_body.html:61
-#, fuzzy
 msgid "Indoor temp"
 msgstr "Унутрашња температура"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_facility_body.html:70
-#, fuzzy
 msgid "Indoor humidity"
 msgstr "Унутрашња влажност"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_facility_body.html:86
-#, fuzzy
 msgid "Outdoor temp"
 msgstr "Спољна температура"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_facility_body.html:103
-#, fuzzy
 msgid "Actuator Control"
-msgstr "Тип актуатора"
+msgstr "Управљање актуаторима"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_facility_body.html:113
-#, fuzzy
 msgid "AI Advice"
-msgstr "Савет"
+msgstr "AI савет"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_facility_body.html:122
-#, fuzzy
 msgid "No facility selected. Register one at"
-msgstr "Још нема регистрованих AI услуга."
+msgstr "Ниједан објекат није изабран. Региструјте га на"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_gauge_angular_configure_options.html:6
-#, fuzzy
 msgid "Section Start"
-msgstr "Листа избора"
+msgstr "Почетак опсега"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_gauge_angular_configure_options.html:36
-#, fuzzy
 msgid "Saved as global band colors"
-msgstr "Боје опсега мерења"
+msgstr "Сачувано као глобалне боје опсега"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_gauge_angular_configure_options.html:38
-#, fuzzy
 msgid "Save as Global Band Colors"
-msgstr "Боје опсега мерења"
+msgstr "Сачувај као глобалне боје опсега"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_gauge_angular_configure_options.html:39
 msgid "Applies the first 5 section colors to Settings > Custom UI band colors."
 msgstr ""
 
 #: aot_flask/templates/user_templates/widget_template_AoT_graph_configure_options.html:2
-#, fuzzy
 msgid "Graph Series Options"
-msgstr "Опције услуге"
+msgstr "Опције серије графикона"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_graph_configure_options.html:6
-#, fuzzy
 msgid "Use Custom Colors"
-msgstr "Прилагођени CSS"
+msgstr "Користи прилагођене боје"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_graph_configure_options.html:35
-#, fuzzy
 msgid "Select Color"
-msgstr "Боја текста"
+msgstr "Изабери боју"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_graph_configure_options.html:40
 #: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:39
-#, fuzzy
 msgid "Disable Data Grouping"
-msgstr "Онемогући SPI"
+msgstr "Онемогући груписање података"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_graph_configure_options.html:47
 #: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:45
-#, fuzzy
 msgid "Series Type"
-msgstr "Тип извора"
+msgstr "Тип серије"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_graph_configure_options.html:50
-#, fuzzy
 msgid "Step (Left)"
-msgstr "Листа локација"
+msgstr "Корак (лево)"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_graph_configure_options.html:51
-#, fuzzy
 msgid "Step (Center)"
-msgstr "Поново центрирај"
+msgstr "Корак (средина)"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_graph_configure_options.html:52
-#, fuzzy
 msgid "Step (Right)"
-msgstr "Осенчи ноћ"
+msgstr "Корак (десно)"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_graph_configure_options.html:53
 #: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:52
-#, fuzzy
 msgid "Column"
-msgstr "Запремина"
+msgstr "Колона"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_graph_configure_options.html:77
 msgid "Saved as global chart colors"
@@ -21534,9 +21431,8 @@ msgstr ""
 
 #: aot_flask/templates/user_templates/widget_template_AoT_graph_configure_options.html:84
 #: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:62
-#, fuzzy
 msgid "Y-Axis Options"
-msgstr "Корисничке опције"
+msgstr "Опције Y-осе"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_graph_configure_options.html:88
 #: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:65
@@ -21544,32 +21440,26 @@ msgid "Enable Manual Y-Axis Min/Max"
 msgstr ""
 
 #: aot_flask/templates/user_templates/widget_template_AoT_graph_configure_options.html:97
-#, fuzzy
 msgid "Enable Align Ticks"
-msgstr "Омогући AI услугу"
+msgstr "Омогући поравнање ознака"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_graph_configure_options.html:106
-#, fuzzy
 msgid "Enable Start On Tick"
-msgstr "Подразумевана почетна локација"
+msgstr "Омогући почетак на ознаци"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_graph_configure_options.html:115
-#, fuzzy
 msgid "Enable End On Tick"
-msgstr "Омогући легенду"
+msgstr "Омогући крај на ознаци"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_graph_configure_options.html:131
-#, fuzzy
 msgid "Y-Axis Min"
-msgstr "Померај Y-осе"
+msgstr "Мин. Y-осе"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_graph_configure_options.html:135
-#, fuzzy
 msgid "Y-Axis Max"
-msgstr "Померај Y-осе"
+msgstr "Макс. Y-осе"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_map_body.html:16
-#, fuzzy
 msgid "Enter an address."
 msgstr "Унесите адресу."
 
@@ -21578,69 +21468,57 @@ msgid "Ask a question about this advisory (e.g., what should I do?)"
 msgstr ""
 
 #: aot_flask/templates/user_templates/widget_template_AoT_map_body.html:125
-#, fuzzy
 msgid "Ask AI what to do"
-msgstr "Унесите шта треба урадити"
+msgstr "Питај AI шта да радим"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_map_body.html:155
 msgid "What concrete actions should I take based on this advisory?"
 msgstr ""
 
 #: aot_flask/templates/user_templates/widget_template_AoT_map_title_bar.html:14
-#, fuzzy
 msgid "Show Controls"
-msgstr "Заустави контролу на"
+msgstr "Прикажи контроле"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_map_title_bar.html:14
-#, fuzzy
 msgid "Hide Controls"
-msgstr "PID контрола"
+msgstr "Сакриј контроле"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_pid_body.html:284
-#, fuzzy
 msgid "PID Detail Settings"
-msgstr "PID подешавања"
+msgstr "Детаљна подешавања PID-а"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_pid_body.html:349
-#, fuzzy
 msgid "Gains"
-msgstr "Појачање"
+msgstr "Појачања"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_pid_body.html:381
-#, fuzzy
 msgid "Timing & Limits"
-msgstr "ограничење контејнера"
+msgstr "Тајминг и ограничења"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_pid_body.html:393
 #: widgets/widget_function_status.py:59
-#, fuzzy
 msgid "Band"
-msgstr "Песак"
+msgstr "Опсег"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_pid_body.html:438
-#, fuzzy
 msgid "activate"
-msgstr "Активирај"
+msgstr "активирај"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_pid_body.html:443
-#, fuzzy
 msgid "deactivate"
-msgstr "Деактивирај"
+msgstr "деактивирај"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_pid_js.html:143
-#, fuzzy
 msgid "No PID selected"
-msgstr "Није изабрано"
+msgstr "Ниједан PID није изабран"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_pid_js.html:150
-#, fuzzy
 msgid "No PID found or no measurement"
-msgstr "Број мерења"
+msgstr "PID није пронађен или недостаје мерење"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_pid_js_ready_end.html:167
-#, fuzzy
 msgid "5m"
-msgstr "M"
+msgstr "5 мин"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_pid_js_ready_end.html:168
 msgid "30m"
@@ -21659,9 +21537,8 @@ msgid "1d"
 msgstr ""
 
 #: aot_flask/templates/user_templates/widget_template_AoT_pid_js_ready_end.html:201
-#, fuzzy
 msgid "Actual"
-msgstr "Актуатор"
+msgstr "Стварно"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_timer_body.html:165
 #: aot_flask/templates/user_templates/widget_template_AoT_timer_body.html:173
@@ -21671,65 +21548,54 @@ msgstr "Покрени"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_timer_body.html:179
 #: aot_flask/templates/user_templates/widget_template_AoT_timer_body.html:187
-#, fuzzy
 msgid "Rest"
-msgstr "Ресетуј"
+msgstr "Пауза"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_timer_body.html:192
-#, fuzzy
 msgid "Cycles"
-msgstr "Да"
+msgstr "Циклуси"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_timer_body.html:205
 #: aot_flask/templates/user_templates/widget_template_AoT_timer_body.html:213
-#, fuzzy
 msgid "Start at"
-msgstr "Датум почетка"
+msgstr "Почетак у"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_timer_body.html:222
-#, fuzzy
 msgid "Select the Output to control in the widget options."
-msgstr "Изаберите излаз за контролу."
+msgstr "Изаберите излаз за управљање у опцијама виџета."
 
 #: aot_flask/templates/user_templates/widget_template_AoT_wind_angular_configure_options.html:29
-#, fuzzy, python-format
+#, python-format
 msgid "Data Position Offset (%%)"
-msgstr "Офсет позиције података (%)"
+msgstr "Померај позиције података (%%)"
 
 #: aot_flask/templates/user_templates/widget_template_widget_calendar_body.html:12
-#, fuzzy
 msgid "Edit Schedule"
-msgstr "AI распоред"
+msgstr "Уреди распоред"
 
 #: aot_flask/templates/user_templates/widget_template_widget_calendar_js_ready_end.html:15
-#, fuzzy
 msgid "Open in Scheduler"
-msgstr "AI распоред"
+msgstr "Отвори у распореду"
 
 #: aot_flask/templates/user_templates/widget_template_widget_calendar_js_ready_end.html:20
-#, fuzzy
 msgid "Calendars"
-msgstr "Календар"
+msgstr "Календари"
 
 #: aot_flask/templates/user_templates/widget_template_widget_camera_js.html:25
-#, fuzzy
 msgid "Still"
-msgstr "Инсталирај"
+msgstr "Слика"
 
 #: aot_flask/templates/user_templates/widget_template_widget_camera_js.html:33
-#, fuzzy
 msgid "Max Age Exceeded"
-msgstr "Максимална старост (сек)"
+msgstr "Прекорачена максимална старост"
 
 #: aot_flask/templates/user_templates/widget_template_widget_camera_js.html:38
-#, fuzzy
 msgid "File Not Found"
 msgstr "Датотека није пронађена"
 
 #: aot_flask/templates/user_templates/widget_template_widget_camera_js.html:57
-#, fuzzy
 msgid "Error Getting Image"
-msgstr "Грешка при брисању картице"
+msgstr "Грешка при преузимању слике"
 
 #: aot_flask/templates/user_templates/widget_template_widget_camera_js.html:113
 msgid "Error: HLS library failed to load"
@@ -21755,9 +21621,8 @@ msgid "Deactivated"
 msgstr "Искључена"
 
 #: aot_flask/templates/user_templates/widget_template_widget_function_status_js.html:155
-#, fuzzy
 msgid "No Function selected."
-msgstr "Локација није изабрана"
+msgstr "Ниједна функција није изабрана."
 
 #: aot_flask/templates/user_templates/widget_template_widget_function_status_js.html:169
 #: aot_flask/utils/utils_function_status.py:215
@@ -21779,14 +21644,12 @@ msgid ""
 msgstr ""
 
 #: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:4
-#, fuzzy
 msgid "Series Options"
-msgstr "Опције услуге"
+msgstr "Опције серије"
 
 #: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:7
-#, fuzzy
 msgid "Enable Custom Colors"
-msgstr "Омогући TLS"
+msgstr "Омогући прилагођене боје"
 
 #: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:49
 msgid "Line (Step, Left)"
@@ -21801,29 +21664,24 @@ msgid "Line (Step, Right)"
 msgstr ""
 
 #: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:71
-#, fuzzy
 msgid "Enable Y-Axis Align Ticks"
-msgstr "Омогући ресетовање X-осе"
+msgstr "Омогући поравнање ознака Y-осе"
 
 #: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:77
-#, fuzzy
 msgid "Enable Y-Axis Start On Tick"
-msgstr "Омогући ресетовање X-осе"
+msgstr "Омогући почетак Y-осе на ознаци"
 
 #: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:83
-#, fuzzy
 msgid "Enable Y-Axis End On Tick"
-msgstr "Омогући ресетовање X-осе"
+msgstr "Омогући крај Y-осе на ознаци"
 
 #: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:101
-#, fuzzy
 msgid "Y-Axis Minimum"
-msgstr "Минимум"
+msgstr "Минимум Y-осе"
 
 #: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:107
-#, fuzzy
 msgid "Y-Axis Maximum"
-msgstr "Максимум"
+msgstr "Максимум Y-осе"
 
 #: aot_flask/templates/user_templates/widget_template_widget_indicator_js.html:42
 #: aot_flask/templates/user_templates/widget_template_widget_indicator_js.html:53
@@ -21833,21 +21691,18 @@ msgstr "Максимум"
 #: aot_flask/templates/user_templates/widget_template_widget_measurement_multi_js.html:49
 #: aot_flask/templates/user_templates/widget_template_widget_output_pwm_slider_js.html:51
 #: aot_flask/templates/user_templates/widget_template_widget_output_pwm_slider_js.html:72
-#, fuzzy
 msgid "NO DATA"
-msgstr "Нема података"
+msgstr "НЕМА ПОДАТАКА"
 
 #: aot_flask/templates/user_templates/widget_template_widget_measurement_js.html:32
 #: aot_flask/templates/user_templates/widget_template_widget_measurement_multi_js.html:32
 #: aot_flask/templates/user_templates/widget_template_widget_output_pwm_slider_js.html:52
-#, fuzzy
 msgid "MAX AGE EXCEEDED"
-msgstr "Максимална старост (сек)"
+msgstr "ПРЕКОРАЧЕНА МАКСИМАЛНА СТАРОСТ"
 
 #: aot_flask/templates/user_templates/widget_template_widget_notice_configure_options.html:2
-#, fuzzy
 msgid "Category Filter"
-msgstr "Филтер по ознаци"
+msgstr "Филтер категорије"
 
 #: aot_flask/templates/user_templates/widget_template_widget_notice_configure_options.html:5
 msgid ""
@@ -21860,25 +21715,21 @@ msgid "No categories yet. Set one when creating a post to filter by it here."
 msgstr ""
 
 #: aot_flask/templates/user_templates/widget_template_widget_notice_js.html:415
-#, fuzzy
 msgid "Notice updated"
-msgstr "Обавештење обрисано"
+msgstr "Обавештење ажурирано"
 
 #: aot_flask/templates/user_templates/widget_template_widget_notice_js.html:415
-#, fuzzy
 msgid "Notice created"
-msgstr "Обавештење обрисано"
+msgstr "Обавештење креирано"
 
 #: aot_flask/templates/user_templates/widget_template_widget_python_code_js.html:10
-#, fuzzy
 msgid "NO DATA ERROR"
-msgstr "Без датума"
+msgstr "ГРЕШКА: НЕМА ПОДАТАКА"
 
 #: aot_flask/templates/user_templates/widget_template_widget_python_code_js.html:13
 #: aot_flask/templates/user_templates/widget_template_widget_python_code_js.html:17
-#, fuzzy
 msgid "CONNECTION ERROR"
-msgstr "Грешка везе"
+msgstr "ГРЕШКА ВЕЗЕ"
 
 #: aot_flask/templates/user_templates/widget_template_widget_trigger_sequence_body.html:12
 #: widgets/widget_trigger_sequence.py:367
@@ -22258,29 +22109,28 @@ msgid "Function not found"
 msgstr "Функција није пронађена"
 
 #: aot_flask/utils/utils_function_status.py:94
-#, fuzzy, python-format
+#, python-format
 msgid "%(n)s s"
-msgstr "%(n)s дана"
+msgstr "%(n)s с"
 
 #: aot_flask/utils/utils_function_status.py:108
-#, fuzzy, python-format
+#, python-format
 msgid "%(n)s s ago"
-msgstr "%(n)s фаза"
+msgstr "пре %(n)s с"
 
 #: aot_flask/utils/utils_function_status.py:110
-#, fuzzy, python-format
+#, python-format
 msgid "%(n)s min ago"
-msgstr "%(n)s фаза"
+msgstr "пре %(n)s мин"
 
 #: aot_flask/utils/utils_function_status.py:111
-#, fuzzy, python-format
+#, python-format
 msgid "%(n)s h ago"
-msgstr "%(n)s фаза"
+msgstr "пре %(n)s ч"
 
 #: aot_flask/utils/utils_function_status.py:117
-#, fuzzy
 msgid "Paused — no actuators registered"
-msgstr "Нема регистрованих задатака."
+msgstr "Паузирано — нема регистрованих актуатора"
 
 #: aot_flask/utils/utils_function_status.py:118
 msgid "Paused — outside the operating time window"
@@ -22292,29 +22142,28 @@ msgid "Paused (%(reason)s)"
 msgstr ""
 
 #: aot_flask/utils/utils_function_status.py:132
-#, fuzzy
 msgid "Waiting for the first control cycle."
-msgstr "Време чекања пре прве радње"
+msgstr "Чека се први контролни циклус."
 
 #: aot_flask/utils/utils_function_status.py:140
-#, fuzzy, python-format
+#, python-format
 msgid "Mode: %(modes)s"
-msgstr "Ознаке: %(names)s"
+msgstr "Режим: %(modes)s"
 
 #: aot_flask/utils/utils_function_status.py:155
-#, fuzzy, python-format
+#, python-format
 msgid "Environment: %(values)s"
-msgstr "Променљиве окружења"
+msgstr "Окружење: %(values)s"
 
 #: aot_flask/utils/utils_function_status.py:163
-#, fuzzy, python-format
+#, python-format
 msgid "Deviation: %(values)s"
-msgstr "Трајање (минути)"
+msgstr "Одступање: %(values)s"
 
 #: aot_flask/utils/utils_function_status.py:171
-#, fuzzy, python-format
+#, python-format
 msgid "Actuators: %(values)s"
-msgstr "Ознаке: %(names)s"
+msgstr "Актуатори: %(values)s"
 
 #: aot_flask/utils/utils_function_status.py:176
 #, python-format
@@ -22327,9 +22176,8 @@ msgid "Safety gate: %(reason)s — control stopped"
 msgstr ""
 
 #: aot_flask/utils/utils_function_status.py:187
-#, fuzzy
 msgid "triggered"
-msgstr "Окидач"
+msgstr "активирано"
 
 #: aot_flask/utils/utils_function_status.py:189
 #, python-format
@@ -22357,39 +22205,34 @@ msgid "Last cycle: %(when)s"
 msgstr ""
 
 #: aot_flask/utils/utils_function_status.py:213
-#, fuzzy
 msgid "Idle"
-msgstr "Сакриј"
+msgstr "Неактивно"
 
 #: aot_flask/utils/utils_function_status.py:214
-#, fuzzy
 msgid "Outside the time window"
-msgstr "Омогући временски прозор"
+msgstr "Изван временског прозора"
 
 #: aot_flask/utils/utils_function_status.py:216
-#, fuzzy
 msgid "Initializing"
-msgstr "Коришћење вештачке интелигенције"
+msgstr "Иницијализација"
 
 #: aot_flask/utils/utils_function_status.py:217
-#, fuzzy
 msgid "Standby"
-msgstr "Песак"
+msgstr "Приправност"
 
 #: aot_flask/utils/utils_function_status.py:218
-#, fuzzy
 msgid "Ready"
-msgstr "Црвена"
+msgstr "Спремно"
 
 #: aot_flask/utils/utils_function_status.py:225
-#, fuzzy, python-format
+#, python-format
 msgid "Waiting (%(time)s)"
-msgstr "Функција (%(type)s)"
+msgstr "Чекање (%(time)s)"
 
 #: aot_flask/utils/utils_function_status.py:230
-#, fuzzy, python-format
+#, python-format
 msgid "Sequence: %(state)s"
-msgstr "Успех: %(action)s"
+msgstr "Секвенца: %(state)s"
 
 #: aot_flask/utils/utils_function_status.py:236
 #, python-format
@@ -22412,14 +22255,14 @@ msgid "Steps: %(running)s of %(total)s running"
 msgstr ""
 
 #: aot_flask/utils/utils_function_status.py:257
-#, fuzzy, python-format
+#, python-format
 msgid "Conditional: %(state)s"
-msgstr "Условно"
+msgstr "Условно: %(state)s"
 
 #: aot_flask/utils/utils_function_status.py:262
-#, fuzzy, python-format
+#, python-format
 msgid "Period: %(period)s"
-msgstr "Период: %(label)s"
+msgstr "Период: %(period)s"
 
 #: aot_flask/utils/utils_function_status.py:266
 #, python-format
@@ -22435,9 +22278,8 @@ msgid "The last check ran no action."
 msgstr ""
 
 #: aot_flask/utils/utils_function_status.py:270
-#, fuzzy
 msgid "Not checked yet."
-msgstr "Још ништа није забележено."
+msgstr "Још није проверено."
 
 #: aot_flask/utils/utils_function_status.py:274
 #, python-format
@@ -29608,9 +29450,8 @@ msgid "Input value validity duration"
 msgstr "Трајање важења вредности улаза"
 
 #: widgets/widget_trigger_sequence.py:539
-#, fuzzy
 msgid "Continue where it stopped"
-msgstr "Снимање заустављено"
+msgstr "Настави тамо где је стало"
 
 #: widgets/widget_trigger_sequence.py:540
 msgid "Start from the beginning"
@@ -30159,9 +30000,8 @@ msgstr ""
 "наводњавање."
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:673
-#, fuzzy
 msgid "Enable Sunburn/Evening Protection"
-msgstr "Заштита од опекотина при прскању"
+msgstr "Омогући заштиту од сунца/вечерњу заштиту"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:675
 msgid ""

@@ -4711,9 +4711,8 @@ msgid "No devices to inspect"
 msgstr "Nenhum dispositivo para inspecionar"
 
 #: aot_flask/routes_geo_journal.py:132
-#, fuzzy
 msgid "Could not find that area."
-msgstr "Could not find button ID."
+msgstr "Não foi possível encontrar essa área."
 
 #: aot_flask/routes_geo_journal.py:154
 msgid ""
@@ -4722,20 +4721,17 @@ msgid ""
 msgstr ""
 
 #: aot_flask/routes_geo_journal.py:223 aot_flask/routes_geo_journal.py:451
-#, fuzzy
 msgid "Permission Denied"
 msgstr "Permissão negada"
 
 #: aot_flask/routes_geo_journal.py:243
-#, fuzzy
 msgid "Pick at least one measurement."
-msgstr "Store Measurement"
+msgstr "Escolha pelo menos uma medição."
 
 #: aot_flask/routes_geo_journal.py:246 aot_flask/routes_geo_journal.py:248
 #: aot_flask/routes_geo_journal.py:499
-#, fuzzy
 msgid "Select what the journal is about."
-msgstr "Selecione a função que este Output desempenha."
+msgstr "Selecione sobre o que é este diário."
 
 #: aot_flask/routes_geo_journal.py:250
 msgid "Enter both a start and an end date."
@@ -4750,9 +4746,8 @@ msgid "Could not find what this journal is about."
 msgstr ""
 
 #: aot_flask/routes_geo_journal.py:266
-#, fuzzy
 msgid "Could not read this target."
-msgstr "Could not find the API key to delete."
+msgstr "Não foi possível ler este alvo."
 
 #: aot_flask/routes_geo_journal.py:271
 #, python-format
@@ -4777,14 +4772,12 @@ msgid "This journal is still being generated."
 msgstr ""
 
 #: aot_flask/routes_geo_journal.py:456
-#, fuzzy
 msgid "Journal not found."
-msgstr "Fonte não encontrada."
+msgstr "Diário não encontrado."
 
 #: aot_flask/routes_geo_journal.py:470
-#, fuzzy
 msgid "Could not delete this journal."
-msgstr "Excluir esta fonte?"
+msgstr "Não foi possível excluir este diário."
 
 #: aot_flask/routes_geo_plot.py:184
 #: aot_flask/templates/pages/ai/components/onboarding_flow.html:67
@@ -4945,13 +4938,10 @@ msgstr ""
 
 #: aot_flask/routes_password_reset.py:131
 #: aot_flask/utils/utils_settings.py:355
-#, fuzzy
 msgid ""
 "Invalid password. Must be at least 8 characters, contain only letters, "
 "numbers, and symbols, and not be a commonly used password."
-msgstr ""
-"Invalid password. Must be between 6 and 64 characters and only contain "
-"letters, numbers, and symbols."
+msgstr "Senha inválida. Deve ter pelo menos 8 caracteres, conter apenas letras, números e símbolos, e não ser uma senha de uso comum."
 
 #: aot_flask/routes_password_reset.py:136
 msgid "Code expired or invalid"
@@ -6874,9 +6864,8 @@ msgid "User ID"
 msgstr "User ID"
 
 #: aot_flask/forms/forms_settings.py:544
-#, fuzzy
 msgid "Key Name"
-msgstr "Rename"
+msgstr "Nome da Chave"
 
 #: aot_flask/forms/forms_settings.py:548
 #: aot_flask/templates/settings/user_detail.html:161
@@ -6886,21 +6875,18 @@ msgstr "Permissões"
 
 #: aot_flask/forms/forms_settings.py:549
 #: aot_flask/templates/settings/user_detail.html:137
-#, fuzzy
 msgid "Full access"
-msgstr "Acesso a Ferramentas"
+msgstr "Acesso total"
 
 #: aot_flask/forms/forms_settings.py:550
 #: aot_flask/templates/settings/user_detail.html:137
-#, fuzzy
 msgid "Read only"
-msgstr "Motivo"
+msgstr "Somente leitura"
 
 #: aot_flask/forms/forms_settings.py:554
 #: aot_flask/templates/settings/user_detail.html:144
-#, fuzzy
 msgid "Revoke"
-msgstr "Curso"
+msgstr "Revogar"
 
 #: aot_flask/forms/forms_settings.py:556
 #: aot_flask/templates/settings/user_detail.html:43
@@ -7186,25 +7172,22 @@ msgstr "Fundo inativo"
 
 #: aot_flask/forms/forms_settings.py:684
 #: aot_flask/templates/settings/custom_ui.html:528
-#, fuzzy
 msgid "Warning State"
-msgstr "Warning"
+msgstr "Estado de Alerta"
 
 #: aot_flask/forms/forms_settings.py:688
 #: aot_flask/templates/settings/custom_ui.html:228
 #: aot_flask/templates/settings/custom_ui.html:230
 #: aot_flask/templates/settings/custom_ui.html:529
-#, fuzzy
 msgid "Channel On"
-msgstr "Channel"
+msgstr "Canal Ligado"
 
 #: aot_flask/forms/forms_settings.py:689
 #: aot_flask/templates/settings/custom_ui.html:250
 #: aot_flask/templates/settings/custom_ui.html:252
 #: aot_flask/templates/settings/custom_ui.html:530
-#, fuzzy
 msgid "Channel Off"
-msgstr "Channel"
+msgstr "Canal Desligado"
 
 #: aot_flask/forms/forms_settings.py:692
 #: aot_flask/static/js/ai/aot-ai-gantt.js:309
@@ -9406,9 +9389,8 @@ msgstr ""
 #: aot_flask/templates/pages/geo/journal.html:5
 #: aot_flask/templates/pages/geo/journal.html:57
 #: aot_flask/templates/pages/geo/journal_view.html:3
-#, fuzzy
 msgid "Journals"
-msgstr "Horas"
+msgstr "Diários"
 
 #: aot_flask/templates/layout.html:683
 #: aot_flask/templates/layout_default.html:683
@@ -9490,9 +9472,8 @@ msgstr "System Log"
 #: aot_flask/templates/layout.html:729
 #: aot_flask/templates/layout_default.html:729
 #: aot_flask/templates/tools/audit_log.html:3
-#, fuzzy
 msgid "Audit Log"
-msgstr "Catálogo"
+msgstr "Registro de Auditoria"
 
 #: aot_flask/templates/layout.html:730
 #: aot_flask/templates/layout_default.html:730
@@ -10016,9 +9997,8 @@ msgid "Forgot Password"
 msgstr "Forgot Password"
 
 #: aot_flask/templates/login_totp.html:38
-#, fuzzy
 msgid "Two-Factor Authentication"
-msgstr "Autenticação"
+msgstr "Autenticação de Dois Fatores"
 
 #: aot_flask/templates/login_totp.html:41
 msgid "Enter the 6-digit code from your authenticator app."
@@ -10026,14 +10006,12 @@ msgstr ""
 
 #: aot_flask/templates/login_totp.html:47
 #: aot_flask/templates/login_totp.html:53
-#, fuzzy
 msgid "Verification Code"
-msgstr "Código da seção"
+msgstr "Código de Verificação"
 
 #: aot_flask/templates/login_totp.html:63
-#, fuzzy
 msgid "Verify"
-msgstr "Gravidade"
+msgstr "Verificar"
 
 #: aot_flask/templates/admin/backup.html:18
 msgid "Backup and Restore"
@@ -11101,34 +11079,28 @@ msgid "Device Settings"
 msgstr "Device Settings"
 
 #: aot_flask/templates/pages/device.html:180
-#, fuzzy
 msgid "Fault"
-msgstr "Default"
+msgstr "Falha"
 
 #: aot_flask/templates/pages/device.html:181
-#, fuzzy
 msgid "Device OK"
-msgstr "Função do dispositivo"
+msgstr "Dispositivo OK"
 
 #: aot_flask/templates/pages/device.html:236
-#, fuzzy
 msgid "Select a device type first"
-msgstr "Selecione uma instalação primeiro"
+msgstr "Selecione um tipo de dispositivo primeiro"
 
 #: aot_flask/templates/pages/device.html:289
-#, fuzzy
 msgid "Measurement Channels"
-msgstr "Canal de Medição"
+msgstr "Canais de Medição"
 
 #: aot_flask/templates/pages/device.html:292
-#, fuzzy
 msgid "Input inactive"
-msgstr "Inactive"
+msgstr "Entrada inativa"
 
 #: aot_flask/templates/pages/device.html:306
-#, fuzzy
 msgid "Control Channels"
-msgstr "Number of Channels"
+msgstr "Canais de Controle"
 
 #: aot_flask/templates/pages/device.html:320
 msgid "This device has no measurements or controls yet."
@@ -11146,9 +11118,8 @@ msgid "None"
 msgstr "Nenhum"
 
 #: aot_flask/templates/pages/device.html:385
-#, fuzzy
 msgid "Input / Output"
-msgstr "PWM Output"
+msgstr "Entrada / Saída"
 
 #: aot_flask/templates/pages/ai/ai_library.html:542
 #: aot_flask/templates/pages/device.html:389
@@ -11158,49 +11129,40 @@ msgstr "Link"
 
 #: aot_flask/templates/pages/device.html:394
 #: aot_flask/templates/pages/device.html:430
-#, fuzzy
 msgid "Currently linked"
-msgstr "Visualização Atual"
+msgstr "Atualmente vinculados"
 
 #: aot_flask/templates/pages/device.html:406
-#, fuzzy
 msgid "Reference"
-msgstr "Preferences"
+msgstr "Referência"
 
 #: aot_flask/templates/pages/device.html:409
 #: aot_flask/templates/pages/device.html:440
-#, fuzzy
 msgid "Unlink"
-msgstr "Link"
+msgstr "Desvincular"
 
 #: aot_flask/templates/pages/device.html:425
-#, fuzzy
 msgid "Sub-devices"
-msgstr "Dispositivos"
+msgstr "Subdispositivos"
 
 #: aot_flask/templates/pages/device.html:467
 #: aot_flask/templates/pages/geo/geo_facility.html:771
-#, fuzzy
 msgid "Linked"
-msgstr "Link"
+msgstr "Vinculado"
 
 #: aot_flask/templates/pages/device.html:479
-#, fuzzy
 msgid "Unlinked"
 msgstr "— Não vinculado —"
 
 #: aot_flask/templates/pages/device.html:532
-#, fuzzy
 msgid "Failed to load settings"
-msgstr "Falha ao carregar"
+msgstr "Falha ao carregar as configurações"
 
 #: aot_flask/templates/pages/device.html:549
-#, fuzzy
 msgid "Form not found"
-msgstr "Erro: formulário não encontrado"
+msgstr "Formulário não encontrado"
 
 #: aot_flask/templates/pages/device.html:596
-#, fuzzy
 msgid "Deleted"
 msgstr "Excluído."
 
@@ -11220,9 +11182,8 @@ msgid "Are you sure you want to duplicate?"
 msgstr "Are you sure you want to duplicate?"
 
 #: aot_flask/templates/pages/device.html:610
-#, fuzzy
 msgid "Duplicated"
-msgstr "Duplicate"
+msgstr "Duplicado."
 
 #: aot_flask/templates/pages/device.html:620
 #: aot_flask/templates/settings/input.html:41
@@ -17574,16 +17535,14 @@ msgid ""
 msgstr ""
 
 #: aot_flask/templates/pages/geo/journal.html:77
-#, fuzzy
 msgid "Change"
-msgstr "Changelog"
+msgstr "Alterar"
 
 #: aot_flask/templates/pages/geo/journal.html:80
 msgid "Search by crop, variety, name, zone…"
 msgstr ""
 
 #: aot_flask/templates/pages/geo/journal.html:94
-#, fuzzy
 msgid "End date"
 msgstr "Data de Término"
 
@@ -17592,38 +17551,32 @@ msgid "Or make a journal for a whole site or zone"
 msgstr ""
 
 #: aot_flask/templates/pages/geo/journal.html:113
-#, fuzzy
 msgid "Site or zone"
-msgstr "Dividir zonas"
+msgstr "Site ou zona"
 
 #: aot_flask/templates/pages/geo/journal.html:116
-#, fuzzy
 msgid "Select…"
-msgstr "Select"
+msgstr "Selecionar…"
 
 #: aot_flask/templates/pages/geo/journal.html:118
-#, fuzzy
 msgid "Unmapped"
-msgstr "Aplicado"
+msgstr "Sem mapa"
 
 #: aot_flask/templates/pages/geo/journal.html:133
 msgid "The whole site or zone is covered, including every plot inside it."
 msgstr ""
 
 #: aot_flask/templates/pages/geo/journal.html:147
-#, fuzzy
 msgid "Measurements to include"
-msgstr "Measurement ID"
+msgstr "Medições a incluir"
 
 #: aot_flask/templates/pages/geo/journal.html:158
-#, fuzzy
 msgid "Generate journal"
-msgstr "Regenerar miniatura"
+msgstr "Gerar diário"
 
 #: aot_flask/templates/pages/geo/journal.html:161
-#, fuzzy
 msgid "Saved journals"
-msgstr "Salvar Nome"
+msgstr "Diários salvos"
 
 #: aot_flask/templates/pages/geo/journal.html:165
 #: aot_flask/templates/pages/geo/plots.html:53
@@ -17637,22 +17590,19 @@ msgid "Untitled"
 msgstr "Sem título"
 
 #: aot_flask/templates/pages/geo/journal.html:174
-#, fuzzy
 msgid "Generating…"
-msgstr "General Settings"
+msgstr "Gerando…"
 
 #: aot_flask/templates/pages/geo/journal.html:176
-#, fuzzy
 msgid "Generation failed"
-msgstr "Falha na ação"
+msgstr "Falha na geração"
 
 #: aot_flask/templates/pages/geo/journal_view.html:6
 #: aot_flask/templates/pages/geo/journal_view.html:177
 #: aot_flask/templates/pages/geo/journal_view.html:184
 #: aot_flask/templates/pages/geo/journal_view.html:198
-#, fuzzy
 msgid "Journal"
-msgstr "Portal"
+msgstr "Diário"
 
 #: aot_flask/templates/pages/geo/journal_view.html:180
 msgid ""
@@ -17666,9 +17616,8 @@ msgstr ""
 #: aot_flask/templates/pages/geo/journal_view.html:204
 #: aot_flask/templates/pages/geo/journal_view.html:368
 #: aot_flask/templates/pages/geo/journal_view.html:561
-#, fuzzy
 msgid "ongoing"
-msgstr "Abertura"
+msgstr "em andamento"
 
 #: aot_flask/templates/pages/geo/journal_view.html:219
 #: aot_flask/templates/pages/geo/journal_view.html:378
@@ -17677,25 +17626,21 @@ msgstr "Área"
 
 #: aot_flask/templates/pages/geo/journal_view.html:221
 #: aot_flask/templates/pages/geo/journal_view.html:407
-#, fuzzy
 msgid "Time zone"
 msgstr "Fuso horário"
 
 #: aot_flask/templates/pages/geo/journal_view.html:226
-#, fuzzy
 msgid "Generated"
-msgstr "Gerar"
+msgstr "Gerado"
 
 #: aot_flask/templates/pages/geo/journal_view.html:238
-#, fuzzy
 msgid "About this document"
-msgstr "Related Documents"
+msgstr "Sobre este documento"
 
 #: aot_flask/templates/pages/geo/journal_view.html:244
 #: aot_flask/templates/pages/geo/journal_view.html:326
-#, fuzzy
 msgid "Contents"
-msgstr "conteúdo"
+msgstr "Índice"
 
 #: aot_flask/templates/pages/geo/journal_view.html:246
 msgid "Each section below starts on a new page, in this order."
@@ -17728,15 +17673,14 @@ msgstr ""
 #: aot_flask/templates/pages/geo/journal_view.html:257
 #: aot_flask/templates/pages/geo/journal_view.html:330
 #: aot_flask/templates/pages/geo/journal_view.html:602
-#, fuzzy
 msgid "Daily log"
-msgstr "Daily"
+msgstr "Registro diário"
 
 #: aot_flask/templates/pages/geo/journal_view.html:255
 #: aot_flask/templates/pages/geo/journal_view.html:258
-#, fuzzy, python-format
+#, python-format
 msgid "%(n)s periods"
-msgstr "%(n)s participaram"
+msgstr "%(n)s períodos"
 
 #: aot_flask/templates/pages/geo/journal_view.html:262
 msgid "How to read this"
@@ -17765,9 +17709,8 @@ msgid ""
 msgstr ""
 
 #: aot_flask/templates/pages/geo/journal_view.html:270
-#, fuzzy
 msgid "Target and Δ"
-msgstr "ID do Alvo"
+msgstr "Alvo e Δ"
 
 #: aot_flask/templates/pages/geo/journal_view.html:271
 msgid ""
@@ -17780,7 +17723,6 @@ msgstr ""
 #: aot_flask/templates/pages/geo/journal_view.html:273
 #: aot_flask/templates/pages/geo/journal_view.html:510
 #: aot_flask/templates/pages/geo/journal_view.html:753
-#, fuzzy
 msgid "Runtime"
 msgstr "Tempo de funcionamento"
 
@@ -17799,18 +17741,16 @@ msgid ""
 msgstr ""
 
 #: aot_flask/templates/pages/geo/journal_view.html:286
-#, fuzzy
 msgid "Terms used here"
-msgstr "Termos de Uso"
+msgstr "Termos usados aqui"
 
 #: aot_flask/templates/pages/geo/journal_view.html:295
 msgid "Where the numbers come from"
 msgstr ""
 
 #: aot_flask/templates/pages/geo/journal_view.html:297
-#, fuzzy
 msgid "Source"
-msgstr "Tipo de fonte"
+msgstr "Fonte"
 
 #: aot_flask/templates/pages/geo/journal_view.html:298
 msgid ""
@@ -17819,9 +17759,8 @@ msgid ""
 msgstr ""
 
 #: aot_flask/templates/pages/geo/journal_view.html:299
-#, fuzzy
 msgid "Snapshot"
-msgstr "INSTANTÂNEO"
+msgstr "Instantâneo"
 
 #: aot_flask/templates/pages/geo/journal_view.html:300
 msgid ""
@@ -17838,34 +17777,29 @@ msgid "Print (save as PDF)"
 msgstr ""
 
 #: aot_flask/templates/pages/geo/journal_view.html:315
-#, fuzzy
 msgid "Markdown"
-msgstr "Down"
+msgstr "Markdown"
 
 #: aot_flask/templates/pages/geo/journal_view.html:316
-#, fuzzy
 msgid "ODT"
-msgstr "out."
+msgstr "ODT"
 
 #: aot_flask/templates/pages/geo/journal_view.html:317
 msgid "CSV"
 msgstr ""
 
 #: aot_flask/templates/pages/geo/journal_view.html:318
-#, fuzzy
 msgid "JSON"
-msgstr "On"
+msgstr "JSON"
 
 #: aot_flask/templates/pages/geo/journal_view.html:331
 #: aot_flask/templates/pages/geo/journal_view.html:818
-#, fuzzy
 msgid "Additional notes"
-msgstr "Informações adicionais"
+msgstr "Notas adicionais"
 
 #: aot_flask/templates/pages/geo/journal_view.html:356
-#, fuzzy
 msgid "Item"
-msgstr "itens"
+msgstr "Item"
 
 #: aot_flask/templates/pages/geo/journal_view.html:387
 msgid "Growing degree days"
@@ -17887,14 +17821,12 @@ msgid "%(p)s%% of days measured"
 msgstr ""
 
 #: aot_flask/templates/pages/geo/journal_view.html:398
-#, fuzzy
 msgid "No program attached"
-msgstr "Nenhum anexo"
+msgstr "Nenhum programa vinculado"
 
 #: aot_flask/templates/pages/geo/journal_view.html:399
-#, fuzzy
 msgid "The program has no base temperature"
-msgstr "Temperatura do Ponto de Orvalho"
+msgstr "O programa não tem temperatura-base"
 
 #: aot_flask/templates/pages/geo/journal_view.html:400
 msgid "Not enough measured days"
@@ -17907,41 +17839,37 @@ msgstr ""
 
 #: aot_flask/templates/pages/geo/journal_view.html:448
 #: aot_flask/templates/pages/geo/journal_view.html:664
-#, fuzzy
 msgid "Min"
-msgstr "min"
+msgstr "Mín"
 
 #: aot_flask/templates/pages/geo/journal_view.html:448
 #: aot_flask/templates/pages/geo/journal_view.html:664
-#, fuzzy
 msgid "Max"
-msgstr "Max:"
+msgstr "Máx"
 
 #: aot_flask/templates/pages/geo/journal_view.html:448
 #: aot_flask/templates/pages/geo/journal_view.html:664
-#, fuzzy
 msgid "Avg"
-msgstr "Tag"
+msgstr "Méd"
 
 #: aot_flask/templates/pages/geo/journal_view.html:458
 #: aot_flask/templates/pages/geo/journal_view.html:677
-#, fuzzy, python-format
+#, python-format
 msgid "%(n)s sensors"
-msgstr "Sensores"
+msgstr "%(n)s sensores"
 
 #: aot_flask/templates/pages/geo/journal_view.html:471
 #: aot_flask/templates/pages/geo/journal_view.html:685
 #: aot_flask/templates/pages/geo/journal_view.html:720
-#, fuzzy
 msgid "partial coverage"
-msgstr "Cobertura"
+msgstr "cobertura parcial"
 
 #: aot_flask/templates/pages/geo/journal_view.html:474
 #: aot_flask/templates/pages/geo/journal_view.html:689
 #: aot_flask/templates/pages/geo/journal_view.html:732
-#, fuzzy, python-format
+#, python-format
 msgid "curve: %(name)s"
-msgstr "Tags: %(names)s"
+msgstr "curva: %(name)s"
 
 #: aot_flask/templates/pages/geo/journal_view.html:482
 #: aot_flask/templates/pages/geo/journal_view.html:487
@@ -17954,35 +17882,30 @@ msgstr ""
 #: aot_flask/templates/pages/geo/journal_view.html:488
 #: aot_flask/templates/pages/geo/journal_view.html:698
 #: aot_flask/templates/pages/geo/journal_view.html:738
-#, fuzzy
 msgid "cumulative target"
-msgstr "Alvo Estático"
+msgstr "alvo cumulativo"
 
 #: aot_flask/templates/pages/geo/journal_view.html:502
-#, fuzzy
 msgid "No sensor for:"
-msgstr "Sensor de CO2"
+msgstr "Sem sensor para:"
 
 #: aot_flask/templates/pages/geo/journal_view.html:510
 #: aot_flask/templates/pages/geo/journal_view.html:753
-#, fuzzy
 msgid "Water"
-msgstr "Clima"
+msgstr "Água"
 
 #: aot_flask/templates/pages/geo/journal_view.html:519
 #: aot_flask/templates/pages/geo/journal_view.html:765
-#, fuzzy
 msgid "estimated"
-msgstr "Estimado"
+msgstr "estimado"
 
 #: aot_flask/templates/pages/geo/journal_view.html:562
 msgid "before this journal"
 msgstr ""
 
 #: aot_flask/templates/pages/geo/journal_view.html:563
-#, fuzzy
 msgid "planned"
-msgstr "Planejador"
+msgstr "planejado"
 
 #: aot_flask/templates/pages/geo/journal_view.html:583
 #, python-format
@@ -17990,9 +17913,8 @@ msgid "Follows curve: %(name)s"
 msgstr ""
 
 #: aot_flask/templates/pages/geo/journal_view.html:587
-#, fuzzy
 msgid "No sensor for this"
-msgstr "Nenhuma estação encontrada para esta fazenda."
+msgstr "Sem sensor para isto"
 
 #: aot_flask/templates/pages/geo/journal_view.html:612
 #: aot_flask/templates/settings/general.html:376
@@ -18005,9 +17927,8 @@ msgid "Monthly"
 msgstr "Monthly"
 
 #: aot_flask/templates/pages/geo/journal_view.html:614
-#, fuzzy
 msgid "Whole period"
-msgstr "Reset Period"
+msgstr "Período completo"
 
 #: aot_flask/templates/pages/geo/journal_view.html:631
 #, python-format
@@ -18020,25 +17941,22 @@ msgid "GDD %(v)s"
 msgstr ""
 
 #: aot_flask/templates/pages/geo/journal_view.html:644
-#, fuzzy, python-format
+#, python-format
 msgid "No data recorded — %(n)s periods skipped."
-msgstr "No data for the last %(period)s seconds"
+msgstr "Nenhum dado registrado — %(n)s períodos ignorados."
 
 #: aot_flask/templates/pages/geo/journal_view.html:646
-#, fuzzy
 msgid "No data recorded for this period."
-msgstr "Nenhuma fazenda retornada para esta chave."
+msgstr "Nenhum dado registrado para este período."
 
 #: aot_flask/templates/pages/geo/journal_view.html:680
 #: aot_flask/templates/pages/geo/journal_view.html:710
-#, fuzzy
 msgid "usage"
-msgstr "Usage"
+msgstr "uso"
 
 #: aot_flask/templates/pages/geo/journal_view.html:690
-#, fuzzy
 msgid "varies"
-msgstr "Bibliotecas"
+msgstr "varia"
 
 #: aot_flask/templates/pages/geo/journal_view.html:726
 #, python-format
@@ -18046,15 +17964,12 @@ msgid "outdoors %(out)s × cover %(tau)s"
 msgstr ""
 
 #: aot_flask/templates/pages/geo/journal_view.html:739
-#, fuzzy
 msgid "no sensor"
-msgstr "Sensor de CO2"
+msgstr "sem sensor"
 
 #: aot_flask/templates/pages/geo/journal_view.html:863
-#, fuzzy
 msgid "Delete this journal? This cannot be undone."
-msgstr ""
-"Excluir esta aba e todas as suas entradas? Esta ação não pode ser desfeita."
+msgstr "Excluir este diário? Esta ação não pode ser desfeita."
 
 #: aot_flask/templates/pages/geo/journal_view.html:869
 #: aot_flask/templates/pages/geo/journal_view.html:873
@@ -19284,38 +19199,32 @@ msgid "Click to edit Upgrade Badge colors"
 msgstr "Clique para editar as cores do Selo de Upgrade"
 
 #: aot_flask/templates/settings/custom_ui.html:222
-#, fuzzy
 msgid "Output/Input Channel Preview"
-msgstr "Canal de Output"
+msgstr "Pré-visualização do Canal de Saída/Entrada"
 
 #: aot_flask/templates/settings/custom_ui.html:229
-#, fuzzy
 msgid "Click to edit Channel On colors"
-msgstr "Clique para editar as cores de fundo de Perigo"
+msgstr "Clique para editar as cores do Canal Ligado"
 
 #: aot_flask/templates/settings/custom_ui.html:251
-#, fuzzy
 msgid "Click to edit Channel Off colors"
-msgstr "Clique para editar as cores do Botão Desligado"
+msgstr "Clique para editar as cores do Canal Desligado"
 
 #: aot_flask/templates/settings/custom_ui.html:273
-#, fuzzy
 msgid "Click to edit Pending colors"
-msgstr "Clique para editar as cores do Selo MCP"
+msgstr "Clique para editar as cores de Pendente"
 
 #: aot_flask/templates/settings/custom_ui.html:282
 msgid "Click to edit Danger Tint colors"
 msgstr "Clique para editar as cores de fundo de Perigo"
 
 #: aot_flask/templates/settings/custom_ui.html:291
-#, fuzzy
 msgid "Click to edit Unverified Running Tint colors"
-msgstr "Clique para editar as cores de fundo de Perigo"
+msgstr "Clique para editar as cores da Tonalidade de Execução Não Verificada"
 
 #: aot_flask/templates/settings/custom_ui.html:293
-#, fuzzy
 msgid "Running (unconfirmed)"
-msgstr "Não confirmado"
+msgstr "Em execução (não confirmado)"
 
 #: aot_flask/templates/settings/custom_ui.html:310
 msgid "Branding"
@@ -20315,9 +20224,8 @@ msgid "Revoke this API key? Anything using it will stop working."
 msgstr ""
 
 #: aot_flask/templates/settings/user_detail.html:149
-#, fuzzy
 msgid "No API keys issued."
-msgstr "No API keys stored yet."
+msgstr "Nenhuma API Key emitida."
 
 #: aot_flask/templates/settings/user_detail.html:161
 msgid "Read-only keys can fetch data but cannot change anything."
@@ -20402,41 +20310,34 @@ msgstr "Módulos de Widget Importados"
 
 #: aot_flask/templates/tools/audit_log.html:26
 #: aot_flask/templates/tools/audit_log.html:60
-#, fuzzy
 msgid "Result"
-msgstr "Repouso"
+msgstr "Resultado"
 
 #: aot_flask/templates/tools/audit_log.html:30
-#, fuzzy
 msgid "Failure"
-msgstr "com falha"
+msgstr "Falha"
 
 #: aot_flask/templates/tools/audit_log.html:34
-#, fuzzy
 msgid "Rows"
-msgstr "Roles"
+msgstr "Linhas"
 
 #: aot_flask/templates/tools/audit_log.html:43
-#, fuzzy
 msgid "Export CSV"
-msgstr "Exportar Spec"
+msgstr "Exportar CSV"
 
 #: aot_flask/templates/tools/audit_log.html:52
-#, fuzzy
 msgid "No audit log entries found."
-msgstr "No notes found"
+msgstr "Nenhuma entrada de registro de auditoria encontrada."
 
 #: aot_flask/templates/tools/audit_log.html:58 widgets/AoT_PID.py:426
 msgid "Timestamp"
 msgstr "Timestamp"
 
 #: aot_flask/templates/tools/audit_log.html:66
-#, fuzzy
 msgid "Target Object"
-msgstr "Dispositivo Alvo"
+msgstr "Objeto Alvo"
 
 #: aot_flask/templates/tools/audit_log.html:67
-#, fuzzy
 msgid "Detail"
 msgstr "Detalhes"
 
@@ -21415,9 +21316,8 @@ msgid "Deactivated"
 msgstr "Desativada"
 
 #: aot_flask/templates/user_templates/widget_template_widget_function_status_js.html:155
-#, fuzzy
 msgid "No Function selected."
-msgstr "Nenhuma localização selecionada"
+msgstr "Nenhuma Função selecionada."
 
 #: aot_flask/templates/user_templates/widget_template_widget_function_status_js.html:169
 #: aot_flask/utils/utils_function_status.py:215
@@ -21912,9 +21812,9 @@ msgid "Function not found"
 msgstr "Função não encontrada"
 
 #: aot_flask/utils/utils_function_status.py:94
-#, fuzzy, python-format
+#, python-format
 msgid "%(n)s s"
-msgstr "%(num)d notas"
+msgstr "%(n)s s"
 
 #: aot_flask/utils/utils_function_status.py:108
 #, python-format
@@ -21927,14 +21827,13 @@ msgid "%(n)s min ago"
 msgstr ""
 
 #: aot_flask/utils/utils_function_status.py:111
-#, fuzzy, python-format
+#, python-format
 msgid "%(n)s h ago"
-msgstr "h ago"
+msgstr "há %(n)s h"
 
 #: aot_flask/utils/utils_function_status.py:117
-#, fuzzy
 msgid "Paused — no actuators registered"
-msgstr "Nenhuma tarefa registrada."
+msgstr "Pausado — nenhum atuador registrado"
 
 #: aot_flask/utils/utils_function_status.py:118
 msgid "Paused — outside the operating time window"
@@ -21946,29 +21845,28 @@ msgid "Paused (%(reason)s)"
 msgstr ""
 
 #: aot_flask/utils/utils_function_status.py:132
-#, fuzzy
 msgid "Waiting for the first control cycle."
-msgstr "O tempo de espera antes da primeira ação"
+msgstr "Aguardando o primeiro ciclo de controle."
 
 #: aot_flask/utils/utils_function_status.py:140
-#, fuzzy, python-format
+#, python-format
 msgid "Mode: %(modes)s"
-msgstr "Tags: %(names)s"
+msgstr "Modo: %(modes)s"
 
 #: aot_flask/utils/utils_function_status.py:155
-#, fuzzy, python-format
+#, python-format
 msgid "Environment: %(values)s"
-msgstr "Variáveis de Ambiente"
+msgstr "Ambiente: %(values)s"
 
 #: aot_flask/utils/utils_function_status.py:163
-#, fuzzy, python-format
+#, python-format
 msgid "Deviation: %(values)s"
-msgstr "Duração (Minutos)"
+msgstr "Desvio: %(values)s"
 
 #: aot_flask/utils/utils_function_status.py:171
-#, fuzzy, python-format
+#, python-format
 msgid "Actuators: %(values)s"
-msgstr "Tags: %(names)s"
+msgstr "Atuadores: %(values)s"
 
 #: aot_flask/utils/utils_function_status.py:176
 #, python-format
@@ -21981,9 +21879,8 @@ msgid "Safety gate: %(reason)s — control stopped"
 msgstr ""
 
 #: aot_flask/utils/utils_function_status.py:187
-#, fuzzy
 msgid "triggered"
-msgstr "Trigger"
+msgstr "acionado"
 
 #: aot_flask/utils/utils_function_status.py:189
 #, python-format
@@ -21991,9 +21888,9 @@ msgid "Safety gate (partial): %(reason)s"
 msgstr ""
 
 #: aot_flask/utils/utils_function_status.py:195
-#, fuzzy, python-format
+#, python-format
 msgid "No actuator to control %(target)s"
-msgstr "Controle do Atuador"
+msgstr "Nenhum atuador para controlar %(target)s"
 
 #: aot_flask/utils/utils_function_status.py:199
 #, python-format
@@ -22011,39 +21908,34 @@ msgid "Last cycle: %(when)s"
 msgstr ""
 
 #: aot_flask/utils/utils_function_status.py:213
-#, fuzzy
 msgid "Idle"
-msgstr "Hide"
+msgstr "Ocioso"
 
 #: aot_flask/utils/utils_function_status.py:214
-#, fuzzy
 msgid "Outside the time window"
-msgstr "Ativar Janela de Tempo"
+msgstr "Fora da janela de tempo"
 
 #: aot_flask/utils/utils_function_status.py:216
-#, fuzzy
 msgid "Initializing"
-msgstr "Utilização de IA"
+msgstr "Inicializando"
 
 #: aot_flask/utils/utils_function_status.py:217
-#, fuzzy
 msgid "Standby"
-msgstr "Areia"
+msgstr "Em espera"
 
 #: aot_flask/utils/utils_function_status.py:218
-#, fuzzy
 msgid "Ready"
-msgstr "Red"
+msgstr "Pronto"
 
 #: aot_flask/utils/utils_function_status.py:225
-#, fuzzy, python-format
+#, python-format
 msgid "Waiting (%(time)s)"
-msgstr "Function (%(type)s)"
+msgstr "Aguardando (%(time)s)"
 
 #: aot_flask/utils/utils_function_status.py:230
-#, fuzzy, python-format
+#, python-format
 msgid "Sequence: %(state)s"
-msgstr "Sucesso: %(action)s"
+msgstr "Sequência: %(state)s"
 
 #: aot_flask/utils/utils_function_status.py:236
 #, python-format
@@ -22066,14 +21958,14 @@ msgid "Steps: %(running)s of %(total)s running"
 msgstr ""
 
 #: aot_flask/utils/utils_function_status.py:257
-#, fuzzy, python-format
+#, python-format
 msgid "Conditional: %(state)s"
-msgstr "Conditional"
+msgstr "Condicional: %(state)s"
 
 #: aot_flask/utils/utils_function_status.py:262
-#, fuzzy, python-format
+#, python-format
 msgid "Period: %(period)s"
-msgstr "Período: %(label)s"
+msgstr "Período: %(period)s"
 
 #: aot_flask/utils/utils_function_status.py:266
 #, python-format
@@ -22089,9 +21981,8 @@ msgid "The last check ran no action."
 msgstr ""
 
 #: aot_flask/utils/utils_function_status.py:270
-#, fuzzy
 msgid "Not checked yet."
-msgstr "Ainda não foram registadas chamadas de ferramentas."
+msgstr "Ainda não verificado."
 
 #: aot_flask/utils/utils_function_status.py:274
 #, python-format
@@ -22489,9 +22380,9 @@ msgid ""
 msgstr ""
 
 #: aot_flask/utils/utils_remote_host.py:272
-#, fuzzy, python-format
+#, python-format
 msgid "Could not enroll with %(host)s: %(err)s"
-msgstr "Failed to regenerate widget HTML: %(err)s"
+msgstr "Não foi possível registrar com %(host)s: %(err)s"
 
 #: aot_flask/utils/utils_remote_host.py:277
 #, python-format
@@ -22553,14 +22444,12 @@ msgid ""
 msgstr ""
 
 #: aot_flask/utils/utils_settings.py:456
-#, fuzzy
 msgid "API key not found."
-msgstr "Conselho não encontrado."
+msgstr "API Key não encontrada."
 
 #: aot_flask/utils/utils_settings.py:466
-#, fuzzy
 msgid "API key revoked."
-msgstr "API Key Body"
+msgstr "API Key revogada."
 
 #: aot_flask/utils/utils_settings.py:532
 msgid "That username is already taken."
@@ -25338,9 +25227,8 @@ msgid ""
 msgstr ""
 
 #: inputs/modbus_tcp.py:108 outputs/on_off_modbus.py:133
-#, fuzzy
 msgid "Timeout (seconds)"
-msgstr "Timeout (sec)"
+msgstr "Tempo Limite (segundos)"
 
 #: inputs/modbus_tcp.py:110
 msgid ""
@@ -25349,9 +25237,8 @@ msgid ""
 msgstr ""
 
 #: inputs/modbus_tcp.py:118 outputs/on_off_modbus.py:143
-#, fuzzy
 msgid "Retries"
-msgstr "Retirar"
+msgstr "Tentativas"
 
 #: inputs/modbus_tcp.py:120 outputs/on_off_modbus.py:145
 msgid ""
@@ -25376,18 +25263,16 @@ msgid "Input Register (read-only word)"
 msgstr ""
 
 #: inputs/modbus_tcp.py:145
-#, fuzzy
 msgid "Register Type"
-msgstr "Registrar Saída"
+msgstr "Tipo de Registrador"
 
 #: inputs/modbus_tcp.py:146
 msgid "Which Modbus table this channel reads from"
 msgstr ""
 
 #: inputs/modbus_tcp.py:153
-#, fuzzy
 msgid "Register Address"
-msgstr "Enter address."
+msgstr "Endereço do Registrador"
 
 #: inputs/modbus_tcp.py:155
 msgid ""
@@ -25401,9 +25286,8 @@ msgid "Bit (coil / discrete input)"
 msgstr ""
 
 #: inputs/modbus_tcp.py:172
-#, fuzzy
 msgid "Data Type"
-msgstr "Tipo de Autenticação"
+msgstr "Tipo de Dado"
 
 #: inputs/modbus_tcp.py:174
 msgid ""
@@ -25420,9 +25304,8 @@ msgid "Little endian (low word first)"
 msgstr ""
 
 #: inputs/modbus_tcp.py:186
-#, fuzzy
 msgid "Word Order"
-msgstr "Reorder"
+msgstr "Ordem das Palavras"
 
 #: inputs/modbus_tcp.py:188
 msgid ""
@@ -25431,9 +25314,8 @@ msgid ""
 msgstr ""
 
 #: inputs/modbus_tcp.py:196
-#, fuzzy
 msgid "Scale Factor"
-msgstr "Power Factor"
+msgstr "Fator de Escala"
 
 #: inputs/modbus_tcp.py:198
 msgid ""
@@ -25475,28 +25357,24 @@ msgid ""
 msgstr ""
 
 #: inputs/remote_aot_input.py:108
-#, fuzzy
 msgid "Remote AoT Host"
-msgstr "MQTT Host"
+msgstr "Host do AoT Remoto"
 
 #: inputs/remote_aot_input.py:109 outputs/remote_output_on_off.py:75
 #: outputs/remote_output_pwm.py:91
-#, fuzzy
 msgid ""
 "The host or IP address of the remote AoT (a port may be included, e.g. "
 "192.168.0.9:8084)"
-msgstr "The host or IP address of the remote AoT"
+msgstr "O host ou endereço IP do AoT remoto (pode incluir uma porta, por exemplo 192.168.0.9:8084)"
 
 #: inputs/remote_aot_input.py:116
-#, fuzzy
 msgid "Remote AoT API Key"
-msgstr "Map API Key"
+msgstr "API Key do AoT Remoto"
 
 #: inputs/remote_aot_input.py:117 outputs/remote_output_on_off.py:83
 #: outputs/remote_output_pwm.py:99
-#, fuzzy
 msgid "The API key of the remote AoT, exactly as shown on that server"
-msgstr "The API key of the remote AoT"
+msgstr "A API Key do AoT remoto, exatamente como exibida naquele servidor"
 
 #: inputs/remote_aot_input.py:127 outputs/on_off_wireless_rpi_rf.py:91
 #: outputs/remote_output_on_off.py:93 outputs/remote_output_pwm.py:109
@@ -25524,7 +25402,6 @@ msgid ""
 msgstr ""
 
 #: inputs/remote_aot_input.py:141 outputs/remote_output_pwm.py:123
-#, fuzzy
 msgid "Request Timeout (Seconds)"
 msgstr "Tempo Limite da Solicitação (seg)"
 
@@ -25535,9 +25412,8 @@ msgid ""
 msgstr ""
 
 #: inputs/remote_aot_input.py:148
-#, fuzzy
 msgid "Initial Backfill (Hours)"
-msgstr "Executar Preenchimento Agora"
+msgstr "Preenchimento Inicial (Horas)"
 
 #: inputs/remote_aot_input.py:149
 msgid ""
@@ -25546,9 +25422,8 @@ msgid ""
 msgstr ""
 
 #: inputs/remote_aot_input.py:166
-#, fuzzy
 msgid "Remote Measurement"
-msgstr "Real-time Measurement"
+msgstr "Medição Remota"
 
 #: inputs/remote_aot_input.py:167
 msgid "The measurement on the remote AoT to collect into this channel"
@@ -26702,9 +26577,8 @@ msgid "A friendly name shown in the UI for this channel."
 msgstr ""
 
 #: outputs/on_off_modbus.py:165
-#, fuzzy
 msgid "Coil Address"
-msgstr "IP Address"
+msgstr "Endereço da Bobina"
 
 #: outputs/on_off_modbus.py:167
 msgid ""
@@ -26719,14 +26593,12 @@ msgid ""
 msgstr ""
 
 #: outputs/on_off_modbus.py:196
-#, fuzzy
 msgid "Set the channel state when AoT shuts down"
-msgstr "Set the state when AoT shuts down"
+msgstr "Define o estado do canal quando o AoT é desligado"
 
 #: outputs/on_off_modbus.py:204
-#, fuzzy
 msgid "Whether to trigger functions when the channel switches at startup"
-msgstr "Whether to trigger functions when the output switches at startup"
+msgstr "Se as funções devem ser acionadas quando o canal mudar de estado na inicialização"
 
 #: outputs/on_off_modbus.py:221 outputs/on_off_python.py:273
 #: outputs/on_off_wireless_rpi_rf.py:147 outputs/pwm_shell.py:139
@@ -29013,9 +28885,8 @@ msgid "Input value validity duration"
 msgstr "Input value validity duration"
 
 #: widgets/widget_trigger_sequence.py:539
-#, fuzzy
 msgid "Continue where it stopped"
-msgstr "Captura interrompida"
+msgstr "Continuar de onde parou"
 
 #: widgets/widget_trigger_sequence.py:540
 msgid "Start from the beginning"
@@ -29305,9 +29176,8 @@ msgid ""
 msgstr ""
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:379
-#, fuzzy
 msgid "Running Signal Threshold"
-msgstr "Limiar de Vento Forte (m/s)"
+msgstr "Limiar do Sinal de Funcionamento"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:381
 msgid ""

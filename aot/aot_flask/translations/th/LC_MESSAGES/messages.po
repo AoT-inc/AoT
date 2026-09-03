@@ -4688,9 +4688,8 @@ msgid "No devices to inspect"
 msgstr "ไม่มีอุปกรณ์ให้ตรวจสอบ"
 
 #: aot_flask/routes_geo_journal.py:132
-#, fuzzy
 msgid "Could not find that area."
-msgstr "Could not find button ID."
+msgstr "ไม่พบพื้นที่ดังกล่าว"
 
 #: aot_flask/routes_geo_journal.py:154
 msgid ""
@@ -4699,20 +4698,17 @@ msgid ""
 msgstr ""
 
 #: aot_flask/routes_geo_journal.py:223 aot_flask/routes_geo_journal.py:451
-#, fuzzy
 msgid "Permission Denied"
 msgstr "ปฏิเสธสิทธิ์"
 
 #: aot_flask/routes_geo_journal.py:243
-#, fuzzy
 msgid "Pick at least one measurement."
-msgstr "Store Measurement"
+msgstr "กรุณาเลือกค่าที่ต้องการวัดอย่างน้อยหนึ่งรายการ"
 
 #: aot_flask/routes_geo_journal.py:246 aot_flask/routes_geo_journal.py:248
 #: aot_flask/routes_geo_journal.py:499
-#, fuzzy
 msgid "Select what the journal is about."
-msgstr "เลือกบทบาทที่ Output นี้จะทำหน้าที่"
+msgstr "กรุณาเลือกเป้าหมายของรายงานนี้"
 
 #: aot_flask/routes_geo_journal.py:250
 msgid "Enter both a start and an end date."
@@ -4727,9 +4723,8 @@ msgid "Could not find what this journal is about."
 msgstr ""
 
 #: aot_flask/routes_geo_journal.py:266
-#, fuzzy
 msgid "Could not read this target."
-msgstr "Could not find the API key to delete."
+msgstr "ไม่สามารถอ่านข้อมูลเป้าหมายนี้ได้"
 
 #: aot_flask/routes_geo_journal.py:271
 #, python-format
@@ -4754,14 +4749,12 @@ msgid "This journal is still being generated."
 msgstr ""
 
 #: aot_flask/routes_geo_journal.py:456
-#, fuzzy
 msgid "Journal not found."
-msgstr "ไม่พบแหล่งข้อมูล"
+msgstr "ไม่พบรายงาน"
 
 #: aot_flask/routes_geo_journal.py:470
-#, fuzzy
 msgid "Could not delete this journal."
-msgstr "ต้องการลบแหล่งข้อมูลนี้หรือไม่"
+msgstr "ไม่สามารถลบรายงานนี้ได้"
 
 #: aot_flask/routes_geo_plot.py:184
 #: aot_flask/templates/pages/ai/components/onboarding_flow.html:67
@@ -4922,13 +4915,10 @@ msgstr ""
 
 #: aot_flask/routes_password_reset.py:131
 #: aot_flask/utils/utils_settings.py:355
-#, fuzzy
 msgid ""
 "Invalid password. Must be at least 8 characters, contain only letters, "
 "numbers, and symbols, and not be a commonly used password."
-msgstr ""
-"Invalid password. Must be between 6 and 64 characters and only contain "
-"letters, numbers, and symbols."
+msgstr "รหัสผ่านไม่ถูกต้อง ต้องมีความยาวอย่างน้อย 8 ตัวอักษร ประกอบด้วยตัวอักษร ตัวเลข และสัญลักษณ์เท่านั้น และต้องไม่ใช่รหัสผ่านที่ใช้กันทั่วไป"
 
 #: aot_flask/routes_password_reset.py:136
 msgid "Code expired or invalid"
@@ -6852,9 +6842,8 @@ msgid "User ID"
 msgstr "User ID"
 
 #: aot_flask/forms/forms_settings.py:544
-#, fuzzy
 msgid "Key Name"
-msgstr "Rename"
+msgstr "ชื่อ API Key"
 
 #: aot_flask/forms/forms_settings.py:548
 #: aot_flask/templates/settings/user_detail.html:161
@@ -6864,21 +6853,18 @@ msgstr "สิทธิ์การใช้งาน"
 
 #: aot_flask/forms/forms_settings.py:549
 #: aot_flask/templates/settings/user_detail.html:137
-#, fuzzy
 msgid "Full access"
-msgstr "การเข้าถึงเครื่องมือ"
+msgstr "เข้าถึงแบบเต็ม"
 
 #: aot_flask/forms/forms_settings.py:550
 #: aot_flask/templates/settings/user_detail.html:137
-#, fuzzy
 msgid "Read only"
-msgstr "เหตุผล"
+msgstr "อ่านอย่างเดียว"
 
 #: aot_flask/forms/forms_settings.py:554
 #: aot_flask/templates/settings/user_detail.html:144
-#, fuzzy
 msgid "Revoke"
-msgstr "ระยะชัก"
+msgstr "เพิกถอน"
 
 #: aot_flask/forms/forms_settings.py:556
 #: aot_flask/templates/settings/user_detail.html:43
@@ -7164,25 +7150,22 @@ msgstr "พื้นหลังไม่ใช้งาน"
 
 #: aot_flask/forms/forms_settings.py:684
 #: aot_flask/templates/settings/custom_ui.html:528
-#, fuzzy
 msgid "Warning State"
-msgstr "Warning"
+msgstr "สถานะเตือน"
 
 #: aot_flask/forms/forms_settings.py:688
 #: aot_flask/templates/settings/custom_ui.html:228
 #: aot_flask/templates/settings/custom_ui.html:230
 #: aot_flask/templates/settings/custom_ui.html:529
-#, fuzzy
 msgid "Channel On"
-msgstr "Channel"
+msgstr "ช่องเปิด"
 
 #: aot_flask/forms/forms_settings.py:689
 #: aot_flask/templates/settings/custom_ui.html:250
 #: aot_flask/templates/settings/custom_ui.html:252
 #: aot_flask/templates/settings/custom_ui.html:530
-#, fuzzy
 msgid "Channel Off"
-msgstr "Channel"
+msgstr "ช่องปิด"
 
 #: aot_flask/forms/forms_settings.py:692
 #: aot_flask/static/js/ai/aot-ai-gantt.js:309
@@ -9384,9 +9367,8 @@ msgstr ""
 #: aot_flask/templates/pages/geo/journal.html:5
 #: aot_flask/templates/pages/geo/journal.html:57
 #: aot_flask/templates/pages/geo/journal_view.html:3
-#, fuzzy
 msgid "Journals"
-msgstr "ชั่วโมง"
+msgstr "รายงาน"
 
 #: aot_flask/templates/layout.html:683
 #: aot_flask/templates/layout_default.html:683
@@ -9468,9 +9450,8 @@ msgstr "System Log"
 #: aot_flask/templates/layout.html:729
 #: aot_flask/templates/layout_default.html:729
 #: aot_flask/templates/tools/audit_log.html:3
-#, fuzzy
 msgid "Audit Log"
-msgstr "แคตตาล็อก"
+msgstr "บันทึกการตรวจสอบ"
 
 #: aot_flask/templates/layout.html:730
 #: aot_flask/templates/layout_default.html:730
@@ -9994,9 +9975,8 @@ msgid "Forgot Password"
 msgstr "Forgot Password"
 
 #: aot_flask/templates/login_totp.html:38
-#, fuzzy
 msgid "Two-Factor Authentication"
-msgstr "การยืนยันตัวตน"
+msgstr "การยืนยันตัวตนแบบสองปัจจัย"
 
 #: aot_flask/templates/login_totp.html:41
 msgid "Enter the 6-digit code from your authenticator app."
@@ -10004,14 +9984,12 @@ msgstr ""
 
 #: aot_flask/templates/login_totp.html:47
 #: aot_flask/templates/login_totp.html:53
-#, fuzzy
 msgid "Verification Code"
-msgstr "รหัสส่วน"
+msgstr "รหัสยืนยัน"
 
 #: aot_flask/templates/login_totp.html:63
-#, fuzzy
 msgid "Verify"
-msgstr "ความรุนแรง"
+msgstr "ยืนยัน"
 
 #: aot_flask/templates/admin/backup.html:18
 msgid "Backup and Restore"
@@ -11077,34 +11055,28 @@ msgid "Device Settings"
 msgstr "Device Settings"
 
 #: aot_flask/templates/pages/device.html:180
-#, fuzzy
 msgid "Fault"
-msgstr "Default"
+msgstr "ขัดข้อง"
 
 #: aot_flask/templates/pages/device.html:181
-#, fuzzy
 msgid "Device OK"
-msgstr "บทบาทของอุปกรณ์"
+msgstr "อุปกรณ์ปกติ"
 
 #: aot_flask/templates/pages/device.html:236
-#, fuzzy
 msgid "Select a device type first"
-msgstr "โปรดเลือกสิ่งอำนวยความสะดวกก่อน"
+msgstr "กรุณาเลือกประเภทอุปกรณ์ก่อน"
 
 #: aot_flask/templates/pages/device.html:289
-#, fuzzy
 msgid "Measurement Channels"
 msgstr "ช่องวัดค่า"
 
 #: aot_flask/templates/pages/device.html:292
-#, fuzzy
 msgid "Input inactive"
-msgstr "Inactive"
+msgstr "Input ไม่ได้ใช้งาน"
 
 #: aot_flask/templates/pages/device.html:306
-#, fuzzy
 msgid "Control Channels"
-msgstr "Number of Channels"
+msgstr "ช่องควบคุม"
 
 #: aot_flask/templates/pages/device.html:320
 msgid "This device has no measurements or controls yet."
@@ -11122,9 +11094,8 @@ msgid "None"
 msgstr "ไม่มี"
 
 #: aot_flask/templates/pages/device.html:385
-#, fuzzy
 msgid "Input / Output"
-msgstr "PWM Output"
+msgstr "Input / Output"
 
 #: aot_flask/templates/pages/ai/ai_library.html:542
 #: aot_flask/templates/pages/device.html:389
@@ -11134,49 +11105,40 @@ msgstr "ลิงก์"
 
 #: aot_flask/templates/pages/device.html:394
 #: aot_flask/templates/pages/device.html:430
-#, fuzzy
 msgid "Currently linked"
-msgstr "มุมมองปัจจุบัน"
+msgstr "เชื่อมโยงอยู่ในขณะนี้"
 
 #: aot_flask/templates/pages/device.html:406
-#, fuzzy
 msgid "Reference"
-msgstr "Preferences"
+msgstr "อ้างอิง"
 
 #: aot_flask/templates/pages/device.html:409
 #: aot_flask/templates/pages/device.html:440
-#, fuzzy
 msgid "Unlink"
-msgstr "ลิงก์"
+msgstr "ยกเลิกการเชื่อมโยง"
 
 #: aot_flask/templates/pages/device.html:425
-#, fuzzy
 msgid "Sub-devices"
-msgstr "อุปกรณ์"
+msgstr "อุปกรณ์ย่อย"
 
 #: aot_flask/templates/pages/device.html:467
 #: aot_flask/templates/pages/geo/geo_facility.html:771
-#, fuzzy
 msgid "Linked"
-msgstr "ลิงก์"
+msgstr "เชื่อมโยงแล้ว"
 
 #: aot_flask/templates/pages/device.html:479
-#, fuzzy
 msgid "Unlinked"
-msgstr "— ยังไม่ได้เชื่อมโยง —"
+msgstr "ยกเลิกการเชื่อมโยงแล้ว"
 
 #: aot_flask/templates/pages/device.html:532
-#, fuzzy
 msgid "Failed to load settings"
-msgstr "โหลดไม่สำเร็จ"
+msgstr "โหลดการตั้งค่าไม่สำเร็จ"
 
 #: aot_flask/templates/pages/device.html:549
-#, fuzzy
 msgid "Form not found"
-msgstr "ข้อผิดพลาด: ไม่พบฟอร์ม"
+msgstr "ไม่พบฟอร์ม"
 
 #: aot_flask/templates/pages/device.html:596
-#, fuzzy
 msgid "Deleted"
 msgstr "ลบแล้ว"
 
@@ -11196,9 +11158,8 @@ msgid "Are you sure you want to duplicate?"
 msgstr "Are you sure you want to duplicate?"
 
 #: aot_flask/templates/pages/device.html:610
-#, fuzzy
 msgid "Duplicated"
-msgstr "Duplicate"
+msgstr "ทำสำเนาแล้ว"
 
 #: aot_flask/templates/pages/device.html:620
 #: aot_flask/templates/settings/input.html:41
@@ -17523,16 +17484,14 @@ msgid ""
 msgstr ""
 
 #: aot_flask/templates/pages/geo/journal.html:77
-#, fuzzy
 msgid "Change"
-msgstr "Changelog"
+msgstr "เปลี่ยน"
 
 #: aot_flask/templates/pages/geo/journal.html:80
 msgid "Search by crop, variety, name, zone…"
 msgstr ""
 
 #: aot_flask/templates/pages/geo/journal.html:94
-#, fuzzy
 msgid "End date"
 msgstr "วันที่สิ้นสุด"
 
@@ -17541,38 +17500,32 @@ msgid "Or make a journal for a whole site or zone"
 msgstr ""
 
 #: aot_flask/templates/pages/geo/journal.html:113
-#, fuzzy
 msgid "Site or zone"
-msgstr "แบ่งโซน"
+msgstr "Site หรือโซน"
 
 #: aot_flask/templates/pages/geo/journal.html:116
-#, fuzzy
 msgid "Select…"
-msgstr "Select"
+msgstr "เลือก…"
 
 #: aot_flask/templates/pages/geo/journal.html:118
-#, fuzzy
 msgid "Unmapped"
-msgstr "นำไปใช้แล้ว"
+msgstr "ไม่มีแผนที่"
 
 #: aot_flask/templates/pages/geo/journal.html:133
 msgid "The whole site or zone is covered, including every plot inside it."
 msgstr ""
 
 #: aot_flask/templates/pages/geo/journal.html:147
-#, fuzzy
 msgid "Measurements to include"
-msgstr "Measurement ID"
+msgstr "ค่าที่ต้องการรวมไว้"
 
 #: aot_flask/templates/pages/geo/journal.html:158
-#, fuzzy
 msgid "Generate journal"
-msgstr "สร้างภาพย่อใหม่"
+msgstr "สร้างรายงาน"
 
 #: aot_flask/templates/pages/geo/journal.html:161
-#, fuzzy
 msgid "Saved journals"
-msgstr "บันทึกชื่อ"
+msgstr "รายงานที่บันทึกไว้"
 
 #: aot_flask/templates/pages/geo/journal.html:165
 #: aot_flask/templates/pages/geo/plots.html:53
@@ -17586,22 +17539,19 @@ msgid "Untitled"
 msgstr "ไม่มีชื่อเรื่อง"
 
 #: aot_flask/templates/pages/geo/journal.html:174
-#, fuzzy
 msgid "Generating…"
-msgstr "General Settings"
+msgstr "กำลังสร้าง…"
 
 #: aot_flask/templates/pages/geo/journal.html:176
-#, fuzzy
 msgid "Generation failed"
-msgstr "การดำเนินการล้มเหลว"
+msgstr "สร้างไม่สำเร็จ"
 
 #: aot_flask/templates/pages/geo/journal_view.html:6
 #: aot_flask/templates/pages/geo/journal_view.html:177
 #: aot_flask/templates/pages/geo/journal_view.html:184
 #: aot_flask/templates/pages/geo/journal_view.html:198
-#, fuzzy
 msgid "Journal"
-msgstr "พอร์ทัล"
+msgstr "รายงาน"
 
 #: aot_flask/templates/pages/geo/journal_view.html:180
 msgid ""
@@ -17615,9 +17565,8 @@ msgstr ""
 #: aot_flask/templates/pages/geo/journal_view.html:204
 #: aot_flask/templates/pages/geo/journal_view.html:368
 #: aot_flask/templates/pages/geo/journal_view.html:561
-#, fuzzy
 msgid "ongoing"
-msgstr "ช่องเปิด"
+msgstr "ยังดำเนินอยู่"
 
 #: aot_flask/templates/pages/geo/journal_view.html:219
 #: aot_flask/templates/pages/geo/journal_view.html:378
@@ -17626,25 +17575,21 @@ msgstr "พื้นที่"
 
 #: aot_flask/templates/pages/geo/journal_view.html:221
 #: aot_flask/templates/pages/geo/journal_view.html:407
-#, fuzzy
 msgid "Time zone"
 msgstr "เขตเวลา"
 
 #: aot_flask/templates/pages/geo/journal_view.html:226
-#, fuzzy
 msgid "Generated"
-msgstr "สร้าง"
+msgstr "สร้างเมื่อ"
 
 #: aot_flask/templates/pages/geo/journal_view.html:238
-#, fuzzy
 msgid "About this document"
-msgstr "Related Documents"
+msgstr "เกี่ยวกับเอกสารนี้"
 
 #: aot_flask/templates/pages/geo/journal_view.html:244
 #: aot_flask/templates/pages/geo/journal_view.html:326
-#, fuzzy
 msgid "Contents"
-msgstr "เนื้อหา"
+msgstr "สารบัญ"
 
 #: aot_flask/templates/pages/geo/journal_view.html:246
 msgid "Each section below starts on a new page, in this order."
@@ -17677,15 +17622,14 @@ msgstr ""
 #: aot_flask/templates/pages/geo/journal_view.html:257
 #: aot_flask/templates/pages/geo/journal_view.html:330
 #: aot_flask/templates/pages/geo/journal_view.html:602
-#, fuzzy
 msgid "Daily log"
-msgstr "Daily"
+msgstr "บันทึกประจำวัน"
 
 #: aot_flask/templates/pages/geo/journal_view.html:255
 #: aot_flask/templates/pages/geo/journal_view.html:258
-#, fuzzy, python-format
+#, python-format
 msgid "%(n)s periods"
-msgstr "เข้าร่วมแล้ว %(n)s คน"
+msgstr "%(n)s ช่วงเวลา"
 
 #: aot_flask/templates/pages/geo/journal_view.html:262
 msgid "How to read this"
@@ -17714,9 +17658,8 @@ msgid ""
 msgstr ""
 
 #: aot_flask/templates/pages/geo/journal_view.html:270
-#, fuzzy
 msgid "Target and Δ"
-msgstr "รหัสเป้าหมาย"
+msgstr "เป้าหมายและ Δ"
 
 #: aot_flask/templates/pages/geo/journal_view.html:271
 msgid ""
@@ -17729,7 +17672,6 @@ msgstr ""
 #: aot_flask/templates/pages/geo/journal_view.html:273
 #: aot_flask/templates/pages/geo/journal_view.html:510
 #: aot_flask/templates/pages/geo/journal_view.html:753
-#, fuzzy
 msgid "Runtime"
 msgstr "ระยะเวลาทำงาน"
 
@@ -17748,18 +17690,16 @@ msgid ""
 msgstr ""
 
 #: aot_flask/templates/pages/geo/journal_view.html:286
-#, fuzzy
 msgid "Terms used here"
-msgstr "ข้อกำหนดการใช้งาน"
+msgstr "คำศัพท์ที่ใช้ในเอกสารนี้"
 
 #: aot_flask/templates/pages/geo/journal_view.html:295
 msgid "Where the numbers come from"
 msgstr ""
 
 #: aot_flask/templates/pages/geo/journal_view.html:297
-#, fuzzy
 msgid "Source"
-msgstr "ประเภทแหล่งข้อมูล"
+msgstr "แหล่งข้อมูล"
 
 #: aot_flask/templates/pages/geo/journal_view.html:298
 msgid ""
@@ -17768,7 +17708,6 @@ msgid ""
 msgstr ""
 
 #: aot_flask/templates/pages/geo/journal_view.html:299
-#, fuzzy
 msgid "Snapshot"
 msgstr "สแนปช็อต"
 
@@ -17787,32 +17726,27 @@ msgid "Print (save as PDF)"
 msgstr ""
 
 #: aot_flask/templates/pages/geo/journal_view.html:315
-#, fuzzy
 msgid "Markdown"
-msgstr "Down"
+msgstr "Markdown"
 
 #: aot_flask/templates/pages/geo/journal_view.html:316
-#, fuzzy
 msgid "ODT"
-msgstr "ต.ค."
+msgstr "ODT"
 
 #: aot_flask/templates/pages/geo/journal_view.html:317
 msgid "CSV"
 msgstr ""
 
 #: aot_flask/templates/pages/geo/journal_view.html:318
-#, fuzzy
 msgid "JSON"
-msgstr "On"
+msgstr "JSON"
 
 #: aot_flask/templates/pages/geo/journal_view.html:331
 #: aot_flask/templates/pages/geo/journal_view.html:818
-#, fuzzy
 msgid "Additional notes"
-msgstr "ข้อมูลเพิ่มเติม"
+msgstr "โน้ตเพิ่มเติม"
 
 #: aot_flask/templates/pages/geo/journal_view.html:356
-#, fuzzy
 msgid "Item"
 msgstr "รายการ"
 
@@ -17836,14 +17770,12 @@ msgid "%(p)s%% of days measured"
 msgstr ""
 
 #: aot_flask/templates/pages/geo/journal_view.html:398
-#, fuzzy
 msgid "No program attached"
-msgstr "ไม่มีไฟล์แนบ"
+msgstr "ไม่มี Program ที่แนบไว้"
 
 #: aot_flask/templates/pages/geo/journal_view.html:399
-#, fuzzy
 msgid "The program has no base temperature"
-msgstr "อุณหภูมิจุดน้ำค้าง"
+msgstr "Program นี้ไม่ได้กำหนดอุณหภูมิฐานไว้"
 
 #: aot_flask/templates/pages/geo/journal_view.html:400
 msgid "Not enough measured days"
@@ -17856,41 +17788,37 @@ msgstr ""
 
 #: aot_flask/templates/pages/geo/journal_view.html:448
 #: aot_flask/templates/pages/geo/journal_view.html:664
-#, fuzzy
 msgid "Min"
-msgstr "นาที"
+msgstr "Min"
 
 #: aot_flask/templates/pages/geo/journal_view.html:448
 #: aot_flask/templates/pages/geo/journal_view.html:664
-#, fuzzy
 msgid "Max"
-msgstr "Max:"
+msgstr "Max"
 
 #: aot_flask/templates/pages/geo/journal_view.html:448
 #: aot_flask/templates/pages/geo/journal_view.html:664
-#, fuzzy
 msgid "Avg"
-msgstr "Tag"
+msgstr "Avg"
 
 #: aot_flask/templates/pages/geo/journal_view.html:458
 #: aot_flask/templates/pages/geo/journal_view.html:677
-#, fuzzy, python-format
+#, python-format
 msgid "%(n)s sensors"
-msgstr "เซนเซอร์"
+msgstr "เซนเซอร์ %(n)s ตัว"
 
 #: aot_flask/templates/pages/geo/journal_view.html:471
 #: aot_flask/templates/pages/geo/journal_view.html:685
 #: aot_flask/templates/pages/geo/journal_view.html:720
-#, fuzzy
 msgid "partial coverage"
-msgstr "อัตราครอบคลุม"
+msgstr "ครอบคลุมบางส่วน"
 
 #: aot_flask/templates/pages/geo/journal_view.html:474
 #: aot_flask/templates/pages/geo/journal_view.html:689
 #: aot_flask/templates/pages/geo/journal_view.html:732
-#, fuzzy, python-format
+#, python-format
 msgid "curve: %(name)s"
-msgstr "แท็ก: %(names)s"
+msgstr "เส้นโค้ง: %(name)s"
 
 #: aot_flask/templates/pages/geo/journal_view.html:482
 #: aot_flask/templates/pages/geo/journal_view.html:487
@@ -17903,24 +17831,20 @@ msgstr ""
 #: aot_flask/templates/pages/geo/journal_view.html:488
 #: aot_flask/templates/pages/geo/journal_view.html:698
 #: aot_flask/templates/pages/geo/journal_view.html:738
-#, fuzzy
 msgid "cumulative target"
-msgstr "ค่าเป้าหมายคงที่"
+msgstr "เป้าหมายสะสม"
 
 #: aot_flask/templates/pages/geo/journal_view.html:502
-#, fuzzy
 msgid "No sensor for:"
-msgstr "เซ็นเซอร์ CO2"
+msgstr "ไม่มีเซนเซอร์สำหรับ:"
 
 #: aot_flask/templates/pages/geo/journal_view.html:510
 #: aot_flask/templates/pages/geo/journal_view.html:753
-#, fuzzy
 msgid "Water"
-msgstr "สภาพอากาศ"
+msgstr "น้ำ"
 
 #: aot_flask/templates/pages/geo/journal_view.html:519
 #: aot_flask/templates/pages/geo/journal_view.html:765
-#, fuzzy
 msgid "estimated"
 msgstr "ค่าประมาณ"
 
@@ -17929,9 +17853,8 @@ msgid "before this journal"
 msgstr ""
 
 #: aot_flask/templates/pages/geo/journal_view.html:563
-#, fuzzy
 msgid "planned"
-msgstr "แพลนเนอร์"
+msgstr "ตามแผน"
 
 #: aot_flask/templates/pages/geo/journal_view.html:583
 #, python-format
@@ -17939,9 +17862,8 @@ msgid "Follows curve: %(name)s"
 msgstr ""
 
 #: aot_flask/templates/pages/geo/journal_view.html:587
-#, fuzzy
 msgid "No sensor for this"
-msgstr "ไม่พบฤดูกาลสำหรับฟาร์มนี้"
+msgstr "ไม่มีเซนเซอร์สำหรับสิ่งนี้"
 
 #: aot_flask/templates/pages/geo/journal_view.html:612
 #: aot_flask/templates/settings/general.html:376
@@ -17954,9 +17876,8 @@ msgid "Monthly"
 msgstr "Monthly"
 
 #: aot_flask/templates/pages/geo/journal_view.html:614
-#, fuzzy
 msgid "Whole period"
-msgstr "Reset Period"
+msgstr "ทั้งช่วงเวลา"
 
 #: aot_flask/templates/pages/geo/journal_view.html:631
 #, python-format
@@ -17969,25 +17890,22 @@ msgid "GDD %(v)s"
 msgstr ""
 
 #: aot_flask/templates/pages/geo/journal_view.html:644
-#, fuzzy, python-format
+#, python-format
 msgid "No data recorded — %(n)s periods skipped."
-msgstr "No data for the last %(period)s seconds"
+msgstr "ไม่มีข้อมูลบันทึกไว้ — ข้ามไป %(n)s ช่วงเวลา"
 
 #: aot_flask/templates/pages/geo/journal_view.html:646
-#, fuzzy
 msgid "No data recorded for this period."
-msgstr "ไม่พบฟาร์มสำหรับคีย์นี้"
+msgstr "ไม่มีข้อมูลบันทึกไว้สำหรับช่วงเวลานี้"
 
 #: aot_flask/templates/pages/geo/journal_view.html:680
 #: aot_flask/templates/pages/geo/journal_view.html:710
-#, fuzzy
 msgid "usage"
-msgstr "Usage"
+msgstr "การใช้งาน"
 
 #: aot_flask/templates/pages/geo/journal_view.html:690
-#, fuzzy
 msgid "varies"
-msgstr "คลังข้อมูล"
+msgstr "แปรผัน"
 
 #: aot_flask/templates/pages/geo/journal_view.html:726
 #, python-format
@@ -17995,15 +17913,12 @@ msgid "outdoors %(out)s × cover %(tau)s"
 msgstr ""
 
 #: aot_flask/templates/pages/geo/journal_view.html:739
-#, fuzzy
 msgid "no sensor"
-msgstr "เซ็นเซอร์ CO2"
+msgstr "ไม่มีเซนเซอร์"
 
 #: aot_flask/templates/pages/geo/journal_view.html:863
-#, fuzzy
 msgid "Delete this journal? This cannot be undone."
-msgstr ""
-"ต้องการลบแท็บนี้พร้อมรายการทั้งหมดหรือไม่? การกระทำนี้ไม่สามารถย้อนกลับได้"
+msgstr "ต้องการลบรายงานนี้หรือไม่? การกระทำนี้ไม่สามารถย้อนกลับได้"
 
 #: aot_flask/templates/pages/geo/journal_view.html:869
 #: aot_flask/templates/pages/geo/journal_view.html:873
@@ -19230,38 +19145,32 @@ msgid "Click to edit Upgrade Badge colors"
 msgstr "คลิกเพื่อแก้ไขสีป้ายอัปเกรด"
 
 #: aot_flask/templates/settings/custom_ui.html:222
-#, fuzzy
 msgid "Output/Input Channel Preview"
-msgstr "ช่อง Output"
+msgstr "ตัวอย่างช่อง Output/Input"
 
 #: aot_flask/templates/settings/custom_ui.html:229
-#, fuzzy
 msgid "Click to edit Channel On colors"
-msgstr "คลิกเพื่อแก้ไขสีพื้นหลังอันตราย"
+msgstr "คลิกเพื่อแก้ไขสีของช่องเปิด"
 
 #: aot_flask/templates/settings/custom_ui.html:251
-#, fuzzy
 msgid "Click to edit Channel Off colors"
-msgstr "คลิกเพื่อแก้ไขสีของปุ่มปิด"
+msgstr "คลิกเพื่อแก้ไขสีของช่องปิด"
 
 #: aot_flask/templates/settings/custom_ui.html:273
-#, fuzzy
 msgid "Click to edit Pending colors"
-msgstr "คลิกเพื่อแก้ไขสีป้าย MCP"
+msgstr "คลิกเพื่อแก้ไขสีรอดำเนินการ"
 
 #: aot_flask/templates/settings/custom_ui.html:282
 msgid "Click to edit Danger Tint colors"
 msgstr "คลิกเพื่อแก้ไขสีพื้นหลังอันตราย"
 
 #: aot_flask/templates/settings/custom_ui.html:291
-#, fuzzy
 msgid "Click to edit Unverified Running Tint colors"
-msgstr "คลิกเพื่อแก้ไขสีพื้นหลังอันตราย"
+msgstr "คลิกเพื่อแก้ไขสีพื้นหลังการทำงานที่ยังไม่ยืนยัน"
 
 #: aot_flask/templates/settings/custom_ui.html:293
-#, fuzzy
 msgid "Running (unconfirmed)"
-msgstr "ยังไม่ยืนยัน"
+msgstr "กำลังทำงาน (ยังไม่ยืนยัน)"
 
 #: aot_flask/templates/settings/custom_ui.html:310
 msgid "Branding"
@@ -20255,9 +20164,8 @@ msgid "Revoke this API key? Anything using it will stop working."
 msgstr ""
 
 #: aot_flask/templates/settings/user_detail.html:149
-#, fuzzy
 msgid "No API keys issued."
-msgstr "No API keys stored yet."
+msgstr "ยังไม่มีการออก API Key"
 
 #: aot_flask/templates/settings/user_detail.html:161
 msgid "Read-only keys can fetch data but cannot change anything."
@@ -20342,43 +20250,36 @@ msgstr "โมดูลวิดเจ็ตที่นำเข้า"
 
 #: aot_flask/templates/tools/audit_log.html:26
 #: aot_flask/templates/tools/audit_log.html:60
-#, fuzzy
 msgid "Result"
-msgstr "หยุดพัก"
+msgstr "Result"
 
 #: aot_flask/templates/tools/audit_log.html:30
-#, fuzzy
 msgid "Failure"
-msgstr "รายการล้มเหลว"
+msgstr "Failure"
 
 #: aot_flask/templates/tools/audit_log.html:34
-#, fuzzy
 msgid "Rows"
-msgstr "Roles"
+msgstr "Rows"
 
 #: aot_flask/templates/tools/audit_log.html:43
-#, fuzzy
 msgid "Export CSV"
-msgstr "ส่งออก Spec"
+msgstr "ส่งออก CSV"
 
 #: aot_flask/templates/tools/audit_log.html:52
-#, fuzzy
 msgid "No audit log entries found."
-msgstr "No notes found"
+msgstr "ไม่พบรายการในบันทึกการตรวจสอบ"
 
 #: aot_flask/templates/tools/audit_log.html:58 widgets/AoT_PID.py:426
 msgid "Timestamp"
 msgstr "Timestamp"
 
 #: aot_flask/templates/tools/audit_log.html:66
-#, fuzzy
 msgid "Target Object"
-msgstr "อุปกรณ์เป้าหมาย"
+msgstr "Target Object"
 
 #: aot_flask/templates/tools/audit_log.html:67
-#, fuzzy
 msgid "Detail"
-msgstr "รายละเอียด"
+msgstr "Detail"
 
 #: aot_flask/templates/tools/export.html:3
 #: aot_flask/templates/tools/export.html:5
@@ -21352,9 +21253,8 @@ msgid "Deactivated"
 msgstr "ปิดใช้งานแล้ว"
 
 #: aot_flask/templates/user_templates/widget_template_widget_function_status_js.html:155
-#, fuzzy
 msgid "No Function selected."
-msgstr "ยังไม่ได้เลือกตำแหน่ง"
+msgstr "ยังไม่ได้เลือก Function"
 
 #: aot_flask/templates/user_templates/widget_template_widget_function_status_js.html:169
 #: aot_flask/utils/utils_function_status.py:215
@@ -21842,9 +21742,9 @@ msgid "Function not found"
 msgstr "ไม่พบฟังก์ชัน"
 
 #: aot_flask/utils/utils_function_status.py:94
-#, fuzzy, python-format
+#, python-format
 msgid "%(n)s s"
-msgstr "โน้ต %(num)d รายการ"
+msgstr "%(n)s วินาที"
 
 #: aot_flask/utils/utils_function_status.py:108
 #, python-format
@@ -21857,14 +21757,13 @@ msgid "%(n)s min ago"
 msgstr ""
 
 #: aot_flask/utils/utils_function_status.py:111
-#, fuzzy, python-format
+#, python-format
 msgid "%(n)s h ago"
-msgstr "h ago"
+msgstr "%(n)s ชั่วโมงที่แล้ว"
 
 #: aot_flask/utils/utils_function_status.py:117
-#, fuzzy
 msgid "Paused — no actuators registered"
-msgstr "ยังไม่มีงานที่ลงทะเบียนไว้"
+msgstr "หยุดชั่วคราว — ยังไม่ได้ลงทะเบียนแอคชูเอเตอร์"
 
 #: aot_flask/utils/utils_function_status.py:118
 msgid "Paused — outside the operating time window"
@@ -21876,29 +21775,28 @@ msgid "Paused (%(reason)s)"
 msgstr ""
 
 #: aot_flask/utils/utils_function_status.py:132
-#, fuzzy
 msgid "Waiting for the first control cycle."
-msgstr "เวลารอคอยก่อนการดำเนินการครั้งแรก"
+msgstr "กำลังรอรอบควบคุมครั้งแรก"
 
 #: aot_flask/utils/utils_function_status.py:140
-#, fuzzy, python-format
+#, python-format
 msgid "Mode: %(modes)s"
-msgstr "แท็ก: %(names)s"
+msgstr "โหมด: %(modes)s"
 
 #: aot_flask/utils/utils_function_status.py:155
-#, fuzzy, python-format
+#, python-format
 msgid "Environment: %(values)s"
-msgstr "ตัวแปรสภาพแวดล้อม"
+msgstr "สภาพแวดล้อม: %(values)s"
 
 #: aot_flask/utils/utils_function_status.py:163
-#, fuzzy, python-format
+#, python-format
 msgid "Deviation: %(values)s"
-msgstr "ระยะเวลา (นาที)"
+msgstr "ค่าเบี่ยงเบน: %(values)s"
 
 #: aot_flask/utils/utils_function_status.py:171
-#, fuzzy, python-format
+#, python-format
 msgid "Actuators: %(values)s"
-msgstr "แท็ก: %(names)s"
+msgstr "แอคชูเอเตอร์: %(values)s"
 
 #: aot_flask/utils/utils_function_status.py:176
 #, python-format
@@ -21911,9 +21809,8 @@ msgid "Safety gate: %(reason)s — control stopped"
 msgstr ""
 
 #: aot_flask/utils/utils_function_status.py:187
-#, fuzzy
 msgid "triggered"
-msgstr "Trigger"
+msgstr "ถูกกระตุ้น"
 
 #: aot_flask/utils/utils_function_status.py:189
 #, python-format
@@ -21921,9 +21818,9 @@ msgid "Safety gate (partial): %(reason)s"
 msgstr ""
 
 #: aot_flask/utils/utils_function_status.py:195
-#, fuzzy, python-format
+#, python-format
 msgid "No actuator to control %(target)s"
-msgstr "การควบคุมแอคชูเอเตอร์"
+msgstr "ไม่มีแอคชูเอเตอร์สำหรับควบคุม %(target)s"
 
 #: aot_flask/utils/utils_function_status.py:199
 #, python-format
@@ -21941,39 +21838,34 @@ msgid "Last cycle: %(when)s"
 msgstr ""
 
 #: aot_flask/utils/utils_function_status.py:213
-#, fuzzy
 msgid "Idle"
-msgstr "Hide"
+msgstr "ว่าง"
 
 #: aot_flask/utils/utils_function_status.py:214
-#, fuzzy
 msgid "Outside the time window"
-msgstr "เปิดใช้งานช่วงเวลา"
+msgstr "อยู่นอกช่วงเวลาที่กำหนด"
 
 #: aot_flask/utils/utils_function_status.py:216
-#, fuzzy
 msgid "Initializing"
-msgstr "การใช้งาน AI"
+msgstr "กำลังเริ่มต้น"
 
 #: aot_flask/utils/utils_function_status.py:217
-#, fuzzy
 msgid "Standby"
-msgstr "ทราย"
+msgstr "สแตนด์บาย"
 
 #: aot_flask/utils/utils_function_status.py:218
-#, fuzzy
 msgid "Ready"
-msgstr "Red"
+msgstr "พร้อม"
 
 #: aot_flask/utils/utils_function_status.py:225
-#, fuzzy, python-format
+#, python-format
 msgid "Waiting (%(time)s)"
-msgstr "Function (%(type)s)"
+msgstr "กำลังรอ (%(time)s)"
 
 #: aot_flask/utils/utils_function_status.py:230
-#, fuzzy, python-format
+#, python-format
 msgid "Sequence: %(state)s"
-msgstr "สำเร็จ: %(action)s"
+msgstr "Sequence: %(state)s"
 
 #: aot_flask/utils/utils_function_status.py:236
 #, python-format
@@ -21996,14 +21888,14 @@ msgid "Steps: %(running)s of %(total)s running"
 msgstr ""
 
 #: aot_flask/utils/utils_function_status.py:257
-#, fuzzy, python-format
+#, python-format
 msgid "Conditional: %(state)s"
-msgstr "Conditional"
+msgstr "Conditional: %(state)s"
 
 #: aot_flask/utils/utils_function_status.py:262
-#, fuzzy, python-format
+#, python-format
 msgid "Period: %(period)s"
-msgstr "ช่วงเวลา: %(label)s"
+msgstr "Period: %(period)s"
 
 #: aot_flask/utils/utils_function_status.py:266
 #, python-format
@@ -22019,9 +21911,8 @@ msgid "The last check ran no action."
 msgstr ""
 
 #: aot_flask/utils/utils_function_status.py:270
-#, fuzzy
 msgid "Not checked yet."
-msgstr "ยังไม่มีการบันทึกการเรียกใช้เครื่องมือ"
+msgstr "ยังไม่ได้ตรวจสอบ"
 
 #: aot_flask/utils/utils_function_status.py:274
 #, python-format
@@ -22419,9 +22310,9 @@ msgid ""
 msgstr ""
 
 #: aot_flask/utils/utils_remote_host.py:272
-#, fuzzy, python-format
+#, python-format
 msgid "Could not enroll with %(host)s: %(err)s"
-msgstr "Failed to regenerate widget HTML: %(err)s"
+msgstr "ไม่สามารถลงทะเบียนกับ %(host)s ได้: %(err)s"
 
 #: aot_flask/utils/utils_remote_host.py:277
 #, python-format
@@ -22483,14 +22374,12 @@ msgid ""
 msgstr ""
 
 #: aot_flask/utils/utils_settings.py:456
-#, fuzzy
 msgid "API key not found."
-msgstr "ไม่พบคำแนะนำ"
+msgstr "ไม่พบ API Key"
 
 #: aot_flask/utils/utils_settings.py:466
-#, fuzzy
 msgid "API key revoked."
-msgstr "API Key Body"
+msgstr "API Key ถูกเพิกถอนแล้ว"
 
 #: aot_flask/utils/utils_settings.py:532
 msgid "That username is already taken."
@@ -25224,9 +25113,8 @@ msgid ""
 msgstr ""
 
 #: inputs/modbus_tcp.py:108 outputs/on_off_modbus.py:133
-#, fuzzy
 msgid "Timeout (seconds)"
-msgstr "Timeout (sec)"
+msgstr "หมดเวลา (วินาที)"
 
 #: inputs/modbus_tcp.py:110
 msgid ""
@@ -25235,9 +25123,8 @@ msgid ""
 msgstr ""
 
 #: inputs/modbus_tcp.py:118 outputs/on_off_modbus.py:143
-#, fuzzy
 msgid "Retries"
-msgstr "ถอนออก"
+msgstr "จำนวนครั้งที่ลองใหม่"
 
 #: inputs/modbus_tcp.py:120 outputs/on_off_modbus.py:145
 msgid ""
@@ -25262,18 +25149,16 @@ msgid "Input Register (read-only word)"
 msgstr ""
 
 #: inputs/modbus_tcp.py:145
-#, fuzzy
 msgid "Register Type"
-msgstr "ลงทะเบียนเอาต์พุต"
+msgstr "ประเภทรีจิสเตอร์"
 
 #: inputs/modbus_tcp.py:146
 msgid "Which Modbus table this channel reads from"
 msgstr ""
 
 #: inputs/modbus_tcp.py:153
-#, fuzzy
 msgid "Register Address"
-msgstr "Enter address."
+msgstr "ที่อยู่รีจิสเตอร์"
 
 #: inputs/modbus_tcp.py:155
 msgid ""
@@ -25287,9 +25172,8 @@ msgid "Bit (coil / discrete input)"
 msgstr ""
 
 #: inputs/modbus_tcp.py:172
-#, fuzzy
 msgid "Data Type"
-msgstr "ประเภทการยืนยันตัวตน"
+msgstr "ประเภทข้อมูล"
 
 #: inputs/modbus_tcp.py:174
 msgid ""
@@ -25306,9 +25190,8 @@ msgid "Little endian (low word first)"
 msgstr ""
 
 #: inputs/modbus_tcp.py:186
-#, fuzzy
 msgid "Word Order"
-msgstr "Reorder"
+msgstr "ลำดับเวิร์ด"
 
 #: inputs/modbus_tcp.py:188
 msgid ""
@@ -25317,9 +25200,8 @@ msgid ""
 msgstr ""
 
 #: inputs/modbus_tcp.py:196
-#, fuzzy
 msgid "Scale Factor"
-msgstr "Power Factor"
+msgstr "ตัวคูณสเกล"
 
 #: inputs/modbus_tcp.py:198
 msgid ""
@@ -25361,28 +25243,24 @@ msgid ""
 msgstr ""
 
 #: inputs/remote_aot_input.py:108
-#, fuzzy
 msgid "Remote AoT Host"
-msgstr "MQTT Host"
+msgstr "Remote AoT Host"
 
 #: inputs/remote_aot_input.py:109 outputs/remote_output_on_off.py:75
 #: outputs/remote_output_pwm.py:91
-#, fuzzy
 msgid ""
 "The host or IP address of the remote AoT (a port may be included, e.g. "
 "192.168.0.9:8084)"
-msgstr "The host or IP address of the remote AoT"
+msgstr "The host or IP address of the remote AoT (a port may be included, e.g. 192.168.0.9:8084)"
 
 #: inputs/remote_aot_input.py:116
-#, fuzzy
 msgid "Remote AoT API Key"
-msgstr "Map API Key"
+msgstr "Remote AoT API Key"
 
 #: inputs/remote_aot_input.py:117 outputs/remote_output_on_off.py:83
 #: outputs/remote_output_pwm.py:99
-#, fuzzy
 msgid "The API key of the remote AoT, exactly as shown on that server"
-msgstr "The API key of the remote AoT"
+msgstr "The API key of the remote AoT, exactly as shown on that server"
 
 #: inputs/remote_aot_input.py:127 outputs/on_off_wireless_rpi_rf.py:91
 #: outputs/remote_output_on_off.py:93 outputs/remote_output_pwm.py:109
@@ -25410,7 +25288,6 @@ msgid ""
 msgstr ""
 
 #: inputs/remote_aot_input.py:141 outputs/remote_output_pwm.py:123
-#, fuzzy
 msgid "Request Timeout (Seconds)"
 msgstr "หมดเวลาคำขอ (วินาที)"
 
@@ -25421,9 +25298,8 @@ msgid ""
 msgstr ""
 
 #: inputs/remote_aot_input.py:148
-#, fuzzy
 msgid "Initial Backfill (Hours)"
-msgstr "เติมข้อมูลย้อนหลังทันที"
+msgstr "การเติมข้อมูลย้อนหลังครั้งแรก (ชั่วโมง)"
 
 #: inputs/remote_aot_input.py:149
 msgid ""
@@ -25432,9 +25308,8 @@ msgid ""
 msgstr ""
 
 #: inputs/remote_aot_input.py:166
-#, fuzzy
 msgid "Remote Measurement"
-msgstr "Real-time Measurement"
+msgstr "Remote Measurement"
 
 #: inputs/remote_aot_input.py:167
 msgid "The measurement on the remote AoT to collect into this channel"
@@ -26569,9 +26444,8 @@ msgid "A friendly name shown in the UI for this channel."
 msgstr ""
 
 #: outputs/on_off_modbus.py:165
-#, fuzzy
 msgid "Coil Address"
-msgstr "IP Address"
+msgstr "ที่อยู่คอยล์"
 
 #: outputs/on_off_modbus.py:167
 msgid ""
@@ -26586,14 +26460,12 @@ msgid ""
 msgstr ""
 
 #: outputs/on_off_modbus.py:196
-#, fuzzy
 msgid "Set the channel state when AoT shuts down"
-msgstr "Set the state when AoT shuts down"
+msgstr "Set the channel state when AoT shuts down"
 
 #: outputs/on_off_modbus.py:204
-#, fuzzy
 msgid "Whether to trigger functions when the channel switches at startup"
-msgstr "Whether to trigger functions when the output switches at startup"
+msgstr "Whether to trigger functions when the channel switches at startup"
 
 #: outputs/on_off_modbus.py:221 outputs/on_off_python.py:273
 #: outputs/on_off_wireless_rpi_rf.py:147 outputs/pwm_shell.py:139
@@ -28857,9 +28729,8 @@ msgid "Input value validity duration"
 msgstr "Input value validity duration"
 
 #: widgets/widget_trigger_sequence.py:539
-#, fuzzy
 msgid "Continue where it stopped"
-msgstr "หยุดการจับภาพแล้ว"
+msgstr "ทำงานต่อจากจุดที่หยุดไว้"
 
 #: widgets/widget_trigger_sequence.py:540
 msgid "Start from the beginning"
@@ -29149,9 +29020,8 @@ msgid ""
 msgstr ""
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:379
-#, fuzzy
 msgid "Running Signal Threshold"
-msgstr "เกณฑ์ลมแรง (m/s)"
+msgstr "ค่าเกณฑ์สัญญาณการทำงาน"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:381
 msgid ""
