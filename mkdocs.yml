@@ -127,6 +127,7 @@ nav:
       - GIS Layers: geo/layers.md
       - Map Widget: geo/map-widget.md
       - Facility Widget: geo/facility-widget.md
+      - Plot Widget: geo/plot-widget.md
       - Parcel Import: geo/parcel-import.md
       - Settings: geo/settings.md
       - API Reference: geo/api-reference.md

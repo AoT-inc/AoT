@@ -68,6 +68,9 @@ Plots drawn in the design tool's [Plot mode](design-tool.md#plot) appear on the 
 - **[Overview] > Program** — current and next stage, accumulated heat, stage targets, and the actual state of the declared resources. Confirming, logging and undoing stage changes happens here too. See [Management Programs](programs.md#stage-events).
 - **[Settings] > Stage schedule** — where the real schedule is edited. Programme lengths are only a reference, so stages can be **postponed or pulled forward**, and this one plot can be set to advance automatically. See [Editing the schedule](programs.md#stage-schedule).
 
+!!! note "Targets are read-only here"
+    This popup shows each stage's targets but does not edit them — [overriding a plot's own target](programs.md#plot-override) is done from the [`/plots` page](programs.md#plots-page) or the [AoT Plot widget](plot-widget.md), not from the map.
+
 - **Crop, variety, growing period**, and days elapsed.
 - **Area and dimensions** — width and length are shown together, because area alone cannot answer "how many rows fit here?".
 - **Irrigation** — which valves wet this plot, and how much of it each one covers. One valve waters several crops and one crop may straddle two valves, so no single valve is designated; the overlapping areas are shown as they are. Percentages are **relative to the plot** ("how much of my bed gets wet"). Any part with no watering yet is shown rather than hidden.
@@ -279,3 +282,4 @@ You can add multiple `AoT_map` widgets to the same dashboard, each showing a dif
 - [Facility Widget](facility-widget.md) — The dedicated 3D facility widget
 - [GIS Layers](layers.md) — Registering overlay layers
 - [Journals](journal.md) — Snapshot documents built from the same GDD/DLI/irrigation data
+- [AoT Plot Widget](plot-widget.md) — Dashboard widget for keeping one plot in view, with target editing this popup doesn't have

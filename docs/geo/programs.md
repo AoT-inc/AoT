@@ -56,9 +56,18 @@ Day temp · Night temp · Humidity · CO₂ · DLI · VPD.
 **Blank fields are not saved** — zero and unset must stay distinguishable.
 
 !!! warning "For display and advice"
-    Targets **do not change control automatically.** The plot modal repeats the same line. Today their purpose is to let people and the AI read the same numbers for "what this stage should aim at".
+    Setting a target does not switch anything on by itself — that still needs an environmental control function to exist and be configured to act on it. A target's job is to let people, the AI, and (where one is configured) the control function read the same number for "what this stage should aim at".
 
 **An item with a curve shows no number.** Showing the stage value for an item that actually follows a curve would present a figure that is not in use as if it were the target — the screen says "Follows curve: (name)" instead.
+
+### Overriding targets per plot { #plot-override }
+
+A program's own target is what a **new** plot starts with — after that, each plot can hold its **own** value for any target that isn't following a curve, independently of the program and of every other plot on it.
+
+- **Edit it on the plot, not the program** — from the [`/plots`](#plots-page) page or the [AoT Plot widget](plot-widget.md), never from here.
+- The override belongs to that one plot. Changing it never touches the program, and it has no effect on any other plot that shares the same program.
+- **Leaving the field blank is how you undo an override** — the plot falls back to the program's own value.
+- Curve-driven items are still never editable per plot, for the same reason they show no number above.
 
 ### Stage resources { #resources }
 
@@ -150,8 +159,17 @@ Turning on **Advance stages automatically** for a **plot** records changes witho
 !!! note "Resources do not become automatic too"
     Even with automatic stage advance, irrigation and fertigation functions are not switched on. That is a separate decision and still needs [Apply].
 
+## Managing plots directly { #plots-page }
+
+`/plots` lists every plot — filterable by map, site, zone, and kind, with a switch to include ones that have already ended. **Plots are not created here** — a plot only comes into existence by drawing it in the design tool's [Plot mode](design-tool.md#plot); this page is for managing plots that already exist.
+
+Clicking one opens the same kind of drawer this page uses for programs: schedule (length of each stage), guidance, and that plot's [own targets](#plot-override), all in the one stage track. Nothing leaves the drawer until you press **[Save]**.
+
+The [AoT Plot widget](plot-widget.md) opens the identical drawer from the dashboard, for keeping one plot in view without going to this page. The [map widget's plot popup](map-widget.md#plot) shows the same operational facts but does not edit any of them.
+
 ## Related
 
 - [Design Tool](design-tool.md#plot) — where plots are drawn
 - [Map Widget](map-widget.md#plot) — where plots are viewed and operated
+- [AoT Plot Widget](plot-widget.md) — dashboard widget for keeping one plot in view, with the same editing drawer as this page
 - [Facility Management](facility.md) — plots whose location is the bay itself, with no drawing
