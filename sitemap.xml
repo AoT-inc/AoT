@@ -409,6 +409,14 @@
         <xhtml:link rel="alternate" hreflang="ko" href="https://aot-inc.github.io/AoT/ko/geo/parcel-import/"/>
     </url>
     <url>
+        <loc>https://aot-inc.github.io/AoT/geo/plot-widget/</loc>
+        <lastmod>2026-09-03</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="en" href="https://aot-inc.github.io/AoT/geo/plot-widget/"/>
+        <xhtml:link rel="alternate" hreflang="ja" href="https://aot-inc.github.io/AoT/ja/geo/plot-widget/"/>
+        <xhtml:link rel="alternate" hreflang="ko" href="https://aot-inc.github.io/AoT/ko/geo/plot-widget/"/>
+    </url>
+    <url>
         <loc>https://aot-inc.github.io/AoT/geo/programs/</loc>
         <lastmod>2026-09-03</lastmod>
         <changefreq>daily</changefreq>
@@ -839,6 +847,14 @@
         <xhtml:link rel="alternate" hreflang="ja" href="https://aot-inc.github.io/AoT/ja/geo/parcel-import/"/>
     </url>
     <url>
+        <loc>https://aot-inc.github.io/AoT/ko/geo/plot-widget/</loc>
+        <lastmod>2026-09-03</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="ko" href="https://aot-inc.github.io/AoT/ko/geo/plot-widget/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="https://aot-inc.github.io/AoT/geo/plot-widget/"/>
+        <xhtml:link rel="alternate" hreflang="ja" href="https://aot-inc.github.io/AoT/ja/geo/plot-widget/"/>
+    </url>
+    <url>
         <loc>https://aot-inc.github.io/AoT/ko/geo/programs/</loc>
         <lastmod>2026-09-03</lastmod>
         <changefreq>daily</changefreq>
@@ -1261,6 +1277,14 @@
         <xhtml:link rel="alternate" hreflang="ja" href="https://aot-inc.github.io/AoT/ja/geo/parcel-import/"/>
         <xhtml:link rel="alternate" hreflang="en" href="https://aot-inc.github.io/AoT/geo/parcel-import/"/>
         <xhtml:link rel="alternate" hreflang="ko" href="https://aot-inc.github.io/AoT/ko/geo/parcel-import/"/>
+    </url>
+    <url>
+        <loc>https://aot-inc.github.io/AoT/ja/geo/plot-widget/</loc>
+        <lastmod>2026-09-03</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="ja" href="https://aot-inc.github.io/AoT/ja/geo/plot-widget/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="https://aot-inc.github.io/AoT/geo/plot-widget/"/>
+        <xhtml:link rel="alternate" hreflang="ko" href="https://aot-inc.github.io/AoT/ko/geo/plot-widget/"/>
     </url>
     <url>
         <loc>https://aot-inc.github.io/AoT/ja/geo/programs/</loc>
