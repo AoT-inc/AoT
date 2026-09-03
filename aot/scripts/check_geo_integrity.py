@@ -23,7 +23,7 @@ GeoShape 는 도형의 종류를 두 곳에 들고 있다 — `type` 컬럼과
               더 INSERT → 두 벌. 6일간 아무도 몰랐고, 08-03 시설 하나를
               추가하자 "예전 시설이 지도에서 사라짐"으로 표면화됐다.
 
-검사 항목 12종 (GeoShape 8 + GeoPlot 4):
+검사 항목 13종 (GeoShape 9 + GeoPlot 4):
   type-mismatch   type 컬럼 ≠ properties.aot_type
   duplicate       같은 지도 안에서 (종류, 기하) 가 겹치는 도형.
                   좌표는 --tolerance(기본 1e-6 도, 약 0.1m) 로 반올림해 비교한다
@@ -32,6 +32,12 @@ GeoShape 는 도형의 종류를 두 곳에 들고 있다 — `type` 컬럼과
                   의 map_overlay_id 가 없는 GeoShape.id 를 가리킴
   orphan-facility GeoFacility.shape_uuid 가 없는 GeoShape 를 가리킴
   orphan-label    라벨의 parent_node_id 가 어떤 도형에도 해소되지 않음
+  equipment-sprinkler-marker  equipment_collection 번들 **안쪽** JSON 에 남은
+                  스프링클러 점 마커(sub_type='sprinkler'). duplicate 검사는
+                  DUP_EXEMPT_TYPES 때문에 번들 안을 못 보므로 따로 연다 — 정본
+                  이미터는 sprinkler_coverage 하나뿐이고 점 마커는 화면용
+                  장식이라 애초에 저장돼선 안 된다(2026-09-03 사건, cleanup은
+                  fix_geo_sprinkler_markers.py).
 
 공간-장치 바인딩(docs/design/geo-device-binding.md) 관련 3종:
 
@@ -408,6 +414,11 @@ def collect(map_uuid=None, tolerance=1e-6):
     _collect_plots(findings, map_uuid, map_names)
     _check_containment_cache(findings, map_uuid, map_names)
 
+    # ── equipment_collection 번들 안의 스프링클러 점 마커 잔존/중복 ───────
+    # DUP_EXEMPT_TYPES 가 'equipment_collection' 을 통째로 빼므로 위의
+    # duplicate 검사는 번들 **안쪽** JSON 은 못 본다 — 여기서 따로 연다.
+    _check_equipment_bundle_sprinklers(findings, shapes, map_names, tolerance)
+
     return dict(findings), len(shapes)
 
 
@@ -584,6 +595,59 @@ def _collect_plots(findings, map_uuid, map_names):
                          program_kind=prog_kind, program_uuid=prog_uuid))
 
 
+def _check_equipment_bundle_sprinklers(findings, shapes, map_names, tolerance):
+    """equipment_collection 번들 안의 스프링클러 점 마커(sub_type='sprinkler')를 본다.
+
+    정본 이미터는 `sprinkler_coverage`(원형 커버리지) 하나뿐이고, 점 마커는
+    편집 세션에서만 보이는 화면용 장식이라 저장돼서는 안 된다(aot-geo-stats.js
+    "sprinkler_coverage is the canonical emitter; sprinkler dot markers are
+    ephemeral", plot_journal._EMITTER_SUB_TYPE). 그런데 클라이언트의
+    `_loadAllFeatures` 는 이 점을 애초에 다시 불러오지 않으므로, 한 번 저장된
+    점은 다음 세션에서 클라이언트 자신도 보지 못해 지울 방법이 없었다 —
+    재생성할 때마다 새 사본만 쌓였다(2026-09-03 실측: 나주 지도 이미터 274개에
+    점 마커 2,466개, 한 지점에 최대 8겹, 274곳은 옛 유량(850)과 새 유량(70)이
+    함께 남음). 저장 경로는 이제 이 마커를 아예 안 보내도록 고쳤지만
+    (geo_overlays._is_ephemeral_sprinkler_marker), **이미 쌓인 데이터**는
+    이 검사만이 본다 — DUP_EXEMPT_TYPES 가 번들 자체는 기하 비교 대상에서
+    빼므로 위의 duplicate 검사는 번들 안쪽 JSON 을 못 본다.
+
+    좌표는 tolerance 로 반올림해 비교한다(duplicate 검사와 동일한 이유 —
+    완전 일치만 보면 편집 중 미세하게 움직인 중복을 놓친다).
+    """
+    ndigits = max(0, -int(round(math.log10(tolerance)))) if tolerance > 0 else 12
+
+    for s in shapes:
+        if s.type != 'equipment_collection':
+            continue
+        bundle = _feature(s)
+        feats = bundle.get('features') if isinstance(bundle, dict) else None
+        if not isinstance(feats, list):
+            continue
+
+        markers = [f for f in feats
+                   if isinstance(f, dict)
+                   and (f.get('properties') or {}).get('sub_type') == 'sprinkler']
+        if not markers:
+            continue
+
+        by_coord = defaultdict(list)
+        for f in markers:
+            coords = (f.get('geometry') or {}).get('coordinates')
+            if not (isinstance(coords, list) and len(coords) >= 2):
+                continue
+            key = (round(coords[0], ndigits), round(coords[1], ndigits))
+            by_coord[key].append(f.get('properties', {}).get('node_id'))
+
+        max_at_point = max((len(v) for v in by_coord.values()), default=0)
+        findings['equipment-sprinkler-marker'].append({
+            'map': map_names.get(s.geo_id, s.geo_id),
+            'shape_id': s.id,
+            'marker_count': len(markers),
+            'distinct_locations': len(by_coord),
+            'max_duplicate_at_one_point': max_at_point,
+        })
+
+
 def _check_containment_cache(findings, map_uuid, map_names):
     """포함 관계 캐시가 기하와 어긋나는가.
 
@@ -659,6 +723,7 @@ HEADINGS = {
     'plot-dangling-program': '실존하지 않는 프로그램을 가리키는 구획',
     'plot-program-kind-mismatch': '구획과 프로그램의 대상 종류가 다름',
     'containment-cache-drift': '포함 캐시가 기하와 불일치 (무효화 누락 경로)',
+    'equipment-sprinkler-marker': 'equipment_collection 안에 남은 스프링클러 점 마커(비정본, 저장돼선 안 됨)',
 }
 
 # 데이터가 실제로 안 보이거나 잘못 붙는 항목. 이게 있으면 화면이 이미 틀어져 있다.

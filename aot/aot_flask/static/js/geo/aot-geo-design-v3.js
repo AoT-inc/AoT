@@ -2430,6 +2430,19 @@ class AoTGeoDesign {
                     // [Fix] Respect no_save flag (e.g. Dynamic Length Labels, Connection Dots)
                     if (l.feature.properties.no_save) return;
 
+                    // [Fix] Sprinkler dot markers are ephemeral — sprinkler_coverage is the
+                    // canonical emitter (see aot-geo-stats.js's containment rule and
+                    // plot_journal._map_sprinklers). _loadAllFeatures already refuses to load
+                    // these Point markers back from the DB, so a client that persisted them here
+                    // could never see its own old copies again to delete them: the delta-save
+                    // path (saveDesign isAutoSave) only ever merges upserts/deletes into the
+                    // server's equipment_collection bundle, so anything the client can't see, it
+                    // can't tell the server to remove. Every regenerate cycle then added a fresh
+                    // batch on top of the invisible leftovers — up to 8x duplication observed in
+                    // production (2026-09-03). Never let these reach the server at all; they are
+                    // recreated in-memory from sprinkler_coverage whenever needed for this session.
+                    if (l.feature.properties.aot_type === 'equipment' && l.feature.properties.sub_type === 'sprinkler') return;
+
                     if (forcedType && (!l.feature.properties.aot_type || l.feature.properties.aot_type === 'feature')) {
                         l.feature.properties.aot_type = forcedType;
                     }

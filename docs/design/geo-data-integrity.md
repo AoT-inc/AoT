@@ -188,7 +188,7 @@ P5    컬럼 드롭                 map_config_id + (사망 처리된) map_overl
 | 위험 | 이유 | 대책 | 상태 |
 |------|------|------|------|
 | 위젯 `custom_options` 내 `map_uuid`/`device_ids` | JSON 내장 참조 — DB 가 볼 수 없음 | `check_geo_integrity.py` 에 JSON 참조 검사 | **미구현** |
-| `equipment_collection` 번들 내부 피처 | DB 행이 없음 | 동일 | **미구현** |
+| `equipment_collection` 번들 내부 피처 | DB 행이 없음 | `check_geo_integrity.py` 의 `equipment-sprinkler-marker` (스프링클러 점 마커만 — 2026-09-03 사건) | 부분 구현 |
 | 유령 지도(`geo_id` 가 실존 `geo_map` 아님) | 기존 행은 I8 트리거가 못 잡음(신규만 차단) | `phantom-map` 보고 항목 | 구현됨 |
 | 좌표 자체가 틀린 마커 | 무결성이 아니라 입력 오류 | 사용자 확인 영역 | — |
 

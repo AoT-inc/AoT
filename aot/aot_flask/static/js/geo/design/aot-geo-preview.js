@@ -273,6 +273,12 @@ class AoTGeoPreview {
                 if (!f || !f.properties) return;
                 if (f.properties.no_save) return;
                 if (f.properties.aot_type !== 'equipment') return;
+                // [Fix] Sprinkler dot markers are ephemeral — sprinkler_coverage is the
+                // canonical emitter. Same reasoning as saveDesign's collectLayer in
+                // aot-geo-design-v3.js: _loadAllFeatures never loads these Point markers
+                // back, so once persisted here a later session can't see or delete its own
+                // stale copies, and they only pile up across regenerate cycles.
+                if (f.properties.sub_type === 'sprinkler') return;
                 const nid = f.properties.node_id;
                 if (nid && seenIds.has(nid)) return;
                 if (nid) seenIds.add(nid);

@@ -916,8 +916,11 @@ class AoTGeoModules {
                 }
 
                 // [V14 Fix] Mark for Save
+                // [Fix] The dot marker itself is never persisted (see saveDesign's
+                // collectLayer — sub_type='sprinkler' is filtered out there); only its
+                // coverage circle is the canonical, saved emitter. Marking the marker
+                // dirty here did nothing useful and only muddied dirtyNodeIds.
                 if (this.parent.dirtyNodeIds) {
-                    if (marker.feature.properties.node_id) this.parent.dirtyNodeIds.add(marker.feature.properties.node_id);
                     if (coverage.feature.properties.node_id) this.parent.dirtyNodeIds.add(coverage.feature.properties.node_id);
                 }
 

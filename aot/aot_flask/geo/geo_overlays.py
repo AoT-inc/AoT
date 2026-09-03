@@ -13,6 +13,23 @@ except ImportError:
 from aot.databases.models import GeoShape, Input, Output, OutputChannel, PID, Trigger, Conditional, CustomController, Function, GeoFacility, GeoFacilitySetpoint
 from aot.aot_flask.extensions import db
 
+def _is_ephemeral_sprinkler_marker(feat):
+    """스프링클러 점 마커(sub_type='sprinkler')인가.
+
+    정본 이미터는 `sprinkler_coverage`(원형 커버리지) 하나뿐이고, 점 마커는
+    편집 세션 동안만 보이는 화면용 장식이다(aot-geo-stats.js의 "sprinkler_coverage
+    is the canonical emitter; sprinkler dot markers are ephemeral" 참조,
+    plot_journal._EMITTER_SUB_TYPE 도 동일). 클라이언트의 `_loadAllFeatures` 는
+    이 점을 애초에 다시 불러오지 않으므로, 여기서 저장을 허용하면 클라이언트가
+    자기가 예전에 저장한 사본을 다시는 보지 못해 지울 수도 없다 — 재생성할
+    때마다 새 사본만 쌓인다(2026-09-03, 이미터 1개당 최대 8겹 실측). 저장
+    경계에서 한 번 막아 두면 향후 다른 저장 경로가 실수로 이걸 다시 보내도
+    안전하다.
+    """
+    props = (feat or {}).get('properties') or {}
+    return props.get('sub_type') == 'sprinkler'
+
+
 def _drop_containment_cache():
     """도형 기하가 바뀐 직후 포함 관계 캐시를 버린다.
 
@@ -352,6 +369,13 @@ class GeoOverlayManager:
         # --- Optimization: Bulk Bundle for Equipment ---
         if target_type == 'equipment':
             try:
+                # [Fix] Never persist ephemeral sprinkler dot markers — see
+                # _is_ephemeral_sprinkler_marker. Filter before the empty-wipe
+                # check below so a payload that is ONLY stray dot markers is
+                # correctly treated as empty, not as "real equipment saved".
+                new_features = [f for f in new_features
+                                if not _is_ephemeral_sprinkler_marker(f)]
+
                 # [Safety] This path deletes ALL equipment rows before re-inserting the
                 # bundle. An empty payload would therefore wipe every equipment feature.
                 # Block it unless the caller explicitly confirms an intentional clear.
@@ -773,8 +797,16 @@ class GeoOverlayManager:
             # next time a full equipment save re-bundled, so freshly generated sprinklers
             # (which save via this delta path) vanished after a reload. Merge equipment
             # upserts INTO the bundle here, symmetric with the delete branch.
+            # [Fix] Never persist ephemeral sprinkler dot markers (see
+            # _is_ephemeral_sprinkler_marker) — this is the dominant save path for
+            # newly-generated sprinklers (doSave path in generateSprinklers), and a
+            # pure additive merge below, so anything that slips through here never
+            # gets cleaned up: the client can't see its own past copies to delete
+            # them (the load path never loads sub_type='sprinkler' Points back), so
+            # every regenerate cycle piled a fresh batch on top of the old one.
             equip_upserts = [f for f in upserts
-                             if f.get('properties', {}).get('aot_type') == 'equipment']
+                             if f.get('properties', {}).get('aot_type') == 'equipment'
+                             and not _is_ephemeral_sprinkler_marker(f)]
             other_upserts = [f for f in upserts
                              if f.get('properties', {}).get('aot_type') != 'equipment']
 
