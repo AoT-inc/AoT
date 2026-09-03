@@ -53,4 +53,4 @@ export INSTALL_ARCH
 export MACHINE_TYPE="${INSTALL_ARCH}"
 export UNAME_TYPE="$(uname -m)"
 
-printf "#### 설치 대상: %s | 아키텍처: %s\n" "${INSTALL_TARGET}" "${INSTALL_ARCH}"
+printf "#### Install target: %s | Architecture: %s\n" "${INSTALL_TARGET}" "${INSTALL_ARCH}"
