@@ -26,7 +26,7 @@
 
 ---
 
-## 1. 개요
+## 1. 개요 { #1-개요 }
 
 EnvCoordinator 는 시설(온실/식물공장)의 환경을 단일 Function 으로 통합 제어합니다.
 
@@ -45,7 +45,7 @@ L3 Coordinator → 액추에이터별 명령 산출 + 안전 게이트 통과
 
 ---
 
-## 2. 전제 조건
+## 2. 전제 조건 { #2-전제-조건 }
 
 | 항목 | 필수/선택 | 비고 |
 |------|----------|------|
@@ -58,7 +58,7 @@ L3 Coordinator → 액추에이터별 명령 산출 + 안전 게이트 통과
 
 ---
 
-## 3. Custom Function 등록
+## 3. Custom Function 등록 { #3-custom-function-등록 }
 
 1. **Setup → Function → 추가** 에서 `env_coordinator` 를 선택합니다.
 2. 옵션 그룹을 순서대로 설정합니다.
@@ -104,7 +104,7 @@ humid_min     < 측정 RH < humid_max    (절대 한계)
 
 ---
 
-## 4. GeoFacility 연동
+## 4. GeoFacility 연동 { #4-geofacility-연동 }
 
 ### 4.1 연결
 
@@ -145,7 +145,7 @@ GeoFacility
 
 ---
 
-## 5. 액추에이터 등록과 자동 변환
+## 5. 액추에이터 등록과 자동 변환 { #5-액추에이터-등록과-자동-변환 }
 
 ### 5.1 Action 추가
 
@@ -185,7 +185,7 @@ EnvCoordinator 는 Output 의 출력 타입을 자동 감지해 0–100 % 명령
 
 ---
 
-## 6. 관수 시스템 유량 자동 산출
+## 6. 관수 시스템 유량 자동 산출 { #6-관수-시스템-유량-자동-산출 }
 
 GeoFacility 의 `irrigation_layer` fitting 마다 다음이 자동 집계됩니다.
 
@@ -207,7 +207,7 @@ irrigation_layer (actuator_id = 펌프/밸브 Output)
 
 ---
 
-## 7. 안전 게이트와 긴급 정지
+## 7. 안전 게이트와 긴급 정지 { #7-안전-게이트와-긴급-정지 }
 
 ### 7.1 사전 게이트 (PreGate)
 
@@ -245,7 +245,7 @@ irrigation_layer (actuator_id = 펌프/밸브 Output)
 
 ---
 
-## 8. Method 곡선과 Growth Schedule
+## 8. Method 곡선과 Growth Schedule { #8-method-곡선과-growth-schedule }
 
 ### 8.1 Method
 
@@ -265,7 +265,7 @@ VPD/CO₂/광주기 목표를 시간 기반 곡선으로 정의합니다.
 
 ---
 
-## 9. 그룹 액추에이터
+## 9. 그룹 액추에이터 { #9-그룹-액추에이터 }
 
 GeoFacility 의 `groups` 필드에 정의합니다 (Facility 편집 UI 또는 API).
 
@@ -290,7 +290,7 @@ GeoFacility 의 `groups` 필드에 정의합니다 (Facility 편집 UI 또는 AP
 
 ---
 
-## 10. 기상 예보 연동
+## 10. 기상 예보 연동 { #10-기상-예보-연동 }
 
 GeoFacility 의 `weather_bindings` 에 예보 Input 을 매핑합니다.
 
@@ -311,7 +311,7 @@ GeoFacility 의 `weather_bindings` 에 예보 Input 을 매핑합니다.
 
 ---
 
-## 11. 운영 명령
+## 11. 운영 명령 { #11-운영-명령 }
 
 Function Command 또는 RPC 로 호출:
 
@@ -324,7 +324,7 @@ Function Command 또는 RPC 로 호출:
 
 ---
 
-## 12. 로그 정책
+## 12. 로그 정책 { #12-로그-정책 }
 
 ### 12.1 기본값
 
@@ -346,7 +346,7 @@ Function Command 또는 RPC 로 호출:
 
 ---
 
-## 13. 트러블슈팅
+## 13. 트러블슈팅 { #13-트러블슈팅 }
 
 | 증상 | 점검 항목 |
 |------|----------|
@@ -362,7 +362,7 @@ Function Command 또는 RPC 로 호출:
 
 ---
 
-## 14. 용어
+## 14. 용어 { #14-용어 }
 
 | 용어 | 정의 |
 |------|------|
