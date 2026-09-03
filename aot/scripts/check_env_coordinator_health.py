@@ -335,11 +335,25 @@ def analyse(row, hours, min_delta):
             mismatch.append((ts, float(value)))
 
     # ── 사이클 리듬 ────────────────────────────────────────────────────────
+    # ⚠ **`safety_gate_active` 도 사이클 신호에 넣는다** (2026-09-03). 안전
+    #   게이트가 걸리면 `_cycle_mixin.py` 가 L1~L3 전에 조기 반환해
+    #   `coord_actuator_*` 를 한 줄도 안 쓴다 — 그 전에는 여기서 `cmd_by_act`
+    #   만 봤으므로, 강우가 몇 시간 이어지면 코디네이터가 **실제로는 매
+    #   사이클 정상 실행 중**인데도 "결정 로그가 없다"(cycles=0) 로 보였다.
+    #   실측: 쿠마모토가 강우 게이트로 5시간 동안 이 상태였고, 그동안 이
+    #   스크립트와 데몬 로그만 보면 "코디네이터가 멈췄다"와 구분되지 않았다
+    #   (반면 `get_control_state` 의 실시간 요약은 `_write_gate_only_summary`
+    #   덕에 이미 최신이었다 — 2026-08-26에 화면 쪽만 먼저 고쳐졌었다).
+    #   `safety_gate_active` 는 게이트가 걸린 사이클에만 쓰이고 정상 사이클과
+    #   겹치지 않으므로(트리거되면 그 자리에서 반환, `coord_actuator_*` 는
+    #   안 쓴다) 합쳐도 사이클이 중복 세어지지 않는다.
+    #
     # 한 사이클은 액추에이터 수만큼 행을 남기고 그것들이 거의 같은 순간에
     # 몰린다. 타임스탬프를 그대로 세면 **사이클 수가 액추에이터 배로 부풀고
     # 중앙 간격이 0 초가 된다**(첫 실행에서 실제로 그렇게 나왔다).
-    stamps = _cluster_cycles(
-        sorted(ts for series in cmd_by_act.values() for ts, _ in series))
+    cmd_stamps = sorted(ts for series in cmd_by_act.values() for ts, _ in series)
+    gate_stamps = sorted(ts for ts, _ in gate_events)
+    stamps = _cluster_cycles(cmd_stamps + gate_stamps)
     gaps = [(b - a).total_seconds() for a, b in zip(stamps, stamps[1:])]
     median_gap = statistics.median(gaps) if gaps else 0.0
     # 중앙값의 3배를 넘는 간격 = 사이클이 통째로 빠진 것. 재시작·정지·멈춤.
@@ -427,12 +441,22 @@ def analyse(row, hours, min_delta):
     clean_ratio = (sum(1 for _t, v in clean_flags if v >= 0.5) * 100.0
                    / len(clean_flags)) if clean_flags else None
 
+    # 클러스터된 사이클 중 `coord_actuator_*` 가 하나도 없는 것 = 게이트만
+    # 남긴 사이클. `cycles` 에는 포함시키되(방금 위에서 그렇게 했다) 몇 회가
+    # 그런 것인지는 따로 말한다 — 안 그러면 "5시간째 게이트로 쉬는 중"과
+    # "정상적으로 5시간 잘 돌았다"가 숫자만 봐서는 구분되지 않는다.
+    cmd_cycles = set(_cluster_cycles(cmd_stamps))
+    gate_only_cycles = sum(
+        1 for g in _cluster_cycles(gate_stamps)
+        if not any(abs((g - c).total_seconds()) < 5.0 for c in cmd_cycles))
+
     return {
         'uuid': row.unique_id,
         'name': row.name,
         'facility_uuid': facility_uuid,
         'debug_logging': bool(row.log_level_debug),
         'cycles': len(stamps),
+        'gate_only_cycles': gate_only_cycles,
         'median_gap_s': median_gap,
         'long_gaps': len(long_gaps),
         'first': stamps[0].isoformat() if stamps else None,
@@ -581,8 +605,10 @@ def report(results, hours, min_delta):
             problems += 1
             continue
 
+        gate_only = (f' · 게이트로만 {r["gate_only_cycles"]}회'
+                    if r['gate_only_cycles'] else '')
         print(f'   사이클      {r["cycles"]}회 · 중앙 간격 {_fmt_gap(r["median_gap_s"])}'
-              f' · 긴 공백 {r["long_gaps"]}회')
+              f' · 긴 공백 {r["long_gaps"]}회{gate_only}')
 
         if r['have_env_metrics']:
             modes = ' · '.join(f'{k} {v}' for k, v in list(r['modes'].items())[:4])

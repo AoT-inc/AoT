@@ -100,6 +100,67 @@ class TestCycleClustering(unittest.TestCase):
         self.assertEqual(idx(starts, base - timedelta(seconds=5)), 0)
 
 
+class TestGateOnlySilenceIsNotMistakenForStalling(unittest.TestCase):
+    """게이트로만 남은 사이클도 "돌고 있다" 로 세어야 한다.
+
+    강우·돌풍 같은 안전 게이트가 걸리면 `_cycle_mixin.py` 가 L1~L3 전에
+    조기 반환해 `coord_actuator_*` 를 한 줄도 안 쓴다(`safety_gate_active`
+    만 쓴다). 그런데 이 검사기는 `cmd_by_act`(= `coord_actuator_*_command`)
+    만으로 `stamps`(사이클 리듬)를 계산했다 — 그래서 강우가 몇 시간 이어지면
+    코디네이터가 **실제로는 매 사이클 정상 실행 중**인데도 "결정 로그가
+    없다"(cycles=0, "이 창에서 한 사이클도 돌지 않았습니다")로 보였다.
+
+    실측: 2026-09-03 쿠마모토가 강우 게이트로 5시간째였고, 이 검사기와 데몬
+    로그만 보면 "코디네이터가 멈췄다"와 구분되지 않았다 — 실시간 상태
+    (`get_control_state`)를 따로 찍어 보고서야 정상임을 확인했다.
+    """
+
+    def test_gate_events_feed_the_cycle_stamps(self):
+        src = _source(_SCRIPT)
+        self.assertIn('gate_stamps = sorted(ts for ts, _ in gate_events)', src)
+        self.assertIn('_cluster_cycles(cmd_stamps + gate_stamps)', src,
+                      'safety_gate_active 타임스탬프가 사이클 리듬 계산에 '
+                      '안 들어가면 게이트만 걸린 시간대가 "공백"으로 보인다')
+
+    def test_gate_only_cycles_are_reported_separately(self):
+        """포함은 시키되, "게이트로만 존재했다"는 사실은 숨기지 않는다.
+
+        합쳐서 세기만 하면 "5시간째 게이트로 쉬는 중"과 "정상적으로 5시간
+        잘 돌았다"가 숫자만 봐서는 다시 구분되지 않는다."""
+        src = _source(_SCRIPT)
+        self.assertIn("'gate_only_cycles'", src)
+        self.assertIn('게이트로만', src)
+
+    def test_gate_only_heartbeats_stay_distinct_cycles(self):
+        """게이트 사이클 3회(10분 간격, 명령 기록 없음)가 뭉개지지 않는다.
+
+        `_cluster_cycles` 자체는 이번에 안 고쳤지만, 이 검사기가 그 함수에
+        기대는 성질이 정확히 이것이다 — 뭉개지면 "5시간째 게이트" 도
+        "방금 한 번 걸림"과 구분되지 않는다."""
+        ns = _load_helpers('_cluster_cycles')
+        base = datetime(2026, 9, 3, 0, 0, tzinfo=timezone.utc)
+        gate_stamps = [base + timedelta(minutes=10 * i) for i in range(3)]
+        cycles = ns['_cluster_cycles'](gate_stamps)
+        self.assertEqual(len(cycles), 3,
+                         '게이트 사이클 3회가 뭉개지거나 사라졌습니다')
+
+    def test_gate_only_cycles_after_normal_ones_extend_the_last_seen_time(self):
+        """정상 사이클 2회 뒤 게이트 사이클 3회 — `last` 는 게이트 쪽으로 가야 한다.
+
+        cmd 만 봤을 때는 정상 사이클이 끝난 시각에 멈춰, 그 뒤로 몇 시간
+        게이트가 이어져도 "마지막으로 본 시각"이 과거에 고정된다."""
+        ns = _load_helpers('_cluster_cycles')
+        base = datetime(2026, 9, 3, 0, 0, tzinfo=timezone.utc)
+        cmd_stamps = [base, base + timedelta(minutes=10)]
+        gate_stamps = [base + timedelta(minutes=20 * i) for i in range(2, 5)]
+        combined = ns['_cluster_cycles'](sorted(cmd_stamps + gate_stamps))
+        self.assertEqual(len(combined), 5,
+                         'cmd 사이클과 게이트 사이클이 합쳐지지 않고 그대로 '
+                         '다섯 개여야 합니다')
+        self.assertEqual(combined[-1], gate_stamps[-1],
+                         '마지막 사이클이 게이트 쪽 최신 시각을 반영해야 합니다')
+
+
 class TestOscillationCounting(unittest.TestCase):
 
     def setUp(self):

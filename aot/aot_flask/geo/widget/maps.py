@@ -48,6 +48,34 @@ except Exception:
 
 logger = logging.getLogger(__name__)
 
+
+def _measurement_display_name(measurement_key):
+    """측정 키 → 사람이 읽는 이름. 모르는 키면 `None`(호출부가 폴백한다).
+
+    정본은 `MEASUREMENTS`(`config_devices_units.py`) 하나다 — 화면마다 자기
+    이름표를 들면 같은 값이 자리마다 다른 이름으로 보인다.
+
+    ⚠ `MEASUREMENTS` 의 이름은 `lazy_gettext` 객체다. **참/거짓으로 평가하지
+      말 것** — 그 순간 `__len__` → `str()` 이 불려 번역이 강제되고, 요청
+      컨텍스트가 없으면 거기서 예외가 난다. `is None` 으로만 본다.
+    """
+    if not measurement_key:
+        return None
+    try:
+        from aot.config_devices_units import MEASUREMENTS
+        entry = MEASUREMENTS.get(str(measurement_key))
+        if entry is None:
+            return None
+        name = entry.get('name')
+        if name is None:
+            return None
+        return str(name) or None
+    except Exception:
+        # 이름을 못 얻는 것이 지도를 못 그릴 이유는 아니다 — 호출부가
+        # 원문 키로 폴백한다.
+        return None
+
+
 # NOTE: Cross-request ORM caching of GeoMap caused DetachedInstanceError on
 # tab duplication / dashboard re-render (instances became detached after the
 # original request's session was torn down). The cache is intentionally
@@ -298,6 +326,20 @@ def generate_page_variables_logic(widget_unique_id, widget_options):
                         meas = meas_lookup[m_id]
                         chan = meas.channel if meas.channel is not None else 0
                         raw_name = (meas.name or meas.measurement or '')
+                        # 표시명은 **측정 정의(`MEASUREMENTS`)를 정본으로** 쓴다.
+                        #
+                        # 예전에는 사용자가 채널 이름을 안 지었을 때 원문 키를
+                        # 그대로 내보냈다(`vapor_pressure_deficit`). 그래서
+                        # 클라이언트(`aot-map-custom-controls.js`)가 철자
+                        # 5가지를 'VPD' 로 되돌리는 정규화를 자기 안에 들고
+                        # 있었는데, 그것은 같은 판정의 **두 번째 사본**이라
+                        # 정의를 고쳐도 지도만 안 따라오는 상태가 된다.
+                        #
+                        # ⚠ `raw_name` 은 그대로 둔다 — 아래 `channel_label_meta`
+                        #   가 밴드 key 를 뽑는 근거이고, 그 자리에는 번역되지
+                        #   않는 원문이 필요하다(바로 아래 주석 참조).
+                        display_name = meas.name or _measurement_display_name(
+                            meas.measurement) or raw_name
                         eff_unit = (conv_unit_lookup.get(meas.conversion_id)
                                     if meas.conversion_id else None) \
                             or meas.rescaled_unit or meas.unit or ''
@@ -312,8 +354,8 @@ def generate_page_variables_logic(widget_unique_id, widget_options):
                             'id': m_id,
                             'device_unique_id': dev_id,
                             'channel': chan,
-                            'name': f"[CH{chan}] {gettext(raw_name)}".strip(),
-                            'meas_name': gettext(raw_name),
+                            'name': f"[CH{chan}] {gettext(display_name)}".strip(),
+                            'meas_name': gettext(display_name),
                             'measurement_type': meas.measurement_type,
                             'key': band_key,
                             'device_type': m_conf['device_type'],

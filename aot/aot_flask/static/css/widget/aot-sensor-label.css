@@ -2136,3 +2136,31 @@ button.aot-center-modal-close {
    `components/aot-plot-form.css`. 마크업을 만드는 것이 공용 폼
    (`common/aot-plot-form.js` 의 `_hint`)인데 스타일만 이 위젯 파일에 있어서,
    같은 폼을 쓰는 다른 화면(/plots)에서는 안내가 통째로 스타일 없이 렌더됐다. */
+
+/* ── 고르는 행 (`.aot-ov-pick`) ────────────────────────────────────────
+ * 대지 [정보] 탭의 기상대 지정이 쓴다. `.aot-ov-row` 를 그대로 쓰되
+ * **좌우가 뒤집힌다** — 체크가 왼쪽에 서야 목록으로 읽히고, 오른쪽에 있으면
+ * 값(숫자) 자리로 보여 "무엇을 고르는 줄인지" 가 흐려진다.
+ *
+ * 이름 아래 작은 글씨로 그 장치의 측정값을 적는다. 장치 이름만으로는 어느
+ * 것이 기상대인지 알 수 없는 설치가 흔하다(실측: 한 대지에 고를 것 8대,
+ * 이름이 전부 '미러-온습도NN'). */
+.aot-ov-row.aot-ov-pick {
+  justify-content: flex-start;
+  gap: var(--aot-space-3, 8px);
+  align-items: flex-start;
+  cursor: pointer;
+  font-weight: normal;
+  margin: 0;
+}
+.aot-ov-row.aot-ov-pick input { margin-top: 3px; flex: 0 0 auto; }
+.aot-ov-pick-text { display: flex; flex-direction: column; min-width: 0; }
+.aot-ov-pick-text small {
+  color: var(--aot-color-text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* 적용 줄 — 안내문(왼쪽)과 버튼(오른쪽)은 `.aot-ov-row` 기본 배치 그대로다. */
+.aot-ov-row.aot-ov-pick-foot { align-items: center; }
+.aot-ov-weather-msg { color: var(--aot-color-text-secondary); }

@@ -689,6 +689,58 @@ def _move_marker_column(spatial_id, new_device_id, channel_id):
         shape.feature = new_feat
 
 
+SITE_WEATHER_ROLE = 'station'
+"""대지 기상대 지정의 role.
+
+`weather` 는 시설이 외기를 읽을 때 role 을 **측정 종류**로 쓴다
+(`temperature`·`radiation`…). 대지 지정은 종류별이 아니라 **"이 장치가 이
+대지의 기상대다"** 하나이므로 role 을 고정한다 — 종류별로 쪼개면 사람이
+기상대 하나를 지정하려고 측정값 수만큼 체크를 해야 한다.
+"""
+
+
+def set_site_weather(shape_uuid, device_ids, commit=False):
+    """대지(도형)의 기상대를 **지정한 목록 그대로** 맞춘다. 반환: (추가, 종료).
+
+    ⚠ **`rebind()` 를 쓰지 않는다.** `weather` 는 다중 점유라, rebind 는 같은
+      role 의 다른 장치까지 함께 종료시킨다 — 기상대 둘을 등록한 설치에서
+      한 대를 더하는 것만으로 다른 한 대가 조용히 사라진다.
+
+    ⚠ **빈 목록은 "전부 해제" 다.** 그러면 `weather_device_ids` 가 추론으로
+      되돌아간다 — "지정을 지웠더니 아무 값도 안 나온다" 가 아니라 "지정 전
+      상태로 돌아간다" 가 맞다. 화면이 그렇게 말해야 한다.
+    """
+    if not shape_uuid:
+        raise BindingError('shape_uuid 가 비었다')
+
+    want = {str(d).split('::')[0] for d in (device_ids or []) if d}
+    rows = current('weather', shape_uuid, role=SITE_WEATHER_ROLE)
+    have = {r.device_id: r for r in rows}
+
+    ended = 0
+    for dev, row in have.items():
+        if dev not in want:
+            unbind(row.unique_id, 'unbound')
+            ended += 1
+
+    created = 0
+    for dev in sorted(want - set(have)):
+        device_kind = resolve_device_kind(dev)
+        if device_kind is None:
+            # 실존하지 않는 장치를 승격시키면 고아가 정본이 된다(백필과 같은 규칙).
+            logger.warning('[GeoBinding] 기상대 지정 건너뜀 — 없는 장치: %s', dev)
+            continue
+        bind('weather', shape_uuid, SITE_WEATHER_ROLE, device_kind, dev)
+        created += 1
+
+    if created or ended:
+        logger.info('[GeoBinding] 대지 %s 기상대 지정: +%d / 종료 %d',
+                    shape_uuid, created, ended)
+    if commit:
+        db.session.commit()
+    return (created, ended)
+
+
 def rebind_device(old_device_id, new_device_id, commit=False):
     """장치 단위 교체 — 옛 장치가 맡던 **지도 자리 전부**를 새 장치로 옮긴다.
 

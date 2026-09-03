@@ -1928,7 +1928,13 @@
                               limits: (data.plot || {}).limits,
                               // 목표가 곡선인 항목 — 숫자 대신 곡선 이름을 적고
                               // 앱 기본 구간은 그리지 않는다.
-                              targetMethods: (data.plot || {}).target_methods });
+                              targetMethods: (data.plot || {}).target_methods,
+                              // 적산온도(GDD)·광합성 지표(DLI) — 이 구획 자신
+                              // 기준(plot_context.gdd_accumulated/dli_accumulated).
+                              // 코디네이터 사이클 값(`photo`)과는 다른 축이라
+                              // 별도 키로 받는다 — 섞으면 안 된다.
+                              gdd: (data.plot || {}).gdd,
+                              dli: (data.plot || {}).dli });
                         // 축이 없는 줄(CO2·토양수분·이슬점…)은 추세로 답한다.
                         // 값은 이미 그려져 있고, 도착하면 그 자리만 바뀐다.
                         if (window.AoTMapPopup.fillEnvSparklines) {
@@ -2768,7 +2774,136 @@
          */
         function _buildSiteAboutHTML(data) {
             var site = data.site || {};
-            return _siteOverviewCardHTML(site, site.counts || {});
+            // 기상대 칸은 **빈 채로** 나간다 — 후보 목록은 요약과 다른 조회라
+            // (`/weather`) 요약 응답에 실려 오지 않는다. 모달이 열릴 때 한 번
+            // 채운다(스스로 바뀌는 값이 아니라 폴링할 이유가 없다).
+            return _siteOverviewCardHTML(site, site.counts || {}) +
+                   '<div class="aot-ov-card-title">' + _tr('Weather station') +
+                   '</div>' +
+                   '<div class="aot-ov-block aot-ov-weather"></div>';
+        }
+
+        /**
+         * 대지 기상대 지정 — [정보] 탭.
+         *
+         * ## 왜 이 화면이 있는가
+         *
+         * 일사·강우는 대지에 하나 있는 기상대가 재고 구획마다 따로 재지 않는다.
+         * 구획 화면이 그 값을 보려면 대지의 기상대를 알아야 하는데, 지금까지는
+         * **측정값 이름으로 추론**했다. 추론은 아무도 설정을 만지지 않은 설치에서
+         * 값이 보이게 하는 안전망이지 정답이 아니다 — 대지에 일사계가 둘이거나
+         * 실험용 센서가 섞이면 바로잡을 수단이 없었다.
+         *
+         * ⚠ **해제는 비활성이 아니라 "지정 전" 이다.** 전부 끄면 추론으로
+         *   되돌아간다. 화면이 그렇게 말하지 않으면 사람은 "값이 안 나오게
+         *   된다" 로 읽고 아예 손대지 않는다.
+         */
+        function _renderSiteWeather(box, d) {
+            var html = '';
+            var src = d.source || 'none';
+            var note = (src === 'bound')
+                ? _tr('Set here. Clear every choice to go back to automatic.')
+                : (src === 'inferred')
+                    ? _tr('Found automatically from what these devices measure.')
+                    : _tr('No weather source found in this site.');
+            html += '<div class="aot-ov-trend">' + _escZ(note) + '</div>';
+
+            var cands = d.candidates || [];
+            if (!cands.length) {
+                html += '<div class="aot-ov-row"><span>' +
+                        _escZ(_tr('No devices to choose from.')) + '</span></div>';
+                box.innerHTML = html;
+                return;
+            }
+
+            var chosen = {};
+            (d.selected || []).forEach(function (x) { chosen[x] = 1; });
+            var editable = !!d.can_edit;
+
+            cands.forEach(function (c) {
+                // 추론으로 걸린 것은 지정이 없을 때만 체크로 보인다 — 지정이
+                // 있으면 지정이 정본이라, 추론까지 켜 두면 무엇이 실제로
+                // 쓰이는지 화면이 두 가지를 말하게 된다.
+                var on = chosen[c.device_id]
+                         || (src === 'inferred' && c.inferred);
+                html += '<label class="aot-ov-row aot-ov-pick">' +
+                        '<input type="checkbox" value="' + _escZ(c.device_id) + '"' +
+                        (on ? ' checked' : '') +
+                        (editable ? '' : ' disabled') + '>' +
+                        '<span class="aot-ov-pick-text">' +
+                        '<span>' + _escZ(c.name) + '</span>' +
+                        '<small>' + _escZ((c.measurements || []).join(', ')) +
+                        '</small></span></label>';
+            });
+
+            if (editable) {
+                html += '<div class="aot-ov-row aot-ov-pick-foot">' +
+                        '<span class="aot-ov-weather-msg"></span>' +
+                        '<button type="button" class="aot-pill-btn aot-ov-weather-save">' +
+                        _escZ(_tr('Apply')) + '</button></div>';
+            }
+            box.innerHTML = html;
+        }
+
+        function _wireSiteWeather(uid, body, siteUuid) {
+            var box = body && body.querySelector('.aot-ov-weather');
+            if (!box) return;
+            fetch('/api/geo/site/' + encodeURIComponent(siteUuid) + '/weather',
+                  { credentials: 'same-origin' })
+                .then(function (r) { return r.ok ? r.json() : null; })
+                .then(function (d) {
+                    if (!d || !d.ok) return;
+                    // 모달이 그새 닫혔거나 다른 대지로 바뀌었으면 버린다.
+                    var st = _sitePopupState[uid];
+                    if (!st || st.siteUuid !== siteUuid) return;
+                    _renderSiteWeather(box, d);
+                })
+                .catch(function () {});
+
+            box.addEventListener('click', function (e) {
+                var btn = e.target.closest && e.target.closest('.aot-ov-weather-save');
+                if (!btn) return;
+                var ids = [];
+                Array.prototype.forEach.call(
+                    box.querySelectorAll('input[type="checkbox"]:checked'),
+                    function (i) { ids.push(i.value); });
+                var msg = box.querySelector('.aot-ov-weather-msg');
+                btn.disabled = true;
+                fetch('/api/geo/site/' + encodeURIComponent(siteUuid) + '/weather', {
+                    method: 'POST', credentials: 'same-origin',
+                    headers: { 'Content-Type': 'application/json',
+                               'X-CSRFToken': _csrfHeader() },
+                    body: JSON.stringify({ device_ids: ids })
+                }).then(function (r) { return r.json().catch(function () { return null; }); })
+                  .then(function (d) {
+                      btn.disabled = false;
+                      if (!d || !d.ok) {
+                          if (msg) msg.textContent = (d && d.error) || _tr('Save failed');
+                          return;
+                      }
+                      // 저장 뒤 안내문이 바뀌어야 한다 — '자동으로 찾음' 이
+                      // 그대로 남으면 방금 한 지정이 반영됐는지 알 수 없다.
+                      fetch('/api/geo/site/' + encodeURIComponent(siteUuid) + '/weather',
+                            { credentials: 'same-origin' })
+                          .then(function (r) { return r.ok ? r.json() : null; })
+                          .then(function (d2) {
+                              if (d2 && d2.ok) _renderSiteWeather(box, d2);
+                              // ⚠ **다시 그린 뒤에 적는다.** 앞에 적으면
+                              //   `innerHTML` 교체가 지워, 이미 지정돼 있던
+                              //   대지에 한 대를 더할 때(안내문이 안 바뀐다)
+                              //   화면이 아무 반응도 하지 않는다.
+                              var m2 = box.querySelector('.aot-ov-weather-msg');
+                              if (m2) m2.textContent = _tr('Saved');
+                          }).catch(function () {
+                              var m2 = box.querySelector('.aot-ov-weather-msg');
+                              if (m2) m2.textContent = _tr('Saved');
+                          });
+                  })
+                  .catch(function () {
+                      btn.disabled = false;
+                      if (msg) msg.textContent = _tr('Save failed');
+                  });
+            });
         }
 
         function _siteTileHTML(key, num, label, extraCls) {
@@ -2866,9 +3001,18 @@
                 // [개요]도 **여기서 함께** 채운다. 탭을 누를 때 그리면 첫 클릭에
                 // 빈 화면이 한 번 보이고, 폴링이 돌아오는 30초마다 그 상태로
                 // 되돌아간다(pane 이 다시 비므로).
+                // ⚠ **비어 있을 때만 채운다.** 30초 폴링마다 다시 그리면
+                //   기상대 지정을 고르는 중에 체크가 통째로 날아간다(저장
+                //   버튼을 누르기 전에 화면이 스스로 되돌아간다). 원래 여기서
+                //   그린 이유는 "탭 첫 클릭에 빈 화면이 보이는 것" 을 막기
+                //   위해서였고, 그 목적은 한 번 채우는 것으로 그대로 달성된다
+                //   — 면적·구역 수는 30초마다 바뀌는 값이 아니다.
                 var aboutPane = body.querySelector(
                     '.aot-bay-popup-pane[data-pane="about"]');
-                if (aboutPane) aboutPane.innerHTML = _buildSiteAboutHTML(data);
+                if (aboutPane && !aboutPane.firstChild) {
+                    aboutPane.innerHTML = _buildSiteAboutHTML(data);
+                    _wireSiteWeather(uid, body, siteUuid);
+                }
 
                 // 구성 목록은 [현황] 안에 있다 — 같은 pane 이므로 여기서 배선한다.
                 _wireSiteRows(uid, pane);
@@ -4199,9 +4343,12 @@
          *
          * 카드마다 목록의 출처가 다르고 갱신 주기도 달라, 부르는 쪽이 자기가
          * 아는 것만 넘긴다(`readings` 또는 `summary`). 넘기지 않은 카드의
-         * 버튼은 그 카드를 그린 쪽이 따로 건다. */
+         * 버튼은 그 카드를 그린 쪽이 따로 건다.
+         *
+         * `extraChoices` — [현재] 카드에서만 쓴다(DLI·GDD 는 측정값이 아니라
+         * `readings` 에 없는 파생값 — `envRowChoices` 주석 참조). */
         function _wireFacilityCardConfig(uid, facilityUuid, pane, canEdit,
-                                         card, source) {
+                                         card, source, extraChoices) {
             var P = window.AoTMapPopup;
             if (!P || !canEdit) return;
             _wireCardConfig(uid, pane, {
@@ -4220,7 +4367,7 @@
                 },
                 choicesOf: function () {
                     return card === 'control' ? P.controlRowChoices(source)
-                                              : P.envRowChoices(source);
+                                              : P.envRowChoices(source, extraChoices);
                 },
                 hiddenOf: function () { return _facilityHidden(uid, facilityUuid); },
                 onSaved: function (rows) {
@@ -4780,7 +4927,9 @@
                     limits:  st._lastProgramLimits,
                     trend:   st._lastTrend,
                     photo:   st._lastPhoto,
-                    targets: st._lastTargets
+                    targets: st._lastTargets,
+                    gdd:     st._lastPlotGdd,
+                    dli:     st._lastPlotDli
                 });
                 if (html) {
                     // 같은 값이면 DOM 을 건드리지 않는다(위 _loadOverview 주석).
@@ -4812,8 +4961,18 @@
                         else pane.insertAdjacentHTML('afterbegin', html);
                     }
                     _wireFacilityRepPick(uid, facilityUuid, pane, canEdit);
+                    // DLI·GDD 도 [설정]에서 켜고 끌 수 있어야 한다 — 값을
+                    // 낼 수 있을 때만 선택지로 얹는다(다른 측정 줄과 같은
+                    // "값이 오는가" 기준, envRowChoices 주석 참조).
+                    var _envExtraChoices = [];
+                    if ((st._lastPlotDli || {}).usable) {
+                        _envExtraChoices.push({ key: 'DLI', label: _tr('DLI') });
+                    }
+                    if ((st._lastPlotGdd || {}).usable) {
+                        _envExtraChoices.push({ key: 'GDD', label: _tr('GDD') });
+                    }
                     _wireFacilityCardConfig(uid, facilityUuid, pane, canEdit,
-                                            'now', readings);
+                                            'now', readings, _envExtraChoices);
                     // 축이 없는 줄은 추세로 답한다. 센서 목록은 라벨용으로
                     // 이미 받아 둔 것을 쓴다(sensorsByFac) — 같은 것을 또
                     // 받으면 모달 열 때마다 왕복이 하나 는다.
@@ -5082,6 +5241,11 @@
                         st0._lastPhoto   = _sm.photo   || null;
                         st0._lastTargets = _sm.targets || null;
                         st0._lastIrr     = j.irrigation || null;
+                        // 적산온도(GDD)·광합성 지표(DLI) — 시설 기준(bay 무관,
+                        // routes_geo_iec._build_facility_overview 참조), 코디
+                        // 네이터 요약(`_sm.photo`)과는 다른 키에서 온다.
+                        st0._lastPlotGdd = j.plot_gdd || null;
+                        st0._lastPlotDli = j.plot_dli || null;
                     }
                     _render([j.env_summary || null, j.status || null,
                              j.info || null, j.hazards || null,

@@ -8,48 +8,118 @@
 {#- 대상 선택 폼은 시설/프로그램 페이지와 같은 폼 요소를 쓴다
     (aot-modal-modern.css 는 layout.html 이 전역으로 이미 실어 온다). -#}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/pages/geo-plots.css') }}" />
+<style>
+  /* ⚠ **여백을 직접 만들지 않는다.** AoT 현대화 모달 스타일이 이미 준다:
+     `.aot-modal-container`(좌우 16px) · `.aot-modal-section-title` ·
+     `.aot-modal-group-title`(각각 "박스 내부 레이블과 정렬 통일 (16px)") ·
+     `.aot-modal-body-text`. 제목에는 그 클래스를 쓰고 본문은 컨테이너 안에
+     넣는다 — 여기 남은 것은 공용에 없는 것(검색 결과 목록)뿐이다. */
+
+  /* 구획 검색 — 이 화면의 주 진입이라 전폭이다(옵션 행 문법은 160px 고정). */
+  .aot-journal-search { margin: 0 16px 1rem; }
+  .aot-journal-search-label { display: block; font-size: .8rem; text-transform: uppercase; letter-spacing: .04em; opacity: .6; margin-bottom: .3rem; }
+  .aot-journal-search input[type="search"] { width: 100%; }
+
+  /* 구획 검색 결과 — /plots 의 목록과 같은 문법을 쓰되 고르는 용도라 짧다. */
+  .aot-journal-results { max-height: 15rem; overflow-y: auto; border: 1px solid rgba(128,128,128,.2); border-radius: 6px; margin-top: .4rem; }
+  .aot-journal-results::-webkit-scrollbar { display: none; }
+  .aot-journal-results { scrollbar-width: none; }
+  .aot-journal-result { display: flex; justify-content: space-between; gap: .8rem; width: 100%; padding: .45rem .75rem; background: none; border: none; border-bottom: 1px solid rgba(128,128,128,.12); text-align: left; cursor: pointer; }
+  .aot-journal-result:last-child { border-bottom: none; }
+  .aot-journal-result:hover, .aot-journal-result.is-active { background: rgba(128,128,128,.12); }
+  .aot-journal-result-where { font-size: .8rem; opacity: .6; }
+  .aot-journal-chosen { display: flex; align-items: center; gap: .6rem; flex-wrap: wrap; }
+  .aot-journal-clear { background: none; border: none; font-size: .82rem; opacity: .65; cursor: pointer; text-decoration: underline; }
+
+  /* 2차 경로(대지·구역)는 접어 둔다 — 구획을 찾기 위해 지나야 하는 관문이
+     아니라는 것이 화면에도 드러나야 한다. */
+  .aot-journal-area-block > summary { cursor: pointer; font-size: .9rem; opacity: .75; padding: .5rem 16px; }
+  /* `<details>` 의 삼각 마커는 기본으로 글 앞 자리를 차지해 그 줄만 밀린다 —
+     마커를 목록 안쪽으로 넣어 글이 기준선에 서게 한다. */
+  details > summary { list-style-position: inside; }
+  /* 실을 측정값 고르기 — 기본은 진단 채널만 꺼진 상태다. */
+  .aot-journal-meas-block { margin: 0 0 1rem; }
+  .aot-journal-meas-block > summary { cursor: pointer; font-size: .9rem; opacity: .8; padding: .5rem 16px; }
+  .aot-journal-meas-list { display: flex; flex-wrap: wrap; gap: .35rem .9rem; padding: .4rem 16px .2rem; }
+  .aot-journal-meas-list label { display: flex; align-items: center; gap: .35rem; font-size: .86rem; font-weight: normal; margin: 0; cursor: pointer; }
+  .aot-journal-meas-list .is-diagnostic { opacity: .6; }
+
+  /* ── 저장된 일지 한 줄 ──────────────────────────────────────────────
+     제목 · 기간 · 요약 · 삭제를 **격자**로 세운다. 예전에는 flex 한 줄에
+     제목과 기간이 섞여 흘러, 폰에서 날짜가 줄바꿈에 걸리면 한 항목이 서너
+     줄로 늘어지고 어디까지가 제목인지 알 수 없었다. 격자로 두면 줄바꿈
+     지점을 내용이 아니라 선언이 정한다. */
+  .aot-journal-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto auto;
+    grid-template-areas: "title period meta del";
+    align-items: center;
+    gap: var(--aot-space-2) var(--aot-space-4);
+    padding: var(--aot-space-3) 0;
+    border-bottom: 1px solid var(--aot-border-light);
+  }
+  .aot-journal-row:last-child { border-bottom: none; }
+  .aot-journal-cell-title  { grid-area: title; min-width: 0; }
+  .aot-journal-cell-period { grid-area: period; }
+  .aot-journal-cell-meta   { grid-area: meta; }
+  .aot-journal-row-del     { grid-area: del; }
+  /* 기간은 날짜라 절대 줄바꿈하지 않는다 — 쪼개지면 두 날짜가 한 덩이로
+     안 읽힌다. 그래서 이 칸만 자기 폭을 요구한다. */
+  .aot-journal-cell-period,
+  .aot-journal-cell-meta {
+    color: var(--aot-color-text-secondary);
+    font-size: var(--aot-font-size-sm);
+    white-space: nowrap;
+  }
+
+  @media (max-width: 700px) {
+    /* 폰: 제목 한 줄, 그 아래 기간·요약 한 줄. 삭제는 오른쪽에서 두 줄을
+       가로지른다 — 손가락만 한 표적이 목록마다 같은 자리에 선다. */
+    .aot-journal-row {
+      grid-template-columns: minmax(0, 1fr) auto;
+      grid-template-areas: "title  del"
+                           "period del"
+                           "meta   del";
+      align-items: start;
+    }
+    .aot-journal-row-del { align-self: center; }
+  }
+</style>
 {% endblock %}
 
 {% block body %}
-<main role="main" class="container aot-page">
+<main role="main" class="container aot-page aot-journal-doc">
 
   <div class="aot-page-head">
-    <h1 class="aot-page-title">{{ _('Journals') }}</h1>
+    <h1 class="aot-modal-section-title">{{ _('Journals') }}</h1>
   </div>
 
-  <p class="text-muted">
+  <p class="aot-modal-body-text" style="padding-left:16px;">
     {{ _('Pick a plot, zone, or site and a period, and generate a snapshot of what was grown, measured, and controlled — a document you can hand off or print.') }}
   </p>
 
+  {#- ── 1차: 구획을 이름으로 바로 찾는다 ──────────────────────────────────
+      일지의 주 대상은 구획이다. 예전에는 구획에 닿으려면 그 구획이 어느
+      대지·구역에 있는지를 **먼저 알아맞혀야** 했다 — 정작 사람은 찾는
+      것의 이름(작물·품종·별칭)을 이미 알고 있다. /plots 페이지가 같은
+      문제를 검색 하나로 푼 것을 그대로 따른다.
+
+      ⚠ 옵션 행(`.aot-modal-option-row`)에 넣지 않는다 — 그 문법의 컨트롤은
+        160px 고정(`!important`)이라 검색 결과가 세로로 뭉개진다. 이건 설정
+        한 줄이 아니라 이 화면의 **주 진입**이므로 전폭 블록이 맞다. -#}
+  <div class="aot-journal-search">
+    <label class="aot-journal-search-label" for="journal-plot-search">{{ _('Plot') }}</label>
+    <div id="journal-plot-chosen" class="aot-journal-chosen" style="display:none;">
+      <strong id="journal-plot-chosen-name"></strong>
+      <button type="button" class="aot-journal-clear" id="journal-plot-clear">{{ _('Change') }}</button>
+    </div>
+    <input type="search" id="journal-plot-search" class="form-control aot-modern-input"
+           placeholder="{{ _('Search by crop, variety, name, zone…') }}"
+           autocomplete="off">
+    <div class="aot-journal-results" id="journal-plot-results" style="display:none;"></div>
+  </div>
+
   <div class="aot-modal-container" id="journal-form">
-    <div class="aot-modal-option-row">
-      <label class="aot-modal-option-label" for="journal-area">{{ _('Area') }}</label>
-      <div class="aot-modal-option-control">
-        <select id="journal-area" class="form-control aot-modern-select">
-          <option value="">{{ _('Select…') }}</option>
-          {% set ns = namespace(kind=None) %}
-          {% for a in area_choices %}
-            {% if a.kind != ns.kind %}
-              {% if ns.kind %}</optgroup>{% endif %}
-              <optgroup label="{{ _('Sites') if a.kind == 'site' else _('Zones') }}">
-              {% set ns.kind = a.kind %}
-            {% endif %}
-            <option value="{{ a.value }}" data-kind="{{ a.kind }}">{{ a.item }}</option>
-          {% endfor %}
-          {% if ns.kind %}</optgroup>{% endif %}
-        </select>
-      </div>
-    </div>
-
-    <div class="aot-modal-option-row" id="journal-plot-row" style="display:none;">
-      <label class="aot-modal-option-label" for="journal-plot">{{ _('Plot') }}</label>
-      <div class="aot-modal-option-control">
-        <select id="journal-plot" class="form-control aot-modern-select">
-          <option value="">{{ _('Whole area') }}</option>
-        </select>
-      </div>
-    </div>
-
     <div class="aot-modal-option-row">
       <label class="aot-modal-option-label" for="journal-start">{{ _('Start date') }}</label>
       <div class="aot-modal-option-control">
@@ -57,13 +127,91 @@
       </div>
     </div>
 
-    <div class="aot-modal-option-row" style="border-bottom:none;">
+    <div class="aot-modal-option-row">
       <label class="aot-modal-option-label" for="journal-end">{{ _('End date') }}</label>
       <div class="aot-modal-option-control">
         <input type="date" id="journal-end" class="form-control aot-modern-input">
       </div>
     </div>
+
+    {#- ── 기록 단위 ────────────────────────────────────────────────────────
+        굵게 고르면 저장되는 문서와 화면이 그만큼 작아진다. 다만 **센서를 읽는
+        양은 줄지 않는다** — 어느 단위든 시간별로 읽어 접기 때문이다. 그래서
+        "빨라진다" 고 적지 않는다(적으면 다음 사람이 그렇게 믿고 최적화를
+        엉뚱한 데서 찾는다).
+
+        기본은 '자동' 이다. 예전 동작(일 단위로 저장하되 예산을 넘기면 주간)이
+        그대로 남아, 아무것도 고르지 않은 사람의 결과가 달라지지 않는다. -#}
+    <div class="aot-modal-option-row" style="border-bottom:none;">
+      <label class="aot-modal-option-label" for="journal-gran">{{ _('Record by') }}</label>
+      <div class="aot-modal-option-control">
+        <select id="journal-gran" class="form-control aot-modern-select">
+          <option value="">{{ _('Automatic') }}</option>
+          <option value="day">{{ _('Daily') }}</option>
+          <option value="week">{{ _('Weekly') }}</option>
+          <option value="month">{{ _('Monthly') }}</option>
+        </select>
+      </div>
+    </div>
+    <p class="aot-modal-body-text text-muted small" id="journal-gran-note">
+      {{ _('A coarser unit makes a smaller document. Daily detail cannot be recovered later, so pick it only if you do not need it.') }}
+    </p>
   </div>
+
+  {#- ── 2차: 대지·구역 자체의 일지 ────────────────────────────────────────
+      ⚠ 라벨을 "면적" 이라 부르지 않는다 — 공간 어휘표(CLAUDE.md)에 없는 말인
+        데다, 이 기능 안에서 `area_m2`(실제 제곱미터)가 이미 그 말을 쓴다.
+      ⚠ 그룹은 **종류가 아니라 농장(지도)** 이다. 예전에는 `kind` 가 바뀔
+        때마다 optgroup 을 새로 열었는데 목록이 이름순 정렬이라 대지·구역이
+        번갈아 나왔고, 실측에서 20개 항목이 **9개 그룹**으로 쪼개졌다.
+        게다가 사람이 기대하는 묶음은 농장이고, 정작 농장 이름은 항목
+        텍스트의 접두사로 들어가 있었다(그룹 머리가 될 정보였다). -#}
+  <details class="aot-journal-area-block">
+    <summary>{{ _('Or make a journal for a whole site or zone') }}</summary>
+    <div class="aot-modal-container">
+      <div class="aot-modal-option-row">
+        <label class="aot-modal-option-label" for="journal-area">{{ _('Site or zone') }}</label>
+        <div class="aot-modal-option-control">
+          <select id="journal-area" class="form-control aot-modern-select">
+            <option value="">{{ _('Select…') }}</option>
+            {% for map_name, items in area_groups %}
+            <optgroup label="{{ map_name or _('Unmapped') }}">
+              {% for a in items %}
+              <option value="{{ a.value }}" data-kind="{{ a.kind }}">
+                {{ a.shape_name or a.item }}{% if a.kind == 'site' %} ({{ _('Site') }}){% endif %}
+              </option>
+              {% endfor %}
+            </optgroup>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+      <div class="aot-modal-option-row" style="border-bottom:none;">
+        <span class="aot-modal-option-label">&nbsp;</span>
+        <div class="aot-modal-option-control">
+          <p class="text-muted small mb-0">
+            {{ _('The whole site or zone is covered, including every plot inside it.') }}
+          </p>
+        </div>
+      </div>
+    </div>
+  </details>
+
+  {#- ── 실을 측정값 ────────────────────────────────────────────────────
+      대상을 고르면 그 대상이 **실제로 재는 것**만 나온다(전체 어휘를 보여주면
+      고를 수 있는 것과 값이 나오는 것이 달라진다). 전위·신호강도 같은 장치
+      진단 채널은 기본으로 꺼져 있다 — 기르는 환경이 아니라 장비 상태라,
+      실측에서 표의 절반을 차지하면서 읽을 것이 없었다. -#}
+  <details class="aot-journal-meas-block" id="journal-meas-block" style="display:none;">
+    {#- 문구는 두 가지다. 실내 센서가 하나도 없는 구획이면 고르는 대상이
+        전부 기상대 채널이라, 그렇게 말하는 편이 어디서 잰 값인지 분명하다
+        (`target_info` 의 `weather_only`). -#}
+    <summary>
+      <span id="journal-meas-title">{{ _('Measurements to include') }}</span>
+      <span class="text-muted small" id="journal-meas-count"></span>
+    </summary>
+    <div class="aot-journal-meas-list" id="journal-meas-list"></div>
+  </details>
 
   <p class="text-muted small" id="journal-plot-note" style="display:none;"></p>
   <p class="text-danger small" id="journal-form-error" style="display:none;"></p>
@@ -73,27 +221,44 @@
             class="btn aot-pill-btn aot-pill-btn-primary">{{ _('Generate journal') }}</button>
   </div>
 
-  <h2 class="aot-page-title" style="font-size:1.1rem;">{{ _('Saved journals') }}</h2>
+  <h2 class="aot-modal-section-title">{{ _('Saved journals') }}</h2>
 
   <div class="aot-plots-list" id="journal-list">
     {% if not journals %}
     <div class="aot-plots-empty">{{ _('Nothing recorded yet.') }}</div>
     {% endif %}
     {% for j in journals %}
-    <a class="aot-plots-row text-decoration-none text-reset" href="{{ url_for('routes_geo.geo_journal_view', journal_uuid=j.unique_id) }}">
-      <div class="aot-plots-main">
+    {#- ── 한 줄 = 격자 넷 ─────────────────────────────────────────────────
+        제목 · 기간 · 요약 · 삭제. 예전에는 기간이 제목과 **같은 줄에** 흘러
+        들어가서, 폰에서 날짜가 줄바꿈에 걸려 한 항목이 서너 줄로 늘어지고
+        어디까지가 제목인지 알 수 없었다. 기간을 자기 칸에 두면 줄바꿈 지점이
+        내용이 아니라 격자로 정해진다. -#}
+    <div class="aot-journal-row">
+      <a class="aot-journal-cell-title text-decoration-none text-reset"
+         href="{{ url_for('routes_geo.geo_journal_view', journal_uuid=j.unique_id) }}">
         <span class="aot-plots-subject">{{ j.title or _('Untitled') }}</span>
         {% if j.status in ('pending', 'running') %}
         <span class="aot-plots-planned-badge">{{ _('Generating…') }}</span>
         {% elif j.status == 'error' %}
         <span class="aot-plots-ended-badge">{{ _('Generation failed') }}</span>
         {% endif %}
-        <span class="aot-plots-where">{{ j.period_start.isoformat() }} – {{ j.period_end.isoformat() }}</span>
+      </a>
+      <div class="aot-journal-cell-period">
+        {{ j.period_start.isoformat() }} – {{ j.period_end.isoformat() }}
       </div>
-      <div class="aot-plots-meta" data-summary="{{ j.summary or '' }}">
+      <div class="aot-journal-cell-meta" data-summary="{{ j.summary or '' }}">
         {#- 요약은 숫자만 담은 JSON(§7) — 여기서 사람이 읽는 문장으로 조립한다. -#}
       </div>
-    </a>
+      {#- 잘못 만든 일지를 치울 수 없으면 사용자는 만들어 보는 것 자체를
+          꺼리게 된다(실측: 기간을 잘못 잡아 70% 가 빈 문서가 만들어졌다).
+
+          ⚠ **× 를 쓰지 않는다.** 시스템 전반에서 × 는 '닫기' 다. 게다가
+            20×24px 짜리 글리프가 행 전체 링크 바로 옆에 있어, 폰에서 살짝
+            빗나간 탭이 삭제 대신 **일지로 이동**했다 — 사용자에게는 "눌러도
+            삭제가 안 된다" 로 보인다. 글자로 쓰고 손가락만 한 크기를 준다. -#}
+      <button type="button" class="btn aot-pill-btn aot-journal-row-del"
+              data-url="{{ url_for('routes_geo.geo_journal_delete', journal_uuid=j.unique_id) }}">{{ _('Delete') }}</button>
+    </div>
     {% endfor %}
   </div>
 
@@ -103,7 +268,8 @@
 <script>
   AoTJournalPage.initHub({
     createUrl: {{ url_for('routes_geo.geo_journal_create') | tojson }},
-    historyUrlBase: {{ url_for('routes_geo.geo_journal_plot_history') | tojson }}
+    plotsUrl: {{ (url_for('routes_geo.api_plots_list') ~ '?include_ended=1&include_planned=1') | tojson }},
+    targetInfoUrl: {{ url_for('routes_geo.geo_journal_target_info') | tojson }}
   });
 </script>
 {% endblock %}

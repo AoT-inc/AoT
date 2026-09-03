@@ -614,6 +614,30 @@ def _program_methods(row):
     return coordinator_plot.program_target_methods(row)
 
 
+def _plot_photosynthesis(row):
+    """구획의 적산온도(GDD)·광합성 지표(DLI) → `{'gdd', 'dli'}`.
+
+    계산은 `plot_context.gdd_accumulated`/`dli_accumulated` 하나씩만 부른다
+    (두 번째 계산자를 만들지 않는다). 이 구획 자신의 `program_uuid` 로 정한
+    프로그램을 쓴다 — 시설-bay 개요의 "시설 대표 구획" 과 달리, 여기는 이미
+    구획 하나로 좁혀져 있으니 대표를 고를 필요가 없다.
+    """
+    from aot.aot_flask.geo import plot_context as _pc
+
+    if not getattr(row, 'program_uuid', None):
+        return {'gdd': None, 'dli': None}
+    try:
+        from aot.databases.models import GeoProgram
+        program = GeoProgram.query.filter_by(
+            unique_id=row.program_uuid).first()
+    except Exception:                                       # noqa: BLE001
+        program = None
+    return {
+        'gdd': _pc.gdd_accumulated(row, program),
+        'dli': _pc.dli_accumulated(row, program),
+    }
+
+
 def _sensor_order_key(item):
     """값을 주는 것 → 구획 안 → 가까운 것 순."""
     return (1 if item.get('no_data') else 0,
@@ -739,6 +763,7 @@ def _build_facility_plot_contents(row):
             # 목표가 곡선인 항목 — 숫자가 없으므로 앱 기본 구간도 그리지 않는다.
             'target_methods': _program_methods(row),
             'status': inv['status'],
+            **_plot_photosynthesis(row),
         },
         'source': sensors.get('source'),
         'sensors': inv['sensors'],
@@ -934,6 +959,7 @@ def _build_plot_contents(plot_uuid):
             # 목표가 곡선인 항목 — 숫자가 없으므로 앱 기본 구간도 그리지 않는다.
             'target_methods': _program_methods(row),
             'status': inv['status'],
+            **_plot_photosynthesis(row),
         },
         # 대표값의 출처 — 목록(위 sensors/outputs)이 "손댈 수 있는 것 전부"
         # 라면 이쪽은 "이 구획을 대표하는 값이 어디서 오는가" 하나다. 둘은

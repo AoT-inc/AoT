@@ -1319,6 +1319,29 @@ def _build_facility_overview(facility_uuid):
         _limits = _cp.program_limits(_plot)
     except Exception:                                       # noqa: BLE001
         _limits = {}
+
+    # 적산온도(GDD)·광합성 지표(DLI) — 시설 기준(bay 무관)으로 하나만 낸다.
+    # 대표는 위에서 관수 근거로 이미 고른 `_plot`(구획 목록의 첫 번째)을
+    # 그대로 쓴다 — 같은 시설에서 관수는 구획 A, GDD는 구획 B를 기준으로
+    # 삼으면 사용자가 두 숫자를 다른 재배기로 오독한다.
+    #
+    # ⚠ 이 "첫 번째" 규칙은 구획이 둘 이상일 때 실증되지 않았다 — 실제로
+    # 여러 작기가 함께 도는 시설에서 어느 것을 대표로 볼지는 운영 데이터로
+    # 다시 봐야 한다(다구획 집계 방식은 후속 작업).
+    _gdd, _dli = None, None
+    if _plot is not None and getattr(_plot, 'program_uuid', None):
+        try:
+            from aot.databases.models import GeoProgram
+            _program = GeoProgram.query.filter_by(
+                unique_id=_plot.program_uuid).first()
+            if _program is not None:
+                from aot.aot_flask.geo import plot_context as _pc2
+                _gdd = _pc2.gdd_accumulated(_plot, _program)
+                _dli = _pc2.dli_accumulated(_plot, _program)
+        except Exception:                                   # noqa: BLE001
+            logger.warning('[facility/overview] GDD/DLI 계산 실패',
+                           exc_info=True)
+
     return {
         'ok':          True,
         'limits':      _limits,
@@ -1334,6 +1357,11 @@ def _build_facility_overview(facility_uuid):
         'rep_key':     rep_key,
         # [현황] 카드에서 빼 둔 항목 — 거르는 것은 화면이 한다(site_summary 주석).
         'hidden_rows': hidden_rows,
+        # 코디네이터 사이클 적분값(`env_summary.summary.photo.dli_today`)과는
+        # **다른 값**이다 — 섞이지 않게 키를 분리한다(plot_context.dli_accumulated
+        # 독스트링 참조). 코디네이터가 없는 시설에도 뜨는 것이 이 값의 존재 이유다.
+        'plot_gdd':    _gdd,
+        'plot_dli':    _dli,
         'ts':          _time.time(),
     }
 

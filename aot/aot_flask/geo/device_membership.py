@@ -308,6 +308,12 @@ def area_choices():
         where = maps.get(shape.geo_id) or ''
         out.append({'value': shape.unique_id,
                     'kind': shape.type,
+                    # ⚠ `item` 은 **그대로 둔다** — 그래프 픽커
+                    # (`routes_page.py`)와 기존 테스트가 이 합쳐진 문자열을
+                    # 쓴다. 아래 둘은 **순수 추가**다: 지도명을 그룹 머리로
+                    # 쓰려면(일지 허브) 합쳐진 라벨에서 되짚을 수 없기 때문.
+                    'map_name': where,
+                    'shape_name': name,
                     'item': ('%s · %s' % (where, name)) if where else name})
     out.sort(key=lambda o: o['item'])
     return out
@@ -472,6 +478,173 @@ def device_ids_in_area(shape_uuid):
 
     ids |= _referencing_device_ids(ids)
     return ids
+
+
+#: **기상원을 알아보는 표식** — 이 measurement 를 하나라도 내면 그 장치는
+#: 기상대(실물이든 예보 API 든)로 본다. 판별에만 쓰고, 일단 기상원으로 잡히면
+#: **그 장치의 측정값 전부**를 싣는다(실외 온·습도도 참고 값이다).
+#:
+#: 드라이버 이름으로는 못 가른다 — 실측: API 기상은 `KMA_weather_500`·
+#: `OPENWEATHERMAP_*` 처럼 이름이 말해 주지만, 실물 기상대(미러-기상대)는
+#: 범용 `MQTT_PAHO_JSON` 이라 같은 규칙에 안 걸린다.
+#:
+#: ⚠ 좁게 고른다. `speed` 는 팬 회전수일 수 있고 `light` 는 실내 PAR 일 수
+#:   있어 표식으로 쓰지 않는다 — 엉뚱한 장치가 기상대로 잡히면 그 장치의
+#:   측정값 전부가 실외로 딸려 들어온다. 여기 있는 것들은 **구획이 잴 이유가
+#:   없는 것**뿐이다(일사·강우·적설·시정·자외선·방위).
+WEATHER_MARKER_MEASUREMENTS = frozenset({
+    'radiation', 'precipitation', 'rain', 'snowfall', 'visibility', 'uvi',
+    'direction',
+})
+
+
+def weather_device_ids(shape_uuid):
+    """대지(또는 구역) uuid → `(장치 id 목록, 출처)`.
+
+    출처는 `'bound'`(사람이 지정) | `'inferred'`(측정값으로 추론) | `'none'`.
+
+    ## 왜 두 갈래인가
+
+    일사·강우는 **대지에 하나 있는 기상대**가 재고, 구획마다 따로 재지 않는다.
+    그런데 `sensors_for_plot` 의 폴백은 배타적이라(구획 안 → 동 → 시설 → 구역,
+    처음 비지 않은 데서 멈춘다) **구획 안에 센서가 하나라도 있으면 대지의
+    기상대까지 내려가지 않는다.** 실측: `[관찰] 육묘장 구획` 은 같은 대지에
+    미러-기상대(일사·강우·풍향)가 있는데도 온습도 6대만 보고 있었다.
+
+    **지정이 정본이다.** `geo_binding` 의 `spatial_kind='weather'` 행이 있으면
+    그것만 쓴다 — 그 role 은 이미 있고(시설이 외기를 읽는 데 쓴다) 여기서는
+    `spatial_id` 가 GeoShape 인 것만 다르다.
+
+    **지정이 없으면 추론한다.** 지정 UI 가 생기기 전에도, 그리고 아무도 설정을
+    만지지 않은 설치에서도 값이 보여야 하기 때문이다 — `scoping_active()` 가
+    grant 0건일 때 판정을 건너뛰는 것과 같은 판단이다. 다만 **어느 규칙이었는지
+    호출부가 알 수 있어야 한다**(화면이 "자동으로 찾은 기상대" 라고 말할 수
+    있게) — 그래서 출처를 함께 돌려준다.
+    """
+    from aot.databases.models import DeviceMeasurements, GeoBinding
+
+    if not shape_uuid:
+        return [], 'none'
+
+    # ── 1) 사람이 지정한 것 ────────────────────────────────────────────
+    try:
+        rows = GeoBinding.query.filter(
+            GeoBinding.spatial_kind == 'weather',
+            GeoBinding.spatial_id == shape_uuid,
+            GeoBinding.valid_to.is_(None)).all()
+        bound = sorted({r.device_id for r in rows if r.device_id})
+        if bound:
+            return bound, 'bound'
+    except Exception:
+        logger.exception('[weather] 지정 기상원 조회 실패: %s', shape_uuid)
+
+    # ── 2) 측정값으로 추론 ─────────────────────────────────────────────
+    inside = device_ids_in_area(shape_uuid)
+    if not inside:
+        return [], 'none'
+    try:
+        marked = DeviceMeasurements.query.with_entities(
+            DeviceMeasurements.device_id).filter(
+            DeviceMeasurements.device_id.in_(list(inside)),
+            DeviceMeasurements.measurement.in_(
+                list(WEATHER_MARKER_MEASUREMENTS))).all()
+    except Exception:
+        logger.exception('[weather] 기상원 추론 실패: %s', shape_uuid)
+        return [], 'none'
+
+    found = sorted({r[0] for r in marked if r[0]})
+    return (found, 'inferred') if found else ([], 'none')
+
+
+def weather_candidates(shape_uuid):
+    """이 대지 안에서 기상대로 **고를 수 있는** 장치 목록.
+
+    반환: `[{'device_id', 'name', 'measurements': [표시명…], 'inferred': bool,
+              'selected': bool}, …]` — 추론에 걸린 것이 앞에 온다.
+
+    ⚠ **추론에 걸린 것만 내지 않는다.** 추론 기준은 측정값 이름
+    (`WEATHER_MARKER_MEASUREMENTS`)인데, 실외 온습도만 재는 기상대는 그 이름을
+    하나도 안 갖는다 — 목록에 없으면 사람은 "지정할 수단이 없다" 로 읽는다.
+    지정 화면이 존재하는 이유가 **추론이 틀렸을 때 바로잡는 것**이라, 추론이
+    고른 것만 보여 주면 화면이 자기 목적을 배반한다.
+
+    측정값 이름을 함께 내는 것은 고르기 위해서다. 장치 이름만으로는 어느 것이
+    기상대인지 알 수 없는 설치가 흔하다(실측: 한 대지에 장치 19대).
+    """
+    from aot.databases.models import DeviceMeasurements
+    from aot.aot_flask.geo.widget.maps import _measurement_display_name
+
+    inside = device_ids_in_area(shape_uuid) or []
+    if not inside:
+        return []
+
+    selected, source = weather_device_ids(shape_uuid)
+    selected_set = set(selected if source == 'bound' else [])
+
+    try:
+        rows = DeviceMeasurements.query.filter(
+            DeviceMeasurements.device_id.in_(list(inside))).all()
+    except Exception:
+        logger.exception('[weather] 후보 조회 실패: %s', shape_uuid)
+        return []
+
+    by_dev = {}
+    for r in rows:
+        box = by_dev.setdefault(r.device_id, {'meas': [], 'keys': set(),
+                                              'seen': set()})
+        if not r.measurement:
+            continue
+        box['keys'].add(r.measurement)
+        # ⚠ **채널이 스스로 붙인 이름이 먼저다.** 측정 어휘의 이름은 물리량이라
+        #   `length` 가 '길이' 로 나오는데, 그 채널이 재는 것은 강우다 — 사람이
+        #   고를 때 필요한 것은 단위가 아니라 무엇을 재는가다(일지에서 같은
+        #   지적을 받아 고친 것과 같은 규칙).
+        label = (r.name or '').strip() or _measurement_display_name(
+            r.measurement) or r.measurement
+        if label in box['seen']:
+            continue        # 같은 이름이 두 채널에 있으면 한 번만 적는다
+        box['seen'].add(label)
+        box['meas'].append(label)
+
+    out = []
+    for dev_id, box in by_dev.items():
+        name, kind = _device_display_name(dev_id)
+        if not name:
+            continue        # 실존하지 않는 장치를 고르게 두지 않는다
+        if kind == 'output':
+            # 출력(밸브·난방기)은 기상을 재지 않는다. 그런데 가동시간·듀티를
+            # 측정값으로 갖고 있어 거르지 않으면 목록을 통째로 덮는다
+            # (실측: 3포장 19대 중 18대가 밸브였다 — 고를 것 하나가 파묻힌다).
+            continue
+        out.append({
+            'device_id': dev_id,
+            'name': name,
+            'measurements': box['meas'][:6],
+            'inferred': bool(box['keys'] & WEATHER_MARKER_MEASUREMENTS),
+            'selected': dev_id in selected_set,
+        })
+
+    # 고를 만한 것이 위로. 같은 등급 안에서는 이름순이라 목록이 흔들리지 않는다.
+    out.sort(key=lambda d: (not d['selected'], not d['inferred'], d['name']))
+    return out
+
+
+def _device_display_name(device_id):
+    """장치 uuid → `(이름, 종류)`. 못 찾으면 `(None, None)`.
+
+    종류가 필요한 이유는 호출부가 출력을 걸러야 하기 때문이다 — 이름만으로는
+    밸브와 기상대를 가를 수 없다.
+    """
+    from aot.databases.models import Input, Output, CustomController
+    for model, kind in ((Input, 'input'), (Output, 'output'),
+                        (CustomController, 'device')):
+        try:
+            row = model.query.filter_by(unique_id=device_id).first()
+        except Exception:
+            continue
+        if row is not None:
+            return (getattr(row, 'name', None) or device_id[:8], kind)
+    return (None, None)
 
 
 def note_ids_in_area(shape_uuid, device_ids=None):

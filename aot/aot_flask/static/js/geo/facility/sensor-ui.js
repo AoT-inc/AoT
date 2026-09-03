@@ -196,7 +196,9 @@
     {value: 'temperature',    label: (window._ ? window._('Temperature') : 'Temperature')},
     {value: 'humidity',       label: (window._ ? window._('Humidity') : 'Humidity')},
     {value: 'co2',            label: 'CO2'},
-    {value: 'vpd',            label: (window._ ? window._('Vapor pressure deficit (VPD)') : 'Vapor pressure deficit (VPD)')},
+    // 이름은 측정 정의(`MEASUREMENTS`)와 같은 'VPD' 로 통일한다 — 화면마다
+    // 다른 이름으로 부르면 같은 값인지 사용자가 알 수 없다.
+    {value: 'vpd',            label: (window._ ? window._('VPD') : 'VPD')},
     {value: 'light',          label: (window._ ? window._('Solar radiation') : 'Solar radiation')},
     {value: 'wind_speed',     label: (window._ ? window._('Wind speed') : 'Wind speed')},
     {value: 'wind_direction', label: (window._ ? window._('Wind direction') : 'Wind direction')},

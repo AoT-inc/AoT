@@ -4271,6 +4271,74 @@ def api_geo_site_summary(site_uuid):
     return jsonify(result)
 
 
+@blueprint.route('/api/geo/site/<string:site_uuid>/weather',
+                 methods=['GET', 'POST'])
+@login_required
+def api_geo_site_weather(site_uuid):
+    """대지의 **기상대 지정** — 읽기(GET)와 저장(POST).
+
+    ## 왜 지정이 필요한가
+
+    일사·강우는 대지에 하나 있는 기상대가 재고 구획마다 따로 재지 않는다.
+    그래서 구획 화면이 그 값을 보려면 대지의 기상대를 알아야 하는데, 지금까지
+    그것을 **측정값 이름으로 추론**하고 있었다(`WEATHER_MARKER_MEASUREMENTS`).
+    추론은 아무도 설정을 만지지 않은 설치에서도 값이 보이게 하는 안전망이지만,
+    대지에 일사계가 둘이거나 실험용 센서가 섞이면 **사람이 바로잡을 수단이
+    없었다.** 여기가 그 수단이다.
+
+    지정이 있으면 지정이 이긴다. 지우면 추론으로 되돌아간다 — 비활성이 아니라
+    **지정 전 상태**다.
+    """
+    from aot.aot_flask.geo import device_binding, device_membership
+    from aot.databases.models import GeoShape
+
+    shape = GeoShape.query.filter_by(unique_id=site_uuid).first()
+    if shape is None:
+        return jsonify({'ok': False, 'error': 'site not found'}), 404
+
+    if request.method == 'GET':
+        selected, source = device_membership.weather_device_ids(site_uuid)
+        return jsonify({
+            'ok': True,
+            'source': source,
+            'selected': selected,
+            'candidates': device_membership.weather_candidates(site_uuid),
+            'can_edit': utils_general.user_has_permission(
+                'edit_settings', silent=True),
+        })
+
+    # ── 저장 ────────────────────────────────────────────────────────────
+    # 조작 권한은 그 도형이 놓인 **지도**로 판정한다 — 대지는 지도의 최상위
+    # 도형이라 자기 스코프 자원이 따로 없다(`geo_map` 이 정본).
+    if not scope.can_operate('geo_map', shape.geo_id):
+        return jsonify({'ok': False, 'error': scope.deny_message()}), 403
+    if not utils_general.user_has_permission('edit_settings', silent=True):
+        return jsonify({'ok': False, 'error': 'permission denied'}), 403
+
+    data = request.get_json(silent=True) or {}
+    # ⚠ 키가 **아예 없는 요청**과 "빈 목록으로 해제" 를 가른다. 없는 것을
+    #   해제로 읽으면 화면의 다른 실수(조회 실패로 목록을 못 채운 상태에서
+    #   저장) 하나가 지정을 통째로 지운다 — 스코프 부여 화면이 같은 함정을
+    #   겪었고, 거기서 배운 규칙이다.
+    if 'device_ids' not in data:
+        return jsonify({'ok': False, 'error': 'device_ids is required'}), 400
+    ids = data.get('device_ids')
+    if not isinstance(ids, list):
+        return jsonify({'ok': False, 'error': 'device_ids must be a list'}), 400
+
+    try:
+        created, ended = device_binding.set_site_weather(
+            site_uuid, ids, commit=True)
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.exception('api_geo_site_weather save failed')
+        return jsonify({'ok': False, 'error': str(e)}), 400
+
+    selected, source = device_membership.weather_device_ids(site_uuid)
+    return jsonify({'ok': True, 'created': created, 'ended': ended,
+                    'source': source, 'selected': selected})
+
+
 @blueprint.route('/api/geo/output/<string:output_uuid>/state', methods=['POST'])
 @login_required
 def api_geo_output_state(output_uuid):

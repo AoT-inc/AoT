@@ -2288,13 +2288,18 @@
    *
    * 있지도 않은 항목까지 늘어놓지 않는 이유: 목록이 그 시설에 없는 센서로
    * 채워지면 사용자는 "여기 CO2 가 있었나" 를 먼저 의심한다. 반대로 감춘
-   * 것을 빼면 다시 켤 수단이 없어진다. 그래서 기준은 "값이 오는가" 하나다. */
-  function envRowChoices(readings) {
+   * 것을 빼면 다시 켤 수단이 없어진다. 그래서 기준은 "값이 오는가" 하나다.
+   *
+   * `extras` — 측정값이 아니라 파생값이라 `readings` 에 없는 줄(DLI·GDD).
+   * 호출부가 **실제로 값을 낼 수 있을 때만**(`usable`) 채워서 넘긴다 — 여기서
+   * 무조건 추가하면 위 "있지도 않은 항목" 규칙이 이 두 줄에서만 깨진다. */
+  function envRowChoices(readings, extras) {
     var SL = window.AoTSensorLabel;
-    return _envNowOrder(readings || []).map(function (r) {
+    var base = _envNowOrder(readings || []).map(function (r) {
       return { key: r.key,
                label: (SL && SL.keyDisplay) ? SL.keyDisplay(r.key) : r.key };
     });
+    return base.concat(extras || []);
   }
 
   /* 제어 상태 카드의 줄. **경고는 목록에 없다** — 편차("못 따라감")와 안전
@@ -2392,6 +2397,23 @@
     // 것인지 화면이 덜 그려진 것인지 구분할 수 없다.
     var _empty = (!readings.length && !sensors.total);
 
+    // ── 적산온도(GDD)·광합성 지표(DLI) — 구획 기준 실측 (2026-08-30) ──────
+    //
+    // 아래 `_ph.dli_today`(광합성 블록)와 **다른 값이다** — 그쪽은 env_
+    // coordinator 사이클 적분이라 자동제어 Function 이 있는 시설에서만 있고,
+    // 이 값(`opts.dli`/`opts.gdd`)은 `plot_context.gdd_accumulated`/
+    // `dli_accumulated` 로 구획 하나(또는 시설이면 그 시설의 대표 구획)
+    // 기준으로 늘 계산된다 — 코디네이터 없는 시설·노지 구획에도 뜬다.
+    //
+    // `usable` 이 아니면(센서 없음·프로그램 없음 등) 이 카드에 아예 없는
+    // 항목으로 본다 — 다른 측정 줄과 같은 "값이 오는가" 기준([설정] 목록
+    // 주석 참조). **`hidden` 은 usable 과 별개로도 가린다** — 사람이 끈
+    // 것은 값이 있어도 안 보인다(다른 측정 줄과 동일).
+    var _dliUsable = !!(window.AoTViz && (opts.dli || {}).usable &&
+                        (opts.dli || {}).value != null);
+    var _gddUsable = !!(window.AoTViz && (opts.gdd || {}).usable &&
+                        (opts.gdd || {}).value != null);
+
     var head = '<div class="aot-ov-card-title aot-ov-card-title--row">' +
                '<span>' + _esc(_t('Environment')) + '</span>' +
                '<span class="aot-ov-title-actions">';
@@ -2404,7 +2426,9 @@
               '</span>';
     }
     // 낼 줄이 하나도 없으면 [설정]도 두지 않는다 — 열어 봐야 빈 목록이다.
-    if (opts.configurable && readings.length) head += _cardCfgBtn('now');
+    if (opts.configurable && (readings.length || _dliUsable || _gddUsable)) {
+      head += _cardCfgBtn('now');
+    }
     head += '</span></div>';
 
     // **감추는 것은 여기서만 한다.** 서버는 감춘 항목도 계속 보낸다(설정 창이
@@ -2412,15 +2436,54 @@
     var hidden = _hiddenSet(opts.hidden);
     var shown = readings.filter(function (r) { return !hidden[r.key]; });
 
+    // 이 둘은 **0 에서 목표까지 채우는 값**이다(오늘의 DLI·재배 시작일부터의
+    // 누적 GDD) — `AoTViz.bullet()` 자신의 예시가 "누적 GDD" 를 정확히 이
+    // 용도로 든다("쌓아서 도달하는 목표에만 쓴다"). `value()`(트랙 없는 값만)
+    // 대신 이걸 쓰면 채워진 만큼이 곧 "목표까지 얼마나 왔나" 를 보여준다.
+    //
+    // 시간창이 서로 다르다는 것을 **단위 옆 괄호가 아니라** 눈금 줄의 덧말
+    // (`scaleLead`)로 말한다 — 한 줄에 라벨·값·단위·주석을 다 우겨넣으면
+    // 읽기 전에 먼저 걸러내야 한다.
+    var _dliRowHtml = '';
+    var _gddRowHtml = '';
+    if (_dliUsable && !hidden.DLI) {
+      var _dli = opts.dli;
+      _dliRowHtml = '<div class="aot-env-now-item">' + window.AoTViz.bullet({
+        label: _t('DLI'),
+        value: _dli.value, target: _dli.target,
+        valueText: String(_dli.value),
+        valueSub: (_dli.target != null ? ' / ' + _dli.target : '') + ' mol/m²',
+        scaleLead: _t('Today'),
+        scaleNote: _dli.assumed ? _t('Estimated') : null
+      }) + '</div>';
+    }
+    if (_gddUsable && !hidden.GDD) {
+      var _gdd = opts.gdd;
+      // 목표(target) — 프로그램의 하루 권장 GDD × 지난 날수(plot_context.
+      // gdd_accumulated 가 이미 환산해 낸다). 없는 프로그램도 정상이라
+      // 그때는 DLI 처럼 현재값만 보인다.
+      _gddRowHtml = '<div class="aot-env-now-item">' + window.AoTViz.bullet({
+        label: _t('GDD'),
+        value: _gdd.value, target: _gdd.target,
+        valueText: String(_gdd.value),
+        valueSub: (_gdd.target != null ? ' / ' + _gdd.target : '') + ' °C·d',
+        scaleLead: _t('Cumulative since planting')
+      }) + '</div>';
+    }
+
     var body;
-    if (shown.length) {
-      body = '<div class="aot-env-now aot-viz-group">' +
-             _envNowOrder(shown)
-               .map(function (r) { return _envNowRowHtml(r, opts); })
-               .join('') + '</div>';
-    } else if (readings.length) {
-      // 값은 오는데 전부 꺼 둔 상태. "측정값 없음" 이라고 적으면 센서가 죽은
-      // 줄 안다 — 그것은 지금 상태가 아니라 사용자가 정한 것이다.
+    if (shown.length || _dliRowHtml || _gddRowHtml) {
+      var _rows = _envNowOrder(shown)
+        .map(function (r) { return _envNowRowHtml(r, opts); });
+      // 둘 다 카드 맨 위, DLI 바로 아래에 GDD — 목표 대비 진행을 보여주는
+      // 파생값 둘을 나란히 묶어 다른 측정 줄과 구분한다.
+      var _derived = [_dliRowHtml, _gddRowHtml].filter(Boolean);
+      _rows = _derived.concat(_rows);
+      body = '<div class="aot-env-now aot-viz-group">' + _rows.join('') + '</div>';
+    } else if (readings.length || _dliUsable || _gddUsable) {
+      // 값은 오는데 전부 꺼 둔 상태(DLI/GDD 도 포함). "측정값 없음" 이라고
+      // 적으면 센서가 죽은 줄 안다 — 그것은 지금 상태가 아니라 사용자가 정한
+      // 것이다.
       body = '<div class="aot-ov-muted">' +
              _esc(_t('All items in this card are hidden.')) + '</div>';
     } else {

@@ -11,28 +11,181 @@
     표 행이 페이지 경계에서 잘리지 않게만 한다. -#}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/widget/aot-sensor-label.css') }}" />
 <style>
+  /* ⚠ **좌우 여백을 직접 만들지 않는다.** AoT 현대화 모달 스타일이 이미
+     정의하고 있고, 거기에 "박스 내부 레이블과 정렬 통일 (16px)" 이라는
+     주석까지 붙어 있다:
+
+       .aot-modal-container      padding: 0 16px   ← 좌우 **둘 다**
+       .aot-modal-section-title  padding-left:16px ← 제목을 그 선에 맞춤
+       .aot-modal-group-title    padding-left:16px
+       .aot-modal-body-text                        ← 본문 문단
+       .aot-tag / .aot-tag-list                    ← 알약 모양 표시
+
+     그래서 이 파일에는 정렬 규칙이 없다. 제목에는 위 클래스를 쓰고, 본문·표·
+     사진은 `.aot-modal-container` 안에 넣으면 좌우 여백이 함께 온다.
+     여기 남은 것은 **공용에 없는 것**뿐이다(인쇄 규칙·사진 격자·접힌 센서 행). */
+
+  /* 표지 — 넘겨줄 수 있는 문서가 되려면 첫 장이 무엇에 대한 문서인지 말해야
+     한다. 화면에서는 얇은 머리글, 인쇄에서는 한 페이지를 차지한다. */
+  .aot-journal-cover { padding: 1.5rem 0 1rem; border-bottom: 1px solid rgba(128,128,128,.25); margin-bottom: 1.25rem; }
+  .aot-journal-cover-title { font-size: 1.8rem; font-weight: 600; margin: 0 0 .35rem; }
+  .aot-journal-cover-sub { font-size: 1rem; opacity: .75; margin: 0 0 .2rem; }
+  .aot-journal-cover-meta { font-size: .82rem; opacity: .55; margin-top: .6rem; }
+
+  /* 목차 — 지침이 긴 문서(딸기 7단계)에서 아래로만 스크롤하지 않게. */
+  .aot-journal-toc { margin: 0 0 1.5rem; padding: .6rem .9rem; border: 1px solid rgba(128,128,128,.2); border-radius: 6px; }
+  .aot-journal-toc ul { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: .25rem 1.1rem; }
+  .aot-journal-toc a { font-size: .88rem; }
+  .aot-journal-toc-title { font-size: .75rem; text-transform: uppercase; letter-spacing: .04em; opacity: .55; margin-bottom: .3rem; }
+
+  /* 단위 전환 — 알약 모양은 공용 `.aot-tag` 가 이미 준다. 여기서는
+     "지금 보고 있는 것" 표시와 줄 여백만 얹는다. */
+  .aot-journal-gran { margin: 0 0 1rem 16px; }
+  .aot-journal-gran a { text-decoration: none; }
+  .aot-journal-gran a.active { font-weight: 700; outline: 2px solid currentColor; }
+
+  /* 센서 그룹 — 대표 줄은 표에 남고 개별 센서는 접힌다.
+     ⚠ `<details>` 로는 못 한다(표의 행을 감쌀 수 없다) — 행에 클래스를 두고
+        JS 가 토글한다. */
+  .aot-journal-toggle { background: none; border: none; padding: 0; font-size: .82rem; opacity: .7; cursor: pointer; text-align: left; }
+  .aot-journal-toggle:hover { opacity: 1; }
+  .aot-journal-sub { display: none; }
+  .aot-journal-sub.is-open { display: table-row; }
+  .aot-journal-sub td { font-size: .84rem; opacity: .8; }
+  .aot-journal-sub td:first-child { padding-left: 1.6rem; }
+  .aot-journal-gap { font-style: italic; }
+
+  /* 단계 사진 — 노트에 흩어져 있던 것을 그 단계 자리에 모아 보인다. */
+  .aot-journal-photos { display: flex; flex-wrap: wrap; gap: .6rem; margin: 0 0 .5rem; }
+  .aot-journal-photos figure { margin: 0; max-width: 12rem; }
+  .aot-journal-photos img { width: 100%; height: auto; border-radius: 4px; display: block; }
+  .aot-journal-photos figcaption { font-size: .72rem; opacity: .6; margin-top: .2rem; }
+
+  /* 실외(기상) 행 — 같은 표 안에서 **좌측 막대**로만 갈린다.
+     ⚠ 이름 뒤에 '실외' 배지를 붙이지 말 것 — "한 열에는 한 정보만" 이고,
+       배지를 이어 붙이면 "미러-기상대 실외" 처럼 이름이 두 겹으로 읽힌다.
+       게다가 채널 이름이 이미 '실외 온도' 라고 말하는 경우가 흔하다. */
+  .aot-journal-table tr.is-outdoor td:first-child { box-shadow: inset 3px 0 0 rgba(128,128,128,.35); }
+
+  /* ── 실내·실외 표의 열을 **같은 자리**에 세운다 ────────────────────────
+     두 표는 열 구성이 같은데도(목표·Δ 를 비워 맞췄다) 칸이 어긋났다. 표는
+     기본적으로 **내용에 따라 열 폭을 각자 정하기** 때문이다(auto layout) —
+     실외의 "미러-기상대" 와 실내의 "센서 6개" 는 글자 수가 달라 첫 열부터
+     밀린다. `table-layout: fixed` 로 폭을 내용이 아니라 **선언으로** 정한다.
+     ⚠ 폭을 여기 한 번만 적는다. 표마다 따로 적으면 한쪽만 고쳤을 때 다시
+       어긋나고, 그 어긋남은 값이 틀린 것처럼 보인다. */
+  /* 열은 6개다: 측정값 · 목표 · 최소 · 최대 · 평균 · Δ. 첫 열이 가장 넓은
+     이유는 거기서만 글이 길어지기 때문이다(측정값 이름, 펼쳤을 때는 센서 이름).
+     목표가 없는 문서(대지·구역)는 목표·Δ 두 열이 통째로 빠지므로 나머지가
+     늘어난다 — `fixed` 는 선언한 폭의 비율을 지키므로 그대로 맞는다. */
+  .aot-journal-table { table-layout: fixed; width: 100%; }
+  .aot-journal-table th:nth-child(1), .aot-journal-table td:nth-child(1) { width: 30%; }
+  .aot-journal-table th:nth-child(2), .aot-journal-table td:nth-child(2) { width: 12%; }
+  .aot-journal-table th:nth-child(3), .aot-journal-table td:nth-child(3) { width: 12%; }
+  .aot-journal-table th:nth-child(4), .aot-journal-table td:nth-child(4) { width: 12%; }
+  .aot-journal-table th:nth-child(5), .aot-journal-table td:nth-child(5) { width: 22%; }
+  .aot-journal-table th:nth-child(6), .aot-journal-table td:nth-child(6) { width: 12%; }
+  /* 고정 폭에서는 긴 이름이 칸을 넘는다 — 넘치는 대신 줄을 바꾼다. */
+  .aot-journal-table td, .aot-journal-table th { word-break: break-word; }
+
+  /* 장치·가동시간·관수량 표는 열이 셋이다. **첫 열의 폭을 위와 같게** 두어
+     '장치'가 '측정값' 아래 오게 한다 — 폭을 셋으로 나눠 채우면 값이 엉뚱한
+     열 위치에 서서 표끼리 어긋나 보인다. */
+  .aot-journal-table.aot-journal-runtime th:nth-child(2),
+  .aot-journal-table.aot-journal-runtime td:nth-child(2) { width: 24%; }
+  .aot-journal-table.aot-journal-runtime th:nth-child(3),
+  .aot-journal-table.aot-journal-runtime td:nth-child(3) { width: 46%; }
+
+  /* 기간 밖 단계(계획만) — 있다는 것만 알리고 자리를 적게 쓴다. */
+  .aot-journal-stage-planned { opacity: .55; }
+
+  /* 문서 안내(인쇄 2쪽) — 화면에서는 접어 둔다. 목차만으로 한 장을 쓰는 것은
+     낭비였고, 정작 "이 숫자를 어떻게 읽나" 는 어디에도 없었다. */
+  .aot-journal-guide { display: none; }
+  .aot-journal-guide h3 { font-size: .95rem; margin: 1.1rem 0 .35rem; }
+  .aot-journal-guide dl { margin: 0; font-size: .84rem; line-height: 1.55; }
+  .aot-journal-guide dt { font-weight: 600; margin-top: .45rem; }
+  .aot-journal-guide dd { margin: 0 0 0 1rem; opacity: .8; }
+  .aot-journal-guide-toc { font-size: .86rem; line-height: 1.7; margin: 0; padding: 0; list-style: none; }
+  .aot-journal-guide-toc li { display: flex; justify-content: space-between;
+      gap: 1rem; border-bottom: 1px dotted rgba(128,128,128,.35); padding: .15rem 0; }
+  .aot-journal-guide-toc .where { opacity: .6; white-space: nowrap; }
+
   @media print {
+    /* 여백은 브라우저 기본(좁게/넓게)에 맡기지 않는다 — 기본값이 제각각이라
+       같은 문서가 사람마다 다르게 나온다. */
+    @page { size: A4; margin: 18mm 16mm 16mm; }
+
+    body { font-size: 10.5pt; }
+
     .main-navbar, #ai-fab, #ai-chat-drawer,
-    .aot-journal-print-bar, .aot-journal-notes { display: none !important; }
+    .aot-journal-print-bar, .aot-journal-notes,
+    .aot-journal-toc, .aot-journal-gran { display: none !important; }
+
+    /* ── 표지 ──────────────────────────────────────────────────────────
+       화면용 얇은 머리글을 그대로 인쇄하면 내용이 좌상단에 몰린다. 인쇄에서는
+       한 장을 실제로 **쓰도록** 세로로 펼친다: 위쪽에 무엇/언제, 아래쪽에
+       만든 시각. flex 로 위아래를 밀어내면 A4 어느 배율에서도 균형이 선다. */
+    .aot-journal-cover {
+      page-break-after: always;
+      display: flex; flex-direction: column;
+      min-height: 235mm;              /* A4(297) − 위아래 여백 − 여유 */
+      padding: 0; margin: 0; border: none;
+    }
+    /* 표지도 같은 기준선에 선다 — 여기만 0 이면 첫 장이 어긋나 보인다. */
+    .aot-journal-cover-head { margin-top: 55mm; }
+    .aot-journal-cover-title { font-size: 30pt; line-height: 1.2; margin: 0 0 6mm; }
+    .aot-journal-cover-sub { font-size: 13pt; opacity: .85; margin: 0 0 2mm; }
+    .aot-journal-cover-rule { border: none; border-top: 2px solid currentColor;
+        opacity: .35; margin: 8mm 0 6mm; width: 45mm; }
+    .aot-journal-cover-facts { margin-top: 8mm; font-size: 11pt; line-height: 1.9; }
+    .aot-journal-cover-facts dt { float: left; width: 28mm; opacity: .6; clear: left; }
+    .aot-journal-cover-facts dd { margin: 0 0 0 28mm; }
+    .aot-journal-cover-meta { margin-top: auto; font-size: 9pt; opacity: .55;
+        border-top: 1px solid rgba(128,128,128,.3); padding-top: 3mm; }
+
+    /* ── 안내(2쪽) ─────────────────────────────────────────────────────
+       목차 네 줄만으로 한 장을 쓰던 자리다. 목차에 **어디서 시작하는지**를
+       붙이고, 이 문서를 읽는 데 필요한 설명(집계 단위·근사·출처)을 함께 둔다. */
+    .aot-journal-guide { display: block; page-break-after: always; }
+
+    /* ── 단락은 페이지로 나눈다 ────────────────────────────────────────
+       현황–단계–일자별 기록이 끊임없이 이어지면 어디서 무엇이 끝났는지
+       알 수 없다. 각 단락을 새 장에서 시작한다. */
+    .aot-journal-section { page-break-before: always; }
+    .aot-journal-section > h2 { margin-top: 0; }
+
     .aot-journal-bucket { page-break-inside: avoid; }
+    .aot-journal-stage { page-break-inside: avoid; }
     .aot-journal-table { page-break-inside: auto; }
     .aot-journal-table tr { page-break-inside: avoid; }
+    /* 표 머리가 다음 장으로 넘어가면 그 표는 무슨 표인지 알 수 없어진다. */
+    .aot-journal-table thead { display: table-header-group; }
+    h2, h3 { page-break-after: avoid; }
+
+    /* 접힌 센서도 인쇄물에는 전부 나와야 한다 — 종이는 펼칠 수 없다. */
+    .aot-journal-sub { display: table-row !important; }
+    .aot-journal-toggle { display: none; }
+
+    .aot-journal-photos img { max-width: 55mm; }
   }
 </style>
 {% endblock %}
 
 {% block body %}
-<main role="main" class="container aot-page">
+<main role="main" class="container aot-page aot-journal-doc">
 
+  {% if journal.status in ('pending', 'running') %}
   <div class="aot-page-head">
     <h1 class="aot-page-title">{{ journal.title or _('Journal') }}</h1>
   </div>
-
-  {% if journal.status in ('pending', 'running') %}
   <meta http-equiv="refresh" content="5">
   <p class="text-muted">{{ _('This journal is still being generated. This page will refresh automatically.') }}</p>
 
   {% elif journal.status == 'error' %}
+  <div class="aot-page-head">
+    <h1 class="aot-page-title">{{ journal.title or _('Journal') }}</h1>
+  </div>
   <p class="text-danger">{{ _('This journal could not be generated.') }}</p>
   {% if journal.error_message %}
   <p class="text-muted small">{{ journal.error_message }}</p>
@@ -40,19 +193,162 @@
 
   {% elif journal.status == 'done' and d %}
 
-  <div class="aot-journal-print-bar mb-3">
-    <button type="button" class="btn aot-pill-btn" id="journal-print-btn">{{ _('Print (save as PDF)') }}</button>
+  {# ── 표지 ────────────────────────────────────────────────────────────
+       인쇄에서 한 장을 실제로 쓴다(위 @media print). 화면에서는 얇은 머리글로
+       남아 스크롤을 잡아먹지 않는다. #}
+  <div class="aot-journal-cover">
+    <div class="aot-journal-cover-head">
+      <h1 class="aot-journal-cover-title">{{ journal.title or _('Journal') }}</h1>
+      <hr class="aot-journal-cover-rule">
+      <p class="aot-journal-cover-sub">
+        {{ target_kind_label }}{% if d.target.subject %} · {{ d.target.subject }}{% if d.target.variety %} ({{ d.target.variety }}){% endif %}{% endif %}
+      </p>
+      <p class="aot-journal-cover-sub">
+        {{ d.target.period.start }} – {{ d.target.period.end }}{% if d.target.period.ongoing %} ({{ _('ongoing') }}){% endif %}
+      </p>
+
+      {#- 표지에서 바로 확인하는 사실들. 화면에서는 아래 '현황' 과 겹치므로
+          인쇄에서만 보인다(공간이 남는 쪽에 채운다). -#}
+      <dl class="aot-journal-cover-facts d-none d-print-block">
+        {% if d.target.location %}
+        {% set where = [d.target.location.zone_name, d.target.location.facility_name, d.target.location.bay_name] | select | join(' · ') %}
+        {% if where %}<dt>{{ _('Location') }}</dt><dd>{{ where }}</dd>{% endif %}
+        {% endif %}
+        {% if d.target.program %}
+        <dt>{{ _('Program') }}</dt>
+        <dd>{{ d.target.program.name }}{% if d.target.program.version %} (v{{ d.target.program.version }}){% endif %}</dd>
+        {% endif %}
+        {% if d.target.area_m2 is not none %}
+        <dt>{{ _('Area') }}</dt><dd>{{ '%.1f'|format(d.target.area_m2) }} m²</dd>
+        {% endif %}
+        <dt>{{ _('Time zone') }}</dt><dd>{{ d.target.tz_name }}</dd>
+      </dl>
+    </div>
+
+    <p class="aot-journal-cover-meta">
+      {{ _('Generated') }}: {{ journal.created_at.strftime('%Y-%m-%d %H:%M') if journal.created_at else '—' }}
+      · {{ d.target.tz_name }}
+      <span class="d-none d-print-inline"> · AoT {{ AOT_VERSION if AOT_VERSION is defined else '' }}</span>
+    </p>
   </div>
 
+  {# ── 문서 안내 (인쇄 2쪽) ─────────────────────────────────────────────
+       예전에는 이 자리가 낱말 네 개짜리 목차 하나로 한 장을 차지했다.
+       하이퍼링크는 화면에서만 뜻이 있고 종이에는 아무것도 남기지 않는다.
+       그래서 목차에 **어디서 시작하는지**를 붙이고, 이 문서를 읽는 데 실제로
+       필요한 것(집계 단위·근사의 성격·값의 출처)을 같은 장에 둔다. #}
+  <section class="aot-journal-guide">
+    <h2 class="aot-modal-section-title">{{ _('About this document') }}</h2>
+
+    {#- ⚠ 쪽 번호를 적지 않는다. HTML/CSS 로는 실제 쪽 수를 셀 수 없어(Chrome 이
+        `target-counter()` 를 지원하지 않는다) 상수를 박으면 내용이 조금만
+        달라져도 **거짓말이 된다.** 대신 각 단락이 새 장에서 시작한다는 사실과
+        그 안에 무엇이 몇 개 있는지를 적는다 — 종이에서 실제로 쓸모가 있다. -#}
+    <h3>{{ _('Contents') }}</h3>
+    <p class="text-muted small" style="margin:0 0 .3rem;">
+      {{ _('Each section below starts on a new page, in this order.') }}
+    </p>
+    <ul class="aot-journal-guide-toc">
+      <li><span>1. {{ _('Overview') }}</span>
+          <span class="where">{{ _('what this journal is about') }}</span></li>
+      {% if stage_sections %}
+      <li><span>2. {{ _('Program stages') }}</span>
+          <span class="where">{{ _('%(n)s stages', n=stage_sections|length) }}</span></li>
+      <li><span>3. {{ _('Daily log') }}</span>
+          <span class="where">{{ _('%(n)s periods', n=view_buckets|length) }}</span></li>
+      {% else %}
+      <li><span>2. {{ _('Daily log') }}</span>
+          <span class="where">{{ _('%(n)s periods', n=view_buckets|length) }}</span></li>
+      {% endif %}
+    </ul>
+
+    <h3>{{ _('How to read this') }}</h3>
+    <dl>
+      <dt>{{ _('Period and time zone') }}</dt>
+      <dd>{{ _('Days start and end in %(tz)s. Every date in this document is a local calendar day, not a UTC day.', tz=d.target.tz_name) }}</dd>
+
+      <dt>{{ _('Min / Max / Avg') }}</dt>
+      <dd>{{ _('Min and max are exact. The average is the mean of hourly means, so heavily sampled hours do not pull it — it is an approximation, not a true time-weighted average.') }}</dd>
+
+      <dt>{{ _('Target and Δ') }}</dt>
+      <dd>{{ _('Targets come from the growing program attached to the plot. Δ is the measured average minus that target. Day/night targets and curve-based targets are marked instead of differenced, because comparing them against a whole-day average produces false alarms.') }}</dd>
+
+      <dt>{{ _('Runtime') }}</dt>
+      <dd>{{ _('Hours a device was on during the period, read from its first channel.') }}</dd>
+
+      {% if d.measurements and d.measurements.excluded %}
+      <dt>{{ _('What was left out') }}</dt>
+      <dd>{{ _('Device diagnostics (battery, signal) are not included by default. They can be turned on when generating a journal.') }}</dd>
+      {% endif %}
+    </dl>
+
+    {#- 이 문서에 **실제로 나오는** 용어만 설명한다. GDD·DLI 는 시설원예
+        바깥에서는 통하지 않는 말이라, 문서를 받는 쪽(인증기관·다음 사람)이
+        숫자만 보고 무엇을 세는 것인지 물어볼 데가 없다. -#}
+    {% if glossary %}
+    <h3>{{ _('Terms used here') }}</h3>
+    <dl>
+      {% for g in glossary %}
+      <dt>{{ g.term }}</dt>
+      <dd>{{ g.text }}</dd>
+      {% endfor %}
+    </dl>
+    {% endif %}
+
+    <h3>{{ _('Where the numbers come from') }}</h3>
+    <dl>
+      <dt>{{ _('Source') }}</dt>
+      <dd>{{ _('Sensor and device records held by this AoT system for the devices assigned to this target.') }}</dd>
+      <dt>{{ _('Snapshot') }}</dt>
+      <dd>{{ _('This document was fixed when it was generated. Later changes to devices, programs or wiring do not alter it.') }}</dd>
+    </dl>
+
+    {% if d.caveats %}
+    <h3>{{ _('Notes on accuracy') }}</h3>
+    <ul class="small" style="padding-left:1.1rem;">
+      {% for c in d.caveats %}
+      <li>{{ caveat_texts.get(c, c) }}</li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+  </section>
+
+  <div class="aot-journal-print-bar mb-3">
+    <button type="button" class="btn aot-pill-btn" id="journal-print-btn">{{ _('Print (save as PDF)') }}</button>
+    <a class="btn aot-pill-btn" href="{{ url_for('routes_geo.geo_journal_view', journal_uuid=journal.unique_id, format='md', granularity=view_granularity) }}">{{ _('Markdown') }}</a>
+    <a class="btn aot-pill-btn" href="{{ url_for('routes_geo.geo_journal_view', journal_uuid=journal.unique_id, format='odt', granularity=view_granularity) }}">{{ _('ODT') }}</a>
+    <a class="btn aot-pill-btn" href="{{ url_for('routes_geo.geo_journal_view', journal_uuid=journal.unique_id, format='csv', granularity=view_granularity) }}">{{ _('CSV') }}</a>
+    <a class="btn aot-pill-btn" href="{{ url_for('routes_geo.geo_journal_view', journal_uuid=journal.unique_id, format='json') }}">{{ _('JSON') }}</a>
+    <button type="button" class="btn aot-pill-btn" id="journal-delete-btn"
+            data-url="{{ url_for('routes_geo.geo_journal_delete', journal_uuid=journal.unique_id) }}"
+            data-back="{{ url_for('routes_geo.geo_journal_hub') }}">{{ _('Delete') }}</button>
+  </div>
+
+  {# ── 목차 ──────────────────────────────────────────────────────────── #}
+  <nav class="aot-journal-toc">
+    <div class="aot-journal-toc-title">{{ _('Contents') }}</div>
+    <ul>
+      <li><a href="#journal-overview">{{ _('Overview') }}</a></li>
+      {% if stage_sections %}<li><a href="#journal-stages">{{ _('Program stages') }}</a></li>{% endif %}
+      <li><a href="#journal-log">{{ _('Daily log') }}</a></li>
+      <li><a href="#journal-notes-mount">{{ _('Additional notes') }}</a></li>
+    </ul>
+  </nav>
+
+  {#- 캐비어트는 화면에서만 여기 둔다 — 인쇄본은 안내(2쪽)에 모아 두었다. -#}
+  {#- 캐비어트는 화면에서만 여기 둔다(인쇄본은 안내 2쪽에 모았다).
+      컨테이너에 넣어 좌우 여백을 공용 규칙에서 받는다. -#}
   {% if d.caveats %}
-  <ul class="text-muted small">
+  <div class="aot-modal-container d-print-none">
     {% for c in d.caveats %}
-    <li>{{ caveat_texts.get(c, c) }}</li>
+    <p class="aot-modal-body-text">{{ caveat_texts.get(c, c) }}</p>
     {% endfor %}
-  </ul>
+  </div>
   {% endif %}
 
   {# ── 개요 ──────────────────────────────────────────────────────────── #}
+  <section class="aot-journal-section">
+  <h2 class="aot-modal-section-title" id="journal-overview">{{ _('Overview') }}</h2>
   <div class="aot-modal-container mb-4">
     <div class="aot-modal-option-row">
       <span class="aot-modal-option-label">{{ _('Type') }}</span>
@@ -86,36 +382,208 @@
       <span>{{ '%.1f'|format(d.target.area_m2) }} m²</span>
     </div>
     {% endif %}
+    {#- 적산온도 — 단계 전환을 좌우하는 값이라 개요에 둔다.
+        ⚠ 못 쓸 때 빈칸이나 0 을 내지 않는다. "그날 하나도 안 쌓였다" 로
+          읽히는데, 못 쓰는 것과 0 은 전혀 다르다 — 이유를 그대로 적는다. -#}
+    {% if d.gdd %}
+    <div class="aot-modal-option-row">
+      <span class="aot-modal-option-label">{{ _('Growing degree days') }}</span>
+      <span>
+        {% if d.gdd.usable %}
+          {{ d.gdd.total }}
+          {% if d.gdd.period is not none %}<span class="text-muted small">({{ _('this journal: %(v)s', v=d.gdd.period) }})</span>{% endif %}
+          <span class="text-muted small">· {{ _('base %(t)s°', t=d.gdd.t_base) }}</span>
+          {% if d.gdd.coverage_pct is not none and d.gdd.coverage_pct < 100 %}
+          <span class="text-muted small">· {{ _('%(p)s%% of days measured', p=d.gdd.coverage_pct) }}</span>
+          {% endif %}
+        {% else %}
+          <span class="text-muted small">
+            {% if d.gdd.reason == 'no-program' %}{{ _('No program attached') }}
+            {% elif d.gdd.reason == 'no-t-base' %}{{ _('The program has no base temperature') }}
+            {% else %}{{ _('Not enough measured days') }}{% endif %}
+          </span>
+        {% endif %}
+      </span>
+    </div>
+    {% endif %}
     <div class="aot-modal-option-row" style="border-bottom:none;">
       <span class="aot-modal-option-label">{{ _('Time zone') }}</span>
       <span>{{ d.target.tz_name }}</span>
     </div>
   </div>
+  </section>
 
-  {# ── 단계별 요약 (plot만) ──────────────────────────────────────────── #}
-  {% if d.stages %}
-  <h2 class="aot-page-title" style="font-size:1.1rem;">{{ _('Stages') }}</h2>
-  {% for st in d.stages %}
-  <div class="aot-modal-container mb-3">
+  {# ── 단계별 기록 (plot만) ──────────────────────────────────────────────
+       ⚠ msgid 는 `_('Program stages')` 다. `_('Stages')` 는 **시설 화면의
+         측창 개폐 단수**(1단·2단)가 이미 쓰고 있어 한국어가 "단" 으로
+         번역돼 있다 — 재배 단계에 그 말을 쓰면 뜻이 완전히 달라진다.
+
+       기간과 겹치는 단계는 그 구간의 **실제 기록**(목표 대비 실측·노트·사진)을
+       함께 낸다. 겹치지 않는 단계(아직 오지 않은 계획)는 접어 둔다 — 지우지
+       않는 이유는 "이 작기가 앞으로 어떻게 가는가" 도 문서의 값이기 때문이다. #}
+  {% if stage_sections %}
+  <section class="aot-journal-section">
+  <h2 class="aot-modal-section-title" id="journal-stages">{{ _('Program stages') }}</h2>
+
+  {% for sec in stage_sections %}
+  {% set st = sec.stage %}
+  {% if sec.in_period %}
+  <div class="aot-modal-container mb-3 aot-journal-stage">
     <div class="aot-modal-option-row">
       <span class="aot-modal-option-label">{{ st.name or st.key }}</span>
-      <span class="text-muted small">{{ st.starts_on or '—' }} – {{ st.ends_on or _('ongoing') }}</span>
+      <span class="text-muted small">
+        {{ sec.starts_on }} – {{ sec.ends_on }}
+        ({{ _('%(n)s days in this journal', n=sec.days) }})
+      </span>
     </div>
+
     {% if st.guidance %}
     <p class="small mb-2">{{ st.guidance }}</p>
     {% endif %}
+
+    {#- 목표 대비 실측. 계획만 있던 자리에 그 기간에 실제로 어땠는지를 붙인다. -#}
+    {#- 실내·실외를 한 표에(위 버킷과 같은 이유). -#}
+    {% if sec.env_groups %}
+    <table class="table table-sm aot-journal-table mb-2">
+      <thead>
+        {#- 컬럼 순서: 측정값 · 목표 · 최소 · 최대 · 평균 · Δ.
+            목표를 실측 앞에 두는 이유는 이 표를 보는 순서가 "얼마여야 하나 →
+            얼마였나" 이기 때문이다. 센서 이름 열은 없다 — 아래 주석 참조. -#}
+        <tr>
+          <th>{{ _('Measurement') }}</th><th>{{ _('Target') }}</th>
+          <th>{{ _('Min') }}</th><th>{{ _('Max') }}</th><th>{{ _('Avg') }}</th>
+          <th>Δ</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for grp in sec.env_groups %}
+        {% set row = grp.summary or grp.sensors[0] %}
+        {% set outdoor = (grp.scope == 'outdoor') %}
+        <tr{% if outdoor %} class="is-outdoor"{% endif %}>
+          <td>{{ grp.measurement_label or grp.measurement }}</td>
+          <td>
+            {% if row.get('follows_curve') %}{{ _('curve: %(name)s', name=row.get('follows_curve')) }}
+            {% elif row.get('target') is not none %}{{ row.get('target') }}{% endif %}
+          </td>
+          <td>{{ row.get('min') if row.get('min') is not none else '' }}</td>
+          <td>{{ row.get('max') if row.get('max') is not none else '' }}</td>
+          <td>
+            {#- `row` 는 그룹 요약일 수도 개별 행일 수도 있다. 요약에는 방위
+                키가 없으므로 **`.get()` 으로 본다** — 점 접근은 없는 키에서
+                템플릿을 통째로 500 으로 떨어뜨린다(실제로 그랬다). -#}
+            {% set sector = row.get('sector') %}
+            {% if sector is not none %}{{ compass(sector) }}{% if row.get('sector_pct') %} {{ row.get('sector_pct') }}%{% endif %}
+            {% elif row.get('avg') is not none %}{{ row.get('avg') }}{{ ' ' ~ grp.unit if grp.unit else '' }}{% endif %}
+            {% if row.get('coverage_low') %}<span class="text-muted small">({{ _('partial coverage') }})</span>{% endif %}
+          </td>
+          <td>
+            {% if grp.summary %}
+              {% if grp.summary.delta_min is not none %}
+                {% if grp.summary.delta_min == grp.summary.delta_max %}{{ grp.summary.delta_min }}
+                {% else %}{{ grp.summary.delta_min }} ~ {{ grp.summary.delta_max }}{% endif %}
+              {% elif grp.summary.delta_skipped == 'when' %}<span class="text-muted small">{{ _('day/night target') }}</span>
+              {% elif grp.summary.delta_skipped == 'daily-shape' %}<span class="text-muted small">{{ _('cumulative target') }}</span>
+              {% endif %}
+            {% else %}
+              {% if row.get('delta') is not none %}{{ row.get('delta') }}
+              {% elif row.get('delta_skipped') == 'when' %}<span class="text-muted small">{{ _('day/night target') }}</span>
+              {% elif row.get('delta_skipped') == 'daily-shape' %}<span class="text-muted small">{{ _('cumulative target') }}</span>
+              {% endif %}
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% endif %}
+
+    {#- 이 단계에 센서가 없는 목표는 그대로 밝힌다 — 빈칸은 "안 채웠다" 로 읽힌다. -#}
+    {% set unobservable = (st.targets or []) | selectattr('observable', 'equalto', false) | list %}
+    {% if unobservable %}
+    <p class="text-muted small mb-2">
+      {{ _('No sensor for:') }}
+      {{ unobservable | map(attribute='label') | join(' · ') }}
+    </p>
+    {% endif %}
+
+    {% if sec.control %}
+    <table class="table table-sm aot-journal-table aot-journal-runtime mb-2">
+      <thead><tr>
+        <th>{{ _('Device') }}</th><th>{{ _('Runtime') }}</th><th>{{ _('Water') }}</th>
+      </tr></thead>
+      <tbody>
+        {% for c in sec.control %}
+        <tr>
+          <td>{{ c.name }}</td>
+          <td>{{ runtime_text(c) }}</td>
+          <td>
+            {% if c.water %}{{ c.water.litres }} L
+            <span class="text-muted small">({{ _('estimated') }})</span>{% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% endif %}
+
+    {% if sec.notes %}
+    <ul class="small mb-2 aot-journal-stage-notes">
+      {% for n in sec.notes %}
+      <li>
+        <strong>{{ n.time[:16] | replace('T', ' ') if n.time else '' }}</strong>
+        {% if n.title %}{{ n.title }} — {% endif %}{{ n.body }}
+      </li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+
+    {% if sec.photos %}
+    <div class="aot-journal-photos">
+      {% for p in sec.photos %}
+      <figure>
+        <img src="{{ url_for('routes_general.send_note_attachment', filename=p.file) }}"
+             alt="{{ p.title or '' }}" loading="lazy">
+        <figcaption>{{ p.time[:16] | replace('T', ' ') if p.time else '' }}</figcaption>
+      </figure>
+      {% endfor %}
+    </div>
+    {% endif %}
+  </div>
+
+  {% else %}
+  {#- 이 문서의 기간 밖 — 아직 오지 않은 단계다.
+      **지침과 목표는 그대로 낸다.** 앞으로 무엇을 해야 하는지가 이 문서를
+      받아 드는 사람(다음 작기 담당자·인증기관)에게 값이고, 계획은 기록만큼
+      실재한다. 실측값이 없다는 것만 다르므로 그 자리를 비우고 '예정' 이라
+      표시한다 — 흐리게 두어 기록과 계획이 눈으로 갈린다. -#}
+  <div class="aot-modal-container mb-3 aot-journal-stage aot-journal-stage-planned">
+    <div class="aot-modal-option-row">
+      <span class="aot-modal-option-label">{{ st.name or st.key }}</span>
+      <span class="text-muted small">
+        {{ st.starts_on or '—' }} – {{ st.ends_on or _('ongoing') }} ·
+        {% if sec.when == 'past' %}{{ _('before this journal') }}
+        {% else %}{{ _('planned') }}{% endif %}
+      </span>
+    </div>
+
+    {% if st.guidance %}
+    <p class="small mb-2">{{ st.guidance }}</p>
+    {% endif %}
+
     {% if st.targets %}
     <table class="table table-sm aot-journal-table mb-0">
+      <thead>
+        <tr>
+          <th>{{ _('Target') }}</th><th>{{ _('Value') }}</th><th></th>
+        </tr>
+      </thead>
       <tbody>
         {% for t in st.targets %}
         <tr>
           <td>{{ t.label }}</td>
           <td>
-            {% if t.source == 'method' %}
-            {{ _('Follows curve: %(name)s', name=t.method_name or '—') }}
-            {% elif t.value is not none %}
-            {{ t.value }} {{ t.unit or '' }}
-            {% endif %}
+            {% if t.source == 'method' %}{{ _('Follows curve: %(name)s', name=t.method_name or '—') }}
+            {% elif t.value is not none %}{{ t.value }} {{ t.unit or '' }}{% endif %}
           </td>
           <td class="text-muted small">
             {% if t.observable == False %}{{ _('No sensor for this') }}{% endif %}
@@ -126,61 +594,193 @@
     </table>
     {% endif %}
   </div>
+  {% endif %}
   {% endfor %}
+  </section>
   {% endif %}
 
-  {# ── 버킷 루프 ─────────────────────────────────────────────────────── #}
-  {% for b in d.buckets %}
+  {# ── 일자별 기록 ───────────────────────────────────────────────────── #}
+  <section class="aot-journal-section">
+  <h2 class="aot-modal-section-title" id="journal-log">{{ _('Daily log') }}</h2>
+
+  {#- 단위 전환. 저장된 것보다 **굵게만** 볼 수 있으므로 라우트가 고를 수 있는
+      것만 넘겨준다 — 눌러도 아무 일 없는 버튼을 두면 고장으로 읽힌다. -#}
+  {% if granularities|length > 1 %}
+  <div class="aot-journal-gran aot-tag-list">
+    {% for g in granularities %}
+    <a href="{{ url_for('routes_geo.geo_journal_view', journal_uuid=journal.unique_id, granularity=g) }}#journal-log"
+       class="aot-tag {% if g == view_granularity %}active{% endif %}">
+      {% if g == 'day' %}{{ _('Daily') }}
+      {% elif g == 'week' %}{{ _('Weekly') }}
+      {% elif g == 'month' %}{{ _('Monthly') }}
+      {% else %}{{ _('Whole period') }}{% endif %}
+    </a>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {#- 목표·편차 열은 **plot 에서만** 값을 가진다 — 대지·구역은 프로그램이 없어
+      구조적으로 항상 빈다. 빈 열 둘을 계속 그리면 표만 넓어지고 읽을 것이 없다. -#}
+  {% set show_target = (d.target.type == 'plot') %}
+
+  {% for b in view_buckets %}
   <div class="aot-journal-bucket mb-4">
-    <h3 class="aot-page-title" style="font-size:1rem;">{{ b.date_label }}</h3>
+    <h3 class="aot-modal-group-title">
+      {{ b.date_label }}
+      {#- 일장 — 주야 목표의 편차가 이 시각을 근거로 계산된다. -#}
+      {% if b.daylight_h or b.gdd is not none %}
+      <span class="aot-modal-body-text" style="font-weight:400;">
+        {% if b.daylight_h %}· {{ _('daylight %(h)s h', h=b.daylight_h) }}
+        {% if b.sunrise %}({{ b.sunrise }}–{{ b.sunset }}){% endif %}{% endif %}
+        {% if b.gdd is not none %}· {{ _('GDD %(v)s', v=b.gdd) }}{% endif %}
+      </span>
+      {% endif %}
+    </h3>
+    {#- 본문은 컨테이너 안에 둔다 — `.aot-modal-container` 의 `padding: 0 16px`
+        가 **좌우 여백을 함께** 준다(공용 규칙, 직접 만들지 않는다). -#}
+    <div class="aot-modal-container">
 
     {% if b.empty %}
-    <p class="text-muted small">{{ _('No data recorded for this period.') }}</p>
+    <p class="aot-modal-body-text aot-journal-gap">
+      {% if b.gap_count and b.gap_count > 1 %}
+      {{ _('No data recorded — %(n)s periods skipped.', n=b.gap_count) }}
+      {% else %}
+      {{ _('No data recorded for this period.') }}
+      {% endif %}
+    </p>
     {% else %}
 
-    {% if b.env %}
+    {#- ⚠ **실내와 실외를 한 표에 둔다.** 예전에는 표를 둘로 나눴는데
+        두 가지가 나빴다:
+        (1) 순서를 매길 수 없다 — 광합성 1순위인 **일사는 실외 전용**이라,
+            나누면 실내 값 전부 아래로 밀린다.
+        (2) 같은 측정값의 실내·실외를 나란히 못 본다 — 외기 대비 실내가
+            얼마나 다른가가 이 표를 보는 이유 중 하나다.
+        섞이지 않게 막는 것은 표가 아니라 **그룹 키의 `scope`** 다(실외 온도가
+        실내 평균에 들어가지 않는다). 그건 그대로 두고 표만 합쳤다. -#}
+    {% if b.env_groups %}
     <table class="table table-sm aot-journal-table">
       <thead>
+        {#- 센서 이름 열을 두지 않는다. 표를 읽는 사람이 묻는 것은 "이 값이
+            얼마였나" 이지 "어느 기계가 쟀나" 가 아니고, 이름 열은 폭을 가장
+            많이 먹으면서 대부분 '미러-온습도01…07' 처럼 서로 구별되지 않는다.
+            여러 대가 든 행은 첫 칸에서 대수를 눌러 펼치고, 그때만 이름이
+            나온다 — 평균의 출처를 확인할 길은 남긴다(인증 문서로 나간다). -#}
         <tr>
-          <th>{{ _('Sensor') }}</th><th>{{ _('Measurement') }}</th>
+          <th>{{ _('Measurement') }}</th>
+          {% if show_target %}<th>{{ _('Target') }}</th>{% endif %}
           <th>{{ _('Min') }}</th><th>{{ _('Max') }}</th><th>{{ _('Avg') }}</th>
-          <th>{{ _('Target') }}</th><th>Δ</th>
+          {% if show_target %}<th>Δ</th>{% endif %}
         </tr>
       </thead>
       <tbody>
-        {% for e in b.env %}
-        <tr>
-          <td>{{ e.sensor }}</td>
-          <td>{{ e.measurement }}{% if e.usage %} ({{ _('usage') }}: {{ e.usage.amount }} {{ e.usage.unit }}){% endif %}</td>
-          <td>{{ e.min }}</td>
-          <td>{{ e.max }}</td>
-          <td>
-            {{ e.avg }}{{ ' ' ~ e.unit if e.unit else '' }}
-            {% if e.coverage_low %}<span class="text-muted small">({{ _('partial coverage') }})</span>{% endif %}
-          </td>
-          <td>
-            {% if e.follows_curve %}{{ _('curve: %(name)s', name=e.follows_curve) }}
-            {% elif e.target is not none %}{{ e.target }}{% endif %}
-          </td>
-          <td>
-            {% if e.delta is not none %}{{ e.delta }}
-            {% elif e.delta_skipped == 'when' %}<span class="text-muted small">{{ _('day/night target') }}</span>
-            {% elif e.delta_skipped == 'daily-shape' %}<span class="text-muted small">{{ _('cumulative target') }}</span>
-            {% elif e.delta_skipped == 'unobservable' %}<span class="text-muted small">{{ _('no sensor') }}</span>
+        {% for grp in b.env_groups %}
+          {% set gid = loop.index0 %}
+          {% set outdoor = (grp.scope == 'outdoor') %}
+          {% if grp.summary %}
+          <tr{% if outdoor %} class="is-outdoor"{% endif %}>
+            <td>
+              {{ grp.measurement_label or grp.measurement }}{% if grp.summary.usage is not none %} ({{ _('usage') }}: {{ grp.summary.usage }} {{ grp.unit }}){% endif %}
+              <button type="button" class="aot-journal-toggle"
+                      data-group="{{ b.key }}-{{ gid }}">
+                {{ _('%(n)s sensors', n=grp.summary.sensor_count) }}
+              </button>
+            </td>
+            {% if show_target %}
+            <td>
+              {% if grp.summary.follows_curve %}{{ _('curve: %(name)s', name=grp.summary.follows_curve) }}
+              {% elif grp.summary.target_varies %}<span class="text-muted small">{{ _('varies') }}</span>
+              {% elif grp.summary.target is not none %}{{ grp.summary.target }}{% endif %}
+            </td>
             {% endif %}
-          </td>
-        </tr>
+            <td>{{ grp.summary.min if grp.summary.min is not none else '' }}</td>
+            <td>{{ grp.summary.max if grp.summary.max is not none else '' }}</td>
+            <td>
+              {{ grp.summary.avg if grp.summary.avg is not none else '' }}{{ ' ' ~ grp.unit if grp.unit else '' }}
+              {% if grp.summary.coverage_low %}<span class="text-muted small">({{ _('partial coverage') }})</span>{% endif %}
+            </td>
+            {% if show_target %}
+            <td>
+              {% if grp.summary.delta_min is not none %}
+                {% if grp.summary.delta_min == grp.summary.delta_max %}{{ grp.summary.delta_min }}
+                {% else %}{{ grp.summary.delta_min }} ~ {{ grp.summary.delta_max }}{% endif %}
+              {% elif grp.summary.delta_skipped == 'when' %}<span class="text-muted small">{{ _('day/night target') }}</span>
+              {% elif grp.summary.delta_skipped == 'daily-shape' %}<span class="text-muted small">{{ _('cumulative target') }}</span>
+              {% endif %}
+            </td>
+            {% endif %}
+          </tr>
+          {% endif %}
+
+          {% for e in grp.sensors %}
+          <tr {% if grp.summary %}class="aot-journal-sub{% if outdoor %} is-outdoor{% endif %}" data-group="{{ b.key }}-{{ gid }}"{% elif outdoor %}class="is-outdoor"{% endif %}>
+            {#- 펼친 행에서는 첫 칸이 **어느 센서인가**를 답한다. 그 행에서
+                달라지는 것이 센서이므로 그것이 그 칸의 한 가지 정보다.
+                한 대뿐이라 요약이 없는 행은 그대로 측정값을 낸다. -#}
+            <td>
+              {% if grp.summary %}{{ e.sensor }}
+              {% else %}{{ e.measurement_label or e.measurement }}{% if e.usage %} ({{ _('usage') }}: {{ e.usage.amount }} {{ e.usage.unit }}){% endif %}{% endif %}
+            </td>
+            {% if show_target %}
+            <td>
+              {% if e.follows_curve %}{{ _('curve: %(name)s', name=e.follows_curve) }}
+              {% elif e.target is not none %}{{ e.target }}{% endif %}
+            </td>
+            {% endif %}
+            <td>{{ e.min if e.min is not none else '' }}</td>
+            <td>{{ e.max if e.max is not none else '' }}</td>
+            <td>
+              {#- 방위는 각도가 아니라 최다 풍향으로 말한다. -#}
+              {% if e.sector is not none %}
+                {{ compass(e.sector) }}{% if e.sector_pct %} {{ e.sector_pct }}%{% endif %}
+              {% elif e.avg is not none %}
+                {{ e.avg }}{{ ' ' ~ e.unit if e.unit else '' }}
+              {% endif %}
+              {% if e.coverage_low %}<span class="text-muted small">({{ _('partial coverage') }})</span>{% endif %}
+              {#- 피복을 지난 값이면 **그 자리에서** 근거를 말한다. 안내
+                  페이지의 주석으로만 두면 표를 읽는 사람이 그 숫자가 실측인지
+                  환산인지 알 수 없다(딸기 목표가 17~20 대라 42.3 과 33.0 은
+                  판단이 갈리는 차이다). -#}
+              {% if e.cover %}
+              <div class="text-muted small">{{ _('outdoors %(out)s × cover %(tau)s',
+                   out=e.cover.outdoor, tau=e.cover.tau) }}</div>
+              {% endif %}
+            </td>
+            {% if show_target %}
+            <td>
+              {% if e.delta is not none %}{{ e.delta }}
+              {% elif e.delta_skipped == 'when' %}<span class="text-muted small">{{ _('day/night target') }}</span>
+              {% elif e.delta_skipped == 'daily-shape' %}<span class="text-muted small">{{ _('cumulative target') }}</span>
+              {% elif e.delta_skipped == 'unobservable' %}<span class="text-muted small">{{ _('no sensor') }}</span>
+              {% endif %}
+            </td>
+            {% endif %}
+          </tr>
+          {% endfor %}
         {% endfor %}
       </tbody>
     </table>
     {% endif %}
 
     {% if b.control %}
-    <table class="table table-sm aot-journal-table">
-      <thead><tr><th>{{ _('Device') }}</th><th>{{ _('Runtime') }}</th></tr></thead>
+    <table class="table table-sm aot-journal-table aot-journal-runtime">
+      <thead><tr>
+        <th>{{ _('Device') }}</th><th>{{ _('Runtime') }}</th><th>{{ _('Water') }}</th>
+      </tr></thead>
       <tbody>
         {% for c in b.control %}
-        <tr><td>{{ c.name }}</td><td>{{ c.hours }} {{ _('h') }}</td></tr>
+        <tr>
+          <td>{{ c.name }}</td>
+          <td>{{ runtime_text(c) }}</td>
+          {#- 설계 유량 × 가동시간 × 구획 몫. **실측이 아니라 추정**이라
+              그렇게 표시한다 — 유량계 값과 같은 신뢰도로 읽히면 안 된다. -#}
+          <td>
+            {% if c.water %}
+              {{ c.water.litres }} L
+              <span class="text-muted small">({{ _('estimated') }}{% if c.water.share < 1 %}, {{ (c.water.share * 100) | round | int }}%{% endif %})</span>
+            {% endif %}
+          </td>
+        </tr>
         {% endfor %}
       </tbody>
     </table>
@@ -190,17 +790,37 @@
     <ul class="small">
       {% for n in b.notes %}
       <li>
-        <strong>{{ n.time[11:16] if n.time else '' }}</strong>
+        {#- 접힌 단위(주간·월간·전체)에서는 시각만으로 며칠 것인지 알 수 없다. -#}
+        <strong>{{ (n.time[:16] | replace('T', ' ')) if n.time else '' }}</strong>
         {% if n.title %}{{ n.title }} — {% endif %}{{ n.body }}
-        {% if n.image_files %}({{ n.image_files|length }} {{ _('attachment(s)') }}){% endif %}
       </li>
       {% endfor %}
     </ul>
+    {#- 사진은 **어느 단위에서도** 나와야 한다. 예전에는 "(N 개 첨부)" 라는
+        글자만 있어서, 문서를 넘겨받은 사람에게는 사진이 있었다는 사실만
+        남고 정작 사진은 어디에도 없었다. -#}
+    {% set bucket_photos = [] %}
+    {% for n in b.notes %}{% for f in (n.image_files or []) %}
+      {% set _ = bucket_photos.append({'file': f, 'time': n.time, 'title': n.title}) %}
+    {% endfor %}{% endfor %}
+    {% if bucket_photos %}
+    <div class="aot-journal-photos">
+      {% for p in bucket_photos %}
+      <figure>
+        <img src="{{ url_for('routes_general.send_note_attachment', filename=p.file) }}"
+             alt="{{ p.title or '' }}" loading="lazy">
+        <figcaption>{{ (p.time[:16] | replace('T', ' ')) if p.time else '' }}</figcaption>
+      </figure>
+      {% endfor %}
+    </div>
+    {% endif %}
     {% endif %}
 
     {% endif %}
+    </div>
   </div>
   {% endfor %}
+  </section>
 
   {# ── 추가 의견 (노트 재사용, §10) ──────────────────────────────────── #}
   <div class="aot-journal-notes" id="journal-notes-mount"></div>
@@ -209,15 +829,66 @@
   <script>
     (function () {
       var mount = document.getElementById('journal-notes-mount');
-      if (!mount || !window.AoTNotesBlock) return;
-      mount.innerHTML = window.AoTNotesBlock.html({ title: {{ _('Additional notes') | tojson }} });
-      window.AoTNotesBlock.wire(mount, {
-        targetId: {{ journal.unique_id | tojson }},
-        targetType: 'journal',
-        name: {{ (journal.title or '') | tojson }}
-      });
+      if (mount && window.AoTNotesBlock) {
+        mount.innerHTML = window.AoTNotesBlock.html({ title: {{ _('Additional notes') | tojson }} });
+        window.AoTNotesBlock.wire(mount, {
+          targetId: {{ journal.unique_id | tojson }},
+          targetType: 'journal',
+          name: {{ (journal.title or '') | tojson }}
+        });
+      }
+      // ── 인쇄 / PDF 저장 ──────────────────────────────────────────────
+      //
+      // 브라우저는 PDF 파일명을 `document.title` 에서 딴다. 그대로 두면
+      // "AoT 설원6 - AoT 26.09.01.pdf" 처럼 앱 이름이 붙은 채 저장돼, 여러
+      // 작기를 내려받으면 무엇이 무엇인지 알 수 없다. 인쇄 직전에 제목을
+      // `YYYYMM_대상명` 으로 바꾸고 끝나면 되돌린다 — 되돌리지 않으면 탭
+      // 제목이 그 상태로 남는다.
       var printBtn = document.getElementById('journal-print-btn');
-      if (printBtn) printBtn.addEventListener('click', function () { window.print(); });
+      var docTitle = {{ (print_filename or (journal.title or 'journal')) | tojson }};
+      var savedTitle = null;
+
+      function _restoreTitle() {
+        if (savedTitle !== null) { document.title = savedTitle; savedTitle = null; }
+      }
+      window.addEventListener('afterprint', _restoreTitle);
+
+      if (printBtn) printBtn.addEventListener('click', function () {
+        savedTitle = document.title;
+        document.title = docTitle;
+        window.print();
+        // Safari 등 `afterprint` 를 안 주는 브라우저 대비 — 인쇄 대화상자는
+        // 동기라 여기 도달했을 때는 이미 끝났거나 곧 끝난다.
+        setTimeout(_restoreTitle, 1000);
+      });
+
+      // 센서 그룹 펼치기/접기. 값은 전부 이미 DOM 에 있고 보이기만 토글한다 —
+      // 접는 것이 사실을 지우지 않는다(§4-3).
+      document.querySelectorAll('.aot-journal-toggle').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          var rows = document.querySelectorAll(
+            'tr.aot-journal-sub[data-group="' + btn.dataset.group + '"]');
+          var opening = !rows[0] || !rows[0].classList.contains('is-open');
+          rows.forEach(function (tr) { tr.classList.toggle('is-open', opening); });
+        });
+      });
+
+      var delBtn = document.getElementById('journal-delete-btn');
+      if (delBtn) delBtn.addEventListener('click', function () {
+        if (!window.confirm({{ _('Delete this journal? This cannot be undone.') | tojson }})) return;
+        delBtn.disabled = true;
+        fetch(delBtn.dataset.url, { method: 'DELETE', headers: { 'Accept': 'application/json' } })
+          .then(function (r) { return r.json(); })
+          .then(function (body) {
+            if (body && body.ok) { window.location.href = delBtn.dataset.back; return; }
+            window.alert((body && body.message) || {{ _('Something went wrong.') | tojson }});
+            delBtn.disabled = false;
+          })
+          .catch(function () {
+            window.alert({{ _('Something went wrong.') | tojson }});
+            delBtn.disabled = false;
+          });
+      });
     })();
   </script>
 

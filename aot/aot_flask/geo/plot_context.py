@@ -2307,6 +2307,10 @@ def sensors_for_plot(plot, containers=None, markers=None):
             # 조회해서 확인해야 하기 때문이다.
             'zone_kind': getattr(zone, 'type', None) if zone is not None else None,
             'source': source,
+            # 기상(실외)은 위 체인과 **겨루지 않고 더해진다** — `_weather_for_plot`
+            # 참조. 실내 목록에 섞지 말 것.
+            **dict(zip(('from_weather', 'weather_source', 'weather_site_uuid'),
+                       _weather_for_plot(plot, containers=containers))),
         }
 
     in_plot = sorted(_only_sensor_ids(device_membership.device_ids_in_geometry(
@@ -2335,7 +2339,48 @@ def sensors_for_plot(plot, containers=None, markers=None):
         # 없는 지도에서는 site 가 온다.
         'zone_kind': getattr(zone, 'type', None) if zone is not None else None,
         'source': source,
+        **dict(zip(('from_weather', 'weather_source', 'weather_site_uuid'),
+                   _weather_for_plot(plot, containers=containers))),
     }
+
+
+def _weather_for_plot(plot, containers=None, facilities=None):
+    """구획 → `(기상 장치 id 목록, 출처, 대지 uuid)`.
+
+    ## 왜 폴백이 아니라 **더하는** 것인가
+
+    일사·강우·풍향은 대지에 하나 있는 기상대가 재고 구획마다 따로 재지 않는다.
+    그런데 `sensors_for_plot` 의 실내 체인은 **배타적**이다(구획 안 → 동 →
+    시설 → 구역, 처음 비지 않은 데서 멈춘다) — 구획 안에 온습도계가 하나만
+    있어도 대지의 기상대까지 내려가지 않는다. 실측: `[관찰] 육묘장 구획` 이
+    같은 대지의 미러-기상대(일사·강우·풍향)를 못 보고 있었다.
+
+    그래서 기상은 **실내 체인과 겨루지 않는 별도 축**으로 더한다. 시설의
+    `sensors_resolved`(실내) ↔ `sensors_outdoor`(실외)가 이미 같은 분리를
+    하고 있다.
+
+    ⚠ **실외 값을 실내 값과 합치지 말 것.** 기상대도 온·습도를 낸다. 그것을
+      구획의 온도와 같은 줄에 접으면, 이 저장소에 이미 실측으로 남아 있는
+      실패(*"공기 온도 목표가 토양 센서 값과 비교된 적이 있다"*)를 그대로
+      반복한다. 소비처는 이 목록을 **실외로 표시해** 따로 보여야 한다.
+    """
+    site = None
+    zone = zone_for_plot(plot, containers=containers)
+    if zone is not None and getattr(zone, 'type', None) == 'site':
+        site = zone
+    else:
+        try:
+            site = device_membership.site_for_geometry(
+                plot.geo_id, geometry_of(plot, facilities=facilities),
+                containers=containers)
+        except Exception:
+            site = None
+    # 대지를 못 찾으면 구역이라도 본다 — zone 에 기상대를 매단 설치가 있다.
+    target = site if site is not None else zone
+    if target is None:
+        return [], 'none', None
+    ids, source = device_membership.weather_device_ids(target.unique_id)
+    return ids, source, target.unique_id
 
 
 def _shape_name(shape):
@@ -3132,8 +3177,31 @@ def _daily_extremes(device_id, channel, measure, start_ts, end_ts):
 
     **마지막 버킷은 버린다.** 오늘은 아직 안 끝났고, 그대로 두면 하루가 절반만
     쌓인 채 더해진다(그날의 Tmax 가 낮게 잡혀 GDD 가 과소평가된다).
+
+    ⚠ **환산(Conversion)이 걸린 채널은 `measure` 인자를 그대로 쓰면 0건이
+    나온다.** `return_measurement_info` 가 환산 채널에서는 measurement 를
+    비우기 때문에(unit 만 바꿔 준다) — InfluxDB 에 그 이름 태그로 저장돼
+    있지 않다는 뜻이다(`plot_journal._channel_info` 의 "온도 8채널 누락"
+    사고와 같은 함정). 그래서 호출자가 준 이름을 무조건 믿지 않고 여기서
+    다시 확인한다 — 실측: F→C 환산 채널을 `measure='temperature'` 로 물으면
+    0건, 필터를 비우면(device+channel+unit 만) 하루치가 그대로 나온다.
     """
+    from aot.databases.models import Conversion, DeviceMeasurements
     from aot.utils.influx import query_string
+    from aot.utils.system_pi import return_measurement_info
+
+    try:
+        dm = DeviceMeasurements.query.filter_by(
+            device_id=device_id, channel=channel).first()
+        if dm is not None:
+            conv = None
+            if dm.conversion_id:
+                conv = Conversion.query.filter(
+                    Conversion.unique_id == dm.conversion_id).first()
+            _, _, resolved = return_measurement_info(dm, conv)
+            measure = resolved
+    except Exception:
+        pass   # 못 찾으면 호출자가 준 이름 그대로 시도(과거 동작 유지)
 
     out = {}
     for fn in ('max', 'min'):
@@ -3215,7 +3283,7 @@ def gdd_accumulated(plot, program_row=None, on=None, with_series=False):
 
     info = {'usable': False, 'value': None, 'reason': None,
             't_base': None, 'days_counted': 0, 'days_expected': 0,
-            'coverage_pct': None, 'sensor_count': 0}
+            'coverage_pct': None, 'sensor_count': 0, 'target': None}
 
     if program_row is None:
         return dict(info, reason='no-program')
@@ -3231,6 +3299,17 @@ def gdd_accumulated(plot, program_row=None, on=None, with_series=False):
         return dict(info, reason='no-t-base')
     info['t_base'] = t_base
 
+    # 목표 — 프로그램의 "하루 권장 GDD"(`gdd_daily`, program-settings.js
+    # 'Suggested GDD per day')를 지금까지 지난 날수만큼 곱한다. 프로그램이
+    # 주는 것은 하루 치 비율뿐이고 실측(`value`)은 누적이라, 그대로 나란히
+    # 놓으면 단위가 안 맞는다 — **여기서 하루치를 누적으로 환산**해야 DLI 의
+    # "오늘 값 / 오늘 목표" 와 같은 화면 문법(현재/목표)을 쓸 수 있다.
+    gdd_daily = photo.get('gdd_daily') if isinstance(photo, dict) else None
+    try:
+        gdd_daily = None if gdd_daily is None else float(gdd_daily)
+    except (TypeError, ValueError):
+        gdd_daily = None
+
     start = getattr(plot, 'started_on', None)
     if start is None:
         return dict(info, reason='no-start-date')
@@ -3239,6 +3318,8 @@ def gdd_accumulated(plot, program_row=None, on=None, with_series=False):
     if end < start:
         return dict(info, reason='not-started')
     info['days_expected'] = (end - start).days      # 오늘(미완성)은 세지 않는다
+    if gdd_daily is not None:
+        info['target'] = round(gdd_daily * info['days_expected'], 1)
     if info['days_expected'] <= 0:
         return dict(info, reason='too-early')
 
@@ -3284,6 +3365,142 @@ def gdd_accumulated(plot, program_row=None, on=None, with_series=False):
 
     if len(per_day) < info['days_expected'] * _GDD_MIN_COVERAGE:
         return dict(info, reason='low-coverage')
+    return dict(info, usable=True)
+
+
+# 빛을 재는 measurement — `plot_journal.LIGHT_MEASUREMENTS` 와 같은 어휘.
+_DLI_LIGHT_MEASURES = frozenset({'radiation', 'light'})
+
+
+def _plot_light_channels(plot):
+    """구획이 참조하는 빛(광량) 채널 → [(device_id, channel, unit)].
+
+    온도(`_plot_temperature_channels`)와 달리 **실외(기상)까지 포함한다** —
+    `plot_journal._plot_sensor_ids` 와 같은 판단이다: "일사·강우는 대지에
+    하나 있는 기상대가 재고, 구획 안에 온습도계가 있다는 이유로 빠지면 안
+    된다." 실측으로 확인했다 — 구획 안·bay 안에 광량 센서를 따로 둔 시설은
+    드물고, 시설 fitting 으로 물린 지역 기상대(`from_weather`)가 사실상
+    유일한 광량 출처인 경우가 흔하다. 온도는 실내/실외가 다른 값이라 섞으면
+    안 되지만(`sensors_for_plot` 의 실외 배제), 빛은 그 경계를 넘나든다 —
+    반투광 외피 안쪽 값은 결국 바깥 일사에서 파생된다.
+
+    같은 장치가 실내 우선순위 체인과 `from_weather` 양쪽에 잡히면(대지에
+    기상대 하나뿐인 설치) **실외 쪽만 남긴다** — `_plot_sensor_ids` 와 같은
+    dedup 규칙(같은 값이 표에 두 번 나오지 않게).
+
+    환산(Conversion)이 걸린 채널은 `return_measurement_info` 로 실제 표시
+    단위를 구한다 — 원본 `unit` 컬럼을 그대로 쓰면(예: lux→W/m² 환산) 엉뚱한
+    PPFD 계수가 걸린다(`plot_journal._channel_info` 와 같은 이유).
+    """
+    from aot.databases.models import Conversion, DeviceMeasurements
+    from aot.utils.system_pi import return_measurement_info
+
+    try:
+        found = sensors_for_plot(plot) or {}
+    except Exception:
+        return []
+    indoor_ids = (list(found.get('in_plot') or [])
+                  or list(found.get('in_bay') or [])
+                  or list(found.get('from_facility') or [])
+                  or list(found.get('from_zone') or []))
+    outdoor_ids = list(found.get('from_weather') or [])
+    outdoor_set = set(outdoor_ids)
+    ids = [d for d in indoor_ids if d not in outdoor_set] + outdoor_ids
+
+    out = []
+    seen = set()
+    for did in ids:
+        if did in seen:
+            continue
+        seen.add(did)
+        try:
+            rows = DeviceMeasurements.query.filter_by(device_id=did).all()
+        except Exception:
+            continue
+        for m in rows:
+            conv = None
+            if getattr(m, 'conversion_id', None):
+                conv = Conversion.query.filter(
+                    Conversion.unique_id == m.conversion_id).first()
+            _, unit, measurement = return_measurement_info(m, conv)
+            display = measurement or m.measurement
+            if display in _DLI_LIGHT_MEASURES:
+                out.append((did, m.channel, unit))
+    return out
+
+
+def dli_accumulated(plot, program_row=None, on=None):
+    """구획의 **오늘치** DLI(일적산광량) → dict (판정 불가면 `usable=False` + 이유).
+
+    PPFD(µmol/m²/s) 시간평균을 그날 자정부터 지금까지 더한다(`plot_journal.
+    daily_channel_stats` 의 mol 적분과 같은 식). `gdd_accumulated` 와 달리 재배
+    시작일부터의 누적이 아니라 **그날 하루만** 본다 — 빛은 그날 값이 그날의
+    광합성을 결정하고, 여러 날을 더해 봤자 뜻이 없다.
+
+    ⚠ `env_control/cumulative_tracker` 의 DLI 와 **다른 값이다**(그쪽은 제어
+    사이클마다 적분하고 env_coordinator 함수가 있어야 한다 — `gdd_accumulated`
+    독스트링의 같은 경고와 같은 이유). 두 값을 섞지 말 것.
+
+    단위 환산은 `plot_journal.LIGHT_UNITS_TO_PPFD` 를 그대로 쓴다(모르는 단위는
+    환산하지 않는다 — 두 번째 환산표를 만들지 않는다).
+    """
+    from aot.aot_flask.geo.plot_journal import ppfd_factor
+    from aot.utils.device_tz import resolve_location_tz
+    from aot.utils.influx import query_string
+    from aot.utils.timekit import as_tz, local_day_bounds_utc
+
+    info = {'usable': False, 'value': None, 'reason': None,
+            'target': None, 'sensor_count': 0, 'assumed': None}
+
+    target = None
+    if program_row is not None:
+        photo = getattr(program_row, 'photosynthesis', None) or {}
+        target = photo.get('dli_target') if isinstance(photo, dict) else None
+        try:
+            target = None if target is None else float(target)
+        except (TypeError, ValueError):
+            target = None
+    info['target'] = target
+
+    channels = _plot_light_channels(plot)
+    info['sensor_count'] = len(channels)
+    if not channels:
+        return dict(info, reason='no-light-sensor')
+
+    today = on or date.today()
+    tz = as_tz(resolve_location_tz(plot.unique_id))
+    start_ts, end_ts = local_day_bounds_utc(today, today, tz)
+
+    total = 0.0
+    assumed = False
+    counted = 0
+    for did, ch, unit in channels:
+        factor, is_assumed = ppfd_factor(unit)
+        if factor is None:
+            continue          # 모르는 단위 — 지어내지 않는다
+        try:
+            tables = query_string(
+                unit, did, channel=ch, measure=None,
+                start_str=start_ts, end_str=end_ts,
+                group_sec=3600, group_fn='mean')
+        except Exception as exc:
+            logger.debug('DLI: %s 조회 실패: %s', did, exc)
+            continue
+        for table in (tables or []):
+            for rec in table.records:
+                try:
+                    val = float(rec.get_value())
+                except (TypeError, ValueError, AttributeError):
+                    continue
+                total += val * factor * 3600.0 / 1e6
+        counted += 1
+        assumed = assumed or is_assumed
+
+    if counted == 0:
+        return dict(info, reason='unknown-light-unit')
+
+    info['value'] = round(total, 2)
+    info['assumed'] = assumed
     return dict(info, usable=True)
 
 

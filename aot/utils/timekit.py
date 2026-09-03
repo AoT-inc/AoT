@@ -517,7 +517,8 @@ def bucket_local_key(rec_time: Optional[datetime], bucket_sec: int,
       InfluxDB 2.7 에서 원자료와 대조해 확인했다. 그래서 시작 시각으로 되돌린
       다음 시간대를 입힌다 — **이 뺄셈을 빼면 모든 날짜가 하루씩 밀린다.**
 
-    `granularity='week'` 면 그 주의 월요일(현지 기준)을 키로 쓴다.
+    `granularity='week'` 면 그 주의 월요일(현지 기준)을, `'month'` 면 그 달의
+    1일을 키로 쓴다.
     """
     from datetime import timedelta as _td
 
@@ -530,6 +531,8 @@ def bucket_local_key(rec_time: Optional[datetime], bucket_sec: int,
         return None
     if granularity == 'week':
         return local_day - _td(days=local_day.weekday())
+    if granularity == 'month':
+        return local_day.replace(day=1)
     return local_day
 
 
@@ -547,8 +550,19 @@ def buckets_expected(key, granularity: str,
     """
     from datetime import timedelta as _td
 
-    days = [key] if granularity != 'week' else [key + _td(days=n)
-                                                for n in range(7)]
+    # 커버리지의 분모는 그 버킷이 **덮는 날 수**다. 달은 28~31 로 제각각이라
+    # 상수로 둘 수 없고, 주와 같은 방식으로 실제 날짜를 세어야 한다 — 30 으로
+    # 박으면 2월은 늘 100% 를 넘고 1월은 늘 모자란다.
+    if granularity == 'week':
+        days = [key + _td(days=n) for n in range(7)]
+    elif granularity == 'month':
+        days = []
+        d = key.replace(day=1)
+        while d.month == key.month and d.year == key.year:
+            days.append(d)
+            d += _td(days=1)
+    else:
+        days = [key]
     total = 0
     for d in days:
         if period_start is not None and d < period_start:

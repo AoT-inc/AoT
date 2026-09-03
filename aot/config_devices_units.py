@@ -338,8 +338,14 @@ MEASUREMENTS = {
         'name': lazy_gettext('Ultraviolet Index'),
         'meas': 'uvi',
         'units': ['index']},
+    # ⚠ 표시 이름은 **'VPD'** 로 통일한다(사용자 지시, 2026-09-03).
+    #   `meas` 키는 그대로 둔다 — 그것은 InfluxDB 태그이자 DB 에 이미 저장된
+    #   값이라, 바꾸면 지금까지 쌓인 측정값을 통째로 못 읽게 된다.
+    #   긴 이름 때문에 화면마다 제각각이었다: 지도 위젯은 자기 코드에서 5가지
+    #   철자를 'VPD' 로 되돌리는 정규화를 들고 있었고(그중 둘은 오타 대비),
+    #   시설 화면은 'Vapor pressure deficit (VPD)', 라벨 모듈은 'VPD' 였다.
     'vapor_pressure_deficit': {
-        'name': lazy_gettext('Vapor Pressure Deficit'),
+        'name': lazy_gettext('VPD'),
         'meas': 'vapor_pressure_deficit',
         'units': ['hPa', 'Pa', 'kPa']},
     'version': {
