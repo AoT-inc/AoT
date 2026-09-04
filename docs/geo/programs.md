@@ -58,7 +58,7 @@ Day temp · Night temp · Humidity · CO₂ · DLI · VPD.
 !!! warning "For display and advice"
     Setting a target does not switch anything on by itself — that still needs an environmental control function to exist and be configured to act on it. A target's job is to let people, the AI, and (where one is configured) the control function read the same number for "what this stage should aim at".
 
-**An item with a curve shows no number.** Showing the stage value for an item that actually follows a curve would present a figure that is not in use as if it were the target — the screen says "Follows curve: (name)" instead.
+**An item with a curve shows no number on this screen.** Showing the stage value for an item that actually follows a curve would present a figure that is not in use as if it were the target — the screen says "Follows curve: (name)" instead. What the curve actually asked for on a given day, and how far the readings sat from it, is shown split by day and night in [the journal](journal.md#curve-target).
 
 ### Overriding targets per plot { #plot-override }
 
@@ -137,7 +137,9 @@ All in the same table, and the programme is left alone — what you change here 
 Once you have tuned lengths, added stages and written guidance, that knowledge lives **only in that plot**. **[Register as programme]**, at the bottom of the **[Program]** card on the [Settings] tab, makes it reusable.
 
 - What goes in is the list the plot **actually follows** — stages removed stay out, added stages come along, and the lengths are the **real spans between boundaries**, not the standard. Guidance travels too.
-- Targets and target items are copied from the source programme unchanged (the plot never edits them).
+- Targets and target items are copied from the source programme unchanged (the plot never edits them). The reply, however, carries **what this plot actually measured against each target, stage by stage** — median with p25-p75, per sensor. Stage lengths were already updated from the field; targets were the half of that loop that had no way back.
+- Asking the AI to register with `adopt_targets` rewrites **only the unambiguous ones** to the measured median. Where two sensors disagree, where the stage has no readings, where a curve is attached, or where the value falls outside the item's defined range, the source value is kept and the reason is given — which sensor to trust is a person's call, not the system's.
+- On screen, **pressing [Register] unfolds the comparison right below it** — per stage, `target → this plot's median`, with one line per sensor where they differ. It only shows; nothing is changed by looking.
 - **The plot is not moved onto it.** Registering is a copy — changing a running season's interpretation would silently change what it was grown for. Pick the new programme in [Settings] if you want this plot on it too.
 - A name already in use gets a number appended.
 - Guidance you wrote **survives a stage change.** An observation on a past stage that vanishes on the next transition is worth nothing as a record.

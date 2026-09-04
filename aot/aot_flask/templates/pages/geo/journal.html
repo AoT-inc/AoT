@@ -201,17 +201,13 @@
       대상을 고르면 그 대상이 **실제로 재는 것**만 나온다(전체 어휘를 보여주면
       고를 수 있는 것과 값이 나오는 것이 달라진다). 전위·신호강도 같은 장치
       진단 채널은 기본으로 꺼져 있다 — 기르는 환경이 아니라 장비 상태라,
-      실측에서 표의 절반을 차지하면서 읽을 것이 없었다. -#}
-  <details class="aot-journal-meas-block" id="journal-meas-block" style="display:none;">
-    {#- 문구는 두 가지다. 실내 센서가 하나도 없는 구획이면 고르는 대상이
-        전부 기상대 채널이라, 그렇게 말하는 편이 어디서 잰 값인지 분명하다
-        (`target_info` 의 `weather_only`). -#}
-    <summary>
-      <span id="journal-meas-title">{{ _('Measurements to include') }}</span>
-      <span class="text-muted small" id="journal-meas-count"></span>
-    </summary>
-    <div class="aot-journal-meas-list" id="journal-meas-list"></div>
-  </details>
+      실측에서 표의 절반을 차지하면서 읽을 것이 없었다.
+
+      이 안에 `<details class="aot-journal-meas-block">` 가 **하나 또는 둘**
+      들어간다(journal-page.js `_renderMeasurements`) — 구획에 실내 센서와
+      기상대가 둘 다 있으면 그룹이 갈린다(현장 센서 / 기상대), 아니면 하나뿐.
+      여기서는 빈 컨테이너만 둔다. -#}
+  <div id="journal-meas-block" style="display:none;"></div>
 
   <p class="text-muted small" id="journal-plot-note" style="display:none;"></p>
   <p class="text-danger small" id="journal-form-error" style="display:none;"></p>

@@ -1888,6 +1888,24 @@
 
             pane.innerHTML = _buildZoneSkel();
 
+            /* 지난 7일 — **`/contents` 와 나란히** 건다.
+             *
+             * 예전에는 카드를 그린 **뒤에** 받아서, 모달을 열면 가로 밴드 바가
+             * 잠깐 보였다가 세로 범위 도표로 바뀌었다(사용자 지적). 모양이
+             * 바뀌는 것은 늦게 오는 것보다 거슬린다.
+             *
+             * 서버 계산이 0.9~1.5초라 무작정 기다릴 수는 없다(캐시 10분).
+             * 그래서 **환경 카드만** 이것을 기다리고(아래 `_withWeek`),
+             * 나머지(장치·상위 화살표)는 그대로 먼저 그린다. */
+            var _weekP = fetch('/api/geo/plot/' + encodeURIComponent(plotUuid) +
+                               '/env_week', { cache: 'no-store' })
+                .then(function (r) { return r.ok ? r.json() : null; })
+                .then(function (wk) {
+                    return (wk && wk.ok && wk.series && wk.series.length)
+                        ? wk.series : null;
+                })
+                .catch(function () { return null; });
+
             fetch('/api/geo/plot/' + encodeURIComponent(plotUuid) + '/contents',
                   { cache: 'no-store' })
                 .then(function (r) { return r.ok ? r.json() : null; })
@@ -1906,7 +1924,7 @@
                         '.aot-bay-popup-pane[data-pane="overview"] ' +
                         '[data-slot="envnow"]');
                     if (envSlot && window.AoTMapPopup.buildEnvNowHtml) {
-                        envSlot.innerHTML = window.AoTMapPopup.buildEnvNowHtml(
+                        var _envArgs = [
                             (data.plot || {}).env,
                             // 프로그램이 정한 목표. 서버가 어떤 항목을 목표로
                             // 볼지 이미 정해 준다(_program_targets) — 여기서
@@ -1934,14 +1952,45 @@
                               // 코디네이터 사이클 값(`photo`)과는 다른 축이라
                               // 별도 키로 받는다 — 섞으면 안 된다.
                               gdd: (data.plot || {}).gdd,
-                              dli: (data.plot || {}).dli });
-                        // 축이 없는 줄(CO2·토양수분·이슬점…)은 추세로 답한다.
-                        // 값은 이미 그려져 있고, 도착하면 그 자리만 바뀐다.
-                        if (window.AoTMapPopup.fillEnvSparklines) {
-                            window.AoTMapPopup.fillEnvSparklines(
-                                envSlot, data.sensors,
-                                ((data.plot || {}).env || {}).readings);
-                        }
+                              dli: (data.plot || {}).dli }];
+                        /* 주간 계열을 **기다렸다가 한 번만** 그린다. 늦으면
+                         * (1.5초) 지금 값만으로 먼저 그리고, 뒤늦게 도착하면
+                         * 그때 한 번 더 그린다 — 빈 카드로 두지 않는다. */
+                        var _drawEnv = function (wkSeries) {
+                            if (!envSlot.isConnected) return;
+                            var z2 = _zonePopupState[uid];
+                            if (!z2 || z2.popup !== popup) return;
+                            if (wkSeries) {
+                                _envArgs[1] = Object.assign({}, _envArgs[1],
+                                                            { week: wkSeries });
+                            }
+                            envSlot.innerHTML =
+                                window.AoTMapPopup.buildEnvNowHtml.apply(null, _envArgs);
+                            if (window.AoTViz && window.AoTViz.tips) {
+                                // 값 풍선은 붙인 **뒤에** 배선한다.
+                                try { window.AoTViz.tips(envSlot); } catch (e) {}
+                            }
+                            // 축이 없는 줄(CO2·토양수분·이슬점…)은 추세로 답한다.
+                            if (window.AoTMapPopup.fillEnvSparklines) {
+                                window.AoTMapPopup.fillEnvSparklines(
+                                    envSlot, data.sensors,
+                                    ((data.plot || {}).env || {}).readings);
+                            }
+                        };
+                        var _drawn = false;
+                        var _late = setTimeout(function () {
+                            if (!_drawn) { _drawn = true; _drawEnv(null); }
+                        }, 1500);
+                        _weekP.then(function (wkSeries) {
+                            clearTimeout(_late);
+                            if (_drawn) {
+                                // 늦게 왔다 — 그때 한 번 더 그린다.
+                                if (wkSeries) _drawEnv(wkSeries);
+                                return;
+                            }
+                            _drawn = true;
+                            _drawEnv(wkSeries);
+                        });
                     }
 
                     // `_renderZoneDevices` 는 `data.zone.output_order` 를 읽는다.
@@ -4442,11 +4491,12 @@
                 // 노드와는 **영원히 다르다** — 노트 자리표시자를 옮겨 심어
                 // 한 번 막아 둔 그 깜빡임이, 번역을 켜면 그대로 되살아난다
                 // (`_setHtmlIfChanged` 주석).
-                if (pane._aotRecordHtml === html) return;
-                pane._aotRecordHtml = html;
+                if (_cardFresh(pane, '_aotRecordHtml', html)) return;
                 var tmp = document.createElement('div');
                 tmp.innerHTML = html;
                 var node = tmp.firstElementChild;
+                // **넣을 노드를 기억한다** — 다음에 "아직 붙어 있는가" 를 묻는다.
+                _cardMark(pane, '_aotRecordHtml', html, node);
                 // `buildRecordBlock`/`notesBlockHtml` 모두 제목+박스를
                 // `.aot-ov-card` 로 감싼 뿌리 노드 하나를 낸다(2026-08-20) —
                 // 옛 박스(`.aot-ov-record`·`.aot-ov-notes`)로 찾은 뒤
@@ -4774,6 +4824,7 @@
                 if (!rt || !pane || !pane.isConnected) return;
                 var st = _actLabelState[uid];
                 if (!st || st.openBayFacility !== facilityUuid) return;
+
                 var html = window.AoTMapPopup.buildFacilityPlotsHtml(
                     rt.plots || [], bayId, {
                         // 설계 화면 링크를 보일지 — 편집 권한과 **다른 축**이다.
@@ -4808,10 +4859,11 @@
                 // 번역본으로 바꿔 놓으므로, `existing.outerHTML`(번역본)과 갓
                 // 만든 노드(원문)를 견주면 **영원히 다르다** — 가드가 있는데도
                 // 매 폴링마다 갈아끼우고 있었다(`_setHtmlIfChanged` 주석).
-                if (pane._aotPlotsHtml === html) return;
-                pane._aotPlotsHtml = html;
+                if (_cardFresh(pane, '_aotPlotsHtml', html)) return;
                 var block = _parseNode(html);
                 if (!block) return;
+                // **넣을 노드를 기억한다** — 다음에 "아직 붙어 있는가" 를 묻는다.
+                _cardMark(pane, '_aotPlotsHtml', html, block);
                 if (existing) {
                     existing.replaceWith(block);
                     _wireFacilityCapacity(uid, facilityUuid, bayId, block, pane,
@@ -4864,6 +4916,37 @@
             }).catch(function () { /* 부가 정보다 — 실패해도 [현황]은 그대로 */ });
         }
 
+        /* 시설 모달의 지난 7일 — **한 번만** 받는다.
+         *
+         * `/overview` 에 얹지 않는 이유는 그 응답이 최소 5초까지 폴링되기
+         * 때문이다(`_runtimePollSeconds`). 여기 계산은 InfluxDB 를 훑으므로
+         * 그 주기를 타면 안 된다.
+         *
+         * 받아 두면 그 다음 폴링부터 `_prependFacilityEnvNow` 가 알아서 쓴다 —
+         * 카드를 그리는 코드는 한 벌뿐이다. 그래서 도착 직후에도 화면을 직접
+         * 갈아끼우지 않고 카드 캐시(`pane._aotEnvNowHtml`)만 비워, 다음 그림에서
+         * 자연스럽게 바뀌게 한다. */
+        function _loadFacilityEnvWeek(uid, facilityUuid, pane) {
+            var st = _actLabelState[uid];
+            if (!st) return;
+            st._envWeekByFac = st._envWeekByFac || {};
+            st._envWeekPending = st._envWeekPending || {};
+            if (st._envWeekByFac[facilityUuid] ||
+                st._envWeekPending[facilityUuid]) return;
+            st._envWeekPending[facilityUuid] = 1;
+            fetch('/api/aot/facility/' + encodeURIComponent(facilityUuid) +
+                  '/env_week', { cache: 'no-store' })
+                .then(function (r) { return r.ok ? r.json() : null; })
+                .then(function (wk) {
+                    st._envWeekPending[facilityUuid] = 0;
+                    if (!wk || !wk.ok || !wk.series || !wk.series.length) return;
+                    st._envWeekByFac[facilityUuid] = wk.series;
+                    if (pane && pane.isConnected) pane._aotEnvNowHtml = null;
+                    _prependFacilityEnvNow(uid, facilityUuid, pane);
+                })
+                .catch(function () { st._envWeekPending[facilityUuid] = 0; });
+        }
+
         function _prependFacilityEnvNow(uid, facilityUuid, pane) {
             if (!window.AoTFacilityRuntime || !window.AoTMapPopup ||
                 !window.AoTMapPopup.buildEnvNowHtml) return;
@@ -4871,6 +4954,27 @@
                 if (!rt || !pane || !pane.isConnected) return;
                 var st = _actLabelState[uid];
                 if (!st || st.openBayFacility !== facilityUuid) return;
+
+                /* ── 첫 그림은 지난 7일을 기다린다 ──────────────────────
+                 *
+                 * 예전에는 지금 값으로 먼저 그리고 주간 계열이 오면 다시
+                 * 그렸는데, 모달을 열면 가로 밴드 바가 잠깐 보였다가 세로
+                 * 범위 도표로 바뀌었다(사용자 지적). 모양이 바뀌는 것은 늦게
+                 * 오는 것보다 거슬린다.
+                 *
+                 * 서버 계산이 0.9~1.5초라 무작정 기다리지는 않는다 — 1.5초가
+                 * 지나면 지금 값만으로 그리고, 도착하면 그때 한 번 더 그린다.
+                 * 이 카드는 5초까지 폴링되므로 **첫 그림만** 미루면 된다.
+                 *
+                 * ⚠ 마감 시각은 **시설마다** 잡는다. 위젯 하나에 하나만 두면
+                 *   다른 시설을 열 때 이미 지나 있어 첫 그림이 그대로 나간다. */
+                _loadFacilityEnvWeek(uid, facilityUuid, pane);
+                st._envWeekWait = st._envWeekWait || {};
+                if (!(st._envWeekByFac || {})[facilityUuid]) {
+                    var _w = st._envWeekWait[facilityUuid];
+                    if (!_w) { _w = st._envWeekWait[facilityUuid] = Date.now() + 1500; }
+                    if (Date.now() < _w) return;
+                }
 
                 var indoor = rt.indoor || {};
                 var sensors = rt.sensors || {};
@@ -4929,7 +5033,12 @@
                     photo:   st._lastPhoto,
                     targets: st._lastTargets,
                     gdd:     st._lastPlotGdd,
-                    dli:     st._lastPlotDli
+                    dli:     st._lastPlotDli,
+                    // 지난 7일 — 도착해 있으면 측정 줄이 범위 도표가 된다.
+                    // **폴링과 분리돼 있다**(아래 `_loadFacilityEnvWeek`):
+                    // 이 카드는 최소 5초까지 다시 그려지지만 주간 계열은
+                    // 모달을 열 때 한 번만 받는다.
+                    week:    st._envWeekByFac && st._envWeekByFac[facilityUuid]
                 });
                 if (html) {
                     // 같은 값이면 DOM 을 건드리지 않는다(위 _loadOverview 주석).
@@ -4947,8 +5056,7 @@
                     // (번역본)과 갓 만든 노드(원문)를 견주면 **영원히 다르다**
                     // — 가드가 있는데도 매 폴링마다 갈아끼우고 있었다
                     // (`_setHtmlIfChanged` 주석).
-                    if (pane._aotEnvNowHtml === html) return;
-                    pane._aotEnvNowHtml = html;
+                    if (_cardFresh(pane, '_aotEnvNowHtml', html)) return;
                     var node = _parseNode(html);
                     var curBlock = pane.querySelector('.aot-ov-envnow');
                     var cur = curBlock && (curBlock.closest('.aot-ov-card') || curBlock);
@@ -4959,8 +5067,19 @@
                         var slot = pane.querySelector('[data-slot="now"]');
                         if (slot) slot.innerHTML = html;
                         else pane.insertAdjacentHTML('afterbegin', html);
+                        node = (pane.querySelector('.aot-ov-envnow') || {})
+                                   .closest ? pane.querySelector('.aot-ov-envnow')
+                                                  .closest('.aot-ov-card') : null;
                     }
+                    // **넣은 뒤에** 표식한다 — 실제로 붙은 노드를 기억해야
+                    // 다음에 "아직 붙어 있는가" 를 물을 수 있다.
+                    _cardMark(pane, '_aotEnvNowHtml', html, node);
                     _wireFacilityRepPick(uid, facilityUuid, pane, canEdit);
+                    // 값 풍선 — 범위 도표의 열을 짚으면 그날 최저~최고가 뜬다.
+                    // **붙인 뒤에** 배선한다(dataviz 규약).
+                    if (window.AoTViz && window.AoTViz.tips) {
+                        try { window.AoTViz.tips(pane); } catch (e) {}
+                    }
                     // DLI·GDD 도 [설정]에서 켜고 끌 수 있어야 한다 — 값을
                     // 낼 수 있을 때만 선택지로 얹는다(다른 측정 줄과 같은
                     // "값이 오는가" 기준, envRowChoices 주석 참조).
@@ -5067,6 +5186,18 @@
                 if (!ovSame) {
                     st2._ovHtml = ovHtml;
                     pane.innerHTML = ovHtml;
+                    /* ⚠ **여기서 얹혀 있던 카드들이 함께 지워진다.**
+                     *
+                     * [현재]·[구획]·[기록] 카드는 이 HTML 에 없고, 각자
+                     * 나중에 `pane` 에 얹는다. 그 셋은 "지난번에 만든
+                     * 문자열" 과 견줘 같으면 건너뛰는데, 판이 통째로 갈린
+                     * 것을 모르면 **영영 다시 그리지 않는다** — 모달을 오래
+                     * 열어 두면 카드가 사라진 채로 남았다(사용자 지적).
+                     *
+                     * 지우는 쪽이 세대를 올리고, 그리는 쪽이 자기 세대와
+                     * 견준다. 카드마다 캐시를 하나씩 비우는 방식으로 하면
+                     * 카드가 늘 때 이 자리를 고치는 것을 잊는다. */
+                    _paneWiped(pane);
                 }
 
                 // [시설 세부] — 같은 env_summary 를 근거 중심으로 편다.
@@ -8468,6 +8599,32 @@
      * 여기서 건드리지 않는다 — 이 함수가 없애는 것은 **바뀌지 않았는데도**
      * 나던 주기적 깜빡임이다.
      */
+    /* 판(`pane`)을 통째로 갈아엎었다 — 거기 얹혀 있던 카드는 전부 사라졌다.
+     * 세대를 올려서, 각 카드가 "내가 그린 그대로 있다" 는 착각을 못 하게 한다. */
+    function _paneWiped(pane) {
+        if (pane) pane._aotGen = (pane._aotGen || 0) + 1;
+    }
+
+    /* 얹는 카드의 재사용 판정 — 건너뛰려면 셋이 다 맞아야 한다:
+     * 문자열이 같고 · 그 뒤로 판이 안 갈렸고 · **그 카드가 아직 붙어 있고.**
+     *
+     * 문자열만 보면 판이 갈린 뒤에도 "그대로다" 로 읽어, 카드가 사라진 채로
+     * 영영 다시 그려지지 않는다(모달을 오래 열어 두면 실제로 그랬다). 세대만
+     * 보면 `_paneWiped` 를 부르지 않는 새 경로가 생기는 날 같은 일이 난다 —
+     * 그래서 **DOM 을 직접 확인**하는 것을 마지막 관문으로 둔다. */
+    function _cardFresh(pane, key, html) {
+        if (pane[key] !== html) return false;
+        if (pane[key + 'Gen'] !== (pane._aotGen || 0)) return false;
+        var n = pane[key + 'Node'];
+        return !!(n && n.isConnected && pane.contains(n));
+    }
+
+    function _cardMark(pane, key, html, node) {
+        pane[key] = html;
+        pane[key + 'Gen'] = (pane._aotGen || 0);
+        pane[key + 'Node'] = node || null;
+    }
+
     function _setHtmlIfChanged(el, html) {
         if (!el) return false;
         if (el._aotLastHtml === html) return false;
@@ -11121,7 +11278,13 @@
             ['base', 'overlay'].forEach(function(role) {
                 if (!groups[role].length) return;
                 const head = document.createElement('div');
-                head.style.cssText = 'font-weight:var(--aot-fw-bold);color:#444;font-size:var(--aot-fs-caption);text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid #eee;margin-bottom:4px;padding-bottom:2px;';
+                // 색은 **시스템 토큰만** — 나머지는 이미 토큰인데 색만 직접
+                // 적혀 있어 테마를 바꿔도 이 줄만 그대로였다(지적 2026-09-04).
+                head.style.cssText = 'font-weight:var(--aot-fw-bold);'
+                    + 'color:var(--aot-color-text-secondary);'
+                    + 'font-size:var(--aot-fs-caption);text-transform:uppercase;'
+                    + 'letter-spacing:.5px;margin-bottom:4px;padding-bottom:2px;'
+                    + 'border-bottom:1px solid var(--border-neutral);';
                 head.textContent = role === 'base' ? (window._ ? window._('Base Map') : 'Base Map') : (window._ ? window._('Overlay') : 'Overlay');
                 panel.appendChild(head);
 

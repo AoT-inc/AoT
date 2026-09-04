@@ -552,6 +552,45 @@ def api_plot_contents(plot_uuid):
     return jsonify(payload)
 
 
+@blueprint.route('/api/geo/plot/<string:plot_uuid>/env_week', methods=['GET'])
+@login_required
+def api_plot_env_week(plot_uuid):
+    """구획 모달의 **최근 7일 일별 환경 계열**. `AoTViz.range` 입력 모양이다.
+
+    ⚠ **`/contents` 에 얹지 않는다.** 그 응답은 30초 캐시이고 모달이 열릴
+    때마다 부르는데, 여기 계산은 InfluxDB 를 훑으므로 수명이 다르다. 실은
+    수명뿐 아니라 **부르는 시점**도 다르다 — 지금 값은 자주, 지난 7일은 한 번.
+    한 응답에 묶으면 짧은 쪽이 긴 쪽을 끌고 다닌다.
+
+    `?days=` 로 창을 바꿀 수 있다(1~31). 캐시 키는 구획 uuid 하나라 창을
+    바꿔 부르면 앞의 것이 남아 있을 수 있다 — 화면은 기본값만 쓴다.
+    """
+    from aot.aot_flask.geo import plot_journal
+    from aot.aot_flask.geo.site_summary import cached_plot_env_week
+
+    row = GeoPlot.query.filter(GeoPlot.unique_id == plot_uuid).first()
+    if row is None:
+        return jsonify({'ok': False, 'error': 'plot not found'}), 404
+
+    try:
+        days = max(1, min(31, int(request.args.get('days') or 7)))
+    except (TypeError, ValueError):
+        days = 7
+
+    def _build():
+        try:
+            return plot_journal.recent_env_trends(row, days=days)
+        except Exception:
+            current_app.logger.exception('plot env_week: 계열 생성 실패')
+            # 빈 목록을 캐시하지 않는다 — 일시적 실패가 10분간 굳는다.
+            return None
+
+    series = cached_plot_env_week(plot_uuid, _build)
+    if series is None:
+        return jsonify({'ok': False, 'error': 'build failed'}), 500
+    return jsonify({'ok': True, 'days': days, 'series': series})
+
+
 def _env_of(input_ids):
     """센서 묶음의 현재 환경 — `{'readings', 'sensors': {'valid','total'}}`.
 
@@ -1243,8 +1282,12 @@ def api_plot_save_as_program(plot_uuid):
         return denied
 
     data = request.get_json(silent=True) or {}
+    # 응답에는 `target_review` 가 함께 온다 — 단계마다 목표 옆에 이 구획이
+    # 실제로 잰 분포다(되먹임 고리의 나머지 반쪽). `adopt_targets` 는 그중
+    # 애매하지 않은 것만 실측 중앙값으로 갈아 담는다.
     result, error = plot_io.save_as_program(
-        plot_uuid, name=data.get('name'), set_by=_current_user_name())
+        plot_uuid, name=data.get('name'), set_by=_current_user_name(),
+        adopt_targets=bool(data.get('adopt_targets')))
     if error:
         status = 404 if '찾을 수 없습니다' in error else 400
         return jsonify({'ok': False, 'message': error}), status

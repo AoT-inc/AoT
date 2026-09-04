@@ -1712,6 +1712,10 @@
               // 밴드 — 초록이 '평소', 세로선이 '오늘'. 기준이 없으면 값도
               // 주지 않는다(축을 지어내지 않는다).
               ? V.band({ label: label,
+                         // ⚠ **옛 그림 그대로**(초록 면 + 세로선 마커).
+                         // 여기서 초록은 목표가 아니라 **평소 가동시간**이고
+                         // 길이 자체가 뜻이라, 다른 줄처럼 선 둘로 못 옮긴다.
+                         okZone: true,
                          value: (duty && duty.hasBase) ? duty.h : null,
                          min: 0,
                          max: (duty && duty.hasBase) ? duty.axisH : undefined,
@@ -2196,6 +2200,41 @@
     return spec;
   }
 
+  /* 지금 값 줄(`r.key`) ↔ 주간 계열 짝짓기.
+   *
+   * **키 어휘가 둘이다.** 지금 값은 채널 표시 키(`T`·`RH`·`VPD`, 매핑에 없는
+   * 채널은 사람이 붙인 이름)로 오고 계열은 measurement 이름으로 온다. 그래서
+   * **서버가 후보를 함께 싣는다**(`now_keys`) — 여기서 이름을 다시 만들면
+   * 규칙이 두 벌이 되고, 갈라지는 날 조용히 안 맞는다.
+   *
+   * 실외(outdoor) 계열은 짝짓지 않는다. 카드의 지금 값 줄은 실내 기준이라,
+   * 같은 measurement 라는 이유로 실외 계열을 붙이면 안쪽 값 위에 바깥
+   * 그림이 그려진다. */
+  function _weekSeriesFor(key, week) {
+    if (!key || !week || !week.length) return null;
+    for (var i = 0; i < week.length; i++) {
+      var w = week[i];
+      if (String(w.scope || 'indoor') !== 'indoor') continue;
+      var keys = w.now_keys || [];
+      for (var j = 0; j < keys.length; j++) {
+        if (String(keys[j]) === String(key)) return w;
+      }
+    }
+    return null;
+  }
+
+  /* 값 풍선 문구 — **빌더는 문구를 만들지 않는다**(dataviz 규약)는 규칙이
+   * 있어 부르는 쪽인 여기서 만든다. 짚었을 때 최저~최고와 평균을 함께 준다:
+   * 막대는 진폭만 그리므로 가운데가 어디였는지는 여기서만 알 수 있다. */
+  function _weekTip(p, name, unit) {
+    if (!p || p.avg == null && p.min == null) return null;
+    var u = unit ? ' ' + unit : '';
+    var span = (p.min != null && p.max != null && p.max > p.min)
+      ? p.min + '~' + p.max + u : null;
+    var avg = (p.avg != null) ? _t('mean') + ' ' + p.avg + u : null;
+    return [p.label, span, avg].filter(Boolean).join(' \u00b7 ');
+  }
+
   function _envNowRowHtml(r, opts) {
     opts = opts || {};
     var V = window.AoTViz;
@@ -2209,7 +2248,27 @@
     var name = s.name, dec = s.dec, unit = s.unit;
 
     var inner;
-    if (V && s.hasAxis) {
+    var wk = _weekSeriesFor(r.key, opts.week);
+    if (V && wk && V.range) {
+      // ── 지난 며칠 안에서 오늘은 어디인가 ─────────────────────────────
+      //
+      // 지금 값 하나만 그리던 자리다. 그런데 그것은 같은 모달의 [환경·제어]
+      // 탭이 24시간 그래프로 이미 답한다 — 사용자 지적: *"사실상 환경/제어
+      // 탭에서 지금 상태를 거의 다 확인할 수 있는 중복 데이터를 다른 형식으로
+      // 보여주는 것 뿐임"*. 이 줄이 따로 있을 이유는 **더 넓은 창**이다.
+      //
+      // 머리줄의 숫자는 여전히 **지금 값**이다(계열의 대표값이 아니라) —
+      // "지금 몇 도인가" 를 잃지 않으면서 그 옆에 지난 며칠을 세운다.
+      inner = V.range({
+        label: name,
+        valueText: s.valueText, valueSub: unit, stale: s.stale,
+        scale: wk.scale, targets: wk.targets, bars: !!wk.bars,
+        points: (wk.points || []).map(function (p) {
+          return { label: p.label, min: p.min, max: p.max, avg: p.avg,
+                   tip: _weekTip(p, name, unit) };
+        })
+      });
+    } else if (V && s.hasAxis) {
       inner = V.band({
         label: name,
         value: s.value,
@@ -4787,7 +4846,11 @@
               '<div class="aot-ov-desc-actions">' +
               '<button type="button" class="aot-ov-pill aot-ov-pill--primary ' +
                 'aot-ov-sched-reggo">' + _esc(_t('Register')) + '</button>' +
-              '</div></div>';
+              '</div></div>' +
+              // 등록하고 나면 여기에 **단계별 목표 옆의 실측**이 들어온다
+              // (`AoTTargetReview`). 등록한 자리에서 바로 보여야 그 숫자로
+              // 목표를 고칠지 판단할 수 있다 — 다른 화면으로 옮기면 안 본다.
+              '<div class="aot-ov-sched-reg-review" hidden></div>';
     }
     return '<div class="aot-ov-card-title">' + _esc(_t('Program')) +
            '</div><div class="aot-ov-block">' + rows + '</div>';

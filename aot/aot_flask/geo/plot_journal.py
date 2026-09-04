@@ -58,7 +58,7 @@ GDD·`runtime` 전부가 회귀 표면이 된다.
 import logging
 import threading
 import time
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, time as dtime, timedelta
 
 from aot.aot_flask.geo import plot_context
 
@@ -127,6 +127,33 @@ CIRCULAR_POINTS_PER_HOUR = 60
 #: 빛을 재는 measurement. 이것들만 DLI(일적산광량)를 파생한다.
 LIGHT_MEASUREMENTS = frozenset({'radiation', 'light'})
 
+#: **0 이 실제 0 인 측정값** — 그림에서 바닥부터 올라오는 막대로 그린다.
+#:
+#: 밤에 일사는 0 이고, 비가 안 오면 강수는 0 이다. 그런 값은 "얼마나 컸나"
+#: 이므로 크기(막대)다. 반대로 온도 0 °C 는 "없었다" 가 아니라 그냥 낮은
+#: 값이라, 축 위의 **위치**(마커)로 읽어야 한다.
+#:
+#: ⚠ 예전에는 "min/max 가 없으면 막대" 라는 대리 규칙을 썼는데, 그것은 DLI 와
+#:   가동시간만 우연히 맞췄다 — 일사는 min/max 가 있어서 빈 트랙 위의 점으로
+#:   나왔다("Solar 는 이렇게 표현되는게 맞아?", 2026-09-04).
+MAGNITUDE_MEASUREMENTS = frozenset({
+    'radiation', 'light', 'dli', 'gdd',
+    'precipitation', 'rain', 'snowfall',
+})
+
+#: **원 데이터가 아니라 결과 지표** — 그림에서 위로 올린다.
+#:
+#: 일사·기온·습도는 센서가 잰 것이고, DLI(일사 적분)·GDD(기온 적산)·
+#: VPD(온습도에서 계산)는 그것으로 만든 값이다. 사람이 보고 판단하는 것은
+#: 뒤쪽이라 그쪽을 먼저 보인다(실사용 지적 2026-09-04: "Solar 는 하나의
+#: 데이터라면 DLI 는 데이터를 활용한 결과 지표가 되는 것").
+#:
+#: ⚠ **표의 '주요 수치' 와는 기준이 다르다.** 표는 광합성 우선순위 상위 N개
+#:   (`mark_primary_groups`)를 쓴다 — 표는 "그날 값이 얼마였나" 를 확인하는
+#:   자리라 원 데이터가 먼저이고, 그림은 "어떻게 흘렀나" 를 판단하는 자리라
+#:   지표가 먼저다. 둘 다 사용자가 각각 정한 것이다.
+DERIVED_MEASUREMENTS = ('dli', 'gdd', 'vapor_pressure_deficit')
+
 #: 단위 → `(PPFD 환산계수, 가정이 들어갔는가)`.
 #:
 #: DLI(mol/m²/일)는 PPFD(µmol/m²/s)를 하루 동안 적분한 값이다. 센서가 무엇을
@@ -172,7 +199,7 @@ def ppfd_factor(unit):
 #:   중요한 값을 밀어낸다.
 MEASUREMENT_ORDER = (
     # 1) 광합성 — DLI 는 일사에서 파생한 값이라 바로 뒤에 붙인다.
-    'radiation', 'light', 'dli', 'uvi', 'co2',
+    'radiation', 'light', 'dli', 'gdd', 'uvi', 'co2',
     'temperature', 'humidity', 'vapor_pressure_deficit', 'dewpoint',
     # 2) 물
     'precipitation', 'rain', 'snowfall', 'length',
@@ -289,10 +316,32 @@ def gdd_for_journal(plot, end_date, start_date=None):
     if plot is None or not getattr(plot, 'program_uuid', None):
         return dict(out, reason='no-program')
 
+    # ⚠ **일지 종료일을 그대로 `gdd_accumulated(on=...)` 에 넘기지 않는다.**
+    #   그 함수는 `on`(없으면 `date.today()`)을 자신의 "오늘" 로 삼아
+    #   `days_expected` 를 "오늘까지"만 센다(끝나지 않은 작기를 과대평가하지
+    #   않기 위해서다). 그런데 진행 중인 작기의 일지는 **미래 종료일**을
+    #   갖는다(예정 기간까지 담는 것이 §문서 계약) — 그 미래 날짜를 그대로
+    #   `on` 에 넘기면 함수의 "오늘" 자체가 미래로 밀려, 아직 오지 않은
+    #   날들까지 기대일수에 들어간다.
+    #
+    #   실측(설원6/딸기, 종료일 2026-12-22, 실제로는 9일치 자료뿐):
+    #   `days_expected=118`(작기 시작~2026-12-22) vs `days_counted=9` →
+    #   `coverage_pct=7.6%` → `usable=False`. 작기 도중에 일지를 뽑는 것이
+    #   정상 사용인데, 이 경로로는 진행 중인 작기의 GDD 가 항상 죽는다.
+    #
+    #   실제 "오늘"(구획의 tz 기준)과 문서 종료일 중 **이른 쪽**을 넘긴다 —
+    #   끝난 작기(종료일이 과거)는 원래 종료일 그대로, 진행 중인 작기는
+    #   실제 오늘까지만 기대하게 된다.
+    from aot.utils.device_tz import resolve_location_tz
+    from aot.utils.timekit import as_tz, to_tz, utc_now
+    tz = as_tz(resolve_location_tz(getattr(plot, 'unique_id', None)))
+    real_today = to_tz(utc_now(), tz).date()
+    gdd_on = min(end_date, real_today) if end_date else real_today
+
     program = GeoProgram.query.filter_by(
         unique_id=plot.program_uuid).first()
     try:
-        found = plot_context.gdd_accumulated(plot, program, on=end_date,
+        found = plot_context.gdd_accumulated(plot, program, on=gdd_on,
                                              with_series=True)
     except Exception:
         logger.exception('journal: 적산온도 산출 실패')
@@ -394,6 +443,378 @@ def choose_granularity(start_date, end_date, rows=None, requested=None):
 
 #: 열람 시점에 고를 수 있는 단위. 저장 단위보다 **잘게** 는 볼 수 없다.
 VIEW_GRANULARITIES = ('day', 'week', 'month', 'all')
+
+
+# ── 곡선 목표(Method)의 주야 Δ ─────────────────────────────────────────────
+#
+# 곡선이 걸린 항목은 **저장 시점에** 목표도 Δ도 없이 곡선 이름만 남는다
+# (`delta_for` 의 `'method'` 분기 — 곡선의 '지금 값' 을 그 자리에서 구할 수
+# 없었다). 그런데 그것이 실제로 뜻하는 바는 "견줄 수 없다" 가 아니라 "아직
+# 안 견줬다" 였고, 화면의 `curve: 이름` 은 사용자가 **곡선을 잘 따르고 있다**
+# 로 읽었다. 실측에서 운영 중인 프로그램 넷이 전부 VPD 에 곡선을 걸고 있어,
+# 정교하게 설정한 구획일수록 일지가 그것을 검증하지 못했다.
+#
+# ## 왜 주간/야간으로 가르는가
+#
+# 하루 곡선은 하루 안에서 크게 변한다(오이 VPD: 새벽 0.4 → 정오 1.05). 그것을
+# 일평균 하나로 접어 실측 일평균과 빼면 숫자는 나오지만 뜻이 흐려진다 —
+# 밤에 고습으로 눌린 것과 낮에 건조로 튄 것이 서로를 지운다. 일지는 이미
+# `avg_day`/`avg_night` 를 갖고 있고(일출·일몰로 가른 값), 주야 전용 목표
+# (`when='day'|'night'`)가 그 값으로 편차를 내고 있다 — 곡선도 같은 길을 쓴다.
+#
+# ## 왜 열람 시점인가
+#
+# 저장 스냅샷은 불변이다(§1). 여기서 계산하면 **이 수정 이전에 만들어진
+# 일지도 열기만 하면 Δ가 채워진다** — `fold_buckets`·`stage_sections` 와 같은
+# 성격이다. 저장된 행은 `delta_skipped='method'` 그대로 남고, 화면·내보내기가
+# 보는 사본에만 `target_phases` 가 붙는다.
+
+#: 곡선을 하루 몇 초 간격으로 훑을 것인가. 5분이면 일출·일몰 경계가 한 칸
+#: 안쪽이라 주야 평균이 경계 반올림에 흔들리지 않는다.
+CURVE_SAMPLE_SEC = 300
+
+
+def _journal_date(value):
+    """'YYYY-MM-DD…' → date. 못 읽으면 None."""
+    if not value:
+        return None
+    try:
+        return datetime.strptime(str(value)[:10], '%Y-%m-%d').date()
+    except (ValueError, TypeError):
+        return None
+
+
+def _sun_window(bucket):
+    """버킷의 `sunrise`/`sunset`('HH:MM') → `(일출초, 일몰초)`. 못 구하면 None.
+
+    백야·극야(그날 일출·일몰이 없어 저장 때 비워진 것)와 값이 뒤집힌 경우는
+    가르지 않는다 — 억지로 가르면 하루가 통째로 한쪽에 몰린다(`sun_lookup`).
+    """
+    def _sec(text):
+        try:
+            hh, mm = str(text).split(':')[:2]
+            return int(hh) * 3600 + int(mm) * 60
+        except (AttributeError, TypeError, ValueError):
+            return None
+    rise, set_ = _sec(bucket.get('sunrise')), _sec(bucket.get('sunset'))
+    if rise is None or set_ is None or not (0 <= rise < set_ <= 86400):
+        return None
+    return rise, set_
+
+
+def _curve_profile(handler, weeks, tz, ref_date, start_dt=None):
+    """곡선 하나 → 하루치 값 목록(`CURVE_SAMPLE_SEC` 간격, 현지 벽시계 순).
+
+    각 칸의 **중앙 시각**으로 평가한다 — 경계에서 재면 첫 칸과 마지막 칸이
+    같은 끝점을 두 번 세게 된다.
+
+    `start_dt` 는 **재배 시작 시각**이다(구획의 `started_on`). 주차를 직접
+    받는 곡선에서는 쓰이지 않지만, 주차 인자를 받지 않는 종류(사인·베지어·
+    기간형)는 이것으로 경과를 센다 — 안 넘기면 `AbstractMethod` 가
+    1900-01-01 을 시작으로 잡아 **엉뚱한 지점의 곡선 값을 목표로 적는다**.
+    건너뛰는 것보다 나쁜 실패라, 폴백 경로에도 반드시 넘긴다
+    (구획 모달 `coordinator_plot.plot_curve_targets` 도 그렇게 한다).
+
+    `weeks` 는 **소수 재배 주차**다 — 그날 현지 정오 기준으로 한 번 세어
+    (`weeks_elapsed_at`) 하루 전체에 쓴다. 제어·구획 모달과 같은 기준이다.
+
+    처음에는 정수 주차를 썼다. `DailyMultiPointMethod` 가 주차를 정수 층으로
+    캐시해(`_resolved_week_floor`) 소수를 넘기면 그 층에서 처음 물어본 소수의
+    곡선이 그 주 내내 재사용됐기 때문인데, 그 캐시 자체가 결함이었다(같은
+    구획·같은 순간의 답이 호출 순서에 따라 달라졌다). 캐시를 소수 주차로
+    바로잡았으므로 이제 소수를 그대로 넘긴다.
+
+    정오를 기준점으로 삼는 이유는 주차가 하루 안에서도 1/7 주씩 흐르기
+    때문이다 — 주차 보간이 구간 안에서 선형이라, 정오 값이 곧 그날 평균이다.
+    (하루 288 표본이 같은 주차를 공유하므로 핸들러 캐시도 그대로 맞는다.)
+    """
+    base = datetime.combine(ref_date, dtime.min)
+    if start_dt is None:
+        start_dt = base
+    out = []
+    for i in range(86400 // CURVE_SAMPLE_SEC):
+        naive = base + timedelta(seconds=i * CURVE_SAMPLE_SEC
+                                 + CURVE_SAMPLE_SEC // 2)
+        try:
+            aware = tz.localize(naive)
+        except AttributeError:
+            aware = naive.replace(tzinfo=tz)
+        stamp = aware.timestamp()
+        try:
+            value, ended = handler.calculate_setpoint(
+                stamp, method_start_time=start_dt,
+                weeks_elapsed=weeks, facility_tz=tz)
+        except TypeError:
+            # 주차·시간대를 받지 않는 곡선 종류(사인·베지어 등). **시작
+            # 시각은 그때도 넘긴다** — 위 독스트링 참조.
+            value, ended = handler.calculate_setpoint(
+                stamp, method_start_time=start_dt)
+        except Exception:                                   # noqa: BLE001
+            return None
+        out.append(None if (ended or value is None) else float(value))
+    return out if any(v is not None for v in out) else None
+
+
+def _phase_means(profile, sunrise_sec, sunset_sec):
+    """하루치 곡선 → `(주간 평균, 야간 평균)`. 값이 없는 쪽은 None."""
+    day, night = [], []
+    for i, value in enumerate(profile or []):
+        if value is None:
+            continue
+        mid = i * CURVE_SAMPLE_SEC + CURVE_SAMPLE_SEC // 2
+        (day if sunrise_sec <= mid < sunset_sec else night).append(value)
+    return ((sum(day) / len(day)) if day else None,
+            (sum(night) / len(night)) if night else None)
+
+
+def _merge_phases(boxes):
+    """여러 버킷·센서의 `target_phases` → 하나로. 없으면 None.
+
+    목표는 평균(접힌 구간 안에서 주차가 넘어가면 곡선 값도 바뀐다), Δ 는
+    평균과 **범위**를 함께 낸다 — 범위를 빼면 접기가 이탈의 폭을 감춘다.
+    """
+    out = {}
+    for phase in ('day', 'night'):
+        targets = [b[phase]['target'] for b in boxes
+                   if (b.get(phase) or {}).get('target') is not None]
+        deltas = [b[phase]['delta'] for b in boxes
+                  if (b.get(phase) or {}).get('delta') is not None]
+        if not targets and not deltas:
+            continue
+        box = {}
+        if targets:
+            box['target'] = _round(sum(targets) / len(targets))
+            box['target_varies'] = (max(targets) != min(targets))
+        if deltas:
+            box['delta'] = _round(sum(deltas) / len(deltas))
+            box['delta_min'] = _round(min(deltas))
+            box['delta_max'] = _round(max(deltas))
+        out[phase] = box
+    return out or None
+
+
+def with_curve_deltas(journal_data):
+    """저장 스냅샷 → 곡선 목표의 주야 목표·Δ가 붙은 **열람용 사본**.
+
+    바뀌는 것이 없으면 받은 것을 그대로 돌려준다(사본을 만들지 않는다).
+    붙는 자리는 곡선 목표가 걸린 환경 행의 `target_phases` 다:
+
+    ```
+    {'day':   {'target': 0.79, 'delta': +0.02},
+     'night': {'target': 0.44, 'delta': -0.29}}
+    ```
+
+    `delta_skipped` 는 `'method'`(견주지 않았다) 에서 `'curve-phase'`(주야로
+    나눠 견줬다) 로 바뀐다. **곡선 이름(`follows_curve`)은 지우지 않는다** —
+    어느 곡선의 목표인지가 숫자와 함께 있어야 사람이 되짚을 수 있다.
+
+    ⚠ 실패하면 **받은 것을 그대로 돌려준다.** 곡선 행이 지워졌거나 주차를
+      구할 수 없는 것은 문서를 못 열 이유가 아니다(500 으로 떨어지면 그 일지는
+      통째로 못 본다).
+    """
+    try:
+        return _with_curve_deltas(journal_data)
+    except Exception:                                       # noqa: BLE001
+        logger.exception('journal: 곡선 목표 Δ 계산 실패')
+        return journal_data
+
+
+def _with_curve_deltas(journal_data):
+    from aot.utils.method import load_method_handler, local_noon, weeks_elapsed_at
+    from aot.utils.timekit import as_tz
+
+    data = journal_data or {}
+    buckets = data.get('buckets') or []
+    stages = data.get('stages') or []
+    if not buckets or not stages:
+        return journal_data
+
+    # 곡선은 **프로그램 수준**이다(`targets_methods`) — 단계마다 달라지지
+    # 않으므로 측정값 하나에 곡선 하나로 색인한다.
+    curves = {}
+    for stage in stages:
+        for target in (stage.get('targets') or []):
+            if (target.get('source') != 'method'
+                    or not target.get('method_uuid')
+                    # 센서가 없으면 곡선이 있어도 견줄 것이 없다.
+                    or target.get('observable') is False
+                    # 적산 목표(DLI 등)를 순간값 평균과 빼면 차원이 다르다.
+                    or target.get('shape') == 'daily'):
+                continue
+            key = str(target.get('measurement') or '').strip().lower()
+            if key:
+                curves.setdefault(key, target)
+    if not curves:
+        return journal_data
+
+    # 재배 주차의 기준일 — 단계 일정이 구획의 `started_on` 에서 만들어지므로
+    # 첫 단계의 시작일이 곧 그 날이다(스냅샷에 별도로 담겨 있지 않다).
+    started = _journal_date(stages[0].get('starts_on'))
+    if started is None:
+        return journal_data
+
+    tz = as_tz((data.get('target') or {}).get('tz_name'))
+    handlers = {}
+    profiles = {}
+    changed = False
+    out_buckets = []
+
+    for bucket in buckets:
+        rows = bucket.get('env') or []
+        day = _journal_date(bucket.get('key') or bucket.get('date_label'))
+        window = _sun_window(bucket)
+        if day is None or window is None:
+            out_buckets.append(bucket)
+            continue
+        weeks = weeks_elapsed_at(started, when=local_noon(day, tz), tz=tz)
+        if weeks is None:
+            out_buckets.append(bucket)
+            continue
+
+        new_rows = []
+        touched = False
+        for row in rows:
+            meas = str(row.get('measurement') or '').strip().lower()
+            target = curves.get(meas)
+            # ⚠ **대표(`delta_skipped == 'method'`)만 보지 않는다.**
+            #   `attach_targets` 는 후보 중 **첫 것**을 대표로 삼으므로,
+            #   곡선이 `temp_night` 에 걸리고 `temp_day` 가 고정값이면 대표는
+            #   고정값이 되고 이 행은 통째로 건너뛰어졌다 — 그 배치에서는 곡선
+            #   Δ 복원이 조용히 적용되지 않았다.
+            #
+            #   대신 "이 행에 목표가 붙기는 했는가" 를 본다. 붙었다면
+            #   `attach_targets` 가 그 measurement 의 **후보 전부**를 붙인
+            #   것이므로 곡선도 그 안에 있다. 아무것도 안 붙은 행(같은 값을
+            #   현장 센서도 재서 목표에서 빠진 기상대 행 등)은 그대로 둔다 —
+            #   빠진 데는 이유가 있다.
+            has_target = (row.get('target') is not None
+                          or row.get('delta_skipped') is not None
+                          or bool(row.get('targets_eval')))
+            if target is None or not has_target:
+                new_rows.append(row)
+                continue
+
+            uuid = target['method_uuid']
+            if uuid not in handlers:
+                handlers[uuid] = load_method_handler(uuid)
+            handler = handlers[uuid]
+            if handler is None:
+                new_rows.append(row)
+                continue
+            cache_key = (uuid, weeks)
+            if cache_key not in profiles:
+                profiles[cache_key] = _curve_profile(
+                    handler, weeks, tz, day,
+                    start_dt=datetime.combine(started, dtime.min))
+            profile = profiles[cache_key]
+            if profile is None:
+                new_rows.append(row)
+                continue
+
+            day_target, night_target = _phase_means(profile, *window)
+            when = target.get('when')
+            if when == 'day':
+                night_target = None
+            elif when == 'night':
+                day_target = None
+
+            phases = {}
+            for phase, value, measured in (
+                    ('day', day_target, row.get('avg_day')),
+                    ('night', night_target, row.get('avg_night'))):
+                if value is None:
+                    continue
+                box = {'target': _round(value)}
+                # 실측이 없는 쪽은 목표만 적는다 — 목표를 함께 지우면
+                # "그 시간대엔 목표가 없다" 로 읽힌다.
+                if measured is not None:
+                    box['delta'] = round(float(measured) - float(value), 2)
+                phases[phase] = box
+            if not phases:
+                new_rows.append(row)
+                continue
+
+            # 세는 쪽(`target_drift`)이 보는 자리에도 남긴다 — 거기서는
+            # `delta_skipped` 인 행을 분모에서 빼므로, 이것을 안 남기면
+            # 곡선이 걸린 항목(운영 중인 프로그램 넷의 VPD)이 이탈 요약에서
+            # 통째로 빠진다. 주야는 `when` 목표와 같은 모양으로 낸다.
+            #
+            # ⚠ **덮어쓰지 않고 갈아 끼운다.** 한 행에는 그 measurement 의
+            #   후보가 전부 실려 있다(온도라면 주간·야간 둘). 통째로 바꾸면
+            #   곡선이 아닌 목표가 이탈 요약에서 사라진다 — 곡선을 `temp_day`
+            #   에만 걸고 `temp_night` 는 고정값으로 둔 프로그램에서 야간온도
+            #   이탈이 통째로 없어졌다. 바꾸는 것은 **이 곡선 목표의 자리**
+            #   하나뿐이고 나머지는 그대로 둔다.
+            evals = [e for e in (row.get('targets_eval') or [])
+                     if not (e.get('label') == target.get('label')
+                             and (e.get('when') or None)
+                             == (target.get('when') or None))]
+            evals += [{'label': target.get('label'),
+                       'when': ph, 'value': box.get('target'),
+                       'delta': box.get('delta'), 'delta_skipped': None}
+                      for ph, box in phases.items()]
+            new_rows.append(dict(row, target_phases=phases,
+                                 targets_eval=evals,
+                                 delta_skipped='curve-phase'))
+            touched = True
+
+        if touched:
+            changed = True
+            out_buckets.append(dict(bucket, env=new_rows))
+        else:
+            out_buckets.append(bucket)
+
+    return dict(data, buckets=out_buckets) if changed else journal_data
+
+
+#: 주야 표시의 말머리. 이미 쓰이는 msgid 라 새 번역이 필요 없다
+#: (`routes_function.py` — 16개 로케일에 이미 번역돼 있다).
+_PHASE_LABELS = (('day', 'Daytime'), ('night', 'Nighttime'))
+
+#: 같은 것을 `when` 값으로 찾는 표(이탈 요약이 쓴다).
+_PHASE_LABEL_BY_WHEN = dict(_PHASE_LABELS)
+
+
+def _phase_text(phases, pick):
+    """`target_phases` → '주간 0.79 · 야간 0.44' 같은 한 줄. 없으면 ''."""
+    parts = []
+    for phase, label in _PHASE_LABELS:
+        box = (phases or {}).get(phase)
+        if not box:
+            continue
+        text = pick(box)
+        if text:
+            parts.append('%s %s' % (_gettext_safe(label), text))
+    return ' · '.join(parts)
+
+
+def phase_target_text(phases):
+    """주야 목표 한 줄. 접힌 구간에서 값이 갈리면 평균이고, 그 사실은 Δ 범위가 말한다."""
+    return _phase_text(phases, lambda box: (
+        '' if box.get('target') is None else str(box['target'])))
+
+
+def phase_delta_text(phases):
+    """주야 Δ 한 줄. 접힌 구간은 범위(`min ~ max`)로 낸다.
+
+    부호를 **항상 붙인다** — 화면의 다른 Δ 칸과 같은 규칙이다(`'%+g'`).
+    Δ 는 방향이 값의 절반이라, 부호가 없으면 넘친 것과 모자란 것이 같아 보인다.
+    """
+    def _sign(value):
+        try:
+            return '%+g' % float(value)
+        except (TypeError, ValueError):
+            return str(value)
+
+    def _one(box):
+        low, high = box.get('delta_min'), box.get('delta_max')
+        if low is not None and high is not None and low != high:
+            return '%s ~ %s' % (_sign(low), _sign(high))
+        value = box.get('delta')
+        if value is None:
+            value = low if low is not None else high
+        return '' if value is None else _sign(value)
+    return _phase_text(phases, _one)
 
 
 def fold_buckets(buckets, to='week', granularity='day'):
@@ -536,14 +957,51 @@ def _merge_bucket_group(box, to):
             avg = sum(v * max(n, 1) for v, n in pairs) / weight
 
         samples = sum(r.get('samples') or 0 for r in members)
-        expected = sum(r.get('expected') or 0 for r in members) or None
+        # ⚠ **결측일도 분모에 넣는다.** `members` 는 이 (장치·채널·측정값)
+        #   행이 **있었던 날만** 모은 것이다 — 그 채널이 하루 통째로 안
+        #   잡힌 날은 애초에 `members` 에 들지 않으므로, `expected` 를
+        #   `members` 만으로 더하면 그 날이 분모에서도 사라져 커버리지가
+        #   실제보다 좋게 나온다. 실측(대선 8/15 주 접기): 7일 중 2일이
+        #   이 채널에서 통째로 빠졌는데 분모가 5일치(120)로만 잡혀
+        #   `coverage 0.858` 이 났다(실제로는 61%에 가깝다). 하루치 기대
+        #   표본수는 있는 날들의 평균으로 어림한다 — 정확할 필요는 없다,
+        #   없는 것보다 사실에 가까우면 된다.
+        expected_vals = [r.get('expected') for r in members
+                        if r.get('expected')]
+        expected = sum(expected_vals) if expected_vals else None
+        missing_days = len(days) - len(members)
+        if expected and missing_days > 0:
+            per_day = sum(expected_vals) / len(expected_vals)
+            expected += round(per_day * missing_days)
         coverage = round(samples / expected, 3) if expected else None
         usages = [r['usage']['amount'] for r in members
                   if (r.get('usage') or {}).get('amount') is not None]
+
+        # ⚠ **주간·야간 평균도 다시 계산해야 한다.** `dict(members[0])` 은
+        #   첫날의 avg_day/avg_night 를 그대로 물고 오는데, 그 뒤로 갱신하는
+        #   코드가 없었다 — 접은 구간의 전체 평균은 여러 날을 가중해 다시
+        #   구하면서 주·야 평균은 첫날 하루 것으로 남으니, 실측(대선
+        #   8/22~8/28 주간 접기)에서 전체 평균(0.07)이 주·야 평균(0.38 /
+        #   0.30) 둘보다 작게 나오는 — 산술적으로 있을 수 없는 — 결과가
+        #   났다. 하루 단위로 주/야 각각의 표본수가 따로 저장돼 있지 않으므로
+        #   그날의 전체 `samples` 를 가중치로 쓴다 — 주·야 비율이 날마다
+        #   다르면 오차가 있지만, 첫날 값만 남기는 것보다는 사실에 가깝다.
+        #   원형(풍향) 채널은 애초에 주·야를 가르지 않으므로(`_circular_
+        #   channel_stats` 참조) 항상 `None` 이다.
+        def _weighted_phase_avg(field):
+            phase_pairs = [(r[field], r.get('samples') or 0) for r in members
+                          if r.get(field) is not None]
+            if not phase_pairs:
+                return None
+            weight = sum(max(n, 1) for _v, n in phase_pairs)
+            return sum(v * max(n, 1) for v, n in phase_pairs) / weight
+
         base.update({
             'min': _round(min(mins)) if mins else None,
             'max': _round(max(maxs)) if maxs else None,
             'avg': _round(avg),
+            'avg_day': _round(_weighted_phase_avg('avg_day')),
+            'avg_night': _round(_weighted_phase_avg('avg_night')),
             'circular': circular,
             'samples': samples,
             'expected': expected,
@@ -566,9 +1024,27 @@ def _merge_bucket_group(box, to):
                                                if avg is not None else None))
 
         deltas = [r['delta'] for r in members if r.get('delta') is not None]
-        base['delta'] = _round(sum(deltas) / len(deltas)) if deltas else None
+        # ⚠ `avg` 와 같은 가중치(그날의 표본수)로 평균한다 — 단순 평균이면
+        #   표본이 하루뿐인 날과 온종일인 날이 같은 무게를 갖는다.
+        delta_pairs = [(r['delta'], r.get('samples') or 0) for r in members
+                      if r.get('delta') is not None]
+        if delta_pairs:
+            dweight = sum(max(n, 1) for _v, n in delta_pairs)
+            base['delta'] = _round(
+                sum(v * max(n, 1) for v, n in delta_pairs) / dweight)
+        else:
+            base['delta'] = None
         base['delta_min'] = _round(min(deltas)) if deltas else None
         base['delta_max'] = _round(max(deltas)) if deltas else None
+        # 곡선 목표의 주야 Δ 도 같이 접는다. `dict(members[0])` 이 첫날 것을
+        # 들고 오므로 **덮어써야 한다** — 안 그러면 접은 구간이 첫날의 목표를
+        # 그 구간 전체의 것으로 말한다(피복 근거와 같은 종류의 어긋남이다).
+        phases = _merge_phases([r['target_phases'] for r in members
+                                if r.get('target_phases')])
+        if phases:
+            base['target_phases'] = phases
+        else:
+            base.pop('target_phases', None)
         env_rows.append(base)
 
     # ── 제어: 장치별 가동시간 합 ─────────────────────────────────────────
@@ -711,7 +1187,8 @@ def _channel_info(dm_row):
 
 
 def daily_channel_stats(dm_row, start_str, end_str, tz,
-                        granularity='day', bucket_sec=3600, sun_fn=None):
+                        granularity='day', bucket_sec=3600, sun_fn=None,
+                        stats=('min', 'max', 'mean')):
     """한 채널의 구간 전체 → 버킷별 min/max/avg.
 
     ```
@@ -723,6 +1200,13 @@ def daily_channel_stats(dm_row, start_str, end_str, tz,
     쿼리는 **채널당 정확히 3회**이고 기간과 무관하다(min·max·mean). 날짜마다
     한 번씩 묻는 구조로 만들면 두 달치가 180회가 된다 — `_daily_extremes` 가
     같은 이유로 창 집계를 쓴다.
+
+    `stats` 로 그중 일부만 물을 수 있다. 극값을 안 쓰는 호출부(목표 이탈만
+    세는 `recent_target_drift`)가 조회를 셋에서 하나로 줄이는 자리다 —
+    **계산 규칙은 그대로 두고 묻는 것만 줄인다**(다른 집계 경로를 새로
+    만들면 같은 구획을 두고 화면과 AI 가 다른 숫자를 말하게 된다).
+    안 물은 통계는 `None` 이고, 그것이 "값이 없다" 와 같은 뜻이라 화면이
+    `min`/`max` 를 비운 채로 그린다(원형 채널이 이미 그렇게 동작한다).
 
     접는 규칙: min 은 시간별 최소의 최소, max 는 최대의 최대(둘 다 **정확**),
     avg 는 시간평균의 평균(**근사** — 모듈 머리말의 대가 1).
@@ -769,7 +1253,7 @@ def daily_channel_stats(dm_row, start_str, end_str, tz,
         sunrise, sunset, _hours = found
         return 'day' if sunrise <= local < sunset else 'night'
 
-    for fn in ('min', 'max', 'mean'):
+    for fn in stats:
         try:
             tables = query_string(
                 unit, dm_row.device_id, channel=channel,
@@ -829,79 +1313,112 @@ def daily_channel_stats(dm_row, start_str, end_str, tz,
             'dli_assumed': light_assumed}
 
 
-def _wanted_measurement(dm_row, wanted):
+def _wanted_measurement(dm_row, wanted, scope=None):
     """이 채널을 일지에 실을 것인가 → bool.
 
     `wanted` 가 `None` 이면 **기본 규칙**(진단 채널만 뺀다), 집합이면 그 안에
     있는 것만. 판정 기준은 `_channel_info` 의 **표시 이름**이다 — 환산 채널은
     `return_measurement_info` 가 measurement 를 비우므로 원본 컬럼을 봐야
     한다(그러지 않으면 환산된 온도가 목록에서 통째로 빠진다).
+
+    `scope`(`'indoor'`|`'outdoor'`)를 주면 `'<scope>:<name>'` 형태의 항목도
+    맞는 것으로 본다. **같은 이름이 실내·기상 양쪽에 있을 때 이것이 없으면
+    한쪽을 고른 선택이 다른 쪽까지 함께 켜고 끈다** — 온도가 실내 센서와
+    기상대에 둘 다 있는 구획에서, 기상 쪽 온도를 빼려고 체크를 풀면 실내
+    온도까지 같이 빠졌다(사용자 실측 보고, 2026-09-03). 평문 이름
+    (`'temperature'`)은 그대로 두 스코프 모두에 맞는다 — 화면이 스코프를
+    가르지 않는 대상(zone/site, 실내뿐이거나 기상뿐인 구획)이 예전처럼
+    동작하게 하기 위한 하위호환이다.
     """
     name = _channel_info(dm_row)[2]
     if not name:
         return False
     if wanted is None:
         return name not in DIAGNOSTIC_MEASUREMENTS
-    return name in wanted
+    if name in wanted:
+        return True
+    return bool(scope) and (scope + ':' + name) in wanted
 
 
-def measurements_are_weather_only(target_type, target_id):
-    """이 대상이 참조하는 센서가 **기상대뿐인가**.
-
-    화면 문구를 고르는 데 쓴다 — 실내 센서가 하나도 없는 구획에서 "포함할
-    측정값" 이라고만 하면 어디서 재는 값인지 알 수 없다. 기상대뿐이라면
-    그렇게 말하는 편이 정확하다.
-
-    구획이 아니면 판정하지 않는다(False) — 대지·구역의 센서 집합은 실내외가
-    섞인 것이 보통이라 이 구분이 뜻을 갖지 않는다.
-    """
-    if target_type != 'plot':
-        return False
-    try:
-        target_row = resolve_target_row(target_type, target_id)
-        indoor, outdoor = _plot_sensor_ids(target_row)
-    except Exception:
-        return False
-    return bool(outdoor) and not indoor
-
-
-def available_measurements(target_type, target_id):
-    """이 대상이 실제로 재는 measurement 목록 → 화면의 선택지.
+def available_measurement_groups(target_type, target_id):
+    """이 대상이 실제로 재는 measurement 목록 → 화면의 선택지, **스코프별로**.
 
     ```
-    [{'key', 'label', 'diagnostic': bool, 'channels': int, 'default': bool}]
+    [{'scope': 'indoor'|'outdoor'|None,
+      'measurements': [{'key', 'label', 'diagnostic': bool,
+                        'channels': int, 'default': bool}]}]
     ```
 
     **없는 것을 고르게 하지 않는다** — 이 대상에 붙은 센서가 실제로 내는 것만
     낸다. 전체 어휘(`MEASUREMENTS`)를 그대로 보여주면 고를 수 있는 것과 값이
     나오는 것이 달라져, 사용자는 골랐는데 빈 문서를 받는다.
+
+    ## 왜 스코프로 가르는가
+
+    구획에 실내 센서와 기상대가 **둘 다** 있으면 같은 이름(`temperature`)이
+    양쪽에 있을 수 있다. 하나의 평문 목록으로 내면 체크박스도 하나뿐이라
+    "기상 쪽 온도만 빼고 싶다" 를 표현할 수 없다 — 체크를 풀면 실내 온도까지
+    함께 빠진다(`_wanted_measurement` 독스트링의 실측 사고). 그래서 둘 다
+    있을 때만 `key` 를 `'<scope>:<name>'` 으로 갈라 두 그룹을 낸다. 한쪽만
+    있거나(기상뿐인 구획·실내뿐인 구획) 대상이 zone/site 면 가를 이유가
+    없으므로 평문 이름 그대로 **한 그룹**을 낸다 — 화면·저장된 선택값이
+    예전과 같게 남는다.
     """
     from aot.databases.models import DeviceMeasurements
 
     target_row = resolve_target_row(target_type, target_id)
     sensor_ids, _actuators, _unassigned, _area = resolve_devices(
         target_type, target_row)
-    ids = [d for d in (sensor_ids or []) if d]
+    ids = {d for d in (sensor_ids or []) if d}
     if not ids:
         return []
 
-    counts = {}
+    outdoor_ids = set()
+    if target_type == 'plot':
+        try:
+            _indoor, outdoor_ids = _plot_sensor_ids(target_row)
+        except Exception:
+            outdoor_ids = set()
+        outdoor_ids &= ids
+    split = bool(outdoor_ids) and bool(ids - outdoor_ids)
+
+    counts = {}   # scope(또는 None) -> {name: 채널 수}
     for dm in DeviceMeasurements.query.filter(
             DeviceMeasurements.device_id.in_(ids)).all():
         name = _channel_info(dm)[2]
-        if name:
-            counts[name] = counts.get(name, 0) + 1
+        if not name:
+            continue
+        scope = ('outdoor' if dm.device_id in outdoor_ids else 'indoor') \
+                if split else None
+        counts.setdefault(scope, {})
+        counts[scope][name] = counts[scope].get(name, 0) + 1
 
-    out = []
-    for key in sorted(counts):
-        diagnostic = key in DIAGNOSTIC_MEASUREMENTS
-        out.append({'key': key,
-                    'label': measurement_label(key),
-                    'diagnostic': diagnostic,
-                    'channels': counts[key],
-                    # 진단 채널은 기본으로 꺼 둔다 — 켜는 것은 사람의 선택이다.
-                    'default': not diagnostic})
-    return out
+    def _items(scope, names):
+        out = []
+        for name in sorted(names):
+            diagnostic = name in DIAGNOSTIC_MEASUREMENTS
+            key = ('%s:%s' % (scope, name)) if scope else name
+            out.append({'key': key,
+                        'label': measurement_label(name),
+                        'diagnostic': diagnostic,
+                        'channels': names[name],
+                        # 진단 채널은 기본으로 꺼 둔다 — 켜는 것은 사람의 선택.
+                        'default': not diagnostic})
+        return out
+
+    if not split:
+        return [{'scope': None, 'measurements': _items(None, counts.get(None) or {})}]
+
+    groups = []
+    # 실내를 기상보다 앞에 둔다 — 구획을 볼 때 먼저 궁금한 것은 안에서 무엇을
+    # 재는지다.
+    if counts.get('indoor'):
+        groups.append({'scope': 'indoor',
+                       'measurements': _items('indoor', counts['indoor'])})
+    if counts.get('outdoor'):
+        groups.append({'scope': 'outdoor',
+                       'measurements': _items('outdoor', counts['outdoor'])})
+    return groups
 
 
 def _circular_channel_stats(dm_row, channel, unit, measurement,
@@ -1027,7 +1544,8 @@ def _circular_channel_stats(dm_row, channel, unit, measurement,
 
 def env_channel_series(device_ids, start_str, end_str, tz,
                        granularity='day', bucket_sec=3600,
-                       measurements=None, outdoor_ids=None, sun_fn=None):
+                       measurements=None, outdoor_ids=None, sun_fn=None,
+                       want_stats=('min', 'max', 'mean')):
     """센서 장치 id 목록 → 채널별 시계열 + 실패 목록.
 
     `measurements` 가 주어지면 **그 목록의 measurement 만** 조회한다(없으면
@@ -1062,11 +1580,17 @@ def env_channel_series(device_ids, start_str, end_str, tz,
 
     series, errors = [], []
     for dm in rows:
-        if not _wanted_measurement(dm, wanted):
+        # 스코프는 `_wanted_measurement` 보다 **먼저** 정한다 — 실내·기상에
+        # 같은 이름의 채널이 있을 때 `'outdoor:temperature'` 같은 스코프
+        # 선택을 이 판정에서 봐야, 기상 온도만 빼는 선택이 실내 온도까지
+        # 함께 빼지 않는다(모듈 위 독스트링의 실측 사고).
+        scope = 'outdoor' if dm.device_id in (outdoor_ids or set()) else 'indoor'
+        if not _wanted_measurement(dm, wanted, scope=scope):
             continue
         stats = daily_channel_stats(dm, start_str, end_str, tz,
                                     granularity=granularity,
-                                    bucket_sec=bucket_sec, sun_fn=sun_fn)
+                                    bucket_sec=bucket_sec, sun_fn=sun_fn,
+                                    stats=want_stats)
         if stats is None:
             errors.append({'device_id': dm.device_id,
                            'channel': getattr(dm, 'channel', None),
@@ -1082,9 +1606,8 @@ def env_channel_series(device_ids, start_str, end_str, tz,
         stats['channel_name'] = (getattr(dm, 'name', None) or '').strip() or None
         # 실외(기상)인가. **실내 값과 절대 합치지 않기 위한 표식**이다 —
         # 기상대도 온·습도를 내므로 표시가 없으면 같은 measurement 로 묶여
-        # 구획의 온도와 외기가 한 줄이 된다.
-        stats['scope'] = ('outdoor' if dm.device_id in (outdoor_ids or set())
-                          else 'indoor')
+        # 구획의 온도와 외기가 한 줄이 된다. 위에서 이미 정한 것을 그대로 쓴다.
+        stats['scope'] = scope
         series.append(stats)
         time.sleep(QUERY_PACING_SEC)
     return series, errors
@@ -1170,6 +1693,63 @@ def delta_for(target, avg, avg_day=None, avg_night=None):
         return None, 'no-reading'
 
 
+def _unobservable_targets(targets, env_rows):
+    """단계 목표 중 **정말로 잴 수 없는 것**만 → list.
+
+    저장된 `observable` 이 `False` 라도, 그 measurement 의 행이 이 기간에
+    실제로 있으면 잰 것이다 — 그때는 목록에서 뺀다. 판정이 틀렸던 이력이
+    있어(동의 키 미고려·기상대 제외) 저장값을 그대로 믿지 않는다.
+    """
+    from aot.config_devices_units import measurement_aliases
+
+    have = {str(r.get('measurement') or '') for r in (env_rows or [])}
+    out = []
+    for t in journal_target_view(targets):
+        if t.get('observable') is not False:
+            continue
+        keys = measurement_aliases(t.get('measurement'))
+        if any(k in have for k in keys):
+            continue
+        out.append(t)
+    return out
+
+
+def journal_target_view(targets):
+    """프로그램의 목표 선언 → **일지가 견줄 수 있는 모양**(새 목록).
+
+    프로그램은 목표의 `measurement` 에 **원천 채널**을 적는다 — DLI 항목이
+    `measurement='radiation'`, `shape='daily'` 인 것이 그 예다(`program_io.
+    _FIXED_TARGET_DEFS` 주석: "DLI 는 radiation 의 일적산이라 순간값과 같은
+    축에 놓으면 안 된다"). 선언으로서는 옳다: 그 값을 재는 센서가 무엇인지
+    말하고 있다.
+
+    문제는 **일지가 그것을 그대로 견주려 한다는 것**이다. `attach_targets` 가
+    measurement 로 맞추므로 그 목표는 일사 행(W/m²)에 붙고, `delta_for` 가
+    `daily-shape` 로 비교를 막는다 — 단계마다 DLI 를 채워도 일지에는 Δ 가
+    영영 나오지 않았다(실사용 점검 2026-09-04). 정작 Δ 가 나오던 DLI 는
+    **프로그램 수준** `photosynthesis.dli_target` 이라는 다른 경로였다.
+
+    여기서 하는 일은 하나뿐이다: **하루 적산 목표는 하루 적산 행(`dli`)에
+    견주게 한다.** 일지의 DLI 행은 이미 mol/m²/d 로 적분된 값이라 차원이
+    맞고, 그래서 `shape` 도 떼어 낸다(붙여 두면 `delta_for` 가 다시 막는다 —
+    `photosynthesis_targets()` 가 같은 이유로 처음부터 안 붙인다).
+
+    ⚠ **원본을 고치지 않는다**(사본을 낸다). 프로그램의 선언은 프로그램의
+      것이고, 이것은 일지의 해석이다.
+    """
+    from aot.config_devices_units import measurement_aliases
+
+    out = []
+    for t in (targets or []):
+        item = dict(t or {})
+        meas = str(item.get('measurement') or '')
+        if item.get('shape') == 'daily' and meas in LIGHT_MEASUREMENTS:
+            item['measurement'] = 'dli'
+            item.pop('shape', None)
+        out.append(item)
+    return out
+
+
 def attach_targets(env_rows, targets):
     """한 버킷의 환경 행들에 그 시기의 목표를 붙인다(제자리 수정) → env_rows.
 
@@ -1184,9 +1764,24 @@ def attach_targets(env_rows, targets):
         if m:
             by_meas.setdefault(m, []).append(t)
 
+    # 현장(비-기상대) 센서가 있는 measurement 집합. 있으면 기상대 행은 그
+    # measurement 의 목표에서 뺀다(아래 분기 참조) — "실내/실외" 가 아니라
+    # "현장 센서 vs 기상대 센서" 로 가르는 것이 노지에도 맞는 구분이다.
+    indoor_measures = {str(r.get('measurement') or '').strip().lower()
+                       for r in env_rows if r.get('scope') != 'outdoor'}
+
     for row in env_rows:
-        cands = by_meas.get(str(row.get('measurement') or '').strip().lower())
-        if not cands:
+        meas = str(row.get('measurement') or '').strip().lower()
+        cands = by_meas.get(meas)
+        # ⚠ **기상대 값에는 재배 목표를 함부로 붙이지 않는다.** 목표는 작물이
+        #   자라는 자리(현장 센서)의 값과 견주는 것이다 — 같은 measurement 를
+        #   재는 현장 센서가 이 버킷에 있으면 기상대 행은 그 목표·Δ 에서
+        #   뺀다. 실측(설원6/딸기): 기상대 습도 평균 87.83% 옆에 재배 목표
+        #   65%·Δ 22.83 이 그대로 붙어 있었다. 다만 **노지처럼 기상대뿐인
+        #   구획**(대선/콩 등)에서는 기상대가 곧 재배 환경이므로 그대로
+        #   붙인다 — 그래서 "현장 센서가 이 버킷에 없을 때만" 이다.
+        if not cands or (row.get('scope') == 'outdoor'
+                         and meas in indoor_measures):
             row['target'] = None
             row['delta'] = None
             row['delta_skipped'] = None
@@ -1196,6 +1791,21 @@ def attach_targets(env_rows, targets):
         delta, skipped = delta_for(t, row.get('avg'),
                                    avg_day=row.get('avg_day'),
                                    avg_night=row.get('avg_night'))
+        # ⚠ **후보가 여럿일 수 있다** — 온도는 주간·야간 목표가 따로다.
+        #   표는 대표 하나만 보이면 되지만, 세는 쪽(`target_drift`)이 첫
+        #   후보만 보면 **야간 목표는 존재하지 않는 것이 된다**(실사용
+        #   점검 2026-09-04: 야간온도가 78일 중 78일 목표를 넘겼는데 문서
+        #   어디에도 그 사실이 없었다). 대표는 그대로 두고 전부를 따로 남긴다.
+        evals = []
+        for cand in cands:
+            c_delta, c_skipped = delta_for(cand, row.get('avg'),
+                                           avg_day=row.get('avg_day'),
+                                           avg_night=row.get('avg_night'))
+            evals.append({'label': cand.get('label'),
+                          'when': cand.get('when'),
+                          'value': cand.get('value'),
+                          'delta': c_delta, 'delta_skipped': c_skipped})
+        row['targets_eval'] = evals
         row['target'] = t.get('value')
         row['target_label'] = t.get('label')
         row['delta'] = delta
@@ -1576,7 +2186,21 @@ def note_scope_for_target(target_type, target_row, device_ids=None):
              'polygon': None, 'gps_skipped': None}
 
     if target_type == 'plot':
-        # 구획에 자손은 없다 — 노트는 그 GeoPlot 행에 직접 붙는다.
+        # 구획에는 **계층상의** 자손이 없다(`descendant_target_ids` 가 구획으로
+        # 내려가지 않는다). 그래서 예전에는 여기를 비워 두었고, 장치에 붙인
+        # 노트는 **좌표가 있을 때만** 구획 일지에 들어왔다.
+        #
+        # 그런데 일지는 이미 그 장치들의 값을 싣는다 — 센서 표도 가동시간도
+        # 그 목록(`resolve_devices`)에서 나온다. 데이터는 싣고 그 장치에 붙은
+        # 기록만 빼면, **바로 그 데이터를 읽는 데 필요한 맥락**이 사라진다.
+        # 실측(로컬, 2026-09-04): "센서 측정부 오류로 수리 중"(온습도_7·_8)이
+        # 좌표가 없다는 이유로 그 센서를 쓰는 구획 넷 어디에도 안 나왔다.
+        # 그 노트가 없으면 그날의 결측·이상값을 설명할 길이 없다.
+        #
+        # 그래서 **호출부가 넘긴 장치 집합을 자손으로 본다.** 계층을 새로
+        # 만드는 것이 아니라, 이 문서가 이미 자기 것이라고 말한 장치를 그대로
+        # 쓰는 것이다 — 두 번째 판정 기준을 만들지 않는다.
+        scope['descendant_ids'] = set(device_ids or [])
         #
         # ⚠ **시설 구획(has_own_geometry() == False)은 좌표 판정을 하지 않는다.**
         #   그 기하는 `geometry_of` 가 시설 외피에서 파생한 값이라, 그것으로 점
@@ -1667,6 +2291,38 @@ def _anchor_of(note, scope):
     return 'position' if _point_inside(note, scope) else None
 
 
+#: 노트가 "장치에 붙었다" 고 말할 때 쓰는 `target_type` 값들. 어휘가 갈려 있어
+#: (`device`·`input`·`output`·`function`) 하나로 좁히지 않고 전부 받는다 —
+#: 이름을 통일하는 것은 이 자리의 일이 아니고, 여기서 좁히면 그 사이에 만들어진
+#: 노트가 조용히 이름을 잃는다.
+_DEVICE_NOTE_TYPES = frozenset({'device', 'input', 'output', 'function'})
+
+
+def _attached_device_name(note):
+    """장치에 붙은 노트 → 그 장치 이름. 못 찾으면 None.
+
+    **왜 이름까지 싣는가** — "센서 측정부 오류로 수리 중" 이 구획의 다른 노트
+    사이에 이름 없이 서면, 읽는 사람은 **어느 센서**가 고장이었는지 알 수 없다.
+    그 문서에는 같은 항목을 재는 센서가 둘일 수 있고(§4-3), 어느 쪽 값을
+    의심해야 하는지가 그 노트의 값어치 전부다.
+
+    장치가 지워졌으면 `None` 이다 — 이름을 지어내지 않는다.
+    """
+    if str(note.target_type or '').lower() not in _DEVICE_NOTE_TYPES:
+        return None
+    if not note.target_id:
+        return None
+    from aot.databases.models import CustomController, Function, Input, Output
+    for model in (Input, Output, Function, CustomController):
+        try:
+            row = model.query.filter_by(unique_id=note.target_id).first()
+        except Exception:
+            row = None
+        if row is not None:
+            return getattr(row, 'name', None) or None
+    return None
+
+
 def _naive_utc(dt):
     """tz-aware 든 naive 든 → **naive UTC**. DB 비교 직전에 한 번 통과시킨다."""
     from aot.utils.timekit import ensure_utc
@@ -1724,6 +2380,10 @@ def notes_for_target(target_type, target_row, start_utc, end_utc,
             # 사진이 아닌 첨부(문서·로그)도 있었다는 사실을 지우지 않는다.
             'other_files': others,
             'anchor': anchor,
+            # 장치에 붙은 노트면 **어느 장치인지** 함께 싣는다 — 이름이 없으면
+            # "센서 고장" 이 어느 센서 이야기인지 문서 안에서 알 수 없다.
+            'anchor_name': (_attached_device_name(n)
+                            if anchor == 'descendant' else None),
             'gps': ({'lat': n.gps_lat, 'lng': n.gps_lng}
                     if anchor == 'position' and n.gps_lat is not None else None),
         })
@@ -2205,18 +2865,39 @@ def build_journal_for_target(target_type, target_id, start_date, end_date,
     # 갈라지면 게이트를 통과해 놓고 다르게 도는 일이 생긴다.
     # 무엇을 빼는지 **먼저 알아 둔다** — 조회한 결과만 보면 "값이 없었다" 와
     # "안 실었다" 가 구별되지 않는다.
+    #
+    # ⚠ **왜 빠졌는지를 갈라 둔다.** 예전에는 한 목록으로 묶어 전부 "장치
+    #   진단 값" 이라 불렀는데, 실제로 빠진 것의 대부분은 **사람이 만들 때
+    #   고르지 않은 채널**이었다 — 이 구획은 기온·습도를 현장 센서로 재므로
+    #   기상대 쪽 같은 항목을 꺼 둔 것이고, 진짜 진단값은 전위·RSSI·SNR
+    #   뿐이다. 그것을 "온도는 장치 진단 값" 이라고 적으면 사용자는 **자기가
+    #   재고 있는 값이 진단용으로 취급돼 빠졌다**고 읽는다(실사용 지적).
     excluded_measurements = []
+    excluded_diagnostic = []
+    excluded_chosen = []
     try:
         wanted = None if measurements is None else set(measurements)
         from aot.databases.models import DeviceMeasurements as _DM
-        seen = set()
+        seen, diag, chosen = set(), set(), set()
         _ids = [d for d in (sensor_ids or []) if d]
         if _ids:
             for dm in _DM.query.filter(_DM.device_id.in_(_ids)).all():
                 name = _channel_info(dm)[2]
-                if name and not _wanted_measurement(dm, wanted):
-                    seen.add(name)
+                if not name:
+                    continue
+                _scope = 'outdoor' if dm.device_id in outdoor_ids else 'indoor'
+                if _wanted_measurement(dm, wanted, scope=_scope):
+                    continue
+                seen.add(name)
+                if name in DIAGNOSTIC_MEASUREMENTS:
+                    diag.add(name)
+                else:
+                    # 어느 쪽 센서의 것인지까지 적는다 — "온도를 뺐다" 만으로는
+                    # 현장 온도가 빠진 줄로 읽힌다.
+                    chosen.add('%s:%s' % (_scope, name))
         excluded_measurements = sorted(seen)
+        excluded_diagnostic = sorted(diag)
+        excluded_chosen = sorted(chosen)
     except Exception:
         logger.exception('journal: 제외 목록 산정 실패')
 
@@ -2263,7 +2944,12 @@ def build_journal_for_target(target_type, target_id, start_date, end_date,
                 # 주중 전환 판정은 이번 범위 밖이다(일별 상세로 보면 정확하다).
                 st = stage_at(stages, key) if stages else None
                 stage_targets = (st.get('targets') or []) if st else []
-                attach_targets(rows, list(stage_targets) + photo_targets)
+                # 단계 목표가 먼저다 — `attach_targets` 는 후보 중 첫
+                # 것을 쓰므로, 단계마다 채운 DLI 가 프로그램 수준 기본값을
+                # 덮는다(그것이 단계별로 채우는 이유다).
+                attach_targets(
+                    rows,
+                    journal_target_view(stage_targets) + photo_targets)
 
     # ── 제어(§4-4) ───────────────────────────────────────────────────────
     # 설계 유량 — 시설 구획에만 있다(노지에는 배관 도면이라는 것이 없다).
@@ -2276,11 +2962,18 @@ def build_journal_for_target(target_type, target_id, start_date, end_date,
     errors.extend({'kind': 'control', **e} for e in ctrl_errors)
 
     # ── 노트(§5) ─────────────────────────────────────────────────────────
-    # plot 은 `note_scope_for_target` 이 device_ids 를 쓰지 않으므로 None 그대로
-    # 넘긴다(구획엔 자손 개념이 없다 — §5).
+    # 구획에는 `area_device_ids` 가 없다(그것은 zone/site 의 원본 참조 집합).
+    # 대신 **이 문서가 이미 자기 것이라고 말한 장치**를 그대로 넘긴다 — 센서
+    # 표와 가동시간이 나온 그 목록이다. 그 장치에 붙은 노트(고장·수리·점검)가
+    # 없으면 같은 문서 안의 결측·이상값을 설명할 길이 없다(§5).
+    note_device_ids = area_device_ids
+    if target_type == 'plot':
+        note_device_ids = set(sensor_ids or []) | {
+            a.get('output_id') for a in (actuators or [])
+            if isinstance(a, dict) and a.get('output_id')}
     notes, note_meta = notes_for_target(
         target_type, target_row, s_dt, e_dt,
-        device_ids=area_device_ids, tz=tz)
+        device_ids=note_device_ids, tz=tz)
     notes_by_bkt = notes_by_bucket(notes, labels, tz, granularity=granularity)
     if note_meta.get('gps_skipped'):
         caveats.append('gps-notes-skipped:%s' % note_meta['gps_skipped'])
@@ -2330,9 +3023,21 @@ def build_journal_for_target(target_type, target_id, start_date, end_date,
 
     buckets = collapse_edge_gaps(buckets)
 
-    if excluded_measurements:
-        caveats.append('measurements-excluded:%s'
-                       % ','.join(excluded_measurements))
+    if excluded_diagnostic:
+        caveats.append('measurements-excluded-diagnostic:%s'
+                       % ','.join(excluded_diagnostic))
+    if excluded_chosen:
+        caveats.append('measurements-excluded-chosen:%s'
+                       % ','.join(excluded_chosen))
+
+    # 강수는 **합계를 내지 않는다** — 그 이유를 문서가 스스로 말한다.
+    # 저장된 값이 겹치는 창인지(기상청 `rn_15m` 은 직전 15분 누적을 5분마다
+    # 다시 적는다) 시스템이 알 수 없어, 더하면 같은 비를 여러 번 센다.
+    # 말하지 않으면 읽는 사람이 평균을 시간당 강수량으로 읽는다(실사용
+    # 검토에서 나온 지적: "이 기간 비가 얼마나 왔는지 문서가 답을 못 한다").
+    if any(e.get('measurement') == 'precipitation'
+           for b in buckets for e in (b.get('env') or [])):
+        caveats.append('precipitation-not-summed')
 
     # DLI 가 어떤 값인지 문서가 스스로 말한다 — 환산 가정과 측정 위치를
     # 모르면 목표와의 차이를 잘못 읽는다(실외 42 대 목표 22 는 시설 안이
@@ -2351,6 +3056,20 @@ def build_journal_for_target(target_type, target_id, start_date, end_date,
             caveats.append('water-estimated-map')
         if any(w.get('source') != 'map-equipment' for w in _waters):
             caveats.append('water-estimated')
+        # ⚠ **일부 장치만 물량이 비었으면 그것도 문서가 말해야 한다.**
+        #   `water` 는 장치마다 결정되는 값이다(설계 유량 지도가 그 장치에
+        #   있는지로 갈린다 — 날짜와 무관하다). 실측(대선/콩): v331 은
+        #   물량이 나오는데 v332 는 문서 내내 빈칸이었고, 왜 비는지 표
+        #   어디에도 없었다. **어느 장치가 관수인지는 판정하지 않는다**
+        #   (Output 은 통신 방식만 알 뿐 의미 분류가 없다 — 아래
+        #   `water-no-flow-basis` 와 같은 이유) — 그래서 "장치 하나가
+        #   특별하다" 가 아니라 "이 열 자체의 한계" 로 말한다.
+        _with_water = {(c.get('output_id') or c.get('name'))
+                       for c in _ctrl_rows if c.get('water')}
+        _without_water = {(c.get('output_id') or c.get('name'))
+                          for c in _ctrl_rows} - _with_water
+        if _without_water:
+            caveats.append('water-partial-coverage')
     elif _ctrl_rows:
         # 물량 칸이 하나도 안 채워졌다. 화면은 그 열을 아예 내지 않고(§10),
         # 문서는 왜 없는지를 여기서 말한다 — 예전에는 열이 빈 채로 남아
@@ -2423,6 +3142,9 @@ def build_journal_for_target(target_type, target_id, start_date, end_date,
             'selected': (sorted(measurements)
                          if measurements is not None else None),
             'excluded': excluded_measurements,
+            # 왜 빠졌는지 — 진단 채널과 **사람이 안 고른 채널**은 다른 사실이다.
+            'excluded_diagnostic': excluded_diagnostic,
+            'excluded_chosen': excluded_chosen,
         },
         'buckets': buckets,
         'caveats': caveats,
@@ -2488,14 +3210,1210 @@ def _gap_bucket(group):
     }
 
 
-def stage_sections(journal_data):
+def _nice_step(rough):
+    """대충의 눈금 간격 → **읽기 좋은 간격**(1·2·5 × 10ⁿ).
+
+    17.333 같은 눈금을 문서에 그대로 내면 사람이 그 축을 못 읽는다. 축은
+    값을 담는 그릇이지 값 자체가 아니므로, 자릿수를 맞춘 뒤 1·2·5 중
+    하나로 맞춘다(그래프 축의 통상 규칙).
+
+    ⚠ **올림이 아니라 가까운 쪽이다**(2026-09-04). 올림은 간격을 최대 두 배로
+      키우고, 간격이 두 배면 축의 양 끝도 그만큼 밖으로 밀린다 — 실측: 온도
+      12~42 구간에서 대충 간격 10.07 이 20 으로 올라가 축이 **0~60** 이 됐고,
+      데이터가 화면의 3분의 1만 차지했다. 가까운 쪽(10)으로 맞추면 10~50 이다.
+      눈금이 몇 개 더 생기는 것은 문제가 아니다 — 범위 도표는 양 끝과 가운데
+      **셋만** 글자로 낸다.
+    """
+    import math
+    if not rough or rough <= 0:
+        return 1.0
+    exp = math.floor(math.log10(rough))
+    base = rough / (10 ** exp)
+    return min((1.0, 2.0, 5.0, 10.0),
+               key=lambda c: abs(c - base)) * (10 ** exp)
+
+
+#: 한 버킷을 빼고 재서 축이 이만큼으로 줄면, 그 축은 **그 하루가 혼자 정한
+#: 것**이다. 0.7 = 30% 이상 줄어야 뺀다. 조금 줄이자고 값을 축 밖에 두는
+#: 것은 손해다 — 밖으로 나간 값은 끝에 붙어 "여기까지" 로 읽힌다.
+_AXIS_OUTLIER_GAIN = 0.7
+
+
+def value_scale(values, ticks=4, keep=None, groups=None):
+    """값 목록 → 그림의 세로 축 `{'lo','hi','ticks':[{'v','text'},…]}`.
+
+    ## 왜 서버가 계산하나
+
+    `aot-dataviz.css` 머리말의 규약이다 — **프리미티브는 이미 서식된 문자열을
+    받는다.** 눈금 글자를 브라우저에서 만들면 소수 자릿수·자릿점 규칙이
+    그 파일에 갇히고, 같은 값이 표와 그림에서 다르게 보인다.
+
+    ⚠ **축을 데이터에 꽉 맞추지 않는다.** 0.1 도 차이가 화면 전체를 채우면
+      평평한 기간이 요동치는 것처럼 읽힌다. 눈금 간격만큼 바깥으로 벌린다.
+
+    ## 하루가 축을 혼자 정하지 못하게 한다 (2026-09-04)
+
+    실측: 쿠마모토 온실에서 09-01 에 **온도 54.9 °C** 가 한 번 찍혔고(다른
+    날은 32~33), 그 값에서 계산된 VPD 가 10.97 kPa 였다. 축이 그것까지 담느라
+    0~15 로 늘어나 나머지 엿새의 막대가 전부 바닥에 깔렸다 — **읽을 수 있는
+    날이 사고가 난 그 하루뿐**이었다. 사용자 지적: *"VPD 는 저 시간대 오류인
+    것 같아. 10kPa 라니…심한 값이잖아."*
+
+    `groups`(버킷별 값 묶음)를 주면 **한 버킷을 빼고 다시 재 본다.** 그것만
+    빼도 축이 30% 이상 줄면 그 축은 그 하루가 혼자 정한 것이므로, 나머지에
+    맞춰 잡는다. 데이터를 고치는 것이 아니라 **축만** 그렇게 잡는 것이고,
+    밖으로 나간 값도 그대로 그려진다 — 프리미티브의 `pct()` 가 0~100 으로
+    눌러 축 끝에 붙인다.
+
+    ⚠ **분위수(IQR) 울타리로 하지 말 것.** 먼저 그렇게 만들었다가 실측에서
+      버렸다 — 한쪽으로 쏠린 계열에서 **멀쩡한 값을 자른다.** 청자5호는 VPD 가
+      대부분 0 근처라 3·IQR 울타리로도 2.9 kPa 가 잘렸고(정상값이다), 습도
+      56% 도 잘렸다. 이 화면의 실패는 "분포가 넓다" 가 아니라 **"하루가
+      튀었다"** 이므로, 판정도 하루 단위로 해야 한다.
+
+    ⚠ **`keep` 은 반드시 축 안에 담는다**(목표·0 기준선). 목표만 그림 밖으로
+      나가면 "한참 못 미쳤다" 가 "목표가 없다" 로 보인다.
+    """
+    import math
+    vals = [float(v) for v in (values or []) if v is not None]
+    keeps = [float(v) for v in (keep or []) if v is not None]
+    if not vals and not keeps:
+        return None
+    if not vals:
+        vals = list(keeps)
+    lo, hi = min(vals), max(vals)
+
+    # ── 하루가 혼자 정한 축인가 ─────────────────────────────────────────
+    # 버킷이 넷은 돼야 "하나를 빼는" 것이 뜻을 갖는다(셋 중 하나를 빼면
+    # 그것은 표본이 아니라 취향이다).
+    gs = [[float(v) for v in (g or []) if v is not None] for g in (groups or [])]
+    gs = [g for g in gs if g]
+    if len(gs) >= 4 and hi > lo:
+        span = hi - lo
+        best = None
+        for i in range(len(gs)):
+            rest = [v for j, g in enumerate(gs) if j != i for v in g]
+            if not rest:
+                continue
+            r_lo, r_hi = min(rest), max(rest)
+            if best is None or (r_hi - r_lo) < (best[1] - best[0]):
+                best = (r_lo, r_hi)
+        if best and (best[1] - best[0]) <= span * _AXIS_OUTLIER_GAIN:
+            lo, hi = best
+
+    # 목표·0 기준선은 잘리지 않는다.
+    for v in keeps:
+        lo, hi = min(lo, v), max(hi, v)
+
+    if hi == lo:
+        # 평평한 구간 — 위아래로 한 칸씩 벌려 선이 그림 한가운데 서게 한다.
+        pad = abs(lo) * 0.05 or 1.0
+        lo, hi = lo - pad, hi + pad
+    step = _nice_step((hi - lo) / max(ticks - 1, 1))
+    lo = math.floor(lo / step) * step
+    hi = math.ceil(hi / step) * step
+    # 소수 자릿수는 **간격**이 정한다(0.5 간격이면 한 자리, 5 간격이면 정수).
+    digits = max(0, -int(math.floor(math.log10(step)))) if step < 1 else 0
+    out = []
+    v = lo
+    while v <= hi + step * 0.001:
+        out.append({'v': round(v, 6), 'text': ('%%.%df' % digits) % v})
+        v += step
+    return {'lo': lo, 'hi': hi, 'ticks': out}
+
+
+def env_trend_series(view_buckets, targets=None, summary_groups=None):
+    """`view_buckets`(각 버킷에 `group_env_rows()` 결과가 `env_groups` 로
+    붙어 있다) → 측정값×scope 그룹별 시계열 목록. `AoTViz.range`
+    (`static/js/common/aot-dataviz.js`)에 그대로 넘길 수 있는 모양이다.
+
+    ```
+    [{'measurement', 'unit', 'unit_label', 'scope', 'measurement_label',
+      'primary', 'targets': [{'v','when','label'}], 'scale': {…},
+      'points': [{'k','label','min','max','avg','avg_day','avg_night',
+                  'coverage_low'}, …]}]
+    ```
+
+    ## 왜 필요한가
+
+    반복되는 일별 표 대신 **기간 전체의 모양**을 먼저 보여주기 위한 것이다.
+
+    ⚠ 예전에는 `AoTViz.trend`(높이 24px, 눈금 없음, 숫자는 마지막 값 하나)로
+      그렸는데, 실사용 검토에서 "추세를 가볍게 보기엔 맞지만 **데이터를
+      검토하기엔 정밀도가 부족하다**" 는 지적을 받았다. 그래서 저장된 것을
+      전부 그리는 범위 도표로 바꿨다 — 기간마다 최저~최고 막대, 그 위에
+      평균, 주간·야간 평균을 갈라 찍고, 목표를 가로줄로 깔고, 결측 기간을
+      따로 표시한다. **없는 통계를 지어내지는 않는다**(스냅샷에는 사분위도
+      표준편차도 없다 — 상자그림을 그리려면 생성 쪽을 먼저 고쳐야 한다).
+
+    ⚠ **원형(방위) 측정값은 뺀다.** 선형 축에 각도를 얹으면 359도와 0도가
+      정반대 끝에 선다(`CIRCULAR_UNITS` 주석이 경고한 오독).
+
+    ⚠ **점 하나도 빠뜨리지 않는다.** 어떤 버킷에 이 그룹의 행이 아예 없어도
+      그 자리에 빈 점을 채운다 — 비우면 뒤의 점들이 앞으로 당겨져 날짜
+      간격이 실제와 달라진다.
+
+    ⚠ **목표 줄은 `targets`(그 구간의 단계 목표)에서 꺼낸다.** 버킷 행에
+      붙어 있는 `target` 은 `attach_targets` 가 **생성 시점에** 후보 중
+      하나만 골라 굳혀 둔 것이라(온도처럼 주간·야간 목표가 따로 있으면 그중
+      하나만 남는다) 그림에는 부족하다 — 주간 평균·야간 평균을 갈라 찍는
+      그림에는 짝이 되는 목표 두 줄이 있어야 한다. 단계 목록은 스냅샷에
+      그대로 있으므로 **이 계산은 이미 만들어진 일지에도 소급된다.**
+
+      `targets` 를 주지 않으면 예전처럼 행의 `target` 하나만 쓴다.
+
+    ⚠ **머리줄 숫자는 표와 같은 출처에서 온다.** `summary_groups`(같은 기간을
+      `_merge_bucket_group` 으로 접어 `group_env_rows` 를 돌린 결과)를 주면
+      그 그룹의 평균을 그대로 싣는다. 예전에는 **마지막 값**을 실었는데, 바로
+      옆 표가 같은 이름으로 기간 평균을 내고 있어 한 블록 안에서 숫자가
+      둘이었다(실측: 파종·발아기 표 38.46, 그래프 41.73 — 뒤쪽은 그 단계
+      마지막 날 값이었다). 여기서 평균을 다시 계산하지 않는 이유는 그것이
+      곧 **두 번째 계산자**이기 때문이다 — 표본 수 가중이 어긋나는 순간 다시
+      두 숫자가 된다.
+
+    ⚠ **목표가 없는 행에는 줄을 긋지 않는다.** 기상대 행은 같은 measurement
+      를 현장 센서도 잴 때 목표에서 빠지는데(`attach_targets`), 그 판정은
+      행의 `target` 이 이미 담고 있다 — 그래서 "행에 목표가 붙었을 때만"
+      단계 목표를 꺼내 온다.
+    """
+    view_buckets = view_buckets or []
+    # 표가 이미 낸 대표값. 키는 계열 키와 같다.
+    heads = {}
+    for grp in (summary_groups or []):
+        row = grp.get('summary') or (grp.get('sensors') or [{}])[0]
+        heads[(str(grp.get('measurement') or ''), str(grp.get('unit') or ''),
+               str(grp.get('scope') or 'indoor'))] = row.get('avg')
+    by_meas = {}
+    for t in (targets or []):
+        m = str(t.get('measurement') or '').strip().lower()
+        if m and t.get('value') is not None:
+            by_meas.setdefault(m, []).append(
+                {'v': t.get('value'), 'when': t.get('when'),
+                 'label': t.get('label')})
+    order = []
+    meta = {}
+    per_bucket = []
+    for bucket in view_buckets:
+        rows_by_key = {}
+        for grp in (bucket.get('env_groups') or []):
+            row = grp.get('summary') or (grp.get('sensors') or [{}])[0]
+            if row.get('circular'):
+                continue
+            # ⚠ **적산온도는 여기서 만들지 않는다.** `with_gdd_group()` 이 표에
+            #   넣어 둔 그룹이 여기까지 흘러오면 "일별 GDD" 계열이 생겨,
+            #   `gdd_trend_series()` 가 만드는 누적 계열과 **같은 이름의 도표가
+            #   둘** 나온다(실측). 그림에서 GDD 는 누적이 정본이다.
+            if str(grp.get('measurement') or '') == 'gdd':
+                continue
+            key = (str(grp.get('measurement') or ''), str(grp.get('unit') or ''),
+                  str(grp.get('scope') or 'indoor'))
+            if key not in meta:
+                meta[key] = {'measurement': grp.get('measurement'),
+                            'unit': grp.get('unit'), 'scope': grp.get('scope'),
+                            'measurement_label': grp.get('measurement_label'),
+                            'primary': bool(grp.get('primary')),
+                            'target': None, 'targets': []}
+                order.append(key)
+            if grp.get('primary'):
+                meta[key]['primary'] = True
+            if row.get('target') is not None:
+                meta[key]['target'] = row.get('target')
+                # 목표를 따라가는 곡선(method)은 상수가 아니라 가로줄로 그릴
+                # 수 없다 — 그릴 수 있는 것만 싣는다.
+                if not row.get('follows_curve'):
+                    meas = str(grp.get('measurement') or '').strip().lower()
+                    meta[key]['targets'] = by_meas.get(meas) or [
+                        {'v': row.get('target'), 'when': row.get('when'),
+                         'label': row.get('target_label')}]
+            rows_by_key[key] = row
+        per_bucket.append(rows_by_key)
+
+    out = []
+    for key in order:
+        points = []
+        for i, bucket in enumerate(view_buckets):
+            bkey = bucket.get('key') or bucket.get('date_label')
+            # 축 눈금용 짧은 날짜. 숫자 날짜라 로케일을 타지 않는다(월·주
+            # 버킷은 `date_label` 이 범위라 시작일만 쓴다).
+            short = str(bkey or '')[5:10] or str(bkey or '')
+            row = per_bucket[i].get(key)
+            if row is None:
+                points.append({'k': bkey, 'label': short, 'min': None,
+                               'max': None, 'avg': None})
+            else:
+                points.append({'k': bkey, 'label': short,
+                               'min': row.get('min'), 'max': row.get('max'),
+                               'avg': row.get('avg'),
+                               'avg_day': row.get('avg_day'),
+                               'avg_night': row.get('avg_night'),
+                               'coverage_low': bool(row.get('coverage_low'))})
+        m = meta[key]
+        # 축은 **관측값과 목표를 모두** 담아야 한다 — 목표만 그림 밖으로
+        # 나가면 "한참 못 미쳤다" 가 "목표가 없다" 로 보인다.
+        span_vals = []
+        span_groups = []
+        for pt in points:
+            g = [pt.get('min'), pt.get('max'), pt.get('avg')]
+            span_vals += g
+            span_groups.append(g)
+        # 목표는 **데이터가 아니다** — 축을 견고하게 잡을 때 분위수 계산에
+        # 섞으면 목표 하나가 울타리를 움직인다. 담기만 하고 재지는 않는다.
+        keep_vals = [t['v'] for t in m['targets']]
+        # **0 이 실제 0 인가**로 가른다(`MAGNITUDE_MEASUREMENTS`). 최저~최고가
+        # 아예 없는 계열도 크기다 — 그 기간에 값이 하나뿐이라 범위를 그릴
+        # 것이 없다. 크기로 그리려면 축이 0 에서 시작해야 한다(20~60 축에
+        # 얹으면 20 인 날이 0 처럼 보인다).
+        bars = (str(m['measurement'] or '') in MAGNITUDE_MEASUREMENTS
+                or not any(pt.get('min') is not None
+                           and pt.get('max') is not None for pt in points))
+        if bars:
+            keep_vals.append(0.0)
+        out.append({'measurement': m['measurement'], 'unit': m['unit'],
+                    # 사람이 읽는 단위 기호도 여기서 낸다(§WP2-2 와 같은
+                    # 이유) — 화면이 원문 단위 키를 다시 사람화할 필요가
+                    # 없게 한다.
+                    'unit_label': unit_label(m['unit']),
+                    'scope': m['scope'], 'measurement_label': m['measurement_label'],
+                    'primary': m['primary'],
+                    'derived': (str(m['measurement'] or '')
+                                in DERIVED_MEASUREMENTS),
+                    # 표가 낸 대표값(없으면 화면이 점들에서 고른다).
+                    'head_value': heads.get(key),
+                    'head_kind': 'mean',
+                    'target': m['target'], 'targets': m['targets'],
+                    'bars': bars,
+                    'scale': value_scale(span_vals, keep=keep_vals,
+                                         groups=span_groups),
+                    'points': points})
+    return out
+
+
+def gdd_trend_series(view_buckets, journal_data=None, baseline=None):
+    """버킷들 → **적산온도 누적** 계열(하나) 또는 `None`.
+
+    ```
+    {'measurement': 'gdd', 'derived': True, 'bars': True,
+     'scale': {…}, 'points': [{'k','label','avg'}, …]}
+    ```
+
+    ## 왜 따로 있나
+
+    GDD 는 환경 행이 아니다 — 버킷마다 `gdd`(그날 증가분)로, 문서 전체에
+    `gdd.total`(작기 누적)·`gdd.period`(이 기간 합)로 실린다. 그래서 화면에는
+    날짜 제목 옆 작은 글자로만 나오고 있었다. **DLI 는 환경 행이라 도표까지
+    가는데 GDD 는 글자로만 남는 것**이 층이 어긋난 지점이었다(실사용 지적
+    2026-09-04: "DLI 가 나왔으면 GDD 가 있어야지").
+
+    ⚠ **누적으로 그린다.** 일별 증가분은 매일 비슷해서 막대 높이가 다 같다
+      (실측: 15~17 °C·d). 단계 전환을 좌우하는 것도 누적이다.
+
+    ⚠ **작기 시작부터의 누적**이다. 이 문서 안에서 0 부터 세면 "지금 몇 도"
+      라는 농사의 물음에 답하지 못한다 — 시작점은 `total - period` 로
+      되짚는다(둘 다 이미 저장돼 있다). 단계 도표처럼 문서의 일부만 그릴
+      때는 그 구간이 시작되는 시점의 누적을 `baseline` 으로 받는다.
+
+    ⚠ **못 쓸 때는 아무것도 내지 않는다.** `usable=False`(프로그램 없음·
+      기준온도 없음·커버리지 부족)에 0 을 그리면 "하나도 안 쌓였다" 로
+      읽히는데, 못 쓰는 것과 0 은 전혀 다르다(`gdd_for_journal` 과 같은 규칙).
+    """
+    gdd = (journal_data or {}).get('gdd') or {}
+    if gdd.get('usable') is False:
+        return None
+
+    points, cum = [], []
+    if baseline is not None:
+        running = float(baseline)
+    else:
+        total, period = gdd.get('total'), gdd.get('period')
+        try:
+            running = float(total) - float(period)
+        except (TypeError, ValueError):
+            running = 0.0
+    for bucket in (view_buckets or []):
+        key = bucket.get('key') or bucket.get('date_label')
+        value = bucket.get('gdd')
+        if value is not None:
+            try:
+                running += float(value)
+            except (TypeError, ValueError):
+                pass
+        points.append({'k': key, 'label': str(key or '')[5:10],
+                       'avg': _round(running)})
+        cum.append(running)
+    if not any(bucket.get('gdd') is not None for bucket in (view_buckets or [])):
+        return None
+
+    return {
+        'measurement': 'gdd', 'unit': 'C_day',
+        'unit_label': unit_label('C_day'),
+        'measurement_label': _gettext_safe('GDD (accumulated)'),
+        'scope': 'indoor', 'primary': False, 'derived': True, 'bars': True,
+        'target': None, 'targets': [],
+        # 누적 곡선의 평균은 뜻이 없다 — 끝 시점의 누적이 곧 그 기간의 값이다.
+        'head_value': _round(running), 'head_kind': 'last',
+        'scale': value_scale([0.0] + cum),
+        'points': points,
+    }
+
+
+def order_chart_series(series):
+    """도표 계열 목록 → **결과 지표가 앞에 오게** 정렬한다(제자리 아님).
+
+    DLI·GDD·VPD 를 먼저 두고 나머지는 원래 순서를 지킨다. 왜 그 셋인지는
+    `DERIVED_MEASUREMENTS` 주석에 있다 — 사람이 보고 판단하는 것은 센서가 잰
+    값이 아니라 그것으로 만든 지표다.
+    """
+    rank = {m: i for i, m in enumerate(DERIVED_MEASUREMENTS)}
+    front, rest = [], []
+    for s in (series or []):
+        if s is None:
+            continue
+        (front if s.get('derived') else rest).append(s)
+    front.sort(key=lambda s: rank.get(str(s.get('measurement') or ''), 99))
+    return front + rest
+
+
+def recent_env_trends(plot, days=7, end_date=None, sensor_ids=None,
+                      outdoor_ids=None, target_id=None):
+    """구획 → **최근 `days` 일의 일별 환경 계열**. `AoTViz.range` 입력 모양이다.
+
+    일지가 만드는 것과 같은 계산이지만 **저장하지 않는다** — 화면이 열릴 때마다
+    최근 창을 다시 낸다(일지는 백그라운드에서 만들어 스냅샷을 남긴다).
+
+    ## 왜 필요한가
+
+    지도 위젯 [현황] 카드는 센서마다 "지금 몇 도" 한 점을 그렸는데, 그것은
+    같은 모달의 [환경·제어] 탭이 24시간 그래프로 이미 답하는 것이다. 사용자
+    지적: *"사실상 환경/제어 탭에서 지금 상태를 거의 다 확인할 수 있는 중복
+    데이터를 다른 형식으로 보여주는 것 뿐임 … 1주일 간의 데이터 중에서 오늘은
+    어느 정도인지를 확인할 수 있으면 어떨까"*. 그 물음에 답하려면 지금 값이
+    아니라 **최근 며칠의 폭 안에서 오늘이 어디인지**를 그려야 한다.
+
+    ## 비용
+
+    `env_channel_series` 는 **채널당 쿼리 수가 기간과 무관**하다(min·max·mean
+    3회). 그래서 7일이라고 7배가 되지 않는다. 그래도 요청 스레드에서 도는
+    계산이므로 **부르는 쪽이 캐시를 건다** — 일별 버킷은 하루에 한 번만 바뀌고
+    오늘 열만 진행 중이다.
+
+    ⚠ **폴링 응답에 얹지 말 것.** 지도 위젯 시설 모달은 최소 5초까지 폴링한다
+    (`_runtimePollSeconds`). 여기 결과를 그 응답에 실으면 그 주기가 그대로
+    7일 조회 주기가 된다.
+    """
+    from aot.utils.timekit import as_tz
+    from aot.utils.device_tz import resolve_location_tz
+
+    if plot is None and not sensor_ids:
+        return []
+    # 좌표(=시간대)의 주인. 시설 카드는 구획이 없을 수도 있어 따로 받는다.
+    target_id = target_id or getattr(plot, 'unique_id', None)
+    tz = as_tz(resolve_location_tz(target_id))
+    end = end_date or datetime.now(tz).date()
+    start = end - timedelta(days=max(1, int(days or 7)) - 1)
+
+    if sensor_ids is None:
+        sensor_ids, outdoor_ids = _plot_sensor_ids(plot)
+    else:
+        # 시설 카드 — 센서 목록을 부르는 쪽이 정한다(`facility_sensor_ids`).
+        # 구획의 우선순위 체인과 규칙이 달라, 여기서 다시 만들면 같은 시설을
+        # 두 화면이 다르게 세게 된다.
+        sensor_ids = set(sensor_ids or ())
+        if outdoor_ids is None:
+            _i, outdoor_ids = (_plot_sensor_ids(plot) if plot is not None
+                               else (set(), set()))
+    if not sensor_ids and not outdoor_ids:
+        return []
+
+    bucket_sec = bucket_seconds_for(tz, start, end)
+    s_str, e_str = period_bounds_utc(start, end, tz)
+    labels = bucket_labels(start, end, 'day')
+
+    series, _errors = env_channel_series(
+        sensor_ids, s_str, e_str, tz, granularity='day', bucket_sec=bucket_sec,
+        outdoor_ids=outdoor_ids, sun_fn=sun_lookup(target_id))
+    env_by_bucket = env_rows_by_bucket(
+        series, labels, tz=tz, bucket_sec=bucket_sec, granularity='day',
+        period_start=start, period_end=end,
+        cover=(cover_light_factor(plot) if plot is not None else None))
+
+    # 목표 — 일지의 문서 도표와 **같은 규칙**이다: 버킷마다 그날의 단계 목표를
+    # 붙이고(`attach_targets`), 도표의 가로 목표대는 기간과 겹치는 마지막 단계의
+    # 것을 쓴다. 광합성 목표(DLI)는 단계가 없어도 프로그램 수준으로 붙는다.
+    stages = _plot_stages(plot) if plot is not None else None
+    photo = photosynthesis_targets(plot) if plot is not None else []
+    doc_targets = None
+    if stages or photo:
+        for key, rows in env_by_bucket.items():
+            st = stage_at(stages, key) if stages else None
+            stage_targets = (st.get('targets') or []) if st else []
+            attach_targets(rows, journal_target_view(stage_targets) + photo)
+            if stage_targets:
+                doc_targets = journal_target_view(stage_targets)
+        if doc_targets is None and photo:
+            doc_targets = photo
+
+    view_buckets = [{'key': k, 'env_groups': group_env_rows(env_by_bucket[k])}
+                    for k in sorted(env_by_bucket)]
+    out = order_chart_series(env_trend_series(view_buckets, targets=doc_targets))
+
+    # ── 화면의 "지금 값" 줄과 짝짓는 열쇠 ───────────────────────────────────
+    #
+    # 두 목록은 **키 어휘가 다르다.** 지금 값은 채널 표시 키(`T`·`RH`·`VPD` 나,
+    # 매핑이 없으면 사람이 붙인 채널 이름)로 오고, 여기 계열은 measurement
+    # 이름(`temperature`…)으로 온다. 화면에서 이름을 다시 만들면 규칙이 두 벌이
+    # 되므로 **서버가 후보를 함께 싣는다** — `channel_label_meta` 가 지금 값
+    # 쪽에서도 키를 만드는 그 함수다.
+    #
+    # 후보를 여럿 주는 이유: 매핑에 없는 채널(토양수분 등)은 지금 값 쪽 키가
+    # 사람이 붙인 이름이라, measurement 이름으로는 절대 안 맞는다.
+    try:
+        from aot.aot_flask.geo.facility_sensors import channel_label_meta
+        for s in out:
+            meas = str(s.get('measurement') or '')
+            cands = []
+            try:
+                k, _u = channel_label_meta(meas, '', s.get('unit') or '', meas)
+                if k:
+                    cands.append(str(k))
+            except Exception:
+                pass
+            for extra in (s.get('measurement_label'), meas):
+                if extra and str(extra) not in cands:
+                    cands.append(str(extra))
+            s['now_keys'] = cands
+    except Exception:
+        logger.exception('recent_env_trends: 지금 값 키 후보 산정 실패')
+    return out
+
+
+def target_drift(view_buckets):
+    """버킷 목록 → **목표 항목별 이탈 요약**. 열람 시점 순수 계산이다.
+
+    ```
+    [{'measurement', 'when', 'label', 'phase_label', 'unit', 'unit_label',
+      'sensor_count', 'agree': 'above'|'below'|'mixed'|None,
+      'sensors': [{'sensor', 'days', 'above', 'below', 'on_target',
+                   'mean', 'min', 'max', 'one_way'}, …],
+      # 대표 줄 — 센서가 하나면 그 센서의 값, 여럿이면 **범위의 아래끝**이고
+      # `*_hi` 가 위끝이다(같으면 둘이 같은 값이다).
+      'days', 'above', 'below', 'on_target', 'mean', 'min', 'max', 'one_way',
+      'days_hi', 'above_hi', 'below_hi', 'on_target_hi', 'mean_hi'}]
+    ```
+
+    ## 왜 필요한가
+
+    시스템은 **시점별 Δ 는 계산하는데 그것을 종합해서 말하지 않았다.** 김제
+    3-1 가을오이 시뮬레이션(2026-09-04)에서 야간온도가 **78일 중 78일**
+    목표를 넘겼고 최소 편차조차 +1.66 ℃ 였는데, 51일치 일지를 사람이
+    스크롤하며 Δ 부호를 눈으로 세지 않는 한 그 사실은 어디에도 나타나지
+    않았다. 문헌 기준의 목표가 이 현장에서 성립하지 않는다는 것은 **오류가
+    아니라 사용자가 알아야 할 발견**이다.
+
+    ## 센서별로 센다 — 평균으로 하나 만들지 않는다
+
+    한 구획의 센서 둘이 같은 목표를 **반대 방향**으로 벗어나는 일이 흔하다
+    (캐노피 안팎·설치 높이). 실측(김제 3-1, 51일): VPD 가 `SIM 현장센서`
+    48일 중 42일 **미달**(평균 −0.30)인데 `온습도_5` 는 25일 중 15일
+    **초과**(평균 +0.19)였다.
+
+    예전에는 하루 안에서 센서별 Δ 를 평균해 그날 값 하나로 만들었다. 분모를
+    지키려는 것이었지만(아래 ⚠) 대가가 셋이었다 — (1) **어느 센서도 말하지
+    않은 숫자**를 문서가 말한다(습도 +16.30 과 +2.37 이 +11.56 이 됐다),
+    (2) 분모가 섞인다("51일" 은 각각 48일·30일 잰 센서 둘을 합친 수다),
+    (3) 반대 방향이 지워진다.
+
+    그래서 **센서마다 따로 세고**, 결론이 같으면 대표 줄로 접는다(화면이
+    측정값 표에서 이미 쓰는 어휘 — `센서 N대` 요약 줄 + 펼치기). 접을 때도
+    평균을 새로 만들지 않고 **범위**로 접는다.
+
+    ⚠ **분모는 여전히 버킷 수를 넘지 않는다.** 센서별로 세므로 한 센서가
+      하루를 두 번 셀 일이 없다(예전에 행마다 세어 14일짜리 단계가 24일로
+      나왔던 그 문제는 여기서 구조적으로 생기지 않는다).
+
+    ⚠ **판정하지 않는다. 세기만 한다.** "이 목표는 여기서 안 맞는다" 는
+      판단에는 허용 범위(tolerance)가 필요한데 이 데이터에는 없고, 없는
+      것은 의도적 선택이다(`get_plot` 의 `target_check` 가 "there is no
+      tolerance band in the data — do NOT invent one" 이라고 스스로 밝힌다).
+      여기서 내는 것은 **날짜 수·평균·범위뿐**이고, `one_way` 는 임계값이
+      아니라 산술이다(한 방향이 100%). 센서가 여럿이면 **전부**가 같은
+      방향으로 100% 일 때만 붙인다.
+
+    ⚠ **비교할 수 없는 행은 빼지 않고 세지도 않는다.** 곡선 목표·주야 목표
+      처럼 `delta_skipped` 인 행은 Δ 가 아예 없다 — 분모에 넣으면 "이탈 안
+      함" 으로 잘못 세어진다.
+
+    저장된 Δ 만 쓰므로 **이 기능 이전에 만들어진 일지도 열기만 하면 채워진다**
+    (`fold_buckets` 와 같은 성격).
+    """
+    acc = {}
+    order = []
+    for bucket in (view_buckets or []):
+        # 묶은 것이 있으면 그것을, 없으면 원 행을 쓴다 — 단계 절은 보는
+        # 단위와 무관하게 **날짜별** 행으로 세야 한다("78일 중 78일" 의
+        # 분모가 보는 단위에 따라 달라지면 안 된다).
+        rows = []
+        groups = bucket.get('env_groups')
+        if groups:
+            for grp in groups:
+                rows.extend(grp.get('sensors') or [])
+        else:
+            rows = bucket.get('env') or []
+        day = bucket.get('key') or bucket.get('date_label')
+        for row in rows:
+            # ⚠ **후보 전부를 본다.** `targets_eval` 이 있으면(이 기능 이후에
+            #   만든 일지) 주간·야간이 둘 다 들어 있다. 없으면 예전처럼 대표
+            #   하나만 본다 — 옛 일지는 야간 목표의 Δ 가 애초에 저장되지
+            #   않았으므로 지어내지 않는다.
+            items = row.get('targets_eval')
+            if not items:
+                items = [{'label': row.get('target_label'),
+                          'when': row.get('when'), 'value': row.get('target'),
+                          'delta': row.get('delta')}]
+            meas = str(row.get('measurement') or '')
+            # 센서를 무엇으로 가릴 것인가 — 이름은 사람이 바꿀 수 있으므로
+            # 채널을 먼저 본다. 옛 일지에는 채널이 없을 수 있어 이름으로
+            # 떨어진다(그때도 한 구획 안에서는 갈리지 않는다).
+            who = (row.get('device_id'), row.get('channel'))
+            if who[0] is None:
+                who = (row.get('sensor'), None)
+            for item in items:
+                delta = item.get('delta')
+                if delta is None or item.get('value') is None:
+                    continue
+                try:
+                    delta = float(delta)
+                except (TypeError, ValueError):
+                    continue
+                key = (meas, str(item.get('when') or ''))
+                if key not in acc:
+                    acc[key] = {'measurement': row.get('measurement'),
+                                'when': item.get('when'),
+                                'label': (item.get('label')
+                                          or row.get('measurement_label')
+                                          or measurement_label(
+                                              row.get('measurement'),
+                                              row.get('scope'))),
+                                'unit': row.get('unit'),
+                                'sensors': {}, 'order': []}
+                    order.append(key)
+                box = acc[key]['sensors'].get(who)
+                if box is None:
+                    box = {'sensor': row.get('sensor'), 'days': {}}
+                    acc[key]['sensors'][who] = box
+                    acc[key]['order'].append(who)
+                # ⚠ **하루는 한 번만 센다** — 주간 버킷을 일 단위로 펼쳐 보는
+                #   등 같은 날이 두 번 들어오면 분모가 부풀어 오른다. 한 센서의
+                #   하루에는 값이 하나뿐이므로 덮어써도 잃을 것이 없다.
+                box['days'][day] = delta
+
+    def _stats(deltas):
+        days = len(deltas)
+        above = sum(1 for d in deltas if d > 0)
+        below = sum(1 for d in deltas if d < 0)
+        one_way = 'above' if above == days else (
+            'below' if below == days else None)
+        return {'days': days, 'above': above, 'below': below,
+                'on_target': days - above - below,
+                'mean': _round(sum(deltas) / days),
+                'min': _round(min(deltas)), 'max': _round(max(deltas)),
+                'one_way': one_way}
+
+    out = []
+    for key in order:
+        box = acc[key]
+        sensors = []
+        for who in box['order']:
+            deltas = list(box['sensors'][who]['days'].values())
+            if not deltas:
+                continue
+            sensors.append(dict(_stats(deltas),
+                                sensor=box['sensors'][who]['sensor']))
+        if not sensors:
+            continue
+
+        # 센서마다 우세한 방향. 같은 쪽이면 접고, 갈리면 그 사실을 말한다 —
+        # 하나를 대표로 고르면 그것도 거짓이다.
+        #
+        # ⚠ **'갈린다' 는 두 방향이 실제로 맞설 때뿐이다.** 예전에는 우세한
+        #   방향이 없는(above == below) 센서만 둘 있어도 'mixed' 가 붙어,
+        #   갈리지 않았는데 화면이 "센서에 따라 결론이 갈립니다" 를 말했다.
+        #   한쪽만 기울고 다른 쪽이 반반인 것도 맞서는 것이 아니다.
+        def _side(s):
+            if s['above'] > s['below']:
+                return 'above'
+            if s['below'] > s['above']:
+                return 'below'
+            return None
+        sides = {_side(s) for s in sensors}
+        leaning = sides - {None}
+        if 'above' in sides and 'below' in sides:
+            agree = 'mixed'
+        elif len(leaning) == 1:
+            agree = leaning.pop()
+        else:
+            agree = None
+
+        def _span(field):
+            vals = [s[field] for s in sensors if s[field] is not None]
+            return (min(vals), max(vals)) if vals else (None, None)
+
+        days_lo, days_hi = _span('days')
+        above_lo, above_hi = _span('above')
+        below_lo, below_hi = _span('below')
+        on_lo, on_hi = _span('on_target')
+        mean_lo, mean_hi = _span('mean')
+        ways = {s['one_way'] for s in sensors}
+        # 센서가 여럿이면 **전부** 같은 방향으로 100% 일 때만 붙인다.
+        one_way = ways.pop() if len(ways) == 1 else None
+        out.append({
+            'measurement': box['measurement'], 'when': box['when'],
+            # 목표 라벨은 **번역 대상 msgid** 다("Day temp" → "주간 온도").
+            # 사용자가 직접 지은 항목은 카탈로그에 없어 그대로 나가는데,
+            # 그것이 맞는 동작이다(사람이 적은 이름을 옮기지 않는다).
+            'label': _gettext_safe(box['label']) if box['label'] else box['label'],
+            'unit': box['unit'],
+            'unit_label': unit_label(box['unit']),
+            'sensor_count': len(sensors),
+            'agree': agree if len(sensors) > 1 else None,
+            'sensors': sensors,
+            'days': days_lo, 'days_hi': days_hi,
+            'above': above_lo, 'above_hi': above_hi,
+            'below': below_lo, 'below_hi': below_hi,
+            'on_target': on_lo, 'on_target_hi': on_hi,
+            'mean': mean_lo, 'mean_hi': mean_hi,
+            # Δ 범위는 원래부터 범위다 — 센서를 가로질러도 최소~최대 그대로.
+            'min': _round(min(s['min'] for s in sensors)),
+            'max': _round(max(s['max'] for s in sensors)),
+            'one_way': one_way,
+        })
+
+    # 같은 이름이 두 줄 서면 어느 쪽이 무엇인지 알 수 없다. 목표 라벨이
+    # 주야를 이미 말하는 항목("주간 온도")에는 붙이지 않고, 겹칠 때만 붙인다
+    # — 곡선 목표는 라벨이 하나뿐이라(VPD) 주야 두 줄이 같은 이름이 된다.
+    seen = {}
+    for e in out:
+        seen[e['label']] = seen.get(e['label'], 0) + 1
+    for e in out:
+        e['phase_label'] = (
+            _gettext_safe(_PHASE_LABEL_BY_WHEN[e['when']])
+            if (seen.get(e['label'], 0) > 1
+                and e['when'] in _PHASE_LABEL_BY_WHEN) else None)
+
+    # 한 방향으로 몰린 항목이 먼저다 — 사람이 먼저 알아야 할 것이 위에 온다.
+    # 센서가 여럿이면 **가장 한쪽으로 몰린 센서**를 기준으로 삼는다.
+    def _rank(e):
+        return -max(max(s['above'], s['below']) / max(s['days'], 1)
+                    for s in e['sensors'])
+    out.sort(key=_rank)
+    return out
+
+
+#: 목표 이탈을 "요즘 어땠나" 로 물을 때 보는 기본 기간. 짧으면 하루 날씨에
+#: 휘둘리고, 길면 단계가 바뀌어 목표 자체가 달라진다.
+RECENT_DRIFT_DAYS = 14
+
+
+#: `recent_target_drift` 의 짧은 캐시. 한 대화에서 `get_plot` 이 여러 번 불리는
+#: 것이 정상인데, 그때마다 InfluxDB 를 2주치 다시 읽으면 그 비용이 그대로
+#: 사람이 기다리는 시간이 된다. 창이 **날 단위**라 몇 분 사이에 바뀌는 것은
+#: 오늘 하루의 부분값뿐이다.
+_RECENT_DRIFT_TTL_SEC = 600
+_RECENT_DRIFT_CACHE_MAX = 32
+_recent_drift_cache = {}
+
+
+def recent_target_drift(plot, days=RECENT_DRIFT_DAYS, on=None):
+    """구획 → **최근 N일**의 목표 이탈 요약 + 항목별 마지막 실측. 못 내면 None.
+
+    ```
+    {'days', 'from', 'to',
+     'drift': [ …`target_drift` 그대로… ],
+     'latest': {'<measurement>|<when>': {'value', 'on', 'sensor'}}}
+    ```
+
+    ## 왜 필요한가
+
+    `get_plot` 의 목표 점검(`_stage_target_check`)은 **한 시점**만 본다. 그래서
+    "이 목표가 이 현장에서 계속 안 맞는다" 는 사실이 어디에도 나타나지 않았다 —
+    실측(김제 3-1)에서 야간온도가 잰 날 전부 목표를 넘겼는데, 낮에 물으면 그
+    항목은 `not_this_period` 로 빠져 **목록에서 사라지기까지 했다.**
+
+    `latest` 는 그 자리를 메운다. 야간 목표를 낮에 물어도 **직전 밤의 값**을
+    함께 낼 수 있어야 "지금은 해당 없음" 이 "모른다" 로 읽히지 않는다.
+
+    ## 일지와 **같은 함수로** 센다
+
+    수집(`env_channel_series`)·목표 부착(`attach_targets`)·세기(`target_drift`)
+    를 전부 일지 것으로 쓴다. 여기서 따로 세면 같은 구획을 두고 화면과 AI 가
+    다른 숫자를 말하게 된다 — 이 저장소가 반복해서 겪은 실패다.
+
+    ⚠ **조회는 목표가 있는 measurement 로 좁힌다.** `get_plot` 은 자주 불리는
+      도구라, 안 볼 채널까지 InfluxDB 에 묻는 것이 그대로 부담이 된다
+      (`env_channel_series` 의 `measurements` 인자가 그 자리다).
+    """
+    from aot.utils.device_tz import resolve_location_tz
+    from aot.utils.timekit import as_tz
+
+    if plot is None or getattr(plot, 'unique_id', None) is None:
+        return None
+
+    # ⚠ **캐시 키에 창의 끝날을 넣는다.** `on` 이 없으면 창은 "오늘" 인데,
+    #   그것을 키에 안 담으면 23:55 에 담긴 어제 창이 00:01 에도 TTL 안이라
+    #   그대로 나온다 — 응답의 `from`/`to` 가 어제로 찍히고 오늘치가 빠진다.
+    tz = as_tz(resolve_location_tz(plot.unique_id))
+    end_date = on or datetime.now(tz).date()
+    start_date = end_date - timedelta(days=max(1, int(days)) - 1)
+    cache_key = (plot.unique_id, int(days), end_date.isoformat())
+    hit = _recent_drift_cache.get(cache_key)
+    if hit is not None and (time.time() - hit[0]) < _RECENT_DRIFT_TTL_SEC:
+        return hit[1]
+
+    stages = _plot_stages(plot)
+    photo = photosynthesis_targets(plot)
+    if not stages and not photo:
+        return None
+
+    # 목표가 걸린 항목만 묻는다. **원본 measurement 로 좁힌다** — DLI 목표는
+    # 선언이 `radiation` 이고 실제 채널은 `light` 일 수 있어(같은 것의 다른
+    # 이름) 동의어를 함께 넣지 않으면 조회에서 통째로 빠진다.
+    from aot.config_devices_units import measurement_aliases
+    wanted = set()
+    for st in (stages or []):
+        for t in (st.get('targets') or []):
+            # 견줄 수 없는 항목은 묻지 않는다 — 값도 곡선도 없거나, 이 구획이
+            # 재지 못하는 것. 안 볼 채널을 InfluxDB 에 묻는 비용이 그대로
+            # 사람이 기다리는 시간이 된다.
+            if t.get('observable') is False:
+                continue
+            if t.get('value') is None and not t.get('method_uuid'):
+                continue
+            for name in measurement_aliases(t.get('measurement')):
+                if name:
+                    wanted.add(name)
+    for t in photo:
+        for name in measurement_aliases(t.get('measurement')):
+            if name:
+                wanted.add(name)
+    if not wanted:
+        return None
+
+    sensor_ids, outdoor_ids = _plot_sensor_ids(plot)
+    ids = set(sensor_ids) | set(outdoor_ids)
+    if not ids:
+        return None
+
+    bucket_sec = bucket_seconds_for(tz, start_date, end_date)
+    s_str, e_str = period_bounds_utc(start_date, end_date, tz)
+    sun_fn = sun_lookup(plot.unique_id)
+    labels = bucket_labels(start_date, end_date, 'day')
+    try:
+        series, _errors = env_channel_series(
+            ids, s_str, e_str, tz, granularity='day', bucket_sec=bucket_sec,
+            measurements=sorted(wanted), outdoor_ids=outdoor_ids,
+            sun_fn=sun_fn,
+            # 극값은 세지 않는다 — 조회가 채널당 셋에서 하나로 준다.
+            want_stats=('mean',))
+    except Exception:
+        logger.exception('recent_target_drift: 채널 조회 실패(%s)',
+                         plot.unique_id)
+        return None
+    if not series:
+        return None
+
+    env_by_bucket = env_rows_by_bucket(
+        series, labels, tz=tz, bucket_sec=bucket_sec, granularity='day',
+        period_start=start_date, period_end=end_date,
+        cover=cover_light_factor(plot))
+
+    from aot.utils.timekit import to_tz
+
+    def _hhmm(moment):
+        try:
+            return to_tz(moment, tz).strftime('%H:%M')
+        except Exception:
+            return None
+
+    buckets = []
+    for key in labels:
+        rows = env_by_bucket.get(key) or []
+        st = stage_at(stages, key) if stages else None
+        attach_targets(rows,
+                       journal_target_view((st.get('targets') or []) if st
+                                           else []) + photo)
+        # 일출·일몰을 함께 싣는다 — 곡선 목표를 주야로 갈라 견주는
+        # `with_curve_deltas` 가 이 두 값으로 창을 만든다. 없으면 곡선이 걸린
+        # 항목(운영 중인 프로그램 넷의 VPD)이 이탈 요약에서 통째로 빠진다.
+        sun = sun_fn(key) if sun_fn else None
+        buckets.append({'key': key.isoformat(), 'env': rows,
+                        'sunrise': _hhmm(sun[0]) if sun else None,
+                        'sunset': _hhmm(sun[1]) if sun else None})
+
+    # 곡선 목표의 주야 Δ — 일지 화면과 같은 함수를 쓴다(§곡선 목표).
+    buckets = (with_curve_deltas(
+        {'buckets': buckets, 'stages': stages or [],
+         'target': {'tz_name': str(getattr(tz, 'zone', None) or tz)}})
+        or {}).get('buckets') or buckets
+
+    # 항목별 **마지막 실측** — 늦은 날부터 훑어 처음 만난 값이 그것이다.
+    latest = {}
+    for bucket in reversed(buckets):
+        for row in (bucket.get('env') or []):
+            meas = str(row.get('measurement') or '')
+            for when, value in (('day', row.get('avg_day')),
+                                ('night', row.get('avg_night')),
+                                ('', row.get('avg'))):
+                if value is None:
+                    continue
+                key = '%s|%s' % (meas, when)
+                if key in latest:
+                    continue
+                latest[key] = {'value': value, 'on': bucket['key'],
+                               'sensor': row.get('sensor')}
+
+    drift = target_drift(buckets)
+    out = None
+    if drift or latest:
+        out = {'days': (end_date - start_date).days + 1,
+               'from': start_date.isoformat(), 'to': end_date.isoformat(),
+               'drift': drift, 'latest': latest}
+    if len(_recent_drift_cache) > _RECENT_DRIFT_CACHE_MAX:
+        _recent_drift_cache.clear()      # 오래된 것만 골라 낼 값어치가 없다
+    _recent_drift_cache[cache_key] = (time.time(), out)
+    return out
+
+
+def measured_stage_targets(plot, on=None):
+    """구획 → **단계별 목표 옆에 이 현장의 실측 분포**. 못 내면 None.
+
+    ```
+    [{'key', 'name', 'starts_on', 'ends_on',
+      'items': [{'key', 'label', 'unit', 'when', 'measurement',
+                 'target': 22.0 | None,
+                 'sensors': [{'sensor', 'days', 'median', 'p25', 'p75'}],
+                 'suggest': 27.8 | None, 'why': 'sensors-differ'|'no-data'}]}]
+    ```
+
+    ## 왜 필요한가 — 되먹임 고리가 한쪽만 열려 있었다
+
+    `plot_io.save_as_program` 은 구획이 **실제로 따른 단계 일수**를 새 프로그램에
+    담아 준다. 그런데 목표값은 원본 그대로 복사한다 — 단계 일수는 현장 실측으로
+    갱신할 길이 있는데 **목표값은 아무리 어긋나도 갱신할 길이 없었다.** 기후가
+    바뀌어 문헌 기준이 이 현장에서 성립하지 않게 되는 상황이 정확히 여기서
+    막힌다(실측: 야간온도가 잰 날 전부 목표를 넘겼다).
+
+    ## 지어내지 않는다
+
+    - 내는 것은 **그 단계 기간에 실제로 잰 값의 분포**뿐이다. "얼마여야 한다"
+      는 판단이 아니라 "얼마였다" 는 사실이고, 고칠지는 사람이 정한다.
+    - 중앙값을 쓴다 — 폭염 하루가 평균을 끌고 가면 그 값은 그 작기를 대표하지
+      못한다. 사분위(p25·p75)를 함께 내어 폭을 함께 보인다.
+    - **센서를 가로질러 평균하지 않는다**(§C-0 과 같은 규칙). 캐노피 안팎이
+      다른 값을 내는 것이 정상이라, 하나로 접으면 어느 센서도 말하지 않은
+      숫자가 된다. 그래서 `suggest` 는 **그 항목을 잰 센서가 하나일 때만**
+      값을 갖고, 여럿이면 `why='sensors-differ'` 로 비운다 — 사람이 고를
+      일이지 시스템이 고를 일이 아니다.
+    """
+    from aot.utils.device_tz import resolve_location_tz
+    from aot.utils.timekit import as_tz
+
+    if plot is None or getattr(plot, 'unique_id', None) is None:
+        return None
+    stages = _plot_stages(plot)
+    if not stages:
+        return None
+
+    started = getattr(plot, 'started_on', None)
+    if started is None:
+        return None
+    tz = as_tz(resolve_location_tz(plot.unique_id))
+    end_date = on or datetime.now(tz).date()
+    ends = [_journal_date(st.get('ends_on')) for st in stages]
+    last = max([d for d in ends if d is not None] or [end_date])
+    end_date = min(end_date, last)
+    if end_date < started:
+        return None
+
+    from aot.config_devices_units import measurement_aliases
+    wanted = set()
+    for st in stages:
+        for t in (st.get('targets') or []):
+            if t.get('observable') is False:
+                continue
+            for name in measurement_aliases(t.get('measurement')):
+                if name:
+                    wanted.add(name)
+    if not wanted:
+        return None
+
+    sensor_ids, outdoor_ids = _plot_sensor_ids(plot)
+    ids = set(sensor_ids) | set(outdoor_ids)
+    if not ids:
+        return None
+    bucket_sec = bucket_seconds_for(tz, started, end_date)
+    s_str, e_str = period_bounds_utc(started, end_date, tz)
+    try:
+        series, _errors = env_channel_series(
+            ids, s_str, e_str, tz, granularity='day', bucket_sec=bucket_sec,
+            measurements=sorted(wanted), outdoor_ids=outdoor_ids,
+            sun_fn=sun_lookup(plot.unique_id), want_stats=('mean',))
+    except Exception:
+        logger.exception('measured_stage_targets: 채널 조회 실패(%s)',
+                         plot.unique_id)
+        return None
+    if not series:
+        return None
+    labels = bucket_labels(started, end_date, 'day')
+    env_by_bucket = env_rows_by_bucket(
+        series, labels, tz=tz, bucket_sec=bucket_sec, granularity='day',
+        period_start=started, period_end=end_date,
+        cover=cover_light_factor(plot))
+
+    def _pick(row, when):
+        if when == 'day':
+            return row.get('avg_day')
+        if when == 'night':
+            return row.get('avg_night')
+        return row.get('avg')
+
+    def _quantile(values, q):
+        """정렬된 표본의 분위수 — 보간 없이 가까운 관측값으로 답한다.
+
+        보간하면 그 자리에 **실제로 잰 적 없는 숫자**가 생긴다. 목표 제안으로
+        나갈 값이라 관측값 중 하나를 고르는 편이 정직하다.
+        """
+        if not values:
+            return None
+        idx = int(round((len(values) - 1) * q))
+        return _round(values[idx])
+
+    out = []
+    for st in stages:
+        s_on = _journal_date(st.get('starts_on'))
+        e_on = _journal_date(st.get('ends_on')) or end_date
+        items = []
+        # `journal_target_view` 를 거친다 — 적산 목표(DLI)는 선언이 일사인데
+        # 견줄 값은 하루 적산 행이다(§목표 부착). 여기서 그 규칙을 다시 적으면
+        # 일지와 갈린다.
+        for t in journal_target_view(st.get('targets') or []):
+            meas = str(t.get('measurement') or '')
+            when = t.get('when')
+            per_sensor = {}
+            for key in labels:
+                if s_on is not None and key < s_on:
+                    continue
+                if key > e_on:
+                    continue
+                for row in (env_by_bucket.get(key) or []):
+                    if str(row.get('measurement') or '') != meas:
+                        continue
+                    value = _pick(row, when)
+                    if value is None:
+                        continue
+                    who = (row.get('device_id'), row.get('channel'))
+                    box = per_sensor.setdefault(
+                        who, {'sensor': row.get('sensor'), 'values': []})
+                    box['values'].append(float(value))
+            sensors = []
+            for box in per_sensor.values():
+                vals = sorted(box['values'])
+                sensors.append({'sensor': box['sensor'], 'days': len(vals),
+                                'median': _quantile(vals, 0.5),
+                                'p25': _quantile(vals, 0.25),
+                                'p75': _quantile(vals, 0.75)})
+            # 목표 라벨은 **번역 대상 msgid** 다("Day temp" → "주간 온도").
+            # 화면이 그대로 그리므로 여기서 옮긴다(`target_drift` 와 같은 규칙).
+            item = {'key': t.get('key'),
+                    'label': (_gettext_safe(t['label']) if t.get('label')
+                              else t.get('label')),
+                    'unit': t.get('unit'), 'when': when,
+                    'measurement': meas, 'target': t.get('value'),
+                    'sensors': sensors}
+            if not sensors:
+                item['suggest'], item['why'] = None, 'no-data'
+            elif len(sensors) > 1:
+                item['suggest'], item['why'] = None, 'sensors-differ'
+            else:
+                item['suggest'], item['why'] = sensors[0]['median'], None
+            items.append(item)
+        out.append({'key': st.get('key'), 'name': st.get('name'),
+                    'starts_on': st.get('starts_on'),
+                    'ends_on': st.get('ends_on'), 'items': items})
+    return out
+
+
+def control_trend_series(view_buckets):
+    """`view_buckets`(각 버킷에 `control` 목록) → 장치별 가동시간 시계열.
+
+    ```
+    [{'output_id', 'name', 'bars': True, 'scale': {…},
+      'points': [{'k', 'label', 'avg'}, …]}]
+    ```
+
+    min/max 는 안 낸다 — 가동시간은 한 기간에 값이 하나뿐이다.
+
+    ⚠ **선이 아니라 막대다.** 예전에는 `AoTViz.trend` 로 점을 이어 그렸는데,
+      실사용 지적(2026-09-04): "장치는 서로 연결되는 값이 아니라 독립적이라
+      막대형이 낫다." 어제 3시간 돌고 오늘 1시간 돈 것은 **두 사실**이지
+      한 값이 내려간 것이 아니다. 그래서 축을 0 에서 시작해 바닥에서
+      올라오는 막대로 그린다.
+
+    ⚠ `env_trend_series` 와 같은 이유로 **행이 없는 버킷도 자리를 채운다**
+      (`avg: None`) — 날짜 간격을 지킨다.
+    """
+    view_buckets = view_buckets or []
+    order = []
+    meta = {}
+    per_bucket = []
+    for bucket in view_buckets:
+        rows_by_key = {}
+        for row in (bucket.get('control') or []):
+            key = row.get('output_id') or row.get('name')
+            if not key:
+                continue
+            if key not in meta:
+                meta[key] = {'name': row.get('name')}
+                order.append(key)
+            rows_by_key[key] = row
+        per_bucket.append(rows_by_key)
+
+    out = []
+    for key in order:
+        points = []
+        for i, bucket in enumerate(view_buckets):
+            bkey = bucket.get('key') or bucket.get('date_label')
+            row = per_bucket[i].get(key)
+            points.append({'k': bkey, 'label': str(bkey or '')[5:10],
+                           'avg': (row.get('hours') if row else None)})
+        # 축은 **0 에서** 시작한다 — 가동시간은 크기라 0 이 기준이다.
+        span = [0.0] + [pt['avg'] for pt in points if pt['avg'] is not None]
+        # 가동시간은 **합**이다 — 접기(`_merge_bucket_group`)도 그렇게 하고,
+        # 표도 그 합을 보인다. 마지막 값을 실으면 "이 기간에 얼마나 돌았나"
+        # 라는 물음에 하루치로 답하게 된다.
+        total = sum(pt['avg'] for pt in points if pt['avg'] is not None)
+        out.append({'output_id': key, 'name': meta[key]['name'],
+                    'bars': True, 'scale': value_scale(span),
+                    'head_value': (round(total, 3) if points else None),
+                    'head_kind': 'sum',
+                    'points': points})
+    return out
+
+
+def stage_timeline_data(stages, tz_name=None, on=None):
+    """`stages`(§7, `starts_on`/`ends_on`/`name` 을 가진 목록) →
+    `AoTViz.timeline`(WP3)에 그대로 넘길 데이터.
+
+    ```
+    {'segments': [{'span', 'name', 'current'}], 'positionPct'}
+    ```
+
+    ## 왜 필요한가
+
+    단계마다 반복되던 큰 블록(목표표·안내문) 대신, "지금 전체 일정에서
+    어디쯤인가" 를 **막대 하나**로 먼저 보여준다 — 6단계 문서에서 같은
+    모양의 절이 6번 반복되던 것을 줄인다(§WP4-3). 세부(지침·실측·노트)는
+    `stage_sections()` 가 그대로 낸다 — 이 함수는 그 위에 얹는 요약 막대일
+    뿐, 계산을 대신하지 않는다.
+
+    ⚠ **끝나지 않은 마지막 단계는 7일로 어림한다.** `span` 이 0 이면
+      `AoTViz.timeline` 이 그 구간을 그리지 않아 막대에서 통째로 사라진다
+      — 없는 것보다 대충이라도 자리를 주는 편이 낫다.
+
+    ⚠ **기준 시점은 `on`(문서 기간의 끝)이지 오늘이 아니다.** 오늘로 잡으면
+      8월 일지를 9월에 열었을 때 막대가 9월 단계를 가리킨다 — 문서가 담은
+      기간과 무관한 단계가 문서 맨 위에서 강조된다(실사용 점검 2026-09-04).
+      `gdd_for_journal` 이 `min(end_date, real_today)` 로 하는 것과 같은
+      판단이다. 주지 않으면 예전처럼 오늘을 쓴다.
+    """
+    import pytz
+
+    def _d(v):
+        if not v:
+            return None
+        try:
+            return datetime.strptime(str(v)[:10], '%Y-%m-%d').date()
+        except (ValueError, TypeError):
+            return None
+
+    try:
+        tz = pytz.timezone(tz_name) if tz_name else pytz.utc
+    except Exception:
+        tz = pytz.utc
+    today = datetime.now(tz).date()
+    # 문서가 아직 진행 중이면 기간 끝이 미래일 수 있다 — 그때는 오늘이 맞다.
+    if on is not None:
+        today = min(on, today)
+
+    segs = []
+    total_days = 0
+    first_start = None
+    for st in (stages or []):
+        s = _d(st.get('starts_on'))
+        e = _d(st.get('ends_on'))
+        if first_start is None and s is not None:
+            first_start = s
+        if s is not None and e is not None:
+            span = (e - s).days + 1
+        elif s is not None:
+            span = 7
+        else:
+            span = 1
+        span = max(span, 1)
+        is_current = (s is not None and s <= today
+                     and (e is None or today <= e))
+        segs.append({'span': span, 'name': st.get('name') or st.get('key'),
+                    'current': is_current})
+        total_days += span
+
+    pos = None
+    elapsed = None
+    if first_start is not None and total_days:
+        elapsed = (today - first_start).days
+        pos = max(0.0, min(100.0, (elapsed / total_days) * 100.0))
+
+    # ── 머리줄(라벨 + 값) ────────────────────────────────────────────────
+    # 다른 화면들은 `AoTViz` 에 언제나 머리줄을 넘긴다 — 그래야 `.aot-viz-head`
+    # 의 아래 여백(12px)이 생겨 그림이 상자 위 테두리에 닿지 않고, 무엇보다
+    # 막대가 무엇을 말하는지가 글자로 남는다. 문구는 번역 대상이라 여기서
+    # 만든다(화면에서 만들면 msgid 가 JS 에 갇힌다).
+    label = None
+    for seg in segs:
+        if seg.get('current'):
+            label = seg.get('name')
+            break
+    value_text = None
+    if elapsed is not None and total_days:
+        # 작기 시작 다음 날이 D2 다 — 사람이 세는 방식(첫날이 D1).
+        value_text = '%s / %s' % (
+            _gettext_safe('D%(n)s') % {'n': max(1, elapsed + 1)},
+            _gettext_safe('%(n)s days') % {'n': total_days})
+
+    return {'segments': segs, 'positionPct': pos,
+            'label': label, 'value_text': value_text}
+
+
+def stage_sections(journal_data, granularity=None, stored=None):
     """저장된 스냅샷 → **단계별 실제 기록** 목록. 열람 시점 순수 계산이다.
 
     ```
     [{'stage': 원본 단계, 'in_period': bool, 'days': int,
       'starts_on', 'ends_on',            # 이 문서의 기간과 겹치는 구간
-      'env_groups': [...], 'control': [...], 'notes': [...], 'photos': [...]}]
+      'env_groups': [...], 'control': [...], 'notes': [...], 'photos': [...],
+      'buckets': [...]}]                 # granularity 를 준 경우에만
     ```
+
+    `granularity`(보는 단위)를 주면 각 단계에 **그 단계 기간의 일/주/월
+    버킷 목록**을 함께 담는다. 이것이 화면의 기본 구성이다 — 예전에는 단계
+    절과 일자별 절이 따로 있어 "정식기에 무슨 일이 있었나" 를 두 군데서
+    맞춰 읽어야 했다(실사용 지적). 조회를 새로 하지 않는다 — 이미 저장된
+    같은 버킷을 단계 구간으로 갈라 `fold_buckets` 로 접을 뿐이다.
+
+    ⚠ **주·월 경계는 단계마다 다시 잡힌다**(그 단계의 첫 기록일 기준).
+      의도한 선택이다. 문서 전체 기준으로 접으면 한 버킷이 단계 경계를
+      걸쳐 "이 주는 어느 단계 것인가" 를 지어내야 한다. 단계별로 앵커하면
+      "정식기 1주차" 가 그대로 읽힌다.
+
+    `granularity == 'all'` 이면 버킷이 하나뿐이고 그 값은 단계 요약과 같으므로
+    목록을 만들지 않는다(같은 표를 두 번 그리지 않는다).
 
     ## 왜 필요한가 (실사용에서 나온 지적)
 
@@ -2529,20 +4447,59 @@ def stage_sections(journal_data):
     # 버킷을 날짜로 색인한다. 접힌 '빈 구간'(gap_count)은 여러 날을 대표하므로
     # 시작일만 갖고는 못 가른다 — 어차피 내용이 없으니 넘긴다.
     dated = []
+    dated_all = []
     for bucket in buckets:
-        if bucket.get('gap_count'):
-            continue
         key = _as_date(bucket.get('key') or bucket.get('date_label'))
-        if key is not None:
+        if key is None:
+            continue
+        dated_all.append((key, bucket))
+        # 접힌 '빈 구간'(gap_count)은 여러 날을 대표하므로 **요약 계산에는
+        # 넣지 않는다** — 시작일만 갖고는 며칠짜리인지 못 가르고, 어차피
+        # 내용이 없다. 다만 **목록에는 남긴다**(`dated_all`): 단계 안에
+        # 목록을 그리면서 빠뜨리면 그 기간이 사라진 것처럼 보인다.
+        if not bucket.get('gap_count'):
             dated.append((key, bucket))
 
+    def _targets_signature(targets):
+        """단계 목표 목록 → 비교용 서명(순서에 안 흔들리게 정렬한다).
+
+        WP4-3 — 미래 단계의 동일한 목표표가 그대로 4~5 번 반복됐다(딸기
+        6단계가 전부 낮/야간 온도·습도·VPD 곡선으로 같았다). 여기서 이전
+        단계와 **다른지만** 판정한다 — 화면은 같으면 표를 다시 안 그린다.
+        """
+        sig = [(t.get('key'), t.get('value'), t.get('unit'),
+               t.get('when'), t.get('method_name'))
+              for t in (targets or [])]
+        return tuple(sorted(sig, key=lambda x: str(x[0])))
+
+    # 날짜별 누적을 **문서 순서대로 한 번** 만들어 둔다 — 단계마다 다시 세면
+    # 겹치는 구간에서 값이 어긋난다. 시작점은 문서와 같은 규칙이다.
+    _gdd = (journal_data or {}).get('gdd') or {}
+    try:
+        _running = float(_gdd.get('total')) - float(_gdd.get('period'))
+    except (TypeError, ValueError):
+        _running = 0.0
+    gdd_before = {}        # 버킷 시작일 → 그 버킷 **직전**까지의 누적
+    gdd_after = {}         # 버킷 시작일 → 그 버킷까지 포함한 누적
+    for _k, _b in sorted(dated_all, key=lambda kv: kv[0]):
+        gdd_before[_k] = _running
+        if _b.get('gdd') is not None:
+            try:
+                _running += float(_b['gdd'])
+            except (TypeError, ValueError):
+                pass
+        gdd_after[_k] = _running
+
     out = []
+    prev_sig = object()   # 첫 단계는 항상 '바뀜' 으로 — 어떤 서명과도 안 같다
     for stage in stages:
         starts = _as_date(stage.get('starts_on'))
         ends = _as_date(stage.get('ends_on'))
-        mine = [(k, b) for k, b in dated
-                if (starts is None or k >= starts)
-                and (ends is None or k <= ends)]
+        def _in_stage(k, _s=starts, _e=ends):
+            return (_s is None or k >= _s) and (_e is None or k <= _e)
+
+        mine = [(k, b) for k, b in dated if _in_stage(k)]
+        mine_all = [(k, b) for k, b in dated_all if _in_stage(k)]
 
         # **'예정' 과 '지난' 을 가른다.** 기간 밖이라고 전부 앞으로 올 일은
         # 아니다 — 문서 기간보다 **먼저 끝난** 단계도 기간 밖이고, 그것을
@@ -2554,6 +4511,10 @@ def stage_sections(journal_data):
         if ends is not None and doc_start is not None and ends < doc_start:
             when = 'past'
 
+        sig = _targets_signature(stage.get('targets'))
+        targets_changed = (sig != prev_sig)
+        prev_sig = sig
+
         section = {
             'stage': stage,
             'in_period': bool(mine),
@@ -2561,22 +4522,71 @@ def stage_sections(journal_data):
             'days': len(mine),
             'starts_on': min(k for k, _b in mine).isoformat() if mine else None,
             'ends_on': max(k for k, _b in mine).isoformat() if mine else None,
+            'targets_changed': targets_changed,
             'env_groups': [], 'control': [], 'notes': [], 'photos': [],
+            'buckets': [], 'trends': [], 'drift': [], 'unobservable': [],
         }
         if mine:
             merged = _merge_bucket_group(
                 {'days': [b for _k, b in mine],
                  'first': min(k for k, _b in mine),
                  'last': max(k for k, _b in mine)}, 'all')
-            section['env_groups'] = group_env_rows(merged.get('env') or [])
+            section['env_groups'] = with_gdd_group(
+                group_env_rows(merged.get('env') or []), merged)
             section['control'] = merged.get('control') or []
             section['notes'] = merged.get('notes') or []
+            # 적산온도는 **단계 전환을 좌우하는 값**인데 단계 절에만 없었다
+            # (실사용 지적 2026-09-04). 접기(`_merge_bucket_group`)가 이미
+            # 합을 내 두므로 그대로 담고, 끝 시점의 누적을 함께 낸다 —
+            # "이 단계에 얼마나 쌓았나" 와 "그래서 지금 몇 도인가" 는 다른
+            # 물음이고, 단계 전환을 정하는 것은 뒤쪽이다.
+            # 이 단계 기간의 목표 이탈 요약. **날짜별 행**으로 센다(보는
+            # 단위와 무관하게 분모가 같아야 한다).
+            section['drift'] = target_drift([b for _k, b in mine])
+            # ⚠ **"센서 없음" 은 저장된 `observable` 을 그대로 믿지 않는다.**
+            #   그 값은 생성 시점에 굳는데, 판정 자체가 틀려 있었다(동의 키를
+            #   안 보고 기상대를 목록에서 뺐다 — `plot_context`). 그래서 DLI
+            #   값과 Δ 가 바로 위 표에 있는데 그 아래 "센서 없음: DLI" 가
+            #   붙어 **화면이 스스로를 부정했다**. 이 단계에 실제로 행이 있는
+            #   measurement 는 여기서 걸러 낸다 — 옛 일지에도 소급된다.
+            section['unobservable'] = _unobservable_targets(
+                stage.get('targets'), merged.get('env') or [])
+            section['gdd'] = merged.get('gdd')
+            _last = max(k for k, _b in mine)
+            section['gdd_cumulative'] = _round(gdd_after.get(_last))
             # 사진은 노트 안에 흩어져 있다 — 단계 절에서 한눈에 보이게 모은다.
             for note in section['notes']:
                 for name in (note.get('image_files') or []):
                     section['photos'].append({'file': name,
                                               'time': note.get('time'),
                                               'title': note.get('title')})
+        # 이 단계 기간의 일/주/월 목록. 라우트가 문서 전체에 하는 것과
+        # **같은 두 줄**이다(접고, `env_groups` 를 붙인다) — 표가 두 벌
+        # 갈라지지 않게 화면도 같은 매크로로 그린다.
+        if granularity and granularity != 'all' and mine_all:
+            for bucket in fold_buckets([b for _k, b in mine_all],
+                                       to=granularity,
+                                       granularity=(stored or 'day')):
+                section['buckets'].append(dict(bucket, env_groups=(
+                    with_gdd_group(group_env_rows(bucket.get('env') or []),
+                                   bucket))))
+            # 이 단계 기간의 범위 도표(§보고서용 viz). 단계 요약 표가 "얼마
+            # 였나" 를 한 줄로 말한다면 이 그림은 "그 안에서 어떻게 움직였나"
+            # 를 말한다 — 같은 버킷을 다시 읽는 순수 계산이다.
+            # ⚠  이 아니라  이다 — 데이터가 없는 단계도
+            #   빈 구간 버킷은 가질 수 있고, 그때  은 비어 있다.
+            # ⚠ `mine` 이 아니라 `mine_all` 이다 — 데이터가 없는 단계도 빈
+            #   구간 버킷은 가질 수 있고, 그때 `mine` 은 비어 있다(실측:
+            #   `min() arg is an empty sequence`).
+            # 단계 도표의 머리줄은 **바로 위 표와 같은 값**이어야 한다 —
+            # 그래서 표를 만든 그룹 목록을 그대로 넘긴다.
+            _first = min(k for k, _b in mine_all)
+            section['trends'] = order_chart_series(
+                env_trend_series(section['buckets'],
+                                 targets=stage.get('targets'),
+                                 summary_groups=section['env_groups'])
+                + [gdd_trend_series(section['buckets'], journal_data,
+                                    baseline=gdd_before.get(_first, 0.0))])
         out.append(section)
     return out
 
@@ -2669,6 +4679,62 @@ def measurement_label(key, scope=None):
         return key
 
 
+#: 정본(`UNITS`)에 없는, 이 저장소가 파생해 내는 단위. DLI 는 일지가 직접
+#: 적분해 만드는 값이라(§`LIGHT_MEASUREMENTS`) `DeviceMeasurements` 정의에
+#: 없다.
+_UNIT_LABEL_OVERRIDES = {
+    'mol_m2_d': 'mol/m²/d',
+    # 적산온도의 단위. `UNITS` 에는 없다 — GDD 는 장치 측정값이 아니라
+    # 일지가 계산해 내는 값이라 단위 표에 자리가 없다.
+    'C_day': '°C·d',
+}
+
+
+def unit_label(key):
+    """단위 키 → 사람이 읽는 기호. 모르면 원문 키를 그대로 낸다.
+
+    정본은 `UNITS`(`config_devices_units.py`) 다 — 여기서 새 기호를 지어
+    내지 않는다. 실측: 표에 `28.74 C`·`71.27 percent`·`0.19 none`·`0.26 m_s`
+    처럼 DeviceMeasurements 의 원문 단위 키가 그대로 나갔다 — `UNITS[key]
+    ['unit']` 이 이미 `°C`·`%`·(빈 문자열)·`m/s` 를 갖고 있는데 그것을 쓰지
+    않고 있었다.
+
+    ⚠ **CSV 는 이 함수를 쓰지 않는다.** CSV 는 표계산으로 다시 쓰라고 내는
+      기계용 파일이라 원문 키가 오히려 안전하다(사람이 읽는 기호는 로케일에
+      따라 갈리고, 다시 파싱할 때 방해가 된다).
+    """
+    if not key:
+        return ''
+    key = str(key)
+    if key in _UNIT_LABEL_OVERRIDES:
+        return _UNIT_LABEL_OVERRIDES[key]
+    from aot.config_devices_units import UNITS
+    entry = UNITS.get(key)
+    if entry is None:
+        return key
+    unit = entry.get('unit')
+    return key if unit is None else unit
+
+
+def _display_avg(e):
+    """환경 행의 평균값 → 내보내기(MD·ODT)용 표시 문자열.
+
+    방위는 각도가 아니라 최다 풍향으로 말한다(HTML 과 같은 규칙 —
+    `compass_label`) — 그러지 않으면 원형평균 각도(예: 74.68)를 선형으로
+    읽는 오독이 `CIRCULAR_UNITS` 주석이 경고한 그대로 이 경로에서만
+    재발한다. 그 외에는 값에 사람이 읽는 단위를 붙인다(`unit_label`).
+    """
+    if e.get('sector') is not None:
+        text = compass_label(e['sector']) or ''
+        if e.get('sector_pct'):
+            text += ' %s%%' % e['sector_pct']
+        return text
+    avg = e.get('avg')
+    if avg is None:
+        return ''
+    return ('%s %s' % (avg, unit_label(e.get('unit')))).strip()
+
+
 def group_env_rows(rows):
     """버킷 하나의 env 행 → **측정값별로 묶은 표시용 그룹** 목록.
 
@@ -2698,6 +4764,14 @@ def group_env_rows(rows):
     """
     import math
 
+    # 열람 시점 방어 — 생성 시점 결함(§1-4, `attach_targets`)으로 기상대
+    # 행에 재배 목표가 이미 구워져 저장된 옛 일지도 여기서 가려낸다. 같은
+    # measurement 를 재는 현장 센서가 이 버킷에 있으면 기상대 행은 목표·Δ
+    # 를 보이지 않는다 — 판정 규칙은 생성 경로와 같아야 한다(두 곳이
+    # 갈리면 새 일지와 옛 일지가 다르게 보인다).
+    indoor_measures = {str(r.get('measurement') or '').strip().lower()
+                       for r in (rows or []) if r.get('scope') != 'outdoor'}
+
     groups = {}
     order = []
     for raw in (rows or []):
@@ -2711,6 +4785,12 @@ def group_env_rows(rows):
         row['max'] = _round(row.get('max'))
         row['avg'] = _round(row.get('avg'))
         row['delta'] = _round(row.get('delta'))
+        meas = str(row.get('measurement') or '').strip().lower()
+        if row.get('scope') == 'outdoor' and meas in indoor_measures:
+            row['target'] = None
+            row['delta'] = None
+            row['delta_skipped'] = None
+            row['follows_curve'] = None
         # 저장된 것은 원문 키다 — 사람이 읽는 이름은 여기서 만든다.
         # 채널 이름 → 측정 정의 → 원문 키 순. 위 주석 참조.
         row['measurement_label'] = (
@@ -2738,10 +4818,29 @@ def group_env_rows(rows):
         # '강우' 라고 적어 둔 것을 '길이' 로 되돌리면 자기가 적은 것을 못
         # 알아본다. 여럿이면 이름이 제각각일 수 있어 일반명을 쓴다.
         label = measurement_label(measurement, scope)
-        if len(members) == 1 and members[0].get('channel_name'):
-            label = members[0]['channel_name']
+        # ⚠ **채널 이름이 다른 행과 겹치면 쓰지 않는다.** Open-Meteo 입력은
+        #   풍속(채널 3)과 풍향(채널 4)에 **똑같이 `'Wind'`** 를 붙여 두어,
+        #   표에 "Wind" 두 줄이 나란히 서고 어느 쪽이 방향인지 알 수 없었다
+        #   (실사용 점검 2026-09-04). 겹칠 때는 measurement 이름으로 돌아간다
+        #   — `_OUTDOOR_LABELS` 가 이미 '풍속'·'풍향' 을 갖고 있다.
+        #   겹치지 않는 이름은 그대로 둔다(위 이유).
+        chan = (members[0].get('channel_name')
+                if len(members) == 1 else None)
+        # ⚠ **같은 measurement 를 현장 센서도 재고 있을 때만** "기상대" 를
+        #   덧붙인다 — "실내/실외" 가 아니라 "현장 센서 vs 기상대 센서" 로
+        #   가르는 것이 노지에도 맞는 구분이다(대선/콩처럼 기상대뿐인
+        #   구획에서는 덧붙일 이유가 없다 — 애초에 헷갈릴 짝이 없다).
+        #   좌측 색 막대(`.is-outdoor`)만으로는 구별이 안 된다는 것이
+        #   실사용 검토에서 나왔다 — "온도" 두 행이 나란히 있는데 어느
+        #   쪽이 시설 안인지 표에 없었다. 배지를 이어 붙이는 것이 아니라
+        #   **라벨 자체가 말하게** 한다("한 열에는 한 정보만" 규칙과
+        #   충돌하지 않는다 — 이 경우 그 한 정보가 곧 "어디서 쟀나" 다).
         entry = {'measurement': measurement, 'unit': unit, 'scope': scope,
                  'measurement_label': label,
+                 # 겹침 판정을 끝낸 뒤에야 라벨이 정해진다 — 아래 참조.
+                 '_chan_label': chan, '_meas_label': label,
+                 '_prefix': (scope == 'outdoor'
+                             and measurement in indoor_measures),
                  'sensors': members, 'summary': None}
         if len(members) < 2:
             out.append(entry)
@@ -2775,8 +4874,26 @@ def group_env_rows(rows):
         usages = [r['usage']['amount'] for r in members
                   if (r.get('usage') or {}).get('amount') is not None]
 
+        def _phase_avg(field):
+            """주간/야간 평균을 **표본 수로 가중해** 접는다.
+
+            단순 평균으로 접으면 반나절만 기록된 센서가 온종일 기록된 센서와
+            같은 무게를 갖는다(바로 위 `avg` 와 같은 규칙).
+            """
+            pairs = [(r[field], r.get('samples') or 0) for r in members
+                     if r.get(field) is not None]
+            if not pairs or circular:
+                return None
+            w = sum(max(n, 1) for _v, n in pairs)
+            return sum(v * max(n, 1) for v, n in pairs) / w
+
         entry['summary'] = {
             'sensor_count': len(members),
+            # 범위 도표가 주간·야간 평균을 갈라 찍는다 — 대표 줄에도 있어야
+            # 여러 센서를 묶은 그룹에서 그림이 비지 않는다.
+            'avg_day': _round(_phase_avg('avg_day')),
+            'avg_night': _round(_phase_avg('avg_night')),
+            'when': members[0].get('when'),
             # 원형 값은 min/max 가 없다 — 빈 리스트가 그대로 None 이 된다.
             'min': _round(min(mins)) if mins else None,
             'max': _round(max(maxs)) if maxs else None,
@@ -2793,10 +4910,129 @@ def group_env_rows(rows):
             # 같은 목표를 보므로 사유도 같다).
             'delta_skipped': members[0].get('delta_skipped'),
             'follows_curve': members[0].get('follows_curve'),
+            # 곡선 목표의 주야 Δ — 센서를 가로질러 접을 때도 범위를 남긴다.
+            # 실측에서 같은 구획의 두 센서가 같은 VPD 목표를 **반대 방향**으로
+            # 벗어났다(캐노피 안팎). 평균 하나로 접으면 그 사실이 사라진다.
+            'target_phases': _merge_phases([r['target_phases'] for r in members
+                                            if r.get('target_phases')]),
             'usage': (round(sum(usages), 3) if usages else None),
         }
         out.append(entry)
-    return out
+
+    # ── 라벨 확정 — **겹치면 measurement 이름으로 돌아간다** ─────────────
+    # 채널 이름은 사용자가 붙인 것일 때 값이 있지만(자기가 '강우' 라 적어 둔
+    # 것을 '길이' 로 되돌리면 못 알아본다), 입력 모듈이 붙인 이름은 그렇지
+    # 않다 — 풍속·풍향이 둘 다 'Wind' 다. 표에서 두 행을 가르지 못하는
+    # 이름은 이름 노릇을 못 한다.
+    # ⚠ **같은 measurement 끼리 겹치는 것은 겹침이 아니다.** 현장·기상대
+    #   온도가 둘 다 '온도' 인 것은 정상이고, 그 둘은 "기상대" 접두가 이미
+    #   가른다. 되돌려야 하는 것은 **서로 다른 measurement 가 같은 이름을
+    #   쓰는 경우**다(풍속·풍향이 둘 다 'Wind').
+    seen = {}
+    for entry in out:
+        name = entry.get('_chan_label')
+        if name:
+            seen.setdefault(name, set()).add(entry['measurement'])
+    for entry in out:
+        name = entry.pop('_chan_label', None)
+        label = entry.pop('_meas_label', entry['measurement_label'])
+        if name and len(seen.get(name) or ()) == 1:
+            label = name
+        if entry.pop('_prefix', False):
+            label = _gettext_safe('Weather station %(name)s') % {'name': label}
+        entry['measurement_label'] = label
+        for row in (entry.get('sensors') or []):
+            # 개별 행의 캐시도 같은 판정을 따르게 한다 — 표는 그룹 라벨을
+            # 쓰지만(§WP2-1) 다른 소비자가 행을 직접 읽는다.
+            row['measurement_label'] = label
+    return mark_primary_groups(out)
+
+
+#: 결과 지표가 없는 표에서 **즉시 보이는** 측정값 가짓수(대체 규칙).
+#:
+#: 노지 구획처럼 DLI·GDD·VPD 가 하나도 없는 문서에서는 표가 통째로 접힌다 —
+#: 그때만 예전 규칙(광합성 우선순위 상위 N개)으로 돌아간다.
+PRIMARY_MEASUREMENT_COUNT = 3
+
+
+def mark_primary_groups(groups, top_n=None):
+    """표시용 그룹 목록에 `primary`(즉시 보임) 플래그를 붙인다(제자리 수정).
+
+    **주요 = 결과 지표**다(`DERIVED_MEASUREMENTS`: DLI·GDD·VPD). 일사·기온·
+    습도는 센서가 잰 원 데이터이고, 사람이 보고 판단하는 것은 그것으로 만든
+    지표다 — 그림(도표 상위)과 **같은 기준**을 표에도 쓴다(실사용 결정
+    2026-09-04: "DLI, GDD, VPD 는 주요지표이기 때문에 각 층에서 다루는 게
+    낫다").
+
+    ⚠ **하나도 없으면 예전 규칙으로 돌아간다.** 노지 구획처럼 세 지표가 전혀
+      없는 문서에서 그대로 두면 표가 통째로 접혀 아무것도 안 보인다. 그때는
+      광합성 우선순위 상위 `top_n` 개를 즉시 보인다 — `group_env_rows()` 가
+      이미 그 순서로 정렬해 두었으므로 앞에서부터 세면 된다.
+
+    ⚠ **같은 measurement 의 현장·기상대 그룹은 함께 보인다.** 둘을 갈라
+      한쪽만 즉시 보이면 이 표를 보는 이유 중 하나("외기 대비 현장이 얼마나
+      다른가")가 사라진다.
+    """
+    groups = groups or []
+    kept = {str(g.get('measurement') or '') for g in groups
+            if str(g.get('measurement') or '') in DERIVED_MEASUREMENTS}
+    if not kept:
+        limit = PRIMARY_MEASUREMENT_COUNT if top_n is None else top_n
+        order = []
+        for grp in groups:
+            meas = str(grp.get('measurement') or '')
+            if meas not in order and len(order) < limit:
+                order.append(meas)
+        kept = set(order)
+    for grp in groups:
+        grp['primary'] = str(grp.get('measurement') or '') in kept
+    return groups
+
+
+def gdd_display_group(bucket):
+    """버킷 → 표에 넣을 **적산온도 그룹** 하나(또는 `None`).
+
+    GDD 는 환경 행이 아니라 버킷에 실린 값이라, 예전에는 날짜 제목 옆 작은
+    글자로만 나왔다 — DLI·VPD 는 표의 행인데 GDD 만 표 밖에 떠 있었다.
+    여기서 **같은 모양의 그룹**으로 만들어 표에 넣는다.
+
+    ⚠ **표가 만지는 키를 전부 채운다.** 없는 키에 점으로 접근하면 Jinja 가
+      `Undefined` 를 내는데 `Undefined is not none` 이 **참**이라, 방위 칸에서
+      `compass(Undefined)` 가 불려 "None" 이 찍힌다(이 파일에서 이미 한 번 난
+      500 사고와 같은 계열).
+    """
+    value = (bucket or {}).get('gdd')
+    if value is None:
+        return None
+    row = {
+        'sensor': None, 'measurement': 'gdd', 'unit': 'C_day',
+        'measurement_label': _gettext_safe('GDD'),
+        'scope': 'indoor', 'avg': value,
+        'min': None, 'max': None, 'avg_day': None, 'avg_night': None,
+        'sector': None, 'sector_pct': None,
+        'samples': None, 'expected': None, 'coverage_low': False,
+        'cover': None, 'usage': None, 'circular': False,
+        'target': None, 'target_label': None, 'when': None,
+        'delta': None, 'delta_skipped': None, 'follows_curve': None,
+    }
+    return {'measurement': 'gdd', 'unit': 'C_day', 'scope': 'indoor',
+            'measurement_label': row['measurement_label'],
+            'sensors': [row], 'summary': None, 'primary': True}
+
+
+def with_gdd_group(env_groups, bucket):
+    """표시용 그룹 목록 + 그 버킷의 적산온도 → 정렬된 새 목록.
+
+    `group_env_rows()` 가 잡아 둔 순서를 지킨다 — GDD 는 `MEASUREMENT_ORDER`
+    에서 DLI 바로 뒤이므로 제자리에 끼어든다.
+    """
+    group = gdd_display_group(bucket)
+    if group is None:
+        return env_groups
+    out = list(env_groups or []) + [group]
+    out.sort(key=lambda g: (measurement_rank(g.get('measurement')),
+                            0 if g.get('scope') == 'indoor' else 1))
+    return mark_primary_groups(out)
 
 
 # 피복 코드값 → 사람이 읽는 이름. **원문으로 두고 부를 때 번역한다** —
@@ -2820,6 +5056,176 @@ def cover_material_label(key):
     return _gettext_safe(name) if name else str(key or '?')
 
 
+# ── 문서에 실을 지도 ────────────────────────────────────────────────────────
+#
+# 일지는 **어디서 있었던 일인지**를 말하지 않고 있었다. 위치는 "3-1" 같은 이름
+# 한 줄이 전부였고, 도형·센서 배치는 문서 어디에도 없다. 종이로 넘겨받은
+# 사람은 그 이름이 어느 밭인지 알 수 없다.
+#
+# ⚠ **스냅샷에는 기하가 없다.** 그래서 여기서 하는 일은 전부 **열람 시점
+#   계산**이다 — 예전에 만든 일지에도 지도가 붙는다(소급). 대신 도형과 센서
+#   위치는 **지금**의 것이지 문서 기간의 것이 아니다. 그 사실을 화면이 한 줄로
+#   말한다(`live: True`). 기하를 스냅샷에 굳히지 않는 이유는 §6 계약을 바꾸면
+#   기존 일지가 전부 "지도 없음" 이 되기 때문이다.
+
+def _geom_bbox(geom, out=None):
+    """GeoJSON 기하 → `[w, s, e, n]`. `out` 을 주면 그것과 합친다."""
+    box = out
+    stack = [(geom or {}).get('coordinates')]
+    while stack:
+        item = stack.pop()
+        if not isinstance(item, (list, tuple)) or not item:
+            continue
+        if (len(item) >= 2 and isinstance(item[0], (int, float))
+                and isinstance(item[1], (int, float))):
+            x, y = float(item[0]), float(item[1])
+            box = ([x, y, x, y] if box is None else
+                   [min(box[0], x), min(box[1], y),
+                    max(box[2], x), max(box[3], y)])
+            continue
+        stack.extend(item)
+    return box
+
+
+def _shape_geometry(shape):
+    """GeoShape → GeoJSON 기하 dict (없으면 None)."""
+    feat = getattr(shape, 'feature', None)
+    if isinstance(feat, str):
+        try:
+            import json as _json
+            feat = _json.loads(feat)
+        except (ValueError, TypeError):
+            return None, None
+    if not isinstance(feat, dict):
+        return None, None
+    geom = feat.get('geometry')
+    if not geom or not geom.get('coordinates'):
+        return None, None
+    return geom, (feat.get('properties') or {}).get('color')
+
+
+def journal_map_view(journal_data):
+    """이 일지의 대상을 그린 지도 한 장 → dict | None.
+
+    담는 것은 — **구획 도형과 이름**, 그 구획이 든 **대지(site)·구역(zone)의
+    도형과 이름**, **센서 자리**, 그리고 **바탕 지도 후보들**이다. 편집 지도를
+    옮겨 놓는 것이 아니라 "이 문서가 말하는 자리" 를 한 장으로 보이는 것이
+    목적이라, 그리기 도구·장치 조작은 싣지 않는다. 대신 확대/축소·회전·바탕
+    전환·저작권 표시는 있어야 한다 — 항공사진과 일반도가 서로 다른 것을
+    보여 주고, 저작권은 뺄 수 없다.
+
+    색은 **정하지 않는다** — 도형이 자기 색을 가졌으면 그것을, 아니면 종류별
+    테마색(`AOT_GEO_CONFIG.theme_config`)을 화면이 붙인다. 같은 밭이 편집
+    지도와 일지에서 다른 색이면 사용자가 두 번 배워야 한다.
+
+    대상이 사라졌거나(구획 삭제) 기하가 없으면 `None` — 그 경우 문서는 지도
+    없이 그대로 나온다. 지도가 없다고 일지가 안 열리면 안 된다.
+    """
+    target = (journal_data or {}).get('target') or {}
+    ttype, tid = target.get('type'), target.get('unique_id')
+    if not ttype or not tid:
+        return None
+    try:
+        row = resolve_target_row(ttype, tid)
+    except ValueError:
+        return None                      # 대상이 삭제됐다 — 지도 없이 낸다.
+    except Exception:
+        logger.debug('일지 지도: 대상 조회 실패', exc_info=True)
+        return None
+
+    try:
+        geom = plot_context.geometry_of(row)
+    except Exception:
+        logger.debug('일지 지도: 기하를 읽지 못했다', exc_info=True)
+        geom = None
+    if not geom or not geom.get('coordinates'):
+        return None
+
+    bbox = _geom_bbox(geom)
+    if bbox is None:
+        return None
+
+    out = {
+        'name': target.get('name') or getattr(row, 'name', None) or '',
+        'geometry': geom,
+        'color': getattr(row, 'color', None),
+        # 끝난 작기는 편집 지도에서 점선으로 그린다 — 같은 약속을 지킨다.
+        'ended': bool(getattr(row, 'ended_on', None)),
+        'containers': [],
+        'sensors': [],
+        'sensor_source': None,
+        'bbox': bbox,
+        # 시설에 매단 구획의 기하는 **시설 외피에서 파생한 값**이다 — 그 사실을
+        # 말하지 않으면 사용자는 직접 그린 경계로 읽는다(§ plot_context 경고).
+        'derived_geometry': bool(
+            hasattr(row, 'has_own_geometry') and not row.has_own_geometry()),
+    }
+
+    # ── 감싸는 대지·구역 ────────────────────────────────────────────────
+    #   ⚠ **둘 다 낸다.** `container_for_geometry` 는 zone 이 site 를 이기므로
+    #     그 결과 하나만 쓰면 구역 안의 구획에서는 대지가 영영 안 나온다
+    #     (`site_for_geometry` 가 이 때문에 따로 있다). 문서를 받는 사람이
+    #     먼저 묻는 것은 "어느 농장(대지)의 어느 구역인가" 다.
+    #   ⚠ 구획을 화면에 맞출 때 이 도형들은 **넣지 않는다** — 대지가 구획보다
+    #     훨씬 크면 정작 주인공이 점만 하게 나온다(실측: 2,222m² 구획).
+    if ttype == 'plot':
+        try:
+            from aot.aot_flask.geo import device_membership
+            containers = device_membership.load_containers(row.geo_id)
+            site = device_membership.site_for_geometry(
+                row.geo_id, geom, containers=containers)
+            zone = plot_context.zone_for_plot(row, containers=containers)
+        except Exception:
+            logger.debug('일지 지도: 상위 도형 조회 실패', exc_info=True)
+            site = zone = None
+        for shape, kind in ((site, 'site'), (zone, None)):
+            if shape is None:
+                continue
+            kind = kind or (getattr(shape, 'type', None) or 'zone')
+            if any(cc['kind'] == kind for cc in out['containers']):
+                continue          # site 가 zone 자리에도 잡히는 지도가 있다.
+            cgeom, ccolor = _shape_geometry(shape)
+            if not cgeom:
+                continue
+            out['containers'].append({
+                'kind': kind,
+                'name': plot_context._shape_name(shape) or '',
+                'geometry': cgeom,
+                'color': ccolor,
+            })
+
+    # ── 센서 자리 ───────────────────────────────────────────────────────
+    #   이 문서의 숫자가 **어디서 나온 값인지**를 그림으로 말한다.
+    try:
+        from aot.aot_flask.geo import device_membership
+        if ttype == 'plot':
+            found = plot_context.sensors_for_plot(row)
+            ids = list(found.get('in_plot') or [])
+            source = found.get('source')
+            if not ids:
+                ids = list(found.get('from_zone') or [])
+        else:
+            ids = sorted(device_membership.device_ids_in_shape(row))
+            source = 'zone'
+        wanted = set(ids)
+        if wanted:
+            seen = set()
+            for dev_id, (lng, lat) in device_membership.load_markers(row.geo_id):
+                if dev_id not in wanted or dev_id in seen:
+                    continue
+                seen.add(dev_id)
+                name, _kind = device_membership._device_display_name(dev_id)
+                out['sensors'].append({
+                    'name': name or dev_id[:8], 'lng': lng, 'lat': lat})
+                out['bbox'] = [min(out['bbox'][0], lng), min(out['bbox'][1], lat),
+                               max(out['bbox'][2], lng), max(out['bbox'][3], lat)]
+            out['sensor_source'] = source
+    except Exception:
+        logger.debug('일지 지도: 센서 위치를 읽지 못했다', exc_info=True)
+
+    return out
+
+
 def has_any_target(journal_data):
     """이 문서에 목표가 **하나라도** 있는가 → bool.
 
@@ -2838,7 +5244,14 @@ def has_any_target(journal_data):
                 return True
             if row.get('follows_curve'):
                 return True
-    return bool(journal_data.get('stages'))
+    # ⚠ **단계가 있다는 것만으로 참을 내지 않는다.** 예전에는 여기서
+    #   `bool(journal_data.get('stages'))` 를 그대로 돌려줬는데, 프로그램에
+    #   단계는 있고 그 단계에 목표가 하나도 없는 경우(실측: 대선/콩 6단계
+    #   전부 targets=[])에도 참이 되어 문서 내내 빈 목표·Δ 열이 났다 — 이
+    #   함수가 막으려던 바로 그 증상이 다른 경로로 재발한 것이다. 단계
+    #   자체가 아니라 **단계 안의 targets** 를 봐야 한다.
+    return any((st.get('targets') or [])
+               for st in (journal_data.get('stages') or []))
 
 
 def glossary_terms(journal_data):
@@ -2952,6 +5365,25 @@ def caveat_text(key):
             "Water volumes are estimated from the designed nozzle flow and "
             "run time, and split by the plot's share of the bay — not "
             "measured by a flow meter.")
+    if base == 'precipitation-not-summed':
+        # ⚠ **합계를 지어내지 않는다.** 실측(기상청 채널, 2026-09-04):
+        #   `rn_15m`(직전 15분 누적)을 **5분마다** 다시 적어 창이 겹친다 —
+        #   그대로 더하면 같은 비를 세 번 센다. 그렇다고 3으로 나누면 그것은
+        #   기록이 아니라 지어낸 계수다(이 파일의 DLI 환산 규칙과 같은 이유).
+        #   시스템은 어떤 강수 채널이 겹치는 창인지 아닌지 알 방법이 없으므로,
+        #   합계를 내지 않는다는 사실과 각 열이 무엇인지를 대신 말한다.
+        return _gettext_safe(
+            "No rainfall total is given. Each stored reading covers its own "
+            "window, and this system cannot tell whether those windows "
+            "overlap — the weather-station channel, for one, repeats a "
+            "15-minute total every 5 minutes. Read the maximum as the "
+            "wettest single window, and the average as the mean of those "
+            "windows, not an hourly rate.")
+    if base == 'water-partial-coverage':
+        return _gettext_safe(
+            "Some devices in this journal have no mapped coverage area, so "
+            "their water column stays blank — that does not mean they used "
+            "no water.")
     if base == 'dli-estimated':
         return _gettext_safe(
             "Daily light integral is estimated from solar radiation "
@@ -2976,10 +5408,35 @@ def caveat_text(key):
             "This facility has a shade screen. Whether it was drawn on any "
             "given day is not recorded, so it is not counted — on days it "
             "was drawn, the crop got less light than shown.")
-    if base == 'measurements-excluded':
+    if base == 'measurements-excluded-diagnostic':
         names = [measurement_label(k) for k in suffix.split(',') if k]
         return _gettext_safe(
             "Device diagnostics were left out of this journal: %(names)s."
+        ) % {'names': ' · '.join(str(n) for n in names)}
+    if base == 'measurements-excluded-chosen':
+        # `<scope>:<name>` — 어느 쪽 센서의 것인지까지 말한다. 기상대 쪽은
+        # 그 말을 앞에 붙인다("기상대 온도") — 안 붙이면 현장 온도가 빠진
+        # 줄로 읽힌다.
+        names = []
+        for item in suffix.split(','):
+            if not item:
+                continue
+            scope, _, name = item.rpartition(':')
+            label = str(measurement_label(name, scope or None))
+            if scope == 'outdoor':
+                label = '%s %s' % (_gettext_safe('Weather Station'), label)
+            names.append(label)
+        return _gettext_safe(
+            "These measurements were not selected when this journal was "
+            "made, so they are not in it: %(names)s."
+        ) % {'names': ' · '.join(names)}
+    if base == 'measurements-excluded':
+        # 옛 일지의 키 — 왜 빠졌는지가 갈라져 있지 않다. 그때 전부를 "장치
+        # 진단 값" 이라 부른 것이 결함이었으므로, 여기서는 **이유를 말하지
+        # 않는다**(문장은 열람 시점에 만들어지므로 옛 일지도 함께 고쳐진다).
+        names = [measurement_label(k) for k in suffix.split(',') if k]
+        return _gettext_safe(
+            "These measurements were left out of this journal: %(names)s."
         ) % {'names': ' · '.join(str(n) for n in names)}
     if base == 'stored-weekly-too-large':
         return _gettext_safe(
@@ -3045,12 +5502,15 @@ def _md_target_value(t):
 
 def _md_delta_value(e):
     """편차 셀 — §4-5 의 스킵 사유를 사람이 읽을 문구로. 지어내지 않는다."""
+    if e.get('target_phases'):
+        return phase_delta_text(e['target_phases'])
     if e.get('delta') is not None:
         return str(e['delta'])
     reason = {
         'when': 'day/night target',
         'daily-shape': 'cumulative target',
         'method': 'follows curve',
+        'curve-phase': 'follows curve',
         'unobservable': 'no sensor',
         'no-reading': 'no reading',
         'no-target': '',
@@ -3084,21 +5544,30 @@ def render_plot_journal_markdown(journal_data, granularity=None):
     `fold_buckets`) — 화면에서 월간으로 보다가 내려받았는데 파일만 일간이면
     같은 문서의 두 판본이 생긴다.
     """
+    # 곡선 목표의 주야 Δ 는 **열람 시점 계산**이다(저장 스냅샷은 불변).
+    journal_data = with_curve_deltas(journal_data)
     t = journal_data.get('target') or {}
     lines = []
 
-    title = t.get('name') or t.get('unique_id') or 'Journal'
+    title = t.get('name') or t.get('unique_id') or _gettext_safe('Journal')
     period = t.get('period') or {}
     lines.append('# %s' % title)
     lines.append('')
-    lines.append('%s – %s%s' % (period.get('start'), period.get('end'),
-                                ' (ongoing)' if period.get('ongoing') else ''))
+    lines.append('%s – %s%s' % (
+        period.get('start'), period.get('end'),
+        (' (%s)' % _gettext_safe('ongoing')) if period.get('ongoing') else ''))
     lines.append('')
 
     caveats = journal_data.get('caveats') or []
     if caveats:
-        lines.append('> Photo links below point to `/note_attachment/...` '
-                     'and stay valid only while the server is running.')
+        # ⚠ **번역 대상이다.** 예전에는 이 함수 안의 문구가 전부 영어로
+        #   고정돼 있었다 — HTML(§10)은 뷰어 언어로 나가는데 MD·ODT 만
+        #   영어로 굳었다(실사용 검토). `_gettext_safe` 는 HTTP 열람에서는
+        #   뷰어 언어로, 요청 컨텍스트가 없는 MCP 경로에서는 원문(영어)으로
+        #   떨어진다 — 기존 규칙 그대로다.
+        lines.append('> %s' % _gettext_safe(
+            'Photo links below point to `/note_attachment/...` and stay '
+            'valid only while the server is running.'))
         for key in caveats:
             lines.append('> - %s' % caveat_text(key))
         lines.append('')
@@ -3108,34 +5577,39 @@ def render_plot_journal_markdown(journal_data, granularity=None):
     # 없다 — 여기 없으면 GDD·DLI 가 설명 없는 숫자로만 건너간다.
     _terms = glossary_terms(journal_data)
     if _terms:
-        lines.append('## Terms used here')
+        lines.append('## %s' % _gettext_safe('Terms used here'))
         lines.append('')
         for g in _terms:
             lines.append('- **%s** — %s' % (g['term'], g['text']))
         lines.append('')
 
     # ── 개요 ─────────────────────────────────────────────────────────────
-    lines.append('## Overview')
+    # 표 왼쪽 열(Type/Item/...)은 HTML(§10)이 이미 쓰는 것과 **같은 msgid**
+    # 를 재사용한다 — 각자 새 문구를 만들면 두 판본이 같은 항목을 다른
+    # 말로 부르게 된다.
+    lines.append('## %s' % _gettext_safe('Overview'))
     lines.append('')
     lines.append('| | |')
     lines.append('|---|---|')
-    lines.append('| Type | %s |' % _md_escape(
-        _target_kind_label(t.get('type'), t.get('kind'))))
+    lines.append('| %s | %s |' % (_gettext_safe('Type'), _md_escape(
+        _target_kind_label(t.get('type'), t.get('kind')))))
     if t.get('subject'):
         item = t['subject'] + (' — %s' % t['variety'] if t.get('variety') else '')
-        lines.append('| Item | %s |' % _md_escape(item))
+        lines.append('| %s | %s |' % (_gettext_safe('Item'), _md_escape(item)))
     loc = t.get('location') or {}
     loc_parts = [v for v in (loc.get('zone_name'), loc.get('facility_name'),
                              loc.get('bay_name')) if v]
     if loc_parts:
-        lines.append('| Location | %s |' % _md_escape(' · '.join(loc_parts)))
+        lines.append('| %s | %s |' % (_gettext_safe('Location'),
+                                      _md_escape(' · '.join(loc_parts))))
     prog = t.get('program') or {}
     if prog.get('name'):
-        lines.append('| Program | %s |' % _md_escape(
-            prog['name'] + (' (v%s)' % prog['version'] if prog.get('version') else '')))
+        lines.append('| %s | %s |' % (_gettext_safe('Program'), _md_escape(
+            prog['name'] + (' (v%s)' % prog['version'] if prog.get('version') else ''))))
     if t.get('area_m2') is not None:
-        lines.append('| Area | %.1f m² |' % t['area_m2'])
-    lines.append('| Time zone | %s |' % _md_escape(t.get('tz_name')))
+        lines.append('| %s | %.1f m² |' % (_gettext_safe('Area'), t['area_m2']))
+    lines.append('| %s | %s |' % (_gettext_safe('Time zone'),
+                                  _md_escape(t.get('tz_name'))))
     lines.append('')
 
     # ── 단계별 요약 (plot만) ─────────────────────────────────────────────
@@ -3145,15 +5619,17 @@ def render_plot_journal_markdown(journal_data, granularity=None):
     # 아니게 되므로 같은 `stage_sections()` 를 쓴다.
     sections = stage_sections(journal_data)
     if sections:
-        lines.append('## Program stages')
+        lines.append('## %s' % _gettext_safe('Program stages'))
         lines.append('')
         for sec in sections:
             st = sec['stage']
             if not sec['in_period']:
                 # 기간 밖(계획) — 있다는 것만 한 줄로.
-                lines.append('- %s (%s – %s) — planned' % (
+                lines.append('- %s (%s – %s) — %s' % (
                     _md_escape(st.get('name') or st.get('key')),
-                    st.get('starts_on') or '—', st.get('ends_on') or 'ongoing'))
+                    st.get('starts_on') or '—',
+                    st.get('ends_on') or _gettext_safe('ongoing'),
+                    _gettext_safe('planned')))
                 continue
             lines.append('### %s (%s – %s)' % (
                 _md_escape(st.get('name') or st.get('key')),
@@ -3164,15 +5640,24 @@ def render_plot_journal_markdown(journal_data, granularity=None):
                 lines.append('')
 
             if sec['env_groups']:
-                lines.append('| Sensor | Measurement | Min | Max | Avg | Target |')
+                lines.append('| %s | %s | %s | %s | %s | %s |' % (
+                    _gettext_safe('Sensor'), _gettext_safe('Measurement'),
+                    _gettext_safe('Min'), _gettext_safe('Max'),
+                    _gettext_safe('Avg'), _gettext_safe('Target')))
                 lines.append('|---|---|---|---|---|---|')
                 for grp in sec['env_groups']:
                     row = grp.get('summary') or grp['sensors'][0]
-                    who = ('%d sensors' % grp['summary']['sensor_count']
+                    who = ((_gettext_safe('%(n)s sensors')
+                           % {'n': grp['summary']['sensor_count']})
                            if grp.get('summary') else grp['sensors'][0].get('sensor'))
-                    target = (('curve: %s' % row['follows_curve'])
-                              if row.get('follows_curve')
-                              else (row.get('target') if row.get('target') is not None else ''))
+                    if row.get('target_phases'):
+                        target = phase_target_text(row['target_phases'])
+                    elif row.get('follows_curve'):
+                        target = (_gettext_safe('curve: %(name)s')
+                                  % {'name': row['follows_curve']})
+                    else:
+                        target = (row.get('target')
+                                  if row.get('target') is not None else '')
                     lines.append('| %s | %s | %s | %s | %s | %s |' % (
                         _md_escape(who),
                         _md_escape(grp.get('measurement_label') or grp.get('measurement')),
@@ -3183,12 +5668,14 @@ def render_plot_journal_markdown(journal_data, granularity=None):
             missing = [t.get('label') for t in (st.get('targets') or [])
                        if t.get('observable') is False]
             if missing:
-                lines.append('_No sensor for: %s_' % _md_escape(' · '.join(
-                    str(m) for m in missing)))
+                lines.append('_%s %s_' % (_gettext_safe('No sensor for:'),
+                                          _md_escape(' · '.join(
+                                              str(m) for m in missing))))
                 lines.append('')
 
             if sec['control']:
-                lines.append('| Device | Runtime (h) |')
+                lines.append('| %s | %s |' % (_gettext_safe('Device'),
+                                              _gettext_safe('Runtime (h)')))
                 lines.append('|---|---|')
                 for c in sec['control']:
                     lines.append('| %s | %s |' % (_md_escape(c.get('name')),
@@ -3198,6 +5685,9 @@ def render_plot_journal_markdown(journal_data, granularity=None):
             for n in sec['notes']:
                 time_str = (n.get('time') or '')[:16].replace('T', ' ')
                 head = ('**%s**' % time_str) if time_str else ''
+                # 장치에 붙은 기록이면 어느 장치인지 밝힌다 — 화면과 같은 규칙.
+                if n.get('anchor_name'):
+                    head += (' ' if head else '') + n['anchor_name']
                 if n.get('title'):
                     head += (' ' if head else '') + n['title']
                 body = n.get('body') or ''
@@ -3216,40 +5706,57 @@ def render_plot_journal_markdown(journal_data, granularity=None):
     buckets = fold_buckets(journal_data.get('buckets') or [],
                            to=(granularity or stored), granularity=stored)
 
-    lines.append('## Log')
+    lines.append('## %s' % _gettext_safe('Daily log'))
     lines.append('')
     for b in buckets:
         lines.append('### %s' % b.get('date_label'))
         lines.append('')
         if b.get('empty'):
             gaps = b.get('gap_count') or 1
-            lines.append('_No data recorded%s._'
-                         % ((' — %d periods skipped' % gaps) if gaps > 1 else
-                            ' for this period'))
+            # HTML(§10)과 **같은 msgid** 를 쓴다(줄임표 위치까지) — 각자
+            # 새 문구를 지으면 결측 안내가 두 판본에서 다른 말이 된다.
+            if gaps > 1:
+                lines.append('_%s_' % (_gettext_safe(
+                    'No data recorded — %(n)s periods skipped.')
+                    % {'n': gaps}))
+            else:
+                lines.append('_%s_' % _gettext_safe(
+                    'No data recorded for this period.'))
             lines.append('')
             continue
 
         env = b.get('env') or []
         if env:
+            headers = [_gettext_safe('Sensor'), _gettext_safe('Measurement'),
+                      _gettext_safe('Min'), _gettext_safe('Max'),
+                      _gettext_safe('Avg')]
             if show_target:
-                lines.append('| Sensor | Measurement | Min | Max | Avg | Target | Δ |')
+                headers += [_gettext_safe('Target'), 'Δ']
+                lines.append('| %s |' % ' | '.join(headers))
                 lines.append('|---|---|---|---|---|---|---|')
             else:
-                lines.append('| Sensor | Measurement | Min | Max | Avg |')
+                lines.append('| %s |' % ' | '.join(headers))
                 lines.append('|---|---|---|---|---|')
             for e in env:
-                avg = e.get('avg')
-                avg_cell = ('%s %s' % (avg, e.get('unit') or '')).strip() \
-                    if avg is not None else ''
+                # 방위는 방위로, 단위는 사람이 읽는 기호로 — `_display_avg`
+                # 가 HTML 과 같은 규칙을 쓴다(방위 오독·원문 단위 키 노출
+                # 둘 다 이 한 곳에서 막는다).
+                avg_cell = _display_avg(e)
                 if e.get('coverage_low'):
-                    avg_cell += ' (partial coverage)'
-                target_cell = ('curve: %s' % e['follows_curve']
-                               if e.get('follows_curve')
-                               else (str(e['target']) if e.get('target') is not None else ''))
+                    avg_cell += ' (%s)' % _gettext_safe('partial coverage')
+                if e.get('target_phases'):
+                    target_cell = phase_target_text(e['target_phases'])
+                elif e.get('follows_curve'):
+                    target_cell = (_gettext_safe('curve: %(name)s')
+                                   % {'name': e['follows_curve']})
+                else:
+                    target_cell = (str(e['target'])
+                                   if e.get('target') is not None else '')
                 usage_suffix = ''
                 if e.get('usage'):
-                    usage_suffix = ' (usage: %s %s)' % (
-                        e['usage'].get('amount'), e['usage'].get('unit'))
+                    usage_suffix = ' (%s: %s %s)' % (
+                        _gettext_safe('usage'), e['usage'].get('amount'),
+                        unit_label(e['usage'].get('unit')))
                 label = measurement_label(e.get('measurement'), e.get('scope'))
                 if show_target:
                     lines.append('| %s | %s%s | %s | %s | %s | %s | %s |' % (
@@ -3266,7 +5773,8 @@ def render_plot_journal_markdown(journal_data, granularity=None):
 
         control = b.get('control') or []
         if control:
-            lines.append('| Device | Runtime (h) |')
+            lines.append('| %s | %s |' % (_gettext_safe('Device'),
+                                          _gettext_safe('Runtime (h)')))
             lines.append('|---|---|')
             for c in control:
                 lines.append('| %s | %s |' % (_md_escape(c.get('name')),
@@ -3277,6 +5785,8 @@ def render_plot_journal_markdown(journal_data, granularity=None):
         for n in notes:
             time_str = (n.get('time') or '')[11:16]
             head = ('**%s**' % time_str) if time_str else ''
+            if n.get('anchor_name'):
+                head += (' ' if head else '') + n['anchor_name']
             if n.get('title'):
                 head += (' ' if head else '') + n['title']
             body = n.get('body') or ''
@@ -3289,7 +5799,8 @@ def render_plot_journal_markdown(journal_data, granularity=None):
             lines.append('')
 
     lines.append('---')
-    lines.append('_Generated: %s_' % journal_data.get('generated_at'))
+    lines.append('_%s: %s_' % (_gettext_safe('Generated'),
+                               journal_data.get('generated_at')))
     return '\n'.join(lines)
 
 
@@ -3559,18 +6070,31 @@ def render_plot_journal_csv(journal_data, granularity=None):
     import csv
     import io as _io
 
-    stored = (journal_data or {}).get('granularity') or 'day'
-    buckets = fold_buckets((journal_data or {}).get('buckets') or [],
+    # 곡선 목표의 주야 Δ 는 **열람 시점 계산**이다(저장 스냅샷은 불변).
+    journal_data = with_curve_deltas(journal_data)
+    journal_data = journal_data or {}
+    stored = journal_data.get('granularity') or 'day'
+    buckets = fold_buckets(journal_data.get('buckets') or [],
                            to=(granularity or stored), granularity=stored)
-    target = (journal_data or {}).get('target') or {}
+    target = journal_data.get('target') or {}
 
     out = _io.StringIO()
     writer = csv.writer(out)
+    # ⚠ 곡선 목표의 주야 값은 **열을 새로 만들어** 낸다. `target` 칸에
+    #   '주간 0.79 · 야간 0.44' 같은 문자열을 넣으면 표 계산이 그 열을 통째로
+    #   글자로 읽어, 곡선을 안 쓰는 다른 행의 숫자까지 못 쓰게 된다.
+    #   새 열은 **뒤에 붙인다** — 기존 열의 자리가 그대로라 지금 이 파일을
+    #   읽고 있는 수식이 깨지지 않는다.
     writer.writerow([
         'period', 'kind', 'scope', 'device', 'measurement', 'unit',
         'min', 'max', 'avg', 'target', 'delta', 'samples', 'expected',
-        'coverage', 'usage',
+        'coverage', 'usage', 'water_l', 'water_estimated',
+        'target_day', 'delta_day', 'target_night', 'delta_night',
     ])
+
+    def _phase(row, phase, field):
+        return ((row.get('target_phases') or {}).get(phase) or {}).get(field)
+
     for bucket in buckets:
         label = bucket.get('date_label')
         for row in (bucket.get('env') or []):
@@ -3581,19 +6105,36 @@ def render_plot_journal_csv(journal_data, granularity=None):
                 row.get('min'), row.get('max'), row.get('avg'),
                 row.get('target'), row.get('delta'),
                 row.get('samples'), row.get('expected'), row.get('coverage'),
-                usage,
+                usage, '', '',
+                _phase(row, 'day', 'target'), _phase(row, 'day', 'delta'),
+                _phase(row, 'night', 'target'), _phase(row, 'night', 'delta'),
             ])
         for row in (bucket.get('control') or []):
+            # ⚠ **관수량이 빠져 있었다.** HTML·MD·ODT 는 관수량 열을 내는데
+            #   CSV 만 없었다 — 표계산으로 물 사용량을 못 뽑는 파일이 됐다.
+            #   `scope` 도 밸브에 무의미한 고정값('indoor')이 찍혀 있었다
+            #   (제어 행의 `scope` 는 담당 대상 단위 — plot/zone/site — 라
+            #   env 행의 '현장/기상대' 와 다른 어휘다. 섞으면 같은 열이 두
+            #   뜻을 갖게 되므로 여기서는 비워 둔다).
+            water = row.get('water') or {}
             writer.writerow([
-                label, 'runtime', 'indoor', row.get('name'),
+                label, 'runtime', '', row.get('name'),
                 'runtime', 'h', '', '', row.get('hours'),
                 '', '', '', '', '', '',
-            ][:15])
+                water.get('litres', ''),
+                ('yes' if water.get('estimated') else '') if water else '',
+                '', '', '', '',
+            ])
         for note in (bucket.get('notes') or []):
+            # ⚠ 장치에 붙은 기록의 **장치 이름은 여기 싣지 않는다.** 이 행은
+            #   `device` 칸에 제목, `measurement` 칸에 본문을 넣는 기존 배치를
+            #   쓰는데, 이름을 끼우면 그 두 칸의 뜻이 밀린다 — 지금 이 파일을
+            #   읽고 있는 수식이 조용히 어긋난다. 이름은 화면·MD·ODT 가 낸다.
             writer.writerow([
                 label, 'note', '', note.get('title') or '',
                 (note.get('body') or '').replace('\n', ' '),
-                '', '', '', '', '', '', '', '', '', '',
+                '', '', '', '', '', '', '', '', '', '', '', '',
+                '', '', '', '',
             ])
     # 대상 정보는 맨 뒤에 한 줄 — 파일만 받아도 무엇에 대한 자료인지 안다.
     writer.writerow([])
@@ -3702,11 +6243,14 @@ def render_plot_journal_odt(journal_data, granularity=None):
     import io as _io
     import zipfile
 
-    stored = (journal_data or {}).get('granularity') or 'day'
+    # 곡선 목표의 주야 Δ 는 **열람 시점 계산**이다(저장 스냅샷은 불변).
+    journal_data = with_curve_deltas(journal_data)
+    journal_data = journal_data or {}
+    stored = journal_data.get('granularity') or 'day'
     view = granularity or stored
-    buckets = fold_buckets((journal_data or {}).get('buckets') or [],
+    buckets = fold_buckets(journal_data.get('buckets') or [],
                            to=view, granularity=stored)
-    t = (journal_data or {}).get('target') or {}
+    t = journal_data.get('target') or {}
     period = t.get('period') or {}
 
     body = []
@@ -3750,7 +6294,8 @@ def render_plot_journal_odt(journal_data, granularity=None):
                        if grp.get('summary') else grp['sensors'][0].get('sensor'))
                 rows.append([who,
                              grp.get('measurement_label') or grp.get('measurement'),
-                             row.get('min'), row.get('max'), row.get('avg')])
+                             row.get('min'), row.get('max'),
+                             _display_avg(row)])
             body.append(_odt_table('stage-env',
                                    ['Sensor', 'Measurement', 'Min', 'Max', 'Avg'],
                                    rows))
@@ -3761,7 +6306,9 @@ def render_plot_journal_odt(journal_data, granularity=None):
         for note in sec.get('notes') or []:
             body.append(_odt_p('%s  %s %s' % (
                 (note.get('time') or '')[:16].replace('T', ' '),
-                note.get('title') or '', note.get('body') or ''), 'Muted'))
+                ' '.join(x for x in (note.get('anchor_name'),
+                                     note.get('title')) if x),
+                note.get('body') or ''), 'Muted'))
 
     # ── 일자별 기록 ─────────────────────────────────────────────────────
     body.append(_odt_p('Log', 'Heading_20_1'))
@@ -3777,8 +6324,12 @@ def render_plot_journal_odt(journal_data, granularity=None):
         if env:
             rows = [[e.get('sensor'),
                      measurement_label(e.get('measurement'), e.get('scope')),
-                     e.get('min'), e.get('max'), e.get('avg'),
-                     e.get('target'), e.get('delta')] for e in env]
+                     e.get('min'), e.get('max'), _display_avg(e),
+                     (phase_target_text(e['target_phases'])
+                      if e.get('target_phases') else e.get('target')),
+                     (phase_delta_text(e['target_phases'])
+                      if e.get('target_phases') else e.get('delta'))]
+                    for e in env]
             body.append(_odt_table(
                 'env', ['Sensor', 'Measurement', 'Min', 'Max', 'Avg',
                         'Target', 'Delta'], rows))
@@ -3790,7 +6341,9 @@ def render_plot_journal_odt(journal_data, granularity=None):
         for note in (bucket.get('notes') or []):
             body.append(_odt_p('%s  %s %s' % (
                 (note.get('time') or '')[:16].replace('T', ' '),
-                note.get('title') or '', note.get('body') or ''), 'Muted'))
+                ' '.join(x for x in (note.get('anchor_name'),
+                                     note.get('title')) if x),
+                note.get('body') or ''), 'Muted'))
 
     content = (
         '<?xml version="1.0" encoding="UTF-8"?>'

@@ -4628,11 +4628,11 @@ msgstr "Permiso denegado"
 
 #: aot_flask/routes_function.py:132
 msgid "Daytime"
-msgstr ""
+msgstr "Diurno"
 
 #: aot_flask/routes_function.py:132
 msgid "Nighttime"
-msgstr ""
+msgstr "Nocturno"
 
 #: aot_flask/routes_function.py:599
 msgid "Function not found or deleted."

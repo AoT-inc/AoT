@@ -434,7 +434,7 @@ class TestResolveV2At:
         m.method_data_first = FakeMD()
         m._data = _migrate_multipoint(json.loads(FakeMD().points_json))
         m._resolved_cache = None
-        m._resolved_week_floor = None
+        m._resolved_week = None
 
         plot = m.get_plot(100)
         assert len(plot) == 2          # weeks [0, 4]
@@ -454,7 +454,7 @@ def _make_method(data=None):
     m = DailyMultiPointMethod.__new__(DailyMultiPointMethod)
     m._data = _migrate_multipoint(data or _v2_data())
     m._resolved_cache = None
-    m._resolved_week_floor = None
+    m._resolved_week = None
     return m
 
 
@@ -498,7 +498,7 @@ class TestCalculateSetpointTimezone:
         val, _ = m.calculate_setpoint(now_ts, method_start_time=start)
         # weeks_elapsed≈0 → uses week-0 curve; at 8:30 AM value is between 0.6 and 1.2
         # Just confirm no exception and weeks_elapsed was really 0 by checking cache
-        assert m._resolved_week_floor == 0
+        assert m._resolved_week == 0
 
     def test_none_start_uses_epoch_fallback(self):
         """method_start_time=None → start=1900-01-01, weeks_elapsed is huge, clamped to last week."""

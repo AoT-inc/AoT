@@ -4441,11 +4441,11 @@ msgstr "權限被拒"
 
 #: aot_flask/routes_function.py:132
 msgid "Daytime"
-msgstr ""
+msgstr "白天"
 
 #: aot_flask/routes_function.py:132
 msgid "Nighttime"
-msgstr ""
+msgstr "夜間"
 
 #: aot_flask/routes_function.py:599
 msgid "Function not found or deleted."

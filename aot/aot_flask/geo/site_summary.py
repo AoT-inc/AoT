@@ -120,6 +120,36 @@ _PLANTING_CONTENTS_CACHE = {}
 _PLANTING_CONTENTS_LOCKS = {}
 
 
+_PLOT_ENV_WEEK_CACHE = {}
+_PLOT_ENV_WEEK_LOCKS = {}
+# 일별 버킷은 **하루에 한 번만** 바뀌고 오늘 열만 진행 중이다. 30초로 두면
+# 근거 없이 InfluxDB 를 다시 훑는다. 반대로 너무 길면 오늘 열이 굳는다.
+_PLOT_ENV_WEEK_TTL_S = 600
+
+
+def cached_plot_env_week(plot_uuid, build, force=False):
+    """구획 모달의 주간 환경 계열 캐시 — **10분**.
+
+    `cached_plot_contents`(30초)와 사전을 나누는 이유는 수명이 다르기
+    때문이다. 같이 두면 둘 중 하나가 남의 주기로 끌려간다.
+    """
+    return cached_build(_PLOT_ENV_WEEK_CACHE, _PLOT_ENV_WEEK_LOCKS,
+                        plot_uuid, _PLOT_ENV_WEEK_TTL_S, build, force)
+
+
+_FACILITY_ENV_WEEK_CACHE = {}
+_FACILITY_ENV_WEEK_LOCKS = {}
+
+
+def cached_facility_env_week(key, build, force=False):
+    """시설 모달의 주간 환경 계열 캐시 — 구획과 같은 수명(10분).
+
+    키는 `시설uuid|동id` 다 — 다동 시설은 동마다 센서가 다르다.
+    """
+    return cached_build(_FACILITY_ENV_WEEK_CACHE, _FACILITY_ENV_WEEK_LOCKS,
+                        key, _PLOT_ENV_WEEK_TTL_S, build, force)
+
+
 def cached_plot_contents(plot_uuid, build, force=False):
     """식생 구획 모달 응답 캐시 — 구역 모달과 **같은 수명**(30초).
 
@@ -142,8 +172,12 @@ def invalidate_plot_contents(plot_uuid=None):
     with _CACHE_LOCK:
         if plot_uuid is None:
             _PLANTING_CONTENTS_CACHE.clear()
+            # 주간 계열도 함께 버린다 — 프로그램·단계가 바뀌면 목표대가
+            # 달라지므로 10분을 기다리면 옛 목표 위에 새 값이 그려진다.
+            _PLOT_ENV_WEEK_CACHE.clear()
         else:
             _PLANTING_CONTENTS_CACHE.pop(plot_uuid, None)
+            _PLOT_ENV_WEEK_CACHE.pop(plot_uuid, None)
 
 
 def invalidate_zone_contents_all():

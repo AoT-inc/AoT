@@ -5,7 +5,7 @@ _helpers_mixin.py — HelpersMixin: small per-cycle helpers.
 
 import json
 import time
-from datetime import datetime, timedelta, timezone as _tz
+from datetime import datetime, timedelta
 from typing import Any, Optional
 
 from aot.databases.models import Actions
@@ -75,66 +75,36 @@ class HelpersMixin:
     def _get_weeks_elapsed(self) -> float:
         """구획 시작일 이후 경과 주차(소수) + week_offset.
 
+        **주차의 정본은 `aot.utils.method.weeks_elapsed_at()` 하나다.** 구획
+        모달과 일지도 같은 함수를 쓴다 — 셋이 따로 세면 제어가 쓰는 목표와
+        화면이 보여 주는 목표가 갈린다(예전에는 화면 둘이 `days // 7` 로
+        내림해 최대 한 주치 어긋났다).
+
         Wall-clock policy: missed downtime is NOT compensated automatically.
         Use schedule_week_offset (positive = fast-forward) for manual adjustment.
 
-        Input formats:
-          - date only (YYYY-MM-DD): interpreted as facility-timezone midnight 00:00.
-            If the facility timezone is unset, the system local timezone is used.
-            (Farmers do not think in terms of UTC, so never assume UTC.)
-          - date+time (ISO 8601 with tz): used as-is.
+        시작일의 정본은 구획의 `started_on` 이고, 날짜만 있는 값은 **시설
+        시간대의 자정 00:00** 으로 읽는다(농부는 UTC 로 심지 않는다).
         Returns 0.0 when there is no plot (no start date to count from).
         """
-        # **시작일의 정본은 구획의 `started_on` 이다.** 예전에는 같은 날짜를
-        # 함수 옵션(`schedule_start_time`)에도 적게 해서, 구획을 3월 2일에
-        # 시작해도 곡선은 사람이 따로 넣은 날짜를 기준으로 돌았다.
         started = self._plot_targets().get('started_on')
-        start_raw = started.isoformat() if started else ''
-        if not start_raw:
+        if not started:
             return 0.0
+
+        fac_tz = self._get_facility_tz()
+        if fac_tz is None:
+            self.logger.warning(
+                '_get_weeks_elapsed: no device location coordinates — '
+                'cannot resolve the plot start date timezone. '
+                'Set location coordinates on the device or link a GeoFacility.')
+            return 0.0
+
         try:
-            import re as _re
-            from dateutil.parser import isoparse
-
-            # Detect date-only input: YYYY-MM-DD pattern (no time component)
-            date_only = bool(_re.fullmatch(r'\d{4}-\d{2}-\d{2}', start_raw))
-
-            # Resolve timezone from device location coordinates (farmers have no UTC concept)
-            fac_tz = self._get_facility_tz()
-
-            if date_only:
-                # Date-only input -> interpret as device-location-timezone midnight 00:00
-                if fac_tz is None:
-                    self.logger.warning(
-                        '_get_weeks_elapsed: no device location coordinates — '
-                        'cannot resolve schedule_start_time timezone. '
-                        'Set location coordinates on the device or link a GeoFacility.')
-                    return 0.0
-                import datetime as _dt
-                year, month, day = map(int, start_raw.split('-'))
-                local_midnight = _dt.datetime(year, month, day, 0, 0, 0)
-                try:
-                    start_dt = fac_tz.localize(local_midnight)
-                except AttributeError:
-                    start_dt = local_midnight.replace(tzinfo=fac_tz)
-            else:
-                start_dt = isoparse(start_raw)
-                if start_dt.tzinfo is None:
-                    # Time present but no tz -> interpret in device-location timezone
-                    if fac_tz is not None:
-                        try:
-                            start_dt = fac_tz.localize(start_dt)
-                        except AttributeError:
-                            start_dt = start_dt.replace(tzinfo=fac_tz)
-                    else:
-                        self.logger.warning(
-                            '_get_weeks_elapsed: no device location, falling back to UTC')
-                        start_dt = start_dt.replace(tzinfo=_tz.utc)
-
-            now_utc = datetime.now(_tz.utc)
-            elapsed_sec = (now_utc - start_dt).total_seconds()
-            offset = float(self.schedule_week_offset or 0.0)
-            return max(0.0, elapsed_sec / (7 * 86400) + offset)
+            from aot.utils.method import weeks_elapsed_at
+            weeks = weeks_elapsed_at(started, tz=fac_tz)
+            if weeks is None:
+                return 0.0
+            return max(0.0, weeks + float(self.schedule_week_offset or 0.0))
         except Exception as exc:
             self.logger.warning('_get_weeks_elapsed parse error: %s', exc)
             return 0.0

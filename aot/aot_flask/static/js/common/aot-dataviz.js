@@ -161,8 +161,13 @@
      *   AoTViz.band({
      *     label: '기온', value: 26.4, valueText: '26.4 °C',
      *     min: 16, max: 32, okMin: 22, okMax: 28,
+     *     spanMin: 22.8, spanMax: 33.7,   // 그 기간의 최저~최고(선택)
      *     scale: ['16', '32']
      *   })
+     *
+     * **초록 = 실측, 직각선 = 목표.** `okMin`/`okMax` 는 이름 그대로 목표
+     * 범위이고, 이제 초록 면이 아니라 **선 둘**로 그려진다. 부르는 쪽은
+     * 그대로 두고 그림만 바뀐다.
      */
     function band(o) {
         o = o || {};
@@ -177,13 +182,52 @@
 '">';
         html += headHtml(o.label, o.valueText != null ? o.valueText : o.value, o.valueSub);
         html += '<div class="aot-viz-track">';
-        if (os !== null && oe !== null && oe > os) {
-            html += '<div class="aot-viz-ok" style="left:' + os.toFixed(2) +
-                    '%;width:' + (oe - os).toFixed(2) + '%"></div>';
+        /* ── 예외: on/off 장치의 가동시간 줄 ───────────────────────────
+         *
+         * `okZone: true` 면 **옛 그림 그대로** 그린다(초록 면 + 세로선 마커).
+         * 그 줄에서는 초록이 "목표" 가 아니라 **평소 가동시간**이고 왼쪽 끝에서
+         * 자라며, 마커는 오늘이다 — 길이 자체가 뜻이라 선 둘로는 못 옮긴다
+         * (aot-map-popup.js `_rowOf` 의 binary 분기).
+         *
+         * ⚠ 이 손잡이를 다른 자리에 쓰지 말 것. 한 화면에 두 어휘가 서면
+         * 이 파일이 2026-09-04 에 겪은 일이 그대로 되돌아온다. */
+        if (o.okZone) {
+            if (os !== null && oe !== null && oe > os) {
+                html += '<div class="aot-viz-ok" style="left:' + os.toFixed(2) +
+                        '%;width:' + (oe - os).toFixed(2) + '%"></div>';
+            }
+            if (p !== null) {
+                html += '<div class="aot-viz-now" style="--aot-viz-pos:' +
+                        p.toFixed(2) + '"></div>';
+            }
+        } else {
+        /* ── 실측은 초록, 목표는 직각선 ────────────────────────────────
+         *
+         * 예전에는 반대였다 — 초록 면이 적정 범위(목표)였고 세로선이 지금
+         * 값이었다. 그런데 불릿은 처음부터 "초록 = 실측(누적), 선 = 목표"
+         * 였고, 두 줄이 한 카드에 나란히 서면 초록과 선의 뜻이 줄마다
+         * 뒤집혔다(2026-09-04 신고). 밴드 바를 불릿 쪽에 맞춘다.
+         *
+         * 실측은 **폭**으로 그린다(그 기간의 최저~최고). 값 하나뿐이면
+         * 그 자리에 최소 두께로 선다 — CSS `min-width` 가 그 몫이다. */
+        var sLo = pct(o.spanMin, o.min, o.max);
+        var sHi = pct(o.spanMax, o.min, o.max);
+        if (sLo !== null && sHi !== null && sHi > sLo) {
+            html += '<div class="aot-viz-span" style="left:' + sLo.toFixed(2) +
+                    '%;width:' + (sHi - sLo).toFixed(2) + '%"></div>';
+        } else if (p !== null) {
+            html += '<div class="aot-viz-span" style="left:' + p.toFixed(2) +
+                    '%;width:0"></div>';
         }
-        if (p !== null) {
-            html += '<div class="aot-viz-now" style="--aot-viz-pos:' +
-                    p.toFixed(2) + '"></div>';
+        // 목표 — 하나면 선 하나, 범위면 양 끝 둘. 맨 위에 선다(CSS z-index).
+        if (os !== null) {
+            html += '<div class="aot-viz-target" style="--aot-viz-pos:' +
+                    os.toFixed(2) + '"></div>';
+        }
+        if (oe !== null && (os === null || oe > os)) {
+            html += '<div class="aot-viz-target" style="--aot-viz-pos:' +
+                    oe.toFixed(2) + '"></div>';
+        }
         }
         html += '</div>';
         // 밴드의 기준은 적정 범위이므로 눈금 라벨을 그 **중앙**에 붙인다.
@@ -445,6 +489,124 @@
         return html + '</div>';
     }
 
+    /* ── 추세 띠 ─────────────────────────────────────────────────────────
+     * 기간에 걸친 값의 **범위와 목표 대비 위치**. `spark` 와 다른 것 —
+     * 스파크는 판단 없이 모양만 말하고, 이것은 밴드 바(`band`)를 시간축으로
+     * 늘인 것이라 목표·적정 구간을 함께 그린다(반복되는 일별 표를 대신해
+     * 여러 날을 한 줄로 요약하려고 만들었다 — 구획 일지의 §4).
+     *
+     *   AoTViz.trend({
+     *     label: '기온', valueText: '28.7 °C', valueSub: '어제',
+     *     points: [{ k: '08-15', min: 22.1, max: 34.8, avg: 27.6 }, …],
+     *     band: { lo: 20, hi: 25 },      // 적정 구간(범위 목표)
+     *     target: 25                     // 또는 단일 목표(범위가 없을 때)
+     *   })
+     *
+     * `points` 는 **오래된 것 → 최신 순**이고 자리마다 하루(또는 한 구간)를
+     * 가리킨다. `avg` 가 `null`(또는 없음)인 자리는 **결측**이다 — 그 자리는
+     * 이어 그리지 않는다(선을 그으면 없는 값을 지어낸 것으로 읽힌다). 결측
+     * 앞뒤로 값이 있어도 서로 잇지 않고, 끊어진 조각(run)마다 띠·선을 따로
+     * 그린다 — x 위치는 항상 **전체 점 수 기준**이라 결측이 있어도 날짜
+     * 간격이 어긋나지 않는다.
+     *
+     * `min`/`max` 가 있으면 그 구간의 **범위 띠**(트랙과 같은 중립색)를
+     * 함께 그린다 — 평균 하나보다 그날의 변동폭이 함께 보이는 편이 낫다.
+     * 없으면(둘 다 `avg` 로 접힌다) 선만 그려진다.
+     *
+     * `band`(범위) 와 `target`(단일 값)은 **있는 쪽 하나만** 그린다 —
+     * `band` 가 우선이다. 관측 범위 밖의 목표도 세로 범위 계산에 넣으므로
+     * (아래) 목표를 벗어난 기간이 통째로도 그림이 안 잘린다.
+     *
+     * ⚠ **세로축에 숫자를 붙이지 않는다**(스파크와 같은 이유) — 실제
+     *   값·목표는 머리줄(`valueText`)이 말하고, 그림은 "그 값이 목표 대비
+     *   어디 있었나" 라는 **모양**만 말한다.
+     */
+    function trend(o) {
+        o = o || {};
+        var pts = Array.isArray(o.points) ? o.points : [];
+        var n = pts.length;
+        var html = '<div class="' +
+                   cls('aot-viz aot-viz--trend', { stale: o.stale,
+                                                   className: o.className }) +
+                   '">';
+        html += headHtml(o.label, o.valueText != null ? o.valueText : o.value,
+                         o.valueSub);
+
+        // ── 세로 범위 ────────────────────────────────────────────────────
+        // 관측값뿐 아니라 목표·밴드도 범위 안에 들어와야 한다 — 안 그러면
+        // 목표를 계속 못 채운 기간에서 목표선 자체가 그림 밖으로 사라진다.
+        var lo = Infinity, hi = -Infinity, i;
+        for (i = 0; i < n; i++) {
+            var p = pts[i] || {};
+            if (isNum(p.min)) { lo = Math.min(lo, p.min); hi = Math.max(hi, p.min); }
+            if (isNum(p.max)) { lo = Math.min(lo, p.max); hi = Math.max(hi, p.max); }
+            if (isNum(p.avg)) { lo = Math.min(lo, p.avg); hi = Math.max(hi, p.avg); }
+        }
+        var band = o.band;
+        if (band) {
+            if (isNum(band.lo)) { lo = Math.min(lo, band.lo); hi = Math.max(hi, band.lo); }
+            if (isNum(band.hi)) { lo = Math.min(lo, band.hi); hi = Math.max(hi, band.hi); }
+        }
+        if (isNum(o.target)) { lo = Math.min(lo, o.target); hi = Math.max(hi, o.target); }
+
+        // 그릴 값이 없다 — 빈 칸이 "아직 모른다" 를 정직하게 말한다(스파크와
+        // 같은 규칙). 점이 하나뿐이면 방향도 범위도 말할 수 없다.
+        if (!isFinite(lo) || !isFinite(hi) || n < 2) {
+            return html + '</div>';
+        }
+        var span = (hi - lo) || 1;         // 평평한 구간도 그린다(가운데 선)
+        // viewBox 높이 24, 위아래 3 여백 — spark 와 같은 수치라 나란히 놓여도
+        // 리듬이 갈리지 않는다.
+        function y(v) { return 21 - ((v - lo) / span) * 18; }
+        function x(idx) { return (idx / (n - 1)) * 100; }
+
+        var svg = '';
+        // band 가 우선이다 — 둘 다 오면 범위 쪽이 더 많은 것을 말한다.
+        if (band && (isNum(band.lo) || isNum(band.hi))) {
+            var bLo = isNum(band.lo) ? band.lo : lo;
+            var bHi = isNum(band.hi) ? band.hi : hi;
+            var yTop = y(Math.max(bLo, bHi)), yBot = y(Math.min(bLo, bHi));
+            svg += '<rect class="aot-viz-trend-band" x="0" y="' +
+                   yTop.toFixed(2) + '" width="100" height="' +
+                   Math.max(0, yBot - yTop).toFixed(2) + '"/>';
+        } else if (isNum(o.target)) {
+            var yt = y(o.target);
+            svg += '<line class="aot-viz-trend-target" x1="0" x2="100" y1="' +
+                   yt.toFixed(2) + '" y2="' + yt.toFixed(2) + '"/>';
+        }
+
+        // ── 결측으로 갈라진 조각(run)마다 띠·선을 따로 그린다 ────────────
+        var run = [];
+        function flushRun() {
+            if (run.length < 2) { run = []; return; }
+            var top = [], bottom = [], line = [], j, k;
+            for (j = 0; j < run.length; j++) {
+                var idx = run[j], pt = pts[idx] || {};
+                var hiV = isNum(pt.max) ? pt.max : pt.avg;
+                top.push(x(idx).toFixed(2) + ',' + y(hiV).toFixed(2));
+                line.push(x(idx).toFixed(2) + ',' + y(pt.avg).toFixed(2));
+            }
+            for (k = run.length - 1; k >= 0; k--) {
+                var idx2 = run[k], pt2 = pts[idx2] || {};
+                var loV = isNum(pt2.min) ? pt2.min : pt2.avg;
+                bottom.push(x(idx2).toFixed(2) + ',' + y(loV).toFixed(2));
+            }
+            svg += '<polygon class="aot-viz-trend-ribbon" points="' +
+                   top.join(' ') + ' ' + bottom.join(' ') + '"/>';
+            svg += '<polyline class="aot-viz-trend-line" points="' +
+                   line.join(' ') + '"/>';
+            run = [];
+        }
+        for (i = 0; i < n; i++) {
+            if (isNum((pts[i] || {}).avg)) run.push(i); else flushRun();
+        }
+        flushRun();
+
+        html += '<svg class="aot-viz-trend" viewBox="0 0 100 24" ' +
+                'preserveAspectRatio="none" aria-hidden="true">' + svg + '</svg>';
+        return html + '</div>';
+    }
+
     /* 여러 줄을 한 묶음으로. 사이 여백을 각 호출부가 인라인 style 로 넣지
        않게 하려는 것이 전부다. */
     function group(rows) {
@@ -483,11 +645,321 @@
         }
     }
 
+    /* ── 범위 도표 ───────────────────────────────────────────────────────
+     * **밴드 바를 세로로 돌려 기간마다 하나씩** 세운 것이다. 그것뿐이다.
+     *
+     *   .aot-viz-track  회색 필   축 전체 범위
+     *   .aot-viz-ok     초록      목표대
+     *   .aot-viz-now    어두운 선 그 기간의 값
+     *
+     * 값이 '크기' 인 계열(DLI 하루 적산·장치 가동시간)은 밴드 바가 아니라
+     * **불릿**을 돌린다 — 트랙 + 채운 양(`.aot-viz-fill`, 바닥에서 올라온다).
+     *
+     * ⚠ **여기서 새로 만드는 것은 없다.** 색도 라운드도 클래스가 이미 갖고
+     *   있다 — 돌리는 것은 좌표뿐이다(가로 → 세로). 이 자리에서 세 번
+     *   어겼다: 투명도(`45%`·`55%`·`18%`)를 만들었고, 구간(초록)을 마커
+     *   색으로 칠했고, 라운드를 없앴다. 전부 되돌렸다.
+     *
+     * ⚠ **눈금 글자는 만들지 않는다**(이 파일의 규약). 서버가
+     *   `plot_journal.value_scale()` 로 축과 눈금 문자열을 함께 보낸다.
+     *
+     * ⚠ **기간이 하나면 이 그림을 쓰지 않는다** — 그 자리는 밴드 바 자체가
+     *   맞다(가로 한 줄). 부르는 쪽이 고른다.
+     *
+     * **그 기간의 최저~최고를 그린다**(`min`·`max`가 오면). 평균 하나만
+     * 찍던 때는 "그날 얼마나 튀었나" 를 짚어야만 알 수 있었다 — 그런데
+     * 하루 평균은 낮과 밤을 섞은 값이라, 34도까지 오른 날과 종일 25도인
+     * 날이 같은 자리에 선다. 진폭이 곧 그 줄이 답해야 할 것이다.
+     *
+     * ⚠ 진폭을 그리면 **평균 마커는 그리지 않는다.** 셋(최저·평균·최고)을
+     *   한 칸에 세우면 칸 폭이 38px 인 화면에서 무엇이 기준인지 모양이
+     *   말해 주지 못한다 — 한계선 셋을 세웠다가 되돌린 것과 같은 이유다
+     *   (aot-dataviz.css `.aot-viz-limit` 주석). 값은 풍선이 말한다.
+     *
+     *   AoTViz.range({
+     *     label: '온도', valueText: '21.0 °C',
+     *     scale: {lo: 10, hi: 40, ticks: [{v: 10, text: '10'}, …]},
+     *     targets: [{v: 25, text: '주간 25'}, {v: 12, text: '야간 12'}],
+     *     points: [{label: '08-26', min: 17.4, max: 29.8, avg: 21.0}, …]
+     *   })
+     */
+    function range(o) {
+        o = o || {};
+        var pts = Array.isArray(o.points) ? o.points : [];
+        var sc = o.scale || {};
+        var lo = sc.lo, hi = sc.hi;
+        /* 막대 굵기는 **밀도가 정한다.** 8px 로 못박아 두면 기간이 51 개인
+           문서에서 트랙이 칸보다 굵어 서로 붙어 한 덩어리로 뭉갠다(실측).
+           칸 수로 단을 나눈다 — 이 빌더는 문자열만 만들어 돌려주므로(지도
+           팝업이 이어 붙이는 방식) 폭을 재서 정할 수 없다. */
+        var barW = pts.length <= 24 ? 8 : (pts.length <= 60 ? 4 : 2);
+        var html = '<div class="' +
+                   cls('aot-viz aot-viz--range', { stale: o.stale,
+                                                   className: o.className }) +
+                   '" style="--aot-viz-range-bar:' + barW + 'px">';
+        html += headHtml(o.label, o.valueText != null ? o.valueText : o.value,
+                         o.valueSub);
+        // 그릴 축이 없다 — 빈 칸이 "아직 모른다" 를 정직하게 말한다(밴드 바와
+        // 같은 규칙).
+        if (!isNum(lo) || !isNum(hi) || hi === lo || !pts.length) {
+            return html + '</div>';
+        }
+        var i, p;
+        // '크기' 인가(불릿을 돌린다) '값' 인가(밴드 바를 돌린다).
+        var bars = o.bars == null ? false : o.bars;
+
+        // 아래에서부터의 거리(%). 세로로 돌렸으므로 큰 값이 위다.
+        function bottom(v) {
+            return pct(v, lo, hi);
+        }
+
+        // 목표대 — 값이 하나면 얇은 띠, 주간·야간처럼 둘이면 그 사이.
+        var tv = [];
+        (o.targets || []).forEach(function (t) {
+            if (t && isNum(t.v)) tv.push(t.v);
+        });
+        var okLo = tv.length ? bottom(Math.min.apply(null, tv)) : null;
+        var okHi = tv.length ? bottom(Math.max.apply(null, tv)) : null;
+        var okTitle = (o.targets || []).map(function (t) { return t.text; })
+                        .filter(Boolean).join(' · ');
+        /* 가운데 눈금 하나. 양 끝만 적으면 막대가 어느 정도 규모인지 가늠할
+           수 없다(실사용 지적 2026-09-04). **눈금표에서 고른다** — 축의
+           산술 중간(예: 22.5)이 아니라 서버가 만든 눈금 중 가운데에 가장
+           가까운 것이라야 사람이 읽는 숫자가 된다. 격자로 여러 줄을 깔지
+           않는 이유는 같은 자리에서 이미 "너무 산만하다" 는 지적을 받았기
+           때문이다. */
+        var ticks = Array.isArray(sc.ticks) ? sc.ticks : [];
+        var mid = null;
+        if (ticks.length > 2) {
+            var want = (lo + hi) / 2, best = Infinity;
+            for (i = 1; i < ticks.length - 1; i++) {
+                var d = Math.abs(ticks[i].v - want);
+                if (d < best) { best = d; mid = ticks[i]; }
+            }
+        }
+        var midPos = mid ? bottom(mid.v) : null;
+
+        /* 목표를 그리는 방식은 **범위형과 누적형이 다르다.**
+         *
+         *   범위형(밴드): 목표는 "이 사이에 있어라" 는 **면**이다(.aot-viz-ok).
+         *   누적형(막대): 목표는 "여기까지 쌓아라" 는 **지점**이다.
+         *
+         * 누적형에 면을 쓰면 한 트랙 안에서 같은 초록이 '목표대' 와 '쌓인 양'
+         * 두 뜻으로 서고, 어느 초록이 무엇인지 모양이 말해 주지 못한다. 그래서
+         * 가로 도표의 불릿과 **같은 어휘**(목표 = 깃발 마커)로 그린다. */
+        /* 목표는 **선**이다 — 누적형이든 범위형이든 같다(밴드 바와 같은 규칙).
+         * 초록 면으로 그리던 때는 한 트랙 안에서 초록이 '목표대' 와 '실측'
+         * 두 뜻으로 섰고, 도표를 가로지르는 긴 선으로도 그려 봤지만 "시선이
+         * 너무 끌린다" 는 지적을 받았다(2026-09-04). 지금은 트랙 폭만큼의
+         * 짧은 가로선이고 맨 위에 선다(CSS z-index) — 초록이 트랙 두께를
+         * 꽉 채워도 가려지지 않는다.
+         *
+         * 열마다 반복해 그린다. 자기 열 안에서만 서므로 도표 전체를 가르는
+         * 규칙선처럼 보이지 않는다. */
+        var goalHtml = '';
+        tv.forEach(function (v) {
+            var gb = bottom(v);
+            if (gb === null) return;
+            goalHtml += '<div class="aot-viz-target" style="--aot-viz-pos:' +
+                        gb.toFixed(2) + '"' +
+                        (okTitle ? ' title="' + esc(okTitle) + '"' : '') +
+                        '></div>';
+        });
+
+        var cols = '';
+        for (i = 0; i < pts.length; i++) {
+            p = pts[i] || {};
+            // **마크업도 밴드 바 그대로다** — 트랙 안에 구간과 마커가 든다.
+            // 형제로 빼면 `border-radius: inherit`(구간이 트랙의 라운드를
+            // 물려받는 규칙)이 끊긴다.
+            var col = '';
+            var b = bottom(p.avg);
+            var spLo = bottom(p.min), spHi = bottom(p.max);
+            if (b !== null || (spLo !== null && spHi !== null)) {
+                if (bars) {
+                    // 채운 양 — 바닥에서 올라온다. **0 이면 아예 그리지
+                    // 않는다**: 최소 높이로 남긴 조각이 "조금 돌았다" 로
+                    // 읽혀 꺼진 장치가 켜진 것처럼 보였다(오랜 규칙).
+                    if (b > 0) {
+                        col += '<div class="aot-viz-fill" style="height:' +
+                               b.toFixed(2) + '%"></div>';
+                    }
+                } else if (spLo !== null && spHi !== null) {
+                    // 그 기간의 진폭 — 최저에서 최고까지. 면이라 캡 보정을
+                    // 하지 않는다(.aot-viz-ok 와 같은 규칙). 폭이 0 이어도
+                    // 그린다 — 최소 두께는 CSS 가 준다(값이 하나뿐인 기간).
+                    col += '<div class="aot-viz-span" style="bottom:' +
+                           spLo.toFixed(2) + '%;height:' +
+                           (spHi - spLo).toFixed(2) + '%"></div>';
+                } else {
+                    // 진폭을 모르거나(최저·최고 없음) 폭이 0 이면(값이 하나뿐인
+                    // 기간) **아는 만큼만** 그린다 — 최소 높이를 줘서 진폭이
+                    // 있는 것처럼 보이게 하지 않는다.
+                    //
+                    // 위치는 밴드 바와 **같은 방식**으로 넘긴다 — 트랙의
+                    // 둥근 캡만큼 안쪽에 매핑하는 보정이 CSS 에 있고,
+                    // 캡 크기는 트랙 굵기에서 파생된다.
+                    var at = (b !== null) ? b : spLo;
+                    col += '<div class="aot-viz-now" style="--aot-viz-pos:' +
+                           at.toFixed(2) + '"></div>';
+                }
+            }
+            // 누적형의 목표는 **쌓인 막대 위**에 얹는다 — 먼저 깔면 막대가
+            // 목표를 넘었을 때 그 위를 덮어 "넘었는지" 를 볼 수 없다.
+            col += goalHtml;
+            // ⚠ 네이티브 `title` 을 쓰지 않는다 — **터치에서는 뜨지 않고**
+            //   데스크톱에서도 1 초 넘게 걸린다. 값을 확인하려고 짚는
+            //   동작에는 맞지 않는다. 문구는 부르는 쪽이 `tip` 으로 준다
+            //   (이 파일은 문구를 만들지 않는다).
+            cols += '<div class="aot-viz-col"' +
+                    (p.tip ? ' data-tip="' + esc(p.tip) + '"' : '') +
+                    '><div class="aot-viz-track">' + col + '</div></div>';
+        }
+
+        // 세로 눈금은 **양 끝 두 글자 + 가운데 하나**다(밴드 바의 `scale` 과
+        // 같은 어휘에 가이드 한 줄만 더한다).
+        var vscale = '';
+        if (ticks.length) {
+            vscale = '<div class="aot-viz-vscale">' +
+                     '<span>' + esc(ticks[ticks.length - 1].text) + '</span>' +
+                     (midPos !== null
+                       ? '<span class="is-mid" style="bottom:' +
+                         midPos.toFixed(2) + '%">' + esc(mid.text) + '</span>'
+                       : '') +
+                     '<span>' + esc(ticks[0].text) + '</span></div>';
+        }
+        // 가이드는 막대 **뒤에** 온다(앞에 두면 값을 가로지른다).
+        var guide = midPos !== null
+          ? '<i class="aot-viz-guide" style="bottom:' + midPos.toFixed(2) + '%"></i>'
+          : '';
+        // 값 풍선은 **그리는 자리 안**에 둔다. 도표 위(바깥)에 띄우면 바로
+        // 위 도표의 제목 옆에 떠서 어느 그래프의 값인지 헷갈린다(실측).
+        // 붙인 뒤 `AoTViz.tips(root)` 가 배선한다.
+        html += '<div class="aot-viz-plot">' + vscale + guide +
+                '<div class="aot-viz-cols">' + cols + '</div>' +
+                '<div class="aot-viz-tip" hidden></div></div>';
+
+        // 가로 눈금 — 처음·가운데·끝만. 전부 적으면 글자가 겹쳐 아무것도
+        // 못 읽는다(기간이 65 개인 문서가 실제로 있다).
+        var first = pts[0] && pts[0].label;
+        var last = pts[pts.length - 1] && pts[pts.length - 1].label;
+        var mid = pts.length > 2 ? pts[Math.floor(pts.length / 2)].label : null;
+        if (first || last) {
+            html += '<div class="aot-viz-scale aot-viz-xaxis">' +
+                    '<span>' + esc(first || '') + '</span>' +
+                    (pts.length > 2 ? '<span>' + esc(mid || '') + '</span>' : '') +
+                    '<span>' + esc(last || '') + '</span></div>';
+        }
+        return html + '</div>';
+    }
+
+    /* ── 값 풍선 배선 ────────────────────────────────────────────────────
+     * 붙인 뒤 한 번 부른다: `AoTViz.tips(mountElement)`.
+     *
+     * ⚠ **포인터 이벤트 하나로 마우스·터치·펜을 함께 받는다.** mouse/touch
+     *   를 따로 걸면 터치 기기에서 둘 다 발화해 풍선이 두 번 뜬다.
+     *
+     * 문구는 만들지 않는다 — 칸의 `data-tip` 을 그대로 보인다(이 파일의 규약).
+     */
+    /* 열려 있는 값 풍선을 닫는 문서 단위 배선. **한 번만** 건다 —
+     * 예전에는 도표마다 `document` 에 걸어서, 일지 한 장(범위 도표 19개)을
+     * 열면 같은 일을 하는 리스너가 19개 쌓였다. */
+    var _tipCharts = [];
+    var _tipDismissBound = false;
+
+    function _bindTipDismiss() {
+        if (_tipDismissBound || !global.document) return;
+        _tipDismissBound = true;
+        global.document.addEventListener('pointerdown', function (ev) {
+            for (var i = 0; i < _tipCharts.length; i++) {
+                var c = _tipCharts[i];
+                if (c.contains(ev.target)) continue;
+                var t = c.querySelector('.aot-viz-tip');
+                if (t) t.hidden = true;
+            }
+        });
+    }
+
+    function tips(root) {
+        var scope = root || (global.document && global.document.body);
+        if (!scope || !scope.querySelectorAll) return;
+        var charts = scope.querySelectorAll('.aot-viz--range');
+        for (var i = 0; i < charts.length; i++) bindOne(charts[i]);
+
+        function bindOne(chart) {
+            // 두 번 걸지 않는다 — 다시 그리지 않고 `tips()` 만 다시 부르는
+            // 호출부가 있으면 핸들러가 쌓인다.
+            if (chart.getAttribute('data-tips') === '1') return;
+            chart.setAttribute('data-tips', '1');
+            var tip = chart.querySelector('.aot-viz-tip');
+            if (!tip) return;
+
+            function hide() { tip.hidden = true; }
+
+            function show(col) {
+                var text = col.getAttribute('data-tip');
+                if (!text) { hide(); return; }
+                tip.textContent = text;
+                tip.hidden = false;
+                // 칸 가운데에 놓되 **도표 밖으로 나가지 않게** 자른다 —
+                // 첫 칸·끝 칸에서 글자가 카드를 넘어가면 잘려 읽히지 않는다.
+                var cr = col.getBoundingClientRect();
+                var pr = tip.parentNode.getBoundingClientRect();
+                var half = tip.offsetWidth / 2;
+                var x = cr.left + cr.width / 2 - pr.left;
+                tip.style.left =
+                    Math.max(half, Math.min(pr.width - half, x)) + 'px';
+            }
+
+            function at(ev) {
+                var el = ev.target;
+                while (el && el !== chart && !(el.classList &&
+                       el.classList.contains('aot-viz-col'))) {
+                    el = el.parentNode;
+                }
+                return (el && el !== chart) ? el : null;
+            }
+
+            /* 마우스는 **따라다니고**, 터치는 **머문다.**
+             *
+             * 손가락은 값 위에 머무를 수 없다 — 짚은 순간 그 자리를 가리고,
+             * 떼면 볼 것이 사라진다. 그래서 터치에서는 다음에 짚을 때까지
+             * 그대로 둔다(사용자 지적: *"터치를 떼면 바로 사라져서 불편함"*).
+             *
+             * ⚠ **`pointerleave` 로 닫는 것은 마우스뿐이다.** 터치도 손을 떼면
+             *   그 이벤트가 온다(포인터가 사라지므로) — 구분하지 않으면 떼는
+             *   순간 닫힌다. 이것이 그 증상의 원인이었다. */
+            function isMouse(ev) {
+                return !ev.pointerType || ev.pointerType === 'mouse';
+            }
+
+            chart.addEventListener('pointermove', function (ev) {
+                var col = at(ev);
+                // 짚은 채 움직이면 칸을 훑어 값을 읽는다(마우스·터치 공용).
+                if (col) { show(col); return; }
+                // 칸 밖으로 나가면 마우스만 닫는다 — 터치는 머문다.
+                if (isMouse(ev)) hide();
+            });
+            chart.addEventListener('pointerdown', function (ev) {
+                var col = at(ev);
+                if (col) show(col);
+            });
+            chart.addEventListener('pointerleave', function (ev) {
+                if (isMouse(ev)) hide();
+            });
+            _tipCharts.push(chart);
+            _bindTipDismiss();
+        }
+    }
+
     global.AoTViz = {
         band: band,
         settle: settle,
         value: value,
         spark: spark,
+        trend: trend,
+        range: range,
+        tips: tips,
         bullet: bullet,
         timeline: timeline,
         group: group,

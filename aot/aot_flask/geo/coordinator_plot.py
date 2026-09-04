@@ -335,10 +335,25 @@ def _resolve_curve_targets(plot_row, keys, on=None):
     작기가 기준점이다 — 곡선의 몇 주차인지는 심은 날부터 센다(코디네이터는
     자기 시작 시각을 쓰지만, 구획에는 그것이 곧 작기다). 못 풀면 그 항목을
     빼고 돌려준다: 지어낸 숫자를 목표라고 적는 것보다 이름만 적는 편이 낫다.
+
+    ## 제어와 같은 값을 내기 위해 필요한 두 가지
+
+    1. **소수 주차.** 예전에는 `(ref - started).days // 7` 로 내림했다. 곡선의
+       주차 보간(`_interp_weeks`)이 계단이 되어, 제어가 7.41 주차로 도는
+       구획을 화면은 7 주차로 그렸다.
+    2. **현지 시간대.** 예전에는 `facility_tz=None` 을 넘겼다. 그러면
+       `calculate_setpoint` 이 하루 곡선의 시각(`t_sec`)을 UTC 로 잡는다 —
+       한국이면 아홉 시간이 밀려, 저녁 8시에 정오 목표를 보여 준다.
+       (실측 2026-09-04 20:36 KST, 김제 3-1 가을오이 / 오이 VPD(노지 가을):
+        제어 0.61 vs 화면 1.09 — 주차 차이는 0.003 이고 나머지 0.481 이
+        전부 이 시간대 폴백이었다.)
     """
     import time as _time
     from datetime import date as _date, datetime as _dt, time as _t
     from aot.databases.models import GeoProgram
+    from aot.utils.method import (
+        DailyMultiPointMethod, local_noon, weeks_elapsed_at)
+    from aot.utils.device_tz import resolve_location_tz
 
     puuid = getattr(plot_row, 'program_uuid', None)
     if not puuid:
@@ -348,13 +363,21 @@ def _resolve_curve_targets(plot_row, keys, on=None):
     if not isinstance(curves, dict) or not curves:
         return {}
 
+    # 구획의 시계. 시설이 있으면 그 시설, 노지면 소속 구역을 따른다 —
+    # 일지(`build_journal_for_target`)가 쓰는 것과 같은 해석기다.
+    try:
+        tz = resolve_location_tz(getattr(plot_row, 'unique_id', None))
+    except Exception as exc:                                # noqa: BLE001
+        logger.debug('구획 시간대 해석 실패(%s): %s', puuid, exc)
+        tz = None
+
     started = getattr(plot_row, 'started_on', None)
     ref = on or _date.today()
-    weeks = None
-    start_dt = None
-    if started is not None:
-        weeks = max(0, (ref - started).days // 7)
-        start_dt = _dt.combine(started, _t.min)
+    # 오늘을 보는 것이면 **지금**이 기준이다(제어가 쓰는 것과 같은 순간).
+    # 지난 날짜를 보는 것이면 그날 현지 정오 — 하루를 한 값으로 대표한다.
+    when = None if (on is None or ref == _date.today()) else local_noon(ref, tz)
+    weeks = weeks_elapsed_at(started, when=when, tz=tz)
+    start_dt = _dt.combine(started, _t.min) if started is not None else None
 
     out = {}
     for key in keys:
@@ -366,9 +389,15 @@ def _resolve_curve_targets(plot_row, keys, on=None):
             handler = load_method_handler(uuid)
             if handler is None:
                 continue
+            # 주차를 못 셌는데 주차 곡선이면 값을 내지 않는다. 넘기면
+            # `calculate_setpoint` 이 1900-01-01 을 시작일로 삼아 **마지막
+            # 주차**의 곡선을 돌려준다 — 지어낸 숫자다. 일지도 같은 경우
+            # 그 행을 건너뛴다.
+            if weeks is None and isinstance(handler, DailyMultiPointMethod):
+                continue
             value, ended = handler.calculate_setpoint(
                 _time.time(), method_start_time=start_dt,
-                weeks_elapsed=weeks, facility_tz=None)
+                weeks_elapsed=weeks, facility_tz=tz)
             # 끝난 곡선은 값을 내지 않는다 — 마지막 값을 붙들고 있는 것은
             # 제어의 일이지(코디네이터가 `_vpd_last_sp` 로 한다) 표시의 일이
             # 아니다. 화면은 "곡선을 따름" 으로 돌아간다.

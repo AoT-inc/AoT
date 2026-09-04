@@ -10059,7 +10059,8 @@ class AoTDataToolService:
     @staticmethod
     def get_plot(plot_id=None, row_spacing_cm=None,
                      plant_spacing_cm=None, edge_margin_cm=None,
-                     bed_pitch_cm=None, rows_per_bed=None, **extra):
+                     bed_pitch_cm=None, rows_per_bed=None,
+                     recent_days=None, **extra):
         """[읽기전용] 구획 하나의 상세 — 작물·기간·면적·치수 + 참조 센서 출처.
 
         간격 두 개를 주면 `capacity_estimate`(줄 수·그루 수)까지 센다.
@@ -10072,6 +10073,18 @@ class AoTDataToolService:
         조건을 한쪽만 주면 계산이 성립하지 않으므로 조용히 넘기지 않고 오류로
         말한다 — 사용자가 말한 조건이 답에 반영되지 않은 것을 아무도 모르는
         상태가 최악이다.
+
+        ## `recent_days` — 목표가 **계속** 벗어나는가
+
+        `target_check` 는 오랫동안 한 시점만 봤다. 그래서 "이 목표가 이 현장에
+        안 맞는다" 는 사실이 이 응답에 나타난 적이 없다 — 실측(김제 3-1)에서
+        야간온도가 잰 날 전부 목표를 넘겼는데, 낮에 물으면 그 항목은 아예
+        목록에서 빠지기까지 했다. 기본 14일을 되돌아본다.
+
+        **InfluxDB 를 그 기간만큼 읽는다**(실측: 0.3초 → 첫 호출 1.3초). 같은
+        구획을 다시 물으면 10분 캐시로 다시 0.3초다. 정말 빠른 응답만 필요하면
+        `recent_days=0` 으로 끈다 — 기본을 켜 두는 이유는, 끄면 모델이 그것을
+        물어볼 이유를 알 수 없기 때문이다(없는 것은 없는 줄도 모른다).
 
         ## `stage.guidance` — 실려 있다는 것과 닿는다는 것은 다르다
 
@@ -10108,7 +10121,8 @@ class AoTDataToolService:
                     rows_per_bed=rows_per_bed)
             except ValueError as ve:
                 return {"error": str(ve)}
-            _check = AoTDataToolService._stage_target_check(brief)
+            _check = AoTDataToolService._stage_target_check(
+                brief, plot_row=row, recent_days=recent_days)
             if _check:
                 brief['target_check'] = _check
             return {"plot": brief,
@@ -10136,7 +10150,7 @@ class AoTDataToolService:
     # 내부 사정이 아니라 **그 사람의 프로그램에 아직 안 채워진 칸**이고, 채우면
     # 답이 좋아지는 행동 가능한 정보다.
     @staticmethod
-    def _stage_target_check(brief):
+    def _stage_target_check(brief, plot_row=None, recent_days=None):
         stage = (brief or {}).get('stage') or {}
         targets = stage.get('targets')
 
@@ -10208,8 +10222,12 @@ class AoTDataToolService:
             when = t.get('when')
             if when in ('day', 'night') and is_day is not None:
                 if (when == 'day') != bool(is_day):
-                    off_period.append({'label': label, 'target': t['value'],
-                                       'unit': unit, 'applies': when})
+                    # `measurement` 를 함께 남긴다 — 아래에서 "직전 그
+                    # 시간대의 값" 을 찾는 열쇠가 이것이다.
+                    off_period.append({
+                        'label': label, 'target': t['value'], 'unit': unit,
+                        'applies': when,
+                        'measurement': t.get('measurement') or t.get('key')})
                     continue
 
             meas = str(t.get('measurement') or t.get('key')).strip().lower()
@@ -10243,14 +10261,99 @@ class AoTDataToolService:
             out['not_measurable_here'] = unmeasurable
         if no_reading:
             out['no_reading_for'] = no_reading
+
+        # ── 최근 며칠은 어땠나 ───────────────────────────────────────────
+        #
+        # 위까지는 전부 **한 시점**이다. 그래서 "이 목표가 이 현장에서 계속
+        # 안 맞는다" 는 사실이 이 응답에 나타난 적이 없었다 — 실측(김제 3-1):
+        # 야간온도가 잰 날 전부 목표를 넘겼는데, 낮에 물으면 그 항목은
+        # `not_this_period` 로 빠져 **목록에서 사라지기까지 했다.**
+        #
+        # 일지와 **같은 함수로** 센다(`plot_journal.recent_target_drift` →
+        # `target_drift`). 여기서 따로 세면 같은 구획을 두고 화면과 AI 가
+        # 다른 숫자를 말한다.
+        recent = AoTDataToolService._recent_drift(plot_row, recent_days)
+        if recent:
+            # 화면이 쓰는 필드를 그대로 넘기지 않고 **말할 것만** 남긴다 —
+            # 응답에 실리는 글자가 곧 매 호출의 비용이다(극값·on_target 은
+            # 문장으로 옮길 일이 없다).
+            out['recent'] = {
+                'days': recent['days'], 'from': recent['from'],
+                'to': recent['to'],
+                'drift': [{
+                    'label': d['label'], 'when': d.get('when'),
+                    'unit': d.get('unit_label') or d.get('unit'),
+                    'days': d['days'], 'days_hi': d['days_hi'],
+                    'above': d['above'], 'above_hi': d['above_hi'],
+                    'below': d['below'], 'below_hi': d['below_hi'],
+                    'mean': d['mean'], 'mean_hi': d['mean_hi'],
+                    'one_way': d['one_way'], 'agree': d.get('agree'),
+                    'sensors': [{'sensor': x['sensor'], 'days': x['days'],
+                                 'above': x['above'], 'below': x['below'],
+                                 'mean': x['mean'], 'one_way': x['one_way']}
+                                for x in (d.get('sensors') or [])],
+                } for d in (recent.get('drift') or [])]}
+            # 지금은 해당 없는 항목에 **직전 그 시간대의 값**을 붙인다.
+            # 붙이지 않으면 "지금은 해당 없음" 이 "모른다" 로 읽힌다.
+            for item in off_period:
+                key = '%s|%s' % (str(item.get('measurement') or '').strip().lower(),
+                                 item.get('applies') or '')
+                seen = (recent.get('latest') or {}).get(key)
+                if not seen:
+                    continue
+                item['last_seen'] = dict(seen)
+                try:
+                    item['last_seen']['delta'] = round(
+                        float(seen['value']) - float(item['target']), 2)
+                except (TypeError, ValueError):
+                    pass
+
         out['note'] = ("target vs current for THIS stage. 'delta' is current minus "
                        "target. There is no tolerance band in the data — do NOT invent "
                        "one. Check 'sensor' before trusting a row: several sensors can "
                        "report the same measurement (air vs soil temperature), and "
                        "'other_sensors' lists the rest. 'not_this_period' targets do "
-                       "not apply right now; 'follows_curve' targets track a curve, "
-                       "not a fixed number.")
+                       "not apply right now — their 'last_seen' is the most recent "
+                       "reading from the window they DO apply to, so answer with that "
+                       "instead of dropping them. 'follows_curve' targets track a "
+                       "curve, not a fixed number — but 'recent' still counts "
+                       "them, split by 'when'. 'recent' counts the last N days per "
+                       "sensor: 'days'..'mean' are the LOW end of the per-sensor "
+                       "range and '*_hi' the high end, and two rows can share a "
+                       "label and differ only by 'when' (day/night). 'one_way' "
+                       "means every sensor missed the same way on every day it "
+                       "measured; agree='mixed' means the sensors disagree — name "
+                       "both rather than picking one or averaging them. A target "
+                       "missed one way for the whole window is a finding worth "
+                       "telling the grower: the guide may not hold at this site. "
+                       "Still no tolerance band — report the counts, do not grade "
+                       "them.")
         return out
+
+    #: `get_plot` 이 목표 이탈을 되돌아보는 기본 기간. `recent_days=0` 이면 끈다
+    #: — 이 계산은 InfluxDB 를 그 기간만큼 읽으므로 호출이 눈에 띄게 느려진다
+    #: (실측 0.3초 → 1.3초). 기본을 켜 두는 이유는, 끄면 모델이 그것을 물어볼
+    #: 이유를 알 수 없기 때문이다(없는 것은 없는 줄도 모른다).
+    RECENT_DRIFT_DEFAULT_DAYS = 14
+
+    @staticmethod
+    def _recent_drift(plot_row, recent_days=None):
+        """구획 → 최근 N일 목표 이탈 요약. 못 내거나 꺼져 있으면 None."""
+        if plot_row is None:
+            return None
+        try:
+            days = (AoTDataToolService.RECENT_DRIFT_DEFAULT_DAYS
+                    if recent_days is None else int(recent_days))
+        except (TypeError, ValueError):
+            days = AoTDataToolService.RECENT_DRIFT_DEFAULT_DAYS
+        if days <= 0:
+            return None
+        try:
+            from aot.aot_flask.geo import plot_journal as PJ
+            return PJ.recent_target_drift(plot_row, days=days)
+        except Exception as e:                                  # noqa: BLE001
+            logger.debug('[StageTargetCheck] recent drift unavailable: %s', e)
+            return None
 
     @staticmethod
     def _latest_by_measurement(in_plot_ids, zone_ids=None):
@@ -10338,6 +10441,22 @@ class AoTDataToolService:
                 "suits the crop, or how it is doing, answer FROM THAT — do not list "
                 "raw sensor values instead. There is no tolerance band in the data, "
                 "so report the gap; do not invent 'good/bad' thresholds.")
+        # 한 시점만 보면 "오늘 좀 높네" 로 끝난다. 며칠째 같은 쪽으로 벗어나고
+        # 있다는 것은 **그 사람이 받아야 할 발견**이다 — 문헌 기준의 목표가 이
+        # 현장에서 성립하지 않는다는 뜻일 수 있고, 그러면 고칠 것은 현장이
+        # 아니라 목표 쪽이다.
+        _recent = _tc.get('recent') or {}
+        if _recent.get('drift'):
+            notes.append(
+                "'target_check.recent' counts the last %d days. A row with "
+                "'one_way' missed the same way on EVERY day every sensor "
+                "measured — say that out loud with the counts; it may mean the "
+                "programme's target does not hold at this site, which is the "
+                "grower's call to make, not yours. Where agree='mixed' the "
+                "sensors disagree: name both, never average them or pick one. "
+                "'not_this_period' rows carry 'last_seen' from the window they "
+                "do apply to — use it instead of saying you cannot tell."
+                % _recent.get('days', 0))
         elif _tc.get('state') == 'no_targets':
             notes.append(
                 "'target_check' says this programme has no target values for the "
@@ -10485,6 +10604,39 @@ class AoTDataToolService:
         `granularity` 는 **화면이 쓰는 그 접기**다(`fold_buckets`) — 저장된
         스냅샷은 그대로 두고 열람 시점에 접는 순수 계산이라, 스냅샷 불변
         계약을 깨지 않는다. 저장 단위보다 잘게는 못 간다.
+
+        ## 스냅샷 위에 얹어 주는 것 (열람 시점 계산)
+
+        스냅샷은 원문 그대로다 — 단위는 `C`·`percent` 같은 키이고, 목표에서
+        얼마나 벗어났는지는 버킷마다 흩어진 `delta` 뿐이다. 화면은 그 위에서
+        판단 재료를 만드는데 여기에는 없어서, 읽는 쪽이 같은 계산을 다시
+        해야 했다. 아래 필드가 그것이다(전부 파생이라 스냅샷을 바꾸지 않고,
+        이 기능 이전에 만든 일지에도 붙는다).
+
+        - `units` — 원문 단위 키 → 사람이 읽는 기호(`°C`·`%`·`m/s`).
+        - `caveat_texts` — 주의사항 키 → 문장.
+        - `derived_measurements` — **결과 지표**의 키(DLI·적산온도·VPD).
+          일사·기온·습도는 센서가 잰 원 데이터이고, 판단에 쓰는 것은 그것
+          으로 만든 이쪽이다.
+        - `target_drift` — 목표 항목마다 **며칠 중 며칠을 어느 쪽으로**
+          벗어났는지, 평균·범위. `one_way` 는 한 방향 100% 일 때만 붙는다.
+          ⚠ **세기만 한 것이지 판정이 아니다.** 이 데이터에는 허용 범위가
+            없고 그것은 의도된 선택이다 — "이 목표는 여기서 안 맞는다" 고
+            말하려면 사람이 정한 기준이 있어야 한다. 숫자를 그대로 옮기고
+            임계값을 지어내지 말 것.
+          ⚠ 접기 **전** 날짜별 버킷으로 센다 — `granularity` 를 바꿔도
+            분모가 흔들리지 않는다.
+          ⚠ **센서마다 따로 센 것이다.** `sensors` 에 센서별 수치가 들어
+            있고, 바깥의 `days`/`above`/`below`/`mean` 은 그 **범위의
+            아래끝**이며 `*_hi` 가 위끝이다(센서가 하나면 둘이 같다).
+            `agree='mixed'` 는 **센서에 따라 결론이 갈린다**는 뜻이다 —
+            실측(김제 3-1, 51일)에서 VPD 가 한 센서는 48일 중 42일 미달,
+            다른 센서는 25일 중 15일 초과였다. 그럴 때 한쪽을 골라 말하거나
+            평균으로 접지 말 것 — 어느 쪽도 사실이 아니다. 센서 이름을
+            들어 양쪽을 그대로 전하라.
+        - `stage_summaries` — 단계마다 이 기간에 **실제로 어떻게 됐는가**
+          (`stages` 는 계획이다): 겹친 날 수, 적산온도 합계와 끝 시점 누적,
+          그 단계의 `target_drift`, 못 재는 목표(`no_sensor_for`).
         """
         try:
             from datetime import date as _date
@@ -10501,7 +10653,14 @@ class AoTDataToolService:
             if row.status != 'done' or row.data is None:
                 return {"status": row.status, "error_message": row.error_message}
 
-            data = dict(row.data)
+            # 곡선 목표의 주야 목표·Δ 는 **열람 시점 계산**이다(저장 스냅샷은
+            # 불변). 화면에만 태우고 여기서 빠뜨리면 같은 일지·같은 날인데 두
+            # 경로의 답이 갈린다 — 실측(2026-09-04): 화면은 "주간 0.81 · 야간
+            # 0.46", MCP 는 `target: null, delta: null, delta_skipped: method`
+            # 였고 `target_drift` 에도 VPD 가 통째로 없었다. MCP 는 AI 가 읽는
+            # 경로라, 사용자가 "이 구획 VPD 어때?" 라고 물으면 화면에는 보이는
+            # 답을 AI 만 못 내는 상태가 된다.
+            data = dict(PJ.with_curve_deltas(row.data))
             stored = data.get('granularity') or 'day'
             buckets = list(data.get('buckets') or [])
 
@@ -10533,6 +10692,10 @@ class AoTDataToolService:
                     'of': len(data.get('buckets') or []),
                 }
 
+            # 접기 **전**의 날짜별 버킷. 이탈을 셀 때 쓴다 — 접힌 버킷으로
+            # 세면 "78일 중 78일" 의 분모가 보는 단위에 따라 달라진다.
+            raw_buckets = list(buckets)
+
             if granularity:
                 if granularity not in PJ.VIEW_GRANULARITIES:
                     return {"error": "granularity must be one of %s"
@@ -10560,6 +10723,86 @@ class AoTDataToolService:
                     "Call again with granularity='week'|'month'|'all' to fold "
                     "them, or date_from/date_to to narrow the range."
                     % len(buckets))
+
+            # ── 화면이 아는 것을 AI 도 알게 한다 ────────────────────────────
+            #
+            # 저장된 스냅샷은 `unit` 을 **원문 키**(`C`·`percent`·`m_s`·
+            # `none`)로, `caveats` 를 **키 문자열**로 들고 있다. 화면은 열람
+            # 시점에 그것을 기호(`°C`)와 문장으로 바꿔 내는데, MCP 로 읽는
+            # 쪽에는 그 두 가지가 없어 AI 가 "0.26 m_s" 를 그대로 사용자에게
+            # 옮기거나 `measurements-excluded:rssi,snr` 를 스스로 해독해야
+            # 했다(실사용 점검, 2026-09-04).
+            #
+            # ⚠ **원본 필드는 건드리지 않는다.** 행마다 라벨을 끼워 넣으면
+            #   응답이 그만큼 커지는데, 이 도구는 이미 캡에 걸려 `env` 를
+            #   먼저 버린다 — 그래서 **문서 전체에 실제로 쓰인 단위만** 작은
+            #   대응표 하나로 덧붙인다(`granularity_view`·`hint` 와 같은
+            #   파생 필드다).
+            units = {}
+            for bucket in buckets:
+                for env_row in (bucket.get('env') or []):
+                    raw_unit = env_row.get('unit')
+                    if raw_unit and raw_unit not in units:
+                        units[raw_unit] = PJ.unit_label(raw_unit)
+            if units:
+                data['units'] = units
+            caveat_keys = data.get('caveats') or []
+            if caveat_keys:
+                data['caveat_texts'] = {k: PJ.caveat_text(k)
+                                        for k in caveat_keys}
+
+            # ── 화면이 **판단하는 것**도 함께 준다 ──────────────────────────
+            #
+            # 여기까지가 "화면이 아는 것"(단위·주의문)이었다. 그런데 화면은
+            # 그 위에서 **판단 재료**를 더 만든다 — 무엇이 결과 지표인지,
+            # 목표에서 어느 쪽으로 얼마나 벗어났는지, 단계마다 얼마나
+            # 쌓았는지. 그것이 전부 열람 시점 계산이라 MCP 로 읽는 쪽에는
+            # 없었다: 사람이 보는 화면은 "무엇이 중요한가" 를 말해 주는데
+            # AI 가 받는 응답은 원 스냅샷 그대로였다(2026-09-04 점검).
+            #
+            # ⚠ **작은 것만 싣는다.** 이 도구는 이미 응답 캡에 걸려 `env` 를
+            #   먼저 버린다 — 아래 셋은 단계 수·목표 항목 수만큼이라 길이가
+            #   기간에 비례하지 않는다. 버킷을 늘리는 필드는 넣지 않는다.
+            #
+            # ⚠ **이탈은 접기 전 원 버킷으로 센다.** 접힌 버킷으로 세면
+            #   "78일 중 78일" 의 분모가 보는 단위에 따라 달라진다.
+            drift_source = [b for b in raw_buckets if not b.get('gap_count')]
+            drift = PJ.target_drift(drift_source)
+            if drift:
+                data['target_drift'] = drift
+
+            # 결과 지표(원 데이터로 만든 값)와 원 데이터를 가른다 — 사람이
+            # 보고 판단하는 것은 뒤쪽이 아니라 이쪽이다.
+            data['derived_measurements'] = list(PJ.DERIVED_MEASUREMENTS)
+
+            # 단계별 요약. 스냅샷의 `stages` 는 **계획**이고, 이것은 그 계획이
+            # 이 기간에 어떻게 됐는가다(적산온도·이탈·못 재는 항목).
+            try:
+                summaries = []
+                for sec in PJ.stage_sections(row.data):
+                    stage = sec.get('stage') or {}
+                    summaries.append({
+                        'key': stage.get('key'), 'name': stage.get('name'),
+                        'in_period': sec.get('in_period'),
+                        # ⚠ `stage_sections` 의 `when` 은 기간과 겹치면
+                        #   `'current'` 다 — 화면에서는 "이 문서의 단계" 라는
+                        #   뜻이지만, 읽는 쪽에는 "지금 진행 중인 단계" 로
+                        #   읽힌다(겹치는 단계가 다섯이면 다섯이 '현재' 다).
+                        'when': ('in_period' if sec.get('in_period')
+                                 else sec.get('when')),
+                        'days': sec.get('days'),
+                        'starts_on': sec.get('starts_on'),
+                        'ends_on': sec.get('ends_on'),
+                        'gdd': sec.get('gdd'),
+                        'gdd_cumulative': sec.get('gdd_cumulative'),
+                        'target_drift': sec.get('drift') or [],
+                        'no_sensor_for': [t.get('label') for t
+                                          in (sec.get('unobservable') or [])],
+                    })
+                if summaries:
+                    data['stage_summaries'] = summaries
+            except Exception:
+                logger.exception('get_plot_journal: stage summary failed')
 
             return PJ.journal_to_jsonable(data)
         except Exception as e:
@@ -11176,14 +11419,28 @@ class AoTDataToolService:
             return {"status": "error", "message": str(e)}
 
     @staticmethod
-    def save_plot_schedule_as_program(plot_id=None, name=None, **extra):
+    def save_plot_schedule_as_program(plot_id=None, name=None,
+                                      adopt_targets=False, **extra):
         """[쓰기] 이 구획의 일정을 **프로그램으로 등록한다**. 사람 승인 필요.
 
         구획에서 기간을 맞추고 단계를 더하고 지침을 적고 나면 그 지식은 그 구획
         안에만 있다 — 다음 작기·옆 밭이 같은 일을 처음부터 다시 하지 않게 한다.
 
         담기는 것은 지금 **실제로 따르고 있는** 단계 목록이고, 기간은 표준이
-        아니라 경계 사이의 실제 날수다. 목표는 원본 프로그램 것을 그대로 옮긴다.
+        아니라 경계 사이의 실제 날수다.
+
+        ## 목표는 되먹임이 한쪽만 열려 있었다
+
+        단계 일수는 위처럼 실측으로 갱신되는데 목표값은 아무리 어긋나도 갱신할
+        길이 없었다 — 문헌 기준이 이 현장에서 안 맞게 되는 상황이 정확히 여기서
+        막힌다. 이제 등록할 때마다 `target_review` 로 **단계마다 목표 옆에 이
+        구획이 실제로 잰 분포**를 함께 낸다. 보여 주기만 한다.
+
+        `adopt_targets=True` 면 애매하지 않은 항목만 실측 중앙값으로 바꿔
+        담는다. 센서가 둘 이상이라 값이 갈리거나, 그 단계에 잰 것이 없거나,
+        곡선이 걸렸거나, 항목 정의의 범위를 벗어나면 **원본을 지키고 이유를
+        낸다**(`targets_kept`) — 지어낸 숫자가 다음 작기의 목표가 되는 일이
+        이 게이트의 반대편이다.
 
         **구획을 새 프로그램으로 옮기지는 않는다** — 등록은 복사다. 진행 중인
         작기의 해석이 등록 한 번에 바뀌면 "그때 무엇을 목표로 길렀나" 의 답이
@@ -11196,12 +11453,26 @@ class AoTDataToolService:
             if not plot_id:
                 return {"status": "error", "message": "plot_id is required"}
             result, err = plot_io.save_as_program(
-                plot_id, name=name, set_by='AI')
+                plot_id, name=name, set_by='AI',
+                adopt_targets=bool(adopt_targets))
             if err:
                 return {"status": "error", "message": err}
-            return {"status": "success", "program": result.get('program'),
-                    "note": ("The plot still follows what it followed before — "
-                             "registering is a copy.")}
+            out = {"status": "success", "program": result.get('program'),
+                   "note": ("The plot still follows what it followed before — "
+                            "registering is a copy. 'target_review' puts each "
+                            "stage's target next to what this plot actually "
+                            "measured over that stage ('median' with p25-p75, "
+                            "per sensor, never averaged across sensors). A "
+                            "target the site never met is a finding: say it "
+                            "with the numbers and offer "
+                            "adopt_targets=true, which rewrites only the "
+                            "unambiguous ones. 'targets_kept' says why the "
+                            "rest were left alone — do not fill those in "
+                            "yourself.")}
+            for key in ('target_review', 'targets_adopted', 'targets_kept'):
+                if result.get(key):
+                    out[key] = result[key]
+            return out
         except Exception as e:
             logger.exception("Error in save_plot_schedule_as_program")
             return {"status": "error", "message": str(e)}

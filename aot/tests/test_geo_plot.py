@@ -5154,9 +5154,12 @@ class TestFacilityPlotRendering(unittest.TestCase):
         # `test_comparison_is_build_to_build_not_against_the_live_dom` 참조.
         self.assertIn('var ovSame = (st2._ovHtml === ovHtml)', widget)
         self.assertIn('if (!ovSame)', widget)
-        self.assertIn('if (pane._aotEnvNowHtml === html) return;', widget)
-        self.assertIn('if (pane._aotPlotsHtml === html) return;', widget)
-        self.assertIn('if (pane._aotRecordHtml === html) return;', widget)
+        # 얹는 카드 셋은 공용 판정을 지난다(2026-09-04). 문자열만 견주던 것이
+        # `_cardFresh` 로 바뀌었다 — 판이 갈리면 다시 그려야 하기 때문이다
+        # (`TestModalCardsSurviveAPaneWipe`). "값이 그대로면 손대지 않는다" 는
+        # 이 검사의 취지는 그 안에 그대로 있다.
+        for key in ('_aotEnvNowHtml', '_aotPlotsHtml', '_aotRecordHtml'):
+            self.assertIn("if (_cardFresh(pane, '%s', html)) return;" % key, widget)
 
     def test_comparison_parses_before_comparing(self):
         """문자열 HTML 과 DOM 의 `outerHTML` 을 직접 비교하면 안 된다.

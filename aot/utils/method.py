@@ -19,6 +19,107 @@ def parse_db_time(time_string, default=None):
         return default
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# 재배 주차 — 곡선의 주차 축은 여기 한 곳에서만 센다
+# ─────────────────────────────────────────────────────────────────────────────
+#
+# `DailyMultiPoint` 곡선은 주차 키프레임 사이를 **선형 보간**한다
+# (`_interp_weeks`). 주차가 0.3 주씩 흐르면 목표도 그만큼씩 흐르라는 뜻이다 —
+# 그것이 이 곡선 편집기가 "3주차 0.35 / 6주차 0.4" 를 받는 이유다.
+#
+# 그런데 같은 구획·같은 날의 주차를 세 곳이 서로 다르게 셌다: 제어는 소수
+# 주차, 구획 모달과 일지는 `days // 7` 로 내림한 정수 주차. 내림은 보간을
+# 계단으로 바꿔 버린다 — 곡선을 걸어 둔 뜻이 주 경계마다 한 번씩만 반영된다.
+# 그래서 **소수 주차가 정본**이고, 세 곳이 이 함수 하나를 쓴다.
+#
+# 기준점은 구획의 `started_on` 이고, 그 날짜는 **현지 자정**으로 읽는다.
+# 농부는 UTC 로 심지 않는다 — 한국이면 UTC 자정 해석은 아홉 시간을 앞당긴다.
+
+
+def weeks_elapsed_at(started_on, when=None, tz=None):
+    """`started_on` 현지 자정부터 `when` 까지의 경과 주차(소수) → float.
+
+    Args:
+        started_on: 구획 시작일. `date` / `datetime` / ISO 문자열 모두 받는다.
+                    날짜만 주면 `tz` 의 자정 00:00 으로 읽는다.
+        when:       기준 시각(tz-aware datetime). 없으면 지금.
+                    하루를 통째로 보는 화면(일지 등)은 **그날 현지 정오**를
+                    준다 — 주차 보간이 하루 안에서 1/7 주씩 흐르므로,
+                    정오 값이 곧 그날 평균이다(구간 안에서 선형이라 정확히
+                    같다).
+        tz:         현지 시간대(pytz 객체 또는 이름). 없으면 UTC 로 읽는다.
+
+    Returns:
+        0.0 이상의 소수 주차. `started_on` 이 없거나 못 읽으면 None —
+        호출자가 "주차를 못 센다" 를 각자 정책대로 처리한다(제어는 곡선을
+        안 돌리고, 화면은 곡선 이름만 적는다).
+    """
+    if started_on is None or started_on == '':
+        return None
+
+    if isinstance(tz, str):
+        try:
+            import pytz as _pytz
+            tz = _pytz.timezone(tz)
+        except Exception:
+            tz = None
+
+    def _localize(naive):
+        if tz is None:
+            return naive.replace(tzinfo=datetime.timezone.utc)
+        try:
+            return tz.localize(naive)
+        except AttributeError:
+            return naive.replace(tzinfo=tz)
+
+    # ── 시작 시각 ────────────────────────────────────────────────────────
+    start_dt = started_on
+    if isinstance(start_dt, str):
+        import re as _re
+        text = start_dt.strip()
+        if _re.fullmatch(r'\d{4}-\d{2}-\d{2}', text):
+            year, month, day = (int(x) for x in text.split('-'))
+            start_dt = datetime.datetime(year, month, day)
+        else:
+            try:
+                from dateutil.parser import isoparse
+                start_dt = isoparse(text)
+            except Exception:
+                return None
+    elif isinstance(start_dt, datetime.datetime):
+        pass
+    elif isinstance(start_dt, datetime.date):
+        start_dt = datetime.datetime(start_dt.year, start_dt.month, start_dt.day)
+    else:
+        return None
+
+    if start_dt.tzinfo is None:
+        start_dt = _localize(start_dt)
+
+    # ── 기준 시각 ────────────────────────────────────────────────────────
+    if when is None:
+        when = datetime.datetime.now(datetime.timezone.utc)
+    elif when.tzinfo is None:
+        when = _localize(when)
+
+    return max(0.0, (when - start_dt).total_seconds() / (7 * 86400))
+
+
+def local_noon(day, tz=None):
+    """`day`(date) 의 현지 정오 → tz-aware datetime.
+
+    하루치를 한 값으로 대표해야 하는 화면이 `weeks_elapsed_at(..., when=)`
+    에 넘길 시각이다. 자정을 쓰면 그날 전체가 전날 끝자락의 주차로 계산된다.
+    """
+    naive = datetime.datetime.combine(day, datetime.time(12, 0, 0))
+    if tz is None:
+        return naive.replace(tzinfo=datetime.timezone.utc)
+    try:
+        return tz.localize(naive)
+    except AttributeError:
+        return naive.replace(tzinfo=tz)
+
+
 class AbstractMethod(object):
     """
     Basic class for methods. A method is called by controller (trigger, pid) to determine an analogue
@@ -576,7 +677,7 @@ class DailyMultiPointMethod(AbstractMethod):
             self._data = self._default_data()
 
         self._resolved_cache = None
-        self._resolved_week_floor = None
+        self._resolved_week = None
 
     @staticmethod
     def _default_data():
@@ -670,10 +771,23 @@ class DailyMultiPointMethod(AbstractMethod):
             t_sec = (now_dt_utc.hour * 3600 + now_dt_utc.minute * 60
                      + now_dt_utc.second)
 
-        week_floor = int(weeks_elapsed)
-        if self._resolved_cache is None or self._resolved_week_floor != week_floor:
+        # 캐시 열쇠는 **소수 주차 그대로**다.
+        #
+        # 예전에는 `int(weeks_elapsed)` 로 잡았다. 그러면 그 정수 층에서 처음
+        # 물어본 소수의 곡선이 그 주 내내 재사용된다 — 데몬이 핸들러를 사이클
+        # 사이에 붙들고 있으므로(`_vpd_method_handler`), 같은 구획·같은 순간의
+        # 목표가 **데몬이 언제 재시작했는지**에 따라 달라졌다(실측: 7.00 주차로
+        # 먼저 물어본 핸들러 0.6085 vs 7.99 로 먼저 물어본 핸들러 0.6166).
+        # 주차 보간을 계단으로 만들면서 그 계단의 위치까지 호출 순서에 맡긴
+        # 셈이라, 어느 쪽으로도 옳지 않았다.
+        #
+        # 다시 풀어 봐야 5~14 µs 다(12점×12주차 최대 크기에서 13.8 µs 실측).
+        # 사이클마다 내도 무시할 값이라, 정확함을 택한다. 캐시를 남겨 두는 것은
+        # 하루치를 훑는 화면(일지) 때문이다 — 그쪽은 하루 288 표본이 같은 주차를
+        # 공유하므로 이 캐시가 그대로 맞는다.
+        if self._resolved_cache is None or self._resolved_week != weeks_elapsed:
             self._resolved_cache = _resolve_v2_at(self._data, weeks_elapsed)
-            self._resolved_week_floor = week_floor
+            self._resolved_week = weeks_elapsed
 
         return _eval_curve(self._resolved_cache, t_sec), False
 

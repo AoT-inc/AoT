@@ -17109,14 +17109,6 @@ msgstr ""
 msgid "Target and Δ"
 msgstr ""
 
-#: aot_flask/templates/pages/geo/journal_view.html:271
-msgid ""
-"Targets come from the growing program attached to the plot. Δ is the "
-"measured average minus that target. Day/night targets and curve-based "
-"targets are marked instead of differenced, because comparing them against a "
-"whole-day average produces false alarms."
-msgstr ""
-
 #: aot_flask/templates/pages/geo/journal_view.html:273
 #: aot_flask/templates/pages/geo/journal_view.html:510
 #: aot_flask/templates/pages/geo/journal_view.html:753
@@ -17357,7 +17349,7 @@ msgstr ""
 
 #: aot_flask/templates/pages/geo/journal_view.html:726
 #, python-format
-msgid "outdoors %(out)s × cover %(tau)s"
+msgid "weather station %(out)s × cover %(tau)s"
 msgstr ""
 
 #: aot_flask/templates/pages/geo/journal_view.html:739
@@ -28474,8 +28466,12 @@ msgstr ""
 msgid "Cumulative since start"
 msgstr ""
 
-#: aot/aot_flask/templates/pages/geo/journal.html
+#: aot/aot_flask/static/js/geo/journal-page.js
 msgid "Weather station measurements to include"
+msgstr ""
+
+#: aot/aot_flask/static/js/geo/journal-page.js
+msgid "On-site sensor measurements to include"
 msgstr ""
 
 #: aot/aot_flask/templates/pages/geo/journal.html
@@ -28741,4 +28737,134 @@ msgstr ""
 
 #: aot/aot_flask/geo/plot_journal.py
 msgid "No sensor sits inside this plot, so the nearest one in the same zone was used — about %(m)s m away. It is the closest reading available, not a reading of this plot."
+msgstr ""
+
+#: aot/aot_flask/geo/plot_journal.py
+#, python-format
+msgid "Weather station %(name)s"
+msgstr ""
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "Field sensor and weather station"
+msgstr ""
+
+#: aot/aot_flask/geo/plot_journal.py
+msgid "Runtime (h)"
+msgstr ""
+
+#: aot/aot_flask/geo/plot_journal.py
+msgid "Photo links below point to `/note_attachment/...` and stay valid only while the server is running."
+msgstr ""
+
+#: aot/aot_flask/geo/plot_journal.py
+msgid "Some devices in this journal have no mapped coverage area, so their water column stays blank — that does not mean they used no water."
+msgstr ""
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "Full numbers for this period"
+msgstr ""
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "Same targets as the previous stage."
+msgstr ""
+
+#: aot/aot_flask/geo/plot_journal.py
+msgid "No rainfall total is given. Each stored reading covers its own window, and this system cannot tell whether those windows overlap — the weather-station channel, for one, repeats a 15-minute total every 5 minutes. Read the maximum as the wettest single window, and the average as the mean of those windows, not an hourly rate."
+msgstr ""
+
+#: aot/aot_flask/geo/plot_journal.py
+#, python-format
+msgid "D%(n)s"
+msgstr ""
+
+#: aot/aot_flask/templates/pages/geo/journal_view.html
+msgid "Show %(n)s more"
+msgstr ""
+
+#: aot/aot_flask/templates/pages/geo/journal_view.html
+msgid "Show less"
+msgstr ""
+
+#: aot/aot_flask/templates/pages/geo/journal_view.html
+msgid "%(n)s stages, %(m)s periods"
+msgstr ""
+
+#: aot/aot_flask/geo/plot_journal.py
+msgid "GDD (accumulated)"
+msgstr ""
+
+#: aot/aot_flask/templates/pages/geo/journal_view.html
+msgid "accumulated %(v)s"
+msgstr ""
+
+#: aot/aot_flask/templates/pages/geo/journal_view.html
+msgid "Show plan"
+msgstr ""
+
+#: aot/aot_flask/templates/pages/geo/journal_view.html
+msgid "%(n)s of %(d)s days above target"
+msgstr ""
+
+#: aot/aot_flask/templates/pages/geo/journal_view.html
+msgid "%(n)s of %(d)s days below target"
+msgstr ""
+
+#: aot/aot_flask/templates/pages/geo/journal_view.html
+msgid "on target for all %(d)s days"
+msgstr ""
+
+#: aot/aot_flask/templates/pages/geo/journal_view.html
+msgid "average %(v)s"
+msgstr ""
+
+#: aot/aot_flask/templates/pages/geo/journal_view.html
+msgid "of %(d)s days: %(a)s above, %(b)s below"
+msgstr ""
+
+#: aot/aot_flask/templates/pages/geo/journal_view.html
+msgid "Measurement trends"
+msgstr ""
+
+#: aot/aot_flask/templates/pages/geo/journal_view.html
+msgid "Crop schedule"
+msgstr ""
+
+#: aot/aot_flask/templates/pages/geo/journal_view.html
+msgid "Against target"
+msgstr ""
+
+#: aot/aot_flask/templates/pages/geo/journal_view.html
+msgid "Above"
+msgstr ""
+
+#: aot/aot_flask/templates/pages/geo/journal_view.html
+msgid "Below"
+msgstr ""
+
+#: aot/aot_flask/templates/pages/geo/journal_view.html
+msgid "Day count"
+msgstr ""
+
+#: aot/aot_flask/templates/pages/geo/journal_view.html
+msgid "Shape and sensor positions are current, not from this period."
+msgstr ""
+
+#: aot/aot_flask/templates/pages/geo/journal_view.html
+msgid "The outline is derived from the facility."
+msgstr ""
+
+#: aot/aot_flask/templates/pages/geo/journal_view.html
+msgid "Sensors shown belong to the surrounding area."
+msgstr ""
+
+#: aot/aot_flask/templates/pages/geo/journal_view.html
+msgid "Stage timeline"
+msgstr ""
+
+#: aot/aot_flask/templates/pages/geo/journal_view.html
+msgid "Rows marked \"Weather station\" and set off by a left border come from the site weather station, not a sensor placed at this target. Where both exist for the same measurement, targets are compared against the field sensor only."
+msgstr ""
+
+#: aot/aot_flask/templates/pages/geo/journal_view.html
+msgid "Targets come from the program attached to this plot. Δ is the measured average minus that target. Day/night targets and curve-based targets are marked instead of differenced, because comparing them against a whole-day average produces false alarms."
 msgstr ""

@@ -17271,14 +17271,6 @@ msgstr ""
 msgid "Target and Δ"
 msgstr "目標とΔ"
 
-#: aot_flask/templates/pages/geo/journal_view.html:271
-msgid ""
-"Targets come from the growing program attached to the plot. Δ is the "
-"measured average minus that target. Day/night targets and curve-based "
-"targets are marked instead of differenced, because comparing them against a "
-"whole-day average produces false alarms."
-msgstr ""
-
 #: aot_flask/templates/pages/geo/journal_view.html:273
 #: aot_flask/templates/pages/geo/journal_view.html:510
 #: aot_flask/templates/pages/geo/journal_view.html:753
@@ -17471,6 +17463,39 @@ msgstr "予定"
 msgid "Follows curve: %(name)s"
 msgstr "カーブに従う: %(name)s"
 
+#: aot_flask/static/js/common/aot-target-review.js
+msgid "Target vs what this plot measured"
+msgstr "この区画が実際に測った値と目標"
+
+#: aot_flask/static/js/common/aot-target-review.js
+msgid ""
+"The second number is the median of the daily values in that stage, per sensor. Showing it changes nothing."
+msgstr "後の数値はその段階の日別値の中央値です（センサーごと）。表示するだけで何も変えません。"
+
+#: aot_flask/geo/plot_journal.py
+msgid ""
+"These measurements were not selected when this journal was made, so they are not in it: %(names)s."
+msgstr ""
+"この日誌を作るときに選ばなかったため入っていない測定値です: %(names)s。"
+
+#: aot_flask/geo/plot_journal.py
+msgid "These measurements were left out of this journal: %(names)s."
+msgstr "この日誌から外した測定値です: %(names)s。"
+
+#: aot_flask/geo/plot_journal.py
+msgid ""
+"Measurements you did not select when generating this journal are not in it. The caveats above name them."
+msgstr ""
+"日誌を作るときに選ばなかった測定値は入りません。何かは上の注意事項が示します。"
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "Sensors disagree"
+msgstr "センサーによって結論が分かれます"
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "Measured by the weather station"
+msgstr "気象台が測ります"
+
 #: aot_flask/templates/pages/geo/journal_view.html:587
 msgid "No sensor for this"
 msgstr "センサーなし"
@@ -17519,8 +17544,8 @@ msgstr "変動"
 
 #: aot_flask/templates/pages/geo/journal_view.html:726
 #, python-format
-msgid "outdoors %(out)s × cover %(tau)s"
-msgstr "屋外 %(out)s × 被覆 %(tau)s"
+msgid "weather station %(out)s × cover %(tau)s"
+msgstr "気象観測所 %(out)s × 被覆 %(tau)s"
 
 #: aot_flask/templates/pages/geo/journal_view.html:739
 msgid "no sensor"
@@ -33569,3 +33594,129 @@ msgstr "この対象の装置ですが、この期間に記録を残さなかっ
 #: aot/aot_flask/geo/plot_journal.py
 msgid "No sensor sits inside this plot, so the nearest one in the same zone was used — about %(m)s m away. It is the closest reading available, not a reading of this plot."
 msgstr "この区画内にはセンサーがないため、同じ区域で最も近いセンサーを使いました — 約%(m)s m 離れています。入手できる最も近い値であり、この区画を測った値ではありません。"
+
+#: aot/aot_flask/geo/plot_journal.py
+#, python-format
+msgid "Weather station %(name)s"
+msgstr "気象観測所 %(name)s"
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "Field sensor and weather station"
+msgstr "現場センサーと気象観測所"
+
+#: aot/aot_flask/geo/plot_journal.py
+msgid "Runtime (h)"
+msgstr "稼働時間(時間)"
+
+#: aot/aot_flask/geo/plot_journal.py
+msgid "Photo links below point to `/note_attachment/...` and stay valid only while the server is running."
+msgstr "以下の写真リンクは `/note_attachment/...` を指しており、サーバーが稼働している間のみ有効です。"
+
+#: aot/aot_flask/geo/plot_journal.py
+msgid "Some devices in this journal have no mapped coverage area, so their water column stays blank — that does not mean they used no water."
+msgstr "この日誌の一部の装置は地図に担当区域がないため、灌水量の列が空欄になっています — 水を使わなかったという意味ではありません。"
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "Full numbers for this period"
+msgstr "この期間の全数値"
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "Same targets as the previous stage."
+msgstr "前の段階と目標は同じです。"
+
+#: aot/aot_flask/geo/plot_journal.py
+msgid "No rainfall total is given. Each stored reading covers its own window, and this system cannot tell whether those windows overlap — the weather-station channel, for one, repeats a 15-minute total every 5 minutes. Read the maximum as the wettest single window, and the average as the mean of those windows, not an hourly rate."
+msgstr "降水量の合計は出しません。保存された値はそれぞれ自分の区間を測ったものですが、その区間が重なるかをシステムは判断できません — 気象観測所のチャンネルだけでも、直前15分の降水量を5分ごとに記録し直します。最大値は「最も強く降った一区間」、平均はそれら区間の平均であり、1時間あたりの降水量ではありません。"
+
+#: aot/aot_flask/geo/plot_journal.py
+#, python-format
+msgid "D%(n)s"
+msgstr "D%(n)s"
+
+#: aot/aot_flask/templates/pages/geo/journal_view.html
+msgid "Show %(n)s more"
+msgstr "他 %(n)s件を表示"
+
+#: aot/aot_flask/templates/pages/geo/journal_view.html
+msgid "Show less"
+msgstr "折りたたむ"
+
+#: aot/aot_flask/templates/pages/geo/journal_view.html
+msgid "%(n)s stages, %(m)s periods"
+msgstr "%(n)s段階・%(m)s期間"
+
+#: aot/aot_flask/geo/plot_journal.py
+msgid "GDD (accumulated)"
+msgstr "GDD (積算)"
+
+#: aot/aot_flask/templates/pages/geo/journal_view.html
+msgid "accumulated %(v)s"
+msgstr "積算 %(v)s"
+
+#: aot/aot_flask/templates/pages/geo/journal_view.html
+msgid "Show plan"
+msgstr "計画を表示"
+
+#: aot/aot_flask/templates/pages/geo/journal_view.html
+msgid "%(n)s of %(d)s days above target"
+msgstr "%(d)s日中 %(n)s日 目標超過"
+
+#: aot/aot_flask/templates/pages/geo/journal_view.html
+msgid "%(n)s of %(d)s days below target"
+msgstr "%(d)s日中 %(n)s日 目標未達"
+
+#: aot/aot_flask/templates/pages/geo/journal_view.html
+msgid "on target for all %(d)s days"
+msgstr "%(d)s日すべて目標どおり"
+
+#: aot/aot_flask/templates/pages/geo/journal_view.html
+msgid "average %(v)s"
+msgstr "平均 %(v)s"
+
+#: aot/aot_flask/templates/pages/geo/journal_view.html
+msgid "of %(d)s days: %(a)s above, %(b)s below"
+msgstr "%(d)s日中 超過 %(a)s日・未達 %(b)s日"
+
+#: aot/aot_flask/templates/pages/geo/journal_view.html
+msgid "Measurement trends"
+msgstr "測定値の推移"
+
+#: aot/aot_flask/templates/pages/geo/journal_view.html
+msgid "Crop schedule"
+msgstr "作期スケジュール"
+
+#: aot/aot_flask/templates/pages/geo/journal_view.html
+msgid "Above"
+msgstr "超過"
+
+#: aot/aot_flask/templates/pages/geo/journal_view.html
+msgid "Below"
+msgstr "未達"
+
+#: aot/aot_flask/templates/pages/geo/journal_view.html
+msgid "Day count"
+msgstr "日数"
+
+#: aot/aot_flask/templates/pages/geo/journal_view.html
+msgid "Shape and sensor positions are current, not from this period."
+msgstr "図形とセンサーの位置は、この期間のものではなく現在の配置です。"
+
+#: aot/aot_flask/templates/pages/geo/journal_view.html
+msgid "The outline is derived from the facility."
+msgstr "この区画には独自の境界がなく、施設の外形から導出した図形です。"
+
+#: aot/aot_flask/templates/pages/geo/journal_view.html
+msgid "Sensors shown belong to the surrounding area."
+msgstr "表示されているセンサーは、この区画ではなく周囲の区域のものです。"
+
+#: aot/aot_flask/templates/pages/geo/journal_view.html
+msgid "Stage timeline"
+msgstr "ステージ日程"
+
+#: aot/aot_flask/templates/pages/geo/journal_view.html
+msgid "Rows marked \"Weather station\" and set off by a left border come from the site weather station, not a sensor placed at this target. Where both exist for the same measurement, targets are compared against the field sensor only."
+msgstr "「気象観測所」と表示され左側に線が付いている行は、この対象に設置されたセンサーではなく敷地の気象観測所の値です。同じ測定値を現場センサーも測っている場合、目標は現場センサー側とのみ比較します。"
+
+#: aot/aot_flask/templates/pages/geo/journal_view.html
+msgid "Targets come from the program attached to this plot. Δ is the measured average minus that target. Day/night targets and curve-based targets are marked instead of differenced, because comparing them against a whole-day average produces false alarms."
+msgstr "目標は区画に紐づくプログラムから来ます。Δ は実測平均からその目標を引いた値です。昼夜目標と曲線目標は差を出さず表示のみします — 一日全体の平均と比べると誤った警報が出るためです。"

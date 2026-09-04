@@ -4588,11 +4588,11 @@ msgstr "ปฏิเสธสิทธิ์"
 
 #: aot_flask/routes_function.py:132
 msgid "Daytime"
-msgstr ""
+msgstr "กลางวัน"
 
 #: aot_flask/routes_function.py:132
 msgid "Nighttime"
-msgstr ""
+msgstr "กลางคืน"
 
 #: aot_flask/routes_function.py:599
 msgid "Function not found or deleted."

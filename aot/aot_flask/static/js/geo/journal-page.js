@@ -106,49 +106,87 @@
     var chosen = null;       // 고른 구획
     var datesTouched = false;
     var measBlock = document.getElementById('journal-meas-block');
-    var measList = document.getElementById('journal-meas-list');
-    var measCount = document.getElementById('journal-meas-count');
 
-    // 실을 측정값. 대상을 고를 때마다 서버가 그 대상이 **실제로 재는 것**만
-    // 내려준다 — 전체 어휘를 보여주면 고를 수 있는 것과 값이 나오는 것이
-    // 달라져, 골랐는데 빈 문서를 받는다.
-    function _renderMeasurements(items) {
-      if (!measBlock || !measList) return;
-      if (!items || !items.length) {
-        measBlock.style.display = 'none';
-        measList.innerHTML = '';
-        return;
-      }
-      measList.innerHTML = items.map(function (m) {
-        return '<label class="' + (m.diagnostic ? 'is-diagnostic' : '') + '">' +
-               '<input type="checkbox" value="' + _esc(m.key) + '"' +
-               (m.default ? ' checked' : '') + '>' +
-               '<span>' + _esc(m.label || m.key) + '</span>' +
-               '</label>';
-      }).join('');
-      measBlock.style.display = '';
-      _updateMeasCount();
+    // 스코프별 제목. 구획에 실내 센서와 기상대가 **둘 다** 있으면 그룹이
+    // 둘로 나뉘어 각각 이 제목을 단다 — 하나로 뭉치면 체크박스도 하나뿐이라
+    // "기상 쪽 온도만 뺀다" 를 표현할 수 없다(`_wanted_measurement` 의 실측
+    // 사고 참고). 한쪽뿐이거나 대지·구역이면 서버가 그룹을 하나만 보낸다.
+    function _groupTitle(scope) {
+      if (scope === 'outdoor') return _t('Weather station measurements to include');
+      if (scope === 'indoor') return _t('On-site sensor measurements to include');
+      return _t('Measurements to include');
     }
 
-    function _updateMeasCount() {
-      if (!measCount || !measList) return;
-      var boxes = measList.querySelectorAll('input[type=checkbox]');
-      var on = measList.querySelectorAll('input[type=checkbox]:checked');
-      measCount.textContent = _t('%(on)s of %(all)s')
-        .replace('%(on)s', String(on.length)).replace('%(all)s', String(boxes.length));
+    // 실을 측정값. 대상을 고를 때마다 서버가 그 대상이 **실제로 재는 것**만,
+    // 스코프별로 나눠 내려준다 — 전체 어휘를 보여주면 고를 수 있는 것과 값이
+    // 나오는 것이 달라져, 골랐는데 빈 문서를 받는다.
+    //
+    // ⚠ **그룹마다 별도 `<details>` 를 만든다.** 예전에는 한 목록에 실내·기상
+    //   채널이 같은 이름(`temperature`)으로 섞여 있어, 기상 쪽을 빼려고 체크를
+    //   풀면 실내 채널까지 함께 빠졌다 — 체크박스가 이름 하나에 하나뿐이었기
+    //   때문이다. 스코프마다 목록을 가르면 값(`key`)도 서버가 이미
+    //   `'outdoor:temperature'` 처럼 갈라 보내므로 저절로 독립된다.
+    function _renderMeasurements(groups) {
+      if (!measBlock) return;
+      groups = (groups || []).filter(function (g) {
+        return g && g.measurements && g.measurements.length;
+      });
+      if (!groups.length) {
+        measBlock.style.display = 'none';
+        measBlock.innerHTML = '';
+        return;
+      }
+      measBlock.innerHTML = groups.map(function (g) {
+        var on = g.measurements.filter(function (m) { return m.default; }).length;
+        var list = g.measurements.map(function (m) {
+          return '<label class="' + (m.diagnostic ? 'is-diagnostic' : '') + '">' +
+                 '<input type="checkbox" value="' + _esc(m.key) + '"' +
+                 (m.default ? ' checked' : '') + '>' +
+                 '<span>' + _esc(m.label || m.key) + '</span>' +
+                 '</label>';
+        }).join('');
+        return '<details class="aot-journal-meas-block" open>' +
+               '<summary><span>' + _esc(_groupTitle(g.scope)) + '</span>' +
+               '<span class="text-muted small aot-journal-meas-count">' +
+               _esc(_t('%(on)s of %(all)s')
+                    .replace('%(on)s', String(on))
+                    .replace('%(all)s', String(g.measurements.length))) +
+               '</span></summary>' +
+               '<div class="aot-journal-meas-list">' + list + '</div>' +
+               '</details>';
+      }).join('');
+      measBlock.style.display = '';
+    }
+
+    // 그룹이 여럿이라 카운트 배지도 그룹마다 다시 세야 한다 — `<details>`
+    // 하나의 목록만 보면 다른 그룹 배지가 그대로 남는다.
+    function _updateMeasCounts() {
+      if (!measBlock) return;
+      var blocks = measBlock.querySelectorAll('.aot-journal-meas-block');
+      for (var i = 0; i < blocks.length; i++) {
+        var boxes = blocks[i].querySelectorAll('input[type=checkbox]');
+        var on = blocks[i].querySelectorAll('input[type=checkbox]:checked');
+        var badge = blocks[i].querySelector('.aot-journal-meas-count');
+        if (badge) {
+          badge.textContent = _t('%(on)s of %(all)s')
+            .replace('%(on)s', String(on.length)).replace('%(all)s', String(boxes.length));
+        }
+      }
     }
 
     function _selectedMeasurements() {
-      if (!measList) return null;
-      var boxes = measList.querySelectorAll('input[type=checkbox]');
+      if (!measBlock) return null;
+      var boxes = measBlock.querySelectorAll('input[type=checkbox]');
       if (!boxes.length) return null;   // 목록을 못 받았다 = 서버 기본에 맡긴다
       return [].slice.call(boxes)
         .filter(function (b) { return b.checked; })
         .map(function (b) { return b.value; });
     }
 
-    if (measList) {
-      measList.addEventListener('change', _updateMeasCount);
+    if (measBlock) {
+      // 위임 — 그룹은 대상을 바꿀 때마다 통째로 다시 그려지므로 각 체크박스에
+      // 직접 붙이면 다시 그릴 때마다 리스너를 새로 달아야 한다.
+      measBlock.addEventListener('change', _updateMeasCounts);
     }
 
     if (startInput) startInput.addEventListener('input', function () { datesTouched = true; });
@@ -213,17 +251,10 @@
         .then(function (r) { return r.json(); })
         .then(function (data) {
           if (!data || !data.ok) return;
-          // 실내 센서가 하나도 없는 구획이면 고르는 대상이 전부 기상대
-          // 채널이다 — 어디서 잰 값인지가 고르는 판단에 들어가므로 그렇게
-          // 말한다. 그 외에는 원래 문구로 되돌린다(대상을 바꿔 가며 고를 때
-          // 앞 대상의 문구가 남으면 안 된다).
-          var titleEl = document.getElementById('journal-meas-title');
-          if (titleEl) {
-            titleEl.textContent = data.weather_only
-              ? _t('Weather station measurements to include')
-              : _t('Measurements to include');
-          }
-          _renderMeasurements(data.measurements);
+          // 그룹 제목은 `_renderMeasurements` 가 스코프마다 정한다 — 대상을
+          // 바꿔 가며 고를 때 앞 대상의 그룹이 그대로 남지 않도록 항상
+          // 통째로 다시 그린다.
+          _renderMeasurements(data.measurement_groups);
           if (!fillDates || datesTouched) return;
           if (data.first_date) {
             if (startInput) startInput.value = data.first_date;

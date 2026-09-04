@@ -393,37 +393,125 @@ def geo_journal_view(journal_uuid):
     glossary = []
     has_targets = False
     target_kind_label = None
+    # ⚠ **`render_template` 에 넘기는 이름은 전부 여기서 먼저 만든다.**
+    #   아래 블록은 문서가 다 만들어졌을 때만 도는데, 생성 직후 첫 렌더는
+    #   `is_ready()` 가 아직 거짓이라 그 자리를 지나친다 — 하나라도 빠뜨리면
+    #   그때만 `UnboundLocalError` 로 터지고, 새로고침하면 완료돼서 사라진다
+    #   (실측: `target_drift` 를 빠뜨려 생성 직후에만 500).
     view_buckets = []
     stage_sections = []
+    env_trends = []
+    control_trends = []
+    target_drift = []
+    stage_timeline = None
+    journal_map = None
     if row.is_ready():
-        for key in (row.data.get('caveats') or []):
+        # 곡선 목표(Method)의 주야 목표·Δ 는 **열람 시점 계산**이다 — 저장
+        # 스냅샷은 그대로 두므로 JSON·MCP 내보내기는 원본이고, 이 수정 이전에
+        # 만들어진 일지도 열기만 하면 Δ가 채워진다(`fold_buckets` 와 같은 성격).
+        data = plot_journal.with_curve_deltas(row.data)
+        for key in (data.get('caveats') or []):
             caveat_texts[key] = plot_journal.caveat_text(key)
-        target = row.data.get('target') or {}
+        target = data.get('target') or {}
         target_kind_label = plot_journal._target_kind_label(
             target.get('type'), target.get('kind'))
 
         # 접기·묶기는 **열람할 때마다 하는 순수 계산**이다 — 저장된 스냅샷은
         # 그대로 두므로 JSON·MCP 내보내기는 원본 그대로다(§C·§E).
         folded = plot_journal.fold_buckets(
-            row.data.get('buckets') or [], to=view_gran, granularity=stored)
+            data.get('buckets') or [], to=view_gran, granularity=stored)
         for bucket in folded:
+            # 적산온도도 **표의 행**이다 — DLI·VPD 는 행인데 GDD 만 날짜 제목
+            # 옆 글자로 떠 있었다(세 지표를 각 층에서 같이 다룬다).
             view_buckets.append(dict(bucket, env_groups=(
-                plot_journal.group_env_rows(bucket.get('env') or []))))
+                plot_journal.with_gdd_group(
+                    plot_journal.group_env_rows(bucket.get('env') or []),
+                    bucket))))
 
         # 단계별 실제 기록(지침 + 목표 대비 실측 + 노트 + 사진). 저장된 버킷을
         # 단계 구간으로 갈라 붙이는 순수 계산이라, 이 기능 이전에 만들어진
         # 일지도 열기만 하면 채워진다.
-        stage_sections = plot_journal.stage_sections(row.data)
+        # 보는 단위를 함께 넘긴다 — 각 단계가 **그 단계 기간의 일/주/월**과
+        # 그 기간의 범위 도표를 함께 담아 온다.
+        stage_sections = plot_journal.stage_sections(
+            data, granularity=view_gran, stored=stored)
+
+        # 문서 머리의 범위 도표 — 기간 전체의 모양을 먼저 보여준다.
+        # `view_buckets` 에 이미 붙은 `env_groups`/`control` 을 그대로
+        # 재사용하는 순수 계산이다.
+        #
+        # 목표 줄은 **기간과 겹치는 마지막 단계**의 목표를 쓴다(표의 Δ 와
+        # 같은 규칙 — "그 구간 끝의 목표"). 단계가 여럿 걸친 문서에서 어느
+        # 목표를 그릴지는 어차피 하나를 골라야 하고, 사람이 지금 견주는
+        # 것은 최신 목표다. 단계별 도표는 각자 제 단계 목표를 쓴다.
+        doc_targets = None
+        for sec in stage_sections:
+            if sec.get('in_period') and (sec['stage'].get('targets')):
+                doc_targets = sec['stage']['targets']
+        # 문서 도표의 머리줄도 같은 규칙 — 기간 전체를 한 덩어리로 접은
+        # 대표값이다(그래야 단계 표·문서 도표가 서로 다른 숫자를 내지 않는다).
+        _all = [b for b in (data.get('buckets') or [])
+                if not b.get('gap_count')]
+        _doc_groups = []
+        _keys = []
+        for _b in _all:
+            try:
+                _keys.append(datetime.strptime(
+                    str(_b.get('key'))[:10], '%Y-%m-%d').date())
+            except (ValueError, TypeError):
+                pass
+        if _all and _keys:
+            # `_merge_bucket_group` 은 라벨을 만들 때 실제 날짜를 쓴다.
+            _merged = plot_journal._merge_bucket_group(
+                {'days': _all, 'first': min(_keys), 'last': max(_keys)}, 'all')
+            _doc_groups = plot_journal.group_env_rows(_merged.get('env') or [])
+        env_trends = plot_journal.env_trend_series(
+            view_buckets, targets=doc_targets, summary_groups=_doc_groups)
+        # 적산온도는 환경 행이 아니라 버킷에 실린 값이라 따로 만든다 —
+        # 그러지 않으면 DLI(파생)는 도표까지 가고 GDD 는 날짜 제목 옆 글자로만
+        # 남아 층이 어긋난다(실사용 지적).
+        env_trends = plot_journal.order_chart_series(
+            env_trends + [plot_journal.gdd_trend_series(view_buckets, data)])
+        control_trends = plot_journal.control_trend_series(view_buckets)
+
+        # 목표 이탈 요약 — 시점별 Δ 는 계산하면서 그것을 **종합해서 말하지**
+        # 않고 있었다(시뮬레이션 점검 2026-09-04: 야간온도가 78일 중 78일
+        # 목표를 넘겼는데 문서 어디에도 그 사실이 없었다). 저장된 Δ 만 쓰는
+        # 열람 시점 계산이라 기존 일지에도 소급된다.
+        # **날짜별 행**으로 센다 — 보는 단위에 따라 분모가 달라지면 안 된다.
+        target_drift = plot_journal.target_drift(data.get('buckets') or [])
+
+        # 단계 절 머리의 기간 바(§WP4-3) — 반복되던 목표표 대신 막대 하나로
+        # 먼저 보여준다.
+        # 기준 시점은 **문서 기간의 끝**이다(오늘이 아니라) — 지난 기간을
+        # 담은 일지에서 막대가 오늘의 단계를 가리키면, 문서와 무관한 단계가
+        # 맨 위에서 강조된다. 진행 중인 문서면 함수가 오늘로 자른다.
+        _period_end = None
+        try:
+            _pe = ((data.get('target') or {}).get('period') or {}).get('end')
+            _period_end = (datetime.strptime(str(_pe)[:10], '%Y-%m-%d').date()
+                           if _pe else None)
+        except (ValueError, TypeError):
+            _period_end = None
+        stage_timeline = plot_journal.stage_timeline_data(
+            data.get('stages'), tz_name=target.get('tz_name'),
+            on=_period_end)
+
+        # 문서에 실을 지도 — 구획 도형·이름·감싸는 구역·센서 위치.
+        # 스냅샷에 기하가 없어 **열람 시점에** 다시 찾는다(그래서 예전 일지에도
+        # 붙는다). 대신 그려지는 배치는 문서 기간이 아니라 **지금**의 것이라,
+        # 화면이 그 사실을 한 줄로 적는다.
+        journal_map = plot_journal.journal_map_view(data)
 
         # 용어집도 **열람 시점 계산**이다. 저장하면 생성 시점의 언어로 굳는다
         # (`caveat_text` 와 같은 이유), 그리고 이 기능 이전에 만든 일지도
         # 열기만 하면 설명이 붙는다.
-        glossary = plot_journal.glossary_terms(row.data)
+        glossary = plot_journal.glossary_terms(data)
 
         # 목표·Δ 열을 낼지 — **목표가 실제로 있을 때만** 낸다. 구획이라는
         # 이유만으로 켜면 프로그램이 없는 구획에서 두 열이 문서 내내 비고,
         # 빈 열은 "계산이 안 된다" 로 읽힌다(관수량 열과 같은 판단).
-        has_targets = plot_journal.has_any_target(row.data)
+        has_targets = plot_journal.has_any_target(data)
 
     # 저장 단위보다 잘게는 못 보므로 그 선택지는 **아예 내주지 않는다** —
     # 눌러도 아무 일 없는 버튼을 두면 고장으로 읽힌다.
@@ -438,10 +526,20 @@ def geo_journal_view(journal_uuid):
                            target_kind_label=target_kind_label,
                            view_buckets=view_buckets,
                            stage_sections=stage_sections,
+                           env_trends=env_trends,
+                           control_trends=control_trends,
+                           stage_timeline=stage_timeline,
+                           target_drift=target_drift,
+                           journal_map=journal_map,
                            print_filename=stem,
                            # 16방위 이름은 번역 대상이라 요청 시점에 만든다.
                            compass=plot_journal.compass_label,
                            runtime_text=plot_journal.runtime_text,
+                           # 저장된 unit 은 원문 키다(`C`·`percent`·`m_s`) —
+                           # 사람이 읽는 기호(`°C`·`%`·`m/s`)는 여기서 만든다.
+                           unit_label=plot_journal.unit_label,
+                           phase_target=plot_journal.phase_target_text,
+                           phase_delta=plot_journal.phase_delta_text,
                            view_granularity=view_gran,
                            granularities=available)
 
@@ -519,22 +617,16 @@ def geo_journal_target_info():
         logger.exception('[journal] 자료 시작 시각 조회 실패: %s', target_id)
         first_at = None
 
+    # 스코프별(실내/기상)로 나눈 그룹. 구획에 실내 센서와 기상대가 둘 다
+    # 있으면 두 그룹이 오고, 한쪽뿐이거나 대상이 zone/site 면 한 그룹(scope
+    # None)이 온다 — 화면은 그룹 수로 나눠 그릴지를 정한다.
     try:
-        measurements = plot_journal.available_measurements(
+        groups = plot_journal.available_measurement_groups(
             target_type, target_id)
     except Exception:
         logger.exception('[journal] 측정값 목록 조회 실패: %s', target_id)
-        measurements = []
-
-    # 실내 센서가 하나도 없는 구획이면 화면이 "포함할 **기상대** 측정값" 이라고
-    # 말한다 — 어디서 잰 값인지가 고르는 판단에 들어간다.
-    try:
-        weather_only = plot_journal.measurements_are_weather_only(
-            target_type, target_id)
-    except Exception:
-        weather_only = False
+        groups = []
 
     return jsonify({'ok': True,
                     'first_date': first_at.isoformat() if first_at else None,
-                    'weather_only': weather_only,
-                    'measurements': measurements})
+                    'measurement_groups': groups})

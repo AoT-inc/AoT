@@ -1235,6 +1235,14 @@
                     var wrap = body.querySelector('.aot-ov-sched-reg-wrap');
                     if (wrap) wrap.hidden = true;
                     if (nameEl) nameEl.value = '';
+                    // 단계 일수는 실측으로 갱신되는데 목표값은 원본 그대로
+                    // 복사된다. 무엇이 얼마나 달랐는지를 **등록한 자리에서**
+                    // 보인다 — 고칠지는 사람이 정한다(화면은 판정하지 않는다).
+                    if (window.AoTTargetReview) {
+                        window.AoTTargetReview.render(
+                            body.querySelector('.aot-ov-sched-reg-review'),
+                            res.data.target_review);
+                    }
                 });
         });
 

@@ -339,6 +339,18 @@
         var nm = (res.data.program || {}).name || '';
         _toast(_t('Registered as a programme: %(name)s').replace('%(name)s', nm),
                'success');
+        // 단계 일수는 실측으로 갱신되는데 목표값은 원본 그대로 복사된다.
+        // 무엇이 얼마나 달랐는지를 드로어 안에 남긴다 — 토스트는 사라지므로
+        // 숫자를 읽을 자리가 못 된다.
+        if (root.AoTTargetReview && el.body) {
+          var box = el.body.querySelector('.aot-plot-target-review');
+          if (!box) {
+            box = document.createElement('div');
+            box.className = 'aot-plot-target-review';
+            el.body.appendChild(box);
+          }
+          root.AoTTargetReview.render(box, res.data.target_review);
+        }
       });
     });
   }

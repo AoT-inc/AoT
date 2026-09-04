@@ -61,12 +61,25 @@
  * 읽힌다 — 실제로 그렇게 만들었다가 되돌렸다(불릿만 진한 회색 막대 + 달성 시
  * 밝은 초록, 트랙 높이 10/14/12px).
  *
- * **마커는 전부 세로 선이다. 원을 쓰지 않는다.** 원은 슬라이더 핸들의 모양이라
- * 읽기만 하는 값에 쓰면 만질 수 있는 것처럼 보인다 — 현재값을 채운 원으로,
- * 목표를 속 빈 원으로 그렸다가 둘 다 되돌렸다.
- * 현재와 목표가 같은 모양이어도 헷갈리지 않는다: **한 줄에 둘이 함께 서는
- * 경우가 없기 때문이다.** 밴드 바·기간 바의 마커는 현재 하나뿐이고, 불릿의
- * 마커는 목표 하나뿐이다(불릿의 현재는 채운 막대의 끝이 말한다).
+ * **원을 쓰지 않는다.** 원은 슬라이더 핸들의 모양이라 읽기만 하는 값에 쓰면
+ * 만질 수 있는 것처럼 보인다 — 현재값을 채운 원으로, 목표를 속 빈 원으로
+ * 그렸다가 둘 다 되돌렸다. 이 규칙은 지금도 유효하다(.aot-viz-step 의 조작
+ * 손잡이가 실제로 원이다).
+ *
+ * 마커는 현재와 목표가 **같은 세로 선**이다. 근거는 "한 줄에 둘이 함께 서는
+ * 경우가 없다" 였다(밴드 바·기간 바는 현재 하나, 불릿은 목표 하나).
+ *
+ * ⚠ **그 근거는 한 줄 안에서만 참이다.** 실제 신고는 **줄과 줄 사이**에서
+ * 나왔다(2026-09-04): 같은 카드에 밴드 줄과 불릿 줄이 나란히 서면 세로 선이
+ * 윗줄에서는 '지금 값', 아랫줄에서는 '목표' 가 되고 초록도 '적정 범위' 와
+ * '쌓인 양' 으로 뒤집히는데 화면에 단서가 없다. 섞이는 자리가 실측으로
+ * 넷이다(환경 카드 · [제어 상태] 환기 그룹 · 구획 [진행] 카드 · 일지 보고서).
+ *
+ * **아직 풀리지 않았다.** 시도하고 되돌린 것: 색(실외 시인성) · 원(조작
+ * 손잡이와 혼동) · 목표 마커의 삼각 깃발 캡(아래 .aot-viz-target 주석 참조) ·
+ * 채움 모양(on/off 밴드가 `okMin: 0` 으로 왼쪽 끝부터 채워 이미 겹친다).
+ * 다음에 손대는 사람은 **표현을 바꾸기 전에 그 카드가 무엇을 답해야 하는지를
+ * 먼저 물을 것** — 이 문제가 표현의 문제가 아닐 수 있다는 지적이 있었다.
  *
  * 트랙을 회색 리터럴(--aot-bg-off 등)이 아니라 text_color_primary 의 혼합으로
  * 만드는 이유: --aot-bg-* 는 라이트/다크에서 값이 갈리지 않아(다크 재정의가
@@ -84,6 +97,11 @@
   /* 구간 색 — 적정 범위 · 채운 양 · 현재 단계가 전부 이 하나를 쓴다.
      전역 토글의 켜짐 녹색과 같은 값이다(위 주석). 옅히지 않는다. */
   --aot-viz-zone: var(--aot-band-3);
+  /* 트랙의 중립색. **토큰으로 뽑아 둔 이유**는 축 가이드선(범위 도표)이
+     트랙과 같은 색이어야 하기 때문이다 — 같은 식을 두 곳에 적으면 다크
+     보정(--aot-viz-track-mix)이 한쪽에만 걸리는 날이 온다. */
+  --aot-viz-track-bg: color-mix(in srgb, var(--aot-color-text-primary)
+                                var(--aot-viz-track-mix, 10%), transparent);
   /* 담는 카드의 바탕. 색이 아니라 '배경' 이라서 토큰이 따로다 —
      구간 경계(.aot-viz-tick)를 파낼 때와 기준 라벨이 축 라벨을 가릴 때 쓴다.
      .aot-ov-block 과 같은 토큰을 쓴다. */
@@ -271,8 +289,7 @@
   position: relative;
   height: var(--aot-viz-track-h);
   border-radius: calc(var(--aot-viz-track-h) / 2);
-  background: color-mix(in srgb, var(--aot-color-text-primary)
-                        var(--aot-viz-track-mix, 10%), transparent);
+  background: var(--aot-viz-track-bg);
   /* 마커의 링이 트랙 밖으로 나가야 하므로 overflow 를 자르지 않는다. */
 }
 
@@ -290,16 +307,21 @@
    보였다. 0 과 "값 없음" 은 값 글자로 갈린다('0' 대 '—'). */
 .aot-viz-fill { left: 0; min-width: 4px; }
 
+/* ⚠ **채움은 양(길이)만 말한다 — 타입 구분에 쓰지 않는다.** "불릿의 채움은
+   왼쪽 끝에서 자라고 밴드의 초록은 떠 있으니 모양만으로 갈린다" 는 기대는
+   틀렸다: on/off 장치 밴드가 `okMin: 0` 을 줘서 그 초록도 왼쪽 끝에서 자란다
+   (aot-map-popup.js `_rowOf` — "왼쪽 끝부터 평소까지 채운다"). 하필 그 카드가
+   밴드와 불릿이 섞여 서는 자리다. */
+
 /* 마커 — 현재(.aot-viz-now)와 목표(.aot-viz-target)가 **같은 세로 선**이다.
-   원을 쓰지 않는 이유와 둘이 같아도 되는 이유는 파일 머리 주석에 있다.
-   테두리도 그림자도 두지 않는다. */
+   원을 쓰지 않는 이유, 그리고 이 둘을 갈라 보려다 되돌린 것들은 파일 머리
+   주석에 있다. 테두리도 그림자도 두지 않는다. */
 /* 한계선(.aot-viz-limit)은 제거했다(2026-08-20). 한 줄에 선이 셋(하한·지금·
    상한) 서면 어느 것이 지금인지 모양이 말해 주지 못했다. 프로그램이 정한 범위도
    앱 기본 밴드와 **같은 방식**(초록 면)으로 그린다 — 출처가 달라도 뜻이 같으면
    모양도 같아야 한다. */
 
-.aot-viz-now,
-.aot-viz-target {
+.aot-viz-now {
   position: absolute;
   top: 50%;
   width: var(--aot-viz-mark-w);
@@ -323,6 +345,76 @@
              (100% - var(--aot-viz-track-h)) * var(--aot-viz-pos, 0) / 100);
 }
 
+/* 목표 — **트랙 크기의 직각선**이고 **맨 위**에 선다.
+ *
+ * 가로 바에서는 트랙 높이만큼의 세로선, 세로 열에서는 트랙 폭만큼의 가로선이다
+ * (`.aot-viz--range` 가 축을 바꾼다). 방향만 다르고 규칙은 하나다.
+ *
+ * ⚠ **트랙 밖으로 나가지 않는다.** 예전 마커는 트랙(8px)보다 훨씬 긴 24px 라
+ *   줄에서 가장 눈에 띄는 것이 목표였다. 목표는 기준이지 값이 아니다 —
+ *   도표를 가로지르는 긴 선으로도 그려 봤지만 "시선이 너무 끌린다" 는
+ *   지적을 받았다(2026-09-04).
+ *
+ * ⚠ **z-index 로 맨 위에 둔다.** 실측(초록)이 트랙 두께를 꽉 채우므로, 겹치는
+ *   자리에서 목표가 그 아래로 들어가면 "넘었는지" 를 볼 수 없다. 목표가 늘
+ *   보이는 것이 이 그림의 핵심이다. */
+.aot-viz-target {
+  position: absolute;
+  top: 0; bottom: 0;
+  width: 2px;
+  z-index: 2;
+  background: var(--aot-viz-mark, var(--aot-color-brand-secondary));
+  transform: translateX(-50%);
+  /* 마커와 같은 캡 보정(위 .aot-viz-now 주석 참조). */
+  left: calc(var(--aot-viz-track-h) / 2 +
+             (100% - var(--aot-viz-track-h)) * var(--aot-viz-pos, 0) / 100);
+}
+
+/* 진폭 — 그 기간의 **최저~최고**(범위 도표에서만 쓴다).
+ *
+ * 마커와 같은 색이다. 마커가 "그 순간 여기" 라면 이것은 "그 기간 이만큼
+ * 오르내렸다" 로, 둘 다 **실측**을 말한다 — 목표(초록)와 갈리는 것은 색이지
+ * 이 둘 사이가 아니다.
+ *
+ * ⚠ **가늘어야 한다**(2px, 트랙 8px). 굵게 하면 뒤에 깔린 목표대(초록 면)를
+ * 덮어 "목표 대비 어디인가" 를 읽을 수 없다 — 트랙 폭까지 굵혀 본 시안에서
+ * 초록이 거의 사라졌다. 자리는 인라인으로 온다(bottom·height, 세로 축).
+ *
+ * 마커의 캡 보정(위 주석)을 쓰지 않는다. 이것은 점이 아니라 **면**이라
+ * .aot-viz-ok/.aot-viz-fill 과 같은 규칙을 따른다. */
+.aot-viz-span {
+  position: absolute;
+  /* **트랙 두께를 꽉 채운다.** 가로 바에서는 위아래 끝까지, 세로 열에서는
+     좌우 끝까지 — 방향만 다르고 규칙은 하나다. 자리(시작·길이)는 인라인으로
+     온다.
+
+     ⚠ 예전에는 2px 가는 선이었다. 목표를 **초록 면**으로 그리던 때라 굵으면
+     그것을 덮었기 때문이다. 이제 목표는 트랙 크기의 직각선이고 **맨 위에**
+     서므로(아래 .aot-viz-target) 초록이 두꺼워도 가려지지 않는다. */
+  top: 0; bottom: 0;
+  /* 폭이 0 이어도 보이게 — 그 기간에 값이 하나뿐이면 최저=최고다. */
+  min-width: var(--aot-viz-track-h);
+  border-radius: inherit;
+  background: var(--aot-viz-zone);
+}
+
+/* ⚠ **마커에 모양을 덧붙여 종류를 말하려 하지 말 것** (2026-09-04 실패).
+ *
+ * 목표 마커에만 삼각 깃발 캡(::before)을 얹어 "이 줄은 누적형" 을 말하려
+ * 했다가 되돌렸다. 사용자 반응이 답이었다 — *"깃발이 있으면 의미가 다르다는
+ * 거야? 잘 모르겠는데"*, *"그저 now 위에 붙인 것뿐인 것 같아 보여"*.
+ *
+ * 모양은 **배워야 아는 기호**다. 처음 보는 사람에게 삼각형은 "다른 종류" 가
+ * 아니라 "같은 마커에 붙은 혹" 으로 읽힌다. 색(실외 시인성)과 원(조작
+ * 손잡이와 혼동)을 배제하고 남은 것이 모양이라고 생각했지만, 애초에 **뜻을
+ * 스스로 설명하는 축은 글자뿐**이다 — 이 파일 머리의 "지표를 구분하는 것은
+ * 색이 아니라 이름이다" 가 가리키던 것이 그것이다.
+ *
+ * 지금 방식: 셋째 줄의 **기준 라벨이 자기가 가리키는 것 아래에 앉는다.**
+ * 밴드는 초록 구간 아래에 "범위 12–25", 불릿은 목표 마커 아래에 "목표 17".
+ * 마커가 같은 모양이어도 그 아래 글자가 무엇인지 말한다(scaleHtml 의
+ * `anchor`). 부르는 쪽이 문구를 준다 — 이 파일은 문구를 만들지 않는다. */
+
 /* 구간 경계 (기간 바) — 배경을 파내서 그린다. 경계마다 색을 주면 단계 수만큼
    색이 늘어난다. */
 .aot-viz-tick {
@@ -339,6 +431,8 @@
  * **마커와 같은 색이고 모양만 다르다**(오늘 = 세로 선, 사건 = 점). 색을 하나
  * 더 두면 이 파일의 세 색 규칙이 넷이 되고, 나란히 선 밴드·불릿과 톤이 갈린다
  * — 파일 머리의 "역할이 같으면 색도 모양도 같아야 한다" 의 뒷면이다.
+ * 이제 한 색 위에 모양이 셋이다: 선(지금 값) · 점(그날의 사건) · 깃발(목표).
+ * 늘어나는 축은 계속 모양 하나뿐이고, 색은 여전히 늘지 않는다.
  *
  * 트랙 안에 들어가는 크기다(지름 = 트랙 높이 − 2px). 마커처럼 트랙 밖으로
  * 나가면 사건이 여럿인 축에서 점들이 오늘 마커와 같은 무게로 서서, 무엇이
@@ -451,6 +545,166 @@
 }
 .aot-viz.is-stale .aot-viz-spark { opacity: 0.5; }
 
+/* ── 추세 띠 ─────────────────────────────────────────────────────────────
+   기간에 걸친 값의 범위(min~max)·평균·목표를 한 줄로. 스파크와 같은 자리
+   (높이)를 쓴다 — 나란히 놓여도 리듬이 갈리지 않는다.
+
+   색은 이 파일의 세 역할을 그대로 옮긴 것뿐이다(새 색을 만들지 않는다):
+     띠(범위)   — 트랙과 같은 중립색 (text_color_primary 10% 혼합)
+     평균 선    — 마커(brand_secondary). 여러 "이 지점" 이 이어진 것뿐이다.
+     목표 구간  — 구간(band_3). 밴드 바의 적정 구간과 같은 뜻·같은 색이다.
+     단일 목표선 — 목표 구간과 같은 색, 대시로만 값(선)과 구분한다(모양이
+                  다르면 색을 늘리지 않아도 서로 헷갈리지 않는다 — 기간
+                  바의 '오늘=세로선 · 사건=점' 과 같은 규칙). */
+.aot-viz-trend {
+  display: block;
+  width: 100%;
+  height: calc(var(--aot-viz-mark-h) + 4px);
+  overflow: visible;
+}
+.aot-viz-trend-ribbon {
+  fill: color-mix(in srgb, var(--aot-color-text-primary)
+                  var(--aot-viz-track-mix, 10%), transparent);
+  stroke: none;
+}
+.aot-viz-trend-line {
+  fill: none;
+  stroke: var(--aot-viz-mark, var(--aot-color-brand-secondary));
+  stroke-width: 1.5;
+  vector-effect: non-scaling-stroke;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.aot-viz-trend-band {
+  /* 면(구간)이라 불릿의 채운 막대·밴드 바의 적정 구간과 같은 진하기를
+     그대로 쓰면 밑에 있는 범위 띠·평균 선을 덮어 버린다 — 옅혀서 뒤에
+     있는 것이 계속 보이게 한다(zone-c1 이 이미 쓰는 18% 와 같은 값). */
+  fill: color-mix(in srgb, var(--aot-viz-zone) 18%, transparent);
+  stroke: none;
+}
+.aot-viz-trend-target {
+  stroke: var(--aot-viz-zone);
+  stroke-width: 1.5;
+  stroke-dasharray: 3 2;
+  vector-effect: non-scaling-stroke;
+}
+.aot-viz.is-stale .aot-viz-trend { opacity: 0.5; }
+
+/* ── 범위 도표 (`.aot-viz--range`) ────────────────────────────────────────
+   **밴드 바를 세로로 돌려 기간마다 하나씩** 세운 것이다. 그것뿐이다.
+
+   마크업도 색도 라운드도 밴드 바 그대로다(트랙 안에 구간과 마커가 든다).
+   **여기 있는 것은 축을 바꾸는 규칙뿐이다** — 가로였던 것을 세로로:
+
+     트랙   height → width,  가로 100% → 세로 100%
+     구간   left/width      → bottom/height
+     마커   top:50%/세로 선 → left:50%/가로 선 (캡 보정은 그대로 쓴다)
+
+   ⚠ 이 자리에서 규칙을 세 번 어겼다(2026-09-04). 시키지 않은 **배경 면**을
+     깔았고, 투명도(`45%`·`55%`·`18%`)를 만들었고, **구간(초록)을 마커 색으로**
+     칠했고, 라운드를 없앴다. 색·배경·라운드를 이 블록에서 **선언하지 않는
+     것**이 그 재발을 막는 방법이다 — 아래에 `background` 도 `color` 도
+     `border-radius` 도 없다. */
+.aot-viz--range {
+  /* 트랙 굵기만 이 도표에서 갈린다 — 밀도가 정한다(빌더가 칸 수로 8 → 4 →
+     2px 을 인라인으로 준다). 8px 로 못박으면 기간이 51 개인 문서에서 트랙이
+     칸보다 굵어 서로 붙어 한 덩어리로 뭉갠다(실측: 칸 폭 10.3px). */
+  --aot-viz-range-bar: var(--aot-viz-track-h);
+}
+.aot-viz--range .aot-viz-plot {
+  position: relative;
+  height: var(--aot-viz-range-h, 64px);
+  /* 눈금 글자가 앉을 왼쪽 자리. 글자를 트랙 위에 겹치면 값을 가린다. */
+  padding-left: 2.2em;
+}
+.aot-viz--range .aot-viz-vscale {
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 2em;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  text-align: right;
+  font-size: var(--aot-font-size-xs);
+  color: var(--aot-color-text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+/* 글자의 가운데가 축의 끝에 오게 반 줄씩 물린다. */
+.aot-viz--range .aot-viz-vscale > span:first-child { margin-top: -0.5em; }
+.aot-viz--range .aot-viz-vscale > span:last-child { margin-bottom: -0.5em; }
+/* 가운데 눈금 — 양 끝만 있으면 막대가 어느 정도 규모인지 가늠할 수 없다
+   (실사용 지적 2026-09-04). **한 줄만** 긋는다 — 격자로 깔았다가 "너무
+   산만하다" 는 지적을 받은 것이 바로 이 자리다. */
+.aot-viz--range .aot-viz-vscale > span.is-mid {
+  position: absolute;
+  right: 0;
+  transform: translateY(50%);
+}
+.aot-viz--range .aot-viz-guide {
+  position: absolute;
+  left: 2.2em; right: 0;
+  /* 트랙과 **같은 중립색**이다(토큰 하나에서 온다) — 축의 일부이지 값이
+     아니므로 새 색을 만들지 않는다. */
+  border-top: 1px solid var(--aot-viz-track-bg);
+}
+
+.aot-viz--range .aot-viz-cols {
+  height: 100%;
+  display: flex;
+  align-items: stretch;
+  gap: 1px;
+}
+.aot-viz--range .aot-viz-col { flex: 1 1 0; min-width: 0; }
+
+/* 트랙 — 눕힌 것을 세운다. 굵기가 높이에서 폭으로 간다. */
+.aot-viz--range .aot-viz-track {
+  width: min(var(--aot-viz-range-bar), 100%);
+  height: 100%;
+  margin: 0 auto;
+  border-radius: calc(var(--aot-viz-range-bar) / 2);
+}
+/* 구간(적정 범위 · 채운 양) — 좌우로 눕던 것이 위아래로 선다. */
+.aot-viz--range .aot-viz-ok,
+.aot-viz--range .aot-viz-fill,
+.aot-viz--range .aot-viz-span {
+  top: auto;
+  left: 0; right: 0;
+  width: auto;
+  min-width: 0;
+}
+/* 가로에서 '최소 폭' 이던 것이 여기서는 '최소 높이' 다. */
+.aot-viz--range .aot-viz-span { min-height: var(--aot-viz-range-bar); }
+/* 채운 양은 언제나 **바닥**에서 시작한다(가로에서 왼쪽 끝이던 자리). */
+.aot-viz--range .aot-viz-fill { bottom: 0; }
+/* 마커 — 세로 선이 가로 선이 된다. 캡 보정은 밴드 바의 것을 그대로 쓰되
+   축만 바꾼다(캡 크기는 이 도표의 트랙 굵기에서 파생된다).
+   현재값(.aot-viz-now, 범위형)과 목표(.aot-viz-target, 누적형)가 같은
+   좌표계를 쓴다 — 가로 도표에서와 같이 대는 같고 깃발 캡만 다르다. */
+.aot-viz--range .aot-viz-now {
+  top: auto;
+  left: 50%;
+  width: min(var(--aot-viz-mark-h), 100%);
+  height: var(--aot-viz-mark-w);
+  transform: translate(-50%, 50%);
+  bottom: calc(var(--aot-viz-range-bar) / 2 +
+               (100% - var(--aot-viz-range-bar)) * var(--aot-viz-pos, 0) / 100);
+}
+/* 목표 — 세로선이 가로선이 된다. **트랙 폭만큼**이고 맨 위다(위 규칙 참조).
+   가로 바에서 `top/bottom: 0` 이던 자리가 여기서는 `left/right: 0` 이다. */
+.aot-viz--range .aot-viz-target {
+  top: auto;
+  left: 0; right: 0;
+  width: auto;
+  height: 2px;
+  transform: translateY(50%);
+  bottom: calc(var(--aot-viz-range-bar) / 2 +
+               (100% - var(--aot-viz-range-bar)) * var(--aot-viz-pos, 0) / 100);
+}
+/* 깃발 캡은 가로 도표와 같은 자리(선 바로 위, 가운데)에 선다 — 세로로
+   돌아도 "이 지점" 을 가리키는 뜻이 같으므로 모양을 바꾸지 않는다. */
+
+.aot-viz--range .aot-viz-xaxis { margin-left: 2.2em; }
+
 /* ── 눈금 라벨 ──────────────────────────────────────────────────────────── */
 .aot-viz-scale {
   display: flex;
@@ -535,6 +789,32 @@
 }
 .aot-viz-scale--anchored .aot-viz-scale-anchor { padding-left: 0; }
 .aot-viz-scale.is-anchor-end .aot-viz-scale-anchor { padding-right: 0; }
+
+/* ── 값 풍선 (`.aot-viz-tip`) ─────────────────────────────────────────────
+   짚은 칸의 값을 그 자리에서 보인다. **네이티브 `title` 을 쓰지 않는 이유**는
+   터치에서 아예 뜨지 않고, 데스크톱에서도 1 초 넘게 걸리기 때문이다 — 값을
+   확인하려고 짚는 동작에는 맞지 않는다.
+
+   ⚠ 이 컴포넌트의 세 색(트랙·구간·마커)은 **값을 그리는 색**이라 여기 쓰지
+     않는다. 풍선은 값이 아니라 **글을 얹는 면**이라, 글자와 카드의 두
+     토큰을 뒤집어 쓴다(라이트에서는 어두운 면 위 밝은 글자, 다크에서는 그
+     반대 — 두 토큰이 이미 테마별로 갈려 있으므로 따로 보정하지 않는다). */
+.aot-viz-tip {
+  position: absolute;
+  top: 0;
+  transform: translate(-50%, -2px);
+  z-index: 1;
+  padding: 3px 8px;
+  border-radius: 4px;
+  background: var(--aot-color-text-primary);
+  color: var(--aot-viz-surface);
+  font-size: var(--aot-font-size-xs);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  pointer-events: none;   /* 풍선이 제 아래 칸을 가로채면 값이 바뀌지 않는다 */
+}
+/* 인쇄에는 남기지 않는다 — 짚어야 뜨는 것은 종이에서 뜻이 없다. */
+@media print { .aot-viz-tip { display: none !important; } }
 
 /* ── 변형 ───────────────────────────────────────────────────────────────── */
 

@@ -737,7 +737,10 @@ class SequenceTriggerController(AbstractController, threading.Thread):
                 f"so it runs about {repeats} times that day rather than once.")
         return out
 
-    def initialize_variables(self):
+    def initialize_variables(self, cold_start=True):
+        """`cold_start=True` 는 스레드가 갓 시작된 경우(데몬 기동/재활성화) —
+        이때만 저장된 사이클을 재개한다. `refresh_settings()` 가 부르는
+        `cold_start=False` 에서는 재개를 건너뛴다 — 그 이유는 아래 참조."""
         self.trigger = db_retrieve_table_daemon(Trigger, unique_id=self.unique_id)
         if not self.trigger:
             self.running = False
@@ -787,8 +790,28 @@ class SequenceTriggerController(AbstractController, threading.Thread):
         # output_on 까지 내려가 **밸브를 남은 시간만큼 다시 열었다**.
         # active_actions 는 이 함수가 지우지 않으므로, 로드를 건너뛰어도 돌고
         # 있던 스텝은 loop() 의 비활성 분기가 stop_all_active() 로 끝까지 끈다.
+        #
+        # **`cold_start=False`(refresh_settings) 에서는 활성이어도 건너뛴다.**
+        # 이것이 뒤에 발견된 두 번째, 더 조용한 변종이다 — 실측(로컬,
+        # 2026-09-04 20:20:38): 창이 막 닫혀 loop() 스레드가 `stop_all_active()`
+        # 로 밸브 2개를 끄는 바로 그 순간, 위젯의 요일별 시간휠 저장이 쏜
+        # `refresh_daemon_trigger_settings` RPC 가 **다른 스레드에서** 이
+        # 함수를 동시에 돌렸다. 그 RPC 시점엔 아직 `is_activated=True` 였으므로
+        # 가드를 통과해 `_load_runtime_state()` 가 **막 껐지만 DB 저장이 아직
+        # 안 끝난** 예전 스냅샷(active_actions에 그 2개가 남아 있음)을 읽었고,
+        # `_resync_after_resume()` 는 실제 장치가 꺼진 것을 "재시작으로 꺼졌다"
+        # 로 오인해 남은 시간만큼 **다시 켰다**(로그: "재개했으나 출력이 꺼져
+        # 있습니다 … 남은 1162초만큼 다시 켭니다" × 2, 창 닫힘 오류 로그 직후
+        # 28ms/76ms 뒤). 사용자 보고("종료 시간을 바꿔도/비활성화해도 멈추지
+        # 않는다")와 정확히 일치한다.
+        #
+        # `refresh_settings()` 는 재시작이 아니라 "이미 살아서 돌고 있는
+        # 스레드의 설정을 다시 읽는 것"이다 — 그 스레드의 `self.active_actions`
+        # 가 이미 정본이므로, DB 스냅샷으로 되읽을 이유가 없고 되읽으면 방금
+        # 위와 같이 살아있는 상태를 낡은 스냅샷으로 덮어쓸 위험만 남는다.
         if self.is_activated:
-            self._load_runtime_state()
+            if cold_start:
+                self._load_runtime_state()
         elif self.active_actions:
             self.logger.debug(
                 f"Sequence {self.unique_id}: 비활성 상태라 사이클을 재개하지 않는다 "
@@ -1760,8 +1783,14 @@ class SequenceTriggerController(AbstractController, threading.Thread):
         # After reload, re-derive sequence_cycle_duration from the active schedule
         # entry (not from trigger.period, which may differ in per_day mode) so that
         # period changes take effect for the current and next cycle.
+        #
+        # cold_start=False: this thread is already alive and running its own
+        # loop() -- self.active_actions/cycle_start_time are already the source
+        # of truth. Re-running _load_runtime_state() here would race loop()'s
+        # own turn_off_action()/_save_runtime_state() calls and can reopen an
+        # output the live thread just closed (see initialize_variables()).
         saved_cycle_start = self.cycle_start_time
-        self.initialize_variables()
+        self.initialize_variables(cold_start=False)
         if saved_cycle_start is not None:
             self.cycle_start_time = saved_cycle_start
             active = active_entry_now(self.schedule, self.device_tz)

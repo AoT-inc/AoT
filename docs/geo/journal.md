@@ -42,10 +42,11 @@ Data is always kept at **daily** detail internally. "Recording unit" only contro
 | Stages | For a plot: each stage's guidance, targets, **and what actually happened during that stage's real span** — measured min/max/average against target, notes, photos |
 | Log | One entry per day (or per week/month, [see above](#granularity)) — environment min/max/average against target, accumulated heat and light, irrigation, control device runtime, and any notes written that day |
 
-- **Environment values carry a target and a Δ (difference)** where the program defines one for that measurement. Where the target is day/night-specific, or is itself a curve, or the plot has no sensor for it, the log says so instead of guessing a number.
+- **Environment values carry a target and a Δ (difference)** where the program defines one for that measurement. A day/night-specific target — or [a curve](#curve-target) — is compared against the readings from that window; where the plot has no sensor for it, the log says so instead of guessing a number.
 - **If the target/site has no target defined for anything at all**, the Target and Δ columns are left out of the log table entirely rather than shown empty.
 - **A meter's usage** (e.g. a water flow meter) is shown as that day's amount, derived from the meter's own reading — not attached to a particular valve, since nothing in the system records which meter serves which device.
 - **Notes** attached to the plot/zone/site, to anything inside it, or simply pinned to a map location within it, all appear on the day they were written.
+- **Notes on the devices this document draws its values from appear too** — sensor faults, repairs, valve checks. They are the context needed to read those values: a gap or an odd reading is usually explained there. The device name is shown in front of the note, and no coordinates are required. Notes are captured when the journal is built, so an existing journal has to be regenerated to pick them up.
 - Stages that haven't started yet within the period are shown dimmed, with a "planned" badge — their guidance and targets are printed, but there is nothing measured to show yet.
 - Log rows follow a fixed reading order rather than an alphabetical one: **light → DLI → CO₂ → temperature/humidity → VPD → water → wind** — the order a grower actually thinks in. Indoor and outdoor readings share one table (marked by a side indicator) instead of two separate ones. A column is labeled with the sensor's own channel name when exactly one sensor covers that measurement; with several, it falls back to the generic measurement name.
 
@@ -86,6 +87,37 @@ For a plot under cover, outdoor light is scaled by the facility's [covering mate
 ## Day length and day/night targets { #daylight }
 
 Sunrise, sunset, and day length are computed from the target's own location and printed on each day's entry. Where a program's target is day- or night-specific, that window is now used to average the matching readings and show a real Δ — previously the target was printed with no comparison at all. If the sensor has no readings inside that window, the Δ is left out for that day rather than guessed.
+
+### Curve targets are compared too { #curve-target }
+
+Where the program puts [a curve](programs.md#targets) on an item, the journal evaluates that curve for the day's crop week and derives **a separate daytime and night-time target**, each compared against the matching measured average. The week is counted as a fraction — the curve interpolates linearly between week keyframes, so the target drifts by a seventh of a week each day (the same basis the controller and the plot modal use). The Target cell shows both values ("Daytime 0.79 · Nighttime 0.45"), the Δ cell shows the two differences, and the line underneath names the curve.
+
+- **It is not folded into a single daily average.** A daily curve moves a lot within the day (a cucumber VPD curve runs from 0.4 before dawn to 1.0 at noon); folded into one number, a humid night and a dry afternoon cancel each other out.
+- The calculation happens **when the journal is opened** — the stored record is untouched, so journals created before this feature fill in their Δ simply by being reopened.
+- Folded to weeks or months, the target becomes that span's average and the Δ becomes a range ("Daytime -0.41 ~ +0.32"). The same holds across several sensors in one plot: sensors placed differently (inside vs. outside the canopy) can miss the same target in opposite directions, so the range is shown rather than a single folded number.
+- On days with no sunrise/sunset (polar day or night), or where the curve has been deleted, the log falls back to naming the curve as before.
+
+---
+
+## Target deviation summary { #drift }
+
+An **"Against target"** table appears for the document and for each stage. It is counted at viewing time from the stored deltas, so journals created before this feature fill in simply by being reopened.
+
+| Target | Day count | Above | Below | Avg | Range |
+|---|---|---|---|---|---|
+| Night temp (2 sensors) | 30 ~ 48 | 30 ~ 48 | | +5.54 ~ +5.91 °C | +1.66 ~ +9.31 |
+
+**It counts; it does not judge.** Saying "this target does not hold here" would need a tolerance band, and there is none in the data — deliberately so. The table gives day counts, averages and ranges, nothing more.
+
+### Counted per sensor { #drift-sensors }
+
+Where a plot has more than one sensor for the same item, each sensor is counted **separately**. Sensors placed differently — inside vs. outside the canopy, at different heights — often miss the same target in opposite directions.
+
+- When they agree, the row collapses; "2 sensors" expands it. The collapsed values are a **range, not an average** — averaging produces a figure no sensor reported, and mixes the denominators (a sensor that measured 48 days and one that measured 30 become "51 days").
+- When they disagree, the row says "Sensors disagree". No single sensor is picked as the representative, because that would not be true either.
+- The denominator is **the days that sensor actually measured**, which is what makes a sentence like "exceeded on 48 of 48 days" true.
+
+Printing expands the collapsed sensor rows.
 
 ---
 

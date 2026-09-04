@@ -159,7 +159,13 @@ if (!window.AoTMapLoader) {
                 pitch: mapOptions.pitch || 0,
                 bearing: mapOptions.bearing || 0,
                 zoomControl: mapOptions.zoomControl !== false,
-                scrollWheelZoom: mapOptions.scrollWheelZoom !== false
+                scrollWheelZoom: mapOptions.scrollWheelZoom !== false,
+                // 기본은 끈 채로 둔다(GPU stall — AoTMapLibreLoader 주석 참조).
+                // 다만 **인쇄되는 지도**는 켜야 한다: 꺼져 있으면 브라우저가
+                // 인쇄하려고 캔버스를 읽는 순간 이미 지워진 뒤라 지도 자리가
+                // 백지로 나온다(일지 문서 `journal-map.js`). 부르는 쪽이
+                // 명시적으로 켤 때만 켜지므로 기존 화면은 그대로다.
+                preserveDrawingBuffer: mapOptions.preserveDrawingBuffer === true
             });
             // Wrap the MapLibre map in L.map-compatible interface
             if (mlMap && typeof L !== 'undefined' && L.Map) {

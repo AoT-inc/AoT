@@ -8,6 +8,31 @@ from flask_babel import lazy_gettext
 
 # Measurement information
 # First unit in list is the default unit when Input is created
+#: 같은 것을 가리키는 measurement 키들, 그리고 **파생값이 무엇으로 관측되는가**.
+#:
+#: 입력 모듈마다 키가 갈린다(일사는 `radiation`·`light`, 강수는
+#: `precipitation`·`rain`). 목표는 그중 하나로만 선언되므로, "이 구획이 그
+#: 목표를 재는가" 를 **정확 일치**로 물으면 같은 값을 다른 이름으로 재는
+#: 설치에서 영원히 "센서 없음" 이 된다(실사용 점검 2026-09-04: 노지 구획의
+#: 일사 목표가 그랬다).
+#:
+#: `dli` 는 채널이 아니라 **일사의 하루 적산**이다 — 잴 수 있는가는 일사
+#: 채널이 있는가로 답한다.
+MEASUREMENT_ALIASES = {
+    'radiation': ('radiation', 'light'),
+    'light': ('radiation', 'light'),
+    'dli': ('radiation', 'light'),
+    'precipitation': ('precipitation', 'rain'),
+    'rain': ('precipitation', 'rain'),
+}
+
+
+def measurement_aliases(key):
+    """measurement 키 → 그것을 만족시키는 키들의 tuple(자기 자신 포함)."""
+    name = str(key or '')
+    return MEASUREMENT_ALIASES.get(name, (name,)) if name else ()
+
+
 MEASUREMENTS = {
     'acceleration': {
         'name': lazy_gettext('Acceleration'),
@@ -249,6 +274,16 @@ MEASUREMENTS = {
         'name': lazy_gettext('Pulse Width'),
         'meas': 'pulse_width',
         'units': ['us']},
+    'rain': {
+        # ⚠ `precipitation` 과 **따로 둔다.** Open-Meteo 입력(채널 5)이
+        #   `rain` 을 쓰고 있어 이미 저장된 데이터가 그 키로 쌓여 있다 —
+        #   모듈을 `precipitation` 으로 바꾸면 기존 설치의 기록이 끊긴다.
+        #   여기 없으면 `measurement_label()` 이 모르는 키를 그대로 돌려주어
+        #   일지·CSV 에 영문 'rain' 이 그대로 나갔다(실사용 점검 2026-09-04,
+        #   모든 로케일).
+        'name': lazy_gettext('Rain'),
+        'meas': 'rain',
+        'units': ['mm', 'in', 'mm_h', 'in_h']},
     'radiation_dose_rate': {
         'name': lazy_gettext('Radiation Dose Rate'),
         'meas': 'radiation_dose_rate',

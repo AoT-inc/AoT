@@ -76,6 +76,9 @@ IMPORTANT: This is the SOURCE TEMPLATE file.
   <script src="/static/js/common/aot-option-depends.js?v=20260827b"></script>
   <script src="/static/js/common/aot-scale-input.js?v=20260902a"></script>
   <script src="/static/js/common/aot-range-band.js?v=20260828d"></script>
+  {#- 등록 응답의 `target_review` 를 그리는 공용 조각. 지도 위젯(번들)과
+      구획 페이지가 같은 것을 쓴다 — 두 벌로 짜면 한쪽만 고쳐진다. -#}
+  <script src="/static/js/common/aot-target-review.js?v=20260904b"></script>
   <script src="/static/js/common/aot-modal-enhance.js?v=20260828b"></script>
   <!-- 서버 다운 감지 워치독: 연결 끊기면 폴링 정지 → 복구 시 1회 새로고침 (재연결 폭주 방지). jQuery 이후 로드. -->
   <script src="/static/js/common/aot-server-health.js?v=20260702b"></script>
@@ -767,7 +770,12 @@ IMPORTANT: This is the SOURCE TEMPLATE file.
       탭바 위에 1.5em 여백이 끼어 다른 탭 페이지와 다르게 아래로 밀려 보인다. -#}
   {% if active_page not in ['geo_design', 'settings', 'dashboard', 'geo_setting', 'geo_input', 'input', 'output', 'function', 'geo_programs'] %}
   <!-- Top Spacer for non-map pages (replaces navbar margin) -->
-  <div style="height: 1.5em; clear: both;"></div>
+  {#- 클래스가 붙어 있어야 **인쇄에서 뺄 수 있다.** 이 여백은 화면의 내비게이션
+      바를 위한 것이라 종이에서는 뜻이 없는데, 5.6mm 를 먼저 차지하는 바람에
+      일지 표지(한 장을 통째로 쓰는 flex 상자)가 남은 높이에 못 들어가
+      **통째로 다음 장으로 밀려 1쪽이 백지**가 됐다(실사용 지적 2026-09-04).
+      Chrome 은 flex 컨테이너를 페이지 사이에서 쪼개지 않고 통째로 옮긴다. -#}
+  <div class="aot-top-spacer" style="height: 1.5em; clear: both;"></div>
   {% endif %}
 
 

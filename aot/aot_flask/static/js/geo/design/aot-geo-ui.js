@@ -873,7 +873,16 @@ AoTGeoUI.prototype.initLegacyLayerButtons = function() {
         layerPanel.id = 'aot-legacy-layer-panel';
         layerPanel.className = 'aot-legacy-layer-panel';
         // Position beside the tool-layers button: same top as button (10px), to its left (right:45px)
-        layerPanel.style.cssText = 'display:none;position:absolute;top:10px;right:45px;left:auto;background:white;padding:10px;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.25);z-index:var(--aot-z-fixed-panel);max-height:300px;overflow-y:auto;min-width:200px;';
+        // 색·글자는 **시스템 토큰만** 쓴다(지적 2026-09-04). 예전에는 흰색과
+        // 회색을 직접 적어 두어 테마를 바꿔도 이 목록만 그대로였다.
+        layerPanel.style.cssText = 'display:none;position:absolute;top:10px;'
+            + 'right:45px;left:auto;padding:8px;border-radius:8px;'
+            + 'background:var(--aot-surface-card,var(--aot-input-bg));'
+            + 'color:var(--aot-color-text-primary);'
+            + 'border:1px solid var(--border-neutral);'
+            + 'box-shadow:var(--aot-shadow-2,0 2px 8px rgba(0,0,0,0.25));'
+            + 'z-index:var(--aot-z-fixed-panel);max-height:300px;'
+            + 'overflow-y:auto;min-width:200px;';
         container.appendChild(layerPanel);
     }
 
@@ -1053,7 +1062,10 @@ AoTGeoUI.prototype._toggleLayerPanel = function() {
 
     const geoLayers = window.AOT_GEO_CONFIG && window.AOT_GEO_CONFIG.layers;
     if (!geoLayers || geoLayers.length === 0) {
-        panel.innerHTML = '<div style="padding:10px;color:#666;">' + (window._ ? window._('No active layers') : 'No active layers') + '</div>';
+        panel.innerHTML = '<div style="padding:10px;color:'
+            + 'var(--aot-color-text-secondary);">'
+            + (window._ ? window._('No active layers') : 'No active layers')
+            + '</div>';
         return;
     }
 
@@ -1331,8 +1343,10 @@ AoTGeoUI.prototype._toggleLayerPanel = function() {
         if (groups[role].length === 0) return;
         const groupDiv = document.createElement('div');
         groupDiv.style.marginBottom = '8px';
-        groupDiv.innerHTML = '<div style="font-weight:bold;padding:2px 0;color:#444;font-size:11px;' +
-            'text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid #eee;margin-bottom:4px;">' +
+        groupDiv.innerHTML = '<div style="font-weight:var(--aot-fw-bold);padding:2px 0;' +
+            'color:var(--aot-color-text-secondary);font-size:var(--aot-fs-caption);' +
+            'text-transform:uppercase;letter-spacing:.5px;' +
+            'border-bottom:1px solid var(--border-neutral);margin-bottom:4px;">' +
             labelMap[role] + '</div>';
 
         if (role === 'base') {
@@ -1348,7 +1362,7 @@ AoTGeoUI.prototype._toggleLayerPanel = function() {
                 itemDiv.innerHTML = '<label style="cursor:pointer;display:flex;align-items:center;gap:6px;">' +
                     '<input type="radio" name="aot-lp-base"' + (isActive ? ' checked' : '') +
                     ' data-layer-id="' + l.id + '" data-layer-type="' + l.type + '"> ' +
-                    '<span style="font-size:13px;">' + (l.name || l.id) + '</span></label>';
+                    '<span style="font-size:var(--aot-fs-body);">' + (l.name || l.id) + '</span></label>';
                 groupDiv.appendChild(itemDiv);
             });
         } else {
@@ -1360,7 +1374,7 @@ AoTGeoUI.prototype._toggleLayerPanel = function() {
                 itemDiv.innerHTML = '<label style="cursor:pointer;display:flex;align-items:center;gap:6px;">' +
                     '<input type="checkbox"' + (visible ? ' checked' : '') +
                     ' data-layer-id="' + l.id + '"> ' +
-                    '<span style="font-size:13px;">' + (l.name || l.id) + '</span></label>';
+                    '<span style="font-size:var(--aot-fs-body);">' + (l.name || l.id) + '</span></label>';
                 groupDiv.appendChild(itemDiv);
             });
         }
@@ -1386,8 +1400,10 @@ AoTGeoUI.prototype._toggleLayerPanel = function() {
         ];
         const shapeDiv = document.createElement('div');
         shapeDiv.style.marginBottom = '8px';
-        shapeDiv.innerHTML = '<div style="font-weight:bold;padding:2px 0;color:#444;font-size:11px;' +
-            'text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid #eee;margin-bottom:4px;">' +
+        shapeDiv.innerHTML = '<div style="font-weight:var(--aot-fw-bold);padding:2px 0;' +
+            'color:var(--aot-color-text-secondary);font-size:var(--aot-fs-caption);' +
+            'text-transform:uppercase;letter-spacing:.5px;' +
+            'border-bottom:1px solid var(--border-neutral);margin-bottom:4px;">' +
             (window._ ? window._('Shapes') : 'Shapes') + '</div>';
         MODES.forEach(([mode, label]) => {
             const visible = !design.shapeTypesForMode(mode)
@@ -1397,7 +1413,7 @@ AoTGeoUI.prototype._toggleLayerPanel = function() {
             itemDiv.innerHTML = '<label style="cursor:pointer;display:flex;align-items:center;gap:6px;">' +
                 '<input type="checkbox"' + (visible ? ' checked' : '') +
                 ' data-shape-mode="' + mode + '"> ' +
-                '<span style="font-size:13px;">' + label + '</span></label>';
+                '<span style="font-size:var(--aot-fs-body);">' + label + '</span></label>';
             shapeDiv.appendChild(itemDiv);
         });
         panel.appendChild(shapeDiv);

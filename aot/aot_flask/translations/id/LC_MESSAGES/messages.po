@@ -4612,11 +4612,11 @@ msgstr "Izin ditolak"
 
 #: aot_flask/routes_function.py:132
 msgid "Daytime"
-msgstr ""
+msgstr "Siang"
 
 #: aot_flask/routes_function.py:132
 msgid "Nighttime"
-msgstr ""
+msgstr "Malam"
 
 #: aot_flask/routes_function.py:599
 msgid "Function not found or deleted."

@@ -1542,35 +1542,111 @@ def measurable_in_plot(plot):
 
     비어 있는 집합은 "못 잰다" 가 아니라 **"모른다"** 로 다뤄야 한다(센서를 아직
     안 이었을 수도, 조회가 실패했을 수도 있다) — 호출부가 그렇게 구분한다.
+
+    ⚠ **어디서 쟀는지는 잃지 말 것.** 합친 집합만 보면 "기상대가 재는 것" 과
+      "구획 안에서 재는 것" 이 구별되지 않는다 — 그 구별이 필요하면
+      `measurable_sources_for_plot()` / `observability_for_plot()` 를 쓴다.
+    """
+    have = measurable_sources_for_plot(plot)
+    return have['plot'] | have['weather']
+
+
+def measurable_sources_for_plot(plot):
+    """구획 → `{'plot': 현장 센서가 재는 것, 'weather': 기상대가 재는 것}`.
+
+    **둘을 갈라 두는 이유**는 값을 합치지 않기 위해서가 아니라(합치는 것은
+    호출부의 판단이다) 화면이 **어디서 재는지 말할 수 있게** 하기 위해서다.
+    기상대가 재는 것을 "이 구획이 잰다" 고만 하면 사용자는 구획 안에 그 센서가
+    있는 줄로 읽는다.
     """
     from aot.databases.models import DeviceMeasurements
 
+    empty = {'plot': set(), 'weather': set()}
     try:
         found = sensors_for_plot(plot) or {}
     except Exception:
-        return set()
+        return empty
     # sensors_for_plot 의 우선순위(구역 → 시설 → zone, 좁은 쪽이 이긴다)와
     # 같아야 한다 — 시설 구획은 `in_plot` 이 항상 비어 있어 `in_bay`/
     # `from_facility` 를 보지 않으면 무조건 zone 폴백으로 떨어진다.
-    ids = (list(found.get('in_plot') or [])
-           or list(found.get('in_bay') or [])
-           or list(found.get('from_facility') or [])
-           or list(found.get('from_zone') or []))
+    field_ids = (list(found.get('in_plot') or [])
+                 or list(found.get('in_bay') or [])
+                 or list(found.get('from_facility') or [])
+                 or list(found.get('from_zone') or []))
+    # ⚠ **기상대는 위 체인과 겨루지 않고 더해진다**(`sensors_for_plot` 의
+    #   `from_weather` 와 같은 규칙). 노지 구획은 일사·강우를 기상대가 재는
+    #   것이 정상인데 이 목록에서 빼 두면 그 목표가 **영원히 "이 구획은 못
+    #   잼"** 으로 표시된다(실사용 점검 2026-09-04). 일지 본체는 이미 같은
+    #   `from_weather` 를 실외 데이터로 쓰고 있었다 — 한 파일 안에서 두
+    #   경로가 서로 다른 답을 내고 있었다.
+    weather_ids = list(found.get('from_weather') or [])
+    ids = list(dict.fromkeys(field_ids + weather_ids))
     if not ids:
-        return set()
+        return empty
     try:
         rows = DeviceMeasurements.query.filter(
             DeviceMeasurements.device_id.in_(ids)).all()
     except Exception:
-        return set()
-    return {m.measurement for m in rows if m.measurement}
+        return empty
+    field_set, weather_set = set(field_ids), set(weather_ids)
+    out = {'plot': set(), 'weather': set()}
+    for m in rows:
+        if not m.measurement:
+            continue
+        if m.device_id in field_set:
+            out['plot'].add(m.measurement)
+        if m.device_id in weather_set:
+            out['weather'].add(m.measurement)
+    return out
+
+
+def observability_for_plot(plot):
+    """구획 → `fn(measurement) -> (observable, observed_by)`.
+
+    - `observable` — `True` 잰다 · `False` 없다 · `None` 알 수 없다(센서를
+      하나도 못 찾았거나 항목에 `measurement` 가 없다 — 사용자가 만든 항목이
+      그렇다).
+    - `observed_by` — `'plot'`(현장 센서) · `'weather'`(기상대) · `None`.
+      화면이 "기상대가 잽니다" 라고 말할 수 있어야 사용자가 그 값을 구획 안에서
+      잰 것으로 오해하지 않는다.
+
+    ## 판정은 **여기 한 곳에만** 있다
+
+    같은 규칙을 `_mark_observable` 과 `stage_targets_full` 이 각자 적어 두고
+    있었고, 그래서 별칭 수정이 한쪽에만 들어갔다 — 구획 모달은 고쳐졌는데
+    일지가 저장하는 판정은 여전히 정확 일치라 `radiation` 이 "센서 없음" 으로
+    굳었다. 두 벌을 지우고 이 함수 하나를 부른다.
+
+    ⚠ **정확 일치로 묻지 않는다.** 같은 값을 모듈마다 다른 키로 재고
+      (`radiation`·`light`, `precipitation`·`rain`), DLI 는 채널이 아니라
+      일사의 하루 적산이다(`config_devices_units.MEASUREMENT_ALIASES`).
+
+    센서 조회는 **한 번만** 한다 — 항목마다 다시 세면 목표 여섯 개짜리 단계에서
+    같은 질의가 여섯 번 돈다.
+    """
+    from aot.config_devices_units import measurement_aliases
+
+    have = measurable_sources_for_plot(plot)
+    field, weather = have['plot'], have['weather']
+    known = bool(field or weather)
+
+    def _look(measurement):
+        if not measurement or not known:
+            return None, None
+        names = measurement_aliases(measurement)
+        if any(k in field for k in names):
+            return True, 'plot'
+        if any(k in weather for k in names):
+            return True, 'weather'
+        return False, None
+
+    return _look
 
 
 def _mark_observable(out, plot):
-    """단계 목표에 `observable` 을 얹는다(제자리 수정) → out.
+    """단계 목표에 `observable`·`observed_by` 를 얹는다(제자리 수정) → out.
 
-    `True` 재는 센서가 있다 · `False` 없다 · `None` 알 수 없다(센서를 하나도 못
-    찾았거나 항목에 `measurement` 가 없다 — 사용자가 만든 항목이 그렇다).
+    판정 규칙은 `observability_for_plot()` 하나다 — 여기 다시 적지 말 것.
 
     **없다고 값을 지우거나 감추지 않는다.** 프로그램은 시설과 독립이어야 다른 곳에
     재사용된다(`coordinator-plot-targets.md` 의 분담) — 여기서 하는 일은 화면이
@@ -1579,13 +1655,9 @@ def _mark_observable(out, plot):
     targets = (out or {}).get('targets') or []
     if not targets:
         return out
-    have = measurable_in_plot(plot)
+    look = observability_for_plot(plot)
     for t in targets:
-        m = t.get('measurement')
-        if not m or not have:
-            t['observable'] = None
-        else:
-            t['observable'] = m in have
+        t['observable'], t['observed_by'] = look(t.get('measurement'))
     return out
 
 
@@ -1795,20 +1867,18 @@ def stage_targets_full(stage, program_row=None, plot=None):
     가려낼 수 없다.
 
     그래서 정본(`_stage_targets`) 위에 얇은 공개 창구를 하나 둔다. 새 판정은
-    없다 — `plot` 을 주면 `measurable_in_plot(plot)` 한 번으로 전 항목에
-    `observable` 을 얹을 뿐이다(`_mark_observable` 과 같은 규칙, 구획 단위
-    집합이라 단계마다 다시 세지 않는다).
+    없다 — `plot` 을 주면 `observability_for_plot(plot)` 한 번으로 전 항목에
+    `observable`·`observed_by` 를 얹을 뿐이다(`_mark_observable` 과 **같은
+    함수**를 쓴다. 예전에는 규칙을 두 벌 적어 두었고, 그래서 별칭 수정이
+    `_mark_observable` 에만 들어가 이쪽은 `radiation` 을 계속 "센서 없음" 으로
+    굳혔다 — 일지가 저장하는 판정이 바로 이것이다).
     """
     targets = _stage_targets(stage, program_row=program_row)
     if plot is None or not targets:
         return targets
-    have = measurable_in_plot(plot)
+    look = observability_for_plot(plot)
     for t in targets:
-        m = t.get('measurement')
-        if not m or not have:
-            t['observable'] = None
-        else:
-            t['observable'] = m in have
+        t['observable'], t['observed_by'] = look(t.get('measurement'))
     return targets
 
 

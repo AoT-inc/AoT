@@ -1220,6 +1220,56 @@ def _unwrap_json(resp):
         return None
 
 
+@blueprint.route('/api/aot/facility/<facility_uuid>/env_week', methods=['GET'])
+@login_required
+def api_facility_env_week(facility_uuid):
+    """시설 모달의 **최근 7일 일별 환경 계열**. 구획 쪽과 같은 계산이다.
+
+    ⚠ **`/overview` 에 얹지 않는다.** 그 응답은 모달이 열려 있는 동안 최소
+    5초까지 폴링된다(`_runtimePollSeconds`) — 여기 계산은 InfluxDB 를 훑으므로
+    그 주기에 태우면 안 된다. 서버 캐시 10분.
+
+    센서 목록은 **시설의 것**을 쓴다(`plot_context.facility_sensor_ids`).
+    구획의 우선순위 체인과 규칙이 다르므로, 구획 것을 빌려오면 같은 시설을
+    두 화면이 다르게 세게 된다. 목표·피복은 시설의 대표 구획에서 온다
+    (`_build_facility_overview` 가 이미 같은 구획을 고른다).
+    """
+    from aot.aot_flask.geo import plot_context as _pc
+    from aot.aot_flask.geo import plot_journal
+    from aot.aot_flask.geo.site_summary import cached_facility_env_week
+
+    bay_id = (request.args.get('bay') or '').strip() or None
+    try:
+        days = max(1, min(31, int(request.args.get('days') or 7)))
+    except (TypeError, ValueError):
+        days = 7
+
+    def _build():
+        try:
+            ids = _pc.facility_sensor_ids(facility_uuid, bay_id) or {}
+            sensor_ids = set(ids.get('in_bay') or ()) | set(ids.get('facility') or ())
+            if not sensor_ids:
+                return []
+            try:
+                _rows = _pc.plots_in_facility(facility_uuid)
+                _plot = _rows[0] if _rows else None
+            except Exception:                                   # noqa: BLE001
+                _plot = None
+            return plot_journal.recent_env_trends(
+                _plot, days=days, sensor_ids=sensor_ids,
+                target_id=facility_uuid)
+        except Exception:
+            current_app.logger.exception('facility env_week: 계열 생성 실패')
+            # 빈 목록을 캐시하지 않는다 — 일시적 실패가 10분간 굳는다.
+            return None
+
+    series = cached_facility_env_week(
+        '%s|%s' % (facility_uuid, bay_id or ''), _build)
+    if series is None:
+        return jsonify({'ok': False, 'error': 'build failed'}), 500
+    return jsonify({'ok': True, 'days': days, 'series': series})
+
+
 @blueprint.route('/api/aot/facility/<facility_uuid>/overview', methods=['GET'])
 @login_required
 def api_facility_overview(facility_uuid):

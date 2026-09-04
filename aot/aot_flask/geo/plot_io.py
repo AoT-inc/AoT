@@ -1339,7 +1339,76 @@ def add_stage(plot_uuid, name=None, days=None, after=None, guidance=None,
             'stage_schedule': plot_context.stage_schedule_view(row)}, None
 
 
-def save_as_program(plot_uuid, name=None, set_by=None):
+def _target_review(row, src, out_stages, adopt):
+    """등록될 단계 목록에 **실측 분포**를 붙인다 → (review, adopted, kept).
+
+    `adopt` 가 참이면 애매하지 않은 항목만 실측 중앙값으로 갈아 끼운다
+    (`out_stages` 를 제자리 수정). 나머지는 원본을 지키고 이유를 남긴다 —
+    `save_as_program` 독스트링의 사유 목록이 그 계약이다.
+
+    ⚠ **실패해도 등록을 막지 않는다.** 실측을 못 읽는 것은 일정을 프로그램으로
+      남기지 못할 이유가 아니다 — 그러면 되먹임을 붙이려다 원래 되던 일을
+      깨뜨리는 셈이 된다.
+    """
+    from aot.aot_flask.geo import plot_journal
+
+    try:
+        measured = plot_journal.measured_stage_targets(row)
+    except Exception:
+        logger.exception('save_as_program: 실측 분포 산정 실패(%s)',
+                         row.unique_id)
+        return None, [], []
+    if not measured:
+        return None, [], []
+
+    curves = (getattr(src, 'targets_methods', None) or {}) if src else {}
+    if not isinstance(curves, dict):
+        curves = {}
+    bounds = {}
+    for d in ((src.target_def_list() if src is not None else []) or []):
+        if isinstance(d, dict) and d.get('key'):
+            bounds[d['key']] = (d.get('min'), d.get('max'))
+
+    by_key = {st.get('key'): st for st in out_stages}
+    adopted, kept = [], []
+    for block in measured:
+        stage = by_key.get(block.get('key'))
+        for item in block.get('items') or []:
+            key = item.get('key')
+            why = item.get('why')
+            if not why and key in curves:
+                why = 'follows-curve'
+            value = item.get('suggest')
+            if not why and value is not None:
+                lo, hi = bounds.get(key, (None, None))
+                if (lo is not None and value < lo) or \
+                        (hi is not None and value > hi):
+                    why = 'out-of-range'
+            item['why'] = why
+            if why:
+                # 쓰지 못할 이유가 있는데 제안값이 남아 있으면 화면·모델이
+                # 그것을 그대로 집어 든다. 사유와 값이 서로를 부정하지 않게 한다.
+                item['suggest'] = None
+            if not adopt or stage is None:
+                continue
+            if why or value is None:
+                if item.get('sensors') or why == 'follows-curve':
+                    kept.append({'stage': block.get('name'), 'key': key,
+                                 'label': item.get('label'),
+                                 'target': item.get('target'), 'why': why})
+                continue
+            targets = stage.get('targets')
+            if not isinstance(targets, dict):
+                targets = {}
+                stage['targets'] = targets
+            adopted.append({'stage': block.get('name'), 'key': key,
+                            'label': item.get('label'),
+                            'from': targets.get(key), 'to': value})
+            targets[key] = value
+    return measured, adopted, kept
+
+
+def save_as_program(plot_uuid, name=None, set_by=None, adopt_targets=False):
     """이 구획의 일정을 **프로그램으로 등록한다** → (dict, error).
 
     ## 왜 필요한가
@@ -1355,8 +1424,29 @@ def save_as_program(plot_uuid, name=None, set_by=None):
     표준이 아니라 **경계 사이의 실제 날수**다: 그것을 고쳐 둔 것이 이 기능을
     부르는 이유다.
 
-    목표(`targets`)와 목표 항목 정의는 원본 프로그램 것을 그대로 옮긴다 —
-    구획이 손대지 않는 값이라 바뀐 것이 없다.
+    목표(`targets`)와 목표 항목 정의는 기본적으로 원본 프로그램 것을 그대로
+    옮긴다 — 구획이 손대지 않는 값이라 바뀐 것이 없다.
+
+    ## 되먹임 고리가 한쪽만 열려 있었다
+
+    단계 일수는 위처럼 **현장 실측으로 갱신**되는데 목표값은 아무리 어긋나도
+    갱신할 길이 없었다(실측: 야간온도가 잰 날 전부 목표를 넘겼다). 기후가
+    바뀌어 문헌 기준이 이 현장에서 성립하지 않게 되는 상황이 정확히 여기서
+    막힌다.
+
+    그래서 등록할 때마다 **`target_review`** 를 함께 낸다 — 단계마다 목표
+    옆에 이 구획이 실제로 잰 분포(`plot_journal.measured_stage_targets`)를
+    나란히 놓는다. 보여 주기만 한다.
+
+    `adopt_targets=True` 면 그중 **애매하지 않은 것만** 실측 중앙값으로
+    바꿔 담는다. 애매한 것은 원본을 지키고 이유를 함께 낸다:
+
+    - `sensors-differ` — 그 항목을 잰 센서가 둘 이상이고 값이 다르다. 어느
+      쪽을 쓸지는 사람이 정할 일이지 시스템이 고를 일이 아니다(§C-0).
+    - `no-data` — 그 단계 기간에 잰 것이 없다(아직 오지 않은 단계 등).
+    - `follows-curve` — 곡선이 걸린 항목은 단계 값이 쓰이지 않는다.
+    - `out-of-range` — 항목 정의의 min/max 를 벗어난다. 실측이 그렇더라도
+      정의를 넘는 값을 조용히 넣지 않는다.
 
     ## 구획을 새 프로그램으로 옮기지는 않는다
 
@@ -1378,6 +1468,16 @@ def save_as_program(plot_uuid, name=None, set_by=None):
     out_stages = []
     for i, st in enumerate(stages):
         item = {k: v for k, v in st.items() if k != 'after'}
+        # ⚠ **`targets` 는 얕은 복사로 떼어지지 않는다.** 구획에 목표
+        #   오버라이드가 없는 단계에서는 `effective_stages` 가 원본 프로그램의
+        #   `stages` JSON 에 든 dict 를 그대로 넘기므로, 여기 dict 는 그 프로그램의
+        #   것과 **같은 객체**다(로컬 실측: 69개 단계가 객체를 공유했다).
+        #   `adopt_targets` 가 그 위에 쓰면 사용자가 고르지도 않은 **원본
+        #   프로그램의 목표**가 실측값으로 덮인다 — 지금은 뒤따르는 커밋이
+        #   인스턴스를 expire 해 DB 까지 가지 않을 뿐이고, 그 사이에 원본을 읽는
+        #   코드가 하나만 끼어도 새는 자리다. 여기서 잘라 둔다.
+        if isinstance(item.get('targets'), dict):
+            item['targets'] = dict(item['targets'])
         # 마지막 단계는 "끝까지" 로 둔다 — 끝내는 날은 재배 종료가 정한다.
         if i == len(stages) - 1:
             item['days'] = None
@@ -1387,6 +1487,10 @@ def save_as_program(plot_uuid, name=None, set_by=None):
         out_stages.append(item)
 
     src = GeoProgram.query.filter_by(unique_id=row.program_uuid).first()
+
+    # ── 목표를 실측에 되먹인다(보여 주기가 기본, 반영은 선택) ────────────
+    review, adopted, kept = _target_review(row, src, out_stages, adopt_targets)
+
     name = (name or '').strip()
     if not name:
         # 이름을 지어 준다 — 사람에게 빈 칸부터 내밀지 않는다. 겹치면 뒤에 번호.
@@ -1419,7 +1523,9 @@ def save_as_program(plot_uuid, name=None, set_by=None):
     result, err = program_io.create_program(payload, source='user')
     if err:
         return None, err
-    return {'program': {'unique_id': result.get('unique_id'),
+    return {'target_review': review,
+            'targets_adopted': adopted, 'targets_kept': kept,
+            'program': {'unique_id': result.get('unique_id'),
                         'name': result.get('name')}}, None
 
 

@@ -434,7 +434,9 @@ TOOLS: List[Tool] = [
                         "(width x length), which sensors it reads (own plot or "
                         "falls back to its zone), which irrigation valves overlap "
                         "it, and its current programme stage. Give both spacings "
-                        "to get row and plant counts. The reply carries a "
+                        "to get row and plant counts. 'target_check' pairs this "
+                        "stage's targets with the readings, now and over the last "
+                        "14 days. The reply carries a "
                         "'_reading' list — the rules for reading THIS result. "
                         "Follow it; it is instruction, not commentary. Read-only."),
         "usage_hint": ("params.arguments: {plot_id, plant_spacing_cm, "
@@ -792,12 +794,14 @@ TOOLS: List[Tool] = [
         "description": ("Registers THIS PLOT's schedule as a reusable "
                         "programme — the stages it actually follows, with the "
                         "lengths as edited and the plot's own guidance. Targets "
-                        "come from the source programme unchanged. The plot is "
+                        "are copied, but the reply shows what the plot actually "
+                        "measured against each. The plot is "
                         "NOT moved onto the new programme: registering is a "
                         "copy, and changing a running season's interpretation "
                         "would silently change what it was grown for. Requires "
                         "human approval."),
-        "usage_hint": "params.arguments: {plot_id, name?}",
+        "usage_hint": ("params.arguments: {plot_id, name?, adopt_targets? "
+                       "(take the measured values as the new targets)}"),
     }),
     Tool('undo_plot_stage', handler='undo_plot_stage', mutating=True, manifest={
         "tool_name": "undo_plot_stage",
