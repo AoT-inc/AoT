@@ -1345,13 +1345,24 @@ def available_measurement_groups(target_type, target_id):
 
     ```
     [{'scope': 'indoor'|'outdoor'|None,
-      'measurements': [{'key', 'label', 'diagnostic': bool,
+      'measurements': [{'key', 'label', 'diagnostic': bool, 'off': bool,
                         'channels': int, 'default': bool}]}]
     ```
 
     **없는 것을 고르게 하지 않는다** — 이 대상에 붙은 센서가 실제로 내는 것만
     낸다. 전체 어휘(`MEASUREMENTS`)를 그대로 보여주면 고를 수 있는 것과 값이
     나오는 것이 달라져, 사용자는 골랐는데 빈 문서를 받는다.
+
+    ## 꺼 둔 채널은 빼지 않고 `off` 로 표시한다
+
+    `is_enabled=False` 인 채널은 **지금은** 값을 쌓지 않는다(저장 직전에
+    `influx.disabled_measurement_channels` 가 막는다). 그렇다고 목록에서 빼면
+    안 된다 — 일지는 과거의 기록이라 그 채널도 그 기간에는 켜져 있었을 수 있고,
+    오늘 상태로 선택지를 지우면 그때의 값에 손이 닿지 않는다.
+
+    그래서 **남기되 `off=True` 로 표시하고 `default` 를 끈다.** 고르는 것은
+    사람의 선택으로 두고, 기본으로 켜서 빈 열을 만들지는 않는다. 화면은 이
+    표식으로 "지금 꺼져 있음" 을 말한다.
 
     ## 왜 스코프로 가르는가
 
@@ -1382,7 +1393,15 @@ def available_measurement_groups(target_type, target_id):
         outdoor_ids &= ids
     split = bool(outdoor_ids) and bool(ids - outdoor_ids)
 
-    counts = {}   # scope(또는 None) -> {name: 채널 수}
+    # scope(또는 None) -> {name: {'total': 채널 수, 'live': 켜진 채널 수}}
+    #
+    # 꺼 둔 채널(`is_enabled=False`)도 **목록에서 빼지 않는다.** 일지는 과거의
+    # 기록이라 지금 꺼진 채널도 그 기간에는 값을 냈을 수 있고, 오늘 상태로
+    # 선택지를 지우면 그 기간의 값에 손이 닿지 않는다(`_plot_sensor_ids` 가
+    # 위젯의 stale 규칙을 따르지 않는 것과 같은 이유). 대신 **기본으로 켜지
+    # 않고** 꺼져 있다는 사실을 화면이 말한다 — 그러지 않으면 고른 사람이
+    # 측정값 없는 문서를 받는다(이 함수 독스트링의 계약).
+    counts = {}
     for dm in DeviceMeasurements.query.filter(
             DeviceMeasurements.device_id.in_(ids)).all():
         name = _channel_info(dm)[2]
@@ -1391,19 +1410,29 @@ def available_measurement_groups(target_type, target_id):
         scope = ('outdoor' if dm.device_id in outdoor_ids else 'indoor') \
                 if split else None
         counts.setdefault(scope, {})
-        counts[scope][name] = counts[scope].get(name, 0) + 1
+        entry = counts[scope].setdefault(name, {'total': 0, 'live': 0})
+        entry['total'] += 1
+        if dm.is_enabled:
+            entry['live'] += 1
 
     def _items(scope, names):
         out = []
         for name in sorted(names):
             diagnostic = name in DIAGNOSTIC_MEASUREMENTS
             key = ('%s:%s' % (scope, name)) if scope else name
+            entry = names[name]
+            # 그 이름을 재는 채널이 **하나도 켜져 있지 않을 때만** 꺼진 것으로
+            # 본다 — 두 센서 중 하나만 꺼져 있으면 값은 계속 나온다.
+            off = entry['live'] == 0
             out.append({'key': key,
                         'label': measurement_label(name),
                         'diagnostic': diagnostic,
-                        'channels': names[name],
+                        'channels': entry['total'],
+                        'off': off,
                         # 진단 채널은 기본으로 꺼 둔다 — 켜는 것은 사람의 선택.
-                        'default': not diagnostic})
+                        # 꺼 둔 채널도 마찬가지다: 지금은 값이 쌓이지 않으므로
+                        # 기본으로 켜면 빈 열이 생긴다.
+                        'default': not diagnostic and not off})
         return out
 
     if not split:
@@ -2436,7 +2465,113 @@ def notes_by_bucket(notes, labels, tz, granularity='day'):
 _NEAREST_M = {}
 
 
-def _plot_sensor_ids(plot, with_weather=True):
+#: 기간 안에 값이 있었는지 볼 때 장치당 최대 몇 채널까지 물을 것인가.
+#: 살아 있는 센서는 대개 첫 채널에서 바로 걸리고, 죽은 센서만 끝까지 간다.
+_PERIOD_PROBE_CHANNELS = 4
+
+
+def _had_data_in_period(device_id, period):
+    """그 기간에 값을 낸 적이 있는가 → bool.
+
+    진단 채널(rssi·snr·배터리)은 **보지 않는다.** LoRaWAN 노드는 센서가 죽어도
+    배터리 전압만 계속 올리는 일이 있어서, 그것을 "값이 있다" 로 세면 빈 일지를
+    만든 센서를 그대로 다시 고르게 된다.
+
+    조회가 실패하면 **있는 것으로 본다**(fail-open) — 인플럭스가 흔들릴 때마다
+    같은 기간의 일지가 다른 센서로 만들어지면 문서가 재현되지 않는다.
+    """
+    from aot.databases.models import DeviceMeasurements
+    from aot.utils.influx import query_string
+
+    start_str, end_str = period
+    try:
+        rows = DeviceMeasurements.query.filter_by(device_id=device_id).all()
+    except Exception:
+        return True
+
+    looked = 0
+    for dm in rows:
+        if looked >= _PERIOD_PROBE_CHANNELS:
+            break
+        channel, unit, display, measure_filter = _channel_info(dm)
+        if unit is None or display in DIAGNOSTIC_MEASUREMENTS:
+            continue
+        looked += 1
+        try:
+            tables = query_string(unit, device_id, channel=channel,
+                                  measure=measure_filter, value='LAST',
+                                  start_str=start_str, end_str=end_str)
+        except Exception:
+            return True
+        for table in (tables or []):
+            for _rec in table.records:
+                return True
+    return False
+
+
+#: 폴백 후보를 몇 개까지 실제로 물어볼 것인가(가까운 순). 구역에 센서가 많은
+#: 설치에서 후보마다 인플럭스를 치면 문서 하나 만드는 데 그것만 수십 회가 된다.
+_FALLBACK_CANDIDATES = 6
+
+
+def _tail_period(period):
+    """기간의 **마지막 하루** → `(start_str, end_str)`. 못 구하면 None.
+
+    "기간에 값이 있었나" 만 보면 중간에 끊긴 센서가 그대로 뽑힌다(실측: 8/29~
+    9/4 일지에서 8/31에 죽은 센서가 앞의 사흘 때문에 통과했고, 뒤 나흘이 통째로
+    비었다). 사람이 보는 기준은 "이 기간을 **끝까지** 따라왔나" 라서, 끝자락을
+    따로 본다.
+    """
+    from datetime import datetime as _dt, timedelta as _td
+
+    fmt = '%Y-%m-%dT%H:%M:%SZ'
+    try:
+        start = _dt.strptime(period[0], fmt)
+        end = _dt.strptime(period[1], fmt)
+    except Exception:
+        return None
+    tail = max(start, end - _td(days=1))
+    return tail.strftime(fmt), period[1]
+
+
+def _pick_with_data(ranked, period):
+    """거리순 후보 → **그 기간의 값을 실제로 가진 것 중 가장 가까운** 하나.
+
+    ⚠ 판정 기준은 *오늘 살아 있는가* 가 아니라 **그 기간에 값이 있었는가** 다.
+    일지는 지나간 기간의 기록이라, 오늘 상태로 고르면 같은 기간의 문서가 만들
+    때마다 달라진다 — 위젯의 stale 규칙(`routes_geo_plot._live_first`)을 여기
+    그대로 쓰지 못하는 이유가 이것이다.
+
+    보는 순서는 **끝자락 → 기간 전체 → 거리**다. 끝까지 따라온 센서가 있으면
+    그중 가장 가까운 것, 없으면 기간 안에 값이라도 있던 것 중 가장 가까운 것,
+    그것도 없으면 그냥 최근접이다. 마지막 단계에서 빈손으로 돌아서지 않는 이유:
+    "이 센서로 봤는데 없었다" 가 "아무것도 안 봤다" 보다 낫고, 그래야 빈 일지가
+    고장을 가리키는 정보가 된다.
+
+    기간을 모르면(측정 목록처럼 기간이 없는 질문) 예전처럼 최근접이다.
+    """
+    if not period or len(ranked) < 2:
+        return ranked[0]
+
+    ranked = ranked[:_FALLBACK_CANDIDATES]
+    probes = []
+    for probe in (_tail_period(period), period):
+        # 하루보다 짧은 기간에서는 끝자락이 곧 기간이다 — 같은 것을 두 번
+        # 묻지 않는다.
+        if probe and probe not in probes:
+            probes.append(probe)
+    for probe in probes:
+        for did, dist in ranked:
+            try:
+                if _had_data_in_period(did, probe):
+                    return did, dist
+            except Exception:
+                logger.exception('journal: 기간 내 자료 유무 확인 실패')
+                return did, dist
+    return ranked[0]
+
+
+def _plot_sensor_ids(plot, with_weather=True, period=None):
     """구획이 참조할 센서 id → `(실내 set, 실외 set)`.
 
     실내 우선순위는 `sensors_for_plot()` 그대로(배타적 체인). **실외(기상)는
@@ -2468,17 +2603,23 @@ def _plot_sensor_ids(plot, with_weather=True):
         #   않는다.** 그것은 지금 살아 있는가를 보는데, 일지는 지나간 기간의
         #   기록이라 오늘 죽은 센서가 그때는 값을 냈을 수 있다. 오늘 상태로
         #   과거 문서의 센서를 바꾸면 같은 기간의 일지가 만들 때마다 달라진다.
+        #
+        # 고르는 기준은 거리 하나가 아니다 — **그 기간에 값이 있었던 것 중**
+        # 가장 가까운 것이다(`_pick_with_data`). 거리만 보면 무응답 센서를
+        # 골라 놓고 실내 행이 통째로 빈 일지가 나온다(실측 2026-09-04, 김제
+        # 3-2 청자5호: 최근접 35.8m 온습도계가 8/31 이후 무응답).
         zone_ids = list(found.get('from_zone') or [])
         if zone_ids:
             near = []
             try:
                 near = plot_context.nearest_devices(
-                    plot, set(zone_ids), limit=1) or []
+                    plot, set(zone_ids), limit=len(zone_ids)) or []
             except Exception:
                 logger.exception('journal: 최근접 센서 조회 실패')
             if near:
-                ids = [near[0][0]]
-                nearest_m = near[0][1]
+                did, dist = _pick_with_data(near, period)
+                ids = [did]
+                nearest_m = dist
             else:
                 # 기하가 없는 구획(시설 구획)은 "가깝다" 를 말할 수 없다 —
                 # 그때는 예전처럼 구역 전체를 쓴다(빈 손보다 낫다).
@@ -2654,7 +2795,7 @@ def resolve_target_row(target_type, target_id):
     return row
 
 
-def resolve_devices(target_type, target_row):
+def resolve_devices(target_type, target_row, period=None):
     """대상 → `(sensor_ids, actuators, unassigned_areas, area_device_ids)`.
 
     §3 의 정본 조합을 한 자리에 둔다. 승인 게이트가 **집계를 시작하기 전에**
@@ -2666,9 +2807,15 @@ def resolve_devices(target_type, target_row):
     노트 조회(§5)에 넘긴다. sensor/actuator id 만 추려 넘기면 그 사이(PID·
     함수에 직접 붙은 노트)가 빠진다 — `note_scope_for_target` 이 이 집합을
     `descendant_ids` 에 합치는 것이 정확히 그 갭을 메우는 자리다.
+
+    `period` 는 `(start_str, end_str)`(UTC 문자열, `period_bounds_utc` 의 결과).
+    구획에서만 뜻이 있다 — 구역 폴백 후보를 **그 기간에 값이 있었던 것** 중에서
+    고르기 위한 것이다(`_pick_with_data`). 안 주면 예전처럼 최근접이므로, 기간이
+    없는 질문(측정 목록·자료 시작 시각)은 그대로 두면 된다. 다만 **게이트와
+    실제 집계는 같은 값을 넘겨야 한다** — 다르면 다른 센서를 세고 통과한다.
     """
     if target_type == 'plot':
-        sensor_ids, outdoor_ids = _plot_sensor_ids(target_row)
+        sensor_ids, outdoor_ids = _plot_sensor_ids(target_row, period=period)
         actuators, unassigned = plot_context.actuators_for_plot(target_row)
         return sensor_ids | outdoor_ids, actuators, unassigned, None
 
@@ -2843,12 +2990,18 @@ def build_journal_for_target(target_type, target_id, start_date, end_date,
 
     # ── 장치 조회(§3) ────────────────────────────────────────────────────
     (sensor_ids, actuators, unassigned_areas,
-     area_device_ids) = resolve_devices(target_type, target_row)
+     area_device_ids) = resolve_devices(target_type, target_row,
+                                        period=(s_str, e_str))
 
     # 어느 것이 실외(기상)인가. 구획은 대지의 기상원을 따로 받고, zone/site
     # 대상은 자기 안에 기상대가 있으면 그것이 곧 실외다.
     if target_type == 'plot':
-        _indoor, outdoor_ids = _plot_sensor_ids(target_row)
+        # 기간을 **여기서도** 넘긴다. 이 호출은 실외 목록만 쓰지만
+        # `_plot_sensor_ids` 가 지나가며 `_NEAREST_M` 을 다시 쓰기 때문에,
+        # 빼먹으면 문서에 적히는 거리가 위에서 실제로 고른 센서가 아니라
+        # 그냥 최근접의 것이 된다(실측: 50m 센서를 쓰면서 36m 라고 적혔다).
+        _indoor, outdoor_ids = _plot_sensor_ids(target_row,
+                                                period=(s_str, e_str))
     else:
         from aot.aot_flask.geo import device_membership as _dm
         outdoor_ids = set(_dm.weather_device_ids(target_row.unique_id)[0])
@@ -3610,22 +3763,25 @@ def recent_env_trends(plot, days=7, end_date=None, sensor_ids=None,
     tz = as_tz(resolve_location_tz(target_id))
     end = end_date or datetime.now(tz).date()
     start = end - timedelta(days=max(1, int(days or 7)) - 1)
+    # 기간을 **센서를 고르기 전에** 구한다 — 구역 폴백이 그 기간에 값이 있었던
+    # 센서를 고르기 때문이다(`_pick_with_data`). 안 넘기면 같은 모달에서
+    # 센서 목록(`_live_first`)과 이 계열이 서로 다른 센서를 보게 된다.
+    s_str, e_str = period_bounds_utc(start, end, tz)
 
     if sensor_ids is None:
-        sensor_ids, outdoor_ids = _plot_sensor_ids(plot)
+        sensor_ids, outdoor_ids = _plot_sensor_ids(plot, period=(s_str, e_str))
     else:
         # 시설 카드 — 센서 목록을 부르는 쪽이 정한다(`facility_sensor_ids`).
         # 구획의 우선순위 체인과 규칙이 달라, 여기서 다시 만들면 같은 시설을
         # 두 화면이 다르게 세게 된다.
         sensor_ids = set(sensor_ids or ())
         if outdoor_ids is None:
-            _i, outdoor_ids = (_plot_sensor_ids(plot) if plot is not None
-                               else (set(), set()))
+            _i, outdoor_ids = (_plot_sensor_ids(plot, period=(s_str, e_str))
+                               if plot is not None else (set(), set()))
     if not sensor_ids and not outdoor_ids:
         return []
 
     bucket_sec = bucket_seconds_for(tz, start, end)
-    s_str, e_str = period_bounds_utc(start, end, tz)
     labels = bucket_labels(start, end, 'day')
 
     series, _errors = env_channel_series(
@@ -3997,13 +4153,15 @@ def recent_target_drift(plot, days=RECENT_DRIFT_DAYS, on=None):
     if not wanted:
         return None
 
-    sensor_ids, outdoor_ids = _plot_sensor_ids(plot)
+    # 기간을 먼저 구해 센서 선택에 넘긴다 — 구역 폴백이 그 기간에 값이 있었던
+    # 센서를 고른다(`_pick_with_data`).
+    s_str, e_str = period_bounds_utc(start_date, end_date, tz)
+    sensor_ids, outdoor_ids = _plot_sensor_ids(plot, period=(s_str, e_str))
     ids = set(sensor_ids) | set(outdoor_ids)
     if not ids:
         return None
 
     bucket_sec = bucket_seconds_for(tz, start_date, end_date)
-    s_str, e_str = period_bounds_utc(start_date, end_date, tz)
     sun_fn = sun_lookup(plot.unique_id)
     labels = bucket_labels(start_date, end_date, 'day')
     try:
@@ -4145,12 +4303,13 @@ def measured_stage_targets(plot, on=None):
     if not wanted:
         return None
 
-    sensor_ids, outdoor_ids = _plot_sensor_ids(plot)
+    # 위와 같다 — 기간을 먼저 구해 센서 선택에 넘긴다.
+    s_str, e_str = period_bounds_utc(started, end_date, tz)
+    sensor_ids, outdoor_ids = _plot_sensor_ids(plot, period=(s_str, e_str))
     ids = set(sensor_ids) | set(outdoor_ids)
     if not ids:
         return None
     bucket_sec = bucket_seconds_for(tz, started, end_date)
-    s_str, e_str = period_bounds_utc(started, end_date, tz)
     try:
         series, _errors = env_channel_series(
             ids, s_str, e_str, tz, granularity='day', bucket_sec=bucket_sec,
@@ -5843,6 +6002,24 @@ _BUILD_LOCK = threading.Lock()
 STALE_RUNNING_MINUTES = 30
 
 
+def _utc_bounds_for(target_id, start_date, end_date):
+    """대상의 현지 시간대로 접은 `(start_str, end_str)` — 실패하면 None.
+
+    `build_journal_for_target` 이 집계 전에 하는 것과 같은 계산이다. 실패를
+    None 으로 접는 이유: 이건 후보를 고르는 힌트일 뿐이라, 못 구했다고 비용
+    판정을 막을 값이 아니다(그때는 예전처럼 최근접이 된다).
+    """
+    from aot.utils.device_tz import resolve_location_tz
+    from aot.utils.timekit import as_tz
+
+    try:
+        return period_bounds_utc(start_date, end_date,
+                                 as_tz(resolve_location_tz(target_id)))
+    except Exception:
+        logger.exception('journal: 기간 경계 계산 실패')
+        return None
+
+
 def estimate_journal_cost(target_type, target_id, start_date, end_date,
                           measurements=None):
     """집계를 **시작하기 전에** 비용을 센다 → dict.
@@ -5861,8 +6038,12 @@ def estimate_journal_cost(target_type, target_id, start_date, end_date,
     """
     days = (end_date - start_date).days + 1
     target_row = resolve_target_row(target_type, target_id)
+    # 기간을 함께 넘긴다 — 구획의 구역 폴백은 **기간에 값이 있었던 센서**를
+    # 고르므로(`_pick_with_data`), 여기서 빼면 게이트가 다른 센서의 채널을
+    # 세고 통과한다(이 함수의 존재 이유가 그 어긋남을 막는 것이다).
     sensor_ids, actuators, _unassigned, _area = resolve_devices(
-        target_type, target_row)
+        target_type, target_row,
+        period=_utc_bounds_for(target_id, start_date, end_date))
 
     env_channels, circular_channels = count_channels_detail(sensor_ids,
                                                             measurements)

@@ -694,6 +694,34 @@ class TestDiagnosticMeasurementFilter(unittest.TestCase):
         self.assertIn("'%s:%s'", src)          # 스코프 접두 키 조립
         self.assertIn('split', src)
 
+    def test_disabled_channels_stay_selectable_but_are_not_default(self):
+        """꺼 둔 채널을 목록에서 빼면 그 기간의 값에 손이 닿지 않는다 — 일지는
+        과거의 기록이고 그때는 켜져 있었을 수 있다. 남기되 기본으로 켜지는
+        않는다(켜면 빈 열이 생긴다).
+
+        `is_enabled` 를 보지 않던 때 실제로 `outdoor:temperature` 를 골라
+        **측정값이 한 줄도 없는 일지**가 만들어졌다.
+        """
+        import inspect
+        src = inspect.getsource(PJ.available_measurement_groups)
+        self.assertIn('dm.is_enabled', src)        # 켜진 채널을 따로 센다
+        self.assertIn("'off'", src)                # 표식을 내보낸다
+        # 기본 선택은 진단이 아니면서 꺼져 있지도 않을 때만 참이다
+        self.assertIn("'default': not diagnostic and not off", src)
+        # 하나라도 켜져 있으면 꺼진 것으로 보지 않는다
+        self.assertIn("entry['live'] == 0", src)
+
+    def test_disabled_channel_note_is_translatable(self):
+        """'(currently off)' 는 화면 문구다 — 번역함수를 거치지 않으면 22개
+        로케일 중 하나에서만 맞는 말이 된다."""
+        import io
+        js = io.open('aot/aot_flask/static/js/geo/journal-page.js',
+                     encoding='utf-8').read()
+        self.assertIn("_t('(currently off)')", js)
+        po = io.open('aot/aot_flask/translations/ko/LC_MESSAGES/messages.po',
+                     encoding='utf-8').read()
+        self.assertIn('msgid "(currently off)"', po)
+
     def test_env_series_and_build_target_pass_scope_through(self):
         """`_wanted_measurement` 을 스코프 없이 부르는 자리가 되살아나면
         `test_scoped_selection_does_not_leak_across_scopes` 가 지키는 계약이
@@ -3994,7 +4022,14 @@ class TestNearestSensorFallback(unittest.TestCase):
         """판정을 새로 만들지 않는다 — 위젯이 쓰는 함수를 그대로 부른다."""
         src = self._src('_plot_sensor_ids')
         self.assertIn('plot_context.nearest_devices(', src)
-        self.assertIn('limit=1', src)
+
+    def test_only_one_zone_sensor_is_taken(self):
+        """후보는 전부 받아 보되(`limit=len(zone_ids)`) **문서에 싣는 것은
+        하나**다. 구역 센서를 전부 쓰면 한 구역에 든 구획들의 문서가 서로
+        같아진다 — 이 클래스가 지키는 바로 그 규칙이다."""
+        src = self._src('_plot_sensor_ids')
+        self.assertIn('limit=len(zone_ids)', src)
+        self.assertIn('ids = [did]', src)
 
     def test_the_nearer_steps_are_untouched(self):
         """구획 안·동·시설 센서가 있으면 그것이 그대로 이긴다 — 최근접은
@@ -4113,6 +4148,92 @@ class TestJournalMcpTools(unittest.TestCase):
         import inspect
         self.assertIn('threading.Thread(target=_work',
                       inspect.getsource(PJ._run_journal_build))
+
+
+class TestZoneFallbackPicksASensorWithData(unittest.TestCase):
+    """구획 안에 센서가 없어 구역에서 끌어올 때, **거리만 보고 고르지 않는다.**
+
+    실측(2026-09-04, 김제 3-2 청자5호): 최근접 35.8m 온습도계가 8/31 이후
+    무응답인데 14m 더 먼 토양센서는 값을 내고 있었다. 거리만 보던 시절에는
+    최근접을 고른 뒤 실내 행이 통째로 빈 일지가 나왔고, 같은 구역의 다른
+    구획은 최근접이 살아 있는 센서라 멀쩡했다 — 한 구획만 비는 이유가 정렬
+    하나였다.
+
+    ⚠ 판정 기준이 *오늘 살아 있는가* 가 아니라 **그 기간의 값을 가졌는가**
+    라는 것이 위젯과 다른 점이다. 오늘 상태로 고르면 같은 기간의 문서가 만들
+    때마다 달라진다.
+    """
+
+    P = ('2026-08-29T15:00:00Z', '2026-09-04T15:00:00Z')
+
+    def _pick(self, ranked, has_data):
+        from unittest import mock
+        with mock.patch.object(PJ, '_had_data_in_period',
+                               side_effect=has_data):
+            return PJ._pick_with_data(ranked, self.P)
+
+    def test_picks_the_nearest_that_covers_the_end_of_the_period(self):
+        ranked = [('dead-near', 35.8), ('live-far', 49.8)]
+        # 끝자락 탐침: 가까운 쪽은 이미 죽었고 먼 쪽만 값이 있다.
+        self.assertEqual(
+            self._pick(ranked, lambda did, probe: did == 'live-far'),
+            ('live-far', 49.8))
+
+    def test_nearest_still_wins_when_both_are_alive(self):
+        """값을 주는 것끼리는 거리가 기준이다 — 새 규칙이 옛 규칙을 덮어쓰지
+        않는다."""
+        ranked = [('near', 10.0), ('far', 20.0)]
+        self.assertEqual(self._pick(ranked, lambda did, probe: True),
+                         ('near', 10.0))
+
+    def test_past_period_keeps_the_sensor_that_was_alive_then(self):
+        """오늘 죽은 센서라도 **그 기간에는** 값을 냈다면 그것이 맞다 —
+        지나간 문서가 오늘 상태로 다시 쓰이면 안 된다."""
+        ranked = [('near-dead-today', 35.8), ('far-live-today', 49.8)]
+        tail = PJ._tail_period(self.P)
+
+        def has_data(did, probe):
+            if probe == tail:          # 끝자락엔 둘 다 없다(전부 지난 기간)
+                return False
+            return did == 'near-dead-today'
+
+        self.assertEqual(self._pick(ranked, has_data),
+                         ('near-dead-today', 35.8))
+
+    def test_all_empty_still_answers_with_the_nearest(self):
+        """빈손으로 돌아서지 않는다 — "이 센서로 봤는데 없었다" 가 "아무것도
+        안 봤다" 보다 낫고, 그래야 빈 일지가 고장을 가리킨다."""
+        ranked = [('near', 10.0), ('far', 20.0)]
+        self.assertEqual(self._pick(ranked, lambda did, probe: False),
+                         ('near', 10.0))
+
+    def test_without_a_period_it_is_the_plain_nearest(self):
+        """기간이 없는 질문(측정 목록 등)은 예전 그대로다."""
+        ranked = [('near', 10.0), ('far', 20.0)]
+        self.assertEqual(PJ._pick_with_data(ranked, None), ('near', 10.0))
+
+    def test_tail_is_the_last_day_of_the_period(self):
+        self.assertEqual(PJ._tail_period(self.P),
+                         ('2026-09-03T15:00:00Z', '2026-09-04T15:00:00Z'))
+
+    def test_tail_never_starts_before_the_period(self):
+        """하루보다 짧은 기간에서 끝자락이 기간 밖으로 나가면 안 된다."""
+        short = ('2026-09-04T00:00:00Z', '2026-09-04T06:00:00Z')
+        self.assertEqual(PJ._tail_period(short), short)
+
+    def test_the_gate_counts_the_same_sensor_as_the_build(self):
+        """게이트가 기간을 안 넘기면 다른 센서의 채널을 세고 통과한다."""
+        import inspect
+        self.assertIn('period=_utc_bounds_for(',
+                      inspect.getsource(PJ.estimate_journal_cost))
+
+    def test_the_distance_written_in_the_document_is_the_chosen_one(self):
+        """`_plot_sensor_ids` 는 지나가며 `_NEAREST_M` 을 다시 쓴다 — 실외
+        목록만 쓰는 두 번째 호출에서 기간을 빼먹으면 문서에 50m 센서를 쓰면서
+        36m 라고 적힌다(실측)."""
+        import inspect
+        src = inspect.getsource(PJ.build_journal_for_target)
+        self.assertNotIn('_plot_sensor_ids(target_row)', src)
 
 
 class TestFoldPhaseAverages(unittest.TestCase):

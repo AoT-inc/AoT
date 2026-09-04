@@ -29237,6 +29237,9 @@ msgstr "시작일부터 누적"
 msgid "Weather station measurements to include"
 msgstr "포함할 기상대 측정값"
 
+msgid "(currently off)"
+msgstr "(지금 꺼짐)"
+
 #: aot/aot_flask/static/js/geo/journal-page.js
 msgid "On-site sensor measurements to include"
 msgstr "포함할 현장 센서 측정값"

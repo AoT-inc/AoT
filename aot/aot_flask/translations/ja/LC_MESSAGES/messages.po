@@ -28979,6 +28979,9 @@ msgstr "開始日からの累積"
 msgid "Weather station measurements to include"
 msgstr "含める気象台の測定値"
 
+msgid "(currently off)"
+msgstr "(現在オフ)"
+
 #: aot/aot_flask/templates/pages/geo/journal.html
 msgid "Record by"
 msgstr "記録単位"

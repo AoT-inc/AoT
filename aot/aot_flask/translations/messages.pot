@@ -28470,6 +28470,9 @@ msgstr ""
 msgid "Weather station measurements to include"
 msgstr ""
 
+msgid "(currently off)"
+msgstr ""
+
 #: aot/aot_flask/static/js/geo/journal-page.js
 msgid "On-site sensor measurements to include"
 msgstr ""

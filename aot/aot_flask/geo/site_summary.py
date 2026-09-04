@@ -724,6 +724,48 @@ def env_for_devices(device_ids, prefetched=None):
     return {'readings': readings, 'sensors': {'valid': valid, 'total': total}}
 
 
+def live_device_ids(device_ids, prefetched=None):
+    """지금 값을 주고 있는 장치만 남긴다 → set.
+
+    판정은 `env_for_devices` 하나로 한다 — 여기서 따로 세면 같은 센서를 두고
+    한 화면은 살아 있다 하고 다른 화면은 죽었다 한다(`_env_of` 가 그것을
+    그대로 쓰는 것과 같은 이유).
+
+    쓰이는 자리는 **폴백 후보 고르기**다. 구획 안에 센서가 없어 옆에서
+    끌어올 때, 거리만 보고 고르면 값을 못 주는 것을 골라 놓고 화면은 그대로
+    빈다(실측 2026-09-04, 김제 3-2 청자5호).
+
+    조회가 실패하면 **살아 있는 것으로 본다** — 실패를 죽음으로 읽으면
+    인플럭스가 잠깐 흔들릴 때마다 화면이 옆 센서로 갈아탄다.
+
+    값 조회는 **한 번만** 뜬다(`prefetch_last_values`). 장치마다 뜨면 왕복이
+    후보 수만큼 는다.
+    """
+    ids = [d for d in (device_ids or []) if d]
+    if not ids:
+        return set()
+
+    if prefetched is None:
+        try:
+            prefetched = prefetch_last_values(ids)
+        except Exception as exc:
+            logger.warning('[SiteSummary] 값 사전 조회 실패: %s', exc)
+            prefetched = {}
+
+    out = set()
+    for device_id in ids:
+        try:
+            env = env_for_devices([device_id], prefetched=prefetched)
+        except Exception as exc:
+            logger.warning('[SiteSummary] 센서 신선도 판정 실패(%s): %s',
+                           device_id, exc)
+            out.add(device_id)
+            continue
+        if (env.get('sensors') or {}).get('valid', 0) > 0:
+            out.add(device_id)
+    return out
+
+
 def _sensor_rollup(device_ids, partial, rep_key=None, prefetched=None):
     """(rep, sensors) — 필지 행이 쓰는 축약형."""
     try:

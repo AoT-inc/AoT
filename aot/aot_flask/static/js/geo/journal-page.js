@@ -139,10 +139,19 @@
       measBlock.innerHTML = groups.map(function (g) {
         var on = g.measurements.filter(function (m) { return m.default; }).length;
         var list = g.measurements.map(function (m) {
-          return '<label class="' + (m.diagnostic ? 'is-diagnostic' : '') + '">' +
+          // 꺼 둔 채널도 고를 수 있게 남긴다(과거에는 값을 냈을 수 있다).
+          // 다만 지금은 값이 쌓이지 않으므로 그 사실을 라벨이 말한다 —
+          // 말하지 않으면 골라 놓고 빈 열을 받는다.
+          var cls = [];
+          if (m.diagnostic) cls.push('is-diagnostic');
+          if (m.off) cls.push('is-off');
+          var note = m.off
+            ? ' <span class="text-muted small">' + _esc(_t('(currently off)')) + '</span>'
+            : '';
+          return '<label class="' + cls.join(' ') + '">' +
                  '<input type="checkbox" value="' + _esc(m.key) + '"' +
                  (m.default ? ' checked' : '') + '>' +
-                 '<span>' + _esc(m.label || m.key) + '</span>' +
+                 '<span>' + _esc(m.label || m.key) + note + '</span>' +
                  '</label>';
         }).join('');
         return '<details class="aot-journal-meas-block" open>' +

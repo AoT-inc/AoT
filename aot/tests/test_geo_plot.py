@@ -2977,10 +2977,47 @@ class TestPlotShowsOnlyWhatItTouches(unittest.TestCase):
         self.assertIn('have = kinds_direct[kind]', body)
         self.assertIn('if have or not kinds_zone[kind]', body)
 
-    def test_fallback_takes_only_the_closest(self):
+    def test_fallback_takes_only_one(self):
+        """하나만 가져온다는 규칙은 그대로다 — 여러 개를 실으면 식생 패널이
+        구역 패널의 복사본이 된다."""
         body = self._body()
         self.assertIn('nearest_devices(', body)
-        self.assertIn('limit=1', body)
+        self.assertIn('ranked[:1]', body)
+
+    def test_fallback_sensor_must_actually_give_values(self):
+        """고르는 기준에 **값을 주는가**가 거리보다 먼저 온다.
+
+        거리만 보면 무응답 센서를 골라 놓고 폴백은 성립했는데 화면은 그대로
+        빈다 — 실측(2026-09-04, 김제 3-2 청자5호): 최근접 35.8m 온습도계가
+        8/31 이후 무응답인데 14m 더 먼 토양센서는 값을 내고 있었다. 같은
+        구역의 다른 구획은 최근접이 그 살아 있는 센서라 멀쩡했다.
+        """
+        body = self._body()
+        self.assertIn('_live_first(ranked)', body)
+
+    def test_live_first_keeps_distance_order_within_groups(self):
+        """순서만 바꾼다 — 값을 주는 것끼리, 못 주는 것끼리 각각은 거리순
+        그대로다. 그래야 "가장 가까운 것" 이 여전히 기준으로 남는다."""
+        from unittest import mock
+        from aot.aot_flask import routes_geo_plot as rgp
+
+        ranked = [('dead-near', 10.0), ('live-mid', 20.0), ('live-far', 30.0)]
+        with mock.patch('aot.aot_flask.geo.site_summary.live_device_ids',
+                        return_value={'live-mid', 'live-far'}):
+            self.assertEqual(rgp._live_first(ranked),
+                             [('live-mid', 20.0), ('live-far', 30.0),
+                              ('dead-near', 10.0)])
+
+    def test_live_first_falls_back_when_all_are_dead(self):
+        """전부 죽었으면 최근접 그대로다 — 아무것도 안 내는 쪽이 더 나쁘고,
+        고장을 화면에서 지우지도 않는다."""
+        from unittest import mock
+        from aot.aot_flask import routes_geo_plot as rgp
+
+        ranked = [('a', 10.0), ('b', 20.0)]
+        with mock.patch('aot.aot_flask.geo.site_summary.live_device_ids',
+                        return_value=set()):
+            self.assertEqual(rgp._live_first(ranked), ranked)
 
     def test_distance_is_reported(self):
         """왜 여기 있는지, 얼마나 믿을 값인지 판단할 근거."""

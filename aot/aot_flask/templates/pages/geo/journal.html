@@ -42,7 +42,10 @@
   .aot-journal-meas-block > summary { cursor: pointer; font-size: .9rem; opacity: .8; padding: .5rem 16px; }
   .aot-journal-meas-list { display: flex; flex-wrap: wrap; gap: .35rem .9rem; padding: .4rem 16px .2rem; }
   .aot-journal-meas-list label { display: flex; align-items: center; gap: .35rem; font-size: .86rem; font-weight: normal; margin: 0; cursor: pointer; }
-  .aot-journal-meas-list .is-diagnostic { opacity: .6; }
+  /* 진단 채널과 지금 꺼 둔 채널은 같은 무게로 흐린다 — 고를 수는 있지만
+     기본은 아니라는 뜻이 눈으로 보여야 한다. */
+  .aot-journal-meas-list .is-diagnostic,
+  .aot-journal-meas-list .is-off { opacity: .6; }
 
   /* ── 저장된 일지 한 줄 ──────────────────────────────────────────────
      제목 · 기간 · 요약 · 삭제를 **격자**로 세운다. 예전에는 flex 한 줄에

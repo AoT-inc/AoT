@@ -612,6 +612,31 @@ def _env_of(input_ids):
         return {'readings': [], 'sensors': {'valid': 1, 'total': 1}}
 
 
+def _live_first(ranked):
+    """거리순 후보를 **값을 주는 것 먼저**로 다시 세운다 → 같은 모양의 목록.
+
+    `[(device_id, 거리_m)]` 안에서 순서만 바꾼다 — 값을 주는 것끼리, 못 주는
+    것끼리 각각은 거리순 그대로다. 그래서 "가장 가까운 것" 은 여전히 기준이고,
+    값을 주는가가 그보다 먼저 걸리는 조건일 뿐이다.
+
+    **전부 죽었으면 원래 순서 그대로다.** 그때는 가장 가까운 것을 내고 화면이
+    "값 없음" 을 말한다 — 아무것도 안 내는 쪽이 더 나쁘고, 고장을 화면에서
+    지우지도 않는다(`stale_direct` 가 `no_data` 를 남기는 것과 같은 태도).
+    """
+    if len(ranked) < 2:
+        return ranked
+    from aot.aot_flask.geo.site_summary import live_device_ids
+    try:
+        live = live_device_ids([d for d, _ in ranked])
+    except Exception:
+        current_app.logger.exception('plot contents: 인접 센서 신선도 판정 실패')
+        return ranked
+    if not live or len(live) == len(ranked):
+        return ranked
+    return ([x for x in ranked if x[0] in live]
+            + [x for x in ranked if x[0] not in live])
+
+
 def _program_targets(row):
     """프로그램이 정한 목표 — 판정은 `coordinator_plot` 이 한다(어휘 한 곳)."""
     from aot.aot_flask.geo import coordinator_plot
@@ -888,8 +913,21 @@ def _build_plot_contents(plot_uuid):
             reason = 'stale'
         if have or not kinds_zone[kind]:
             continue
-        for did, dist in plot_context.nearest_devices(
-                row, kinds_zone[kind], markers=markers, limit=1):
+        # 센서는 **거리만으로 고르지 않는다.** 값을 못 주는 것을 골라 놓으면
+        # 폴백이 성립해 놓고 화면은 그대로 비어, 사용자는 "옆에 센서가 있는데
+        # 왜 값이 없나" 를 묻게 된다 — 위에서 구획 안 센서에 이미 적용하고 있는
+        # 규칙(`stale_direct`)이 폴백 후보에만 빠져 있었다.
+        #
+        # 실측(2026-09-04, 김제 3-2 청자5호): 최근접 온습도계(35.8m)가 8/31
+        # 이후 무응답인데 14m 더 먼 토양센서는 값을 내고 있었다. 같은 구역의
+        # 태청은 최근접이 그 살아 있는 센서라 멀쩡했다 — 한 구획만 빈 이유가
+        # 거리 정렬 하나였다.
+        ranked = plot_context.nearest_devices(
+            row, kinds_zone[kind], markers=markers,
+            limit=(len(kinds_zone[kind]) if kind == 'inputs' else 1))
+        if kind == 'inputs':
+            ranked = _live_first(ranked)
+        for did, dist in ranked[:1]:
             nearest[did] = dist
             nearest_reason[did] = reason
 
