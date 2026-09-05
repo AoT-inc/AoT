@@ -5865,3 +5865,382 @@ class TestPacingIsAShareOfWorkNotAFixedGap(unittest.TestCase):
         짧은 버스트가 공유 자원을 먹통으로 만드는 것이 원래 걱정이었다."""
         self.assertLess(PJ.QUERY_DUTY, 1.0)
         self.assertGreater(PJ.QUERY_DUTY, 0.0)
+
+
+class TestTodaySpanOnTheBandRow(unittest.TestCase):
+    """[현황] 밴드 줄은 값 하나가 아니라 **오늘의 최저~최고**를 그린다.
+
+    지금까지 이 줄은 트랙 위에 녹색 점 하나였다. "지금 26.4 ℃" 는 그것만으로
+    오늘이 어떤 날인지 말하지 못한다 — 새벽에 12 ℃ 였는지 밤새 25 ℃ 였는지에
+    따라 같은 26.4 가 전혀 다른 뜻이다.
+
+    ⚠ **프리미티브가 있다는 것과 쓰인다는 것은 다르다.** `AoTViz.band` 는
+    2026-09-04 부터 `spanMin`/`spanMax` 를 받았지만 **부르는 곳이 한 곳도
+    없어**(`grep`) 그 경로는 한 번도 실행된 적이 없었다. 이 검사가 고정하는
+    것은 프리미티브가 아니라 **배선**이다.
+    """
+
+    @staticmethod
+    def _read(*parts):
+        path = os.path.join(os.path.dirname(__file__), '..', 'aot_flask',
+                            'static', 'js', *parts)
+        return io.open(os.path.abspath(path), encoding='utf-8').read()
+
+    def _popup(self):
+        return self._read('widgets', 'AoT_map', 'aot-map-popup.js')
+
+    def _widget(self):
+        return self._read('widgets', 'AoT_map', 'aot-map-widget-vector.js')
+
+    # ── 배선 ────────────────────────────────────────────────────────────
+    def test_the_band_row_actually_passes_a_span(self):
+        js = self._popup()
+        self.assertIn('spanMin: _span ? _span.lo : null', js)
+        self.assertIn('spanMax: _span ? _span.hi : null', js)
+
+    def test_both_modals_tell_the_builder_which_bucket_is_today(self):
+        """`weekToday` 를 안 넘기면 폭이 **영영 안 그려진다** — 계열은 왔고
+        줄도 그려지므로 에러도 빈 화면도 없다. 그래서 소스로 고정한다."""
+        w = self._widget()
+        self.assertIn('_opts1.weekToday = _weekToday;', w)     # 구획 모달
+        self.assertIn('weekToday: (st._envWeekTodayByFac || {})', w)  # 시설 모달
+
+    def test_the_series_is_fetched_without_waiting_for_a_click(self):
+        """계열은 이제 **기본 보기**([오늘])의 재료다. 누를 때만 받으면 폭은
+        [7일] 을 눌렀다 돌아온 사람에게만 보인다 — 같은 화면이 사람마다 다르게
+        생긴다. 두 모달 모두 첫 그림 뒤 배경에서 한 번 받는다."""
+        w = self._widget()
+        # 구획 모달 — 토글 핸들러 **밖**에서 조회가 시작된다.
+        self.assertIn('// 값이 먼저다 — 계열을 기다리지 않고 한 번 그린다.', w)
+        # 시설 모달 — 그리는 함수가 아직 안 받았으면 스스로 건다.
+        self.assertIn('if (!_weekFetched &&\n                        '
+                      '!(st._envWeekPending || {})[facilityUuid]) {', w)
+
+    def test_a_click_during_the_background_fetch_is_remembered(self):
+        """조회 중 클릭을 그냥 무시하면 사용자에게는 **첫 클릭이 씹힌 것**이다."""
+        w = self._widget()
+        self.assertIn('_weekWantExpand = true;', w)
+        self.assertIn('st._envWeekWantExpandByFac[facilityUuid] = 1;', w)
+
+    # ── 어느 버킷이 오늘인가 ────────────────────────────────────────────
+    def test_today_is_found_by_key_not_by_taking_the_last_point(self):
+        """마지막 점을 오늘로 삼으면 **단계 창**(`?end=`)과 **주 단위**에서
+        조용히 틀린다 — 주 버킷을 오늘의 폭이라고 그리면 일주일치 진폭이
+        하루로 보인다. 창의 끝은 서버가 `window.end` 로 말해 준다."""
+        js = self._popup()
+        start = js.index('function _todaySpan(')
+        body = js[start:js.index('\n  }\n', start)]
+        self.assertIn("String(pts[i].k) === String(todayKey)", body)
+        self.assertNotIn('pts[pts.length - 1]', body)
+        self.assertNotIn('pts.length - 1]', body)
+
+    def test_the_point_carries_the_bucket_key_the_client_matches_on(self):
+        """짝짓기의 반대쪽 — 서버가 `k` 를 안 실으면 위 규칙이 영영 안 맞는다."""
+        buckets = [{'key': '2026-09-04', 'env_groups': []},
+                   {'key': '2026-09-05', 'env_groups': []}]
+        out = PJ.env_trend_series(buckets)
+        for s in out:
+            for pt in s.get('points') or []:
+                self.assertIn('k', pt)
+
+    # ── 무엇을 그리지 않는가 ────────────────────────────────────────────
+    def test_cumulative_rows_get_no_span(self):
+        """강우·DLI 처럼 0 에서 쌓이는 값의 "그날 최저~최고" 는 읽은 값의
+        진폭이지 쌓인 양이 아니다 — 폭으로 그리면 누적을 진폭으로 오독한다."""
+        js = self._popup()
+        start = js.index('function _todaySpan(')
+        body = js[start:js.index('\n  }\n', start)]
+        self.assertIn('wk.bars', body)
+
+    def test_the_span_goes_through_the_judgment_unit(self):
+        """VPD 는 Pa 로 저장하는 입력과 kPa 로 저장하는 입력이 공존한다
+        (`aot-map-sensor-labels.js` BAND_UNIT_SCALE). 지금 값은 `bandValue`
+        로 환산돼 축에 놓이므로 폭도 같은 함수를 지나야 한다 — 안 그러면
+        630 Pa 짜리 최고가 kPa 축의 오른쪽 끝에 박힌다."""
+        js = self._popup()
+        seg = js[js.index('} else if (V && s.hasAxis) {'):]
+        seg = seg[:seg.index('} else if (V) {')]
+        self.assertIn('_ML.bandValue(r.key, v, wk.unit)', seg)
+
+    def test_the_current_value_widens_the_span(self):
+        """계열은 10분 캐시라 방금 찍힌 최고를 아직 모를 수 있다. 그때 지금
+        값이 초록 밖에 서면 같은 줄이 스스로를 반박한다 — 지금 값도 오늘의
+        관측이므로 정의상 그 폭 안이다."""
+        js = self._popup()
+        start = js.index('function _todaySpan(')
+        body = js[start:js.index('\n  }\n', start)]
+        self.assertIn('lo = Math.min(lo, spec.value);', body)
+        self.assertIn('hi = Math.max(hi, spec.value);', body)
+
+    def test_the_span_is_not_spelled_out_in_words(self):
+        """폭을 글자로도 쓰면 같은 줄의 기준 라벨과 대시 표기가 같아 한
+        덩어리로 읽힌다. 이 카드가 여러 번 지적받은 자리다("한 줄에 너무 많은
+        정보는 혼란스러움"). 폭은 **길이**가 말한다."""
+        js = self._popup()
+        seg = js[js.index('} else if (V && s.hasAxis) {'):]
+        seg = seg[:seg.index('} else if (V) {')]
+        self.assertNotIn('scaleLead', seg)
+
+    def test_the_duty_row_keeps_the_old_grammar(self):
+        """on/off 가동시간 줄의 초록은 '목표' 가 아니라 **평소 가동시간**이고
+        길이 자체가 뜻이다 — 여기까지 폭으로 바꾸면 두 어휘가 한 화면에 선다."""
+        self.assertIn('okZone: true', self._popup())
+
+
+class TestNowCursorSitsAboveTheTrack(unittest.TestCase):
+    """지금 위치는 트랙 **바로 위**의 역삼각형이다 (2026-09-05).
+
+    초록이 폭(오늘의 최저~최고)을 차지하면서 "지금 이 안 어디쯤" 을 가리키는
+    표식이 사라졌다 — 목표선과의 거리를 눈으로 잴 수 없었다. 되돌리는 방법이
+    까다로운 이유는 **트랙 안에는 이미 셋이 서 있기 때문**이다(초록 실측 ·
+    목표 직각선 · 회색 축). 그 안에서 넷째를 가르려던 시도는 여섯 번 전부
+    되돌아왔다(docs/design/dataviz-primitives.md "되돌린 것들").
+
+    그래서 축을 하나 새로 쓴다 — **트랙 안이냐 밖이냐.** 색은 목표선과 같은
+    것을 쓰므로 색이 늘지 않는다.
+    """
+
+    @staticmethod
+    def _read(kind, *parts):
+        base = os.path.join(os.path.dirname(__file__), '..', 'aot_flask',
+                            'static', kind, *parts)
+        return io.open(os.path.abspath(base), encoding='utf-8').read()
+
+    def _js(self):
+        return self._read('js', 'common', 'aot-dataviz.js')
+
+    def _css(self):
+        return self._read('css', 'components', 'aot-dataviz.css')
+
+    def _rule(self, selector):
+        css = self._css()
+        start = css.index(selector + ' {')
+        return css[start:css.index('}', start)]
+
+    def test_the_cursor_is_drawn_at_the_current_value(self):
+        js = self._js()
+        self.assertIn("html += '<div class=\"aot-viz-cursor\" "
+                      "style=\"--aot-viz-pos:' +\n                    "
+                      "p.toFixed(2) + '\"></div>';", js)
+
+    def test_the_duty_row_keeps_its_own_marker_instead(self):
+        """on/off 가동시간 줄의 `.aot-viz-now` 가 이미 '오늘' 이다 — 삼각형을
+        더하면 같은 것을 두 번 가리킨다."""
+        js = self._js()
+        self.assertIn('var cursor = (!o.okZone && p !== null);', js)
+
+    def test_the_cursor_reuses_the_target_colour(self):
+        """색을 늘리지 않는다(실외 시인성). 초록(실측)과 갈리는 것이 색이고,
+        지금과 목표는 **트랙 안이냐 밖이냐**로 갈린다."""
+        rule = self._rule('.aot-viz-cursor')
+        self.assertIn('var(--aot-viz-mark, var(--aot-color-brand-secondary))',
+                      rule)
+        self.assertNotIn('--aot-viz-zone', rule)
+
+    def test_the_cursor_stands_outside_the_track(self):
+        """트랙 안에 넣으면 초록·목표와 자리를 다툰다 — 그 자리를 두고 한
+        시도가 전부 되돌아왔다."""
+        rule = self._rule('.aot-viz-cursor')
+        self.assertIn('bottom: calc(100% + 1px);', rule)
+
+    def test_the_cursor_uses_the_same_cap_correction_as_the_markers(self):
+        """보정을 빠뜨리면 삼각형이 트랙 라운드 밖을 가리켜 끝값에서 최대
+        4px 어긋난다(트랙 양끝이 둥글기 때문 — `.aot-viz-now` 주석)."""
+        rule = self._rule('.aot-viz-cursor')
+        self.assertIn('left: calc(var(--aot-viz-track-h) / 2 +', rule)
+        self.assertIn('var(--aot-viz-pos, 0) / 100)', rule)
+
+    def test_space_is_reserved_by_a_class_not_by_has(self):
+        """`:has()` 대신 빌더가 뿌리에 표식을 새긴다 — 지원 범위 문제이기도
+        하고, 어느 줄이 삼각형을 갖는지 소스에서 바로 보인다."""
+        js = self._js()
+        self.assertIn("'aot-viz aot-viz--band' + (cursor ? ' aot-viz--cursor' : '')",
+                      js)
+        self.assertIn('.aot-viz--cursor .aot-viz-track { margin-top: 6px; }',
+                      self._css())
+
+
+class TestJournalSinglePeriodBandShowsTheSpread(unittest.TestCase):
+    """일지가 **한 기간만** 담을 때의 밴드도 그 기간의 최저~최고를 그린다.
+
+    값 하나(평균)만 세우면 그 기간이 잔잔했는지 요동쳤는지 사라진다 — 같은
+    24.0 ℃ 라도 19~34 였던 날과 23~25 였던 날은 전혀 다른 날이다. 기간이
+    여럿일 때 범위 도표가 막대로 말하는 것을 여기서는 초록 폭이 말한다.
+
+    지도 위젯 [현황] 과 **같은 어휘**다(초록 = 실측 폭 · 직각선 = 목표 ·
+    ▼ = 그 줄의 값). 한 화면만 고치면 같은 값이 화면마다 다르게 읽힌다 —
+    이 파일이 2026-09-04 에 겪은 그 실패다.
+    """
+
+    @staticmethod
+    def _tpl():
+        path = os.path.join(os.path.dirname(__file__), '..', 'aot_flask',
+                            'templates', 'pages', 'geo', 'journal_view.html')
+        return io.open(os.path.abspath(path), encoding='utf-8').read()
+
+    def _single_period_block(self):
+        html = self._tpl()
+        start = html.index('if (pts.length === 1) {')
+        return html[start:html.index('return AoTViz.range({', start)]
+
+    def test_the_band_passes_the_bucket_min_and_max(self):
+        self.assertIn('spanMin: only.min, spanMax: only.max',
+                      self._single_period_block())
+
+    def test_the_cumulative_branch_still_goes_to_bullet(self):
+        """`bars` 는 "0 에서 쌓이는 값" 이라 밴드로 그리면 어휘가 뒤집힌다 —
+        폭을 더한다고 그 판단이 바뀌지 않는다."""
+        block = self._single_period_block()
+        head = block[:block.index('return AoTViz.band({')]
+        self.assertIn('if (s.bars) {', head)
+        self.assertIn('return AoTViz.bullet({', head)
+
+    def test_an_old_snapshot_without_min_max_still_renders(self):
+        """스냅샷에 min/max 가 없는 옛 일지가 있다. `undefined` 가 넘어가면
+        폭이 안 그려지고 값 점과 ▼ 만 남는다 — 예전과 같은 그림이다."""
+        import re
+        js_path = os.path.join(os.path.dirname(__file__), '..', 'aot_flask',
+                               'static', 'js', 'common', 'aot-dataviz.js')
+        js = io.open(os.path.abspath(js_path), encoding='utf-8').read()
+        # pct() 가 숫자가 아닌 값에 null 을 돌려주는 것이 그 안전장치다.
+        m = re.search(r'function pct\(([^)]*)\)\s*\{(.{0,400}?)\n    \}', js,
+                      re.S)
+        self.assertIsNotNone(m, 'pct() 를 못 찾았다')
+        self.assertIn('return null', m.group(2))
+
+
+class TestPlotWidgetDrawsTodaySpanToo(unittest.TestCase):
+    """구획 위젯의 [오늘] 밴드도 오늘의 최저~최고를 그린다.
+
+    이 위젯은 지도 구획 모달과 **같은 빌더**(`buildEnvNowHtml`)를 쓴다. 그런데
+    빌더가 폭을 그리려면 부르는 쪽이 계열과 `weekToday` 를 넘겨야 하므로,
+    배선을 안 하면 같은 함수를 쓰면서도 위젯만 예전 그림으로 남는다 — 같은
+    구획을 두 화면이 다르게 말하게 된다.
+    """
+
+    @staticmethod
+    def _js():
+        path = os.path.join(os.path.dirname(__file__), '..', 'aot_flask',
+                            'static', 'js', 'widgets', 'AoT_plot',
+                            'aot-plot-widget.js')
+        return io.open(os.path.abspath(path), encoding='utf-8').read()
+
+    def test_the_today_window_ignores_the_picked_stage(self):
+        """[오늘] 줄의 숫자는 **지금 값**이다. 지난 단계의 창에서 오늘을 찾으면
+        아무것도 안 나온다 — 그러면 단계를 골라 둔 사람만 폭을 잃는다."""
+        js = self._js()
+        start = js.index('function todayQuery() {')
+        body = js[start:js.index('\n    }\n', start)]
+        self.assertIn("'recent:' + _ENV_WINDOW_DAYS.day + '|day'", body)
+        self.assertNotIn('st.picked', body)
+        self.assertNotIn('stage=', body)
+
+    def test_the_today_window_shares_the_daily_mode_cache_key(self):
+        """같은 창을 두 번 묻지 않게 키를 맞춰 둔다 — [일] 을 누르면 이미 받아
+        둔 것이 즉시 뜬다."""
+        js = self._js()
+        self.assertIn("key: 'recent:' + days + '|' + unit", js)  # envQuery
+        self.assertIn("key: 'recent:' + _ENV_WINDOW_DAYS.day + '|day'", js)
+
+    def test_the_card_passes_the_series_even_in_today_mode(self):
+        js = self._js()
+        self.assertIn('opts.weekToday = st.envEnd[tq.key] || null;', js)
+
+    def test_the_background_fetch_has_its_own_lock(self):
+        """`st.envFetching`(모드 손잡이의 자물쇠)을 같이 쓰면 배경 조회가 도는
+        동안 [일]·[주] 클릭이 조용히 씹힌다."""
+        js = self._js()
+        self.assertIn('st.envTodayPending', js)
+        start = js.index('function loadTodayWindow(')
+        body = js[start:js.index('\n    }\n', start)]
+        self.assertNotIn('st.envFetching', body)
+
+    def test_the_span_is_refreshed_with_the_widget_cycle(self):
+        """위젯은 몇 시간씩 열려 있다. 안 갱신하면 저녁에도 아침의 최고를 본다.
+        **버리지 않고 다시 받는다** — 버리면 [일] 을 펴 둔 사람의 도표가
+        새로고침마다 사라졌다가 다시 눌러야 돌아온다(같은 창을 쓴다)."""
+        js = self._js()
+        self.assertIn('if (needEnv) loadTodayWindow(uid, true);', js)
+
+    def test_the_refresh_only_touches_a_window_someone_has_opened(self):
+        """보기 단위는 **위젯 설정에 저장된다** — 처음부터 [주] 로 열리는 위젯이
+        있고, 그 사람은 [오늘] 밴드를 한 번도 안 본다. 거기까지 주기마다 물으면
+        아무도 안 보는 조회가 5분마다 돈다."""
+        js = self._js()
+        start = js.index('function loadTodayWindow(')
+        body = js[start:js.index('\n    }\n', start)]
+        self.assertIn('if (force ? !have : have) return;', body)
+
+    def test_a_failed_fetch_does_not_loop(self):
+        """빈 배열도 남긴다 — 안 남기면 그릴 때마다 다시 물어 조회가 끝없이
+        돈다(끊긴 서버에서 특히)."""
+        js = self._js()
+        start = js.index('function loadTodayWindow(')
+        body = js[start:js.index('\n    }\n', start)]
+        self.assertIn("st.envCache[q.key] = (wk && wk.ok && wk.series) "
+                      "? wk.series : [];", body)
+
+    def test_the_mode_buttons_do_not_vanish_under_the_user(self):
+        """단위 손잡이는 자료가 아니라 **보는 방법**이고, 그중 [오늘] 은 언제나
+        내용이 있다. 자료가 없다고 접으면 지금 서 있는 칸까지 사라져 되돌아올
+        길이 없어진다 — [일] 을 눌러 빈 창을 만난 사람이 [오늘] 로 못 돌아왔다.
+        계열을 미리 받게 되면서 **누르지 않아도** 그 상태에 닿을 수 있다."""
+        path = os.path.join(os.path.dirname(__file__), '..', 'aot_flask',
+                            'static', 'js', 'widgets', 'AoT_map',
+                            'aot-map-popup.js')
+        js = io.open(os.path.abspath(path), encoding='utf-8').read()
+        self.assertIn('var _weekCapable = (opts.rangeModes && '
+                      'opts.rangeModes.length)', js)
+
+
+class TestEnvSeriesRoutesSayWhichBucketIsToday(unittest.TestCase):
+    """계열을 내는 라우트는 **창을 함께 실어야 한다**(`window.end`).
+
+    화면은 그 값으로 "어느 버킷이 오늘인가" 를 찾는다 — 마지막 점을 오늘로
+    삼으면 창의 끝이 오늘이 아닐 때(단계 창·`?end=`·주 단위) 조용히 틀리기
+    때문이다.
+
+    ⚠ 안 실으면 그 화면만 폭을 **영영** 못 그린다. 계열은 오고 줄도 그려지므로
+    **에러도 빈 화면도 없다** — 시설 라우트가 실제로 그 상태였다(2026-09-05,
+    구획 라우트에만 있었다). 두 라우트를 함께 보는 검사가 없으면 한쪽만 고쳐도
+    아무 신호가 없다.
+    """
+
+    @staticmethod
+    def _handler(fname, defname):
+        path = os.path.join(os.path.dirname(__file__), '..', 'aot_flask', fname)
+        src = io.open(os.path.abspath(path), encoding='utf-8').read()
+        start = src.index('def %s(' % defname)
+        nxt = src.find('\n@blueprint.route', start)
+        return src[start:nxt if nxt > 0 else len(src)]
+
+    def _routes(self):
+        return {
+            'plot': self._handler('routes_geo_plot.py', 'api_plot_env_week'),
+            'facility': self._handler('routes_geo_iec.py',
+                                      'api_facility_env_week'),
+        }
+
+    def test_every_env_series_route_reports_its_window(self):
+        for name, body in self._routes().items():
+            self.assertIn("'window'", body,
+                          '%s 라우트가 창을 안 싣는다' % name)
+            self.assertIn("'end':", body,
+                          '%s 라우트의 창에 끝이 없다' % name)
+
+    def test_today_comes_from_the_resource_timezone(self):
+        """서버 시간으로 자르면 시차가 있는 설치에서 여기 적는 날과 실제
+        버킷이 하루 어긋난다 — `recent_env_trends` 는 `target_id` 의 시간대로
+        자르므로 라우트도 같은 것을 봐야 한다."""
+        for name, body in self._routes().items():
+            self.assertIn('resolve_location_tz(', body,
+                          '%s 라우트가 자원의 시간대를 안 본다' % name)
+
+    def test_the_client_reads_that_field(self):
+        """반대쪽 — 화면이 그 값을 실제로 `weekToday` 로 넘기는가."""
+        path = os.path.join(os.path.dirname(__file__), '..', 'aot_flask',
+                            'static', 'js', 'widgets', 'AoT_map',
+                            'aot-map-widget-vector.js')
+        js = io.open(os.path.abspath(path), encoding='utf-8').read()
+        # 구획 모달 · 시설 모달 둘 다 응답의 window.end 를 집는다.
+        self.assertEqual(js.count('wk.window) ? wk.window.end : null'), 2)

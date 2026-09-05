@@ -370,6 +370,40 @@
              (100% - var(--aot-viz-track-h)) * var(--aot-viz-pos, 0) / 100);
 }
 
+/* 지금 위치 — 트랙 **바로 위**의 역삼각형 (2026-09-05).
+ *
+ * 초록이 폭(그 기간의 최저~최고)을 차지하면서 "지금 이 안 어디쯤" 을 가리키는
+ * 표식이 사라졌다. 이것이 그 자리를 되돌린다.
+ *
+ * ⚠ **트랙 밖에 선다.** 안에 넣으면 초록·목표와 자리를 다투는데, 그 자리를
+ *   두고 시도한 표현은 이미 여섯 번 되돌아왔다(파일 머리 주석의 표). 안과 밖은
+ *   색을 늘리지 않고도 뜻을 가르는 유일하게 남은 축이다.
+ *
+ * 색은 **목표선과 같다**(`--aot-viz-mark`). 색을 늘리지 않는다는 규칙 그대로다 —
+ * 초록(실측)과 갈리는 것이 색이고, 지금과 목표는 트랙 안이냐 밖이냐로 갈린다.
+ *
+ * ⚠ **자리는 마커와 같은 캡 보정을 쓴다**(위 .aot-viz-now 주석). 보정을
+ *   빠뜨리면 삼각형이 트랙 라운드 밖을 가리켜, 끝값에서 최대 4px 어긋난다. */
+.aot-viz-cursor {
+  position: absolute;
+  /* 트랙의 위쪽 바깥. 1px 를 띄워 트랙 테두리와 붙어 보이지 않게 한다. */
+  bottom: calc(100% + 1px);
+  width: 0;
+  height: 0;
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-top: 5px solid var(--aot-viz-mark, var(--aot-color-brand-secondary));
+  transform: translateX(-50%);
+  left: calc(var(--aot-viz-track-h) / 2 +
+             (100% - var(--aot-viz-track-h)) * var(--aot-viz-pos, 0) / 100);
+  pointer-events: none;
+}
+/* 삼각형이 설 자리를 트랙 **위에** 마련한다. `:has()` 로 알아서 잡지 않는 이유는
+   지원 범위이고, 빌더가 뿌리에 표식을 새기는 편이 어느 줄이 그것을 갖는지
+   소스에서 바로 보인다. 값이 없는 줄(마커가 아예 없다)에는 붙지 않으므로
+   같은 카드 안에서 줄 간격이 들쭉날쭉해지지 않는다. */
+.aot-viz--cursor .aot-viz-track { margin-top: 6px; }
+
 /* 진폭 — 그 기간의 **최저~최고**(범위 도표에서만 쓴다).
  *
  * 마커와 같은 색이다. 마커가 "그 순간 여기" 라면 이것은 "그 기간 이만큼

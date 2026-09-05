@@ -107,6 +107,22 @@ class TestKindLabelsMatchServer(unittest.TestCase):
                                 '%s: %r 번역이 비어 있다' % (name, msgid))
 
 
+def _env_row_builder():
+    """[현황] 환경 한 줄을 만드는 **구간 전체**(`envRowSpec` + `_envNowRowHtml`).
+
+    ⚠ 한 함수만 잘라 보면 안 된다. 이 빌더는 2026-09 에 둘로 갈렸고(축·목표를
+    정하는 `envRowSpec` 과 그것을 그리는 `_envNowRowHtml`), 그때부터 아래 두
+    검사가 **규칙이 깨져서가 아니라 코드가 옮겨져서** 빨간불이었다. 규칙은
+    "이 줄이 목표를 값 옆에 세우고 축을 밴드 표에서 얻는가" 이지 "그 문장이 어느
+    함수 안에 있는가" 가 아니다.
+    """
+    src = _read(_POPUP)
+    start = src.index('function envRowSpec(')
+    # 끝은 `_envNowRowHtml` **다음**의 최상위 함수다(들여쓰기 2칸 = IIFE 최상위).
+    end = src.index('\n  function ', src.index('function _envNowRowHtml('))
+    return src[start:end]
+
+
 class TestOverviewReadsServerFields(unittest.TestCase):
     """서버가 보내는 키를 화면이 실제로 읽는지 — 이름이 갈리면 그 값은 영영
     안 뜨는데 에러는 나지 않는다."""
@@ -145,13 +161,13 @@ class TestOverviewReadsServerFields(unittest.TestCase):
         그래서 `opts.deviation`(작은 글씨 한 줄)은 더 이상 읽지 않는다 — 축이
         같은 말을 더 잘 하고, 줄이 하나 줄어든다.
         """
-        body = _read(_POPUP).split('function _envNowRowHtml', 1)[1].split(
-            '\n  function ', 1)[0]
+        body = _env_row_builder()
         self.assertIn('opts.targets', body)
         self.assertIn('_NOW_TO_TARGET', body)
         # 목표는 **위치**로 말한다 — 값만 적고 자리를 안 주면 축 위 어디를
-        # 가리키는지 알 수 없다.
-        self.assertIn('at: anchorAt', body)
+        # 가리키는지 알 수 없다. 이름 앞의 한정자(`s.`)는 보지 않는다 — 그것을
+        # 박아 두면 함수를 가를 때마다 규칙이 아니라 표기가 깨진다.
+        self.assertRegex(body, r'at:\s*(?:\w+\.)?anchorAt')
 
     def test_env_axis_comes_from_the_band_table(self):
         """축과 적정 구간은 **밴드 색과 같은 표**에서 온다.
@@ -159,8 +175,7 @@ class TestOverviewReadsServerFields(unittest.TestCase):
         화면이 범위를 따로 들면 라벨 색과 축이 갈린다. 단위 환산(bandValue)도
         같이 써야 Pa 로 저장된 VPD 의 마커가 제자리에 선다.
         """
-        body = _read(_POPUP).split('function _envNowRowHtml', 1)[1].split(
-            '\n  function ', 1)[0]
+        body = _env_row_builder()
         self.assertIn('bandScale', body)
         self.assertIn('bandValue', body)
         # 축을 모르는 지표는 **지어내지 않는다** — 머리줄만 낸다.

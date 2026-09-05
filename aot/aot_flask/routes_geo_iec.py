@@ -1277,7 +1277,22 @@ def api_facility_env_week(facility_uuid):
                      hidden=_hidden), _build)
     if series is None:
         return jsonify({'ok': False, 'error': 'build failed'}), 500
-    return jsonify({'ok': True, 'days': days, 'series': series})
+    # ⚠ **창을 함께 실어야 한다.** 화면은 "어느 버킷이 오늘인가" 를 이 값으로
+    # 찾는다(`_todaySpan`, aot-map-popup.js) — 마지막 점을 오늘로 삼으면 창의
+    # 끝이 오늘이 아닐 때 조용히 틀리기 때문이다. 안 실으면 시설 카드만 오늘의
+    # 폭을 영영 못 그린다: 계열은 오고 줄도 그려지므로 **에러도 빈 화면도 없다**.
+    #
+    # 오늘은 **그 시설의 시간대**로 정한다 — `recent_env_trends` 가 같은
+    # `target_id` 로 같은 판단을 하므로(거기 `tz`), 서버 시간으로 자르면 시차가
+    # 있는 설치에서 여기 적는 날과 실제 버킷이 하루 어긋난다.
+    from datetime import datetime as _dt, timedelta as _td
+    from aot.utils.device_tz import resolve_location_tz
+    from aot.utils.timekit import as_tz
+    end = _dt.now(as_tz(resolve_location_tz(facility_uuid))).date()
+    start = end - _td(days=days - 1)
+    return jsonify({'ok': True, 'days': days, 'series': series,
+                    'window': {'start': start.isoformat(),
+                               'end': end.isoformat()}})
 
 
 @blueprint.route('/api/aot/facility/<facility_uuid>/overview', methods=['GET'])

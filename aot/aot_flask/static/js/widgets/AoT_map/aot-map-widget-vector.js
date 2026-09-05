@@ -1935,17 +1935,34 @@
                               // 별도 키로 받는다 — 섞으면 안 된다.
                               gdd: (data.plot || {}).gdd,
                               dli: (data.plot || {}).dli }];
-                        // 기본은 **하루(지금 값)** 다. 주간 계열은 **누를 때만**
-                        // 받는다(2026-09-05 재설계) — 예전엔 모달을 열 때마다
-                        // 미리 받아 뒀는데, 안 눌러도 매번 0.9~1.5초짜리 조회가
-                        // 돌았다. `opts.weekLazy` 로 "아직 안 받았지만 있을 수
-                        // 있다" 를 버튼 쪽에 알린다(`_weekCapable`,
-                        // aot-map-popup.js) — 버튼은 그 뜻으로 먼저 뜨고,
-                        // 실제 조회는 첫 클릭에서 시작한다.
+                        // ── 계열은 **뒤따라 온다** ─────────────────────────
+                        //
+                        // 기본 보기는 여전히 **하루**다. 그런데 그 하루도 이제
+                        // 값 하나가 아니라 **오늘의 최저~최고 폭**을 그리므로
+                        // (`_todaySpan`, aot-map-popup.js) 계열이 필요하다 —
+                        // 오늘의 폭과 [7일] 도표는 같은 버킷에서 나오고, 따로
+                        // 계산하면 같은 하루를 두 보기가 다르게 말한다.
+                        //
+                        // 그래서 조회는 **첫 그림 뒤 배경에서** 시작한다. 값은
+                        // 즉시 뜨고(`/contents` 에 이미 있다) 폭만 한 박자 늦게
+                        // 채워진다 — 카드를 붙잡지 않으므로 여는 속도는 그대로다.
+                        //
+                        // ⚠ 예전에는 **누를 때만** 받았다(2026-09-05). 근거는
+                        //   "안 눌러도 매번 0.9~1.5초짜리 조회가 돈다" 였는데,
+                        //   그 조회가 이제 기본 보기에도 쓰이므로 헛일이 아니다.
+                        //   `?days=1` 로 좁혀도 값은 같다 — `env_channel_series`
+                        //   는 채널당 질의 수가 기간과 무관하다(min·max·mean 3회).
+                        //   그래서 7일을 받아 [7일] 버튼까지 즉답하게 한다.
                         var _envWeekExpanded = false;
                         var _weekFetched = false;   // 조회를 이미 마쳤나(빈 응답도 포함)
                         var _weekFetching = false;
+                        var _weekWantExpand = false;  // 조회 중에 누른 것을 기억한다
                         var _lastWkSeries = null;
+                        // 계열의 **오늘**. 창의 끝은 늘 오늘이 아니므로(단계 창)
+                        // 서버가 말한 것을 그대로 쓴다 — 여기서 날짜를 만들면
+                        // 브라우저 시간대로 자르게 되어 시차가 있는 설치에서 하루
+                        // 어긋난다.
+                        var _weekToday = null;
                         var _t2 = function (s) { return (window._ ? window._(s) : s); };
                         var _drawEnv = function () {
                             if (!envSlot.isConnected) return;
@@ -1953,8 +1970,10 @@
                             if (!z2 || z2.popup !== popup) return;
                             var _opts1 = Object.assign({}, _envArgs[1],
                                 { weekExpanded: _envWeekExpanded });
-                            if (_weekFetched) { _opts1.week = _lastWkSeries || []; }
-                            else { _opts1.weekLazy = true; }
+                            if (_weekFetched) {
+                                _opts1.week = _lastWkSeries || [];
+                                _opts1.weekToday = _weekToday;
+                            } else { _opts1.weekLazy = true; }
                             envSlot.innerHTML =
                                 window.AoTMapPopup.buildEnvNowHtml(_envArgs[0], _opts1);
                             if (window.AoTViz && window.AoTViz.tips) {
@@ -1976,38 +1995,38 @@
                             if (_toggleBtn) {
                                 _toggleBtn.addEventListener('click', function (ev) {
                                     ev.stopPropagation();
-                                    if (_weekFetching) return;
                                     if (_weekFetched) {
                                         // 이미 받아 뒀다 — 보기만 바꾼다(재조회 없음).
                                         _envWeekExpanded = !_envWeekExpanded;
                                         _drawEnv();
                                         return;
                                     }
-                                    _weekFetching = true;
+                                    // 배경 조회가 도는 중이다. **누른 것을
+                                    // 기억한다** — 무시하면 한 번 더 눌러야
+                                    // 하는데, 사용자에게는 첫 클릭이 씹힌 것이다.
+                                    _weekWantExpand = true;
                                     _toggleBtn.disabled = true;
                                     _toggleBtn.textContent = _t2('Loading...');
-                                    fetch('/api/geo/plot/' + encodeURIComponent(plotUuid) +
-                                          '/env_week', { cache: 'no-store' })
-                                        .then(function (r) { return r.ok ? r.json() : null; })
-                                        .then(function (wk) {
-                                            _weekFetching = false;
-                                            _weekFetched = true;
-                                            _lastWkSeries = (wk && wk.ok && wk.series)
-                                                ? wk.series : [];
-                                            _envWeekExpanded = true;
-                                            _drawEnv();
-                                        })
-                                        .catch(function () {
-                                            _weekFetching = false;
-                                            _weekFetched = true;
-                                            _lastWkSeries = [];
-                                            _envWeekExpanded = true;
-                                            _drawEnv();
-                                        });
                                 });
                             }
                         };
+                        // 값이 먼저다 — 계열을 기다리지 않고 한 번 그린다.
                         _drawEnv();
+                        _weekFetching = true;
+                        fetch('/api/geo/plot/' + encodeURIComponent(plotUuid) +
+                              '/env_week', { cache: 'no-store' })
+                            .then(function (r) { return r.ok ? r.json() : null; })
+                            .then(function (wk) { return wk; })
+                            .catch(function () { return null; })
+                            .then(function (wk) {
+                                _weekFetching = false;
+                                _weekFetched = true;
+                                _lastWkSeries = (wk && wk.ok && wk.series)
+                                    ? wk.series : [];
+                                _weekToday = (wk && wk.window) ? wk.window.end : null;
+                                if (_weekWantExpand) _envWeekExpanded = true;
+                                _drawEnv();
+                            });
                     }
 
                     // `_renderZoneDevices` 는 `data.zone.output_order` 를 읽는다.
@@ -4963,6 +4982,12 @@
                     st._envWeekFetchedByFac[facilityUuid] = 1;
                     st._envWeekByFac[facilityUuid] =
                         (wk && wk.ok && wk.series) ? wk.series : [];
+                    // 계열의 **오늘**(`window.end`). 창의 끝이 늘 오늘은 아니라
+                    // 서버가 말한 것을 그대로 든다 — 여기서 날짜를 만들면
+                    // 브라우저 시간대로 잘라 시차 있는 설치에서 하루 어긋난다.
+                    st._envWeekTodayByFac = st._envWeekTodayByFac || {};
+                    st._envWeekTodayByFac[facilityUuid] =
+                        (wk && wk.window) ? wk.window.end : null;
                     if (pane && pane.isConnected) pane._aotEnvNowHtml = null;
                     if (onDone) onDone();
                 })
@@ -4989,9 +5014,17 @@
                 var st = _actLabelState[uid];
                 if (!st) return;
                 st._envWeekPending = st._envWeekPending || {};
-                if (st._envWeekPending[facilityUuid]) return;
                 st._envWeekFetchedByFac = st._envWeekFetchedByFac || {};
                 st._envWeekExpandedByFac = st._envWeekExpandedByFac || {};
+                if (st._envWeekPending[facilityUuid]) {
+                    // 배경 조회가 도는 중이다 — **누른 것을 기억한다.** 무시하면
+                    // 한 번 더 눌러야 하는데, 사용자에게는 첫 클릭이 씹힌 것이다.
+                    st._envWeekWantExpandByFac = st._envWeekWantExpandByFac || {};
+                    st._envWeekWantExpandByFac[facilityUuid] = 1;
+                    btn.disabled = true;
+                    btn.textContent = (window._ ? window._('Loading...') : 'Loading...');
+                    return;
+                }
                 if (st._envWeekFetchedByFac[facilityUuid]) {
                     // 이미 받아 뒀다 — 보기만 바꾼다(재조회 없음).
                     st._envWeekExpandedByFac[facilityUuid] =
@@ -5026,6 +5059,25 @@
                     st._envWeekFetchedByFac[facilityUuid]);
                 var _weekExpanded = !!(st._envWeekExpandedByFac &&
                     st._envWeekExpandedByFac[facilityUuid]);
+                // ── 계열은 **뒤따라 온다** ─────────────────────────────────
+                // 기본 보기(오늘)도 이제 계열이 필요하다 — 값 하나가 아니라
+                // **오늘의 최저~최고 폭**을 그리기 때문이다(`_todaySpan`,
+                // aot-map-popup.js). 그래서 첫 그림 뒤 배경에서 한 번 받는다:
+                // 값은 `/runtime` 에 이미 있어 즉시 뜨고, 폭만 한 박자 늦게
+                // 채워진다. 받고 나면 `_envWeekFetchedByFac` 가 서므로 **폴링
+                // 주기마다 다시 부르지 않는다** — 이 함수는 최소 5초마다 돈다.
+                if (!_weekFetched &&
+                        !(st._envWeekPending || {})[facilityUuid]) {
+                    _loadFacilityEnvWeek(uid, facilityUuid, pane, function () {
+                        var w = st._envWeekWantExpandByFac || {};
+                        if (w[facilityUuid]) {
+                            st._envWeekExpandedByFac = st._envWeekExpandedByFac || {};
+                            st._envWeekExpandedByFac[facilityUuid] = true;
+                            w[facilityUuid] = 0;
+                        }
+                        _prependFacilityEnvNow(uid, facilityUuid, pane);
+                    });
+                }
 
                 var indoor = rt.indoor || {};
                 var sensors = rt.sensors || {};
@@ -5094,6 +5146,7 @@
                     week:    _weekFetched
                         ? (st._envWeekByFac && st._envWeekByFac[facilityUuid]) || []
                         : undefined,
+                    weekToday: (st._envWeekTodayByFac || {})[facilityUuid] || null,
                     weekLazy: !_weekFetched
                 });
                 if (html) {

@@ -2238,6 +2238,49 @@
     return [p.labelFull || p.label, span, avg].filter(Boolean).join(' \u00b7 ');
   }
 
+  /* 오늘의 **최저~최고** — 밴드 바의 초록 폭.
+   *
+   * 이 줄은 지금까지 값 하나만 그렸다(트랙 위의 녹색 점 하나). 그런데 "지금
+   * 26.4℃" 는 그것만으로는 오늘이 어떤 날인지 말하지 못한다 — 새벽에 12℃
+   * 였는지 밤새 25℃ 였는지에 따라 같은 26.4 가 전혀 다른 뜻이다. 초록을
+   * **폭**으로 그리면 그 하루가 한 눈에 들어온다(`AoTViz.band` 의 `spanMin`/
+   * `spanMax`, 어휘는 "초록 = 실측, 직각선 = 목표").
+   *
+   * ⚠ **오늘 버킷은 계열의 마지막 점이 아니라 `k` 로 찾는다.** 창의 끝은 늘
+   *   오늘이 아니고(단계 창·`?end=`), 단위가 주(week)면 마지막 버킷은 하루가
+   *   아니라 그 주다 — 그것을 오늘의 폭이라고 그리면 **일주일치 진폭이 오늘로
+   *   보인다.** 부르는 쪽이 "이 계열의 오늘은 이 키다" 를 `opts.weekToday` 로
+   *   말해 주고(서버 응답의 `window.end`), 그 키가 없으면 폭을 그리지 않는다.
+   *
+   * ⚠ **누적형(`bars`)은 그리지 않는다.** 강우·DLI 처럼 0 에서 쌓이는 값의
+   *   "그날 최저~최고" 는 읽은 값의 진폭이지 쌓인 양이 아니라, 폭으로 그리면
+   *   누적을 진폭으로 오독하게 된다.
+   *
+   * 지금 값으로 폭을 **넓힌다**. 계열은 10분 캐시(`_PLOT_ENV_WEEK_TTL_S`)라
+   * 방금 찍힌 최고를 아직 모를 수 있는데, 그때 지금 값이 초록 밖에 서면 같은
+   * 줄이 스스로를 반박한다. 넓히는 것은 얼버무림이 아니다 — 지금 값도 오늘의
+   * 관측이므로 정의상 그 폭 안이다. */
+  function _todaySpan(wk, spec, unitOf, todayKey) {
+    if (!wk || !todayKey || wk.bars) return null;
+    var pts = wk.points || [];
+    var hit = null;
+    for (var i = 0; i < pts.length; i++) {
+      if (pts[i] && String(pts[i].k) === String(todayKey)) { hit = pts[i]; break; }
+    }
+    if (!hit) return null;
+    var lo = (hit.min != null) ? unitOf(+hit.min) : null;
+    var hi = (hit.max != null) ? unitOf(+hit.max) : null;
+    if (lo == null && hi == null) return null;
+    if (lo == null) lo = hi;
+    if (hi == null) hi = lo;
+    if (!isFinite(lo) || !isFinite(hi)) return null;
+    if (spec && spec.value != null && isFinite(spec.value)) {
+      lo = Math.min(lo, spec.value);
+      hi = Math.max(hi, spec.value);
+    }
+    return { lo: Math.min(lo, hi), hi: Math.max(lo, hi) };
+  }
+
   function _envNowRowHtml(r, opts) {
     opts = opts || {};
     var V = window.AoTViz;
@@ -2281,6 +2324,13 @@
         })
       });
     } else if (V && s.hasAxis) {
+      // 오늘의 폭 — 계열은 **판정 축과 단위가 다를 수 있다**(Pa 로 저장된 VPD).
+      // 지금 값이 `ML.bandValue` 로 환산돼 축에 놓이므로, 폭도 같은 함수를
+      // 지나야 한다. 안 그러면 630 Pa 짜리 최고가 kPa 축의 오른쪽 끝에 박힌다.
+      var _ML = window.AoTMapSensorLabels;
+      var _span = _todaySpan(wk, s, function (v) {
+        return (_ML && _ML.bandValue) ? _ML.bandValue(r.key, v, wk.unit) : v;
+      }, opts.weekToday);
       inner = V.band({
         label: name,
         value: s.value,
@@ -2288,6 +2338,12 @@
         valueSub: unit,
         min: s.min, max: s.max,
         okMin: s.okMin, okMax: s.okMax,
+        // ⚠ **숫자는 적지 않는다.** 폭을 글자로도 쓰면("오늘 22.8–33.7") 같은
+        // 줄의 기준 라벨과 대시 표기가 같아 둘이 한 덩어리로 읽히고, 줄이
+        // 여섯이면 그 혼동도 여섯이다 — 이 카드가 여러 번 지적받은 자리다
+        // ("한 줄에 너무 많은 정보는 혼란스러움"). 폭은 **길이**가 말한다.
+        spanMin: _span ? _span.lo : null,
+        spanMax: _span ? _span.hi : null,
         stale: s.stale,
         // **축의 끝을 적지 않는다.** 밴드 축의 양 끝(10~45°C 등)은 5단계 색을
         // 나누려고 정한 값이라 사람이 읽을 뜻이 없고, 기준 라벨이 그 자리로
@@ -2517,7 +2573,14 @@
     var _weekTried = (opts.week !== undefined);
     var _weekMatches = _weekTried && !!(opts.week.length &&
       shown.some(function (r) { return _weekSeriesFor(r.key, opts.week); }));
-    var _weekCapable = _weekTried ? _weekMatches : !!opts.weekLazy;
+    // ⚠ **여러 단위를 고르는 화면(`rangeModes`)에서는 접지 않는다.** 그 손잡이는
+    // 자료가 아니라 **보는 방법**이고, 그중 하나([오늘])는 언제나 내용이 있다.
+    // 접으면 지금 서 있는 칸까지 함께 사라져 되돌아올 길이 없어진다 — [일] 을
+    // 눌러 빈 창을 만난 사람이 [오늘] 로 못 돌아오는 자리였다. 빈 창은 손잡이를
+    // 없애는 대신 `rangeEmptyText` 가 말한다.
+    var _weekCapable = (opts.rangeModes && opts.rangeModes.length)
+      ? true
+      : (_weekTried ? _weekMatches : !!opts.weekLazy);
     if (_weekCapable) {
       // 대체하는 배지(`.aot-ov-degraded`)와 같은 글자 크기·색 톤을 쓴다 —
       // `.aot-ov-cardcfg`(점 세 개 전용, 큰 글자·호버 배경)를 여러 글자

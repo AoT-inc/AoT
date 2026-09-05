@@ -176,9 +176,23 @@
         var oe = pct(o.okMax, o.min, o.max);
         var out = isOutside(o.value, o.okMin, o.okMax);
 
+        /* ── 지금 위치 ────────────────────────────────────────────────
+         * 초록이 **폭**(그 기간의 최저~최고)을 차지하면서 "지금 이 안 어디쯤"
+         * 을 가리키는 표식이 사라졌다. 그것을 트랙 **바로 위**의 역삼각형이
+         * 되돌린다 — 트랙 안에 넣으면 초록·목표와 자리를 다투고, 그 자리를
+         * 두고 시도한 표현은 이미 여섯 번 되돌아왔다(파일 머리 주석).
+         *
+         * 색은 목표선과 **같다**(`--aot-viz-mark`). 색을 늘리지 않는다는 규칙
+         * 그대로다 — 초록(실측)과 갈리는 것이 색이고, 이 둘(지금·목표)은
+         * 트랙 안이냐 밖이냐로 갈린다.
+         *
+         * `okZone`(on/off 가동시간)에는 두지 않는다. 그 줄의 `.aot-viz-now`
+         * 가 이미 '오늘' 이라, 삼각형을 더하면 같은 것을 두 번 가리킨다. */
+        var cursor = (!o.okZone && p !== null);
         var html = '<div class="' +
-                   cls('aot-viz aot-viz--band', { stale: o.stale, out: out, empty: p === null,
-                                                  className: o.className }) +
+                   cls('aot-viz aot-viz--band' + (cursor ? ' aot-viz--cursor' : ''),
+                       { stale: o.stale, out: out, empty: p === null,
+                         className: o.className }) +
 '">';
         html += headHtml(o.label, o.valueText != null ? o.valueText : o.value, o.valueSub);
         html += '<div class="aot-viz-track">';
@@ -228,6 +242,10 @@
             html += '<div class="aot-viz-target" style="--aot-viz-pos:' +
                     oe.toFixed(2) + '"></div>';
         }
+        }
+        if (cursor) {
+            html += '<div class="aot-viz-cursor" style="--aot-viz-pos:' +
+                    p.toFixed(2) + '"></div>';
         }
         html += '</div>';
         // 밴드의 기준은 적정 범위이므로 눈금 라벨을 그 **중앙**에 붙인다.

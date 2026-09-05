@@ -1679,12 +1679,22 @@
               scale: scaleEnds
             });
           }
+          /* ── 한 기간짜리 밴드도 **폭**을 그린다 (2026-09-05) ──────────
+             값 하나(평균)만 세우면 그 기간이 잔잔했는지 요동쳤는지 사라진다 —
+             같은 24.0 ℃ 라도 19~34 였던 날과 23~25 였던 날은 전혀 다른 날이다.
+             기간이 여럿일 때 범위 도표가 막대로 말하는 것을 여기서는 초록 폭이
+             말한다. 어휘는 그대로다: **초록 = 실측, 직각선 = 목표, ▼ = 그 줄의
+             값**(`AoTViz.band` 가 값 위치에 자동으로 세운다).
+
+             ⚠ 스냅샷에 min/max 가 없는 옛 일지가 있다. 그때는 폭이 안 그려지고
+             ▼ 와 초록 점만 남는다 — 예전과 같은 그림이다. */
           return AoTViz.band({
             label: s.measurement_label,
             value: only.avg, valueText: valueText,
             min: sc.lo, max: sc.hi,
             okMin: tv.length ? Math.min.apply(null, tv) : null,
             okMax: tv.length ? Math.max.apply(null, tv) : null,
+            spanMin: only.min, spanMax: only.max,
             // 눈금은 서버가 만든 축의 양 끝이다(문구를 여기서 만들지 않는다).
             scale: scaleEnds
           });

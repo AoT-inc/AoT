@@ -215,6 +215,10 @@
             st.plot = (det && det.ok) ? det.plot : null;
             st.contents = (out[1] && out[1].ok) ? out[1] : null;
             render(uid);
+            // 오늘의 폭도 함께 늙는다. **버리지 않고 다시 받는다** — 버리면
+            // [일] 을 펴 둔 사람의 도표가 새로고침마다 사라졌다가 다시 눌러야
+            // 돌아온다(같은 창을 쓰기 때문이다).
+            if (needEnv) loadTodayWindow(uid, true);
         });
     }
 
@@ -407,6 +411,20 @@
      */
     var _ENV_WINDOW_DAYS = { day: 7, week: 56 };
 
+    /* [오늘] 밴드가 그리는 **오늘의 최저~최고**가 나오는 창.
+     *
+     * 고른 단계와 무관하게 **언제나 최근 7일·일 단위**다 — [오늘] 줄의 숫자는
+     * 지금 값이라(`plot.env.readings`), 지난 단계의 창에서 오늘을 찾으면 아무
+     * 것도 안 나온다.
+     *
+     * 키가 `envQuery` 의 [일] 모드(단계를 안 고른 경우)와 **같다.** 일부러 그
+     * 렇게 맞춘 것이다 — 같은 창을 두 번 묻지 않고, [일] 을 누르면 이미 받아
+     * 둔 것이 즉시 뜬다. */
+    function todayQuery() {
+        return { key: 'recent:' + _ENV_WINDOW_DAYS.day + '|day',
+                 qs: '?days=' + _ENV_WINDOW_DAYS.day + '&unit=day' };
+    }
+
     function envQuery(uid) {
         var st = S[uid];
         var unit = st.envMode;                    // 'day' | 'week'
@@ -476,11 +494,29 @@
         };
         var q = envQuery(uid);
         var hit = st.envCache[q.key];
-        // 아직 안 받았으면 "있을 수 있다" 만 알린다(`weekLazy`) — 손잡이는 그
-        // 뜻으로 먼저 뜨고, 실제 조회는 누를 때 시작한다.
-        if (st.envMode && hit !== undefined) opts.week = hit;
-        else if (!st.envMode) opts.weekLazy = true;
-        else opts.weekLazy = true;
+        if (st.envMode && hit !== undefined) {
+            opts.week = hit;
+            opts.weekToday = st.envEnd[q.key] || null;
+        } else if (!st.envMode) {
+            // ── [오늘] 도 계열이 필요하다 ────────────────────────────────
+            //
+            // 이 보기의 밴드 줄은 값 하나가 아니라 **오늘의 최저~최고 폭**을
+            // 그린다(`_todaySpan`, aot-map-popup.js). 재료는 [일] 도표와 **같은
+            // 버킷**이다 — 따로 계산하면 같은 하루를 두 보기가 다르게 말한다.
+            //
+            // 없으면 배경에서 받아 온다. 값은 `/contents` 에 이미 있어 즉시
+            // 뜨고 폭만 한 박자 늦게 채워진다.
+            var tq = todayQuery();
+            var today = st.envCache[tq.key];
+            if (today !== undefined) {
+                opts.week = today;
+                opts.weekToday = st.envEnd[tq.key] || null;
+            } else {
+                // 손잡이는 "받을 수 있다" 는 뜻으로 먼저 뜬다.
+                opts.weekLazy = true;
+                loadTodayWindow(uid);
+            }
+        } else opts.weekLazy = true;
 
         slot.innerHTML = P.buildEnvNowHtml(plot.env, opts);
 
@@ -542,12 +578,59 @@
                 if (!S[uid] || S[uid] !== st || st.opts.plotUuid !== uuid) return;
                 st.envFetching = false;
                 st.envCache[q.key] = (wk && wk.ok && wk.series) ? wk.series : [];
+                // 계열의 **오늘**. 창의 끝이 늘 오늘은 아니라(지난 단계·주 단위)
+                // 서버가 말한 것을 그대로 든다 — 여기서 날짜를 만들면 브라우저
+                // 시간대로 잘라 시차가 있는 설치에서 하루 어긋난다.
+                st.envEnd[q.key] = (wk && wk.window) ? wk.window.end : null;
                 drawEnv(uid);
             })
             .catch(function () {
                 if (!S[uid] || S[uid] !== st || st.opts.plotUuid !== uuid) return;
                 st.envFetching = false;
                 st.envCache[q.key] = [];
+                drawEnv(uid);
+            });
+    }
+
+    /** [오늘] 밴드가 쓸 창을 배경에서 받아 둔다.
+     *
+     * `st.envFetching`(모드 손잡이의 자물쇠)과 **다른 자물쇠**를 쓴다 — 같이
+     * 쓰면 이 배경 조회가 도는 동안 [일]·[주] 클릭이 조용히 씹힌다.
+     *
+     * 인자 하나가 두 뜻을 가른다:
+     *
+     *   force 없음 — **없으면 채운다**(그리다가 부른다).
+     *   force 있음 — **있으면 갱신한다**(새로고침 주기에서 부른다).
+     *
+     * 갱신이 필요한 이유: 안 하면 위젯이 살아 있는 내내 처음 받은 폭이 그대로
+     * 남아 저녁에도 아침의 최고를 보게 된다.
+     *
+     * ⚠ **갱신은 이미 받아 둔 창에만 한다.** 보기 단위는 위젯 설정에 저장되므로
+     * ([오늘]|[일]|[주]) 처음부터 [주] 로 열리는 위젯이 있는데, 그 사람은 [오늘]
+     * 밴드를 한 번도 안 본다 — 거기까지 주기마다 물으면 아무도 안 보는 조회가
+     * 5분마다 돈다. 눌러서 [오늘] 로 오면 그때 `force` 없이 채워진다.
+     */
+    function loadTodayWindow(uid, force) {
+        var st = S[uid];
+        if (!st || st.envTodayPending) return;
+        var uuid = st.opts.plotUuid;
+        if (!uuid) return;
+        var q = todayQuery();
+        var have = (st.envCache[q.key] !== undefined);
+        if (force ? !have : have) return;
+
+        st.envTodayPending = true;
+        fetch('/api/geo/plot/' + encodeURIComponent(uuid) + '/env_series' + q.qs,
+              { cache: 'no-store' })
+            .then(function (r) { return r.ok ? r.json() : null; })
+            .catch(function () { return null; })
+            .then(function (wk) {
+                if (!S[uid] || S[uid] !== st || st.opts.plotUuid !== uuid) return;
+                st.envTodayPending = false;
+                // 실패해도 빈 배열을 남긴다 — 안 남기면 그릴 때마다 다시 물어
+                // 조회가 끝없이 돈다(끊긴 서버에서 특히).
+                st.envCache[q.key] = (wk && wk.ok && wk.series) ? wk.series : [];
+                st.envEnd[q.key] = (wk && wk.window) ? wk.window.end : null;
                 drawEnv(uid);
             });
     }
@@ -1006,6 +1089,8 @@
             // 창(단위 + 고른 단계)마다 계열을 따로 들고 있는다. 단위를 오가거나
             // 축에서 단계를 되짚을 때 같은 창을 다시 묻지 않는다.
             envCache: {},
+            envEnd: {},            // 창 → 그 계열의 마지막 날(`window.end`)
+            envTodayPending: false,
             notesCache: {},        // 재렌더 때 목록이 자리막이로 스치지 않게
             photoCache: {},        // 최신 사진 — 노트 응답을 구획별로 들고 있는다
             plots: [], plot: null, contents: null,
@@ -1024,6 +1109,8 @@
                 // 그것은 "어떻게 보나" 라 구획이 바뀌어도 뜻이 이어진다.
                 st.envFetching = false;
                 st.envCache = {};
+                st.envEnd = {};
+                st.envTodayPending = false;
                 st.notesCache = {};    // 다른 구획의 노트를 보여 주면 안 된다
                 st.photoCache = {};
                 render(uid);              // 고른 즉시 자리막이로 바뀐다
