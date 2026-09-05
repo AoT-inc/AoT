@@ -407,6 +407,10 @@ def _get_all_tools(app, role=None, tiered=None):
 # 15,000 으로 낮춰 1.67배를 둔다. 추정기를 함께 고쳤으므로 이중 안전장치다.
 _MAX_RESPONSE_TOKENS = int(os.environ.get("AOT_MCP_MAX_RESPONSE_TOKENS", "15000"))
 
+#: 도구가 응답에 실어 보내는 캡 우선순위 힌트의 키. `_cap_result` 가 읽고
+#: **응답에서 떼어낸다** — 클라이언트가 볼 내용이 아니다.
+CAP_PRIORITY_KEY = _CAP_PRIORITY_KEY = "_cap_priority"
+
 
 # ASCII 계열 몇 글자를 1토큰으로 셀 것인가. 영어 산문의 통념은 4지만 **여기서
 # 재는 것은 JSON 이다** — 중괄호·따옴표·콜론·이스케이프가 촘촘해 같은 글자 수라도
@@ -497,7 +501,7 @@ def _heaviest_column(lst):
     return k, weights[k]
 
 
-def _thin_lists(result, target):
+def _thin_lists(result, target, priority=None):
     """상한을 넘긴 응답에서 목록의 **열**부터 줄인다 → {경로: [뺀 키…]}.
 
     행을 자르면 남는 것은 "몇 건 중 몇 건" 이다. 실측(2026-08-26, 로컬
@@ -515,6 +519,28 @@ def _thin_lists(result, target):
     열을 다 빼도 상한 아래로 못 내려가면 남은 몫은 호출부의 행 자르기가
     맡는다. 그때 그 목록은 이미 얇아져 있으므로, 같은 상한 안에 **더 많은
     행**이 남는다.
+
+    ## `priority` — 크기만으로 고르면 요청한 것이 먼저 사라진다
+
+    무게로만 고르면 **호출자가 달라고 한 것**이 가장 크다는 이유로 먼저
+    잘린다. 실측(2026-09-05): 일지를 하루로 좁혀 부르는데도 `buckets.env`
+    (그 하루의 측정값 — 부른 이유 그 자체)가 빠지고, 날짜와 무관하게 늘 실리는
+    `stage_summaries.target_drift` 가 남았다.
+
+    그래서 도구가 자기 응답의 순서를 말할 수 있게 한다:
+
+        {'drop_first': [('stage_summaries', 'target_drift'), …],
+         'keep_last':  [('buckets', 'env'), …],
+         'narrow_with': "Call again with date_from/date_to …"}
+
+    `drop_first` 는 무게와 무관하게 **먼저** 빼고, `keep_last` 는 다른 후보가
+    하나도 없을 때만 건드린다. 힌트를 주지 않는 도구는 예전 그대로 무게로
+    고른다 — 규칙을 캡 쪽 표에 두면 도구가 늘 때마다 두 곳이 갈라진다.
+
+    `narrow_with` 는 이 함수가 아니라 호출부(`_cap_result`)가 쓴다 — 잘렸을 때
+    안내 문장에 이어 붙는다. 같은 딕셔너리에 둔 이유는 **둘 다 "도구가 자기
+    응답에 대해 아는 것"** 이고, 키를 나누면 도구가 두 개를 관리하게 되기
+    때문이다.
     """
     omitted = {}
     for _ in range(24):
@@ -523,14 +549,55 @@ def _thin_lists(result, target):
             break
         slots = []
         _list_slots(result, slots)
-        best = None
-        for parent, key, path, lst in slots:
-            col = _heaviest_column(lst)
-            if col and (best is None or col[1] > best[0]):
-                best = (col[1], parent, key, path, lst, col[0])
-        if best is None:
-            break
-        _, parent, key, path, lst, col_key = best
+
+        drop_first = list((priority or {}).get('drop_first') or [])
+        keep_last = {tuple(x) for x in ((priority or {}).get('keep_last') or [])}
+
+        # 1) 도구가 "이것부터 빼라" 고 한 것 — 무게를 보지 않는다.
+        #
+        # `_heaviest_column` 과 달리 **컨테이너로 한정하지 않는다.** 그 제한은
+        # "무엇인지 말하는 이름·식별자를 지킨다" 는 뜻인데, 여기서는 도구가
+        # 자기 응답을 알고 지목한 것이므로 긴 산문(`stages.guidance`) 같은
+        # 문자열 열도 뺄 수 있다. 자동 선택에는 그 제한이 그대로 남는다.
+        pick = None
+        for want_path, want_col in drop_first:
+            for parent, key, path, lst in slots:
+                if path != want_path:
+                    continue
+                if not any(isinstance(it, dict) and want_col in it for it in lst):
+                    continue      # 이미 빠졌다
+                pick = (parent, key, path, lst, want_col)
+                break
+            if pick:
+                break
+
+        # 2) 없으면 예전대로 가장 무거운 열. 단 `keep_last` 는 미뤄 둔다.
+        if pick is None:
+            # `keep_last` 로 지목된 열은 후보에서 아예 뺀다(위 3 참고).
+            best = None
+            for parent, key, path, lst in slots:
+                col = _heaviest_column(lst)
+                if not col:
+                    continue
+                cand = (col[1], parent, key, path, lst, col[0])
+                if (path, col[0]) in keep_last:
+                    continue
+                if best is None or col[1] > best[0]:
+                    best = cand
+            # 3) 미뤄 둔 것밖에 남지 않았으면 **여기서 멈춘다.** 열은 통째로
+            #    빠지므로, 조금 모자란 것을 메우려고 지켜야 할 열을 뽑으면
+            #    과잉 절삭이 된다 — 실측: 340 토큰이 모자란데 5,682 토큰짜리
+            #    `env` 를 통째로 뺐다(측정값 없는 일지가 나갔다).
+            #
+            #    남은 몫은 호출부의 **행 자르기**가 맡는다. "3건 중 2건" 이지만
+            #    측정값이 살아 있는 편이, 3건 모두 있으나 측정값이 없는 것보다
+            #    쓸모 있다.
+            if best is None:
+                break
+            _, parent, key, path, lst, col_key = best
+            pick = (parent, key, path, lst, col_key)
+
+        parent, key, path, lst, col_key = pick
         for item in lst:
             item.pop(col_key, None)
         keys = omitted.setdefault(path, {"keys": [], "count": len(lst)})["keys"]
@@ -556,7 +623,13 @@ def _cap_result(result, tool_name, max_tokens=None):
     # 조용히 사라진다.
     if max_tokens is None:
         max_tokens = _MAX_RESPONSE_TOKENS
-    if max_tokens <= 0 or not isinstance(result, dict):
+    if not isinstance(result, dict):
+        return result
+
+    # 힌트는 캡을 위한 지시이지 응답의 내용이 아니다 — **항상** 떼어낸다.
+    # 캡이 꺼져 있거나(0) 응답이 작아 자를 필요가 없을 때도 마찬가지다.
+    priority = result.pop(_CAP_PRIORITY_KEY, None)
+    if max_tokens <= 0:
         return result
 
     text = json.dumps(result, ensure_ascii=False)
@@ -572,7 +645,7 @@ def _cap_result(result, tool_name, max_tokens=None):
 
     # 열을 먼저 줄인다. 여기서 상한 아래로 내려가면 행은 하나도 안 잘리고,
     # 못 내려가더라도 목록이 얇아진 만큼 아래 행 자르기가 더 많이 남긴다.
-    for path, info in _thin_lists(result, target).items():
+    for path, info in _thin_lists(result, target, priority).items():
         # 열만 줄인 목록은 **전 건이 남아 있다** — kept 와 total 을 같이 적어
         # 진단에서 "몇 건 중 몇 건" 과 한눈에 구분되게 한다.
         dropped.append({"path": path, "kept": info["count"],
@@ -682,6 +755,20 @@ def _cap_result(result, tool_name, max_tokens=None):
                       "size limit (see the '*_fields_omitted' notes for which). "
                       "Do not re-query looking for missing entries; ask for a "
                       "single entry if you need the dropped fields.")
+        # ── 어떻게 좁히는지는 **도구만 안다** ──────────────────────────
+        # 위 문장은 "narrow the query" 까지밖에 말하지 못한다. 무엇으로
+        # 좁히는지(어떤 인자가 있는지)는 도구마다 다르고, 여기서는 알 수
+        # 없다. 그래서 도구가 `_cap_priority.narrow_with` 로 한 줄을 실어
+        # 보내면 그것을 이어 붙인다 — 없으면 예전 그대로다.
+        #
+        # 실측(2026-09-04)에서 실제로 아팠던 자리다: 일지를 통째로 부르면
+        # 측정값이 잘리는데, 안내는 "좁혀서 다시 부르라" 고만 해서 모델이
+        # **같은 조회를 반복**했다. `date_from`/`granularity` 가 있다는 것을
+        # 말해 주면 두 번째 호출이 달라진다.
+        narrow = (priority or {}).get("narrow_with")
+        if rows_cut or text_cut:
+            if isinstance(narrow, str) and narrow.strip():
+                advice = advice + " " + narrow.strip()
         result["_truncated"] = {
             "reason": "response exceeded the MCP response size limit",
             "estimated_tokens_before": original,

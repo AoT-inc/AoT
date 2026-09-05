@@ -75,10 +75,30 @@ DAILY_DETAIL_MAX_DAYS = 60
 #: (그날 최대 − 그날 최소)로 파생한다. 확장은 여기 키 하나를 더하면 된다.
 CUMULATIVE_METER_MEASUREMENTS = frozenset({'volume'})
 
-#: 채널을 순회하며 쿼리를 쏘는 사이의 간격(초). 저사양 기기에서 짧은 버스트가
-#: 공유 자원(InfluxDB·CPU)을 먹통으로 만드는 것은 이 저장소가 LoRaWAN 다운링크
-#: 에서 이미 겪고 페이싱으로 해결한 실패다. 같은 원칙을 여기에도 적용한다.
-QUERY_PACING_SEC = 0.05
+#: 채널을 순회하며 일을 하는 동안 **얼마나 양보하는가**. 저사양 기기에서 짧은
+#: 버스트가 공유 자원(InfluxDB·CPU)을 먹통으로 만드는 것은 이 저장소가 LoRaWAN
+#: 다운링크에서 이미 겪고 페이싱으로 해결한 실패다. 여기도 같은 걱정이지만
+#: **재는 축이 다르다.**
+#:
+#: 예전에는 채널마다 고정 0.05초를 쉬었다. 그것은 채널 수에만 비례해, **일이
+#: 얼마나 무거웠는지와 무관하게** 같은 값이 나온다. 실측(2026-09-05, 김제 3-1,
+#: 예열 상태)에서 그 어긋남이 그대로 드러났다:
+#:
+#:     하루치  조회 0.40초  ·  페이싱 0.80초 (전체의 53%)
+#:     51일치  조회 0.64초  ·  페이싱 0.80초 (전체의 42%)
+#:
+#: 하루짜리 일지가 **조회의 두 배를 쉬고 있었다.** 대부분의 실사용이 그 짧은
+#: 쪽이다. 반대로 서버가 느려 조회가 10배 걸리는 날에도 양보는 그대로 0.05초라,
+#: 정작 양보가 필요한 순간에 늘지 않는다.
+#:
+#: 그래서 간격이 아니라 **비율**로 정한다 — 이 작업은 자기가 쓴 시간의
+#: `(1 - QUERY_DUTY) / QUERY_DUTY` 만큼 쉰다. 0.8 이면 4 만큼 일하고 1 만큼
+#: 쉰다. 서버가 힘들면 조회가 길어지므로 **양보도 함께 늘어난다**.
+QUERY_DUTY = 0.8
+
+#: 한 번의 양보 상한. 조회 하나가 타임아웃 근처까지 갔을 때 그 비율만큼 자면
+#: 일지 하나가 몇 분씩 늘어난다 — 양보는 자기 조절이지 지연 예산이 아니다.
+QUERY_PACING_MAX_SEC = 0.5
 
 #: 계약의 `caveats` 에 실어 문서 머리말에 찍는 문구 키. 번역은 화면에서 한다.
 #: 값이 아니라 **키**인 이유: 문구를 여기서 한국어로 박으면 22개 로케일 중
@@ -359,11 +379,36 @@ def gdd_for_journal(plot, end_date, start_date=None):
     return out
 
 
+def _pace(started_at):
+    """이 채널에 쓴 만큼에 비례해 양보한다 → 실제로 쉰 초(계측용).
+
+    `started_at` 은 `time.monotonic()` 값이다 — 벽시계로 재면 NTP 보정이나
+    서머타임에 음수가 나온다.
+
+    **재는 것은 조회 시간이 아니라 채널 처리 전체**다. 파이썬 쪽 접기·태양시
+    판정도 같은 CPU 를 쓰므로, 조회만 세면 그만큼 양보가 모자란다.
+    """
+    busy = time.monotonic() - started_at
+    if busy <= 0:
+        return 0.0
+    nap = min(QUERY_PACING_MAX_SEC, busy * (1.0 - QUERY_DUTY) / QUERY_DUTY)
+    if nap > 0:
+        time.sleep(nap)
+    return nap
+
+
 def sun_lookup(target_id):
     """대상 → `(현지날짜) → (일출, 일몰, 일장시간)` 조회 함수. 못 구하면 `None`.
 
     `aot.utils.solar.sun_times` 는 **target_id 로 좌표를 해소**하고 결과를
-    캐시하므로, 날짜마다 불러도 같은 날은 한 번만 계산한다.
+    캐시한다. 다만 그 캐시의 키가 `(위도, 경도, tz, 날짜)` 라 **키를 만들기
+    위한 좌표 해소는 캐시 밖**이다 — 날짜마다 부르면 좌표도 날마다 다시
+    푼다. 좌표는 날짜와 무관한데도.
+
+    실측(2026-09-05, 51일 일지): 그 해소가 `db_retrieve_table_daemon` 561회를
+    타고 **1.14초**, 생성 전체 3.6초의 32% 였다. 값을 읽는 쿼리 48회 전부가
+    0.70초인데 그보다 크다. 그래서 여기서 **한 번만** 풀어 좌표로 넘긴다 —
+    캐시 수명이 일지 하나라, 그동안 장치를 옮겨도 다음 일지부터 반영된다.
 
     ## 왜 필요한가
 
@@ -378,13 +423,30 @@ def sun_lookup(target_id):
     from aot.utils import solar
 
     cache = {}
+    coords = []          # [] = 아직 안 품, [None] = 못 구함, [lat, lon] = 구함
+
+    def _coords():
+        if not coords:
+            try:
+                from aot.utils.timekit import resolve_coords
+                lat, lon, _src = resolve_coords(None, target_id=target_id)
+            except Exception:
+                lat = lon = None
+            coords.extend([lat, lon] if lat is not None and lon is not None
+                          else [None])
+        return (coords[0], coords[1]) if len(coords) == 2 else (None, None)
 
     def _lookup(local_date):
         if local_date in cache:
             return cache[local_date]
         result = None
+        lat, lon = _coords()
+        if lat is None:
+            cache[local_date] = None
+            return None
         try:
-            times = solar.sun_times(target_id=target_id, date=local_date)
+            times = solar.sun_times(latitude=lat, longitude=lon,
+                                    date=local_date)
             if times is not None and times.sunrise and times.sunset:
                 hours = (times.sunset - times.sunrise).total_seconds() / 3600.0
                 result = (times.sunrise, times.sunset, round(hours, 2))
@@ -1616,6 +1678,7 @@ def env_channel_series(device_ids, start_str, end_str, tz,
         scope = 'outdoor' if dm.device_id in (outdoor_ids or set()) else 'indoor'
         if not _wanted_measurement(dm, wanted, scope=scope):
             continue
+        _t0 = time.monotonic()
         stats = daily_channel_stats(dm, start_str, end_str, tz,
                                     granularity=granularity,
                                     bucket_sec=bucket_sec, sun_fn=sun_fn,
@@ -1624,7 +1687,7 @@ def env_channel_series(device_ids, start_str, end_str, tz,
             errors.append({'device_id': dm.device_id,
                            'channel': getattr(dm, 'channel', None),
                            'reason': 'query-failed-or-unusable'})
-            time.sleep(QUERY_PACING_SEC)
+            _pace(_t0)
             continue
         stats['sensor'] = names.get(dm.device_id) or dm.device_id
         # **사용자가 붙인 채널 이름이 정본이다.** measurement 키는 일반명이라
@@ -1638,7 +1701,7 @@ def env_channel_series(device_ids, start_str, end_str, tz,
         # 구획의 온도와 외기가 한 줄이 된다. 위에서 이미 정한 것을 그대로 쓴다.
         stats['scope'] = scope
         series.append(stats)
-        time.sleep(QUERY_PACING_SEC)
+        _pace(_t0)
     return series, errors
 
 
@@ -2067,6 +2130,7 @@ def control_rows_by_bucket(actuators, start_str, end_str, tz,   # noqa: C901
         oid = a.get('output_id')
         if not oid:
             continue
+        _t0 = time.monotonic()
         try:
             by_bucket = get_operational_seconds_by_day(
                 oid, start_str, end_str, tz=tz,
@@ -2074,7 +2138,7 @@ def control_rows_by_bucket(actuators, start_str, end_str, tz,   # noqa: C901
         except Exception as exc:
             logger.warning('journal: 가동시간 조회 실패(%s): %s', oid, exc)
             errors.append({'output_id': oid, 'reason': 'query-failed'})
-            time.sleep(QUERY_PACING_SEC)
+            _pace(_t0)
             continue
         for key, secs in by_bucket.items():
             if key not in out:
@@ -2103,7 +2167,7 @@ def control_rows_by_bucket(actuators, start_str, end_str, tz,   # noqa: C901
                     'source': flow.get('source'),
                 }
             out[key].append(row)
-        time.sleep(QUERY_PACING_SEC)
+        _pace(_t0)
         if not any(key in out for key in by_bucket):
             silent.append(a.get('name') or oid[:8])
     for key in out:
@@ -5974,11 +6038,33 @@ def render_plot_journal_markdown(journal_data, granularity=None):
 #
 #   a) 예방이 우선 — 시작하기 전에 세어 보고 넘으면 **시작하지 않는다**.
 #   b) 백그라운드 스레드 + 전역 단일 실행 잠금 (routes_geo._start_overlay_tiling).
-#   c) 채널 간 페이싱 (QUERY_PACING_SEC — LoRaWAN 다운링크와 같은 원칙).
+#   c) 채널 간 페이싱 (QUERY_DUTY — LoRaWAN 다운링크와 같은 원칙).
 #   d) 중간에 죽은 작업 회수 — 저사양 기기는 재시작이 드물지 않다.
 
 #: 한 일지가 쏠 수 있는 InfluxDB 쿼리 수 상한. 환경 채널당 3회(min/max/mean) +
 #: 제어 채널당 1회(sum)로 세며, **기간과 무관**하다.
+#:
+#: ⚠ 세 상한은 서로 다른 것을 잡고, **실제로 걸리는 것은 대개 행 수 하나**다.
+#:   실측(2026-09-05, 김제 3-1 — 환경 15채널 중 원형 2 + 제어 1):
+#:
+#:       일수     쿼리      행     판정
+#:          1       44    2,472   ok
+#:         51       44  126,072   ok
+#:        202       44  499,344   ok
+#:        205       44  506,760   too-much-data      ← 여기서 걸린다
+#:       1101       44           period-too-long     ← 이미 한참 전에 걸렸다
+#:
+#:   쿼리 수는 기간이 아무리 길어도 44 로 고정이라 상한 240 에 닿지 않는다.
+#:   기간 상한 1,100 일도 이 규모에서는 **도달 불가**다 — 하루 행 수가
+#:   500,000/1,100 ≈ 455 미만일 때만 기간이 먼저 걸리고, 그것은 대략 환경
+#:   채널 6개 미만인 대상뿐이다.
+#:
+#:   그래서 `period-too-long` 안내("기간이 너무 깁니다")는 채널이 아주 적은
+#:   대상에서만 나온다. **"기간을 줄이세요" 라고 말하는 자리는 실제로는
+#:   `too-much-data` 쪽**이고, 그 문구가 기간과 범위를 함께 말하는 이유가
+#:   여기 있다. 셋 중 하나를 만질 때는 이 관계를 함께 볼 것 — 쿼리 상한만
+#:   낮추면 아무 일도 안 일어나고, 행 상한만 올리면 기간 상한이 그제야
+#:   의미를 갖는다.
 MAX_QUERIES_PER_JOURNAL = 240
 
 #: 기간 상한(일). 횟수 상한만으로는 **스캔 부하가 안 잡힌다** — 채널 1개짜리

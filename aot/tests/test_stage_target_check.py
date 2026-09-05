@@ -27,7 +27,7 @@ def _reading(value, sensor='온습도_6', others=None):
 class TestItPairsTargetWithReading:
     def test_the_gap_is_computed(self, monkeypatch):
         monkeypatch.setattr(S, '_latest_by_measurement',
-                            staticmethod(lambda a, b=None: {'temperature': _reading(25.2)}))
+                            staticmethod(lambda a, b=None, **_: {'temperature': _reading(25.2)}))
         out = S._stage_target_check(_brief(
             [{'key': 'temp_day', 'label': 'Day temp', 'unit': '°C',
               'measurement': 'temperature', 'value': 26.0, 'observable': True}],
@@ -53,7 +53,7 @@ class TestItDoesNotManufactureProblems:
     def test_a_non_observable_target_is_not_reported_as_a_missing_sensor(self, monkeypatch):
         """CO2·DLI 처럼 센서로 잴 수 없다고 선언된 항목을 '센서 없음' 으로
         보고하면 없는 문제를 만든다."""
-        monkeypatch.setattr(S, '_latest_by_measurement', staticmethod(lambda a, b=None: {}))
+        monkeypatch.setattr(S, '_latest_by_measurement', staticmethod(lambda a, b=None, **_: {}))
         out = S._stage_target_check(_brief(
             [{'key': 'co2', 'label': 'CO2', 'measurement': 'co2',
               'value': 1000.0, 'observable': False}],
@@ -63,7 +63,7 @@ class TestItDoesNotManufactureProblems:
         assert 'CO2' not in (out.get('no_reading_for') or [])
 
     def test_a_measurable_target_without_a_reading_is_reported(self, monkeypatch):
-        monkeypatch.setattr(S, '_latest_by_measurement', staticmethod(lambda a, b=None: {}))
+        monkeypatch.setattr(S, '_latest_by_measurement', staticmethod(lambda a, b=None, **_: {}))
         out = S._stage_target_check(_brief(
             [{'key': 'rh', 'label': 'Humidity', 'measurement': 'humidity',
               'value': 70.0, 'observable': True}],
@@ -87,7 +87,7 @@ class TestTheRawDictShapeStillWorks:
     def test_a_dict_of_targets_is_accepted(self, monkeypatch):
         """정규화를 거치지 않은 payload 에서 조용히 비어 버리지 않게 한다."""
         monkeypatch.setattr(S, '_latest_by_measurement',
-                            staticmethod(lambda a, b=None: {'temperature': _reading(24.0)}))
+                            staticmethod(lambda a, b=None, **_: {'temperature': _reading(24.0)}))
         brief = {'stage': {'name': '정식기', 'targets': {'temp_day': 26.0}},
                  'program': {'name': '무', 'target_defs': [
                      {'key': 'temp_day', 'label': 'Day temp', 'unit': '°C',
@@ -120,7 +120,7 @@ class TestItSaysWhichSensorTheReadingCameFrom:
 
     def test_the_sensor_name_travels_with_the_reading(self, monkeypatch):
         monkeypatch.setattr(S, '_latest_by_measurement', staticmethod(
-            lambda a, b=None: {'temperature': _reading(35.6, '온습도_6')}))
+            lambda a, b=None, **_: {'temperature': _reading(35.6, '온습도_6')}))
         out = S._stage_target_check(_brief(
             [{'key': 'temp_day', 'label': 'Day temp', 'measurement': 'temperature',
               'value': 25.0, 'observable': True}], sensors={'in_plot': ['d1']}))
@@ -128,7 +128,7 @@ class TestItSaysWhichSensorTheReadingCameFrom:
 
     def test_the_other_sensors_are_listed(self, monkeypatch):
         monkeypatch.setattr(S, '_latest_by_measurement', staticmethod(
-            lambda a, b=None: {'temperature': _reading(
+            lambda a, b=None, **_: {'temperature': _reading(
                 35.6, '온습도_6', others=[{'sensor': '토양온습도_4', 'value': 36.25}])}))
         out = S._stage_target_check(_brief(
             [{'key': 'temp_day', 'label': 'Day temp', 'measurement': 'temperature',
@@ -137,7 +137,7 @@ class TestItSaysWhichSensorTheReadingCameFrom:
 
     def test_the_note_warns_about_same_measurement_sensors(self, monkeypatch):
         monkeypatch.setattr(S, '_latest_by_measurement', staticmethod(
-            lambda a, b=None: {'temperature': _reading(35.6)}))
+            lambda a, b=None, **_: {'temperature': _reading(35.6)}))
         out = S._stage_target_check(_brief(
             [{'key': 'temp_day', 'label': 'Day temp', 'measurement': 'temperature',
               'value': 25.0}], sensors={'in_plot': ['d1']}))
@@ -150,7 +150,7 @@ class TestDayAndNightTargetsDoNotCrossCompare:
 
     def _run(self, monkeypatch, is_day):
         monkeypatch.setattr(S, '_latest_by_measurement', staticmethod(
-            lambda a, b=None: {'temperature': _reading(35.6)}))
+            lambda a, b=None, **_: {'temperature': _reading(35.6)}))
         import aot.utils.solar as solar
         monkeypatch.setattr(solar, 'is_daytime', lambda **kw: is_day)
         return S._stage_target_check(_brief(
@@ -193,7 +193,7 @@ class TestCurveDrivenTargetsAreNotDroppedSilently:
     없는 것처럼 보인다 — 실측에서 VPD 가 그랬다."""
 
     def test_a_curve_target_is_reported_as_following_a_curve(self, monkeypatch):
-        monkeypatch.setattr(S, '_latest_by_measurement', staticmethod(lambda a, b=None: {}))
+        monkeypatch.setattr(S, '_latest_by_measurement', staticmethod(lambda a, b=None, **_: {}))
         out = S._stage_target_check(_brief(
             [{'key': 'vpd', 'label': 'VPD', 'measurement': 'vapor_pressure_deficit',
               'value': None, 'source': 'method', 'method_name': 'vpd'}],
@@ -202,7 +202,7 @@ class TestCurveDrivenTargetsAreNotDroppedSilently:
         assert 'VPD' not in (out.get('no_reading_for') or [])
 
     def test_a_nameless_curve_still_says_it_follows_one(self, monkeypatch):
-        monkeypatch.setattr(S, '_latest_by_measurement', staticmethod(lambda a, b=None: {}))
+        monkeypatch.setattr(S, '_latest_by_measurement', staticmethod(lambda a, b=None, **_: {}))
         out = S._stage_target_check(_brief(
             [{'key': 'vpd', 'label': 'VPD', 'value': None,
               'source': 'method', 'method_uuid': 'm-1'}], sensors={'in_plot': ['d1']}))
@@ -229,7 +229,7 @@ class TestFacilityPlotSensorsAreNotSkipped:
     def _captured(self, monkeypatch):
         calls = []
         monkeypatch.setattr(S, '_latest_by_measurement', staticmethod(
-            lambda a, b=None: calls.append((list(a or []), list(b or [])))
+            lambda a, b=None, **_: calls.append((list(a or []), list(b or [])))
             or {'temperature': _reading(25.0)}))
         return calls
 
@@ -276,7 +276,7 @@ class TestItLooksBackNotJustAtNow:
     def _out(self, monkeypatch, is_day=True, latest=None, recent_days=None):
         import aot.aot_flask.geo.plot_journal as PJ
         monkeypatch.setattr(S, '_latest_by_measurement',
-                            staticmethod(lambda a, b=None: {}))
+                            staticmethod(lambda a, b=None, **_: {}))
         monkeypatch.setattr('aot.utils.solar.is_daytime',
                             lambda **k: is_day)
         monkeypatch.setattr(PJ, 'recent_target_drift',

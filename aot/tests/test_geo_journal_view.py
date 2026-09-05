@@ -5693,3 +5693,175 @@ class TestExcludedMeasurementsSayWhy(unittest.TestCase):
         text = str(PJ.caveat_text(
             'measurements-excluded:temperature,humidity'))
         self.assertNotIn('diagnostic', text.lower())
+
+
+class TestSunLookupResolvesTheLocationOnce(unittest.TestCase):
+    """좌표는 날짜와 무관한데 날마다 다시 풀고 있었다.
+
+    `solar.sun_times` 의 캐시 키가 `(위도, 경도, tz, 날짜)` 라, **키를 만들기
+    위한 좌표 해소는 캐시 밖**이다. 51일 일지에서 그 해소가
+    `db_retrieve_table_daemon` 561회를 타고 1.14초 — 값을 읽는 InfluxDB 쿼리
+    48회 전부(0.70초)보다 컸다(실측 2026-09-05).
+
+    **에러가 나지 않는 종류의 낭비**라, 기간이 길어질수록 조용히 커진다.
+    """
+
+    def _lookup_with_counters(self):
+        """`sun_lookup` 을 가짜 좌표·태양시 위에서 돌리고 호출 수를 센다."""
+        from datetime import datetime, timedelta, timezone
+        from aot.utils import solar
+        from aot.utils import timekit
+        calls = {'coords': 0, 'sun': 0}
+
+        def fake_coords(entity, target_id=None):
+            calls['coords'] += 1
+            return 35.8, 126.9, 'test'
+
+        class _T:
+            def __init__(self, d):
+                base = datetime(d.year, d.month, d.day, tzinfo=timezone.utc)
+                self.sunrise = base + timedelta(hours=6)
+                self.sunset = base + timedelta(hours=19)
+
+        def fake_sun(target_id=None, entity=None, date=None,
+                     latitude=None, longitude=None):
+            calls['sun'] += 1
+            # 좌표를 받았으면 그것으로 계산한다 — 이 갈래를 타야 캐시 밖의
+            # 해소가 사라진다.
+            calls.setdefault('by_coords', 0)
+            if latitude is not None:
+                calls['by_coords'] += 1
+            return _T(date)
+
+        real_coords = timekit.resolve_coords
+        real_sun = solar.sun_times
+        timekit.resolve_coords = fake_coords
+        solar.sun_times = fake_sun
+        try:
+            lookup = PJ.sun_lookup('plot-uuid')
+            days = [date(2026, 7, d) for d in range(1, 21)]
+            results = [lookup(d) for d in days]
+        finally:
+            timekit.resolve_coords = real_coords
+            solar.sun_times = real_sun
+        return calls, results
+
+    def test_the_location_is_resolved_once_for_the_whole_journal(self):
+        calls, _ = self._lookup_with_counters()
+        self.assertEqual(calls['coords'], 1,
+                         '좌표 해소가 날마다 일어나면 안 된다')
+
+    def test_every_day_is_still_asked_for_its_own_sun_times(self):
+        """좌표만 재사용한다 — 일출·일몰은 날마다 다르다."""
+        calls, results = self._lookup_with_counters()
+        self.assertEqual(calls['sun'], 20)
+        self.assertEqual(len(results), 20)
+        self.assertTrue(all(r is not None for r in results))
+
+    def test_the_resolved_coordinates_are_what_gets_asked(self):
+        """`target_id` 로 다시 묻게 두면 캐시 밖 해소가 그대로 남는다."""
+        calls, _ = self._lookup_with_counters()
+        self.assertEqual(calls.get('by_coords'), 20)
+
+    def test_a_target_without_coordinates_gives_up_quietly(self):
+        """좌표가 없으면 `None`(밤낮을 가르지 않는다) — 그리고 날마다 다시
+        묻지 않는다. 못 구한 사실도 한 번 알면 그만이다."""
+        from aot.utils import solar
+        from aot.utils import timekit
+        calls = {'coords': 0, 'sun': 0}
+
+        def no_coords(entity, target_id=None):
+            calls['coords'] += 1
+            return None, None, None
+
+        def fake_sun(**kwargs):
+            calls['sun'] += 1
+            return None
+
+        real_coords, real_sun = timekit.resolve_coords, solar.sun_times
+        timekit.resolve_coords, solar.sun_times = no_coords, fake_sun
+        try:
+            lookup = PJ.sun_lookup('plot-uuid')
+            out = [lookup(date(2026, 7, d)) for d in range(1, 11)]
+        finally:
+            timekit.resolve_coords, solar.sun_times = real_coords, real_sun
+        self.assertTrue(all(o is None for o in out))
+        self.assertEqual(calls['coords'], 1)
+        self.assertEqual(calls['sun'], 0, '좌표가 없으면 묻지 않는다')
+
+
+class TestPacingIsAShareOfWorkNotAFixedGap(unittest.TestCase):
+    """양보를 채널 수로 세면 일의 무게와 어긋난다.
+
+    예전에는 채널마다 고정 0.05초를 쉬었다. 실측(2026-09-05, 김제 3-1, 예열):
+
+        하루치  조회 0.40초 · 페이싱 0.80초 (전체의 53%)
+        51일치  조회 0.64초 · 페이싱 0.80초 (전체의 42%)
+
+    **하루짜리 일지가 조회의 두 배를 쉬고 있었고**, 대부분의 실사용이 그 짧은
+    쪽이다. 반대로 서버가 느려 조회가 10배 걸리는 날에도 양보는 그대로여서,
+    정작 필요한 순간에 늘지 않는다.
+    """
+
+    def _nap_for(self, busy_seconds):
+        """`busy_seconds` 만큼 일한 척하고 `_pace` 가 자려는 시간을 잡는다."""
+        naps = []
+        real_sleep = PJ.time.sleep
+        PJ.time.sleep = lambda s: naps.append(s)
+        try:
+            returned = PJ._pace(PJ.time.monotonic() - busy_seconds)
+        finally:
+            PJ.time.sleep = real_sleep
+        return returned, naps
+
+    def test_the_nap_scales_with_how_long_the_channel_took(self):
+        short, _ = self._nap_for(0.1)
+        long, _ = self._nap_for(1.0)
+        self.assertGreater(long, short * 5)
+
+    def test_the_ratio_is_the_declared_duty_cycle(self):
+        """0.8 이면 4 만큼 일하고 1 만큼 쉰다 — 상수와 계산이 갈리면 안 된다."""
+        nap, _ = self._nap_for(1.0)
+        expected = 1.0 * (1.0 - PJ.QUERY_DUTY) / PJ.QUERY_DUTY
+        self.assertAlmostEqual(nap, expected, places=3)
+
+    def test_it_actually_sleeps_that_long(self):
+        """돌려주는 값은 계측용이다 — 실제로 자지 않으면 양보가 아니다."""
+        nap, naps = self._nap_for(1.0)
+        self.assertEqual(len(naps), 1)
+        self.assertAlmostEqual(naps[0], nap, places=6)
+
+    def test_a_very_slow_query_does_not_stall_the_journal(self):
+        """양보는 자기 조절이지 지연 예산이 아니다 — 타임아웃 근처까지 간
+        조회 하나가 비율대로 자면 일지가 몇 분씩 늘어난다."""
+        nap, _ = self._nap_for(60.0)
+        self.assertEqual(nap, PJ.QUERY_PACING_MAX_SEC)
+
+    def test_no_work_means_no_nap(self):
+        """시계가 뒤로 갔거나(단조 시계라 없어야 하지만) 일이 없었으면 자지
+        않는다 — 음수 시간으로 `time.sleep` 을 부르면 예외가 난다."""
+        naps = []
+        real_sleep = PJ.time.sleep
+        PJ.time.sleep = lambda s: naps.append(s)
+        try:
+            nap = PJ._pace(PJ.time.monotonic() + 1.0)
+        finally:
+            PJ.time.sleep = real_sleep
+        self.assertEqual(nap, 0.0)
+        self.assertEqual(naps, [])
+
+    def test_the_loops_do_not_go_back_to_a_fixed_sleep(self):
+        """고정 간격이 한 곳만 되살아나도 그 자리만 조용히 옛 성질로 돌아간다.
+        네 자리(환경 채널 2 · 제어 2)가 모두 `_pace` 를 지나야 한다."""
+        import inspect
+        for fn in (PJ.env_channel_series, PJ.control_rows_by_bucket):
+            src = inspect.getsource(fn)
+            self.assertNotIn('time.sleep(', src,
+                             '%s 가 직접 자고 있다' % fn.__name__)
+            self.assertIn('_pace(', src)
+
+    def test_the_yielding_did_not_quietly_disappear(self):
+        """`QUERY_DUTY = 1.0` 은 "양보하지 않는다" 는 뜻이다. 저사양 기기에서
+        짧은 버스트가 공유 자원을 먹통으로 만드는 것이 원래 걱정이었다."""
+        self.assertLess(PJ.QUERY_DUTY, 1.0)
+        self.assertGreater(PJ.QUERY_DUTY, 0.0)

@@ -649,5 +649,421 @@ class TestSpatialTreeDepth(unittest.TestCase):
         self.assertIn('0', depth, '무제한을 어떻게 주는지 없다')
 
 
+
+class TestJournalNarrowsAndFolds(unittest.TestCase):
+    """일지 조회는 **호출자가 좁힌 만큼** 가벼워져야 한다.
+
+    실측(2026-09-05): 하루를 요청해도 6단계의 목표·지침(2,495토큰)과 이탈
+    통계(4,192)가 통째로 실려, 캡이 정작 그 하루의 측정값을 밀어냈다.
+    좁힌 뒤 — 원본 11,720 → 6,681, 잘림 없음.
+    """
+
+    def _src(self):
+        import inspect
+        from aot.ai.services.aot_data_tool_service import AoTDataToolService
+        return inspect.getsource(AoTDataToolService.get_plot_journal)
+
+    def test_dates_narrow_the_stage_plan_too(self):
+        """기간 밖 단계는 이름·기간만 남기고 목표·지침을 뺀다. 지우지는
+        않는다 — 앞뒤에 무엇이 있었는지는 문서의 값이다."""
+        src = self._src()
+        self.assertIn("'outside_period'", src.replace('"', "'"))
+        self.assertIn("k not in ('targets', 'guidance')", src)
+        # 뺐다는 사실을 말한다(빈 값과 구분되어야 한다)
+        self.assertIn("'stages_note'", src.replace('"', "'"))
+
+    def test_dates_narrow_the_stage_summaries_too(self):
+        """`stages` 만 줄이면 같은 무게가 `stage_summaries` 로 옮겨 갈 뿐이다 —
+        실제로 그렇게 되어 398 → 4,192 토큰이 됐다."""
+        src = self._src()
+        self.assertIn("k not in ('target_drift', 'no_sensor_for')", src)
+
+    def test_long_unscoped_reads_fold_by_default(self):
+        """좁히지도 접지도 않은 긴 조회는 캡이 버킷을 잘라 "51건 중 3건" 이
+        된다 — 그 문서로는 아무것도 답할 수 없다. 도구 설명이 이미 안내하는
+        대로 기본값이 접는다."""
+        src = self._src()
+        self.assertIn('auto_folded', src)
+        # 무엇으로 접었는지 말하고, 일별로 보는 길도 알려준다
+        self.assertIn("granularity_view", src)
+        self.assertIn("granularity='day'", src)
+
+    def test_folding_keeps_going_until_it_fits(self):
+        """한 단계만 접어서는 모자랄 수 있다 — 51일을 주간으로 접어도 8버킷
+        이라 캡이 "8건 중 3건" 으로 잘랐다."""
+        src = self._src()
+        self.assertIn("order = ['week', 'month', 'all']", src)
+        self.assertIn('budget', src)
+        self.assertIn('_MAX_RESPONSE_TOKENS', src)
+
+    def test_folded_reads_drop_per_stage_drift(self):
+        """접어서 보는 조회는 개괄을 원한다는 뜻이다. 단계마다 센서별 이탈까지
+        실으면(실측 4,192토큰, 고정비의 절반) 그만큼 버킷이 잘려 나간다."""
+        src = self._src()
+        self.assertIn("if auto_folded and summaries", src)
+        self.assertIn("k != 'target_drift'", src)
+        self.assertIn("'stage_summaries_note'", src.replace('"', "'"))
+
+    def test_repeated_target_fields_are_hoisted(self):
+        """목표 하나가 열한 필드인데 절반은 `key` 로 정해진다 — 6단계 × 5목표
+        = 30번 반복되어 2,288 토큰이었다."""
+        src = self._src()
+        self.assertIn('target_defs', src)
+        self.assertIn("_DEF_KEYS", src)
+
+    def test_explicit_day_is_still_honoured(self):
+        """자동 접기는 **인자를 주지 않았을 때만** 끼어든다."""
+        src = self._src()
+        self.assertIn('if not granularity and stored ==', src)
+
+class TestPlotCurrentValuesAreNarrowed(unittest.TestCase):
+    """`get_plot` 은 목표 대조에 쓰이는 measurement 만 읽어야 한다.
+
+    예전에는 구획·구역 센서의 **모든 채널**을 하나씩 읽어(실측 25회)
+    `rssi`·`snr`·전위처럼 목표와 무관한 값까지 InfluxDB 를 왕복했다.
+    예열 후 5회 중앙값: 75회 0.291초 → 39회 0.170초, `target_check.rows` 는 동일.
+    """
+
+    def _src(self):
+        import inspect
+        from aot.ai.services.aot_data_tool_service import AoTDataToolService
+        return inspect.getsource(AoTDataToolService._latest_by_measurement)
+
+    def test_narrowing_is_by_measurement_not_by_channel(self):
+        """같은 측정을 재는 다른 센서를 `others` 로 내보내는 계약이 있다 —
+        채널로 좁히면 그 목록이 조용히 비어, 공기 온도 목표가 토양 센서 값과
+        비교되던 실측 사고로 돌아간다."""
+        src = self._src()
+        self.assertIn('wanted', src)
+        # measurement 이름으로 거른다
+        self.assertIn('str(meas).strip().lower() not in want', src)
+        # 그리고 그 판정 뒤에도 센서별 후보를 계속 모은다(others 계약)
+        self.assertIn("found.setdefault", src)
+        self.assertIn("'others'", src.replace('"', "'"))
+
+    def test_conversion_is_loaded_once_not_per_channel(self):
+        """채널마다 `Conversion.query` 를 돌면 채널 수만큼 DB 를 왕복한다(N+1)."""
+        src = self._src()
+        self.assertIn('Conversion.unique_id.in_(conv_ids)', src)
+        self.assertNotIn('Conversion.unique_id == m.conversion_id', src)
+
+    def test_without_wanted_everything_is_still_read(self):
+        """`wanted` 를 주지 않는 호출부의 동작은 그대로여야 한다."""
+        src = self._src()
+        self.assertIn('want = ', src)
+        self.assertIn('if want is not None', src)
+
+    def test_caller_derives_wanted_from_the_targets(self):
+        """무엇을 읽을지는 목표 항목이 정한다 — 목록을 손으로 적으면 목표가
+        늘 때 조용히 빠진다."""
+        import inspect
+        from aot.ai.services.aot_data_tool_service import AoTDataToolService
+        src = inspect.getsource(AoTDataToolService._stage_target_check)
+        self.assertIn('wanted_meas', src)
+        self.assertIn("t.get('measurement') or t.get('key')", src)
+        self.assertIn('wanted=wanted_meas', src)
+
+class TestGuidanceIsLabelledAsThePlanNotTheOutcome(unittest.TestCase):
+    """지침을 인용하라고 시키면서 **그것이 지켜지는지 볼 곳**은 말하지 않았다.
+
+    `list_plots` 와 `get_crop_status` 는 단계 지침을 싣고 "그대로 인용하라" 고
+    지시한다. 그런데 목표 대조(`target_check` — 지금 값이 목표에서 얼마나
+    벗어났는가, 며칠째 같은 쪽으로 벗어나는가)는 `get_plot` 에만 있다.
+    그래서 모델은 계획을 읽고 **그것이 곧 현재 상태인 것처럼** 답할 수 있다.
+
+    이 프로젝트가 시뮬레이션으로 확인한 것이 정확히 그 어긋남이다 — 야간
+    온도 목표가 78일 중 78일 초과(평균 +5.77℃)인데 지침은 그대로였다.
+    가이드가 현장에서 성립하지 않는다는 사실은 **사용자가 받아야 할 발견**
+    이고, 지침만 인용하면 그것이 영영 드러나지 않는다.
+
+    비용은 두 도구 합쳐 약 100토큰이다(실측 2026-09-05: list_plots
+    5,792 → 5,875, get_crop_status 6,844 → 6,861).
+    """
+
+    def _src(self, fn_name):
+        import inspect
+        from aot.ai.services.aot_data_tool_service import AoTDataToolService
+        return inspect.getsource(getattr(AoTDataToolService, fn_name))
+
+    def test_the_list_says_guidance_is_a_plan(self):
+        src = self._src('list_plots')
+        self.assertIn('target_check', src)
+        self.assertIn('the PLAN', src)
+
+    def test_the_crop_summary_lists_target_check_among_what_is_missing(self):
+        """"여기 없는 것" 목록에서 빠지면 모델은 그것이 존재하는 줄도 모른다."""
+        src = self._src('get_crop_status')
+        self.assertIn('target_check', src)
+
+    def test_the_pointer_names_the_tool_that_actually_has_it(self):
+        """"어딘가 다른 곳" 은 안내가 아니다 — 부를 이름을 적어야 한다."""
+        for fn in ('list_plots', 'get_crop_status'):
+            self.assertIn('get_plot', self._src(fn))
+
+
+class TestTruncationSaysHowToNarrow(unittest.TestCase):
+    """"좁혀서 다시 부르라" 만으로는 두 번째 호출이 달라지지 않는다.
+
+    캡은 자기가 자른 응답이 어떤 도구의 것인지 모르므로 인자 이름을 말할 수
+    없다. 실측(2026-09-04): 일지를 통째로 부르면 측정값이 잘리는데 안내가
+    일반론이라 모델이 **같은 조회를 반복**했다. `date_from`/`granularity` 가
+    있다는 것을 말해 주면 그 반복이 사라진다.
+    """
+
+    def _cap(self, result, limit, priority=None):
+        from aot.ai.services import tool_execution as TE
+        if priority is not None:
+            result = dict(result)
+            result[TE.CAP_PRIORITY_KEY] = priority
+        return TE._cap_result(result, "test_tool", max_tokens=limit)
+
+    def _big(self):
+        # 행이 잘리게 만든다 — 열 자르기만으로는 끝나지 않도록 열이 하나뿐인
+        # 항목을 많이 둔다.
+        return {'rows': [{'v': 'x' * 300} for _ in range(40)]}
+
+    def test_the_tool_sentence_is_appended_when_rows_were_cut(self):
+        out = self._cap(self._big(), 900,
+                        {'narrow_with': "Call again with date_from=…"})
+        advice = out['_truncated']['advice']
+        self.assertIn('INCOMPLETE', advice)
+        self.assertIn('date_from', advice)
+
+    def test_a_tool_that_says_nothing_keeps_the_old_wording(self):
+        out = self._cap(self._big(), 900)
+        self.assertIn('INCOMPLETE', out['_truncated']['advice'])
+        self.assertNotIn('date_from', out['_truncated']['advice'])
+
+    def test_the_hint_never_reaches_the_client(self):
+        """`narrow_with` 는 캡을 위한 지시이지 응답의 내용이 아니다."""
+        from aot.ai.services import tool_execution as TE
+        out = self._cap(self._big(), 900, {'narrow_with': "…"})
+        self.assertNotIn(TE.CAP_PRIORITY_KEY, out)
+        # 자를 필요가 없을 때도 떼어낸다
+        small = self._cap({'a': 1}, 100000, {'narrow_with': "…"})
+        self.assertNotIn(TE.CAP_PRIORITY_KEY, small)
+
+    def test_a_complete_list_does_not_get_told_to_narrow(self):
+        """열만 줄인 응답은 목록이 온전하다. 거기에 "좁혀서 다시 부르라" 를
+        붙이면 모델이 없는 항목을 찾아 같은 조회를 되풀이하고, 그 재조회는
+        같은 상한에 걸려 또 같은 답을 받는다."""
+        result = {'rows': [{'name': 'n%d' % i, 'blob': ['y' * 400]}
+                           for i in range(8)]}
+        out = self._cap(result, 1200, {'narrow_with': "Call again with date_from=…"})
+        tr = out['_truncated']
+        # 전제 확인 — 이 입력이 실제로 '열만 잘린' 경우여야 검증이 성립한다.
+        self.assertTrue(all(d['kept'] == d['total'] for d in tr['lists_trimmed']))
+        self.assertNotIn('INCOMPLETE', tr['advice'])
+        self.assertNotIn('date_from', tr['advice'])
+
+    def test_the_journal_tool_names_its_own_arguments(self):
+        """문구를 캡 쪽에 두면 도구가 늘 때마다 두 곳이 갈라진다 — 도구가
+        자기 인자를 적는다."""
+        import inspect
+        from aot.ai.services.aot_data_tool_service import AoTDataToolService
+        src = inspect.getsource(AoTDataToolService.get_plot_journal)
+        self.assertIn("'narrow_with'", src)
+        for arg in ('date_from', 'date_to', 'granularity'):
+            self.assertIn(arg, src)
+
+
+class TestPlotCurrentValuesAreReadInOneRoundTrip(unittest.TestCase):
+    """채널마다 InfluxDB 를 왕복하던 것을 한 번으로.
+
+    좁히기(`wanted`)로 25 → 13회가 된 뒤에도 **채널 수만큼 왕복**하는 구조는
+    그대로였다. `query_last_values_bulk` 가 device+unit 합집합을 한 번 물어
+    계열마다 `last()` 를 내주므로 1회면 된다 — 지도 위젯이 같은 이유로 이미
+    쓰던 함수라 새로 만들 것이 없었다.
+
+    실측(2026-09-05, 김제 3-1, 예열 후 5회 중앙값):
+    13회 0.178초 → **1회 0.104초**, `target_check` 는 전후 동일.
+    """
+
+    def _src(self):
+        import inspect
+        from aot.ai.services.aot_data_tool_service import AoTDataToolService
+        return inspect.getsource(AoTDataToolService._latest_by_measurement)
+
+    def test_the_bulk_query_is_issued_once_not_per_channel(self):
+        """루프 안에서 부르면 왕복 수가 그대로다 — 이름만 바뀐 셈이 된다."""
+        src = self._src()
+        self.assertEqual(src.count('query_last_values_bulk_status('), 1)
+        # 호출이 채널 루프보다 **앞**에 있어야 한다.
+        call_at = src.index('query_last_values_bulk_status(')
+        loop_at = src.index('for dev, unit, channel, meas in picks')
+        self.assertLess(call_at, loop_at)
+
+    def test_a_failed_query_falls_back_but_an_empty_one_does_not(self):
+        """빈 결과는 두 가지 뜻이다 — 못 돌았거나, 돌았는데 그 계열에 값이
+        없거나. 가르지 않으면 값이 없는 정상 상태에서 채널마다 다시 묻는
+        옛 경로로 통째로 되돌아가고, **N 이 가장 클 때 폴백이 가장 비싸다.**"""
+        src = self._src()
+        self.assertIn(', ok = ', src)
+        self.assertIn('if ok:', src)
+        # 개별 조회는 폴백 안에만 남는다
+        self.assertEqual(src.count('read_influxdb_list('), 1)
+
+    def test_the_lookup_key_goes_through_the_shared_normalisation(self):
+        """Influx 태그는 문자열이라 채널 `0` 과 `'0'` 이 다르다. 키를 손으로
+        만들면 만드는 쪽과 찾는 쪽이 조용히 어긋나 **전부 미스**가 되는데,
+        폴백이 없으면 값이 통째로 비고 있으면 옛 성능으로 돌아간다."""
+        src = self._src()
+        self.assertIn('bulk_key(unit, dev, channel, meas)', src)
+
+    def test_narrowing_still_shrinks_what_is_asked(self):
+        """한 번에 묻더라도 `wanted` 는 살아 있어야 한다 — 좁히면 묻는
+        unit·device 집합이 함께 작아진다."""
+        src = self._src()
+        picks_at = src.index('picks.append(')
+        want_at = src.index('str(meas).strip().lower() not in want')
+        self.assertLess(want_at, picks_at)
+
+    def test_the_timestamp_stays_an_absolute_utc_instant(self):
+        """벌크는 epoch 초를 돌려준다. 그대로 `str()` 하면 `at` 이 숫자가 되고,
+        naive 로 되돌리면 서버 지역시간으로 읽혀 **몇 시간 어긋난다.**"""
+        src = self._src()
+        self.assertIn('datetime.fromtimestamp(hit[0], tz=timezone.utc)', src)
+
+
+class TestCapPriorityHint(unittest.TestCase):
+    """캡이 무게로만 고르면 **호출자가 달라고 한 것**이 먼저 잘린다.
+
+    실측(2026-09-05): 일지를 하루로 좁혀 불러도 그 하루의 측정값
+    (`buckets.env`)이 빠지고, 날짜와 무관하게 늘 실리는 단계 요약이 남았다.
+    도구가 순서를 말할 수 있게 하고, 말하지 않는 도구는 예전 그대로 둔다.
+    """
+
+    def _big(self, filler=400):
+        """캡에 걸리게 만든 응답 — 무게 순서는 heavy > wanted 다.
+
+        ⚠ 값을 **컨테이너**로 둔다. 자동 선택(`_heaviest_column`)은 dict/list
+        열만 후보로 삼기 때문이다(스칼라는 그 항목이 무엇인지 말하는
+        이름·식별자라 지킨다). 문자열로 두면 열 자르기가 아예 안 걸려
+        행 자르기로 떨어지고, 그러면 이 테스트가 열 선택을 보지 못한다.
+        """
+        return {
+            'rows': [{'heavy': ['x' * filler], 'wanted': ['y' * (filler // 4)],
+                      'id': i} for i in range(12)],
+        }
+
+    def test_without_hint_the_heaviest_column_goes_first(self):
+        """힌트를 주지 않는 도구는 예전 동작 그대로여야 한다.
+
+        상한은 **열 하나를 빼면 들어가는 크기**로 잡는다 — 더 조이면 열
+        자르기로는 못 내려가 행 자르기로 떨어지고, 그러면 이 테스트가 열
+        선택을 보는 것이 아니게 된다(처음에 그렇게 짰다가 12행이 1행으로
+        잘리면서 무거운 열이 그대로 남았다).
+        """
+        from aot.ai.services import tool_execution as TE
+        res = TE._cap_result(self._big(), 'x', max_tokens=1600)
+        self.assertEqual(len(res['rows']), 12, '행이 잘렸다 — 상한을 다시 잡을 것')
+        self.assertNotIn('heavy', res['rows'][0])   # 무거운 쪽이 먼저 빠졌다
+        self.assertIn('wanted', res['rows'][0])
+
+    def test_hint_can_protect_a_column_even_when_it_is_heaviest(self):
+        """`keep_last` 로 지목한 열은 다른 후보가 남아 있는 동안 지켜진다."""
+        from aot.ai.services import tool_execution as TE
+        payload = self._big()
+        # 무게를 뒤집는다 — wanted 가 가장 무겁지만 지켜져야 한다.
+        for r in payload['rows']:
+            r['wanted'] = ['y' * 600]
+        payload[TE.CAP_PRIORITY_KEY] = {
+            'drop_first': [['rows', 'heavy']],
+            'keep_last': [['rows', 'wanted']],
+        }
+        res = TE._cap_result(payload, 'x', max_tokens=4400)
+        self.assertEqual(len(res['rows']), 12, '행이 잘렸다 — 상한을 다시 잡을 것')
+        self.assertNotIn('heavy', res['rows'][0])
+        self.assertIn('wanted', res['rows'][0],
+                      'keep_last 로 지목한 열이 먼저 잘렸다')
+
+    def test_keep_last_is_not_dropped_even_as_a_last_resort(self):
+        """열은 통째로 빠지므로, 조금 모자란 것을 메우려고 지켜야 할 열을
+        뽑으면 과잉 절삭이 된다 — 실측: 340 토큰이 모자란데 5,682 토큰짜리
+        `env` 를 통째로 뺐다. 남은 몫은 행 자르기가 맡는다."""
+        from aot.ai.services import tool_execution as TE
+        payload = {'rows': [{'wanted': ['y' * 500], 'id': i} for i in range(12)]}
+        payload[TE.CAP_PRIORITY_KEY] = {'keep_last': [['rows', 'wanted']]}
+        res = TE._cap_result(payload, 'x', max_tokens=1500)
+        self.assertIn('wanted', res['rows'][0],
+                      '뺄 것이 그것뿐일 때도 keep_last 는 지켜져야 한다')
+        self.assertLess(len(res['rows']), 12, '대신 행이 잘렸어야 한다')
+
+    def test_hint_is_never_returned_to_the_client(self):
+        """힌트는 캡을 위한 지시이지 응답의 내용이 아니다 — 캡이 꺼져 있거나
+        자를 필요가 없을 때도 떼어내야 한다."""
+        from aot.ai.services import tool_execution as TE
+        for max_tokens in (0, 300, 10 ** 9):
+            payload = self._big()
+            payload[TE.CAP_PRIORITY_KEY] = {'drop_first': [['rows', 'heavy']]}
+            res = TE._cap_result(payload, 'x', max_tokens=max_tokens)
+            self.assertNotIn(TE.CAP_PRIORITY_KEY, res,
+                             'max_tokens=%r 에서 힌트가 남았다' % max_tokens)
+
+    def test_journal_declares_its_own_order(self):
+        """그 기간의 측정값과 노트는 이 도구에만 있다 — 단계 계획의 산문·이탈
+        통계는 `get_plot` 으로도 볼 수 있으므로 그쪽을 먼저 버린다."""
+        import inspect
+        from aot.ai.services.aot_data_tool_service import AoTDataToolService
+        src = inspect.getsource(AoTDataToolService.get_plot_journal)
+        self.assertIn('CAP_PRIORITY_KEY', src)
+        self.assertIn("'keep_last'", src.replace('"', "'"))
+        # 측정값과 노트가 보호 대상이다
+        flat = src.replace('"', "'").replace(' ', '')
+        self.assertIn("['buckets','env']", flat)
+        self.assertIn("['buckets','notes']", flat)
+
+class TestSystemBriefIsSummaryNotUnion(unittest.TestCase):
+    """`get_system_brief` 가 하위 도구의 응답을 통째로 담으면 혼자서 상한을 넘는다.
+
+    실측(2026-09-05): `get_spatial_tree` + `get_crop_status` + `get_control_state`
+    를 그대로 담아 **18,974 토큰** — 상한 15,000 을 넘어 잘린 채 전달됐다.
+    게다가 `crops` 6,844 는 `get_crop_status` 와 정확히 같은 값이라, 브리핑을 읽고
+    그 도구를 다시 부르면 같은 값을 두 번 냈다. 요약으로 바꿔 1,633 토큰이 됐다.
+    """
+
+    def _src(self):
+        import inspect
+        from aot.ai.services.aot_data_tool_service import AoTDataToolService
+        return inspect.getsource(AoTDataToolService.get_system_brief)
+
+    def test_subtool_responses_are_not_embedded_whole(self):
+        """하위 도구를 그대로 대입하는 형태가 되살아나면 상한을 다시 넘는다."""
+        src = self._src()
+        for call in ('S.get_spatial_tree(depth=2)',
+                     'S.get_crop_status()',
+                     'S.get_control_state()'):
+            self.assertNotIn('lambda: %s' % call, src,
+                             '%s 를 그대로 담으면 안 된다 — 요약을 거칠 것' % call)
+        # 요약 함수를 거친다
+        for fn in ('_spatial_summary', '_crops_summary', '_control_summary'):
+            self.assertIn(fn, src)
+
+    def test_names_survive_the_summary(self):
+        """이름을 빼면 "구획 39건" 만 남아 반드시 되묻게 되고, 줄인 만큼을
+        두 번째 호출이 도로 쓴다."""
+        src = self._src()
+        self.assertIn("'names'", src.replace('"', "'"))
+        self.assertIn("'subjects'", src.replace('"', "'"))
+
+    def test_name_lists_are_capped_with_a_remainder(self):
+        """설치가 커지면 이름만으로도 응답이 불어난다. 자르되 몇 건이 더 있는지
+        말해야 한다."""
+        src = self._src()
+        self.assertIn('_NAME_CAP', src)
+        self.assertIn('more', src)
+
+    def test_plot_count_is_the_sum_not_the_open_field_only(self):
+        """원본 `plot_count` 는 노지만 센다 — 그대로 실으면 시설 구획과 더한
+        합이 맞지 않는다(실측: 39 / 39 / 5)."""
+        src = self._src()
+        self.assertIn('len(open_plots) + len(bay_plots)', src)
+        self.assertNotIn("cs.get(\"plot_count\"", src)
+
+    def test_anomalies_stay_whole(self):
+        """이상 상태는 작고(348토큰) 이 도구의 존재 이유에 가장 가깝다 —
+        요약하다 이것까지 줄이면 브리핑이 답해야 할 것을 못 답한다."""
+        self.assertIn('S.get_anomalies()', self._src())
+
 if __name__ == '__main__':
     unittest.main()

@@ -30998,6 +30998,22 @@ msgid "Sensors responding"
 msgstr "센서 응답"
 
 #: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "7 Days"
+msgstr "7일"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Show today only"
+msgstr "오늘 값만 보기"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Show the last 7 days"
+msgstr "지난 7일 보기"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "No data for the last 7 days."
+msgstr "지난 7일 기록이 없습니다."
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
 msgid "No sensor readings"
 msgstr "측정값 없음"
 

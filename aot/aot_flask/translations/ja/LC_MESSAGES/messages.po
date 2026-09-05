@@ -33722,4 +33722,4 @@ msgstr "「気象観測所」と表示され左側に線が付いている行は
 
 #: aot/aot_flask/templates/pages/geo/journal_view.html
 msgid "Targets come from the program attached to this plot. Δ is the measured average minus that target. Day/night targets and curve-based targets are marked instead of differenced, because comparing them against a whole-day average produces false alarms."
-msgstr "目標は区画に紐づくプログラムから来ます。Δ は実測平均からその目標を引いた値です。昼夜目標と曲線目標は差を出さず表示のみします — 一日全体の平均と比べると誤った警報が出るためです。"
+msgstr "目標はこの区画のプログラムから来ます。Δ は実測平均からその目標を引いた値です。昼夜目標と曲線目標は差を出さず表示のみします — 一日全体の平均と比べると誤った警報が出るためです。"

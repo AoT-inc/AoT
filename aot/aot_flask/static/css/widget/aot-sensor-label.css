@@ -1699,6 +1699,28 @@ button.aot-center-modal-close {
   font-variant-numeric: tabular-nums;
 }
 
+/* [환경] 카드 머리줄의 [7일 ↔ 오늘] 토글 — 이 자리에 있던 배지
+   (.aot-ov-degraded, 위)와 같은 글자 크기·색 톤을 쓴다. 버튼 크롬(테두리·
+   채움·호버 배경)은 두지 않는다 — 클릭 가능함은 밑줄 하나로만 말한다.
+   호버에도 배경을 넣지 않는 이유: 클릭 뒤 포커스가 남아 배경이 계속
+   보이는 것을 아예 만들지 않기 위해서다. */
+.aot-ov-envrange-toggle {
+  border: 0;
+  background: none;
+  padding: 0;
+  color: var(--aot-color-text-secondary);
+  font-size: var(--aot-font-size-xs);
+  font-weight: 500;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  flex-shrink: 0;
+}
+.aot-ov-envrange-toggle:hover {
+  color: var(--aot-color-text-primary);
+}
+
+
 /* ── 모달 제목줄 공용 (site·zone·facility) ────────────────────────────────
    [← 상위] 이름 [상태 점]. 이름 묶음이 flex:1 이라 화살표는 왼쪽에 붙고
    점은 이름 바로 뒤에 따라온다(헤더가 space-between 이라 묶지 않으면 점이

@@ -1888,24 +1888,6 @@
 
             pane.innerHTML = _buildZoneSkel();
 
-            /* 지난 7일 — **`/contents` 와 나란히** 건다.
-             *
-             * 예전에는 카드를 그린 **뒤에** 받아서, 모달을 열면 가로 밴드 바가
-             * 잠깐 보였다가 세로 범위 도표로 바뀌었다(사용자 지적). 모양이
-             * 바뀌는 것은 늦게 오는 것보다 거슬린다.
-             *
-             * 서버 계산이 0.9~1.5초라 무작정 기다릴 수는 없다(캐시 10분).
-             * 그래서 **환경 카드만** 이것을 기다리고(아래 `_withWeek`),
-             * 나머지(장치·상위 화살표)는 그대로 먼저 그린다. */
-            var _weekP = fetch('/api/geo/plot/' + encodeURIComponent(plotUuid) +
-                               '/env_week', { cache: 'no-store' })
-                .then(function (r) { return r.ok ? r.json() : null; })
-                .then(function (wk) {
-                    return (wk && wk.ok && wk.series && wk.series.length)
-                        ? wk.series : null;
-                })
-                .catch(function () { return null; });
-
             fetch('/api/geo/plot/' + encodeURIComponent(plotUuid) + '/contents',
                   { cache: 'no-store' })
                 .then(function (r) { return r.ok ? r.json() : null; })
@@ -1953,19 +1935,28 @@
                               // 별도 키로 받는다 — 섞으면 안 된다.
                               gdd: (data.plot || {}).gdd,
                               dli: (data.plot || {}).dli }];
-                        /* 주간 계열을 **기다렸다가 한 번만** 그린다. 늦으면
-                         * (1.5초) 지금 값만으로 먼저 그리고, 뒤늦게 도착하면
-                         * 그때 한 번 더 그린다 — 빈 카드로 두지 않는다. */
-                        var _drawEnv = function (wkSeries) {
+                        // 기본은 **하루(지금 값)** 다. 주간 계열은 **누를 때만**
+                        // 받는다(2026-09-05 재설계) — 예전엔 모달을 열 때마다
+                        // 미리 받아 뒀는데, 안 눌러도 매번 0.9~1.5초짜리 조회가
+                        // 돌았다. `opts.weekLazy` 로 "아직 안 받았지만 있을 수
+                        // 있다" 를 버튼 쪽에 알린다(`_weekCapable`,
+                        // aot-map-popup.js) — 버튼은 그 뜻으로 먼저 뜨고,
+                        // 실제 조회는 첫 클릭에서 시작한다.
+                        var _envWeekExpanded = false;
+                        var _weekFetched = false;   // 조회를 이미 마쳤나(빈 응답도 포함)
+                        var _weekFetching = false;
+                        var _lastWkSeries = null;
+                        var _t2 = function (s) { return (window._ ? window._(s) : s); };
+                        var _drawEnv = function () {
                             if (!envSlot.isConnected) return;
                             var z2 = _zonePopupState[uid];
                             if (!z2 || z2.popup !== popup) return;
-                            if (wkSeries) {
-                                _envArgs[1] = Object.assign({}, _envArgs[1],
-                                                            { week: wkSeries });
-                            }
+                            var _opts1 = Object.assign({}, _envArgs[1],
+                                { weekExpanded: _envWeekExpanded });
+                            if (_weekFetched) { _opts1.week = _lastWkSeries || []; }
+                            else { _opts1.weekLazy = true; }
                             envSlot.innerHTML =
-                                window.AoTMapPopup.buildEnvNowHtml.apply(null, _envArgs);
+                                window.AoTMapPopup.buildEnvNowHtml(_envArgs[0], _opts1);
                             if (window.AoTViz && window.AoTViz.tips) {
                                 // 값 풍선은 붙인 **뒤에** 배선한다.
                                 try { window.AoTViz.tips(envSlot); } catch (e) {}
@@ -1976,21 +1967,47 @@
                                     envSlot, data.sensors,
                                     ((data.plot || {}).env || {}).readings);
                             }
-                        };
-                        var _drawn = false;
-                        var _late = setTimeout(function () {
-                            if (!_drawn) { _drawn = true; _drawEnv(null); }
-                        }, 1500);
-                        _weekP.then(function (wkSeries) {
-                            clearTimeout(_late);
-                            if (_drawn) {
-                                // 늦게 왔다 — 그때 한 번 더 그린다.
-                                if (wkSeries) _drawEnv(wkSeries);
-                                return;
+                            // [7일 ↔ 오늘] 토글. 매번 `innerHTML` 을 통째로 다시
+                            // 쓰므로(위) 이전 버튼과 리스너는 이미 사라졌다 —
+                            // 이 카드는 열 때 한 번만 그리는 것이라(주기 재렌더
+                            // 없음) 중복 바인딩을 막는 dataset 가드가 필요 없다.
+                            var _toggleBtn = envSlot.querySelector(
+                                '.aot-ov-envrange-toggle');
+                            if (_toggleBtn) {
+                                _toggleBtn.addEventListener('click', function (ev) {
+                                    ev.stopPropagation();
+                                    if (_weekFetching) return;
+                                    if (_weekFetched) {
+                                        // 이미 받아 뒀다 — 보기만 바꾼다(재조회 없음).
+                                        _envWeekExpanded = !_envWeekExpanded;
+                                        _drawEnv();
+                                        return;
+                                    }
+                                    _weekFetching = true;
+                                    _toggleBtn.disabled = true;
+                                    _toggleBtn.textContent = _t2('Loading...');
+                                    fetch('/api/geo/plot/' + encodeURIComponent(plotUuid) +
+                                          '/env_week', { cache: 'no-store' })
+                                        .then(function (r) { return r.ok ? r.json() : null; })
+                                        .then(function (wk) {
+                                            _weekFetching = false;
+                                            _weekFetched = true;
+                                            _lastWkSeries = (wk && wk.ok && wk.series)
+                                                ? wk.series : [];
+                                            _envWeekExpanded = true;
+                                            _drawEnv();
+                                        })
+                                        .catch(function () {
+                                            _weekFetching = false;
+                                            _weekFetched = true;
+                                            _lastWkSeries = [];
+                                            _envWeekExpanded = true;
+                                            _drawEnv();
+                                        });
+                                });
                             }
-                            _drawn = true;
-                            _drawEnv(wkSeries);
-                        });
+                        };
+                        _drawEnv();
                     }
 
                     // `_renderZoneDevices` 는 `data.zone.output_order` 를 읽는다.
@@ -4916,35 +4933,80 @@
             }).catch(function () { /* 부가 정보다 — 실패해도 [현황]은 그대로 */ });
         }
 
-        /* 시설 모달의 지난 7일 — **한 번만** 받는다.
+        /* 시설 모달의 지난 7일 — **누를 때만** 받는다(2026-09-05 재설계).
          *
-         * `/overview` 에 얹지 않는 이유는 그 응답이 최소 5초까지 폴링되기
-         * 때문이다(`_runtimePollSeconds`). 여기 계산은 InfluxDB 를 훑으므로
-         * 그 주기를 타면 안 된다.
+         * 예전엔 모달을 열 때마다 미리 받아 뒀는데, 안 눌러도 매번 InfluxDB
+         * 를 훑는 0.9~1.5초짜리 조회가 돌았다. `/overview` 에 얹지 않는
+         * 이유는 그대로다(`_runtimePollSeconds` 로 최소 5초까지 폴링되는
+         * 응답에 얹으면 이 무거운 계산도 그 주기를 탄다). 이제는 [7일]
+         * 버튼을 처음 누를 때만 부르고(`_wireFacilityEnvRangeToggle`),
+         * 결과(빈 배열이어도)를 캐시해 두 번째부터는 재조회하지 않는다.
          *
-         * 받아 두면 그 다음 폴링부터 `_prependFacilityEnvNow` 가 알아서 쓴다 —
-         * 카드를 그리는 코드는 한 벌뿐이다. 그래서 도착 직후에도 화면을 직접
-         * 갈아끼우지 않고 카드 캐시(`pane._aotEnvNowHtml`)만 비워, 다음 그림에서
-         * 자연스럽게 바뀌게 한다. */
-        function _loadFacilityEnvWeek(uid, facilityUuid, pane) {
+         * `st._envWeekFetchedByFac` 가 "이미 시도했나"(성공·빈 응답 모두
+         * 포함)를 따로 든다 — `st._envWeekByFac[uuid]` 만 보면 "짝지을 계열이
+         * 없다" 와 "아직 안 받았다" 를 구분할 수 없다(버튼을 계속 [7일] 로
+         * 띄울지, "지난 7일 기록이 없습니다" 로 바꿀지가 갈린다). */
+        function _loadFacilityEnvWeek(uid, facilityUuid, pane, onDone) {
             var st = _actLabelState[uid];
             if (!st) return;
             st._envWeekByFac = st._envWeekByFac || {};
+            st._envWeekFetchedByFac = st._envWeekFetchedByFac || {};
             st._envWeekPending = st._envWeekPending || {};
-            if (st._envWeekByFac[facilityUuid] ||
-                st._envWeekPending[facilityUuid]) return;
+            if (st._envWeekPending[facilityUuid]) return;
+            if (st._envWeekFetchedByFac[facilityUuid]) { if (onDone) onDone(); return; }
             st._envWeekPending[facilityUuid] = 1;
             fetch('/api/aot/facility/' + encodeURIComponent(facilityUuid) +
                   '/env_week', { cache: 'no-store' })
                 .then(function (r) { return r.ok ? r.json() : null; })
                 .then(function (wk) {
                     st._envWeekPending[facilityUuid] = 0;
-                    if (!wk || !wk.ok || !wk.series || !wk.series.length) return;
-                    st._envWeekByFac[facilityUuid] = wk.series;
+                    st._envWeekFetchedByFac[facilityUuid] = 1;
+                    st._envWeekByFac[facilityUuid] =
+                        (wk && wk.ok && wk.series) ? wk.series : [];
                     if (pane && pane.isConnected) pane._aotEnvNowHtml = null;
-                    _prependFacilityEnvNow(uid, facilityUuid, pane);
+                    if (onDone) onDone();
                 })
-                .catch(function () { st._envWeekPending[facilityUuid] = 0; });
+                .catch(function () {
+                    st._envWeekPending[facilityUuid] = 0;
+                    st._envWeekFetchedByFac[facilityUuid] = 1;
+                    st._envWeekByFac[facilityUuid] = [];
+                    if (onDone) onDone();
+                });
+        }
+
+        /* [7일 ↔ 오늘] 버튼 배선 — 시설 카드는 **최소 5초마다 다시 그려진다**
+         * (구획 모달과 달리 열 때 한 번이 아니다). 그런데 값이 안 바뀌면
+         * `_cardFresh` 가 DOM 을 그대로 두므로(위 주석), 그 사이엔 이미 붙은
+         * 버튼과 리스너가 살아 있다 — 값이 바뀌어 노드가 통째로 새로 만들어질
+         * 때만 새 버튼에 다시 건다. `dataset` 가드는 같은 노드에 두 번 거는
+         * 사고를 막는다(형제 함수 `_wireFacilityCardConfig` 와 같은 관례). */
+        function _wireFacilityEnvRangeToggle(uid, facilityUuid, pane) {
+            var btn = pane.querySelector('.aot-ov-envrange-toggle');
+            if (!btn || btn.dataset.envRangeBound) return;
+            btn.dataset.envRangeBound = '1';
+            btn.addEventListener('click', function (ev) {
+                ev.stopPropagation();
+                var st = _actLabelState[uid];
+                if (!st) return;
+                st._envWeekPending = st._envWeekPending || {};
+                if (st._envWeekPending[facilityUuid]) return;
+                st._envWeekFetchedByFac = st._envWeekFetchedByFac || {};
+                st._envWeekExpandedByFac = st._envWeekExpandedByFac || {};
+                if (st._envWeekFetchedByFac[facilityUuid]) {
+                    // 이미 받아 뒀다 — 보기만 바꾼다(재조회 없음).
+                    st._envWeekExpandedByFac[facilityUuid] =
+                        !st._envWeekExpandedByFac[facilityUuid];
+                    if (pane.isConnected) pane._aotEnvNowHtml = null;
+                    _prependFacilityEnvNow(uid, facilityUuid, pane);
+                    return;
+                }
+                btn.disabled = true;
+                btn.textContent = (window._ ? window._('Loading...') : 'Loading...');
+                _loadFacilityEnvWeek(uid, facilityUuid, pane, function () {
+                    st._envWeekExpandedByFac[facilityUuid] = true;
+                    _prependFacilityEnvNow(uid, facilityUuid, pane);
+                });
+            });
         }
 
         function _prependFacilityEnvNow(uid, facilityUuid, pane) {
@@ -4955,26 +5017,15 @@
                 var st = _actLabelState[uid];
                 if (!st || st.openBayFacility !== facilityUuid) return;
 
-                /* ── 첫 그림은 지난 7일을 기다린다 ──────────────────────
-                 *
-                 * 예전에는 지금 값으로 먼저 그리고 주간 계열이 오면 다시
-                 * 그렸는데, 모달을 열면 가로 밴드 바가 잠깐 보였다가 세로
-                 * 범위 도표로 바뀌었다(사용자 지적). 모양이 바뀌는 것은 늦게
-                 * 오는 것보다 거슬린다.
-                 *
-                 * 서버 계산이 0.9~1.5초라 무작정 기다리지는 않는다 — 1.5초가
-                 * 지나면 지금 값만으로 그리고, 도착하면 그때 한 번 더 그린다.
-                 * 이 카드는 5초까지 폴링되므로 **첫 그림만** 미루면 된다.
-                 *
-                 * ⚠ 마감 시각은 **시설마다** 잡는다. 위젯 하나에 하나만 두면
-                 *   다른 시설을 열 때 이미 지나 있어 첫 그림이 그대로 나간다. */
-                _loadFacilityEnvWeek(uid, facilityUuid, pane);
-                st._envWeekWait = st._envWeekWait || {};
-                if (!(st._envWeekByFac || {})[facilityUuid]) {
-                    var _w = st._envWeekWait[facilityUuid];
-                    if (!_w) { _w = st._envWeekWait[facilityUuid] = Date.now() + 1500; }
-                    if (Date.now() < _w) return;
-                }
+                // 주간 계열은 조회하지 않는다 — [7일] 버튼을 누를 때만
+                // `_loadFacilityEnvWeek` 가 받는다(위 주석). 여기서는 지금
+                // 캐시 상태만 읽어 opts 로 넘긴다: 아직 안 받았으면
+                // `weekLazy`(버튼은 뜨되 눌러야 조회), 받았으면(빈 배열이어도)
+                // `week` 로 실제 값을 넘긴다.
+                var _weekFetched = !!(st._envWeekFetchedByFac &&
+                    st._envWeekFetchedByFac[facilityUuid]);
+                var _weekExpanded = !!(st._envWeekExpandedByFac &&
+                    st._envWeekExpandedByFac[facilityUuid]);
 
                 var indoor = rt.indoor || {};
                 var sensors = rt.sensors || {};
@@ -5034,11 +5085,16 @@
                     targets: st._lastTargets,
                     gdd:     st._lastPlotGdd,
                     dli:     st._lastPlotDli,
-                    // 지난 7일 — 도착해 있으면 측정 줄이 범위 도표가 된다.
-                    // **폴링과 분리돼 있다**(아래 `_loadFacilityEnvWeek`):
-                    // 이 카드는 최소 5초까지 다시 그려지지만 주간 계열은
-                    // 모달을 열 때 한 번만 받는다.
-                    week:    st._envWeekByFac && st._envWeekByFac[facilityUuid]
+                    // 지난 7일 — **누를 때만** 받는다(위 `_loadFacilityEnvWeek`
+                    // 주석). 아직 안 받았으면 `weekLazy` 로 버튼만 먼저
+                    // 띄우고, 받았으면(빈 배열이어도) `week` 로 실제 값을
+                    // 넘긴다 — 둘 다 넘기지 않는다(`_weekCapable` 가 어느
+                    // 쪽인지로 판정을 가른다, aot-map-popup.js 참조).
+                    weekExpanded: _weekExpanded,
+                    week:    _weekFetched
+                        ? (st._envWeekByFac && st._envWeekByFac[facilityUuid]) || []
+                        : undefined,
+                    weekLazy: !_weekFetched
                 });
                 if (html) {
                     // 같은 값이면 DOM 을 건드리지 않는다(위 _loadOverview 주석).
@@ -5075,6 +5131,7 @@
                     // 다음에 "아직 붙어 있는가" 를 물을 수 있다.
                     _cardMark(pane, '_aotEnvNowHtml', html, node);
                     _wireFacilityRepPick(uid, facilityUuid, pane, canEdit);
+                    _wireFacilityEnvRangeToggle(uid, facilityUuid, pane);
                     // 값 풍선 — 범위 도표의 열을 짚으면 그날 최저~최고가 뜬다.
                     // **붙인 뒤에** 배선한다(dataviz 규약).
                     if (window.AoTViz && window.AoTViz.tips) {

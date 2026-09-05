@@ -8498,8 +8498,9 @@ class AoTDataToolService:
                 # 여기서는 빠져 있다 — 상세를 부르지 않은 채 그렇게 답한다.
                 result["plot_detail"] = (
                     "Plots here are summaries: crop, place, period and current "
-                    "stage only. Stage schedule, timeline, dimensions and "
-                    "planting capacity are NOT in this response — call get_plot "
+                    "stage only. Stage schedule, timeline, dimensions, planting "
+                    "capacity and the target-vs-reading comparison "
+                    "('target_check') are NOT in this response — call get_plot "
                     "with the plot's unique_id for those. Absence of a field "
                     "here does not mean the plot lacks it.")
             if bay_plots:
@@ -8642,9 +8643,88 @@ class AoTDataToolService:
                 logger.warning("get_system_brief: %s 실패: %s", label, exc)
                 return {"error": f"Failed to read {label}: {exc}"}
 
-        brief["spatial"] = _safe("공간 계층", lambda: S.get_spatial_tree(depth=2))
-        brief["crops"] = _safe("작물", lambda: S.get_crop_status())
-        brief["control"] = _safe("제어 상태", lambda: S.get_control_state())
+        # ── 왜 요약만 싣는가 ────────────────────────────────────────────
+        # 예전에는 `get_spatial_tree` · `get_crop_status` · `get_control_state`
+        # 의 응답을 **통째로** 담았다. 세 도구의 합집합이라 이 도구 하나가
+        # 18,974 토큰이 되어 **MCP 상한(15,000)을 넘었고, 잘린 채 전달됐다**
+        # (실측 2026-09-05: spatial 6,841 · crops 6,844 · control 4,447).
+        # 게다가 `crops` 는 `get_crop_status` 와 **정확히 같은 값**이라, 브리핑을
+        # 읽고 그 도구를 다시 부르면 같은 6,844 를 두 번 냈다.
+        #
+        # 그래서 여기서는 **셀 수 있는 것과 이름만** 내고 어디서 자세히 볼지
+        # 가리킨다 — 이 도구의 원래 목적("어디를 파야 할지 알려주는 지도")
+        # 그대로다. 온전한 18,974 와 요약을 견주는 것이 아니라, **잘린 15,000
+        # 과 온전한 요약**을 견주는 것이 옳은 비교다.
+        #
+        # ⚠ **이름을 빼지 말 것.** "구획 39건" 만 있으면 무엇이 있는지 알 수
+        #   없어 반드시 되물어야 하고, 그러면 줄인 만큼을 두 번째 호출이 도로
+        #   쓴다. 이름이 있으면 많은 질문이 여기서 끝난다.
+        # 이름 목록의 상한. 설치가 커지면 이름만으로도 응답이 불어나므로
+        # 자르되, **몇 건 중 몇 건인지**를 함께 남긴다("39건" 만 남기면 무엇이
+        # 있는지 알 수 없어 되묻게 되고, 줄인 만큼을 두 번째 호출이 도로 쓴다).
+        _NAME_CAP = 40
+
+        def _capped(names):
+            names = list(names or [])
+            if len(names) <= _NAME_CAP:
+                return names
+            return names[:_NAME_CAP] + ["… +%d more" % (len(names) - _NAME_CAP)]
+
+        def _spatial_summary():
+            tree = S.get_spatial_tree(depth=2) or {}
+            nodes = tree.get("hierarchy") or []
+            by_type, names = {}, {}
+            def _walk(items):
+                for n in items:
+                    t = n.get("type") or "unknown"
+                    by_type[t] = by_type.get(t, 0) + 1
+                    # 장치는 이름을 싣지 않는다 — 수가 많고 get_device_list 가 있다.
+                    if t in ("site", "zone", "facility") and n.get("name"):
+                        names.setdefault(t, []).append(n["name"])
+                    _walk(n.get("children") or [])
+            _walk(nodes)
+            return {"counts": by_type,
+                    "names": {k: _capped(v) for k, v in names.items()},
+                    "see": "get_spatial_tree for the tree with devices"}
+
+        def _crops_summary():
+            cs = S.get_crop_status() or {}
+            open_plots = cs.get("open_field_plots") or []
+            bay_plots = cs.get("facility_bay_plots") or []
+            subjects = []
+            for p in list(open_plots) + list(bay_plots):
+                sub = p.get("crop") or p.get("subject")
+                if sub and sub not in subjects:
+                    subjects.append(sub)
+            # `plot_count` 를 원본에서 그대로 가져오면 안 된다 — 그 값은 노지만
+            # 세므로 시설 구획과 더하면 합이 맞지 않는다(실측: 39 / 39 / 5).
+            return {
+                "plot_count": len(open_plots) + len(bay_plots),
+                "open_field": len(open_plots),
+                "in_facility": len(bay_plots),
+                "subjects": _capped(subjects),
+                # 시설은 몇 개뿐이고 작물·단계가 붙어 있어 그대로 둔다.
+                "facilities": cs.get("facilities") or [],
+                "see": "get_crop_status for every plot with its stage and guidance",
+            }
+
+        def _control_summary():
+            st = S.get_control_state() or {}
+            coords = st.get("coordinators") or []
+            rows = []
+            for c in coords:
+                rows.append({"facility_name": c.get("facility_name"),
+                             "function_name": c.get("function_name"),
+                             "is_activated": c.get("is_activated")})
+            return {"coordinator_count": len(coords), "coordinators": rows,
+                    "see": ("get_control_state for targets, limiting factor "
+                            "and safety-gate status")}
+
+        brief["spatial"] = _safe("공간 계층", _spatial_summary)
+        brief["crops"] = _safe("작물", _crops_summary)
+        brief["control"] = _safe("제어 상태", _control_summary)
+        # 이상 상태는 요약하지 않는다 — 작고(348토큰), 이 도구의 존재 이유에
+        # 가장 가까운 부분이다.
         brief["anomalies"] = _safe("이상 상태", lambda: S.get_anomalies())
         # 핸들러 이름은 get_device_list_tool 이다(도구명과 다름). _safe 가 예외를
         # 처리하므로 hasattr 류의 방어 가드는 두지 않는다 — 가드를 두면 이름이
@@ -10041,7 +10121,11 @@ class AoTDataToolService:
                 notes.append(
                     "'stage.guidance' is what THAT plot's programme says to do in "
                     "its current stage. Quote it; do not replace it with generic "
-                    "crop advice.")
+                    "crop advice. It is the PLAN — whether the site is actually "
+                    "meeting it is not here: get_plot's 'target_check' pairs each "
+                    "target with the current reading and counts how many days it "
+                    "has been missed the same way. Do not conclude a plot is fine "
+                    "from guidance alone.")
             elif items:
                 # 지침이 하나도 없을 때야말로 지어내기 쉽다 — 그 자리에서 말한다.
                 notes.append(
@@ -10193,8 +10277,22 @@ class AoTDataToolService:
         # 없이는 bay/시설 센서의 현재값이 대조에서 통째로 빠진다.
         narrow = (sensors.get('in_plot') or sensors.get('in_bay')
                   or sensors.get('from_facility') or [])
+        # 대조에 실제로 쓰이는 measurement 만 읽는다. 예전에는 이 구획의
+        # **모든 채널**을 하나씩 읽어(실측 25회) `rssi`·`snr`·전위처럼 목표와
+        # 무관한 값까지 InfluxDB 를 왕복했다.
+        #
+        # ⚠ **채널이 아니라 measurement 기준으로 좁힌다.** 같은 측정을 재는
+        #   다른 센서를 `others` 로 내보내는 계약이 있으므로, 쓰는 measurement
+        #   는 **모든 센서에서** 읽어야 한다.
+        wanted_meas = set()
+        for t in items:
+            if t.get('observable') is False:
+                continue
+            _m = str(t.get('measurement') or t.get('key') or '').strip().lower()
+            if _m:
+                wanted_meas.add(_m)
         current = AoTDataToolService._latest_by_measurement(
-            narrow, sensors.get('from_zone') or [])
+            narrow, sensors.get('from_zone') or [], wanted=wanted_meas or None)
 
         rows, no_reading, curves, off_period, unmeasurable = [], [], [], [], []
         for t in items:
@@ -10356,8 +10454,13 @@ class AoTDataToolService:
             return None
 
     @staticmethod
-    def _latest_by_measurement(in_plot_ids, zone_ids=None):
+    def _latest_by_measurement(in_plot_ids, zone_ids=None, wanted=None):
         """측정 종류별 최신값 — {measurement: {'value','at','sensor','others'}}.
+
+        `wanted` 를 주면 그 measurement 만 읽는다(없으면 전부 — 다른 호출부의
+        동작을 바꾸지 않는다). 채널이 아니라 **measurement** 로 좁히는 것이
+        핵심이다: 같은 측정을 여러 센서가 재면 나머지를 `others` 로 내보내야
+        하므로, 쓰는 measurement 는 모든 센서에서 읽어야 한다.
 
         구획 안 센서를 구역 폴백보다 **먼저** 본다(sensors_for_plot 의 우선순위와
         같다). 평균을 내지 않는 이유는 구획 안 센서와 구역 대표 센서가 섞이면
@@ -10367,8 +10470,11 @@ class AoTDataToolService:
         """
         out = {}
         try:
+            from datetime import datetime, timezone
+
             from aot.databases.models import Conversion, DeviceMeasurements, Input
-            from aot.utils.influx import read_influxdb_list
+            from aot.utils.influx import (bulk_key, query_last_values_bulk_status,
+                                          read_influxdb_list)
             from aot.utils.system_pi import return_measurement_info
 
             ordered = list(in_plot_ids or []) + [d for d in (zone_ids or [])
@@ -10379,23 +10485,65 @@ class AoTDataToolService:
             names = {i.unique_id: i.name for i in Input.query.filter(
                 Input.unique_id.in_(ordered)).all()}
 
-            found = {}
-            for m in DeviceMeasurements.query.filter(
-                    DeviceMeasurements.device_id.in_(ordered)).all():
-                conv = (Conversion.query.filter(
-                    Conversion.unique_id == m.conversion_id).first()
-                    if m.conversion_id else None)
+            dms = DeviceMeasurements.query.filter(
+                DeviceMeasurements.device_id.in_(ordered)).all()
+
+            # 변환 정의를 **한 번에** 읽는다. 예전에는 채널마다 조회해
+            # 채널 수만큼 DB 를 왕복했다(N+1).
+            conv_ids = {m.conversion_id for m in dms if m.conversion_id}
+            convs = {}
+            if conv_ids:
+                convs = {c.unique_id: c for c in Conversion.query.filter(
+                    Conversion.unique_id.in_(conv_ids)).all()}
+
+            want = {str(w).strip().lower() for w in (wanted or [])} or None
+
+            # 읽을 채널을 먼저 정하고 **한 번에** 묻는다. 예전에는 채널마다
+            # 왕복해, 대조 하나에 InfluxDB 를 13번 갔다(4-A 로 25 → 13 이 된
+            # 뒤의 수치다). `query_last_values_bulk` 가 device+unit 합집합으로
+            # 한 번 물어 계열마다 `last()` 를 내주므로 **1회**면 된다 —
+            # 지도 위젯이 같은 이유로 이미 쓰고 있다.
+            picks = []
+            for m in dms:
+                conv = convs.get(m.conversion_id) if m.conversion_id else None
                 channel, unit, meas = return_measurement_info(m, conv)
                 if not unit or not meas:
                     continue
-                rows = read_influxdb_list(m.device_id, unit, channel, measure=meas,
+                # 대조에 안 쓰이는 채널은 InfluxDB 까지 가지 않는다 — 좁히면
+                # 묻는 unit·device 집합도 함께 작아진다.
+                if want is not None and str(meas).strip().lower() not in want:
+                    continue
+                picks.append((m.device_id, unit, channel, meas))
+
+            # `ok` 가 False 면 **쿼리가 못 돌았다**는 뜻이다. 그것과 "돌았는데
+            # 그 계열에 값이 없다" 를 가르지 않으면, 값이 없는 정상 상태에서
+            # 채널마다 다시 묻는 옛 경로로 통째로 되돌아간다.
+            bulk, ok = query_last_values_bulk_status(
+                [(u, d, c, ms) for d, u, c, ms in picks], past_sec=3600)
+
+            def _latest(dev, unit, channel, meas):
+                # (시각, 값) 또는 None.
+                if ok:
+                    hit = bulk.get(bulk_key(unit, dev, channel, meas))
+                    if not hit or hit[1] is None:
+                        return None
+                    return datetime.fromtimestamp(hit[0], tz=timezone.utc), hit[1]
+                rows = read_influxdb_list(dev, unit, channel, measure=meas,
                                           duration_sec=3600, datetime_obj=True)
                 if not rows or rows[-1][1] is None:
+                    return None
+                return rows[-1][0], rows[-1][1]
+
+            found = {}
+            for dev, unit, channel, meas in picks:
+                got = _latest(dev, unit, channel, meas)
+                if got is None:
                     continue
+                at, value = got
                 found.setdefault(str(meas).strip().lower(), []).append({
-                    'value': rows[-1][1], 'at': str(rows[-1][0]),
-                    'sensor': names.get(m.device_id, m.device_id),
-                    '_rank': rank.get(m.device_id, 99)})
+                    'value': value, 'at': str(at),
+                    'sensor': names.get(dev, dev),
+                    '_rank': rank.get(dev, 99)})
 
             for meas, cands in found.items():
                 cands.sort(key=lambda c: c['_rank'])
@@ -10692,9 +10840,75 @@ class AoTDataToolService:
                     'of': len(data.get('buckets') or []),
                 }
 
+                # 날짜를 좁혔으면 **단계도 그 기간에 맞춰** 줄인다. 그러지
+                # 않으면 하루를 요청해도 6단계의 목표·지침이 통째로 실려
+                # (실측 2,495토큰) 정작 그 하루의 측정값을 밀어낸다.
+                #
+                # 지우지는 않는다 — 앞뒤에 무엇이 있었는지는 문서의 값이다.
+                # 기간 밖 단계는 **이름과 기간만** 남기고 `targets`·`guidance`
+                # 를 뺀 뒤 그 사실을 표식으로 말한다(빈 값과 구분되어야 한다).
+                stages = data.get('stages') or []
+                if stages:
+                    trimmed, dropped = [], 0
+                    for st in stages:
+                        s0, s1 = _parse(st.get('starts_on')), _parse(st.get('ends_on'))
+                        overlaps = not ((hi and s0 and s0 > hi)
+                                        or (lo and s1 and s1 < lo))
+                        if overlaps:
+                            trimmed.append(st)
+                            continue
+                        thin = {k: v for k, v in st.items()
+                                if k not in ('targets', 'guidance')}
+                        thin['outside_period'] = True
+                        trimmed.append(thin)
+                        dropped += 1
+                    data['stages'] = trimmed
+                    if dropped:
+                        data['stages_note'] = (
+                            "%d of %d stages fall outside the requested dates — "
+                            "their targets and guidance are omitted here (call "
+                            "without date_from/date_to to see the whole plan)."
+                            % (dropped, len(stages)))
+
             # 접기 **전**의 날짜별 버킷. 이탈을 셀 때 쓴다 — 접힌 버킷으로
             # 세면 "78일 중 78일" 의 분모가 보는 단위에 따라 달라진다.
             raw_buckets = list(buckets)
+
+            # 좁히지도 접지도 않은 긴 조회는 **기본으로 접는다.** 예전에는
+            # 51일치를 그대로 만들어 캡이 버킷을 3개로 잘랐다 — 남은 것은
+            # "51건 중 3건" 이라 그 문서로는 아무것도 답할 수 없다.
+            #
+            # 도구 설명이 이미 "사흘을 넘으면 granularity 를 쓰라" 고 안내한다.
+            # **기본값이 그 안내를 따르게** 한 것이고, 무엇으로 접었는지는
+            # `granularity_view` 가 말한다. 일별이 필요하면 명시하면 된다.
+            # 한 단계만 접어서는 모자랄 수 있다. 51일을 주간으로 접으면 8개인데
+            # 버킷 하나가 2,400 토큰이라 여전히 상한을 넘어, 캡이 "8건 중 3건"
+            # 으로 잘랐다. **들어갈 때까지** 접는다 — 굵게 보는 것과 잘려 나가는
+            # 것 중에는 전자가 낫다(잘린 문서는 몇 건인지조차 답하지 못한다).
+            auto_folded = False
+            if not granularity and stored == 'day' and len(buckets) > 3:
+                order = ['week', 'month', 'all']
+                # 상한은 캡이 쓰는 값을 그대로 본다(두 벌로 두면 갈라진다).
+                # 고정비(단계·요약·캐비어트·안내)를 뺀 나머지가 버킷 예산이다.
+                # ⚠ **실측으로 잡을 것.** 처음에 4,000 으로 어림했다가 실제
+                #   고정비가 8,303 인 것을 보고 고쳤다 — 예산을 크게 잡으면
+                #   접기가 통과시킨 응답을 캡이 다시 잘라, 지켜야 할 `env` 가
+                #   빠진 채 나간다(그렇게 만들어 보고 알았다).
+                #   아래 `auto_folded` 분기가 단계별 이탈을 생략하므로 접어서
+                #   보는 조회의 고정비는 4,000 안팎이다.
+                #
+                # 접기는 **대략 맞추는 것**이고 정밀 조정은 캡이 한다. 예산을
+                # 빡빡하게 잡으면 한 단계 더 접혀 51일이 한 덩어리가 된다 —
+                # 굵게 보는 것보다 나쁜 것은 **너무 굵게** 보는 것이다.
+                from aot.ai.services.tool_execution import _MAX_RESPONSE_TOKENS
+                budget = max(1, _MAX_RESPONSE_TOKENS - 4000)
+                for g in order:
+                    folded = PJ.fold_buckets(buckets, to=g, granularity=stored)
+                    size = len(json.dumps(folded, ensure_ascii=False,
+                                          default=str)) / 3.0
+                    granularity, auto_folded = g, True
+                    if size <= budget:
+                        break
 
             if granularity:
                 if granularity not in PJ.VIEW_GRANULARITIES:
@@ -10716,7 +10930,14 @@ class AoTDataToolService:
             # 통째로 빠진다. 캡의 안내는 "하나씩 물어봐라" 인데 **무엇으로
             # 좁히는지**는 그 자리에서 알 수 없다 — 여기서 말해 준다.
             # 이 힌트는 최상위 문자열이라 캡이 리스트 필드를 떨어뜨려도 남는다.
-            if not granularity and not (lo or hi) and len(buckets) > 3:
+            if auto_folded:
+                data['hint'] = (
+                    "No granularity was given and this journal has many periods, "
+                    "so it was folded to '%s' to fit the response limit. Call "
+                    "again with granularity='day' (narrow the range with "
+                    "date_from/date_to first) for day-by-day detail."
+                    % granularity)
+            elif not granularity and not (lo or hi) and len(buckets) > 3:
                 data['hint'] = (
                     "This journal has %d periods and may be trimmed to fit the "
                     "response limit — the measurements (env) are dropped first. "
@@ -10799,12 +11020,97 @@ class AoTDataToolService:
                         'no_sensor_for': [t.get('label') for t
                                           in (sec.get('unobservable') or [])],
                     })
+                # 날짜를 좁혔으면 요약도 그 기간 것만 상세를 싣는다 —
+                # `stages` 와 같은 원칙이다. 하루를 물었는데 6단계의 이탈
+                # 통계가 통째로 실리면(실측 4,192토큰) 그 하루의 측정값을
+                # 밀어낸다. 기간 밖 단계는 이름·기간·적산온도만 남긴다.
+                if (lo or hi) and summaries:
+                    thinned = []
+                    for sm in summaries:
+                        s0, s1 = _parse(sm.get('starts_on')), _parse(sm.get('ends_on'))
+                        overlaps = not ((hi and s0 and s0 > hi)
+                                        or (lo and s1 and s1 < lo))
+                        if overlaps:
+                            thinned.append(sm)
+                            continue
+                        thinned.append({k: v for k, v in sm.items()
+                                        if k not in ('target_drift', 'no_sensor_for')})
+                    summaries = thinned
+                # 접어서 보는 조회는 **개괄을 원한다는 뜻**이다. 단계마다 센서별
+                # 이탈 통계까지 실으면(실측 4,192토큰, 고정비의 절반) 그만큼
+                # 버킷이 잘려 나간다 — 문서 단위 `target_drift` 가 같은 것을
+                # 요약해 싣고 있으므로 거기를 보면 된다.
+                if auto_folded and summaries:
+                    summaries = [{k: v for k, v in sm.items()
+                                  if k != 'target_drift'} for sm in summaries]
+                    data['stage_summaries_note'] = (
+                        "Per-stage target drift is omitted because this journal "
+                        "was folded to '%s' — see the document-level "
+                        "'target_drift', or narrow the range with "
+                        "date_from/date_to for per-stage detail." % granularity)
                 if summaries:
                     data['stage_summaries'] = summaries
             except Exception:
                 logger.exception('get_plot_journal: stage summary failed')
 
-            return PJ.journal_to_jsonable(data)
+            # ── 목표 정의의 반복 필드를 머리로 올린다 ──────────────────
+            #
+            # 목표 하나가 열한 개 필드를 갖는데 `label`·`unit`·`measurement`·
+            # `shape`·`fixed`·`when` 은 `key` 로 정해지는 값이다. 6단계 × 5목표
+            # = 30번 반복되어 2,288 토큰이었다(주간 조회 전체의 7%).
+            #
+            # 정의는 `target_defs` 에 한 벌만 싣고 단계에는 그 단계에서만
+            # 달라지는 것(`value`·`source`·곡선 정보)을 남긴다.
+            _DEF_KEYS = ('label', 'unit', 'measurement', 'shape', 'fixed', 'when')
+            target_defs = {}
+            for st in (data.get('stages') or []):
+                slim = []
+                for t in (st.get('targets') or []):
+                    k = t.get('key')
+                    if not k:
+                        slim.append(t)
+                        continue
+                    if k not in target_defs:
+                        target_defs[k] = {d: t[d] for d in _DEF_KEYS if d in t}
+                    slim.append({d: v for d, v in t.items()
+                                 if d not in _DEF_KEYS})
+                if slim:
+                    st['targets'] = slim
+            if target_defs:
+                data['target_defs'] = target_defs
+                data['target_defs_note'] = (
+                    "Each stage's targets carry only what differs there; the "
+                    "shared fields (label, unit, measurement, shape, when) are "
+                    "here, keyed by 'key'.")
+
+            # ── 캡이 무엇부터 버릴지 이 도구가 정한다 ──────────────────
+            #
+            # 캡은 무게로 고른다. 그러면 **호출자가 달라고 한 것**이 가장
+            # 크다는 이유로 먼저 잘린다 — 하루로 좁혀 불러도 그 하루의 측정값
+            # (`buckets.env`)이 빠지고, 날짜와 무관하게 늘 실리는 단계 요약이
+            # 남았다(실측 2026-09-05).
+            #
+            # 순서를 뒤집는다. 단계 계획의 산문·이탈 통계는 다른 도구
+            # (`get_plot`)로도 볼 수 있지만, **그 기간의 측정값과 노트는 이
+            # 도구에만 있다.**
+            out = PJ.journal_to_jsonable(data)
+            if isinstance(out, dict):
+                from aot.ai.services.tool_execution import CAP_PRIORITY_KEY
+                out[CAP_PRIORITY_KEY] = {
+                    'drop_first': [['stages', 'guidance'],
+                                   ['stage_summaries', 'target_drift'],
+                                   ['stages', 'targets']],
+                    'keep_last': [['buckets', 'env'], ['buckets', 'notes']],
+                    # 캡의 안내는 "좁혀서 다시 부르라" 까지밖에 못 말한다 —
+                    # **무엇으로** 좁히는지는 이 도구만 안다. 인자 이름을
+                    # 적어 두지 않으면 모델이 같은 조회를 되풀이한다.
+                    'narrow_with': (
+                        "To see the rest, call get_plot_journal again on the "
+                        "same journal_id with date_from/date_to for a shorter "
+                        "range, or granularity='week'|'month'|'all' to fold the "
+                        "periods together."),
+                }
+            return out
         except Exception as e:
             logger.exception("Error in get_plot_journal")
             return {"error": str(e)}

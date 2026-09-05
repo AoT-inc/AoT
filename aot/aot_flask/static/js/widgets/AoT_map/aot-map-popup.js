@@ -2249,7 +2249,7 @@
 
     var inner;
     var wk = _weekSeriesFor(r.key, opts.week);
-    if (V && wk && V.range) {
+    if (V && wk && V.range && opts.weekExpanded) {
       // ── 지난 며칠 안에서 오늘은 어디인가 ─────────────────────────────
       //
       // 지금 값 하나만 그리던 자리다. 그런데 그것은 같은 모달의 [환경·제어]
@@ -2259,6 +2259,13 @@
       //
       // 머리줄의 숫자는 여전히 **지금 값**이다(계열의 대표값이 아니라) —
       // "지금 몇 도인가" 를 잃지 않으면서 그 옆에 지난 며칠을 세운다.
+      //
+      // ⚠ **기본값은 아니다.** 처음엔 이 창이 기본이었는데, 사용자 지적으로
+      // "업데이트 전과 같이 1일 데이터를 기본 제공" 하게 되돌리고 이 도표는
+      // 머리줄 [7일] 버튼(`opts.weekExpanded`)을 눌렀을 때만 낸다
+      // (2026-09-05). 안 눌렀으면 아래 `s.hasAxis` 분기(오늘 값 밴드)로
+      // 떨어진다 — 조회 자체는 그대로 병렬로 미리 해 둔다(버튼을 눌렀을 때
+      // 기다리지 않도록).
       inner = V.range({
         label: name,
         valueText: s.valueText, valueSub: unit, stale: s.stale,
@@ -2473,16 +2480,53 @@
     var _gddUsable = !!(window.AoTViz && (opts.gdd || {}).usable &&
                         (opts.gdd || {}).value != null);
 
+    // **감추는 것은 여기서만 한다.** 서버는 감춘 항목도 계속 보낸다(설정 창이
+    // 목록을 만들려면 그래야 한다). 머리줄의 [7일] 버튼도 실제로 보여줄 줄
+    // (`shown`) 기준으로 판단해야 하므로 머리줄보다 먼저 계산한다.
+    var hidden = _hiddenSet(opts.hidden);
+    var shown = readings.filter(function (r) { return !hidden[r.key]; });
+
     var head = '<div class="aot-ov-card-title aot-ov-card-title--row">' +
                '<span>' + _esc(_t('Environment')) + '</span>' +
                '<span class="aot-ov-title-actions">';
-    if (sensors.total && sensors.valid < sensors.total) {
-      // 'Sensors' 를 쓰지 않는다 — 그 msgid 는 설정 화면에서 "센서류"(장치 분류)
-      // 로 번역돼 있어 "센서류 2/3" 이 된다. 뜻이 다르면 msgid 를 나눈다.
-      head += '<span class="aot-ov-degraded">' +
-              _esc(_t('Sensors responding')) + ' ' +
-              sensors.valid + '/' + sensors.total +
-              '</span>';
+    // 기본은 **하루**(지금 값)다 — 주간 범위 도표는 [7일] 을 눌러야 뜬다
+    // (2026-09-05, 사용자 지적: "업데이트 전과 같이 1일 데이터를 기본
+    // 제공").
+    //
+    // **이 자리는 예전에 "응답하지 않는 센서 수" 배지(`aot-ov-degraded`)가
+    // 있던 자리다 — 그 배지를 이 버튼으로 대체한다.** 개별 열화는 각 줄의
+    // `.aot-stale` 표시가 여전히 맡는다(집계 숫자만 없앤 것이고, 어느 센서가
+    // 문제인지는 그 줄에서 그대로 보인다).
+    //
+    // `opts.week` 는 이제 **세 상태**를 구분해야 한다 — 부르는 쪽(위젯)이
+    // 조회를 누를 때까지 미루므로(2026-09-05 재설계, §7):
+    //   아직 안 부름   opts.week === undefined, opts.weekLazy === true
+    //                  → 있을 수도 있다고 믿고 버튼을 먼저 띄운다(눌러야
+    //                    실제로 안다). 안 눌러 보면 판정할 수 없다.
+    //   불렀는데 짝 없음 opts.week 가 배열(길이 0 이거나 안 맞음)
+    //                  → 버튼을 접고 "지난 7일 기록이 없습니다" 를 말한다.
+    //                    조용히 원래 모양으로 돌아가면 클릭이 아무 일도
+    //                    안 한 것처럼 보인다(사용자 지적).
+    //   불렀고 짝 있음  opts.week 의 일부 줄이 실제로 매치
+    //                  → 평소대로 버튼 + (펼치면) 범위 도표.
+    var _weekTried = (opts.week !== undefined);
+    var _weekMatches = _weekTried && !!(opts.week.length &&
+      shown.some(function (r) { return _weekSeriesFor(r.key, opts.week); }));
+    var _weekCapable = _weekTried ? _weekMatches : !!opts.weekLazy;
+    if (_weekCapable) {
+      var _expanded = !!opts.weekExpanded;
+      var _toggleLabel = _expanded ? _t('Today') : _t('7 Days');
+      var _toggleTitle = _expanded ? _t('Show today only')
+                                    : _t('Show the last 7 days');
+      // 대체하는 배지(`.aot-ov-degraded`)와 같은 글자 크기·색 톤을 쓴다 —
+      // `.aot-ov-cardcfg`(점 세 개 전용, 큰 글자·호버 배경)를 여러 글자
+      // 라벨에 그대로 씌우면 제목처럼 커지고 클릭 뒤 포커스 배경이 남는다.
+      // 테두리·채움을 아예 없애고 밑줄만으로 "누를 수 있다" 를 말한다.
+      head += '<button type="button" class="aot-ov-envrange-toggle"' +
+              ' data-expanded="' + (_expanded ? '1' : '0') + '"' +
+              ' aria-label="' + _esc(_toggleTitle) + '"' +
+              ' title="' + _esc(_toggleTitle) + '">' +
+              _esc(_toggleLabel) + '</button>';
     }
     // 낼 줄이 하나도 없으면 [설정]도 두지 않는다 — 열어 봐야 빈 목록이다.
     if (opts.configurable && (readings.length || _dliUsable || _gddUsable)) {
@@ -2490,10 +2534,14 @@
     }
     head += '</span></div>';
 
-    // **감추는 것은 여기서만 한다.** 서버는 감춘 항목도 계속 보낸다(설정 창이
-    // 목록을 만들려면 그래야 한다).
-    var hidden = _hiddenSet(opts.hidden);
-    var shown = readings.filter(function (r) { return !hidden[r.key]; });
+    // 불렀는데(`_weekTried`) 짝지을 계열이 없었다 — 위에서 버튼을 이미
+    // 접었으니(`_weekCapable` false), 왜 [7일] 이 사라졌는지 한 줄로
+    // 말한다. `opts.weekExpanded` 로만 가리는 이유: 안 눌러 본 사람에게는
+    // 애초에 뜬 적 없는 버튼 얘기라 보일 필요가 없다.
+    var _weekEmptyHtml = (_weekTried && !_weekMatches && opts.weekExpanded)
+      ? '<div class="aot-ov-now-note">' +
+        _esc(_t('No data for the last 7 days.')) + '</div>'
+      : '';
 
     // 이 둘은 **0 에서 목표까지 채우는 값**이다(오늘의 DLI·재배 시작일부터의
     // 누적 GDD) — `AoTViz.bullet()` 자신의 예시가 "누적 GDD" 를 정확히 이
@@ -2571,7 +2619,8 @@
       // 파생값 둘을 나란히 묶어 다른 측정 줄과 구분한다.
       var _derived = [_dliRowHtml, _gddRowHtml].filter(Boolean);
       _rows = _derived.concat(_rows);
-      body = '<div class="aot-env-now aot-viz-group">' + _rows.join('') + '</div>';
+      body = _weekEmptyHtml +
+             '<div class="aot-env-now aot-viz-group">' + _rows.join('') + '</div>';
     } else if (readings.length || _dliUsable || _gddUsable) {
       // 값은 오는데 전부 꺼 둔 상태(DLI/GDD 도 포함). "측정값 없음" 이라고
       // 적으면 센서가 죽은 줄 안다 — 그것은 지금 상태가 아니라 사용자가 정한
