@@ -183,7 +183,7 @@ if (!window._aotThreeLoaded) {
 <script>
 if (!window._aotFacility3DLoaded) {
   window._aotFacility3DLoaded = true;
-  document.write('<script src="/static/js/widgets/AoT_facility/aot-facility-3d.js?v=36"><\\/script>');
+  document.write('<script src="{{ asset(\'facility-3d\') }}"><\\/script>');
 }
 </script>
 <!-- 위젯 비가드 스크립트 9개 → 단일 번들(concat+minify, static/js/tools/bundle.mjs: aot-facility-widget).

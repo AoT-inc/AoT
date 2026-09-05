@@ -1575,8 +1575,7 @@
   {# ── 추가 의견 (노트 재사용, §10) ──────────────────────────────────── #}
   <div class="aot-journal-notes" id="journal-notes-mount"></div>
 
-  <script src="{{ url_for('static', filename='js/common/sensor-label.js') }}"></script>
-  <script src="{{ url_for('static', filename='js/common/aot-dataviz.js') }}"></script>
+  <script src="{{ asset('page-journal-view-viz') }}"></script>
   {#- ── 지도 ─────────────────────────────────────────────────────────────
       **편집 지도(`/geo/design`)가 지도를 세우는 방법을 그대로 따른다** —
       `AoTGeoDesign._initMap()` 도 maplibre 지도를 직접 만들고 공용 모듈을
@@ -1590,7 +1589,7 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='css/widget/aot-sensor-label.css') }}">
   {#- 바탕·테마색을 이 설정에서 읽는다(편집 지도와 같은 출처). -#}
   <script>window.AOT_GEO_CONFIG = {{ geo_config | tojson | safe }};</script>
-  <script src="{{ url_for('static', filename='js/geo/aot-maplibre-raster-bridge.js') }}"></script>
+  <script src="{{ asset('app-raster-bridge') }}"></script>
   {#- 레이어 패널(바탕·오버레이 선택)은 **편집 지도의 것을 그대로 쓴다** —
       `AoTGeoUI._toggleLayerPanel()`(427줄)이 래스터/벡터 바탕, 벡터 채널,
       오버레이 켜고 끄기, 마지막 선택 기억까지 전부 한다. 공용
@@ -1599,8 +1598,7 @@
       고를 수 없다(그것을 붙였다가 되돌렸다, 지적 2026-09-04).
       번들이 아니라 **원본 파일**을 싣는다 — `geo-design` 번들은 스코프에
       갇혀 `AoTGeoUI` 를 밖에서 못 쓴다. -#}
-  <script src="{{ url_for('static', filename='js/geo/design/aot-geo-ui.js') }}"></script>
-  <script src="{{ url_for('static', filename='js/geo/journal-map.js') }}"></script>
+  <script src="{{ asset('page-journal-view-map') }}"></script>
   <script>
     (function () {
       // ── 기간 전체의 추세(§WP4-2) ───────────────────────────────────────

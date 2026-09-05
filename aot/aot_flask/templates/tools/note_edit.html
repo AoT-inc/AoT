@@ -108,7 +108,7 @@
     </div>
   </div>
 
-  <script src="{{ url_for('static', filename='js/tools/note-orphaned-links.js') }}"></script>
+  <script src="{{ asset('tool-note-links') }}"></script>
   <script>
     AoTNoteOrphanedLinks.init({
       noteId: {{ this_note.unique_id | tojson }},

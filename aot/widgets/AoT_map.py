@@ -158,23 +158,18 @@ WIDGET_HEAD_HTML = """
      3D 시설을 한 번도 안 여는 대시보드가 831KB 를 받고 파싱했고, document.write 는
      파서까지 멈춰 세웠다. 이제 로더만 미리 두고, 지도에 3D 지오메트리를 가진 시설이
      실제로 있을 때 aot-map-widget-vector.js 가 ensure() 로 그때 받는다. -->
-<script src="/static/js/common/aot-facility-3d-loader.js?v=1"></script>
+<script src="{{ asset('widget-map-extra') }}"></script>
 
 <!-- GeoJSON overlay support -->
-<script src="/static/js/geo/aot-geojson-manager.js?v=20260814a"></script>
 
 <!-- Sensor labels (facility fittings measurement labels + 24h popup) -->
 <!-- aot-chart-core: 공용 Highcharts 기본값(local TZ 등) — bay 모달 인라인 차트가 사용 -->
-<script src="/static/js/common/aot-chart-core.js?v=20260813i"></script>
 <!-- 출력 상태 공용 분류기(on/off/pending/fault). 위젯 코드가 이미 이것을
      전제로 쓰고 있었는데 정작 로드는 안 하고 있어서, 늘 인라인 폴백으로
      떨어져 있었다 — 'fault'(무응답) 판정이 화면마다 달라질 수 있는 상태였다. -->
-<script src="/static/js/common/aot-output-state.js?v=9"></script>
 <!-- 고정 리터럴 `?v=52` 였다 — 내용이 바뀌어도 URL 이 그대로라 1년 캐시가
      곧 "1년간 옛 JS" 가 된다(CLAUDE.md 정적 캐시 무효화). url_for 가 내용
      해시를 붙인다. -->
-<script src="{{ url_for('static', filename='js/common/sensor-label.js') }}"></script>
-<script src="{{ url_for('static', filename='js/widgets/AoT_map/aot-map-sensor-labels.js') }}"></script>
 <link rel="stylesheet" href="{{ url_for('static', filename='css/widget/aot-sensor-label.css') }}">
 <link rel="stylesheet" href="/static/css/components/aot-toggle.css?v=20260814a">
 <!-- 공용 데이터 시각화 프리미티브(밴드 바 · 불릿 · 기간 바).
@@ -184,10 +179,9 @@ WIDGET_HEAD_HTML = """
 
 <!-- Shared time-wheel module (also used by AoT_timer, sequence widgets) — zone popup "settings" (turn on until end time) -->
 <link rel="stylesheet" href="/static/css/components/aot-time-wheel.css?v=20260813a">
-<script src="/static/js/components/aot-time-wheel.js?v=20260813d"></script>
+<script src="{{ asset('widget-map-tail') }}"></script>
 
 <!-- Actuator group panel -->
-<script src="/static/js/widgets/AoT_facility/aot-facility-actuator-panel.js?v=15"></script>
 <link rel="stylesheet" href="/static/css/widget/aot-facility-widget.css?v=32">
 
 <style>

@@ -1,0 +1,11 @@
+/* AoT bundle: page-location-entry — built from 1 sources. Do not edit; edit sources and rebuild (tools/bundle.mjs). */
+class AoTLocationPicker{constructor(t,e={}){this.mapId=t,this.map=null,this.marker=null,this.initialLat=e.lat||37.5665,this.initialLng=e.lng||126.978,this.hasInitial=!isNaN(e.lat)&&!isNaN(e.lng)}init(){if(console.log("AoTLocationPicker initializing (Pure MapLibre)..."),typeof maplibregl>"u"){console.error("MapLibre GL not loaded!");return}this.map=new maplibregl.Map({container:this.mapId,style:{version:8,sources:{osm:{type:"raster",tiles:["https://a.tile.openstreetmap.org/{z}/{x}/{y}.png"],tileSize:256,attribution:"\xA9 OpenStreetMap"}},layers:[{id:"osm",type:"raster",source:"osm",minzoom:0,maxzoom:19}]},center:[this.initialLng,this.initialLat],zoom:13}),this.map.addControl(new maplibregl.NavigationControl,"top-right"),this.hasInitial&&this._placeMarker(this.initialLng,this.initialLat),this.map.on("click",t=>{this._placeMarker(t.lngLat.lng,t.lngLat.lat)}),document.getElementById("btn-confirm-location").addEventListener("click",()=>{this._confirmSelection()})}_placeMarker(t,e){this.marker&&this.marker.remove();const i=document.createElement("div");i.style.cssText=`
+            width: 24px;
+            height: 24px;
+            background-color: #995aff;
+            border: 3px solid white;
+            border-radius: 50%;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+            cursor: move;
+        `,this.marker=new maplibregl.Marker({element:i,draggable:!0}).setLngLat([t,e]).addTo(this.map),this.marker.on("dragstart",()=>{this.map.dragPan.disable()}),this.marker.on("dragend",()=>{this.map.dragPan.enable();const a=this.marker.getLngLat();this._updateUI(a.lat,a.lng)}),this.map.flyTo([e,t],this.map.getZoom()),this._updateUI(e,t)}_updateUI(t,e){const i=document.getElementById("selected-coords");i.innerText=`${t.toFixed(6)}, ${e.toFixed(6)}`,i.classList.remove("text-danger"),i.classList.add("text-success"),document.getElementById("btn-confirm-location").disabled=!1}_confirmSelection(){if(!this.marker)return;const t=this.marker.getLngLat(),e={lat:t.lat,lng:t.lng};console.log("Location Selected:",e),window.opener&&!window.opener.closed?(window.opener.postMessage({type:"AOT_LOCATION_SELECTED",payload:e},"*"),window.close()):alert(`Selected: ${e.lat}, ${e.lng}
+(No parent window found to return value)`)}}

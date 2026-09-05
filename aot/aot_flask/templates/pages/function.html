@@ -26,8 +26,7 @@
 <link rel="stylesheet" href="/static/css/gridstack-custom.css?v=20260611z1" />
 <link rel="stylesheet" href="{{ url_for('static', filename='css/aot-entry-ui.css') }}" />
 <script src="{{ url_for('static', filename='js/vendor/gridstack-all.js') }}"></script>
-<script src="/static/js/common/aot-output-state.js?v=9"></script>
-<script src="{{ url_for('static', filename='js/common/aot-coordinator-plot.js') }}"></script>
+<script src="{{ asset('page-function-head') }}"></script>
 
 
 {% include 'pages/map/map_assets.html' %}
@@ -729,8 +728,7 @@
 </script>
 
 <!-- Tab Management JavaScript -->
-<script src="{{ url_for('static', filename='js/app/tab_management.js') }}"></script>
-<script src="/static/js/common/aot-widget-drawer.js?v=20260725d"></script>
+<script src="{{ asset('page-crud-tail') }}"></script>
 
 <!-- Tab Settings Modal -->
 {% include 'modals/tab_settings.html' %}

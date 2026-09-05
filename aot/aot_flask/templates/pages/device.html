@@ -31,7 +31,7 @@
 <link rel="stylesheet" href="/static/css/gridstack-custom.css?v=20260611z1" />
 <link rel="stylesheet" href="{{ url_for('static', filename='css/aot-entry-ui.css') }}" />
 <script src="{{ url_for('static', filename='js/vendor/gridstack-all.js') }}"></script>
-<script src="/static/js/common/aot-output-state.js?v=9"></script>
+<script src="{{ asset('app-output-state') }}"></script>
 {% endblock %}
 
 {%- block body %}
@@ -824,5 +824,5 @@
      드로어에 그대로 가려 보인다 — input.html/output.html/function.html은 전부
      이 스크립트를 로드하는데 device.html만 빠져 있던 게 실제 원인이었다
      (2026-07-28 재현·확인). -->
-<script src="/static/js/common/aot-widget-drawer.js?v=20260725d"></script>
+<script src="{{ asset('app-widget-drawer') }}"></script>
 {% endblock %}

@@ -109,7 +109,7 @@ WIDGET_INFORMATION = {
 </div>""",
 
     'widget_dashboard_head': """{% if "aot_notice_render" not in dashboard_dict %}
-  <script src="/static/js/components/aot-notice-render.js?v=20260708"></script>
+  <script src="{{ asset('app-notice-render') }}"></script>
   {% set _dummy = dashboard_dict.update({"aot_notice_render": 1}) %}
 {% endif %}
 <style>

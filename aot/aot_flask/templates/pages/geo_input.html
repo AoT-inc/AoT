@@ -28,8 +28,7 @@
 
 <link rel="stylesheet" href="{{ url_for('static', filename='css/components/aot-toggle.css') }}" />
 <!-- [GIS Vector Migration] aot-maplibre-loader.js is already loaded in layout.html head -->
-<script src="{{ url_for('static', filename='js/geo/aot-geo-input-preview.js') }}"></script>
-<script src="{{ url_for('static', filename='js/geo/aot-geo-image-overlay.js') }}"></script>
+<script src="{{ asset('page-geo-input') }}"></script>
 
 <script>
     // Inject Global Geo Config
@@ -230,5 +229,5 @@
 
 
 </script>
-<script src="/static/js/common/aot-widget-drawer.js?v=20260725d"></script>
+<script src="{{ asset('app-widget-drawer') }}"></script>
 {% endblock %}

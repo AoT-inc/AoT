@@ -116,7 +116,7 @@
 
 {#- 탭 추가/설정 버튼이 부르는 전역 함수(createNewTab/openTabSettings 등)는
     여기서 온다 — input 페이지와 같은 스크립트다. -#}
-<script src="{{ url_for('static', filename='js/app/tab_management.js') }}"></script>
+<script src="{{ asset('app-tab-management') }}"></script>
 {% include 'modals/tab_settings.html' %}
 
 {#- 설정 드로어 — input 페이지와 같은 셸(`aot-option-modal aot-widget-drawer`).
@@ -345,8 +345,5 @@ window._PROG = {
   source_ai:    {{ _('AI')|tojson }}
 };
 </script>
-<script src="{{ url_for('static', filename='js/common/aot-widget-drawer.js') }}"></script>
-<script src="{{ url_for('static', filename='js/common/aot-plot-labels.js') }}"></script>
-<script src="{{ url_for('static', filename='js/common/aot-dataviz.js') }}"></script>
-<script src="{{ url_for('static', filename='js/geo/program-settings.js') }}"></script>
+<script src="{{ asset('page-programs') }}"></script>
 {%- endblock -%}

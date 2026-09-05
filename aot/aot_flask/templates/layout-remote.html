@@ -24,7 +24,7 @@
 
   <link href="{{ url_for('static', filename='css/custom.css') }}" rel="stylesheet">
   <!-- 폴링 가시성 관리자 (배터리 Step 2-A): 백그라운드 시 모든 setInterval 폴링 정지. 반드시 최상단 로드. -->
-  <script src="/static/js/common/aot-poll-visibility.js?v=20260813b"></script>
+  <script src="{{ asset('app-early') }}"></script>
   <script src="{{ url_for('static', filename='js/vendor/jquery-3.4.1.min.js') }}"></script>
   <!-- FontAwesome 5.11.2 webfont (구 SVG-JS 빌드 대체): MutationObserver 상주 제거 + 페이지당 JS 파싱 1.1MB 감소 -->
   <link href="{{ url_for('static', filename='vendor/fontawesome-5.11.2/css/all.min.css') }}" rel="stylesheet">
@@ -91,8 +91,8 @@
   <!-- Placed at the end of the document so the pages load faster -->
   <script src="{{ url_for('static', filename='js/vendor/bootstrap.min.js') }}"></script>
 
-  <!-- AoT timezone display utility -->
-  <script src="/static/js/common/aot-tz.js?v=20260506"></script>
+  <!-- AoT timezone display utility (app-time 번들: aot-tz + aot-time-utils) -->
+  <script src="{{ asset('app-time') }}"></script>
 </body>
 
 </html>

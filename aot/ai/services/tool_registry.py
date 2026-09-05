@@ -424,7 +424,7 @@ TOOLS: List[Tool] = [
                         "The reply carries a '_reading' list — the rules for "
                         "reading THIS result. Follow it; it is instruction, "
                         "not commentary. Read-only."),
-        "usage_hint": ("params.arguments: {map_id?, include_ended?, "
+        "usage_hint": ("params.arguments: {map_id?, zone_id?, include_ended?, "
                        "on?: 'YYYY-MM-DD', with_sensors?}"),
     }),
     Tool('get_plot', handler='get_plot', manifest={
@@ -1558,11 +1558,12 @@ _MCP_TOOL_PAYLOADS: List[Dict[str, Any]] = [
     # 안 보이는 상태로 한참 헤맸다).
     {
         "tool_name": "list_plots",
-        "description": "Lists vegetation plots — what crop is planted where, with area, size (width x length), period and the zone each plot sits in. Growing plots only unless include_ended=true. This is the ONLY source for open-field crops; get_crop_status covers greenhouses. For row/plant counts at a given spacing, call get_plot on the one plot. Pass with_sensors=true to get every plot's sensors in ONE call instead of calling get_plot per plot. Irrigation valves are NOT included here (they are the expensive part); call get_plot on the single plot when you need them. The reply carries a '_reading' list: the rules for reading THIS result, narrowed to what it actually returned. Follow it — it is instruction, not commentary. Read-only.",
+        "description": "Lists vegetation plots — what crop is planted where, with area, size (width x length), period and the zone each plot sits in. Growing plots only unless include_ended=true. This is the ONLY source for open-field crops; get_crop_status covers greenhouses. For row/plant counts at a given spacing, call get_plot on the one plot. Pass with_sensors=true to get every plot's sensors in ONE call instead of calling get_plot per plot. Irrigation valves are NOT included here (they are the expensive part); call get_plot on the single plot when you need them. zone_id answers whether one zone has a crop. The reply carries a '_reading' list: the rules for reading THIS result, narrowed to what it actually returned. Follow it — it is instruction, not commentary. Read-only.",
         "input_schema": {
             "type": "object",
             "properties": {
                 "map_id": {"type": "string", "description": "Map (farm) unique_id. Omit for all maps."},
+                "zone_id": {"type": "string", "description": "Zone or site unique_id (from get_spatial_tree/resolve_target). Only plots spatially inside it."},
                 "include_ended": {"type": "boolean", "description": "Include finished plots (history). Default: false."},
                 "on": {"type": "string", "description": "As-of date 'YYYY-MM-DD' — what was growing on that day."},
                 "with_sensors": {"type": "boolean", "description": "Include each plot's referenced sensors (in_plot / from_zone / source). Default false. Use this instead of calling get_plot once per plot when the question spans several plots ('which plots are too wet'). Valves are still excluded."}

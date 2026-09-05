@@ -416,7 +416,14 @@ def create_app(config=ProdConfig):
                 h = None
             return ('%s?v=%s' % (base, h)) if h else base
 
-        return {'asset': asset}
+        def bundle_manifest():
+            """번들명 → 내용해시 전체. layout 이 window.AOT_BUNDLES 로 내보내,
+            런타임에 <script> 를 만드는 JS(지연 로더들)도 같은 해시 URL 을 쓴다.
+            그쪽은 url_for/asset 을 지나지 않아 예전엔 소스 경로를 직접 박고 있었다."""
+            asset('')  # 매니페스트 로드/갱신을 위 캐시 로직에 위임한다
+            return _bundle_manifest['data'] or {}
+
+        return {'asset': asset, 'bundle_manifest': bundle_manifest}
 
     # ── Google account status — used by the nav-bar "User Settings" modal
     # (Google sign-in / connect) and the login page's "Sign in with Google"

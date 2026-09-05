@@ -1234,7 +1234,7 @@ WIDGET_INFORMATION = {
     <link rel="stylesheet" href="/static/css/components/aot-toggle.css?v=20260814a">
     <!-- Shared time-wheel module (also used by other widgets) -->
     <link rel="stylesheet" href="/static/css/components/aot-time-wheel.css?v=20260813a">
-    <script src="/static/js/components/aot-time-wheel.js?v=20260813d"></script>
+    <script src="{{ asset('app-time-wheel') }}"></script>
     """,
 
     'endpoints': [
@@ -1545,7 +1545,7 @@ WIDGET_INFORMATION = {
       }
 
       // ===== Time picker: delegate to the shared AoTTimeWheel module =====
-      // (module: /static/js/components/aot-time-wheel.js + .css — reusable by other widgets)
+      // (번들 app-time-wheel + css/components/aot-time-wheel.css — 다른 위젯도 같이 쓴다)
       function openWheel(wid, key){
         if (!window.AoTTimeWheel) { console.warn('[AoT Timer] AoTTimeWheel module not loaded'); return; }
         if (key === 'startat') {

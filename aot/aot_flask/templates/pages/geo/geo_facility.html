@@ -1149,7 +1149,7 @@
     saved: {{ _('Saved')|tojson }}
   };
 </script>
-<script src="{{ url_for('static', filename='js/geo/aot-facility-scope.js') }}"></script>
+<script src="{{ asset('page-geo-facility-scope') }}"></script>
 
 <script type="application/json" id="facility-page-vars">
 {{ {
@@ -1386,7 +1386,7 @@ var _COMM = {
 
 <script src="{{ asset('geo-facility') }}"></script>
 <!-- Shared right-side drawer shell (same one input/output/function pages use) -->
-<script src="/static/js/common/aot-widget-drawer.js?v=20260725d"></script>
+<script src="{{ asset('app-widget-drawer') }}"></script>
 
 
 <!-- ── Device check (Commissioning) JavaScript ───────────────────────────── -->

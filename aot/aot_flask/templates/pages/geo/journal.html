@@ -263,7 +263,7 @@
 
 </main>
 
-<script src="{{ url_for('static', filename='js/geo/journal-page.js') }}"></script>
+<script src="{{ asset('page-journal') }}"></script>
 <script>
   AoTJournalPage.initHub({
     createUrl: {{ url_for('routes_geo.geo_journal_create') | tojson }},

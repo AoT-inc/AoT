@@ -12,6 +12,10 @@ STATS_PASSWORD 유출 구간 포함)가 그대로 origin 으로 전송됐다.
 — 해시를 아는 사람이면 지금도 받을 수 있다는 뜻이다. 그래서 이 검사는
 "지운 뒤 확인"이 아니라 **push 되기 전에 막는 것**을 목표로 한다.
 
+검사는 두 겹이다. **모양**(스쿼시 커밋 1개인가)과 **내용**(그 트리에 공개하면 안 되는
+것이 들어 있지 않은가). 모양만 보던 때는, 절차를 거치지 않고 손으로 commit-tree 한
+트리를 그대로 올려도 통과했다 — JS 원본 전체가 그렇게 나갈 수 있었다.
+
 origin 에 실제로 필요한 것은 매번 정확히 하나의 커밋뿐이다 —
 `git commit-tree <tree> -p origin/main -m ...` 로 만든 스쿼시 동기화 커밋
 (CLAUDE.md 'Git 전략 > origin(GitHub) 동기화 절차'). 이 스크립트는 그
@@ -60,6 +64,70 @@ def ensure_local_object(sha):
     return r.returncode == 0
 
 
+# ── 내용 검사: 공개 트리에 들어가면 안 되는 것 ────────────────────────────
+# 공개본에는 빌드 산출물만 올린다(정책: .local/plans/2609_github_js_publish_policy.md).
+# 목록(aot/scripts/publish/exclude.txt)에만 기대면 목록이 낡는 순간 뚫리므로,
+# 목록과 무관하게 성립하는 **구조 규칙**을 먼저 본다.
+JS_ROOT = 'aot/aot_flask/static/js/'
+
+# 산출물·외부 라이브러리라 공개해도 되는 것들.
+_ALLOWED_PREFIX = (JS_ROOT + 'dist/', JS_ROOT + 'geo/dist/',
+                   JS_ROOT + 'vendor/', JS_ROOT + 'notes/')
+_ALLOWED_EXACT = {
+    # three.js 애드온(각 라이브러리 라이선스라 손대지 않는다)
+    JS_ROOT + 'widgets/AoT_facility/GLTFLoader.js',
+    JS_ROOT + 'widgets/AoT_facility/OrbitControls.js',
+    JS_ROOT + 'widgets/AoT_facility/three-gltf-exporter.js',
+    JS_ROOT + 'widgets/AoT_facility/three-mesh-bvh.js',
+}
+
+
+def _tree_paths(sha):
+    r = _run(['git', 'ls-tree', '-r', '--name-only', sha])
+    if r.returncode != 0:
+        return None
+    return r.stdout.splitlines()
+
+
+def _is_public_js_source(path):
+    """공개하면 안 되는 AoT 자작 JS 원본인가."""
+    if not path.startswith(JS_ROOT) or not path.endswith('.js'):
+        return False
+    if path.startswith(_ALLOWED_PREFIX) or path in _ALLOWED_EXACT:
+        return False
+    if path.endswith('.min.js'):
+        return False
+    return True
+
+
+def check_tree_contents(sha):
+    """(통과여부, 사유) — 트리에 JS 원본·소스맵·제외 목록의 경로가 있으면 False."""
+    paths = _tree_paths(sha)
+    if paths is None:
+        return None, 'ls-tree 실패'
+
+    offenders = [p for p in paths if _is_public_js_source(p)]
+    offenders += [p for p in paths
+                  if p.startswith(JS_ROOT) and p.endswith('.map')
+                  and not p.startswith(JS_ROOT + 'vendor/')]
+
+    # 보조: 목록에 적힌 것이 남아 있으면 그것도 잡는다(빌드 도구·테스트 등 .js 가 아닌 것들).
+    try:
+        with open('aot/scripts/publish/exclude.txt', encoding='utf-8') as fh:
+            listed = {l.strip() for l in fh
+                      if l.strip() and not l.lstrip().startswith('#')}
+        present = set(paths)
+        offenders += sorted(listed & present - set(offenders))
+    except OSError:
+        pass  # 목록이 없으면 구조 규칙만으로 판단한다
+
+    if offenders:
+        uniq = sorted(set(offenders))
+        return False, ('공개하면 안 되는 파일 %d개가 트리에 있습니다(예: %s).'
+                       % (len(uniq), ', '.join(uniq[:3])))
+    return True, None
+
+
 def check_ref_update(local_sha, remote_main_sha):
     """(통과여부, 사유) — 통과여부는 True/False/None(검사 자체 실패)."""
     if local_sha == ZERO_SHA:
@@ -92,8 +160,8 @@ def _report_block(local_ref, local_sha, reason):
     print('차단: %s' % local_ref, file=sys.stderr)
     print('  %s' % reason, file=sys.stderr)
     print('  대상 커밋: %s' % local_sha, file=sys.stderr)
-    print('  origin 에는 commit-tree 로 만든 스쿼시 동기화 커밋만 올릴 것 —', file=sys.stderr)
-    print("  CLAUDE.md 'Git 전략 > origin(GitHub) 동기화 절차' 참고.", file=sys.stderr)
+    print('  origin 에는 aot/scripts/publish/publish_public.sh 가 만든', file=sys.stderr)
+    print('  스쿼시 동기화 커밋만 올릴 것(모양도 내용도 그 절차가 맞춰 준다).', file=sys.stderr)
     print('  정말 의도한 것이면: AOT_SKIP_ORIGIN_HISTORY_CHECK=1 git push ...', file=sys.stderr)
     print(file=sys.stderr)
 
@@ -104,7 +172,20 @@ def main():
     parser.add_argument('remote_url', nargs='?', default=None)
     parser.add_argument('--simulate-sha', help='테스트용: stdin 대신 이 sha 하나만 검사')
     parser.add_argument('--simulate-remote-main', help='테스트용: 원격 조회를 건너뛰고 이 sha 를 remote main 으로 쓴다')
+    parser.add_argument('--check-tree', metavar='TREEISH',
+                        help='내용 검사만 단독 수행(공개 절차가 push 前에 쓴다)')
     args = parser.parse_args()
+
+    if args.check_tree:
+        ok, reason = check_tree_contents(args.check_tree)
+        if ok is None:
+            print('경고: 내용 검사 실패(%s).' % reason, file=sys.stderr)
+            return 2
+        if not ok:
+            print('차단: %s' % reason, file=sys.stderr)
+            return 1
+        print('OK: 트리에 JS 원본·소스맵·제외 대상이 없습니다.')
+        return 0
 
     simulating = bool(args.simulate_sha)
 
@@ -144,14 +225,23 @@ def main():
         ok, reason = check_ref_update(local_sha, remote_main)
         if ok is None:
             print('경고: %s 검사 실패(%s) — 통과시킵니다.' % (local_ref, reason), file=sys.stderr)
-            continue
-        if not ok:
+        elif not ok:
             blocked = True
             _report_block(local_ref, local_sha, reason)
+            continue
+
+        if local_sha == ZERO_SHA:
+            continue
+        ok2, reason2 = check_tree_contents(local_sha)
+        if ok2 is None:
+            print('경고: %s 내용 검사 실패(%s) — 통과시킵니다.' % (local_ref, reason2), file=sys.stderr)
+        elif not ok2:
+            blocked = True
+            _report_block(local_ref, local_sha, reason2)
 
     if blocked:
         return 1
-    print('OK: origin 으로 향하는 참조가 전부 스쿼시 이력 안에 있습니다.')
+    print('OK: origin 으로 향하는 참조가 스쿼시 이력 안에 있고, 트리에 원본이 없습니다.')
     return 0
 
 

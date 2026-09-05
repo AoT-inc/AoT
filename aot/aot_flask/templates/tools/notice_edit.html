@@ -5,7 +5,7 @@
 {% block title %} - {{ _('Edit Notice') }}{% endblock %}
 
 {% block body %}
-<script src="{{ url_for('static', filename='js/components/aot-notice-render.js') }}"></script>
+<script src="{{ asset('app-notice-render') }}"></script>
 <style>
     /* Body text area: plain prose, not the pill/code-editor look aot-modern-input
        gives textareas by default (9999px radius, no-wrap + horizontal scroll).

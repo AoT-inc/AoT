@@ -552,8 +552,7 @@ WIDGET_INFORMATION = {
     'widget_dashboard_head': """
     <link rel="stylesheet" href="/static/css/components/aot-toggle.css?v=20260814a">
     <link rel="stylesheet" href="/static/css/components/aot-time-wheel.css?v=20260813a">
-    <script src="/static/js/components/aot-time-wheel.js?v=20260813d"></script>
-    <script src="/static/js/common/aot-output-state.js?v=9"></script>
+    <script src="{{ asset('widget-sequence') }}"></script>
     <style>
         /* --- Layout --- */
         .seq-widget-container {

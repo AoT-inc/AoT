@@ -274,6 +274,106 @@ class AoTDataToolService:
                 pass
         return results
 
+    # 한국어/약어 → **DB 에 실제로 저장된 측정 이름**. 값이 곧 부분일치 검색어라
+    # 저장 이름과 겹쳐야 한다 — '수분'/'토양' 을 'moisture' 로 적어 두었더니
+    # 토양수분이 `volumetric_water_content` 로 저장되는 이 시스템에서 한 건도
+    # 안 걸렸다(실측: zone 3-1 에 해당 센서가 2대 있는데 "No measurements
+    # matching type '토양'"). [[project 트래커 6번]] 이 search_devices 에서
+    # 지적한 것과 같은 실패가 이 표에도 남아 있었다.
+    _SENSOR_TYPE_ALIASES = {
+        '온도': 'temperature', 'temp': 'temperature',
+        '습도': 'humidity', 'hum': 'humidity',
+        '조도': 'light', 'lux': 'light',
+        '수분': 'volumetric_water_content',
+        '토양': 'volumetric_water_content',
+        'moisture': 'volumetric_water_content',
+        '기상': 'weather', '날씨': 'weather', 'atmosphere': 'weather',
+        '배터리': 'electrical_potential', 'vbat': 'electrical_potential',
+        'battery': 'electrical_potential',
+    }
+
+    @staticmethod
+    def _normalize_sensor_type(sensor_type):
+        """사용자가 말한 센서 종류 → 저장된 측정 이름 조각. 못 찾으면 원문 그대로."""
+        if not sensor_type:
+            return None
+        term = str(sensor_type).strip().lower()
+        for alias, stored in AoTDataToolService._SENSOR_TYPE_ALIASES.items():
+            if alias in term:
+                return stored
+        return term
+
+    @staticmethod
+    def _pick_zone_inputs(target_zone, normalized_type=None):
+        """구역 안에서 **읽을 후보 장치들을 순서대로** 돌려준다.
+
+        `_pick_weather_input` 과 같은 계약이되 기상 전용 드라이버 조건이 없는
+        일반판이다. 그쪽은 "첫 Input 을 그냥 집으면 무슨 일이 벌어지는지"를
+        이미 겪고 만들어졌는데(그 함수 주석 참조), 그 교훈이 기상 경로에만
+        적용돼 있었다 — 일반 경로는 계속 `.first()` 였다.
+
+        묻는 측정을 **실제로 가진** 장치를 앞세운다. 이름이 아니라
+        DeviceMeasurements 를 보므로 '온습도_5' 가 토양수분을 갖고 있어도
+        정상적으로 걸린다. 나머지 후보도 버리지 않고 뒤에 남긴다 — 앞선
+        장치가 침묵해도 구역 전체가 침묵한 것은 아니기 때문이다.
+        """
+        from aot.aot_flask.geo.device_membership import device_ids_in_shape
+        member_ids = device_ids_in_shape(target_zone) or set()
+        if not member_ids:
+            return [], []
+
+        rows = Input.query.filter(Input.unique_id.in_(list(member_ids))).all()
+        if not rows:
+            return [], []
+
+        with_measure = set()
+        if normalized_type and normalized_type != 'weather':
+            try:
+                with_measure = AoTDataToolService._device_ids_with_measurement(
+                    normalized_type)
+            except Exception:
+                logger.debug("[SENSOR_DETAIL] measurement lookup failed",
+                             exc_info=True)
+
+        # 결정론적으로 정렬한다. 예전엔 정렬 없는 `.first()` 라 SQLite 가
+        # 돌려주는 순서(사실상 rowid)에 답이 달려 있었다.
+        # `others` 를 여기서 만들지 않는다. 아래 호출부는 첫 후보가 조용하면
+        # 다음 후보로 넘어가므로, 여기서 "첫 후보를 뺀 나머지" 를 굳혀 두면
+        # 실제로 답한 장치가 '나머지' 목록에 남는다(실제로 그렇게 나왔다).
+        # 나머지는 결과가 정해진 뒤 `_zone_pick_note` 가 만든다.
+        return sorted(
+            rows,
+            key=lambda i: (0 if i.unique_id in with_measure else 1,
+                           str(i.name or i.unique_id)))
+
+    @staticmethod
+    def _zone_pick_note(chosen, candidates, searched_all=False):
+        """"이 답은 구역 안 N대 중 1대의 값" 이라는 사실을 응답에 실어 보낸다.
+
+        구역으로 물으면 답은 필연적으로 한 대에서 나온다. 그것을 말하지 않으면
+        구역에 센서가 하나뿐인 것처럼 읽히고, 그 한 대의 침묵이 구역의 침묵으로
+        읽힌다 — 이 도구가 실제로 그렇게 답해 온 자리다.
+        """
+        _chosen_id = getattr(chosen, 'unique_id', None)
+        others = [{"name": i.name, "device_id": i.unique_id, "driver": i.device}
+                  for i in candidates if i.unique_id != _chosen_id]
+        note = {
+            "answered_by": getattr(chosen, 'name', None) or _chosen_id,
+            "devices_in_zone": len(candidates),
+            "other_devices_in_zone": others,
+            "note": ("A zone answer comes from ONE device. This is that "
+                     "device's reading, not a zone-wide aggregate — the "
+                     "others listed here were not read. For every sensor of "
+                     "the zone at once, call get_zone_sensor_summary."),
+        }
+        if searched_all:
+            note["note"] = (
+                "Every device in this zone was checked, not just the one "
+                "named — so this empty result is about the zone, not about "
+                "one device being picked. For a zone-wide view of what each "
+                "sensor holds, call get_zone_sensor_summary.")
+        return note
+
     @staticmethod
     def get_sensor_detail(loc_id, sensor_type=None, time_range="24h", limit=None):
         """
@@ -282,8 +382,28 @@ class AoTDataToolService:
         :param sensor_type: 필터링할 센서 타입 (예: temperature, humidity)
         :param time_range: 조회 범위 ("1h", "24h", "7d" 등)
         :param limit: 반환할 최근 readings 수 (기본: 20, 현재 날씨 조회 시 1 권장)
+
+        ## 구역(zone/site)으로 물으면 — 한 대가 아니라 **후보 전체**를 본다
+
+        여러 시스템 프롬프트가 이 도구를 "loc_id 에 zone unique_id 를 넣어
+        쓰라"고 안내한다. 그런데 구역 분기는 오랫동안 구역 안 장치 중
+        `.first()` 하나만 집어 그 한 대의 답을 **구역의 답인 양** 냈다.
+        실측(zone 3-1): 장치 4대 중 데이터가 이틀 끊긴 1대가 매번 뽑혀
+        "No data ... in the last 24h" 를 반환했다 — 나머지 3대는 정상
+        보고 중이었다. 묻는 측정을 가진 장치를 앞세우고, 앞선 후보가
+        빈손이면 다음 후보로 넘어간다. 어느 장치가 답했는지와 나머지
+        후보는 `zone_pick` 으로 함께 낸다(구역 전체를 한 번에 보려면
+        `get_zone_sensor_summary`).
         """
         try:
+            # 측정 이름 정규화를 **장치 선택보다 먼저** 한다. 예전에는 장치를
+            # 먼저 고르고 나서 걸렀기 때문에, 구역에 습도 센서가 있어도 먼저
+            # 뽑힌 장치에 습도가 없으면 "No measurements matching type" 이
+            # 나갔다 — 있는 것을 없다고 답하는 자리였다.
+            normalized_type = AoTDataToolService._normalize_sensor_type(sensor_type)
+            target_zone = None
+            zone_candidates = []
+
             # 1. 대상 식별 (Input 우선: unique_id 또는 map_config_id/geo_id 지원)
             target_input = Input.query.filter(
                 # [P2] 지도 uuid 로 들어오면 그 지도에 배치된 장치를 찾는다.
@@ -333,11 +453,9 @@ class AoTDataToolService:
                     # [S3] 소속은 마커 좌표에서 파생한다. site 폴리곤은 내부
                     # zone 들을 기하학적으로 포함하므로 별도 계층 순회가 필요
                     # 없다 — site 에 대해 호출하면 하위 zone 센서까지 잡힌다.
-                    from aot.aot_flask.geo.device_membership import device_ids_in_shape
-                    _member_ids = device_ids_in_shape(target_zone)
-                    target_input = (Input.query.filter(
-                        Input.unique_id.in_(_member_ids)).first()
-                        if _member_ids else None)
+                    zone_candidates = AoTDataToolService._pick_zone_inputs(
+                        target_zone, normalized_type)
+                    target_input = zone_candidates[0] if zone_candidates else None
 
             if not target_input:
                 # If no sensor is directly linked to the zone, return the zone's coordinates
@@ -355,36 +473,45 @@ class AoTDataToolService:
                 return {"error": f"Device or zone not found: {loc_id}"}
 
             # 2. 측정값 정보 획득
-            device_measurements = DeviceMeasurements.query.filter(DeviceMeasurements.device_id == target_input.unique_id).all()
-            if not device_measurements:
-                return {"error": f"This device ({target_input.name}) has no defined measurements."}
+            def _measurements_for(dev):
+                """이 장치의 측정 중 물어본 종류만. 없으면 빈 리스트."""
+                rows = DeviceMeasurements.query.filter(
+                    DeviceMeasurements.device_id == dev.unique_id).all()
+                if not rows or not normalized_type:
+                    return rows
+                if normalized_type == 'weather':
+                    # 'weather' 는 대기 관련 측정 여러 개를 한꺼번에 가리킨다.
+                    return [m for m in rows
+                            if any(wm in (m.measurement or "").lower()
+                                   for wm in _WEATHER_METRIC_KEYWORDS)]
+                return [m for m in rows
+                        if normalized_type in (m.measurement or "").lower()]
 
-            # 필터링 적용 (Sensory Keyword Normalization)
-            if sensor_type:
-                s_type_map = {
-                    '온도': 'temperature', 'temp': 'temperature',
-                    '습도': 'humidity', 'hum': 'humidity',
-                    '조도': 'light', 'lux': 'light',
-                    '수분': 'moisture', '토양': 'moisture',
-                    '기상': 'weather', '날씨': 'weather', 'atmosphere': 'weather',
-                    '배터리': 'battery', 'vbat': 'battery'
-                }
-                # Normalize search term
-                search_term = sensor_type.lower()
-                for ko, en in s_type_map.items():
-                    if ko in search_term:
-                        search_term = en
+            device_measurements = _measurements_for(target_input)
+
+            # 구역으로 물었는데 첫 후보에 그 측정이 없으면 다음 후보로 넘어간다.
+            # 구역 안 다른 장치가 갖고 있는 것을 "없다" 고 답하지 않기 위해서다.
+            if not device_measurements and zone_candidates:
+                for _cand in zone_candidates[1:]:
+                    _ms = _measurements_for(_cand)
+                    if _ms:
+                        target_input, device_measurements = _cand, _ms
                         break
 
-                if search_term == 'weather':
-                    # Special Case: 'weather' maps to multiple common atmospheric metrics
-                    device_measurements = [m for m in device_measurements
-                                           if any(wm in (m.measurement or "").lower()
-                                                  for wm in _WEATHER_METRIC_KEYWORDS)]
-                else:
-                    device_measurements = [m for m in device_measurements if search_term in (m.measurement or "").lower()]
-
             if not device_measurements:
+                if zone_candidates:
+                    return {
+                        "error": (f"No device in this zone records "
+                                  f"'{sensor_type}'." if sensor_type else
+                                  f"No device in this zone has any defined "
+                                  f"measurement."),
+                        "zone_pick": AoTDataToolService._zone_pick_note(
+                            target_input, zone_candidates, searched_all=True),
+                    }
+                if not DeviceMeasurements.query.filter(
+                        DeviceMeasurements.device_id ==
+                        target_input.unique_id).first():
+                    return {"error": f"This device ({target_input.name}) has no defined measurements."}
                 return {"error": f"No measurements matching type '{sensor_type}'."}
 
             # 3. InfluxDB 연결 사전 점검
@@ -415,53 +542,92 @@ class AoTDataToolService:
 
             # 4. InfluxDB 시계열 조회
             offset_sec = AoTDataToolService._parse_range(time_range)
-            results = []
 
-            for m in device_measurements:
-                conversion = Conversion.query.filter(Conversion.unique_id == m.conversion_id).first() if m.conversion_id else None
-                channel, unit, measurement = return_measurement_info(m, conversion)
+            def _read_series(dev, measurements):
+                """한 장치의 측정들을 읽어 시계열 목록으로. 데이터 없으면 []."""
+                out = []
+                for m in measurements:
+                    conversion = Conversion.query.filter(Conversion.unique_id == m.conversion_id).first() if m.conversion_id else None
+                    channel, unit, measurement = return_measurement_info(m, conversion)
 
-                data = read_influxdb_list(
-                    target_input.unique_id,
-                    unit,
-                    channel,
-                    measure=measurement,
-                    duration_sec=offset_sec,
-                    datetime_obj=True
-                )
+                    data = read_influxdb_list(
+                        dev.unique_id,
+                        unit,
+                        channel,
+                        measure=measurement,
+                        duration_sec=offset_sec,
+                        datetime_obj=True
+                    )
 
-                if data:
-                    # Rows are tz-aware UTC (InfluxDB client) — display in this
-                    # device's own location time (resolved once per measurement,
-                    # not per row) for the same reason as _get_last_values_fallback above.
-                    try:
-                        from aot.utils.device_tz import resolve_location_tz
-                        _tz = resolve_location_tz(target_input.unique_id)
-                        readings = [{"t": row[0].astimezone(_tz).isoformat(), "v": round(row[1], 2), "u": unit} for row in data]
-                    except Exception:
-                        readings = [{"t": row[0].isoformat(), "v": round(row[1], 2), "u": unit} for row in data]
-                    values = [row[1] for row in data]
-                    _keep = int(limit) if limit else 20
-                    results.append({
-                        "device_name": target_input.name or target_input.unique_id,
-                        # 함수 값은 계산된 것(예: 센서 여럿의 평균, VPD)이다.
-                        # 구분해 내보내지 않으면 직접 잰 값으로 보고된다.
-                        "device_kind": "function" if is_function else "input",
-                        "measurement": measurement or m.measurement,
-                        "readings": readings[-_keep:],  # limit 파라미터로 조절 (기본 20건)
-                        "total_readings": len(readings),
-                        "stats": {
-                            "min": round(min(values), 2),
-                            "max": round(max(values), 2),
-                            "avg": round(sum(values) / len(values), 2),
-                            "count": len(values)
-                        }
-                    })
+                    if data:
+                        # Rows are tz-aware UTC (InfluxDB client) — display in this
+                        # device's own location time (resolved once per measurement,
+                        # not per row) for the same reason as _get_last_values_fallback above.
+                        try:
+                            from aot.utils.device_tz import resolve_location_tz
+                            _tz = resolve_location_tz(dev.unique_id)
+                            readings = [{"t": row[0].astimezone(_tz).isoformat(), "v": round(row[1], 2), "u": unit} for row in data]
+                        except Exception:
+                            readings = [{"t": row[0].isoformat(), "v": round(row[1], 2), "u": unit} for row in data]
+                        values = [row[1] for row in data]
+                        _keep = int(limit) if limit else 20
+                        out.append({
+                            "device_name": dev.name or dev.unique_id,
+                            # 함수 값은 계산된 것(예: 센서 여럿의 평균, VPD)이다.
+                            # 구분해 내보내지 않으면 직접 잰 값으로 보고된다.
+                            "device_kind": "function" if is_function else "input",
+                            "measurement": measurement or m.measurement,
+                            "readings": readings[-_keep:],  # limit 파라미터로 조절 (기본 20건)
+                            "total_readings": len(readings),
+                            "stats": {
+                                "min": round(min(values), 2),
+                                "max": round(max(values), 2),
+                                "avg": round(sum(values) / len(values), 2),
+                                "count": len(values)
+                            }
+                        })
+                return out
+
+            results = _read_series(target_input, device_measurements)
+
+            # 고른 장치가 조용하다고 **구역이** 조용한 것은 아니다. 실측(zone
+            # 3-1): 이틀 끊긴 장치가 먼저 뽑혀 "No data" 를 냈는데 같은 구역
+            # 센서 3대는 정상 보고 중이었다. 다음 후보로 넘어간다.
+            _tried = [target_input]
+            if not results and zone_candidates:
+                for _cand in zone_candidates:
+                    if _cand.unique_id == target_input.unique_id:
+                        continue
+                    _ms = _measurements_for(_cand)
+                    if not _ms:
+                        continue
+                    _tried.append(_cand)
+                    results = _read_series(_cand, _ms)
+                    if results:
+                        target_input = _cand
+                        break
 
             if results:
+                if zone_candidates and len(zone_candidates) > 1:
+                    _note = AoTDataToolService._zone_pick_note(
+                        target_input, zone_candidates)
+                    # 성공 응답은 **리스트**다(호출부가 result[0]['readings'] 로
+                    # 읽는다 — aot_native_tool_engine). 형태를 바꾸지 않고
+                    # 각 항목에 얹는다.
+                    for _r in results:
+                        _r['zone_pick'] = _note
                 return results
 
             # InfluxDB는 접속됐지만 데이터가 없는 경우
+            if zone_candidates:
+                return {
+                    "message": (
+                        f"No data in the last {time_range} from any of the "
+                        f"{len(_tried)} device(s) tried in this zone."),
+                    "time_range": time_range,
+                    "zone_pick": AoTDataToolService._zone_pick_note(
+                        target_input, zone_candidates, searched_all=True),
+                }
             return {
                 "message": f"No data for device '{target_input.name}' in the last {time_range}.",
                 "device_id": target_input.unique_id,
@@ -1088,6 +1254,11 @@ class AoTDataToolService:
             # shape's centroid inside a zone polygon). When the query references a zone
             # (e.g. "1-4구역"), include the devices LOCATED in that zone — otherwise
             # "1포장 1-4구역 밸브 켜줘" finds the zone shape but never the valves in it.
+            # `zone_scoped_query` also flags this for the caller (see _zone_scope_note
+            # below): a location-scoped device search must not be read as "everything
+            # that exists at this location" — plots/crops live in a separate registry
+            # keyed by variety name, not by zone name, so they never surface here.
+            zone_scoped_query = False
             try:
                 from aot.ai.services.ai_context_service import AIContextService
                 zmap = AIContextService.get_device_zone_map()  # {device_id: zone_name}
@@ -1160,6 +1331,8 @@ class AoTDataToolService:
                             if m and m.group(1) in site_nums:
                                 allowed_zones.add(zn)
 
+                zone_scoped_query = bool(allowed_zones)
+
                 if allowed_zones:
                     # Include every device located in the scoped zones...
                     for zn in allowed_zones:
@@ -1180,12 +1353,40 @@ class AoTDataToolService:
 
             results = AoTDataToolService._annotate_device_membership(results)
             out = {"results": results, "count": len(results)}
+            notes = []
             note = AoTDataToolService._complex_device_note(results)
             if note:
-                out["_reading"] = [note]
+                notes.append(note)
+            note = AoTDataToolService._zone_scope_note(zone_scoped_query)
+            if note:
+                notes.append(note)
+            if notes:
+                out["_reading"] = notes
             return out
         except Exception as e:
             return {"error": str(e)}
+
+    @staticmethod
+    def _zone_scope_note(zone_scoped_query):
+        """질의가 zone/site를 가리켰을 때만, 이 결과의 한계를 알린다.
+
+        `search_devices`는 장치(Input/Output/Camera/복합장치)와 구역 도형의
+        **이름**만 뒤진다. 작물 구획(plot)은 별도 레지스트리에 품종명으로
+        등록돼 zone 이름을 담지 않으므로 여기 결과에 절대 나타나지 않는다.
+        "이 구역 장치를 찾아봤는데 결과가 이거다"를 "이 구역엔 이게 전부다"로
+        읽으면(특히 작물 유무 판단) 실제 사례로 확인된 오판이 재발한다
+        (.local/plans/mcp_tool_audit_tracker.md 8번 항목).
+        """
+        if not zone_scoped_query:
+            return None
+        return ("This query was matched to a specific zone/site. These results are "
+                "devices and zone shapes whose NAME matched — they are not an "
+                "inventory of everything at that location. Plots/crops are a "
+                "separate registry keyed by variety name (not by zone name), so "
+                "they never appear here even when a plot is actively growing "
+                "there. Do not conclude 'no crop/plot here' from this result — "
+                "call list_plots (filtered by map_id or the plot's zone) to check "
+                "plot existence.")
 
     @staticmethod
     def _complex_device_note(results):
@@ -1293,14 +1494,42 @@ class AoTDataToolService:
                 input_ids = ([i.unique_id for i in Input.query.filter(
                     Input.unique_id.in_(_member_ids)).all()]
                     if _member_ids else [])
+                # 아래 두 빈 경우는 원인이 서로 다른데 예전에는 같은 문장
+                # ("No energy sensors found for this zone/period")으로 나갔다.
+                # 그 문장은 "여기엔 에너지 계측이 없다" 로 읽히지만, 실제로는
+                # **지도 마커 좌표가 이 폴리곤 안에 들어오는 장치가 없다** 는
+                # 뜻일 수 있다 — 관리상 이 구역 소속이어도 마커가 안 찍혔거나
+                # 경계 밖에 찍혔으면 여기서 빠진다.
+                _total_energy = EnergyUsage.query.count()
                 if not input_ids:
-                    return {"message": "No energy sensors found for this zone/period"}
+                    return {
+                        "message": ("No device is placed inside this zone on the "
+                                    "map, so nothing could be measured for it."),
+                        "cause": "no_device_marker_in_zone",
+                        "note": ("Zone scoping here is geometric: a device counts "
+                                 "only if its map marker falls inside the zone "
+                                 "polygon. A device assigned to this zone but not "
+                                 "placed (or placed just outside) is missed. "
+                                 "%d energy record(s) exist system-wide; call "
+                                 "without zone_id to see them."
+                                 % _total_energy),
+                    }
                 energy_usage = EnergyUsage.query.filter(EnergyUsage.device_id.in_(input_ids)).all()
+                if not energy_usage:
+                    return {
+                        "message": ("The %d device(s) inside this zone have no "
+                                    "energy records." % len(input_ids)),
+                        "cause": "devices_present_but_no_energy_records",
+                        "note": ("%d energy record(s) exist system-wide. This is "
+                                 "about these devices, not about the zone having "
+                                 "no monitoring." % _total_energy),
+                    }
             else:
                 energy_usage = EnergyUsage.query.all()
 
             if not energy_usage:
-                return {"message": "No energy sensors found for this zone/period"}
+                return {"message": "No energy records exist on this system at all.",
+                        "cause": "no_energy_records_configured"}
 
             stats, graph = return_energy_usage(energy_usage, device_measurements_all, conversion_all)
             
@@ -1319,10 +1548,13 @@ class AoTDataToolService:
             if zone_id:
                 summary += f" Filtering by Zone: {zone_id}."
 
+            # "Usage is within normal parameters." 라는 문장이 데이터와 무관하게
+            # 항상 실려 나갔다. 자리를 채우려고 둔 것이겠지만, 읽는 쪽에서는
+            # 서버가 내린 판정으로 읽힌다 — 사용량이 얼마든 "정상" 이라고
+            # 답하게 된다. 판정할 근거가 없으면 판정을 싣지 않는다.
             return {
                 "summary": summary,
                 "data": report_data,
-                "insights": ["Usage is within normal parameters."] # Placeholder for AI logic
             }
         except Exception as e:
             return {"error": str(e)}
@@ -8905,7 +9137,14 @@ class AoTDataToolService:
 
     @staticmethod
     def search_archives(query=None, limit=50, offset=0):
-        """아카이브된 문서를 메타데이터로 검색한다. 실제 아카이브 실물만 조회된다."""
+        """아카이브된 문서를 메타데이터로 검색한다. 실제 아카이브 실물만 조회된다.
+
+        **검색 대상은 저장된 메타데이터뿐이다** — 제목과 태그(그리고 이후
+        아카이브된 것에 한해 노트가 매달렸던 대상). 본문도, 날짜도, 위치도
+        색인돼 있지 않다. 그래서 "3-1 구역 아카이브 노트" 같은 질문은 제목에
+        그 말이 우연히 들어 있지 않으면 0건이 된다 — 없는 것이 아니라 이
+        검색으로는 못 찾는 것이다. 빈 결과의 note 가 그 둘을 구분해 말한다.
+        """
         try:
             try:
                 limit = max(1, min(int(limit), 200))
@@ -8925,8 +9164,39 @@ class AoTDataToolService:
                 "results": archives,
             }
             if not archives:
-                out["note"] = ("No archived documents. This is the expected state until "
-                               "tier migration is wired — it does not mean a search failed.")
+                # 예전에는 무조건 "아카이브된 문서가 없다" 고 단정했다. 검색어를
+                # 준 경우에도 그렇게 답하므로, **검색어가 안 맞은 것**을 "아무것도
+                # 아카이브되지 않았다" 로 보고하는 자리였다. 둘을 갈라 말한다.
+                # 검색어가 없었다면 방금 받은 total 이 곧 전체 개수다 — 다시
+                # 묻지 않는다. 전체를 따로 세어야 하는 경우는 "검색어를 줬고
+                # 0건" 일 때뿐이다(그때의 total 은 '조건에 맞는 수'라 0이다).
+                total_archived = int(result.get('total') or 0)
+                if query:
+                    try:
+                        total_archived = int(
+                            svc.search_archives(query=None, limit=1, offset=0)
+                            .get('total', 0))
+                    except Exception:
+                        logger.debug("[ARCHIVE] total count probe failed",
+                                     exc_info=True)
+
+                if not total_archived:
+                    out["note"] = ("No archived documents at all. This is the "
+                                   "expected state until tier migration is wired "
+                                   "— it does not mean a search failed.")
+                elif query:
+                    out["note"] = (
+                        "%d archived document(s) exist but none matched this "
+                        "query. Only the title and tags are indexed — not the "
+                        "body, the date, or the location/zone the note was "
+                        "attached to. Do not report this as 'nothing archived "
+                        "for that place'; retry with a word from the title, or "
+                        "search the live notes with search_notes."
+                        % total_archived)
+                else:
+                    out["note"] = ("%d archived document(s) exist but this page "
+                                   "is empty — check offset/limit."
+                                   % total_archived)
             return out
         except Exception as e:
             logger.exception("Error in search_archives")
@@ -8987,7 +9257,12 @@ class AoTDataToolService:
                 return {"status": "error",
                         "message": "Note has no content to archive"}
 
-            meta = {"name": note.name, "note_tags": note.note_tags}
+            # 대상(구역·구획 등)을 함께 남긴다. 예전에는 제목과 태그만 남겨서,
+            # 아카이브를 위치로 되찾을 방법이 **원리적으로** 없었다 —
+            # search_archives 가 메타데이터만 뒤지기 때문이다. 이후 아카이브분
+            # 부터 위치로 좁힐 수 있다(기존 것은 소급되지 않는다).
+            meta = {"name": note.name, "note_tags": note.note_tags,
+                    "target_type": note.target_type, "target_id": note.target_id}
             svc = AoTDataToolService._cold_storage_service()
             result = svc.archive_document(
                 document_id=note_id, content=content, metadata=meta,
@@ -9281,13 +9556,45 @@ class AoTDataToolService:
             if kind:
                 q = q.filter(GeoProgram.kind == str(kind).strip())
             if want:
-                q = q.filter(GeoProgram.subject == want)
+                # 부분일치로, **subject 와 name 양쪽**을 본다.
+                #
+                # 예전에는 `subject` 완전일치(`==`)였다. 두 가지가 겹쳐 깨졌다.
+                # (1) `subject` 는 만들 때 적은 자유 텍스트라 정규화가 없다 —
+                #     '상추' 로 물으면 '적상추' 가 0건이 된다.
+                # (2) 그보다 나쁜 것은 `subject` 가 **믿을 수 없다**는 점이다.
+                #     실측(로컬): name='무' 인 프로그램의 subject 가 'cucumber'
+                #     이고, name='콩' 은 subject='custom', 그 밖에 '미지정'·
+                #     '새 프로그램' 같은 자리표시자도 있다. 사람이 아는 작물
+                #     이름은 사실상 `name` 에 있다(name='노지 가을오이 …').
+                # 그래서 '콩'·'오이' 로 물으면 그 프로그램이 실재하는데도 0건이
+                # 나왔고, 이 도구가 막으려던 **중복 생성**을 오히려 부추겼다.
+                _like = '%%%s%%' % want
+                q = q.filter(or_(GeoProgram.subject.ilike(_like),
+                                 GeoProgram.name.ilike(_like)))
             if tab_id:
                 q = q.filter(GeoProgram.tab_id == str(tab_id).strip())
             rows = q.order_by(GeoProgram.subject.asc()).all()
-            return {"status": "success", "count": len(rows),
-                    "programs": [program_io.to_dict(r, with_stages=False)
-                                 for r in rows]}
+            out = {"status": "success", "count": len(rows),
+                   "programs": [program_io.to_dict(r, with_stages=False)
+                                for r in rows]}
+            if want:
+                _exact = [r for r in rows
+                          if (r.subject or '').strip().lower() == want.lower()]
+                if rows and not _exact:
+                    out["note"] = (
+                        "Matched by containment on the programme's subject OR "
+                        "its name — no subject is exactly '%s'. Subject is free "
+                        "text and is often a placeholder or another language "
+                        "(a programme named '노지 가을오이' carries "
+                        "subject='cucumber'), so judge these by name. Reuse or "
+                        "copy one rather than creating a near-duplicate." % want)
+                elif not rows:
+                    out["note"] = (
+                        "No programme's subject or name contains '%s'. Both are "
+                        "free text and may be in another language — try the "
+                        "other language or a shorter word before concluding none "
+                        "exists and creating a new one." % want)
+            return out
         except Exception as e:
             logger.exception("Error in list_programs")
             return {"status": "error", "message": str(e)}
@@ -9969,14 +10276,43 @@ class AoTDataToolService:
 
     @staticmethod
     def list_tabs(page_type=None, **extra):
-        """[읽기전용] 탭 목록 — Dashboard/Input/Output/Function/Programs 화면이
-        공유하는 같은 탭 인프라(`TabService`)를 그대로 쓴다."""
+        """[읽기전용] 탭 목록 — Input/Output/Function/Programs 화면이 공유하는
+        같은 탭 인프라(`TabService`)를 그대로 쓴다.
+
+        **대시보드만 예외다.** 대시보드 탭의 정본은 `Tab` 이 아니라 `Dashboard`
+        테이블이고(`list_dashboards` 주석 참조), `Tab` 에는 `page_type=
+        'dashboard'` 행이 아예 없다. 그런데 'dashboard' 는 `TAB_PAGE_TYPES` 의
+        유효값이라, 예전에는 이 조회가 **`status: success` + 빈 목록**을 돌려
+        줬다 — 실측(로컬): 위젯 16개짜리 '김제' 를 포함해 대시보드 11개가
+        멀쩡히 있는데도 `{"tabs": []}`. 에러도 아니고 경고도 아닌 "없음" 이라
+        읽는 쪽에서 의심할 자리가 없었다.
+
+        그래서 대시보드는 정본 테이블에서 읽어 준다. 어느 도구를 골랐는지에
+        따라 사실이 달라지지 않게 하는 것 — 같은 파일의
+        `[WEATHER_TOOL_UNIFICATION]` 이 이미 세운 원칙이다.
+        """
         try:
             from aot.services.tab_service import TabService, TAB_PAGE_TYPES
 
             if page_type not in TAB_PAGE_TYPES:
                 return {"status": "error",
                         "message": "page_type must be one of %s" % (TAB_PAGE_TYPES,)}
+
+            if page_type == 'dashboard':
+                from sqlalchemy import text
+                from aot.databases.models import Dashboard
+                boards = Dashboard.query.order_by(
+                    text("COALESCE(sort_order, 999999), id")).all()
+                return {
+                    "status": "success",
+                    "tabs": [{"unique_id": b.unique_id, "name": b.name,
+                              "position": b.sort_order} for b in boards],
+                    "note": ("Dashboard tabs are kept in their own registry, not "
+                             "in the shared tab table — these rows come from "
+                             "there. call list_dashboards for the widgets on "
+                             "each."),
+                }
+
             tabs = TabService.get_tabs_for_page(page_type)
             return {"status": "success",
                     "tabs": [{"unique_id": t.unique_id, "name": t.name,
@@ -10041,7 +10377,7 @@ class AoTDataToolService:
             return {"status": "error", "message": str(e)}
 
     @staticmethod
-    def list_plots(map_id=None, include_ended=False, on=None,
+    def list_plots(map_id=None, zone_id=None, include_ended=False, on=None,
                        with_sensors=False, **extra):
         """[읽기전용] 식생 구획(작기) 목록 — 어디에 무엇이 심겨 있는가.
 
@@ -10052,6 +10388,16 @@ class AoTDataToolService:
         `source`)를 함께 낸다. 밸브 교차는 **포함하지 않는다** — 그쪽이 비용의
         대부분이고(실측 구획 8개: 센서 37 쿼리 · 밸브 120 쿼리) 목록에서 필요한
         일이 드물다. 밸브가 필요하면 그 구획 하나만 `get_plot` 으로 본다.
+
+        `zone_id` 는 그 zone/site 안에서 자란(자라는) 구획만 남긴다 —
+        `map_id`(지도 전체)보다 한 단계 좁은, zone 하나짜리 스코프다. `search_devices`
+        로 어떤 zone에 장치가 있는지 찾아본 것과 "그 zone에 작물이 있는가"는
+        다른 질문이다 — 구획은 zone 이름이 아니라 품종명으로 등록돼 이름 검색
+        으로는 절대 안 잡힌다("이 zone엔 이름 매칭이 없으니 작물도 없다"고
+        결론 내지 말 것, .local/plans/mcp_tool_audit_tracker.md 8번 항목 실측
+        사례). 구획-zone 소속은 **저장된 값이 아니라 공간 포함으로 그때그때
+        판정**한다(구획 하나가 여러 zone에 걸치면 가장 좁게 감싸는 도형 하나로
+        정해진다) — `get_spatial_tree`/`resolve_target`으로 zone id를 먼저 얻을 것.
         """
         try:
             from datetime import datetime
@@ -10095,6 +10441,13 @@ class AoTDataToolService:
             items = []
             for r in rows:
                 _c, _mk = _cached(r.geo_id)
+                if zone_id:
+                    # 구획-zone 소속은 저장돼 있지 않다 — 여기서만 판정한다
+                    # (docstring 참조). `_c`(containers)는 이미 지도당 한 번
+                    # 로드돼 있어 이 필터가 추가 쿼리를 만들지 않는다.
+                    _zone = plot_context.zone_for_plot(r, containers=_c)
+                    if _zone is None or _zone.unique_id != zone_id:
+                        continue
                 items.append(AoTDataToolService._plot_brief(
                     r, with_sensors=with_sensors, with_valves=False,
                     containers=_c, markers=_mk, summary=True))
@@ -10102,6 +10455,14 @@ class AoTDataToolService:
                    "note": ("Only plots currently growing are listed. "
                             "Pass include_ended=true for history.")
                            if not include_ended else None}
+            if zone_id and not items:
+                out["note"] = (
+                    "0 plots matched zone_id (checked by spatial containment "
+                    "against every plot on its map, not by name — this is not "
+                    "a search-string miss). "
+                    + ("This zone has no plot growing there right now."
+                       if not include_ended else
+                       "This zone has no plot at all, past or present."))
             # get_plot 과 같은 규칙이되, 목록에서 실제로 걸리는 것만 싣는다.
             notes = []
             if items:
