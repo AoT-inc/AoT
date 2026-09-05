@@ -413,8 +413,15 @@
                 var sp2 = Number(segs[i] && segs[i].span);
                 if (!isNum(sp2) || sp2 <= 0) continue;
                 var w2 = (sp2 / total) * 100;
+                // `picked` 는 **색이 아니라 상태 표시**다. 예전에는 이 클래스가
+                // 밑줄을 그렸는데, 6px 트랙 아래 2px 선은 트랙의 일부로 읽혀
+                // "구간이 두 겹" 처럼 보였다(2026-09-05). 지금 고른 구간은
+                // 부르는 쪽이 `current` 로 넘겨 **면을 칠하고**, 여기서는 그
+                // 사실을 보조기술에 알리는 일만 한다 — 색만으로 상태를 말하지
+                // 않기 위해서다. 클래스는 남긴다(자리 표시·테스트용).
                 html += '<button type="button" class="aot-viz-seg-hit' +
                         (segs[i].picked ? ' is-picked' : '') + '"' +
+                        ' aria-pressed="' + (segs[i].picked ? 'true' : 'false') + '"' +
                         (segs[i].key ? ' data-viz-key="' + esc(segs[i].key) + '"' : '') +
                         (segs[i].name ? ' title="' + esc(segs[i].name) + '"' +
                                         ' aria-label="' + esc(segs[i].name) + '"' : '') +
@@ -444,6 +451,13 @@
                    '">';
         html += headHtml(o.label, o.valueText != null ? o.valueText : o.value,
                          o.valueSub);
+        // 덧말은 **축이 없어도 필요하다.** 같은 이름의 값이 시간창만 달리해
+        // 두 자리에 설 수 있고(적산온도: '이 단계' 대 '시작일부터 누적'), 그
+        // 구분을 단위 옆 괄호로 적지 않는 것이 이 파일의 규약이다. 축이 있는
+        // 형(밴드·불릿)은 이미 `scaleLead` 로 그것을 말하는데 이 형만 조용히
+        // 버려, 부르는 쪽이 넘겨도 화면에 안 나왔다(2026-09-05).
+        // 눈금 항목은 없다 — 축이 없으므로 기준을 가리킬 자리도 없다.
+        html += scaleHtml(null, null, o.scaleNote, o.scaleLead);
         return html + '</div>';
     }
 

@@ -2198,3 +2198,14 @@ button.aot-center-modal-close {
   font-size: var(--aot-font-size-sm);
   line-height: 1.5;
 }
+
+/* 단위 알약이 여럿일 때(카드가 [오늘][일][주] 를 낼 때) **켜진 것**을
+   표시한다. 색을 새로 들이지 않는다 — 밑줄만으로 "누를 수 있다" 를 말하던
+   규칙 위에, 켜진 것은 글자를 본문색·반굵게로 올리고 밑줄을 뗀다(지금 보고
+   있는 것은 누를 데가 아니다). */
+.aot-ov-envrange-toggle.is-on {
+  color: var(--aot-color-text-primary);
+  font-weight: 600;
+  text-decoration: none;
+  cursor: default;
+}

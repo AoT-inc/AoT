@@ -2232,7 +2232,10 @@
     var span = (p.min != null && p.max != null && p.max > p.min)
       ? p.min + '~' + p.max + u : null;
     var avg = (p.avg != null) ? _t('mean') + ' ' + p.avg + u : null;
-    return [p.label, span, avg].filter(Boolean).join(' \u00b7 ');
+    // **눈금 글자가 아니라 온전한 라벨**을 쓴다. 접힌 버킷(주·월)의 눈금은
+    // 시작일 하나라(칸이 38px 이다) 그대로 적으면 그 주 전체가 하루로
+    // 읽힌다 — 서버가 `label_full` 로 범위를 함께 싣는다.
+    return [p.labelFull || p.label, span, avg].filter(Boolean).join(' \u00b7 ');
   }
 
   function _envNowRowHtml(r, opts) {
@@ -2271,8 +2274,10 @@
         valueText: s.valueText, valueSub: unit, stale: s.stale,
         scale: wk.scale, targets: wk.targets, bars: !!wk.bars,
         points: (wk.points || []).map(function (p) {
-          return { label: p.label, min: p.min, max: p.max, avg: p.avg,
-                   tip: _weekTip(p, name, unit) };
+          var _p = { label: p.label, labelFull: p.label_full,
+                     min: p.min, max: p.max, avg: p.avg };
+          _p.tip = _weekTip(_p, name, unit);
+          return _p;
         })
       });
     } else if (V && s.hasAxis) {
@@ -2514,19 +2519,48 @@
       shown.some(function (r) { return _weekSeriesFor(r.key, opts.week); }));
     var _weekCapable = _weekTried ? _weekMatches : !!opts.weekLazy;
     if (_weekCapable) {
-      var _expanded = !!opts.weekExpanded;
-      var _toggleLabel = _expanded ? _t('Today') : _t('7 Days');
-      var _toggleTitle = _expanded ? _t('Show today only')
-                                    : _t('Show the last 7 days');
       // 대체하는 배지(`.aot-ov-degraded`)와 같은 글자 크기·색 톤을 쓴다 —
       // `.aot-ov-cardcfg`(점 세 개 전용, 큰 글자·호버 배경)를 여러 글자
       // 라벨에 그대로 씌우면 제목처럼 커지고 클릭 뒤 포커스 배경이 남는다.
       // 테두리·채움을 아예 없애고 밑줄만으로 "누를 수 있다" 를 말한다.
-      head += '<button type="button" class="aot-ov-envrange-toggle"' +
-              ' data-expanded="' + (_expanded ? '1' : '0') + '"' +
-              ' aria-label="' + _esc(_toggleTitle) + '"' +
-              ' title="' + _esc(_toggleTitle) + '">' +
-              _esc(_toggleLabel) + '</button>';
+      var _btn = function (mode, label, title, on) {
+        return '<button type="button" class="aot-ov-envrange-toggle' +
+               (on ? ' is-on' : '') + '"' +
+               ' data-range-mode="' + _esc(mode) + '"' +
+               // 상태는 `aria-pressed` 하나로 말한다. 예전 `data-expanded` 는
+               // 읽는 곳이 없었고(grep), 모드가 여럿이면 뜻도 갈린다
+               // ("펼쳤나" 대 "이 단위가 켜졌나").
+               ' aria-pressed="' + (on ? 'true' : 'false') + '"' +
+               ' aria-label="' + _esc(title) + '"' +
+               ' title="' + _esc(title) + '">' + _esc(label) + '</button>';
+      };
+      // ── 여러 단위를 고르는 카드(`rangeModes`) ────────────────────────
+      //
+      // 부르는 쪽이 단위 목록을 주면 **알약 여러 개**가 된다([오늘][일][주]).
+      // 안 주면 지금까지의 두 상태 토글 그대로다 — 지도 카드가 그쪽이라,
+      // 이 분기가 없으면 같은 함수를 쓰는 두 화면이 함께 바뀐다.
+      //
+      // ⚠ **단위는 창까지 정한다**(부르는 쪽의 약속). 7일 창에 주 버킷을 쓰면
+      //   점이 하나라 범위 도표가 성립하지 않는다(`AoTViz.range` 규약:
+      //   "기간이 하나면 이 그림을 쓰지 않는다"). 그래서 단위를 고르는 화면은
+      //   단위마다 창을 함께 바꾼다.
+      var _modes = opts.rangeModes;
+      if (_modes && _modes.length) {
+        var _cur = opts.rangeMode || '';
+        head += _btn('', _t('Today'), _t('Show today only'), !_cur);
+        for (var _i = 0; _i < _modes.length; _i++) {
+          head += _btn(_modes[_i].key, _modes[_i].label,
+                       _modes[_i].title || _modes[_i].label,
+                       _cur === _modes[_i].key);
+        }
+      } else {
+        var _expanded = !!opts.weekExpanded;
+        head += _btn(_expanded ? '' : 'week',
+                     _expanded ? _t('Today') : _t('7 Days'),
+                     _expanded ? _t('Show today only')
+                               : _t('Show the last 7 days'),
+                     false);
+      }
     }
     // 낼 줄이 하나도 없으면 [설정]도 두지 않는다 — 열어 봐야 빈 목록이다.
     if (opts.configurable && (readings.length || _dliUsable || _gddUsable)) {
@@ -2538,9 +2572,12 @@
     // 접었으니(`_weekCapable` false), 왜 [7일] 이 사라졌는지 한 줄로
     // 말한다. `opts.weekExpanded` 로만 가리는 이유: 안 눌러 본 사람에게는
     // 애초에 뜬 적 없는 버튼 얘기라 보일 필요가 없다.
+    // 문구는 부르는 쪽이 바꿀 수 있다 — 창이 "지난 7일" 이 아닐 수 있기
+    // 때문이다(단계 기간·최근 8주). 안 주면 지도 카드의 그 문구 그대로.
     var _weekEmptyHtml = (_weekTried && !_weekMatches && opts.weekExpanded)
       ? '<div class="aot-ov-now-note">' +
-        _esc(_t('No data for the last 7 days.')) + '</div>'
+        _esc(opts.rangeEmptyText || _t('No data for the last 7 days.')) +
+        '</div>'
       : '';
 
     // 이 둘은 **0 에서 목표까지 채우는 값**이다(오늘의 DLI·재배 시작일부터의
@@ -4072,7 +4109,8 @@
   //
   // 초록 구간은 "여기까지 왔다"(경과분), 마커는 오늘이다. 두 막대가 같은 문법을
   // 쓰므로 위아래로 나란히 놓아도 서로 다른 그림으로 읽히지 않는다.
-  function _plotProgressHtml(p) {
+  function _plotProgressHtml(p, opts) {
+    opts = opts || {};
     var V = window.AoTViz;
     // 번들에 프리미티브가 없으면 **옛 텍스트 행으로 되돌아간다.** 조용히 빈
     // 칸을 내면 진행 정보가 통째로 사라진 것을 아무도 모른다.
@@ -4139,13 +4177,27 @@
         valueText: (p.ended_on ? _t('%(n)s days') : _t('Day %(n)s'))
                    .replace('%(n)s', String(tl.elapsed_days)),
         valueSub: tl.total_days ? ('/ ' + String(tl.total_days)) : '',
+        // 구간을 **고를 수 있게** 하는 것은 부르는 쪽의 선택이다(`pickable`).
+        // 지도 모달은 읽기 전용이라 인자를 주지 않고, 대시보드 구획 위젯만
+        // 켠다 — 거기서는 축이 곧 "어느 단계를 볼까" 를 고르는 메뉴다.
+        //
+        // 켠 쪽에서는 **초록이 '고른 구간'** 을 뜻한다(오늘은 마커가 말한다).
+        // 안 켠 쪽은 예전 그대로 '현재 단계' 다 — 고를 수 없는 축에서 색이
+        // 선택을 뜻하면 아무것도 안 고른 상태를 그릴 수 없다.
+        pickable: !!opts.pickable,
         segments: tl.stages.map(function (st) {
+          var mine = opts.pickable
+            ? (opts.pickedKey ? st.key === opts.pickedKey : !!st.current)
+            : !!st.current;
           return {
+            key: st.key,
             span: Math.max(0, (st.to_pct || 0) - (st.from_pct || 0)),
             name: st.name,
-            current: !!st.current
+            current: mine,
+            picked: opts.pickable ? mine : false
           };
         }),
+        events: opts.events || null,
         positionPct: Math.min(100, Math.max(0, pct)),
         // 눈금 문자열은 AoTViz 가 이스케이프한다 — 여기서 또 하면 &amp; 가 뜬다.
         scale: [
@@ -4342,7 +4394,11 @@
     // 조회(노트)라 자리만 잡고 위젯이 채운다([현재] 자리와 같은 방식).
     var html = '<div data-slot="photo"></div>';
 
-    html += '<div class="aot-ov-card-title">' + _esc(_t('Progress')) +
+    // 대시보드 구획 위젯과 **같은 카드**다(단계 일정 + 적산온도) — 같은 것을
+    // 두 화면이 다르게 부르지 않게 msgid 를 맞춘다(`Program stages` → "단계").
+    // ⚠ `Stages`·`Stage` 는 시설 측창 개폐 단수(1단·2단)가 이미 쓰고 있어
+    //   한국어가 "단" 한 글자로 나온다.
+    html += '<div class="aot-ov-card-title">' + _esc(_t('Program stages')) +
             '</div><div class="aot-ov-block">';
 
     // 대상·시작일·예상 종료일은 [개요] 가 맡는다 — 바뀌지 않는 사실이고,
@@ -5014,6 +5070,11 @@
     buildZoneAboutHtml:    buildZoneAboutHtml,
     buildDescriptionHtml:  buildDescriptionHtml,
     buildEnvNowHtml:       buildEnvNowHtml,
+    // 진행 축 — **구획 모달과 같은 그림**을 대시보드 위젯도 쓴다. 위젯이 자기
+    // 축을 따로 그리던 것을 여기 하나로 모았다(2026-09-05): 같은 것을 두
+    // 화면이 다르게 그리면 단계 이름줄·눈금이 갈리고, 실제로 위젯만
+    // `compact` 라는 자기 전용 모양을 갖고 있었다.
+    buildPlotProgressHtml: _plotProgressHtml,
     // 환경 줄의 **판정만** — 좁은 화면이 자기 그림을 그리되 목표/한계 구분은
     // 여기 하나를 쓰게 하려는 것이다(envRowSpec 주석 참조).
     envRowSpec:            envRowSpec,

@@ -71,7 +71,10 @@ def widget_variables(widget_unique_id, widget_options):
     return {
         'plot_uuid': options.get('plot_uuid') or '',
         'refresh_minutes': options.get('refresh_minutes', 5),
-        'gauge': options.get('gauge') or 'VPD',
+        # 환경 카드의 보기 단위. `''`(오늘) | `'day'` | `'week'`.
+        # **폼에는 없다**(`plot_uuid` 와 같은 자리) — 사람은 카드 머리줄에서
+        # 고르고, 그 선택이 `/save_widget_custom_options` 로 직접 남는다.
+        'env_mode': options.get('env_mode') or '',
         'show_progress': options.get('show_progress', True),
         'show_env': options.get('show_env', True),
         'show_trend': options.get('show_trend', True),
@@ -108,29 +111,126 @@ WIDGET_HEAD_HTML = """
      기준으로 낮춘다 — 여백·정렬·구분선은 공용 규칙 그대로다. */
   .aot-plotw .aot-ov-block { font-size: var(--aot-fs-md); }
 
+  /* 컨테이너 경계 — **테두리 한 줄**이다.
+     
+     공용 `.aot-ov-block` 은 `border: none` 이다. 모달에서는 카드가 배경 보조색
+     위에 얹혀 **면 대비**로 경계가 서기 때문인데(그 규칙의 주석: "카드 배경 =
+     배경 기본 (모달 페이지 배경인 배경 보조와 대비)"), 위젯 내부는 배경 기본색
+     한 겹이라 그 대비가 없다.
+     
+     면을 한 겹 더 깔아 대비를 만드는 방법을 썼다가 물렸다(030d86ec → c30aede6)
+     — 위젯 안에서 면을 나누면 대시보드의 다른 위젯과 어긋난다. 그래서 배경은
+     그대로 두고 **선으로만** 경계를 세운다. 시설 위젯이 안쪽 상자에 쓰는 것과
+     같은 톤이다(`aot-facility-widget.css`: `1px solid var(--aot-border-light)`).
+     
+     ⚠ 공용 규칙을 고치지 않는다 — 모달은 면 대비로 이미 성립하고, 거기에
+       선까지 그으면 한 경계에 표시가 둘이 된다. 이 위젯 안에서만 얹는다.
+     
+     ⚠ **`border` 가 아니라 `box-shadow` 링이다.** 테두리를 쓰면 그 1px 이
+       박스 안쪽 내용을 그만큼 밀어, 제목(30px)과 박스 안 첫 글자(31px)가
+       어긋난다(2026-09-05 실측). 제목의 좌우 여백이 박스의 안여백과 같아야
+       한다는 규칙이 1px 때문에 깨지는 것이다. 링은 레이아웃을 차지하지 않아
+       두 좌표가 그대로 남고, 라운드(16px)도 따라온다.
+
+     ⚠ 공용 `.aot-ov-block` 은 그림자를 쓰지 않는다(확인함) — 덮어쓸 것이 없다.
+       쓰기 시작하면 여기서 합쳐 적을 것. */
+  .aot-plotw-body .aot-ov-block {
+    box-shadow: 0 0 0 1px var(--aot-border-light);
+  }
+
+  /* ⚠ **카드 제목의 좌우 여백을 건드리지 말 것.** 그것이 정렬 규칙이다.
+
+     제목은 박스 **밖**에 있고 박스는 자기 안여백(`--aot-space-4`)만큼 글을
+     들여 쓴다. 공용 규칙이 제목에 **같은 값**을 주는 이유가 그것이다 —
+     `.aot-ov-card-title { padding: 0 var(--aot-space-4) }`. 그래서 제목의
+     첫 글자와 박스 안 첫 글자가 같은 세로선에 선다(오른쪽 손잡이도 마찬가지:
+     [오늘][일간][주간] 이 박스 안 값의 오른쪽 끝과 맞는다).
+
+     한때 본체에 좌우 여백을 주면서 이 값을 0 으로 눕혔는데, 그러면 제목이
+     박스 **바깥선**에 붙어 안쪽 글보다 16px 왼쪽으로 나간다(2026-09-05). */
+
+  /* 마지막 카드의 아래 여백 — 본체의 아래 패딩이 0 이라 카드 자신의
+     `margin-bottom` 이 그 몫을 한다. 지우지 않는다(지우면 마지막 카드가
+     들어간 면의 바닥에 닿는다). */
+
   /* 머리(선택 + 편집)는 고정, 본체만 흐른다.
      좌우 여백은 **카드와 같은 값**이다(--aot-space-4) — 안 주면 머리줄만
      카드 경계에 붙어 아래 카드들과 세로선이 안 맞는다. */
   .aot-plotw { display: flex; flex-direction: column; height: 100%; }
+  /* 좌우 여백은 **본체의 여백 + 카드의 안여백**이다. 머리줄은 본체 밖이라
+     본체의 여백을 못 받으므로 여기서 두 몫을 함께 적는다 — 그래야 선택 상자의
+     왼쪽 모서리가 카드 안 첫 글자와 같은 세로선에 선다(안 맞추면 머리줄만
+     카드보다 12px 왼쪽으로 나간다). */
   .aot-plotw-head {
     display: flex;
     align-items: center;
     gap: var(--aot-space-2);
-    padding: 0 var(--aot-space-4) var(--aot-space-3);
+    padding: 0 calc(var(--aot-space-3) + var(--aot-space-4)) var(--aot-space-3);
     flex: 0 0 auto;
   }
   .aot-plotw-pick { flex: 1 1 auto; min-width: 0; }
 
-  /* 본체는 스크롤하되 **스크롤바는 보이지 않는다**(앱 전역 규칙). */
+  /* 본체는 스크롤하되 **스크롤바는 보이지 않는다**(앱 전역 규칙).
+
+     ⚠ **들어간 면 위에 카드를 얹는다**(모달과 같은 관계).
+     `.aot-ov-block` 은 `--aot-surface-card`(흰색)로 칠해져 있고, 그것이
+     카드로 보이는 것은 **그 아래 면이 `--aot-surface-body` 일 때뿐**이다
+     (그 규칙의 주석이 "모달 페이지 배경인 배경 보조와 대비" 라고 적고 있다).
+     그런데 대시보드 위젯의 바탕(`.grid-stack-item-content`)은 흰색이라,
+     흰 카드가 흰 바탕에 얹혀 **경계가 통째로 사라져 있었다**(2026-09-05 실측:
+     블록 `#ffffff` · 위젯 바탕 `#ffffff`). 카드마다 배경·라운드·안여백이 이미
+     있었는데 보이지만 않았던 것이다.
+
+     좌우 여백은 카드가 바탕에 닿지 않게 하는 몫이다 — 없으면 들어간 면이
+     위아래로만 보여 카드가 아니라 띠로 읽힌다. */
+  /* ⚠ **배경을 여기서 칠하지 않는다.** 한때 본체를 `--aot-surface-body`(배경
+     보조)로 눕혀 흰 카드가 카드로 보이게 했는데, 위젯 안에서 면을 두 겹으로
+     나누는 것은 대시보드의 다른 위젯과 어긋난다 — 위젯 내부는 **배경 기본색
+     한 겹**이다(2026-09-05 결정). 카드 경계가 안 보이는 문제는 배경이 아닌
+     다른 수단으로 다룬다.
+
+     같은 이유로 좌우 여백도 주지 않는다. 여백을 주면 카드가 안쪽으로
+     들어가고, 제목의 공용 여백(아래 주석)과 더해져 정렬이 두 번 밀린다. */
+  /* ⚠ **좌우 여백은 여기(본체)에 준다 — 껍데기가 아니라.**
+     
+     이 요소는 스크롤 컨테이너라(`overflow-y: auto`) 자기 **패딩 상자**에서
+     내용을 자른다. 카드가 본체와 폭이 같으면 카드의 경계선(`box-shadow` 링)이
+     정확히 그 자름선 위에 놓여 **좌우만 안 보인다**(위아래는 스크롤 영역 안이라
+     남는다). 실제로 그랬다 — 껍데기에 여백을 줬더니 카드와 본체가 둘 다
+     26~702 가 되어 링의 1px 이 잘렸다(2026-09-05).
+     
+     본체에 주면 자름선은 바깥(14~714)에 있고 카드는 안쪽(26~702)이라 링이
+     산다. 값은 옆 위젯의 같은 자리에서 가져왔다(`.seq-widget-container`:
+     `padding: 10px 12px`) — 나란히 서는 물건이라 가장자리 여백이 다르면
+     그것부터 눈에 띈다.
+     
+     ⚠ 그 대신 **머리줄이 따로 맞춰야 한다** — 머리줄은 본체 밖이라 이 여백을
+       못 받는다(아래 `.aot-plotw-head`). */
   .aot-plotw-body {
     flex: 1 1 auto;
     overflow-y: auto;
+    padding: 0 var(--aot-space-3) var(--aot-space-3);
     scrollbar-width: none;
     -ms-overflow-style: none;
   }
   .aot-plotw-body::-webkit-scrollbar { width: 0; height: 0; display: none; }
-  /* 마지막 카드의 아래 여백은 카드가 아니라 본체 끝이 정한다. */
+  /* 마지막 카드의 아래 여백은 카드가 아니라 **본체 끝**이 정한다(위 padding).
+     카드 자신의 `margin-bottom`(16px)을 그대로 두면 본체 여백과 더해져 아래만
+     28px 이 된다 — 머리줄이 만드는 위쪽 틈(space-3)과 어긋난다. 지금은 위아래
+     둘 다 12px 이다. */
+  .aot-plotw-body > .aot-ov-card:last-child .aot-ov-block:last-child,
   .aot-plotw-body > .aot-ov-block:last-child { margin-bottom: 0; }
+  /* 어떤 자식도 부모보다 넓어질 수 없다 — flex 자식의 기본 `min-width: auto`
+     가 이 위젯에서 폭이 새는 통로다(위 `.aot-plotw-list .aot-tag` 주석). */
+  .aot-plotw, .aot-plotw-body, .aot-plotw-stage,
+  .aot-plotw-stage-head, .aot-plotw-stage-head > * { min-width: 0; }
+  .aot-plotw-body { overflow-x: hidden; }
+
+
+  /* 카드 사이 가로 구분선은 두지 않는다. 한 번 넣었다가 뺐고(2026-09-05),
+     그 자리를 배경 대비로 대신했다가 그것도 물렸다 — 위젯 내부는 배경 기본색
+     한 겹이다(위 `.aot-plotw-body` 주석). 지금 카드를 나누는 것은 제목과
+     박스 사이 여백뿐이다. */
 
   /* 전환 대기 — 카드 안에서 한 줄로 선다(카드 자체는 공용 규칙이 그린다). */
   .aot-plotw-ask {
@@ -142,21 +242,68 @@ WIDGET_HEAD_HTML = """
   .aot-plotw-ask-text { flex: 1 1 auto; min-width: 0; }
   .aot-plotw-ask-date { width: auto; flex: 0 0 auto; }
 
-  /* 지침 — **두 줄까지만**. 전문은 title 과 편집 모달에 있다. */
-  .aot-plotw-guide {
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
+  /* 지침 — **높이가 정해진 상자**다. 넘치는 글은 상자 안에서만 흐른다.
+     
+     ⚠ 지침이 없는 단계에서도 **자리를 지킨다**(JS 가 빈 상자를 낸다). 단계마다
+       글이 있고 없고·길고 짧고가 다른데 그 차이가 카드 높이로 새어 나가면,
+       축을 한 번 누를 때마다 아래 카드가 밀린다.
+
+     예전에는 `-webkit-line-clamp: 2` 로 두 줄만 보이고 나머지는 `title` 에만
+     있었다 — 폰에는 `title` 이 없어 사실상 읽을 길이 없었다. 상자가 높이를
+     잠그므로 clamp 는 중복이고, 이제 스크롤로 전문을 읽는다.
+
+     스크롤바는 보이지 않는다(앱 전역 규칙). `overscroll-behavior: contain` 은
+     상자 끝에서 스크롤이 위젯 본체로 넘어가지 않게 한다 — 안 주면 지침을 끝까지
+     내린 순간 카드 전체가 함께 움직인다. */
+  .aot-plotw-guidebox {
+    /* 줄 간격을 **여기서 정한다.** 상자 높이가 `줄간격 × 줄수` 라, 줄 간격이
+       바깥(본문 기본값)에서 오면 그 둘이 어긋나 두 번째 줄의 아랫부분이
+       잘린다 — 처음에 1.5 로 계산해 놓고 실제 줄 간격은 1.8 이라 8px 이
+       모자랐다(2026-09-05 실측: 상자 42px 대 내용 50px). 같은 변수를 두 곳이
+       쓰게 해서 다시 어긋날 수 없게 한다. */
+    --aot-plotw-guide-lh: 1.8;
+    --aot-plotw-guide-lines: 2;
+    line-height: var(--aot-plotw-guide-lh);
+    height: calc(var(--aot-fs-md) * var(--aot-plotw-guide-lh)
+                 * var(--aot-plotw-guide-lines));
+    /* 목표 칩과 붙어 있으면 칩의 조밀함에 글이 딸려 읽힌다 — 칩 줄이 위에서
+       받는 간격(space-2)보다 한 칸 더 벌려 "여기부터 문장" 을 표시한다. */
+    margin-top: var(--aot-space-3);
+    overflow-y: auto;
+    overscroll-behavior: contain;
     color: var(--aot-color-text-secondary);
+    scrollbar-width: none;
+    -ms-overflow-style: none;
   }
+  .aot-plotw-guidebox::-webkit-scrollbar { width: 0; height: 0; display: none; }
 
   /* 단계 세부 — 축 **바로** 아래. 기본은 현재 단계이고, 축에서 다른 구간을
      누르면 그 단계로 바뀐다.
      ⚠ 여백을 벌리지 않는다. 한때 위아래 16px + 구분선을 줬다가 되돌렸다 —
      축과 그 단계의 내용은 **한 덩이**라 떼어 놓을 이유가 없고, 벌린 만큼
      카드만 커졌다(2026-08-28 지적). */
-  .aot-plotw-stage { margin-top: var(--aot-space-2); }
+  /* ⚠ **높이를 예약한다.** 단계마다 목표 개수·지침 유무가 달라, 그대로 두면
+     축을 누를 때마다 아래 카드가 밀린다. 머리줄 1 + 칩 1 + 지침 2 = 네 줄
+     어치를 잡아 두고, 모자란 단계에서는 빈 자리로 남긴다 — 흔들리는 것보다
+     빈 것이 낫다. (`min-height` 라 목표가 아주 많은 단계는 그만큼 늘어난다.) */
+  .aot-plotw-stage {
+    margin-top: var(--aot-space-2);
+    /* 바닥 = 머리줄 + (간격 + 목표 칩 한 줄) + (간격 + 지침 상자).
+       목표가 하나도 없는 단계는 칩 줄을 아예 안 그리는데(JS), 그때도 이
+       바닥이 있어 카드가 짧아지지 않는다. */
+    min-height: calc(var(--aot-font-size-xs) * 1.8
+                     + var(--aot-space-2) + 1.6rem
+                     + var(--aot-space-3)
+                     + var(--aot-fs-md) * 1.8 * 2);
+  }
+  /* 어느 단계에도 지침이 없는 구획 — 지침 상자를 아예 안 내므로(JS
+     `anyGuide`) 그 몫도 예약하지 않는다. 예약해 두면 두 줄이 통째로 죽은
+     공간이 된다. 흔들림 걱정은 없다: 그런 구획은 **모든** 단계가 상자를
+     안 내므로 어느 단계를 골라도 높이가 같다. */
+  .aot-plotw-stage.is-noguide {
+    min-height: calc(var(--aot-font-size-xs) * 1.8
+                     + var(--aot-space-2) + 1.6rem);
+  }
   .aot-plotw-stage-head {
     display: flex;
     align-items: baseline;
@@ -168,6 +315,14 @@ WIDGET_HEAD_HTML = """
   .aot-plotw-stage-head b {
     font-size: var(--aot-font-size-sm);
     color: var(--aot-color-text-primary);
+    /* ⚠ **줄 상자를 키우지 않는다.** 이 요소는 현재 단계에서만 없는데(이름은
+       축의 머리줄이 이미 말한다), 큰 글자의 줄 상자가 그대로 줄 높이가 되면
+       머리줄이 21.6px ↔ 24.5px 로 오간다 — 축을 누를 때마다 카드가 2.9px 씩
+       밀리는 그 "미세한 레이아웃 변화" 다(2026-09-05 로컬 실측).
+       `line-height: 1` 이면 이 글자의 상자가 옆 글자(21.6px)보다 작아져 줄
+       높이를 정하는 쪽이 늘 옆 글자가 된다. 글자 크기는 그대로다 —
+       baseline 정렬이라 위치도 그대로다. */
+    line-height: 1;
   }
   /* [지금 단계로] — 글자 링크다. 버튼 모양을 주면 카드 안에 누를 것이 둘
      (편집·되돌리기)이 되어 무엇이 주된 행동인지 흐려진다. */
@@ -181,7 +336,12 @@ WIDGET_HEAD_HTML = """
     font-size: var(--aot-font-size-xs);
     cursor: pointer;
   }
-  .aot-plotw-stage .aot-plotw-guide { margin-top: var(--aot-space-1); }
+  /* 현재 단계에서는 **감추되 자리는 남긴다.** `display:none` 으로 빼면 다른
+     단계를 고르는 순간 버튼이 새로 생기며 머리줄이 밀린다. */
+  .aot-plotw-stage-back.is-idle { visibility: hidden; }
+  /* (옛 `.aot-plotw-guide` 간격 규칙은 상자로 옮겼다 — 위
+     `.aot-plotw-guidebox { margin-top }`. 클래스 이름이 바뀐 뒤 이 선택자는
+     아무것도 고르지 못해 간격이 0 이 돼 있었다.) */
 
   /* 단계 목표 · 나머지 환경값 — **한 행에 칩으로 나열한다.**
      핵심(게이지)만 한 줄을 쓰고, 곁들이는 값은 줄을 늘리지 않는다.
@@ -200,12 +360,25 @@ WIDGET_HEAD_HTML = """
     gap: var(--aot-space-1) var(--aot-space-2);
     margin-top: var(--aot-space-2);
   }
+  /* ⚠ **칩이 카드보다 넓어질 수 없게 한다.** 공용 `.aot-tag` 는
+     `white-space: nowrap` 인데 flex 아이템의 기본 `min-width: auto` 와 만나면
+     콘텐츠 폭 아래로 줄어들지 않는다 — 곡선을 따르는 목표는 값 자리에 **곡선
+     이름**이 오므로("야간 저온 감응 곡선 v2") 그 이름 하나가 카드 폭을 넘겼고,
+     단계마다 목표 구성이 달라 **단계를 바꿀 때 좌우폭이 변했다**(2026-09-05).
+     넘치면 칩 안에서 자르고 전문은 `title` 이 진다(JS `_pair`).
+
+     공용 `.aot-tag` 자체는 고치지 않는다 — 모달·설정 화면이 같은 칩을 쓰는데
+     거기서는 잘릴 일이 없고, 공용 규칙을 이 위젯 사정으로 바꾸면 그 화면들이
+     함께 바뀐다. 좁히는 것은 이 위젯의 목록뿐이다. */
   .aot-plotw-list .aot-tag {
     display: inline-flex;
     align-items: baseline;
     gap: 0.35em;
     font-size: var(--aot-fs-sm);
     font-variant-numeric: tabular-nums;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
   .aot-plotw-list i {
     font-style: normal;
@@ -222,18 +395,11 @@ WIDGET_HEAD_HTML = """
     color: var(--aot-color-text-secondary);
   }
 
-  /* 추세 방향 — 칩과 게이지 값 옆에 붙는다(`↑`/`↓`).
-     이 카드에는 스파크라인이 설 자리가 없다(줄을 늘리지 않는다). 그런데 여기서
-     정말 필요한 것은 모양이 아니라 **방향**이다: 습도가 범위 위로 벗어나 있는데
-     더 오르는 중인지 내려오는 중인지가 다음 행동을 가른다. */
-  .aot-plotw-trend {
-    font-style: normal;
-    margin-left: 0.25em;
-    font-weight: 400;
-    color: var(--aot-color-text-secondary);
-  }
+  /* (`.aot-plotw-trend` — 방향 화살표 규칙은 없앴다. 환경 카드가 공용
+     빌더로 바뀌면서 축 없는 줄은 스파크라인이, 축 있는 줄은 `scaleNote` 가
+     추세를 맡는다.) */
 
-  .aot-plotw-empty { padding: var(--aot-space-5) 0; text-align: center; }
+.aot-plotw-empty { padding: var(--aot-space-5) 0; text-align: center; }
 
   /* bootstrap-select 는 `<select>` 의 클래스를 **감싸는 div 에도 복사**한다.
      그래서 `.aot-modern-select` 의 테두리와 화살표가 껍데기에 한 벌, 안쪽
@@ -328,7 +494,7 @@ WIDGET_BODY_HTML = """
     var opts = {
       plotUuid: {{ (widget_variables.plot_uuid or '')|tojson }},
       refreshMin: {{ widget_variables.refresh_minutes|int }},
-      gauge: {{ (widget_variables.gauge or 'VPD')|tojson }},
+      envMode: {{ (widget_variables.env_mode or '')|tojson }},
       showProgress: {{ 'true' if widget_variables.show_progress else 'false' }},
       showEnv:      {{ 'true' if widget_variables.show_env else 'false' }},
       showTrend:    {{ 'true' if widget_variables.show_trend else 'false' }},
@@ -361,16 +527,22 @@ WIDGET_INFORMATION = {
     # 폰에서 한 줄에 하나 — 네 묶음이 서는 화면이라 반으로 접히면 축이 뭉갠다.
     'mobile_full_width': True,
 
-    # 세로를 짧게 잡는다 — 이 카드는 한 줄(진행) + 타일 두어 줄이면 끝이고,
-    # 남는 높이는 여백이 되어 대시보드의 다른 위젯을 아래로 민다.
+    # 세로를 짧게 잡던 것을 되돌린다(2026-09-05). "진행 한 줄 + 타일 두어 줄"
+    # 이던 시절의 값(6)인데, 환경 카드가 지도 구획 모달과 같은 빌더로 바뀌면서
+    # 측정마다 자기 줄을 갖게 됐다(DLI·적산온도 포함). 6 이면 새로 놓은 위젯이
+    # 첫 두 줄만 보이고 나머지는 스크롤 안으로 숨어 "고장 난 것" 처럼 보인다.
+    # 12 는 실사용에서 나온 값이다 — 사용자가 이 위젯을 직접 11칸으로 늘려
+    # 쓰고 있었다(2026-09-05 로컬 실측, 측정 5줄짜리 구획).
     'widget_width': 12,
-    'widget_height': 6,
+    'widget_height': 12,
 
     'generate_page_variables': widget_variables,
     'execute_at_modification': execute_at_modification,
 
-    # 고른 구획(`plot_uuid`)은 **여기 없다.** 사람은 UUID 를 고르지 않고,
-    # 관심 대상은 위젯 본체의 선택 상자로 바꾼다(그쪽이 직접 저장한다).
+    # 고른 구획(`plot_uuid`)과 환경 카드의 보기 단위(`env_mode`)는 **여기
+    # 없다.** 사람은 UUID 를 고르지 않고, 둘 다 위젯 본체에서 바꾼다(그쪽이
+    # 직접 저장한다). 폼에 같은 항목을 두면 본체와 폼이 같은 키를 다투게 되고,
+    # 폼을 한 번 저장할 때마다 본체에서 고른 것이 되돌아간다.
     'custom_options': [
         {
             'type': 'header',
@@ -380,7 +552,10 @@ WIDGET_INFORMATION = {
             'id': 'show_progress',
             'type': 'bool',
             'default_value': True,
-            'name': lazy_gettext('Progress'),
+            # 프로그램·일지와 **같은 msgid** 다(`Program stages` → "단계").
+            # ⚠ `Stages`·`Stage` 를 쓰지 말 것 — 시설의 측창 개폐 단수가 이미
+            #   쓰고 있어 한국어가 "단" 한 글자로 나온다.
+            'name': lazy_gettext('Program stages'),
             'phrase': lazy_gettext(
                 'Stage timeline with today and past transitions marked.')
         },
@@ -391,7 +566,9 @@ WIDGET_INFORMATION = {
             'name': lazy_gettext('Targets vs now'),
             'phrase': lazy_gettext(
                 'Current readings against the targets and limits this stage '
-                'declares. One gets the gauge, the rest are listed as text.')
+                'declares — the same card the map widget shows, including '
+                'DLI and accumulated heat. [7 Days] turns each row into the '
+                'range it moved through over the last week.')
         },
         {
             'id': 'show_trend',
@@ -399,8 +576,9 @@ WIDGET_INFORMATION = {
             'default_value': True,
             'name': lazy_gettext('Trends'),
             'phrase': lazy_gettext(
-                'Fills the rows that have no axis with a recent trend line. '
-                'Needs the targets block.')
+                'Fills the rows that have no range of their own (CO2, soil '
+                'moisture, dew point) with a recent trend line. Needs the '
+                'targets block.')
         },
         {
             'id': 'show_gdd',
@@ -408,25 +586,17 @@ WIDGET_INFORMATION = {
             'default_value': True,
             'name': lazy_gettext('Accumulated heat'),
             'phrase': lazy_gettext(
-                'How far this stage has come in growing degree days. Shown '
-                'only when the programme declares a base temperature.')
+                'How far this stage has come towards the next one in growing '
+                'degree days. Shown only when the programme moves stages by '
+                'GDD. The running total since planting is a row in the '
+                'environment card instead, and follows that card\'s settings.')
         },
-        {
-            'id': 'gauge',
-            'type': 'select',
-            'default_value': 'VPD',
-            'options_select': [
-                ('VPD', lazy_gettext('VPD')),
-                ('T', lazy_gettext('Temperature')),
-                ('RH', lazy_gettext('Humidity')),
-                ('soil', lazy_gettext('Soil moisture')),
-            ],
-            'name': lazy_gettext('Gauge metric'),
-            'phrase': lazy_gettext(
-                'Which measurement gets the gauge. The rest are listed as '
-                'text. If this plot does not measure it, the first one with '
-                'a range is shown instead.')
-        },
+        # 게이지 지표 선택(`gauge`)은 **없앴다**(2026-09-05). 환경 카드가
+        # 지도 구획 모달과 같은 빌더(`AoTMapPopup.buildEnvNowHtml`)를 쓰면서
+        # **모든 측정이 자기 축을 갖게** 되어, "어느 하나를 게이지로" 라는
+        # 물음 자체가 없어졌다. 저장돼 있던 값은 그대로 남지만 아무도 읽지
+        # 않는다(`execute_at_modification` 이 선언하지 않은 값을 지우지
+        # 않으므로, 되살릴 일이 생기면 그 값이 아직 거기 있다).
         {
             'type': 'header',
             'name': lazy_gettext('General')

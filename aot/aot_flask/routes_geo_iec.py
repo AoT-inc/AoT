@@ -1236,13 +1236,19 @@ def api_facility_env_week(facility_uuid):
     """
     from aot.aot_flask.geo import plot_context as _pc
     from aot.aot_flask.geo import plot_journal
-    from aot.aot_flask.geo.site_summary import cached_facility_env_week
+    from aot.aot_flask.geo.site_summary import (cached_facility_env_week,
+                                                 env_week_key)
 
     bay_id = (request.args.get('bay') or '').strip() or None
     try:
         days = max(1, min(31, int(request.args.get('days') or 7)))
     except (TypeError, ValueError):
         days = 7
+
+    # 구획 쪽과 같은 규칙 — 감춘 줄은 그리지 않으므로 조회하지도 않는다.
+    # 시설 카드도 감추기를 쓴다(`_facilityHidden`, aot-map-widget-vector.js).
+    from aot.aot_flask.geo import site_summary as _ss
+    _hidden = (_ss.hidden_rows_for_facility(facility_uuid) or {}).get('now') or []
 
     def _build():
         try:
@@ -1257,14 +1263,18 @@ def api_facility_env_week(facility_uuid):
                 _plot = None
             return plot_journal.recent_env_trends(
                 _plot, days=days, sensor_ids=sensor_ids,
-                target_id=facility_uuid)
+                target_id=facility_uuid, hidden_keys=_hidden)
         except Exception:
             current_app.logger.exception('facility env_week: 계열 생성 실패')
             # 빈 목록을 캐시하지 않는다 — 일시적 실패가 10분간 굳는다.
             return None
 
+    # ⚠ 창(`days`)이 키에 들어가야 한다 — 빠뜨리면 `?days=` 를 바꿔 불러도
+    # 앞의 창이 그대로 나온다. 규칙은 구획과 **같은 함수**다(`env_week_key`) —
+    # 두 라우트가 각자 조립하면 한쪽만 고쳐도 아무 신호가 없다.
     series = cached_facility_env_week(
-        '%s|%s' % (facility_uuid, bay_id or ''), _build)
+        env_week_key('%s|%s' % (facility_uuid, bay_id or ''), days,
+                     hidden=_hidden), _build)
     if series is None:
         return jsonify({'ok': False, 'error': 'build failed'}), 500
     return jsonify({'ok': True, 'days': days, 'series': series})

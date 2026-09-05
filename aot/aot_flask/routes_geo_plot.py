@@ -7,7 +7,7 @@ routes_geo.py 맨 아래에서 import 되어 공유 blueprint 에 등록된다
 설계 정본: docs/design/geo-vegetation-plot.md
 """
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from flask import request, jsonify, current_app
 from flask_login import current_user, login_required
@@ -552,43 +552,151 @@ def api_plot_contents(plot_uuid):
     return jsonify(payload)
 
 
+def _stage_window(row, stage_key, today):
+    """단계 키 → `(start, end, state)`. 못 찾으면 `(None, None, None)`.
+
+    창은 **`stage_schedule_view` 가 정한 경계**를 그대로 쓴다 — 그것이 기준점·
+    승인·프로그램 길이를 이미 반영한 정본이고(`plot_context`), 여기서 날짜
+    산술을 다시 하면 축의 구간과 그래프의 창이 갈린다.
+
+    ⚠ **끝은 오늘로 자른다.** 진행 중인 단계는 `ends_on` 이 미래라, 그대로
+      물으면 아직 오지 않은 날까지 버킷을 만든다(빈 칸이 꼬리처럼 붙는다).
+
+    ⚠ 아직 오지 않은 단계는 창이 없다 — `state='future'` 로 알리고 조회하지
+      않는다. 빈 그래프를 그리면 "데이터가 없다"(=고장)로 읽히지만 실제로는
+      **아직 안 온 것**이다.
+    """
+    from aot.aot_flask.geo import plot_context
+    try:
+        sched = plot_context.stage_schedule_view(row) or []
+    except Exception:
+        current_app.logger.exception('plot env_series: 단계 일정 조회 실패')
+        return None, None, None
+    hit = None
+    for st in sched:
+        if str(st.get('key')) == str(stage_key):
+            hit = st
+            break
+    if hit is None:
+        return None, None, None
+    start = _as_day(hit.get('starts_on'))
+    ends = _as_day(hit.get('ends_on'))
+    if start is None or start > today:
+        return None, None, 'future'
+    end = min(ends, today) if ends else today
+    return start, end, (hit.get('state') or None)
+
+
+def _as_day(value):
+    """'YYYY-MM-DD' → date. 못 읽으면 None."""
+    if not value:
+        return None
+    try:
+        return datetime.strptime(str(value)[:10], '%Y-%m-%d').date()
+    except (ValueError, TypeError):
+        return None
+
+
+@blueprint.route('/api/geo/plot/<string:plot_uuid>/env_series', methods=['GET'])
 @blueprint.route('/api/geo/plot/<string:plot_uuid>/env_week', methods=['GET'])
 @login_required
 def api_plot_env_week(plot_uuid):
-    """구획 모달의 **최근 7일 일별 환경 계열**. `AoTViz.range` 입력 모양이다.
+    """구획의 **환경 계열** — `AoTViz.range` 입력 모양.
+
+    ```
+    ?days=7            창 길이(1~120). `stage` 가 있으면 무시된다.
+    ?end=YYYY-MM-DD    창의 끝(기본 오늘).
+    ?stage=<키>        그 단계의 기간을 창으로 — days·end 를 대신한다.
+    ?unit=day|week     버킷 단위(기본 day).
+    ```
+
+    `/env_week` 는 **같은 핸들러의 옛 이름**이다(인자 없이 부르면 최근 7일
+    일별). 이름을 나눠 두 벌 만들면 계산이 갈린다.
 
     ⚠ **`/contents` 에 얹지 않는다.** 그 응답은 30초 캐시이고 모달이 열릴
     때마다 부르는데, 여기 계산은 InfluxDB 를 훑으므로 수명이 다르다. 실은
     수명뿐 아니라 **부르는 시점**도 다르다 — 지금 값은 자주, 지난 7일은 한 번.
     한 응답에 묶으면 짧은 쪽이 긴 쪽을 끌고 다닌다.
 
-    `?days=` 로 창을 바꿀 수 있다(1~31). 캐시 키는 구획 uuid 하나라 창을
-    바꿔 부르면 앞의 것이 남아 있을 수 있다 — 화면은 기본값만 쓴다.
+    ⚠ **창을 가르는 것은 전부 캐시 키에 들어가야 한다**
+    (`site_summary.env_week_key`). 예전에는 키가 구획 uuid 하나라 `?days=` 를
+    바꿔 불러도 앞의 것이 그대로 나왔다(에러 없이). 인자를 더할 때는 그 함수도
+    함께 고칠 것 — 증상은 "다른 단계를 눌렀는데 같은 그림" 이다.
     """
     from aot.aot_flask.geo import plot_journal
-    from aot.aot_flask.geo.site_summary import cached_plot_env_week
+    from aot.aot_flask.geo.site_summary import (cached_plot_env_week,
+                                                env_week_key)
+    from aot.utils.device_tz import resolve_location_tz
+    from aot.utils.timekit import as_tz
 
     row = GeoPlot.query.filter(GeoPlot.unique_id == plot_uuid).first()
     if row is None:
         return jsonify({'ok': False, 'error': 'plot not found'}), 404
 
+    unit = (request.args.get('unit') or 'day').strip().lower()
+    if unit not in ('day', 'week'):
+        unit = 'day'
+
+    # 오늘은 **그 구획의 시간대**로 정한다 — 서버 시간으로 자르면 시차가 있는
+    # 설치에서 창의 끝이 하루 어긋난다(`recent_env_trends` 와 같은 규칙).
+    today = datetime.now(as_tz(resolve_location_tz(plot_uuid))).date()
+
+    stage_key = (request.args.get('stage') or '').strip() or None
+    end = _as_day(request.args.get('end')) or today
+    if end > today:
+        end = today
     try:
-        days = max(1, min(31, int(request.args.get('days') or 7)))
+        # 상한 120일 — 그 위는 일지의 몫이다(이 응답은 카드 한 장이다).
+        days = max(1, min(120, int(request.args.get('days') or 7)))
     except (TypeError, ValueError):
         days = 7
 
+    state = None
+    if stage_key:
+        s_day, e_day, state = _stage_window(row, stage_key, today)
+        if state == 'future':
+            # 아직 오지 않은 단계 — 조회하지 않는다. 화면이 "예정" 이라고 적는다.
+            return jsonify({'ok': True, 'unit': unit, 'series': [],
+                            'window': {'start': None, 'end': None,
+                                       'stage_key': stage_key,
+                                       'state': 'future'}})
+        if s_day is None:
+            return jsonify({'ok': False, 'error': 'stage not found'}), 404
+        end = e_day
+        days = (end - s_day).days + 1
+
+    # 감춘 줄은 그리지 않으므로 조회하지도 않는다. 목록은 **카드가 쓰는 그것**
+    # 이다(`_inherited_hidden_rows` → `plot.hidden_rows.now`) — 화면이 따로
+    # 만들어 보내면 규칙이 두 벌이 되고, 갈라지는 날 조회에서만 빠진 줄이
+    # 생긴다(에러 없이).
+    _hidden = (_inherited_hidden_rows(
+        facility_uuid=getattr(row, 'facility_uuid', None),
+        zone_uuid=getattr(row, 'zone_uuid', None)) or {}).get('now') or []
+
     def _build():
         try:
-            return plot_journal.recent_env_trends(row, days=days)
+            return plot_journal.recent_env_trends(
+                row, days=days, end_date=end, unit=unit, hidden_keys=_hidden)
         except Exception:
-            current_app.logger.exception('plot env_week: 계열 생성 실패')
+            current_app.logger.exception('plot env_series: 계열 생성 실패')
             # 빈 목록을 캐시하지 않는다 — 일시적 실패가 10분간 굳는다.
             return None
 
-    series = cached_plot_env_week(plot_uuid, _build)
+    # ⚠ 감춘 목록도 **답을 가른다** — 상위에서 항목을 감추면 계열이 줄어드는데,
+    # 키가 같으면 감추기 전 계열이 10분간 그대로 나온다.
+    #
+    # 단계 키는 키에 담지 않는다 — 단계는 `(days, end)` 로 이미 풀려 있고,
+    # 같은 창이면 같은 답이다(단계 두 개가 우연히 같은 창이면 나눌 이유가 없다).
+    series = cached_plot_env_week(
+        env_week_key(plot_uuid, days, end=end.isoformat(), unit=unit,
+                     hidden=_hidden), _build)
     if series is None:
         return jsonify({'ok': False, 'error': 'build failed'}), 500
-    return jsonify({'ok': True, 'days': days, 'series': series})
+    start = end - timedelta(days=days - 1)
+    return jsonify({'ok': True, 'days': days, 'unit': unit, 'series': series,
+                    'window': {'start': start.isoformat(),
+                               'end': end.isoformat(),
+                               'stage_key': stage_key, 'state': state}})
 
 
 def _env_of(input_ids):

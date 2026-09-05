@@ -26,10 +26,11 @@ The body is read-only outside the Edit modal, in four optional blocks:
 
 | Block | Shows |
 |---|---|
-| **Progress** | The stage timeline as a bar — segments for each stage, today marked on it, past transitions shown. |
-| **Targets vs now** | Current readings against this stage's targets and limits — the same environment card used in the map widget's zone/facility/plot popups. One measurement gets a gauge; the rest are listed as text. |
-| **Trends** | Fills in the rows from the block above that have no gauge with a recent sparkline. Needs *Targets vs now* turned on. |
-| **Accumulated heat** | How far the current stage has progressed toward its [GDD](journal.md#gdd) transition threshold — shown only when the program declares a base temperature. |
+| **Program stages** | The stage timeline — **the same axis** the [map widget](map-widget.md#plot)'s plot modal draws under [Overview] (stage names, date scale, next stage). One difference: here the segments are **clickable** — the picked one turns green, its dates, targets and guidance unfold below, and the environment card's window follows it. Today is a vertical line; past transitions are dots. |
+| **Targets vs now** | Current readings against this stage's targets and limits — the **same card** the [map widget](map-widget.md#plot)'s plot modal shows under [Overview] (it calls the same builder). Every measurement gets its own row and axis, and DLI and [accumulated heat](journal.md#gdd) come along. **[Today][Daily][Weekly]** in the card header pick the window — Daily is the last 7 days (7 points), Weekly the last 8 weeks (8 points). **The unit picks the window too**: a week bucket over a 7-day window would leave a single point, and a range chart needs more than one. Click a stage on the timeline and that stage's span becomes the window. The data is fetched only when you press, so leaving it on [Today] costs nothing. |
+| **Trends** | Fills the rows that have no range of their own (CO2, soil moisture, dew point) with a recent trend sparkline. Needs *Targets vs now*. |
+| **Notes** | What is coming up, a preview of recent notes, and [Open notes]. The **same block** the map widget's plot modal uses (the shared `AoTNotesBlock`) — it shows this plot's own notes only, never the zone's or facility's. |
+| **Accumulated heat** | How far the current stage has come towards the next one in [GDD](journal.md#gdd) (`This stage`). Shown **only when the programme moves stages by GDD** — with date-driven stages the question does not arise. The running total since planting is a separate `GDD` row in the environment card (`Cumulative since start`). |
 
 ---
 
@@ -43,11 +44,10 @@ The body is read-only outside the Edit modal, in four optional blocks:
 
 | Option | Description | Default |
 |---|---|---|
-| Progress | Show the stage timeline block. | On |
+| Program stages | Show the stage timeline block. | On |
 | Targets vs now | Show current readings against this stage's targets and limits. | On |
 | Trends | Fill rows with no gauge with a recent trend line. Needs *Targets vs now*. | On |
-| Gauge metric | Which measurement gets the gauge — VPD, Temperature, Humidity, or Soil moisture. Falls back to the first available one if this plot doesn't measure the chosen metric. | VPD |
-| Accumulated heat | Show the GDD block. | On |
+| Accumulated heat | Show this stage's GDD progress (the running total lives in the environment card) | On |
 | Refresh Interval | Minutes between reloads. Stages move by the day, so short intervals only add load. | 5 |
 
 ---

@@ -1636,13 +1636,25 @@ def _circular_channel_stats(dm_row, channel, unit, measurement,
 def env_channel_series(device_ids, start_str, end_str, tz,
                        granularity='day', bucket_sec=3600,
                        measurements=None, outdoor_ids=None, sun_fn=None,
-                       want_stats=('min', 'max', 'mean')):
+                       want_stats=('min', 'max', 'mean'), hidden_keys=None):
     """센서 장치 id 목록 → 채널별 시계열 + 실패 목록.
 
     `measurements` 가 주어지면 **그 목록의 measurement 만** 조회한다(없으면
     `DIAGNOSTIC_MEASUREMENTS` 를 뺀 전부). 화면에서 거르지 않고 여기서
     거르는 이유는 **조회 비용**이다 — 안 볼 채널을 InfluxDB 에 묻는 것은
     저사양 기기에서 그대로 부담이 된다.
+
+    `hidden_keys` 는 **사람이 카드에서 감춘 표시 키**다(`T`·`RH`·`VPD` …).
+    감춘 줄은 그리지 않으므로 조회할 이유도 없다 — 조회·파이썬·페이싱이 전부
+    채널 수에 비례하므로(`_pace` 가 채널마다 붙는다) 감춘 만큼 그대로 준다.
+
+    ⚠ **`measurements` 와 어휘가 다르다.** 그쪽은 measurement 이름
+    (`temperature`)이고 이쪽은 채널 표시 키다 — 매핑에 없는 채널(토양수분 등)은
+    사람이 붙인 이름이 곧 키라 measurement 이름으로는 절대 안 맞는다. 그래서
+    번역하지 않고 **카드가 줄을 만들 때 쓰는 그 함수**(`channel_meta_for_dm`,
+    `site_summary.env_for_devices` 가 readings 를 만들며 부르는 것)로 여기서
+    직접 키를 구한다. 어휘를 옮기는 코드를 두면 그 번역이 틀리는 날 **줄이
+    조용히 사라진다** — 빠진 줄은 에러가 아니라 '없는 것' 으로 보인다.
 
     돌려주는 것은 `(series, errors)`.
     `series` 는 `[{device_id, channel, sensor, unit, measurement, by_bucket}]`
@@ -1657,10 +1669,12 @@ def env_channel_series(device_ids, start_str, end_str, tz,
     쪽을 볼지는 사람이 정한다.
     """
     from aot.databases.models import DeviceMeasurements, Input
+    from aot.aot_flask.geo.facility_sensors import channel_meta_for_dm
 
     ids = [d for d in (device_ids or []) if d]
     if not ids:
         return [], []
+    hidden = set(hidden_keys or ())
 
     names = {i.unique_id: i.name for i in Input.query.filter(
         Input.unique_id.in_(ids)).all()}
@@ -1678,6 +1692,14 @@ def env_channel_series(device_ids, start_str, end_str, tz,
         scope = 'outdoor' if dm.device_id in (outdoor_ids or set()) else 'indoor'
         if not _wanted_measurement(dm, wanted, scope=scope):
             continue
+        # 사람이 감춘 줄은 조회하지 않는다. **판정 실패는 "안 감춤" 이다** —
+        # 여기서 못 읽었다고 채널을 빼면 카드에 있던 줄이 사라진다.
+        if hidden:
+            try:
+                if (channel_meta_for_dm(dm) or {}).get('key') in hidden:
+                    continue
+            except Exception:                                   # noqa: BLE001
+                logger.exception('journal: 감춘 채널 판정 실패(%s)', dm.device_id)
         _t0 = time.monotonic()
         stats = daily_channel_stats(dm, start_str, end_str, tz,
                                     granularity=granularity,
@@ -3653,17 +3675,25 @@ def env_trend_series(view_buckets, targets=None, summary_groups=None):
             # 축 눈금용 짧은 날짜. 숫자 날짜라 로케일을 타지 않는다(월·주
             # 버킷은 `date_label` 이 범위라 시작일만 쓴다).
             short = str(bkey or '')[5:10] or str(bkey or '')
+            # **눈금은 짧게, 풍선은 온전하게.** 접힌 버킷(`date_label` 이 범위)
+            # 에서 눈금 글자만 주면 화면이 "08-30 · 22.8~32.3 °C" 라고 적어
+            # 그 주 전체를 **하루로 읽히게** 한다. 눈금을 늘릴 수는 없으므로
+            # (칸이 38px 이다) 온전한 라벨을 따로 싣고 풍선이 그것을 쓴다.
+            _full = str(bucket.get('date_label') or '')
+            _full = _full if (_full and _full != str(bkey or '')) else None
+            _pt = {'k': bkey, 'label': short}
+            if _full:
+                _pt['label_full'] = _full
             row = per_bucket[i].get(key)
             if row is None:
-                points.append({'k': bkey, 'label': short, 'min': None,
-                               'max': None, 'avg': None})
+                _pt.update({'min': None, 'max': None, 'avg': None})
             else:
-                points.append({'k': bkey, 'label': short,
-                               'min': row.get('min'), 'max': row.get('max'),
-                               'avg': row.get('avg'),
-                               'avg_day': row.get('avg_day'),
-                               'avg_night': row.get('avg_night'),
-                               'coverage_low': bool(row.get('coverage_low'))})
+                _pt.update({'min': row.get('min'), 'max': row.get('max'),
+                            'avg': row.get('avg'),
+                            'avg_day': row.get('avg_day'),
+                            'avg_night': row.get('avg_night'),
+                            'coverage_low': bool(row.get('coverage_low'))})
+            points.append(_pt)
         m = meta[key]
         # 축은 **관측값과 목표를 모두** 담아야 한다 — 목표만 그림 밖으로
         # 나가면 "한참 못 미쳤다" 가 "목표가 없다" 로 보인다.
@@ -3791,7 +3821,8 @@ def order_chart_series(series):
 
 
 def recent_env_trends(plot, days=7, end_date=None, sensor_ids=None,
-                      outdoor_ids=None, target_id=None):
+                      outdoor_ids=None, target_id=None, hidden_keys=None,
+                      unit='day'):
     """구획 → **최근 `days` 일의 일별 환경 계열**. `AoTViz.range` 입력 모양이다.
 
     일지가 만드는 것과 같은 계산이지만 **저장하지 않는다** — 화면이 열릴 때마다
@@ -3812,6 +3843,15 @@ def recent_env_trends(plot, days=7, end_date=None, sensor_ids=None,
     3회). 그래서 7일이라고 7배가 되지 않는다. 그래도 요청 스레드에서 도는
     계산이므로 **부르는 쪽이 캐시를 건다** — 일별 버킷은 하루에 한 번만 바뀌고
     오늘 열만 진행 중이다.
+
+    `unit` — 버킷 단위(`'day'`|`'week'`|`'month'`). 조회는 **언제나 일 단위**로
+    하고 접기만 달리한다(`fold_buckets`) — 굵게 물어도 InfluxDB 질의 수는
+    같은데(채널당 3회, 기간 무관) 접는 규칙이 일지와 갈리게 된다. 단계처럼
+    긴 창에서는 일별 점이 수십 개라 좁은 카드에서 뭉개진다.
+
+    `hidden_keys` — 카드에서 감춘 표시 키. 그 줄은 그리지 않으므로 조회하지도
+    않는다(`env_channel_series` 의 같은 인자). **감춘 것이 없으면 아무것도
+    달라지지 않는다** — 이 인자의 값어치는 사람이 줄을 감춘 그 순간부터 나온다.
 
     ⚠ **폴링 응답에 얹지 말 것.** 지도 위젯 시설 모달은 최소 5초까지 폴링한다
     (`_runtimePollSeconds`). 여기 결과를 그 응답에 실으면 그 주기가 그대로
@@ -3850,7 +3890,8 @@ def recent_env_trends(plot, days=7, end_date=None, sensor_ids=None,
 
     series, _errors = env_channel_series(
         sensor_ids, s_str, e_str, tz, granularity='day', bucket_sec=bucket_sec,
-        outdoor_ids=outdoor_ids, sun_fn=sun_lookup(target_id))
+        outdoor_ids=outdoor_ids, sun_fn=sun_lookup(target_id),
+        hidden_keys=hidden_keys)
     env_by_bucket = env_rows_by_bucket(
         series, labels, tz=tz, bucket_sec=bucket_sec, granularity='day',
         period_start=start, period_end=end,
@@ -3872,8 +3913,26 @@ def recent_env_trends(plot, days=7, end_date=None, sensor_ids=None,
         if doc_targets is None and photo:
             doc_targets = photo
 
-    view_buckets = [{'key': k, 'env_groups': group_env_rows(env_by_bucket[k])}
-                    for k in sorted(env_by_bucket)]
+    # ── 버킷 단위 접기 ────────────────────────────────────────────────────
+    #
+    # ⚠ **목표를 붙인 뒤에 접는다.** `attach_targets` 는 **그날의** 단계 목표를
+    #   붙이는데(`stage_at(stages, key)`), 접고 나면 그 버킷이 며칠을 대표하는지
+    #   만 남아 "어느 날의 목표인가" 를 물을 수 없다. 순서를 바꾸면 단계 경계를
+    #   걸친 주가 한쪽 단계의 목표만 갖게 된다.
+    #
+    # ⚠ 접기는 **일지와 같은 함수**다(`fold_buckets`). 단위 전환을 여기서 다시
+    #   짜면 같은 구획을 일지와 위젯이 다르게 접는다 — 특히 주 경계는 달력이
+    #   아니라 **기록 시작일에 앵커**한다는 규칙이 거기 하나로 있다.
+    folded = [{'key': k.isoformat() if hasattr(k, 'isoformat') else str(k),
+               'env': env_by_bucket[k]}
+              for k in sorted(env_by_bucket)]
+    if unit and unit != 'day':
+        folded = fold_buckets(folded, to=unit, granularity='day')
+
+    view_buckets = [{'key': b.get('key'),
+                     'date_label': b.get('date_label'),
+                     'env_groups': group_env_rows(b.get('env') or [])}
+                    for b in folded]
     out = order_chart_series(env_trend_series(view_buckets, targets=doc_targets))
 
     # ── 화면의 "지금 값" 줄과 짝짓는 열쇠 ───────────────────────────────────

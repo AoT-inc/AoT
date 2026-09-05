@@ -57,7 +57,45 @@ _BUILD_LOCKS = {}
 
 # ── 캐시 + 단일 비행 ────────────────────────────────────────────────────────
 
-def cached_build(cache, locks, key, ttl_s, build, force=False):
+#: 사전 하나가 들고 있을 수 있는 최대 항목 수.
+#:
+#: 예전에는 상한이 **없었다.** 키가 자원 uuid 하나뿐일 때는 자원 수가 곧
+#: 상한이라 무해했는데, 창(기간·단위·단계)을 키에 넣는 순간 그 보호가
+#: 사라진다 — 구획 44개 × 단계 6개 × 단위 2개 = 528 이고, 끝난 단계의 창은
+#: 날짜가 고정이라 **다시 조회되지 않은 채 영원히 남는다.** 만료된 항목조차
+#: 지우는 코드가 없었다(잠금 사전도 함께 자랐다).
+#:
+#: 512 는 "현실적인 동시 사용의 몇 배" 다. 넘으면 만료가 가까운 것부터
+#: 버리므로, 지금 보고 있는 창이 밀려나는 일은 사실상 없다.
+MAX_CACHE_ENTRIES = 512
+
+
+def _evict(cache, locks, max_entries):
+    """만료된 항목과 넘치는 항목을 버린다. **`_CACHE_LOCK` 을 쥔 채 부른다.**
+
+    잠금 사전도 함께 줄인다 — 그러지 않으면 캐시만 비고 `locks` 는 계속
+    자란다(키 하나당 `threading.Lock` 하나라 조용히 쌓인다).
+
+    ⚠ **쥐고 있는 잠금은 지우지 않는다.** 지금 build() 를 도는 스레드의
+      잠금을 지우면 다음 호출자가 새 잠금을 만들어, 같은 계산이 둘 돈다
+      (틀린 값이 나오지는 않지만 단일 비행이 조용히 풀린다).
+    """
+    now = time.time()
+    for k in [k for k, v in cache.items() if v[0] <= now]:
+        del cache[k]
+    over = len(cache) - max_entries
+    if over > 0:
+        # 만료가 **가까운 것부터** 버린다 — 방금 채운 것이 가장 늦게 만료되므로
+        # 지금 보고 있는 창이 밀려나지 않는다.
+        for k in sorted(cache, key=lambda k: cache[k][0])[:over]:
+            del cache[k]
+    for k in [k for k, lk in locks.items()
+              if k not in cache and not lk.locked()]:
+        del locks[k]
+
+
+def cached_build(cache, locks, key, ttl_s, build, force=False,
+                 max_entries=MAX_CACHE_ENTRIES):
     """TTL 캐시 + 키별 단일 비행. 모달 응답을 만드는 자리마다 쓴다.
 
     단일 비행이 캐시만큼 중요하다. 이 계산 하나가 influx 수십 질의라,
@@ -68,6 +106,9 @@ def cached_build(cache, locks, key, ttl_s, build, force=False):
 
     build() 가 None 을 주면 캐시에 넣지 않는다 — "못 찾음"을 30초 동안
     기억하면 방금 만든 도형이 그동안 없는 것이 된다.
+
+    **상한은 여기 하나에 있다**(`_evict`). 사전마다 따로 두면 새 캐시를
+    만드는 사람이 그것을 기억해야 하고, 기억하지 못한 사전만 조용히 샌다.
     """
     now = time.time()
     if not force:
@@ -93,6 +134,9 @@ def cached_build(cache, locks, key, ttl_s, build, force=False):
         if payload is not None:
             with _CACHE_LOCK:
                 cache[key] = (time.time() + ttl_s, payload)
+                # 넣은 **직후에만** 정리한다. 조회마다 훑으면 폴링이 잦은
+                # 화면에서 그 비용이 그대로 요청에 붙는다.
+                _evict(cache, locks, max_entries)
         return payload
 
 
@@ -127,14 +171,44 @@ _PLOT_ENV_WEEK_LOCKS = {}
 _PLOT_ENV_WEEK_TTL_S = 600
 
 
-def cached_plot_env_week(plot_uuid, build, force=False):
+def env_week_key(base, days, end=None, unit='day', hidden=None):
+    """주간 환경 계열의 캐시 키 — **창을 가르는 것을 전부 담는다.**
+
+    `base` 는 무엇의 계열인가(구획 uuid, 시설이면 `시설uuid|동id`)이고,
+    나머지가 창이다. 같은 대상이라도 창이 다르면 **다른 답**이다.
+
+    ⚠ **라우트가 새 질의 인자를 받기 시작하면 반드시 여기도 더할 것.**
+      키에 없는 축은 캐시에서 섞이고, 증상은 "다른 단계를 눌렀는데 같은
+      그림" 이며 **에러가 나지 않는다.** 예전에 `?days=` 가 정확히 그
+      상태였다 — 라우트는 받는데 키는 uuid 하나였다.
+
+    키를 만드는 규칙이 **캐시 옆에** 있는 이유: 라우트마다 조립하면(구획·시설
+    두 곳이 그랬다) 한쪽만 고쳐도 아무 신호가 없다.
+    """
+    # 감춘 목록도 답을 가른다(계열이 줄어든다). 순서에 안 흔들리게 정렬한다 —
+    # 같은 집합이 다른 키가 되면 캐시가 그만큼 헛돈다.
+    h = ','.join(sorted(str(k) for k in (hidden or ())))
+    return '%s|d%s|e%s|%s|h%s' % (base, days, end or '', unit, h)
+
+
+def cached_plot_env_week(key, build, force=False):
     """구획 모달의 주간 환경 계열 캐시 — **10분**.
 
     `cached_plot_contents`(30초)와 사전을 나누는 이유는 수명이 다르기
     때문이다. 같이 두면 둘 중 하나가 남의 주기로 끌려간다.
+
+    ⚠ **키는 구획 uuid 하나가 아니다.** 같은 구획이라도 **창이 다르면 다른
+    답**이다(기간·단위, 그리고 앞으로는 고른 단계). 예전에는 uuid 하나였고
+    라우트가 `?days=` 를 받으면서도 그것을 키에 안 담아, 창을 바꿔 부르면
+    **앞의 것이 그대로 나왔다**(에러 없이). 그때는 "화면이 기본값만 쓴다" 는
+    전제로 버텼는데 그 전제가 곧 깨진다.
+
+    키를 만드는 일은 **부르는 쪽**이 한다(`_env_week_key`) — 창을 정하는 것이
+    라우트이고, 여기서 다시 조립하면 두 곳이 갈린다. 시설 쪽
+    (`cached_facility_env_week`)이 이미 그 모양이다.
     """
     return cached_build(_PLOT_ENV_WEEK_CACHE, _PLOT_ENV_WEEK_LOCKS,
-                        plot_uuid, _PLOT_ENV_WEEK_TTL_S, build, force)
+                        key, _PLOT_ENV_WEEK_TTL_S, build, force)
 
 
 _FACILITY_ENV_WEEK_CACHE = {}
@@ -144,7 +218,8 @@ _FACILITY_ENV_WEEK_LOCKS = {}
 def cached_facility_env_week(key, build, force=False):
     """시설 모달의 주간 환경 계열 캐시 — 구획과 같은 수명(10분).
 
-    키는 `시설uuid|동id` 다 — 다동 시설은 동마다 센서가 다르다.
+    키는 `시설uuid|동id|창` 이다 — 다동 시설은 동마다 센서가 다르고, 같은
+    동이라도 창이 다르면 다른 답이다(구획 쪽의 같은 경고 참조).
     """
     return cached_build(_FACILITY_ENV_WEEK_CACHE, _FACILITY_ENV_WEEK_LOCKS,
                         key, _PLOT_ENV_WEEK_TTL_S, build, force)

@@ -3995,7 +3995,13 @@ class TestVocabularyIsNotAgricultureOnly(unittest.TestCase):
         body = src.split('function _plotOverviewHtml', 1)[1].split(
             '\n  function ', 1)[0]
         # [현황] 은 "지금" 이다 — 대상·시작일 같은 정체성은 [개요] 가 갖는다.
-        self.assertIn("_t('Progress')", body)
+        #
+        # msgid 는 `Program stages`("단계") 다 — 대시보드 구획 위젯의 같은
+        # 카드와 맞춘 것이다(2026-09-05). `Stages`·`Stage` 를 쓰면 안 된다:
+        # 시설 측창 개폐 단수(1단·2단)가 이미 그 msgid 를 쓰고 있어 한국어가
+        # "단" 한 글자로 나온다.
+        self.assertIn("_t('Program stages')", body)
+        self.assertNotIn("_t('Stages')", body)
         self.assertNotIn("_t('Growing now')", body)
         # [개요]도 같은 문제를 겪었다 — 제목과 첫 행이 둘 다 '심은 것' 이었다.
         about = src.split('function _plotAboutHtml', 1)[1].split(
@@ -9712,6 +9718,246 @@ class TestPlotScheduleWiring(unittest.TestCase):
 
 _TOOL_SERVICE = os.path.join(_ROOT, 'ai', 'services',
                              'aot_data_tool_service.py')
+
+
+class TestWidgetReusesPlotStyle(unittest.TestCase):
+    """구획 위젯은 **지도 구획 모달의 그림**을 쓴다 — 자기 것을 그리지 않는다.
+
+    같은 구획의 같은 축이 지도에서는 단계 이름과 날짜를 달고 대시보드에서는
+    맨 막대로 나오던 것을 고친 뒤, 그 상태로 되돌아가지 않게 고정한다.
+    노트도 같다 — 창마다 노트 버튼 모양과 문구가 달랐던 것이 공용 컴포넌트로
+    모은 이유다(`AoTNotesBlock`).
+    """
+
+    def _widget(self):
+        return _read(os.path.join(_ROOT, 'aot_flask', 'static', 'js',
+                                  'widgets', 'AoT_plot', 'aot-plot-widget.js'))
+
+    def test_progress_axis_comes_from_the_shared_builder(self):
+        src = self._widget()
+        self.assertIn('buildPlotProgressHtml', src)
+        # 자기 축을 다시 조립하면 안 된다.
+        self.assertNotIn('V.timeline(', src)
+        self.assertNotIn('AoTViz.timeline(', src)
+
+    def test_widget_only_compact_axis_is_gone(self):
+        """`compact` 는 이 위젯 하나를 위해 공용 빌더에 낸 구멍이었다."""
+        self.assertNotIn('compact:', self._widget())
+
+    def test_notes_use_the_shared_component(self):
+        src = self._widget()
+        self.assertIn('buildRecordBlock', src)
+        self.assertIn('AoTNotesBlock', src)
+        # 자체 노트 마크업 금지 — 목록·버튼은 공용 컴포넌트가 낸다.
+        self.assertNotIn('aot-ov-notes-list', src)
+        self.assertNotIn('aot-ov-notes-open', src)
+
+    def test_notes_target_type_matches_the_map(self):
+        """같은 구획의 노트가 두 화면에서 다른 목록이 되면 안 된다."""
+        self.assertIn("targetType: 'plot'", self._widget())
+        self.assertIn("targetType: 'plot'",
+                      _read(os.path.join(_ROOT, 'aot_flask', 'static', 'js',
+                                         'widgets', 'AoT_map', 'aot-map-plot.js')))
+
+    def test_guidance_box_is_reserved_per_plot(self):
+        """지침 상자는 **이 구획에 지침이 하나라도 있을 때만** 예약한다.
+
+        무조건 내면 어느 단계에도 지침이 없는 구획에서 두 줄이 죽은 공간이
+        되고(실측 118 → 55px), "그 단계에 있을 때만" 으로 하면 지침이 있는
+        단계와 없는 단계를 오갈 때 카드가 뛴다 — 고치려던 그 흔들림이다.
+        """
+        js = self._widget()
+        self.assertIn('anyGuide', js)
+        self.assertIn('is-noguide', js)
+        css = _read(os.path.join(_ROOT, 'widgets', 'AoT_plot.py'))
+        self.assertIn('.aot-plotw-stage.is-noguide', css,
+                      '상자를 안 내면 그 몫의 최소 높이도 빼야 한다.')
+
+    def test_latest_photo_reuses_the_map_helpers(self):
+        """사진 고르는 규칙(동영상 제외)과 카드 모양은 지도 쪽에 하나로 있다."""
+        src = self._widget()
+        self.assertIn('latestNotePhoto', src)
+        self.assertIn('buildPhotoCardHtml', src)
+        # 확장자 판별을 위젯이 다시 하면 두 화면이 다른 파일을 사진으로 본다.
+        self.assertNotIn('jpe?g|png', src)
+
+    def test_photo_cache_is_not_the_notes_cache(self):
+        """공용 노트 캐시는 `{html: '…'}` 한 벌이다(sensor-label.js).
+
+        거기에 uuid 키를 얹으면 두 용도가 한 객체에서 섞인다.
+        """
+        src = self._widget()
+        self.assertIn('photoCache', src)
+        body = src.split('function fillLatestPhoto', 1)[1].split('\n    }', 1)[0]
+        self.assertNotIn('notesCache[', body)
+
+    def test_card_title_keeps_the_shared_indent(self):
+        """제목의 좌우 여백이 **정렬 규칙**이다 — 덮으면 정렬이 깨진다.
+
+        제목은 박스 밖에 있고 박스는 자기 안여백(`--aot-space-4`)만큼 글을
+        들여 쓴다. 공용 규칙이 제목에 **같은 값**을 주는 이유가 그것이다
+        (`.aot-ov-card-title { padding: 0 var(--aot-space-4) }`) — 그래야
+        제목의 첫 글자와 박스 안 첫 글자가 같은 세로선에 선다.
+
+        한때 본체에 좌우 여백을 주면서 이 값을 0 으로 눕혔고, 제목이 안쪽 글
+        보다 16px 왼쪽으로 나갔다(2026-09-05).
+        """
+        css = _read(os.path.join(_ROOT, 'widgets', 'AoT_plot.py'))
+        self.assertNotIn('.aot-plotw-body .aot-ov-card-title { padding-left: 0',
+                         css, '제목의 공용 좌우 여백을 덮으면 정렬이 깨진다.')
+
+    def test_card_boundary_is_a_ring_not_a_border(self):
+        """경계는 `box-shadow` 링이다 — `border` 는 정렬을 1px 깬다.
+
+        테두리를 쓰면 그 1px 이 박스 안쪽 내용을 밀어, 제목(30px)과 박스 안
+        첫 글자(31px)가 어긋난다(2026-09-05 실측). 제목의 좌우 여백이 박스의
+        안여백과 같아야 한다는 규칙이 1px 때문에 깨진다. 링은 레이아웃을
+        차지하지 않아 두 좌표가 그대로 남는다.
+        """
+        css = _read(os.path.join(_ROOT, 'widgets', 'AoT_plot.py'))
+        rule = css.split('.aot-plotw-body .aot-ov-block {', 1)[1].split('}', 1)[0]
+        self.assertIn('box-shadow', rule)
+        self.assertNotIn('border:', rule,
+                         'border 는 안쪽 내용을 1px 밀어 제목 정렬을 깬다.')
+
+    def test_view_mode_is_saved_but_never_in_the_form(self):
+        """환경 카드의 단위는 **본체에서 고르고 본체가 저장한다**.
+
+        `custom_options`(설정 폼)에 같은 항목을 두면 본체와 폼이 같은 키를
+        다투게 되고, 폼을 한 번 저장할 때마다 본체에서 고른 것이 되돌아간다 —
+        `plot_uuid` 가 그 자리에 없는 것과 같은 이유다.
+        """
+        py = _read(os.path.join(_ROOT, 'widgets', 'AoT_plot.py'))
+        self.assertIn("'env_mode'", py)
+        opts = py.split("'custom_options': [", 1)[1].split("\n    ],", 1)[0]
+        self.assertNotIn("'id': 'env_mode'", opts)
+        self.assertNotIn("'id': 'plot_uuid'", opts)
+
+    def test_view_mode_round_trips(self):
+        """고르면 저장하고, 다시 열면 그 보기로 선다."""
+        js = self._widget()
+        self.assertIn("persistOptions(uid, { env_mode: mode })", js)
+        self.assertIn('opts.envMode', js)
+        self.assertIn("opts.envMode === 'week'", js)
+
+    def test_saving_one_option_does_not_wipe_the_others(self):
+        """부분 저장이다 — 단위를 저장해도 고른 구획이 살아남아야 한다."""
+        py = _read(os.path.join(_ROOT, 'widgets', 'AoT_plot.py'))
+        fn = py.split('def execute_at_modification', 1)[1].split('\ndef ', 1)[0]
+        self.assertIn('final = options.copy()', fn)
+        self.assertIn('for key, value in custom_options_postsave.items()', fn)
+
+    def test_gutter_lives_inside_the_scroll_container(self):
+        """좌우 여백은 **본체**가 준다 — 껍데기가 주면 카드 테두리가 잘린다.
+
+        본체는 스크롤 컨테이너라(`overflow-y: auto`) 자기 **패딩 상자**에서
+        내용을 자른다. 껍데기에 여백을 주면 카드와 본체의 폭이 같아져 카드의
+        경계선(`box-shadow` 링)이 정확히 그 자름선 위에 놓이고, **좌우만**
+        안 보인다(위아래는 스크롤 영역 안이라 남는다). 실제로 그랬다
+        (2026-09-05: 카드·본체 둘 다 26~702).
+
+        본체가 주면 자름선은 바깥이고 카드는 안쪽이라 링이 산다.
+        """
+        css = _read(os.path.join(_ROOT, 'widgets', 'AoT_plot.py'))
+        body = css.split('.aot-plotw-body {', 1)[1].split('}', 1)[0]
+        self.assertIn('padding', body,
+                      '본체가 여백을 주지 않으면 카드가 자름선에 붙는다.')
+        shell = css.split('.aot-plotw { display: flex', 1)[1].split('}', 1)[0]
+        self.assertNotIn('padding', shell,
+                         '껍데기에 주면 카드가 자름선에 붙어 좌우 선이 잘린다.')
+
+    def test_head_matches_the_card_indent(self):
+        """머리줄은 본체 밖이라 그 여백을 못 받는다 — 두 몫을 함께 적어야 한다.
+
+        안 맞추면 선택 상자만 카드보다 12px 왼쪽으로 나간다.
+        """
+        css = _read(os.path.join(_ROOT, 'widgets', 'AoT_plot.py'))
+        head = css.split('.aot-plotw-head {', 1)[1].split('}', 1)[0]
+        self.assertIn('--aot-space-3', head)
+        self.assertIn('--aot-space-4', head)
+
+    def test_widget_body_paints_no_second_surface(self):
+        """위젯 내부는 **배경 기본색 한 겹**이다(2026-09-05 결정).
+
+        본체를 배경 보조색으로 눕혀 카드를 띄우는 방법을 썼다가 물렸다 —
+        위젯 안에서 면을 두 겹으로 나누면 대시보드의 다른 위젯과 어긋난다.
+        여백도 같은 이유로 주지 않는다(주면 제목 정렬이 두 번 밀린다).
+        """
+        css = _read(os.path.join(_ROOT, 'widgets', 'AoT_plot.py'))
+        body = css.split('.aot-plotw-body {', 1)[1].split('}', 1)[0]
+        self.assertNotIn('background', body,
+                         '위젯 내부는 배경 기본색 한 겹이다.')
+
+    def test_notes_do_not_borrow_descendants(self):
+        """구획은 컨테이너가 아니라 참조다(설계 §256).
+
+        자손을 펴면 구역·시설의 노트가 이 구획 것처럼 보인다.
+        """
+        src = self._widget()
+        wire = src.split('function wireNotes', 1)[1].split('\n    }', 1)[0]
+        self.assertNotIn('descendants', wire)
+
+
+class TestGddIsNotSaidTwice(unittest.TestCase):
+    """적산온도는 **카드마다 다른 물음**에 답해야 한다.
+
+    `plot_context.stage_of` 는 `gdd_accumulated()` 결과를 `stage['gdd']` 에
+    그대로 얹는다 — 그러니 그것은 `/contents` 의 `plot.gdd` 와 **같은 숫자**다.
+    위젯이 그 값을 진행 카드에 또 내면 화면에 같은 수가 두 번 서고, 라벨까지
+    다르면("적산온도" 대 "GDD") 사용자가 둘이 같은 것인지 매번 따져야 한다.
+
+    ⚠ 이 중복은 **잠복형**이다. 단계 전환이 GDD 로 판정되지 않는데도
+      `stage['gdd']` 가 붙는 경우에만 드러난다 — 프로그램이 단계별 GDD 를
+      선언했지만 `_stage_by_gdd` 가 판정을 포기한 때다(가운데 단계에 `gdd` 가
+      없으면 `None` 을 돌려준다). 로컬 44개 구획은 전부 `source='days'` 에
+      `stage['gdd']` 도 없어 화면에 나타나지 않는다. 그래서 눈으로는 못 잡고
+      이 검사가 잡는다.
+    """
+
+    def _widget_js(self):
+        return _read(os.path.join(_ROOT, 'aot_flask', 'static', 'js',
+                                  'widgets', 'AoT_plot', 'aot-plot-widget.js'))
+
+    def _gdd_line(self):
+        src = self._widget_js()
+        return src.split('function gddLine', 1)[1].split('\n    }', 1)[0]
+
+    def test_stage_card_only_answers_the_stage_question(self):
+        """진행 카드는 '다음 단계까지' 만 답한다 — 누적은 환경 카드의 몫이다."""
+        body = self._gdd_line()
+        self.assertIn("st.source !== 'gdd'", body,
+                      'GDD 로 단계를 넘기지 않는 구획에서도 무언가를 내고 있다.')
+        self.assertIn('gdd_in_stage', body)
+        # 누적값으로 되돌아가는 폴백이 되살아나면 잡는다.
+        self.assertNotIn('g.value', body)
+        self.assertNotIn('st.gdd.value', body)
+
+    def test_both_cards_call_it_the_same_thing(self):
+        """같은 측정을 두 이름으로 부르지 않는다 — 구분은 덧말이 한다."""
+        body = self._gdd_line()
+        self.assertIn("_t('GDD')", body)
+        self.assertNotIn("_t('Accumulated heat')", body,
+                         "환경 카드는 'GDD' 라고 부른다 — 라벨이 갈리면 안 된다.")
+        self.assertIn("scaleLead", body,
+                      '시간창의 차이는 눈금 줄의 덧말이 말해야 한다.')
+
+    def test_reason_text_lives_in_one_card(self):
+        """'왜 못 내는가' 도 환경 카드가 이미 말한다(`buildEnvNowHtml`)."""
+        self.assertNotIn('_GDD_REASON', self._widget_js())
+        popup = _read(os.path.join(_ROOT, 'aot_flask', 'static', 'js',
+                                   'widgets', 'AoT_map', 'aot-map-popup.js'))
+        self.assertIn('_gddReason', popup)
+
+    def test_value_primitive_can_carry_the_lead(self):
+        """축 없는 형도 덧말을 낼 수 있어야 한다.
+
+        마지막 '끝까지' 단계는 남은 양이 없어 축을 못 만들고 `value()` 로
+        떨어진다 — 그때 덧말이 조용히 버려지면 그 줄만 시간창을 잃는다.
+        """
+        viz = _read(os.path.join(_ROOT, 'aot_flask', 'static', 'js',
+                                 'common', 'aot-dataviz.js'))
+        body = viz.split('function value(o)', 1)[1].split('\n    }', 1)[0]
+        self.assertIn('scaleLead', body)
 
 
 class TestPlotSummaryView(unittest.TestCase):

@@ -34135,3 +34135,12 @@ msgstr "\"기상대\" 라고 적히고 왼쪽에 막대가 있는 행은 이 대
 #: aot/aot_flask/templates/pages/geo/journal_view.html
 msgid "Targets come from the program attached to this plot. Δ is the measured average minus that target. Day/night targets and curve-based targets are marked instead of differenced, because comparing them against a whole-day average produces false alarms."
 msgstr "목표는 구획에 붙은 프로그램에서 옵니다. Δ 는 실측 평균에서 그 목표를 뺀 값입니다. 주야 목표와 곡선 목표는 편차를 내지 않고 표시만 합니다 — 하루 전체 평균과 비교하면 잘못된 경보가 나기 때문입니다."
+
+msgid "Show the last 8 weeks"
+msgstr "최근 8주 보기"
+
+msgid "No data for this period."
+msgstr "이 기간의 기록이 없습니다."
+
+msgid "This stage"
+msgstr "이 단계"

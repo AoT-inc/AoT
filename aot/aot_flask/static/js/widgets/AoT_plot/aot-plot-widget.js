@@ -172,8 +172,15 @@
      *  (`edit_controllers`)이 없는 사람도 **보는 동안은** 바꿔 볼 수 있어야
      *  하고, 그 사람에게 저장 실패를 알릴 이유는 없다(고치려던 것이 아니다). */
     function persistPick(uid, uuid) {
+        persistOptions(uid, { plot_uuid: uuid });
+    }
+
+    /** 위젯에 옵션 몇 개를 남긴다. **부분 저장이다** — 서버가 기존 값 위에
+     *  덮는다(`execute_at_modification` 이 "선언하지 않은 값을 지우지 않는다").
+     *  그래서 단위를 저장해도 고른 구획이 살아남는다. */
+    function persistOptions(uid, options) {
         _api('POST', '/save_widget_custom_options',
-             { widget_id: uid, options: { plot_uuid: uuid } });
+             { widget_id: uid, options: options });
     }
 
     // ── 조회 ─────────────────────────────────────────────────────────────
@@ -226,6 +233,9 @@
         return '<span class="aot-tag"' +
                // 값이 늦게 오는 것(추세 방향)을 이 칩에 이어 붙일 수 있어야 한다.
                (key ? ' data-viz-key="' + _esc(key) + '"' : '') +
+               // 칩은 카드보다 넓어질 수 없어 끝이 잘릴 수 있다(CSS
+               // `.aot-plotw-list .aot-tag`) — 전문은 `title` 이 진다.
+               ' title="' + _esc(name + ' ' + value) + '"' +
                '><i>' + _esc(name) + '</i>' +
                (weak ? '<em>' + _esc(value) + '</em>'
                      : '<b>' + _esc(value) + '</b>') + '</span>';
@@ -233,59 +243,40 @@
 
     // ── 1) 어디까지 왔나 ────────────────────────────────────────────────
     //
-    // **한 줄이다.** 단계·일차·남은 날을 머리줄에 적고 그 아래 얇은 트랙 하나.
-    // 구간 이름 줄과 눈금 줄은 뺐다(`compact`) — 좁은 카드에서 그 둘은 트랙보다
-    // 자리를 더 먹는데, 여기서 답해야 하는 것은 "지금 어디쯤" 하나다.
+    // **지도 구획 모달과 같은 그림**을 쓴다(`AoTMapPopup.buildPlotProgressHtml`).
     //
-    // 구간은 **누를 수 있다.** 축이 현재 단계만 말하면 "다음엔 무엇을 하나" 를
-    // 알 수 없는데, 그 답은 이미 응답에 있다(`stage_schedule` 이 모든 단계의
-    // 기간·지침·목표를 싣는다) — 조회 없이 그 자리에서 보여 줄 수 있다.
+    // 예전에는 이 위젯만 자기 축을 조립했고, 그러느라 공용 빌더에
+    // `compact` 라는 **이 위젯 전용 모양**까지 만들었다(단계 이름줄과 눈금줄을
+    // 빼고 6px 트랙만 남긴 것). 좁은 카드에서 줄을 아끼려던 것인데, 결과는
+    // 같은 구획의 같은 축이 지도에서는 이름과 날짜를 달고 대시보드에서는
+    // 맨 막대로 나오는 것이었다(2026-09-05 지적). 위젯 높이를 늘린 뒤로는
+    // 자리를 아낄 이유도 없다.
+    //
+    // 다른 것은 **고를 수 있다는 것 하나**다(`pickable`) — 지도 모달은 읽기
+    // 전용이고, 여기서는 축이 곧 "어느 단계를 볼까" 를 고르는 메뉴다.
+    // 사건 표식(지나간 전환)도 이 위젯만 싣는다.
     function blockProgress(uid, p) {
-        var V = root.AoTViz;
+        var P = root.AoTMapPopup;
         var tl = p.timeline;
-        if (!V || !tl || !(tl.stages || []).length) return '';
-        var picked = S[uid].picked;
-
-        var segs = tl.stages.map(function (s) {
-            return { key: s.key, span: Math.max(0, (s.to_pct || 0) - (s.from_pct || 0)),
-                     name: s.name, current: !!s.current,
-                     picked: !!picked && s.key === picked };
-        });
+        if (!P || !P.buildPlotProgressHtml) return '';
 
         // 사건은 **단계의 시작 경계**에 찍는다 — 축의 경계는 서버가 계획·승인을
         // 반영해 이미 잡아 둔 것이라, 화면이 날짜 산술을 따로 하면 두 값이 갈린다.
-        var byKey = {};
-        tl.stages.forEach(function (s) { byKey[s.key] = s; });
-        var events = (p.stage_history || []).filter(function (h) {
-            return !h.undone && byKey[h.stage_key];
-        }).map(function (h) {
-            var s = byKey[h.stage_key];
-            return { pct: s.from_pct,
-                     label: (h.started_on || '') + ' ' + (s.name || '') };
-        });
-
-        var st = p.stage || {};
-        var head = (st.state === 'running' && st.name) ? st.name : _t('Progress');
-        // 오른쪽 값은 **일차 하나**다. 남은 날은 그 옆 작은 글씨로 — 둘을 같은
-        // 크기로 적으면 어느 것이 지금인지 눈이 매번 고른다.
-        var vt = (p.days_since_planted != null)
-            ? _t('Day %(n)s').replace('%(n)s', String(p.days_since_planted))
-            : '';
-        if (tl.total_days) vt += ' / ' + tl.total_days;
-        // 남은 날 — **음수는 "남음" 이 아니다.** 예정일을 지난 작기에서
-        // "-2일 남음" 이 되던 자리다(2026-08-28 실측). 지났으면 지났다고 적는다.
-        var left = (st.days_left != null) ? st.days_left : p.days_to_expected_end;
-        var sub = '';
-        if (left != null) {
-            sub = (left < 0)
-                ? _t('%(n)s days over').replace('%(n)s', String(-left))
-                : _t('%(n)s days left').replace('%(n)s', String(left));
+        var events = null;
+        if (tl && (tl.stages || []).length) {
+            var byKey = {};
+            tl.stages.forEach(function (s) { byKey[s.key] = s; });
+            events = (p.stage_history || []).filter(function (h) {
+                return !h.undone && byKey[h.stage_key];
+            }).map(function (h) {
+                var s = byKey[h.stage_key];
+                return { pct: s.from_pct,
+                         label: (h.started_on || '') + ' ' + (s.name || '') };
+            });
         }
 
-        return V.timeline({
-            compact: true, pickable: true,
-            label: head, valueText: vt || null, valueSub: sub || null,
-            segments: segs, events: events, positionPct: tl.today_pct
+        return P.buildPlotProgressHtml(p, {
+            pickable: true, pickedKey: S[uid].picked, events: events
         }) + stageDetail(uid, p);
     }
 
@@ -317,16 +308,26 @@
             bits.push(row.starts_on + (row.ends_on ? ' ~ ' + row.ends_on : ' ~'));
         }
 
-        var html = '<div class="aot-plotw-stage">' +
+        // 최소 높이도 같은 판단을 따른다 — 지침 상자를 안 내는 구획에서
+        // 그 몫까지 예약하면 죽은 공간이 그대로 남는다(CSS `is-noguide`).
+        var anyGuideNow = sched.some(function (x) { return !!x.guidance; });
+        var html = '<div class="aot-plotw-stage' +
+                   (anyGuideNow ? '' : ' is-noguide') + '">' +
                    '<div class="aot-plotw-stage-head">' +
                    // 현재 단계의 이름은 **축의 머리줄이 이미 말한다** — 여기서
                    // 또 적으면 같은 글자가 두 줄 연달아 선다. 다른 단계를
                    // 골랐을 때만 이름을 적는다(그때는 머리줄과 다르다).
                    (isCur ? '' : '<b>' + _esc(row.name || key) + '</b>') +
                    '<span>' + _esc(bits.join(' \u00b7 ')) + '</span>' +
-                   (isCur ? '' :
-                    '<button type="button" class="aot-plotw-stage-back">' +
-                    _esc(_t('Back to now')) + '</button>') +
+                   // [지금 단계로]는 현재 단계에서 **감추되 자리는 남긴다**
+                   // (`is-idle` → visibility:hidden). 예전에는 아예 안 그려서,
+                   // 축을 눌러 다른 단계를 고르는 순간 이 버튼이 새로 생기며
+                   // 머리줄이 밀렸다 — 그것이 "미세한 레이아웃 변화" 의 실체다.
+                   // 이름을 함께 되살리지 않는 이유는 위 주석 그대로다(머리줄과
+                   // 같은 글자가 두 줄 연달아 서는 쪽이 더 나쁘다).
+                   '<button type="button" class="aot-plotw-stage-back' +
+                   (isCur ? ' is-idle" tabindex="-1" aria-hidden="true"' : '"') +
+                   '>' + _esc(_t('Back to now')) + '</button>' +
                    '</div>';
 
         // 목표 — **한 행에 나열한다.** 항목마다 줄을 잡으면 목표 넷에 카드가
@@ -349,256 +350,262 @@
         }).filter(Boolean);
         if (tg.length) html += '<div class="aot-tag-list aot-plotw-list">' + tg.join('') + '</div>';
 
-        if (row.guidance) {
-            html += '<div class="aot-plotw-guide" title="' + _esc(row.guidance) +
-                    '">' + _esc(row.guidance) + '</div>';
+        // 지침 — **이 구획에 지침이 하나라도 있으면** 언제나 상자를 낸다
+        // (그 단계가 비어 있어도).
+        //
+        // 단계마다 지침이 있고 없고, 길고 짧고가 다른데 그 차이가 카드 높이로
+        // 새어 나가면 축을 한 번 누를 때마다 아래 카드가 밀린다. 상자가 높이를
+        // 잠그고, 넘치는 글은 **상자 안에서만** 흐른다.
+        //
+        // ⚠ 예약은 **구획 단위**로 판단한다. 처음에는 무조건 냈는데, 어느
+        //   단계에도 지침이 없는 구획에서는 그 두 줄이 통째로 죽은 공간이었다
+        //   (2026-09-05 지적). 반대로 "그 단계에 있을 때만" 으로 하면 지침이
+        //   있는 단계와 없는 단계를 오갈 때 카드가 두 줄씩 뛴다 — 고치려던
+        //   그 흔들림이다. 그래서 **이 구획의 어느 단계든 지침을 가졌는가**로
+        //   정한다: 가졌으면 전부 예약(흔들리지 않는다), 아니면 아무도 안
+        //   낸다(빈 자리가 없다).
+        //
+        // `-webkit-line-clamp`(두 줄 자르기)는 뗐다 — 상자가 이미 높이를
+        // 잠그므로 중복이고, 잘린 뒤를 읽을 길이 `title` 뿐이었다(폰에는
+        // `title` 이 없다). 이제 스크롤로 전문을 읽는다.
+        var anyGuide = sched.some(function (x) { return !!x.guidance; });
+        if (anyGuide) {
+            html += '<div class="aot-plotw-guidebox">' +
+                    (row.guidance ? _esc(row.guidance) : '') + '</div>';
         }
         return html + '</div>';
     }
 
-    // ── 2) 지금 어떤가 — 게이지 하나 + 나머지는 글 ──────────────────────
+    // ── 2) 지금 어떤가 — **지도 구획 모달과 같은 카드** ────────────────
     //
-    // **지표 하나만 게이지로 세운다.** 여러 개를 한 그림에 몰면 라벨이 겹쳐
-    // 읽히지 않는다(실제로 그렇게 만들어 봤다). 어느 것을 볼지는 작목마다
-    // 다르므로 — 시설 토마토는 VPD, 노지는 토양수분 — 사용자가 고른다.
+    // 여기서 다시 짜지 않는다. `AoTMapPopup.buildEnvNowHtml` 을 그대로 부른다 —
+    // 지도 위젯 구획 모달의 [현황] 환경 카드와 **같은 함수**라, 같은 구획을 두
+    // 화면이 다르게 말할 수 없다.
     //
-    // 나머지는 **글로** 적는다. 게이지가 아니어도 값은 읽히고, 무엇보다
-    // 겹치지 않는다.
+    // 예전에는 이 위젯만 자기 표현을 갖고 있었다(지표 하나만 게이지, 나머지는
+    // 칩). 좁은 카드에서 줄을 아끼려던 것인데, 결과가 **"VPD 하나 + 칩 둘"**
+    // 이라 정작 볼 것이 안 보였다(2026-09-05 지적). 지금은 모든 측정이 자기
+    // 축을 갖고, DLI·적산온도도 함께 나온다 — 그 판정(무엇이 목표이고 무엇이
+    // 한계인가, 광합성 지표가 쓸 만한가)이 전부 그 빌더 한 곳에 있다.
     //
-    // 판정(무엇이 목표이고 무엇이 한계인가, 적정 구간이 어디인가)은 **지도
-    // 팝업 것을 그대로 쓴다**(`AoTMapPopup.envRowSpec`) — 온도·습도가 목표가
-    // 아니라 한계라는 구분이 거기 하나로 있고, 화면이 다시 조립하면 "아무도
-    // 정한 적 없는 숫자가 목표로 둔갑" 하는 실패로 되돌아간다.
+    // 그래서 이 위젯에서 사라진 것: 게이지 지표 선택(`gauge`)과 방향 화살표
+    // (`fillTrends`). 앞의 것은 **모든 줄이 축을 가지므로** 고를 것이 없어졌고,
+    // 뒤의 것은 축 없는 줄을 스파크라인으로 채우는 공용 함수
+    // (`fillEnvSparklines`)가 대신한다.
 
-    /** 고른 지표 → 실제 측정 key. `soil` 만 이름으로 찾는다.
+    /** 지금 볼 창 — **단위가 창을 정한다.**
      *
-     * 토양수분은 **고정 어휘가 없다**(`facility_sensors._MTYPE_KEY` 에 없어
-     * 측정명이 그대로 key 가 된다) — 설치마다 이름이 달라 목록으로 못 박을 수
-     * 없다. 나머지 셋은 어휘가 고정이라 그대로 맞춘다. */
-    function _matchKey(choice, keys) {
-        if (choice === 'soil') {
-            for (var i = 0; i < keys.length; i++) {
-                if (/soil|moist|수분/i.test(keys[i])) return keys[i];
-            }
-            return null;
+     * 7일 창에 주 버킷을 쓰면 점이 하나라 범위 도표가 성립하지 않는다
+     * (`AoTViz.range` 규약: "기간이 하나면 이 그림을 쓰지 않는다"). 그래서
+     * 단위를 고르는 것이 곧 창을 고르는 것이다 — 일이면 최근 7일, 주면 최근
+     * 8주. 어느 쪽이든 점이 7~8개라 도표가 늘 성립한다.
+     *
+     * **축에서 단계를 고르면 그 단계가 창이 된다**(`picked`). 그때는 길이를
+     * 여기서 정하지 않는다 — 서버가 일정에서 그 단계의 경계를 꺼내 쓰고
+     * (`_stage_window`), 진행 중이면 오늘로 자른다. 화면이 날짜 산술을 다시
+     * 하면 축의 구간과 그래프의 창이 갈린다.
+     */
+    var _ENV_WINDOW_DAYS = { day: 7, week: 56 };
+
+    function envQuery(uid) {
+        var st = S[uid];
+        var unit = st.envMode;                    // 'day' | 'week'
+        if (st.picked) {
+            return { key: 'stage:' + st.picked + '|' + unit,
+                     qs: '?stage=' + encodeURIComponent(st.picked) +
+                         '&unit=' + unit };
         }
-        return (keys.indexOf(choice) >= 0) ? choice : null;
+        var days = _ENV_WINDOW_DAYS[unit] || 7;
+        return { key: 'recent:' + days + '|' + unit,
+                 qs: '?days=' + days + '&unit=' + unit };
     }
 
-    function blockEnv(uid) {
+    // ── 2) 지금 어떤가 — **지도 구획 모달과 같은 카드** ────────────────
+    //
+    // 여기서 다시 짜지 않는다. `AoTMapPopup.buildEnvNowHtml` 을 그대로 부른다 —
+    // 지도 위젯 구획 모달의 [현황] 환경 카드와 **같은 함수**라, 같은 구획을 두
+    // 화면이 다르게 말할 수 없다.
+    //
+    // 다른 것은 **머리줄의 손잡이**뿐이다: 지도는 [오늘]↔[7일] 두 상태이고
+    // 여기는 [오늘][일][주] 세 상태다(`rangeModes`). 위젯은 한 구획을 오래
+    // 들여다보는 자리라 "지난 주와 견줘 지금이 어디인가" 만이 아니라 "이 단계
+    // 동안 어땠나" 까지 묻게 된다.
+
+    /** 환경 카드를 그 자리에 그린다. `render()` 가 만든 슬롯을 채운다.
+     *
+     * **본체를 다시 그리지 않는다.** 단위 손잡이는 이 카드만 바꾸므로, 여기서
+     * `render()` 를 부르면 축에서 고른 단계가 함께 초기화된다.
+     */
+    function drawEnv(uid) {
         var st = S[uid];
-        var V = root.AoTViz;
+        var slot = _el(uid, '[data-slot="envnow"]');
         var P = root.AoTMapPopup;
+        if (!slot || !P || !P.buildEnvNowHtml) return;
         var c = st.contents;
-        if (!V || !P || !P.envRowSpec || !c) return '';
+        if (!c) return;
         var plot = c.plot || {};
-        var readings = ((plot.env || {}).readings) || [];
-        // 감추는 항목은 **상위(시설·구역)의 설정을 물려받는다** — 서버가 어느
-        // 상위인지 이미 골라 준다. 여기서 다시 고르면 규칙이 두 곳에 생긴다.
-        var hidden = {};
-        ((plot.hidden_rows || {}).now || []).forEach(function (k) { hidden[k] = 1; });
 
-        var specs = [];
-        readings.filter(function (r) { return !hidden[r.key]; }).forEach(function (r) {
-            var sp = P.envRowSpec(r, { targets: plot.targets,
-                                       limits: plot.limits,
-                                       targetMethods: plot.target_methods });
-            if (sp) specs.push(sp);
-        });
-        if (!specs.length) return '';
+        // 인자는 지도 구획 모달과 **같은 것을 같은 이름으로** 넘긴다
+        // (`aot-map-widget-vector.js` 의 `_envArgs`). 하나라도 빠지면 이 위젯의
+        // 카드만 다른 판정을 하게 된다.
+        var opts = {
+            // 감추는 항목은 **상위(시설·구역)의 설정을 물려받는다** — 서버가
+            // 어느 상위인지 이미 골라 준다. 여기서 다시 고르면 규칙이 두 곳에
+            // 생긴다. [설정] 손잡이는 두지 않는다(`configurable` 없음):
+            // 저장이 상위에 있어 여기서 고치면 그 시설·구역을 보는 **다른
+            // 사람의 화면**이 함께 바뀐다. 고치는 자리는 지도의 그 창이다.
+            hidden: (plot.hidden_rows || {}).now,
+            targets: plot.targets,
+            // 한계(온도 주/야간 · 습도)는 목표와 다른 축이다.
+            limits: plot.limits,
+            // 목표가 곡선인 항목 — 숫자 대신 곡선 이름을 적는다.
+            targetMethods: plot.target_methods,
+            // 적산온도·광합성 지표 — 이 구획 자신 기준. 코디네이터 사이클 값
+            // (`photo`)과는 다른 축이라 별도 키로 받는다(섞으면 안 된다).
+            gdd: plot.gdd,
+            dli: plot.dli,
+            rangeModes: [{ key: 'day', label: _t('Daily'),
+                           title: _t('Show the last 7 days') },
+                         { key: 'week', label: _t('Weekly'),
+                           title: _t('Show the last 8 weeks') }],
+            rangeMode: st.envMode || '',
+            weekExpanded: !!st.envMode,
+            // 창이 "지난 7일" 이 아닐 수 있으므로(단계 기간·최근 8주) 빈 결과
+            // 문구도 그에 맞게 — 기본 문구를 쓰면 화면이 거짓말을 한다.
+            rangeEmptyText: _t('No data for this period.')
+        };
+        var q = envQuery(uid);
+        var hit = st.envCache[q.key];
+        // 아직 안 받았으면 "있을 수 있다" 만 알린다(`weekLazy`) — 손잡이는 그
+        // 뜻으로 먼저 뜨고, 실제 조회는 누를 때 시작한다.
+        if (st.envMode && hit !== undefined) opts.week = hit;
+        else if (!st.envMode) opts.weekLazy = true;
+        else opts.weekLazy = true;
 
-        var keys = specs.map(function (x) { return x.key; });
-        var want = _matchKey(st.opts.gauge, keys);
-        // 고른 것을 이 구획이 재지 않으면 **축을 그릴 수 있는 첫 지표**로
-        // 대신한다. 빈 자리를 두면 사용자는 위젯이 고장 난 것으로 읽는데,
-        // 실제로는 그 센서가 없는 것이다 — 게이지 라벨이 무엇을 보고 있는지
-        // 이미 말하므로 바꿔치기가 거짓말이 되지 않는다.
-        var main = null;
-        for (var i = 0; i < specs.length; i++) {
-            if (specs[i].key === want) { main = specs[i]; break; }
+        slot.innerHTML = P.buildEnvNowHtml(plot.env, opts);
+
+        // 값 풍선은 붙인 **뒤에** 배선한다.
+        if (root.AoTViz && root.AoTViz.tips) {
+            try { root.AoTViz.tips(slot); } catch (e) { /* 덤이다 */ }
         }
-        if (!main) {
-            for (i = 0; i < specs.length; i++) {
-                if (specs[i].hasAxis) { main = specs[i]; break; }
-            }
+        // 축이 없는 줄(CO2·토양수분·이슬점…)은 추세로 답한다.
+        if (st.opts.show.trend && P.fillEnvSparklines) {
+            P.fillEnvSparklines(slot, c.sensors, (plot.env || {}).readings);
         }
+        wireRangeModes(uid, slot);
+    }
 
-        // 게이지에도 방향을 붙인다 — 이 카드에서 제일 먼저 읽는 값이라 "지금
-        // 어느 쪽으로 가는 중인가" 가 제일 필요한 자리다. 어느 지표인지는
-        // 채우고 나서 알아야 하므로 상태에 남긴다.
-        st.mainKey = main ? main.key : null;
-
-        var html = '';
-        if (main && main.hasAxis) {
-            html += V.band({
-                className: 'aot-plotw-main',
-                label: main.name, value: main.value,
-                valueText: main.valueText, valueSub: main.unit,
-                min: main.min, max: main.max,
-                okMin: main.okMin, okMax: main.okMax,
-                stale: main.stale,
-                // 축의 양 끝은 적지 않는다 — 5단계 색을 나누려고 정한 값이라
-                // 사람이 읽을 뜻이 없다. 이 줄이 말하는 것은 기준과 지금 위치다.
-                scale: main.anchorText
-                    ? [{ text: main.anchorText, anchor: true, at: main.anchorAt }]
-                    : [],
-                scaleNote: main.trendNote || ''
+    /** [오늘][일][주] — 누른 단위의 창을 받아 온다.
+     *
+     * 조회는 **누를 때만** 한다. 안 눌러도 매번 0.9~1.5초짜리 InfluxDB 조회가
+     * 도는 것을 없앤 판단이고(2026-09-05), 위젯은 5분마다 다시 그려지므로
+     * 그것을 미리 받아 두면 그 주기가 그대로 조회 주기가 된다.
+     *
+     * 받은 결과는 **창마다** 캐시한다(빈 배열이어도). 단위를 오가거나 축에서
+     * 단계를 되짚을 때 같은 창을 다시 묻지 않는다.
+     */
+    function wireRangeModes(uid, slot) {
+        var st = S[uid];
+        slot.querySelectorAll('[data-range-mode]').forEach(function (btn) {
+            btn.addEventListener('click', function (ev) {
+                ev.stopPropagation();
+                if (st.envFetching) return;
+                var mode = btn.getAttribute('data-range-mode') || '';
+                if (mode === (st.envMode || '')) return;     // 이미 그것이다
+                st.envMode = mode;
+                // 고른 단위를 위젯에 남긴다 — 다시 열었을 때 같은 보기로
+                // 서게 하려는 것이다. 실패해도 화면은 그대로 간다(고른 구획을
+                // 저장할 때와 같은 판단: 저장 권한이 없는 사람도 보는 동안은
+                // 바꿔 볼 수 있어야 한다).
+                persistOptions(uid, { env_mode: mode });
+                if (!mode) { drawEnv(uid); return; }         // 접기 — 조회 없음
+                loadEnvRange(uid, btn);
             });
-        } else if (main) {
-            html += V.value({ className: 'aot-plotw-main',
-                              label: main.name, valueText: main.valueText,
-                              valueSub: main.unit, stale: main.stale });
-        }
-
-        // 나머지는 **한 행에 나열한다** — 단계 목표와 같은 줄 문법이다.
-        //
-        // ⚠ 항목마다 줄을 잡지 않는다. 한때 공용 라벨-값 행(`.aot-ov-row`)으로
-        //   한 줄씩 세웠다가 되돌렸다 — 정렬은 맞았지만 값 두어 개에 카드가
-        //   그만큼 커졌다. **핵심(게이지)만 한 줄이고 나머지는 나열이다**
-        //   (2026-08-28 지적).
-        var rest = specs.filter(function (x) { return x !== main; }).map(function (x) {
-            return _pair(x.name, x.valueText + (x.unit ? ' ' + x.unit : ''),
-                         false, x.key);
         });
-        if (rest.length) {
-            html += '<div class="aot-tag-list aot-plotw-list">' + rest.join('') + '</div>';
-        }
-        return html;
+    }
+
+    /** 지금 창의 계열을 받아 카드를 다시 그린다. 캐시에 있으면 바로 그린다. */
+    function loadEnvRange(uid, btn) {
+        var st = S[uid];
+        var uuid = st.opts.plotUuid;
+        var q = envQuery(uid);
+        if (st.envCache[q.key] !== undefined) { drawEnv(uid); return; }
+
+        st.envFetching = true;
+        if (btn) { btn.disabled = true; btn.textContent = _t('Loading...'); }
+        fetch('/api/geo/plot/' + encodeURIComponent(uuid) + '/env_series' + q.qs,
+              { cache: 'no-store' })
+            .then(function (r) { return r.ok ? r.json() : null; })
+            .then(function (wk) {
+                // 응답이 도는 사이에 다른 구획으로 옮겼으면 버린다 — 늦게 온
+                // 것이 새 구획의 화면을 덮어쓰면 이름과 값이 어긋난다.
+                if (!S[uid] || S[uid] !== st || st.opts.plotUuid !== uuid) return;
+                st.envFetching = false;
+                st.envCache[q.key] = (wk && wk.ok && wk.series) ? wk.series : [];
+                drawEnv(uid);
+            })
+            .catch(function () {
+                if (!S[uid] || S[uid] !== st || st.opts.plotUuid !== uuid) return;
+                st.envFetching = false;
+                st.envCache[q.key] = [];
+                drawEnv(uid);
+            });
     }
 
     // ── 적산온도 ────────────────────────────────────────────────────────
     //
-    // 이것은 "어디까지 왔나" 의 다른 자다(날이 아니라 쌓인 열). 그래서 환경이
-    // 아니라 **진행 옆**에 붙인다 — 같은 질문의 답 둘을 떼어 놓으면 사람이
-    // 둘을 오가며 읽는다.
-    var _GDD_REASON = {
-        'no-program': 'No programme is linked.',
-        'no-t-base': 'The programme has no base temperature.',
-        'no-start-date': 'No planting date yet.',
-        'not-started': 'Not started yet.',
-        'too-early': 'Too early to accumulate.',
-        'no-temperature-sensor': 'No temperature sensor reaches this plot.',
-        'low-coverage': 'Not enough daily temperature data.'
-    };
+    // **이 카드가 말하는 것은 "이 단계" 하나다.** 작기 시작부터의 누적은 환경
+    // 카드가 낸다(`buildEnvNowHtml` 의 GDD 불릿, 목표 대비 막대까지 함께).
+    //
+    // 예전에는 여기서 셋을 다 냈다 — 단계 진척 · 누적값 · 못 내는 이유. 뒤의
+    // 둘은 **환경 카드와 같은 값·같은 문장**이었다: `stage.gdd` 는
+    // `plot_context` 가 `gdd_accumulated()` 결과를 그대로 얹은 것이라
+    // (`out['gdd'] = {…gdd…}`) `contents.plot.gdd` 와 **같은 숫자**다.
+    // 그래서 화면에 "적산온도 930.5" 와 "GDD 930.5" 가 나란히 서서, 사용자가
+    // 둘이 같은 것인지 다른 것인지 매번 따져야 했다(2026-09-05 정리).
+    //
+    // 남는 것은 **다른 값일 때뿐**이다 — `gdd_in_stage`(이 단계에 쌓인 것)와
+    // `gdd_left`(다음 단계까지 남은 것)는 누적에서 파생되지만 답하는 물음이
+    // 다르다("다음으로 언제 넘어가나"). 그것이 진행 카드의 물음이다.
+    //
+    // 라벨은 환경 카드와 **같은 `GDD`** 를 쓰고, 무엇이 다른지는 눈금 줄의
+    // 덧말이 말한다(`scaleLead`: "이 단계" 대 "시작일부터 누적") — 시간창이
+    // 다른 것을 덧말로 말하는 것은 그 카드가 DLI·GDD 에 이미 쓰는 규약이다.
+    // 라벨을 다르게 적으면("적산온도" 대 "GDD") 같은 것을 다른 이름으로 부르게
+    // 된다.
 
-    /** 적산온도 한 줄 — 이 단계의 전환 임계까지 얼마나 왔나. */
+    /** 이 단계의 적산온도 진척 — 다음 단계까지 얼마나 왔나. 없으면 `''`.
+     *
+     * 단계 전환이 GDD 로 판정될 때만 낸다(`source === 'gdd'`). 날짜로 판정하는
+     * 구획에서는 이 물음이 성립하지 않는다 — 그때 누적값을 대신 내면 환경
+     * 카드와 같은 숫자를 두 번 적는 것이 된다.
+     */
     function gddLine(p) {
         var V = root.AoTViz;
         var st = p.stage || {};
-        var g = st.gdd;
-        if (!V || (!g && st.source !== 'gdd')) return '';
-        var label = _t('Accumulated heat');
+        if (!V || st.source !== 'gdd' || st.gdd_in_stage == null) return '';
         var unit = '\u00b0C\u00b7d';
-
-        if (st.source === 'gdd' && st.gdd_in_stage != null) {
-            // 이 단계의 길이 = 쌓인 것 + 남은 것. 마지막 "끝까지" 단계는 남은
-            // 것이 없어(null) 축을 만들 수 없다 — 그때는 숫자만 낸다.
-            var len = (st.gdd_left == null) ? null : (st.gdd_in_stage + st.gdd_left);
-            if (len && len > 0) {
-                return V.bullet({
-                    label: label, value: st.gdd_in_stage,
-                    valueText: String(st.gdd_in_stage), valueSub: unit,
-                    min: 0, max: len, target: len,
-                    scale: ['0', { text: _t('Next stage'), anchor: true }]
-                });
-            }
-            return V.value({ label: label, valueText: String(st.gdd_in_stage),
-                             valueSub: unit });
+        // 이 단계의 길이 = 쌓인 것 + 남은 것. 마지막 "끝까지" 단계는 남은 것이
+        // 없어(null) 축을 만들 수 없다 — 그때는 숫자만 낸다.
+        var len = (st.gdd_left == null) ? null : (st.gdd_in_stage + st.gdd_left);
+        if (len && len > 0) {
+            return V.bullet({
+                label: _t('GDD'), value: st.gdd_in_stage,
+                valueText: String(st.gdd_in_stage), valueSub: unit,
+                min: 0, max: len, target: len,
+                scaleLead: _t('This stage'),
+                scale: ['0', { text: _t('Next stage'), anchor: true }]
+            });
         }
-        if (g && g.value != null) {
-            return V.value({ label: label, valueText: String(g.value),
-                             valueSub: unit });
-        }
-        var why = _GDD_REASON[(g || {}).reason];
-        if (!why) return '';
-        return V.value({ label: label, valueText: '\u2014', valueSub: _t(why) });
+        return V.value({ label: _t('GDD'),
+                         valueText: String(st.gdd_in_stage), valueSub: unit,
+                         scaleLead: _t('This stage') });
     }
 
-    /** 편차 축의 라벨에 **방향**을 붙인다 — `↑`/`↓`.
-     *
-     * 이 표현에는 스파크라인이 설 자리가 없다(축이 하나뿐이다). 그런데 여기서
-     * 정말 필요한 것은 모양이 아니라 **방향**이다: 습도가 구간 위로 벗어나
-     * 있는데 더 오르는 중인지 내려오는 중인지가 다음 행동을 가른다.
-     *
-     * 덤이라 실패해도 값은 그대로 남는다. */
-    function fillTrends(uid, host) {
-        var st = S[uid];
-        if (!st.opts.show.trend || !st.contents) return;
-        // 붙일 자리 둘 — 곁들이는 값의 **칩**과, 게이지의 **값 옆**.
-        var targets = [];
-        [].forEach.call(host.querySelectorAll('.aot-plotw-list .aot-tag[data-viz-key]'),
-            function (el) {
-                targets.push({ el: el, key: el.getAttribute('data-viz-key') });
-            });
-        var gauge = st.mainKey &&
-                    host.querySelector('.aot-plotw-main .aot-viz-value');
-        if (gauge) targets.push({ el: gauge, key: st.mainKey });
-        if (!targets.length) return;
-
-        var chans = {};                    // key → {device_id, measurement_id}
-        (st.contents.sensors || []).forEach(function (sen) {
-            (sen.channels || []).forEach(function (ch) {
-                if (ch.key && ch.measurement_id && !chans[ch.key]) {
-                    chans[ch.key] = { device_id: sen.unique_id,
-                                      measurement_id: ch.measurement_id };
-                }
-            });
-        });
-
-        var jobs = [];
-        targets.forEach(function (t) {
-            var ch = chans[t.key];
-            if (ch) jobs.push({ el: t.el, ch: ch });
-        });
-        if (!jobs.length) return;
-
-        var items = jobs.map(function (j) {
-            return { kind: 'past', unique_id: j.ch.device_id,
-                     measure_type: 'input',
-                     measurement_id: j.ch.measurement_id,
-                     period: String(_TREND_PAST_S) };
-        });
-        // 공유 코얼레서를 지난다 — 같은 대시보드의 다른 위젯과 항목이 겹치면
-        // 한 번으로 합쳐진다.
-        var sent = (root.AoTDataBatch && root.AoTDataBatch.postItems)
-            ? root.AoTDataBatch.postItems(items).then(function (res) {
-                  return res ? { results: res } : null;
-              })
-            : _api('POST', '/data_batch', { items: items }).then(function (r) {
-                  return r.data;
-              });
-
-        sent.then(function (d) {
-            var res = d && d.results;
-            // 길이가 안 맞으면 짝짓기가 깨진 것이다 — 잘못 이으면 CO2 의 방향이
-            // 습도 자리에 붙는다. 그럴 바에는 안 그린다.
-            if (!Array.isArray(res) || res.length !== jobs.length) return;
-            jobs.forEach(function (j, i) {
-                var series = res[i];
-                if (!Array.isArray(series) || series.length < 4) return;
-                var v = series.map(function (x) {
-                    return Array.isArray(x) ? Number(x[1]) : Number(x);
-                }).filter(function (x) { return isFinite(x); });
-                if (v.length < 4 || !j.el.isConnected) return;
-                // 앞뒤 1/4 의 평균을 견준다 — 마지막 점 하나로 방향을 정하면
-                // 센서가 한 번 튄 것이 곧 "오르는 중" 이 된다.
-                var q = Math.max(1, Math.floor(v.length / 4));
-                var avg = function (arr) {
-                    return arr.reduce(function (a, b) { return a + b; }, 0) / arr.length;
-                };
-                var head = avg(v.slice(0, q)), tail = avg(v.slice(-q));
-                var span = Math.max.apply(null, v) - Math.min.apply(null, v);
-                // 흔들림 안쪽의 차이는 방향이 아니다 — "→ 0" 은 아무 말도 아니다.
-                if (!span || Math.abs(tail - head) < span * 0.15) return;
-                var mark = document.createElement('i');
-                mark.className = 'aot-plotw-trend';
-                mark.textContent = (tail > head) ? '\u2191' : '\u2193';
-                j.el.appendChild(mark);
-            });
-        }).catch(function () { /* 덤이다 */ });
-    }
-
-    var _TREND_PAST_S = 10800;      // 3시간 — 방향을 말하기에 충분한 창
+    // 방향 화살표(`fillTrends`)는 없앴다 — 축 없는 줄을 스파크라인으로 채우는
+    // 공용 함수(`AoTMapPopup.fillEnvSparklines`)가 그 일을 대신하고, 축이 있는
+    // 줄은 빌더가 `scaleNote` 로 추세를 이미 적는다. 이 위젯만의 3시간 창을
+    // 따로 두면 같은 값을 두 화면이 다른 창으로 말하게 된다.
 
     // ── 전환 승인 ────────────────────────────────────────────────────────
     //
@@ -650,22 +657,44 @@
         var prog = show.progress ? blockProgress(uid, p) : '';
         var gdd = show.gdd ? gddLine(p) : '';
         if (prog || gdd) {
-            html += '<div class="aot-ov-card-title">' + _esc(_t('Progress')) +
+            html += '<div class="aot-ov-card-title">' +
+                    _esc(_t('Program stages')) +
                     '</div><div class="aot-ov-block">' +
                     root.AoTViz.group([prog, gdd].filter(Boolean)) + '</div>';
         }
 
-        // 지금 무엇이 어긋나 있나 — 지표 전부가 한 축에.
-        var dev = show.env ? blockEnv(uid) : '';
-        if (dev) {
-            html += '<div class="aot-ov-card-title">' + _esc(_t('Environment')) +
-                    '</div><div class="aot-ov-block">' + dev + '</div>';
-        }
+        // 지금 어떤가 — **자리만 잡는다.** 카드 자체(제목 + 박스)는
+        // `buildEnvNowHtml` 이 통째로 만들고(`drawEnv`), [7일] 토글은 이
+        // 슬롯만 다시 그린다. 본체 HTML 에 섞어 넣으면 토글 한 번에 축에서
+        // 고른 단계까지 초기화된다.
+        var dev = !!(show.env && st.contents);
+        if (dev) html += '<div data-slot="envnow"></div>';
+
+        // ── 노트 — **맨 아래**, 지도 구획 모달과 같은 블록 ────────────────
+        //
+        // 자체 마크업을 짜지 않는다. 예정과 노트가 한 블록이라는 것도, 목록의
+        // 모양도, [노트 열기] 버튼의 문구도 전부 공용 컴포넌트가 정한다
+        // (`buildRecordBlock` → `AoTNotesBlock`). 창마다 노트 버튼 모양과
+        // 문구가 달랐던 것이 그것을 한 곳으로 모은 이유다.
+        //
+        // 맨 아래인 이유: 읽는 순서가 "지금 어떤가 → 그래서 무엇을 적나" 다.
+        // 카드 안에서도 버튼은 목록 아래(`.aot-ov-actions`)에 선다.
+        //
+        // **최신 사진은 노트 바로 위**다. 지도 모달은 이것을 화면 맨 위에 두는데
+        // (거기서 제일 먼저 보는 것이 "지금 어떻게 생겼나" 라서), 위젯에서는
+        // 그 자리가 단계·환경을 아래로 밀어낸다 — 대시보드에 상주하는 물건이라
+        // 먼저 읽히는 것은 지표다. 사진은 노트에서 온 것이므로 노트 옆에 둔다.
+        var rec = (root.AoTMapPopup && root.AoTMapPopup.buildRecordBlock)
+            ? root.AoTMapPopup.buildRecordBlock(
+                  p.schedule, { addable: p.active !== false })
+            : '';
+        if (rec) html += '<div data-slot="photo"></div>';
+        html += rec;
 
         // 지침 카드는 **없다.** 지침은 단계에 딸린 글이라 진행 카드의 단계
         // 세부 안에 있다(`stageDetail`) — 따로 카드를 두면 현재 단계의 지침이
         // 두 곳에 나온다.
-        if (!prog && !gdd && !dev) {
+        if (!prog && !gdd && !dev && !rec) {
             html += '<div class="aot-ov-muted aot-plotw-empty">' +
                     _esc(_t('All items in this card are hidden.')) + '</div>';
         }
@@ -677,9 +706,11 @@
         var edit = _el(uid, '.aot-plotw-edit');
         if (edit) edit.hidden = !p.can_edit;
 
-        fillTrends(uid, body);
+        if (dev) drawEnv(uid);
         wireStagePick(uid, body);
         wireAsk(uid, body);
+        wireNotes(uid, body, p);
+        fillLatestPhoto(uid, body, p);
     }
 
     /** 축의 구간을 눌러 그 단계를 편다. 같은 구간을 다시 누르면 접는다 —
@@ -693,8 +724,13 @@
             btn.addEventListener('click', function () {
                 var key = btn.getAttribute('data-viz-key');
                 if (!key) return;
-                S[uid].picked = (S[uid].picked === key) ? null : key;
+                var st = S[uid];
+                st.picked = (st.picked === key) ? null : key;
                 render(uid);
+                // 고른 단계가 곧 **환경의 창**이다(`envQuery`). 펼쳐 둔 상태면
+                // 그 창을 받아 온다 — `render` 는 캐시에 있는 것만 그리므로,
+                // 처음 보는 창은 여기서 시작해야 카드가 빈 채로 남지 않는다.
+                if (st.envMode) loadEnvRange(uid, null);
             });
         });
         var back = body.querySelector('.aot-plotw-stage-back');
@@ -702,6 +738,79 @@
             S[uid].picked = null;
             render(uid);
         });
+    }
+
+    /** 노트 — 공용 컴포넌트에 **배선만 넘긴다**(자체 노트 UI 금지).
+     *
+     * 목록을 받아 채우는 것도, [노트 열기]가 여는 서랍도 전부 그쪽이 한다
+     * (`AoTNotesBlock` → `open-notes` 이벤트 → layout 의 노트 앱). 위젯은
+     * "무엇의 노트인가" 만 말한다.
+     *
+     * `targetType: 'plot'` — 지도 구획 모달과 **같은 값**이다(`aot-map-plot.js`).
+     * 다르게 적으면 같은 구획의 노트가 두 화면에서 다른 목록이 된다.
+     *
+     * ⚠ `descendants` 를 켜지 않는다. 구획은 컨테이너가 아니라 **참조**라
+     *   (설계 §256) 자손을 펴면 구역·시설의 노트가 이 구획 것처럼 보인다 —
+     *   지도 구획 모달이 최신 사진에 대해 같은 판단을 한다.
+     *
+     * 본체는 5분마다 다시 그려진다. `cache` 를 넘겨 그때마다 목록이 자리막이
+     * (…)로 스쳐 보이지 않게 한다 — 캐시는 **위젯 상태**에 둔다(본체 DOM 은
+     * 교체된다).
+     */
+    function wireNotes(uid, body, p) {
+        var N = root.AoTNotesBlock;
+        if (!N || !N.wire || !p || !p.unique_id) return;
+        var st = S[uid];
+        st.notesCache = st.notesCache || {};
+        N.wire(body, { targetId: p.unique_id, targetType: 'plot',
+                       name: p.subject || p.name || '' },
+               { cache: st.notesCache });
+    }
+
+    /** 최신 사진 — 노트에 붙은 사진 중 가장 최근 것 하나.
+     *
+     * 고르는 규칙도 카드 모양도 지도 모달의 것을 그대로 쓴다
+     * (`latestNotePhoto` · `buildPhotoCardHtml`) — 동영상을 빼고 사진만 고르는
+     * 판단이 거기 하나로 있다.
+     *
+     * ⚠ **이 구획의 노트만 본다.** 자손을 펴면 구역 사진이 이 구획 사진인 것처럼
+     *   보인다(`wireNotes` 의 같은 이유).
+     *
+     * 사진은 **곁들이다** — 실패해도 나머지는 그대로 간다. 응답은 노트 목록과
+     * 같은 것이라 캐시를 함께 쓴다(본체는 5분마다 다시 그려진다).
+     */
+    function fillLatestPhoto(uid, body, p) {
+        var slot = body.querySelector('[data-slot="photo"]');
+        var P = root.AoTMapPopup;
+        if (!slot || !P || !P.latestNotePhoto || !P.buildPhotoCardHtml) return;
+        var st = S[uid];
+        var uuid = p && p.unique_id;
+        if (!uuid) return;
+
+        var draw = function (notes) {
+            if (!slot.isConnected) return;
+            var photo = P.latestNotePhoto(notes);
+            var cur = slot.querySelector('img');
+            // 같은 사진이면 DOM 을 건드리지 않는다 — 5분마다 다시 그리는데
+            // 매번 새 `<img>` 를 넣으면 그때마다 다시 받아 깜빡인다.
+            if (photo && cur && cur.getAttribute('src') === photo.url) return;
+            slot.innerHTML = P.buildPhotoCardHtml(photo);
+        };
+
+        // ⚠ 노트 블록의 캐시(`st.notesCache`)를 같이 쓰지 않는다. 그것은
+        //   공용 컴포넌트가 `{html: '…'}` 한 벌로 쓰는 물건이라(sensor-label.js),
+        //   여기서 uuid 키를 얹으면 두 용도가 한 객체에서 섞인다.
+        var cached = st.photoCache[uuid];
+        if (cached) { draw(cached); return; }
+        fetch('/notes/target/' + encodeURIComponent(uuid), { cache: 'no-store' })
+            .then(function (r) { return r.ok ? r.json() : null; })
+            .then(function (notes) {
+                if (!S[uid] || S[uid] !== st || st.opts.plotUuid !== uuid) return;
+                if (!Array.isArray(notes)) return;
+                st.photoCache[uuid] = notes;
+                draw(notes);
+            })
+            .catch(function () { /* 사진은 곁들이다 */ });
     }
 
     function wireAsk(uid, body) {
@@ -874,7 +983,6 @@
             opts: {
                 plotUuid: opts.plotUuid || null,
                 refreshMin: Math.max(1, parseInt(opts.refreshMin, 10) || 5),
-                gauge: opts.gauge || 'VPD',
                 show: {
                     progress: opts.showProgress !== false,
                     env: opts.showEnv !== false,
@@ -883,6 +991,23 @@
                 }
             },
             picked: null,          // 축에서 고른 단계(없으면 지금)
+            // 환경 카드의 단위. `''`(오늘) | `'day'` | `'week'`.
+            //
+            // **재렌더를 넘어 산다** — 위젯은 5분마다 다시 그려지는데 그때마다
+            // 접히면 펼쳐 두고 보는 일이 성립하지 않는다. 그리고 위젯에
+            // 저장돼 있어(`env_mode`) 페이지를 다시 열어도 같은 보기로 선다.
+            //
+            // ⚠ 모르는 값은 `''` 로 눕힌다. 저장된 옵션은 사람이 손으로 고칠
+            //   수 있는 자리이고(설정 JSON), 엉뚱한 값이 오면 손잡이 어느
+            //   것도 켜지지 않은 채 카드만 비어 보인다.
+            envMode: (opts.envMode === 'day' || opts.envMode === 'week')
+                ? opts.envMode : '',
+            envFetching: false,
+            // 창(단위 + 고른 단계)마다 계열을 따로 들고 있는다. 단위를 오가거나
+            // 축에서 단계를 되짚을 때 같은 창을 다시 묻지 않는다.
+            envCache: {},
+            notesCache: {},        // 재렌더 때 목록이 자리막이로 스치지 않게
+            photoCache: {},        // 최신 사진 — 노트 응답을 구획별로 들고 있는다
             plots: [], plot: null, contents: null,
             programs: {}, facilities: {}, timer: null
         };
@@ -894,6 +1019,13 @@
                 st.picked = null;      // 다른 구획의 단계 키는 뜻이 없다
                 st.plot = null;
                 st.contents = null;
+                // 계열은 **구획마다 다른 값**이다 — 안 버리면 옮긴 뒤에도 앞
+                // 구획의 그림이 그대로 남는다(에러 없이). 고른 단위는 남긴다:
+                // 그것은 "어떻게 보나" 라 구획이 바뀌어도 뜻이 이어진다.
+                st.envFetching = false;
+                st.envCache = {};
+                st.notesCache = {};    // 다른 구획의 노트를 보여 주면 안 된다
+                st.photoCache = {};
                 render(uid);              // 고른 즉시 자리막이로 바뀐다
                 persistPick(uid, st.opts.plotUuid);
                 refresh(uid);
@@ -913,7 +1045,12 @@
             });
         }
 
-        loadPlots(uid).then(function () { return refresh(uid); });
+        loadPlots(uid).then(function () { return refresh(uid); }).then(function () {
+            // 저장된 단위가 있으면 그 창을 받아 온다. "조회는 누를 때만" 규칙의
+            // 예외가 아니다 — 사람이 그 보기를 골라 **저장해 둔 것**이라 그것이
+            // 곧 누른 것이다. 기본값(`''`)에서는 아무 조회도 일어나지 않는다.
+            if (S[uid] && S[uid].envMode) loadEnvRange(uid, null);
+        });
 
         // 단계는 하루 단위로 변하고 환경은 분 단위로 변한다 — 그 사이 어딘가면
         // 되므로 기본 5분이다. **숨은 탭에서는 건너뛴다**: 안 보이는 화면을
