@@ -163,12 +163,77 @@ class TestWiringFootguns(unittest.TestCase):
         body = src.split('function wireCardConfig', 1)[1].split('\n  }', 1)[0]
         self.assertIn('cfgBound', body)
 
+    def _facility_wiring(self):
+        """`_wireFacilityCardConfig` 의 몸통과 부르는 자리들."""
+        src = _read(_WIDGET)
+        self.assertIn('function _wireFacilityCardConfig', src,
+                      '시설 카드 [설정] 배선 함수가 사라졌거나 이름이 바뀌었다 '
+                      '— 아래 규칙이 무엇을 지키는지부터 다시 볼 것.')
+        body = src.split('function _wireFacilityCardConfig', 1)[1] \
+                  .split('\n        }', 1)[0]
+        # 주석은 뺀다 — 주석에 적힌 카드 이름은 코드가 아니다.
+        body = re.sub(r'//.*', '', body)
+        calls = [m.group(1) for m in
+                 re.finditer(r'(?<!function )_wireFacilityCardConfig\((.*?)\);',
+                             src, re.S)]
+        return body, calls
+
+    @staticmethod
+    def _args(call):
+        """괄호 밖의 쉼표로만 자른다 — 인자 안에 `(a || {})` 가 들어온다."""
+        out, buf, depth = [], '', 0
+        for ch in call:
+            if ch in '([{':
+                depth += 1
+            elif ch in ')]}':
+                depth -= 1
+            if ch == ',' and depth == 0:
+                out.append(buf.strip())
+                buf = ''
+            else:
+                buf += ch
+        out.append(buf.strip())
+        return out
+
     def test_card_name_comes_from_the_caller(self):
         """어느 카드인지를 `source` 가 비었는지로 짐작하면, 코디네이터가 없는
-        시설(summary 없음)에서 제어 카드가 [현재]로 잘못 걸린다."""
-        src = _read(_WIDGET)
-        self.assertIn("'now', readings)", src)
-        self.assertIn("'control', (res[0] || {}).summary)", src)
+        시설(summary 없음)에서 제어 카드가 [현재]로 잘못 걸린다.
+
+        그래서 **카드 이름은 인자다.** 부르는 쪽이 자기가 어느 카드를 그렸는지
+        알고 말한다 — 넘어온 데이터가 비었는지로 되짚지 않는다. 지키는 것은
+        둘이고, 둘 다 있어야 뜻이 산다.
+
+        1. 부르는 자리가 카드 이름을 **리터럴로** 넘긴다. 변수로 넘기면 그
+           변수를 어디서 만들었는지가 다시 문제가 된다.
+        2. 몸통 안에서 카드 이름이 나오는 자리는 **`card` 와 비교하는 곳뿐**
+           이다. `summary ? 'control' : 'now'` 같은 짐작이 들어오면 이 규칙에
+           걸린다 — 실제로 그렇게 걸렸었다.
+        """
+        body, calls = self._facility_wiring()
+
+        # 1) 두 카드 **모두** 부르는 쪽이 이름을 리터럴로 넘긴다.
+        #    (`card` 는 5번째 인자 — 시그니처가 바뀌면 아래 인덱스도 함께.)
+        passed = []
+        for call in calls:
+            args = self._args(call)
+            self.assertGreater(len(args), 5,
+                               '카드 이름 없이 부르고 있다: %s' % call.strip())
+            passed.append(args[4])
+        self.assertEqual(["'now'", "'control'"], sorted(passed, reverse=True),
+                         '카드 이름을 리터럴로 넘기지 않거나 한쪽 카드를 '
+                         '안 걸고 있다: %r' % (passed,))
+
+        # 2) 걸 카드는 넘어온 이름 그대로다 — 몸통이 다시 고르지 않는다.
+        self.assertIn('cards: [card]', body)
+
+        # 3) 몸통에 카드 이름이 나오는 자리는 `card` 와의 비교뿐이다.
+        for m in re.finditer(r"'(?:now|control)'", body):
+            head = body[:m.start()].rstrip()
+            self.assertRegex(head, r'card\s*[!=]==?$',
+                             '카드 이름을 `card` 와 비교하는 것 말고 다른 데 '
+                             '쓰고 있다 — 데이터가 비었는지로 카드를 짐작하는 '
+                             '길이 열린다: ...%s' % body[max(0, m.start() - 60):
+                                                        m.end() + 10])
 
 
 class TestStringsAreTranslated(unittest.TestCase):
