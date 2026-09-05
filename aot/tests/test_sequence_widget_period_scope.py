@@ -57,12 +57,21 @@ def test_per_day_writes_todays_index_only():
 
 
 def test_shared_mode_still_propagates_to_all_days():
-    """공유 모드는 모든 요일이 같은 것이 정의다 — 여기까지 막으면 안 된다."""
+    """공유 모드는 모든 요일이 같은 것이 정의다 — 여기까지 막으면 안 된다.
+
+    퍼뜨리는 계산 자체는 `weekly_schedule.apply_shared_window()` 로 옮겼다
+    (같은 계산이 세 곳에 흩어져 있었고 그중 하나가 빠져 편집이 무시됐다).
+    여기서는 공유 모드가 여전히 그 경로를 지나는지만 본다 — 7일 순회가
+    실제로 일어나는지는 `test_sequence_window_edit_reaches_daemon.py` 가
+    헬퍼를 직접 호출해 검증한다.
+    """
     marker = "if sched.get('mode') == 'shared':"
     assert marker in SRC
     start = SRC.index(marker)
     branch = SRC[start:SRC.index("elif sched.get('mode') == 'per_day':")]
-    assert "for i in range(7)" in branch
+    assert "apply_shared_window" in branch, (
+        "공유 모드가 정본 JSON 을 갱신하지 않는다 — 데몬은 레거시 컬럼을 "
+        "읽지 않으므로 편집이 통째로 무시된다")
 
 
 def test_pushed_fields_is_actually_populated():

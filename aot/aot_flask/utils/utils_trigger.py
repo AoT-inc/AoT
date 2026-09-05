@@ -15,6 +15,9 @@ from aot.aot_flask.utils.utils_general import controller_activate_deactivate
 from aot.aot_flask.utils.utils_general import delete_entry_with_id
 from aot.utils.system_pi import epoch_of_next_time
 from aot.utils.time_utils import parse_flexible_time
+from aot.utils.weekly_schedule import (
+    apply_shared_window, from_legacy, parse_schedule,
+    validate as validate_schedule)
 
 logger = logging.getLogger(__name__)
 
@@ -201,6 +204,46 @@ def trigger_mod(form):
             
             logger.info(f"DEBUG: Trigger obj updated: {trigger.timer_start_time}, {trigger.period}, latency={trigger.timer_start_offset}, val={trigger.time_offset_minutes}")
 
+            # 위에서 고친 것은 **레거시 컬럼뿐**이고, 데몬은
+            # `parse_schedule(timer_schedule) or from_legacy(...)` 로 창을 정한다
+            # — JSON 이 있으면 레거시는 통째로 무시된다. 그래서 이 폼의 시작·
+            # 종료·주기 편집은 저장도 되고 "Daemon response: Sequence settings
+            # refreshed" 성공 메시지까지 나오면서 **실제 동작은 하나도 안 바뀌는**
+            # 상태였다(실측 2026-09-05). 정본 JSON 까지 반영한다.
+            import json as _json
+            # 자정 종료는 '24:00' 으로 적는다 — '00:00' 은 "시작보다 앞" 으로
+            # 읽혀 아래 검증에 걸린다(`/function_sequence_update_settings` 와
+            # 같은 규칙).
+            if trigger.timer_end_time == '00:00':
+                trigger.timer_end_time = '24:00'
+            _sched = parse_schedule(getattr(trigger, 'timer_schedule', None)) or from_legacy(
+                trigger.timer_start_time, trigger.timer_end_time,
+                getattr(trigger, 'timer_weekday', None), trigger.period or 3600)
+            if apply_shared_window(_sched,
+                                   start=trigger.timer_start_time,
+                                   end=trigger.timer_end_time,
+                                   period=trigger.period):
+                # 저장 시점에 막지 않으면 데몬이 읽을 때 `parse_schedule` 이
+                # 거부하고 `from_legacy` 로 폴백한다 — 그러면 창이 조용히
+                # 잘리고(23:00~02:00 → 23:00~24:00) **요일별 설정(요일별 창 ·
+                # 스텝 on/off · 요일별 길이)이 통째로 사라진다.** 실측으로
+                # 확인했다(2026-09-05). 무시되는 것보다 나쁘므로 여기서 막는다.
+                _errors = validate_schedule(_sched)
+                if _errors:
+                    messages["error"].append(gettext(
+                        "End time must be later than start time on the same day "
+                        "(a window crossing midnight is not supported)."))
+                else:
+                    trigger.timer_schedule = _json.dumps(_sched)
+            else:
+                # per_day 는 요일마다 창이 다른 것이 존재 이유라 전역 값 하나를
+                # 퍼뜨리면 안 된다. 대신 **조용히 버리지 않고 알린다** — 이 폼의
+                # 시간 칸이 안 먹는다는 사실을 사용자가 알 방법이 여기밖에 없다.
+                messages["warning"].append(gettext(
+                    "This sequence uses per-weekday times, so the start/end time "
+                    "here was not applied. Change it on the weekday schedule of "
+                    "the sequence widget."))
+
         if not messages["error"]:
             logger.info("DEBUG: Attempting DB commit...")
             try:
@@ -250,9 +293,10 @@ def trigger_mod(form):
                                 
                                 # Check if this widget is controlling THIS trigger
                                 if opts.get('function_id') == form.function_id.data:
-                                    # Update specific fields
-                                    opts['timer_start_time'] = trigger.timer_start_time or "00:00"
-                                    opts['timer_end_time'] = trigger.timer_end_time or "23:59"
+                                    # Update specific fields.
+                                    # 시작·종료 시각은 위젯 설정 모달에서 더 이상
+                                    # 편집하지 않으므로(정본 편집기는 위젯 본문의
+                                    # 요일별 시간휠) 위젯 옵션으로 밀어 넣지 않는다.
                                     opts['sequence_period'] = (
                                         float(trigger.period) if trigger.period is not None else 3600.0)
                                     opts['timer_start_offset'] = (

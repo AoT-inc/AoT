@@ -34144,3 +34144,15 @@ msgstr "이 기간의 기록이 없습니다."
 
 msgid "This stage"
 msgstr "이 단계"
+
+#: aot/aot_flask/utils/utils_trigger.py
+msgid "This sequence uses per-weekday times, so the start/end time here was not applied. Change it on the weekday schedule of the sequence widget."
+msgstr "이 시퀀스는 요일별 시간을 씁니다. 여기서 바꾼 시작·종료 시간은 반영되지 않았습니다. 시퀀스 위젯의 요일별 시간에서 바꿔 주세요."
+
+#: aot/aot_flask/utils/utils_trigger.py aot/aot_flask/routes_function.py
+msgid "End time must be later than start time on the same day (a window crossing midnight is not supported)."
+msgstr "종료 시각은 같은 날의 시작 시각보다 뒤여야 합니다(자정을 넘는 구간은 지원하지 않습니다)."
+
+#: aot/widgets/AoT_timer.py
+msgid "OFF Failed: {}"
+msgstr "정지 실패: {}"

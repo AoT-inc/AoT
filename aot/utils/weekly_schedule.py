@@ -449,6 +449,51 @@ def to_legacy(schedule: dict) -> Tuple[str, str, str, float]:
     return start, end, weekday_str, period
 
 
+def apply_shared_window(schedule: dict, start=None, end=None, period=None) -> bool:
+    """레거시 컬럼 값을 **정본 JSON 에 반영**한다. `to_legacy()` 의 반대 방향.
+
+    데몬은 `parse_schedule(timer_schedule) or from_legacy(...)` 로 창을 정하므로,
+    JSON 이 한 번이라도 만들어진 시퀀스에서는 **레거시 컬럼만 고치면 아무 효과가
+    없다**. 화면은 레거시 컬럼을 되읽어 새 값을 보여주고 데몬은 옛 창으로 계속
+    도는, 조용한 어긋남이 된다(실측 2026-09-05: 레거시 `timer_end_time` 을
+    11:11 로 바꿔도 실효 window_end 는 JSON 의 23:59 그대로였다).
+
+    :return: 반영했으면 True. **per_day 모드면 아무것도 하지 않고 False** —
+        요일마다 창이 다른 것이 per_day 의 존재 이유라, 전역 값 하나를 7일에
+        퍼뜨리면 짜 둔 구성이 통째로 사라진다(주기에서 실제로 겪은 사고다).
+        호출자는 False 를 받으면 **사용자에게 알려야 한다** — 조용히 버리면
+        이 함수를 만든 이유가 없어진다.
+
+    ⚠ 같은 계산이 아직 두 곳에 인라인으로 남아 있다(둘 다 정상 동작 중이라
+    이번에는 건드리지 않았다). 셋 중 하나를 고치면 나머지도 함께 볼 것:
+      - `routes_function.function_sequence_update_settings` (시간휠 shared 경로)
+      - `widgets/widget_trigger_sequence.execute_at_modification` (위젯 저장)
+    """
+    if schedule.get("mode", "shared") != "shared":
+        return False
+
+    shared = schedule.setdefault("shared", {})
+    days = schedule.setdefault("days", {})
+    if start:
+        shared["start"] = start
+    if end:
+        shared["end"] = end
+    if period is not None:
+        shared["period"] = int(float(period))
+
+    # shared 모드는 "모든 요일이 같다" 가 정의다 — 요일 항목까지 맞춰야
+    # `active_entry_now()` 가 오늘 항목에서 새 값을 읽는다.
+    for i in range(7):
+        entry = days.setdefault(str(i), {})
+        if start:
+            entry["start"] = start
+        if end:
+            entry["end"] = end
+        if period is not None:
+            entry["period"] = int(float(period))
+    return True
+
+
 def build_warnings(schedule: dict) -> list:
     """
     Return human-readable warnings for a valid schedule (e.g. period > window length).

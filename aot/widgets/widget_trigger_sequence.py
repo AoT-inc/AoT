@@ -139,8 +139,6 @@ def refresh_display_values(widget_unique_id, options_values):
     # `or 기본값` 을 쓰면 0 이 정당한 값인 필드(time_offset_minutes 등)에서
     # 0 을 "없음" 으로 오인해 기본값으로 덮어쓴다 — 컨트롤러의
     # initialize_variables 가 같은 필드에 쓰는 `is not None` 검사와 맞춘다.
-    values['timer_start_time'] = trigger.timer_start_time or '00:00'
-    values['timer_end_time'] = trigger.timer_end_time or '23:59'
     values['sequence_period'] = float(trigger.period) if trigger.period is not None else 3600.0
     values['timer_start_offset'] = (
         int(trigger.timer_start_offset) if trigger.timer_start_offset is not None else 0)
@@ -190,8 +188,6 @@ def execute_at_modification(mod_widget, request_form, custom_options_presave, cu
         if trigger:
             if func_id != old_func_id:
                 # Case A: Function Changed (or Init) -> Pull ALL from Function
-                final_options['timer_start_time'] = trigger.timer_start_time or "00:00"
-                final_options['timer_end_time'] = trigger.timer_end_time or "23:59"
                 final_options['sequence_period'] = (
                     float(trigger.period) if trigger.period is not None else 3600.0)
                 final_options['timer_start_offset'] = (
@@ -248,27 +244,14 @@ def execute_at_modification(mod_widget, request_form, custom_options_presave, cu
                         # Update final_options to match reality
                         final_options[field_key] = val_func_norm
 
-                # Only sync legacy time fields in shared mode; per_day lives in timer_schedule
-                raw_sched = getattr(trigger, 'timer_schedule', None)
-                sched_mode = 'shared'
-                if raw_sched:
-                    try:
-                        import json as _j
-                        sched_mode = _j.loads(raw_sched).get('mode', 'shared')
-                    except Exception:
-                        pass
-
-                if sched_mode == 'shared':
-                    smart_sync_field('timer_start_time', 'timer_start_time', str, str)
-                    smart_sync_field('timer_end_time', 'timer_end_time', str, str)
-                    smart_sync_field('sequence_period', 'period', float, float)
-                else:
-                    # per_day: start/end are per-day, pull only (don't push global values).
-                    # period is synced via trigger.period which now tracks today's per-day
-                    # period (updated by /function_sequence_update_schedule).
-                    final_options['timer_start_time'] = trigger.timer_start_time or "00:00"
-                    final_options['timer_end_time']   = trigger.timer_end_time or "23:59"
-                    smart_sync_field('sequence_period', 'period', float, float)
+                # 시작·종료 시각은 이 모달에서 편집하지 않는다 — 위젯 본문의
+                # [시작]·[종료] 카드(요일별 시간휠)가 정본 편집기이고, 그쪽은
+                # shared·per_day 양쪽에서 정본 JSON 까지 쓴다. 예전에는 여기에도
+                # 텍스트 입력이 있었는데 **per_day 에서는 push 자체가 없어**,
+                # 사용자가 값을 고쳐 저장해도 아무 일도 없이 옛 값으로 되돌아왔다
+                # (칸은 멀쩡히 보이므로 왜 안 먹는지 알 방법이 없다). 편집기를
+                # 하나로 줄여 그 갈래를 없앴다.
+                smart_sync_field('sequence_period', 'period', float, float)
 
                 # 이 옵션만 표현이 다르다: 화면은 'resume'/'restart', DB 는 불리언.
                 # smart_sync_field 의 문자열 비교에 그대로 태우면 True 와
@@ -292,23 +275,22 @@ def execute_at_modification(mod_widget, request_form, custom_options_presave, cu
                     # Sync timer_schedule JSON so the daemon picks up new shared-mode values
                     try:
                         import json as _j
-                        from aot.utils.weekly_schedule import parse_schedule, from_legacy
+                        from aot.utils.weekly_schedule import (
+                            apply_shared_window, parse_schedule, from_legacy)
                         raw_sched = getattr(trigger, 'timer_schedule', None)
                         sched = parse_schedule(raw_sched) or from_legacy(
                             trigger.timer_start_time, trigger.timer_end_time,
                             getattr(trigger, 'timer_weekday', None), trigger.period or 3600,
                         )
                         if sched.get('mode') == 'shared':
-                            new_start  = trigger.timer_start_time or '00:00'
-                            new_end    = trigger.timer_end_time or '23:59'
-                            new_period = int(float(trigger.period or 3600))
-                            sched['shared']['start']  = new_start
-                            sched['shared']['end']    = new_end
-                            sched['shared']['period'] = new_period
-                            for i in range(7):
-                                sched['days'][str(i)]['start']  = new_start
-                                sched['days'][str(i)]['end']    = new_end
-                                sched['days'][str(i)]['period'] = new_period
+                            # 레거시 컬럼 → 정본 JSON. 같은 계산이 세 곳에 있었고
+                            # 그중 하나(Functions 편집 폼)가 빠져 있어 편집이 통째로
+                            # 무시됐다 — 이제 셋 다 이 헬퍼를 지난다.
+                            apply_shared_window(
+                                sched,
+                                start=trigger.timer_start_time or '00:00',
+                                end=trigger.timer_end_time or '23:59',
+                                period=trigger.period or 3600)
                             trigger.timer_schedule = _j.dumps(sched)
                         elif sched.get('mode') == 'per_day':
                             # 요일마다 주기가 다른 것이 per_day 의 존재 이유다.
@@ -488,20 +470,6 @@ WIDGET_INFORMATION = {
         {
             'type': 'header',
             'name': lazy_gettext('Sequence Settings (Synced)')
-        },
-        {
-            'id': 'timer_start_time',
-            'type': 'text',
-            'default_value': '00:00',
-            'name': lazy_gettext('Start Time'),
-            'phrase': lazy_gettext('HH:MM format')
-        },
-        {
-            'id': 'timer_end_time',
-            'type': 'text',
-            'default_value': '23:59',
-            'name': lazy_gettext('End Time'),
-            'phrase': lazy_gettext('HH:MM format')
         },
         {
             'id': 'sequence_period',

@@ -729,14 +729,44 @@ def _wait_for_confirm(daemon, device_unique_id, channel_index, stop_event, timeo
     return 'timeout'
 
 
+def _issue_output_off(daemon, device_unique_id, channel_index, why=''):
+    """OFF 를 보내고 **성공했는지 돌려준다**. 실패는 재시도하고 크게 남긴다.
+
+    ON 은 예전부터 3회 재시도가 있었는데 OFF 는 한 번 쏘고 반환값을 버렸다.
+    끄는 쪽이 못 나가는 것이 훨씬 위험하다 — 화면에는 정지라고 뜨는데 밸브는
+    열린 채 남는다(이 프로젝트가 이미 운영 사고로 겪은 모양이다).
+
+    ⚠ **`stop_event` 를 넘기지 말 것.** `_issue_output_command_with_retry` 는
+    stop_event 가 서 있으면 즉시 `cancelled` 로 돌아온다. OFF 를 보내는 자리는
+    거의 언제나 "정지 중"이라 stop_event 가 이미 서 있고, 그것을 넘기면 **끄는
+    명령만 골라서 재시도가 사라진다.**
+    """
+    ok, err = _issue_output_command_with_retry(
+        daemon, device_unique_id, channel_index, 'off', 0,
+        stop_event=None, retries=3, retry_delay=1.5)
+    if not ok:
+        logger.error(
+            "출력 OFF 실패 %s ch=%s%s: %s — 이 출력이 켜진 채 남아 있을 수 "
+            "있으니 직접 확인하십시오.",
+            device_unique_id, channel_index, f' ({why})' if why else '', err)
+    return ok, err
+
+
 def _force_output_off(device_unique_id, channel_id):
+    """채널을 해소해 OFF 를 보낸다. `(성공여부, 오류)` 를 돌려준다."""
     try:
         ch_index = _resolve_channel_index(device_unique_id, channel_id)
         if ch_index is None:
-            return
-        _issue_output_command(DaemonControl(), device_unique_id, ch_index, 'off', 0)
+            logger.error(
+                "출력 OFF 를 보내지 못했습니다 — 채널을 찾을 수 없습니다 "
+                "(%s / %s). 이 출력이 켜진 채 남아 있을 수 있습니다.",
+                device_unique_id, channel_id)
+            return False, 'channel not found'
+        return _issue_output_off(
+            DaemonControl(), device_unique_id, ch_index, why='force off')
     except Exception as exc:
-        logger.debug(f"force_output_off failed: {exc}")
+        logger.error(f"force_output_off failed: {exc}")
+        return False, str(exc)
 
 
 def _cyc_stop_worker(device_unique_id, channel_id, reason='user_stop'):
@@ -749,13 +779,26 @@ def _cyc_stop_worker(device_unique_id, channel_id, reason='user_stop'):
         thread = worker.get('thread')
     if thread and thread.is_alive():
         thread.join(timeout=2.0)
-    message = 'User stopped' if reason == 'user_stop' else 'Initializing'
-    _cyc_state_update(
-        device_unique_id, channel_id,
-        active=False, phase='stopped', message=message, error=None,
-        next_transition_ms=None, phase_duration_sec=0, phase_started_ms=None,
-        scheduled_until_ms=None, stopped_at_ms=int(time.time() * 1000))
-    _force_output_off(device_unique_id, channel_id)
+
+    # **끄고 나서 그 결과로 화면을 쓴다.** 예전에는 순서가 반대였고 반환값도
+    # 보지 않아, OFF 가 못 나갔는데도 화면에는 무조건 "User stopped" 가 떴다 —
+    # 사용자는 껐다고 믿고 자리를 뜨는데 밸브는 열려 있다.
+    ok, err = _force_output_off(device_unique_id, channel_id)
+    now_ms = int(time.time() * 1000)
+    if ok:
+        message = 'User stopped' if reason == 'user_stop' else 'Initializing'
+        _cyc_state_update(
+            device_unique_id, channel_id,
+            active=False, phase='stopped', message=message, error=None,
+            next_transition_ms=None, phase_duration_sec=0, phase_started_ms=None,
+            scheduled_until_ms=None, stopped_at_ms=now_ms)
+    else:
+        _cyc_state_update(
+            device_unique_id, channel_id,
+            active=False, phase='error',
+            message=lazy_gettext('OFF Failed: {}').format(err), error=str(err),
+            next_transition_ms=None, phase_duration_sec=0, phase_started_ms=None,
+            scheduled_until_ms=None, stopped_at_ms=now_ms)
 
 
 def _cyc_worker(device_unique_id, channel_id, channel_index,
@@ -826,7 +869,7 @@ def _cyc_worker(device_unique_id, channel_id, channel_index,
                     message='Offline (no response)', phase_started_ms=None,
                     phase_duration_sec=0, next_transition_ms=None, active=True)
             stop_event.wait()  # hold indefinitely until stopped
-            _issue_output_command(daemon, device_unique_id, channel_index, 'off', 0)
+            _issue_output_off(daemon, device_unique_id, channel_index, why='hold end')
             _cyc_state_update(
                 device_unique_id, channel_id, active=False, phase='stopped',
                 message='User stopped', next_transition_ms=None, phase_duration_sec=0,
@@ -866,7 +909,7 @@ def _cyc_worker(device_unique_id, channel_id, channel_index,
                     active=True)
             if not _sleep_with_cancel(stop_event, run_sec):
                 break
-            _issue_output_command(daemon, device_unique_id, channel_index, 'off', 0)
+            _issue_output_off(daemon, device_unique_id, channel_index, why='cycle run end')
             now_ms = int(time.time() * 1000)
             if rest_sec > 0:
                 _cyc_state_update(
@@ -894,7 +937,7 @@ def _cyc_worker(device_unique_id, channel_id, channel_index,
                 completed_cycles=total_cycles, next_transition_ms=None, phase_duration_sec=0,
                 phase_started_ms=None, stopped_at_ms=int(time.time() * 1000))
     finally:
-        _issue_output_command(daemon, device_unique_id, channel_index, 'off', 0)
+        _issue_output_off(daemon, device_unique_id, channel_index, why='worker finally')
         with _CYCLE_LOCK:
             existing = _CYCLE_WORKERS.get(key)
             if existing and existing.get('thread') is threading.current_thread():

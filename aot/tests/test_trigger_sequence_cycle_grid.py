@@ -104,6 +104,44 @@ def test_first_cycle_falls_back_to_now_when_anchor_unavailable():
     assert inst._next_cycle_start({'period': PERIOD}, now, PERIOD) == now
 
 
+# ---- 예외: 방금 활성화됐으면 격자가 아니라 지금부터 ----
+#
+# 실측(2026-09-05, 3시간 주기 창): 오후 2시 50분에 시퀀스를 활성화했는데
+# elapsed 8936초(2.48시간)로 시작했다 — 격자 앵커(14:30)를 그대로 썼기
+# 때문이다. resume_on_activate 를 "처음부터 시작" 으로 골라도 이 경로는
+# 그 옵션과 무관하게 도므로 재발했다.
+
+def test_fresh_activation_anchors_to_now_not_grid():
+    inst = make_controller()
+    inst._fresh_activation = True
+    now = ANCHOR + 2 * PERIOD + 47   # 격자 앵커였다면 ANCHOR + 2*PERIOD 가 나온다
+    assert inst._next_cycle_start(ENTRY, now, PERIOD) == now
+
+
+def test_fresh_activation_flag_is_consumed_once():
+    """한 번 쓰고 나면 꺼진다 — 그날 남은 창 재개방·요일 전환은 계속 격자를 따른다."""
+    inst = make_controller()
+    inst._fresh_activation = True
+
+    first = inst._next_cycle_start(ENTRY, ANCHOR + 2 * PERIOD + 47, PERIOD)
+    assert first == ANCHOR + 2 * PERIOD + 47
+    assert inst._fresh_activation is False
+
+    # 다음날 창이 다시 열려 cycle_start_time 이 또 None 이 됐다 — 이번엔 격자.
+    inst.cycle_start_time = None
+    later = ANCHOR + 5 * PERIOD + 90
+    assert inst._next_cycle_start(ENTRY, later, PERIOD) == ANCHOR + 5 * PERIOD
+
+
+def test_fresh_activation_false_by_default_uses_grid():
+    """기본값(설정 안 함)은 예전처럼 격자 — 이 플래그가 없던 모든 기존 동작이
+    그대로 유지되는지 확인한다."""
+    inst = make_controller()
+    assert getattr(inst, '_fresh_activation', False) is False
+    now = ANCHOR + 2 * PERIOD + 47
+    assert inst._next_cycle_start(ENTRY, now, PERIOD) == ANCHOR + 2 * PERIOD
+
+
 # ---- 진행 중: += period 로 격자 유지 ----
 
 def test_late_arrival_does_not_move_the_grid():

@@ -333,6 +333,8 @@ class SequenceTriggerController(AbstractController, threading.Thread):
         # Initialize sequence specific vars
         self.control = DaemonControl()
         self.cycle_start_time = None
+        self._fresh_activation = False
+        self._had_persisted_cycle = False
         self.activation_timestamp = 0
         self.current_schedule = []
         self.active_actions = set()
@@ -809,6 +811,7 @@ class SequenceTriggerController(AbstractController, threading.Thread):
         # 스레드의 설정을 다시 읽는 것"이다 — 그 스레드의 `self.active_actions`
         # 가 이미 정본이므로, DB 스냅샷으로 되읽을 이유가 없고 되읽으면 방금
         # 위와 같이 살아있는 상태를 낡은 스냅샷으로 덮어쓸 위험만 남는다.
+        self._had_persisted_cycle = False
         if self.is_activated:
             if cold_start:
                 self._load_runtime_state()
@@ -816,6 +819,38 @@ class SequenceTriggerController(AbstractController, threading.Thread):
             self.logger.debug(
                 f"Sequence {self.unique_id}: 비활성 상태라 사이클을 재개하지 않는다 "
                 f"(진행 중이던 스텝 {len(self.active_actions)}개는 loop 이 끈다).")
+
+        # 방금 켠 것인가(위 두 갈래 어느 쪽도 사이클을 복원하지 못한 진짜 콜드
+        # 스타트) — `_next_cycle_start()` 가 첫 사이클의 기준점을 격자가 아니라
+        # **지금**으로 잡게 하는 신호다. 격자 앵커링(2026-08-28 표류 수정,
+        # [[project_sequence_cycle_grid_drift]])은 "하루 내내 도는 스레드가
+        # 몇 시간에 한 번씩 사이클을 새로 여는 상황"의 표류를 막으려는 것이지,
+        # "방금 활성화한 순간" 과는 무관하다. 그런데 `cycle_start_time is None`
+        # 조건만으로 갈리다 보니 활성화 직후 첫 판정도 같은 분기를 타서, 창이
+        # 3시간 주기인데 오후 2시 50분에 켜면 즉시 "14:30 격자점부터 이미
+        # 2시간 20분 지남" 으로 계산돼 이번 슬롯의 모든 스텝이 이미 끝난
+        # 것처럼 처리됐다(실측 2026-09-05: `resume_on_activate=처음부터 시작`
+        # 로 재활성화했는데도 elapsed 8936초로 시작 — 재개 저장 상태와는
+        # 무관한 별도 경로).
+        #
+        # ⚠ **`cycle_start_time is None` 만으로 가르면 데몬 재시작까지 휩쓴다.**
+        # 저장된 사이클이 주기보다 낡으면 `_load_runtime_state` 도 복원을
+        # 포기하므로 그때도 None 인데, 그것은 "사용자가 방금 켰다" 가 아니라
+        # "데몬이 한 주기 넘게 내려가 있었다" 이다. 거기서 지금을 기준으로
+        # 잡으면 그날 남은 사이클이 전부 재시작 시각으로 밀려 — 정각 05:30·
+        # 06:30 으로 5일 연속 검증했던 격자가 깨진다(2026-08-28 표류 수정).
+        # 그래서 **저장된 사이클이 있었는지**(`_had_persisted_cycle`, 낡아서
+        # 못 썼더라도 True)를 함께 본다:
+        #
+        #   저장 사이클 없음(신규·"처음부터 시작"으로 비운 뒤) → 지금부터
+        #   저장 사이클 있었음(복원했거나 낡음)               → 격자
+        #
+        # 한 번 쓰고 나면(`_next_cycle_start`) 꺼진다 — 그날 남은 시간 동안의
+        # 자연스러운 창 재개방/요일 전환은 여전히 격자에 맞춘다.
+        self._fresh_activation = (
+            cold_start
+            and self.cycle_start_time is None
+            and not self._had_persisted_cycle)
 
         self.ready.set()
         self.running = True
@@ -842,6 +877,13 @@ class SequenceTriggerController(AbstractController, threading.Thread):
                 ts = float(row.last_cycle_ts)
                 active_vars = json.loads(row.active_vars_json or '{}')
                 sess.expunge_all()
+
+            # 여기까지 왔다는 것은 **이 시퀀스가 돌던 사이클이 저장돼 있었다**는
+            # 뜻이다(낡아서 못 쓰더라도). `_fresh_activation` 이 이 사실을 본다 —
+            # 아래 '낡음' 분기로 빠져도 그것은 "사용자가 방금 켰다" 가 아니라
+            # "데몬이 오래 내려가 있었다" 이므로, 첫 사이클을 지금부터가 아니라
+            # 격자에 맞춰야 한다(2026-08-28 표류 수정을 그대로 유지).
+            self._had_persisted_cycle = True
 
             # Don't resume a cycle whose scheduled window has already fully
             # elapsed while the daemon was down (e.g. down for days) --
@@ -1343,8 +1385,23 @@ class SequenceTriggerController(AbstractController, threading.Thread):
         로 잡는다. 타이머 트리거가 `+= period` / `epoch_of_next_time` 으로
         격자를 지키는 것과 같은 방식이며, 그래서 같은 원격 출력을 써도 타이머만
         시각이 맞았다.
+
+        ⚠ **`_fresh_activation` 은 이 규칙의 유일한 예외다.** 방금 활성화됐고
+        복원할 사이클이 없으면(`initialize_variables` 참조) 격자점이 아니라
+        **지금**을 첫 사이클의 기준으로 쓴다 — 격자 앵커링은 "하루 내내 도는
+        스레드가 몇 시간마다 사이클을 새로 여는" 표류를 막으려는 것이지, 막
+        켠 순간과는 무관하다. 오후 2시 50분에(3시간 주기 창에서) 활성화하면
+        격자로는 "14:30 부터 이미 2시간 20분 지남" 이 되어 이번 슬롯의 스텝이
+        전부 이미 끝난 것처럼 처리된다 — `resume_on_activate` 로 "처음부터
+        시작" 을 골라도 이 경로는 건드리지 않으므로 그 옵션과 무관하게
+        재발한다(실측 2026-09-05, elapsed 8936초로 시작). 한 번 쓰면 꺼지므로
+        그날 나머지 창 재개방·요일 전환은 여전히 격자를 따른다 — 표류 방지는
+        그대로 유효하다.
         """
         if self.cycle_start_time is None:
+            if getattr(self, '_fresh_activation', False):
+                self._fresh_activation = False
+                return self._reject_runt(entry, now, now)
             anchor = window_start_epoch(entry, self.device_tz, now)
             if anchor is None or anchor > now:
                 # 창 시작을 계산할 수 없거나(스키마 손상) 아직 이르면 지금부터.
@@ -1447,6 +1504,8 @@ class SequenceTriggerController(AbstractController, threading.Thread):
             self.sequence_cycle_duration = period
         self.cycle_start_time = now
         self.stop_all_active()
+        # 새 사이클이니 "이번 사이클에 이미 끝난 스텝" 기록도 비운다.
+        self._completed_actions = set()
         self.build_cycle_schedule()
         self.logger.debug(f"Started new cycle at {now}. Schedule has {len(self.current_schedule)} items.")
         for i, item in enumerate(self.current_schedule):
@@ -1476,6 +1535,9 @@ class SequenceTriggerController(AbstractController, threading.Thread):
         elapsed = now - self.cycle_start_time
 
         desired_active = set()
+        completed = getattr(self, '_completed_actions', None)
+        if completed is None:
+            completed = self._completed_actions = set()
 
         for item in self.current_schedule:
             if item['start'] <= elapsed < item['end']:
@@ -1484,9 +1546,18 @@ class SequenceTriggerController(AbstractController, threading.Thread):
                 if item['action'].unique_id not in self.active_actions:
                     if off_only:
                         continue
+                    # 이번 사이클에서 이미 끝난 스텝은 다시 켜지 않는다.
+                    # `refresh_settings()` 가 스케줄을 다시 세우면 슬롯 경계가
+                    # 움직인다 — 예를 들어 앞 스텝의 시간을 줄이면 뒤 스텝들이
+                    # 통째로 앞당겨지므로, **이미 물을 준 스텝의 창이 지금
+                    # elapsed 를 다시 품게 되어** 그 밸브가 한 번 더 열린다.
+                    # 설정을 고쳤을 뿐인데 관수가 두 번 되는 것이라 사용자는
+                    # 원인을 짐작할 수 없다.
+                    if item['action'].unique_id in completed:
+                        continue
                     self.logger.debug(f"Desired matched: Action {item['action'].unique_id} at elapsed {elapsed}")
                     self.turn_on_action(item['action'], item)
-        
+
         # Turn OFF things that shouldn't be active
         # Create a copy to iterate because we modify the set
         current_active_ids = self._off_order(self.active_actions)
@@ -1497,10 +1568,17 @@ class SequenceTriggerController(AbstractController, threading.Thread):
                 # item can be found by ID
                 found_item = next((i for i in self.current_schedule if i['action'].unique_id == act_id), None)
                 if found_item:
-                    self.turn_off_action(found_item['action'], found_item)
+                    if self.turn_off_action(found_item['action'], found_item):
+                        completed.add(act_id)
                 else:
-                    # Zombie action? just remove from set
-                    self.active_actions.discard(act_id)
+                    # 계획에 없는데 켜져 있는 스텝. 예전에는 여기서 집합에서만
+                    # 빼고 **OFF 를 보내지 않았다** — 그러면 밸브는 열린 채로
+                    # 남고 컨트롤러는 그것을 잊는다(아무도 닫지 않는다).
+                    # 계획에서 사라지는 것은 정상적으로 일어난다: 사용자가 그
+                    # 스텝을 오늘 요일에서 끄거나 지우면 다음 재계산에서 빠진다.
+                    # `stop_all_active()` 는 이미 DB 로 되짚어 끄고 있었다 —
+                    # 같은 처리를 여기서도 한다.
+                    self._force_off_unscheduled(act_id)
 
     def turn_on_action(self, action, item):
         self.logger.debug(f"Action ON: {action.unique_id}")
@@ -1726,25 +1804,37 @@ class SequenceTriggerController(AbstractController, threading.Thread):
                 f"{len(self.active_actions)}개를 중간에 끊습니다. 이 스텝들은 "
                 "개방 시간 기록이 남지 않을 수 있습니다.")
         for act_id in self._off_order(self.active_actions):
-            # Find action info 
+            # Find action info
             found_item = next((i for i in self.current_schedule if i['action'].unique_id == act_id), None)
-            
+
             if found_item:
                 self.turn_off_action(found_item['action'], found_item)
             else:
-                # If not in schedule, we still need to turn it off if it's an output
-                # Try to retrieve from DB to know if it's output
-                try:
-                    action = db_retrieve_table_daemon(Actions, unique_id=act_id)
-                    if action and 'output' in action.action_type:
-                        # Construct a fake item to pass to turn_off_action
-                        fake_item = {'is_output': True}
-                        self.turn_off_action(action, fake_item)
-                    else:
-                        self.active_actions.discard(act_id)
-                except Exception:
-                     self.logger.warning(f"Could not retrieve action {act_id} for force stop. Removing from active set.")
-                     self.active_actions.discard(act_id)
+                self._force_off_unscheduled(act_id)
+
+    def _force_off_unscheduled(self, act_id):
+        """계획에 없는데 켜져 있는 스텝을 **DB 로 되짚어** 끈다.
+
+        스텝이 계획에서 빠지는 것은 정상적으로 일어난다 — 사용자가 그 스텝을
+        오늘 요일에서 끄거나 아예 지우면 다음 재계산에서 사라진다. 그때 집합에서
+        빼기만 하면 **밸브는 열린 채 남고 컨트롤러는 그것을 잊는다.** 아무도
+        닫지 않으므로 창이 닫혀도, 시퀀스를 꺼도 그대로다.
+
+        출력이 아닌 스텝(알림 등)은 끌 것이 없으므로 집합에서만 뺀다.
+        """
+        try:
+            action = db_retrieve_table_daemon(Actions, unique_id=act_id)
+        except Exception:
+            self.logger.error(
+                f"Action {act_id}: 계획에 없어 DB 로 되짚으려 했으나 조회에 "
+                "실패했습니다 — 이 출력이 켜진 채 남아 있을 수 있습니다.")
+            self.active_actions.discard(act_id)
+            return
+        if action and 'output' in (action.action_type or ''):
+            # turn_off_action 이 성공했을 때만 집합에서 뺀다(실패 시 재시도).
+            self.turn_off_action(action, {'is_output': True})
+        else:
+            self.active_actions.discard(act_id)
 
     def run_finally(self):
         # Distinguish a process-level stop (daemon restart, e.g. `systemctl
@@ -1806,6 +1896,25 @@ class SequenceTriggerController(AbstractController, threading.Thread):
             self.all_actions_cache = actions
         except Exception as e:
             self.logger.warning(f"refresh_settings: could not reload action cache: {e}")
+
+        # 진행 중인 사이클의 계획도 다시 세운다. 예전에는 `self.schedule`(창)만
+        # 다시 읽고 `current_schedule`(스텝별 시작·끝)은 그대로 두어서, 작동
+        # 중에 스텝 길이·교차 시간·요일별 on/off 를 고치면 **다음 사이클까지
+        # 반영되지 않았다** — 주기가 3시간이면 세 시간 뒤다. 저장은 됐고 화면도
+        # 새 값을 보여주므로 사용자는 반영된 줄 안다.
+        #
+        # 다시 세울 때 두 가지가 함께 필요하다(둘 다 이 커밋에서 붙였다):
+        #   - 이미 끝난 스텝은 다시 켜지 않는다(`_completed_actions`) — 슬롯
+        #     경계가 움직이면 끝난 스텝의 창이 지금 elapsed 를 다시 품는다.
+        #   - 계획에서 빠진 스텝은 집합에서 빼지 말고 **꺼야 한다**
+        #     (`_force_off_unscheduled`) — 안 그러면 밸브가 열린 채 잊힌다.
+        if self.cycle_start_time is not None:
+            try:
+                self.build_cycle_schedule()
+            except Exception as e:
+                self.logger.error(
+                    f"refresh_settings: 사이클 계획을 다시 세우지 못했습니다 — "
+                    f"이번 사이클은 옛 계획으로 계속합니다: {e}")
         # Reset active_weekday so next loop re-evaluates the current window
         self.active_weekday = None
         return "Sequence settings refreshed"

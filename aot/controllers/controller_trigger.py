@@ -135,7 +135,14 @@ class TriggerController(AbstractController, threading.Thread):
                     self.trigger.unique_id_1)
 
                 self.timer_period += self.trigger.period
-                self.set_output_duty_cycle(pwm_duty_cycle)
+                if pwm_duty_cycle is None:
+                    # 메서드가 값을 내지 못했다(시작 시각 미기록·곡선 밖 등).
+                    # 예전에는 그대로 넘겨 `amount=None` 으로 출력 명령이 나갔다.
+                    self.logger.error(
+                        "메서드가 설정점을 내지 못해 PWM 출력을 건드리지 "
+                        "않습니다. 이 트리거의 메서드 설정을 확인하십시오.")
+                else:
+                    self.set_output_duty_cycle(pwm_duty_cycle)
 
                 actions = parse_action_information()
 
@@ -186,17 +193,38 @@ class TriggerController(AbstractController, threading.Thread):
     def run_finally(self):
         pass
 
+    # 메인 루프가 "멈췄다" 고 답할 때까지 기다리는 상한.
+    #
+    # 무한 대기였다. 그런데 이 확인은 **오직 `loop()` 안에서만** 세워지므로,
+    # 컨트롤러 스레드가 이미 끝났거나(정지 중 refresh) 예외로 죽었으면 영원히
+    # 오지 않는다 — RPC 스레드가 통째로 새고, 더 나쁘게는 `pause_loop` 가 True
+    # 로 남아 **그 트리거가 두 번 다시 발화하지 않는다.**
+    #
+    # 못 기다렸을 때는 그냥 진행한다. 잠깐의 어긋난 읽기보다 트리거가 죽는
+    # 쪽이 훨씬 나쁘고, 시퀀스 컨트롤러는 애초에 이 멈춤 없이 돈다.
+    PAUSE_ACK_TIMEOUT_S = 10.0
+
     def refresh_settings(self):
         """Signal to pause the main loop and wait for verification, the refresh settings."""
         self.pause_loop = True
-        while not self.verify_pause_loop:
-            time.sleep(0.1)
+        try:
+            deadline = time.time() + self.PAUSE_ACK_TIMEOUT_S
+            while not self.verify_pause_loop:
+                if time.time() >= deadline:
+                    self.logger.error(
+                        f"메인 루프가 {self.PAUSE_ACK_TIMEOUT_S:.0f}초 안에 멈춤을 "
+                        "확인하지 않았습니다 — 기다리지 않고 설정을 다시 읽습니다.")
+                    break
+                time.sleep(0.1)
 
-        self.logger.info("Refreshing trigger settings")
-        self.initialize_variables()
-
-        self.pause_loop = False
-        self.verify_pause_loop = False
+            self.logger.info("Refreshing trigger settings")
+            self.initialize_variables()
+        finally:
+            # **반드시 푼다.** 예전에는 `initialize_variables()` 가 예외를
+            # 던지면 `pause_loop` 가 True 로 남아, 메인 루프가 그 자리에 park
+            # 한 채 트리거가 조용히 죽었다(에러 로그 한 줄 말고는 흔적이 없다).
+            self.pause_loop = False
+            self.verify_pause_loop = False
         return "Trigger settings successfully refreshed"
 
     def initialize_variables(self):
@@ -261,9 +289,22 @@ class TriggerController(AbstractController, threading.Thread):
             if self.is_activated:
                 self.start_method(self.trigger.unique_id_1)
             if self.trigger_actions_at_start:
+                # 기준점을 한 주기 뒤로 눕히면 **다음 loop() 에서 바로 발화한다**
+                # (`timer_period < time.time()` 이 참). 그래서 여기서 직접
+                # `self.loop()` 를 부를 필요가 없다.
+                #
+                # ⚠ **다시 부르지 말 것 — 교착이다.** `initialize_variables` 는
+                # 기동 때만 도는 게 아니라 `refresh_settings()` 를 통해서도
+                # 도는데, 그쪽은 `pause_loop=True` 를 걸어 둔 채 이 함수를
+                # 부른다. 그 상태에서 재진입한 `loop()` 는 첫 분기
+                # (`if self.pause_loop:`)에서 `while self.pause_loop` 로 park
+                # 하고, 그 플래그를 풀 코드는 자기를 기다리는 `refresh_settings`
+                # 하나뿐이라 서로 영원히 기다린다. 실증(2026-09-05): 3초 안에
+                # 반환하지 않았다. 걸리면 RPC 가 끝나지 않고 `pause_loop` 가
+                # True 로 남아 **그 트리거는 조용히 영영 발화하지 않는다.**
+                #
+                # 대가는 발화가 최대 sample_rate 만큼 늦어지는 것뿐이다.
                 self.timer_period = now - self.trigger.period
-                if self.is_activated:
-                    self.loop()
             else:
                 self.timer_period = now
 
@@ -367,7 +408,11 @@ class TriggerController(AbstractController, threading.Thread):
             Trigger, unique_id=self.unique_id)
 
         if this_controller.method_start_time is None:
-            return
+            # **반드시 튜플로 돌려준다.** 예전에는 맨 `return`(=None) 이라
+            # 호출부의 `pwm_duty_cycle, ended = ...` 가 TypeError 로 터졌고,
+            # 그 예외가 `timer_period` 를 갱신하기 **전**이라 루프가 매 주기
+            # 같은 예외를 되풀이했다(로그 폭주 + 헛도는 루프).
+            return None, False
 
         now = utc_now()
 
@@ -390,13 +435,29 @@ class TriggerController(AbstractController, threading.Thread):
         return setpoint, ended
 
     def set_output_duty_cycle(self, duty_cycle):
-        """Set PWM Output duty cycle."""
+        """Set PWM Output duty cycle. 실패하면 **크게 남긴다**.
+
+        예전에는 반환값을 버렸다. `output_on` 은 예외가 아니라 `(1, msg)` 로
+        실패를 알리므로(Pyro5 타임아웃·통신오류 포함), 버리면 명령이 못 나가도
+        설정점 곡선만 조용히 진행한다 — 화면의 설정점과 실제 출력이 갈리는데
+        아무 흔적이 없다.
+        """
         output_channel = db_retrieve_table_daemon(OutputChannel).filter(
             OutputChannel.unique_id == self.trigger.unique_id_3).first()
         output_channel = output_channel.channel if output_channel else 0
         self.logger.debug(f"Set output duty cycle to {duty_cycle}")
-        self.control.output_on(
+        ret = self.control.output_on(
             self.trigger.unique_id_2, output_type='pwm', amount=duty_cycle, output_channel=output_channel)
+        # (code, msg) 중 code 0 만 성공. 튜플이 아닌 반환은 성공으로 본다 —
+        # 반환값이 없는 드라이버가 정상이고, 감사 계층
+        # (`controller_output.output_on_off`)도 같은 규약을 쓴다.
+        if isinstance(ret, (tuple, list)) and ret and ret[0]:
+            self.logger.error(
+                f"PWM 듀티 {duty_cycle} 전송이 거부되었습니다 — "
+                f"{ret[1] if len(ret) > 1 else ret[0]}. "
+                "설정점 곡선은 계속 진행하지만 출력은 바뀌지 않았습니다.")
+            return False
+        return True
 
     def check_triggers(self):
         """

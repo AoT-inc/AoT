@@ -108,6 +108,67 @@ def test_refresh_still_skips_when_deactivated(monkeypatch):
     inst._load_runtime_state.assert_not_called()
 
 
+# ---- _fresh_activation: 방금 켠 것인가 (controller_trigger_sequence._next_cycle_start 의 신호) ----
+#
+# 별개의 사고: "처음부터 시작" 을 골라 재활성화해도 elapsed 가 0 이 아니라
+# 몇 시간으로 시작했다(실측 2026-09-05). 원인은 이 파일 위쪽의 재개-스냅샷
+# 경합과 무관한 `_next_cycle_start()`의 격자 앵커링이었다 — 그것을 막는
+# 신호가 `_fresh_activation` 이고, 여기서는 `initialize_variables()` 가 그
+# 신호를 올바른 조건에서만 세우는지를 본다(`_next_cycle_start` 자체의 동작은
+# test_trigger_sequence_cycle_grid.py 가 검증한다).
+
+def test_cold_start_without_restored_cycle_marks_fresh_activation(monkeypatch):
+    """복원할 사이클이 없는 진짜 콜드 스타트 — 다음 사이클은 지금부터."""
+    inst = make_controller(monkeypatch, _Trigger(is_activated=True))
+    inst.cycle_start_time = None  # _load_runtime_state 가 목이라 아무것도 복원 안 함
+
+    inst.initialize_variables()  # cold_start=True 기본값
+
+    assert inst._fresh_activation is True
+
+
+def test_cold_start_with_restored_cycle_is_not_fresh_activation(monkeypatch):
+    """데몬 재시작으로 진짜 재개했다면 그 사이클을 이어간다 — 지금부터가 아니다."""
+    inst = make_controller(monkeypatch, _Trigger(is_activated=True))
+    inst.cycle_start_time = None
+
+    def fake_resume():
+        inst.cycle_start_time = 999.0  # _load_runtime_state 가 실제로 복원했다고 가정
+
+    inst._load_runtime_state.side_effect = fake_resume
+    inst.initialize_variables()
+
+    assert inst._fresh_activation is False
+
+
+def test_stale_persisted_cycle_is_not_a_fresh_activation(monkeypatch):
+    """데몬이 한 주기 넘게 내려가 있다 올라온 경우 — 복원은 못 해도 '방금 켠 것'이
+    아니다. 여기서 지금을 기준으로 잡으면 그날 남은 사이클이 전부 재기동 시각으로
+    밀려 격자 앵커링(표류 방지)이 깨진다."""
+    inst = make_controller(monkeypatch, _Trigger(is_activated=True))
+    inst.cycle_start_time = None
+
+    def stale_row_seen():
+        # 낡아서 복원은 포기하지만, 돌던 시퀀스였다는 사실은 남긴다.
+        inst._had_persisted_cycle = True
+
+    inst._load_runtime_state.side_effect = stale_row_seen
+    inst.initialize_variables()
+
+    assert inst._fresh_activation is False
+
+
+def test_refresh_never_marks_fresh_activation(monkeypatch):
+    """설정 재로드는 창 사이 유휴 상태(cycle_start_time=None)라도 '방금 켠 것'이
+    아니다 — 격자 앵커링(표류 방지)이 계속 적용돼야 한다."""
+    inst = make_controller(monkeypatch, _Trigger(is_activated=True))
+    inst.cycle_start_time = None  # 예: 창과 창 사이라 원래도 None
+
+    inst.initialize_variables(cold_start=False)
+
+    assert inst._fresh_activation is False
+
+
 # ---- refresh_settings() actually calls cold_start=False ----
 
 def test_refresh_settings_passes_cold_start_false(monkeypatch):

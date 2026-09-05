@@ -72,8 +72,8 @@ from aot.utils.actions import parse_action_information
 from aot.utils.functions import device_module_names
 from aot.utils.functions import parse_function_information
 from aot.utils.weekly_schedule import (
-    from_legacy, parse_schedule, to_legacy, validate as validate_schedule,
-    build_warnings
+    apply_shared_window, from_legacy, parse_schedule, to_legacy,
+    validate as validate_schedule, build_warnings
 )
 from aot.utils.inputs import parse_input_information
 from aot.utils.outputs import output_types, parse_output_information
@@ -1624,16 +1624,21 @@ def function_sequence_update_settings():
             trigger.timer_start_time, trigger.timer_end_time,
             getattr(trigger, 'timer_weekday', None), trigger.period or 3600,
         )
-        if sched.get('mode') == 'shared':
-            if start_time: sched['shared']['start'] = start_time
-            if end_time: sched['shared']['end'] = end_time
-            if period is not None: sched['shared']['period'] = int(float(period))
-            # Propagate to all days that share the same value
-            for i in range(7):
-                k = str(i)
-                if start_time: sched['days'][k]['start'] = start_time
-                if end_time: sched['days'][k]['end'] = end_time
-                if period is not None: sched['days'][k]['period'] = int(float(period))
+        applied = apply_shared_window(
+            sched, start=start_time, end=end_time, period=period)
+
+        # 저장 시점에 막지 않으면 데몬이 읽을 때 `parse_schedule` 이 거부하고
+        # `from_legacy` 로 폴백한다 — 창이 조용히 잘리고(23:00~02:00 →
+        # 23:00~24:00) **요일별 설정이 통째로 사라진다.**
+        sched_errors = validate_schedule(sched)
+        if sched_errors:
+            # 레거시 컬럼은 위에서 이미 객체에 올라갔다 — 커밋하지 않고
+            # 되돌린다(반쯤 반영된 상태로 두면 다음 커밋에 묻어 나간다).
+            db.session.rollback()
+            return jsonify({'error': _(
+                "End time must be later than start time on the same day "
+                "(a window crossing midnight is not supported).")}), 400
+
         trigger.timer_schedule = _json.dumps(sched)
 
         db.session.commit()
@@ -1641,6 +1646,20 @@ def function_sequence_update_settings():
         # Refresh Controller
         control = DaemonControl()
         control.refresh_daemon_trigger_settings(function_id)
+
+        if not applied:
+            # per_day 에서는 전역 값 하나를 7일에 퍼뜨릴 수 없다(요일별 구성이
+            # 사라진다). 레거시 컬럼만 바뀌고 정본 JSON 은 그대로이므로 **실제
+            # 동작은 하나도 안 바뀐다** — 조용히 성공이라고 답하면 안 된다.
+            # 지금은 위젯 JS 가 per_day 에서 이 엔드포인트를 부르지 않지만,
+            # 새 호출자가 생기면 그때 조용한 무반영이 된다.
+            return jsonify({
+                'status': 'success',
+                'warnings': [_(
+                    "This sequence uses per-weekday times, so the start/end time "
+                    "here was not applied. Change it on the weekday schedule of "
+                    "the sequence widget.")],
+            })
 
         return jsonify({'status': 'success'})
     except Exception as e:

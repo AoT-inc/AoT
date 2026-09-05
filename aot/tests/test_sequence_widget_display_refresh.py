@@ -67,16 +67,20 @@ def _trigger(**overrides):
 
 class TestRefreshDisplayValues:
 
-    def test_stale_end_time_is_replaced_by_the_triggers_current_value(self, app):
-        """핵심 회귀. aot-004 사건을 그대로 재현한다."""
+    def test_stale_values_are_replaced_by_the_triggers_current_values(self, app):
+        """핵심 회귀. aot-004 사건을 그대로 재현한다.
+
+        시작·종료 시각 칸은 그 뒤 모달에서 아예 없앴다(아래 테스트 참조) —
+        정본 편집기가 위젯 본문의 요일별 시간휠 하나로 줄었기 때문이다.
+        나머지 칸은 여전히 Trigger 를 정본으로 삼는 캐시라, 같은 어긋남이
+        생길 수 있어 이 검증이 계속 필요하다.
+        """
         with app.app_context():
             from aot.widgets.widget_trigger_sequence import refresh_display_values
 
             trigger = _trigger()
             stale = {
                 'function_id': trigger.unique_id,
-                'timer_start_time': '05:30',
-                'timer_end_time': '16:00',       # 저장 당시 값 — 그 뒤 15:00 으로 바뀜
                 'sequence_period': 36000.0,
                 'timer_start_offset': 10,
                 'output_duration': 0.0,          # 실제는 20.0
@@ -88,9 +92,25 @@ class TestRefreshDisplayValues:
 
             fresh = refresh_display_values('widget-1', stale)
 
-            assert fresh['timer_end_time'] == '15:00'
             assert fresh['output_duration'] == 20.0
             assert fresh['time_offset_minutes'] == 0
+
+    def test_the_dead_time_inputs_are_gone_from_the_modal(self, app):
+        """모달의 시작·종료 텍스트 입력은 제거됐다.
+
+        per_day 모드에서 그 두 칸은 **push 자체가 없어** 값을 고쳐 저장해도
+        아무 일 없이 되돌아왔다(칸은 멀쩡히 보이므로 왜 안 먹는지 알 방법이
+        없다). 정본 편집기를 위젯 본문의 요일별 시간휠 하나로 줄여 그 갈래를
+        없앴다 — 되살리려면 per_day 에서 어느 요일에 반영할지부터 정해야 한다.
+        """
+        from aot.widgets.widget_trigger_sequence import WIDGET_INFORMATION
+
+        ids = {o.get('id') for o in WIDGET_INFORMATION['custom_options']}
+        assert 'timer_start_time' not in ids, '죽은 입력칸이 되살아났다'
+        assert 'timer_end_time' not in ids, '죽은 입력칸이 되살아났다'
+        # 나머지 동기화 칸은 그대로여야 한다.
+        assert {'sequence_period', 'output_duration', 'time_offset_minutes',
+                'resume_on_activate'} <= ids
 
     def test_zero_is_a_real_value_not_a_missing_one(self, app):
         """`or 기본값` 이면 0 이 '없음' 으로 읽혀 기본값으로 덮인다 — 이 값들은

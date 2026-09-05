@@ -33723,3 +33723,15 @@ msgstr "「気象観測所」と表示され左側に線が付いている行は
 #: aot/aot_flask/templates/pages/geo/journal_view.html
 msgid "Targets come from the program attached to this plot. Δ is the measured average minus that target. Day/night targets and curve-based targets are marked instead of differenced, because comparing them against a whole-day average produces false alarms."
 msgstr "目標はこの区画のプログラムから来ます。Δ は実測平均からその目標を引いた値です。昼夜目標と曲線目標は差を出さず表示のみします — 一日全体の平均と比べると誤った警報が出るためです。"
+
+#: aot/aot_flask/utils/utils_trigger.py
+msgid "This sequence uses per-weekday times, so the start/end time here was not applied. Change it on the weekday schedule of the sequence widget."
+msgstr "このシーケンスは曜日別の時刻を使います。ここで変更した開始・終了時刻は 反映されていません。シーケンスウィジェットの曜日別スケジュールで変更してください。"
+
+#: aot/aot_flask/utils/utils_trigger.py aot/aot_flask/routes_function.py
+msgid "End time must be later than start time on the same day (a window crossing midnight is not supported)."
+msgstr "終了時刻は同じ日の開始時刻より後である必要があります（日をまたぐ時間帯には対応していません）。"
+
+#: aot/widgets/AoT_timer.py
+msgid "OFF Failed: {}"
+msgstr "停止に失敗: {}"

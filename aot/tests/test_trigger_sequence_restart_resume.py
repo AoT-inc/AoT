@@ -99,6 +99,35 @@ def test_load_ignores_stale_cycle_older_than_period(temp_runtime_db, monkeypatch
     loader.build_cycle_schedule.assert_not_called()
 
 
+def test_stale_cycle_still_counts_as_having_run(temp_runtime_db, monkeypatch):
+    """낡아서 복원을 포기해도 "저장된 사이클이 있었다" 는 사실은 남긴다.
+
+    이 신호가 없으면 `initialize_variables` 가 데몬 장기 정지 후 재기동을
+    "사용자가 방금 켰다" 로 오인해 첫 사이클을 격자가 아니라 재기동 시각에
+    맞춘다 — 그날 남은 사이클이 전부 그만큼 밀려, 정각으로 5일 연속 검증했던
+    격자 앵커링(2026-08-28 표류 수정)이 깨진다.
+    """
+    saver = make_controller()
+    monkeypatch.setattr(seq_mod.time, 'time', lambda: 2_000_000.0)
+    saver.cycle_start_time = 2_000_000.0 - (2 * 43200.0)
+    saver._save_runtime_state()
+
+    loader = make_controller()
+    monkeypatch.setattr(seq_mod.time, 'time', lambda: 2_000_000.0)
+    loader._load_runtime_state()
+
+    assert loader.cycle_start_time is None          # 복원은 안 했지만
+    assert loader._had_persisted_cycle is True      # 돌던 시퀀스였다는 것은 안다
+
+
+def test_no_persisted_row_means_no_prior_cycle(temp_runtime_db):
+    """행이 아예 없으면(신규 시퀀스, 또는 '처음부터 시작'으로 비운 뒤) 방금 켠 것이다."""
+    loader = make_controller()
+    loader._had_persisted_cycle = False
+    loader._load_runtime_state()
+    assert loader._had_persisted_cycle is False
+
+
 def test_turn_on_action_persists_state(temp_runtime_db, monkeypatch):
     inst = make_controller()
     inst.cycle_start_time = 1785100000.0
