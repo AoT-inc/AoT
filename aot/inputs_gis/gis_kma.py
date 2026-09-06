@@ -64,6 +64,23 @@ INPUT_INFORMATION = {
 # CSV 컬럼 순서: pub_timestamp, ta, hm, wd_10m, ws_10m, pa, rn_ox, rn_15m, vs, sd_tot
 _CSV_FIELDS = ['pub_timestamp', 'ta', 'hm', 'wd_10m', 'ws_10m', 'pa', 'rn_ox', 'rn_15m', 'vs', 'sd_tot']
 
+# KMA는 미보고 관측값을 -999로 채워 보낸다(kma_weather_500.py와 동일 현상).
+# 그대로 float으로 받으면 -999가 실측값(예: 기온 -999°C)으로 표시된다.
+KMA_MISSING_SENTINEL_MAX = -900.0
+
+
+def _to_float_or_none(v):
+    try:
+        v = str(v).strip()
+        if v == '' or v.lower() == 'nan':
+            return None
+        val = float(v)
+        if val <= KMA_MISSING_SENTINEL_MAX:
+            return None
+        return val
+    except Exception:
+        return None
+
 
 def _parse_kma_csv(text):
     """sfc_nc_var.php CSV 응답을 파싱해 최신 행의 dict를 반환."""
@@ -84,15 +101,15 @@ def _parse_kma_csv(text):
                 continue
         except Exception:
             pass
+        row = {field: _to_float_or_none(cols[i]) for i, field in enumerate(_CSV_FIELDS[1:], 1)}
+        # 전 필드가 -999/결측이면 이 행은 버리고 더 이전의 유효한 행을 채택한다
+        # (그렇지 않으면 최신 타임스탬프가 결측행이어도 그대로 선택되어 표시할
+        # 값이 하나도 안 남는다 — kma_weather_500.py에서 실제로 겪은 문제).
+        if all(val is None for val in row.values()):
+            continue
         if best_ts is None or ts > best_ts:
             best_ts = ts
-            best_row = {}
-            for i, field in enumerate(_CSV_FIELDS[1:], 1):
-                try:
-                    v = cols[i].strip()
-                    best_row[field] = float(v) if v not in ('', 'nan') else None
-                except Exception:
-                    best_row[field] = None
+            best_row = row
     return best_row if best_ts else None
 
 

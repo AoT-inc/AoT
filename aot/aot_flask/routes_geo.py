@@ -1106,8 +1106,25 @@ def api_geo_proxy_kma():
             current_app.logger.error(f'[KMA Proxy] API error in body: {resp.text[:200]}')
             return jsonify({'error': 'KMA API error', 'kma_body': resp.text[:200]}), 200
 
-        # CSV 파싱 (kma_weather_500.pre_fetch_data와 동일 로직)
+        # CSV 파싱 (kma_weather_500.pre_fetch_data와 동일 로직).
+        # KMA는 미보고 관측값을 -999로 채워 보낸다 — 그대로 float으로 받으면
+        # -999가 실측값(예: 기온 -999°C)으로 표시된다(kma_weather_500.py에서
+        # 겪은 것과 동일한 문제). -900 이하를 결측으로 간주해 버린다.
         _fields = ['ta', 'hm', 'wd_10m', 'ws_10m', 'pa', 'rn_ox', 'rn_15m', 'vs', 'sd_tot']
+        _MISSING_SENTINEL_MAX = -900.0
+
+        def _to_float_or_none(v):
+            try:
+                v = str(v).strip()
+                if v == '' or v.lower() == 'nan':
+                    return None
+                val = float(v)
+                if val <= _MISSING_SENTINEL_MAX:
+                    return None
+                return val
+            except Exception:
+                return None
+
         best_ts = None
         result = {}
         for line in resp.text.strip().split('\n'):
@@ -1125,15 +1142,15 @@ def api_geo_proxy_kma():
                     continue
             except Exception:
                 pass
+            row = {field: _to_float_or_none(cols[i]) for i, field in enumerate(_fields, 1)}
+            # 전 필드가 -999/결측이면 이 행은 버리고 더 이전의 유효한 행을
+            # 채택한다 — 안 그러면 최신 타임스탬프가 결측행이어도 그대로
+            # 선택되어 표시할 값이 하나도 안 남는다.
+            if all(val is None for val in row.values()):
+                continue
             if best_ts is None or ts > best_ts:
                 best_ts = ts
-                result = {}
-                for i, field in enumerate(_fields, 1):
-                    try:
-                        v = cols[i].strip()
-                        result[field] = float(v) if v not in ('', 'nan') else None
-                    except Exception:
-                        result[field] = None
+                result = row
 
         if not best_ts:
             return jsonify({'error': 'No valid data in KMA response'}), 200
