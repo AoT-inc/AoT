@@ -4200,11 +4200,20 @@ def api_geo_site_contents(site_uuid):
     **`_build_area_contents` 를 그대로 쓴다.** 구역 모달·구획 모달이 이미 같은
     함수를 쓰고 있고, 따로 만들면 같은 장치를 화면마다 다르게 세게 된다 —
     이 도메인이 정확히 그 실패로 크게 데었다(그 함수의 docstring 참조).
-    여기서 하는 일은 **집합을 정하는 것**뿐이다: 필지 안 구역·시설의 장치 전부.
+    여기서 하는 일은 **집합을 정하는 것**뿐이다: 필지 안 구역·시설의 장치.
 
     `device_ids_in_area` 는 site 도형에도 그대로 동작한다(포함 판정은 종류를
-    가리지 않는다). 필지 요약(`summary_for_site`)도 같은 집합을 쓰므로 두
-    화면의 장치 수가 갈리지 않는다.
+    가리지 않는다).
+
+    ⚠ **시설 안 설비(fitting)에 매인 액추에이터는 뺀다**
+    (`include_facility_fittings=False`). 필지 모달에서 시설 안의 측창·도어까지
+    늘어놓으면 "이 필지를 어떻게 볼까"가 아니라 "여기서 뭘 다 조작할 수 있나"가
+    되어, 정작 필지 단위로 판단할 것이 묻힌다. 설비 액추에이터는 그 시설
+    모달에서 본다. 구역 폴리곤·시설 외형에 **직접** 맡긴 장치는 그대로 온다.
+
+    필지 요약(`summary_for_site`)은 이 집합을 쓰지 않는다 — 그쪽은 자식(구역·
+    시설)마다 따로 판정한다. 그래서 시설 행의 센서 수는 여기 변경과 무관하게
+    자기 설비를 그대로 센다.
     """
     from aot.databases.models import GeoShape as _GS
     from aot.aot_flask.geo.device_membership import device_ids_in_area
@@ -4213,7 +4222,8 @@ def api_geo_site_contents(site_uuid):
     if not site:
         return jsonify({'ok': False, 'error': 'site not found'}), 404
 
-    inv = _build_area_contents(device_ids_in_area(site_uuid) or set())
+    inv = _build_area_contents(
+        device_ids_in_area(site_uuid, include_facility_fittings=False) or set())
 
     # "켜면 무엇이 함께 젖는가" — 구역 모달과 같은 경고를 단다. 한쪽에만 있으면
     # "필지에서 켜면 안전하다" 는 잘못된 대비가 생긴다.

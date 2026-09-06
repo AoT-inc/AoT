@@ -73,12 +73,6 @@
   justify-content: center;
 }
 
-/* MapLibre container styles */
-.maplibregl-container {
-  width: 100%;
-  height: 100%;
-}
-
 .maplibregl-canvas {
   outline: none;
 }
@@ -130,45 +124,6 @@ body.aot-map-fullscreen-active .navbar.main-navbar {
 /* Stacking context fix for parents (grid-stack) */
 body.aot-map-fullscreen-active .grid-stack-item:not(.aot-fs-parent) {
     display: none !important;
-}
-
-.aot-fs-parent {
-    z-index: var(--aot-z-overlay) !important;
-    transform: none !important;
-    transition: none !important;
-    position: fixed !important;
-    top: 0 !important;
-    left: 0 !important;
-    width: 100vw !important;
-    height: 100vh !important;
-    background: #fff !important;
-}
-
-.aot-map-pseudo-fullscreen-body {
-  overflow: hidden !important;
-}
-
-.aot-map-wrap {
-  display: flex;
-  flex-direction: column;
-  width: 100%;
-}
-
-.aot-map-attribution,
-.aot-map-attribution-placeholder,
-.aot-map-attribution-inline {
-  display: block;
-  margin-top: 6px;
-  width: 100%;
-  text-align: right;
-  font-size: 0.75rem;
-  color: var(--aot-color-text-secondary, #666);
-  white-space: nowrap !important; /* [Fix] V7: Force single line */
-  max-width: none !important; /* [Fix] V8: Prevent wrapping */
-  display: flex !important;
-  flex-direction: row !important;
-  flex-wrap: nowrap !important;
-  align-items: center !important;
 }
 
 /* MapLibre Popup Styles */
@@ -292,18 +247,6 @@ body.aot-map-fullscreen-active .grid-stack-item:not(.aot-fs-parent) {
   margin-bottom: 6px;
 }
 
-/* ── 측정값 행 (Input 팝업) ── */
-.aot-popup-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 6px;
-  border-bottom: 1px dotted var(--aot-border-neutral, #eee);
-  padding-bottom: 4px;
-}
-.aot-popup-row:last-child { border-bottom: none; margin-bottom: 0; }
-
-.aot-popup-row-label,
 .aot-popup-info-label {        /* Input + Output 라벨 동일 규칙 */
   font-size: 0.923em;          /* ~12px */
   font-weight: 600;
@@ -314,7 +257,6 @@ body.aot-map-fullscreen-active .grid-stack-item:not(.aot-fs-parent) {
   min-width: 0;
   word-break: break-word;
 }
-.aot-popup-row-value,
 .aot-popup-info-value {        /* Input + Output 값 동일 규칙 */
   font-size: 0.923em;          /* ~12px */
   font-weight: 700;
@@ -324,24 +266,12 @@ body.aot-map-fullscreen-active .grid-stack-item:not(.aot-fs-parent) {
   flex: 0 0 auto;
   color: var(--aot-color-text-primary, #111);
 }
-.aot-popup-unit {
-  font-size: 0.85em;           /* ~11px */
-  margin-left: 2px;
-  color: var(--aot-color-text-secondary, #555);
-}
 
 /* ── 정보 섹션 (Output 팝업 — Current / Last Work Time) ── */
 .aot-popup-info {
   border-top: 1px solid var(--aot-border-neutral, #eee);
   padding-top: 8px;
 }
-.aot-popup-info-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 4px;
-}
-.aot-popup-info-row:last-child { margin-bottom: 0; }
 
 /* ══════════════════════════════════════════════════════════════════
    팝업 버튼 단일 시스템 — 모든 팝업 타입에서 이 클래스만 사용.
@@ -431,47 +361,10 @@ body.aot-map-fullscreen-active .grid-stack-item:not(.aot-fs-parent) {
   background: var(--aot-surface-card, #fff);
 }
 
-/* Attribution styles */
-.aot-map-attribution,
-.aot-map-attribution-placeholder,
-.aot-map-attribution-inline {
-  display: inline-block !important;
-  margin: 0 !important;
-  padding: 0 !important;
-  white-space: nowrap !important;
-  float: none !important;
-  vertical-align: middle !important;
-}
-
-.aot-map-attribution img,
 .maplibregl-ctrl-attrib img {
   display: inline-block !important;
   vertical-align: middle !important;
   margin: 0 4px !important; /* Proper spacing for copyright logo */
-}
-
-/* Explicit bottom-center override for inline attribution */
-.aot-map-attribution-inline {
-  position: absolute !important;
-  bottom: 0 !important;
-  top: auto !important;
-  right: auto !important;
-  left: 50% !important;
-  transform: translateX(-50%) !important;
-  width: auto !important;
-  margin: 0 !important;
-  padding: 0 5px;
-  background: rgba(255, 255, 255, 0.7);
-  border-radius: 4px 4px 0 0;
-  z-index: 10;
-  text-align: center;
-  pointer-events: auto;
-}
-
-.aot-map-attribution a,
-.aot-map-attribution-placeholder a {
-  color: inherit;
-  text-decoration: none;
 }
 
 /* Attribution (MapLibre native) */
@@ -561,92 +454,6 @@ body.aot-map-fullscreen-active .grid-stack-item:not(.aot-fs-parent) {
   --z-map-popup:      50;   /* device / note / label 팝업 */
   --z-map-popup-act:  55;   /* facility 액추에이터 팝업 (device 팝업 위) */
   --z-facility-panel: 70;   /* facility IEC 설정점 패널 (지도-로컬 스케일, 팝업 위) */
-}
-
-/* --- New Utility Classes --- */
-/* aot-map-container-fluid inherits standard container-fluid padding */
-
-
-.aot-map-tabs-wrapper {
-  flex: 1 1 auto;
-  min-width: 0;
-  gap: 6px;
-  margin: 0 6px;
-  flex-wrap: nowrap;
-  overflow-x: auto;
-}
-
-.aot-gap-sm {
-  gap: 0.35em;
-}
-
-.aot-gap-md {
-  gap: 0.5em;
-}
-
-.aot-mt-lg {
-  margin-top: 1.6em;
-}
-
-.aot-entry-break {
-  width: 100%;
-}
-
-.aot-map-search-btn {
-  min-width: 60px;
-}
-
-.aot-map-search-results {
-  z-index: 40;
-  display: none;
-  margin-top: 2px;
-  width: calc(100% - 70px);
-}
-
-.aot-color-input-sm {
-  width: 48px;
-  padding: 0;
-}
-
-.aot-color-input-custom {
-  max-width: 120px;
-}
-
-.aot-color-dot-btn {
-  padding: 0;
-  border: none;
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-}
-
-.aot-device-list-box {
-  max-height: 180px;
-  overflow: auto;
-  margin-top: 10px;
-}
-
-.aot-device-section-row {
-  margin-top: 10px;
-}
-
-.aot-map-option-controls-row {
-  padding: 0.5em 0;
-  margin-left: 0;
-  flex-wrap: wrap;
-  gap: 0.35em;
-}
-
-.aot-col-min-150 {
-  min-width: 150px;
-}
-
-.aot-col-min-90 {
-  min-width: 90px;
-}
-
-.aot-max-w-200 {
-  max-width: 200px;
 }
 
 /* Text Marker Styles */
@@ -866,14 +673,6 @@ body.aot-map-fullscreen-active .grid-stack-item:not(.aot-fs-parent) {
   display: none;
 }
 
-/* data-only 모드: map 외부에 position:relative로 배치되므로 bottom 오프셋 불필요 */
-.aot-legend-standalone {
-  bottom: auto !important;
-  position: relative !important;
-  margin: 8px !important;
-  align-self: flex-start !important;
-}
-
 .aot-legend-item-wrapper {
   width: 100%;
   box-sizing: border-box;
@@ -1019,19 +818,6 @@ body.aot-map-fullscreen-active .grid-stack-item:not(.aot-fs-parent) {
   margin-top: 0 !important;
 }
 
-
-/* ==========================================================================
-   Widget & Label Styles (Consolidated from AoT_map.py)
-   ========================================================================== */
-
-.aot-map-widget-wrapper {
-  position: relative !important;
-  width: 100%;
-  height: 100%;
-  overflow: hidden !important;
-  background: #f8f9fa;
-}
-
 /* Hidden UI State - MapLibre compatible */
 
 /* Device Label Styles - Reverse effect for ON state */
@@ -1107,10 +893,6 @@ body.aot-map-fullscreen-active .grid-stack-item:not(.aot-fs-parent) {
 
 .aot-mr-10 {
   margin-right: 10px !important;
-}
-
-.aot-overflow-visible {
-  overflow: visible !important;
 }
 
 /* --device-label-color 는 어디서도 정의되지 않는 가짜 var() 참조였다
@@ -1905,22 +1687,9 @@ body.aot-map-fullscreen-active .grid-stack-item:not(.aot-fs-parent) {
         transform: none !important;
     }
 }
-/* [New] Page Container for Sliding */
-.aot-meas-page {
-    min-width: fit-content; /* [Fix] Allow page to be wider than container */
-    width: auto;
-    height: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    scroll-snap-align: none !important;
-    padding: 0 5px; /* [Fix] Reduced to 5px to balance inner spacing */
-    box-sizing: border-box;
-}
 
 /* Ensure items don't shrink, triggering scroll */
-.aot-measurement-panel .aot-measurement-item,
-.aot-measurement-panel .aot-meas-separator {
+.aot-measurement-panel .aot-measurement-item {
     flex-shrink: 0 !important;
 }
 
@@ -2106,13 +1875,6 @@ body.aot-map-fullscreen-active .grid-stack-item:not(.aot-fs-parent) {
     color: var(--aot-color-text-secondary, #555); /* Neutral color similar to name/legacy */
 }
 
-.aot-meas-unit-row {
-    display: flex;
-    align-items: baseline;
-    gap: 4px;
-    margin-top: 4px;
-}
-
 .aot-meas-name {
     font-size: 0.75rem;
     color: var(--aot-color-text-secondary, #888);
@@ -2124,14 +1886,6 @@ body.aot-map-fullscreen-active .grid-stack-item:not(.aot-fs-parent) {
     font-size: 0.9rem;
     color: var(--aot-color-text-secondary, #666);
     font-weight: 600;
-}
-
-.aot-meas-separator {
-    height: 30px;
-    width: 1px;
-    background-color: #e0e0e0;
-    margin: 0 5px;
-    flex-shrink: 0;
 }
 
 /* Mobile Adjustments */
@@ -2156,12 +1910,12 @@ body.aot-map-fullscreen-active .grid-stack-item:not(.aot-fs-parent) {
 /* --- Geo Design Print Styles --- */
 @media print {
     /* Hide Sidebars, Navbars, Floating Tools */
-    .sidebar, .navbar, .aot-footer, .map-tools-left, .map-tools-right, .mode-panel, #nav-mode-panel, .nav-v-panel, .aot-map-controls-container, .maplibregl-ctrl-zoom, .maplibregl-ctrl-group {
+    .sidebar, .navbar, .map-tools-left, .map-tools-right, .mode-panel, #nav-mode-panel, .nav-v-panel, .maplibregl-ctrl-zoom, .maplibregl-ctrl-group {
         display: none !important;
     }
 
     /* Expand Content to Full Width/Height */
-    body, html, .main-panel, .content, .container-fluid {
+    body, html, .content, .container-fluid {
         width: 100% !important;
         height: auto !important;
         margin: 0 !important;
@@ -2202,7 +1956,7 @@ body.aot-map-fullscreen-active .grid-stack-item:not(.aot-fs-parent) {
     }
 
     /* Hide Site Selector and Helper Buttons */
-    #site-selector, .bootstrap-select, #btn-site-filter, .close-panel-btn {
+    #site-selector, .bootstrap-select, #btn-site-filter {
         display: none !important;
     }
 
@@ -2284,75 +2038,6 @@ body.aot-map-fullscreen-active .grid-stack-item:not(.aot-fs-parent) {
   transform: scale(1.2);
 }
 
-/* ============================================
-   AoT Layer Control - 레이어 토글 컨트롤
-   ============================================ */
-
-/* 메인 컨테이너 */
-.aot-layer-ctrl {
-    background: white;
-    border-radius: 6px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-    min-width: 200px;
-    max-width: 280px;
-    overflow: hidden;
-    font-size: 13px;
-}
-
-/* 토글 버튼 */
-.aot-layer-toggle-btn {
-    padding: 10px 14px;
-    background: linear-gradient(135deg, #4a90d9, #357abd);
-    color: var(--text-color-tertiary, white);
-    border: none;
-    cursor: pointer;
-    font-size: 14px;
-    width: 100%;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    transition: background 0.2s ease;
-    font-weight: 500;
-}
-
-.aot-layer-toggle-btn:hover {
-    background: linear-gradient(135deg, #357abd, #2a6aa8);
-}
-
-.aot-layer-toggle-btn i {
-    font-size: 16px;
-}
-
-/* 레이어 목록 */
-.aot-layer-list {
-    border-top: 1px solid #e0e0e0;
-    max-height: 350px;
-    overflow-y: auto;
-    background: #fafafa;
-}
-
-/* 레이어 그룹 */
-.aot-layer-group {
-    padding: 6px 0;
-    border-bottom: 1px solid #f0f0f0;
-}
-
-.aot-layer-group:last-child {
-    border-bottom: none;
-}
-
-.aot-layer-group-title {
-    font-weight: 600;
-    padding: 4px 12px;
-    color: var(--aot-color-text-primary, #333);
-    background: #f5f5f5;
-    border-bottom: 1px solid #e8e8e8;
-    margin-bottom: 4px;
-    font-size: 12px;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
 /* 개별 레이어 항목 */
 .aot-layer-item {
     padding: 4px 12px;
@@ -2384,24 +2069,6 @@ body.aot-map-fullscreen-active .grid-stack-item:not(.aot-fs-parent) {
 .aot-layer-item input[type="checkbox"]:checked + * {
     color: var(--aot-color-info, #2a6aa8);
     font-weight: 500;
-}
-
-/* 스크롤바 스타일 */
-.aot-layer-list::-webkit-scrollbar {
-    width: 6px;
-}
-
-.aot-layer-list::-webkit-scrollbar-track {
-    background: #f0f0f0;
-}
-
-.aot-layer-list::-webkit-scrollbar-thumb {
-    background: #ccc;
-    border-radius: 3px;
-}
-
-.aot-layer-list::-webkit-scrollbar-thumb:hover {
-    background: #aaa;
 }
 
 /* ==========================================================================

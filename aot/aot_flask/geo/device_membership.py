@@ -375,12 +375,24 @@ def _shapes_inside(area_shape):
     return out
 
 
-def _bound_device_ids(shape_uuids):
+def _bound_device_ids(shape_uuids, include_facility_fittings=True):
     """도형들에 바인딩된 장치 + 그 도형에 놓인 시설의 설비에 바인딩된 장치.
 
     마커만 보면 안 되는 이유: 로컬 실측에서 출력 16개 중 마커가 있는 것은 1개,
     PID 는 0개다. 마커는 "지도에 점을 찍었다"는 뜻일 뿐이고, 구역을 담당하는
     장치는 보통 구역 폴리곤이나 시설 설비에 매여 있다.
+
+    바인딩은 두 갈래다:
+
+    · `spatial_kind='shape'` — 도형(구역 폴리곤·시설 외형)에 **직접** 맡긴 장치.
+    · `spatial_id='<시설>:<설비>'` — 시설 **안의 설비**(측창·도어·관수밸브 …)에
+      매인 장치. 시설을 한 겹 더 들어간 것이다.
+
+    `include_facility_fittings=False` 는 뒤엣것을 뺀다. 필지(site) 모달이 그렇게
+    부른다 — 필지에서 시설 안의 측창까지 늘어놓으면 "여기서 뭘 볼까"가 아니라
+    "여기서 뭘 다 조작할 수 있나"가 되어, 정작 필지 단위로 판단할 것이 묻힌다.
+    설비 액추에이터는 그 시설 모달에서 본다. 앞엣것은 어디서든 유지된다 —
+    구역에 맡긴 밸브는 구역의 것이 맞다.
     """
     from aot.databases.models import GeoBinding, GeoFacility
 
@@ -392,13 +404,14 @@ def _bound_device_ids(shape_uuids):
         GeoBinding.spatial_id.in_(list(shape_uuids)),
         GeoBinding.valid_to.is_(None)).all()}
 
-    facilities = [f.unique_id for f in GeoFacility.query.filter(
-        GeoFacility.shape_uuid.in_(list(shape_uuids))).all()]
-    for fac in facilities:
-        for b in GeoBinding.query.filter(
-                GeoBinding.spatial_id.like(fac + ':%'),
-                GeoBinding.valid_to.is_(None)).all():
-            ids.add(b.device_id)
+    if include_facility_fittings:
+        facilities = [f.unique_id for f in GeoFacility.query.filter(
+            GeoFacility.shape_uuid.in_(list(shape_uuids))).all()]
+        for fac in facilities:
+            for b in GeoBinding.query.filter(
+                    GeoBinding.spatial_id.like(fac + ':%'),
+                    GeoBinding.valid_to.is_(None)).all():
+                ids.add(b.device_id)
     return {i for i in ids if i}
 
 
@@ -442,7 +455,7 @@ def _referencing_device_ids(known):
     return extra
 
 
-def device_ids_in_area(shape_uuid):
+def device_ids_in_area(shape_uuid, include_facility_fittings=True):
     """구역/필지 uuid → 그 안에 속한 장치 id 집합. 도형을 못 찾으면 None.
 
     None 은 "아무것도 없다"가 아니라 **"거르지 않는다"** 이다 — 둘을 같은
@@ -457,6 +470,10 @@ def device_ids_in_area(shape_uuid):
        보통 자기 마커가 없어(그릇만 지도에 놓는다) 1·2 로는 빠지는데, 그러면
        "이 구역의 값"에서 정작 값을 재는 것들이 사라진다.
     4. **참조** — 위에서 모인 장치를 읽거나 움직이는 PID·함수.
+
+    `include_facility_fittings=False` 는 2 겹에서 **시설 안 설비에 매인 것**만
+    뺀다(`_bound_device_ids` 주석). 그 장치를 참조하는 PID·함수도 따라서 빠진다 —
+    없는 장치를 움직이는 제어기를 목록에 두면 그것대로 읽을 수 없는 화면이 된다.
     """
     from aot.databases.models import Input, Output
 
@@ -466,7 +483,8 @@ def device_ids_in_area(shape_uuid):
 
     inside = _shapes_inside(shape)
     ids = set(device_ids_in_shape(shape))
-    ids |= _bound_device_ids({sh.unique_id for sh in inside})
+    ids |= _bound_device_ids({sh.unique_id for sh in inside},
+                             include_facility_fittings=include_facility_fittings)
     ids = {i for i in ids if i}
     if not ids:
         return ids

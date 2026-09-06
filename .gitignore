@@ -71,6 +71,11 @@ aot/databases/migrations/
 
 # --- Node.js ---
 node_modules/
+# 슬래시가 붙은 위 규칙은 **디렉터리만** 막는다. 빌드할 때 다른
+# 체크아웃의 node_modules 를 심링크로 걸어 두는 일이 있는데, 그때는
+# 이름이 같아도 디렉터리가 아니라 걸리지 않아 그대로 커밋된다
+# (2026-09-06 실제로 두 개가 커밋에 딸려 들어갔다).
+node_modules
 
 # --- Claude Code 로컬 설정 (전체 무시) ---
 .claude/
