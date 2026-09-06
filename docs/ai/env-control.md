@@ -474,8 +474,8 @@ own metadata — no extra configuration:
 | Command (%) | on/off relay (60 s cycle) | PWM | volumetric pump (1.5 L/min) |
 |---:|---|---|---|
 | 0 | OFF | duty 0 | OFF |
-| 30 | ON for 18 s | duty 30 | 750 mL/cycle |
-| 100 | ON for 60 s (continuous) | duty 100 | 2,500 mL/cycle |
+| 30 | ON for 18 s | duty 30 | 450 mL/cycle |
+| 100 | ON for 60 s (continuous) | duty 100 | 1,500 mL/cycle |
 
 A wetting-type mister is additionally wrapped in pulse dosing: one spray is cut at the
 maximum on-time, and nothing sprays at all until the drying interval has passed.
