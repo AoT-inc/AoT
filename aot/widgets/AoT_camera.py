@@ -78,11 +78,27 @@ WIDGET_INFORMATION = {
         }
     ],
     
-    'widget_dashboard_body': """
-    <div id="{{each_widget.id}}-container" class="camera-container" style="width:100%; height:100%; background:#000; overflow:hidden; position:relative;">
-        <img id="{{each_widget.id}}-video" src="" style="width:100%; height:100%; object-fit:contain; display:block;">
-        <!-- 라이브 영상 위 HUD 오버레이: 임의 영상 배경 위에서 항상 보이도록 흰색+그림자 고정(테마 무관) -->
-        <div id="{{each_widget.id}}-overlay" style="position:absolute; top:10px; left:10px; color:#fff; font-size:0.8em; text-shadow:1px 1px 2px #000;">
+    'widget_dashboard_body': """<style>
+  /* 영상 뒤 바탕 — 앱 다른 곳의 카메라 미리보기와 같은 색을 쓴다
+     (모달의 카메라 미리보기가 이미 이 토큰을 쓴다). */
+  .aot-camw-stage {
+    width: 100%; height: 100%; position: relative;
+    overflow: hidden;
+    background: var(--camera-preview-bg, #1a1a1a);
+  }
+  .aot-camw-video { width: 100%; height: 100%; object-fit: contain; display: block; }
+  /* HUD 오버레이: **임의의 영상 위**에 얹히므로 테마 토큰을 따르지 않는다 —
+     밝은 장면에서도 읽히도록 흰 글자 + 그림자로 고정한다. 크기만 사다리에서 고른다. */
+  .aot-camw-hud {
+    position: absolute; top: var(--aot-space-2); left: var(--aot-space-2);
+    color: #fff;
+    font-size: var(--aot-fs-caption);
+    text-shadow: 1px 1px 2px #000;
+  }
+</style>
+    <div id="{{each_widget.id}}-container" class="camera-container aot-camw-stage">
+        <img id="{{each_widget.id}}-video" src="" class="aot-camw-video">
+        <div id="{{each_widget.id}}-overlay" class="aot-camw-hud">
             <span id="{{each_widget.id}}-status">{{_('Connecting...')}}</span>
         </div>
     </div>

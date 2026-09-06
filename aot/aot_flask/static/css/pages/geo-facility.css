@@ -363,8 +363,8 @@
 
   /* ── Shared facility content primitives (typography + alignment rules) ──────
      One consistent scale instead of the previous ad-hoc 0.68–0.85rem sprawl:
-       heading rows   → --aot-font-size-base (.95rem)
-       body / labels  → --aot-font-size-sm   (.85rem)
+       heading rows   → --aot-font-size-base (1rem)
+       body / labels  → --aot-font-size-sm   (.875rem)
        hints / meta   → --aot-font-size-xs   (.75rem)
      ──────────────────────────────────────────────────────────────────────── */
 

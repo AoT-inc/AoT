@@ -169,7 +169,10 @@ def widget_variables(widget_unique_id, widget_options):
 
 
 WIDGET_HEAD_HTML = """\
+{% if "css_facility_widget" not in dashboard_dict %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/widget/aot-facility-widget.css') }}">
+{% set _dummy = dashboard_dict.update({"css_facility_widget": 1}) %}
+{% endif %}
 <script>
 if (!window._aotThreeLoaded) {
   window._aotThreeLoaded = true;
@@ -189,8 +192,10 @@ if (!window._aotFacility3DLoaded) {
 <!-- 위젯 비가드 스크립트 9개 → 단일 번들(concat+minify, static/js/tools/bundle.mjs: aot-facility-widget).
      three.min/aot-facility-3d 가드 로드는 위에 그대로 유지(AoT_map 위젯과 공유 가드). 소스 수정 시 npm run build:bundles 후 위젯 재생성. -->
 <script src="{{ asset('aot-facility-widget') }}"></script>
+{% if "css_sensor_label" not in dashboard_dict %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/widget/aot-sensor-label.css') }}">
-<link rel="stylesheet" href="{{ url_for('static', filename='css/components/aot-toggle.css') }}">
+{% set _dummy = dashboard_dict.update({"css_sensor_label": 1}) %}
+{% endif %}
 """
 
 WIDGET_BODY_HTML = """\
@@ -560,9 +565,7 @@ WIDGET_INFORMATION = {
     ],
 
     'widget_dashboard_head': WIDGET_HEAD_HTML,
-    'widget_dashboard_title_bar': """
-    <span class="aot-w-title" style="padding-right:0.5em">{{each_widget.name}}</span>
-    """,
+    'widget_dashboard_title_bar': """""",
     'widget_dashboard_body': WIDGET_BODY_HTML,
     'widget_dashboard_js_ready': '',
     'widget_dashboard_js_ready_end': '',

@@ -295,7 +295,7 @@ WIDGET_INFORMATION = {
 
     'widget_dashboard_head': """<!-- No head content -->""",
 
-    'widget_dashboard_title_bar': """<span class="aot-w-title" style="padding-right:0.5em">{% if widget_options['enable_timestamp'] %}<span id="{{each_widget.id}}-timestamp"></span> {% endif %}{{each_widget.name}}</span>""",
+    'widget_dashboard_title_bar': """{#- 이름은 셸이 렌더한다. 여기는 이름 옆 촬영 시각(캡션)만. -#}{% if widget_options['enable_timestamp'] %}<span class="aot-w-caption" id="{{each_widget.id}}-timestamp"></span>{% endif %}""",
 
     'widget_dashboard_body': """
 <span id="{{each_widget.id}}-error"></span>

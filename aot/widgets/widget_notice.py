@@ -130,7 +130,7 @@ WIDGET_INFORMATION = {
   }
   .aot-notice-widget-post:last-child { margin-bottom: 0; }
   .aot-notice-widget-title {
-    font-weight: 700; font-size: 0.9rem;
+    font-weight: 700; font-size: var(--aot-font-size-sm);
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   }
   .aot-notice-widget-title a {
@@ -138,15 +138,18 @@ WIDGET_INFORMATION = {
     display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   }
   .aot-notice-widget-title a:hover { text-decoration: underline; }
-  .aot-notice-widget-meta { font-size: 0.7rem; color: var(--aot-color-text-secondary, #6c757d); margin-top: 2px; }
+  .aot-notice-widget-meta { font-size: var(--aot-font-size-2xs); color: var(--aot-color-text-secondary, #6c757d); margin-top: 2px; }
+  /* 분류 배지: 글자색을 본문색으로 올린다. 보조색(#5E6B64)을 밝은 칩 배경
+     (#f1f3f5) 위 10.88px 로 쓰면 대비 4.41:1 로 AA(4.5:1)에 아슬하게 못 미쳤다.
+     크기도 0.68rem 이라는 사다리 밖 값이었다 — 2xs(0.7rem)로 맞춘다. */
   .aot-notice-widget-category-badge {
-    display: inline-block; font-size: 0.68rem; font-weight: 700;
+    display: inline-block; font-size: var(--aot-font-size-2xs); font-weight: 700;
     padding: 0.1rem 0.5rem; border-radius: 9999px;
-    background: var(--aot-surface-body, #f1f3f5); color: var(--aot-color-text-secondary, #6c757d);
+    background: var(--aot-surface-body, #f1f3f5); color: var(--aot-color-text-primary, #13261B);
   }
 
   .aot-notice-widget-modal-body {
-    font-size: 0.9rem; line-height: 1.6; white-space: normal;
+    font-size: var(--aot-font-size-sm); line-height: 1.6; white-space: normal;
     color: var(--aot-color-text-primary, #212529);
   }
   .aot-notice-widget-modal-body .aot-notice-embed-video iframe { width: 100%; max-width: 480px; aspect-ratio: 16/9; border-radius: 0.5rem; }
@@ -160,19 +163,19 @@ WIDGET_INFORMATION = {
   .aot-notice-link-preview:hover { background: var(--aot-surface-body, #f8f9fa); }
   .aot-notice-link-preview-image { width: 48px; height: 48px; object-fit: cover; border-radius: 0.4rem; flex-shrink: 0; }
   .aot-notice-link-preview-text { display: flex; flex-direction: column; overflow: hidden; }
-  .aot-notice-link-preview-title { font-weight: 700; font-size: 0.85rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .aot-notice-link-preview-desc { font-size: 0.76rem; color: var(--aot-color-text-secondary, #6c757d); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .aot-notice-link-preview-domain { font-size: 0.7rem; color: var(--aot-color-text-secondary, #6c757d); margin-top: 2px; }
+  .aot-notice-link-preview-title { font-weight: 700; font-size: var(--aot-font-size-sm); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .aot-notice-link-preview-desc { font-size: var(--aot-font-size-xs); color: var(--aot-color-text-secondary, #6c757d); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .aot-notice-link-preview-domain { font-size: var(--aot-font-size-2xs); color: var(--aot-color-text-secondary, #6c757d); margin-top: 2px; }
   .aot-notice-widget-poll-row {
     display: flex; align-items: center; justify-content: space-between;
-    font-size: 0.85rem; padding: 0.4rem 0.6rem; border: 1px solid var(--border-neutral, #dee2e6);
+    font-size: var(--aot-font-size-sm); padding: 0.4rem 0.6rem; border: 1px solid var(--border-neutral, #dee2e6);
     border-radius: 0.5rem; margin-bottom: 0.35rem; cursor: pointer;
   }
   .aot-notice-widget-poll-row.selected { border-color: var(--bd-tertiary, #13261B); background: var(--aot-surface-body, #f8f9fa); }
   .aot-notice-widget-poll-bar-track { height: 5px; border-radius: 3px; background: var(--aot-surface-body, #e9ecef); margin-top: 3px; overflow: hidden; }
   .aot-notice-widget-poll-bar-fill { height: 100%; background: var(--bd-tertiary, #13261B); }
-  .aot-notice-widget-reply-item { padding: 0.4rem 0; border-bottom: 1px solid var(--border-neutral, #f1f1f1); font-size: 0.85rem; }
-  .aot-notice-widget-reply-meta { font-size: 0.72rem; color: var(--aot-color-text-secondary, #6c757d); }
+  .aot-notice-widget-reply-item { padding: 0.4rem 0; border-bottom: 1px solid var(--border-neutral, #f1f1f1); font-size: var(--aot-font-size-sm); }
+  .aot-notice-widget-reply-meta { font-size: var(--aot-font-size-2xs); color: var(--aot-color-text-secondary, #6c757d); }
   .aot-notice-widget-reply-input-row { display: flex; gap: 6px; margin-top: 0.5rem; }
   .aot-notice-widget-reply-input-row input { flex: 1; }
 
@@ -205,14 +208,16 @@ WIDGET_INFORMATION = {
   }
 </style>""",
 
-    'widget_dashboard_title_bar': """<span class="widget-title-bar aot-w-title">{{each_widget.name}}</span>
+    'widget_dashboard_title_bar': """{#- 이름은 셸이 렌더한다. 여기는 제목줄 오른쪽 도구만. -#}
 {% if permission_edit_settings %}
 <div class="widget-map-controls" id="notice-widget-header-controls-{{each_widget.unique_id}}">
-    <a class="widget-map-ctrl-btn" id="notice-widget-new-btn-{{each_widget.unique_id}}" title="{{_('New Post')}}">
+    <a class="aot-w-tool widget-map-ctrl-btn" id="notice-widget-new-btn-{{each_widget.unique_id}}"
+       role="button" tabindex="0" aria-label="{{_('New Post')}}" title="{{_('New Post')}}">
         <i class="fas fa-plus"></i>
     </a>
 </div>
-{% endif %}""",
+{% endif %}
+""",
 
     'widget_dashboard_body': """
 <div class="aot-notice-widget-outer">
@@ -298,7 +303,7 @@ WIDGET_INFORMATION = {
           <div class="aot-modal-container d-none notice-widget-poll-section">
             <div class="d-flex justify-content-between align-items-center">
               <div class="aot-modal-section-title" style="margin-top:0.6rem;">{{_('Poll')}}</div>
-              <button type="button" class="btn aot-pill-btn notice-widget-poll-remove-btn" style="min-width:auto; padding:0 10px; height:26px; font-size:0.72rem;">{{_('Remove Poll')}}</button>
+              <button type="button" class="btn aot-pill-btn notice-widget-poll-remove-btn">{{_('Remove Poll')}}</button>
             </div>
             <div class="aot-modal-option-row aot-full-width-row">
               <label class="aot-modal-option-label">{{_('Question')}}</label>

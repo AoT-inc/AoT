@@ -57,6 +57,22 @@ from aot.utils.constraints_pass import constraints_pass_positive_value
 
 logger = logging.getLogger(__name__)
 
+
+def _band_palette():
+    """측정 5단 밴드 팔레트 — 앱 전체가 쓰는 단일 소스(사용자 오버레이 포함).
+
+    `aot/config` 의 BAND_PALETTE 가 정본이고, `get_band_palette()` 가 거기에
+    settings/custom_ui 의 band_1..5 를 얹어 항상 5색을 돌려준다. 위젯 파일에
+    같은 색을 다시 적어 두면 사용자가 색을 바꿔도 그 위젯만 안 따라온다.
+    """
+    try:
+        from aot.aot_flask.utils.utils_theme import get_band_palette
+        return get_band_palette()
+    except Exception:
+        # 앱 컨텍스트 밖(테스트·마이그레이션)에서는 오버레이 없이 기본값만.
+        from aot.config import BAND_PALETTE
+        return list(BAND_PALETTE)
+
 def execute_at_creation(error, new_widget, dict_widget):
     """ On widget creation, override min/max/colors etc. based on preset_config """
     custom_options_json = json.loads(new_widget.custom_options)
@@ -65,12 +81,7 @@ def execute_at_creation(error, new_widget, dict_widget):
     preset = custom_options_json.get('preset_config', 'custom')
 
     # 2) Default custom color list
-    # Global 5-band measurement palette (--aot-band-1..5) + custom_ui band_1..5 오버레이
-    try:
-        from aot.aot_flask.utils.utils_theme import get_band_palette
-        color_list = get_band_palette()
-    except Exception:
-        color_list = ["#2DB4FF", "#54BCC1", "#32c85a", "#FEAE5F", "#CF5C58"]
+    color_list = _band_palette()
 
     # 3) Override min/max, color array etc. based on the preset
     if preset == 'temperature':
@@ -178,13 +189,9 @@ def generate_page_variables(widget_unique_id, widget_options):
     band_palette = None
     preset = widget_options.get('preset_config', 'custom')
     if preset in ('temperature', 'humidity', 'vpd'):
-        try:
-            from aot.aot_flask.utils.utils_theme import get_band_palette
-            band_palette = get_band_palette()
-            if preset == 'humidity':
-                band_palette = list(reversed(band_palette))
-        except Exception:
-            band_palette = None
+        band_palette = _band_palette()
+        if preset == 'humidity':
+            band_palette = list(reversed(band_palette))
 
     try:
         if 'range_colors' in widget_options and widget_options['range_colors']:
@@ -285,6 +292,11 @@ WIDGET_INFORMATION = {
             'phrase': lazy_gettext('Set the number of decimal places to display')
         },
         {
+            'type': 'header',
+            'name': lazy_gettext('Color Sections')
+        },
+
+        {
             'id': 'min',
             'type': 'float',
             'default_value': 0,
@@ -319,6 +331,12 @@ WIDGET_INFORMATION = {
             'phrase': lazy_gettext('Selecting a preset configuration automatically applies default settings such as min/max values. Preset gauges follow the global band colors (Settings > Custom UI); choose Custom to set individual section colors.')
         },
         {
+            'type': 'collapse_start',
+            'id': 'appearance',
+            'name': lazy_gettext('Appearance')
+        },
+
+        {
             # Data font size
             'id': 'text_font_size',
             'type': 'float',
@@ -348,6 +366,9 @@ WIDGET_INFORMATION = {
             'default_value': 30,
             'name': lazy_gettext('Data Position Offset'),
             'phrase': lazy_gettext('Set the vertical position offset of the data text inside the gauge (numeric only).')
+        },
+        {
+            'type': 'collapse_end'
         }        
     ],
 
@@ -361,7 +382,7 @@ WIDGET_INFORMATION = {
 {% endif %}
 """,
 
-    'widget_dashboard_title_bar': """<span class="aot-w-title" style="padding-right:0.5em">{{each_widget.name}}</span>""",
+    'widget_dashboard_title_bar': """""",
 
     # Actual widget display area
     'widget_dashboard_body': """<div class="not-draggable" id="container-gauge-{{each_widget.unique_id}}" style="position: absolute; left: 0; top: 0; bottom: 0; right: 0; overflow: hidden;"></div>""",
@@ -369,49 +390,68 @@ WIDGET_INFORMATION = {
     # Section for editing color ranges on the settings screen
     # The "range end" field is completely removed. Only range start and color are shown
     'widget_dashboard_configure_options': """
-        {% for n in range(widget_variables['colors_gauge_angular']|length) %}
-          {% set index = '{0:0>2}'.format(n) %}
-        <div class="form-row">
-          <div class="col-auto">
-            <label class="control-label" for="color_low_number{{index}}">[{{n}}] {{_('Section Start')}}</label>
-            <div>
-              <input class="form-control" id="color_low_number{{index}}" name="color_low_number{{index}}" type="text" value="{{widget_variables['colors_gauge_angular'][n]['low']}}">
-            </div>
-          </div>
-          <div class="col-auto">
-            <label class="control-label" for="color_hex_number{{index}}">[{{n}}] {{_('Color')}}</label>
-            <div>
-              <input id="color_hex_number{{index}}" name="color_hex_number{{index}}" placeholder="#000000" type="color" value="{{widget_variables['colors_gauge_angular'][n]['hex']}}">
-            </div>
-          </div>
-        </div>
-        {% endfor %}
-        {# 역방향 저장: 이 위젯의 구간색(앞 5개)을 전역 밴드 색(custom_ui band_1..5)으로 #}
-        <div class="form-row" style="margin-top: 8px;">
-          <div class="col-auto">
-            <button type="button" class="btn aot-pill-btn"
-                    onclick="(function(btn){
-                      var colors = [];
-                      for (var i = 0; i < 5; i++) {
-                        var el = document.getElementById('color_hex_number0' + i);
-                        if (el && el.value) colors.push(el.value);
-                      }
-                      if (!colors.length) return;
-                      var csrf = document.querySelector('input[name=csrf_token]');
-                      fetch('/settings/custom_ui/global_colors', {
-                        method: 'POST',
-                        headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrf ? csrf.value : ''},
-                        body: JSON.stringify({kind: 'band', colors: colors})
-                      }).then(function(r){ return r.json().then(function(d){ return r.ok ? d : Promise.reject(new Error(d.error || 'failed')); }); })
-                        .then(function(){ if (window.toastr) toastr.success('{{_('Saved as global band colors')}}'); })
-                        .catch(function(e){ if (window.toastr) toastr.error(e.message); else alert(e.message); });
-                    })(this)">{{_('Save as Global Band Colors')}}</button>
-            <span class="aot-modal-body-text">{{_('Applies the first 5 section colors to Settings > Custom UI band colors.')}}</span>
-          </div>
-        </div>
+<div class="aot-modal-section-title">{{_('Color Sections')}}</div>
+<div class="aot-modal-container">
+{#- 구간 수는 사용자가 정하므로(옵션 `stops`) 이 칸들은 custom_options 로
+    선언할 수 없다 — 여기서 직접 그린다. 다만 **모양은 표준 옵션 행**을 쓴다.
+    예전에는 부트스트랩 `form-row`/`col-auto`/`control-label` 이라, 같은 모달
+    위쪽의 다른 설정들과 행 높이·라벨 정렬·입력칸 모양이 달랐다. -#}
+{% for n in range(widget_variables['colors_gauge_angular']|length) %}
+  {% set index = '{0:0>2}'.format(n) %}
+<div class="aot-modal-option-row">
+  <label class="aot-modal-option-label" for="color_low_number{{index}}">{{_('Section')}} {{ n + 1 }}</label>
+  <div class="aot-modal-option-control">
+    <input class="form-control aot-modern-input aot-gauge-stop-input"
+           id="color_low_number{{index}}" name="color_low_number{{index}}" type="text"
+           value="{{widget_variables['colors_gauge_angular'][n]['low']}}"
+           aria-label="{{_('Section Start')}}" title="{{_('Section Start')}}">
+    <input type="color" id="color_hex_number{{index}}" name="color_hex_number{{index}}"
+           value="{{widget_variables['colors_gauge_angular'][n]['hex']}}"
+           aria-label="{{_('Color')}}" title="{{_('Color')}}">
+  </div>
+</div>
+{% endfor %}
+{#- 역방향 저장: 이 위젯의 구간색(앞 5개)을 전역 밴드 색(custom_ui band_1..5)으로 -#}
+<div class="aot-modal-option-row aot-modal-option-row-wrap">
+  <label class="aot-modal-option-label">{{_('Global Band Colors')}}</label>
+  <div class="aot-modal-option-control">
+    <button type="button" class="btn aot-pill-btn"
+            onclick="(function(btn){
+              var colors = [];
+              for (var i = 0; i < 5; i++) {
+                var el = document.getElementById('color_hex_number0' + i);
+                if (el && el.value) colors.push(el.value);
+              }
+              if (!colors.length) return;
+              var csrf = document.querySelector('input[name=csrf_token]');
+              fetch('/settings/custom_ui/global_colors', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrf ? csrf.value : ''},
+                body: JSON.stringify({kind: 'band', colors: colors})
+              }).then(function(r){ return r.json().then(function(d){ return r.ok ? d : Promise.reject(new Error(d.error || 'failed')); }); })
+                .then(function(){ if (window.toastr) toastr.success('{{_('Saved as global band colors')}}'); })
+                .catch(function(e){ if (window.toastr) toastr.error(e.message); else alert(e.message); });
+            })(this)">{{_('Save as Global Band Colors')}}</button>
+  </div>
+  <div class="aot-modal-body-text">{{_('Applies the first 5 section colors to Settings > Custom UI band colors.')}}</div>
+</div>
+</div>
     """,
 
     'widget_dashboard_js': """
+  /* 테마 토큰을 색 문자열로 읽는다.
+     Highcharts 는 아래 색들을 SVG 표현속성(stroke/fill)으로 넣기 때문에
+     `var(--…)` 를 그대로 주면 풀리지 않는다. 여기서 한 번 계산해 넘긴다.
+     테마별 값은 aot-theme-variables.css / custom-dark.css 가 갖고 있다. */
+  window.aotThemeColor = window.aotThemeColor || function (name, fallback) {
+    try {
+      var v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+      return v || fallback;
+    } catch (e) {
+      return fallback;
+    }
+  };
+
   function getLastDataGaugeAngular(widget_id,
                        unique_id,
                        measure_type,
@@ -542,21 +582,21 @@ WIDGET_INFORMATION = {
           y: 20
         },
 
-        minColor: "#3e3f46",
-        maxColor: "#3e3f46",
+        minColor: aotThemeColor('--aot-gauge-dial', '#3e3f46'),
+        maxColor: aotThemeColor('--aot-gauge-dial', '#3e3f46'),
 
         minorTickInterval: 'auto',
         minorTickWidth: 0,
         minorTickLength: 0,
         minorTickPosition: 'inside',
-        minorTickColor: '#666',
+        minorTickColor: aotThemeColor('--aot-gauge-tick', '#666666'),
 
         tickPixelInterval: 50,
         tickWidth: 0,
         
         tickPosition: 'inside',
         tickLength: 0,
-        tickColor: '#666',
+        tickColor: aotThemeColor('--aot-gauge-tick', '#666666'),
 
         labels: {
             step: 2,
@@ -617,7 +657,9 @@ WIDGET_INFORMATION = {
         y: {{ widget_options.get("text_y_offset", 30) }},
         formatter: function() {
           var dec = {{ widget_options.get("decimal_places", 1) }};
-          var val = (this.y === null) ? '' : Highcharts.numberFormat(this.y, dec);
+          // 값이 없으면 **빈 칸이 아니라 대시**. 빈 칸은 "0" 인지 "센서가
+          // 죽었" 는지 "아직 안 왔" 는지를 구분해 주지 못한다.
+          var val = (this.y === null) ? '—' : Highcharts.numberFormat(this.y, dec);
           var dataFontSize = {{ widget_options.get("text_font_size", 1.5) }};
           var unitFontSize = {{ widget_options.get("unit_font_size", 0.7) }};
           // Get the unit the existing way
@@ -630,13 +672,17 @@ WIDGET_INFORMATION = {
                 'N/A'
               {%- endif -%}
           {% endif %};
+          if (this.y === null) {
+            // 값이 없는데 단위만 남으면 ("— °C") 읽는 사람이 값을 찾게 된다.
+            return '<span class="aot-w-nodata" style="font-size:var(--aot-fs-value)">' + val + '</span>';
+          }
           return '<span style="font-size:var(--aot-fs-value)">' + val + '</span>' +
                 '<span style="font-size:var(--aot-fs-unit);margin-left:0.2em">' + unitLabel + '</span>';
         }
       },
       yAxis: 0,
       dial: {
-        backgroundColor: '{% if current_user.theme in dark_themes %}#e3e4f4{% else %}#3e3f46{% endif %}',
+        backgroundColor: aotThemeColor('--aot-gauge-dial', '#3e3f46'),
         baseWidth: 5
       },
       tooltip: {
@@ -727,12 +773,14 @@ def gauge_reformat_stops(current_stops, new_stops, current_colors=None):
     if current_stops is None:
         current_stops = 5  # Default value
     
+    palette = _band_palette()
+
     if current_colors:
+        # 사용자가 이미 고른 색이 있으면 **그대로 둔다** — 팔레트로 덮지 않는다.
         colors = current_colors
     else:
-        # Default example of 5 colors (when newly added)
-        # Global 5-band measurement palette (aot-theme-variables.css --aot-band-1..5)
-        colors = ['0,20,#2DB4FF', '20,40,#54BCC1', '40,60,#32c85a', '60,80,#FEAE5F', '80,100,#CF5C58']
+        # 새로 추가하는 게이지에만 팔레트 기본값을 쓴다(5단, 0~100 균등).
+        colors = [f"{i * 20},{(i + 1) * 20},{c}" for i, c in enumerate(palette)]
 
     if new_stops > current_stops:
         try:
@@ -741,7 +789,7 @@ def gauge_reformat_stops(current_stops, new_stops, current_colors=None):
             stop = 80
         for _ in range(new_stops - current_stops):
             stop += 20
-            colors.append(f"{stop - 20},{stop},#CF5C58")
+            colors.append(f"{stop - 20},{stop},{palette[-1]}")
 
     elif new_stops < current_stops:
         colors = colors[:len(colors) - (current_stops - new_stops)]

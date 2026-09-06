@@ -1,7 +1,7 @@
 # 코디네이터가 구획에서 목표를 가져온다
 
 `env_coordinator` 와 관리 프로그램(`GeoProgram`)의 접점. 정본 둘을 잇는 문서이고
-양쪽 정본은 각각 `program-layer.md`(프로그램) · `env_coordinator_user_guide.md`
+양쪽 정본은 각각 `program-layer.md`(프로그램) · `../ai/env-control.md`
 (코디네이터)다.
 
 ---

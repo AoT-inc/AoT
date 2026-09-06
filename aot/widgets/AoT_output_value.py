@@ -88,16 +88,26 @@ WIDGET_INFORMATION = {
     ],
 
     'widget_dashboard_head': """
+{% if "css_facility_widget" not in dashboard_dict %}
+{% if "css_facility_widget" not in dashboard_dict %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/widget/aot-facility-widget.css') }}">
+{% set _dummy = dashboard_dict.update({"css_facility_widget": 1}) %}
+{% endif %}
+{% set _dummy = dashboard_dict.update({"css_facility_widget": 1}) %}
+{% endif %}
+{% if "css_sensor_label" not in dashboard_dict %}
+{% if "css_sensor_label" not in dashboard_dict %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/widget/aot-sensor-label.css') }}">
+{% set _dummy = dashboard_dict.update({"css_sensor_label": 1}) %}
+{% endif %}
+{% set _dummy = dashboard_dict.update({"css_sensor_label": 1}) %}
+{% endif %}
 <style>
   .aot-value-widget-body { padding: 0.5em 0.75em; height: 100%; }
 </style>
 """,
 
-    'widget_dashboard_title_bar': """
-    <span style="padding-right: 0.5em">{{each_widget.name}}</span>
-""",
+    'widget_dashboard_title_bar': """""",
 
     'widget_dashboard_body': """
 {%- set device_id = widget_options['output'].split(",")[0] -%}
@@ -119,7 +129,9 @@ WIDGET_INFORMATION = {
     <div class="aot-act-meta">
       <span class="aot-act-meta-text" id="value-{{each_widget.unique_id}}">&mdash;</span>
       <span class="aot-act-meta-ctrl">
+        {#- 스크린리더가 읽을 이름 — 없으면 "슬라이더" 로만 읽힌다. -#}
         <input id="range_{{each_widget.unique_id}}" type="range" class="aot-act-slider"
+               aria-label="{{_('Value')}}"
                min="0" max="100" step="1" value="0"
                oninput="AoTOutputValue.onSlide('{{each_widget.unique_id}}', this.value)"
                onchange="AoTOutputValue.onCommand('{{each_widget.unique_id}}', '{{device_id}}', '{{channel_id}}', 'set', this.value)">

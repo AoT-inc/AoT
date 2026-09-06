@@ -52,6 +52,7 @@ Measurements
  - [Pressure](#pressure)
  - [Pulse Width](#pulse-width)
  - [Solar Radiation](#solar-radiation)
+ - [Rain](#rain)
  - [Volume Flow Rate](#volume-flow-rate)
  - [Resistance](#resistance)
  - [Revolutions](#revolutions)
@@ -67,17 +68,17 @@ Measurements
  - [Total Dissolved Solids](#total-dissolved-solids)
  - [Unitless](#unitless)
  - [Ultraviolet Index](#ultraviolet-index)
- - [Vapor Pressure Deficit](#vapor-pressure-deficit)
+ - [VPD](#vpd)
  - [Version](#version)
  - [Visibility](#visibility)
  - [VOC](#voc)
  - [Volume](#volume)
 
-## Acceleration
+## Acceleration {: #acceleration }
 
 ### [Ruuvi: RuuviTag](/AoT/Supported-Inputs/#ruuvi-ruuvitag)
 
-## Acceleration (X)
+## Acceleration (X) {: #acceleration-x }
 
 ### [Analog Devices: ADXL34x (343, 344, 345, 346)](/AoT/Supported-Inputs/#analog-devices-adxl34x-343-344-345-346)
 
@@ -85,7 +86,7 @@ Measurements
 
 ### [Ruuvi: RuuviTag](/AoT/Supported-Inputs/#ruuvi-ruuvitag)
 
-## Acceleration (Y)
+## Acceleration (Y) {: #acceleration-y }
 
 ### [Analog Devices: ADXL34x (343, 344, 345, 346)](/AoT/Supported-Inputs/#analog-devices-adxl34x-343-344-345-346)
 
@@ -93,7 +94,7 @@ Measurements
 
 ### [Ruuvi: RuuviTag](/AoT/Supported-Inputs/#ruuvi-ruuvitag)
 
-## Acceleration (Z)
+## Acceleration (Z) {: #acceleration-z }
 
 ### [Analog Devices: ADXL34x (343, 344, 345, 346)](/AoT/Supported-Inputs/#analog-devices-adxl34x-343-344-345-346)
 
@@ -101,11 +102,11 @@ Measurements
 
 ### [Ruuvi: RuuviTag](/AoT/Supported-Inputs/#ruuvi-ruuvitag)
 
-## ADC
+## ADC {: #adc }
 
 ### [AMS: AS7262](/AoT/Supported-Inputs/#ams-as7262)
 
-## Altitude
+## Altitude {: #altitude }
 
 ### [BOSCH: BME280 (Adafruit_BME280)](/AoT/Supported-Inputs/#bosch-bme280-adafruit_bme280)
 
@@ -125,11 +126,11 @@ Measurements
 
 ### [Senseair: K96](/AoT/Supported-Inputs/#senseair-k96)
 
-## Angle
+## Angle {: #angle }
 
 ### [Raspberry Pi Foundation: Sense HAT](/AoT/Supported-Inputs/#raspberry-pi-foundation-sense-hat)
 
-## Battery
+## Battery {: #battery }
 
 ### [Ecowitt: Ecowitt Cloud API Weather Data](/AoT/Supported-Inputs/#ecowitt-ecowitt-cloud-api-weather-data)
 
@@ -145,7 +146,7 @@ Measurements
 
 ### [Xiaomi: Mijia LYWSD03MMC (ATC and non-ATC modes)](/AoT/Supported-Inputs/#xiaomi-mijia-lywsd03mmc-atc-and-non-atc-modes)
 
-## Boolean
+## Boolean {: #boolean }
 
 ### [AoT: Output State (On/Off)](/AoT/Supported-Inputs/#aot-output-state-on-off)
 
@@ -153,7 +154,7 @@ Measurements
 
 ### [AoT: Server Port Open](/AoT/Supported-Inputs/#aot-server-port-open)
 
-## Carbon Dioxide
+## Carbon Dioxide {: #carbon-dioxide }
 
 ### [AMS: CCS811 (with Temperature)](/AoT/Supported-Inputs/#ams-ccs811-with-temperature)
 
@@ -181,43 +182,43 @@ Measurements
 
 ### [Winsen: MH-Z19B](/AoT/Supported-Inputs/#winsen-mh-z19b)
 
-## Color (Y)
+## Color (Y) {: #color-y }
 
 ### [Atlas Scientific: Atlas Color](/AoT/Supported-Inputs/#atlas-scientific-atlas-color)
 
-## Color (Blue)
+## Color (Blue) {: #color-blue }
 
 ### [Atlas Scientific: Atlas Color](/AoT/Supported-Inputs/#atlas-scientific-atlas-color)
 
-## Color (Green)
+## Color (Green) {: #color-green }
 
 ### [Atlas Scientific: Atlas Color](/AoT/Supported-Inputs/#atlas-scientific-atlas-color)
 
-## Color (Red)
+## Color (Red) {: #color-red }
 
 ### [Atlas Scientific: Atlas Color](/AoT/Supported-Inputs/#atlas-scientific-atlas-color)
 
-## Color (x)
+## Color (x) {: #color-x }
 
 ### [Atlas Scientific: Atlas Color](/AoT/Supported-Inputs/#atlas-scientific-atlas-color)
 
-## Color (y)
+## Color (y) {: #color-y }
 
 ### [Atlas Scientific: Atlas Color](/AoT/Supported-Inputs/#atlas-scientific-atlas-color)
 
-## CPU Load (15 Minutes)
+## CPU Load (15 Minutes) {: #cpu-load-15-minutes }
 
 ### [AoT: CPU Load](/AoT/Supported-Inputs/#aot-cpu-load)
 
-## CPU Load (1 Minute)
+## CPU Load (1 Minute) {: #cpu-load-1-minute }
 
 ### [AoT: CPU Load](/AoT/Supported-Inputs/#aot-cpu-load)
 
-## CPU Load (5 Minutes)
+## CPU Load (5 Minutes) {: #cpu-load-5-minutes }
 
 ### [AoT: CPU Load](/AoT/Supported-Inputs/#aot-cpu-load)
 
-## Dewpoint
+## Dewpoint {: #dewpoint }
 
 ### [AOSONG: AM2315/AM2320](/AoT/Supported-Inputs/#aosong-am2315-am2320)
 
@@ -248,6 +249,8 @@ Measurements
 ### [KMA: KMA High-Resolution 500m](/AoT/Supported-Inputs/#kma-kma-high-resolution-500m)
 
 ### [KMA: KMA Station Data](/AoT/Supported-Inputs/#kma-kma-station-data)
+
+### [Open-Meteo: Open-Meteo (Coords, Hourly incl. Solar)](/AoT/Supported-Inputs/#open-meteo-open-meteo-coords-hourly-incl-solar)
 
 ### [OpenWeather: OpenWeatherMap (City/Coords, Current)](/AoT/Supported-Inputs/#openweather-openweathermap-city-coords-current)
 
@@ -293,7 +296,7 @@ Measurements
 
 ### [Texas Instruments: HDC1000](/AoT/Supported-Inputs/#texas-instruments-hdc1000)
 
-## Direction
+## Direction {: #direction }
 
 ### [Ecowitt: Ecowitt Cloud API Weather Data](/AoT/Supported-Inputs/#ecowitt-ecowitt-cloud-api-weather-data)
 
@@ -303,23 +306,25 @@ Measurements
 
 ### [KMA: KMA Station Data](/AoT/Supported-Inputs/#kma-kma-station-data)
 
+### [Open-Meteo: Open-Meteo (Coords, Hourly incl. Solar)](/AoT/Supported-Inputs/#open-meteo-open-meteo-coords-hourly-incl-solar)
+
 ### [OpenWeather: OpenWeatherMap (City/Coords, Current)](/AoT/Supported-Inputs/#openweather-openweathermap-city-coords-current)
 
 ### [OpenWeather: OpenWeatherMap (Lat/Lon, Current/Future)](/AoT/Supported-Inputs/#openweather-openweathermap-lat-lon-current-future)
 
 ### [Raspberry Pi Foundation: Sense HAT](/AoT/Supported-Inputs/#raspberry-pi-foundation-sense-hat)
 
-## Disk
+## Disk {: #disk }
 
 ### [AoT: Free Space](/AoT/Supported-Inputs/#aot-free-space)
 
 ### [AoT: System and AoT RAM](/AoT/Supported-Inputs/#aot-system-and-aot-ram)
 
-## Dissolved Oxygen
+## Dissolved Oxygen {: #dissolved-oxygen }
 
 ### [Atlas Scientific: Atlas DO](/AoT/Supported-Inputs/#atlas-scientific-atlas-do)
 
-## Duration
+## Duration {: #duration }
 
 ### [AoT: Uptime](/AoT/Supported-Inputs/#aot-uptime)
 
@@ -327,15 +332,15 @@ Measurements
 
 ### [RAKwireless: RAK3172 Valve Controller: Heartbeat (ChirpStack MQTT)](/AoT/Supported-Inputs/#rakwireless-rak3172-valve-controller-heartbeat-chirpstack-mqtt)
 
-## Duty Cycle
+## Duty Cycle {: #duty-cycle }
 
 ### [Raspberry Pi: Signal (PWM)](/AoT/Supported-Inputs/#raspberry-pi-signal-pwm)
 
-## GPIO Edge
+## GPIO Edge {: #gpio-edge }
 
 ### [Raspberry Pi: Edge Detection](/AoT/Supported-Inputs/#raspberry-pi-edge-detection)
 
-## Electrical Conductivity
+## Electrical Conductivity {: #electrical-conductivity }
 
 ### [AnyLeaf: AnyLeaf EC](/AoT/Supported-Inputs/#anyleaf-anyleaf-ec)
 
@@ -347,7 +352,7 @@ Measurements
 
 ### [Xiaomi: Miflora](/AoT/Supported-Inputs/#xiaomi-miflora)
 
-## Electrical Current
+## Electrical Current {: #electrical-current }
 
 ### [Power Monitor: RPi 6-Channel Power Monitor (v0.1.0)](/AoT/Supported-Inputs/#power-monitor-rpi-6-channel-power-monitor-v010)
 
@@ -361,7 +366,7 @@ Measurements
 
 ### [Texas Instruments: INA219x](/AoT/Supported-Inputs/#texas-instruments-ina219x)
 
-## Electrical Potential
+## Electrical Potential {: #electrical-potential }
 
 ### [Microchip: MCP3008 (Adafruit_CircuitPython_MCP3xxx)](/AoT/Supported-Inputs/#microchip-mcp3008-adafruit_circuitpython_mcp3xxx)
 
@@ -393,7 +398,7 @@ Measurements
 
 ### [Texas Instruments: INA219x](/AoT/Supported-Inputs/#texas-instruments-ina219x)
 
-## Energy
+## Energy {: #energy }
 
 ### [Power Monitor: RPi 6-Channel Power Monitor (v0.4.0)](/AoT/Supported-Inputs/#power-monitor-rpi-6-channel-power-monitor-v040)
 
@@ -401,15 +406,15 @@ Measurements
 
 ### [Tasmota: Tasmota Outlet Energy Monitor (HTTP)](/AoT/Supported-Inputs/#tasmota-tasmota-outlet-energy-monitor-http)
 
-## Frequency
+## Frequency {: #frequency }
 
 ### [Raspberry Pi: Signal (PWM)](/AoT/Supported-Inputs/#raspberry-pi-signal-pwm)
 
-## GPIO State
+## GPIO State {: #gpio-state }
 
 ### [Raspberry Pi: GPIO State](/AoT/Supported-Inputs/#raspberry-pi-gpio-state)
 
-## Humidity
+## Humidity {: #humidity }
 
 ### [AOSONG: AM2315/AM2320](/AoT/Supported-Inputs/#aosong-am2315-am2320)
 
@@ -447,6 +452,8 @@ Measurements
 
 ### [KMA: KMA Station Data](/AoT/Supported-Inputs/#kma-kma-station-data)
 
+### [Open-Meteo: Open-Meteo (Coords, Hourly incl. Solar)](/AoT/Supported-Inputs/#open-meteo-open-meteo-coords-hourly-incl-solar)
+
 ### [OpenWeather: OpenWeatherMap (City/Coords, Current)](/AoT/Supported-Inputs/#openweather-openweathermap-city-coords-current)
 
 ### [OpenWeather: OpenWeatherMap (Lat/Lon, Current/Future)](/AoT/Supported-Inputs/#openweather-openweathermap-lat-lon-current-future)
@@ -495,7 +502,7 @@ Measurements
 
 ### [Xiaomi: Mijia LYWSD03MMC (ATC and non-ATC modes)](/AoT/Supported-Inputs/#xiaomi-mijia-lywsd03mmc-atc-and-non-atc-modes)
 
-## Ion Concentration
+## Ion Concentration {: #ion-concentration }
 
 ### [AnyLeaf: AnyLeaf pH](/AoT/Supported-Inputs/#anyleaf-anyleaf-ph)
 
@@ -505,7 +512,7 @@ Measurements
 
 ### [Texas Instruments: ADS1256: Generic Analog pH/EC](/AoT/Supported-Inputs/#texas-instruments-ads1256-generic-analog-ph-ec)
 
-## Length
+## Length {: #length }
 
 ### [Atlas Scientific: Atlas Color](/AoT/Supported-Inputs/#atlas-scientific-atlas-color)
 
@@ -519,7 +526,7 @@ Measurements
 
 ### [Silicon Labs: SI1145](/AoT/Supported-Inputs/#silicon-labs-si1145)
 
-## Light
+## Light {: #light }
 
 ### [AMS: TSL2561](/AoT/Supported-Inputs/#ams-tsl2561)
 
@@ -529,6 +536,8 @@ Measurements
 
 ### [Catnip Electronics: Chirp](/AoT/Supported-Inputs/#catnip-electronics-chirp)
 
+### [Open-Meteo: Open-Meteo (Coords, Hourly incl. Solar)](/AoT/Supported-Inputs/#open-meteo-open-meteo-coords-hourly-incl-solar)
+
 ### [ROHM: BH1750](/AoT/Supported-Inputs/#rohm-bh1750)
 
 ### [Silicon Labs: SI1145](/AoT/Supported-Inputs/#silicon-labs-si1145)
@@ -537,17 +546,17 @@ Measurements
 
 ### [ams: AS7341](/AoT/Supported-Inputs/#ams-as7341)
 
-## Magnetic Flux Density
+## Magnetic Flux Density {: #magnetic-flux-density }
 
 ### [Melexis: MLX90393](/AoT/Supported-Inputs/#melexis-mlx90393)
 
 ### [Raspberry Pi Foundation: Sense HAT](/AoT/Supported-Inputs/#raspberry-pi-foundation-sense-hat)
 
-## Methane
+## Methane {: #methane }
 
 ### [Senseair: K96](/AoT/Supported-Inputs/#senseair-k96)
 
-## Moisture
+## Moisture {: #moisture }
 
 ### [Adafruit: I2C Capacitive Moisture Sensor](/AoT/Supported-Inputs/#adafruit-i2c-capacitive-moisture-sensor)
 
@@ -557,29 +566,29 @@ Measurements
 
 ### [Xiaomi: Miflora](/AoT/Supported-Inputs/#xiaomi-miflora)
 
-## Oxygen
+## Oxygen {: #oxygen }
 
 ### [Atlas Scientific: Atlas O2 (Oxygen Gas)](/AoT/Supported-Inputs/#atlas-scientific-atlas-o2-oxygen-gas)
 
-## Oxidation Reduction Potential
+## Oxidation Reduction Potential {: #oxidation-reduction-potential }
 
 ### [AnyLeaf: AnyLeaf ORP](/AoT/Supported-Inputs/#anyleaf-anyleaf-orp)
 
 ### [Atlas Scientific: Atlas ORP](/AoT/Supported-Inputs/#atlas-scientific-atlas-orp)
 
-## PM10
+## PM10 {: #pm10 }
 
 ### [Winsen: ZH03B](/AoT/Supported-Inputs/#winsen-zh03b)
 
-## PM1
+## PM1 {: #pm1 }
 
 ### [Winsen: ZH03B](/AoT/Supported-Inputs/#winsen-zh03b)
 
-## PM2.5
+## PM2.5 {: #pm25 }
 
 ### [Winsen: ZH03B](/AoT/Supported-Inputs/#winsen-zh03b)
 
-## Power
+## Power {: #power }
 
 ### [Power Monitor: RPi 6-Channel Power Monitor (v0.1.0)](/AoT/Supported-Inputs/#power-monitor-rpi-6-channel-power-monitor-v010)
 
@@ -591,11 +600,11 @@ Measurements
 
 ### [Tasmota: Tasmota Outlet Energy Monitor (HTTP)](/AoT/Supported-Inputs/#tasmota-tasmota-outlet-energy-monitor-http)
 
-## Apparent Power
+## Apparent Power {: #apparent-power }
 
 ### [Tasmota: Tasmota Outlet Energy Monitor (HTTP)](/AoT/Supported-Inputs/#tasmota-tasmota-outlet-energy-monitor-http)
 
-## Power Factor
+## Power Factor {: #power-factor }
 
 ### [Power Monitor: RPi 6-Channel Power Monitor (v0.1.0)](/AoT/Supported-Inputs/#power-monitor-rpi-6-channel-power-monitor-v010)
 
@@ -603,11 +612,11 @@ Measurements
 
 ### [Tasmota: Tasmota Outlet Energy Monitor (HTTP)](/AoT/Supported-Inputs/#tasmota-tasmota-outlet-energy-monitor-http)
 
-## Reactive Power
+## Reactive Power {: #reactive-power }
 
 ### [Tasmota: Tasmota Outlet Energy Monitor (HTTP)](/AoT/Supported-Inputs/#tasmota-tasmota-outlet-energy-monitor-http)
 
-## Precipitation
+## Precipitation {: #precipitation }
 
 ### [Ecowitt: Ecowitt Cloud API Weather Data](/AoT/Supported-Inputs/#ecowitt-ecowitt-cloud-api-weather-data)
 
@@ -615,7 +624,7 @@ Measurements
 
 ### [KMA: KMA Short-term Forecast](/AoT/Supported-Inputs/#kma-kma-short-term-forecast)
 
-## Pressure
+## Pressure {: #pressure }
 
 ### [Atlas Scientific: Atlas Pressure](/AoT/Supported-Inputs/#atlas-scientific-atlas-pressure)
 
@@ -653,59 +662,63 @@ Measurements
 
 ### [Senseair: K96](/AoT/Supported-Inputs/#senseair-k96)
 
-## Pulse Width
+## Pulse Width {: #pulse-width }
 
 ### [Raspberry Pi: Signal (PWM)](/AoT/Supported-Inputs/#raspberry-pi-signal-pwm)
 
-## Solar Radiation
+## Solar Radiation {: #solar-radiation }
 
 ### [Ecowitt: Ecowitt Cloud API Weather Data](/AoT/Supported-Inputs/#ecowitt-ecowitt-cloud-api-weather-data)
 
-## Volume Flow Rate
+## Rain {: #rain }
+
+### [Open-Meteo: Open-Meteo (Coords, Hourly incl. Solar)](/AoT/Supported-Inputs/#open-meteo-open-meteo-coords-hourly-incl-solar)
+
+## Volume Flow Rate {: #volume-flow-rate }
 
 ### [Atlas Scientific: Atlas Flow Meter](/AoT/Supported-Inputs/#atlas-scientific-atlas-flow-meter)
 
 ### [Generic: Hall Flow Meter](/AoT/Supported-Inputs/#generic-hall-flow-meter)
 
-## Resistance
+## Resistance {: #resistance }
 
 ### [BOSCH: BME680 (Adafruit_CircuitPython_BME680)](/AoT/Supported-Inputs/#bosch-bme680-adafruit_circuitpython_bme680)
 
 ### [BOSCH: BME680 (bme680)](/AoT/Supported-Inputs/#bosch-bme680-bme680)
 
-## Revolutions
+## Revolutions {: #revolutions }
 
 ### [Raspberry Pi: Signal (Revolutions) (pigpio method #1)](/AoT/Supported-Inputs/#raspberry-pi-signal-revolutions--pigpio-method-#1)
 
 ### [Raspberry Pi: Signal (Revolutions) (pigpio method #2)](/AoT/Supported-Inputs/#raspberry-pi-signal-revolutions--pigpio-method-#2)
 
-## RSSI
+## RSSI {: #rssi }
 
 ### [RAKwireless: RAK3172 Valve Controller: Heartbeat (ChirpStack MQTT)](/AoT/Supported-Inputs/#rakwireless-rak3172-valve-controller-heartbeat-chirpstack-mqtt)
 
-## Salinity
+## Salinity {: #salinity }
 
 ### [Atlas Scientific: Atlas EC](/AoT/Supported-Inputs/#atlas-scientific-atlas-ec)
 
-## Sky Condition
+## Sky Condition {: #sky-condition }
 
 ### [KMA: KMA Short-term Forecast](/AoT/Supported-Inputs/#kma-kma-short-term-forecast)
 
-## Fresh Snowfall
+## Fresh Snowfall {: #fresh-snowfall }
 
 ### [KMA: KMA High-Resolution 500m](/AoT/Supported-Inputs/#kma-kma-high-resolution-500m)
 
 ### [KMA: KMA Short-term Forecast](/AoT/Supported-Inputs/#kma-kma-short-term-forecast)
 
-## SNR
+## SNR {: #snr }
 
 ### [RAKwireless: RAK3172 Valve Controller: Heartbeat (ChirpStack MQTT)](/AoT/Supported-Inputs/#rakwireless-rak3172-valve-controller-heartbeat-chirpstack-mqtt)
 
-## Specific Gravity
+## Specific Gravity {: #specific-gravity }
 
 ### [Atlas Scientific: Atlas EC](/AoT/Supported-Inputs/#atlas-scientific-atlas-ec)
 
-## Speed
+## Speed {: #speed }
 
 ### [Ecowitt: Ecowitt Cloud API Weather Data](/AoT/Supported-Inputs/#ecowitt-ecowitt-cloud-api-weather-data)
 
@@ -715,11 +728,13 @@ Measurements
 
 ### [KMA: KMA Station Data](/AoT/Supported-Inputs/#kma-kma-station-data)
 
+### [Open-Meteo: Open-Meteo (Coords, Hourly incl. Solar)](/AoT/Supported-Inputs/#open-meteo-open-meteo-coords-hourly-incl-solar)
+
 ### [OpenWeather: OpenWeatherMap (City/Coords, Current)](/AoT/Supported-Inputs/#openweather-openweathermap-city-coords-current)
 
 ### [OpenWeather: OpenWeatherMap (Lat/Lon, Current/Future)](/AoT/Supported-Inputs/#openweather-openweathermap-lat-lon-current-future)
 
-## Status
+## Status {: #status }
 
 ### [AoT: GL: Aerial Photo Overlay](/AoT/Supported-Inputs/#aot-gl-aerial-photo-overlay)
 
@@ -765,7 +780,7 @@ Measurements
 
 ### [Vworld: KO: Vworld](/AoT/Supported-Inputs/#vworld-ko-vworld)
 
-## Temperature
+## Temperature {: #temperature }
 
 ### [AMS: CCS811 (with Temperature)](/AoT/Supported-Inputs/#ams-ccs811-with-temperature)
 
@@ -853,6 +868,8 @@ Measurements
 
 ### [Microchip: MCP9808](/AoT/Supported-Inputs/#microchip-mcp9808)
 
+### [Open-Meteo: Open-Meteo (Coords, Hourly incl. Solar)](/AoT/Supported-Inputs/#open-meteo-open-meteo-coords-hourly-incl-solar)
+
 ### [OpenWeather: OpenWeatherMap (City/Coords, Current)](/AoT/Supported-Inputs/#openweather-openweathermap-city-coords-current)
 
 ### [OpenWeather: OpenWeatherMap (Lat/Lon, Current/Future)](/AoT/Supported-Inputs/#openweather-openweathermap-lat-lon-current-future)
@@ -911,21 +928,21 @@ Measurements
 
 ### [Xiaomi: Mijia LYWSD03MMC (ATC and non-ATC modes)](/AoT/Supported-Inputs/#xiaomi-mijia-lywsd03mmc-atc-and-non-atc-modes)
 
-## Total Dissolved Solids
+## Total Dissolved Solids {: #total-dissolved-solids }
 
 ### [Atlas Scientific: Atlas EC](/AoT/Supported-Inputs/#atlas-scientific-atlas-ec)
 
-## Unitless
+## Unitless {: #unitless }
 
 ### [Ecowitt: Ecowitt soil_sensor](/AoT/Supported-Inputs/#ecowitt-ecowitt-soil_sensor)
 
 ### [RAKwireless: RAK3172 Valve Controller: Heartbeat (ChirpStack MQTT)](/AoT/Supported-Inputs/#rakwireless-rak3172-valve-controller-heartbeat-chirpstack-mqtt)
 
-## Ultraviolet Index
+## Ultraviolet Index {: #ultraviolet-index }
 
 ### [Ecowitt: Ecowitt Cloud API Weather Data](/AoT/Supported-Inputs/#ecowitt-ecowitt-cloud-api-weather-data)
 
-## Vapor Pressure Deficit
+## VPD {: #vpd }
 
 ### [AOSONG: AM2315/AM2320](/AoT/Supported-Inputs/#aosong-am2315-am2320)
 
@@ -946,6 +963,8 @@ Measurements
 ### [BOSCH: BME680 (Adafruit_CircuitPython_BME680)](/AoT/Supported-Inputs/#bosch-bme680-adafruit_circuitpython_bme680)
 
 ### [BOSCH: BME680 (bme680)](/AoT/Supported-Inputs/#bosch-bme680-bme680)
+
+### [Open-Meteo: Open-Meteo (Coords, Hourly incl. Solar)](/AoT/Supported-Inputs/#open-meteo-open-meteo-coords-hourly-incl-solar)
 
 ### [Ruuvi: RuuviTag](/AoT/Supported-Inputs/#ruuvi-ruuvitag)
 
@@ -987,21 +1006,21 @@ Measurements
 
 ### [Texas Instruments: HDC1000](/AoT/Supported-Inputs/#texas-instruments-hdc1000)
 
-## Version
+## Version {: #version }
 
 ### [AoT: AoT Version](/AoT/Supported-Inputs/#aot-aot-version)
 
-## Visibility
+## Visibility {: #visibility }
 
 ### [KMA: KMA High-Resolution 500m](/AoT/Supported-Inputs/#kma-kma-high-resolution-500m)
 
-## VOC
+## VOC {: #voc }
 
 ### [AMS: CCS811 (with Temperature)](/AoT/Supported-Inputs/#ams-ccs811-with-temperature)
 
 ### [AMS: CCS811 (without Temperature)](/AoT/Supported-Inputs/#ams-ccs811-without-temperature)
 
-## Volume
+## Volume {: #volume }
 
 ### [Atlas Scientific: Atlas Flow Meter](/AoT/Supported-Inputs/#atlas-scientific-atlas-flow-meter)
 

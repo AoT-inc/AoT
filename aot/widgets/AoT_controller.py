@@ -195,11 +195,10 @@ WIDGET_INFORMATION = {
 
     # -------------------- TITLE BAR --------------------
     'widget_dashboard_title_bar': """
-{%- if each_widget.name %}
-  <span class="aot-w-title">{{ each_widget.name }}</span>
-{%- else %}
-  <span class="aot-w-title">{{_('Controller Switch')}}</span>
-{%- endif %}
+{#- 이름은 셸이 렌더한다(dashboard_entry.html) — 여기는 이름 옆 부가물 전용.
+    예전에 있던 "이름이 비면 'Controller Switch' 로 대체" 는 뺐다: 제목 span 이
+    둘이 되어 라이브 미리보기가 이름을 빈 쪽에 써 넣으면 두 이름이 겹쳤고,
+    이름을 비워 둔 위젯을 24종은 그냥 비워 두는데 이 하나만 달랐다. -#}
 """,
 
     # -------------------- BODY --------------------

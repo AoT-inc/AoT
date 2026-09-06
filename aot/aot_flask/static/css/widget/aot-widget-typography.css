@@ -1,7 +1,10 @@
 /* aot-widget-typography.css
- * 3-tier uniform text scale for all AoT widgets.
- * Font SIZE is set here only — never via inline style on the element.
- * Size tiers: sm (0.75rem) · md (0.875rem) · lg (1.5rem)
+ * 모든 AoT 위젯이 공유하는 텍스트 역할 클래스.
+ * 글자 **크기는 여기서만** 정한다 — 요소에 인라인 style 로 적지 않는다.
+ *
+ * 크기 값은 직접 적지 않고 `aot-theme-variables.css` 의 **단일 사다리**
+ * (--aot-font-size-2xs/xs/sm/base/lg/xl)를 역할 이름(--aot-fs-*)으로 가리킨다.
+ * 위젯이 쓰는 단: caption/sm = 12px · title/label/body/unit/md = 14px · value/lg = 24px
  */
 
 /* ── widget title bar ── */

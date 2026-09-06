@@ -13,6 +13,43 @@ box to filter the list: it matches the device and manufacturer name, the module 
 interface (I2C, UART, ...), and the measurement names **in your own language** - searching
 for the translated name of a measurement finds every sensor that reports it.
 
+### Open-Meteo weather input { #open-meteo }
+
+Most built-in weather inputs need a provider account and a free API key, and
+some (KMA) only cover Korea. Open-Meteo needs neither: enter a
+Latitude/Longitude in the input's own Coordinates option and it works
+anywhere on Earth, with no key required.
+
+It also reports something most free weather sources do not: solar radiation
+(W/m²), modeled with cloud cover taken into account. Without it, [Nursery
+Mode](Functions.md#nursery-mode)'s sun-scald lock falls back to a clear-sky
+estimate that ignores clouds and always errs toward caution. Adding this
+input switches the lock onto Open-Meteo's modeled value instead — more
+accurate on average, but no longer guaranteed to only err on the safe side.
+
+The values are a forecast model's hourly output for your coordinates, not a
+measurement taken at your site. The free tier is limited to non-commercial
+use (CC BY 4.0); entering a paid API key in the input's settings switches it
+to Open-Meteo's commercial endpoint. Full option list: [Supported
+Inputs](Supported-Inputs.md).
+
+Open-Meteo also feeds AoT in two other, unrelated ways: as an AI knowledge
+source (see [Region-agnostic built-in sources](ai/overview.md#global-sources))
+and as a weather layer on the map (see [GIS Layer
+Management](geo/layers.md)). This input is a third, separate path, and the
+only one of the three that writes the values into the time-series database as
+regular measurements.
+
+### MQTT inputs: TLS and CA certificates { #mqtt-tls }
+
+The MQTT inputs can connect to a broker over TLS. Turn on "Use TLS" and leave
+"TLS CA Certificate" empty to trust the system's CA store, which is what a
+broker with a publicly-trusted certificate (for example, Let's Encrypt) needs.
+A broker with a private or self-signed certificate needs the path to that CA
+file entered explicitly — without it, the connection is rejected during
+certificate verification. TLS is required whenever the broker is reached over
+the internet rather than a local network.
+
 ### Custom Inputs
 
 See the [Building a Custom Input Module](https://github.com/AoT-inc/AoT/wiki/Building-a-Custom-Input-Module) Wiki page.

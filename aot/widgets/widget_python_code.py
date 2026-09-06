@@ -219,7 +219,7 @@ return self.return_string""",
 
     'widget_dashboard_head': """<!-- No head content -->""",
 
-    'widget_dashboard_title_bar': """<span class="aot-w-title" style="padding-right:0.5em">{{each_widget.name}}</span>""",
+    'widget_dashboard_title_bar': """""",
 
     'widget_dashboard_body': """<span class="aot-w-body" id="text-python-code-{{each_widget.unique_id}}"></span>""",
 

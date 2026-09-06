@@ -218,6 +218,11 @@ WIDGET_INFORMATION = {
             'phrase': lazy_gettext('Set the number of decimal places to display.')
         },
         {
+            'type': 'header',
+            'name': lazy_gettext('Range')
+        },
+
+        {
             'id': 'min',
             'type': 'float',
             'default_value': 0,
@@ -231,6 +236,12 @@ WIDGET_INFORMATION = {
             'name': lazy_gettext('Maximum Value'),
             'phrase': lazy_gettext('Set the maximum value for the gauge.')
         },
+        {
+            'type': 'collapse_start',
+            'id': 'appearance',
+            'name': lazy_gettext('Appearance')
+        },
+
         {
             'id': 'text_font_size',
             'type': 'float',
@@ -279,50 +290,62 @@ WIDGET_INFORMATION = {
             'default_value': 5,
             'name': lazy_gettext('Data Position Offset'),
             'phrase': lazy_gettext('Set the vertical position offset (%) for the data text inside the gauge. (Default: 5)')
+        },
+        {
+            'type': 'collapse_end'
         }
     ],
 
     'widget_dashboard_head': """<!-- No external JS dependencies. Using native SVG. -->""",
 
-    'widget_dashboard_title_bar': """<span class="aot-w-title" style="padding-right:0.5em">{{each_widget.name}}</span>""",
+    'widget_dashboard_title_bar': """""",
 
     # Actual widget display area
-    'widget_dashboard_body': """<div class="not-draggable" id="container-gauge-{{each_widget.unique_id}}" style="position: absolute; left: 0; top: 0; bottom: 0; right: 0; overflow: hidden; z-index: 1; min-height: 120px;"></div>""",
+    'widget_dashboard_body': """<style>
+  /* SVG 글자색은 `fill` 이라 텍스트 색 토큰이 자동으로 따라오지 않는다.
+     예전에는 `#111`·`#333`·`#9aa0a6` 을 JS 가 직접 박아 넣어서, **다크 테마에서
+     어두운 카드 위 검은 글자**가 됐다. CSS 의 `fill` 은 표현속성보다 세므로
+     여기서 토큰으로 한 번만 정한다. */
+  .aot-windw-value { fill: var(--aot-text-main, var(--aot-color-text-primary)); }
+  .aot-windw-sub   { fill: var(--aot-color-text-secondary); }
+  .aot-windw-rose  { fill: var(--aot-color-text-secondary); opacity: 0.7; }
+</style>
+<div class="not-draggable" id="container-gauge-{{each_widget.unique_id}}" style="position: absolute; left: 0; top: 0; bottom: 0; right: 0; overflow: hidden; z-index: 1; min-height: 120px;"></div>""",
 
     # Section for editing color ranges on the settings screen
     # The "range end" field is completely removed. Only range start and color are shown
+    # 설정 화면의 색 지정 — 표준 옵션 행(.aot-modal-option-row)을 쓴다.
+    #
+    # ⚠ 예전에는 이 자리에 부트스트랩 `form-row`/`col-auto` 와 자체 `<style>` 로
+    #   만든 칩이 있었고, 그 아래에 `direction_dot_px`·`text_y_offset` 을 **한 번 더**
+    #   그렸다 — 두 필드가 같은 이름으로 모달에 두 번 나와(실측 확인) 어느 쪽을
+    #   고쳐도 먼저 나온 값만 저장됐다. 아래 두 색만 여기서 그리고,
+    #   나머지 옵션은 전부 표준 렌더러(custom_options)에 맡긴다.
     'widget_dashboard_configure_options': """
-      <style>
-        .aot-color-preset { width: 22px; height: 22px; border-radius: 50%; border: 1px solid #bbb; display: inline-block; cursor: pointer; margin: 0 6px 0 0; }
-        .aot-color-row { display:flex; align-items:center; gap:10px; margin-bottom:8px; }
-        .aot-color-row label { font-weight:600; margin-right:6px; }
-      </style>
-      <div class=\"aot-color-row\">
-        <label for=\"border_color\">{{_('Border Color')}}</label>
-        <input id=\"border_color\" name=\"border_color\" type=\"color\" value=\"{{ widget_options.get('border_color', '#D5D5D5') }}\" class=\"form-control\" style=\"width: 42px; height: 28px; padding: 0;\">
-        {% set border_palette = ['#F4D624','#3E3F46','#8BC1C1','#2AA876','#1F78B4','#FEA60B'] %}
-        {% for c in border_palette %}
-          <span class=\"aot-color-preset\" title=\"{{c}}\" style=\"background:{{c}}\" onclick=\"var inp=document.getElementById('border_color'); inp.value='{{c}}'; this.parentElement.querySelectorAll('.aot-color-preset').forEach(e=>e.style.outline='none'); this.style.outline='3px solid #666'\"></span>
-        {% endfor %}
-      </div>
-      <div class=\"aot-color-row\">
-        <label for=\"direction_color\">{{_('Wind Direction Indicator Color')}}</label>
-        <input id=\"direction_color\" name=\"direction_color\" type=\"color\" value=\"{{ widget_options.get('direction_color', '#F4D624') }}\" class=\"form-control\" style=\"width: 42px; height: 28px; padding: 0;\">
-        {% set dir_palette = ['#DF5353','#1F78B4','#2AA876','#7B5EA7','#000000','#FF7F0E'] %}
-        {% for c in dir_palette %}
-          <span class=\"aot-color-preset\" title=\"{{c}}\" style=\"background:{{c}}\" onclick=\"var inp=document.getElementById('direction_color'); inp.value='{{c}}'; this.parentElement.querySelectorAll('.aot-color-preset').forEach(e=>e.style.outline='none'); this.style.outline='3px solid #666'\"></span>
-        {% endfor %}
-      </div>
-      <div class=\"form-row\" style=\"align-items:center; gap:10px;\">
-        <div class=\"col-auto\">
-          <label class=\"control-label\" for=\"direction_dot_px\">{{_('Direction Dot Size (px)')}}</label>
-          <input id=\"direction_dot_px\" name=\"direction_dot_px\" class=\"form-control\" type=\"number\" min=\"2\" max=\"20\" step=\"1\" value=\"{{ widget_options.get('direction_dot_px', 10) }}\">
-        </div>
-        <div class=\"col-auto\">
-          <label class=\"control-label\" for=\"text_y_offset\">{{_('Data Position Offset (%%)')}}</label>
-          <input id=\"text_y_offset\" name=\"text_y_offset\" class=\"form-control\" type=\"number\" min=\"-30\" max=\"40\" step=\"1\" value=\"{{ widget_options.get('text_y_offset', 5) }}\">
-        </div>
-      </div>
+<div class="aot-modal-section-title">{{_('Colors')}}</div>
+<div class="aot-modal-container">
+{%- set _uid = each_widget.unique_id %}
+<div class="aot-modal-option-row aot-modal-option-row-wrap">
+  <label class="aot-modal-option-label" for="{{_uid}}_border_color">{{_('Border Color')}}</label>
+  <div class="aot-modal-option-control">
+    {%- set color_id = _uid ~ '_border_color' -%}
+    {%- set color_name = 'border_color' -%}
+    {%- set color_value = widget_options.get('border_color', '#D5D5D5') -%}
+    {%- set color_presets = ['#F4D624', '#3E3F46', '#8BC1C1', '#2AA876', '#1F78B4', '#FEA60B'] -%}
+    {% include 'pages/form_options/Color_Presets.html' %}
+  </div>
+</div>
+<div class="aot-modal-option-row aot-modal-option-row-wrap">
+  <label class="aot-modal-option-label" for="{{_uid}}_direction_color">{{_('Wind Direction Indicator Color')}}</label>
+  <div class="aot-modal-option-control">
+    {%- set color_id = _uid ~ '_direction_color' -%}
+    {%- set color_name = 'direction_color' -%}
+    {%- set color_value = widget_options.get('direction_color', '#F4D624') -%}
+    {%- set color_presets = ['#DF5353', '#1F78B4', '#2AA876', '#7B5EA7', '#000000', '#FF7F0E'] -%}
+    {% include 'pages/form_options/Color_Presets.html' %}
+  </div>
+</div>
+</div>
     """,
 
     'widget_dashboard_js': """
@@ -403,7 +426,7 @@ WIDGET_INFORMATION = {
       text.setAttribute('y', ry);
       text.setAttribute('text-anchor', 'middle');
       text.setAttribute('font-size', Math.max(12, size * 0.07));
-      text.setAttribute('fill', '#9aa0a6');
+      text.setAttribute('class', 'aot-windw-rose');
       text.textContent = o.t;
       svg.appendChild(text);
     });
@@ -434,7 +457,7 @@ WIDGET_INFORMATION = {
     speedText.setAttribute('font-weight', '700');
     // speedText.setAttribute('font-family', 'Inter, "Noto Sans KR", system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif');
     speedText.setAttribute('font-size', Math.max(12, size * 0.12));
-    speedText.setAttribute('fill', '#111');
+    speedText.setAttribute('class', 'aot-windw-value');
     speedText.textContent = '';
     svg.appendChild(speedText);
 
@@ -446,7 +469,7 @@ WIDGET_INFORMATION = {
     dirText.setAttribute('text-anchor', 'middle');
     dirText.setAttribute('font-size', Math.max(10, size * 0.06) * dirFontEm);
     // dirText.setAttribute('font-family', 'Inter, "Noto Sans KR", system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif');
-    dirText.setAttribute('fill', '#333');
+    dirText.setAttribute('class', 'aot-windw-sub');
     dirText.textContent = '';
     svg.appendChild(dirText);
 
@@ -504,17 +527,32 @@ WIDGET_INFORMATION = {
     // Normalize input (handles strings, NaN, negatives, >360)
     var d = Number(deg);
     if (!isFinite(d)) d = 0;
+    var lbl = document.getElementById('dirtext-' + widget_id);
+    // ⚠ 값이 없을 때 바늘을 0° 로 돌리면 **북풍이라는 멀쩡한 측정값처럼 보인다.**
+    // 예전에는 204(데이터 없음)와 통신 실패 모두 이 함수를 0 으로 불렀다.
+    // 값이 없으면 바늘을 감추고 방향 글자도 대시로 둔다.
+    if (deg === null || deg === undefined) {
+      g.style.display = 'none';
+      if (lbl) { lbl.textContent = '—'; lbl.setAttribute('class', 'aot-windw-sub aot-w-nodata'); }
+      return;
+    }
+    g.style.display = '';
     d = ((d % 360) + 360) % 360; // wrap into [0,360)
     // Our needle geometry points to North when 0°, so rotate by d directly.
     g.setAttribute('transform', 'rotate(' + (d % 360) + ' ' + cx + ' ' + cy + ')');
-    var lbl = document.getElementById('dirtext-' + widget_id);
-    if (lbl) lbl.textContent = aotWindAngleToCompass8(d);
+    if (lbl) { lbl.textContent = aotWindAngleToCompass8(d); lbl.setAttribute('class', 'aot-windw-sub'); }
   }
 
   function aotWindUpdateSpeed(widget_id, val, unit, decimals, dataFontSizeEm, unitFontSizeEm) {
     var t = document.getElementById('speed-' + widget_id);
     if (!t) return;
-    var v = (val === null || val === undefined) ? '' : Number(val).toFixed(decimals || 1);
+    // 값이 없으면 **빈 칸이 아니라 대시**. 빈 칸은 "0" 인지 "센서가 죽었" 는지
+    // "아직 안 왔" 는지를 구분해 주지 못한다. 단위도 붙이지 않는다.
+    if (val === null || val === undefined) {
+      t.innerHTML = '<tspan class="aot-w-nodata" style="font-size:var(--aot-fs-value)">—</tspan>';
+      return;
+    }
+    var v = Number(val).toFixed(decimals || 1);
     var dataSpan = '<tspan style="font-size:var(--aot-fs-value)">' + v + '</tspan>';
     var unitSpan = unit ? '<tspan style="font-size:var(--aot-fs-unit)"> ' + unit + '</tspan>' : '';
     t.innerHTML = dataSpan + unitSpan;
@@ -533,7 +571,7 @@ WIDGET_INFORMATION = {
           if (!window.widget) window.widget = {};
           if (!window.widget[widget_id]) window.widget[widget_id] = {};
           window.widget[widget_id].lastDir = null;
-          aotWindUpdateNeedle(widget_id, 0);
+          aotWindUpdateNeedle(widget_id, null);
         }
         else {
           const measurement = data[1];
@@ -547,7 +585,7 @@ WIDGET_INFORMATION = {
         if (!window.widget) window.widget = {};
         if (!window.widget[widget_id]) window.widget[widget_id] = {};
         window.widget[widget_id].lastDir = null;
-        aotWindUpdateNeedle(widget_id, 0);
+        aotWindUpdateNeedle(widget_id, null);
       }
     });
   }

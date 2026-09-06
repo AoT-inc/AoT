@@ -253,30 +253,6 @@ When using hardware PWM pins, an exact frequency can be set. The same PWM channe
 </tbody>
 </table>
 
-### Schematic for DC Fan Control
-
-Below is a hardware schematic that lets you control a direct current (DC) fan using AoT's PWM output.
-
-Controlling a 12-volt DC fan (for example, a PC fan) with a PWM output
-
-![Schematic: Controlling a 12-volt DC fan with a PWM output](images/Schematic-PWM-DC-12-volt-fan-control.png)
-
-### Schematic for Alternating Current (AC) Modulation
-
-Below is a hardware schematic that lets you modulate alternating current (AC) using AoT's PWM output.
-
-Modulating alternating current (AC) at a 1% duty cycle with a PWM output
-
-![Schematic: Modulating AC at a 1% duty cycle with a PWM output](images/Schematic-PWM-AC-1percent-duty-cycle.png)
-
-Modulating alternating current (AC) at a 50% duty cycle with a PWM output
-
-![Schematic: Modulating AC at a 50% duty cycle with a PWM output](images/Schematic-PWM-AC-50percent-duty-cycle.png)
-
-Modulating alternating current (AC) at a 99% duty cycle with a PWM output
-
-![Schematic: Modulating AC at a 99% duty cycle with a PWM output](images/Schematic-PWM-AC-99percent-duty-cycle.png)
-
 ## Peristaltic Pump
 
 AoT supports two peristaltic pump output modules: the Generic Peristaltic Pump Output and the Atlas Scientific EZO-PMP Peristaltic Pump.
@@ -340,6 +316,10 @@ This option runs a terminal command when the output is turned on, turned off, or
 
 The Python Command output works similarly to the Linux Command output, but runs Python 3 code. When you create a Python Command output, example code is provided showing how to use the output.
 
+## MQTT: TLS and CA certificates { #mqtt-tls }
+
+The MQTT outputs (On/Off, On/Off Multi, Value, and PWM) can publish to a broker over TLS. Turn on "Use TLS" and leave "TLS CA Certificate" empty to trust the system's CA store, which is what a broker with a publicly-trusted certificate (for example, Let's Encrypt) needs. A broker with a private or self-signed certificate needs the path to that CA file entered explicitly — without it, the connection is rejected during certificate verification. TLS is required whenever the broker is reached over the internet rather than a local network. The same options exist on the [MQTT inputs](Inputs.md#mqtt-tls).
+
 ## Output Notes
 
 Wireless and command (Linux/Python) outputs: because the wireless protocol only allows one-way communication with 315/433 MHz devices, a wireless relay is assumed to be off until it is turned on, and is displayed in red (off) when added. If a wireless relay is turned on or off outside of AoT (for example, with a remote), AoT cannot verify the relay's state and displays its last known state. For example, if AoT turns a wireless relay on and you turn the relay off with the remote, AoT still assumes the relay is on.
@@ -369,8 +349,6 @@ still recorded at send time.
     lengthening the gap again — changing only one of the two saturates the
     gateway so it cannot hear the replies. The two values live in the LNS
     (ChirpStack) config and in AoT respectively, so both must be adjusted.
-
-
 
 If a sequence step, conditional, PID, or widget still points at an output,
 deletion is refused and AoT tells you where it is used. Remove or repoint

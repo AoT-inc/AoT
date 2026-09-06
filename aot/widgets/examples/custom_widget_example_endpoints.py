@@ -144,7 +144,9 @@ WIDGET_INFORMATION = {
     ],
 
     'widget_dashboard_head': """<!-- No head content -->""",
-    'widget_dashboard_title_bar': """<span style="padding-right: 0.5em; font-size: {{each_widget.font_em_name}}em">{{each_widget.name}}</span>""",
+    # 이름은 셸이 렌더한다(dashboard_entry.html). 여기는 이름 옆에 붙는
+    # 부가물(상태 배지·도구 버튼)만 넣는다 — 비워 두면 이름만 나온다.
+    'widget_dashboard_title_bar': """""",
     'widget_dashboard_body': """<span style="font-size: {{widget_options['font_em_body']}}em">{{widget_options['body_text']|safe}}</span>""",
     'widget_dashboard_js': """<!-- No JS content -->""",
     'widget_dashboard_js_ready': """<!-- No JS ready content -->""",

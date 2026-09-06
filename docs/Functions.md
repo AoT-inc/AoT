@@ -158,11 +158,7 @@ The PID controller is the most commonly used regulatory controller in industrial
 
 **D** (derivative) multiplies the error by K<sub>D</sub> and then differentiates it (K<sub>D</sub> · s). As the rate of change of the error varies over time, the output signal changes. The faster the error changes, the larger the derivative path becomes, reducing the rate of change of the output. This has the effect of reducing overshoot and undershoot (oscillation) around the setpoint.
 
-![PID Animation](images/PID-Animation.gif)
-
 The K<sub>P</sub>, K<sub>I</sub>, and K<sub>D</sub> gains determine how much the P, I, and D variables influence the final PID output value. For example, the larger the gain, the greater the influence of that variable on the output.
-
-![PID Equation](images/PID-Equation.jpg)
 
 The output of a PID controller can be used in several ways. A simple use case is to use this value as the number of seconds the output is turned on during a periodic interval (Period). For example, if the period is set to 30 seconds, the PID equation calculates the PID output every 30 seconds using the desired measurement and the actual measurement. The longer the output is on during that period, the greater the impact on the system. For example, if the output is on for 15 seconds every 30 seconds, that is a 50 % duty cycle, and if it is on for 30 seconds every 30 seconds, that is a 100 % duty cycle with twice the impact on the system. The PID controller calculates the output based on how much the actual measurement differs from the desired measurement (the error). As the error increases or persists, the output increases so that the output stays on longer within the period, which generally reduces the error by changing the measured condition. As the error decreases, the control variable decreases so the output stays on for a shorter time. The ultimate goal of a well-tuned PID controller is to drive the actual measurement to the setpoint quickly, minimize overshoot, and hold the setpoint with minimal oscillation.
 
@@ -251,8 +247,6 @@ The autotune feature is a standalone controller useful for determining appropria
 </table>
 
 A typical graph output looks like this:
-
-![PID Autotune Output](images/Autotune-Output-Example.png)
 
 And a typical daemon log output looks like this:
 
@@ -740,6 +734,22 @@ When a duration method is selected, the selected PWM output is set to the duty c
 </tbody>
 </table>
 
+!!! note
+    "Trigger When Activated" fires on the trigger's next check after activation
+    or a settings refresh, not the instant it happens — at most one sample
+    interval later (the daemon's general trigger/conditional sample rate).
+    Firing it synchronously used to risk a rare deadlock during a settings
+    reload, where the trigger could get stuck and never fire again.
+
+    If the selected duration method has no value yet (for example, right after
+    activation, before the method has recorded a start time), the PWM output is
+    left untouched instead of being sent a broken command — the trigger simply
+    waits for the next period and tries again. If the output does accept the
+    calculation but rejects the command itself (offline, timeout), that
+    rejection is now logged as an error; the setpoint curve keeps advancing
+    regardless, since it does not depend on whether the output could be
+    reached.
+
 ### Sunrise/Sunset Options
 
 Triggers an event at sunrise or sunset (or an offset thereof) based on latitude and longitude.
@@ -1009,7 +1019,7 @@ off while irrigation carried on.
     keep theirs. To set them individually, change the period with that weekday
     selected, or use the per-day settings in the unified modal.
 
-
+### Continuing vs. starting over on reactivation { #sequence-resume-on-activate }
 
 Turning a sequence off and on again **continues from where it stopped** by
 default — the behaviour you want when a run was paused briefly. To change
@@ -1030,7 +1040,20 @@ there is no cycle left to rejoin after that long.
     progress always continues. This setting governs only a deliberate off/on by a
     person.
 
+!!! note
+    **The very first cycle after a genuine restart begins right now, not at a
+    fixed clock boundary.** This applies only when there is no earlier cycle to
+    carry over — a brand-new sequence, or reactivating after "Start from the
+    beginning" cleared the previous one. Previously this case was anchored to
+    the same fixed clock grid the daemon uses to keep same-day cycles from
+    drifting (see the note on "skipped rather than started" cycles above), so
+    switching a sequence on partway through its window could compute the new
+    cycle as already hours old and treat every step in it as already finished.
+    If a previous cycle's state exists — even one too old to resume — the
+    daemon still anchors to that clock grid, because that case means the
+    daemon was down rather than the user just switching the sequence on.
 
+### Shared ↔ per-day switch { #sequence-schedule-mode-switch }
 
 Going from per-day back to shared mode promotes the settings of the **first
 active weekday** to the shared values — not only the window (start, end, period)
@@ -1049,9 +1072,42 @@ through a path other than this widget — the day-schedule editor (time wheel), 
 the function settings page. Such a change takes effect on irrigation immediately,
 and this widget's settings modal re-reads those values every time the dashboard
 is opened — it never sits on a value saved earlier until you happen to save this
-widget again.
+widget again. Previously, editing the start/end time or period on the function
+settings page could report success while leaving the schedule the daemon
+actually follows unchanged, once a per-weekday schedule was already in use;
+every save path now writes the same underlying schedule.
 
+!!! note
+    In per-day mode, the start/end/period fields on the function's own settings
+    page cannot apply either, for the same reason a single shared value would
+    erase the per-weekday setup. Saving there now tells you so instead of
+    reporting success silently — edit per-weekday times from the sequence
+    widget's step list instead.
 
+A change to a **step's** settings — duration, device group, or a per-weekday
+on/off — made while the sequence is running also reaches the current cycle, not
+only the next one. Previously such a change did not take effect until the next
+cycle began, which could be hours away with a long period, even though the
+settings screen showed it saved immediately. Two safeguards keep a mid-run edit
+from misfiring: a step that already finished this cycle is not switched back on
+even if shortening an earlier step shifts the timing so it would otherwise fall
+due again, and a step removed from today's plan (turned off for the day, or
+deleted) is explicitly switched off rather than merely dropped from tracking, so
+its output cannot stay open unnoticed.
+
+A window that crosses midnight (end time earlier than start time on the same
+day) is rejected when you try to save it, with an explanation. Previously such a
+window could be saved from the function settings page, only for the daemon to
+fall back to a truncated same-day window that silently discarded the rest of the
+per-weekday setup.
+
+!!! note
+    The sequence widget's own settings dialog no longer has direct Start
+    Time / End Time text fields — those never worked correctly once a
+    per-weekday schedule was in use, so start and end times are set only
+    through the time wheel in the unified modal described below.
+
+### Unified modal and time wheel
 
 Time, group, name, and weekday schedule are edited from a **single unified modal** in the sequence widget's step list.
 

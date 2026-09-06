@@ -10656,7 +10656,7 @@ msgstr ""
 "). Dieses Update kann Systemänderungen verursachen; vorhandene "
 "Einstellungen werden möglicherweise nicht beibehalten. Es wird empfohlen,"
 " vor dem Upgrade die Datenbank zu exportieren oder wichtige Infos (GPIO, "
-"PID 등) zu notieren."
+"PID usw.) zu notieren."
 
 #: aot_flask/templates/admin/upgrade.html:329
 msgid ""

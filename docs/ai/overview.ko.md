@@ -159,7 +159,7 @@ AoT의 AI는 두 가지 경로로 도구를 사용합니다.
 
 ---
 
-## 안전·승인 모델
+## 안전·승인 모델 { #safety-approval-model }
 
 상태를 바꾸지 않는 **읽기 도구**는 즉시 실행됩니다. **상태를 바꾸는 도구**는 어느 경로로 호출되든 승인 게이트를 거칩니다.
 
@@ -464,4 +464,4 @@ Action**으로 등록합니다. Custom GPT 생성·Actions 기능은 ChatGPT 유
 
 - [환경 제어 자동화](env-control.md)
 - [스케줄러](scheduler.md)
-- [AI 가이드 (전체)](../ai_guide.ko.md)
+- AI 가이드 (전체)

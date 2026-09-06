@@ -25,16 +25,19 @@
 
 /* Widget header gear (settings) button: align flush to the right edge so it does
    not visually overlap .widget-graph-controls (which sits at right: 35px). */
+/* `!important` 는 없앴다 — 예전에는 셸 규칙이 세 파일에 중복돼 있어
+   그것을 이기려고 붙었지만, 이제 정본이 aot-base.css 한 곳뿐이라
+   선택자 특정도(.grid-stack-item .widget-settings)만으로 이긴다. */
 .grid-stack-item .widget-settings {
-  right: 0 !important;
-  top: 0.75em !important;
+  right: 0;
+  top: 0.75em;
   padding: 0 0.5em;
   line-height: 1;
 }
 .grid-stack-item .widget-settings a.btn {
-  padding: 0 !important;
-  margin: 0 !important;
-  border: 0 !important;
+  padding: 0;
+  margin: 0;
+  border: 0;
   line-height: 1;
 }
 

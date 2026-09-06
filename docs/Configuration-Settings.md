@@ -41,6 +41,113 @@ Page\: `[Admin] -> System Configuration -> General Settings`
 </tbody>
 </table>
 
+To customize the branding and colors of the web interface, see [Custom UI](#custom-ui) below.
+
+## Custom UI { #custom-ui }
+
+Page\: `[Admin] -> System Configuration -> Custom UI`
+
+This page customizes the branding and color palette of the web interface — useful for putting your own name and logo on AoT, or simply changing its color scheme. A live preview at the top of the page shows every color as you change it; nothing is applied elsewhere until you click Save.
+
+<table>
+<thead>
+<tr class="header">
+<th>Setting</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Brand Display</td>
+<td>What appears in the navigation bar\: the default AoT branding, the hostname, custom text, or an uploaded image.</td>
+</tr>
+<tr>
+<td>Title Display</td>
+<td>What appears in the browser tab title\: the hostname or custom brand text.</td>
+</tr>
+<tr>
+<td>Brand Text</td>
+<td>Custom text used in place of the hostname when Brand Display or Title Display is set to use it.</td>
+</tr>
+<tr>
+<td>Brand Image</td>
+<td>An uploaded logo (JPG, PNG, GIF, SVG, or WebP) used when Brand Display is set to Brand Image.</td>
+</tr>
+<tr>
+<td>Brand Image Height</td>
+<td>Height of the uploaded brand image, in pixels.</td>
+</tr>
+<tr>
+<td>Favicon Display</td>
+<td>Use the default AoT favicon or an uploaded custom icon.</td>
+</tr>
+<tr>
+<td>Favicon Image</td>
+<td>An uploaded icon used when Favicon Display is set to use it.</td>
+</tr>
+</tbody>
+</table>
+
+Below Branding, colors are organized into groups\: Brand Colors is always visible, and the rest appear as tabs. Every color has its own hex input and color picker, and clicking an element in the live preview jumps to the color that controls it.
+
+<table>
+<thead>
+<tr class="header"><th>Color Group</th><th>What it controls</th></tr>
+</thead>
+<tbody>
+<tr>
+<td>Brand Colors</td>
+<td>Primary, secondary, and accent tones used for accent icons, drag handles, and AI chat elements.</td>
+</tr>
+<tr>
+<td>Text Colors</td>
+<td>Primary and secondary text, plus the tertiary color used for text on filled buttons and badges.</td>
+</tr>
+<tr>
+<td>Background Colors</td>
+<td>Card and page background colors.</td>
+</tr>
+<tr>
+<td>State Colors</td>
+<td>Device on/off/pending/warning row backgrounds, and the four semantic colors — Success, Warning, Danger, Info — used app-wide for measurement status, alerts, and confirmations, each with a soft tint background/text/border variant.</td>
+</tr>
+<tr>
+<td>Button Colors</td>
+<td>Primary and secondary button backgrounds, and the On/Off/Pause/Hold action button colors.</td>
+</tr>
+<tr>
+<td>Badge Colors</td>
+<td>The AI (LLM) badge, MCP tool badge, and Upgrade-available badge.</td>
+</tr>
+<tr>
+<td>Measurement Band Colors</td>
+<td>The 5 threshold bands (very low to very high) used by gauge widgets and sensor value labels.</td>
+</tr>
+<tr>
+<td>Chart Series Colors</td>
+<td>The default 6 line colors assigned to graph, PID, and calendar widget series.</td>
+</tr>
+</tbody>
+</table>
+
+Theme Preset switches between built-in palettes (AoT Default, Ocean Blue, Warm Sunset, Minimal Gray, Night Mode) or a palette you saved yourself with Save Preset. Reset to Defaults restores AoT's built-in colors.
+
+<table>
+<thead>
+<tr class="header"><th>Setting</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr>
+<td>Custom CSS</td>
+<td>Additional CSS applied to every page, for changes beyond what the color settings above allow.</td>
+</tr>
+<tr>
+<td>Custom Layout</td>
+<td>Custom HTML injected into the page layout.</td>
+</tr>
+</tbody>
+</table>
+
 ## Time Series Database Settings
 
 Page\: `[Admin] -> System Configuration -> General Settings`
@@ -504,6 +611,74 @@ Roles define the permissions of each user. Four default roles are provided that 
 The `Edit Controllers` permission protects editing of Conditionals, Graphs, LCDs, Methods, PIDs, Outputs, and Inputs.
 
 The `View Stats` permission protects viewing of the Usage Statistics, System Information, and Energy Usage pages.
+
+### Groups { #groups }
+
+Page\: `Manage -> System Management -> Users -> Groups`
+
+Roles and Groups answer two different questions. A Role decides **what** a user is allowed to do (edit settings, edit controllers, view stats, and so on — see [Roles](#roles) above). A Group decides **which** dashboards, maps, facilities, and tabs (and the inputs, outputs, functions, and controllers placed on those tabs) a user is allowed to operate. The two combine: to perform an action on something, a user needs both the Role permission for that action, and membership in a Group the target has been granted to.
+
+By default, no resource belongs to any group, so behavior is unchanged from before Groups existed\: anyone whose Role allows an action can perform it on anything. This only changes once you grant a Group to a specific resource. From that point on, only members of the granted Group(s) — plus any user whose Role has "Access all groups" enabled — can operate that one resource. Everyone else immediately loses the ability to operate it, so check who currently uses a resource before granting a Group to it.
+
+Groups restrict **operating** a resource only\: turning a device on or off, changing its settings, deleting it, or opening its dashboard/map/facility/tab page. They do not restrict **viewing**. Sensor readings, history, and exported data remain visible to every logged-in user whether or not they belong to the relevant group.
+
+This page (the Groups tab under Users) is only for creating groups and choosing their members. Resources are not granted to a group here.
+
+<table>
+<thead>
+<tr class="header">
+<th>Setting</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Group Name</td>
+<td>A name for the group.</td>
+</tr>
+<tr>
+<td>Description</td>
+<td>What the group is for. Without it, nobody can tell later whether the group is still needed.</td>
+</tr>
+<tr>
+<td>Members</td>
+<td>The users who belong to this group.</td>
+</tr>
+</tbody>
+</table>
+
+A Group is granted to a resource from that resource's own settings, not from this page. Each of the following carries a "Groups that can operate this ___" section in its own settings dialog:
+
+<table>
+<thead>
+<tr class="header">
+<th>Resource</th>
+<th>Where the group is assigned</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Tab</td>
+<td>The tab's own settings. This also covers every Input, Output, Function, Conditional, Trigger, PID, and Custom Controller placed on that tab — a device does not carry its own group assignment, it always follows the tab it is on. If a device seems to be missing or locked for a user, check the groups granted to its tab.</td>
+</tr>
+<tr>
+<td>Dashboard</td>
+<td>The dashboard's own settings.</td>
+</tr>
+<tr>
+<td>Map</td>
+<td>The map's own settings.</td>
+</tr>
+<tr>
+<td>Facility</td>
+<td>The facility's own settings.</td>
+</tr>
+</tbody>
+</table>
+
+A user can belong to more than one group. When a user's groups disagree about a resource, the widest access applies — belonging to any one group the resource is granted to is enough.
+
+On the [Roles](#roles) screen, a Role can be marked "Access all groups". Users with such a Role bypass every group restriction and can operate every resource regardless of what has been granted — intended for the small number of people who manage the whole system rather than one area of it. The built-in Admin role has this enabled by default.
 
 ## Raspberry Pi Settings { #pi-settings }
 

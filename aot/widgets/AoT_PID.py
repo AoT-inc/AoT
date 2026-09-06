@@ -533,13 +533,12 @@ WIDGET_INFORMATION = {
 
   # ------------------ TITLE BAR ------------------
   'widget_dashboard_title_bar': """
+  {#- 이름은 셸이 렌더한다(dashboard_entry.html). 여기는 이름 옆 상태 배지만. -#}
   {%- if widget_options['enable_status'] -%}
-    <span id="text-pid-state-{{each_widget.unique_id}}"></span>{{' '}}
+    <span class="aot-w-caption" id="text-pid-state-{{each_widget.unique_id}}"></span>
   {%- else -%}
-    <span style="display: none" id="text-pid-state-{{each_widget.unique_id}}"></span>
+    <span class="aot-w-caption" hidden id="text-pid-state-{{each_widget.unique_id}}"></span>
   {%- endif -%}
-
-  <span class="aot-w-title" style="padding-right:0.5em"> {{each_widget.name}}</span>
   """,
 
   # ------------------ BODY ------------------
@@ -634,14 +633,16 @@ WIDGET_INFORMATION = {
 #pid_container_{{each_widget.unique_id}} .btn-aot-pid-resume {
   box-sizing: border-box;
   flex: 0 0 auto;
-  height: 34px !important;
-  padding: 0 0.4em !important;
+  /* 앱 버튼 높이. 예전에는 34px 이라 같은 화면의 알약 버튼(32px)보다
+     2px 커서 나란히 서면 밑선이 어긋났다. */
+  height: var(--aot-btn-height) !important;
+  padding: 0 var(--aot-space-1) !important;
   font-size: var(--aot-fs-label) !important;
   font-weight: var(--aot-fw-semibold);
   white-space: nowrap;
   text-overflow: clip;
   border: 1px solid var(--border-neutral, #d7d3c4) !important;
-  border-radius: 9999px !important;
+  border-radius: var(--aot-btn-pill-radius) !important;
   background: var(--aot-input-bg, #fff) !important;
   color: var(--aot-text-main, #333) !important;
   box-shadow: none !important;
@@ -675,13 +676,15 @@ WIDGET_INFORMATION = {
   flex: 0 0 auto;
   width: 160px !important;
   min-width: 160px !important;
-  height: 34px !important;
-  padding: 0 0.4em !important;
+  /* 앱 버튼 높이. 예전에는 34px 이라 같은 화면의 알약 버튼(32px)보다
+     2px 커서 나란히 서면 밑선이 어긋났다. */
+  height: var(--aot-btn-height) !important;
+  padding: 0 var(--aot-space-1) !important;
   font-size: var(--aot-fs-label) !important;
   font-weight: var(--aot-fw-semibold);
   white-space: nowrap;
   border: 1px solid var(--border-neutral, #d7d3c4) !important;
-  border-radius: 9999px !important;
+  border-radius: var(--aot-btn-pill-radius) !important;
   background: var(--aot-input-bg, #fff) !important;
   color: var(--aot-text-main, #333) !important;
   box-shadow: none !important;
@@ -730,7 +733,7 @@ WIDGET_INFORMATION = {
 }
 #pid_modal_{{each_widget.unique_id}} .pid-modal-header h5 {
   margin: 0;
-  font-size: 1rem;
+  font-size: var(--aot-font-size-base);
   font-weight: 600;
   color: var(--aot-text-main, #333);
   line-height: 1.4;
@@ -738,7 +741,7 @@ WIDGET_INFORMATION = {
 #pid_modal_{{each_widget.unique_id}} .pid-modal-close {
   background: none;
   border: none;
-  font-size: 1.5rem;
+  font-size: var(--aot-font-size-xl);
   line-height: 1;
   cursor: pointer;
   color: var(--aot-text-secondary, #888);
@@ -773,7 +776,6 @@ WIDGET_INFORMATION = {
 </style>
 
 
-<link rel="stylesheet" href="{{ url_for('static', filename='css/components/aot-toggle.css') }}">
 {% set this_pid = table_pid.query.filter(table_pid.unique_id == widget_options['pid']).first() %}
 
 <div class="frame-aot" id="pid_container_{{each_widget.unique_id}}">

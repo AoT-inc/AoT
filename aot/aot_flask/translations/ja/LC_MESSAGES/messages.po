@@ -223,7 +223,7 @@ msgstr "酸素"
 
 #: config_devices_units.py:193
 msgid "Oxidation Reduction Potential"
-msgstr "酸化還元電위"
+msgstr "酸化還元電位"
 
 #: config_devices_units.py:209
 msgid "PID P-Value"
@@ -420,7 +420,7 @@ msgstr "体積"
 #: config_devices_units.py:364 inputs/ecowitt_mqtt.py:36
 #: inputs/ecowitt_weather.py:32
 msgid "Solar Radiation"
-msgstr "日사量"
+msgstr "日射量"
 
 #: config_devices_units.py:368 inputs/kma_weather_500.py:152
 #: inputs_gis/gis_kma.py:13
@@ -438,7 +438,7 @@ msgstr "表示設定"
 #: aot_flask/templates/settings/translations.html:84
 #: config_devices_units.py:373
 msgid "Status"
-msgstr "ステータ스"
+msgstr "ステータス"
 
 #: config_devices_units.py:377 inputs/ecowitt_mqtt.py:48
 #: inputs/ecowitt_soil_moisture.py:15 inputs/sensecap_weather.py:35
@@ -755,7 +755,7 @@ msgstr "10億分率 ppb"
 
 #: config_devices_units.py:635
 msgid "Parts per million"
-msgstr "100만分率 ppm"
+msgstr "100万分率 ppm"
 
 #: config_devices_units.py:638
 msgid "Parts per thousand"
@@ -1686,7 +1686,7 @@ msgstr "シングル"
 
 #: config_translations.py:184 widgets/widget_gauge_solid.py:219
 msgid "Stops"
-msgstr "停止数"
+msgstr "区間数"
 
 #: aot_flask/forms/forms_settings.py:703
 #: aot_flask/templates/flash_messages.html:7
@@ -2580,7 +2580,7 @@ msgstr "上昇"
 
 #: config_translations.py:434 config_translations.py:437
 msgid "Never allow duty cycle to go below Min."
-msgstr "デュー티サイクルが最小値を下回らないようにします"
+msgstr "デューティサイクルが最小値を下回らないようにします"
 
 #: aot_flask/forms/forms_pid.py:31
 #: aot_flask/templates/pages/geo/geo_facility.html:1276
@@ -3624,7 +3624,7 @@ msgstr "Set a PWM Output to set a duty cycle."
 msgid ""
 "Ramp a PWM Output from one duty cycle to another duty cycle over a period of"
 " time."
-msgstr "一定時間かけてPWM出力のデュー티サイクルを段階的に変更します"
+msgstr "一定時間かけてPWM出力のデューティサイクルを段階的に変更します"
 
 #: actions/output_ramp_pwm.py:50
 #: aot_flask/templates/pages/ai/ai_agent.html:902
@@ -4908,7 +4908,7 @@ msgstr "パスワードリセットコード"
 
 #: aot_flask/forms/forms_authentication.py:86
 msgid "Reset Code"
-msgstr "リ셋コード"
+msgstr "リセットコード"
 
 #: aot_flask/forms/forms_authentication.py:88
 #: aot_flask/forms/forms_authentication.py:89
@@ -5278,7 +5278,7 @@ msgstr "メッセージにコードを含める"
 
 #: aot_flask/forms/forms_conditional.py:41
 msgid "Refractory Period (sec)"
-msgstr "不응期 秒"
+msgstr "不応期 秒"
 
 #: aot_flask/forms/forms_conditional.py:44 aot_flask/forms/forms_pid.py:47
 #: aot_flask/forms/forms_trigger.py:50
@@ -5833,7 +5833,7 @@ msgstr "バックアップを作成"
 
 #: aot_flask/forms/forms_misc.py:93 aot_flask/templates/admin/backup.html:48
 msgid "Restore Backup"
-msgstr "バックアップを復원"
+msgstr "バックアップを復元"
 
 #: aot_flask/forms/forms_misc.py:94 aot_flask/templates/admin/backup.html:49
 msgid "Delete Backup"
@@ -6146,7 +6146,7 @@ msgstr "最小オフ継続時間 上昇"
 
 #: aot_flask/forms/forms_pid.py:169
 msgid "Min Duration (Lower)"
-msgstr "最小継続時間 下강"
+msgstr "最小継続時間 下降"
 
 #: aot_flask/forms/forms_pid.py:177
 msgid "Max Duration (Lower)"
@@ -7210,7 +7210,7 @@ msgstr "エッジ検出時"
 
 #: aot_flask/forms/forms_trigger.py:33
 msgid "Latitude (Decimal)"
-msgstr "緯도 十進法"
+msgstr "緯度 十進法"
 
 #: aot_flask/forms/forms_trigger.py:34
 msgid "Longitude (Decimal)"
@@ -12571,7 +12571,7 @@ msgstr "名前のエイリアス"
 msgid ""
 "Local word = table name, comma separated. e.g. 무=radish, 배추=cabbage. Only "
 "common anchors are needed — the AI works out synonyms itself."
-msgstr "現地語 = 表の名前、カンマ区切り。例: 대根=radish。よく使うものだけで十分です — 同義語は AI が自分で解決します。"
+msgstr "現地語 = 表の名前、カンマ区切り。例: だいこん=radish、はくさい=cabbage。よく使うものだけで十分です — 同義語は AI が自分で解決します。"
 
 #: aot_flask/templates/pages/ai/ai_library.html:526
 msgid "e.g. These are survival ranges, not greenhouse setpoints."
@@ -14914,7 +14914,7 @@ msgstr "PWM最大デューティサイクル % - 最大出力レベルを設定�
 msgid ""
 "Minimum value required for lower output to be active. If smaller than this, "
 "lower output will not turn on."
-msgstr "下降出力이アクティブになるために必要な最小値。これより小さい場合、下降出力はオンになりません。"
+msgstr "下降出力がアクティブになるために必要な最小値。これより小さい場合、下降出力はオンになりません。"
 
 #: aot_flask/templates/pages/function_options/pid_options/output_value_lower.html:13
 msgid ""
@@ -15059,7 +15059,7 @@ msgstr "このPWM出力にデューティ比を適用します。"
 
 #: aot_flask/templates/pages/function_options/trigger_options/run_pwm_method.html:27
 msgid "Duration between calculating and setting the PWM output duty cycle"
-msgstr "PWM출력デューティ比を計算・設定までの期間"
+msgstr "PWM出力デューティ比を計算・設定までの期間"
 
 #: aot_flask/templates/pages/function_options/trigger_options/sunrise_sunset.html:4
 msgid "Next Sunrise/Sunset at Geographic Location"
@@ -17065,7 +17065,7 @@ msgstr "サイトの最大ポリゴン数"
 msgid ""
 "Limit max polygons for Sites. Sites exceeding this limit will be rendered as"
 " points."
-msgstr "サイトの最大ポリゴン数を制限합니다。制限を超えたサイトは点として表示されます"
+msgstr "サイトの最大ポリゴン数を制限します。制限を超えたサイトは点として表示されます"
 
 #: aot_flask/templates/pages/geo/geo_setting.html:325
 msgid "Max Zone Polygons"
@@ -18378,7 +18378,7 @@ msgstr "暗号化なし"
 
 #: aot_flask/templates/settings/alerts.html:54
 msgid "Unencrypted (No Login)"
-msgstr "暗호化なし ログイン不要"
+msgstr "暗号化なし ログイン不要"
 
 #: aot_flask/templates/settings/alerts.html:62
 msgid "Typically the email ID or full address"
@@ -18786,7 +18786,7 @@ msgstr "ブランディング"
 #: aot_flask/templates/settings/custom_ui.html:346
 msgid ""
 "Overrides the hostname with this text. Leave empty to use the hostname."
-msgstr "ホスト名をこのテキストで上書きします。ホ스트名を使用する場合は空白のままにしてください"
+msgstr "ホスト名をこのテキストで上書きします。ホスト名を使用する場合は空白のままにしてください"
 
 #: aot_flask/templates/settings/custom_ui.html:354
 msgid "Formats"
@@ -19820,7 +19820,7 @@ msgstr "メンバーと付与リソースはグループ作成後に設定しま
 
 #: aot_flask/templates/settings/widget.html:19
 msgid "You can import widget module files."
-msgstr "ウィジェット모ジュールファイルをインポートできます"
+msgstr "ウィジェットモジュールファイルをインポートできます"
 
 #: aot_flask/templates/settings/widget.html:32
 msgid "Imported Widget Modules"
@@ -19949,7 +19949,7 @@ msgid ""
 "of the current database is created at "
 "/opt/AoT/databases/aot.db.backup_DATE_TIME."
 msgstr ""
-"注記1 この機能はすべての設定、ユーザーアカウント、カスタム関数/入力/出力/ウィ젯を上書きし、Web "
+"注記1 この機能はすべての設定、ユーザーアカウント、カスタム関数/入力/出力/ウィジェットを上書きし、Web "
 "UIからログアウトさせます。現在のデータベースのバックアップは /opt/AoT/databases/aot.db.backup_日付_時刻 "
 "に作成されます"
 
@@ -27788,7 +27788,7 @@ msgstr "ループ内で実行するPythonコード"
 
 #: widgets/widget_python_code.py:215
 msgid "Python Code (On Refresh)"
-msgstr "Python코드 更新時"
+msgstr "Pythonコード 更新時"
 
 #: widgets/widget_python_code.py:216
 msgid "Python code to execute every dashboard/widget refresh"
@@ -33099,7 +33099,7 @@ msgstr "苗は成葉より焼けやすいため、噴霧の制限を厳しくし
 
 #: aot/functions/custom_functions/env_coordinator_impl/_function_info.py
 msgid "Use the misting nozzles for humidity too. Turn off when they are your irrigation."
-msgstr "噴霧ノズルを加湿にも使います。そのノズルが灌水設備なら오프にしてください。"
+msgstr "噴霧ノズルを加湿にも使います。そのノズルが灌水設備ならオフにしてください。"
 
 #: aot/functions/custom_functions/env_coordinator_impl/_function_info.py
 msgid "A safety stop: control halts after this date. Leave blank to run indefinitely."
@@ -33735,3 +33735,27 @@ msgstr "終了時刻は同じ日の開始時刻より後である必要があり
 #: aot/widgets/AoT_timer.py
 msgid "OFF Failed: {}"
 msgstr "停止に失敗: {}"
+
+#: aot/widgets/AoT_wind_angular.py
+msgid "Colors"
+msgstr "色"
+
+#: aot/widgets/AoT_gauge_angular.py aot/widgets/widget_gauge_solid.py
+msgid "Color Sections"
+msgstr "区間の色"
+
+#: aot/widgets/AoT_gauge_angular.py aot/widgets/widget_gauge_solid.py
+msgid "Section"
+msgstr "区間"
+
+#: aot/widgets/AoT_gauge_angular.py
+msgid "Global Band Colors"
+msgstr "全体のバンド色"
+
+#: aot/aot_flask/templates/pages/form_options/Color_Presets.html
+msgid "Preset colors"
+msgstr "プリセットの色"
+
+#: aot/widgets/AoT_graph.py
+msgid "Text Size"
+msgstr "文字サイズ"

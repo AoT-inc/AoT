@@ -8,10 +8,17 @@ import os
 sys.path.append(os.path.abspath(os.path.join(__file__, "../../..")))
 
 from aot.config import INSTALL_DIRECTORY
-from aot.scripts.doc_locale_helper import english_locale
+from aot.scripts.doc_locale_helper import doc_locale
 from aot.utils.inputs import parse_input_information
 from aot.utils.system_pi import add_custom_measurements
 from aot.utils.system_pi import add_custom_units
+
+# (locale, filename suffix) - English has no suffix (mkdocs-static-i18n default).
+LANGUAGES = [
+    ("en", ""),
+    ("ko", ".ko"),
+    ("ja", ".ja"),
+]
 
 
 def repeat_to_length(s, wanted):
@@ -28,11 +35,16 @@ def safe_link(link):
 
 
 if __name__ == "__main__":
-    with english_locale():
+  for lang, suffix in LANGUAGES:
+    # Parsing must happen inside the locale context: parse_input_information()
+    # and add_custom_measurements()/add_custom_units() resolve lazy_gettext()
+    # strings as they run, so re-parsing per language is required to get
+    # per-language output.
+    with doc_locale(lang):
         inputs_info = OrderedDict()
         aot_info = OrderedDict()
 
-        save_path = os.path.join(INSTALL_DIRECTORY, "docs/Supported-Inputs-By-Measurement.md")
+        save_path = os.path.join(INSTALL_DIRECTORY, f"docs/Supported-Inputs-By-Measurement{suffix}.md")
 
         for input_id, input_data in parse_input_information(exclude_custom=True).items():
             name_str = ""
@@ -80,7 +92,14 @@ if __name__ == "__main__":
             out_file.write("\n")
 
             for measure, data in dict_inputs.items():
-                out_file.write(f"## {dict_measurements[measure]['name']}\n\n")
+                # Explicit id (attr_list, enabled in mkdocs.yml) instead of relying
+                # on mkdocs' auto-generated heading slug: for ko/ja headings the
+                # default slugifier (markdown.extensions.toc.slugify) strips all
+                # non-ASCII characters, so e.g. "가속도" -> "" and every CJK
+                # heading collapses to positional ids ("_1", "_2", ...) that never
+                # match the #safe_link(...) anchors the TOC above links to.
+                heading = dict_measurements[measure]['name']
+                out_file.write(f"## {heading} {{: #{safe_link(heading)} }}\n\n")
 
                 # Determine if there are multiple of the same name
                 dict_names = {}

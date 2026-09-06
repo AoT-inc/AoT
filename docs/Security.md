@@ -61,21 +61,65 @@ any script or integration using the old key before generating a replacement.
 ## Audit log { #audit-log }
 
 **Manage → Audit Log** (requires the "View Logs" permission — the same one used for
-the System Log) records security-relevant activity:
+the System Log; on the default roles that means Admin, Editor, and Monitor, not
+Guest or Kiosk — see [Roles](Configuration-Settings.md#roles)) is a browsable,
+filterable record of who did what, when, from where, and whether it succeeded.
 
-- Login success, failure, and account lockout
-- Logout
+### What gets recorded
+
+- Login success, failure, and account lockout; logout
 - User creation, modification, and deletion
+- Group creation, modification, deletion, and changes to a group's membership or
+  resource grants
 - General settings changes
-- Manual output/device control
-- API key generation
+- Device control — a person switching an output from the dashboard, an AI agent
+  doing so on their behalf, and an irrigation sequence opening or closing a valve.
+  Continuous automatic control by PID/PWM controllers and the environment
+  coordinator is deliberately **not** included here: it runs far too often for a
+  row-per-action table, and is tracked instead as tags on the time-series
+  measurement data. A driver's own startup, shutdown, or removal is recorded too,
+  since that can change hardware state directly.
+- API key generation and revocation, and use of the deprecated URL-query-string
+  key auth
 - Remote Admin token issuance
+- Exporting this audit log as CSV, and requesting a software update (from the
+  Upgrade page, or from the scheduled auto-update check)
 
-Filter by action, user, or result, and set how many rows to show. **Export CSV**
-downloads the currently filtered results.
+The **Action** filter lists the everyday ones; a few less common actions (such as
+the update-request one above) are not in that dropdown but still show up when the
+filter is left on **All**.
 
-Entries older than 1 year are removed automatically. This is not currently
-configurable from the settings page.
+AI tool calls and their approvals are **not** part of this log — they go through a
+separate approval trail described in [Safety & Approval Model](ai/overview.md#safety-approval-model).
+This page only records the resulting device-control action, attributed to the AI.
+
+### Reading the table
+
+| Column | Meaning |
+|---|---|
+| Timestamp | When it happened, shown in your local time zone (stored internally in UTC) |
+| Action | The event, as a `domain.verb` string — e.g. `login.failure`, `output.control` |
+| Result | `success` or `failure`. A denied or failed attempt is recorded too, not only what went through |
+| User | The account name, when the action came from a logged-in person. For device control specifically, this can instead show what triggered it — a sequence, a driver lifecycle phase (`startup`/`shutdown`), or (for the scheduled update check) `auto-update` |
+| IP Address | The address the request came from. Blank when there was no browser request to read one from — an AI agent's command, or a driver lifecycle event |
+| Target Object | What was acted on: its type and, where known, its name (an output's name, a setting's name, and so on) |
+| Detail | A short free-text note. For device control this includes the channel, the requested state, and the determined origin (`user`, `ai`, `sequence`, `lifecycle`, or `unknown` if no code path claimed it — worth a look if you see it) |
+
+**Export CSV** adds columns not shown on screen — `user_id`, `target_id`, and the
+`before`/`after` values as JSON, populated for actions where the changed value
+matters (currently settings changes).
+
+### Filtering and export
+
+Filter by **Action**, **User** (a partial, case-insensitive match), and **Result**,
+and choose how many rows to display (**Rows**, up to 1000). **Export CSV**
+downloads every row matching the current Action/User/Result filters — it ignores
+the Rows limit, so the file can hold more than what is shown on screen.
+
+### Retention
+
+Entries older than 1 year (`AUDIT_LOG_RETENTION_DAYS`) are removed automatically by
+a daily background job. This is not currently configurable from the settings page.
 
 Passwords, password hashes, and API keys themselves are never written to the audit
 log — only the fact that an action occurred and who performed it.

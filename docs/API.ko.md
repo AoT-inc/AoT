@@ -15,7 +15,7 @@ API는 응용 프로그램 프로그래밍 인터페이스로, 간단히 말해 
 
 REST는 표현 상태 전송(Representational State Transfer)의 약자입니다. 이는 분산 시스템이 일관된 인터페이스를 노출하는 방법을 설명하는 아키텍처 패턴입니다. 사람들이 ‘REST API’라는 용어를 사용할 때, 일반적으로 HTTP 프로토콜을 통해 미리 정의된 URL 집합을 통해 접근하는 API를 지칭합니다. 이러한 URL은 다양한 리소스를 나타내며, 해당 위치에서 접근할 수 있는 모든 정보나 콘텐츠는 JSON, HTML, 오디오 파일 또는 이미지로 반환될 수 있습니다. 종종 리소스는 HTTP를 통해 수행할 수 있는 하나 이상의 메서드(GET, POST, PUT 및 DELETE)를 가집니다.
 
-### 인증
+### 인증 { #authentication }
 
 API 키는 **관리 → 시스템 관리 → 사용자**에서 사용자를 편집한 뒤 **API 키 생성**을 눌러 발급할 수 있습니다. 키는 128바이트 난수값이며, **생성되는 그 순간 딱 한 번만** base64로 인코딩된 문자열로 표시됩니다 — AoT는 키 자체가 아니라 단방향 해시만 저장하므로 이후에는 다시 표시할 수 없습니다. 분실했다면 새로 발급하십시오. 자세한 내용은 [보안](Security.ko.md#api-keys)을 참조하십시오.
 
@@ -106,7 +106,7 @@ https://{RASPBERRY_PI_IP_ADDRESS}/api를 방문하여 AoT 설치의 현재 API �
 
 최신 API 버전에 대한 문서는 HTML 형식으로도 제공됩니다: `AoT API 문서 <https://aot-inc.github.io/AoT/aot-api.html>`__
 
-## 데몬 제어 객체
+## 데몬 제어 객체 { #daemon-control-object }
 
 ### DaemonControl()
 

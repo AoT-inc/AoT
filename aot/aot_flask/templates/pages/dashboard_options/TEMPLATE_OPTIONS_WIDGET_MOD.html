@@ -18,13 +18,11 @@
 </div>
 {% endif %}
 
-<div class="aot-modal-option-row">
-  <label class="aot-modal-option-label" for="font_em_name_{{each_widget.unique_id}}">{{form_base.font_em_name.label.text}}</label>
-  <div class="aot-modal-option-control">
-    {{form_base.font_em_name(class_='form-control aot-modern-input', id='font_em_name_' ~ each_widget.unique_id, value=each_widget.font_em_name, **{'title': dict_translation['font_em_name']['phrase']})}}
-  </div>
-</div>
-
+{#- "Font Size (em)"(font_em_name) 칸은 2026-09-06 에 없앴다.
+    위젯 25종 가운데 그 값을 읽는 것은 widget_function_status 하나뿐이라,
+    나머지에서는 숫자를 바꿔도 화면이 그대로인 **죽은 노브**였다.
+    글자 크기는 공용 사다리(aot-theme-variables.css)와 역할 클래스
+    (.aot-w-title/.aot-w-body …)가 정한다 — 위젯마다 따로 정하지 않는다. -#}
 <div class="aot-modal-option-row">
   <label class="aot-modal-option-label" for="enable_drag_handle_{{each_widget.unique_id}}">{{form_base.enable_drag_handle.label.text}}</label>
   <div class="aot-modal-option-control" style="display: flex; align-items: center;">

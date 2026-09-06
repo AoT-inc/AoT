@@ -1,0 +1,65 @@
+name: Docs Health
+
+# 사용자 매뉴얼(mkdocs, docs/)이 앱 코드와 따로 노는 것을 막는다.
+#   - 템플릿의 manual_url('Foo/#bar') 가 가리키는 페이지·앵커가 실제로 없는 채로 링크만
+#     걸리는 경우 (앱은 정상 배포되고, 클릭한 사용자만 404/빈 화면을 본다).
+#   - 문서 사이 링크가 가리키는 앵커가 그 언어 판에 없는 경우 (한국어/일본어 제목은
+#     자동 슬러그가 영어와 달라 조용히 깨진다. mkdocs 는 INFO 로만 흘린다).
+#   - ko/ja "번역"이 en 폴백보다도 내용이 적은 채로 커밋되는 경우
+#     (과거 일본어 부분번역 5쪽 사고 - 부분번역을 완료로 착각). 판정은 길이가 아니라
+#     구조로 한다 - 제목·표 행·목록 항목·코드 블록·문단 개수는 언어와 무관하게
+#     원문과 같아야 한다. 길이 비율로 보던 때는 일본어 완역본이 영어의 57~60% 로
+#     나와 멀쩡한 네 쪽이 부분번역으로 잡혔다.
+#   - docs/**/*.md 가 참조하는 이미지가 실제로는 없는 경우.
+#   - mkdocs.yml 의 extra.version 과 aot/config/__init__.py 의 AOT_VERSION 불일치
+#     (과거 태그·문서 버전 불일치 이력).
+#
+# aot/scripts/check_docs_health.py 의 5개 검사 중 4개(links·i18n·version·images)만 여기
+# 건다. 남은 하나(drift: docs/Supported-*.md 생성기 6종을 재실행해 git diff 가 비는지)는
+# aot 전체(입력/출력/함수/액션/위젯 파서)를 import 하며, 그 경로가 requirements.txt
+# 전체(numpy, influxdb_client, opencv-python-headless 등 120여 개)를 요구한다. 이 저장소의
+# 다른 잡이 이미 그 설치를 하고 있어 문서 워크플로에 통째로 다시 물리면 push 마다 무거워지고,
+# 이 게이트를 붙이는 시점에 그 전체 설치가 이 러너에서 실제로 매끈히 되는지 실측하지
+# 않았다 - 그래서 drift 는 로컬 전용으로 남겨 둔다:
+#   python3 aot/scripts/check_docs_health.py --only drift
+# (요구사항 설치가 실측되면 이 워크플로에 별도 잡으로 추가하면 된다.)
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'docs/**'
+      - 'mkdocs.yml'
+      - 'aot/aot_flask/templates/**'
+      - 'aot/config/__init__.py'
+      - 'aot/scripts/check_docs_health.py'
+  pull_request:
+    paths:
+      - 'docs/**'
+      - 'mkdocs.yml'
+      - 'aot/aot_flask/templates/**'
+      - 'aot/config/__init__.py'
+      - 'aot/scripts/check_docs_health.py'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: docs/requirements.txt
+
+      - name: mkdocs 및 플러그인 설치
+        run: pip install -r docs/requirements.txt
+
+      - name: 문서 건전성 검사 (links · anchors · i18n · version · images)
+        run: python3 aot/scripts/check_docs_health.py

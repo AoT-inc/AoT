@@ -61,10 +61,12 @@
   --aot-text-color: var(--text-primary);
   --aot-title-font-size: 1em;
   --aot-prt-font-size: 1em;
-  --aot-btn-font-size: 1em;
+  /* --aot-btn-font-size 는 aot-theme-variables.css 의 사다리가 정한다.
+     여기서 `1em` 으로 덮으면 부모에 따라 크기가 달라져 사다리를 벗어난다. */
 
   --aot-btn-width: 54px;
-  --aot-btn-height: 32px;
+  /* --aot-btn-height 는 aot-theme-variables.css 가 정한다.
+     여기서 덮어쓰면 그쪽 값이 죽는다(실제로 그랬다). */
   --aot-btn-gap: 4px;
   --aot-group-gap: 8px;
 
@@ -461,15 +463,9 @@ body,
   }
 }
 
-.widget-outer {
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1) !important;
-  border-radius: 0.7em !important;
-  border: 1px solid #c9c9c9;
-  /* 위젯 카드 = 배경 기본(--aot-surface-card, bd_primary 로 배선됨) —
-     새 배경 보조(body, --aot-surface-body)와 대비되는 카드 레이어.
-     color-system.md 참조. */
-  background-color: var(--aot-surface-card, #FFFFFF);
-}
+/* .widget-outer(위젯 카드)는 `aot-base.css` 의 "위젯 셸" 절이 정본이다.
+   여기 있던 정의는 AoT 테마에서만 살아 있어서 다른 테마에서는 카드가 안
+   그려졌고, `!important` 두 개가 셸의 다른 정의들과 싸웠다. 2026-09-06 이관. */
 
 /* 사이드바 메뉴 스타일 */
 #sidebar-wrapper .list-group-item {

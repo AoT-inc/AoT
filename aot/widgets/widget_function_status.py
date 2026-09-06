@@ -267,10 +267,11 @@ WIDGET_INFORMATION = {
 
     'widget_dashboard_head': """<!-- No head content -->""",
 
-    'widget_dashboard_title_bar': """<span class="aot-w-title" style="padding-right:0.5em">{{each_widget.name}}</span>""",
+    'widget_dashboard_title_bar': """""",
 
-    'widget_dashboard_body': """<link rel="stylesheet" href="{{ url_for('static', filename='css/components/aot-toggle.css') }}">
-<style>
+    # aot-toggle.css 링크는 지웠다 — layout.html 이 모든 페이지에서 이미 싣는데,
+    # 여기(본문)에 있으면 위젯 인스턴스마다 한 번씩 더 내려갔다.
+    'widget_dashboard_body': """<style>
 #fsw-body-{{each_widget.unique_id}} {
   background-color: var(--aot-input-bg);
   border: 1px solid var(--gray);
@@ -279,7 +280,9 @@ WIDGET_INFORMATION = {
   margin: 12px;
 }
 #fsw-body-{{each_widget.unique_id}} .aot-w-body {
-  font-size: {{each_widget.font_em_name or 1.0}}em;
+  /* 크기는 .aot-w-body 가 이미 정한다(공용 사다리). 예전에는 위젯 설정의
+     `font_em_name` 배수를 곱했는데, 그 칸은 25종 중 이 위젯 하나만 읽어서
+     나머지에서는 아무 일도 안 하는 노브였다 — 2026-09-06 에 칸을 없앴다. */
   white-space: pre-line;
 }
 </style>

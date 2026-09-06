@@ -181,7 +181,7 @@
 .env-cell.env-clickable:hover { border-color: var(--bd-btn-primary); }
 .env-cell.iec-focus { outline: 2px solid var(--bd-btn-primary); outline-offset: 1px; }
 .env-label  { font-size: var(--aot-font-size-xs); color: var(--aot-color-text-secondary); }
-.env-value  { font-size: .95rem; font-weight: 700; color: var(--aot-color-text-primary); }
+.env-value  { font-size: var(--aot-font-size-base); font-weight: 700; color: var(--aot-color-text-primary); }
 .env-cell.env-ok   .env-value { color: var(--aot-color-success); }
 .env-cell.env-warn .env-value { color: var(--aot-color-warning); }
 .env-cell.env-err  .env-value { color: var(--aot-color-danger);  }
@@ -192,6 +192,9 @@
   margin-top: .05rem;
 }
 .env-sp-hint {
+  /* 사다리 예외: 카드 모서리에 절대배치되는 힌트 칩이다(top:3px). 사다리
+     최소단(2xs = 11.2px)으로 키우면 아래 설정값 줄과 겹친다 — 본문 글자가
+     아니라 자리에 갇힌 표식이라 크기를 자리가 정한다. */
   font-size: 9px;
   color: var(--aot-color-text-secondary);
   position: absolute;
@@ -602,7 +605,7 @@
   opacity: .65;
   padding: 0 4px;
   margin-right: 2px;
-  font-size: 14px;
+  font-size: var(--aot-font-size-sm);
   line-height: 1;
   -webkit-user-select: none;
   user-select: none;
@@ -627,7 +630,10 @@
   font-size: 1.1em;      /* .aot-act-name 과 동일 글꼴 크기 → 같은 줄 박스 */
   line-height: 1.4;      /* 제목과 동일 줄높이로 박스 높이 확보 */
 }
-/* 아이콘 자체 크기는 고정하고, 위 줄 박스 안에서 세로 중앙 정렬(상속 align-items:center) */
+/* 아이콘 자체 크기는 고정하고, 위 줄 박스 안에서 세로 중앙 정렬(상속 align-items:center)
+   사다리 예외: 글자가 아니라 아이콘 글리프다. 줄 높이는 옆 제목(1.1em)이 정하고
+   이 값은 그 안에서 아이콘이 차지할 크기만 고정한다 — 사다리를 따라 커지면
+   손잡이가 제목보다 커 보인다. */
 .aot-act-row > .aot-act-drag-handle i { font-size: 13px; line-height: 1; }
 .aot-act-row:has(> .aot-act-drag-handle) { padding-left: 22px; }
 /* 제목과 핸들의 줄 박스를 동일하게 맞춰 아이콘이 제목 텍스트 상하 중심에 오게 함 */

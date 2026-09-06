@@ -1,5 +1,8 @@
 # AoT Widget Style Cleanup Plan
 
+> 상태: 부분 시행. 남은 항목은 [widget-uiux-unification-plan.md](widget-uiux-unification-plan.md)
+> 의 **WP4(색 정합)** 에서 이어 받는다. 그 문서가 위젯 UI/UX 전반의 정본이다.
+
 **목표:** `aot/widgets/AoT_*.py` 전 위젯에서 하드코딩된 색상·폰트·여백을
 전역 CSS 토큰(`aot-theme-variables.css`) 및 공용 클래스(`aot-widget-typography.css`,
 `aot-base.css`)로 교체한다.

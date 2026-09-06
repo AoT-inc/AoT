@@ -8,7 +8,7 @@
 
 페이지 상단의 드롭다운은 지원 장치를 출력 방식별로 묶어 보여줍니다(펌프·정량, 비례 제어(PWM), 값 설정, 켜기·끄기). AoT가 직접 만든 장치가 맨 앞에 옵니다. 검색창은 장치 이름과 모듈 이름, 인터페이스는 물론 사용 중인 언어의 측정명으로도 걸립니다.
 
-## 사용자 정의 출력
+## 사용자 정의 출력 { #custom-outputs }
 
 AoT에는 사용자 정의 출력을 AoT 시스템에서 생성하고 사용할 수 있는 사용자 정의 출력 가져오기 시스템이 있습니다. 사용자 정의 출력은 `[기어 아이콘] -> 구성 -> 사용자 정의 출력` 페이지에서 업로드 및 가져오기 할 수 있습니다. 가져온 후에는 `설정 -> 출력` 페이지에서 사용할 수 있습니다.
 
@@ -250,30 +250,6 @@ PWM 스위칭 주파수는 부하(전력을 사용하는 장치)에 영향을 �
 </tbody>
 </table>
 
-### DC 팬 제어를 위한 회로도
-
-아래는 AoT의 PWM 출력을 사용하여 직류(DC) 팬을 제어할 수 있는 하드웨어 회로도입니다.
-
-PWM 출력으로 12볼트 DC 팬(예: PC 팬) 제어
-
-![회로도: PWM 출력으로 12볼트 DC 팬 제어](images/Schematic-PWM-DC-12-volt-fan-control.png)
-
-### 교류(AC) 변조를 위한 회로도
-
-아래는 AoT의 PWM 출력을 사용하여 교류(AC)를 변조할 수 있는 하드웨어 회로도입니다.
-
-PWM 출력으로 교류(AC)를 1% 듀티 사이클로 변조
-
-![회로도: PWM 출력으로 교류(AC)를 1% 듀티 사이클로 변조](images/Schematic-PWM-AC-1percent-duty-cycle.png)
-
-PWM 출력으로 교류(AC)를 50% 듀티 사이클로 변조
-
-![회로도: PWM 출력으로 교류(AC)를 50% 듀티 사이클로 변조](images/Schematic-PWM-AC-50percent-duty-cycle.png)
-
-PWM 출력으로 교류(AC)를 99% 듀티 사이클로 변조
-
-![회로도: PWM 출력으로 교류(AC)를 99% 듀티 사이클로 변조](images/Schematic-PWM-AC-99percent-duty-cycle.png)
-
 ## 연동 펌프(Peristaltic Pump)
 
 AoT는 두 가지 연동 펌프 출력 모듈을 지원합니다. 일반 연동 펌프 출력(Generic Peristaltic Pump Output)과 Atlas Scientific EZO-PMP 연동 펌프입니다.
@@ -336,6 +312,10 @@ sudo /opt/AoT/env/bin/python /opt/AoT/aot/devices/wireless_rpi_rf.py -d 2 -g 17
 ## Python 명령
 
 Python 명령 출력은 Linux 명령 출력과 유사하게 작동하지만 Python 3 코드를 실행합니다. Python 명령 출력을 생성하면 출력 사용 방법을 보여주는 예제 코드가 제공됩니다.
+
+## MQTT: TLS와 CA 인증서 { #mqtt-tls }
+
+MQTT 출력(On/Off, On/Off Multi, Value, PWM)은 TLS로 브로커에 발행할 수 있습니다. "TLS 사용"을 켜고 "TLS CA 인증서"를 비워 두면 시스템의 CA 저장소를 신뢰하는데, 이는 공인 인증서(예: Let's Encrypt)를 쓰는 브로커에 필요한 방식입니다. 사설 또는 자체서명 인증서를 쓰는 브로커라면 해당 CA 파일의 경로를 직접 입력해야 합니다 — 지정하지 않으면 인증서 검증 단계에서 연결이 거절됩니다. 브로커를 로컬 네트워크가 아니라 인터넷을 통해 접속한다면 TLS가 필요합니다. 같은 옵션이 [MQTT 입력](Inputs.ko.md#mqtt-tls)에도 있습니다.
 
 ## 출력 참고 사항
 

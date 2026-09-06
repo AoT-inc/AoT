@@ -144,7 +144,8 @@ WIDGET_HEAD_HTML = """
      If maplibregl is missing the widget init will log a clear error. -->
 
 <!-- Map tool styles (.map-tools-left/right, .tool-group, .btn-circle) — same as /geo/design -->
-<link rel="stylesheet" href="{{ url_for('static', filename='css/map/map.css') }}" />
+{#- map.css 는 layout.html 이 모든 페이지에서 이미 싣는다 — 여기서 또 걸면
+    한 화면에 같은 파일이 두 번 내려간다(실측으로 확인). -#}
 
 <!-- widget-shared — **구획 위젯(AoT_plot)과 나눠 쓰는 소스.** 반드시 아래
      aot-map-widget 보다 먼저.
@@ -181,19 +182,31 @@ WIDGET_HEAD_HTML = """
 <!-- 고정 리터럴 `?v=52` 였다 — 내용이 바뀌어도 URL 이 그대로라 1년 캐시가
      곧 "1년간 옛 JS" 가 된다(CLAUDE.md 정적 캐시 무효화). url_for 가 내용
      해시를 붙인다. -->
+{% if "css_sensor_label" not in dashboard_dict %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/widget/aot-sensor-label.css') }}">
-<link rel="stylesheet" href="{{ url_for('static', filename='css/components/aot-toggle.css') }}">
+{% set _dummy = dashboard_dict.update({"css_sensor_label": 1}) %}
+{% endif %}
 <!-- 공용 데이터 시각화 프리미티브(밴드 바 · 불릿 · 기간 바).
      구획 모달의 기간 축이 쓴다. 규약: docs/design/dataviz-primitives.md -->
-<link rel="stylesheet" href="{{ url_for('static', filename='css/components/aot-dataviz.css') }}">
+{#- aot-dataviz.css 도 layout.html 이 이미 싣는다. -#}
+{#- aot-plot-form.css 는 AoT_plot 위젯도 건다 — 먼저 그린 쪽만 걸리게 한다. -#}
+{% if "css_plot_form" not in dashboard_dict %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/components/aot-plot-form.css') }}">
+{% set _dummy = dashboard_dict.update({"css_plot_form": 1}) %}
+{% endif %}
 
 <!-- Shared time-wheel module (also used by AoT_timer, sequence widgets) — zone popup "settings" (turn on until end time) -->
+{% if "css_time_wheel" not in dashboard_dict %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/components/aot-time-wheel.css') }}">
+{% set _dummy = dashboard_dict.update({"css_time_wheel": 1}) %}
+{% endif %}
 <script src="{{ asset('widget-map-tail') }}"></script>
 
 <!-- Actuator group panel -->
+{% if "css_facility_widget" not in dashboard_dict %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/widget/aot-facility-widget.css') }}">
+{% set _dummy = dashboard_dict.update({"css_facility_widget": 1}) %}
+{% endif %}
 
 <style>
   /* Pure MapLibre Styles */
@@ -243,6 +256,9 @@ WIDGET_HEAD_HTML = """
   
   /* Attribution */
   .maplibregl-ctrl-attrib {
+    /* 사다리 예외: 지도 위에 겹쳐 두는 저작권 표시다. 지도를 가리지 않으면서
+       읽을 수는 있어야 하는 자리라 MapLibre·OSM 관례 크기를 따른다 —
+       사다리 최소단(2xs = 11.2px)으로 키우면 좁은 위젯에서 지도를 덮는다. */
     font-size: 10px;
   }
 
@@ -429,7 +445,7 @@ WIDGET_BODY_HTML = """
                 closeBtn.setAttribute('type', 'button');
                 closeBtn.setAttribute('aria-label', 'Close');
                 closeBtn.innerHTML = '&#x2715;';
-                closeBtn.style.cssText = 'position:absolute;top:10px;right:14px;background:none;border:none;cursor:pointer;font-size:16px;line-height:1;padding:4px 6px;z-index:1;';
+                closeBtn.style.cssText = 'position:absolute;top:10px;right:14px;background:none;border:none;cursor:pointer;font-size:var(--aot-font-size-base);line-height:1;padding:4px 6px;z-index:1;';
 
                 popupWrap.appendChild(box);
                 popupWrap.appendChild(closeBtn);
@@ -1008,19 +1024,25 @@ WIDGET_INFORMATION = {
     'widget_dashboard_head': WIDGET_HEAD_HTML,
     
     'widget_dashboard_title_bar': """
-    <span class="aot-w-title" style="padding-right:0.5em">{{each_widget.name}}</span>
-
+    {#- 이름은 셸이 렌더한다. 여기는 제목줄 오른쪽 도구만. -#}
     <div class="widget-map-controls" id="widget-map-controls-{{each_widget.unique_id}}">
-        <a class="widget-map-ctrl-btn"
+        {#- ⚠ 이 두 버튼의 이름표(title)와 아이콘 상태는 눌릴 때마다
+            `aot-map-widget-vector.js` 가 다시 쓴다(`_wire(btnLock…)`).
+            그래서 여기서 `aria-label` 을 따로 주면 눌린 뒤 값이 어긋난다 —
+            이름표 일원화는 그 JS(번들 재빌드 필요)와 함께 다뤄야 한다.
+            같은 이유로 hide 상태의 흐림도 JS 가 인라인으로 넣는 값을 따른다. -#}
+        <a class="aot-w-tool widget-map-ctrl-btn"
            id="tool-lock-{{each_widget.unique_id}}"
+           role="button" tabindex="0"
            data-locked="{{ 'true' if widget_variables.get('map_locked', False) else 'false' }}"
-           {% if not settings.hide_tooltips %}title="{{ _('Unlock Map') if widget_variables.get('map_locked', False) else _('Lock Map') }}"{% endif %}>
+           title="{{ _('Unlock Map') if widget_variables.get('map_locked', False) else _('Lock Map') }}">
             <i class="fas fa-{{ 'lock' if widget_variables.get('map_locked', False) else 'unlock' }}"></i>
         </a>
-        <a class="widget-map-ctrl-btn"
+        <a class="aot-w-tool widget-map-ctrl-btn"
            id="tool-hide-{{each_widget.unique_id}}"
+           role="button" tabindex="0"
            data-hidden="{{ 'true' if widget_variables.get('hide_controls', False) else 'false' }}"
-           {% if not settings.hide_tooltips %}title="{{ _('Show Controls') if widget_variables.get('hide_controls', False) else _('Hide Controls') }}"{% endif %}>
+           title="{{ _('Show Controls') if widget_variables.get('hide_controls', False) else _('Hide Controls') }}">
             <i class="fas fa-grip-horizontal" style="{{ 'opacity:0.35;' if widget_variables.get('hide_controls', False) else '' }}"></i>
         </a>
     </div>

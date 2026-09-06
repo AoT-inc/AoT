@@ -1,8 +1,7 @@
 {% set widget_meta = dict_widgets.get(each_widget.graph_type) %}
 {% if not widget_meta %}
-<div class="grid-stack-item-content widget-outer"
-  style="display: flex; flex-flow: column; padding: 0; border: 1px solid #f5c6cb; border-radius: 5px; background: var(--aot-tint-danger-bg, #f8d7da);">
-  <div style="padding: 0.75em; color: var(--aot-tint-danger-fg, #721c24);">
+<div class="grid-stack-item-content widget-outer widget-outer-error">
+  <div class="widget-body aot-w-body widget-error-text">
     {{ _('Unknown Widget Type') }} ({{ each_widget.graph_type }})
   </div>
 </div>
@@ -10,19 +9,35 @@
 {% set widget_options = custom_options_values_widgets.get(each_widget.unique_id, {}) %}
 {% set widget_variables = custom_widget_variables.get(each_widget.unique_id, {}) %}
 
-<div class="grid-stack-item-content widget-outer"
-  style="display: flex; flex-flow: column; padding: 0; border: 1px solid #ddd; border-radius: 5px">
+{#- 카드 모양(테두리·모서리·배경·flex)은 `aot-base.css` 의 "위젯 셸" 절이 정본이다.
+    여기에 인라인 style 로 다시 적지 말 것 — 인라인은 CSS 보다 세서, 예전에
+    여기 있던 `border: 1px solid #ddd` 가 CSS 가 정한 값을 말없이 죽였고
+    토큰이 아니라서 다크 테마에서도 밝은 실선으로 남았다. -#}
+<div class="grid-stack-item-content widget-outer">
 
   <div class="d-flex justify-content-between widget-heading{% if not this_dashboard.locked %} panel-heading{% endif %}">
     {% if not this_dashboard.locked %}
     <div class="my-auto widget-drag-handle">
       {% if each_widget.enable_drag_handle -%}
-      <i style="font-size: 1.5em" class="fas fa-grip-lines widget-drag-icon" title="{{_('Drag')}}"></i>
+      <i class="fas fa-grip-lines widget-drag-icon" title="{{_('Drag')}}"></i>
       {%- endif %}
     </div>
     {% endif %}
 
-    <div class="my-auto widget-title">
+    {#- 제목줄 계약 (2026-09-06)
+        **이름은 셸이 렌더한다.** 위젯의 `widget_dashboard_title_bar` 는 이름
+        옆에 붙는 부가물(상태 배지·도구 버튼)만 넣는다.
+
+        예전에는 25종이 각자 이름 span 을 만들었고, 클래스를 빠뜨린 위젯
+        (AoT_output_value·AoT_output_pwm)과 이름 앞에 상태 배지를 두어
+        `.widget-title > span` 이 배지에 잡히던 위젯(AoT_PID·AoT_timer)의
+        제목만 13.6px/400 으로 렌더됐다 — 나머지 13개는 14px/600 이었다.
+        이름을 한 곳에서 그리면 그 어긋남이 생길 수 없다.
+
+        `#widget-title-<uid>` 는 위젯이 제목 영역을 잡을 수 있는 안정된
+        손잡이다(AoT_graph 의 모바일 메뉴가 이것을 쓴다). -#}
+    <div class="my-auto widget-title" id="widget-title-{{each_widget.unique_id}}">
+      <span class="aot-w-title">{{each_widget.name}}</span>
       {% if each_widget.graph_type in list_html_files_title_bar %}
       <!-- Widget {{each_widget.graph_type}} widget_dashboard_title_bar template for {{each_widget.unique_id}} begin -->
       {% include 'user_templates/{}'.format(list_html_files_title_bar[each_widget.graph_type]) %}
@@ -32,14 +47,15 @@
 
     {% if not this_dashboard.locked %}
     <div class="my-auto widget-settings">
-      <a class="btn" data-toggle="modal" data-target="#modal_config_{{each_widget.unique_id}}">
-        <i style="font-size: 1.5em" class="fas fa-cog widget-cog-icon" title="{{_('Settings')}}"></i>
+      <a class="btn" data-toggle="modal" data-target="#modal_config_{{each_widget.unique_id}}"
+         aria-label="{{_('Settings')}}">
+        <i class="fas fa-cog widget-cog-icon" title="{{_('Settings')}}"></i>
       </a>
     </div>
     {% endif %}
   </div>
 
-  <div id="container-graph-{{each_widget.id}}" style="position: relative; flex-grow: 1">
+  <div id="container-graph-{{each_widget.id}}" class="widget-body">
     {% if each_widget.graph_type in list_html_files_body %}
     <!-- Widget {{each_widget.graph_type}} widget_dashboard_body template for {{each_widget.unique_id}} begin -->
     {% include 'user_templates/{}'.format(list_html_files_body[each_widget.graph_type]) %}

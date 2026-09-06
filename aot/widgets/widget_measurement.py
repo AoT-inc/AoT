@@ -140,7 +140,7 @@ WIDGET_INFORMATION = {
 
     'widget_dashboard_head': """<!-- No head content -->""",
 
-    'widget_dashboard_title_bar': """<span class="widget-title-bar aot-w-title" style="padding-right:0.5em">{{each_widget.name}}</span>""",
+    'widget_dashboard_title_bar': """""",
 
     'widget_dashboard_body': """
   {%- set device_id = widget_options['measurement'].split(",")[0] -%}

@@ -32,8 +32,29 @@ from aot.utils.constraints_pass import constraints_pass_positive_value
 logger = logging.getLogger(__name__)
 
 
+def _band_palette():
+    """측정 5단 밴드 팔레트 — 앱 전체가 쓰는 단일 소스.
+
+    ⚠ 예전에는 이 위젯만 Highcharts 기본색 4단
+    (`#33CCFF · #55BF3B · #DDDF0D · #DF5353`)을 자체 하드코딩했다. 그래서
+    같은 대시보드에 각도 게이지와 나란히 놓으면 **같은 "낮음→높음"이 서로
+    다른 색 언어**로 보였고, 설정(custom_ui)에서 사용자가 밴드 색을 바꿔도
+    이 위젯만 따라오지 않았다.
+
+    `get_band_palette()` 는 `aot/config` 의 BAND_PALETTE 에 사용자
+    오버레이를 얹어 **항상 5색**을 돌려준다.
+    """
+    try:
+        from aot.aot_flask.utils.utils_theme import get_band_palette
+        return get_band_palette()
+    except Exception:
+        # 앱 컨텍스트 밖(테스트·마이그레이션)에서는 오버레이 없이 기본값만.
+        from aot.config import BAND_PALETTE
+        return list(BAND_PALETTE)
+
+
 def execute_at_creation(error, new_widget, dict_widget):
-    color_list = ["#33CCFF", "#55BF3B", "#DDDF0D", "#DF5353"]
+    color_list = _band_palette()
     custom_options_json = json.loads(new_widget.custom_options)
     custom_options_json['range_colors'] = []
 
@@ -49,7 +70,8 @@ def execute_at_creation(error, new_widget, dict_widget):
         if i + 1 < len(color_list):
             color = color_list[i + 1]
         else:
-            color = "#DF5353"
+            # 팔레트보다 구간이 많으면 마지막 단(가장 높음)을 반복한다.
+            color = color_list[-1]
         custom_options_json['range_colors'].append('{stop},{color}'.format(stop=stop, color=color))
 
     new_widget.custom_options = json.dumps(custom_options_json)
@@ -215,7 +237,10 @@ WIDGET_INFORMATION = {
         {
             'id': 'stops',
             'type': 'integer',
-            'default_value': 4,
+            # 밴드 팔레트가 5단이라 기본도 5단으로 맞춘다(각도 게이지와 동일).
+            # 이미 만들어 둔 위젯의 저장값은 건드리지 않는다 — 이 기본값은
+            # 새로 추가할 때만 쓰인다.
+            'default_value': 5,
             'name': lazy_gettext('Stops'),
             'phrase': lazy_gettext('The number of color stops')
         }
@@ -232,28 +257,33 @@ WIDGET_INFORMATION = {
 {% endif %}
 """,
 
-    'widget_dashboard_title_bar': """<span class="aot-w-title" style="padding-right:0.5em">{{each_widget.name}}</span>""",
+    'widget_dashboard_title_bar': """""",
 
     'widget_dashboard_body': """<div class="not-draggable" id="container-gauge-{{each_widget.unique_id}}" style="position: absolute; left: 0; top: 0; bottom: 0; right: 0; overflow: hidden;"></div>""",
 
+    # 각도 게이지와 **같은 모양**을 쓴다 — 구간 수가 사용자 설정이라
+    # custom_options 로는 선언할 수 없고, 여기서 표준 옵션 행으로 그린다.
+    # 예전에는 부트스트랩 form-row 였고 라벨 "Stop"/"Color" 가 번역 함수 없이
+    # 영어로 박혀 있었다(22개 언어로 나가는 앱이다).
     'widget_dashboard_configure_options': """
-            {% for n in range(widget_variables['colors_gauge_solid_form']|length) %}
-              {% set index = '{0:0>2}'.format(n) %}
-        <div class="form-row">
-          <div class="col-auto">
-            <label class="control-label" for="color_stop_number{{index}}">[{{n}}] Stop</label>
-            <div>
-              <input class="form-control" id="color_stop_number{{index}}" name="color_stop_number{{index}}" type="text" value="{{widget_variables['colors_gauge_solid_form'][n]['stop']}}">
-            </div>
-          </div>
-          <div class="col-auto">
-            <label class="control-label" for="color_hex_number{{index}}">[{{n}}] Color</label>
-            <div>
-              <input id="color_hex_number{{index}}" name="color_hex_number{{index}}" placeholder="#000000" type="color" value="{{widget_variables['colors_gauge_solid_form'][n]['hex']}}">
-            </div>
-          </div>
-        </div>
-            {% endfor %}
+<div class="aot-modal-section-title">{{_('Color Sections')}}</div>
+<div class="aot-modal-container">
+{% for n in range(widget_variables['colors_gauge_solid_form']|length) %}
+  {% set index = '{0:0>2}'.format(n) %}
+<div class="aot-modal-option-row">
+  <label class="aot-modal-option-label" for="color_stop_number{{index}}">{{_('Section')}} {{ n + 1 }}</label>
+  <div class="aot-modal-option-control">
+    <input class="form-control aot-modern-input aot-gauge-stop-input"
+           id="color_stop_number{{index}}" name="color_stop_number{{index}}" type="text"
+           value="{{widget_variables['colors_gauge_solid_form'][n]['stop']}}"
+           aria-label="{{_('Value')}}" title="{{_('Value')}}">
+    <input type="color" id="color_hex_number{{index}}" name="color_hex_number{{index}}"
+           value="{{widget_variables['colors_gauge_solid_form'][n]['hex']}}"
+           aria-label="{{_('Color')}}" title="{{_('Color')}}">
+  </div>
+</div>
+{% endfor %}
+</div>
 """,
 
     'widget_dashboard_js': """
@@ -439,9 +469,21 @@ WIDGET_INFORMATION = {
         {%- endfor -%})',
       data: [null],
       dataLabels: {
-        format: '<div style="text-align:center"><span style="font-size:var(--aot-fs-value-lg);font-weight:var(--aot-fw-bold);color:' +
-          ((Highcharts.theme && Highcharts.theme.contrastTextColor) || 'var(--aot-color-text-primary)') + '">{point.y:,.{{widget_options['decimal_places']}}f}</span><br/>' +
-           '<span style="font-size:var(--aot-fs-unit);font-weight:var(--aot-fw-medium);color:var(--aot-color-text-secondary)">{{measure_unit}}</span></div>'
+        // `format` 문자열로는 값이 없을 때를 구분할 수 없다 — Highcharts 가
+        // null 이면 라벨을 아예 안 그려서 **값 자리가 빈 칸**이 됐다.
+        // 빈 칸은 "0" 인지 "센서가 죽었" 는지 "아직 안 왔" 는지를 말해 주지 않는다.
+        // 각도 게이지와 같은 규칙으로 대시를 그린다(단위는 붙이지 않는다).
+        formatter: function () {
+          var big = 'font-size:var(--aot-fs-value-lg);font-weight:var(--aot-fw-bold);color:' +
+            ((Highcharts.theme && Highcharts.theme.contrastTextColor) || 'var(--aot-color-text-primary)');
+          if (this.y === null || this.y === undefined) {
+            return '<div style="text-align:center"><span class="aot-w-nodata" style="' + big + '">—</span></div>';
+          }
+          var dec = {{ widget_options['decimal_places'] }};
+          return '<div style="text-align:center"><span style="' + big + '">' +
+            Highcharts.numberFormat(this.y, dec) + '</span><br/>' +
+            '<span style="font-size:var(--aot-fs-unit);font-weight:var(--aot-fw-medium);color:var(--aot-color-text-secondary)">{{measure_unit}}</span></div>';
+        }
       },
       tooltip: {
 
@@ -528,10 +570,13 @@ def custom_colors_gauge(form, error):
 
 def gauge_reformat_stops(current_stops, new_stops, current_colors=None):
     """Generate stops and colors for new and modified gauges."""
+    palette = _band_palette()
+
     if current_colors:
+        # 사용자가 이미 고른 색이 있으면 **그대로 둔다** — 팔레트로 덮지 않는다.
         colors = current_colors
-    else:  # Default colors (adding new gauge)
-        colors = ['20,#33CCFF', '40,#55BF3B', '60,#DDDF0D', '80,#DF5353']
+    else:  # 새로 추가하는 게이지에만 팔레트 기본값을 쓴다.
+        colors = ['{},{}'.format((i + 1) * 20, c) for i, c in enumerate(palette)]
 
     if new_stops > current_stops:
         try:
@@ -540,7 +585,7 @@ def gauge_reformat_stops(current_stops, new_stops, current_colors=None):
             stop = 80
         for _ in range(new_stops - current_stops):
             stop += 20
-            colors.append('{},#DF5353'.format(stop))
+            colors.append('{},{}'.format(stop, palette[-1]))
     elif new_stops < current_stops:
         colors = colors[: len(colors) - (current_stops - new_stops)]
 

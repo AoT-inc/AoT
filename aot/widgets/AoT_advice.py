@@ -292,15 +292,19 @@ WIDGET_INFORMATION = {
     # ------------------------------------------------------------------
     'widget_dashboard_head': """
 <style>
-  /* ---------- Alert-level palette CSS custom properties ---------- */
-  .aot-advice--none     { --aot-bg: #1A202C; --aot-text: #CBD5E0; --aot-border: #4A5568; }
-  .aot-advice--info     { --aot-bg: #1A365D; --aot-text: #90CDF4; --aot-border: #3182CE; }
-  .aot-advice--warning  { --aot-bg: #2D2A00; --aot-text: #F6E05E; --aot-border: #D69E2E; }
-  .aot-advice--critical { --aot-bg: #2D0F0F; --aot-text: #FEB2B2; --aot-border: #E53E3E; }
+  /* ---------- 알림 등급별 팔레트 ----------
+     ⚠ 이름을 `--aot-bg`/`--aot-text`/`--aot-border` 로 두었었는데, 이것은
+     **전역 이름공간의 아주 흔한 이름**이라 위쪽 어느 요소가 같은 이름을
+     정의하는 순간 이 위젯이 조용히 그 값을 물려받는다(전역에 `--aot-bg-*`
+     계열이 이미 여럿 있다). 위젯 전용 접두사를 붙여 격리한다. */
+  .aot-advice--none     { --aot-advice-bg: #1A202C; --aot-advice-text: #CBD5E0; --aot-advice-border: #4A5568; }
+  .aot-advice--info     { --aot-advice-bg: #1A365D; --aot-advice-text: #90CDF4; --aot-advice-border: #3182CE; }
+  .aot-advice--warning  { --aot-advice-bg: #2D2A00; --aot-advice-text: #F6E05E; --aot-advice-border: #D69E2E; }
+  .aot-advice--critical { --aot-advice-bg: #2D0F0F; --aot-advice-text: #FEB2B2; --aot-advice-border: #E53E3E; }
 
   /* ---------- container ---------- */
-  /* 이 위젯은 항상 어두운 배경(--aot-bg, 기본 #1A202C)의 자체 알림-레벨 색상
-     체계(--aot-bg/--aot-text/--aot-border)를 쓴다. 아래 회색 계열 텍스트색은
+  /* 이 위젯은 항상 어두운 배경(--aot-advice-bg, 기본 #1A202C)의 자체 알림-레벨
+     색상 체계(--aot-advice-bg/-text/-border)를 쓴다. 아래 회색 계열 텍스트색은
      그 어두운 배경 위에서의 가독성을 위해 조정된 값으로, 라이트모드 전역
      텍스트 토큰(--aot-color-text-*)과 무관하게 리터럴로 유지한다. */
   .aot-advice-container {
@@ -317,9 +321,9 @@ WIDGET_INFORMATION = {
 
   /* ---------- CSS variables applied via alert-level class ---------- */
   .aot-advice {
-    background-color: var(--aot-bg, #1A202C);
-    color: var(--aot-text, #CBD5E0);
-    border-color: var(--aot-border, #4A5568);
+    background-color: var(--aot-advice-bg, #1A202C);
+    color: var(--aot-advice-text, #CBD5E0);
+    border-color: var(--aot-advice-border, #4A5568);
   }
 
   /* ---------- tier visibility ---------- */
@@ -391,6 +395,28 @@ WIDGET_INFORMATION = {
   }
   .advice-anomaly-list li::before {
     content: "- ";
+  }
+
+  /* ---------- 글자 모양 조작기 ----------
+     [새로 고침]·[AI 에게 알려주기]·[취소]는 글자처럼 보이지만 **누르는 것**이다.
+     예전에는 `<span onclick>` 이라 키보드로 닿을 수 없었다. `<button>` 으로
+     바꾸되 브라우저 기본 버튼 껍데기(배경·테두리·여백)는 벗겨 생김새를 유지한다. */
+  .advice-refresh-link,
+  .advice-learn-toggle,
+  .advice-learn-cancel {
+    -webkit-appearance: none;
+    appearance: none;
+    background: none;
+    border: 0;
+    padding: 0;
+    font-family: inherit;
+    line-height: inherit;
+  }
+  .advice-refresh-link:focus-visible,
+  .advice-learn-toggle:focus-visible,
+  .advice-learn-cancel:focus-visible {
+    outline: var(--aot-focus-outline);
+    outline-offset: var(--aot-focus-outline-offset);
   }
 
   /* ---------- refresh link ---------- */
@@ -472,7 +498,7 @@ WIDGET_INFORMATION = {
   .aot-advice__badge {
     font-weight: var(--aot-fw-bold);
     font-family: monospace;
-    color: var(--aot-text);
+    color: var(--aot-advice-text);
     margin-left: 0.5em;
     white-space: nowrap;
   }
@@ -480,7 +506,7 @@ WIDGET_INFORMATION = {
   /* ---------- Tier separator (medium and large) ---------- */
   .aot-advice--medium .aot-advice__detail,
   .aot-advice--large  .aot-advice__detail {
-    border-top: 1px solid var(--aot-border);
+    border-top: 1px solid var(--aot-advice-border);
     padding-top: 0.5em;
     margin-top: 0.5em;
   }
@@ -507,7 +533,7 @@ WIDGET_INFORMATION = {
   /* ---------- Error state ---------- */
   .aot-advice__error-msg {
     display: none;
-    color: var(--aot-text);
+    color: var(--aot-advice-text);
     opacity: 0.6;
     font-size: var(--aot-fs-body);
   }
@@ -538,8 +564,8 @@ WIDGET_INFORMATION = {
      data-max-change-items="{{ widget_options.get('max_change_items', 5) }}"
      data-show-confidence-score="{{ 'true' if widget_options.get('show_confidence_score', True) else 'false' }}">
 
-  <span class="advice-refresh-link"
-        onclick="fetchAdviceData('{{each_widget.unique_id}}')">{{_('Refresh')}}</span>
+  <button type="button" class="advice-refresh-link"
+        onclick="fetchAdviceData('{{each_widget.unique_id}}')">{{_('Refresh')}}</button>
 
   <!-- ─── Empty state ─────────────────────────────────────────── -->
   <div class="aot-advice__empty" aria-live="polite">{{_('No AI analysis available. Analysis runs automatically — check back shortly.')}}</div>
@@ -597,8 +623,8 @@ WIDGET_INFORMATION = {
 
     <!-- Learning input affordance (large tier only) -->
     <div class="advice-learn-section">
-      <span class="advice-learn-toggle"
-            onclick="toggleAdviceLearn('{{each_widget.unique_id}}')">{{_('Teach AI')}}</span>
+      <button type="button" class="advice-learn-toggle"
+            onclick="toggleAdviceLearn('{{each_widget.unique_id}}')">{{_('Teach AI')}}</button>
       <div class="advice-learn-form"
            id="advice-learn-form-{{each_widget.unique_id}}"
            style="display:none">
@@ -609,8 +635,8 @@ WIDGET_INFORMATION = {
         <div class="advice-learn-actions">
           <button class="advice-learn-submit"
                   onclick="submitAdviceNote('{{each_widget.unique_id}}')">{{_('Submit')}}</button>
-          <span class="advice-learn-cancel"
-                onclick="toggleAdviceLearn('{{each_widget.unique_id}}')">{{_('Cancel')}}</span>
+          <button type="button" class="advice-learn-cancel"
+                onclick="toggleAdviceLearn('{{each_widget.unique_id}}')">{{_('Cancel')}}</button>
         </div>
         <div class="advice-learn-msg"
              id="advice-learn-msg-{{each_widget.unique_id}}"></div>

@@ -397,6 +397,12 @@ WIDGET_INFORMATION = {
             'phrase': lazy_gettext('Hide graph axis tick labels and unit titles on small screens (chart width < 480px).')
         },
         {
+            'type': 'collapse_start',
+            'id': 'text_size',
+            'name': lazy_gettext('Text Size')
+        },
+
+        {
             'id': 'graph_font_size_em_axes',
             'type': 'float',
             'default_value': 0.8,
@@ -423,6 +429,9 @@ WIDGET_INFORMATION = {
             'default_value': 1.0,
             'name': lazy_gettext('Title Font Size (em)'),
             'phrase': lazy_gettext('Set the font size for the title (em).')
+        },
+        {
+            'type': 'collapse_end'
         },
         {
             'type': 'header',
@@ -499,23 +508,28 @@ WIDGET_INFORMATION = {
 """,
 
     'widget_dashboard_title_bar': """
-        <div class="widget-graph-title" id="widget-graph-title-{{each_widget.unique_id}}">
-            <span class="aot-w-title">{{each_widget.name}}</span>
-        </div>
+        {#- 이름은 셸이 렌더한다(dashboard_entry.html). 여기는 제목줄 오른쪽 도구만.
+            버튼은 공용 규격 `.aot-w-tool` 하나를 쓴다 — 예전에는 부트스트랩
+            `btn btn-sm btn-success`(초록 그라디언트)라 이 위젯만 다른 앱처럼 보였다. -#}
         {% if widget_options['enable_header_buttons'] -%}
         <div class="widget-graph-controls" id="widget-graph-controls-{{each_widget.unique_id}}">
             <div class="widget-graph-responsive-controls" id="widget-graph-responsive-controls-{{each_widget.unique_id}}">
-                <a class="btn btn-sm btn-success" id="updateData{{each_widget.unique_id}}" title="{{_('Update')}}">
+                <a class="aot-w-tool" role="button" tabindex="0" id="updateData{{each_widget.unique_id}}"
+                   aria-label="{{_('Update')}}" title="{{_('Update')}}">
                     <i class="fa fa-download"></i>
                 </a>
-                <a class="btn btn-sm btn-success" id="resetZoom{{each_widget.unique_id}}" title="{{_('Reset')}}">
+                <a class="aot-w-tool" role="button" tabindex="0" id="resetZoom{{each_widget.unique_id}}"
+                   aria-label="{{_('Reset')}}" title="{{_('Reset')}}">
                     <i class="fa fa-undo-alt"></i>
                 </a>
-                <a class="btn btn-sm btn-success" id="showhidebutton{{each_widget.unique_id}}" title="{{_('Hide')}}">
+                <a class="aot-w-tool" role="button" tabindex="0" id="showhidebutton{{each_widget.unique_id}}"
+                   aria-label="{{_('Hide')}}" title="{{_('Hide')}}">
                     <i class="fa fa-eye-slash"></i>
                 </a>
             </div>
-            <a href="javascript:void(0);" class="btn btn-sm menu" onclick="return graphMenuFunction('{{each_widget.unique_id}}');" title="{{_('Options')}}">
+            <a href="javascript:void(0);" class="aot-w-tool menu"
+               onclick="return graphMenuFunction('{{each_widget.unique_id}}');"
+               aria-label="{{_('Options')}}" title="{{_('Options')}}">
                 <i class="fa fa-bars"></i>
             </a>
         </div>
@@ -846,18 +860,13 @@ WIDGET_INFORMATION = {
   }
 
   function graphMenuFunction(widget_id) {
+    // 제목 래퍼는 이제 셸이 준다(`#widget-title-<uid>`). 예전에는 이 위젯이
+    // 자기 제목 div 를 만들어 className 을 통째로 갈아끼웠는데, 그 방식은
+    // 다른 클래스가 하나라도 붙는 순간 그것을 지운다. classList 로 바꾼다.
     var x = document.getElementById("widget-graph-responsive-controls-" + widget_id);
-    var y = document.getElementById("widget-graph-title-" + widget_id);
-    if (x.className === "widget-graph-responsive-controls") {
-      x.className += " responsive";
-    } else {
-      x.className = "widget-graph-responsive-controls";
-    }
-    if (y.className === "widget-graph-title") {
-      y.className += " responsive";
-    } else {
-      y.className = "widget-graph-title";
-    }
+    var y = document.getElementById("widget-title-" + widget_id);
+    if (x) { x.classList.toggle("responsive"); }
+    if (y) { y.classList.toggle("responsive"); }
   }
 
   // Redraw a particular chart — deferred during scroll to avoid jank

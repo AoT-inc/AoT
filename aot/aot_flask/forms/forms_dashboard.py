@@ -42,6 +42,9 @@ class DashboardBase(FlaskForm):
         validators=[DataRequired()]
     )
     tab_id = StringField(lazy_gettext('Tab'))
+    # 2026-09-06: 폼에서 이 칸을 뺐다(죽은 노브 — 25종 중 하나만 읽었다).
+    # 필드 선언만 남긴 것은 기존 저장 데이터·외부 폼 제출과의 호환 때문이고,
+    # 어느 템플릿도 이것을 그리지 않고 어느 저장 경로도 읽지 않는다.
     font_em_name = DecimalField(lazy_gettext('Font Size (em)'))
     refresh_duration = IntegerField(
         lazy_gettext('Refresh Duration (sec)'),

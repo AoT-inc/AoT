@@ -31,8 +31,8 @@ With the current tab **unlocked**:
 
 -   **Add a widget** — choose a widget type from the dropdown and click **Add Widget**. The widget is placed on the current tab.
 -   **Move / resize** — drag a widget to reposition it, or drag its corner to resize. Positions are saved automatically.
--   **Configure a widget** — click the widget's **gear** icon to open its settings.
--   **Move a widget to another tab** — in the widget's settings, pick a different tab from the **Tab** dropdown (shown when more than one tab exists) and **Save**.
+-   **Configure a widget** — click the widget's **gear** icon to open its settings in a drawer that slides in from the right edge (a bottom sheet on phones). For most widgets there's no Save button: each option you change is applied and saved automatically after a short pause, and the widget re-renders in place. If a change doesn't turn out the way you wanted, click **되돌리기 (Revert)** in the drawer's footer to restore every option to what it was when you opened the drawer. A few options that would require rebuilding the widget from scratch — such as the AoT Map widget's base map or 3D render mode — still need the classic Save button; see [AoT Map](#widget-map) below.
+-   **Move a widget to another tab** — in the widget's settings drawer, pick a different tab from the **Tab** dropdown (shown when more than one tab exists). Like any other option, the move is saved automatically.
 
 ---
 
@@ -57,6 +57,10 @@ See the sensors and devices scattered across your greenhouses on one map, and co
 -   **Shapes** — toggle site / zone / facility / equipment / device polygons.
 
 *Notable:* realtime sensor values are anchored on the 3D structures, and — when the global AI is configured — the latest AI advisories appear as clickable chips at the top of the map. For the full option list and details, see the [AoT_map widget page](geo/map-widget.md).
+
+### AoT Plot { #widget-plot }
+
+Keeps a single plot's status resident on the dashboard — its stage timeline, targets alongside current readings, trends, and accumulated heat — for the plot you want to keep an eye on continuously through a season, rather than clicking into it on the map each time. Device control is deliberately left out (that stays the map or facility widget's job). Which plot to watch is picked from a searchable dropdown in the widget body itself, not from the settings drawer. See the [AoT Plot widget page](geo/plot-widget.md) for the full walkthrough.
 
 ### Sequence Controller { #widget-sequence }
 
@@ -120,9 +124,13 @@ Shows a single measurement on a circular gauge with colored bands.
 
 *Notable:* presets pull from the global 5-band palette (**Settings → Custom UI**), and the gauge can push its section colors back to those global band colors. Make sure the **Maximum Value** matches the top (High) section for correct display.
 
+### Function Status { #widget-function-status }
+
+Displays the live status of a Function, Conditional, or PID controller you choose in its settings. Click **Details** on the widget to open a modal with that controller's current status and — if you have edit permission — its settings, editable right there: a toggle switch for each on/off option and a number or text field for everything else. A PID controller shows its usual tunables (setpoint, P/I/D gains, period, band, integrator limits), matching the AoT PID widget's own detail view. Changes save immediately from the modal, so you can adjust a running controller without leaving the dashboard.
+
 ---
 
-## Custom Widget Development
+## Custom Widget Development { #custom-widgets }
 
 AoT supports custom widget imports. Modules are located in `aot/widgets/`.
 

@@ -11,12 +11,12 @@
 
 .aot-calendar-widget-outer .fc {
   font-family: inherit;
-  font-size: 0.82rem;
+  font-size: var(--aot-font-size-sm);
   color: var(--aot-color-text-primary, #212529);
 }
 
 .aot-calendar-widget-outer .fc-toolbar-title {
-  font-size: 1rem;
+  font-size: var(--aot-font-size-base);
   font-weight: 700;
 }
 
@@ -96,7 +96,7 @@
   padding: 0.5rem;
 }
 .aot-cal-picker-head {
-  font-size: 0.72rem;
+  font-size: var(--aot-font-size-2xs);
   font-weight: 700;
   color: var(--aot-color-text-secondary, #6c757d);
   text-transform: uppercase;
@@ -112,7 +112,7 @@
   border-radius: 0.4rem;
   cursor: pointer;
   margin: 0;
-  font-size: 0.85rem;
+  font-size: var(--aot-font-size-sm);
   font-weight: 400;
 }
 .aot-cal-picker-row:hover { background: var(--aot-surface-body, #f8f9fa); }
@@ -156,7 +156,7 @@
 }
 .aot-cal-popover-title {
   font-weight: 700;
-  font-size: 0.88rem;
+  font-size: var(--aot-font-size-sm);
   margin-bottom: 0.5rem;
   word-break: break-word;
 }
@@ -170,7 +170,7 @@
   display: flex;
   justify-content: space-between;
   gap: 0.5rem;
-  font-size: 0.78rem;
+  font-size: var(--aot-font-size-xs);
 }
 .aot-cal-popover-label {
   color: var(--aot-color-text-secondary, #6c757d);
@@ -201,6 +201,6 @@
     gap: 0.4rem;
   }
   .aot-calendar-widget-outer .fc-toolbar-title {
-    font-size: 0.9rem;
+    font-size: var(--aot-font-size-sm);
   }
 }

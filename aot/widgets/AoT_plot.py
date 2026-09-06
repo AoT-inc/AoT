@@ -89,13 +89,23 @@ WIDGET_HEAD_HTML = """
 {#- **카드 골격**(`.aot-ov-card-title` + `.aot-ov-block`) — 지도·시설 모달이
     쓰는 것과 같은 파일이다. 이것을 안 싣고 위젯이 자기 여백·배경을 적으면
     같은 성격의 화면이 앱 안에서 저마다 다른 카드가 된다. -#}
+{% if "css_sensor_label" not in dashboard_dict %}
+{% if "css_sensor_label" not in dashboard_dict %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/widget/aot-sensor-label.css') }}">
+{% set _dummy = dashboard_dict.update({"css_sensor_label": 1}) %}
+{% endif %}
+{% set _dummy = dashboard_dict.update({"css_sensor_label": 1}) %}
+{% endif %}
 
 {#- 편집 모달의 세 파일 — `/plots` 페이지와 **같은 정의**다. 하나라도 빠지면
     골격만 같고 긴 제목이 잘리거나 단계 트랙이 통째로 안 그려진다. -#}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/components/aot-stage-track.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/components/aot-drawer-form.css') }}">
+{#- AoT_map 위젯도 이 파일을 건다 — 먼저 그린 쪽만 걸리게 한다. -#}
+{% if "css_plot_form" not in dashboard_dict %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/components/aot-plot-form.css') }}">
+{% set _dummy = dashboard_dict.update({"css_plot_form": 1}) %}
+{% endif %}
 
 {#- widget-shared — **지도 위젯(AoT_map)과 나눠 쓰는 소스.** 반드시 아래
     aot-plot-widget 보다 먼저. 이 위젯이 쓰는 것 거의 전부가 여기 있다
@@ -619,9 +629,7 @@ WIDGET_INFORMATION = {
     ],
 
     'widget_dashboard_head': WIDGET_HEAD_HTML,
-    'widget_dashboard_title_bar': """
-    <span class="aot-w-title" style="padding-right:0.5em">{{each_widget.name}}</span>
-    """,
+    'widget_dashboard_title_bar': """""",
     'widget_dashboard_body': WIDGET_BODY_HTML,
     'widget_dashboard_js_ready': '',
     'widget_dashboard_js_ready_end': '',

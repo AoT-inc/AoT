@@ -1,0 +1,38 @@
+{#- 색 고르기 한 줄 — 표준 옵션 행(.aot-modal-option-row) 안에 들어가는
+    "색 입력 + 미리 고르기 칩" 묶음.
+
+    ⚠ **여기가 정본이다.** 예전에는 위젯마다 색 고르는 자리를 각자 만들었다:
+      · AoT_wind_angular — 자체 `.aot-color-preset` 칩 + 인라인 onclick,
+        `form-control` 에 `style="width:42px;height:28px"` 를 직접 박음
+      · AoT_gauge_angular / widget_gauge_solid — 맨 `<input type="color">` 를
+        부트스트랩 `form-row`/`col-auto` 안에
+    같은 모달 안에서 색 고르는 칸이 세 가지로 보였다. 이 파일 하나만 include 한다.
+
+    쓰는 쪽에서 아래를 `{% set %}` 한 뒤 include 한다:
+      color_id        입력의 id (라벨 for= 와 짝)
+      color_name      제출될 필드 이름
+      color_value     현재 값 (#RRGGBB)
+      color_presets   (선택) 미리 고를 색 목록. 없으면 칩 줄을 안 그린다.
+
+    ⚠ 칩의 동작이 인라인 `onclick` 인 데는 이유가 있다. 위젯 설정 모달의 본문은
+    `<template class="aot-lazy-modal-body">` 안에 담겼다가 처음 열 때
+    `cloneNode` 로 복제된다(dashboard.js: hydrateLazyModalBodies) —
+    **복제된 조각의 `<script>` 는 실행되지 않는다.** 그래서 위임 리스너를 여기
+    둘 수 없고, 두려면 `app/dashboard.js` 에 넣고 번들을 다시 빌드해야 한다.
+    속성은 복제돼도 그대로 동작하므로 지금은 이 방식을 쓴다. 대신 문구가
+    위젯마다 흩어지지 않도록 이 파일 한 곳에만 적는다. -#}
+<input type="color"
+       id="{{color_id}}"
+       name="{{color_name}}"
+       value="{{color_value}}">
+{%- if color_presets %}
+<div class="aot-color-presets" role="group" aria-label="{{_('Preset colors')}}">
+  {%- for c in color_presets %}
+  <button type="button"
+          class="aot-color-preset{% if c|lower == (color_value or '')|lower %} is-picked{% endif %}"
+          style="--aot-preset-color: {{c}}"
+          title="{{c}}" aria-label="{{c}}"
+          onclick="(function(b){var i=document.getElementById('{{color_id}}');if(!i)return;i.value='{{c}}';i.dispatchEvent(new Event('input',{bubbles:true}));i.dispatchEvent(new Event('change',{bubbles:true}));b.parentElement.querySelectorAll('.aot-color-preset').forEach(function(e){e.classList.remove('is-picked')});b.classList.add('is-picked')})(this)"></button>
+  {%- endfor %}
+</div>
+{%- endif %}

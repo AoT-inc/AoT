@@ -43,7 +43,6 @@ exclude_docs: |
   *_design.md
   design_*.md
   i18n_translation_guide.md
-  env_coordinator_user_guide.md
   ai_guide.md
   ai_guide.*.md
   GEO.md
@@ -101,6 +100,7 @@ nav:
   - About: About.md
   - Usage:
     - Data Viewing: Data-Viewing.md
+    - Devices: Device.md
     - Inputs.md
     - Outputs.md
     - Functions.md
@@ -122,6 +122,7 @@ nav:
       - Getting Started: geo/getting-started.md
       - Design Tool: geo/design-tool.md
       - Management Programs: geo/programs.md
+      - Plots: geo/plots.md
       - Journals: geo/journal.md
       - Facility Management: geo/facility.md
       - GIS Layers: geo/layers.md
@@ -141,12 +142,15 @@ nav:
     - I2C Multiplexers: I2C-Multiplexers.md
     - Analog-To-Digital Converters: Analog-To-Digital-Converters.md
     - PLC (Modbus TCP): PLC-Modbus.md
+    - LoRaWAN (ChirpStack): LoRaWAN-ChirpStack.md
     - Interfaces.md
     - Dependencies.md
     - Device Notes: Device-Notes.md
   - System:
     - System Information: System-Information.md
     - System Configuration: Configuration-Settings.md
+    - Integrations: Integrations.md
+    - Name Translations: Name-Translations.md
     - Log Viewer: Log-Viewer.md
     - Security.md
     - Time & Timezones: time-handling.md

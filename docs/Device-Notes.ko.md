@@ -8,9 +8,7 @@
 
 ## 디스플레이
 
-지원되는 디스플레이는 몇 가지에 불과합니다. I2C 백팩이 있는 16x2 및 20x4 문자 LCD 디스플레이와 [128x32](https://www.adafruit.com/product/931) / [128x64](https://www.adafruit.com/product/931) OLED 디스플레이가 지원됩니다. 아래 이미지는 I2C 백팩이 있는 호환 가능한 디바이스 유형입니다. 자세한 내용은 [지원되는 기능](Supported-Functions.md)을 참조하십시오.
-
-![image4](images/LCD-front-back.jpg)
+지원되는 디스플레이는 몇 가지에 불과합니다. I2C 백팩이 있는 16x2 및 20x4 문자 LCD 디스플레이와 [128x32](https://www.adafruit.com/product/931) / [128x64](https://www.adafruit.com/product/931) OLED 디스플레이가 지원됩니다. 자세한 내용은 [지원되는 기능](Supported-Functions.md)을 참조하십시오.
 
 ## 라즈베리 파이
 
@@ -27,8 +25,6 @@
 재부팅 후, /dev/i2c-3에 새로운 I2C 버스가 생성되며, SDA는 핀 23(BCM), SCL은 핀 24(BCM)에 있습니다. 장치를 연결하기 전에 적절한 풀업 저항기를 추가하십시오.
 
 ## K-30
-
-![image5](images/Sensor-K30-01.jpg)
 
 K-30을 연결할 때는 역전압 보호가 없으므로 잘못된 연결이 센서를 손상시킬 수 있으니 매우 주의하십시오.
 
@@ -66,29 +62,3 @@ lrwxrwxrwx 1 root root 7 Oct 6 21:04 dust-sensor -> ttyUSB0
 ```
 
 이제 먼지 센서가 연결될 때마다 /dev/dust-sensor에 나타납니다.
-
-## 다이어그램
-
-### DHT11 다이어그램
-
-![Schematic-Sensor-DHT11-01](images/Schematic-Sensor-DHT11-01.jpg)
-
-![Schematic-Sensor-DHT11-02](images/Schematic-Sensor-DHT11-02.png)
-
-### DS18B20 다이어그램
-
-![Schematic-Sensor-DS18B20-01](images/Schematic-Sensor-DS18B20-01.png)
-
-![Schematic-Sensor-DS18B20-02](images/Schematic-Sensor-DS18B20-02.jpg)
-
-![Schematic-Sensor-DS18B20-03](images/Schematic-Sensor-DS18B20-03.jpg)
-
-### 라즈베리 파이와 릴레이 다이어그램
-
-#### 라즈베리 파이, 4개의 릴레이, 4개의 아울렛, 1개의 DS18B20 센서
-
-![Schematic: Pi, 4 relays, 4 outlets, and 1 DS18B20 sensor](images/Schematic-Pi-4-relays.png)
-
-#### 라즈베리 파이, 8개의 릴레이, 8개의 아울렛
-
-![Schematic: Pi, 8 relays, and 8 outlets](images/Schematic-Pi-8-relays.png)

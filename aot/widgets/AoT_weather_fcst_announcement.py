@@ -108,14 +108,24 @@ WIDGET_INFORMATION = {
   """,
 
   'widget_dashboard_title_bar': """
+  {#- 이름은 셸이 렌더한다. 여기는 이름 옆 예보 시각(캡션)만 —
+      예전에는 이것이 `aot-w-title` 이라 제목 행세를 했고, 그래서 이 위젯만
+      대시보드에서 이름이 안 보였다. -#}
   <span id="forecast-time-{{each_widget.unique_id}}"
-        class="widget-title-bar-forecast aot-w-title"
-        style="padding-right:0.5em">
-  </span>
+        class="widget-title-bar-forecast aot-w-caption"></span>
   """,
 
   # Body area (row-aot-weather-1, 2, 3)
-  'widget_dashboard_body': """
+  'widget_dashboard_body': """<style>
+  /* 예보 표 — JS 가 만들어 넣는 표의 뼈대. 예전에는 이 네 줄이 JS 문자열의
+     인라인 style 로 들어가 있었고 행 간격만 `10px` 로 사다리를 벗어나 있었다. */
+  .aot-fcst-table {
+    table-layout: fixed;
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0 var(--aot-space-3);
+  }
+</style>
   <div id="forecast-container-{{each_widget.unique_id}}" class="frame-aot day-background">
     <div class="row-aot-weather-1">
       <!-- 1) Icon display -->
@@ -334,7 +344,7 @@ $(document).ready(function(){
       tmpContainer.innerHTML = "";
       tmnContainer.innerHTML = "";
       tmxContainer.innerHTML = "";
-      widgetTitleBar.innerHTML = "";
+      widgetTitleBar.textContent = "";
       container.classList.remove("day-background", "night-background");
       return;
     }
@@ -355,7 +365,7 @@ $(document).ready(function(){
       tmpContainer.innerHTML = "";
       tmnContainer.innerHTML = "";
       tmxContainer.innerHTML = "";
-      widgetTitleBar.innerHTML = "";
+      widgetTitleBar.textContent = "";
       container.classList.remove("day-background", "night-background");
       return;
     }
@@ -386,7 +396,10 @@ $(document).ready(function(){
     } else {
         forecastTimeString = offset + window._("h later") + " ";
     }
-    widgetTitleBar.innerHTML = '<span class="aot-w-title" style="font-weight:var(--aot-fw-bold)">' + forecastTimeString + forecastHour + ':00 ' + window._('Forecast') + '</span>';
+    // 담는 span 이 이미 `.aot-w-caption` 이다(제목줄 계약: 이름은 셸이 그리고
+    // 위젯은 그 옆 부가물만 넣는다). 여기서 `.aot-w-title` 을 다시 씌우면
+    // 예보 시각이 이름 옆에서 **두 번째 제목**처럼 커진다. 글자만 넣는다.
+    widgetTitleBar.textContent = forecastTimeString + forecastHour + ':00 ' + window._('Forecast');
 
     // Center-align the icon
     iconContainer.style.display = 'flex';
@@ -434,30 +447,30 @@ $(document).ready(function(){
     // [1] TMP (current temperature): use font_em_tmp
     var tmpDisplay = tmp !== null ? tmp + '°' : '-';
     tmpContainer.innerHTML =
-      '<span class="aot-w-value" style="font-weight:var(--aot-fw-semibold)">' + tmpDisplay + '</span>';
+      '<span class="aot-w-value">' + tmpDisplay + '</span>';
 
     // [2] Remaining text such as TMN, TMX, forecast announcement
     var tmnDisplay = tmn !== null ? tmn + '°' : '-';
     var tmxDisplay = tmx !== null ? tmx + '°' : '-';
     tmnContainer.innerHTML =
-      '<div class="aot-w-body" style="display:flex;justify-content:space-between;width:100%">' +
+      '<div class="aot-w-body aot-w-row-between">' +
       '<span>' + window._('Min:') + '</span>' +
       '<span>' + tmnDisplay + '</span>' +
       '</div>';
     tmxContainer.innerHTML =
-      '<div class="aot-w-body" style="display:flex;justify-content:space-between;width:100%">' +
+      '<div class="aot-w-body aot-w-row-between">' +
       '<span>' + window._('Max:') + '</span>' +
       '<span>' + tmxDisplay + '</span>' +
       '</div>';
 
     directionStr += " ";  // space after the wind direction
 
-    var forecastText = '<table class="aot-w-body" style="table-layout:fixed;width:100%;border-collapse:separate;border-spacing:0 10px">';
+    var forecastText = '<table class="aot-w-body aot-fcst-table">';
     forecastText += '<tr>';
 
     // (1) Humidity
-    forecastText += '  <td style="width:33%;padding:0 8px;vertical-align:bottom">'
-                  + '    <div style="display:flex;justify-content:space-between;align-items:flex-end">'
+    forecastText += '  <td class="aot-w-cell" style="width:33%">'
+                  + '    <div class="aot-w-row-between">'
                   + '      <span>' + window._('Humidity:') + '</span>'
                   + '      <b>' + (reh !== null ? reh : '-') + '</b>'
                   + '      <span>%</span>'
@@ -465,8 +478,8 @@ $(document).ready(function(){
                   + '  </td>';
 
     // (2) Precipitation probability
-    forecastText += '  <td style="width:33%;padding:0 8px;vertical-align:bottom">'
-                  + '    <div style="display:flex;justify-content:space-between;align-items:flex-end">'
+    forecastText += '  <td class="aot-w-cell" style="width:33%">'
+                  + '    <div class="aot-w-row-between">'
                   + '      <span>' + window._('Precip:') + '</span>'
                   + '      <b>' + (pop !== null ? pop : '-') + '</b>'
                   + '      <span>%</span>'
@@ -475,15 +488,15 @@ $(document).ready(function(){
 
     // (3) Snowfall or precipitation amount
     if (sno !== null && parseFloat(sno) > 0) {
-      forecastText += '  <td style="width:34%;padding:0 8px;vertical-align:bottom">'
-                    + '    <div style="display:flex;justify-content:space-between;align-items:flex-end">'
+      forecastText += '  <td class="aot-w-cell" style="width:34%">'
+                    + '    <div class="aot-w-row-between">'
                     + '      <span>' + window._('Snowfall:') + '</span>'
                     + '      <b>' + sno + 'cm</b>'
                     + '    </div>'
                     + '  </td>';
     } else {
-      forecastText += '  <td style="width:34%;padding:0 8px;vertical-align:bottom">'
-                    + '    <div style="display:flex;justify-content:space-between;align-items:flex-end">'
+      forecastText += '  <td class="aot-w-cell" style="width:34%">'
+                    + '    <div class="aot-w-row-between">'
                     + '      <span>' + window._('Rainfall:') + '</span>'
                     + '      <b>' + (rn1 !== null ? rn1 + 'mm' : '-') + '</b>'
                     + '    </div>'
@@ -493,14 +506,14 @@ $(document).ready(function(){
 
     // Second row: wind direction, wind speed
     forecastText += '<tr>';
-    forecastText += '  <td style="width:50%;padding:0 8px;vertical-align:bottom">'
-                  + '    <div style="display:flex;justify-content:space-between;align-items:flex-end">'
+    forecastText += '  <td class="aot-w-cell" style="width:50%">'
+                  + '    <div class="aot-w-row-between">'
                   + '      <span>' + window._('Wind Dir:') + '</span>'
                   + '      <b>' + directionStr + '</b>'
                   + '    </div>'
                   + '  </td>';
-    forecastText += '  <td style="width:50%;padding:0 8px;vertical-align:bottom">'
-                  + '    <div style="display:flex;justify-content:space-between;align-items:flex-end">'
+    forecastText += '  <td class="aot-w-cell" style="width:50%">'
+                  + '    <div class="aot-w-row-between">'
                   + '      <span>' + window._('Wind Speed:') + '</span>'
                   + '      <b>' + windSpeed + '</b>'
                   + '      <span>m/s</span>'
@@ -526,7 +539,7 @@ $(document).ready(function(){
         tmpContainer.innerHTML = "";
         tmnContainer.innerHTML = "";
         tmxContainer.innerHTML = "";
-        widgetTitleBar.innerHTML = "";
+        widgetTitleBar.textContent = "";
         container.classList.remove("day-background", "night-background");
       });
   }

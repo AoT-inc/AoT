@@ -56,7 +56,7 @@ WIDGET_INFORMATION = {
     ],
 
     'widget_dashboard_head': """<!-- No head content -->""",
-    'widget_dashboard_title_bar': """<span class="aot-w-title" style="padding-right:0.5em">{{each_widget.name}}</span>""",
+    'widget_dashboard_title_bar': """""",
     'widget_dashboard_body': """<span class="aot-w-body">{{widget_options['body_text']}}</span>""",
     'widget_dashboard_js': """<!-- No JS content -->""",
     'widget_dashboard_js_ready': """<!-- No JS ready content -->""",

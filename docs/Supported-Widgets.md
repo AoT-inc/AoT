@@ -6,16 +6,10 @@
 
 Displays pre-generated periodic AI analysis. Content depth adapts to widget size automatically.
 
-### AI Reasoning Insight
-
-- Libraries: ai
-
-AI-driven analysis and intelligent action recommendations.
-
-### Activate/Deactivate Controller
+### AoT Actuator Position
 
 
-Activate/Deactivate a Controller (Inputs and Functions). For manipulating a PID Controller, use the PID Controller Widget.
+Displays and controls a positional (open/close) actuator: close/stop/open buttons plus a fine-adjust slider.
 
 ### AoT Circular Gauge
 
@@ -54,6 +48,11 @@ Displays the location of the selected device on a map. Highlights the operating 
 
 Displays and allows control of a PID Controller.
 
+### AoT PWM Output
+
+
+Displays and controls a PWM output with a single slider.
+
 ### AoT Plot
 
 
@@ -91,26 +90,12 @@ Displays a camera image or stream.
 
 Displays the status of a Function (if supported).
 
-### Gauge (Angular) [Highcharts]
-
-- Libraries: Highcharts
-- Dependencies: highstock-9.1.2.js, highcharts-more-9.1.2.js
-
-Displays an angular gauge. Be sure to set the Maximum option to the last Stop High value for the gauge to display properly.
-
 ### Gauge (Solid) [Highcharts]
 
 - Libraries: Highcharts
 - Dependencies: highstock-9.1.2.js, highcharts-more-9.1.2.js, solid-gauge-9.1.2.js
 
 Displays a solid gauge. Be sure to set the Maximum option to the last Stop value for the gauge to display properly.
-
-### Graph (Synchronous) [Highstock]
-
-- Libraries: Highstock
-- Dependencies: highstock-9.1.2.js, highcharts-more-9.1.2.js, data-9.1.2.js, exporting-9.1.2.js, export-data-9.1.2.js, offline-exporting-9.1.2.js
-
-Displays a synchronous graph (all data is downloaded for the selected period on the x-axis).
 
 ### Indicator
 
@@ -138,11 +123,6 @@ Advanced camera widget with auto-dependency installation and profile support.
 
 
 Displays the latest notice board post titles. Clicking a title opens the full post (content, poll, replies, acknowledge) in a popup; all actions taken there are reflected on the actual post. Users with write permission can also create, edit, and delete posts directly from the widget.
-
-### Output (PWM Slider)
-
-
-Displays and allows control of a PWM output using a slider.
 
 ### Python Code
 

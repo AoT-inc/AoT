@@ -97,7 +97,7 @@ WIDGET_INFORMATION = {
 
     'widget_dashboard_head': """<!-- No head content -->""",
 
-    'widget_dashboard_title_bar': """<span class="aot-w-title">{{each_widget.name}}</span>""",
+    'widget_dashboard_title_bar': """""",
 
     'widget_dashboard_body': """<div class="widget-indicator-body"><img id="value-{{each_widget.unique_id}}" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" alt=""></div>""",
 

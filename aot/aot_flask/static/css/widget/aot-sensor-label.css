@@ -116,7 +116,7 @@
 .aot-sensor-popup-close {
   border: none;
   background: transparent;
-  font-size: 16px;
+  font-size: var(--aot-font-size-base);
   line-height: 1;
   cursor: pointer;
   color: var(--aot-color-text-secondary);
@@ -219,7 +219,7 @@
   max-height: 88vh;
   display: flex;
   flex-direction: column;
-  font-size: 1rem;
+  font-size: var(--aot-font-size-base);
   padding: 14px 16px 20px; /* 하단 20px — border-radius:16px 안에 컨텐츠가 차지 않도록 */
   overflow-y: auto;         /* 세로 부족 시 스크롤 허용 (스크롤바는 숨김) */
   scrollbar-width: none;        /* Firefox */
@@ -299,7 +299,7 @@
    selector beats the plain .maplibregl-popup-content base regardless of load
    order. 14px ≈ the desktop 0.85rem so desktop is visually unchanged. */
 .maplibregl-popup-content.aot-center-modal {
-  font-size: 14px;
+  font-size: var(--aot-font-size-sm);
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
 }
@@ -308,7 +308,7 @@
    so zone/facility/site-list text all scale up proportionally. Desktop/tablet
    stay 14px. Compound selector (0,2,0) overrides the base above. */
 @media (max-width: 480px) {
-  .maplibregl-popup-content.aot-center-modal { font-size: 16px; }
+  .maplibregl-popup-content.aot-center-modal { font-size: var(--aot-font-size-base); }
 }
 
 /* ── MapLibre marker label ────────────────────────────────────────────────── */
@@ -1180,7 +1180,7 @@
   .aot-center-modal > .aot-sensor-popup-header,
   .aot-center-modal .aot-sensor-popup--docked > .aot-sensor-popup-header,
   .aot-center-modal .aot-act-tabs-nav {
-    font-size: 14px;
+    font-size: var(--aot-font-size-sm);
   }
 }
 
@@ -1443,6 +1443,9 @@
 
 .aot-link-badge-num {
   fill: currentColor;
+  /* 사다리 예외: 고정 크기 원형 배지 안에 그리는 SVG 숫자다. 사다리 최소단
+     (2xs = 11.2px)이면 원 밖으로 넘친다 — 원을 키우면 지도 위 마커가 커진다.
+     본문 글자가 아니라 도형에 갇힌 글자라 도형이 크기를 정한다. */
   font-size: 9px;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
@@ -1539,7 +1542,7 @@
 .aot-modal-up {
   flex-shrink: 0;
   border: none;
-  font-size: 16px;
+  font-size: var(--aot-font-size-base);
   line-height: 1;
   /* 글리프(←)를 버튼 상자 한가운데 놓는다. 텍스트 기준선에 맡기면 글꼴마다
      위아래로 조금씩 어긋나, 옆의 제목·상태 점과 눈에 띄게 어긋나 보인다. */
@@ -1587,7 +1590,7 @@ button.aot-center-modal-close {
   width: 32px;
   height: 32px;
   padding: 0;
-  font-size: 16px;
+  font-size: var(--aot-font-size-base);
   color: var(--aot-color-text-secondary);
   display: inline-flex;
   align-items: center;

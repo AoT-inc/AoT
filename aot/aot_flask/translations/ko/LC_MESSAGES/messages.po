@@ -1687,7 +1687,7 @@ msgstr "단일"
 
 #: config_translations.py:184 widgets/widget_gauge_solid.py:219
 msgid "Stops"
-msgstr "설정"
+msgstr "구간 수"
 
 #: aot_flask/forms/forms_settings.py:703
 #: aot_flask/templates/flash_messages.html:7
@@ -34156,3 +34156,27 @@ msgstr "종료 시각은 같은 날의 시작 시각보다 뒤여야 합니다(�
 #: aot/widgets/AoT_timer.py
 msgid "OFF Failed: {}"
 msgstr "정지 실패: {}"
+
+#: aot/widgets/AoT_wind_angular.py
+msgid "Colors"
+msgstr "색"
+
+#: aot/widgets/AoT_gauge_angular.py aot/widgets/widget_gauge_solid.py
+msgid "Color Sections"
+msgstr "구간 색"
+
+#: aot/widgets/AoT_gauge_angular.py aot/widgets/widget_gauge_solid.py
+msgid "Section"
+msgstr "구간"
+
+#: aot/widgets/AoT_gauge_angular.py
+msgid "Global Band Colors"
+msgstr "전역 밴드 색"
+
+#: aot/aot_flask/templates/pages/form_options/Color_Presets.html
+msgid "Preset colors"
+msgstr "미리 고른 색"
+
+#: aot/widgets/AoT_graph.py
+msgid "Text Size"
+msgstr "글자 크기"

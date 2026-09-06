@@ -15,10 +15,12 @@
 
   --aot-title-font-size: 1em;
   --aot-prt-font-size: 1em;
-  --aot-btn-font-size: var(--aot-btn-font-size);
+  /* --aot-btn-font-size 는 aot-theme-variables.css 의 사다리가 정한다.
+     여기 있던 `var(--aot-btn-font-size)` 는 자기참조라 값이 무효였다. */
 
   --aot-btn-width: 54px;
-  --aot-btn-height: 32px;
+  /* --aot-btn-height 는 aot-theme-variables.css 가 정한다.
+     여기서 덮어쓰면 그쪽 값이 죽는다(실제로 그랬다). */
   --aot-btn-gap: 4px;
   --aot-group-gap: 8px;
 

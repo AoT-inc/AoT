@@ -89,8 +89,10 @@
      참조하는 공통 팔레트. 차가움(낮음) → 적정 → 뜨거움(높음).
        1 매우 낮음·차가움 / 2 조금 낮음 / 3 적정 / 4 조금 높음 / 5 매우 높음·뜨거움
      습도 등 일부 항목은 의미가 반대이므로 역순(band-5 → band-1)으로 사용.
-     ※ Python/JS 팔레트 상수(AoT_gauge_angular.color_list, BAND_PALETTE,
-        SensorRangesUI.PALETTE)도 이 값과 동일하게 유지할 것.
+     ※ 정본은 `aot/config/__init__.py` 의 BAND_PALETTE 이고, 서버측은
+        utils_theme.get_band_palette() 로 사용자 오버레이까지 얹어 읽는다.
+        위젯 파일에 같은 색을 다시 적지 말 것 — 적으면 사용자가 색을 바꿔도
+        그 위젯만 안 따라온다(widget_gauge_solid 가 실제로 그랬다).
      ======================================================================== */
   --aot-band-1: #2DB4FF; /* 매우 낮음, 차가움 */
   --aot-band-2: #54BCC1; /* 조금 낮음, 조금 차가움 */
@@ -109,6 +111,18 @@
   --aot-chart-4: #F4D624;
   --aot-chart-5: #DF5353;
   --aot-chart-6: #008DDE;
+
+  /* ------------------------------------------------------------------------
+     게이지 구조색 — 바늘·축·눈금처럼 **측정값이 아닌** 부분.
+     Highcharts 는 이 값들을 SVG 표현속성(stroke/fill)으로 넣기 때문에
+     `var()` 가 풀리지 않는다. 위젯 JS 가 `aotThemeColor()` 로 여기서 읽어
+     문자열로 넘긴다 — 그래야 테마가 바뀔 때 함께 따라온다.
+     예전에는 위젯 템플릿이 "테마가 다크 목록에 있으면" 하는 서버측 분기로
+     갈랐는데, 그러면 테마가 늘 때마다 위젯도 같이 고쳐야 했고
+     바늘만 밝아지고 축(minColor/maxColor)은 어두운 채로 남아 있었다.
+     ------------------------------------------------------------------------ */
+  --aot-gauge-dial: #3e3f46;  /* 바늘·축 */
+  --aot-gauge-tick: #666666;  /* 눈금선 */
 
   /* ========================================================================
      Section 1.3: color — background-state
@@ -220,20 +234,42 @@
   --aot-font-family: "Gothic A1", "Ubuntu", "Open Sans", "Nanum Gothic", "Malgun Gothic", "Apple SD Gothic Neo", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
   --aot-font-mono: SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
 
-  /* widget typography scale — 3-tier fixed (uniform across all widgets) */
-  --aot-fs-sm:    0.75rem;   /* 12px  captions, timestamps, badges */
-  --aot-fs-md:    0.875rem;  /* 14px  titles, labels, units, body */
-  --aot-fs-lg:    1.5rem;    /* 24px  measurement values, gauge centre */
+  /* ------------------------------------------------------------------
+     크기 사다리 — **정본이자 유일하다.** 크기는 여기서만 정한다.
 
-  /* aliases — all 7 old names map to the 3-tier scale */
-  --aot-fs-caption:  var(--aot-fs-sm);
-  --aot-fs-label:    var(--aot-fs-md);
-  --aot-fs-body:     var(--aot-fs-md);
-  --aot-fs-unit:     var(--aot-fs-md);
-  --aot-fs-title:    var(--aot-fs-md);
-  --aot-fs-value:    var(--aot-fs-lg);
-  --aot-fs-value-sm: 1.125rem;         /* 18px  value one step below lg */
-  --aot-fs-value-lg: var(--aot-fs-lg);
+     ⚠ 예전에는 사다리가 **두 벌**이었다: `--aot-fs-*`(3단)와
+     `--aot-font-size-*`(6단). 같은 이름 `sm`·`lg` 가 서로 다른 값을
+     가리켰고(sm 0.75 ↔ 0.85, lg 1.5 ↔ 1.05), 그래서 3단을 선언해 놓고
+     화면에는 8가지 크기가 나왔다(실측: 10.83·11.0·11.81·12·13·13.6·14·16px).
+     그 어긋남이 "위젯마다 제각각"으로 보이던 원인의 대부분이었다.
+     2026-09-06 에 한 벌로 합쳤다 — 아래 6단이 전부이고,
+     `--aot-fs-*` 는 **역할 이름**으로서 이 단들을 가리키기만 한다.
+
+     ⚠ `16px`/`18px` 처럼 **px 로 남아야 하는 것**이 있다: iOS 는 16px 미만
+     입력칸에서 화면을 확대한다. 그것은 크기가 아니라 동작이라 사다리 밖이다.
+     ------------------------------------------------------------------ */
+  --aot-font-size-2xs:  0.7rem;    /* 11.2px  조밀한 상세 라벨 */
+  --aot-font-size-xs:   0.75rem;   /* 12px    캡션·타임스탬프·배지 */
+  --aot-font-size-sm:   0.875rem;  /* 14px    제목·라벨·단위·본문 ← 기준 */
+  --aot-font-size-base: 1rem;      /* 16px    본문 강조 */
+  --aot-font-size-lg:   1.125rem;  /* 18px    값 한 단 아래 */
+  --aot-font-size-xl:   1.5rem;    /* 24px    측정값·게이지 중앙 */
+
+  /* 역할 이름 — 위젯이 쓰는 이름. 값은 위 사다리에서만 온다.
+     ⚠ 여기에 리터럴 rem 을 다시 적지 말 것. 적는 순간 사다리가 두 벌이 된다. */
+  --aot-fs-sm:       var(--aot-font-size-xs);    /* 12px */
+  --aot-fs-md:       var(--aot-font-size-sm);    /* 14px */
+  --aot-fs-lg:       var(--aot-font-size-xl);    /* 24px */
+  --aot-fs-caption:  var(--aot-font-size-xs);
+  --aot-fs-label:    var(--aot-font-size-sm);
+  --aot-fs-body:     var(--aot-font-size-sm);
+  --aot-fs-unit:     var(--aot-font-size-sm);
+  --aot-fs-title:    var(--aot-font-size-sm);
+  --aot-fs-value:    var(--aot-font-size-xl);
+  --aot-fs-value-sm: var(--aot-font-size-lg);    /* 18px */
+  --aot-fs-value-lg: var(--aot-font-size-xl);
+
+  --aot-btn-font-size: var(--aot-font-size-sm);  /* 14px */
 
   /* font-weight tokens */
   --aot-fw-regular:  400;
@@ -246,28 +282,32 @@
   --aot-lh-base:  1.45;
   --aot-ls-tight: -0.01em;
 
-  /* legacy aliases — kept for backward compat */
-  /* ⚠ **크기는 이 사다리에서만 고른다.** 임의의 rem 을 쓰면 값들이 서로
-     어긋나고, 그 어긋남이 "정돈이 안 됐다" 로 보인다 — `aot-modal-modern.css`
-     가 실제로 그 길을 갔다(리터럴 26곳, 서로 다른 크기 10가지). 2026-08-27 에
-     전부 이 토큰으로 돌렸다.
-     ⚠ `16px`/`18px` 처럼 **px 로 남아야 하는 것**이 있다: iOS 는 16px 미만
-     입력칸에서 화면을 확대한다. 그것은 크기가 아니라 동작이라 사다리 밖이다. */
-  --aot-font-size-2xs: 0.7rem;   /* 조밀한 상세 라벨 — xs 아래 */
-  --aot-font-size-xs: 0.75rem;
-  --aot-font-size-sm: 0.85rem;
-  --aot-font-size-base: 0.95rem;
-  --aot-font-size-lg: 1.05rem;
-  --aot-font-size-xl: 1.4rem;
-  --aot-btn-font-size: 0.85rem;
+  /* ⚠ 임의의 rem 을 쓰면 값들이 서로 어긋나고, 그 어긋남이 "정돈이 안 됐다" 로
+     보인다 — `aot-modal-modern.css` 가 실제로 그 길을 갔다(리터럴 26곳, 서로
+     다른 크기 10가지). 2026-08-27 에 전부 토큰으로 돌렸다.
+     크기 사다리는 위 Section 1.11 에 한 벌만 있다. */
 
   /* ========================================================================
      Section 1.12: geometry
      ======================================================================== */
-  --aot-btn-height: 36px;
-  --aot-btn-height-sm: 32px;
+  /* 버튼 치수 — ⚠ 여기 적힌 값이 실제로 쓰이는 값이어야 한다.
+     예전에는 이 파일이 36px 이라고 적어 두었지만, 뒤에 로드되는 테마
+     (`aot.css` · `bootstrap-4-themes/aot.css`)가 둘 다 32px 로 덮어써서
+     **36px 은 한 번도 화면에 나온 적이 없었다.** 사다리가 "36/32 두 단"
+     이라고 말하는 동안 실제로는 32 한 단이었다는 뜻이다.
+     2026-09-06 에 덮어쓰던 두 곳을 지우고 여기를 실제 값으로 맞췄다. */
+  --aot-btn-height: 32px;
+  /* 아직 한 단뿐이다. 더 작은 단이 필요해지면 **여기서만** 갈라 놓는다 —
+     호출부는 이미 의도(sm)를 적어 두었으므로 이름은 남긴다. */
+  --aot-btn-height-sm: var(--aot-btn-height);
   --aot-btn-radius: 18px;
   --aot-btn-radius-sm: 16px;
+  /* 키보드 포커스 표시 — `outline: var(--aot-focus-outline)` 로 쓴다.
+     ⚠ `outline: none` 으로 지우기만 하고 대신 아무것도 주지 않으면 키보드로
+     쓰는 사람은 자기가 어디에 있는지 볼 수 없다. 실제로 시퀀스 위젯의 요일
+     버튼·체크박스가 그랬다. 지울 거면 이 토큰으로 다시 그려 줄 것. */
+  --aot-focus-outline: 2px solid var(--aot-color-brand-secondary);
+  --aot-focus-outline-offset: 1px;
   --aot-control-width: 160px;
   /* 컨트롤 폭 사다리 — 옵션 행(.aot-modal-option-row)의 컨트롤이 실제로 필요한
      폭. 공용 160px(--aot-control-width)는 텍스트 입력/셀렉트 기준이라, 스위치

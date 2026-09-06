@@ -120,7 +120,7 @@ WIDGET_INFORMATION = {
   .aot-calendar-widget-container { padding: 8px; flex: 1 1 auto; overflow: hidden; min-height: 0; }
 </style>""",
 
-    'widget_dashboard_title_bar': """<span class="widget-title-bar aot-w-title">{{each_widget.name}}</span>""",
+    'widget_dashboard_title_bar': """""",
 
     'widget_dashboard_body': """
 <div class="aot-calendar-widget-outer">

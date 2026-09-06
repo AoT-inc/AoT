@@ -11,13 +11,15 @@ import re
 from collections import OrderedDict
 
 from aot.config import INSTALL_DIRECTORY
-from aot.scripts.doc_locale_helper import english_locale
+from aot.scripts.doc_locale_helper import doc_locale
 from aot.utils.widgets import parse_widget_information
 
-save_path = os.path.join(INSTALL_DIRECTORY, "docs/Supported-Widgets.md")
-
-widgets_info = OrderedDict()
-aot_info = OrderedDict()
+# (locale, filename suffix) - English has no suffix (mkdocs-static-i18n default).
+LANGUAGES = [
+    ("en", ""),
+    ("ko", ".ko"),
+    ("ja", ".ja"),
+]
 
 
 def repeat_to_length(s, wanted):
@@ -25,7 +27,15 @@ def repeat_to_length(s, wanted):
 
 
 if __name__ == "__main__":
-    with english_locale():
+  for lang, suffix in LANGUAGES:
+    save_path = os.path.join(INSTALL_DIRECTORY, f"docs/Supported-Widgets{suffix}.md")
+    widgets_info = OrderedDict()
+    aot_info = OrderedDict()
+
+    # Parsing must happen inside the locale context: parse_widget_information()
+    # resolves lazy_gettext() strings as it runs, so re-parsing per language
+    # is required to get per-language output.
+    with doc_locale(lang):
         for widget_id, widget_data in parse_widget_information(exclude_custom=True).items():
             name_str = ""
             if 'widget_name' in widget_data and widget_data['widget_name']:

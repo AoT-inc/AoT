@@ -8,14 +8,16 @@ sys.path.append(os.path.abspath(os.path.join(__file__, "../../..")))
 from collections import OrderedDict
 
 from aot.config import INSTALL_DIRECTORY
-from aot.scripts.doc_locale_helper import english_locale
+from aot.scripts.doc_locale_helper import doc_locale
 from aot.scripts.generate_doc_output import generate_controller_doc
 from aot.utils.outputs import parse_output_information
 
-save_path = os.path.join(INSTALL_DIRECTORY, "docs/Supported-Outputs.md")
-
-outputs_info = OrderedDict()
-aot_info = OrderedDict()
+# (locale, filename suffix) - English has no suffix (mkdocs-static-i18n default).
+LANGUAGES = [
+    ("en", ""),
+    ("ko", ".ko"),
+    ("ja", ".ja"),
+]
 
 
 def repeat_to_length(s, wanted):
@@ -23,7 +25,15 @@ def repeat_to_length(s, wanted):
 
 
 if __name__ == "__main__":
-    with english_locale():
+  for lang, suffix in LANGUAGES:
+    save_path = os.path.join(INSTALL_DIRECTORY, f"docs/Supported-Outputs{suffix}.md")
+    outputs_info = OrderedDict()
+    aot_info = OrderedDict()
+
+    # Parsing must happen inside the locale context: parse_output_information()
+    # resolves lazy_gettext() strings as it runs, so re-parsing per language
+    # is required to get per-language output.
+    with doc_locale(lang):
         for output_id, output_data in parse_output_information(exclude_custom=True).items():
             name_str = ""
             if 'output_name' in output_data and output_data['output_name']:

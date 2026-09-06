@@ -518,8 +518,10 @@ WIDGET_INFORMATION = {
     ],
 
     'widget_dashboard_head': """
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/components/aot-toggle.css') }}">
+    {% if "css_time_wheel" not in dashboard_dict %}
     <link rel="stylesheet" href="{{ url_for('static', filename='css/components/aot-time-wheel.css') }}">
+    {% set _dummy = dashboard_dict.update({"css_time_wheel": 1}) %}
+    {% endif %}
     <script src="{{ asset('widget-sequence') }}"></script>
     <style>
         /* --- Layout --- */
@@ -579,7 +581,13 @@ WIDGET_INFORMATION = {
             flex-shrink: 0;
         }
 
-        /* Day button: tap to select for editing */
+        /* 요일 타일 — 누르면 그날을 편집 대상으로 고른다.
+           ⚠ 버튼 반경 토큰(16px 알약)을 **일부러 안 쓴다.** 이것은 낱개
+           버튼이 아니라 일곱 칸이 붙어 있는 격자의 한 칸이라, 알약 모양이
+           되면 칸끼리 떨어져 보여 "한 주"로 안 읽힌다. 타일용 반경 사다리는
+           아직 없다(WP8 에서 규약과 함께 정한다).
+           여백 6/2/7 도 두 줄(요일·날짜)을 눈으로 맞춘 값이라 그대로 둔다 —
+           보지 않고 사다리에 스냅하면 가운데 정렬이 어긋난다. */
         .seq-day-btn {
             width: 100%;
             padding: 6px 2px 7px;
@@ -593,6 +601,13 @@ WIDGET_INFORMATION = {
             gap: 1px;
             transition: background 0.15s, border-color 0.15s;
             outline: none;
+        }
+        /* ⚠ 위에서 outline 을 지웠으니 키보드용 표시를 **다시 준다.**
+           지우기만 하면 탭으로 옮겨 다니는 사람은 자기가 어느 요일에 있는지
+           볼 수 없다(마우스로는 hover 가 있지만 키보드에는 아무것도 없었다). */
+        .seq-day-btn:focus-visible {
+            outline: var(--aot-focus-outline);
+            outline-offset: var(--aot-focus-outline-offset);
         }
         .seq-day-btn:hover {
             background: var(--bg-btn-hover-light);
@@ -624,8 +639,14 @@ WIDGET_INFORMATION = {
             user-select: none;
             line-height: 1.1;
         }
+        /* 주말은 danger 계열로 표시하되 **글자용 토큰**을 쓴다.
+           `--aot-color-danger`(#DF5353)는 배경·아이콘용이라 흰 바탕 위 14px
+           글자로 쓰면 대비 3.51:1 로 WCAG AA(4.5:1)에 못 미친다.
+           같은 파일 아래 `.seq-dev-offline` 주석이 이미 "danger 틴트 배경은
+           밝아서 안 보인다 — fg 토큰과 쌍으로 쓴다"고 적어 둔 그 규칙인데,
+           요일 라벨만 빠져 있었다. `--aot-tint-danger-fg`(#b23b3b)는 5.87:1. */
         .seq-day-weekend .seq-day-label-text {
-            color: var(--aot-color-danger);
+            color: var(--aot-tint-danger-fg, #b23b3b);
         }
         /* Disabled (unchecked) day: dim text */
         .seq-day-cell.is-disabled .seq-day-label-text {
@@ -638,10 +659,20 @@ WIDGET_INFORMATION = {
             gap: 6px;
             margin-bottom: 10px;
         }
+        /* 앱의 버튼 규격을 따른다 — 예전에는 `padding: 5px 4px` 로 높이가
+           정해져 37px 이 됐고 모서리도 10px 이라, 같은 화면의 다른 버튼
+           (32px · 16px)과 나란히 놓으면 혼자 크고 각져 보였다. */
         .seq-action-btn {
             flex: 1;
-            padding: 5px 4px;
-            border-radius: 10px;
+            /* 정본 알약 버튼(.aot-pill-btn)과 같은 짜임 — 고정 높이가 아니라
+               최소 높이로 두어 글자가 두 줄이 되면 늘어난다. `height` 로 못
+               박으면 좁은 폭에서 글자가 상자 밖으로 삐져나온다. */
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-height: var(--aot-btn-height);
+            padding: 0 var(--aot-space-1);
+            border-radius: var(--aot-btn-pill-radius);
             border: 1px solid var(--aot-border-light);
             background: transparent;
             font-size: var(--aot-fs-label);
@@ -688,13 +719,20 @@ WIDGET_INFORMATION = {
             font-variant-numeric: tabular-nums;
             color: var(--aot-text-main);
         }
+        /* 눌러서 편집하는 칸들 — 키보드로도 닿으므로 포커스 표시가 필요하다. */
+        .seq-name-editable:focus-visible,
+        .seq-time-editable:focus-visible,
+        .seq-card-editable:focus-visible {
+            outline: var(--aot-focus-outline);
+            outline-offset: calc(var(--aot-focus-outline-offset) * -1);
+        }
         .seq-card-editable { cursor: pointer; transition: border-color 0.15s; }
         .seq-card-editable:hover { border-color: var(--aot-color-brand-secondary); }
 
         /* --- Expand Button --- */
         .seq-expand-btn-container { margin-bottom: 10px; display: flex; justify-content: center; }
         .seq-expand-btn {
-            width: 100%; height: 32px; border-radius: 16px;
+            width: 100%; height: var(--aot-btn-height); border-radius: var(--aot-btn-pill-radius);
             background-color: transparent; border: 1px solid var(--aot-border-light, #ddd);
             color: var(--gray-dark, #666); font-size: var(--aot-fs-body); font-weight: var(--aot-fw-medium);
             display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s ease;
@@ -781,6 +819,11 @@ WIDGET_INFORMATION = {
             background-color: transparent; cursor: pointer; position: relative;
             vertical-align: middle; outline: none; transition: all 0.2s ease;
         }
+        /* 체크박스도 마찬가지 — 지웠으면 다시 그려 준다. */
+        .seq-square-toggle:focus-visible {
+            outline: var(--aot-focus-outline);
+            outline-offset: var(--aot-focus-outline-offset);
+        }
         .seq-square-toggle:checked { background-color: var(--aot-color-brand-secondary); border-color: var(--aot-color-brand-secondary); }
         .seq-square-toggle:checked::after {
             content: ''; position: absolute; top: 1px; left: 4px;
@@ -844,10 +887,12 @@ WIDGET_INFORMATION = {
         .seq-group-new-row .seq-group-new-input {
             flex: 1 1 auto;
             min-width: 0;
-            height: 36px;
-            border-radius: 18px;
+            /* 앱 컨트롤 규격. 예전 36px 은 `--aot-btn-height` 가 한때 적어만
+               두고 실제로는 안 쓰이던 값이라, 이 칸만 옆 버튼보다 4px 컸다. */
+            height: var(--aot-btn-height);
+            border-radius: var(--aot-btn-pill-radius);
             border: 1px solid var(--aot-border-light);
-            padding: 0 12px;
+            padding: 0 var(--aot-btn-padding-x);
             background: var(--aot-input-bg);
             color: var(--aot-text-main, #444);
             font-size: var(--aot-fs-body);
@@ -864,6 +909,9 @@ WIDGET_INFORMATION = {
         .seq-step-modal .seq-type-panel-title { text-align: left; margin-bottom: var(--aot-space-3, 12px); }
         .seq-step-section { margin-bottom: var(--aot-space-4, 16px); }
         .seq-step-label { font-weight: var(--aot-fw-semibold, 600); font-size: var(--aot-fs-label); color: var(--gray-dark, #888); text-transform: uppercase; margin-bottom: 6px; }
+        {#- ⚠ 아래 두 칸(44px·40px)은 앱 컨트롤 높이(32px)보다 크다. 폰에서 손가락
+            으로 짚는 시트라 일부러 키운 것으로 보여 **보지 않고 줄이지 않는다** —
+            실제 폰 화면에서 확인한 뒤 정한다(WP5 에서 이 시트를 볼 때 함께). -#}
         .seq-step-time-input {
             width: 100%; height: 44px; border-radius: 22px; border: 1px solid var(--aot-border-light);
             padding: 0 14px; background: var(--aot-input-bg); color: var(--aot-text-main, #444);
@@ -875,7 +923,8 @@ WIDGET_INFORMATION = {
         .seq-step-group-body { display: flex; flex-direction: column; gap: var(--aot-space-2, 8px); max-height: 34vh; overflow-y: auto; }
         .seq-step-group-body .btn.aot-pill-btn { width: 100%; text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .seq-step-newrow { display: flex; gap: var(--aot-space-2, 8px); width: 100%; box-sizing: border-box; margin-top: var(--aot-space-2, 8px); }
-        .seq-step-newrow input { flex: 1 1 auto; min-width: 0; height: 36px; border-radius: 18px; border: 1px solid var(--aot-border-light); padding: 0 12px; background: var(--aot-input-bg); color: var(--aot-text-main, #444); font-size: var(--aot-fs-body); box-sizing: border-box; }
+        {#- 옆에 선 버튼이 알약 규격(32px)이라 이 칸도 같은 높이여야 밑선이 맞는다. -#}
+        .seq-step-newrow input { flex: 1 1 auto; min-width: 0; height: var(--aot-btn-height); border-radius: var(--aot-btn-pill-radius); border: 1px solid var(--aot-border-light); padding: 0 var(--aot-btn-padding-x); background: var(--aot-input-bg); color: var(--aot-text-main, #444); font-size: var(--aot-fs-body); box-sizing: border-box; }
         .seq-step-newrow button { flex: 0 0 auto; white-space: nowrap; }
         .seq-step-modal .seq-type-cancel-row { display: flex; gap: var(--aot-space-2, 8px); }
         .seq-step-modal .seq-type-cancel-row .btn.aot-pill-btn { flex: 1; }
@@ -914,7 +963,7 @@ WIDGET_INFORMATION = {
     </style>
     """,
 
-    'widget_dashboard_title_bar': """<span class="aot-w-title" id="seq-title-{{each_widget.unique_id}}">{{each_widget.name}}</span>""",
+    'widget_dashboard_title_bar': """""",
 
     'widget_dashboard_body': """
     {% set show_det = widget_options.get('show_details', 'Show') %}
@@ -957,6 +1006,7 @@ WIDGET_INFORMATION = {
         <div class="seq-info-grid">
             <div class="seq-info-card seq-card-editable"
                  data-field="start_time" data-fid="{{fid}}" data-wid="{{wid}}"
+                 role="button" tabindex="0"
                  onclick="seq_open_setting_wheel(this)"
                  data-toggle="tooltip" data-placement="top"
                  title="{{ _('Set the time of day the sequence starts for the selected day') }}">
@@ -965,6 +1015,7 @@ WIDGET_INFORMATION = {
             </div>
             <div class="seq-info-card seq-card-editable"
                  data-field="end_time" data-fid="{{fid}}" data-wid="{{wid}}"
+                 role="button" tabindex="0"
                  onclick="seq_open_setting_wheel(this)"
                  data-toggle="tooltip" data-placement="top"
                  title="{{ _('Set the time of day the sequence stops. Select 00:00 for 24:00 (end of day).') }}">
@@ -973,6 +1024,7 @@ WIDGET_INFORMATION = {
             </div>
             <div class="seq-info-card seq-card-editable"
                  data-field="period" data-fid="{{fid}}" data-wid="{{wid}}"
+                 role="button" tabindex="0"
                  onclick="seq_open_setting_wheel(this)"
                  data-toggle="tooltip" data-placement="top"
                  title="{{ _('Set the duration of one cycle. Cycles repeat until the end time.') }}">
@@ -1030,6 +1082,28 @@ WIDGET_INFORMATION = {
     // Key: widget_id, Value: { interval: null, elapsed: 0, period: 0, is_active: false, start_ts: 0 }
     if (typeof window.seqWidgetState === 'undefined') {
         window.seqWidgetState = {};
+    }
+
+    // 목록의 [이름]·[시간] 칸은 눌러서 편집하는 자리인데 `<div onclick>` 이라
+    // **키보드로는 닿을 수 없었다.** 마크업에 role/tabindex 를 주고, Enter·Space
+    // 를 클릭과 같게 처리한다. 위임 리스너라 목록이 다시 그려져도 살아 있고,
+    // 위젯 종류당 한 번만 등록한다(이 블록은 종류마다 한 번 렌더된다).
+    if (!window.__seqKeyActivateBound) {
+        window.__seqKeyActivateBound = true;
+        document.addEventListener('keydown', function (e) {
+            if (e.key !== 'Enter' && e.key !== ' ' && e.key !== 'Spacebar') return;
+            var cell = e.target.closest && e.target.closest(
+                '.seq-name-editable, .seq-time-editable, .seq-card-editable');
+            if (!cell) return;
+            e.preventDefault();
+            if (cell.classList.contains('seq-name-editable')) {
+                if (typeof seq_open_name_modal === 'function') seq_open_name_modal(cell);
+            } else if (cell.classList.contains('seq-time-editable')) {
+                if (typeof seq_open_time_modal === 'function') seq_open_time_modal(cell);
+            } else if (typeof seq_open_setting_wheel === 'function') {
+                seq_open_setting_wheel(cell);
+            }
+        });
     }
 
     // Distinct colors per device group, assigned by first-appearance order so
@@ -1588,7 +1662,10 @@ WIDGET_INFORMATION = {
                     // quotes/spaces in a group name from breaking the attribute.
                     var blockKey = inGroup ? ('g:' + encodeURIComponent(effGroup)) : ('u:' + s.unique_id);
                     listHtml += '<div class="' + rowClass + '" data-uid="' + s.unique_id + '" data-block="' + blockKey + '" title="' + window._('Press and hold to reorder') + '">';
-                    listHtml += '<div class="seq-col-enable"><input type="checkbox" ' + checked + ' class="seq-square-toggle" data-id="' + s.unique_id + '" onchange="toggle_seq_action(this.dataset.id, this, \\'' + widget_id + '\\', \\'' + function_id + '\\')"></div>';
+                    // 스크린리더가 읽을 이름 — 없으면 그냥 "체크박스" 로만 읽힌다.
+                    // (스텝 이름은 아래에서 계산되므로 여기서는 공용 라벨을 쓴다.
+                    //  이름 칸이 바로 옆 칸이라 행을 읽으면 무엇의 활성인지 이어진다.)
+                    listHtml += '<div class="seq-col-enable"><input type="checkbox" ' + checked + ' class="seq-square-toggle" aria-label="' + window._('Enabled') + '" data-id="' + s.unique_id + '" onchange="toggle_seq_action(this.dataset.id, this, \\'' + widget_id + '\\', \\'' + function_id + '\\')"></div>';
 
                     // '-' 는 서버가 "가리키는 장치를 못 찾았다" 고 말하는 값이다.
                     // 그대로 두면 화면에 이유 없는 대시 하나만 남아, 설정이
@@ -1605,10 +1682,10 @@ WIDGET_INFORMATION = {
                     var eName = seq_esc(displayName);
                     var eDevice = seq_esc(deviceDetail);
                     var eGroup = seq_esc(effGroup || '');
-                    listHtml += '<div class="seq-col-name seq-name-editable' + grpCellCls + '"' + nameCellStyle + ' title="' + eName + '" data-uid="' + s.unique_id + '" data-name="' + eName + '" data-device="' + eDevice + '" data-group="' + eGroup + '" data-type="' + seq_esc(s.type) + '" data-lead="' + (s.total_lead || 0) + '" data-lag="' + (s.total_lag || 0) + '" data-wid="' + widget_id + '" data-fid="' + function_id + '" onclick="seq_open_name_modal(this)"><span class="' + nameCls + '">' + eName + '</span>' + devBadge + '</div>';
+                    listHtml += '<div class="seq-col-name seq-name-editable' + grpCellCls + '"' + nameCellStyle + ' role="button" tabindex="0" title="' + eName + '" data-uid="' + s.unique_id + '" data-name="' + eName + '" data-device="' + eDevice + '" data-group="' + eGroup + '" data-type="' + seq_esc(s.type) + '" data-lead="' + (s.total_lead || 0) + '" data-lag="' + (s.total_lag || 0) + '" data-wid="' + widget_id + '" data-fid="' + function_id + '" onclick="seq_open_name_modal(this)"><span class="' + nameCls + '">' + eName + '</span>' + devBadge + '</div>';
 
                     var timeShown = isTotal ? window._('Total') : timeStr;
-                    listHtml += '<div class="seq-col-time seq-time-editable" data-uid="' + s.unique_id + '" data-dur="' + durationSec + '" data-type="' + seq_esc(s.type) + '" data-group="' + eGroup + '" data-name="' + eName + '" data-wid="' + widget_id + '" data-fid="' + function_id + '" onclick="seq_open_time_modal(this)"><span class="seq-text-time">' + timeShown + '</span></div>';
+                    listHtml += '<div class="seq-col-time seq-time-editable" role="button" tabindex="0" data-uid="' + s.unique_id + '" data-dur="' + durationSec + '" data-type="' + seq_esc(s.type) + '" data-group="' + eGroup + '" data-name="' + eName + '" data-wid="' + widget_id + '" data-fid="' + function_id + '" onclick="seq_open_time_modal(this)"><span class="seq-text-time">' + timeShown + '</span></div>';
                     listHtml += '</div>';
                 }
             } else {

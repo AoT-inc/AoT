@@ -1274,9 +1274,11 @@ WIDGET_INFORMATION = {
 
     # ------------------ HEAD (CSS) ------------------
     'widget_dashboard_head': """
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/components/aot-toggle.css') }}">
     <!-- Shared time-wheel module (also used by other widgets) -->
+    {% if "css_time_wheel" not in dashboard_dict %}
     <link rel="stylesheet" href="{{ url_for('static', filename='css/components/aot-time-wheel.css') }}">
+    {% set _dummy = dashboard_dict.update({"css_time_wheel": 1}) %}
+    {% endif %}
     <script src="{{ asset('app-time-wheel') }}"></script>
     """,
 
@@ -1297,13 +1299,12 @@ WIDGET_INFORMATION = {
 
     # ------------------ TITLE BAR ------------------
     'widget_dashboard_title_bar': """
+    {#- 이름은 셸이 렌더한다. 여기는 이름 옆 상태 배지만. -#}
     {%- if widget_options['enable_status'] -%}
-      <span id="tm_state_{{each_widget.unique_id}}"></span>
+      <span class="aot-w-caption" id="tm_state_{{each_widget.unique_id}}"></span>
     {%- else -%}
-      <span style="display:none" id="tm_state_{{each_widget.unique_id}}"></span>
+      <span class="aot-w-caption" hidden id="tm_state_{{each_widget.unique_id}}"></span>
     {%- endif %}
-
-    <span class="aot-w-title" style="padding-right:0.5em">{{each_widget.name}}</span>
     """,
 
     # ------------------ BODY ------------------
@@ -1325,7 +1326,7 @@ WIDGET_INFORMATION = {
       min-height: 36px;
     }
     #aot_tm_{{each_widget.unique_id}} .aot-cnt-label {
-      font-size: 0.9em;
+      font-size: var(--aot-font-size-sm);
       font-weight: 600;
       color: var(--aot-text-main, #333);
       white-space: nowrap;
@@ -1341,11 +1342,13 @@ WIDGET_INFORMATION = {
     #aot_tm_{{each_widget.unique_id}} .aot-cnt-cycles {
       box-sizing: border-box;
       width: 7.6em;
-      height: 34px;
+      /* 앱 컨트롤 높이. 예전에는 34px 이라 옆의 토글·버튼(32px)과 밑선이
+         2px 어긋났다. */
+      height: var(--aot-btn-height);
       text-align: center;
       font-variant-numeric: tabular-nums;
       border: 1px solid var(--border-neutral, #d7d3c4);
-      border-radius: 9999px !important;
+      border-radius: var(--aot-btn-pill-radius) !important;
       background: var(--aot-input-bg, #fff);
       color: var(--aot-text-main, #333);
       box-shadow: none !important;
@@ -1353,7 +1356,7 @@ WIDGET_INFORMATION = {
     #aot_tm_{{each_widget.unique_id}} .aot-cnt-time-trigger {
       font-weight: 600;
       letter-spacing: 0.04em;
-      padding: 0 1em !important;
+      padding: 0 var(--aot-btn-padding-x) !important;
       cursor: pointer;
       transition: border-color 0.15s ease;
     }
@@ -1367,6 +1370,12 @@ WIDGET_INFORMATION = {
     #aot_tm_{{each_widget.unique_id}} .aot-cnt-time-trigger:focus {
       outline: none;
       border-color: var(--color-zone-mode, #2ecc71);
+    }
+    /* 키보드로 왔을 때는 테두리 색만으로 두지 않는다 — 1px 색 변화는
+       hover 와 구분되지 않고, 색으로만 알리는 표시이기도 하다. */
+    #aot_tm_{{each_widget.unique_id}} .aot-cnt-time-trigger:focus-visible {
+      outline: var(--aot-focus-outline);
+      outline-offset: var(--aot-focus-outline-offset);
     }
     /* active phase counting down */
     #aot_tm_{{each_widget.unique_id}} .aot-cnt-time-trigger.is-counting {
@@ -1382,6 +1391,10 @@ WIDGET_INFORMATION = {
     #aot_tm_{{each_widget.unique_id}} .aot-cnt-cycles:focus {
       outline: none;
       border-color: var(--color-zone-mode, #2ecc71);
+    }
+    #aot_tm_{{each_widget.unique_id}} .aot-cnt-cycles:focus-visible {
+      outline: var(--aot-focus-outline);
+      outline-offset: var(--aot-focus-outline-offset);
     }
     /* Reserve horizontal width for the toggle column (same as AoT_timer.py) */
     #aot_tm_{{each_widget.unique_id}} .col-aot-2 {
@@ -1406,7 +1419,7 @@ WIDGET_INFORMATION = {
       color: var(--aot-text-main, #333);
     }
     #aot_tm_{{each_widget.unique_id}} .aot-cnt-msg {
-      font-size: 0.8em;
+      font-size: var(--aot-font-size-xs);
       line-height: 1.3;
       color: var(--text-medium-gray, #8a8a8a);
     }
