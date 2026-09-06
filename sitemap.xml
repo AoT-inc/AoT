@@ -105,6 +105,14 @@
         <xhtml:link rel="alternate" hreflang="ko" href="https://aot-inc.github.io/AoT/ko/Device-Notes/"/>
     </url>
     <url>
+        <loc>https://aot-inc.github.io/AoT/Device/</loc>
+        <lastmod>2026-09-06</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="en" href="https://aot-inc.github.io/AoT/Device/"/>
+        <xhtml:link rel="alternate" hreflang="ja" href="https://aot-inc.github.io/AoT/ja/Device/"/>
+        <xhtml:link rel="alternate" hreflang="ko" href="https://aot-inc.github.io/AoT/ko/Device/"/>
+    </url>
+    <url>
         <loc>https://aot-inc.github.io/AoT/Energy-Usage/</loc>
         <lastmod>2026-09-06</lastmod>
         <changefreq>daily</changefreq>
@@ -153,12 +161,28 @@
         <xhtml:link rel="alternate" hreflang="ko" href="https://aot-inc.github.io/AoT/ko/Inputs/"/>
     </url>
     <url>
+        <loc>https://aot-inc.github.io/AoT/Integrations/</loc>
+        <lastmod>2026-09-06</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="en" href="https://aot-inc.github.io/AoT/Integrations/"/>
+        <xhtml:link rel="alternate" hreflang="ja" href="https://aot-inc.github.io/AoT/ja/Integrations/"/>
+        <xhtml:link rel="alternate" hreflang="ko" href="https://aot-inc.github.io/AoT/ko/Integrations/"/>
+    </url>
+    <url>
         <loc>https://aot-inc.github.io/AoT/Interfaces/</loc>
         <lastmod>2026-09-06</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="en" href="https://aot-inc.github.io/AoT/Interfaces/"/>
         <xhtml:link rel="alternate" hreflang="ja" href="https://aot-inc.github.io/AoT/ja/Interfaces/"/>
         <xhtml:link rel="alternate" hreflang="ko" href="https://aot-inc.github.io/AoT/ko/Interfaces/"/>
+    </url>
+    <url>
+        <loc>https://aot-inc.github.io/AoT/LoRaWAN-ChirpStack/</loc>
+        <lastmod>2026-09-06</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="en" href="https://aot-inc.github.io/AoT/LoRaWAN-ChirpStack/"/>
+        <xhtml:link rel="alternate" hreflang="ja" href="https://aot-inc.github.io/AoT/ja/LoRaWAN-ChirpStack/"/>
+        <xhtml:link rel="alternate" hreflang="ko" href="https://aot-inc.github.io/AoT/ko/LoRaWAN-ChirpStack/"/>
     </url>
     <url>
         <loc>https://aot-inc.github.io/AoT/Log-Viewer/</loc>
@@ -175,6 +199,14 @@
         <xhtml:link rel="alternate" hreflang="en" href="https://aot-inc.github.io/AoT/Methods/"/>
         <xhtml:link rel="alternate" hreflang="ja" href="https://aot-inc.github.io/AoT/ja/Methods/"/>
         <xhtml:link rel="alternate" hreflang="ko" href="https://aot-inc.github.io/AoT/ko/Methods/"/>
+    </url>
+    <url>
+        <loc>https://aot-inc.github.io/AoT/Name-Translations/</loc>
+        <lastmod>2026-09-06</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="en" href="https://aot-inc.github.io/AoT/Name-Translations/"/>
+        <xhtml:link rel="alternate" hreflang="ja" href="https://aot-inc.github.io/AoT/ja/Name-Translations/"/>
+        <xhtml:link rel="alternate" hreflang="ko" href="https://aot-inc.github.io/AoT/ko/Name-Translations/"/>
     </url>
     <url>
         <loc>https://aot-inc.github.io/AoT/Notes/</loc>
@@ -417,6 +449,14 @@
         <xhtml:link rel="alternate" hreflang="ko" href="https://aot-inc.github.io/AoT/ko/geo/plot-widget/"/>
     </url>
     <url>
+        <loc>https://aot-inc.github.io/AoT/geo/plots/</loc>
+        <lastmod>2026-09-06</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="en" href="https://aot-inc.github.io/AoT/geo/plots/"/>
+        <xhtml:link rel="alternate" hreflang="ja" href="https://aot-inc.github.io/AoT/ja/geo/plots/"/>
+        <xhtml:link rel="alternate" hreflang="ko" href="https://aot-inc.github.io/AoT/ko/geo/plots/"/>
+    </url>
+    <url>
         <loc>https://aot-inc.github.io/AoT/geo/programs/</loc>
         <lastmod>2026-09-06</lastmod>
         <changefreq>daily</changefreq>
@@ -537,6 +577,14 @@
         <xhtml:link rel="alternate" hreflang="ja" href="https://aot-inc.github.io/AoT/ja/Device-Notes/"/>
     </url>
     <url>
+        <loc>https://aot-inc.github.io/AoT/ko/Device/</loc>
+        <lastmod>2026-09-06</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="ko" href="https://aot-inc.github.io/AoT/ko/Device/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="https://aot-inc.github.io/AoT/Device/"/>
+        <xhtml:link rel="alternate" hreflang="ja" href="https://aot-inc.github.io/AoT/ja/Device/"/>
+    </url>
+    <url>
         <loc>https://aot-inc.github.io/AoT/ko/Energy-Usage/</loc>
         <lastmod>2026-09-06</lastmod>
         <changefreq>daily</changefreq>
@@ -585,12 +633,28 @@
         <xhtml:link rel="alternate" hreflang="ja" href="https://aot-inc.github.io/AoT/ja/Inputs/"/>
     </url>
     <url>
+        <loc>https://aot-inc.github.io/AoT/ko/Integrations/</loc>
+        <lastmod>2026-09-06</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="ko" href="https://aot-inc.github.io/AoT/ko/Integrations/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="https://aot-inc.github.io/AoT/Integrations/"/>
+        <xhtml:link rel="alternate" hreflang="ja" href="https://aot-inc.github.io/AoT/ja/Integrations/"/>
+    </url>
+    <url>
         <loc>https://aot-inc.github.io/AoT/ko/Interfaces/</loc>
         <lastmod>2026-09-06</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="ko" href="https://aot-inc.github.io/AoT/ko/Interfaces/"/>
         <xhtml:link rel="alternate" hreflang="en" href="https://aot-inc.github.io/AoT/Interfaces/"/>
         <xhtml:link rel="alternate" hreflang="ja" href="https://aot-inc.github.io/AoT/ja/Interfaces/"/>
+    </url>
+    <url>
+        <loc>https://aot-inc.github.io/AoT/ko/LoRaWAN-ChirpStack/</loc>
+        <lastmod>2026-09-06</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="ko" href="https://aot-inc.github.io/AoT/ko/LoRaWAN-ChirpStack/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="https://aot-inc.github.io/AoT/LoRaWAN-ChirpStack/"/>
+        <xhtml:link rel="alternate" hreflang="ja" href="https://aot-inc.github.io/AoT/ja/LoRaWAN-ChirpStack/"/>
     </url>
     <url>
         <loc>https://aot-inc.github.io/AoT/ko/Log-Viewer/</loc>
@@ -607,6 +671,14 @@
         <xhtml:link rel="alternate" hreflang="ko" href="https://aot-inc.github.io/AoT/ko/Methods/"/>
         <xhtml:link rel="alternate" hreflang="en" href="https://aot-inc.github.io/AoT/Methods/"/>
         <xhtml:link rel="alternate" hreflang="ja" href="https://aot-inc.github.io/AoT/ja/Methods/"/>
+    </url>
+    <url>
+        <loc>https://aot-inc.github.io/AoT/ko/Name-Translations/</loc>
+        <lastmod>2026-09-06</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="ko" href="https://aot-inc.github.io/AoT/ko/Name-Translations/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="https://aot-inc.github.io/AoT/Name-Translations/"/>
+        <xhtml:link rel="alternate" hreflang="ja" href="https://aot-inc.github.io/AoT/ja/Name-Translations/"/>
     </url>
     <url>
         <loc>https://aot-inc.github.io/AoT/ko/Notes/</loc>
@@ -729,14 +801,6 @@
         <xhtml:link rel="alternate" hreflang="ja" href="https://aot-inc.github.io/AoT/ja/Upgrade-Backup-Restore/"/>
     </url>
     <url>
-        <loc>https://aot-inc.github.io/AoT/ko/env_coordinator_user_guide/</loc>
-        <lastmod>2026-09-06</lastmod>
-        <changefreq>daily</changefreq>
-        <xhtml:link rel="alternate" hreflang="ko" href="https://aot-inc.github.io/AoT/ko/env_coordinator_user_guide/"/>
-        <xhtml:link rel="alternate" hreflang="en" href="https://aot-inc.github.io/AoT/env_coordinator_user_guide/"/>
-        <xhtml:link rel="alternate" hreflang="ja" href="https://aot-inc.github.io/AoT/ja/env_coordinator_user_guide/"/>
-    </url>
-    <url>
         <loc>https://aot-inc.github.io/AoT/ko/time-handling/</loc>
         <lastmod>2026-09-06</lastmod>
         <changefreq>daily</changefreq>
@@ -855,6 +919,14 @@
         <xhtml:link rel="alternate" hreflang="ko" href="https://aot-inc.github.io/AoT/ko/geo/plot-widget/"/>
         <xhtml:link rel="alternate" hreflang="en" href="https://aot-inc.github.io/AoT/geo/plot-widget/"/>
         <xhtml:link rel="alternate" hreflang="ja" href="https://aot-inc.github.io/AoT/ja/geo/plot-widget/"/>
+    </url>
+    <url>
+        <loc>https://aot-inc.github.io/AoT/ko/geo/plots/</loc>
+        <lastmod>2026-09-06</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="ko" href="https://aot-inc.github.io/AoT/ko/geo/plots/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="https://aot-inc.github.io/AoT/geo/plots/"/>
+        <xhtml:link rel="alternate" hreflang="ja" href="https://aot-inc.github.io/AoT/ja/geo/plots/"/>
     </url>
     <url>
         <loc>https://aot-inc.github.io/AoT/ko/geo/programs/</loc>
@@ -977,6 +1049,14 @@
         <xhtml:link rel="alternate" hreflang="ko" href="https://aot-inc.github.io/AoT/ko/Device-Notes/"/>
     </url>
     <url>
+        <loc>https://aot-inc.github.io/AoT/ja/Device/</loc>
+        <lastmod>2026-09-06</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="ja" href="https://aot-inc.github.io/AoT/ja/Device/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="https://aot-inc.github.io/AoT/Device/"/>
+        <xhtml:link rel="alternate" hreflang="ko" href="https://aot-inc.github.io/AoT/ko/Device/"/>
+    </url>
+    <url>
         <loc>https://aot-inc.github.io/AoT/ja/Energy-Usage/</loc>
         <lastmod>2026-09-06</lastmod>
         <changefreq>daily</changefreq>
@@ -1025,12 +1105,28 @@
         <xhtml:link rel="alternate" hreflang="ko" href="https://aot-inc.github.io/AoT/ko/Inputs/"/>
     </url>
     <url>
+        <loc>https://aot-inc.github.io/AoT/ja/Integrations/</loc>
+        <lastmod>2026-09-06</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="ja" href="https://aot-inc.github.io/AoT/ja/Integrations/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="https://aot-inc.github.io/AoT/Integrations/"/>
+        <xhtml:link rel="alternate" hreflang="ko" href="https://aot-inc.github.io/AoT/ko/Integrations/"/>
+    </url>
+    <url>
         <loc>https://aot-inc.github.io/AoT/ja/Interfaces/</loc>
         <lastmod>2026-09-06</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="ja" href="https://aot-inc.github.io/AoT/ja/Interfaces/"/>
         <xhtml:link rel="alternate" hreflang="en" href="https://aot-inc.github.io/AoT/Interfaces/"/>
         <xhtml:link rel="alternate" hreflang="ko" href="https://aot-inc.github.io/AoT/ko/Interfaces/"/>
+    </url>
+    <url>
+        <loc>https://aot-inc.github.io/AoT/ja/LoRaWAN-ChirpStack/</loc>
+        <lastmod>2026-09-06</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="ja" href="https://aot-inc.github.io/AoT/ja/LoRaWAN-ChirpStack/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="https://aot-inc.github.io/AoT/LoRaWAN-ChirpStack/"/>
+        <xhtml:link rel="alternate" hreflang="ko" href="https://aot-inc.github.io/AoT/ko/LoRaWAN-ChirpStack/"/>
     </url>
     <url>
         <loc>https://aot-inc.github.io/AoT/ja/Log-Viewer/</loc>
@@ -1047,6 +1143,14 @@
         <xhtml:link rel="alternate" hreflang="ja" href="https://aot-inc.github.io/AoT/ja/Methods/"/>
         <xhtml:link rel="alternate" hreflang="en" href="https://aot-inc.github.io/AoT/Methods/"/>
         <xhtml:link rel="alternate" hreflang="ko" href="https://aot-inc.github.io/AoT/ko/Methods/"/>
+    </url>
+    <url>
+        <loc>https://aot-inc.github.io/AoT/ja/Name-Translations/</loc>
+        <lastmod>2026-09-06</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="ja" href="https://aot-inc.github.io/AoT/ja/Name-Translations/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="https://aot-inc.github.io/AoT/Name-Translations/"/>
+        <xhtml:link rel="alternate" hreflang="ko" href="https://aot-inc.github.io/AoT/ko/Name-Translations/"/>
     </url>
     <url>
         <loc>https://aot-inc.github.io/AoT/ja/Notes/</loc>
@@ -1287,6 +1391,14 @@
         <xhtml:link rel="alternate" hreflang="ja" href="https://aot-inc.github.io/AoT/ja/geo/plot-widget/"/>
         <xhtml:link rel="alternate" hreflang="en" href="https://aot-inc.github.io/AoT/geo/plot-widget/"/>
         <xhtml:link rel="alternate" hreflang="ko" href="https://aot-inc.github.io/AoT/ko/geo/plot-widget/"/>
+    </url>
+    <url>
+        <loc>https://aot-inc.github.io/AoT/ja/geo/plots/</loc>
+        <lastmod>2026-09-06</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="ja" href="https://aot-inc.github.io/AoT/ja/geo/plots/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="https://aot-inc.github.io/AoT/geo/plots/"/>
+        <xhtml:link rel="alternate" hreflang="ko" href="https://aot-inc.github.io/AoT/ko/geo/plots/"/>
     </url>
     <url>
         <loc>https://aot-inc.github.io/AoT/ja/geo/programs/</loc>
