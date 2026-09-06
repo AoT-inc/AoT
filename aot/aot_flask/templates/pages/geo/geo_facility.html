@@ -5,7 +5,9 @@
 {% block head %}
 <!-- MapLibre GL 은 layout.html head 에서 제공됨 (GIS 설정의 로컬/CDN 옵션 적용).
      여기서 재로드하면 window.maplibregl 을 덮어쓰므로 로드하지 않는다. -->
-<link rel="stylesheet" href="{{ url_for('static', filename='css/map/map.css') }}" />
+{#- map.css 는 layout.html 이 이 페이지에도 싣는다 — 여기서 또 걸면
+    같은 파일이 두 번 내려가고 두 번 파싱된다(실측: /geo/design 에서
+    map.css 318 규칙이 두 벌이었다). -#}
 {#- 공용 구획 폼(`common/aot-plot-form.js`)의 스타일 — 지도 위젯·/plots 와 **같은 파일**이다. -#}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/components/aot-plot-form.css') }}" />
 <link rel="stylesheet" href="/static/css/pages/geo-facility.css?v=20260812d" />

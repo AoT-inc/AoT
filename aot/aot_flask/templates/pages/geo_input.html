@@ -26,7 +26,9 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/aot-entry-ui.css') }}" />
 <script src="{{ url_for('static', filename='js/vendor/gridstack-all.js') }}"></script>
 
-<link rel="stylesheet" href="{{ url_for('static', filename='css/components/aot-toggle.css') }}" />
+{#- aot-toggle.css 는 layout.html 이 이 페이지에도 싣는다 — 여기서 또 걸면
+    같은 파일이 두 번 내려가고 두 번 파싱된다(실측: /geo/design 에서
+    map.css 318 규칙이 두 벌이었다). -#}
 <!-- [GIS Vector Migration] aot-maplibre-loader.js is already loaded in layout.html head -->
 <script src="{{ asset('page-geo-input') }}"></script>
 

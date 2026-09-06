@@ -3,7 +3,9 @@
 
 {% block head %}
 <link href="{{ url_for('static', filename='css/components/btn-toggle.css') }}" rel="stylesheet">
-<link href="{{ url_for('static', filename='css/map/map.css') }}" rel="stylesheet">
+{#- map.css 는 layout.html 이 이 페이지에도 싣는다 — 여기서 또 걸면
+    같은 파일이 두 번 내려가고 두 번 파싱된다(실측: /geo/design 에서
+    map.css 318 규칙이 두 벌이었다). -#}
 {% endblock %}
 
 {% block body %}

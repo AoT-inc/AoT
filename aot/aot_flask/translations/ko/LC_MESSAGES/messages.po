@@ -25056,13 +25056,14 @@ msgstr ""
 
 #: inputs_gis/gis_esa.py:9
 msgid ""
-"A global land cover map based on European Space Agency (ESA) Sentinel-2 "
-"satellite data. Vegetation, urban areas, cropland, forest, and water bodies "
-"are classified and color-coded at 10m resolution, useful for environmental "
-"analysis."
+"Global surface soil moisture (0-5cm) from NASA's SMAP (Soil Moisture "
+"Active Passive) L4 product, delivered as a near-real-time overlay via NASA "
+"GIBS. Available at roughly 9km resolution with selectable dates, useful "
+"for irrigation planning and drought monitoring."
 msgstr ""
-"유럽우주국(ESA) Sentinel-2 위성 데이터를 기반으로 한 전 세계 토지 피복 지도입니다. 식생, 도시, 농경지, 산림, 수역 "
-"등을 10m급 해상도로 분류해 색상별로 표시하며, 환경 분석에 유용합니다."
+"NASA SMAP(Soil Moisture Active Passive) L4 위성이 관측한 전 지구 표층 토양수분(0~5cm)을 NASA "
+"GIBS를 통해 준실시간 오버레이로 제공합니다. 약 9km 해상도로 날짜를 선택해 볼 수 있으며, 관개 계획과 가뭄 "
+"모니터링에 유용합니다."
 
 #: inputs_gis/gis_esri.py:7
 msgid "Esri"

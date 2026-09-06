@@ -5,8 +5,8 @@ import datetime
 
 INPUT_INFORMATION = {
     'input_name_unique': 'gis_esa', # Keep ID
-    'input_manufacturer': 'ESA',
-    'message': lg('A global land cover map based on European Space Agency (ESA) Sentinel-2 satellite data. Vegetation, urban areas, cropland, forest, and water bodies are classified and color-coded at 10m resolution, useful for environmental analysis.'),
+    'input_manufacturer': 'NASA',
+    'message': lg("Global surface soil moisture (0-5cm) from NASA's SMAP (Soil Moisture Active Passive) L4 product, delivered as a near-real-time overlay via NASA GIBS. Available at roughly 9km resolution with selectable dates, useful for irrigation planning and drought monitoring."),
     'country': ['GL'],
     'input_name': 'Soil Moisture (NASA SMAP)',
     'input_library': 'gis_esa',

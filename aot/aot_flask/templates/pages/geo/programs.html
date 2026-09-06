@@ -9,7 +9,9 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/aot-entry-ui.css') }}" />
 {#- 단계 기간 바가 쓰는 공용 시각화(밴드·불릿·기간 바). 지도 위젯의 작기
     진행 바와 **같은 모양**이라 사용자가 따로 배울 것이 없다. -#}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/components/aot-dataviz.css') }}" />
+{#- aot-dataviz.css 는 layout.html 이 이 페이지에도 싣는다 — 여기서 또 걸면
+    같은 파일이 두 번 내려가고 두 번 파싱된다(실측: /geo/design 에서
+    map.css 318 규칙이 두 벌이었다). -#}
 {#- 단계 트랙·단계 설정 패널 — 구획 운영 페이지(`/plots`)와 **같은 정의**를 쓴다.
     같은 것(단계로 나뉜 재배 일정)을 다루는 화면이 서로 다른 문법을 쓰면 사용자가
     화면마다 다시 배워야 한다. -#}
