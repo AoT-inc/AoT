@@ -3543,11 +3543,12 @@ def page_settings():
     if not utils_general.user_has_permission('view_settings'):
         return redirect(url_for('routes_general.home'))
     
-    # 301 Redirect to Geo Design page where the settings are now a modal
+    # 301 Redirect to Geo Design page where the settings are now a modal.
+    # 옛 페이지 템플릿(pages/geo/geo_setting.html)은 지웠다 — 이 return 뒤에
+    # 도달 불가능한 render_template 이 남아 있었고, 그것이 그 파일의 유일한
+    # 사용처였다. 실제 설정 UI 는 modals/geo_settings_modal.html 이고
+    # geo_design.html 이 include 한다.
     return redirect(url_for('routes_geo.page_design'), code=301)
-    
-    # Functionality moved to api_geo_settings and geo_design modal
-    pass
 
 @blueprint.route('/location/entry')
 @login_required

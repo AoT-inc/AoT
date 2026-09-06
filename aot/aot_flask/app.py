@@ -390,6 +390,17 @@ def create_app(config=ProdConfig):
     def inject_static_build_id():
         return {'static_build_id': _ASSET_BUILD_ID}
 
+    # 반입한 MapLibre 의 버전. layout 이 어느 파일을 싣는지와 브라우저가 무엇을
+    # 할 수 있다고 믿는지가 **같은 값**이어야 하므로 한 곳에서만 답한다.
+    # aot/utils/maplibre.py 참조(반입 디렉터리가 버전을 정한다).
+    from aot.utils import maplibre as _maplibre
+
+    @app.context_processor
+    def inject_maplibre_version():
+        return {'maplibre_version': _maplibre.bundled_version(),
+                'maplibre_major': _maplibre.bundled_major(),
+                'maplibre_vendor_dir': _maplibre.vendor_dir()}
+
     # ── Bundle asset() — content-hash cache-busting for built JS bundles ──
     # Reads static/js/dist/manifest.json (bundle name -> content hash, written by
     # tools/bundle.mjs) and returns "/static/js/dist/<name>.bundle.js?v=<hash>".

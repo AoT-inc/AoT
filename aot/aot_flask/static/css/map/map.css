@@ -474,18 +474,7 @@ body.aot-map-fullscreen-active .grid-stack-item:not(.aot-fs-parent) {
   text-decoration: none;
 }
 
-.section-stack {
-  display: flex;
-  flex-direction: column;
-  gap: 25px;
-}
-
-.section-stack .section-box {
-  margin-bottom: 0;
-}
-
 /* Attribution (MapLibre native) */
-
 
 
 #map-tabs {
@@ -496,13 +485,6 @@ body.aot-map-fullscreen-active .grid-stack-item:not(.aot-fs-parent) {
 
 #map-tabs .map-tab {
   flex: 1 1 0;
-}
-
-#map-tabs .btn-map-tab {
-  width: 100%;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 /* Design Tabs Overrides */
@@ -526,19 +508,6 @@ body.aot-map-fullscreen-active .grid-stack-item:not(.aot-fs-parent) {
   width: 40px !important;
 }
 
-.section-box {
-  padding: 0;
-  border: 1px solid #eee;
-  border-radius: 10px;
-  background: #fff;
-  margin-bottom: 25px;
-}
-
-.section-box h5 {
-  font-weight: 600;
-  margin-bottom: 12px;
-}
-
 .map-container {
   width: 100%;
   height: 450px;
@@ -546,16 +515,6 @@ body.aot-map-fullscreen-active .grid-stack-item:not(.aot-fs-parent) {
   overflow: hidden;
   border: 1px solid #ddd;
   margin-top: 15px;
-}
-
-.color-dot {
-  width: 18px;
-  height: 18px;
-  display: inline-block;
-  border-radius: 50%;
-  cursor: pointer;
-  margin-right: 5px;
-  border: 1px solid #ddd;
 }
 
 /* Collision Animation */
@@ -593,22 +552,6 @@ body.aot-map-fullscreen-active .grid-stack-item:not(.aot-fs-parent) {
   justify-content: center;
 }
 
-.map-marker-glyph {
-  color: var(--text-color-tertiary, #fff);
-  font-weight: bold;
-  line-height: 1;
-  text-align: center;
-  display: block;
-}
-
-.map-marker-img {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  filter: invert(1);
-  opacity: 0.9;
-}
-
 :root {
   --aot-surface: transparent;
 
@@ -622,7 +565,6 @@ body.aot-map-fullscreen-active .grid-stack-item:not(.aot-fs-parent) {
 
 /* --- New Utility Classes --- */
 /* aot-map-container-fluid inherits standard container-fluid padding */
-
 
 
 .aot-map-tabs-wrapper {
@@ -712,21 +654,6 @@ body.aot-map-fullscreen-active .grid-stack-item:not(.aot-fs-parent) {
   background: transparent;
   border: none;
   /* transform: translate(-50%, -50%); removed to prevent conflict with Leaflet */
-}
-
-.site-label,
-.zone-label {
-  display: inline-block;
-  padding: 2px 8px;
-  border-radius: 4px; /* Rounded Rectangle */
-  font-weight: 500;
-  font-size: 12px;
-  line-height: 1.2;
-  white-space: nowrap;
-  text-align: center;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
-  transition: transform 0.2s;
-  transform: translate(-50%, -50%);
 }
 
 .aot-map-text-marker:hover .marker-pill {
@@ -1165,17 +1092,6 @@ body.aot-map-fullscreen-active .grid-stack-item:not(.aot-fs-parent) {
   background: #f0f0f0;
 }
 
-/* Memo Label Content */
-.memo-label-content {
-  background: rgba(255, 255, 255, 0.9);
-  padding: 4px 8px;
-  border: 1px solid #3498db;
-  border-radius: 4px;
-  font-size: 12px;
-  white-space: nowrap;
-  box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.1);
-}
-
 /* Common Map Button Icon */
 .aot-map-btn-icon {
   color: var(--aot-color-text-primary, #464646);
@@ -1213,31 +1129,10 @@ body.aot-map-fullscreen-active .grid-stack-item:not(.aot-fs-parent) {
 .tooltip {
   z-index: 60 !important;
 }
-.site-label {
-  font-weight: bold;
-  font-size: 14px;
-  text-shadow: 0 0 3px white;
-}
-
-.zone-label {
-  font-weight: 600;
-  font-size: 12px;
-  color: var(--aot-color-text-primary, #444);
-}
 
 .length-label {
   font-size: 0.833em;
   color: var(--aot-color-text-secondary, #888);
-}
-
-/* Memo Label Styling */
-.memo-label div {
-  transition: transform 0.2s ease;
-}
-
-.memo-label:hover div {
-  transform: scale(1.05);
-  z-index: 5; /* Below tool buttons (20) — labels must not cover tools */
 }
 
 /* Custom Map Controls - MapLibre compatible */

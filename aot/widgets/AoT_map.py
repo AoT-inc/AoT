@@ -1074,3 +1074,29 @@ WIDGET_INFORMATION = {
   })();
 """
 }
+
+
+# ── 반입한 MapLibre 가 못 그리는 옵션은 설정 화면에 내놓지 않는다 ──────────────
+#
+# `enable_3d_terrain` 은 MapLibre 4 에서 도형 외곽선에 세로선을 그린다
+# (aot/utils/maplibre.py `supports_terrain` 주석에 실측 근거). 켜 봐야 결함만
+# 보이는 스위치를 설정 화면에 두면, 사용자는 그것을 켜 보고 지도가 깨졌다고
+# 판단한다. 그래서 5 가 반입되기 전까지는 목록에서 뺀다.
+#
+# 값을 지우지는 않는다 — 예전에 켜 둔 대시보드의 저장값은 그대로 두고,
+# 지도 쪽이 무시한다(aot-map-widget-vector.js 의 `_terrainOk`). 5 를 반입하면
+# 옵션이 다시 나타나고 저장돼 있던 값이 그대로 되살아난다.
+#
+# 이 두 항목(`collapse_start` 3d_map … `collapse_end`)에 남는 것이
+# `facility_render_mode` 뿐이어도 그룹은 유지한다 — 3D 관련 설정을 찾는 자리가
+# 버전에 따라 사라졌다 나타나면 그게 더 헷갈린다.
+def _drop_options_the_bundled_maplibre_cannot_render(info):
+    from aot.utils import maplibre as _ml
+    if _ml.supports_terrain():
+        return
+    info['custom_options'] = [
+        o for o in info['custom_options'] if o.get('id') != 'enable_3d_terrain'
+    ]
+
+
+_drop_options_the_bundled_maplibre_cannot_render(WIDGET_INFORMATION)

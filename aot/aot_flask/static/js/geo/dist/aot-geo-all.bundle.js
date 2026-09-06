@@ -2097,11 +2097,26 @@ var AoTGeo = (function (exports) {
 	     *   기본값 없음 — 예전 기본값은 존재하지 않는 파일을 가리키고 있었다.
 	     * @returns {Promise} 모든 스크립트가 로드되면 resolve
 	     */
+	    /**
+	     * 반입한 MapLibre 의 버전. layout 이 `window.AOT_MAPLIBRE` 로 내려 준다
+	     * (서버의 aot/utils/maplibre.py 가 반입 디렉터리를 보고 정한 값).
+	     * 그것이 없는 자리(layout 을 안 지나는 단독 로드)에서는 마지막으로 알려진
+	     * 반입 버전을 쓴다 — 여기서 손으로 버전을 고쳐야 하는 일은 없어야 한다.
+	     */
+	    function mlVersion() {
+	        return (window.AOT_MAPLIBRE && window.AOT_MAPLIBRE.version) || '4.1.2';
+	    }
+
+	    /** 동일 출처 반입본의 디렉터리 경로(끝에 `/` 없음). */
+	    function mlVendorBase() {
+	        return '/static/vendor/maplibre-gl-' + mlVersion();
+	    }
+
 	    function loadMapDependencies(config) {
 	        config = config || {};
 
-	        loadCss('/static/vendor/maplibre-gl-4.1.2/maplibre-gl.css?v=' + (window.AOT_ASSET_V || ''));
-	        var pMapLibre = loadScript('/static/vendor/maplibre-gl-4.1.2/maplibre-gl.js?v=' + (window.AOT_ASSET_V || ''));
+	        loadCss(mlVendorBase() + '/maplibre-gl.css?v=' + (window.AOT_ASSET_V || ''));
+	        var pMapLibre = loadScript(mlVendorBase() + '/maplibre-gl.js?v=' + (window.AOT_ASSET_V || ''));
 
 	        var pBundle = Promise.resolve();
 	        if (config.bundleUrl) {
@@ -2118,19 +2133,19 @@ var AoTGeo = (function (exports) {
 	     * 하나로 합친다.
 	     *
 	     * **기본은 동일 출처 반입본이다.** 예전 기본값은 unpkg 였는데, 같은 버전을
-	     * 이미 `static/vendor/maplibre-gl-4.1.2/` 에 두고도 외부에서 받고 있었다 —
+	     * 이미 `static/vendor/maplibre-gl-<버전>/` 에 두고도 외부에서 받고 있었다 —
 	     * 폐쇄망 설치에서는 지도가 아예 뜨지 않는다. layout.html 이 쓰는 정책과
 	     * 같게 맞춘다(로컬 기본, CDN 은 명시적으로 골랐을 때만).
 	     *
 	     * @param {Object} [config]
-	     * @param {string} [config.version='4.1.2'] - CDN 을 쓸 때의 버전
+	     * @param {string} [config.version] - CDN 을 쓸 때의 버전(기본: 반입본과 같은 버전)
 	     * @param {string} [config.cdnBase] - 지정하면 그 CDN 에서 받는다(기본: 반입본)
 	     * @param {number} [config.timeout=15000]
 	     * @returns {Promise<boolean>} maplibregl 사용 가능하면 true, 실패 시 reject
 	     */
 	    function loadMapLibre(config) {
 	        config = config || {};
-	        var version = config.version || '4.1.2';
+	        var version = config.version || mlVersion();
 	        var cdnBase = config.cdnBase || '';
 	        var timeout = config.timeout || 15000;
 
@@ -2153,10 +2168,10 @@ var AoTGeo = (function (exports) {
 	            var assetV = window.AOT_ASSET_V || '';
 	            var cssUrl = cdnBase
 	                ? cdnBase + '/maplibre-gl@' + version + '/dist/maplibre-gl.css'
-	                : '/static/vendor/maplibre-gl-4.1.2/maplibre-gl.css?v=' + assetV;
+	                : mlVendorBase() + '/maplibre-gl.css?v=' + assetV;
 	            var jsUrl = cdnBase
 	                ? cdnBase + '/maplibre-gl@' + version + '/dist/maplibre-gl.js'
-	                : '/static/vendor/maplibre-gl-4.1.2/maplibre-gl.js?v=' + assetV;
+	                : mlVendorBase() + '/maplibre-gl.js?v=' + assetV;
 
 	            // Load CSS first, then JS
 	            loadCss(cssUrl).then(function() {
