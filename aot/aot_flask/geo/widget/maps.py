@@ -712,7 +712,12 @@ def generate_page_variables_logic(widget_unique_id, widget_options):
             if saved_active_names is not None:
                 layer_copy['visible'] = (layer_name_normalized in saved_names_normalized)
             else:
-                layer_copy['visible'] = l.get('visible', l.get('is_active', l.get('is_default', False)))
+                # 새 위젯(active_layers 저장 이력 없음)은 오버레이를 항상 꺼진 채로
+                # 시작한다. 예전에는 전역 GeoLayer 상태(관리자가 레이어 미리보기에서
+                # 마지막으로 저장한 channel_visible_*/layer_visible 값)를 그대로
+                # 상속해서, 관리자가 KMA 채널을 켠 채로 저장해두면 모든 신규 위젯에
+                # KMA 오버레이가 자동으로 켜지는 버그가 있었다.
+                layer_copy['visible'] = False
             
         active_layers.append(layer_copy)
     

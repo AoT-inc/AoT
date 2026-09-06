@@ -400,6 +400,20 @@ html {
   opacity: 1;
 }
 
+/* 넓어진 짚는 자리는 아이콘 **바깥으로** 자라야 한다.
+   이 줄은 카드 오른쪽 끝에 매달려 있고(`right: 3em`), 그 기준선은 예전의
+   맨몸 아이콘(약 14.5px)에 맞춰 정해진 값이다. `.aot-w-tool` 이 상자를
+   24px 로 키우면서 늘어난 만큼이 배치를 차지해, 기준선은 그대로인데 아이콘만
+   안쪽·아래로 밀렸다 — 잠금이 14.3px 왼쪽·3.7px 아래로, 컨트롤 토글이
+   4.8px 왼쪽·3.7px 아래로.
+   음수 마진은 배치에 아이콘 크기만 내놓고 짚는 자리(24×24)는 그대로 둔다.
+   `.widget-graph-controls` 에는 걸지 않는다 — 그쪽 기준선(`right: 35px`)은
+   여백을 가진 부트스트랩 버튼에 맞춰 잡힌 값이라, 여기서 더 당기면
+   메뉴 아이콘이 톱니에 붙는다(실측 간격 0px). */
+.widget-map-controls .widget-map-ctrl-btn {
+  margin: -4px;
+}
+
 .widget-graph-responsive-controls {
   display: none;
 }
