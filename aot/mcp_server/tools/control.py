@@ -5,10 +5,16 @@ mcp_server/tools/control.py — P4-1: 쓰기(제어) 도구 모음.
 모든 도구는 safety_check() 통과 후 사용자 승인을 받아야 실행된다.
 
 도구 목록:
-  set_vpd_target        — VPD 목표값 변경 (Method 또는 CustomVariable)
   update_method_point   — DailyMultiPoint 곡선 제어점 수정
   request_manual_lock   — 수동 잠금 요청 (AI 자동제어 일시 정지)
   acknowledge_alert     — 경보 확인 처리
+
+⚠ `set_vpd_target` 은 2026-09-06 에 뺐다. `custom_options['target_vpd']` 에
+쓰기만 하고 아무도 읽지 않는 죽은 경로였다 — VPD 목표의 정본은 구획/프로그램
+이고, env_coordinator 는 매 사이클 `_plot_targets()` 로 그것을 직접 읽는다
+(코디네이터 자체 옵션에 목표를 중복 저장하지 않는다, 설계문서 D19 및
+`docs/design/coordinator-plot-targets.md`). Method 곡선을 쓰는 VPD 목표는
+`update_method_point` 로 바꾸고, 고정값 목표는 프로그램/구획 화면에서 바꾼다.
 """
 
 from __future__ import annotations
@@ -67,94 +73,6 @@ def _write_gate(tool_name: str, params: dict, agent_id: str,
                 f'token_id={e.token_id}'
             ),
         }
-
-
-# ─────────────────────────────────────────────────────────────────────────────
-# set_vpd_target
-# ─────────────────────────────────────────────────────────────────────────────
-
-def set_vpd_target(
-    function_id: str,
-    value: float,
-    reason: str = '',
-    agent_id: str = 'ai_agent',
-) -> dict:
-    """env_coordinator 의 VPD 목표값을 변경한다.
-
-    Args:
-        function_id: CustomController.unique_id
-        value:       새 VPD 목표 (kPa). 허용 범위 0.3 ~ 2.5, 1회 변화량 ≤ 0.5 kPa.
-        reason:      변경 이유 (감사 로그 기록)
-        agent_id:    AI 에이전트 식별자
-
-    Returns:
-        성공 시 {'ok': True, 'old_value': float, 'new_value': float}
-        대기 시 {'pending': True, 'token_id': str, ...}
-        오류 시 {'error': str, 'message': str}
-    """
-    params = {'function_id': function_id, 'value': value}
-
-    # 현재값 조회 (delta 제한 검증용)
-    current_value = _get_current_vpd_target(function_id)
-
-    gate = _write_gate('set_vpd_target', params, agent_id, reason, current_value)
-    if gate:
-        return gate  # pending or error
-
-    # ── 실제 쓰기 (승인 경로 — 여기에 오지 않음, 항상 pending 반환) ──
-    # 아래 _apply_vpd_target 은 confirm_action 도구가 승인 후 직접 호출하도록 설계
-    return {'error': 'unreachable', 'message': 'safety_check should have raised'}
-
-
-def _get_current_vpd_target(function_id: str) -> float | None:
-    try:
-        from aot.databases.models import CustomController
-        from aot.utils.database import db_retrieve_table_daemon
-        ctrl = db_retrieve_table_daemon(CustomController, unique_id=function_id)
-        custom_options = json.loads(ctrl.custom_options or '{}')
-        return float(custom_options.get('target_vpd', 0))
-    except Exception:
-        return None
-
-
-def _apply_vpd_target(function_id: str, value: float, agent_id: str,
-                      audit_id: str = '') -> dict:
-    """승인 후 실제 VPD setpoint 를 DB 에 기록."""
-    try:
-        from aot.databases.models import CustomController
-        from aot.config import AOT_DB_PATH
-        from aot.databases.utils import session_scope
-
-        with session_scope(AOT_DB_PATH) as sess:
-            ctrl = sess.query(CustomController).filter(
-                CustomController.unique_id == function_id).first()
-            if ctrl is None:
-                return {'error': 'not_found', 'function_id': function_id}
-            opts = json.loads(ctrl.custom_options or '{}')
-            old = opts.get('target_vpd')
-            opts['target_vpd'] = round(value, 3)
-            ctrl.custom_options = json.dumps(opts, ensure_ascii=False)
-            sess.commit()
-
-        # 실행 중인 env_coordinator 인스턴스는 custom_options 를 최초 1회만 읽으므로,
-        # cmd_reload 로 재기동 없이 다음 사이클에 반영되게 한다.
-        try:
-            from aot.aot_client import DaemonControl
-            DaemonControl().module_function(
-                'Function', function_id, 'cmd_reload', {}, thread=True)
-        except Exception as reload_exc:
-            logger.warning('set_vpd_target: cmd_reload failed for %s: %s',
-                           function_id, reload_exc)
-
-        audit.update_status(audit_id, 'completed',
-                            result_summary=f'target_vpd {old} → {value}')
-        logger.info('set_vpd_target: %s → %.3f kPa (agent=%s)', function_id, value, agent_id)
-        return {'ok': True, 'function_id': function_id,
-                'old_value': old, 'new_value': value}
-    except Exception as exc:
-        audit.update_status(audit_id, 'error', error=str(exc))
-        logger.exception('set_vpd_target apply failed: %s', exc)
-        return {'error': 'db_error', 'message': str(exc)}
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -382,8 +300,6 @@ def _apply_acknowledge_alert(alert_id: str, note: str,
 # ─────────────────────────────────────────────────────────────────────────────
 
 _APPLY_DISPATCH: dict[str, callable] = {
-    'set_vpd_target':    lambda p, aid, auid: _apply_vpd_target(
-        p['function_id'], p['value'], aid, auid),
     'update_method_point': lambda p, aid, auid: _apply_method_point(
         p['method_id'], p['point_index'], p['new_value'], aid, auid),
     'request_manual_lock': lambda p, aid, auid: _apply_manual_lock(

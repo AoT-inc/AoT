@@ -606,7 +606,9 @@ assessment       → "good" / "moderate" / "poor"
 
 Based on diagnostics, `suggest_setpoint_adjustment` proposes a target adjustment. A
 suggestion is advice only — the target itself lives on the plot's stage plan, so
-applying it means editing that stage target on the plot screen.
+applying it means editing that stage target on the plot screen, or, for a
+Method-curve target, calling `update_method_point` (with user approval) to
+change the relevant curve point.
 
 ---
 

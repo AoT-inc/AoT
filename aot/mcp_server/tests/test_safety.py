@@ -10,6 +10,13 @@ tests/test_safety.py — P4-3 safety.py 단위 테스트.
   - confirm / reject / expire: 토큰 상태 전이
   - get_pending_confirmations: 만료 항목 자동 정리
   - read 도구: safety_check → None (통과)
+
+⚠ 대표 write 도구로 `update_method_point` 를 쓴다. 예전에는 `set_vpd_target`
+이었는데, 그 도구는 아무도 읽지 않는 custom_options['target_vpd'] 에만 쓰는
+죽은 경로라 삭제됐다(VPD 목표의 정본은 구획/프로그램이고, 코디네이터는 매
+사이클 그것을 직접 읽는다 — `_plot_targets()`). 이 파일이 검사하는 것은
+`safety_check()` 프레임워크 자체(범위·delta·레이트리밋·토큰)이지 특정 도구의
+비즈니스 로직이 아니므로, 살아있는 write 도구 아무거나로 대표해도 무방하다.
 """
 
 import time
@@ -42,7 +49,7 @@ class TestWriteDisabled:
 
     def test_write_tool_blocked_when_disabled(self):
         with pytest.raises(safety_mod.WriteDisabled):
-            safety_mod.safety_check('set_vpd_target', {'value': 1.0}, 'agent1')
+            safety_mod.safety_check('update_method_point', {'new_value': 1.0}, 'agent1')
 
     def test_read_tool_passes_when_write_disabled(self):
         result = safety_mod.safety_check('list_facilities', {}, 'agent1')
@@ -51,7 +58,7 @@ class TestWriteDisabled:
     def test_write_enabled_allows_confirmation(self):
         safety_mod.set_write_enabled(True)
         with pytest.raises(safety_mod.ConfirmationRequired):
-            safety_mod.safety_check('set_vpd_target', {'value': 1.0}, 'agent1')
+            safety_mod.safety_check('update_method_point', {'new_value': 1.0}, 'agent1')
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -63,36 +70,26 @@ class TestSafetyViolation:
         _reload()
         safety_mod.set_write_enabled(True)
 
-    def test_vpd_below_min(self):
+    def test_value_below_min(self):
         with pytest.raises(safety_mod.SafetyViolation, match='out of range'):
-            safety_mod.safety_check('set_vpd_target', {'value': 0.1}, 'agent1')
+            safety_mod.safety_check('update_method_point', {'new_value': -0.1}, 'agent1')
 
-    def test_vpd_above_max(self):
+    def test_value_above_max(self):
         with pytest.raises(safety_mod.SafetyViolation, match='out of range'):
-            safety_mod.safety_check('set_vpd_target', {'value': 3.0}, 'agent1')
+            safety_mod.safety_check('update_method_point', {'new_value': 3.1}, 'agent1')
 
-    def test_vpd_delta_exceeded(self):
+    def test_delta_exceeded(self):
         with pytest.raises(safety_mod.SafetyViolation, match='delta'):
             safety_mod.safety_check(
-                'set_vpd_target', {'value': 2.0}, 'agent1',
-                current_value=1.0)   # delta = 1.0 > 0.5
+                'update_method_point', {'new_value': 1.5}, 'agent1',
+                current_value=1.0)   # delta = 0.5 > max_delta_per_call(0.3)
 
-    def test_vpd_delta_ok(self):
-        # delta = 0.3 ≤ 0.5: ConfirmationRequired 발생해야 함
+    def test_delta_ok(self):
+        # delta = 0.2 ≤ 0.3: ConfirmationRequired 발생해야 함
         with pytest.raises(safety_mod.ConfirmationRequired):
             safety_mod.safety_check(
-                'set_vpd_target', {'value': 1.3}, 'agent1',
+                'update_method_point', {'new_value': 1.2}, 'agent1',
                 current_value=1.0)
-
-    def test_method_point_below_min(self):
-        with pytest.raises(safety_mod.SafetyViolation):
-            safety_mod.safety_check(
-                'update_method_point', {'new_value': -0.1}, 'agent1')
-
-    def test_method_point_above_max(self):
-        with pytest.raises(safety_mod.SafetyViolation):
-            safety_mod.safety_check(
-                'update_method_point', {'new_value': 3.1}, 'agent1')
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -105,23 +102,25 @@ class TestRateLimit:
         safety_mod.set_write_enabled(True)
 
     def test_rate_limit_exceeded_after_n_calls(self):
-        limit = safety_mod.WRITE_BOUNDS['set_vpd_target'].max_calls_per_hour  # 5
+        limit = safety_mod.WRITE_BOUNDS['update_method_point'].max_calls_per_hour  # 10
         for i in range(limit):
             with pytest.raises(safety_mod.ConfirmationRequired):
-                safety_mod.safety_check('set_vpd_target', {'value': 1.0 + i * 0.01}, 'agent1')
+                safety_mod.safety_check(
+                    'update_method_point', {'new_value': 1.0 + i * 0.01}, 'agent1')
 
         with pytest.raises(safety_mod.RateLimitExceeded):
-            safety_mod.safety_check('set_vpd_target', {'value': 1.5}, 'agent1')
+            safety_mod.safety_check('update_method_point', {'new_value': 1.5}, 'agent1')
 
     def test_rate_limit_per_agent_independent(self):
-        limit = safety_mod.WRITE_BOUNDS['set_vpd_target'].max_calls_per_hour
+        limit = safety_mod.WRITE_BOUNDS['update_method_point'].max_calls_per_hour
         for i in range(limit):
             with pytest.raises(safety_mod.ConfirmationRequired):
-                safety_mod.safety_check('set_vpd_target', {'value': 1.0 + i * 0.01}, 'agent_A')
+                safety_mod.safety_check(
+                    'update_method_point', {'new_value': 1.0 + i * 0.01}, 'agent_A')
 
         # agent_B 는 별도 카운터
         with pytest.raises(safety_mod.ConfirmationRequired):
-            safety_mod.safety_check('set_vpd_target', {'value': 1.0}, 'agent_B')
+            safety_mod.safety_check('update_method_point', {'new_value': 1.0}, 'agent_B')
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -135,17 +134,17 @@ class TestConfirmationRequired:
 
     def test_token_issued(self):
         with pytest.raises(safety_mod.ConfirmationRequired) as exc_info:
-            safety_mod.safety_check('set_vpd_target', {'value': 1.0}, 'agent1')
+            safety_mod.safety_check('update_method_point', {'new_value': 1.0}, 'agent1')
         token_id = exc_info.value.token_id
         assert token_id in safety_mod._pending_tokens
 
     def test_token_fields(self):
         with pytest.raises(safety_mod.ConfirmationRequired) as exc_info:
-            safety_mod.safety_check('set_vpd_target', {'value': 1.2}, 'agent_x')
+            safety_mod.safety_check('update_method_point', {'new_value': 1.2}, 'agent_x')
         tid = exc_info.value.token_id
         tok = safety_mod._pending_tokens[tid]
-        assert tok.tool_name == 'set_vpd_target'
-        assert tok.params == {'value': 1.2}
+        assert tok.tool_name == 'update_method_point'
+        assert tok.params == {'new_value': 1.2}
         assert tok.agent_id == 'agent_x'
         assert tok.status == 'pending'
         assert tok.expires_at > time.time()
@@ -162,7 +161,7 @@ class TestTokenLifecycle:
 
     def _get_token_id(self):
         with pytest.raises(safety_mod.ConfirmationRequired) as exc_info:
-            safety_mod.safety_check('set_vpd_target', {'value': 1.0}, 'agent1')
+            safety_mod.safety_check('update_method_point', {'new_value': 1.0}, 'agent1')
         return exc_info.value.token_id
 
     def test_confirm_sets_approved(self):

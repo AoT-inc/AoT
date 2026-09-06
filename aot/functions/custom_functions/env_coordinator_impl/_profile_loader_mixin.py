@@ -60,6 +60,28 @@ _KIND_SAFE_DEFAULT = {
 }
 
 
+def _resolve_safe_default_pct(opts: dict, existing_default: 'float | None',
+                               kind: str) -> float:
+    """`env_actuator` 액션의 `safe_default_pct` 를 해석한다.
+
+    ⚠ 이 필드는 액션 폼에서 빠졌다(예전 P2-3 시절 남은 옵션). 그래서
+    `opts.get('safe_default_pct')` 는 이제 사실상 항상 없는 값이다 — `0.0` 을
+    기본값으로 두고 무조건 덮어쓰면, 병합 때마다 시설 도면에서 자동 발견된
+    안전 위치(보온커튼·차광막 = 100, 걷힘)를 0(닫힘)으로 지운다. 정전·통신
+    두절 시 가야 할 자리가 뒤집히는 안전 사고다.
+
+    값이 없으면(폼에 없거나 빈 문자열) **덮어쓰지 않는다** — 병합이면 기존
+    프로필의 값을, 신규면 kind 별 안전 기본값을 그대로 쓴다. 폼이 나중에
+    되살아나 실제 값을 보내면 그 값이 그대로 이긴다.
+    """
+    raw = opts.get('safe_default_pct')
+    if raw not in (None, ''):
+        return float(raw)
+    if existing_default is not None:
+        return existing_default
+    return _KIND_SAFE_DEFAULT.get(kind, 0.0)
+
+
 # 습윤형 분무기 기본 펄스 도징 (육묘장 모드가 꺼져 있을 때).
 # 잎을 적시는 분무기를 개도(%)로 연속 변조하면 사이클의 절반을 계속 뿌리게 되어
 # 잎이 마를 틈이 없다. 이는 육묘가 아닌 시설에서도 병해 유발 조건이므로 기본값
@@ -821,7 +843,9 @@ class ProfileLoaderMixin:
             min_repeat_sec   = float(opts.get('min_repeat_sec', 0.0) or 0.0)
             # P2-3: safe_default_pct — 안전 게이트 발동 또는 E-stop 시 이동할 위치 (0~100%).
             # 0 = OFF. 예: 보온커튼 파킹 위치 50%, 차광막 열림 유지 100%.
-            safe_default_pct = float(opts.get('safe_default_pct', 0.0) or 0.0)
+            # ⚠ 이 필드는 액션 폼에서 빠졌다 — 실제 해석은 `existing` 이 정해진
+            # 뒤(아래) `_resolve_safe_default_pct()` 로 미룬다. 여기서 미리
+            # `0.0` 기본값으로 읽으면 병합 때마다 자동 발견된 안전 위치를 지운다.
 
             if not device_id or not kind:
                 continue
@@ -931,7 +955,10 @@ class ProfileLoaderMixin:
                                                   existing.capacity_meta or manual_cap_meta)
                 existing.effect_model = effect_model
                 existing.cmd_constraints = cmd_constraints
-                existing.safe_default = safe_default_pct   # P2-3: 덮어쓰기
+                # P2-3: 명시값만 반영 — 값이 없으면(폼에서 빠졌으므로 지금은
+                # 항상 없다) 자동 발견된 안전 위치를 지우지 않고 보존한다.
+                existing.safe_default = _resolve_safe_default_pct(
+                    opts, existing.safe_default, kind)
                 # 시설 도면에서 자동 발견된 프로필은 capacity_meta 가 이미 채워져
                 # 있어 통째로 교체하지 않는다. 다만 action 폼에서만 들어오는 값
                 # (차광포 투과율)은 병합해야 유실되지 않는다.
@@ -949,7 +976,9 @@ class ProfileLoaderMixin:
                     capabilities=_KIND_CAPABILITIES.get(kind, []),
                     cost_fn=_build_cost_fn(kind, cost, manual_cap_meta),
                     response_sec=60.0,
-                    safe_default=safe_default_pct,          # P2-3
+                    # P2-3: 값이 없으면(지금은 항상 없다) kind 별 안전 기본값
+                    # (보온커튼·차광막=100, 그 외=0)으로 — 무조건 0 이 아니다.
+                    safe_default=_resolve_safe_default_pct(opts, None, kind),
                     manual_lock=ManualLockState(),
                     effect_model=effect_model,
                     cmd_constraints=cmd_constraints,

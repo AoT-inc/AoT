@@ -577,7 +577,8 @@ assessment       → "good" / "moderate" / "poor"
 
 진단 결과를 바탕으로 `suggest_setpoint_adjustment` 가 목표 조정을 제안합니다. 제안은
 조언일 뿐이고, 목표 자체는 구획의 단계 계획에 있으므로 적용하려면 구획 화면에서 그
-단계 목표를 고쳐야 합니다.
+단계 목표를 고치거나, Method 곡선을 쓰는 목표라면 사용자 승인 후
+`update_method_point` 로 해당 제어점을 바꿉니다.
 
 ---
 

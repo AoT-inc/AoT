@@ -66,9 +66,6 @@ class WriteBounds:
 
 # 도구별 제한 테이블
 WRITE_BOUNDS: dict[str, WriteBounds] = {
-    'set_vpd_target': WriteBounds(
-        field='value', min_val=0.3, max_val=2.5,
-        max_delta_per_call=0.5, max_calls_per_hour=5),
     'update_method_point': WriteBounds(
         field='new_value', min_val=0.0, max_val=3.0,
         max_delta_per_call=0.3, max_calls_per_hour=10),

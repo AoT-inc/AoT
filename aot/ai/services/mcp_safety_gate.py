@@ -9,7 +9,7 @@ mcp_safety_gate.py — 외부 MCP 경로(aot_mcp_server.py)의 안전·감사 �
 `aot/mcp_server/safety.py`(FastMCP 트랙)를 대체한다. 그 구현을 그대로
 쓸 수 없는 이유가 두 가지 있고, 여기서 둘 다 바로잡는다:
 
-  1. WRITE_TOOLS 가 그 트랙 전용 4개 도구(set_vpd_target 등)로 하드코딩돼
+  1. WRITE_TOOLS 가 그 트랙 전용 소수 도구(update_method_point 등)로 하드코딩돼
      있어, 활성 서버의 실제 쓰기 도구(operate_device, set_output_state,
      설비 CRUD …)는 검사를 그냥 통과한다 — 있는 척하는 무동작이 된다.
      → 여기서는 tool_registry(SSOT)의 approval_required_tools() 에서 파생한다.

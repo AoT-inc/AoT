@@ -73,7 +73,7 @@ class HelpersMixin:
     # ── Growth Schedule ───────────────────────────────────────────────────────
 
     def _get_weeks_elapsed(self) -> float:
-        """구획 시작일 이후 경과 주차(소수) + week_offset.
+        """구획 시작일 이후 경과 주차(소수).
 
         **주차의 정본은 `aot.utils.method.weeks_elapsed_at()` 하나다.** 구획
         모달과 일지도 같은 함수를 쓴다 — 셋이 따로 세면 제어가 쓰는 목표와
@@ -81,7 +81,10 @@ class HelpersMixin:
         내림해 최대 한 주치 어긋났다).
 
         Wall-clock policy: missed downtime is NOT compensated automatically.
-        Use schedule_week_offset (positive = fast-forward) for manual adjustment.
+        ⚠ 예전에는 `schedule_week_offset` 옵션으로 수동 보정했지만, 그 옵션은
+        2026-08-27 에 뺐다(설계문서 D19 — `docs/design/coordinator-plot-targets.md`).
+        생장 시계가 실측과 어긋나면 구획의 `started_on` 을 실제 파종일로
+        고친다 — 정본이 하나면 두 곳에 적을 일이 없다.
 
         시작일의 정본은 구획의 `started_on` 이고, 날짜만 있는 값은 **시설
         시간대의 자정 00:00** 으로 읽는다(농부는 UTC 로 심지 않는다).
@@ -104,7 +107,7 @@ class HelpersMixin:
             weeks = weeks_elapsed_at(started, tz=fac_tz)
             if weeks is None:
                 return 0.0
-            return max(0.0, weeks + float(self.schedule_week_offset or 0.0))
+            return max(0.0, weeks)
         except Exception as exc:
             self.logger.warning('_get_weeks_elapsed parse error: %s', exc)
             return 0.0

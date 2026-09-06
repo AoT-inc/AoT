@@ -226,7 +226,6 @@ class CustomModule(
         self.sensor_max_age = None
 
         # Growth Schedule
-        self.schedule_week_offset  = None
         self._schedule_ended_logged = False
 
         # Facility link (optional)
@@ -455,11 +454,13 @@ class CustomModule(
 
     # ─────────────────────────────────────────────────────────────────────────
     def cmd_reload(self, args_dict: dict) -> str:
-        """실행 중 custom_options 변경(예: AI set_vpd_target)을 다음 사이클에 반영.
+        """실행 중 custom_options 변경을 재기동 없이 다음 사이클에 반영.
 
-        setup_custom_options() 를 재호출해 target_vpd 등 정적 옵션 속성을 DB 에서
-        다시 읽는다. _load_runtime_state() (PI 적분·캘리브레이션 상태)는 여기서
-        재실행하지 않으므로 런타임 상태는 보존된다.
+        setup_custom_options() 를 재호출해 정적 옵션 속성을 DB 에서 다시 읽는다.
+        (VPD/CO₂ 목표는 옵션이 아니라 구획에서 매 사이클 직접 읽으므로 — 정본은
+        `_plot_targets()` — 이 재호출과 무관하게 항상 최신이다.)
+        _load_runtime_state() (PI 적분·캘리브레이션 상태)는 여기서 재실행하지
+        않으므로 런타임 상태는 보존된다.
         """
         custom_function = db_retrieve_table_daemon(
             CustomController, unique_id=self.unique_id)
@@ -467,8 +468,8 @@ class CustomModule(
             FUNCTION_INFORMATION['custom_options'], custom_function)
         self._reload_profiles()
         self._cached_tz = self._CACHED_TZ_SENTINEL  # 위치 변경 시 tz 재결정
-        # setpoint(목표값) 등이 바뀌었을 수 있으므로 다음 사이클은 개구부 정상
-        # 구동주기를 우회해 즉시 반영한다 (예: AI set_vpd_target).
+        # 설정이 바뀌었을 수 있으므로 다음 사이클은 개구부 정상
+        # 구동주기를 우회해 즉시 반영한다 (예: 액추에이터 등록 변경).
         self._force_immediate = True
         return f'Reloaded — {len(self._profiles)} actuator(s)'
 
@@ -644,5 +645,6 @@ class CustomModule(
                 gap_h = gap / 3600
                 self.logger.warning(
                     'EnvCoordinator: %.1fh outage detected — plants continued growing. '
-                    'Correct growth week via schedule_week_offset.',
+                    'If the growth week now looks wrong, correct the plot\'s '
+                    'started date rather than the Function.',
                     gap_h)

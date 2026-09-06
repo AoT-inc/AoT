@@ -215,24 +215,6 @@ def compare_periods(
 # ─────────────────────────────────────────────────────────────────────────────
 
 @mcp.tool()
-def set_vpd_target(
-    function_id: str,
-    value: float,
-    reason: str = '',
-) -> dict:
-    """VPD 목표값을 변경한다. 사용자 승인 필요.
-
-    허용 범위: 0.3 ~ 2.5 kPa | 1회 변화량: ≤ 0.5 kPa | 시간당 최대 5회.
-
-    Args:
-        function_id: CustomController.unique_id
-        value:       새 VPD 목표 (kPa)
-        reason:      변경 이유 (감사 로그에 기록)
-    """
-    return control.set_vpd_target(function_id, value, reason, _AGENT_ID)
-
-
-@mcp.tool()
 def update_method_point(
     method_id: str,
     point_index: int,

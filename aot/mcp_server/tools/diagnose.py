@@ -225,7 +225,10 @@ def detect_sensor_anomaly(
 def suggest_setpoint_adjustment(facility_id: str) -> dict:
     """현재 환경 상태를 기반으로 VPD setpoint 권장값을 제안한다.
 
-    제안만 반환하며, 실제 변경은 사용자 승인 후 set_vpd_target 으로 수행한다.
+    제안만 반환하며 실제로 쓰지 않는다 — VPD 목표의 정본은 구획/프로그램이라,
+    Method 곡선이면 `update_method_point` 로 해당 제어점을 바꾸고, 고정값
+    목표면 사람이 프로그램/구획 화면에서 직접 바꾼다(코디네이터 자체 옵션에는
+    쓸 자리가 없다).
 
     Args:
         facility_id: GeoFacility.unique_id
@@ -276,8 +279,8 @@ def suggest_setpoint_adjustment(facility_id: str) -> dict:
         'suggested_target': suggested,
         'reason':         reason,
         'note': (
-            '이 값은 제안입니다. 적용하려면 set_vpd_target 도구를 사용하고 '
-            '사용자 승인을 받으세요.'
+            '이 값은 제안입니다. Method 곡선이면 update_method_point 로 반영하고, '
+            '고정값 목표면 프로그램/구획 화면에서 사람이 직접 바꾸세요.'
         ),
     }
 
