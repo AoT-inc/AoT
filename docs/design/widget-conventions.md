@@ -165,6 +165,22 @@ JS 에서 `getComputedStyle` 로 한 번 읽어 문자열로 넘긴다(`aotTheme
 `Loading...`·`Value` 같은 것은 이미 번역돼 있다. 같은 뜻의 msgid 를 새로 만들면
 그만큼 번역되지 않은 문구가 는다.
 
+**계산된 스타일을 잴 때 트랜지션을 먼저 끝낸다.** 브라우저가 화면을 그리지
+않는 동안(패널이 숨겨졌거나 탭이 뒤에 있을 때)에는 CSS 트랜지션이
+`playState: "running"` 인 채 `currentTime: 0` 으로 멈춘다 — 그러면
+`getComputedStyle` 이 **전환 전 값**을 돌려준다. 어떤 CSS 규칙과도 맞지 않는
+색이 나오면 이것을 의심할 것:
+
+```js
+document.getAnimations().filter(a => a.playState === 'running').forEach(a => a.finish());
+```
+
+실제로 이 함정에 한 번 걸렸다. `AoT_plot` 의 구획 선택 상자가 `#999999` 로
+읽혀 대비 위반(2.85:1)으로 보고했는데, 그것은 bootstrap-select 의
+`.bs-placeholder` **시작색**이었고 0.15초 뒤 `#5E6B64`(5.13:1)로 가는
+중간값이었다. 시트를 다 꺼도 색이 안 바뀌고 **같은 마크업의 복제본은 정상색**
+이 나오면 CSS 가 아니라 애니메이션이다.
+
 **설정 모달 본문의 `<script>` 는 실행되지 않는다.** 본문이 `<template>` 에 담겼다가
 `cloneNode` 로 복제되기 때문이다(`dashboard.js: hydrateLazyModalBodies`).
 동작이 필요하면 속성 핸들러를 쓰거나 `app/dashboard.js` 에 넣는다.

@@ -9,19 +9,22 @@
 # 우회  : AOT_SKIP_BUNDLE_CHECK=1 git commit ...
 set -e
 
-if [ -n "$AOT_SKIP_BUNDLE_CHECK" ]; then
-    exit 0
-fi
-
 ROOT=$(git rev-parse --show-toplevel)
-CHECK="$ROOT/aot/scripts/check_js_bundles.py"
-[ -f "$CHECK" ] || exit 0
 
-if ! python3 "$CHECK" --staged; then
-    echo
-    echo "커밋 중단: 위 번들을 재빌드하고 산출물까지 함께 스테이지하세요."
-    echo "  (의도한 커밋이라면 AOT_SKIP_BUNDLE_CHECK=1 git commit ...)"
-    exit 1
+# ⚠ **우회 변수는 자기 검사 하나만 꺼야 한다.**
+# 예전에는 `AOT_SKIP_BUNDLE_CHECK` 가 훅 맨 앞에서 `exit 0` 을 했다 — 번들
+# 재빌드만 건너뛰려고 그 변수를 쓰면 **아래 검사가 전부 함께 꺼졌다**.
+# 번들 산출물이 아직 안 맞는 상태로 커밋할 일은 드물지 않은데(스쿼시 동기화,
+# 되돌리기 등), 그때마다 스코프·geo쓰기·alembic·i18n·캐시 검사가 통째로
+# 조용히 비활성화됐다. 2026-09-06 에 스코프 검사를 붙이면서 발견했다.
+CHECK="$ROOT/aot/scripts/check_js_bundles.py"
+if [ -z "$AOT_SKIP_BUNDLE_CHECK" ] && [ -f "$CHECK" ]; then
+    if ! python3 "$CHECK" --staged; then
+        echo
+        echo "커밋 중단: 위 번들을 재빌드하고 산출물까지 함께 스테이지하세요."
+        echo "  (의도한 커밋이라면 AOT_SKIP_BUNDLE_CHECK=1 git commit ...)"
+        exit 1
+    fi
 fi
 
 # ── 정의 없이 불리는 JS 내부 함수 ────────────────────────────────────────
@@ -36,6 +39,26 @@ if [ -z "$AOT_SKIP_JS_UNDEF_CHECK" ]; then
             echo
             echo "커밋 중단: 정의가 없는 내부 함수를 부르고 있습니다."
             echo "  (의도한 커밋이라면 AOT_SKIP_JS_UNDEF_CHECK=1 git commit ...)"
+            exit 1
+        fi
+    fi
+fi
+
+# ── 바깥에서 안쪽 스코프의 이름 부르기 ───────────────────────────────────
+# 형제 검사(위)는 "정의가 있는가", 이쪽은 "그 정의에 닿는가" 를 본다.
+# 2026-09-06: 5,500줄짜리 함수 안의 장치 모달을 IIFE 최상위로 끌어올렸는데
+# 그것이 부르는 `_wireUpBtn` 은 아직 그 함수 안이었다. 최상위는 안쪽 스코프를
+# 볼 수 없으니 모달을 여는 순간 ReferenceError 다. 그때 문법 검사·번들 빌드·
+# 정의 검사·전역 비교가 **전부 통과**했다 — 로드는 멀쩡하고 부를 때 터진다.
+# 우회: AOT_SKIP_JS_SCOPE_CHECK=1 git commit ...
+if [ -z "$AOT_SKIP_JS_SCOPE_CHECK" ]; then
+    SCOPE_CHECK="$ROOT/aot/scripts/check_js_scope_reach.py"
+    if [ -f "$SCOPE_CHECK" ] && git diff --cached --name-only | grep -q '\.js$'; then
+        if ! python3 "$SCOPE_CHECK" --staged; then
+            echo
+            echo "커밋 중단: 바깥 함수가 안쪽 스코프의 이름을 부릅니다."
+            echo "  함수를 밖으로 옮겼다면 그것이 부르는 것도 함께 옮기세요."
+            echo "  (의도한 커밋이라면 AOT_SKIP_JS_SCOPE_CHECK=1 git commit ...)"
             exit 1
         fi
     fi
