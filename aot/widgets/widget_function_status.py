@@ -269,7 +269,7 @@ WIDGET_INFORMATION = {
 
     'widget_dashboard_title_bar': """<span class="aot-w-title" style="padding-right:0.5em">{{each_widget.name}}</span>""",
 
-    'widget_dashboard_body': """<link rel="stylesheet" href="/static/css/components/aot-toggle.css?v=20260814a">
+    'widget_dashboard_body': """<link rel="stylesheet" href="{{ url_for('static', filename='css/components/aot-toggle.css') }}">
 <style>
 #fsw-body-{{each_widget.unique_id}} {
   background-color: var(--aot-input-bg);

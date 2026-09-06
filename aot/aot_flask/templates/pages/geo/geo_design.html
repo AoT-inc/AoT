@@ -638,8 +638,11 @@
      위 aot-geo-all.bundle.js 뒤여야 한다. -->
 <script src="{{ asset('geo-design-map') }}"></script>
 
-<!-- Turf.js (vendor) + Custom Map Controls — 외부 유지 (turf=vendor·layout 공유,
-     custom-controls=AoT_map 위젯과 공유). 번들보다 먼저 로드. -->
+<!-- Turf.js (vendor) + Custom Map Controls — 번들보다 먼저 로드.
+     turf 는 **이 화면이 유일한 실사용처**다(호출 200여 곳). 예전에는 layout.html
+     도 함께 실어 두 번 로드됐는데, 그 layout 쪽이 지도 없는 화면까지 564KB 를
+     끌고 다녔으므로 거기서 뺐다 — 이제 여기가 유일한 로드 지점이다.
+     custom-controls 는 AoT_map 위젯과 공유. -->
 <script src="{{ url_for('static', filename='js/common/turf.min.js') }}"></script>
 <script src="{{ asset('map-custom-controls') }}"></script>
 

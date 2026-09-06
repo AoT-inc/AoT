@@ -97,6 +97,12 @@ WIDGET_HEAD_HTML = """
 <link rel="stylesheet" href="{{ url_for('static', filename='css/components/aot-drawer-form.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/components/aot-plot-form.css') }}">
 
+{#- widget-shared — **지도 위젯(AoT_map)과 나눠 쓰는 소스.** 반드시 아래
+    aot-plot-widget 보다 먼저. 이 위젯이 쓰는 것 거의 전부가 여기 있다
+    (plot-labels · plot-form · dataviz · sensor-label · geo-data · map-sensor-labels · popup).
+    예전에는 같은 442KB 를 지도 위젯 번들도 사본으로 담고 있어, 한 대시보드에 두
+    위젯이 서면 두 벌을 받았다. 자세한 경위는 AoT_map.py 의 같은 자리 주석. -#}
+<script src="{{ asset('widget-shared') }}"></script>
 <script src="{{ asset('aot-plot-widget') }}"></script>
 
 <style>

@@ -85,7 +85,7 @@ WIDGET_INFORMATION = {
     ],
 
     'widget_dashboard_head': """
-<link rel="stylesheet" href="/static/css/widget/aot-facility-widget.css?v=31">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/widget/aot-facility-widget.css') }}">
 <style>
   .aot-pwm-widget-body { padding: 0.5em 0.75em; height: 100%; }
 </style>

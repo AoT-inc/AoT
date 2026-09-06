@@ -169,7 +169,7 @@ def widget_variables(widget_unique_id, widget_options):
 
 
 WIDGET_HEAD_HTML = """\
-<link rel="stylesheet" href="/static/css/widget/aot-facility-widget.css?v=28">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/widget/aot-facility-widget.css') }}">
 <script>
 if (!window._aotThreeLoaded) {
   window._aotThreeLoaded = true;
@@ -190,7 +190,7 @@ if (!window._aotFacility3DLoaded) {
      three.min/aot-facility-3d 가드 로드는 위에 그대로 유지(AoT_map 위젯과 공유 가드). 소스 수정 시 npm run build:bundles 후 위젯 재생성. -->
 <script src="{{ asset('aot-facility-widget') }}"></script>
 <link rel="stylesheet" href="{{ url_for('static', filename='css/widget/aot-sensor-label.css') }}">
-<link rel="stylesheet" href="/static/css/components/aot-toggle.css?v=20260814a">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/components/aot-toggle.css') }}">
 """
 
 WIDGET_BODY_HTML = """\

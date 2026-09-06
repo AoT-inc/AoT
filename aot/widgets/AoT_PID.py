@@ -773,7 +773,7 @@ WIDGET_INFORMATION = {
 </style>
 
 
-<link rel="stylesheet" href="/static/css/components/aot-toggle.css?v=20260814a">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/components/aot-toggle.css') }}">
 {% set this_pid = table_pid.query.filter(table_pid.unique_id == widget_options['pid']).first() %}
 
 <div class="frame-aot" id="pid_container_{{each_widget.unique_id}}">

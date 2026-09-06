@@ -1579,8 +1579,10 @@
   {#- ── 지도 ─────────────────────────────────────────────────────────────
       **편집 지도(`/geo/design`)가 지도를 세우는 방법을 그대로 따른다** —
       `AoTGeoDesign._initMap()` 도 maplibre 지도를 직접 만들고 공용 모듈을
-      bind 한다. maplibre·turf·`AoTVectorLayerManager` 는 layout.html 이 이미
-      싣는다(`needs_map`). 여기서 더 받는 것은 셋뿐이다: 바탕 래스터 다리,
+      bind 한다. maplibre·`AoTVectorLayerManager` 는 layout.html 이 이미
+      싣는다(`needs_map`). **turf 는 싣지 않는다** — 이 화면의 유일한 사용처였던
+      레이어 패널의 `turf.bbox` 를 `_bboxOf`(aot-geo-ui.js)로 바꿨다.
+      여기서 더 받는 것은 셋뿐이다: 바탕 래스터 다리,
       공용 지도 도구 단추, 그리고 이 문서의 도형을 얹는 파일.
 
       ⚠ `AoTMapLoader`(aot-map-loader.js) 는 **쓰지 않는다.** leaflet 셸

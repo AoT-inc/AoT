@@ -146,9 +146,20 @@ WIDGET_HEAD_HTML = """
 <!-- Map tool styles (.map-tools-left/right, .tool-group, .btn-circle) — same as /geo/design -->
 <link rel="stylesheet" href="{{ url_for('static', filename='css/map/map.css') }}" />
 
-<!-- 위젯 핵심 스크립트 11개 → 단일 번들 (static/js/tools/bundle.mjs: aot-map-widget).
+<!-- widget-shared — **구획 위젯(AoT_plot)과 나눠 쓰는 소스.** 반드시 아래
+     aot-map-widget 보다 먼저.
+     plot-labels · plot-form · dataviz · sensor-label · geo-data · map-sensor-labels · popup
+
+     예전에는 이 442KB 가 지도 위젯 번들과 구획 위젯 번들 **양쪽에 사본으로** 들어
+     있었다(구획 위젯 번들의 69% 가 지도 위젯 번들과 같은 소스였다). 각 모듈에 가드가
+     있어 재정의는 건너뛰었지만 **받고 파싱하는 값은 두 번 치렀다** — 한 대시보드에
+     두 위젯이 서면 442KB 를 두 벌 받았다. 이제 URL 이 같으므로 한 벌만 받는다.
+     위젯 하나만 있는 대시보드가 받는 총량은 예전과 **같다**(쪼갰을 뿐 더하지 않았다). -->
+<script src="{{ asset('widget-shared') }}"></script>
+
+<!-- 위젯 핵심 스크립트 → 단일 번들 (static/js/tools/bundle.mjs: aot-map-widget).
      순서 보존: vector-layer-manager → map-loader → stopwatch → controls → custom-controls
-     → actuator-order → popup → bay → facility-runtime → geo-data → widget-vector.
+     → actuator-order → bay → facility-runtime → label-layers → plot → widget-vector.
      아래 three/facility-3d/map-3d document.write 가드 블록은 유지(AoT_facility 위젯 공존 시
      중복로드 방지). 소스 수정 시 npm run build:bundles 후 위젯 재생성. -->
 <script src="{{ asset('aot-map-widget') }}"></script>
@@ -171,18 +182,18 @@ WIDGET_HEAD_HTML = """
      곧 "1년간 옛 JS" 가 된다(CLAUDE.md 정적 캐시 무효화). url_for 가 내용
      해시를 붙인다. -->
 <link rel="stylesheet" href="{{ url_for('static', filename='css/widget/aot-sensor-label.css') }}">
-<link rel="stylesheet" href="/static/css/components/aot-toggle.css?v=20260814a">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/components/aot-toggle.css') }}">
 <!-- 공용 데이터 시각화 프리미티브(밴드 바 · 불릿 · 기간 바).
      구획 모달의 기간 축이 쓴다. 규약: docs/design/dataviz-primitives.md -->
 <link rel="stylesheet" href="{{ url_for('static', filename='css/components/aot-dataviz.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/components/aot-plot-form.css') }}">
 
 <!-- Shared time-wheel module (also used by AoT_timer, sequence widgets) — zone popup "settings" (turn on until end time) -->
-<link rel="stylesheet" href="/static/css/components/aot-time-wheel.css?v=20260813a">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/components/aot-time-wheel.css') }}">
 <script src="{{ asset('widget-map-tail') }}"></script>
 
 <!-- Actuator group panel -->
-<link rel="stylesheet" href="/static/css/widget/aot-facility-widget.css?v=32">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/widget/aot-facility-widget.css') }}">
 
 <style>
   /* Pure MapLibre Styles */

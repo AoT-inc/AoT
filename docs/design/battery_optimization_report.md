@@ -32,7 +32,7 @@
 | 2 | `setInterval` 폴링이 탭 비활성/화면잠금 시에도 계속 실행 | CPU + 셀룰러 라디오 |
 | 3 | `layout_default.html` 에서 `check_daemon_status` 60초 타이머 중복 등록 | 네트워크 |
 | 4 | facility 3D 뷰어: `requestAnimationFrame` 무조건 60fps 루프 | GPU |
-| 5 | 비지도 페이지에서도 maplibre-gl(775KB) + turf(563KB) 전부 로드 | 파싱/메모리 |
+| 5 | 비지도 페이지에서도 maplibre-gl(775KB) + turf(563KB) 전부 로드 (turf 는 2026-09-06 분리 — 아래 Step 5 부분 적용) | 파싱/메모리 |
 | 6 | 저전력/데이터절약 모드에서도 폴링 간격 미조정 | CPU + 셀룰러 |
 | 7 | 탭 비활성 시 `.fa-spin` 등 CSS 무한 애니메이션 계속 실행 | GPU |
 
@@ -234,7 +234,32 @@ function setHiddenClass(hidden) {
 
 | Step | 내용 | 보류 이유 |
 |---|---|---|
-| Step 5 | maplibre/turf 조건부 로드 | output/input/function 페이지에서 위치 선택용 지도 모달(`AoTMapModalController`)이 maplibre 의존. 단순 스킵 시 해당 기능 무음 실패. Lazy 로드 방식으로 별도 구현 필요. |
+| Step 5 | maplibre 조건부 로드 | output/input/function 페이지에서 위치 선택용 지도 모달(`AoTMapModalController`)이 maplibre 의존. 단순 스킵 시 해당 기능 무음 실패. Lazy 로드 방식으로 별도 구현 필요. |
+
+### Step 5 부분 적용 — turf.js 를 편집 화면 전용으로 (2026-09-06)
+
+Step 5 의 두 덩어리 중 **turf(564KB / gzip 144KB)만 먼저 떼어냈다.** maplibre 와
+달리 turf 는 어디서 쓰는지가 코드로 분명해서, 무음 실패 위험 없이 옮길 수 있었다.
+
+**전수 조사 결과** — turf 를 실제로 호출하는 곳은 200여 곳인데 그 전부가
+`geo-design*` 번들, 즉 **지도 편집 화면 하나**였다. 나머지는 두 줄뿐이었다:
+
+| 자리 | 쓰던 함수 | 대체 |
+|---|---|---|
+| 일지 보기 지도 · 레이어 패널 | `turf.bbox` | `_bboxOf()` — 좌표 최소/최대 재귀 순회 (aot-geo-ui.js) |
+| 지도 위젯 · 구획 라벨 자리 | `turf.pointOnFeature` | `_interiorPoint()` — 수평 스캔라인 최장 구간의 중점 (aot-map-plot.js) |
+
+`_interiorPoint` 는 **폴리곤 내부를 보장한다.** 원래 코드에 있던 폴백(링 좌표
+평균)은 그러지 못했다 — 실측에서 ㄱ자·U자·구멍 뚫린 도형 셋 모두 점이 도형
+밖으로 나갔다. 새 구현은 그 셋을 포함한 합성 8케이스와 실제 구획 22개(김제)에서
+전부 내부에 놓였고, turf 와의 차이는 최대 3m 였다.
+
+`/geo/design` 은 **원래부터 자기 head 에서 turf 를 직접 실었다** — layout 것과
+겹쳐 두 번 로드되고 있었다. 그래서 layout 에서 빼는 것으로 끝났고, 그 화면의
+동작은 달라지지 않는다.
+
+**효과**: `needs_map` 인 거의 모든 페이지(제외는 settings/method/scheduler 셋뿐)의
+head 동기 로드에서 gzip 144KB 와 그 파싱이 사라진다. 남은 것은 maplibre 쪽이다.
 
 ---
 

@@ -518,8 +518,8 @@ WIDGET_INFORMATION = {
     ],
 
     'widget_dashboard_head': """
-    <link rel="stylesheet" href="/static/css/components/aot-toggle.css?v=20260814a">
-    <link rel="stylesheet" href="/static/css/components/aot-time-wheel.css?v=20260813a">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/components/aot-toggle.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/components/aot-time-wheel.css') }}">
     <script src="{{ asset('widget-sequence') }}"></script>
     <style>
         /* --- Layout --- */

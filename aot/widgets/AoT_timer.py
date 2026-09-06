@@ -1274,9 +1274,9 @@ WIDGET_INFORMATION = {
 
     # ------------------ HEAD (CSS) ------------------
     'widget_dashboard_head': """
-    <link rel="stylesheet" href="/static/css/components/aot-toggle.css?v=20260814a">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/components/aot-toggle.css') }}">
     <!-- Shared time-wheel module (also used by other widgets) -->
-    <link rel="stylesheet" href="/static/css/components/aot-time-wheel.css?v=20260813a">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/components/aot-time-wheel.css') }}">
     <script src="{{ asset('app-time-wheel') }}"></script>
     """,
 

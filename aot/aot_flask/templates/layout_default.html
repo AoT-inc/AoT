@@ -141,14 +141,29 @@ IMPORTANT: This is the SOURCE TEMPLATE file.
   <script src="{{ url_for('static', filename='vendor/maplibre-gl-4.1.2/maplibre-gl.js') }}"></script>
   {% endif %}
 
-  <!-- map-shim 번들 — maplibre-gl 직후, turf 앞.
+  <!-- map-shim 번들 — maplibre-gl 직후.
        · aot-maplibre-patches      MapLibre 호환 패치(멱등). 지연/온디맨드 로드에서도 재호출 가능.
        · aot-maplibre-loader       [GIS Vector Migration] AoT Vector Modules (Pure MapLibre)
        · aot-vector-layer-manager  aot-map-widget 번들에도 들어 있으나 각 모듈이 가드로 재정의를 건너뛴다. -->
   <script src="{{ asset('map-shim') }}"></script>
 
-  <!-- Turf.js for geometry operations -->
-  <script src="{{ url_for('static', filename='js/common/turf.min.js') }}"></script>
+  <!-- ⚠ **Turf.js 는 여기서 싣지 않는다.** 예전에는 이 자리에 있었다 —
+       564KB(gzip 144KB)를 `needs_map` 인 **거의 모든 페이지**가 head 에서 동기로
+       받았다는 뜻이다(제외되는 블루프린트는 settings/method/scheduler 셋뿐).
+
+       그런데 turf 를 실제로 호출하는 곳은 **지도 편집 화면 하나**다(2026-09-06
+       전수 조사: 호출 200여 곳이 전부 `geo-design*` 번들). 대시보드·일지·입출력
+       화면은 한 번도 부르지 않으면서 값만 치르고 있었다.
+
+       · `/geo/design`  → geo_design.html 이 **자기 head 에서 직접 싣는다**
+                          (원래부터 그랬다. 여기 것과 겹쳐 두 번 실렸다.)
+       · 일지 보기 지도 → `turf.bbox` 한 줄이 유일한 사용처였다. 좌표 최소/최대를
+                          구하는 것뿐이라 `_bboxOf`(aot-geo-ui.js)로 대신한다.
+       · 지도 위젯     → `turf.pointOnFeature` 한 줄. 폴리곤 내부가 보장되는
+                          대표점이 필요했던 것이라 `_interiorPoint`(aot-map-plot.js)로
+                          대신한다(실측: 김제 구획 22개에서 turf 와 최대 3m 차이).
+
+       새로 turf 가 필요해지면 layout 으로 되돌리지 말고 **그 템플릿이 직접 싣게 할 것.** -->
 
   <!-- [GIS Vector Migration] MapLibre Compatibility Layer:
        callInitHooks 패치는 aot-maplibre-patches.js 로 이전됨(멱등 apply). -->
@@ -1172,7 +1187,7 @@ IMPORTANT: This is the SOURCE TEMPLATE file.
   {% if needs_map %}
   <!-- AoT Map Core Bundle (Replaces individual geo/map files) -->
   <!-- [GIS Vector Transition] Updated v=20260429 with full vector module code -->
-  <script src="/static/js/geo/dist/aot-geo-all.bundle.js?v=20260429"></script>
+  <script src="{{ url_for('static', filename='js/geo/dist/aot-geo-all.bundle.js') }}"></script>
   {% endif %}
 
   <!-- AoT Tabs Component (used by input/output/function pages) -->
