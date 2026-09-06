@@ -25,8 +25,8 @@
 
 /* Widget header gear (settings) button: align flush to the right edge so it does
    not visually overlap .widget-graph-controls (which sits at right: 35px). */
-/* `!important` 는 없앴다 — 예전에는 셸 규칙이 세 파일에 중복돼 있어
-   그것을 이기려고 붙었지만, 이제 정본이 aot-base.css 한 곳뿐이라
+/* 자리(right/top)의 `!important` 는 없앴다 — 예전에는 셸 규칙이 세 파일에
+   중복돼 있어 그것을 이기려고 붙었지만, 이제 정본이 aot-base.css 한 곳뿐이라
    선택자 특정도(.grid-stack-item .widget-settings)만으로 이긴다. */
 .grid-stack-item .widget-settings {
   right: 0;
@@ -35,7 +35,15 @@
   line-height: 1;
 }
 .grid-stack-item .widget-settings a.btn {
-  padding: 0;
+  /* padding 만은 `!important` 가 남아야 한다. `aot-base-ui.css` 의 알약 버튼
+     규칙이 `.btn:not(…):not(…):not(…):not(…):not(…)` 로 특정도를 (0,9,0) 까지
+     끌어올려 `padding: 0 1.2em` 을 먹인다 — 이 선택자(0,3,1)로는 못 이긴다.
+     한 번 뗐다가 톱니 아이콘이 19.2px 안쪽으로 밀려 지도 도구줄과 겹쳤다
+     (크롬 실측: 톱니 글리프가 카드 오른쪽 26.9~50.9px, 컨트롤 토글이
+     42.7~54.9px). 브라우저 기본 글꼴이 큰 환경에서는 겹치지 않아 눈에 띄지도
+     않았다 — `1.2em` 은 글꼴을 따라가고 도구줄 기준선 `3em` 도 그러는데,
+     톱니 아이콘 크기만 다른 기준(부모 글꼴)을 따르기 때문이다. */
+  padding: 0 !important;
   margin: 0;
   border: 0;
   line-height: 1;

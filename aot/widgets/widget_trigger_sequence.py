@@ -357,6 +357,7 @@ TRANSLATABLE_STRINGS = [
     lazy_gettext('Create group'),
     lazy_gettext('Deactivated'),
     lazy_gettext('Device is gone'),
+    lazy_gettext('Enabled'),
     lazy_gettext('Duration'),
     lazy_gettext('Duration updated'),
     lazy_gettext('End'),
