@@ -121,8 +121,21 @@ body.aot-map-fullscreen-active .navbar.main-navbar {
     display: none !important;
 }
 
-/* Stacking context fix for parents (grid-stack) */
-body.aot-map-fullscreen-active .grid-stack-item:not(.aot-fs-parent) {
+/* 최대화 중에는 대시보드 격자를 통째로 감춘다.
+ *
+ * 지도만 남기고 뒤를 지우는 것이 목적인데, **지도는 여기 걸리지 않는다** —
+ * 최대화에 들어갈 때 컨테이너를 `<body>` 직속으로 옮기기 때문이다
+ * (`_toggleMapMaximize`, aot-map-widget-vector.js / aot-map-controls.js).
+ * 옮기는 이유는 그 함수 주석에 있다: grid-stack 항목의 `transform` 이
+ * stacking context 이자 iOS 에서는 `position: fixed` 의 컨테이닝 블록이라,
+ * 그 안에 두면 지도가 내비바 밑에 깔린다.
+ *
+ * 예전에는 `:not(.aot-fs-parent)` 가 붙어 있었다 — 위젯을 격자에 **둔 채**
+ * 최대화하던 시절, "지금 최대화된 위젯의 격자 항목" 만 남기려던 표식이다.
+ * `<body>` 로 옮기는 방식으로 바뀌면서 그 클래스를 붙이는 코드가 사라졌고,
+ * 남은 `:not()` 은 늘 참이라 하는 일이 없으면서 "어딘가 이 클래스를 붙이는
+ * 데가 있다" 는 인상만 줬다(2026-09-06 확인 후 제거). */
+body.aot-map-fullscreen-active .grid-stack-item {
     display: none !important;
 }
 
