@@ -3215,7 +3215,7 @@ msgstr ""
 "Las funciones incluyen integración de GPS (notas vinculadas a la ubicación),"
 " Asunto Inteligente (extracción automática de la primera línea), Archivos "
 "Adjuntos Multimedia (imágenes y archivos) y un Sistema de Etiquetas "
-"(clasificación y控制 de visibilidad en el mapa)."
+"(clasificación y control de visibilidad en el mapa)."
 
 #: config_translations_docs.py:139
 msgid "2. Usage Guide"

@@ -72,7 +72,7 @@ Measurements
  - [버전](#버전)
  - [시정](#시정)
  - [휘발성 유기 화합물](#휘발성-유기-화합물)
- - [값](#값)
+ - [부피](#부피)
 
 ## 가속 {: #가속 }
 
@@ -740,8 +740,6 @@ Measurements
 
 ### [CARTO: GL: Carto Maps](/AoT/Supported-Inputs/#carto-gl-carto-maps)
 
-### [ESA: GL: Soil Moisture (NASA SMAP)](/AoT/Supported-Inputs/#esa-gl-soil-moisture-nasa-smap)
-
 ### [Esri: GL: Esri World Imagery](/AoT/Supported-Inputs/#esri-gl-esri-world-imagery)
 
 ### [GSI: JP: GSI Maps](/AoT/Supported-Inputs/#gsi-jp-gsi-maps)
@@ -759,6 +757,8 @@ Measurements
 ### [Mapbox: GL: Mapbox](/AoT/Supported-Inputs/#mapbox-gl-mapbox)
 
 ### [Microsoft: GL: Bing Maps](/AoT/Supported-Inputs/#microsoft-gl-bing-maps)
+
+### [NASA: GL: Soil Moisture (NASA SMAP)](/AoT/Supported-Inputs/#nasa-gl-soil-moisture-nasa-smap)
 
 ### [NASA: NASA GIBS](/AoT/Supported-Inputs/#nasa-nasa-gibs)
 
@@ -1020,7 +1020,7 @@ Measurements
 
 ### [AMS: CCS811 (without Temperature)](/AoT/Supported-Inputs/#ams-ccs811-without-temperature)
 
-## 값 {: #값 }
+## 부피 {: #부피 }
 
 ### [Atlas Scientific: Atlas Flow Meter](/AoT/Supported-Inputs/#atlas-scientific-atlas-flow-meter)
 

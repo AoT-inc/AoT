@@ -416,7 +416,7 @@ msgstr "휘발성 유기 화합물"
 #: config_translations.py:316 config_translations.py:317
 #: inputs/atlas_flow.py:204 inputs/hall_flow.py:61
 msgid "Volume"
-msgstr "값"
+msgstr "부피"
 
 #: config_devices_units.py:364 inputs/ecowitt_mqtt.py:36
 #: inputs/ecowitt_weather.py:32

@@ -254,6 +254,22 @@ def _en_pages(build_dir):
     return pages
 
 
+# en 슬롯(접미사 없는 X.md)에 다른 언어 본문이 들어간 것을 잡는 문턱.
+#
+# 실제로 그런 페이지가 있었다: docs/time-handling.md 가 처음 추가될 때부터 본문이
+# 한국어였고(2026-09-06 발견), 영어 사용자는 nav 의 "Time & Timezones" 를 열면
+# 한국어를 봤다. 번역본이 부실한 것은 위 검사가 잡지만, **원문 자리가 원문이
+# 아닌 것**은 아무도 안 봤다.
+#
+# 한국어 예시를 인용하는 영어 문서는 정상이다 — 사용자가 지은 이름("1번 하우스
+# 온도")이나 앱이 실제로 내보내는 한국어 라벨을 드는 자리가 있다. 실측 비율은
+# 그런 페이지가 0.04~0.7%, 본문이 통째로 한국어인 페이지가 36% 라 문턱을 넉넉히
+# 15% 로 둔다.
+EN_MAX_FOREIGN_RATIO = 0.15
+
+_FOREIGN_IN_EN_RE = re.compile(r"[가-힣ぁ-んァ-ヶ]")
+
+
 def check_i18n(build_dir):
     problems = []
     for page in _en_pages(build_dir):
@@ -266,6 +282,13 @@ def check_i18n(build_dir):
         if en_words == 0:
             continue  # 빈 페이지(리다이렉트 등) - 비교 대상 아님
         page_label = page if page else "(root)"
+
+        foreign = len(_FOREIGN_IN_EN_RE.findall(en_text))
+        if en_chars and foreign / en_chars > EN_MAX_FOREIGN_RATIO:
+            problems.append(
+                f"en/{page_label} 본문의 {foreign / en_chars:.0%} 가 한글/가나다 - "
+                f"영어 정본 자리에 다른 언어가 들어간 것으로 보인다(X.md 는 en 슬롯이다). "
+                f"영어로 다시 쓰고, 원래 언어는 X.ko.md / X.ja.md 로 옮길 것")
 
         for lang in LANGS:
             lang_index = os.path.join(build_dir, lang, page, "index.html")
@@ -362,6 +385,38 @@ def _restore_generated(snap):
                 f.write(data)
 
 
+_ENTRY_RE = re.compile(r"^### ", re.M)
+
+
+def _generated_entry_counts():
+    """생성 문서의 언어별 항목 수 - 언어끼리 같아야 한다.
+
+    생성기는 항목을 **번역된 이름으로 묶는다.** 그래서 한 언어에서 서로 다른 두
+    항목의 이름이 같아지면 조용히 하나로 합쳐지고, 그 언어 매뉴얼에서는 장치나
+    액션 하나가 통째로 사라진다.
+
+    실제로 그랬다: 한국어 카탈로그가 "Volume" 과 "Value" 를 둘 다 "값" 으로
+    번역해 "Output: Volume" 액션이 한국어 매뉴얼에 없었다(2026-09-06 발견,
+    번역을 "부피" 로 바꿔 해결). 분량 비교로는 안 잡힌다 - 46개 중 45개는
+    98% 라 어떤 비율 문턱도 통과한다.
+    """
+    import glob
+    out = {}
+    for en_path in sorted(glob.glob(os.path.join(ROOT, "docs", "Supported-*.md"))):
+        if re.search(r"\.(ko|ja)\.md$", en_path):
+            continue
+        base = en_path[:-3]
+        counts = {}
+        for lang, suffix in (("en", ""), ("ko", ".ko"), ("ja", ".ja")):
+            path = base + suffix + ".md"
+            if not os.path.isfile(path):
+                continue
+            with open(path, encoding="utf-8") as f:
+                counts[lang] = len(_ENTRY_RE.findall(f.read()))
+        out[rel(en_path)] = counts
+    return out
+
+
 def check_drift():
     """생성기를 다시 돌려 나온 내용이 지금 파일과 같은지 본다.
 
@@ -394,6 +449,14 @@ def check_drift():
             "생성기를 재실행하니 다음 파일의 내용이 달라졌다(난수 기본값은 "
             "정규화해 제외): " + ", ".join(changed) +
             " - 재생성해서 커밋할 것 (python3 aot/scripts/generate_manual_*.py).")
+
+    for doc, counts in _generated_entry_counts().items():
+        if len(set(counts.values())) > 1:
+            detail = " · ".join(f"{k} {v}" for k, v in counts.items())
+            problems.append(
+                f"{doc} 의 항목 수가 언어마다 다르다({detail}) - 번역된 이름이 겹쳐 "
+                f"항목이 합쳐진 것으로 보인다. 그 언어 카탈로그에서 두 이름을 "
+                f"구분되게 고칠 것(합쳐진 쪽 항목은 매뉴얼에서 아예 사라진다).")
 
     created = sorted(rel(path) for path in (set(after) - set(snap)))
     if created:

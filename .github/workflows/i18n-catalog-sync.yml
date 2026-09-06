@@ -19,11 +19,13 @@ on:
     paths:
       - 'aot/aot_flask/translations/**'
       - 'aot/scripts/check_po_mo_sync.py'
+      - 'aot/scripts/check_i18n_script_contamination.py'
       - '.github/workflows/i18n-catalog-sync.yml'
   pull_request:
     paths:
       - 'aot/aot_flask/translations/**'
       - 'aot/scripts/check_po_mo_sync.py'
+      - 'aot/scripts/check_i18n_script_contamination.py'
       - '.github/workflows/i18n-catalog-sync.yml'
   workflow_dispatch:
 
@@ -44,3 +46,13 @@ jobs:
       # 직접 파싱한다. babel 이 없어도, 설치가 깨져도 이 검사는 돌아야 한다.
       - name: Check .po ↔ .mo catalogs are in sync
         run: python3 aot/scripts/check_po_mo_sync.py
+
+      # 2026-09-06, ja 카탈로그 msgstr 21건에 한글 음절이 글자 단위로 섞여
+      # 들어간 오염이 발견됐다(de/es 에도 1건씩). 이 검사는 그 언어에 있을
+      # 수 없는 문자(한글/가나/한자/타이문자/데바나가리/키릴)가 msgstr 에
+      # 섞이면 잡는다. polib 이 필요하다.
+      - name: Install polib
+        run: pip install polib
+
+      - name: Check translation catalogs for stray-script contamination
+        run: python3 aot/scripts/check_i18n_script_contamination.py

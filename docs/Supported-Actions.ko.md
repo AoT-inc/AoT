@@ -85,7 +85,7 @@ Usage: Executing <strong>self.run_action("ACTION_ID")</strong> will publish the 
 - Default Value: 1883</td><td>The port of the MQTT server</td></tr><tr><td>Topic</td><td>Text
 - Default Value: paho/test/single</td><td>The topic to publish with</td></tr><tr><td>Payload</td><td>Text</td><td>The payload to publish</td></tr><tr><td>Payload Type</td><td>Select(Options: [<strong>Text</strong> | Integer | Float/Decimal] (Default in <strong>bold</strong>)</td><td>The type to cast the payload</td></tr><tr><td>연결 유지</td><td>Integer
 - Default Value: 60</td><td>The keepalive timeout value for the client. Set to 0 to disable.</td></tr><tr><td>Client ID</td><td>Text
-- Default Value: client_H8Zhp3sj</td><td>Unique client ID for connecting to the MQTT server</td></tr><tr><td>Use Login</td><td>Boolean</td><td>Send login credentials</td></tr><tr><td>사용자명</td><td>Text
+- Default Value: client_i5404Wvg</td><td>Unique client ID for connecting to the MQTT server</td></tr><tr><td>Use Login</td><td>Boolean</td><td>Send login credentials</td></tr><tr><td>사용자명</td><td>Text
 - Default Value: user</td><td>Username for connecting to the server</td></tr><tr><td>비밀번호</td><td>Text</td><td>Password for connecting to the server</td></tr><tr><td>Use Websockets</td><td>Boolean</td><td>Use websockets to connect to the server.</td></tr></tbody></table>
 
 ### MQTT: 발행: 측정값
@@ -100,7 +100,7 @@ Publish an Input measurement to an MQTT server.
 - Default Value: 1883</td><td>The port of the MQTT server</td></tr><tr><td>Topic</td><td>Text
 - Default Value: paho/test/single</td><td>The topic to publish with</td></tr><tr><td>연결 유지</td><td>Integer
 - Default Value: 60</td><td>The keepalive timeout value for the client. Set to 0 to disable.</td></tr><tr><td>Client ID</td><td>Text
-- Default Value: client_YqLZ5ILk</td><td>Unique client ID for connecting to the MQTT server</td></tr><tr><td>Use Login</td><td>Boolean</td><td>Send login credentials</td></tr><tr><td>사용자명</td><td>Text
+- Default Value: client_DCRrfYCC</td><td>Unique client ID for connecting to the MQTT server</td></tr><tr><td>Use Login</td><td>Boolean</td><td>Send login credentials</td></tr><tr><td>사용자명</td><td>Text
 - Default Value: user</td><td>Username for connecting to the server</td></tr><tr><td>비밀번호</td><td>Text</td><td>Password for connecting to the server.</td></tr><tr><td>Use Websockets</td><td>Boolean</td><td>Use websockets to connect to the server.</td></tr></tbody></table>
 
 ### Output: 액추에이터 페어링 (위치 / 정지)
@@ -354,10 +354,10 @@ Usage: Executing <strong>self.run_action("ACTION_ID")</strong> will clear the to
 - Manufacturer: AoT
 - Works with: Functions
 
-출력에 부피를 분배하도록 지시합니다.
+출력으로 값을 전송합니다.
 
-Usage: Executing <strong>self.run_action("ACTION_ID")</strong> will actuate a volume output. Executing <strong>self.run_action("ACTION_ID", value={"output_id": "959019d1-c1fa-41fe-a554-7be3366a9c5b", "channel": 0, "volume": 42})</strong> will send a volume to the output with the specified ID and channel. Don't forget to change the output_id value to an actual Output ID that exists in your system.
-<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Output</td><td>Select Channel (Output_Channels)</td><td>Select an output to control</td></tr><tr><td>값</td><td>Decimal</td><td>The volume to send to the output</td></tr></tbody></table>
+Usage: Executing <strong>self.run_action("ACTION_ID")</strong> will actuate a value output. Executing <strong>self.run_action("ACTION_ID", value={"output_id": "959019d1-c1fa-41fe-a554-7be3366a9c5b", "channel": 0, "value": 42})</strong> will send a value to the output with the specified ID and channel. Don't forget to change the output_id value to an actual Output ID that exists in your system.
+<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Output</td><td>Select Channel (Output_Channels)</td><td>Select an output to control</td></tr><tr><td>값</td><td>Decimal</td><td>The value to send to the output</td></tr></tbody></table>
 
 ### 출력: 듀티 사이클
 
@@ -380,6 +380,16 @@ Usage: Executing <strong>self.run_action("ACTION_ID")</strong> will ramp the PWM
 <table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Output</td><td>Select Channel (Output_Channels)</td><td>Select an output to control</td></tr><tr><td>듀티 사이클: 시작</td><td>Decimal</td><td>듀티 사이클 PWM (퍼센트, 0.0 - 100.0)</td></tr><tr><td>듀티 사이클: 종료</td><td>Decimal
 - Default Value: 50.0</td><td>듀티 사이클 PWM (퍼센트, 0.0 - 100.0)</td></tr><tr><td>증가 (듀티 사이클)</td><td>Decimal
 - Default Value: 1.0</td><td>How much to change the duty cycle every Duration</td></tr><tr><td>지속시간 (초)</td><td>Decimal</td><td>How long to ramp from start to finish.</td></tr></tbody></table>
+
+### 출력: 부피
+
+- Manufacturer: AoT
+- Works with: Functions
+
+출력에 부피를 분배하도록 지시합니다.
+
+Usage: Executing <strong>self.run_action("ACTION_ID")</strong> will actuate a volume output. Executing <strong>self.run_action("ACTION_ID", value={"output_id": "959019d1-c1fa-41fe-a554-7be3366a9c5b", "channel": 0, "volume": 42})</strong> will send a volume to the output with the specified ID and channel. Don't forget to change the output_id value to an actual Output ID that exists in your system.
+<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Output</td><td>Select Channel (Output_Channels)</td><td>Select an output to control</td></tr><tr><td>부피</td><td>Decimal</td><td>The volume to send to the output</td></tr></tbody></table>
 
 ### 출력: 켜기/끄기/지속시간
 

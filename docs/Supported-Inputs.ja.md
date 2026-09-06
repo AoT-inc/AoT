@@ -704,7 +704,7 @@ ChirpStack v4 MQTTブローカーのトピック(application/+/device/+/event/up
 <table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>測定有効</td><td>Multi-Select</td><td>記録する測定項目</td></tr><tr><td>Period (Seconds)</td><td>Decimal</td><td>測定またはアクションの間隔時間</td></tr><tr><td>事前出力</td><td>Select</td><td>各測定を行う前に、選択した出力をオンにします</td></tr><tr><td>Pre Out Duration (Seconds)</td><td>Decimal</td><td>事前出力が選択されている場合、すべての測定を取得する前に事前出力をオンにする期間を設定します。</td></tr><tr><td>測定前および測定中</td><td>Boolean</td><td>測定完了後に（前ではなく）出力をオフにするにはチェックしてください</td></tr><tr><td>MQTT Host</td><td>Text
 - Default Value: localhost</td><td>MQTTブローカーのホスト名またはIPアドレス (例: localhost)</td></tr><tr><td>MQTT Port</td><td>Text
 - Default Value: 1883</td><td>MQTTブローカーのポート (デフォルト1883、TLSの場合は8883推奨)</td></tr><tr><td>MQTT Username</td><td>Text</td><td>任意: ブローカー認証用のユーザー名</td></tr><tr><td>MQTT Password</td><td>Text</td><td>任意: ブローカー認証用のパスワード</td></tr><tr><td>TLSを有効化</td><td>Boolean</td><td>TLS(SSL)接続を使用するかどうか (デフォルトはオフ)</td></tr><tr><td>CA証明書のパス</td><td>Text</td><td>任意: TLS使用時のCA証明書のパス</td></tr><tr><td>Client ID</td><td>Text
-- Default Value: client_wG1ovrih</td><td>Unique client ID for connecting to the server</td></tr><tr><td>Keepalive (sec)</td><td>Text
+- Default Value: client_9guuhSJA</td><td>Unique client ID for connecting to the server</td></tr><tr><td>Keepalive (sec)</td><td>Text
 - Default Value: 60</td><td>MQTT Keepalive(秒) (デフォルト60秒)</td></tr><tr><td>Subscribe Topics</td><td>Text
 - Default Value: application/+/device/+/event/up</td><td>カンマ(,)区切りの購読トピック (例: application/+/device/+/event/up)</td></tr><tr><td>QoS</td><td>Text</td><td>MQTT QoSレベル (0, 1, 2)</td></tr><tr><td>Device EUIs (comma-separated)</td><td>Text</td><td>任意: 特定のデバイスのみ処理します。EUIをカンマ区切りで入力してください</td></tr><tr><td colspan="3">Channel Options</td></tr><tr><td>名前</td><td>Text</td><td>他と区別するための名前</td></tr><tr><td>JMESPath Expression</td><td>Text</td><td>受信イベント全体(JSON)に対して評価されます</td></tr></tbody></table>
 
@@ -732,16 +732,6 @@ ChirpStack v4 REST APIを定期的に呼び出してデバイスイベントを�
 - Datasheet URL: [Link](https://cdn.shopify.com/s/files/1/0019/5952/files/Datasheet_COZIR_A_CO2Meter_4_15.pdf)
 <table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>UARTデバイス</td><td>Text</td><td>UARTデバイスの場所 (例: /dev/ttyUSB1)</td></tr><tr><td>測定有効</td><td>Multi-Select</td><td>記録する測定項目</td></tr><tr><td>Period (Seconds)</td><td>Decimal</td><td>測定またはアクションの間隔時間</td></tr><tr><td>事前出力</td><td>Select</td><td>各測定を行う前に、選択した出力をオンにします</td></tr><tr><td>Pre Out Duration (Seconds)</td><td>Decimal</td><td>事前出力が選択されている場合、すべての測定を取得する前に事前出力をオンにする期間を設定します。</td></tr><tr><td>測定前および測定中</td><td>Boolean</td><td>測定完了後に（前ではなく）出力をオフにするにはチェックしてください</td></tr></tbody></table>
 
-### ESA: GL: Soil Moisture (NASA SMAP)
-
-- Manufacturer: ESA
-- Measurements: Status
-- Libraries: gis_esa
-- Manufacturer URL: [Link](https://smap.jpl.nasa.gov/)
-
-A global land cover map based on European Space Agency (ESA) Sentinel-2 satellite data. Vegetation, urban areas, cropland, forest, and water bodies are classified and color-coded at 10m resolution, useful for environmental analysis.
-<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Date Mode</td><td>Select</td><tr><td>Custom Date</td><td>Text</td></tbody></table>
-
 ### Ecowitt: Ecowitt Cloud API Weather Data
 
 - Manufacturer: Ecowitt
@@ -765,7 +755,7 @@ Ecowitt Cloud APIを使用するには、Application Key、API Key、デバイ�
 - Default Value: 1883</td><td>ホストポート番号</td></tr><tr><td>Topic</td><td>Text
 - Default Value: gw</td><td>The topic to subscribe to</td></tr><tr><td>キープアライブ</td><td>Integer
 - Default Value: 60</td><td>Maximum amount of time between received signals. Set to 0 to disable.</td></tr><tr><td>Client ID</td><td>Text
-- Default Value: client_y4v8cFq6</td><td>Unique client ID for connecting to the server</td></tr><tr><td>Use Login</td><td>Boolean</td><td>Send login credentials</td></tr><tr><td>Use TLS</td><td>Boolean</td><td>Send login credentials using TLS</td></tr><tr><td>ユーザー名</td><td>Text
+- Default Value: client_SEzw0646</td><td>Unique client ID for connecting to the server</td></tr><tr><td>Use Login</td><td>Boolean</td><td>Send login credentials</td></tr><tr><td>Use TLS</td><td>Boolean</td><td>Send login credentials using TLS</td></tr><tr><td>ユーザー名</td><td>Text
 - Default Value: user</td><td>サーバー接続用のユーザー名</td></tr><tr><td>パスワード</td><td>Text</td><td>Password for connecting to the server. Leave blank to disable.</td></tr><tr><td>Use Websockets</td><td>Boolean</td><td>Use websockets to connect to the server.</td></tr><tr><td colspan="3">Channel Options</td></tr><tr><td>名前</td><td>Text</td><td>他と区別するための名前</td></tr><tr><td>JMESPATH Expression</td><td>Text</td><td>JMESPATH expression to find value in JSON response</td></tr></tbody></table>
 
 ### Ecowitt: Ecowitt soil_sensor
@@ -1089,7 +1079,7 @@ A single topic is subscribed to and the returned JSON payload contains one or mo
 - Default Value: 1883</td><td>ホストポート番号</td></tr><tr><td>Topic</td><td>Text
 - Default Value: mqtt/test/input</td><td>The topic to subscribe to</td></tr><tr><td>キープアライブ</td><td>Integer
 - Default Value: 60</td><td>Maximum amount of time between received signals. Set to 0 to disable.</td></tr><tr><td>Client ID</td><td>Text
-- Default Value: client_HM9vroLB</td><td>Unique client ID for connecting to the server</td></tr><tr><td>Use Login</td><td>Boolean</td><td>Send login credentials</td></tr><tr><td>Use TLS</td><td>Boolean</td><td>Send login credentials using TLS</td></tr><tr><td>TLS CA Certificate</td><td>Text</td><td>Path to the CA certificate file that signed the broker certificate. Leave blank to use the system CA store (for brokers with a publicly-trusted certificate, e.g. Let's Encrypt).</td></tr><tr><td>ユーザー名</td><td>Text
+- Default Value: client_eLwe0Qvz</td><td>Unique client ID for connecting to the server</td></tr><tr><td>Use Login</td><td>Boolean</td><td>Send login credentials</td></tr><tr><td>Use TLS</td><td>Boolean</td><td>Send login credentials using TLS</td></tr><tr><td>TLS CA Certificate</td><td>Text</td><td>Path to the CA certificate file that signed the broker certificate. Leave blank to use the system CA store (for brokers with a publicly-trusted certificate, e.g. Let's Encrypt).</td></tr><tr><td>ユーザー名</td><td>Text
 - Default Value: user</td><td>サーバー接続用のユーザー名</td></tr><tr><td>パスワード</td><td>Text</td><td>Password for connecting to the server. Leave blank to disable.</td></tr><tr><td>Use Websockets</td><td>Boolean</td><td>Use websockets to connect to the server.</td></tr><tr><td colspan="3">Channel Options</td></tr><tr><td>名前</td><td>Text</td><td>他と区別するための名前</td></tr><tr><td>JMESPATH Expression</td><td>Text</td><td>JMESPATH expression to find value in JSON response</td></tr></tbody></table>
 
 ### MQTT: MQTT Subscribe (Value payload)
@@ -1105,7 +1095,7 @@ A topic is subscribed to for each channel Subscription Topic and the returned pa
 - Default Value: localhost</td><td>ホストまたはIPアドレス</td></tr><tr><td>ポート</td><td>Integer
 - Default Value: 1883</td><td>ホストポート番号</td></tr><tr><td>キープアライブ</td><td>Integer
 - Default Value: 60</td><td>Maximum amount of time between received signals. Set to 0 to disable.</td></tr><tr><td>Client ID</td><td>Text
-- Default Value: client_UiZmnFUH</td><td>Unique client ID for connecting to the server</td></tr><tr><td>Use Login</td><td>Boolean</td><td>Send login credentials</td></tr><tr><td>Use TLS</td><td>Boolean</td><td>Send login credentials using TLS</td></tr><tr><td>TLS CA Certificate</td><td>Text</td><td>Path to the CA certificate file that signed the broker certificate. Leave blank to use the system CA store (for brokers with a publicly-trusted certificate, e.g. Let's Encrypt).</td></tr><tr><td>ユーザー名</td><td>Text
+- Default Value: client_8yRtEtKH</td><td>Unique client ID for connecting to the server</td></tr><tr><td>Use Login</td><td>Boolean</td><td>Send login credentials</td></tr><tr><td>Use TLS</td><td>Boolean</td><td>Send login credentials using TLS</td></tr><tr><td>TLS CA Certificate</td><td>Text</td><td>Path to the CA certificate file that signed the broker certificate. Leave blank to use the system CA store (for brokers with a publicly-trusted certificate, e.g. Let's Encrypt).</td></tr><tr><td>ユーザー名</td><td>Text
 - Default Value: user</td><td>サーバー接続用のユーザー名</td></tr><tr><td>パスワード</td><td>Text</td><td>Password for connecting to the server. Leave blank to disable.</td></tr><tr><td>Use Websockets</td><td>Boolean</td><td>Use websockets to connect to the server.</td></tr><tr><td colspan="3">Channel Options</td></tr><tr><td>名前</td><td>Text</td><td>他と区別するための名前</td></tr><tr><td>Subscription Topic</td><td>Text</td><td>The MQTT topic to subscribe to</td></tr></tbody></table>
 
 ### MapTiler: GL: MapTiler Vector
@@ -1251,6 +1241,16 @@ Modbus TCP 装置（PLC、ゲートウェイ、計量器）からコイルとレ
 - Product URL: [Link](https://www.adafruit.com/product/3942)
 - Additional URL: [Link](https://learn.adafruit.com/ultrasonic-sonar-distance-sensors/python-circuitpython)
 <table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Period (Seconds)</td><td>Decimal</td><td>測定またはアクションの間隔時間</td></tr><tr><td>事前出力</td><td>Select</td><td>各測定を行う前に、選択した出力をオンにします</td></tr><tr><td>Pre Out Duration (Seconds)</td><td>Decimal</td><td>事前出力が選択されている場合、すべての測定を取得する前に事前出力をオンにする期間を設定します。</td></tr><tr><td>測定前および測定中</td><td>Boolean</td><td>測定完了後に（前ではなく）出力をオフにするにはチェックしてください</td></tr><tr><td>Trigger Pin</td><td>Integer</td><td>Enter the GPIO Trigger Pin for your device (BCM numbering).</td></tr><tr><td>Echo Pin</td><td>Integer</td><td>Enter the GPIO Echo Pin for your device (BCM numbering).</td></tr></tbody></table>
+
+### NASA: GL: Soil Moisture (NASA SMAP)
+
+- Manufacturer: NASA
+- Measurements: Status
+- Libraries: gis_esa
+- Manufacturer URL: [Link](https://smap.jpl.nasa.gov/)
+
+NASA SMAP(Soil Moisture Active Passive)L4データによる全球表層土壌水分(深さ0~5cm)を、NASA GIBS経由の準リアルタイムオーバーレイとして提供します。解像度約9kmで日付を選択でき、灌漑計画や干ばつモニタリングに役立ちます。
+<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Date Mode</td><td>Select</td><tr><td>Custom Date</td><td>Text</td></tbody></table>
 
 ### NASA: NASA GIBS
 
@@ -1406,7 +1406,7 @@ ChirpStack v4 MQTTブローカーからRAK3172バルブコントローラーの�
 <table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>測定有効</td><td>Multi-Select</td><td>記録する測定項目</td></tr><tr><td>事前出力</td><td>Select</td><td>各測定を行う前に、選択した出力をオンにします</td></tr><tr><td>Pre Out Duration (Seconds)</td><td>Decimal</td><td>事前出力が選択されている場合、すべての測定を取得する前に事前出力をオンにする期間を設定します。</td></tr><tr><td>測定前および測定中</td><td>Boolean</td><td>測定完了後に（前ではなく）出力をオフにするにはチェックしてください</td></tr><tr><td>MQTT Host</td><td>Text
 - Default Value: localhost</td><td>ChirpStack MQTTブローカーのホスト名またはIPアドレス</td></tr><tr><td>MQTT Port</td><td>Integer
 - Default Value: 1883</td><td>MQTTポート(デフォルト1883)</td></tr><tr><td>MQTT Username</td><td>Text</td><td>ブローカー認証のユーザー名(不要な場合は空欄のまま)</td></tr><tr><td>MQTT Password</td><td>Text</td><td>ブローカー認証のパスワード</td></tr><tr><td>TLSを有効化</td><td>Boolean</td><td>TLS(SSL)接続を使用するかどうか</td></tr><tr><td>CA証明書のパス</td><td>Text</td><td>TLS使用時のCA証明書ファイルパス</td></tr><tr><td>Client ID</td><td>Text
-- Default Value: aot_rak3172hb_rA8ZPA</td><td>MQTTクライアントの固有ID</td></tr><tr><td>Application ID(MQTTトピック)</td><td>Text
+- Default Value: aot_rak3172hb_3JLfgV</td><td>MQTTクライアントの固有ID</td></tr><tr><td>Application ID(MQTTトピック)</td><td>Text
 - Default Value: +</td><td>特定のアプリのみを購読するにはIDを入力してください。空欄の場合は"+"(すべて)を使用します。</td></tr><tr><td>Device EUIフィルター</td><td>Text</td><td>特定のデバイスのみを処理します。空欄の場合はすべて受信します(複数指定する場合はカンマ区切り)。</td></tr><tr><td>Base HBフレームのデコード</td><td>Boolean
 - Default Value: True</td><td>FPort 225の0xA5 baseフレーム(バッテリー+クラス)をデコードします。</td></tr><tr><td>Ext HBフレームのデコード</td><td>Boolean
 - Default Value: True</td><td>FPort 225の0xA6 extフレーム(HB周期、実際のクラス、バルブ状態など)をデコードします。</td></tr></tbody></table>
@@ -1773,7 +1773,7 @@ Stadia Mapsの高品質なデザイン特化型地図サーバーです。Alidad
 This measures from several Kasa power devices (plugs/strips) capable of measuring energy consumption. These include, but are not limited to the KP115 and HS600.
 <table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>測定有効</td><td>Multi-Select</td><td>記録する測定項目</td></tr><tr><td>Period (Seconds)</td><td>Decimal</td><td>測定またはアクションの間隔時間</td></tr><tr><td>事前出力</td><td>Select</td><td>各測定を行う前に、選択した出力をオンにします</td></tr><tr><td>Pre Out Duration (Seconds)</td><td>Decimal</td><td>事前出力が選択されている場合、すべての測定を取得する前に事前出力をオンにする期間を設定します。</td></tr><tr><td>測定前および測定中</td><td>Boolean</td><td>測定完了後に（前ではなく）出力をオフにするにはチェックしてください</td></tr><tr><td>Device Type</td><td>Select</td><td>The type of Kasa device</td></tr><tr><td>ホスト</td><td>Text
 - Default Value: 0.0.0.0</td><td>ホストまたはIPアドレス</td></tr><tr><td>Asyncio RPC Port</td><td>Integer
-- Default Value: 18412</td><td>The port to start the asyncio RPC server. Must be unique from other Kasa Outputs.</td></tr><tr><td colspan="3">Commands</td></tr><tr><td colspan="3">The total kWh can be cleared with the following button or with the Clear Total kWh Function Action. This will also clear all energy stats on the device, not just the total kWh.</td></tr><tr><td>トータルをクリア: キロワット時</td><td>Button</td><td></td></tr></tbody></table>
+- Default Value: 18121</td><td>The port to start the asyncio RPC server. Must be unique from other Kasa Outputs.</td></tr><tr><td colspan="3">Commands</td></tr><tr><td colspan="3">The total kWh can be cleared with the following button or with the Clear Total kWh Function Action. This will also clear all energy stats on the device, not just the total kWh.</td></tr><tr><td>トータルをクリア: キロワット時</td><td>Button</td><td></td></tr></tbody></table>
 
 ### Tasmota: Tasmota Outlet Energy Monitor (HTTP)
 
