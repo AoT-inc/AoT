@@ -16,18 +16,18 @@ import time
 
 # Set variables the first time the code runs.
 if not hasattr(self, "output_id_gpio_pwm"):
-    self.logger.debug("초기화 중")
-    self.output_id_gpio_pwm = "a3dade60-091a-49d7-9c79-cd2adf41bc23"  # GPIO PWM Output의 UUID
-    self.fan_spinning = False  # 팬의 상태를 저장
-    self.fan_min_duty_cycle = 2  # 팬이 계속 회전할 수 있는 최소 듀티 사이클
-    self.fan_spin_duty_cycle = 25  # 팬이 꺼져 있을 때 회전을 시작하기 위한 최소 듀티 사이클
-    self.fan_charge_duty_cycle = 45  # 팬이 처음 회전하기 위해 필요한 충전 듀티 사이클
-    self.fan_spin_duration_sec = 1.5  # 팬을 충전 듀티 사이클로 실행할 시간(초)
+    self.logger.debug("初期化中")
+    self.output_id_gpio_pwm = "a3dade60-091a-49d7-9c79-cd2adf41bc23"  # GPIO PWM出力のUUID
+    self.fan_spinning = False  # ファンが回転しているかを保持します
+    self.fan_min_duty_cycle = 2  # ファンが回り続けられる最小デューティサイクル
+    self.fan_spin_duty_cycle = 25  # 停止状態からファンを回し始める最小デューティサイクル
+    self.fan_charge_duty_cycle = 45  # ファンを回し始めるために必要なチャージ用デューティサイクル
+    self.fan_spin_duration_sec = 1.5  # チャージ用デューティサイクルで回す時間(秒)
 
-# 팬이 회전하지 않고 원하는 듀티 사이클이 너무 낮은 경우 팬을 충전합니다.
+# ファンが止まっていて要求されたデューティサイクルが低すぎる場合にチャージします。
 if duty_cycle and not self.fan_spinning and duty_cycle < self.fan_spin_duty_cycle:
-    self.logger.debug("듀티 사이클이 너무 낮고 팬이 꺼져 있습니다. 충전 중.")
-    self.logger.debug("{} %의 듀티 사이클 설정".format(self.fan_charge_duty_cycle))
+    self.logger.debug("デューティサイクルが低すぎ、ファンは停止中です。チャージします。")
+    self.logger.debug("デューティサイクルを {} % に設定".format(self.fan_charge_duty_cycle))
     control.output_on(self.output_id_gpio_pwm,
                       output_type='pwm',
                       amount=self.fan_charge_duty_cycle,
@@ -36,12 +36,12 @@ if duty_cycle and not self.fan_spinning and duty_cycle < self.fan_spin_duty_cycl
     self.fan_spinning = True
 
 if duty_cycle == 0:
-    self.logger.debug("팬이 꺼졌습니다")
+    self.logger.debug("ファンを停止しました")
     self.fan_spinning = False
 elif duty_cycle > self.fan_spin_duty_cycle:
     self.fan_spinning = True
 
-self.logger.debug("{} %의 듀티 사이클 설정".format(duty_cycle))
+self.logger.debug("デューティサイクルを {} % に設定".format(duty_cycle))
 control.output_on(self.output_id_gpio_pwm,
                   output_type='pwm',
                   amount=duty_cycle,

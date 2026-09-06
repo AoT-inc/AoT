@@ -61,10 +61,10 @@ headers = {
     'X-API-KEY': api_key
 }
 response = requests.get(url, headers=headers, verify=False)
-print("응답 상태: {}".format(response.status_code))
-print("응답 헤더: {}".format(response.headers))
+print("レスポンスステータス: {}".format(response.status_code))
+print("レスポンスヘッダー: {}".format(response.headers))
 response_dict = json.loads(response.text)
-print("응답 딕셔너리: {}".format(response_dict))
+print("レスポンス辞書: {}".format(response_dict))
 ```
 
 ### Pythonの例(POST)
@@ -80,16 +80,16 @@ ip_address = '127.0.0.1'
 api_key = 'YOUR_API_KEY'
 endpoint = 'outputs/3f5a4806-c830-432d-b329-7821da8336e4'
 url = 'https://{ip}/api/{ep}'.format(ip=ip_address, ep=endpoint)
-data = {"state": True}  # 출력을 켭니다
+data = {"state": True}  # 出力をオンにします
 headers = {
     'Accept': 'application/vnd.aot.v1+json',
     'X-API-KEY': api_key
 }
 response = requests.post(url, json=data, headers=headers, verify=False)
-print("응답 상태: {}".format(response.status_code))
-print("응답 헤더: {}".format(response.headers))
+print("レスポンスステータス: {}".format(response.status_code))
+print("レスポンスヘッダー: {}".format(response.headers))
 response_dict = json.loads(response.text)
-print("응답 딕셔너리: {}".format(response_dict))
+print("レスポンス辞書: {}".format(response_dict))
 ```
 
 ### エラー

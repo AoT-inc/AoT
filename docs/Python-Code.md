@@ -16,18 +16,18 @@ import time
 
 # Set variables the first time the code runs.
 if not hasattr(self, "output_id_gpio_pwm"):
-    self.logger.debug("초기화 중")
-    self.output_id_gpio_pwm = "a3dade60-091a-49d7-9c79-cd2adf41bc23"  # GPIO PWM Output의 UUID
-    self.fan_spinning = False  # 팬의 상태를 저장
-    self.fan_min_duty_cycle = 2  # 팬이 계속 회전할 수 있는 최소 듀티 사이클
-    self.fan_spin_duty_cycle = 25  # 팬이 꺼져 있을 때 회전을 시작하기 위한 최소 듀티 사이클
-    self.fan_charge_duty_cycle = 45  # 팬이 처음 회전하기 위해 필요한 충전 듀티 사이클
-    self.fan_spin_duration_sec = 1.5  # 팬을 충전 듀티 사이클로 실행할 시간(초)
+    self.logger.debug("Initializing")
+    self.output_id_gpio_pwm = "a3dade60-091a-49d7-9c79-cd2adf41bc23"  # UUID of the GPIO PWM Output
+    self.fan_spinning = False  # stores whether the fan is spinning
+    self.fan_min_duty_cycle = 2  # lowest duty cycle at which the fan keeps spinning
+    self.fan_spin_duty_cycle = 25  # lowest duty cycle that starts the fan from a stop
+    self.fan_charge_duty_cycle = 45  # charge duty cycle needed to get the fan turning
+    self.fan_spin_duration_sec = 1.5  # seconds to run the fan at the charge duty cycle
 
-# 팬이 회전하지 않고 원하는 듀티 사이클이 너무 낮은 경우 팬을 충전합니다.
+# Charge the fan when it is not spinning and the requested duty cycle is too low.
 if duty_cycle and not self.fan_spinning and duty_cycle < self.fan_spin_duty_cycle:
-    self.logger.debug("듀티 사이클이 너무 낮고 팬이 꺼져 있습니다. 충전 중.")
-    self.logger.debug("{} %의 듀티 사이클 설정".format(self.fan_charge_duty_cycle))
+    self.logger.debug("Duty cycle too low and fan is off. Charging.")
+    self.logger.debug("Setting duty cycle to {} %".format(self.fan_charge_duty_cycle))
     control.output_on(self.output_id_gpio_pwm,
                       output_type='pwm',
                       amount=self.fan_charge_duty_cycle,
@@ -36,12 +36,12 @@ if duty_cycle and not self.fan_spinning and duty_cycle < self.fan_spin_duty_cycl
     self.fan_spinning = True
 
 if duty_cycle == 0:
-    self.logger.debug("팬이 꺼졌습니다")
+    self.logger.debug("Fan turned off")
     self.fan_spinning = False
 elif duty_cycle > self.fan_spin_duty_cycle:
     self.fan_spinning = True
 
-self.logger.debug("{} %의 듀티 사이클 설정".format(duty_cycle))
+self.logger.debug("Setting duty cycle to {} %".format(duty_cycle))
 control.output_on(self.output_id_gpio_pwm,
                   output_type='pwm',
                   amount=duty_cycle,
