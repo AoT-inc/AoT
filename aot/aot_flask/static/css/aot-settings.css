@@ -149,13 +149,13 @@
 
 .aot-settings-select:focus {
     border-color: var(--aot-input-focus-border) !important;
-    box-shadow: 0 0 0 0.15rem var(--modal-focus-ring) !important;
+    box-shadow: 0 0 0 0.15rem var(--aot-focus-ring) !important;
     outline: none;
 }
 
 .aot-settings-control .aot-modern-input:focus {
     border-color: var(--aot-input-focus-border) !important;
-    box-shadow: 0 0 0 0.15rem var(--modal-focus-ring) !important;
+    box-shadow: 0 0 0 0.15rem var(--aot-focus-ring) !important;
     outline: none;
 }
 

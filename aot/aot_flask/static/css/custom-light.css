@@ -13,53 +13,23 @@
  */
 
 /* ========================================================================
-   Section 1.6: surface tokens — light mode
-   ======================================================================== */
-:root {
-  --aot-surface-card: #ffffff;
-  --aot-surface-modal: #ffffff;
-  --aot-surface-dropdown: #ffffff;
-  --aot-surface-input: #ffffff;
-  --aot-surface-body: #f8f9fa;
-}
+   지금 이 파일에는 재정의가 **하나도 없다**. (2026-09-07)
 
-/* ========================================================================
-   Section 1.7: note tokens — light mode
-   ======================================================================== */
-:root {
-  --aot-note-card-bg: #ffffff;
-  --aot-note-card-border: #eef2f5;
-  --aot-note-card-shadow: rgba(0,0,0,0.03);
-  --aot-note-card-hover-shadow: rgba(0,0,0,0.06);
-  --aot-note-card-body-text: #4a5568;
-  --aot-note-footer-bg: #f8fafc;
-  --aot-note-footer-text: #94a3b8;
-  --aot-note-tag-bg: #e0f2fe;
-  --aot-note-tag-text: #0369a1;
-  --aot-note-tag-hover-bg: #bae6fd;
-  --aot-note-fab-bg: #3b82f6;
-  --aot-note-search-bg: #ffffff;
-  --aot-note-search-border: #cbd5e1;
-  --aot-note-search-focus: #3b82f6;
-}
+   위 규칙대로 "라이트 기본값과 다른 것만" 남긴 결과다. 그전에는 23개를
+   선언하고 있었는데 **22개가 `aot-theme-variables.css` 와 글자까지 같았고**,
+   나머지 하나(`--aot-surface-body`)는 같아야 하는데 달랐다:
 
-/* ========================================================================
-   Section 1.5: border tokens — light mode
-   ======================================================================== */
-:root {
-  --aot-border-neutral: #dddddd;
-  --aot-border-light: #f0f0f0;
-  --aot-border-form: #ced4da;
-}
+       aot-theme-variables.css   #F3F6F5   ← 정본. theme_defaults.json ·
+                                             forms_settings.py ·
+                                             custom_ui.html 프리셋도 이 값
+       custom-light.css          #f8f9fa   ← 이것이 나중에 실려 이겼다
 
-/* ========================================================================
-   Section 1.9: modal tokens — light mode
-   ------------------------------------------------------------------------
-   title/body/group-title 는 2026-07부터 aot-theme-variables.css 기본값이
-   --aot-color-text-primary/secondary 를 따르도록 바뀌어(settings/custom_ui
-   텍스트색 연동) 라이트모드에서 별도로 재고정할 값이 없다 — 여기서 리터럴로
-   덮어쓰면 그 연동이 끊긴다. backdrop 만 유지.
+   즉 **설정을 한 번도 저장하지 않은 사용자만** `#f8f9fa` 를 보고, 설정
+   화면을 열었다 저장한 사용자는 `/custom.css` 가 `bd_secondary` 기본값
+   `#F3F6F5` 를 발행해 그쪽을 봤다. 같은 기본 설정인데 화면이 갈렸다.
+   그 한 줄을 지워 정본으로 모았다.
+
+   ⚠ 이 파일을 지우지 말 것 — `layout.html` 이 라이트 테마에서 이것을 싣는다.
+   라이트에만 필요한 값이 생기면 여기에 적는다. 비어 있는 것이 정상이다.
+   (다크는 다르다 — `custom-dark.css` 는 실제로 갈리는 값만 담고 있다.)
    ======================================================================== */
-:root {
-  --aot-modal-backdrop: rgba(0,0,0,0.5);
-}

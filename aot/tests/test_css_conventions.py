@@ -357,6 +357,21 @@ def _inline_offenders(text, label):
 #     적혀 있는데 화면은 열아홉 곳의 인라인 때문에 둥글었다)
 #   · 나머지는 **인라인인 채로 토큰만** 쓴다 (147곳). 인라인이라는 사실보다
 #     값이 사다리 밖이라는 것이 문제였다.
+# `user_templates/widget_template_*.html` 은 **생성물**이다 — aotflask 기동 시
+# `aot/widgets/*.py` 에서 만들어지고 `.gitignore` 에 있다. 세지 않는다:
+#
+#   · 정본인 `.py` 를 이미 세고 있어 **한 위반을 두 번** 잡는다.
+#   · 있다가 없다가 한다. 앱이 한 번이라도 뜬 작업본에는 있고 갓 clone 한
+#     곳에는 없어, **같은 코드가 어떤 날은 통과하고 어떤 날은 실패**한다.
+#     2026-09-07 에 실제로 그렇게 세 검사가 한꺼번에 붉어졌다 — 고칠 것은
+#     위젯이 아니라 이 스캐너의 범위였다.
+_GENERATED_TEMPLATE_DIR = "user_templates"
+
+
+def _is_generated_template(rel_path):
+    return rel_path.replace("\\", "/").startswith(_GENERATED_TEMPLATE_DIR + "/")
+
+
 _INLINE_BUDGET = {}
 
 
@@ -364,6 +379,8 @@ def _current_inline_counts():
     counts, detail = {}, {}
     for path in sorted(TEMPLATE_DIR.rglob("*.html")):
         rel = str(path.relative_to(TEMPLATE_DIR))
+        if _is_generated_template(rel):
+            continue
         offenders = _inline_offenders(path.read_text(encoding="utf-8"), rel)
         if offenders:
             counts[rel] = len(offenders)
@@ -469,7 +486,7 @@ _IMPORTANT = re.compile(r"!\s*important")
 
 _IMPORTANT_BUDGET = {
     "aot-modal-modern.css": 222,
-    "bootstrap-4-themes/aot.css": 212,
+    "bootstrap-4-themes/aot.css": 211,
     "map/map.css": 183,
     "components/aot-base-ui.css": 139,
     "ai/ai_scheduler.css": 53,
@@ -573,7 +590,8 @@ _MIGRATED_ALIASES = (
     "--font-family-sans-serif", "--font-family-monospace",
 )
 _VAR_USE = re.compile(r"var\(\s*(--[a-z][a-z0-9-]*)")
-_ALIAS_SCAN_SKIP = {"node_modules", "__pycache__", "dist", "vendor"}
+_ALIAS_SCAN_SKIP = {"node_modules", "__pycache__", "dist", "vendor",
+                    _GENERATED_TEMPLATE_DIR}
 _ALIAS_SCAN_EXT = (".css", ".html", ".py", ".js")
 
 
@@ -607,3 +625,244 @@ def test_legacy_aliases_have_no_consumers():
     assert not bad, (
         "레거시 별칭을 다시 쓰고 있다. 정본 --aot-* 이름을 쓸 것 "
         "(다크에서 값이 갈린다): " + " | ".join(bad[:8]))
+
+
+# ------------------------------------------------- var() 폴백이 정본과 다른 것
+
+# ## 왜 보는가
+#
+# `var(--aot-color-info, #007bff)` 처럼 **폴백에 다른 색을 적어 둔 자리**가
+# 있다. 폴백은 토큰이 정의되지 않았을 때만 쓰이고 `aot-theme-variables.css` 는
+# 모든 페이지에 실리므로, 지금 화면에 그 색이 나오지는 **않는다**. 그래서
+# 이것은 렌더 버그가 아니라 **문서 버그**다 — 코드를 읽는 사람(그리고 색을
+# 훑는 도구)에게 "이 자리의 색은 부트스트랩 파랑" 이라고 잘못 말한다.
+#
+# 실제로 그렇게 새어 나갔다. 2026-09-07 에 디자인 시스템을 claude.ai/design 에
+# 올렸더니 저쪽 에이전트가 `#007bff` 를 팔레트 밖의 색으로 보고했다. 값이
+# 안 쓰이는 것과 안 읽히는 것은 다르다.
+#
+# 그리고 언젠가는 렌더 버그가 된다. 토큰 이름을 바꾸거나(방금 `--modal-focus-ring`
+# → `--aot-focus-ring` 이 그랬다) 토큰 파일이 안 실리는 조각을 만들면 그 순간
+# 폴백이 켜지고, 그때 나오는 색은 팔레트 밖이다.
+#
+# ## 규칙
+#
+# 폴백 자리에 리터럴 색을 적을 거라면 **그 토큰의 정본 값을 그대로** 적는다.
+# `#fff` 처럼 줄여 써도 된다(3자리는 펴서 비교한다). 다크 값이 따로 있는
+# 토큰이라도 폴백은 정본(라이트) 값이다 — 다크는 custom-dark.css 가 덮는다.
+#
+# ## 상한
+#
+# 311곳이 남아 있다. 대부분 부트스트랩 기본색(`#6c757d` `#212529` `#dc3545`)
+# 이거나 정본이 정해지기 전의 손색이다. 한 번에 고칠 값어치는 없고, **늘지만
+# 않으면 된다.** 토큰별로 세고 내려가기만 한다.
+_FALLBACK = re.compile(r"var\(\s*(--[A-Za-z0-9_-]+)\s*,\s*(#[0-9A-Fa-f]{3,8})\s*\)")
+_HEX_DEF = re.compile(r"(--[A-Za-z0-9_-]+)\s*:\s*(#[0-9A-Fa-f]{3,8})\s*;")
+
+_FALLBACK_BUDGET = {
+    "--aot-color-text-secondary": 110,
+    "--aot-color-text-primary": 94,
+    "--aot-border-neutral": 22,
+    "--aot-surface-body": 16,
+    "--aot-color-danger": 11,
+    "--aot-border-light": 8,
+    "--aot-color-warning": 8,
+    "--aot-btn-border-primary": 4,
+    "--aot-color-success": 4,
+    "--color-zone-mode": 4,
+    "--text-medium-gray": 4,
+    "--aot-surface-card": 3,
+    "--aot-surface-input": 3,
+    "--aot-tint-info-bg": 3,
+    "--aot-tint-info-fg": 3,
+    "--aot-color-dark": 2,
+    "--aot-bg-pause": 1,
+    "--aot-border-form": 1,
+    "--aot-btn-bg-hold": 1,
+    "--aot-btn-bg-inactive": 1,
+    "--aot-btn-bg-pause": 1,
+    "--aot-color-brand-primary": 1,
+    "--aot-color-text-tertiary": 1,
+    "--aot-tint-danger-bg": 1,
+    "--aot-tint-success-bg": 1,
+    "--aot-tint-success-fg": 1,
+    "--aot-tint-warning-bg": 1,
+    "--aot-tint-warning-fg": 1,
+}
+
+
+def _norm_hex(value):
+    """`#fff` 와 `#ffffff` 는 같은 색이다. 3자리를 펴서 비교한다."""
+    h = value.lower().lstrip("#")
+    if len(h) == 3:
+        h = "".join(c * 2 for c in h)
+    return "#" + h
+
+
+def _canonical_hex():
+    """`aot-theme-variables.css` 가 리터럴 색으로 정의한 토큰들.
+
+    같은 이름이 여러 번 나오면 **처음 것**이 정본이다 — 뒤의 것은 같은 파일
+    안의 조건부/주석 예시일 수 있고, 정의 순서상 앞이 기준이다.
+    """
+    text = (CSS_DIR / "aot-theme-variables.css").read_text(encoding="utf-8")
+    out = {}
+    for m in _HEX_DEF.finditer(text):
+        out.setdefault(m.group(1), _norm_hex(m.group(2)))
+    return out
+
+
+def _fallback_mismatches():
+    import os
+    root = CSS_DIR.parent.parent.parent          # .../aot
+    canon = _canonical_hex()
+    # 자기 자신은 뺀다. 위 주석이 `var(--aot-color-info, #007bff)` 를 **예시로**
+    # 적고 있어서, 빼지 않으면 이 가드가 자기 설명문을 위반으로 잡는다.
+    # (`check_dead_css.py` 도 같은 데 걸렸다 — 코퍼스에 자기를 넣지 말 것.)
+    myself = os.path.abspath(__file__)
+    out = []
+    for base, dirs, files in os.walk(root):
+        dirs[:] = [d for d in dirs if d not in _ALIAS_SCAN_SKIP]
+        for f in sorted(files):
+            if not f.endswith(_ALIAS_SCAN_EXT):
+                continue
+            path = os.path.join(base, f)
+            if os.path.abspath(path) == myself:
+                continue
+            with open(path, encoding="utf-8", errors="replace") as fh:
+                for i, line in enumerate(fh, 1):
+                    for m in _FALLBACK.finditer(line):
+                        token = m.group(1)
+                        if token not in canon:
+                            continue
+                        if canon[token] == _norm_hex(m.group(2)):
+                            continue
+                        rel = os.path.relpath(path, root)
+                        out.append((token, f"{rel}:{i} {m.group(2)} != {canon[token]}"))
+    return out
+
+
+def _current_fallback_counts():
+    counts = {}
+    for token, _ in _fallback_mismatches():
+        counts[token] = counts.get(token, 0) + 1
+    return counts
+
+
+def test_var_fallback_matches_the_token():
+    """`var()` 폴백에 토큰의 정본과 다른 색을 새로 적지 않는다."""
+    counts = _current_fallback_counts()
+    where = {}
+    for token, loc in _fallback_mismatches():
+        where.setdefault(token, []).append(loc)
+    grew = [f"{t} ({_FALLBACK_BUDGET.get(t, 0)} -> {n}) 예: {where[t][0]}"
+            for t, n in sorted(counts.items())
+            if n > _FALLBACK_BUDGET.get(t, 0)]
+    assert not grew, (
+        "var() 폴백이 토큰의 정본 값과 다르다. 폴백에는 그 토큰의 정본을 그대로 "
+        "적을 것 (부트스트랩 기본색을 적지 말 것): " + " | ".join(grew[:6]))
+
+
+def test_fallback_budget_is_not_stale():
+    """폴백 상한도 내려가기만 한다."""
+    counts = _current_fallback_counts()
+    stale = [f"{t}: 상한 {cap} -> 실제 {counts.get(t, 0)}"
+             for t, cap in sorted(_FALLBACK_BUDGET.items())
+             if counts.get(t, 0) < cap]
+    assert not stale, (
+        "폴백을 정본으로 맞췄으면 _FALLBACK_BUDGET 도 그만큼 내릴 것 "
+        "(0 이 되면 항목째 지운다): " + " | ".join(stale))
+
+
+def test_fallback_budget_entries_are_real_tokens():
+    """상한 표가 실제로 정의된 토큰을 가리킨다."""
+    canon = _canonical_hex()
+    missing = sorted(set(_FALLBACK_BUDGET) - set(canon))
+    assert not missing, (
+        "_FALLBACK_BUDGET 이 aot-theme-variables.css 에 없는 토큰을 가리킨다: "
+        + ", ".join(missing))
+
+
+# ------------------------------------------------------ 테두리는 정본 하나로
+
+# 모달 CSS 가 테두리를 부트스트랩 변수 `--gray`(테마가 `#eeebeb` 로 덮은 값)로
+# 그리고 있었다 — 나머지 147곳이 쓰는 `--aot-border-neutral` 과 같은 용도에 두
+# 색이었다. **다크에서는 결함이었다**: `--gray` 는 다크 오버라이드가 없어
+# `#eeebeb` 로 남고, 어두운 모달(`#1e1e1e`) 위에 거의 흰 선이 그어졌다.
+# `--aot-border-neutral` 은 다크에서 `#444444` 로 뒤집힌다.
+#
+# 2026-09-07 에 테두리 14곳을 정본으로 옮겼다. 남은 `var(--gray)` 두 곳은
+# 테두리가 아니다(드롭다운 선택 배경 · 채널 구분자 글자색) — 그 둘은 다크에서
+# 어떤 값이어야 하는지가 정리가 아니라 디자인 결정이라 그대로 두었다.
+_GRAY_BORDER = re.compile(
+    r"\bborder(?:-(?:top|right|bottom|left|color))?\s*:[^;{}]*var\(\s*--gray\s*\)")
+
+
+def test_borders_do_not_use_the_bootstrap_gray():
+    """테두리를 `--gray` 로 그리지 않는다. 정본은 `--aot-border-neutral` 이다."""
+    import os
+    root = CSS_DIR.parent.parent.parent          # .../aot
+    myself = os.path.abspath(__file__)
+    bad = []
+    for base, dirs, files in os.walk(root):
+        dirs[:] = [d for d in dirs if d not in _ALIAS_SCAN_SKIP]
+        for f in sorted(files):
+            if not f.endswith(_ALIAS_SCAN_EXT):
+                continue
+            path = os.path.join(base, f)
+            if os.path.abspath(path) == myself:
+                continue
+            with open(path, encoding="utf-8", errors="replace") as fh:
+                for i, line in enumerate(fh, 1):
+                    if _GRAY_BORDER.search(line):
+                        bad.append(f"{os.path.relpath(path, root)}:{i}")
+    assert not bad, (
+        "테두리에 --gray 를 쓰고 있다. 정본 --aot-border-neutral 을 쓸 것 "
+        "(--gray 는 다크 오버라이드가 없어 어두운 바탕에 흰 선이 된다): "
+        + " | ".join(bad[:8]))
+
+
+# ------------------------------------------ 대시보드 탭바 아래 여백 (회귀 가드)
+
+# `.aot-sticky-tabs` 는 다섯 화면이 함께 쓴다(대시보드·입력·출력·함수·프로그램).
+# 그중 **대시보드만** 여백이 0 이어야 한다 — 위젯 격자가 `padding: 1em` 을 이미
+# 갖고 있어서, 공용 50px 이 얹히면 탭바와 첫 위젯 사이가 14px → 64px 이 된다.
+#
+# 예전에는 양쪽 다 `!important` 였고, `!important` 끼리는 특이도가 가르므로
+# ID 인 `#dash-sticky` 가 이겼다. 2026-09 에 "아무 일도 안 하는 `!important`"
+# 를 걷어내면서 `#dash-sticky` 쪽만 떼자 공용 규칙이 이겨 대시보드가 벌어졌다.
+# **한쪽만 떼면 승자가 뒤집히는 짝이었다.**
+#
+# 지금은 둘 다 평범한 선언이고 특이도만으로 갈린다. 공용 쪽에 `!important` 가
+# 다시 붙으면 그 순간 대시보드가 도로 벌어지므로, 그것을 막는다.
+_STICKY_TABS_RULE = re.compile(r"\.aot-sticky-tabs\s*\{([^}]*)\}")
+
+
+def test_shared_sticky_tabbar_margin_has_no_important():
+    """공용 탭바 여백에 `!important` 를 붙이지 않는다 — 대시보드가 벌어진다."""
+    text = _blank_comments(
+        (CSS_DIR / "bootstrap-4-themes" / "aot.css").read_text(encoding="utf-8"))
+    m = _STICKY_TABS_RULE.search(text)
+    assert m, ".aot-sticky-tabs 규칙을 찾지 못했다"
+    decls = [d.strip() for d in m.group(1).split(";") if "margin" in d]
+    assert decls, ".aot-sticky-tabs 에 margin 선언이 없다"
+    bad = [d for d in decls if _IMPORTANT.search(d)]
+    assert not bad, (
+        "공용 .aot-sticky-tabs 의 여백에 !important 가 붙었다. 대시보드의 "
+        "#dash-sticky(margin 0)가 평범한 선언이라 이 순간 지고, 탭바와 첫 "
+        "위젯 사이가 14px -> 64px 로 벌어진다: " + " | ".join(bad))
+
+
+def test_dashboard_sticky_keeps_zero_margin():
+    """대시보드 탭바는 자기 여백을 0 으로 유지한다."""
+    text = _blank_comments(
+        (CSS_DIR / "dashboard.css").read_text(encoding="utf-8"))
+    bodies = [m.group(1) for m in
+              re.finditer(r"#dash-sticky\s*\{([^}]*)\}", text)]
+    assert bodies, "#dash-sticky 규칙을 찾지 못했다"
+    margins = [d.strip() for b in bodies for d in b.split(";")
+               if d.strip().startswith("margin")]
+    assert margins, "#dash-sticky 에 margin 선언이 없다 — 공용 50px 이 그대로 얹힌다"
+    for d in margins:
+        assert re.search(r":\s*0(px)?\s*(!important)?$", d), (
+            f"#dash-sticky 의 여백이 0 이 아니다: {d}")

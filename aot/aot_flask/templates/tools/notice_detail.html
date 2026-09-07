@@ -50,13 +50,13 @@
 
     /* Plain prose textarea, not the pill/code-editor look aot-modern-input gives
        textareas by default (9999px radius, no-wrap + horizontal scroll).
-       Focus uses the same neutral blue ring every modal already shows
-       (--modal-focus-ring) WITHOUT swapping the border to the brand yellow
-       .aot-modern-input uses — that yellow is reserved for buttons/actions,
-       not text input borders. */
+       Focus is the shared one every modal shows: --aot-input-focus-border
+       (brand deep green) + --aot-focus-ring. Until 2026-09 that token held
+       the brand yellow, so this block deliberately kept its own grey border;
+       the token was fixed, so the exception is gone. */
     textarea.aot-notice-textarea {
         border-radius: 8px !important;
-        border: 1px solid var(--gray) !important;
+        border: 1px solid var(--aot-border-neutral) !important;
         outline: none !important;
         white-space: normal !important;
         overflow-wrap: break-word !important;
@@ -65,8 +65,8 @@
         resize: none !important;
     }
     textarea.aot-notice-textarea:focus {
-        border-color: var(--gray) !important;
-        box-shadow: 0 0 0 0.15rem var(--modal-focus-ring) !important;
+        border-color: var(--aot-input-focus-border) !important;
+        box-shadow: 0 0 0 0.15rem var(--aot-focus-ring) !important;
         outline: none !important;
     }
 </style>

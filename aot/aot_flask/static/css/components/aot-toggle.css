@@ -4,16 +4,22 @@
   width: var(--aot-roundbox-width, 60px);
   height: var(--aot-base-size, 28px);
   cursor: pointer;
+  /* 아래 두 줄은 테마(`bootstrap-4-themes/aot.css`)에 있던 같은 이름의 두 번째
+     정의에서 옮겨 왔다. 2026-09-07 에 그 정의를 지웠는데, 나머지는 이 파일이
+     전부 덮고 있었지만 이 둘은 여기 없어서 지우면 사라졌다.
+       · margin 0  — `.btn-toggle` 은 `<label>` 로도 붙는다(76곳). 부트스트랩
+                     reboot 이 `label { margin-bottom: .5rem }` 을 주므로
+                     이것이 없으면 토글 아래에 반 rem 이 생긴다.
+       · align-self — 다른 컨트롤과 한 행을 나눠 쓸 때(stretch 인 flex 행)
+                     세로로 늘어나지 않고 가운데 정렬된다. */
+  margin: 0;
+  align-self: center;
   /* 이 토글은 여러 곳에서 다른 컨트롤과 한 행을 나눠 쓴다(예: 목표 항목의
      [값 입력][토글]). 그 행이 좁아져 flex-shrink 가 걸리면 폭이 고정된
      이 박스도 기본값(shrink:1)으로는 함께 눌린다 — 안의 슬라이더·손잡이는
      %/inset 기준이라 눌린 채로 그대로 작아져 알약 모양이 무너진다. 줄어들
      차례는 항상 값 입력 쪽에 양보한다. */
   flex-shrink: 0;
-}
-
-.switch-label {
-  font-weight: 600;
 }
 
 .btn-toggle-input {

@@ -181,7 +181,7 @@ WIDGET_INFORMATION = {
 
   textarea.aot-notice-textarea {
     border-radius: 8px !important;
-    border: 1px solid var(--gray) !important;
+    border: 1px solid var(--aot-border-neutral) !important;
     outline: none !important;
     white-space: normal !important;
     overflow-wrap: break-word !important;
@@ -191,11 +191,11 @@ WIDGET_INFORMATION = {
     min-height: 120px;
   }
   textarea.aot-notice-textarea:focus {
-    /* Same neutral blue ring every modal already shows (--modal-focus-ring),
-       WITHOUT swapping the border to the brand yellow .aot-modern-input uses —
-       that yellow is reserved for buttons/actions, not text input borders. */
-    border-color: var(--gray) !important;
-    box-shadow: 0 0 0 0.15rem var(--modal-focus-ring) !important;
+    /* Shared focus: --aot-input-focus-border (brand deep green) + --aot-focus-ring.
+       Until 2026-09 that token held the brand yellow, so this block kept its own
+       grey border; the token was fixed, so the exception is gone. */
+    border-color: var(--aot-input-focus-border) !important;
+    box-shadow: 0 0 0 0.15rem var(--aot-focus-ring) !important;
     outline: none !important;
   }
 

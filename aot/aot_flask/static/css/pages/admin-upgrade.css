@@ -44,6 +44,11 @@ main.container .aot-notice-box {
     background: var(--aot-surface-card) !important;
     color: var(--aot-color-text-primary);
     border-color: var(--aot-border-neutral) !important;
+    /* 2026-09-07: 톤이 붙은 상자만 그림자를 지게 바뀌었다(기본형은 폼을 감싸는
+       테두리라 안 뜬다). 이 페이지는 위 결정대로 **전부 같은 모양**이어야 하므로
+       그림자도 함께 눕힌다. `!important` 는 필요 없다 — 이 선택자(0,2,1)가
+       `.aot-notice-box.aot-notice-box-success`(0,2,0)보다 특이도가 높다. */
+    box-shadow: none;
 }
 
 /* Bootstrap's global `code { color: #e83e8c }` (bootstrap.min.css) otherwise

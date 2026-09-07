@@ -14,17 +14,17 @@
 @import url("https://fonts.googleapis.com/css?family=Gothic+A1:400,500,700|Ubuntu:400,700&display=swap");
 
 :root {
-  --blue: #007bff;
-  --indigo: #6610f2;
-  --purple: #9B479F;
-  --pink: #e83e8c;
-  --red: #DF5353;
-  --orange: #fe890b;
-  --yellow: #f2bd1f;
-  --green: #96C064;
-  --teal: #20c997;
-  --cyan: #029ACF;
-  --white: #fff;
+  /* 부트스트랩 팔레트 11개(`--blue` `--indigo` `--purple` `--pink` `--red`
+     `--orange` `--yellow` `--green` `--teal` `--cyan` `--white`)를 여기서
+     AoT 값으로 다시 잡고 있었다. **읽는 곳이 한 군데도 없었다** — 저장소
+     전체에서 `var(--blue)` 류가 0곳이다(2026-09-07 실측). 부트스트랩의 `:root`
+     팔레트는 값을 노출할 뿐 자기 규칙에서 `var()` 로 쓰지 않으므로, 여기 다시
+     적는 것은 아무 일도 하지 않았다. 지웠다.
+     `--gray` 만 남긴다 — 아직 읽는 곳이 둘 있다(아래 :125 의 드롭다운 선택
+     배경, `aot-modal-modern.css` 의 채널 구분자 색). 테두리로 쓰던 14곳은
+     정본 `--aot-border-neutral` 로 옮겼다. 남은 둘은 테두리가 아니라 각각
+     배경·글자색이고, 다크에서 어떤 값이어야 하는지가 정리가 아니라 디자인
+     결정이라 그대로 둔다. */
   --gray: #eeebeb;
   /* aot-theme-variables.css 와 동일 체인 유지 — 이 파일이 나중에 로드되어
      여기서 리터럴로 재고정하면 .aot-modal-group-title 등 다수 UI의
@@ -1062,54 +1062,12 @@ main.container>p {
   margin: 0;
 }
 
-/* 토글 버튼(btn-toggle) */
-.btn-toggle {
-  position: relative;
-  align-self: center;
-  width: 54px;
-  height: 32px;
-  margin: 0;
-}
-
-.btn-toggle-input {
-  opacity: 0;
-  width: 0;
-  height: 0;
-}
-
-.btn-toggle-slider {
-  position: absolute;
-  background-color: var(--aot-color-text-secondary);
-  cursor: pointer;
-  border-radius: var(--aot-btn-pill-radius);
-  transition: background-color 0.3s;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-}
-
-.btn-toggle-thumb {
-  position: absolute;
-  height: 28px;
-  width: 28px;
-  border-radius: 50%;
-  background-color: white;
-  bottom: 2px;
-  /* 바닥에서 0.3em만큼 띄움 */
-  left: 2px;
-  /* 왼쪽에서 0.3em만큼 띄움 */
-  transition: transform 0.3s;
-}
-
-/* 토글 버튼 활성화 스타일 */
-.btn-toggle-input:checked+.btn-toggle-slider {
-  background-color: var(--primary);
-}
-
-.btn-toggle-input:checked+.btn-toggle-slider .btn-toggle-thumb {
-  transform: translateX(22px);
-}
+/* 토글(btn-toggle)의 정본은 `components/aot-toggle.css` 하나다.
+   여기에 두 번째 정의가 있었다 — 같은 선택자에 다른 값(폭 54×32 · 켜짐색
+   `--primary`)이라, 어느 쪽이 이기는지가 순전히 로드 순서였다. layout.html
+   에서 이 테마가 먼저 실리고 components/ 가 뒤에 실려 늘 정본이 이겼으므로
+   이 블록은 한 번도 화면에 나온 적이 없다. 살아 있던 두 줄(margin·align-self)
+   은 정본으로 옮겼다. 2026-09-07 */
 
 /* 배경색 처리 (투명 처리) */
 .row-aot-1,
@@ -1161,7 +1119,16 @@ main.container>p {
   top: 50px;
   z-index: 100;
   background-color: var(--aot-bg-off, #F3F6F5);
-  margin-bottom: 50px !important; /* Forces 50px space below the tab bar */
+  /* 탭바 아래 여백. **`!important` 를 붙이지 않는다** — 붙이면 대시보드가
+     깨진다. 대시보드의 `#dash-sticky` 는 자기 여백을 0 으로 두는데(위젯 격자가
+     `padding: 1em` 을 이미 갖고 있다), 양쪽 다 `!important` 면 우선순위를
+     특이도가 가르고 ID 인 `#dash-sticky` 가 이긴다. 2026-09 에 아무 일도 안
+     하는 `!important` 를 걷어내면서 `#dash-sticky` 쪽만 떼자, 이쪽이 이겨
+     대시보드 탭바와 위젯 사이가 14px → 66px 로 벌어졌다.
+     지금은 둘 다 평범한 선언이라 특이도만으로 갈린다:
+       · 대시보드(`#dash-sticky`)      margin 0    ← ID 가 이긴다
+       · 입력·출력·함수·프로그램 화면   50px       ← 경쟁 규칙이 없다 */
+  margin-bottom: 50px;
   transition: top 0.3s ease-in-out;
 }
 

@@ -25,9 +25,14 @@
 | 틴트 배경 | `--aot-tint-{success,warning,danger,info}-bg` | 위 색의 옅은 판 |
 | 표면 | `--aot-surface-{card,modal,dropdown,input}` `--aot-surface-body` | `#ffffff` / `#F3F6F5` |
 | 테두리 | `--aot-border-neutral` | `#dddddd` |
+| 포커스 | `--aot-input-focus-border` + `--aot-focus-ring` | `#13261B` + 그 12% 알파 |
 
 ⚠ **`--aot-color-primary`(`#F2D524`, 노랑)를 버튼이나 액션에 쓰지 말 것.**
 이름이 primary 라 헷갈리지만 브랜드 색이 아니다. 채워진 버튼은 딥그린이다.
+
+입력칸 포커스는 위 두 토큰 한 벌이다(테두리 + 바깥 링). 다크에서는
+`custom-dark.css` 가 밝은 쪽으로 뒤집는다 — 딥그린은 어두운 바탕에서 안 보인다.
+`outline` 을 지우기만 하고 대체 표시를 안 두는 것은 금지다.
 
 ## 사다리 — 값을 지어내지 말고 여기서 고른다
 
@@ -41,6 +46,8 @@
 사다리 밖 값은 검사(`aot/tests/test_css_conventions.py`)가 막는다. 그림자는
 `--aot-shadow-*`, 겹침 순서는 `--aot-z-*` 를 쓴다.
 
+`var(--토큰, #폴백)` 을 쓸 때 **폴백에는 그 토큰의 정본 값을 그대로** 적는다. 부트스트랩 기본색(`#007bff` `#0d6efd` …)을 적지 않는다 — 검사가 막는다.
+
 ## 클래스 어휘
 
 | 계열 | 대표 클래스 |
@@ -49,7 +56,7 @@
 | 입력 | `.aot-modern-input` `.aot-modern-select` (`.form-control` 과 함께) |
 | 설정 행 | `.aot-modal-option-row` > `.aot-modal-option-label` + `.aot-modal-option-control` |
 | 제목 | `.aot-modal-section-title`(구획) `.aot-modal-group-title`(묶음) |
-| 안내 상자 | `.aot-notice-box` **기본이 경고 톤**, 변형 `-success` `-danger` `-info` `-plain` (`-warning` 은 없다) |
+| 안내 상자 | `.aot-notice-box` **기본은 톤 없음**(폼을 감쌀 때), 톤은 `-success` `-warning` `-danger` `-info` 넷 |
 | 모달 | `.modal.aot-option-modal`(설정용) `.aot-center-modal`(위젯 팝업) |
 | 목록 행 | `.aot-entry-item` + `.aot-col-*` |
 | 상태 배경 | `.active-background` `.inactive-background` `.pause-background` `.hold-background` `.unknown-background` `.fault-background` |

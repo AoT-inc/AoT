@@ -1991,7 +1991,7 @@ body.aot-map-fullscreen-active .grid-stack-item {
 
 .aot-layer-item input[type="checkbox"]:checked + span,
 .aot-layer-item input[type="checkbox"]:checked + * {
-    color: var(--aot-color-info, #2a6aa8);
+    color: var(--aot-color-info, #029ACF);
     font-weight: 500;
 }
 

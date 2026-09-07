@@ -46,8 +46,7 @@
 `.btn-toggle-input:checked + .btn-toggle-slider` 가 `#32c85a` 이고, 그것이
 밴드 팔레트의 '적정'(`--aot-band-3`)과 같은 값이다. 처음에는 `color_success`
 를 45% 로 옅혀 썼는데, 옅힌 초록은 4px 선 위에서 연약해 보여 "여기다" 라고
-말하지 못했다. (`aot-toggle.css` 는 아직 토큰이 아니라 리터럴을 갖고 있다 —
-그쪽을 `--aot-band-3` 으로 바꾸면 두 곳이 한 출처가 된다.)
+말하지 못했다. (`aot-toggle.css` 도 지금은 `var(--aot-band-3)` 를 쓴다 — 두 곳이 한 출처다.)
 
 **마커 색은 브랜드 보조색이다** — 액추에이터 슬라이더의 현재값 표시
 (`.aot-3way-current-dot`)가 쓰는 `--aot-color-brand-secondary` 와 같다.

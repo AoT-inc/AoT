@@ -75,7 +75,7 @@ VENDOR_PREFIX = ("maplibregl-", "leaflet-", "mapbox", "gs-", "grid-stack",
 VENDOR_EXACT = {"no-gutters", "col-3", "container-sm", "container-md",
                 "container-lg", "container-xl", "form-check-inline",
                 "input-group-btn", "gap-4", "gap-5", "icon-fw", "btn-info",
-                "panel-body", "switch-label", "text-gradient",
+                "panel-body", "text-gradient",
                 "dropdown-upgrade", "dropdown-item-upgrade"}
 
 # 너무 짧아서 거의 모든 이름을 "조립됨" 으로 만들어 버리는 앞자락.

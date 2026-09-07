@@ -274,7 +274,7 @@ WIDGET_INFORMATION = {
     'widget_dashboard_body': """<style>
 #fsw-body-{{each_widget.unique_id}} {
   background-color: var(--aot-input-bg);
-  border: 1px solid var(--gray);
+  border: 1px solid var(--aot-border-neutral);
   border-radius: 16px;
   padding: 14px 16px;
   margin: 12px;

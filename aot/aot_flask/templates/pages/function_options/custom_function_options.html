@@ -13,7 +13,7 @@
     {{form_function.function_type(value='function')}}
 
     {% if each_function.is_activated and not dict_options.get('modify_settings_without_deactivating') %}
-    <div class="aot-notice-box" style="margin-bottom: 15px;">
+    <div class="aot-notice-box aot-notice-box-warning" style="margin-bottom: 15px;">
       <p>{{_('This controller is active. Deactivate it before saving changes, or they will not be applied.')}}</p>
     </div>
     {% endif %}

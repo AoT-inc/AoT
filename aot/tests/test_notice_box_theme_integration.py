@@ -115,18 +115,46 @@ def _find_rule_body(css_text, selector):
     return m.group(1) if m else None
 
 
-def test_notice_box_consumes_per_tint_border_not_flat_neutral():
-    """.aot-notice-box 가 다시 --aot-border-neutral(정적, custom_ui 밖) 하나로
-    묶이면 이 계약 전체가 무의미해진다 -- plain 변형만 예외(안내문이 아니라
-    폼을 감싸는 용도라 시맨틱 톤이 없다)."""
+def test_notice_box_tones_consume_per_tint_border_not_flat_neutral():
+    """톤이 다시 --aot-border-neutral(정적, custom_ui 밖) 하나로 묶이면 이
+    계약 전체가 무의미해진다.
+
+    2026-09-07 에 표현이 바뀌었다. 예전에는 기본형이 곧 경고 톤이라
+    `-warning` 변형이 없었고, 이 검사는 "`.aot-notice-box {`" 부터
+    "`-plain`" 까지를 **한 덩어리로 잘라** 그 안에 네 tint 토큰이 다 있는지
+    봤다. 지금은 기본형에 톤이 없고 톤 네 개가 대칭이라, 자르는 대신
+    **톤마다 자기 규칙을 직접 확인한다.** 계약은 그대로다 — 사용자가
+    settings/custom_ui 에서 바꾸는 값이 실제로 그 톤의 테두리에 닿아야 한다.
+    """
     stripped = _strip_css_comments(MODAL_CSS.read_text())
-    box_start = stripped.index('.aot-notice-box {')
-    plain_start = stripped.index('.aot-notice-box-plain')
-    body = stripped[box_start:plain_start]
-    assert '--aot-border-neutral' not in body
-    for token in ('--aot-tint-warning-border', '--aot-tint-success-border',
-                  '--aot-tint-danger-border', '--aot-tint-info-border'):
-        assert token in body, token
+    for tone in ('success', 'warning', 'danger', 'info'):
+        sel = f'.aot-notice-box.aot-notice-box-{tone}'
+        # 한 톤의 선택자는 여러 규칙에 나올 수 있다(예: 네 톤이 그림자를
+        # 함께 쓰는 묶음 규칙). **색을 정하는 규칙**을 찾아야 하므로 첫
+        # 규칙을 집지 말고, tint 를 담은 규칙이 하나라도 있는지 본다.
+        bodies = [m.group(1) for m in re.finditer(
+            re.escape(sel) + r'\s*\{([^}]*)\}', stripped)]
+        assert bodies, f'{sel} 규칙이 없다'
+        toned = [b for b in bodies if f'--aot-tint-{tone}-border' in b]
+        assert toned, (
+            f'{sel} 가 --aot-tint-{tone}-border 를 쓰지 않는다: {bodies}')
+        for b in toned:
+            assert '--aot-border-neutral' not in b, (
+                f'{sel} 가 중립 테두리로 묶였다 — custom_ui 연동이 끊긴다')
+
+
+def test_notice_box_base_has_no_tone():
+    """기본형에 톤이 없다.
+
+    예전에는 기본형이 경고 톤이었다. 변형을 안 붙이면 조용히 노란 경고
+    상자가 나왔고, 그래서 `-warning` 이라는 이름이 아예 없었다. 톤을 원하면
+    붙이게 하고, 안 붙이면 톤이 없어야 한다."""
+    stripped = _strip_css_comments(MODAL_CSS.read_text())
+    body = _find_rule_body(stripped, '.aot-notice-box')
+    assert body is not None
+    for tone in ('success', 'warning', 'danger', 'info'):
+        assert f'--aot-tint-{tone}' not in body, (
+            f'기본형이 {tone} 톤을 갖고 있다 — 톤은 변형으로만 붙인다: {body.strip()}')
 
 
 def test_upgrade_page_paragraphs_are_not_bumped_by_global_main_rule():

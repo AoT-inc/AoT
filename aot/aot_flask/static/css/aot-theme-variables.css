@@ -56,6 +56,9 @@
      ======================================================================== */
   --aot-color-primary: #F2D524;
   --aot-color-primary-hover: #EBCF21;
+  /* info 의 한 단 진한 판. 새 색을 만들지 않았다 — 이미 다크에서
+     `--aot-color-info` 로 쓰는 값이다(custom-dark.css). 2026-09-07 */
+  --aot-color-info-hover: #0287b8;
   --aot-color-success: #96C064;
   --aot-color-warning: #FEA60B;
   --aot-color-danger: #DF5353;
@@ -228,18 +231,18 @@
   --aot-note-tag-bg: #e0f2fe;
   --aot-note-tag-text: #0369a1;
   --aot-note-tag-hover-bg: #bae6fd;
-  --aot-note-fab-bg: #3b82f6;
+  --aot-note-fab-bg: var(--aot-color-info);
   --aot-note-search-bg: #ffffff;
   --aot-note-search-border: #cbd5e1;
-  --aot-note-search-focus: #3b82f6;
+  --aot-note-search-focus: var(--aot-color-info);
 
   /* ========================================================================
      Section 1.8: color — upgrade / alert
      ======================================================================== */
   --aot-upgrade-dropdown-text: #ededed;
   --aot-upgrade-dropdown-bg: #f92f44;
-  --aot-expand-toggle: #3b82f6;
-  --aot-expand-toggle-hover: #2563eb;
+  --aot-expand-toggle: var(--aot-color-info);
+  --aot-expand-toggle-hover: var(--aot-color-info-hover);
 
   /* ========================================================================
      Section 1.9: color — modal
@@ -309,13 +312,14 @@
 
   --aot-btn-font-size: var(--aot-font-size-sm);  /* 14px */
 
-  /* font-weight tokens */
+  /* font-weight tokens — @kind other (색·간격 축이 아니라 숫자 사다리다.
+     디자인 도구의 토큰 분류기가 이 표식으로 읽는다.) */
   --aot-fw-regular:  400;
   --aot-fw-medium:   500;
   --aot-fw-semibold: 600;
   --aot-fw-bold:     700;
 
-  /* line-height / letter-spacing */
+  /* line-height / letter-spacing — @kind other */
   --aot-lh-tight: 1.1;
   --aot-lh-base:  1.45;
   --aot-ls-tight: -0.01em;
@@ -376,6 +380,7 @@
      UI(내비바·모달·드롭다운·오버레이·토스트·툴팁)에만 쓴다.
      지도 pane·gridstack 핸들·위젯 내부 등 "제자리" 레이어는 로컬 소정수를
      쓰고 100 미만을 유지할 것. 하드코딩 숫자/극단값(9999·2147483647) 금지.
+     @kind other — 색도 간격도 아닌 겹침 순서다.
      ======================================================================== */
   --aot-z-base:              0;    /* 기본 흐름 콘텐츠 */
   --aot-z-raised:           10;    /* 살짝 띄운 콘텐츠·배지 */
@@ -484,7 +489,12 @@
      타일·카드 사다리와 계통이 다르다. */
   --aot-primary: var(--aot-color-primary);
   --aot-primary-hover: var(--aot-color-primary-hover);
-  --aot-input-focus-border: var(--aot-color-primary);
+  /* 입력칸 포커스 테두리. **브랜드 딥그린**이지 `--aot-color-primary`(노랑)가
+     아니다 — 노랑은 버튼·액션 전용이라 입력 테두리에 쓰지 않는다. 예전에는
+     이 토큰이 노랑이라 쓰면 안 되는 값이었고, 그것을 알아챈 곳들이 제각기
+     다른 색으로 피해 갔다(예: aot-drawer.css 의 composer 는 브랜드색을 직접
+     적었다). 토큰 쪽을 고쳐 그 우회를 없앤다. 2026-09-07 */
+  --aot-input-focus-border: var(--aot-color-brand-primary);
   --aot-input-bg: var(--aot-surface-input);
   --aot-text-main: var(--aot-modal-body-text);
   --aot-text-title: var(--aot-modal-title-text);
@@ -496,7 +506,12 @@
   --gray-dark: var(--aot-color-text-secondary, #888888);
   --gray-hard: #616161;
   --text-tertiary: var(--aot-color-text-tertiary);
-  --modal-focus-ring: rgba(0, 123, 255, 0.1);
+  /* 포커스 링(테두리 바깥의 옅은 번짐). 브랜드 딥그린의 알파판이다.
+     예전 이름은 `--modal-focus-ring`, 값은 부트스트랩 파랑
+     `rgba(0,123,255,0.1)` 이었다 — 팔레트에 없는 색이 모달·설정·공지
+     입력칸에 실제로 나왔다. 다크는 custom-dark.css 가 밝은 알파로 뒤집는다
+     (딥그린 알파는 어두운 바탕에서 보이지 않는다). 2026-09-07 */
+  --aot-focus-ring: rgba(19, 38, 27, 0.12);
   --camera-preview-bg: #1a1a1a;
 
   /* Geometry (legacy aliases) */
@@ -531,8 +546,8 @@
   --color-zone-mode: #28a745;
   --color-facility-mode: #82898f;
   --text-facility-mode: #5a6268;
-  --color-equipment-mode: #007bff;
-  --color-equipment-mode-hover: #0056b3;
+  --color-equipment-mode: var(--aot-color-info);
+  --color-equipment-mode-hover: var(--aot-color-info-hover);
   --color-device-mode: #995aff;
   --bg-equipment-tint: #eef6ff;
   --bg-equipment-tint-hover: #f0f7ff;

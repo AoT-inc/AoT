@@ -415,7 +415,7 @@
 
 .aot-color-hex:focus {
     border-color: var(--aot-input-focus-border);
-    box-shadow: 0 0 0 0.15rem var(--modal-focus-ring);
+    box-shadow: 0 0 0 0.15rem var(--aot-focus-ring);
     outline: none;
 }
 
@@ -565,7 +565,7 @@
 .aot-color-popover-hex-input:focus {
     outline: none;
     border-color: var(--aot-input-focus-border, #F2D524);
-    box-shadow: 0 0 0 0.15rem var(--modal-focus-ring, rgba(0,123,255,0.1));
+    box-shadow: 0 0 0 0.15rem var(--aot-focus-ring, rgba(19,38,27,0.12));
 }
 
 /* ============================================================

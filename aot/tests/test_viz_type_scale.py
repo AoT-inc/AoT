@@ -211,21 +211,46 @@ class TestThePageBaseIsOnTheLadder(unittest.TestCase):
                                   '모든 글자가 사다리 밖에 앉는다')
         self.assertEqual(got.group(1), '--aot-font-size-sm')
 
-    def test_the_theme_link_carries_a_manual_version(self):
-        """⚠ 테마는 **리터럴 참조**다(`{{ effective_theme }}`) — `url_for` 를
-        지나지 않아 내용 해시가 안 붙는다. 그래서 내용을 고치면 `?v=` 를
-        **손으로 올려야** 한다.
+    def test_the_theme_link_is_content_hashed_not_hand_versioned(self):
+        """테마·테마변형 CSS 링크는 `url_for` 를 지나야 한다.
 
-        이번에 그것을 잊고 "왜 안 바뀌지" 를 한 번 겪었다. 검사가 값을 강제할
-        수는 없지만(무엇으로 올릴지는 사람이 정한다) **있는지**는 본다.
+        `app.py` 의 `_static_cache_bust` 가 `url_for('static', ...)` 에 파일
+        내용 해시를 `?v=` 로 붙인다. **다만 `v` 를 명시하면 그 자동 버전이
+        꺼진다**("명시 지정은 존중한다").
+
+        예전에는 이 자리가 리터럴 참조(`{{ effective_theme }}?v=20260827a`)
+        여서, 검사도 "손으로 적은 버전이 **있는지**" 만 봤다. 그 방식은 한 번
+        더 실패했다 — 2026-09-07 에 테마 CSS 를 고치고 로컬 서버에 올렸는데
+        화면이 그대로였고, 브라우저가 받은 파일에는 지운 `!important` 가 아직
+        들어 있었다. 사람이 올려야 하는 값은 사람이 잊는다.
+
+        그래서 자리를 `url_for` 로 돌렸다(테마는 `/static/...` 경로라 앞자락을
+        떼어 태운다). 이제 검사는 **손으로 적은 `?v=` 가 없는지**를 본다 —
+        하나라도 있으면 그 파일만 자동 해시가 꺼진다.
         """
         base = os.path.join(_ROOT, 'aot_flask', 'templates')
+        # 정적 파일만 본다. `/custom.css` (앞에 `/static/` 이 없다)는 사용자
+        # 색을 그때그때 만드는 **라우트**라 내용 해시를 붙일 파일이 없고,
+        # 손으로 준 버전(`custom_css_version`)이 맞다.
+        watched = ('/static/css/custom-dark.css', '/static/css/custom-light.css',
+                   '/static/css/custom.css')
         for name in ('layout_default.html', 'layout.html'):
             with open(os.path.join(base, name), encoding='utf-8') as fh:
                 src = fh.read()
-            self.assertRegex(src, r'\{\{\s*effective_theme\s*\}\}\?v=',
-                             '%s: 테마 링크에 버전이 없다 — 고쳐도 브라우저가 '
-                             '옛 테마를 계속 쓴다' % name)
+
+            self.assertRegex(
+                src, r"url_for\('static',\s*filename=effective_theme",
+                '%s: 테마 링크가 url_for 를 지나지 않는다 — 내용 해시가 붙지 '
+                '않아 고쳐도 브라우저가 옛 테마를 쓴다' % name)
+            self.assertNotRegex(
+                src, r'\{\{\s*effective_theme\s*\}\}\?v=',
+                '%s: 테마 링크에 손으로 적은 ?v= 가 있다 — 자동 해시가 꺼진다' % name)
+
+            for css in watched:
+                self.assertNotRegex(
+                    src, re.escape(css) + r'\?v=',
+                    '%s: %s 에 손으로 적은 ?v= 가 있다 — url_for 로 태울 것 '
+                    '(파일을 고쳐도 브라우저가 옛것을 쓴다)' % (name, css))
 
 
 class TestCommandRowsLookLikeEveryOtherRow(unittest.TestCase):

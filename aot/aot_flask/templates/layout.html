@@ -104,15 +104,26 @@ IMPORTANT: This is the SOURCE TEMPLATE file.
   {% set effective_theme = current_user.theme if current_user.is_authenticated and current_user.theme else
   '/static/css/bootstrap-4-themes/aot.css' %}
 
+  {# ⚠ 아래 네 줄에 `?v=` 를 **손으로 적지 말 것.** `url_for('static', ...)` 는
+     파일 내용 해시를 붙여 주는데(app.py `_static_cache_bust`), `v` 를 명시하면
+     그 자동 버전이 꺼진다("명시 지정은 존중한다"). 예전에는 여기 셋이 각각
+     `?v=20260702a` · `?v=20260827a` 로 못 박혀 있어서, **파일을 고쳐도 이미
+     방문한 브라우저는 옛 CSS 를 계속 썼다** — 2026-09-07 에 대시보드 여백을
+     고치고도 화면이 안 바뀌어 그 자리에서 잡혔다. 테마는 사용자가 고른
+     `/static/...` 경로라 앞자락을 떼어 같은 길로 태운다. #}
   {% if effective_theme in dark_themes %}
-  <link href="/static/css/custom-dark.css?v=20260702a" rel="stylesheet">
+  <link href="{{ url_for('static', filename='css/custom-dark.css') }}" rel="stylesheet">
   {% else %}
-  <link href="/static/css/custom-light.css?v=20260702a" rel="stylesheet">
+  <link href="{{ url_for('static', filename='css/custom-light.css') }}" rel="stylesheet">
   {% endif %}
 
-  <link href="{{ effective_theme }}?v=20260827a" rel="stylesheet">
+  {% if effective_theme.startswith('/static/') %}
+  <link href="{{ url_for('static', filename=effective_theme[8:]) }}" rel="stylesheet">
+  {% else %}
+  <link href="{{ effective_theme }}" rel="stylesheet">
+  {% endif %}
 
-  <link href="/static/css/custom.css?v=20260603" rel="stylesheet">
+  <link href="{{ url_for('static', filename='css/custom.css') }}" rel="stylesheet">
   <link href="{{ url_for('static', filename='css/aot-base.css') }}" rel="stylesheet">
   <link href="{{ url_for('static', filename='css/widget/aot-widget-typography.css') }}" rel="stylesheet">
   <link href="{{ url_for('static', filename='css/components/aot-base-ui.css') }}" rel="stylesheet">

@@ -25,7 +25,7 @@
   background-color: rgba(52, 152, 219, 0.2) !important;
   border-color: #3498db !important;
   border-style: dashed !important;
-  color: var(--aot-color-info, #2980b9) !important;
+  color: var(--aot-color-info, #029ACF) !important;
 }
 
 .status-completed {

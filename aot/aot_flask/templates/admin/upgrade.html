@@ -32,9 +32,9 @@
     }
     if (down_for_sec < 180) {
       const waited = Math.floor(down_for_sec / 60);
-      // Base .aot-notice-box (no modifier) already renders in the warning
-      // tint -- there is no separate "-warning" modifier class.
-      return `<div class="aot-notice-box" style="white-space: normal;">
+      // Warning tone is explicit (aot-notice-box-warning). Until 2026-09 the
+      // base class alone rendered warning-toned and no "-warning" existed.
+      return `<div class="aot-notice-box aot-notice-box-warning" style="white-space: normal;">
         <strong>{{_('Still reconnecting')}}</strong> (${waited} {{_('min so far')}}).
         {{_('A normal restart is usually done within a minute. This may mean the update failed and an automatic rollback is in progress.')}}
       </div>`;
@@ -65,7 +65,7 @@
         );
 
         if (isHTML && hasLoginContent) {
-           document.getElementById("upgrade_status").innerHTML = `<div class="aot-notice-box text-center">
+           document.getElementById("upgrade_status").innerHTML = `<div class="aot-notice-box aot-notice-box-warning text-center">
              <strong>{{_('Upgrade completed! System is restarting...')}}</strong><br>
              {{_('The page will automatically reload in a moment.')}}
            </div>`;
@@ -155,7 +155,7 @@
 
     {% if upgrade == 1 %}
 
-    <div class="aot-notice-box">
+    <div class="aot-notice-box aot-notice-box-warning">
       <p><strong>{{_('AoT is currently updating.')}}</strong></p>
       <p>{{_('The containers are being recreated on the new image. The web interface may briefly become unreachable; this page reconnects on its own.')}}</p>
       <p>{{_('A backup is taken before the image is swapped. If the new version does not come up, the previous one is restored automatically.')}}</p>
@@ -194,7 +194,7 @@
 
     {% elif upgrade_available %}
 
-    <div class="aot-notice-box">
+    <div class="aot-notice-box aot-notice-box-warning">
       <p><strong>{{_('A new version is available and its image has been published.')}}</strong></p>
       <p>
         <a href="https://github.com/AoT-inc/AoT/blob/main/CHANGELOG.md" target="_blank">{{_('Changelog')}}</a> {{_('contains all changes.')}}
@@ -240,7 +240,7 @@
        day, when the scheduled time arrives -- not when this form is saved. So
        a schedule set before the updater exists just starts working once it
        does, instead of being unreachable until then. #}
-    <div class="aot-notice-box aot-notice-box-plain">
+    <div class="aot-notice-box">
       <form method="post" action="/admin/upgrade">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
         <input type="hidden" name="form-name" value="auto_update">
@@ -269,7 +269,7 @@
 
     {% if not updater_present %}
 
-    <div class="aot-notice-box">
+    <div class="aot-notice-box aot-notice-box-warning">
       <p><strong>{{_('This is a Docker deployment, so the update is applied on the host.')}}</strong></p>
       <p>{{_('The one-click update button requires the optional updater service, which is not running on this system.')}}</p>
       <p>{{_('To update, run the following on the host in the directory holding the compose file, after setting the desired version in AOT_IMAGE_TAG:')}}</p>
@@ -293,7 +293,7 @@ docker compose -f docker/docker-compose.prod.yml up -d</pre>
 
     {% elif upgrade == 1 %}
 
-    <div class="aot-notice-box">
+    <div class="aot-notice-box aot-notice-box-warning">
       <p><strong>{{_('AoT is currently upgrading.')}}</strong></p>
       <p>{{_('Upgrades typically take a few minutes, but can take longer in some cases. Please wait until the upgrade is complete.')}}</p>
       <p>{{_('Once the upgrade is complete and the system restarts, the daemon status indicator (top-left logo) will return to green.')}}</p>

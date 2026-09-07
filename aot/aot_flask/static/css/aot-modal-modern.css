@@ -141,7 +141,7 @@ a.aot-modal-section-title-collapsible + .collapse + .aot-modal-container:not(:ha
     color: var(--aot-text-main);
     background: none;
     padding: 7px 0 7px 0; /* 상하 대칭 패딩 */
-    border-bottom: 1px solid var(--gray);
+    border-bottom: 1px solid var(--aot-border-neutral);
     margin-top: 0.75rem;
     margin-bottom: 0.75rem; /* 상하 대칭 마진 */
     display: flex;
@@ -151,7 +151,7 @@ a.aot-modal-section-title-collapsible + .collapse + .aot-modal-container:not(:ha
 
 .aot-modal-container {
     background-color: var(--aot-input-bg);
-    border: 1px solid var(--gray);
+    border: 1px solid var(--aot-border-neutral);
     border-radius: var(--aot-radius-lg) !important;
     padding: 0 16px !important; /* 좌우 여백을 16px로 충분히 확보하여 답답함 해소 */
     margin-bottom: 1.2rem;
@@ -205,11 +205,15 @@ a.aot-modal-section-title-collapsible + .collapse + .aot-modal-container:not(:ha
     justify-content: space-between;
     padding: 0.4rem 0 !important;
     min-height: 2.4rem;
-    border-bottom: 1px solid var(--gray); /* 통일된 경계선 */
+    border-bottom: 1px solid var(--aot-border-neutral); /* 통일된 경계선 */
     /* gap 을 변수로 둔다 — 아래 .aot-modal-option-label 의 max-width 계산이
        이 값을 그대로 읽어야 라벨 상한과 실제 간격이 어긋나지 않는다.
        예전엔 상한에 데스크탑 gap(15px) 기준 상수가 박혀 있어, 모바일(gap 8px)
        에서 22px 가량이 space-between 사이 빈 공간으로 버려졌다. */
+    /* @scoped — `:root` 가 아니라 **선택자에 묶인 의도적 국소 오버라이드**다.
+       CSS 커스텀 속성의 상속을 이용한 정상 설계라 `!important` 없이 특이도만으로
+       동작한다. 파일 단위로만 세면 "정의가 여러 벌" 로 오인한다.
+       정본 설명: docs/design/color-system.md */
     --aot-row-gap: 15px;
     gap: var(--aot-row-gap); /* Increased for better touch separation */
 }
@@ -269,6 +273,7 @@ a.aot-modal-section-title-collapsible + .collapse + .aot-modal-container:not(:ha
 .aot-dash-scope-groups,
 .aot-map-scope-groups,
 .aot-fac-scope-groups {
+    /* @scoped */
     --aot-common-control-width: 60px;
 }
 
@@ -277,7 +282,7 @@ a.aot-modal-section-title-collapsible + .collapse + .aot-modal-container:not(:ha
 .aot-modern-select {
     box-sizing: border-box;
     border-radius: var(--aot-btn-pill-radius) !important;
-    border: 1px solid var(--gray) !important;
+    border: 1px solid var(--aot-border-neutral) !important;
     padding: 0 1rem !important;
     font-size: var(--aot-font-size-sm) !important;
     background-color: var(--aot-input-bg) !important;
@@ -312,7 +317,7 @@ a.aot-modal-section-title-collapsible + .collapse + .aot-modal-container:not(:ha
     height: 32px !important;
     width: 100% !important;
     padding: 0;
-    border: 1px solid var(--gray) !important;
+    border: 1px solid var(--aot-border-neutral) !important;
     border-radius: var(--aot-radius-lg) !important;
     cursor: pointer;
     overflow: hidden;
@@ -402,7 +407,7 @@ a.aot-modal-section-title-collapsible + .collapse + .aot-modal-container:not(:ha
 
 .aot-modern-input:focus {
     border-color: var(--aot-input-focus-border) !important;
-    box-shadow: 0 0 0 0.15rem var(--modal-focus-ring) !important;
+    box-shadow: 0 0 0 0.15rem var(--aot-focus-ring) !important;
 }
 
 /* Textarea: multi-line code editor. No !important height here — the height comes from
@@ -483,7 +488,7 @@ textarea.aot-modern-input.aot-input-prose {
     height: 32px;
     border-radius: var(--aot-btn-pill-radius);
     background: var(--aot-input-bg);
-    border: 1px solid var(--gray) !important;
+    border: 1px solid var(--aot-border-neutral) !important;
     color: var(--aot-text-main);
     font-size: var(--aot-font-size-sm);
     text-align: center;
@@ -853,6 +858,7 @@ textarea.aot-modern-input.aot-input-prose {
 /* SECTION 6: RESPONSIVE ADAPTATION */
 @media (max-width: 768px) {
     .aot-modal-option-row {
+        /* @scoped */
         --aot-row-gap: 8px; /* 라벨 max-width 계산도 이 값을 읽는다 */
         flex-wrap: nowrap !important; /* 가로 레이아웃 최대한 유지 */
         height: auto !important;
@@ -921,6 +927,7 @@ textarea.aot-modern-input.aot-input-prose {
        (`:only-child` 로 쓰면 hidden input 형제 하나에 규칙이 조용히 빠지거나,
        반대로 넓은 조합 행까지 좁혀 버린다). */
     .aot-modal-option-row:has(> .aot-modal-option-control > .btn-toggle):not(:has(> .aot-modal-option-control > * + *)) {
+        /* @scoped */
         --aot-common-control-width: var(--aot-ctrl-w-switch);
     }
     /* 폭이 어긋나더라도 스위치가 눌리는 일은 없게 — 눌리면 thumb 이 슬라이더
@@ -929,9 +936,11 @@ textarea.aot-modern-input.aot-input-prose {
         flex-shrink: 0;
     }
     .aot-modal-option-row:has(> .aot-modal-option-control > input[type="color"]):not(:has(> .aot-modal-option-control > * + *)) {
+        /* @scoped */
         --aot-common-control-width: var(--aot-ctrl-w-color);
     }
     .aot-modal-option-row:has(> .aot-modal-option-control > input[type="number"]):not(:has(> .aot-modal-option-control > * + *)) {
+        /* @scoped */
         --aot-common-control-width: var(--aot-ctrl-w-num);
     }
 
@@ -978,6 +987,7 @@ textarea.aot-modern-input.aot-input-prose {
     @media (max-width: 360px) {
         .aot-modal-option-row {
             flex-wrap: nowrap !important;
+            /* @scoped */
             --aot-row-gap: 6px;
         }
         .aot-modal-option-label {
@@ -1186,7 +1196,7 @@ textarea.aot-modern-input.aot-input-prose {
     display: flex;
     align-items: center;
     justify-content: center;
-    border: 1px solid var(--gray);
+    border: 1px solid var(--aot-border-neutral);
     background: var(--aot-input-bg);
     color: var(--aot-text-main);
     transition: all 0.2s;
@@ -1670,7 +1680,7 @@ label.aot-modal-option-label[title]:not([title=""]) {
 
 label.aot-modal-option-label[title]:not([title=""]):hover .aot-option-tip {
     opacity: 1;
-    color: var(--aot-color-info, #007bff);
+    color: var(--aot-color-info, #029ACF);
 }
 
 /* ── Aerial Photo overlay opacity slider ──────────────────────────────────
@@ -2074,7 +2084,7 @@ body { transition: padding-right 0.4s cubic-bezier(0.075, 0.82, 0.165, 1); }
    ============================================================ */
 .aot-modal-detail-item {
   padding: 0.5rem 0;
-  border-bottom: 1px solid var(--gray);
+  border-bottom: 1px solid var(--aot-border-neutral);
 }
 .aot-modal-detail-item:last-child {
   border-bottom: none;
@@ -2135,7 +2145,7 @@ body { transition: padding-right 0.4s cubic-bezier(0.075, 0.82, 0.165, 1); }
 .aot-modal-detail-field input[type="color"] {
   height: 32px !important;
   padding: 0 !important;
-  border: 1px solid var(--gray) !important;
+  border: 1px solid var(--aot-border-neutral) !important;
   border-radius: var(--aot-radius-lg) !important;
   cursor: pointer;
   overflow: hidden !important;
@@ -2206,30 +2216,41 @@ body { transition: padding-right 0.4s cubic-bezier(0.075, 0.82, 0.165, 1); }
 .aot-status-badge.aot-status-fail    { background: var(--aot-tint-danger-bg);  color: var(--aot-tint-danger-fg); }
 .aot-status-badge.aot-status-running { background: var(--aot-tint-info-bg);    color: var(--aot-tint-info-fg); }
 
-/* ── Notice box — 페이지 상단 안내/경고/성공 박스 ─────────── */
+/* ── Notice box — 페이지 상단 안내 상자 ────────────────────
+   **기본형에는 톤이 없다.** 2026-09-07 이전에는 기본형이 곧 경고 톤이라
+   `-warning` 변형이 아예 없었고, 변형을 안 붙이면 조용히 노란 경고 상자가
+   나왔다(`admin/upgrade.html` 에 "modifier 없이도 경고 톤으로 나온다" 는
+   주석이 남아 있었을 정도다). 톤은 네 개가 대칭이고, 톤을 원하면 붙인다:
+
+       .aot-notice-box                      톤 없음 — 안내문이 아니라 폼을 감쌀 때
+       .aot-notice-box.aot-notice-box-success|warning|danger|info
+
+   테두리색은 톤마다 `--aot-tint-*-border` 를 쓴다. settings/custom_ui 에서
+   사용자가 바꾸는 값이라, 중립 테두리 하나로 묶으면 그 연동이 끊긴다
+   (`test_notice_box_theme_integration.py` 가 계약으로 못 박아 두었다).
+   기본형만 예외로 중립 테두리다 — 톤이 없으니 시맨틱 테두리도 없다.
+   ─────────────────────────────────────────────────────────── */
 .aot-notice-box {
-    background: var(--aot-tint-warning-bg);
-    color: var(--aot-tint-warning-fg);
-    border: 1px solid var(--aot-tint-warning-border);
+    background: transparent;
+    color: inherit;
+    border: 1px solid var(--aot-border-neutral);
     border-radius: var(--aot-radius-sm);
     padding: 20px;
     margin-bottom: 20px;
     line-height: 1.6;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 .aot-notice-box p { margin-bottom: 10px; }
 .aot-notice-box p:last-child { margin-bottom: 0; }
+/* 톤 네 개 — 배경·글자·테두리 세 값이 한 벌로 움직이고, 톤이 있는 상자만
+   살짝 띄운다(기본형은 폼을 감싸는 테두리라 그림자가 없다). */
+.aot-notice-box.aot-notice-box-success,
+.aot-notice-box.aot-notice-box-warning,
+.aot-notice-box.aot-notice-box-danger,
+.aot-notice-box.aot-notice-box-info { box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05); }
 .aot-notice-box.aot-notice-box-success { background: var(--aot-tint-success-bg); color: var(--aot-tint-success-fg); border-color: var(--aot-tint-success-border); }
+.aot-notice-box.aot-notice-box-warning { background: var(--aot-tint-warning-bg); color: var(--aot-tint-warning-fg); border-color: var(--aot-tint-warning-border); }
 .aot-notice-box.aot-notice-box-danger  { background: var(--aot-tint-danger-bg);  color: var(--aot-tint-danger-fg);  border-color: var(--aot-tint-danger-border); }
 .aot-notice-box.aot-notice-box-info    { background: var(--aot-tint-info-bg);    color: var(--aot-tint-info-fg);    border-color: var(--aot-tint-info-border); }
-/* 색 없이 테두리만 — 안내문이 아니라 설정 폼을 감쌀 때. 톤이 없으니 테두리도
-   시맨틱 톤이 아니라 일반 중립 테두리(--aot-border-neutral, custom_ui 밖) */
-.aot-notice-box.aot-notice-box-plain {
-    background: transparent;
-    color: inherit;
-    border-color: var(--aot-border-neutral);
-    box-shadow: none;
-}
 
 /* ── Tag — 읽기 전용 꼬리표(개수, 분류, 값 나열) ──────────── */
 .aot-tag {
