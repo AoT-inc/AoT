@@ -723,6 +723,18 @@
  * (`buildZonePlotsHtml`·`buildFacilityPlotsHtml` 이 다는 `.aot-ov-plot-link`). */
 .aot-ov-row.aot-ov-plot-link { padding: 12px 0; }
 
+/* 값이 두 층인 줄 — [자원]의 장치별 "오늘 / 최근 7일" 이 그것이다.
+ *
+ * `.aot-ov-row` 는 `space-between` 이라, 값이 길어 라벨 옆까지 차면 나눌
+ * 여백이 사라져 **라벨과 값이 붙는다**(모바일 375px 에서 실측:
+ * "v332오늘 20 초 · 70.8 L"). 라벨은 줄이지 않고, 값 칸이 남는 폭을 갖고
+ * 오른쪽으로 붙는다.
+ *
+ * ⚠ `.aot-ov-row` 자체에 gap 을 주지 않는다 — 이 파일의 모든 줄이 걸려
+ *   숫자 한 줄짜리 카드의 간격까지 함께 바뀐다. */
+.aot-ov-row--stack > span:first-child { flex: 0 0 auto; padding-right: 12px; }
+.aot-ov-row--stack > span:last-child  { flex: 1 1 auto; text-align: right; }
+
 /* Gate state: warning-like color */
 /* 안전 게이트 — `.aot-ov-strain` 과 같은 규칙이다(2026-08-26).
    모달 안에서는 색이 아니라 **굵기**로 눈에 걸리게 한다. */

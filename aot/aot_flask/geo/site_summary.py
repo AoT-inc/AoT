@@ -236,6 +236,26 @@ def cached_plot_contents(plot_uuid, build, force=False):
                         plot_uuid, _ZONE_CONTENTS_TTL_S, build, force)
 
 
+_PLOT_RESOURCE_USAGE_CACHE = {}
+_PLOT_RESOURCE_USAGE_LOCKS = {}
+# 가동시간은 밸브가 도는 동안 계속 자란다 — 10분(주간 계열)으로 두면 방금 준
+# 물이 화면에 한참 안 나타나 "안 셌다" 로 읽힌다. 반대로 30초(모달 응답)면
+# 창을 다시 열 때마다 InfluxDB 를 훑는다. 그 사이에 둔다.
+_PLOT_RESOURCE_USAGE_TTL_S = 120
+
+
+def cached_plot_resource_usage(key, build, force=False):
+    """구획 자원(관수)의 가동시간·물량 캐시 — 2분.
+
+    ⚠ **키에 창(일수)을 담을 것.** 같은 구획이라도 창이 다르면 다른 답이다 —
+    `cached_plot_env_week` 가 그것을 uuid 하나로 두었다가 "창을 바꿔 불러도 앞의
+    것이 나오는" 상태였다(에러 없이). 키를 만드는 것은 부르는 쪽이다.
+    """
+    return cached_build(_PLOT_RESOURCE_USAGE_CACHE,
+                        _PLOT_RESOURCE_USAGE_LOCKS,
+                        key, _PLOT_RESOURCE_USAGE_TTL_S, build, force)
+
+
 def invalidate_plot_contents(plot_uuid=None):
     """구획이 바뀐 직후(저장·종료·삭제) 부른다.
 
@@ -250,9 +270,16 @@ def invalidate_plot_contents(plot_uuid=None):
             # 주간 계열도 함께 버린다 — 프로그램·단계가 바뀌면 목표대가
             # 달라지므로 10분을 기다리면 옛 목표 위에 새 값이 그려진다.
             _PLOT_ENV_WEEK_CACHE.clear()
+            _PLOT_RESOURCE_USAGE_CACHE.clear()
         else:
             _PLANTING_CONTENTS_CACHE.pop(plot_uuid, None)
             _PLOT_ENV_WEEK_CACHE.pop(plot_uuid, None)
+            # 키가 `uuid|d7` 꼴이라 uuid 로 지울 수 없다 — 접두어로 고른다.
+            # 프로그램·단계가 바뀌면 자원 목록 자체가 달라지므로 남겨 두면
+            # 없어진 역할의 숫자가 2분 더 보인다.
+            for _k in [k for k in _PLOT_RESOURCE_USAGE_CACHE
+                       if str(k).split('|')[0] == plot_uuid]:
+                _PLOT_RESOURCE_USAGE_CACHE.pop(_k, None)
 
 
 def invalidate_zone_contents_all():

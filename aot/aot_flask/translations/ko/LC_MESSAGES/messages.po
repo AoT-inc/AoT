@@ -34181,3 +34181,27 @@ msgstr "미리 고른 색"
 #: aot/widgets/AoT_graph.py
 msgid "Text Size"
 msgstr "글자 크기"
+
+#: aot/aot_flask/static/js/common/aot-map-popup.js
+msgid "Last 7 days"
+msgstr "최근 7일"
+
+#: aot/aot_flask/static/js/common/aot-map-popup.js
+msgid "No run recorded in the last 7 days"
+msgstr "최근 7일 가동 기록 없음"
+
+#: aot/aot_flask/static/js/common/aot-map-popup.js
+msgid "No flow rate is known for these devices, so water is not estimated."
+msgstr "이 장치들의 유량을 몰라 물량을 계산하지 않습니다."
+
+#: aot/aot_flask/static/js/common/aot-map-popup.js
+msgid "Some of these devices have no known flow rate, so their water is left out."
+msgstr "유량을 모르는 장치가 있어 그만큼은 물량에서 빠졌습니다."
+
+#: aot/aot_flask/static/js/common/aot-map-popup.js
+msgid "Water is estimated from designed flow and run time, not measured by a flow meter."
+msgstr "물량은 설계 유량과 가동시간으로 낸 추정치이며 유량계 실측이 아닙니다."
+
+#: aot/aot_flask/static/js/common/aot-map-popup.js
+msgid "Only the share belonging to this plot is counted: %(pct)s"
+msgstr "이 구획의 몫만 셉니다: %(pct)s"

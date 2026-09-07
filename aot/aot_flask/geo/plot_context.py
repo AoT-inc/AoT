@@ -758,6 +758,20 @@ _ROLE_FITTING_KINDS = {
 }
 
 
+def resource_fitting_kinds():
+    """자원 역할이 쓰는 **피팅 종류 전부**(합집합) → set.
+
+    `_ROLE_FITTING_KINDS` 가 정본이고 여기서는 읽기만 한다. 이 목록을 밖에서
+    다시 적으면(`irrigation_status._IRRIGATION_FITTING_KINDS` 가 그 모양이다)
+    역할 어휘가 늘 때 한쪽만 늘어나고, 그 어긋남은 "어떤 화면에서는 그 밸브가
+    안 보인다" 로 나타난다.
+    """
+    kinds = set()
+    for v in _ROLE_FITTING_KINDS.values():
+        kinds.update(v)
+    return kinds
+
+
 def declared_roles(stage, program_row=None):
     """이 단계가 요구하는 자원 역할 → `[{role, source}]` (P6).
 
@@ -820,16 +834,36 @@ def functions_for_role(role, plot):
     ⚠ 반환값을 저장하지 말 것 — `sensors_for_plot` 과 같은 이유다(파생값을 컬럼에
     쓰면 구획이 끝나도 옛 값이 남는다).
     """
+    outputs, reason = outputs_for_role(role, plot)
+    if reason != 'ok':
+        return [], reason
+    return _functions_driving(outputs), 'ok'
+
+
+def outputs_for_role(role, plot):
+    """그 역할을 이 자리에서 맡는 **출력** → `(set, reason)`.
+
+    `functions_for_role` 이 함수를 되짚기 **직전에** 갖고 있던 것이 이 집합이다.
+    가동시간·물량은 함수가 아니라 출력에 붙는 사실이라(밸브가 몇 초 열렸나)
+    같은 판정을 두 번 하지 않도록 여기서 한 번만 푼다.
+
+    ⚠ **두 번째 판정자를 만들지 말 것.** "이 자리에서 무엇이 관수인가" 는
+      이 함수 하나가 답한다 — 갈라지면 자원 칸이 말하는 장치와 가동시간이
+      가리키는 장치가 서로 다른 것이 되는데, 그 어긋남은 에러가 아니라
+      **그럴듯한 숫자**로 나타난다.
+
+    `reason` 어휘는 `functions_for_role` 과 같다.
+    """
     kinds = _ROLE_FITTING_KINDS.get(role)
     if not kinds:
-        return [], 'no-vocabulary'
+        return set(), 'no-vocabulary'
 
     facility_uuid = getattr(plot, 'facility_uuid', None) if plot else None
     if not facility_uuid:
         # 노지 구획. 출력 마커를 기하로 찾는 길은 있으나 "이 출력이 관수다" 를
         # 말해 주는 어휘가 노지에는 아직 없다 — 시설의 fitting 종류에 해당하는
         # 것이 없다. 없는 것을 추측해 물을 틀지 않는다.
-        return [], 'no-facility'
+        return set(), 'no-facility'
 
     from .facility_bays import build_fitting_bay_map, compute_bay_slices
     from .facility_io import FacilityManager
@@ -837,13 +871,13 @@ def functions_for_role(role, plot):
     # `_to_dict` 를 지나야 fitting 의 장치가 바인딩 기준으로 해소된다.
     fac, err = FacilityManager.get_facility(facility_uuid)
     if err or not fac:
-        return [], 'not-placed'
+        return set(), 'not-placed'
 
     fittings = [f for f in (fac.get('fittings') or [])
                 if isinstance(f, dict) and f.get('kind') in kinds
                 and f.get('actuator_id')]
     if not fittings:
-        return [], 'not-placed'
+        return set(), 'not-placed'
 
     bay_id = getattr(plot, 'bay_id', None)
     if bay_id:
@@ -856,10 +890,9 @@ def functions_for_role(role, plot):
         # 물이 나오는 쪽이라 폴백이 조용히 틀리면 안 된다.
         fittings = scoped
         if not fittings:
-            return [], 'not-placed'
+            return set(), 'not-placed'
 
-    outputs = {f['actuator_id'] for f in fittings}
-    return _functions_driving(outputs), 'ok'
+    return {f['actuator_id'] for f in fittings}, 'ok'
 
 
 def _functions_driving(output_uuids):

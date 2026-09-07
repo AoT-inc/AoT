@@ -64,6 +64,7 @@ Clicking a Zone or Site shape opens a popup listing every sensor and output devi
 
 Plots drawn in the design tool's [Plot mode](design-tool.md#plot) appear on the map; clicking one opens its operational view.
 
+- **[Status] > Resources** — for each irrigation device that reaches this plot, how long it ran **today** and over the **last 7 days**, and how much water that is (estimated). The volume is designed flow (a facility's piping layout, or the emitters drawn on an outdoor map) x run time x the plot's share, so it is **not a flow-meter reading**. That it is an estimate, what the plot's share is, and whether any device was left out for want of a flow rate are not tagged onto each figure — a single note **below the table** says all three. A device whose flow rate is unknown shows run time only. For the same figures broken down by period, use the [Journal](journal.md).
 - **[Status]** — subject and variety, days elapsed, start date, plus a live **Environment** card with day-of-target readings including **GDD** (accumulated heat since the season started, [see Journals](journal.md#gdd)) and **DLI** (today's light vs. target, [see Journals](journal.md#dli)) where the program and sensors support them. If either can't be calculated, the card says why (no program, no base temperature, not enough measured days) instead of just showing nothing.
 - **[Overview] > Program** — current and next stage, accumulated heat, stage targets, and the actual state of the declared resources. Confirming, logging and undoing stage changes happens here too. See [Management Programs](programs.md#stage-events).
 - **[Settings] > Stage schedule** — where the real schedule is edited. Programme lengths are only a reference, so stages can be **postponed or pulled forward**, and this one plot can be set to advance automatically. See [Editing the schedule](programs.md#stage-schedule).
@@ -77,8 +78,8 @@ Plots drawn in the design tool's [Plot mode](design-tool.md#plot) appear on the 
 - **Sensors** — sensors inside the plot, falling back to the parent zone's sensors if there are none.
 - **Notes** — the same shared notes block as other shapes.
 
-!!! note "Water volume is not calculated"
-    Water is physically shared across overlapping areas, so summing per-crop requirements produces a wrong number. The widget shows the inputs and leaves the judgement to you.
+!!! note "Per-crop requirements are not apportioned"
+    Water is physically shared across overlapping areas, so summing per-crop **requirements** produces a wrong number. The widget shows the inputs and leaves the judgement to you. (How much water actually went out is a different question, answered under **[Status] > Resources** above.)
 
 Plot labels (chips) appear from **zoom 16** — the map already carries many labels, so always-on labels would collide. Toggle them from the layer control or the **Show Plots** setting; both share the same value.
 

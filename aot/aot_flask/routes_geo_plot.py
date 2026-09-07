@@ -597,6 +597,46 @@ def _as_day(value):
         return None
 
 
+@blueprint.route('/api/geo/plot/<string:plot_uuid>/resource_usage',
+                 methods=['GET'])
+@login_required
+def api_plot_resource_usage(plot_uuid):
+    """구획 자원(관수)의 **가동시간·물량** — [현황] 탭 자원 칸이 채운다.
+
+    ```
+    ?days=7            창 길이(1~30). 기본 7.
+    ```
+
+    ⚠ **`/api/geo/plot/<uuid>`(상세)에 얹지 않는다.** 그 응답은 목록
+    (`/api/geo/plots`)과 **같은 조립기**(`plot_context.to_dict`)를 지난다 —
+    거기 InfluxDB 조회를 넣으면 구획 수십 개짜리 지도의 목록 한 번이 조회
+    수십 건이 된다. 그래서 [현황]의 사진·이력과 같은 방식으로 **자리만 잡고
+    따로 채운다**.
+
+    ⚠ **`/contents` 에도 얹지 않는다.** 그쪽은 [환경·제어] 전용이라 [현황]만
+    열고 닫는 사람에게는 오지 않는다(`_plot_schedule` 의 같은 경고 참조).
+    """
+    from aot.aot_flask.geo import plot_resource_usage
+    from aot.aot_flask.geo.site_summary import cached_plot_resource_usage
+
+    row = GeoPlot.query.filter(GeoPlot.unique_id == plot_uuid).first()
+    if row is None:
+        return jsonify({'ok': False, 'error': 'plot not found'}), 404
+
+    try:
+        # 상한 30일 — 그 위는 일지의 몫이다(이 칸은 줄 두 개다).
+        days = max(1, min(30, int(request.args.get('days')
+                                  or plot_resource_usage.WINDOW_DAYS)))
+    except (TypeError, ValueError):
+        days = plot_resource_usage.WINDOW_DAYS
+
+    # 키에 창을 담는다 — 담지 않으면 창을 바꿔 불러도 앞의 답이 나온다.
+    payload = cached_plot_resource_usage(
+        '%s|d%s' % (plot_uuid, days),
+        lambda: plot_resource_usage.usage_for_plot(row, days=days))
+    return jsonify(dict(payload or {'days': days, 'roles': {}}, ok=True))
+
+
 @blueprint.route('/api/geo/plot/<string:plot_uuid>/env_series', methods=['GET'])
 @blueprint.route('/api/geo/plot/<string:plot_uuid>/env_week', methods=['GET'])
 @login_required
