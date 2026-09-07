@@ -485,7 +485,11 @@ def test_inline_budget_is_not_stale():
 _IMPORTANT = re.compile(r"!\s*important")
 
 _IMPORTANT_BUDGET = {
-    "aot-modal-modern.css": 222,
+    # 223: 드로어를 닫는 0.4초 동안 padding-right 를 0 으로 묶는 한 줄.
+    # 부트스트랩이 모달을 열며 body **인라인**에 넣어 둔 스크롤바 보정을 이겨야
+    # 한다 — 인라인은 선택자로는 못 이긴다. 같은 블록의 overflow 는 특이도로
+    # 이기므로 안 붙였다.
+    "aot-modal-modern.css": 223,
     "bootstrap-4-themes/aot.css": 211,
     "map/map.css": 183,
     "components/aot-base-ui.css": 139,

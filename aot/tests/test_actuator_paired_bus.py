@@ -10,6 +10,7 @@ These tests drive the real ``_Bus._run_batch`` with real ``OutputModule``
 instances (constructed in testing mode, options injected, relay calls recorded)
 rather than a re-implementation, so a regression in the scheduler is caught.
 """
+import time
 from types import SimpleNamespace
 
 import pytest
@@ -91,7 +92,10 @@ def run_batch(members, targets):
     bus = _Bus('test-bus')
     for member in members:
         bus._members[member.unique_id] = member
-    bus._requests = {member.unique_id: targets[member.unique_id]
+    # `_requests` 는 (목표, 최초 명령 시각) 이다 — 시각은 재큐가 명령보다 오래
+    # 살지 못하게 하는 근거이고, 갓 들어온 명령이므로 지금 시각으로 세운다.
+    now = time.time()
+    bus._requests = {member.unique_id: (targets[member.unique_id], now)
                      for member in members if member.unique_id in targets}
     bus._run_batch()
     return bus
@@ -334,3 +338,186 @@ def test_already_at_target_does_not_touch_the_bus():
     run_batch([member], {'w1': 50.0})
 
     assert log == [], log
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 재큐는 명령보다 오래 살면 안 된다
+# ─────────────────────────────────────────────────────────────────────────────
+# 이동이 한 배치에 못 끝나면 목표가 재큐되어 다음 배치에서 이어진다. 그것을
+# 취소하는 수단이 **새 명령 하나뿐**이라, 명령이 끊기면 옛 목표가 무한히 살아
+# 계속 실행된다.
+#
+# 실측(2026-09-07 쿠마모토): 강우 게이트가 측창을 닫으라고 한 2시간 31분 내내
+# 재큐된 옛 목표(69.8%)가 살아남아 창을 5%p 씩 열어 올렸다(최대 65%). 게이트가
+# 풀리자 곧바로 69.8% 로 돌아간 것이 그 목표가 계속 살아 있었다는 증거다.
+
+from aot.outputs.paired_actuator_bus_scheduler import (  # noqa: E402
+    REQUEUE_MAX_AGE_SEC,
+)
+
+
+def _lone_member(log=None):
+    member = make_member('win-a', 'sel-a', 'open-a', 'close-a', log or [])
+    bus = _Bus('test-bus-requeue')
+    bus._members[member.unique_id] = member
+    return bus, member
+
+
+def test_requeue_keeps_a_fresh_target():
+    bus, member = _lone_member()
+    first_ts = time.time()
+    bus._requeue([{'member': member, 'target': 60.0, 'first_ts': first_ts}])
+
+    assert bus._requests[member.unique_id] == (60.0, first_ts), (
+        '정상적인 이어달리기까지 끊으면 한 배치에 못 끝나는 이동이 영영 완료되지 않습니다')
+
+
+def test_requeue_discards_a_target_that_outlived_its_command():
+    """명령이 끊긴 채 목표만 살아 있으면 폐기하고 그 자리에 선다."""
+    bus, member = _lone_member()
+    stale = time.time() - (REQUEUE_MAX_AGE_SEC + 1.0)
+    bus._requeue([{'member': member, 'target': 69.8, 'first_ts': stale}])
+
+    assert member.unique_id not in bus._requests, (
+        '새 명령 없이 %.0f초를 넘긴 목표가 살아남았습니다 — 강우 게이트 중에 '
+        '창을 계속 열던 그 경로입니다' % REQUEUE_MAX_AGE_SEC)
+
+
+def test_requeue_inherits_the_age_so_it_actually_expires():
+    """재큐는 시각을 **물려받는다** — 매번 리셋되면 수명 제한이 무의미하다."""
+    bus, member = _lone_member()
+    first_ts = time.time() - (REQUEUE_MAX_AGE_SEC - 10.0)   # 아직 살아 있음
+
+    bus._requeue([{'member': member, 'target': 60.0, 'first_ts': first_ts}])
+    carried = bus._requests[member.unique_id][1]
+    assert carried == first_ts, '재큐가 나이를 리셋했습니다 — 목표가 영원히 삽니다'
+
+    # 그 목표가 다시 미완료로 돌아왔을 때는 이미 상한을 넘었어야 한다.
+    bus._requests.clear()
+    bus._requeue([{'member': member, 'target': 60.0,
+                   'first_ts': carried - 20.0}])
+    assert member.unique_id not in bus._requests
+
+
+def test_a_new_command_resets_the_age():
+    """새 명령은 시계를 다시 세운다 — 늙은 재큐를 대체하는 정상 경로다."""
+    bus, member = _lone_member()
+    bus._requests[member.unique_id] = (
+        69.8, time.time() - (REQUEUE_MAX_AGE_SEC - 5.0))
+
+    bus.submit(member, 0.0)
+
+    target, ts = bus._requests[member.unique_id]
+    assert target == 0.0
+    assert time.time() - ts < 1.0, '새 명령인데 옛 나이를 물려받았습니다'
+
+
+def test_a_new_command_still_supersedes_a_requeue():
+    """기존 계약은 그대로 — 새 명령이 있으면 재큐는 건너뛴다."""
+    bus, member = _lone_member()
+    bus.submit(member, 0.0)
+    bus._requeue([{'member': member, 'target': 69.8, 'first_ts': time.time()}])
+
+    assert bus._requests[member.unique_id][0] == 0.0, (
+        '재큐된 옛 목표가 새 명령을 덮었습니다')
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 같은 버스의 셀렉터는 서로 달라야 한다
+# ─────────────────────────────────────────────────────────────────────────────
+# 셀렉터는 "이 버스를 지금 어느 액추에이터에 물릴지" 고르는 스위치다. 둘이 같은
+# 채널을 가리키면 구분 자체가 성립하지 않는데, 그 상태가 **아무 데도 드러나지
+# 않았다** — 저장도 되고 기동도 되고 명령도 정상으로 돌아온다.
+#
+# 실측(2026-09-07 쿠마모토): `측창: 좌` 와 `측창: 우` 가 둘 다 CH3("우")를
+# 가리키고 CH2("좌")는 아무도 쓰지 않았다. 사용자는 시설 편집기에서 좌우를
+# 정확히 배정해 두었고 그쪽은 맞았다 — 어긋난 것은 그 아래 셀렉터였고,
+# 위층 화면에서는 그것이 보이지 않는다.
+
+
+class _CapturingLogger:
+    def __init__(self):
+        self.errors = []
+
+    def error(self, msg, *args):
+        self.errors.append(msg % args if args else msg)
+
+    def info(self, *a, **k):
+        pass
+
+    def warning(self, *a, **k):
+        pass
+
+    def debug(self, *a, **k):
+        pass
+
+    def exception(self, *a, **k):
+        pass
+
+
+def _bus_with(members):
+    bus = _Bus('test-bus-selector')
+    bus.logger = _CapturingLogger()
+    for member in members:
+        bus.attach(member)
+    return bus
+
+
+def test_two_actuators_on_one_selector_are_reported():
+    log = []
+    left = make_member('win-left', 'sel-SHARED', 'open-a', 'close-a', log)
+    right = make_member('win-right', 'sel-SHARED', 'open-a', 'close-a', log)
+
+    bus = _bus_with([left, right])
+
+    assert bus.logger.errors, (
+        '두 액추에이터가 같은 셀렉터를 가리키는데 아무도 알리지 않았습니다 — '
+        '이 상태로 한쪽 창이 영영 선택되지 않습니다')
+    joined = ' '.join(bus.logger.errors)
+    assert 'win-left' in joined and 'win-right' in joined
+
+
+def test_distinct_selectors_are_silent():
+    log = []
+    left = make_member('win-left', 'sel-left', 'open-a', 'close-a', log)
+    right = make_member('win-right', 'sel-right', 'open-a', 'close-a', log)
+
+    bus = _bus_with([left, right])
+
+    assert not bus.logger.errors, (
+        '정상 설정에 경고가 났습니다: %s' % bus.logger.errors)
+
+
+def test_a_lone_actuator_without_a_selector_is_fine():
+    """혼자 쓰면 셀렉터가 없어도 된다 — 옵션 설명 그대로다."""
+    log = []
+    solo = make_member('win-solo', '', 'open-a', 'close-a', log)
+
+    bus = _bus_with([solo])
+
+    assert not bus.logger.errors
+
+
+def test_missing_selector_is_reported_when_the_bus_is_shared():
+    """셀렉터가 비면 늘 물려 있는 셈이라, 남을 움직일 때 같이 움직인다."""
+    log = []
+    solo = make_member('win-nosel', '', 'open-a', 'close-a', log)
+    other = make_member('win-other', 'sel-b', 'open-a', 'close-a', log)
+
+    bus = _bus_with([solo, other])
+
+    joined = ' '.join(bus.logger.errors)
+    assert 'win-nosel' in joined, (
+        '버스를 나눠 쓰는데 셀렉터가 없는 액추에이터를 알리지 않았습니다')
+
+
+def test_the_same_conflict_is_reported_once():
+    """attach 는 멤버마다 불린다 — 같은 문장이 쌓이면 로그를 읽을 수 없다."""
+    log = []
+    members = [make_member('win-%d' % i, 'sel-SHARED', 'open-a', 'close-a', log)
+               for i in range(3)]
+
+    bus = _bus_with(members)
+
+    shared = [e for e in bus.logger.errors if 'sel-SHARED' in e]
+    assert len(shared) == 1, '같은 충돌이 %d 번 보고됐습니다' % len(shared)

@@ -11,6 +11,8 @@ from typing import Any, Optional
 from aot.databases.models import Actions
 from aot.functions.utils.env_control import (
     CH_DISPATCH_FAIL,
+    REASON_SAFETY_POST_GATE,
+    REASON_SAFETY_PRE_GATE,
     write_decision_log,
 )
 from aot.functions.utils.env_control.types import SituationReport
@@ -1419,10 +1421,38 @@ class HelpersMixin:
             # When the gate permits a move, replace val with the grid-snapped value.
             # The motor gate is active only for opening kinds + move_step_pct > 0. If step=0,
             # skip the gate and take the normal deadband path below, sending micro-vibration as-is.
+            # ── 안전 게이트의 강제 명령은 억제를 지나지 않는다 ────────────────
+            # 아래 두 억제(모터 모션 게이트·데드밴드)는 **모터 수명**을 위한
+            # 것이고, 안전 게이트는 그보다 위다. 순서가 뒤집혀 있으면 마지막
+            # 방어선이 수명 보호에 막힌다.
+            #
+            # 실측(2026-09-07 쿠마모토): 강우 게이트가 2시간 31분 동안 32회
+            # 발동해 측창에 0% 를 강제했는데, 직전 전송값도 0 이라 히스테리시스
+            # (`should_move=False`)에 걸려 **한 번도 전달되지 않았다.** 그동안
+            # 버스 스케줄러는 재큐해 둔 옛 목표(69.8%)를 향해 창을 5%p 씩 열어
+            # 올렸고, 게이트가 풀리자 곧바로 69.8% 로 돌아갔다. 즉 코디네이터가
+            # 믿는 "직전에 0 을 보냈다" 와 실제 개도가 갈라져 있었고, 바로 그
+            # 갈라짐 때문에 재확인 전송이 억제됐다.
+            #
+            # 안전 명령은 **매번 다시 보낸다.** 값이 같아도 보내는 것이
+            # 확인 사살이고, 비용은 사이클당 전송 한 번뿐이다. `submit` 이
+            # 진행 중인 반대 방향 이동을 끊고(`_interrupt`) 재큐를 무효화하는
+            # 것도 이 전송이 실제로 도착해야 일어난다.
+            _reason = (cmd.get('reason') if isinstance(cmd, dict)
+                       else getattr(cmd, 'reason', None))
+            safety_forced = _reason in (REASON_SAFETY_PRE_GATE,
+                                        REASON_SAFETY_POST_GATE)
+
             step = (profile.cmd_constraints.move_step_pct
                     if (profile and profile.kind in self._MOTOR_KINDS) else 0.0)
-            gate_active = step > 0.0
-            if gate_active:
+            gate_active = step > 0.0 and not safety_forced
+            if safety_forced:
+                # 격자에는 맞춘다 — 모터가 격자 값을 기대하고, 이후 비교도
+                # 격자 위에서 이뤄져야 한다. 억제만 건너뛴다.
+                if step > 0.0:
+                    val = max(0.0, min(100.0, round(val / step) * step))
+                will_move = True
+            elif gate_active:
                 normal_sec, emergency_sec = self._actuation_params()
                 period_eff = emergency_sec if emergency else normal_sec
                 min_dwell = max(period_eff, profile.cmd_constraints.min_dwell_sec)
@@ -1460,7 +1490,11 @@ class HelpersMixin:
             pulse_dosing = bool(
                 profile and getattr(profile.cmd_constraints, 'pulse_dosing', False))
 
-            if (not gate_active) and (not pulse_dosing) and prev_sent is not None:
+            # `safety_forced` 는 여기서도 빠진다 — 데드밴드는 "값이 그대로면
+            # 보내지 않는다" 이고, 위 사건에서 값이 그대로인데 실제 개도가
+            # 달랐던 것이 문제였다.
+            if (not gate_active) and (not pulse_dosing) \
+                    and (not safety_forced) and prev_sent is not None:
                 prev_val, prev_ts = prev_sent
                 age = now - prev_ts
                 delta = abs(val - prev_val)

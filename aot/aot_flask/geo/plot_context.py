@@ -16,6 +16,10 @@
 import logging
 import math
 from datetime import date
+from datetime import datetime as _datetime
+from datetime import timedelta as _timedelta
+from datetime import timezone as _tzmod
+from time import monotonic as _monotonic
 
 from aot.aot_flask.geo import device_membership
 from aot.aot_flask.geo.facility_calc import _ring_area_m2
@@ -1402,8 +1406,27 @@ def stage_schedule_view(plot, program=None, on=None, sched=None, events=None,
     return out
 
 
+def _gdd_cached(plot, program_row, on, cache):
+    """같은 요청 안에서 적산온도를 두 번 재지 않는다.
+
+    `to_dict` 는 `stage_of` 와 `stage_proposal` 을 잇달아 부르고, 제안 쪽도
+    안에서 `stage_of` 를 지난다(`gated=False`). 인자만 다를 뿐 적산온도는 같은
+    값인데 구획마다 온도 채널 전량을 두 번 훑고 있었다 — 실측: 구획 하나
+    1.06초 중 1.04초, 인플럭스 쿼리 16회.
+    """
+    if cache is None:
+        return gdd_accumulated(plot, program_row, on=on, with_series=True)
+    key = (getattr(plot, 'unique_id', None),
+           getattr(program_row, 'unique_id', None),
+           getattr(program_row, 'version', None), on)
+    if key not in cache:
+        cache[key] = gdd_accumulated(plot, program_row, on=on,
+                                     with_series=True)
+    return cache[key]
+
+
 def stage_of(plot, program=None, on=None, with_observability=False,
-             gated=True, sched=None):
+             gated=True, sched=None, gdd_cache=None):
     """구획의 **현재 단계** → dict (판정 불가면 None).
 
     ## 계산
@@ -1471,7 +1494,7 @@ def stage_of(plot, program=None, on=None, with_observability=False,
     out = None
     gdd = None
     if not sched['planned'] and any(st.get('gdd') is not None for st in run):
-        gdd = gdd_accumulated(plot, row, on=on, with_series=True)
+        gdd = _gdd_cached(plot, row, on, gdd_cache)
         if gdd.get('usable'):
             out = _stage_by_gdd(run, gdd, row, base_index, plot)
 
@@ -3185,12 +3208,15 @@ def to_dict(row, containers=None, with_sensors=False, markers=None,
         # 만들면 목록 화면 한 장(수십 구획)이 구획마다 네 벌씩 조회한다.
         sched = stage_schedule(row, program=prog, anchors=anchors,
                                programs=programs)
+        # 적산온도는 아래 `stage_proposal` 도 같은 값을 쓴다 — 한 벌만 만든다.
+        _gdd_once = {}
         st = stage_of(row, program=prog, with_observability=bool(with_sensors),
-                      sched=sched)
+                      sched=sched, gdd_cache=_gdd_once)
         # 대기 중 전환·이력. **저장하지 않는 값과 저장된 값이 함께 나간다** —
         # 화면이 "지금 이렇게 보이는데 확인하시겠습니까" 를 말하려면 둘 다 필요하다.
         out['stage_proposal'] = stage_proposal(row, program=prog,
-                                               sched=sched, anchors=anchors)
+                                               sched=sched, anchors=anchors,
+                                               gdd_cache=_gdd_once)
         out['stage_history'] = stage_history(row, events=events)
         # 단계 일정(P8) — 화면이 경계를 고치는 자리다. 여기서 내지 않으면
         # 사람은 전환이 **닥친 뒤에** 확인/연기만 할 수 있고, 미리 잡아 둘 수 없다.
@@ -3271,6 +3297,17 @@ _GDD_MIN_COVERAGE = 0.8
 # 온도로 볼 측정 이름. `DeviceMeasurements.measurement` 어휘를 그대로 쓴다.
 _GDD_TEMP_MEASURE = 'temperature'
 
+# 일별 최고·최저 캐시. 지나간 하루는 변하지 않으므로 다시 조회하지 않는다.
+# TTL 은 뒤늦게 들어오는 과거 데이터(백필·재전송)를 위한 것이다.
+_EXTREMES_CACHE = {}
+_EXTREMES_TODAY = {}
+_EXTREMES_TTL = 1800.0
+# 오늘 하루는 계속 쌓이는 중이라 짧게만 붙잡는다. 목록 화면 한 장이 같은
+# 채널을 구획 수만큼 다시 묻는 것을 막는 정도의 수명이다.
+_EXTREMES_TODAY_TTL = 60.0
+_EXTREMES_MAX_DAYS = 500
+_EXTREMES_MAX_KEYS = 400
+
 
 def _daily_extremes(device_id, channel, measure, start_ts, end_ts, tz,
                     bucket_sec):
@@ -3321,6 +3358,97 @@ def _daily_extremes(device_id, channel, measure, start_ts, end_ts, tz,
     except Exception:
         pass   # 못 찾으면 호출자가 준 이름 그대로 시도(과거 동작 유지)
 
+    from aot.utils.timekit import bucket_local_key, local_day_bounds_utc
+
+    # ── 지나간 하루는 다시 재지 않는다 ────────────────────────────
+    #
+    # 이 조회는 **몇 달치를 시간별로** 받아 온다(창 3600초). 구획 하나가
+    # 온도 채널 4개를 가지면 최고·최저로 8회, 목록 화면은 그것을 구획 수만큼
+    # 반복한다 — 실측: 구획 26개에 27만 행. 그런데 **어제까지의 최고·최저는
+    # 변하지 않는다.** 바뀌는 것은 오늘 하루뿐이다.
+    #
+    # 그래서 지난 날짜는 프로세스 캐시에서 꺼내고 오늘만 다시 잰다.
+    # TTL 을 두는 이유는 **뒤늦게 들어오는 과거 데이터** 때문이다(백필·
+    # 재전송·게이트웨이 지연). 캐시가 정본이 되면 그 데이터가 영영 안 보인다.
+    _now = _monotonic()
+    ck = (device_id, channel, measure, bucket_sec, str(getattr(tz, 'key', tz)))
+    hit = _EXTREMES_CACHE.get(ck)
+    if hit is not None and _now - hit['at'] > _EXTREMES_TTL:
+        hit = None
+    try:
+        s_day = _local_day_of(start_ts, tz)
+        e_day = _local_day_of(end_ts, tz, back=True)
+        today_local = _datetime.now(_tzmod.utc).astimezone(tz).date()
+    except Exception:                                       # noqa: BLE001
+        s_day = e_day = today_local = None
+
+    # **값이 아니라 '조회한 구간'을 기억한다.** 값만 기억하면 데이터가 없는
+    # 날이 영영 "아직 안 본 날" 로 남아 캐시가 한 번도 안 걸린다(실측: 온도
+    # 채널 하나가 비어 있어 매번 전량 재조회했다).
+    settled_to = (today_local - _timedelta(days=1)) if today_local else None
+    if hit and s_day and e_day and settled_to is not None:
+        need_from, need_to = s_day, min(e_day, settled_to)
+        if (need_to < need_from
+                or (hit['from'] <= need_from and hit['to'] >= need_to)):
+            have = hit['days']
+            out = {d: v for d, v in have.items() if s_day <= d <= e_day}
+            if e_day >= today_local:
+                out.update(_today_extremes(device_id, channel, measure, tz,
+                                           bucket_sec, today_local, ck, _now))
+            return out
+
+    res = _query_daily_extremes(device_id, channel, measure,
+                                start_ts, end_ts, tz, bucket_sec)
+    if today_local is not None and s_day and e_day:
+        keep = dict((hit or {}).get('days') or {})
+        keep.update({d: v for d, v in res.items() if d < today_local})
+        # 무한히 자라지 않게 가장 오래된 것부터 버린다.
+        if len(keep) > _EXTREMES_MAX_DAYS:
+            for d in sorted(keep)[:len(keep) - _EXTREMES_MAX_DAYS]:
+                keep.pop(d, None)
+        if len(_EXTREMES_CACHE) > _EXTREMES_MAX_KEYS:
+            _EXTREMES_CACHE.clear()
+        lo = min(s_day, hit['from']) if hit else s_day
+        hi = max(min(e_day, settled_to), hit['to']) if hit else min(e_day, settled_to)
+        _EXTREMES_CACHE[ck] = {'at': _now, 'days': keep, 'from': lo, 'to': hi}
+    return res
+
+
+def _today_extremes(device_id, channel, measure, tz, bucket_sec, today, ck,
+                    now_m):
+    """오늘 하루의 최고·최저. 짧은 수명으로 붙잡는다."""
+    from aot.utils.timekit import local_day_bounds_utc
+
+    slot = _EXTREMES_TODAY.get(ck)
+    if (slot and slot['day'] == today
+            and now_m - slot['at'] <= _EXTREMES_TODAY_TTL):
+        return dict(slot['days'])
+    t0, t1 = local_day_bounds_utc(today, today, tz)
+    got = _query_daily_extremes(device_id, channel, measure, t0, t1, tz,
+                                bucket_sec)
+    if len(_EXTREMES_TODAY) > _EXTREMES_MAX_KEYS:
+        _EXTREMES_TODAY.clear()
+    _EXTREMES_TODAY[ck] = {'day': today, 'at': now_m, 'days': dict(got)}
+    return got
+
+
+def _local_day_of(ts, tz, back=False):
+    """`local_day_bounds_utc` 가 만든 경계 문자열 → 현지 날짜.
+
+    끝 경계(`back=True`)는 **다음 날 자정**이라 1초를 빼야 그 구간의 마지막
+    날이 나온다.
+    """
+    d = _datetime.strptime(str(ts), '%Y-%m-%dT%H:%M:%SZ').replace(
+        tzinfo=_tzmod.utc)
+    if back:
+        d -= _timedelta(seconds=1)
+    return d.astimezone(tz).date()
+
+
+def _query_daily_extremes(device_id, channel, measure, start_ts, end_ts, tz,
+                          bucket_sec):
+    """`_daily_extremes` 의 실제 조회부. 캐시를 거치지 않는다."""
+    from aot.utils.influx import query_string
     from aot.utils.timekit import bucket_local_key
 
     out = {}
@@ -3778,7 +3906,7 @@ def stage_history(plot, events=None):
 
 
 def stage_proposal(plot, program=None, on=None, assume_start=False, anchors=None,
-                   sched=None):
+                   sched=None, gdd_cache=None):
     """대기 중인 전환 제안 → dict|None. **저장하지 않는다.**
 
     기준점 이후로 계산한 단계가 기준점보다 앞서 있으면 그것이 제안이다. 행으로
@@ -3809,7 +3937,8 @@ def stage_proposal(plot, program=None, on=None, assume_start=False, anchors=None
 
     # **고정을 풀고 본다**(`gated=False`) — 제안은 "파생이 앞서갔다" 는 사실
     # 자체라, 고정된 값을 보면 영영 뜨지 않는다.
-    st = stage_of(plot, program=program, on=on, gated=False, sched=sched)
+    st = stage_of(plot, program=program, on=on, gated=False, sched=sched,
+                  gdd_cache=gdd_cache)
     if not st or st.get('state') != 'running':
         return None
     # `stage_of` 의 `index` 는 이미 **전체 기준**이다(기준점 이후 구간으로 잘라

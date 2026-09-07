@@ -3926,14 +3926,53 @@ def recent_env_trends(plot, days=7, end_date=None, sensor_ids=None,
     folded = [{'key': k.isoformat() if hasattr(k, 'isoformat') else str(k),
                'env': env_by_bucket[k]}
               for k in sorted(env_by_bucket)]
+
+    # ── 적산온도도 **같은 카드의 다른 줄과 같은 그림**이어야 한다 ──────────
+    #
+    # 예전에는 이 함수가 GDD 계열을 아예 내지 않았고, 화면은 그 줄만 따로
+    # 가로 불릿으로 그렸다 — 같은 카드에서 온도·습도·VPD 는 세로로 서는데
+    # 누적형 둘(GDD·DLI)만 눕어 있었다(실사용 지적 2026-09-05). DLI 는 환경
+    # 행이라 계열이 이미 있었고, 없던 것은 GDD 뿐이다.
+    #
+    # ⚠ **계산자를 새로 만들지 않는다.** `gdd_for_journal()` → `plot_context.
+    #   gdd_accumulated()` 가 정본이고 여기서는 **한 번** 부른다. 일별 값을
+    #   접기 **전에** 붙여 두면 `_merge_bucket_group` 이 주·월 버킷에서
+    #   합계를 내준다(그쪽에 이미 있는 규칙이다).
+    _gdd = None
+    if plot is not None:
+        try:
+            _gdd = gdd_for_journal(plot, end, start)
+        except Exception:
+            logger.debug('recent_env_trends: 적산온도 계산 실패', exc_info=True)
+            _gdd = None
+    if _gdd and _gdd.get('usable'):
+        _by_day = _gdd.get('by_day') or {}
+        for _b in folded:                    # 아직 **일 단위**다
+            try:
+                _d = datetime.strptime(str(_b.get('key'))[:10], '%Y-%m-%d').date()
+            except (ValueError, TypeError):
+                continue
+            _v = _by_day.get(_d)
+            if _v is not None:
+                _b['gdd'] = _round(_v, 1)
+
     if unit and unit != 'day':
         folded = fold_buckets(folded, to=unit, granularity='day')
 
     view_buckets = [{'key': b.get('key'),
                      'date_label': b.get('date_label'),
+                     'gdd': b.get('gdd'),
                      'env_groups': group_env_rows(b.get('env') or [])}
                     for b in folded]
-    out = order_chart_series(env_trend_series(view_buckets, targets=doc_targets))
+    out = env_trend_series(view_buckets, targets=doc_targets)
+    if _gdd and _gdd.get('usable'):
+        _s = gdd_trend_series(view_buckets, {'gdd': _gdd})
+        if _s:
+            # 화면의 "지금 값" 줄과 짝짓는 열쇠 — 이 계열만 measurement 가
+            # 환경 행이 아니라 아래 후보 산정이 만들어 주지 못한다.
+            _s['now_keys'] = ['GDD', 'gdd']
+            out = out + [_s]
+    out = order_chart_series(out)
 
     # ── 화면의 "지금 값" 줄과 짝짓는 열쇠 ───────────────────────────────────
     #
@@ -3948,6 +3987,10 @@ def recent_env_trends(plot, days=7, end_date=None, sensor_ids=None,
     try:
         from aot.aot_flask.geo.facility_sensors import channel_label_meta
         for s in out:
+            # ⚠ 이미 정해진 것은 덮지 않는다 — 적산온도 계열은 환경 행이
+            #   아니라 이 후보 산정이 화면 쪽 키('GDD')를 만들어 내지 못한다.
+            if s.get('now_keys'):
+                continue
             meas = str(s.get('measurement') or '')
             cands = []
             try:

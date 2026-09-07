@@ -246,3 +246,105 @@ def test_dispatch_watchdog_reconfirm_does_not_reset_dwell_clock(monkeypatch):
     assert adapter.sends == [25.0, 25.0, 0.0], (
         "워치독 재확인이 dwell 시계를 리셋해 실제 이동(정상주기 180s 는 이미 충족)을 "
         "억제하면 버그")
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 안전 게이트의 강제 명령은 억제를 지나지 않는다
+# ─────────────────────────────────────────────────────────────────────────────
+# 위 억제(모터 모션 게이트·데드밴드)는 **모터 수명**을 위한 것이고, 안전
+# 게이트는 그보다 위다. 순서가 뒤집히면 마지막 방어선이 수명 보호에 막힌다.
+#
+# 실측(2026-09-07 쿠마모토): 강우 게이트가 2시간 31분 동안 32회 발동해 측창에
+# 0% 를 강제했는데, 직전 전송값도 0 이라 히스테리시스에 걸려 **한 번도
+# 전달되지 않았다.** 그동안 버스 스케줄러는 재큐해 둔 옛 목표(69.8%)를 향해
+# 창을 5%p 씩 열어 올렸고(최대 65%), 게이트가 풀리자 곧바로 69.8% 로 돌아갔다.
+#
+# ⚠ `emergency=True` 만으로는 부족하다 — 그것은 최소 이동 간격을
+#   `emergency_period_sec` 으로 낮출 뿐, 값이 같으면 여전히 막는다. 위 사건이
+#   정확히 그 경우였다(게이트 명령도 0, 직전 전송값도 0).
+
+from aot.functions.utils.env_control import (          # noqa: E402
+    REASON_SAFETY_PRE_GATE, REASON_SAFETY_POST_GATE, REASON_PRIMARY,
+)
+
+
+def _clocked(monkeypatch, start=1000.0):
+    import aot.functions.custom_functions.env_coordinator_impl._helpers_mixin as mod
+    monkeypatch.setattr(mod.time, 'sleep', lambda *_: None)
+    clock = {'t': start}
+    monkeypatch.setattr(mod.time, 'time', lambda: clock['t'])
+    return clock
+
+
+def test_safety_gate_command_is_resent_even_when_the_value_did_not_change(monkeypatch):
+    """같은 값이어도 매번 보낸다 — 그것이 확인 사살이다.
+
+    코디네이터가 믿는 '직전에 0 을 보냈다' 와 실제 개도는 갈라질 수 있다
+    (출력층이 재큐된 옛 목표로 창을 열고 있었다). 값이 같다는 이유로 재전송을
+    억제하면 그 갈라짐을 바로잡을 기회가 영영 없다.
+    """
+    clock = _clocked(monkeypatch)
+    adapter = _RecordingAdapter()
+    host = _DispatchHost(adapter)
+
+    host._dispatch({'win1': {'value': 0.0, 'reason': REASON_SAFETY_PRE_GATE}},
+                   emergency=True)
+    first = len(adapter.sends)
+    assert first == 1
+
+    # 시간을 거의 진전시키지 않는다 — 최소 이동 간격·데드밴드가 가장 강하게
+    # 막는 조건에서도 안전 명령은 통과해야 한다.
+    for _ in range(4):
+        clock['t'] += 1.0
+        host._dispatch({'win1': {'value': 0.0, 'reason': REASON_SAFETY_PRE_GATE}},
+                       emergency=True)
+
+    assert len(adapter.sends) == first + 4, (
+        '안전 게이트 명령이 억제됐습니다 — 강우 중 창이 열린 채로 남습니다. '
+        '보낸 횟수: %d' % len(adapter.sends))
+    assert all(value == 0.0 for value in adapter.sends)
+
+
+def test_post_gate_correction_is_also_exempt(monkeypatch):
+    """후게이트 보정도 안전 조치다 — 같은 규칙을 받는다."""
+    clock = _clocked(monkeypatch)
+    adapter = _RecordingAdapter()
+    host = _DispatchHost(adapter)
+
+    host._dispatch({'win1': {'value': 0.0, 'reason': REASON_SAFETY_POST_GATE}})
+    clock['t'] += 1.0
+    host._dispatch({'win1': {'value': 0.0, 'reason': REASON_SAFETY_POST_GATE}})
+
+    assert len(adapter.sends) == 2
+
+
+def test_normal_command_is_still_suppressed(monkeypatch):
+    """일반 제어는 그대로 억제된다 — 면제를 넓히면 모터 수명이 사라진다."""
+    clock = _clocked(monkeypatch)
+    adapter = _RecordingAdapter()
+    host = _DispatchHost(adapter)
+
+    host._dispatch({'win1': {'value': 25.0, 'reason': REASON_PRIMARY}})
+    sent_after_first = len(adapter.sends)
+
+    for _ in range(4):
+        clock['t'] += 1.0
+        host._dispatch({'win1': {'value': 25.0, 'reason': REASON_PRIMARY}})
+
+    assert len(adapter.sends) == sent_after_first, (
+        '일반 명령까지 억제가 풀렸습니다 — 창이 매 사이클 떨게 됩니다')
+
+
+def test_safety_value_is_still_snapped_to_the_motor_grid(monkeypatch):
+    """억제만 건너뛴다 — 격자는 지킨다.
+
+    모터는 격자 값을 기대하고, 이후 비교도 그 위에서 이뤄져야 한다.
+    """
+    _clocked(monkeypatch)
+    adapter = _RecordingAdapter()
+    host = _DispatchHost(adapter, move_step_pct=5.0)
+
+    host._dispatch({'win1': {'value': 63.2, 'reason': REASON_SAFETY_PRE_GATE}},
+                   emergency=True)
+
+    assert adapter.sends[-1] == 65.0

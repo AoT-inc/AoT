@@ -28,6 +28,44 @@ _MIN_ON_PCT = 5.0
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# 데몬 반환값 검사 — **이 경로의 실패는 예외로 오지 않는다**
+# ─────────────────────────────────────────────────────────────────────────────
+# `control.output_on/off` 는 Pyro5 RPC 다. 그 너머에서 무슨 일이 나든 예외가
+# 이쪽으로 넘어오지 않는다 — 데몬(`aot_daemon.output_on`)과 클라이언트
+# (`DaemonControl.output_on`)가 **각자 `except Exception` 으로 잡아
+# `(1, msg)` 로 바꾼다.** 그래서 반환값을 안 보면 실패를 알 방법이 통째로
+# 없어진다.
+#
+# 실측(2026-09-07 영양 천창1): 릴레이 설정이 비어 명령이 한 번도 실행되지
+# 않았는데, 어댑터가 반환값을 버리고 코디네이터의 `_dispatch` 는 예외만
+# 보았기 때문에 130회가 전부 성공으로 집계됐다. `record_dispatch` 는 그
+# 성공을 근거로 신뢰도를 **올렸고**, `actuator_mismatch` 는 48시간 내내 0
+# 이었다 — 감지 장치가 정확히 반대로 작동한 것이다.
+#
+# 판정 규약은 `controller_output.output_on_off` 가 감사로그를 남길 때 쓰는
+# 것과 **같다**(`bool(ret[0])`). 두 벌을 만들면 갈라지고, 갈라지면 감사로그와
+# 제어가 서로 다른 성패를 기록하게 된다.
+#
+# ⚠ 튜플이 아닌 반환(None 포함)은 **성공으로 본다.** 이 경로에는 아직
+#   반환값을 안 주는 자리가 남아 있어, 모르는 것을 실패로 바꾸면 정상
+#   동작하던 장치가 무더기로 신뢰를 잃는다(그쪽 오탐이 훨씬 위험하다).
+
+def _raise_if_failed(ret, actuator_id: str, what: str) -> None:
+    """데몬 반환값이 실패(`(1, msg)`)면 예외로 올린다.
+
+    코디네이터의 `_dispatch` 가 예외를 잡아 `failed` 에 넣고, 그것이
+    `record_dispatch(success=False)` → 신뢰도 하락 → `actuator_mismatch`
+    로그로 이어진다. 즉 **이 한 줄이 실패를 다시 보이게 하는 이음매다.**
+    """
+    if not isinstance(ret, (tuple, list)) or not ret:
+        return
+    if not ret[0]:
+        return
+    detail = ret[1] if len(ret) > 1 else ''
+    raise RuntimeError(f'{what} 거부됨 (actuator={actuator_id}): {detail}')
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # 어댑터 클래스
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -43,14 +81,16 @@ class DispatchAdapter:
         cycle_sec: float,
     ) -> None:
         if pct > 0.0:
-            control.output_on(
+            _raise_if_failed(control.output_on(
                 actuator_id,
                 output_type='value',
                 amount=pct,
                 output_channel=ch,
-            )
+            ), actuator_id, 'output_on(value)')
         else:
-            control.output_off(actuator_id, output_channel=ch)
+            _raise_if_failed(
+                control.output_off(actuator_id, output_channel=ch),
+                actuator_id, 'output_off')
 
     def __repr__(self) -> str:
         return f'{self.__class__.__name__}()'
@@ -72,14 +112,16 @@ class PwmAdapter(DispatchAdapter):
         cycle_sec: float,
     ) -> None:
         if pct > 0.0:
-            control.output_on(
+            _raise_if_failed(control.output_on(
                 actuator_id,
                 output_type='pwm',
                 amount=pct,
                 output_channel=ch,
-            )
+            ), actuator_id, 'output_on(pwm)')
         else:
-            control.output_off(actuator_id, output_channel=ch)
+            _raise_if_failed(
+                control.output_off(actuator_id, output_channel=ch),
+                actuator_id, 'output_off')
 
 
 class TimeProportionalAdapter(DispatchAdapter):
@@ -99,14 +141,16 @@ class TimeProportionalAdapter(DispatchAdapter):
     ) -> None:
         if pct >= _MIN_ON_PCT:
             on_sec = max(1.0, cycle_sec * pct / 100.0)
-            control.output_on(
+            _raise_if_failed(control.output_on(
                 actuator_id,
                 output_type='sec',
                 amount=on_sec,
                 output_channel=ch,
-            )
+            ), actuator_id, 'output_on(sec)')
         else:
-            control.output_off(actuator_id, output_channel=ch)
+            _raise_if_failed(
+                control.output_off(actuator_id, output_channel=ch),
+                actuator_id, 'output_off')
 
 
 class PairedAdapter(DispatchAdapter):
@@ -131,12 +175,12 @@ class PairedAdapter(DispatchAdapter):
         cycle_sec: float,
     ) -> None:
         """0% 포함 모든 명령을 output_type='value' 로 전달해 last_target 추적을 보장한다."""
-        control.output_on(
+        _raise_if_failed(control.output_on(
             actuator_id,
             output_type='value',
             amount=pct,
             output_channel=ch,
-        )
+        ), actuator_id, 'output_on(value)')
 
 
 class VolumetricAdapter(DispatchAdapter):
@@ -162,14 +206,15 @@ class VolumetricAdapter(DispatchAdapter):
             on_sec  = cycle_sec * pct / 100.0
             vol_ml  = self._flow_lpm * on_sec / 60.0 * 1000.0
             if vol_ml >= 1.0:
-                control.output_on(
+                _raise_if_failed(control.output_on(
                     actuator_id,
                     output_type='vol',
                     amount=vol_ml,
                     output_channel=ch,
-                )
+                ), actuator_id, 'output_on(vol)')
                 return
-        control.output_off(actuator_id, output_channel=ch)
+        _raise_if_failed(control.output_off(actuator_id, output_channel=ch),
+                         actuator_id, 'output_off')
 
     def __repr__(self) -> str:
         return f'VolumetricAdapter(flow_lpm={self._flow_lpm})'
@@ -220,7 +265,9 @@ class PulsedDoseAdapter(DispatchAdapter):
 
         if pct < _MIN_ON_PCT or now < self._blocked_until:
             # 요청 없음, 또는 건조 시간 중 — 확실히 끈다.
-            control.output_off(actuator_id, output_channel=ch)
+            _raise_if_failed(
+                control.output_off(actuator_id, output_channel=ch),
+                actuator_id, 'output_off')
             return
 
         on_sec = max(1.0, self._max_on_sec * min(100.0, pct) / 100.0)
@@ -228,13 +275,19 @@ class PulsedDoseAdapter(DispatchAdapter):
         if isinstance(self._inner, VolumetricAdapter) and self._flow_lpm > 0.0:
             vol_ml = self._flow_lpm * on_sec / 60.0 * 1000.0
             if vol_ml < 1.0:
-                control.output_off(actuator_id, output_channel=ch)
+                _raise_if_failed(
+                    control.output_off(actuator_id, output_channel=ch),
+                    actuator_id, 'output_off')
                 return
-            control.output_on(actuator_id, output_type='vol',
-                              amount=vol_ml, output_channel=ch)
+            _raise_if_failed(
+                control.output_on(actuator_id, output_type='vol',
+                                  amount=vol_ml, output_channel=ch),
+                actuator_id, 'output_on(vol)')
         elif isinstance(self._inner, TimeProportionalAdapter):
-            control.output_on(actuator_id, output_type='sec',
-                              amount=on_sec, output_channel=ch)
+            _raise_if_failed(
+                control.output_on(actuator_id, output_type='sec',
+                                  amount=on_sec, output_channel=ch),
+                actuator_id, 'output_on(sec)')
         else:
             # PWM/value: 펄스를 만들 수 없다 → 진폭 그대로 위임.
             # 건조 간격 억제만으로 습윤 시간을 줄인다.

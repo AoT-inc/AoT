@@ -46,6 +46,27 @@ _RELAY_CONDITION = threading.Condition()
 # enough to outlast a full travel, short enough that a leaked lease surfaces.
 RELAY_LEASE_TIMEOUT_SEC = 600.0
 
+# ─────────────────────────────────────────────────────────────────────────────
+# 재큐의 수명 — **명령보다 오래 사는 목표를 만들지 않는다**
+# ─────────────────────────────────────────────────────────────────────────────
+# 이동이 한 배치에 못 끝나면 `_requeue` 가 목표를 되살려 다음 배치에서 잇는다.
+# 그런데 그것을 취소하는 수단이 **새 명령 하나뿐**이라, 명령이 오지 않는 동안
+# 옛 목표가 무한히 살아 계속 실행된다.
+#
+# 실측(2026-09-07 쿠마모토): 강우 게이트가 측창을 닫으라고 한 2시간 31분 내내
+# 재큐된 옛 목표(69.8%)가 살아남아 창을 5%p 씩 열어 올렸다(최대 65%). 코디네이터
+# 쪽 억제로 새 명령이 도달하지 못한 것이 직접 원인이었지만, **명령이 끊기면
+# 옛 목표가 영원히 사는 구조** 자체가 그 사고를 가능하게 했다. 명령이 끊기는
+# 경로는 그 억제 말고도 여럿이다 — 함수 비활성화, 데몬 재시작, dispatch 실패.
+#
+# 그래서 재큐에 수명을 준다. 넘으면 **폐기하고 그 자리에 선다** — 오래된 목표를
+# 계속 쫓는 것보다 멈춰 있는 편이 언제나 안전하다.
+#
+# 값은 안전 게이트의 `ttl`(300초)과 같게 두었다. 이동 한 번(travel 60~90초)의
+# 3배 이상이라 정상 이동은 끊기지 않고, 제어 주기(기본 600초)보다 짧아 "새
+# 명령이 한 번도 안 온 채 한 주기가 지났다" 는 상황을 넘기지 않는다.
+REQUEUE_MAX_AGE_SEC = 300.0
+
 
 def _acquire_relays(relay_keys, owner, timeout=RELAY_LEASE_TIMEOUT_SEC):
     """Lease every relay key for `owner`. All-or-nothing; False on timeout."""
@@ -109,7 +130,11 @@ class _Bus:
         self.logger = logging.getLogger('{}.bus'.format(__name__))
 
         self._members = {}          # output unique_id -> OutputModule
-        self._requests = {}         # output unique_id -> target percent
+        # uid -> (target percent, 이 목표가 **처음** 명령된 시각).
+        # 시각을 목표와 한 자리에 담는다 — 따로 두면 `clear()` 한쪽만 비워져
+        # 나이가 유령으로 남는다. 재큐는 이 시각을 물려받고(그래서 늙는다),
+        # 새 명령은 다시 세운다.
+        self._requests = {}         # output unique_id -> (target percent, first_ts)
         self._stops = set()
         self._req_lock = threading.RLock()
         self._wake = threading.Event()
@@ -126,12 +151,80 @@ class _Bus:
         self._thread = None
         self._stopping = False
         self._swept = False
+        # 이미 알린 셀렉터 충돌(키 또는 멤버 uuid). attach 는 멤버마다
+        # 불리므로, 없으면 같은 문장이 멤버 수만큼 쌓인다.
+        self._reported_selector_conflicts = set()
 
     # ── membership ───────────────────────────────────────────────────────────
     def attach(self, member):
         with self._req_lock:
             self._members[member.unique_id] = member
+            self._warn_on_indistinct_selectors()
         self._ensure_thread()
+
+    def _warn_on_indistinct_selectors(self):
+        """같은 버스의 멤버는 **서로 다른** 셀렉터를 가져야 한다.
+
+        셀렉터의 존재 이유가 "이 버스를 지금 어느 액추에이터에 물릴지" 고르는
+        것이라, 둘이 같은 채널을 가리키면 구분 자체가 성립하지 않는다. 그런데
+        그 상태가 **아무 데도 드러나지 않는다** — 저장도 되고, 기동도 되고,
+        명령도 정상으로 돌아온다. 소프트웨어는 멤버별로 위치를 따로 추적하므로
+        화면에는 둘 다 명령대로 움직인 것으로 보인다.
+
+        실측(2026-09-07 쿠마모토): `측창: 좌` 와 `측창: 우` 가 둘 다 CH3("우")를
+        가리키고 CH2("좌")는 아무도 쓰지 않았다. 사용자는 시설 편집기에서 좌우
+        개구부에 각 Output 을 정확히 배정해 두었는데 — 그쪽은 맞았다 — 그 아래
+        셀렉터가 어긋나 좌측 창은 한 번도 선택되지 않았다. 좌우를 정하는 설정이
+        두 층에 나뉘어 있고 위층 화면에서는 아래층이 보이지 않는다.
+
+        **막지는 않는다.** 여기서 멤버를 거부하면 창이 아예 안 움직이는데,
+        그것은 어긋난 채로 도는 것보다 나쁠 수 있다(폭염·강우에 못 닫는다).
+        대신 등급을 ERROR 로 두고 무엇을 고쳐야 하는지까지 적는다.
+
+        한 번 보고한 충돌은 다시 알리지 않는다 — attach 는 멤버마다 불리므로
+        그대로 두면 같은 문장이 멤버 수만큼 쌓인다.
+        """
+        if len(self._members) < 2:
+            return
+
+        by_key = {}
+        no_selector = []
+        for member in self._members.values():
+            try:
+                key = member.ref_key(member.selector_ref())
+            except Exception:                                   # noqa: BLE001
+                continue                # 옵션을 아직 못 읽는 멤버는 다음 attach 에서
+            if key:
+                by_key.setdefault(key, []).append(member)
+            else:
+                no_selector.append(member)
+
+        for key, members in sorted(by_key.items()):
+            if len(members) < 2:
+                continue
+            if key in self._reported_selector_conflicts:
+                continue
+            self._reported_selector_conflicts.add(key)
+            self.logger.error(
+                "Bus %s: %s 가 **같은 셀렉터**(%s)를 가리킵니다 — 서로 구분되지 "
+                "않아 한쪽만 실제로 움직입니다. 각 액추에이터의 'Output: Selector' "
+                "를 서로 다른 채널로 지정하세요.",
+                self.key,
+                ' / '.join(sorted(m.output_label() for m in members)),
+                key)
+
+        # 셀렉터가 비어 있으면 "이 버스를 혼자 쓴다" 는 뜻이다(옵션 설명 그대로).
+        # 멤버가 여럿인데 비어 있으면 그 액추에이터는 늘 물려 있는 셈이라,
+        # 남을 움직일 때마다 함께 움직인다.
+        for member in no_selector:
+            if member.unique_id in self._reported_selector_conflicts:
+                continue
+            self._reported_selector_conflicts.add(member.unique_id)
+            self.logger.error(
+                "Bus %s: %s 에 셀렉터가 없는데 이 버스를 %d 개가 함께 씁니다 — "
+                "이 액추에이터는 늘 연결된 상태라 남을 움직일 때 같이 움직입니다. "
+                "'Output: Selector' 를 지정하세요.",
+                self.key, member.output_label(), len(self._members))
 
     def detach(self, member):
         with self._req_lock:
@@ -174,7 +267,8 @@ class _Bus:
     def submit(self, member, target):
         with self._req_lock:
             self._stops.discard(member.unique_id)
-            self._requests[member.unique_id] = target
+            # 새 명령 = 나이 초기화. 재큐로 늙어 가던 목표를 여기서 대체한다.
+            self._requests[member.unique_id] = (target, time.time())
         # Re-plan: a running batch ends its current stage early so this actuator
         # does not wait out someone else's full travel.
         self._interrupt = True
@@ -265,11 +359,16 @@ class _Bus:
             member = members.get(unique_id)
             if member is None:
                 continue
-            move = member.plan_move(requests[unique_id])
+            target, first_ts = requests[unique_id]
+            move = member.plan_move(target)
             if move is None:
                 # Nothing to do — still publish so the card shows the resolved position.
                 member.finish_motion(member.live_position())
             else:
+                # 나이는 계획이 아니라 **명령**에 붙는다. `plan_move` 는 재큐될
+                # 때마다 새 dict 를 만들므로, 거기서 시각을 세우면 매번 0 으로
+                # 되살아나 수명 제한이 무의미해진다.
+                move['first_ts'] = first_ts
                 moves.append(move)
 
         if not moves:
@@ -485,12 +584,24 @@ class _Bus:
 
     def _requeue(self, items):
         """Return unfinished targets to the pending map so the next batch resumes them."""
+        now = time.time()
         with self._req_lock:
             for item in items:
                 unique_id = item['member'].unique_id
                 if unique_id in self._requests or unique_id in self._stops:
                     continue  # a newer command already supersedes this one
-                self._requests[unique_id] = item['target']
+                first_ts = item.get('first_ts') or now
+                age = now - first_ts
+                if age > REQUEUE_MAX_AGE_SEC:
+                    # 명령이 끊긴 채 목표만 살아 있는 상태다. 쫓기를 그만두고
+                    # 그 자리에 선다 — 위 REQUEUE_MAX_AGE_SEC 주석 참조.
+                    self.logger.error(
+                        "Bus %s: %s 의 목표 %.1f%% 를 폐기합니다 — 새 명령 없이 "
+                        "%.0f초 (상한 %.0f초). 현 위치에 정지합니다.",
+                        self.key, item['member'].output_label(),
+                        item['target'], age, REQUEUE_MAX_AGE_SEC)
+                    continue
+                self._requests[unique_id] = (item['target'], first_ts)
         self._wake.set()
 
     def _release_selectors(self, members):

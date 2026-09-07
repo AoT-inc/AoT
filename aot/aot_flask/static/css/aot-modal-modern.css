@@ -1793,8 +1793,24 @@ body { transition: padding-right 0.4s cubic-bezier(0.075, 0.82, 0.165, 1); }
     overflow: auto !important;
     padding-right: var(--aot-wdrawer-w) !important;
   }
-  /* No dimming backdrop — the dashboard must stay visible AND interactive. */
-  body.aot-widget-drawer-open .modal-backdrop { display: none !important; }
+  /* 닫는 동안(=드로어가 빠져나가는 0.4초) 만 붙는 상태. 밀기는 이 구간 **처음에**
+     풀린다 — 예전에는 부트스트랩이 모달을 완전히 접은 뒤(hidden)에야 풀려서,
+     드로어가 사라지고 **그 다음에** 본문이 뒤늦게 넓어졌다. 두 동작이 이어 붙어
+     닫기만 유독 느리게 보였다. 시작 시각을 맞추는 것뿐이고 길이는 그대로다.
+     이 구간에도 두 가지를 지켜야 한다:
+       · overflow — 부트스트랩의 body.modal-open{overflow:hidden} 이 살아나면
+         스크롤바가 사라지며 폭이 튄다.
+       · padding — 부트스트랩이 body 인라인에 스크롤바 보정 padding 을 넣어 둔다.
+         그대로 두면 0 이 아니라 그 값까지만 줄었다가 hidden 에서 튄다. */
+  body.aot-widget-drawer-closing:not(.aot-widget-drawer-open).modal-open {
+    overflow: auto;                /* 부트스트랩 .modal-open 보다 특이도가 높다 */
+    padding-right: 0 !important;   /* 부트스트랩이 body **인라인**에 넣은 보정을 이긴다 */
+  }
+  /* No dimming backdrop — the dashboard must stay visible AND interactive.
+     닫히는 동안에도 계속 숨긴다 — 안 그러면 드로어가 빠져나가는 0.4초 동안
+     backdrop 이 살아나 화면이 한 번 어두워진다. */
+  body.aot-widget-drawer-open .modal-backdrop,
+  body.aot-widget-drawer-closing .modal-backdrop { display: none !important; }
 
   /* The fullscreen .modal layer must let clicks fall through to the dashboard;
      only the dialog (the drawer) captures pointer events. */

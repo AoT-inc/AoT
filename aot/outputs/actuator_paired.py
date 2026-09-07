@@ -620,8 +620,23 @@ class OutputModule(AbstractOutput):
             return
         out_id, ch_num = self._parse_ref(output_id)
         if not out_id:
-            self.logger.warning("relay_on aborted — could not resolve ref %r", output_id)
-            return
+            # ⚠ **경고만 남기고 돌아가면 안 된다.** 위 `_parse_ref` 주석이 적어
+            # 둔 그 상태다 — 설정이 비어 릴레이는 돌지 않는데 명령은 성공으로
+            # 돌아간다. 그러면 상위가 전부 속는다: `_drive` 는 "움직이는 중"
+            # 으로 상태를 갱신하고(경과시간 기반 위치 추정까지 오염된다),
+            # 코디네이터의 `_dispatch` 는 예외가 없으니 성공으로 세고,
+            # `record_dispatch(success=True)` 가 그 액추에이터의 신뢰도를
+            # **올린다**. 실측(2026-09-07 영양 천창1): 130회 명령이 한 번도
+            # 실행되지 않았는데 `actuator_mismatch` 는 48시간 내내 0 이었다.
+            #
+            # 예외로 올리는 이유는 그것이 이 경로에서 **유일하게 위로 전달되는
+            # 신호**이기 때문이다. 데몬(`aot_daemon.output_on`)이 이 예외를
+            # 잡아 `(1, msg)` 로 바꾸고, 그 반환값을 코디네이터 쪽 어댑터
+            # (`dispatch_adapters._raise_if_failed`)가 검사한다.
+            msg = (f"relay_on aborted — could not resolve ref {output_id!r} "
+                   f"(설정이 비어 릴레이를 켤 수 없습니다)")
+            self.logger.error(msg)
+            raise RuntimeError(msg)
         self.logger.info("relay_on  ref=%r -> out_id=%s ch=%s dur=%.2f",
                          output_id, out_id, ch_num, duration)
         try:
@@ -640,7 +655,16 @@ class OutputModule(AbstractOutput):
             return
         out_id, ch_num = self._parse_ref(output_id)
         if not out_id:
-            self.logger.warning("relay_off aborted — could not resolve ref %r", output_id)
+            # ⚠ **여기서는 `_relay_on` 과 달리 예외를 올리지 않는다.** 끄는 것은
+            # 안전 동작이고, 이 함수는 정지 경로에서 양쪽 릴레이에 연달아 불린다
+            # (`output_switch(state='off')`). 한쪽 설정이 비었다고 예외를 올리면
+            # **반대쪽 정지와 위치 저장까지 함께 중단된다** — 못 켜는 것보다
+            # 못 끄는 것이 위험하다.
+            #
+            # 대신 등급을 올려 둔다. 이 자리가 조용하면 "끄라고 했는데 안 꺼진"
+            # 사실이 어디에도 안 남는다.
+            self.logger.error("relay_off aborted — could not resolve ref %r "
+                              "(설정이 비어 릴레이를 끌 수 없습니다)", output_id)
             return
         self.logger.info("relay_off ref=%r -> out_id=%s ch=%s", output_id, out_id, ch_num)
         try:
