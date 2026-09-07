@@ -96,9 +96,12 @@
 .aot-viz {
   /* 구간 색 — 적정 범위 · 채운 양 · 현재 단계가 전부 이 하나를 쓴다.
      전역 토글의 켜짐 녹색과 같은 값이다(위 주석). 옅히지 않는다. */
-  /* @scoped — `:root` 가 아니라 **선택자에 묶인 의도적 국소 오버라이드**다.
+  /* 국소 오버라이드(의도) — `:root` 가 아니라 **선택자에 묶인** 커스텀 속성이다.
      CSS 커스텀 속성의 상속을 이용한 정상 설계라 `!important` 없이 특이도만으로
      동작한다. 파일 단위로만 세면 "정의가 여러 벌" 로 오인한다.
+     ⚠ claude.ai/design 의 검사기는 이것을 **계속 보고한다.** 억제 주석 문법은
+     없고, `:root` 로 올리면 `:has()` 로 행 모양을 가르는 이 설계가 깨진다.
+     그 보고는 남겨 두는 것이 맞다(2026-09-07 확인).
      정본 설명: docs/design/color-system.md */
   --aot-viz-zone: var(--aot-band-3);
   /* 트랙의 중립색. **토큰으로 뽑아 둔 이유**는 축 가이드선(범위 도표)이
@@ -169,7 +172,7 @@
    주인이 여백을 더하면 위아래가 어긋난다(아래가 위의 두 배가 됐던 적이 있다). */
 .aot-viz,
 .aot-viz-group {
-  /* @scoped */
+  /* 국소 오버라이드(의도) */
   --aot-viz-inner: var(--aot-space-3);
 }
 
@@ -654,7 +657,7 @@
   /* 트랙 굵기만 이 도표에서 갈린다 — 밀도가 정한다(빌더가 칸 수로 8 → 4 →
      2px 을 인라인으로 준다). 8px 로 못박으면 기간이 51 개인 문서에서 트랙이
      칸보다 굵어 서로 붙어 한 덩어리로 뭉갠다(실측: 칸 폭 10.3px). */
-  /* @scoped */
+  /* 국소 오버라이드(의도) */
   --aot-viz-range-bar: var(--aot-viz-track-h);
 }
 .aot-viz--range .aot-viz-plot {
@@ -1075,7 +1078,7 @@
  */
 .aot-env-status,
 .aot-coord-plot[data-summary="1"] {
-  /* @scoped */
+  /* 국소 오버라이드(의도) */
   --aot-common-control-width: 72%;
 }
 .aot-env-status .aot-modal-option-control,

@@ -312,17 +312,20 @@
 
   --aot-btn-font-size: var(--aot-font-size-sm);  /* 14px */
 
-  /* font-weight tokens — @kind other (색·간격 축이 아니라 숫자 사다리다.
-     디자인 도구의 토큰 분류기가 이 표식으로 읽는다.) */
-  --aot-fw-regular:  400;
-  --aot-fw-medium:   500;
-  --aot-fw-semibold: 600;
-  --aot-fw-bold:     700;
+  /* font-weight tokens. 색·간격 축이 아니라 숫자 사다리다 — 줄마다 붙은
+     `@kind other` 가 디자인 도구의 분류기에게 그 사실을 알린다.
+     ⚠ 표식은 **선언마다 후행 주석**으로만 읽힌다. 섹션 머리말에 한 번
+     적는 것으로는 안 된다(2026-09-07 에 그렇게 했다가 그대로 다시
+     보고받았다). */
+  --aot-fw-regular:  400;  /* @kind other */
+  --aot-fw-medium:   500;  /* @kind other */
+  --aot-fw-semibold: 600;  /* @kind other */
+  --aot-fw-bold:     700;  /* @kind other */
 
-  /* line-height / letter-spacing — @kind other */
-  --aot-lh-tight: 1.1;
-  --aot-lh-base:  1.45;
-  --aot-ls-tight: -0.01em;
+  /* line-height / letter-spacing */
+  --aot-lh-tight: 1.1;  /* @kind other */
+  --aot-lh-base:  1.45;  /* @kind other */
+  --aot-ls-tight: -0.01em;  /* @kind other */
 
   /* ⚠ 임의의 rem 을 쓰면 값들이 서로 어긋나고, 그 어긋남이 "정돈이 안 됐다" 로
      보인다 — `aot-modal-modern.css` 가 실제로 그 길을 갔다(리터럴 26곳, 서로
@@ -380,25 +383,24 @@
      UI(내비바·모달·드롭다운·오버레이·토스트·툴팁)에만 쓴다.
      지도 pane·gridstack 핸들·위젯 내부 등 "제자리" 레이어는 로컬 소정수를
      쓰고 100 미만을 유지할 것. 하드코딩 숫자/극단값(9999·2147483647) 금지.
-     @kind other — 색도 간격도 아닌 겹침 순서다.
      ======================================================================== */
-  --aot-z-base:              0;    /* 기본 흐름 콘텐츠 */
-  --aot-z-raised:           10;    /* 살짝 띄운 콘텐츠·배지 */
-  --aot-z-sticky:          100;    /* sticky 서브헤더, 페이지 내 고정 바 */
-  --aot-z-map-overlay:     400;    /* 지도/캔버스 위 떠있는 컨트롤·패널 */
-  --aot-z-dropdown:       1000;    /* 메뉴·selectpicker·자동완성 (부트스트랩 관례) */
-  --aot-z-drawer:         1500;    /* 슬라이드 사이드바·드로어 */
-  --aot-z-fixed-panel:    2000;    /* 고정 떠있는 툴 팔레트(geo 디자인 등) */
-  --aot-z-navbar:         3000;    /* 상단 내비게이션 바 */
-  --aot-z-overlay:        4000;    /* 전체화면 오버레이: 로딩·지도 풀스크린·갤러리 뷰어 */
-  --aot-z-modal-backdrop: 5000;    /* 모달 배경 */
-  --aot-z-modal:          5100;    /* 다이얼로그 */
-  --aot-z-modal-nested:   5200;    /* 모달 안에서 밖으로 튀어나오는 드롭다운/select */
-  --aot-z-popover:        5300;    /* 모달 콘텐츠에 앵커된 팝오버 */
-  --aot-z-confirm-backdrop: 5900;  /* 전역 confirm 다이얼로그 배경(일반 모달 위) */
-  --aot-z-confirm:        6000;    /* 전역 confirm 다이얼로그 */
-  --aot-z-toast:          6500;    /* 토스트·알림 (모달 위) */
-  --aot-z-tooltip:        7000;    /* 툴팁 — 항상 최상위 */
+  --aot-z-base:              0;    /* @kind other · 기본 흐름 콘텐츠 */
+  --aot-z-raised:           10;    /* @kind other · 살짝 띄운 콘텐츠·배지 */
+  --aot-z-sticky:          100;    /* @kind other · sticky 서브헤더, 페이지 내 고정 바 */
+  --aot-z-map-overlay:     400;    /* @kind other · 지도/캔버스 위 떠있는 컨트롤·패널 */
+  --aot-z-dropdown:       1000;    /* @kind other · 메뉴·selectpicker·자동완성 (부트스트랩 관례) */
+  --aot-z-drawer:         1500;    /* @kind other · 슬라이드 사이드바·드로어 */
+  --aot-z-fixed-panel:    2000;    /* @kind other · 고정 떠있는 툴 팔레트(geo 디자인 등) */
+  --aot-z-navbar:         3000;    /* @kind other · 상단 내비게이션 바 */
+  --aot-z-overlay:        4000;    /* @kind other · 전체화면 오버레이: 로딩·지도 풀스크린·갤러리 뷰어 */
+  --aot-z-modal-backdrop: 5000;    /* @kind other · 모달 배경 */
+  --aot-z-modal:          5100;    /* @kind other · 다이얼로그 */
+  --aot-z-modal-nested:   5200;    /* @kind other · 모달 안에서 밖으로 튀어나오는 드롭다운/select */
+  --aot-z-popover:        5300;    /* @kind other · 모달 콘텐츠에 앵커된 팝오버 */
+  --aot-z-confirm-backdrop: 5900;  /* @kind other · 전역 confirm 다이얼로그 배경(일반 모달 위) */
+  --aot-z-confirm:        6000;    /* @kind other · 전역 confirm 다이얼로그 */
+  --aot-z-toast:          6500;    /* @kind other · 토스트·알림 (모달 위) */
+  --aot-z-tooltip:        7000;    /* @kind other · 툴팁 — 항상 최상위 */
 
   /* ========================================================================
      Section 1.14: shadow

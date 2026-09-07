@@ -210,9 +210,12 @@ a.aot-modal-section-title-collapsible + .collapse + .aot-modal-container:not(:ha
        이 값을 그대로 읽어야 라벨 상한과 실제 간격이 어긋나지 않는다.
        예전엔 상한에 데스크탑 gap(15px) 기준 상수가 박혀 있어, 모바일(gap 8px)
        에서 22px 가량이 space-between 사이 빈 공간으로 버려졌다. */
-    /* @scoped — `:root` 가 아니라 **선택자에 묶인 의도적 국소 오버라이드**다.
+    /* 국소 오버라이드(의도) — `:root` 가 아니라 **선택자에 묶인** 커스텀 속성이다.
        CSS 커스텀 속성의 상속을 이용한 정상 설계라 `!important` 없이 특이도만으로
        동작한다. 파일 단위로만 세면 "정의가 여러 벌" 로 오인한다.
+       ⚠ claude.ai/design 의 검사기는 이것을 **계속 보고한다.** 억제 주석 문법은
+       없고, `:root` 로 올리면 `:has()` 로 행 모양을 가르는 이 설계가 깨진다.
+       그 보고는 남겨 두는 것이 맞다(2026-09-07 확인).
        정본 설명: docs/design/color-system.md */
     --aot-row-gap: 15px;
     gap: var(--aot-row-gap); /* Increased for better touch separation */
@@ -273,7 +276,7 @@ a.aot-modal-section-title-collapsible + .collapse + .aot-modal-container:not(:ha
 .aot-dash-scope-groups,
 .aot-map-scope-groups,
 .aot-fac-scope-groups {
-    /* @scoped */
+    /* 국소 오버라이드(의도) */
     --aot-common-control-width: 60px;
 }
 
@@ -858,7 +861,7 @@ textarea.aot-modern-input.aot-input-prose {
 /* SECTION 6: RESPONSIVE ADAPTATION */
 @media (max-width: 768px) {
     .aot-modal-option-row {
-        /* @scoped */
+        /* 국소 오버라이드(의도) */
         --aot-row-gap: 8px; /* 라벨 max-width 계산도 이 값을 읽는다 */
         flex-wrap: nowrap !important; /* 가로 레이아웃 최대한 유지 */
         height: auto !important;
@@ -927,7 +930,7 @@ textarea.aot-modern-input.aot-input-prose {
        (`:only-child` 로 쓰면 hidden input 형제 하나에 규칙이 조용히 빠지거나,
        반대로 넓은 조합 행까지 좁혀 버린다). */
     .aot-modal-option-row:has(> .aot-modal-option-control > .btn-toggle):not(:has(> .aot-modal-option-control > * + *)) {
-        /* @scoped */
+        /* 국소 오버라이드(의도) */
         --aot-common-control-width: var(--aot-ctrl-w-switch);
     }
     /* 폭이 어긋나더라도 스위치가 눌리는 일은 없게 — 눌리면 thumb 이 슬라이더
@@ -936,11 +939,11 @@ textarea.aot-modern-input.aot-input-prose {
         flex-shrink: 0;
     }
     .aot-modal-option-row:has(> .aot-modal-option-control > input[type="color"]):not(:has(> .aot-modal-option-control > * + *)) {
-        /* @scoped */
+        /* 국소 오버라이드(의도) */
         --aot-common-control-width: var(--aot-ctrl-w-color);
     }
     .aot-modal-option-row:has(> .aot-modal-option-control > input[type="number"]):not(:has(> .aot-modal-option-control > * + *)) {
-        /* @scoped */
+        /* 국소 오버라이드(의도) */
         --aot-common-control-width: var(--aot-ctrl-w-num);
     }
 
@@ -987,7 +990,7 @@ textarea.aot-modern-input.aot-input-prose {
     @media (max-width: 360px) {
         .aot-modal-option-row {
             flex-wrap: nowrap !important;
-            /* @scoped */
+            /* 국소 오버라이드(의도) */
             --aot-row-gap: 6px;
         }
         .aot-modal-option-label {
