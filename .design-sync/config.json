@@ -1,0 +1,5 @@
+{
+  "shape": "custom",
+  "readmeHeader": ".design-sync/conventions.md",
+  "note": "AoT 는 Jinja+CSS 서버렌더 앱이라 표준 변환기(React dist -> 컴포넌트)가 성립하지 않는다. 토큰·스타일만 담은 번들을 손으로 조립한다 — 조립 절차는 NOTES.md."
+}

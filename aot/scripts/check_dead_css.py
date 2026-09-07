@@ -51,12 +51,14 @@ CSSDIR = os.path.join(ROOT, "aot", "aot_flask", "static", "css")
 # 번들(dist/)과 벤더도 넣는다: 거기 이름이 있으면 런타임에 붙는다는 뜻이다.
 CORPUS_EXT = (".html", ".htm", ".py", ".js", ".mjs", ".jsx", ".ts", ".json",
               ".jinja", ".jinja2", ".svg", ".xml", ".md", ".txt")
-SKIP_DIR = {".git", "node_modules", "__pycache__", ".local"}
+SKIP_DIR = {".git", "node_modules", "__pycache__", ".local", ".design-sync"}
 
 # ⚠ 말뭉치에서 **자기 자신을 빼야 한다.** 이 파일의 설명이 클래스 이름을
 # 인용하는 순간 그 이름이 "마크업에 있다" 로 잡혀 검사가 스스로를 속인다
 # (`.aot-notice-box-info` 를 이 설명에 적었더니 후보에서 사라졌다).
-# `.local/` 도 뺀다 — 감사 보고서가 이름을 잔뜩 인용한다.
+# `.local/`(감사 보고서)과 `.design-sync/`(디자인 시스템 규약 문서)도 같은
+# 이유로 뺀다 — 둘 다 클래스 이름을 예시로 잔뜩 인용하므로, 두면 실제로는
+# 아무 데도 안 쓰이는 이름이 "마크업에 있다" 로 잡힌다(2026-09-07 실측 확인).
 SKIP_FILES = {os.path.abspath(__file__)}
 
 # 우리가 쓴 CSS 만 본다 — 받아 온 것은 우리가 지울 것이 아니다
