@@ -1832,7 +1832,14 @@ body { transition: padding-right 0.4s cubic-bezier(0.075, 0.82, 0.165, 1); }
    resize nudge. iOS-safe: the lifted card is fixed to the viewport, unaffected by
    the scroll-lock's body{position:fixed}. */
 @media (max-width: 767.98px) {
-  :root { --aot-preview-band-h: 42vh; --aot-preview-band-h: 42dvh; }
+  /* 위젯 드로어 전용 — 위쪽 미리보기 띠의 높이. 두 줄은 폴백이다:
+     `dvh` 는 모바일 주소창이 접힐 때 **실제로 보이는** 높이라 그쪽이 맞고,
+     모르는 브라우저는 둘째 줄을 버리고 첫 줄(`vh`)을 쓴다. 순서가 곧 폴백이라
+     합쳐 쓰거나 순서를 바꾸면 안 된다. */
+  :root {
+    --aot-preview-band-h: 42vh;   /* @kind spacing */
+    --aot-preview-band-h: 42dvh;  /* @kind spacing */
+  }
 
   /* The widget drawer also carries .aot-option-modal, so the generic mobile
      full-screen rule above (.modal.aot-option-modal .modal-dialog, specificity
