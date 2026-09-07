@@ -610,6 +610,9 @@
       {% if g == 'day' %}{{ _('Daily') }}
       {% elif g == 'week' %}{{ _('Weekly') }}
       {% elif g == 'month' %}{{ _('Monthly') }}
+      {#- 단계는 달력이 아니라 프로그램이 자르는 단위다 — 절 제목과 같은
+          말을 쓴다(`Program stages` = "단계"). -#}
+      {% elif g == 'stage' %}{{ _('By stage') }}
       {% else %}{{ _('Whole period') }}{% endif %}
     </a>
     {% endfor %}
@@ -652,7 +655,11 @@
       {% if b.daylight_h %}
       <span class="aot-modal-body-text" style="font-weight:400;">
         · {{ _('daylight %(h)s h', h=b.daylight_h) }}
-        {% if b.sunrise %}({{ b.sunrise }}–{{ b.sunset }}){% endif %}
+        {#- ⚠ **둘 다 있을 때만** 적는다. 접힌 버킷의 일몰은 마지막 날의 것을
+            그대로 들고 오는데(`_merge_bucket_group`), 그 날이 아직 진행 중이면
+            비어 있어 화면에 "05:57–None" 이 그대로 찍힌다(단계 단위가 기본이
+            되면서 드러났다). -#}
+        {% if b.sunrise and b.sunset %}({{ b.sunrise }}–{{ b.sunset }}){% endif %}
       </span>
       {% endif %}
     </h3>
@@ -1598,8 +1605,11 @@
       `AoTMapCustomControls.createLayerControl` 은 **다른 물건**이다 —
       장비·구조·경계 같은 **내용 레이어**를 켜고 끄는 것이라 바탕 지도를
       고를 수 없다(그것을 붙였다가 되돌렸다, 지적 2026-09-04).
-      번들이 아니라 **원본 파일**을 싣는다 — `geo-design` 번들은 스코프에
-      갇혀 `AoTGeoUI` 를 밖에서 못 쓴다. -#}
+      `AoTGeoUI` 는 `class` 선언이라 렉시컬 바인딩이지 `window` 속성이
+      아니다 — 그래서 이걸 쓰는 `journal-map.js` 와 **같은 번들**에 담는다
+      (`page-journal-view-map` = aot-geo-ui.js + journal-map.js). 둘을 서로
+      다른 번들로 가르면 `typeof AoTGeoUI` 가 'undefined' 로 떨어져 레이어
+      패널이 에러 없이 사라진다. -#}
   <script src="{{ asset('page-journal-view-map') }}"></script>
   <script>
     (function () {

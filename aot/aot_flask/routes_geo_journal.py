@@ -351,8 +351,17 @@ def geo_journal_view(journal_uuid):
     # 열람 단위(§E) — 저장된 것보다 **굵게만** 볼 수 있다. 저장 단위보다 잘게
     # 요구하면 `fold_buckets` 가 그대로 돌려준다(없는 정보를 지어내지 않는다).
     stored = (row.data or {}).get('granularity') or 'day'
-    view_gran = (request.args.get('granularity') or stored).lower()
+    # ── 기본은 **단계**다 ────────────────────────────────────────────────
+    #
+    # 문서를 여는 사람이 먼저 묻는 것은 "이 작기가 단계별로 어땠나" 이지
+    # 며칠째의 숫자가 아니다. 일 단위로 열면 60줄짜리 표부터 마주친다.
+    # 단계가 없는 문서(프로그램 없는 구획·zone/site)는 저장 단위 그대로다.
+    _stage_ok = plot_journal.stage_fold_available(row.data)
+    _default_gran = 'stage' if _stage_ok else stored
+    view_gran = (request.args.get('granularity') or _default_gran).lower()
     if view_gran not in plot_journal.VIEW_GRANULARITIES:
+        view_gran = _default_gran
+    if view_gran == 'stage' and not _stage_ok:
         view_gran = stored
 
     if fmt == 'md':
@@ -419,7 +428,8 @@ def geo_journal_view(journal_uuid):
         # 접기·묶기는 **열람할 때마다 하는 순수 계산**이다 — 저장된 스냅샷은
         # 그대로 두므로 JSON·MCP 내보내기는 원본 그대로다(§C·§E).
         folded = plot_journal.fold_buckets(
-            data.get('buckets') or [], to=view_gran, granularity=stored)
+            data.get('buckets') or [], to=view_gran, granularity=stored,
+            stages=data.get('stages'))
         for bucket in folded:
             # 적산온도도 **표의 행**이다 — DLI·VPD 는 행인데 GDD 만 날짜 제목
             # 옆 글자로 떠 있었다(세 지표를 각 층에서 같이 다룬다).
@@ -515,9 +525,16 @@ def geo_journal_view(journal_uuid):
 
     # 저장 단위보다 잘게는 못 보므로 그 선택지는 **아예 내주지 않는다** —
     # 눌러도 아무 일 없는 버튼을 두면 고장으로 읽힌다.
+    # `'stage'` 는 크기가 아니라 **다른 축**이라 이 비교에 끼우지 않는다 —
+    # 단계가 있는 문서에서만 내준다(`stage_fold_available`).
     order = {'day': 0, 'week': 1, 'month': 2, 'all': 3}
-    available = [g for g in plot_journal.VIEW_GRANULARITIES
-                 if order[g] >= order.get(stored, 0)]
+    available = []
+    for _g in plot_journal.VIEW_GRANULARITIES:
+        if _g == 'stage':
+            if _stage_ok:
+                available.append(_g)
+        elif order[_g] >= order.get(stored, 0):
+            available.append(_g)
 
     return render_template('pages/geo/journal_view.html', journal=row,
                            caveat_texts=caveat_texts,

@@ -45,7 +45,8 @@ from collections import defaultdict
 
 from aot.start_flask_ui import app
 from aot.aot_flask.extensions import db
-from aot.aot_flask.geo.device_binding import device_kind_models
+from aot.aot_flask.geo.device_binding import (device_kind_models,
+                                               SINGLE_OCCUPANCY_KINDS)
 from aot.databases.models import GeoBinding, GeoFacility, GeoShape
 from aot.utils.time_utils import utc_now
 
@@ -222,23 +223,59 @@ def collect():
 
 
 def _existing_keys():
-    """이미 있는 현재 바인딩의 유일성 키 — 재실행 시 중복 생성을 막는다."""
+    """이미 있는 현재 바인딩의 유일성 키 — 재실행 시 중복 생성을 막는다.
+
+    두 가지를 함께 돌려준다:
+
+    ``keys``
+        (kind, id, role, device_id, channel, measurement) 완전 일치 —
+        같은 연결을 두 번 만들지 않기 위한 멱등 키.
+    ``occupied``
+        {(kind, id, role, channel): device_id} — **단일점유 자리의 현재 임자**.
+        `SINGLE_OCCUPANCY_KINDS`('shape'·'fitting'·'actuator')는 한 자리에
+        장치 하나뿐이고, 그 규칙은 DB 인덱스 `geo_itg_gb1_single_current`
+        가 강제한다.
+    """
     keys = set()
+    occupied = {}
     for b in GeoBinding.query.filter(GeoBinding.valid_to.is_(None)).all():
         keys.add((b.spatial_kind, b.spatial_id, b.role, b.device_id,
                   b.channel_id, b.measurement_id or ''))
-    return keys
+        if b.spatial_kind in SINGLE_OCCUPANCY_KINDS:
+            occupied[(b.spatial_kind, b.spatial_id, b.role,
+                      b.channel_id)] = b.device_id
+    return keys, occupied
 
 
 def apply(rows):
-    """바인딩 행을 만든다. 이미 있는 것은 건너뛴다(멱등)."""
+    """바인딩 행을 만든다. 이미 있는 것은 건너뛴다(멱등).
+
+    **임자가 다른 자리는 건너뛴다.** 레거시 컬럼(`geo_shape.device_id`)은
+    바인딩을 갈아끼울 때 따라 갱신되지 않으므로, 교체가 한 번이라도 있었던
+    도형에서는 컬럼이 옛 장치를 계속 가리킨다. 그 값을 그대로 밀어 넣으면
+    한 자리에 장치 둘이 동시에 매인 꼴이 되는데, 그건 단일점유 위반이라
+    DB 인덱스가 거부한다 — 그리고 전체가 한 트랜잭션이라 **정당한 나머지
+    행까지 통째로 롤백됐다**(실측 2026-09-06: 유효한 170건이 이 한 줄
+    때문에 하나도 반영되지 않고 종료코드 2로 죽었다).
+
+    건너뛰는 것이 맞는 이유는 이 스크립트의 다른 정책과 같다 — 죽은 참조를
+    바인딩으로 승격시키지 않는 것처럼, **갈아끼워진 옛 참조도 정본으로
+    되살리지 않는다.** 사람이 실제로 한 배정은 `geo_binding` 쪽이다.
+    건너뛴 자리는 보고서에 남겨 정리 대상으로 드러낸다.
+    """
     now = utc_now()
-    existing = _existing_keys()
+    existing, occupied = _existing_keys()
     created = 0
+    skipped_slot_taken = []
     for r in rows:
         key = (r['spatial_kind'], r['spatial_id'], r['role'], r['device_id'],
                r['channel_id'], r['measurement_id'] or '')
         if key in existing:
+            continue
+        slot = (r['spatial_kind'], r['spatial_id'], r['role'], r['channel_id'])
+        holder = occupied.get(slot)
+        if holder is not None and holder != r['device_id']:
+            skipped_slot_taken.append(dict(r, current_device_id=holder))
             continue
         db.session.add(GeoBinding(
             spatial_kind=r['spatial_kind'], spatial_id=r['spatial_id'],
@@ -247,12 +284,14 @@ def apply(rows):
             measurement_id=r['measurement_id'], params=r['params'],
             valid_from=now))
         existing.add(key)
+        if r['spatial_kind'] in SINGLE_OCCUPANCY_KINDS:
+            occupied[slot] = r['device_id']
         created += 1
     db.session.commit()
-    return created
+    return created, skipped_slot_taken
 
 
-def _report(col, applied=None):
+def _report(col, applied=None, slot_taken=None):
     print('=' * 68)
     print('geo_binding 백필 %s' % ('적용 결과' if applied is not None
                                    else '미리보기 (쓰기 없음)'))
@@ -268,6 +307,17 @@ def _report(col, applied=None):
         print('  %-28s %4d' % (k, by_kind[k]))
     if applied is not None:
         print('\n  → 실제 생성 %d건 (나머지는 이미 존재)' % applied)
+
+    if slot_taken:
+        print('\n[건너뜀 — 자리의 임자가 다르다] %d건. 레거시 컬럼이 옛 장치를'
+              ' 가리킨다(교체 후 따라 갱신되지 않는다).' % len(slot_taken))
+        print('  geo_binding 쪽이 정본이다. 컬럼을 맞추거나 비울 것.')
+        for d in slot_taken[:30]:
+            print('  %-12s %-40s %-7s 컬럼=%s ↔ 현재=%s' % (
+                d['spatial_kind'], (d['spatial_id'] or '')[:40], d['role'],
+                d['device_id'], d['current_device_id']))
+        if len(slot_taken) > 30:
+            print('  ... 외 %d건' % (len(slot_taken) - 30))
 
     if col.dead:
         print('\n[죽은 참조] %d건 — 바인딩을 만들지 않았다. 정리 대상이다.'
@@ -302,9 +352,10 @@ def main():
             return 2
 
         applied = None
+        slot_taken = []
         if args.apply:
             try:
-                applied = apply(col.rows)
+                applied, slot_taken = apply(col.rows)
             except Exception as exc:
                 db.session.rollback()
                 print('백필 적용 실패: %s' % exc, file=sys.stderr)
@@ -315,10 +366,11 @@ def main():
                 'planned': col.rows,
                 'dead_refs': col.dead,
                 'skipped': dict(col.stats),
+                'skipped_slot_taken': slot_taken,
                 'applied': applied,
             }, ensure_ascii=False, indent=2, default=str))
         else:
-            _report(col, applied)
+            _report(col, applied, slot_taken)
 
         if applied is not None:
             return 0

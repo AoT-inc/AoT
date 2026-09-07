@@ -34207,3 +34207,7 @@ msgstr "이 구획 안에 토출구가 그려져 있지 않아 물량을 낼 수
 #: aot/aot_flask/static/js/common/aot-map-popup.js
 msgid "The flow rate of these devices is unknown, so no water is attributed: %(names)s"
 msgstr "유량을 몰라 물량을 낼 수 없는 장치: %(names)s"
+
+#: aot/aot_flask/templates/pages/geo/journal_view.html
+msgid "By stage"
+msgstr "단계별"

@@ -33788,3 +33788,7 @@ msgstr "この区画内にエミッターが描かれておらず水量を算出
 #: aot/aot_flask/static/js/common/aot-map-popup.js
 msgid "The flow rate of these devices is unknown, so no water is attributed: %(names)s"
 msgstr "流量が不明で水量を算出できない装置: %(names)s"
+
+#: aot/aot_flask/templates/pages/geo/journal_view.html
+msgid "By stage"
+msgstr "ステージ別"

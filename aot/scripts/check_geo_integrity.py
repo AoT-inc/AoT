@@ -28,6 +28,11 @@ GeoShape 는 도형의 종류를 두 곳에 들고 있다 — `type` 컬럼과
   duplicate       같은 지도 안에서 (종류, 기하) 가 겹치는 도형.
                   좌표는 --tolerance(기본 1e-6 도, 약 0.1m) 로 반올림해 비교한다
                   — 완전 일치만 보면 저장 사이에 라벨이 몇 m 움직인 중복을 놓친다.
+                  장치를 매단 도형은 **장치 신원까지 같아야** 중복이다: 마커는
+                  등록 시 부모 구역 중심점에 놓이므로 서로 다른 장치의 마커가
+                  같은 좌표에 겹치는 것이 정상이다(2026-09-06 Japan 지도에서
+                  장치 15개가 그렇게 보고됐고, keep_suggestion 을 따랐다면
+                  멀쩡한 마커 14개가 지워졌다).
   dangling-link   Input/Output/PID/Trigger/Conditional/CustomController/Function
                   의 map_overlay_id 가 없는 GeoShape.id 를 가리킴
   orphan-facility GeoFacility.shape_uuid 가 없는 GeoShape 를 가리킴
@@ -54,6 +59,10 @@ GeoShape 는 도형의 종류를 두 곳에 들고 있다 — `type` 컬럼과
   binding-drift   레거시 저장처에는 있는데 geo_binding 에 현재 바인딩이 없는
                   연결. 두 저장처가 공존하는 Phase B 완료 전까지의 감시자다.
                   geo_binding 테이블이 없는 설치에서는 건너뛴다.
+                  구역 폴리곤(role='area')에서 **자리는 매여 있고 컬럼만 옛
+                  장치를 가리키는** 경우는 제외한다 — 그 컬럼은 교체 때 일부러
+                  두는 것이라(TestLegacyColumnStaysInStep) 세면 숫자가 영영
+                  0 이 되지 않고 진짜 드리프트가 그 잡음에 묻힌다.
 
 공간 구획(docs/design/geo-plot-instance.md) 관련 9종:
 
@@ -224,9 +233,11 @@ def _binding_drift(shapes, device_ids):
     except Exception:
         return []
 
-    current = {(b.spatial_kind, b.spatial_id, b.role, b.device_id)
-               for b in GeoBinding.query.filter(
-                   GeoBinding.valid_to.is_(None)).all()}
+    current = set()
+    bound_slots = set()
+    for b in GeoBinding.query.filter(GeoBinding.valid_to.is_(None)).all():
+        current.add((b.spatial_kind, b.spatial_id, b.role, b.device_id))
+        bound_slots.add((b.spatial_kind, b.spatial_id, b.role))
 
     roles = {'aot_device': 'marker', 'device': 'area'}
     out = []
@@ -238,6 +249,24 @@ def _binding_drift(shapes, device_ids):
         did = raw.split('::')[0]
         if did not in device_ids:
             continue                       # 죽은 참조 — 다른 검사 담당
+        if (role == 'area'
+                and ('shape', s.unique_id, role) in bound_slots):
+            # 자리는 매여 있고 컬럼만 옛 장치를 가리킨다 — 드리프트가 아니다.
+            # 구역 폴리곤의 레거시 컬럼은 장치를 갈아끼워도 **일부러** 두는
+            # 것이다(device_binding `_move_marker_column` 이 마커만 따라가고,
+            # test_rebind_device.TestLegacyColumnStaysInStep 가 그 결정을
+            # 못 박는다 — 컬럼은 없애는 중이라 새 쓰기를 늘리지 않는다).
+            #
+            # 그걸 드리프트로 세면 구역 장치를 한 번이라도 교체한 설치에서는
+            # 이 숫자가 영영 0 이 되지 않고, 그 상수 잡음 뒤로 **진짜** 드리프트
+            # (자리에 바인딩이 아예 없는 경우)가 묻힌다. Phase C 게이팅 신호가
+            # 정확히 그 숫자라 묻히면 안 된다(2026-09-06 실측: 4건 중 1건이
+            # 이 경우였다).
+            #
+            # 마커는 계속 본다 — 마커 컬럼은 따라가기로 돼 있으므로, 어긋나
+            # 있다면 그 동기화가 실패했다는 뜻이고 실제로 고장이다
+            # (`place_device` 가 컬럼으로 마커를 찾는다).
+            continue
         if ('shape', s.unique_id, role, did) not in current:
             out.append({
                 'source': 'geo_shape.device_id',
@@ -273,14 +302,30 @@ def collect(map_uuid=None, tolerance=1e-6):
                 dict(_where(s), type=s.type, aot_type=aot_type))
 
     # ── 같은 지도 안의 (종류, 기하) 중복 ────────────────────────────────
+    #
+    # 장치를 매단 도형은 **기하가 같아도 중복이 아니다.** 마커는 장치를
+    # 등록할 때 부모 구역의 중심점에 놓이므로(ai_action_service → place_device),
+    # 한 번에 여러 장치를 등록하면 서로 다른 장치의 마커가 정확히 같은
+    # 좌표에 겹쳐 앉는다 — 사람이 지도에서 끌어 떼기 전까지 그 상태가 정상이다.
+    # 실측(2026-09-06, Japan 지도): 장치 15개(側窓·天窓·バルブ·ポンプ…)의
+    # 마커가 한 점에 모여 있었고, 이 검사는 그것을 "중복 15건" 으로 보고하며
+    # `keep_suggestion` 으로 하나만 남기라고 권했다 — 그대로 따르면 멀쩡한
+    # 장치 마커 14개가 지워진다.
+    #
+    # 마커의 진짜 중복 규칙(같은 지도·장치·채널에 마커 둘)은 이미 DB 인덱스
+    # geo_itg_i2_marker_unique 가 막는다. 여기서는 장치 신원을 키에 더해,
+    # "같은 장치가 같은 자리에 두 번" 인 경우만 중복으로 남긴다(채널 NULL/'0'
+    # 비대칭으로 인덱스를 비켜 간 레거시 행이 그 경우다).
     groups = defaultdict(list)
     for s in shapes:
         if s.type in DUP_EXEMPT_TYPES:
             continue
         key = _geom_key(s, tolerance)
         if key:
-            groups[(s.geo_id, s.type, key)].append(s)
-    for (geo_id, stype, _), members in groups.items():
+            identity = ((s.device_id, s.channel_id or '0')
+                        if getattr(s, 'device_id', None) else None)
+            groups[(s.geo_id, s.type, key, identity)].append(s)
+    for (geo_id, stype, _, _identity), members in groups.items():
         if len(members) > 1:
             members.sort(key=lambda s: s.id)
             findings['duplicate'].append({

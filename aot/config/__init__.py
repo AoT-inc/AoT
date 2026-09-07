@@ -276,7 +276,9 @@ LANGUAGES = {
     'sv': 'Svenska (Swedish)',
     'tr': 'Türkçe (Turkish)',
     'zh': '中文 (Chinese)',
-    'ja': '日本語 (Japanese)'
+    'ja': '日本語 (Japanese)',
+    'th': 'ภาษาไทย (Thai)',
+    'vi': 'Tiếng Việt (Vietnamese)'
 }
 
 # AI Agent & Service Config (For future integration)

@@ -504,7 +504,11 @@ def choose_granularity(start_date, end_date, rows=None, requested=None):
 
 
 #: 열람 시점에 고를 수 있는 단위. 저장 단위보다 **잘게** 는 볼 수 없다.
-VIEW_GRANULARITIES = ('day', 'week', 'month', 'all')
+#: 열람 단위. `'stage'` 는 **크기가 아니라 다른 축**이다 — 달력이 자르는
+#: 나머지 넷과 달리 프로그램의 단계 경계가 자른다. 그래서 "저장 단위보다
+#: 잘게는 못 본다" 는 크기 비교(`day<week<month<all`)에 끼워 넣지 않고
+#: **단계가 있을 때만** 내준다(`stage_fold_available`).
+VIEW_GRANULARITIES = ('day', 'week', 'month', 'stage', 'all')
 
 
 # ── 곡선 목표(Method)의 주야 Δ ─────────────────────────────────────────────
@@ -879,19 +883,39 @@ def phase_delta_text(phases):
     return _phase_text(phases, _one)
 
 
-def fold_buckets(buckets, to='week', granularity='day'):
+def stage_fold_available(journal_data):
+    """이 문서를 **단계 단위**로 접을 수 있는가 → bool.
+
+    단계가 있어야 하고(프로그램이 붙은 구획), 단계가 둘 이상이어야 뜻이 있다 —
+    하나뿐이면 '전체 기간' 과 같은 그림이 나온다.
+    """
+    stages = (journal_data or {}).get('stages') or []
+    return len([st for st in stages if st.get('starts_on')]) > 1
+
+
+def fold_buckets(buckets, to='week', granularity='day', stages=None):
     """저장된 버킷 목록 → 더 굵은 단위로 접은 버킷 목록. **순수 계산**이다.
 
     InfluxDB 를 다시 읽지 않고 DB 에 쓰지도 않는다 — 열람할 때마다 저장된
     스냅샷에서 새로 만든다. 그래서 스냅샷 불변 계약(§1)을 깨지 않는다.
 
-    `to` 는 `'day'|'week'|'month'|'all'`. **저장 단위보다 잘게는 못 간다** —
-    주 단위로 저장된 문서에 일 단위를 요구하면 접지 않고 그대로 돌려준다
-    (없는 정보를 지어내지 않는다. 화면은 그 선택지를 아예 감춘다).
+    `to` 는 `'day'|'week'|'month'|'stage'|'all'`. **저장 단위보다 잘게는 못
+    간다** — 주 단위로 저장된 문서에 일 단위를 요구하면 접지 않고 그대로
+    돌려준다(없는 정보를 지어내지 않는다. 화면은 그 선택지를 아예 감춘다).
+
+    `'stage'` 는 **크기 비교에서 빠진다.** 달력이 아니라 프로그램의 단계
+    경계가 자르므로 "월보다 굵은가" 를 물을 수 없다 — 대신 `stages` 를 받아야
+    하고, 못 받으면 접지 않고 그대로 돌려준다. 버킷은 **시작일이 속한 단계**로
+    들어간다(`stage_at`) — 목표를 붙일 때(`attach_targets`)와 같은 규칙이라,
+    단계 경계를 걸친 주가 두 규칙에서 다른 단계로 가지 않는다.
     """
-    order = {'day': 0, 'week': 1, 'month': 2, 'all': 3}
-    if order.get(to, 0) <= order.get(granularity, 0):
-        return buckets
+    if to == 'stage':
+        if not stages:
+            return buckets
+    else:
+        order = {'day': 0, 'week': 1, 'month': 2, 'all': 3}
+        if order.get(to, 0) <= order.get(granularity, 0):
+            return buckets
     if not buckets:
         return buckets
 
@@ -925,6 +949,13 @@ def fold_buckets(buckets, to='week', granularity='day'):
     def _fold_key(day):
         if to == 'all':
             return 'all'
+        if to == 'stage':
+            st = stage_at(stages, day)
+            # 어느 단계에도 안 걸리는 날(단계 시작 전·끝난 뒤)은 **한 덩어리로
+            # 모으지 않는다** — 그 날들이 서로 다른 자리인데 한 줄이 되면
+            # 문서가 없는 구간을 지어낸다. 자기 날짜를 키로 남긴다.
+            return (st.get('key') or st.get('name') or st.get('starts_on')
+                    if st else day)
         if to == 'month':
             return day.replace(day=1)
         if anchor is None:
@@ -972,7 +1003,12 @@ def _merge_bucket_group(box, to):
 
     days = box['days']
     first, last = box['first'], box['last']
-    if to == 'all':
+    if to == 'all' or to == 'stage':
+        # 단계도 실제로 들어 있는 **처음~마지막 기록일**로 적는다. 단계의
+        # 계획 기간(`starts_on`~`ends_on`)을 쓰면 문서가 담지 않은 날까지
+        # 적히고, 그 구간에 값이 있는 것으로 읽힌다. 단계 **이름**은 라벨에
+        # 넣지 않는다 — 단계 절의 제목이 이미 말하고, 표 안에서 한 번 더
+        # 적으면 같은 말이 두 번이다.
         label = '%s ~ %s' % (first.isoformat(), last.isoformat())
     elif to == 'month':
         label = first.strftime('%Y-%m')
@@ -4891,7 +4927,10 @@ def stage_sections(journal_data, granularity=None, stored=None):
         if granularity and granularity != 'all' and mine_all:
             for bucket in fold_buckets([b for _k, b in mine_all],
                                        to=granularity,
-                                       granularity=(stored or 'day')):
+                                       granularity=(stored or 'day'),
+                                       # 단계 단위면 이 단계가 통째로 한 줄이
+                                       # 된다 — 자기 단계만 넘기면 충분하다.
+                                       stages=[stage]):
                 section['buckets'].append(dict(bucket, env_groups=(
                     with_gdd_group(group_env_rows(bucket.get('env') or []),
                                    bucket))))
@@ -6029,7 +6068,8 @@ def render_plot_journal_markdown(journal_data, granularity=None):
     show_target = (t.get('type') == 'plot')
     stored = journal_data.get('granularity') or 'day'
     buckets = fold_buckets(journal_data.get('buckets') or [],
-                           to=(granularity or stored), granularity=stored)
+                           to=(granularity or stored), granularity=stored,
+                           stages=journal_data.get('stages'))
 
     lines.append('## %s' % _gettext_safe('Daily log'))
     lines.append('')
@@ -6444,7 +6484,8 @@ def render_plot_journal_csv(journal_data, granularity=None):
     journal_data = journal_data or {}
     stored = journal_data.get('granularity') or 'day'
     buckets = fold_buckets(journal_data.get('buckets') or [],
-                           to=(granularity or stored), granularity=stored)
+                           to=(granularity or stored), granularity=stored,
+                           stages=journal_data.get('stages'))
     target = journal_data.get('target') or {}
 
     out = _io.StringIO()
@@ -6618,7 +6659,8 @@ def render_plot_journal_odt(journal_data, granularity=None):
     stored = journal_data.get('granularity') or 'day'
     view = granularity or stored
     buckets = fold_buckets(journal_data.get('buckets') or [],
-                           to=view, granularity=stored)
+                           to=view, granularity=stored,
+                           stages=journal_data.get('stages'))
     t = journal_data.get('target') or {}
     period = t.get('period') or {}
 

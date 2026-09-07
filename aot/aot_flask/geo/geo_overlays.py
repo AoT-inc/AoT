@@ -30,6 +30,37 @@ def _is_ephemeral_sprinkler_marker(feat):
     return props.get('sub_type') == 'sprinkler'
 
 
+def _strip_derived_bbox(feat):
+    """피처에서 파생 필드 `bbox` 를 뺀 사본을 반환한다. 원본 불변.
+
+    GeoJSON 의 `bbox` 는 좌표에서 언제든 다시 구할 수 있는 파생값이라 정본이
+    아니다. 그런데 turf 의 몇몇 함수(대표적으로 `lineSplit`)는 내부 rbush
+    색인의 검색 키로 쓰려고 결과 피처에 `bbox` 를 붙여서 돌려준다 — 그것도
+    `turf.square()` 로 정사각형까지 부풀린 값이다(색인 용도에선 과대추정이
+    안전하니 turf 쪽은 정상). 그 피처가 그대로 저장 페이로드에 실려 오면
+    좌표와 어긋난 상자가 DB 에 영구히 남는다(2026-09-06 실측: 지도 4곳
+    `pipe_branch` 130건, 동서로 최대 75m 넓은 상자).
+
+    좌표와 어긋나는 것만 문제가 아니다. `turf.bbox()` 는 피처에 `bbox` 가
+    있으면 좌표를 보지 않고 그 값을 그대로 돌려주므로, 한 번 저장되면
+    이후의 모든 독자가 틀린 범위를 받는다. 게다가 나중에 기하가 편집돼도
+    `bbox` 는 따라 갱신되지 않아(예: aot-geo-geometry `_trimOvershoot` 는
+    `feature.geometry` 만 교체한다) 시간이 지날수록 더 벌어진다.
+
+    생산 지점(aot-geo-preview `_splitPipesByMains`)에서 이미 버리지만, 다른
+    turf 함수도 같은 짓을 하고 저장 경로는 클라이언트가 보낸 피처를 그대로
+    싣기 때문에 저장 경계에서 한 번 더 막는다. 읽는 쪽은 아무도 저장된
+    `bbox` 를 쓰지 않는다 — 서버는 전부 좌표에서 직접 계산하고
+    (`plot_journal._geom_bbox`, `ai_context_service`), 클라이언트에서 이 값이
+    닿는 유일한 곳은 `booleanIntersects` 앞의 기각 프리필터다.
+    """
+    if not isinstance(feat, dict) or 'bbox' not in feat:
+        return feat
+    out = dict(feat)
+    out.pop('bbox', None)
+    return out
+
+
 def _drop_containment_cache():
     """도형 기하가 바뀐 직후 포함 관계 캐시를 버린다.
 
@@ -373,7 +404,8 @@ class GeoOverlayManager:
                 # _is_ephemeral_sprinkler_marker. Filter before the empty-wipe
                 # check below so a payload that is ONLY stray dot markers is
                 # correctly treated as empty, not as "real equipment saved".
-                new_features = [f for f in new_features
+                # 파생 bbox 는 저장하지 않는다 — _strip_derived_bbox 참조.
+                new_features = [_strip_derived_bbox(f) for f in new_features
                                 if not _is_ephemeral_sprinkler_marker(f)]
 
                 # [Safety] This path deletes ALL equipment rows before re-inserting the
@@ -574,7 +606,8 @@ class GeoOverlayManager:
             for db_id, feat in to_update:
                 row = existing_map[db_id]
                 # [I6] 구조 필드 제거 후 저장. 이름 동기화는 원본 페이로드로.
-                row.feature = GeoOverlayManager._strip_structural_props(feat)
+                row.feature = _strip_derived_bbox(
+                    GeoOverlayManager._strip_structural_props(feat))
                 row.updated_at = datetime.utcnow()
 
                 # [New] Sync Properties (Name, etc.) back to Source Models
@@ -618,7 +651,8 @@ class GeoOverlayManager:
                 if hasattr(s, 'parent_id') and parent_id:
                     s.parent_id = parent_id
 
-                s.feature = GeoOverlayManager._strip_structural_props(feat)  # [I6]
+                s.feature = _strip_derived_bbox(
+                    GeoOverlayManager._strip_structural_props(feat))  # [I6]
                 db.session.add(s)
                 pending_bindings.append(
                     (s, device_id or feat_props.get('device_id'),
@@ -804,7 +838,8 @@ class GeoOverlayManager:
             # gets cleaned up: the client can't see its own past copies to delete
             # them (the load path never loads sub_type='sprinkler' Points back), so
             # every regenerate cycle piled a fresh batch on top of the old one.
-            equip_upserts = [f for f in upserts
+            # 파생 bbox 는 저장하지 않는다 — _strip_derived_bbox 참조.
+            equip_upserts = [_strip_derived_bbox(f) for f in upserts
                              if f.get('properties', {}).get('aot_type') == 'equipment'
                              and not _is_ephemeral_sprinkler_marker(f)]
             other_upserts = [f for f in upserts
@@ -903,7 +938,8 @@ class GeoOverlayManager:
                             f"[GeoOverlay][I7] delta upsert ignored client "
                             f"aot_type={target_type!r} for shape id={row.id} "
                             f"(type={row.type!r} kept).")
-                    row.feature = GeoOverlayManager._strip_structural_props(feat)  # [I6]
+                    row.feature = _strip_derived_bbox(
+                        GeoOverlayManager._strip_structural_props(feat))  # [I6]
                     # Update columns if needed
                     if hasattr(row, 'device_id') and device_id: row.device_id = device_id
                     if hasattr(row, 'channel_id') and props.get('channel_id'): row.channel_id = str(props.get('channel_id'))
@@ -917,7 +953,8 @@ class GeoOverlayManager:
                     # 결정한다(생성 계약). 어휘는 I1 화이트리스트가 지킨다.
                     row = GeoShape(
                         geo_id=map_uuid, type=target_type,
-                        feature=GeoOverlayManager._strip_structural_props(feat))  # [I6]
+                        feature=_strip_derived_bbox(
+                            GeoOverlayManager._strip_structural_props(feat)))  # [I6]
                     if hasattr(row, 'device_id') and device_id: row.device_id = device_id
                     if hasattr(row, 'channel_id') and props.get('channel_id'): row.channel_id = str(props.get('channel_id'))
                     if hasattr(row, 'parent_id') and parent_id: row.parent_id = parent_id
