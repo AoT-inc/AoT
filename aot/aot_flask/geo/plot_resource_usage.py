@@ -71,14 +71,14 @@ def usage_for_plot(plot, days=WINDOW_DAYS):
                       'share', 'source', 'has_records', 'dry_here'}],
          'totals': {'seconds_today', 'seconds_window',
                     'litres_today', 'litres_window', 'share',
-                    'water_partial', 'water_dry_here',
                     'has_records', 'estimated'}}
 
-    ⚠ 물량 합에서 빠진 장치가 있으면 **왜 빠졌는지까지** 말한다. 이유가 둘이고
-      사람이 할 일이 다르다 — `water_dry_here` 는 "담당 영역이 이 구획과
-      겹치지만 그 자리에 이미터가 없다"(그 밸브의 물은 다른 구획에 떨어진다,
-      정상일 수 있다)이고, `water_partial` 은 "유량 근거가 아예 없다"(이미터·
-      노즐을 아직 안 그렸다)이다. 뭉뚱그리면 그릴 것이 있는지 알 수 없다.
+    ⚠ 물량을 낼 수 없는 장치도 **목록에는 남긴다**(`litres_window is None`).
+      거르는 것은 화면의 몫이다 — 서버가 미리 빼 버리면 "이 구획을 덮는데
+      물량을 못 내는 장치가 있다" 는 사실이 어디에도 안 남는다. 이유는
+      `dry_here` 가 가른다: 참이면 담당 영역이 구획과 겹치는데 **그 자리에
+      그려진 이미터가 0개**이고(겹침 100%인 사례가 실제로 있다 — 이미터를 아직
+      안 그린 쪽에 가깝다), 거짓이면 유량 근거 자체가 없다.
     """
     from aot.aot_flask.geo import plot_context
     from aot.utils.device_tz import resolve_location_tz
@@ -241,9 +241,6 @@ def _fold(devices):
     # 몫은 **전부 같을 때만** 낸다. 서로 다른 몫을 하나로 적으면 그 숫자가 어느
     # 장치의 것인지 알 수 없는데, 화면은 그것을 전체의 몫으로 읽는다.
     shares = {d['share'] for d in with_water}
-    # 유량 근거가 아예 없는 장치 — `dry_here`(이 구획엔 안 떨어진다)와 다르다.
-    no_basis = [d for d in devices
-                if d['litres_window'] is None and not d['dry_here']]
     return {
         'seconds_today': sum(d['seconds_today'] for d in devices),
         'seconds_window': sum(d['seconds_window'] for d in devices),
@@ -252,12 +249,10 @@ def _fold(devices):
         'litres_window': (round(sum(d['litres_window'] for d in with_water), 1)
                           if has_water else None),
         'share': shares.pop() if len(shares) == 1 else None,
-        # 물량 합에서 빠진 장치가 있다 — 이유별로 따로 낸다.
-        'water_dry_here': any(d['dry_here'] for d in devices),
-        # `partial` 은 **일부만** 빠졌다는 뜻이다 — 전부 빠진 경우는 화면이
-        # 다른 문장을 쓰므로(`litres_window is None`) 여기서 참이 되면
-        # 두 문장이 겹쳐 나온다.
-        'water_partial': has_water and bool(no_basis),
+        # ⚠ **빠진 장치를 합계 플래그로 요약하지 않는다.** 화면은 그 장치를
+        #   **이름으로** 불러야 사람이 지도에서 찾아 고칠 수 있다 — 플래그로
+        #   내면 "어떤 장치인지" 가 사라진다. 판정에 필요한 것은 장치마다
+        #   이미 있는 `dry_here` 와 `litres_window` 둘뿐이다.
         'has_records': any(d['has_records'] for d in devices),
         # 유량계 실측이 아니다 — 화면이 늘 그렇게 말해야 한다.
         'estimated': has_water,

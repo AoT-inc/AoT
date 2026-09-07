@@ -34190,13 +34190,7 @@ msgstr "최근 7일"
 msgid "No run recorded in the last 7 days"
 msgstr "최근 7일 가동 기록 없음"
 
-#: aot/aot_flask/static/js/common/aot-map-popup.js
-msgid "No flow rate is known for these devices, so water is not estimated."
-msgstr "이 장치들의 유량을 몰라 물량을 계산하지 않습니다."
 
-#: aot/aot_flask/static/js/common/aot-map-popup.js
-msgid "Some of these devices have no known flow rate, so their water is left out."
-msgstr "유량을 모르는 장치가 있어 그만큼은 물량에서 빠졌습니다."
 
 #: aot/aot_flask/static/js/common/aot-map-popup.js
 msgid "Water is estimated from designed flow and run time, not measured by a flow meter."
@@ -34207,9 +34201,9 @@ msgid "Only the share belonging to this plot is counted: %(pct)s"
 msgstr "이 구획의 몫만 셉니다: %(pct)s"
 
 #: aot/aot_flask/static/js/common/aot-map-popup.js
-msgid "A device here has no emitter inside this plot, so no water is counted for it."
-msgstr "이 구획 안에 이미터가 없는 장치가 있어 그 장치의 물량은 세지 않습니다."
+msgid "No emitter is mapped inside this plot for these devices, so no water is attributed: %(names)s"
+msgstr "이 구획 안에 이미터가 그려져 있지 않아 물량을 낼 수 없는 장치: %(names)s"
 
 #: aot/aot_flask/static/js/common/aot-map-popup.js
-msgid "No emitter is mapped inside this plot, so no water is counted here."
-msgstr "이 구획 안에 그려진 이미터가 없어 물량을 세지 않습니다."
+msgid "The flow rate of these devices is unknown, so no water is attributed: %(names)s"
+msgstr "유량을 몰라 물량을 낼 수 없는 장치: %(names)s"

@@ -33771,13 +33771,7 @@ msgstr "直近7日"
 msgid "No run recorded in the last 7 days"
 msgstr "直近7日の稼働記録なし"
 
-#: aot/aot_flask/static/js/common/aot-map-popup.js
-msgid "No flow rate is known for these devices, so water is not estimated."
-msgstr "これらの装置の流量が不明なため、水量は算出しません。"
 
-#: aot/aot_flask/static/js/common/aot-map-popup.js
-msgid "Some of these devices have no known flow rate, so their water is left out."
-msgstr "流量が不明な装置があるため、その分は水量に含まれていません。"
 
 #: aot/aot_flask/static/js/common/aot-map-popup.js
 msgid "Water is estimated from designed flow and run time, not measured by a flow meter."
@@ -33788,9 +33782,9 @@ msgid "Only the share belonging to this plot is counted: %(pct)s"
 msgstr "この区画の取り分のみを計上します: %(pct)s"
 
 #: aot/aot_flask/static/js/common/aot-map-popup.js
-msgid "A device here has no emitter inside this plot, so no water is counted for it."
-msgstr "この区画内にエミッターがない装置があるため、その装置の水量は計上しません。"
+msgid "No emitter is mapped inside this plot for these devices, so no water is attributed: %(names)s"
+msgstr "この区画内にエミッターが描かれておらず水量を算出できない装置: %(names)s"
 
 #: aot/aot_flask/static/js/common/aot-map-popup.js
-msgid "No emitter is mapped inside this plot, so no water is counted here."
-msgstr "この区画内に描かれたエミッターがないため、水量は計上しません。"
+msgid "The flow rate of these devices is unknown, so no water is attributed: %(names)s"
+msgstr "流量が不明で水量を算出できない装置: %(names)s"
