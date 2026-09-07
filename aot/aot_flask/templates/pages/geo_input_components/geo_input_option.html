@@ -20,7 +20,7 @@
                 data-legend="{{ (dict_inputs.get(each_input.type, {}).get('legend') or None) | tojson | forceescape }}"
                 data-default-center="{{ dict_inputs.get(each_input.type, {}).get('default_center', '') | tojson | forceescape }}"
                 data-default-zoom="{{ dict_inputs.get(each_input.type, {}).get('default_zoom', '') }}"
-                style="height: 280px; width: 100%; border: 1px solid #eee; border-radius: 12px;"></div>
+                style="height: 280px; width: 100%; border: 1px solid #eee; border-radius: var(--aot-radius-md);"></div>
         </div>
     </div>
 
@@ -33,7 +33,7 @@
 
     {% set manufacturer_url = dict_inputs.get(each_input.type, {}).get('url_manufacturer') %}
     {% if manufacturer_url %}
-    <div class="aot-modal-body-text" style="margin-top: -0.5rem; font-size: 0.85rem;">
+    <div class="aot-modal-body-text" style="margin-top: -0.5rem; font-size: var(--aot-font-size-sm);">
         <strong>{{ _('Related Documents') }}:</strong>
         {{ _('Manufacturer') }}
         {% for each_url in manufacturer_url %}
@@ -45,7 +45,7 @@
 
     {% set gis_info = dict_inputs.get(each_input.type, {}) %}
     {% if gis_info.get('message') %}
-    <div class="aot-modal-body-text" style="font-style: italic; background: #f9f9f9; padding: 8px; border-radius: 8px; font-size: 0.85rem;">
+    <div class="aot-modal-body-text" style="font-style: italic; background: var(--aot-gray-100); padding: 8px; border-radius: var(--aot-radius-sm); font-size: var(--aot-font-size-sm);">
         {{ gis_info.get('message') | safe }}
     </div>
     {% endif %}
@@ -239,7 +239,7 @@
             <label class="aot-modal-option-label" title="{{ _('Overlay transparency.') }}">{{ _('Opacity') }}</label>
             <div class="aot-modal-option-control">
                 <input type="range" class="aot-ov-opacity" min="0" max="1" step="0.05"
-                       value="{{ ov_opacity }}" style="width:100%; accent-color: var(--bd-primary, #2e7d32);">
+                       value="{{ ov_opacity }}" style="width:100%; accent-color: var(--aot-surface-card, #2e7d32);">
             </div>
         </div>
 
@@ -256,7 +256,7 @@
 
         <div class="aot-modal-option-row aot-modal-option-row-wrap">
             <div class="aot-ov-status aot-modal-body-text"
-                 style="width:100%; font-size:0.8rem; color:var(--aot-text-muted,#6b7280); margin:0;">
+                 style="width:100%; font-size: var(--aot-font-size-xs); color:var(--aot-text-muted,#6b7280); margin:0;">
                 {% if ov_image_url %}{{ _('Image loaded. Centre handle moves it; corners scale & rotate. Then Save Placement.') }}{% else %}{{ _('Upload a drone or aerial photo to begin.') }}{% endif %}
             </div>
         </div>

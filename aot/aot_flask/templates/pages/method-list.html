@@ -21,7 +21,7 @@
     {% include 'flash_messages.html' %}
 
     <div class="aot-settings-title">
-      <h3>{{_('Method')}} <a href="{{help_page[0]}}" target="_blank"><span style="font-size: 16px" class="fas fa-question-circle"></span></a></h3>
+      <h3>{{_('Method')}} <a href="{{help_page[0]}}" target="_blank"><span class="fas fa-question-circle aot-help-icon"></span></a></h3>
     </div>
 
     <p class="aot-modal-body-text">{{_('Methods are used to reference various types of setpoints in a PID controller. Typically, a PID controller controls a device to a fixed setpoint. If you want the setpoint to change over time, you can change the setpoint over time in the method and use it for control by tracking the value in the PID controller.')}}</p>
@@ -123,7 +123,7 @@
           },
           tooltip: {
             {% if each_method.method_type == "Duration" -%}
-              headerFormat: '<span style="font-size: 10px">{point.key} Seconds</span><br/>',
+              headerFormat: '<span style="font-size: var(--aot-font-size-2xs)">{point.key} Seconds</span><br/>',
             {%- endif -%}
             {% if each_method.method_type == "Date" -%}
               xDateFormat: '%a, %b %e, %Y %H:%M:%S',

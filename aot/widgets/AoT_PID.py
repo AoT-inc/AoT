@@ -563,16 +563,16 @@ WIDGET_INFORMATION = {
    보이는 버그, custom_ui.html 의 bg_inactive 도움말 "PID container
    background" 문구와도 모순됨) — color-system.md 참조. */
 #pid_container_{{each_widget.unique_id}}.active-background {
-  background-color: var(--bg-active) !important;
+  background-color: var(--aot-bg-active) !important;
 }
 #pid_container_{{each_widget.unique_id}}.inactive-background {
-  background-color: var(--bg-inactive) !important;
+  background-color: var(--aot-bg-inactive) !important;
 }
 #pid_container_{{each_widget.unique_id}}.pause-background {
-  background-color: var(--bg-pause) !important;
+  background-color: var(--aot-bg-pause) !important;
 }
 #pid_container_{{each_widget.unique_id}}.hold-background {
-  background-color: var(--bg-hold) !important;
+  background-color: var(--aot-bg-hold) !important;
 }
 
 /* Row 1: last-active text — hidden; spans kept for JS reference */
@@ -641,7 +641,7 @@ WIDGET_INFORMATION = {
   font-weight: var(--aot-fw-semibold);
   white-space: nowrap;
   text-overflow: clip;
-  border: 1px solid var(--border-neutral, #d7d3c4) !important;
+  border: 1px solid var(--aot-border-neutral, #d7d3c4) !important;
   border-radius: var(--aot-btn-pill-radius) !important;
   background: var(--aot-input-bg, #fff) !important;
   color: var(--aot-text-main, #333) !important;
@@ -651,9 +651,9 @@ WIDGET_INFORMATION = {
 }
 #pid_container_{{each_widget.unique_id}} .btn-aot-pid-sm:hover,
 #pid_container_{{each_widget.unique_id}} .btn-aot-pid-resume:hover {
-  background: var(--bd-btn-primary, #13261B) !important;
-  color: var(--text-color-tertiary, #FFFFFF) !important;
-  border-color: var(--bd-btn-primary, #13261B) !important;
+  background: var(--aot-btn-bg-primary, #13261B) !important;
+  color: var(--aot-color-text-tertiary, #FFFFFF) !important;
+  border-color: var(--aot-btn-bg-primary, #13261B) !important;
 }
 /* pause/hold = 78px (78+4+78=160), resume = 160px */
 #pid_container_{{each_widget.unique_id}} .btn-aot-pid-sm {
@@ -683,7 +683,7 @@ WIDGET_INFORMATION = {
   font-size: var(--aot-fs-label) !important;
   font-weight: var(--aot-fw-semibold);
   white-space: nowrap;
-  border: 1px solid var(--border-neutral, #d7d3c4) !important;
+  border: 1px solid var(--aot-border-neutral, #d7d3c4) !important;
   border-radius: var(--aot-btn-pill-radius) !important;
   background: var(--aot-input-bg, #fff) !important;
   color: var(--aot-text-main, #333) !important;
@@ -692,9 +692,9 @@ WIDGET_INFORMATION = {
   transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
 }
 #pid_container_{{each_widget.unique_id}} .btn-aot-pid-detail:hover {
-  background: var(--bd-btn-primary, #13261B) !important;
-  color: var(--text-color-tertiary, #FFFFFF) !important;
-  border-color: var(--bd-btn-primary, #13261B) !important;
+  background: var(--aot-btn-bg-primary, #13261B) !important;
+  color: var(--aot-color-text-tertiary, #FFFFFF) !important;
+  border-color: var(--aot-btn-bg-primary, #13261B) !important;
 }
 
 /* PID Settings Modal — overlay + panel styled to match .aot-option-modal */
@@ -726,7 +726,7 @@ WIDGET_INFORMATION = {
   justify-content: space-between;
   min-height: 50px;
   padding: 0 1rem;
-  border-bottom: 1px solid var(--border-neutral, #dee2e6);
+  border-bottom: 1px solid var(--aot-border-neutral, #dee2e6);
   background: var(--aot-surface-card, #fff);
   border-top-left-radius: 1rem;
   border-top-right-radius: 1rem;
@@ -768,7 +768,7 @@ WIDGET_INFORMATION = {
   gap: 0.25rem;
   min-height: 50px;
   padding: 9px 1rem;
-  border-top: 1px solid var(--border-neutral, #dee2e6);
+  border-top: 1px solid var(--aot-border-neutral, #dee2e6);
   background: var(--aot-surface-card, #fff);
   border-bottom-left-radius: 1rem;
   border-bottom-right-radius: 1rem;

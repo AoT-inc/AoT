@@ -54,7 +54,7 @@
 .aot-drawer-title-text {
     margin: 0;
     font-weight: 700;
-    font-size: 1rem;
+    font-size: var(--aot-font-size-base);
     color: var(--aot-color-brand-primary, #13261B);
     white-space: nowrap;
     overflow: hidden;
@@ -121,7 +121,7 @@
     gap: 6px;
     background: var(--aot-surface-input, #f8fafc);
     padding: 5px 6px 5px 8px;
-    border-radius: 18px;
+    border-radius: var(--aot-btn-radius);
     border: 1px solid var(--aot-border-form, #e2e8f0);
     transition: border-color 0.2s;
 }
@@ -139,6 +139,9 @@
     border: none;
     padding: 8px 4px;
     outline: none;
+    /* 사다리 예외: iOS 는 16px 미만 입력칸에 focus 하면 화면을 확대한다. 이 16px 은
+       크기가 아니라 **동작**이라 사다리에 넣으면 그 이유가 사라진다
+       (aot/tests/test_viz_type_scale.py 가 같은 계약을 모달에서 지킨다). */
     font-size: 16px;
     resize: none;
     max-height: 140px;

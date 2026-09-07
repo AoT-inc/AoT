@@ -10,7 +10,7 @@
   <style>
     /* Color group tabs — same underline pattern as #userSettingsTabs (settings/users.html) */
     #colorGroupTabs {
-      border-bottom: 2px solid var(--border-neutral, #dee2e6);
+      border-bottom: 2px solid var(--aot-border-neutral, #dee2e6);
       margin-bottom: 1rem;
       flex-wrap: wrap;
     }
@@ -24,9 +24,9 @@
       cursor: pointer;
     }
     #colorGroupTabs .nav-link.active {
-      color: var(--brand-secondary);
+      color: var(--aot-color-brand-secondary);
       background: transparent;
-      border-bottom: 2px solid var(--brand-secondary);
+      border-bottom: 2px solid var(--aot-color-brand-secondary);
     }
   </style>
 {% endblock %}
@@ -35,7 +35,7 @@
   <!-- Route: /settings/custom_ui -->
   <div class="container">
     <div class="aot-settings-title">
-      <h3>{{_('Custom UI Settings')}} <a href="{{ manual_url('Configuration-Settings/#general-settings') }}" target="_blank"><span class="fas fa-question-circle" style="font-size:16px"></span></a></h3>
+      <h3>{{_('Custom UI Settings')}} <a href="{{ manual_url('Configuration-Settings/#general-settings') }}" target="_blank"><span class="fas fa-question-circle aot-help-icon"></span></a></h3>
       <div class="d-flex" style="gap: 8px;">
         <button class="btn aot-pill-btn" id="menu-toggle">{{_('Settings Menu')}}</button>
         <button type="submit" form="form-custom_ui" class="btn aot-pill-btn aot-pill-btn-primary aot-w-60">{{_('Save')}}</button>
@@ -762,14 +762,14 @@
         <div class="aot-settings-row" style="flex-wrap: wrap; height: auto;">
           {{form_settings_custom_ui.custom_css.label(class_='aot-settings-label')}}
           <div style="flex: 1 1 100%; margin-top: 6px;">
-            <textarea class="form-control aot-modern-input" id="custom_css" name="custom_css" title="{{_('Custom CSS Settings')}}" rows="4" style="border-radius: 8px !important; resize: vertical;">{{settings.custom_css or ''}}</textarea>
+            <textarea class="form-control aot-modern-input" id="custom_css" name="custom_css" title="{{_('Custom CSS Settings')}}" rows="4" style="border-radius: var(--aot-radius-sm) !important; resize: vertical;">{{settings.custom_css or ''}}</textarea>
           </div>
         </div>
 
         <div class="aot-settings-row" style="flex-wrap: wrap; height: auto;">
           {{form_settings_custom_ui.custom_layout.label(class_='aot-settings-label')}}
           <div style="flex: 1 1 100%; margin-top: 6px;">
-            <textarea class="form-control aot-modern-input" id="custom_layout" name="custom_layout" title="{{_('Custom Layout HTML Settings')}}" rows="4" style="border-radius: 8px !important; resize: vertical;">{{settings.custom_layout or ''}}</textarea>
+            <textarea class="form-control aot-modern-input" id="custom_layout" name="custom_layout" title="{{_('Custom Layout HTML Settings')}}" rows="4" style="border-radius: var(--aot-radius-sm) !important; resize: vertical;">{{settings.custom_layout or ''}}</textarea>
           </div>
         </div>
 

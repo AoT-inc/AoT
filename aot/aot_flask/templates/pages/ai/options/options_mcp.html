@@ -9,7 +9,7 @@
 
     <!-- Agent Engine Description -->
     {% if engine_info.description %}
-    <div class="mb-2" style="font-size: 0.9rem; color: var(--aot-color-text-secondary, #666); line-height: 1.5;">
+    <div class="mb-2" style="font-size: var(--aot-font-size-sm); color: var(--aot-color-text-secondary, #666); line-height: 1.5;">
         {{ engine_info.description }}
     </div>
     {% endif %}
@@ -17,7 +17,7 @@
     <!-- Agent Auth Link (Left aligned, no box) -->
     {% if engine_info.auth_link %}
     <div class="mb-3 text-left">
-        <a href="{{ engine_info.auth_link }}" target="_blank" class="text-primary" style="text-decoration: underline; font-size: 0.85rem;">
+        <a href="{{ engine_info.auth_link }}" target="_blank" class="text-primary" style="text-decoration: underline; font-size: var(--aot-font-size-sm);">
             <i class="fas fa-external-link-alt mr-1"></i> {{ _('Get API Key / Documentation') }}
         </a>
     </div>
@@ -61,7 +61,7 @@
             <label class="aot-modal-option-label font-weight-bold">{{ _('Server Instruction / System Prompt') }}</label>
             <div class="aot-modal-option-control">
                 <textarea name="system_prompt" class="form-control aot-modern-input" rows="5"
-                          style="height: auto !important; min-height: 120px; border-radius: 12px !important;"
+                          style="height: auto !important; min-height: 120px; border-radius: var(--aot-radius-md) !important;"
                           placeholder="{{ _('Define how this MCP server should be utilized...') }}">{{ agent.system_prompt }}</textarea>
             </div>
         </div>

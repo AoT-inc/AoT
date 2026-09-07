@@ -37,7 +37,7 @@
         </div>
 
         {% if 'trigger_sequence' in function_info and 'message' in function_info['trigger_sequence'] %}
-        <div class="aot-modal-body-text mb-3" style="font-style: italic; padding: 8px; border-radius: 8px; font-size: 0.85rem;">
+        <div class="aot-modal-body-text mb-3" style="font-style: italic; padding: 8px; border-radius: var(--aot-radius-sm); font-size: var(--aot-font-size-sm);">
             {{function_info['trigger_sequence']['message']}}
         </div>
         {% endif %}
@@ -170,8 +170,7 @@
 
     <div class="aot-modal-group-title">
         {{_('Actions')}}
-        <a href="{{ manual_url('Actions/') }}" target="_blank"><span style="font-size: 16px"
-                class="fas fa-question-circle"></span></a>
+        <a href="{{ manual_url('Actions/') }}" target="_blank"><span class="fas fa-question-circle aot-help-icon"></span></a>
     </div>
 
     <div class="aot-modal-container">

@@ -19,7 +19,7 @@
 
 .aot-log-toolbar label {
   margin: 0;
-  font-size: 0.75rem;
+  font-size: var(--aot-font-size-xs);
   color: var(--aot-text-secondary, #5E6B64);
 }
 
@@ -51,7 +51,7 @@
 }
 
 .aot-log-livebox .custom-control-label {
-  font-size: 0.85rem;
+  font-size: var(--aot-font-size-sm);
   cursor: pointer;
 }
 
@@ -64,12 +64,12 @@
   gap: 0.25rem 1rem;
   align-items: center;
   padding: 0.5rem 0 0.35rem;
-  font-size: 0.78rem;
+  font-size: var(--aot-font-size-xs);
   color: var(--aot-text-secondary, #5E6B64);
 }
 
 .aot-log-status code {
-  font-size: 0.78rem;
+  font-size: var(--aot-font-size-xs);
   color: inherit;
   background: none;
   padding: 0;
@@ -80,8 +80,8 @@
   border: 1px solid var(--aot-tint-warning-border, #dac196);
   background: var(--aot-tint-warning-bg, #fff3e2);
   color: var(--aot-tint-warning-fg, #94650a);
-  font-size: 0.8rem;
-  border-radius: 3px;
+  font-size: var(--aot-font-size-xs);
+  border-radius: var(--aot-radius-xs);
 }
 
 .aot-log-notice.is-error {
@@ -95,13 +95,13 @@
 .aot-log-pane {
   border: 1px solid var(--aot-border-neutral, #dddddd);
   background: var(--aot-surface-card, #ffffff);
-  border-radius: 3px;
+  border-radius: var(--aot-radius-xs);
   overflow: auto;
   resize: vertical;
   height: 60vh;
   min-height: 14rem;
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 0.78rem;
+  font-size: var(--aot-font-size-xs);
   line-height: 1.45;
   /* 스크롤은 되되 스크롤바는 보이지 않게 — 앱 전역 규칙. */
   scrollbar-width: none;
@@ -172,7 +172,7 @@
   padding: 1.5rem 0.75rem;
   text-align: center;
   color: var(--aot-text-secondary, #5E6B64);
-  font-size: 0.85rem;
+  font-size: var(--aot-font-size-sm);
 }
 
 /* --- AI 바 ----------------------------------------------------------- */
@@ -185,7 +185,7 @@
   padding: 0.55rem 0.65rem;
   margin-top: 0.6rem;
   border: 1px solid var(--aot-border-neutral, #dddddd);
-  border-radius: 3px;
+  border-radius: var(--aot-radius-xs);
   background: var(--aot-surface-body, #f8f9fa);
 }
 
@@ -196,7 +196,7 @@
 .aot-log-aibar .aot-log-aihint {
   flex: 1 1 12rem;
   min-width: 0;
-  font-size: 0.78rem;
+  font-size: var(--aot-font-size-xs);
   color: var(--aot-text-secondary, #5E6B64);
 }
 
@@ -208,7 +208,7 @@
   /* 버튼 묶음은 한 줄을 통째로 쓴다. 다른 필드와 같은 8rem 을 나눠 가지면
      버튼이 눌려 세로로 쌓인다. */
   .aot-log-toolbar .aot-log-actions { flex: 1 1 100%; }
-  .aot-log-pane { height: 55vh; font-size: 0.72rem; }
+  .aot-log-pane { height: 55vh; font-size: var(--aot-font-size-2xs); }
   /* 폰에서는 로거 이름과 날짜를 접는다 — 가로가 부족하면 메시지가 먼저 잘린다. */
   .aot-log-logger { display: none; }
   .aot-log-ts { width: 4.4rem; }

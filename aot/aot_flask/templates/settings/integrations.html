@@ -34,7 +34,7 @@
         <div class="aot-modal-option-row">
           <div class="aot-modal-option-label">{{_('Status')}}</div>
           <div class="aot-modal-option-control">
-            <span class="aot-tint-success" style="padding:0.15rem 0.6rem; border-radius:9999px;">{{_('Connected')}}</span>
+            <span class="aot-tint-success" style="padding:0.15rem 0.6rem; border-radius: var(--aot-btn-pill-radius);">{{_('Connected')}}</span>
             {% if connection.account_email %}<span class="ml-2">{{ connection.account_email }}</span>{% endif %}
           </div>
         </div>
@@ -51,7 +51,7 @@
           <div class="aot-modal-option-control">
             {{ connection.last_synced_at.strftime('%Y-%m-%d %H:%M') }} UTC
             {% if connection.last_sync_status == 'error' %}
-              <span class="aot-tint-danger" style="padding:0.1rem 0.5rem; border-radius:9999px;">{{_('Error')}}</span>
+              <span class="aot-tint-danger" style="padding:0.1rem 0.5rem; border-radius: var(--aot-btn-pill-radius);">{{_('Error')}}</span>
             {% endif %}
           </div>
         </div>
@@ -92,10 +92,10 @@
           <br>{{_('Authorized redirect URI to register in Google:')}}
           <code>{{ google_redirect_uri }}</code>
           {% else %}
-          <br><span class="aot-tint-warning" style="padding:0.1rem 0.5rem; border-radius:9999px;">{{_('Set the Public Base URL first to compute the redirect URI.')}}</span>
+          <br><span class="aot-tint-warning" style="padding:0.1rem 0.5rem; border-radius: var(--aot-btn-pill-radius);">{{_('Set the Public Base URL first to compute the redirect URI.')}}</span>
           {% endif %}
           {% if config_source and (config_source.client_id_env or config_source.client_secret_env or config_source.base_url_env) %}
-          <br><span class="aot-tint-info" style="padding:0.1rem 0.5rem; border-radius:9999px;">{{_('Some values are provided by environment variables and override the fields below.')}}</span>
+          <br><span class="aot-tint-info" style="padding:0.1rem 0.5rem; border-radius: var(--aot-btn-pill-radius);">{{_('Some values are provided by environment variables and override the fields below.')}}</span>
           {% endif %}
         </div>
       </div>

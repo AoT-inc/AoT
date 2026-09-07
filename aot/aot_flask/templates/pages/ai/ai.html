@@ -187,7 +187,7 @@
         font-size: 0.875rem;
         font-weight: 600;
         background: #0d6efd;
-        color: var(--text-color-tertiary, #fff);
+        color: var(--aot-color-text-tertiary, #fff);
         border: none;
         border-radius: 6px;
         cursor: pointer;
@@ -381,7 +381,7 @@
                     <button class="req-save-btn" onclick="AiPage.saveRequirement()">{{ _('Save') }}</button>
                     <button class="req-cancel-btn" onclick="AiPage.cancelEditRequirement()">{{ _('Cancel') }}</button>
                 </div>
-                <div id="req-save-error" style="color:var(--aot-color-danger, #dc3545); font-size:0.85rem; margin-top:0.4rem; display:none;"></div>
+                <div id="req-save-error" style="color:var(--aot-color-danger, #dc3545); font-size: var(--aot-font-size-sm); margin-top:0.4rem; display:none;"></div>
             </div>
         </section>
 
@@ -449,7 +449,7 @@ const AiPage = (function() {
         const keywords = data.keywords || [];
         const kwEl = document.getElementById('keywords-content');
         if (keywords.length === 0) {
-            kwEl.innerHTML = '<span style="color:var(--aot-color-text-secondary, #adb5bd); font-size:0.875rem;">{{ _("AI is still learning...") }}</span>';
+            kwEl.innerHTML = '<span style="color:var(--aot-color-text-secondary, #adb5bd); font-size: var(--aot-font-size-sm);">{{ _("AI is still learning...") }}</span>';
         } else {
             kwEl.innerHTML = '<div class="keyword-chips">' +
                 keywords.map(function(k) {
@@ -462,7 +462,7 @@ const AiPage = (function() {
         const features = data.features || [];
         const fEl = document.getElementById('features-content');
         if (features.length === 0) {
-            fEl.innerHTML = '<span style="color:var(--aot-color-text-secondary, #adb5bd); font-size:0.875rem;">{{ _("No activity yet") }}</span>';
+            fEl.innerHTML = '<span style="color:var(--aot-color-text-secondary, #adb5bd); font-size: var(--aot-font-size-sm);">{{ _("No activity yet") }}</span>';
         } else {
             fEl.innerHTML = '<ul class="feature-list">' +
                 features.map(function(f, i) {

@@ -122,7 +122,7 @@ WIDGET_INFORMATION = {
   .aot-notice-widget-outer { height: 100%; display: flex; flex-flow: column; overflow: hidden; }
   .aot-notice-widget-container { padding: 8px; flex: 1 1 auto; overflow-y: auto; }
   .aot-notice-widget-post {
-    border: 1px solid var(--border-neutral, #e9ecef);
+    border: 1px solid var(--aot-border-neutral, #e9ecef);
     border-radius: 8px;
     padding: 8px;
     margin-bottom: 8px;
@@ -156,7 +156,7 @@ WIDGET_INFORMATION = {
   .aot-notice-widget-modal-body .aot-notice-embed-image img { max-width: 100%; border-radius: 0.5rem; }
   .aot-notice-link-preview {
     display: flex; align-items: center; gap: 0.6rem;
-    border: 1px solid var(--border-neutral, #dee2e6);
+    border: 1px solid var(--aot-border-neutral, #dee2e6);
     border-radius: 0.6rem; padding: 0.5rem 0.75rem; margin-top: 0.5rem;
     text-decoration: none; color: inherit; max-width: 100%;
   }
@@ -168,13 +168,13 @@ WIDGET_INFORMATION = {
   .aot-notice-link-preview-domain { font-size: var(--aot-font-size-2xs); color: var(--aot-color-text-secondary, #6c757d); margin-top: 2px; }
   .aot-notice-widget-poll-row {
     display: flex; align-items: center; justify-content: space-between;
-    font-size: var(--aot-font-size-sm); padding: 0.4rem 0.6rem; border: 1px solid var(--border-neutral, #dee2e6);
+    font-size: var(--aot-font-size-sm); padding: 0.4rem 0.6rem; border: 1px solid var(--aot-border-neutral, #dee2e6);
     border-radius: 0.5rem; margin-bottom: 0.35rem; cursor: pointer;
   }
-  .aot-notice-widget-poll-row.selected { border-color: var(--bd-tertiary, #13261B); background: var(--aot-surface-body, #f8f9fa); }
+  .aot-notice-widget-poll-row.selected { border-color: var(--aot-btn-bg-primary, #13261B); background: var(--aot-surface-body, #f8f9fa); }
   .aot-notice-widget-poll-bar-track { height: 5px; border-radius: 3px; background: var(--aot-surface-body, #e9ecef); margin-top: 3px; overflow: hidden; }
-  .aot-notice-widget-poll-bar-fill { height: 100%; background: var(--bd-tertiary, #13261B); }
-  .aot-notice-widget-reply-item { padding: 0.4rem 0; border-bottom: 1px solid var(--border-neutral, #f1f1f1); font-size: var(--aot-font-size-sm); }
+  .aot-notice-widget-poll-bar-fill { height: 100%; background: var(--aot-btn-bg-primary, #13261B); }
+  .aot-notice-widget-reply-item { padding: 0.4rem 0; border-bottom: 1px solid var(--aot-border-neutral, #f1f1f1); font-size: var(--aot-font-size-sm); }
   .aot-notice-widget-reply-meta { font-size: var(--aot-font-size-2xs); color: var(--aot-color-text-secondary, #6c757d); }
   .aot-notice-widget-reply-input-row { display: flex; gap: 6px; margin-top: 0.5rem; }
   .aot-notice-widget-reply-input-row input { flex: 1; }

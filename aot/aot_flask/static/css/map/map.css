@@ -21,7 +21,7 @@
  * 정본: docs/design/typography-scale.md
  */
 .maplibregl-map {
-  font-size: 0.75rem;
+  font-size: var(--aot-font-size-xs);
   line-height: 1.667;
 }
 
@@ -62,34 +62,23 @@
    var(--aot-z-tooltip)  clipped-name bubble (.aot-meas-sum-tip)
    ========================================================================== */
 
-.aot-map {
-  min-height: 420px;
-  width: 100%;
-  border: 1px solid #e0e0e0;
-  border-radius: 6px;
-  overflow: hidden;
-  position: relative;
-  display: flex;
-  justify-content: center;
-}
-
 .maplibregl-canvas {
   outline: none;
 }
 
 .maplibregl-ctrl-group {
   background: var(--panel-bg-rgba, #fff);
-  border-radius: 4px;
+  border-radius: var(--aot-radius-xs);
   box-shadow: 0 0 0 2px rgba(0,0,0,.1);
 }
 
 .maplibregl-ctrl-group button {
-  width: 29px !important;
-  height: 29px !important;
+  width: 29px;
+  height: 29px;
 }
 
 .maplibregl-ctrl-attrib {
-  font-size: 0.7rem;
+  font-size: var(--aot-font-size-2xs);
 }
 
 /* Vector layer controls */
@@ -141,48 +130,23 @@ body.aot-map-fullscreen-active .grid-stack-item {
 
 /* MapLibre Popup Styles */
 .maplibregl-popup {
-  font-size: 12px;
+  font-size: var(--aot-font-size-xs);
   z-index: var(--z-map-popup) !important;
 }
 
 /* ── 팝업 타입별 클래스 ─────────────────────────────────────────────
    JS new maplibregl.Popup({ className: 'aot-popup aot-popup--*' }) 로 적용.
    width/max-width 는 CSS에서만 결정 — JS maxWidth 옵션 / !important 덮어쓰기 없음. */
-/* 260px: [시작/종료 시각 설정] 버튼이 한 줄에 들어가는 최소 폭.
-   높이는 일부러 낮게 유지한다 — maplibregl.Popup 은 anchor 미지정 시 팝업
-   **높이**로 위/아래를 자동 결정하므로, 팝업이 커지면 마커 위치와 무관하게
-   항상 아래로만 붙는다(그래서 이 팝업에는 이력 그래프를 넣지 않는다). */
-.aot-popup--device   { min-width: 260px; max-width: 260px; }
-.aot-popup--facility { min-width: 200px; max-width: 200px; z-index: var(--z-map-popup-act) !important; }
 .aot-popup--note     { max-width: 260px; }
 /* 라벨 팝업은 모달과 같은 노트 블록(제목 + 우측 알약 한 행)을 담는다. 200px 로만
    묶어 두면 그 행이 눌려 제목과 버튼이 서로 붙는다 — 알약이 들어갈 만큼만 넓힌다. */
 .aot-popup--label    { min-width: 230px; max-width: 260px; }
 
-/* facility 팝업 — 액추에이터 목록이 많을 때 세로 스크롤 */
-.aot-popup--facility .maplibregl-popup-content {
-  max-height: min(50vh, 320px);
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  scrollbar-width: thin;
-  scrollbar-color: var(--aot-color-brand-secondary, #5E6B64) transparent;
-}
-.aot-popup--facility .maplibregl-popup-content::-webkit-scrollbar {
-  width: 4px;
-}
-.aot-popup--facility .maplibregl-popup-content::-webkit-scrollbar-track {
-  background: transparent;
-}
-.aot-popup--facility .maplibregl-popup-content::-webkit-scrollbar-thumb {
-  background: var(--aot-color-brand-secondary, #5E6B64);
-  border-radius: 9999px;
-}
-
 /* maplibregl-gl.css 의 하드코딩 흰색/검은색을 시스템 토큰으로 덮어쓰기.
    (테마 전환·다크모드 시 일관된 색상 보장) */
 .maplibregl-popup-content {
   padding: 12px 16px;             /* 8→12 상하, 12→16 좌우 — 16px 라운드에 균형잡힌 여백 */
-  border-radius: 16px;
+  border-radius: var(--aot-radius-lg);
   background: var(--aot-surface-body, #F3F6F5); /* 모달 페이지 배경 = 배경 보조. 안의 카드(.aot-ov-block)는 배경 기본으로 대비를 만든다 */
   color: var(--aot-color-text-primary);
   box-shadow: var(--aot-shadow-md);
@@ -206,7 +170,7 @@ body.aot-map-fullscreen-active .grid-stack-item {
 .maplibregl-popup-close-button {
   top: 10px !important;           /* 0→10 : 라운드 모서리에서 안쪽으로 */
   right: 12px !important;         /* 0→12 : 우측 여백과 균일 */
-  font-size: 16px;
+  font-size: var(--aot-font-size-base);
   padding: 4px 6px;
   color: var(--aot-color-text-secondary);
   line-height: 1;
@@ -260,32 +224,6 @@ body.aot-map-fullscreen-active .grid-stack-item {
   margin-bottom: 6px;
 }
 
-.aot-popup-info-label {        /* Input + Output 라벨 동일 규칙 */
-  font-size: 0.923em;          /* ~12px */
-  font-weight: 600;
-  color: var(--aot-color-text-secondary, #555);
-  flex: 1;
-  padding-right: 4px;
-  line-height: 1.2;
-  min-width: 0;
-  word-break: break-word;
-}
-.aot-popup-info-value {        /* Input + Output 값 동일 규칙 */
-  font-size: 0.923em;          /* ~12px */
-  font-weight: 700;
-  font-family: ui-monospace, "SF Mono", Menlo, monospace;
-  text-align: right;
-  white-space: nowrap;
-  flex: 0 0 auto;
-  color: var(--aot-color-text-primary, #111);
-}
-
-/* ── 정보 섹션 (Output 팝업 — Current / Last Work Time) ── */
-.aot-popup-info {
-  border-top: 1px solid var(--aot-border-neutral, #eee);
-  padding-top: 8px;
-}
-
 /* ══════════════════════════════════════════════════════════════════
    팝업 버튼 단일 시스템 — 모든 팝업 타입에서 이 클래스만 사용.
    !important 로 외부 CSS (aot-entry-ui.css 등) override 차단.
@@ -302,7 +240,7 @@ body.aot-map-fullscreen-active .grid-stack-item {
   font-size: 0.923em !important;   /* ~12px at 13px base */
   font-weight: 600 !important;
   line-height: 1 !important;
-  border-radius: 13px !important;
+  border-radius: var(--aot-radius-md) !important;
   border: none !important;
   cursor: pointer !important;
   white-space: nowrap !important;
@@ -318,8 +256,8 @@ body.aot-map-fullscreen-active .grid-stack-item {
 
 /* 색상 변형 ── 아래 4종이 전부 */
 .aot-popup-btn--primary {
-  background: var(--bd-btn-primary, #13261B) !important;
-  color: var(--text-color-tertiary, #fff) !important;
+  background: var(--aot-btn-bg-primary, #13261B) !important;
+  color: var(--aot-color-text-tertiary, #fff) !important;
 }
 .aot-popup-btn--secondary {
   background: var(--aot-btn-bg-hold, #D1D5D5) !important;
@@ -328,15 +266,6 @@ body.aot-map-fullscreen-active .grid-stack-item {
 .aot-popup-btn--muted {
   background: var(--aot-btn-bg-pause, #989E9E) !important;
   color: var(--aot-color-text-primary, #111) !important;
-}
-/* 장치 제어 (ON/OFF, Open/Stop/Close) — 시스템 제어색 */
-.aot-popup-btn--ctrl {
-  background: var(--bg-btn-off, #5E6B64) !important;
-  color: var(--text-color-tertiary, #fff) !important;
-}
-.aot-popup-btn--ctrl.active {
-  background: var(--bg-btn-on, #13261B) !important;
-  color: var(--text-color-tertiary, #fff) !important;
 }
 
 /* ── 버튼 행 (map notes 액션 등) ── */
@@ -367,7 +296,7 @@ body.aot-map-fullscreen-active .grid-stack-item {
   font-size: 0.923em;          /* ~12px */
   padding: 4px 8px;
   border: 1px solid var(--aot-border-neutral, #ddd);
-  border-radius: 4px;
+  border-radius: var(--aot-radius-xs);
   width: 100%;
   box-sizing: border-box;
   color: var(--aot-color-text-primary, #111);
@@ -382,7 +311,6 @@ body.aot-map-fullscreen-active .grid-stack-item {
 
 /* Attribution (MapLibre native) */
 
-
 #map-tabs {
   -webkit-user-select: none;
   -moz-user-select: none;
@@ -393,33 +321,16 @@ body.aot-map-fullscreen-active .grid-stack-item {
   flex: 1 1 0;
 }
 
-/* Design Tabs Overrides */
-#designTabs .nav-link {
-  font-size: 1em;
-  color: var(--aot-color-text-secondary, #495057);
-  background-color: #f1f3f5;
-  /* Inactive Gray */
-  border-color: #dee2e6 #dee2e6 #ddd;
-}
-
-#designTabs .nav-link.active {
-  color: var(--aot-color-info, #007bff);
-  /* Active Blue */
-  background-color: #fff;
-  border-color: #dee2e6 #dee2e6 #fff;
-  font-weight: 600;
-}
-
 .btn-fixed-40 {
-  width: 40px !important;
+  width: 40px;
 }
 
 .map-container {
   width: 100%;
   height: 450px;
-  border-radius: 10px;
+  border-radius: var(--aot-radius-md);
   overflow: hidden;
-  border: 1px solid #ddd;
+  border: 1px solid var(--aot-border-neutral);
   margin-top: 15px;
 }
 
@@ -428,13 +339,12 @@ body.aot-map-fullscreen-active .grid-stack-item {
   transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), opacity 0.2s ease-in-out;
 }
 
-
 /* Tool Group Button Styles (MapTiler style) — canonical rule, no !important needed */
 .tool-group .btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 13px;
+  font-size: var(--aot-font-size-xs);
   line-height: 1;
   padding: 0;
   border: none;
@@ -501,7 +411,7 @@ body.aot-map-fullscreen-active .grid-stack-item {
   display: flex;
   flex-direction: column;
   background: var(--panel-bg-rgba, #fff);
-  border-radius: 4px;
+  border-radius: var(--aot-radius-xs);
   overflow: hidden;
   box-shadow: 0 0 0 2px rgba(0,0,0,.1);
 }
@@ -518,7 +428,7 @@ body.aot-map-fullscreen-active .grid-stack-item {
   padding: 0;
   background-color: transparent;
   color: var(--aot-color-text-primary, #333);
-  font-size: 13px;
+  font-size: var(--aot-font-size-xs);
   transition: background-color 0.1s;
 }
 
@@ -550,16 +460,16 @@ body.aot-map-fullscreen-active .grid-stack-item {
 .btn-circle {
   width: 29px;
   height: 29px;
-  border-radius: 4px;
+  border-radius: var(--aot-radius-xs);
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 0;
   border: none;
   box-shadow: 0 0 0 2px rgba(0,0,0,.1);
-  background: var(--panel-bg-rgba, #fff) !important;
+  background: var(--panel-bg-rgba, #fff);
   color: var(--aot-color-text-primary, #333);
-  font-size: 13px;
+  font-size: var(--aot-font-size-xs);
   transition: background-color 0.1s;
 }
 
@@ -591,23 +501,21 @@ body.aot-map-fullscreen-active .grid-stack-item {
 /* Mobile Responsive Adjustments (Standard) */
 @media (max-width: 768px) {
   .map-tools-left {
-    left: 10px !important;
+    left: 10px;
   }
 
   .map-tools-right {
-    right: 10px !important;
+    right: 10px;
     /* [Fix] Adjust top position if needed, but 70px is fine relative to layer control */
   }
 
   /* [New] Mobile Margins for External Layer Control */
   #external-layer-control {
-    top: 10px !important;
-    right: 10px !important;
+    top: 10px;
+    right: 10px;
   }
 
-  /* MapLibre compatible legend container */
 }
-
 
 /* [Fix] Map Search Overlay Layout - Centered with margins to clear side controls */
 .map-search-overlay {
@@ -650,7 +558,7 @@ body.aot-map-fullscreen-active .grid-stack-item {
   background-color: var(--panel-bg-rgba, rgba(255, 255, 255, 0.9)) !important;
   padding: 10px 12px !important;
   border: none !important;
-  border-radius: 12px !important;
+  border-radius: var(--aot-radius-md) !important;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
   min-width: 200px;
   max-width: 260px;
@@ -693,7 +601,7 @@ body.aot-map-fullscreen-active .grid-stack-item {
 }
 
 .aot-legend-item-wrapper:not(:first-child) {
-  border-top: 1px solid #eee;
+  border-top: 1px solid var(--aot-gray-200);
   padding-top: 10px;
 }
 
@@ -708,7 +616,7 @@ body.aot-map-fullscreen-active .grid-stack-item {
 .aot-legend-bar {
   height: 12px;
   width: 100%;
-  border-radius: 6px;
+  border-radius: var(--aot-radius-sm);
   /* Rounded pill shape */
   border: 1px solid rgba(0, 0, 0, 0.05);
   /* Subtle border */
@@ -746,7 +654,7 @@ body.aot-map-fullscreen-active .grid-stack-item {
   justify-content: center;
   min-width: 60px;
   padding-left: 12px;
-  border-left: 1px solid #e0e0e0;
+  border-left: 1px solid var(--aot-border-neutral);
   text-align: center;
 }
 
@@ -837,10 +745,10 @@ body.aot-map-fullscreen-active .grid-stack-item {
 .device-label {
   background: white !important; /* Ensure background is white */
   color: var(--aot-color-text-primary, black) !important;
-  border: 1px solid #ccc !important;
-  border-radius: 12px !important; /* Pill shape */
+  border: 1px solid var(--aot-gray-300) !important;
+  border-radius: var(--aot-radius-md) !important; /* Pill shape */
   padding: 1px 6px !important; /* Slightly more side padding for pill look */
-  font-size: 11px;
+  font-size: var(--aot-font-size-2xs);
   white-space: nowrap;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
   transition: all 0.3s ease;
@@ -857,8 +765,8 @@ body.aot-map-fullscreen-active .grid-stack-item {
   left: 40px;
   background: white;
   z-index: 30 !important;
-  border: 1px solid #ccc;
-  border-radius: 8px;
+  border: 1px solid var(--aot-gray-300);
+  border-radius: var(--aot-radius-sm);
   padding: 8px;
   min-width: 180px;
   max-height: 300px;
@@ -883,18 +791,18 @@ body.aot-map-fullscreen-active .grid-stack-item {
 .site-item {
   padding: 5px 8px;
   cursor: pointer;
-  font-size: 13px;
-  border-radius: 4px;
+  font-size: var(--aot-font-size-xs);
+  border-radius: var(--aot-radius-xs);
 }
 
 .site-item:hover {
-  background: #f0f0f0;
+  background: var(--aot-gray-200);
 }
 
 /* Common Map Button Icon */
 .aot-map-btn-icon {
   color: var(--aot-color-text-primary, #464646);
-  font-size: 14px;
+  font-size: var(--aot-font-size-sm);
 }
 
 /* Disabled State for Controls - MapLibre compatible */
@@ -913,9 +821,9 @@ body.aot-map-fullscreen-active .grid-stack-item {
    렌더되어 custom_ui 와 완전히 무관했다. 실제 켜짐 표시 토큰인 --bg-on
    으로 교체(출력 채널 켜짐과 동일 개념). */
 .device-label.device-on {
-  background-color: var(--bg-on, #B5BABA) !important;
-  border-color: var(--bg-on, #B5BABA) !important;
-  color: var(--text-color-tertiary, white) !important;
+  background-color: var(--aot-bg-on, #B5BABA) !important;
+  border-color: var(--aot-bg-on, #B5BABA) !important;
+  color: var(--aot-color-text-tertiary, white) !important;
   font-weight: bold;
 }
 
@@ -953,7 +861,7 @@ body.aot-map-fullscreen-active .grid-stack-item {
     
     /* Theme aware background */
     background-color: var(--panel-bg-rgba, rgba(255, 255, 255, 0.9));
-    border-radius: 12px;
+    border-radius: var(--aot-radius-md);
     box-shadow: 0 4px 15px rgba(0,0,0,0.15);
     padding: 0; /* Padding moved to Pages */
     z-index: 10;
@@ -1069,7 +977,7 @@ body.aot-map-fullscreen-active .grid-stack-item {
        widget width. Bottom-attached centered tab, top corners rounded. */
     width: max-content;
     max-width: 100% !important;
-    border-radius: 12px 12px 0 0;
+    border-radius: var(--aot-radius-md) var(--aot-radius-md) 0 0;
     border-bottom: none;
     animation: none;
     /* Dedicated side columns: the balance handle (left, 16px strip) and the
@@ -1201,9 +1109,9 @@ body.aot-map-fullscreen-active .grid-stack-item {
     position: fixed;
     z-index: var(--aot-z-tooltip);
     background: rgba(0, 0, 0, 0.85);
-    color: var(--text-color-tertiary, #fff);
+    color: var(--aot-color-text-tertiary, #fff);
     padding: 4px 8px;
-    border-radius: 6px;
+    border-radius: var(--aot-radius-sm);
     font-size: 1em;
     line-height: 1.3;
     white-space: nowrap;
@@ -1316,7 +1224,7 @@ body.aot-map-fullscreen-active .grid-stack-item {
     max-width: calc(100% - 120px) !important;
     /* 높이는 내용이 정한다. 시계는 크기 손잡이로 커지고 작아진다. */
     height: auto !important;
-    border-radius: 0 0 12px 12px;
+    border-radius: 0 0 var(--aot-radius-md) var(--aot-radius-md);
     border-top: none;
     animation: none;
     justify-content: center;
@@ -1589,9 +1497,9 @@ body.aot-map-fullscreen-active .grid-stack-item {
     box-sizing: border-box;
     background: var(--panel-bg-rgba, rgba(255, 255, 255, 0.95));
     border: 1px solid var(--panel-border, rgba(0, 0, 0, 0.08));
-    border-radius: 8px;
+    border-radius: var(--aot-radius-sm);
     padding: 6px 10px;
-    font-size: 11px;
+    font-size: var(--aot-font-size-2xs);
     line-height: 1.5;
     color: var(--aot-color-text-primary, #333);
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
@@ -1638,6 +1546,10 @@ body.aot-map-fullscreen-active .grid-stack-item {
     box-shadow: none;
     color: var(--aot-color-text-primary, #333);
     padding: 0 2px;
+    /* 사다리 예외: 지도 위에 배경 없이 겹쳐 그리는 축척 눈금이다. 헤일로
+       (text-shadow)로만 읽히게 만든 오버레이라, 사다리 최소단(11.2px)으로
+       키우면 좁은 위젯에서 지도 내용을 그만큼 더 덮는다. 본문 글자가 아니라
+       지도 위 계기(計器)라 지도가 크기를 정한다. */
     font-size: 10px;
     line-height: 1.4;
     /* No fill behind it any more — halo keeps it legible over dark imagery. */
@@ -1664,7 +1576,7 @@ body.aot-map-fullscreen-active .grid-stack-item {
     bottom: 10px;
     background-color: var(--panel-bg-rgba, rgba(255, 255, 255, 0.9));
     border: 1px solid var(--panel-border, rgba(0,0,0,0.05));
-    border-radius: 16px;
+    border-radius: var(--aot-radius-lg);
     padding: 6px 12px;
     min-height: 32px;
     box-sizing: border-box;
@@ -1769,12 +1681,12 @@ body.aot-map-fullscreen-active .grid-stack-item {
     min-width: 0;
     padding: 4px 12px;
     border: 1px solid var(--panel-border, rgba(0, 0, 0, 0.06));
-    border-radius: 9999px;
+    border-radius: var(--aot-btn-pill-radius);
     background: var(--panel-bg-rgba, rgba(255, 255, 255, 0.92));
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
     backdrop-filter: blur(4px);
     -webkit-backdrop-filter: blur(4px);
-    font-size: 12px;
+    font-size: var(--aot-font-size-xs);
     color: var(--aot-color-text-primary, #333);
     cursor: pointer;
     white-space: nowrap;
@@ -1793,7 +1705,7 @@ body.aot-map-fullscreen-active .grid-stack-item {
 .aot-ai-tool-icon {
     font-style: normal;
     font-weight: 700;
-    font-size: 11px;
+    font-size: var(--aot-font-size-2xs);
     letter-spacing: 0.02em;
 }
 
@@ -1889,14 +1801,14 @@ body.aot-map-fullscreen-active .grid-stack-item {
 }
 
 .aot-meas-name {
-    font-size: 0.75rem;
+    font-size: var(--aot-font-size-xs);
     color: var(--aot-color-text-secondary, #888);
     font-weight: 500;
     white-space: nowrap;
 }
 
 .aot-meas-unit {
-    font-size: 0.9rem;
+    font-size: var(--aot-font-size-sm);
     color: var(--aot-color-text-secondary, #666);
     font-weight: 600;
 }
@@ -1907,12 +1819,11 @@ body.aot-map-fullscreen-active .grid-stack-item {
         bottom: 50px; /* Slightly lower on mobile but still above controls if stacked */
         padding: 0 10px; /* Adjust padding for fixed height alignment */
         justify-content: flex-start; /* Allow scroll from start */
-        /* Height remains 85px from main rule */
     }
     
     /* [Mobile] Make measurement name more visible */
     .aot-meas-name {
-        font-size: 0.85rem;  /* Increased from 0.75rem */
+        font-size: var(--aot-font-size-sm);  /* Increased from 0.75rem */
         color: var(--aot-color-text-secondary, #555);         /* Darker from #888 */
         font-weight: 600;    /* Bolder from 500 */
         margin-top: 4px;     /* Add spacing from value */
@@ -1988,7 +1899,7 @@ body.aot-map-fullscreen-active .grid-stack-item {
         display: block !important;
         page-break-before: avoid;
         margin-top: 50px !important;
-        border-top: 1px solid #ddd;
+        border-top: 1px solid var(--aot-border-neutral);
     }
 
     /* Reset Panel Backgrounds */
@@ -2009,7 +1920,7 @@ body.aot-map-fullscreen-active .grid-stack-item {
   left: 10px;
   z-index: 20;
   background: white;
-  border-radius: 8px;
+  border-radius: var(--aot-radius-sm);
   box-shadow: 0 2px 8px rgba(0,0,0,0.15);
   display: flex;
   flex-direction: column;
@@ -2020,9 +1931,9 @@ body.aot-map-fullscreen-active .grid-stack-item {
 .aot-maplibre-draw-toolbar .draw-btn {
   width: 36px;
   height: 36px;
-  border: 1px solid #ddd;
+  border: 1px solid var(--aot-border-neutral);
   background: white;
-  border-radius: 6px;
+  border-radius: var(--aot-radius-sm);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -2032,13 +1943,13 @@ body.aot-map-fullscreen-active .grid-stack-item {
 }
 
 .aot-maplibre-draw-toolbar .draw-btn:hover {
-  background: #f5f5f5;
+  background: var(--aot-gray-100);
   color: var(--aot-color-text-primary, #333);
 }
 
 .aot-maplibre-draw-toolbar .draw-btn.active {
   background: #3bb2d0;
-  color: var(--text-color-tertiary, white);
+  color: var(--aot-color-text-tertiary, white);
   border-color: #3bb2d0;
 }
 
@@ -2058,7 +1969,7 @@ body.aot-map-fullscreen-active .grid-stack-item {
 }
 
 .aot-layer-item:hover {
-    background: #f0f0f0;
+    background: var(--aot-gray-200);
 }
 
 .aot-layer-item label {
@@ -2066,7 +1977,7 @@ body.aot-map-fullscreen-active .grid-stack-item {
     align-items: center;
     gap: 8px;
     cursor: pointer;
-    font-size: 13px;
+    font-size: var(--aot-font-size-xs);
     color: var(--aot-color-text-primary, #444);
 }
 

@@ -28,7 +28,7 @@
         <div class="aot-modal-option-row aot-full-width-row">
           <label class="aot-modal-option-label font-weight-bold">{{ opt.name or opt.id }}</label>
           <div class="aot-modal-option-control">
-            <textarea name="custom_{{ opt.id }}" class="form-control aot-modern-input" rows="5" style="height: auto !important; min-height: 80px; border-radius: 12px !important;">{{ val }}</textarea>
+            <textarea name="custom_{{ opt.id }}" class="form-control aot-modern-input" rows="5" style="height: auto !important; min-height: 80px; border-radius: var(--aot-radius-md) !important;">{{ val }}</textarea>
           </div>
         </div>
       {% elif opt.type == 'password' %}

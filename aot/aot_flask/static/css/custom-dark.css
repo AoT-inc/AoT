@@ -14,8 +14,10 @@
 
 /* ========================================================================
    Section 1.2: semantic color overrides — dark mode
-   (Authority rule: surface/dark semantic tokens belong in custom-dark.css,
-    not in aot-theme-variables.css :root[data-theme="dark"])
+   (Authority rule: 다크 오버라이드는 **전부 이 파일**이다. 서버가 다크 테마일
+    때만 이것을 싣는다. aot-theme-variables.css 에 있던
+    `:root[data-theme="dark"]` 블록은 `data-theme` 를 설정하는 코드가 저장소에
+    없어 한 번도 적용된 적이 없었고, 2026-09-07 에 지웠다.)
    ======================================================================== */
 :root {
   --aot-color-success: #7aa852;

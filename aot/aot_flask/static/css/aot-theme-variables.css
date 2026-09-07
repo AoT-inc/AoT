@@ -13,10 +13,13 @@
  *             space, font, geometry, shadow, z
  *
  * Dark Mode Authority Rule:
- *   :root[data-theme="dark"] (in THIS file)   → --aot-bg-* state tokens ONLY
- *                                                (active, inactive, on, off, etc.)
- *   custom-dark.css                            → surface tokens ONLY
- *                                                (--aot-surface-*, --aot-note-*, etc.)
+ *   custom-dark.css  → 다크 오버라이드는 **전부 여기**. 서버가 다크 테마일 때만
+ *                      이 파일을 싣는다(`effective_theme in dark_themes`).
+ *
+ *   ⚠ 예전에는 "`:root[data-theme="dark"]` 는 --aot-bg-* 상태 토큰만" 이라는
+ *     분담 규칙이 여기 적혀 있었다. 그런데 저장소 어디에도 `data-theme` 를
+ *     설정하는 코드가 없어 그 블록은 한 번도 적용된 적이 없다 — 2026-09-07 에
+ *     지웠다. 경위는 파일 끝의 주석 참조.
  *
  * ========================================================================
  * TOKEN TAXONOMY (Sections)
@@ -165,6 +168,41 @@
   --aot-border-light: #f0f0f0;
   --aot-border-form: #ced4da;
   --aot-border-form-focus: #80bdff;
+
+  /* ========================================================================
+     Section 1.5b: color — 중립 회색 스케일
+     ========================================================================
+     스케일이 없어서 화면을 만들 때마다 새 회색이 생겼다. 실측(2026-09-06):
+     회색 계열 하드코딩 361회 / 53종. 그중에는 부트스트랩(#dee2e6·#f8f9fa·
+     #212529)과 Tailwind(#e5e7eb) 기본 팔레트가 새어 들어온 것도 있었다.
+
+     값은 **저장소에서 가장 많이 쓰이던 회색 그대로**다. 도입하면서 화면이
+     바뀌지 않게 하려는 것이고, 단을 예쁘게 고르는 것보다 "이미 있는 것을
+     이름으로 만들어 더 늘지 않게" 하는 쪽이 이 스케일의 목적이다.
+
+     ⚠ AoT 의 표면·테두리 중립은 초록기가 있는 브랜드 계열이다
+     (--aot-border-neutral · --aot-border-light · --aot-color-brand-*).
+     이 스케일은 그것과 별개로 **색을 띠지 않는 회색**이 필요한 자리에만 쓴다.
+     둘 중 어느 쪽인지 모르겠으면 브랜드 계열이 기본이다.
+
+     스케일 자체를 초록기 있는 값으로 다시 잡는 것은 화면이 바뀌는 결정이라
+     별건으로 남긴다.
+
+     지금 CSS 가 직접 쓰는 것은 밝은 단(100·200·300)뿐이다. 어두운 단은
+     템플릿·위젯 py·JS 에 **직접 박힌 어두운 회색 93곳**(#333 44 · #666 18 ·
+     #888 14 · #444 10 · #555 6 · #111 1)이 옮겨 올 자리다. 그쪽 정리 전까지는
+     소비처가 적어 보이지만, 단을 빼 두면 그때 또 새 회색이 생긴다.
+
+     CSS 안의 회색 대부분은 `var(--토큰, #333)` 처럼 **폴백 자리**에 있다.
+     그 자리는 손대지 않는다 — 이미 토큰이 앞에 있어 실익이 없고, 토큰 파일이
+     통째로 안 실릴 때를 위한 최후 값을 또 다른 토큰으로 바꾸면 안 된다. */
+  --aot-gray-950: #111111;   /* 최다크 텍스트 */
+  --aot-gray-800: #333333;   /* 본문 강조 텍스트 — 가장 많이 쓰인 회색 */
+  --aot-gray-600: #666666;   /* 보조 텍스트 */
+  --aot-gray-500: #888888;   /* 흐린 텍스트·비활성 */
+  --aot-gray-300: #cccccc;   /* 테두리 */
+  --aot-gray-200: #eeeeee;   /* 옅은 구분선 */
+  --aot-gray-100: #f8f9fa;   /* 옅은 배경 */
 
   /* ========================================================================
      Section 1.6: color — surface
@@ -418,6 +456,32 @@
   /* Modal & Form */
   --aot-common-control-width: var(--aot-control-width);
   --aot-btn-pill-radius: 9999px;
+
+  /* ========================================================================
+     모서리(radius) 사다리
+     ========================================================================
+     스케일이 없어서 화면을 만들 때마다 새 값이 생겼다. 실측(2026-09-07):
+     border-radius 원시값 311회 / 42종. 그중 사다리에 담을 px 단수값이
+     168회 / 17종이었다(1·2·3·4·5·6·8·10·12·13·14·16·18·20·28·32·34).
+
+     4의 배수 다섯 단으로 잡는다. 고를 때 망설일 일이 없다는 것이 이 모양을
+     고른 이유다 — 6px 같은 중간값이 아예 없으므로 "4냐 6이냐" 를 묻지 않는다.
+     실측 168곳 중 108곳이 이 다섯 단에 이미 정확히 앉아 있었다. */
+  --aot-radius-xs:  4px;    /* 작은 컨트롤·체크박스·인라인 칩 */
+  --aot-radius-sm:  8px;    /* 카드·툴팁·패널 — 가장 많이 쓰인 값 */
+  --aot-radius-md: 12px;    /* 큰 카드·배지·목록 패널 */
+  --aot-radius-lg: 16px;    /* 메시지 말풍선·알약형 입력칸 */
+  --aot-radius-xl: 20px;    /* 가장 큰 카드·강조 버튼 */
+
+  /* ⚠ 사다리 밖에 두는 것 — 값이 아니라 **모양**이라 스케일과 무관하다.
+       · `50%`                      원형(아바타·FAB·점)
+       · `--aot-btn-pill-radius`    알약. 높이와 무관하게 완전히 둥근 끝.
+                                    예전에는 999px·9999px 두 표기가 섞여 있었다.
+       · `0`                        모서리 없음
+       · `em` · `inherit`           담는 상자를 따라가는 장치(글자 사다리와 같은 이유)
+     버튼 컨트롤은 별도 토큰을 이미 쓴다 — `--aot-btn-radius`(18px) ·
+     `--aot-btn-radius-sm`(16px). 그쪽은 컨트롤 높이에서 나온 값이라
+     타일·카드 사다리와 계통이 다르다. */
   --aot-primary: var(--aot-color-primary);
   --aot-primary-hover: var(--aot-color-primary-hover);
   --aot-input-focus-border: var(--aot-color-primary);
@@ -479,27 +543,22 @@
   accent-color: var(--aot-color-brand-primary);
 }
 
-/* Dark Theme Overrides — :root[data-theme="dark"] */
-:root[data-theme="dark"] {
-  /* Background-state colors (device/state logic — NOT surface theming) */
-  --aot-bg-on: #F3F6F5;
-  --aot-bg-off: #D1D5D5;
-  --aot-bg-active: #F3F6F5;
-  --aot-bg-inactive: #D1D5D5;
-  --aot-bg-upgrade: #660000;
-  /* light 테마와 동일한 이유로 active 와 구분 — 다크에서도 대비 유지 */
-  --aot-bg-pause: #989E9E;
-  --aot-bg-hold: #F0AD4E;
+/* ── 다크 상태색: `:root[data-theme="dark"]` 블록은 지웠다 (2026-09-07) ──────
+   여기에 `--aot-bg-on/off/active/inactive/upgrade/pause/hold` 의 다크 값이
+   스물두 줄 있었다. **한 번도 적용된 적이 없다.**
 
-  /*
-   * NOTE: Semantic and brand/text color overrides were moved from here
-   * to custom-dark.css per the authority rule (Section 3.1 of Plan 019):
-   * :root[data-theme="dark"] in aot-theme-variables.css holds ONLY --aot-bg-*
-   * state tokens. Surface token dark overrides belong in custom-dark.css.
-   *
-   * Moved tokens:
-   *   --aot-color-success, --aot-color-warning, --aot-color-danger, --aot-color-info
-   *   --aot-color-brand-accent, --aot-color-text-primary, --aot-color-text-secondary
-   *   --aot-color-dark
-   */
-}
+   두 가지 이유로 죽어 있었다:
+     1. 저장소 어디에도 `data-theme` 속성을 **설정하는 코드가 없다.**
+        다크모드는 서버측 조건부 로드(`effective_theme in dark_themes` →
+        `custom-dark.css`)로 동작한다. 셀렉터가 맞을 일이 없었다.
+     2. 설령 맞았더라도 `/custom.css` 가 그 일곱 토큰을 전부 발행하고
+        **가장 나중에 로드된다**(routes_general 의 var_map: bg_on · bg_off ·
+        bg_active · bg_inactive · bg_warning · bg_pending · badge_upgrade).
+        사용자 값이 이겼을 것이다.
+
+   그래서 다크 사용자는 지금도 **사용자가 설정한 상태색**을 본다(테마와 무관).
+   그것이 맞는지는 별개 판단이고, 판단하려면 이 죽은 코드가 먼저 없어야 한다 —
+   읽는 사람이 "다크는 따로 정의돼 있구나" 로 오해하게 만들기 때문이다.
+
+   다크 전용 상태색이 정말 필요해지면 `custom-dark.css` 에 넣는다. 그 파일이
+   실제로 실리는 쪽이고, 표면 토큰이 이미 그렇게 하고 있다. */

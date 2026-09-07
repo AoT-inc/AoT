@@ -42,7 +42,7 @@ main.container > p {
    대비를 유지한다. */
 main.container .aot-notice-box {
     background: var(--aot-surface-card) !important;
-    color: var(--text-color-primary) !important;
+    color: var(--aot-color-text-primary);
     border-color: var(--aot-border-neutral) !important;
 }
 
@@ -53,7 +53,7 @@ main.container .aot-notice-box {
    version number links, which already get the normal link color). */
 main.container code,
 main.container pre {
-    color: var(--text-color-primary);
+    color: var(--aot-color-text-primary);
 }
 
 /* The live update log tail. Was a hardcoded dark "terminal" look, unrelated
@@ -62,11 +62,11 @@ main.container pre {
    content being a raw log, not about color. */
 #upgrade_status {
     background-color: var(--aot-surface-card);
-    color: var(--text-color-primary);
+    color: var(--aot-color-text-primary);
     padding: 15px;
-    border-radius: 8px;
+    border-radius: var(--aot-radius-sm);
     font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
-    font-size: 0.9rem;
+    font-size: var(--aot-font-size-sm);
     border: 1px solid var(--aot-border-neutral);
     overflow: auto;
     resize: vertical;

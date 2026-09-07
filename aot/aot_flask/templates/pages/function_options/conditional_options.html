@@ -41,7 +41,7 @@
       <div class="aot-modal-body-text">
         <div class="d-flex justify-content-between align-items-center mb-2">
             <strong>{{_('Help')}}</strong>
-            <a href="{{ manual_url('Functions/#conditional') }}" target="_blank"><span style="font-size: 16px" class="fas fa-question-circle"></span></a>
+            <a href="{{ manual_url('Functions/#conditional') }}" target="_blank"><span class="fas fa-question-circle aot-help-icon"></span></a>
         </div>
         {{_("Conditional functions can not only execute Python 3 code, but also interact with AoT using conditions and actions within the code.")}}
         {{_("For more information, see the")}} <a href="{{ manual_url('Functions/#conditional') }}" target="_blank">{{_('Conditional Functions documentation')}}</a>.
@@ -174,22 +174,22 @@
 
         <div class="form-group mb-3">
             <div class="aot-modal-subgroup-title mb-2">{{form_conditional.conditional_import.label.text}}</div>
-            <textarea style="font-family:monospace; border-radius: 12px !important;" class="form-control aot-modern-input" id="conditional_import"
+            <textarea style="font-family:monospace; border-radius: var(--aot-radius-md) !important;" class="form-control aot-modern-input" id="conditional_import"
                 name="conditional_import" rows="5" type="text">{{each_function.conditional_import}}</textarea>
         </div>
         <div class="form-group mb-3">
             <div class="aot-modal-subgroup-title mb-2">{{form_conditional.conditional_initialize.label.text}}</div>
-            <textarea style="font-family:monospace; border-radius: 12px !important;" class="form-control aot-modern-input" id="conditional_initialize"
+            <textarea style="font-family:monospace; border-radius: var(--aot-radius-md) !important;" class="form-control aot-modern-input" id="conditional_initialize"
                 name="conditional_initialize" rows="5" type="text">{{each_function.conditional_initialize}}</textarea>
         </div>
         <div class="form-group mb-3">
             <div class="aot-modal-subgroup-title mb-2">{{form_conditional.conditional_statement.label.text}}</div>
-            <textarea style="font-family:monospace; border-radius: 12px !important;" class="form-control aot-modern-input" id="conditional_statement"
+            <textarea style="font-family:monospace; border-radius: var(--aot-radius-md) !important;" class="form-control aot-modern-input" id="conditional_statement"
                 name="conditional_statement" rows="15" type="text">{{each_function.conditional_statement}}</textarea>
         </div>
         <div class="form-group mb-3">
             <div class="aot-modal-subgroup-title mb-2">{{form_conditional.conditional_status.label.text}}</div>
-            <textarea style="font-family:monospace; border-radius: 12px !important;" class="form-control aot-modern-input" id="conditional_status"
+            <textarea style="font-family:monospace; border-radius: var(--aot-radius-md) !important;" class="form-control aot-modern-input" id="conditional_status"
                 name="conditional_status" rows="5" type="text">{{each_function.conditional_status}}</textarea>
         </div>
     </div>
@@ -199,7 +199,7 @@
   <div class="aot-modal-group-title">
     {{_('Conditions')}} 
     <a href="{{ manual_url('Functions/#conditional-options') }}" target="_blank">
-        <span style="font-size: 16px" class="fas fa-question-circle"></span>
+        <span class="fas fa-question-circle aot-help-icon"></span>
     </a>
   </div>
 
@@ -237,7 +237,7 @@
 
   <div class="aot-modal-group-title">
       {{_('Actions')}} 
-      <a href="{{ manual_url('Actions/') }}" target="_blank"><span style="font-size: 16px" class="fas fa-question-circle"></span></a>
+      <a href="{{ manual_url('Actions/') }}" target="_blank"><span class="fas fa-question-circle aot-help-icon"></span></a>
   </div>
 
   <div class="aot-modal-container">

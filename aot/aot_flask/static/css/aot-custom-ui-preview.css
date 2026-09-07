@@ -8,9 +8,16 @@
    CANVAS WRAPPER
 ============================================================ */
 #aot-ui-preview {
+    /* 이 캔버스는 실제 화면을 **작게 흉내 낸 목업**이다. 안쪽 글자는 사다리
+       최소단(11.2px)보다 작은 것이 많은데, 그것이 축소된 모습의 일부다 —
+       사다리로 끌어올리면 실제 화면과 비율이 어긋나 목업 구실을 못 한다.
+       그래서 뿌리 하나만 사다리에 두고 안쪽은 전부 `em` 으로 매단다.
+       여기를 바꾸면 캔버스 전체가 비율을 유지한 채 함께 커진다.
+       (`aot-sensor-label.css` 가 쓰는 것과 같은 방식이다.) */
+    font-size: var(--aot-font-size-2xs);
     background-color: var(--preview-bd-primary, #FFFFFF);
-    border: 1px solid var(--border-neutral);
-    border-radius: 12px;
+    border: 1px solid var(--aot-border-neutral);
+    border-radius: var(--aot-radius-md);
     padding: 0;
     overflow: hidden;
     min-height: 260px;
@@ -27,7 +34,7 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    border-radius: 12px 12px 0 0;
+    border-radius: var(--aot-radius-md) var(--aot-radius-md) 0 0;
     cursor: pointer;
     transition: opacity 0.15s ease;
 }
@@ -40,7 +47,7 @@
    쓴다. brand_primary 를 쓰면 btn_primary_bg 기본값과 같은 색이라 글자가
    배경에 묻힌다. */
 #aot-ui-preview .preview-navbar-brand {
-    font-size: 0.85rem;
+    font-size: 1.2143em;
     font-weight: 700;
     color: var(--preview-brand-accent, #F3F6F5);
     letter-spacing: 0.03em;
@@ -79,12 +86,12 @@
 }
 
 #aot-ui-preview .preview-btn {
-    font-size: 0.7rem;
+    font-size: 1em;
     font-weight: 600;
     height: 26px;
     min-width: 44px;
     padding: 0 10px;
-    border-radius: 9999px;
+    border-radius: var(--aot-btn-pill-radius);
     border: 1px solid var(--preview-bd-btn-border, #B6BABA);
     cursor: pointer;
     display: flex;
@@ -116,10 +123,10 @@
 
 #aot-ui-preview .preview-card {
     flex: 1 1 0;
-    border-radius: 8px;
+    border-radius: var(--aot-radius-sm);
     padding: 8px 10px;
     cursor: pointer;
-    border: 1px solid var(--border-neutral);
+    border: 1px solid var(--aot-border-neutral);
     transition: opacity 0.15s ease;
     min-width: 0;
 }
@@ -137,7 +144,7 @@
 }
 
 #aot-ui-preview .preview-card-title {
-    font-size: 0.7rem;
+    font-size: 1em;
     font-weight: 700;
     color: var(--preview-text-color-primary, #13261B);
     margin-bottom: 3px;
@@ -147,7 +154,7 @@
 }
 
 #aot-ui-preview .preview-card-subtitle {
-    font-size: 0.65rem;
+    font-size: 0.9286em;
     color: var(--preview-text-color-secondary, #5E6B64);
     white-space: nowrap;
     overflow: hidden;
@@ -165,11 +172,11 @@
 }
 
 #aot-ui-preview .preview-badge {
-    font-size: 0.65rem;
+    font-size: 0.9286em;
     font-weight: 700;
     height: 20px;
     padding: 0 8px;
-    border-radius: 9999px;
+    border-radius: var(--aot-btn-pill-radius);
     display: flex;
     align-items: center;
     cursor: pointer;
@@ -193,18 +200,18 @@
    whole-device card, not the channel row).
 ============================================================ */
 #aot-ui-preview .preview-channel-label-row {
-    font-size: 0.72rem;
+    font-size: 1.0286em;
     font-weight: 600;
     color: var(--preview-text-color-secondary, #5E6B64);
     margin-top: 14px;
     margin-bottom: 6px;
     padding-top: 10px;
-    border-top: 1px solid var(--border-neutral);
+    border-top: 1px solid var(--aot-border-neutral);
 }
 
 #aot-ui-preview .preview-channel-group {
-    border: 1px solid var(--border-neutral);
-    border-radius: 8px;
+    border: 1px solid var(--aot-border-neutral);
+    border-radius: var(--aot-radius-sm);
     overflow: hidden;
     margin-bottom: 10px;
 }
@@ -217,7 +224,7 @@
     padding: 0 10px;
     cursor: pointer;
     transition: opacity 0.15s ease;
-    border-bottom: 1px solid var(--border-neutral);
+    border-bottom: 1px solid var(--aot-border-neutral);
 }
 
 #aot-ui-preview .preview-channel-row:last-child {
@@ -229,7 +236,7 @@
 }
 
 #aot-ui-preview .preview-channel-name {
-    font-size: 0.7rem;
+    font-size: 1em;
     font-weight: 700;
     color: var(--preview-text-color-primary, #13261B);
 }
@@ -237,7 +244,7 @@
 /* 상태를 버튼 색만으로 구분하기 어렵다는 피드백 반영 — 채널명 옆에
    상태를 텍스트로 명시(재사용: State Colors 필드 라벨과 동일 문구). */
 #aot-ui-preview .preview-channel-state-badge {
-    font-size: 0.62rem;
+    font-size: 0.8857em;
     font-weight: 600;
     font-style: italic;
     color: var(--preview-text-color-secondary, #5E6B64);
@@ -245,7 +252,7 @@
 }
 
 #aot-ui-preview .preview-channel-status-text {
-    font-size: 0.65rem;
+    font-size: 0.9286em;
     color: var(--preview-text-color-primary, #13261B);
     font-style: italic;
 }
@@ -258,7 +265,7 @@
 #aot-ui-preview .preview-channel-btn.preview-btn {
     height: 18px;
     min-width: 32px;
-    font-size: 0.6rem;
+    font-size: 0.8571em;
     padding: 0 6px;
 }
 
@@ -301,29 +308,9 @@
 /* ============================================================
    PRESET HEADER ROW  (sits above the canvas inside Zone 1 section)
 ============================================================ */
-.aot-preview-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0 0 10px 0;
-    flex-wrap: wrap;
-    gap: 8px;
-}
-
-.aot-preview-header-label {
-    font-size: 0.875rem;
-    font-weight: 600;
-    color: var(--aot-text-main);
-}
-
-.aot-preview-preset-wrap {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
 
 .aot-preview-modified-badge {
-    font-size: 0.72rem;
+    font-size: var(--aot-font-size-2xs);
     color: var(--aot-text-secondary);
     font-style: italic;
     display: none;
@@ -337,7 +324,7 @@
     align-items: center;
     padding: 0.5rem 0;
     min-height: 2.6rem;
-    border-bottom: 1px solid var(--border-neutral);
+    border-bottom: 1px solid var(--aot-border-neutral);
     gap: 10px;
 }
 
@@ -355,7 +342,7 @@
 }
 
 .aot-color-desc {
-    font-size: 0.72rem;
+    font-size: var(--aot-font-size-2xs);
     font-weight: 400;
     color: var(--aot-text-secondary);
     line-height: 1.3;
@@ -365,8 +352,8 @@
     width: 40px;
     height: 28px;
     padding: 0;
-    border: 1px solid var(--border-neutral);
-    border-radius: 6px;
+    border: 1px solid var(--aot-border-neutral);
+    border-radius: var(--aot-radius-sm);
     cursor: pointer;
     flex-shrink: 0;
     -webkit-appearance: none;
@@ -382,17 +369,17 @@
 
 .aot-color-swatch::-webkit-color-swatch {
     border: none;
-    border-radius: 5px;
+    border-radius: var(--aot-radius-xs);
 }
 
 .aot-color-swatch::-moz-color-swatch {
     border: none;
-    border-radius: 5px;
+    border-radius: var(--aot-radius-xs);
 }
 
 .aot-color-label {
     flex: 1 1 auto;
-    font-size: 0.875rem;
+    font-size: var(--aot-font-size-sm);
     font-weight: 600;
     color: var(--aot-text-main);
     line-height: 1.3;
@@ -414,10 +401,10 @@
     flex-shrink: 0;
     box-sizing: border-box;
     border-radius: var(--aot-btn-pill-radius);
-    border: 1px solid var(--border-neutral);
+    border: 1px solid var(--aot-border-neutral);
     padding: 0 0.6rem;
     height: 28px;
-    font-size: 0.8rem;
+    font-size: var(--aot-font-size-xs);
     font-family: monospace;
     background-color: var(--aot-input-bg);
     color: var(--aot-text-main);
@@ -430,11 +417,6 @@
     border-color: var(--aot-input-focus-border);
     box-shadow: 0 0 0 0.15rem var(--modal-focus-ring);
     outline: none;
-}
-
-/* Highlight the color row when scrolled to from canvas click */
-.aot-color-group-highlight {
-    animation: groupHighlightPulse 1.2s ease forwards;
 }
 
 @keyframes groupHighlightPulse {
@@ -451,8 +433,8 @@
     position: fixed;
     z-index: var(--aot-z-dropdown);
     background: var(--aot-input-bg, #ffffff);
-    border: 1px solid var(--border-neutral, #dddddd);
-    border-radius: 14px;
+    border: 1px solid var(--aot-border-neutral, #dddddd);
+    border-radius: var(--aot-radius-lg);
     box-shadow: 0 8px 32px rgba(15, 23, 42, 0.18), 0 2px 8px rgba(15, 23, 42, 0.08);
     padding: 14px 16px 12px;
     min-width: 240px;
@@ -475,7 +457,7 @@
     width: 10px;
     height: 10px;
     background: var(--aot-input-bg, #ffffff);
-    border: 1px solid var(--border-neutral, #dddddd);
+    border: 1px solid var(--aot-border-neutral, #dddddd);
     border-right: none;
     border-bottom: none;
     transform: rotate(45deg);
@@ -491,7 +473,7 @@
 .aot-color-popover[data-placement="top"]::before {
     bottom: -6px;
     left: var(--aot-popover-arrow-x, 50%);
-    border: 1px solid var(--border-neutral, #dddddd);
+    border: 1px solid var(--aot-border-neutral, #dddddd);
     border-left: none;
     border-top: none;
     transform: translateX(-50%) rotate(45deg);
@@ -506,7 +488,7 @@
 }
 
 .aot-color-popover-label {
-    font-size: 0.78rem;
+    font-size: var(--aot-font-size-xs);
     font-weight: 700;
     color: var(--aot-text-main, #444);
     letter-spacing: 0.01em;
@@ -514,18 +496,6 @@
     overflow: hidden;
     text-overflow: ellipsis;
     max-width: 120px;
-}
-
-.aot-color-popover-hex-display {
-    font-size: 0.75rem;
-    font-family: monospace;
-    font-weight: 600;
-    color: var(--aot-text-secondary, #6c757d);
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-    background: var(--border-neutral, #dddddd);
-    border-radius: 6px;
-    padding: 2px 8px;
 }
 
 /* Multi-slot color row (배경색 / 문자색 / 테두리색) */
@@ -538,7 +508,7 @@
 /* 슬롯 라벨은 언어마다 길이가 달라(예: ko "테두리 색상") 고정폭이면 줄바꿈된다.
    min-width 로 정렬만 맞추고 실제 폭은 내용에 맞춘다. */
 .aot-color-popover-slot-label {
-    font-size: 0.72rem;
+    font-size: var(--aot-font-size-2xs);
     font-weight: 600;
     color: var(--aot-text-secondary, #6c757d);
     min-width: 52px;
@@ -554,8 +524,8 @@
     width: 40px;
     height: 28px;
     flex-shrink: 0;
-    border: 1px solid var(--border-neutral, #dddddd);
-    border-radius: 6px;
+    border: 1px solid var(--aot-border-neutral, #dddddd);
+    border-radius: var(--aot-radius-sm);
     cursor: pointer;
     padding: 2px;
     background: none;
@@ -569,57 +539,21 @@
 
 .aot-color-popover-native::-webkit-color-swatch {
     border: none;
-    border-radius: 6px;
+    border-radius: var(--aot-radius-sm);
 }
 
 .aot-color-popover-native::-moz-color-swatch {
     border: none;
-    border-radius: 6px;
-}
-
-/* Preset swatches row */
-.aot-color-popover-presets {
-    display: flex;
-    gap: 6px;
-    flex-wrap: wrap;
-}
-
-.aot-color-popover-preset {
-    width: 24px;
-    height: 24px;
-    border-radius: 50%;
-    border: 2px solid transparent;
-    cursor: pointer;
-    transition: transform 0.15s ease, border-color 0.15s ease;
-    flex-shrink: 0;
-    /* min touch target via outline area */
-    box-sizing: border-box;
-}
-
-.aot-color-popover-preset:hover {
-    transform: scale(1.18);
-    border-color: var(--aot-input-focus-border, #F2D524);
-}
-
-.aot-color-popover-preset:focus-visible {
-    outline: 2px solid var(--aot-input-focus-border, #F2D524);
-    outline-offset: 2px;
-}
-
-/* Hex text input row */
-.aot-color-popover-input-row {
-    display: flex;
-    gap: 6px;
-    align-items: center;
+    border-radius: var(--aot-radius-sm);
 }
 
 .aot-color-popover-hex-input {
     flex: 1 1 auto;
     height: 32px;
-    border: 1px solid var(--border-neutral, #dddddd);
+    border: 1px solid var(--aot-border-neutral, #dddddd);
     border-radius: var(--aot-btn-pill-radius, 9999px);
     padding: 0 0.7rem;
-    font-size: 0.8rem;
+    font-size: var(--aot-font-size-xs);
     font-family: monospace;
     text-transform: uppercase;
     letter-spacing: 0.03em;
@@ -646,8 +580,4 @@
         width: 80px;
     }
 
-    .aot-preview-header {
-        flex-direction: column;
-        align-items: flex-start;
-    }
 }

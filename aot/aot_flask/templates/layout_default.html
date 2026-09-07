@@ -574,7 +574,7 @@ IMPORTANT: This is the SOURCE TEMPLATE file.
             aria-haspopup="true" aria-expanded="false">
             {{ _('Dashboard') }}
           </a>
-          <div class="dropdown-menu" aria-labelledby="dropdownDashboard" style="border-radius: 16px !important; box-shadow: 0 8px 24px rgba(0,0,0,0.12) !important; border: 1px solid rgba(0,0,0,0.08) !important; padding: 8px 0 !important; overflow: hidden !important;">
+          <div class="dropdown-menu" aria-labelledby="dropdownDashboard">
             {% for each_dash in dashboards %}
             <a class="dropdown-item {% if each_dash.unique_id == dashboard_id %} active{% endif %}"
               href="/dashboard/{{ each_dash.unique_id }}">
@@ -595,7 +595,7 @@ IMPORTANT: This is the SOURCE TEMPLATE file.
              aria-expanded="false">
              {{ _('AI') }}
           </a>
-          <div class="dropdown-menu" aria-labelledby="dropdownAIAgent" style="border-radius: 16px !important; box-shadow: 0 8px 24px rgba(0,0,0,0.12) !important; border: 1px solid rgba(0,0,0,0.08) !important; padding: 8px 0 !important; overflow: hidden !important;">
+          <div class="dropdown-menu" aria-labelledby="dropdownAIAgent">
             <a class="dropdown-item {% if active_page == 'ai_dashboard' %} active{% endif %}"
                href="{{ url_for('routes_ai_agent.page_ai_dashboard') }}">
                {{ _('Portal') }}
@@ -625,7 +625,7 @@ IMPORTANT: This is the SOURCE TEMPLATE file.
             aria-expanded="false">
             {{ _('Settings') }}
           </a>
-          <div class="dropdown-menu" aria-labelledby="dropdownSettings" style="border-radius: 16px !important; box-shadow: 0 8px 24px rgba(0,0,0,0.12) !important; border: 1px solid rgba(0,0,0,0.08) !important; padding: 8px 0 !important; overflow: hidden !important;">
+          <div class="dropdown-menu" aria-labelledby="dropdownSettings">
             <a class="dropdown-item {% if active_page == 'geo_design' %} active{% endif %}"
               href="{{ url_for('routes_geo.page_design') }}">
               {{ _('Map') }}
@@ -671,7 +671,7 @@ IMPORTANT: This is the SOURCE TEMPLATE file.
             aria-expanded="false">
             {{ _('Additional Features') }}
           </a>
-          <div class="dropdown-menu" aria-labelledby="dropdownExtra" style="border-radius: 16px !important; box-shadow: 0 8px 24px rgba(0,0,0,0.12) !important; border: 1px solid rgba(0,0,0,0.08) !important; padding: 8px 0 !important; overflow: hidden !important;">
+          <div class="dropdown-menu" aria-labelledby="dropdownExtra">
             <a class="dropdown-item{% if active_page == 'live' %} active{% endif %}"
               href="{{url_for('routes_page.page_live')}}">
               {{_('Live Measurement')}}
@@ -732,7 +732,7 @@ IMPORTANT: This is the SOURCE TEMPLATE file.
             aria-expanded="false">
             {{ _('Help') }}
           </a>
-          <div class="dropdown-menu dropdown-menu-right" aria-labelledby="dropdownHelp" style="border-radius: 16px !important; box-shadow: 0 8px 24px rgba(0,0,0,0.12) !important; border: 1px solid rgba(0,0,0,0.08) !important; padding: 8px 0 !important; overflow: hidden !important;">
+          <div class="dropdown-menu dropdown-menu-right" aria-labelledby="dropdownHelp">
             {% if help_page and help_page[0] %}
             <a class="dropdown-item" target="_blank" href="{{ help_page[0] }}">{{ _('Help') }}: {{ help_page[1] }}</a>
             {% endif %}
@@ -750,7 +750,7 @@ IMPORTANT: This is the SOURCE TEMPLATE file.
             aria-expanded="false">
             {{ _('Manage') }}
           </a>
-          <div class="dropdown-menu dropdown-menu-right" aria-labelledby="dropdownManage" style="border-radius: 16px !important; box-shadow: 0 8px 24px rgba(0,0,0,0.12) !important; border: 1px solid rgba(0,0,0,0.08) !important; padding: 8px 0 !important; overflow: hidden !important;">
+          <div class="dropdown-menu dropdown-menu-right" aria-labelledby="dropdownManage">
             <a class="dropdown-item" href="{{ url_for('routes_settings.settings_general') }}">{{ _('System Management') }}</a>
             <a class="dropdown-item" href="{{ url_for('routes_page.page_logview') }}">{{ _('System Log') }}</a>
             <a class="dropdown-item" href="{{ url_for('routes_page.page_audit_log') }}">{{ _('Audit Log') }}</a>

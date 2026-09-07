@@ -557,7 +557,7 @@ WIDGET_INFORMATION = {
             align-items: stretch;
             margin-bottom: 10px;
             padding: 8px 6px;
-            background-color: var(--bg-off);
+            background-color: var(--aot-bg-off);
             border: 1px solid var(--aot-border-light);
             border-radius: 8px;
             gap: 3px;
@@ -677,7 +677,7 @@ WIDGET_INFORMATION = {
             border: 1px solid var(--aot-border-light);
             background: transparent;
             font-size: var(--aot-fs-label);
-            color: var(--gray-dark);
+            color: var(--aot-color-text-secondary);
             cursor: pointer;
             transition: all 0.15s;
         }
@@ -687,7 +687,7 @@ WIDGET_INFORMATION = {
         .seq-action-btn.active {
             background: var(--aot-color-brand-secondary);
             border-color: var(--aot-color-brand-secondary);
-            color: var(--text-color-tertiary);
+            color: var(--aot-color-text-tertiary);
         }
 
         /* --- Section 3: Info Grid (BOTTOM) --- */
@@ -698,7 +698,7 @@ WIDGET_INFORMATION = {
             margin-bottom: 10px;
         }
         .seq-info-card {
-            background-color: var(--bg-off);
+            background-color: var(--aot-bg-off);
             border: 1px solid var(--aot-border-light);
             border-radius: 8px;
             padding: 8px 4px;
@@ -709,7 +709,7 @@ WIDGET_INFORMATION = {
         }
         .seq-info-label {
             font-size: var(--aot-fs-label);
-            color: var(--gray-dark);
+            color: var(--aot-color-text-secondary);
             text-transform: uppercase;
             margin-bottom: 4px;
             font-weight: var(--aot-fw-medium);
@@ -735,10 +735,10 @@ WIDGET_INFORMATION = {
         .seq-expand-btn {
             width: 100%; height: var(--aot-btn-height); border-radius: var(--aot-btn-pill-radius);
             background-color: transparent; border: 1px solid var(--aot-border-light, #ddd);
-            color: var(--gray-dark, #666); font-size: var(--aot-fs-body); font-weight: var(--aot-fw-medium);
+            color: var(--aot-color-text-secondary, #666); font-size: var(--aot-fs-body); font-weight: var(--aot-fw-medium);
             display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s ease;
         }
-        .seq-expand-btn:hover { background-color: var(--aot-color-brand-secondary); border-color: var(--aot-color-brand-secondary); color: var(--text-color-tertiary); }
+        .seq-expand-btn:hover { background-color: var(--aot-color-brand-secondary); border-color: var(--aot-color-brand-secondary); color: var(--aot-color-text-tertiary); }
         .seq-expand-btn:active { transform: scale(0.99); }
         .seq-expand-icon { font-size: var(--aot-fs-caption); margin-left: 6px; transition: transform 0.3s ease; }
         .seq-expand-btn.expanded .seq-expand-icon { transform: rotate(180deg); }
@@ -748,9 +748,9 @@ WIDGET_INFORMATION = {
         .seq-details-container.expanded { display: block; }
         .seq-list-header {
             display: flex; align-items: center; padding: 8px 10px;
-            background-color: var(--bg-off); border-bottom: 1px solid var(--aot-border-light);
+            background-color: var(--aot-bg-off); border-bottom: 1px solid var(--aot-border-light);
             border-top-left-radius: 8px; border-top-right-radius: 8px;
-            font-size: var(--aot-fs-caption); color: var(--gray-dark, #777); font-weight: var(--aot-fw-semibold);
+            font-size: var(--aot-fs-caption); color: var(--aot-color-text-secondary, #777); font-weight: var(--aot-fw-semibold);
         }
         .seq-col-enable { width: 36px; text-align: center; flex-shrink: 0; }
         /* justify-content:space-between pins the device-status label to this column's
@@ -774,7 +774,7 @@ WIDGET_INFORMATION = {
         .seq-list-body {
             border: 1px solid var(--aot-border-light); border-top: none;
             border-bottom-left-radius: 8px; border-bottom-right-radius: 8px;
-            background: var(--bg-off); max-height: 330px; overflow-y: auto;
+            background: var(--aot-bg-off); max-height: 330px; overflow-y: auto;
         }
         .seq-list-item {
             display: flex; align-items: center; padding: 0 10px;
@@ -783,8 +783,8 @@ WIDGET_INFORMATION = {
             height: 40px; box-sizing: border-box; white-space: nowrap; flex-wrap: nowrap;
         }
         .seq-list-item:last-child { border-bottom: none; }
-        .seq-list-item.active { background-color: var(--bg-active); border-left: 3px solid var(--aot-color-brand-secondary); padding-left: 7px; }
-        .seq-list-item.disabled { opacity: 0.6; background-color: var(--bg-off); }
+        .seq-list-item.active { background-color: var(--aot-bg-active); border-left: 3px solid var(--aot-color-brand-secondary); padding-left: 7px; }
+        .seq-list-item.disabled { opacity: 0.6; background-color: var(--aot-bg-off); }
         /* Device state (Model A): offline/unconfirmed target output.
            2026-08-04: --bg-pause(일시정지) 에서 danger 틴트로 이관 — 무응답은
            사용자가 멈춘 것이 아니라 고장이다. 배지 글자색이 #fff 고정이었는데
@@ -792,7 +792,7 @@ WIDGET_INFORMATION = {
         .seq-list-item.seq-offline { border-left: 3px solid var(--aot-tint-danger-fg, #b23b3b); padding-left: 7px; }
         .seq-dev-badge { margin-left: 6px; flex-shrink: 0; font-size: var(--aot-fs-caption, 0.72em); padding: 0 5px; border-radius: 8px; white-space: nowrap; vertical-align: middle; }
         .seq-dev-offline { background: var(--aot-tint-danger-bg, #fbe7e7); color: var(--aot-tint-danger-fg, #b23b3b); opacity: 0.85; }
-        .seq-dev-pending { background: var(--bg-hold, #f0ad4e); color: #fff; }
+        .seq-dev-pending { background: var(--aot-bg-hold, #f0ad4e); color: #fff; }
 
         /* --- Drag to reorder --- */
         /* Rows are picked up by pressing and dragging (touch: press and hold).
@@ -836,7 +836,7 @@ WIDGET_INFORMATION = {
         .seq-text-name { font-weight: var(--aot-fw-medium); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; flex-shrink: 1; }
         .seq-text-time { font-weight: var(--aot-fw-semibold); font-variant-numeric: tabular-nums; color: var(--aot-text-main, #555); }
         .seq-col-time.seq-time-editable { cursor: pointer; }
-        .seq-col-time.seq-time-editable:hover .seq-text-time { color: var(--bd-btn-primary); text-decoration: underline; }
+        .seq-col-time.seq-time-editable:hover .seq-text-time { color: var(--aot-btn-bg-primary); text-decoration: underline; }
         /* Group tint fills the whole NAME cell (full row height) so contiguous
            group members' backgrounds connect into ONE continuous block; only the
            block's top (first member) and bottom (last member) are rounded.
@@ -909,7 +909,7 @@ WIDGET_INFORMATION = {
         .seq-step-time-body .aot-wheel-cols { margin: 2px 0 4px; }
         .seq-step-modal .seq-type-panel-title { text-align: left; margin-bottom: var(--aot-space-3, 12px); }
         .seq-step-section { margin-bottom: var(--aot-space-4, 16px); }
-        .seq-step-label { font-weight: var(--aot-fw-semibold, 600); font-size: var(--aot-fs-label); color: var(--gray-dark, #888); text-transform: uppercase; margin-bottom: 6px; }
+        .seq-step-label { font-weight: var(--aot-fw-semibold, 600); font-size: var(--aot-fs-label); color: var(--aot-color-text-secondary, #888); text-transform: uppercase; margin-bottom: 6px; }
         {#- ⚠ 아래 두 칸(44px·40px)은 앱 컨트롤 높이(32px)보다 크다. 폰에서 손가락
             으로 짚는 시트라 일부러 키운 것으로 보여 **보지 않고 줄이지 않는다** —
             실제 폰 화면에서 확인한 뒤 정한다(WP5 에서 이 시트를 볼 때 함께). -#}
@@ -920,7 +920,7 @@ WIDGET_INFORMATION = {
             cursor: pointer; font-weight: var(--aot-fw-semibold, 600);
         }
         .seq-step-time-input:hover { border-color: var(--aot-color-brand-secondary); }
-        .seq-step-note { color: var(--gray-dark, #888); font-size: var(--aot-fs-body); padding: 4px 2px; }
+        .seq-step-note { color: var(--aot-color-text-secondary, #888); font-size: var(--aot-fs-body); padding: 4px 2px; }
         .seq-step-group-body { display: flex; flex-direction: column; gap: var(--aot-space-2, 8px); max-height: 34vh; overflow-y: auto; }
         .seq-step-group-body .btn.aot-pill-btn { width: 100%; text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .seq-step-newrow { display: flex; gap: var(--aot-space-2, 8px); width: 100%; box-sizing: border-box; margin-top: var(--aot-space-2, 8px); }

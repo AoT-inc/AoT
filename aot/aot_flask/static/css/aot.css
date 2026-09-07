@@ -13,16 +13,12 @@
   --gray-dark: var(--aot-modal-group-title);
   --gray-hard: var(--aot-color-dark);
 
-  --aot-title-font-size: 1em;
-  --aot-prt-font-size: 1em;
-  /* --aot-btn-font-size 는 aot-theme-variables.css 의 사다리가 정한다.
-     여기 있던 `var(--aot-btn-font-size)` 는 자기참조라 값이 무효였다. */
-
-  --aot-btn-width: 54px;
-  /* --aot-btn-height 는 aot-theme-variables.css 가 정한다.
-     여기서 덮어쓰면 그쪽 값이 죽는다(실제로 그랬다). */
-  --aot-btn-gap: 4px;
-  --aot-group-gap: 8px;
+  /* 크기 토큰은 aot-theme-variables.css 가 정한다.
+     --aot-btn-font-size: 여기 있던 `var(--aot-btn-font-size)` 는 자기참조라 무효였다.
+     --aot-btn-height:    여기서 덮어쓰면 그쪽 값이 죽는다(실제로 그랬다).
+     --aot-title-font-size · --aot-prt-font-size · --aot-btn-width ·
+     --aot-btn-gap · --aot-group-gap: 이 파일과 bootstrap-4-themes/aot.css 에만
+     같은 값으로 선언돼 있었고 저장소 어디에도 소비처가 없었다 — 지웠다. */
 
 
   --breakpoint-xs: 0;

@@ -7,7 +7,6 @@
  * Output: header(42) + channels(N*42) + gap(4)
  */
 
-
 /* ===== Grid-Stack Flexbox Integration ===== */
 /* Allow grid-stack-item-content to use flexbox without breaking absolute positioning */
 .grid-stack-item-content.aot-entry-item,
@@ -15,7 +14,6 @@
   display: flex;
   overflow: visible !important;
   /* padding: 0 !important; 제거하여 GridStack 마진 허용 */
-  /* margin-left/right 제거하여 수평 간격 확보 */
 }
 
 .grid-stack-item-content:has(.aot-entry-item-header) {
@@ -24,28 +22,28 @@
 
 /* Ensure single-row entries use flexbox for internal layout */
 .aot-entry-item {
-  display: flex !important;
+  display: flex;
   flex-direction: row;
-  flex-wrap: nowrap !important;
+  flex-wrap: nowrap;
   align-items: center;
 }
 
 /* ===== Entry Item - single row entries (Input, Function, Geo/Input, AI Agent) ===== */
 .aot-entry-item {
-  height: 48px !important; /* Force standardized 48px content height */
-  position: relative !important;
+  height: 48px; /* Force standardized 48px content height */
+  position: relative;
   padding: 0 8px !important;
   border: none;
-  border-radius: 20px !important; /* 알약 모양 복구 */
-  background-color: var(--aot-surface-card, var(--bd-primary));
-  color: var(--text-color-primary);
+  border-radius: var(--aot-radius-xl) !important; /* 알약 모양 복구 */
+  background-color: var(--aot-surface-card);
+  color: var(--aot-color-text-primary);
   overflow: hidden;
   align-items: center;
-  resize: none !important; /* Phase 9-8: Disable internal resizing handle */
+  resize: none; /* Phase 9-8: Disable internal resizing handle */
 }
 
 .aot-entry-item * {
-  resize: none !important; /* Phase 9-8: Recursive disable */
+  resize: none; /* Phase 9-8: Recursive disable */
 }
 
 /* GridStack resize handle removal — entry UI only, not the dashboard widget grid */
@@ -53,23 +51,23 @@
 .aot-entry-item .ui-resizable-handle,
 .aot-entry-item-header .ui-resizable-handle,
 .aot-entry-item-channel .ui-resizable-handle {
-  display: none !important;
+  display: none;
 }
 
 .aot-entry-item.active-background {
-  background-color: var(--bg-active, #D1D5D5) !important; /* Phase 9-3 수정: 활성 상태 --bg-active */
+  background-color: var(--aot-bg-active, #D1D5D5); /* Phase 9-3 수정: 활성 상태 --bg-active */
 }
 
 .aot-entry-item.inactive-background {
-  background-color: var(--bg-inactive, #F3F6F5) !important; /* Phase 9-3 수정: 비활성 상태 --bg-inactive */
-  color: var(--text-color-primary) !important;
+  background-color: var(--aot-bg-inactive, #F3F6F5); /* Phase 9-3 수정: 비활성 상태 --bg-inactive */
+  color: var(--aot-color-text-primary);
 }
 
 .aot-entry-drag-handle,
 .aot-entry-drag-handle i,
 .aot-entry-settings a,
 .aot-entry-settings a i {
-  color: var(--bd-btn-secondary, #5E6B64) !important;
+  color: var(--aot-btn-bg-secondary, #5E6B64);
 }
 
 /* ===== Reduced gutters ===== */
@@ -90,52 +88,52 @@
 
 /* UUID copy button (Pill design with hover effect) */
 .aot-entry-uuid-btn {
-  height: var(--aot-btn-height) !important;
+  height: var(--aot-btn-height);
   min-height: var(--aot-btn-height) !important;
-  border-radius: var(--aot-btn-radius) !important;
+  border-radius: var(--aot-btn-radius);
   padding-left: var(--aot-btn-padding-x) !important;
-  padding-right: var(--aot-btn-padding-x) !important;
+  padding-right: var(--aot-btn-padding-x);
   display: flex;
-  align-items: center !important;
+  align-items: center;
   justify-content: flex-start !important;
   font-weight: 500 !important;
-  font-size: 0.8rem !important;
-  user-select: none !important; /* Phase 9-8: Prevent text cursor */
-  cursor: pointer !important;
-  white-space: nowrap !important;
-  overflow: hidden !important;
-  text-overflow: ellipsis !important;
+  font-size: var(--aot-font-size-xs);
+  user-select: none; /* Phase 9-8: Prevent text cursor */
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   transition: all 0.2s ease !important;
   border: 1px solid transparent !important; /* 기본 배경 투명 요청 반영 */
-  background-color: transparent !important;
-  color: var(--text-color-primary) !important;
+  background-color: transparent;
+  color: var(--aot-color-text-primary);
   width: 100% !important;
 }
 
 .aot-entry-uuid-btn:hover {
-  background-color: var(--brand-secondary) !important;
-  color: var(--text-color-tertiary) !important;
-  border-color: var(--brand-secondary) !important;
+  background-color: var(--aot-color-brand-secondary) !important;
+  color: var(--aot-color-text-tertiary) !important;
+  border-color: var(--aot-color-brand-secondary) !important;
 }
 
 /* Device Name Input/label (Plain text style) */
 .aot-entry-name-input {
-  background: transparent !important;
-  border: none !important;
-  box-shadow: none !important;
+  background: transparent;
+  border: none;
+  box-shadow: none;
   text-align: left !important;
-  padding-left: 0 !important; /* 기본 패딩은 컨테이너(aot-col-name)에서 담당 */
-  font-size: 0.95rem !important;
-  font-weight: 500 !important;
-  white-space: nowrap !important;
-  overflow: hidden !important;
-  text-overflow: ellipsis !important;
-  color: var(--text-color-primary) !important;
-  width: 100% !important;
-  user-select: none !important; /* Phase 9-8: Prevent ghost cursor */
-  cursor: default !important;
-  display: flex !important; /* Ensure vertical-centering if div */
-  align-items: center !important;
+  padding-left: 0; /* 기본 패딩은 컨테이너(aot-col-name)에서 담당 */
+  font-size: var(--aot-font-size-base);
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--aot-color-text-primary);
+  width: 100%;
+  user-select: none; /* Phase 9-8: Prevent ghost cursor */
+  cursor: default;
+  display: flex; /* Ensure vertical-centering if div */
+  align-items: center;
 }
 
 .aot-entry-name-input:hover {
@@ -147,23 +145,23 @@
    plus a compensating negative left margin keep the resting text flush-left, so
    only the colours transition on hover (no layout shift). */
 .aot-col-name-copy {
-  cursor: pointer !important;
+  cursor: pointer;
 }
 .aot-col-name-copy .aot-entry-name-input {
-  cursor: pointer !important;
-  padding-left: var(--aot-btn-padding-x) !important;
-  padding-right: var(--aot-btn-padding-x) !important;
-  margin-left: calc(-1 * var(--aot-btn-padding-x)) !important;
+  cursor: pointer;
+  padding-left: var(--aot-btn-padding-x);
+  padding-right: var(--aot-btn-padding-x);
+  margin-left: calc(-1 * var(--aot-btn-padding-x));
   border: 1px solid transparent !important;
   border-radius: var(--aot-btn-radius) !important;
-  background-color: transparent !important;
-  transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease !important;
+  background-color: transparent;
+  transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
 }
 .aot-col-name-copy:hover .aot-entry-name-input,
 .aot-col-name-copy .aot-entry-name-input:hover {
-  background-color: var(--brand-secondary) !important;
-  color: var(--text-color-tertiary) !important;
-  border-color: var(--brand-secondary) !important;
+  background-color: var(--aot-color-brand-secondary) !important;
+  color: var(--aot-color-text-tertiary) !important;
+  border-color: var(--aot-color-brand-secondary) !important;
 }
 
 /* Live measurement chips shown in the UUID column for activated inputs.
@@ -180,10 +178,10 @@
 }
 .aot-measure-chip {
   flex: 0 0 auto;
-  font-size: 0.85rem;
+  font-size: var(--aot-font-size-sm);
   font-weight: 600;
   white-space: nowrap;
-  color: var(--text-color-primary);
+  color: var(--aot-color-text-primary);
   line-height: 1.3;
 }
 .aot-measure-chip .aot-measure-unit {
@@ -204,8 +202,8 @@
 .aot-entry-item.row,
 .aot-entry-item-header.row,
 .aot-entry-item-channel.row {
-    margin-left: 0 !important;
-    margin-right: 0 !important;
+    margin-left: 0;
+    margin-right: 0;
 }
 
 /* Divider: remove right border for common styles */
@@ -218,9 +216,9 @@
 
 /* 3.5:3:3.5 Flex 배분 클래스 (정밀 고정) */
 .aot-col-name { 
-  flex: 35 35 0% !important; 
+  flex: 35 35 0%; 
   width: 35% !important;
-  max-width: none !important; 
+  max-width: none; 
   min-width: 0; /* 넘침 방지를 위해 min-width 0 설정 필수 */
   padding-left: 0 !important; /* Phase 9-2: 텍스트 영역 활용을 위해 좌측 여백 제거 */
 }
@@ -230,15 +228,15 @@
   padding-left: 0 !important;
 }
 .aot-col-uuid { 
-  flex: 30 30 0% !important; 
+  flex: 30 30 0%; 
   width: 30% !important;
-  max-width: none !important; 
+  max-width: none; 
   min-width: 0; 
 }
 .aot-col-action {
-  flex: 35 35 0% !important;
-  width: 35% !important;
-  max-width: none !important;
+  flex: 35 35 0%;
+  width: 35%;
+  max-width: none;
   min-width: 0;
 }
 
@@ -258,7 +256,7 @@
 .aot-col-grow {
   flex: 1 1 0%;
   min-width: 0;
-  padding-right: 8px !important; /* visual gap — adjacent grow/btn columns have no border/chip to separate them */
+  padding-right: 8px; /* visual gap — adjacent grow/btn columns have no border/chip to separate them */
 }
 .aot-col-btn {
   flex: 0 0 120px;
@@ -284,29 +282,29 @@
 /* Font sizes for specific input types within entry */
 .aot-entry-content-item input[type="text"],
 .aot-entry-content-item input[type="text"]:disabled {
-  font-size: 0.95rem;
+  font-size: var(--aot-font-size-base);
   font-weight: 500;
   text-align: left !important; /* 강제 좌측 정렬 */
-  padding-left: 0 !important; /* Phase 9-2: 12px 여백 제거 */
-  padding-right: 0 !important; /* Phase 9-2: 우측 여백 제거 */
-  white-space: normal !important; /* Phase 9-2: 줄바꿈 허용 */
-  overflow: visible !important; /* Phase 9-2: 오버플로우 표시 */
-  text-overflow: clip !important; /* Phase 9-2: 말줄임표 제거 */
+  padding-left: 0; /* Phase 9-2: 12px 여백 제거 */
+  padding-right: 0; /* Phase 9-2: 우측 여백 제거 */
+  white-space: normal; /* Phase 9-2: 줄바꿈 허용 */
+  overflow: visible; /* Phase 9-2: 오버플로우 표시 */
+  text-overflow: clip; /* Phase 9-2: 말줄임표 제거 */
 }
 
 .aot-entry-content-item input[type="text"]:hover,
 .aot-entry-name-input:hover {
-  color: var(--text-color-primary) !important; /* 호버 시 색상 변경 방지 */
+  color: var(--aot-color-text-primary) !important; /* 호버 시 색상 변경 방지 */
 }
 
 .aot-entry-content-item input.btn {
-  font-size: 0.8rem;
-  text-align: left !important; /* UUID 버튼 좌측 정렬 */
+  font-size: var(--aot-font-size-xs);
+  text-align: left; /* UUID 버튼 좌측 정렬 */
   padding-left: 12px !important;
 }
 
 .aot-entry-actions input.btn {
-  font-size: 0.8rem;
+  font-size: var(--aot-font-size-xs);
   text-align: center !important; /* 액션 버튼 중앙 정렬 */
 }
 
@@ -320,23 +318,23 @@
 
 /* Minimum width for activate/deactivate buttons */
 .aot-entry-actions input.btn {
-  height: var(--aot-btn-height) !important;
-  min-height: var(--aot-btn-height) !important;
-  border-radius: var(--aot-btn-radius) !important;
-  padding-left: var(--aot-btn-padding-x) !important;
-  padding-right: var(--aot-btn-padding-x) !important;
+  height: var(--aot-btn-height);
+  min-height: var(--aot-btn-height);
+  border-radius: var(--aot-btn-radius);
+  padding-left: var(--aot-btn-padding-x);
+  padding-right: var(--aot-btn-padding-x);
   display: flex; /* !important 제거 */
-  align-items: center !important;
-  justify-content: center !important;
-  font-weight: 500 !important;
-  font-size: 0.8rem !important;
-  white-space: nowrap !important; /* Phase 9-9: Force no-wrap for consistency */
-  overflow: visible !important;   /* Phase 9-2: 오버플로우 허용 */
-  text-overflow: clip !important; /* Phase 9-2: 말줄임표 제거 */
-  transition: all 0.2s ease !important;
-  border: 1px solid var(--bd-btn-border, #B6BABA) !important;
-  max-width: none !important;
-  width: 100% !important;
+  align-items: center;
+  justify-content: center;
+  font-weight: 500;
+  font-size: var(--aot-font-size-xs);
+  white-space: nowrap; /* Phase 9-9: Force no-wrap for consistency */
+  overflow: visible;   /* Phase 9-2: 오버플로우 허용 */
+  text-overflow: clip; /* Phase 9-2: 말줄임표 제거 */
+  transition: all 0.2s ease;
+  border: 1px solid var(--aot-btn-border-primary, #B6BABA) !important;
+  max-width: none;
+  width: 100%;
 }
 
 /* Activate / Deactivate button generic styles using custom variables */
@@ -345,60 +343,59 @@
 .aot-entry-item .aot-entry-actions input.form-control.btn.aot-pill-btn-primary[name*="_activate"],
 .aot-entry-item .aot-entry-actions input.form-control.btn.aot-pill-btn-primary[value="Activate"],
 .aot-entry-item .aot-entry-actions input.form-control.btn.aot-pill-btn-primary[value*="활성화"] {
-  background-color: var(--bg-btn-inactive) !important;
-  color: var(--text-color-tertiary) !important;
+  background-color: var(--aot-btn-bg-inactive);
+  color: var(--aot-color-text-tertiary) !important;
   border: none !important;
-  opacity: 1 !important;
+  opacity: 1;
 }
 
 /* Deactivate button (appears on Gray Active entry) */
 .aot-entry-item .aot-entry-actions input.form-control.btn.aot-pill-btn-primary[name*="_deactivate"],
 .aot-entry-item .aot-entry-actions input.form-control.btn.aot-pill-btn-primary[value="Deactivate"],
 .aot-entry-item .aot-entry-actions input.form-control.btn.aot-pill-btn-primary[value*="비활성화"] {
-  background-color: var(--bg-btn-active) !important;
-  color: var(--text-color-tertiary) !important;
+  background-color: var(--aot-btn-bg-active);
+  color: var(--aot-color-text-tertiary) !important;
   border: none !important;
-  opacity: 1 !important;
+  opacity: 1;
 }
-
 
 /* ===== Button Group - Multiple buttons in single action area ===== */
 .aot-entry-actions.aot-entry-button-group {
   display: flex; /* !important 제거 */
   gap: 4px;
-  padding: 0 !important;
+  padding: 0;
   align-items: center;
-  width: 100% !important;
+  width: 100%;
   justify-content: stretch;
 }
 
 .aot-entry-actions.aot-entry-button-group input.btn {
-  flex: 1 1 0 !important;
-  min-width: 40px !important;
-  max-width: none !important;
-  width: auto !important;
-  margin: 0 !important;
+  flex: 1 1 0;
+  min-width: 40px;
+  max-width: none;
+  width: auto;
+  margin: 0;
   white-space: nowrap;
 }
 
 /* Mobile: Ensure button group uses full width */
 @media (max-width: 768px) {
   .aot-entry-actions.aot-entry-button-group {
-    padding: 0 !important;
-    width: 100% !important;
+    padding: 0;
+    width: 100%;
   }
   
   .aot-entry-actions.aot-entry-button-group input.btn {
-    flex: 1 1 0 !important;
-    min-width: 35px !important;
+    flex: 1 1 0;
+    min-width: 35px;
   }
 }
 
 /* ===== PID 2-row Entry ===== */
 .aot-pid-entry.aot-entry-item {
-  height: 100px !important;
-  flex-direction: column !important;
-  align-items: stretch !important;
+  height: 100px;
+  flex-direction: column;
+  align-items: stretch;
   padding-left: 0 !important;
   padding-right: 0 !important;
 }
@@ -414,7 +411,7 @@
 }
 
 .aot-pid-row-2 {
-  border-top: 1px solid var(--bd-btn-border, #B6BABA);
+  border-top: 1px solid var(--aot-btn-border-primary, #B6BABA);
 }
 
 /* Spacers that mirror drag-handle and settings column widths */
@@ -441,7 +438,7 @@
 .aot-pid-secondary-actions {
   display: flex;
   gap: 4px;
-  padding: 0 !important;
+  padding: 0;
   align-items: center;
   width: 100%;
 }
@@ -453,42 +450,42 @@
 }
 
 .aot-pid-secondary-actions > div input.btn {
-  flex: 1 1 0 !important;
-  width: 100% !important;
+  flex: 1 1 0;
+  width: 100%;
   min-width: 0 !important;
-  color: var(--text-color-tertiary) !important;
-  background-color: var(--bg-btn-inactive) !important;
+  color: var(--aot-color-text-tertiary);
+  background-color: var(--aot-btn-bg-inactive) !important;
   border: none !important;
-  opacity: 1 !important;
+  opacity: 1;
 }
 
 /* ===== Output Button State Colors ===== */
 .aot-btn-on,
 .aot-btn-off {
-  height: var(--aot-btn-height) !important;
-  min-height: var(--aot-btn-height) !important;
-  border-radius: var(--aot-btn-radius) !important;
-  padding-left: var(--aot-btn-padding-x) !important;
-  padding-right: var(--aot-btn-padding-x) !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  font-weight: 500 !important;
-  font-size: 0.8rem !important;
-  transition: all 0.2s ease !important;
+  height: var(--aot-btn-height);
+  min-height: var(--aot-btn-height);
+  border-radius: var(--aot-btn-radius);
+  padding-left: var(--aot-btn-padding-x);
+  padding-right: var(--aot-btn-padding-x);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 500;
+  font-size: var(--aot-font-size-xs);
+  transition: all 0.2s ease;
 }
 
 .aot-btn-on {
   /* Phase 9-5: 장치 상태(State)가 꺼져있을 땐 OFF 버튼과 같은 색상 사용 */
-  background-color: var(--bg-btn-off, #5E6B64) !important;
-  border: 1px solid var(--bd-btn-border, #B6BABA) !important;
-  color: var(--text-color-tertiary, #FFFFFF) !important;
+  background-color: var(--aot-btn-bg-inactive, #5E6B64);
+  border: 1px solid var(--aot-btn-border-primary, #B6BABA);
+  color: var(--aot-color-text-tertiary, #FFFFFF);
 }
 
 /* Phase 9-5: 장치 상태가 켜져있을 땐(활성 채널) ON 버튼이 어두운 색상으로 변경 */
 .aot-entry-item-channel.active-background .aot-btn-on,
 .aot-entry-item.active-background .aot-btn-on {
-  background-color: var(--bg-btn-on, #13261B) !important;
+  background-color: var(--aot-btn-bg-active, #13261B);
 }
 
 /* Actuator Paired: row turns active like any other output, but the non-moving
@@ -496,14 +493,14 @@
    stands out. Higher specificity than the row-cascade rule above. */
 .aot-entry-item-channel.active-background .aot-btn-on.aot-paired-inactive,
 .aot-entry-item.active-background .aot-btn-on.aot-paired-inactive {
-  background-color: var(--bg-btn-off, #5E6B64) !important;
+  background-color: var(--aot-btn-bg-inactive, #5E6B64);
 }
 
 .aot-btn-off {
-  background-color: var(--bg-btn-off, #5E6B64) !important;
-  border: 1px solid var(--bd-btn-border, #B6BABA) !important;
-  color: var(--text-color-tertiary, #FFFFFF) !important;
-  text-shadow: none !important;
+  background-color: var(--aot-btn-bg-inactive, #5E6B64);
+  border: 1px solid var(--aot-btn-border-primary, #B6BABA);
+  color: var(--aot-color-text-tertiary, #FFFFFF);
+  text-shadow: none;
 }
 
 /* hover 는 마우스 포인터 환경에서만 — 터치 기기의 sticky-hover(첫 탭이 hover 로
@@ -524,8 +521,8 @@
 
 /* ===== Inline Badges (for LLM/MCP labels next to names) ===== */
 .aot-badge-inline {
-  font-size: 0.6rem;
-  border-radius: 10px;
+  font-size: var(--aot-font-size-2xs);
+  border-radius: var(--aot-radius-md);
   padding: 3px 6px;
   margin-right: 6px;
   white-space: nowrap;
@@ -533,45 +530,45 @@
 }
 
 .aot-badge-inline.badge-llm {
-  background-color: var(--bg-llm, #6277c7) !important;
-  color: var(--text-color-tertiary) !important;
+  background-color: var(--aot-color-llm, #6277c7) !important;
+  color: var(--aot-color-text-tertiary) !important;
 }
 
 .aot-badge-inline.badge-mcp {
-  background-color: var(--bg-mcp, #64c762) !important;
-  color: var(--text-color-tertiary) !important;
+  background-color: var(--aot-color-mcp, #64c762) !important;
+  color: var(--aot-color-text-tertiary) !important;
 }
 
 /* ===== Drag Handle ===== */
 .aot-entry-drag-handle {
-  width: 40px !important;
-  min-width: 40px !important;
-  max-width: 40px !important;
-  cursor: grab !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important; /* 가로 중앙 정렬 */
-  padding: 0 !important;
-  flex: none !important;
-  height: 100% !important;
+  width: 40px;
+  min-width: 40px;
+  max-width: 40px;
+  cursor: grab;
+  display: flex;
+  align-items: center;
+  justify-content: center; /* 가로 중앙 정렬 */
+  padding: 0;
+  flex: none;
+  height: 100%;
 }
 
 .aot-entry-drag-handle i {
-  font-size: 1.2rem !important;
-  color: var(--brand-secondary) !important;
+  font-size: var(--aot-font-size-lg);
+  color: var(--aot-color-brand-secondary);
 }
 
 /* ===== Settings Button ===== */
 .aot-entry-settings {
-  display: flex !important;
-  align-items: center !important;
-  justify-content: flex-end !important; /* 맨 우측 배치 */
-  width: 40px !important; /* 40px 고정 */
-  min-width: 40px !important;
-  max-width: 40px !important;
-  height: 100% !important;
-  padding: 0 !important;
-  flex: none !important;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end; /* 맨 우측 배치 */
+  width: 40px; /* 40px 고정 */
+  min-width: 40px;
+  max-width: 40px;
+  height: 100%;
+  padding: 0;
+  flex: none;
 }
 
 /* Make sure the nested anchor tags fill the space */
@@ -582,127 +579,126 @@
   align-items: center;
   justify-content: center;
   padding: 0;
-  background: transparent !important;
-  border: none !important;
-  box-shadow: none !important;
+  background: transparent;
+  border: none;
+  box-shadow: none;
 }
 
 .aot-entry-settings i {
-  font-size: 1.1rem;
-  color: var(--bd-btn-border, #B6BABA);
+  font-size: var(--aot-font-size-lg);
+  color: var(--aot-btn-border-primary, #B6BABA);
 }
 
 /* ===== Output Entry ===== */
 .grid-stack-item-content:has(.aot-entry-item-header) {
   border: none !important;
-  border-radius: 20px !important; /* 엔트리 배경 라운드 20px 요청 반영 */
-  background-color: transparent !important;
-  display: flex !important;
-  flex-direction: column !important;
+  border-radius: var(--aot-radius-xl); /* 엔트리 배경 라운드 20px 요청 반영 */
+  background-color: transparent;
+  display: flex;
+  flex-direction: column;
 }
 
 /* Header row (Row 1: 장치) */
 .aot-entry-item-header {
-  height: 48px !important;
-  min-height: 48px !important;
-  padding: 0 8px !important; /* Input 스타일 동기화 (좌우 8px 패딩) */
-  margin-left: 0 !important; /* row 의 음수 마진 무력화 */
-  margin-right: 0 !important;
+  height: 48px;
+  min-height: 48px;
+  padding: 0 8px; /* Input 스타일 동기화 (좌우 8px 패딩) */
+  margin-left: 0; /* row 의 음수 마진 무력화 */
+  margin-right: 0;
   width: 100% !important;
-  flex-wrap: nowrap !important;
-  background-color: var(--aot-surface-card, #FFFFFF) !important; /* 카드(행 전체)와 같은 배경 기본 — 페이지가 배경 보조 */
-  border-top-left-radius: 19px !important; /* 렌더링 뭉개짐 방지 */
-  border-top-right-radius: 19px !important;
-  display: flex !important;
+  flex-wrap: nowrap;
+  background-color: var(--aot-surface-card, #FFFFFF); /* 카드(행 전체)와 같은 배경 기본 — 페이지가 배경 보조 */
+  border-top-left-radius: 19px; /* 렌더링 뭉개짐 방지 */
+  border-top-right-radius: 19px;
+  display: flex;
   align-items: center;
-  border-bottom: 1px solid var(--bd-btn-border, #B6BABA) !important;
-  resize: none !important;
+  border-bottom: 1px solid var(--aot-btn-border-primary, #B6BABA) !important;
+  resize: none;
 }
 
 .aot-entry-item-header * {
-  resize: none !important;
+  resize: none;
 }
 
 /* Channel row (Row 2: 채널) */
 .aot-entry-item-channel {
-  height: 48px !important;
-  min-height: 48px !important;
-  padding: 0 8px !important; /* Input 스타일 동기화 (좌우 8px 패딩) */
-  margin-left: 0 !important; /* row 의 음수 마진 무력화 */
-  margin-right: 0 !important;
-  width: 100% !important;
-  flex-wrap: nowrap !important;
-  display: flex !important;
+  height: 48px;
+  min-height: 48px;
+  padding: 0 8px; /* Input 스타일 동기화 (좌우 8px 패딩) */
+  margin-left: 0; /* row 의 음수 마진 무력화 */
+  margin-right: 0;
+  width: 100%;
+  flex-wrap: nowrap;
+  display: flex;
   align-items: center;
-  border-bottom: 1px solid var(--bd-btn-border, #B6BABA) !important;
+  border-bottom: 1px solid var(--aot-btn-border-primary, #B6BABA);
   transition: background-color 0.2s ease;
-  resize: none !important;
+  resize: none;
 }
 
 .aot-entry-item-channel * {
-  resize: none !important;
+  resize: none;
 }
 
 .aot-entry-item-channel:last-of-type {
-  height: 40px !important; /* 8px 단축으로 엔트리 간 시각적 갭 8px 확보 */
-  min-height: 40px !important;
-  border-bottom-left-radius: 19px !important; /* 렌더링 뭉개짐 방지 */
-  border-bottom-right-radius: 19px !important;
-  border-bottom: none !important;
+  height: 40px; /* 8px 단축으로 엔트리 간 시각적 갭 8px 확보 */
+  min-height: 40px;
+  border-bottom-left-radius: 19px; /* 렌더링 뭉개짐 방지 */
+  border-bottom-right-radius: 19px;
+  border-bottom: none;
 }
 
 /* Row 2 Background states */
 .aot-entry-item-channel.active-background {
-  background-color: var(--bg-on, #B5BABA) !important;
+  background-color: var(--aot-bg-on, #B5BABA);
 }
 
 .aot-entry-item-channel.inactive-background {
-  background-color: var(--bg-off, #F3F6F5) !important;
+  background-color: var(--aot-bg-off, #F3F6F5);
 }
 
 /* Output 가로 비율 정의 (고정 40px 제외 영역 분배) */
 .aot-output-col-4 {
-  flex: 4 1 0 !important;
+  flex: 4 1 0;
   min-width: 0;
 }
 
 .aot-output-col-6 {
-  flex: 6 1 0 !important;
+  flex: 6 1 0;
   min-width: 0;
 }
 
 /* Output UUID Button Style (Transparent background 요청 반영) */
 .aot-output-uuid-btn {
-  background-color: transparent !important;
+  background-color: transparent;
   border: 1px solid transparent !important;
-  color: var(--text-color-primary, #13261B) !important;
-  text-align: left !important;
-  padding-left: 12px !important;
+  color: var(--aot-color-text-primary, #13261B);
+  text-align: left;
+  padding-left: 12px;
 }
 
 .aot-output-uuid-btn:hover {
-  background-color: var(--bd-btn-secondary, #5E6B64) !important;
-  color: var(--text-color-tertiary, #FFFFFF) !important;
-  border-color: var(--bd-btn-secondary, #5E6B64) !important;
+  background-color: var(--aot-btn-bg-secondary, #5E6B64) !important;
+  color: var(--aot-color-text-tertiary, #FFFFFF) !important;
+  border-color: var(--aot-btn-bg-secondary, #5E6B64) !important;
 }
 
 /* drag handle & settings button 정밀 고정폭 village */
 .aot-entry-drag-handle,
-.aot-entry-settings,
-.aot-output-spacer-40 {
-  width: 40px !important;
-  min-width: 40px !important;
-  max-width: 40px !important;
-  flex: none !important;
+.aot-entry-settings {
+  width: 40px;
+  min-width: 40px;
+  max-width: 40px;
+  flex: none;
 }
 
 /* 채널 행 2단 좌우 여백 */
 .aot-ch-col-left {
-  padding-left: 8px !important;
+  padding-left: 8px;
 }
 
 .aot-ch-col-right {
-  padding-right: 4px !important;
+  padding-right: 4px;
 }
 
 /* form-control aot-entry-name-input 과 aot-paired-pos 사이 간격 */
@@ -734,14 +730,14 @@
 /* Very small screens (iPhone SE, etc.) */
 @media (max-width: 375px) {
   .aot-entry-actions input.btn {
-    font-size: 0.75rem;
+    font-size: var(--aot-font-size-xs);
     padding-left: 8px;
     padding-right: 8px;
     min-width: 60px;
   }
 
   .aot-entry-button-group input.btn {
-    font-size: 0.75rem;
+    font-size: var(--aot-font-size-xs);
     padding-left: 6px;
     padding-right: 6px;
     min-width: 40px;
@@ -753,37 +749,36 @@
   .aot-entry-item,
   .aot-entry-item-header,
   .aot-entry-item-channel {
-    flex-wrap: nowrap !important;
-    overflow: hidden !important;
+    flex-wrap: nowrap;
+    overflow: hidden;
   }
 
   .aot-entry-drag-handle,
-  .aot-entry-settings,
-  .aot-output-spacer-40 {
-    width: 28px !important;
-    min-width: 28px !important;
-    max-width: 28px !important;
+.aot-entry-settings {
+    width: 28px;
+    min-width: 28px;
+    max-width: 28px;
   }
 
   .aot-entry-drag-handle i {
-    font-size: 1rem !important;
+    font-size: var(--aot-font-size-base);
   }
 
   .aot-entry-actions input.btn {
-    font-size: 0.7rem !important;
-    padding-left: 4px !important;
-    padding-right: 4px !important;
-    min-width: 0 !important;
+    font-size: var(--aot-font-size-2xs);
+    padding-left: 4px;
+    padding-right: 4px;
+    min-width: 0;
   }
 
   .aot-entry-uuid-btn {
-    font-size: 0.7rem !important;
-    padding-left: 4px !important;
-    padding-right: 4px !important;
+    font-size: var(--aot-font-size-2xs);
+    padding-left: 4px;
+    padding-right: 4px;
   }
 
   .aot-entry-name-input {
-    font-size: 0.8rem !important;
+    font-size: var(--aot-font-size-xs);
   }
 }
 
@@ -801,8 +796,8 @@
 
 /* Make sure the input button inside takes full width of that wrapping div */
 .aot-col-action > div > input.form-control.btn {
-  width: 100% !important;
-  max-width: none !important;
+  width: 100%;
+  max-width: none;
 }
 
 /* ============================================================
@@ -810,171 +805,14 @@
    Design tokens: aot-theme-variables.css
    ============================================================ */
 
-.aot-add-panel {
-  margin-bottom: 1.25rem;
-}
-
-/* --- Tab selector --- */
-.aot-add-tabs {
-  display: flex;
-  gap: var(--aot-space-2);
-  margin-bottom: var(--aot-space-2);
-}
-
-.aot-add-tab {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  height: var(--aot-btn-height-sm);
-  padding: 0 var(--aot-space-3);
-  border-radius: var(--aot-btn-radius);
-  border: 1px solid var(--aot-border-neutral);
-  background: var(--aot-surface-card);
-  color: var(--aot-color-text-secondary);
-  font-size: var(--aot-font-size-sm);
-  font-weight: 500;
-  cursor: pointer;
-  transition: background 0.15s, border-color 0.15s, color 0.15s;
-}
-
-.aot-add-tab.active,
-.aot-add-tab:focus {
-  background: var(--aot-btn-bg-primary);
-  border-color: var(--aot-btn-bg-primary);
-  color: var(--text-color-tertiary, #ffffff);
-  outline: none;
-}
-
-.aot-add-tab-dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  flex-shrink: 0;
-  opacity: 0.85;
-}
-
-.aot-add-tab-dot--llm { background: var(--aot-color-llm); }
-.aot-add-tab-dot--mcp { background: var(--aot-color-mcp); }
-
-/* --- Panel body --- */
-.aot-add-body {
-  padding: var(--aot-space-3) 0;
-}
-
-/* --- Role card grid --- */
-.aot-role-grid {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--aot-space-2);
-  margin-bottom: var(--aot-space-2);
-}
-
-.aot-role-card {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  min-width: 88px;
-  padding: 10px 14px;
-  background: var(--aot-surface-card);
-  border: 1px solid var(--aot-border-neutral);
-  border-radius: 14px;
-  cursor: pointer;
-  transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
-}
-
-.aot-role-card:hover {
-  border-color: var(--aot-color-llm);
-  background: rgba(98, 119, 199, 0.05);
-}
-
-.aot-role-card.selected {
-  border-color: var(--aot-color-llm);
-  background: rgba(98, 119, 199, 0.08);
-  box-shadow: 0 0 0 2px rgba(98, 119, 199, 0.18);
-}
-
-.aot-role-icon {
-  font-size: 1.1rem;
-  line-height: 1;
-  margin-bottom: 4px;
-  color: var(--aot-color-text-secondary);
-}
-
-.aot-role-name {
-  font-weight: 600;
-  font-size: 0.83rem;
-  color: var(--aot-color-text-primary);
-  line-height: 1.2;
-}
-
-.aot-role-hint {
-  font-size: 0.70rem;
-  color: var(--aot-color-text-secondary);
-  margin-top: 2px;
-  line-height: 1.2;
-}
-
-/* --- Role preview strip --- */
-.aot-role-preview {
-  padding: 10px 14px;
-  background: var(--aot-surface-card);
-  border: 1px solid var(--aot-border-neutral);
-  border-left: 3px solid var(--aot-color-llm);
-  border-radius: 12px;
-  margin-top: 4px;
-  margin-bottom: var(--aot-space-2);
-}
-
-.aot-role-preview-row {
-  display: flex;
-  align-items: center;
-  gap: var(--aot-space-2);
-  margin-bottom: 3px;
-}
-
-.aot-role-preview-label {
-  font-size: 0.75rem;
-  color: var(--aot-color-text-secondary);
-  flex-shrink: 0;
-}
-
-.aot-role-preview-model {
-  font-size: 0.83rem;
-  color: var(--aot-color-text-primary);
-}
-
-.aot-role-preview-hint {
-  font-size: 0.75rem;
-  color: var(--aot-color-text-secondary);
-  font-family: var(--aot-font-mono);
-}
-
-.aot-role-preview-desc {
-  font-size: 0.75rem;
-  color: var(--aot-color-text-secondary);
-  margin-bottom: var(--aot-space-2);
-  line-height: 1.4;
-}
-
-/* --- Add confirm button --- */
-.aot-add-confirm-btn {
-  height: var(--aot-btn-height-sm) !important;
-  font-size: var(--aot-font-size-sm) !important;
-}
-
-/* --- MCP form width constraint --- */
-.aot-add-mcp-form {
-  max-width: 600px;
-}
-
 /* ── 코디네이터가 따르는 구획 (표시 전용) ───────────────────────────────
    설정 화면 안에서 "이건 설정이 아니라 참고" 임이 한눈에 보여야 한다 —
    입력 필드와 같은 모양이면 사람이 고치려 든다. */
 .aot-coord-plot {
   margin: 0 0 12px;
   padding: 10px 14px;
-  border-radius: 16px;
-  background: var(--aot-surface-card, var(--bg-off));
+  border-radius: var(--aot-radius-lg);
+  background: var(--aot-surface-card, var(--aot-bg-off));
   border: 1px solid var(--aot-border-neutral, var(--aot-border-light));
   font-size: var(--aot-font-size-base);
 }
@@ -988,10 +826,6 @@
   color: var(--aot-color-text-secondary);
   font-size: var(--aot-font-size-sm);
   margin-top: 6px;
-}
-.aot-coord-plot-list {
-  margin: 4px 0 0 18px;
-  color: var(--aot-color-text-secondary);
 }
 .aot-coord-plot-table {
   width: 100%;
@@ -1007,27 +841,10 @@
 .aot-coord-plot-table th:first-child { text-align: left; }
 .aot-coord-plot-table td { padding: 2px 0; text-align: right; }
 .aot-coord-plot-table td:first-child { text-align: left; }
-/* 다른 값만 눈에 띄면 된다 — 같은 값까지 색을 주면 어디를 봐야 할지 잃는다. */
-.aot-coord-plot-differs td { color: var(--aot-color-warning, #b26a00); }
-.aot-coord-plot-actions { margin-top: 10px; }
 .aot-coord-plot-cand {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
   padding: 4px 0;
-}
-/* 단계가 바뀌어 다시 가져올 것이 남았을 때만 눈에 띈다. */
-.aot-coord-plot-pending { color: var(--aot-color-warning, #b26a00); }
-/* 목표 칸이 구획에서 온 값임을 라벨 옆에 한 마디로. 입력을 막지는 않는다. */
-.aot-coord-plot-from {
-  margin-left: 6px;
-  padding: 1px 8px;
-  border-radius: 10px;
-  font-size: var(--aot-font-size-xs);
-  font-weight: 500;
-  color: var(--aot-color-text-secondary);
-  background: var(--aot-surface-card, var(--bg-off));
-  border: 1px solid var(--aot-border-neutral, var(--aot-border-light));
-  white-space: nowrap;
 }

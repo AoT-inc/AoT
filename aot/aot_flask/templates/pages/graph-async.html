@@ -129,17 +129,26 @@
       font-size: 0.85rem;
     }
 
-    .aot-measure-chips {
+    /* ⚠ 예전 이름은 `.aot-measure-chip` 이었다. 그런데 그 이름은
+       `aot-entry-ui.css` 가 **다른 것**에 이미 쓰고 있다 — 항목 행의 측정값
+       텍스트 칩(배경도 모서리도 없고 굵기 600)이다. 이쪽은 알약 모양 필터
+       칩이라 생김새도 쓰임도 다르다.
+
+       지금은 이 페이지가 `aot-entry-ui.css` 를 싣지 않아 부딪히지 않지만,
+       한 이름이 두 컴포넌트를 가리키는 상태 자체가 지뢰다 — 그 CSS 를
+       layout 에 올리는 날(이미 13개 템플릿이 싣는다) 한쪽이 조용히 망가진다.
+       이 페이지 안에서만 쓰는 것이므로 이쪽 이름을 바꿨다(2026-09-07). */
+    .aot-graph-chips {
       display: flex;
       flex-wrap: wrap;
       gap: 6px;
     }
 
-    .aot-measure-chips:empty {
+    .aot-graph-chips:empty {
       display: none;
     }
 
-    .aot-measure-chip {
+    .aot-graph-chip {
       display: inline-flex;
       align-items: center;
       gap: 4px;
@@ -241,7 +250,7 @@
   <main role="main" class="container py-4">
   {% include 'flash_messages.html' %}
 
-    <h4>{{_('Asynchronous Graphs')}} <a href="{{help_page[0]}}" target="_blank"><span style="font-size: 16px" class="fas fa-question-circle"></span></a></h4>
+    <h4>{{_('Asynchronous Graphs')}} <a href="{{help_page[0]}}" target="_blank"><span class="fas fa-question-circle aot-help-icon"></span></a></h4>
 
     <p>{{_('Graphs are useful for visualizing datasets over weeks, months, or years. Displaying such data on synchronous graphs can cause high data processing and computation load.')}}</p>
 
@@ -323,7 +332,7 @@
         </div>
       </div>
 
-      <div class="aot-measure-chips" id="measure-chips"></div>
+      <div class="aot-graph-chips" id="measure-chips"></div>
 
       <div class="aot-toolbar-controls">
         <div class="aot-period-group" role="group" aria-label="{{_('Period')}}">
@@ -395,7 +404,7 @@ $(document).ready(function () {
     selectedInputs('.aot-measure-menu').each(function () {
       const input = this;
       const text = $(input).closest('.aot-measure-item').find('.aot-measure-item-text').text().trim();
-      const chip = $('<span class="aot-measure-chip"></span>').text(text);
+      const chip = $('<span class="aot-graph-chip"></span>').text(text);
       const remove = $('<button type="button" class="aot-chip-remove" aria-label="{{_('Remove')}}">×</button>');
       remove.on('click', function () {
         input.checked = false;

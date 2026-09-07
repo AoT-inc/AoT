@@ -9,15 +9,15 @@
     {{form_conditional_conditions.conditional_id(class_='form-control', value=each_function.unique_id)}}
     {{form_conditional_conditions.conditional_condition_id(class_='form-control', value=each_condition.unique_id)}}
 
-    <div style="border: 1px solid var(--border-neutral); border-radius: 16px; padding: 6px 8px; background-color: var(--bd-primary);">
+    <div style="border: 1px solid var(--aot-border-neutral); border-radius: var(--aot-radius-lg); padding: 6px 8px; background-color: var(--aot-surface-card);">
 
       <!-- Row 1: type label (left) · Delete · Save (right) -->
       <div class="d-flex align-items-center flex-nowrap">
         <div style="flex: 1 1 auto; margin-right: 5px; min-width: 0;">
           <div class="form-control form-control-sm text-truncate"
                title="{{cond_label}}"
-               style="background-color: var(--bg-btn-active-light); cursor: default; border: 1px solid var(--border-neutral); border-radius: 14px; height: 28px; padding: 2px 8px; line-height: 22px;">
-            <strong style="font-size: 0.85rem;">{{cond_label}}</strong>
+               style="background-color: var(--bg-btn-active-light); cursor: default; border: 1px solid var(--aot-border-neutral); border-radius: var(--aot-radius-lg); height: 28px; padding: 2px 8px; line-height: 22px;">
+            <strong style="font-size: var(--aot-font-size-sm);">{{cond_label}}</strong>
           </div>
         </div>
         <div style="flex: 0 0 auto; margin-right: 5px;">
@@ -38,7 +38,7 @@
 
       <!-- Row 2+: condition-specific options -->
       {% if each_condition.condition_type %}
-      <div style="margin-top: 6px; padding-top: 6px; border-top: 1px solid var(--border-neutral);">
+      <div style="margin-top: 6px; padding-top: 6px; border-top: 1px solid var(--aot-border-neutral);">
         {% if each_condition.condition_type == 'measurement' %}
           {% include 'pages/function_options/conditional_options/measurement.html' %}
         {% elif each_condition.condition_type == 'measurement_and_ts' %}

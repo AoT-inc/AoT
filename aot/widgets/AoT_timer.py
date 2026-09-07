@@ -1347,7 +1347,7 @@ WIDGET_INFORMATION = {
       height: var(--aot-btn-height);
       text-align: center;
       font-variant-numeric: tabular-nums;
-      border: 1px solid var(--border-neutral, #d7d3c4);
+      border: 1px solid var(--aot-border-neutral, #d7d3c4);
       border-radius: var(--aot-btn-pill-radius) !important;
       background: var(--aot-input-bg, #fff);
       color: var(--aot-text-main, #333);

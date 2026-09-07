@@ -12,7 +12,7 @@
 <script src="{{ url_for('static', filename='js/vendor/gridstack-all.js') }}"></script>
 <style>
   #userSettingsTabs {
-    border-bottom: 2px solid var(--border-neutral, #dee2e6);
+    border-bottom: 2px solid var(--aot-border-neutral, #dee2e6);
     margin-bottom: 1.25rem;
   }
   #userSettingsTabs .nav-link {
@@ -25,9 +25,9 @@
     cursor: pointer;
   }
   #userSettingsTabs .nav-link.active {
-    color: var(--brand-secondary);
+    color: var(--aot-color-brand-secondary);
     background: transparent;
-    border-bottom: 2px solid var(--brand-secondary);
+    border-bottom: 2px solid var(--aot-color-brand-secondary);
   }
   /* Force 100% width on mobile immediately to prevent jagged reflow */
   @media (max-width: 768px) {
@@ -50,7 +50,7 @@
   <div class="container">
 
     <div class="aot-settings-title">
-      <h3>{{_('User Settings')}} <a href="{{ manual_url('Configuration-Settings/#users') }}" target="_blank"><span class="fas fa-question-circle" style="font-size:14px; margin-left:4px;"></span></a></h3>
+      <h3>{{_('User Settings')}} <a href="{{ manual_url('Configuration-Settings/#users') }}" target="_blank"><span class="fas fa-question-circle aot-help-icon"></span></a></h3>
       <div class="d-flex" style="gap: 8px;">
         <button class="btn aot-pill-btn aot-pill-btn-primary" id="menu-toggle">{{_('Settings Menu')}}</button>
       </div>

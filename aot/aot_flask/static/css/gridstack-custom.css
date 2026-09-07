@@ -178,22 +178,22 @@
    overlay layers. Widget-internal popups stay inside the isolation:isolate
    stacking context of .grid-stack-item-content and cannot overlap the handle. */
 .grid-stack-item > .ui-resizable-se {
-  background-image: none !important;
-  background-color: transparent !important;
-  border: none !important;
-  opacity: 1 !important;
-  width: 30px !important;
-  height: 30px !important;
-  transform: none !important;
-  cursor: se-resize !important;
-  pointer-events: auto !important;
+  background-image: none;
+  background-color: transparent;
+  border: none;
+  opacity: 1;
+  width: 30px;
+  height: 30px;
+  transform: none;
+  cursor: se-resize;
+  pointer-events: auto;
   z-index: 2 !important;
 }
 
 @media (max-width: 768px) {
   .grid-stack-item > .ui-resizable-se {
-    width: 40px !important;
-    height: 40px !important;
+    width: 40px;
+    height: 40px;
   }
 }
 

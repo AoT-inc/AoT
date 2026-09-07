@@ -75,7 +75,7 @@
     {% set additional_url = dict_outputs[each_output.output_type].get('url_additional') %}
 
     {% if manufacturer_url or datasheet_url or product_purchase_url or additional_url %}
-    <div class="aot-modal-body-text" style="margin-top: -0.5rem; font-size: 0.85rem;">
+    <div class="aot-modal-body-text" style="margin-top: -0.5rem; font-size: var(--aot-font-size-sm);">
       <strong>{{_("Related Documents")}}:</strong>
       {%- if manufacturer_url -%} {{_("Manufacturer")}} {% for each_url in manufacturer_url %}<a href="{{each_url}}" target="_blank">{{_('Link')}} {{loop.index}}</a>{{ ", " if not loop.last }}{% endfor %}{%- endif -%}
       {%- if datasheet_url -%} {% if manufacturer_url %}; {% endif %}{{_("Datasheet")}} {% for each_url in datasheet_url %}<a href="{{each_url}}" target="_blank">{{_('Link')}} {{loop.index}}</a>{{ ", " if not loop.last }}{% endfor %}{%- endif -%}
@@ -85,7 +85,7 @@
     {% endif %}
 
     {% if 'message' in dict_outputs[each_output.output_type] %}
-    <div class="aot-modal-body-text" style="font-style: italic; padding: 8px; border-radius: 8px; font-size: 0.85rem;">
+    <div class="aot-modal-body-text" style="font-style: italic; padding: 8px; border-radius: var(--aot-radius-sm); font-size: var(--aot-font-size-sm);">
       {{dict_outputs[each_output.output_type]['message']|safe}}
     </div>
     {% endif %}

@@ -84,7 +84,7 @@
 .aot-drawer-rows .aot-drawer-textarea {
   width: 100%;
   resize: vertical;
-  border-radius: 16px !important;
+  border-radius: var(--aot-radius-lg) !important;
   /* 공용 textarea 규칙은 코드 편집기용이라 `white-space: pre` 로 줄을 안 접는다.
      산문이라 가로 스크롤이 아니라 줄바꿈이 맞다. */
   white-space: pre-wrap !important;

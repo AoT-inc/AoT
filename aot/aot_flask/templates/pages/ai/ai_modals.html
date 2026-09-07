@@ -14,11 +14,11 @@
                 </div>
                 <div class="modal-body">
                     <!-- Service Description Area -->
-                    <div id="service_description_container" style="display: none; margin-bottom: 1.5rem; padding: 12px; background: #f8f9fa; border-left: 4px solid #007bff; border-radius: 8px; font-size: 0.9rem; color: var(--aot-color-text-secondary, #555);">
+                    <div id="service_description_container" style="display: none; margin-bottom: 1.5rem; padding: 12px; background: var(--aot-gray-100); border-left: 4px solid #007bff; border-radius: var(--aot-radius-sm); font-size: var(--aot-font-size-sm); color: var(--aot-color-text-secondary, #555);">
                         <span id="service_description_text"></span>
                     </div>
 
-                    <div id="auth_link_container_top" style="display:none; margin-top: -1rem; margin-bottom: 1.5rem; padding-left: 12px; font-size: 0.85rem;">
+                    <div id="auth_link_container_top" style="display:none; margin-top: -1rem; margin-bottom: 1.5rem; padding-left: 12px; font-size: var(--aot-font-size-sm);">
                         <strong>{{ _('Related Link') }}:</strong>
                         <a id="auth_link_href_top" href="#" target="_blank" class="text-primary">
                             {{ _('Get API Key') }}
@@ -55,7 +55,7 @@
                             <div class="aot-modal-option-row">
                                 <label class="aot-modal-option-label">{{ _('Engine Type') }}</label>
                                 <div class="aot-modal-option-control">
-                                    <input type="text" id="engineTypeDisplay" class="form-control aot-modern-input" readonly style="background: #f8f9fa;">
+                                    <input type="text" id="engineTypeDisplay" class="form-control aot-modern-input" readonly style="background: var(--aot-gray-100);">
                                 </div>
                             </div>
 
@@ -126,7 +126,7 @@
                         </div>
 
                         <!-- MCP Assignment Checklist (Shown only when 'assigned' is selected) -->
-                        <div id="mcp-assignment-section" style="display:none; padding: 10px; background: #fdfdfd; border: 1px solid #eee; border-radius: 8px; margin-top: 10px;">
+                        <div id="mcp-assignment-section" style="display:none; padding: 10px; background: var(--aot-gray-100); border: 1px solid #eee; border-radius: var(--aot-radius-sm); margin-top: 10px;">
                             <label class="font-weight-bold mb-2">{{ _('Select Assigned MCP Servers') }}</label>
                             <div id="mcp-checklist-container" style="max-height: 200px; overflow-y: auto;">
                                 {% for mcp in mcp_servers %}
@@ -155,7 +155,7 @@
                             <label class="aot-modal-option-label" id="system-prompt-label">{{ _('System Prompt') }}</label>
                             <div class="aot-modal-option-control" style="flex: 1 1 100% !important; width: 100% !important;">
                                 <textarea name="system_prompt" class="form-control aot-modern-input" rows="5"
-                                          style="height: auto !important; border-radius: 16px !important; text-align: left;"
+                                          style="height: auto !important; border-radius: var(--aot-radius-lg) !important; text-align: left;"
                                           placeholder="{{ _('Define how this agent should behave...') }}"></textarea>
                             </div>
                         </div>

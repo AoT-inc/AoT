@@ -135,6 +135,21 @@ _ABS_FONT_SIZE = re.compile(r"font-size:\s*(?!var\()([0-9.]*[0-9](?:px|rem))")
 _EXEMPT = re.compile(r"사다리\s*예외\s*:\s*(\S[^*/\n]{9,})")
 
 
+def _blank_comments(src):
+    """주석을 공백으로 덮되 **줄 수를 보존한다.**
+
+    줄 단위로 `/* … */` 를 지우면 **여러 줄 주석을 못 지운다** — 그 안에 적힌
+    옛 값이나 설명용 예시(`style="font-size: 16px"` 같은)가 코드로 읽혀 위반이
+    된다. 2026-09-07 에 실제로 그랬다.
+
+    공백으로만 채우면 이번엔 안쪽 줄바꿈이 사라져 줄 번호가 통째로 밀린다.
+    둘 다 겪은 뒤의 모양이라, 개행만 남기고 나머지를 공백으로 덮는다.
+    """
+    def blank(m):
+        return "".join(ch if ch == "\n" else " " for ch in m.group(0))
+    return re.sub(r"/\*.*?\*/", blank, src, flags=re.S)
+
+
 def _abs_font_size_offenders(text, label):
     """절대 글자 크기 중 **이유가 적히지 않은** 것만 돌려준다.
 
@@ -152,10 +167,9 @@ def _abs_font_size_offenders(text, label):
     """
     offenders = []
     lines = text.splitlines()
-    for i, line in enumerate(lines):
-        # 주석만 있는 줄은 건너뛴다(설명에 적힌 옛 값을 위반으로 세지 않는다)
-        stripped = re.sub(r"/\*.*?\*/", "", line, flags=re.S)
-        for m in _ABS_FONT_SIZE.finditer(stripped):
+    # 주석 안의 값은 세지 않는다 — 여러 줄 주석까지 포함해서.
+    for i, line in enumerate(_blank_comments(text).splitlines()):
+        for m in _ABS_FONT_SIZE.finditer(line):
             window = "\n".join(lines[max(0, i - 6):i + 1])
             if _EXEMPT.search(window):
                 continue

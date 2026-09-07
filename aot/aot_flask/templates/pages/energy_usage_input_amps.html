@@ -27,7 +27,7 @@
 
   <!-- Page Title -->
   <div class="aot-settings-title">
-    <h3>{{_('Energy Usage')}} ({{_('Amp Measure')}}) <a href="{{help_page[0]}}" target="_blank"><span class="fas fa-question-circle" style="font-size:16px"></span></a></h3>
+    <h3>{{_('Energy Usage')}} ({{_('Amp Measure')}}) <a href="{{help_page[0]}}" target="_blank"><span class="fas fa-question-circle aot-help-icon"></span></a></h3>
   </div>
 
   <!-- Add -->
@@ -71,7 +71,7 @@
     {{form_energy_usage_mod.csrf_token}}
     {{form_energy_usage_mod.energy_usage_id(value=each_energy.unique_id)}}
 
-    <div class="row small-gutters" style="border-bottom: 1px solid var(--border-neutral); padding: 0.3em 0.2em 0.3em 0">
+    <div class="row small-gutters" style="border-bottom: 1px solid var(--aot-border-neutral); padding: 0.3em 0.2em 0.3em 0">
       <div class="col-2 col-sm-1 text-center icon-fh">
         <a data-toggle="collapse" href="#collapseContainer-input-{{each_energy.id}}" aria-expanded="false" aria-controls="collapseContainer{{each_energy.id}}">
           <span style="font-size: 3.6em" class="collapse-button{{each_energy.id}} fa fa-plus-square"></span>
@@ -92,7 +92,7 @@
         </div>
       </div>
 
-      <div class="row small-gutters" style="border-bottom: 1px solid var(--border-neutral); padding: 0.5em">
+      <div class="row small-gutters" style="border-bottom: 1px solid var(--aot-border-neutral); padding: 0.5em">
         <div class="col-auto">
           {{form_energy_usage_mod.selection_device_measure_ids.label(class_='control-label')}}
           <div>
@@ -112,7 +112,7 @@
 
     <div id="container-{{each_energy.unique_id}}" style="height: 400px; width: 100%"></div>
 
-    <div class="row small-gutters" style="border-bottom: 1px solid var(--border-neutral); padding-top: 0.1em">
+    <div class="row small-gutters" style="border-bottom: 1px solid var(--aot-border-neutral); padding-top: 0.1em">
       <div class="table-responsive">
         <table class="table">
           <tr>

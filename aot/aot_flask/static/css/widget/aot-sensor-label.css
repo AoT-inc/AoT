@@ -16,7 +16,7 @@
   position: absolute;
   left: 0; top: 0;
   padding: 2px 6px;
-  border-radius: 4px;
+  border-radius: var(--aot-radius-xs);
   font-family: ui-monospace, "SF Mono", Menlo, monospace;
   font-weight: 600;
   line-height: 1.15;
@@ -43,7 +43,7 @@
   display: none;
   background: var(--aot-surface-card);
   color: var(--aot-color-text-primary);
-  border-radius: 16px;
+  border-radius: var(--aot-radius-lg);
   border: 1px solid var(--aot-border-neutral);
   width: min(240px, 92%);
   max-height: 80%;
@@ -123,55 +123,6 @@
   padding: 4px 6px;
 }
 .aot-sensor-popup-close:hover { color: var(--aot-color-text-primary); }
-
-/* 하위 호환: 구형 inline vals (비모달 floating popup 경로가 남아있을 경우) */
-.aot-sensor-popup-vals {
-  font-size: 1em;
-  color: var(--aot-color-text-primary);
-  margin-bottom: 4px;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  font-variant-numeric: tabular-nums;
-}
-.aot-sensor-popup-ch { white-space: nowrap; }
-.aot-sensor-popup-ch em {
-  font-style: normal;
-  color: var(--aot-color-text-secondary);
-  font-size: 0.85em;
-  margin-right: 2px;
-}
-.aot-sensor-popup-ch.aot-stale {
-  color: var(--aot-color-text-secondary);
-  text-decoration: line-through;
-}
-
-.aot-sensor-popup-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin-bottom: 6px;
-  font-size: 1em;
-}
-
-.aot-sensor-popup-table td {
-  padding: 3px 4px;
-}
-
-.aot-sensor-popup-table td:first-child {
-  color: var(--aot-color-text-secondary);
-}
-
-.aot-sensor-popup-table td:last-child {
-  text-align: right;
-  font-variant-numeric: tabular-nums;
-  font-weight: 600;
-  color: var(--aot-color-text-primary);
-}
-
-.aot-sensor-popup-table tr.aot-stale td {
-  color: var(--aot-color-text-secondary);
-  text-decoration: line-through;
-}
 
 .aot-sensor-popup-chart-wrap {
   position: relative;
@@ -314,7 +265,7 @@
 /* ── MapLibre marker label ────────────────────────────────────────────────── */
 .aot-sensor-map-marker {
   padding: 2px 6px;
-  border-radius: 4px;
+  border-radius: var(--aot-radius-xs);
   font-family: ui-monospace, "SF Mono", Menlo, monospace;
   font-weight: 600;
   font-size: 0.85em;
@@ -322,7 +273,7 @@
   cursor: pointer;
   box-shadow: 0 1px 3px rgba(0,0,0,0.25);
   background: rgba(15,23,42,0.78);
-  color: var(--text-color-tertiary, #f8fafc);
+  color: var(--aot-color-text-tertiary, #f8fafc);
   transform: translate(-50%, -100%);
 }
 .aot-sensor-map-marker:hover { outline: 1px solid rgba(255,255,255,0.45); }
@@ -513,7 +464,7 @@
  * 10px 이라 제목 위가 늘 답답했다(2026-08-20 척도 정리). */
 .aot-ov-block {
   padding: var(--aot-space-4) var(--aot-space-4);
-  border-radius: 16px;
+  border-radius: var(--aot-radius-lg);
   margin-bottom: var(--aot-space-4);
   background: var(--aot-surface-card, #FFFFFF); /* 카드 배경 = 배경 기본 (모달 페이지 배경인 배경 보조와 대비) */
   border: none;
@@ -602,7 +553,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: 8px;
+  border-radius: var(--aot-radius-sm);
   color: var(--aot-color-text-secondary);
   /* 기호라 본문 크기로 두면 작아 보인다. 제목 글자보다는 작게. */
   font-size: var(--aot-font-size-lg);
@@ -616,7 +567,7 @@
 .aot-ov-cardcfg:hover,
 .aot-ov-cardcfg:focus-visible {
   color: var(--aot-color-text-primary);
-  background: var(--bg-active);
+  background: var(--aot-bg-active);
   outline: none;
 }
 
@@ -627,39 +578,6 @@
   margin: calc(var(--aot-space-4) * -0.5) var(--aot-space-4) var(--aot-space-4);
   font-size: var(--aot-font-size-sm);
   line-height: 1.5;
-}
-
-/* 상태 요약 본문 라인 */
-.aot-ov-modes-line {
-  font-weight: 600;
-  color: var(--aot-color-text-primary);
-}
-
-/* Row within overview block: flex row with IEC label + function name + toggle */
-.aot-ov-iec {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-/* IEC label (scope): small muted uppercase-like tag */
-.aot-ov-scope {
-  font-size: var(--aot-font-size-xs);
-  color: var(--aot-color-text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  font-weight: 600;
-  flex-shrink: 0;
-}
-
-/* Function name: bold, flex-grow to fill, ellipsis */
-.aot-ov-fn-name {
-  font-weight: 600;
-  flex: 1;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  color: var(--aot-color-text-primary);
 }
 
 /* IEC 자동제어 토글: 공용 슬라이드 토글(components/aot-toggle.css, .btn-toggle)
@@ -688,12 +606,6 @@
 .aot-ov-reasons {
   color: var(--aot-color-text-secondary);
   margin-top: 4px;
-}
-
-/* Mode display: larger, bold */
-.aot-ov-modes {
-  font-weight: 600;
-  color: var(--aot-color-text-primary);
 }
 
 /* Row: space-between, monospace numerics */
@@ -743,18 +655,8 @@
   font-weight: 600;
 }
 
-/* Device reference: extra left margin */
-.aot-ov-dev {
-  margin-left: 8px;
-  color: var(--aot-color-text-secondary);
-}
-
 /* Trend/feedforward: smaller, muted */
 .aot-ov-trend {
-  color: var(--aot-color-text-secondary);
-  margin-top: 2px;
-}
-.aot-ov-ff {
   color: var(--aot-color-text-secondary);
   margin-top: 2px;
 }
@@ -806,7 +708,7 @@
   width: 100%;
   max-height: 180px;
   object-fit: cover;
-  border-radius: 8px;
+  border-radius: var(--aot-radius-sm);
   border: 1px solid var(--aot-border-light);
 }
 .aot-ov-photo-actions {
@@ -820,9 +722,9 @@
   height: var(--aot-btn-height-sm, 32px);
   padding: 0 var(--aot-btn-padding-x, 12px);
   border-radius: var(--aot-btn-radius-sm, 16px);
-  border: 1px solid var(--bd-btn-border, #B6BABA);
-  background: var(--bg-btn-off, #5E6B64);
-  color: var(--text-color-tertiary, #FFFFFF);
+  border: 1px solid var(--aot-btn-border-primary, #B6BABA);
+  background: var(--aot-btn-bg-inactive, #5E6B64);
+  color: var(--aot-color-text-tertiary, #FFFFFF);
   font-size: var(--aot-font-size-sm);
   font-weight: 500;
   cursor: pointer;
@@ -833,8 +735,8 @@
    `.aot-pill-btn-primary`(aot-modal-modern.css)와 같은 토큰을 쓴다 — 브랜드
    딥그린. 노란색(--aot-color-primary)은 버튼에 쓰지 않는다. */
 .aot-ov-pill--primary {
-  background: var(--bd-tertiary, #13261B);
-  border-color: var(--bd-border, #13261B);
+  background: var(--aot-btn-bg-primary, #13261B);
+  border-color: var(--aot-color-brand-primary, #13261B);
 }
 
 /* 되돌릴 수 없는 동작(작기 종료)을 기본 동작에서 떼어 왼쪽 끝으로 민다.
@@ -853,13 +755,6 @@
   }
 }
 
-/* 설명 블록 */
-.aot-ov-desc-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
 .aot-ov-desc-view {
   margin-top: 4px;
   color: var(--aot-color-text-primary);
@@ -873,9 +768,9 @@
   font-size: inherit;
   font-family: inherit;
   color: var(--aot-color-text-primary);
-  background: var(--bg-off);
+  background: var(--aot-bg-off);
   border: 1px solid var(--aot-border-light);
-  border-radius: 6px;
+  border-radius: var(--aot-radius-sm);
   resize: vertical;
 }
 .aot-ov-desc-actions {
@@ -928,7 +823,7 @@
 /* 지침 칸 — 글상자는 설명 편집(`.aot-ov-desc-input`)과 같은 것을 쓴다. 모서리만
    이 자리에서 조금 더 둥글게 둔다. */
 .aot-ov-sched-guide {
-  border-radius: 8px;
+  border-radius: var(--aot-radius-sm);
 }
 .aot-ov-sched-edit-wrap {
   padding-bottom: var(--aot-space-2, 6px);
@@ -1028,7 +923,7 @@
   width: 40px;
   height: 40px;
   object-fit: cover;
-  border-radius: 6px;
+  border-radius: var(--aot-radius-sm);
   border: 1px solid var(--aot-border-light);
 }
 
@@ -1055,31 +950,6 @@
   border-radius: inherit;
 }
 
-/* 단계 지침 접기 — [진행] 카드 안, 타임라인 바로 아래에 버튼 하나로 앉는다.
-   `<summary>` 를 pill 버튼 모양으로 쓰므로 기본 마커(삼각형)를 지운다. 이 저장소는
-   아이콘을 쓰지 않으므로 열림 표시도 글머리가 아니라 **버튼 색**으로 한다. */
-.aot-ov-guide {
-  margin-top: var(--aot-space-3);
-}
-.aot-ov-guide > summary {
-  display: inline-flex;
-  align-items: center;
-  list-style: none;
-  width: auto;
-}
-.aot-ov-guide > summary::-webkit-details-marker,
-.aot-ov-guide > summary::marker {
-  display: none;
-  content: '';
-}
-.aot-ov-guide[open] > summary {
-  background: var(--bg-btn-on, #13261B);
-  font-weight: 600;
-}
-.aot-ov-guide[open] > .aot-ov-guidance {
-  margin-top: var(--aot-space-3);
-}
-
 /* Muted text */
 /* 단계 지침 — 재배 지침서에서 옮겨 온 산문이라 줄바꿈이 살아야 읽힌다.
    길어질 수 있으므로(서버가 4000자까지 받는다) 스크롤을 준다. 스크롤바는
@@ -1100,12 +970,6 @@
   color: var(--aot-color-text-secondary);
 }
 
-/* Loading state */
-.aot-ov-loading {
-  color: var(--aot-color-text-secondary);
-  padding: 8px 0;
-}
-
 /* Skeleton placeholder — shown while /overview is in flight so the pane
    reads as "loading" instead of a blank/ellipsis box. */
 .aot-ov-skel {
@@ -1113,7 +977,7 @@
 }
 .aot-ov-skel-bar {
   height: 12px;
-  border-radius: 6px;
+  border-radius: var(--aot-radius-sm);
   margin: 10px 0;
   background: linear-gradient(90deg,
     var(--aot-color-border, rgba(127,127,127,0.18)) 25%,
@@ -1153,14 +1017,14 @@
   font-size: 0.95em;
   font-weight: 600;
   border-radius: var(--aot-btn-radius-sm, 16px);
-  border: 1px solid var(--bd-btn-border, #B6BABA);
-  background: var(--bg-btn-off, #5E6B64);
-  color: var(--text-color-tertiary, #FFFFFF);
+  border: 1px solid var(--aot-btn-border-primary, #B6BABA);
+  background: var(--aot-btn-bg-inactive, #5E6B64);
+  color: var(--aot-color-text-tertiary, #FFFFFF);
   display: flex;
   align-items: center;
 }
 .aot-bay-popup-pane .aot-act-tab-btn.active {
-  background: var(--bg-btn-on, #13261B);
+  background: var(--aot-btn-bg-active, #13261B);
   font-weight: 700;
 }
 
@@ -1198,8 +1062,8 @@
 
 /* Selected actuator row highlight — 전역 활성 색상 변수 사용 (하드코딩 금지) */
 .aot-act-row--selected {
-  border-left: 3px solid var(--bd-btn-primary);
-  background: var(--bg-active);
+  border-left: 3px solid var(--aot-btn-bg-primary);
+  background: var(--aot-bg-active);
   padding-left: calc(0.55rem - 2px);
 }
 
@@ -1242,9 +1106,9 @@
   height: var(--aot-btn-height-sm, 32px);
   padding: 0 var(--aot-btn-padding-x, 12px);
   border-radius: var(--aot-btn-radius-sm, 16px);
-  border: 1px solid var(--bd-btn-border, #B6BABA);
-  background: var(--bg-btn-off, #5E6B64);
-  color: var(--text-color-tertiary, #FFFFFF);
+  border: 1px solid var(--aot-btn-border-primary, #B6BABA);
+  background: var(--aot-btn-bg-inactive, #5E6B64);
+  color: var(--aot-color-text-tertiary, #FFFFFF);
   font-size: var(--aot-font-size-sm);
   font-weight: 500;
   display: flex;
@@ -1254,7 +1118,7 @@
   transition: all 0.2s ease;
 }
 .aot-act-pbtn.active {
-  background: var(--bg-btn-on, #13261B);
+  background: var(--aot-btn-bg-active, #13261B);
 }
 /* 터치 기기 sticky-hover 방지 — entry UI 와 동일 정책 */
 @media (hover: hover) and (pointer: fine) {
@@ -1343,11 +1207,11 @@
   max-height: 100%;
 }
 .aot-map-panel-layer[data-mode="side"] > .aot-map-panel-wrap > .aot-center-modal {
-  border-radius: 12px;
+  border-radius: var(--aot-radius-md);
   box-shadow: -6px 0 24px rgba(0, 0, 0, 0.18);
 }
 .aot-map-panel-layer[data-mode="sheet"] > .aot-map-panel-wrap > .aot-center-modal {
-  border-radius: 16px 16px 0 0;
+  border-radius: var(--aot-radius-lg) var(--aot-radius-lg) 0 0;
   box-shadow: 0 -6px 24px rgba(0, 0, 0, 0.22);
   padding-bottom: env(safe-area-inset-bottom);
 }
@@ -1378,7 +1242,7 @@
   display: block;
   width: 44px;
   height: 4px;
-  border-radius: 2px;
+  border-radius: var(--aot-radius-xs);
   background: var(--aot-text-secondary, #98a2b3);
   opacity: 0.55;
   transition: opacity 0.15s ease, width 0.15s ease;
@@ -1429,8 +1293,7 @@
 /* 배지가 들어가는 헤더의 제목은 남는 폭을 먹고 줄임표 처리되어야 한다
    (min-width:0 이 없으면 flex 항목이 줄지 않아 배지가 밖으로 밀린다). */
 .aot-sensor-popup-header > .aot-sensor-popup-title,
-.aot-popup-header > .aot-popup-title,
-.aot-3way-header > .aot-popup-title {
+.aot-popup-header > .aot-popup-title {
   flex: 1 1 auto;
   min-width: 0;
   text-align: center;
@@ -1494,10 +1357,10 @@
 }
 .aot-site-row-val {
   flex-shrink: 0;
-  border-radius: 10px;
+  border-radius: var(--aot-radius-md);
   padding: 1px 8px;
   font-variant-numeric: tabular-nums;
-  background: var(--aot-surface-card, var(--bg-off));
+  background: var(--aot-surface-card, var(--aot-bg-off));
 }
 .aot-site-row-val.is-blank {
   background: none;
@@ -1528,9 +1391,9 @@
 }
 .aot-site-tile {
   flex: 1;
-  border-radius: 12px;
+  border-radius: var(--aot-radius-md);
   padding: 8px 10px;
-  background: var(--aot-surface-card, var(--bg-off));
+  background: var(--aot-surface-card, var(--aot-bg-off));
   cursor: pointer;
 }
 .aot-site-tile-num {
@@ -1650,7 +1513,7 @@ button.aot-center-modal-close {
      그만큼 먹어, 밴드 바 목록이 다시 붙어 보인다(옛 가로 배치에서 쓰던
      값이었다). */
   margin: 0 -8px;
-  border-radius: 8px;
+  border-radius: var(--aot-radius-sm);
   transition: background-color 0.12s ease;
   /* 지정 배경이 켜져도 마커의 링 색은 카드 바탕이 아니라 이 배경이어야
      한다 — 아니면 지정된 줄만 마커 둘레에 흰 홈이 생긴다. */
@@ -1675,19 +1538,19 @@ button.aot-center-modal-close {
   height: 1px;
   background: var(--aot-border-neutral, var(--aot-border-light));
 }
-.aot-env-now-item.is-rep { --aot-viz-surface: var(--brand-accent); }
+.aot-env-now-item.is-rep { --aot-viz-surface: var(--aot-color-brand-accent); }
 /* 지정된 것은 브랜드 강조 배경(--brand-accent)으로 남는다. 호버는 그보다
    옅은 --bg-active — 둘이 같으면 마우스만 올려도 지정된 것처럼 보인다. */
 .aot-env-now-item.is-selectable { cursor: pointer; }
 .aot-env-now-item.is-selectable:hover,
 .aot-env-now-item.is-selectable:focus-visible {
-  background: var(--bg-active);
+  background: var(--aot-bg-active);
   outline: none;
 }
 .aot-env-now-item.is-rep,
 .aot-env-now-item.is-rep.is-selectable:hover {
-  background: var(--brand-accent);
-  box-shadow: inset 0 0 0 1px var(--bd-btn-primary);
+  background: var(--aot-color-brand-accent);
+  box-shadow: inset 0 0 0 1px var(--aot-btn-bg-primary);
 }
 
 /* 센서 일부가 응답하지 않을 때만 나온다 — 값이 평균이라 몇 대가 빠졌는지
@@ -1697,9 +1560,9 @@ button.aot-center-modal-close {
    글자는 그대로 두고 **남은 날을 말로** 적는다. */
 .aot-ov-planned {
   font-size: var(--aot-font-size-xs);
-  color: var(--text-color-primary, #13261B);
+  color: var(--aot-color-text-primary, #13261B);
   border: 1px solid var(--aot-border-light);
-  border-radius: 999px;
+  border-radius: var(--aot-btn-pill-radius);
   padding: 0 6px;
   white-space: nowrap;
 }
@@ -1734,7 +1597,6 @@ button.aot-center-modal-close {
 .aot-ov-envrange-toggle:hover {
   color: var(--aot-color-text-primary);
 }
-
 
 /* ── 모달 제목줄 공용 (site·zone·facility) ────────────────────────────────
    [← 상위] 이름 [상태 점]. 이름 묶음이 flex:1 이라 화살표는 왼쪽에 붙고
@@ -1866,7 +1728,7 @@ button.aot-center-modal-close {
 .aot-act-tag.aot-scope-nearest {
   flex-shrink: 0;
   padding: 0 5px;
-  border-radius: 8px;
+  border-radius: var(--aot-radius-sm);
   font-size: var(--aot-font-size-xs);
   font-weight: 500;
   line-height: 1.6;
@@ -1929,7 +1791,7 @@ button.aot-center-modal-close {
 .aot-act-tag.aot-scope-nodata {
   flex-shrink: 0;
   padding: 0 5px;
-  border-radius: 8px;
+  border-radius: var(--aot-radius-sm);
   font-size: var(--aot-font-size-xs);
   font-weight: 500;
   line-height: 1.6;
@@ -1950,14 +1812,6 @@ button.aot-center-modal-close {
   color: var(--aot-color-text-secondary);
 }
 .aot-ov-sub-title:first-of-type { margin-top: 0; }
-
-/* 통합 기록 폼의 안내 한 줄 — '언제' 를 비우면 노트가 된다는 것을 말한다.
-   버튼 문구도 같은 것을 말하지만(노트로 저장 / 예정으로 저장), 폼을 처음
-   여는 사람은 아직 버튼을 보고 있지 않다. */
-.aot-ov-record-hint {
-  margin: 4px 0 8px;
-  line-height: 1.5;
-}
 
 /* 옛 기간 축(.aot-tl-*)은 공용 프리미티브로 옮겼다 —
    components/aot-dataviz.css 의 .aot-viz--timeline. 같은 위젯에 두 종류의
@@ -2036,13 +1890,13 @@ button.aot-center-modal-close {
 .aot-center-modal .aot-bay-popup-section[data-zone="sensors"],
 .aot-center-modal .aot-sensor-popup-chart-wrap {
   padding: var(--aot-space-4);
-  border-radius: 16px;
+  border-radius: var(--aot-radius-lg);
   margin-bottom: var(--aot-space-4);
   background: var(--aot-surface-card, #FFFFFF);
 }
 .aot-center-modal .aot-act-row {
   padding: var(--aot-space-4);
-  border-radius: 16px;
+  border-radius: var(--aot-radius-lg);
   margin-bottom: var(--aot-space-4);
 }
 
@@ -2075,7 +1929,7 @@ button.aot-center-modal-close {
    흐린 색을 본문 색으로 되돌려, 같은 글꼴·같은 크기인데도 다른 서체처럼 보이던
    인상을 없앤다. 옆의 '함께 작동' 은 부가 정보라 흐린 색 그대로 둔다. */
 .aot-center-modal .aot-act-meta-text {
-  color: var(--text-color-primary, #13261B);
+  color: var(--aot-color-text-primary, #13261B);
 }
 
 /* ── 셸 안에서는 스크롤 주체가 pane 하나여야 한다 ───────────────────────────

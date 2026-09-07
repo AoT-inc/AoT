@@ -11,7 +11,7 @@
 .aot-brand-text {
   font-weight: 600;
   color: var(--aot-color-text-primary, #13261B);
-  font-size: 1.1rem;
+  font-size: var(--aot-font-size-lg);
   line-height: 1;
 }
 /* Status-tint box hugs the logo symmetrically and stays centered on it.
@@ -25,12 +25,12 @@
   display: inline-flex;
   align-items: center;
   padding: 5px 7px;
-  border-radius: 8px;
+  border-radius: var(--aot-radius-sm);
   transition: background-color 0.2s ease;
 }
 #brand-link > img,
 #brand-link > .aot-brand-text {
-  margin-left: 0 !important;
+  margin-left: 0;
 }
 /* Cap the brand-image height so a large brand_image_height (default 55px) can't
    overflow the compact navbar. Smaller configured heights are still honored;
@@ -106,11 +106,6 @@ html {
   border: 0;
 }
 
-.checkbox-big {
-  width: 1.5em;
-  height: 1.5em
-}
-
 .icon-fw {
   width: 1.28571429em;
   text-align: center
@@ -150,12 +145,6 @@ html {
 
 .no-gutters {
   padding: 0 0;
-}
-
-
-
-.checkbox-nopad {
-  padding-top: 0 !important;
 }
 
 .table {
@@ -460,7 +449,7 @@ html {
 
 @media (min-width: 768px) {
   .container, .container-md, .container-sm, .container-lg, .container-xl {
-    max-width: 1200px !important;
+    max-width: 1200px;
   }
   .notes-masonry-grid {
     column-count: 2;
@@ -470,13 +459,13 @@ html {
 
 @media (min-width: 992px) {
   .container, .container-md, .container-sm, .container-lg, .container-xl {
-    max-width: 1200px !important;
+    max-width: 1200px;
   }
 }
 
 @media (min-width: 1200px) {
   .container, .container-md, .container-sm, .container-lg, .container-xl {
-    max-width: 1200px !important;
+    max-width: 1200px;
   }
   .notes-masonry-grid {
     column-count: 3;
@@ -497,7 +486,7 @@ html {
   /* Prevent card splitting across columns */
   background: var(--aot-note-card-bg);
   border: 1px solid var(--aot-note-card-border);
-  border-radius: 12px;
+  border-radius: var(--aot-radius-md);
   box-shadow: var(--aot-note-card-shadow);
   margin-bottom: 1.5rem;
   /* Gap between vertical items */
@@ -524,18 +513,15 @@ html {
   padding: 0.5rem 1.25rem 1.25rem;
   color: var(--aot-note-card-body-text);
   line-height: 1.6;
-  font-size: 0.95rem;
+  font-size: var(--aot-font-size-base);
   white-space: pre-wrap;
   /* Preserve line breaks */
   position: relative;
 }
 
-
-
-
 .expand-toggle-btn {
   text-decoration: none !important;
-  font-size: 0.85rem;
+  font-size: var(--aot-font-size-sm);
   color: var(--aot-expand-toggle) !important;
   transition: color 0.2s;
 }
@@ -555,7 +541,7 @@ html {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-size: 0.85rem;
+  font-size: var(--aot-font-size-sm);
   color: var(--aot-note-footer-text);
 }
 
@@ -566,13 +552,13 @@ html {
   background: var(--aot-note-tag-bg);
   color: var(--aot-note-tag-text);
   padding: 2px 10px;
-  border-radius: 9999px;
-  font-size: 0.75rem;
+  border-radius: var(--aot-btn-pill-radius);
+  font-size: var(--aot-font-size-xs);
   font-weight: 600;
   margin-right: 4px;
   margin-bottom: 4px;
   transition: background 0.2s;
-  text-decoration: none !important;
+  text-decoration: none;
 }
 
 .note-tag-chip:hover {
@@ -583,7 +569,7 @@ html {
 /* 4. Search Bar & Controls */
 .note-search-bar {
   background: var(--aot-note-search-bg);
-  border-radius: 16px;
+  border-radius: var(--aot-radius-lg);
   padding: 1.5rem;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
   border: 1px solid var(--aot-note-search-border);
@@ -595,7 +581,7 @@ html {
   display: flex;
   align-items: center;
   border: 1px solid var(--aot-border-form);
-  border-radius: 12px;
+  border-radius: var(--aot-radius-md);
   /* Smooth rounded */
   background: var(--aot-note-search-bg);
   padding: 4px 12px;
@@ -630,12 +616,12 @@ html {
   height: 56px;
   border-radius: 50%;
   background: var(--aot-note-fab-bg);
-  color: var(--text-color-tertiary, white);
+  color: var(--aot-color-text-tertiary, white);
   box-shadow: 0 4px 15px rgba(19, 38, 27, 0.4);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.5rem;
+  font-size: var(--aot-font-size-xl);
   z-index: var(--aot-z-fixed-panel);
   transition: transform 0.2s, background 0.2s;
   cursor: pointer;
@@ -644,46 +630,46 @@ html {
 .note-fab:hover {
   background: var(--aot-note-fab-bg);
   transform: scale(1.1);
-  color: var(--text-color-tertiary, white);
+  color: var(--aot-color-text-tertiary, white);
 }
 
 /* 6. User Request: Pills & Avatar & Select Fix (Cleaned & Consolidated) */
 .ui-pill {
-  height: 32px !important;
-  border-radius: 16px !important;
-  padding-top: 0 !important;
-  padding-bottom: 0 !important;
-  line-height: normal !important;
+  height: 32px;
+  border-radius: var(--aot-radius-lg) !important;
+  padding-top: 0;
+  padding-bottom: 0;
+  line-height: normal;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1em !important;
+  font-size: 1em;
 }
 
 /* For Selectpicker Button that gets generated */
 .bootstrap-select.ui-pill>.dropdown-toggle {
-  height: 32px !important;
-  border-radius: 16px !important;
-  padding: 0 12px !important;
+  height: 32px;
+  border-radius: var(--aot-radius-lg) !important;
+  padding: 0 12px;
   align-items: center;
 }
 
 /* Selectpicker Text Overflow Fix */
 .bootstrap-select.ui-pill .filter-option {
-  white-space: nowrap !important;
-  overflow: hidden !important;
-  text-overflow: ellipsis !important;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   display: flex;
   align-items: center;
   height: 100%;
 }
 
 .bootstrap-select.ui-pill .filter-option-inner-inner {
-  display: block !important;
-  white-space: nowrap !important;
-  overflow: hidden !important;
-  text-overflow: ellipsis !important;
-  width: 100% !important;
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  width: 100%;
 }
 
 /* Filter inputs (search box) */
@@ -692,19 +678,19 @@ html {
 }
 
 .note-search-input {
-  font-size: 1em !important;
+  font-size: 1em;
 }
 
 /* Avatar Circle (32px) */
 .note-avatar-circle {
-  width: 32px !important;
-  height: 32px !important;
+  width: 32px;
+  height: 32px;
   /* Prevent Oval Shape */
-  min-width: 32px !important;
-  min-height: 32px !important;
-  border-radius: 50% !important;
-  flex-shrink: 0 !important;
-  font-size: 1em !important;
+  min-width: 32px;
+  min-height: 32px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  font-size: 1em;
 }
 
 /* 7. Additional UI Enhancements */
@@ -732,14 +718,14 @@ html {
 
 /* Custom Selectpicker dropdown style */
 .bootstrap-select .dropdown-menu {
-  border-radius: 12px;
+  border-radius: var(--aot-radius-md);
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
   border: 1px solid var(--aot-border-form);
 }
 
 .bootstrap-select .dropdown-item {
   padding: 8px 16px;
-  font-size: 0.9rem;
+  font-size: var(--aot-font-size-sm);
 }
 
 .bootstrap-select .dropdown-item.active,
@@ -758,7 +744,7 @@ html {
 
 .aot-action-group .bootstrap-select {
   flex: 1;
-  width: auto !important;
+  width: auto;
 }
 
 /* Force hide native select to prevent click interception */
@@ -775,7 +761,7 @@ html {
 
 /* Theme State Backgrounds */
 .nav .upgrade_available {
-    background: var(--bg-upgrade);
+    background: var(--aot-bg-upgrade);
 }
 
 /* nav-bar 관리(Manage) 메뉴의 업그레이드 항목: 업그레이드가 없으면 다른 메뉴와
@@ -784,7 +770,7 @@ html {
    해당 배경 밝기를 서버에서 미리 판정해 aot-nav-upgrade-light/dark 클래스로
    부여한다(layout_default.html, routes_static.py inject_variables). */
 .dropdown-item.aot-nav-upgrade {
-    background-color: var(--bg-upgrade);
+    background-color: var(--aot-bg-upgrade);
 }
 
 /* aot.css 의 .navbar.main-navbar .dropdown-menu .dropdown-item 가 color 를
@@ -794,13 +780,13 @@ html {
 .navbar.main-navbar .dropdown-menu .dropdown-item.aot-nav-upgrade.aot-nav-upgrade-light,
 .navbar.main-navbar .dropdown-menu .dropdown-item.aot-nav-upgrade.aot-nav-upgrade-light:hover,
 .navbar.main-navbar .dropdown-menu .dropdown-item.aot-nav-upgrade.aot-nav-upgrade-light:focus {
-    color: var(--text-color-primary) !important;
+    color: var(--aot-color-text-primary) !important;
 }
 
 .navbar.main-navbar .dropdown-menu .dropdown-item.aot-nav-upgrade.aot-nav-upgrade-dark,
 .navbar.main-navbar .dropdown-menu .dropdown-item.aot-nav-upgrade.aot-nav-upgrade-dark:hover,
 .navbar.main-navbar .dropdown-menu .dropdown-item.aot-nav-upgrade.aot-nav-upgrade-dark:focus {
-    color: var(--text-color-tertiary) !important;
+    color: var(--aot-color-text-tertiary) !important;
 }
 
 /* aot.css 의 .navbar.main-navbar .dropdown-menu .dropdown-item:hover 가
@@ -811,22 +797,22 @@ html {
    고정한다. */
 .navbar.main-navbar .dropdown-menu .dropdown-item.aot-nav-upgrade:hover,
 .navbar.main-navbar .dropdown-menu .dropdown-item.aot-nav-upgrade:focus {
-    background-color: var(--bg-upgrade) !important;
+    background-color: var(--aot-bg-upgrade) !important;
     opacity: 0.85;
 }
 
 .active-background {
-    background-color: var(--bg-active) !important;
+    background-color: var(--aot-bg-active);
 }
 
 .inactive-background {
-    background-color: var(--bg-inactive) !important;
+    background-color: var(--aot-bg-inactive);
 }
 
 /* 일시정지 — 사용자가 의도적으로 멈춘 상태(PID 일시정지/유지, AI 초안 대기 등).
    실패가 아니므로 중립색(--bg-pause)을 유지한다. */
 .pause-background {
-    background-color: var(--bg-pause) !important;
+    background-color: var(--aot-bg-pause) !important;
 }
 
 /* 무응답/오프라인(comm_fault) — 2026-08-04 .pause-background 에서 분리.
@@ -838,11 +824,11 @@ html {
    배경만 칠한다(형제 클래스와 동일): 카드 전체에 글자색까지 강제하면 안에 든
    입력·버튼의 자기 색과 싸운다. */
 .fault-background {
-    background-color: var(--aot-tint-danger-bg) !important;
+    background-color: var(--aot-tint-danger-bg);
 }
 
 .hold-background {
-    background-color: var(--bg-hold) !important;
+    background-color: var(--aot-bg-hold) !important;
 }
 
 /* 상태 미상 — 서버에서 그 장치의 상태가 아예 오지 않은 경우(데몬 무응답으로
@@ -854,7 +840,7 @@ html {
    확정 사실이고, 이쪽은 "우리가 물어보지 못했다"라 장치 자체는 멀쩡할 수 있다.
    그래서 경보색이 아니라 중립 회색 + 사선으로 "정보 없음"만 표시한다. */
 .unknown-background {
-    background-color: var(--bg-pause) !important;
+    background-color: var(--aot-bg-pause) !important;
     background-image: repeating-linear-gradient(
         45deg,
         transparent,
@@ -870,3 +856,14 @@ html {
    `background: transparent !important` rules (aot-entry-ui.css) that a
    class-based override ties with on specificity and then loses to by load
    order, differently per page. See paintUnverifiedRunning()'s comment. */
+
+/* ── 도움말 물음표 아이콘 ──────────────────────────────────────────────
+   페이지 제목 옆에서 매뉴얼로 보내는 물음표. 29개 템플릿이 31곳에
+   `style="font-size: 16px"` 를 **하나씩 복사해** 갖고 있었다 — 같은 것을
+   서른한 번 적어 두면 한 번 바꿀 때 서른한 곳을 찾아다녀야 한다.
+
+   `base`(1rem)는 손가락 화면에서 루트 확대(115%)를 따라 18.4px 이 된다 —
+   작은 아이콘을 눌러야 하는 자리라 그쪽이 맞다. */
+.aot-help-icon {
+  font-size: var(--aot-font-size-base);
+}

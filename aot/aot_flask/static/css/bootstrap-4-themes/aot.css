@@ -30,8 +30,8 @@
      여기서 리터럴로 재고정하면 .aot-modal-group-title 등 다수 UI의
      text_color_secondary 연동이 끊긴다 */
   --gray-dark: var(--aot-color-text-secondary, #888888);
-  --primary: var(--bd-primary, #fff);
-  --secondary: var(--brand-secondary, #5E6B64);
+  --primary: var(--aot-surface-card, #fff);
+  --secondary: var(--aot-color-brand-secondary, #5E6B64);
   --success: #fff3cd;
   --info: #029ACF;
   --warning: #e6be9bc9;
@@ -39,37 +39,35 @@
   --light: #fdf2cf;
   --dark: #141414;
   
-  --text-primary: var(--text-color-primary, #13261B);
-  --text-secondary: var(--text-color-secondary, #5E6B64);
-  --text-tertiary: var(--text-color-tertiary, #FFFFFF);
+  --text-primary: var(--aot-color-text-primary, #13261B);
+  --text-secondary: var(--aot-color-text-secondary, #5E6B64);
+  --text-tertiary: var(--aot-color-text-tertiary, #FFFFFF);
 
   --bg-active: #fdf2cf;
   /* 작동(활성) 상태 배경 */
   --bg-paused: #e6be9bc9;
   /* 일시정지 상태 배경 */
-  --bg-btn-active: #13261B;
-  --bg-btn-inactive: #5E6B64;
+  /* --bg-btn-active · --bg-btn-inactive 는 aot-theme-variables.css 가
+     var(--aot-btn-bg-active) / var(--aot-btn-bg-inactive) 로 정한다.
+     여기 리터럴 #13261B·#5E6B64 가 있으면 이 파일이 뒤에 실려 그 연결을
+     끊는다 — 값은 같아 화면은 그대로였지만, 정본 토큰을 바꿔도 여기서
+     막혀 따라오지 않았다(--aot-btn-height 와 같은 부류). */
   --bg-inactive: #d2d1d1;
 
-  --btn-outline: var(--bd-border, #6e6947);
+  --btn-outline: var(--aot-color-brand-primary, #6e6947);
 
-  --aot-btn-bg: var(--bd-tertiary, var(--primary));
+  --aot-btn-bg: var(--aot-btn-bg-primary, var(--primary));
   /* 버튼 기본 배경 (기존 디자인 참고) */
-  --aot-btn-hover-bg: var(--gray-dark);
+  --aot-btn-hover-bg: var(--aot-color-text-secondary);
   /* 버튼 호버 배경 */
-  --aot-btn-hover-text-color: var(--text-primary);
-  --aot-text-color: var(--text-primary);
-  --aot-title-font-size: 1em;
-  --aot-prt-font-size: 1em;
-  /* --aot-btn-font-size 는 aot-theme-variables.css 의 사다리가 정한다.
-     여기서 `1em` 으로 덮으면 부모에 따라 크기가 달라져 사다리를 벗어난다. */
-
-  --aot-btn-width: 54px;
-  /* --aot-btn-height 는 aot-theme-variables.css 가 정한다.
-     여기서 덮어쓰면 그쪽 값이 죽는다(실제로 그랬다). */
-  --aot-btn-gap: 4px;
-  --aot-group-gap: 8px;
-
+  --aot-btn-hover-text-color: var(--aot-color-text-primary);
+  --aot-text-color: var(--aot-color-text-primary);
+  /* 크기 토큰은 aot-theme-variables.css 가 정한다.
+     --aot-btn-font-size: 여기서 `1em` 으로 덮으면 부모에 따라 크기가 달라져 사다리를 벗어난다.
+     --aot-btn-height:    여기서 덮어쓰면 그쪽 값이 죽는다(실제로 그랬다).
+     --aot-title-font-size · --aot-prt-font-size · --aot-btn-width ·
+     --aot-btn-gap · --aot-group-gap: 이 파일과 css/aot.css 에만 같은 값으로
+     선언돼 있었고 저장소 어디에도 소비처가 없었다 — 지웠다. */
 
   --breakpoint-xs: 0;
   --breakpoint-sm: 576px;
@@ -90,7 +88,7 @@
 
 /* HTML 기본 폰트 및 설정 */
 html {
-  font-family: var(--font-family-sans-serif);
+  font-family: var(--aot-font-family);
   line-height: 1.15;
   -webkit-text-size-adjust: 100%;
   -webkit-tap-highlight-color: rgba(0, 0, 0, 0);
@@ -116,7 +114,7 @@ section {
 /* body 기본 스타일 설정 */
 body {
   margin: 0;
-  font-family: var(--font-family-sans-serif);
+  font-family: var(--aot-font-family);
   /* ⚠ **페이지 기본 크기도 사다리 위에 있어야 한다** (2026-08-27).
    *
    * 0.87rem 이었다 — `sm`(0.85)과 `base`(0.95) 사이라 어느 칸도 아니다.
@@ -136,7 +134,7 @@ body {
   /* 사이트 기본 텍스트색 — settings/custom_ui '텍스트 기본'(text_color_primary)이
      이 값을 통해 대부분의 미지정(色 없는) 텍스트에 적용된다. 카드/모달/배지 등
      자체 color 를 지정한 컴포넌트는 이 규칙보다 우선한다(정상 동작). */
-  color: var(--text-primary, #212529);
+  color: var(--aot-color-text-primary, #212529);
   text-align: left;
   /* 배경 2단 레이어링: 페이지(body)는 항상 배경 보조(--aot-surface-body,
      settings/custom_ui bd_secondary) — 그 위에 얹히는 카드(.widget-outer,
@@ -158,17 +156,17 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .navbar-brand {
-  font-family: 'Roboto', sans-serif !important;
+  font-family: 'Roboto', sans-serif;
   font-size: 1em !important;
-  font-weight: bold !important;
+  font-weight: bold;
 }
 
 /* Navbar 메인 스타일 */
 .navbar.main-navbar {
   background-color: var(--primary);
   border: none;
-  height: 50px !important;
-  margin-bottom: 0px !important;
+  height: 50px;
+  margin-bottom: 0px;
   padding: 0 1rem;
   font-size: 1.1em !important;
 }
@@ -188,42 +186,48 @@ body {
 
 .navbar.main-navbar .nav-link {
   position: relative;
-  color: var(--text-primary, #444) !important;
+  color: var(--aot-color-text-primary, #444) !important;
   font-weight: var(--aot-fw-semibold, 600);
 
   transition: color 0.2s ease-in-out;
 }
 
 .navbar.main-navbar .nav-link:hover {
-  color: var(--text-primary, #000) !important;
+  color: var(--aot-color-text-primary, #000) !important;
   /* 호버 시 색상만 변경 */
   text-decoration: none;
   /* 밑줄 제거 유지 */
 }
 
-
 /* Navbar 내부 Dropdown 메뉴 스타일 */
+/* ⚠ 여기 `border-radius: 0` · `border: none` · `box-shadow: none` 이라고
+   적혀 있는 동안, 실제 화면은 **둥근 드롭다운**이었다. layout.html 과
+   layout_default.html 이 `style="border-radius: 16px !important; box-shadow:
+   …; border: …"` 를 **드롭다운마다 하나씩, 열아홉 곳에** 달아 이 규칙을
+   덮고 있었기 때문이다. 디자인이 바뀌었는데 규칙은 안 따라오고 호출부가
+   개별로 우회한 모양이다 — 하나를 고치려면 열아홉 곳을 찾아다녀야 했다.
+   2026-09-07 에 값을 여기로 옮기고 인라인을 전부 걷어냈다. */
 .navbar.main-navbar .dropdown-menu {
   background-color: var(--primary);
-  border: none;
-  border-radius: 0 !important;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: var(--aot-radius-lg);
   padding-top: 10px;
   padding-bottom: 10px;
-  box-shadow: none;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
   margin: 0;
   width: auto;
 }
 
 .navbar.main-navbar .dropdown-menu {
-  min-width: 180px !important;
+  min-width: 180px;
   /* 필요하면 길이에 따라 이 값을 조정하세요. */
-  width: auto !important;
+  width: auto;
 }
 
 .navbar.main-navbar .dropdown-menu .dropdown-item {
   font-weight: normal !important;
-  white-space: nowrap !important;
-  color: var(--text-primary, #212529) !important;
+  white-space: nowrap;
+  color: var(--aot-color-text-primary, #212529) !important;
 }
 
 .navbar.main-navbar .dropdown-menu .dropdown-item {
@@ -247,7 +251,7 @@ body {
 .navbar.main-navbar .dropdown-menu .dropdown-item.active,
 .navbar.main-navbar .dropdown-menu .dropdown-item:active {
   background-color: var(--primary);
-  color: var(--text-primary, #000) !important;
+  color: var(--aot-color-text-primary, #000) !important;
   font-weight: bold !important;
 }
 
@@ -262,8 +266,7 @@ body {
 }
 
 /* 기본 폰트 설정 */
-body,
-.google-gothic-a1 {
+body {
   font-family: 'Gothic A1', sans-serif;
 }
 
@@ -287,7 +290,7 @@ body,
   }
 
   .navbar.main-navbar .dropdown-toggle {
-    pointer-events: none !important;
+    pointer-events: none;
   }
 
   .navbar.main-navbar .nav-link,
@@ -312,7 +315,7 @@ body,
 /* 모바일 환경 스타일 */
 @media (max-width: 767.98px) {
   .navbar.main-navbar {
-    position: fixed !important;
+    position: fixed;
     font-size: 1em;
     top: 0;
     width: 100%;
@@ -334,7 +337,7 @@ body,
   }
 
   .navbar.main-navbar .navbar-toggler {
-    color: var(--text-primary, #000) !important;
+    color: var(--aot-color-text-primary, #000) !important;
     border-color: transparent !important;
   }
 
@@ -343,8 +346,8 @@ body,
     top: 50px;
     left: 0;
     width: 100%;
-    padding-bottom: 6em !important;
-    background-color: var(--primary) !important;
+    padding-bottom: 6em;
+    background-color: var(--primary);
     z-index: 998;
     max-height: calc(100vh - 50px);
     overflow-y: auto;
@@ -352,23 +355,15 @@ body,
 
   .navbar.main-navbar .navbar-nav>li>a.nav-link {
     position: relative;
-    font-size: 2em !important;
-    font-weight: bold !important;
-    padding-left: 2rem !important;
-  }
-
-  .navbar-dashboard-config.mr-2 {
-    font-size: 1.1em !important;
-    color: var(--text-primary, #000) !important;
-    text-decoration: none !important;
-    position: relative;
-    top: 1px;
+    font-size: 2em;
+    font-weight: bold;
+    padding-left: 2rem;
   }
 
   .navbar-nav .dropdown-menu .dropdown-item {
     position: relative;
-    font-size: 1.5em !important;
-    padding-left: 4rem !important;
+    font-size: 1.5em;
+    padding-left: 4rem;
   }
 
   .navbar-nav .dropdown-menu.show .dropdown-item {
@@ -379,7 +374,7 @@ body,
   .navbar-nav .dropdown-menu a::before {
     content: '>';
     position: absolute;
-    left: 2.2rem !important;
+    left: 2.2rem;
     top: 50%;
     transform: translateY(-50%);
     opacity: 0;
@@ -455,7 +450,7 @@ body,
     font-size: 1.2em !important;
     margin: 0 !important;
     padding: 0 !important;
-    color: var(--text-primary, #000) !important;
+    color: var(--aot-color-text-primary, #000) !important;
     /* 텍스트 색상 검정 */
     vertical-align: middle !important;
     white-space: nowrap;
@@ -469,13 +464,13 @@ body,
 
 /* 사이드바 메뉴 스타일 */
 #sidebar-wrapper .list-group-item {
-  font-family: 'Gothic A1', sans-serif !important;
-  font-size: 1.2em !important;
-  color: var(--text-primary) !important;
-  background-color: #fff !important;
-  padding: 10px 15px !important;
-  border: none !important;
-  transition: all 0.2s ease !important;
+  font-family: 'Gothic A1', sans-serif;
+  font-size: 1.2em;
+  color: var(--aot-color-text-primary);
+  background-color: #fff;
+  padding: 10px 15px;
+  border: none;
+  transition: all 0.2s ease;
 }
 
 #sidebar-wrapper .list-group-item:hover {
@@ -484,21 +479,21 @@ body,
 }
 
 #sidebar-wrapper .list-group-item.active {
-  background-color: var(--primary) !important;
-  font-weight: bold !important;
-  color: var(--text-primary) !important;
-  border-color: transparent !important;
+  background-color: var(--primary);
+  font-weight: bold;
+  color: var(--aot-color-text-primary);
+  border-color: transparent;
 }
 
 /* 버튼 기본 스타일 */
 .btn-primary {
-  font-family: 'Gothic A1', sans-serif !important;
+  font-family: 'Gothic A1', sans-serif;
   font-size: 1em !important;
-  background-color: var(--bd-btn-primary) !important;
-  color: var(--text-tertiary) !important;
+  background-color: var(--aot-btn-bg-primary) !important;
+  color: var(--aot-color-text-tertiary) !important;
   padding: 8px 14px !important;
-  border: 1px solid var(--bd-btn-border) !important;
-  border-radius: 4px !important;
+  border: 1px solid var(--aot-btn-border-primary) !important;
+  border-radius: var(--aot-radius-xs) !important;
   transition: all 0.2s ease !important;
 }
 
@@ -506,11 +501,10 @@ body,
 .btn-primary:hover,
 .bootstrap-select .btn-primary:hover,
 .bootstrap-select.show .btn-primary.dropdown-toggle:hover {
-  background-color: var(--dark) !important;
-  color: var(--text-tertiary) !important;
-  border-color: var(--bd-border) !important;
+  background-color: var(--aot-color-dark) !important;
+  color: var(--aot-color-text-tertiary) !important;
+  border-color: var(--aot-color-brand-primary) !important;
 }
-
 
 /* 드롭다운 버튼 및 항목 스타일 일원화 및 우선순위 명확히 처리 */
 .bootstrap-select .btn-primary,
@@ -518,9 +512,9 @@ body,
 .bootstrap-select.show .btn-primary.dropdown-toggle,
 .bootstrap-select.show .btn-primary.dropdown-toggle:hover {
   background-color: var(--primary) !important;
-  color: var(--text-primary) !important;
+  color: var(--aot-color-text-primary) !important;
   outline: none !important;
-  border: 1px solid var(--dark) !important;
+  border: 1px solid var(--aot-color-dark) !important;
   box-shadow: none !important;
 }
 
@@ -542,7 +536,7 @@ body,
 .bootstrap-select .btn-primary.active,
 .bootstrap-select.show .btn-primary.dropdown-toggle {
   background-color: var(--primary) !important;
-  color: var(--text-primary) !important;
+  color: var(--aot-color-text-primary) !important;
   text-align: center !important;
 }
 
@@ -553,7 +547,7 @@ body,
 .bootstrap-select.show .btn-primary.dropdown-toggle {
   outline: none !important;
   /* 브라우저 기본 포커스 테두리 제거 */
-  border: 1px solid var(--dark) !important;
+  border: 1px solid var(--aot-color-dark) !important;
   /* 테두리 명확히 설정 */
   box-shadow: none !important;
   /* 그림자 제거 */
@@ -571,18 +565,18 @@ body,
 /* Bootstrap .form-control 기본 텍스트색(#495057)이 모든 input/select/textarea에
    토큰과 무관하게 박혀 있던 것을 site 기본 텍스트색에 연결 */
 .form-control {
-  color: var(--text-primary, #495057) !important;
+  color: var(--aot-color-text-primary, #495057) !important;
 }
 
 textarea.form-control {
-  font-size: 1em !important;
-  text-align: left !important;
+  font-size: 1em;
+  text-align: left;
 }
 
 select.form-control,
 select.form-control {
-  text-align: left !important;
-  font-size: 1em !important;
+  text-align: left;
+  font-size: 1em;
 }
 
 /* col-1: 아이콘 위치 아래로 1px 이동 */
@@ -605,91 +599,91 @@ input.form-control {
 
 input.form-control.btn.btn-primary {
   text-align: center;
-  background-color: var(--bd-btn-secondary) !important;
-  color: var(--text-color-primary) !important;
-  border: 1px solid var(--bd-btn-border) !important;
+  background-color: var(--aot-btn-bg-secondary) !important;
+  color: var(--aot-color-text-primary) !important;
+  border: 1px solid var(--aot-btn-border-primary) !important;
 }
 
 /* 엔트리 이동버튼, 설정버튼 배경 (drag, cog) */
 .icon-fh .fa-grip-horizontal,
 .icon-fh a.btn {
   background-color: transparent !important;
-  color: var(--text-color-primary) !important;
-  border-radius: 6px;
+  color: var(--aot-color-text-primary) !important;
+  border-radius: var(--aot-radius-sm);
   padding: 4px !important;
 }
 
 .bootstrap-select .dropdown-menu.inner {
-  font-size: 1em !important;
+  font-size: 1em;
 }
 
 .bootstrap-select .dropdown-item {
-  font-size: 1em !important;
-  color: var(--text-primary, #212529) !important;
+  font-size: 1em;
+  color: var(--aot-color-text-primary, #212529) !important;
 }
 
 .bootstrap-select .filter-option-inner-inner {
-  font-size: 1em !important;
+  font-size: 1em;
 }
 
 .dropdown-menu.show {
-  font-size: 1em !important;
+  font-size: 1em;
 }
 
 .dropdown-menu.show .dropdown-item {
-  font-size: 1em !important;
+  font-size: 1em;
 }
 
 /* Bootstrap .dropdown-item 기본 텍스트색(#212529) 전역 연결 — navbar/bootstrap-select
    전용 규칙 밖의 일반 드롭다운(액션 메뉴 등)까지 포괄하는 안전망 */
 .dropdown-item {
-  color: var(--text-primary, #212529) !important;
+  color: var(--aot-color-text-primary, #212529) !important;
 }
 
 /* Bootstrap 모달 닫기(×) 버튼 기본 텍스트색(#000) 연결 */
 .close {
-  color: var(--text-primary, #000) !important;
+  color: var(--aot-color-text-primary, #000) !important;
 }
 
 /* Bootstrap .table 기본 텍스트색(#212529) 전역 연결 — 설정 페이지의 데이터
    테이블(측정값 변환, 사용자, API 키 등)의 셀/라벨 전체에 영향 */
 .table {
-  color: var(--text-primary, #212529) !important;
+  color: var(--aot-color-text-primary, #212529);
 }
 
 /* Bootstrap 팝오버/드롭다운 헤더·텍스트 기본색 전역 연결 */
 .popover-body,
 .dropdown-item-text {
-  color: var(--text-primary, #212529) !important;
+  color: var(--aot-color-text-primary, #212529) !important;
 }
 .dropdown-header {
-  color: var(--text-primary, #6c757d) !important;
+  color: var(--aot-color-text-primary, #6c757d) !important;
 }
 
 /* Bootstrap 텍스트 유틸리티(.text-dark/.text-body/.text-muted/.text-secondary)
    기본 텍스트색 전역 연결 — 템플릿 전반에서 매우 광범위하게 사용됨 */
 .text-dark,
 .text-body {
-  color: var(--text-primary, #343a40) !important;
+  color: var(--aot-color-text-primary, #343a40) !important;
 }
 .text-muted,
 .text-secondary {
-  color: var(--text-secondary, #6c757d) !important;
+  color: var(--aot-color-text-secondary, #6c757d) !important;
 }
 
 button.dropdown-toggle.btn.btn-primary {
   text-align: center !important;
   /* 중앙 정렬 */
-  border: 1px solid var(--bd-btn-border) !important;
-  background-color: var(--bd-btn-primary) !important;
-  color: var(--text-tertiary) !important;
+  border: 1px solid var(--aot-btn-border-primary) !important;
+  background-color: var(--aot-btn-bg-primary) !important;
+  color: var(--aot-color-text-tertiary) !important;
 }
 
 button.dropdown-toggle.btn.btn-primary:hover {
-  background-color: var(--dark) !important;
+  background-color: var(--aot-color-dark) !important;
   /* 배경색 검정 */
-  color: var(--text-tertiary) !important;
-  border-color: var(--bd-btn-border) !important;
+  color: var(--aot-color-text-tertiary) !important;
+  border-color: var(--aot-btn-border-primary) !important;
 }
 
 .dropdown-menu.inner.show .dropdown-item,
@@ -704,16 +698,16 @@ button.dropdown-toggle.btn.btn-primary:hover {
 .col-6 input.form-control,
 .col-4 input.form-control,
 div[id^="pid_"] input.form-control {
-  font-size: 1em !important;
+  font-size: 1em;
   text-align: center !important;
-  color: var(--text-primary, #000) !important;
+  color: var(--aot-color-text-primary, #000);
 }
 
 .col-3 input.form-control:hover,
 .col-6 input.form-control:hover,
 .col-4 input.form-control:hover,
 div[id^="pid_"] input.form-control:hover {
-  background-color: var(--dark) !important;
+  background-color: var(--aot-color-dark) !important;
   color: var(--primary) !important;
 }
 
@@ -727,9 +721,9 @@ input.form-control.btn.btn-primary[name="output_activate"].active,
 input.form-control.btn.btn-primary[name="function_activate"],
 input.form-control.btn.btn-primary[name="function_activate"]:active,
 input.form-control.btn.btn-primary[name="function_activate"].active {
-  background-color: var(--bg-btn-active) !important;
-  color: var(--text-color-primary) !important;
-  border: 1px solid var(--bd-btn-border) !important;
+  background-color: var(--aot-btn-bg-active) !important;
+  color: var(--aot-color-text-primary) !important;
+  border: 1px solid var(--aot-btn-border-primary) !important;
 }
 
 /* deactivate 버튼 */
@@ -742,11 +736,10 @@ input.form-control.btn.btn-primary[name="output_deactivate"].active,
 input.form-control.btn.btn-primary[name="function_deactivate"],
 input.form-control.btn.btn-primary[name="function_deactivate"]:active,
 input.form-control.btn.btn-primary[name="function_deactivate"].active {
-  background-color: var(--bg-btn-inactive) !important;
-  color: var(--text-color-tertiary) !important;
-  border: 1px solid var(--bd-btn-border) !important;
+  background-color: var(--aot-btn-bg-inactive) !important;
+  color: var(--aot-color-text-tertiary) !important;
+  border: 1px solid var(--aot-btn-border-primary) !important;
 }
-
 
 input.form-control.btn.btn-primary[name="input_deactivate"]:hover,
 input.form-control.btn.btn-primary[name="input_deactivate"].hover,
@@ -764,24 +757,24 @@ input.form-control.btn.btn-primary[name="function_activate"]:hover,
 input.form-control.btn.btn-primary[name="function_activate"].hover,
 input.form-control.btn.btn-primary[id^="agent_activate_"]:hover,
 input.form-control.btn.btn-primary[id^="agent_activate_"].hover {
-  background-color: var(--dark) !important;
-  color: var(--text-tertiary) !important;
-  border-color: var(--bd-btn-border) !important;
+  background-color: var(--aot-color-dark) !important;
+  color: var(--aot-color-text-tertiary) !important;
+  border-color: var(--aot-btn-border-primary) !important;
   text-align: center !important;
 }
 
 /* AI 에이전트 전 전용 Activate 버튼 스타일 */
 input.form-control.btn.btn-primary[id^="agent_activate_"] {
-  background-color: var(--bg-btn-active) !important;
-  color: var(--text-color-primary) !important;
-  border: 1px solid var(--bd-btn-border) !important;
+  background-color: var(--aot-btn-bg-active) !important;
+  color: var(--aot-color-text-primary) !important;
+  border: 1px solid var(--aot-btn-border-primary) !important;
 }
 
 /* AI 에이전트 전 전용 Deactivate 버튼 스타일 */
 input.form-control.btn.btn-primary[id^="agent_deactivate_"] {
-  background-color: var(--bg-btn-inactive) !important;
-  color: var(--text-color-tertiary) !important;
-  border: 1px solid var(--bd-btn-border) !important;
+  background-color: var(--aot-btn-bg-inactive) !important;
+  color: var(--aot-color-text-tertiary) !important;
+  border: 1px solid var(--aot-btn-border-primary) !important;
 }
 
 .bootstrap-select .btn-primary,
@@ -792,7 +785,7 @@ input.form-control.btn.btn-primary[id^="agent_deactivate_"] {
 .bootstrap-select.show .btn-primary.dropdown-toggle {
   outline: none !important;
   /* 브라우저 기본 포커스 테두리 제거 */
-  border: 1px solid var(--dark) !important;
+  border: 1px solid var(--aot-color-dark) !important;
   /* 테두리 명확히 설정 */
   box-shadow: none !important;
   /* 그림자 제거 */
@@ -806,60 +799,53 @@ input.form-control.btn.btn-primary[id^="agent_deactivate_"] {
 
 /* 배경 상태 클래스: JS에서 토글(활성, 일시정지, 비활성) */
 
-
 /* User Custom Button Theme Extensions */
 
 .btn-secondary {
-  background-color: var(--bd-btn-secondary, #5E6B64) !important;
-  color: var(--text-color-tertiary, #FFFFFF) !important;
-  border: 1px solid var(--bd-btn-border, #5E6B64) !important;
+  background-color: var(--aot-btn-bg-secondary, #5E6B64) !important;
+  color: var(--aot-color-text-tertiary, #FFFFFF) !important;
+  border: 1px solid var(--aot-btn-border-primary, #5E6B64) !important;
 }
 
 .btn-secondary:hover {
-  background-color: var(--dark) !important;
+  background-color: var(--aot-color-dark) !important;
   color: var(--primary) !important;
 }
 
-.btn-tertiary, .btn-info {
-  background-color: var(--bd-btn-tertiary, #F3F6F5) !important;
-  color: var(--text-color-primary, #13261B) !important;
-  border: 1px solid var(--bd-btn-border, #5E6B64) !important;
+.btn-info {
+  background-color: var(--aot-color-brand-accent, #F3F6F5) !important;
+  color: var(--aot-color-text-primary, #13261B) !important;
+  border: 1px solid var(--aot-btn-border-primary, #5E6B64) !important;
 }
 
 input.btn.btn-warning[id^="pid_pause_"] {
-  background-color: var(--bg-btn-pause, #b1b1b1) !important;
-  color: var(--text-color-primary) !important;
-  border: 1px solid var(--bd-btn-border, #5E6B64) !important;
+  background-color: var(--aot-btn-bg-pause, #b1b1b1) !important;
+  color: var(--aot-color-text-primary) !important;
+  border: 1px solid var(--aot-btn-border-primary, #5E6B64) !important;
 }
 
 input.btn.btn-warning[id^="pid_pause_"]:hover {
-  background-color: var(--dark, #000) !important;
+  background-color: var(--aot-color-dark, #000) !important;
   color: var(--primary, #fff) !important;
 }
 
 input.btn.btn-secondary[id^="pid_hold_"] {
-  background-color: var(--bg-btn-hold, #747474) !important;
-  color: var(--text-color-tertiary) !important;
-  border: 1px solid var(--bd-btn-border, #5E6B64) !important;
+  background-color: var(--aot-btn-bg-hold, #747474) !important;
+  color: var(--aot-color-text-tertiary) !important;
+  border: 1px solid var(--aot-btn-border-primary, #5E6B64) !important;
 }
 
 input.btn.btn-secondary[id^="pid_hold_"]:hover {
-  background-color: var(--dark, #000) !important;
+  background-color: var(--aot-color-dark, #000) !important;
   color: var(--primary, #fff) !important;
 }
 
-.btn-upgrade {
-  background-color: var(--bg-btn-upgrade, #13261B) !important;
-  color: var(--text-color-tertiary, #FFFFFF) !important;
-  border: 1px solid var(--bd-btn-border, #5E6B64) !important;
-}
 /* 과거 여기 있던 a[href*="upgrade"] 는 실제 업그레이드 유무·배경 밝기와 무관하게
    "upgrade" 문자열이 포함된 모든 링크(nav-bar 관리 메뉴 포함)에 !important 로
    강제 배경/글자색을 씌워, 업그레이드가 없을 때도 항상 강조되고 텍스트가
    배경과 같은 색으로 보이지 않게 되는 버그의 원인이었다. nav-bar 관리 메뉴의
    업그레이드 항목은 layout_default.html 이 upgrade_available 로 게이팅하고
    배경 밝기에 따라 텍스트색을 고르는 .aot-nav-upgrade(aot-base.css)로 대체됨. */
-
 
 .bootstrap-select .dropdown-menu.inner.show .inner>li>a,
 .bootstrap-select .dropdown-menu .bs-title-option {
@@ -877,17 +863,17 @@ input.form-control[name="name"][type="text"] {
 }
 
 select.form-control.form-dropdown {
-  font-size: 1em !important;
+  font-size: 1em;
 }
 
 .bootstrap-select.selectpicker,
 .bootstrap-select.selectpicker .dropdown-item,
 .bootstrap-select.selectpicker .bs-title-option {
-  font-size: 1em !important;
+  font-size: 1em;
 }
 
 .dropdown-menu.inner.show .dropdown-item {
-  font-size: 1em !important;
+  font-size: 1em;
 }
 
 main.container>p {
@@ -895,20 +881,20 @@ main.container>p {
 }
 
 .widget-drag-handle {
-  transform: translateY(-1px) !important;
+  transform: translateY(-1px);
 }
 
 .widget-cog-icon {
   font-size: 0.8em;
-  transform: translateY(-4px) !important;
+  transform: translateY(-4px);
 }
 
 .widget-graph-controls {
-  position: absolute !important;
+  position: absolute;
   top: 4px !important;
   /* 위로 이동 (적절한 값으로 미세조정) */
   right: 35px !important;
-  z-index: 999 !important;
+  z-index: 999;
 }
 
 .widget-graph-controls .fa-bars {
@@ -918,11 +904,11 @@ main.container>p {
 
 /* Modal Layout Improvements */
 .modal {
-  margin-top: 0 !important;
-  padding-top: 50px !important;
-  padding-bottom: 3rem !important;
-  overflow-x: hidden !important; 
-  overflow-y: auto !important; /* Fix: Allow vertical scrolling of the modal container */
+  margin-top: 0;
+  padding-top: 50px;
+  padding-bottom: 3rem;
+  overflow-x: hidden; 
+  overflow-y: auto; /* Fix: Allow vertical scrolling of the modal container */
 }
 
 .modal-dialog {
@@ -936,7 +922,7 @@ main.container>p {
 .modal-content {
   max-height: none; /* Let the content define the height, the parent .modal scrolls */
   height: auto;
-  border-radius: 20px !important;
+  border-radius: var(--aot-radius-xl) !important;
   border: none;
   display: flex;
   flex-direction: column;
@@ -978,7 +964,7 @@ main.container>p {
   display: flex;
   width: 100%;
   height: 64px;
-  align-items: center !important;
+  align-items: center;
 }
 
 .row-aot-1-1 {
@@ -1001,7 +987,7 @@ main.container>p {
 .col-aot-1 {
   flex-grow: 1;
   display: flex;
-  align-items: center !important;
+  align-items: center;
 }
 
 .col-aot-2 {
@@ -1034,13 +1020,11 @@ main.container>p {
   align-items: center;
   /* 수직 중앙 정렬 */
   font-size: 1.1em;
-  text-align: left !important;
+  text-align: left;
 }
 
 /* 시간 입력(input-time) 컨테이너 */
-.input-time,
-.btn-time,
-.btn-aot-pid {
+.input-time {
   display: flex;
   gap: 4px;
   /* 약 4px 간격 */
@@ -1078,31 +1062,6 @@ main.container>p {
   margin: 0;
 }
 
-/* 버튼(btn-time-item) 개별 스타일 */
-.btn-time-item {
-  width: 54px;
-  height: 32px;
-  font-size: 1em;
-  /* 약 14px */
-  font-weight: 400;
-  border-radius: 0.2em;
-  /* 2px */
-  background-color: var(--primary);
-  cursor: pointer;
-  transition: background-color 0.2s;
-}
-
-.btn-time-item:hover {
-  background-color: var(--dark);
-  color: var(--primary);
-}
-
-.btn-time-item:disabled {
-  background-color: var(--gray);
-  color: var(--gray-dark);
-  cursor: not-allowed;
-}
-
 /* 토글 버튼(btn-toggle) */
 .btn-toggle {
   position: relative;
@@ -1120,9 +1079,9 @@ main.container>p {
 
 .btn-toggle-slider {
   position: absolute;
-  background-color: var(--gray-dark);
+  background-color: var(--aot-color-text-secondary);
   cursor: pointer;
-  border-radius: 32px;
+  border-radius: var(--aot-btn-pill-radius);
   transition: background-color 0.3s;
   top: 0;
   left: 0;
@@ -1152,44 +1111,23 @@ main.container>p {
   transform: translateX(22px);
 }
 
-
 /* 배경색 처리 (투명 처리) */
 .row-aot-1,
 .row-aot-2,
 .col-aot-1,
 .col-aot-2,
 .prt-text,
-.input-time,
-.btn-time {
+.input-time {
   background-color: transparent;
 }
 
 /* input-time, btn-time 컨테이너 수직 중앙정렬 필수 */
-.input-time,
-.btn-time {
+.input-time {
   height: 100%;
   /* 컨테이너 높이를 행과 동일하게 */
   display: flex;
   align-items: center;
   /* 수직 중앙 정렬 필수 */
-}
-
-/* col-aot-2 내부 명확한 우측 끝 정렬 (토글 버튼 확실한 우측정렬) */
-
-.btn-time>.btn-time-item {
-  width: 54px;
-  height: 32px;
-  font-size: 1em !important;
-  font-weight: 400;
-  border-radius: 0.2em !important;
-  align-items: center !important;
-  border-color: #8b845b !important;
-  border-width: 0.3px;
-}
-
-/* 버튼 기본 스타일 - flex 컨테이너로 변경 */
-.btn-aot-pid {
-  gap: 4px;
 }
 
 .btn-aot-pid-sm,
@@ -1205,7 +1143,7 @@ main.container>p {
 
 .btn-aot-pid-sm:hover,
 .btn-aot-pid-resume:hover {
-  background-color: var(--dark) !important;
+  background-color: var(--aot-color-dark) !important;
   color: var(--primary);
 }
 
@@ -1222,7 +1160,7 @@ main.container>p {
   position: sticky;
   top: 50px;
   z-index: 100;
-  background-color: var(--bg-off, #F3F6F5);
+  background-color: var(--aot-bg-off, #F3F6F5);
   margin-bottom: 50px !important; /* Forces 50px space below the tab bar */
   transition: top 0.3s ease-in-out;
 }
@@ -1232,39 +1170,39 @@ body.aot-nav-hidden .aot-sticky-tabs {
 }
 
 .aot-nav-tab {
-  background-color: var(--bg-off, #F3F6F5) !important;
-  height: 40px !important;
-  font-size: 1.1em !important;
+  background-color: var(--aot-bg-off, #F3F6F5) !important;
+  height: 40px;
+  font-size: 1.1em;
   font-weight: 500;
-  border-radius: 0px !important;
-  border: none !important;
-  padding: 0 !important;
-  margin: 0 !important;
-  margin-left: -1px !important;
-  display: flex !important;
+  border-radius: 0px;
+  border: none;
+  padding: 0;
+  margin: 0;
+  margin-left: -1px;
+  display: flex;
   justify-content: center;
   align-items: center;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  color: var(--bd-btn-secondary, #5E6B64) !important;
+  color: var(--aot-btn-bg-secondary, #5E6B64) !important;
   cursor: pointer;
   text-decoration: none !important;
 }
 
 .aot-nav-tab-add {
-  background-color: var(--bd-btn-secondary, #5E6B64) !important;
-  color: var(--text-color-tertiary) !important;
-  border: none !important;
-  border-radius: 0px !important;
-  height: 40px !important;
-  width: 40px !important;
-  font-size: 1.1em !important;
+  background-color: var(--aot-btn-bg-secondary, #5E6B64) !important;
+  color: var(--aot-color-text-tertiary) !important;
+  border: none;
+  border-radius: 0px;
+  height: 40px;
+  width: 40px;
+  font-size: 1.1em;
   font-weight: 500;
-  padding: 0 !important;
-  margin: 0 !important;
-  margin-left: -1px !important;
-  display: flex !important;
+  padding: 0;
+  margin: 0;
+  margin-left: -1px;
+  display: flex;
   justify-content: center;
   align-items: center;
   overflow: hidden;
@@ -1276,8 +1214,8 @@ body.aot-nav-hidden .aot-sticky-tabs {
 
 /* Hover style for current dashboard button */
 .aot-nav-tab:hover, .aot-nav-tab-add:hover {
-  background-color: var(--bd-btn-primary, #13261B) !important;
-  color: var(--text-color-tertiary, #FFFFFF) !important;
+  background-color: var(--aot-btn-bg-primary, #13261B) !important;
+  color: var(--aot-color-text-tertiary, #FFFFFF) !important;
   text-decoration: none !important;
 }
 
@@ -1296,13 +1234,6 @@ body.aot-nav-hidden .aot-sticky-tabs {
   -webkit-appearance: none;
   -moz-appearance: textfield;
 
-}
-
-.pid-timestamp,
-.pid-info {
-  display: block;
-  width: 100%;
-  text-align: left !important;
 }
 
 /* 버튼, 키입력창 등 포커스/활성 시 outline과 그림자 제거 */
@@ -1331,8 +1262,7 @@ textarea::-moz-focus-inner {
 }
 
 .btn-aot-pid-sm,
-.btn-aot-pid-resume,
-.btn-time-item {
+.btn-aot-pid-resume {
   padding: 0 !important;
   margin: 0 !important;
   display: flex;
@@ -1341,18 +1271,18 @@ textarea::-moz-focus-inner {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  color: var(--text-primary, #373632);
+  color: var(--aot-color-text-primary, #373632);
 }
 
 /* Active dashboard button style */
 .aot-nav-tab.active {
-  background-color: var(--bd-btn-secondary, #5E6B64) !important;
-  color: var(--text-color-tertiary, #FFFFFF) !important;
+  background-color: var(--aot-btn-bg-secondary, #5E6B64) !important;
+  color: var(--aot-color-text-tertiary, #FFFFFF) !important;
   font-weight: 700;
 }
 
 .aot-nav-tab.active:hover {
-  color: var(--text-tertiary) !important;
+  color: var(--aot-color-text-tertiary) !important;
 }
 
 .highcharts-data-label text {
@@ -1447,14 +1377,6 @@ textarea::-moz-focus-inner {
   margin: 10px auto;
 }
 
-.col-weather-slider {
-  display: flex;
-  margin-top: 0;
-  margin-bottom: 10px;
-  width: 100%;
-  align-items: center;
-}
-
 .btn-aot-slide-time {
   -webkit-appearance: none;
   /* 브라우저 기본 스타일 제거 */
@@ -1465,7 +1387,7 @@ textarea::-moz-focus-inner {
   /* 트랙 높이 */
   background: #999;
   /* 트랙 배경색 */
-  border-radius: 4px;
+  border-radius: var(--aot-radius-xs);
   /* 트랙 둥근 모서리 */
   outline: none;
   /* 포커스 시 테두리 제거 */
@@ -1499,20 +1421,20 @@ textarea::-moz-focus-inner {
 .day-background {
   background-color: var(--light) !important;
   /* 밝은 배경 (예: 흰색) */
-  color: var(--text-primary, #000) !important;
+  color: var(--aot-color-text-primary, #000) !important;
   /* 글자색 검정 */
 }
 
 .night-background {
   background-color: #2E435B !important;
   /* 어두운 배경 (예: 진한 회색) */
-  color: var(--text-color-tertiary, #fff) !important;
+  color: var(--aot-color-text-tertiary, #fff) !important;
   /* 글자색 흰색 */
 }
 
 /* 기본 드롭다운 토글 ::after 가상 요소 제거 */
 .bootstrap-select .dropdown-toggle::after {
-  display: none !important;
+  display: none;
 }
 
 /* 기존 .bs-caret와 그 내부의 .caret 숨기기 */
@@ -1537,59 +1459,13 @@ textarea::-moz-focus-inner {
   /* 오른쪽 여백 (디자인에 맞게 조절) */
   top: 50%;
   transform: translateY(-50%);
+  /* 사다리 예외: content:"▼" 로 그리는 장식 삼각형이다. 글자가 아니라 도형이고,
+     셀렉트 상자 오른쪽 끝에 맞춘 크기라 사다리 최소단(11.2px)으로 키우면
+     캐럿만 40% 커져 상자 밖으로 튀어나온다. */
   font-size: 8px;
-  /* 원하는 작은 크기로 설정 */
-  color: var(--text-primary, #000);
+  color: var(--aot-color-text-primary, #000);
   /* 색상 설정 (원하는 색으로 조절) */
   pointer-events: none;
-}
-
-/* Animated Text Input Styles (Reusable) */
-.aot-animated-input-group {
-  position: relative;
-  width: 100%;
-  --aot-input-border-color: rgba(221, 221, 221, 0.39);
-  --aot-input-focus-color: var(--primary, var(--primary));
-  /* AoT Primary */
-  --aot-input-hover-bg: rgba(73, 133, 224, 0.12);
-  display: flex;
-  align-items: center;
-}
-
-.aot-animated-input {
-  font-family: inherit;
-  font-size: 1em;
-  background-color: transparent;
-  width: 100%;
-  box-sizing: border-box;
-  padding: 0.5em 0.5em 0.7em 0.5em;
-  border: none;
-  border-bottom: 1px solid var(--aot-input-border-color);
-  transition: background-color 0.2s;
-  color: inherit;
-}
-
-.aot-animated-input:hover {
-  background: var(--aot-input-hover-bg);
-}
-
-.aot-animated-input:focus {
-  outline: none;
-}
-
-.aot-animated-input-border {
-  position: absolute;
-  background: var(--aot-input-focus-color);
-  width: 0%;
-  height: 2px;
-  bottom: 0;
-  left: 0;
-  transition: 0.3s;
-  pointer-events: none;
-}
-
-.aot-animated-input:focus~.aot-animated-input-border {
-  width: 100%;
 }
 
 /* ==========================================================================
@@ -1632,7 +1508,7 @@ textarea::-moz-focus-inner {
     }
     
     .aot-unified-modal .modal-content {
-        border-radius: 0.5rem; /* Standard rounded corners */
+        border-radius: var(--aot-radius-sm); /* Standard rounded corners */
         box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
     }
 }

@@ -37,7 +37,7 @@ map_config_id, map_configs, map_overlays, shape_on_color, shape_off_color, shape
     <!-- Positioned at 80px to avoid overlapping standard Leaflet Zoom Control (if present) -->
     <!-- Floating Tools (Left) -->
     <div class="map-tools-left" style="top: 20px; left: 10px; display: flex; flex-direction: column; gap: 8px; position: absolute; z-index: var(--aot-z-fixed-panel);">
-        <div class="tool-group shadow-sm" style="display: flex; flex-direction: column; border-radius: 8px; overflow: hidden; background: var(--panel-bg-rgba, rgba(255,255,255,0.9)); border: 1px solid #ddd;">
+        <div class="tool-group shadow-sm" style="display: flex; flex-direction: column; border-radius: var(--aot-radius-sm); overflow: hidden; background: var(--panel-bg-rgba, rgba(255,255,255,0.9)); border: 1px solid #ddd;">
             <button type="button" id="btn-zoom-in-{{ unique_id }}" class="btn btn-white" style="width: 36px; height: 36px; padding: 0; background: transparent; border: none; border-bottom: 1px solid #ddd;" title="Zoom In">
                 <i class="fas fa-plus" style="color: var(--aot-color-text-secondary, #666);"></i>
             </button>
@@ -60,7 +60,7 @@ map_config_id, map_configs, map_overlays, shape_on_color, shape_off_color, shape
 
     <!-- Search Overlay -->
     <div id="search-overlay-{{ unique_id }}" class="map-search-overlay d-none">
-        <div style="pointer-events: auto; width: 100%; max-width: 400px; background: transparent; border-radius: 20px;">
+        <div style="pointer-events: auto; width: 100%; max-width: 400px; background: transparent; border-radius: var(--aot-radius-xl);">
             <aot-map-search-fixed id="search-comp-{{ unique_id }}" placeholder="{{ _('Enter address.') }}"></aot-map-search-fixed>
         </div>
     </div>

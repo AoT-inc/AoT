@@ -41,7 +41,7 @@
     </div>
 
     {% if 'pid_pid' in function_info and 'message' in function_info['pid_pid'] %}
-    <div class="aot-modal-body-text mb-3" style="font-style: italic; padding: 8px; border-radius: 8px; font-size: 0.85rem;">
+    <div class="aot-modal-body-text mb-3" style="font-style: italic; padding: 8px; border-radius: var(--aot-radius-sm); font-size: var(--aot-font-size-sm);">
         {{function_info['pid_pid']['message']}}
     </div>
     {% endif %}

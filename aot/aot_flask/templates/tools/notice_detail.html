@@ -10,7 +10,7 @@
 <style>
     .notice-detail-card {
         background: var(--aot-surface-card, #fff);
-        border: 1px solid var(--border-neutral, #dee2e6);
+        border: 1px solid var(--aot-border-neutral, #dee2e6);
         border-radius: 1rem;
         padding: 1.5rem;
         margin-bottom: 1.25rem;
@@ -27,7 +27,7 @@
 
     .aot-notice-link-preview {
         display: flex; align-items: center; gap: 0.6rem;
-        border: 1px solid var(--border-neutral, #dee2e6);
+        border: 1px solid var(--aot-border-neutral, #dee2e6);
         border-radius: 0.6rem; padding: 0.5rem 0.75rem; margin-top: 0.5rem;
         text-decoration: none; color: inherit; max-width: 480px;
     }
@@ -39,13 +39,13 @@
     .aot-notice-link-preview-domain { font-size: 0.72rem; color: var(--aot-color-text-secondary, #6c757d); margin-top: 2px; }
     .notice-poll-option-row {
         display: flex; align-items: center; justify-content: space-between;
-        padding: 0.5rem 0.75rem; border: 1px solid var(--border-neutral, #dee2e6);
+        padding: 0.5rem 0.75rem; border: 1px solid var(--aot-border-neutral, #dee2e6);
         border-radius: 0.6rem; margin-bottom: 0.4rem; cursor: pointer;
     }
-    .notice-poll-option-row.selected { border-color: var(--bd-tertiary, #13261B); background: var(--aot-surface-body, #f8f9fa); }
+    .notice-poll-option-row.selected { border-color: var(--aot-btn-bg-primary, #13261B); background: var(--aot-surface-body, #f8f9fa); }
     .notice-poll-bar-track { height: 6px; border-radius: 4px; background: var(--aot-surface-body, #e9ecef); margin-top: 4px; overflow: hidden; }
-    .notice-poll-bar-fill { height: 100%; background: var(--bd-tertiary, #13261B); }
-    .notice-reply-item { padding: 0.6rem 0; border-bottom: 1px solid var(--border-neutral, #f1f1f1); }
+    .notice-poll-bar-fill { height: 100%; background: var(--aot-btn-bg-primary, #13261B); }
+    .notice-reply-item { padding: 0.6rem 0; border-bottom: 1px solid var(--aot-border-neutral, #f1f1f1); }
     .notice-reply-meta { font-size: 0.75rem; color: var(--aot-color-text-secondary, #6c757d); }
 
     /* Plain prose textarea, not the pill/code-editor look aot-modern-input gives
@@ -82,8 +82,8 @@
         <div class="notice-detail-card">
             <div class="d-flex justify-content-between align-items-start">
                 <div>
-                    {% if post.pinned %}<span class="notice-pin-badge" style="display:inline-block;font-size:0.7rem;font-weight:700;padding:0.15rem 0.55rem;border-radius:9999px;background:var(--aot-tint-info-bg,#e7f3fb);color:var(--aot-tint-info-fg,#0d6efd);margin-right:0.5rem;">{{ _('Pinned') }}</span>{% endif %}
-                    {% if post.category %}<span class="notice-category-badge" style="display:inline-block;font-size:0.7rem;font-weight:700;padding:0.15rem 0.55rem;border-radius:9999px;background:var(--aot-surface-body,#f1f3f5);color:var(--aot-color-text-secondary,#6c757d);margin-right:0.5rem;">{{ post.category }}</span>{% endif %}
+                    {% if post.pinned %}<span class="notice-pin-badge" style="display:inline-block;font-size: var(--aot-font-size-2xs);font-weight:700;padding:0.15rem 0.55rem;border-radius: var(--aot-btn-pill-radius);background:var(--aot-tint-info-bg,#e7f3fb);color:var(--aot-tint-info-fg,#0d6efd);margin-right:0.5rem;">{{ _('Pinned') }}</span>{% endif %}
+                    {% if post.category %}<span class="notice-category-badge" style="display:inline-block;font-size: var(--aot-font-size-2xs);font-weight:700;padding:0.15rem 0.55rem;border-radius: var(--aot-btn-pill-radius);background:var(--aot-surface-body,#f1f3f5);color:var(--aot-color-text-secondary,#6c757d);margin-right:0.5rem;">{{ post.category }}</span>{% endif %}
                     <span class="notice-detail-title">{{ post.title }}</span>
                     <div class="notice-detail-meta">
                         {{ post.author.name if post.author else '?' }} &middot; {{ utc_to_local_time(post.date_time) }}

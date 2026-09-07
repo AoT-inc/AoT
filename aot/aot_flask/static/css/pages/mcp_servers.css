@@ -19,7 +19,7 @@
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
     border: 1px solid rgba(255, 255, 255, 0.3);
-    border-radius: 20px;
+    border-radius: var(--aot-radius-xl);
     padding: 1.5rem;
     margin-bottom: 1.5rem;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -35,16 +35,11 @@
     background: rgba(255, 255, 255, 0.85);
 }
 
-.dark-theme .server-card {
-    background: rgba(30, 30, 50, 0.6);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
 /* Status Badges */
 .status-indicator {
     padding: 4px 12px;
-    border-radius: 20px;
-    font-size: 0.75rem;
+    border-radius: var(--aot-radius-xl);
+    font-size: var(--aot-font-size-xs);
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.5px;
@@ -75,9 +70,9 @@
 /* Action Buttons */
 .btn-premium-primary {
     background: linear-gradient(135deg, #4A90E2 0%, #357ABD 100%);
-    color: var(--text-color-tertiary, white);
+    color: var(--aot-color-text-tertiary, white);
     border: none;
-    border-radius: 12px;
+    border-radius: var(--aot-radius-md);
     padding: 10px 24px;
     font-weight: 600;
     transition: all 0.2s;
@@ -89,24 +84,17 @@
 }
 
 .btn-premium-secondary {
-    background: #f8f9fa;
+    background: var(--aot-gray-100);
     color: var(--aot-color-text-secondary, #495057);
-    border: 1px solid #dee2e6;
-    border-radius: 12px;
+    border: 1px solid var(--aot-border-neutral);
+    border-radius: var(--aot-radius-md);
     font-weight: 600;
-}
-
-.btn-premium-light {
-    background: rgba(255, 255, 255, 0.5);
-    border: 1px solid rgba(255, 255, 255, 0.5);
-    border-radius: 12px;
-    color: var(--aot-color-text-secondary, #495057);
 }
 
 /* Form Styles */
 .premium-input {
-    border-radius: 12px;
-    border: 1px solid #dee2e6;
+    border-radius: var(--aot-radius-md);
+    border: 1px solid var(--aot-border-neutral);
     padding: 12px 16px;
     transition: all 0.2s;
 }
@@ -118,23 +106,9 @@
 
 .form-label-premium {
     font-weight: 600;
-    font-size: 0.9rem;
+    font-size: var(--aot-font-size-sm);
     color: var(--aot-color-text-secondary, #495057);
     margin-bottom: 8px;
-}
-
-.dark-theme .form-label-premium {
-    color: #e0e0e0;
-}
-
-/* Icon Buttons */
-.btn-icon-only {
-    width: 44px;
-    height: 44px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 0;
 }
 
 /* Responsive Grid */
@@ -143,7 +117,7 @@
 }
 
 .server-info-label {
-    font-size: 0.7rem;
+    font-size: var(--aot-font-size-2xs);
     color: var(--aot-color-text-secondary, #adb5bd);
     text-transform: uppercase;
     margin-bottom: 2px;
@@ -151,31 +125,23 @@
 
 .server-info-value {
     font-family: 'Monaco', 'Consolas', monospace;
-    font-size: 0.85rem;
+    font-size: var(--aot-font-size-sm);
     color: var(--aot-color-text-secondary, #495057);
     word-break: break-all;
 }
 
-.dark-theme .server-info-value {
-    color: #ced4da;
-}
-
 .loading-state {
     background: rgba(255, 255, 255, 0.3);
-    border-radius: 20px;
+    border-radius: var(--aot-radius-xl);
     margin: 2rem;
 }
 
 /* Glassmorphism Modal */
 .glass-effect {
-    background: rgba(255, 255, 255, 0.8) !important;
-    backdrop-filter: blur(20px) !important;
+    background: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px) !important;
-    border: 1px solid rgba(255, 255, 255, 0.4) !important;
-    border-radius: 28px !important;
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    border-radius: var(--aot-radius-xl) !important;
 }
 
-.dark-theme .glass-effect {
-    background: rgba(25, 25, 45, 0.85) !important;
-    border: 1px solid rgba(255, 255, 255, 0.1) !important;
-}

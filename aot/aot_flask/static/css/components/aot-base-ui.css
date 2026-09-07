@@ -6,59 +6,6 @@
 /* tokens defined in aot-theme-variables.css */
 
 /* ------------------------------------------------------------
-   1. AoT Cycle (Circle)
-   - Default Diameter: 28px
-   - Shape: Circle (50% border-radius)
-   - Behavior: Flex center for icon/text containment
------------------------------------------------------------- */
-.aot-cycle {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    box-sizing: border-box;
-
-    width: var(--aot-base-size);
-    height: var(--aot-base-size);
-    border-radius: 50%;
-
-    /* Default: No Border */
-    border: none;
-
-    /* Prevent shrinking in flex containers */
-    flex-shrink: 0;
-
-    /* Overflow hidden for contained images/backgrounds */
-    overflow: hidden;
-}
-
-/* Size Modifiers: 4px +/- Steps */
-
-/* 24px */
-.aot-cycle.sm {
-    width: calc(var(--aot-base-size) - var(--aot-step-size));
-    height: calc(var(--aot-base-size) - var(--aot-step-size));
-}
-
-/* 20px */
-.aot-cycle.xs {
-    width: calc(var(--aot-base-size) - (var(--aot-step-size) * 2));
-    height: calc(var(--aot-base-size) - (var(--aot-step-size) * 2));
-}
-
-/* 32px */
-.aot-cycle.lg {
-    width: calc(var(--aot-base-size) + var(--aot-step-size));
-    height: calc(var(--aot-base-size) + var(--aot-step-size));
-}
-
-/* 36px */
-.aot-cycle.xl {
-    width: calc(var(--aot-base-size) + (var(--aot-step-size) * 2));
-    height: calc(var(--aot-base-size) + (var(--aot-step-size) * 2));
-}
-
-
-/* ------------------------------------------------------------
    2. AoT Roundbox (Pill/Oval)
    - Dimensions: 60px width x 28px height
    - Shape: Full Pill (Left/Right rounded 50% relative to height)
@@ -73,7 +20,7 @@
     height: var(--aot-base-size);
 
     /* "Box Left/Right Rounding 50%" typically means full pill shape */
-    border-radius: 9999px;
+    border-radius: var(--aot-btn-pill-radius);
     /* Ensures perfect semicircles on ends regardless of exact height */
 
     /* Default: No Border */
@@ -89,21 +36,15 @@
 
 /* Unified Selection Row for Main Pages */
 .aot-main-selection-row {
-    margin-left: 0 !important;
-    margin-right: 0 !important;
+    margin-left: 0;
+    margin-right: 0;
     gap: 12px; /* 12px gap between select and add button */
-    padding-left: 0 !important; /* Remove excess horizontal padding */
+    padding-left: 0; /* Remove excess horizontal padding */
 }
 
 .aot-main-selection-row > [class*="col-"] {
-    padding-left: 0 !important;
-    padding-right: 0 !important;
-}
-
-/* Pill-shaped Button Utility */
-.aot-btn-pill {
-    border-radius: 9999px !important;
-    /* Optional: ensure min-height if desired, e.g. 28px */
+    padding-left: 0;
+    padding-right: 0;
 }
 
 /* ------------------------------------------------------------
@@ -112,7 +53,7 @@
    - Excludes Input-Group, and Button-Group contexts.
 ------------------------------------------------------------ */
 .btn:not(.input-group-btn > .btn):not(.input-group-append > .btn):not(.input-group-prepend > .btn):not(.btn-group > .btn):not(.dropdown-toggle) {
-    border-radius: 9999px !important;
+    border-radius: var(--aot-btn-pill-radius) !important;
     padding-left: 1.2em;
     padding-right: 1.2em;
 }
@@ -123,7 +64,7 @@
 ------------------------------------------------------------ */
 .frame-aot input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]),
 .frame-aot button {
-    border-radius: 9999px !important;
+    border-radius: var(--aot-btn-pill-radius) !important;
     /* Ensure padding for text inputs so text doesn't hit the curve */
     padding-left: 0.8em;
     padding-right: 0.8em;
@@ -133,17 +74,9 @@
 
 /* Optional 1px border */
 .aot-border {
-    border: 1px solid var(--border-neutral);
+    border: 1px solid var(--aot-border-neutral);
     /* Default gray, override as needed */
 }
-
-/* Utility to center content if .aot-roundbox is used as a flex container */
-.aot-flex-center {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-}
-
 
 /* ------------------------------------------------------------
    6. Animated Hamburger Button (Refined)
@@ -161,13 +94,12 @@
     user-select: none;
     cursor: pointer;
     transition: 300ms;
-    border-radius: 6px;
+    border-radius: var(--aot-radius-sm);
     /* Reduced radius for smaller size */
     margin-bottom: 0;
     position: relative;
     /* Ensure absolute children are relative to this */
 }
-
 
 .burger .line,
 .burger::before,
@@ -179,9 +111,9 @@
     display: block;
     background-color: var(--aot-color-dark);
     /* Standard dark color */
-    border-radius: 2px;
+    border-radius: var(--aot-radius-xs);
     position: absolute;
-    transition: all 0.2s !important;
+    transition: all 0.2s;
     /* Ensure centering mechanism is robust */
     left: 50%;
     top: 50%;
@@ -247,12 +179,12 @@
 
 /* 4px */
 .gap-2 {
-    gap: 0.5rem !important;
+    gap: 0.5rem;
 }
 
 /* 8px */
 .gap-3 {
-    gap: 1rem !important;
+    gap: 1rem;
 }
 
 /* 16px */
@@ -271,50 +203,6 @@
    8. AoT Tabs Visualization (Universal)
    ------------------------------------------------------------ */
 
-/* Shared Sticky Container Style (Unified Dashboard/Map) */
-.aot-tabs-sticky-container {
-    /* Visuals from Map Style */
-    background: var(--aot-surface, var(--aot-surface-card)) !important;
-    /* Force White (variable is transparent in map.css) */
-
-    /* Enforce full width (override container-fluid padding) */
-    padding: 4px 0;
-
-    transition: padding 120ms ease;
-
-    /* Positioning */
-    position: sticky;
-    /* Use variable for dynamic offset (controlled by JS based on Navbar) */
-    /* Default to 50px (navbar height) to avoid hiding behind navbar if JS delays */
-    top: var(--aot-sticky-top, 50px);
-
-
-    /* Tier 2: Sticky Tabs — 모달 아래, 콘텐츠 위 */
-    z-index: var(--aot-z-sticky);
-    margin-bottom: 0.25rem !important;
-
-    /* Background handled by ::before below for extensions, plus this container background */
-    box-shadow: none !important;
-}
-
-.aot-tabs-sticky-container::before {
-    content: "";
-    position: absolute;
-    left: 0;
-    right: 0;
-    top: -200px;
-    bottom: -16px;
-
-    background-color: var(--aot-input-bg) !important;
-    /* Force White */
-
-    /* Layer 3: Behind Tabs (z:10) but inside Sticky Context */
-    z-index: -1;
-
-    /* Ensure no pointer events blocking if it overlaps something interactive (though it's behind) */
-    pointer-events: none;
-}
-
 /* Shared Wrapper logic */
 .aot-tabs-wrapper {
     flex: 1 1 0px;
@@ -322,7 +210,7 @@
     gap: 0px;
     /* Remove padding on container so content scrolls full width (behind buttons) */
     margin: 0;
-    padding: 0 !important;
+    padding: 0;
 
     flex-wrap: nowrap;
     overflow-x: auto;
@@ -342,63 +230,16 @@
 /* Ensure initial/final items have space to be seen, but scroll INTO the masked area */
 .aot-tabs-wrapper .aot-tab-item:first-child {
     /* margin-left: 80px !important; <--- Removed, replaced by dummy-spacer in HTML */
-    margin-left: 0 !important;
+    margin-left: 0;
 }
 
 .aot-tabs-wrapper .aot-tab-item:last-child {
     /* margin-right: 50px !important; */
-    margin-right: 0 !important;
+    margin-right: 0;
 }
 
 .aot-tabs-wrapper::-webkit-scrollbar {
     display: none;
-}
-
-/* Nav Container for Absolute Buttons */
-.aot-tabs-nav-container {
-    position: relative;
-    width: 100%;
-}
-
-/* Floating Buttons (Add / Settings) */
-.aot-tabs-nav-container .btn-fixed-40 {
-    position: absolute;
-    top: 50%;
-    transform: translateY(-50%);
-    z-index: 20;
-    /* Solid background matches the button color, but we need the MASK to be the page background */
-    /* Wait, the button IS the yellow circle. The MASK is the white gap. */
-    /* Solution: The button element itself has a thick WHITE border. */
-    /* The inner content (yellow circle) is maintained by the button properties. */
-
-    /* Create the 'Gap' mask using the border */
-    border: 6px solid var(--bd-primary) !important;
-    /* Explicit White */
-
-    /* Ensure circular shape */
-    border-radius: 50% !important;
-
-    /* Box sizing: Border box means width includes border. */
-    /* If button is 40px, and border is 6px, inner is 28px. */
-    /* This might shrink the button too much. */
-    /* Better: Make the button larger (e.g. 52px) and use border to cut it down to 40px visual? */
-    /* Or: Use box-shadow for the white mask? box-shadow: 0 0 0 6px #fff; */
-    /* Box-shadow is better because it doesn't affect flow layout or inner dimensions as much. */
-    border: none !important;
-    box-shadow: 0 0 0 6px var(--bd-primary);
-    /* Explicit White Mask */
-}
-
-/* Left Button (Add) */
-.aot-tabs-nav-container #btn-map-create,
-.aot-tabs-nav-container .btn-left {
-    left: 0;
-}
-
-/* Right Button (Settings) */
-.aot-tabs-nav-container #btn-map-settings,
-.aot-tabs-nav-container .btn-right {
-    right: 0;
 }
 
 .aot-tabs-wrapper {
@@ -407,7 +248,7 @@
     -webkit-user-select: none; -moz-user-select: none; user-select: none;
     overflow-x: auto;
     overflow-y: hidden;
-    border-radius: 0px !important;
+    border-radius: 0px;
     scroll-snap-type: x mandatory;
 }
 
@@ -417,22 +258,19 @@
 
 /* Mobile Tab Width Logic: 3 tabs exactly */
 @media (max-width: 991px) {
-    .aot-tabs-wrapper .dummy-spacer {
-        display: none !important;
-    }
     .aot-tabs-wrapper .aot-tab-item {
         /* Dynamic fit: 1-3 items fill 100%, 4+ scroll */
-        flex: 1 0 33.333% !important;
-        max-width: 100% !important;
+        flex: 1 0 33.333%;
+        max-width: 100%;
         scroll-snap-align: center;
-        flex-shrink: 0 !important;
+        flex-shrink: 0;
     }
 }
 
 .aot-tab-item {
     flex: 0 0 auto;
     position: relative;
-    border-radius: 0px !important;
+    border-radius: 0px;
     /* Pill Shape Removed */
     transition: transform 0.1s ease, opacity 0.2s;
 }
@@ -449,17 +287,17 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background-color: var(--bg-off) !important;
-    color: var(--bd-btn-secondary) !important;
-    border: 1px solid var(--bd-btn-border) !important;
+    background-color: var(--aot-bg-off) !important;
+    color: var(--aot-btn-bg-secondary) !important;
+    border: 1px solid var(--aot-btn-border-primary) !important;
 }
 
 /* Active Dash Tab */
 .aot-tab-item.active .btn,
 .dash-tab.active .btn {
-    background-color: var(--bd-btn-primary) !important;
-    color: var(--text-color-tertiary) !important;
-    border-color: var(--bd-border) !important;
+    background-color: var(--aot-btn-bg-primary) !important;
+    color: var(--aot-color-text-tertiary) !important;
+    border-color: var(--aot-color-brand-primary) !important;
 }
 
 /* Dragging Visuals */
@@ -495,7 +333,7 @@
     top: 25%;
     bottom: 25%;
     width: 4px;
-    border-radius: 2px;
+    border-radius: var(--aot-radius-xs);
     background-color: var(--indicator-neutral);
     /* Neutral high-contrast */
     opacity: 0.8;
@@ -505,27 +343,27 @@
 
 /* Fixed Button (Moved from dashboard.html) */
 .btn-fixed-40 {
-    width: 40px !important;
-    height: 40px !important;
-    flex: 0 0 40px !important;
-    flex-shrink: 0 !important;
+    width: 40px;
+    height: 40px;
+    flex: 0 0 40px;
+    flex-shrink: 0;
     padding: 0;
     display: flex;
     align-items: center;
     justify-content: center;
-    border-radius: 0px !important;
-    background-color: var(--bg-off) !important;
-    color: var(--bd-btn-secondary) !important;
-    border: none !important;
+    border-radius: 0px;
+    background-color: var(--aot-bg-off) !important;
+    color: var(--aot-btn-bg-secondary) !important;
+    border: none;
     position: relative;
     z-index: 20;
-    box-shadow: none !important;
+    box-shadow: none;
 }
 
 /* [fix_dash_button_colors] Add/Settings buttons match active tab color */
 .aot-nav-tab-add {
-    background-color: var(--bd-btn-secondary) !important;
-    color: var(--text-color-tertiary) !important;
+    background-color: var(--aot-btn-bg-secondary) !important;
+    color: var(--aot-color-text-tertiary) !important;
 }
 
 /* Mobile Tabs (Now includes Tablets up to 991px) */
@@ -544,13 +382,13 @@
         /* Using 150px as Safe Deductible for 3 items */
 
         /* min-width: calc((100vw - 134px) / 3); */
-        flex: 1 0 33.333% !important;
-        max-width: 100% !important;
+        flex: 1 0 33.333%;
+        max-width: 100%;
         transition: 300ms;
 
         /* Force equal width */
         scroll-snap-align: center;
-        flex-shrink: 0 !important;
+        flex-shrink: 0;
     }
 
     /* Ensure text truncates if it doesn't fit in the calculated width */
@@ -569,8 +407,8 @@
         /* Round 4 Final: Natural Width + No Shrink */
         /* "Don't force arbitrary width. Just text width + height." */
         /* flex: grow shrink basis */
-        flex: 1 0 auto !important;
-        flex-shrink: 0 !important;
+        flex: 1 0 auto;
+        flex-shrink: 0;
         /* CRITICAL: Never squash. Trigger scroll instead. */
 
         /* Round 5 User Request: "Max 10 tabs" */
@@ -596,7 +434,7 @@
 ------------------------------------------------------------ */
 /* Generic Bootstrap Select Toggle Rounding (User Request) */
 .bootstrap-select > .dropdown-toggle {
-    border-radius: 9999px !important;
+    border-radius: var(--aot-btn-pill-radius) !important;
 }
 
 .bootstrap-select .btn.aot-roundbox {
@@ -608,7 +446,7 @@
     padding-left: 1em;
     /* Restore padding for readability */
     padding-right: 1em;
-    border-radius: 9999px !important;
+    border-radius: var(--aot-btn-pill-radius);
     /* Force pill shape */
 }
 
@@ -617,8 +455,8 @@
 /* This ensures physical separation regardless of GridStack positioning */
 .grid-stack-item {
     /* padding: 0 !important; Removed to allow GridStack JS inline padding (margins) to work */
-    border: none !important;
-    box-sizing: border-box !important;
+    border: none;
+    box-sizing: border-box;
 }
 
 /* ------------------------------------------------------------
@@ -630,21 +468,21 @@
      accidentally matching ul.dropdown-menu.inner (which shares the class).
    ------------------------------------------------------------ */
 .bootstrap-select > .dropdown-menu {
-    max-width: calc(100vw - 30px) !important;
+    max-width: calc(100vw - 30px);
     min-width: 0 !important;
-    width: auto !important;
+    width: auto;
 }
 
 /* Default: Left-aligned */
 .bootstrap-select > .dropdown-menu:not(.dropdown-menu-right) {
-    left: 0 !important;
-    right: auto !important;
+    left: 0;
+    right: auto;
 }
 
 /* Right-aligned support */
 .bootstrap-select > .dropdown-menu.dropdown-menu-right {
-    left: auto !important;
-    right: 0 !important;
+    left: auto;
+    right: 0;
 }
 
 /* Child combinator (>) so this targets ONLY the wrapper div.inner (direct child
@@ -652,12 +490,12 @@
    class "inner" and a descendant combinator would also scroll it, producing a
    second nested scrollbar inside the first (the double-scroll bug). */
 .bootstrap-select > .dropdown-menu > .inner {
-    max-width: 100% !important;
+    max-width: 100%;
     /* Enforce strict bottom margin regardless of trigger position */
     max-height: calc(100dvh - 180px) !important;
     /* 120px safety + 60px estimated header/trigger space */
-    overflow-x: hidden !important;
-    overflow-y: auto !important;
+    overflow-x: hidden;
+    overflow-y: auto;
 }
 
 /* Ensure selected item and search are visible.
@@ -672,43 +510,24 @@
 }
 
 .bootstrap-select .dropdown-menu .bs-searchbox {
-    flex: 0 0 auto !important;
+    flex: 0 0 auto;
 }
 
 .bootstrap-select > .dropdown-menu > .inner {
-    flex: 1 1 auto !important;
+    flex: 1 1 auto;
 }
 
 .bootstrap-select .dropdown-menu li a span.text {
-    display: inline-block !important;
-    max-width: 100% !important;
-    overflow: hidden !important;
-    text-overflow: ellipsis !important;
-    white-space: nowrap !important;
+    display: inline-block;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 /* Entry Container Margins */
 .aot-entry-container {
     margin: 0 0.75em;
-}
-
-
-/* Pill Input Style */
-.aot-pill-input {
-    background-color: var(--aot-input-bg) !important;
-    border-radius: 9999px !important;
-    /* Pill shape */
-    border: none !important;
-    text-align: center !important;
-    height: 28px !important;
-    /* Fixed height for consistency */
-    color: var(--aot-text-main) !important;
-}
-
-.aot-pill-input:disabled {
-    background-color: var(--aot-input-bg) !important;
-    /* Ensure white background even when disabled */
-    color: var(--aot-text-main) !important;
 }
 
 /* ------------------------------------------------------------
@@ -723,7 +542,7 @@
     padding-right: 4px !important;
     text-align: center !important;
     text-align-last: center !important;
-    border-radius: 14px !important;
+    border-radius: var(--aot-radius-lg) !important;
 }
 
 /* Support for bootstrap-select buttons when using aot-no-caret-select */
@@ -735,7 +554,7 @@
     padding-left: 8px !important;
     padding-right: 8px !important;
     text-align: center !important;
-    border-radius: 14px !important;
+    border-radius: var(--aot-radius-lg) !important;
 }
 
 .aot-no-caret-select::-ms-expand {
@@ -746,31 +565,31 @@
    8.2 Bootstrap Select Dropdown Menu Refinement
    ------------------------------------------------------------ */
 .bootstrap-select .dropdown-menu {
-    border-radius: 12px !important;
+    border-radius: var(--aot-radius-md) !important;
     box-shadow: var(--aot-shadow-dropdown, 0 4px 12px rgba(0,0,0,0.1)) !important;
 }
 
 .bootstrap-select .dropdown-menu li a {
     text-align: left !important; /* System standard: Left align for lists */
-    padding: 4px 12px !important; /* Reduced height (approx 70%) */
-    display: flex !important;
-    align-items: center !important; /* Vertical centering */
-    min-height: 28px !important;
-    font-size: 0.85rem !important;
+    padding: 4px 12px; /* Reduced height (approx 70%) */
+    display: flex;
+    align-items: center; /* Vertical centering */
+    min-height: 28px;
+    font-size: var(--aot-font-size-sm);
 }
 
 .bootstrap-select .dropdown-menu li a span.text {
-    line-height: normal !important;
-    display: block !important;
+    line-height: normal;
+    display: block;
 }
 
 /* Fix for optgroup labels if any */
 .bootstrap-select .dropdown-menu .dropdown-header {
-    text-align: left !important;
-    padding: 4px 12px !important;
-    font-size: 0.75rem !important;
-    font-weight: 700 !important;
-    color: var(--gray-dark) !important;
+    text-align: left;
+    padding: 4px 12px;
+    font-size: var(--aot-font-size-xs);
+    font-weight: 700;
+    color: var(--aot-color-text-secondary) !important;
 }
 
 /* Toggle Switch Styling */
@@ -800,7 +619,7 @@
     /* Inactive gray */
     -webkit-transition: .4s;
     transition: .4s;
-    border-radius: 34px;
+    border-radius: var(--aot-btn-pill-radius);
 }
 
 .slider:before {
@@ -838,24 +657,14 @@ input:checked+.slider:before {
 /* Mode Panel Container */
 /* Mode Panel Container */
 .mode-panel {
-    display: flex !important; /* [Fix] V10: Restore visibility */
+    display: flex; /* [Fix] V10: Restore visibility */
     flex-direction: column;
     position: absolute;
     left: 50%;
     transform: translateX(-50%);
     bottom: 35px; /* [Fix] V8: Restore position */
     max-height: 50vh; /* [Fix] V8: Enable scroll */
-    z-index: var(--aot-z-fixed-panel) !important; /* 지도 컨트롤 위로 뜨는 패널 */
-    /* ... Legacy styles hidden ... */
-}
-
-/* Mode Tabs Flex Container */
-.mode-tabs {
-    display: flex;
-    justify-content: center;
-    /* User Req: Center Align */
-    margin-top: 8px;
-    /* User Req: Add 8px top spacing */
+    z-index: var(--aot-z-fixed-panel); /* 지도 컨트롤 위로 뜨는 패널 */
 }
 
 /* Individual Mode Tab Button */
@@ -864,10 +673,10 @@ input:checked+.slider:before {
     /* User Req: Min Width 60px, Height 32px, Radius 16px */
     min-width: 60px;
     height: 32px;
-    border-radius: 16px;
-    border: 1px solid var(--border-neutral);
+    border-radius: var(--aot-radius-lg);
+    border: 1px solid var(--aot-border-neutral);
     /* Default border */
-    background: var(--bd-primary);
+    background: var(--aot-surface-card);
     color: var(--text-dark-neutral);
 
     padding: 0 12px;
@@ -878,7 +687,7 @@ input:checked+.slider:before {
     cursor: pointer;
     font-weight: 600;
     transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-    font-size: 0.85rem;
+    font-size: var(--aot-font-size-sm);
     white-space: nowrap;
     overflow: hidden;
     max-width: 200px;
@@ -893,7 +702,7 @@ input:checked+.slider:before {
 /* Base Active Style */
 .mode-tab.active {
     box-shadow: var(--aot-shadow-tab-active, 0 2px 8px rgba(0, 0, 0, 0.15));
-    color: var(--aot-color-text-tertiary) !important;
+    color: var(--aot-color-text-tertiary);
 }
 
 /* Sliding Hide Animation */
@@ -952,12 +761,12 @@ input:checked+.slider:before {
 
 /* Close state for Equipment (Requested: White Background, Theme Border, Height 32) */
 .mode-tab[data-mode="equipment"].is-closing {
-    background: var(--bd-primary) !important;
+    background: var(--aot-surface-card) !important;
     color: var(--color-equipment-mode) !important;
     border-color: var(--color-equipment-mode) !important;
     box-shadow: none !important;
     height: 32px !important;
-    border-radius: 16px !important;
+    border-radius: var(--aot-radius-lg) !important;
 }
 
 /* AoT Device: Purple */
@@ -970,37 +779,12 @@ input:checked+.slider:before {
     background: var(--color-device-mode);
 }
 
-/* Standardized Mode Tab Button (User Req: 32px) */
-.btn-mode-tab {
-    min-width: 60px;
-    height: 32px;
-    border-radius: 16px;
-    border: 1px solid var(--border-neutral);
-    background: var(--bd-primary);
-    color: var(--text-dark-neutral);
-    padding: 0 12px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    font-weight: 600;
-    transition: all 0.2s !important;
-    font-size: 0.85rem;
-    white-space: nowrap;
-
-    /* [Refined] Clickability: Ensure button precedence */
-    position: relative;
-    z-index: 20;
-    /* [Refined] Touch Optimization */
-    touch-action: manipulation;
-}
-
 /* Small Pill Buttons for Mode Rows (28px height) */
 .btn-aot-pill {
     height: 28px !important;
-    border-radius: 14px !important;
+    border-radius: var(--aot-radius-lg) !important;
     padding: 0 10px !important;
-    font-size: 11px !important;
+    font-size: var(--aot-font-size-2xs) !important;
     font-weight: 600 !important;
     white-space: nowrap !important;
     display: flex !important;
@@ -1010,8 +794,8 @@ input:checked+.slider:before {
 }
 
 .btn-aot-outline {
-    background: var(--bd-primary) !important;
-    border-color: var(--border-neutral) !important;
+    background: var(--aot-surface-card) !important;
+    border-color: var(--aot-border-neutral) !important;
     color: var(--aot-text-main) !important;
 }
 
@@ -1022,7 +806,7 @@ input:checked+.slider:before {
 
 .btn-aot-action {
     background: var(--color-equipment-mode) !important;
-    color: var(--text-color-tertiary) !important;
+    color: var(--aot-color-text-tertiary) !important;
     border: none !important;
 }
 
@@ -1044,7 +828,7 @@ input:checked+.slider:before {
     height: 50px;
     background: var(--panel-bg-rgba, rgba(255, 255, 255, 0.9));
     backdrop-filter: blur(10px);
-    border-radius: 16px;
+    border-radius: var(--aot-radius-lg);
     box-shadow: var(--aot-shadow-nav-panel, 0 10px 40px rgba(0, 0, 0, 0.2));
     z-index: var(--aot-z-fixed-panel);
     overflow: hidden;
@@ -1122,7 +906,6 @@ input:checked+.slider:before {
 @media (max-width: 991px) {
     .nav-tier-inner {
         padding: 0 16px; /* Horizontal buffer for scroll ends */
-        /* margin: 0 auto and justify-content: center are inherited from base */
     }
 }
 
@@ -1176,7 +959,7 @@ input:checked+.slider:before {
 /* 드로어의 tier 사이 구분선 — 모드 tier(설정 묶음)와 그 하위 tier 를 눈으로
    가른다. 마지막 tier 뒤에는 긋지 않는다. */
 #geo-settings-drawer .nav-tier:not(:last-child) {
-    border-bottom: 1px solid var(--border-neutral, #dee2e6);
+    border-bottom: 1px solid var(--aot-border-neutral, #dee2e6);
     padding-bottom: 12px;
 }
 
@@ -1194,14 +977,14 @@ input:checked+.slider:before {
     height: 28px;
     flex: 0 0 auto;
     padding: 0;
-    border: 1px solid var(--border-neutral, #dee2e6);
-    border-radius: 8px;
+    border: 1px solid var(--aot-border-neutral, #dee2e6);
+    border-radius: var(--aot-radius-sm);
     background: none;
     cursor: pointer;
 }
 .aot-geo-color-input::-webkit-color-swatch-wrapper { padding: 2px; }
-.aot-geo-color-input::-webkit-color-swatch { border: none; border-radius: 6px; }
-.aot-geo-color-input::-moz-color-swatch { border: none; border-radius: 6px; }
+.aot-geo-color-input::-webkit-color-swatch { border: none; border-radius: var(--aot-radius-sm); }
+.aot-geo-color-input::-moz-color-swatch { border: none; border-radius: var(--aot-radius-sm); }
 
 /* 숫자 + 단위 — 단위를 값 칸 밖 오른쪽에 두어 입력폭을 잡아먹지 않게 한다. */
 .aot-geo-input-unit {
@@ -1215,8 +998,8 @@ input:checked+.slider:before {
     text-align: right;
 }
 .aot-geo-unit {
-    font-size: 0.8rem;
-    color: var(--text-secondary, #5E6B64);
+    font-size: var(--aot-font-size-xs);
+    color: var(--aot-color-text-secondary, #5E6B64);
     white-space: nowrap;
 }
 
@@ -1318,13 +1101,13 @@ input:checked+.slider:before {
     /* [Correction] User Req: Keep Button Height 28px (Do not increase) */
     height: 28px;
     padding: 0 14px;
-    border-radius: 999px;
+    border-radius: var(--aot-btn-pill-radius);
     /* [Refined] Force Pill Shape */
-    background: var(--bd-primary);
+    background: var(--aot-surface-card);
     /* [Refined] Force Solid White Background for Hit Area */
     /* [Refined] Tier 1 & 2 Default: White Background, Gray Border default, but Tier 1 overrides below */
-    border: 1px solid var(--border-neutral);
-    font-size: 13px;
+    border: 1px solid var(--aot-border-neutral);
+    font-size: var(--aot-font-size-xs);
     font-weight: 600;
     color: var(--aot-text-main);
     display: flex;
@@ -1355,7 +1138,7 @@ input:checked+.slider:before {
 .nav-tier[data-tier-id="main"] .mode-tab[data-nav-mode="site"]:hover {
     background: var(--theme-site, var(--aot-color-danger));
     border-color: var(--theme-site, var(--aot-color-danger));
-    color: var(--text-color-tertiary);
+    color: var(--aot-color-text-tertiary);
 }
 
 /* Zone (Orange) */
@@ -1368,7 +1151,7 @@ input:checked+.slider:before {
 .nav-tier[data-tier-id="main"] .mode-tab[data-nav-mode="zone"]:hover {
     background: var(--theme-zone, var(--aot-color-warning));
     border-color: var(--theme-zone, var(--aot-color-warning));
-    color: var(--text-color-tertiary);
+    color: var(--aot-color-text-tertiary);
 }
 
 /* Facility (Green) */
@@ -1381,7 +1164,7 @@ input:checked+.slider:before {
 .nav-tier[data-tier-id="main"] .mode-tab[data-nav-mode="facility"]:hover {
     background: var(--theme-facility, var(--aot-color-success));
     border-color: var(--theme-facility, var(--aot-color-success));
-    color: var(--text-color-tertiary);
+    color: var(--aot-color-text-tertiary);
 }
 
 /* Equipment (Blue) */
@@ -1394,7 +1177,7 @@ input:checked+.slider:before {
 .nav-tier[data-tier-id="main"] .mode-tab[data-nav-mode="equipment"]:hover {
     background: var(--theme-equipment, var(--aot-color-info));
     border-color: var(--theme-equipment, var(--aot-color-info));
-    color: var(--text-color-tertiary);
+    color: var(--aot-color-text-tertiary);
 }
 
 /* Planting (Vegetation)
@@ -1411,7 +1194,7 @@ input:checked+.slider:before {
 .nav-tier[data-tier-id="main"] .mode-tab[data-nav-mode="plot"]:hover {
     background: var(--theme-plot, #6a8f3c);
     border-color: var(--theme-plot, #6a8f3c);
-    color: var(--text-color-tertiary);
+    color: var(--aot-color-text-tertiary);
 }
 
 /* Device (Purple) */
@@ -1424,12 +1207,12 @@ input:checked+.slider:before {
 .nav-tier[data-tier-id="main"] .mode-tab[data-nav-mode="aot_device"]:hover {
     background: var(--theme-device, var(--aot-color-mcp));
     border-color: var(--theme-device, var(--aot-color-mcp));
-    color: var(--text-color-tertiary);
+    color: var(--aot-color-text-tertiary);
 }
 
 /* General Active/Hover for Tier 2+ (Uses Global Active Theme) */
 .nav-tier:not([data-tier-id="main"]) .mode-tab:hover {
-    background: var(--bd-primary);
+    background: var(--aot-surface-card);
     border-color: var(--active-theme-color);
     color: var(--active-theme-color);
 }
@@ -1441,7 +1224,7 @@ input:checked+.slider:before {
 /* Active: Theme BG */
 .nav-tier:not([data-tier-id="main"]) .mode-tab.active {
     background: var(--active-theme-color);
-    color: var(--text-color-tertiary);
+    color: var(--aot-color-text-tertiary);
     border-color: var(--active-theme-color);
     box-shadow: none;
 }
@@ -1458,10 +1241,10 @@ input:checked+.slider:before {
     border-radius: 50% !important;
     padding: 0 !important;
     /* [Refined] Round 6 Fix: Visible White Background + Shadow */
-    background: var(--bd-primary) !important;
-    border: 1px solid var(--border-neutral) !important;
+    background: var(--aot-surface-card) !important;
+    border: 1px solid var(--aot-border-neutral) !important;
     box-shadow: var(--aot-shadow-btn-nav-back, 0 2px 5px rgba(0, 0, 0, 0.1)) !important;
-    font-size: 14px !important;
+    font-size: var(--aot-font-size-sm) !important;
     color: var(--aot-text-main) !important;
     /* [Refined] Position & Z-index for Clickability */
     position: relative;
@@ -1491,7 +1274,6 @@ input:checked+.slider:before {
     box-shadow: none !important;
 }
 
-
 .btn-nav-back:active {
     background: var(--bg-btn-active-light) !important;
     transform: scale(0.95);
@@ -1502,21 +1284,20 @@ input:checked+.slider:before {
     height: 28px !important;
     /* Matched to taller row */
     padding: 2px 8px !important;
-    font-size: 11px !important;
-    border-radius: 14px !important;
-    border: 1px solid var(--border-form-control);
+    font-size: var(--aot-font-size-2xs) !important;
+    border-radius: var(--aot-radius-lg) !important;
+    border: 1px solid var(--aot-border-form);
     width: 60px;
     text-align: center;
 }
 
 .form-control-compact:focus {
-    border-color: var(--border-form-focus);
+    border-color: var(--aot-border-form-focus);
     box-shadow: var(--aot-shadow-form-focus, 0 0 0 0.2rem rgba(0, 123, 255, 0.25));
 }
 
 /* Animations */
 /* Animations Removed to prevent Flinch */
-
 
 @media (max-width: 768px) {
     .nav-v-panel {
@@ -1533,9 +1314,9 @@ input:checked+.slider:before {
     min-width: 60px !important;
     height: 28px !important;
     /* [Refined] Reverted to 28px */
-    border-radius: 999px !important;
+    border-radius: var(--aot-btn-pill-radius) !important;
     /* [Refined] Force Pill Shape */
-    font-size: 0.75rem !important;
+    font-size: var(--aot-font-size-xs) !important;
     /* Slight bump */
     font-weight: 600 !important;
     display: inline-flex !important;
@@ -1547,14 +1328,14 @@ input:checked+.slider:before {
     white-space: nowrap !important;
     border-style: solid !important;
     border-width: 1px !important;
-    background: var(--bd-primary) !important;
+    background: var(--aot-surface-card) !important;
     /* [Refined] Default White Background */
 }
 
 /* Outline Style: Theme Border (1px), Solid White Background (Clickable) */
 .btn-aot-outline {
-    background: var(--bd-primary) !important;
-    border: 2px solid var(--border-neutral) !important;
+    background: var(--aot-surface-card) !important;
+    border: 2px solid var(--aot-border-neutral) !important;
     color: var(--aot-text-main) !important;
     transition: all 0.2s !important;
 }
@@ -1562,7 +1343,7 @@ input:checked+.slider:before {
 .btn-aot-outline:hover {
     border-color: var(--active-theme-color) !important;
     color: var(--active-theme-color) !important;
-    background: var(--bd-primary) !important;
+    background: var(--aot-surface-card) !important;
 }
 
 .btn-aot-outline:active {
@@ -1570,7 +1351,7 @@ input:checked+.slider:before {
 }
 
 .btn-aot-outline.active {
-    background: var(--bd-primary) !important;
+    background: var(--aot-surface-card) !important;
     border-color: var(--active-theme-color) !important;
     color: var(--aot-color-dark) !important;
     /* Text Black */
@@ -1580,7 +1361,7 @@ input:checked+.slider:before {
 /* Action Style: Solid Background, Black Text, No Border (stays 1px but matches bg) */
 /* Action Style: Outline Default, Solid on Hover */
 .btn-aot-action {
-    background: var(--bd-primary) !important;
+    background: var(--aot-surface-card) !important;
     color: var(--aot-color-dark) !important;
     /* Text Black */
     border: 2px solid var(--color-equipment-mode) !important;
@@ -1590,137 +1371,24 @@ input:checked+.slider:before {
 
 .btn-aot-action:hover {
     background: var(--color-equipment-mode) !important;
-    color: var(--text-color-tertiary) !important;
+    color: var(--aot-color-text-tertiary) !important;
     border-color: var(--color-equipment-mode) !important;
-}
-
-/* Equipment Sub-Navigation - Horizontal & Compact */
-.equipment-sub-nav {
-    display: flex !important;
-    flex-direction: row !important;
-    gap: 8px !important;
-    margin-bottom: 8px !important;
-    border-bottom: 1px solid var(--border-divider-light) !important;
-    padding-bottom: 4px !important;
-    align-items: center !important;
-}
-
-.sub-nav-item {
-    font-size: 0.8rem !important;
-    padding: 4px 10px !important;
-    cursor: pointer !important;
-    color: var(--text-medium-gray) !important;
-    border-radius: 999px !important;
-    transition: all 0.2s !important;
-}
-
-.sub-nav-item.active {
-    color: var(--color-equipment-mode) !important;
-    font-weight: bold !important;
-    background: var(--bg-equipment-tint) !important;
-}
-
-/* Tiered Layout for Inputs */
-.tier-grid {
-    display: flex !important;
-    flex-direction: column !important;
-    gap: 8px !important;
-}
-
-.tier-row {
-    display: flex !important;
-    flex-direction: row !important;
-    width: 100% !important;
-    gap: 8px !important;
-    align-items: center !important;
 }
 
 /* Mobile: Stack Angle/Offset Sliders Vertically */
 @media (max-width: 768px) {
-    .tier-slider-row {
-        flex-direction: column !important;
-        align-items: flex-start !important;
-        background: transparent !important;
-        /* Remove bg to avoid looking like one big block */
-        padding: 0 !important;
-        gap: 8px !important;
-    }
 
-    .tier-slider-group {
-        width: 100% !important;
-        background: var(--bg-btn-hover-lighter) !important;
-        border-radius: 999px !important;
-        /* Pill shape per group */
-        padding: 4px 12px !important;
-        margin: 0 !important;
-    }
-
-    /* Mobile: 2x2 Layout for Sprinkler Inputs */
-    .sprinkler-inputs {
-        flex-wrap: wrap !important;
-    }
-
-    .sprinkler-input-group {
-        width: 48% !important;
-        /* Forces 2 per row */
-        justify-content: center !important;
-    }
-}
-
-/* Sprinkler Field Specifics */
-.sprinkler-field {
-    min-width: 90px !important;
-    max-width: 150px !important;
-    text-align: right !important;
-    width: auto !important;
-    /* Allow flex growth within limits */
-}
-
-/* Compact Input Groups */
-.aot-input-pill {
-    height: 28px !important;
-    border-radius: 14px !important;
-    border: 1px solid var(--border-neutral) !important;
-    text-align: center !important;
-    font-size: 0.75rem !important;
-    padding: 0 8px !important;
-    width: 65px !important;
-    background: white !important;
-}
-
-.aot-input-pill:focus {
-    border-color: var(--color-equipment-mode) !important;
-    outline: none !important;
-}
-
-/* --- Mode Sub-Tabs (Sliding animation) --- */
-.mode-sub-tabs-container {
-    display: flex;
-    gap: 5px;
-    max-width: 0;
-    opacity: 0;
-    overflow: hidden;
-    transition: max-width 0.5s ease-in-out, opacity 0.3s ease-in-out, margin 0.5s ease-in-out;
-    margin-left: 0;
-    align-items: center;
-}
-
-.mode-sub-tabs-container.visible {
-    max-width: 600px;
-    /* Sufficient for 3-4 sub-tabs */
-    opacity: 1;
-    margin-left: 5px;
 }
 
 .mode-sub-tab {
     min-width: 70px;
     height: 32px;
-    border-radius: 16px;
+    border-radius: var(--aot-radius-lg);
     border: 1px solid var(--color-equipment-mode);
     /* Equipment Blue */
-    background: var(--bd-primary);
+    background: var(--aot-surface-card);
     color: var(--color-equipment-mode);
-    font-size: 0.8rem;
+    font-size: var(--aot-font-size-xs);
     font-weight: 600;
     display: flex;
     align-items: center;
@@ -1731,7 +1399,6 @@ input:checked+.slider:before {
     transition: all 0.2s !important;
 }
 
-
 .mode-sub-tab:hover {
     background: var(--bg-equipment-tint-hover);
     transform: scale(0.95);
@@ -1739,7 +1406,7 @@ input:checked+.slider:before {
 
 .mode-sub-tab.active {
     background: var(--color-equipment-mode);
-    color: var(--text-color-tertiary);
+    color: var(--aot-color-text-tertiary);
     box-shadow: var(--aot-shadow-mode-sub-tab, 0 2px 4px rgba(0, 123, 255, 0.3));
 }
 
@@ -1751,8 +1418,8 @@ input:checked+.slider:before {
 
 /* Default (Desktop) - Symmetric Vertical Margins */
 .modal-dialog {
-    margin-top: 2rem !important;
-    margin-bottom: 2rem !important;
+    margin-top: 2rem;
+    margin-bottom: 2rem;
 }
 
 /* Ensure modal content respects safe areas */
@@ -1765,10 +1432,10 @@ input:checked+.slider:before {
 @media (max-width: 991px) {
     .modal-dialog {
         /* Keep top consistent */
-        margin-top: 1.5rem !important;
+        margin-top: 1.5rem;
         /* Dynamic bottom margin: Increased Base 3rem + Safe Area (Home Indicator) */
         /* Provided extra buffer (3rem) to ensure web controller doesn't cover content */
-        margin-bottom: calc(3rem + env(safe-area-inset-bottom)) !important;
+        margin-bottom: calc(3rem + env(safe-area-inset-bottom));
     }
 }
 
@@ -1792,7 +1459,7 @@ input:checked+.slider:before {
 }
 
 .aot-form-grid-label {
-  font-size: 0.8rem;
+  font-size: var(--aot-font-size-xs);
   font-weight: 600;
   color: var(--aot-text-main);
   margin-bottom: 4px;
@@ -1800,9 +1467,9 @@ input:checked+.slider:before {
 
 /* Page-level section container — replaces inline border/padding on full pages */
 .aot-page-section {
-  border: 1px solid var(--border-neutral);
-  border-radius: 8px;
+  border: 1px solid var(--aot-border-neutral);
+  border-radius: var(--aot-radius-sm);
   padding: 1rem 1.25rem;
   margin-bottom: 1.5rem;
-  background: var(--bd-primary);
+  background: var(--aot-surface-card);
 }

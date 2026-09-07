@@ -326,7 +326,7 @@
   top: 50%;
   width: var(--aot-viz-mark-w);
   height: var(--aot-viz-mark-h);
-  border-radius: 2px;
+  border-radius: var(--aot-radius-xs);
   background: var(--aot-viz-mark, var(--aot-color-brand-secondary));
   transform: translate(-50%, -50%);
   /* **트랙의 양끝은 둥글다**(반지름 = 높이/2 = 4px). 그래서 눈으로 읽히는
@@ -518,7 +518,9 @@
   right: 2px;
   bottom: 0;
   height: 2px;
-  border-radius: 1px;
+  /* 높이 2px 막대의 끝을 완전히 둥글린 것 — 모서리가 아니라 알약이다.
+     브라우저가 반지름을 짧은 변의 절반으로 깎으므로 렌더는 1px 과 같다. */
+  border-radius: var(--aot-btn-pill-radius);
   background: var(--aot-viz-mark, var(--aot-color-brand-secondary));
 }
 
@@ -528,7 +530,7 @@
  * 어디쯤" 하나다. 구간 이름은 트랙의 title 로 남는다. */
 .aot-viz--timeline.aot-viz--compact .aot-viz-track {
   height: 6px;
-  border-radius: 3px;
+  border-radius: var(--aot-radius-xs);
   margin-top: var(--aot-space-1, 4px);
 }
 .aot-viz--timeline.aot-viz--compact .aot-viz-now {
@@ -843,7 +845,7 @@
   transform: translate(-50%, -2px);
   z-index: 1;
   padding: 3px 8px;
-  border-radius: 4px;
+  border-radius: var(--aot-radius-xs);
   background: var(--aot-color-text-primary);
   color: var(--aot-viz-surface);
   font-size: var(--aot-font-size-xs);

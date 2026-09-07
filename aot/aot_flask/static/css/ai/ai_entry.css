@@ -1,9 +1,9 @@
 /* AI Service Registry Page Styles */
 
 .ai-card {
-    background: var(--aot-surface-card, var(--bd-primary));
+    background: var(--aot-surface-card);
     border: none;
-    border-radius: 20px !important;
+    border-radius: var(--aot-radius-xl) !important;
     transition: all 0.3s ease;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
 }
@@ -16,13 +16,13 @@
 .ai-endpoint-display {
     background: var(--bg-btn-hover-lighter);
     padding: 0.75rem;
-    border-radius: 8px;
+    border-radius: var(--aot-radius-sm);
     margin-bottom: 1rem;
 }
 
 .ai-endpoint-url {
     font-family: monospace;
-    font-size: 0.8rem;
+    font-size: var(--aot-font-size-xs);
     color: var(--color-equipment-mode);
     word-break: break-all;
 }

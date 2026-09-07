@@ -17,9 +17,9 @@
 
     <!-- Tier 1: Action Header, Options & Controls -->
     {% if is_sequence %}
-    <div style="border: 1px solid var(--border-neutral); border-bottom: none; border-radius: 16px 16px 0 0; background-color: var(--bd-primary); overflow: hidden;">
+    <div style="border: 1px solid var(--aot-border-neutral); border-bottom: none; border-radius: var(--aot-radius-lg) var(--aot-radius-lg) 0 0; background-color: var(--aot-surface-card); overflow: hidden;">
         <!-- Row 1: Move, Type, Delete, Save -->
-        <div class="d-flex align-items-center flex-nowrap" style="padding: 6px 8px; border-bottom: 1px solid var(--border-neutral);">
+        <div class="d-flex align-items-center flex-nowrap" style="padding: 6px 8px; border-bottom: 1px solid var(--aot-border-neutral);">
             <!-- Drag Handle -->
             <div class="text-center icon-fh my-auto" style="cursor: move; padding-right: 8px; flex: 0 0 auto;">
                 <i style="font-size: 1.2em; color: var(--aot-text-secondary);" class="fa fa-grip-lines" title="{{_('Drag')}}"></i>
@@ -27,8 +27,8 @@
 
             <!-- Action Type (Name) -->
             <div style="flex: 1 1 auto; margin-right: 5px; min-width: 0;">
-                 <div class="form-control form-control-sm text-truncate d-flex align-items-center" title="{{dict_options.get('name', 'Unknown Action')}}" style="background-color: var(--bg-btn-active-light); cursor: default; border: 1px solid var(--border-neutral); border-radius: 14px; height: 28px; padding: 0 8px; max-width: 200px;">
-                     <strong style="font-size: 0.85rem; line-height: 1;">{{dict_options.get('name', 'Unknown Action')}}</strong>
+                 <div class="form-control form-control-sm text-truncate d-flex align-items-center" title="{{dict_options.get('name', 'Unknown Action')}}" style="background-color: var(--bg-btn-active-light); cursor: default; border: 1px solid var(--aot-border-neutral); border-radius: var(--aot-radius-lg); height: 28px; padding: 0 8px; max-width: 200px;">
+                     <strong style="font-size: var(--aot-font-size-sm); line-height: 1;">{{dict_options.get('name', 'Unknown Action')}}</strong>
                  </div>
             </div>
 
@@ -48,7 +48,7 @@
         </div>
 
         <!-- Row 2: Options -->
-        <div class="d-flex align-items-center" style="padding: 6px 8px; border-bottom: 1px solid var(--border-neutral); min-height: 40px;">
+        <div class="d-flex align-items-center" style="padding: 6px 8px; border-bottom: 1px solid var(--aot-border-neutral); min-height: 40px;">
             <div style="flex: 1 1 auto; min-width: 0; {% if not wrap_options %}overflow-x: auto; -webkit-overflow-scrolling: touch;{% endif %}">
                  {% if 'custom_options' in dict_options and unique_id in custom_options_values %}
                     <div style="display: flex; flex-wrap: {% if wrap_options %}wrap{% else %}nowrap{% endif %}; align-items: center; {% if not wrap_options %}white-space: nowrap;{% endif %}">
@@ -66,16 +66,16 @@
                                  <div style="margin-right: 8px; margin-bottom: 6px; flex: 0 0 auto;">
                                     {% if wrap_options %}
                                     <div style="display: flex; align-items: center; margin-bottom: 2px; min-height: 16px;">
-                                        <label class="mb-0" style="font-size: 0.78rem; color: var(--aot-text-secondary); white-space: nowrap;">{{each_option['name']}}</label>
+                                        <label class="mb-0" style="font-size: var(--aot-font-size-xs); color: var(--aot-text-secondary); white-space: nowrap;">{{each_option['name']}}</label>
                                         {% if each_option.get('phrase') %}
                                         <span style="margin-left: 3px; cursor: pointer; color: var(--aot-text-secondary);"
                                               data-toggle="tooltip" data-placement="top" title="{{each_option['phrase']}}">
-                                            <i class="fa fa-info-circle" style="font-size: 0.75rem;"></i>
+                                            <i class="fa fa-info-circle" style="font-size: var(--aot-font-size-xs);"></i>
                                         </span>
                                         {% endif %}
                                     </div>
                                     {% endif %}
-                                    <select class="form-control form-control-sm selectpicker" data-container="body" data-width="fit" name="{{opt_id}}" title="{{each_option['name']}}" style="max-width: 240px; height: 28px; padding: 0 5px; font-size: 0.85rem; border-radius: 14px;">
+                                    <select class="form-control form-control-sm selectpicker" data-container="body" data-width="fit" name="{{opt_id}}" title="{{each_option['name']}}" style="max-width: 240px; height: 28px; padding: 0 5px; font-size: var(--aot-font-size-sm); border-radius: var(--aot-radius-lg);">
                                         <option value="" disabled {% if not opt_val %}selected{% endif %}>{{each_option['name']}}</option>
 
                                         {% if each_option['type'] == 'select' %}
@@ -130,11 +130,11 @@
                                  {% if wrap_options %}
                                  <div style="margin-right: 8px; margin-bottom: 6px; flex: 0 0 auto;">
                                     <div style="display: flex; align-items: center; margin-bottom: 2px;">
-                                        <label class="mb-0" style="font-size: 0.78rem; color: var(--aot-text-secondary); white-space: nowrap;">{{each_option['name']}}</label>
+                                        <label class="mb-0" style="font-size: var(--aot-font-size-xs); color: var(--aot-text-secondary); white-space: nowrap;">{{each_option['name']}}</label>
                                         {% if each_option.get('phrase') %}
                                         <span style="margin-left: 3px; cursor: pointer; color: var(--aot-text-secondary);"
                                               data-toggle="tooltip" data-placement="top" title="{{each_option['phrase']}}">
-                                            <i class="fa fa-info-circle" style="font-size: 0.75rem;"></i>
+                                            <i class="fa fa-info-circle" style="font-size: var(--aot-font-size-xs);"></i>
                                         </span>
                                         {% endif %}
                                     </div>
@@ -142,20 +142,20 @@
                                            type="{% if each_option['type'] == 'text' %}text{% else %}number{% endif %}"
                                            {% if each_option['type'] == 'float' %}step="any"{% endif %}
                                            value="{{ opt_val if opt_val is not none else '' }}"
-                                           style="max-width: 100px; height: 28px; font-size: 0.85rem; border-radius: 14px;">
+                                           style="max-width: 100px; height: 28px; font-size: var(--aot-font-size-sm); border-radius: var(--aot-radius-lg);">
                                  </div>
                                  {% else %}
                                  <div style="margin-right: 5px; margin-bottom: 5px; flex: 0 0 auto;">
                                     <input class="form-control form-control-sm" name="{{opt_id}}" placeholder="{{each_option['name']}}" title="{{each_option['name']}}"
                                            type="{% if each_option['type'] == 'text' %}text{% else %}number{% endif %}"
                                            {% if each_option['type'] == 'float' %}step="any"{% endif %}
-                                           value="{{ opt_val if opt_val is not none else '' }}" style="max-width: 80px; height: 28px; font-size: 0.85rem; border-radius: 14px;">
+                                           value="{{ opt_val if opt_val is not none else '' }}" style="max-width: 80px; height: 28px; font-size: var(--aot-font-size-sm); border-radius: var(--aot-radius-lg);">
                                  </div>
                                  {% endif %}
 
                             {% elif each_option['type'] == 'bool' %}
-                                 <div style="margin-right: 5px; margin-bottom: 5px; flex: 0 0 auto; display: flex; align-items: center; border: 1px solid var(--border-neutral); border-radius: 14px; padding: 0 5px; height: 28px;">
-                                     <label class="mb-0 mr-1" style="font-size: 0.85rem;">{{each_option['name']}}</label>
+                                 <div style="margin-right: 5px; margin-bottom: 5px; flex: 0 0 auto; display: flex; align-items: center; border: 1px solid var(--aot-border-neutral); border-radius: var(--aot-radius-lg); padding: 0 5px; height: 28px;">
+                                     <label class="mb-0 mr-1" style="font-size: var(--aot-font-size-sm);">{{each_option['name']}}</label>
                                      <input name="{{opt_id}}" type="checkbox" value="y" {% if opt_val %}checked{% endif %}>
                                  </div>
                             {% endif %}
@@ -167,7 +167,7 @@
         </div>
     </div>
     {% else %}
-    <div style="border: 1px solid var(--border-neutral); border-radius: 16px; padding: 6px 8px; background-color: var(--bd-primary);">
+    <div style="border: 1px solid var(--aot-border-neutral); border-radius: var(--aot-radius-lg); padding: 6px 8px; background-color: var(--aot-surface-card);">
       <!-- Row 1: Drag, Name, Delete, Save -->
       <div class="d-flex align-items-center flex-nowrap">
         <!-- Drag Handle -->
@@ -177,8 +177,8 @@
 
         <!-- Action Name -->
         <div style="flex: 1 1 auto; margin-right: 5px; min-width: 0;">
-             <div class="form-control form-control-sm text-truncate" title="{{dict_options['name']}}" style="background-color: var(--bg-btn-active-light); cursor: default; border: 1px solid var(--border-neutral); border-radius: 14px; height: 28px; padding: 2px 8px; line-height: 22px; max-width: 240px;">
-                 <strong style="font-size: 0.85rem;">{{dict_options["name"]}}</strong>
+             <div class="form-control form-control-sm text-truncate" title="{{dict_options['name']}}" style="background-color: var(--bg-btn-active-light); cursor: default; border: 1px solid var(--aot-border-neutral); border-radius: var(--aot-radius-lg); height: 28px; padding: 2px 8px; line-height: 22px; max-width: 240px;">
+                 <strong style="font-size: var(--aot-font-size-sm);">{{dict_options["name"]}}</strong>
              </div>
         </div>
 
@@ -212,7 +212,7 @@
 
                     {% if each_option['type'] in ['select', 'select_device', 'select_channel', 'select_measurement'] %}
                          <div style="margin-right: 5px; flex: 0 0 auto;">
-                            <select class="form-control form-control-sm" name="{{opt_id}}" title="{{each_option['name']}}" style="max-width: 210px; height: 28px; padding: 0 5px; font-size: 0.85rem; border-radius: 14px;">
+                            <select class="form-control form-control-sm" name="{{opt_id}}" title="{{each_option['name']}}" style="max-width: 210px; height: 28px; padding: 0 5px; font-size: var(--aot-font-size-sm); border-radius: var(--aot-radius-lg);">
                                 <option value="" disabled {% if not opt_val %}selected{% endif %}>{{each_option['name']}}</option>
                                 
                                 {% if each_option['type'] == 'select' %}
@@ -268,12 +268,12 @@
                             <input class="form-control form-control-sm" name="{{opt_id}}" placeholder="{{each_option['name']}}" title="{{each_option['name']}}"
                                    type="{% if each_option['type'] == 'text' %}text{% else %}number{% endif %}"
                                    {% if each_option['type'] == 'float' %}step="any"{% endif %}
-                                   value="{{ opt_val if opt_val is not none else '' }}" style="max-width: 80px; height: 28px; font-size: 0.85rem; border-radius: 14px;">
+                                   value="{{ opt_val if opt_val is not none else '' }}" style="max-width: 80px; height: 28px; font-size: var(--aot-font-size-sm); border-radius: var(--aot-radius-lg);">
                          </div>
 
                     {% elif each_option['type'] == 'bool' %}
-                         <div style="margin-right: 5px; flex: 0 0 auto; display: flex; align-items: center; border: 1px solid var(--border-neutral); border-radius: 14px; padding: 0 5px; height: 28px;">
-                             <label class="mb-0 mr-1" style="font-size: 0.85rem;">{{each_option['name']}}</label>
+                         <div style="margin-right: 5px; flex: 0 0 auto; display: flex; align-items: center; border: 1px solid var(--aot-border-neutral); border-radius: var(--aot-radius-lg); padding: 0 5px; height: 28px;">
+                             <label class="mb-0 mr-1" style="font-size: var(--aot-font-size-sm);">{{each_option['name']}}</label>
                              <input name="{{opt_id}}" type="checkbox" value="y" {% if opt_val %}checked{% endif %}>
                          </div>
                     {% endif %}

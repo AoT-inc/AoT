@@ -67,17 +67,3 @@
   font-family: var(--aot-font-family);
 }
 
-/* ── large value variant (gauge centre) — same tier as value ── */
-.aot-w-value-lg {
-  font-size: var(--aot-fs-lg);
-  font-weight: var(--aot-fw-bold);
-  color: var(--aot-text-main, var(--aot-color-text-primary));
-  line-height: var(--aot-lh-tight);
-  letter-spacing: var(--aot-ls-tight);
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 100%;
-  font-family: var(--aot-font-family);
-}

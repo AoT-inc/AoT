@@ -2,7 +2,7 @@
 .device-timeline-wrapper {
   margin: 20px 0;
   background: var(--aot-surface-card, #fff);
-  border-radius: 8px;
+  border-radius: var(--aot-radius-sm);
   box-shadow: 0 4px 12px rgba(0,0,0,0.1);
   overflow: hidden;
 }
@@ -31,14 +31,14 @@
 .status-completed {
   background-color: rgba(46, 204, 113, 0.8) !important;
   border-color: #27ae60 !important;
-  color: var(--text-color-tertiary, #fff) !important;
+  color: var(--aot-color-text-tertiary, #fff) !important;
 }
 
 /* Mobile specific cards */
 @media (max-width: 768px) {
   .mobile-device-card {
     background: var(--aot-surface-card, #fff);
-    border-radius: 12px;
+    border-radius: var(--aot-radius-md);
     padding: 16px;
     margin-bottom: 12px;
     box-shadow: 0 2px 8px rgba(0,0,0,0.08);
@@ -54,7 +54,7 @@
   }
   
   .device-name {
-    font-size: 16px;
+    font-size: var(--aot-font-size-base);
     font-weight: 600;
     color: var(--aot-modal-body-text, #333);
   }
@@ -62,7 +62,7 @@
   .stats {
     display: flex;
     gap: 16px;
-    font-size: 14px;
+    font-size: var(--aot-font-size-sm);
     color: var(--aot-color-text-secondary, #666);
   }
   
@@ -74,6 +74,6 @@
     text-align: center;
     padding: 40px 20px;
     color: var(--aot-color-text-secondary, #aaa);
-    font-size: 14px;
+    font-size: var(--aot-font-size-sm);
   }
 }

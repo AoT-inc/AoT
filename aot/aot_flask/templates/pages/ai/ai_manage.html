@@ -70,13 +70,13 @@
     }
 
     /* Severity / status / type badges */
-    .badge-severity-critical { background-color: #dc3545; color: var(--text-color-tertiary, white); }
-    .badge-severity-high     { background-color: #fd7e14; color: var(--text-color-tertiary, white); }
+    .badge-severity-critical { background-color: #dc3545; color: var(--aot-color-text-tertiary, white); }
+    .badge-severity-high     { background-color: #fd7e14; color: var(--aot-color-text-tertiary, white); }
     .badge-severity-medium   { background-color: #ffc107; color: var(--aot-color-text-primary, #333); }
-    .badge-severity-low      { background-color: #17a2b8; color: var(--text-color-tertiary, white); }
+    .badge-severity-low      { background-color: #17a2b8; color: var(--aot-color-text-tertiary, white); }
     .badge-status-pending    { background-color: #ffc107; color: var(--aot-color-text-primary, #333); }
-    .badge-status-resolved   { background-color: #28a745; color: var(--text-color-tertiary, white); }
-    .badge-status-ignored    { background-color: #6c757d; color: var(--text-color-tertiary, white); }
+    .badge-status-resolved   { background-color: #28a745; color: var(--aot-color-text-tertiary, white); }
+    .badge-status-ignored    { background-color: #6c757d; color: var(--aot-color-text-tertiary, white); }
 </style>
 {% endblock %}
 
@@ -141,7 +141,7 @@
               </div>
             </div>{# /.status-card #}
             {% else %}
-            <div class="inactive-background text-center py-5" style="border-radius: 24px;">
+            <div class="inactive-background text-center py-5" style="border-radius: var(--aot-radius-xl);">
                 <p class="text-muted mb-0">{{ _('No reasoning history yet.') }}</p>
             </div>
             {% endif %}
@@ -365,7 +365,7 @@
                     </div>
                 </div>
                 <div class="aot-modal-group-title">{{ _('User Correction') }}</div>
-                <textarea class="form-control border-warning" id="detail_user_correction" rows="3" readonly style="background-color: #fff9db;"></textarea>
+                <textarea class="form-control border-warning" id="detail_user_correction" rows="3" readonly style="background-color: var(--aot-tint-warning-bg);"></textarea>
                 <div class="d-flex justify-content-end mt-4">
                     <button type="button" class="btn btn-secondary aot-pill-btn mr-2" data-dismiss="modal">{{ _('Close') }}</button>
                     <button type="button" class="btn btn-primary aot-pill-btn" onclick="addToKnowledge()">{{ _('Apply to Knowledge') }}</button>

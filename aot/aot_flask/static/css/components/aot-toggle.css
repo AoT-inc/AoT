@@ -28,9 +28,9 @@
   left: 0;
   right: 0;
   bottom: 0;
-  border-radius: 9999px;
+  border-radius: var(--aot-btn-pill-radius);
   /* Match aot-roundbox pill shape */
-  background-color: #d2d7dc;
+  background-color: var(--aot-border-neutral);
   transition: background-color 0.2s;
 }
 
@@ -52,7 +52,7 @@
 }
 
 .btn-toggle-input:checked+.btn-toggle-slider {
-  background-color: #32c85a;
+  background-color: var(--aot-band-3);
 }
 
 .btn-toggle-input:checked+.btn-toggle-slider .btn-toggle-thumb {
@@ -64,7 +64,7 @@
    lag 10s+). Slider pulses amber so the switch reads as "confirming" rather
    than a settled on/off. Thumb position still reflects the intended state. */
 .btn-toggle-input.aot-toggle-pending+.btn-toggle-slider {
-  background-color: var(--bg-hold, #f0ad4e);
+  background-color: var(--aot-bg-hold, #f0ad4e);
   animation: aot-toggle-pending-pulse 1s ease-in-out infinite;
 }
 
@@ -76,6 +76,6 @@
 /* Fault/offline: the device did not confirm the command (offline). Distinct
    muted slider so it reads as "no response", not a settled off. */
 .btn-toggle-input.aot-toggle-fault+.btn-toggle-slider {
-  background-color: var(--bg-pause, #b0b0b0);
+  background-color: var(--aot-bg-pause, #b0b0b0);
   opacity: 0.55;
 }

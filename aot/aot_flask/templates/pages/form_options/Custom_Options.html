@@ -190,7 +190,7 @@
 <div class="aot-modal-option-row flex-column align-items-start">
   <label class="aot-modal-option-label mb-2" title="{{each_option.get('phrase', '')}}">{{each_option['name']}}{% if each_option.get('phrase') %}<span class="fas fa-info-circle aot-option-tip" aria-hidden="true"></span>{% endif %}</label>
   <div class="w-100">
-    <textarea style="font-family:monospace; border-radius: 12px !important;" class="form-control" id="{{name_prefix}}{{each_option['id']}}" name="{% if channel_options %}{{name_prefix}}{% endif %}{{each_option['id']}}" rows="{{each_option['lines']}}" type="text" title="{{each_option['phrase']}}"
+    <textarea style="font-family:monospace; border-radius: var(--aot-radius-md) !important;" class="form-control" id="{{name_prefix}}{{each_option['id']}}" name="{% if channel_options %}{{name_prefix}}{% endif %}{{each_option['id']}}" rows="{{each_option['lines']}}" type="text" title="{{each_option['phrase']}}"
     {%- if 'disabled' in each_option and each_option['disabled'] %} disabled{% endif -%}
     >
     {%- if channel_options and custom_options_values[unique_id][channel][each_option['id']] is not none -%}

@@ -11,7 +11,7 @@
 <script src="{{ url_for('static', filename='vendor/fullcalendar-5.11.5/main.min.js') }}"></script>
 <style>
 /* FullCalendar minimal overrides only */
-.fc { font-family: var(--font-family-sans-serif); }
+.fc { font-family: var(--aot-font-family); }
 .fc .fc-toolbar-title { font-size: 1.1rem; font-weight: 700; }
 .fc .fc-button { border-radius: 16px !important; font-size: 0.85rem; padding: 4px 12px; }
 .fc .fc-button-primary { background-color: var(--primary, #F2D524); border-color: var(--primary, #F2D524); color: #000; }
@@ -66,7 +66,7 @@
     <div class="aot-settings-title">
         <h3>{{ _('Scheduler') }}
             <a href="{{ manual_url('ai/overview/') }}" target="_blank">
-                <span style="font-size: 16px" class="fas fa-question-circle"></span>
+                <span class="fas fa-question-circle aot-help-icon"></span>
             </a>
         </h3>
         <div class="d-flex" style="gap: 8px;">
@@ -132,7 +132,7 @@
     {% endfor %}
     </div>
     {% else %}
-    <div class="inactive-background text-center py-4" style="border-radius: 24px;">
+    <div class="inactive-background text-center py-4" style="border-radius: var(--aot-radius-xl);">
         <p class="text-muted mb-0">{{ _('No pending proposals.') }}</p>
     </div>
     {% endif %}
@@ -175,7 +175,7 @@
     {% endfor %}
     </div>
     {% else %}
-    <div class="inactive-background text-center py-4" style="border-radius: 24px;">
+    <div class="inactive-background text-center py-4" style="border-radius: var(--aot-radius-xl);">
         <p class="text-muted mb-0">{{ _('No active jobs.') }}</p>
     </div>
     {% endif %}
@@ -187,7 +187,7 @@
 
     <div style="clear: both; padding: 0.5em 0;"></div>
 
-    <div class="aot-entry-container" style="border-radius: 24px; padding: 20px;">
+    <div class="aot-entry-container" style="border-radius: var(--aot-radius-xl); padding: 20px;">
         <div id="scheduler-calendar"></div>
     </div>
 
@@ -200,7 +200,7 @@
     
     <div style="clear: both; padding: 0.5em 0;"></div>
     
-    <div class="aot-entry-container" style="border-radius: 24px; padding: 20px;">
+    <div class="aot-entry-container" style="border-radius: var(--aot-radius-xl); padding: 20px;">
         <!-- Desktop View -->
         <div id="device-timeline-container" class="d-none d-md-block"></div>
         <!-- Mobile View -->
@@ -255,7 +255,7 @@
         </div>
         <div class="aot-entry-content-item aot-col-btn">
             <input class="form-control aot-entry-name-input" disabled
-                   style="font-size: 0.8rem;"
+                   style="font-size: var(--aot-font-size-xs);"
                    value="{{ job.display_created_at }}" type="text">
         </div>
         <div class="aot-entry-content-item aot-col-icon">
@@ -268,7 +268,7 @@
     {% endfor %}
     </div>
     {% else %}
-    <div class="inactive-background text-center py-4" style="border-radius: 24px;">
+    <div class="inactive-background text-center py-4" style="border-radius: var(--aot-radius-xl);">
         <p class="text-muted mb-0">{{ _('No history yet.') }}</p>
     </div>
     {% endif %}
@@ -351,7 +351,7 @@
                         <label class="aot-modal-option-label">{{ _('Reasoning') }}</label>
                         <div class="aot-modal-option-control" style="flex: 1 1 100% !important; width: 100% !important;">
                             <textarea class="form-control aot-modern-input" rows="3" readonly
-                                      style="height: auto !important; border-radius: 16px !important; text-align: left;">{{ draft.reasoning }}</textarea>
+                                      style="height: auto !important; border-radius: var(--aot-radius-lg) !important; text-align: left;">{{ draft.reasoning }}</textarea>
                         </div>
                     </div>
                 </div>
@@ -453,7 +453,7 @@
                         <label class="aot-modal-option-label">{{ _('Reasoning') }}</label>
                         <div class="aot-modal-option-control" style="flex: 1 1 100% !important; width: 100% !important;">
                             <textarea class="form-control aot-modern-input" rows="3" readonly
-                                      style="height: auto !important; border-radius: 16px !important; text-align: left;">{{ job.reasoning }}</textarea>
+                                      style="height: auto !important; border-radius: var(--aot-radius-lg) !important; text-align: left;">{{ job.reasoning }}</textarea>
                         </div>
                     </div>
                 </div>
@@ -546,7 +546,7 @@
                         <label class="aot-modal-option-label">{{ _('Reasoning') }}</label>
                         <div class="aot-modal-option-control" style="flex: 1 1 100% !important; width: 100% !important;">
                             <textarea class="form-control aot-modern-input" rows="3" readonly
-                                      style="height: auto !important; border-radius: 16px !important; text-align: left;">{{ job.reasoning }}</textarea>
+                                      style="height: auto !important; border-radius: var(--aot-radius-lg) !important; text-align: left;">{{ job.reasoning }}</textarea>
                         </div>
                     </div>
                 </div>
@@ -600,7 +600,7 @@
                                 <label class="aot-modal-option-label">{{ _('Command') }}</label>
                                 <div class="aot-modal-option-control" style="flex: 1 1 100% !important; width: 100% !important;">
                                     <textarea id="smartCommand" class="form-control aot-modern-input" rows="3"
-                                              style="height: auto !important; border-radius: 16px !important; text-align: left;"
+                                              style="height: auto !important; border-radius: var(--aot-radius-lg) !important; text-align: left;"
                                               placeholder="{{ _('e.g., Water Zone A at 5 PM for 10 seconds') }}"></textarea>
                                 </div>
                             </div>
@@ -613,14 +613,14 @@
                                     <label class="aot-modal-option-label">{{ _('Insight') }}</label>
                                     <div class="aot-modal-option-control" style="flex: 1 1 100% !important; width: 100% !important;">
                                         <textarea id="aiInsight" class="form-control aot-modern-input" rows="2" readonly
-                                                  style="height: auto !important; border-radius: 16px !important; text-align: left;"></textarea>
+                                                  style="height: auto !important; border-radius: var(--aot-radius-lg) !important; text-align: left;"></textarea>
                                     </div>
                                 </div>
                                 <div class="aot-modal-option-row aot-modal-row-wrap">
                                     <label class="aot-modal-option-label">{{ _('Actions') }}</label>
                                     <div class="aot-modal-option-control" style="flex: 1 1 100% !important; width: 100% !important;">
                                         <div id="aiProposedActions" class="form-control aot-modern-input"
-                                             style="height: auto !important; border-radius: 16px !important; text-align: left;"></div>
+                                             style="height: auto !important; border-radius: var(--aot-radius-lg) !important; text-align: left;"></div>
                                     </div>
                                 </div>
                             </div>

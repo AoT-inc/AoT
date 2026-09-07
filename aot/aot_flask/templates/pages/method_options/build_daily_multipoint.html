@@ -153,7 +153,7 @@
       // Time
       html += '<td><input type="text" class="form-control form-control-sm" value="' +
         secToHHMM(pt.t_sec) + '" ' +
-        (ep ? 'readonly style="background:#f5f5f5;cursor:not-allowed;"' : '') +
+        (ep ? 'readonly style="background: var(--aot-gray-100);cursor:not-allowed;"' : '') +
         ' data-idx="' + idx + '" onchange="mpUpdateTime(this)"></td>';
       // Value columns
       weeks.forEach(function(_, wi) {

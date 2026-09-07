@@ -116,7 +116,7 @@
 
     {%- if method_setpoint -%}
 
-      <div class="row small-gutters" style="margin: 1em 0 0 0; padding: 1em; border: 1px solid var(--border-neutral); border-radius: 16px;">
+      <div class="row small-gutters" style="margin: 1em 0 0 0; padding: 1em; border: 1px solid var(--aot-border-neutral); border-radius: var(--aot-radius-lg);">
         <div class="col-12" style="padding-bottom: 1em">
           <h3>{{_('Setpoint Tracking')}}</h3>
         </div>
@@ -319,7 +319,7 @@
       },
       tooltip: {
         {% if method.method_type == "Duration" -%}
-          headerFormat: '<span style="font-size: 10px">{point.key} Seconds</span><br/>',
+          headerFormat: '<span style="font-size: var(--aot-font-size-2xs)">{point.key} Seconds</span><br/>',
         {%- endif -%}
         {% if method.method_type == "Date" -%}
           xDateFormat: '%a, %b %e, %Y %H:%M:%S',

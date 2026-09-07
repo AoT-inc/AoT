@@ -14,13 +14,13 @@
     /* 좌우 16px: 단락 제목(.aot-modal-group-title padding-left:16px)과 정렬 통일 */
     padding: 1.5rem 16px 0.75rem;
     margin-bottom: 1.5rem;
-    border-bottom: 1px solid var(--border-neutral);
+    border-bottom: 1px solid var(--aot-border-neutral);
 }
 
 .aot-settings-title h3,
 .aot-settings-title h4 {
     margin: 0;
-    font-size: 1.25rem;
+    font-size: var(--aot-font-size-lg);
     font-weight: 700;
     color: var(--aot-text-title);
 }
@@ -30,8 +30,8 @@
 ============================================================ */
 .aot-settings-section {
     background-color: var(--aot-input-bg);
-    border: 1px solid var(--border-neutral);
-    border-radius: 16px;
+    border: 1px solid var(--aot-border-neutral);
+    border-radius: var(--aot-radius-lg);
     padding: 0 16px;
     margin-bottom: 1.2rem;
     overflow: visible;
@@ -41,9 +41,9 @@
    3. GROUP TITLE  (≈ aot-modal-group-title)
 ============================================================ */
 .aot-settings-group-title {
-    font-size: 1.05rem;
+    font-size: var(--aot-font-size-base);
     font-weight: 700;
-    color: var(--aot-color-text-secondary, var(--gray-dark));
+    color: var(--aot-color-text-secondary, var(--aot-color-text-secondary));
     margin-top: 1.6rem;
     margin-bottom: 0.2rem;
     padding-left: 16px;
@@ -51,28 +51,12 @@
 
 /* Section description below group title */
 .aot-settings-group-title + p,
-.aot-modal-group-title + p,
-.aot-settings-section-desc {
-    font-size: 0.82rem;
+.aot-modal-group-title + p {
+    font-size: var(--aot-font-size-sm);
     color: var(--aot-text-secondary);
     padding-left: 16px;
     margin-bottom: 0.6rem;
     line-height: 1.5;
-}
-
-/* ============================================================
-   3b. CONTROLLER ROW  (distinct visual indicator)
-============================================================ */
-.aot-controller-row .aot-settings-label::before {
-    content: '';
-    display: inline-block;
-    width: 3px;
-    height: 14px;
-    border-radius: 9999px;
-    background: var(--aot-primary);
-    margin-right: 8px;
-    vertical-align: middle;
-    opacity: 0.7;
 }
 
 /* ============================================================
@@ -83,7 +67,7 @@
     align-items: center;
     padding: 0.5rem 0;
     min-height: 2.8rem;
-    border-bottom: 1px solid var(--border-neutral);
+    border-bottom: 1px solid var(--aot-border-neutral);
     gap: 16px;
 }
 
@@ -91,23 +75,17 @@
     border-bottom: none;
 }
 
-/* Wrap variant for tall controls (textarea, multi-select) */
-.aot-settings-row.aot-settings-row-wrap {
-    flex-wrap: wrap;
-    height: auto;
-}
-
 /* ============================================================
    5. LABEL  (≈ aot-modal-option-label)
 ============================================================ */
 .aot-settings-label {
     flex: 1 1 auto;
-    font-size: 0.875rem;
+    font-size: var(--aot-font-size-sm);
     font-weight: 600;
     color: var(--aot-text-main);
     line-height: 1.3;
     word-break: break-word;
-    margin-bottom: 0 !important;
+    margin-bottom: 0;
 }
 
 /* ============================================================
@@ -137,35 +115,35 @@
 /* Inputs inside settings rows */
 .aot-settings-control .aot-modern-input,
 .aot-settings-control .aot-modern-select {
-    box-sizing: border-box !important;
-    border-radius: var(--aot-btn-pill-radius) !important;
-    border: 1px solid var(--border-neutral) !important;
-    padding: 0 1rem !important;
-    height: 32px !important;
-    font-size: 0.875rem !important;
-    background-color: var(--aot-input-bg) !important;
-    color: var(--aot-text-main) !important;
-    line-height: 30px !important;
+    box-sizing: border-box;
+    border-radius: var(--aot-btn-pill-radius);
+    border: 1px solid var(--aot-border-neutral);
+    padding: 0 1rem;
+    height: 32px;
+    font-size: var(--aot-font-size-sm);
+    background-color: var(--aot-input-bg);
+    color: var(--aot-text-main);
+    line-height: 30px;
 }
 
 /* aot-settings-select: plain HTML select with pill style (no bootstrap-select) */
 .aot-settings-select {
-    box-sizing: border-box !important;
-    width: 100% !important;
+    box-sizing: border-box;
+    width: 100%;
     border-radius: var(--aot-btn-pill-radius) !important;
-    border: 1px solid var(--border-neutral) !important;
-    padding: 0 2rem 0 1rem !important;
-    height: 32px !important;
-    font-size: 0.875rem !important;
-    background-color: var(--aot-input-bg) !important;
-    color: var(--aot-text-main) !important;
-    line-height: 30px !important;
-    appearance: none !important;
-    -webkit-appearance: none !important;
-    -moz-appearance: none !important;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath fill='%23888' d='M0 0l5 6 5-6z'/%3E%3C/svg%3E") !important;
-    background-repeat: no-repeat !important;
-    background-position: right 0.85rem center !important;
+    border: 1px solid var(--aot-border-neutral) !important;
+    padding: 0 2rem 0 1rem;
+    height: 32px;
+    font-size: var(--aot-font-size-sm);
+    background-color: var(--aot-input-bg);
+    color: var(--aot-text-main);
+    line-height: 30px;
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath fill='%23888' d='M0 0l5 6 5-6z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.85rem center;
     cursor: pointer;
 }
 
@@ -189,54 +167,45 @@
    and a doubled arrow. Fix: strip the wrapper to a bare container so the inner toggle
    is the only visible pill, sized to match the 32px text inputs beside it. */
 .aot-settings-control .bootstrap-select {
-    border: none !important;
-    background: none !important;
-    border-radius: 0 !important;
-    height: auto !important;
-    min-height: 0 !important;
-    padding: 0 !important;
-    line-height: normal !important;
+    border: none;
+    background: none;
+    border-radius: 0;
+    height: auto;
+    min-height: 0;
+    padding: 0;
+    line-height: normal;
 }
 .aot-settings-control .bootstrap-select > .dropdown-toggle {
-    width: 100% !important;
-    box-sizing: border-box !important;
-    border-radius: var(--aot-btn-pill-radius) !important;
-    border: 1px solid var(--border-neutral) !important;
-    height: 32px !important;
-    font-size: 0.875rem !important;
-    background-color: var(--aot-input-bg) !important;
-    color: var(--aot-text-main) !important;
-    padding: 0 1rem !important;
-    display: flex !important;
-    align-items: center !important;
+    width: 100%;
+    box-sizing: border-box;
+    border-radius: var(--aot-btn-pill-radius);
+    border: 1px solid var(--aot-border-neutral);
+    height: 32px;
+    font-size: var(--aot-font-size-sm);
+    background-color: var(--aot-input-bg);
+    color: var(--aot-text-main);
+    padding: 0 1rem;
+    display: flex;
+    align-items: center;
 }
 
 /* bootstrap-select's .filter-option is position:absolute; top:0, so its text pins
    to the top of the button. These selects are NOT the .ui-pill variant, so the
    ui-pill centering rules don't reach them — center the label here. */
 .aot-settings-control .bootstrap-select > .dropdown-toggle .filter-option {
-    display: flex !important;
-    align-items: center !important;
-    height: 100% !important;
+    display: flex;
+    align-items: center;
+    height: 100%;
 }
 
 .aot-settings-control .bootstrap-select .dropdown-menu {
-    z-index: var(--aot-z-dropdown) !important;
+    z-index: var(--aot-z-dropdown);
 }
 
 /* Raise z-index when selectpicker is open */
 .aot-settings-row:has(.bootstrap-select.show) {
     position: relative;
     z-index: 100;
-}
-
-/* ============================================================
-   7. HELPER TEXT  (≈ aot-modal-body-text)
-============================================================ */
-.aot-settings-hint {
-    font-size: 0.8rem;
-    color: var(--aot-text-secondary);
-    margin-top: 0.25rem;
 }
 
 /* ============================================================
@@ -253,7 +222,7 @@
    9. SIDEBAR  (layout-settings.html)
 ============================================================ */
 #sidebar-wrapper {
-    border-right: 1px solid var(--border-neutral) !important;
+    border-right: 1px solid var(--aot-border-neutral) !important;
     /* 배경 기본(카드) — 이게 없으면 모바일 폭(max-width:767.98px, simple-
        sidebar.css)에서 이 메뉴가 position:absolute 로 페이지 위에 겹쳐 뜨는데
        배경이 투명해 뒤의 페이지 제목/본문 글자가 메뉴 항목과 겹쳐 보였다
@@ -269,7 +238,7 @@
    10. PAGE CONTENT WRAPPER OVERRIDE  (Remove inner padding)
 ============================================================ */
 #page-content-wrapper {
-    padding: 0 !important;
+    padding: 0;
     min-width: 0;
     overflow-x: hidden;
 }
@@ -278,28 +247,28 @@
    10b. CONTAINER FLUID OVERRIDE  (Remove restrictions on settings pages)
 ============================================================ */
 #page-content-wrapper .container-fluid {
-    max-width: 100% !important;
-    margin-left: 0 !important;
-    margin-right: 0 !important;
-    padding-left: 0 !important;
-    padding-right: 0 !important;
+    max-width: 100%;
+    margin-left: 0;
+    margin-right: 0;
+    padding-left: 0;
+    padding-right: 0;
 }
 
 /* ============================================================
    10c. CONTAINER OVERRIDE  (Center and responsive)
 ============================================================ */
 #page-content-wrapper .container {
-    max-width: 860px !important;
-    margin-left: auto !important;
-    margin-right: auto !important;
-    padding-left: 16px !important;
-    padding-right: 16px !important;
+    max-width: 860px;
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: 16px;
+    padding-right: 16px;
 }
 
 /* Responsive: full width on smaller screens */
 @media (max-width: 920px) {
     #page-content-wrapper .container {
-        max-width: 100% !important;
+        max-width: 100%;
         padding-left: 8px !important;
         padding-right: 8px !important;
     }
@@ -332,7 +301,7 @@
 }
 
 .aot-module-table tr {
-    border-bottom: 1px solid var(--border-neutral);
+    border-bottom: 1px solid var(--aot-border-neutral);
 }
 
 .aot-module-table tr:last-child {
@@ -341,7 +310,7 @@
 
 .aot-module-table td {
     padding: 0.8rem 0;
-    font-size: 0.875rem;
+    font-size: var(--aot-font-size-sm);
     color: var(--aot-text-main);
     vertical-align: middle;
     word-wrap: break-word;
@@ -354,7 +323,7 @@
 }
 
 .aot-module-table thead tr {
-    border-bottom: 1px solid var(--gray-dark);
+    border-bottom: 1px solid var(--aot-color-text-secondary);
 }
 
 .aot-module-table thead td {
@@ -378,29 +347,6 @@
 .aot-module-table-5col td:nth-child(3),
 .aot-module-table-5col td:nth-child(4) {
     width: calc((100% - 160px) / 4) !important;
-}
-
-/* chirpstack: sticky name col + 2-button register col */
-.aot-module-table-chirpstack {
-    min-width: 700px;
-}
-.aot-module-table-chirpstack td:nth-child(2),
-.aot-module-table-chirpstack td:nth-child(3),
-.aot-module-table-chirpstack td:nth-child(4) {
-    width: auto !important;
-}
-.aot-module-table-chirpstack td:first-child {
-    position: sticky;
-    left: 0;
-    z-index: 1;
-    background-color: var(--aot-input-bg);
-    width: 130px !important;
-}
-.aot-module-table-chirpstack thead td:first-child {
-    z-index: 2;
-}
-.aot-module-table-chirpstack td:last-child {
-    width: 190px !important;
 }
 
 /* ============================================================
@@ -443,7 +389,7 @@
 .aot-list-row-main {
     flex: 1 1 220px;
     min-width: 0;
-    font-size: 0.875rem;
+    font-size: var(--aot-font-size-sm);
     color: var(--aot-text-main);
     line-height: 1.5;
 }
@@ -495,11 +441,11 @@
 .aot-code-block {
     margin: 0;
     padding: 0.8em;
-    border: 1px solid var(--border-neutral);
-    border-radius: 12px;
+    border: 1px solid var(--aot-border-neutral);
+    border-radius: var(--aot-radius-md);
     background-color: var(--aot-input-bg);
     color: var(--aot-text-main);
-    font-size: 0.82rem;
+    font-size: var(--aot-font-size-sm);
     overflow-x: auto;
     -ms-overflow-style: none;
     scrollbar-width: none;

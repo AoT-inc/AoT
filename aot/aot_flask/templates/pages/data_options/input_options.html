@@ -88,7 +88,7 @@
     {% set additional_url = dict_inputs[each_input.device].get('url_additional') %}
 
     {% if manufacturer_url or datasheet_url or product_purchase_url or additional_url %}
-    <div class="aot-modal-body-text" style="margin-top: -0.5rem; font-size: 0.85rem;">
+    <div class="aot-modal-body-text" style="margin-top: -0.5rem; font-size: var(--aot-font-size-sm);">
       <strong>{{_("Related Documents")}}:</strong>
       {%- if manufacturer_url -%} {{_("Manufacturer")}} {% for each_url in manufacturer_url %}<a href="{{each_url}}" target="_blank">{{_('Link')}} {{loop.index}}</a>{{ ", " if not loop.last }}{% endfor %}{%- endif -%}
       {%- if datasheet_url -%} {% if manufacturer_url %}; {% endif %}{{_("Datasheet")}} {% for each_url in datasheet_url %}<a href="{{each_url}}" target="_blank">{{_('Link')}} {{loop.index}}</a>{{ ", " if not loop.last }}{% endfor %}{%- endif -%}
@@ -98,7 +98,7 @@
     {% endif %}
 
     {% if 'message' in dict_inputs[each_input.device] %}
-    <div class="aot-modal-body-text" style="font-style: italic; background: #f9f9f9; padding: 8px; border-radius: 8px; font-size: 0.85rem;">
+    <div class="aot-modal-body-text" style="font-style: italic; background: var(--aot-gray-100); padding: 8px; border-radius: var(--aot-radius-sm); font-size: var(--aot-font-size-sm);">
       {{dict_inputs[each_input.device]['message']|safe}}
     </div>
     {% endif %}
@@ -381,7 +381,7 @@
 
   </form>
 
-  <div class="aot-modal-group-title">{{_('Actions')}} <a href="{{ manual_url('Actions/') }}" target="_blank"><span style="font-size: 16px" class="fas fa-question-circle"></span></a></div>
+  <div class="aot-modal-group-title">{{_('Actions')}} <a href="{{ manual_url('Actions/') }}" target="_blank"><span class="fas fa-question-circle aot-help-icon"></span></a></div>
   <div class="aot-modal-container">
     <form method="post" action="/input">
       {{form_actions.csrf_token}}

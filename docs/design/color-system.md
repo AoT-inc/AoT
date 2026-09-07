@@ -19,7 +19,10 @@ settings/custom_ui 연동 구조를 정의한다. z-index 는 `z-index-system.md
   신규 사용 금지, 발견 시 실토큰으로 교체.
 - 다크모드는 `data-theme` 속성이 아니라 **서버측 조건부 로드**(`effective_theme in
   dark_themes` → custom-dark.css)로 동작한다. `:root[data-theme="dark"]` 블록은
-  현재 어떤 코드도 data-theme 을 설정하지 않으므로 휴면 상태다.
+  어떤 코드도 data-theme 을 설정하지 않아 휴면이었고, **2026-09-07 에 지웠다**
+  (거기 있던 `--aot-bg-*` 다크 값 일곱은 `/custom.css` 가 같은 이름을 더 나중에
+  발행하므로 설령 적용됐더라도 사용자 값에 덮였다 — 이중으로 죽어 있었다).
+  다크 전용 값이 필요하면 **custom-dark.css** 에 넣는다.
 
 ## 2. settings/custom_ui ↔ 토큰 매핑
 
@@ -56,6 +59,35 @@ settings/custom_ui 연동 구조를 정의한다. z-index 는 `z-index-system.md
 전부 그대로 발행하므로(위 표) **소비하는 CSS 파일은 단 한 곳도 수정하지
 않았다** — 변경은 오직 관리자 페이지가 몇 개의 DB 필드로 값을 받아
 그 별칭들을 채우느냐일 뿐이다.
+
+### ⚠ 그 생략에는 구멍이 있었다 (2026-09-07 수정)
+
+`/custom.css` 는 다크 사용자에게 `--aot-*` 실토큰 발행만 생략하고 **레거시
+별칭은 그대로 발행**한다(코드 주석에도 "레거시 별칭은 유지" 라고 적혀 있다).
+그런데 별칭은 정본에서 `--text-color-primary: var(--aot-color-text-primary)`
+처럼 **실토큰을 참조**하도록 정의돼 있다. `/custom.css` 가 거기에 라이트
+사용자 값을 **리터럴로** 덮으면 참조가 끊긴다.
+
+그래서 다크 사용자에게 두 값이 갈렸다:
+
+| 소비처가 쓰는 것 | 다크에서 받는 값 |
+|---|---|
+| `var(--aot-color-text-primary)` | `#F3F6F5` (custom-dark.css) ✅ |
+| `var(--text-color-primary)` | 사용자 라이트 값 `#13261B` ❌ |
+| `var(--aot-surface-card)` | `#1e1e1e` ✅ |
+| `var(--bd-primary)` | `#FFFFFF` ❌ |
+
+`aot-entry-ui.css` 의 `.aot-entry-item`(입력·함수·지도입력·AI 에이전트 화면의
+항목 카드)이 배경은 실토큰, 글자는 별칭을 쓰고 있었다 — 다크에서 `#13261B`
+글자가 `#1e1e1e` 카드 위에 앉아 **대비 1.05:1** 이었다(AA 최소 4.5:1).
+브라우저로 재현해 확인했고, 실토큰으로 바꾸면 15.33:1 이 된다.
+
+**그래서 이 다섯 필드의 별칭 소비처 54곳을 실토큰으로 옮겼다**
+(`--text-color-primary` 26 · `--bd-primary` 24 · 나머지 4). 라이트에서는 두
+값이 같아 화면이 바뀌지 않는다.
+
+**신규 코드는 별칭을 쓰지 않는다.** 위 표의 다섯 쌍은 특히 그렇다 — 별칭을
+쓰면 다크에서 조용히 라이트 값을 받는다.
 
 예외 규칙:
 - **다크 사용자**에게는 `--aot-color-brand-accent`, `--aot-color-text-primary`,
@@ -697,3 +729,90 @@ DB 에 남은 잔재 정리는 `python3 -m aot.scripts.fix_geo_theme_drift`
    속성, `color` 와 별개)로 그려 우리가 설정한 `style.color` 가 반영되지
    않는 사례가 있을 수 있음 — SVG `fill` vs CSS `color` 불일치는
    Highcharts 렌더 모드에 따라 갈리므로 필요시 개별 확인 요망.
+
+## 5-8. 레거시 별칭 소비를 정본으로 옮김 (2026-09-07)
+
+`--text-color-primary: var(--aot-color-text-primary)` 처럼 별칭이 정본을 가리키기만
+하면 값은 따라온다. **문제는 `/custom.css` 다.** 사용자 색을 발행할 때 별칭과 정본을
+**둘 다** 쓰는데, 다크 사용자에게는 정본만 걸러낸다(`dark_overridden` — custom-dark.css
+값을 지키려고). 그러면 **별칭에는 라이트 값이 남는다.**
+
+브라우저에서 잰 실제 값(다크, 2026-09-07):
+
+    --bd-primary          #ffffff   vs  --aot-surface-card       #1e1e1e
+    --text-color-primary  #13261B   vs  --aot-color-text-primary #F3F6F5
+
+어두운 배경에 흰 카드가 뜨고, 어두운 배경에 어두운 글자가 앉는다. 2026-09-07 에
+소비처 **407곳**을 정본 이름으로 옮겼고, `test_css_conventions.py` 의
+`test_legacy_aliases_have_no_consumers` 가 되돌아오는 것을 막는다. 정의는 하위호환용
+으로 남긴다 — `/custom.css` 가 계속 발행하므로 사용자 CSS 는 깨지지 않는다.
+
+### ⚠ 이름만 별칭이고 값이 다른 여덟 개
+
+`--gray` `--gray-hard` `--light` `--primary` `--secondary` `--success` `--warning`
+`--danger` 는 **옮기면 색이 바뀐다.** `aot.css` 가 별칭으로 선언하지만 **그 파일은
+화면에 안 실리고**, 대신 `bootstrap-4-themes/aot.css` 가 같은 이름을 다른 리터럴로
+정의한다:
+
+| 이름 | 실제 값 | 정본 후보 |
+|---|---|---|
+| `--gray` | `#eeebeb` | `--aot-color-brand-secondary` `#5E6B64` |
+| `--primary` | `#ffffff` | `--aot-color-primary` `#F2D524` |
+| `--success` | `#fff3cd` | `--aot-color-success` `#96C064` |
+
+정리가 아니라 **디자인 결정**이다 — 어느 색이 맞는지를 먼저 정해야 한다.
+
+### ⚠ 안 실리는 파일의 선언을 믿지 말 것
+
+`--gray-dark` 는 `aot.css` 에서 `--aot-modal-group-title` 을 가리키지만, 실제로
+로드되는 `aot-theme-variables.css` 는 `--aot-color-text-secondary` 를 가리킨다
+(주석에 "이름과 달리" 라고 못 박혀 있다). 앞엣것을 믿고 옮겼다가 다크에서 색이
+#D1D5D5 → #aaaaaa 로 바뀌는 것을 A/B 대조가 잡았다. **정본은 문법이 아니라
+브라우저가 해석한 값으로 확인한다.**
+
+## 5-7. 중립 회색 스케일 (2026-09-06)
+
+스케일이 없어서 화면을 만들 때마다 새 회색이 생겼다. 실측: 자작 CSS 안의
+회색 계열 하드코딩 361회 / 53종. 그 안에는 부트스트랩(`#dee2e6`·`#f8f9fa`·
+`#e9ecef`)과 Tailwind(`#e5e7eb`) 기본 팔레트가 새어 들어온 것도 있었다.
+
+```css
+--aot-gray-950: #111111;   /* 최다크 텍스트 */
+--aot-gray-800: #333333;   /* 본문 강조 텍스트 — 가장 많이 쓰인 회색 */
+--aot-gray-600: #666666;   /* 보조 텍스트 */
+--aot-gray-500: #888888;   /* 흐린 텍스트·비활성 */
+--aot-gray-300: #cccccc;   /* 테두리 */
+--aot-gray-200: #eeeeee;   /* 옅은 구분선 */
+--aot-gray-100: #f8f9fa;   /* 옅은 배경 */
+```
+
+값은 **저장소에서 가장 많이 쓰이던 회색 그대로**다. 도입 시점에 화면이
+바뀌지 않게 하려는 것이고, 단을 예쁘게 고르는 것보다 "이미 있는 것을 이름으로
+만들어 더 늘지 않게" 하는 쪽이 목적이다.
+
+**브랜드 계열과 헷갈리지 말 것.** AoT 의 표면·테두리 중립은 초록기가 있다
+(`--aot-border-neutral` `#dddddd` · `--aot-border-light` `#f0f0f0` ·
+`--aot-color-brand-*`). 이 스케일은 그것과 별개로 **색을 띠지 않는 회색**이
+필요한 자리에만 쓴다. 둘 중 어느 쪽인지 모르겠으면 브랜드 계열이 기본이다.
+스케일 자체를 초록기 있는 값으로 다시 잡는 것은 화면이 바뀌는 결정이라 별건.
+
+### 폴백 자리는 세지도, 바꾸지도 않는다
+
+`§5` 규칙 1이 이미 허용하듯 `var(--토큰, #폴백)` 의 리터럴은 정상이다. 토큰이
+앞에 있어 사용자 테마 변경을 그대로 따라오고, 뒤 값은 토큰 파일이 통째로 안
+실릴 때의 최후 값이다. **이것을 또 다른 토큰으로 바꾸면 그 최후 값이 사라진다.**
+
+hex 사용량을 셀 때도 이 자리를 빼고 세야 한다. 그러지 않으면 문제가 실제보다
+크게 보인다 — 2026-09-06 감사에서 "브랜드 3색 107곳 하드코딩" 으로 보고된 것이
+실제로는 직접 사용 2곳 + 폴백 101곳이었다.
+
+```
+제외 정규식: var\(\s*--[A-Za-z0-9-]+\s*,\s*(#[0-9a-fA-F]{3,8})
+```
+
+### 토큰 재정의를 셀 때는 선택자 스코프를 볼 것
+
+`--aot-common-control-width` 는 정의가 일곱 벌이지만 `:root` 는 정본 한 곳뿐이고,
+나머지는 `#tabScopeGroups`·`.veg-def-row`·`.aot-env-status` 처럼 **선택자에 묶인
+의도적 국소 오버라이드**다. CSS 커스텀 속성의 상속을 이용한 정상 설계이므로
+`!important` 없이 특이도만으로 동작한다. 파일 단위로만 세면 결함으로 오인한다.

@@ -202,7 +202,7 @@
     /* [Theme] Site Mode Specifics (Red) */
     .mode-tab[data-mode="site"].active {
         background-color: var(--theme-site, #DF5353) !important;
-        color: var(--text-color-tertiary, white) !important;
+        color: var(--aot-color-text-tertiary, white) !important;
         border-color: var(--theme-site, #DF5353) !important;
     }
 
@@ -216,7 +216,7 @@
 
     #device-sub-tabs .mode-sub-tab.active {
         background: #995aff;
-        color: var(--text-color-tertiary, white);
+        color: var(--aot-color-text-tertiary, white);
         border-color: #995aff;
     }
 
@@ -405,7 +405,7 @@
     </div>
 
     <!-- Section 2: Map & Selector -->
-    <div class="card mb-4 shadow-sm" style="border-radius: 20px; overflow: hidden;">
+    <div class="card mb-4 shadow-sm" style="border-radius: var(--aot-radius-xl); overflow: hidden;">
         <div class="card-header bg-white py-3">
             <div class="mb-2 font-weight-bold">
                 <h5>{{ _('Map Design') }}</h5>
@@ -565,7 +565,7 @@
     </div>
 
     <!-- Section 3: Information (Dashboard) -->
-    <div class="card mb-4 shadow-sm" style="border-radius: 20px;">
+    <div class="card mb-4 shadow-sm" style="border-radius: var(--aot-radius-xl);">
         <div class="card-header bg-white font-weight-bold mt-2 border-0">
             <h5>{{ _('Design Information') }}</h5>
             <hr class="mt-0 mb-3">
@@ -580,7 +580,7 @@
     </div>
 
     <!-- Section 4: Data Processing -->
-    <div class="card mb-5 shadow-sm" id="section-data-processing" style="border-radius: 20px;">
+    <div class="card mb-5 shadow-sm" id="section-data-processing" style="border-radius: var(--aot-radius-xl);">
         <div class="card-header bg-white font-weight-bold mt-2 border-0">
             <h5>{{ _('Data Processing') }}</h5>
             <hr class="mt-0 mb-3">
@@ -605,9 +605,9 @@
 
     <!-- Print Footer (Hidden on Screen) -->
     <div class="print-footer mt-5 p-4 text-left text-muted" style="display: none;">
-        <p class="mb-1" style="font-size: 0.9rem;">{{ _('This document was created using the <strong>AoT Geographic Information System</strong>, free software available to everyone.') }}</p>
-        <p class="mb-1" style="font-size: 0.9rem;">{{ _('Maps and drawings included in this material are generated based on satellite imagery and basic data, so <strong>errors may occur compared to the actual site.</strong>') }}</p>
-        <p class="mb-0" style="font-size: 0.9rem;">{{ _('AoT provides <strong>no legal warranty</strong> regarding the accuracy or suitability of the outputs, and the user is responsible for construction and decision-making based on them.') }}</p>
+        <p class="mb-1" style="font-size: var(--aot-font-size-sm);">{{ _('This document was created using the <strong>AoT Geographic Information System</strong>, free software available to everyone.') }}</p>
+        <p class="mb-1" style="font-size: var(--aot-font-size-sm);">{{ _('Maps and drawings included in this material are generated based on satellite imagery and basic data, so <strong>errors may occur compared to the actual site.</strong>') }}</p>
+        <p class="mb-0" style="font-size: var(--aot-font-size-sm);">{{ _('AoT provides <strong>no legal warranty</strong> regarding the accuracy or suitability of the outputs, and the user is responsible for construction and decision-making based on them.') }}</p>
     </div>
 </div>
 </div>
@@ -827,7 +827,7 @@
               </button>
             </div>
           </div>
-          <div id="parcel-result-list" class="mb-2" style="max-height:160px;overflow-y:auto;font-size:13px;"></div>
+          <div id="parcel-result-list" class="mb-2" style="max-height:160px;overflow-y:auto;font-size: var(--aot-font-size-sm);"></div>
 
           <!-- Site name (used only when saving merged; individual saves use each parcel's name) -->
           <div class="form-group row mb-2" id="parcel-site-name-row">

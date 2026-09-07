@@ -77,7 +77,7 @@
         top: -8px;
         right: -8px;
         background: #dc3545;
-        color: var(--text-color-tertiary, #fff);
+        color: var(--aot-color-text-tertiary, #fff);
         border-radius: 50%;
         width: 20px;
         height: 20px;
@@ -126,7 +126,7 @@
 </style>
 
 <!-- Path: /notes -->
-<div class="container-fluid px-0" style="background: #f8fafc; min-height: 100vh; padding-bottom: 5rem;">
+<div class="container-fluid px-0" style="background: var(--aot-surface-body); min-height: 100vh; padding-bottom: 5rem;">
   {% include 'flash_messages.html' %}
 
   <!-- 1. HEADER & INTEGRATED SEARCH BAR -->
@@ -264,6 +264,9 @@
   <div id="scrollSentinel" style="height: 50px; width: 100%; clear: both;"></div>
   {% else %}
       <div class="text-center py-5">
+          {# 사다리 예외: 빈 목록 자리를 채우는 장식용 큰 글리프다(opacity 0.3).
+   읽는 글자가 아니라 여백을 메우는 도형이라 사다리 최상단(24px)으로는
+   그 자리를 못 채운다. #}
           <div class="mb-3 text-muted" style="font-size: 3rem; opacity: 0.3;">
               <i class="far fa-folder-open"></i>
           </div>
@@ -593,10 +596,6 @@
                 $container.animate({ scrollLeft: '+=' + scrollAmount }, 200);
             }
         };
-
-        // Helper to Initialize Read More / Fold controls (Robust for images)
-        // Helper to Initialize Read More / Fold controls (Robust for images)
-        // Handled globally by aot-note-utils.js
 
         // 1. Edit Button Handler
         $(document).on('click', '.edit-note-btn', function() {

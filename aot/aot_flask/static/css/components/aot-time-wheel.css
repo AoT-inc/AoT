@@ -17,13 +17,13 @@
 body.aot-wheel-lock{ overflow:hidden !important; }
 
 .aot-wheel-panel{
-  background:var(--aot-surface-card,#fff); border-radius:18px;
+  background:var(--aot-surface-card,#fff); border-radius:var(--aot-radius-xl);
   box-shadow:0 12px 40px rgba(0,0,0,0.25);
   padding:14px 16px 12px; width:min(320px,90vw);
   user-select:none; -webkit-user-select:none;
 }
 .aot-wheel-title{
-  text-align:center; font-weight:700; font-size:0.95rem;
+  text-align:center; font-weight:700; font-size:var(--aot-font-size-base);
   color:var(--aot-text-main,#333); margin-bottom:8px;
 }
 .aot-wheel-cols{
@@ -47,6 +47,9 @@ body.aot-wheel-lock{ overflow:hidden !important; }
   height:36px; line-height:36px;
   scroll-snap-align:center;
   font-variant-numeric:tabular-nums;
+  /* 사다리 예외: 높이 36px 로 못 박힌 드럼 칸 안에 스크롤 스냅으로 앉는 숫자다.
+     사다리 lg(18px)로 내리면 36px 칸 안에서 숫자가 떠 보이고, 드럼의 원근
+     곡률(perspective:640px)에 맞춘 밀도가 어긋난다. 칸이 크기를 정하는 자리다. */
   font-size:1.25rem; font-weight:400;
   color:var(--text-medium-gray,#b9b9b9);
   transform-origin:center center;
@@ -62,6 +65,8 @@ body.aot-wheel-lock{ overflow:hidden !important; }
   font-weight:700;
 }
 .aot-wheel-sep{
+  /* 사다리 예외: 위 .aot-wheel-item 과 같은 드럼 칸에 나란히 앉는 구분 기호라
+     숫자와 크기가 같아야 한다. 이유는 그쪽 주석 참조. */
   font-size:1.25rem; font-weight:700;
   color:var(--aot-text-main,#333); padding:0 2px;
   position:relative; z-index:2;
@@ -70,10 +75,10 @@ body.aot-wheel-lock{ overflow:hidden !important; }
 .aot-wheel-band{
   position:absolute; left:0; right:0; top:50%; height:36px;
   transform:translateY(-50%); z-index:1; pointer-events:none;
-  border-top:1px solid var(--border-neutral,#e2ded0);
-  border-bottom:1px solid var(--border-neutral,#e2ded0);
+  border-top:1px solid var(--aot-border-neutral,#e2ded0);
+  border-bottom:1px solid var(--aot-border-neutral,#e2ded0);
   background:var(--bg-btn-hover-lighter,rgba(46,204,113,0.08));
-  border-radius:8px;
+  border-radius:var(--aot-radius-sm);
 }
 .aot-wheel-actions{ display:flex; gap:8px; margin-top:12px; }
 

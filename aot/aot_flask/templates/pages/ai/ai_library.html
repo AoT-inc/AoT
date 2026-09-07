@@ -842,10 +842,10 @@ function openSourceSettings(sourceId) {
     if (meta.urlSource) infoLinks.push(T.sourceSite + ' <a href="' + esc(meta.urlSource) + '" target="_blank">' + T.link + '</a>');
     if (meta.urlApiKey && meta.urlApiKey !== meta.urlSource) infoLinks.push(T.apiKey + ' <a href="' + esc(meta.urlApiKey) + '" target="_blank">' + T.link + '</a>');
     if (infoLinks.length) {
-      html += '<div class="aot-modal-body-text" style="font-size: 0.85rem;"><strong>' + T.relatedDocs + ':</strong> ' + infoLinks.join('; ') + '.</div>';
+      html += '<div class="aot-modal-body-text" style="font-size: var(--aot-font-size-sm);"><strong>' + T.relatedDocs + ':</strong> ' + infoLinks.join('; ') + '.</div>';
     }
     if (meta.description) {
-      html += '<div class="aot-modal-body-text" style="font-style: italic; background: #f9f9f9; padding: 8px; border-radius: 8px; font-size: 0.85rem;">' + esc(meta.description) + '</div>';
+      html += '<div class="aot-modal-body-text" style="font-style: italic; background: var(--aot-gray-100); padding: 8px; border-radius: var(--aot-radius-sm); font-size: var(--aot-font-size-sm);">' + esc(meta.description) + '</div>';
     }
     if (meta.usage) {
       html += '<div class="aot-modal-container"><div class="col-12 text-muted small" style="padding:0"><strong>' + T.usageLabel + '</strong> ' + esc(meta.usage) + '</div></div>';

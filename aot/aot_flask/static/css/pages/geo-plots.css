@@ -21,7 +21,7 @@
   font-size: calc(var(--aot-font-size-base) * 1.5);
   font-weight: 400;      /* 굵기가 아니라 크기로 앞선다(카드 제목과 같은 규약) */
   margin: 0;
-  color: var(--text-color-primary, #13261B);
+  color: var(--aot-color-text-primary, #13261B);
 }
 
 /* 좁히는 수단은 **검색 하나**다. 드롭다운 필터(지도·대지·구역·종류)와
@@ -48,7 +48,7 @@
 /* 목록 — 카드 하나에 행을 쌓는다(설정 화면의 항목 목록과 같은 모양). */
 .aot-plots-list {
   background: var(--aot-surface-card, #FFFFFF);
-  border-radius: 16px;
+  border-radius: var(--aot-radius-lg);
   padding: var(--aot-space-2) var(--aot-space-4);
 }
 
@@ -72,7 +72,7 @@
 
 .aot-plots-subject {
   font-size: var(--aot-font-size-base);
-  color: var(--text-color-primary, #13261B);
+  color: var(--aot-color-text-primary, #13261B);
 }
 
 /* 품종·위치는 **곁들이다** — 한 열에 한 정보라는 규약을 지키되, 목록에서는
@@ -98,7 +98,7 @@
   font-size: var(--aot-font-size-xs);
   color: var(--aot-color-text-secondary);
   border: 1px solid var(--aot-border-light);
-  border-radius: 999px;
+  border-radius: var(--aot-btn-pill-radius);
   padding: 1px 8px;
 }
 
@@ -109,9 +109,9 @@
 .aot-plots-planned-badge {
   flex: 0 0 auto;
   font-size: var(--aot-font-size-xs);
-  color: var(--text-color-primary, #13261B);
-  border: 1px solid var(--text-color-primary, #13261B);
-  border-radius: 999px;
+  color: var(--aot-color-text-primary, #13261B);
+  border: 1px solid var(--aot-color-text-primary, #13261B);
+  border-radius: var(--aot-btn-pill-radius);
   padding: 1px 8px;
   white-space: nowrap;
 }

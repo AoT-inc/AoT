@@ -31,7 +31,7 @@
 }
 .aot-pf-date-clear[hidden] { display: none; }
 @media (hover: hover) {
-  .aot-pf-date-clear:hover { color: var(--text-color-primary, #13261B); }
+  .aot-pf-date-clear:hover { color: var(--aot-color-text-primary, #13261B); }
 }
 
 /* ── 작기 종료 창의 선택지 ─────────────────────────────────────────────────
@@ -79,7 +79,7 @@
   color: var(--aot-color-text-secondary);
   text-decoration: underline;
 }
-.aot-ov-field-hint a:hover { color: var(--text-color-primary, #13261B); }
+.aot-ov-field-hint a:hover { color: var(--aot-color-text-primary, #13261B); }
 
 /* (나) 문장 — **한 줄을 다 쓴다.** 라벨/컨트롤 두 열 구조에 넣지 않는다:
    컨트롤 열은 폭이 고정이라 문장이 거기 갇히면 두 줄로 접히고 오른쪽으로

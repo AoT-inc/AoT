@@ -5,15 +5,15 @@
 
 /* --- Scheduler Card --- */
 .scheduler-card {
-    background: var(--aot-surface-card, var(--bd-primary));
+    background: var(--aot-surface-card);
     border: none;
-    border-radius: 20px !important;
+    border-radius: var(--aot-radius-xl) !important;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
     margin-bottom: 24px;
 }
 .scheduler-header {
     padding: 24px;
-    border-bottom: 1px solid var(--border-neutral);
+    border-bottom: 1px solid var(--aot-border-neutral);
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -27,66 +27,43 @@
     padding: 0;
 }
 
-/* --- Gantt Custom Styles --- */
-#ai-gantt-container {
-    border: none;
-    min-height: 700px;
-}
 .vis-timeline {
     border: none !important;
 }
 .vis-item {
-    border-radius: 12px !important;
+    border-radius: var(--aot-radius-md) !important;
     border: none !important;
     padding: 4px 12px !important;
-    font-size: 0.9rem;
+    font-size: var(--aot-font-size-sm);
     box-shadow: 0 2px 6px rgba(0,0,0,0.1);
     cursor: pointer;
 }
-.vis-item.task-status-completed { background-color: var(--aot-color-success, #28a745) !important; color: var(--text-color-tertiary, white) !important; }
-.vis-item.task-status-in_progress { background-color: #995aff !important; color: var(--text-color-tertiary, white) !important; }
-.vis-item.task-status-pending { background-color: #f8f9fa !important; color: var(--aot-text-main) !important; border: 1px solid #dee2e6 !important; }
-.vis-item.task-status-draft { background-color: #e9ecef !important; color: var(--aot-color-text-secondary, #6c757d) !important; border: 1px dashed #ced4da !important; }
-.vis-item.task-type-device_control { background-color: var(--color-equipment-mode) !important; color: white !important; }
-.vis-item.task-type-checkpoint { border: 2px solid #ffc107 !important; border-radius: 8px !important; }
+.vis-item.task-status-completed { background-color: var(--aot-color-success, #28a745) !important; color: var(--aot-color-text-tertiary, white) !important; }
+.vis-item.task-status-in_progress { background-color: #995aff !important; color: var(--aot-color-text-tertiary, white) !important; }
+.vis-item.task-status-pending { background-color: var(--aot-gray-100) !important; color: var(--aot-text-main) !important; border: 1px solid var(--aot-border-neutral) !important; }
+.vis-item.task-status-draft { background-color: var(--aot-gray-200) !important; color: var(--aot-color-text-secondary, #6c757d) !important; border: 1px dashed #ced4da !important; }
 
 .vis-labelset .vis-label {
-    border-bottom: 1px solid var(--border-neutral) !important;
+    border-bottom: 1px solid var(--aot-border-neutral) !important;
     padding: 12px !important;
     font-weight: 500;
 }
-.vis-label.gantt-group-goal { color: var(--color-equipment-mode); font-weight: 700; background: #f8f9ff !important; }
-.vis-label.gantt-group-aot { color: var(--aot-color-danger, #dc3545); font-weight: 700; background: #fff8f8 !important; }
 
-/* --- Action Buttons --- */
-.btn-action {
-    padding: 8px 16px;
-    border-radius: 20px;
-    font-weight: 600;
-    transition: all 0.2s;
-    margin-left: 8px;
-    border: 1px solid #dee2e6;
-}
-.btn-refresh {
-    background: #f8f9fa;
-    color: var(--aot-text-main);
-}
-.btn-refresh:hover { background: #e9ecef; }
 .btn-add-task {
-    background: var(--brand-primary);
-    color: var(--text-color-tertiary, #fff);
+    background: var(--aot-color-brand-primary);
+    color: var(--aot-color-text-tertiary, #fff);
     border: none;
 }
-.btn-add-task:hover { background: var(--brand-primary); color: #fff; opacity: 0.9; }
+.btn-add-task:hover { background: var(--aot-color-brand-primary); color: #fff; opacity: 0.9; }
 
 /* --- Global Controls --- */
 #gantt-global-controls .btn, #gantt-scale-controls .btn {
-    font-size: 11px;
+    font-size: var(--aot-font-size-2xs);
     padding: 3px 8px;
 }
 .btn-scale.active {
     background-color: var(--aot-color-text-secondary, #6c757d);
-    color: var(--text-color-tertiary, white);
+    color: var(--aot-color-text-tertiary, white);
 }
 
 /* --- Selection & Hover --- */
@@ -103,12 +80,12 @@
 
 /* --- Tooltip --- */
 div.vis-tooltip {
-    background: var(--brand-primary) !important;
-    color: var(--text-color-tertiary, #fff) !important;
+    background: var(--aot-color-brand-primary) !important;
+    color: var(--aot-color-text-tertiary, #fff) !important;
     border: none !important;
-    border-radius: 8px !important;
+    border-radius: var(--aot-radius-sm) !important;
     padding: 8px 12px !important;
-    font-size: 12px !important;
+    font-size: var(--aot-font-size-xs) !important;
     line-height: 1.5;
     box-shadow: 0 4px 12px rgba(0,0,0,0.2);
     max-width: 250px;
@@ -121,14 +98,14 @@ div.vis-tooltip {
 }
 .gantt-row-parent .vis-label .vis-inner {
     font-weight: 700;
-    font-size: 13px;
+    font-size: var(--aot-font-size-xs);
 }
 .gantt-row-child .vis-label {
-    background: #fafafa !important;
-    border-bottom: 1px solid #eee !important;
+    background: var(--aot-gray-100) !important;
+    border-bottom: 1px solid var(--aot-gray-200) !important;
 }
 .gantt-row-child .vis-label .vis-inner {
-    font-size: 12px;
+    font-size: var(--aot-font-size-xs);
     color: var(--aot-color-text-secondary, #555);
 }
 .gantt-group-parent {
@@ -154,12 +131,12 @@ div.vis-tooltip {
 .vis-item.gantt-summary-bar {
     background: linear-gradient(135deg, #1e293b 0%, #334155 100%) !important;
     border: none !important;
-    border-radius: 3px !important;
+    border-radius: var(--aot-radius-xs) !important;
     height: 14px !important;
     min-height: 14px !important;
     margin-top: 10px;
-    color: var(--text-color-tertiary, #fff) !important;
-    font-size: 11px !important;
+    color: var(--aot-color-text-tertiary, #fff) !important;
+    font-size: var(--aot-font-size-2xs) !important;
     font-weight: 700;
     letter-spacing: 0.3px;
     box-shadow: 0 2px 6px rgba(0,0,0,0.2) !important;
@@ -172,10 +149,10 @@ div.vis-tooltip {
 /* --- Inline Editor --- */
 .gantt-inline-editor {
     width: 100%;
-    font-size: 11px;
+    font-size: var(--aot-font-size-2xs);
     padding: 2px 5px;
     border: 1px solid var(--color-equipment-mode);
-    border-radius: 4px;
+    border-radius: var(--aot-radius-xs);
     outline: none;
 }
 
@@ -188,12 +165,12 @@ div.vis-tooltip {
 .gantt-group-container {
     display: flex;
     align-items: center;
-    border-bottom: 1px solid var(--border-neutral);
+    border-bottom: 1px solid var(--aot-border-neutral);
     padding: 5px 0;
 }
 .gantt-group-header {
-    background-color: var(--brand-primary) !important;
-    color: var(--text-color-tertiary, white) !important;
+    background-color: var(--aot-color-brand-primary) !important;
+    color: var(--aot-color-text-tertiary, white) !important;
     text-align: center;
     font-weight: bold;
     letter-spacing: 2px;
@@ -209,23 +186,23 @@ div.vis-tooltip {
 #ai-gantt-macro-container {
     flex: 0 0 25%;
     min-height: 180px;
-    border-bottom: 2px solid var(--border-neutral);
-    background: #fafafa;
+    border-bottom: 2px solid var(--aot-border-neutral);
+    background: var(--aot-gray-100);
 }
 #ai-gantt-micro-container {
     flex: 1;
     min-height: 400px;
-    background: var(--aot-surface-card, var(--bd-primary));
+    background: var(--aot-surface-card);
 }
 
 /* --- Proposed Tasks Table --- */
 #proposed-tasks-table {
-    font-size: 0.95rem;
+    font-size: var(--aot-font-size-base);
 }
 #proposed-tasks-table thead th {
     border-top: none;
     text-transform: uppercase;
-    font-size: 0.75rem;
+    font-size: var(--aot-font-size-xs);
     letter-spacing: 0.05em;
     font-weight: 700;
     color: var(--aot-color-text-secondary, #6c757d);
@@ -234,23 +211,23 @@ div.vis-tooltip {
 #proposed-tasks-table tbody td {
     vertical-align: middle;
     padding: 14px 12px;
-    border-color: #f8f9fa;
+    border-color: var(--aot-gray-100);
 }
 .whitespace-nowrap {
     white-space: nowrap;
 }
 .badge-draft {
-    background-color: #f8f9fa;
+    background-color: var(--aot-gray-100);
     color: var(--aot-color-text-secondary, #6c757d);
-    border: 1px solid #dee2e6;
+    border: 1px solid var(--aot-border-neutral);
 }
 .custom-checkbox .custom-control-label::before {
-    border-radius: 4px;
-    border: 2px solid #dee2e6;
+    border-radius: var(--aot-radius-xs);
+    border: 2px solid var(--aot-border-neutral);
 }
 .btn-group-sm .btn {
     padding: 0.25rem 0.5rem;
-    font-size: 0.8rem;
+    font-size: var(--aot-font-size-xs);
 }
 
 /* --- Proposed Items (Shadow & Ghost) --- */
@@ -278,7 +255,7 @@ div.vis-tooltip {
 
     .container-fluid { padding: 8px !important; }
     .scheduler-card {
-        border-radius: 12px !important;
+        border-radius: var(--aot-radius-md) !important;
         margin-bottom: 8px;
     }
     .scheduler-header {
@@ -288,14 +265,14 @@ div.vis-tooltip {
         justify-content: space-between;
     }
     .scheduler-header h2.section-title {
-        font-size: 1rem !important;
+        font-size: var(--aot-font-size-base) !important;
         margin: 0;
     }
     .scheduler-header .d-flex { gap: 6px; }
     #btn-add-task {
-        font-size: 13px !important;
+        font-size: var(--aot-font-size-xs) !important;
         padding: 8px 16px !important;
-        border-radius: 20px !important;
+        border-radius: var(--aot-radius-xl) !important;
     }
 
     .mobile-task-list {
@@ -305,10 +282,10 @@ div.vis-tooltip {
         padding: 12px 16px;
     }
     .mobile-task-card {
-        background: var(--aot-surface-card, var(--bd-primary));
-        border-radius: 12px;
+        background: var(--aot-surface-card);
+        border-radius: var(--aot-radius-md);
         padding: 14px 16px;
-        border-left: 4px solid #dee2e6;
+        border-left: 4px solid var(--aot-border-neutral);
         box-shadow: 0 1px 4px rgba(0,0,0,0.06);
         cursor: pointer;
         transition: transform 0.15s;
@@ -324,20 +301,20 @@ div.vis-tooltip {
         background: #faf5ff;
     }
     .mobile-task-card .task-title {
-        font-size: 14px;
+        font-size: var(--aot-font-size-sm);
         font-weight: 600;
         color: var(--aot-text-main);
         margin-bottom: 4px;
     }
     .mobile-task-card .task-meta {
-        font-size: 11px;
+        font-size: var(--aot-font-size-2xs);
         color: var(--aot-color-text-secondary, #888);
     }
     .mobile-task-card .task-status-badge {
         display: inline-block;
-        font-size: 10px;
+        font-size: var(--aot-font-size-2xs);
         padding: 2px 8px;
-        border-radius: 10px;
+        border-radius: var(--aot-radius-md);
         font-weight: 600;
         margin-top: 6px;
     }
@@ -349,7 +326,7 @@ div.vis-tooltip {
         text-align: center;
         padding: 40px 20px;
         color: var(--aot-color-text-secondary, #aaa);
-        font-size: 14px;
+        font-size: var(--aot-font-size-sm);
     }
 
     .modal-dialog {

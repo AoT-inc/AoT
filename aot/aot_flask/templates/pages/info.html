@@ -48,12 +48,12 @@
         {% endif %}
         <br>{{_('Database Version')}}:&nbsp;
         {%- if database_version == correct_database_version -%}<span style="color: var(--aot-color-dark, #141414); font-weight: bold; overflow-wrap: anywhere;">{{database_version}}</span>
-            {%- else -%}<span style="color: var(--aot-color-danger, #F70D1A); font-weight: bold; overflow-wrap: anywhere;">{{database_version}}</span> ({{_('Incorrect Version. Should be')}} {{correct_database_version}}) <a href="{{ manual_url('Troubleshooting/#incorrect-database-version') }}"><span style="font-size: 16px" class="fas fa-question-circle"></span></a>
+            {%- else -%}<span style="color: var(--aot-color-danger, #F70D1A); font-weight: bold; overflow-wrap: anywhere;">{{database_version}}</span> ({{_('Incorrect Version. Should be')}} {{correct_database_version}}) <a href="{{ manual_url('Troubleshooting/#incorrect-database-version') }}"><span class="fas fa-question-circle aot-help-icon"></span></a>
             {%- endif -%}
         <br>{{_('Database URL')}}: <span class="hide" style="font-weight: bold; overflow-wrap: anywhere;">{{database_url}}</span>
         <br>{{_('Daemon Status')}}:&nbsp
         {%- if daemon_status == "alive" %}<span style="color: var(--aot-color-dark, #141414); font-weight: bold;">{{_('Running')}}</span>
-        {%- else %}<span style="color: var(--aot-color-danger, #F70D1A); font-weight: bold;">{{_('Not Running')}}</span> <a href="{{ manual_url('Troubleshooting/#daemon-not-running') }}"><span style="font-size: 16px" class="fas fa-question-circle"></span></a>
+        {%- else %}<span style="color: var(--aot-color-danger, #F70D1A); font-weight: bold;">{{_('Not Running')}}</span> <a href="{{ manual_url('Troubleshooting/#daemon-not-running') }}"><span class="fas fa-question-circle aot-help-icon"></span></a>
         {% endif %}
         {% if daemon_up %}
           <br>{{_('Daemon RAM Usage')}}: <span style="color: var(--aot-color-dark, #141414); font-weight: bold;">{{ram_use_daemon}} MB</span>
@@ -75,7 +75,7 @@
       <div class="aot-code-block-label">
         {{_('Web Server Threads')}} (gunicorn)
       </div>
-      <div class="aot-code-block" style="font-size: 0.9rem;">
+      <div class="aot-code-block" style="font-size: var(--aot-font-size-sm);">
         {{_('Effective Value')}}: <span style="font-weight: bold;">{{gunicorn_info.effective}}</span>
         ({%- if gunicorn_info.source == 'env' -%}{{_('Environment variable')}} GUNICORN_THREADS
          {%- elif gunicorn_info.source == 'manual' -%}{{_('Manual setting')}}

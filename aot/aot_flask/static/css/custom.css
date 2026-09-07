@@ -20,11 +20,6 @@
   border: 0;
 }
 
-.checkbox-big {
-  width: 1.5em;
-  height: 1.5em
-}
-
 .icon-fw {
   width: 1.28571429em;
   text-align: center
@@ -64,10 +59,6 @@
 
 .no-gutters {
   padding: 0 0;
-}
-
-.checkbox-nopad {
-  padding-top: 0 !important;
 }
 
 .table {
@@ -119,17 +110,16 @@
   }
 }
 
-
 /* Avatar Circle (32px) */
 .note-avatar-circle {
-  width: 32px !important;
-  height: 32px !important;
+  width: 32px;
+  height: 32px;
   /* Prevent Oval Shape */
-  min-width: 32px !important;
-  min-height: 32px !important;
-  border-radius: 50% !important;
-  flex-shrink: 0 !important;
-  font-size: 1em !important;
+  min-width: 32px;
+  min-height: 32px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  font-size: 1em;
 }
 
 /* Action Group Styling */
@@ -142,7 +132,7 @@
 
 .aot-action-group .bootstrap-select {
   flex: 1;
-  width: auto !important;
+  width: auto;
 }
 
 /* Force hide native select to prevent click interception */
@@ -156,7 +146,6 @@
   z-index: 10;
   /* Ensure button is clickable */
 }
-
 
 /* Container horizontal padding — responsive margin */
 .container {

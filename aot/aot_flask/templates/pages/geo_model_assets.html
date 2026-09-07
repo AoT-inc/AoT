@@ -16,10 +16,10 @@
     flex: 1; min-width: 180px; padding: 0.4rem 0.75rem;
     border: 1px solid #ccc; border-radius: 6px; font-size: 0.88rem;
   }
-  .btn-primary { background: #0070f3; color: var(--text-color-tertiary, #fff); border: none; padding: 0.42rem 1rem;
+  .btn-primary { background: #0070f3; color: var(--aot-color-text-tertiary, #fff); border: none; padding: 0.42rem 1rem;
     border-radius: 6px; cursor: pointer; font-size: 0.88rem; }
   .btn-primary:hover { background: #005dd1; }
-  .btn-danger { background: #e53935; color: var(--text-color-tertiary, #fff); border: none; padding: 0.35rem 0.75rem;
+  .btn-danger { background: #e53935; color: var(--aot-color-text-tertiary, #fff); border: none; padding: 0.35rem 0.75rem;
     border-radius: 5px; cursor: pointer; font-size: 0.8rem; }
   .btn-secondary { background: #f0f0f0; color: var(--aot-color-text-primary, #333); border: 1px solid #ccc; padding: 0.42rem 0.9rem;
     border-radius: 6px; cursor: pointer; font-size: 0.88rem; }
@@ -79,7 +79,7 @@
 
   <div class="asset-toolbar">
     <input type="text" id="asset-search" placeholder="{{ _('Search by name…') }}" oninput="filterAssets(this.value)">
-    <select id="unit-select" style="padding:0.4rem 0.65rem;border:1px solid #ccc;border-radius:6px;font-size:0.88rem;"
+    <select id="unit-select" style="padding:0.4rem 0.65rem;border:1px solid #ccc;border-radius: var(--aot-radius-sm);font-size: var(--aot-font-size-sm);"
             onchange="saveUnit(this.value)">
       <option value="mm">mm</option>
       <option value="cm">cm</option>

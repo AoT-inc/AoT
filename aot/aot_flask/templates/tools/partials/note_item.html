@@ -60,7 +60,7 @@
                 
                 {% if image_files %}
                 <div class="note-gallery-container bg-light border-bottom" id="gallery-{{each_note.unique_id}}" data-media='{{ image_files | tojson }}'>
-                    <div class="note-main-image position-relative" style="background: #f1f5f9;">
+                    <div class="note-main-image position-relative" style="background: var(--aot-gray-100);">
                         <div class="main-img-link" onclick="openGlobalGallery('{{each_note.unique_id}}')" style="cursor: zoom-in;">
                             <img src="/note_attachment/{{image_files[0]}}" class="img-fluid w-100 main-img-display" alt="Main" loading="lazy" style="max-height: 380px; min-height: 100px; object-fit: cover;">
                         </div>
@@ -69,7 +69,7 @@
                     {% if image_files|length > 1 %}
                     <div class="note-thumbnails-wrapper position-relative p-2 bg-white border-top d-none">
                         <button class="nav-arrow prev position-absolute" onclick="scrollGallery('{{each_note.unique_id}}', 'left')" style="left: 5px; top: 50%; transform: translateY(-50%); z-index: 5; border: none; background: rgba(255,255,255,0.9); border-radius: 50%; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 4px rgba(0,0,0,0.1); cursor: pointer;">
-                            <i class="fas fa-chevron-left text-dark" style="font-size: 12px;"></i>
+                            <i class="fas fa-chevron-left text-dark" style="font-size: var(--aot-font-size-xs);"></i>
                         </button>
                         <div class="note-thumbnails d-flex gap-2 overflow-auto no-scrollbar scroll-smooth p-1" id="thumb-container-{{each_note.unique_id}}" style="gap: 8px; overflow-x: auto; scroll-behavior: smooth;">
                             {% for img_file in image_files %}
@@ -81,14 +81,14 @@
                             {% endfor %}
                         </div>
                         <button class="nav-arrow next position-absolute" onclick="scrollGallery('{{each_note.unique_id}}', 'right')" style="right: 5px; top: 50%; transform: translateY(-50%); z-index: 5; border: none; background: rgba(255,255,255,0.9); border-radius: 50%; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 4px rgba(0,0,0,0.1); cursor: pointer;">
-                            <i class="fas fa-chevron-right text-dark" style="font-size: 12px;"></i>
+                            <i class="fas fa-chevron-right text-dark" style="font-size: var(--aot-font-size-xs);"></i>
                         </button>
                     </div>
                     {% endif %}
                 </div>
                 {% endif %}
 
-                <div class="note-card-body p-4" id="body-{{each_note.unique_id}}" style="white-space: pre-wrap; font-weight: 500; font-size: 0.95rem; line-height: 1.6; padding-bottom: 30px;">{{ each_note.note }}</div>
+                <div class="note-card-body p-4" id="body-{{each_note.unique_id}}" style="white-space: pre-wrap; font-weight: 500; font-size: var(--aot-font-size-base); line-height: 1.6; padding-bottom: 30px;">{{ each_note.note }}</div>
             </div>
 
             <div class="text-center pb-3 note-more-ctrl" id="ctrl-{{each_note.unique_id}}" style="display:none;">
