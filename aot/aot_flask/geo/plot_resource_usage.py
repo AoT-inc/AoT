@@ -68,13 +68,17 @@ def usage_for_plot(plot, days=WINDOW_DAYS):
          'devices': [{'output_id', 'name', 'roles',
                       'seconds_today', 'seconds_window',
                       'litres_today', 'litres_window',
-                      'share', 'source', 'has_records'}],
+                      'share', 'source', 'has_records', 'dry_here'}],
          'totals': {'seconds_today', 'seconds_window',
                     'litres_today', 'litres_window', 'share',
-                    'water_partial', 'has_records', 'estimated'}}
+                    'water_partial', 'water_dry_here',
+                    'has_records', 'estimated'}}
 
-    ⚠ 물량 합에 유량 근거가 없는 장치는 **빠진다**. 빠졌다는 사실을
-      (`water_partial`) 함께 말하지 않으면 그 합이 전체인 줄로 읽힌다.
+    ⚠ 물량 합에서 빠진 장치가 있으면 **왜 빠졌는지까지** 말한다. 이유가 둘이고
+      사람이 할 일이 다르다 — `water_dry_here` 는 "담당 영역이 이 구획과
+      겹치지만 그 자리에 이미터가 없다"(그 밸브의 물은 다른 구획에 떨어진다,
+      정상일 수 있다)이고, `water_partial` 은 "유량 근거가 아예 없다"(이미터·
+      노즐을 아직 안 그렸다)이다. 뭉뚱그리면 그릴 것이 있는지 알 수 없다.
     """
     from aot.aot_flask.geo import plot_context
     from aot.utils.device_tz import resolve_location_tz
@@ -208,6 +212,12 @@ def _device_row(output_id, name, by_day, today, flow, roles):
         'litres_window': None,
         'share': None,
         'source': None,
+        # 물량이 왜 비었는가 — **두 이유를 가른다.**
+        #   `dry_here`  담당 영역은 이 구획과 겹치는데 그 겹친 자리에 이미터가
+        #               없다. 그 밸브의 물은 다른 구획에 떨어진다(정상일 수 있다).
+        #   그 밖       유량 근거 자체가 없다(이미터·노즐을 아직 안 그렸다).
+        # 사람이 할 일이 다르므로 화면이 같은 말로 뭉뚱그리면 안 된다.
+        'dry_here': (flow is not None and not flow.get('lph')),
     }
     lph = (flow or {}).get('lph')
     if lph:
@@ -231,6 +241,9 @@ def _fold(devices):
     # 몫은 **전부 같을 때만** 낸다. 서로 다른 몫을 하나로 적으면 그 숫자가 어느
     # 장치의 것인지 알 수 없는데, 화면은 그것을 전체의 몫으로 읽는다.
     shares = {d['share'] for d in with_water}
+    # 유량 근거가 아예 없는 장치 — `dry_here`(이 구획엔 안 떨어진다)와 다르다.
+    no_basis = [d for d in devices
+                if d['litres_window'] is None and not d['dry_here']]
     return {
         'seconds_today': sum(d['seconds_today'] for d in devices),
         'seconds_window': sum(d['seconds_window'] for d in devices),
@@ -239,7 +252,12 @@ def _fold(devices):
         'litres_window': (round(sum(d['litres_window'] for d in with_water), 1)
                           if has_water else None),
         'share': shares.pop() if len(shares) == 1 else None,
-        'water_partial': has_water and len(with_water) != len(devices),
+        # 물량 합에서 빠진 장치가 있다 — 이유별로 따로 낸다.
+        'water_dry_here': any(d['dry_here'] for d in devices),
+        # `partial` 은 **일부만** 빠졌다는 뜻이다 — 전부 빠진 경우는 화면이
+        # 다른 문장을 쓰므로(`litres_window is None`) 여기서 참이 되면
+        # 두 문장이 겹쳐 나온다.
+        'water_partial': has_water and bool(no_basis),
         'has_records': any(d['has_records'] for d in devices),
         # 유량계 실측이 아니다 — 화면이 늘 그렇게 말해야 한다.
         'estimated': has_water,

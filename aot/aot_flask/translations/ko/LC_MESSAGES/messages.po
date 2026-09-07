@@ -34205,3 +34205,11 @@ msgstr "물량은 설계 유량과 가동시간으로 낸 추정치이며 유량
 #: aot/aot_flask/static/js/common/aot-map-popup.js
 msgid "Only the share belonging to this plot is counted: %(pct)s"
 msgstr "이 구획의 몫만 셉니다: %(pct)s"
+
+#: aot/aot_flask/static/js/common/aot-map-popup.js
+msgid "A device here has no emitter inside this plot, so no water is counted for it."
+msgstr "이 구획 안에 이미터가 없는 장치가 있어 그 장치의 물량은 세지 않습니다."
+
+#: aot/aot_flask/static/js/common/aot-map-popup.js
+msgid "No emitter is mapped inside this plot, so no water is counted here."
+msgstr "이 구획 안에 그려진 이미터가 없어 물량을 세지 않습니다."

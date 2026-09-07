@@ -6769,9 +6769,18 @@ def _open_field_flow(plot):
         if region.is_empty:
             continue
         lph = sum(flow for pt, flow in sprinklers if region.contains(pt))
-        if lph > 0:
-            out[oid] = {'lph': round(lph, 1), 'share': 1.0,
-                        'source': 'map-equipment'}
+        # ⚠ **0 도 기록한다.** 담당 폴리곤은 이 구획과 겹치는데 그 겹친 자리에
+        #   이미터가 하나도 없는 배치가 실제로 있다(김제 실측: v341 은 이미터
+        #   15개를 갖지만 '평안' 안에는 0개 — 그 밸브의 물은 다른 구획에
+        #   떨어진다). 이 항목을 빼 버리면 화면은 그것을 **"유량을 모르는
+        #   장치"** 와 구분하지 못하는데, 둘은 사람이 할 일이 다르다:
+        #   앞은 "이 구획엔 안 떨어진다"(정상일 수 있다) 이고 뒤는 "이미터를
+        #   아직 안 그렸다"(그리면 된다) 이다.
+        #
+        #   물량 계산에는 영향이 없다 — 쓰는 쪽이 전부 `flow.get('lph')` 로
+        #   참을 확인한다(0 은 거짓이라 그대로 건너뛴다).
+        out[oid] = {'lph': round(lph, 1), 'share': 1.0,
+                    'source': 'map-equipment'}
     return out
 
 

@@ -647,6 +647,30 @@
 .aot-ov-row--stack > span:first-child { flex: 0 0 auto; padding-right: 12px; }
 .aot-ov-row--stack > span:last-child  { flex: 1 1 auto; text-align: right; }
 
+/* [자원] 장치 한 대 = 이름 한 줄 + 창 두 줄(오늘·최근 7일).
+ *
+ * 이름을 값의 왼쪽 칸에 두면 값 칸이 좁아 "오늘 12.34 시간 · 104,917 L" 이
+ * 매번 두 줄로 접힌다(실측). 이름을 자기 줄로 올리면 값이 온전한 폭을 갖는다.
+ *
+ * ⚠ 구분선은 **장치 사이**에 긋고 장치 안에는 긋지 않는다. 공용
+ *   `.aot-ov-row + .aot-ov-row` 규칙을 그대로 두면 정확히 반대가 된다 —
+ *   한 장치의 두 줄 사이에만 선이 생겨 무리가 거꾸로 묶여 보인다. */
+/* ⚠ `:not()` 은 **인자의 특이도를 갖는다.** 공용 규칙이
+ *   `.aot-ov-row:not(.aot-ov-block) + .aot-ov-row:not(.aot-ov-block)`(클래스 4)
+ *   이라 `.aot-ov-usage .aot-ov-row + .aot-ov-row`(클래스 3)로는 못 이긴다 —
+ *   선이 그대로 남는다(실측). 같은 `:not()` 을 달아 5로 올린다. */
+.aot-ov-usage .aot-ov-row:not(.aot-ov-block) + .aot-ov-row:not(.aot-ov-block) {
+  border-top: 0;
+}
+/* 한 장치 안의 세 줄은 **한 덩어리**다 — 공용 줄 간격(6px, 즉 줄 사이 12px)을
+ * 그대로 쓰면 이름과 값이 서로 다른 항목처럼 떨어져 보인다. 절반으로 줄여
+ * 무리를 붙이고, 무리 사이 간격은 위 구분선이 맡는다. */
+.aot-ov-usage .aot-ov-row { padding: 3px 0; }
+.aot-ov-usage + .aot-ov-usage,
+.aot-ov-row:not(.aot-ov-block) + .aot-ov-usage {
+  border-top: 1px solid var(--aot-border-neutral, var(--aot-border-light));
+}
+
 /* Gate state: warning-like color */
 /* 안전 게이트 — `.aot-ov-strain` 과 같은 규칙이다(2026-08-26).
    모달 안에서는 색이 아니라 **굵기**로 눈에 걸리게 한다. */

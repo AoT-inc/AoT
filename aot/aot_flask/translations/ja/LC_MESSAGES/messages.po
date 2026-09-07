@@ -33786,3 +33786,11 @@ msgstr "水量は設計流量と稼働時間から求めた推定値で、流量
 #: aot/aot_flask/static/js/common/aot-map-popup.js
 msgid "Only the share belonging to this plot is counted: %(pct)s"
 msgstr "この区画の取り分のみを計上します: %(pct)s"
+
+#: aot/aot_flask/static/js/common/aot-map-popup.js
+msgid "A device here has no emitter inside this plot, so no water is counted for it."
+msgstr "この区画内にエミッターがない装置があるため、その装置の水量は計上しません。"
+
+#: aot/aot_flask/static/js/common/aot-map-popup.js
+msgid "No emitter is mapped inside this plot, so no water is counted here."
+msgstr "この区画内に描かれたエミッターがないため、水量は計上しません。"
