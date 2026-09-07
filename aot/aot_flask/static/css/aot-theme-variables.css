@@ -384,23 +384,23 @@
      지도 pane·gridstack 핸들·위젯 내부 등 "제자리" 레이어는 로컬 소정수를
      쓰고 100 미만을 유지할 것. 하드코딩 숫자/극단값(9999·2147483647) 금지.
      ======================================================================== */
-  --aot-z-base:              0;    /* @kind other · 기본 흐름 콘텐츠 */
-  --aot-z-raised:           10;    /* @kind other · 살짝 띄운 콘텐츠·배지 */
-  --aot-z-sticky:          100;    /* @kind other · sticky 서브헤더, 페이지 내 고정 바 */
-  --aot-z-map-overlay:     400;    /* @kind other · 지도/캔버스 위 떠있는 컨트롤·패널 */
-  --aot-z-dropdown:       1000;    /* @kind other · 메뉴·selectpicker·자동완성 (부트스트랩 관례) */
-  --aot-z-drawer:         1500;    /* @kind other · 슬라이드 사이드바·드로어 */
-  --aot-z-fixed-panel:    2000;    /* @kind other · 고정 떠있는 툴 팔레트(geo 디자인 등) */
-  --aot-z-navbar:         3000;    /* @kind other · 상단 내비게이션 바 */
-  --aot-z-overlay:        4000;    /* @kind other · 전체화면 오버레이: 로딩·지도 풀스크린·갤러리 뷰어 */
-  --aot-z-modal-backdrop: 5000;    /* @kind other · 모달 배경 */
-  --aot-z-modal:          5100;    /* @kind other · 다이얼로그 */
-  --aot-z-modal-nested:   5200;    /* @kind other · 모달 안에서 밖으로 튀어나오는 드롭다운/select */
-  --aot-z-popover:        5300;    /* @kind other · 모달 콘텐츠에 앵커된 팝오버 */
-  --aot-z-confirm-backdrop: 5900;  /* @kind other · 전역 confirm 다이얼로그 배경(일반 모달 위) */
-  --aot-z-confirm:        6000;    /* @kind other · 전역 confirm 다이얼로그 */
-  --aot-z-toast:          6500;    /* @kind other · 토스트·알림 (모달 위) */
-  --aot-z-tooltip:        7000;    /* @kind other · 툴팁 — 항상 최상위 */
+  --aot-z-base:              0;    /* @kind other */ /* 기본 흐름 콘텐츠 */
+  --aot-z-raised:           10;    /* @kind other */ /* 살짝 띄운 콘텐츠·배지 */
+  --aot-z-sticky:          100;    /* @kind other */ /* sticky 서브헤더, 페이지 내 고정 바 */
+  --aot-z-map-overlay:     400;    /* @kind other */ /* 지도/캔버스 위 떠있는 컨트롤·패널 */
+  --aot-z-dropdown:       1000;    /* @kind other */ /* 메뉴·selectpicker·자동완성 (부트스트랩 관례) */
+  --aot-z-drawer:         1500;    /* @kind other */ /* 슬라이드 사이드바·드로어 */
+  --aot-z-fixed-panel:    2000;    /* @kind other */ /* 고정 떠있는 툴 팔레트(geo 디자인 등) */
+  --aot-z-navbar:         3000;    /* @kind other */ /* 상단 내비게이션 바 */
+  --aot-z-overlay:        4000;    /* @kind other */ /* 전체화면 오버레이: 로딩·지도 풀스크린·갤러리 뷰어 */
+  --aot-z-modal-backdrop: 5000;    /* @kind other */ /* 모달 배경 */
+  --aot-z-modal:          5100;    /* @kind other */ /* 다이얼로그 */
+  --aot-z-modal-nested:   5200;    /* @kind other */ /* 모달 안에서 밖으로 튀어나오는 드롭다운/select */
+  --aot-z-popover:        5300;    /* @kind other */ /* 모달 콘텐츠에 앵커된 팝오버 */
+  --aot-z-confirm-backdrop: 5900;  /* @kind other */ /* 전역 confirm 다이얼로그 배경(일반 모달 위) */
+  --aot-z-confirm:        6000;    /* @kind other */ /* 전역 confirm 다이얼로그 */
+  --aot-z-toast:          6500;    /* @kind other */ /* 토스트·알림 (모달 위) */
+  --aot-z-tooltip:        7000;    /* @kind other */ /* 툴팁 — 항상 최상위 */
 
   /* ========================================================================
      Section 1.14: shadow

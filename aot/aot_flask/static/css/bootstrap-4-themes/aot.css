@@ -69,11 +69,11 @@
      --aot-btn-gap · --aot-group-gap: 이 파일과 css/aot.css 에만 같은 값으로
      선언돼 있었고 저장소 어디에도 소비처가 없었다 — 지웠다. */
 
-  --breakpoint-xs: 0;
-  --breakpoint-sm: 576px;
-  --breakpoint-md: 768px;
-  --breakpoint-lg: 992px;
-  --breakpoint-xl: 1200px;
+  /* `--breakpoint-xs|sm|md|lg|xl` 를 여기서 다시 선언하고 있었다. 값은
+     부트스트랩 기본과 **똑같았고**(0·576·768·992·1200) 읽는 곳은 저장소에
+     한 곳도 없다(`var(--breakpoint-` 0곳). 위 팔레트 11개와 같은 계열의
+     죽은 재선언이라 지운다 — 부트스트랩의 `:root` 에 그대로 남아 있으므로
+     누가 나중에 읽더라도 같은 값이 나온다. 2026-09-07 */
 
   --font-family-sans-serif: "Gothic A1", "Ubuntu", "Open Sans", "Nanum Gothic", "Malgun Gothic", "Apple SD Gothic Neo", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
   --font-family-monospace: SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
