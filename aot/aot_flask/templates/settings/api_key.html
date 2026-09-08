@@ -218,7 +218,7 @@
             data: JSON.stringify(items, null, '  '),
             contentType: "application/json; charset=utf-8",
             error: function () {
-              window.showToast('{{_("Error connecting to server.")}}', 'error');
+              window.showToast({{ _("Error connecting to server.")|tojson }}, 'error');
             }
           });
         }, 0);
@@ -231,7 +231,7 @@
       if (!input) { return; }
       var shown = input.type === 'text';
       input.type = shown ? 'password' : 'text';
-      $(this).text(shown ? '{{_("Show")}}' : '{{_("Hide")}}');
+      $(this).text(shown ? {{ _("Show")|tojson }} : {{ _("Hide")|tojson }});
     });
 
     // The detail form is injected after page load, so the submit handler below
@@ -254,7 +254,7 @@
 
       $drawer.attr('data-config-uid-target', uid);
       $drawer.find('.modal-title').text($(this).data('drawer-title') || '');
-      swap('<div class="modal-body"><div class="aot-modal-container">{{_("Loading")}}...</div></div>');
+      swap('<div class="modal-body"><div class="aot-modal-container">' + {{ _("Loading")|tojson }} + '...</div></div>');
       $drawer.modal('show');
       // One shared drawer for every row: switching from card A to card B does
       // not re-fire show.bs.modal, so the row highlight has to be moved by hand
@@ -262,14 +262,14 @@
       if (window.AoTWidgetDrawer) { window.AoTWidgetDrawer.activateByUid(uid); }
 
       $.get('/settings/api_key/detail/' + encodeURIComponent(uid)).done(swap).fail(function () {
-        swap('<div class="modal-body"><div class="aot-modal-container">{{_("Error connecting to server.")}}</div></div>');
+        swap('<div class="modal-body"><div class="aot-modal-container">' + {{ _("Error connecting to server.")|tojson }} + '</div></div>');
       });
     });
 
     $(document).on('submit', 'form.api-key-form', function (e) {
       let submitter_btn = $(e.originalEvent.submitter);
 
-      window.showToast('{{_("Processing command...")}}', 'info');
+      window.showToast({{ _("Processing command...")|tojson }}, 'info');
 
       $.ajax({
         type: "POST",
@@ -297,11 +297,11 @@
               setTimeout(function () { window.location.reload(); }, 800);
             }
           } else {
-            window.showToast('{{_("Error")}}: ' + data.data.messages.error.join(", "), 'error');
+            window.showToast({{ _("Error")|tojson }} + ': ' + data.data.messages.error.join(", "), 'error');
           }
         },
         error: function() {
-          window.showToast('{{_("Error connecting to server.")}}', 'error');
+          window.showToast({{ _("Error connecting to server.")|tojson }}, 'error');
         }
       });
       e.preventDefault();

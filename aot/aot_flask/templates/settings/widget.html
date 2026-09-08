@@ -20,7 +20,7 @@
 
     <form method="post" action="/settings/widget" enctype=multipart/form-data>
     {{form_widget.csrf_token}}
-    <input id="import_widget_file" name="import_widget_file" type="file" style="display:none" onchange="document.getElementById('import_widget_file_label').textContent = this.files[0] ? this.files[0].name : '{{_('Choose files')}}';">
+    <input id="import_widget_file" name="import_widget_file" type="file" style="display:none" onchange="document.getElementById('import_widget_file_label').textContent = this.files[0] ? this.files[0].name : {{ _('Choose files')|tojson|forceescape }};">
     <div class="d-flex flex-wrap" style="gap: 8px; margin-bottom: 1.2rem; align-items: center;">
       <button type="button" class="btn aot-pill-btn" onclick="document.getElementById('import_widget_file').click()"><span id="import_widget_file_label">{{_('Choose files')}}</span></button>
       {{form_widget.import_widget_upload(class_='btn aot-pill-btn aot-pill-btn-primary')}}

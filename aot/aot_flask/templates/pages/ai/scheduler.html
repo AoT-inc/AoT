@@ -777,15 +777,15 @@ $('#taskActionType').on('change', function() {
     $('#amountGroup').toggleClass('d-none', actionType === 'function' || actionType === 'abstract_plan');
 
     if (actionType === 'output') {
-        $('#targetLabel').text("{{ _('Target Device') }}");
-        $('#amountLabel').text("{{ _('Amount (seconds or PWM)') }}");
+        $('#targetLabel').text({{ _('Target Device')|tojson }});
+        $('#amountLabel').text({{ _('Amount (seconds or PWM)')|tojson }});
     } else if (actionType === 'pid') {
-        $('#targetLabel').text("{{ _('Target PID Controller') }}");
-        $('#amountLabel').text("{{ _('Value') }}");
+        $('#targetLabel').text({{ _('Target PID Controller')|tojson }});
+        $('#amountLabel').text({{ _('Value')|tojson }});
     } else if (actionType === 'function') {
-        $('#targetLabel').text("{{ _('Target Function') }}");
+        $('#targetLabel').text({{ _('Target Function')|tojson }});
     } else if (actionType === 'abstract_plan') {
-        $('#targetLabel').text("{{ _('Target Zone/Site') }}");
+        $('#targetLabel').text({{ _('Target Zone/Site')|tojson }});
     }
 
     var list = [];
@@ -795,7 +795,7 @@ $('#taskActionType').on('change', function() {
     else if (actionType === 'abstract_plan') list = zoneData;
 
     if (list.length === 0) {
-        targetSelect.append($('<option>').val('').text("{{ _('No items available') }}").prop('disabled', true));
+        targetSelect.append($('<option>').val('').text({{ _('No items available')|tojson }}).prop('disabled', true));
     } else {
         list.forEach(function(item) {
             targetSelect.append($('<option>').val(item.unique_id).text(item.name));
@@ -819,7 +819,7 @@ $('#taskTarget').on('change', function() {
             channelSelect.append($('<option>').val(ch.index).text(ch.name + ' (CH' + ch.index + ')'));
         });
     } else {
-        channelSelect.append($('<option>').val(0).text('{{ _("CH0 (Default)") }}'));
+        channelSelect.append($('<option>').val(0).text({{ _("CH0 (Default)")|tojson }}));
     }
     refreshSelect('taskChannel');
 });
@@ -850,10 +850,10 @@ function updateTaskDualClock() {
     var vtz = AoTTz.viewerTz();
     var lines = [];
     if (dtz) {
-        lines.push('{{ _("Device-local") }}: <b>' + AoTTz.formatDevice(inst, dtz, { fmt: 'datetimeShort' }) + '</b> (' + dtz + ')');
+        lines.push({{ _("Device-local")|tojson }} + ': <b>' + AoTTz.formatDevice(inst, dtz, { fmt: 'datetimeShort' }) + '</b> (' + dtz + ')');
     }
     if (!dtz || dtz !== vtz) {
-        lines.push('{{ _("Your time") }}: ' + AoTTz.formatViewer(inst, { fmt: 'datetimeShort' }) + ' (' + vtz + ')');
+        lines.push({{ _("Your time")|tojson }} + ': ' + AoTTz.formatViewer(inst, { fmt: 'datetimeShort' }) + ' (' + vtz + ')');
     }
     lines.push('UTC: ' + inst.toISOString().slice(0, 16).replace('T', ' '));
     el.innerHTML = lines.join('<br>');
@@ -880,7 +880,7 @@ function apiCall(url, method, data, onSuccess) {
             location.reload();
         },
         error: function(xhr) {
-            var msg = '{{ _("Error") }}';
+            var msg = {{ _("Error")|tojson }};
             try { msg = JSON.parse(xhr.responseText).error || msg; } catch(e) {}
             alert(msg);
         }
@@ -888,12 +888,12 @@ function apiCall(url, method, data, onSuccess) {
 }
 
 function approveJob(jobId) {
-    if (!confirm('{{ _("Approve this job?") }}')) return;
+    if (!confirm({{ _("Approve this job?")|tojson }})) return;
     apiCall('/api/v1/scheduler/approve/' + jobId, 'POST', {});
 }
 
 function rejectJob(jobId) {
-    var feedback = prompt('{{ _("Rejection reason (optional):") }}');
+    var feedback = prompt({{ _("Rejection reason (optional):")|tojson }});
     if (feedback === null) return;
     apiCall('/api/v1/scheduler/reject/' + jobId, 'POST', { feedback: feedback });
 }
@@ -918,7 +918,7 @@ function saveJob(jobId) {
 }
 
 function deleteJob(jobId) {
-    var reason = prompt('{{ _("Cancellation reason (optional):") }}');
+    var reason = prompt({{ _("Cancellation reason (optional):")|tojson }});
     if (reason === null) return;
     apiCall('/api/v1/scheduler/jobs/' + jobId, 'DELETE', { reason: reason });
 }
@@ -926,7 +926,7 @@ function deleteJob(jobId) {
 function askAI() {
     var agentId = $('#smartAgent').val();
     var command = $('#smartCommand').val();
-    if (!command) return alert("{{ _('Please enter a command') }}");
+    if (!command) return alert({{ _('Please enter a command')|tojson }});
 
     var btn = $('button[onclick="askAI()"]');
     var originalHtml = btn.html();
@@ -950,7 +950,7 @@ function askAI() {
             actionsHtml += '</ul>';
             $('#aiProposedActions').html(actionsHtml);
         } else {
-            alert("{{ _('Error: ') }}" + data.message);
+            alert({{ _('Error: ')|tojson }} + data.message);
         }
     })
     .catch(error => {
@@ -1018,9 +1018,9 @@ document.addEventListener('DOMContentLoaded', function() {
             var deviceLocal = (window.AoTTz && props.tz)
                 ? AoTTz.formatDevice(info.event.start, props.tz, { fmt: 'datetime' }) + ' (' + props.tz + ')'
                 : '';
-            alert('{{ _("State: ") }}' + props.state + '\n{{ _("Type: ") }}' + props.action_type + '\n{{ _("Target: ") }}' + props.target_id + '\n{{ _("By: ") }}' + props.proposed_by
-                + (deviceLocal ? '\n{{ _("Local time: ") }}' + deviceLocal : '')
-                + '\n{{ _("Reasoning: ") }}' + (props.reasoning || '-'));
+            alert({{ _("State: ")|tojson }} + props.state + '\n' + {{ _("Type: ")|tojson }} + props.action_type + '\n' + {{ _("Target: ")|tojson }} + props.target_id + '\n' + {{ _("By: ")|tojson }} + props.proposed_by
+                + (deviceLocal ? '\n' + {{ _("Local time: ")|tojson }} + deviceLocal : '')
+                + '\n' + {{ _("Reasoning: ")|tojson }} + (props.reasoning || '-'));
         },
         eventDidMount: function(info) {
             var props = info.event.extendedProps;
@@ -1046,7 +1046,7 @@ document.addEventListener('DOMContentLoaded', function() {
         var _cap = document.createElement('div');
         _cap.className = 'text-muted small';
         _cap.style.cssText = 'margin-top:4px;text-align:right;';
-        _cap.textContent = '{{ _("Calendar shown in your timezone") }}: ' + _axisTz;
+        _cap.textContent = {{ _("Calendar shown in your timezone")|tojson }} + ': ' + _axisTz;
         calendarEl.parentNode.insertBefore(_cap, calendarEl.nextSibling);
     } catch (e) {}
 

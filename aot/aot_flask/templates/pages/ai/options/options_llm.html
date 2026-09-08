@@ -189,7 +189,7 @@
             }
 
             if (typeof window.showToast === 'function') {
-                window.showToast("{{ _('Default options for role applied') }}", 'info');
+                window.showToast({{ _('Default options for role applied')|tojson }}, 'info');
             }
         }
     });
@@ -198,7 +198,7 @@
     function lookupKeyHint(provider) {
         $.getJSON('/api/ai/entry/key_hint?provider=' + encodeURIComponent(provider), function(data) {
             if (data.found) {
-                const hint = '{{ _("Existing key on file") }}: ' + data.hint;
+                const hint = {{ _("Existing key on file")|tojson }} + ': ' + data.hint;
                 $('#api_key_hint').text(hint).show();
             } else {
                 $('#api_key_hint').hide();

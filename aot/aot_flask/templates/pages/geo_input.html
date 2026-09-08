@@ -183,7 +183,7 @@
             return false;
         }
 
-        window.showToast('{{_("Command sent. Please wait.")}}', 'info');
+        window.showToast({{ _("Command sent. Please wait.")|tojson }}, 'info');
 
         $.ajax({
             type: "POST",

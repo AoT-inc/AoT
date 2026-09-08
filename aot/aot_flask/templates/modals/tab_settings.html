@@ -148,7 +148,7 @@
         if (!d || !d.success) return;
         if (!d.groups.length) {
           scopeGroups.innerHTML =
-            '<div class="aot-modal-body-text">{{_("No groups yet. Create one in Settings > Users > Groups.")}}</div>';
+            '<div class="aot-modal-body-text">' + {{ _("No groups yet. Create one in Settings > Users > Groups.")|tojson }} + '</div>';
           scopeSection.style.display = '';
           return;
         }
@@ -192,7 +192,7 @@
     const groups = selectedGroups();
     if (!groups.length) {
       scopeImpact.textContent =
-        '{{_("Everyone can operate this tab (no group assigned).")}}';
+        {{ _("Everyone can operate this tab (no group assigned).")|tojson }};
       return;
     }
     fetch('/api/scope/grant_impact/tab/' + encodeURIComponent(currentTabId), {
@@ -205,18 +205,18 @@
         const i = d.impact || {};
         if (i.locks_out_everyone) {
           scopeImpact.textContent =
-            '{{_("Warning: nobody would be able to operate this tab.")}}';
+            {{ _("Warning: nobody would be able to operate this tab.")|tojson }};
         } else if (i.losing) {
           scopeImpact.textContent =
-            '{{_("Losing operation")}}: ' + (i.losing_names || []).join(', ');
+            {{ _("Losing operation")|tojson }} + ': ' + (i.losing_names || []).join(', ');
         } else {
           scopeImpact.textContent =
-            '{{_("Nobody loses operation with this change.")}}';
+            {{ _("Nobody loses operation with this change.")|tojson }};
         }
       }).catch(function () {
         // 조용히 "영향 없음" 으로 보이면 안 된다 — 모른다는 것을 말한다.
         scopeImpact.textContent =
-          '{{_("Error: Unable to communicate with server.")}}';
+          {{ _("Error: Unable to communicate with server.")|tojson }};
       });
   }
 
@@ -233,7 +233,7 @@
   btnRename.addEventListener('click', function() {
     const newName = nameInput.value.trim();
     if (!newName) {
-      showToast('{{_("Tab name cannot be empty")}}', 'error');
+      showToast({{ _("Tab name cannot be empty")|tojson }}, 'error');
       return;
     }
     
@@ -243,10 +243,10 @@
     if (newName === currentTabName) {
       saveTabScope().then(function (res) {
         if (res && res.success === false) {
-          showToast(res.message || '{{_("Failed to save")}}', 'error');
+          showToast(res.message || {{ _("Failed to save")|tojson }}, 'error');
           return;
         }
-        showToast('{{_("Saved")}}', 'success');
+        showToast({{ _("Saved")|tojson }}, 'success');
         $modal.modal('hide');
         setTimeout(function () { window.location.reload(); }, 500);
       });
@@ -270,24 +270,24 @@
       if (data.success) {
         // 이름과 그룹은 같은 [저장]으로 함께 반영된다.
         saveTabScope().then(function () {
-          showToast('{{_("Tab renamed successfully")}}', 'success');
+          showToast({{ _("Tab renamed successfully")|tojson }}, 'success');
           $modal.modal('hide');
           // Reload page to show new name
           setTimeout(() => window.location.reload(), 500);
         });
       } else {
-        showToast(data.message || '{{_("Failed to rename tab")}}', 'error');
+        showToast(data.message || {{ _("Failed to rename tab")|tojson }}, 'error');
       }
     })
     .catch(err => {
       console.error('Rename failed', err);
-      showToast('{{_("Error renaming tab")}}', 'error');
+      showToast({{ _("Error renaming tab")|tojson }}, 'error');
     });
   });
   
   // Duplicate Tab
   btnDuplicate.addEventListener('click', function() {
-    window.aotConfirm('{{_("Duplicate this tab and all its entries?")}}', function() {
+    window.aotConfirm({{ _("Duplicate this tab and all its entries?")|tojson }}, function() {
       btnDuplicate.disabled = true;
       fetch('/tab/duplicate', {
         method: 'POST',
@@ -301,7 +301,7 @@
       .then(r => r.json())
       .then(data => {
         if (data.success) {
-          showToast('{{_("Tab duplicated successfully")}}', 'success');
+          showToast({{ _("Tab duplicated successfully")|tojson }}, 'success');
           $modal.modal('hide');
           if (data.redirect_url) {
             window.location.href = data.redirect_url;
@@ -309,13 +309,13 @@
             setTimeout(() => window.location.reload(), 500);
           }
         } else {
-          showToast(data.message || '{{_("Failed to duplicate tab")}}', 'error');
+          showToast(data.message || {{ _("Failed to duplicate tab")|tojson }}, 'error');
           btnDuplicate.disabled = false;
         }
       })
       .catch(err => {
         console.error('Duplicate failed', err);
-        showToast('{{_("Error duplicating tab")}}', 'error');
+        showToast({{ _("Error duplicating tab")|tojson }}, 'error');
         btnDuplicate.disabled = false;
       });
     });
@@ -328,7 +328,7 @@
     console.log('[TabSettings] currentTabId:', currentTabId);
     
     if (totalTabs <= 1) {
-      showToast('{{_("Cannot delete the last tab")}}', 'warning');
+      showToast({{ _("Cannot delete the last tab")|tojson }}, 'warning');
       return;
     }
     
@@ -336,8 +336,8 @@
     // 옮겨간다(다른 구획이 여전히 참조할 수 있어서다). 공용 확인문구를 그대로
     // 쓰면 "전부 삭제된다" 고 잘못 겁주게 된다.
     const deleteConfirmMsg = currentPageType === 'program'
-      ? '{{_("Delete this tab? Its programmes are not deleted — they move to the page\'s default tab.")}}'
-      : '{{_("Delete this tab and all its entries? This cannot be undone.")}}';
+      ? {{ _("Delete this tab? Its programmes are not deleted — they move to the page's default tab.")|tojson }}
+      : {{ _("Delete this tab and all its entries? This cannot be undone.")|tojson }};
     window.aotConfirm(deleteConfirmMsg, function() {
       console.log('[TabSettings] Sending DELETE request to /tab/' + currentTabId);
       btnDelete.disabled = true;
@@ -356,7 +356,7 @@
       .then(data => {
         console.log('[TabSettings] Response data:', data);
         if (data.success) {
-          showToast('{{_("Tab deleted successfully")}}', 'success');
+          showToast({{ _("Tab deleted successfully")|tojson }}, 'success');
           $modal.modal('hide');
           if (data.redirect_url) {
             console.log('[TabSettings] Redirecting to:', data.redirect_url);
@@ -367,13 +367,13 @@
           }
         } else {
           console.error('[TabSettings] Delete failed:', data.message);
-          showToast(data.message || '{{_("Failed to delete tab")}}', 'error');
+          showToast(data.message || {{ _("Failed to delete tab")|tojson }}, 'error');
           btnDelete.disabled = false;
         }
       })
       .catch(err => {
         console.error('[TabSettings] Delete error:', err);
-        showToast('{{_("Error deleting tab")}}', 'error');
+        showToast({{ _("Error deleting tab")|tojson }}, 'error');
         btnDelete.disabled = false;
       });
     });

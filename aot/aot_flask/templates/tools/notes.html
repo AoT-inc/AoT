@@ -666,7 +666,7 @@
                     var displayName = fileName.length > 37 ? fileName.substring(37) : fileName;
                     
                     var html = '<div class="note-edit-attachment-item" data-filename="' + fileName + '">';
-                    html += '<div class="note-edit-attachment-delete" title="{{_("Remove")}}"><i class="fas fa-times"></i></div>';
+                    html += '<div class="note-edit-attachment-delete" title="' + {{ _("Remove")|tojson }} + '"><i class="fas fa-times"></i></div>';
                     if (isImage) {
                         html += '<img src="/note_attachment/' + fileName + '" class="note-edit-attachment-preview" title="' + displayName + '">';
                     } else {
@@ -676,7 +676,7 @@
                     $container.append(html);
                 });
             } else {
-                $container.html('<small class="text-muted italic">{{_("No attachments")}}</small>');
+                $container.html('<small class="text-muted italic">' + {{ _("No attachments")|tojson }} + '</small>');
             }
 
             $('#editNoteModal').modal('show');
@@ -695,7 +695,7 @@
                 // Return to truncated state (450px)
                 $wrapper.removeClass('expanded').addClass('collapsed');
                 $wrapper.find('.note-thumbnails-wrapper').addClass('d-none'); // Hide thumbnails
-                $btn.html('{{ _("Read More") }} <i class="fas fa-chevron-down ml-1"></i>');
+                $btn.html({{ _("Read More")|tojson }} + ' <i class="fas fa-chevron-down ml-1"></i>');
                 
                 // [RESET GALLERY] - Restore first image when folding
                 var $gallery = $('#gallery-' + uid);
@@ -727,7 +727,7 @@
                 // Expand to full content height (Scrollable 600px)
                 $wrapper.removeClass('collapsed').addClass('expanded');
                 $wrapper.find('.note-thumbnails-wrapper').removeClass('d-none'); // Show thumbnails
-                $btn.html('{{ _("Fold") }} <i class="fas fa-chevron-up ml-1"></i>');
+                $btn.html({{ _("Fold")|tojson }} + ' <i class="fas fa-chevron-up ml-1"></i>');
             }
         });
 
@@ -746,7 +746,7 @@
             $item.fadeOut(300, function() { 
                 $(this).remove(); 
                 if ($('#edit_attachments_container').children().length === 0) {
-                    $('#edit_attachments_container').html('<small class="text-muted italic">{{_("No attachments")}}</small>');
+                    $('#edit_attachments_container').html('<small class="text-muted italic">' + {{ _("No attachments")|tojson }} + '</small>');
                 }
             });
             });
@@ -798,13 +798,13 @@
                          
                          // Optional: Toast or Notify?
                      } else {
-                         alert('{{_("Error updating visibility:")}} ' + (res.error || '{{_("Unknown")}}'));
+                         alert({{ _("Error updating visibility:")|tojson }} + ' ' + (res.error || {{ _("Unknown")|tojson }}));
                          // Revert toggle
                          $('#edit_map_visible_toggle').prop('checked', !isVisible);
                      }
                  },
                  error: function(err) {
-                      alert('{{_("Network error updating visibility")}}');
+                      alert({{ _("Network error updating visibility")|tojson }});
                       $('#edit_map_visible_toggle').prop('checked', !isVisible);
                  }
              });

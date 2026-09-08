@@ -21,7 +21,7 @@
           }
         }
         else {
-          document.getElementById("dependency_status").innerHTML = "{{_('Attempting to read the dependency log. Please wait...')}}";
+          document.getElementById("dependency_status").innerHTML = {{ _('Attempting to read the dependency log. Please wait...')|tojson }};
         }
       },
       cache: false

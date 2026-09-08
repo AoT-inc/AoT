@@ -771,12 +771,12 @@ IMPORTANT: This is the SOURCE TEMPLATE file.
             <a class="dropdown-item{% if upgrade_available %} aot-nav-upgrade {{ 'aot-nav-upgrade-light' if upgrade_bg_is_light else 'aot-nav-upgrade-dark' }}{% endif %}" href="{{ url_for('routes_admin.admin_upgrade') }}">{{ _('Upgrade') }}</a>
             <a class="dropdown-item" href="{{ url_for('routes_admin.admin_backup') }}">{{ _('Backup Restore') }}</a>
             <div class="dropdown-divider"></div>
-            <a class="dropdown-item" href="/systemctl/daemon_restart" onclick='return confirm("{{ _("Are you sure you want to restart the backend?") }}")'>{{
+            <a class="dropdown-item" href="/systemctl/daemon_restart" onclick='return confirm({{ _("Are you sure you want to restart the backend?")|tojson|forceescape }})'>{{
               _('Restart Backend') }}</a>
-            <a class="dropdown-item" href="/systemctl/frontend_reload" onclick='return confirm("{{ _("Are you sure you want to reload the frontend?") }}")'>{{
+            <a class="dropdown-item" href="/systemctl/frontend_reload" onclick='return confirm({{ _("Are you sure you want to reload the frontend?")|tojson|forceescape }})'>{{
               _('Reload Frontend') }}</a>
-            <a class="dropdown-item" href="/systemctl/restart" onclick='return confirm("{{ _("Are you sure you want to restart the system?") }}")'>{{ _('Restart System') }}</a>
-            <a class="dropdown-item" href="/systemctl/shutdown" onclick='return confirm("{{ _("Are you sure you want to shutdown the system?") }}")'>{{ _('Shutdown System')
+            <a class="dropdown-item" href="/systemctl/restart" onclick='return confirm({{ _("Are you sure you want to restart the system?")|tojson|forceescape }})'>{{ _('Restart System') }}</a>
+            <a class="dropdown-item" href="/systemctl/shutdown" onclick='return confirm({{ _("Are you sure you want to shutdown the system?")|tojson|forceescape }})'>{{ _('Shutdown System')
               }}</a>
             <div class="dropdown-divider"></div>
             {# 사용자 지정 이름의 원문 ↔ 번역 전환. 브라우저 번역기의 "원문 보기"와
@@ -943,7 +943,7 @@ IMPORTANT: This is the SOURCE TEMPLATE file.
                 <form method="post" action="{{ url_for('routes_integrations.oauth_google_disconnect') }}" style="margin: 0;">
                   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                   <button type="submit" class="btn aot-pill-btn"
-                    onclick='return confirm("{{ _("Disconnect your Google account?") }}")'>{{ _('Disconnect') }}</button>
+                    onclick='return confirm({{ _("Disconnect your Google account?")|tojson|forceescape }})'>{{ _('Disconnect') }}</button>
                 </form>
               </div>
             </div>
@@ -1060,7 +1060,7 @@ IMPORTANT: This is the SOURCE TEMPLATE file.
           return $(this).val();
         }).get();
         if (!picked.length) {
-          $impact.text('{{ _("Everyone can operate this dashboard (no group assigned).") }}');
+          $impact.text({{ _("Everyone can operate this dashboard (no group assigned).")|tojson }});
           return;
         }
         $.ajax({
@@ -1071,15 +1071,15 @@ IMPORTANT: This is the SOURCE TEMPLATE file.
           if (!res || !res.success) return;
           var i = res.impact || {};
           if (i.locks_out_everyone) {
-            $impact.text('{{ _("Warning: nobody would be able to operate this dashboard.") }}');
+            $impact.text({{ _("Warning: nobody would be able to operate this dashboard.")|tojson }});
           } else if (i.losing) {
-            $impact.text('{{ _("Losing operation") }}: ' + (i.losing_names || []).join(', '));
+            $impact.text({{ _("Losing operation")|tojson }} + ': ' + (i.losing_names || []).join(', '));
           } else {
-            $impact.text('{{ _("Nobody loses operation with this change.") }}');
+            $impact.text({{ _("Nobody loses operation with this change.")|tojson }});
           }
         }).fail(function () {
           // 조용히 "영향 없음" 으로 보이면 안 된다 — 모른다는 것을 말한다.
-          $impact.text('{{ _("Error: Unable to communicate with server.") }}');
+          $impact.text({{ _("Error: Unable to communicate with server.")|tojson }});
         });
       }
 
@@ -1091,7 +1091,7 @@ IMPORTANT: This is the SOURCE TEMPLATE file.
           if (!d || !d.success) return;
           if (!d.groups.length) {
             $groups.html('<div class="aot-modal-body-text">'
-              + '{{ _("No groups yet. Create one in Settings > Users > Groups.") }}</div>');
+              + {{ _("No groups yet. Create one in Settings > Users > Groups.")|tojson }} + '</div>');
             $sec.show();
             return;   // 그룹이 없으면 표식도 넣지 않는다 — 지울 부여가 없다
           }
@@ -1191,9 +1191,9 @@ IMPORTANT: This is the SOURCE TEMPLATE file.
       document.body.removeChild(tempInput);
       {% if not(misc is defined and misc.hide_alert_success) %}
       if (typeof window.showToast !== 'undefined') {
-        window.showToast("{{_('Copied to Clipboard')}}: " + value, 'success');
+        window.showToast({{ _('Copied to Clipboard')|tojson }} + ': ' + value, 'success');
       } else if (typeof toastr !== 'undefined') {
-        toastr['success']("{{_('Copied to Clipboard')}}: " + value);
+        toastr['success']({{ _('Copied to Clipboard')|tojson }} + ': ' + value);
       } else {
         alert('Copied to Clipboard: ' + value);
       }

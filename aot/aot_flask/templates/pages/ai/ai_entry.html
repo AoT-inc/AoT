@@ -36,7 +36,7 @@
                             <div class="dropdown">
                                 <button class="btn btn-sm text-muted p-0" data-toggle="dropdown">{{_('Edit')}}</button>
                                 <div class="dropdown-menu dropdown-menu-right shadow-sm border-0" style="border-radius: var(--aot-radius-md);">
-                                    <form action="{{ url_for('routes_ai_agent.ai_entry_delete', entry_id=entry.unique_id) }}" method="POST" onsubmit="return confirm('{{ _("Delete this service?") }}');">
+                                    <form action="{{ url_for('routes_ai_agent.ai_entry_delete', entry_id=entry.unique_id) }}" method="POST" onsubmit="return confirm({{ _("Delete this service?")|tojson|forceescape }});">
                                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                                         <button class="dropdown-item text-danger py-2" type="submit">{{ _('Delete') }}</button>
                                     </form>
@@ -186,7 +186,7 @@
 
         idField.style.display = (val === 'account') ? 'block' : 'none';
         keyField.style.display = (val === 'no_auth') ? 'none' : 'block';
-        keyLabel.innerText = (val === 'account') ? "{{ _('Password') }}" : "{{ _('API Key') }}";
+        keyLabel.innerText = (val === 'account') ? {{ _('Password')|tojson }} : {{ _('API Key')|tojson }};
     });
 </script>
 {% endblock %}
