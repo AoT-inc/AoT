@@ -128,17 +128,17 @@
     const thead = document.getElementById('mp-thead');
     let html = '<tr>' +
       '<th style="width:2.5em;">#</th>' +
-      '<th style="width:8em;">{{_("Time (HH:MM)")}}</th>';
+      '<th style="width:8em;">' + {{ _("Time (HH:MM)")|tojson }} + '</th>';
     weeks.forEach(function(w, wi) {
       html += '<th style="min-width:7em;">' +
         '<div style="display:flex;align-items:center;gap:4px;">' +
         '<span style="color:' + COLORS[wi % COLORS.length] + ';font-weight:700;">●</span>' +
-        '{{ _("Week") }} <input type="number" min="0" max="999" value="' + w + '" ' +
+        {{ _("Week")|tojson }} + ' <input type="number" min="0" max="999" value="' + w + '" ' +
         'class="form-control form-control-sm" style="width:4.5em;display:inline-block;" ' +
         'onchange="mpUpdateWeek(this,' + wi + ')">' +
         '</div></th>';
     });
-    html += '<th style="width:8em;">{{_("Mode")}}</th><th style="width:3em;"></th></tr>';
+    html += '<th style="width:8em;">' + {{ _("Mode")|tojson }} + '</th><th style="width:3em;"></th></tr>';
     thead.innerHTML = html;
   }
 
@@ -166,9 +166,9 @@
       html += '<td style="vertical-align:middle;">' +
         '<select class="form-control form-control-sm" data-idx="' + idx + '" ' +
         'onchange="mpUpdateCurve(this)">' +
-        '<option value="linear"' + (ct === 'linear' ? ' selected' : '') + '>{{ _("Linear") }}</option>' +
-        '<option value="smooth"' + (ct === 'smooth' ? ' selected' : '') + '>{{ _("Smooth") }}</option>' +
-        '<option value="bezier"' + (ct === 'bezier' ? ' selected' : '') + '>{{ _("Bezier") }}</option>' +
+        '<option value="linear"' + (ct === 'linear' ? ' selected' : '') + '>' + {{ _("Linear")|tojson }} + '</option>' +
+        '<option value="smooth"' + (ct === 'smooth' ? ' selected' : '') + '>' + {{ _("Smooth")|tojson }} + '</option>' +
+        '<option value="bezier"' + (ct === 'bezier' ? ' selected' : '') + '>' + {{ _("Bezier")|tojson }} + '</option>' +
         '</select></td>';
       // Delete
       html += '<td style="text-align:center;vertical-align:middle;">' +
@@ -428,7 +428,7 @@
         data.push([t * 1000, parseFloat(evalCurve(resolved, t).toFixed(4))]);
       }
       chart.addSeries({
-        name: '{{ _("Week") }} ' + w, data: data, color: color,
+        name: {{ _("Week")|tojson }} + ' ' + w, data: data, color: color,
         lineWidth: 2, marker: { enabled: false }
       }, wi === weeks.length - 1);
     });

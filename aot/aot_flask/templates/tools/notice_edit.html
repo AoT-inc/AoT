@@ -182,17 +182,17 @@
 <script>
 $(document).ready(function () {
     $('#editNoticeDeleteBtn').on('click', function () {
-        if (!confirm('{{ _("Delete this notice?") }}')) { return; }
+        if (!confirm({{ _("Delete this notice?")|tojson }})) { return; }
         var postId = $(this).data('post');
         $.ajax({
             url: '/notice/api/' + postId + '/delete',
             method: 'POST',
             success: function () {
-                showToast('{{ _("Notice deleted") }}', 'success');
+                showToast({{ _("Notice deleted")|tojson }}, 'success');
                 window.location.href = '{{ url_for("routes_notice.page_notice") }}';
             },
             error: function (xhr) {
-                var msg = (xhr.responseJSON && xhr.responseJSON.error) || '{{ _("Action failed") }}';
+                var msg = (xhr.responseJSON && xhr.responseJSON.error) || {{ _("Action failed")|tojson }};
                 showToast(msg, 'error');
             }
         });
@@ -208,7 +208,7 @@ $(document).ready(function () {
     $('#editAddPollOptionBtn').on('click', function () {
         var count = $('#editPollOptionsContainer .aot-modal-option-row').length + 1;
         var $row = $('<div class="aot-modal-option-row aot-full-width-row">' +
-            '<input type="text" name="poll_option" class="aot-modern-input" placeholder="{{ _("Option") }} ' + count + '" style="width:100%;"></div>');
+            '<input type="text" name="poll_option" class="aot-modern-input" placeholder="' + {{ _("Option")|tojson }} + ' ' + count + '" style="width:100%;"></div>');
         $('#editPollOptionsContainer').append($row);
     });
 

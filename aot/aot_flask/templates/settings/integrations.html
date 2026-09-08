@@ -62,7 +62,7 @@
             <button type="submit" class="btn aot-pill-btn aot-pill-btn-secondary">{{_('Sync Now')}}</button>
           </form>
           <form method="post" action="{{ url_for('routes_integrations.oauth_google_disconnect') }}"
-                onsubmit="return confirm('{{_('Disconnect Google Calendar? Synced events already in Google are not deleted.')}}');" style="display:inline;">
+                onsubmit="return confirm({{ _('Disconnect Google Calendar? Synced events already in Google are not deleted.')|tojson|forceescape }});" style="display:inline;">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <button type="submit" class="btn aot-pill-btn aot-pill-btn-danger">{{_('Disconnect')}}</button>
           </form>

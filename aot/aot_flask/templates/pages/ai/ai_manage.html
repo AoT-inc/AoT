@@ -438,7 +438,7 @@ async function loadErrors() {
                 </td>
             </tr>`;
         });
-        $('#errors-tbody').html(rows || '<tr><td colspan="5" class="text-center text-muted py-3">{{ _('No errors found.') }}</td></tr>');
+        $('#errors-tbody').html(rows || '<tr><td colspan="5" class="text-center text-muted py-3">' + {{ _('No errors found.')|tojson }} + '</td></tr>');
     } catch (err) {}
 }
 

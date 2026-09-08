@@ -324,11 +324,11 @@ const GKT = (function() {
     let _selectedPreset = null;
 
     const PRESET_LABELS = {
-        outdoor_farming:  '{{ _("Outdoor Farming") }}',
-        greenhouse:       '{{ _("Greenhouse") }}',
-        sports_facility:  '{{ _("Sports Facility") }}',
-        park:             '{{ _("Park") }}',
-        transportation:   '{{ _("Transportation") }}'
+        outdoor_farming:  {{ _("Outdoor Farming")|tojson }},
+        greenhouse:       {{ _("Greenhouse")|tojson }},
+        sports_facility:  {{ _("Sports Facility")|tojson }},
+        park:             {{ _("Park")|tojson }},
+        transportation:   {{ _("Transportation")|tojson }}
     };
 
     function _updateDots(step) {
@@ -413,7 +413,7 @@ const GKT = (function() {
             console.error('GKT finish error:', err);
             const errEl = document.getElementById('gkt-save-error');
             if (errEl) {
-                errEl.textContent = '{{ _("Failed to save. Please try again.") }}';
+                errEl.textContent = {{ _("Failed to save. Please try again.")|tojson }};
                 errEl.style.display = 'block';
             }
             if (btn) btn.disabled = false;

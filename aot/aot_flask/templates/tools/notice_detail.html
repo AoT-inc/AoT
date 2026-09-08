@@ -163,12 +163,12 @@ $(document).ready(function () {
             url: '/notice/api/' + $btn.data('post') + '/ack',
             method: 'POST',
             success: function (res) {
-                $btn.prop('disabled', true).addClass('aot-pill-btn-secondary').text('{{ _("Acknowledged") }}');
-                $('#ackCount').text(res.ack_count + ' {{ _("acknowledged") }}');
-                showToast('{{ _("Acknowledged") }}', 'success');
+                $btn.prop('disabled', true).addClass('aot-pill-btn-secondary').text({{ _("Acknowledged")|tojson }});
+                $('#ackCount').text(res.ack_count + ' ' + {{ _("acknowledged")|tojson }});
+                showToast({{ _("Acknowledged")|tojson }}, 'success');
             },
             error: function (xhr) {
-                var msg = (xhr.responseJSON && xhr.responseJSON.error) || '{{ _("Action failed") }}';
+                var msg = (xhr.responseJSON && xhr.responseJSON.error) || {{ _("Action failed")|tojson }};
                 showToast(msg, 'error');
             }
         });
@@ -216,10 +216,10 @@ $(document).ready(function () {
                         $row.find('.notice-poll-bar-fill').css('width', pct + '%');
                         $row.find('.small.text-muted').text(opt.count);
                     });
-                    showToast('{{ _("Vote submitted") }}', 'success');
+                    showToast({{ _("Vote submitted")|tojson }}, 'success');
                 },
                 error: function (xhr) {
-                    var msg = (xhr.responseJSON && xhr.responseJSON.error) || '{{ _("Action failed") }}';
+                    var msg = (xhr.responseJSON && xhr.responseJSON.error) || {{ _("Action failed")|tojson }};
                     showToast(msg, 'error');
                 }
             });
@@ -243,10 +243,10 @@ $(document).ready(function () {
                 $('#noticeReplyList').append(html);
                 $('#replyBody').val('');
                 autosizeTextarea(document.getElementById('replyBody'));
-                showToast('{{ _("Reply added") }}', 'success');
+                showToast({{ _("Reply added")|tojson }}, 'success');
             },
             error: function (xhr) {
-                var msg = (xhr.responseJSON && xhr.responseJSON.error) || '{{ _("Action failed") }}';
+                var msg = (xhr.responseJSON && xhr.responseJSON.error) || {{ _("Action failed")|tojson }};
                 showToast(msg, 'error');
             }
         });
@@ -261,10 +261,10 @@ $(document).ready(function () {
             method: 'POST',
             success: function () {
                 $item.remove();
-                showToast('{{ _("Reply deleted") }}', 'success');
+                showToast({{ _("Reply deleted")|tojson }}, 'success');
             },
             error: function (xhr) {
-                var msg = (xhr.responseJSON && xhr.responseJSON.error) || '{{ _("Action failed") }}';
+                var msg = (xhr.responseJSON && xhr.responseJSON.error) || {{ _("Action failed")|tojson }};
                 showToast(msg, 'error');
             }
         });

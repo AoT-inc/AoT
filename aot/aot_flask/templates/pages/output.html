@@ -154,7 +154,7 @@
                     // so the switch doesn't flip on then snap back to off.
                     if (document.getElementById(inputId)) {
                       document.getElementById(inputId).className = 'form-control btn btn-primary btn-sm btn-block hold-background';
-                      document.getElementById(inputId).value = '{{_('Confirming')}}';
+                      document.getElementById(inputId).value = {{ _('Confirming')|tojson }};
                     }
                     if (document.getElementById(rowId)) {
                         document.getElementById(rowId).className = "item_channel row small-gutters hold-background aot-entry-item-channel";
@@ -166,7 +166,7 @@
                     // reverted (off) state. A late ACK will resolve it to on/off.
                     if (document.getElementById(inputId)) {
                       document.getElementById(inputId).className = 'form-control btn btn-primary btn-sm btn-block fault-background';
-                      document.getElementById(inputId).value = '{{_('No Response')}}';
+                      document.getElementById(inputId).value = {{ _('No Response')|tojson }};
                     }
                     if (document.getElementById(rowId)) {
                         document.getElementById(rowId).className = "item_channel row small-gutters fault-background aot-entry-item-channel";
@@ -178,9 +178,9 @@
                     if (document.getElementById(inputId)) {
                       document.getElementById(inputId).className = 'form-control btn btn-primary btn-sm btn-block';
                       if (states[i] === 'on') {
-                        document.getElementById(inputId).value = '{{_('Active')}}';
+                        document.getElementById(inputId).value = {{ _('Active')|tojson }};
                       } else {
-                        document.getElementById(inputId).value = '{{_('Active')}}, ' + states[i].toFixed(1);
+                        document.getElementById(inputId).value = {{ _('Active')|tojson }} + ', ' + states[i].toFixed(1);
                       }
                     }
                     // Apply active background to the row
@@ -192,7 +192,7 @@
                     // State: OFF
                     if (document.getElementById(inputId)) {
                       document.getElementById(inputId).className = 'form-control btn btn-primary btn-sm btn-block inactive-background';
-                      document.getElementById(inputId).value = '{{_('Inactive')}}';
+                      document.getElementById(inputId).value = {{ _('Inactive')|tojson }};
                     }
                     // Apply inactive background to the row 
                     if (document.getElementById(rowId)) {
@@ -325,7 +325,7 @@
     {% for each_output_channel in dict_outputs[each_output.output_type]['channels_dict'] %}
     if (document.getElementById("{{each_output.unique_id}}-{{each_output_channel}}-input-output-state")) {
       document.getElementById("{{each_output.unique_id}}-{{each_output_channel}}-input-output-state").className = 'form-control btn btn-primary btn-sm btn-block fault-background';
-      document.getElementById("{{each_output.unique_id}}-{{each_output_channel}}-input-output-state").value = '{{_('No Connection')}}';
+      document.getElementById("{{each_output.unique_id}}-{{each_output_channel}}-input-output-state").value = {{ _('No Connection')|tojson }};
     }
     // Force Row to stay clean and apply pause background
     if (document.getElementById("{{each_output.unique_id}}-{{each_output_channel}}-output-state")) {

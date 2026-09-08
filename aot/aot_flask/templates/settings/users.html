@@ -502,7 +502,7 @@
             data: JSON.stringify(items, null, '  '),
             contentType: "application/json; charset=utf-8",
             error: function () {
-              window.showToast('{{_("Error: Unable to communicate with server.")}}', 'error');
+              window.showToast({{ _("Error: Unable to communicate with server.")|tojson }}, 'error');
             }
           });
         }, 0);
@@ -545,7 +545,7 @@
 
       $drawer.attr('data-config-uid-target', uid);
       $drawer.find('.modal-title').text($(this).data('drawer-title') || '');
-      swap('<div class="modal-body"><div class="aot-modal-container">{{_("Loading")}}...</div></div>');
+      swap('<div class="modal-body"><div class="aot-modal-container">' + {{ _("Loading")|tojson }} + '...</div></div>');
       $drawer.modal('show');
       // One shared drawer for every row: switching from card A to card B does not
       // re-fire show.bs.modal, so the row highlight has to be moved by hand or A
@@ -553,7 +553,7 @@
       if (window.AoTWidgetDrawer) { window.AoTWidgetDrawer.activateByUid(uid); }
 
       $.get(url).done(swap).fail(function () {
-        swap('<div class="modal-body"><div class="aot-modal-container">{{_("Error: Unable to communicate with server.")}}</div></div>');
+        swap('<div class="modal-body"><div class="aot-modal-container">' + {{ _("Error: Unable to communicate with server.")|tojson }} + '</div></div>');
       });
     });
 
@@ -589,7 +589,7 @@
         let needs_reload = (action === 'user_save' || action === 'user_role_save' ||
                             action === 'user_group_save' || action === 'user_group_delete');
 
-        window.showToast('{{_("Command sent. Please wait.")}}', 'info');
+        window.showToast({{ _("Command sent. Please wait.")|tojson }}, 'info');
         $.ajax({
           type: "POST",
           url: '/settings/users_submit',
@@ -608,7 +608,7 @@
                 // Show the outcome before the page goes away — reloading
                 // immediately swallows the toast the user just earned.
                 if (data.data.messages.success.length !== 0) {
-                  window.showToast('{{_("Success")}}: ' + data.data.messages.success.join(", "), 'success');
+                  window.showToast({{ _("Success")|tojson }} + ': ' + data.data.messages.success.join(", "), 'success');
                 }
                 setTimeout(function () { window.location.reload(); }, 800);
                 return;
@@ -642,20 +642,20 @@
                 $drawer.modal('hide');
               }
               if ('warning' in data.data.messages && data.data.messages.warning.length !== 0) {
-                window.showToast('{{_("Warning")}}: ' + data.data.messages.warning.join(", "), 'warning');
+                window.showToast({{ _("Warning")|tojson }} + ': ' + data.data.messages.warning.join(", "), 'warning');
               }
               if ('info' in data.data.messages && data.data.messages.info.length !== 0) {
-                window.showToast('{{_("Info")}}: ' + data.data.messages.info.join(", "), 'info');
+                window.showToast({{ _("Info")|tojson }} + ': ' + data.data.messages.info.join(", "), 'info');
               }
               if ('success' in data.data.messages && data.data.messages.success.length !== 0) {
-                window.showToast('{{_("Success")}}: ' + data.data.messages.success.join(", "), 'success');
+                window.showToast({{ _("Success")|tojson }} + ': ' + data.data.messages.success.join(", "), 'success');
               }
             } else {
-              window.showToast('{{_("Error")}}: ' + data.data.messages.error.join(", "), 'error');
+              window.showToast({{ _("Error")|tojson }} + ': ' + data.data.messages.error.join(", "), 'error');
             }
           },
           error: function() {
-            window.showToast('{{_("Error: Unable to communicate with server.")}}', 'error');
+            window.showToast({{ _("Error: Unable to communicate with server.")|tojson }}, 'error');
           }
         });
         e.preventDefault();

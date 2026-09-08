@@ -302,7 +302,7 @@ $(document).ready(function () {
     $('#addPollOptionBtn').on('click', function () {
         var count = $('#addPollOptionsContainer .aot-modal-option-row').length + 1;
         var $row = $('<div class="aot-modal-option-row aot-full-width-row">' +
-            '<input type="text" name="poll_option" class="aot-modern-input" placeholder="{{ _("Option") }} ' + count + '" style="width:100%;"></div>');
+            '<input type="text" name="poll_option" class="aot-modern-input" placeholder="' + {{ _("Option")|tojson }} + ' ' + count + '" style="width:100%;"></div>');
         $('#addPollOptionsContainer').append($row);
     });
 

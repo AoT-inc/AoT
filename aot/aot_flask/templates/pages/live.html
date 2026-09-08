@@ -13,8 +13,8 @@
     $.ajax(url, {
       success: function (data, responseText, jqXHR) {
         if (jqXHR.status === 204) {
-          if (period === 0) document.getElementById(measure_string + "-time").innerHTML = "{{_('No Data')}}";
-          else document.getElementById(measure_string + "-time").innerHTML = "{{_('No data for the last %(period)s seconds', period='%(period)s')}}".replace('%(period)s', period);
+          if (period === 0) document.getElementById(measure_string + "-time").innerHTML = {{ _('No Data')|tojson }};
+          else document.getElementById(measure_string + "-time").innerHTML = {{ _('No data for the last %(period)s seconds', period='%(period)s')|tojson }}.replace('%(period)s', period);
           document.getElementById(measure_string + "-value").innerHTML = "0";
         }
         else {
@@ -32,8 +32,8 @@
         }
       },
       error: function (XMLHttpRequest, textStatus, errorThrown) {
-        if (period === 0) document.getElementById(measure_string + "-time").innerHTML = "{{_('Error: Data not found.')}}";
-        else document.getElementById(measure_string + "-time").innerHTML = "{{_('Error: No data for the last %(period)s seconds', period='%(period)s')}}".replace('%(period)s', period);
+        if (period === 0) document.getElementById(measure_string + "-time").innerHTML = {{ _('Error: Data not found.')|tojson }};
+        else document.getElementById(measure_string + "-time").innerHTML = {{ _('Error: No data for the last %(period)s seconds', period='%(period)s')|tojson }}.replace('%(period)s', period);
         document.getElementById(measure_string + "-value").innerHTML = "0";
       },
       cache: false

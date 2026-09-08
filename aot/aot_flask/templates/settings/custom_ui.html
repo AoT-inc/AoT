@@ -1034,7 +1034,7 @@
       })
       .then(function (res) {
         return res.json().then(function (data) {
-          if (!res.ok) throw new Error(data.error || '{{_('Request failed')}}');
+          if (!res.ok) throw new Error(data.error || {{ _('Request failed')|tojson }});
           return data;
         });
       })
@@ -1056,7 +1056,7 @@
         }
       }
       if (!name) {
-        if (window.toastr) toastr.warning('{{_('Enter a preset name')}}');
+        if (window.toastr) toastr.warning({{ _('Enter a preset name')|tojson }});
         if (input) input.focus();
         return;
       }
@@ -1066,7 +1066,7 @@
         activePreset = USER_PRESET_PREFIX + name;
         clearModifiedBadge();
         if (input) input.value = '';
-        if (window.toastr) toastr.success('{{_('Preset saved')}}: ' + name);
+        if (window.toastr) toastr.success({{ _('Preset saved')|tojson }} + ': ' + name);
       });
     }
 
@@ -1074,13 +1074,13 @@
       var select = document.getElementById('theme-preset-select');
       if (!select || select.value.indexOf(USER_PRESET_PREFIX) !== 0) return;
       var name = select.value.slice(USER_PRESET_PREFIX.length);
-      if (!window.confirm('{{_('Delete preset')}} "' + name + '"?')) return;
+      if (!window.confirm({{ _('Delete preset')|tojson }} + ' "' + name + '"?')) return;
       presetRequest('DELETE', { name: name }, function (data) {
         userPresets = data.presets || {};
         select.value = '';
         activePreset = null;
         rebuildUserPresetOptions();
-        if (window.toastr) toastr.success('{{_('Preset deleted')}}: ' + name);
+        if (window.toastr) toastr.success({{ _('Preset deleted')|tojson }} + ': ' + name);
       });
     }
 
@@ -1194,17 +1194,17 @@
       }
       closePopover();
 
-      var label = anchorEl.getAttribute('data-color-label') || '{{_('Color')}}';
+      var label = anchorEl.getAttribute('data-color-label') || {{ _('Color')|tojson }};
 
       // Collect defined color slots (중복 필드는 한 번만 — 같은 토큰을 두 줄로
       // 보여주면 한쪽만 바뀐 것처럼 보인다)
       var slots = [];
       var seenKeys = {};
       [
-        ['data-color-bg',     '{{_('Background Color')}}'],
-        ['data-color-text',   '{{_('Text Color')}}'],
-        ['data-color-text-2', '{{_('Subtext Color')}}'],
-        ['data-color-border', '{{_('Border Color')}}']
+        ['data-color-bg',     {{ _('Background Color')|tojson }}],
+        ['data-color-text',   {{ _('Text Color')|tojson }}],
+        ['data-color-text-2', {{ _('Subtext Color')|tojson }}],
+        ['data-color-border', {{ _('Border Color')|tojson }}]
       ].forEach(function (pair) {
         var key = anchorEl.getAttribute(pair[0]);
         if (!key || seenKeys[key]) return;

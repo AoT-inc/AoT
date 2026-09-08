@@ -141,7 +141,7 @@
               <button type="submit" name="user_revoke_api_key" value="1"
                 class="btn aot-pill-btn aot-pill-btn-secondary"
                 data-revoke-key="{{each_key.unique_id}}"
-                onclick="return confirm('{{_('Revoke this API key? Anything using it will stop working.')}}')">{{_('Revoke')}}</button>
+                onclick="return confirm({{ _('Revoke this API key? Anything using it will stop working.')|tojson|forceescape }})">{{_('Revoke')}}</button>
             </div>
           </div>
           {% endfor %}

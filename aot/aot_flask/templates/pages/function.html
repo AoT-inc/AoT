@@ -175,10 +175,10 @@
   function popup_response(data) {
     if (data && data.data && data.data.messages) {
       const msgs = data.data.messages;
-      if (msgs.error && msgs.error.length) window.showToast('{{ _("Error:") }} ' + msgs.error.join(", "), 'error');
-      if (msgs.warning && msgs.warning.length) window.showToast('{{ _("Warning:") }} ' + msgs.warning.join(", "), 'warning');
-      if (msgs.info && msgs.info.length) window.showToast('{{ _("Info:") }} ' + msgs.info.join(", "), 'info');
-      if (msgs.success && msgs.success.length) window.showToast('{{ _("Success:") }} ' + msgs.success.join(", "), 'success');
+      if (msgs.error && msgs.error.length) window.showToast({{ _("Error:")|tojson }} + ' ' + msgs.error.join(", "), 'error');
+      if (msgs.warning && msgs.warning.length) window.showToast({{ _("Warning:")|tojson }} + ' ' + msgs.warning.join(", "), 'warning');
+      if (msgs.info && msgs.info.length) window.showToast({{ _("Info:")|tojson }} + ' ' + msgs.info.join(", "), 'info');
+      if (msgs.success && msgs.success.length) window.showToast({{ _("Success:")|tojson }} + ' ' + msgs.success.join(", "), 'success');
     }
   }
 
@@ -210,7 +210,7 @@
         if (typeof onDone === 'function') onDone();
       },
       error: function () {
-        window.showToast('{{ _("Error: Could not get new Function options.") }}', 'error');
+        window.showToast({{ _("Error: Could not get new Function options.")|tojson }}, 'error');
       }
     });
   }
@@ -251,7 +251,7 @@
             for (let c = 0; c < data['error'].length; c++) {
               errors += data['error'][c].replace(/(?:\r\n|\r|\n)/g, "<br>") + '<br>';
             }
-            if (statusElem) statusElem.innerHTML += "<p><pre>{{ _('Error(s):') }}<br>" + errors + "</pre></p>";
+            if (statusElem) statusElem.innerHTML += "<p><pre>" + {{ _('Error(s):')|tojson }} + "<br>" + errors + "</pre></p>";
           }
 
           // Trigger Sequence only: data.steps carries each step's resolved
@@ -280,7 +280,7 @@
           }
         }
         else {
-          if (statusElem) statusElem.innerHTML = "{{ _('Error querying status.') }}";
+          if (statusElem) statusElem.innerHTML = {{ _('Error querying status.')|tojson }};
         }
       }
     );
@@ -308,11 +308,11 @@
             for (let c = 0; c < data['error'].length; c++) {
               errors += data['error'][c].replace(/(?:\r\n|\r|\n)/g, "<br>") + '<br>';
             }
-            if (statusElem) statusElem.innerHTML += "<p><pre>{{ _('Error(s):') }}<br>" + errors + "</pre></p>";
+            if (statusElem) statusElem.innerHTML += "<p><pre>" + {{ _('Error(s):')|tojson }} + "<br>" + errors + "</pre></p>";
           }
         }
         else {
-          if (statusElem) statusElem.innerHTML = "{{ _('Error querying status.') }}";
+          if (statusElem) statusElem.innerHTML = {{ _('Error querying status.')|tojson }};
         }
       }
     );
@@ -398,7 +398,7 @@
       $form = $(button).closest('form');
     }
     if (!$form.length) {
-      window.showToast('{{ _("Error: form not found for action") }} ' + action, 'error');
+      window.showToast({{ _("Error: form not found for action")|tojson }} + ' ' + action, 'error');
       return false;
     }
     let form_values = getFormData($form);
@@ -419,7 +419,7 @@
       action === 'pid_hold' ||
       action === 'pid_resume' ||
       action.startsWith('custom_button_')) {
-      window.showToast('{{ _("Command sent. Please wait...") }}', 'info');
+      window.showToast({{ _("Command sent. Please wait...")|tojson }}, 'info');
       
       // Get current tab_id from URL
       const urlParams = new URLSearchParams(window.location.search);
@@ -442,7 +442,7 @@
               }
               if (data.data.dep_message.length > 0) {
                 if (document.getElementById("dependencies_message")) {
-                  document.getElementById("dependencies_message").innerHTML = "<p>{{ _('Message about dependencies:') }} " + data.data.dep_message + "</p>";
+                  document.getElementById("dependencies_message").innerHTML = "<p>" + {{ _('Message about dependencies:')|tojson }} + " " + data.data.dep_message + "</p>";
                 }
               }
               $('#modal_config_dependency_install').modal('show');
@@ -467,7 +467,7 @@
                   popup_response(data);
                 },
                 error: function () {
-                  window.showToast('{{ _("Error: Could not get new Function entry") }}', 'error');
+                  window.showToast({{ _("Error: Could not get new Function entry")|tojson }}, 'error');
                 }
               });
             }
@@ -481,7 +481,7 @@
             }
             if (data.data.dep_message.length > 0) {
               if (document.getElementById("dependencies_message")) {
-                document.getElementById("dependencies_message").innerHTML = "<p>{{ _('Message about dependencies:') }} " + data.data.dep_message + "</p>";
+                document.getElementById("dependencies_message").innerHTML = "<p>" + {{ _('Message about dependencies:')|tojson }} + " " + data.data.dep_message + "</p>";
               }
             }
             $('#modal_config_dependency_install').modal('show');
@@ -549,7 +549,7 @@
                 if (document.getElementById('form_pid_' + data.data.function_id) != null) {
                   ids_hide(data.data.function_id, ["pid_activate", "pid_resume"]);
                   ids_show(data.data.function_id, ["pid_deactivate", "pid_pause", "pid_hold"]);
-                  document.getElementById("pid_activity_indicator_" + data.data.function_id).value = "{{ _('PID Controller [Activated]') }}";
+                  document.getElementById("pid_activity_indicator_" + data.data.function_id).value = {{ _('PID Controller [Activated]')|tojson }};
                 }
                 if ("function_type" in form_values && ["conditional", "function", "pid"].includes(form_values.function_type)) {
                   ids_show(data.data.function_id, ["status_activated_enable"]);
@@ -574,7 +574,7 @@
               if (document.getElementById('form_pid_' + data.data.function_id) != null) {
                 ids_hide(data.data.function_id, ["pid_deactivate", "pid_pause", "pid_hold", "pid_resume"]);
                 ids_show(data.data.function_id, ["pid_activate"]);
-                document.getElementById("pid_activity_indicator_" + data.data.function_id).value = "{{ _('PID Controller [Deactivated]') }}";
+                document.getElementById("pid_activity_indicator_" + data.data.function_id).value = {{ _('PID Controller [Deactivated]')|tojson }};
                 if (document.getElementById("function_status_activated_" + data.data.function_id)) {
                   document.getElementById("function_status_activated_" + data.data.function_id).innerHTML = "";
                 }
@@ -592,21 +592,21 @@
               $('#function_status_' + data.data.function_id).addClass("pause-background");
               ids_hide(data.data.function_id, ["pid_activate", "pid_pause", "pid_hold"]);
               ids_show(data.data.function_id, ["pid_deactivate", "pid_resume"]);
-              document.getElementById("pid_activity_indicator_" + data.data.function_id).value = "{{ _('PID Controller [Paused]') }}";
+              document.getElementById("pid_activity_indicator_" + data.data.function_id).value = {{ _('PID Controller [Paused]')|tojson }};
             }
             else if (action === 'pid_hold' && 'function_id' in data.data) {
               function_status_reset(data.data.function_id);
               $('#function_status_' + data.data.function_id).addClass("hold-background");
               ids_hide(data.data.function_id, ["pid_activate", "pid_hold", "pid_pause"]);
               ids_show(data.data.function_id, ["pid_deactivate", "pid_resume"]);
-              document.getElementById("pid_activity_indicator_" + data.data.function_id).value = "{{ _('PID Controller [Hold]') }}";
+              document.getElementById("pid_activity_indicator_" + data.data.function_id).value = {{ _('PID Controller [Hold]')|tojson }};
             }
             else if (action === 'pid_resume' && 'function_id' in data.data) {
               function_status_reset(data.data.function_id);
               $('#function_status_' + data.data.function_id).addClass("active-background");
               ids_hide(data.data.function_id, ["pid_resume"]);
               ids_show(data.data.function_id, ["pid_deactivate", "pid_pause", "pid_hold"]);
-              document.getElementById("pid_activity_indicator_" + data.data.function_id).value = "{{ _('PID Controller [Activated]') }}";
+              document.getElementById("pid_activity_indicator_" + data.data.function_id).value = {{ _('PID Controller [Activated]')|tojson }};
             }
             if (action === 'delete_action' && 'action_id' in data.data) {
               document.getElementById("mod_action_" + data.data.action_id).remove();
@@ -658,13 +658,13 @@
                         popup_response(data);
                       },
                       error: function () {
-                        window.showToast('{{ _("Error: Could not get new Function options.") }}', 'error');
+                        window.showToast({{ _("Error: Could not get new Function options.")|tojson }}, 'error');
                       }
                       });
                   }
                 },
                 error: function () {
-                  window.showToast('{{ _("Error: Could not get Function actions.") }}', 'error');
+                  window.showToast({{ _("Error: Could not get Function actions.")|tojson }}, 'error');
                 }
               });
             }
@@ -690,13 +690,13 @@
                         popup_response(data);
                       },
                       error: function () {
-                        window.showToast('{{ _("Error: Could not get new Function options.") }}', 'error');
+                        window.showToast({{ _("Error: Could not get new Function options.")|tojson }}, 'error');
                       }
                     });
                   }
                 },
                 error: function () {
-                  window.showToast('{{ _("Error: Could not get Function conditions.") }}', 'error');
+                  window.showToast({{ _("Error: Could not get Function conditions.")|tojson }}, 'error');
                 }
               });
             } else {
@@ -707,7 +707,7 @@
           }
         },
         error: function () {
-          window.showToast('{{ _("Error: Unable to communicate with server.") }}', 'error');
+          window.showToast({{ _("Error: Unable to communicate with server.")|tojson }}, 'error');
         }
       });
     }
@@ -715,7 +715,7 @@
 
   $(document).ready(function() {
     $('.clockpicker').clockpicker({
-      donetext: '{{ _("Done") }}'
+      donetext: {{ _("Done")|tojson }}
     });
 
     $('.collapse').on('show.bs.collapse', function () {

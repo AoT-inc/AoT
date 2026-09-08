@@ -207,7 +207,7 @@
       type: 'GET',
       url: '/camera/detect',
       beforeSend: function() {
-        if (window.showToast) window.showToast('{{_("Detecting cameras...")}}', 'info');
+        if (window.showToast) window.showToast({{ _("Detecting cameras...")|tojson }}, 'info');
       },
       success: function(response) {
         if (response.status === 'success' && response.cameras && response.cameras.length > 0) {
@@ -227,13 +227,13 @@
           });
           
           $container.fadeIn();
-          if (window.showToast) window.showToast('{{_("Found")}} ' + response.cameras.length + ' {{_("camera(s)")}}', 'success');
+          if (window.showToast) window.showToast({{ _("Found")|tojson }} + ' ' + response.cameras.length + ' ' + {{ _("camera(s)")|tojson }}, 'success');
         } else {
-          if (window.showToast) window.showToast('{{_("No cameras detected")}}', 'warning');
+          if (window.showToast) window.showToast({{ _("No cameras detected")|tojson }}, 'warning');
         }
       },
       error: function() {
-        if (window.showToast) window.showToast('{{_("Camera detection failed")}}', 'error');
+        if (window.showToast) window.showToast({{ _("Camera detection failed")|tojson }}, 'error');
       }
     });
   }
@@ -278,7 +278,7 @@
       'stream': null
     };
 
-    if (window.showToast) window.showToast('{{_("Starting...")}}', 'info');
+    if (window.showToast) window.showToast({{ _("Starting...")|tojson }}, 'info');
 
     $.ajax({
       type: 'POST',
@@ -287,7 +287,7 @@
       contentType: dataMap[mode] ? 'application/json' : undefined,
       success: function(response) {
         if (response.status === 'success') {
-          if (window.showToast) window.showToast('{{_("Capture started")}}', 'success');
+          if (window.showToast) window.showToast({{ _("Capture started")|tojson }}, 'success');
           // Refresh preview image
           var $img = $('#preview_img_' + uid);
           $img.attr('src', '/camera/last_image/' + uid + '?t=' + Date.now());
@@ -297,11 +297,11 @@
             $('#last_capture_time_' + uid).text(response.timestamp);
           }
         } else {
-          if (window.showToast) window.showToast('{{_("Capture failed")}}', 'error');
+          if (window.showToast) window.showToast({{ _("Capture failed")|tojson }}, 'error');
         }
       },
       error: function() {
-        if (window.showToast) window.showToast('{{_("Capture failed")}}', 'error');
+        if (window.showToast) window.showToast({{ _("Capture failed")|tojson }}, 'error');
       }
     });
   }
@@ -315,11 +315,11 @@
     };
 
     if (mode === 'snapshot') {
-      if (window.showToast) window.showToast('{{_("Snapshot mode has no stop action")}}', 'info');
+      if (window.showToast) window.showToast({{ _("Snapshot mode has no stop action")|tojson }}, 'info');
       return;
     }
 
-    if (window.showToast) window.showToast('{{_("Stopping...")}}', 'info');
+    if (window.showToast) window.showToast({{ _("Stopping...")|tojson }}, 'info');
 
     $.ajax({
       type: 'POST',
@@ -328,13 +328,13 @@
       contentType: 'application/json',
       success: function(response) {
         if (response.status === 'success') {
-          if (window.showToast) window.showToast('{{_("Capture stopped")}}', 'success');
+          if (window.showToast) window.showToast({{ _("Capture stopped")|tojson }}, 'success');
         } else {
-          if (window.showToast) window.showToast('{{_("Stop failed")}}', 'error');
+          if (window.showToast) window.showToast({{ _("Stop failed")|tojson }}, 'error');
         }
       },
       error: function() {
-        if (window.showToast) window.showToast('{{_("Stop failed")}}', 'error');
+        if (window.showToast) window.showToast({{ _("Stop failed")|tojson }}, 'error');
       }
     });
   }

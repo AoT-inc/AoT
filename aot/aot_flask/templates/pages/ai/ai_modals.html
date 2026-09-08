@@ -206,7 +206,7 @@ function renderDynamicFields(type) {
                     <select name="auth_type" class="form-control selectpicker aot-standard-select" data-style="btn-white border" id="authTypeSelect">
         `;
         preset.auth_methods.forEach(method => {
-            let label = method === 'api_key' ? "{{ _('API Key') }}" : (method === 'account' ? "{{ _('ID / Password') }}" : method);
+            let label = method === 'api_key' ? {{ _('API Key')|tojson }} : (method === 'account' ? {{ _('ID / Password')|tojson }} : method);
             authHtml += `<option value="${method}">${label}</option>`;
         });
         authHtml += `</select></div></div>`;
@@ -246,10 +246,10 @@ function renderDynamicFields(type) {
             const isMCP = enginePresets[type].is_mcp;
             if (method === 'api_key') {
                 $('.auth-field-key').show(); $('.auth-field-id').hide();
-                $('#keyLabel').text(isMCP ? "{{ _('Service Key') }}" : "{{ _('API Key') }}");
+                $('#keyLabel').text(isMCP ? {{ _('Service Key')|tojson }} : {{ _('API Key')|tojson }});
             } else if (method === 'account') {
                 $('.auth-field-key').show(); $('.auth-field-id').show();
-                $('#keyLabel').text("{{ _('Password') }}");
+                $('#keyLabel').text({{ _('Password')|tojson }});
             } else {
                 $('.auth-field-key').hide(); $('.auth-field-id').hide();
             }
@@ -258,9 +258,9 @@ function renderDynamicFields(type) {
         
         // v6: MCP labeling
         if (preset.is_mcp) {
-             $authContainer.parent().prev('.aot-modal-group-title').text("{{ _('Service API Key') }}");
+             $authContainer.parent().prev('.aot-modal-group-title').text({{ _('Service API Key')|tojson }});
         } else {
-             $authContainer.parent().prev('.aot-modal-group-title').text("{{ _('Authentication') }}");
+             $authContainer.parent().prev('.aot-modal-group-title').text({{ _('Authentication')|tojson }});
         }
     }
 
@@ -323,9 +323,9 @@ function renderDynamicFields(type) {
 
             // Replace generic "Custom Options" title with grouped sections
             $('#custom_options_section .aot-modal-group-title').first().hide();
-            $customContainer.append(renderGroup("{{ _('Service Credentials') }}", credentialOpts));
-            $customContainer.append(renderGroup("{{ _('Brain Configuration') }}", brainOpts));
-            $customContainer.append(renderGroup("{{ _('Options') }}", otherOpts));
+            $customContainer.append(renderGroup({{ _('Service Credentials')|tojson }}, credentialOpts));
+            $customContainer.append(renderGroup({{ _('Brain Configuration')|tojson }}, brainOpts));
+            $customContainer.append(renderGroup({{ _('Options')|tojson }}, otherOpts));
         } else {
             allOpts.forEach(opt => { $customContainer.append(renderOptControl(opt)); });
         }
@@ -352,9 +352,9 @@ function renderDynamicFields(type) {
     const $modal = $('#addAgentModal');
     if (preset.is_mcp) {
         $modal.find('#v6_pipeline_section').hide();
-        $modal.find('#specialty-label').text("{{ _('MCP Scope') }}");
-        $modal.find('#rules-group-title').text("{{ _('MCP Instructions') }}");
-        $modal.find('#system-prompt-label').text("{{ _('Server Instruction') }}");
+        $modal.find('#specialty-label').text({{ _('MCP Scope')|tojson }});
+        $modal.find('#rules-group-title').text({{ _('MCP Instructions')|tojson }});
+        $modal.find('#system-prompt-label').text({{ _('Server Instruction')|tojson }});
         $modal.find('select[name="pipeline_role"]').val('executor').selectpicker('refresh');
         $modal.find('select[name="tool_access"]').val('none').selectpicker('refresh');
 
@@ -375,9 +375,9 @@ function renderDynamicFields(type) {
         $modal.find('input[name="specialty"]').val(preset.specialty || '');
     } else {
         $modal.find('#v6_pipeline_section').show();
-        $modal.find('#specialty-label').text("{{ _('Specialty') }}");
-        $modal.find('#rules-group-title').text("{{ _('Agent Rules') }}");
-        $modal.find('#system-prompt-label').text("{{ _('System Prompt') }}");
+        $modal.find('#specialty-label').text({{ _('Specialty')|tojson }});
+        $modal.find('#rules-group-title').text({{ _('Agent Rules')|tojson }});
+        $modal.find('#system-prompt-label').text({{ _('System Prompt')|tojson }});
 
         const $prompt = $modal.find('textarea[name="system_prompt"]');
         const currentPrompt = $prompt.val() || '';
@@ -445,11 +445,11 @@ $(document).ready(function() {
         const preset = rolePresets[val];
         
         const guides = {
-            'router': "{{ _('Classifies intent only. Lightweight model recommended.') }}",
-            'planner': "{{ _('Creates execution plans. Standard or Heavy model recommended.') }}",
-            'executor': "{{ _('Calls tools and collects data.') }}",
-            'synthesizer': "{{ _('Synthesizes results into user response.') }}",
-            'worker': "{{ _('Legacy supervisor/worker mode.') }}"
+            'router': {{ _('Classifies intent only. Lightweight model recommended.')|tojson }},
+            'planner': {{ _('Creates execution plans. Standard or Heavy model recommended.')|tojson }},
+            'executor': {{ _('Calls tools and collects data.')|tojson }},
+            'synthesizer': {{ _('Synthesizes results into user response.')|tojson }},
+            'worker': {{ _('Legacy supervisor/worker mode.')|tojson }}
         };
         
         // Update label tooltip instead of inline text

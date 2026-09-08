@@ -87,7 +87,7 @@
           }
         }
         else {
-          document.getElementById("upgrade_status").innerHTML = "{{_('Reading AoT upgrade logs. Please wait...')}}";
+          document.getElementById("upgrade_status").innerHTML = {{ _('Reading AoT upgrade logs. Please wait...')|tojson }};
         }
 
         // During upgrade progress, continuously force logo to red
@@ -222,7 +222,7 @@
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
         <div class="form-group">
           <button type="submit" class="btn btn-primary"
-                  onclick="return confirm('{{_('The containers will be recreated on the new image and control will pause briefly. A backup is taken first. Continue?')}}')">
+                  onclick="return confirm({{ _('The containers will be recreated on the new image and control will pause briefly. A backup is taken first. Continue?')|tojson|forceescape }})">
             {% if upgrade_available %}
               {{_('Update to %(version)s', version=current_latest_release)}}
             {% else %}
