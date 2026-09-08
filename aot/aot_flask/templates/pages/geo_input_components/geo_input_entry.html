@@ -28,7 +28,7 @@
                 value="{{_('Deactivate')}}" />
         </div>
         <div class="aot-entry-settings">
-            <a class="btn p-0" data-toggle="modal" data-target="#modal_config_{{each_input.unique_id}}">
+            <a class="btn p-0 aot-geoinput-settings-open" href="javascript:void(0)" data-input-id="{{each_input.unique_id}}">
                 <i class="fas fa-cog"></i>
             </a>
         </div>
@@ -48,7 +48,12 @@
                 </button>
             </div>
             <div class="modal-body">
-                {% include 'pages/geo_input_components/geo_input_option.html' %}
+                {# input/output/function 페이지와 같은 이유로 지연 로드한다 —
+                   레이어 수만큼 이 모달 전체가 초기 HTML에 그대로 심기면
+                   그리드스택 배치가 늦어진다. 최초로 열 때만
+                   /geo/layer/options 로 가져온다(geo_input.html 참조). #}
+                <div id="mod_geoinput_{{each_input.unique_id}}" data-aot-lazy-modal-body
+                    data-aot-lazy-id="{{each_input.unique_id}}"></div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn aot-pill-btn" data-dismiss="modal">{{ _('Close') }}</button>

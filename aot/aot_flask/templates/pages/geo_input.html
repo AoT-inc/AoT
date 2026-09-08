@@ -163,6 +163,44 @@
         }
     });
 
+    /**
+     * Open a layer's settings modal, lazily fetching its body fragment on the
+     * first open instead of at page load — every layer used to carry its
+     * full settings modal (channel list, image-overlay panel, map preview)
+     * inline, so N layers meant N modals worth of HTML parsed before
+     * GridStack could lay anything out. Fetch -> insert -> THEN show: both
+     * AoTGeoInputPreview and AoTGeoImageOverlay init off a document-level
+     * shown.bs.modal delegate (registered once at page load, not from an
+     * inline <script> in the fragment itself, unlike input/output/function),
+     * so as long as the fragment is in the DOM before modal('show') fires,
+     * they pick it up on their own — no manual re-init call needed here.
+     */
+    function openGeoInputSettingsModal(id) {
+        var $modal = $('#modal_config_' + id);
+        var $placeholder = $modal.find('[data-aot-lazy-modal-body]');
+        if (!$placeholder.length) {
+            $modal.modal('show'); // Already loaded on a prior open.
+            return;
+        }
+        $placeholder.html('<span class="text-muted">' + {{ _('Loading...')|tojson }} + '</span>');
+        $.ajax({
+            type: "GET",
+            url: '/geo/layer/options?input_id=' + id,
+            success: function (html) {
+                $placeholder.replaceWith(html);
+                if (window.AoTModalEnhance) AoTModalEnhance.apply($('#form_config_' + id));
+                $modal.modal('show');
+            },
+            error: function () {
+                $placeholder.html('<span class="text-danger">' + {{ _('Could not load settings') | tojson }} + '</span>');
+                $modal.modal('show');
+            }
+        });
+    }
+    $(document).on('click', '.aot-geoinput-settings-open', function () {
+        openGeoInputSettingsModal($(this).data('input-id'));
+    });
+
     jQuery.fn.processRequest = function (button, action) {
         var formId = $(button).data('form-id');
         var $form;

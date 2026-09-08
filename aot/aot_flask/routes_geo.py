@@ -3387,6 +3387,15 @@ def api_facility_apply(facility_uuid):
     return jsonify(resp)
 
 
+def _geo_layer_get_custom_option(layer_obj, option_id):
+    import json
+    try:
+        options = json.loads(layer_obj.options) if layer_obj.options else {}
+        return options.get(option_id)
+    except:
+        return None
+
+
 @blueprint.route('/geo/layer') # Renamed from /geo/input
 @blueprint.route('/geo/input') # Alias for compatibility
 @login_required
@@ -3397,20 +3406,12 @@ def page_layer():
     """
     if not utils_general.user_has_permission('edit_settings'):
         return redirect(url_for('routes_general.home'))
-    
+
     geo_layers = sorted(GeoLayer.query.all(), key=lambda l: (l.position_y, l.id))
     dict_inputs = parse_input_information()
 
     form_add = forms_geo.GISInputAdd()
     form_mod = forms_geo.GISInputMod()
-
-    def get_custom_option(layer_obj, option_id):
-        import json
-        try:
-            options = json.loads(layer_obj.options) if layer_obj.options else {}
-            return options.get(option_id)
-        except:
-            return None
 
     from flask_wtf.csrf import generate_csrf
     return render_template('pages/geo_input.html',
@@ -3420,7 +3421,38 @@ def page_layer():
                            dict_inputs=dict_inputs,
                            form_add_gis=form_add,
                            form_mod_gis=form_mod,
-                           get_custom_option=get_custom_option,
+                           get_custom_option=_geo_layer_get_custom_option,
+                           csrf_token=generate_csrf)
+
+
+@blueprint.route('/geo/layer/options')
+@blueprint.route('/geo/input/options') # Alias, matching page_layer()'s own naming
+@login_required
+def page_layer_options():
+    """
+    Settings-modal body fragment for one GeoLayer, fetched on demand.
+
+    page_layer() used to render every layer's full geo_input_option.html
+    inline (channel lists, image-overlay panel, map preview) even when the
+    modal was never opened — same root cause as the input/output/function
+    pages fixed alongside this (see routes_input.py's `input_type=options`
+    endpoint and geo_input.html's openLayerSettingsModal()).
+    """
+    if not utils_general.user_has_permission('edit_settings'):
+        return "Permission denied", 403
+
+    input_id = request.args.get('input_id')
+    each_input = GeoLayer.query.filter_by(unique_id=input_id).first()
+    if not each_input:
+        return "Not found", 404
+
+    dict_inputs = parse_input_information()
+
+    from flask_wtf.csrf import generate_csrf
+    return render_template('pages/geo_input_components/geo_input_option.html',
+                           each_input=each_input,
+                           dict_inputs=dict_inputs,
+                           get_custom_option=_geo_layer_get_custom_option,
                            csrf_token=generate_csrf)
 
 @blueprint.route('/geo/layer/submit', methods=['POST'])
