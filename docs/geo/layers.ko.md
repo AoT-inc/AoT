@@ -34,6 +34,7 @@
 |--------|----------|------|------------|
 | NASA GIBS | `gis_nasa_gibs` | 과학용 위성 영상, WMS | 불필요 |
 | ESA | `gis_esa` | 유럽 우주기구 위성 | 불필요 |
+| Sentinel Hub | `gis_sentinelhub` | Sentinel-2 10m 해상도 NDVI·수분·수계 지수 | 필요 (OAuth 클라이언트) |
 
 ### 기상 오버레이
 
@@ -50,7 +51,8 @@
 | OpenTopoMap | `gis_opentopomap` | 등고선·지형 지도 | 불필요 |
 | ISRIC | `gis_isric` | 전세계 토양 데이터 (SoilGrids) | 불필요 |
 | GSI | `gis_gsi` | 일본 국토지리원 지도 | 불필요 |
-| SGIS | `gis_sgis` | 싱가포르 지리정보 | 불필요 |
+| SGIS | `gis_sgis` | 통계청 통계지리정보 | 필요 |
+| Agromonitoring | `gis_agromonitoring` | 필지 단위 NDVI 통계·토양 수분·지온 | 필요 |
 
 ---
 
@@ -105,6 +107,29 @@ AoT 서버가 CORS 프록시(`/api/geo/proxy/rainviewer/*`)를 통해 중계하�
 ### ISRIC (SoilGrids)
 
 토양 유기물, pH, 질소 함량 등 전세계 토양 데이터를 WMS 방식으로 제공합니다. 농업 스마트팜에서 토양 분석에 활용됩니다.
+
+### Sentinel Hub (Sentinel-2)
+
+10m 해상도 Sentinel-2 영상입니다. MODIS NDVI가 250m 화소 하나로 덮는 6.25ha를 여기서는 625개 화소로 보므로, 한 필지 안의 생육 편차가 드러납니다.
+
+[Copernicus Data Space Ecosystem](https://dataspace.copernicus.eu/)에서 무료 계정을 만들고 대시보드에서 OAuth 클라이언트를 생성한 뒤 Client ID와 Secret을 입력합니다. Sentinel Hub는 OAuth2 client credentials 방식이라 타일을 AoT 서버가 대신 받아옵니다(`/api/geo/proxy/sentinelhub/<unique_id>`) — Secret은 브라우저로 나가지 않습니다.
+
+| 옵션 | 설명 |
+|--------|-------------|
+| 레이어 | NDVI, 트루컬러, NDMI(수분), NDWI(수계), 위색조합 |
+| 컬렉션 | L2A(대기보정) 또는 L1C |
+| 검색 기간 | 특정 날짜 하나로는 구름 때문에 화면이 비므로, 이 기간에서 쓸 수 있는 가장 최근 장면을 그립니다 |
+| 최대 운량 / 장면 우선순위 | 그 기간 안에서 어떤 장면을 고를지 |
+
+무료 등급은 월 30,000 PU입니다. 지도 화면 한 번이 약 4 PU이고 타일은 하루 캐시하며, 줌 9 미만에서는 아예 요청하지 않습니다 — 10m 자료를 광역으로 보는 것은 예산만 쓰고 보이는 것이 없습니다.
+
+### Agromonitoring (필지 NDVI·토양)
+
+등록한 필지 경계의 NDVI 통계와 **토양 수분·지온을 숫자로** 제공하는 유일한 레이어입니다. SMAP 오버레이는 9km 그림이고, NASA GIBS 범례의 토양 수분 숫자는 Open-Meteo 모델값을 빌려 온 것입니다.
+
+필지는 Agromonitoring 대시보드에서 그립니다(1~3000ha). 폴리곤 ID를 붙여넣거나, 비워 두면 클릭한 지점을 포함하는 폴리곤을 자동으로 찾습니다. API 키는 OpenWeatherMap과 같은 계정의 것을 씁니다.
+
+값은 서버를 거쳐 조회하고(`/api/geo/proxy/agromonitoring/<unique_id>`) 30분 캐시합니다 — 무료 등급의 호출 한도가 공개돼 있지 않기 때문입니다.
 
 ---
 

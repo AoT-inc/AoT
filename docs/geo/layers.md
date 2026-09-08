@@ -34,6 +34,7 @@ The `/geo/layer` page is where you register and manage external map data sources
 |----------|-----------|----------|-----------------|
 | NASA GIBS | `gis_nasa_gibs` | Scientific satellite imagery, WMS | Not required |
 | ESA | `gis_esa` | European Space Agency satellite | Not required |
+| Sentinel Hub | `gis_sentinelhub` | Sentinel-2 at 10 m: NDVI, moisture and water indices | Required (OAuth client) |
 
 ### Weather Overlays
 
@@ -50,7 +51,8 @@ The `/geo/layer` page is where you register and manage external map data sources
 | OpenTopoMap | `gis_opentopomap` | Contour and terrain map | Not required |
 | ISRIC | `gis_isric` | Global soil data (SoilGrids) | Not required |
 | GSI | `gis_gsi` | Japan Geospatial Information Authority | Not required |
-| SGIS | `gis_sgis` | Singapore geospatial information | Not required |
+| SGIS | `gis_sgis` | Statistics Korea geospatial statistics | Required |
+| Agromonitoring | `gis_agromonitoring` | Per-field NDVI statistics, soil moisture and soil temperature | Required |
 
 ---
 
@@ -105,6 +107,29 @@ The AoT server relays requests via a CORS proxy (`/api/geo/proxy/rainviewer/*`),
 ### ISRIC (SoilGrids)
 
 Provides global soil data (organic matter, pH, nitrogen content) via WMS. Useful for soil analysis in agricultural smart farm applications.
+
+### Sentinel Hub (Sentinel-2)
+
+Sentinel-2 imagery at 10 m resolution — the 6.25 ha that MODIS NDVI covers with a single 250 m pixel is 625 pixels here, so growth differences inside one field become visible.
+
+Register a free account on the [Copernicus Data Space Ecosystem](https://dataspace.copernicus.eu/), create an OAuth client in the dashboard, and enter its Client ID and Secret. Because Sentinel Hub authenticates with OAuth2 client credentials, the AoT server fetches every tile on your behalf (`/api/geo/proxy/sentinelhub/<unique_id>`) — the secret never reaches the browser.
+
+| Option | Description |
+|--------|-------------|
+| Layer | NDVI, True Color, NDMI (moisture), NDWI (water), False Color |
+| Collection | L2A (atmospherically corrected) or L1C |
+| Search Window | Clouds leave holes in any single date, so the most recent usable scene inside this window is drawn |
+| Max Cloud Coverage / Scene Priority | Which scene to pick inside that window |
+
+The free tier allows 30,000 processing units per month. One map screen costs roughly 4, tiles are cached for a day, and zoom levels below 9 are not requested at all — a 10 m dataset viewed at continental scale would spend the budget without showing anything.
+
+### Agromonitoring (Field NDVI / Soil)
+
+Reports NDVI statistics and **soil moisture and soil temperature as numbers** for a field boundary you registered — the only layer here that does. The SMAP overlay is a 9 km picture, and the NASA GIBS legend borrows its soil-moisture figure from an Open-Meteo model value.
+
+Draw the field in the Agromonitoring dashboard (1–3000 ha) and either paste its polygon ID or leave the field empty, in which case the polygon containing the clicked point is matched automatically. The API key is the same one used for OpenWeatherMap.
+
+Values are read through the server (`/api/geo/proxy/agromonitoring/<unique_id>`) and cached for 30 minutes, because the free tier's call limits are not published.
 
 ---
 

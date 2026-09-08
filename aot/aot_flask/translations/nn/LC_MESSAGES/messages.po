@@ -4655,7 +4655,9 @@ msgstr "Gruppe"
 msgid ""
 "Saved, but the daemon could not be reached — the sequence may still be "
 "running. Check the daemon."
-msgstr "Lagra, men klarte ikkje å nå daemonen — sekvensen køyrer kanskje framleis. Sjekk daemonen."
+msgstr ""
+"Lagra, men klarte ikkje å nå daemonen — sekvensen køyrer kanskje "
+"framleis. Sjekk daemonen."
 
 #: aot_flask/routes_function.py:2263
 msgid "The sequence is still running — the daemon did not apply the change."
@@ -30524,8 +30526,6 @@ msgstr "Estimert"
 msgid "Cumulative since start"
 msgstr "Kumulativt sidan start"
 
-
-
 #: config_devices_units.py:342
 msgid "Vapor Pressure Deficit"
 msgstr "Damptrykkunderskot"
@@ -30548,7 +30548,9 @@ msgstr "Stopp styring den"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:401
 msgid "Control stops for good after this date. Leave blank to keep running."
-msgstr "Styringa stoppar for godt etter denne datoen. La stå tomt for å halde fram."
+msgstr ""
+"Styringa stoppar for godt etter denne datoen. La stå tomt for å halde "
+"fram."
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:667
 msgid "Misting Sunburn Protection"
@@ -30566,7 +30568,9 @@ msgstr "Planteskulemodus (frøplantar)"
 msgid ""
 "Tighter misting limits for seedlings, which scorch more easily than grown"
 " leaves."
-msgstr "Strengare grenser for tåkelegging for frøplantar, som svir seg lettare enn utvaksne blad."
+msgstr ""
+"Strengare grenser for tåkelegging for frøplantar, som svir seg lettare "
+"enn utvaksne blad."
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:1192
 msgid "Not used"
@@ -30581,6 +30585,7 @@ msgstr "Tåke"
 msgid "Devices under automatic control"
 msgstr "Einingar under automatisk styring"
 
+#, python-format
 msgid "%(n)s excluded"
 msgstr "%(n)s utelatne"
 
@@ -30597,19 +30602,44 @@ msgid "This facility has no actuators yet."
 msgstr "Dette anlegget har ingen aktuatorar enno."
 
 msgid "Could not load the device list. Existing settings are kept."
-msgstr "Klarte ikkje å laste einingslista. Eksisterande innstillingar blir tekne vare på."
+msgstr ""
+"Klarte ikkje å laste einingslista. Eksisterande innstillingar blir tekne "
+"vare på."
 
 msgid "Excluded actuators (raw)"
 msgstr "Utelatne aktuatorar (rådata)"
 
-msgid "Comma-separated Output IDs excluded from automatic control. Normally set with the toggles above rather than typed here."
-msgstr "Kommaseparerte utgangs-ID-ar som er utelatne frå automatisk styring. Blir vanlegvis sett med brytarane over, ikkje skrivne inn her."
+msgid ""
+"Comma-separated Output IDs excluded from automatic control. Normally set "
+"with the toggles above rather than typed here."
+msgstr ""
+"Kommaseparerte utgangs-ID-ar som er utelatne frå automatisk styring. Blir"
+" vanlegvis sett med brytarane over, ikkje skrivne inn her."
 
-msgid "Proactively shift temperature/humidity setpoints and inhibit ventilation before adverse weather arrives. Uses this facility's own forecast source if one is linked in the facility editor's weather bindings (any service — KMA, OpenWeatherMap, Open-Meteo); otherwise falls back to the system-wide KMA short-term forecast."
-msgstr "Flyttar proaktivt temperatur-/fuktnivåa og hindrar ventilasjon før dårleg vêr kjem. Brukar denne fasiliteten sin eigen prognosekjelde dersom ei slik er kopla til i vêrbindingane i fasilitetsredigeraren (kva som helst teneste — KMA, OpenWeatherMap, Open-Meteo); elles fell systemet tilbake på den systemomfattande KMA-korttidsprognosen."
+msgid ""
+"Proactively shift temperature/humidity setpoints and inhibit ventilation "
+"before adverse weather arrives. Uses this facility's own forecast source "
+"if one is linked in the facility editor's weather bindings (any service —"
+" KMA, OpenWeatherMap, Open-Meteo); otherwise falls back to the system-"
+"wide KMA short-term forecast."
+msgstr ""
+"Flyttar proaktivt temperatur-/fuktnivåa og hindrar ventilasjon før dårleg"
+" vêr kjem. Brukar denne fasiliteten sin eigen prognosekjelde dersom ei "
+"slik er kopla til i vêrbindingane i fasilitetsredigeraren (kva som helst "
+"teneste — KMA, OpenWeatherMap, Open-Meteo); elles fell systemet tilbake "
+"på den systemomfattande KMA-korttidsprognosen."
 
-msgid "How many hours ahead to check for incoming adverse weather (1–6 h) when using the system-wide KMA fallback above. Longer lookahead gives earlier warning but may over-correct. Ignored when this facility has its own forecast source linked — that source already applies its own lookahead."
-msgstr "Kor mange timar fram i tid ein skal sjekke etter dårleg vêr på veg inn (1–6 t) når den systemomfattande KMA-reserveløysinga ovanfor blir brukt. Lengre horisont gir tidlegare varsel, men kan føre til overkorrigering. Blir ignorert når denne fasiliteten har ei eiga prognosekjelde kopla til — den kjelda brukar då alt sin eigen horisont."
+msgid ""
+"How many hours ahead to check for incoming adverse weather (1–6 h) when "
+"using the system-wide KMA fallback above. Longer lookahead gives earlier "
+"warning but may over-correct. Ignored when this facility has its own "
+"forecast source linked — that source already applies its own lookahead."
+msgstr ""
+"Kor mange timar fram i tid ein skal sjekke etter dårleg vêr på veg inn "
+"(1–6 t) når den systemomfattande KMA-reserveløysinga ovanfor blir brukt. "
+"Lengre horisont gir tidlegare varsel, men kan føre til overkorrigering. "
+"Blir ignorert når denne fasiliteten har ei eiga prognosekjelde kopla til "
+"— den kjelda brukar då alt sin eigen horisont."
 
 #: aot/widgets/widget_notice.py:1
 msgid "Notice Category Filter"
@@ -30644,8 +30674,20 @@ msgid "Notice & Notes Board"
 msgstr "Meldings- og notatoppslagstavle"
 
 #: aot/widgets/widget_notice.py:1
-msgid "Displays the latest notice board post titles and/or the notes written in a chosen site, zone, plot, or facility (and everything nested under it). Clicking a notice opens the full post (content, poll, replies, acknowledge) in a popup; clicking a note opens it in the shared notes panel. Users with write permission can also create, edit, and delete posts directly from the widget."
-msgstr "Viser titlane på dei nyaste innlegga på oppslagstavla og/eller notata som er skrivne på ein valt stad, sone, teig eller anlegg (og alt som ligg under det). Å klikke på ei melding opnar heile innlegget (innhald, avrøysting, svar, kvittering) i eit sprettoppvindauge; å klikke på eit notat opnar det i det delte notatpanelet. Brukarar med skriveløyve kan òg opprette, redigere og slette innlegg direkte frå widgeten."
+msgid ""
+"Displays the latest notice board post titles and/or the notes written in "
+"a chosen site, zone, plot, or facility (and everything nested under it). "
+"Clicking a notice opens the full post (content, poll, replies, "
+"acknowledge) in a popup; clicking a note opens it in the shared notes "
+"panel. Users with write permission can also create, edit, and delete "
+"posts directly from the widget."
+msgstr ""
+"Viser titlane på dei nyaste innlegga på oppslagstavla og/eller notata som"
+" er skrivne på ein valt stad, sone, teig eller anlegg (og alt som ligg "
+"under det). Å klikke på ei melding opnar heile innlegget (innhald, "
+"avrøysting, svar, kvittering) i eit sprettoppvindauge; å klikke på eit "
+"notat opnar det i det delte notatpanelet. Brukarar med skriveløyve kan òg"
+" opprette, redigere og slette innlegg direkte frå widgeten."
 
 #: aot/widgets/widget_notice.py:1
 msgid "Show Notices"
@@ -30688,16 +30730,25 @@ msgid "How often to refresh the notice/notes lists"
 msgstr "Kor ofte meldings-/notatlistene skal oppdaterast"
 
 #: aot/widgets/widget_notice.py:1
-msgid "Notes written in this site/zone/plot/facility (and, if \"Include Nested Spaces\" above is on, everything nested under it) are shown."
-msgstr "Notat skrivne på denne staden/sona/teigen/anlegget vert viste (og, dersom \"Ta med underliggjande område\" ovanfor er slått på, alt som ligg under det)."
+msgid ""
+"Notes written in this site/zone/plot/facility (and, if \"Include Nested "
+"Spaces\" above is on, everything nested under it) are shown."
+msgstr ""
+"Notat skrivne på denne staden/sona/teigen/anlegget vert viste (og, dersom"
+" \"Ta med underliggjande område\" ovanfor er slått på, alt som ligg under"
+" det)."
 
 #: aot/widgets/widget_notice.py:1
 msgid "No sites, zones, plots, or facilities exist yet."
 msgstr "Det finst enno ingen stader, soner, teigar eller anlegg."
 
 #: aot/widgets/widget_notice.py:1
-msgid "Nothing selected — turn on \"Show Notices\" and/or \"Show Notes\" in the widget settings."
-msgstr "Ingenting valt — slå på \"Vis meldingar\" og/eller \"Vis notat\" i widget-innstillingane."
+msgid ""
+"Nothing selected — turn on \"Show Notices\" and/or \"Show Notes\" in the "
+"widget settings."
+msgstr ""
+"Ingenting valt — slå på \"Vis meldingar\" og/eller \"Vis notat\" i "
+"widget-innstillingane."
 
 #: aot/widgets/widget_notice.py:1
 msgid "Choose a space in the widget settings to show notes."
@@ -30708,8 +30759,12 @@ msgid "Display notes written in a chosen space (see Space below)"
 msgstr "Viser notat skrivne i eit valt område (sjå \"Område\" nedanfor)"
 
 #: aot/widgets/widget_notice.py:1
-msgid "Also show notes written in zones/plots/facilities/devices nested under the chosen space"
-msgstr "Viser òg notat skrivne i soner/teigar/anlegg/einingar som ligg under det valde området"
+msgid ""
+"Also show notes written in zones/plots/facilities/devices nested under "
+"the chosen space"
+msgstr ""
+"Viser òg notat skrivne i soner/teigar/anlegg/einingar som ligg under det "
+"valde området"
 
 #: aot/widgets/widget_notice.py:1
 msgid "Newest First"
@@ -30717,7 +30772,9 @@ msgstr "Nyaste først"
 
 #: aot/widgets/widget_notice.py:1
 msgid "Only show notes whose category or tags contain this text (optional)"
-msgstr "Viser berre notat der kategori eller merkelapp inneheld denne teksten (valfritt)"
+msgstr ""
+"Viser berre notat der kategori eller merkelapp inneheld denne teksten "
+"(valfritt)"
 
 #: aot/widgets/widget_notice.py:1
 msgid "Show Notes List"
@@ -30730,3 +30787,256 @@ msgstr "Viser notat som samsvarer med filteret nedanfor"
 #: aot/widgets/widget_notice.py:1
 msgid "Notes Filter"
 msgstr "Notatfilter"
+
+#, python-format
+msgid "%(n)s channels"
+msgstr "%(n)s kanalar"
+
+#, python-format
+msgid "%(n)s linked"
+msgstr "%(n)s kopla til"
+
+msgid "AoT Device Count"
+msgstr "Tal på AoT-einingar"
+
+msgid "Apply Filter"
+msgstr "Bruk filter"
+
+msgid "Assign"
+msgstr "Tildel"
+
+msgid "Branch Pipe Count"
+msgstr "Tal på grenrøyr"
+
+msgid "Branch Pipe Elbow"
+msgstr "Knerøyr (grenrøyr)"
+
+msgid "Branch Pipe End"
+msgstr "Endestykke (grenrøyr)"
+
+msgid "Branch Pipe Length"
+msgstr "Lengd på grenrøyr"
+
+msgid "Branch Pipe Tee"
+msgstr "T-røyr (grenrøyr)"
+
+msgid "Conversion details:"
+msgstr "Detaljar om konvertering:"
+
+msgid "Custom entry…"
+msgstr "Eigendefinert oppføring…"
+
+msgid "Data Load Failed"
+msgstr "Klarte ikkje å laste inn data"
+
+msgid "Design Details"
+msgstr "Designdetaljar"
+
+msgid "Design Summary"
+msgstr "Designsamandrag"
+
+msgid "Do you want to continue?"
+msgstr "Vil du halde fram?"
+
+msgid "Drip irrigation applied ("
+msgstr "Drypevatning brukt ("
+
+msgid "Enter name"
+msgstr "Skriv inn namn"
+
+msgid "Flow Rate (L/h)"
+msgstr "Gjennomstrøyming (L/h)"
+
+msgid "Flow Rate (L/min)"
+msgstr "Gjennomstrøyming (L/min)"
+
+msgid "From envelope"
+msgstr "Frå omriss"
+
+msgid "Group name"
+msgstr "Gruppenamn"
+
+msgid "Input Device Count"
+msgstr "Tal på inngangseiningar"
+
+msgid "It will be automatically converted to the current format (v"
+msgstr "Det vil bli automatisk konvertert til gjeldande format (v"
+
+msgid "Line is too short ("
+msgstr "Linja er for kort ("
+
+msgid "Logic Count"
+msgstr "Tal på logikkar"
+
+msgid "Main Pipe Count"
+msgstr "Tal på hovudrøyr"
+
+msgid "Main Pipe Elbow"
+msgstr "Knerøyr (hovudrøyr)"
+
+msgid "Main Pipe End"
+msgstr "Endestykke (hovudrøyr)"
+
+msgid "Main Pipe Length"
+msgstr "Lengd på hovudrøyr"
+
+msgid "Main Pipe Reducing Elbow"
+msgstr "Reduksjonsknerøyr (hovudrøyr)"
+
+msgid "Main Pipe Reducing Tee"
+msgstr "Reduksjons-T-røyr (hovudrøyr)"
+
+msgid "Main Pipe Tee"
+msgstr "T-røyr (hovudrøyr)"
+
+msgid "Must be at least 0.01m²."
+msgstr "Må vere minst 0.01m²."
+
+msgid "Must be at least 10cm."
+msgstr "Må vere minst 10cm."
+
+msgid "New Site"
+msgstr "Ny stad"
+
+msgid "New Zone"
+msgstr "Ny sone"
+
+msgid "New group"
+msgstr "Ny gruppe"
+
+msgid "No Pipe Data"
+msgstr "Ingen røyrdata"
+
+msgid "No Sites Found"
+msgstr "Fann ingen stadar"
+
+msgid "No Sites Selected"
+msgstr "Ingen stadar valde"
+
+msgid "No actuators registered"
+msgstr "Ingen aktuatorar registrerte"
+
+msgid "No."
+msgstr "Nr."
+
+msgid "Number of Emitters"
+msgstr "Tal på dryppdyser"
+
+msgid "Number of Emitters (Pipe)"
+msgstr "Tal på dryppdyser (røyr)"
+
+msgid "Output Device Count"
+msgstr "Tal på utgangseiningar"
+
+msgid "Pipe Details"
+msgstr "Røyrdetaljar"
+
+msgid "Pipe Length"
+msgstr "Røyrlengd"
+
+msgid "Placement mode"
+msgstr "Plasseringsmodus"
+
+msgid "Reference line"
+msgstr "Referanselinje"
+
+msgid "Search Device..."
+msgstr "Søk etter eining..."
+
+msgid "Select Site"
+msgstr "Vel stad"
+
+msgid "Service name"
+msgstr "Tenestenamn"
+
+msgid "Shape is too small ("
+msgstr "Forma er for lita ("
+
+msgid "Site Area"
+msgstr "Stadareal"
+
+msgid "Site Count"
+msgstr "Tal på stadar"
+
+msgid "Site Pipe Info"
+msgstr "Røyrinfo for stad"
+
+msgid "Solar radiation"
+msgstr "Solinnstråling"
+
+msgid ""
+"The map updates as you drag — branches follow the reference line at this "
+"angle."
+msgstr ""
+"Kartet vert oppdatert medan du dreg — greinene følgjer referanselinja i "
+"denne vinkelen."
+
+msgid "This file is in an older format (v"
+msgstr "Denne fila er i eit eldre format (v"
+
+msgid "This match key already exists: "
+msgstr "Denne treffnøkkelen finst allereie: "
+
+msgid "Total Area"
+msgstr "Totalt areal"
+
+msgid "Zone Count"
+msgstr "Tal på soner"
+
+msgid "[Branch Pipe]"
+msgstr "[Grenrøyr]"
+
+msgid "[Main Pipe]"
+msgstr "[Hovudrøyr]"
+
+msgid "and"
+msgstr "og"
+
+msgid "detached"
+msgstr "fråkopla"
+
+msgid "elements imported."
+msgstr "element importerte."
+
+msgid "hh"
+msgstr "hh"
+
+msgid "loading_map"
+msgstr "Lastar inn kart..."
+
+msgid "manual size"
+msgstr "manuell storleik"
+
+msgid "mm"
+msgstr "mm"
+
+msgid "others"
+msgstr "andre"
+
+msgid "pipes)"
+msgstr "røyr)"
+
+msgid "save_btn_text"
+msgstr "Lagre"
+
+msgid "ss"
+msgstr "ss"
+
+msgid "units"
+msgstr "einingar"
+
+msgid "upper limit"
+msgstr "øvre grense"
+
+msgid "— Auto —"
+msgstr "— Auto —"
+
+msgid "— Select Input channel —"
+msgstr "— Vel inngangskanal —"
+
+msgid "— Select channel —"
+msgstr "— Vel kanal —"
+
+msgid "— Select —"
+msgstr "— Vel —"
+

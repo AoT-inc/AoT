@@ -15,6 +15,21 @@ Overlay a user-uploaded aerial or drone photo on the map. On upload, GPS and cam
 
 ## Built-In Map Layers (Providers)
 
+### Agromonitoring: GL: Agromonitoring (Field NDVI/Soil)
+
+- Layer Type: none
+- Default Role: Overlay
+- Attribution: &copy; <a href="https://agromonitoring.com/">Agromonitoring</a>
+- Manufacturer: Agromonitoring
+- Libraries: gis_agromonitoring
+- Manufacturer URL: [Link](https://agromonitoring.com/)
+
+Per-field NDVI statistics and soil moisture / soil temperature for a polygon registered at agromonitoring.com — the only input here that reports soil moisture as a number for your own field boundary rather than as a coarse satellite overlay. Draw the field in the Agromonitoring dashboard (1-3000 ha) and either paste its polygon ID below or leave it empty to match the polygon containing the point you click. Uses the same account as OpenWeatherMap.
+<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>API Key</td><td>Text</td><tr><td>Polygon ID</td><td>Text</td><tr><td>Active Channels</td></td><tr><td>NDVI Search Window</td><td>Select</td></tbody></table>
+
+- GIS Search: Supported (Address/Place)
+  - Capabilities: 
+
 ### CARTO: GL: Carto Maps
 
 - Layer Type: xyz
@@ -31,19 +46,17 @@ Data analysis-focused maps from CARTO DB. Offers restrained color schemes with P
 - GIS Search: Supported (Address/Place)
   - Capabilities: 
 
-### ESA: GL: Soil Moisture (NASA SMAP)
+### Copernicus: GL: Sentinel-2 (Sentinel Hub)
 
 - Layer Type: xyz
 - Default Role: Overlay
-- Attribution: NASA SMAP L4 Soil Moisture
-- Service URL: `https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/SMAP_L4_Analyzed_Surface_Soil_Moisture/default/{time}/GoogleMapsCompatible_Level6/{z}/{y}/{x}.png`
-- Time Enabled: Yes
-- Manufacturer: ESA
-- Libraries: gis_esa
-- Manufacturer URL: [Link](https://smap.jpl.nasa.gov/)
+- Attribution: &copy; <a href="https://dataspace.copernicus.eu/">Copernicus Sentinel-2</a>
+- Manufacturer: Copernicus
+- Libraries: gis_sentinelhub
+- Manufacturer URL: [Link](https://dataspace.copernicus.eu/)
 
-A global land cover map based on European Space Agency (ESA) Sentinel-2 satellite data. Vegetation, urban areas, cropland, forest, and water bodies are classified and color-coded at 10m resolution, useful for environmental analysis.
-<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Date Mode</td><td>Select</td><tr><td>Custom Date</td><td>Text</td></tbody></table>
+Sentinel-2 imagery at 10 m resolution through Sentinel Hub on the Copernicus Data Space Ecosystem — fine enough to read growth differences inside a single field, unlike the 250 m MODIS NDVI. Register a free CDSE account, create an OAuth client and paste its Client ID and Secret below. The free tier allows 30,000 processing units per month; one map screen costs roughly 4, and tiles are cached for a day.
+<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>OAuth Client ID</td><td>Text</td><tr><td>OAuth Client Secret</td><td>Text</td><tr><td>Layer</td></td><tr><td>Collection</td><td>Select</td><tr><td>Search Window</td><td>Select</td><tr><td>Max Cloud Coverage</td><td>Select</td><tr><td>Scene Priority</td><td>Select</td></tbody></table>
 
 - GIS Search: Supported (Address/Place)
   - Capabilities: 
@@ -187,6 +200,23 @@ Microsoft global map service providing high-resolution aerial imagery (Aerial) a
 
 - GIS Search: Supported (Address/Place)
   - Capabilities: address, place
+
+### NASA: GL: Soil Moisture (NASA SMAP)
+
+- Layer Type: xyz
+- Default Role: Overlay
+- Attribution: NASA SMAP L4 Soil Moisture
+- Service URL: `https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/SMAP_L4_Analyzed_Surface_Soil_Moisture/default/{time}/GoogleMapsCompatible_Level6/{z}/{y}/{x}.png`
+- Time Enabled: Yes
+- Manufacturer: NASA
+- Libraries: gis_esa
+- Manufacturer URL: [Link](https://smap.jpl.nasa.gov/)
+
+Global surface soil moisture (0-5cm) from NASA's SMAP (Soil Moisture Active Passive) L4 product, delivered as a near-real-time overlay via NASA GIBS. Available at roughly 9km resolution with selectable dates, useful for irrigation planning and drought monitoring.
+<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Date Mode</td><td>Select</td><tr><td>Custom Date</td><td>Text</td></tbody></table>
+
+- GIS Search: Supported (Address/Place)
+  - Capabilities: 
 
 ### NASA: NASA GIBS
 

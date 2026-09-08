@@ -30,6 +30,7 @@ Measurements
  - [電流](#電流)
  - [電位](#電位)
  - [エネルギー](#エネルギー)
+ - [Evapotranspiration](#evapotranspiration)
  - [周波数](#周波数)
  - [GPIO状態](#gpio状態)
  - [湿度](#湿度)
@@ -406,6 +407,10 @@ Measurements
 
 ### [Tasmota: Tasmota Outlet Energy Monitor (HTTP)](/AoT/Supported-Inputs/#tasmota-tasmota-outlet-energy-monitor-http)
 
+## Evapotranspiration {: #evapotranspiration }
+
+### [NASA: NASA POWER (Coords, Daily incl. ET0)](/AoT/Supported-Inputs/#nasa-nasa-power-coords-daily-incl-et0)
+
 ## 周波数 {: #周波数 }
 
 ### [Raspberry Pi: Signal (PWM)](/AoT/Supported-Inputs/#raspberry-pi-signal-pwm)
@@ -451,6 +456,8 @@ Measurements
 ### [KMA: KMA短期予報](/AoT/Supported-Inputs/#kma-kma短期予報)
 
 ### [KMA: KMA高解像度500m](/AoT/Supported-Inputs/#kma-kma高解像度500m)
+
+### [NASA: NASA POWER (Coords, Daily incl. ET0)](/AoT/Supported-Inputs/#nasa-nasa-power-coords-daily-incl-et0)
 
 ### [Open-Meteo: Open-Meteo (Coords, Hourly incl. Solar)](/AoT/Supported-Inputs/#open-meteo-open-meteo-coords-hourly-incl-solar)
 
@@ -535,6 +542,8 @@ Measurements
 ### [Atlas Scientific: Atlas Color](/AoT/Supported-Inputs/#atlas-scientific-atlas-color)
 
 ### [Catnip Electronics: Chirp](/AoT/Supported-Inputs/#catnip-electronics-chirp)
+
+### [NASA: NASA POWER (Coords, Daily incl. ET0)](/AoT/Supported-Inputs/#nasa-nasa-power-coords-daily-incl-et0)
 
 ### [Open-Meteo: Open-Meteo (Coords, Hourly incl. Solar)](/AoT/Supported-Inputs/#open-meteo-open-meteo-coords-hourly-incl-solar)
 
@@ -672,6 +681,8 @@ Measurements
 
 ## 雨 {: #雨 }
 
+### [NASA: NASA POWER (Coords, Daily incl. ET0)](/AoT/Supported-Inputs/#nasa-nasa-power-coords-daily-incl-et0)
+
 ### [Open-Meteo: Open-Meteo (Coords, Hourly incl. Solar)](/AoT/Supported-Inputs/#open-meteo-open-meteo-coords-hourly-incl-solar)
 
 ## 体積流量 {: #体積流量 }
@@ -728,6 +739,8 @@ Measurements
 
 ### [KMA: KMA高解像度500m](/AoT/Supported-Inputs/#kma-kma高解像度500m)
 
+### [NASA: NASA POWER (Coords, Daily incl. ET0)](/AoT/Supported-Inputs/#nasa-nasa-power-coords-daily-incl-et0)
+
 ### [Open-Meteo: Open-Meteo (Coords, Hourly incl. Solar)](/AoT/Supported-Inputs/#open-meteo-open-meteo-coords-hourly-incl-solar)
 
 ### [OpenWeather: OpenWeatherMap (City/Coords, Current)](/AoT/Supported-Inputs/#openweather-openweathermap-city-coords-current)
@@ -736,9 +749,13 @@ Measurements
 
 ## ステータス {: #ステータス }
 
+### [Agromonitoring: GL: Agromonitoring (Field NDVI/Soil)](/AoT/Supported-Inputs/#agromonitoring-gl-agromonitoring-field-ndvi-soil)
+
 ### [AoT: GL: Aerial Photo Overlay](/AoT/Supported-Inputs/#aot-gl-aerial-photo-overlay)
 
 ### [CARTO: GL: Carto Maps](/AoT/Supported-Inputs/#carto-gl-carto-maps)
+
+### [Copernicus: GL: Sentinel-2 (Sentinel Hub)](/AoT/Supported-Inputs/#copernicus-gl-sentinel-2-sentinel-hub)
 
 ### [Esri: GL: Esri World Imagery](/AoT/Supported-Inputs/#esri-gl-esri-world-imagery)
 
@@ -867,6 +884,8 @@ Measurements
 ### [Melexis: MLX90614](/AoT/Supported-Inputs/#melexis-mlx90614)
 
 ### [Microchip: MCP9808](/AoT/Supported-Inputs/#microchip-mcp9808)
+
+### [NASA: NASA POWER (Coords, Daily incl. ET0)](/AoT/Supported-Inputs/#nasa-nasa-power-coords-daily-incl-et0)
 
 ### [Open-Meteo: Open-Meteo (Coords, Hourly incl. Solar)](/AoT/Supported-Inputs/#open-meteo-open-meteo-coords-hourly-incl-solar)
 

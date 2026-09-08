@@ -58,7 +58,8 @@ from aot.functions._lorawan_common import (
     ChirpStackClient, MODE_A, MODE_C)
 
 # Channels are created/removed DYNAMICALLY per managed device when devices are
-# assigned on Settings -> ChirpStack (see _lorawan_common.sync_scheduler_channels):
+# assigned to this scheduler via a device's own "Class Scheduler" field (e.g. the
+# AoT-C composite device — see _lorawan_common.sync_scheduler_channels):
 # (3 per device: RSSI/SNR/Vbat at base = slot*3) plus a final site-state channel at
 # (managed_count * 3). measurements_dict stays empty + measurements_variable_amount so
 # the framework does not pre-allocate a fixed channel count. MAX_DEVICES is only a
@@ -129,7 +130,8 @@ FUNCTION_INFORMATION = {
         'per-device LoRaWAN Mode Manager.'),
 
     # No measurement-config UI: telemetry channels are created automatically when
-    # devices are assigned on Settings -> ChirpStack (sync_scheduler_channels).
+    # devices are assigned to this scheduler (sync_scheduler_channels), which happens
+    # from the device's own "Class Scheduler" field (e.g. the AoT-C composite device).
     # (matches EnvCoordinator, which disables measurements_select/configure.)
     'options_enabled': ['custom_options', 'function_status'],
     'options_disabled': ['measurements_select', 'measurements_configure'],
@@ -160,7 +162,7 @@ FUNCTION_INFORMATION = {
         {'type': 'header', 'name': lazy_gettext('ChirpStack')},
         {'id': 'cs_rest_port', 'type': 'integer', 'default_value': 8090, 'required': True,
          'name': lazy_gettext('REST Port'),
-         'phrase': lazy_gettext('Server/token from Settings -> ChirpStack; devices assigned there ("Managed by").')},
+         'phrase': lazy_gettext('Server/token from Settings -> ChirpStack; devices join this scheduler from their own device page (e.g. the AoT-C "Class Scheduler" field).')},
 
         {'type': 'header', 'name': lazy_gettext('Control Mode')},
         {'id': 'control_mode', 'type': 'select', 'default_value': 'AUTO',
@@ -447,7 +449,8 @@ class CustomModule(AbstractFunction):
         devices = self._persisted_devices()
         if not devices:
             self.logger.warning(
-                "No devices assigned - assign devices on Settings -> ChirpStack.")
+                "No devices assigned - assign a device to this scheduler from its own "
+                "device page (e.g. the AoT-C 'Class Scheduler' field).")
             return
         now = datetime.now()
         self._state_cache = {}  # fresh per-tick cache (interlock/reconcile/telemetry share it)

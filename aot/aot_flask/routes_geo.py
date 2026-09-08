@@ -1484,6 +1484,274 @@ def api_geo_tile_xyz(layer_id, z, x, y):
 
 
 # ---------------------------------------------------------------------------
+# Sentinel Hub (Copernicus) proxy
+# ---------------------------------------------------------------------------
+# Sentinel Hub 는 OAuth2 client credentials 를 쓴다 — 타일 URL 에 키를 박는
+# 방식(gis_openweather 등)을 그대로 따르면 client_secret 이 브라우저로 나간다.
+# 그래서 타일도 값 조회도 서버가 대신 부르고, 자격증명은 서버 밖으로 나가지
+# 않는다. 요청 본문·PU 비용의 근거는 `aot/inputs_gis/gis_sentinelhub.py` 상단.
+_SH_TILE_TTL = 86400        # Sentinel-2 재방문이 5일이라 한 시간 캐시는 낭비다.
+_SH_SETTINGS_TTL = 60.0
+_sh_settings_cache = {}     # {unique_id: (settings, expires_at)}
+
+
+def _load_gis_layer_instance(unique_id):
+    """GeoLayer 하나를 그 입력 모듈 인스턴스로 만든다. 못 찾으면 None.
+
+    api/geo.py 의 검색 프록시가 하던 것과 같은 조립(옵션 기본값 채우기 →
+    전역 키 폴백 → `get_custom_option` 대체)을 한 곳에 모은 것이다.
+    """
+    import re as _re
+    from aot.utils.modules import load_module_from_file
+    from aot.aot_flask.utils.utils_geo import MockInputDev
+
+    channel_id = None
+    layer = GeoLayer.query.filter_by(unique_id=unique_id).first()
+    if not layer:
+        # WMS 프록시와 같은 관례: 채널마다 레이어를 나눠 그릴 때 `<uid>_<채널>`.
+        m = _re.match(r'^(.+)_(\d+)$', unique_id)
+        if m:
+            layer = GeoLayer.query.filter_by(unique_id=m.group(1)).first()
+            if layer:
+                channel_id = int(m.group(2))
+    if not layer:
+        return None
+
+    layer_def = parse_input_information().get(layer.type, {})
+    if not layer_def.get('file_path'):
+        return None
+
+    mod, _status = load_module_from_file(layer_def['file_path'], 'inputs')
+    if not mod or not hasattr(mod, 'InputModule'):
+        return None
+
+    try:
+        opts = json.loads(layer.options) if layer.options else {}
+    except Exception:
+        opts = {}
+
+    required_ids = []
+    for opt_def in layer_def.get('custom_options', []):
+        opt_id = opt_def.get('id')
+        if not opt_id:
+            continue
+        if opt_id not in opts and 'default' in opt_def:
+            opts[opt_id] = opt_def['default']
+        if opt_def.get('required'):
+            required_ids.append(opt_id)
+
+    # 키 필드는 전역 키 저장소를 따른다(다른 GIS 입력과 같은 규칙).
+    key_field = layer_def.get('key_field')
+    if key_field and not opts.get(key_field):
+        settings_row = GeoSetting.query.first()
+        if settings_row and settings_row.keys:
+            try:
+                global_keys = json.loads(settings_row.keys)
+            except Exception:
+                global_keys = {}
+            global_val = global_keys.get(layer_def.get('global_key_field', key_field))
+            if global_val:
+                opts[key_field] = global_val
+
+    # 전역 저장소에는 키 필드 자리가 **하나뿐**이라 두 값짜리 자격증명
+    # (예: Sentinel Hub 의 client_id + client_secret)은 절반만 채워진다.
+    # 같은 종류의 다른 레이어에 이미 적어 둔 필수값을 물려받게 한다 —
+    # 지수마다 레이어를 나눠 두는 것이 보통인데, 그때마다 같은 비밀값을
+    # 다시 적게 하지 않기 위해서다.
+    missing = [opt_id for opt_id in required_ids if not opts.get(opt_id)]
+    if missing:
+        for sibling in GeoLayer.query.filter_by(type=layer.type).all():
+            if not missing:
+                break
+            if sibling.unique_id == layer.unique_id or not sibling.options:
+                continue
+            try:
+                sib_opts = json.loads(sibling.options)
+            except Exception:
+                continue
+            for opt_id in list(missing):
+                if sib_opts.get(opt_id):
+                    opts[opt_id] = sib_opts[opt_id]
+                    missing.remove(opt_id)
+
+    if channel_id is not None:
+        opts['active_channels'] = [channel_id]
+
+    inst = mod.InputModule(MockInputDev(layer))
+    inst.custom_options = opts
+    inst.get_custom_option = lambda opt, default=None: opts.get(opt, default)
+    return inst
+
+
+def _get_sentinelhub_settings(unique_id):
+    """Sentinel Hub 조회에 필요한 설정 한 벌. 못 찾으면 None.
+
+    `_get_wms_layer_info` 와 같은 이유로 TTL 캐시를 둔다 — 타일 한 장마다
+    parse_input_information() 과 모듈 로드를 다시 할 이유가 없다.
+    """
+    now = time.time()
+    cached = _sh_settings_cache.get(unique_id)
+    if cached and now < cached[1]:
+        return cached[0]
+
+    inst = _load_gis_layer_instance(unique_id)
+    if not inst or not hasattr(inst, 'request_settings'):
+        return None
+
+    settings = inst.request_settings()
+    _sh_settings_cache[unique_id] = (settings, now + _SH_SETTINGS_TTL)
+    return settings
+
+
+def _sh_blank_tile():
+    """상류가 실패했을 때의 빈 타일. WMS 프록시와 같은 이유로 캐시하지 않는다."""
+    return Response(_TRANSPARENT_1X1_PNG, status=200, content_type='image/png',
+                    headers={'Cache-Control': 'no-cache'})
+
+
+@blueprint.route('/api/geo/proxy/sentinelhub/<unique_id>', methods=['GET'])
+@login_required
+def api_geo_proxy_sentinelhub(unique_id):
+    """Sentinel Hub Process API 타일 프록시.
+
+    `@cache.cached` 를 붙이지 않는 이유는 WMS 프록시와 같다 — 캐시 대상은
+    응답이 아니라 타일 바이트다.
+    """
+    from aot.inputs_gis import gis_sentinelhub as sh
+
+    try:
+        try:
+            z = int(request.args.get('z', ''))
+            x = int(request.args.get('x', ''))
+            y = int(request.args.get('y', ''))
+        except (TypeError, ValueError):
+            return Response('Missing or invalid z/x/y', status=400)
+
+        if z < 0 or z > 22 or not (0 <= x < 2 ** z) or not (0 <= y < 2 ** z):
+            return Response('Tile coordinates out of range', status=400)
+
+        # 광역 뷰에서는 상류를 부르지 않는다 — 10m 자료를 대륙 단위로 받아 봐야
+        # 화면에는 뭉개진 한 덩어리고 PU 만 나간다.
+        if z < sh.MIN_ZOOM:
+            return _sh_blank_tile()
+
+        settings = _get_sentinelhub_settings(unique_id)
+        if not settings:
+            return Response('Layer not found or not configured', status=404)
+        if not settings.get('client_id') or not settings.get('client_secret'):
+            current_app.logger.warning(
+                '[SentinelHub Proxy] credentials missing for %s', unique_id)
+            return _sh_blank_tile()
+
+        # 캐시 키에서 자격증명은 뺀다 — 그림을 정하는 것은 아니고, 디스크
+        # 캐시 키에 비밀값을 섞을 이유도 없다. 나머지는 전부 그림을 바꾼다.
+        cache_params = {
+            'z': z, 'x': x, 'y': y,
+            'channel': settings.get('channel_id'),
+            'collection': settings.get('collection'),
+            'cloud': settings.get('max_cloud'),
+            'order': settings.get('mosaicking_order'),
+            'from': settings.get('time_from'),
+            'to': settings.get('time_to'),
+        }
+        cached = _tile_cache_get('sentinelhub', cache_params)
+
+        if cached is None:
+            png = sh.fetch_tile_png(settings, z, x, y, logger=current_app.logger)
+            if not png:
+                return _sh_blank_tile()
+            cached = (png, 'image/png')
+            _tile_cache_set('sentinelhub', cache_params, cached, timeout=_SH_TILE_TTL)
+
+        return utils_http.tile_conditional(request, cached[0], cached[1], _SH_TILE_TTL)
+
+    except Exception as e:
+        current_app.logger.warning('[SentinelHub Proxy] Exception for %s: %s',
+                                   unique_id, e)
+        return _sh_blank_tile()
+
+
+@blueprint.route('/api/geo/proxy/sentinelhub/<unique_id>/value', methods=['GET'])
+@login_required
+@cache.cached(timeout=900, query_string=True,
+              unless=lambda: hasattr(g, '_proxy_error') and g._proxy_error)
+def api_geo_proxy_sentinelhub_value(unique_id):
+    """좌표 한 점의 지수 통계(범례 숫자 상자·AI 조회용).
+
+    실패해도 200 을 돌려준다 — 범례 값 상자는 필드가 없으면 '--' 를 보여주고,
+    그림 자체는 타일 프록시가 따로 그린다.
+    """
+    from aot.inputs_gis import gis_sentinelhub as sh
+
+    try:
+        lat = float(request.args.get('lat', ''))
+        lon = float(request.args.get('lon', ''))
+    except (TypeError, ValueError):
+        return jsonify({'error': 'Missing coordinates'}), 400
+
+    try:
+        settings = _get_sentinelhub_settings(unique_id)
+        if not settings:
+            g._proxy_error = True
+            return jsonify({'error': 'Layer not configured'}), 200
+
+        stats = sh.fetch_index_stats(settings, lat, lon, logger=current_app.logger)
+        if not stats:
+            g._proxy_error = True
+            return jsonify({'error': 'No cloud-free observation in window'}), 200
+
+        return jsonify({
+            'index': stats['key'],
+            'mean': round(stats['mean'], 3),
+            'min': round(stats['min'], 3) if stats.get('min') is not None else None,
+            'max': round(stats['max'], 3) if stats.get('max') is not None else None,
+            'window_to': stats.get('interval_to'),
+        })
+    except Exception as e:
+        g._proxy_error = True
+        current_app.logger.warning('[SentinelHub Value] Exception for %s: %s',
+                                   unique_id, e)
+        return jsonify({'error': str(e)}), 200
+
+
+# ---------------------------------------------------------------------------
+# Agromonitoring proxy
+# ---------------------------------------------------------------------------
+# 필지 폴리곤의 토양 수분·지온·NDVI. 키가 브라우저로 나가지 않게 서버가
+# 부르고, 무료 등급의 호출 한도가 공개돼 있지 않아 30분 캐시를 건다
+# (`aot/inputs_gis/gis_agromonitoring.py` 상단 참조).
+@blueprint.route('/api/geo/proxy/agromonitoring/<unique_id>', methods=['GET'])
+@login_required
+@cache.cached(timeout=1800, query_string=True,
+              unless=lambda: hasattr(g, '_proxy_error') and g._proxy_error)
+def api_geo_proxy_agromonitoring(unique_id):
+    """좌표를 담은 등록 필지의 값. 실패해도 200 — 범례는 '--' 로 남는다."""
+    try:
+        lat = float(request.args.get('lat', ''))
+        lon = float(request.args.get('lon', ''))
+    except (TypeError, ValueError):
+        return jsonify({'error': 'Missing coordinates'}), 400
+
+    try:
+        inst = _load_gis_layer_instance(unique_id)
+        if not inst or not hasattr(inst, 'get_data_at_location'):
+            g._proxy_error = True
+            return jsonify({'error': 'Layer not configured'}), 200
+
+        data = inst.get_data_at_location(lat, lon)
+        if not data:
+            g._proxy_error = True
+            return jsonify({'error': 'No registered polygon or no data'}), 200
+
+        return jsonify(data)
+    except Exception as e:
+        g._proxy_error = True
+        current_app.logger.warning('[Agromonitoring Proxy] Exception for %s: %s',
+                                   unique_id, e)
+        return jsonify({'error': str(e)}), 200
+
+
+# ---------------------------------------------------------------------------
 # GIS Tile Proxy Routes (Generic) - NASA GIBS tile proxy
 # ---------------------------------------------------------------------------
 

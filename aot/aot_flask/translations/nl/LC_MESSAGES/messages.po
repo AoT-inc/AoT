@@ -4694,7 +4694,9 @@ msgstr "Groep"
 msgid ""
 "Saved, but the daemon could not be reached — the sequence may still be "
 "running. Check the daemon."
-msgstr "Opgeslagen, maar de daemon kon niet worden bereikt — de sequentie kan nog steeds actief zijn. Controleer de daemon."
+msgstr ""
+"Opgeslagen, maar de daemon kon niet worden bereikt — de sequentie kan nog"
+" steeds actief zijn. Controleer de daemon."
 
 #: aot_flask/routes_function.py:2263
 msgid "The sequence is still running — the daemon did not apply the change."
@@ -30856,8 +30858,6 @@ msgstr "Geschat"
 msgid "Cumulative since start"
 msgstr "Cumulatief sinds de start"
 
-
-
 #: config_devices_units.py:342
 msgid "Vapor Pressure Deficit"
 msgstr "Dampdrukdeficiet"
@@ -30880,7 +30880,9 @@ msgstr "Regeling stoppen op"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:401
 msgid "Control stops for good after this date. Leave blank to keep running."
-msgstr "De regeling stopt definitief na deze datum. Laat leeg om te blijven doorlopen."
+msgstr ""
+"De regeling stopt definitief na deze datum. Laat leeg om te blijven "
+"doorlopen."
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:667
 msgid "Misting Sunburn Protection"
@@ -30898,7 +30900,9 @@ msgstr "Kwekerij(zaailing)modus"
 msgid ""
 "Tighter misting limits for seedlings, which scorch more easily than grown"
 " leaves."
-msgstr "Strengere vernevelingslimieten voor zaailingen, die gemakkelijker verschroeien dan volgroeide bladeren."
+msgstr ""
+"Strengere vernevelingslimieten voor zaailingen, die gemakkelijker "
+"verschroeien dan volgroeide bladeren."
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:1192
 msgid "Not used"
@@ -30913,11 +30917,14 @@ msgstr "Nevel"
 msgid "Devices under automatic control"
 msgstr "Apparaten onder automatische besturing"
 
+#, python-format
 msgid "%(n)s excluded"
 msgstr "%(n)s uitgesloten"
 
 msgid "Turn a device off to keep automatic control from moving it."
-msgstr "Schakel een apparaat uit zodat de automatische besturing het niet verplaatst."
+msgstr ""
+"Schakel een apparaat uit zodat de automatische besturing het niet "
+"verplaatst."
 
 msgid "Safety gates will not move it either."
 msgstr "Ook de veiligheidsvergrendelingen sturen het dan niet aan."
@@ -30929,19 +30936,47 @@ msgid "This facility has no actuators yet."
 msgstr "Deze faciliteit heeft nog geen actuatoren."
 
 msgid "Could not load the device list. Existing settings are kept."
-msgstr "De apparatenlijst kon niet worden geladen. Bestaande instellingen blijven behouden."
+msgstr ""
+"De apparatenlijst kon niet worden geladen. Bestaande instellingen blijven"
+" behouden."
 
 msgid "Excluded actuators (raw)"
 msgstr "Uitgesloten actuatoren (ruwe waarde)"
 
-msgid "Comma-separated Output IDs excluded from automatic control. Normally set with the toggles above rather than typed here."
-msgstr "Kommagescheiden Uitgang-ID's die zijn uitgesloten van automatische besturing. Worden meestal ingesteld met de schakelaars hierboven in plaats van hier getypt."
+msgid ""
+"Comma-separated Output IDs excluded from automatic control. Normally set "
+"with the toggles above rather than typed here."
+msgstr ""
+"Kommagescheiden Uitgang-ID's die zijn uitgesloten van automatische "
+"besturing. Worden meestal ingesteld met de schakelaars hierboven in "
+"plaats van hier getypt."
 
-msgid "Proactively shift temperature/humidity setpoints and inhibit ventilation before adverse weather arrives. Uses this facility's own forecast source if one is linked in the facility editor's weather bindings (any service — KMA, OpenWeatherMap, Open-Meteo); otherwise falls back to the system-wide KMA short-term forecast."
-msgstr "Verschuift proactief de temperatuur-/vochtigheidsinstelpunten en onderdrukt ventilatie voordat ongunstig weer aankomt. Gebruikt de eigen voorspellingsbron van deze faciliteit als er een is gekoppeld in de weerkoppelingen van de faciliteitseditor (elke dienst — KMA, OpenWeatherMap, Open-Meteo); anders wordt teruggevallen op de systeembrede KMA-kortetermijnvoorspelling."
+msgid ""
+"Proactively shift temperature/humidity setpoints and inhibit ventilation "
+"before adverse weather arrives. Uses this facility's own forecast source "
+"if one is linked in the facility editor's weather bindings (any service —"
+" KMA, OpenWeatherMap, Open-Meteo); otherwise falls back to the system-"
+"wide KMA short-term forecast."
+msgstr ""
+"Verschuift proactief de temperatuur-/vochtigheidsinstelpunten en "
+"onderdrukt ventilatie voordat ongunstig weer aankomt. Gebruikt de eigen "
+"voorspellingsbron van deze faciliteit als er een is gekoppeld in de "
+"weerkoppelingen van de faciliteitseditor (elke dienst — KMA, "
+"OpenWeatherMap, Open-Meteo); anders wordt teruggevallen op de "
+"systeembrede KMA-kortetermijnvoorspelling."
 
-msgid "How many hours ahead to check for incoming adverse weather (1–6 h) when using the system-wide KMA fallback above. Longer lookahead gives earlier warning but may over-correct. Ignored when this facility has its own forecast source linked — that source already applies its own lookahead."
-msgstr "Hoeveel uur vooruit wordt gecontroleerd op naderend ongunstig weer (1–6 uur) wanneer de systeembrede KMA-fallback hierboven wordt gebruikt. Een langere vooruitblik geeft eerdere waarschuwing, maar kan overcorrectie veroorzaken. Wordt genegeerd wanneer deze faciliteit een eigen voorspellingsbron heeft gekoppeld — die bron past dan al zijn eigen vooruitblik toe."
+msgid ""
+"How many hours ahead to check for incoming adverse weather (1–6 h) when "
+"using the system-wide KMA fallback above. Longer lookahead gives earlier "
+"warning but may over-correct. Ignored when this facility has its own "
+"forecast source linked — that source already applies its own lookahead."
+msgstr ""
+"Hoeveel uur vooruit wordt gecontroleerd op naderend ongunstig weer (1–6 "
+"uur) wanneer de systeembrede KMA-fallback hierboven wordt gebruikt. Een "
+"langere vooruitblik geeft eerdere waarschuwing, maar kan overcorrectie "
+"veroorzaken. Wordt genegeerd wanneer deze faciliteit een eigen "
+"voorspellingsbron heeft gekoppeld — die bron past dan al zijn eigen "
+"vooruitblik toe."
 
 #: aot/widgets/widget_notice.py:1
 msgid "Notice Category Filter"
@@ -30976,8 +31011,21 @@ msgid "Notice & Notes Board"
 msgstr "Mededelingen- en notitiebord"
 
 #: aot/widgets/widget_notice.py:1
-msgid "Displays the latest notice board post titles and/or the notes written in a chosen site, zone, plot, or facility (and everything nested under it). Clicking a notice opens the full post (content, poll, replies, acknowledge) in a popup; clicking a note opens it in the shared notes panel. Users with write permission can also create, edit, and delete posts directly from the widget."
-msgstr "Toont de titels van de nieuwste berichten op het mededelingenbord en/of de notities die zijn geschreven op een gekozen locatie, zone, perceel of faciliteit (en alles daaronder). Klikken op een mededeling opent het volledige bericht (inhoud, peiling, reacties, bevestiging) in een pop-up; klikken op een notitie opent deze in het gedeelde notitiepaneel. Gebruikers met schrijfrechten kunnen berichten ook rechtstreeks vanuit de widget aanmaken, bewerken en verwijderen."
+msgid ""
+"Displays the latest notice board post titles and/or the notes written in "
+"a chosen site, zone, plot, or facility (and everything nested under it). "
+"Clicking a notice opens the full post (content, poll, replies, "
+"acknowledge) in a popup; clicking a note opens it in the shared notes "
+"panel. Users with write permission can also create, edit, and delete "
+"posts directly from the widget."
+msgstr ""
+"Toont de titels van de nieuwste berichten op het mededelingenbord en/of "
+"de notities die zijn geschreven op een gekozen locatie, zone, perceel of "
+"faciliteit (en alles daaronder). Klikken op een mededeling opent het "
+"volledige bericht (inhoud, peiling, reacties, bevestiging) in een pop-up;"
+" klikken op een notitie opent deze in het gedeelde notitiepaneel. "
+"Gebruikers met schrijfrechten kunnen berichten ook rechtstreeks vanuit de"
+" widget aanmaken, bewerken en verwijderen."
 
 #: aot/widgets/widget_notice.py:1
 msgid "Show Notices"
@@ -31020,16 +31068,25 @@ msgid "How often to refresh the notice/notes lists"
 msgstr "Hoe vaak de mededelingen-/notitielijsten worden vernieuwd"
 
 #: aot/widgets/widget_notice.py:1
-msgid "Notes written in this site/zone/plot/facility (and, if \"Include Nested Spaces\" above is on, everything nested under it) are shown."
-msgstr "Notities die op deze locatie/zone/perceel/faciliteit zijn geschreven, worden getoond (en, als \"Geneste ruimtes opnemen\" hierboven is ingeschakeld, alles daaronder)."
+msgid ""
+"Notes written in this site/zone/plot/facility (and, if \"Include Nested "
+"Spaces\" above is on, everything nested under it) are shown."
+msgstr ""
+"Notities die op deze locatie/zone/perceel/faciliteit zijn geschreven, "
+"worden getoond (en, als \"Geneste ruimtes opnemen\" hierboven is "
+"ingeschakeld, alles daaronder)."
 
 #: aot/widgets/widget_notice.py:1
 msgid "No sites, zones, plots, or facilities exist yet."
 msgstr "Er bestaan nog geen locaties, zones, percelen of faciliteiten."
 
 #: aot/widgets/widget_notice.py:1
-msgid "Nothing selected — turn on \"Show Notices\" and/or \"Show Notes\" in the widget settings."
-msgstr "Niets geselecteerd — schakel \"Mededelingen tonen\" en/of \"Notities tonen\" in de widget-instellingen in."
+msgid ""
+"Nothing selected — turn on \"Show Notices\" and/or \"Show Notes\" in the "
+"widget settings."
+msgstr ""
+"Niets geselecteerd — schakel \"Mededelingen tonen\" en/of \"Notities "
+"tonen\" in de widget-instellingen in."
 
 #: aot/widgets/widget_notice.py:1
 msgid "Choose a space in the widget settings to show notes."
@@ -31037,11 +31094,18 @@ msgstr "Kies een ruimte in de widget-instellingen om notities weer te geven."
 
 #: aot/widgets/widget_notice.py:1
 msgid "Display notes written in a chosen space (see Space below)"
-msgstr "Toont notities die zijn geschreven in een gekozen ruimte (zie \"Ruimte\" hieronder)"
+msgstr ""
+"Toont notities die zijn geschreven in een gekozen ruimte (zie \"Ruimte\" "
+"hieronder)"
 
 #: aot/widgets/widget_notice.py:1
-msgid "Also show notes written in zones/plots/facilities/devices nested under the chosen space"
-msgstr "Toont ook notities die zijn geschreven in zones/percelen/faciliteiten/apparaten die genest zijn onder de gekozen ruimte"
+msgid ""
+"Also show notes written in zones/plots/facilities/devices nested under "
+"the chosen space"
+msgstr ""
+"Toont ook notities die zijn geschreven in "
+"zones/percelen/faciliteiten/apparaten die genest zijn onder de gekozen "
+"ruimte"
 
 #: aot/widgets/widget_notice.py:1
 msgid "Newest First"
@@ -31049,7 +31113,9 @@ msgstr "Nieuwste eerst"
 
 #: aot/widgets/widget_notice.py:1
 msgid "Only show notes whose category or tags contain this text (optional)"
-msgstr "Toont alleen notities waarvan de categorie of tags deze tekst bevatten (optioneel)"
+msgstr ""
+"Toont alleen notities waarvan de categorie of tags deze tekst bevatten "
+"(optioneel)"
 
 #: aot/widgets/widget_notice.py:1
 msgid "Show Notes List"
@@ -31062,3 +31128,256 @@ msgstr "Toont notities die overeenkomen met het onderstaande filter"
 #: aot/widgets/widget_notice.py:1
 msgid "Notes Filter"
 msgstr "Notitiefilter"
+
+#, python-format
+msgid "%(n)s channels"
+msgstr "%(n)s kanalen"
+
+#, python-format
+msgid "%(n)s linked"
+msgstr "%(n)s gekoppeld"
+
+msgid "AoT Device Count"
+msgstr "Aantal AoT-apparaten"
+
+msgid "Apply Filter"
+msgstr "Filter toepassen"
+
+msgid "Assign"
+msgstr "Toewijzen"
+
+msgid "Branch Pipe Count"
+msgstr "Aantal aftakkingsleidingen"
+
+msgid "Branch Pipe Elbow"
+msgstr "Elleboog aftakkingsleiding"
+
+msgid "Branch Pipe End"
+msgstr "Eindstuk aftakkingsleiding"
+
+msgid "Branch Pipe Length"
+msgstr "Lengte aftakkingsleiding"
+
+msgid "Branch Pipe Tee"
+msgstr "T-stuk aftakkingsleiding"
+
+msgid "Conversion details:"
+msgstr "Details van de conversie:"
+
+msgid "Custom entry…"
+msgstr "Aangepaste invoer…"
+
+msgid "Data Load Failed"
+msgstr "Gegevens laden mislukt"
+
+msgid "Design Details"
+msgstr "Ontwerpdetails"
+
+msgid "Design Summary"
+msgstr "Ontwerpoverzicht"
+
+msgid "Do you want to continue?"
+msgstr "Wilt u doorgaan?"
+
+msgid "Drip irrigation applied ("
+msgstr "Druppelirrigatie toegepast ("
+
+msgid "Enter name"
+msgstr "Naam invoeren"
+
+msgid "Flow Rate (L/h)"
+msgstr "Debiet (L/u)"
+
+msgid "Flow Rate (L/min)"
+msgstr "Debiet (L/min)"
+
+msgid "From envelope"
+msgstr "Uit omtrek"
+
+msgid "Group name"
+msgstr "Groepsnaam"
+
+msgid "Input Device Count"
+msgstr "Aantal invoerapparaten"
+
+msgid "It will be automatically converted to the current format (v"
+msgstr "Het wordt automatisch geconverteerd naar de huidige indeling (v"
+
+msgid "Line is too short ("
+msgstr "Lijn is te kort ("
+
+msgid "Logic Count"
+msgstr "Aantal logica's"
+
+msgid "Main Pipe Count"
+msgstr "Aantal hoofdleidingen"
+
+msgid "Main Pipe Elbow"
+msgstr "Elleboog hoofdleiding"
+
+msgid "Main Pipe End"
+msgstr "Eindstuk hoofdleiding"
+
+msgid "Main Pipe Length"
+msgstr "Lengte hoofdleiding"
+
+msgid "Main Pipe Reducing Elbow"
+msgstr "Verloopelleboog hoofdleiding"
+
+msgid "Main Pipe Reducing Tee"
+msgstr "Verloop-T-stuk hoofdleiding"
+
+msgid "Main Pipe Tee"
+msgstr "T-stuk hoofdleiding"
+
+msgid "Must be at least 0.01m²."
+msgstr "Moet minstens 0,01 m² zijn."
+
+msgid "Must be at least 10cm."
+msgstr "Moet minstens 10 cm zijn."
+
+msgid "New Site"
+msgstr "Nieuwe locatie"
+
+msgid "New Zone"
+msgstr "Nieuwe zone"
+
+msgid "New group"
+msgstr "Nieuwe groep"
+
+msgid "No Pipe Data"
+msgstr "Geen leidinggegevens"
+
+msgid "No Sites Found"
+msgstr "Geen locaties gevonden"
+
+msgid "No Sites Selected"
+msgstr "Geen locaties geselecteerd"
+
+msgid "No actuators registered"
+msgstr "Geen actuatoren geregistreerd"
+
+msgid "No."
+msgstr "Nr."
+
+msgid "Number of Emitters"
+msgstr "Aantal druppelaars"
+
+msgid "Number of Emitters (Pipe)"
+msgstr "Aantal druppelaars (leiding)"
+
+msgid "Output Device Count"
+msgstr "Aantal uitvoerapparaten"
+
+msgid "Pipe Details"
+msgstr "Leidingdetails"
+
+msgid "Pipe Length"
+msgstr "Leidinglengte"
+
+msgid "Placement mode"
+msgstr "Plaatsingsmodus"
+
+msgid "Reference line"
+msgstr "Referentielijn"
+
+msgid "Search Device..."
+msgstr "Apparaat zoeken..."
+
+msgid "Select Site"
+msgstr "Locatie selecteren"
+
+msgid "Service name"
+msgstr "Servicenaam"
+
+msgid "Shape is too small ("
+msgstr "Vorm is te klein ("
+
+msgid "Site Area"
+msgstr "Oppervlakte van de locatie"
+
+msgid "Site Count"
+msgstr "Aantal locaties"
+
+msgid "Site Pipe Info"
+msgstr "Leidinginformatie van de locatie"
+
+msgid "Solar radiation"
+msgstr "Zonnestraling"
+
+msgid ""
+"The map updates as you drag — branches follow the reference line at this "
+"angle."
+msgstr ""
+"De kaart wordt bijgewerkt terwijl u sleept — aftakkingen volgen de "
+"referentielijn onder deze hoek."
+
+msgid "This file is in an older format (v"
+msgstr "Dit bestand heeft een oudere indeling (v"
+
+msgid "This match key already exists: "
+msgstr "Deze matchsleutel bestaat al: "
+
+msgid "Total Area"
+msgstr "Totale oppervlakte"
+
+msgid "Zone Count"
+msgstr "Aantal zones"
+
+msgid "[Branch Pipe]"
+msgstr "[Aftakkingsleiding]"
+
+msgid "[Main Pipe]"
+msgstr "[Hoofdleiding]"
+
+msgid "and"
+msgstr "en"
+
+msgid "detached"
+msgstr "losgekoppeld"
+
+msgid "elements imported."
+msgstr "elementen geïmporteerd."
+
+msgid "hh"
+msgstr "hh"
+
+msgid "loading_map"
+msgstr "Kaart wordt geladen..."
+
+msgid "manual size"
+msgstr "handmatige grootte"
+
+msgid "mm"
+msgstr "mm"
+
+msgid "others"
+msgstr "anderen"
+
+msgid "pipes)"
+msgstr "leidingen)"
+
+msgid "save_btn_text"
+msgstr "Opslaan"
+
+msgid "ss"
+msgstr "ss"
+
+msgid "units"
+msgstr "eenheden"
+
+msgid "upper limit"
+msgstr "bovengrens"
+
+msgid "— Auto —"
+msgstr "— Automatisch —"
+
+msgid "— Select Input channel —"
+msgstr "— Selecteer invoerkanaal —"
+
+msgid "— Select channel —"
+msgstr "— Selecteer kanaal —"
+
+msgid "— Select —"
+msgstr "— Selecteer —"
+

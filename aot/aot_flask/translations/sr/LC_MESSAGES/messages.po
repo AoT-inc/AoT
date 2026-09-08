@@ -4656,7 +4656,9 @@ msgstr "Група"
 msgid ""
 "Saved, but the daemon could not be reached — the sequence may still be "
 "running. Check the daemon."
-msgstr "Сачувано, али демон није доступан — секвенца можда и даље ради. Проверите демон."
+msgstr ""
+"Сачувано, али демон није доступан — секвенца можда и даље ради. Проверите"
+" демон."
 
 #: aot_flask/routes_function.py:2263
 msgid "The sequence is still running — the daemon did not apply the change."
@@ -30560,8 +30562,6 @@ msgstr "Процењено"
 msgid "Cumulative since start"
 msgstr "Кумулативно од почетка"
 
-
-
 #: config_devices_units.py:342
 msgid "Vapor Pressure Deficit"
 msgstr "Дефицит притиска водене паре"
@@ -30584,7 +30584,9 @@ msgstr "Заустави контролу на"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:401
 msgid "Control stops for good after this date. Leave blank to keep running."
-msgstr "Контрола се трајно зауставља након овог датума. Оставите празно да би наставила да ради."
+msgstr ""
+"Контрола се трајно зауставља након овог датума. Оставите празно да би "
+"наставила да ради."
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:667
 msgid "Misting Sunburn Protection"
@@ -30602,7 +30604,9 @@ msgstr "Расадни режим (расад)"
 msgid ""
 "Tighter misting limits for seedlings, which scorch more easily than grown"
 " leaves."
-msgstr "Строжа ограничења прскања за расад, који се лакше опече него одрасло лишће."
+msgstr ""
+"Строжа ограничења прскања за расад, који се лакше опече него одрасло "
+"лишће."
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:1192
 msgid "Not used"
@@ -30617,6 +30621,7 @@ msgstr "Магла"
 msgid "Devices under automatic control"
 msgstr "Уређаји под аутоматском контролом"
 
+#, python-format
 msgid "%(n)s excluded"
 msgstr "%(n)s искључено"
 
@@ -30638,14 +30643,37 @@ msgstr "Листа уређаја није могла да се учита. По
 msgid "Excluded actuators (raw)"
 msgstr "Искључени актуатори (сирово)"
 
-msgid "Comma-separated Output IDs excluded from automatic control. Normally set with the toggles above rather than typed here."
-msgstr "ID излаза одвојени зарезима који су искључени из аутоматске контроле. Обично се подешавају помоћу прекидача изнад, а не уносе овде."
+msgid ""
+"Comma-separated Output IDs excluded from automatic control. Normally set "
+"with the toggles above rather than typed here."
+msgstr ""
+"ID излаза одвојени зарезима који су искључени из аутоматске контроле. "
+"Обично се подешавају помоћу прекидача изнад, а не уносе овде."
 
-msgid "Proactively shift temperature/humidity setpoints and inhibit ventilation before adverse weather arrives. Uses this facility's own forecast source if one is linked in the facility editor's weather bindings (any service — KMA, OpenWeatherMap, Open-Meteo); otherwise falls back to the system-wide KMA short-term forecast."
-msgstr "Проактивно помера задате вредности температуре/влажности и обуставља вентилацију пре него што наиђе неповољно време. Користи сопствени извор прогнозе овог објекта ако је повезан у оквиру временских веза у уређивачу објекта (било која услуга — KMA, OpenWeatherMap, Open-Meteo); у супротном се враћа на општесистемску краткорочну KMA прогнозу."
+msgid ""
+"Proactively shift temperature/humidity setpoints and inhibit ventilation "
+"before adverse weather arrives. Uses this facility's own forecast source "
+"if one is linked in the facility editor's weather bindings (any service —"
+" KMA, OpenWeatherMap, Open-Meteo); otherwise falls back to the system-"
+"wide KMA short-term forecast."
+msgstr ""
+"Проактивно помера задате вредности температуре/влажности и обуставља "
+"вентилацију пре него што наиђе неповољно време. Користи сопствени извор "
+"прогнозе овог објекта ако је повезан у оквиру временских веза у уређивачу"
+" објекта (било која услуга — KMA, OpenWeatherMap, Open-Meteo); у "
+"супротном се враћа на општесистемску краткорочну KMA прогнозу."
 
-msgid "How many hours ahead to check for incoming adverse weather (1–6 h) when using the system-wide KMA fallback above. Longer lookahead gives earlier warning but may over-correct. Ignored when this facility has its own forecast source linked — that source already applies its own lookahead."
-msgstr "Колико сати унапред проверавати надолазеће неповољно време (1–6 h) када се користи горенаведена општесистемска резервна KMA прогноза. Дужи хоризонт даје раније упозорење, али може довести до прекомерне корекције. Занемарује се када овај објекат има повезан сопствени извор прогнозе — тај извор већ примењује сопствени хоризонт."
+msgid ""
+"How many hours ahead to check for incoming adverse weather (1–6 h) when "
+"using the system-wide KMA fallback above. Longer lookahead gives earlier "
+"warning but may over-correct. Ignored when this facility has its own "
+"forecast source linked — that source already applies its own lookahead."
+msgstr ""
+"Колико сати унапред проверавати надолазеће неповољно време (1–6 h) када "
+"се користи горенаведена општесистемска резервна KMA прогноза. Дужи "
+"хоризонт даје раније упозорење, али може довести до прекомерне корекције."
+" Занемарује се када овај објекат има повезан сопствени извор прогнозе — "
+"тај извор већ примењује сопствени хоризонт."
 
 #: aot/widgets/widget_notice.py:1
 msgid "Notice Category Filter"
@@ -30680,8 +30708,20 @@ msgid "Notice & Notes Board"
 msgstr "Табла обавештења и бележака"
 
 #: aot/widgets/widget_notice.py:1
-msgid "Displays the latest notice board post titles and/or the notes written in a chosen site, zone, plot, or facility (and everything nested under it). Clicking a notice opens the full post (content, poll, replies, acknowledge) in a popup; clicking a note opens it in the shared notes panel. Users with write permission can also create, edit, and delete posts directly from the widget."
-msgstr "Приказује наслове најновијих порука са табле обавештења и/или белешке написане на изабраном месту, зони, парцели или објекту (и свему испод њега). Кликом на обавештење отвара се цела порука (садржај, анкета, одговори, потврда) у искачућем прозору; кликом на белешку она се отвара у заједничком панелу бележака. Корисници са дозволом за писање такође могу да креирају, уређују и бришу поруке директно из виџета."
+msgid ""
+"Displays the latest notice board post titles and/or the notes written in "
+"a chosen site, zone, plot, or facility (and everything nested under it). "
+"Clicking a notice opens the full post (content, poll, replies, "
+"acknowledge) in a popup; clicking a note opens it in the shared notes "
+"panel. Users with write permission can also create, edit, and delete "
+"posts directly from the widget."
+msgstr ""
+"Приказује наслове најновијих порука са табле обавештења и/или белешке "
+"написане на изабраном месту, зони, парцели или објекту (и свему испод "
+"њега). Кликом на обавештење отвара се цела порука (садржај, анкета, "
+"одговори, потврда) у искачућем прозору; кликом на белешку она се отвара у"
+" заједничком панелу бележака. Корисници са дозволом за писање такође могу"
+" да креирају, уређују и бришу поруке директно из виџета."
 
 #: aot/widgets/widget_notice.py:1
 msgid "Show Notices"
@@ -30724,16 +30764,24 @@ msgid "How often to refresh the notice/notes lists"
 msgstr "Колико често освежавати листе обавештења/бележака"
 
 #: aot/widgets/widget_notice.py:1
-msgid "Notes written in this site/zone/plot/facility (and, if \"Include Nested Spaces\" above is on, everything nested under it) are shown."
-msgstr "Приказују се белешке написане на овом месту/зони/парцели/објекту (а ако је горе укључено „Укључи угнежђене просторе\", и све испод њега)."
+msgid ""
+"Notes written in this site/zone/plot/facility (and, if \"Include Nested "
+"Spaces\" above is on, everything nested under it) are shown."
+msgstr ""
+"Приказују се белешке написане на овом месту/зони/парцели/објекту (а ако "
+"је горе укључено „Укључи угнежђене просторе\", и све испод њега)."
 
 #: aot/widgets/widget_notice.py:1
 msgid "No sites, zones, plots, or facilities exist yet."
 msgstr "Још не постоје места, зоне, парцеле или објекти."
 
 #: aot/widgets/widget_notice.py:1
-msgid "Nothing selected — turn on \"Show Notices\" and/or \"Show Notes\" in the widget settings."
-msgstr "Ништа није изабрано — укључите „Прикажи обавештења\" и/или „Прикажи белешке\" у подешавањима виџета."
+msgid ""
+"Nothing selected — turn on \"Show Notices\" and/or \"Show Notes\" in the "
+"widget settings."
+msgstr ""
+"Ништа није изабрано — укључите „Прикажи обавештења\" и/или „Прикажи "
+"белешке\" у подешавањима виџета."
 
 #: aot/widgets/widget_notice.py:1
 msgid "Choose a space in the widget settings to show notes."
@@ -30744,8 +30792,12 @@ msgid "Display notes written in a chosen space (see Space below)"
 msgstr "Приказује белешке написане у изабраном простору (види „Простор\" испод)"
 
 #: aot/widgets/widget_notice.py:1
-msgid "Also show notes written in zones/plots/facilities/devices nested under the chosen space"
-msgstr "Такође приказује белешке написане у зонама/парцелама/објектима/уређајима угнежђеним под изабраним простором"
+msgid ""
+"Also show notes written in zones/plots/facilities/devices nested under "
+"the chosen space"
+msgstr ""
+"Такође приказује белешке написане у зонама/парцелама/објектима/уређајима "
+"угнежђеним под изабраним простором"
 
 #: aot/widgets/widget_notice.py:1
 msgid "Newest First"
@@ -30753,7 +30805,9 @@ msgstr "Прво најновије"
 
 #: aot/widgets/widget_notice.py:1
 msgid "Only show notes whose category or tags contain this text (optional)"
-msgstr "Приказује само белешке чија категорија или ознаке садрже овај текст (опционо)"
+msgstr ""
+"Приказује само белешке чија категорија или ознаке садрже овај текст "
+"(опционо)"
 
 #: aot/widgets/widget_notice.py:1
 msgid "Show Notes List"
@@ -30766,3 +30820,256 @@ msgstr "Приказује белешке које одговарају филт
 #: aot/widgets/widget_notice.py:1
 msgid "Notes Filter"
 msgstr "Филтер бележака"
+
+#, python-format
+msgid "%(n)s channels"
+msgstr "%(n)s канала"
+
+#, python-format
+msgid "%(n)s linked"
+msgstr "%(n)s повезано"
+
+msgid "AoT Device Count"
+msgstr "Број AoT уређаја"
+
+msgid "Apply Filter"
+msgstr "Примени филтер"
+
+msgid "Assign"
+msgstr "Додели"
+
+msgid "Branch Pipe Count"
+msgstr "Број разводних цеви"
+
+msgid "Branch Pipe Elbow"
+msgstr "Колено разводне цеви"
+
+msgid "Branch Pipe End"
+msgstr "Крај разводне цеви"
+
+msgid "Branch Pipe Length"
+msgstr "Дужина разводне цеви"
+
+msgid "Branch Pipe Tee"
+msgstr "Т-комад разводне цеви"
+
+msgid "Conversion details:"
+msgstr "Детаљи конверзије:"
+
+msgid "Custom entry…"
+msgstr "Прилагођени унос…"
+
+msgid "Data Load Failed"
+msgstr "Учитавање података није успело"
+
+msgid "Design Details"
+msgstr "Детаљи дизајна"
+
+msgid "Design Summary"
+msgstr "Резиме дизајна"
+
+msgid "Do you want to continue?"
+msgstr "Да ли желите да наставите?"
+
+msgid "Drip irrigation applied ("
+msgstr "Примењено капајуће наводњавање ("
+
+msgid "Enter name"
+msgstr "Унесите назив"
+
+msgid "Flow Rate (L/h)"
+msgstr "Проток (L/h)"
+
+msgid "Flow Rate (L/min)"
+msgstr "Проток (L/min)"
+
+msgid "From envelope"
+msgstr "Из омотача"
+
+msgid "Group name"
+msgstr "Назив групе"
+
+msgid "Input Device Count"
+msgstr "Број улазних уређаја"
+
+msgid "It will be automatically converted to the current format (v"
+msgstr "Биће аутоматски конвертован у тренутни формат (v"
+
+msgid "Line is too short ("
+msgstr "Линија је прекратка ("
+
+msgid "Logic Count"
+msgstr "Број логика"
+
+msgid "Main Pipe Count"
+msgstr "Број главних цеви"
+
+msgid "Main Pipe Elbow"
+msgstr "Колено главне цеви"
+
+msgid "Main Pipe End"
+msgstr "Крај главне цеви"
+
+msgid "Main Pipe Length"
+msgstr "Дужина главне цеви"
+
+msgid "Main Pipe Reducing Elbow"
+msgstr "Редукционо колено главне цеви"
+
+msgid "Main Pipe Reducing Tee"
+msgstr "Редукциони Т-комад главне цеви"
+
+msgid "Main Pipe Tee"
+msgstr "Т-комад главне цеви"
+
+msgid "Must be at least 0.01m²."
+msgstr "Мора бити најмање 0.01m²."
+
+msgid "Must be at least 10cm."
+msgstr "Мора бити најмање 10cm."
+
+msgid "New Site"
+msgstr "Нова локација"
+
+msgid "New Zone"
+msgstr "Нова зона"
+
+msgid "New group"
+msgstr "Нова група"
+
+msgid "No Pipe Data"
+msgstr "Нема података о цевима"
+
+msgid "No Sites Found"
+msgstr "Није пронађена ниједна локација"
+
+msgid "No Sites Selected"
+msgstr "Нема изабраних локација"
+
+msgid "No actuators registered"
+msgstr "Нема регистрованих актуатора"
+
+msgid "No."
+msgstr "Бр."
+
+msgid "Number of Emitters"
+msgstr "Број капаљки"
+
+msgid "Number of Emitters (Pipe)"
+msgstr "Број капаљки (цев)"
+
+msgid "Output Device Count"
+msgstr "Број излазних уређаја"
+
+msgid "Pipe Details"
+msgstr "Детаљи цеви"
+
+msgid "Pipe Length"
+msgstr "Дужина цеви"
+
+msgid "Placement mode"
+msgstr "Режим постављања"
+
+msgid "Reference line"
+msgstr "Референтна линија"
+
+msgid "Search Device..."
+msgstr "Претрага уређаја..."
+
+msgid "Select Site"
+msgstr "Изаберите локацију"
+
+msgid "Service name"
+msgstr "Назив услуге"
+
+msgid "Shape is too small ("
+msgstr "Облик је премали ("
+
+msgid "Site Area"
+msgstr "Површина локације"
+
+msgid "Site Count"
+msgstr "Број локација"
+
+msgid "Site Pipe Info"
+msgstr "Информације о цевима локације"
+
+msgid "Solar radiation"
+msgstr "Сунчево зрачење"
+
+msgid ""
+"The map updates as you drag — branches follow the reference line at this "
+"angle."
+msgstr ""
+"Мапа се ажурира док превлачите — разводне цеви прате референтну линију "
+"под овим углом."
+
+msgid "This file is in an older format (v"
+msgstr "Ова датотека је у старијем формату (v"
+
+msgid "This match key already exists: "
+msgstr "Овај кључ подударања већ постоји: "
+
+msgid "Total Area"
+msgstr "Укупна површина"
+
+msgid "Zone Count"
+msgstr "Број зона"
+
+msgid "[Branch Pipe]"
+msgstr "[Разводна цев]"
+
+msgid "[Main Pipe]"
+msgstr "[Главна цев]"
+
+msgid "and"
+msgstr "и"
+
+msgid "detached"
+msgstr "одвојено"
+
+msgid "elements imported."
+msgstr "елемената увезено."
+
+msgid "hh"
+msgstr "hh"
+
+msgid "loading_map"
+msgstr "Учитавање мапе..."
+
+msgid "manual size"
+msgstr "ручна величина"
+
+msgid "mm"
+msgstr "mm"
+
+msgid "others"
+msgstr "других"
+
+msgid "pipes)"
+msgstr "цеви)"
+
+msgid "save_btn_text"
+msgstr "Сачувај"
+
+msgid "ss"
+msgstr "ss"
+
+msgid "units"
+msgstr "јединица"
+
+msgid "upper limit"
+msgstr "горња граница"
+
+msgid "— Auto —"
+msgstr "— Аутоматски —"
+
+msgid "— Select Input channel —"
+msgstr "— Изаберите улазни канал —"
+
+msgid "— Select channel —"
+msgstr "— Изаберите канал —"
+
+msgid "— Select —"
+msgstr "— Изаберите —"
+

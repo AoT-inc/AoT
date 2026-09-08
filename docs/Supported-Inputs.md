@@ -340,6 +340,17 @@ This is an alternate method to calculate RPM from pulses on a pin using pigpio, 
 - Product URL: [Link](https://www.adafruit.com/product/4026)
 <table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>I<sup>2</sup>C Address</td><td>Text</td><td>The address of the I<sup>2</sup>C device.</td></tr><tr><td>I<sup>2</sup>C Bus</td><td>Integer</td><td>The Bus the I<sup>2</sup>C device is connected.</td></tr><tr><td>Measurements Enabled</td><td>Multi-Select</td><td>The measurements to record</td></tr><tr><td>Period (Seconds)</td><td>Decimal</td><td>The duration between measurements or actions</td></tr><tr><td>Pre Output</td><td>Select</td><td>Turn the selected output on before taking every measurement</td></tr><tr><td>Pre Out Duration (Seconds)</td><td>Decimal</td><td>If a Pre Output is selected, set the duration to turn the Pre Output on for before every measurement is acquired.</td></tr><tr><td>Pre During Measure</td><td>Boolean</td><td>Check to turn the output off after (opposed to before) the measurement is complete</td></tr></tbody></table>
 
+### Agromonitoring: GL: Agromonitoring (Field NDVI/Soil)
+
+- Manufacturer: Agromonitoring
+- Measurements: Status
+- Interfaces: AoT
+- Libraries: gis_agromonitoring
+- Manufacturer URL: [Link](https://agromonitoring.com/)
+
+Per-field NDVI statistics and soil moisture / soil temperature for a polygon registered at agromonitoring.com — the only input here that reports soil moisture as a number for your own field boundary rather than as a coarse satellite overlay. Draw the field in the Agromonitoring dashboard (1-3000 ha) and either paste its polygon ID below or leave it empty to match the polygon containing the point you click. Uses the same account as OpenWeatherMap.
+<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>API Key</td><td>Text</td><tr><td>Polygon ID</td><td>Text</td><tr><td>Active Channels</td></td><tr><td>NDVI Search Window</td><td>Select</td></tbody></table>
+
 ### Analog Devices: ADT7410
 
 - Manufacturer: Analog Devices
@@ -704,7 +715,7 @@ Subscribes to the ChirpStack v4 MQTT broker topic (application/+/device/+/event/
 <table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Measurements Enabled</td><td>Multi-Select</td><td>The measurements to record</td></tr><tr><td>Period (Seconds)</td><td>Decimal</td><td>The duration between measurements or actions</td></tr><tr><td>Pre Output</td><td>Select</td><td>Turn the selected output on before taking every measurement</td></tr><tr><td>Pre Out Duration (Seconds)</td><td>Decimal</td><td>If a Pre Output is selected, set the duration to turn the Pre Output on for before every measurement is acquired.</td></tr><tr><td>Pre During Measure</td><td>Boolean</td><td>Check to turn the output off after (opposed to before) the measurement is complete</td></tr><tr><td>MQTT Host</td><td>Text
 - Default Value: localhost</td><td>MQTT broker hostname or IP address (e.g. localhost)</td></tr><tr><td>MQTT Port</td><td>Text
 - Default Value: 1883</td><td>MQTT broker port (default 1883, 8883 recommended for TLS)</td></tr><tr><td>MQTT Username</td><td>Text</td><td>Optional: broker authentication username</td></tr><tr><td>MQTT Password</td><td>Text</td><td>Optional: broker authentication password</td></tr><tr><td>Enable TLS</td><td>Boolean</td><td>Whether to use a TLS (SSL) connection (default off)</td></tr><tr><td>CA Certificate Path</td><td>Text</td><td>Optional: path to the CA certificate when using TLS</td></tr><tr><td>Client ID</td><td>Text
-- Default Value: client_E94Skyyx</td><td>Unique client ID for connecting to the server</td></tr><tr><td>Keepalive (sec)</td><td>Text
+- Default Value: client_arggqMus</td><td>Unique client ID for connecting to the server</td></tr><tr><td>Keepalive (sec)</td><td>Text
 - Default Value: 60</td><td>MQTT keepalive in seconds (default 60 sec)</td></tr><tr><td>Subscribe Topics</td><td>Text
 - Default Value: application/+/device/+/event/up</td><td>Comma-separated subscription topics (e.g. application/+/device/+/event/up)</td></tr><tr><td>QoS</td><td>Text</td><td>MQTT QoS level (0, 1, 2)</td></tr><tr><td>Device EUIs (comma-separated)</td><td>Text</td><td>Optional: process only specific devices. Enter EUIs separated by commas</td></tr><tr><td colspan="3">Channel Options</td></tr><tr><td>Name</td><td>Text</td><td>A name to distinguish this from others</td></tr><tr><td>JMESPath Expression</td><td>Text</td><td>Evaluated against the entire received event (JSON)</td></tr></tbody></table>
 
@@ -720,6 +731,17 @@ Periodically calls the ChirpStack v4 REST API to fetch device events, and applie
 - Default Value: 50</td><td>Number of events to fetch in a single REST API call (page size)</td></tr><tr><td>Event kind</td><td>Text
 - Default Value: up</td><td>Type of events to fetch (e.g. up, join, status)</td></tr><tr><td>Fallback URL template</td><td>Text
 - Default Value: /api/devices/{dev_eui}/events?limit={limit}&kind={kind}&after={after}</td><td>URL template used for REST requests when the official Python client is unavailable (appended after the API Base URL). {dev_eui}, {limit}, {kind}, {after} are substituted automatically</td></tr><tr><td colspan="3">Channel Options</td></tr><tr><td>Name</td><td>Text</td><td>A name to distinguish this from others</td></tr><tr><td>JMESPath Expression</td><td>Text</td><td>Evaluated against the full event JSON</td></tr></tbody></table>
+
+### Copernicus: GL: Sentinel-2 (Sentinel Hub)
+
+- Manufacturer: Copernicus
+- Measurements: Status
+- Interfaces: AoT
+- Libraries: gis_sentinelhub
+- Manufacturer URL: [Link](https://dataspace.copernicus.eu/)
+
+Sentinel-2 imagery at 10 m resolution through Sentinel Hub on the Copernicus Data Space Ecosystem — fine enough to read growth differences inside a single field, unlike the 250 m MODIS NDVI. Register a free CDSE account, create an OAuth client and paste its Client ID and Secret below. The free tier allows 30,000 processing units per month; one map screen costs roughly 4, and tiles are cached for a day.
+<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>OAuth Client ID</td><td>Text</td><tr><td>OAuth Client Secret</td><td>Text</td><tr><td>Layer</td></td><tr><td>Collection</td><td>Select</td><tr><td>Search Window</td><td>Select</td><tr><td>Max Cloud Coverage</td><td>Select</td><tr><td>Scene Priority</td><td>Select</td></tbody></table>
 
 ### Cozir: Cozir CO2
 
@@ -755,7 +777,7 @@ Subscribes to channels automatically generated based on the selected Ecowitt dev
 - Default Value: 1883</td><td>Host port number</td></tr><tr><td>Topic</td><td>Text
 - Default Value: gw</td><td>The topic to subscribe to</td></tr><tr><td>Keep Alive</td><td>Integer
 - Default Value: 60</td><td>Maximum amount of time between received signals. Set to 0 to disable.</td></tr><tr><td>Client ID</td><td>Text
-- Default Value: client_pPFiqPBB</td><td>Unique client ID for connecting to the server</td></tr><tr><td>Use Login</td><td>Boolean</td><td>Send login credentials</td></tr><tr><td>Use TLS</td><td>Boolean</td><td>Send login credentials using TLS</td></tr><tr><td>Username</td><td>Text
+- Default Value: client_UsleSQWH</td><td>Unique client ID for connecting to the server</td></tr><tr><td>Use Login</td><td>Boolean</td><td>Send login credentials</td></tr><tr><td>Use TLS</td><td>Boolean</td><td>Send login credentials using TLS</td></tr><tr><td>Username</td><td>Text
 - Default Value: user</td><td>Username for connecting to the server</td></tr><tr><td>Password</td><td>Text</td><td>Password for connecting to the server. Leave blank to disable.</td></tr><tr><td>Use Websockets</td><td>Boolean</td><td>Use websockets to connect to the server.</td></tr><tr><td colspan="3">Channel Options</td></tr><tr><td>Name</td><td>Text</td><td>A name to distinguish this from others</td></tr><tr><td>JMESPATH Expression</td><td>Text</td><td>JMESPATH expression to find value in JSON response</td></tr></tbody></table>
 
 ### Ecowitt: Ecowitt soil_sensor
@@ -1079,7 +1101,7 @@ A single topic is subscribed to and the returned JSON payload contains one or mo
 - Default Value: 1883</td><td>Host port number</td></tr><tr><td>Topic</td><td>Text
 - Default Value: mqtt/test/input</td><td>The topic to subscribe to</td></tr><tr><td>Keep Alive</td><td>Integer
 - Default Value: 60</td><td>Maximum amount of time between received signals. Set to 0 to disable.</td></tr><tr><td>Client ID</td><td>Text
-- Default Value: client_jpEZlggi</td><td>Unique client ID for connecting to the server</td></tr><tr><td>Use Login</td><td>Boolean</td><td>Send login credentials</td></tr><tr><td>Use TLS</td><td>Boolean</td><td>Send login credentials using TLS</td></tr><tr><td>TLS CA Certificate</td><td>Text</td><td>Path to the CA certificate file that signed the broker certificate. Leave blank to use the system CA store (for brokers with a publicly-trusted certificate, e.g. Let's Encrypt).</td></tr><tr><td>Username</td><td>Text
+- Default Value: client_WHwxLJZR</td><td>Unique client ID for connecting to the server</td></tr><tr><td>Use Login</td><td>Boolean</td><td>Send login credentials</td></tr><tr><td>Use TLS</td><td>Boolean</td><td>Send login credentials using TLS</td></tr><tr><td>TLS CA Certificate</td><td>Text</td><td>Path to the CA certificate file that signed the broker certificate. Leave blank to use the system CA store (for brokers with a publicly-trusted certificate, e.g. Let's Encrypt).</td></tr><tr><td>Username</td><td>Text
 - Default Value: user</td><td>Username for connecting to the server</td></tr><tr><td>Password</td><td>Text</td><td>Password for connecting to the server. Leave blank to disable.</td></tr><tr><td>Use Websockets</td><td>Boolean</td><td>Use websockets to connect to the server.</td></tr><tr><td colspan="3">Channel Options</td></tr><tr><td>Name</td><td>Text</td><td>A name to distinguish this from others</td></tr><tr><td>JMESPATH Expression</td><td>Text</td><td>JMESPATH expression to find value in JSON response</td></tr></tbody></table>
 
 ### MQTT: MQTT Subscribe (Value payload)
@@ -1095,7 +1117,7 @@ A topic is subscribed to for each channel Subscription Topic and the returned pa
 - Default Value: localhost</td><td>Host or IP address</td></tr><tr><td>Port</td><td>Integer
 - Default Value: 1883</td><td>Host port number</td></tr><tr><td>Keep Alive</td><td>Integer
 - Default Value: 60</td><td>Maximum amount of time between received signals. Set to 0 to disable.</td></tr><tr><td>Client ID</td><td>Text
-- Default Value: client_6yUrtu3q</td><td>Unique client ID for connecting to the server</td></tr><tr><td>Use Login</td><td>Boolean</td><td>Send login credentials</td></tr><tr><td>Use TLS</td><td>Boolean</td><td>Send login credentials using TLS</td></tr><tr><td>TLS CA Certificate</td><td>Text</td><td>Path to the CA certificate file that signed the broker certificate. Leave blank to use the system CA store (for brokers with a publicly-trusted certificate, e.g. Let's Encrypt).</td></tr><tr><td>Username</td><td>Text
+- Default Value: client_0aDBux1s</td><td>Unique client ID for connecting to the server</td></tr><tr><td>Use Login</td><td>Boolean</td><td>Send login credentials</td></tr><tr><td>Use TLS</td><td>Boolean</td><td>Send login credentials using TLS</td></tr><tr><td>TLS CA Certificate</td><td>Text</td><td>Path to the CA certificate file that signed the broker certificate. Leave blank to use the system CA store (for brokers with a publicly-trusted certificate, e.g. Let's Encrypt).</td></tr><tr><td>Username</td><td>Text
 - Default Value: user</td><td>Username for connecting to the server</td></tr><tr><td>Password</td><td>Text</td><td>Password for connecting to the server. Leave blank to disable.</td></tr><tr><td>Use Websockets</td><td>Boolean</td><td>Use websockets to connect to the server.</td></tr><tr><td colspan="3">Channel Options</td></tr><tr><td>Name</td><td>Text</td><td>A name to distinguish this from others</td></tr><tr><td>Subscription Topic</td><td>Text</td><td>The MQTT topic to subscribe to</td></tr></tbody></table>
 
 ### MapTiler: GL: MapTiler Vector
@@ -1263,6 +1285,17 @@ Global surface soil moisture (0-5cm) from NASA's SMAP (Soil Moisture Active Pass
 Real-time Earth observation maps from NASA GIBS satellite system. Includes satellite imagery (Blue Marble) plus environmental data like temperature, clouds, and fires, selectable by date for time-series analysis.
 <table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Satellite Layer</td></td><tr><td>Date Mode</td><td>Select</td><tr><td>Custom Date</td><td>Text</td></tbody></table>
 
+### NASA: NASA POWER (Coords, Daily incl. ET0)
+
+- Manufacturer: NASA
+- Measurements: ET0/Solar/Temperature/Humidity/Wind/Rain
+- Interfaces: AoT
+- Additional URL: [Link](https://power.larc.nasa.gov/)
+
+No API key needed — enter Latitude/Longitude only. Reports FAO-56 reference evapotranspiration (ET0) computed from NASA's daily agroclimatology, which no other AoT input provides. Note the data lags real time by roughly one to two weeks, so treat it as a seasonal baseline for irrigation planning rather than a live reading; poll once a day.
+<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Measurements Enabled</td><td>Multi-Select</td><td>The measurements to record</td></tr><tr><td>Period (Seconds)</td><td>Decimal</td><td>The duration between measurements or actions</td></tr><tr><td>Pre Output</td><td>Select</td><td>Turn the selected output on before taking every measurement</td></tr><tr><td>Pre Out Duration (Seconds)</td><td>Decimal</td><td>If a Pre Output is selected, set the duration to turn the Pre Output on for before every measurement is acquired.</td></tr><tr><td>Pre During Measure</td><td>Boolean</td><td>Check to turn the output off after (opposed to before) the measurement is complete</td></tr><tr><td>Search Window (days)</td><td>Integer
+- Default Value: 20</td><td>How far back to look for the most recent complete day. NASA POWER lags real time by about 7-13 days, so a window shorter than two weeks can come back empty.</td></tr></tbody></table>
+
 ### Naver: KO: Naver Map
 
 - Manufacturer: Naver
@@ -1406,7 +1439,7 @@ Directly decodes the RAK3172 valve controller's heartbeat (FPort 225) payload fr
 <table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Measurements Enabled</td><td>Multi-Select</td><td>The measurements to record</td></tr><tr><td>Pre Output</td><td>Select</td><td>Turn the selected output on before taking every measurement</td></tr><tr><td>Pre Out Duration (Seconds)</td><td>Decimal</td><td>If a Pre Output is selected, set the duration to turn the Pre Output on for before every measurement is acquired.</td></tr><tr><td>Pre During Measure</td><td>Boolean</td><td>Check to turn the output off after (opposed to before) the measurement is complete</td></tr><tr><td>MQTT Host</td><td>Text
 - Default Value: localhost</td><td>ChirpStack MQTT broker hostname or IP address</td></tr><tr><td>MQTT Port</td><td>Integer
 - Default Value: 1883</td><td>MQTT port (default 1883)</td></tr><tr><td>MQTT Username</td><td>Text</td><td>Broker authentication username (leave empty if none)</td></tr><tr><td>MQTT Password</td><td>Text</td><td>Broker authentication password</td></tr><tr><td>Enable TLS</td><td>Boolean</td><td>Whether to use a TLS (SSL) connection</td></tr><tr><td>CA Certificate Path</td><td>Text</td><td>Path to the CA certificate file when using TLS</td></tr><tr><td>Client ID</td><td>Text
-- Default Value: aot_rak3172hb_tnQuQt</td><td>Unique MQTT client ID</td></tr><tr><td>Application ID (MQTT Topic)</td><td>Text
+- Default Value: aot_rak3172hb_Cz3qBQ</td><td>Unique MQTT client ID</td></tr><tr><td>Application ID (MQTT Topic)</td><td>Text
 - Default Value: +</td><td>Enter an ID to subscribe to a specific app only. Leave empty to use "+" (all).</td></tr><tr><td>Device EUI Filter</td><td>Text</td><td>Process only specific devices. Leave empty to receive all (multiple can be specified, comma-separated).</td></tr><tr><td>Decode Base HB Frame</td><td>Boolean
 - Default Value: True</td><td>Decode the 0xA5 base frame (battery + class) on FPort 225.</td></tr><tr><td>Decode Ext HB Frame</td><td>Boolean
 - Default Value: True</td><td>Decode the 0xA6 ext frame (HB period, actual class, valve states, etc.) on FPort 225.</td></tr></tbody></table>
@@ -1773,7 +1806,7 @@ Statistical geographic information service from Statistics Korea (SGIS). Optimal
 This measures from several Kasa power devices (plugs/strips) capable of measuring energy consumption. These include, but are not limited to the KP115 and HS600.
 <table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Measurements Enabled</td><td>Multi-Select</td><td>The measurements to record</td></tr><tr><td>Period (Seconds)</td><td>Decimal</td><td>The duration between measurements or actions</td></tr><tr><td>Pre Output</td><td>Select</td><td>Turn the selected output on before taking every measurement</td></tr><tr><td>Pre Out Duration (Seconds)</td><td>Decimal</td><td>If a Pre Output is selected, set the duration to turn the Pre Output on for before every measurement is acquired.</td></tr><tr><td>Pre During Measure</td><td>Boolean</td><td>Check to turn the output off after (opposed to before) the measurement is complete</td></tr><tr><td>Device Type</td><td>Select</td><td>The type of Kasa device</td></tr><tr><td>Host</td><td>Text
 - Default Value: 0.0.0.0</td><td>Host or IP address</td></tr><tr><td>Asyncio RPC Port</td><td>Integer
-- Default Value: 18369</td><td>The port to start the asyncio RPC server. Must be unique from other Kasa Outputs.</td></tr><tr><td colspan="3">Commands</td></tr><tr><td colspan="3">The total kWh can be cleared with the following button or with the Clear Total kWh Function Action. This will also clear all energy stats on the device, not just the total kWh.</td></tr><tr><td>Clear Total: Kilowatt-hour</td><td>Button</td><td></td></tr></tbody></table>
+- Default Value: 18434</td><td>The port to start the asyncio RPC server. Must be unique from other Kasa Outputs.</td></tr><tr><td colspan="3">Commands</td></tr><tr><td colspan="3">The total kWh can be cleared with the following button or with the Clear Total kWh Function Action. This will also clear all energy stats on the device, not just the total kWh.</td></tr><tr><td>Clear Total: Kilowatt-hour</td><td>Button</td><td></td></tr></tbody></table>
 
 ### Tasmota: Tasmota Outlet Energy Monitor (HTTP)
 

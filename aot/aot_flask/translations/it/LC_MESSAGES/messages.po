@@ -4697,7 +4697,9 @@ msgstr "Gruppo"
 msgid ""
 "Saved, but the daemon could not be reached — the sequence may still be "
 "running. Check the daemon."
-msgstr "Salvato, ma non è stato possibile contattare il demone — la sequenza potrebbe essere ancora in esecuzione. Controllare il demone."
+msgstr ""
+"Salvato, ma non è stato possibile contattare il demone — la sequenza "
+"potrebbe essere ancora in esecuzione. Controllare il demone."
 
 #: aot_flask/routes_function.py:2263
 msgid "The sequence is still running — the daemon did not apply the change."
@@ -30975,8 +30977,6 @@ msgstr "Stimato"
 msgid "Cumulative since start"
 msgstr "Cumulativo dall'inizio"
 
-
-
 #: config_devices_units.py:342
 msgid "Vapor Pressure Deficit"
 msgstr "Deficit di pressione di vapore"
@@ -30999,7 +30999,9 @@ msgstr "Interrompi il controllo su"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:401
 msgid "Control stops for good after this date. Leave blank to keep running."
-msgstr "Il controllo si interrompe definitivamente dopo questa data. Lascia vuoto per continuare."
+msgstr ""
+"Il controllo si interrompe definitivamente dopo questa data. Lascia vuoto"
+" per continuare."
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:667
 msgid "Misting Sunburn Protection"
@@ -31017,7 +31019,9 @@ msgstr "Modalità vivaio (piantine)"
 msgid ""
 "Tighter misting limits for seedlings, which scorch more easily than grown"
 " leaves."
-msgstr "Limiti di nebulizzazione più stretti per le piantine, che si bruciano più facilmente delle foglie mature."
+msgstr ""
+"Limiti di nebulizzazione più stretti per le piantine, che si bruciano più"
+" facilmente delle foglie mature."
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:1192
 msgid "Not used"
@@ -31032,11 +31036,14 @@ msgstr "Nebulizzazione"
 msgid "Devices under automatic control"
 msgstr "Dispositivi sotto controllo automatico"
 
+#, python-format
 msgid "%(n)s excluded"
 msgstr "%(n)s esclusi"
 
 msgid "Turn a device off to keep automatic control from moving it."
-msgstr "Disattiva un dispositivo per impedire che il controllo automatico lo muova."
+msgstr ""
+"Disattiva un dispositivo per impedire che il controllo automatico lo "
+"muova."
 
 msgid "Safety gates will not move it either."
 msgstr "Nemmeno le protezioni di sicurezza lo muoveranno."
@@ -31048,19 +31055,47 @@ msgid "This facility has no actuators yet."
 msgstr "Questa struttura non ha ancora attuatori."
 
 msgid "Could not load the device list. Existing settings are kept."
-msgstr "Impossibile caricare l'elenco dei dispositivi. Le impostazioni esistenti vengono mantenute."
+msgstr ""
+"Impossibile caricare l'elenco dei dispositivi. Le impostazioni esistenti "
+"vengono mantenute."
 
 msgid "Excluded actuators (raw)"
 msgstr "Attuatori esclusi (valore grezzo)"
 
-msgid "Comma-separated Output IDs excluded from automatic control. Normally set with the toggles above rather than typed here."
-msgstr "ID uscita esclusi dal controllo automatico, separati da virgole. Normalmente si impostano con gli interruttori sopra, invece di digitarli qui."
+msgid ""
+"Comma-separated Output IDs excluded from automatic control. Normally set "
+"with the toggles above rather than typed here."
+msgstr ""
+"ID uscita esclusi dal controllo automatico, separati da virgole. "
+"Normalmente si impostano con gli interruttori sopra, invece di digitarli "
+"qui."
 
-msgid "Proactively shift temperature/humidity setpoints and inhibit ventilation before adverse weather arrives. Uses this facility's own forecast source if one is linked in the facility editor's weather bindings (any service — KMA, OpenWeatherMap, Open-Meteo); otherwise falls back to the system-wide KMA short-term forecast."
-msgstr "Sposta proattivamente i setpoint di temperatura/umidità e inibisce la ventilazione prima dell'arrivo di condizioni meteo avverse. Usa la fonte di previsione propria di questa struttura se ne è collegata una nei collegamenti meteo dell'editor della struttura (qualsiasi servizio — KMA, OpenWeatherMap, Open-Meteo); in caso contrario, ricade sulla previsione a breve termine KMA a livello di sistema."
+msgid ""
+"Proactively shift temperature/humidity setpoints and inhibit ventilation "
+"before adverse weather arrives. Uses this facility's own forecast source "
+"if one is linked in the facility editor's weather bindings (any service —"
+" KMA, OpenWeatherMap, Open-Meteo); otherwise falls back to the system-"
+"wide KMA short-term forecast."
+msgstr ""
+"Sposta proattivamente i setpoint di temperatura/umidità e inibisce la "
+"ventilazione prima dell'arrivo di condizioni meteo avverse. Usa la fonte "
+"di previsione propria di questa struttura se ne è collegata una nei "
+"collegamenti meteo dell'editor della struttura (qualsiasi servizio — KMA,"
+" OpenWeatherMap, Open-Meteo); in caso contrario, ricade sulla previsione "
+"a breve termine KMA a livello di sistema."
 
-msgid "How many hours ahead to check for incoming adverse weather (1–6 h) when using the system-wide KMA fallback above. Longer lookahead gives earlier warning but may over-correct. Ignored when this facility has its own forecast source linked — that source already applies its own lookahead."
-msgstr "Quante ore in anticipo controllare l'arrivo di condizioni meteo avverse (1–6 h) quando si usa il fallback KMA a livello di sistema indicato sopra. Un anticipo maggiore offre un avviso più precoce ma può causare una sovracorrezione. Viene ignorato quando questa struttura ha una propria fonte di previsione collegata — quella fonte applica già il proprio anticipo."
+msgid ""
+"How many hours ahead to check for incoming adverse weather (1–6 h) when "
+"using the system-wide KMA fallback above. Longer lookahead gives earlier "
+"warning but may over-correct. Ignored when this facility has its own "
+"forecast source linked — that source already applies its own lookahead."
+msgstr ""
+"Quante ore in anticipo controllare l'arrivo di condizioni meteo avverse "
+"(1–6 h) quando si usa il fallback KMA a livello di sistema indicato "
+"sopra. Un anticipo maggiore offre un avviso più precoce ma può causare "
+"una sovracorrezione. Viene ignorato quando questa struttura ha una "
+"propria fonte di previsione collegata — quella fonte applica già il "
+"proprio anticipo."
 
 #: aot/widgets/widget_notice.py:1
 msgid "Notice Category Filter"
@@ -31095,8 +31130,21 @@ msgid "Notice & Notes Board"
 msgstr "Bacheca avvisi e note"
 
 #: aot/widgets/widget_notice.py:1
-msgid "Displays the latest notice board post titles and/or the notes written in a chosen site, zone, plot, or facility (and everything nested under it). Clicking a notice opens the full post (content, poll, replies, acknowledge) in a popup; clicking a note opens it in the shared notes panel. Users with write permission can also create, edit, and delete posts directly from the widget."
-msgstr "Mostra i titoli degli ultimi post della bacheca avvisi e/o le note scritte in un sito, zona, appezzamento o struttura scelti (e tutto ciò che vi è annidato). Facendo clic su un avviso si apre il post completo (contenuto, sondaggio, risposte, conferma) in una finestra popup; facendo clic su una nota la si apre nel pannello note condiviso. Gli utenti con permesso di scrittura possono anche creare, modificare ed eliminare post direttamente dal widget."
+msgid ""
+"Displays the latest notice board post titles and/or the notes written in "
+"a chosen site, zone, plot, or facility (and everything nested under it). "
+"Clicking a notice opens the full post (content, poll, replies, "
+"acknowledge) in a popup; clicking a note opens it in the shared notes "
+"panel. Users with write permission can also create, edit, and delete "
+"posts directly from the widget."
+msgstr ""
+"Mostra i titoli degli ultimi post della bacheca avvisi e/o le note "
+"scritte in un sito, zona, appezzamento o struttura scelti (e tutto ciò "
+"che vi è annidato). Facendo clic su un avviso si apre il post completo "
+"(contenuto, sondaggio, risposte, conferma) in una finestra popup; facendo"
+" clic su una nota la si apre nel pannello note condiviso. Gli utenti con "
+"permesso di scrittura possono anche creare, modificare ed eliminare post "
+"direttamente dal widget."
 
 #: aot/widgets/widget_notice.py:1
 msgid "Show Notices"
@@ -31139,16 +31187,25 @@ msgid "How often to refresh the notice/notes lists"
 msgstr "Con quale frequenza aggiornare gli elenchi di avvisi/note"
 
 #: aot/widgets/widget_notice.py:1
-msgid "Notes written in this site/zone/plot/facility (and, if \"Include Nested Spaces\" above is on, everything nested under it) are shown."
-msgstr "Vengono mostrate le note scritte in questo sito/zona/appezzamento/struttura (e, se sopra è attivo \"Includi spazi annidati\", tutto ciò che vi è annidato)."
+msgid ""
+"Notes written in this site/zone/plot/facility (and, if \"Include Nested "
+"Spaces\" above is on, everything nested under it) are shown."
+msgstr ""
+"Vengono mostrate le note scritte in questo "
+"sito/zona/appezzamento/struttura (e, se sopra è attivo \"Includi spazi "
+"annidati\", tutto ciò che vi è annidato)."
 
 #: aot/widgets/widget_notice.py:1
 msgid "No sites, zones, plots, or facilities exist yet."
 msgstr "Non esistono ancora siti, zone, appezzamenti o strutture."
 
 #: aot/widgets/widget_notice.py:1
-msgid "Nothing selected — turn on \"Show Notices\" and/or \"Show Notes\" in the widget settings."
-msgstr "Nessuna selezione — attiva \"Mostra avvisi\" e/o \"Mostra note\" nelle impostazioni del widget."
+msgid ""
+"Nothing selected — turn on \"Show Notices\" and/or \"Show Notes\" in the "
+"widget settings."
+msgstr ""
+"Nessuna selezione — attiva \"Mostra avvisi\" e/o \"Mostra note\" nelle "
+"impostazioni del widget."
 
 #: aot/widgets/widget_notice.py:1
 msgid "Choose a space in the widget settings to show notes."
@@ -31159,8 +31216,12 @@ msgid "Display notes written in a chosen space (see Space below)"
 msgstr "Mostra le note scritte in uno spazio scelto (vedi \"Spazio\" sotto)"
 
 #: aot/widgets/widget_notice.py:1
-msgid "Also show notes written in zones/plots/facilities/devices nested under the chosen space"
-msgstr "Mostra anche le note scritte in zone/appezzamenti/strutture/dispositivi annidati sotto lo spazio scelto"
+msgid ""
+"Also show notes written in zones/plots/facilities/devices nested under "
+"the chosen space"
+msgstr ""
+"Mostra anche le note scritte in zone/appezzamenti/strutture/dispositivi "
+"annidati sotto lo spazio scelto"
 
 #: aot/widgets/widget_notice.py:1
 msgid "Newest First"
@@ -31168,7 +31229,9 @@ msgstr "Più recenti prima"
 
 #: aot/widgets/widget_notice.py:1
 msgid "Only show notes whose category or tags contain this text (optional)"
-msgstr "Mostra solo le note la cui categoria o i cui tag contengono questo testo (facoltativo)"
+msgstr ""
+"Mostra solo le note la cui categoria o i cui tag contengono questo testo "
+"(facoltativo)"
 
 #: aot/widgets/widget_notice.py:1
 msgid "Show Notes List"
@@ -31181,3 +31244,256 @@ msgstr "Mostra le note corrispondenti al filtro sottostante"
 #: aot/widgets/widget_notice.py:1
 msgid "Notes Filter"
 msgstr "Filtro note"
+
+#, python-format
+msgid "%(n)s channels"
+msgstr "%(n)s canali"
+
+#, python-format
+msgid "%(n)s linked"
+msgstr "%(n)s collegati"
+
+msgid "AoT Device Count"
+msgstr "Numero di dispositivi AoT"
+
+msgid "Apply Filter"
+msgstr "Applica filtro"
+
+msgid "Assign"
+msgstr "Assegna"
+
+msgid "Branch Pipe Count"
+msgstr "Numero di tubi di diramazione"
+
+msgid "Branch Pipe Elbow"
+msgstr "Gomito del tubo di diramazione"
+
+msgid "Branch Pipe End"
+msgstr "Terminale del tubo di diramazione"
+
+msgid "Branch Pipe Length"
+msgstr "Lunghezza del tubo di diramazione"
+
+msgid "Branch Pipe Tee"
+msgstr "Raccordo a T del tubo di diramazione"
+
+msgid "Conversion details:"
+msgstr "Dettagli della conversione:"
+
+msgid "Custom entry…"
+msgstr "Voce personalizzata…"
+
+msgid "Data Load Failed"
+msgstr "Caricamento dati non riuscito"
+
+msgid "Design Details"
+msgstr "Dettagli del progetto"
+
+msgid "Design Summary"
+msgstr "Riepilogo del progetto"
+
+msgid "Do you want to continue?"
+msgstr "Vuoi continuare?"
+
+msgid "Drip irrigation applied ("
+msgstr "Irrigazione a goccia applicata ("
+
+msgid "Enter name"
+msgstr "Inserisci il nome"
+
+msgid "Flow Rate (L/h)"
+msgstr "Portata (L/h)"
+
+msgid "Flow Rate (L/min)"
+msgstr "Portata (L/min)"
+
+msgid "From envelope"
+msgstr "Dal perimetro"
+
+msgid "Group name"
+msgstr "Nome del gruppo"
+
+msgid "Input Device Count"
+msgstr "Numero di dispositivi di ingresso"
+
+msgid "It will be automatically converted to the current format (v"
+msgstr "Verrà convertito automaticamente nel formato attuale (v"
+
+msgid "Line is too short ("
+msgstr "La linea è troppo corta ("
+
+msgid "Logic Count"
+msgstr "Numero di logiche"
+
+msgid "Main Pipe Count"
+msgstr "Numero di tubi principali"
+
+msgid "Main Pipe Elbow"
+msgstr "Gomito del tubo principale"
+
+msgid "Main Pipe End"
+msgstr "Terminale del tubo principale"
+
+msgid "Main Pipe Length"
+msgstr "Lunghezza del tubo principale"
+
+msgid "Main Pipe Reducing Elbow"
+msgstr "Gomito di riduzione del tubo principale"
+
+msgid "Main Pipe Reducing Tee"
+msgstr "Raccordo a T di riduzione del tubo principale"
+
+msgid "Main Pipe Tee"
+msgstr "Raccordo a T del tubo principale"
+
+msgid "Must be at least 0.01m²."
+msgstr "Deve essere almeno 0,01 m²."
+
+msgid "Must be at least 10cm."
+msgstr "Deve essere almeno 10 cm."
+
+msgid "New Site"
+msgstr "Nuovo sito"
+
+msgid "New Zone"
+msgstr "Nuova zona"
+
+msgid "New group"
+msgstr "Nuovo gruppo"
+
+msgid "No Pipe Data"
+msgstr "Nessun dato sui tubi"
+
+msgid "No Sites Found"
+msgstr "Nessun sito trovato"
+
+msgid "No Sites Selected"
+msgstr "Nessun sito selezionato"
+
+msgid "No actuators registered"
+msgstr "Nessun attuatore registrato"
+
+msgid "No."
+msgstr "N."
+
+msgid "Number of Emitters"
+msgstr "Numero di gocciolatori"
+
+msgid "Number of Emitters (Pipe)"
+msgstr "Numero di gocciolatori (tubo)"
+
+msgid "Output Device Count"
+msgstr "Numero di dispositivi di uscita"
+
+msgid "Pipe Details"
+msgstr "Dettagli del tubo"
+
+msgid "Pipe Length"
+msgstr "Lunghezza del tubo"
+
+msgid "Placement mode"
+msgstr "Modalità di posizionamento"
+
+msgid "Reference line"
+msgstr "Linea di riferimento"
+
+msgid "Search Device..."
+msgstr "Cerca dispositivo..."
+
+msgid "Select Site"
+msgstr "Seleziona sito"
+
+msgid "Service name"
+msgstr "Nome del servizio"
+
+msgid "Shape is too small ("
+msgstr "La forma è troppo piccola ("
+
+msgid "Site Area"
+msgstr "Superficie del sito"
+
+msgid "Site Count"
+msgstr "Numero di siti"
+
+msgid "Site Pipe Info"
+msgstr "Informazioni sui tubi del sito"
+
+msgid "Solar radiation"
+msgstr "Radiazione solare"
+
+msgid ""
+"The map updates as you drag — branches follow the reference line at this "
+"angle."
+msgstr ""
+"La mappa si aggiorna mentre trascini — le diramazioni seguono la linea di"
+" riferimento a questo angolo."
+
+msgid "This file is in an older format (v"
+msgstr "Questo file è in un formato precedente (v"
+
+msgid "This match key already exists: "
+msgstr "Questa chiave di corrispondenza esiste già: "
+
+msgid "Total Area"
+msgstr "Superficie totale"
+
+msgid "Zone Count"
+msgstr "Numero di zone"
+
+msgid "[Branch Pipe]"
+msgstr "[Tubo di diramazione]"
+
+msgid "[Main Pipe]"
+msgstr "[Tubo principale]"
+
+msgid "and"
+msgstr "e"
+
+msgid "detached"
+msgstr "scollegato"
+
+msgid "elements imported."
+msgstr "elementi importati."
+
+msgid "hh"
+msgstr "hh"
+
+msgid "loading_map"
+msgstr "Caricamento della mappa in corso..."
+
+msgid "manual size"
+msgstr "dimensione manuale"
+
+msgid "mm"
+msgstr "mm"
+
+msgid "others"
+msgstr "altri"
+
+msgid "pipes)"
+msgstr "tubi)"
+
+msgid "save_btn_text"
+msgstr "Salva"
+
+msgid "ss"
+msgstr "ss"
+
+msgid "units"
+msgstr "unità"
+
+msgid "upper limit"
+msgstr "limite superiore"
+
+msgid "— Auto —"
+msgstr "— Automatico —"
+
+msgid "— Select Input channel —"
+msgstr "— Seleziona canale di ingresso —"
+
+msgid "— Select channel —"
+msgstr "— Seleziona canale —"
+
+msgid "— Select —"
+msgstr "— Seleziona —"
+

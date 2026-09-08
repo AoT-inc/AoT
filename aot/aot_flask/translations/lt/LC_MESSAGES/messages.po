@@ -4667,7 +4667,9 @@ msgstr "Grupė"
 msgid ""
 "Saved, but the daemon could not be reached — the sequence may still be "
 "running. Check the daemon."
-msgstr "Išsaugota, tačiau nepavyko susisiekti su tarnyba (daemon) — seka gali vis dar veikti. Patikrinkite tarnybą."
+msgstr ""
+"Išsaugota, tačiau nepavyko susisiekti su tarnyba (daemon) — seka gali vis"
+" dar veikti. Patikrinkite tarnybą."
 
 #: aot_flask/routes_function.py:2263
 msgid "The sequence is still running — the daemon did not apply the change."
@@ -30670,8 +30672,6 @@ msgstr "Apytiksliai"
 msgid "Cumulative since start"
 msgstr "Sukaupta nuo pradžios"
 
-
-
 #: config_devices_units.py:342
 msgid "Vapor Pressure Deficit"
 msgstr "Garų slėgio deficitas"
@@ -30694,7 +30694,9 @@ msgstr "Sustabdyti valdymą"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:401
 msgid "Control stops for good after this date. Leave blank to keep running."
-msgstr "Valdymas visiškai sustabdomas po šios datos. Palikite tuščią, kad veiktų nuolat."
+msgstr ""
+"Valdymas visiškai sustabdomas po šios datos. Palikite tuščią, kad veiktų "
+"nuolat."
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:667
 msgid "Misting Sunburn Protection"
@@ -30712,7 +30714,9 @@ msgstr "Daigyno (daigų) režimas"
 msgid ""
 "Tighter misting limits for seedlings, which scorch more easily than grown"
 " leaves."
-msgstr "Griežtesnės purškimo ribos daigams, kurie lengviau nudega nei subrendę lapai."
+msgstr ""
+"Griežtesnės purškimo ribos daigams, kurie lengviau nudega nei subrendę "
+"lapai."
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:1192
 msgid "Not used"
@@ -30727,6 +30731,7 @@ msgstr "Rūkas"
 msgid "Devices under automatic control"
 msgstr "Automatiškai valdomi įrenginiai"
 
+#, python-format
 msgid "%(n)s excluded"
 msgstr "%(n)s neįtraukta"
 
@@ -30748,14 +30753,37 @@ msgstr "Nepavyko įkelti įrenginių sąrašo. Esami nustatymai išsaugoti."
 msgid "Excluded actuators (raw)"
 msgstr "Neįtraukti vykdikliai (neapdorota)"
 
-msgid "Comma-separated Output IDs excluded from automatic control. Normally set with the toggles above rather than typed here."
-msgstr "Kableliais atskirti išvesčių ID, neįtraukti į automatinį valdymą. Paprastai nustatoma aukščiau esančiais jungikliais, o ne įvedama čia."
+msgid ""
+"Comma-separated Output IDs excluded from automatic control. Normally set "
+"with the toggles above rather than typed here."
+msgstr ""
+"Kableliais atskirti išvesčių ID, neįtraukti į automatinį valdymą. "
+"Paprastai nustatoma aukščiau esančiais jungikliais, o ne įvedama čia."
 
-msgid "Proactively shift temperature/humidity setpoints and inhibit ventilation before adverse weather arrives. Uses this facility's own forecast source if one is linked in the facility editor's weather bindings (any service — KMA, OpenWeatherMap, Open-Meteo); otherwise falls back to the system-wide KMA short-term forecast."
-msgstr "Iš anksto pakeičia temperatūros / drėgmės nuostatas ir sustabdo vėdinimą prieš atvykstant nepalankioms oro sąlygoms. Naudoja šio objekto nuosavą prognozės šaltinį, jei toks susietas objekto redaktoriaus orų susiejimuose (bet kokia paslauga – KMA, OpenWeatherMap, Open-Meteo); priešingu atveju grįžtama prie visos sistemos KMA trumpalaikės prognozės."
+msgid ""
+"Proactively shift temperature/humidity setpoints and inhibit ventilation "
+"before adverse weather arrives. Uses this facility's own forecast source "
+"if one is linked in the facility editor's weather bindings (any service —"
+" KMA, OpenWeatherMap, Open-Meteo); otherwise falls back to the system-"
+"wide KMA short-term forecast."
+msgstr ""
+"Iš anksto pakeičia temperatūros / drėgmės nuostatas ir sustabdo vėdinimą "
+"prieš atvykstant nepalankioms oro sąlygoms. Naudoja šio objekto nuosavą "
+"prognozės šaltinį, jei toks susietas objekto redaktoriaus orų "
+"susiejimuose (bet kokia paslauga – KMA, OpenWeatherMap, Open-Meteo); "
+"priešingu atveju grįžtama prie visos sistemos KMA trumpalaikės prognozės."
 
-msgid "How many hours ahead to check for incoming adverse weather (1–6 h) when using the system-wide KMA fallback above. Longer lookahead gives earlier warning but may over-correct. Ignored when this facility has its own forecast source linked — that source already applies its own lookahead."
-msgstr "Kiek valandų iš anksto tikrinti artėjančias nepalankias oro sąlygas (1–6 val.), kai naudojamas aukščiau nurodytas visos sistemos KMA atsarginės variantas. Ilgesnis žvalgymo laikas duoda ankstesnį įspėjimą, bet gali per daug koreguoti. Ignoruojama, jei šiam objektui susietas nuosavas prognozės šaltinis – tas šaltinis jau taiko savų žvalgymo laiką."
+msgid ""
+"How many hours ahead to check for incoming adverse weather (1–6 h) when "
+"using the system-wide KMA fallback above. Longer lookahead gives earlier "
+"warning but may over-correct. Ignored when this facility has its own "
+"forecast source linked — that source already applies its own lookahead."
+msgstr ""
+"Kiek valandų iš anksto tikrinti artėjančias nepalankias oro sąlygas (1–6 "
+"val.), kai naudojamas aukščiau nurodytas visos sistemos KMA atsarginės "
+"variantas. Ilgesnis žvalgymo laikas duoda ankstesnį įspėjimą, bet gali "
+"per daug koreguoti. Ignoruojama, jei šiam objektui susietas nuosavas "
+"prognozės šaltinis – tas šaltinis jau taiko savų žvalgymo laiką."
 
 #: aot/widgets/widget_notice.py:1
 msgid "Notice Category Filter"
@@ -30790,8 +30818,21 @@ msgid "Notice & Notes Board"
 msgstr "Pranešimų ir užrašų skydelis"
 
 #: aot/widgets/widget_notice.py:1
-msgid "Displays the latest notice board post titles and/or the notes written in a chosen site, zone, plot, or facility (and everything nested under it). Clicking a notice opens the full post (content, poll, replies, acknowledge) in a popup; clicking a note opens it in the shared notes panel. Users with write permission can also create, edit, and delete posts directly from the widget."
-msgstr "Rodo naujausių skelbimų lentos įrašų pavadinimus ir (arba) pastabas, parašytas pasirinktoje vietoje, zonoje, sklype ar objekte (ir viskame, kas yra po juo). Spustelėjus skelbimą, iškylančiajame lange atsidaro visas įrašas (turinys, apklausa, atsakymai, patvirtinimas); spustelėjus pastabą, ji atsidaro bendrame pastabų skydelyje. Rašymo teises turintys naudotojai taip pat gali kurti, redaguoti ir šalinti įrašus tiesiai iš valdiklio."
+msgid ""
+"Displays the latest notice board post titles and/or the notes written in "
+"a chosen site, zone, plot, or facility (and everything nested under it). "
+"Clicking a notice opens the full post (content, poll, replies, "
+"acknowledge) in a popup; clicking a note opens it in the shared notes "
+"panel. Users with write permission can also create, edit, and delete "
+"posts directly from the widget."
+msgstr ""
+"Rodo naujausių skelbimų lentos įrašų pavadinimus ir (arba) pastabas, "
+"parašytas pasirinktoje vietoje, zonoje, sklype ar objekte (ir viskame, "
+"kas yra po juo). Spustelėjus skelbimą, iškylančiajame lange atsidaro "
+"visas įrašas (turinys, apklausa, atsakymai, patvirtinimas); spustelėjus "
+"pastabą, ji atsidaro bendrame pastabų skydelyje. Rašymo teises turintys "
+"naudotojai taip pat gali kurti, redaguoti ir šalinti įrašus tiesiai iš "
+"valdiklio."
 
 #: aot/widgets/widget_notice.py:1
 msgid "Show Notices"
@@ -30834,16 +30875,25 @@ msgid "How often to refresh the notice/notes lists"
 msgstr "Kaip dažnai atnaujinti pranešimų / pastabų sąrašus"
 
 #: aot/widgets/widget_notice.py:1
-msgid "Notes written in this site/zone/plot/facility (and, if \"Include Nested Spaces\" above is on, everything nested under it) are shown."
-msgstr "Rodomos pastabos, parašytos šioje vietoje / zonoje / sklype / objekte (o jei aukščiau įjungta „Įtraukti įdėtąsias erdves\", ir viskas, kas yra po juo)."
+msgid ""
+"Notes written in this site/zone/plot/facility (and, if \"Include Nested "
+"Spaces\" above is on, everything nested under it) are shown."
+msgstr ""
+"Rodomos pastabos, parašytos šioje vietoje / zonoje / sklype / objekte (o "
+"jei aukščiau įjungta „Įtraukti įdėtąsias erdves\", ir viskas, kas yra po "
+"juo)."
 
 #: aot/widgets/widget_notice.py:1
 msgid "No sites, zones, plots, or facilities exist yet."
 msgstr "Kol kas nėra jokių vietų, zonų, sklypų ar objektų."
 
 #: aot/widgets/widget_notice.py:1
-msgid "Nothing selected — turn on \"Show Notices\" and/or \"Show Notes\" in the widget settings."
-msgstr "Niekas nepasirinkta — valdiklio nustatymuose įjunkite „Rodyti pranešimus\" ir (arba) „Rodyti pastabas\"."
+msgid ""
+"Nothing selected — turn on \"Show Notices\" and/or \"Show Notes\" in the "
+"widget settings."
+msgstr ""
+"Niekas nepasirinkta — valdiklio nustatymuose įjunkite „Rodyti "
+"pranešimus\" ir (arba) „Rodyti pastabas\"."
 
 #: aot/widgets/widget_notice.py:1
 msgid "Choose a space in the widget settings to show notes."
@@ -30854,8 +30904,12 @@ msgid "Display notes written in a chosen space (see Space below)"
 msgstr "Rodo pastabas, parašytas pasirinktoje erdvėje (žr. „Erdvė\" žemiau)"
 
 #: aot/widgets/widget_notice.py:1
-msgid "Also show notes written in zones/plots/facilities/devices nested under the chosen space"
-msgstr "Taip pat rodo pastabas, parašytas zonose / sklypuose / objektuose / įrenginiuose, esančiuose po pasirinkta erdve"
+msgid ""
+"Also show notes written in zones/plots/facilities/devices nested under "
+"the chosen space"
+msgstr ""
+"Taip pat rodo pastabas, parašytas zonose / sklypuose / objektuose / "
+"įrenginiuose, esančiuose po pasirinkta erdve"
 
 #: aot/widgets/widget_notice.py:1
 msgid "Newest First"
@@ -30876,3 +30930,254 @@ msgstr "Rodo pastabas, atitinkančias žemiau esantį filtrą"
 #: aot/widgets/widget_notice.py:1
 msgid "Notes Filter"
 msgstr "Užrašų filtras"
+
+#, python-format
+msgid "%(n)s channels"
+msgstr "%(n)s kanalai"
+
+#, python-format
+msgid "%(n)s linked"
+msgstr "%(n)s susieta"
+
+msgid "AoT Device Count"
+msgstr "AoT įrenginių skaičius"
+
+msgid "Apply Filter"
+msgstr "Taikyti filtrą"
+
+msgid "Assign"
+msgstr "Priskirti"
+
+msgid "Branch Pipe Count"
+msgstr "Šakos vamzdžių skaičius"
+
+msgid "Branch Pipe Elbow"
+msgstr "Šakos vamzdžio alkūnė"
+
+msgid "Branch Pipe End"
+msgstr "Šakos vamzdžio galas"
+
+msgid "Branch Pipe Length"
+msgstr "Šakos vamzdžio ilgis"
+
+msgid "Branch Pipe Tee"
+msgstr "Šakos vamzdžio trišakis"
+
+msgid "Conversion details:"
+msgstr "Konvertavimo informacija:"
+
+msgid "Custom entry…"
+msgstr "Pasirinktinis įrašas…"
+
+msgid "Data Load Failed"
+msgstr "Nepavyko įkelti duomenų"
+
+msgid "Design Details"
+msgstr "Projekto informacija"
+
+msgid "Design Summary"
+msgstr "Projekto santrauka"
+
+msgid "Do you want to continue?"
+msgstr "Ar norite tęsti?"
+
+msgid "Drip irrigation applied ("
+msgstr "Pritaikytas lašelinis laistymas ("
+
+msgid "Enter name"
+msgstr "Įveskite pavadinimą"
+
+msgid "Flow Rate (L/h)"
+msgstr "Srauto greitis (l/val.)"
+
+msgid "Flow Rate (L/min)"
+msgstr "Srauto greitis (l/min.)"
+
+msgid "From envelope"
+msgstr "Iš gaubto"
+
+msgid "Group name"
+msgstr "Grupės pavadinimas"
+
+msgid "Input Device Count"
+msgstr "Įvesties įrenginių skaičius"
+
+msgid "It will be automatically converted to the current format (v"
+msgstr "Jis bus automatiškai konvertuotas į dabartinį formatą (v"
+
+msgid "Line is too short ("
+msgstr "Linija per trumpa ("
+
+msgid "Logic Count"
+msgstr "Logikos skaičius"
+
+msgid "Main Pipe Count"
+msgstr "Pagrindinių vamzdžių skaičius"
+
+msgid "Main Pipe Elbow"
+msgstr "Pagrindinio vamzdžio alkūnė"
+
+msgid "Main Pipe End"
+msgstr "Pagrindinio vamzdžio galas"
+
+msgid "Main Pipe Length"
+msgstr "Pagrindinio vamzdžio ilgis"
+
+msgid "Main Pipe Reducing Elbow"
+msgstr "Pagrindinio vamzdžio redukcinė alkūnė"
+
+msgid "Main Pipe Reducing Tee"
+msgstr "Pagrindinio vamzdžio redukcinis trišakis"
+
+msgid "Main Pipe Tee"
+msgstr "Pagrindinio vamzdžio trišakis"
+
+msgid "Must be at least 0.01m²."
+msgstr "Turi būti bent 0,01 m²."
+
+msgid "Must be at least 10cm."
+msgstr "Turi būti bent 10 cm."
+
+msgid "New Site"
+msgstr "Naujas ūkis"
+
+msgid "New Zone"
+msgstr "Nauja zona"
+
+msgid "New group"
+msgstr "Nauja grupė"
+
+msgid "No Pipe Data"
+msgstr "Nėra vamzdžių duomenų"
+
+msgid "No Sites Found"
+msgstr "Ūkių nerasta"
+
+msgid "No Sites Selected"
+msgstr "Nepasirinktas nė vienas ūkis"
+
+msgid "No actuators registered"
+msgstr "Nėra registruotų vykdiklių"
+
+msgid "No."
+msgstr "Nr."
+
+msgid "Number of Emitters"
+msgstr "Lašintuvų skaičius"
+
+msgid "Number of Emitters (Pipe)"
+msgstr "Lašintuvų skaičius (vamzdis)"
+
+msgid "Output Device Count"
+msgstr "Išvesties įrenginių skaičius"
+
+msgid "Pipe Details"
+msgstr "Vamzdžio informacija"
+
+msgid "Pipe Length"
+msgstr "Vamzdžio ilgis"
+
+msgid "Placement mode"
+msgstr "Išdėstymo režimas"
+
+msgid "Reference line"
+msgstr "Atskaitos linija"
+
+msgid "Search Device..."
+msgstr "Ieškoti įrenginio..."
+
+msgid "Select Site"
+msgstr "Pasirinkite ūkį"
+
+msgid "Service name"
+msgstr "Paslaugos pavadinimas"
+
+msgid "Shape is too small ("
+msgstr "Forma per maža ("
+
+msgid "Site Area"
+msgstr "Ūkio plotas"
+
+msgid "Site Count"
+msgstr "Ūkių skaičius"
+
+msgid "Site Pipe Info"
+msgstr "Ūkio vamzdžių informacija"
+
+msgid "Solar radiation"
+msgstr "Saulės spinduliuotė"
+
+msgid ""
+"The map updates as you drag — branches follow the reference line at this "
+"angle."
+msgstr "Žemėlapis atsinaujina tempiant — šakos šiuo kampu seka atskaitos liniją."
+
+msgid "This file is in an older format (v"
+msgstr "Šis failas yra senesnio formato (v"
+
+msgid "This match key already exists: "
+msgstr "Šis atitikties raktas jau egzistuoja: "
+
+msgid "Total Area"
+msgstr "Bendras plotas"
+
+msgid "Zone Count"
+msgstr "Zonų skaičius"
+
+msgid "[Branch Pipe]"
+msgstr "[Šakos vamzdis]"
+
+msgid "[Main Pipe]"
+msgstr "[Pagrindinis vamzdis]"
+
+msgid "and"
+msgstr "ir"
+
+msgid "detached"
+msgstr "atskirta"
+
+msgid "elements imported."
+msgstr "elementai importuoti."
+
+msgid "hh"
+msgstr "hh"
+
+msgid "loading_map"
+msgstr "Žemėlapis kraunamas..."
+
+msgid "manual size"
+msgstr "rankinis dydis"
+
+msgid "mm"
+msgstr "mm"
+
+msgid "others"
+msgstr "kiti"
+
+msgid "pipes)"
+msgstr "vamzdžiai)"
+
+msgid "save_btn_text"
+msgstr "Išsaugoti"
+
+msgid "ss"
+msgstr "ss"
+
+msgid "units"
+msgstr "vnt."
+
+msgid "upper limit"
+msgstr "viršutinė riba"
+
+msgid "— Auto —"
+msgstr "— Automatinis —"
+
+msgid "— Select Input channel —"
+msgstr "— Pasirinkite įvesties kanalą —"
+
+msgid "— Select channel —"
+msgstr "— Pasirinkite kanalą —"
+
+msgid "— Select —"
+msgstr "— Pasirinkite —"
+

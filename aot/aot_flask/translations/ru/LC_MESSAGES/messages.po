@@ -4685,7 +4685,9 @@ msgstr "Группа"
 msgid ""
 "Saved, but the daemon could not be reached — the sequence may still be "
 "running. Check the daemon."
-msgstr "Сохранено, но не удалось связаться с демоном — последовательность может ещё выполняться. Проверьте демон."
+msgstr ""
+"Сохранено, но не удалось связаться с демоном — последовательность может "
+"ещё выполняться. Проверьте демон."
 
 #: aot_flask/routes_function.py:2263
 msgid "The sequence is still running — the daemon did not apply the change."
@@ -30796,8 +30798,6 @@ msgstr "Оценка"
 msgid "Cumulative since start"
 msgstr "Накоплено с начала"
 
-
-
 #: config_devices_units.py:342
 msgid "Vapor Pressure Deficit"
 msgstr "Дефицит давления пара"
@@ -30820,7 +30820,9 @@ msgstr "Остановить управление при"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:401
 msgid "Control stops for good after this date. Leave blank to keep running."
-msgstr "Управление окончательно останавливается после этой даты. Оставьте пустым, чтобы продолжать работу."
+msgstr ""
+"Управление окончательно останавливается после этой даты. Оставьте пустым,"
+" чтобы продолжать работу."
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:667
 msgid "Misting Sunburn Protection"
@@ -30838,7 +30840,9 @@ msgstr "Режим рассады (сеянцев)"
 msgid ""
 "Tighter misting limits for seedlings, which scorch more easily than grown"
 " leaves."
-msgstr "Более строгие ограничения туманообразования для рассады, которая обгорает легче, чем взрослые листья."
+msgstr ""
+"Более строгие ограничения туманообразования для рассады, которая обгорает"
+" легче, чем взрослые листья."
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:1192
 msgid "Not used"
@@ -30853,11 +30857,14 @@ msgstr "Туман"
 msgid "Devices under automatic control"
 msgstr "Устройства под автоматическим управлением"
 
+#, python-format
 msgid "%(n)s excluded"
 msgstr "%(n)s исключено"
 
 msgid "Turn a device off to keep automatic control from moving it."
-msgstr "Отключите устройство, чтобы автоматическое управление не могло им управлять."
+msgstr ""
+"Отключите устройство, чтобы автоматическое управление не могло им "
+"управлять."
 
 msgid "Safety gates will not move it either."
 msgstr "Защитные блокировки также не будут им управлять."
@@ -30874,14 +30881,39 @@ msgstr "Не удалось загрузить список устройств. 
 msgid "Excluded actuators (raw)"
 msgstr "Исключённые приводы (необработанные)"
 
-msgid "Comma-separated Output IDs excluded from automatic control. Normally set with the toggles above rather than typed here."
-msgstr "Идентификаторы выходов, исключённые из автоматического управления, через запятую. Обычно задаются переключателями выше, а не вводятся здесь."
+msgid ""
+"Comma-separated Output IDs excluded from automatic control. Normally set "
+"with the toggles above rather than typed here."
+msgstr ""
+"Идентификаторы выходов, исключённые из автоматического управления, через "
+"запятую. Обычно задаются переключателями выше, а не вводятся здесь."
 
-msgid "Proactively shift temperature/humidity setpoints and inhibit ventilation before adverse weather arrives. Uses this facility's own forecast source if one is linked in the facility editor's weather bindings (any service — KMA, OpenWeatherMap, Open-Meteo); otherwise falls back to the system-wide KMA short-term forecast."
-msgstr "Заблаговременно смещает уставки температуры/влажности и приостанавливает вентиляцию перед наступлением неблагоприятной погоды. Использует собственный источник прогноза этого объекта, если он привязан в разделе погодных привязок редактора объекта (любая служба — KMA, OpenWeatherMap, Open-Meteo); в противном случае используется общесистемный краткосрочный прогноз KMA."
+msgid ""
+"Proactively shift temperature/humidity setpoints and inhibit ventilation "
+"before adverse weather arrives. Uses this facility's own forecast source "
+"if one is linked in the facility editor's weather bindings (any service —"
+" KMA, OpenWeatherMap, Open-Meteo); otherwise falls back to the system-"
+"wide KMA short-term forecast."
+msgstr ""
+"Заблаговременно смещает уставки температуры/влажности и приостанавливает "
+"вентиляцию перед наступлением неблагоприятной погоды. Использует "
+"собственный источник прогноза этого объекта, если он привязан в разделе "
+"погодных привязок редактора объекта (любая служба — KMA, OpenWeatherMap, "
+"Open-Meteo); в противном случае используется общесистемный краткосрочный "
+"прогноз KMA."
 
-msgid "How many hours ahead to check for incoming adverse weather (1–6 h) when using the system-wide KMA fallback above. Longer lookahead gives earlier warning but may over-correct. Ignored when this facility has its own forecast source linked — that source already applies its own lookahead."
-msgstr "На сколько часов вперёд проверять приближение неблагоприятной погоды (1–6 ч) при использовании общесистемного резервного прогноза KMA, указанного выше. Больший горизонт даёт более раннее предупреждение, но может привести к чрезмерной коррекции. Игнорируется, если у этого объекта привязан собственный источник прогноза — этот источник уже применяет собственный горизонт."
+msgid ""
+"How many hours ahead to check for incoming adverse weather (1–6 h) when "
+"using the system-wide KMA fallback above. Longer lookahead gives earlier "
+"warning but may over-correct. Ignored when this facility has its own "
+"forecast source linked — that source already applies its own lookahead."
+msgstr ""
+"На сколько часов вперёд проверять приближение неблагоприятной погоды (1–6"
+" ч) при использовании общесистемного резервного прогноза KMA, указанного "
+"выше. Больший горизонт даёт более раннее предупреждение, но может "
+"привести к чрезмерной коррекции. Игнорируется, если у этого объекта "
+"привязан собственный источник прогноза — этот источник уже применяет "
+"собственный горизонт."
 
 #: aot/widgets/widget_notice.py:1
 msgid "Notice Category Filter"
@@ -30916,8 +30948,20 @@ msgid "Notice & Notes Board"
 msgstr "Доска объявлений и заметок"
 
 #: aot/widgets/widget_notice.py:1
-msgid "Displays the latest notice board post titles and/or the notes written in a chosen site, zone, plot, or facility (and everything nested under it). Clicking a notice opens the full post (content, poll, replies, acknowledge) in a popup; clicking a note opens it in the shared notes panel. Users with write permission can also create, edit, and delete posts directly from the widget."
-msgstr "Показывает заголовки последних записей доски объявлений и/или заметки, написанные в выбранном участке, зоне, грядке или объекте (и во всём, что вложено внутрь). Щелчок по объявлению открывает всю запись (содержание, опрос, ответы, подтверждение) во всплывающем окне; щелчок по заметке открывает её в общей панели заметок. Пользователи с правом записи также могут создавать, редактировать и удалять записи прямо из виджета."
+msgid ""
+"Displays the latest notice board post titles and/or the notes written in "
+"a chosen site, zone, plot, or facility (and everything nested under it). "
+"Clicking a notice opens the full post (content, poll, replies, "
+"acknowledge) in a popup; clicking a note opens it in the shared notes "
+"panel. Users with write permission can also create, edit, and delete "
+"posts directly from the widget."
+msgstr ""
+"Показывает заголовки последних записей доски объявлений и/или заметки, "
+"написанные в выбранном участке, зоне, грядке или объекте (и во всём, что "
+"вложено внутрь). Щелчок по объявлению открывает всю запись (содержание, "
+"опрос, ответы, подтверждение) во всплывающем окне; щелчок по заметке "
+"открывает её в общей панели заметок. Пользователи с правом записи также "
+"могут создавать, редактировать и удалять записи прямо из виджета."
 
 #: aot/widgets/widget_notice.py:1
 msgid "Show Notices"
@@ -30960,16 +31004,25 @@ msgid "How often to refresh the notice/notes lists"
 msgstr "Как часто обновлять списки объявлений/заметок"
 
 #: aot/widgets/widget_notice.py:1
-msgid "Notes written in this site/zone/plot/facility (and, if \"Include Nested Spaces\" above is on, everything nested under it) are shown."
-msgstr "Показываются заметки, написанные в этом участке/зоне/грядке/объекте (а если выше включено «Включить вложенные пространства» — то и во всём, что вложено внутрь)."
+msgid ""
+"Notes written in this site/zone/plot/facility (and, if \"Include Nested "
+"Spaces\" above is on, everything nested under it) are shown."
+msgstr ""
+"Показываются заметки, написанные в этом участке/зоне/грядке/объекте (а "
+"если выше включено «Включить вложенные пространства» — то и во всём, что "
+"вложено внутрь)."
 
 #: aot/widgets/widget_notice.py:1
 msgid "No sites, zones, plots, or facilities exist yet."
 msgstr "Пока нет ни одного участка, зоны, грядки или объекта."
 
 #: aot/widgets/widget_notice.py:1
-msgid "Nothing selected — turn on \"Show Notices\" and/or \"Show Notes\" in the widget settings."
-msgstr "Ничего не выбрано — включите «Показывать объявления» и/или «Показывать заметки» в настройках виджета."
+msgid ""
+"Nothing selected — turn on \"Show Notices\" and/or \"Show Notes\" in the "
+"widget settings."
+msgstr ""
+"Ничего не выбрано — включите «Показывать объявления» и/или «Показывать "
+"заметки» в настройках виджета."
 
 #: aot/widgets/widget_notice.py:1
 msgid "Choose a space in the widget settings to show notes."
@@ -30977,11 +31030,17 @@ msgstr "Выберите пространство в настройках вид
 
 #: aot/widgets/widget_notice.py:1
 msgid "Display notes written in a chosen space (see Space below)"
-msgstr "Показывает заметки, написанные в выбранном пространстве (см. «Пространство» ниже)"
+msgstr ""
+"Показывает заметки, написанные в выбранном пространстве (см. "
+"«Пространство» ниже)"
 
 #: aot/widgets/widget_notice.py:1
-msgid "Also show notes written in zones/plots/facilities/devices nested under the chosen space"
-msgstr "Также показывает заметки, написанные в зонах/грядках/объектах/устройствах, вложенных в выбранное пространство"
+msgid ""
+"Also show notes written in zones/plots/facilities/devices nested under "
+"the chosen space"
+msgstr ""
+"Также показывает заметки, написанные в "
+"зонах/грядках/объектах/устройствах, вложенных в выбранное пространство"
 
 #: aot/widgets/widget_notice.py:1
 msgid "Newest First"
@@ -30989,7 +31048,9 @@ msgstr "Сначала новые"
 
 #: aot/widgets/widget_notice.py:1
 msgid "Only show notes whose category or tags contain this text (optional)"
-msgstr "Показывать только заметки, категория или теги которых содержат этот текст (необязательно)"
+msgstr ""
+"Показывать только заметки, категория или теги которых содержат этот текст"
+" (необязательно)"
 
 #: aot/widgets/widget_notice.py:1
 msgid "Show Notes List"
@@ -31002,3 +31063,256 @@ msgstr "Показывает заметки, соответствующие фи
 #: aot/widgets/widget_notice.py:1
 msgid "Notes Filter"
 msgstr "Фильтр заметок"
+
+#, python-format
+msgid "%(n)s channels"
+msgstr "%(n)s каналов"
+
+#, python-format
+msgid "%(n)s linked"
+msgstr "%(n)s привязано"
+
+msgid "AoT Device Count"
+msgstr "Количество устройств AoT"
+
+msgid "Apply Filter"
+msgstr "Применить фильтр"
+
+msgid "Assign"
+msgstr "Назначить"
+
+msgid "Branch Pipe Count"
+msgstr "Количество ответвлений трубы"
+
+msgid "Branch Pipe Elbow"
+msgstr "Колено ответвления трубы"
+
+msgid "Branch Pipe End"
+msgstr "Заглушка ответвления трубы"
+
+msgid "Branch Pipe Length"
+msgstr "Длина ответвления трубы"
+
+msgid "Branch Pipe Tee"
+msgstr "Тройник ответвления трубы"
+
+msgid "Conversion details:"
+msgstr "Детали преобразования:"
+
+msgid "Custom entry…"
+msgstr "Свой вариант…"
+
+msgid "Data Load Failed"
+msgstr "Не удалось загрузить данные"
+
+msgid "Design Details"
+msgstr "Детали проекта"
+
+msgid "Design Summary"
+msgstr "Сводка проекта"
+
+msgid "Do you want to continue?"
+msgstr "Продолжить?"
+
+msgid "Drip irrigation applied ("
+msgstr "Применён капельный полив ("
+
+msgid "Enter name"
+msgstr "Введите имя"
+
+msgid "Flow Rate (L/h)"
+msgstr "Расход (L/h)"
+
+msgid "Flow Rate (L/min)"
+msgstr "Расход (L/min)"
+
+msgid "From envelope"
+msgstr "Из оболочки"
+
+msgid "Group name"
+msgstr "Название группы"
+
+msgid "Input Device Count"
+msgstr "Количество входных устройств"
+
+msgid "It will be automatically converted to the current format (v"
+msgstr "Он будет автоматически преобразован в текущий формат (v"
+
+msgid "Line is too short ("
+msgstr "Линия слишком короткая ("
+
+msgid "Logic Count"
+msgstr "Количество логических блоков"
+
+msgid "Main Pipe Count"
+msgstr "Количество основных труб"
+
+msgid "Main Pipe Elbow"
+msgstr "Колено основной трубы"
+
+msgid "Main Pipe End"
+msgstr "Заглушка основной трубы"
+
+msgid "Main Pipe Length"
+msgstr "Длина основной трубы"
+
+msgid "Main Pipe Reducing Elbow"
+msgstr "Переходное колено основной трубы"
+
+msgid "Main Pipe Reducing Tee"
+msgstr "Переходной тройник основной трубы"
+
+msgid "Main Pipe Tee"
+msgstr "Тройник основной трубы"
+
+msgid "Must be at least 0.01m²."
+msgstr "Должно быть не менее 0.01m²."
+
+msgid "Must be at least 10cm."
+msgstr "Должно быть не менее 10cm."
+
+msgid "New Site"
+msgstr "Новый участок"
+
+msgid "New Zone"
+msgstr "Новая зона"
+
+msgid "New group"
+msgstr "Новая группа"
+
+msgid "No Pipe Data"
+msgstr "Нет данных о трубах"
+
+msgid "No Sites Found"
+msgstr "Участки не найдены"
+
+msgid "No Sites Selected"
+msgstr "Участки не выбраны"
+
+msgid "No actuators registered"
+msgstr "Приводы не зарегистрированы"
+
+msgid "No."
+msgstr "№"
+
+msgid "Number of Emitters"
+msgstr "Количество капельниц"
+
+msgid "Number of Emitters (Pipe)"
+msgstr "Количество капельниц (труба)"
+
+msgid "Output Device Count"
+msgstr "Количество выходных устройств"
+
+msgid "Pipe Details"
+msgstr "Детали трубы"
+
+msgid "Pipe Length"
+msgstr "Длина трубы"
+
+msgid "Placement mode"
+msgstr "Режим размещения"
+
+msgid "Reference line"
+msgstr "Опорная линия"
+
+msgid "Search Device..."
+msgstr "Поиск устройства..."
+
+msgid "Select Site"
+msgstr "Выбрать участок"
+
+msgid "Service name"
+msgstr "Название сервиса"
+
+msgid "Shape is too small ("
+msgstr "Фигура слишком маленькая ("
+
+msgid "Site Area"
+msgstr "Площадь участка"
+
+msgid "Site Count"
+msgstr "Количество участков"
+
+msgid "Site Pipe Info"
+msgstr "Информация о трубах участка"
+
+msgid "Solar radiation"
+msgstr "Солнечная радиация"
+
+msgid ""
+"The map updates as you drag — branches follow the reference line at this "
+"angle."
+msgstr ""
+"Карта обновляется при перетаскивании — ответвления следуют опорной линии "
+"под этим углом."
+
+msgid "This file is in an older format (v"
+msgstr "Этот файл в старом формате (v"
+
+msgid "This match key already exists: "
+msgstr "Этот ключ соответствия уже существует: "
+
+msgid "Total Area"
+msgstr "Общая площадь"
+
+msgid "Zone Count"
+msgstr "Количество зон"
+
+msgid "[Branch Pipe]"
+msgstr "[Ответвление трубы]"
+
+msgid "[Main Pipe]"
+msgstr "[Основная труба]"
+
+msgid "and"
+msgstr "и"
+
+msgid "detached"
+msgstr "отсоединено"
+
+msgid "elements imported."
+msgstr "элементов импортировано."
+
+msgid "hh"
+msgstr "hh"
+
+msgid "loading_map"
+msgstr "Загрузка карты..."
+
+msgid "manual size"
+msgstr "ручной размер"
+
+msgid "mm"
+msgstr "mm"
+
+msgid "others"
+msgstr "других"
+
+msgid "pipes)"
+msgstr "труб)"
+
+msgid "save_btn_text"
+msgstr "Сохранить"
+
+msgid "ss"
+msgstr "ss"
+
+msgid "units"
+msgstr "шт."
+
+msgid "upper limit"
+msgstr "верхний предел"
+
+msgid "— Auto —"
+msgstr "— Авто —"
+
+msgid "— Select Input channel —"
+msgstr "— Выберите входной канал —"
+
+msgid "— Select channel —"
+msgstr "— Выберите канал —"
+
+msgid "— Select —"
+msgstr "— Выберите —"
+

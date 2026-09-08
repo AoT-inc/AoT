@@ -4673,7 +4673,9 @@ msgstr "Група"
 msgid ""
 "Saved, but the daemon could not be reached — the sequence may still be "
 "running. Check the daemon."
-msgstr "Збережено, але не вдалося з'єднатися з демоном — послідовність, можливо, все ще виконується. Перевірте демон."
+msgstr ""
+"Збережено, але не вдалося з'єднатися з демоном — послідовність, можливо, "
+"все ще виконується. Перевірте демон."
 
 #: aot_flask/routes_function.py:2263
 msgid "The sequence is still running — the daemon did not apply the change."
@@ -30694,8 +30696,6 @@ msgstr "Оцінка"
 msgid "Cumulative since start"
 msgstr "Накопичено з початку"
 
-
-
 #: config_devices_units.py:342
 msgid "Vapor Pressure Deficit"
 msgstr "Дефіцит тиску пари"
@@ -30718,7 +30718,9 @@ msgstr "Зупинити керування"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:401
 msgid "Control stops for good after this date. Leave blank to keep running."
-msgstr "Керування остаточно зупиняється після цієї дати. Залиште порожнім, щоб продовжити роботу."
+msgstr ""
+"Керування остаточно зупиняється після цієї дати. Залиште порожнім, щоб "
+"продовжити роботу."
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:667
 msgid "Misting Sunburn Protection"
@@ -30736,7 +30738,9 @@ msgstr "Режим розсадника (сіянці)"
 msgid ""
 "Tighter misting limits for seedlings, which scorch more easily than grown"
 " leaves."
-msgstr "Суворіші межі зволоження для сіянців, які легше обпалюються, ніж дозріле листя."
+msgstr ""
+"Суворіші межі зволоження для сіянців, які легше обпалюються, ніж дозріле "
+"листя."
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:1192
 msgid "Not used"
@@ -30751,6 +30755,7 @@ msgstr "Туманоутворення"
 msgid "Devices under automatic control"
 msgstr "Пристрої під автоматичним керуванням"
 
+#, python-format
 msgid "%(n)s excluded"
 msgstr "%(n)s виключено"
 
@@ -30772,14 +30777,38 @@ msgstr "Не вдалося завантажити список пристрої
 msgid "Excluded actuators (raw)"
 msgstr "Виключені приводи (необроблені дані)"
 
-msgid "Comma-separated Output IDs excluded from automatic control. Normally set with the toggles above rather than typed here."
-msgstr "ID виходів, виключених з автоматичного керування, через кому. Зазвичай налаштовується перемикачами вище, а не вводиться тут."
+msgid ""
+"Comma-separated Output IDs excluded from automatic control. Normally set "
+"with the toggles above rather than typed here."
+msgstr ""
+"ID виходів, виключених з автоматичного керування, через кому. Зазвичай "
+"налаштовується перемикачами вище, а не вводиться тут."
 
-msgid "Proactively shift temperature/humidity setpoints and inhibit ventilation before adverse weather arrives. Uses this facility's own forecast source if one is linked in the facility editor's weather bindings (any service — KMA, OpenWeatherMap, Open-Meteo); otherwise falls back to the system-wide KMA short-term forecast."
-msgstr "Завчасно зміщує задані значення температури/вологості та призупиняє вентиляцію перед настанням несприятливої погоди. Використовує власне джерело прогнозу цього об'єкта, якщо воно прив'язане у вкладці погодних прив'язок редактора об'єкта (будь-яка служба — KMA, OpenWeatherMap, Open-Meteo); інакше повертається до загальносистемного короткострокового прогнозу KMA."
+msgid ""
+"Proactively shift temperature/humidity setpoints and inhibit ventilation "
+"before adverse weather arrives. Uses this facility's own forecast source "
+"if one is linked in the facility editor's weather bindings (any service —"
+" KMA, OpenWeatherMap, Open-Meteo); otherwise falls back to the system-"
+"wide KMA short-term forecast."
+msgstr ""
+"Завчасно зміщує задані значення температури/вологості та призупиняє "
+"вентиляцію перед настанням несприятливої погоди. Використовує власне "
+"джерело прогнозу цього об'єкта, якщо воно прив'язане у вкладці погодних "
+"прив'язок редактора об'єкта (будь-яка служба — KMA, OpenWeatherMap, Open-"
+"Meteo); інакше повертається до загальносистемного короткострокового "
+"прогнозу KMA."
 
-msgid "How many hours ahead to check for incoming adverse weather (1–6 h) when using the system-wide KMA fallback above. Longer lookahead gives earlier warning but may over-correct. Ignored when this facility has its own forecast source linked — that source already applies its own lookahead."
-msgstr "На скільки годин наперед перевіряти наближення несприятливої погоди (1–6 год) під час використання наведеного вище загальносистемного резервного прогнозу KMA. Більший горизонт дає раннє попередження, але може призвести до надмірної корекції. Ігнорується, якщо до цього об'єкта прив'язане власне джерело прогнозу — це джерело вже застосовує власний горизонт."
+msgid ""
+"How many hours ahead to check for incoming adverse weather (1–6 h) when "
+"using the system-wide KMA fallback above. Longer lookahead gives earlier "
+"warning but may over-correct. Ignored when this facility has its own "
+"forecast source linked — that source already applies its own lookahead."
+msgstr ""
+"На скільки годин наперед перевіряти наближення несприятливої погоди (1–6 "
+"год) під час використання наведеного вище загальносистемного резервного "
+"прогнозу KMA. Більший горизонт дає раннє попередження, але може призвести"
+" до надмірної корекції. Ігнорується, якщо до цього об'єкта прив'язане "
+"власне джерело прогнозу — це джерело вже застосовує власний горизонт."
 
 #: aot/widgets/widget_notice.py:1
 msgid "Notice Category Filter"
@@ -30814,8 +30843,21 @@ msgid "Notice & Notes Board"
 msgstr "Дошка оголошень і нотаток"
 
 #: aot/widgets/widget_notice.py:1
-msgid "Displays the latest notice board post titles and/or the notes written in a chosen site, zone, plot, or facility (and everything nested under it). Clicking a notice opens the full post (content, poll, replies, acknowledge) in a popup; clicking a note opens it in the shared notes panel. Users with write permission can also create, edit, and delete posts directly from the widget."
-msgstr "Показує заголовки останніх записів дошки оголошень та/або нотатки, написані у вибраній ділянці, зоні, грядці чи об'єкті (і в усьому, що вкладено всередину). Клацання по оголошенню відкриває весь запис (вміст, опитування, відповіді, підтвердження) у спливному вікні; клацання по нотатці відкриває її на спільній панелі нотаток. Користувачі з правом запису також можуть створювати, редагувати та видаляти записи прямо з віджета."
+msgid ""
+"Displays the latest notice board post titles and/or the notes written in "
+"a chosen site, zone, plot, or facility (and everything nested under it). "
+"Clicking a notice opens the full post (content, poll, replies, "
+"acknowledge) in a popup; clicking a note opens it in the shared notes "
+"panel. Users with write permission can also create, edit, and delete "
+"posts directly from the widget."
+msgstr ""
+"Показує заголовки останніх записів дошки оголошень та/або нотатки, "
+"написані у вибраній ділянці, зоні, грядці чи об'єкті (і в усьому, що "
+"вкладено всередину). Клацання по оголошенню відкриває весь запис (вміст, "
+"опитування, відповіді, підтвердження) у спливному вікні; клацання по "
+"нотатці відкриває її на спільній панелі нотаток. Користувачі з правом "
+"запису також можуть створювати, редагувати та видаляти записи прямо з "
+"віджета."
 
 #: aot/widgets/widget_notice.py:1
 msgid "Show Notices"
@@ -30858,16 +30900,25 @@ msgid "How often to refresh the notice/notes lists"
 msgstr "Як часто оновлювати списки оголошень/нотаток"
 
 #: aot/widgets/widget_notice.py:1
-msgid "Notes written in this site/zone/plot/facility (and, if \"Include Nested Spaces\" above is on, everything nested under it) are shown."
-msgstr "Показуються нотатки, написані в цій ділянці/зоні/грядці/об'єкті (а якщо вище ввімкнено «Включити вкладені простори» — і в усьому, що вкладено всередину)."
+msgid ""
+"Notes written in this site/zone/plot/facility (and, if \"Include Nested "
+"Spaces\" above is on, everything nested under it) are shown."
+msgstr ""
+"Показуються нотатки, написані в цій ділянці/зоні/грядці/об'єкті (а якщо "
+"вище ввімкнено «Включити вкладені простори» — і в усьому, що вкладено "
+"всередину)."
 
 #: aot/widgets/widget_notice.py:1
 msgid "No sites, zones, plots, or facilities exist yet."
 msgstr "Ще немає жодної ділянки, зони, грядки чи об'єкта."
 
 #: aot/widgets/widget_notice.py:1
-msgid "Nothing selected — turn on \"Show Notices\" and/or \"Show Notes\" in the widget settings."
-msgstr "Нічого не вибрано — увімкніть «Показувати оголошення» та/або «Показувати нотатки» в налаштуваннях віджета."
+msgid ""
+"Nothing selected — turn on \"Show Notices\" and/or \"Show Notes\" in the "
+"widget settings."
+msgstr ""
+"Нічого не вибрано — увімкніть «Показувати оголошення» та/або «Показувати "
+"нотатки» в налаштуваннях віджета."
 
 #: aot/widgets/widget_notice.py:1
 msgid "Choose a space in the widget settings to show notes."
@@ -30878,8 +30929,12 @@ msgid "Display notes written in a chosen space (see Space below)"
 msgstr "Показує нотатки, написані у вибраному просторі (див. «Простір» нижче)"
 
 #: aot/widgets/widget_notice.py:1
-msgid "Also show notes written in zones/plots/facilities/devices nested under the chosen space"
-msgstr "Також показує нотатки, написані в зонах/грядках/об'єктах/пристроях, вкладених у вибраний простір"
+msgid ""
+"Also show notes written in zones/plots/facilities/devices nested under "
+"the chosen space"
+msgstr ""
+"Також показує нотатки, написані в зонах/грядках/об'єктах/пристроях, "
+"вкладених у вибраний простір"
 
 #: aot/widgets/widget_notice.py:1
 msgid "Newest First"
@@ -30887,7 +30942,9 @@ msgstr "Спочатку нові"
 
 #: aot/widgets/widget_notice.py:1
 msgid "Only show notes whose category or tags contain this text (optional)"
-msgstr "Показувати лише нотатки, категорія або теги яких містять цей текст (необов'язково)"
+msgstr ""
+"Показувати лише нотатки, категорія або теги яких містять цей текст "
+"(необов'язково)"
 
 #: aot/widgets/widget_notice.py:1
 msgid "Show Notes List"
@@ -30900,3 +30957,256 @@ msgstr "Показує нотатки, що відповідають фільт�
 #: aot/widgets/widget_notice.py:1
 msgid "Notes Filter"
 msgstr "Фільтр нотаток"
+
+#, python-format
+msgid "%(n)s channels"
+msgstr "%(n)s каналів"
+
+#, python-format
+msgid "%(n)s linked"
+msgstr "%(n)s прив'язано"
+
+msgid "AoT Device Count"
+msgstr "Кількість пристроїв AoT"
+
+msgid "Apply Filter"
+msgstr "Застосувати фільтр"
+
+msgid "Assign"
+msgstr "Призначити"
+
+msgid "Branch Pipe Count"
+msgstr "Кількість відгалужувальних труб"
+
+msgid "Branch Pipe Elbow"
+msgstr "Коліно відгалужувальної труби"
+
+msgid "Branch Pipe End"
+msgstr "Заглушка відгалужувальної труби"
+
+msgid "Branch Pipe Length"
+msgstr "Довжина відгалужувальної труби"
+
+msgid "Branch Pipe Tee"
+msgstr "Трійник відгалужувальної труби"
+
+msgid "Conversion details:"
+msgstr "Деталі перетворення:"
+
+msgid "Custom entry…"
+msgstr "Власний варіант…"
+
+msgid "Data Load Failed"
+msgstr "Не вдалося завантажити дані"
+
+msgid "Design Details"
+msgstr "Деталі проєкту"
+
+msgid "Design Summary"
+msgstr "Підсумок проєкту"
+
+msgid "Do you want to continue?"
+msgstr "Продовжити?"
+
+msgid "Drip irrigation applied ("
+msgstr "Застосовано крапельний полив ("
+
+msgid "Enter name"
+msgstr "Введіть ім'я"
+
+msgid "Flow Rate (L/h)"
+msgstr "Витрата (L/h)"
+
+msgid "Flow Rate (L/min)"
+msgstr "Витрата (L/min)"
+
+msgid "From envelope"
+msgstr "З оболонки"
+
+msgid "Group name"
+msgstr "Назва групи"
+
+msgid "Input Device Count"
+msgstr "Кількість вхідних пристроїв"
+
+msgid "It will be automatically converted to the current format (v"
+msgstr "Він буде автоматично перетворений у поточний формат (v"
+
+msgid "Line is too short ("
+msgstr "Лінія занадто коротка ("
+
+msgid "Logic Count"
+msgstr "Кількість логічних блоків"
+
+msgid "Main Pipe Count"
+msgstr "Кількість магістральних труб"
+
+msgid "Main Pipe Elbow"
+msgstr "Коліно магістральної труби"
+
+msgid "Main Pipe End"
+msgstr "Заглушка магістральної труби"
+
+msgid "Main Pipe Length"
+msgstr "Довжина магістральної труби"
+
+msgid "Main Pipe Reducing Elbow"
+msgstr "Перехідне коліно магістральної труби"
+
+msgid "Main Pipe Reducing Tee"
+msgstr "Перехідний трійник магістральної труби"
+
+msgid "Main Pipe Tee"
+msgstr "Трійник магістральної труби"
+
+msgid "Must be at least 0.01m²."
+msgstr "Повинно бути не менше 0.01m²."
+
+msgid "Must be at least 10cm."
+msgstr "Повинно бути не менше 10cm."
+
+msgid "New Site"
+msgstr "Нова ділянка"
+
+msgid "New Zone"
+msgstr "Нова зона"
+
+msgid "New group"
+msgstr "Нова група"
+
+msgid "No Pipe Data"
+msgstr "Немає даних про труби"
+
+msgid "No Sites Found"
+msgstr "Ділянок не знайдено"
+
+msgid "No Sites Selected"
+msgstr "Ділянки не вибрано"
+
+msgid "No actuators registered"
+msgstr "Приводи не зареєстровано"
+
+msgid "No."
+msgstr "№"
+
+msgid "Number of Emitters"
+msgstr "Кількість крапельниць"
+
+msgid "Number of Emitters (Pipe)"
+msgstr "Кількість крапельниць (труба)"
+
+msgid "Output Device Count"
+msgstr "Кількість вихідних пристроїв"
+
+msgid "Pipe Details"
+msgstr "Деталі труби"
+
+msgid "Pipe Length"
+msgstr "Довжина труби"
+
+msgid "Placement mode"
+msgstr "Режим розміщення"
+
+msgid "Reference line"
+msgstr "Опорна лінія"
+
+msgid "Search Device..."
+msgstr "Пошук пристрою..."
+
+msgid "Select Site"
+msgstr "Вибрати ділянку"
+
+msgid "Service name"
+msgstr "Назва сервісу"
+
+msgid "Shape is too small ("
+msgstr "Фігура занадто мала ("
+
+msgid "Site Area"
+msgstr "Площа ділянки"
+
+msgid "Site Count"
+msgstr "Кількість ділянок"
+
+msgid "Site Pipe Info"
+msgstr "Інформація про труби ділянки"
+
+msgid "Solar radiation"
+msgstr "Сонячна радіація"
+
+msgid ""
+"The map updates as you drag — branches follow the reference line at this "
+"angle."
+msgstr ""
+"Карта оновлюється під час перетягування — відгалуження слідують за "
+"опорною лінією під цим кутом."
+
+msgid "This file is in an older format (v"
+msgstr "Цей файл у застарілому форматі (v"
+
+msgid "This match key already exists: "
+msgstr "Цей ключ відповідності вже існує: "
+
+msgid "Total Area"
+msgstr "Загальна площа"
+
+msgid "Zone Count"
+msgstr "Кількість зон"
+
+msgid "[Branch Pipe]"
+msgstr "[Відгалужувальна труба]"
+
+msgid "[Main Pipe]"
+msgstr "[Магістральна труба]"
+
+msgid "and"
+msgstr "та"
+
+msgid "detached"
+msgstr "від'єднано"
+
+msgid "elements imported."
+msgstr "елементів імпортовано."
+
+msgid "hh"
+msgstr "hh"
+
+msgid "loading_map"
+msgstr "Завантаження карти..."
+
+msgid "manual size"
+msgstr "розмір вручну"
+
+msgid "mm"
+msgstr "mm"
+
+msgid "others"
+msgstr "інших"
+
+msgid "pipes)"
+msgstr "труб)"
+
+msgid "save_btn_text"
+msgstr "Зберегти"
+
+msgid "ss"
+msgstr "ss"
+
+msgid "units"
+msgstr "шт."
+
+msgid "upper limit"
+msgstr "верхня межа"
+
+msgid "— Auto —"
+msgstr "— Авто —"
+
+msgid "— Select Input channel —"
+msgstr "— Виберіть вхідний канал —"
+
+msgid "— Select channel —"
+msgstr "— Виберіть канал —"
+
+msgid "— Select —"
+msgstr "— Виберіть —"
+

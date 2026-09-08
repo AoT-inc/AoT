@@ -4667,7 +4667,7 @@ msgid "Select one or more devices to register."
 msgstr ""
 
 #: aot_flask/routes_settings.py:177
-msgid "Select a registration target (Input/Output) or a scheduler."
+msgid "Select a registration target (Input or Output)."
 msgstr ""
 
 #: aot_flask/routes_settings.py:201
@@ -7486,6 +7486,18 @@ msgstr ""
 msgid "dashboard_order_save_fail"
 msgstr ""
 
+#: aot_flask/static/js/app/dashboard-widget-live-preview.js:242
+msgid "Revert"
+msgstr ""
+
+#: aot_flask/static/js/app/dashboard-widget-live-preview.js:243
+msgid "Revert to the settings from when this dialog was opened"
+msgstr ""
+
+#: aot_flask/static/js/app/dashboard-widget-live-preview.js:227
+msgid "Reverted"
+msgstr ""
+
 #: aot_flask/static/js/components/aot-map-search-fixed.js:365
 msgid "Search service unavailable"
 msgstr ""
@@ -7571,6 +7583,8 @@ msgstr ""
 msgid "must be within range"
 msgstr ""
 
+#: aot_flask/static/js/app/dashboard-widget-live-preview.js:188
+#: aot_flask/static/js/app/dashboard-widget-live-preview.js:626
 #: aot_flask/static/js/dist/aot-facility-widget.bundle.js:5
 #: aot_flask/static/js/widgets/AoT_facility/aot-facility-setpoints.js:161
 #: aot_flask/templates/modals/tab_settings.html:249
@@ -11784,6 +11798,8 @@ msgstr ""
 msgid "AI service stopped"
 msgstr ""
 
+#: aot_flask/static/js/app/dashboard-widget-live-preview.js:181
+#: aot_flask/static/js/app/dashboard-widget-live-preview.js:408
 #: aot_flask/templates/pages/ai/ai_agent.html:698
 #: aot_flask/templates/pages/ai/ai_agent.html:731
 #: aot_flask/templates/pages/ai/ai_library.html:496

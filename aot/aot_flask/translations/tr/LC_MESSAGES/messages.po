@@ -4662,7 +4662,9 @@ msgstr "Grup"
 msgid ""
 "Saved, but the daemon could not be reached — the sequence may still be "
 "running. Check the daemon."
-msgstr "Kaydedildi, ancak arka plan servisine (daemon) ulaşılamadı — sekans hâlâ çalışıyor olabilir. Daemon'u kontrol edin."
+msgstr ""
+"Kaydedildi, ancak arka plan servisine (daemon) ulaşılamadı — sekans hâlâ "
+"çalışıyor olabilir. Daemon'u kontrol edin."
 
 #: aot_flask/routes_function.py:2263
 msgid "The sequence is still running — the daemon did not apply the change."
@@ -30625,8 +30627,6 @@ msgstr "Tahmini"
 msgid "Cumulative since start"
 msgstr "Başlangıçtan bu yana birikimli"
 
-
-
 #: config_devices_units.py:342
 msgid "Vapor Pressure Deficit"
 msgstr "Buhar Basıncı Açığı"
@@ -30649,7 +30649,9 @@ msgstr "Kontrol Açıkken Durdur"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:401
 msgid "Control stops for good after this date. Leave blank to keep running."
-msgstr "Bu tarihten sonra kontrol kalıcı olarak durur. Çalışmaya devam etmesi için boş bırakın."
+msgstr ""
+"Bu tarihten sonra kontrol kalıcı olarak durur. Çalışmaya devam etmesi "
+"için boş bırakın."
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:667
 msgid "Misting Sunburn Protection"
@@ -30667,7 +30669,9 @@ msgstr "Fidelik (Fide) Modu"
 msgid ""
 "Tighter misting limits for seedlings, which scorch more easily than grown"
 " leaves."
-msgstr "Olgun yapraklara göre daha kolay yanan fideler için daha sıkı sisleme sınırları."
+msgstr ""
+"Olgun yapraklara göre daha kolay yanan fideler için daha sıkı sisleme "
+"sınırları."
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:1192
 msgid "Not used"
@@ -30682,11 +30686,14 @@ msgstr "Sisleme"
 msgid "Devices under automatic control"
 msgstr "Otomatik kontrol altındaki cihazlar"
 
+#, python-format
 msgid "%(n)s excluded"
 msgstr "%(n)s hariç tutuldu"
 
 msgid "Turn a device off to keep automatic control from moving it."
-msgstr "Otomatik kontrolün bir cihazı hareket ettirmesini önlemek için o cihazı kapatın."
+msgstr ""
+"Otomatik kontrolün bir cihazı hareket ettirmesini önlemek için o cihazı "
+"kapatın."
 
 msgid "Safety gates will not move it either."
 msgstr "Güvenlik geçitleri de o cihazı hareket ettirmez."
@@ -30703,14 +30710,38 @@ msgstr "Cihaz listesi yüklenemedi. Mevcut ayarlar korunuyor."
 msgid "Excluded actuators (raw)"
 msgstr "Hariç tutulan aktüatörler (ham değer)"
 
-msgid "Comma-separated Output IDs excluded from automatic control. Normally set with the toggles above rather than typed here."
-msgstr "Otomatik kontrolden hariç tutulan Çıkış Kimliklerini virgülle ayırarak yazın. Normalde buraya yazmak yerine yukarıdaki anahtarlarla ayarlanır."
+msgid ""
+"Comma-separated Output IDs excluded from automatic control. Normally set "
+"with the toggles above rather than typed here."
+msgstr ""
+"Otomatik kontrolden hariç tutulan Çıkış Kimliklerini virgülle ayırarak "
+"yazın. Normalde buraya yazmak yerine yukarıdaki anahtarlarla ayarlanır."
 
-msgid "Proactively shift temperature/humidity setpoints and inhibit ventilation before adverse weather arrives. Uses this facility's own forecast source if one is linked in the facility editor's weather bindings (any service — KMA, OpenWeatherMap, Open-Meteo); otherwise falls back to the system-wide KMA short-term forecast."
-msgstr "Olumsuz hava koşulları gelmeden önce sıcaklık/nem set noktalarını proaktif olarak kaydırır ve havalandırmayı engeller. Tesis düzenleyicisinin hava durumu bağlantılarında bu tesise ait bir tahmin kaynağı bağlıysa (herhangi bir servis — KMA, OpenWeatherMap, Open-Meteo) onu kullanır; aksi takdirde sistem genelindeki KMA kısa vadeli tahminine geri döner."
+msgid ""
+"Proactively shift temperature/humidity setpoints and inhibit ventilation "
+"before adverse weather arrives. Uses this facility's own forecast source "
+"if one is linked in the facility editor's weather bindings (any service —"
+" KMA, OpenWeatherMap, Open-Meteo); otherwise falls back to the system-"
+"wide KMA short-term forecast."
+msgstr ""
+"Olumsuz hava koşulları gelmeden önce sıcaklık/nem set noktalarını "
+"proaktif olarak kaydırır ve havalandırmayı engeller. Tesis "
+"düzenleyicisinin hava durumu bağlantılarında bu tesise ait bir tahmin "
+"kaynağı bağlıysa (herhangi bir servis — KMA, OpenWeatherMap, Open-Meteo) "
+"onu kullanır; aksi takdirde sistem genelindeki KMA kısa vadeli tahminine "
+"geri döner."
 
-msgid "How many hours ahead to check for incoming adverse weather (1–6 h) when using the system-wide KMA fallback above. Longer lookahead gives earlier warning but may over-correct. Ignored when this facility has its own forecast source linked — that source already applies its own lookahead."
-msgstr "Yukarıdaki sistem genelindeki KMA yedek tahmini kullanılırken, yaklaşan olumsuz hava koşullarının kaç saat öncesinden kontrol edileceği (1–6 sa). Daha uzun ileri bakış daha erken uyarı sağlar ancak aşırı düzeltmeye yol açabilir. Bu tesisin kendi bağlı tahmin kaynağı varsa yok sayılır — o kaynak zaten kendi ileri bakışını uygular."
+msgid ""
+"How many hours ahead to check for incoming adverse weather (1–6 h) when "
+"using the system-wide KMA fallback above. Longer lookahead gives earlier "
+"warning but may over-correct. Ignored when this facility has its own "
+"forecast source linked — that source already applies its own lookahead."
+msgstr ""
+"Yukarıdaki sistem genelindeki KMA yedek tahmini kullanılırken, yaklaşan "
+"olumsuz hava koşullarının kaç saat öncesinden kontrol edileceği (1–6 sa)."
+" Daha uzun ileri bakış daha erken uyarı sağlar ancak aşırı düzeltmeye yol"
+" açabilir. Bu tesisin kendi bağlı tahmin kaynağı varsa yok sayılır — o "
+"kaynak zaten kendi ileri bakışını uygular."
 
 #: aot/widgets/widget_notice.py:1
 msgid "Notice Category Filter"
@@ -30745,8 +30776,20 @@ msgid "Notice & Notes Board"
 msgstr "Duyuru ve Not Panosu"
 
 #: aot/widgets/widget_notice.py:1
-msgid "Displays the latest notice board post titles and/or the notes written in a chosen site, zone, plot, or facility (and everything nested under it). Clicking a notice opens the full post (content, poll, replies, acknowledge) in a popup; clicking a note opens it in the shared notes panel. Users with write permission can also create, edit, and delete posts directly from the widget."
-msgstr "En son duyuru panosu gönderi başlıklarını ve/veya seçilen bir alan, bölge, parsel veya tesiste (ve altındaki her şeyde) yazılan notları gösterir. Bir duyuruya tıklamak tam gönderiyi (içerik, anket, yanıtlar, onay) bir açılır pencerede açar; bir nota tıklamak onu paylaşılan notlar panelinde açar. Yazma izni olan kullanıcılar gönderileri doğrudan widget'tan oluşturabilir, düzenleyebilir ve silebilir."
+msgid ""
+"Displays the latest notice board post titles and/or the notes written in "
+"a chosen site, zone, plot, or facility (and everything nested under it). "
+"Clicking a notice opens the full post (content, poll, replies, "
+"acknowledge) in a popup; clicking a note opens it in the shared notes "
+"panel. Users with write permission can also create, edit, and delete "
+"posts directly from the widget."
+msgstr ""
+"En son duyuru panosu gönderi başlıklarını ve/veya seçilen bir alan, "
+"bölge, parsel veya tesiste (ve altındaki her şeyde) yazılan notları "
+"gösterir. Bir duyuruya tıklamak tam gönderiyi (içerik, anket, yanıtlar, "
+"onay) bir açılır pencerede açar; bir nota tıklamak onu paylaşılan notlar "
+"panelinde açar. Yazma izni olan kullanıcılar gönderileri doğrudan "
+"widget'tan oluşturabilir, düzenleyebilir ve silebilir."
 
 #: aot/widgets/widget_notice.py:1
 msgid "Show Notices"
@@ -30789,16 +30832,24 @@ msgid "How often to refresh the notice/notes lists"
 msgstr "Duyuru/not listelerinin ne sıklıkla yenileneceği"
 
 #: aot/widgets/widget_notice.py:1
-msgid "Notes written in this site/zone/plot/facility (and, if \"Include Nested Spaces\" above is on, everything nested under it) are shown."
-msgstr "Bu alanda/bölgede/parselde/tesiste yazılan notlar gösterilir (ve yukarıdaki \"İç İçe Alanları Dahil Et\" açıksa, altındaki her şey de)."
+msgid ""
+"Notes written in this site/zone/plot/facility (and, if \"Include Nested "
+"Spaces\" above is on, everything nested under it) are shown."
+msgstr ""
+"Bu alanda/bölgede/parselde/tesiste yazılan notlar gösterilir (ve "
+"yukarıdaki \"İç İçe Alanları Dahil Et\" açıksa, altındaki her şey de)."
 
 #: aot/widgets/widget_notice.py:1
 msgid "No sites, zones, plots, or facilities exist yet."
 msgstr "Henüz alan, bölge, parsel veya tesis yok."
 
 #: aot/widgets/widget_notice.py:1
-msgid "Nothing selected — turn on \"Show Notices\" and/or \"Show Notes\" in the widget settings."
-msgstr "Hiçbir şey seçilmedi — widget ayarlarında \"Duyuruları Göster\" ve/veya \"Notları Göster\" seçeneğini açın."
+msgid ""
+"Nothing selected — turn on \"Show Notices\" and/or \"Show Notes\" in the "
+"widget settings."
+msgstr ""
+"Hiçbir şey seçilmedi — widget ayarlarında \"Duyuruları Göster\" ve/veya "
+"\"Notları Göster\" seçeneğini açın."
 
 #: aot/widgets/widget_notice.py:1
 msgid "Choose a space in the widget settings to show notes."
@@ -30806,11 +30857,17 @@ msgstr "Notları göstermek için widget ayarlarından bir alan seçin."
 
 #: aot/widgets/widget_notice.py:1
 msgid "Display notes written in a chosen space (see Space below)"
-msgstr "Seçilen bir alanda yazılan notları gösterir (aşağıdaki \"Alan\" bölümüne bakın)"
+msgstr ""
+"Seçilen bir alanda yazılan notları gösterir (aşağıdaki \"Alan\" bölümüne "
+"bakın)"
 
 #: aot/widgets/widget_notice.py:1
-msgid "Also show notes written in zones/plots/facilities/devices nested under the chosen space"
-msgstr "Seçilen alanın altında iç içe geçmiş bölgelerde/parsellerde/tesislerde/cihazlarda yazılan notları da gösterir"
+msgid ""
+"Also show notes written in zones/plots/facilities/devices nested under "
+"the chosen space"
+msgstr ""
+"Seçilen alanın altında iç içe geçmiş "
+"bölgelerde/parsellerde/tesislerde/cihazlarda yazılan notları da gösterir"
 
 #: aot/widgets/widget_notice.py:1
 msgid "Newest First"
@@ -30818,7 +30875,9 @@ msgstr "Önce En Yeni"
 
 #: aot/widgets/widget_notice.py:1
 msgid "Only show notes whose category or tags contain this text (optional)"
-msgstr "Yalnızca kategorisi veya etiketleri bu metni içeren notları gösterir (isteğe bağlı)"
+msgstr ""
+"Yalnızca kategorisi veya etiketleri bu metni içeren notları gösterir "
+"(isteğe bağlı)"
 
 #: aot/widgets/widget_notice.py:1
 msgid "Show Notes List"
@@ -30831,3 +30890,256 @@ msgstr "Aşağıdaki filtreyle eşleşen notları gösterir"
 #: aot/widgets/widget_notice.py:1
 msgid "Notes Filter"
 msgstr "Not Filtresi"
+
+#, python-format
+msgid "%(n)s channels"
+msgstr "%(n)s kanal"
+
+#, python-format
+msgid "%(n)s linked"
+msgstr "%(n)s bağlı"
+
+msgid "AoT Device Count"
+msgstr "AoT Cihaz Sayısı"
+
+msgid "Apply Filter"
+msgstr "Filtreyi Uygula"
+
+msgid "Assign"
+msgstr "Ata"
+
+msgid "Branch Pipe Count"
+msgstr "Dal Boru Sayısı"
+
+msgid "Branch Pipe Elbow"
+msgstr "Dal Boru Dirseği"
+
+msgid "Branch Pipe End"
+msgstr "Dal Boru Ucu"
+
+msgid "Branch Pipe Length"
+msgstr "Dal Boru Uzunluğu"
+
+msgid "Branch Pipe Tee"
+msgstr "Dal Boru T Bağlantısı"
+
+msgid "Conversion details:"
+msgstr "Dönüştürme ayrıntıları:"
+
+msgid "Custom entry…"
+msgstr "Özel giriş…"
+
+msgid "Data Load Failed"
+msgstr "Veri Yüklenemedi"
+
+msgid "Design Details"
+msgstr "Tasarım Ayrıntıları"
+
+msgid "Design Summary"
+msgstr "Tasarım Özeti"
+
+msgid "Do you want to continue?"
+msgstr "Devam etmek istiyor musunuz?"
+
+msgid "Drip irrigation applied ("
+msgstr "Damla sulama uygulandı ("
+
+msgid "Enter name"
+msgstr "Ad girin"
+
+msgid "Flow Rate (L/h)"
+msgstr "Akış Hızı (L/sa)"
+
+msgid "Flow Rate (L/min)"
+msgstr "Akış Hızı (L/dk)"
+
+msgid "From envelope"
+msgstr "Zarftan"
+
+msgid "Group name"
+msgstr "Grup adı"
+
+msgid "Input Device Count"
+msgstr "Giriş Cihazı Sayısı"
+
+msgid "It will be automatically converted to the current format (v"
+msgstr "Geçerli biçime (v"
+
+msgid "Line is too short ("
+msgstr "Çizgi çok kısa ("
+
+msgid "Logic Count"
+msgstr "Mantık Sayısı"
+
+msgid "Main Pipe Count"
+msgstr "Ana Boru Sayısı"
+
+msgid "Main Pipe Elbow"
+msgstr "Ana Boru Dirseği"
+
+msgid "Main Pipe End"
+msgstr "Ana Boru Ucu"
+
+msgid "Main Pipe Length"
+msgstr "Ana Boru Uzunluğu"
+
+msgid "Main Pipe Reducing Elbow"
+msgstr "Ana Boru Redüksiyon Dirseği"
+
+msgid "Main Pipe Reducing Tee"
+msgstr "Ana Boru Redüksiyon T Bağlantısı"
+
+msgid "Main Pipe Tee"
+msgstr "Ana Boru T Bağlantısı"
+
+msgid "Must be at least 0.01m²."
+msgstr "En az 0,01 m² olmalıdır."
+
+msgid "Must be at least 10cm."
+msgstr "En az 10 cm olmalıdır."
+
+msgid "New Site"
+msgstr "Yeni Saha"
+
+msgid "New Zone"
+msgstr "Yeni Bölge"
+
+msgid "New group"
+msgstr "Yeni grup"
+
+msgid "No Pipe Data"
+msgstr "Boru Verisi Yok"
+
+msgid "No Sites Found"
+msgstr "Saha Bulunamadı"
+
+msgid "No Sites Selected"
+msgstr "Saha Seçilmedi"
+
+msgid "No actuators registered"
+msgstr "Kayıtlı aktüatör yok"
+
+msgid "No."
+msgstr "No."
+
+msgid "Number of Emitters"
+msgstr "Damlatıcı Sayısı"
+
+msgid "Number of Emitters (Pipe)"
+msgstr "Damlatıcı Sayısı (Boru)"
+
+msgid "Output Device Count"
+msgstr "Çıkış Cihazı Sayısı"
+
+msgid "Pipe Details"
+msgstr "Boru Ayrıntıları"
+
+msgid "Pipe Length"
+msgstr "Boru Uzunluğu"
+
+msgid "Placement mode"
+msgstr "Yerleştirme modu"
+
+msgid "Reference line"
+msgstr "Referans çizgisi"
+
+msgid "Search Device..."
+msgstr "Cihaz Ara..."
+
+msgid "Select Site"
+msgstr "Saha Seç"
+
+msgid "Service name"
+msgstr "Servis adı"
+
+msgid "Shape is too small ("
+msgstr "Şekil çok küçük ("
+
+msgid "Site Area"
+msgstr "Saha Alanı"
+
+msgid "Site Count"
+msgstr "Saha Sayısı"
+
+msgid "Site Pipe Info"
+msgstr "Saha Boru Bilgisi"
+
+msgid "Solar radiation"
+msgstr "Güneş radyasyonu"
+
+msgid ""
+"The map updates as you drag — branches follow the reference line at this "
+"angle."
+msgstr ""
+"Sürüklerken harita güncellenir — dallar bu açıda referans çizgisini takip"
+" eder."
+
+msgid "This file is in an older format (v"
+msgstr "Bu dosya eski bir biçimde (v"
+
+msgid "This match key already exists: "
+msgstr "Bu eşleştirme anahtarı zaten mevcut: "
+
+msgid "Total Area"
+msgstr "Toplam Alan"
+
+msgid "Zone Count"
+msgstr "Bölge Sayısı"
+
+msgid "[Branch Pipe]"
+msgstr "[Dal Boru]"
+
+msgid "[Main Pipe]"
+msgstr "[Ana Boru]"
+
+msgid "and"
+msgstr "ve"
+
+msgid "detached"
+msgstr "ayrıldı"
+
+msgid "elements imported."
+msgstr "öğe içe aktarıldı."
+
+msgid "hh"
+msgstr "hh"
+
+msgid "loading_map"
+msgstr "Harita yükleniyor..."
+
+msgid "manual size"
+msgstr "manuel boyut"
+
+msgid "mm"
+msgstr "mm"
+
+msgid "others"
+msgstr "diğer"
+
+msgid "pipes)"
+msgstr "boru)"
+
+msgid "save_btn_text"
+msgstr "Kaydet"
+
+msgid "ss"
+msgstr "ss"
+
+msgid "units"
+msgstr "adet"
+
+msgid "upper limit"
+msgstr "üst sınır"
+
+msgid "— Auto —"
+msgstr "— Otomatik —"
+
+msgid "— Select Input channel —"
+msgstr "— Giriş kanalı seçin —"
+
+msgid "— Select channel —"
+msgstr "— Kanal seçin —"
+
+msgid "— Select —"
+msgstr "— Seçin —"
+

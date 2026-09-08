@@ -166,15 +166,14 @@ def settings_chirpstack():
             euis = request.form.getlist('dev_euis')
             do_input = bool(request.form.get('reg_input'))
             do_output = bool(request.form.get('reg_output'))
-            scheduler_id = request.form.get('scheduler_id') or None
             on_payload = request.form.get('on_payload') or None
             off_payload = request.form.get('off_payload') or None
             f_port = request.form.get('f_port') or None
             input_channels = request.form.get('input_channels') or None
             if not euis:
                 messages["warning"].append(gettext("Select one or more devices to register."))
-            elif not do_input and not do_output and not scheduler_id:
-                messages["warning"].append(gettext("Select a registration target (Input/Output) or a scheduler."))
+            elif not do_input and not do_output:
+                messages["warning"].append(gettext("Select a registration target (Input or Output)."))
             else:
                 n_in, n_out = 0, 0
                 jmes = [ln.strip() for ln in (input_channels or '').splitlines() if ln.strip()]
@@ -265,9 +264,6 @@ def settings_chirpstack():
                            grpc_ok=utils_chirpstack.grpc_available(),
                            reg_input=reg_input,
                            reg_output=reg_output,
-                           managed_by={},
-                           sched_names={},
-                           schedulers=[],
                            api_keys=api_keys)
 
 

@@ -4690,7 +4690,9 @@ msgstr "Csoport"
 msgid ""
 "Saved, but the daemon could not be reached — the sequence may still be "
 "running. Check the daemon."
-msgstr "Mentve, de a démon nem elérhető — a szekvencia lehet, hogy még fut. Ellenőrizze a démont."
+msgstr ""
+"Mentve, de a démon nem elérhető — a szekvencia lehet, hogy még fut. "
+"Ellenőrizze a démont."
 
 #: aot_flask/routes_function.py:2263
 msgid "The sequence is still running — the daemon did not apply the change."
@@ -30851,8 +30853,6 @@ msgstr "Becsült"
 msgid "Cumulative since start"
 msgstr "Halmozott a kezdet óta"
 
-
-
 #: config_devices_units.py:342
 msgid "Vapor Pressure Deficit"
 msgstr "Páranyomás-hiány"
@@ -30875,7 +30875,9 @@ msgstr "Vezérlés leállítása ekkor"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:401
 msgid "Control stops for good after this date. Leave blank to keep running."
-msgstr "A vezérlés véglegesen leáll ez után a dátum után. Hagyja üresen a folyamatos működéshez."
+msgstr ""
+"A vezérlés véglegesen leáll ez után a dátum után. Hagyja üresen a "
+"folyamatos működéshez."
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:667
 msgid "Misting Sunburn Protection"
@@ -30893,7 +30895,9 @@ msgstr "Palántanevelő (csíranövény) üzemmód"
 msgid ""
 "Tighter misting limits for seedlings, which scorch more easily than grown"
 " leaves."
-msgstr "Szigorúbb párásítási korlátok a csíranövényekhez, amelyek könnyebben megégnek, mint a kifejlett levelek."
+msgstr ""
+"Szigorúbb párásítási korlátok a csíranövényekhez, amelyek könnyebben "
+"megégnek, mint a kifejlett levelek."
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:1192
 msgid "Not used"
@@ -30908,6 +30912,7 @@ msgstr "Párásítás"
 msgid "Devices under automatic control"
 msgstr "Automatikus vezérlés alatt álló eszközök"
 
+#, python-format
 msgid "%(n)s excluded"
 msgstr "%(n)s kizárva"
 
@@ -30929,14 +30934,40 @@ msgstr "Az eszközlista betöltése nem sikerült. A meglévő beállítások me
 msgid "Excluded actuators (raw)"
 msgstr "Kizárt aktuátorok (nyers)"
 
-msgid "Comma-separated Output IDs excluded from automatic control. Normally set with the toggles above rather than typed here."
-msgstr "Vesszővel elválasztott kimenet-azonosítók, amelyek ki vannak zárva az automatikus vezérlésből. Ezeket általában a fenti kapcsolókkal, nem itt begépelve kell beállítani."
+msgid ""
+"Comma-separated Output IDs excluded from automatic control. Normally set "
+"with the toggles above rather than typed here."
+msgstr ""
+"Vesszővel elválasztott kimenet-azonosítók, amelyek ki vannak zárva az "
+"automatikus vezérlésből. Ezeket általában a fenti kapcsolókkal, nem itt "
+"begépelve kell beállítani."
 
-msgid "Proactively shift temperature/humidity setpoints and inhibit ventilation before adverse weather arrives. Uses this facility's own forecast source if one is linked in the facility editor's weather bindings (any service — KMA, OpenWeatherMap, Open-Meteo); otherwise falls back to the system-wide KMA short-term forecast."
-msgstr "Kedvezőtlen időjárás beérkezése előtt proaktívan eltolja a hőmérséklet-/páratartalom-alapértékeket, és gátolja a szellőztetést. Ha a létesítményszerkesztő időjárás-kötéseiben ehhez a létesítményhez saját előrejelzési forrás van hozzárendelve (bármely szolgáltatás – KMA, OpenWeatherMap, Open-Meteo), azt használja; ellenkező esetben a rendszerszintű KMA rövid távú előrejelzésre esik vissza."
+msgid ""
+"Proactively shift temperature/humidity setpoints and inhibit ventilation "
+"before adverse weather arrives. Uses this facility's own forecast source "
+"if one is linked in the facility editor's weather bindings (any service —"
+" KMA, OpenWeatherMap, Open-Meteo); otherwise falls back to the system-"
+"wide KMA short-term forecast."
+msgstr ""
+"Kedvezőtlen időjárás beérkezése előtt proaktívan eltolja a hőmérséklet"
+"-/páratartalom-alapértékeket, és gátolja a szellőztetést. Ha a "
+"létesítményszerkesztő időjárás-kötéseiben ehhez a létesítményhez saját "
+"előrejelzési forrás van hozzárendelve (bármely szolgáltatás – KMA, "
+"OpenWeatherMap, Open-Meteo), azt használja; ellenkező esetben a "
+"rendszerszintű KMA rövid távú előrejelzésre esik vissza."
 
-msgid "How many hours ahead to check for incoming adverse weather (1–6 h) when using the system-wide KMA fallback above. Longer lookahead gives earlier warning but may over-correct. Ignored when this facility has its own forecast source linked — that source already applies its own lookahead."
-msgstr "Hány órával előre ellenőrizze a közelgő kedvezőtlen időjárást (1–6 óra), amikor a fenti rendszerszintű KMA-tartalékot használja. A hosszabb előretekintés korábbi figyelmeztetést ad, de túlkorrigáláshoz vezethet. Figyelmen kívül marad, ha ehhez a létesítményhez saját előrejelzési forrás van hozzárendelve – az a forrás már alkalmazza a saját előretekintését."
+msgid ""
+"How many hours ahead to check for incoming adverse weather (1–6 h) when "
+"using the system-wide KMA fallback above. Longer lookahead gives earlier "
+"warning but may over-correct. Ignored when this facility has its own "
+"forecast source linked — that source already applies its own lookahead."
+msgstr ""
+"Hány órával előre ellenőrizze a közelgő kedvezőtlen időjárást (1–6 óra), "
+"amikor a fenti rendszerszintű KMA-tartalékot használja. A hosszabb "
+"előretekintés korábbi figyelmeztetést ad, de túlkorrigáláshoz vezethet. "
+"Figyelmen kívül marad, ha ehhez a létesítményhez saját előrejelzési "
+"forrás van hozzárendelve – az a forrás már alkalmazza a saját "
+"előretekintését."
 
 #: aot/widgets/widget_notice.py:1
 msgid "Notice Category Filter"
@@ -30971,8 +31002,22 @@ msgid "Notice & Notes Board"
 msgstr "Közlemény és jegyzet tábla"
 
 #: aot/widgets/widget_notice.py:1
-msgid "Displays the latest notice board post titles and/or the notes written in a chosen site, zone, plot, or facility (and everything nested under it). Clicking a notice opens the full post (content, poll, replies, acknowledge) in a popup; clicking a note opens it in the shared notes panel. Users with write permission can also create, edit, and delete posts directly from the widget."
-msgstr "Megjeleníti a közleménytábla legfrissebb bejegyzéseinek címeit és/vagy a kiválasztott helyszínen, zónában, parcellán vagy létesítményben (és minden alárendelt egységben) írt jegyzeteket. Egy közleményre kattintva a teljes bejegyzés (tartalom, szavazás, válaszok, nyugtázás) felugró ablakban nyílik meg; egy jegyzetre kattintva a megosztott jegyzetpanelben nyílik meg. Az írási jogosultsággal rendelkező felhasználók a widgetből közvetlenül is létrehozhatnak, szerkeszthetnek és törölhetnek bejegyzéseket."
+msgid ""
+"Displays the latest notice board post titles and/or the notes written in "
+"a chosen site, zone, plot, or facility (and everything nested under it). "
+"Clicking a notice opens the full post (content, poll, replies, "
+"acknowledge) in a popup; clicking a note opens it in the shared notes "
+"panel. Users with write permission can also create, edit, and delete "
+"posts directly from the widget."
+msgstr ""
+"Megjeleníti a közleménytábla legfrissebb bejegyzéseinek címeit és/vagy a "
+"kiválasztott helyszínen, zónában, parcellán vagy létesítményben (és "
+"minden alárendelt egységben) írt jegyzeteket. Egy közleményre kattintva a"
+" teljes bejegyzés (tartalom, szavazás, válaszok, nyugtázás) felugró "
+"ablakban nyílik meg; egy jegyzetre kattintva a megosztott jegyzetpanelben"
+" nyílik meg. Az írási jogosultsággal rendelkező felhasználók a widgetből "
+"közvetlenül is létrehozhatnak, szerkeszthetnek és törölhetnek "
+"bejegyzéseket."
 
 #: aot/widgets/widget_notice.py:1
 msgid "Show Notices"
@@ -31015,16 +31060,25 @@ msgid "How often to refresh the notice/notes lists"
 msgstr "Milyen gyakran frissüljön a közlemény-/jegyzetlista"
 
 #: aot/widgets/widget_notice.py:1
-msgid "Notes written in this site/zone/plot/facility (and, if \"Include Nested Spaces\" above is on, everything nested under it) are shown."
-msgstr "Az ebben a helyszínben/zónában/parcellán/létesítményben írt jegyzetek jelennek meg (és ha a fenti \"Beágyazott helyek belefoglalása\" be van kapcsolva, minden alárendelt egység is)."
+msgid ""
+"Notes written in this site/zone/plot/facility (and, if \"Include Nested "
+"Spaces\" above is on, everything nested under it) are shown."
+msgstr ""
+"Az ebben a helyszínben/zónában/parcellán/létesítményben írt jegyzetek "
+"jelennek meg (és ha a fenti \"Beágyazott helyek belefoglalása\" be van "
+"kapcsolva, minden alárendelt egység is)."
 
 #: aot/widgets/widget_notice.py:1
 msgid "No sites, zones, plots, or facilities exist yet."
 msgstr "Még nincsenek helyszínek, zónák, parcellák vagy létesítmények."
 
 #: aot/widgets/widget_notice.py:1
-msgid "Nothing selected — turn on \"Show Notices\" and/or \"Show Notes\" in the widget settings."
-msgstr "Nincs semmi kiválasztva — kapcsolja be a \"Közlemények megjelenítése\" és/vagy \"Jegyzetek megjelenítése\" beállítást a widget beállításaiban."
+msgid ""
+"Nothing selected — turn on \"Show Notices\" and/or \"Show Notes\" in the "
+"widget settings."
+msgstr ""
+"Nincs semmi kiválasztva — kapcsolja be a \"Közlemények megjelenítése\" "
+"és/vagy \"Jegyzetek megjelenítése\" beállítást a widget beállításaiban."
 
 #: aot/widgets/widget_notice.py:1
 msgid "Choose a space in the widget settings to show notes."
@@ -31032,11 +31086,18 @@ msgstr "Válasszon egy helyet a widget beállításaiban a jegyzetek megjelenít
 
 #: aot/widgets/widget_notice.py:1
 msgid "Display notes written in a chosen space (see Space below)"
-msgstr "Megjeleníti a kiválasztott helyen írt jegyzeteket (lásd az alábbi \"Hely\" mezőt)"
+msgstr ""
+"Megjeleníti a kiválasztott helyen írt jegyzeteket (lásd az alábbi "
+"\"Hely\" mezőt)"
 
 #: aot/widgets/widget_notice.py:1
-msgid "Also show notes written in zones/plots/facilities/devices nested under the chosen space"
-msgstr "A kiválasztott hely alá rendelt zónákban/parcellákon/létesítményekben/eszközökön írt jegyzeteket is megjeleníti"
+msgid ""
+"Also show notes written in zones/plots/facilities/devices nested under "
+"the chosen space"
+msgstr ""
+"A kiválasztott hely alá rendelt "
+"zónákban/parcellákon/létesítményekben/eszközökön írt jegyzeteket is "
+"megjeleníti"
 
 #: aot/widgets/widget_notice.py:1
 msgid "Newest First"
@@ -31044,7 +31105,9 @@ msgstr "Legújabb elöl"
 
 #: aot/widgets/widget_notice.py:1
 msgid "Only show notes whose category or tags contain this text (optional)"
-msgstr "Csak azokat a jegyzeteket jeleníti meg, amelyek kategóriája vagy címkéi tartalmazzák ezt a szöveget (nem kötelező)"
+msgstr ""
+"Csak azokat a jegyzeteket jeleníti meg, amelyek kategóriája vagy címkéi "
+"tartalmazzák ezt a szöveget (nem kötelező)"
 
 #: aot/widgets/widget_notice.py:1
 msgid "Show Notes List"
@@ -31057,3 +31120,256 @@ msgstr "A lenti szűrőnek megfelelő jegyzeteket jeleníti meg"
 #: aot/widgets/widget_notice.py:1
 msgid "Notes Filter"
 msgstr "Jegyzetszűrő"
+
+#, python-format
+msgid "%(n)s channels"
+msgstr "%(n)s csatorna"
+
+#, python-format
+msgid "%(n)s linked"
+msgstr "%(n)s összekapcsolva"
+
+msgid "AoT Device Count"
+msgstr "AoT eszközök száma"
+
+msgid "Apply Filter"
+msgstr "Szűrő alkalmazása"
+
+msgid "Assign"
+msgstr "Hozzárendelés"
+
+msgid "Branch Pipe Count"
+msgstr "Elágazó csövek száma"
+
+msgid "Branch Pipe Elbow"
+msgstr "Elágazó cső könyök"
+
+msgid "Branch Pipe End"
+msgstr "Elágazó cső végzáró"
+
+msgid "Branch Pipe Length"
+msgstr "Elágazó cső hossza"
+
+msgid "Branch Pipe Tee"
+msgstr "Elágazó cső T-idom"
+
+msgid "Conversion details:"
+msgstr "Átalakítási részletek:"
+
+msgid "Custom entry…"
+msgstr "Egyéni bejegyzés…"
+
+msgid "Data Load Failed"
+msgstr "Adatbetöltés sikertelen"
+
+msgid "Design Details"
+msgstr "Tervezési részletek"
+
+msgid "Design Summary"
+msgstr "Tervezési összegzés"
+
+msgid "Do you want to continue?"
+msgstr "Szeretné folytatni?"
+
+msgid "Drip irrigation applied ("
+msgstr "Csepegtető öntözés alkalmazva ("
+
+msgid "Enter name"
+msgstr "Adja meg a nevet"
+
+msgid "Flow Rate (L/h)"
+msgstr "Áramlási sebesség (L/h)"
+
+msgid "Flow Rate (L/min)"
+msgstr "Áramlási sebesség (L/min)"
+
+msgid "From envelope"
+msgstr "Burkológörbéből"
+
+msgid "Group name"
+msgstr "Csoport neve"
+
+msgid "Input Device Count"
+msgstr "Bemeneti eszközök száma"
+
+msgid "It will be automatically converted to the current format (v"
+msgstr "Automatikusan átalakításra kerül a jelenlegi formátumra (v"
+
+msgid "Line is too short ("
+msgstr "A vonal túl rövid ("
+
+msgid "Logic Count"
+msgstr "Logikák száma"
+
+msgid "Main Pipe Count"
+msgstr "Főcsövek száma"
+
+msgid "Main Pipe Elbow"
+msgstr "Főcső könyök"
+
+msgid "Main Pipe End"
+msgstr "Főcső végzáró"
+
+msgid "Main Pipe Length"
+msgstr "Főcső hossza"
+
+msgid "Main Pipe Reducing Elbow"
+msgstr "Főcső szűkítő könyök"
+
+msgid "Main Pipe Reducing Tee"
+msgstr "Főcső szűkítő T-idom"
+
+msgid "Main Pipe Tee"
+msgstr "Főcső T-idom"
+
+msgid "Must be at least 0.01m²."
+msgstr "Legalább 0.01m² kell legyen."
+
+msgid "Must be at least 10cm."
+msgstr "Legalább 10cm kell legyen."
+
+msgid "New Site"
+msgstr "Új telephely"
+
+msgid "New Zone"
+msgstr "Új zóna"
+
+msgid "New group"
+msgstr "Új csoport"
+
+msgid "No Pipe Data"
+msgstr "Nincs csőadat"
+
+msgid "No Sites Found"
+msgstr "Nem található telephely"
+
+msgid "No Sites Selected"
+msgstr "Nincs kiválasztott telephely"
+
+msgid "No actuators registered"
+msgstr "Nincs regisztrált beavatkozó"
+
+msgid "No."
+msgstr "Sorsz."
+
+msgid "Number of Emitters"
+msgstr "Csepegtetők száma"
+
+msgid "Number of Emitters (Pipe)"
+msgstr "Csepegtetők száma (cső)"
+
+msgid "Output Device Count"
+msgstr "Kimeneti eszközök száma"
+
+msgid "Pipe Details"
+msgstr "Cső részletei"
+
+msgid "Pipe Length"
+msgstr "Cső hossza"
+
+msgid "Placement mode"
+msgstr "Elhelyezési mód"
+
+msgid "Reference line"
+msgstr "Referenciavonal"
+
+msgid "Search Device..."
+msgstr "Eszköz keresése..."
+
+msgid "Select Site"
+msgstr "Telephely kiválasztása"
+
+msgid "Service name"
+msgstr "Szolgáltatás neve"
+
+msgid "Shape is too small ("
+msgstr "Az alakzat túl kicsi ("
+
+msgid "Site Area"
+msgstr "Telephely területe"
+
+msgid "Site Count"
+msgstr "Telephelyek száma"
+
+msgid "Site Pipe Info"
+msgstr "Telephely csőadatai"
+
+msgid "Solar radiation"
+msgstr "Napsugárzás"
+
+msgid ""
+"The map updates as you drag — branches follow the reference line at this "
+"angle."
+msgstr ""
+"A térkép húzás közben frissül — az elágazások ebben a szögben követik a "
+"referenciavonalat."
+
+msgid "This file is in an older format (v"
+msgstr "Ez a fájl régebbi formátumú (v"
+
+msgid "This match key already exists: "
+msgstr "Ez az egyezési kulcs már létezik: "
+
+msgid "Total Area"
+msgstr "Teljes terület"
+
+msgid "Zone Count"
+msgstr "Zónák száma"
+
+msgid "[Branch Pipe]"
+msgstr "[Elágazó cső]"
+
+msgid "[Main Pipe]"
+msgstr "[Főcső]"
+
+msgid "and"
+msgstr "és"
+
+msgid "detached"
+msgstr "leválasztva"
+
+msgid "elements imported."
+msgstr "elem importálva."
+
+msgid "hh"
+msgstr "hh"
+
+msgid "loading_map"
+msgstr "Térkép betöltése..."
+
+msgid "manual size"
+msgstr "kézi méret"
+
+msgid "mm"
+msgstr "mm"
+
+msgid "others"
+msgstr "másik"
+
+msgid "pipes)"
+msgstr "cső)"
+
+msgid "save_btn_text"
+msgstr "Mentés"
+
+msgid "ss"
+msgstr "ss"
+
+msgid "units"
+msgstr "db"
+
+msgid "upper limit"
+msgstr "felső határ"
+
+msgid "— Auto —"
+msgstr "— Automatikus —"
+
+msgid "— Select Input channel —"
+msgstr "— Bemeneti csatorna kiválasztása —"
+
+msgid "— Select channel —"
+msgstr "— Csatorna kiválasztása —"
+
+msgid "— Select —"
+msgstr "— Kiválasztás —"
+

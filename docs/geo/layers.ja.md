@@ -34,6 +34,7 @@
 |----------|-----------|----------|-----------------|
 | NASA GIBS | `gis_nasa_gibs` | 科学衛星画像、WMS | 不要 |
 | ESA | `gis_esa` | 欧州宇宙機関の衛星画像 | 不要 |
+| Sentinel Hub | `gis_sentinelhub` | Sentinel-2 10m 解像度の NDVI・水分・水域指数 | 必要（OAuth クライアント） |
 
 ### 気象オーバーレイ
 
@@ -50,7 +51,8 @@
 | OpenTopoMap | `gis_opentopomap` | 等高線・地形図 | 不要 |
 | ISRIC | `gis_isric` | 世界の土壌データ（SoilGrids） | 不要 |
 | GSI | `gis_gsi` | 日本の国土地理院 | 不要 |
-| SGIS | `gis_sgis` | シンガポールの地理空間情報 | 不要 |
+| SGIS | `gis_sgis` | 韓国統計庁の統計地理情報 | 必要 |
+| Agromonitoring | `gis_agromonitoring` | 圃場単位の NDVI 統計・土壌水分・地温 | 必要 |
 
 ---
 
@@ -105,6 +107,29 @@ AoTサーバーがCORSプロキシ（`/api/geo/proxy/rainviewer/*`）経由で�
 ### ISRIC (SoilGrids)
 
 WMS経由で世界の土壌データ（有機物、pH、窒素含有量）を提供します。スマートファームにおける土壌分析に役立ちます。
+
+### Sentinel Hub (Sentinel-2)
+
+10m 解像度の Sentinel-2 画像です。MODIS NDVI が 250m 画素 1つで覆う 6.25ha を、ここでは 625画素で見るため、圃場内の生育のばらつきが見えるようになります。
+
+[Copernicus Data Space Ecosystem](https://dataspace.copernicus.eu/) で無料アカウントを作成し、ダッシュボードで OAuth クライアントを作成して Client ID と Secret を入力します。Sentinel Hub は OAuth2 client credentials 方式のため、タイルは AoT サーバーが代わりに取得します(`/api/geo/proxy/sentinelhub/<unique_id>`) — Secret がブラウザに渡ることはありません。
+
+| オプション | 説明 |
+|--------|-------------|
+| レイヤー | NDVI、トゥルーカラー、NDMI（水分）、NDWI（水域）、フォールスカラー |
+| コレクション | L2A（大気補正済み）または L1C |
+| 検索期間 | 単一の日付では雲で画面が欠けるため、この期間内で利用可能な直近のシーンを描画します |
+| 最大雲量 / シーン優先度 | その期間内でどのシーンを選ぶか |
+
+無料枠は月 30,000 PU です。地図画面 1回で約 4 PU、タイルは 1日キャッシュし、ズーム 9 未満では取得しません — 10m データを広域で見ても予算を使うだけで得るものがありません。
+
+### Agromonitoring（圃場 NDVI・土壌）
+
+登録した圃場境界の NDVI 統計と、**土壌水分・地温を数値で**返す唯一のレイヤーです。SMAP オーバーレイは 9km の画像であり、NASA GIBS の凡例に出る土壌水分の数値は Open-Meteo のモデル値を借りたものです。
+
+圃場は Agromonitoring のダッシュボードで描きます（1〜3000ha）。ポリゴン ID を貼り付けるか、空欄にすればクリック地点を含むポリゴンを自動で照合します。API キーは OpenWeatherMap と同じアカウントのものです。
+
+値はサーバー経由で取得し(`/api/geo/proxy/agromonitoring/<unique_id>`)、30分キャッシュします — 無料枠の呼び出し上限が公開されていないためです。
 
 ---
 

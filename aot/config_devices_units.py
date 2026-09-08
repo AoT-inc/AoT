@@ -166,6 +166,13 @@ MEASUREMENTS = {
         'name': lazy_gettext('Energy'),
         'meas': 'energy',
         'units': ['kWh']},
+    # 관개량 산정의 기준값(FAO-56 기준증발산 ET0 등). 단위는 mm 지만 뜻은
+    # "하루에 mm" 다 — 자료 자체가 일 단위라 기간을 단위에 넣지 않는다.
+    # `rain` 으로 대신 쓰지 않는 이유는 강수 그래프에 증발산이 섞이기 때문이다.
+    'evapotranspiration': {
+        'name': lazy_gettext('Evapotranspiration'),
+        'meas': 'evapotranspiration',
+        'units': ['mm', 'in']},
     'frequency': {
         'name': lazy_gettext('Frequency'),
         'meas': 'frequency',

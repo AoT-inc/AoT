@@ -340,6 +340,17 @@ This is an alternate method to calculate RPM from pulses on a pin using pigpio, 
 - Product URL: [Link](https://www.adafruit.com/product/4026)
 <table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>I<sup>2</sup>C Address</td><td>Text</td><td>The address of the I<sup>2</sup>C device.</td></tr><tr><td>I<sup>2</sup>C Bus</td><td>Integer</td><td>The Bus the I<sup>2</sup>C device is connected.</td></tr><tr><td>측정값 사용</td><td>Multi-Select</td><td>기록할 측정값</td></tr><tr><td>Period (Seconds)</td><td>Decimal</td><td>측정 또는 작업 사이의 기간</td></tr><tr><td>사전 출력</td><td>Select</td><td>매 측정 전에 선택된 출력을 켜십시오</td></tr><tr><td>Pre Out Duration (Seconds)</td><td>Decimal</td><td>사전 출력이 선택된 경우, 측정값을 얻기 전에 사전 출력을 켜둘 시간을 설정합니다.</td></tr><tr><td>사전 측정 중</td><td>Boolean</td><td>측정 완료 후 (이전이 아니라) 출력을 끄려면 선택하세요</td></tr></tbody></table>
 
+### Agromonitoring: GL: Agromonitoring (Field NDVI/Soil)
+
+- Manufacturer: Agromonitoring
+- Measurements: Status
+- Interfaces: AoT
+- Libraries: gis_agromonitoring
+- Manufacturer URL: [Link](https://agromonitoring.com/)
+
+Per-field NDVI statistics and soil moisture / soil temperature for a polygon registered at agromonitoring.com — the only input here that reports soil moisture as a number for your own field boundary rather than as a coarse satellite overlay. Draw the field in the Agromonitoring dashboard (1-3000 ha) and either paste its polygon ID below or leave it empty to match the polygon containing the point you click. Uses the same account as OpenWeatherMap.
+<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>API 키</td><td>Text</td><tr><td>Polygon ID</td><td>Text</td><tr><td>Active Channels</td></td><tr><td>NDVI Search Window</td><td>Select</td></tbody></table>
+
 ### Analog Devices: ADT7410
 
 - Manufacturer: Analog Devices
@@ -704,7 +715,7 @@ ChirpStack v4 MQTT 브로커의 토픽(application/+/device/+/event/up)을 구�
 <table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>측정값 사용</td><td>Multi-Select</td><td>기록할 측정값</td></tr><tr><td>Period (Seconds)</td><td>Decimal</td><td>측정 또는 작업 사이의 기간</td></tr><tr><td>사전 출력</td><td>Select</td><td>매 측정 전에 선택된 출력을 켜십시오</td></tr><tr><td>Pre Out Duration (Seconds)</td><td>Decimal</td><td>사전 출력이 선택된 경우, 측정값을 얻기 전에 사전 출력을 켜둘 시간을 설정합니다.</td></tr><tr><td>사전 측정 중</td><td>Boolean</td><td>측정 완료 후 (이전이 아니라) 출력을 끄려면 선택하세요</td></tr><tr><td>MQTT Host</td><td>Text
 - Default Value: localhost</td><td>MQTT 브로커 호스트명 또는 IP 주소 (예: localhost)</td></tr><tr><td>MQTT Port</td><td>Text
 - Default Value: 1883</td><td>MQTT 브로커 포트 (기본 1883, TLS는 8883 권장)</td></tr><tr><td>MQTT Username</td><td>Text</td><td>선택 사항: 브로커 인증 사용자 이름</td></tr><tr><td>MQTT Password</td><td>Text</td><td>선택 사항: 브로커 인증 비밀번호</td></tr><tr><td>TLS 활성화</td><td>Boolean</td><td>TLS(SSL) 연결 사용 여부 (기본 꺼짐)</td></tr><tr><td>CA 인증서 경로</td><td>Text</td><td>선택 사항: TLS 사용 시 CA 인증서 경로</td></tr><tr><td>Client ID</td><td>Text
-- Default Value: client_4rKfiVre</td><td>Unique client ID for connecting to the server</td></tr><tr><td>Keepalive (sec)</td><td>Text
+- Default Value: client_FyJv3E4b</td><td>Unique client ID for connecting to the server</td></tr><tr><td>Keepalive (sec)</td><td>Text
 - Default Value: 60</td><td>MQTT Keepalive 초 (기본 60초)</td></tr><tr><td>Subscribe Topics</td><td>Text
 - Default Value: application/+/device/+/event/up</td><td>콤마(,)로 구분된 구독 토픽들 (예: application/+/device/+/event/up)</td></tr><tr><td>QoS</td><td>Text</td><td>MQTT QoS 레벨 (0, 1, 2)</td></tr><tr><td>Device EUIs (comma-separated)</td><td>Text</td><td>선택 사항: 특정 디바이스만 처리. EUI를 콤마(,)로 구분해 입력</td></tr><tr><td colspan="3">Channel Options</td></tr><tr><td>이름</td><td>Text</td><td>다른 것과 구별하기 위한 이름</td></tr><tr><td>JMESPath Expression</td><td>Text</td><td>수신 이벤트 전체(JSON)에 대해 평가합니다</td></tr></tbody></table>
 
@@ -720,6 +731,17 @@ ChirpStack v4 REST API를 주기적으로 호출하여 디바이스 이벤트를
 - Default Value: 50</td><td>한 번의 REST API 호출에서 가져올 이벤트 개수(페이지 크기)</td></tr><tr><td>Event kind</td><td>Text
 - Default Value: up</td><td>가져올 이벤트의 종류 (예: up, join, status)</td></tr><tr><td>Fallback URL template</td><td>Text
 - Default Value: /api/devices/{dev_eui}/events?limit={limit}&kind={kind}&after={after}</td><td>공식 파이썬 클라이언트를 사용할 수 없을 때 REST 요청에 사용할 URL 템플릿 (API Base URL 뒤에 연결됨). {dev_eui}, {limit}, {kind}, {after}가 자동 치환됨</td></tr><tr><td colspan="3">Channel Options</td></tr><tr><td>이름</td><td>Text</td><td>다른 것과 구별하기 위한 이름</td></tr><tr><td>JMESPath Expression</td><td>Text</td><td>Evaluated against the full event JSON</td></tr></tbody></table>
+
+### Copernicus: GL: Sentinel-2 (Sentinel Hub)
+
+- Manufacturer: Copernicus
+- Measurements: Status
+- Interfaces: AoT
+- Libraries: gis_sentinelhub
+- Manufacturer URL: [Link](https://dataspace.copernicus.eu/)
+
+Sentinel-2 imagery at 10 m resolution through Sentinel Hub on the Copernicus Data Space Ecosystem — fine enough to read growth differences inside a single field, unlike the 250 m MODIS NDVI. Register a free CDSE account, create an OAuth client and paste its Client ID and Secret below. The free tier allows 30,000 processing units per month; one map screen costs roughly 4, and tiles are cached for a day.
+<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>OAuth Client ID</td><td>Text</td><tr><td>OAuth 클라이언트 비밀키</td><td>Text</td><tr><td>레이어</td></td><tr><td>Collection</td><td>Select</td><tr><td>Search Window</td><td>Select</td><tr><td>Max Cloud Coverage</td><td>Select</td><tr><td>Scene Priority</td><td>Select</td></tbody></table>
 
 ### Cozir: Cozir CO2
 
@@ -755,7 +777,7 @@ Ecowitt Cloud API를 사용하려면 Application Key, API Key, 장치 MAC 주소
 - Default Value: 1883</td><td>호스트 포트 번호</td></tr><tr><td>Topic</td><td>Text
 - Default Value: gw</td><td>The topic to subscribe to</td></tr><tr><td>연결 유지</td><td>Integer
 - Default Value: 60</td><td>Maximum amount of time between received signals. Set to 0 to disable.</td></tr><tr><td>Client ID</td><td>Text
-- Default Value: client_lw40TJRZ</td><td>Unique client ID for connecting to the server</td></tr><tr><td>Use Login</td><td>Boolean</td><td>Send login credentials</td></tr><tr><td>Use TLS</td><td>Boolean</td><td>Send login credentials using TLS</td></tr><tr><td>사용자명</td><td>Text
+- Default Value: client_VvbFSIsg</td><td>Unique client ID for connecting to the server</td></tr><tr><td>Use Login</td><td>Boolean</td><td>Send login credentials</td></tr><tr><td>Use TLS</td><td>Boolean</td><td>Send login credentials using TLS</td></tr><tr><td>사용자명</td><td>Text
 - Default Value: user</td><td>서버 연결에 사용할 사용자 이름</td></tr><tr><td>비밀번호</td><td>Text</td><td>Password for connecting to the server. Leave blank to disable.</td></tr><tr><td>Use Websockets</td><td>Boolean</td><td>Use websockets to connect to the server.</td></tr><tr><td colspan="3">Channel Options</td></tr><tr><td>이름</td><td>Text</td><td>다른 것과 구별하기 위한 이름</td></tr><tr><td>JMESPATH Expression</td><td>Text</td><td>JMESPATH expression to find value in JSON response</td></tr></tbody></table>
 
 ### Ecowitt: Ecowitt soil_sensor
@@ -1079,7 +1101,7 @@ A single topic is subscribed to and the returned JSON payload contains one or mo
 - Default Value: 1883</td><td>호스트 포트 번호</td></tr><tr><td>Topic</td><td>Text
 - Default Value: mqtt/test/input</td><td>The topic to subscribe to</td></tr><tr><td>연결 유지</td><td>Integer
 - Default Value: 60</td><td>Maximum amount of time between received signals. Set to 0 to disable.</td></tr><tr><td>Client ID</td><td>Text
-- Default Value: client_KA8YEzZ5</td><td>Unique client ID for connecting to the server</td></tr><tr><td>Use Login</td><td>Boolean</td><td>Send login credentials</td></tr><tr><td>Use TLS</td><td>Boolean</td><td>Send login credentials using TLS</td></tr><tr><td>TLS CA Certificate</td><td>Text</td><td>Path to the CA certificate file that signed the broker certificate. Leave blank to use the system CA store (for brokers with a publicly-trusted certificate, e.g. Let's Encrypt).</td></tr><tr><td>사용자명</td><td>Text
+- Default Value: client_EvSjlzAG</td><td>Unique client ID for connecting to the server</td></tr><tr><td>Use Login</td><td>Boolean</td><td>Send login credentials</td></tr><tr><td>Use TLS</td><td>Boolean</td><td>Send login credentials using TLS</td></tr><tr><td>TLS CA Certificate</td><td>Text</td><td>Path to the CA certificate file that signed the broker certificate. Leave blank to use the system CA store (for brokers with a publicly-trusted certificate, e.g. Let's Encrypt).</td></tr><tr><td>사용자명</td><td>Text
 - Default Value: user</td><td>서버 연결에 사용할 사용자 이름</td></tr><tr><td>비밀번호</td><td>Text</td><td>Password for connecting to the server. Leave blank to disable.</td></tr><tr><td>Use Websockets</td><td>Boolean</td><td>Use websockets to connect to the server.</td></tr><tr><td colspan="3">Channel Options</td></tr><tr><td>이름</td><td>Text</td><td>다른 것과 구별하기 위한 이름</td></tr><tr><td>JMESPATH Expression</td><td>Text</td><td>JMESPATH expression to find value in JSON response</td></tr></tbody></table>
 
 ### MQTT: MQTT Subscribe (Value payload)
@@ -1095,7 +1117,7 @@ A topic is subscribed to for each channel Subscription Topic and the returned pa
 - Default Value: localhost</td><td>호스트 또는 IP 주소</td></tr><tr><td>포트</td><td>Integer
 - Default Value: 1883</td><td>호스트 포트 번호</td></tr><tr><td>연결 유지</td><td>Integer
 - Default Value: 60</td><td>Maximum amount of time between received signals. Set to 0 to disable.</td></tr><tr><td>Client ID</td><td>Text
-- Default Value: client_GCQEHxI2</td><td>Unique client ID for connecting to the server</td></tr><tr><td>Use Login</td><td>Boolean</td><td>Send login credentials</td></tr><tr><td>Use TLS</td><td>Boolean</td><td>Send login credentials using TLS</td></tr><tr><td>TLS CA Certificate</td><td>Text</td><td>Path to the CA certificate file that signed the broker certificate. Leave blank to use the system CA store (for brokers with a publicly-trusted certificate, e.g. Let's Encrypt).</td></tr><tr><td>사용자명</td><td>Text
+- Default Value: client_nNgrl38s</td><td>Unique client ID for connecting to the server</td></tr><tr><td>Use Login</td><td>Boolean</td><td>Send login credentials</td></tr><tr><td>Use TLS</td><td>Boolean</td><td>Send login credentials using TLS</td></tr><tr><td>TLS CA Certificate</td><td>Text</td><td>Path to the CA certificate file that signed the broker certificate. Leave blank to use the system CA store (for brokers with a publicly-trusted certificate, e.g. Let's Encrypt).</td></tr><tr><td>사용자명</td><td>Text
 - Default Value: user</td><td>서버 연결에 사용할 사용자 이름</td></tr><tr><td>비밀번호</td><td>Text</td><td>Password for connecting to the server. Leave blank to disable.</td></tr><tr><td>Use Websockets</td><td>Boolean</td><td>Use websockets to connect to the server.</td></tr><tr><td colspan="3">Channel Options</td></tr><tr><td>이름</td><td>Text</td><td>다른 것과 구별하기 위한 이름</td></tr><tr><td>Subscription Topic</td><td>Text</td><td>The MQTT topic to subscribe to</td></tr></tbody></table>
 
 ### MapTiler: GL: MapTiler Vector
@@ -1263,6 +1285,17 @@ NASA SMAP(Soil Moisture Active Passive) L4 위성이 관측한 전 지구 표층
 NASA GIBS 위성 시스템의 실시간 지구 관측 지도입니다. 위성 영상(Blue Marble)과 함께 온도, 구름, 화재 등 환경 데이터를 날짜별로 선택할 수 있어 시계열 분석이 가능합니다.
 <table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>위성 레이어</td></td><tr><td>날짜 모드</td><td>Select</td><tr><td>Custom Date</td><td>Text</td></tbody></table>
 
+### NASA: NASA POWER (Coords, Daily incl. ET0)
+
+- Manufacturer: NASA
+- Measurements: ET0/Solar/Temperature/Humidity/Wind/Rain
+- Interfaces: AoT
+- Additional URL: [Link](https://power.larc.nasa.gov/)
+
+No API key needed — enter Latitude/Longitude only. Reports FAO-56 reference evapotranspiration (ET0) computed from NASA's daily agroclimatology, which no other AoT input provides. Note the data lags real time by roughly one to two weeks, so treat it as a seasonal baseline for irrigation planning rather than a live reading; poll once a day.
+<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>측정값 사용</td><td>Multi-Select</td><td>기록할 측정값</td></tr><tr><td>Period (Seconds)</td><td>Decimal</td><td>측정 또는 작업 사이의 기간</td></tr><tr><td>사전 출력</td><td>Select</td><td>매 측정 전에 선택된 출력을 켜십시오</td></tr><tr><td>Pre Out Duration (Seconds)</td><td>Decimal</td><td>사전 출력이 선택된 경우, 측정값을 얻기 전에 사전 출력을 켜둘 시간을 설정합니다.</td></tr><tr><td>사전 측정 중</td><td>Boolean</td><td>측정 완료 후 (이전이 아니라) 출력을 끄려면 선택하세요</td></tr><tr><td>Search Window (days)</td><td>Integer
+- Default Value: 20</td><td>How far back to look for the most recent complete day. NASA POWER lags real time by about 7-13 days, so a window shorter than two weeks can come back empty.</td></tr></tbody></table>
+
 ### Naver: KO: Naver Map
 
 - Manufacturer: Naver
@@ -1406,7 +1439,7 @@ ChirpStack v4 MQTT 브로커에서 RAK3172 밸브 컨트롤러의 하트비트(F
 <table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>측정값 사용</td><td>Multi-Select</td><td>기록할 측정값</td></tr><tr><td>사전 출력</td><td>Select</td><td>매 측정 전에 선택된 출력을 켜십시오</td></tr><tr><td>Pre Out Duration (Seconds)</td><td>Decimal</td><td>사전 출력이 선택된 경우, 측정값을 얻기 전에 사전 출력을 켜둘 시간을 설정합니다.</td></tr><tr><td>사전 측정 중</td><td>Boolean</td><td>측정 완료 후 (이전이 아니라) 출력을 끄려면 선택하세요</td></tr><tr><td>MQTT Host</td><td>Text
 - Default Value: localhost</td><td>ChirpStack MQTT 브로커 호스트명 또는 IP 주소</td></tr><tr><td>MQTT Port</td><td>Integer
 - Default Value: 1883</td><td>MQTT 포트 (기본 1883)</td></tr><tr><td>MQTT Username</td><td>Text</td><td>브로커 인증 사용자 이름 (없으면 비워둠)</td></tr><tr><td>MQTT Password</td><td>Text</td><td>브로커 인증 비밀번호</td></tr><tr><td>TLS 활성화</td><td>Boolean</td><td>TLS(SSL) 연결 사용 여부</td></tr><tr><td>CA 인증서 경로</td><td>Text</td><td>TLS 사용 시 CA 인증서 파일 경로</td></tr><tr><td>Client ID</td><td>Text
-- Default Value: aot_rak3172hb_BPMMIC</td><td>MQTT 클라이언트 고유 ID</td></tr><tr><td>Application ID (MQTT 토픽)</td><td>Text
+- Default Value: aot_rak3172hb_jYiSgm</td><td>MQTT 클라이언트 고유 ID</td></tr><tr><td>Application ID (MQTT 토픽)</td><td>Text
 - Default Value: +</td><td>특정 앱만 구독하려면 ID 입력. 비워두면 "+" (전체) 사용</td></tr><tr><td>Device EUI 필터</td><td>Text</td><td>특정 디바이스만 처리. 비워두면 전체 수신 (콤마 구분으로 다중 지정 가능)</td></tr><tr><td>Base HB 프레임 디코딩</td><td>Boolean
 - Default Value: True</td><td>FPort 225의 0xA5 base 프레임(배터리+클래스)을 디코딩합니다.</td></tr><tr><td>Ext HB 프레임 디코딩</td><td>Boolean
 - Default Value: True</td><td>FPort 225의 0xA6 ext 프레임(HB 주기, 실제 클래스, 밸브 상태 등)을 디코딩합니다.</td></tr></tbody></table>
@@ -1773,7 +1806,7 @@ Stadia Maps의 고품질 디자인 특화 지도 서버입니다. Alidade Smooth
 This measures from several Kasa power devices (plugs/strips) capable of measuring energy consumption. These include, but are not limited to the KP115 and HS600.
 <table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>측정값 사용</td><td>Multi-Select</td><td>기록할 측정값</td></tr><tr><td>Period (Seconds)</td><td>Decimal</td><td>측정 또는 작업 사이의 기간</td></tr><tr><td>사전 출력</td><td>Select</td><td>매 측정 전에 선택된 출력을 켜십시오</td></tr><tr><td>Pre Out Duration (Seconds)</td><td>Decimal</td><td>사전 출력이 선택된 경우, 측정값을 얻기 전에 사전 출력을 켜둘 시간을 설정합니다.</td></tr><tr><td>사전 측정 중</td><td>Boolean</td><td>측정 완료 후 (이전이 아니라) 출력을 끄려면 선택하세요</td></tr><tr><td>Device Type</td><td>Select</td><td>The type of Kasa device</td></tr><tr><td>호스트</td><td>Text
 - Default Value: 0.0.0.0</td><td>호스트 또는 IP 주소</td></tr><tr><td>Asyncio RPC Port</td><td>Integer
-- Default Value: 18300</td><td>The port to start the asyncio RPC server. Must be unique from other Kasa Outputs.</td></tr><tr><td colspan="3">Commands</td></tr><tr><td colspan="3">The total kWh can be cleared with the following button or with the Clear Total kWh Function Action. This will also clear all energy stats on the device, not just the total kWh.</td></tr><tr><td>총계 삭제: 킬로와트시</td><td>Button</td><td></td></tr></tbody></table>
+- Default Value: 18758</td><td>The port to start the asyncio RPC server. Must be unique from other Kasa Outputs.</td></tr><tr><td colspan="3">Commands</td></tr><tr><td colspan="3">The total kWh can be cleared with the following button or with the Clear Total kWh Function Action. This will also clear all energy stats on the device, not just the total kWh.</td></tr><tr><td>총계 삭제: 킬로와트시</td><td>Button</td><td></td></tr></tbody></table>
 
 ### Tasmota: Tasmota Outlet Energy Monitor (HTTP)
 

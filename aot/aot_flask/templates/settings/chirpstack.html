@@ -134,24 +134,6 @@
         </div>
       </div>
 
-      {% if schedulers %}
-      <!-- Scheduler -->
-      <div class="aot-modal-group-title">{{_('Scheduler')}}</div>
-      <div class="aot-modal-container">
-        <div class="aot-modal-option-row">
-          <div class="aot-modal-option-label">{{_('Assign to scheduler')}}</div>
-          <div class="aot-modal-option-control">
-            <select name="scheduler_id" class="form-control aot-modern-select">
-              <option value="">{{_('None')}}</option>
-              {% for uid, sname in schedulers %}
-              <option value="{{ uid }}">{{ sname }}</option>
-              {% endfor %}
-            </select>
-          </div>
-        </div>
-      </div>
-      {% endif %}
-
       <div class="d-flex justify-content-end" style="margin: 0.5rem 0 1.5rem;">
         <button type="submit" name="action" value="onboard" class="btn aot-pill-btn">{{_('Register selected devices')}}</button>
       </div>
@@ -232,7 +214,6 @@
                     {%- set parts = [] -%}
                     {%- if eui in reg_input %}{% set _drop = parts.append('Input') %}{% endif -%}
                     {%- if eui in reg_output %}{% set _drop = parts.append('Output') %}{% endif -%}
-                    {%- if managed_by.get(eui) %}{% set _drop = parts.append(sched_names.get(managed_by.get(eui), 'Scheduler')) %}{% endif -%}
                     {{ parts|join(' · ') if parts else _('Not registered') }}
                   </div>
                 </div>
