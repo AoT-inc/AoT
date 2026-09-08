@@ -111,15 +111,10 @@ def widget_variables(widget_unique_id, widget_options):
     # as MapLibre raster sources, not by a separate raster (Leaflet) code path.
     # geo_mode is therefore a constant; it is still emitted because the client
     # bundle and geo_config consumers read it.
-    try:
-        from aot.aot_flask.utils.utils_geo import get_geo_config
-        geo_config = get_geo_config()
-        vars['geo_mode'] = 'vector'
-        geo_config['geo_mode'] = 'vector'
-        vars['geo_config'] = geo_config
-    except Exception as e:
-        logger.warning(f"[AoT_map] Failed to detect geo mode: {e}")
-        vars['geo_mode'] = 'vector'  # [Migration] Default: Pure MapLibre
+    # 전역 geo 설정 사본은 여기서 만들지 않는다 — layout.html 의
+    # `window.AOT_GEO_CONFIG` 가 페이지당 한 벌이면 충분하고, 위젯마다 한 벌씩
+    # 더 실으면 대시보드 HTML 이 그만큼 불어난다(위젯당 46KB).
+    vars['geo_mode'] = 'vector'
 
     # Actuator control panel: only users with edit permission see the ON/OFF and slider controls
     try:
@@ -345,6 +340,12 @@ WIDGET_BODY_HTML = """
     'chips_hidden': widget_variables.ai_advice_chips_hidden or False
 } | tojson | safe }}
 </script>
+{#- 이 JSON 에 `layers` 와 `geoConfig` 는 싣지 않는다 — 둘 다 아래 `vars` 안에
+    이미 들어 있는 것을 한 벌 더 적던 자리다. 지도 위젯 하나가 311KB 였고 그중
+    136KB 가 그 두 줄이었다(위젯 4개면 544KB). 레이어 목록은 JS 가
+    `vars.vars.active_layers` 로, 전역 설정은 `window.AOT_GEO_CONFIG` 로 읽는다
+    — 소비처들이 이미 그 폴백을 갖고 있다.
+    (Jinja 표현식 `{{ … }}` 안에는 주석을 넣을 수 없어 여기 적는다.) -#}
 <script type="application/json" id="aot-map-vars-{{ each_widget.unique_id }}">
 {{ {
     'widgetId': each_widget.unique_id,
@@ -352,10 +353,8 @@ WIDGET_BODY_HTML = """
     'contentMapUuid': widget_variables.selected_map_uuid or '',
     'refreshSeconds': widget_variables.period | default(5),
     'devices': widget_variables.devices,
-    'vars': widget_variables,
+    'vars': widget_variables | omit('available_*', 'geo_config'),
     'theme': widget_variables.theme_config,
-    'layers': widget_variables.active_layers,
-    'geoConfig': widget_variables.geo_config,
     'isLocked': widget_variables.map_locked or False,
     'hideControls': widget_variables.hide_controls or False,
     'geo_mode': widget_variables.geo_mode or 'vector',

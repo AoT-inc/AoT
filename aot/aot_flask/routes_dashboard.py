@@ -105,41 +105,21 @@ def save_widget_custom_options():
         except Exception:
             current_options = {}
 
-        dict_widgets = parse_widget_information()
-
-        # 선언된 타입에 맞춘다 — **이 경로가 폼보다 느슨하면 안 된다.**
-        # 여기로 들어온 값은 검증 없이 그대로 저장됐고, 타입에 안 맞는 값 하나가
-        # 남으면 그 값을 건드리지도 않은 다음 **폼 저장 전체**가 거부된다
-        # (2026-08-23: label_min_zoom=17.5 하나가 팝업 기본 탭 변경을 막았다).
-        _dw = dict_widgets.get(widget.graph_type) or {}
-        new_options, _coerce_errors = utils_general.coerce_custom_option_values(
-            _dw, new_options)
-        if _coerce_errors:
+        # 타입 정리와 execute_at_modification 호출은 폼 저장과 **같은 함수**를
+        # 쓴다. 두 경로가 각자 하던 시절, 한쪽에만 규칙이 붙어 갈라진 것이
+        # 2026-08-23 사고였다(느슨한 이 경로가 남긴 label_min_zoom=17.5 하나가
+        # 그 값을 건드리지도 않은 다음 폼 저장 전체를 거부하게 만들었다).
+        allow_saving, apply_errors, final_options = \
+            utils_dashboard.apply_widget_option_changes(
+                widget, current_options, new_options, partial=True)
+        if apply_errors:
             return jsonify({"status": "error",
-                            "message": "; ".join(_coerce_errors)}), 400
+                            "message": "; ".join(str(e) for e in apply_errors)}), 400
+        if not allow_saving:
+            return jsonify({"status": "error",
+                            "message": "Modification rejected by widget"}), 400
 
-        if widget.graph_type in dict_widgets and 'execute_at_modification' in dict_widgets[widget.graph_type]:
-             # Call widget-specific modification logic (haromizes AJAX and Form save paths)
-             logger.debug(f"[AoT Map Debug] Calling execute_at_modification for {widget.unique_id}")
-             (allow_saving, 
-              page_refresh, 
-              widget, 
-              final_options) = dict_widgets[widget.graph_type]['execute_at_modification'](
-                 widget, None, current_options, new_options)
-             
-             if not allow_saving:
-                 logger.warning(f"[AoT Map Debug] Modification rejected for {widget.unique_id}")
-                 return jsonify({"status": "error", "message": "Modification rejected by widget"}), 400
-             
-             logger.debug(f"[AoT Map Debug] Final Options to be saved: {final_options}")
-             widget.custom_options = json.dumps(final_options)
-        else:
-            # Fallback simple merge
-            logger.debug(f"[AoT Map Debug] No execute_at_modification found, performing simple merge.")
-            current_options.update(new_options)
-            widget.custom_options = json.dumps(current_options)
-
-        logger.debug(f"[AoT Map Debug] Committing to DB for {widget.unique_id}")
+        widget.custom_options = json.dumps(final_options)
         db.session.commit()
         logger.debug(f"[AoT Map Debug] Save successful for {widget.unique_id}")
 

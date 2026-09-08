@@ -160,7 +160,7 @@ class InputModule(AbstractGisInput):
                                '    <div class="aot-legend-bar" style="background: linear-gradient(to right, #9d64a0, #7d52a7, #62439d, #3e50b4, #4893d0, #5cc0c0, #98d1a4, #c9e48a, #f2f7bd, #f9cc76, #f29655, #e05847, #b21f37);"></div>' +
                                '    <div class="aot-legend-labels"><span>-40</span><span>0</span><span>40</span></div>' +
                                '  </div>' +
-                               '  <div class="aot-legend-value-box" data-api-url="/api/geo/proxy/openweather?lat={lat}&lon={lon}&appid={apiKey}&units=metric" data-api-param="main.temp" data-unit="°C">' +
+                               '  <div class="aot-legend-value-box" data-api-url="/api/geo/proxy/openweather?lat={lat}&lon={lon}&units=metric" data-api-param="main.temp" data-unit="°C">' +
                                '    <div class="aot-legend-value-text">--</div>' +
                                '    <div class="aot-legend-value-unit">°C</div>' +
                                '  </div>' +
@@ -177,7 +177,7 @@ class InputModule(AbstractGisInput):
                                '    <div class="aot-legend-bar" style="background: linear-gradient(to right, rgba(255,255,255,0), rgba(238,206,206,0.4), rgba(179,100,188,0.7), rgba(63,33,59,0.8), rgba(116,76,172,0.9), rgba(70,0,175,1.0), rgba(13,17,38,1.0));"></div>' +
                                '    <div class="aot-legend-labels"><span>0</span><span>50</span><span>100+</span></div>' +
                                '  </div>' +
-                               '  <div class="aot-legend-value-box" data-api-url="/api/geo/proxy/openweather?lat={lat}&lon={lon}&appid={apiKey}&units=metric" data-api-param="wind.speed" data-unit="m/s">' +
+                               '  <div class="aot-legend-value-box" data-api-url="/api/geo/proxy/openweather?lat={lat}&lon={lon}&units=metric" data-api-param="wind.speed" data-unit="m/s">' +
                                '    <div class="aot-legend-value-text">--</div>' +
                                '    <div class="aot-legend-value-unit">m/s</div>' +
                                '  </div>' +
@@ -194,7 +194,7 @@ class InputModule(AbstractGisInput):
                                '    <div class="aot-legend-bar" style="background: linear-gradient(to right, rgba(255,255,255,0.0), rgba(253,253,255,1.0)); border: 1px solid #eee;"></div>' +
                                '    <div class="aot-legend-labels"><span>0</span><span>50</span><span>100</span></div>' +
                                '  </div>' +
-                               '  <div class="aot-legend-value-box" data-api-url="/api/geo/proxy/openweather?lat={lat}&lon={lon}&appid={apiKey}&units=metric" data-api-param="clouds.all" data-unit="%">' +
+                               '  <div class="aot-legend-value-box" data-api-url="/api/geo/proxy/openweather?lat={lat}&lon={lon}&units=metric" data-api-param="clouds.all" data-unit="%">' +
                                '    <div class="aot-legend-value-text">--</div>' +
                                '    <div class="aot-legend-value-unit">%</div>' +
                                '  </div>' +
@@ -211,7 +211,7 @@ class InputModule(AbstractGisInput):
                                '    <div class="aot-legend-bar" style="background: linear-gradient(to right, rgba(225,200,100,0), rgba(200,150,150,0), rgba(150,150,170,0), rgba(120,120,190,0), rgba(110,110,205,0.3), rgba(80,80,225,0.7), rgba(20,20,255,0.9));"></div>' +
                                '    <div class="aot-legend-labels"><span>0</span><span>10</span><span>100+</span></div>' +
                                '  </div>' +
-                               '  <div class="aot-legend-value-box" data-api-url="/api/geo/proxy/openweather?lat={lat}&lon={lon}&appid={apiKey}&units=metric" data-api-param="rain.1h" data-unit="mm">' +
+                               '  <div class="aot-legend-value-box" data-api-url="/api/geo/proxy/openweather?lat={lat}&lon={lon}&units=metric" data-api-param="rain.1h" data-unit="mm">' +
                                '    <div class="aot-legend-value-text">--</div>' +
                                '    <div class="aot-legend-value-unit">mm</div>' +
                                '  </div>' +
@@ -228,7 +228,7 @@ class InputModule(AbstractGisInput):
                                '    <div class="aot-legend-bar" style="background: linear-gradient(to right, #0073ff, #00aaf7, #00d6de, #6cff9e, #b8ff61, #ffff00, #ffbb00, #ff6f00, #ff0000);"></div>' +
                                '    <div class="aot-legend-labels"><span>950</span><span>1013</span><span>1070</span></div>' +
                                '  </div>' +
-                               '  <div class="aot-legend-value-box" data-api-url="/api/geo/proxy/openweather?lat={lat}&lon={lon}&appid={apiKey}&units=metric" data-api-param="main.pressure" data-unit="hPa">' +
+                               '  <div class="aot-legend-value-box" data-api-url="/api/geo/proxy/openweather?lat={lat}&lon={lon}&units=metric" data-api-param="main.pressure" data-unit="hPa">' +
                                '    <div class="aot-legend-value-text">--</div>' +
                                '    <div class="aot-legend-value-unit">hPa</div>' +
                                '  </div>' +

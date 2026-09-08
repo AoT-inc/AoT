@@ -794,6 +794,28 @@ def api_facility_estop(facility_uuid):
 # ── 맵 팝업 [현황] 탭 APIs ──────────────────────────────────────────────────────
 
 
+def _function_custom_options(fn):
+    """CustomController.custom_options → dict (실패해도 빈 dict).
+
+    옵션 하나를 못 읽는다고 화면이 통째로 죽으면 안 된다.
+    """
+    import json as _json
+    try:
+        return _json.loads(fn.custom_options or '{}') or {}
+    except (TypeError, ValueError):
+        return {}
+
+
+def _parse_disabled_actuators(raw):
+    """제외 목록 파싱 — **정본은 `env_control.types` 다.**
+
+    여기서 다시 구현하지 않는다. 제어(프로필 로더)와 같은 규칙을 써야
+    "화면에서는 꺼져 있는데 제어는 계속 도는" 상태가 생기지 않는다.
+    """
+    from aot.functions.utils.env_control.types import parse_disabled_actuators
+    return parse_disabled_actuators(raw)
+
+
 def _function_facility_uuid(fn):
     """이 env_coordinator 가 붙은 시설 uuid → str|None.
 
@@ -1710,4 +1732,77 @@ def api_coordinator_overview(function_uuid):
         'env':   env,
         'plots': plots,
         'ts':    _time.time(),
+    })
+
+
+@blueprint.route('/api/aot/coordinator/<function_uuid>/actuators', methods=['GET'])
+@login_required
+def api_coordinator_actuators(function_uuid):
+    """이 코디네이터가 제어할 수 있는 장치 목록 + 지금 제외된 것.
+
+    설정 화면의 "자동 제어를 적용할 장치" 토글이 쓴다. 목록은 **연결된 시설**
+    에서 오므로 함수의 옵션 스키마가 미리 알 수 없다 — 그래서 화면이 자리만
+    잡고 여기서 채운다(`env_status` 와 같은 구조).
+
+    ## ⚠ 목록의 출처를 여기서 새로 만들지 않는다
+
+    `get_facility_integration` 의 `actuators_resolved` 를 그대로 쓴다 —
+    코디네이터가 프로필을 만들 때 읽는 것과 **같은 출처**다. 두 벌이 되면
+    화면에 있는 장치를 제어가 모르거나 그 반대가 되고, 그때 사용자는 토글을
+    껐는데 왜 계속 도는지 알 수 없다.
+
+    `bay_scope` 가 걸려 있으면 그 구역의 장치만 낸다 — 화면에 안 보이는 장치를
+    끄고 켤 수 있으면 "껐는데 도는" 것과 구분이 안 된다.
+    """
+    from aot.aot_flask.geo.facility_integration import get_facility_integration
+    from aot.databases.models.controller import CustomController
+
+    fn = CustomController.query.filter_by(unique_id=function_uuid).first()
+    if fn is None or fn.device != 'env_coordinator':
+        return jsonify({'ok': False, 'message': 'Not an env coordinator'}), 404
+
+    opts = _function_custom_options(fn)
+    facility_uuid = _function_facility_uuid(fn)
+    if not facility_uuid:
+        # 시설을 안 고른 상태도 말해야 한다 — 침묵하면 화면이 "장치가 없다" 와
+        # "아직 시설을 안 골랐다" 를 구분하지 못한다.
+        return jsonify({'ok': True, 'facility': None, 'actuators': [],
+                        'disabled': [], 'stale': []})
+
+    data, err = get_facility_integration(facility_uuid)
+    if err or not isinstance(data, dict):
+        return jsonify({'ok': False,
+                        'message': err or 'facility read failed'}), 502
+
+    bay_scope = (opts.get('bay_scope') or '').strip()
+    disabled = _parse_disabled_actuators(opts.get('disabled_actuators'))
+
+    actuators = []
+    seen = set()
+    for act in data.get('actuators_resolved') or []:
+        uid = (act.get('output_uuid') or '').strip()
+        if not uid or uid in seen:
+            continue
+        if bay_scope and bay_scope not in (act.get('bay_ids') or []):
+            continue
+        seen.add(uid)
+        actuators.append({
+            'uuid':    uid,
+            'name':    act.get('output_name') or uid[:8],
+            'kind':    act.get('kind') or '',
+            'enabled': uid not in disabled,
+        })
+
+    # ⚠ 이미 없는 장치를 가리키는 제외 항목도 돌려준다. 조용히 버리면 시설에서
+    #   장치를 잠시 뺐다가 되돌린 사람이 **꺼 둔 상태가 사라진 것을 모른 채**
+    #   되살아난 장치를 만난다.
+    stale = sorted(uid for uid in disabled if uid not in seen)
+
+    return jsonify({
+        'ok':        True,
+        'facility':  facility_uuid,
+        'bay_scope': bay_scope or None,
+        'actuators': actuators,
+        'disabled':  sorted(disabled),
+        'stale':     stale,
     })

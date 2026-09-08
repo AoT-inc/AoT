@@ -121,12 +121,23 @@ def get_misc_cached():
             _MISC_CACHE_TS = now
     return result
 
-def get_geo_config():
+def get_geo_config(with_secrets=False):
     """
     Returns the consolidated Geo configuration for the frontend.
     Includes:
     1. Global Settings (GeoSetting)
     2. Active Layers (GeoLayer)
+
+    ⚠ **기본값은 키가 빠진 사본이다.** 이 함수의 결과는 `layout.html` 이
+    `window.AOT_GEO_CONFIG` 로 **모든 페이지**에 심는 값이라, 여기에 키가 들어
+    있으면 지도를 쓰지도 않는 화면까지 저장된 지도 키 전량이 평문으로 나간다
+    (2026-09-08 실측: 대시보드 HTML 에 google_maps·kma·maptiler·owm·vworld
+    다섯 종이, 지도 위젯 수만큼 네 벌). 같은 컨텍스트의 `api_keys` 픽커는 이미
+    `edit_settings` 로 막혀 있는데 이쪽만 열려 있었다.
+
+    `with_secrets=True` 는 **서버 안에서 키가 실제로 필요한 호출자 전용**이다
+    (레이어를 실제로 켜 주는 위젯 렌더, `/api/geo/layer_secrets`). 브라우저로
+    내려가는 값에는 쓰지 않는다.
     """
     global _GEO_CONFIG_CACHE_MAP
 
@@ -138,12 +149,16 @@ def get_geo_config():
 
     now = time.time()
 
+    # 캐시 축이 로케일 + 비밀 포함 여부 둘이다. 한 축으로만 캐시하면 먼저 온
+    # 요청의 성격이 그대로 굳어 다음 요청에 새어 나간다.
+    cache_key = (current_locale, bool(with_secrets))
+
     # Return cached if valid for current locale. Capture the generation while
     # holding the lock so we can detect a concurrent invalidation during the DB
     # read below (prevents re-poisoning the cache with a stale snapshot).
     with _GEO_CACHE_LOCK:
-        if current_locale in _GEO_CONFIG_CACHE_MAP:
-            ts, cached_config = _GEO_CONFIG_CACHE_MAP[current_locale]
+        if cache_key in _GEO_CONFIG_CACHE_MAP:
+            ts, cached_config = _GEO_CONFIG_CACHE_MAP[cache_key]
             if (now - ts) < _CACHE_TTL:
                 return cached_config
         gen_at_read = _GEO_CACHE_GEN
@@ -170,14 +185,239 @@ def get_geo_config():
     # Add Active Layers
     config['layers'] = get_active_geo_layers(config.get('keys', {}))
 
+    if not with_secrets:
+        # 순서가 중요하다 — 키가 붙은 오버레이를 먼저 프록시 URL 로 바꾸고,
+        # 그다음 남은 키를 지운다.
+        config['layers'] = proxy_overlay_tile_urls(config.get('layers'))
+        config = strip_geo_config_secrets(config, keep=first_vector_base_keeper())
+
     # Update cache for current locale — but only if no invalidation happened
     # while we were reading the DB. Otherwise this snapshot may be stale (a save
     # committed + cleared the cache mid-read) and must not be written back.
     with _GEO_CACHE_LOCK:
         if _GEO_CACHE_GEN == gen_at_read:
-            _GEO_CONFIG_CACHE_MAP[current_locale] = (now, config)
-    
+            _GEO_CONFIG_CACHE_MAP[cache_key] = (now, config)
+
     return config
+
+
+# ------------------------------------------------------------------------------
+# API key masking
+#
+# 지도 레이어의 키는 세 자리에 동시에 들어간다 — `api_key` 필드, 완성된 `url`,
+# 그리고 `options` 안의 사용자 지정 값(`api_key` · `key` · MapTiler `style` 등,
+# 실측 32건). 한 자리만 지우면 나머지로 그대로 새 나가므로 세 곳을 함께 지운다.
+#
+# 지운 자리에는 `{api_key}` 플레이스홀더를 남긴다. 클라이언트(`aot-map-loader`,
+# `aot-vector-layer-manager`)가 이미 이 토큰을 치환하는 코드를 갖고 있어서,
+# 나중에 값만 채워 주면 그대로 동작한다 — 그 값을 필요할 때만 받아오는 통로가
+# `/api/geo/layer_secrets` 다.
+# ------------------------------------------------------------------------------
+KEY_PLACEHOLDER = '{api_key}'
+
+
+def is_vector_base_layer(layer):
+    """벡터 베이스 레이어인가."""
+    return isinstance(layer, dict) and layer.get('type') == 'vector'
+
+
+def first_vector_base_keeper():
+    """**첫 벡터 레이어 하나만** 키를 남기는 판정기(상태를 가진다).
+
+    지도를 그리는 화면들이 예외 없이 `filter(type === 'vector')` 의 **첫 항목**을
+    베이스 스타일로 쓴다 — 지도 위젯 · geo/design · 일지 지도 · 지도 모달 ·
+    입력 미리보기가 전부 같은 한 줄이다. 그 URL 이 비면 지도가 아예 뜨지 않으니
+    그 하나만 남기고, 나머지 벡터 채널과 래스터·오버레이는 켜는 순간
+    `/api/geo/layer_secrets` 로 받아 간다.
+
+    벡터 레이어 전부를 남겼더니 같은 MapTiler 키가 페이지에 수백 번 실렸다
+    (레이어 6종 × 위젯 4개 × 필드 여러 개). 쓰는 것은 언제나 하나다.
+    """
+    state = {'used': False}
+
+    def keep(layer):
+        if state['used'] or not is_vector_base_layer(layer):
+            return False
+        state['used'] = True
+        return True
+
+    return keep
+
+
+def _secret_values(layer, api_keys):
+    """이 레이어에서 지워야 할 실제 키 문자열들."""
+    vals = set()
+    for v in (api_keys or {}).values():
+        if isinstance(v, str) and len(v) >= 8:
+            vals.add(v)
+    lk = layer.get('api_key')
+    if isinstance(lk, str) and len(lk) >= 8:
+        vals.add(lk)
+    return vals
+
+
+def _scrub(text, secrets):
+    """키를 `{api_key}` 로 바꾼다 — 나중에 값만 채우면 되는 자리로 남긴다."""
+    for s in secrets:
+        if s and s in text:
+            text = text.replace(s, KEY_PLACEHOLDER)
+    return text
+
+
+def _erase(text, secrets):
+    """키를 흔적 없이 지운다 — 다시 채울 필요가 없는 자리(프록시 경유)."""
+    for s in secrets:
+        if s and s in text:
+            text = text.replace(s, '')
+    return text
+
+
+def mask_layer_secrets(layers, api_keys=None, keep=None):
+    """레이어 목록의 사본을 돌려준다 — `keep` 이 참을 주는 레이어만 키를 남긴다.
+
+    @param layers    get_active_geo_layers() 결과
+    @param api_keys  전역 키 맵(GeoSetting.keys). 레이어에 직접 박히지 않고
+                     URL 에만 남은 값까지 지우기 위해 함께 받는다.
+    @param keep      layer dict -> bool. 생략하면 전부 마스킹.
+    """
+    masked = []
+    for layer in (layers or []):
+        if keep is not None and keep(layer):
+            masked.append(layer)
+            continue
+
+        secrets = _secret_values(layer, api_keys)
+        item = dict(layer)
+        if item.get('api_key'):
+            item['api_key'] = ''
+        if secrets:
+            if isinstance(item.get('url'), str):
+                item['url'] = _scrub(item['url'], secrets)
+            opts = item.get('options')
+            if isinstance(opts, dict):
+                new_opts = {}
+                for k, v in opts.items():
+                    new_opts[k] = _scrub(v, secrets) if isinstance(v, str) else v
+                item['options'] = new_opts
+        masked.append(item)
+    return masked
+
+
+def strip_geo_config_secrets(config, keep=None):
+    """`keys` 를 떼고 레이어를 마스킹한 geo_config 사본."""
+    if not isinstance(config, dict):
+        return config
+    api_keys = config.get('keys') or {}
+    public = dict(config)
+    public['keys'] = {}
+    public['layers'] = mask_layer_secrets(config.get('layers'), api_keys, keep=keep)
+    return public
+
+
+def proxy_overlay_tile_urls(layers):
+    """키가 필요한 **오버레이** XYZ 레이어의 타일 URL 을 서버 프록시로 바꾼다.
+
+    이런 오버레이(OpenWeatherMap 등)는 타일 URL 자체에 키를 붙여야 해서, 켜는
+    순간 키가 브라우저 URL 에 실린다. `/api/geo/tile/<id>/{z}/{x}/{y}` 를 거치면
+    브라우저는 키를 모른 채 타일만 받는다.
+
+    **베이스맵은 건드리지 않는다.** 화면 하나를 채우는 데 수십 장이 오가는데
+    그것을 전부 앱 서버로 돌리면 워커가 타일에 묶여 대시보드의 다른 요청이
+    밀린다(사용자 결정, 2026-09-08). 베이스는 브라우저가 그대로 직접 받는다.
+    """
+    out = []
+    for layer in (layers or []):
+        url = layer.get('url') or ''
+        is_base = (layer.get('is_base') is True) or (layer.get('role') == 'base')
+        needs_proxy = (
+            not is_base
+            and layer.get('type') in ('xyz', None, '')
+            and layer.get('api_key')
+            and '{z}' in url and '{x}' in url
+        )
+        if not needs_proxy:
+            out.append(layer)
+            continue
+        item = dict(layer)
+        item['url'] = '/api/geo/tile/{}/{{z}}/{{x}}/{{y}}'.format(layer.get('id'))
+        item['api_key'] = ''
+        opts = item.get('options')
+        if isinstance(opts, dict):
+            # 여기서는 `{api_key}` 자리표시자를 **남기지 않는다**. 남기면
+            # AoTGeoSecrets.needs() 가 "아직 키를 못 받았다"고 보고 원본 URL 을
+            # 받아와 방금 만든 프록시 URL 을 덮어쓴다(실측: OWM 타일이 다시
+            # 키를 달고 상류로 나갔다). 프록시 경유 레이어는 키가 필요 없다.
+            secrets = _secret_values(layer, None)
+            item['options'] = {
+                k: (_erase(v, secrets) if isinstance(v, str) else v)
+                for k, v in opts.items()
+            }
+        out.append(item)
+    return out
+
+
+def resolve_layer_upstream_url(layer_id):
+    """레이어의 **상류** 타일 URL(키 포함). 타일 프록시 라우트 전용.
+
+    `resolve_layer_secrets` 는 프록시 대상 레이어에 프록시 URL 을 돌려주므로,
+    프록시가 그것을 쓰면 자기 자신을 부르는 고리가 된다. 여기서는 마스킹도
+    프록시 치환도 하지 않은 원본을 준다 — 응답에 실어 보내면 안 된다.
+    """
+    if not layer_id:
+        return ''
+    target = str(layer_id)
+    for layer in get_geo_config(with_secrets=True).get('layers', []):
+        if str(layer.get('id') or '') == target:
+            return layer.get('url') or ''
+    return ''
+
+
+def global_map_key(name):
+    """지도 키 하나를 찾는다 — **서버 안에서만 쓴다.**
+
+    프록시 라우트가 상류로 보낼 키를 찾는 용도다. 이 값이 응답에 실려 나가면
+    안 된다(그래서 get_geo_config 는 기본적으로 keys 를 비운다).
+
+    `GeoSetting.keys` 만 보면 안 된다 — 실 운영 DB 에서 그 칸은 비어 있고
+    키는 레이어별 `options` 에 들어 있는 경우가 많다(김제 로컬이 그렇다).
+    `get_active_geo_layers` 가 레이어를 훑어 채워 놓은 합본을 쓴다.
+    """
+    settings = GeoSetting.query.first()
+    if settings and settings.keys:
+        try:
+            found = (json.loads(settings.keys) or {}).get(name, '') or ''
+            if found:
+                return found
+        except Exception:
+            pass
+    try:
+        return (get_geo_config(with_secrets=True).get('keys') or {}).get(name, '') or ''
+    except Exception:
+        return ''
+
+
+def resolve_layer_secrets(layer_ids):
+    """`{layer_id: {url, api_key, options}}` — 요청한 레이어의 키를 채워 돌려준다.
+
+    화면이 레이어를 **실제로 켤 때** 그 레이어의 것만 받아 가는 통로다. 호출자는
+    권한을 반드시 확인한다(`/api/geo/layer_secrets`).
+    """
+    wanted = {str(i) for i in (layer_ids or []) if i}
+    if not wanted:
+        return {}
+    out = {}
+    # 프록시를 거치는 오버레이는 여기서도 프록시 URL 을 준다 — 이 통로로 원본을
+    # 흘리면 프록시로 바꿔 둔 의미가 없어진다.
+    resolved = proxy_overlay_tile_urls(get_geo_config(with_secrets=True).get('layers', []))
+    for layer in resolved:
+        lid = str(layer.get('id') or '')
+        if lid in wanted:
+            out[lid] = {
+                'url': layer.get('url', ''),
+                'api_key': layer.get('api_key', ''),
+                'options': layer.get('options', {}),
+            }
+    return out
 
 # ------------------------------------------------------------------------------
 # Geo Data Helpers

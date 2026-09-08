@@ -356,3 +356,43 @@ class SituationReport:
     limiting_factor: Optional[str] = None   # 'light'|'co2'|'temperature'|'water'
     modes: list = field(default_factory=list)  # 복합 모드 리스트
     authority: Dict[str, str] = field(default_factory=dict)  # P5-2: 변수별 제어 권한
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 자동 제어에서 뺀 장치 — 파싱의 **정본**
+# ─────────────────────────────────────────────────────────────────────────────
+# 시설에 있는 장치라고 언제나 제어해도 되는 것은 아니다. 수리 중이거나 손으로
+# 잡아 둔 장치를 코디네이터가 계속 움직이면 사람이 만지는 중에 돌 수 있고,
+# 고장난 장치를 향해 적분이 쌓여 남은 장치까지 이상하게 돈다.
+#
+# ⚠ **읽는 곳이 둘이라 파싱을 두 벌 두면 안 된다.** 설정 화면(웹 API)과 제어
+# (프로필 로더)가 같은 문자열을 읽는데, 한쪽만 공백을 안 다듬으면 **화면에서는
+# 꺼져 있는데 제어는 계속 도는** 상태가 된다. 그때 사용자는 토글을 껐는데 왜
+# 도는지 알 방법이 없다.
+
+def parse_disabled_actuators(raw) -> set:
+    """`disabled_actuators` 옵션 → Output uuid 집합.
+
+    쉼표로 이은 목록이고 공백·빈 항목·중복은 버린다. 값이 없거나 형식이
+    이상하면 **빈 집합**이다 — 제외가 없다는 뜻이라 기존 설치와 동작이 같다.
+    (여기서 예외를 올리면 옵션 하나 때문에 제어가 통째로 멈춘다.)
+    """
+    if not raw:
+        return set()
+    items = raw if isinstance(raw, (list, tuple, set)) else str(raw).split(',')
+    out = set()
+    for item in items:
+        try:
+            uid = str(item).strip()
+        except Exception:                                       # noqa: BLE001
+            continue
+        if uid:
+            out.add(uid)
+    return out
+
+
+def format_disabled_actuators(uuids) -> str:
+    """집합 → 저장 문자열. 정렬해 담는다 — 순서만 다른 저장이 '변경' 으로
+    잡히면 함수가 저장할 때마다 불필요하게 다시 로드된다."""
+    return ','.join(sorted({str(u).strip() for u in (uuids or [])
+                            if str(u).strip()}))

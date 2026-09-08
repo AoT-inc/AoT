@@ -13,6 +13,7 @@ from aot.functions.utils.env_control.effect_functions import build_effect_model
 from aot.functions.utils.env_control.group_expander import expand_group_commands
 from aot.functions.utils.env_control.types import (
     ActuatorGroup, ActuatorProfile, CmdConstraints, ManualLockState,
+    parse_disabled_actuators,
 )
 
 from ._function_info import _FACILITY_SLOT_KIND, _KIND_CAPABILITIES
@@ -464,6 +465,43 @@ class ProfileLoaderMixin:
                 facility_name = integ.get('name') or facility_uuid
                 actuators_list = integ.get('actuators_resolved') or []
                 vent_source = capacity_meta.get('vent_open_source') or 'none'
+
+                # ── 사용자가 자동 제어에서 뺀 장치 ─────────────────────────
+                # 수리 중이거나 손으로 잡아 둔 장치를 계속 움직이면 사람이
+                # 만지는 중에 돌 수 있고, 고장난 장치를 향해 적분이 쌓여 남은
+                # 장치까지 이상하게 돈다.
+                #
+                # ⚠ **여기서 거른다** — 프로필을 만들기 전이다. 그래야 안전
+                # 게이트까지 함께 빠진다(`_build_forced_commands` 는
+                # `profiles` 를 순회한다). 뒤에서 명령만 막으면 게이트가 그
+                # 장치를 계속 강제하는데, 수리 중인 장치야말로 아무것도
+                # 보내면 안 된다. `vent_openings` 도 같이 걸러야 환기 능력
+                # 계산이 없는 장치를 세지 않는다(bay_scope 와 같은 이유).
+                #
+                # ⚠ `getattr(..., None)` 로 감싸지 말 것. 옵션 선언이 사라지면
+                # 여기서 AttributeError 로 드러나야 한다 — 폴백을 두면 제외가
+                # 조용히 안 걸리고, 사용자는 화면에서 껐는데 왜 도는지 알 수
+                # 없다(이 옵션을 만들 때 실제로 그 상태를 한 번 만들었다).
+                disabled_ids = parse_disabled_actuators(self.disabled_actuators)
+                if disabled_ids:
+                    n_before_dis = len(actuators_list)
+                    actuators_list = [
+                        ar for ar in actuators_list
+                        if (ar.get('output_uuid') or '') not in disabled_ids
+                    ]
+                    kept_ids = {ar.get('output_uuid') for ar in actuators_list}
+                    self._vent_openings = [
+                        op for op in self._vent_openings
+                        if op.get('actuator_id') in kept_ids
+                        or not op.get('actuator_id')
+                    ]
+                    # 조용히 빼지 않는다 — "왜 저 장치가 안 도나" 에 답할
+                    # 근거가 로그에 있어야 한다. 사용자가 끈 것이므로 경고가
+                    # 아니라 정보다.
+                    self.logger.info(
+                        "자동 제어 제외: %d개 (설정) — 남은 액추에이터 %d/%d",
+                        n_before_dis - len(actuators_list),
+                        len(actuators_list), n_before_dis)
 
                 # ── Bay scope: 액추에이터 필터 + 물리량 bay 비례 축소 ──────────
                 # 귀속 불가(bay_ids=[]) 액추에이터는 시설 공통으로 보고 제외 —

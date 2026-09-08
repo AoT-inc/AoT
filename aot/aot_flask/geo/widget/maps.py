@@ -610,7 +610,10 @@ def generate_page_variables_logic(widget_unique_id, widget_options):
         except Exception:
             pass
 
-    geo_config = utils_geo.get_geo_config()
+    # 여기서만 키가 든 사본을 받는다 — 아래에서 **이 위젯이 실제로 그리는
+    # 레이어에만** 키를 남기고 나머지는 지워서 내보낸다. 브라우저로 나가는
+    # 값은 마스킹된 `active_layers` 쪽이다(전역 설정은 layout.html 이 따로 심는다).
+    geo_config = utils_geo.get_geo_config(with_secrets=True)
     theme_config = geo_config.get('theme_config', {})
     if isinstance(theme_config, str):
         try:
@@ -723,7 +726,39 @@ def generate_page_variables_logic(widget_unique_id, widget_options):
     
     # Debug logging for matched layers
     logger.debug(f"[AoT Map Layer Debug] Widget {widget_unique_id}: matched_layers={[l.get('name') for l in active_layers if l.get('visible')]}")
-    
+
+    # ── 키는 이 위젯이 실제로 그리는 레이어에만 남긴다 ────────────────────────
+    #
+    # 예전에는 등록된 레이어 34개 전부가 키를 달고 나갔다 — 김제 대시보드에서
+    # 실제로 켠 것은 Vworld 위성지도 하나인데, 쓰지도 않는 Google Maps · OWM ·
+    # KMA 키까지 페이지에 실려 있었다(그것도 지도 위젯 수만큼).
+    #
+    # 벡터 베이스를 함께 남기는 이유: 위젯 JS 는 `selected_base_layer` 가 벡터
+    # 레이어와 이름이 맞지 않으면 **첫 벡터 레이어의 style.json** 을 베이스로
+    # 쓴다(aot-map-widget-vector.js 의 baseStyleUrl). 그 경로가 살아 있는 한
+    # 벡터 베이스는 "안 보이지만 실제로 쓰는" 레이어다.
+    _selected_base_norm = normalize_layer_name(selected_base) if selected_base else None
+    _vector_kept = {'used': False}
+
+    def _layer_needs_key(l):
+        if l.get('visible'):
+            return True
+        if l.get('type') != 'vector':
+            return False
+        # 위젯 JS 가 고르는 그대로: 이름이 맞는 벡터가 있으면 그것, 없으면 첫 벡터.
+        if _selected_base_norm and normalize_layer_name(l.get('name')) == _selected_base_norm:
+            return True
+        if not _vector_kept['used']:
+            _vector_kept['used'] = True
+            return True
+        return False
+
+    # 키가 붙은 오버레이는 서버 타일 프록시를 거치게 바꾼 뒤(그러면 키가 아예
+    # 필요 없다) 남은 것을 마스킹한다.
+    active_layers = utils_geo.proxy_overlay_tile_urls(active_layers)
+    active_layers = utils_geo.mask_layer_secrets(
+        active_layers, global_keys, keep=_layer_needs_key)
+
     default_zoom = w_zoom
     
     if default_zoom is None and selected_map_zoom is not None:
@@ -864,7 +899,9 @@ def generate_page_variables_logic(widget_unique_id, widget_options):
         'default_pitch':   int(float(w_pitch))   if w_pitch   not in (None, '') else 0,
         'default_bearing': int(float(w_bearing)) if w_bearing not in (None, '') else 0,
         'map_provider': map_provider_val,
-        'map_api_key': map_api_key_val,
+        # `map_api_key`(GeoMap.api_key) 는 여기서 내보내지 않는다 — 읽는 쪽이
+        # 하나도 없는데(JS·템플릿 전수 0건) 지도마다 저장된 키를 페이지로
+        # 실어 보내던 자리다. 서버 안에서는 위의 layer_mode 판정에만 쓴다.
         'map_style_url': map_style_url_val,
         'map_default_center': common_center or MAP_DEFAULT_CENTER,
         'map_default_zoom': default_zoom or MAP_DEFAULT_ZOOM,
@@ -897,7 +934,8 @@ def generate_page_variables_logic(widget_unique_id, widget_options):
         'selected_map_center': selected_map_center,
         'selected_map_zoom': selected_map_zoom,
         'global_providers': global_providers,
-        'global_keys': global_keys,
+        # `global_keys`(GeoSetting.keys 전량)도 마찬가지 — 읽는 쪽이 없고,
+        # 레이어에 필요한 키는 위에서 해당 레이어에만 남긴다.
         'map_global_style': map_global_style,
         'widget_unique_id': widget_unique_id,
         'label_position': label_position,
@@ -925,7 +963,9 @@ def generate_page_variables_logic(widget_unique_id, widget_options):
         'label_hidden_meas': widget_options.get('label_hidden_meas', False) if widget_options else False,
         'theme_config': theme_config,
         'active_layers': active_layers,
-        'geo_config': geo_config,
+        # `geo_config` 는 내보내지 않는다 — 전역 설정은 layout.html 이
+        # `window.AOT_GEO_CONFIG` 로 이미 한 벌 심고, 지도 위젯 JS 는 그것을
+        # 폴백으로 읽는다. 위젯마다 46KB 짜리 사본을 더 싣던 자리였다.
         # @ANCHOR: ai_advice_summary_var
         'ai_advice_list': ai_advice_list,
         'ai_globally_enabled': ai_globally_enabled,

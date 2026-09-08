@@ -230,6 +230,35 @@ _TRANSPARENT_1X1_PNG = (
     b'\x00\x00\x05\x00\x01\r\n-\xb4\x00\x00\x00\x00IEND\xaeB`\x82'
 )
 
+@blueprint.route('/api/geo/layer_secrets', methods=['GET'])
+@login_required
+def api_geo_layer_secrets():
+    """요청한 지도 레이어의 완성 URL·키를 돌려준다 — **켤 때 그것만**.
+
+    페이지에 실리는 레이어 목록에서는 키가 `{api_key}` 로 지워져 있다
+    (utils_geo.mask_layer_secrets). 사용자가 레이어를 실제로 켜는 순간
+    화면이 이 통로로 그 레이어의 값만 받아 채운다.
+
+    `ids` 는 레이어 id 를 쉼표로 이은 목록이다. 한 번에 12개까지만 받는다 —
+    목록 전체를 한 요청으로 긁어 예전 상태로 되돌리는 길을 막는다.
+    """
+    raw = (request.args.get('ids') or '').strip()
+    ids = [i.strip() for i in raw.split(',') if i.strip()][:12]
+    if not ids:
+        return jsonify({'ok': False, 'message': 'missing ids'}), 400
+
+    try:
+        secrets = utils_geo.resolve_layer_secrets(ids)
+    except Exception as e:
+        current_app.logger.error(f"[Geo] layer_secrets failed: {e}")
+        return jsonify({'ok': False, 'message': 'error'}), 500
+
+    resp = jsonify({'ok': True, 'layers': secrets})
+    # 프록시·브라우저 어디에도 남기지 않는다.
+    resp.headers['Cache-Control'] = 'no-store, max-age=0'
+    return resp
+
+
 @blueprint.route('/api/geo/init_design', methods=['GET'])
 @login_required
 def api_geo_init_design():
@@ -1018,23 +1047,49 @@ def api_geo_proxy_isric():
 @login_required
 @cache.cached(timeout=300, query_string=True, unless=lambda: hasattr(g, '_proxy_error') and g._proxy_error)
 def api_geo_proxy_openweather():
-    """
-    Proxy for OpenWeatherMap API.
+    """OpenWeatherMap 현재날씨 프록시 — **키는 서버가 찾는다.**
+
+    예전에는 `appid` 를 쿼리로 받아 그대로 상류에 넘겼다. 키를 감추려고 둔
+    통로인데 키가 클라이언트에서 왔으니 감추는 것이 하나도 없었고, 그 URL 이
+    브라우저 방문기록·프록시 로그에 그대로 남았다. 바로 아래 KMA 프록시는
+    처음부터 `input_id` 만 받아 서버에서 키를 찾는다 — 그 방식으로 맞춘다.
+
+    `appid` 가 와도 무시한다(옛 캐시 페이지 호환). 키 출처는 두 곳:
+    레이어별 옵션(`input_id` 로 지정) → 전역 GeoSetting.keys['owm'].
     """
     try:
-        # Whitelisted params
-        params = {k: v for k, v in request.args.items() if k in ['lat', 'lon', 'appid', 'units']}
-        
-        if not params.get('lat') or not params.get('lon') or not params.get('appid'):
-            return jsonify({'error': 'Missing required parameters'}), 400
-            
+        lat = request.args.get('lat')
+        lon = request.args.get('lon')
+        units = request.args.get('units', 'metric')
+        input_id = request.args.get('input_id', '')
+
+        if not lat or not lon:
+            return jsonify({'error': 'Missing lat/lon parameters'}), 400
+
+        api_key = ''
+        if input_id:
+            layer = GeoLayer.query.filter_by(unique_id=input_id).first()
+            if layer and layer.options:
+                try:
+                    api_key = (json.loads(layer.options) or {}).get('api_key', '')
+                except Exception:
+                    api_key = ''
+        if not api_key:
+            api_key = utils_geo.global_map_key('owm')
+
+        if not api_key:
+            g._proxy_error = True
+            return jsonify({'error': 'OpenWeatherMap API key not configured'}), 400
+
         url = 'https://api.openweathermap.org/data/2.5/weather'
-        resp = requests.get(url, params=params, timeout=5)
-        
+        resp = requests.get(
+            url, params={'lat': lat, 'lon': lon, 'units': units, 'appid': api_key},
+            timeout=5)
+
         if resp.status_code != 200:
              g._proxy_error = True
-             return jsonify({'error': f"Upstream error: {resp.status_code}", 'text': resp.text}), 502
-             
+             return jsonify({'error': f"Upstream error: {resp.status_code}"}), 502
+
         return jsonify(resp.json())
     except Exception as e:
         g._proxy_error = True
@@ -1368,6 +1423,64 @@ def api_geo_proxy_wms(unique_id):
             content_type='image/png',
             headers={'Cache-Control': 'no-cache'}
         )
+
+
+_OVERLAY_TILE_TTL = 600        # 날씨 오버레이는 자주 바뀐다 — 10분.
+
+
+@blueprint.route('/api/geo/tile/<layer_id>/<int:z>/<int:x>/<int:y>', methods=['GET'])
+@login_required
+def api_geo_tile_xyz(layer_id, z, x, y):
+    """키가 필요한 **오버레이** XYZ 타일을 서버가 대신 받아 온다.
+
+    OpenWeatherMap 같은 오버레이는 타일 URL 에 키를 붙여야 해서, 브라우저가
+    직접 받으면 키가 URL 에 실린다. 이 통로를 거치면 브라우저는 키를 모른 채
+    타일만 받는다.
+
+    **베이스맵은 여기로 보내지 않는다.** 베이스는 화면을 채우느라 한 번에
+    수십 장이 오고, 그 전부가 gunicorn 워커를 지나가면 대시보드의 다른 요청이
+    밀린다. 오버레이는 장수가 적어 그 비용이 작다(적용 범위는
+    utils_geo.proxy_overlay_tile_urls 가 정한다).
+
+    캐시는 WMS 프록시와 같은 두 겹이다 — 서버 `_tile_cache` + 브라우저 조건부
+    캐시. 상류가 실패하면 투명 타일을 200 으로 돌려준다(재요청 폭주 방지).
+    """
+    try:
+        url_tmpl = utils_geo.resolve_layer_upstream_url(layer_id)
+        if not url_tmpl or url_tmpl.startswith('/api/geo/tile/'):
+            return Response('Layer not found', status=404)
+
+        url = (url_tmpl
+               .replace('{z}', str(z))
+               .replace('{x}', str(x))
+               .replace('{y}', str(y))
+               .replace('{-y}', str((1 << z) - 1 - y))
+               .replace('{s}', 'a')
+               .replace('{r}', ''))
+        if '{' in url.split('?')[0]:
+            # 아직 풀리지 않은 자리표시자가 남았다 — 상류를 부르면 404 만 받는다.
+            return Response('Unresolved tile URL', status=400)
+
+        cache_params = {'z': z, 'x': x, 'y': y}
+        cached = _tile_cache_get(url, cache_params)
+        if cached is None:
+            resp = requests.get(url, timeout=8, headers={'Referer': request.host_url})
+            content_type = resp.headers.get('Content-Type', 'image/png')
+            if resp.status_code != 200 or 'image' not in content_type:
+                current_app.logger.warning(
+                    f'[Tile Proxy] Upstream {resp.status_code} for layer {layer_id}')
+                return Response(_TRANSPARENT_1X1_PNG, status=200,
+                                content_type='image/png',
+                                headers={'Cache-Control': 'no-cache'})
+            cached = (resp.content, content_type)
+            _tile_cache_set(url, cache_params, cached, timeout=_OVERLAY_TILE_TTL)
+
+        return utils_http.tile_conditional(
+            request, cached[0], cached[1], _OVERLAY_TILE_TTL)
+    except Exception as e:
+        current_app.logger.warning(f'[Tile Proxy] Exception for {layer_id}: {e}')
+        return Response(_TRANSPARENT_1X1_PNG, status=200, content_type='image/png',
+                        headers={'Cache-Control': 'no-cache'})
 
 
 # ---------------------------------------------------------------------------

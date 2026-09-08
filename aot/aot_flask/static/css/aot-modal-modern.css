@@ -2345,3 +2345,54 @@ body { transition: padding-right 0.4s cubic-bezier(0.075, 0.82, 0.165, 1); }
 }
 .aot-lib-kind { font-size: var(--aot-font-size-2xs); color: var(--aot-color-text-secondary); }
 
+
+/* ─────────────────────────────────────────────────────────────────────────
+   자동 제어를 적용할 장치 — 토글 목록 (`aot-actuator-enable.js` 가 채운다)
+   ───────────────────────────────────────────────────────────────────────── */
+/* 목록의 뼈대만 둔다. 색·글자·토글은 공용 토큰과 `.btn-toggle` 이 맡는다 —
+   여기서 새 색을 만들면 테마를 바꿀 때 이 목록만 남는다. */
+.aot-actuator-enable-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.aot-actuator-enable-row {
+  display: flex;
+  align-items: center;
+  gap: var(--aot-gap-sm, 8px);
+  /* 이름과 토글이 멀어서, 선이 없으면 어느 토글이 어느 장치인지 눈으로
+     따라가기 어렵다. */
+  border-bottom: 1px solid var(--aot-border-subtle, rgba(128, 128, 128, 0.18));
+  padding: var(--aot-gap-xs, 6px) 0;
+  margin: 0;
+  cursor: pointer;
+}
+
+.aot-actuator-enable-row:last-child { border-bottom: 0; }
+
+.aot-actuator-enable-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.aot-actuator-enable-kind {
+  flex: 0 0 auto;
+  color: var(--aot-text-muted, #888);
+  font-size: 0.85em;
+}
+
+.aot-actuator-enable-count {
+  color: var(--aot-text-muted, #888);
+  font-weight: normal;
+  font-size: 0.85em;
+}
+
+.aot-actuator-enable-hint,
+.aot-actuator-enable-note {
+  color: var(--aot-text-muted, #888);
+  font-size: 0.85em;
+  padding-bottom: var(--aot-gap-xs, 6px);
+}

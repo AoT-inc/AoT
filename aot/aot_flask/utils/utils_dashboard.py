@@ -17,8 +17,9 @@ from aot.databases.models import (PID, Conversion, CustomController,
 from aot.aot_client import DaemonControl
 from aot.aot_flask.extensions import db
 from aot.aot_flask.utils.utils_general import (
-    custom_options_return_json, delete_entry_with_id, flash_success_errors,
-    return_dependencies, use_unit_generate)
+    coerce_custom_option_values, custom_options_return_json,
+    delete_entry_with_id, flash_success_errors, return_dependencies,
+    use_unit_generate)
 from aot.utils.widgets import parse_widget_information
 from aot.utils.widget_generate_html import generate_widget_html
 
@@ -330,6 +331,50 @@ def widget_add(form_base, request_form):
     return dep_unmet, reload_flask
 
 
+def apply_widget_option_changes(widget, presave, postsave,
+                                request_form=None, dict_widgets=None,
+                                partial=False):
+    """위젯 옵션 변경을 확정한다 — **폼 저장과 AJAX 부분 저장의 공통 경로.**
+
+    쓰기 경로가 둘인데(설정 폼 POST, `/save_widget_custom_options` AJAX) 각자
+    타입 정리와 `execute_at_modification` 호출을 따로 하고 있었다. 한쪽에만
+    규칙이 붙으면 두 경로가 갈라진다 — 2026-08-23 사고가 그것이었다(느슨한
+    AJAX 경로가 남긴 `label_min_zoom=17.5` 하나가, 그 값을 건드리지도 않은
+    **다음 폼 저장 전체**를 거부하게 만들었다). 그때는 AJAX 쪽에 검사를 덧대어
+    막았고, 여기서 두 경로를 한 함수로 모은다.
+
+    커밋은 하지 않는다 — 폼 경로는 이름·새로고침 주기 같은 다른 칸을 함께
+    커밋하므로 그 시점은 호출부가 정한다.
+
+    @param presave    저장 전 custom_options (dict)
+    @param postsave   이번에 들어온 값. `partial=True` 면 **패치**다.
+    @param partial    True 면 위젯에 `execute_at_modification` 이 없을 때
+                      presave 위에 덮어쓴다(AJAX 부분 저장).
+    @returns (allow_saving, errors, final_options)
+    """
+    dict_widgets = dict_widgets or parse_widget_information()
+    widget_def = dict_widgets.get(widget.graph_type) or {}
+
+    postsave, errors = coerce_custom_option_values(widget_def, postsave)
+    if errors:
+        return False, errors, postsave
+
+    if 'execute_at_modification' in widget_def:
+        (allow_saving, _page_refresh, widget,
+         final_options) = widget_def['execute_at_modification'](
+            widget, request_form, presave, postsave)
+        if not allow_saving:
+            return False, [gettext(
+                "execute_at_modification() does not allow saving widget options.")], final_options
+        return True, [], final_options
+
+    if partial:
+        merged = dict(presave or {})
+        merged.update(postsave or {})
+        return True, [], merged
+    return True, [], postsave
+
+
 def widget_mod(form_base, request_form):
     """Modify settings of a dashboard item."""
     action = '{action} {controller}'.format(
@@ -370,19 +415,16 @@ def widget_mod(form_base, request_form):
         error, dict_widgets, request_form, mod_dev=mod_widget, device=mod_widget.graph_type,
         custom_options=custom_options_json_presave)
 
-    if 'execute_at_modification' in dict_widgets[mod_widget.graph_type]:
-        (allow_saving,
-         page_refresh,
-         mod_widget,
-         custom_options) = dict_widgets[mod_widget.graph_type]['execute_at_modification'](
-            mod_widget, request_form, custom_options_json_presave, json.loads(custom_options_json_postsave))
-        custom_options = json.dumps(custom_options)  # Convert dictionary to JSON string
-        if not allow_saving:
-            error.append(gettext("execute_at_modification() does not allow saving widget options."))
-    else:
-        custom_options = custom_options_json_postsave
-
-    mod_widget.custom_options = custom_options
+    allow_saving, apply_errors, final_options = apply_widget_option_changes(
+        mod_widget,
+        custom_options_json_presave,
+        json.loads(custom_options_json_postsave),
+        request_form=request_form,
+        dict_widgets=dict_widgets)
+    if apply_errors:
+        error.extend(apply_errors)
+    if allow_saving:
+        mod_widget.custom_options = json.dumps(final_options)
 
     if not error:
         try:

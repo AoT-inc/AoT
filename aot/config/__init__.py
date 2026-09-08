@@ -278,7 +278,11 @@ LANGUAGES = {
     'zh': '中文 (Chinese)',
     'ja': '日本語 (Japanese)',
     'th': 'ภาษาไทย (Thai)',
-    'vi': 'Tiếng Việt (Vietnamese)'
+    'vi': 'Tiếng Việt (Vietnamese)',
+    'hi': 'हिन्दी (Hindi)',
+    'hu': 'Magyar (Hungarian)',
+    'lt': 'Lietuvių (Lithuanian)',
+    'uk': 'Українська (Ukrainian)'
 }
 
 # AI Agent & Service Config (For future integration)

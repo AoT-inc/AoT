@@ -233,6 +233,11 @@ class CustomModule(
         self.geo_facility_id_device_id = None
         # Bay(구역) scope — 빈 값이면 시설 전체 (현행 동작)
         self.bay_scope                 = None
+        # 자동 제어에서 뺀 장치(Output uuid CSV) — 빈 값이면 전부 제어한다.
+        # ⚠ 이 줄이 없으면 `setup_custom_options_json` 이 채우지 않아 옵션이
+        #   영원히 None 이고, 화면에서 아무리 꺼도 제어는 계속 돈다(위 주석의
+        #   그 함정 그대로). 실제로 한 번 밟았다.
+        self.disabled_actuators        = None
 
         # Time Control
         self.time_enable = None

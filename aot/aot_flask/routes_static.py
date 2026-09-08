@@ -289,10 +289,14 @@ def inject_variables():
     # 배경색 밝기에 따라 텍스트를 기본/3차 색 중 무엇으로 할지 서버에서 미리 판정.
     upgrade_bg_is_light = upgrade_badge_is_light(custom_theme)
 
+    # 키가 빠진 사본이다(get_geo_config 기본값). 이 값은 layout.html 이
+    # `window.AOT_GEO_CONFIG` 로 **모든 페이지**에 심으므로, 여기에 키가 있으면
+    # 아래 api_keys 픽커에 걸어 둔 권한 게이트가 무의미해진다 — 같은 함수 안에서
+    # 한쪽만 막혀 있던 자리다(2026-09-08).
     from aot.aot_flask.utils.utils_geo import get_geo_config
     geo_config = get_geo_config()
     map_global_providers = geo_config.get('providers', {}) if geo_config else {}
-    map_global_keys = geo_config.get('keys', {}) if geo_config else {}
+    map_global_keys = {}
 
     # Each user_has_permission() call costs a User+Role query and this runs on
     # every page render, so resolve each permission once and reuse it below.

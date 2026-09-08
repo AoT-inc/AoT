@@ -400,6 +400,34 @@ FUNCTION_INFORMATION = {
             ),
         },
         {
+            # ── 자동 제어에서 뺄 장치 ─────────────────────────────────────
+            # 시설에 있는 장치라고 언제나 제어해도 되는 것은 아니다. 수리
+            # 중이거나 손으로 잡아 둔 장치를 코디네이터가 계속 움직이면 사람이
+            # 만지는 중에 돌 수 있고, 고장난 장치를 향해 적분이 쌓여 남은
+            # 장치까지 이상하게 돈다.
+            #
+            # **제외 목록이다(포함 목록이 아니다).** 포함 목록이면 시설에 장치를
+            # 새로 넣었을 때 목록에 없다는 이유로 **조용히 제어에서 빠진다** —
+            # 아무 에러 없이 그 장치만 안 도는 상태가 되고, 그때 원인을 이
+            # 옵션에서 찾을 사람은 없다. 비어 있으면 전부 제어하므로 기존
+            # 설치의 동작도 그대로다.
+            #
+            # 값은 Output uuid 를 쉼표로 이은 것이고 화면은 아래
+            # `actuator_enable` 마커가 그린다. 사람이 직접 적는 칸이 아니라
+            # **저장소**라 `advanced_only` 다 — 목록과 이 칸이 둘 다 보이면
+            # 같은 것을 두 곳에서 고치게 된다.
+            'id': 'disabled_actuators',
+            'type': 'text',
+            'default_value': '',
+            'required': False,
+            'advanced_only': True,
+            'name': lazy_gettext('Excluded actuators (raw)'),
+            'phrase': lazy_gettext(
+                'Comma-separated Output IDs excluded from automatic control. '
+                'Normally set with the toggles above rather than typed here.'
+            ),
+        },
+        {
             'id': 'bay_scope',
             # ⚠ 자유 텍스트가 아니다 (2026-08-26). 오타 하나가 "이 구역만
             #   제어한다" 를 무너뜨리는데, 화면에는 아무 표시도 안 났다.
@@ -1358,7 +1386,8 @@ _LAYOUT = [
     #   (2026-08-27 사용자 지적: *"시설을 연동하면 연동한 시설 정보가 그 아래에
     #   나오는게 더 자연스러워. 설정하고 그 위치에서 확인."*).
     (False, lazy_gettext('Facility Settings'), [
-        (None, ['geo_facility_id', 'bay_scope', '@status']),
+        (None, ['geo_facility_id', 'bay_scope', '@status', '@actuators',
+                'disabled_actuators']),
     ]),
 
     # ⚠ **접지 않고, 시설 바로 뒤다** (2026-08-27 사용자 지적: *"옵션이 달랑
@@ -1534,7 +1563,8 @@ def _apply_layout(options, layout):
     #   '분류 안 됨' 으로 밀려나 화면 끝에 유령 항목이 생겼다
     #   (`test_applying_twice_is_stable` 가 잡았다).
     _MARKERS = ('collapse_start', 'collapse_end', 'header',
-                'env_status', 'scale_group', 'range_band')
+                'env_status', 'scale_group', 'range_band',
+                'actuator_enable')
     real = [o for o in options if o.get('id') and o.get('type') not in _MARKERS]
     by_id = {o['id']: o for o in real}
     out, used = [], set()
@@ -1578,6 +1608,12 @@ def _apply_layout(options, layout):
                 #   옆에 자동으로 놓았는데, 멤버가 전부 접힘(튜닝) 안에 있어서
                 #   **핵심 옵션까지 접혀 버렸다**(2026-08-27 화면 실측). 핵심은
                 #   항상 보이는 층에 있어야 그것만으로 끝낼 수 있다.
+                if oid == '@actuators':
+                    # 자동 제어에서 뺄 장치의 토글 목록. 서버는 자리만 내고
+                    # 채우는 것은 `aot-actuator-enable.js` 다 — 장치 목록은
+                    # 시설에서 오므로 이 스키마가 미리 알 수 없다.
+                    out.append({'type': 'actuator_enable'})
+                    continue
                 if oid == '@status':
                     # ⚠ **자리는 배치가 정한다.** 예전에는 무조건 맨 위였다 —
                     #   설정을 시작하기 전에 열 줄을 읽어야 했고, 정작 시설을

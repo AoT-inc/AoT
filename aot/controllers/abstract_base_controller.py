@@ -94,7 +94,7 @@ class _ChannelValues(OrderedDict):
 _DISPLAY_ONLY_BASE = [
     'new_line', 'header',
     'collapse_start', 'collapse_end', 'env_status',
-    'scale_group', 'range_band',
+    'scale_group', 'range_band', 'actuator_enable',
 ]
 # `id` 를 요구하지 않는 종류
 NO_ID_REQUIRED_TYPES = _DISPLAY_ONLY_BASE + ['message']

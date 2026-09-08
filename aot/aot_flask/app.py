@@ -473,6 +473,22 @@ def create_app(config=ProdConfig):
         except (ValueError, TypeError):
             return {}
 
+    @app.template_filter('omit')
+    def omit(value, *keys):
+        """dict 에서 주어진 키를 뺀 사본. 접미사 `*` 로 접두사 매칭도 된다.
+
+        위젯 변수를 통째로 `tojson` 하면 **설정 모달에서만 쓰는 목록**까지
+        페이지 본문에 실린다 — 지도 위젯은 그렇게 실린 픽커 데이터가 위젯당
+        66KB 였다(모달을 한 번도 열지 않아도). 실을 것만 남기는 대신 뺄 것을
+        적는 쪽이 안전하다: 새 런타임 값이 생겨도 조용히 사라지지 않는다.
+        """
+        if not isinstance(value, dict):
+            return value
+        exact = {k for k in keys if not k.endswith('*')}
+        prefixes = tuple(k[:-1] for k in keys if k.endswith('*'))
+        return {k: v for k, v in value.items()
+                if k not in exact and not (prefixes and k.startswith(prefixes))}
+
     return app
 
 
