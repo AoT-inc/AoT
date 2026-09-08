@@ -489,12 +489,10 @@ _IMPORTANT_BUDGET = {
     # 부트스트랩이 모달을 열며 body **인라인**에 넣어 둔 스크롤바 보정을 이겨야
     # 한다 — 인라인은 선택자로는 못 이긴다. 같은 블록의 overflow 는 특이도로
     # 이기므로 안 붙였다.
-    "aot-modal-modern.css": 223,
-    "bootstrap-4-themes/aot.css": 211,
+    "aot-modal-modern.css": 3,  # body 인라인 보정 1 + iOS 확대 방지 2
     "map/map.css": 183,
     "components/aot-base-ui.css": 139,
     "ai/ai_scheduler.css": 53,
-    "aot-entry-ui.css": 50,
     "pages/geo-facility.css": 36,
     "aot-base.css": 15,
     "aot-settings.css": 14,
@@ -664,10 +662,10 @@ _FALLBACK = re.compile(r"var\(\s*(--[A-Za-z0-9_-]+)\s*,\s*(#[0-9A-Fa-f]{3,8})\s*
 _HEX_DEF = re.compile(r"(--[A-Za-z0-9_-]+)\s*:\s*(#[0-9A-Fa-f]{3,8})\s*;")
 
 _FALLBACK_BUDGET = {
-    "--aot-color-text-secondary": 110,
+    "--aot-color-text-secondary": 108,
     "--aot-color-text-primary": 94,
-    "--aot-border-neutral": 22,
-    "--aot-surface-body": 16,
+    "--aot-border-neutral": 21,
+    "--aot-surface-body": 14,
     "--aot-color-danger": 11,
     "--aot-border-light": 8,
     "--aot-color-warning": 8,
@@ -826,6 +824,110 @@ def test_borders_do_not_use_the_bootstrap_gray():
         + " | ".join(bad[:8]))
 
 
+# ------------------------------------------------------ 색 리터럴 (하드코딩 색)
+
+# settings/custom_ui 가 시스템 색상의 **유일한 정본**이다. 그 페이지를 거치지
+# 않고 CSS 에 직접 박힌 색은 전부 하드코딩이고, 사용자가 그 페이지에서 값을
+# 바꿔도 따라오지 않는다.
+#
+# 2026-09-08 에 이 가드가 없어서 무슨 일이 있었는지: "일시중지"/"유지" 버튼
+# 색을 연결하는 작업을 하면서, 호버 색으로 `#7f8585` · `#b8bcbc` 를 새로 박아
+# 넣었다. 바로 그 자리에서 사용자가 "custom ui 에 없는 색이 왜 계속 튀어나오
+# 냐"고 잡아냈다 — 사람이 눈으로 잡을 일이 아니다.
+#
+# `var(--토큰, #폴백)` 의 폴백 자리는 여기서 보지 않는다. 그쪽은 이미
+# `test_var_fallback_matches_the_token` 이 "폴백은 토큰 기본값과 같아야 한다"
+# 로 지킨다. 여기서 잡는 것은 **토큰을 아예 거치지 않는** 리터럴이다.
+#
+# box-shadow 는 제외한다 — 그림자는 팔레트가 아니라 깊이 표현이고, 값도
+# 반투명 검정이 관례다.
+_COLOR_PROPS = (
+    r"(?:color|background|background-color|border|border-top|border-right"
+    r"|border-bottom|border-left|border-color|border-top-color"
+    r"|border-right-color|border-bottom-color|border-left-color"
+    r"|fill|stroke|accent-color|outline|outline-color)")
+_COLOR_DECL = re.compile(rf"(?<![\w-]){_COLOR_PROPS}\s*:\s*([^;{{}}]+)", re.I)
+_COLOR_LITERAL = re.compile(
+    r"#[0-9a-fA-F]{3,8}(?![\w-])|rgba?\([^)]*\)|hsla?\([^)]*\)")
+
+# 위반 수 상한. **내려가기만 한다.**
+# 2026-09-08 실측 99곳에서 시작한다. 0 이 되면 항목째 지운다.
+_COLOR_LITERAL_BUDGET = {
+    "ai/ai_scheduler.css": 26,
+    "map/map.css": 16,
+    "ai/device-timeline.css": 12,
+    "bootstrap-4-themes/aot.css": 11,
+    "dashboard.css": 4,
+    "aot-base.css": 3,
+    "ai/aot-ai-global.css": 2,
+    "aot-custom-ui-preview.css": 2,
+    "aot-modal-modern.css": 2,
+    "components/aot-base-ui.css": 1,
+    "components/aot-time-wheel.css": 1,
+}
+
+
+def _color_literal_offenders(text, label):
+    """토큰을 거치지 않은 색 리터럴."""
+    offenders = []
+    src = _blank_comments(text)
+    raw_lines = text.splitlines()
+    for i, line in enumerate(src.splitlines()):
+        for decl in _COLOR_DECL.finditer(line):
+            value = decl.group(1)
+            base = decl.start(1)
+            skip = [(base + m.start(1), base + m.end(1))
+                    for m in _VAR_FALLBACK.finditer(value)]
+            for lit in _COLOR_LITERAL.finditer(value):
+                pos = base + lit.start()
+                if any(a <= pos < b for a, b in skip):
+                    continue
+                window = "\n".join(raw_lines[max(0, i - 6):i + 1])
+                if _EXEMPT.search(window):
+                    continue
+                offenders.append(f"{label}:{i + 1} → {lit.group(0)}")
+    return offenders
+
+
+def _current_color_literal_counts():
+    counts, detail = {}, {}
+    for path in _target_css():
+        rel = str(path.relative_to(CSS_DIR))
+        offenders = _color_literal_offenders(
+            path.read_text(encoding="utf-8"), rel)
+        if offenders:
+            counts[rel] = len(offenders)
+            detail[rel] = offenders
+    return counts, detail
+
+
+def test_color_literals_do_not_regress():
+    """settings/custom_ui 를 거치지 않은 색이 늘지 않는다."""
+    counts, detail = _current_color_literal_counts()
+    grew = []
+    for rel, n in sorted(counts.items()):
+        cap = _COLOR_LITERAL_BUDGET.get(rel, 0)
+        if n > cap:
+            new = detail[rel][cap:] if cap else detail[rel]
+            grew.append(f"{rel}: {cap} → {n} ({', '.join(new[:4])})")
+    assert not grew, (
+        "settings/custom_ui 에 없는 색을 CSS 에 직접 박았다. 그 페이지의 "
+        "필드에 연결된 --aot-* 토큰을 쓸 것 — 마땅한 필드가 없으면 색을 새로 "
+        "만들지 말고 그 페이지에 필드를 먼저 만든다. 상한부터 올리지 말 것: "
+        + " | ".join(grew))
+
+
+def test_color_literal_budget_is_not_stale():
+    """색 리터럴 상한도 내려가기만 한다."""
+    counts, _ = _current_color_literal_counts()
+    stale = [f"{rel}: 상한 {cap} → 실제 {counts.get(rel, 0)}"
+             for rel, cap in sorted(_COLOR_LITERAL_BUDGET.items())
+             if counts.get(rel, 0) < cap]
+    assert not stale, (
+        "색 리터럴을 걷어냈으면 _COLOR_LITERAL_BUDGET 도 그만큼 내릴 것 "
+        "(0 이 되면 항목째 지운다): " + " | ".join(stale))
+
+
 # ------------------------------------------ 대시보드 탭바 아래 여백 (회귀 가드)
 
 # `.aot-sticky-tabs` 는 다섯 화면이 함께 쓴다(대시보드·입력·출력·함수·프로그램).
@@ -870,3 +972,32 @@ def test_dashboard_sticky_keeps_zero_margin():
     for d in margins:
         assert re.search(r":\s*0(px)?\s*(!important)?$", d), (
             f"#dash-sticky 의 여백이 0 이 아니다: {d}")
+
+
+# ---------------------------------------- 출력 On/Off 버튼 특이도 (회귀 가드)
+
+# `.aot-btn-on`/`.aot-btn-off` 는 같은 요소에 `.aot-pill-btn` 도 함께 달고
+# 있다(output_entry.html). `.btn.aot-pill-btn`(2-클래스, aot-modal-modern.css)
+# 이 이 파일보다 나중에 실리므로, 이 규칙이 동률(2-클래스)이면 배경·테두리·
+# 글자색에서 진다 — 2026-09 !important 정리 때 이 규칙의 !important 를
+# "화면에서 아무 일도 안 한다" 로 재고 뗐는데, 그 측정이 /output 화면을
+# 포함하지 않아 놓친 자리였다. 뗀 뒤로 On/Off 버튼이 상태·설정색과 무관하게
+# 늘 흰 알약으로만 보였다(2026-09-07 사용자 리포트로 발견).
+#
+# 3-클래스(`.btn.form-control.aot-btn-on`)로 특이도를 올려 고쳤다. 이 검사는
+# 그 세 클래스가 함께 남아 있는지만 본다 — 둘로 줄이면(예: 리팩터 중 "정리")
+# 조용히 같은 회귀가 재발한다.
+_OUTPUT_BTN_COLOR_RULE = re.compile(
+    r"\.btn\.form-control\.(aot-btn-on|aot-btn-off)\s*\{")
+
+
+def test_output_state_buttons_keep_three_class_specificity():
+    """On/Off 배경·테두리·글자색 규칙이 3-클래스 특이도를 유지한다."""
+    text = _blank_comments(
+        (CSS_DIR / "aot-entry-ui.css").read_text(encoding="utf-8"))
+    found = set(_OUTPUT_BTN_COLOR_RULE.findall(text))
+    assert found == {"aot-btn-on", "aot-btn-off"}, (
+        ".btn.form-control.aot-btn-on / .btn.form-control.aot-btn-off "
+        "3-클래스 규칙을 둘 다 찾지 못했다: " + repr(found) + " — 2-클래스로 "
+        "줄이면 .btn.aot-pill-btn(더 늦게 실림)에 배경·테두리·글자색을 다시 "
+        "내준다. settings/custom_ui 의 켜짐/꺼짐 색이 안 먹히던 회귀가 그것.")

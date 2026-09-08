@@ -95,13 +95,13 @@
         </form>
         <div class="aot-btn-group aot-btn-group-start" style="margin-top: 0.5em;">
           <form method="post" action="/info"
-                onsubmit="return confirm('{{_('Reload the web server now? The connection will be briefly interrupted.')}}');">
+                onsubmit="return confirm({{ _('Reload the web server now? The connection will be briefly interrupted.')|tojson|forceescape }});">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <input type="hidden" name="action" value="restart_frontend">
             <button type="submit" class="btn aot-pill-btn aot-pill-btn-secondary">{{_('Reload web server to apply')}}</button>
           </form>
           <form method="post" action="/info"
-                onsubmit="return confirm('{{_('Restart the daemon now? Control loops will pause for a few seconds.')}}');">
+                onsubmit="return confirm({{ _('Restart the daemon now? Control loops will pause for a few seconds.')|tojson|forceescape }});">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <input type="hidden" name="action" value="restart_daemon">
             <button type="submit" class="btn aot-pill-btn aot-pill-btn-secondary">{{_('Restart daemon')}}</button>

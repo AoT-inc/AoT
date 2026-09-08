@@ -31,7 +31,10 @@ def test_settings_custom_ui_has_no_dead_bg_upgrade_attribute():
     FlaskForm needs a request/session context this test does not set up."""
     from aot.aot_flask.forms.forms_settings import SettingsCustomUI
     assert not hasattr(SettingsCustomUI, 'bg_upgrade')
-    assert hasattr(SettingsCustomUI, 'badge_upgrade')
+    # 2026-09-08: badge_upgrade 도 없앴다 — 값·쓰임이 btn_primary_bg 와 같아
+    # 합쳤다. 배지 대비 계산은 이제 그 필드를 읽는다.
+    assert not hasattr(SettingsCustomUI, 'badge_upgrade')
+    assert hasattr(SettingsCustomUI, 'btn_primary_bg')
 
 
 def test_dark_default_badge_is_detected_as_dark():
@@ -40,8 +43,8 @@ def test_dark_default_badge_is_detected_as_dark():
 
 
 def test_reads_the_current_field_name():
-    assert upgrade_badge_is_light({'badge_upgrade': '#FFFFFF'}) is True
-    assert upgrade_badge_is_light({'badge_upgrade': '#000000'}) is False
+    assert upgrade_badge_is_light({'btn_primary_bg': '#FFFFFF'}) is True
+    assert upgrade_badge_is_light({'btn_primary_bg': '#000000'}) is False
 
 
 def test_migrates_the_legacy_key_before_reading(caplog):
@@ -55,7 +58,7 @@ def test_migrates_the_legacy_key_before_reading(caplog):
 def test_survives_unparseable_color():
     # is_hex_color_light() itself refuses to guess -- that failure must not
     # propagate and break the page.
-    assert upgrade_badge_is_light({'badge_upgrade': 'not-a-color'}) is True
+    assert upgrade_badge_is_light({'btn_primary_bg': 'not-a-color'}) is True
 
 
 def test_none_theme_falls_back_to_the_dark_default():

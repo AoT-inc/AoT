@@ -14,8 +14,7 @@
     }
   }
 </style>
-<link rel="stylesheet" href="{{ url_for('static', filename='css/gridstack.css') }}" />
-<link rel="stylesheet" href="/static/css/gridstack-custom.css?v=20260611z1" />
+<link rel="stylesheet" href="{{ url_for('static', filename='css/gridstack-custom.css') }}" />
 <link rel="stylesheet" href="{{ url_for('static', filename='css/aot-entry-ui.css') }}" />
 <link rel="stylesheet" href="{{ url_for('static', filename='css/aot-settings.css') }}" />
 <script src="{{ url_for('static', filename='js/vendor/gridstack-all.js') }}"></script>
@@ -37,7 +36,7 @@
   <div class="row aot-main-selection-row">
     <div class="col-auto">
       <select class="selectpicker aot-standard-select"
-              data-style="btn btn-primary aot-roundbox"
+              data-style="btn aot-pill-btn aot-pill-btn-primary"
               data-live-search="false"
               title="{{ _('Select Source Type') }}"
               id="library_source_select">
@@ -66,7 +65,7 @@
       </select>
     </div>
     <div class="col-auto">
-      <button class="btn btn-primary" type="button" onclick="triggerAddSource()">
+      <button class="btn aot-pill-btn aot-pill-btn-primary" type="button" onclick="triggerAddSource()">
         {{ _('Add') }}
       </button>
     </div>
@@ -286,7 +285,7 @@
     </div>
     <div class="col-auto">
       <select class="selectpicker aot-standard-select" id="kbProvenance"
-              data-style="btn btn-primary aot-roundbox" data-live-search="false"
+              data-style="btn aot-pill-btn aot-pill-btn-primary" data-live-search="false"
               title="{{ _('All sources') }}" onchange="loadKnowledge(1)">
         <option value="">{{ _('All sources') }}</option>
         <option value="external_authority">{{ _('Authoritative') }}</option>
@@ -452,116 +451,116 @@ var CSRF_TOKEN  = "{{ csrf_token() }}";
 
 /* JS-side translation strings */
 var T = {
-  selectSourceType: "{{ _('Please select a source type.') }}",
-  adding:           "{{ _('Adding…') }}",
-  sourceAdded:      "{{ _('Source added. Configure it via the settings cog.') }}",
-  sourceExists:     "{{ _('This source is already in your library. Configure it via the settings cog.') }}",
-  error:            "{{ _('Error') }}",
-  requestFailed:    "{{ _('Request failed') }}",
-  syncing:          "{{ _('Syncing…') }}",
-  syncComplete:     "{{ _('Sync complete') }}",
-  syncFailed:       "{{ _('Sync failed') }}",
-  connectionError:  "{{ _('Connection error') }}",
-  sourceNotFound:   "{{ _('Source not found.') }}",
-  settingsSuffix:   "{{ _('Settings') }}",
-  sourceName:       "{{ _('Source Name') }}",
-  parameterName:    "{{ _('Parameter Name (Context Key)') }}",
-  syncInterval:     "{{ _('Sync Interval (min)') }}",
-  configHeader:     "{{ _('Configuration') }}",
-  apiKey:           "{{ _('API Key') }}",
-  endpointUrl:      "{{ _('Endpoint URL') }}",
-  jsonPath:         "{{ _('JSON Path') }}",
-  filePath:         "{{ _('File Path') }}",
-  parseMode:        "{{ _('Parse Mode') }}",
-  cssSelector:      "{{ _('CSS Selector (optional)') }}",
-  queryTemplate:    "{{ _('Query Template') }}",
-  gdrivePickButton: "{{ _('Pick from Google Drive') }}",
-  gdriveFilesLabel: "{{ _('Selected Files') }}",
-  gdriveNoFiles:    "{{ _('No files selected yet.') }}",
-  gdriveLoading:    "{{ _('Checking Google connection…') }}",
-  gdriveConnected:  "{{ _('Connected as') }}",
-  gdriveNotConnected: "{{ _('Google account not connected.') }}",
-  gdriveConnectLink: "{{ _('Connect it under Settings > Integrations') }}",
-  gdriveNeedsRescope: "{{ _('Your Google connection predates Drive access — reconnect to grant it.') }}",
-  gdriveReconnectLink: "{{ _('Reconnect under Settings > Integrations') }}",
-  gdriveNotConfigured: "{{ _('Google Picker is not configured yet — an admin must set the Picker API key under Settings > Integrations.') }}",
-  gdriveRemove:     "{{ _('Remove') }}",
-  close:            "{{ _('Close') }}",
-  activate:         "{{ _('Activate') }}",
-  deactivate:       "{{ _('Deactivate') }}",
-  notEnabled:       "{{ _('Source is not enabled. Activate it before syncing.') }}",
-  delete:           "{{ _('Delete') }}",
-  save:             "{{ _('Save') }}",
-  saved:            "{{ _('Saved.') }}",
-  saveFailed:       "{{ _('Save failed') }}",
-  confirmDelete:    "{{ _('Delete this source?') }}",
-  deleted:          "{{ _('Deleted.') }}",
-  deleteFailed:     "{{ _('Delete failed') }}",
-  cropType:         "{{ _('Crop Type') }}",
-  confirming:       "{{ _('Confirming…') }}",
-  confirmed:        "{{ _('Confirmed.') }}",
-  retiring:         "{{ _('Retiring…') }}",
-  retired:          "{{ _('Retired.') }}",
-  confirmRetire:    "{{ _('Retire this item? It will stop being cited until reactivated.') }}",
-  reactivating:     "{{ _('Reactivating…') }}",
-  reactivated:      "{{ _('Reactivated.') }}",
-  itemNotFound:     "{{ _('Item not found.') }}",
-  heading:          "{{ _('Heading') }}",
-  content:          "{{ _('Content') }}",
-  tags:             "{{ _('Tags (comma-separated)') }}",
-  attribution:      "{{ _('Attribution') }}",
-  sourceUrl:        "{{ _('Source URL') }}",
-  tableUrl:         "{{ _('Table URL (CSV)') }}",
-  tableTitle:       "{{ _('Table name') }}",
-  tableAnswers:     "{{ _('What this table can answer') }}",
-  tableAnswersHint: "{{ _('The AI reads only this to decide whether to use the table. e.g. Growing temperature, rainfall and soil pH ranges per plant species.') }}",
-  tableSearchCols:  "{{ _('Columns to look up by') }}",
-  tableCaveat:      "{{ _('Caveat to quote with the numbers') }}",
-  tableSummaryCols: "{{ _('Columns to return by default') }}",
-  tableSummaryColsHint: "{{ _('Leave blank to return every column. Narrow it if rows are wide.') }}",
-  tableNameLang:    "{{ _('What names the table is keyed by') }}",
-  tableNameLangHint:"{{ _('e.g. English common names or scientific names') }}",
-  tableAliases:     "{{ _('Name aliases') }}",
-  tableAliasesHint: "{{ _('Local word = table name, comma separated. e.g. 무=radish, 배추=cabbage. Only common anchors are needed — the AI works out synonyms itself.') }}",
-  tableCaveatHint:  "{{ _('e.g. These are survival ranges, not greenhouse setpoints.') }}",
-  kbNoResults:      "{{ _('Nothing matches those filters.') }}",
-  kbShowing:        "{{ _('Showing') }}",
-  kbOf:             "{{ _('of') }}",
-  kbMore:           "{{ _('Show more') }}",
-  kbOpenSource:     "{{ _('Open source') }}",
-  kbDisable:        "{{ _('Set aside') }}",
-  kbEnable:         "{{ _('Put back') }}",
-  kbSetAside:       "{{ _('Set aside — the AI will not cite this.') }}",
-  kbContentRequired:"{{ _('Write the knowledge text.') }}",
-  kbTagsRequired:   "{{ _('At least one tag is required.') }}",
-  kbAdded:          "{{ _('Added to the library.') }}",
-  kbIncludeAside:   "{{ _('Include set-aside items') }}",
-  strictSaved:      "{{ _('Setting saved.') }}",
-  relatedDocs:      "{{ _('Related Documents') }}",
-  sourceSite:       "{{ _('Source Site') }}",
-  link:             "{{ _('Link') }}",
-  usageLabel:       "{{ _('Usage:') }}",
-  selectOperations: "{{ _('Select operations to register as knowledge') }}",
-  commonParams:     "{{ _('Parameters for the selected operations') }}",
-  selectAtLeastOne: "{{ _('Select at least one operation.') }}",
-  sfkOpsHint:       "{{ _('Enter your service key, then use the Farm and Season pickers below to choose your farm by region and season by name — the internal IDs are filled in for you, so you never have to type a code.') }}",
-  sfkOpsHintSimple: "{{ _('Each of these operations only needs a service key and a date range — no farm-specific ID required.') }}",
-  sfkCodeHint:      "{{ _('A classification code from the measurement record — the example is one real sample value, not a fixed option; actual values vary per record.') }}",
-  sfkNoOpsSelected: "{{ _('Select an operation above to see its required parameters.') }}",
-  selectAll:        "{{ _('Select All') }}",
-  deselectAll:      "{{ _('Deselect All') }}",
-  sfkFarmLabel:     "{{ _('Farm') }}",
-  sfkSeasonLabel:   "{{ _('Cropping Season') }}",
-  sfkLoadFarms:     "{{ _('Load farms') }}",
-  sfkSelectFarm:    "{{ _('Select a farm') }}",
-  sfkSelectSeason:  "{{ _('Select a season') }}",
-  sfkEnterKeyFirst: "{{ _('Enter the API key first, then load farms.') }}",
-  sfkPickFarmFirst: "{{ _('Pick a farm first to load its seasons.') }}",
-  sfkCurrent:       "{{ _('Current:') }}",
-  sfkLoading:       "{{ _('Loading…') }}",
-  sfkLoadFailed:    "{{ _('Load failed') }}",
-  sfkNoFarms:       "{{ _('No farms returned for this key.') }}",
-  sfkNoSeasons:     "{{ _('No seasons found for this farm.') }}",
+  selectSourceType: {{ _('Please select a source type.')|tojson }},
+  adding:           {{ _('Adding…')|tojson }},
+  sourceAdded:      {{ _('Source added. Configure it via the settings cog.')|tojson }},
+  sourceExists:     {{ _('This source is already in your library. Configure it via the settings cog.')|tojson }},
+  error:            {{ _('Error')|tojson }},
+  requestFailed:    {{ _('Request failed')|tojson }},
+  syncing:          {{ _('Syncing…')|tojson }},
+  syncComplete:     {{ _('Sync complete')|tojson }},
+  syncFailed:       {{ _('Sync failed')|tojson }},
+  connectionError:  {{ _('Connection error')|tojson }},
+  sourceNotFound:   {{ _('Source not found.')|tojson }},
+  settingsSuffix:   {{ _('Settings')|tojson }},
+  sourceName:       {{ _('Source Name')|tojson }},
+  parameterName:    {{ _('Parameter Name (Context Key)')|tojson }},
+  syncInterval:     {{ _('Sync Interval (min)')|tojson }},
+  configHeader:     {{ _('Configuration')|tojson }},
+  apiKey:           {{ _('API Key')|tojson }},
+  endpointUrl:      {{ _('Endpoint URL')|tojson }},
+  jsonPath:         {{ _('JSON Path')|tojson }},
+  filePath:         {{ _('File Path')|tojson }},
+  parseMode:        {{ _('Parse Mode')|tojson }},
+  cssSelector:      {{ _('CSS Selector (optional)')|tojson }},
+  queryTemplate:    {{ _('Query Template')|tojson }},
+  gdrivePickButton: {{ _('Pick from Google Drive')|tojson }},
+  gdriveFilesLabel: {{ _('Selected Files')|tojson }},
+  gdriveNoFiles:    {{ _('No files selected yet.')|tojson }},
+  gdriveLoading:    {{ _('Checking Google connection…')|tojson }},
+  gdriveConnected:  {{ _('Connected as')|tojson }},
+  gdriveNotConnected: {{ _('Google account not connected.')|tojson }},
+  gdriveConnectLink: {{ _('Connect it under Settings > Integrations')|tojson }},
+  gdriveNeedsRescope: {{ _('Your Google connection predates Drive access — reconnect to grant it.')|tojson }},
+  gdriveReconnectLink: {{ _('Reconnect under Settings > Integrations')|tojson }},
+  gdriveNotConfigured: {{ _('Google Picker is not configured yet — an admin must set the Picker API key under Settings > Integrations.')|tojson }},
+  gdriveRemove:     {{ _('Remove')|tojson }},
+  close:            {{ _('Close')|tojson }},
+  activate:         {{ _('Activate')|tojson }},
+  deactivate:       {{ _('Deactivate')|tojson }},
+  notEnabled:       {{ _('Source is not enabled. Activate it before syncing.')|tojson }},
+  delete:           {{ _('Delete')|tojson }},
+  save:             {{ _('Save')|tojson }},
+  saved:            {{ _('Saved.')|tojson }},
+  saveFailed:       {{ _('Save failed')|tojson }},
+  confirmDelete:    {{ _('Delete this source?')|tojson }},
+  deleted:          {{ _('Deleted.')|tojson }},
+  deleteFailed:     {{ _('Delete failed')|tojson }},
+  cropType:         {{ _('Crop Type')|tojson }},
+  confirming:       {{ _('Confirming…')|tojson }},
+  confirmed:        {{ _('Confirmed.')|tojson }},
+  retiring:         {{ _('Retiring…')|tojson }},
+  retired:          {{ _('Retired.')|tojson }},
+  confirmRetire:    {{ _('Retire this item? It will stop being cited until reactivated.')|tojson }},
+  reactivating:     {{ _('Reactivating…')|tojson }},
+  reactivated:      {{ _('Reactivated.')|tojson }},
+  itemNotFound:     {{ _('Item not found.')|tojson }},
+  heading:          {{ _('Heading')|tojson }},
+  content:          {{ _('Content')|tojson }},
+  tags:             {{ _('Tags (comma-separated)')|tojson }},
+  attribution:      {{ _('Attribution')|tojson }},
+  sourceUrl:        {{ _('Source URL')|tojson }},
+  tableUrl:         {{ _('Table URL (CSV)')|tojson }},
+  tableTitle:       {{ _('Table name')|tojson }},
+  tableAnswers:     {{ _('What this table can answer')|tojson }},
+  tableAnswersHint: {{ _('The AI reads only this to decide whether to use the table. e.g. Growing temperature, rainfall and soil pH ranges per plant species.')|tojson }},
+  tableSearchCols:  {{ _('Columns to look up by')|tojson }},
+  tableCaveat:      {{ _('Caveat to quote with the numbers')|tojson }},
+  tableSummaryCols: {{ _('Columns to return by default')|tojson }},
+  tableSummaryColsHint: {{ _('Leave blank to return every column. Narrow it if rows are wide.')|tojson }},
+  tableNameLang:    {{ _('What names the table is keyed by')|tojson }},
+  tableNameLangHint:{{ _('e.g. English common names or scientific names')|tojson }},
+  tableAliases:     {{ _('Name aliases')|tojson }},
+  tableAliasesHint: {{ _('Local word = table name, comma separated. e.g. 무=radish, 배추=cabbage. Only common anchors are needed — the AI works out synonyms itself.')|tojson }},
+  tableCaveatHint:  {{ _('e.g. These are survival ranges, not greenhouse setpoints.')|tojson }},
+  kbNoResults:      {{ _('Nothing matches those filters.')|tojson }},
+  kbShowing:        {{ _('Showing')|tojson }},
+  kbOf:             {{ _('of')|tojson }},
+  kbMore:           {{ _('Show more')|tojson }},
+  kbOpenSource:     {{ _('Open source')|tojson }},
+  kbDisable:        {{ _('Set aside')|tojson }},
+  kbEnable:         {{ _('Put back')|tojson }},
+  kbSetAside:       {{ _('Set aside — the AI will not cite this.')|tojson }},
+  kbContentRequired:{{ _('Write the knowledge text.')|tojson }},
+  kbTagsRequired:   {{ _('At least one tag is required.')|tojson }},
+  kbAdded:          {{ _('Added to the library.')|tojson }},
+  kbIncludeAside:   {{ _('Include set-aside items')|tojson }},
+  strictSaved:      {{ _('Setting saved.')|tojson }},
+  relatedDocs:      {{ _('Related Documents')|tojson }},
+  sourceSite:       {{ _('Source Site')|tojson }},
+  link:             {{ _('Link')|tojson }},
+  usageLabel:       {{ _('Usage:')|tojson }},
+  selectOperations: {{ _('Select operations to register as knowledge')|tojson }},
+  commonParams:     {{ _('Parameters for the selected operations')|tojson }},
+  selectAtLeastOne: {{ _('Select at least one operation.')|tojson }},
+  sfkOpsHint:       {{ _('Enter your service key, then use the Farm and Season pickers below to choose your farm by region and season by name — the internal IDs are filled in for you, so you never have to type a code.')|tojson }},
+  sfkOpsHintSimple: {{ _('Each of these operations only needs a service key and a date range — no farm-specific ID required.')|tojson }},
+  sfkCodeHint:      {{ _('A classification code from the measurement record — the example is one real sample value, not a fixed option; actual values vary per record.')|tojson }},
+  sfkNoOpsSelected: {{ _('Select an operation above to see its required parameters.')|tojson }},
+  selectAll:        {{ _('Select All')|tojson }},
+  deselectAll:      {{ _('Deselect All')|tojson }},
+  sfkFarmLabel:     {{ _('Farm')|tojson }},
+  sfkSeasonLabel:   {{ _('Cropping Season')|tojson }},
+  sfkLoadFarms:     {{ _('Load farms')|tojson }},
+  sfkSelectFarm:    {{ _('Select a farm')|tojson }},
+  sfkSelectSeason:  {{ _('Select a season')|tojson }},
+  sfkEnterKeyFirst: {{ _('Enter the API key first, then load farms.')|tojson }},
+  sfkPickFarmFirst: {{ _('Pick a farm first to load its seasons.')|tojson }},
+  sfkCurrent:       {{ _('Current:')|tojson }},
+  sfkLoading:       {{ _('Loading…')|tojson }},
+  sfkLoadFailed:    {{ _('Load failed')|tojson }},
+  sfkNoFarms:       {{ _('No farms returned for this key.')|tojson }},
+  sfkNoSeasons:     {{ _('No seasons found for this farm.')|tojson }},
 };
 
 /* Preset metadata for config form rendering.
@@ -633,16 +632,16 @@ var SMARTFARMKOREA_OPS_BY_PRESET = {
 /* Per-param Korean labels — shown next to each shared parameter input so the
    operator knows why a field is there. */
 var SMARTFARMKOREA_PARAM_LABELS = {
-  userId:          "{{ _('User ID') }}",
-  facilityId:      "{{ _('Facility ID') }}",
-  croppingSerlNo:  "{{ _('Cropping Serial No.') }}",
-  measDate:        "{{ _('Measurement Date') }}",
-  startDate:       "{{ _('Start Date') }}",
-  endDate:         "{{ _('End Date') }}",
-  fldCode:         "{{ _('Field Code') }}",
-  sectCode:        "{{ _('Section Code') }}",
-  fatrCode:        "{{ _('Attribute Code') }}",
-  itemCode:        "{{ _('Item Code') }}",
+  userId:          {{ _('User ID')|tojson }},
+  facilityId:      {{ _('Facility ID')|tojson }},
+  croppingSerlNo:  {{ _('Cropping Serial No.')|tojson }},
+  measDate:        {{ _('Measurement Date')|tojson }},
+  startDate:       {{ _('Start Date')|tojson }},
+  endDate:         {{ _('End Date')|tojson }},
+  fldCode:         {{ _('Field Code')|tojson }},
+  sectCode:        {{ _('Section Code')|tojson }},
+  fatrCode:        {{ _('Attribute Code')|tojson }},
+  itemCode:        {{ _('Item Code')|tojson }},
 };
 
 /* Which params come from a prior discovery operation (identity/cropping) vs
@@ -876,28 +875,28 @@ function openSourceSettings(sourceId) {
       }
     } else if (source.source_type === 'rest_api') {
       html += row(T.endpointUrl, '<input type="text" id="sApiUrl" class="form-control aot-modern-input" value="' + esc(config.endpoint_url || '') + '" placeholder="https://api.example.com/data">');
-      html += row('{{ _("Method") }}',
+      html += row({{ _("Method")|tojson }},
         '<select id="sApiMethod" class="form-control aot-modern-select">' +
         '<option value="GET"'  + (config.method==='GET'  ? ' selected':'')+'>GET</option>' +
         '<option value="POST"' + (config.method==='POST' ? ' selected':'')+'>POST</option>' +
         '</select>');
-      html += row('{{ _("Auth Type") }}',
+      html += row({{ _("Auth Type")|tojson }},
         '<select id="sApiAuthType" class="form-control aot-modern-select" onchange="toggleSAuthValue()">' +
-        '<option value="none"'   + (config.auth_type==='none'    ? ' selected':'')+'>{{ _("None") }}</option>' +
+        '<option value="none"'   + (config.auth_type==='none'    ? ' selected':'')+'>' + {{ _("None")|tojson }} + '</option>' +
         '<option value="bearer"' + (config.auth_type==='bearer'  ? ' selected':'')+'>Bearer Token</option>' +
         '<option value="api_key"'+ (config.auth_type==='api_key' ? ' selected':'')+'>API Key Header</option>' +
         '</select>');
       html += '<div id="sRowAuthValue"' + ((!config.auth_type || config.auth_type==='none') ? ' style="display:none;"' : '') + '>';
-      html += row('{{ _("Auth Value") }}', '<input type="password" id="sApiAuthValue" class="form-control aot-modern-input" autocomplete="off" value="' + esc(config.auth_value||'') + '">');
+      html += row({{ _("Auth Value")|tojson }}, '<input type="password" id="sApiAuthValue" class="form-control aot-modern-input" autocomplete="off" value="' + esc(config.auth_value||'') + '">');
       html += '</div>';
       html += row(T.jsonPath, '<input type="text" id="sApiJsonPath" class="form-control aot-modern-input" value="' + esc(config.json_path||'') + '" placeholder="e.g. data.value">');
     } else if (source.source_type === 'document') {
       html += row(T.filePath, '<input type="text" id="sDocPath" class="form-control aot-modern-input" value="' + esc(config.file_path||'') + '" placeholder="/data/documents/report.txt">');
       html += row(T.parseMode,
         '<select id="sDocMode" class="form-control aot-modern-select">' +
-        '<option value="full_text"' + (config.parse_mode==='full_text' ? ' selected':'')+'>{{ _("Full Text") }}</option>' +
-        '<option value="summary"'   + (config.parse_mode==='summary'   ? ' selected':'')+'>{{ _("Summary") }}</option>' +
-        '<option value="key_value"' + (config.parse_mode==='key_value' ? ' selected':'')+'>{{ _("Key-Value Extraction") }}</option>' +
+        '<option value="full_text"' + (config.parse_mode==='full_text' ? ' selected':'')+'>' + {{ _("Full Text")|tojson }} + '</option>' +
+        '<option value="summary"'   + (config.parse_mode==='summary'   ? ' selected':'')+'>' + {{ _("Summary")|tojson }} + '</option>' +
+        '<option value="key_value"' + (config.parse_mode==='key_value' ? ' selected':'')+'>' + {{ _("Key-Value Extraction")|tojson }} + '</option>' +
         '</select>');
     } else if (source.source_type === 'web_url') {
       html += row('URL', '<input type="text" id="sWebUrl" class="form-control aot-modern-input" value="' + esc(config.url||'') + '" placeholder="https://example.com/data">');
@@ -989,7 +988,7 @@ function renderSmartfarmkoreaFields(config, presetKey) {
   var html = '<div class="aot-modal-group-title">' + T.selectOperations + '</div>';
   html += '<div class="aot-modal-container">';
   html += '<select multiple class="selectpicker aot-standard-select" id="sfkOpsSelect"' +
-    ' data-style="btn btn-outline-secondary aot-roundbox" data-selected-text-format="count > 2"' +
+    ' data-style="btn-white border" data-selected-text-format="count > 2"' +
     ' data-actions-box="true" data-width="100%" title="' + esc(T.selectOperations) + '"' +
     ' data-select-all-text="' + esc(T.selectAll) + '" data-deselect-all-text="' + esc(T.deselectAll) + '">';
   order.forEach(function(cat) {

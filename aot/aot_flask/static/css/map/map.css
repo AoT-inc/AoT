@@ -433,7 +433,7 @@ body.aot-map-fullscreen-active .grid-stack-item {
 }
 
 .tool-group .btn:hover {
-  background-color: rgba(0,0,0,.05);
+  opacity: 0.82;
 }
 
 .tool-group .btn:last-child {

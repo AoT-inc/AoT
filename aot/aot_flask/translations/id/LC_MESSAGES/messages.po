@@ -31169,3 +31169,162 @@ msgstr "disimpan"
 
 msgid "week columns"
 msgstr "kolom minggu"
+
+msgid "Vent"
+msgstr "Ventilasi"
+
+msgid "Mist"
+msgstr "Kabut"
+
+msgid "Devices under automatic control"
+msgstr "Perangkat di bawah kendali otomatis"
+
+msgid "%(n)s excluded"
+msgstr "%(n)s dikecualikan"
+
+msgid "Turn a device off to keep automatic control from moving it."
+msgstr "Matikan perangkat agar kendali otomatis tidak menggerakkannya."
+
+msgid "Safety gates will not move it either."
+msgstr "Gerbang keselamatan juga tidak akan menggerakkannya."
+
+msgid "Select a linked facility first."
+msgstr "Pilih fasilitas yang terhubung terlebih dahulu."
+
+msgid "This facility has no actuators yet."
+msgstr "Fasilitas ini belum memiliki aktuator."
+
+msgid "Could not load the device list. Existing settings are kept."
+msgstr "Daftar perangkat tidak dapat dimuat. Pengaturan yang ada tetap dipertahankan."
+
+msgid "Excluded actuators (raw)"
+msgstr "Aktuator yang dikecualikan (mentah)"
+
+msgid "Comma-separated Output IDs excluded from automatic control. Normally set with the toggles above rather than typed here."
+msgstr "ID Output yang dikecualikan dari kendali otomatis, dipisahkan koma. Biasanya diatur dengan tombol pengalih di atas, bukan diketik di sini."
+
+msgid "Proactively shift temperature/humidity setpoints and inhibit ventilation before adverse weather arrives. Uses this facility's own forecast source if one is linked in the facility editor's weather bindings (any service — KMA, OpenWeatherMap, Open-Meteo); otherwise falls back to the system-wide KMA short-term forecast."
+msgstr "Secara proaktif menggeser setpoint suhu/kelembapan dan menghambat ventilasi sebelum cuaca buruk tiba. Menggunakan sumber prakiraan milik fasilitas ini sendiri jika ada yang ditautkan di pengikatan cuaca pada editor fasilitas (layanan apa pun — KMA, OpenWeatherMap, Open-Meteo); jika tidak, akan kembali menggunakan prakiraan jangka pendek KMA sistem-lebar."
+
+msgid "How many hours ahead to check for incoming adverse weather (1–6 h) when using the system-wide KMA fallback above. Longer lookahead gives earlier warning but may over-correct. Ignored when this facility has its own forecast source linked — that source already applies its own lookahead."
+msgstr "Berapa jam ke depan untuk memeriksa cuaca buruk yang akan datang (1–6 jam) saat menggunakan cadangan KMA sistem-lebar di atas. Rentang lihat-ke-depan yang lebih panjang memberi peringatan lebih awal tetapi dapat menyebabkan koreksi berlebihan. Diabaikan jika fasilitas ini memiliki sumber prakiraan sendiri yang ditautkan — sumber tersebut sudah menerapkan rentang lihat-ke-depannya sendiri."
+
+#: aot/widgets/widget_notice.py:1
+msgid "Notice Category Filter"
+msgstr "Filter Kategori Pengumuman"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Notes Space"
+msgstr "Ruang Catatan"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Space"
+msgstr "Ruang"
+
+#: aot/widgets/widget_notice.py:1
+msgid "None selected"
+msgstr "Tidak ada yang dipilih"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Notices"
+msgstr "Pengumuman"
+
+#: aot/widgets/widget_notice.py:1
+msgid "No notes yet."
+msgstr "Belum ada catatan."
+
+#: aot/widgets/widget_notice.py:1
+msgid "(Attachment only)"
+msgstr "(Hanya lampiran)"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Notice & Notes Board"
+msgstr "Papan Pengumuman & Catatan"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Displays the latest notice board post titles and/or the notes written in a chosen site, zone, plot, or facility (and everything nested under it). Clicking a notice opens the full post (content, poll, replies, acknowledge) in a popup; clicking a note opens it in the shared notes panel. Users with write permission can also create, edit, and delete posts directly from the widget."
+msgstr "Menampilkan judul postingan papan pengumuman terbaru dan/atau catatan yang ditulis di lokasi, zona, petak, atau fasilitas yang dipilih (beserta semua yang ada di dalamnya). Mengklik pengumuman akan membuka postingan lengkap (isi, jajak pendapat, balasan, konfirmasi) dalam jendela munculan; mengklik catatan akan membukanya di panel catatan bersama. Pengguna dengan izin tulis juga dapat membuat, mengedit, dan menghapus postingan langsung dari widget."
+
+#: aot/widgets/widget_notice.py:1
+msgid "Show Notices"
+msgstr "Tampilkan Pengumuman"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Display the notice board section"
+msgstr "Menampilkan bagian papan pengumuman"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Number of Notices"
+msgstr "Jumlah Pengumuman"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Number of Notes"
+msgstr "Jumlah Catatan"
+
+#: aot/widgets/widget_notice.py:1
+msgid "How many of the latest notes to display"
+msgstr "Berapa banyak catatan terbaru yang akan ditampilkan"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Include Nested Spaces"
+msgstr "Sertakan Ruang Bersarang"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Sort Notes By"
+msgstr "Urutkan Catatan Berdasarkan"
+
+#: aot/widgets/widget_notice.py:1
+msgid "How to order the note list"
+msgstr "Cara mengurutkan daftar catatan"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Note Category/Tag Contains"
+msgstr "Kategori/Tag Catatan Mengandung"
+
+#: aot/widgets/widget_notice.py:1
+msgid "How often to refresh the notice/notes lists"
+msgstr "Seberapa sering memperbarui daftar pengumuman/catatan"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Notes written in this site/zone/plot/facility (and, if \"Include Nested Spaces\" above is on, everything nested under it) are shown."
+msgstr "Catatan yang ditulis di lokasi/zona/petak/fasilitas ini ditampilkan (dan, jika \"Sertakan Ruang Bersarang\" di atas aktif, semua yang ada di dalamnya)."
+
+#: aot/widgets/widget_notice.py:1
+msgid "No sites, zones, plots, or facilities exist yet."
+msgstr "Belum ada lokasi, zona, petak, atau fasilitas."
+
+#: aot/widgets/widget_notice.py:1
+msgid "Nothing selected — turn on \"Show Notices\" and/or \"Show Notes\" in the widget settings."
+msgstr "Tidak ada yang dipilih — aktifkan \"Tampilkan Pengumuman\" dan/atau \"Tampilkan Catatan\" di pengaturan widget."
+
+#: aot/widgets/widget_notice.py:1
+msgid "Choose a space in the widget settings to show notes."
+msgstr "Pilih ruang di pengaturan widget untuk menampilkan catatan."
+
+#: aot/widgets/widget_notice.py:1
+msgid "Display notes written in a chosen space (see Space below)"
+msgstr "Menampilkan catatan yang ditulis di ruang yang dipilih (lihat \"Ruang\" di bawah)"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Also show notes written in zones/plots/facilities/devices nested under the chosen space"
+msgstr "Juga menampilkan catatan yang ditulis di zona/petak/fasilitas/perangkat yang bersarang di bawah ruang yang dipilih"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Newest First"
+msgstr "Terbaru Dahulu"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Only show notes whose category or tags contain this text (optional)"
+msgstr "Hanya tampilkan catatan yang kategori atau tag-nya mengandung teks ini (opsional)"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Show Notes List"
+msgstr "Tampilkan Daftar Catatan"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Display notes matching the filter below"
+msgstr "Menampilkan catatan yang cocok dengan filter di bawah"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Notes Filter"
+msgstr "Filter Catatan"

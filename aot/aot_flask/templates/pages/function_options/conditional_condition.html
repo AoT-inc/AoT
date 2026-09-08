@@ -23,7 +23,7 @@
         <div style="flex: 0 0 auto; margin-right: 5px;">
           <button class="btn aot-pill-btn" type="button" name="delete_condition"
                   data-form-id="form_condition_{{each_condition.unique_id}}"
-                  onclick="return confirm('{{_('Are you sure you want to delete?')}}') && $(this).processRequest(this, 'delete_condition');">
+                  onclick="return confirm({{ _('Are you sure you want to delete?')|tojson|forceescape }}) && $(this).processRequest(this, 'delete_condition');">
             {{_('Delete')}}
           </button>
         </div>

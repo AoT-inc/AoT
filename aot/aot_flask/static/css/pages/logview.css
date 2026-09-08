@@ -77,7 +77,7 @@
 
 .aot-log-notice {
   padding: 0.4rem 0.6rem;
-  border: 1px solid var(--aot-tint-warning-border, #dac196);
+  border: 1px solid color-mix(in srgb, var(--aot-tint-warning-fg, #94650A) 35%, transparent);
   background: var(--aot-tint-warning-bg, #fff3e2);
   color: var(--aot-tint-warning-fg, #94650a);
   font-size: var(--aot-font-size-xs);
@@ -85,7 +85,7 @@
 }
 
 .aot-log-notice.is-error {
-  border-color: var(--aot-tint-danger-border, #e1abab);
+  border-color: color-mix(in srgb, var(--aot-tint-danger-fg, #B23B3B) 35%, transparent);
   background: var(--aot-tint-danger-bg, #fbe7e7);
   color: var(--aot-tint-danger-fg, #b23b3b);
 }

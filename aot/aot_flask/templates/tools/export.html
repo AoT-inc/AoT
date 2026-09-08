@@ -7,7 +7,6 @@
 {% block head %}
 <script type="text/javascript" src="{{ url_for('static', filename='js/vendor/moment.min.js') }}"></script>
 <script type="text/javascript" src="{{ url_for('static', filename='js/vendor/daterangepicker.js') }}"></script>
-<link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/daterangepicker.css') }}" />
 <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/aot-settings.css') }}" />
 {% endblock %}
 
@@ -98,7 +97,7 @@
 
   <form method="post" action="/export" enctype="multipart/form-data">
     {{form_import_settings.csrf_token}}
-    <input id="settings_import_file" name="settings_import_file" type="file" style="display:none" onchange="document.getElementById('settings_import_file_label').textContent = this.files[0] ? this.files[0].name : '{{_('Choose files')}}';">
+    <input id="settings_import_file" name="settings_import_file" type="file" style="display:none" onchange="document.getElementById('settings_import_file_label').textContent = this.files[0] ? this.files[0].name : {{ _('Choose files')|tojson|forceescape }};">
     <div class="aot-btn-group aot-btn-group-start" style="align-items: center;">
       <button type="button" class="btn aot-pill-btn" onclick="document.getElementById('settings_import_file').click()"><span id="settings_import_file_label">{{_('Choose files')}}</span></button>
       {{form_import_settings.settings_import_upload(class_='btn aot-pill-btn aot-pill-btn-primary')}}

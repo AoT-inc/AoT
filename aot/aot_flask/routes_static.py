@@ -1,7 +1,6 @@
 # coding=utf-8
 import hashlib
 import logging
-import operator
 import os
 import socket
 import subprocess
@@ -199,8 +198,11 @@ def upgrade_badge_is_light(custom_theme):
         from aot.aot_flask.forms.forms_settings import (
             THEME_DEFAULTS, migrate_theme_dict)
         migrated_theme = migrate_theme_dict(dict(custom_theme or {}))
-        bg_value = (migrated_theme.get('badge_upgrade')
-                    or THEME_DEFAULTS.get('badge_upgrade', '#13261B'))
+        # 2026-09-08: badge_upgrade 필드를 없애고 btn_primary_bg 로 합쳤다.
+        # 값도 쓰임도 "채워진 주 버튼 배경" 과 같은데 필드만 둘이라, 한쪽만
+        # 바꾸면 배지와 버튼 색이 갈렸다.
+        bg_value = (migrated_theme.get('btn_primary_bg')
+                    or THEME_DEFAULTS.get('btn_primary_bg', '#13261B'))
         return is_hex_color_light(bg_value)
     except Exception:
         return True
@@ -265,7 +267,7 @@ def inject_variables():
         _daemon_status_cache['value'] = '0'
         daemon_status = '0'
 
-    languages_sorted = sorted(LANGUAGES.items(), key=operator.itemgetter(1))
+    languages_sorted = sorted(LANGUAGES.items(), key=lambda item: (item[0] != 'ko', item[1]))
 
     import json
     try:

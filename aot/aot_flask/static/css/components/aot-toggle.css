@@ -36,7 +36,7 @@
   bottom: 0;
   border-radius: var(--aot-btn-pill-radius);
   /* Match aot-roundbox pill shape */
-  background-color: var(--aot-border-neutral);
+  background-color: var(--aot-toggle-track-off, #DDDDDD);
   transition: background-color 0.2s;
 }
 
@@ -52,7 +52,9 @@
 
   border-radius: 50%;
   /* aot-cycle */
-  background-color: #fff;
+  /* 손잡이색은 settings/custom_ui "텍스트 보조/밝은 면"(text_color_tertiary)
+     이다 — 여기 #fff 로 박혀 있어 그 페이지에서 바꿔도 따라오지 않았다. */
+  background-color: var(--aot-color-text-tertiary, #FFFFFF);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
   transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }

@@ -30672,3 +30672,162 @@ msgstr "Olgun yapraklara göre daha kolay yanan fideler için daha sıkı sislem
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:1192
 msgid "Not used"
 msgstr "Kullanılmıyor"
+
+msgid "Vent"
+msgstr "Havalandırma"
+
+msgid "Mist"
+msgstr "Sisleme"
+
+msgid "Devices under automatic control"
+msgstr "Otomatik kontrol altındaki cihazlar"
+
+msgid "%(n)s excluded"
+msgstr "%(n)s hariç tutuldu"
+
+msgid "Turn a device off to keep automatic control from moving it."
+msgstr "Otomatik kontrolün bir cihazı hareket ettirmesini önlemek için o cihazı kapatın."
+
+msgid "Safety gates will not move it either."
+msgstr "Güvenlik geçitleri de o cihazı hareket ettirmez."
+
+msgid "Select a linked facility first."
+msgstr "Önce bağlı bir tesis seçin."
+
+msgid "This facility has no actuators yet."
+msgstr "Bu tesiste henüz aktüatör yok."
+
+msgid "Could not load the device list. Existing settings are kept."
+msgstr "Cihaz listesi yüklenemedi. Mevcut ayarlar korunuyor."
+
+msgid "Excluded actuators (raw)"
+msgstr "Hariç tutulan aktüatörler (ham değer)"
+
+msgid "Comma-separated Output IDs excluded from automatic control. Normally set with the toggles above rather than typed here."
+msgstr "Otomatik kontrolden hariç tutulan Çıkış Kimliklerini virgülle ayırarak yazın. Normalde buraya yazmak yerine yukarıdaki anahtarlarla ayarlanır."
+
+msgid "Proactively shift temperature/humidity setpoints and inhibit ventilation before adverse weather arrives. Uses this facility's own forecast source if one is linked in the facility editor's weather bindings (any service — KMA, OpenWeatherMap, Open-Meteo); otherwise falls back to the system-wide KMA short-term forecast."
+msgstr "Olumsuz hava koşulları gelmeden önce sıcaklık/nem set noktalarını proaktif olarak kaydırır ve havalandırmayı engeller. Tesis düzenleyicisinin hava durumu bağlantılarında bu tesise ait bir tahmin kaynağı bağlıysa (herhangi bir servis — KMA, OpenWeatherMap, Open-Meteo) onu kullanır; aksi takdirde sistem genelindeki KMA kısa vadeli tahminine geri döner."
+
+msgid "How many hours ahead to check for incoming adverse weather (1–6 h) when using the system-wide KMA fallback above. Longer lookahead gives earlier warning but may over-correct. Ignored when this facility has its own forecast source linked — that source already applies its own lookahead."
+msgstr "Yukarıdaki sistem genelindeki KMA yedek tahmini kullanılırken, yaklaşan olumsuz hava koşullarının kaç saat öncesinden kontrol edileceği (1–6 sa). Daha uzun ileri bakış daha erken uyarı sağlar ancak aşırı düzeltmeye yol açabilir. Bu tesisin kendi bağlı tahmin kaynağı varsa yok sayılır — o kaynak zaten kendi ileri bakışını uygular."
+
+#: aot/widgets/widget_notice.py:1
+msgid "Notice Category Filter"
+msgstr "Duyuru Kategorisi Filtresi"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Notes Space"
+msgstr "Not Alanı"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Space"
+msgstr "Alan"
+
+#: aot/widgets/widget_notice.py:1
+msgid "None selected"
+msgstr "Hiçbiri seçilmedi"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Notices"
+msgstr "Duyurular"
+
+#: aot/widgets/widget_notice.py:1
+msgid "No notes yet."
+msgstr "Henüz not yok."
+
+#: aot/widgets/widget_notice.py:1
+msgid "(Attachment only)"
+msgstr "(Yalnızca ek)"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Notice & Notes Board"
+msgstr "Duyuru ve Not Panosu"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Displays the latest notice board post titles and/or the notes written in a chosen site, zone, plot, or facility (and everything nested under it). Clicking a notice opens the full post (content, poll, replies, acknowledge) in a popup; clicking a note opens it in the shared notes panel. Users with write permission can also create, edit, and delete posts directly from the widget."
+msgstr "En son duyuru panosu gönderi başlıklarını ve/veya seçilen bir alan, bölge, parsel veya tesiste (ve altındaki her şeyde) yazılan notları gösterir. Bir duyuruya tıklamak tam gönderiyi (içerik, anket, yanıtlar, onay) bir açılır pencerede açar; bir nota tıklamak onu paylaşılan notlar panelinde açar. Yazma izni olan kullanıcılar gönderileri doğrudan widget'tan oluşturabilir, düzenleyebilir ve silebilir."
+
+#: aot/widgets/widget_notice.py:1
+msgid "Show Notices"
+msgstr "Duyuruları Göster"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Display the notice board section"
+msgstr "Duyuru panosu bölümünü gösterir"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Number of Notices"
+msgstr "Duyuru Sayısı"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Number of Notes"
+msgstr "Not Sayısı"
+
+#: aot/widgets/widget_notice.py:1
+msgid "How many of the latest notes to display"
+msgstr "En son kaç not gösterilecek"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Include Nested Spaces"
+msgstr "İç İçe Alanları Dahil Et"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Sort Notes By"
+msgstr "Notları Şuna Göre Sırala"
+
+#: aot/widgets/widget_notice.py:1
+msgid "How to order the note list"
+msgstr "Not listesinin nasıl sıralanacağı"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Note Category/Tag Contains"
+msgstr "Not Kategorisi/Etiketi Şunu İçeriyor"
+
+#: aot/widgets/widget_notice.py:1
+msgid "How often to refresh the notice/notes lists"
+msgstr "Duyuru/not listelerinin ne sıklıkla yenileneceği"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Notes written in this site/zone/plot/facility (and, if \"Include Nested Spaces\" above is on, everything nested under it) are shown."
+msgstr "Bu alanda/bölgede/parselde/tesiste yazılan notlar gösterilir (ve yukarıdaki \"İç İçe Alanları Dahil Et\" açıksa, altındaki her şey de)."
+
+#: aot/widgets/widget_notice.py:1
+msgid "No sites, zones, plots, or facilities exist yet."
+msgstr "Henüz alan, bölge, parsel veya tesis yok."
+
+#: aot/widgets/widget_notice.py:1
+msgid "Nothing selected — turn on \"Show Notices\" and/or \"Show Notes\" in the widget settings."
+msgstr "Hiçbir şey seçilmedi — widget ayarlarında \"Duyuruları Göster\" ve/veya \"Notları Göster\" seçeneğini açın."
+
+#: aot/widgets/widget_notice.py:1
+msgid "Choose a space in the widget settings to show notes."
+msgstr "Notları göstermek için widget ayarlarından bir alan seçin."
+
+#: aot/widgets/widget_notice.py:1
+msgid "Display notes written in a chosen space (see Space below)"
+msgstr "Seçilen bir alanda yazılan notları gösterir (aşağıdaki \"Alan\" bölümüne bakın)"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Also show notes written in zones/plots/facilities/devices nested under the chosen space"
+msgstr "Seçilen alanın altında iç içe geçmiş bölgelerde/parsellerde/tesislerde/cihazlarda yazılan notları da gösterir"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Newest First"
+msgstr "Önce En Yeni"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Only show notes whose category or tags contain this text (optional)"
+msgstr "Yalnızca kategorisi veya etiketleri bu metni içeren notları gösterir (isteğe bağlı)"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Show Notes List"
+msgstr "Not Listesini Göster"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Display notes matching the filter below"
+msgstr "Aşağıdaki filtreyle eşleşen notları gösterir"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Notes Filter"
+msgstr "Not Filtresi"

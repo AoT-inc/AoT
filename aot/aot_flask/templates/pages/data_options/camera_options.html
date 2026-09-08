@@ -182,7 +182,7 @@
       <div class="aot-modal-option-control">
         <select name="capture_mode" 
                 class="selectpicker aot-standard-select" 
-                data-style="btn btn-primary aot-roundbox"
+                data-style="btn aot-pill-btn aot-pill-btn-primary"
                 onchange="toggleCaptureModeSettings('{{each_camera.unique_id}}', this.value)">
           <option value="snapshot" {% if each_camera.capture_mode == 'snapshot' %}selected{% endif %}>{{_('Photo (Snapshot)')}}</option>
           <option value="timelapse" {% if each_camera.capture_mode == 'timelapse' %}selected{% endif %}>{{_('Timelapse')}}</option>

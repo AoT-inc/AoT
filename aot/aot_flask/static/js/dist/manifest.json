@@ -9,7 +9,8 @@
   "app-notice-render": "f46a1e40a4",
   "app-output-state": "a759741eed",
   "app-raster-bridge": "ca210ebf64",
-  "app-shell": "65a3d17bc8",
+  "app-selectpicker": "d67faaa0a4",
+  "app-shell": "b27e00b4d6",
   "app-tab-management": "4551a43f4f",
   "app-tabs": "336f45f013",
   "app-time": "ef540e3bbe",
@@ -18,7 +19,7 @@
   "app-widget-drawer": "275115b8e1",
   "facility-3d": "3e181cabd1",
   "facility-map-3d": "099def1873",
-  "geo-design": "92b0dcaaf3",
+  "geo-design": "726eb9dee2",
   "geo-design-compat": "6fb0dfd517",
   "geo-design-core": "990c8e34ec",
   "geo-design-facility3d": "4f0272812c",
@@ -52,5 +53,5 @@
   "widget-map-extra": "972fc10766",
   "widget-map-tail": "23e3bb85ca",
   "widget-sequence": "22a59a4b2f",
-  "widget-shared": "439e681dfc"
+  "widget-shared": "a16ac7543c"
 }

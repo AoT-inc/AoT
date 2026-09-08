@@ -1005,15 +1005,28 @@ FUNCTION_INFORMATION = {
             'name': lazy_gettext('Forecast Feedforward'),
         },
         {
+            # ⚠ **문구가 실제 동작보다 뒤처져 있었다** (2026-09-08 사용자 지적:
+            #   "현재: 기상청 단기예보 고정 / 변경: 시설에서 설정한 경우 시설의
+            #   예보 시스템 사용..."). 옛 문구는 "KMA 단기예보(forecast.json)"
+            #   만 언급했는데, `_cycle_mixin._apply_forecast_feedforward` 는
+            #   이미 그보다 먼저 시설의 `weather_bindings`(범용 경로,
+            #   `read_forecast_sensors` — KMA·OpenWeatherMap·Open-Meteo 등
+            #   서비스 무관)를 보고, 그것이 없을 때만 이 전역 파일로 폴백한다.
+            #   즉 **기능은 이미 시설별로 갈리는데 설명만 "고정"이라고 말하고
+            #   있었다.** 시설별 예보 채널은 시설 편집기(geo/design)의 날씨
+            #   바인딩 탭(`weather-ui.js`)에서 잇는다 — 새 옵션을 만들지
+            #   않는다, 이 화면은 이미 있는 그 경로를 정확히 설명만 한다.
             'id': 'forecast_feedforward_enabled',
             'type': 'bool',
             'default_value': False,
             'required': False,
             'name': lazy_gettext('Enable Forecast Feedforward'),
             'phrase': lazy_gettext(
-                'Use KMA short-term weather forecast (forecast.json) to proactively '
-                'shift temperature/humidity setpoints and inhibit ventilation '
-                'before adverse weather arrives.'
+                'Proactively shift temperature/humidity setpoints and inhibit '
+                'ventilation before adverse weather arrives. Uses this facility\'s '
+                'own forecast source if one is linked in the facility editor\'s '
+                'weather bindings (any service — KMA, OpenWeatherMap, Open-Meteo); '
+                'otherwise falls back to the system-wide KMA short-term forecast.'
             ),
         },
         {
@@ -1027,8 +1040,11 @@ FUNCTION_INFORMATION = {
             'required': False,
             'name': lazy_gettext('Forecast Lookahead (hours)'),
             'phrase': lazy_gettext(
-                'How many hours ahead to check for incoming adverse weather (1–6 h). '
-                'Longer lookahead gives earlier warning but may over-correct.'
+                'How many hours ahead to check for incoming adverse weather '
+                '(1–6 h) when using the system-wide KMA fallback above. Longer '
+                'lookahead gives earlier warning but may over-correct. Ignored '
+                'when this facility has its own forecast source linked — that '
+                'source already applies its own lookahead.'
             ),
         },
 
@@ -1355,6 +1371,14 @@ _DOMAIN_GROUPS = {
     'Light and Shading':            'screen',
 }
 
+# 도메인도 아니고 "어떻게 판단하나" 도 아닌 묶음 — **범위**다. "이 코디네이터가
+# 애초에 건드릴 장치가 무엇인가" 는 [시설 설정] 의 형제 질문이라 도메인 묶음
+# 보다 앞에 와야 한다(2026-09-08 사용자 지시: [시설 설정] 바로 뒤). 그래서
+# `test_the_domain_groups_come_before_the_cross_cutting_ones` 의 "판단 방식은
+# 도메인 뒤에 온다" 규칙에서 뺀다 — 그 규칙이 지키려는 것("장치 얘기를 하러
+# 온 사람이 모델 설정부터 지나지 않는다")을 범위 선택이 어기지 않기 때문이다.
+_SCOPE_GROUPS = {'Devices under automatic control'}
+
 _LAYOUT = [
     # ═══════════════════════════════════════════════════════════════════════
     # 축은 **도메인**이다 — 옵션 종류가 아니라 (2026-08-27 재구성)
@@ -1385,30 +1409,41 @@ _LAYOUT = [
     # ⚠ 상태 한 줄은 **여기**다 — 시설을 고른 그 자리에서 확인한다
     #   (2026-08-27 사용자 지적: *"시설을 연동하면 연동한 시설 정보가 그 아래에
     #   나오는게 더 자연스러워. 설정하고 그 위치에서 확인."*).
-    (False, lazy_gettext('Facility Settings'), [
-        (None, ['geo_facility_id', 'bay_scope', '@status', '@actuators',
-                'disabled_actuators']),
-    ]),
-
-    # ⚠ **접지 않고, 시설 바로 뒤다** (2026-08-27 사용자 지적: *"옵션이 달랑
-    #   하나인데 접어야 해? … 자주 사용하는 건 아닌데, 전체 의미를 봤을 때
-    #   특정 시간대에 시스템을 중지시키는 상당한 위력의 옵션임"*).
     #
-    #   맞다. 창 밖 시간에는 **난방·냉방을 포함해 제어가 통째로 멈춘다**
+    # ⚠ **시간창 토글도 여기 있다** (2026-09-08 사용자 지적, 이전에는 별도
+    #   묶음 "Working Hours" 였다). `동 범위` 바로 뒤에 둔 이유는 순서
+    #   지시를 그대로 따른 것이고, 접지 않는 이유는 예전 그대로다:
+    #
+    #   창 밖 시간에는 **난방·냉방을 포함해 제어가 통째로 멈춘다**
     #   (`_run_cycle` 의 시간창 게이트). 접어 두면 "안 쓰는 사람에게 안 보인다"
     #   는 이득보다, **켜 놓고 잊은 사람이 왜 밤새 난방이 안 됐는지 모르는**
-    #   손해가 크다. 자리는 빈도가 아니라 **결과의 크기**로 정한다.
+    #   손해가 크다. 이름도 "시간 제어" 가 아니다 — 그렇게 부르면 시간대별로
+    #   다르게 제어한다는 말로 읽히는데, 실제로는 **켜고 끄는 스위치**다.
     #
-    # ⚠ 이름도 "시간 제어" 가 아니다 — 그렇게 부르면 시간대별로 다르게
-    #   제어한다는 말로 읽히는데, 실제로는 **켜고 끄는 스위치**다.
-    #
-    # ⚠ 보이는 것은 토글 하나뿐이다 — 나머지 넷은 `depends_on` 이라 켜야 나온다.
-    #   날짜(제어를 영영 멈추는 날)를 여기 두지 않는다 — 2026-09-01 부로
-    #   그런 필드가 없다. 제어 지속 여부는 구획 프로그램이 정한다
+    #   보이는 것은 토글 하나뿐이다 — 나머지 넷은 `depends_on` 이라 켜야
+    #   나온다. 날짜(제어를 영영 멈추는 날)를 여기 두지 않는다 — 2026-09-01
+    #   부로 그런 필드가 없다. 제어 지속 여부는 구획 프로그램이 정한다
     #   (`coordinator-plot-targets.md` R2: 구획이 없으면 자기 값으로 돈다).
-    (False, lazy_gettext('Working Hours'), [
-        (None, ['time_enable', 'time_start', 'time_end',
-                'photo_method_id', 'photo_anchor']),
+    (False, lazy_gettext('Facility Settings'), [
+        (None, ['geo_facility_id', 'bay_scope',
+                'time_enable', 'time_start', 'time_end',
+                'photo_method_id', 'photo_anchor',
+                '@status']),
+    ]),
+
+    # ⚠ **별도 컨테이너 + 접힘이다** (2026-09-08 사용자 지적). 예전에는
+    #   [시설 설정] 상자 안에 얹혀 있었는데, "무엇에 목표를 맞추는가" 와
+    #   "무엇을 자동 제어에서 뺄지" 는 서로 다른 질문이라 상자를 나눈다.
+    #   접는 이유는 평소에 잘 안 건드리는 설정이기 때문이다 — 시설을 고르는
+    #   것과 달리, 장치를 뺐다 켰다 하는 것은 수리·점검 때만 쓴다.
+    #
+    #   제목은 위젯이 이미 그리는 제목과 **같은 문구**를 쓴다
+    #   (`aot-actuator-enable.js` 의 `_t('Devices under automatic control')`).
+    #   다르면 접힘 화살표 제목과 펼친 내용의 제목이 나란히 두 번 보인다 —
+    #   위젯 쪽 내부 제목은 이미 이 화면 전용으로 없앴다(같은 이유로 종류
+    #   라벨만 번역해 남기고 제목·개수 배지는 이 접힘 제목이 대신한다).
+    (True, lazy_gettext('Devices under automatic control'), [
+        (None, ['@actuators', 'disabled_actuators']),
     ]),
 
     # ── 목표 ─────────────────────────────────────────────────────────────
@@ -1588,7 +1623,15 @@ def _apply_layout(options, layout):
             # ⚠ 제목에서 만들면 안 된다 — 제목은 번역되므로 언어를 바꾸면
             #   앵커가 달라진다. 그 묶음의 **첫 옵션 id** 를 쓴다: 유일하고,
             #   ASCII 이고, 번역과 무관하며, 옵션을 옮기면 자연히 따라간다.
-            first_id = next((i for _s, ids in blocks for i in ids), 'advanced')
+            # ⚠ **표식(`@actuators` 등)을 앵커로 쓰지 않는다.** `@` 는 CSS/jQuery
+            #   id 선택자에서 이스케이프 없이 못 쓰는 문자라, Bootstrap 의
+            #   `data-toggle="collapse"` 가 `href="#…@…"` 를 그대로 셀렉터로
+            #   넘기면 깨진다. 지금까지의 접힘은 전부 첫 항목이 실제 옵션
+            #   id 라 문제가 없었지만(예: `sensor_max_age`), "자동 제어
+            #   대상 장치" 접힘은 첫 항목이 `@actuators` 표식이라
+            #   (2026-09-08) 이 방어가 처음으로 실효를 갖는다.
+            first_id = next((i for _s, ids in blocks for i in ids
+                             if not i.startswith('@')), 'advanced')
             # ⚠ 앵커가 **옵션 id 로 끝나면 안 된다.** `[id$="_update_period"]`
             #   같은 접미사 선택자가 접힘 div 를 옵션 입력으로 잘못 집는다
             #   (2026-08-27 실측). 뒤에 표식을 붙여 그 겹침을 없앤다.

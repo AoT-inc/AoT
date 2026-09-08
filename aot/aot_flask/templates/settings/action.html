@@ -20,7 +20,7 @@
 
     <form method="post" action="/settings/action" enctype=multipart/form-data>
     {{form_action.csrf_token}}
-    <input id="import_action_file" name="import_action_file" type="file" style="display:none" onchange="document.getElementById('import_action_file_label').textContent = this.files[0] ? this.files[0].name : '{{_('Choose files')}}';">
+    <input id="import_action_file" name="import_action_file" type="file" style="display:none" onchange="document.getElementById('import_action_file_label').textContent = this.files[0] ? this.files[0].name : {{ _('Choose files')|tojson|forceescape }};">
     <div class="d-flex flex-wrap" style="gap: 8px; margin-bottom: 1.2rem; align-items: center;">
       <button type="button" class="btn aot-pill-btn" onclick="document.getElementById('import_action_file').click()"><span id="import_action_file_label">{{_('Choose files')}}</span></button>
       {{form_action.import_action_upload(class_='btn aot-pill-btn aot-pill-btn-primary')}}

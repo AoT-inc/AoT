@@ -106,7 +106,7 @@
         <div class="aot-modal-option-row">
             <label class="aot-modal-option-label">{{form_mod_output.tab_id.label(class_='mb-0')}}</label>
             <div class="aot-modal-option-control">
-                <select name="tab_id" class="form-control aot-modern-input">
+                <select name="tab_id" class="form-control aot-modern-select">
                     {% for tab in tabs %}
                     <option value="{{tab.unique_id}}" {% if tab.unique_id == each_output.tab_id %}selected{% endif %}>{{tab.name}}</option>
                     {% endfor %}

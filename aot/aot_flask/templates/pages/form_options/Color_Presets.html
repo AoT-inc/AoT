@@ -26,7 +26,7 @@
        name="{{color_name}}"
        value="{{color_value}}">
 {%- if color_presets %}
-<div class="aot-color-presets" role="group" aria-label="{{_('Preset colors')}}">
+<div class="aot-color-presets" role="group" aria-label={{ _('Preset colors')|tojson }}>
   {%- for c in color_presets %}
   <button type="button"
           class="aot-color-preset{% if c|lower == (color_value or '')|lower %} is-picked{% endif %}"

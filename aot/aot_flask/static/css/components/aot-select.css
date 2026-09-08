@@ -1,0 +1,356 @@
+/* ============================================================
+   AoT 셀렉트 목록(드롭다운) — 정본 한 곳
+   ============================================================
+
+   왜 이 파일이 생겼나
+   -------------------
+   bootstrap-select 는 목록의 위치·폭을 **인라인 스타일**로 심는다. 그래서
+   자리마다(모달 / 드로어 / 설정 / 위젯 추가 / 페이지 상단 …) "그 자리에서만
+   인라인을 무력화하는" 규칙이 따로 자랐고, 스코프가 스무 개까지 늘었다.
+   목록 스타일을 한 군데 손대면 나머지 자리를 전부 따라 고쳐야 했던 이유다.
+
+   지금 구조는 자리를 타지 않는다:
+     · 목록은 **항상 <body> 로 빠진다**. layout 이 selectpicker 기본값을
+       container:'body' + display:'static' 으로 잡는다 → 모달·드로어의
+       overflow 에 잘릴 일이 원천적으로 없다.
+     · 폭은 아래 3번의 `width: max-content` 한 규칙이 정한다.
+     · 좌우 위치는 layout 의 배치 훅이 뷰포트를 보고 한 번에 정한다.
+   따라서 새 자리를 만들 때 **드롭다운용 CSS 를 새로 쓸 일이 없다.**
+   자리별 예외가 필요해 보이면, 그건 대개 여기 규칙이 틀렸다는 신호다.
+
+   DOM 은 두 겹이다
+   ---------------
+       div.dropdown-menu     ← 상자(모서리·그림자) + 검색칸·전체선택 상자
+         ul.inner            ← 스크롤 영역이자 목록
+           li > a.dropdown-item
+   vendor 는 여기가 세 겹이었고(`div.inner` 안에 `ul.dropdown-menu.inner`),
+   그 안쪽 ul 이 `.dropdown-menu` 를 달고 있어서 바깥 상자용 규칙을 자손
+   결합자로 쓰면 그림자·모서리·여백이 **한 겹 더** 그려졌다. 항목 아래로
+   그림자가 비치고 항목이 모서리를 덮던 증상이 그것이었다. 컴포넌트를 우리
+   코드로 바꾸면서 그 겹을 걷어냈다 — 이제 `.dropdown-menu` 는 하나뿐이라
+   그 함정 자체가 없다. 그래도 바깥 상자를 가리킬 때는 자식 결합자 `>` 를 써
+   의도를 분명히 한다.
+
+   `!important` 는 옮겨 온 뼈대에만
+   ------------------------------
+   우리가 쓴 규칙(레이어 밖)에는 `!important` 가 하나도 없다. 예전에 필요했던
+   두 자리는 각각 원인 쪽에서 해결했다:
+     · 목록 높이 상한 → 컴포넌트가 계산한다(windowPadding).
+     · 화면 밖으로 넘침 → layout 의 배치 훅이 넘친 만큼 밀어 넣는다.
+   남은 것은 아래 0번 `@layer vendor` 블록뿐이고, 그건 vendor CSS 에서 그대로
+   옮겨 온 뼈대라 원문을 유지한 것이다.
+   레이어 밖에 `!important` 를 더하기 전에, 인라인을 쓰는 쪽(컴포넌트나 배치
+   훅)에서 풀 수 있는지 먼저 본다.
+   ============================================================ */
+
+
+/* ── 0. 컴포넌트 뼈대 (vendor CSS 에서 옮겨 옴) ──────────────────
+   bootstrap-select 의 CSS 가 하던 "구조" 규칙이다. 우리 컴포넌트가 같은 DOM 을
+   그리므로 그대로 필요하다. `@layer vendor` 안에 두어 캐스케이드 무게를
+   예전과 똑같이 유지한다 — 아래의 우리 규칙(레이어 밖)이 언제나 이긴다.
+
+   ⚠ 일부러 가져오지 않은 것: `.bootstrap-select .dropdown-toggle:focus` 의
+     `outline: 5px auto -webkit-focus-ring-color !important; outline-offset:-2px`.
+     시스템 강조색을 버튼 **안쪽에** 그려서(이 맥에서는 주황) 걷어낸 규칙이다.
+     포커스 표시는 아래 3번이 앱 토큰으로 한다. */
+@layer vendor {
+    /* 원본 <select> — 화면에서 감추되 폼·검증을 위해 자리는 남긴다 */
+    select.selectpicker { display: none !important; }
+    .bootstrap-select > select {
+        position: absolute !important; bottom: 0; left: 50%; display: block !important;
+        width: 0.5px !important; height: 100% !important; padding: 0 !important;
+        opacity: 0 !important; border: none;
+    }
+
+    /* 래퍼 */
+    .bootstrap-select:not([class*="col-"]):not([class*="form-control"]):not(.input-group-btn) { width: 220px; }
+    .bootstrap-select:not(.input-group-btn),
+    .bootstrap-select[class*="col-"] { float: none; display: inline-block; margin-left: 0; }
+    .bootstrap-select.fit-width { width: auto !important; }
+    .bootstrap-select.form-control { margin-bottom: 0; padding: 0; border: none; }
+    :not(.input-group) > .bootstrap-select.form-control:not([class*="col-"]) { width: 100%; }
+    .form-group .bootstrap-select,
+    .form-horizontal .bootstrap-select,
+    .form-inline .bootstrap-select { margin-bottom: 0; }
+    .bootstrap-select[class*="col-"] .dropdown-toggle { width: 100%; }
+    .input-group .bootstrap-select.form-control .dropdown-toggle { border-radius: inherit; }
+
+    /* 버튼과 라벨 */
+    .bootstrap-select > .dropdown-toggle {
+        position: relative; width: 100%; z-index: 1; text-align: right; white-space: nowrap;
+    }
+    .bootstrap-select > .dropdown-toggle.bs-placeholder { color: #999; }
+    .bootstrap-select .dropdown-toggle .filter-option {
+        position: absolute; top: 0; left: 0; width: 100%; height: 100%; text-align: left;
+        padding-top: inherit; padding-right: inherit; padding-bottom: inherit; padding-left: inherit;
+    }
+    .bootstrap-select .dropdown-toggle .filter-option-inner { padding-right: inherit; }
+    .bootstrap-select .dropdown-toggle .filter-option-inner-inner { overflow: hidden; }
+    .bootstrap-select.fit-width .dropdown-toggle .filter-option { position: static; display: inline; padding: 0; }
+    .bootstrap-select.fit-width .dropdown-toggle .filter-option-inner,
+    .bootstrap-select.fit-width .dropdown-toggle .filter-option-inner-inner { display: inline; }
+
+    /* body 로 뺀 앵커 */
+    .bootstrap-select.bs-container { position: absolute; top: 0; left: 0; height: 0 !important; padding: 0 !important; }
+    .bootstrap-select.bs-container .dropdown-menu { z-index: 1060; }
+
+    /* 목록 */
+    .bootstrap-select .dropdown-menu { min-width: 100%; box-sizing: border-box; }
+    .bootstrap-select .dropdown-menu > .inner:focus { outline: 0; }
+    /* 목록은 <ul> 이라 브라우저·Reboot 의 기본 여백과 불릿이 붙는다. 지운다.
+       (vendor 때는 이 자리가 `ul.dropdown-menu.inner` 여서 되돌릴 게 더 많았다) */
+    .bootstrap-select .dropdown-menu > .inner {
+        margin: 0; padding: 0; list-style: none;
+    }
+    .bootstrap-select .dropdown-menu li { position: relative; }
+    .bootstrap-select .dropdown-menu li a { cursor: pointer; user-select: none; }
+    .bootstrap-select .dropdown-menu li a.opt { position: relative; padding-left: 2.25em; }
+    .bootstrap-select .dropdown-menu li a span.text { display: inline-block; }
+    .bootstrap-select .dropdown-menu li a span.check-mark { display: none; }
+    .bootstrap-select .dropdown-menu li small { padding-left: 0.5em; }
+    .bootstrap-select .no-results { padding: 3px; background: #f5f5f5; margin: 0 5px; white-space: nowrap; }
+
+    /* 검색칸·전체선택 상자 */
+    .bs-searchbox, .bs-actionsbox { padding: 4px 8px; }
+    .bs-actionsbox { width: 100%; box-sizing: border-box; }
+    .bs-actionsbox .btn-group button { width: 50%; }
+    .bs-searchbox + .bs-actionsbox { padding: 0 8px 4px; }
+    .bs-searchbox .form-control { margin-bottom: 0; width: 100%; float: none; }
+}
+
+
+/* ── 1. 래퍼도 상자가 아니다 — 버튼은 한 겹 ───────────────────
+   벤더는 원본 <select> 의 클래스를 자기가 만든 래퍼 div 에 통째로 복사한다.
+   그래서 래퍼가 `.aot-modern-select` 의 알약(테두리·배경·높이·모서리)과
+   캐럿 그림까지 그대로 입고, 그 안의 `.dropdown-toggle` 이 **같은 알약을 또**
+   그렸다. 실측(2026-09-08): 래퍼 160×32 / 버튼 158×32 가 1px 어긋난 채
+   겹쳐 있었고, 캐럿도 두 개였다.
+   예전에는 `.aot-settings-control` 과 `.aot-standard-select` 두 자리에만
+   따로 처방이 있어, 나머지 자리(모달·드로어·위젯 추가)는 두 겹 그대로였다.
+   래퍼는 위치만 잡는 껍데기로 두고, 보이는 알약은 안쪽 버튼 하나로 만든다. */
+.bootstrap-select {
+    border: 0;
+    border-radius: 0;
+    background: none;
+    box-shadow: none;
+    height: auto;
+    min-height: 0;
+    padding: 0;
+    line-height: normal;
+}
+
+/* 버튼 라벨은 버튼 안에서 세로 가운데에 놓이고, 넘치면 줄임표로 끝난다.
+   ⚠ 세 겹을 다 눌러야 한다: 벤더의 `.filter-option` 은 position:absolute;top:0
+   이라 그냥 두면 글자가 버튼 위쪽에 붙고, flex 로 세우면 이번엔 안쪽 칸의
+   기본값 `min-width:auto` 때문에 버튼 폭을 넘겨 흘러 캐럿 위에 겹친다
+   (실측: 설정 페이지에서 라벨이 버튼 오른쪽으로 66px 삐져나갔다).
+   예전에는 이 세로정렬 처방이 `.aot-settings-control` 한 자리에만 있었다. */
+.bootstrap-select > .dropdown-toggle .filter-option {
+    display: flex;
+    align-items: center;
+    height: 100%;
+    min-width: 0;
+    overflow: hidden;
+}
+
+.bootstrap-select > .dropdown-toggle .filter-option-inner {
+    min-width: 0;
+    overflow: hidden;
+}
+
+.bootstrap-select > .dropdown-toggle .filter-option-inner-inner {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+
+/* 버튼은 래퍼 폭을 채운다. 자리(열·컨트롤 폭)는 래퍼가 정하고 버튼은 거기
+   맞춘다. 알약 버튼은 display:inline-flex 라 그냥 두면 글자 폭으로 줄어
+   라벨이 잘린다(실측: 래퍼 220px 인데 버튼 54px, "입력: 선택"이 "입력:"). */
+.bootstrap-select > .dropdown-toggle {
+    width: 100%;
+}
+
+/* 포커스 표시는 앱 토큰으로. 벤더가 `!important` 로 박아 둔 시스템 포커스 링
+   (`-webkit-focus-ring-color`, offset -2px)은 버튼 **안쪽에** 강조색 테두리를
+   그린다 — 이 맥에서는 주황(#E59700)으로 나왔다. 레이어 밖에서는 이 선언을
+   이길 수 없어 vendor 앞 레이어에서 되받는다(vendor-layer.css 설명 참조).
+   마우스로 누를 때는 표시하지 않고, 키보드 이동일 때만 보인다. */
+.bootstrap-select > .dropdown-toggle:focus {
+    outline: none;
+}
+
+.bootstrap-select > .dropdown-toggle:focus-visible {
+    outline: var(--aot-focus-outline);
+    outline-offset: var(--aot-focus-outline-offset);
+}
+
+
+/* ── 2. <body> 로 빠진 앵커 ───────────────────────────────────
+   벤더는 `.bs-container` 를 만들 때 원본 <select> 의 클래스를 통째로 복사한다.
+   그래서 `.aot-modern-select` 의 알약 테두리·배경·캐럿 그림이 이 빈 앵커에
+   새어 들어와, 버튼 아래에 높이 2px 짜리 테두리 선이 실제로 그려지고 있었다.
+   앵커는 좌표만 나르는 자리이므로 겉모습을 전부 지운다.
+
+   z-index 는 메뉴가 아니라 앵커 자신에게 준다: 복사된 클래스의
+   `transform: translateZ(0)` 때문에 앵커가 자체 스택 컨텍스트를 만들어,
+   안쪽 메뉴의 z-index 가 앵커 안에 갇히기 때문이다. */
+.bootstrap-select.bs-container {
+    border: 0;
+    background: none;
+    box-shadow: none;
+    z-index: var(--aot-z-modal-nested);
+}
+
+
+/* ── 3. 바깥 목록 — 폭·정렬·상자 ──────────────────────────────
+   `width: max-content` 가 핵심이다. `width: auto` 면 shrink-to-fit 의
+   "가용 폭"이 뷰포트가 아니라 containing block(=버튼 폭인 앵커)으로 잡혀,
+   목록이 버튼 폭까지 눌리고 긴 항목이 여러 줄로 찌그러진다.
+   (실측: 96px 버튼의 목록이 94px 로 눌려 두 줄로 접혔다.) */
+.bootstrap-select > .dropdown-menu {
+    min-width: 100%;
+    width: max-content;
+    max-width: min(560px, calc(100vw - 24px));
+    margin: 4px 0;
+    /* 떠 있는 목록의 경계는 **그림자 하나**로만 낸다. 예전에는 테두리와 그림자를
+       같이 줘서, 버튼 바로 아래 열릴 때 버튼 테두리와 목록 테두리가 나란히
+       두 줄로 보였다. 경계는 한 겹이면 충분하다. */
+    border: 0;
+    border-radius: var(--aot-radius-md);
+    box-shadow: var(--aot-shadow-dropdown);
+    /* 항목을 모서리 안으로 가둔다 */
+    overflow: hidden;
+}
+
+.bootstrap-select > .dropdown-menu:not(.dropdown-menu-right) {
+    left: 0;
+    right: auto;
+}
+
+.bootstrap-select > .dropdown-menu.dropdown-menu-right {
+    left: auto;
+    right: 0;
+}
+
+/* 검색칸·전체선택 상자는 고정, 목록만 스크롤. */
+.bootstrap-select > .dropdown-menu.show {
+    display: flex;
+    flex-direction: column;
+}
+
+
+/* ── 4. 스크롤 영역 ───────────────────────────────────────────
+   목록(`ul.inner`)이 곧 스크롤 상자다. 높이 상한은 컴포넌트가
+   `windowPadding`(layout 에서 지정)으로 계산한다. */
+.bootstrap-select > .dropdown-menu > .inner {
+    flex: 1 1 auto;
+    max-width: 100%;
+    overflow-x: hidden;
+    overflow-y: auto;
+    /* 스크롤은 되되 스크롤바는 보이지 않는다 — 앱 전역 규칙 */
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+.bootstrap-select > .dropdown-menu > .inner::-webkit-scrollbar {
+    display: none;
+}
+
+.bootstrap-select > .dropdown-menu .bs-searchbox {
+    flex: 0 0 auto;
+}
+
+
+/* ── 5. 항목 ─────────────────────────────────────────────────── */
+.bootstrap-select .dropdown-menu li a {
+    display: flex;
+    align-items: center;
+    min-height: 28px;
+    padding: 4px 12px;
+    font-size: var(--aot-font-size-sm);
+    text-align: left;
+}
+
+.bootstrap-select .dropdown-menu li a span.text {
+    display: block;
+    max-width: 100%;
+    overflow: hidden;
+    line-height: normal;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.bootstrap-select .dropdown-menu .dropdown-header {
+    padding: 4px 12px;
+    font-size: var(--aot-font-size-xs);
+    font-weight: 700;
+    text-align: left;
+    color: var(--aot-color-text-secondary);
+}
+
+
+/* ── 6. vendor 기본 파랑 걷어내기 ─────────────────────────────
+   부트스트랩 기본값에는 우리 색이 아닌 파랑이 남아 있고, 앱이 이 두 자리를
+   덮은 적이 없어 그대로 화면에 나가고 있었다(2026-09-08 소스 확인):
+     · `.form-control:focus`  → #80bdff + rgba(0,123,255,.25)
+     · `.dropdown-item.active/:active` → #007bff
+   벤더는 `@layer vendor` 에 있으므로 여기 일반 선언만으로 이긴다(!important 불필요).
+   색은 전역 토큰에서만 가져온다 — 테두리는 입력칸 포커스 테두리 토큰
+   (`--aot-input-focus-border`, 브랜드 딥그린)과 같은 값을 쓴다. */
+
+/* 목록 안 검색칸 — 표시는 테두리 하나로 끝낸다.
+   부트스트랩 기본은 파란 테두리 + 파란 번짐(box-shadow) 두 겹이었다. */
+.bootstrap-select .bs-searchbox .form-control:focus {
+    border-color: var(--aot-input-focus-border);
+    box-shadow: none;
+}
+
+/* 액션 메뉴(네이티브 드롭다운)도 같은 상자를 쓴다 — 경계는 그림자 한 겹.
+   ⚠ 여기서 `overflow` 와 `padding` 은 정하지 않는다. 이 셀렉터는 앱의 모든
+   `.dropdown-menu` 에 닿는데, 그중에는 스스로 `max-height` + `overflow-y:auto`
+   로 스크롤하는 메뉴가 있다(그래프 페이지의 측정값 메뉴 등). 전역에서
+   `overflow:hidden` 을 걸면 그런 메뉴가 잘린다. 스크롤 처리는 목록 자신이,
+   여백은 부트스트랩 기본값(.5rem 0)이 맡는다. */
+.dropdown-menu {
+    border: 0;
+    border-radius: var(--aot-radius-md);
+    box-shadow: var(--aot-shadow-dropdown);
+    /* 목록 바탕은 앱 토큰에서 온다. 예전에는 부트스트랩 테마 파일(20종)이
+       칠하고 있어서, 다크 테마용으로 선언해 둔 `--aot-surface-dropdown`
+       (밝음 #ffffff / 어둠 #2a2a2a)은 실제로 쓰이는 곳이 시설 패널 하나뿐인
+       '선언만 있고 소비처 없는' 토큰이었다. 밝은 테마에서는 값이 같아
+       화면이 바뀌지 않고, 다크 테마에서만 제자리를 찾는다. */
+    background-color: var(--aot-surface-dropdown);
+}
+
+/* 내비 메뉴는 브랜드 배경(--primary)과 큰 반경을 쓰는 별개 상자다(aot.css).
+   거기에 테두리까지 있으면 그림자와 두 겹이 된다. 예전에는 layout 의 인라인
+   <style> 이 `border:none !important` 로 지우고 있었는데, 그 인라인을 걷어내며
+   테두리가 되살아났다. aot.css 와 같은 특이도로 뒤에서 다시 지운다. */
+.navbar.main-navbar .dropdown-menu {
+    border: 0;
+    padding: 8px 0;
+}
+
+/* 네이티브 드롭다운(내비·액션 메뉴)의 선택/누름 상태.
+   selectpicker 쪽은 aot.css 가 이미 `--aot-color-dark` 로 칠하고 있어,
+   두 갈래가 같은 색으로 보이도록 여기서 같은 토큰을 쓴다. */
+.dropdown-menu .dropdown-item.active,
+.dropdown-menu .dropdown-item:active {
+    background-color: var(--aot-color-dark);
+    color: var(--aot-color-text-tertiary);
+}
+
+
+/* ── 7. 폰 ───────────────────────────────────────────────────
+   좁은 화면에서는 목록이 화면 폭을 거의 다 쓰므로 긴 항목을 줄임표로 자르지
+   않고 접는다. 좌우로 넘치는 문제는 CSS 가 아니라 배치 훅이 잡는다. */
+@media (max-width: 575.98px) {
+    .bootstrap-select .dropdown-menu li a span.text {
+        white-space: normal;
+        word-break: break-word;
+        text-overflow: clip;
+    }
+}

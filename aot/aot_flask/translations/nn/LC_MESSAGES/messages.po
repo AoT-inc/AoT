@@ -30571,3 +30571,162 @@ msgstr "Strengare grenser for tåkelegging for frøplantar, som svir seg lettare
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:1192
 msgid "Not used"
 msgstr "Ikkje i bruk"
+
+msgid "Vent"
+msgstr "Ventilasjon"
+
+msgid "Mist"
+msgstr "Tåke"
+
+msgid "Devices under automatic control"
+msgstr "Einingar under automatisk styring"
+
+msgid "%(n)s excluded"
+msgstr "%(n)s utelatne"
+
+msgid "Turn a device off to keep automatic control from moving it."
+msgstr "Slå av ei eining for å hindre at automatisk styring flyttar henne."
+
+msgid "Safety gates will not move it either."
+msgstr "Tryggingssperrene vil heller ikkje flytte henne."
+
+msgid "Select a linked facility first."
+msgstr "Vel først eit tilknytt anlegg."
+
+msgid "This facility has no actuators yet."
+msgstr "Dette anlegget har ingen aktuatorar enno."
+
+msgid "Could not load the device list. Existing settings are kept."
+msgstr "Klarte ikkje å laste einingslista. Eksisterande innstillingar blir tekne vare på."
+
+msgid "Excluded actuators (raw)"
+msgstr "Utelatne aktuatorar (rådata)"
+
+msgid "Comma-separated Output IDs excluded from automatic control. Normally set with the toggles above rather than typed here."
+msgstr "Kommaseparerte utgangs-ID-ar som er utelatne frå automatisk styring. Blir vanlegvis sett med brytarane over, ikkje skrivne inn her."
+
+msgid "Proactively shift temperature/humidity setpoints and inhibit ventilation before adverse weather arrives. Uses this facility's own forecast source if one is linked in the facility editor's weather bindings (any service — KMA, OpenWeatherMap, Open-Meteo); otherwise falls back to the system-wide KMA short-term forecast."
+msgstr "Flyttar proaktivt temperatur-/fuktnivåa og hindrar ventilasjon før dårleg vêr kjem. Brukar denne fasiliteten sin eigen prognosekjelde dersom ei slik er kopla til i vêrbindingane i fasilitetsredigeraren (kva som helst teneste — KMA, OpenWeatherMap, Open-Meteo); elles fell systemet tilbake på den systemomfattande KMA-korttidsprognosen."
+
+msgid "How many hours ahead to check for incoming adverse weather (1–6 h) when using the system-wide KMA fallback above. Longer lookahead gives earlier warning but may over-correct. Ignored when this facility has its own forecast source linked — that source already applies its own lookahead."
+msgstr "Kor mange timar fram i tid ein skal sjekke etter dårleg vêr på veg inn (1–6 t) når den systemomfattande KMA-reserveløysinga ovanfor blir brukt. Lengre horisont gir tidlegare varsel, men kan føre til overkorrigering. Blir ignorert når denne fasiliteten har ei eiga prognosekjelde kopla til — den kjelda brukar då alt sin eigen horisont."
+
+#: aot/widgets/widget_notice.py:1
+msgid "Notice Category Filter"
+msgstr "Filter for meldingskategori"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Notes Space"
+msgstr "Notatområde"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Space"
+msgstr "Område"
+
+#: aot/widgets/widget_notice.py:1
+msgid "None selected"
+msgstr "Ingen valt"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Notices"
+msgstr "Meldingar"
+
+#: aot/widgets/widget_notice.py:1
+msgid "No notes yet."
+msgstr "Ingen notat enno."
+
+#: aot/widgets/widget_notice.py:1
+msgid "(Attachment only)"
+msgstr "(Berre vedlegg)"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Notice & Notes Board"
+msgstr "Meldings- og notatoppslagstavle"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Displays the latest notice board post titles and/or the notes written in a chosen site, zone, plot, or facility (and everything nested under it). Clicking a notice opens the full post (content, poll, replies, acknowledge) in a popup; clicking a note opens it in the shared notes panel. Users with write permission can also create, edit, and delete posts directly from the widget."
+msgstr "Viser titlane på dei nyaste innlegga på oppslagstavla og/eller notata som er skrivne på ein valt stad, sone, teig eller anlegg (og alt som ligg under det). Å klikke på ei melding opnar heile innlegget (innhald, avrøysting, svar, kvittering) i eit sprettoppvindauge; å klikke på eit notat opnar det i det delte notatpanelet. Brukarar med skriveløyve kan òg opprette, redigere og slette innlegg direkte frå widgeten."
+
+#: aot/widgets/widget_notice.py:1
+msgid "Show Notices"
+msgstr "Vis meldingar"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Display the notice board section"
+msgstr "Viser oppslagstavle-delen"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Number of Notices"
+msgstr "Talet på meldingar"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Number of Notes"
+msgstr "Talet på notat"
+
+#: aot/widgets/widget_notice.py:1
+msgid "How many of the latest notes to display"
+msgstr "Kor mange av dei nyaste notata som skal visast"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Include Nested Spaces"
+msgstr "Ta med underliggjande område"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Sort Notes By"
+msgstr "Sorter notat etter"
+
+#: aot/widgets/widget_notice.py:1
+msgid "How to order the note list"
+msgstr "Korleis notatlista skal sorterast"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Note Category/Tag Contains"
+msgstr "Notatkategori/merkelapp inneheld"
+
+#: aot/widgets/widget_notice.py:1
+msgid "How often to refresh the notice/notes lists"
+msgstr "Kor ofte meldings-/notatlistene skal oppdaterast"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Notes written in this site/zone/plot/facility (and, if \"Include Nested Spaces\" above is on, everything nested under it) are shown."
+msgstr "Notat skrivne på denne staden/sona/teigen/anlegget vert viste (og, dersom \"Ta med underliggjande område\" ovanfor er slått på, alt som ligg under det)."
+
+#: aot/widgets/widget_notice.py:1
+msgid "No sites, zones, plots, or facilities exist yet."
+msgstr "Det finst enno ingen stader, soner, teigar eller anlegg."
+
+#: aot/widgets/widget_notice.py:1
+msgid "Nothing selected — turn on \"Show Notices\" and/or \"Show Notes\" in the widget settings."
+msgstr "Ingenting valt — slå på \"Vis meldingar\" og/eller \"Vis notat\" i widget-innstillingane."
+
+#: aot/widgets/widget_notice.py:1
+msgid "Choose a space in the widget settings to show notes."
+msgstr "Vel eit område i widget-innstillingane for å vise notat."
+
+#: aot/widgets/widget_notice.py:1
+msgid "Display notes written in a chosen space (see Space below)"
+msgstr "Viser notat skrivne i eit valt område (sjå \"Område\" nedanfor)"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Also show notes written in zones/plots/facilities/devices nested under the chosen space"
+msgstr "Viser òg notat skrivne i soner/teigar/anlegg/einingar som ligg under det valde området"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Newest First"
+msgstr "Nyaste først"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Only show notes whose category or tags contain this text (optional)"
+msgstr "Viser berre notat der kategori eller merkelapp inneheld denne teksten (valfritt)"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Show Notes List"
+msgstr "Vis notatliste"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Display notes matching the filter below"
+msgstr "Viser notat som samsvarer med filteret nedanfor"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Notes Filter"
+msgstr "Notatfilter"

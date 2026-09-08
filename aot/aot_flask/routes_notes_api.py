@@ -181,8 +181,13 @@ def api_notes_target_get(target_id):
                 # 어느 대상 것인지. 자손까지 합쳐 보여줄 때 이것이 없으면
                 # 합친 목록이 오히려 혼란이 된다.
                 'target_id': n.target_id,
+                'target_type': n.target_type,
                 'target_name': (_display_name_for_target(n.target_id)
                                 if n.target_id != target_id else None),
+                # 위젯(공지판+노트)의 정렬/필터가 쓴다 — 응답에 없으면 그
+                # 위젯은 서버가 이미 골라 준 최신순 밖의 정렬을 할 수 없다.
+                'category': n.category,
+                'priority': n.priority,
             })
             
         return jsonify(result)

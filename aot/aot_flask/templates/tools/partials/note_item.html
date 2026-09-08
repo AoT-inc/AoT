@@ -30,7 +30,7 @@
                         <form method="post" action="/notes" class="d-inline">
                             {{form_note_options.csrf_token}}
                             {{form_note_options.note_unique_id(value=each_note.unique_id)}}
-                            <button name="note_del" value="y" class="dropdown-item small text-danger" onclick="return confirm('{{_('Delete this note?')}}')">
+                            <button name="note_del" value="y" class="dropdown-item small text-danger" onclick="return confirm({{ _('Delete this note?')|tojson|forceescape }})">
                                 <i class="fas fa-trash-alt mr-2"></i> {{_('Delete')}}
                             </button>
                         </form>

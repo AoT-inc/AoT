@@ -30607,3 +30607,162 @@ msgstr "Строжа ограничења прскања за расад, кој
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:1192
 msgid "Not used"
 msgstr "Не користи се"
+
+msgid "Vent"
+msgstr "Вентилација"
+
+msgid "Mist"
+msgstr "Магла"
+
+msgid "Devices under automatic control"
+msgstr "Уређаји под аутоматском контролом"
+
+msgid "%(n)s excluded"
+msgstr "%(n)s искључено"
+
+msgid "Turn a device off to keep automatic control from moving it."
+msgstr "Искључите уређај да га аутоматска контрола не би покретала."
+
+msgid "Safety gates will not move it either."
+msgstr "Ни сигурносне капије га неће покретати."
+
+msgid "Select a linked facility first."
+msgstr "Прво изаберите повезани објекат."
+
+msgid "This facility has no actuators yet."
+msgstr "Овај објекат још нема актуатора."
+
+msgid "Could not load the device list. Existing settings are kept."
+msgstr "Листа уређаја није могла да се учита. Постојећа подешавања су сачувана."
+
+msgid "Excluded actuators (raw)"
+msgstr "Искључени актуатори (сирово)"
+
+msgid "Comma-separated Output IDs excluded from automatic control. Normally set with the toggles above rather than typed here."
+msgstr "ID излаза одвојени зарезима који су искључени из аутоматске контроле. Обично се подешавају помоћу прекидача изнад, а не уносе овде."
+
+msgid "Proactively shift temperature/humidity setpoints and inhibit ventilation before adverse weather arrives. Uses this facility's own forecast source if one is linked in the facility editor's weather bindings (any service — KMA, OpenWeatherMap, Open-Meteo); otherwise falls back to the system-wide KMA short-term forecast."
+msgstr "Проактивно помера задате вредности температуре/влажности и обуставља вентилацију пре него што наиђе неповољно време. Користи сопствени извор прогнозе овог објекта ако је повезан у оквиру временских веза у уређивачу објекта (било која услуга — KMA, OpenWeatherMap, Open-Meteo); у супротном се враћа на општесистемску краткорочну KMA прогнозу."
+
+msgid "How many hours ahead to check for incoming adverse weather (1–6 h) when using the system-wide KMA fallback above. Longer lookahead gives earlier warning but may over-correct. Ignored when this facility has its own forecast source linked — that source already applies its own lookahead."
+msgstr "Колико сати унапред проверавати надолазеће неповољно време (1–6 h) када се користи горенаведена општесистемска резервна KMA прогноза. Дужи хоризонт даје раније упозорење, али може довести до прекомерне корекције. Занемарује се када овај објекат има повезан сопствени извор прогнозе — тај извор већ примењује сопствени хоризонт."
+
+#: aot/widgets/widget_notice.py:1
+msgid "Notice Category Filter"
+msgstr "Филтер категорије обавештења"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Notes Space"
+msgstr "Простор бележака"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Space"
+msgstr "Простор"
+
+#: aot/widgets/widget_notice.py:1
+msgid "None selected"
+msgstr "Ништа није изабрано"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Notices"
+msgstr "Обавештења"
+
+#: aot/widgets/widget_notice.py:1
+msgid "No notes yet."
+msgstr "Још нема бележака."
+
+#: aot/widgets/widget_notice.py:1
+msgid "(Attachment only)"
+msgstr "(Само прилог)"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Notice & Notes Board"
+msgstr "Табла обавештења и бележака"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Displays the latest notice board post titles and/or the notes written in a chosen site, zone, plot, or facility (and everything nested under it). Clicking a notice opens the full post (content, poll, replies, acknowledge) in a popup; clicking a note opens it in the shared notes panel. Users with write permission can also create, edit, and delete posts directly from the widget."
+msgstr "Приказује наслове најновијих порука са табле обавештења и/или белешке написане на изабраном месту, зони, парцели или објекту (и свему испод њега). Кликом на обавештење отвара се цела порука (садржај, анкета, одговори, потврда) у искачућем прозору; кликом на белешку она се отвара у заједничком панелу бележака. Корисници са дозволом за писање такође могу да креирају, уређују и бришу поруке директно из виџета."
+
+#: aot/widgets/widget_notice.py:1
+msgid "Show Notices"
+msgstr "Прикажи обавештења"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Display the notice board section"
+msgstr "Приказује одељак табле обавештења"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Number of Notices"
+msgstr "Број обавештења"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Number of Notes"
+msgstr "Број бележака"
+
+#: aot/widgets/widget_notice.py:1
+msgid "How many of the latest notes to display"
+msgstr "Колико најновијих бележака приказати"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Include Nested Spaces"
+msgstr "Укључи угнежђене просторе"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Sort Notes By"
+msgstr "Сортирај белешке по"
+
+#: aot/widgets/widget_notice.py:1
+msgid "How to order the note list"
+msgstr "Како сортирати листу бележака"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Note Category/Tag Contains"
+msgstr "Категорија/ознака белешке садржи"
+
+#: aot/widgets/widget_notice.py:1
+msgid "How often to refresh the notice/notes lists"
+msgstr "Колико често освежавати листе обавештења/бележака"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Notes written in this site/zone/plot/facility (and, if \"Include Nested Spaces\" above is on, everything nested under it) are shown."
+msgstr "Приказују се белешке написане на овом месту/зони/парцели/објекту (а ако је горе укључено „Укључи угнежђене просторе\", и све испод њега)."
+
+#: aot/widgets/widget_notice.py:1
+msgid "No sites, zones, plots, or facilities exist yet."
+msgstr "Још не постоје места, зоне, парцеле или објекти."
+
+#: aot/widgets/widget_notice.py:1
+msgid "Nothing selected — turn on \"Show Notices\" and/or \"Show Notes\" in the widget settings."
+msgstr "Ништа није изабрано — укључите „Прикажи обавештења\" и/или „Прикажи белешке\" у подешавањима виџета."
+
+#: aot/widgets/widget_notice.py:1
+msgid "Choose a space in the widget settings to show notes."
+msgstr "Изаберите простор у подешавањима виџета да бисте приказали белешке."
+
+#: aot/widgets/widget_notice.py:1
+msgid "Display notes written in a chosen space (see Space below)"
+msgstr "Приказује белешке написане у изабраном простору (види „Простор\" испод)"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Also show notes written in zones/plots/facilities/devices nested under the chosen space"
+msgstr "Такође приказује белешке написане у зонама/парцелама/објектима/уређајима угнежђеним под изабраним простором"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Newest First"
+msgstr "Прво најновије"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Only show notes whose category or tags contain this text (optional)"
+msgstr "Приказује само белешке чија категорија или ознаке садрже овај текст (опционо)"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Show Notes List"
+msgstr "Прикажи листу бележака"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Display notes matching the filter below"
+msgstr "Приказује белешке које одговарају филтеру испод"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Notes Filter"
+msgstr "Филтер бележака"

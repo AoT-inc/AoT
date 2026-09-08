@@ -5,7 +5,7 @@
         {{form_conditional.csrf_token}}
         {{form_conditional.function_id(value=each_function.unique_id)}}
         {{form_conditional.function_type(value='conditional')}}
-    
+
     {# Location settings and map: integrated with macro #}
     {# Moved to below button group #}
 
@@ -69,7 +69,7 @@
         <div class="aot-modal-option-row">
             <label class="aot-modal-option-label">{{_('Tab')}}</label>
             <div class="aot-modal-option-control">
-                <select name="tab_id" class="form-control aot-modern-input">
+                <select name="tab_id" class="form-control aot-modern-select">
                     {% for tab in tabs %}
                     <option value="{{tab.unique_id}}" {% if tab.unique_id == each_function.tab_id %}selected{% endif %}>{{tab.name}}</option>
                     {% endfor %}
@@ -197,7 +197,7 @@
   </form>
 
   <div class="aot-modal-group-title">
-    {{_('Conditions')}} 
+    {{_('Conditions')}}
     <a href="{{ manual_url('Functions/#conditional-options') }}" target="_blank">
         <span class="fas fa-question-circle aot-help-icon"></span>
     </a>
@@ -215,7 +215,7 @@
                 <div class="aot-action-group">
                     <select class="form-control aot-modern-select selectpicker aot-standard-select" data-style="btn-white" data-live-search="true"
                         title="{{_('Select')}}" id="condition_type_{{each_function.unique_id}}" name="condition_type"
-                        data-selected-text-format="static" data-display="static" data-container="body" data-dropdown-align-right="true">
+                        data-selected-text-format="static">
                         {% for value, name in conditional_conditions_list %}
                         <option value="{{value}}">{{name}}</option>
                         {% endfor %}
@@ -236,7 +236,7 @@
   </div>
 
   <div class="aot-modal-group-title">
-      {{_('Actions')}} 
+      {{_('Actions')}}
       <a href="{{ manual_url('Actions/') }}" target="_blank"><span class="fas fa-question-circle aot-help-icon"></span></a>
   </div>
 
@@ -252,12 +252,12 @@
                 <div class="aot-action-group">
                     <select class="form-control aot-modern-select selectpicker aot-standard-select" data-style="btn-white" data-live-search="true"
                         title="{{_('Select')}}" id="action_type_{{each_function.unique_id}}"
-                        name="action_type" data-selected-text-format="static" data-display="static" data-container="body" data-dropdown-align-right="true">
+                        name="action_type" data-selected-text-format="static">
                         {% for value, name in choices_actions %}
                         <option value="{{value}}">{{name}}</option>
                         {% endfor %}
                     </select>
-                    <button data-form-id="form_actions_{{each_function.unique_id}}" onclick="return $(this).processRequest(this, 'add_action');" 
+                    <button data-form-id="form_actions_{{each_function.unique_id}}" onclick="return $(this).processRequest(this, 'add_action');"
                         name="add_action" class="btn btn-primary aot-pill-btn" type="button">{{_('Add')}}</button>
                 </div>
             </div>

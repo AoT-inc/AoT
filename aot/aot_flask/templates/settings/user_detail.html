@@ -84,7 +84,7 @@
       <div class="aot-modal-option-row">
         <label class="aot-modal-option-label">{{_('Role')}}</label>
         <div class="aot-modal-option-control">
-          <select name="role_id" class="form-control aot-modern-input">
+          <select name="role_id" class="form-control aot-modern-select">
             {% for each_role in user_roles %}
             <option value="{{each_role.id}}" {% if user.role_id == each_role.id %}selected{% endif %}>{{each_role.name}}</option>
             {% endfor %}
@@ -95,7 +95,7 @@
       <div class="aot-modal-option-row">
         <label class="aot-modal-option-label">{{_('Theme')}}</label>
         <div class="aot-modal-option-control">
-          <select name="theme" class="form-control aot-modern-input">
+          <select name="theme" class="form-control aot-modern-select">
             {% for value, name in themes %}
             <option value="{{value|e}}" {% if value == user.theme %}selected{% endif %}>{{name|e}}</option>
             {% endfor -%}
@@ -141,7 +141,7 @@
               <button type="submit" name="user_revoke_api_key" value="1"
                 class="btn aot-pill-btn aot-pill-btn-secondary"
                 data-revoke-key="{{each_key.unique_id}}"
-                onclick="return confirm('{{_('Revoke this API key? Anything using it will stop working.')}}')">{{_('Revoke')}}</button>
+                onclick="return confirm({{ _('Revoke this API key? Anything using it will stop working.')|tojson|forceescape }})">{{_('Revoke')}}</button>
             </div>
           </div>
           {% endfor %}

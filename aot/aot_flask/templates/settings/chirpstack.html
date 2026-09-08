@@ -141,7 +141,7 @@
         <div class="aot-modal-option-row">
           <div class="aot-modal-option-label">{{_('Assign to scheduler')}}</div>
           <div class="aot-modal-option-control">
-            <select name="scheduler_id" class="form-control aot-modern-input">
+            <select name="scheduler_id" class="form-control aot-modern-select">
               <option value="">{{_('None')}}</option>
               {% for uid, sname in schedulers %}
               <option value="{{ uid }}">{{ sname }}</option>

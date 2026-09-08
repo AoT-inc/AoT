@@ -12,7 +12,7 @@
 
   <title>AoT {{aot_version}} - {{host}}{% block title %}{% endblock %}</title>
 
-  <link href="{{ url_for('static', filename='css/bootstrap.min.css') }}" rel="stylesheet">
+  <link href="{{ url_for('static', filename='css/vendor-layer.css') }}" rel="stylesheet">
   <link href="{{ url_for('static', filename='css/simple-sidebar.css') }}" rel="stylesheet">
   <link href="{{ url_for('static', filename='css/aot-theme-variables.css') }}" rel="stylesheet">
 
@@ -77,9 +77,6 @@
           z-index: var(--aot-z-navbar) !important;
         }
 
-        .dropdown-menu {
-          z-index: var(--aot-z-dropdown) !important;
-        }
       </style>
     </div>
   </nav>

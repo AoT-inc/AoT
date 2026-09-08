@@ -25,7 +25,7 @@
        마루가 시계가 아니라 해를 따라간다. -->
   <div class="aot-form-grid-item">
     {{form_add_method.time_start_event.label(class_='aot-form-grid-label')}}
-    <select class="form-control aot-modern-input" id="time_start_event" name="time_start_event">
+    <select class="form-control aot-modern-select" id="time_start_event" name="time_start_event">
       <option value="">{{_('Fixed time')}}</option>
       <option value="solar_noon"{% if last_sine_method and last_sine_method.time_start_event == 'solar_noon' %} selected{% endif %}>{{_('Solar Noon')}}</option>
     </select>

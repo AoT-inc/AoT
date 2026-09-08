@@ -97,7 +97,7 @@ IMPORTANT: This is the SOURCE TEMPLATE file.
        · aot-api-key-picker    선택한 키 하나만 요청 시점에 서버에서 조회(평문 일괄 노출 방지) -->
   <script src="{{ asset('app-shell') }}"></script>
 
-  <link href="{{ url_for('static', filename='css/bootstrap.min.css') }}" rel="stylesheet">
+  <link href="{{ url_for('static', filename='css/vendor-layer.css') }}" rel="stylesheet">
   <link href="{{ url_for('static', filename='css/simple-sidebar.css') }}" rel="stylesheet">
   <link href="{{ url_for('static', filename='css/aot-theme-variables.css') }}" rel="stylesheet">
 
@@ -136,8 +136,160 @@ IMPORTANT: This is the SOURCE TEMPLATE file.
   <link href="{{ url_for('static', filename='vendor/fontawesome-5.11.2/css/all.min.css') }}" rel="stylesheet">
   <link href="{{ url_for('static', filename='vendor/fontawesome-5.11.2/css/v4-shims.min.css') }}" rel="stylesheet">
   <link href="{{ url_for('static', filename='vendor/fontawesome-5.11.2/css/fa-compat.css') }}" rel="stylesheet">
-  <link href="{{ url_for('static', filename='css/bootstrap-select.min.css') }}" rel="stylesheet">
-  <script src="{{ url_for('static', filename='js/vendor/bootstrap-select.min.js') }}"></script>
+  {# 셀렉트 목록은 우리 코드가 그린다(aot-selectpicker). 예전 vendor
+     (bootstrap-select v1.13.2, 2018년판)는 2026-09-08 에 지웠다 — 뼈대
+     CSS 는 components/aot-select.css 의 `@layer vendor` 블록에 있다. #}
+  {# 새 셀렉트가 쓰는 문구. 정적 JS 라 번역을 서버에서 넘긴다.
+     `|tojson` 으로 감싸 따옴표·줄바꿈이 스크립트를 깨지 않게 한다. #}
+  <script>
+    window.AOT_SELECT_I18N = {
+      noneSelected:  {{ _('Nothing selected')|tojson }},
+      noResults:     {{ _('No results')|tojson }},
+      countSelected: {{ _('{0} of {1} selected')|tojson }},
+      selectAll:     {{ _('Select All')|tojson }},
+      deselectAll:   {{ _('Deselect All')|tojson }}
+    };
+  </script>
+  <script src="{{ asset('app-selectpicker') }}"></script>
+  {# ── 셀렉트 목록(드롭다운) 전역 동작 — components/aot-select.css 와 한 쌍 ──
+     ⚠ 이 블록은 반드시 bootstrap-select 를 실은 **직후, 파싱 시점에** 돈다.
+       $(function(){...}) 안으로 옮기면 늦다: HTML 에 처음부터
+       `class="selectpicker"` 로 있던 셀렉트가 이미 옛 기본값으로 만들어진 뒤라,
+       그 셀렉트만 목록이 body 로 빠지지 않고 자리마다 동작이 갈린다(실측). #}
+  <script>
+    (function () {
+      if (!window.jQuery || !$.fn.selectpicker) return;
+      var D = $.fn.selectpicker.Constructor.DEFAULTS;
+
+      // 목록을 <body> 로 뺀다. 모달·드로어의 overflow 에 잘리지 않게 하는 유일한
+      // 방법이고, 자리별 무력화 CSS 가 필요 없어지는 근거이기도 하다.
+      D.container = 'body';
+      // 위 container 와 짝. 이게 없으면 벤더가 앵커에 top/left 를 쓰지 않는다
+      // (벤더 조건: Bootstrap 4 에서는 display==='static' 일 때만 좌표를 심는다).
+      D.display = 'static';
+      // 목록 높이는 벤더가 직접 계산한다(예전엔 CSS 가 max-height 에 !important
+      // 로 끼어들었다). 이 값은 "화면 가장자리에서 남겨 둘 여백"이고, 벤더는
+      // 그만큼을 **버튼 옆 가용 공간에서 뺀다**:
+      //     아래공간 = 창높이 − 버튼상단 − 버튼높이 − windowPadding[2]
+      // 즉 크게 잡을수록 목록이 그만큼 짧아진다. 한때 120 을 줬더니 화면 아래
+      // 142px 를 비워 둔 채 목록만 짧아졌다(실측: 보이는 항목 14.3개→10.3개).
+      // 가장자리에 딱 붙지 않을 만큼만 남긴다.
+      D.windowPadding = [8, 0, 8, 0];
+
+      var EDGE = 12;      // 화면 가장자리에서 남기는 최소 여백(px)
+      var MAX_VH = 0.8;   // 목록 높이 상한(창 높이 대비) — 화면을 덮지 않게
+
+      // 목록이 화면 밖으로 나가지 않게 하는 **단 한 곳**.
+      // 높이는 벤더에게 맡긴다: 목록은 버튼 '한쪽 옆'(아래, 자리가 없으면 위)에
+      // 펴지고 버튼을 덮지 않는다. 한때 "양쪽 다 모자라면 버튼을 덮고 창 높이를
+      // 쓰게" 해 봤으나, 폰에서 목록이 화면을 100% 덮어 바깥을 눌러 닫을 곳이
+      // 사라졌다(고를 게 없을 때 빠져나갈 길이 없다). 높이를 벌자고 치를 값이
+      // 아니어서 되돌렸다 — 대신 windowPadding 을 8 로 낮춰 벤더가 쓰는 공간
+      // 자체를 넓혔다(보이는 항목 10.3개 → 14.3개, 실측).
+      function place(inst) {
+        var $menu = inst.$menu, $inner = inst.$menuInner;
+        if (!$menu || !$menu.length || !$inner || !$inner.length) return;
+        var el = $menu[0];
+        if (!el.offsetHeight) return;
+
+        // ⚠ innerWidth/innerHeight 를 쓰면 안 된다: 자리를 차지하는 스크롤바
+        //   (크롬 기본)가 그 값에 **포함**되어 화면이 실제보다 넓다고 보게 된다.
+        //   벤더와 jQuery 는 clientWidth/clientHeight(스크롤바 제외)로 재므로
+        //   섞어 쓰면 딱 스크롤바 폭만큼 어긋난다(실측: 크롬 20px). 오버레이
+        //   스크롤바를 쓰는 브라우저에서는 차이가 0이라 드러나지 않는다.
+        var doc = document.documentElement;
+        var vpW = doc.clientWidth, vpH = doc.clientHeight;
+
+        // 버튼이 화면 밖으로 나갔으면 목록을 닫는다.
+        // 그대로 두면 두 가지가 겹쳐 목록이 화면을 가득 채운 채 떠 있는다:
+        //  (1) 벤더의 '버튼 아래 남은 공간' 계산이 창보다 커진다. 버튼이 위로
+        //      나갈수록 커지기 때문이다(실측: 창 844 에 아래공간 991) →
+        //      목록이 화면보다 길어진다.
+        //  (2) 아래 세로 안전망이 그 목록을 다시 화면 안으로 끌어온다.
+        // 정작 어느 버튼의 목록인지 보이지 않으니, 닫는 것이 맞다.
+        var btn = inst.$button[0].getBoundingClientRect();
+        if (btn.bottom <= 0 || btn.top >= vpH) { inst.toggle(); return; }
+
+        // 지난번 보정을 지우고 벤더가 정한 상태에서 다시 잰다.
+        $menu.removeClass('dropdown-menu-right').css('transform', '');
+        inst.setMenuSize();
+
+        // 목록이 화면을 가득 채우지 않게 상한을 둔다.
+        // 벤더는 '버튼 아래 남은 공간'을 그대로 높이로 쓴다. 버튼이 화면 위쪽에
+        // 있으면 그 공간이 창 전체에 가까워, 항목이 많은 목록은 화면을 덮어
+        // 버린다(실측: 창 844 에서 목록 713px = 84%). 목록은 화면을 덮는 판이
+        // 아니라 버튼에 딸린 목록이어야 하므로, 창 높이의 일정 비율로 묶는다.
+        // 짧은 목록은 이 값에 닿지 않으므로 영향이 없다.
+        var maxH = Math.round(vpH * MAX_VH);
+        if (el.offsetHeight > maxH) {
+          var chrome = el.offsetHeight - $inner[0].offsetHeight;   // 검색칸 + 여백
+          $menu.css('max-height', maxH + 'px');
+          $inner.css('max-height', (maxH - chrome) + 'px');
+        }
+
+        // ── 가로: 오른쪽으로 넘치면 뒤집고, 남는 넘침은 밀어 넣는다 ──
+        var r = el.getBoundingClientRect();
+        if (r.right > vpW - EDGE) {
+          $menu.addClass('dropdown-menu-right');
+          r = el.getBoundingClientRect();
+        }
+        var dx = 0;
+        if (r.left < EDGE) dx = EDGE - r.left;
+        else if (r.right > vpW - EDGE) dx = (vpW - EDGE) - r.right;
+
+        // ── 세로 안전망: 그래도 화면 밖으로 나가면 안으로 민다 ────────
+        // 평소에는 벤더가 버튼 옆 공간에 맞춰 잡으므로 여기까지 오지 않는다.
+        var dy = 0;
+        if (r.top < EDGE) dy = EDGE - r.top;
+        else if (r.bottom > vpH - EDGE) dy = Math.max((vpH - EDGE) - r.bottom, EDGE - r.top);
+
+        if (dx || dy) {
+          $menu.css('transform', 'translate(' + Math.round(dx) + 'px,' + Math.round(dy) + 'px)');
+        }
+      }
+
+      function placeOpen() {
+        $('.bootstrap-select.show').each(function () {
+          var inst = $(this).data('this');   // 벤더가 래퍼에 심어 둔 인스턴스
+          if (inst) place(inst);
+        });
+      }
+
+      // ⚠ '.selectpicker' 로 위임하면 안 된다: 벤더가 원본 <select> 의 클래스를
+      //   래퍼 div 에도 복사하므로 같은 이벤트가 <select> 가 아닌 div 에서도
+      //   잡혀 data('selectpicker') 가 undefined 가 된다(실측).
+      $(document).on('shown.bs.select', 'select.selectpicker', function () {
+        var inst = $(this).data('selectpicker');
+        if (inst) place(inst);
+      });
+
+      // 검색으로 항목이 줄면 벤더가 스스로 높이를 다시 잡는다(input.setMenuSize).
+      // 그때 위에서 늘려 둔 높이가 되돌려지므로 곧바로 다시 태운다.
+      // 이 위임 핸들러는 문서까지 올라온 뒤에 돌므로 벤더 핸들러보다 나중이다.
+      $(document).on('input', '.bs-searchbox input', placeOpen);
+
+      // 벤더는 window 의 scroll/resize 로만 앵커를 다시 잡는다. 모달·드로어
+      // 내부 스크롤은 window 로 버블링하지 않으므로 캡처 단계에서 받아
+      // 같은 재배치를 태운다.
+      // ⚠ requestAnimationFrame 으로 미루지 않는다: 탭이 화면에 없거나 렌더가
+      //   멈춘 동안에는 rAF 가 돌지 않아 목록이 화면 밖에 남는다(실측).
+      //   시간 기준으로만 묶고 그 자리에서 처리한다.
+      var lastTick = 0;
+      document.addEventListener('scroll', function (e) {
+        // 목록 자체를 굴리는 중이면 건드리지 않는다(재배치는 목록 밖이 움직일 때만).
+        var t = e.target;
+        if (t && t.nodeType === 1 && t.closest && t.closest('.bs-container')) return;
+        if (!document.querySelector('.bootstrap-select.show')) return;
+        var now = Date.now();
+        if (now - lastTick < 16) return;   // 한 프레임에 한 번
+        lastTick = now;
+        $(window).trigger('scroll');       // 벤더가 앵커 좌표를 다시 계산
+        placeOpen();
+      }, true);
+
+      $(window).on('resize', placeOpen);
+    })();
+  </script>
   {# needs_map: 지도 없는 텍스트 페이지(routes_settings 등)에서는 MapLibre 전역 스택을
      로드하지 않아 head 렌더 차단을 제거한다. 기본 True(지도 페이지·위젯 무회귀). #}
   {% if needs_map %}
@@ -212,14 +364,9 @@ IMPORTANT: This is the SOURCE TEMPLATE file.
       max-width: 100vw !important;
     }
 
-    .main-navbar .dropdown-menu {
-      z-index: var(--aot-z-dropdown) !important;
-      border-radius: 16px !important;
-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12) !important;
-      border: none !important;
-      padding: 8px 0 !important;
-      overflow: hidden !important;
-    }
+    {# 내비 메뉴 상자는 components/aot-select.css 가 다른 메뉴들과 함께 정한다.
+       여기 있던 여섯 줄은 전부 `!important` 였는데, 부트스트랩이 @layer vendor
+       로 내려간 뒤로는 필요 없는 방어였다. #}
   </style>
 
   {# ?v= 는 테마/커스텀 CSS 내용의 해시다. 앞단 프록시가 이 응답의 no-store 를
@@ -452,7 +599,7 @@ IMPORTANT: This is the SOURCE TEMPLATE file.
       check_daemon_status();
       
       // [Fix] Inject multi-select differentiator class & transfer tooltip titles upon dropdown initialization (Global Listener)
-      $(document).on('loaded.bs.select', '.selectpicker', function (e) {
+      $(document).on('loaded.bs.select', 'select.selectpicker', function (e) {
         var $this = $(this);
         if ($this.attr('multiple')) {
           $this.closest('.bootstrap-select').addClass('aot-multi-select');
@@ -516,10 +663,8 @@ IMPORTANT: This is the SOURCE TEMPLATE file.
         });
       }
       
-      // [Global Fix] Set Bootstrap-Select Defaults
-      if ($.fn.selectpicker) {
-          $.fn.selectpicker.Constructor.DEFAULTS.container = false;
-      }
+      {# selectpicker 기본값은 위쪽(bootstrap-select 직후)에서 이미 잡았다.
+         여기로 되돌리면 정적 셀렉트가 옛 기본값으로 만들어진다. #}
 
       $('.aot-modern-select').each(function() {
         var $el = $(this);
@@ -539,6 +684,10 @@ IMPORTANT: This is the SOURCE TEMPLATE file.
   </script>
   <!-- AoT Modern Design System (Override Bootstrap) - Load Check: Ensure this is last in head -->
   <link href="{{ url_for('static', filename='css/aot-modal-modern.css') }}" rel="stylesheet">
+
+  {# 셀렉트 목록(드롭다운) 정본. aot-modal-modern.css 뒤에 실어, 예전 자리별
+     규칙이 어딘가 되살아나도 이 파일이 마지막 말을 하게 한다. #}
+  <link href="{{ url_for('static', filename='css/components/aot-select.css') }}" rel="stylesheet">
   
   <!-- Shared drawer shell (AI chat, Notes) -->
   <link href="{{ url_for('static', filename='css/components/aot-drawer.css') }}" rel="stylesheet">
@@ -771,12 +920,12 @@ IMPORTANT: This is the SOURCE TEMPLATE file.
             <a class="dropdown-item{% if upgrade_available %} aot-nav-upgrade {{ 'aot-nav-upgrade-light' if upgrade_bg_is_light else 'aot-nav-upgrade-dark' }}{% endif %}" href="{{ url_for('routes_admin.admin_upgrade') }}">{{ _('Upgrade') }}</a>
             <a class="dropdown-item" href="{{ url_for('routes_admin.admin_backup') }}">{{ _('Backup Restore') }}</a>
             <div class="dropdown-divider"></div>
-            <a class="dropdown-item" href="/systemctl/daemon_restart" onclick='return confirm("{{ _("Are you sure you want to restart the backend?") }}")'>{{
+            <a class="dropdown-item" href="/systemctl/daemon_restart" onclick='return confirm({{ _("Are you sure you want to restart the backend?")|tojson|forceescape }})'>{{
               _('Restart Backend') }}</a>
-            <a class="dropdown-item" href="/systemctl/frontend_reload" onclick='return confirm("{{ _("Are you sure you want to reload the frontend?") }}")'>{{
+            <a class="dropdown-item" href="/systemctl/frontend_reload" onclick='return confirm({{ _("Are you sure you want to reload the frontend?")|tojson|forceescape }})'>{{
               _('Reload Frontend') }}</a>
-            <a class="dropdown-item" href="/systemctl/restart" onclick='return confirm("{{ _("Are you sure you want to restart the system?") }}")'>{{ _('Restart System') }}</a>
-            <a class="dropdown-item" href="/systemctl/shutdown" onclick='return confirm("{{ _("Are you sure you want to shutdown the system?") }}")'>{{ _('Shutdown System')
+            <a class="dropdown-item" href="/systemctl/restart" onclick='return confirm({{ _("Are you sure you want to restart the system?")|tojson|forceescape }})'>{{ _('Restart System') }}</a>
+            <a class="dropdown-item" href="/systemctl/shutdown" onclick='return confirm({{ _("Are you sure you want to shutdown the system?")|tojson|forceescape }})'>{{ _('Shutdown System')
               }}</a>
             <div class="dropdown-divider"></div>
             {# 사용자 지정 이름의 원문 ↔ 번역 전환. 브라우저 번역기의 "원문 보기"와
@@ -867,7 +1016,7 @@ IMPORTANT: This is the SOURCE TEMPLATE file.
                 {% set language_tooltip = _("Selecting a language will override the web browser's language") %}
                 <div class="aot-modal-option-label">{{ _('Language') }}</div>
                 <div class="aot-modal-option-control">
-                  <select class="aot-settings-select" id="language" name="language"
+                  <select class="form-control aot-modern-select" id="language" name="language"
                     title="{{ language_tooltip }}">
                     <option value="">{{ _('Browser Default') }}</option>
                     {% for each_language in languages %}
@@ -943,7 +1092,7 @@ IMPORTANT: This is the SOURCE TEMPLATE file.
                 <form method="post" action="{{ url_for('routes_integrations.oauth_google_disconnect') }}" style="margin: 0;">
                   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                   <button type="submit" class="btn aot-pill-btn"
-                    onclick='return confirm("{{ _("Disconnect your Google account?") }}")'>{{ _('Disconnect') }}</button>
+                    onclick='return confirm({{ _("Disconnect your Google account?")|tojson|forceescape }})'>{{ _('Disconnect') }}</button>
                 </form>
               </div>
             </div>
@@ -1060,7 +1209,7 @@ IMPORTANT: This is the SOURCE TEMPLATE file.
           return $(this).val();
         }).get();
         if (!picked.length) {
-          $impact.text('{{ _("Everyone can operate this dashboard (no group assigned).") }}');
+          $impact.text({{ _("Everyone can operate this dashboard (no group assigned).")|tojson }});
           return;
         }
         $.ajax({
@@ -1071,15 +1220,15 @@ IMPORTANT: This is the SOURCE TEMPLATE file.
           if (!res || !res.success) return;
           var i = res.impact || {};
           if (i.locks_out_everyone) {
-            $impact.text('{{ _("Warning: nobody would be able to operate this dashboard.") }}');
+            $impact.text({{ _("Warning: nobody would be able to operate this dashboard.")|tojson }});
           } else if (i.losing) {
-            $impact.text('{{ _("Losing operation") }}: ' + (i.losing_names || []).join(', '));
+            $impact.text({{ _("Losing operation")|tojson }} + ': ' + (i.losing_names || []).join(', '));
           } else {
-            $impact.text('{{ _("Nobody loses operation with this change.") }}');
+            $impact.text({{ _("Nobody loses operation with this change.")|tojson }});
           }
         }).fail(function () {
           // 조용히 "영향 없음" 으로 보이면 안 된다 — 모른다는 것을 말한다.
-          $impact.text('{{ _("Error: Unable to communicate with server.") }}');
+          $impact.text({{ _("Error: Unable to communicate with server.")|tojson }});
         });
       }
 
@@ -1091,7 +1240,7 @@ IMPORTANT: This is the SOURCE TEMPLATE file.
           if (!d || !d.success) return;
           if (!d.groups.length) {
             $groups.html('<div class="aot-modal-body-text">'
-              + '{{ _("No groups yet. Create one in Settings > Users > Groups.") }}</div>');
+              + {{ _("No groups yet. Create one in Settings > Users > Groups.")|tojson }} + '</div>');
             $sec.show();
             return;   // 그룹이 없으면 표식도 넣지 않는다 — 지울 부여가 없다
           }
@@ -1191,9 +1340,9 @@ IMPORTANT: This is the SOURCE TEMPLATE file.
       document.body.removeChild(tempInput);
       {% if not(misc is defined and misc.hide_alert_success) %}
       if (typeof window.showToast !== 'undefined') {
-        window.showToast("{{_('Copied to Clipboard')}}: " + value, 'success');
+        window.showToast({{ _('Copied to Clipboard')|tojson }} + ': ' + value, 'success');
       } else if (typeof toastr !== 'undefined') {
-        toastr['success']("{{_('Copied to Clipboard')}}: " + value);
+        toastr['success']({{ _('Copied to Clipboard')|tojson }} + ': ' + value);
       } else {
         alert('Copied to Clipboard: ' + value);
       }
@@ -1216,7 +1365,6 @@ IMPORTANT: This is the SOURCE TEMPLATE file.
   {% endif %}
 
   <!-- AoT Notes Widget (Global Integration) -->
-  <link href="/static/js/notes/notes-widget.css?v=prod_v23" rel="stylesheet">
   <div id="aot-notes-widget-root"></div>
   <script type="module" src="/static/js/notes/notes-widget.js?v=prod_v23"></script>
   

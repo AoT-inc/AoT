@@ -31074,6 +31074,10 @@ msgstr "運転時間"
 msgid "immediately"
 msgstr "すぐに"
 
+#: aot_flask/static/js/common/aot-map-popup.js
+msgid "Tomorrow"
+msgstr "明日"
+
 #: aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
 msgid "no auto off"
 msgstr "自動オフなし"
@@ -33792,3 +33796,170 @@ msgstr "流量が不明で水量を算出できない装置: %(names)s"
 #: aot/aot_flask/templates/pages/geo/journal_view.html
 msgid "By stage"
 msgstr "ステージ別"
+
+msgid "Vent"
+msgstr "換気口"
+
+msgid "Mist"
+msgstr "噴霧"
+
+msgid "Devices under automatic control"
+msgstr "自動制御の対象デバイス"
+
+msgid "%(n)s excluded"
+msgstr "%(n)s件除外"
+
+msgid "Turn a device off to keep automatic control from moving it."
+msgstr "デバイスをオフにすると、自動制御がそのデバイスを動かさなくなります。"
+
+msgid "Safety gates will not move it either."
+msgstr "安全措置もそのデバイスを動かしません。"
+
+msgid "Select a linked facility first."
+msgstr "先に連携施設を選択してください。"
+
+msgid "This facility has no actuators yet."
+msgstr "この施設にはまだアクチュエーターがありません。"
+
+msgid "Could not load the device list. Existing settings are kept."
+msgstr "デバイス一覧を読み込めませんでした。既存の設定は保持されます。"
+
+msgid "Excluded actuators (raw)"
+msgstr "除外されたアクチュエーター(生データ)"
+
+msgid "Comma-separated Output IDs excluded from automatic control. Normally set with the toggles above rather than typed here."
+msgstr "自動制御から除外する出力IDをカンマ区切りで指定します。通常はここに直接入力せず、上のトグルで設定します。"
+
+msgid "Proactively shift temperature/humidity setpoints and inhibit ventilation before adverse weather arrives. Uses this facility's own forecast source if one is linked in the facility editor's weather bindings (any service — KMA, OpenWeatherMap, Open-Meteo); otherwise falls back to the system-wide KMA short-term forecast."
+msgstr "悪天候が到来する前に、温度・湿度の設定値を先回りして変更し、換気を抑制します。施設エディタの気象バインディングにこの施設独自の予報ソースがリンクされている場合はそれを使用します(KMA、OpenWeatherMap、Open-Meteoなど任意のサービス)。リンクされていない場合は、システム全体の気象庁（KMA）短期予報にフォールバックします。"
+
+msgid "How many hours ahead to check for incoming adverse weather (1–6 h) when using the system-wide KMA fallback above. Longer lookahead gives earlier warning but may over-correct. Ignored when this facility has its own forecast source linked — that source already applies its own lookahead."
+msgstr "上記のシステム全体の気象庁（KMA）フォールバックを使用する場合に、迫り来る悪天候を何時間先まで確認するか（1～6時間）を指定します。先読み時間を長くすると早めに警告できますが、過剰補正が起こる可能性があります。この施設に独自の予報ソースがリンクされている場合は無視されます—そのソースはすでに独自の先読みを適用しているためです。"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Notice Category Filter"
+msgstr "お知らせカテゴリフィルター"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Notes Space"
+msgstr "ノートの空間"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Space"
+msgstr "空間"
+
+#: aot/widgets/widget_notice.py:1
+msgid "None selected"
+msgstr "未選択"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Notices"
+msgstr "お知らせ"
+
+#: aot/widgets/widget_notice.py:1
+msgid "No notes yet."
+msgstr "まだノートがありません。"
+
+#: aot/widgets/widget_notice.py:1
+msgid "(Attachment only)"
+msgstr "(添付ファイルのみ)"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Notice & Notes Board"
+msgstr "お知らせ＆ノート掲示板"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Displays the latest notice board post titles and/or the notes written in a chosen site, zone, plot, or facility (and everything nested under it). Clicking a notice opens the full post (content, poll, replies, acknowledge) in a popup; clicking a note opens it in the shared notes panel. Users with write permission can also create, edit, and delete posts directly from the widget."
+msgstr "最新のお知らせ掲示板の投稿タイトル、および選択したサイト・ゾーン・区画・施設(とその配下すべて)に書かれたノートを表示します。お知らせをクリックするとポップアップで全文(本文、投票、返信、既読確認)が開き、ノートをクリックすると共有ノートパネルで開きます。書き込み権限を持つユーザーは、ウィジェットから直接投稿の作成・編集・削除も行えます。"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Show Notices"
+msgstr "お知らせを表示"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Display the notice board section"
+msgstr "お知らせ掲示板セクションを表示します"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Number of Notices"
+msgstr "お知らせの件数"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Number of Notes"
+msgstr "ノートの件数"
+
+#: aot/widgets/widget_notice.py:1
+msgid "How many of the latest notes to display"
+msgstr "最新のノートを何件表示するか"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Include Nested Spaces"
+msgstr "入れ子の空間を含める"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Sort Notes By"
+msgstr "ノートの並び順"
+
+#: aot/widgets/widget_notice.py:1
+msgid "How to order the note list"
+msgstr "ノート一覧の並び替え方法"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Note Category/Tag Contains"
+msgstr "ノートのカテゴリ/タグに含む文字列"
+
+#: aot/widgets/widget_notice.py:1
+msgid "How often to refresh the notice/notes lists"
+msgstr "お知らせ/ノート一覧を更新する間隔"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Notes written in this site/zone/plot/facility (and, if \"Include Nested Spaces\" above is on, everything nested under it) are shown."
+msgstr "このサイト/ゾーン/区画/施設に書かれたノートが表示されます(上の「入れ子の空間を含める」がオンの場合はその配下すべても含む)。"
+
+#: aot/widgets/widget_notice.py:1
+msgid "No sites, zones, plots, or facilities exist yet."
+msgstr "サイト・ゾーン・区画・施設がまだ存在しません。"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Nothing selected — turn on \"Show Notices\" and/or \"Show Notes\" in the widget settings."
+msgstr "何も選択されていません — ウィジェット設定で「お知らせを表示」と「ノートを表示」のどちらか(または両方)をオンにしてください。"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Choose a space in the widget settings to show notes."
+msgstr "ノートを表示するには、ウィジェット設定で空間を選択してください。"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Display notes written in a chosen space (see Space below)"
+msgstr "選択した空間に書かれたノートを表示します(下の「空間」を参照)"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Also show notes written in zones/plots/facilities/devices nested under the chosen space"
+msgstr "選択した空間の下に入れ子になっているゾーン・区画・施設・機器に書かれたノートも表示します"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Newest First"
+msgstr "新しい順"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Only show notes whose category or tags contain this text (optional)"
+msgstr "カテゴリまたはタグにこの文字列を含むノートのみ表示します(任意)"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Show Notes List"
+msgstr "ノート一覧を表示"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Display notes matching the filter below"
+msgstr "下のフィルターに一致するノートを表示します"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Notes Filter"
+msgstr "ノートフィルター"
+
+#: aot_flask/static/js/aot/aot-selectpicker.js
+msgid "Nothing selected"
+msgstr "未選択"
+
+#: aot_flask/static/js/aot/aot-selectpicker.js
+msgid "{0} of {1} selected"
+msgstr "{1} 件中 {0} 件を選択"

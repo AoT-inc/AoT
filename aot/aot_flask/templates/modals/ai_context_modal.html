@@ -21,7 +21,7 @@
 
             <!-- Footer -->
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-dismiss="modal">{{_('Close')}}</button>
+                <button type="button" class="btn aot-pill-btn aot-pill-btn-secondary" data-dismiss="modal">{{_('Close')}}</button>
             </div>
         </div>
     </div>
@@ -71,8 +71,8 @@
                 },
                 error: function(xhr) {
                     const errorMsg = xhr.status === 403
-                        ? '{{_("Permission denied")}}'
-                        : `{{_("Error loading context")}}: ${xhr.statusText}`;
+                        ? {{ _("Permission denied")|tojson }}
+                        : ({{ _("Error loading context")|tojson }} + ': ' + xhr.statusText);
                     AIContextPanel.showError(body, errorMsg);
                 }
             });
@@ -200,12 +200,12 @@
         .then(function(r) { return r.json(); })
         .then(function(data) {
             if (data.status !== 'success') {
-                window.showToast(data.message || '{{ _("Toggle failed") }}', 'error');
+                window.showToast(data.message || {{ _("Toggle failed")|tojson }}, 'error');
                 $cb.prop('checked', !enabled);
             }
         })
         .catch(function() {
-            window.showToast('{{ _("Error: Could not communicate with server") }}', 'error');
+            window.showToast({{ _("Error: Could not communicate with server")|tojson }}, 'error');
             $cb.prop('checked', !enabled);
         });
     });

@@ -30903,3 +30903,162 @@ msgstr "Strengere vernevelingslimieten voor zaailingen, die gemakkelijker versch
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:1192
 msgid "Not used"
 msgstr "Niet gebruikt"
+
+msgid "Vent"
+msgstr "Ventilatie"
+
+msgid "Mist"
+msgstr "Nevel"
+
+msgid "Devices under automatic control"
+msgstr "Apparaten onder automatische besturing"
+
+msgid "%(n)s excluded"
+msgstr "%(n)s uitgesloten"
+
+msgid "Turn a device off to keep automatic control from moving it."
+msgstr "Schakel een apparaat uit zodat de automatische besturing het niet verplaatst."
+
+msgid "Safety gates will not move it either."
+msgstr "Ook de veiligheidsvergrendelingen sturen het dan niet aan."
+
+msgid "Select a linked facility first."
+msgstr "Selecteer eerst een gekoppelde faciliteit."
+
+msgid "This facility has no actuators yet."
+msgstr "Deze faciliteit heeft nog geen actuatoren."
+
+msgid "Could not load the device list. Existing settings are kept."
+msgstr "De apparatenlijst kon niet worden geladen. Bestaande instellingen blijven behouden."
+
+msgid "Excluded actuators (raw)"
+msgstr "Uitgesloten actuatoren (ruwe waarde)"
+
+msgid "Comma-separated Output IDs excluded from automatic control. Normally set with the toggles above rather than typed here."
+msgstr "Kommagescheiden Uitgang-ID's die zijn uitgesloten van automatische besturing. Worden meestal ingesteld met de schakelaars hierboven in plaats van hier getypt."
+
+msgid "Proactively shift temperature/humidity setpoints and inhibit ventilation before adverse weather arrives. Uses this facility's own forecast source if one is linked in the facility editor's weather bindings (any service — KMA, OpenWeatherMap, Open-Meteo); otherwise falls back to the system-wide KMA short-term forecast."
+msgstr "Verschuift proactief de temperatuur-/vochtigheidsinstelpunten en onderdrukt ventilatie voordat ongunstig weer aankomt. Gebruikt de eigen voorspellingsbron van deze faciliteit als er een is gekoppeld in de weerkoppelingen van de faciliteitseditor (elke dienst — KMA, OpenWeatherMap, Open-Meteo); anders wordt teruggevallen op de systeembrede KMA-kortetermijnvoorspelling."
+
+msgid "How many hours ahead to check for incoming adverse weather (1–6 h) when using the system-wide KMA fallback above. Longer lookahead gives earlier warning but may over-correct. Ignored when this facility has its own forecast source linked — that source already applies its own lookahead."
+msgstr "Hoeveel uur vooruit wordt gecontroleerd op naderend ongunstig weer (1–6 uur) wanneer de systeembrede KMA-fallback hierboven wordt gebruikt. Een langere vooruitblik geeft eerdere waarschuwing, maar kan overcorrectie veroorzaken. Wordt genegeerd wanneer deze faciliteit een eigen voorspellingsbron heeft gekoppeld — die bron past dan al zijn eigen vooruitblik toe."
+
+#: aot/widgets/widget_notice.py:1
+msgid "Notice Category Filter"
+msgstr "Mededelingencategoriefilter"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Notes Space"
+msgstr "Notitieruimte"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Space"
+msgstr "Ruimte"
+
+#: aot/widgets/widget_notice.py:1
+msgid "None selected"
+msgstr "Niets geselecteerd"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Notices"
+msgstr "Mededelingen"
+
+#: aot/widgets/widget_notice.py:1
+msgid "No notes yet."
+msgstr "Nog geen notities."
+
+#: aot/widgets/widget_notice.py:1
+msgid "(Attachment only)"
+msgstr "(Alleen bijlage)"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Notice & Notes Board"
+msgstr "Mededelingen- en notitiebord"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Displays the latest notice board post titles and/or the notes written in a chosen site, zone, plot, or facility (and everything nested under it). Clicking a notice opens the full post (content, poll, replies, acknowledge) in a popup; clicking a note opens it in the shared notes panel. Users with write permission can also create, edit, and delete posts directly from the widget."
+msgstr "Toont de titels van de nieuwste berichten op het mededelingenbord en/of de notities die zijn geschreven op een gekozen locatie, zone, perceel of faciliteit (en alles daaronder). Klikken op een mededeling opent het volledige bericht (inhoud, peiling, reacties, bevestiging) in een pop-up; klikken op een notitie opent deze in het gedeelde notitiepaneel. Gebruikers met schrijfrechten kunnen berichten ook rechtstreeks vanuit de widget aanmaken, bewerken en verwijderen."
+
+#: aot/widgets/widget_notice.py:1
+msgid "Show Notices"
+msgstr "Mededelingen tonen"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Display the notice board section"
+msgstr "Toont het mededelingenbordgedeelte"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Number of Notices"
+msgstr "Aantal mededelingen"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Number of Notes"
+msgstr "Aantal notities"
+
+#: aot/widgets/widget_notice.py:1
+msgid "How many of the latest notes to display"
+msgstr "Hoeveel van de nieuwste notities weergeven"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Include Nested Spaces"
+msgstr "Geneste ruimtes opnemen"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Sort Notes By"
+msgstr "Notities sorteren op"
+
+#: aot/widgets/widget_notice.py:1
+msgid "How to order the note list"
+msgstr "Hoe de notitielijst wordt gesorteerd"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Note Category/Tag Contains"
+msgstr "Notitiecategorie/tag bevat"
+
+#: aot/widgets/widget_notice.py:1
+msgid "How often to refresh the notice/notes lists"
+msgstr "Hoe vaak de mededelingen-/notitielijsten worden vernieuwd"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Notes written in this site/zone/plot/facility (and, if \"Include Nested Spaces\" above is on, everything nested under it) are shown."
+msgstr "Notities die op deze locatie/zone/perceel/faciliteit zijn geschreven, worden getoond (en, als \"Geneste ruimtes opnemen\" hierboven is ingeschakeld, alles daaronder)."
+
+#: aot/widgets/widget_notice.py:1
+msgid "No sites, zones, plots, or facilities exist yet."
+msgstr "Er bestaan nog geen locaties, zones, percelen of faciliteiten."
+
+#: aot/widgets/widget_notice.py:1
+msgid "Nothing selected — turn on \"Show Notices\" and/or \"Show Notes\" in the widget settings."
+msgstr "Niets geselecteerd — schakel \"Mededelingen tonen\" en/of \"Notities tonen\" in de widget-instellingen in."
+
+#: aot/widgets/widget_notice.py:1
+msgid "Choose a space in the widget settings to show notes."
+msgstr "Kies een ruimte in de widget-instellingen om notities weer te geven."
+
+#: aot/widgets/widget_notice.py:1
+msgid "Display notes written in a chosen space (see Space below)"
+msgstr "Toont notities die zijn geschreven in een gekozen ruimte (zie \"Ruimte\" hieronder)"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Also show notes written in zones/plots/facilities/devices nested under the chosen space"
+msgstr "Toont ook notities die zijn geschreven in zones/percelen/faciliteiten/apparaten die genest zijn onder de gekozen ruimte"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Newest First"
+msgstr "Nieuwste eerst"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Only show notes whose category or tags contain this text (optional)"
+msgstr "Toont alleen notities waarvan de categorie of tags deze tekst bevatten (optioneel)"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Show Notes List"
+msgstr "Notitielijst tonen"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Display notes matching the filter below"
+msgstr "Toont notities die overeenkomen met het onderstaande filter"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Notes Filter"
+msgstr "Notitiefilter"

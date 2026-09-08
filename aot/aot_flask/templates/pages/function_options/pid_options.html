@@ -12,7 +12,7 @@
     {{form_mod_pid_base.csrf_token}}
     {{form_mod_pid_base.function_id(value=each_function.unique_id)}}
     {{form_mod_pid_base.function_type(value='pid')}}
-    
+
     {% from 'pages/map/map_option_macros.html' import render_device_map with context %}
     <div class="map-option-section">
       <div class="col-12" style="padding:0">
@@ -63,7 +63,7 @@
 
     <div class="aot-modal-group-title">{{_('Basic Settings')}}</div>
     <div class="aot-modal-container">
-        
+
         <div class="aot-modal-option-row">
             <label class="aot-modal-option-label">{{form_mod_pid_base.name.label(class_='mb-0')}}</label>
             <div class="aot-modal-option-control">
@@ -74,7 +74,7 @@
         <div class="aot-modal-option-row">
             <label class="aot-modal-option-label">{{_('Tab')}}</label>
             <div class="aot-modal-option-control">
-                <select name="tab_id" class="form-control aot-modern-input">
+                <select name="tab_id" class="form-control aot-modern-select">
                     {% for tab in tabs %}
                     <option value="{{tab.unique_id}}" {% if tab.unique_id == each_function.tab_id %}selected{% endif %}>{{tab.name}}</option>
                     {% endfor %}
@@ -102,7 +102,7 @@
         <div class="aot-modal-option-row">
             <label class="aot-modal-option-label">{{form_mod_pid_base.direction.label(class_='mb-0')}}</label>
             <div class="aot-modal-option-control">
-                <select class="form-control aot-modern-select selectpicker" data-style="btn-white" 
+                <select class="form-control aot-modern-select selectpicker" data-style="btn-white"
                     id="direction" name="direction" title="{{_('Select direction to control')}}">
                     <option value="raise" {% if each_function.direction=='raise' %} selected{% endif %}>{{_('Raise')}}</option>
                     <option value="lower" {% if each_function.direction=='lower' %} selected{% endif %}>{{_('Lower')}}</option>
@@ -165,7 +165,7 @@
 
     <div class="aot-modal-group-title">{{_('PID Parameters')}}</div>
     <div class="aot-modal-container">
-        
+
         <div class="aot-modal-option-row">
             <label class="aot-modal-option-label">{{form_mod_pid_base.setpoint.label(class_='mb-0')}}</label>
             <div class="aot-modal-option-control">
@@ -234,7 +234,7 @@
 
     <div class="aot-modal-group-title">{{_('Output Settings')}}</div>
     <div class="aot-modal-container">
-        
+
         <div class="aot-modal-option-row">
             <label class="aot-modal-option-label">{{form_mod_pid_base.raise_output_id.label(class_='mb-0')}}</label>
             <div class="aot-modal-option-control">
@@ -249,12 +249,12 @@
         </div>
 
         {% for each_output in output if each_function.raise_output_id and "," in each_function.raise_output_id and each_function.raise_output_id.split(",")[0] == each_output.unique_id %}
-        
+
         <div class="aot-modal-option-row">
             {% if 'output_types' in dict_outputs[each_output.output_type] and dict_outputs[each_output.output_type]['output_types']|length > 1 %}
             <label class="aot-modal-option-label">{{form_mod_pid_base.raise_output_type.label(class_='mb-0')}}</label>
             <div class="aot-modal-option-control">
-                <select class="form-control aot-modern-select selectpicker" data-style="btn-white" 
+                <select class="form-control aot-modern-select selectpicker" data-style="btn-white"
                     id="raise_output_type" name="raise_output_type" title="{{_('Output Action (On/Off, PWM, Value, Volume, etc.)')}}">
                     <option value="">{{_('Select One')}}</option>
                     {%- for each_type in dict_outputs[each_output.output_type]['output_types'] -%}
@@ -305,7 +305,7 @@
             {% if 'output_types' in dict_outputs[each_output.output_type] and dict_outputs[each_output.output_type]['output_types']|length > 1 %}
             <label class="aot-modal-option-label">{{form_mod_pid_base.lower_output_type.label(class_='mb-0')}}</label>
             <div class="aot-modal-option-control">
-                <select class="form-control aot-modern-select selectpicker" data-style="btn-white" 
+                <select class="form-control aot-modern-select selectpicker" data-style="btn-white"
                     id="lower_output_type" name="lower_output_type" title="{{_('Output Action (On/Off, PWM, Value, Volume, etc.)')}}">
                     <option value="">{{_('Select One')}}</option>
                     {%- for each_type in dict_outputs[each_output.output_type]['output_types'] -%}
@@ -321,7 +321,7 @@
                 </div>
             {% endif %}
         </div>
-        
+
         <div class="aot-modal-container">
             <div class="row small-gutters" style="padding: 1em">
             {% if each_function.lower_output_type == 'pwm' %}
@@ -342,11 +342,11 @@
 
     <div class="aot-modal-group-title">{{_('Setpoint Tracking')}}</div>
     <div class="aot-modal-container">
-        
+
         <div class="aot-modal-option-row">
             <label class="aot-modal-option-label">{{form_mod_pid_base.setpoint_tracking_type.label(class_='mb-0')}}</label>
             <div class="aot-modal-option-control">
-                <select class="form-control aot-modern-select selectpicker" data-style="btn-white" 
+                <select class="form-control aot-modern-select selectpicker" data-style="btn-white"
                     id="setpoint_tracking_type_{{each_function.unique_id}}" name="setpoint_tracking_type" title="{{dict_translation['setpoint_tracking_type']['phrase']}}">
                     <option value="">{{_('Inactive')}}</option>
                     <option value="method" {% if each_function.setpoint_tracking_type=='method' %} selected{% endif %}>{{_('Method')}}</option>
@@ -360,7 +360,6 @@
             <div class="aot-modal-option-control">
                  <div class="aot-action-group">
                     <select class="form-control aot-modern-select selectpicker" data-style="btn-white" data-live-search="true"
-                        data-display="static" data-container="body" data-dropdown-align-right="true"
                         id="setpoint_tracking_method_id" name="setpoint_tracking_method_id"
                         title="{{_('Select one to calculate setpoint. When activated, measurement value replaces PID setpoint')}}">
                         <option value="">{{_('Select One')}}</option>

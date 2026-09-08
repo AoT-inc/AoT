@@ -12,7 +12,7 @@
   <title>{{host}} -  {{dict_translation['login']['title']}}</title>
 
   <!-- Bootstrap core CSS -->
-  <link href="{{ url_for('static', filename='css/bootstrap.min.css') }}" rel="stylesheet">
+  <link href="{{ url_for('static', filename='css/vendor-layer.css') }}" rel="stylesheet">
   <link href="{{ url_for('static', filename='css/aot-theme-variables.css') }}" rel="stylesheet">
 
   {% set effective_theme = current_user.theme if current_user.is_authenticated and current_user.theme else '/static/css/bootstrap-4-themes/aot.css' %}

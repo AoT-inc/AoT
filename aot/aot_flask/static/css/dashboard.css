@@ -122,10 +122,6 @@ body.modal-open .modal { pointer-events: auto; }
 body.aot-nav-hidden .widget-add-bar {
   top: 70px;
 }
-.widget-add-bar .dropdown-menu {
-  z-index: var(--aot-z-dropdown);
-  position: absolute;
-}
 /* Visible resize corner grip when dashboard is unlocked */
 .dashboard-unlocked .grid-stack-item .ui-resizable-se::after {
   content: '';

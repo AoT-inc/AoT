@@ -288,9 +288,24 @@ def page_output():
     # NOTE: 루프 변수로 each_output 을 쓰면 안 된다. 위 215행에서 요청된
     # output_id 로 조회해 둔 each_output 를 덮어써, entry/options 응답이
     # 항상 all_outputs 의 마지막 카드 내용을 반환하는 버그를 유발한다.
+    #
+    # 채널 목록의 기준은 **출력 모듈의 `channels_dict` 선언**이다. 여기서
+    # `output_channel` 테이블 행이 있는 출력만 채우면, 어떤 이유로든 그 행이
+    # 만들어지지 않은 출력은 카드에 채널 줄이 하나도 안 그려져 On/Off 버튼이
+    # 통째로 사라진다 — 화면에서 장치를 조작할 방법 자체가 없어진다
+    # (2026-09-08: ChirpStack 출력 20개가 이 상태였다. 행이 없다는 것은
+    # "채널이 없다"가 아니라 "저장된 채널 옵션이 없다"는 뜻일 뿐이고,
+    # 모듈은 채널 0 을 항상 선언하고 있었다).
+    #
+    # DB 행은 저장된 채널 옵션을 얹는 용도로만 쓰고, 없는 채널은 빈 옵션으로
+    # 그린다 — 옵션 기본값은 템플릿의 `ch_static` 폴백이 이미 담당한다.
     for _init_output in all_outputs:
-        if _init_output.unique_id not in custom_options_values_output_channels:
-            custom_options_values_output_channels[_init_output.unique_id] = {}
+        _saved = custom_options_values_output_channels.setdefault(
+            _init_output.unique_id, {})
+        _declared = dict_outputs.get(
+            _init_output.output_type, {}).get('channels_dict') or {}
+        for _each_channel in _declared:
+            _saved.setdefault(_each_channel, {})
 
     # channel_unique_id -> channel_number map for fast lookup in templates
     # (used by actuator_paired card to resolve its underlying open/close channels)

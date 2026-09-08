@@ -1,40 +1,113 @@
 # coding=utf-8
+import json
+
 from flask_babel import lazy_gettext
 
 from aot.aot_flask.extensions import db
-from aot.databases.models import NoticePost
+from aot.databases.models import NoticePost, GeoShape, GeoFacility, GeoPlot
 from aot.utils.constraints_pass import constraints_pass_positive_value
 
 
+def _shape_display_name(shape):
+    """People-readable label for a site/zone GeoShape row, mirroring the name
+    lookup routes_notes_api._display_name_for_target() uses for notes — falls
+    back to the unique_id only if the shape has no name/label/title."""
+    try:
+        feat = shape.feature if isinstance(shape.feature, dict) else json.loads(shape.feature or '{}')
+        props = (feat.get('properties') or {})
+        return props.get('name') or props.get('label') or props.get('title') or shape.unique_id
+    except Exception:
+        return shape.unique_id
+
+
+def _available_spaces():
+    """Site/zone/facility/plot entities notes can be scoped to, for the
+    settings modal's space picker (widget_dashboard_configure_options). Each
+    entry is (type, unique_id, name), grouped by type in the select markup."""
+    spaces = []
+    for sh in GeoShape.query.filter(GeoShape.type.in_(('site', 'zone'))).order_by(GeoShape.type).all():
+        if sh.unique_id:
+            spaces.append((sh.type, sh.unique_id, _shape_display_name(sh)))
+    for fac in GeoFacility.query.all():
+        if fac.unique_id:
+            spaces.append(('facility', fac.unique_id, getattr(fac, 'name', None) or fac.unique_id))
+    for pl in GeoPlot.query.filter(GeoPlot.ended_on.is_(None)).all():
+        if pl.unique_id:
+            spaces.append(('plot', pl.unique_id, pl.name or pl.subject or pl.unique_id))
+    return spaces
+
+
 def generate_page_variables(widget_unique_id, widget_options):
-    """Distinct category labels currently in use, for the settings modal's
-    category-filter checkbox list (widget_dashboard_configure_options)."""
+    """Per-instance choice lists for the settings modal
+    (widget_dashboard_configure_options): distinct notice category labels
+    currently in use, and every site/zone/facility/plot notes can be scoped to."""
     rows = db.session.query(NoticePost.category).filter(
         NoticePost.category.isnot(None), NoticePost.category != '').distinct().order_by(NoticePost.category).all()
-    return {'available_categories': [r[0] for r in rows]}
+    return {
+        'available_categories': [r[0] for r in rows],
+        'available_spaces': _available_spaces(),
+    }
 
 
 def execute_at_modification(mod_widget, request_form, custom_options_json_presave, custom_options_json_postsave):
-    """The category checkboxes aren't a declared custom_options entry (there's
-    no fixed choice list to validate against — categories are freeform per
-    post), so they're captured here directly from the settings form instead."""
+    """Every notice/notes option except refresh_seconds is hand-rendered in
+    widget_dashboard_configure_options rather than declared: declared
+    custom_options render as one flat framework-owned list, and there's no
+    way to nest a subset of them inside a specific group container (the
+    Notices/Notes split the settings modal needs) or give one a proper
+    multi-select control (the category filter). So all of them are captured
+    here directly from the settings form instead, same pattern AoT_graph.py
+    uses for its per-series checkboxes."""
     allow_saving = True
     page_refresh = False
+
+    def _bool(name):
+        return request_form.get(name) == 'y'
+
+    def _int(name, default):
+        try:
+            return int(request_form.get(name, default))
+        except (TypeError, ValueError):
+            return default
+
+    custom_options_json_postsave['show_notice'] = _bool('show_notice')
+    custom_options_json_postsave['post_count'] = _int('post_count', 3)
+    custom_options_json_postsave['show_poll'] = _bool('show_poll')
+    custom_options_json_postsave['show_reply_box'] = _bool('show_reply_box')
     custom_options_json_postsave['categories'] = request_form.getlist('categories')
+
+    custom_options_json_postsave['show_notes'] = _bool('show_notes')
+    custom_options_json_postsave['notes_post_count'] = _int('notes_post_count', 5)
+    custom_options_json_postsave['notes_include_descendants'] = _bool('notes_include_descendants')
+    notes_sort = request_form.get('notes_sort', 'date')
+    custom_options_json_postsave['notes_sort'] = notes_sort if notes_sort in ('date', 'priority', 'category') else 'date'
+    custom_options_json_postsave['notes_category_filter'] = (request_form.get('notes_category_filter') or '').strip()
+
+    # notes_target arrives as "type::unique_id" (or empty if unset) so the
+    # type and id can never drift out of sync in the saved options.
+    notes_target = (request_form.get('notes_target') or '').strip()
+    if '::' in notes_target:
+        target_type, target_id = notes_target.split('::', 1)
+    else:
+        target_type, target_id = '', ''
+    custom_options_json_postsave['notes_target_type'] = target_type
+    custom_options_json_postsave['notes_target_id'] = target_id
+
     return allow_saving, page_refresh, mod_widget, custom_options_json_postsave
 
 
 WIDGET_INFORMATION = {
     'widget_name_unique': 'widget_notice',
-    'widget_name': lazy_gettext('Notice Board'),
+    'widget_name': lazy_gettext('Notice & Notes Board'),
     'widget_library': '',
     'no_class': True,
     'mobile_full_width': True,  # Always takes the full row (single widget per line) on mobile.
 
-    'message': lazy_gettext('Displays the latest notice board post titles. Clicking a title opens '
-                'the full post (content, poll, replies, acknowledge) in a popup; all actions '
-                'taken there are reflected on the actual post. Users with write permission can '
-                'also create, edit, and delete posts directly from the widget.'),
+    'message': lazy_gettext('Displays the latest notice board post titles and/or the notes written '
+                'in a chosen site, zone, plot, or facility (and everything nested under it). '
+                'Clicking a notice opens the full post (content, poll, replies, acknowledge) in a '
+                'popup; clicking a note opens it in the shared notes panel. Users with write '
+                'permission can also create, edit, and delete posts directly from the widget.'),
 
     'dependencies_module': [],
 
@@ -45,72 +118,161 @@ WIDGET_INFORMATION = {
     'execute_at_modification': execute_at_modification,
 
     'custom_options': [
-        {
-            'id': 'post_count',
-            'type': 'integer',
-            'default_value': 3,
-            'constraints_pass': constraints_pass_positive_value,
-            'name': lazy_gettext('Number of Posts'),
-            'phrase': lazy_gettext('How many of the latest notices to display')
-        },
+        # No header before this one — it belongs with the framework's own
+        # "기본 설정" (Name/Tab/Drag handle) group, same as any other widget's
+        # refresh interval. (Reverted the 'General' header added earlier:
+        # user confirmed refresh_seconds is a basic/system-level setting,
+        # not something that needed separating out.)
         {
             'id': 'refresh_seconds',
             'type': 'integer',
             'default_value': 60,
             'constraints_pass': constraints_pass_positive_value,
             'name': lazy_gettext('Refresh (seconds)'),
-            'phrase': lazy_gettext('How often to refresh the notice list')
-        },
-        {
-            'id': 'show_poll',
-            'type': 'bool',
-            'default_value': True,
-            'name': lazy_gettext('Show Poll Voting'),
-            'phrase': lazy_gettext('Allow voting on polls from the post popup')
-        },
-        {
-            'id': 'show_reply_box',
-            'type': 'bool',
-            'default_value': True,
-            'name': lazy_gettext('Show Reply Box'),
-            'phrase': lazy_gettext('Allow sending a reply from the post popup')
+            'phrase': lazy_gettext('How often to refresh the notice/notes lists')
         },
     ],
 
-    # Not a declared custom_options entry: the choice list (categories currently
-    # in use across posts) is dynamic, not a fixed set — populated per-instance
-    # via generate_page_variables() and saved via execute_at_modification()
-    # (same pattern AoT_graph.py uses for its per-series checkboxes).
+    # Everything below is hand-rendered rather than declared, so the Notices
+    # and Notes options can each sit inside their own container (declared
+    # custom_options render as one flat framework-owned list — there's no way
+    # to nest a subset of them under a group) and the category filter can be
+    # a proper multi-select instead of one toggle per category. Markup/CSS
+    # classes are the same ones Custom_Options.html itself uses for these
+    # option kinds (aot-modal-option-row/-label/-control, btn-toggle,
+    # aot-modern-input/-select, selectpicker) so this looks identical to any
+    # other widget's settings — see AoT_plot.py for the same modal-chrome
+    # convention. Values are captured in execute_at_modification() (same
+    # pattern AoT_graph.py uses for its per-series checkboxes).
     'widget_dashboard_configure_options': """
-<div class="aot-modal-group-title">{{_('Category Filter')}}</div>
+<div class="aot-modal-section-title">{{_('Notices')}}</div>
 <div class="aot-modal-container">
-  <div class="aot-modal-option-row aot-full-width-row">
-    <div class="aot-modal-body-text">{{_('Only show posts in the selected categories. If none are selected, posts of every category are shown.')}}</div>
-  </div>
-  {% if widget_variables.get('available_categories') %}
-    {% for cat in widget_variables.get('available_categories', []) %}
   <div class="aot-modal-option-row">
-    <label class="aot-modal-option-label">{{cat}}</label>
+    <label class="aot-modal-option-label" title="{{_('Display the notice board section')}}">{{_('Show Notices')}}<span class="fas fa-info-circle aot-option-tip" aria-hidden="true"></span></label>
     <div class="aot-modal-option-control">
       <label class="btn-toggle mb-0">
-        <input type="checkbox" name="categories" value="{{cat}}" class="btn-toggle-input"{% if cat in widget_options.get('categories', []) %} checked{% endif %}>
-        <div class="btn-toggle-slider">
-          <div class="btn-toggle-thumb"></div>
-        </div>
+        <input id="show_notice" name="show_notice" type="checkbox" value="y" class="btn-toggle-input"{% if widget_options.get('show_notice', True) %} checked{% endif %}>
+        <div class="btn-toggle-slider"><div class="btn-toggle-thumb"></div></div>
       </label>
     </div>
   </div>
-    {% endfor %}
-  {% else %}
-  <div class="aot-modal-option-row aot-full-width-row">
-    <div class="text-muted small">{{_('No categories yet. Set one when creating a post to filter by it here.')}}</div>
+  <div class="aot-modal-option-row" data-depends-on="show_notice">
+    <label class="aot-modal-option-label" title="{{_('How many of the latest notices to display')}}">{{_('Number of Notices')}}<span class="fas fa-info-circle aot-option-tip" aria-hidden="true"></span></label>
+    <div class="aot-modal-option-control">
+      <input class="form-control aot-modern-input" id="post_count" name="post_count" type="number" value="{{ widget_options.get('post_count', 3) }}">
+    </div>
   </div>
-  {% endif %}
+  <div class="aot-modal-option-row" data-depends-on="show_notice">
+    <label class="aot-modal-option-label" title="{{_('Allow voting on polls from the post popup')}}">{{_('Show Poll Voting')}}<span class="fas fa-info-circle aot-option-tip" aria-hidden="true"></span></label>
+    <div class="aot-modal-option-control">
+      <label class="btn-toggle mb-0">
+        <input id="show_poll" name="show_poll" type="checkbox" value="y" class="btn-toggle-input"{% if widget_options.get('show_poll', True) %} checked{% endif %}>
+        <div class="btn-toggle-slider"><div class="btn-toggle-thumb"></div></div>
+      </label>
+    </div>
+  </div>
+  <div class="aot-modal-option-row" data-depends-on="show_notice">
+    <label class="aot-modal-option-label" title="{{_('Allow sending a reply from the post popup')}}">{{_('Show Reply Box')}}<span class="fas fa-info-circle aot-option-tip" aria-hidden="true"></span></label>
+    <div class="aot-modal-option-control">
+      <label class="btn-toggle mb-0">
+        <input id="show_reply_box" name="show_reply_box" type="checkbox" value="y" class="btn-toggle-input"{% if widget_options.get('show_reply_box', True) %} checked{% endif %}>
+        <div class="btn-toggle-slider"><div class="btn-toggle-thumb"></div></div>
+      </label>
+    </div>
+  </div>
+  <div class="aot-modal-option-row" data-depends-on="show_notice">
+    <label class="aot-modal-option-label" title="{{_('Only show posts in the selected categories. If none are selected, posts of every category are shown.')}}">{{_('Category Filter')}}<span class="fas fa-info-circle aot-option-tip" aria-hidden="true"></span></label>
+    <div class="aot-modal-option-control">
+      {% if widget_variables.get('available_categories') %}
+      <select class="form-control aot-modern-select selectpicker" id="categories" name="categories" title="{{_('Select')}}" multiple data-size="auto" data-selected-text-format="static" data-style="btn-white" data-container="body">
+        {% for cat in widget_variables.get('available_categories', []) %}
+        <option value="{{cat}}"{% if cat in widget_options.get('categories', []) %} selected{% endif %}>{{cat}}</option>
+        {% endfor %}
+      </select>
+      {% else %}
+      <div class="text-muted small">{{_('No categories yet. Set one when creating a post to filter by it here.')}}</div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<div class="aot-modal-section-title">{{_('Notes')}}</div>
+<div class="aot-modal-container">
+  <div class="aot-modal-option-row">
+    <label class="aot-modal-option-label" title="{{_('Display notes matching the filter below')}}">{{_('Show Notes List')}}<span class="fas fa-info-circle aot-option-tip" aria-hidden="true"></span></label>
+    <div class="aot-modal-option-control">
+      <label class="btn-toggle mb-0">
+        <input id="show_notes" name="show_notes" type="checkbox" value="y" class="btn-toggle-input"{% if widget_options.get('show_notes', False) %} checked{% endif %}>
+        <div class="btn-toggle-slider"><div class="btn-toggle-thumb"></div></div>
+      </label>
+    </div>
+  </div>
+  <div class="aot-modal-option-row" data-depends-on="show_notes">
+    <label class="aot-modal-option-label" title="{{_('How many of the latest notes to display')}}">{{_('Number of Notes')}}<span class="fas fa-info-circle aot-option-tip" aria-hidden="true"></span></label>
+    <div class="aot-modal-option-control">
+      <input class="form-control aot-modern-input" id="notes_post_count" name="notes_post_count" type="number" value="{{ widget_options.get('notes_post_count', 5) }}">
+    </div>
+  </div>
+  <div class="aot-modal-option-row" data-depends-on="show_notes">
+    <label class="aot-modal-option-label" title="{{_('Also show notes written in zones/plots/facilities/devices nested under the chosen space')}}">{{_('Include Nested Spaces')}}<span class="fas fa-info-circle aot-option-tip" aria-hidden="true"></span></label>
+    <div class="aot-modal-option-control">
+      <label class="btn-toggle mb-0">
+        <input id="notes_include_descendants" name="notes_include_descendants" type="checkbox" value="y" class="btn-toggle-input"{% if widget_options.get('notes_include_descendants', True) %} checked{% endif %}>
+        <div class="btn-toggle-slider"><div class="btn-toggle-thumb"></div></div>
+      </label>
+    </div>
+  </div>
+  <div class="aot-modal-option-row" data-depends-on="show_notes">
+    <label class="aot-modal-option-label" title="{{_('How to order the note list')}}">{{_('Sort Notes By')}}<span class="fas fa-info-circle aot-option-tip" aria-hidden="true"></span></label>
+    <div class="aot-modal-option-control">
+      {% set notes_sort_current = widget_options.get('notes_sort', 'date') %}
+      <select class="form-control aot-modern-select" id="notes_sort" name="notes_sort">
+        <option value="date"{% if notes_sort_current == 'date' %} selected{% endif %}>{{_('Newest First')}}</option>
+        <option value="priority"{% if notes_sort_current == 'priority' %} selected{% endif %}>{{_('Priority')}}</option>
+        <option value="category"{% if notes_sort_current == 'category' %} selected{% endif %}>{{_('Category')}}</option>
+      </select>
+    </div>
+  </div>
+  <div class="aot-modal-option-row" data-depends-on="show_notes">
+    <label class="aot-modal-option-label" title="{{_('Only show notes whose category or tags contain this text (optional)')}}">{{_('Note Category/Tag Contains')}}<span class="fas fa-info-circle aot-option-tip" aria-hidden="true"></span></label>
+    <div class="aot-modal-option-control">
+      <input class="form-control aot-modern-input" id="notes_category_filter" name="notes_category_filter" type="text" value="{{ widget_options.get('notes_category_filter', '') }}">
+    </div>
+  </div>
+  <div class="aot-modal-option-row" data-depends-on="show_notes">
+    <label class="aot-modal-option-label" title="{{_('Notes written in this site/zone/plot/facility (and, if "Include Nested Spaces" above is on, everything nested under it) are shown.')}}">{{_('Notes Filter')}}<span class="fas fa-info-circle aot-option-tip" aria-hidden="true"></span></label>
+    <div class="aot-modal-option-control">
+      {% if widget_variables.get('available_spaces') %}
+      <select class="form-control aot-modern-select selectpicker" id="notes_target" name="notes_target" data-live-search="true" data-size="8" data-container="body" data-style="btn-white" aria-label="{{_('Notes Filter')}}">
+        <option value="">{{_('None selected')}}</option>
+        {% set current = widget_options.get('notes_target_type', '') ~ '::' ~ widget_options.get('notes_target_id', '') %}
+        {% for space_type, space_id, space_name in widget_variables.get('available_spaces', []) %}
+        <option value="{{space_type}}::{{space_id}}"{% if (space_type ~ '::' ~ space_id) == current %} selected{% endif %}>{%- if space_type == 'site' %}{{_('Site')}}{% elif space_type == 'zone' %}{{_('Zone')}}{% elif space_type == 'facility' %}{{_('Facility')}}{% else %}{{_('Plot')}}{% endif %}: {{space_name}}</option>
+        {% endfor %}
+      </select>
+      {% else %}
+      <div class="text-muted small">{{_('No sites, zones, plots, or facilities exist yet.')}}</div>
+      {% endif %}
+    </div>
+  </div>
 </div>""",
 
     'widget_dashboard_head': """{% if "aot_notice_render" not in dashboard_dict %}
   <script src="{{ asset('app-notice-render') }}"></script>
   {% set _dummy = dashboard_dict.update({"aot_notice_render": 1}) %}
+{% endif %}
+{#- 섹션 제목(.aot-ov-card-title)과 빈 상태 문구(.aot-ov-muted)는 지도·시설
+    모달이 쓰는 것과 같은 공용 파일이다(AoT_plot.py와 동일한 로드 가드).
+    개별 공지/노트 카드 자체(.aot-notice-widget-card, 아래 <style>)는 이
+    위젯만의 것이다 — `.aot-ov-block`/`.aot-ov-note`(요약 패널·미리보기
+    2개용, 대시보드 위젯 안에서는 의도적으로 테두리/배경 대비가 없다)를
+    여러 항목을 스크롤하는 목록에 그대로 썼더니 항목 사이 경계가 전혀
+    안 보였다(2026-09-08 사용자 지적: "컨테이너도 없고"). 그래서 카드
+    자체는 새로 두되, 값은 전부 공용 토큰(--aot-radius-sm·--aot-space-*
+    등)에서 가져온다. -#}
+{% if "css_sensor_label" not in dashboard_dict %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/widget/aot-sensor-label.css') }}">
+{% set _dummy = dashboard_dict.update({"css_sensor_label": 1}) %}
 {% endif %}
 <style>
   /* Fills #container-graph exactly (100% + overflow:hidden) so this widget's
@@ -120,34 +282,73 @@ WIDGET_INFORMATION = {
      .grid-stack-item-content{overflow-y:auto} on top of our inner scroll —
      a double scrollbar that persists no matter how large the card is resized. */
   .aot-notice-widget-outer { height: 100%; display: flex; flex-flow: column; overflow: hidden; }
-  .aot-notice-widget-container { padding: 8px; flex: 1 1 auto; overflow-y: auto; }
-  .aot-notice-widget-post {
-    border: 1px solid var(--aot-border-neutral, #e9ecef);
-    border-radius: 8px;
-    padding: 8px;
-    margin-bottom: 8px;
-    background: var(--aot-surface-card, #fff);
+  /* 공지·노트를 각각 독립 스크롤 영역(flex:1 1 0 두 개)으로 나눴던 첫 시도는
+     위젯을 낮게 줄이면 스크롤바가 두 개 생겨 어느 쪽을 스크롤하는지, 어느
+     쪽이 얼마나 남았는지 가늠할 수 없는 상태가 됐다(2026-09-08 사용자 지적:
+     "스크롤이 2개 생기고 제대로 제어할 수 없는 상태"). 스크롤 영역을 하나로
+     합친다 — 공지 카드 다음에 노트 카드가 이어지는 한 목록으로 보이고, 위젯이
+     아무리 낮아져도 스크롤바는 항상 하나뿐이다.
+     min-height:0 은 그래도 필요하다 — flex 아이템의 기본 min-height 는
+     "auto"(내용의 자연 높이)라, 이것이 없으면 이 컨테이너가 내용보다 작게
+     줄어들기를 거부하고 overflow-y:auto 가 아예 작동하지 않는다. */
+  .aot-notice-widget-container { padding: var(--aot-space-2); flex: 1 1 auto; min-height: 0; overflow-y: auto; }
+  /* 개별 공지/노트를 다시 카드로 되돌린다(2026-09-08) — 앞서 한 줄짜리
+     미리보기 행(.aot-ov-note)으로 바꿨더니 이 위젯 안에서는 두 섹션이
+     경계 없이 이어붙어 "컨테이너가 없다" 로 읽혔다. `.aot-ov-block` 은
+     대시보드 위젯 안에서 테두리·배경 대비를 일부러 안 쓰는 컴포넌트라
+     (AoT_plot.py 주석 2026-09-05: 카드 사이 구분선을 넣었다 뺐다 결국
+     "위젯 내부는 배경 기본색 한 겹" 으로 정착) 요약 패널 한두 개에는
+     맞지만, 여러 개를 스크롤하는 목록에는 경계가 필요하다. 값 자체는
+     테두리·라운드·여백을 전부 토큰(--aot-radius-sm·--aot-space-2 등)에서
+     가져와 다른 카드와 같은 척도를 쓴다 — 리터럴 픽셀값을 쓰지 않는다.
+
+     ⚠ 좌우 패딩은 --aot-space-4(16px) — space-3(12px)이 아니다. 위
+     `.aot-ov-card-title` 의 좌우 패딩이 바로 이 값이고, 그 클래스 자신의
+     주석이 "박스 내부 여백과 같은 값이어야 제목이 그 아래 박스 첫 줄과
+     같은 세로선에서 시작한다" 고 못박고 있다(aot-sensor-label.css:507).
+     `.aot-ov-block` 을 버리고 제목만 재사용하면서 카드 쪽에 임의로
+     space-3 을 넣었더니 정확히 그 정렬이 깨졌다(2026-09-08 사용자 지적:
+     "제목부터 쭉 내려가면서 왼쪽 정렬이 하나도 안 됨"). 진짜 공용
+     스타일을 썼다면 애초에 어긋날 수 없었던 값이다. */
+  .aot-notice-widget-card {
+    border: 1px solid var(--aot-border-neutral);
+    border-radius: var(--aot-radius-sm);
+    padding: var(--aot-space-2) var(--aot-space-4);
+    margin-bottom: var(--aot-space-2);
+    background: var(--aot-surface-card);
   }
-  .aot-notice-widget-post:last-child { margin-bottom: 0; }
-  .aot-notice-widget-title {
-    font-weight: 700; font-size: var(--aot-font-size-sm);
+  .aot-notice-widget-card:last-child { margin-bottom: 0; }
+  .aot-notice-widget-card-title {
+    font-weight: 700; font-size: var(--aot-font-size-sm); color: var(--aot-color-text-primary);
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   }
-  .aot-notice-widget-title a {
-    color: inherit; text-decoration: none; cursor: pointer;
-    display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  /* 카테고리를 알약 배지로 감싸지 않는다 — 배지는 자기 안쪽 여백
+     (padding)이 있어 그 글자만 카드 제목·다른 텍스트와 다른 세로선에서
+     시작한다(2026-09-08 사용자 지적: "알약 문자는 문자 아니냐" ·
+     "그냥 알약으로 싸지 마"). 카테고리·날짜·대상명 전부 같은 줄의 평문. */
+  .aot-notice-widget-card-meta {
+    font-size: var(--aot-font-size-2xs); color: var(--aot-color-text-secondary);
+    margin-top: var(--aot-space-1);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   }
-  .aot-notice-widget-title a:hover { text-decoration: underline; }
-  .aot-notice-widget-meta { font-size: var(--aot-font-size-2xs); color: var(--aot-color-text-secondary, #6c757d); margin-top: 2px; }
-  /* 분류 배지: 글자색을 본문색으로 올린다. 보조색(#5E6B64)을 밝은 칩 배경
-     (#f1f3f5) 위 10.88px 로 쓰면 대비 4.41:1 로 AA(4.5:1)에 아슬하게 못 미쳤다.
-     크기도 0.68rem 이라는 사다리 밖 값이었다 — 2xs(0.7rem)로 맞춘다. */
-  .aot-notice-widget-category-badge {
-    display: inline-block; font-size: var(--aot-font-size-2xs); font-weight: 700;
-    padding: 0.1rem 0.5rem; border-radius: 9999px;
-    background: var(--aot-surface-body, #f1f3f5); color: var(--aot-color-text-primary, #13261B);
-  }
+  .aot-notice-widget-open, .aot-notice-widget-note-open { cursor: pointer; }
+  .aot-notice-widget-open:hover, .aot-notice-widget-note-open:hover { border-color: var(--aot-border-strong, #ced4da); }
+  /* 공지 카드 마지막 것과 "노트" 제목 사이 간격이 0px였다(둘 다 자기
+     여백을 안 가짐 — .aot-ov-card-title는 margin-top이 없고, 마지막
+     카드는 :last-child로 margin-bottom을 지운다). AoT_plot.py가 쓰는
+     .aot-ov-block은 margin-bottom:16px(--aot-space-4)로 다음 제목과의
+     간격을 스스로 만드는데, 그 대신 개별 카드를 쓰면서 이 몫이 빠졌다
+     (2026-09-08 사용자 지적: "노트와 공지 사이에 여백이 없어서 답답해").
+     같은 값을 제목 쪽 margin-top으로 준다 — 첫 제목("공지")은 컨테이너
+     자체 패딩이 이미 있으니 0. */
+  .aot-notice-widget-container > .aot-ov-card-title { margin-top: var(--aot-space-4); }
+  .aot-notice-widget-container > .aot-ov-card-title:first-child { margin-top: 0; }
 
+  /* 상세 팝업 본문은 이제 .aot-ov-block(공용 카드)로 감싼다 — 목록의
+     짧은 미리보기와 달리 여긴 글 전체를 읽는 자리라 컨테이너가 있어야
+     한다(2026-09-08 사용자 지적: "텍스트를 컨테이너로 감싸야할 것
+     같아"). 여기 아래 규칙은 .aot-ov-block 위에 얹혀 글자 크기·줄간격만
+     오버라이드한다(카드 자체의 배경·테두리·둥근모서리·안여백은 그대로). */
   .aot-notice-widget-modal-body {
     font-size: var(--aot-font-size-sm); line-height: 1.6; white-space: normal;
     color: var(--aot-color-text-primary, #212529);
@@ -209,7 +410,7 @@ WIDGET_INFORMATION = {
 </style>""",
 
     'widget_dashboard_title_bar': """{#- 이름은 셸이 렌더한다. 여기는 제목줄 오른쪽 도구만. -#}
-{% if permission_edit_settings %}
+{% if permission_edit_settings and widget_options.get('show_notice', True) %}
 <div class="widget-map-controls" id="notice-widget-header-controls-{{each_widget.unique_id}}">
     <a class="aot-w-tool widget-map-ctrl-btn" id="notice-widget-new-btn-{{each_widget.unique_id}}"
        role="button" tabindex="0" aria-label="{{_('New Post')}}" title="{{_('New Post')}}">
@@ -220,9 +421,25 @@ WIDGET_INFORMATION = {
 """,
 
     'widget_dashboard_body': """
+{% set aot_show_notice = widget_options.get('show_notice', True) %}
+{% set aot_show_notes = widget_options.get('show_notes', False) %}
 <div class="aot-notice-widget-outer">
-  <div id="notice-widget-{{each_widget.unique_id}}" class="aot-notice-widget-container">
-    <div class="text-muted small">{{_('Loading...')}}</div>
+  <div class="aot-notice-widget-container">
+  {% if aot_show_notice %}
+    {% if aot_show_notes %}<div class="aot-ov-card-title">{{_('Notices')}}</div>{% endif %}
+    <div id="notice-widget-{{each_widget.unique_id}}">
+      <div class="aot-ov-muted">{{_('Loading...')}}</div>
+    </div>
+  {% endif %}
+  {% if aot_show_notes %}
+    {% if aot_show_notice %}<div class="aot-ov-card-title">{{_('Notes')}}</div>{% endif %}
+    <div id="notice-widget-notes-{{each_widget.unique_id}}">
+      <div class="aot-ov-muted">{{_('Loading...')}}</div>
+    </div>
+  {% endif %}
+  {% if not aot_show_notice and not aot_show_notes %}
+    <div class="aot-ov-muted">{{_('Nothing selected — turn on "Show Notices" and/or "Show Notes" in the widget settings.')}}</div>
+  {% endif %}
   </div>
 </div>
 
@@ -359,17 +576,19 @@ function aotNoticeWidgetRenderList(widgetId, data) {
   var esc = AoTNoticeRender.escapeHtml;
   var $container = $('#notice-widget-' + widgetId);
   if (!data.posts.length) {
-    $container.html('<div class="text-muted small">{{_('No notices yet.')}}</div>');
+    $container.html('<div class="aot-ov-muted">{{_('No notices yet.')}}</div>');
     return;
   }
   var html = '';
   data.posts.forEach(function (post) {
-    html += '<div class="aot-notice-widget-post">' +
-      '<div class="aot-notice-widget-title"><a href="#" class="aot-notice-widget-open" data-post="' + post.unique_id + '">' +
+    html += '<div class="aot-notice-widget-card aot-notice-widget-open" data-post="' + post.unique_id + '">' +
+      '<div class="aot-notice-widget-card-title">' +
       (post.pinned ? '[{{_('Pinned')}}] ' : '') +
-      (post.category ? '<span class="aot-notice-widget-category-badge">' + esc(post.category) + '</span> ' : '') +
-      esc(post.title) + '</a></div>' +
-      '<div class="aot-notice-widget-meta">' + esc(post.date_time) + '</div>' +
+      esc(post.title) + '</div>' +
+      '<div class="aot-notice-widget-card-meta">' +
+      (post.category ? esc(post.category) + ' \\u00b7 ' : '') +
+      esc(post.date_time) +
+      '</div>' +
       '</div>';
   });
   $container.html(html);
@@ -387,12 +606,68 @@ function aotNoticeWidgetFetchList(widgetId, limit, categories) {
   });
 }
 
+// 노트 카드는 공지 카드와 같은 골격(.aot-notice-widget-card 등)을 그대로
+// 쓴다 — 한 위젯 안에서 두 소스가 다른 카드 모양이면 그 자체가 혼란이다.
+function aotNoticeWidgetRenderNotesList(widgetId, notes, limit, sort, categoryFilter) {
+  var esc = AoTNoticeRender.escapeHtml;
+  var $container = $('#notice-widget-notes-' + widgetId);
+  var filtered = notes;
+  if (categoryFilter) {
+    var needle = categoryFilter.toLowerCase();
+    filtered = notes.filter(function (n) {
+      return ((n.category || '') + ' ' + (n.tags || '')).toLowerCase().indexOf(needle) !== -1;
+    });
+  }
+  if (sort === 'priority') {
+    filtered = filtered.slice().sort(function (a, b) { return (b.priority || 0) - (a.priority || 0); });
+  } else if (sort === 'category') {
+    filtered = filtered.slice().sort(function (a, b) { return (a.category || '').localeCompare(b.category || ''); });
+  }
+  // 'date' 는 서버가 이미 최신순으로 준다(추가 정렬 불필요).
+  filtered = filtered.slice(0, limit);
+  if (!filtered.length) {
+    $container.html('<div class="aot-ov-muted">{{_('No notes yet.')}}</div>');
+    return;
+  }
+  var html = '';
+  filtered.forEach(function (n) {
+    var text = String(n.note || '').replace(/\\s+/g, ' ').trim();
+    if (!text) { text = '{{_('(Attachment only)')}}'; }
+    html += '<div class="aot-notice-widget-card aot-notice-widget-note-open" data-target="' + esc(n.target_id) + '" data-target-type="' + esc(n.target_type || 'unknown') + '" data-name="' + esc(n.target_name || '') + '">' +
+      '<div class="aot-notice-widget-card-title">' + esc(text) + '</div>' +
+      '<div class="aot-notice-widget-card-meta">' +
+      (n.category ? esc(n.category) + ' \\u00b7 ' : '') +
+      esc(n.date_time) +
+      (n.target_name ? ' \\u00b7 ' + esc(n.target_name) : '') +
+      '</div>' +
+      '</div>';
+  });
+  $container.html(html);
+}
+
+function aotNoticeWidgetFetchNotesList(widgetId, targetType, targetId, includeDescendants, limit, sort, categoryFilter) {
+  if (!targetId) {
+    $('#notice-widget-notes-' + widgetId).html(
+      '<div class="aot-ov-muted">{{_('Choose a space in the widget settings to show notes.')}}</div>');
+    return;
+  }
+  var url = '/notes/target/' + encodeURIComponent(targetId) + (includeDescendants ? '?descendants=1' : '');
+  $.ajax({
+    url: url,
+    method: 'GET',
+    success: function (notes) {
+      if (notes && notes.error) { return; }
+      aotNoticeWidgetRenderNotesList(widgetId, notes, limit, sort, categoryFilter);
+    }
+  });
+}
+
 function aotNoticeWidgetBuildModalBody(post, showPoll, showReply, currentUserId, isAdmin) {
   var esc = AoTNoticeRender.escapeHtml;
   var html = '<div class="small text-muted mb-2">' +
-    (post.category ? '<span class="aot-notice-widget-category-badge mr-1">' + esc(post.category) + '</span>' : '') +
+    (post.category ? esc(post.category) + ' &middot; ' : '') +
     esc(post.author) + ' &middot; ' + esc(post.date_time) + '</div>';
-  html += '<div class="aot-notice-widget-modal-body">' + AoTNoticeRender.renderNoticeBody(post.body || '') + '</div>';
+  html += '<div class="aot-ov-block aot-notice-widget-modal-body">' + AoTNoticeRender.renderNoticeBody(post.body || '') + '</div>';
 
   if (showPoll && post.poll) {
     html += '<div class="aot-notice-widget-poll mt-3" data-multi="' + post.poll.multi + '">';
@@ -550,16 +825,29 @@ function aotNoticeWidgetOpenComposeEdit(widgetId, postId, isAdmin) {
   });
 }
 
-function aotNoticeWidgetInit(widgetId, limit, refreshSeconds, showPoll, showReply, currentUserId, isAdmin, categories) {
-  aotNoticeWidgetFetchList(widgetId, limit, categories);
+function aotNoticeWidgetInit(widgetId, limit, refreshSeconds, showPoll, showReply, currentUserId, isAdmin, categories, showNotice, notesOpts) {
+  if (showNotice) {
+    aotNoticeWidgetFetchList(widgetId, limit, categories);
+  }
+  if (notesOpts && notesOpts.show) {
+    aotNoticeWidgetFetchNotesList(widgetId, notesOpts.targetType, notesOpts.targetId,
+      notesOpts.includeDescendants, notesOpts.limit, notesOpts.sort, notesOpts.categoryFilter);
+  }
   // Store the refresh interval per widget and clear the previous one so a
   // live-preview re-init (option change without page reload) doesn't stack
   // duplicate fetch intervals.
   window._notice_intervals = window._notice_intervals || {};
   if (window._notice_intervals[widgetId]) { clearInterval(window._notice_intervals[widgetId]); }
-  window._notice_intervals[widgetId] = setInterval(function () { aotNoticeWidgetFetchList(widgetId, limit, categories); }, refreshSeconds * 1000);
+  window._notice_intervals[widgetId] = setInterval(function () {
+    if (showNotice) { aotNoticeWidgetFetchList(widgetId, limit, categories); }
+    if (notesOpts && notesOpts.show) {
+      aotNoticeWidgetFetchNotesList(widgetId, notesOpts.targetType, notesOpts.targetId,
+        notesOpts.includeDescendants, notesOpts.limit, notesOpts.sort, notesOpts.categoryFilter);
+    }
+  }, refreshSeconds * 1000);
 
   var $list = $('#notice-widget-' + widgetId);
+  var $notesList = $('#notice-widget-notes-' + widgetId);
   var $modal = $('#notice-widget-modal-' + widgetId);
   var $modalContent = $('#notice-widget-modal-content-' + widgetId);
   var $composeForm = $('#notice-widget-compose-form-' + widgetId);
@@ -567,12 +855,23 @@ function aotNoticeWidgetInit(widgetId, limit, refreshSeconds, showPoll, showRepl
   // Idempotent re-init: clear this widget's previously bound handlers (namespace
   // .aotnw) before re-binding, so a live-preview re-init doesn't double-bind on
   // the modals that fixModalZIndex moved to <body> (and thus survive a body swap).
-  $list.off('.aotnw'); $modal.off('.aotnw'); $modalContent.off('.aotnw');
+  $list.off('.aotnw'); $notesList.off('.aotnw'); $modal.off('.aotnw'); $modalContent.off('.aotnw');
   $composeForm.off('.aotnw'); $('#notice-widget-new-btn-' + widgetId).off('.aotnw');
 
   $list.on('click.aotnw', '.aot-notice-widget-open', function (e) {
     e.preventDefault();
     aotNoticeWidgetOpenModal(widgetId, $(this).data('post'), showPoll, showReply, currentUserId, isAdmin);
+  });
+
+  // 노트는 별도 모달을 만들지 않는다 — 앱 전체가 공유하는 노트 패널 하나로
+  // 넘긴다(진입점은 AoTNotesBlock 이 쓰는 것과 같은 'open-notes' 이벤트 하나).
+  $notesList.on('click.aotnw', '.aot-notice-widget-note-open', function () {
+    var $el = $(this);
+    window.dispatchEvent(new CustomEvent('open-notes', { detail: {
+      targetId: $el.data('target'),
+      targetType: $el.data('target-type') || 'unknown',
+      name: $el.data('name') || ''
+    } }));
   });
 
   $modalContent.on('click.aotnw', '.aot-notice-widget-poll-row', function () {
@@ -778,13 +1077,23 @@ function aotNoticeWidgetInit(widgetId, limit, refreshSeconds, showPoll, showRepl
     'widget_dashboard_js_ready_end': """
 aotNoticeWidgetInit(
   '{{each_widget.unique_id}}',
-  {{widget_options['post_count']}},
+  {{widget_options.get('post_count', 3)}},
   {{widget_options['refresh_seconds']}},
-  {{widget_options['show_poll']|lower}},
-  {{widget_options['show_reply_box']|lower}},
+  {{widget_options.get('show_poll', True)|lower}},
+  {{widget_options.get('show_reply_box', True)|lower}},
   {{ current_user.id if current_user.is_authenticated else 'null' }},
   {{ 'true' if current_user.is_authenticated and current_user.role_id == 1 else 'false' }},
-  {{ widget_options.get('categories', []) | tojson }}
+  {{ widget_options.get('categories', []) | tojson }},
+  {{widget_options.get('show_notice', True)|lower}},
+  {
+    show: {{widget_options.get('show_notes', False)|lower}},
+    targetType: {{ widget_options.get('notes_target_type', '') | tojson }},
+    targetId: {{ widget_options.get('notes_target_id', '') | tojson }},
+    includeDescendants: {{widget_options.get('notes_include_descendants', True)|lower}},
+    limit: {{widget_options.get('notes_post_count', 5)}},
+    sort: {{ widget_options.get('notes_sort', 'date') | tojson }},
+    categoryFilter: {{ widget_options.get('notes_category_filter', '') | tojson }}
+  }
 );
 """
 }

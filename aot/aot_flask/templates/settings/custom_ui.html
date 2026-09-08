@@ -6,7 +6,7 @@
 {% block title %} - {{dict_translation['settings']['title'] + ': Custom UI'}}{% endblock %}
 
 {% block head %}
-  <link rel="stylesheet" href="/static/css/aot-custom-ui-preview.css?v=20260804a">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/aot-custom-ui-preview.css') }}">
   <style>
     /* Color group tabs — same underline pattern as #userSettingsTabs (settings/users.html) */
     #colorGroupTabs {
@@ -196,10 +196,49 @@
                     aria-label="{{_('Click to edit MCP Badge colors')}}">MCP</span>
               <span class="preview-badge preview-badge-upgrade"
                     role="button" tabindex="0"
-                    data-color-bg="badge_upgrade"
+                    data-color-bg="btn_primary_bg"
                     data-color-text="text_color_tertiary"
-                    data-color-label="{{_('Upgrade Badge')}}"
-                    aria-label="{{_('Click to edit Upgrade Badge colors')}}">{{_('Upgrade')}}</span>
+                    data-color-label="{{_('Primary Button Background')}}"
+                    aria-label="{{_('Click to edit Primary Button Background colors')}}">{{_('Upgrade')}}</span>
+            </div>
+
+            <!-- Slide toggles (.btn-toggle) — 실제 컴포넌트가 읽는 필드를
+                 그대로 쓴다: 켜짐 band_3 · 대기 bg_pending · 무응답 bg_warning ·
+                 손잡이 text_color_tertiary. 꺼짐 트랙 toggle_track_off. -->
+            <div class="preview-toggle-label-row">{{_('Slide Toggle')}}</div>
+            <div class="preview-toggle-row">
+              <span class="preview-toggle-item">
+                <span class="preview-toggle preview-toggle-on"
+                      role="button" tabindex="0"
+                      data-color-bg="band_3"
+                      data-color-label="{{_('Toggle On')}}"
+                      aria-label="{{_('Click to edit Toggle On colors')}}"><span class="preview-toggle-thumb"></span></span>
+                <span class="preview-toggle-caption">{{_('On')}}</span>
+              </span>
+              <span class="preview-toggle-item">
+                <span class="preview-toggle preview-toggle-off"
+                      role="button" tabindex="0"
+                      data-color-bg="toggle_track_off"
+                      data-color-label="{{_('Toggle Track Off')}}"
+                      aria-label="{{_('Click to edit Toggle Track Off colors')}}"><span class="preview-toggle-thumb"></span></span>
+                <span class="preview-toggle-caption">{{_('Off')}}</span>
+              </span>
+              <span class="preview-toggle-item">
+                <span class="preview-toggle preview-toggle-pending"
+                      role="button" tabindex="0"
+                      data-color-bg="bg_pending"
+                      data-color-label="{{_('Confirming')}}"
+                      aria-label="{{_('Click to edit Confirming colors')}}"><span class="preview-toggle-thumb"></span></span>
+                <span class="preview-toggle-caption">{{_('Confirming')}}</span>
+              </span>
+              <span class="preview-toggle-item">
+                <span class="preview-toggle preview-toggle-fault"
+                      role="button" tabindex="0"
+                      data-color-bg="bg_warning"
+                      data-color-label="{{_('No response')}}"
+                      aria-label="{{_('Click to edit No response colors')}}"><span class="preview-toggle-thumb"></span></span>
+                <span class="preview-toggle-caption">{{_('No response')}}</span>
+              </span>
             </div>
 
             <!-- Output/Input Channel Preview — mirrors the 5 real channel-row
@@ -417,7 +456,6 @@
                    id="hex_{{field_name}}"
                    data-field="{{field_name}}"
                    value="{{(form_settings_custom_ui[field_name].data or '#000000') | upper}}"
-                   maxlength="7"
                    pattern="#[0-9A-Fa-f]{6}"
                    aria-label="{{label}} {{_('hex value')}}"
                    spellcheck="false">
@@ -466,8 +504,7 @@
                        id="hex_{{field_name}}"
                        data-field="{{field_name}}"
                        value="{{(form_settings_custom_ui[field_name].data or '#000000') | upper}}"
-                       maxlength="7"
-                       pattern="#[0-9A-Fa-f]{6}"
+                           pattern="#[0-9A-Fa-f]{6}"
                        aria-label="{{label}} {{_('hex value')}}"
                        spellcheck="false">
                 <input type="color"
@@ -502,8 +539,7 @@
                        id="hex_{{field_name}}"
                        data-field="{{field_name}}"
                        value="{{(form_settings_custom_ui[field_name].data or '#000000') | upper}}"
-                       maxlength="7"
-                       pattern="#[0-9A-Fa-f]{6}"
+                           pattern="#[0-9A-Fa-f]{6}"
                        aria-label="{{label}} {{_('hex value')}}"
                        spellcheck="false">
                 <input type="color"
@@ -540,11 +576,7 @@
               ('tint_danger_bg',  _('Danger Tint'),  _('Soft background for failures — also the row/card background and map-popup name highlight for offline or unresponsive devices')),
               ('tint_danger_fg',  _('Danger Tint Text'), _('Text color used on the danger tint')),
               ('tint_info_bg',    _('Info Tint'),    _('Soft badge background for in-progress/informational states')),
-              ('tint_info_fg',    _('Info Tint Text'), _('Text color used on the info tint')),
-              ('tint_success_border', _('Success Tint Border'), _('Border color for success notice boxes (Admin pages, e.g. Upgrade)')),
-              ('tint_warning_border', _('Warning Tint Border'), _('Border color for warning/default notice boxes')),
-              ('tint_danger_border',  _('Danger Tint Border'),  _('Border color for danger/error notice boxes')),
-              ('tint_info_border',    _('Info Tint Border'),    _('Border color for info notice boxes'))
+              ('tint_info_fg',    _('Info Tint Text'), _('Text color used on the info tint'))
             ] %}
             {% for field_name, label, desc in state_fields %}
             <div class="aot-color-row" data-css-key="{{field_name}}">
@@ -558,8 +590,7 @@
                        id="hex_{{field_name}}"
                        data-field="{{field_name}}"
                        value="{{(form_settings_custom_ui[field_name].data or '#000000') | upper}}"
-                       maxlength="7"
-                       pattern="#[0-9A-Fa-f]{6}"
+                           pattern="#[0-9A-Fa-f]{6}"
                        aria-label="{{label}} {{_('hex value')}}"
                        spellcheck="false">
                 <input type="color"
@@ -589,6 +620,7 @@
               ('bg_btn_off',       _('Button Off'),                  _('Output row OFF button')),
               ('bg_btn_pause',     _('Button Pause'),                _('PID controller pause button')),
               ('bg_btn_hold',      _('Button Hold'),                 _('PID controller hold button')),
+              ('toggle_track_off', _('Toggle Track Off'),            _('Slide toggle track when off (on uses Band 3)')),
               ('bd_btn_border',    _('Button Border'),               _('Border for all buttons and list rows'))
             ] %}
             {% for field_name, label, desc in btn_fields %}
@@ -603,8 +635,7 @@
                        id="hex_{{field_name}}"
                        data-field="{{field_name}}"
                        value="{{(form_settings_custom_ui[field_name].data or '#000000') | upper}}"
-                       maxlength="7"
-                       pattern="#[0-9A-Fa-f]{6}"
+                           pattern="#[0-9A-Fa-f]{6}"
                        aria-label="{{label}} {{_('hex value')}}"
                        spellcheck="false">
                 <input type="color"
@@ -622,11 +653,12 @@
 
         <!-- Badge Colors
              2026-07 통합: badge_upgrade 는 bg_upgrade(nav 배지)+bg_btn_upgrade(버튼)
-             를 흡수했다 (color-system.md §3-2). -->
+             를 흡수했다 (color-system.md §3-2).
+             2026-09-08: 그 badge_upgrade 도 없앴다 — 값도 쓰임도 주 버튼 배경과
+             같아(btn_primary_bg) 사용자가 두 곳을 맞춰 두어야 했다. -->
         <div class="tab-pane fade" id="pane-color-badge" role="tabpanel">
           <div class="aot-settings-section" id="group-badge">
             {% set badge_fields = [
-              ('badge_upgrade', _('Upgrade Badge'), _('Nav upgrade badge and upgrade button background')),
               ('bg_llm',        _('LLM Badge'),     _('AI model (LLM) badge background')),
               ('bg_mcp',        _('MCP Badge'),     _('MCP tool badge background'))
             ] %}
@@ -642,8 +674,7 @@
                        id="hex_{{field_name}}"
                        data-field="{{field_name}}"
                        value="{{(form_settings_custom_ui[field_name].data or '#000000') | upper}}"
-                       maxlength="7"
-                       pattern="#[0-9A-Fa-f]{6}"
+                           pattern="#[0-9A-Fa-f]{6}"
                        aria-label="{{label}} {{_('hex value')}}"
                        spellcheck="false">
                 <input type="color"
@@ -679,8 +710,7 @@
                        id="hex_{{field_name}}"
                        data-field="{{field_name}}"
                        value="{{(form_settings_custom_ui[field_name].data or '#000000') | upper}}"
-                       maxlength="7"
-                       pattern="#[0-9A-Fa-f]{6}"
+                           pattern="#[0-9A-Fa-f]{6}"
                        aria-label="{{label}} {{_('hex value')}}"
                        spellcheck="false">
                 <input type="color"
@@ -717,8 +747,7 @@
                        id="hex_{{field_name}}"
                        data-field="{{field_name}}"
                        value="{{(form_settings_custom_ui[field_name].data or '#000000') | upper}}"
-                       maxlength="7"
-                       pattern="#[0-9A-Fa-f]{6}"
+                           pattern="#[0-9A-Fa-f]{6}"
                        aria-label="{{label}} {{_('hex value')}}"
                        spellcheck="false">
                 <input type="color"
@@ -811,9 +840,7 @@
       color_danger:  '#DF5353', color_info:    '#029ACF',
       tint_success_bg: '#EEF6E6', tint_success_fg: '#557A30',
       tint_danger_bg:  '#FBE7E7', tint_danger_fg:  '#B23B3B',
-      tint_info_bg:    '#E7F4FB', tint_info_fg:    '#06709B',
-      tint_success_border: '#B8CBA6', tint_warning_border: '#DAC196',
-      tint_danger_border:  '#E1ABAB', tint_info_border:    '#98C6D9'
+      tint_info_bg:    '#E7F4FB', tint_info_fg:    '#06709B'
     };
 
     var BAND_CHART_DEFAULTS = {
@@ -825,8 +852,7 @@
       aot_default: Object.assign({
         brand_primary: '#13261B', brand_secondary: '#5E6B64', brand_accent: '#F3F6F5',
         text_color_primary: '#13261B', text_color_secondary: '#5E6B64', text_color_tertiary: '#FFFFFF',
-        bd_primary: '#FFFFFF', bd_secondary: '#F3F6F5',
-        badge_upgrade: '#13261B', bg_active: '#D1D5D5', bg_inactive: '#F3F6F5', bg_warning: '#989E9E', bg_on: '#B5BABA', bg_off: '#F3F6F5', bg_pending: '#F0AD4E', tint_warning_bg: '#FFF3E2', tint_warning_fg: '#94650A',
+        bd_primary: '#FFFFFF', bd_secondary: '#F3F6F5', bg_active: '#D1D5D5', bg_inactive: '#F3F6F5', bg_warning: '#989E9E', bg_on: '#B5BABA', bg_off: '#F3F6F5', bg_pending: '#F0AD4E', tint_warning_bg: '#FFF3E2', tint_warning_fg: '#94650A',
         bg_llm: '#6277C7', bg_mcp: '#64C762',
         btn_primary_bg: '#13261B', btn_secondary_bg: '#5E6B64',
         bg_btn_on: '#13261B', bg_btn_off: '#5E6B64',
@@ -835,8 +861,7 @@
       ocean_blue: Object.assign({
         brand_primary: '#0A2342', brand_secondary: '#2C5F8A', brand_accent: '#E8F4FD',
         text_color_primary: '#0A2342', text_color_secondary: '#2C5F8A', text_color_tertiary: '#FFFFFF',
-        bd_primary: '#FFFFFF', bd_secondary: '#E8F4FD',
-        badge_upgrade: '#0A2342', bg_active: '#BDD7EE', bg_inactive: '#E8F4FD', bg_warning: '#989E9E', bg_on: '#B5BABA', bg_off: '#F3F6F5', bg_pending: '#F0AD4E', tint_warning_bg: '#FFF3E2', tint_warning_fg: '#94650A',
+        bd_primary: '#FFFFFF', bd_secondary: '#E8F4FD', bg_active: '#BDD7EE', bg_inactive: '#E8F4FD', bg_warning: '#989E9E', bg_on: '#B5BABA', bg_off: '#F3F6F5', bg_pending: '#F0AD4E', tint_warning_bg: '#FFF3E2', tint_warning_fg: '#94650A',
         bg_llm: '#4A90D9', bg_mcp: '#42A85A',
         btn_primary_bg: '#0A2342', btn_secondary_bg: '#2C5F8A',
         bg_btn_on: '#0A2342', bg_btn_off: '#2C5F8A',
@@ -845,8 +870,7 @@
       warm_sunset: Object.assign({
         brand_primary: '#6B2737', brand_secondary: '#C0614D', brand_accent: '#FDF0EC',
         text_color_primary: '#6B2737', text_color_secondary: '#C0614D', text_color_tertiary: '#FFFFFF',
-        bd_primary: '#FFFFFF', bd_secondary: '#FDF0EC',
-        badge_upgrade: '#6B2737', bg_active: '#F5C6BC', bg_inactive: '#FDF0EC', bg_warning: '#989E9E', bg_on: '#B5BABA', bg_off: '#F3F6F5', bg_pending: '#F0AD4E', tint_warning_bg: '#FFF3E2', tint_warning_fg: '#94650A',
+        bd_primary: '#FFFFFF', bd_secondary: '#FDF0EC', bg_active: '#F5C6BC', bg_inactive: '#FDF0EC', bg_warning: '#989E9E', bg_on: '#B5BABA', bg_off: '#F3F6F5', bg_pending: '#F0AD4E', tint_warning_bg: '#FFF3E2', tint_warning_fg: '#94650A',
         bg_llm: '#9B59B6', bg_mcp: '#27AE60',
         btn_primary_bg: '#6B2737', btn_secondary_bg: '#C0614D',
         bg_btn_on: '#6B2737', bg_btn_off: '#C0614D',
@@ -855,8 +879,7 @@
       minimal_gray: Object.assign({
         brand_primary: '#2D2D2D', brand_secondary: '#6B6B6B', brand_accent: '#F5F5F5',
         text_color_primary: '#2D2D2D', text_color_secondary: '#6B6B6B', text_color_tertiary: '#FFFFFF',
-        bd_primary: '#FFFFFF', bd_secondary: '#F5F5F5',
-        badge_upgrade: '#2D2D2D', bg_active: '#D0D0D0', bg_inactive: '#F5F5F5', bg_warning: '#989E9E', bg_on: '#B5BABA', bg_off: '#F3F6F5', bg_pending: '#F0AD4E', tint_warning_bg: '#FFF3E2', tint_warning_fg: '#94650A',
+        bd_primary: '#FFFFFF', bd_secondary: '#F5F5F5', bg_active: '#D0D0D0', bg_inactive: '#F5F5F5', bg_warning: '#989E9E', bg_on: '#B5BABA', bg_off: '#F3F6F5', bg_pending: '#F0AD4E', tint_warning_bg: '#FFF3E2', tint_warning_fg: '#94650A',
         bg_llm: '#5B7FA6', bg_mcp: '#4A9E5C',
         btn_primary_bg: '#2D2D2D', btn_secondary_bg: '#6B6B6B',
         bg_btn_on: '#2D2D2D', bg_btn_off: '#6B6B6B',
@@ -865,8 +888,7 @@
       night_mode: Object.assign({
         brand_primary: '#BB86FC', brand_secondary: '#03DAC6', brand_accent: '#1E1E1E',
         text_color_primary: '#E1E1E1', text_color_secondary: '#B0B0B0', text_color_tertiary: '#121212',
-        bd_primary: '#1E1E1E', bd_secondary: '#2C2C2C',
-        badge_upgrade: '#BB86FC', bg_active: '#3C3C3C', bg_inactive: '#2C2C2C', bg_warning: '#989E9E', bg_on: '#B5BABA', bg_off: '#F3F6F5', bg_pending: '#F0AD4E', tint_warning_bg: '#FFF3E2', tint_warning_fg: '#94650A',
+        bd_primary: '#1E1E1E', bd_secondary: '#2C2C2C', bg_active: '#3C3C3C', bg_inactive: '#2C2C2C', bg_warning: '#989E9E', bg_on: '#B5BABA', bg_off: '#F3F6F5', bg_pending: '#F0AD4E', tint_warning_bg: '#FFF3E2', tint_warning_fg: '#94650A',
         bg_llm: '#7C5CBF', bg_mcp: '#00A896',
         btn_primary_bg: '#BB86FC', btn_secondary_bg: '#03DAC6',
         bg_btn_on: '#BB86FC', bg_btn_off: '#03DAC6',
@@ -885,7 +907,6 @@
       text_color_tertiary:  'text-color-tertiary',
       bd_primary:           'bd-primary',
       bd_secondary:         'bd-secondary',
-      badge_upgrade:        'badge-upgrade',
       bg_active:            'bg-active',
       bg_inactive:          'bg-inactive',
       bg_warning:            'bg-warning',
@@ -912,7 +933,11 @@
       bg_btn_off:           'bg-btn-off',
       bg_btn_pause:         'bg-btn-pause',
       bg_btn_hold:          'bg-btn-hold',
-      bd_btn_border:        'bd-btn-border'
+      bd_btn_border:        'bd-btn-border',
+      /* 슬라이드 토글(.btn-toggle)이 실제로 읽는 필드들. 토글 미리보기가
+         이 값들을 그대로 쓰므로, 여기 빠지면 미리보기만 안 따라온다. */
+      band_3:               'band-3',
+      toggle_track_off:     'toggle-track-off'
     };
 
     var themeDefaults = {{ theme_defaults | tojson | safe }};
@@ -952,10 +977,23 @@
       markPresetModified();
     }
 
+    // 붙여넣기를 실제로 받아 준다. 예전엔 hex 칸에 maxlength=7 이 걸려 있어,
+    // 이미 7자가 들어 있는 칸에 커서만 두고 붙여넣으면 브라우저가 삽입을 통째로
+    // 막았다 — "복사 붙여넣기가 안 된다"의 원인. maxlength 를 없앤 대신, 사람이
+    // 실제로 붙여넣는 모양을 여기서 정리한다:
+    //   "#dddddd" · "dddddd" · " #DDDDDD " · "#FF00AA#DDDDDD"(커서 뒤에 이어붙은
+    //   경우) · "rgb(...)" 가 아닌 형태의 앞뒤 잡문자
+    // 규칙은 하나다 — 문자열에서 16진수 6자리를 찾아 **마지막 것**을 쓴다.
+    // 이어붙은 경우 사용자가 방금 붙여넣은 쪽이 뒤에 오기 때문이다.
+    function normalizeHex(rawValue) {
+      var m = String(rawValue).toUpperCase().match(/[0-9A-F]{6}/g);
+      if (!m || !m.length) return null;
+      return '#' + m[m.length - 1];
+    }
+
     function syncFromHex(fieldName, rawValue) {
-      var val = rawValue.trim();
-      if (!val.startsWith('#')) val = '#' + val;
-      if (!isValidHex(val)) return; // wait for valid input
+      var val = normalizeHex(rawValue);
+      if (!val || !isValidHex(val)) return; // wait for valid input
       val = val.toUpperCase();
       var swatchEl = document.getElementById('swatch_' + fieldName);
       var hiddenEl = document.getElementById(fieldName);
@@ -1034,7 +1072,7 @@
       })
       .then(function (res) {
         return res.json().then(function (data) {
-          if (!res.ok) throw new Error(data.error || '{{_('Request failed')}}');
+          if (!res.ok) throw new Error(data.error || {{ _('Request failed')|tojson }});
           return data;
         });
       })
@@ -1056,7 +1094,7 @@
         }
       }
       if (!name) {
-        if (window.toastr) toastr.warning('{{_('Enter a preset name')}}');
+        if (window.toastr) toastr.warning({{ _('Enter a preset name')|tojson }});
         if (input) input.focus();
         return;
       }
@@ -1066,7 +1104,7 @@
         activePreset = USER_PRESET_PREFIX + name;
         clearModifiedBadge();
         if (input) input.value = '';
-        if (window.toastr) toastr.success('{{_('Preset saved')}}: ' + name);
+        if (window.toastr) toastr.success({{ _('Preset saved')|tojson }} + ': ' + name);
       });
     }
 
@@ -1074,13 +1112,13 @@
       var select = document.getElementById('theme-preset-select');
       if (!select || select.value.indexOf(USER_PRESET_PREFIX) !== 0) return;
       var name = select.value.slice(USER_PRESET_PREFIX.length);
-      if (!window.confirm('{{_('Delete preset')}} "' + name + '"?')) return;
+      if (!window.confirm({{ _('Delete preset')|tojson }} + ' "' + name + '"?')) return;
       presetRequest('DELETE', { name: name }, function (data) {
         userPresets = data.presets || {};
         select.value = '';
         activePreset = null;
         rebuildUserPresetOptions();
-        if (window.toastr) toastr.success('{{_('Preset deleted')}}: ' + name);
+        if (window.toastr) toastr.success({{ _('Preset deleted')|tojson }} + ': ' + name);
       });
     }
 
@@ -1194,17 +1232,17 @@
       }
       closePopover();
 
-      var label = anchorEl.getAttribute('data-color-label') || '{{_('Color')}}';
+      var label = anchorEl.getAttribute('data-color-label') || {{ _('Color')|tojson }};
 
       // Collect defined color slots (중복 필드는 한 번만 — 같은 토큰을 두 줄로
       // 보여주면 한쪽만 바뀐 것처럼 보인다)
       var slots = [];
       var seenKeys = {};
       [
-        ['data-color-bg',     '{{_('Background Color')}}'],
-        ['data-color-text',   '{{_('Text Color')}}'],
-        ['data-color-text-2', '{{_('Subtext Color')}}'],
-        ['data-color-border', '{{_('Border Color')}}']
+        ['data-color-bg',     {{ _('Background Color')|tojson }}],
+        ['data-color-text',   {{ _('Text Color')|tojson }}],
+        ['data-color-text-2', {{ _('Subtext Color')|tojson }}],
+        ['data-color-border', {{ _('Border Color')|tojson }}]
       ].forEach(function (pair) {
         var key = anchorEl.getAttribute(pair[0]);
         if (!key || seenKeys[key]) return;
@@ -1252,8 +1290,7 @@
         hexTextInput.type = 'text';
         hexTextInput.className = 'aot-color-popover-hex-input';
         hexTextInput.value = currentVal;
-        hexTextInput.maxLength = 7;
-        hexTextInput.setAttribute('spellcheck', 'false');
+                hexTextInput.setAttribute('spellcheck', 'false');
         hexTextInput.setAttribute('aria-label', slot.label + ' hex');
         hexTextInput.setAttribute('pattern', '#[0-9A-Fa-f]{6}');
 
@@ -1265,20 +1302,18 @@
         });
 
         // hex text → validate and apply
+        // 붙여넣기 처리는 목록 쪽 hex 칸과 같은 규칙(normalizeHex)을 쓴다.
         hexTextInput.addEventListener('input', function () {
-          var val = this.value.trim();
-          if (!val.startsWith('#')) val = '#' + val;
-          if (isValidHex(val)) {
-            val = val.toUpperCase();
+          var val = normalizeHex(this.value);
+          if (val && isValidHex(val)) {
             nativeInput.value = val;
             applyPopoverValue(slot.key, val);
           }
         });
 
         hexTextInput.addEventListener('blur', function () {
-          var val = this.value.trim();
-          if (!val.startsWith('#')) val = '#' + val;
-          this.value = isValidHex(val) ? val.toUpperCase() : nativeInput.value.toUpperCase();
+          var val = normalizeHex(this.value);
+          this.value = val || nativeInput.value.toUpperCase();
         });
 
         row.appendChild(slotLabel);
@@ -1372,9 +1407,15 @@
         });
         // On blur normalize casing and add # if missing
         hexInput.addEventListener('blur', function () {
-          var val = this.value.trim();
-          if (!val.startsWith('#')) val = '#' + val;
-          if (isValidHex(val)) this.value = val.toUpperCase();
+          var val = normalizeHex(this.value);
+          if (val) {
+            this.value = val;
+          } else {
+            // 알아볼 수 없는 값이면 조용히 두지 않고 지금 저장된 값으로 되돌린다
+            // — 그래야 "바꿨는데 저장이 안 됐다" 가 생기지 않는다.
+            var hiddenEl = document.getElementById(this.getAttribute('data-field'));
+            if (hiddenEl && hiddenEl.value) this.value = hiddenEl.value.toUpperCase();
+          }
         });
       });
 

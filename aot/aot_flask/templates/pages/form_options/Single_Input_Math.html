@@ -2,11 +2,10 @@
 <div class="aot-modal-option-row">
   <label class="aot-modal-option-label">{{form.calibrate_sensor_measure.label.text}}</label>
   <div class="aot-modal-option-control">
-    <select class="form-control aot-modern-select selectpicker" 
-            id="calibrate_sensor_measure" 
-            name="calibrate_sensor_measure" 
+    <select class="form-control aot-modern-select selectpicker"
+            id="calibrate_sensor_measure"
+            name="calibrate_sensor_measure"
             title="{{_('No Conversion')}}"
-            data-container="false"
             data-style="btn-white">
       <option value="">{{_('No Conversion')}}</option>
     {% if choices_input or choices_function %}

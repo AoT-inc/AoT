@@ -121,9 +121,13 @@ body.body-no-gap {
     margin-right: 0;
 }
 
+/* 고른 항목은 다른 목록과 같은 색으로 칠한다.
+   예전에는 `var(--gray)` 를 `!important` 로 줬는데, aot.css 가 `--gray` 를
+   브랜드 보조색(#5E6B64, 어두운 색)으로 재정의해 두어 어두운 바탕에
+   `color: inherit`(어두운 글자)이 얹혀 글자가 잘 안 보였다. */
 .form-dropdown.bootstrap-select .dropdown-menu li.selected a {
-    background-color: var(--gray) !important;
-    color: inherit;
+    background-color: var(--aot-color-dark);
+    color: var(--aot-color-text-tertiary);
 }
 
 /* Dropdown button min width as requested */

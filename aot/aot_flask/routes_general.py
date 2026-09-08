@@ -119,8 +119,14 @@ def custom_css():
         # 각 custom_ui 필드 → [레거시 별칭, --aot-* 실토큰] 목록.
         # 레거시 별칭만 덮어쓰면 --aot-* 토큰을 직접 소비하는 컴포넌트(위젯 등)에
         # 사용자 지정 색이 반영되지 않으므로 두 이름을 함께 발행한다.
-        # bg_btn_on/off 는 --aot-btn-bg-active/inactive 와 충돌하므로(별도 aot 토큰
-        # 없음) 레거시 이름만 발행한다. 매핑 근거: docs/design/color-system.md
+        # bg_btn_on/off ("출력 행의 ON/OFF 버튼")는 btn_primary_bg/
+        # btn_secondary_bg("주/보조 버튼 배경" — 저장·활성화·탭 등 전역
+        # 버튼)와 이름이 비슷해 보이지만 다른 필드다. 실토큰도 따로 있다
+        # (--aot-btn-bg-output-on/-off, aot-theme-variables.css). 2026-09-08
+        # 이전에는 여기서 --aot-btn-bg-active/-inactive(주/보조 버튼용)를
+        # 함께 발행해, "버튼 켜짐/꺼짐" 을 바꿔도 출력 화면에 반영되지
+        # 않았다 — 두 필드 기본값이 우연히 같아 겉보기엔 맞아 보였다.
+        # 매핑 근거: docs/design/color-system.md
         #
         # 2026-07 필드 통합: btn_primary_bg/btn_secondary_bg/badge_upgrade 는
         # 여러 필드가 합쳐진 것이라 이전보다 토큰 목록이 길다(color-system.md §3-2).
@@ -140,7 +146,6 @@ def custom_css():
             # dark_overridden 이 이 두 실토큰만 걸러 custom-dark.css 값을 지킨다.
             'bd_primary': ['--bd-primary', '--aot-surface-card'],
             'bd_secondary': ['--bd-secondary', '--aot-surface-body'],
-            'badge_upgrade': ['--bg-upgrade', '--aot-bg-upgrade', '--bg-btn-upgrade', '--aot-btn-bg-upgrade'],
             'bg_active': ['--bg-active', '--aot-bg-active'],
             'bg_inactive': ['--bg-inactive', '--aot-bg-inactive'],
             # **일시정지** 카드 배경(사용자가 의도적으로 멈춘 상태). 소비처:
@@ -181,18 +186,15 @@ def custom_css():
             'tint_danger_fg':  ['--aot-tint-danger-fg'],
             'tint_info_bg':    ['--aot-tint-info-bg'],
             'tint_info_fg':    ['--aot-tint-info-fg'],
-            'tint_success_border': ['--aot-tint-success-border'],
-            'tint_warning_border': ['--aot-tint-warning-border'],
-            'tint_danger_border':  ['--aot-tint-danger-border'],
-            'tint_info_border':    ['--aot-tint-info-border'],
             'bg_llm': ['--bg-llm', '--aot-color-llm'],
             'bg_mcp': ['--bg-mcp', '--aot-color-mcp'],
             'btn_primary_bg': ['--bd-tertiary', '--bd-btn-primary', '--aot-btn-bg-primary', '--bg-btn-active', '--aot-btn-bg-active'],
             'btn_secondary_bg': ['--bd-btn-secondary', '--aot-btn-bg-secondary', '--bg-btn-inactive', '--aot-btn-bg-inactive'],
-            'bg_btn_on': ['--bg-btn-on'],
-            'bg_btn_off': ['--bg-btn-off'],
+            'bg_btn_on': ['--bg-btn-on', '--aot-btn-bg-output-on'],
+            'bg_btn_off': ['--bg-btn-off', '--aot-btn-bg-output-off'],
             'bg_btn_pause': ['--bg-btn-pause', '--aot-btn-bg-pause'],
             'bg_btn_hold': ['--bg-btn-hold', '--aot-btn-bg-hold'],
+            'toggle_track_off': ['--aot-toggle-track-off'],
             'bd_btn_border': ['--bd-btn-border', '--aot-btn-border-primary'],
             'band_1': ['--aot-band-1'],
             'band_2': ['--aot-band-2'],

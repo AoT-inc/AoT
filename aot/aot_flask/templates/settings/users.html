@@ -6,8 +6,7 @@
 {% block title %} - {{dict_translation['settings']['title'] + ': ' + dict_translation['user']['title']}}{% endblock %}
 
 {% block head %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/gridstack.css') }}" />
-<link rel="stylesheet" href="/static/css/gridstack-custom.css?v=20260611z1" />
+<link rel="stylesheet" href="{{ url_for('static', filename='css/gridstack-custom.css') }}" />
 <link rel="stylesheet" href="{{ url_for('static', filename='css/aot-entry-ui.css') }}" />
 <script src="{{ url_for('static', filename='js/vendor/gridstack-all.js') }}"></script>
 <style>
@@ -318,7 +317,7 @@
               <div class="aot-modal-option-row">
                 <label class="aot-modal-option-label">{{form_add_user.addRole.label(class_='mb-0')}}</label>
                 <div class="aot-modal-option-control">
-                  <select name="addRole" class="form-control aot-modern-input">
+                  <select name="addRole" class="form-control aot-modern-select">
                     <option value="Admin">{{_('Admin')}}</option>
                     {% for each_role in user_roles if each_role.name != 'Admin' %}
                     <option value="{{each_role.name}}">{{each_role.name}}</option>
@@ -330,7 +329,7 @@
               <div class="aot-modal-option-row">
                 <label class="aot-modal-option-label">{{form_add_user.theme.label(class_='mb-0')}}</label>
                 <div class="aot-modal-option-control">
-                  <select name="theme" class="form-control aot-modern-input">
+                  <select name="theme" class="form-control aot-modern-select">
                     {% for value, name in themes %}
                     <option value="{{value|e}}" {% if value == 'spacelab' %}selected{% endif %}>{{name|e}}</option>
                     {% endfor -%}
@@ -502,7 +501,7 @@
             data: JSON.stringify(items, null, '  '),
             contentType: "application/json; charset=utf-8",
             error: function () {
-              window.showToast('{{_("Error: Unable to communicate with server.")}}', 'error');
+              window.showToast({{ _("Error: Unable to communicate with server.")|tojson }}, 'error');
             }
           });
         }, 0);
@@ -545,7 +544,7 @@
 
       $drawer.attr('data-config-uid-target', uid);
       $drawer.find('.modal-title').text($(this).data('drawer-title') || '');
-      swap('<div class="modal-body"><div class="aot-modal-container">{{_("Loading")}}...</div></div>');
+      swap('<div class="modal-body"><div class="aot-modal-container">' + {{ _("Loading")|tojson }} + '...</div></div>');
       $drawer.modal('show');
       // One shared drawer for every row: switching from card A to card B does not
       // re-fire show.bs.modal, so the row highlight has to be moved by hand or A
@@ -553,7 +552,7 @@
       if (window.AoTWidgetDrawer) { window.AoTWidgetDrawer.activateByUid(uid); }
 
       $.get(url).done(swap).fail(function () {
-        swap('<div class="modal-body"><div class="aot-modal-container">{{_("Error: Unable to communicate with server.")}}</div></div>');
+        swap('<div class="modal-body"><div class="aot-modal-container">' + {{ _("Error: Unable to communicate with server.")|tojson }} + '</div></div>');
       });
     });
 
@@ -589,7 +588,7 @@
         let needs_reload = (action === 'user_save' || action === 'user_role_save' ||
                             action === 'user_group_save' || action === 'user_group_delete');
 
-        window.showToast('{{_("Command sent. Please wait.")}}', 'info');
+        window.showToast({{ _("Command sent. Please wait.")|tojson }}, 'info');
         $.ajax({
           type: "POST",
           url: '/settings/users_submit',
@@ -608,7 +607,7 @@
                 // Show the outcome before the page goes away — reloading
                 // immediately swallows the toast the user just earned.
                 if (data.data.messages.success.length !== 0) {
-                  window.showToast('{{_("Success")}}: ' + data.data.messages.success.join(", "), 'success');
+                  window.showToast({{ _("Success")|tojson }} + ': ' + data.data.messages.success.join(", "), 'success');
                 }
                 setTimeout(function () { window.location.reload(); }, 800);
                 return;
@@ -642,20 +641,20 @@
                 $drawer.modal('hide');
               }
               if ('warning' in data.data.messages && data.data.messages.warning.length !== 0) {
-                window.showToast('{{_("Warning")}}: ' + data.data.messages.warning.join(", "), 'warning');
+                window.showToast({{ _("Warning")|tojson }} + ': ' + data.data.messages.warning.join(", "), 'warning');
               }
               if ('info' in data.data.messages && data.data.messages.info.length !== 0) {
-                window.showToast('{{_("Info")}}: ' + data.data.messages.info.join(", "), 'info');
+                window.showToast({{ _("Info")|tojson }} + ': ' + data.data.messages.info.join(", "), 'info');
               }
               if ('success' in data.data.messages && data.data.messages.success.length !== 0) {
-                window.showToast('{{_("Success")}}: ' + data.data.messages.success.join(", "), 'success');
+                window.showToast({{ _("Success")|tojson }} + ': ' + data.data.messages.success.join(", "), 'success');
               }
             } else {
-              window.showToast('{{_("Error")}}: ' + data.data.messages.error.join(", "), 'error');
+              window.showToast({{ _("Error")|tojson }} + ': ' + data.data.messages.error.join(", "), 'error');
             }
           },
           error: function() {
-            window.showToast('{{_("Error: Unable to communicate with server.")}}', 'error');
+            window.showToast({{ _("Error: Unable to communicate with server.")|tojson }}, 'error');
           }
         });
         e.preventDefault();

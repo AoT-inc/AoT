@@ -29839,3 +29839,162 @@ msgstr "เป้าหมายมาจากโปรแกรมที่ผ
 msgid "By stage"
 msgstr "ตามระยะ"
 
+
+msgid "Vent"
+msgstr "ช่องระบายอากาศ"
+
+msgid "Mist"
+msgstr "พ่นหมอก"
+
+msgid "Devices under automatic control"
+msgstr "อุปกรณ์ภายใต้การควบคุมอัตโนมัติ"
+
+msgid "%(n)s excluded"
+msgstr "ยกเว้น %(n)s รายการ"
+
+msgid "Turn a device off to keep automatic control from moving it."
+msgstr "ปิดอุปกรณ์เพื่อไม่ให้การควบคุมอัตโนมัติสั่งงานอุปกรณ์นั้น"
+
+msgid "Safety gates will not move it either."
+msgstr "เกตความปลอดภัยก็จะไม่สั่งงานอุปกรณ์นั้นเช่นกัน"
+
+msgid "Select a linked facility first."
+msgstr "โปรดเลือกสิ่งปลูกสร้างที่เชื่อมโยงก่อน"
+
+msgid "This facility has no actuators yet."
+msgstr "สิ่งปลูกสร้างนี้ยังไม่มีแอคชูเอเตอร์"
+
+msgid "Could not load the device list. Existing settings are kept."
+msgstr "ไม่สามารถโหลดรายการอุปกรณ์ได้ การตั้งค่าเดิมยังคงถูกเก็บไว้"
+
+msgid "Excluded actuators (raw)"
+msgstr "แอคชูเอเตอร์ที่ถูกยกเว้น (ค่าดิบ)"
+
+msgid "Comma-separated Output IDs excluded from automatic control. Normally set with the toggles above rather than typed here."
+msgstr "รหัสเอาต์พุตที่ยกเว้นจากการควบคุมอัตโนมัติ คั่นด้วยเครื่องหมายจุลภาค โดยปกติให้ตั้งค่าด้วยสวิตช์สลับด้านบนแทนการพิมพ์ที่นี่"
+
+msgid "Proactively shift temperature/humidity setpoints and inhibit ventilation before adverse weather arrives. Uses this facility's own forecast source if one is linked in the facility editor's weather bindings (any service — KMA, OpenWeatherMap, Open-Meteo); otherwise falls back to the system-wide KMA short-term forecast."
+msgstr "ปรับค่าตั้งอุณหภูมิ/ความชื้นและระงับการระบายอากาศล่วงหน้าก่อนที่สภาพอากาศเลวร้ายจะมาถึง ระบบจะใช้แหล่งพยากรณ์ของสถานที่นี้เองหากมีการเชื่อมโยงไว้ในแท็บการเชื่อมโยงสภาพอากาศของตัวแก้ไขสถานที่ (บริการใดก็ได้ — KMA, OpenWeatherMap, Open-Meteo) หากไม่มี ระบบจะใช้พยากรณ์ระยะสั้นของ KMA ในระดับทั้งระบบแทน"
+
+msgid "How many hours ahead to check for incoming adverse weather (1–6 h) when using the system-wide KMA fallback above. Longer lookahead gives earlier warning but may over-correct. Ignored when this facility has its own forecast source linked — that source already applies its own lookahead."
+msgstr "จำนวนชั่วโมงล่วงหน้าที่จะตรวจสอบสภาพอากาศเลวร้ายที่กำลังจะมาถึง (1–6 ชั่วโมง) เมื่อใช้พยากรณ์สำรอง KMA ระดับทั้งระบบด้านบน ระยะเวลาล่วงหน้าที่นานขึ้นจะช่วยแจ้งเตือนได้เร็วขึ้น แต่อาจทำให้ปรับแก้มากเกินไป ค่านี้จะถูกละเว้นเมื่อสถานที่นี้มีแหล่งพยากรณ์ของตัวเองเชื่อมโยงอยู่ — เพราะแหล่งนั้นใช้ระยะเวลาล่วงหน้าของตัวเองอยู่แล้ว"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Notice Category Filter"
+msgstr "ตัวกรองหมวดหมู่ประกาศ"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Notes Space"
+msgstr "พื้นที่บันทึก"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Space"
+msgstr "พื้นที่"
+
+#: aot/widgets/widget_notice.py:1
+msgid "None selected"
+msgstr "ไม่ได้เลือก"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Notices"
+msgstr "ประกาศ"
+
+#: aot/widgets/widget_notice.py:1
+msgid "No notes yet."
+msgstr "ยังไม่มีบันทึก"
+
+#: aot/widgets/widget_notice.py:1
+msgid "(Attachment only)"
+msgstr "(มีเฉพาะไฟล์แนบ)"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Notice & Notes Board"
+msgstr "บอร์ดประกาศและบันทึก"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Displays the latest notice board post titles and/or the notes written in a chosen site, zone, plot, or facility (and everything nested under it). Clicking a notice opens the full post (content, poll, replies, acknowledge) in a popup; clicking a note opens it in the shared notes panel. Users with write permission can also create, edit, and delete posts directly from the widget."
+msgstr "แสดงชื่อโพสต์ประกาศล่าสุดและ/หรือบันทึกที่เขียนไว้ในไซต์ โซน แปลง หรือสิ่งอำนวยความสะดวกที่เลือก (รวมถึงทุกอย่างที่อยู่ภายใต้นั้น) การคลิกประกาศจะเปิดโพสต์ทั้งหมด (เนื้อหา โพล การตอบกลับ การรับทราบ) ในป๊อปอัป การคลิกบันทึกจะเปิดในแผงบันทึกที่ใช้ร่วมกัน ผู้ใช้ที่มีสิทธิ์เขียนยังสามารถสร้าง แก้ไข และลบโพสต์ได้โดยตรงจากวิดเจ็ต"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Show Notices"
+msgstr "แสดงประกาศ"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Display the notice board section"
+msgstr "แสดงส่วนบอร์ดประกาศ"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Number of Notices"
+msgstr "จำนวนประกาศ"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Number of Notes"
+msgstr "จำนวนบันทึก"
+
+#: aot/widgets/widget_notice.py:1
+msgid "How many of the latest notes to display"
+msgstr "แสดงบันทึกล่าสุดกี่รายการ"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Include Nested Spaces"
+msgstr "รวมพื้นที่ที่ซ้อนอยู่ภายใน"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Sort Notes By"
+msgstr "เรียงบันทึกตาม"
+
+#: aot/widgets/widget_notice.py:1
+msgid "How to order the note list"
+msgstr "วิธีจัดเรียงรายการบันทึก"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Note Category/Tag Contains"
+msgstr "หมวดหมู่/แท็กของบันทึกมีคำว่า"
+
+#: aot/widgets/widget_notice.py:1
+msgid "How often to refresh the notice/notes lists"
+msgstr "ความถี่ในการรีเฟรชรายการประกาศ/บันทึก"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Notes written in this site/zone/plot/facility (and, if \"Include Nested Spaces\" above is on, everything nested under it) are shown."
+msgstr "จะแสดงบันทึกที่เขียนไว้ในไซต์/โซน/แปลง/สิ่งอำนวยความสะดวกนี้ (และถ้าเปิด \"รวมพื้นที่ที่ซ้อนอยู่ภายใน\" ด้านบน จะรวมทุกอย่างที่อยู่ภายใต้นั้นด้วย)"
+
+#: aot/widgets/widget_notice.py:1
+msgid "No sites, zones, plots, or facilities exist yet."
+msgstr "ยังไม่มีไซต์ โซน แปลง หรือสิ่งอำนวยความสะดวก"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Nothing selected — turn on \"Show Notices\" and/or \"Show Notes\" in the widget settings."
+msgstr "ไม่ได้เลือกสิ่งใด — เปิด \"แสดงประกาศ\" และ/หรือ \"แสดงบันทึก\" ในการตั้งค่าวิดเจ็ต"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Choose a space in the widget settings to show notes."
+msgstr "เลือกพื้นที่ในการตั้งค่าวิดเจ็ตเพื่อแสดงบันทึก"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Display notes written in a chosen space (see Space below)"
+msgstr "แสดงบันทึกที่เขียนไว้ในพื้นที่ที่เลือก (ดู \"พื้นที่\" ด้านล่าง)"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Also show notes written in zones/plots/facilities/devices nested under the chosen space"
+msgstr "แสดงบันทึกที่เขียนไว้ในโซน/แปลง/สิ่งอำนวยความสะดวก/อุปกรณ์ที่ซ้อนอยู่ภายใต้พื้นที่ที่เลือกด้วย"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Newest First"
+msgstr "ใหม่สุดก่อน"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Only show notes whose category or tags contain this text (optional)"
+msgstr "แสดงเฉพาะบันทึกที่หมวดหมู่หรือแท็กมีข้อความนี้ (ไม่บังคับ)"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Show Notes List"
+msgstr "แสดงรายการบันทึก"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Display notes matching the filter below"
+msgstr "แสดงบันทึกที่ตรงกับตัวกรองด้านล่าง"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Notes Filter"
+msgstr "ตัวกรองบันทึก"

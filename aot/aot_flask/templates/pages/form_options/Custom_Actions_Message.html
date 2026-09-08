@@ -1,5 +1,15 @@
+{#- ⚠ **컨테이너 밖에서 include 할 것.** 이 설명은 그 컨테이너 안의 버튼들이
+    아니라 컨테이너 **자체**에 대한 것이다 — 제목과 상자 사이에 둔다
+    (2026-09-08 사용자 지적: "컨테이너 안에 있는게 문제라는 말이야").
+    호출부가 컨테이너를 닫고 이 include 를 넣은 뒤 새 컨테이너를 여는
+    책임을 진다 — 이 파일 자체는 그 판단을 할 수 없다(같은 컨테이너를
+    두 곳(input/function)에서 부르므로).
+
+    스타일은 전역 클래스만 쓴다 — `.aot-modal-body-text` 가 설명 문구의
+    문자색·크기를, `.aot-modal-container-intro` 가 상자와 같은 좌우 여백을
+    낸다. 새 클래스를 만들지 않는다. -#}
 {% if 'custom_commands_message' in dict_options %}
-<div class="col-12" style="padding-bottom: 0.5em">
+<div class="aot-modal-body-text aot-modal-container-intro">
   {{dict_options['custom_commands_message']|safe}}
 </div>
 {% endif %}

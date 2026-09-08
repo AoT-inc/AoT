@@ -63,7 +63,7 @@
         <div class="aot-modal-option-row">
             <label class="aot-modal-option-label">{{form_function_base.tab_id.label(class_='mb-0')}}</label>
             <div class="aot-modal-option-control">
-                <select name="tab_id" class="form-control aot-modern-input">
+                <select name="tab_id" class="form-control aot-modern-select">
                     {% for tab in tabs %}
                     <option value="{{tab.unique_id}}" {% if tab.unique_id == each_function.tab_id %}selected{% endif %}>{{tab.name}}</option>
                     {% endfor %}
@@ -142,7 +142,6 @@
         <div class="aot-modal-option-control">
           <div class="d-flex align-items-center aot-control-composite">
             <select class="form-control aot-modern-select selectpicker mr-2" data-style="btn-white" data-live-search="true"
-              data-container="body"
               title="{{_('Select Action')}}" id="action_type_{{each_function.unique_id}}"
               name="action_type" style="flex: 2 !important;">
               {% for value, name in choices_actions %}

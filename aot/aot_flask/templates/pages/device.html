@@ -28,8 +28,7 @@
     font-size: 0.85rem;
   }
 </style>
-<link rel="stylesheet" href="{{ url_for('static', filename='css/gridstack.css') }}" />
-<link rel="stylesheet" href="/static/css/gridstack-custom.css?v=20260611z1" />
+<link rel="stylesheet" href="{{ url_for('static', filename='css/gridstack-custom.css') }}" />
 <link rel="stylesheet" href="{{ url_for('static', filename='css/aot-entry-ui.css') }}" />
 <script src="{{ url_for('static', filename='js/vendor/gridstack-all.js') }}"></script>
 <script src="{{ asset('app-output-state') }}"></script>
@@ -49,7 +48,7 @@
          검색창 없는 단순 목록을 뜻하는 것으로 보고, data-live-search 만
          제거해 검색 콤보를 없앴다(장치 종류가 몇 개뿐이라 검색이 불필요). #}
       <select id="device_type_select" class="selectpicker aot-standard-select"
-        data-style="btn btn-primary aot-roundbox"
+        data-style="btn aot-pill-btn aot-pill-btn-primary"
         title="{{ _('Device') }}: {{ _('Select') }}">
         {% for choice in choices_devices %}
         <option value="{{ choice.value }}">{{ choice.item }}</option>
@@ -57,7 +56,7 @@
       </select>
     </div>
     <div class="col-auto">
-      <button id="device_add_btn" class="btn btn-primary" type="button">{{ _('Add') }}</button>
+      <button id="device_add_btn" class="btn aot-pill-btn aot-pill-btn-primary" type="button">{{ _('Add') }}</button>
     </div>
   </div>
 
@@ -178,9 +177,9 @@
   // 불가) 표시는 여기서만 계산하고 새 판정 로직은 만들지 않는다(design plan
   // 3.3 — 기존 comm_* 계층을 그대로 소비).
   function deviceBadge(hasAnyCapable, hasFault) {
-    if (hasFault) return { text: "{{ _('Fault') }}", cls: 'fault-background' };
-    if (hasAnyCapable) return { text: "{{ _('Device OK') }}", cls: 'active-background' };
-    return { text: "{{ _('Unverifiable') }}", cls: 'inactive-background' };
+    if (hasFault) return { text: {{ _('Fault')|tojson }}, cls: 'fault-background' };
+    if (hasAnyCapable) return { text: {{ _('Device OK')|tojson }}, cls: 'active-background' };
+    return { text: {{ _('Unverifiable')|tojson }}, cls: 'inactive-background' };
   }
 
   function submitFunctionAction(fields, onDone, queryString) {
@@ -234,7 +233,7 @@
     var sel = document.getElementById('device_type_select');
     var deviceType = sel.value;
     if (!deviceType) {
-      window.showToast("{{ _('Select a device type first') }}", 'error');
+      window.showToast({{ _('Select a device type first')|tojson }}, 'error');
       return;
     }
     submitFunctionAction({
@@ -287,10 +286,10 @@
     var html = '';
 
     if (summary.inputs.length) {
-      html += '<div class="aot-modal-group-title">{{ _("Measurement Channels") }}</div><div class="aot-modal-container">';
+      html += '<div class="aot-modal-group-title">' + {{ _("Measurement Channels")|tojson }} + '</div><div class="aot-modal-container">';
       summary.inputs.forEach(function (inp) {
         var inactiveTag = inp.is_activated ? '' :
-          ' <span class="text-muted" style="font-size: 0.75em;">({{ _("Input inactive") }})</span>';
+          ' <span class="text-muted" style="font-size: 0.75em;">(' + {{ _("Input inactive")|tojson }} + ')</span>';
         inp.channels.forEach(function (ch) {
           if (!ch.measurement_id) return;
           html += '<div class="aot-modal-option-row" data-measurement-id="' + ch.measurement_id + '">' +
@@ -304,7 +303,7 @@
     }
 
     if (summary.outputs.length) {
-      html += '<div class="aot-modal-group-title">{{ _("Control Channels") }}</div><div class="aot-modal-container">';
+      html += '<div class="aot-modal-group-title">' + {{ _("Control Channels")|tojson }} + '</div><div class="aot-modal-container">';
       summary.outputs.forEach(function (out) {
         out.channels.forEach(function (ch) {
           html += '<div class="aot-modal-option-row" data-output-id="' + out.unique_id + '" data-channel="' + ch.channel + '">' +
@@ -318,7 +317,7 @@
     }
 
     if (!summary.inputs.length && !summary.outputs.length) {
-      html = '<span class="text-muted">{{ _("This device has no measurements or controls yet.") }}</span>';
+      html = '<span class="text-muted">' + {{ _("This device has no measurements or controls yet.")|tojson }} + '</span>';
     }
 
     el.innerHTML = html;
@@ -346,7 +345,7 @@
   // fragment와 같은 aot-modal-container 박스 안에서 자연스럽게 보인다.
   function _buildCandidateDropdown(selectId, btnId, linkLabel, items) {
     if (!items.length) {
-      return '<div class="aot-modal-option-row"><span class="text-muted">{{ _("None") }}</span></div>';
+      return '<div class="aot-modal-option-row"><span class="text-muted">' + {{ _("None")|tojson }} + '</span></div>';
     }
     var html = '<div class="aot-modal-option-row">' +
       '<div class="d-flex" style="gap: 0.5em; align-items: center; width: 100%;">' +
@@ -383,31 +382,31 @@
   // 보이고, 관계가 보이던가").
   function renderLinkSection(deviceId, summary, cand) {
     var el = document.getElementById('device_settings_modal_link');
-    var html = '<div class="aot-modal-group-title">{{ _("Input / Output") }}</div><div class="aot-modal-container">';
+    var html = '<div class="aot-modal-group-title">' + {{ _("Input / Output")|tojson }} + '</div><div class="aot-modal-container">';
 
     var available = cand.inputs.map(function (i) { return { type: 'input', id: i.unique_id, name: i.name }; })
       .concat(cand.outputs.map(function (o) { return { type: 'output', id: o.unique_id, name: o.name }; }));
-    html += _buildCandidateDropdown('link_avail_io_' + deviceId, 'link_avail_io_btn_' + deviceId, '{{ _("Link") }}', available);
+    html += _buildCandidateDropdown('link_avail_io_' + deviceId, 'link_avail_io_btn_' + deviceId, {{ _("Link")|tojson }}, available);
 
     // 각 항목 이름을 그 Input/Output 정본 페이지로 가는 링크로 만든다 —
     // 채널 행마다 박혀 있던 "설정 →"를 없앤 대신(사용자 지적, 2026-07-28),
     // 실제 설정/조작으로 들어가는 통로를 여기 한 곳으로 모은 것이다.
-    html += '<div class="aot-modal-subgroup-title">{{ _("Currently linked") }}</div>';
+    html += '<div class="aot-modal-subgroup-title">' + {{ _("Currently linked")|tojson }} + '</div>';
     var linked = summary.inputs.map(function (i) { return { type: 'input', id: i.unique_id, name: i.name, tab_id: i.tab_id, secondary: false }; })
       .concat(summary.outputs.map(function (o) { return { type: 'output', id: o.unique_id, name: o.name, tab_id: o.tab_id, secondary: false }; }))
       .concat((summary.secondary_inputs || []).map(function (i) { return { type: 'input', id: i.unique_id, name: i.name, tab_id: i.tab_id, secondary: true }; }))
       .concat((summary.secondary_outputs || []).map(function (o) { return { type: 'output', id: o.unique_id, name: o.name, tab_id: o.tab_id, secondary: true }; }));
     if (!linked.length) {
-      html += '<div class="aot-modal-option-row"><span class="text-muted">{{ _("None") }}</span></div>';
+      html += '<div class="aot-modal-option-row"><span class="text-muted">' + {{ _("None")|tojson }} + '</span></div>';
     } else {
       linked.forEach(function (m) {
         var href = (m.type === 'input' ? '/input' : '/output') + (m.tab_id ? ('?tab_id=' + m.tab_id) : '');
         html += '<div class="aot-modal-option-row">' +
           '<label class="aot-modal-option-label"><a href="' + href + '">' + m.name + '</a>' +
-          (m.secondary ? ' <span class="text-muted">({{ _("Reference") }})</span>' : '') + '</label>' +
+          (m.secondary ? ' <span class="text-muted">(' + {{ _("Reference")|tojson }} + ')</span>' : '') + '</label>' +
           '<div class="aot-modal-option-control">' +
           '<button type="button" class="btn aot-pill-btn aot-pill-btn-primary btn-sm" ' +
-          'onclick="AoTDeviceUnlink(\'' + deviceId + '\',\'' + m.type + '\',\'' + m.id + '\')">{{ _("Unlink") }}</button>' +
+          'onclick="AoTDeviceUnlink(\'' + deviceId + '\',\'' + m.type + '\',\'' + m.id + '\')">' + {{ _("Unlink")|tojson }} + '</button>' +
           '</div></div>';
       });
     }
@@ -423,22 +422,22 @@
   // renderLinkSection과 동일하게 조작 먼저 → 서브헤딩 → 목록 순서로 통일한다.
   function renderSubdevicesSection(deviceId, summary, cand) {
     var el = document.getElementById('device_settings_modal_subdevices');
-    var html = '<div class="aot-modal-group-title">{{ _("Sub-devices") }}</div><div class="aot-modal-container">';
+    var html = '<div class="aot-modal-group-title">' + {{ _("Sub-devices")|tojson }} + '</div><div class="aot-modal-container">';
 
     var devs = (cand.devices || []).map(function (d) { return { type: 'device', id: d.unique_id, name: d.name }; });
-    html += _buildCandidateDropdown('link_avail_dev_' + deviceId, 'link_avail_dev_btn_' + deviceId, '{{ _("Link") }}', devs);
+    html += _buildCandidateDropdown('link_avail_dev_' + deviceId, 'link_avail_dev_btn_' + deviceId, {{ _("Link")|tojson }}, devs);
 
-    html += '<div class="aot-modal-subgroup-title">{{ _("Currently linked") }}</div>';
+    html += '<div class="aot-modal-subgroup-title">' + {{ _("Currently linked")|tojson }} + '</div>';
     var subs = summary.sub_devices || [];
     if (!subs.length) {
-      html += '<div class="aot-modal-option-row"><span class="text-muted">{{ _("None") }}</span></div>';
+      html += '<div class="aot-modal-option-row"><span class="text-muted">' + {{ _("None")|tojson }} + '</span></div>';
     } else {
       subs.forEach(function (d) {
         html += '<div class="aot-modal-option-row">' +
           '<label class="aot-modal-option-label"><a href="/device#device_card_' + d.unique_id + '">' + d.name + '</a></label>' +
           '<div class="aot-modal-option-control">' +
           '<button type="button" class="btn aot-pill-btn aot-pill-btn-primary btn-sm" ' +
-          'onclick="AoTDeviceUnlink(\'' + deviceId + '\',\'device\',\'' + d.unique_id + '\')">{{ _("Unlink") }}</button>' +
+          'onclick="AoTDeviceUnlink(\'' + deviceId + '\',\'device\',\'' + d.unique_id + '\')">' + {{ _("Unlink")|tojson }} + '</button>' +
           '</div></div>';
       });
     }
@@ -465,7 +464,7 @@
       body: JSON.stringify({ type: type, id: id })
     }).then(function (r) { return r.json(); }).then(function (data) {
       if (data.error) { window.showToast(data.error, 'error'); return; }
-      window.showToast("{{ _('Linked') }}", 'success');
+      window.showToast({{ _('Linked')|tojson }}, 'success');
       refreshDeviceSettingsModal(deviceId);
     });
   };
@@ -477,7 +476,7 @@
       body: JSON.stringify({ type: type, id: id })
     }).then(function (r) { return r.json(); }).then(function (data) {
       if (data.error) { window.showToast(data.error, 'error'); return; }
-      window.showToast("{{ _('Unlinked') }}", 'success');
+      window.showToast({{ _('Unlinked')|tojson }}, 'success');
       refreshDeviceSettingsModal(deviceId);
     });
   };
@@ -517,7 +516,7 @@
       var id = btn.getAttribute('data-device-id');
       currentSettingsDeviceId = id;
       var optionsBody = document.getElementById('device_settings_modal_options');
-      optionsBody.innerHTML = "<span class='text-muted'>{{ _('Loading...') }}</span>";
+      optionsBody.innerHTML = "<span class='text-muted'>" + {{ _('Loading...')|tojson }} + "</span>";
       fetch('/function?function_type=options&function_id=' + encodeURIComponent(id))
         .then(function (r) { return r.text(); })
         .then(function (html) {
@@ -530,7 +529,7 @@
           if ($settingsModal) $settingsModal.modal('show');
         })
         .catch(function () {
-          optionsBody.innerHTML = "<span class='text-danger'>{{ _('Failed to load settings') }}</span>";
+          optionsBody.innerHTML = "<span class='text-danger'>" + {{ _('Failed to load settings')|tojson }} + "</span>";
         });
 
       // 카드 로드시 캐시된 요약이 있으면 재사용, 없으면(폴링이 아직 안 끝났으면) 새로 조회
@@ -547,7 +546,7 @@
     if (!currentSettingsDeviceId) return;
     var form = document.getElementById('form_function_' + currentSettingsDeviceId);
     if (!form) {
-      window.showToast("{{ _('Form not found') }}", 'error');
+      window.showToast({{ _('Form not found')|tojson }}, 'error');
       return;
     }
     var params = new URLSearchParams(new FormData(form));
@@ -570,7 +569,7 @@
       if (errs.length) {
         window.showToast(errs.join(', '), 'error');
       } else {
-        window.showToast("{{ _('Saved') }}", 'success');
+        window.showToast({{ _('Saved')|tojson }}, 'success');
         if ($settingsModal) $settingsModal.modal('hide');
         window.location.reload();
       }
@@ -588,13 +587,13 @@
   // 그대로 재사용한다 — 새 삭제/복제 메커니즘을 만들지 않는다. ----
   document.getElementById('device_settings_delete_btn').addEventListener('click', function () {
     if (!currentSettingsDeviceId) return;
-    if (!window.confirm("{{ _('Are you sure you want to delete?') }}")) return;
+    if (!window.confirm({{ _('Are you sure you want to delete?')|tojson }})) return;
     submitFunctionAction({
       function_id: currentSettingsDeviceId,
       csrf_token: csrfToken(),
       function_delete: '1'
     }, function () {
-      window.showToast("{{ _('Deleted') }}", 'success');
+      window.showToast({{ _('Deleted')|tojson }}, 'success');
       if ($settingsModal) $settingsModal.modal('hide');
       window.location.reload();
     });
@@ -602,13 +601,13 @@
 
   document.getElementById('device_settings_duplicate_btn').addEventListener('click', function () {
     if (!currentSettingsDeviceId) return;
-    if (!window.confirm("{{ _('Are you sure you want to duplicate?') }}")) return;
+    if (!window.confirm({{ _('Are you sure you want to duplicate?')|tojson }})) return;
     submitFunctionAction({
       function_id: currentSettingsDeviceId,
       csrf_token: csrfToken(),
       function_duplicate: '1'
     }, function () {
-      window.showToast("{{ _('Duplicated') }}", 'success');
+      window.showToast({{ _('Duplicated')|tojson }}, 'success');
       if ($settingsModal) $settingsModal.modal('hide');
       window.location.reload();
     });
@@ -618,8 +617,8 @@
   function renderCount(deviceId, summary) {
     var el = document.getElementById('device_count_' + deviceId);
     if (!el) return;
-    el.textContent = "{{ _('Measurements') }} " + summary.inputs.length +
-      " · {{ _('Control') }} " + summary.outputs.length;
+    el.textContent = {{ _('Measurements')|tojson }} + " " + summary.inputs.length +
+      " · " + {{ _('Control')|tojson }} + " " + summary.outputs.length;
   }
 
   // ---- 폴링: /data_batch, /inputstate, /outputstate — 카드 배지 + (열려 있으면)

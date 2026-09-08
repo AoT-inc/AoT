@@ -59,11 +59,11 @@
         </div>
         <div id="pid_pause_{{each_function.unique_id}}" style="{% if not each_function.is_activated or each_function.is_paused %}display: none;{% endif %}">
           <input onclick="return $(this).processRequest(this, 'pid_pause');" name="pid_pause" value="{{_('Pause')}}"
-            class="form-control btn aot-pill-btn aot-pill-btn-primary" type="button" />
+            class="form-control btn aot-pill-btn aot-pill-btn-pause" type="button" />
         </div>
         <div id="pid_hold_{{each_function.unique_id}}" style="{% if not each_function.is_activated or each_function.is_held %}display: none;{% endif %}">
           <input onclick="return $(this).processRequest(this, 'pid_hold');" name="pid_hold" value="{{_('Hold')}}"
-            class="form-control btn aot-pill-btn aot-pill-btn-primary" type="button" />
+            class="form-control btn aot-pill-btn aot-pill-btn-hold" type="button" />
         </div>
       </div>
       <div class="aot-pid-gear-spacer"></div>

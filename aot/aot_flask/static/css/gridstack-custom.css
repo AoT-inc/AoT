@@ -198,11 +198,5 @@
 }
 
 
-/* Bootstrap Select dropdown z-index fix:
-   data-container="body" 셀렉트(액션 카드 안 output 장치/상태 등)는 메뉴를
-   <body> 의 .bs-container 로 분리한다. 이 메뉴는 반드시 모달(--aot-z-modal)
-   위에 떠야 한다 → --aot-z-modal-nested. 과거엔 하드코딩(21000/36001)이라
-   모달 값이 바뀔 때마다 메뉴가 모달 뒤에 깔리는 증상을 유발했다. */
-.bootstrap-select.bs-container .dropdown-menu {
-  z-index: var(--aot-z-modal-nested) !important;  /* must stay > --aot-z-modal */
-}
+/* .bs-container 의 z-index 는 components/aot-select.css 가 앵커 자체에 준다.
+   여기 있던 규칙은 메뉴에 주고 있어 앵커의 스택 컨텍스트에 갇혀 무효였다. */

@@ -22,7 +22,6 @@ AoT 는 GPLv3 로 배포되며(`LICENSE.txt`), 오픈소스 [Mycodo](https://git
 | jQuery | 3.4.1 | MIT | `js/vendor/jquery-3.4.1.min.js` |
 | jQuery UI Touch Punch | — | MIT / GPL 이중 | `js/vendor/jquery.ui.touch-punch.min.js` |
 | Bootstrap | 4.6.0 | MIT | `js/vendor/bootstrap.min.js` |
-| bootstrap-select | 1.13.2 | MIT | `js/vendor/bootstrap-select.min.js` |
 | ClockPicker | 0.0.7 | MIT | `js/vendor/bootstrap-clockpicker.min.js` |
 | Popper.js | 2017 판 | MIT | `js/vendor/popper.min.js` |
 | Moment.js | 2.17.1 | MIT | `js/vendor/moment.min.js` |

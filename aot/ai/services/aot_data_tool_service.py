@@ -5763,11 +5763,26 @@ class AoTDataToolService:
                 new_id = ret[1]
             else:
                 new_id = ret[-1]
-        if messages.get("error"):
-            return {"error": "; ".join(messages["error"])}
+
+        # new_id decides success, not messages["error"]. output_add() can
+        # commit the Output (and its channel rows) and THEN append an error —
+        # most commonly manipulate_output('Add', ...)'s post-save daemon
+        # reload, which fails on its own (daemon busy/restarting/unreachable)
+        # without undoing anything already saved. Checking "error" first told
+        # the caller nothing was created when something real was — the
+        # caller would retry create_output believing it needed to, leaving a
+        # redundant Output behind each retry. 2026-09-08, found while
+        # investigating an unrelated report.
         if not new_id:
+            if messages.get("error"):
+                return {"error": "; ".join(messages["error"])}
             return {"error": "Output created but unique_id not returned"}
         result = {"output_id": new_id, "output_type": output_type, "status": "created"}
+        if messages.get("error"):
+            # Created, but something after the save failed non-fatally (see
+            # above) — surface it so the caller can decide whether to retry
+            # just that part (e.g. a config reload), not the whole creation.
+            result["warning"] = "; ".join(messages["error"])
         if name or params:
             AoTDataToolService.modify_output(new_id, name=name, params=params)
             result["configured"] = True

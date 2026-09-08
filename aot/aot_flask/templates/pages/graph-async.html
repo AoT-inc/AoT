@@ -405,7 +405,7 @@ $(document).ready(function () {
       const input = this;
       const text = $(input).closest('.aot-measure-item').find('.aot-measure-item-text').text().trim();
       const chip = $('<span class="aot-graph-chip"></span>').text(text);
-      const remove = $('<button type="button" class="aot-chip-remove" aria-label="{{_('Remove')}}">×</button>');
+      const remove = $('<button type="button" class="aot-chip-remove" aria-label="' + {{ _('Remove')|tojson }} + '">×</button>');
       remove.on('click', function () {
         input.checked = false;
         // 라디오는 하나를 끄면 그 무리가 통째로 비어 버린다. "전체"로 되돌려
@@ -722,26 +722,26 @@ $(document).ready(function() {
             buttons: [{
                 type: 'hour',
                 count: 1,
-                text: '{{_('1h')}}'
+                text: {{ _('1h')|tojson }}
             }, {
                 type: 'day',
                 count: 1,
-                text: '{{_('1d')}}'
+                text: {{ _('1d')|tojson }}
             }, {
                 type: 'week',
                 count: 1,
-                text: '{{_('1w')}}'
+                text: {{ _('1w')|tojson }}
             }, {
                 type: 'month',
                 count: 1,
-                text: '{{_('1mo')}}'
+                text: {{ _('1mo')|tojson }}
             }, {
                 type: 'year',
                 count: 1,
-                text: '{{_('1y')}}'
+                text: {{ _('1y')|tojson }}
             }, {
                 type: 'all',
-                text: '{{_('All')}}'
+                text: {{ _('All')|tojson }}
             }],
             inputEnabled: false, // it supports only days
             selected: 4 // all
@@ -1035,7 +1035,7 @@ $(document).ready(function() {
               아무것도 그리지 않으므로 늘 달아 둔다. -#}
           {
             id: 'hardware-events',
-            name: '{{_('Hardware changes')}}',
+            name: {{ _('Hardware changes')|tojson }},
             type: 'flags',
             data: [],
             shape: 'flag',

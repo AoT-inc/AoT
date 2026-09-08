@@ -1080,6 +1080,10 @@
 .aot-coord-plot[data-summary="1"] {
   /* 국소 오버라이드(의도) */
   --aot-common-control-width: 72%;
+  /* 같은 요약 줄(제목-값)인데 `.aot-coord-plot` 은 자기 카드 규칙에서
+     `--aot-font-size-base`(16px) 를 물려받고 `.aot-env-status` 는 그 정의가
+     없어 모달 기본값(14px) 으로 떨어져 있었다 — 여기서 함께 명시해 맞춘다. */
+  font-size: var(--aot-font-size-base);
 }
 .aot-env-status .aot-modal-option-control,
 .aot-coord-plot[data-summary="1"] .aot-modal-option-control {

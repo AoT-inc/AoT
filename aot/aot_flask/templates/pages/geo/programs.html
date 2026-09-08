@@ -68,7 +68,7 @@
           — "장치 추가" 드롭다운(input 페이지)과 같은 bootstrap-select 내장
           기능이다. -#}
       <select id="veg-base" class="selectpicker aot-standard-select"
-              data-style="btn btn-primary aot-roundbox" data-live-search="true"
+              data-style="btn aot-pill-btn aot-pill-btn-primary" data-live-search="true"
               title="{{ _('Programs') }}: {{ _('Select') }}">
         <option value="">{{ _('Loading…') }}</option>
       </select>
@@ -78,7 +78,7 @@
         모달 밖인 이 줄에 쓰면 그 쪽 배경색 규칙이 안 걸려 다른 버튼과 다르게
         보인다 — 실제로 옆의 selectpicker 알약과 안 맞았다. -#}
     <div class="col-auto">
-      <button type="button" id="veg-add" class="btn btn-primary">
+      <button type="button" id="veg-add" class="btn aot-pill-btn aot-pill-btn-primary">
         {{ _('Add') }}
       </button>
     </div>

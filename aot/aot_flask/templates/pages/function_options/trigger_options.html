@@ -54,7 +54,7 @@
         <div class="aot-modal-option-row">
             <label class="aot-modal-option-label">{{_('Tab')}}</label>
             <div class="aot-modal-option-control">
-                <select name="tab_id" class="form-control aot-modern-input">
+                <select name="tab_id" class="form-control aot-modern-select">
                     {% for tab in tabs %}
                     <option value="{{tab.unique_id}}" {% if tab.unique_id == each_function.tab_id %}selected{% endif %}>{{tab.name}}</option>
                     {% endfor %}
@@ -145,7 +145,7 @@
   </form>
 
   <div class="aot-modal-group-title">
-      {{_('Actions')}} 
+      {{_('Actions')}}
       <a href="{{ manual_url('Actions/') }}" target="_blank"><span class="fas fa-question-circle aot-help-icon"></span></a>
   </div>
 
@@ -160,14 +160,13 @@
             <div class="aot-modal-option-control">
                 <div class="aot-action-group">
                     <select class="form-control aot-modern-select selectpicker aot-standard-select" data-style="btn-white" data-live-search="true"
-                        data-display="static" data-container="body" data-dropdown-align-right="true"
                         title="{{_('Actions')}}: {{dict_translation['select_one']['title']}}" id="action_type_{{each_function.unique_id}}"
                         name="action_type">
                         {% for value, name in choices_actions %}
                         <option value="{{value}}">{{name}}</option>
                         {% endfor %}
                     </select>
-                    <button data-form-id="form_actions_{{each_function.unique_id}}" onclick="return $(this).processRequest(this, 'add_action');" 
+                    <button data-form-id="form_actions_{{each_function.unique_id}}" onclick="return $(this).processRequest(this, 'add_action');"
                         name="add_action" class="btn btn-primary aot-pill-btn" type="button">{{_('Add')}}</button>
                 </div>
             </div>

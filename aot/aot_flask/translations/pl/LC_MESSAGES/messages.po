@@ -30798,3 +30798,162 @@ msgstr "Ściślejsze limity zamgławiania dla sadzonek, które łatwiej ulegają
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:1192
 msgid "Not used"
 msgstr "Nieużywane"
+
+msgid "Vent"
+msgstr "Wentylacja"
+
+msgid "Mist"
+msgstr "Zamgławianie"
+
+msgid "Devices under automatic control"
+msgstr "Urządzenia objęte automatyczną kontrolą"
+
+msgid "%(n)s excluded"
+msgstr "%(n)s wykluczono"
+
+msgid "Turn a device off to keep automatic control from moving it."
+msgstr "Wyłącz urządzenie, aby automatyczna kontrola nim nie sterowała."
+
+msgid "Safety gates will not move it either."
+msgstr "Bramki bezpieczeństwa również nim nie poruszą."
+
+msgid "Select a linked facility first."
+msgstr "Najpierw wybierz powiązany obiekt."
+
+msgid "This facility has no actuators yet."
+msgstr "Ten obiekt nie ma jeszcze żadnych siłowników."
+
+msgid "Could not load the device list. Existing settings are kept."
+msgstr "Nie udało się wczytać listy urządzeń. Istniejące ustawienia zostały zachowane."
+
+msgid "Excluded actuators (raw)"
+msgstr "Wykluczone siłowniki (surowe)"
+
+msgid "Comma-separated Output IDs excluded from automatic control. Normally set with the toggles above rather than typed here."
+msgstr "Identyfikatory wyjść wykluczone z automatycznej kontroli, oddzielone przecinkami. Zwykle ustawiane za pomocą przełączników powyżej, a nie wpisywane tutaj."
+
+msgid "Proactively shift temperature/humidity setpoints and inhibit ventilation before adverse weather arrives. Uses this facility's own forecast source if one is linked in the facility editor's weather bindings (any service — KMA, OpenWeatherMap, Open-Meteo); otherwise falls back to the system-wide KMA short-term forecast."
+msgstr "Proaktywnie przesuwa punkty nastawy temperatury/wilgotności i wstrzymuje wentylację przed nadejściem niekorzystnej pogody. Korzysta z własnego źródła prognozy tego obiektu, jeśli jest ono podłączone w zakładce powiązań pogodowych edytora obiektu (dowolna usługa — KMA, OpenWeatherMap, Open-Meteo); w przeciwnym razie stosuje ogólnosystemową krótkoterminową prognozę KMA."
+
+msgid "How many hours ahead to check for incoming adverse weather (1–6 h) when using the system-wide KMA fallback above. Longer lookahead gives earlier warning but may over-correct. Ignored when this facility has its own forecast source linked — that source already applies its own lookahead."
+msgstr "Ile godzin naprzód sprawdzać nadchodzącą niekorzystną pogodę (1–6 godz.), gdy używana jest powyższa ogólnosystemowa prognoza zapasowa KMA. Dłuższe wyprzedzenie daje wcześniejsze ostrzeżenie, ale może prowadzić do nadmiernej korekty. Pomijane, gdy ten obiekt ma podłączone własne źródło prognozy — to źródło stosuje już swoje własne wyprzedzenie."
+
+#: aot/widgets/widget_notice.py:1
+msgid "Notice Category Filter"
+msgstr "Filtr kategorii ogłoszeń"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Notes Space"
+msgstr "Przestrzeń notatek"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Space"
+msgstr "Przestrzeń"
+
+#: aot/widgets/widget_notice.py:1
+msgid "None selected"
+msgstr "Nie wybrano"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Notices"
+msgstr "Ogłoszenia"
+
+#: aot/widgets/widget_notice.py:1
+msgid "No notes yet."
+msgstr "Brak notatek."
+
+#: aot/widgets/widget_notice.py:1
+msgid "(Attachment only)"
+msgstr "(Tylko załącznik)"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Notice & Notes Board"
+msgstr "Tablica ogłoszeń i notatek"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Displays the latest notice board post titles and/or the notes written in a chosen site, zone, plot, or facility (and everything nested under it). Clicking a notice opens the full post (content, poll, replies, acknowledge) in a popup; clicking a note opens it in the shared notes panel. Users with write permission can also create, edit, and delete posts directly from the widget."
+msgstr "Wyświetla tytuły najnowszych wpisów z tablicy ogłoszeń i/lub notatki napisane w wybranej lokalizacji, strefie, poletku lub obiekcie (oraz we wszystkim, co się w nim znajduje). Kliknięcie ogłoszenia otwiera pełny wpis (treść, ankieta, odpowiedzi, potwierdzenie) w wyskakującym okienku; kliknięcie notatki otwiera ją we wspólnym panelu notatek. Użytkownicy z uprawnieniami do zapisu mogą też tworzyć, edytować i usuwać wpisy bezpośrednio z widżetu."
+
+#: aot/widgets/widget_notice.py:1
+msgid "Show Notices"
+msgstr "Pokaż ogłoszenia"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Display the notice board section"
+msgstr "Wyświetla sekcję tablicy ogłoszeń"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Number of Notices"
+msgstr "Liczba ogłoszeń"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Number of Notes"
+msgstr "Liczba notatek"
+
+#: aot/widgets/widget_notice.py:1
+msgid "How many of the latest notes to display"
+msgstr "Ile najnowszych notatek wyświetlać"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Include Nested Spaces"
+msgstr "Uwzględnij zagnieżdżone przestrzenie"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Sort Notes By"
+msgstr "Sortuj notatki według"
+
+#: aot/widgets/widget_notice.py:1
+msgid "How to order the note list"
+msgstr "Sposób sortowania listy notatek"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Note Category/Tag Contains"
+msgstr "Kategoria/tag notatki zawiera"
+
+#: aot/widgets/widget_notice.py:1
+msgid "How often to refresh the notice/notes lists"
+msgstr "Jak często odświeżać listy ogłoszeń/notatek"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Notes written in this site/zone/plot/facility (and, if \"Include Nested Spaces\" above is on, everything nested under it) are shown."
+msgstr "Wyświetlane są notatki napisane w tej lokalizacji/strefie/poletku/obiekcie (a jeśli powyższa opcja \"Uwzględnij zagnieżdżone przestrzenie\" jest włączona, również wszystko, co się w nim znajduje)."
+
+#: aot/widgets/widget_notice.py:1
+msgid "No sites, zones, plots, or facilities exist yet."
+msgstr "Nie istnieją jeszcze żadne lokalizacje, strefy, poletka ani obiekty."
+
+#: aot/widgets/widget_notice.py:1
+msgid "Nothing selected — turn on \"Show Notices\" and/or \"Show Notes\" in the widget settings."
+msgstr "Nic nie wybrano — włącz \"Pokaż ogłoszenia\" i/lub \"Pokaż notatki\" w ustawieniach widżetu."
+
+#: aot/widgets/widget_notice.py:1
+msgid "Choose a space in the widget settings to show notes."
+msgstr "Wybierz przestrzeń w ustawieniach widżetu, aby wyświetlić notatki."
+
+#: aot/widgets/widget_notice.py:1
+msgid "Display notes written in a chosen space (see Space below)"
+msgstr "Wyświetla notatki napisane w wybranej przestrzeni (patrz \"Przestrzeń\" poniżej)"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Also show notes written in zones/plots/facilities/devices nested under the chosen space"
+msgstr "Wyświetla również notatki napisane w strefach/poletkach/obiektach/urządzeniach zagnieżdżonych pod wybraną przestrzenią"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Newest First"
+msgstr "Od najnowszych"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Only show notes whose category or tags contain this text (optional)"
+msgstr "Wyświetla tylko notatki, których kategoria lub tagi zawierają ten tekst (opcjonalnie)"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Show Notes List"
+msgstr "Pokaż listę notatek"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Display notes matching the filter below"
+msgstr "Wyświetla notatki pasujące do poniższego filtra"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Notes Filter"
+msgstr "Filtr notatek"

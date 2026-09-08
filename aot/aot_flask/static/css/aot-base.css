@@ -716,12 +716,7 @@ html {
   /* Red text/icon */
 }
 
-/* Custom Selectpicker dropdown style */
-.bootstrap-select .dropdown-menu {
-  border-radius: var(--aot-radius-md);
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
-  border: 1px solid var(--aot-border-form);
-}
+/* 목록(.dropdown-menu) 규칙은 components/aot-select.css 가 정본이다 — 여기 두지 않는다. */
 
 .bootstrap-select .dropdown-item {
   padding: 8px 16px;
@@ -761,7 +756,7 @@ html {
 
 /* Theme State Backgrounds */
 .nav .upgrade_available {
-    background: var(--aot-bg-upgrade);
+    background: var(--aot-btn-bg-primary);
 }
 
 /* nav-bar 관리(Manage) 메뉴의 업그레이드 항목: 업그레이드가 없으면 다른 메뉴와
@@ -770,7 +765,7 @@ html {
    해당 배경 밝기를 서버에서 미리 판정해 aot-nav-upgrade-light/dark 클래스로
    부여한다(layout_default.html, routes_static.py inject_variables). */
 .dropdown-item.aot-nav-upgrade {
-    background-color: var(--aot-bg-upgrade);
+    background-color: var(--aot-btn-bg-primary);
 }
 
 /* aot.css 의 .navbar.main-navbar .dropdown-menu .dropdown-item 가 color 를
@@ -797,7 +792,7 @@ html {
    고정한다. */
 .navbar.main-navbar .dropdown-menu .dropdown-item.aot-nav-upgrade:hover,
 .navbar.main-navbar .dropdown-menu .dropdown-item.aot-nav-upgrade:focus {
-    background-color: var(--aot-bg-upgrade) !important;
+    background-color: var(--aot-btn-bg-primary) !important;
     opacity: 0.85;
 }
 

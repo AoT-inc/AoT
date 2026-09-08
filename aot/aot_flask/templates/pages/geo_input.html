@@ -21,8 +21,7 @@
         min-width: 0 !important;
     }
 </style>
-<link rel="stylesheet" href="{{ url_for('static', filename='css/gridstack.css') }}" />
-<link rel="stylesheet" href="/static/css/gridstack-custom.css?v=20260611z1" />
+<link rel="stylesheet" href="{{ url_for('static', filename='css/gridstack-custom.css') }}" />
 <link rel="stylesheet" href="{{ url_for('static', filename='css/aot-entry-ui.css') }}" />
 <script src="{{ url_for('static', filename='js/vendor/gridstack-all.js') }}"></script>
 
@@ -52,12 +51,12 @@
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="row aot-main-selection-row">
             <div class="col-auto">
-                {{ form_add_gis.input_type(class_="selectpicker aot-standard-select", data_style="btn btn-primary aot-roundbox",
+                {{ form_add_gis.input_type(class_="selectpicker aot-standard-select", data_style="btn aot-pill-btn aot-pill-btn-primary",
                 data_live_search="true", title=_('Select GIS Service')) }}
             </div>
             <div class="col-auto">
                 <input onclick="return $(this).processRequest(this, 'input_add');" name="input_add" value="{{_('Add')}}"
-                    class="btn btn-primary" type="button" />
+                    class="btn aot-pill-btn aot-pill-btn-primary" type="button" />
             </div>
         </div>
     </form>
@@ -183,7 +182,7 @@
             return false;
         }
 
-        window.showToast('{{_("Command sent. Please wait.")}}', 'info');
+        window.showToast({{ _("Command sent. Please wait.")|tojson }}, 'info');
 
         $.ajax({
             type: "POST",

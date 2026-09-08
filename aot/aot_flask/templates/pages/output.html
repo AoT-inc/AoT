@@ -18,8 +18,7 @@
     transition: none !important;
   }
 </style>
-<link rel="stylesheet" href="{{ url_for('static', filename='css/gridstack.css') }}" />
-<link rel="stylesheet" href="/static/css/gridstack-custom.css?v=20260611z1" />
+<link rel="stylesheet" href="{{ url_for('static', filename='css/gridstack-custom.css') }}" />
 <link rel="stylesheet" href="{{ url_for('static', filename='css/aot-entry-ui.css') }}" />
 <script src="{{ url_for('static', filename='js/vendor/gridstack-all.js') }}"></script>
 <script src="{{ asset('app-output-state') }}"></script>
@@ -154,7 +153,7 @@
                     // so the switch doesn't flip on then snap back to off.
                     if (document.getElementById(inputId)) {
                       document.getElementById(inputId).className = 'form-control btn btn-primary btn-sm btn-block hold-background';
-                      document.getElementById(inputId).value = '{{_('Confirming')}}';
+                      document.getElementById(inputId).value = {{ _('Confirming')|tojson }};
                     }
                     if (document.getElementById(rowId)) {
                         document.getElementById(rowId).className = "item_channel row small-gutters hold-background aot-entry-item-channel";
@@ -166,7 +165,7 @@
                     // reverted (off) state. A late ACK will resolve it to on/off.
                     if (document.getElementById(inputId)) {
                       document.getElementById(inputId).className = 'form-control btn btn-primary btn-sm btn-block fault-background';
-                      document.getElementById(inputId).value = '{{_('No Response')}}';
+                      document.getElementById(inputId).value = {{ _('No Response')|tojson }};
                     }
                     if (document.getElementById(rowId)) {
                         document.getElementById(rowId).className = "item_channel row small-gutters fault-background aot-entry-item-channel";
@@ -178,9 +177,9 @@
                     if (document.getElementById(inputId)) {
                       document.getElementById(inputId).className = 'form-control btn btn-primary btn-sm btn-block';
                       if (states[i] === 'on') {
-                        document.getElementById(inputId).value = '{{_('Active')}}';
+                        document.getElementById(inputId).value = {{ _('Active')|tojson }};
                       } else {
-                        document.getElementById(inputId).value = '{{_('Active')}}, ' + states[i].toFixed(1);
+                        document.getElementById(inputId).value = {{ _('Active')|tojson }} + ', ' + states[i].toFixed(1);
                       }
                     }
                     // Apply active background to the row
@@ -192,7 +191,7 @@
                     // State: OFF
                     if (document.getElementById(inputId)) {
                       document.getElementById(inputId).className = 'form-control btn btn-primary btn-sm btn-block inactive-background';
-                      document.getElementById(inputId).value = '{{_('Inactive')}}';
+                      document.getElementById(inputId).value = {{ _('Inactive')|tojson }};
                     }
                     // Apply inactive background to the row 
                     if (document.getElementById(rowId)) {
@@ -256,17 +255,49 @@
             var ownActive = ownSt !== null && ownSt !== undefined && ownSt !== 'off' && ownSt !== false;
             var anyActive = openActive || closeActive || ownActive;
 
-            // Self-driven actuators have no open/close output to read a real
-            // direction from (openSt/closeSt above are always null), so
-            // openActive/closeActive would otherwise stay false forever —
-            // meaning the Open/Close button never picks up the "is on" color
-            // even while the row itself is correctly active. Fall back to the
-            // last direction the user actually clicked (see actuator_paired_cmd).
-            if (!openId && !closeId) {
+            // 2026-09-08: openActive/closeActive (above) come from the
+            // CONFIGURED open/close relay sub-outputs' own reported state —
+            // but a common relay design only reports "on" WHILE it is
+            // actively driving and reverts to "off" the moment travel stops,
+            // confirmed or not. A fully-open, at-rest valve then has real
+            // open_id/close_id AND both sub-outputs reporting "off" — so
+            // openActive/closeActive land false even though the row itself
+            // (via ownActive, the coordinator's own position) is correctly
+            // active-background. Verified live: two valves at position
+            // 100.0 with configured open/close outputs both reporting "off"
+            // — 열기/닫기 both showed grey (user report). The narrower
+            // `!openId && !closeId` gate this used to have only covered
+            // self-driven actuators with NO sub-outputs at all, missing this
+            // — the far more common — case where sub-outputs exist but
+            // don't hold state at rest.
+            //
+            // So the fallback below applies whenever the relay-reported
+            // states didn't already answer the question, whether or not
+            // open_id/close_id are configured — pairedLastDirection (a click
+            // in this session) first, since it's more informative than a
+            // guess (e.g. Stop mid-close leaves a positive position, and
+            // only the click remembers that direction was Close, not Open).
+            // Falling back to ownSt when there is no click memory:
+            // actuator_paired_cmd() only ever targets 100 (open) or 0
+            // (close); actuator_paired.py stores 0 as `False`, never the
+            // number 0 (output_states[ch] = target if target > 0 else
+            // False). So a numeric ownSt with nothing telling us otherwise
+            // is read as "open" — the same lean the row-level
+            // active-background already takes (a valve at any nonzero
+            // position is "active" indefinitely, not just while moving;
+            // fully closed is the quiet default).
+            // @self-driven-direction-start — test_paired_actuator_direction_js.py
+            // extracts this block verbatim by these markers and runs it under
+            // node with mock lastDir/ownActive/ownSt/openActive/closeActive.
+            // Keep the block self-contained (reads/writes only the names
+            // already in scope above) so the extraction stays valid.
+            if (!openActive && !closeActive) {
               var lastDir = pairedLastDirection[oid + '-' + ch];
               if (lastDir === 'open')  { openActive = ownActive; }
-              if (lastDir === 'close') { closeActive = ownActive; }
+              else if (lastDir === 'close') { closeActive = ownActive; }
+              else if (typeof ownSt === 'number' && ownSt > 0) { openActive = true; }
             }
+            // @self-driven-direction-end
 
             row.className = "item_channel row small-gutters aot-entry-item-channel aot-paired-row " +
               (anyActive ? "active-background" : "inactive-background");
@@ -325,7 +356,7 @@
     {% for each_output_channel in dict_outputs[each_output.output_type]['channels_dict'] %}
     if (document.getElementById("{{each_output.unique_id}}-{{each_output_channel}}-input-output-state")) {
       document.getElementById("{{each_output.unique_id}}-{{each_output_channel}}-input-output-state").className = 'form-control btn btn-primary btn-sm btn-block fault-background';
-      document.getElementById("{{each_output.unique_id}}-{{each_output_channel}}-input-output-state").value = '{{_('No Connection')}}';
+      document.getElementById("{{each_output.unique_id}}-{{each_output_channel}}-input-output-state").value = {{ _('No Connection')|tojson }};
     }
     // Force Row to stay clean and apply pause background
     if (document.getElementById("{{each_output.unique_id}}-{{each_output_channel}}-output-state")) {
@@ -393,15 +424,18 @@
     <div class="row aot-main-selection-row">
       <div class="col-auto">
         {# 목록이 길어 optgroup(출력 방식별) + 검색 토큰으로 찾는다. 선택지는
-           utils_device_catalog 가 만들고, data-size 로 메뉴 높이를 묶는다. #}
-        {{form_add_output.output_type(class_='selectpicker aot-standard-select aot-device-select', **{'data-style': 'btn btn-primary aot-roundbox',
-        'data-live-search': 'true', 'data-size': '12',
+           utils_device_catalog 가 만든다.
+           높이는 묶지 않는다 — 배치 훅이 창 높이의 80%%로 이미 상한을 두므로
+           화면을 덮지 않는다. 예전엔 data-size 로 12줄에 못 박아, 아래에
+           638px 가 비어 있어도 12줄만 보여 줬다(실측). #}
+        {{form_add_output.output_type(class_='selectpicker aot-standard-select aot-device-select', **{'data-style': 'btn aot-pill-btn aot-pill-btn-primary',
+        'data-live-search': 'true',
         'data-live-search-placeholder': _('Search by name or measurement'),
         'title': _('Output') + ': ' + _('Select')}) }}
       </div>
       <div class="col-auto">
         <input onclick="return $(this).processRequest(this, 'output_add');" name="output_add" value="{{_('Add')}}"
-          class="btn btn-primary" type="button" />
+          class="btn aot-pill-btn aot-pill-btn-primary" type="button" />
       </div>
     </div>
   </form>

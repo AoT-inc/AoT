@@ -459,71 +459,9 @@
     box-sizing: border-box;
 }
 
-/* ------------------------------------------------------------
-   Bootstrap-Select Screen-Aware Constraints
-   - Enforce 15px horizontal padding safety
-   - Enforce 120px bottom safety margin for mobile OS UI/Browser bars
-   - Uses dvh (dynamic viewport height) for modern mobile browsers
-   - NOTE: Use child combinator (>) on outer .dropdown-menu rules to avoid
-     accidentally matching ul.dropdown-menu.inner (which shares the class).
-   ------------------------------------------------------------ */
-.bootstrap-select > .dropdown-menu {
-    max-width: calc(100vw - 30px);
-    min-width: 0 !important;
-    width: auto;
-}
-
-/* Default: Left-aligned */
-.bootstrap-select > .dropdown-menu:not(.dropdown-menu-right) {
-    left: 0;
-    right: auto;
-}
-
-/* Right-aligned support */
-.bootstrap-select > .dropdown-menu.dropdown-menu-right {
-    left: auto;
-    right: 0;
-}
-
-/* Child combinator (>) so this targets ONLY the wrapper div.inner (direct child
-   of the outer .dropdown-menu), NOT ul.dropdown-menu.inner — that UL shares the
-   class "inner" and a descendant combinator would also scroll it, producing a
-   second nested scrollbar inside the first (the double-scroll bug). */
-.bootstrap-select > .dropdown-menu > .inner {
-    max-width: 100%;
-    /* Enforce strict bottom margin regardless of trigger position */
-    max-height: calc(100dvh - 180px) !important;
-    /* 120px safety + 60px estimated header/trigger space */
-    overflow-x: hidden;
-    overflow-y: auto;
-}
-
-/* Ensure selected item and search are visible.
-   Use child combinator (>) so this does NOT apply to ul.dropdown-menu.inner.show —
-   that element also has class "dropdown-menu show", and making it display:flex
-   would cause it to create a conflicting scroll context (visible as double
-   scrollbars on Windows where scrollbars are always shown). */
-.bootstrap-select > .dropdown-menu.show {
-    display: flex !important;
-    flex-direction: column !important;
-    overflow: hidden !important;
-}
-
-.bootstrap-select .dropdown-menu .bs-searchbox {
-    flex: 0 0 auto;
-}
-
-.bootstrap-select > .dropdown-menu > .inner {
-    flex: 1 1 auto;
-}
-
-.bootstrap-select .dropdown-menu li a span.text {
-    display: inline-block;
-    max-width: 100%;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
+/* 셀렉트 목록(드롭다운) 규칙은 components/aot-select.css 로 옮겼다.
+   자리마다 흩어져 서로를 무력화하던 규칙들을 한 파일로 모은 결과다.
+   여기(또는 다른 곳)에 다시 쓰지 말 것. */
 
 /* Entry Container Margins */
 .aot-entry-container {
@@ -561,36 +499,6 @@
     display: none !important;
 }
 
-/* ------------------------------------------------------------
-   8.2 Bootstrap Select Dropdown Menu Refinement
-   ------------------------------------------------------------ */
-.bootstrap-select .dropdown-menu {
-    border-radius: var(--aot-radius-md) !important;
-    box-shadow: var(--aot-shadow-dropdown, 0 4px 12px rgba(0,0,0,0.1)) !important;
-}
-
-.bootstrap-select .dropdown-menu li a {
-    text-align: left !important; /* System standard: Left align for lists */
-    padding: 4px 12px; /* Reduced height (approx 70%) */
-    display: flex;
-    align-items: center; /* Vertical centering */
-    min-height: 28px;
-    font-size: var(--aot-font-size-sm);
-}
-
-.bootstrap-select .dropdown-menu li a span.text {
-    line-height: normal;
-    display: block;
-}
-
-/* Fix for optgroup labels if any */
-.bootstrap-select .dropdown-menu .dropdown-header {
-    text-align: left;
-    padding: 4px 12px;
-    font-size: var(--aot-font-size-xs);
-    font-weight: 700;
-    color: var(--aot-color-text-secondary) !important;
-}
 
 /* Toggle Switch Styling */
 .switch {

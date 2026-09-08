@@ -30898,3 +30898,162 @@ msgstr "Szigorúbb párásítási korlátok a csíranövényekhez, amelyek könn
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:1192
 msgid "Not used"
 msgstr "Nem használt"
+
+msgid "Vent"
+msgstr "Szellőző"
+
+msgid "Mist"
+msgstr "Párásítás"
+
+msgid "Devices under automatic control"
+msgstr "Automatikus vezérlés alatt álló eszközök"
+
+msgid "%(n)s excluded"
+msgstr "%(n)s kizárva"
+
+msgid "Turn a device off to keep automatic control from moving it."
+msgstr "Kapcsolja ki az eszközt, hogy az automatikus vezérlés ne mozgassa."
+
+msgid "Safety gates will not move it either."
+msgstr "A biztonsági zárak sem fogják mozgatni."
+
+msgid "Select a linked facility first."
+msgstr "Először válasszon egy hozzárendelt létesítményt."
+
+msgid "This facility has no actuators yet."
+msgstr "Ennek a létesítménynek még nincsenek aktuátorai."
+
+msgid "Could not load the device list. Existing settings are kept."
+msgstr "Az eszközlista betöltése nem sikerült. A meglévő beállítások megmaradnak."
+
+msgid "Excluded actuators (raw)"
+msgstr "Kizárt aktuátorok (nyers)"
+
+msgid "Comma-separated Output IDs excluded from automatic control. Normally set with the toggles above rather than typed here."
+msgstr "Vesszővel elválasztott kimenet-azonosítók, amelyek ki vannak zárva az automatikus vezérlésből. Ezeket általában a fenti kapcsolókkal, nem itt begépelve kell beállítani."
+
+msgid "Proactively shift temperature/humidity setpoints and inhibit ventilation before adverse weather arrives. Uses this facility's own forecast source if one is linked in the facility editor's weather bindings (any service — KMA, OpenWeatherMap, Open-Meteo); otherwise falls back to the system-wide KMA short-term forecast."
+msgstr "Kedvezőtlen időjárás beérkezése előtt proaktívan eltolja a hőmérséklet-/páratartalom-alapértékeket, és gátolja a szellőztetést. Ha a létesítményszerkesztő időjárás-kötéseiben ehhez a létesítményhez saját előrejelzési forrás van hozzárendelve (bármely szolgáltatás – KMA, OpenWeatherMap, Open-Meteo), azt használja; ellenkező esetben a rendszerszintű KMA rövid távú előrejelzésre esik vissza."
+
+msgid "How many hours ahead to check for incoming adverse weather (1–6 h) when using the system-wide KMA fallback above. Longer lookahead gives earlier warning but may over-correct. Ignored when this facility has its own forecast source linked — that source already applies its own lookahead."
+msgstr "Hány órával előre ellenőrizze a közelgő kedvezőtlen időjárást (1–6 óra), amikor a fenti rendszerszintű KMA-tartalékot használja. A hosszabb előretekintés korábbi figyelmeztetést ad, de túlkorrigáláshoz vezethet. Figyelmen kívül marad, ha ehhez a létesítményhez saját előrejelzési forrás van hozzárendelve – az a forrás már alkalmazza a saját előretekintését."
+
+#: aot/widgets/widget_notice.py:1
+msgid "Notice Category Filter"
+msgstr "Közlemény kategória szűrő"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Notes Space"
+msgstr "Jegyzetek helye"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Space"
+msgstr "Hely"
+
+#: aot/widgets/widget_notice.py:1
+msgid "None selected"
+msgstr "Nincs kiválasztva"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Notices"
+msgstr "Közlemények"
+
+#: aot/widgets/widget_notice.py:1
+msgid "No notes yet."
+msgstr "Még nincsenek jegyzetek."
+
+#: aot/widgets/widget_notice.py:1
+msgid "(Attachment only)"
+msgstr "(Csak melléklet)"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Notice & Notes Board"
+msgstr "Közlemény és jegyzet tábla"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Displays the latest notice board post titles and/or the notes written in a chosen site, zone, plot, or facility (and everything nested under it). Clicking a notice opens the full post (content, poll, replies, acknowledge) in a popup; clicking a note opens it in the shared notes panel. Users with write permission can also create, edit, and delete posts directly from the widget."
+msgstr "Megjeleníti a közleménytábla legfrissebb bejegyzéseinek címeit és/vagy a kiválasztott helyszínen, zónában, parcellán vagy létesítményben (és minden alárendelt egységben) írt jegyzeteket. Egy közleményre kattintva a teljes bejegyzés (tartalom, szavazás, válaszok, nyugtázás) felugró ablakban nyílik meg; egy jegyzetre kattintva a megosztott jegyzetpanelben nyílik meg. Az írási jogosultsággal rendelkező felhasználók a widgetből közvetlenül is létrehozhatnak, szerkeszthetnek és törölhetnek bejegyzéseket."
+
+#: aot/widgets/widget_notice.py:1
+msgid "Show Notices"
+msgstr "Közlemények megjelenítése"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Display the notice board section"
+msgstr "Megjeleníti a közleménytábla szakaszt"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Number of Notices"
+msgstr "Közlemények száma"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Number of Notes"
+msgstr "Jegyzetek száma"
+
+#: aot/widgets/widget_notice.py:1
+msgid "How many of the latest notes to display"
+msgstr "Hány legutóbbi jegyzetet jelenítsen meg"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Include Nested Spaces"
+msgstr "Beágyazott helyek belefoglalása"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Sort Notes By"
+msgstr "Jegyzetek rendezése"
+
+#: aot/widgets/widget_notice.py:1
+msgid "How to order the note list"
+msgstr "Hogyan rendezze a jegyzetlistát"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Note Category/Tag Contains"
+msgstr "A jegyzet kategóriája/címkéje tartalmazza"
+
+#: aot/widgets/widget_notice.py:1
+msgid "How often to refresh the notice/notes lists"
+msgstr "Milyen gyakran frissüljön a közlemény-/jegyzetlista"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Notes written in this site/zone/plot/facility (and, if \"Include Nested Spaces\" above is on, everything nested under it) are shown."
+msgstr "Az ebben a helyszínben/zónában/parcellán/létesítményben írt jegyzetek jelennek meg (és ha a fenti \"Beágyazott helyek belefoglalása\" be van kapcsolva, minden alárendelt egység is)."
+
+#: aot/widgets/widget_notice.py:1
+msgid "No sites, zones, plots, or facilities exist yet."
+msgstr "Még nincsenek helyszínek, zónák, parcellák vagy létesítmények."
+
+#: aot/widgets/widget_notice.py:1
+msgid "Nothing selected — turn on \"Show Notices\" and/or \"Show Notes\" in the widget settings."
+msgstr "Nincs semmi kiválasztva — kapcsolja be a \"Közlemények megjelenítése\" és/vagy \"Jegyzetek megjelenítése\" beállítást a widget beállításaiban."
+
+#: aot/widgets/widget_notice.py:1
+msgid "Choose a space in the widget settings to show notes."
+msgstr "Válasszon egy helyet a widget beállításaiban a jegyzetek megjelenítéséhez."
+
+#: aot/widgets/widget_notice.py:1
+msgid "Display notes written in a chosen space (see Space below)"
+msgstr "Megjeleníti a kiválasztott helyen írt jegyzeteket (lásd az alábbi \"Hely\" mezőt)"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Also show notes written in zones/plots/facilities/devices nested under the chosen space"
+msgstr "A kiválasztott hely alá rendelt zónákban/parcellákon/létesítményekben/eszközökön írt jegyzeteket is megjeleníti"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Newest First"
+msgstr "Legújabb elöl"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Only show notes whose category or tags contain this text (optional)"
+msgstr "Csak azokat a jegyzeteket jeleníti meg, amelyek kategóriája vagy címkéi tartalmazzák ezt a szöveget (nem kötelező)"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Show Notes List"
+msgstr "Jegyzetlista megjelenítése"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Display notes matching the filter below"
+msgstr "A lenti szűrőnek megfelelő jegyzeteket jeleníti meg"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Notes Filter"
+msgstr "Jegyzetszűrő"

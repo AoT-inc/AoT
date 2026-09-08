@@ -7,7 +7,7 @@
     <div class="d-flex align-items-center" style="border: 1px solid var(--aot-border-neutral); border-top: none; border-radius: 0 0 var(--aot-radius-lg) var(--aot-radius-lg); padding: 4px 8px; background-color: var(--aot-surface-card); gap: 6px;">
         <!-- Mode Selection -->
         <div style="flex: 1 1 auto; max-width: 160px; margin-right: 6px; min-width: 80px;">
-             <select class="form-control selectpicker aot-no-caret-select" data-container="body" data-width="100%" name="sequence_mode" style="height: 26px; font-size: var(--aot-font-size-xs); background-color: var(--aot-input-bg);" onchange="toggleSequenceFields('{{unique_id}}', this.value)" title="{{_('Operation Mode')}}">
+             <select class="form-control selectpicker aot-no-caret-select" data-width="100%" name="sequence_mode" style="height: 26px; font-size: var(--aot-font-size-xs); background-color: var(--aot-input-bg);" onchange="toggleSequenceFields('{{unique_id}}', this.value)" title="{{_('Operation Mode')}}">
                 <option value="single" {% if action_options.get('sequence_mode') == 'single' %}selected{% endif %}>{{_('Single')}}</option>
                 <option value="total" {% if action_options.get('sequence_mode') == 'total' %}selected{% endif %}>{{_('Total')}}</option>
             </select>
@@ -20,7 +20,7 @@
 
         <!-- Dynamic Duration -->
         <div class="sequence-duration-field-{{unique_id}}" style="flex: 1 1 auto; max-width: 160px; min-width: 100px; {% if action_options.get('sequence_mode', 'single') == 'total' %}display:none{% endif %}">
-            <select class="form-control selectpicker aot-no-caret-select" data-container="body" data-width="100%" name="action_duration_id" style="height: 26px; font-size: var(--aot-font-size-xs); background-color: var(--aot-surface-card);" title="{{_('Dynamic Duration Reference')}}">
+            <select class="form-control selectpicker aot-no-caret-select" data-width="100%" name="action_duration_id" style="height: 26px; font-size: var(--aot-font-size-xs); background-color: var(--aot-surface-card);" title="{{_('Dynamic Duration Reference')}}">
                 <option value="">-</option>
                 <optgroup label="PID">
                     {% for pid in choices_pid %}

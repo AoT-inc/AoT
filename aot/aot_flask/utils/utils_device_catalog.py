@@ -17,7 +17,7 @@
 - optgroup: 입력은 측정 대상, 출력은 출력 방식, 함수는 티어로 묶는다.
 - data-tokens: 번역된 측정명·제조사·인터페이스·모듈명을 검색 토큰으로 붙인다.
   bootstrap-select 는 text/subtext/tokens 셋을 모두 대문자 contains 로 훑으므로
-  (vendor/bootstrap-select.min.js 의 검색 함수에서 확인) 토큰만 붙이면 어떤
+  (static/js/aot/aot-selectpicker.js 의 검색 함수 참고) 토큰만 붙이면 어떤
   언어로도 검색이 걸린다.
 - data-subtext: 라이브러리·측정항목처럼 부차적인 정보를 흐린 작은 글씨로 분리해
   주 문구가 눈에 먼저 들어오게 한다. (둘째 줄로 내리지 않는 이유: 행이 세로로

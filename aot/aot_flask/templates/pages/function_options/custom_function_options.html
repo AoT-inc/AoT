@@ -59,7 +59,7 @@
     {% endif %}
 
     {% if each_function.device in dict_controllers %}
-    
+
     <div class="aot-modal-body-text d-flex flex-wrap" style="gap: 15px; margin-bottom: 0.5rem;">
         {% if 'function_manufacturer' in dict_controllers[each_function.device] %}
         <span><strong>{{_("Manufacturer")}}:</strong> {{dict_controllers[each_function.device]['function_manufacturer']}}</span>
@@ -127,7 +127,7 @@
 
     <div class="aot-modal-group-title">{{_('Basic Settings')}}</div>
     <div class="aot-modal-container">
-        
+
         <div class="aot-modal-option-row">
             <label class="aot-modal-option-label">{{form_function.name.label(class_='mb-0')}}</label>
             <div class="aot-modal-option-control">
@@ -138,7 +138,7 @@
         <div class="aot-modal-option-row">
             <label class="aot-modal-option-label">{{_('Tab')}}</label>
             <div class="aot-modal-option-control">
-                <select name="tab_id" class="form-control aot-modern-input">
+                <select name="tab_id" class="form-control aot-modern-select">
                     {% for tab in tabs %}
                     <option value="{{tab.unique_id}}" {% if tab.unique_id == each_function.tab_id %}selected{% endif %}>{{tab.name}}</option>
                     {% endfor %}
@@ -218,8 +218,13 @@
 
     {% if each_function.device in custom_commands %}
     <div class="aot-modal-group-title">{{_('Commands')}}</div>
+    {#- ⚠ **컨테이너 밖이다** (2026-09-08 사용자 지적: "컨테이너 안에 있는게
+        문제"). 설명은 그 컨테이너 안의 버튼들에 대한 것이 아니라 그
+        컨테이너 자체에 대한 것이라, 제목과 상자 사이 — 다른 곳의 전체
+        설명(`dict_controllers[...]['message']`)과 같은 자리 — 에 둔다.
+        `.aot-modal-body-text` 로 그 관례를 그대로 따른다. -#}
+    {% include 'pages/form_options/Custom_Actions_Message.html' %}
     <div class="aot-modal-container">
-        {% include 'pages/form_options/Custom_Actions_Message.html' %}
         {% if each_function.device in custom_commands and custom_commands[each_function.device] %}
           {% set force_default_value = true %}
           {% set custom_options_values = none %}
@@ -254,8 +259,23 @@
         {% endfor %}
         {% endif %}
     {% endset %}
+    {#- ⚠ **자기 제목을 이미 내는 함수에는 이 제목을 씌우지 않는다**
+        (2026-09-08 사용자 지적: "아무 옵션이 없는 '고급설정' 제거, 후반부에
+        고급설정과 중복되며 아무 기능도 없는 문구임"). 통합환경제어처럼
+        `custom_options` 를 `_LAYOUT` 으로 직접 배치하는 함수는 첫 항목이
+        `header` 다 — 그 화면은 "시설 설정"·"환기"·"고급 설정" 등 자기
+        제목을 스스로 낸다. 그런데 그 전체를 다시 "Advanced Settings" 라는
+        이름으로 한 번 더 감싸면, 정작 그 이름을 쓰는 진짜 고급 옵션 묶음
+        (`_LAYOUT` 안의 접힘 "Advanced Settings")과 **같은 문구가 화면에
+        두 번** 뜨고, 바깥쪽은 무엇을 담고 있는지 알려주지 않는 빈 이름표가
+        된다. 대부분의 다른 함수(옵션이 헤더 없이 바로 시작)에는 그대로
+        보인다 — 그쪽은 이 제목이 유일한 그룹 이름이다. -#}
+    {% set _self_titled = dict_options.get('custom_options')
+                          and dict_options['custom_options'][0].get('type') == 'header' %}
     {% if _advanced_body | trim %}
+    {% if not _self_titled %}
     <div class="aot-modal-group-title">{{_('Advanced Settings')}}</div>
+    {% endif %}
     <div class="aot-modal-container">
         {{ _advanced_body }}
     </div>
@@ -337,13 +357,13 @@
 
       {% include 'pages/form_options/Measurements_Configure.html' %}
     {% endif %}
-  
+
   </form>
 
     {% if 'enable_actions' in dict_options['options_enabled']%}
 
     <div class="aot-modal-group-title">
-        {{_('Actions')}} 
+        {{_('Actions')}}
         <a href="{{ manual_url('Actions/') }}" target="_blank"><span class="fas fa-question-circle aot-help-icon"></span></a>
     </div>
 
@@ -358,7 +378,6 @@
             <div class="aot-modal-option-control">
                 <div class="aot-action-group">
                     <select class="form-control aot-modern-select selectpicker aot-standard-select" data-style="btn-white" data-live-search="true"
-                        data-display="static" data-container="body" data-dropdown-align-right="true"
                         title="{{_('Actions')}}: {{dict_translation['select_one']['title']}}" id="action_type_{{each_function.unique_id}}"
                         name="action_type">
                         {% set _restrict = dict_options.get('restrict_actions', []) %}
@@ -368,7 +387,7 @@
                         {% endif %}
                         {% endfor %}
                     </select>
-                    <button data-form-id="form_actions_{{each_function.unique_id}}" onclick="return $(this).processRequest(this, 'add_action');" 
+                    <button data-form-id="form_actions_{{each_function.unique_id}}" onclick="return $(this).processRequest(this, 'add_action');"
                         name="add_action" class="btn aot-pill-btn aot-pill-btn-primary" type="button">{{_('Add')}}</button>
                 </div>
             </div>

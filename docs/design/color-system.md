@@ -1080,3 +1080,64 @@ claude.ai/design 의 검사기가 매번 보고하던 형식 항목 둘을 정�
 **남는 규칙**: 외부 도구의 표식은 **문법을 확인하기 전까지 통했다고 하지
 않는다.** 세 번 다 "달았다" 로 끝냈다가 다시 보고받았다 — 확인 경로는
 올려 보는 것 하나뿐이다.
+
+## 5-13. 출력 On/Off 버튼 — 레거시 별칭 정리가 잘못 합친 두 필드 (2026-09-08)
+
+사용자가 `/output` 화면에서 On/Off 버튼 색이 `settings/custom_ui` 설정과
+무관하게 보인다고 지적했다. 실제로 확인해 보니 **연결 자체가 끊겨 있었다.**
+
+### 두 필드는 원래부터 달랐다
+
+`settings/custom_ui` → "버튼 색상" 탭에는 이름이 비슷한 두 쌍이 있다.
+
+| 필드 | 라벨 | 뜻 |
+|---|---|---|
+| `btn_primary_bg` / `btn_secondary_bg` | 주 버튼 배경 / 보조 버튼 배경 | 저장·활성화·탭 등 **앱 전역**의 채워진 버튼 |
+| `bg_btn_on` / `bg_btn_off` | 버튼 켜짐 / 버튼 꺼짐 | **출력 행의 ON/OFF 버튼** 전용 |
+
+`routes_general.py` 의 오래된 주석이 이미 이 구분을 적어 두고 있었다:
+
+> "bg_btn_on/off 는 --aot-btn-bg-active/inactive 와 충돌하므로(별도 aot 토큰
+> 없음) 레거시 이름만 발행한다."
+
+즉 두 필드가 **같은 이름의 실토큰을 공유하면 안 된다**는 것이 처음부터 설계
+의도였다 — `bg_btn_on/off` 전용의 정본 토큰이 아직 없어서, 그때는 레거시
+별칭(`--bg-btn-on`/`--bg-btn-off`)만 발행하고 있었다.
+
+### 레거시 별칭 정리가 이 경계를 지웠다
+
+2026-09-07 "레거시 별칭 407곳을 정본 토큰으로 옮긴다" 작업(`aot-theme-variables.css`)
+에서, 별칭 정의 자체가 이렇게 되어 있었다:
+
+```
+--bg-btn-on:  var(--aot-btn-bg-active);    /* 잘못 — btn_primary_bg 의 정본 */
+--bg-btn-off: var(--aot-btn-bg-inactive);  /* 잘못 — btn_secondary_bg 의 정본 */
+```
+
+`.aot-btn-on`/`.aot-btn-off`(출력 행 버튼)가 그 사이 `--aot-btn-bg-active`/
+`-inactive` 를 직접 읽게 바뀌면서(2026-09-08, 특이도 역전 수정 — §위 참조),
+`bg_btn_on`/`bg_btn_off` 를 바꿔도 출력 화면에 반영되지 않는 상태가 됐다.
+**두 필드의 기본값이 우연히 같아서(`#13261B`/`#5E6B64`) 겉보기엔 맞아
+보였다** — 실제로는 `btn_primary_bg`/`btn_secondary_bg` 의 값을 보고 있었다.
+
+### 고친 것
+
+전용 정본 토큰을 새로 만들었다.
+
+```
+--aot-btn-bg-output-on:  #13261B;
+--aot-btn-bg-output-off: #5E6B64;
+```
+
+- `--bg-btn-on`/`--bg-btn-off` (레거시 별칭)이 이 새 토큰을 가리키게 정정.
+- `routes_general.py` 의 `bg_btn_on`/`bg_btn_off` 매핑에 새 토큰을 추가
+  (레거시 이름과 함께 발행 — 다른 관례와 동일).
+- `.aot-btn-on`/`.aot-btn-off`(기본·active-background 오버라이드·
+  paired-inactive 오버라이드 셋 다)가 `--aot-btn-bg-output-on/-off` 를
+  읽도록 정정. `--aot-btn-bg-active`/`-inactive`(주/보조 버튼용)는
+  그대로 두었다 — 그쪽은 원래도 맞았다.
+
+**남는 규칙**: 이름이 비슷한 두 필드(`btn_primary_bg` vs `bg_btn_on` 류)를
+레거시 별칭 정리처럼 기계적으로 다루는 작업에서는, 겉보기 값이 같다고
+같은 토큰으로 합치면 안 된다 — `routes_general.py` 의 매핑 목록 자체가
+"이 필드가 무엇을 가리키는가"의 정본이다. 값이 아니라 그 목록을 먼저 볼 것.

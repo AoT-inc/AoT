@@ -41,7 +41,6 @@
     }
   </style>
 
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/gridstack.css') }}" />
   {#- `?v=` 를 손으로 적지 않는다. `url_for('static', …)` 는 app.py 의
       `_static_cache_bust` 가 파일 내용 해시를 붙여 주므로 고치면 바로 내려간다.
       손으로 적은 상수는 고쳐도 브라우저가 옛 파일을 계속 쓴다 — 실제로

@@ -581,3 +581,73 @@
     }
 
 }
+
+/* ── 슬라이드 토글 (.btn-toggle) ─────────────────────────────
+   실제 컴포넌트(components/aot-toggle.css)의 모양을 축소해 그대로 옮긴다.
+   색은 그 컴포넌트가 읽는 필드와 1:1 이다:
+     켜짐   band_3            (--aot-band-3)
+     대기   bg_pending        (--aot-bg-hold)
+     무응답 bg_warning        (--aot-bg-pause)
+     손잡이 text_color_tertiary
+   꺼짐   toggle_track_off  (--aot-toggle-track-off) */
+#aot-ui-preview .preview-toggle-label-row {
+    margin-top: 10px;
+    margin-bottom: 4px;
+    font-size: var(--aot-font-size-2xs);
+    color: var(--preview-text-color-secondary, #5E6B64);
+}
+
+#aot-ui-preview .preview-toggle-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+}
+
+#aot-ui-preview .preview-toggle-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+
+#aot-ui-preview .preview-toggle {
+    position: relative;
+    display: inline-block;
+    width: 26px;
+    height: 13px;
+    border-radius: var(--aot-btn-pill-radius);
+    background-color: var(--preview-toggle-track-off, #DDDDDD);
+    cursor: pointer;
+    transition: opacity 0.15s ease;
+}
+
+#aot-ui-preview .preview-toggle:hover { opacity: 0.82; }
+
+#aot-ui-preview .preview-toggle-thumb {
+    position: absolute;
+    top: 1.5px;
+    left: 1.5px;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background-color: var(--preview-text-color-tertiary, #FFFFFF);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+#aot-ui-preview .preview-toggle-on      { background-color: var(--preview-band-3,     #32c85a); }
+#aot-ui-preview .preview-toggle-pending { background-color: var(--preview-bg-pending,  #F0AD4E); }
+#aot-ui-preview .preview-toggle-fault   { background-color: var(--preview-bg-warning,  #989E9E); opacity: 0.55; }
+
+/* 켜짐·대기·무응답은 손잡이가 오른쪽(= 켜기 명령이 나간 상태) */
+#aot-ui-preview .preview-toggle-on .preview-toggle-thumb,
+#aot-ui-preview .preview-toggle-pending .preview-toggle-thumb,
+#aot-ui-preview .preview-toggle-fault .preview-toggle-thumb {
+    left: auto;
+    right: 1.5px;
+}
+
+#aot-ui-preview .preview-toggle-caption {
+    font-size: var(--aot-font-size-2xs);
+    color: var(--preview-text-color-secondary, #5E6B64);
+    white-space: nowrap;
+}

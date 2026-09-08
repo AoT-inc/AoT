@@ -406,11 +406,11 @@ const AiPage = (function() {
 
     // Preset quick-fill texts (English instruction strings)
     const PRESET_FILL_TEXT = {
-        '{{ _("Outdoor Farming") }}':   'Focus on outdoor crop management, weather impact, and soil conditions.',
-        '{{ _("Greenhouse") }}':        'Prioritize greenhouse environment: temperature, humidity, CO2, and pest control.',
-        '{{ _("Sports Facility") }}':   'Help manage facility scheduling, maintenance, and visitor experience.',
-        '{{ _("Park") }}':              'Support park operations: visitor flow, seasonal planning, and safety.',
-        '{{ _("Transportation") }}':    'Monitor traffic flow, incident response, and infrastructure maintenance.'
+        [{{ _("Outdoor Farming")|tojson }}]:   'Focus on outdoor crop management, weather impact, and soil conditions.',
+        [{{ _("Greenhouse")|tojson }}]:        'Prioritize greenhouse environment: temperature, humidity, CO2, and pest control.',
+        [{{ _("Sports Facility")|tojson }}]:   'Help manage facility scheduling, maintenance, and visitor experience.',
+        [{{ _("Park")|tojson }}]:              'Support park operations: visitor flow, seasonal planning, and safety.',
+        [{{ _("Transportation")|tojson }}]:    'Monitor traffic flow, incident response, and infrastructure maintenance.'
     };
 
     // ---- Status snapshot ----
@@ -449,7 +449,7 @@ const AiPage = (function() {
         const keywords = data.keywords || [];
         const kwEl = document.getElementById('keywords-content');
         if (keywords.length === 0) {
-            kwEl.innerHTML = '<span style="color:var(--aot-color-text-secondary, #adb5bd); font-size: var(--aot-font-size-sm);">{{ _("AI is still learning...") }}</span>';
+            kwEl.innerHTML = '<span style="color:var(--aot-color-text-secondary, #adb5bd); font-size: var(--aot-font-size-sm);">' + {{ _("AI is still learning...")|tojson }} + '</span>';
         } else {
             kwEl.innerHTML = '<div class="keyword-chips">' +
                 keywords.map(function(k) {
@@ -462,7 +462,7 @@ const AiPage = (function() {
         const features = data.features || [];
         const fEl = document.getElementById('features-content');
         if (features.length === 0) {
-            fEl.innerHTML = '<span style="color:var(--aot-color-text-secondary, #adb5bd); font-size: var(--aot-font-size-sm);">{{ _("No activity yet") }}</span>';
+            fEl.innerHTML = '<span style="color:var(--aot-color-text-secondary, #adb5bd); font-size: var(--aot-font-size-sm);">' + {{ _("No activity yet")|tojson }} + '</span>';
         } else {
             fEl.innerHTML = '<ul class="feature-list">' +
                 features.map(function(f, i) {
@@ -477,7 +477,7 @@ const AiPage = (function() {
 
     function resetSnapshot() {
         if (!facilityId) return;
-        if (!confirm('{{ _("Reset AI Status? The snapshot will be recalculated on next load.") }}')) return;
+        if (!confirm({{ _("Reset AI Status? The snapshot will be recalculated on next load.")|tojson }})) return;
         fetch('/api/v1/ai/portal/status/snapshot?facility_id=' + encodeURIComponent(facilityId), {
             method: 'DELETE'
         })
@@ -535,7 +535,7 @@ const AiPage = (function() {
                 if (emptyEl) emptyEl.style.display = 'none';
             } else {
                 document.getElementById('req-display-view').innerHTML =
-                    '<div class="requirement-empty">{{ _("Add specific instructions for your AI (optional)") }}</div>';
+                    '<div class="requirement-empty">' + {{ _("Add specific instructions for your AI (optional)")|tojson }} + '</div>';
             }
             cancelEditRequirement();
         })
@@ -543,7 +543,7 @@ const AiPage = (function() {
             console.error('Save requirement error:', err);
             const errEl = document.getElementById('req-save-error');
             if (errEl) {
-                errEl.textContent = '{{ _("Failed to save. Please try again.") }}';
+                errEl.textContent = {{ _("Failed to save. Please try again.")|tojson }};
                 errEl.style.display = 'block';
             }
         });

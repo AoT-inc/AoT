@@ -7,7 +7,6 @@
 {% block head %}
   <script type="text/javascript" src="{{ url_for('static', filename='js/vendor/moment.min.js') }}"></script>
   <script type="text/javascript" src="{{ url_for('static', filename='js/vendor/daterangepicker.js') }}"></script>
-  <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/daterangepicker.css') }}" />
   <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/aot-settings.css') }}" />
 
   <script type="text/javascript" src="{{ asset('highcharts-stack') }}"></script>
@@ -362,22 +361,22 @@ $(document).ready(function() {
             buttons: [{
                 type: 'hour',
                 count: 1,
-                text: '{{_('1 Hour')}}'
+                text: {{ _('1 Hour')|tojson }}
             }, {
                 type: 'day',
                 count: 1,
-                text: '{{_('1 Day')}}'
+                text: {{ _('1 Day')|tojson }}
             }, {
                 type: 'week',
                 count: 1,
-                text: '{{_('1 Week')}}'
+                text: {{ _('1 Week')|tojson }}
             }, {
                 type: 'month',
                 count: 1,
-                text: '{{_('1 Month')}}'
+                text: {{ _('1 Month')|tojson }}
             }, {
                 type: 'all',
-                text: '{{_('All')}}'
+                text: {{ _('All')|tojson }}
             }],
             inputEnabled: false,
             selected: 4
@@ -397,7 +396,7 @@ $(document).ready(function() {
         yAxis: [
           {
             title: {
-              text: '{{_('Amps')}} (A)'
+              text: {{ _('Amps')|tojson }} + ' (A)'
             },
             labels: {
               format: '{value}'
@@ -484,22 +483,22 @@ $(document).ready(function() {
           buttons: [{
               type: 'hour',
               count: 1,
-              text: '{{_('1 Hour')}}'
+              text: {{ _('1 Hour')|tojson }}
           }, {
               type: 'day',
               count: 1,
-              text: '{{_('1 Day')}}'
+              text: {{ _('1 Day')|tojson }}
           }, {
               type: 'week',
               count: 1,
-              text: '{{_('1 Week')}}'
+              text: {{ _('1 Week')|tojson }}
           }, {
               type: 'month',
               count: 1,
-              text: '{{_('1 Month')}}'
+              text: {{ _('1 Month')|tojson }}
           }, {
               type: 'all',
-              text: '{{_('All')}}'
+              text: {{ _('All')|tojson }}
           }],
           inputEnabled: false,
           selected: 4
@@ -519,7 +518,7 @@ $(document).ready(function() {
       yAxis: [
         {
           title: {
-            text: '{{_('Amps')}} (A)'
+            text: {{ _('Amps')|tojson }} + ' (A)'
           },
           labels: {
             format: '{value}'

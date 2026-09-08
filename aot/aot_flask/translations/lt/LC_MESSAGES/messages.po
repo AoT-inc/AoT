@@ -30717,3 +30717,162 @@ msgstr "Griežtesnės purškimo ribos daigams, kurie lengviau nudega nei subrend
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:1192
 msgid "Not used"
 msgstr "Nenaudojama"
+
+msgid "Vent"
+msgstr "Ventiliacija"
+
+msgid "Mist"
+msgstr "Rūkas"
+
+msgid "Devices under automatic control"
+msgstr "Automatiškai valdomi įrenginiai"
+
+msgid "%(n)s excluded"
+msgstr "%(n)s neįtraukta"
+
+msgid "Turn a device off to keep automatic control from moving it."
+msgstr "Išjunkite įrenginį, kad automatinis valdymas jo nevaldytų."
+
+msgid "Safety gates will not move it either."
+msgstr "Apsauginiai vartai jo taip pat nevaldys."
+
+msgid "Select a linked facility first."
+msgstr "Pirmiausia pasirinkite susietą objektą."
+
+msgid "This facility has no actuators yet."
+msgstr "Šiame objekte dar nėra vykdiklių."
+
+msgid "Could not load the device list. Existing settings are kept."
+msgstr "Nepavyko įkelti įrenginių sąrašo. Esami nustatymai išsaugoti."
+
+msgid "Excluded actuators (raw)"
+msgstr "Neįtraukti vykdikliai (neapdorota)"
+
+msgid "Comma-separated Output IDs excluded from automatic control. Normally set with the toggles above rather than typed here."
+msgstr "Kableliais atskirti išvesčių ID, neįtraukti į automatinį valdymą. Paprastai nustatoma aukščiau esančiais jungikliais, o ne įvedama čia."
+
+msgid "Proactively shift temperature/humidity setpoints and inhibit ventilation before adverse weather arrives. Uses this facility's own forecast source if one is linked in the facility editor's weather bindings (any service — KMA, OpenWeatherMap, Open-Meteo); otherwise falls back to the system-wide KMA short-term forecast."
+msgstr "Iš anksto pakeičia temperatūros / drėgmės nuostatas ir sustabdo vėdinimą prieš atvykstant nepalankioms oro sąlygoms. Naudoja šio objekto nuosavą prognozės šaltinį, jei toks susietas objekto redaktoriaus orų susiejimuose (bet kokia paslauga – KMA, OpenWeatherMap, Open-Meteo); priešingu atveju grįžtama prie visos sistemos KMA trumpalaikės prognozės."
+
+msgid "How many hours ahead to check for incoming adverse weather (1–6 h) when using the system-wide KMA fallback above. Longer lookahead gives earlier warning but may over-correct. Ignored when this facility has its own forecast source linked — that source already applies its own lookahead."
+msgstr "Kiek valandų iš anksto tikrinti artėjančias nepalankias oro sąlygas (1–6 val.), kai naudojamas aukščiau nurodytas visos sistemos KMA atsarginės variantas. Ilgesnis žvalgymo laikas duoda ankstesnį įspėjimą, bet gali per daug koreguoti. Ignoruojama, jei šiam objektui susietas nuosavas prognozės šaltinis – tas šaltinis jau taiko savų žvalgymo laiką."
+
+#: aot/widgets/widget_notice.py:1
+msgid "Notice Category Filter"
+msgstr "Pranešimų kategorijos filtras"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Notes Space"
+msgstr "Užrašų erdvė"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Space"
+msgstr "Erdvė"
+
+#: aot/widgets/widget_notice.py:1
+msgid "None selected"
+msgstr "Nepasirinkta"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Notices"
+msgstr "Pranešimai"
+
+#: aot/widgets/widget_notice.py:1
+msgid "No notes yet."
+msgstr "Kol kas užrašų nėra."
+
+#: aot/widgets/widget_notice.py:1
+msgid "(Attachment only)"
+msgstr "(Tik priedas)"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Notice & Notes Board"
+msgstr "Pranešimų ir užrašų skydelis"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Displays the latest notice board post titles and/or the notes written in a chosen site, zone, plot, or facility (and everything nested under it). Clicking a notice opens the full post (content, poll, replies, acknowledge) in a popup; clicking a note opens it in the shared notes panel. Users with write permission can also create, edit, and delete posts directly from the widget."
+msgstr "Rodo naujausių skelbimų lentos įrašų pavadinimus ir (arba) pastabas, parašytas pasirinktoje vietoje, zonoje, sklype ar objekte (ir viskame, kas yra po juo). Spustelėjus skelbimą, iškylančiajame lange atsidaro visas įrašas (turinys, apklausa, atsakymai, patvirtinimas); spustelėjus pastabą, ji atsidaro bendrame pastabų skydelyje. Rašymo teises turintys naudotojai taip pat gali kurti, redaguoti ir šalinti įrašus tiesiai iš valdiklio."
+
+#: aot/widgets/widget_notice.py:1
+msgid "Show Notices"
+msgstr "Rodyti pranešimus"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Display the notice board section"
+msgstr "Rodo skelbimų lentos skiltį"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Number of Notices"
+msgstr "Pranešimų skaičius"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Number of Notes"
+msgstr "Užrašų skaičius"
+
+#: aot/widgets/widget_notice.py:1
+msgid "How many of the latest notes to display"
+msgstr "Kiek naujausių pastabų rodyti"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Include Nested Spaces"
+msgstr "Įtraukti įdėtąsias erdves"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Sort Notes By"
+msgstr "Rikiuoti pastabas pagal"
+
+#: aot/widgets/widget_notice.py:1
+msgid "How to order the note list"
+msgstr "Kaip rikiuoti pastabų sąrašą"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Note Category/Tag Contains"
+msgstr "Pastabos kategorija / žyma yra"
+
+#: aot/widgets/widget_notice.py:1
+msgid "How often to refresh the notice/notes lists"
+msgstr "Kaip dažnai atnaujinti pranešimų / pastabų sąrašus"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Notes written in this site/zone/plot/facility (and, if \"Include Nested Spaces\" above is on, everything nested under it) are shown."
+msgstr "Rodomos pastabos, parašytos šioje vietoje / zonoje / sklype / objekte (o jei aukščiau įjungta „Įtraukti įdėtąsias erdves\", ir viskas, kas yra po juo)."
+
+#: aot/widgets/widget_notice.py:1
+msgid "No sites, zones, plots, or facilities exist yet."
+msgstr "Kol kas nėra jokių vietų, zonų, sklypų ar objektų."
+
+#: aot/widgets/widget_notice.py:1
+msgid "Nothing selected — turn on \"Show Notices\" and/or \"Show Notes\" in the widget settings."
+msgstr "Niekas nepasirinkta — valdiklio nustatymuose įjunkite „Rodyti pranešimus\" ir (arba) „Rodyti pastabas\"."
+
+#: aot/widgets/widget_notice.py:1
+msgid "Choose a space in the widget settings to show notes."
+msgstr "Pasirinkite erdvę valdiklio nustatymuose, kad būtų rodomos pastabos."
+
+#: aot/widgets/widget_notice.py:1
+msgid "Display notes written in a chosen space (see Space below)"
+msgstr "Rodo pastabas, parašytas pasirinktoje erdvėje (žr. „Erdvė\" žemiau)"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Also show notes written in zones/plots/facilities/devices nested under the chosen space"
+msgstr "Taip pat rodo pastabas, parašytas zonose / sklypuose / objektuose / įrenginiuose, esančiuose po pasirinkta erdve"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Newest First"
+msgstr "Naujausi pirmi"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Only show notes whose category or tags contain this text (optional)"
+msgstr "Rodyti tik pastabas, kurių kategorija ar žymos apima šį tekstą (nebūtina)"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Show Notes List"
+msgstr "Rodyti užrašų sąrašą"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Display notes matching the filter below"
+msgstr "Rodo pastabas, atitinkančias žemiau esantį filtrą"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Notes Filter"
+msgstr "Užrašų filtras"

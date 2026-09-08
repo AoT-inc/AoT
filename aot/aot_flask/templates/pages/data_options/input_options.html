@@ -104,7 +104,7 @@
     {% endif %}
 
 
-    
+
     <!-- ... skipped ... -->
 
     {% if 'custom_channel_options_message' in dict_options %}
@@ -137,7 +137,7 @@
       <div class="aot-modal-option-row">
         <label class="aot-modal-option-label">{{form_mod_input.tab_id.label(class_='mb-0')}}</label>
         <div class="aot-modal-option-control">
-          <select name="tab_id" class="form-control aot-modern-input">
+          <select name="tab_id" class="form-control aot-modern-select">
             {% for tab in tabs %}
             <option value="{{tab.unique_id}}" {% if tab.unique_id == each_input.tab_id %}selected{% endif %}>{{tab.name}}</option>
             {% endfor %}
@@ -272,8 +272,10 @@
 
     {% if each_input.device != 'input_spacer' %}
     <div class="aot-modal-group-title">{{_('Commands')}}</div>
+    {#- ⚠ 컨테이너 밖이다 — `custom_function_options.html` 의 같은 수정과
+        같은 이유다(Custom_Actions_Message.html 자체 주석 참조). -#}
+    {% include 'pages/form_options/Custom_Actions_Message.html' %}
     <div class="aot-modal-container">
-      {% include 'pages/form_options/Custom_Actions_Message.html' %}
       <div class="aot-modal-option-row">
         <label class="aot-modal-option-label">{{_('Update Immediately')}}</label>
         <div class="aot-modal-option-control">
@@ -393,7 +395,6 @@
         <div class="aot-modal-option-control">
           <div class="aot-action-group">
             <select class="form-control aot-modern-select selectpicker aot-standard-select" data-style="btn-white" data-live-search="true"
-              data-display="static" data-container="body" data-dropdown-align-right="true"
               title="{{_('Select')}}" id="action_type_{{each_input.unique_id}}"
               name="action_type" data-selected-text-format="static">
               {% for value, name in choices_actions %}

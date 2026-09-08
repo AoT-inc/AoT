@@ -9,7 +9,7 @@
 <div class="aot-modal-option-row">
   <label class="aot-modal-option-label" for="tab_id_{{each_widget.unique_id}}">{{form_base.tab_id.label.text}}</label>
   <div class="aot-modal-option-control">
-    <select name="tab_id" id="tab_id_{{each_widget.unique_id}}" class="form-control aot-modern-input">
+    <select name="tab_id" id="tab_id_{{each_widget.unique_id}}" class="form-control aot-modern-select">
       {% for each_dash in dashboards %}
       <option value="{{each_dash.unique_id}}" {% if each_dash.unique_id == each_widget.tab_id %}selected{% endif %}>{{each_dash.name}}</option>
       {% endfor %}

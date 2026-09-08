@@ -39,11 +39,25 @@
         서버 스키마가 미리 알 수 없다. 자리와 함수 uuid 만 넘기고 채우는 것은
         `aot-actuator-enable.js` 다.
 
+        ⚠ **설명은 상자 밖이다** (2026-09-08 사용자 지적: "컨테이너 전체
+        설명은 컨테이너 밖, 컨테이너 제목 아래로 배치하라고 했는데 이건 또
+        안에다 넣는 이유가 뭔가요?"). 이 문구는 정적이라(서버 데이터에
+        의존하지 않는다) JS 가 아니라 여기서 직접 낸다 — `header` 타입처럼
+        컨테이너를 한 번 닫았다 다시 연다. `Custom_Actions_Message.html` 과
+        같은 전역 클래스(`.aot-modal-body-text` + `.aot-modal-container-intro`)
+        를 쓴다.
+
         ⚠ **여기서 hidden input 을 미리 두지 말 것.** `display:none` 안의
         hidden 도 함께 제출되므로, 목록 조회가 실패한 상태에서 저장하면 빈
         값이 나가 **꺼 둔 장치가 조용히 되살아난다.** 그 input 은 조회에
         성공했을 때만 JS 가 넣는다. -#}
     {% elif each_option['type'] == 'actuator_enable' %}
+</div>
+<div class="aot-modal-body-text aot-modal-container-intro">
+  {{_('Turn a device off to keep automatic control from moving it.')}}
+  {{_('Safety gates will not move it either.')}}
+</div>
+<div class="{{ custom_opt_container }}">
 <div class="aot-actuator-enable" data-function-id="{{unique_id}}"></div>
 
     {% elif each_option['type'] == 'header' %}
@@ -410,7 +424,6 @@
             id="{{name_prefix}}{{each_option['id']}}" 
             name="{% if channel_options %}{{name_prefix}}{% endif %}{{each_option['id']}}" 
             title="{{_('Select')}}"
-            data-size="auto"
             multiple="" 
             data-selected-text-format="static"
             data-style="btn-white"
@@ -483,7 +496,6 @@
             id="{{name_prefix}}{{each_option['id']}}" 
             name="{% if channel_options %}{{name_prefix}}{% endif %}{{each_option['id']}}" 
             title="{{_('Select')}}"
-            data-size="auto"
             multiple=""
             data-selected-text-format="static"
             data-style="btn-white"

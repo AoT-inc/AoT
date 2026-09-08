@@ -30554,3 +30554,162 @@ msgstr "पौध के लिए सख्त मिस्टिंग सी�
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:1192
 msgid "Not used"
 msgstr "उपयोग में नहीं"
+
+msgid "Vent"
+msgstr "वेंट"
+
+msgid "Mist"
+msgstr "मिस्ट"
+
+msgid "Devices under automatic control"
+msgstr "स्वचालित नियंत्रण के अंतर्गत उपकरण"
+
+msgid "%(n)s excluded"
+msgstr "%(n)s बाहर रखे गए"
+
+msgid "Turn a device off to keep automatic control from moving it."
+msgstr "स्वचालित नियंत्रण को किसी उपकरण को चलाने से रोकने के लिए उसे बंद करें।"
+
+msgid "Safety gates will not move it either."
+msgstr "सुरक्षा गेट भी उसे नहीं चलाएंगे।"
+
+msgid "Select a linked facility first."
+msgstr "पहले एक लिंक की गई फैसिलिटी चुनें।"
+
+msgid "This facility has no actuators yet."
+msgstr "इस फैसिलिटी में अभी तक कोई एक्चुएटर नहीं है।"
+
+msgid "Could not load the device list. Existing settings are kept."
+msgstr "उपकरण सूची लोड नहीं हो सकी। मौजूदा सेटिंग्स बनी रहेंगी।"
+
+msgid "Excluded actuators (raw)"
+msgstr "बाहर रखे गए एक्चुएटर (रॉ)"
+
+msgid "Comma-separated Output IDs excluded from automatic control. Normally set with the toggles above rather than typed here."
+msgstr "स्वचालित नियंत्रण से बाहर रखे गए आउटपुट ID, अल्पविराम से अलग किए गए। आमतौर पर इन्हें यहां टाइप करने के बजाय ऊपर दिए गए टॉगल से सेट किया जाता है।"
+
+msgid "Proactively shift temperature/humidity setpoints and inhibit ventilation before adverse weather arrives. Uses this facility's own forecast source if one is linked in the facility editor's weather bindings (any service — KMA, OpenWeatherMap, Open-Meteo); otherwise falls back to the system-wide KMA short-term forecast."
+msgstr "प्रतिकूल मौसम आने से पहले तापमान/नमी के सेटपॉइंट को सक्रिय रूप से बदलता है और वेंटिलेशन को रोकता है। यदि सुविधा संपादक की मौसम बाइंडिंग में इस सुविधा का अपना पूर्वानुमान स्रोत जोड़ा गया है (कोई भी सेवा — KMA, OpenWeatherMap, Open-Meteo), तो उसी का उपयोग करता है; अन्यथा सिस्टम-व्यापी KMA अल्पकालिक पूर्वानुमान पर वापस चला जाता है।"
+
+msgid "How many hours ahead to check for incoming adverse weather (1–6 h) when using the system-wide KMA fallback above. Longer lookahead gives earlier warning but may over-correct. Ignored when this facility has its own forecast source linked — that source already applies its own lookahead."
+msgstr "ऊपर दिए गए सिस्टम-व्यापी KMA फॉलबैक का उपयोग करते समय आने वाले प्रतिकूल मौसम की जांच कितने घंटे पहले की जाए (1–6 घंटे)। अधिक लुकअहेड पहले चेतावनी देता है लेकिन अत्यधिक सुधार कर सकता है। यदि इस सुविधा का अपना पूर्वानुमान स्रोत जोड़ा गया है तो इसे अनदेखा किया जाता है — वह स्रोत पहले से ही अपना खुद का लुकअहेड लागू करता है।"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Notice Category Filter"
+msgstr "सूचना श्रेणी फ़िल्टर"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Notes Space"
+msgstr "नोट्स स्थान"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Space"
+msgstr "स्थान"
+
+#: aot/widgets/widget_notice.py:1
+msgid "None selected"
+msgstr "कोई नहीं चुना गया"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Notices"
+msgstr "सूचनाएँ"
+
+#: aot/widgets/widget_notice.py:1
+msgid "No notes yet."
+msgstr "अभी तक कोई नोट नहीं है।"
+
+#: aot/widgets/widget_notice.py:1
+msgid "(Attachment only)"
+msgstr "(केवल अनुलग्नक)"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Notice & Notes Board"
+msgstr "सूचना और नोट्स बोर्ड"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Displays the latest notice board post titles and/or the notes written in a chosen site, zone, plot, or facility (and everything nested under it). Clicking a notice opens the full post (content, poll, replies, acknowledge) in a popup; clicking a note opens it in the shared notes panel. Users with write permission can also create, edit, and delete posts directly from the widget."
+msgstr "नवीनतम सूचना बोर्ड पोस्ट के शीर्षक और/या चुनी गई साइट, ज़ोन, प्लॉट या सुविधा (और उसके अंतर्गत सब कुछ) में लिखे गए नोट्स दिखाता है। किसी सूचना पर क्लिक करने से पूरी पोस्ट (सामग्री, पोल, उत्तर, पावती) पॉपअप में खुलती है; किसी नोट पर क्लिक करने से वह साझा नोट्स पैनल में खुलता है। लिखने की अनुमति वाले उपयोगकर्ता विजेट से सीधे पोस्ट बना, संपादित और हटा भी सकते हैं।"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Show Notices"
+msgstr "सूचनाएँ दिखाएँ"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Display the notice board section"
+msgstr "सूचना बोर्ड अनुभाग दिखाता है"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Number of Notices"
+msgstr "सूचनाओं की संख्या"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Number of Notes"
+msgstr "नोट्स की संख्या"
+
+#: aot/widgets/widget_notice.py:1
+msgid "How many of the latest notes to display"
+msgstr "कितने नवीनतम नोट्स दिखाने हैं"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Include Nested Spaces"
+msgstr "नेस्टेड स्थान शामिल करें"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Sort Notes By"
+msgstr "नोट्स क्रमबद्ध करें"
+
+#: aot/widgets/widget_notice.py:1
+msgid "How to order the note list"
+msgstr "नोट सूची को कैसे क्रमबद्ध करें"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Note Category/Tag Contains"
+msgstr "नोट श्रेणी/टैग में शामिल"
+
+#: aot/widgets/widget_notice.py:1
+msgid "How often to refresh the notice/notes lists"
+msgstr "सूचना/नोट सूचियों को कितनी बार रीफ़्रेश करें"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Notes written in this site/zone/plot/facility (and, if \"Include Nested Spaces\" above is on, everything nested under it) are shown."
+msgstr "इस साइट/ज़ोन/प्लॉट/सुविधा में लिखे गए नोट्स दिखाए जाते हैं (और यदि ऊपर \"नेस्टेड स्थान शामिल करें\" चालू है, तो उसके अंतर्गत सब कुछ भी)।"
+
+#: aot/widgets/widget_notice.py:1
+msgid "No sites, zones, plots, or facilities exist yet."
+msgstr "अभी तक कोई साइट, ज़ोन, प्लॉट या सुविधा मौजूद नहीं है।"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Nothing selected — turn on \"Show Notices\" and/or \"Show Notes\" in the widget settings."
+msgstr "कुछ भी चयनित नहीं है — विजेट सेटिंग्स में \"सूचनाएँ दिखाएँ\" और/या \"नोट्स दिखाएँ\" चालू करें।"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Choose a space in the widget settings to show notes."
+msgstr "नोट्स दिखाने के लिए विजेट सेटिंग्स में एक स्थान चुनें।"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Display notes written in a chosen space (see Space below)"
+msgstr "चुने गए स्थान में लिखे गए नोट्स दिखाता है (नीचे \"स्थान\" देखें)"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Also show notes written in zones/plots/facilities/devices nested under the chosen space"
+msgstr "चुने गए स्थान के अंतर्गत नेस्टेड ज़ोन/प्लॉट/सुविधाओं/उपकरणों में लिखे गए नोट्स भी दिखाता है"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Newest First"
+msgstr "सबसे नया पहले"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Only show notes whose category or tags contain this text (optional)"
+msgstr "केवल वे नोट्स दिखाएँ जिनकी श्रेणी या टैग में यह टेक्स्ट शामिल हो (वैकल्पिक)"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Show Notes List"
+msgstr "नोट्स सूची दिखाएँ"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Display notes matching the filter below"
+msgstr "नीचे दिए गए फ़िल्टर से मेल खाने वाले नोट्स दिखाता है"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Notes Filter"
+msgstr "नोट्स फ़िल्टर"

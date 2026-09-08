@@ -7,9 +7,15 @@
 정적 --aot-border-neutral 로 고정돼 있었다 — "테두리도 연동해달라" 는 후속
 요청으로 tint_{success,warning,danger,info}_border 4개 필드를 추가했다.
 
-docs/design/color-system.md 는 같은 기본값이 4곳에 있고 항상 일치해야 한다고
-명시한다(§3). 어느 한 곳만 갱신하면 "폼에는 새 색이 보이는데 저장하면 반영 안
-됨" 류의 조용한 드리프트가 난다 — 이 파일이 그 계약을 코드로 고정한다.
+2026-09-08: 그 4개 필드를 **없앴다.** 사용처가 이 안내 상자(+ logview 두 줄)
+뿐이라, 사용자가 톤마다 bg·fg·border 세 칸을 손으로 맞춰야 했다. 이제 테두리는
+같은 톤의 fg 에서 파생한다(color-mix). "테두리도 테마를 따라야 한다" 는 원래
+요구는 그대로 지켜지고, 정해야 할 칸만 줄었다 — 대신 테두리만 따로 다른 색으로
+두는 것은 더 이상 못 한다.
+
+이 파일은 이제 그 새 계약을 고정한다: 톤 테두리는 (1) 자기 fg 에서 나오고,
+(2) 정적 --aot-border-neutral 로 다시 묶이지 않으며, (3) 색 리터럴로 박히지
+않는다.
 """
 import re
 import sys
@@ -27,79 +33,33 @@ MODAL_CSS = REPO / "aot/aot_flask/static/css/aot-modal-modern.css"
 UPGRADE_HTML = REPO / "aot/aot_flask/templates/admin/upgrade.html"
 ADMIN_UPGRADE_CSS = REPO / "aot/aot_flask/static/css/pages/admin-upgrade.css"
 
-BORDER_FIELDS = ['tint_success_border', 'tint_warning_border',
-                 'tint_danger_border', 'tint_info_border']
+# 2026-09-08 에 없앤 필드들. 다시 살아나면 이 파일이 잡는다.
+REMOVED_BORDER_FIELDS = ['tint_success_border', 'tint_warning_border',
+                         'tint_danger_border', 'tint_info_border']
 
 
-def test_border_fields_in_theme_color_fields():
-    """forms_settings.THEME_COLOR_FIELDS 가 저장/로드 루프를 구동하는 유일한
-    목록이다 (utils_settings.settings_custom_ui_mod) -- 여기 없으면 폼에
-    입력창이 있어도 절대 저장되지 않는다."""
+def test_removed_border_fields_stay_removed():
+    """필드를 되살리려면 "왜 fg 파생으로 부족한지" 가 먼저 있어야 한다.
+    그냥 다시 추가되면 사용자가 맞춰야 할 칸이 도로 늘어난다."""
     sys.path.insert(0, str(REPO))
-    from aot.aot_flask.forms.forms_settings import THEME_COLOR_FIELDS
-    for field in BORDER_FIELDS:
-        assert field in THEME_COLOR_FIELDS, field
+    from aot.aot_flask.forms.forms_settings import (THEME_COLOR_FIELDS,
+                                                    LEGACY_THEME_FIELDS_DROP)
+    for field in REMOVED_BORDER_FIELDS:
+        assert field not in THEME_COLOR_FIELDS, field
+        assert field in LEGACY_THEME_FIELDS_DROP, (
+            f"{field} 를 폐기 목록에 넣지 않으면 저장된 옛 값이 "
+            f"custom_theme_json 에 영원히 남는다")
 
 
-def test_border_fields_have_form_fields():
-    """StringField 선언이 없으면 settings/custom_ui.html 의
-    form_settings_custom_ui[field_name] 렌더링이 Jinja UndefinedError 로 죽는다."""
-    text = FORMS_SETTINGS.read_text()
-    for field in BORDER_FIELDS:
-        assert re.search(rf'^\s*{field}\s*=\s*StringField\(', text, re.MULTILINE), field
+def test_removed_border_tokens_are_gone():
+    """토큰 선언이 남아 있으면 '설정에는 없는데 CSS 는 읽는' 유령이 된다."""
+    text = THEME_VARS.read_text()
+    for tone in ('success', 'warning', 'danger', 'info'):
+        assert f'--aot-tint-{tone}-border:' not in text, tone
 
 
-def test_border_fields_wired_to_real_tokens():
-    """/custom.css 발행 로직(routes_general.custom_css) 이 필드를 실제
-    --aot-* 토큰으로 내보내지 않으면, 폼에서 바꿔도 화면 색이 절대 안 바뀐다."""
-    text = ROUTES_GENERAL.read_text()
-    for field, token in zip(
-            BORDER_FIELDS,
-            ['--aot-tint-success-border', '--aot-tint-warning-border',
-             '--aot-tint-danger-border', '--aot-tint-info-border']):
-        m = re.search(rf"'{field}':\s*\[([^\]]+)\]", text)
-        assert m, f"{field} 가 var_map 에 없다"
-        assert token in m.group(1), f"{field} -> {token} 매핑 없음: {m.group(1)}"
 
 
-def test_border_defaults_agree_across_four_places():
-    """color-system.md §3 의 '기본값 4곳 일치' 계약. 이번엔 3곳
-    (theme-variables.css 실토큰 / theme_defaults.json / custom_ui.html
-    SEMANTIC_DEFAULTS) + forms_settings 폴백까지 4곳을 직접 비교한다."""
-    theme_vars_text = THEME_VARS.read_text()
-    css_defaults = {}
-    for m in re.finditer(
-            r'--aot-tint-(success|warning|danger|info)-border:\s*(#[0-9a-fA-F]{6});',
-            theme_vars_text):
-        css_defaults[f'tint_{m.group(1)}_border'] = m.group(2).upper()
-    assert len(css_defaults) == 4, css_defaults
-
-    import json
-    json_defaults = json.loads(THEME_DEFAULTS_JSON.read_text())
-
-    custom_ui_text = CUSTOM_UI_HTML.read_text()
-    m = re.search(r'tint_success_border:\s*\'(#[0-9A-Fa-f]{6})\'.*?'
-                  r'tint_warning_border:\s*\'(#[0-9A-Fa-f]{6})\'.*?'
-                  r'tint_danger_border:\s*\'(#[0-9A-Fa-f]{6})\'.*?'
-                  r'tint_info_border:\s*\'(#[0-9A-Fa-f]{6})\'',
-                  custom_ui_text, re.S)
-    assert m, "custom_ui.html SEMANTIC_DEFAULTS 에서 4개 border 값을 못 찾음"
-    custom_ui_defaults = {
-        'tint_success_border': m.group(1).upper(),
-        'tint_warning_border': m.group(2).upper(),
-        'tint_danger_border': m.group(3).upper(),
-        'tint_info_border': m.group(4).upper(),
-    }
-
-    sys.path.insert(0, str(REPO))
-    from aot.aot_flask.forms import forms_settings
-    for field in BORDER_FIELDS:
-        css_val = css_defaults[field]
-        json_val = json_defaults[field].upper()
-        ui_val = custom_ui_defaults[field]
-        assert css_val == json_val == ui_val, (
-            f"{field} 불일치: theme-variables.css={css_val} "
-            f"theme_defaults.json={json_val} custom_ui.html={ui_val}")
 
 
 def _strip_css_comments(css_text):
@@ -115,7 +75,7 @@ def _find_rule_body(css_text, selector):
     return m.group(1) if m else None
 
 
-def test_notice_box_tones_consume_per_tint_border_not_flat_neutral():
+def test_notice_box_tones_derive_border_from_their_own_fg():
     """톤이 다시 --aot-border-neutral(정적, custom_ui 밖) 하나로 묶이면 이
     계약 전체가 무의미해진다.
 
@@ -135,12 +95,15 @@ def test_notice_box_tones_consume_per_tint_border_not_flat_neutral():
         bodies = [m.group(1) for m in re.finditer(
             re.escape(sel) + r'\s*\{([^}]*)\}', stripped)]
         assert bodies, f'{sel} 규칙이 없다'
-        toned = [b for b in bodies if f'--aot-tint-{tone}-border' in b]
+        toned = [b for b in bodies if f'--aot-tint-{tone}-fg' in b
+                 and 'border-color' in b]
         assert toned, (
-            f'{sel} 가 --aot-tint-{tone}-border 를 쓰지 않는다: {bodies}')
+            f'{sel} 의 테두리가 --aot-tint-{tone}-fg 에서 나오지 않는다: {bodies}')
         for b in toned:
             assert '--aot-border-neutral' not in b, (
                 f'{sel} 가 중립 테두리로 묶였다 — custom_ui 연동이 끊긴다')
+            assert not re.search(r'border-color:[^;]*#[0-9A-Fa-f]{3,8}', b), (
+                f'{sel} 테두리에 색 리터럴이 박혔다 — 톤 fg 에서 파생할 것')
 
 
 def test_notice_box_base_has_no_tone():

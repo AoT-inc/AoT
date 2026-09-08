@@ -28875,3 +28875,174 @@ msgstr ""
 #: aot/aot_flask/templates/pages/geo/journal_view.html
 msgid "By stage"
 msgstr ""
+
+#: aot/aot_flask/static/js/common/aot-actuator-enable.js
+msgid "Vent"
+msgstr ""
+
+#: aot/aot_flask/static/js/common/aot-actuator-enable.js
+msgid "Mist"
+msgstr ""
+
+#: aot/aot_flask/static/js/common/aot-actuator-enable.js
+msgid "Devices under automatic control"
+msgstr ""
+
+#: aot/aot_flask/static/js/common/aot-actuator-enable.js
+msgid "%(n)s excluded"
+msgstr ""
+
+#: aot/aot_flask/static/js/common/aot-actuator-enable.js
+msgid "Turn a device off to keep automatic control from moving it."
+msgstr ""
+
+#: aot/aot_flask/static/js/common/aot-actuator-enable.js
+msgid "Safety gates will not move it either."
+msgstr ""
+
+#: aot/aot_flask/static/js/common/aot-actuator-enable.js
+msgid "Select a linked facility first."
+msgstr ""
+
+#: aot/aot_flask/static/js/common/aot-actuator-enable.js
+msgid "This facility has no actuators yet."
+msgstr ""
+
+#: aot/aot_flask/static/js/common/aot-actuator-enable.js
+msgid "Could not load the device list. Existing settings are kept."
+msgstr ""
+
+#: aot/functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Excluded actuators (raw)"
+msgstr ""
+
+#: aot/functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Comma-separated Output IDs excluded from automatic control. Normally set with the toggles above rather than typed here."
+msgstr ""
+
+#: aot/functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Proactively shift temperature/humidity setpoints and inhibit ventilation before adverse weather arrives. Uses this facility's own forecast source if one is linked in the facility editor's weather bindings (any service — KMA, OpenWeatherMap, Open-Meteo); otherwise falls back to the system-wide KMA short-term forecast."
+msgstr ""
+
+#: aot/functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "How many hours ahead to check for incoming adverse weather (1–6 h) when using the system-wide KMA fallback above. Longer lookahead gives earlier warning but may over-correct. Ignored when this facility has its own forecast source linked — that source already applies its own lookahead."
+
+#: aot/widgets/widget_notice.py:1
+msgid "Notice Category Filter"
+msgstr ""
+
+#: aot/widgets/widget_notice.py:1
+msgid "Notes Space"
+msgstr ""
+
+#: aot/widgets/widget_notice.py:1
+msgid "Space"
+msgstr ""
+
+#: aot/widgets/widget_notice.py:1
+msgid "None selected"
+msgstr ""
+
+#: aot/widgets/widget_notice.py:1
+msgid "Notices"
+msgstr ""
+
+#: aot/widgets/widget_notice.py:1
+msgid "No notes yet."
+msgstr ""
+
+#: aot/widgets/widget_notice.py:1
+msgid "(Attachment only)"
+msgstr ""
+
+#: aot/widgets/widget_notice.py:1
+msgid "Notice & Notes Board"
+msgstr ""
+
+#: aot/widgets/widget_notice.py:1
+msgid "Displays the latest notice board post titles and/or the notes written in a chosen site, zone, plot, or facility (and everything nested under it). Clicking a notice opens the full post (content, poll, replies, acknowledge) in a popup; clicking a note opens it in the shared notes panel. Users with write permission can also create, edit, and delete posts directly from the widget."
+msgstr ""
+
+#: aot/widgets/widget_notice.py:1
+msgid "Show Notices"
+msgstr ""
+
+#: aot/widgets/widget_notice.py:1
+msgid "Display the notice board section"
+msgstr ""
+
+#: aot/widgets/widget_notice.py:1
+msgid "Number of Notices"
+msgstr ""
+
+#: aot/widgets/widget_notice.py:1
+msgid "Number of Notes"
+msgstr ""
+
+#: aot/widgets/widget_notice.py:1
+msgid "How many of the latest notes to display"
+msgstr ""
+
+#: aot/widgets/widget_notice.py:1
+msgid "Include Nested Spaces"
+msgstr ""
+
+#: aot/widgets/widget_notice.py:1
+msgid "Sort Notes By"
+msgstr ""
+
+#: aot/widgets/widget_notice.py:1
+msgid "How to order the note list"
+msgstr ""
+
+#: aot/widgets/widget_notice.py:1
+msgid "Note Category/Tag Contains"
+msgstr ""
+
+#: aot/widgets/widget_notice.py:1
+msgid "How often to refresh the notice/notes lists"
+msgstr ""
+
+#: aot/widgets/widget_notice.py:1
+msgid "Notes written in this site/zone/plot/facility (and, if \"Include Nested Spaces\" above is on, everything nested under it) are shown."
+msgstr ""
+
+#: aot/widgets/widget_notice.py:1
+msgid "No sites, zones, plots, or facilities exist yet."
+msgstr ""
+
+#: aot/widgets/widget_notice.py:1
+msgid "Nothing selected — turn on \"Show Notices\" and/or \"Show Notes\" in the widget settings."
+msgstr ""
+
+#: aot/widgets/widget_notice.py:1
+msgid "Choose a space in the widget settings to show notes."
+msgstr ""
+
+#: aot/widgets/widget_notice.py:1
+msgid "Display notes written in a chosen space (see Space below)"
+msgstr ""
+
+#: aot/widgets/widget_notice.py:1
+msgid "Also show notes written in zones/plots/facilities/devices nested under the chosen space"
+msgstr ""
+
+#: aot/widgets/widget_notice.py:1
+msgid "Newest First"
+msgstr ""
+
+#: aot/widgets/widget_notice.py:1
+msgid "Only show notes whose category or tags contain this text (optional)"
+msgstr ""
+
+#: aot/widgets/widget_notice.py:1
+msgid "Show Notes List"
+msgstr ""
+
+#: aot/widgets/widget_notice.py:1
+msgid "Display notes matching the filter below"
+msgstr ""
+
+#: aot/widgets/widget_notice.py:1
+msgid "Notes Filter"
+msgstr ""

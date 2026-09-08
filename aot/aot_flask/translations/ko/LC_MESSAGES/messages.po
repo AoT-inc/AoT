@@ -31355,6 +31355,10 @@ msgstr "작동 시간"
 msgid "immediately"
 msgstr "지금 바로"
 
+#: aot_flask/static/js/common/aot-map-popup.js
+msgid "Tomorrow"
+msgstr "내일"
+
 #: aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
 msgid "no auto off"
 msgstr "자동 꺼짐 없음"
@@ -34211,3 +34215,170 @@ msgstr "유량을 몰라 물량을 낼 수 없는 장치: %(names)s"
 #: aot/aot_flask/templates/pages/geo/journal_view.html
 msgid "By stage"
 msgstr "단계별"
+
+msgid "Vent"
+msgstr "환기창"
+
+msgid "Mist"
+msgstr "분무"
+
+msgid "Devices under automatic control"
+msgstr "자동 제어 대상 장치"
+
+msgid "%(n)s excluded"
+msgstr "%(n)s개 제외됨"
+
+msgid "Turn a device off to keep automatic control from moving it."
+msgstr "장치를 끄면 자동 제어가 해당 장치를 움직이지 않습니다."
+
+msgid "Safety gates will not move it either."
+msgstr "안전 조치도 해당 장치를 움직이지 않습니다."
+
+msgid "Select a linked facility first."
+msgstr "먼저 연동 시설을 선택하세요."
+
+msgid "This facility has no actuators yet."
+msgstr "이 시설에는 아직 액추에이터가 없습니다."
+
+msgid "Could not load the device list. Existing settings are kept."
+msgstr "장치 목록을 불러올 수 없습니다. 기존 설정은 유지됩니다."
+
+msgid "Excluded actuators (raw)"
+msgstr "제외된 액추에이터 (원본값)"
+
+msgid "Comma-separated Output IDs excluded from automatic control. Normally set with the toggles above rather than typed here."
+msgstr "자동 제어에서 제외할 출력 ID를 쉼표로 구분해 나열합니다. 보통 여기에 직접 입력하지 않고 위 토글로 설정합니다."
+
+msgid "Proactively shift temperature/humidity setpoints and inhibit ventilation before adverse weather arrives. Uses this facility's own forecast source if one is linked in the facility editor's weather bindings (any service — KMA, OpenWeatherMap, Open-Meteo); otherwise falls back to the system-wide KMA short-term forecast."
+msgstr "악천후가 도래하기 전에 온도/습도 목표값을 선제적으로 조정하고 환기를 억제합니다. 시설 편집기의 날씨 바인딩에 이 시설 전용 예보 소스가 연결돼 있으면 그것을 사용하고(기상청, OpenWeatherMap, Open-Meteo 등 어떤 서비스든 가능), 연결되어 있지 않으면 시스템 전역의 기상청 단기예보로 대체됩니다."
+
+msgid "How many hours ahead to check for incoming adverse weather (1–6 h) when using the system-wide KMA fallback above. Longer lookahead gives earlier warning but may over-correct. Ignored when this facility has its own forecast source linked — that source already applies its own lookahead."
+msgstr "위의 시스템 전역 기상청 대체 예보를 사용할 때, 다가오는 악천후를 몇 시간 앞서 확인할지 설정합니다(1~6시간). 선행 시간이 길수록 더 일찍 경고하지만 과잉 보정될 수 있습니다. 이 시설에 자체 예보 소스가 연결돼 있으면 무시됩니다 — 해당 소스가 이미 자체 선행 시간을 적용하기 때문입니다."
+
+#: aot/widgets/widget_notice.py:1
+msgid "Notice Category Filter"
+msgstr "공지 카테고리 필터"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Notes Space"
+msgstr "노트 공간"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Space"
+msgstr "공간"
+
+#: aot/widgets/widget_notice.py:1
+msgid "None selected"
+msgstr "선택 안 함"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Notices"
+msgstr "공지"
+
+#: aot/widgets/widget_notice.py:1
+msgid "No notes yet."
+msgstr "아직 작성된 노트가 없습니다."
+
+#: aot/widgets/widget_notice.py:1
+msgid "(Attachment only)"
+msgstr "(첨부파일만 있음)"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Notice & Notes Board"
+msgstr "공지 & 노트 게시판"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Displays the latest notice board post titles and/or the notes written in a chosen site, zone, plot, or facility (and everything nested under it). Clicking a notice opens the full post (content, poll, replies, acknowledge) in a popup; clicking a note opens it in the shared notes panel. Users with write permission can also create, edit, and delete posts directly from the widget."
+msgstr "최신 공지 게시물 제목과, 선택한 대지·구역·구획·시설(및 그 안에 속한 모든 것)에 작성된 노트를 함께 보여줍니다. 공지를 클릭하면 팝업으로 전체 내용(본문, 투표, 답글, 필독 확인)을 볼 수 있고, 노트를 클릭하면 공용 노트 패널에서 열립니다. 쓰기 권한이 있는 사용자는 위젯에서 바로 게시물을 작성·수정·삭제할 수도 있습니다."
+
+#: aot/widgets/widget_notice.py:1
+msgid "Show Notices"
+msgstr "공지 표시"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Display the notice board section"
+msgstr "공지 게시판 섹션을 표시합니다"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Number of Notices"
+msgstr "공지 개수"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Number of Notes"
+msgstr "노트 개수"
+
+#: aot/widgets/widget_notice.py:1
+msgid "How many of the latest notes to display"
+msgstr "표시할 최신 노트 개수"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Include Nested Spaces"
+msgstr "하위 공간 포함"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Sort Notes By"
+msgstr "노트 정렬 기준"
+
+#: aot/widgets/widget_notice.py:1
+msgid "How to order the note list"
+msgstr "노트 목록의 정렬 방식"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Note Category/Tag Contains"
+msgstr "노트 카테고리/태그 포함 문자열"
+
+#: aot/widgets/widget_notice.py:1
+msgid "How often to refresh the notice/notes lists"
+msgstr "공지/노트 목록을 새로고침할 주기"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Notes written in this site/zone/plot/facility (and, if \"Include Nested Spaces\" above is on, everything nested under it) are shown."
+msgstr "이 대지/구역/구획/시설에 작성된 노트가 표시됩니다(위의 \"하위 공간 포함\"이 켜져 있으면 그 안에 속한 모든 것 포함)."
+
+#: aot/widgets/widget_notice.py:1
+msgid "No sites, zones, plots, or facilities exist yet."
+msgstr "아직 대지·구역·구획·시설이 없습니다."
+
+#: aot/widgets/widget_notice.py:1
+msgid "Nothing selected — turn on \"Show Notices\" and/or \"Show Notes\" in the widget settings."
+msgstr "선택된 항목이 없습니다 — 위젯 설정에서 \"공지 표시\"와/또는 \"노트 표시\"를 켜주세요."
+
+#: aot/widgets/widget_notice.py:1
+msgid "Choose a space in the widget settings to show notes."
+msgstr "노트를 표시하려면 위젯 설정에서 공간을 선택하세요."
+
+#: aot/widgets/widget_notice.py:1
+msgid "Display notes written in a chosen space (see Space below)"
+msgstr "선택한 공간에 작성된 노트를 표시합니다(아래 \"공간\" 참조)"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Also show notes written in zones/plots/facilities/devices nested under the chosen space"
+msgstr "선택한 공간 아래에 속한 구역/구획/시설/장치에 작성된 노트도 함께 표시합니다"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Newest First"
+msgstr "최신순"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Only show notes whose category or tags contain this text (optional)"
+msgstr "카테고리 또는 태그에 이 문자열이 포함된 노트만 표시합니다(선택 사항)"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Show Notes List"
+msgstr "노트 표시"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Display notes matching the filter below"
+msgstr "아래 필터와 일치하는 노트를 표시합니다"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Notes Filter"
+msgstr "노트 필터"
+
+#: aot_flask/static/js/aot/aot-selectpicker.js
+msgid "Nothing selected"
+msgstr "선택 안 함"
+
+#: aot_flask/static/js/aot/aot-selectpicker.js
+msgid "{0} of {1} selected"
+msgstr "{1}개 중 {0}개 선택"

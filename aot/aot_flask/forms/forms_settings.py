@@ -59,12 +59,13 @@ THEME_COLOR_FIELDS = [
     'tint_success_bg', 'tint_success_fg', 'tint_danger_bg', 'tint_danger_fg',
     'tint_info_bg', 'tint_info_fg',
     # 알림/안내 박스(.aot-notice-box) 테두리 — 위 tint bg/fg 쌍과 같은 축.
-    'tint_success_border', 'tint_warning_border', 'tint_danger_border',
-    'tint_info_border',
-    'bg_llm', 'bg_mcp', 'badge_upgrade',
+    'bg_llm', 'bg_mcp',
     'btn_primary_bg', 'btn_secondary_bg',
     'bg_btn_on', 'bg_btn_off',
     'bg_btn_pause', 'bg_btn_hold', 'bd_btn_border',
+    # 슬라이드 토글 꺼짐 트랙. 켜짐은 band_3 을 쓰지만 꺼짐은 전역 테두리색
+    # (--aot-border-neutral)을 빌려 쓰고 있어 이 페이지에서 못 바꿨다.
+    'toggle_track_off',
     # 측정 밴드 5색 (--aot-band-1..5) — 게이지/센서 라벨 등
     'band_1', 'band_2', 'band_3', 'band_4', 'band_5',
     # 차트 시리즈 앞 6색 (GRAPH_SERIES_PALETTE 라이트/다크 공통 구간)
@@ -75,14 +76,22 @@ THEME_COLOR_FIELDS = [
 # 구 필드는 전부 새 필드로 흡수되거나(bd_btn_tertiary -> brand_accent 는 값이
 # 이미 같아 흡수만 하고 대응 신규 필드 없음) 폐기된다.
 LEGACY_THEME_FIELD_MAP = {
-    'btn_primary_bg': ['bd_btn_primary', 'bd_tertiary', 'bg_btn_active'],
+    # 2026-09-08: badge_upgrade 를 없애면서, 그 아래 달려 있던 더 오래된 키들
+    # (bg_upgrade · bg_btn_upgrade)까지 btn_primary_bg 로 이어 붙인다. 사슬을
+    # 끊으면 예전에 배지색을 손수 정해 둔 설치가 그 값을 조용히 잃는다.
+    'btn_primary_bg': ['bd_btn_primary', 'bd_tertiary', 'bg_btn_active',
+                       'badge_upgrade', 'bg_upgrade', 'bg_btn_upgrade'],
     'btn_secondary_bg': ['bd_btn_secondary', 'bg_btn_inactive'],
-    'badge_upgrade': ['bg_upgrade', 'bg_btn_upgrade'],
 }
 LEGACY_THEME_FIELDS_DROP = {
     'bd_tertiary', 'bd_btn_primary', 'bg_btn_active',
     'bd_btn_secondary', 'bg_btn_inactive',
     'bd_btn_tertiary', 'bg_upgrade', 'bg_btn_upgrade',
+    # 2026-09-08 정리. 사용처가 안내 상자 테두리 한 곳뿐이라, 같은 짝의
+    # fg 에서 파생시키고(color-mix) 필드를 없앴다. 업그레이드 배지는 값도
+    # 쓰임도 주 버튼 배경과 같아 btn_primary_bg 로 합쳤다.
+    'tint_success_border', 'tint_warning_border',
+    'tint_danger_border', 'tint_info_border', 'badge_upgrade',
 }
 
 
@@ -710,15 +719,10 @@ class SettingsCustomUI(FlaskForm):
     tint_danger_fg = StringField(lazy_gettext('Danger Tint Text'), default=THEME_DEFAULTS.get('tint_danger_fg', '#B23B3B'), render_kw={"type": "color"})
     tint_info_bg = StringField(lazy_gettext('Info Tint'), default=THEME_DEFAULTS.get('tint_info_bg', '#E7F4FB'), render_kw={"type": "color"})
     tint_info_fg = StringField(lazy_gettext('Info Tint Text'), default=THEME_DEFAULTS.get('tint_info_fg', '#06709B'), render_kw={"type": "color"})
-    tint_success_border = StringField(lazy_gettext('Success Tint Border'), default=THEME_DEFAULTS.get('tint_success_border', '#B8CBA6'), render_kw={"type": "color"})
-    tint_warning_border = StringField(lazy_gettext('Warning Tint Border'), default=THEME_DEFAULTS.get('tint_warning_border', '#DAC196'), render_kw={"type": "color"})
-    tint_danger_border = StringField(lazy_gettext('Danger Tint Border'), default=THEME_DEFAULTS.get('tint_danger_border', '#E1ABAB'), render_kw={"type": "color"})
-    tint_info_border = StringField(lazy_gettext('Info Tint Border'), default=THEME_DEFAULTS.get('tint_info_border', '#98C6D9'), render_kw={"type": "color"})
     bg_llm = StringField(lazy_gettext('BG LLM Badge'), default=THEME_DEFAULTS.get('bg_llm', '#6277C7'), render_kw={"type": "color"})
     bg_mcp = StringField(lazy_gettext('BG MCP Badge'), default=THEME_DEFAULTS.get('bg_mcp', '#64C762'), render_kw={"type": "color"})
     # 2026-07 통합: bg_upgrade(nav 배지) + bg_btn_upgrade(버튼) — 둘 다 같은
     # '업그레이드 알림' 개념이라 하나로. color-system.md §3-2 참조.
-    badge_upgrade = StringField(lazy_gettext('Upgrade Badge'), default=THEME_DEFAULTS.get('badge_upgrade', '#13261B'), render_kw={"type": "color"})
     # 2026-07 통합: bd_tertiary + bd_btn_primary + bg_btn_active — 전부
     # '채워진 주 버튼 배경'을 가리키던 별개 필드였다(color-system.md §3-2).
     btn_primary_bg = StringField(lazy_gettext('Primary Button Background'), default=THEME_DEFAULTS.get('btn_primary_bg', '#13261B'), render_kw={"type": "color"})
@@ -729,6 +733,7 @@ class SettingsCustomUI(FlaskForm):
     bg_btn_on = StringField(lazy_gettext('Btn BG On'), default=THEME_DEFAULTS.get('bg_btn_on', '#13261B'), render_kw={"type": "color"})
     bg_btn_off = StringField(lazy_gettext('Btn BG Off'), default=THEME_DEFAULTS.get('bg_btn_off', '#5E6B64'), render_kw={"type": "color"})
     bg_btn_pause = StringField(lazy_gettext('Btn BG Pause'), default=THEME_DEFAULTS.get('bg_btn_pause', '#989E9E'), render_kw={"type": "color"})
+    toggle_track_off = StringField(lazy_gettext('Toggle Track Off'), default=THEME_DEFAULTS.get('toggle_track_off', '#DDDDDD'), render_kw={"type": "color"})
     bg_btn_hold = StringField(lazy_gettext('Btn BG Hold'), default=THEME_DEFAULTS.get('bg_btn_hold', '#D1D5D5'), render_kw={"type": "color"})
     bd_btn_border = StringField(lazy_gettext('Btn Border Base'), default=THEME_DEFAULTS.get('bd_btn_border', '#B6BABA'), render_kw={"type": "color"})
     # 측정 밴드 5색 (--aot-band-1..5, 차가움→적정→뜨거움)

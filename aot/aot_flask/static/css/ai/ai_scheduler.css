@@ -54,7 +54,7 @@
     color: var(--aot-color-text-tertiary, #fff);
     border: none;
 }
-.btn-add-task:hover { background: var(--aot-color-brand-primary); color: #fff; opacity: 0.9; }
+.btn-add-task:hover { background: var(--aot-color-brand-primary); color: var(--aot-color-text-tertiary, #FFFFFF); opacity: 0.9; }
 
 /* --- Global Controls --- */
 #gantt-global-controls .btn, #gantt-scale-controls .btn {

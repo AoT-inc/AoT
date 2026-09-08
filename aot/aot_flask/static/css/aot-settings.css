@@ -114,7 +114,7 @@
 
 /* Inputs inside settings rows */
 .aot-settings-control .aot-modern-input,
-.aot-settings-control .aot-modern-select {
+.aot-settings-control select.aot-modern-select {
     box-sizing: border-box;
     border-radius: var(--aot-btn-pill-radius);
     border: 1px solid var(--aot-border-neutral);
@@ -159,22 +159,7 @@
     outline: none;
 }
 
-/* Bootstrap-select inside settings rows.
-   bootstrap-select copies the original <select>'s classes (incl. .aot-modern-select)
-   onto its WRAPPER div, so the wrapper picked up the pill border/background/height and
-   the custom dropdown arrow — while the inner .dropdown-toggle button ALSO renders a
-   pill + its own caret. Result: a box-inside-a-box with mismatched height (32 vs 34)
-   and a doubled arrow. Fix: strip the wrapper to a bare container so the inner toggle
-   is the only visible pill, sized to match the 32px text inputs beside it. */
-.aot-settings-control .bootstrap-select {
-    border: none;
-    background: none;
-    border-radius: 0;
-    height: auto;
-    min-height: 0;
-    padding: 0;
-    line-height: normal;
-}
+/* 래퍼(.bootstrap-select) 벗기기는 components/aot-select.css 2번이 전 자리에서 한다. */
 .aot-settings-control .bootstrap-select > .dropdown-toggle {
     width: 100%;
     box-sizing: border-box;
@@ -189,24 +174,9 @@
     align-items: center;
 }
 
-/* bootstrap-select's .filter-option is position:absolute; top:0, so its text pins
-   to the top of the button. These selects are NOT the .ui-pill variant, so the
-   ui-pill centering rules don't reach them — center the label here. */
-.aot-settings-control .bootstrap-select > .dropdown-toggle .filter-option {
-    display: flex;
-    align-items: center;
-    height: 100%;
-}
+/* 라벨 세로정렬·줄임표는 components/aot-select.css 2번이 전 자리에서 한다. */
 
-.aot-settings-control .bootstrap-select .dropdown-menu {
-    z-index: var(--aot-z-dropdown);
-}
-
-/* Raise z-index when selectpicker is open */
-.aot-settings-row:has(.bootstrap-select.show) {
-    position: relative;
-    z-index: 100;
-}
+/* 목록은 <body> 로 빠지므로(components/aot-select.css) 자리별 z-index 가 필요 없다. */
 
 /* ============================================================
    8. SAVE BUTTON ROW

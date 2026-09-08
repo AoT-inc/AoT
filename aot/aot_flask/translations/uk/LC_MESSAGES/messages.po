@@ -30741,3 +30741,162 @@ msgstr "Суворіші межі зволоження для сіянців, я
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:1192
 msgid "Not used"
 msgstr "Не використовується"
+
+msgid "Vent"
+msgstr "Кватирка"
+
+msgid "Mist"
+msgstr "Туманоутворення"
+
+msgid "Devices under automatic control"
+msgstr "Пристрої під автоматичним керуванням"
+
+msgid "%(n)s excluded"
+msgstr "%(n)s виключено"
+
+msgid "Turn a device off to keep automatic control from moving it."
+msgstr "Вимкніть пристрій, щоб автоматичне керування не рухало ним."
+
+msgid "Safety gates will not move it either."
+msgstr "Блокування безпеки також не рухатиме ним."
+
+msgid "Select a linked facility first."
+msgstr "Спершу виберіть пов'язаний об'єкт."
+
+msgid "This facility has no actuators yet."
+msgstr "У цього об'єкта поки немає приводів."
+
+msgid "Could not load the device list. Existing settings are kept."
+msgstr "Не вдалося завантажити список пристроїв. Наявні налаштування збережено."
+
+msgid "Excluded actuators (raw)"
+msgstr "Виключені приводи (необроблені дані)"
+
+msgid "Comma-separated Output IDs excluded from automatic control. Normally set with the toggles above rather than typed here."
+msgstr "ID виходів, виключених з автоматичного керування, через кому. Зазвичай налаштовується перемикачами вище, а не вводиться тут."
+
+msgid "Proactively shift temperature/humidity setpoints and inhibit ventilation before adverse weather arrives. Uses this facility's own forecast source if one is linked in the facility editor's weather bindings (any service — KMA, OpenWeatherMap, Open-Meteo); otherwise falls back to the system-wide KMA short-term forecast."
+msgstr "Завчасно зміщує задані значення температури/вологості та призупиняє вентиляцію перед настанням несприятливої погоди. Використовує власне джерело прогнозу цього об'єкта, якщо воно прив'язане у вкладці погодних прив'язок редактора об'єкта (будь-яка служба — KMA, OpenWeatherMap, Open-Meteo); інакше повертається до загальносистемного короткострокового прогнозу KMA."
+
+msgid "How many hours ahead to check for incoming adverse weather (1–6 h) when using the system-wide KMA fallback above. Longer lookahead gives earlier warning but may over-correct. Ignored when this facility has its own forecast source linked — that source already applies its own lookahead."
+msgstr "На скільки годин наперед перевіряти наближення несприятливої погоди (1–6 год) під час використання наведеного вище загальносистемного резервного прогнозу KMA. Більший горизонт дає раннє попередження, але може призвести до надмірної корекції. Ігнорується, якщо до цього об'єкта прив'язане власне джерело прогнозу — це джерело вже застосовує власний горизонт."
+
+#: aot/widgets/widget_notice.py:1
+msgid "Notice Category Filter"
+msgstr "Фільтр категорій оголошень"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Notes Space"
+msgstr "Простір нотаток"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Space"
+msgstr "Простір"
+
+#: aot/widgets/widget_notice.py:1
+msgid "None selected"
+msgstr "Нічого не вибрано"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Notices"
+msgstr "Оголошення"
+
+#: aot/widgets/widget_notice.py:1
+msgid "No notes yet."
+msgstr "Ще немає нотаток."
+
+#: aot/widgets/widget_notice.py:1
+msgid "(Attachment only)"
+msgstr "(Лише вкладення)"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Notice & Notes Board"
+msgstr "Дошка оголошень і нотаток"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Displays the latest notice board post titles and/or the notes written in a chosen site, zone, plot, or facility (and everything nested under it). Clicking a notice opens the full post (content, poll, replies, acknowledge) in a popup; clicking a note opens it in the shared notes panel. Users with write permission can also create, edit, and delete posts directly from the widget."
+msgstr "Показує заголовки останніх записів дошки оголошень та/або нотатки, написані у вибраній ділянці, зоні, грядці чи об'єкті (і в усьому, що вкладено всередину). Клацання по оголошенню відкриває весь запис (вміст, опитування, відповіді, підтвердження) у спливному вікні; клацання по нотатці відкриває її на спільній панелі нотаток. Користувачі з правом запису також можуть створювати, редагувати та видаляти записи прямо з віджета."
+
+#: aot/widgets/widget_notice.py:1
+msgid "Show Notices"
+msgstr "Показувати оголошення"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Display the notice board section"
+msgstr "Показує розділ дошки оголошень"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Number of Notices"
+msgstr "Кількість оголошень"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Number of Notes"
+msgstr "Кількість нотаток"
+
+#: aot/widgets/widget_notice.py:1
+msgid "How many of the latest notes to display"
+msgstr "Скільки останніх нотаток показувати"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Include Nested Spaces"
+msgstr "Включити вкладені простори"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Sort Notes By"
+msgstr "Сортувати нотатки за"
+
+#: aot/widgets/widget_notice.py:1
+msgid "How to order the note list"
+msgstr "Як упорядкувати список нотаток"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Note Category/Tag Contains"
+msgstr "Категорія/тег нотатки містить"
+
+#: aot/widgets/widget_notice.py:1
+msgid "How often to refresh the notice/notes lists"
+msgstr "Як часто оновлювати списки оголошень/нотаток"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Notes written in this site/zone/plot/facility (and, if \"Include Nested Spaces\" above is on, everything nested under it) are shown."
+msgstr "Показуються нотатки, написані в цій ділянці/зоні/грядці/об'єкті (а якщо вище ввімкнено «Включити вкладені простори» — і в усьому, що вкладено всередину)."
+
+#: aot/widgets/widget_notice.py:1
+msgid "No sites, zones, plots, or facilities exist yet."
+msgstr "Ще немає жодної ділянки, зони, грядки чи об'єкта."
+
+#: aot/widgets/widget_notice.py:1
+msgid "Nothing selected — turn on \"Show Notices\" and/or \"Show Notes\" in the widget settings."
+msgstr "Нічого не вибрано — увімкніть «Показувати оголошення» та/або «Показувати нотатки» в налаштуваннях віджета."
+
+#: aot/widgets/widget_notice.py:1
+msgid "Choose a space in the widget settings to show notes."
+msgstr "Виберіть простір у налаштуваннях віджета, щоб показувати нотатки."
+
+#: aot/widgets/widget_notice.py:1
+msgid "Display notes written in a chosen space (see Space below)"
+msgstr "Показує нотатки, написані у вибраному просторі (див. «Простір» нижче)"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Also show notes written in zones/plots/facilities/devices nested under the chosen space"
+msgstr "Також показує нотатки, написані в зонах/грядках/об'єктах/пристроях, вкладених у вибраний простір"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Newest First"
+msgstr "Спочатку нові"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Only show notes whose category or tags contain this text (optional)"
+msgstr "Показувати лише нотатки, категорія або теги яких містять цей текст (необов'язково)"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Show Notes List"
+msgstr "Показувати список нотаток"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Display notes matching the filter below"
+msgstr "Показує нотатки, що відповідають фільтру нижче"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Notes Filter"
+msgstr "Фільтр нотаток"

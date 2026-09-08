@@ -30579,3 +30579,162 @@ msgstr "Striktare dimningsgränser för plantor, som bränns lättare än fullvu
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:1192
 msgid "Not used"
 msgstr "Används inte"
+
+msgid "Vent"
+msgstr "Ventilation"
+
+msgid "Mist"
+msgstr "Dimma"
+
+msgid "Devices under automatic control"
+msgstr "Enheter under automatisk styrning"
+
+msgid "%(n)s excluded"
+msgstr "%(n)s exkluderade"
+
+msgid "Turn a device off to keep automatic control from moving it."
+msgstr "Stäng av en enhet för att förhindra att automatisk styrning rör den."
+
+msgid "Safety gates will not move it either."
+msgstr "Säkerhetsspärrar kommer inte heller att röra den."
+
+msgid "Select a linked facility first."
+msgstr "Välj en länkad anläggning först."
+
+msgid "This facility has no actuators yet."
+msgstr "Den här anläggningen har inga aktuatorer än."
+
+msgid "Could not load the device list. Existing settings are kept."
+msgstr "Enhetslistan kunde inte läsas in. Befintliga inställningar behålls."
+
+msgid "Excluded actuators (raw)"
+msgstr "Exkluderade aktuatorer (rådata)"
+
+msgid "Comma-separated Output IDs excluded from automatic control. Normally set with the toggles above rather than typed here."
+msgstr "Kommaseparerade utgångs-ID:n som är exkluderade från automatisk styrning. Anges normalt med reglagen ovan istället för att skrivas in här."
+
+msgid "Proactively shift temperature/humidity setpoints and inhibit ventilation before adverse weather arrives. Uses this facility's own forecast source if one is linked in the facility editor's weather bindings (any service — KMA, OpenWeatherMap, Open-Meteo); otherwise falls back to the system-wide KMA short-term forecast."
+msgstr "Flyttar proaktivt bör-värden för temperatur/fuktighet och hämmar ventilationen innan ogynnsamt väder anländer. Använder anläggningens egen prognoskälla om en sådan är kopplad i väderkopplingarna i anläggningsredigeraren (vilken tjänst som helst — KMA, OpenWeatherMap, Open-Meteo); annars faller den tillbaka på den systemomfattande kortsiktiga KMA-prognosen."
+
+msgid "How many hours ahead to check for incoming adverse weather (1–6 h) when using the system-wide KMA fallback above. Longer lookahead gives earlier warning but may over-correct. Ignored when this facility has its own forecast source linked — that source already applies its own lookahead."
+msgstr "Hur många timmar i förväg som ogynnsamt väder ska kontrolleras (1–6 h) när ovanstående systemomfattande KMA-reservprognos används. Längre framförhållning ger tidigare varning men kan leda till överkorrigering. Ignoreras när denna anläggning har en egen prognoskälla kopplad — den källan tillämpar redan sin egen framförhållning."
+
+#: aot/widgets/widget_notice.py:1
+msgid "Notice Category Filter"
+msgstr "Filter för meddelandekategori"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Notes Space"
+msgstr "Anteckningsutrymme"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Space"
+msgstr "Utrymme"
+
+#: aot/widgets/widget_notice.py:1
+msgid "None selected"
+msgstr "Inget valt"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Notices"
+msgstr "Meddelanden"
+
+#: aot/widgets/widget_notice.py:1
+msgid "No notes yet."
+msgstr "Inga anteckningar än."
+
+#: aot/widgets/widget_notice.py:1
+msgid "(Attachment only)"
+msgstr "(Endast bilaga)"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Notice & Notes Board"
+msgstr "Anslagstavla för meddelanden och anteckningar"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Displays the latest notice board post titles and/or the notes written in a chosen site, zone, plot, or facility (and everything nested under it). Clicking a notice opens the full post (content, poll, replies, acknowledge) in a popup; clicking a note opens it in the shared notes panel. Users with write permission can also create, edit, and delete posts directly from the widget."
+msgstr "Visar titlar på de senaste inläggen på anslagstavlan och/eller anteckningarna som skrivits på en vald plats, zon, odlingsyta eller anläggning (och allt som ligger under den). Om man klickar på ett meddelande öppnas hela inlägget (innehåll, omröstning, svar, bekräftelse) i en popup; om man klickar på en anteckning öppnas den i den delade anteckningspanelen. Användare med skrivbehörighet kan även skapa, redigera och ta bort inlägg direkt från widgeten."
+
+#: aot/widgets/widget_notice.py:1
+msgid "Show Notices"
+msgstr "Visa meddelanden"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Display the notice board section"
+msgstr "Visar avsnittet med anslagstavlan"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Number of Notices"
+msgstr "Antal meddelanden"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Number of Notes"
+msgstr "Antal anteckningar"
+
+#: aot/widgets/widget_notice.py:1
+msgid "How many of the latest notes to display"
+msgstr "Hur många av de senaste anteckningarna som ska visas"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Include Nested Spaces"
+msgstr "Inkludera nästlade utrymmen"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Sort Notes By"
+msgstr "Sortera anteckningar efter"
+
+#: aot/widgets/widget_notice.py:1
+msgid "How to order the note list"
+msgstr "Hur anteckningslistan ska sorteras"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Note Category/Tag Contains"
+msgstr "Anteckningens kategori/tagg innehåller"
+
+#: aot/widgets/widget_notice.py:1
+msgid "How often to refresh the notice/notes lists"
+msgstr "Hur ofta meddelande-/anteckningslistorna ska uppdateras"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Notes written in this site/zone/plot/facility (and, if \"Include Nested Spaces\" above is on, everything nested under it) are shown."
+msgstr "Anteckningar som skrivits på denna plats/zon/odlingsyta/anläggning visas (och, om \"Inkludera nästlade utrymmen\" ovan är på, allt som ligger under den)."
+
+#: aot/widgets/widget_notice.py:1
+msgid "No sites, zones, plots, or facilities exist yet."
+msgstr "Det finns ännu inga platser, zoner, odlingsytor eller anläggningar."
+
+#: aot/widgets/widget_notice.py:1
+msgid "Nothing selected — turn on \"Show Notices\" and/or \"Show Notes\" in the widget settings."
+msgstr "Inget valt — aktivera \"Visa meddelanden\" och/eller \"Visa anteckningar\" i widgetinställningarna."
+
+#: aot/widgets/widget_notice.py:1
+msgid "Choose a space in the widget settings to show notes."
+msgstr "Välj ett utrymme i widgetinställningarna för att visa anteckningar."
+
+#: aot/widgets/widget_notice.py:1
+msgid "Display notes written in a chosen space (see Space below)"
+msgstr "Visar anteckningar som skrivits i ett valt utrymme (se \"Utrymme\" nedan)"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Also show notes written in zones/plots/facilities/devices nested under the chosen space"
+msgstr "Visar även anteckningar som skrivits i zoner/odlingsytor/anläggningar/enheter som ligger under det valda utrymmet"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Newest First"
+msgstr "Nyast först"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Only show notes whose category or tags contain this text (optional)"
+msgstr "Visar bara anteckningar vars kategori eller taggar innehåller denna text (valfritt)"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Show Notes List"
+msgstr "Visa anteckningslista"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Display notes matching the filter below"
+msgstr "Visar anteckningar som matchar filtret nedan"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Notes Filter"
+msgstr "Anteckningsfilter"

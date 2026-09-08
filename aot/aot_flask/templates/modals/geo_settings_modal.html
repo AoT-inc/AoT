@@ -187,9 +187,9 @@ function getCurrentMapView() {
         form.find('[name="default_lng"]').val(center.lng.toFixed(6));
         form.find('[name="default_zoom"]').val(zoom);
         
-        window.showToast && window.showToast('{{ _("Current map view captured") }}', 'info');
+        window.showToast && window.showToast({{ _("Current map view captured")|tojson }}, 'info');
     } else {
-        window.showToast && window.showToast('{{ _("Map object not found") }}', 'error');
+        window.showToast && window.showToast({{ _("Map object not found")|tojson }}, 'error');
     }
 }
 
@@ -242,9 +242,9 @@ function openGeoSettings() {
             valInput.val(savedProvider);
             if (savedProvider) {
                 const matched = searchItems.find(i => i.unique_id === savedProvider);
-                btn.text(matched ? matched.name : '{{ _("Select") }}');
+                btn.text(matched ? matched.name : {{ _("Select")|tojson }});
             } else {
-                btn.text('{{ _("Select") }}');
+                btn.text({{ _("Select")|tojson }});
             }
 
             $('#geoSettingsLoading').hide();
@@ -260,7 +260,7 @@ $('#modal_panel_opacity').on('input', function() {
 $(document).on('click', '#modal_search_provider_menu .dropdown-item', function(e) {
     e.preventDefault();
     const val = $(this).data('value');
-    const label = val ? $(this).text() : '{{ _("Select") }}';
+    const label = val ? $(this).text() : {{ _("Select")|tojson }};
     $('#modal_search_provider_val').val(val);
     $('#modal_search_provider_btn').text(label);
 });
@@ -269,7 +269,7 @@ $('#geoSettingsForm').on('submit', function(e) {
     e.preventDefault();
     const $btn = $('#btnSaveGeoSettings');
     const originalText = $btn.text();
-    $btn.prop('disabled', true).text('{{ _("Saving...") }}');
+    $btn.prop('disabled', true).text({{ _("Saving...")|tojson }});
 
     // 체크박스는 해제 시 serialize 에 포함되지 않으므로 명시적으로 true/false 전송
     const payload = $(this).serialize()
@@ -281,7 +281,7 @@ $('#geoSettingsForm').on('submit', function(e) {
         data: payload,
         success: function(resp) {
             if (resp.ok) {
-                window.showToast && window.showToast('{{ _("Settings saved successfully") }}', 'success');
+                window.showToast && window.showToast({{ _("Settings saved successfully")|tojson }}, 'success');
                 $('#geoSettingsModal').modal('hide');
                 setTimeout(() => location.reload(), 500);
             } else {

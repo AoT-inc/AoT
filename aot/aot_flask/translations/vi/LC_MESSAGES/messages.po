@@ -28973,3 +28973,162 @@ msgstr "Các mục tiêu đến từ chương trình gắn với khu vực này.
 msgid "By stage"
 msgstr "Theo giai đoạn"
 
+
+msgid "Vent"
+msgstr "Cửa thông gió"
+
+msgid "Mist"
+msgstr "Phun sương"
+
+msgid "Devices under automatic control"
+msgstr "Thiết bị được điều khiển tự động"
+
+msgid "%(n)s excluded"
+msgstr "%(n)s bị loại trừ"
+
+msgid "Turn a device off to keep automatic control from moving it."
+msgstr "Tắt thiết bị để điều khiển tự động không tác động đến nó."
+
+msgid "Safety gates will not move it either."
+msgstr "Cổng an toàn cũng sẽ không tác động đến thiết bị đó."
+
+msgid "Select a linked facility first."
+msgstr "Hãy chọn cơ sở đã liên kết trước."
+
+msgid "This facility has no actuators yet."
+msgstr "Cơ sở này chưa có bộ truyền động nào."
+
+msgid "Could not load the device list. Existing settings are kept."
+msgstr "Không thể tải danh sách thiết bị. Các cài đặt hiện có vẫn được giữ nguyên."
+
+msgid "Excluded actuators (raw)"
+msgstr "Bộ truyền động bị loại trừ (dữ liệu thô)"
+
+msgid "Comma-separated Output IDs excluded from automatic control. Normally set with the toggles above rather than typed here."
+msgstr "Danh sách ID đầu ra bị loại trừ khỏi điều khiển tự động, cách nhau bằng dấu phẩy. Thông thường được thiết lập bằng các công tắc bật/tắt phía trên thay vì gõ trực tiếp ở đây."
+
+msgid "Proactively shift temperature/humidity setpoints and inhibit ventilation before adverse weather arrives. Uses this facility's own forecast source if one is linked in the facility editor's weather bindings (any service — KMA, OpenWeatherMap, Open-Meteo); otherwise falls back to the system-wide KMA short-term forecast."
+msgstr "Chủ động dịch chuyển các điểm đặt nhiệt độ/độ ẩm và ngăn thông gió trước khi thời tiết bất lợi ập đến. Sử dụng nguồn dự báo riêng của cơ sở này nếu có liên kết trong mục liên kết thời tiết của trình chỉnh sửa cơ sở (bất kỳ dịch vụ nào — KMA, OpenWeatherMap, Open-Meteo); nếu không, sẽ chuyển sang dùng dự báo ngắn hạn KMA áp dụng cho toàn hệ thống."
+
+msgid "How many hours ahead to check for incoming adverse weather (1–6 h) when using the system-wide KMA fallback above. Longer lookahead gives earlier warning but may over-correct. Ignored when this facility has its own forecast source linked — that source already applies its own lookahead."
+msgstr "Số giờ cần kiểm tra trước để phát hiện thời tiết bất lợi sắp đến (1–6 giờ) khi sử dụng dự báo dự phòng KMA toàn hệ thống nêu trên. Thời gian nhìn trước dài hơn giúp cảnh báo sớm hơn nhưng có thể gây điều chỉnh quá mức. Bị bỏ qua khi cơ sở này đã liên kết nguồn dự báo riêng — nguồn đó đã tự áp dụng thời gian nhìn trước của nó."
+
+#: aot/widgets/widget_notice.py:1
+msgid "Notice Category Filter"
+msgstr "Bộ lọc danh mục thông báo"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Notes Space"
+msgstr "Không gian ghi chú"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Space"
+msgstr "Không gian"
+
+#: aot/widgets/widget_notice.py:1
+msgid "None selected"
+msgstr "Chưa chọn"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Notices"
+msgstr "Thông báo"
+
+#: aot/widgets/widget_notice.py:1
+msgid "No notes yet."
+msgstr "Chưa có ghi chú nào."
+
+#: aot/widgets/widget_notice.py:1
+msgid "(Attachment only)"
+msgstr "(Chỉ có tệp đính kèm)"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Notice & Notes Board"
+msgstr "Bảng thông báo & ghi chú"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Displays the latest notice board post titles and/or the notes written in a chosen site, zone, plot, or facility (and everything nested under it). Clicking a notice opens the full post (content, poll, replies, acknowledge) in a popup; clicking a note opens it in the shared notes panel. Users with write permission can also create, edit, and delete posts directly from the widget."
+msgstr "Hiển thị tiêu đề các bài đăng bảng thông báo mới nhất và/hoặc các ghi chú được viết tại một địa điểm, khu vực, lô đất hoặc cơ sở đã chọn (và mọi thứ nằm bên trong nó). Nhấp vào thông báo sẽ mở toàn bộ bài đăng (nội dung, khảo sát, phản hồi, xác nhận) trong cửa sổ bật lên; nhấp vào ghi chú sẽ mở nó trong bảng ghi chú dùng chung. Người dùng có quyền ghi cũng có thể tạo, chỉnh sửa và xóa bài đăng trực tiếp từ tiện ích."
+
+#: aot/widgets/widget_notice.py:1
+msgid "Show Notices"
+msgstr "Hiển thị thông báo"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Display the notice board section"
+msgstr "Hiển thị phần bảng thông báo"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Number of Notices"
+msgstr "Số lượng thông báo"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Number of Notes"
+msgstr "Số lượng ghi chú"
+
+#: aot/widgets/widget_notice.py:1
+msgid "How many of the latest notes to display"
+msgstr "Hiển thị bao nhiêu ghi chú mới nhất"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Include Nested Spaces"
+msgstr "Bao gồm các không gian lồng nhau"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Sort Notes By"
+msgstr "Sắp xếp ghi chú theo"
+
+#: aot/widgets/widget_notice.py:1
+msgid "How to order the note list"
+msgstr "Cách sắp xếp danh sách ghi chú"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Note Category/Tag Contains"
+msgstr "Danh mục/thẻ ghi chú chứa"
+
+#: aot/widgets/widget_notice.py:1
+msgid "How often to refresh the notice/notes lists"
+msgstr "Tần suất làm mới danh sách thông báo/ghi chú"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Notes written in this site/zone/plot/facility (and, if \"Include Nested Spaces\" above is on, everything nested under it) are shown."
+msgstr "Các ghi chú được viết tại địa điểm/khu vực/lô đất/cơ sở này sẽ được hiển thị (và nếu \"Bao gồm các không gian lồng nhau\" ở trên được bật, cả mọi thứ nằm bên trong nó)."
+
+#: aot/widgets/widget_notice.py:1
+msgid "No sites, zones, plots, or facilities exist yet."
+msgstr "Chưa có địa điểm, khu vực, lô đất hoặc cơ sở nào."
+
+#: aot/widgets/widget_notice.py:1
+msgid "Nothing selected — turn on \"Show Notices\" and/or \"Show Notes\" in the widget settings."
+msgstr "Chưa chọn gì — hãy bật \"Hiển thị thông báo\" và/hoặc \"Hiển thị ghi chú\" trong cài đặt tiện ích."
+
+#: aot/widgets/widget_notice.py:1
+msgid "Choose a space in the widget settings to show notes."
+msgstr "Chọn một không gian trong cài đặt tiện ích để hiển thị ghi chú."
+
+#: aot/widgets/widget_notice.py:1
+msgid "Display notes written in a chosen space (see Space below)"
+msgstr "Hiển thị ghi chú được viết trong không gian đã chọn (xem \"Không gian\" bên dưới)"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Also show notes written in zones/plots/facilities/devices nested under the chosen space"
+msgstr "Cũng hiển thị ghi chú được viết trong các khu vực/lô đất/cơ sở/thiết bị nằm lồng bên trong không gian đã chọn"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Newest First"
+msgstr "Mới nhất trước"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Only show notes whose category or tags contain this text (optional)"
+msgstr "Chỉ hiển thị ghi chú có danh mục hoặc thẻ chứa văn bản này (không bắt buộc)"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Show Notes List"
+msgstr "Hiển thị danh sách ghi chú"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Display notes matching the filter below"
+msgstr "Hiển thị ghi chú khớp với bộ lọc bên dưới"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Notes Filter"
+msgstr "Bộ lọc ghi chú"

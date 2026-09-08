@@ -178,7 +178,7 @@
                 <form id="filterForm" class="row align-items-end" onsubmit="event.preventDefault(); loadErrors();">
                     <div class="col-md-3">
                         <label class="aot-modal-option-label mb-1">{{ _('Status') }}</label>
-                        <select class="form-control aot-modern-input form-control-sm" name="status" id="filterStatus">
+                        <select class="form-control aot-modern-select form-control-sm" name="status" id="filterStatus">
                             <option value="">{{ _('All') }}</option>
                             <option value="pending" selected>{{ _('Pending') }}</option>
                             <option value="resolved">{{ _('Resolved') }}</option>
@@ -187,7 +187,7 @@
                     </div>
                     <div class="col-md-3">
                         <label class="aot-modal-option-label mb-1">{{ _('Severity') }}</label>
-                        <select class="form-control aot-modern-input form-control-sm" name="severity" id="filterSeverity">
+                        <select class="form-control aot-modern-select form-control-sm" name="severity" id="filterSeverity">
                             <option value="">{{ _('All') }}</option>
                             <option value="critical">{{ _('Critical') }}</option>
                             <option value="high">{{ _('High') }}</option>
@@ -197,7 +197,7 @@
                     </div>
                     <div class="col-md-3">
                         <label class="aot-modal-option-label mb-1">{{ _('Type') }}</label>
-                        <select class="form-control aot-modern-input form-control-sm" name="error_type" id="filterType">
+                        <select class="form-control aot-modern-select form-control-sm" name="error_type" id="filterType">
                             <option value="">{{ _('All') }}</option>
                             <option value="misinformation">{{ _('Misinformation') }}</option>
                             <option value="hallucination">{{ _('Hallucination') }}</option>
@@ -438,7 +438,7 @@ async function loadErrors() {
                 </td>
             </tr>`;
         });
-        $('#errors-tbody').html(rows || '<tr><td colspan="5" class="text-center text-muted py-3">{{ _('No errors found.') }}</td></tr>');
+        $('#errors-tbody').html(rows || '<tr><td colspan="5" class="text-center text-muted py-3">' + {{ _('No errors found.')|tojson }} + '</td></tr>');
     } catch (err) {}
 }
 

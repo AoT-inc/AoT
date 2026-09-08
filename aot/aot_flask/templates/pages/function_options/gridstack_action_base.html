@@ -34,7 +34,7 @@
 
             <!-- Delete Button -->
             <div style="flex: 0 0 auto; margin-right: 5px;">
-                <button data-form-id="form_action_{{unique_id}}" onclick="return confirm('{{_('Are you sure you want to delete?')}}') && $(this).processRequest(this, 'delete_action');" name="delete_action" class="btn aot-pill-btn d-flex align-items-center justify-content-center" type="button">
+                <button data-form-id="form_action_{{unique_id}}" onclick="return confirm({{ _('Are you sure you want to delete?')|tojson|forceescape }}) && $(this).processRequest(this, 'delete_action');" name="delete_action" class="btn aot-pill-btn d-flex align-items-center justify-content-center" type="button">
                     {{_('Delete')}}
                 </button>
             </div>
@@ -75,14 +75,14 @@
                                         {% endif %}
                                     </div>
                                     {% endif %}
-                                    <select class="form-control form-control-sm selectpicker" data-container="body" data-width="fit" name="{{opt_id}}" title="{{each_option['name']}}" style="max-width: 240px; height: 28px; padding: 0 5px; font-size: var(--aot-font-size-sm); border-radius: var(--aot-radius-lg);">
+                                    <select class="form-control form-control-sm selectpicker" data-width="fit" name="{{opt_id}}" title="{{each_option['name']}}" style="max-width: 240px; height: 28px; padding: 0 5px; font-size: var(--aot-font-size-sm); border-radius: var(--aot-radius-lg);">
                                         <option value="" disabled {% if not opt_val %}selected{% endif %}>{{each_option['name']}}</option>
 
                                         {% if each_option['type'] == 'select' %}
                                             {% for each_set in each_option['options_select'] %}
                                                 <option value="{{each_set[0]}}" {% if each_set[0]|string == opt_val|string %}selected{% endif %}>{{each_set[1]}}</option>
                                             {% endfor %}
-                                            
+
                                         {% elif each_option['type'] == 'select_device' %}
                                               {% set form_choices_raw = [
                                                 ("Input", table_input.query.all()),
@@ -184,7 +184,7 @@
 
         <!-- Delete Button -->
         <div style="flex: 0 0 auto; margin-right: 5px;">
-            <button data-form-id="form_action_{{unique_id}}" onclick="return confirm('{{_('Are you sure you want to delete?')}}') && $(this).processRequest(this, 'delete_action');" name="delete_action" class="btn aot-pill-btn" type="button">
+            <button data-form-id="form_action_{{unique_id}}" onclick="return confirm({{ _('Are you sure you want to delete?')|tojson|forceescape }}) && $(this).processRequest(this, 'delete_action');" name="delete_action" class="btn aot-pill-btn" type="button">
                 {{_('Delete')}}
             </button>
         </div>
@@ -214,12 +214,12 @@
                          <div style="margin-right: 5px; flex: 0 0 auto;">
                             <select class="form-control form-control-sm" name="{{opt_id}}" title="{{each_option['name']}}" style="max-width: 210px; height: 28px; padding: 0 5px; font-size: var(--aot-font-size-sm); border-radius: var(--aot-radius-lg);">
                                 <option value="" disabled {% if not opt_val %}selected{% endif %}>{{each_option['name']}}</option>
-                                
+
                                 {% if each_option['type'] == 'select' %}
                                     {% for each_set in each_option['options_select'] %}
                                         <option value="{{each_set[0]}}" {% if each_set[0]|string == opt_val|string %}selected{% endif %}>{{each_set[1]}}</option>
                                     {% endfor %}
-                                    
+
                                 {% elif each_option['type'] == 'select_device' %}
                                       {% set form_choices_raw = [
                                         ("Input", table_input.query.all()),

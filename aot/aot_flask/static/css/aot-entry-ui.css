@@ -12,7 +12,7 @@
 .grid-stack-item-content.aot-entry-item,
 .grid-stack-item-content:has(.aot-entry-item-header) {
   display: flex;
-  overflow: visible !important;
+  overflow: visible;
   /* padding: 0 !important; 제거하여 GridStack 마진 허용 */
 }
 
@@ -32,9 +32,9 @@
 .aot-entry-item {
   height: 48px; /* Force standardized 48px content height */
   position: relative;
-  padding: 0 8px !important;
+  padding: 0 8px;
   border: none;
-  border-radius: var(--aot-radius-xl) !important; /* 알약 모양 복구 */
+  border-radius: var(--aot-radius-xl); /* 알약 모양 복구 */
   background-color: var(--aot-surface-card);
   color: var(--aot-color-text-primary);
   overflow: hidden;
@@ -89,31 +89,31 @@
 /* UUID copy button (Pill design with hover effect) */
 .aot-entry-uuid-btn {
   height: var(--aot-btn-height);
-  min-height: var(--aot-btn-height) !important;
+  min-height: var(--aot-btn-height);
   border-radius: var(--aot-btn-radius);
-  padding-left: var(--aot-btn-padding-x) !important;
+  padding-left: var(--aot-btn-padding-x);
   padding-right: var(--aot-btn-padding-x);
   display: flex;
   align-items: center;
-  justify-content: flex-start !important;
-  font-weight: 500 !important;
+  justify-content: flex-start;
+  font-weight: 500;
   font-size: var(--aot-font-size-xs);
   user-select: none; /* Phase 9-8: Prevent text cursor */
   cursor: pointer;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  transition: all 0.2s ease !important;
-  border: 1px solid transparent !important; /* 기본 배경 투명 요청 반영 */
+  transition: all 0.2s ease;
+  border: 1px solid transparent; /* 기본 배경 투명 요청 반영 */
   background-color: transparent;
   color: var(--aot-color-text-primary);
-  width: 100% !important;
+  width: 100%;
 }
 
 .aot-entry-uuid-btn:hover {
-  background-color: var(--aot-color-brand-secondary) !important;
-  color: var(--aot-color-text-tertiary) !important;
-  border-color: var(--aot-color-brand-secondary) !important;
+  background-color: var(--aot-color-brand-secondary);
+  color: var(--aot-color-text-tertiary);
+  border-color: var(--aot-color-brand-secondary);
 }
 
 /* Device Name Input/label (Plain text style) */
@@ -121,7 +121,7 @@
   background: transparent;
   border: none;
   box-shadow: none;
-  text-align: left !important;
+  text-align: left;
   padding-left: 0; /* 기본 패딩은 컨테이너(aot-col-name)에서 담당 */
   font-size: var(--aot-font-size-base);
   font-weight: 500;
@@ -137,7 +137,7 @@
 }
 
 .aot-entry-name-input:hover {
-  color: inherit !important;
+  color: inherit;
 }
 
 /* Name column doubles as the UUID copy affordance (click to copy). On hover it
@@ -152,16 +152,16 @@
   padding-left: var(--aot-btn-padding-x);
   padding-right: var(--aot-btn-padding-x);
   margin-left: calc(-1 * var(--aot-btn-padding-x));
-  border: 1px solid transparent !important;
-  border-radius: var(--aot-btn-radius) !important;
+  border: 1px solid transparent;
+  border-radius: var(--aot-btn-radius);
   background-color: transparent;
   transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
 }
 .aot-col-name-copy:hover .aot-entry-name-input,
 .aot-col-name-copy .aot-entry-name-input:hover {
-  background-color: var(--aot-color-brand-secondary) !important;
-  color: var(--aot-color-text-tertiary) !important;
-  border-color: var(--aot-color-brand-secondary) !important;
+  background-color: var(--aot-color-brand-secondary);
+  color: var(--aot-color-text-tertiary);
+  border-color: var(--aot-color-brand-secondary);
 }
 
 /* Live measurement chips shown in the UUID column for activated inputs.
@@ -211,25 +211,25 @@
   border-right: none;
   display: flex;
   align-items: center;
-  padding: 0 !important; /* Phase 9-2: 모든 여백 제거 */
+  padding: 0; /* Phase 9-2: 모든 여백 제거 */
 }
 
 /* 3.5:3:3.5 Flex 배분 클래스 (정밀 고정) */
 .aot-col-name { 
   flex: 35 35 0%; 
-  width: 35% !important;
+  width: 35%;
   max-width: none; 
   min-width: 0; /* 넘침 방지를 위해 min-width 0 설정 필수 */
-  padding-left: 0 !important; /* Phase 9-2: 텍스트 영역 활용을 위해 좌측 여백 제거 */
+  padding-left: 0; /* Phase 9-2: 텍스트 영역 활용을 위해 좌측 여백 제거 */
 }
 
 /* 라벨이 있는 경우 입력 필드 패딩 제거 */
 .aot-col-name:has(.aot-badge-inline) .aot-entry-name-input {
-  padding-left: 0 !important;
+  padding-left: 0;
 }
 .aot-col-uuid { 
   flex: 30 30 0%; 
-  width: 30% !important;
+  width: 30%;
   max-width: none; 
   min-width: 0; 
 }
@@ -284,7 +284,7 @@
 .aot-entry-content-item input[type="text"]:disabled {
   font-size: var(--aot-font-size-base);
   font-weight: 500;
-  text-align: left !important; /* 강제 좌측 정렬 */
+  text-align: left; /* 강제 좌측 정렬 */
   padding-left: 0; /* Phase 9-2: 12px 여백 제거 */
   padding-right: 0; /* Phase 9-2: 우측 여백 제거 */
   white-space: normal; /* Phase 9-2: 줄바꿈 허용 */
@@ -294,18 +294,18 @@
 
 .aot-entry-content-item input[type="text"]:hover,
 .aot-entry-name-input:hover {
-  color: var(--aot-color-text-primary) !important; /* 호버 시 색상 변경 방지 */
+  color: var(--aot-color-text-primary); /* 호버 시 색상 변경 방지 */
 }
 
 .aot-entry-content-item input.btn {
   font-size: var(--aot-font-size-xs);
   text-align: left; /* UUID 버튼 좌측 정렬 */
-  padding-left: 12px !important;
+  padding-left: 12px;
 }
 
 .aot-entry-actions input.btn {
   font-size: var(--aot-font-size-xs);
-  text-align: center !important; /* 액션 버튼 중앙 정렬 */
+  text-align: center; /* 액션 버튼 중앙 정렬 */
 }
 
 /* ===== Action Buttons - vertical center ===== */
@@ -332,7 +332,7 @@
   overflow: visible;   /* Phase 9-2: 오버플로우 허용 */
   text-overflow: clip; /* Phase 9-2: 말줄임표 제거 */
   transition: all 0.2s ease;
-  border: 1px solid var(--aot-btn-border-primary, #B6BABA) !important;
+  border: 1px solid var(--aot-btn-border-primary, #B6BABA);
   max-width: none;
   width: 100%;
 }
@@ -344,8 +344,8 @@
 .aot-entry-item .aot-entry-actions input.form-control.btn.aot-pill-btn-primary[value="Activate"],
 .aot-entry-item .aot-entry-actions input.form-control.btn.aot-pill-btn-primary[value*="활성화"] {
   background-color: var(--aot-btn-bg-inactive);
-  color: var(--aot-color-text-tertiary) !important;
-  border: none !important;
+  color: var(--aot-color-text-tertiary);
+  border: none;
   opacity: 1;
 }
 
@@ -354,8 +354,8 @@
 .aot-entry-item .aot-entry-actions input.form-control.btn.aot-pill-btn-primary[value="Deactivate"],
 .aot-entry-item .aot-entry-actions input.form-control.btn.aot-pill-btn-primary[value*="비활성화"] {
   background-color: var(--aot-btn-bg-active);
-  color: var(--aot-color-text-tertiary) !important;
-  border: none !important;
+  color: var(--aot-color-text-tertiary);
+  border: none;
   opacity: 1;
 }
 
@@ -396,8 +396,8 @@
   height: 100px;
   flex-direction: column;
   align-items: stretch;
-  padding-left: 0 !important;
-  padding-right: 0 !important;
+  padding-left: 0;
+  padding-right: 0;
 }
 
 .aot-pid-row-1,
@@ -449,14 +449,14 @@
   display: flex;
 }
 
+/* 레이아웃 전용 — 배경/문자/테두리는 각 버튼의 aot-pill-btn-* 변형
+   클래스(primary/pause/hold)가 정한다. 예전엔 여기서 !important 로
+   --aot-btn-bg-inactive 를 강제해, Pause/Hold 전용 클래스로 갈아 끼워도
+   화면은 항상 같은 회색으로 보였다(2026-09-08). */
 .aot-pid-secondary-actions > div input.btn {
   flex: 1 1 0;
   width: 100%;
-  min-width: 0 !important;
-  color: var(--aot-color-text-tertiary);
-  background-color: var(--aot-btn-bg-inactive) !important;
-  border: none !important;
-  opacity: 1;
+  min-width: 0;
 }
 
 /* ===== Output Button State Colors ===== */
@@ -475,17 +475,34 @@
   transition: all 0.2s ease;
 }
 
-.aot-btn-on {
-  /* Phase 9-5: 장치 상태(State)가 꺼져있을 땐 OFF 버튼과 같은 색상 사용 */
-  background-color: var(--aot-btn-bg-inactive, #5E6B64);
+/* 배경·테두리·글자색만 3-클래스(.btn.form-control.aot-btn-on)로 올린다. 이
+   버튼은 .aot-pill-btn 도 함께 달고 있는데(같은 요소), 그쪽의 배경 규칙
+   (.btn.aot-pill-btn, 2-클래스, aot-modal-modern.css)이 이 파일보다 나중에
+   실려 동률이면 그쪽이 이긴다. 2026-09 !important 정리에서 이 규칙의
+   !important 를 "화면에서 아무 일도 안 한다" 로 재고 뗐는데, 그 측정이
+   /output 화면을 포함하지 않아 놓친 자리였다 — 실은 그 !important 가 이
+   특이도 역전을 막고 있었다. 뗀 뒤로 On/Off 버튼이 상태·설정색과 무관하게
+   늘 흰 알약으로만 보였다(2026-09-07 사용자 리포트로 발견).
+   모양(둥근 정도·높이)은 손대지 않는다 — 그건 이미 aot-base-ui.css 의 전역
+   `.btn:not(...)` 규칙이 훨씬 높은 특이도로 모든 버튼에 통일하고 있다.
+
+   ⚠ 색은 --aot-btn-bg-output-on/-off 를 쓴다 — --aot-btn-bg-active/
+   -inactive(주/보조 버튼용)가 아니다. 같은 레거시 별칭 정리에서 이 두
+   토큰을 한 번 합쳐 버려, settings/custom_ui 의 "버튼 켜짐"/"버튼 꺼짐"
+   ("출력 행의 ON/OFF 버튼")을 바꿔도 여기 반영되지 않았다 — 두 필드
+   기본값이 우연히 같아 겉보기엔 맞아 보였다(2026-09-08 사용자 리포트로
+   발견). docs/design/color-system.md §5-13. */
+/* ON 버튼은 **언제나** "버튼 켜짐"(bg_btn_on) 색이다.
+   2026-09-08: 여기 있던 Phase 9-5 규칙이 "행이 꺼져 있으면 ON 버튼도 꺼짐색"
+   으로 칠하고 있었다. 그래서 settings/custom_ui 에서 "버튼 켜짐" 을 바꿔도
+   대부분의 행(꺼진 행)에서는 아무 변화가 없었고, ON 버튼이 "버튼 꺼짐" 색을
+   입고 있었다 — 사용자가 "그 색 아니다" 라고 계속 지적한 자리다.
+   행의 상태는 행 배경(bg_on/bg_off)이 이미 말한다. 버튼은 자기가 하는 일의
+   색을 입는다. */
+.btn.form-control.aot-btn-on {
+  background-color: var(--aot-btn-bg-output-on, #13261B);
   border: 1px solid var(--aot-btn-border-primary, #B6BABA);
   color: var(--aot-color-text-tertiary, #FFFFFF);
-}
-
-/* Phase 9-5: 장치 상태가 켜져있을 땐(활성 채널) ON 버튼이 어두운 색상으로 변경 */
-.aot-entry-item-channel.active-background .aot-btn-on,
-.aot-entry-item.active-background .aot-btn-on {
-  background-color: var(--aot-btn-bg-active, #13261B);
 }
 
 /* Actuator Paired: row turns active like any other output, but the non-moving
@@ -493,11 +510,11 @@
    stands out. Higher specificity than the row-cascade rule above. */
 .aot-entry-item-channel.active-background .aot-btn-on.aot-paired-inactive,
 .aot-entry-item.active-background .aot-btn-on.aot-paired-inactive {
-  background-color: var(--aot-btn-bg-inactive, #5E6B64);
+  background-color: var(--aot-btn-bg-output-off, #5E6B64);
 }
 
-.aot-btn-off {
-  background-color: var(--aot-btn-bg-inactive, #5E6B64);
+.btn.form-control.aot-btn-off {
+  background-color: var(--aot-btn-bg-output-off, #5E6B64);
   border: 1px solid var(--aot-btn-border-primary, #B6BABA);
   color: var(--aot-color-text-tertiary, #FFFFFF);
   text-shadow: none;
@@ -505,10 +522,30 @@
 
 /* hover 는 마우스 포인터 환경에서만 — 터치 기기의 sticky-hover(첫 탭이 hover 로
    소비되어 두 번 탭해야 작동) 방지 */
+/* 호버는 **색을 바꾸지 않는다** — settings/custom_ui 미리보기가 쓰는 방식
+   그대로 opacity 로만 반응한다(`#aot-ui-preview .preview-btn:hover
+   { opacity: .82 }`). 그 페이지가 시스템 색상의 정본이므로 호버도 그 페이지에
+   있는 색 안에서만 움직여야 하고, 어둡게 만든 그림자색은 거기 없는 색이다.
+
+   여기 있던 `.aot-btn-on:hover`(0,2,0)는 aot-modal-modern.css 의
+   `.btn.aot-pill-btn:hover`(0,3,0, 나중 로드)에 져서, 호버 순간 버튼이
+   **페이지 배경색**(--aot-surface-body)으로 바뀌었다. 3-클래스로 올려
+   자기 색을 지킨다. */
 @media (hover: hover) and (pointer: fine) {
-  .aot-btn-on:hover,
-  .aot-btn-off:hover {
-    filter: brightness(0.9);
+  .btn.form-control.aot-btn-on:hover,
+  .btn.form-control.aot-btn-on:focus {
+    background-color: var(--aot-btn-bg-output-on, #13261B);
+    border-color: var(--aot-btn-border-primary, #B6BABA);
+    opacity: 0.82;
+  }
+
+  .btn.form-control.aot-btn-off:hover,
+  .btn.form-control.aot-btn-off:focus,
+  .btn.form-control.aot-btn-on.aot-paired-inactive:hover,
+  .btn.form-control.aot-btn-on.aot-paired-inactive:focus {
+    background-color: var(--aot-btn-bg-output-off, #5E6B64);
+    border-color: var(--aot-btn-border-primary, #B6BABA);
+    opacity: 0.82;
   }
 }
 
@@ -530,13 +567,13 @@
 }
 
 .aot-badge-inline.badge-llm {
-  background-color: var(--aot-color-llm, #6277c7) !important;
-  color: var(--aot-color-text-tertiary) !important;
+  background-color: var(--aot-color-llm, #6277c7);
+  color: var(--aot-color-text-tertiary);
 }
 
 .aot-badge-inline.badge-mcp {
-  background-color: var(--aot-color-mcp, #64c762) !important;
-  color: var(--aot-color-text-tertiary) !important;
+  background-color: var(--aot-color-mcp, #64c762);
+  color: var(--aot-color-text-tertiary);
 }
 
 /* ===== Drag Handle ===== */
@@ -591,7 +628,7 @@
 
 /* ===== Output Entry ===== */
 .grid-stack-item-content:has(.aot-entry-item-header) {
-  border: none !important;
+  border: none;
   border-radius: var(--aot-radius-xl); /* 엔트리 배경 라운드 20px 요청 반영 */
   background-color: transparent;
   display: flex;
@@ -605,14 +642,14 @@
   padding: 0 8px; /* Input 스타일 동기화 (좌우 8px 패딩) */
   margin-left: 0; /* row 의 음수 마진 무력화 */
   margin-right: 0;
-  width: 100% !important;
+  width: 100%;
   flex-wrap: nowrap;
   background-color: var(--aot-surface-card, #FFFFFF); /* 카드(행 전체)와 같은 배경 기본 — 페이지가 배경 보조 */
   border-top-left-radius: 19px; /* 렌더링 뭉개짐 방지 */
   border-top-right-radius: 19px;
   display: flex;
   align-items: center;
-  border-bottom: 1px solid var(--aot-btn-border-primary, #B6BABA) !important;
+  border-bottom: 1px solid var(--aot-btn-border-primary, #B6BABA);
   resize: none;
 }
 
@@ -671,16 +708,16 @@
 /* Output UUID Button Style (Transparent background 요청 반영) */
 .aot-output-uuid-btn {
   background-color: transparent;
-  border: 1px solid transparent !important;
+  border: 1px solid transparent;
   color: var(--aot-color-text-primary, #13261B);
   text-align: left;
   padding-left: 12px;
 }
 
 .aot-output-uuid-btn:hover {
-  background-color: var(--aot-btn-bg-secondary, #5E6B64) !important;
-  color: var(--aot-color-text-tertiary, #FFFFFF) !important;
-  border-color: var(--aot-btn-bg-secondary, #5E6B64) !important;
+  background-color: var(--aot-btn-bg-secondary, #5E6B64);
+  color: var(--aot-color-text-tertiary, #FFFFFF);
+  border-color: var(--aot-btn-bg-secondary, #5E6B64);
 }
 
 /* drag handle & settings button 정밀 고정폭 village */

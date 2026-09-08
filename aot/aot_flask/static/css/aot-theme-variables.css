@@ -83,10 +83,6 @@
      fg), not independently editable per-preset; the tint bg/fg above already
      aren't either (SEMANTIC_DEFAULTS in custom_ui.html is shared across every
      built-in preset). Consumed by .aot-notice-box (aot-modal-modern.css). */
-  --aot-tint-success-border: #b8cba6;
-  --aot-tint-warning-border: #dac196;
-  --aot-tint-danger-border:  #e1abab;
-  --aot-tint-info-border:    #98c6d9;
 
   /* ========================================================================
      Section 1.2b: color — measurement band (5단계 측정값 구간 전역 팔레트)
@@ -142,7 +138,6 @@
   --aot-bg-hold: #F0AD4E;
   --aot-bg-on: #B5BABA;
   --aot-bg-off: #F3F6F5;
-  --aot-bg-upgrade: #13261B;
 
   /* ========================================================================
      Section 1.4: color — button
@@ -151,10 +146,25 @@
   --aot-btn-bg-secondary: #5E6B64;
   --aot-btn-bg-active: #13261B;
   --aot-btn-bg-inactive: #5E6B64;
+  /* 출력 행 On/Off 버튼 전용 — settings/custom_ui 의 "버튼 켜짐"/"버튼 꺼짐"
+     (bg_btn_on/bg_btn_off, "출력 행의 ON/OFF 버튼"). 위 --aot-btn-bg-active/
+     -inactive 는 "주 버튼 배경"/"보조 버튼 배경"(btn_primary_bg/
+     btn_secondary_bg — 저장·활성화·탭 등 전역 채워진 버튼) 전용이라 이름이
+     비슷해도 다른 필드다. 두 필드가 지금 같은 색을 쓰고 있어 기본값이
+     같지만, 사용자가 "버튼 켜짐"만 바꾸면 여기만 바뀌어야 한다.
+     2026-09-08: 레거시 별칭 정리 때 이 자리가 실수로 위 --aot-btn-bg-active/
+     -inactive 를 가리키게 옮겨져, "버튼 켜짐/꺼짐" 을 바꿔도 출력 화면에
+     반영되지 않았다(routes_general.py 의 경고 주석 — "별도 aot 토큰 없음" —
+     을 그 정리가 놓쳤다). */
+  --aot-btn-bg-output-on: #13261B;
+  --aot-btn-bg-output-off: #5E6B64;
   --aot-btn-bg-pause: #989E9E;
   --aot-btn-bg-hold: #D1D5D5;
+  /* 슬라이드 토글(.btn-toggle) 꺼짐 트랙. 켜짐은 --aot-band-3 이다.
+     예전엔 전역 테두리색(--aot-border-neutral)을 빌려 써서
+     settings/custom_ui 에서 손댈 수 없었다. */
+  --aot-toggle-track-off: #DDDDDD;
   --aot-btn-bg-flat: #D2D1D1;
-  --aot-btn-bg-upgrade: #13261B;
   --aot-btn-color-primary: #FFFFFF;
   --aot-btn-color-secondary: #FFFFFF;
   /* settings/custom_ui 의 bd_btn_border 필드가 /custom.css 를 통해
@@ -439,7 +449,6 @@
   --bg-hold: var(--aot-bg-hold);
   --bg-on: var(--aot-bg-on);
   --bg-off: var(--aot-bg-off);
-  --bg-upgrade: var(--aot-bg-upgrade);
 
   /* Button Colors */
   --bg-llm: var(--aot-color-llm);
@@ -447,9 +456,8 @@
   --bd-btn-primary: var(--aot-btn-bg-primary);
   --bd-btn-secondary: var(--aot-btn-bg-secondary);
   --bd-btn-tertiary: var(--aot-color-brand-accent);
-  --bg-btn-upgrade: var(--aot-btn-bg-upgrade);
-  --bg-btn-on: var(--aot-btn-bg-active);
-  --bg-btn-off: var(--aot-btn-bg-inactive);
+  --bg-btn-on: var(--aot-btn-bg-output-on);
+  --bg-btn-off: var(--aot-btn-bg-output-off);
   --bg-btn-active: var(--aot-btn-bg-active);
   --bg-btn-inactive: var(--aot-btn-bg-inactive);
   --bg-btn-pause: var(--aot-btn-bg-pause);

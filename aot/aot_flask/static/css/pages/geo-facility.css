@@ -129,11 +129,9 @@
 
   /* Dropdown toggle (Tools & Export) — neutral outline family */
   .container .dropdown-toggle.btn-outline-secondary { border-radius: var(--aot-btn-radius-sm); }
-.container .dropdown-menu,
-  #modal_fac_step .dropdown-menu {
-    border-color: var(--aot-border-neutral);
-    box-shadow: var(--aot-shadow-dropdown);
-  }
+  /* 목록 상자(테두리·모서리·그림자)는 components/aot-select.css 가 정한다.
+     여기 있던 border-color 는 테두리 두께가 0이라 이미 무효였고, box-shadow 는
+     같은 토큰을 한 번 더 준 중복이었다. */
   .container .dropdown-item { font-size: var(--aot-font-size-sm); color: var(--aot-color-text-primary); }
   .container .dropdown-item:hover { background: var(--aot-surface-body); }
 .container .dropdown-header,

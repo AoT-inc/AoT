@@ -30465,3 +30465,162 @@ msgstr "個已儲存"
 
 msgid "week columns"
 msgstr "個週欄"
+
+msgid "Vent"
+msgstr "通風窗"
+
+msgid "Mist"
+msgstr "噴霧"
+
+msgid "Devices under automatic control"
+msgstr "自動控制下的裝置"
+
+msgid "%(n)s excluded"
+msgstr "已排除 %(n)s 個"
+
+msgid "Turn a device off to keep automatic control from moving it."
+msgstr "關閉裝置後，自動控制將不再操作該裝置。"
+
+msgid "Safety gates will not move it either."
+msgstr "安全聯鎖也不會操作該裝置。"
+
+msgid "Select a linked facility first."
+msgstr "請先選擇連結的設施。"
+
+msgid "This facility has no actuators yet."
+msgstr "此設施尚無致動器。"
+
+msgid "Could not load the device list. Existing settings are kept."
+msgstr "無法載入裝置清單。現有設定將會保留。"
+
+msgid "Excluded actuators (raw)"
+msgstr "排除的致動器（原始值）"
+
+msgid "Comma-separated Output IDs excluded from automatic control. Normally set with the toggles above rather than typed here."
+msgstr "以逗號分隔，列出從自動控制中排除的 Output ID。通常應使用上方的切換開關設定，而不是在此手動輸入。"
+
+msgid "Proactively shift temperature/humidity setpoints and inhibit ventilation before adverse weather arrives. Uses this facility's own forecast source if one is linked in the facility editor's weather bindings (any service — KMA, OpenWeatherMap, Open-Meteo); otherwise falls back to the system-wide KMA short-term forecast."
+msgstr "在惡劣天氣來臨之前主動調整溫度/濕度設定點並抑制通風。若在設施編輯器的天氣綁定中為該設施連結了自有的預報來源（任何服務皆可——KMA、OpenWeatherMap、Open-Meteo），則使用該來源；否則將回退至系統層級的氣象廳（KMA）短期預報。"
+
+msgid "How many hours ahead to check for incoming adverse weather (1–6 h) when using the system-wide KMA fallback above. Longer lookahead gives earlier warning but may over-correct. Ignored when this facility has its own forecast source linked — that source already applies its own lookahead."
+msgstr "在使用上方系統層級的 KMA 備用預報時，要提前多少小時檢查即將到來的惡劣天氣（1–6 小時）。前瞻時間越長，預警越早，但也可能導致過度修正。若此設施已連結自有的預報來源，則會忽略此設定——該來源已套用其自身的前瞻時間。"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Notice Category Filter"
+msgstr "公告分類篩選"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Notes Space"
+msgstr "筆記空間"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Space"
+msgstr "空間"
+
+#: aot/widgets/widget_notice.py:1
+msgid "None selected"
+msgstr "未選擇"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Notices"
+msgstr "公告"
+
+#: aot/widgets/widget_notice.py:1
+msgid "No notes yet."
+msgstr "尚無筆記。"
+
+#: aot/widgets/widget_notice.py:1
+msgid "(Attachment only)"
+msgstr "(僅附件)"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Notice & Notes Board"
+msgstr "公告與筆記看板"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Displays the latest notice board post titles and/or the notes written in a chosen site, zone, plot, or facility (and everything nested under it). Clicking a notice opens the full post (content, poll, replies, acknowledge) in a popup; clicking a note opens it in the shared notes panel. Users with write permission can also create, edit, and delete posts directly from the widget."
+msgstr "顯示最新公告欄貼文標題,以及在所選場地、區域、地塊或設施(及其下所有內容)中撰寫的筆記。點擊公告會在彈出視窗中開啟完整貼文(內容、投票、回覆、確認已讀);點擊筆記會在共用筆記面板中開啟。擁有寫入權限的使用者還可以直接在小工具中建立、編輯及刪除貼文。"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Show Notices"
+msgstr "顯示公告"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Display the notice board section"
+msgstr "顯示公告欄區域"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Number of Notices"
+msgstr "公告數量"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Number of Notes"
+msgstr "筆記數量"
+
+#: aot/widgets/widget_notice.py:1
+msgid "How many of the latest notes to display"
+msgstr "顯示最近多少則筆記"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Include Nested Spaces"
+msgstr "包含巢狀空間"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Sort Notes By"
+msgstr "筆記排序方式"
+
+#: aot/widgets/widget_notice.py:1
+msgid "How to order the note list"
+msgstr "筆記清單的排序方式"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Note Category/Tag Contains"
+msgstr "筆記分類/標籤包含"
+
+#: aot/widgets/widget_notice.py:1
+msgid "How often to refresh the notice/notes lists"
+msgstr "公告/筆記清單的重新整理頻率"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Notes written in this site/zone/plot/facility (and, if \"Include Nested Spaces\" above is on, everything nested under it) are shown."
+msgstr "將顯示在此場地/區域/地塊/設施中撰寫的筆記(如果上方「包含巢狀空間」已開啟,則包括其下的所有內容)。"
+
+#: aot/widgets/widget_notice.py:1
+msgid "No sites, zones, plots, or facilities exist yet."
+msgstr "尚無場地、區域、地塊或設施。"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Nothing selected — turn on \"Show Notices\" and/or \"Show Notes\" in the widget settings."
+msgstr "未選擇任何內容 — 請在小工具設定中開啟「顯示公告」和/或「顯示筆記」。"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Choose a space in the widget settings to show notes."
+msgstr "請在小工具設定中選擇一個空間以顯示筆記。"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Display notes written in a chosen space (see Space below)"
+msgstr "顯示在所選空間中撰寫的筆記(參見下方「空間」)"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Also show notes written in zones/plots/facilities/devices nested under the chosen space"
+msgstr "同時顯示巢狀於所選空間下的區域/地塊/設施/裝置中撰寫的筆記"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Newest First"
+msgstr "最新優先"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Only show notes whose category or tags contain this text (optional)"
+msgstr "僅顯示分類或標籤包含此文字的筆記(選填)"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Show Notes List"
+msgstr "顯示筆記清單"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Display notes matching the filter below"
+msgstr "顯示與下方篩選條件相符的筆記"
+
+#: aot/widgets/widget_notice.py:1
+msgid "Notes Filter"
+msgstr "筆記篩選"
