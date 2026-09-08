@@ -73,10 +73,10 @@
         <option value="">{{ _('Loading…') }}</option>
       </select>
     </div>
-    {#- input 페이지의 "추가" 버튼과 같은 클래스만 쓴다(`btn btn-primary`).
-        `aot-pill-btn` 계열은 모달/드로어 전용 알약 버튼이라(`aot-modal-modern.css`),
-        모달 밖인 이 줄에 쓰면 그 쪽 배경색 규칙이 안 걸려 다른 버튼과 다르게
-        보인다 — 실제로 옆의 selectpicker 알약과 안 맞았다. -#}
+    {#- input 페이지의 "추가" 버튼과 같은 클래스를 쓴다(AoT 정본 알약).
+        예전에는 `aot-pill-btn` 이 모달/드로어 밖에서 배경색 규칙을 못 받아
+        여기서만 `btn btn-primary` 를 썼는데, 2026-09-08 에 그 규칙이 모달
+        밖에서도 걸리도록 고쳐져 이제 옆의 selectpicker 알약과 맞는다. -#}
     <div class="col-auto">
       <button type="button" id="veg-add" class="btn aot-pill-btn aot-pill-btn-primary">
         {{ _('Add') }}

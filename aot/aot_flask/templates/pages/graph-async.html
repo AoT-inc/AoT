@@ -223,9 +223,8 @@
       text-align: center;
     }
 
+    /* 모양(반지름·패딩)은 .aot-pill-btn 이 정한다 — 여기는 배치만. */
     .aot-graph-submit {
-      border-radius: 9999px !important;
-      padding: 0.35rem 1.4rem;
       margin-left: auto;
     }
 
@@ -362,7 +361,7 @@
           </label>
         </div>
         {% endif %}
-        <button class="btn btn-primary aot-graph-submit" type="submit">{{_('Display Graph')}}</button>
+        <button class="btn aot-pill-btn aot-pill-btn-primary aot-graph-submit" type="submit">{{_('Display Graph')}}</button>
       </div>
     </div>
     </form>

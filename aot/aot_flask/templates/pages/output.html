@@ -558,6 +558,43 @@
     });
   }
 
+  /**
+   * Open an output's settings modal, lazily fetching its body fragment on the
+   * first open instead of at page load — same reasoning and mechanism as
+   * input.html's openInputSettingsModal (see there): every card used to carry
+   * its full settings modal inline, so N cards meant N modals worth of HTML
+   * parsed before GridStack could lay anything out. Reuses the existing
+   * /output?output_type=options fragment and refreshModalOptions()'s own
+   * replaceWith(), which evaluates the fragment's inline <script> tags
+   * (the map macro's shown.bs.modal binding included) before modal('show')
+   * runs a line below.
+   */
+  function openOutputSettingsModal(id) {
+    var $modal = $('#modal_config_' + id);
+    var $placeholder = $modal.find('[data-aot-lazy-modal-body]');
+    if (!$placeholder.length) {
+      $modal.modal('show'); // Already loaded on a prior open.
+      return;
+    }
+    $placeholder.html('<span class="text-muted">' + {{ _('Loading...')|tojson }} + '</span>');
+    $.ajax({
+      type: "GET",
+      url: '/output?output_type=options&output_id=' + id,
+      success: function (html) {
+        $placeholder.replaceWith(html);
+        if (window.AoTModalEnhance) AoTModalEnhance.apply($('#mod_output_' + id));
+        $modal.modal('show');
+      },
+      error: function () {
+        $placeholder.html('<span class="text-danger">' + {{ _('Could not load settings') | tojson }} + '</span>');
+        $modal.modal('show');
+      }
+    });
+  }
+  $(document).on('click', '.aot-output-settings-open', function () {
+    openOutputSettingsModal($(this).data('output-id'));
+  });
+
   jQuery.fn.processRequest = function (button, action) {
     var formId = $(button).data('form-id');
     var $form;

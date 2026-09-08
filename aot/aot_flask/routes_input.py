@@ -336,13 +336,20 @@ def page_input():
 
     # Map each device measurement -> its effective unit key (accounting for
     # conversion/rescale). Lets the entry card render the live measurement's
-    # unit symbol, mirroring the live-measurements page.
+    # unit symbol, mirroring the live-measurements page. Also group enabled
+    # measurements by device here (one query for every card) instead of each
+    # card in input_entry.html running its own DeviceMeasurements query
+    # (N+1 — was adding a per-card DB round trip to the page's TTFB).
     dict_measure_units = {}
+    dict_input_measurements_enabled = {}
     for each_measurement in DeviceMeasurements.query.all():
         conversion = Conversion.query.filter(
             Conversion.unique_id == each_measurement.conversion_id).first()
         _, m_unit, _ = return_measurement_info(each_measurement, conversion)
         dict_measure_units[each_measurement.unique_id] = m_unit
+        if each_measurement.is_enabled:
+            dict_input_measurements_enabled.setdefault(
+                each_measurement.device_id, []).append(each_measurement)
 
     # Generate Action dropdown for use with Inputs
     choices_actions = []
@@ -354,6 +361,12 @@ def page_input():
     all_inputs = Input.query.all()
     all_outputs = Output.query.all()
     all_functions = CustomController.query.all()
+    # select_device 커스텀 옵션이 있는 액션마다 gridstack_action_base.html /
+    # Custom_Options.html 이 반복 실행하던 6테이블 전체스캔(N+1)을 없애기 위해
+    # 여기서 한 번만 조회해 컨텍스트로 넘긴다.
+    all_pids = PID.query.all()
+    all_triggers = Trigger.query.all()
+    all_cameras = Camera.query.all()
 
     choices_function = utils_general.choices_functions(
         all_functions, dict_units, dict_measurements)
@@ -454,6 +467,7 @@ def page_input():
                                dict_inputs=dict_inputs,
                                dict_measurements=dict_measurements,
                                dict_measure_units=dict_measure_units,
+                               dict_input_measurements_enabled=dict_input_measurements_enabled,
                                dict_units=dict_units,
                                display_order_input=display_order_input,
                                map_configs=map_configs,
@@ -478,6 +492,12 @@ def page_input():
                                table_output=Output,
                                table_pid=PID,
                                table_trigger=Trigger,
+                               all_inputs=all_inputs,
+                               all_outputs=all_outputs,
+                               all_functions=all_functions,
+                               all_pids=all_pids,
+                               all_triggers=all_triggers,
+                               all_cameras=all_cameras,
                                user=user,
                                devices_1wire_ow_shell=devices_1wire_ow_shell,
                                devices_1wire=devices_1wire,
@@ -523,6 +543,7 @@ def page_input():
                                dict_inputs=dict_inputs,
                                dict_measurements=dict_measurements,
                                dict_measure_units=dict_measure_units,
+                               dict_input_measurements_enabled=dict_input_measurements_enabled,
                                dict_units=dict_units,
                                display_order_input=display_order_input,
                                each_input=each_input,
@@ -548,6 +569,12 @@ def page_input():
                                table_output=Output,
                                table_pid=PID,
                                table_trigger=Trigger,
+                               all_inputs=all_inputs,
+                               all_outputs=all_outputs,
+                               all_functions=all_functions,
+                               all_pids=all_pids,
+                               all_triggers=all_triggers,
+                               all_cameras=all_cameras,
                                user=user,
                                devices_1wire_ow_shell=devices_1wire_ow_shell,
                                devices_1wire=devices_1wire,
@@ -620,6 +647,12 @@ def page_input():
                                table_output=Output,
                                table_pid=PID,
                                table_trigger=Trigger,
+                               all_inputs=all_inputs,
+                               all_outputs=all_outputs,
+                               all_functions=all_functions,
+                               all_pids=all_pids,
+                               all_triggers=all_triggers,
+                               all_cameras=all_cameras,
                                user=user,
                                devices_1wire_ow_shell=devices_1wire_ow_shell,
                                devices_1wire=devices_1wire,
@@ -674,6 +707,12 @@ def page_input():
                                table_output=Output,
                                table_pid=PID,
                                table_trigger=Trigger,
+                               all_inputs=all_inputs,
+                               all_outputs=all_outputs,
+                               all_functions=all_functions,
+                               all_pids=all_pids,
+                               all_triggers=all_triggers,
+                               all_cameras=all_cameras,
                                user=user,
                                devices_1wire_ow_shell=devices_1wire_ow_shell,
                                devices_1wire=devices_1wire)

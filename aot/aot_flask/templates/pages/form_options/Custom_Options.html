@@ -403,11 +403,15 @@
 
     {% elif each_option['type'] == 'select_multi_device' %}
 
+      {# input/function 페이지(routes_input.py, routes_function.py)는 이 6테이블을
+         한 번만 조회해 all_inputs 등으로 넘긴다. 이 템플릿은 output/dashboard
+         라우트에서도 include 되어 그 컨텍스트 변수가 없을 수 있으므로, 없을 때만
+         .query.all() 로 폴백한다(N+1 은 그쪽 라우트 스코프 밖). #}
       {% set form_choices_dev = [
-        ("Input", table_input.query.all()),
-        ("Function", table_function.query.all()),
-        ("Output", table_output.query.all()),
-        ("PID", table_pid.query.all())
+        ("Input", all_inputs if all_inputs is defined else table_input.query.all()),
+        ("Function", all_functions if all_functions is defined else table_function.query.all()),
+        ("Output", all_outputs if all_outputs is defined else table_output.query.all()),
+        ("PID", all_pids if all_pids is defined else table_pid.query.all())
       ] %}
 
       {% set multiselect_total = 0 %}
@@ -538,13 +542,17 @@
 
     {% elif each_option['type'] == 'select_device' %}
 
+      {# input/function 페이지는 이 중 6테이블(Input/Output/PID/Trigger/Camera/
+         Function)을 한 번만 조회해 all_* 로 넘긴다. 이 템플릿은 output/dashboard
+         라우트에서도 include 되어 그 컨텍스트 변수가 없을 수 있으므로, 없을 때만
+         .query.all() 로 폴백한다(N+1 은 그쪽 라우트 스코프 밖). #}
       {% set form_choices = [
-        ("Input", table_input.query.all()),
-        ("Output", table_output.query.all()),
-        ("PID", table_pid.query.all()),
-        ("Trigger", table_trigger.query.all()),
-        ("Camera", table_camera.query.all()),
-        ("Function", table_function.query.all()),
+        ("Input", all_inputs if all_inputs is defined else table_input.query.all()),
+        ("Output", all_outputs if all_outputs is defined else table_output.query.all()),
+        ("PID", all_pids if all_pids is defined else table_pid.query.all()),
+        ("Trigger", all_triggers if all_triggers is defined else table_trigger.query.all()),
+        ("Camera", all_cameras if all_cameras is defined else table_camera.query.all()),
+        ("Function", all_functions if all_functions is defined else table_function.query.all()),
         ("Conditional", table_conditional.query.all()),
         ("Map", table_geomap.query.all()),
         ("GeoFacility", table_geofacility.query.all() if table_geofacility else [])

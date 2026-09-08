@@ -202,7 +202,7 @@
     </div>
     {% endif %}
 
-    {% set output_channel = output_channel.query.filter(output_channel.output_id == each_output.unique_id).all() %}
+    {% set output_channel = dict_output_channels_by_output.get(each_output.unique_id, []) %}
 
     {%- set output_channel_exists = [] -%}
     {% for each_output_channel in output_channel %}

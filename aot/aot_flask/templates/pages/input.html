@@ -265,6 +265,44 @@
     });
   }
 
+  /**
+   * Open an input's settings modal, lazily fetching its body fragment on the
+   * first open instead of at page load. Every card used to carry its full
+   * settings modal (30+ sub-templates, incl. a map macro) inline, so N cards
+   * meant N modals worth of HTML parsed before GridStack could lay anything
+   * out — the page felt slow before a single grid cell had settled. Reuses
+   * the same /input?input_type=options fragment as refreshModalOptions(),
+   * including its replaceWith() — jQuery evaluates the fragment's inline
+   * <script> tags (unlike raw innerHTML/gridstack's addWidget) as part of
+   * that call, so the map macro's own shown.bs.modal listener is already
+   * bound by the time modal('show') runs a line below.
+   */
+  function openInputSettingsModal(id) {
+    var $modal = $('#modal_config_' + id);
+    var $placeholder = $modal.find('[data-aot-lazy-modal-body]');
+    if (!$placeholder.length) {
+      $modal.modal('show'); // Already loaded on a prior open.
+      return;
+    }
+    $placeholder.html('<span class="text-muted">' + {{ _('Loading...')|tojson }} + '</span>');
+    $.ajax({
+      type: "GET",
+      url: '/input?input_type=options&input_id=' + id,
+      success: function (html) {
+        $placeholder.replaceWith(html);
+        if (window.AoTModalEnhance) AoTModalEnhance.apply($('#mod_input_' + id));
+        $modal.modal('show');
+      },
+      error: function () {
+        $placeholder.html('<span class="text-danger">' + {{ _('Could not load settings') | tojson }} + '</span>');
+        $modal.modal('show');
+      }
+    });
+  }
+  $(document).on('click', '.aot-input-settings-open', function () {
+    openInputSettingsModal($(this).data('input-id'));
+  });
+
   jQuery.fn.processRequest = function (button, action) {
     console.log("[AoT Debug] processRequest Action: ", action);
     // Priority: data-form-id, if not found then the closest form

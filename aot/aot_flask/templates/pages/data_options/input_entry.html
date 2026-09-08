@@ -25,7 +25,7 @@
         title="{{each_input.name}} · UUID: {{each_input.unique_id}}, {{dict_translation['copy_to_clipboard']['phrase']}}">{{each_input.name}}</div>
     </div>
     <div class="aot-entry-content-item aot-col-uuid">
-      {%- set _meas_enabled = table_device_measurements.query.filter(table_device_measurements.device_id == each_input.unique_id).all() | selectattr('is_enabled') | list -%}
+      {%- set _meas_enabled = dict_input_measurements_enabled.get(each_input.unique_id, []) -%}
       {%- if each_input.is_activated and _meas_enabled -%}
       <div class="aot-entry-measure-live" id="input_measure_{{each_input.unique_id}}">
         {%- for each_meas in _meas_enabled -%}
@@ -58,7 +58,7 @@
         value="{{_('Deactivate')}}" />
     </div>
     <div class="aot-entry-settings">
-      <a class="btn p-0" data-toggle="modal" data-target="#modal_config_{{each_input.unique_id}}">
+      <a class="btn p-0 aot-input-settings-open" href="javascript:void(0)" data-input-id="{{each_input.unique_id}}">
         <i class="fas fa-cog"></i>
       </a>
     </div>
@@ -77,7 +77,12 @@
           </button>
         </div>
         <div class="modal-body">
-          {% include 'pages/data_options/input_options.html' %}
+          {# 카드 수 x 이 모달 전체(30여 하위 include)가 초기 페이지 HTML에
+             그대로 심기면 문서 파싱이 늦어져 그리드스택 배치까지 늦어진다.
+             내용은 최초로 열 때 /input?input_type=options 로 지연 로드한다
+             (input.html 의 show.bs.modal 델리게이트 + refreshModalOptions 재사용). #}
+          <div id="mod_input_{{each_input.unique_id}}" data-aot-lazy-modal-body
+            data-aot-lazy-type="input" data-aot-lazy-id="{{each_input.unique_id}}"></div>
         </div>
         <div class="modal-footer">
           <button type="button" class="btn aot-pill-btn" data-dismiss="modal">{{_('Close')}}</button>

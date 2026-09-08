@@ -85,12 +85,12 @@
 
                                         {% elif each_option['type'] == 'select_device' %}
                                               {% set form_choices_raw = [
-                                                ("Input", table_input.query.all()),
-                                                ("Output", table_output.query.all()),
-                                                ("PID", table_pid.query.all()),
-                                                ("Trigger", table_trigger.query.all()),
-                                                ("Camera", table_camera.query.all()),
-                                                ("Function", table_function.query.all())
+                                                ("Input", all_inputs),
+                                                ("Output", all_outputs),
+                                                ("PID", all_pids),
+                                                ("Trigger", all_triggers),
+                                                ("Camera", all_cameras),
+                                                ("Function", all_functions)
                                               ] %}
                                               {% for name, devices in form_choices_raw %}
                                                 {% if name in each_option['options_select'] %}
@@ -222,12 +222,12 @@
 
                                 {% elif each_option['type'] == 'select_device' %}
                                       {% set form_choices_raw = [
-                                        ("Input", table_input.query.all()),
-                                        ("Output", table_output.query.all()),
-                                        ("PID", table_pid.query.all()),
-                                        ("Trigger", table_trigger.query.all()),
-                                        ("Camera", table_camera.query.all()),
-                                        ("Function", table_function.query.all())
+                                        ("Input", all_inputs),
+                                        ("Output", all_outputs),
+                                        ("PID", all_pids),
+                                        ("Trigger", all_triggers),
+                                        ("Camera", all_cameras),
+                                        ("Function", all_functions)
                                       ] %}
                                       {% for name, devices in form_choices_raw %}
                                         {% if name in each_option['options_select'] %}

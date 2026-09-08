@@ -40,7 +40,7 @@
         value="{{_('Deactivate')}}" />
     </div>
     <div class="aot-entry-settings">
-      <a class="btn p-0" data-toggle="modal" data-target="#modal_config_{{each_function.unique_id}}">
+      <a class="btn p-0 aot-function-settings-open" href="javascript:void(0)" data-function-id="{{each_function.unique_id}}">
         <i class="fas fa-cog"></i>
       </a>
     </div>
@@ -61,7 +61,12 @@
         </button>
       </div>
       <div class="modal-body">
-        {% include 'pages/function_options/function_options.html' %}
+        {# input/output 페이지와 같은 이유로 지연 로드한다 — 이 모달은 액션
+           목록(장치 하나마다 최대 6개 테이블 전체조회)과 지도까지 포함해
+           input/output 보다도 무겁다. 최초로 열 때만
+           /function?function_type=options 로 가져온다(function.html 참조). #}
+        <div id="mod_function_{{each_function.unique_id}}" data-aot-lazy-modal-body
+          data-aot-lazy-type="function" data-aot-lazy-id="{{each_function.unique_id}}"></div>
       </div>
       <div class="modal-footer">
         <button type="button" class="btn aot-pill-btn" data-dismiss="modal">{{_('Close')}}</button>

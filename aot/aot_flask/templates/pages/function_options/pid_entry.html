@@ -41,8 +41,7 @@
         </div>
       </div>
       <div class="aot-entry-settings">
-        <a class="btn p-0" data-toggle="modal"
-          data-target="#modal_config_{{each_function.unique_id}}">
+        <a class="btn p-0 aot-function-settings-open" href="javascript:void(0)" data-function-id="{{each_function.unique_id}}">
           <i class="fas fa-cog"></i>
         </a>
       </div>
@@ -83,7 +82,9 @@
         </button>
       </div>
       <div class="modal-body">
-        {% include 'pages/function_options/pid_options.html' %}
+        {# function.html 참조 — 최초로 열 때만 /function?function_type=options 로 지연 로드한다. #}
+        <div id="mod_function_{{each_function.unique_id}}" data-aot-lazy-modal-body
+          data-aot-lazy-type="function" data-aot-lazy-id="{{each_function.unique_id}}"></div>
       </div>
       <div class="modal-footer">
         <button type="button" class="btn aot-pill-btn" data-dismiss="modal">{{_('Close')}}</button>

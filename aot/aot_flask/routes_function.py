@@ -797,6 +797,12 @@ def page_function():
     all_outputs = Output.query.all()
     all_functions = CustomController.query.all()
     all_pids = PID.query.all()
+    # select_device 커스텀 옵션이 있는 액션마다 gridstack_action_base.html /
+    # Custom_Options.html 이 반복 실행하던 6테이블 전체스캔(N+1)을 없애기 위해
+    # 여기서 한 번만 조회해 컨텍스트로 넘긴다. `trigger`는 이 라우트에서 이미
+    # 현재 탭으로 필터링된 다른 의미로 쓰이므로 재사용하지 않는다.
+    all_triggers = Trigger.query.all()
+    all_cameras = Camera.query.all()
 
     choices_function = utils_general.choices_functions(
         all_functions, dict_units, dict_measurements)
@@ -1007,6 +1013,12 @@ def page_function():
                                table_output=Output,
                                table_pid=PID,
                                table_trigger=Trigger,
+                               all_inputs=all_inputs,
+                               all_outputs=all_outputs,
+                               all_functions=all_functions,
+                               all_pids=all_pids,
+                               all_triggers=all_triggers,
+                               all_cameras=all_cameras,
                                tags=tags,
                                trigger=trigger,
                                units=MEASUREMENTS,
@@ -1106,6 +1118,12 @@ def page_function():
                                table_output=Output,
                                table_pid=PID,
                                table_trigger=Trigger,
+                               all_inputs=all_inputs,
+                               all_outputs=all_outputs,
+                               all_functions=all_functions,
+                               all_pids=all_pids,
+                               all_triggers=all_triggers,
+                               all_cameras=all_cameras,
                                tags=tags,
                                trigger=trigger,
                                units=MEASUREMENTS,
@@ -1211,6 +1229,12 @@ def page_function():
                                table_output=Output,
                                table_pid=PID,
                                table_trigger=Trigger,
+                               all_inputs=all_inputs,
+                               all_outputs=all_outputs,
+                               all_functions=all_functions,
+                               all_pids=all_pids,
+                               all_triggers=all_triggers,
+                               all_cameras=all_cameras,
                                tags=tags,
                                trigger=trigger,
                                units=MEASUREMENTS,
@@ -1311,6 +1335,12 @@ def page_function():
                                table_output=Output,
                                table_pid=PID,
                                table_trigger=Trigger,
+                               all_inputs=all_inputs,
+                               all_outputs=all_outputs,
+                               all_functions=all_functions,
+                               all_pids=all_pids,
+                               all_triggers=all_triggers,
+                               all_cameras=all_cameras,
                                tags=tags,
                                trigger=trigger,
                                units=MEASUREMENTS,
@@ -1394,6 +1424,12 @@ def page_function():
                                table_output=Output,
                                table_pid=PID,
                                table_trigger=Trigger,
+                               all_inputs=all_inputs,
+                               all_outputs=all_outputs,
+                               all_functions=all_functions,
+                               all_pids=all_pids,
+                               all_triggers=all_triggers,
+                               all_cameras=all_cameras,
                                tags=tags,
                                trigger=trigger,
                                units=MEASUREMENTS,

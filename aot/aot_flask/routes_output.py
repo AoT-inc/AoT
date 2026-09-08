@@ -269,8 +269,13 @@ def page_output():
     choices_method = utils_general.choices_methods(method)
     choices_output = utils_general.choices_outputs(
         all_outputs, OutputChannel, dict_outputs, dict_units, dict_measurements)
+    # Queried once and reused below (choices, custom-options parsing, the
+    # uid->channel lookup, and the per-output grouping) instead of the four
+    # separate full-table scans this used to run.
+    all_output_channels = output_channel.query.all()
+
     choices_output_channels = utils_general.choices_outputs_channels(
-        all_outputs, output_channel.query.all(), dict_outputs)
+        all_outputs, all_output_channels, dict_outputs)
     choices_output_channels_measurements = utils_general.choices_outputs_channels_measurements(
         all_outputs, OutputChannel, dict_outputs, dict_units, dict_measurements)
     choices_pid = utils_general.choices_pids(
@@ -282,7 +287,7 @@ def page_output():
     custom_options_values_outputs = parse_custom_option_values_json(
         all_outputs, dict_controller=dict_outputs)
     custom_options_values_output_channels = parse_custom_option_values_output_channels_json(
-        output_channel.query.all(), dict_controller=dict_outputs, key_name='custom_channel_options')
+        all_output_channels, dict_controller=dict_outputs, key_name='custom_channel_options')
     
     # Initialize empty dicts for all outputs to prevent template KeyError
     # NOTE: 루프 변수로 each_output 을 쓰면 안 된다. 위 215행에서 요청된
@@ -310,8 +315,16 @@ def page_output():
     # channel_unique_id -> channel_number map for fast lookup in templates
     # (used by actuator_paired card to resolve its underlying open/close channels)
     output_channels_by_uid = {
-        c.unique_id: c.channel for c in output_channel.query.all()
+        c.unique_id: c.channel for c in all_output_channels
     }
+
+    # output_id -> its OutputChannel rows. output_options.html used to run
+    # `output_channel.query.filter(...)` once per card's settings modal
+    # (N+1 — every card carried this query even though the modal usually
+    # never opens); grouping it once here removes that per-card round trip.
+    dict_output_channels_by_output = {}
+    for c in all_output_channels:
+        dict_output_channels_by_output.setdefault(c.output_id, []).append(c)
 
     custom_commands = {}
     for each_output_dev in output:
@@ -382,6 +395,7 @@ def page_output():
                                custom_options_values_outputs=custom_options_values_outputs,
                                custom_options_values_output_channels=custom_options_values_output_channels,
                                output_channels_by_uid=output_channels_by_uid,
+                               dict_output_channels_by_output=dict_output_channels_by_output,
                                dict_device_names=dict_device_names,
                                dict_member_devices=dict_member_devices,
                                dict_outputs=dict_outputs,
@@ -442,6 +456,7 @@ def page_output():
                                custom_options_values_outputs=custom_options_values_outputs,
                                custom_options_values_output_channels=custom_options_values_output_channels,
                                output_channels_by_uid=output_channels_by_uid,
+                               dict_output_channels_by_output=dict_output_channels_by_output,
                                dict_device_names=dict_device_names,
                                dict_member_devices=dict_member_devices,
                                dict_outputs=dict_outputs,
@@ -507,6 +522,7 @@ def page_output():
                                custom_options_values_outputs=custom_options_values_outputs,
                                custom_options_values_output_channels=custom_options_values_output_channels,
                                output_channels_by_uid=output_channels_by_uid,
+                               dict_output_channels_by_output=dict_output_channels_by_output,
                                dict_device_names=dict_device_names,
                                dict_member_devices=dict_member_devices,
                                dict_outputs=dict_outputs,

@@ -30,7 +30,7 @@
           value="{% if each_output.interface %}[{{each_output.interface}}] {% endif %}{{dict_outputs[each_output.output_type]['output_name']}}{% if dict_outputs[each_output.output_type]['output_library'] %} ({{dict_outputs[each_output.output_type]['output_library']}}){% endif %}">
       </div>
       <div class="aot-entry-settings">
-        <a class="btn p-0" data-toggle="modal" data-target="#modal_config_{{each_output.unique_id}}">
+        <a class="btn p-0 aot-output-settings-open" href="javascript:void(0)" data-output-id="{{each_output.unique_id}}">
           <i class="fas fa-cog"></i>
         </a>
       </div>
@@ -142,7 +142,11 @@
         </button>
       </div>
       <div class="modal-body">
-        {% include 'pages/output_options.html' %}
+        {# input 페이지와 같은 이유로 지연 로드한다 — 카드 수 x 모달 전체가
+           초기 HTML에 그대로 심기면 그리드스택 배치가 늦어진다. 최초로 열 때
+           /output?output_type=options 로 가져온다(output.html 참조). #}
+        <div id="mod_output_{{each_output.unique_id}}" data-aot-lazy-modal-body
+          data-aot-lazy-type="output" data-aot-lazy-id="{{each_output.unique_id}}"></div>
       </div>
       <div class="modal-footer">
         <button type="button" class="btn aot-pill-btn" data-dismiss="modal">{{_('Close')}}</button>
