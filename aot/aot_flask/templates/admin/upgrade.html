@@ -257,7 +257,7 @@
           <input type="time" class="form-control aot-upgrade-time-input"
                  id="docker_auto_update_time" name="docker_auto_update_time"
                  value="{{auto_update_time}}" required>
-          <button type="submit" class="btn btn-primary ml-2">{{_('Save')}}</button>
+          <button type="submit" class="btn aot-pill-btn aot-pill-btn-primary ml-2">{{_('Save')}}</button>
         </div>
         <p class="mb-0">{{_('Checked once a day at this local time. If a newer version has been published, it is installed the same way the button above does it: back up, swap the image, verify, and restore the previous version if it does not come up.')}}</p>
         <p class="mb-0">{{_('Control pauses for a few minutes while the containers restart, so pick an hour when nothing important is running.')}}</p>
@@ -326,7 +326,7 @@ docker compose -f docker/docker-compose.prod.yml up -d</pre>
         {{form_upgrade.csrf_token}}
         <div>
           <div class="form-group">
-            {{form_upgrade.upgrade_next_major_version(class_='btn btn-primary', **{'onclick':'return confirm("' + _("Settings database may not be maintained if you proceed with the upgrade. Do you want to continue?") + '")'})}}
+            {{form_upgrade.upgrade_next_major_version(class_='btn aot-pill-btn aot-pill-btn-primary', **{'onclick':'return confirm("' + _("Settings database may not be maintained if you proceed with the upgrade. Do you want to continue?") + '")'})}}
           </div>
         </div>
       </form>
@@ -361,7 +361,7 @@ docker compose -f docker/docker-compose.prod.yml up -d</pre>
         {{form_upgrade.csrf_token}}
         <div>
           <div class="form-group">
-            {{form_upgrade.upgrade(class_='btn btn-primary')}}
+            {{form_upgrade.upgrade(class_='btn aot-pill-btn aot-pill-btn-primary')}}
           </div>
         </div>
       </form>
@@ -393,7 +393,7 @@ docker compose -f docker/docker-compose.prod.yml up -d</pre>
         {{form_upgrade.csrf_token}}
         <div>
           <div class="form-group">
-            {{form_upgrade.upgrade(class_='btn btn-primary')}}
+            {{form_upgrade.upgrade(class_='btn aot-pill-btn aot-pill-btn-primary')}}
           </div>
         </div>
       </form>
