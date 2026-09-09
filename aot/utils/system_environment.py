@@ -167,6 +167,62 @@ def recommended_threads(env=None):
     return max(THREADS_MIN, min(threads, THREADS_MAX))
 
 
+WORKERS_MAX = 4
+# 워커 하나가 앱을 통째로 적재한다(실측 2026-09-09 로컬 도커: RSS 404MB,
+# 마스터는 23MB). 여유를 얹어 0.7GB 로 잡는다 — 캐시가 붙으면서 자란다.
+WORKER_MEM_GB = 0.7
+# 데몬·DB·OS 몫으로 남겨 두는 양. 이걸 안 빼면 메모리가 빠듯한 기기에서
+# 워커끼리 서로를 굶긴다.
+RESERVED_MEM_GB = 1.0
+
+
+def recommended_workers(env=None):
+    """이 환경에 맞는 gunicorn 워커 수.
+
+    스레드(gthread)는 I/O 대기에만 겹쳐 돌 뿐, 파이썬 코드는 GIL 때문에 프로세스
+    하나 안에서 줄을 선다. 실측(라즈베리파이 4B 2026-08-24): 동시 요청을 1→12 로
+    올려도 처리량이 3.8→3.5 req/s 로 그대로이고, 그때 시스템은 4코어 중 34~52%
+    만 쓴다. 로컬 도커에서도 워커 1개가 코어 1.7개까지만 올라갔다. 프로세스를
+    늘리는 것만이 파이썬 구간을 실제로 병렬화한다.
+
+    다만 **메모리가 먼저 걸린다.** 워커마다 앱을 통째로 올리므로 코어 수와
+    "쓸 수 있는 메모리 ÷ 워커 한 개 몫" 중 작은 쪽을 택한다. 라즈베리파이와
+    저메모리 기기는 1개로 둔다 — 늘려서 얻는 것보다 스왑으로 잃는 것이 크다.
+
+    ⚠ 늘린 뒤에는 **SQLite 쓰기 경합**이 다음 병목 후보다. WAL 이라 읽기는
+    괜찮지만 SD 카드 위에서 N 개 프로세스가 쓰기를 다투는 것은 재보기 전에는
+    모른다(docs/design/scheduler-process-separation.md 5절).
+    """
+    if env is None:
+        env = detect()
+    cores = env.get('cpu_cores') or 1
+    mem_gb = env.get('mem_total_gb')
+
+    if (env.get('platform_type') == PLATFORM_RASPBERRY_PI
+            or (mem_gb is not None and mem_gb < LOW_MEMORY_GB)):
+        return 1
+
+    by_mem = WORKERS_MAX
+    if mem_gb:
+        by_mem = int((mem_gb - RESERVED_MEM_GB) / WORKER_MEM_GB)
+    return max(1, min(cores, by_mem, WORKERS_MAX))
+
+
+def resolve_gunicorn_workers():
+    """(workers, source) — 'env' 면 GUNICORN_WORKERS 로 지정된 값이다.
+
+    스레드와 달리 DB 설정을 두지 않는다. 워커 수는 메모리를 직접 먹는 값이라
+    화면에서 바꾸다 기기를 재우기 쉽고, 바꾸려면 어차피 재시작이 필요하다.
+    """
+    env_value = os.environ.get('GUNICORN_WORKERS')
+    if env_value:
+        try:
+            return max(1, min(int(env_value), WORKERS_MAX * 2)), 'env'
+        except ValueError:
+            pass
+    return recommended_workers(), 'auto'
+
+
 def resolve_gunicorn_threads(database_path=None):
     """Resolve the effective gunicorn thread count and its source.
 

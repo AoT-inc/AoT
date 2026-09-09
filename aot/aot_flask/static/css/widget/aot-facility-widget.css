@@ -246,10 +246,12 @@
 .iec-sp-popup-input {
   font-size: var(--aot-font-size-sm);
   padding: .15rem .35rem;
-  border: 1px solid var(--aot-border-form);
-  border-radius: var(--aot-radius-sm);
+    /* 2026-09-09 알약/테두리 -> 밑줄(ui-guide §2-2). 쓰는 것은 밑줄이다. */
+  border: 0;
+  border-bottom: 2px solid var(--aot-border-neutral);
+  border-radius: 0;
   width: 72px;
-  background: var(--aot-input-bg);
+  background-color: transparent;
   color: var(--aot-color-text-primary);
 }
 .iec-sp-popup-input:focus {

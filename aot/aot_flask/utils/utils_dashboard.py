@@ -263,6 +263,7 @@ def widget_add(form_base, request_form):
     # 읽으면 제출되지 않은 필드라 None 이 되어 Float 열을 덮는다 — 모델
     # 기본값 1.0 을 그대로 둔다. 열 자체는 기존 행 호환을 위해 남겨 둔다.
     new_widget.enable_drag_handle = form_base.enable_drag_handle.data
+    new_widget.mobile_full_width = form_base.mobile_full_width.data
     new_widget.refresh_duration = form_base.refresh_duration.data
 
     # Determine the starting position of the new widget.
@@ -394,6 +395,7 @@ def widget_mod(form_base, request_form):
     mod_widget.name = form_base.name.data
     # font_em_name 은 더 이상 폼에 없다 — 위 add_widget 주석 참조.
     mod_widget.enable_drag_handle = form_base.enable_drag_handle.data
+    mod_widget.mobile_full_width = form_base.mobile_full_width.data
     mod_widget.refresh_duration = form_base.refresh_duration.data
 
     # Move widget to another dashboard (tab) if a valid tab_id was submitted.

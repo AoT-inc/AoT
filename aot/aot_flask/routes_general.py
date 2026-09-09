@@ -164,6 +164,9 @@ def custom_css():
             'bg_off': ['--bg-off', '--aot-bg-off'],
             # 명령 전송 후 확인 대기 중 배경. 소비처: aot-base.css .hold-background.
             'bg_pending': ['--bg-hold', '--aot-bg-hold'],
+            # 무응답(comm_fault) 배경. 2026-09-09 tint_danger_bg(의미 계열)에서
+            # 분가했다 — 같은 장치 상태 축인 bg_warning 과 계열이 갈려 있었다.
+            'bg_fault': ['--aot-bg-fault'],
             # "실행 중, 확인 불가" 인라인 틴트(aot-output-state.js
             # paintUnverifiedRunning). 채널 행에서 bg_on/off 를 인라인
             # !important 로 덮어쓰는 원인이 이 토큰이었다.
@@ -195,6 +198,11 @@ def custom_css():
             'bg_btn_pause': ['--bg-btn-pause', '--aot-btn-bg-pause'],
             'bg_btn_hold': ['--bg-btn-hold', '--aot-btn-bg-hold'],
             'toggle_track_off': ['--aot-toggle-track-off'],
+            # 컨테이너 안 항목 구분선. 기존 121곳이 이 토큰을 이미 소비하므로
+            # 필드만 붙이면 화면 변경 없이 제어권이 생긴다.
+            'bd_divider': ['--aot-border-neutral'],
+            # 옅은 구분선. 목록 행처럼 값이 촘촘한 자리에 쓴다.
+            'bd_divider_soft': ['--aot-border-light'],
             'bd_btn_border': ['--bd-btn-border', '--aot-btn-border-primary'],
             'band_1': ['--aot-band-1'],
             'band_2': ['--aot-band-2'],
@@ -215,6 +223,10 @@ def custom_css():
         # 다크 사용자에게는 해당 --aot-* 토큰 발행을 생략한다(레거시 별칭은 유지).
         dark_overridden = {
             '--aot-color-brand-accent',
+            # custom-dark.css 가 #444444 로 재정의한다. 라이트 값을 덮으면
+            # 다크에서 구분선이 흰 선이 된다.
+            '--aot-border-neutral',
+            '--aot-border-light',
             '--aot-color-text-primary',
             '--aot-color-text-secondary',
             # 2026-08 의미색 추가분. custom-dark.css :root 가 네 색을 어둡게

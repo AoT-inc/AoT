@@ -249,6 +249,13 @@
     max-width: 100%;
     overflow-x: hidden;
     overflow-y: auto;
+    /* 목록 끝에 닿아도 스크롤이 뒤로 새지 않는다. 없으면(브라우저 기본
+       `auto`) 끝에서 한 번 더 굴리는 순간 그 스크롤이 페이지로 넘어가,
+       메뉴는 열린 채 배경이 통째로 밀린다(실측: 150 → 677 = 맨 아래).
+       메뉴는 `container:'body'` 로 모달 **밖**에 붙으므로 모달의
+       스크롤 잠금이 닿지 않는다 — 막는 자리는 여기 하나뿐이다.
+       앱의 다른 스크롤 상자(모달 바디·드로어·시간 휠)도 같은 규칙을 쓴다. */
+    overscroll-behavior: contain;
     /* 스크롤은 되되 스크롤바는 보이지 않는다 — 앱 전역 규칙 */
     scrollbar-width: none;
     -ms-overflow-style: none;

@@ -11,14 +11,15 @@
 <script src="{{ url_for('static', filename='js/vendor/gridstack-all.js') }}"></script>
 <style>
   #userSettingsTabs {
-    border-bottom: 2px solid var(--aot-border-neutral, #dee2e6);
-    margin-bottom: 1.25rem;
+    border-bottom: 2px solid var(--aot-border-neutral);
+    margin-bottom: var(--aot-space-3);
   }
   #userSettingsTabs .nav-link {
     border: none;
-    color: var(--aot-text-secondary, #6c757d);
+    color: var(--aot-color-text-secondary);
     font-weight: 500;
-    padding: 0.6rem 1.1rem;
+    /* 좌우 16 — 담는 .container 와 더해 탭 글자가 카드 안 라벨과 같은 x 에 선다(§2-3). */
+    padding: var(--aot-space-2) var(--aot-space-4);
     border-radius: 0;
     border-bottom: 2px solid transparent;
     cursor: pointer;
@@ -50,8 +51,8 @@
 
     <div class="aot-settings-title">
       <h3>{{_('User Settings')}} <a href="{{ manual_url('Configuration-Settings/#users') }}" target="_blank"><span class="fas fa-question-circle aot-help-icon"></span></a></h3>
-      <div class="d-flex" style="gap: 8px;">
-        <button class="btn aot-pill-btn aot-pill-btn-primary" id="menu-toggle">{{_('Settings Menu')}}</button>
+      <div class="aot-btn-group">
+        <button class="btn aot-pill-btn aot-pill-btn-secondary" id="menu-toggle">{{_('Settings Menu')}}</button>
       </div>
     </div>
 
@@ -74,7 +75,8 @@
 
       <!-- ===== Users ===== -->
       <div class="tab-pane fade show active" id="pane-users" role="tabpanel">
-        <div style="display: flex; justify-content: flex-end; margin-bottom: 0.75rem;">
+        <div class="aot-settings-stack">
+        <div class="aot-btn-group aot-settings-bare">
           <button type="button" class="btn aot-pill-btn aot-pill-btn-primary"
             data-toggle="modal" data-target="#modal_add_user">{{_('Add User')}}</button>
         </div>
@@ -120,11 +122,13 @@
         </div> <!-- grid-stack-item -->
         {% endfor %}
         </div> <!-- grid-stack -->
+        </div> <!-- aot-settings-stack -->
       </div>
 
       <!-- ===== Roles ===== -->
       <div class="tab-pane fade" id="pane-roles" role="tabpanel">
-        <div style="display: flex; justify-content: flex-end; margin-bottom: 0.75rem;">
+        <div class="aot-settings-stack">
+        <div class="aot-btn-group aot-settings-bare">
           <button type="button" class="btn aot-pill-btn aot-pill-btn-primary"
             data-toggle="modal" data-target="#modal_add_role">{{_('Add Role')}}</button>
         </div>
@@ -154,18 +158,20 @@
         </div> <!-- grid-stack-item -->
         {% endfor %}
         </div> <!-- grid-stack -->
+        </div> <!-- aot-settings-stack -->
       </div>
 
       <!-- ===== Groups =====
            역할이 "무엇을 할 수 있는가"(동사)라면 그룹은 "무엇에 대해"(목적어)다.
            정본 설계: docs/design/access-scope-groups.md -->
       <div class="tab-pane fade" id="pane-groups" role="tabpanel">
-        <div class="aot-modal-container" style="margin-bottom: 0.75rem;">
-          <div class="aot-modal-body-text">
+        <div class="aot-settings-card">
+          <div class="aot-settings-sub">
             {{_('Groups restrict who can operate a resource. Every user can still view all data.')}}
           </div>
         </div>
-        <div style="display: flex; justify-content: flex-end; margin-bottom: 0.75rem;">
+        <div class="aot-settings-stack">
+        <div class="aot-btn-group aot-settings-bare">
           <button type="button" class="btn aot-pill-btn aot-pill-btn-primary"
             data-toggle="modal" data-target="#modal_add_group">{{_('Add Group')}}</button>
         </div>
@@ -199,10 +205,11 @@
         </div> <!-- grid-stack-item -->
         {% endfor %}
         </div> <!-- grid-stack -->
+        </div> <!-- aot-settings-stack -->
 
         {% if not user_groups %}
-        <div class="aot-modal-container">
-          <div class="aot-modal-body-text">
+        <div class="aot-settings-card">
+          <div class="aot-settings-sub">
             {{_('No groups yet. Without a group, every user operates every resource their role allows.')}}
           </div>
         </div>
@@ -213,22 +220,20 @@
       <div class="tab-pane fade" id="pane-general" role="tabpanel">
         <form method="post" action="/settings/users">
           {{form_user.csrf_token}}
-          <div class="aot-modal-container">
-            <div class="aot-modal-option-row" style="border-bottom: none;">
-              <div class="aot-modal-option-label">
-                {{form_user.default_login_page.label.text}}
-                <div class="aot-modal-body-text">{{_('Which page to land on before logging in')}}</div>
-              </div>
-              <div class="aot-modal-option-control">
+          <div class="aot-settings-card">
+            <div class="aot-settings-row">
+              <label class="aot-settings-label" for="default_login_page">{{form_user.default_login_page.label.text}}</label>
+              <div class="aot-settings-control">
                 <select class="aot-settings-select" id="default_login_page" name="default_login_page">
                   <option value="password"{% if misc.default_login_page == 'password' %} selected{% endif %}>{{_('Password')}}</option>
                   <option value="keypad"{% if misc.default_login_page == 'keypad' %} selected{% endif %}>{{_('Keypad')}}</option>
                 </select>
               </div>
+              <div class="aot-settings-sub">{{_('Which page to land on before logging in')}}</div>
             </div>
-          </div>
-          <div style="display: flex; justify-content: flex-end; margin-top: 0.5rem;">
-            {{form_user.settings_user_save(class_='btn aot-pill-btn aot-pill-btn-primary')}}
+            <div class="aot-settings-actions">
+              {{form_user.settings_user_save(class_='btn aot-pill-btn aot-pill-btn-primary')}}
+            </div>
           </div>
         </form>
       </div>
@@ -271,51 +276,49 @@
             <div class="aot-modal-container">
 
               <div class="aot-modal-option-row">
-                <label class="aot-modal-option-label"
-                  title="{{_('Used to log in. Letters and numbers only, and cannot be changed later.')}}">{{form_add_user.user_name.label(class_='mb-0')}}</label>
+                {{form_add_user.user_name.label(class_='aot-modal-option-label', title=_('Used to log in. Letters and numbers only, and cannot be changed later.'))}}
                 <div class="aot-modal-option-control">
                   {{form_add_user.user_name(class_='form-control aot-modern-input')}}
                 </div>
               </div>
 
               <div class="aot-modal-option-row">
-                <label class="aot-modal-option-label"
-                  title="{{_('Shown in lists. Leave blank to show the login account instead.')}}">{{form_add_user.full_name.label(class_='mb-0')}}</label>
+                {{form_add_user.full_name.label(class_='aot-modal-option-label', title=_('Shown in lists. Leave blank to show the login account instead.'))}}
                 <div class="aot-modal-option-control">
                   {{form_add_user.full_name(class_='form-control aot-modern-input')}}
                 </div>
               </div>
 
               <div class="aot-modal-option-row">
-                <label class="aot-modal-option-label">{{form_add_user.email.label(class_='mb-0')}}</label>
+                {{form_add_user.email.label(class_='aot-modal-option-label')}}
                 <div class="aot-modal-option-control">
                   {{form_add_user.email(class_='form-control aot-modern-input')}}
                 </div>
               </div>
 
               <div class="aot-modal-option-row">
-                <label class="aot-modal-option-label">{{form_add_user.password_new.label(class_='mb-0')}}</label>
+                {{form_add_user.password_new.label(class_='aot-modal-option-label')}}
                 <div class="aot-modal-option-control">
                   {{form_add_user.password_new(class_='form-control aot-modern-input', autocomplete='new-password')}}
                 </div>
               </div>
 
               <div class="aot-modal-option-row">
-                <label class="aot-modal-option-label">{{form_add_user.password_repeat.label(class_='mb-0')}}</label>
+                {{form_add_user.password_repeat.label(class_='aot-modal-option-label')}}
                 <div class="aot-modal-option-control">
                   {{form_add_user.password_repeat(class_='form-control aot-modern-input', autocomplete='new-password')}}
                 </div>
               </div>
 
               <div class="aot-modal-option-row">
-                <label class="aot-modal-option-label" title="{{_('Note: Keypad codes must be at least 4 digits.')}}">{{form_add_user.code.label(class_='mb-0')}}</label>
+                {{form_add_user.code.label(class_='aot-modal-option-label', title=_('Note: Keypad codes must be at least 4 digits.'))}}
                 <div class="aot-modal-option-control">
                   {{form_add_user.code(class_='form-control aot-modern-input', autocomplete='new-password')}}
                 </div>
               </div>
 
               <div class="aot-modal-option-row">
-                <label class="aot-modal-option-label">{{form_add_user.addRole.label(class_='mb-0')}}</label>
+                {{form_add_user.addRole.label(class_='aot-modal-option-label')}}
                 <div class="aot-modal-option-control">
                   <select name="addRole" class="form-control aot-modern-select">
                     <option value="Admin">{{_('Admin')}}</option>
@@ -327,7 +330,7 @@
               </div>
 
               <div class="aot-modal-option-row">
-                <label class="aot-modal-option-label">{{form_add_user.theme.label(class_='mb-0')}}</label>
+                {{form_add_user.theme.label(class_='aot-modal-option-label')}}
                 <div class="aot-modal-option-control">
                   <select name="theme" class="form-control aot-modern-select">
                     {% for value, name in themes %}
@@ -366,7 +369,7 @@
             <div class="aot-modal-group-title">{{_('Basic Settings')}}</div>
             <div class="aot-modal-container">
               <div class="aot-modal-option-row">
-                <label class="aot-modal-option-label">{{form_user_roles.name.label(class_='mb-0')}}</label>
+                {{form_user_roles.name.label(class_='aot-modal-option-label')}}
                 <div class="aot-modal-option-control">
                   {{form_user_roles.name(class_='form-control aot-modern-input')}}
                 </div>
@@ -383,7 +386,7 @@
               <div class="aot-modal-option-row">
                 <label class="aot-modal-option-label">{{field.label.text}}</label>
                 <div class="aot-modal-option-control">
-                  <label class="btn-toggle mb-0">
+                  <label class="btn-toggle">
                     {{field(class_='btn-toggle-input')}}
                     <div class="btn-toggle-slider"><div class="btn-toggle-thumb"></div></div>
                   </label>

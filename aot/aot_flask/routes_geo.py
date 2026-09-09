@@ -5767,6 +5767,57 @@ def api_geo_local_time():
         'day_length_seconds': times.day_length_seconds if times else None,
     })
 
+
+# ──────────────────────────────────────────────────────────────────────────
+# 장치/도형(target_id)이 상속하는 위치의 오늘 일출·일몰 — 시계 휠의 "일출/일몰
+# 으로 설정" 버튼이 쓰는 유일한 서버 경로. 좌표 해석은 timekit.resolve_coords
+# (도형 → 소속 도형 상속 → 장치 자신의 좌표 → 농장 전역) 그대로 쓰고, 태양시
+# 계산은 solar.sun_times 를 그대로 쓴다 — 새 캐시를 만들지 않는다. 둘 다 이미
+# 좌표+날짜 단위로 캐시돼 있어 같은 장소의 여러 장치가 물어도 astral 재계산은
+# 한 번뿐이다.
+# ──────────────────────────────────────────────────────────────────────────
+@blueprint.route('/api/geo/sun_event', methods=['GET'])
+@login_required
+def api_geo_sun_event():
+    """target_id 가 상속하는 위치의 오늘 일출·일몰을 현지 벽시계 초로 반환.
+
+    쿼리: target_id(필수) — 장치/도형/함수 등의 unique_id.
+    응답: ok, status(normal/always_day/always_night/unknown),
+          sunrise_seconds / sunset_seconds(현지 자정 기준 초, 없으면 None).
+    """
+    from aot.utils.device_tz import resolve_tz_from_coords
+    from aot.utils.solar import STATUS_UNKNOWN, sun_times
+    from aot.utils.timekit import as_tz, resolve_coords, system_tz, utc_now
+
+    target_id = request.args.get('target_id')
+    if not target_id:
+        return jsonify({'ok': False, 'error': 'target_id is required'}), 400
+
+    lat, lon, _source = resolve_coords(None, target_id=target_id)
+    if lat is None or lon is None:
+        return jsonify({'ok': False, 'status': STATUS_UNKNOWN, 'error': 'no_location'})
+
+    tz_name = resolve_tz_from_coords(lat, lon)
+    tzinfo = as_tz(tz_name) if tz_name else system_tz()
+    local_date = utc_now().astimezone(tzinfo).date()
+    times = sun_times(latitude=lat, longitude=lon, date=local_date)
+    if times is None:
+        return jsonify({'ok': False, 'status': STATUS_UNKNOWN, 'error': 'no_data'})
+
+    def _seconds_of_day(dt):
+        if dt is None:
+            return None
+        local = dt.astimezone(tzinfo)
+        return local.hour * 3600 + local.minute * 60 + local.second
+
+    return jsonify({
+        'ok': True,
+        'status': times.status,
+        'sunrise_seconds': _seconds_of_day(times.sunrise),
+        'sunset_seconds': _seconds_of_day(times.sunset),
+    })
+
+
 # ── Sub-module route registrations ────────────────────────────────────────
 from aot.aot_flask import routes_geo_commissioning  # noqa: E402,F401
 from aot.aot_flask import routes_geo_iec            # noqa: E402,F401

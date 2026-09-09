@@ -1605,11 +1605,15 @@ WIDGET_INFORMATION = {
       function openWheel(wid, key){
         if (!window.AoTTimeWheel) { console.warn('[AoT Timer] AoTTimeWheel module not loaded'); return; }
         if (key === 'startat') {
-          // Scheduled start uses hh:mm only.
+          // Scheduled start uses hh:mm only. targetId lets the wheel offer
+          // "sunrise"/"sunset" quick-set buttons using the controlled
+          // device's inherited location (empty when no Output is selected).
+          const deviceId = frame(wid).data('device');
           window.AoTTimeWheel.open({
             title: window._('Start at'),
             value: readHMS(wid, 'startat'),
             fields: 'hm',
+            targetId: deviceId ? String(deviceId) : null,
             onConfirm: function(totalSec, hm){
               $('#aot_tm_startat_'+wid).val(hm);
               $('#aot_tm_startat_trigger_'+wid).text(hm);

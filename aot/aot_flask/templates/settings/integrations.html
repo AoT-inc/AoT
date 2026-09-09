@@ -8,20 +8,19 @@
 {% block settings %}
   <div class="container">
 
+    <!-- 화면 제목 — 행동(설정 메뉴)은 같은 줄 오른쪽 (§3-2 ②) -->
     <div class="aot-settings-title">
       <h3>{{_('Integrations')}}</h3>
-      <div class="d-flex" style="gap: 8px;">
-        <button class="btn aot-pill-btn aot-pill-btn-primary" id="menu-toggle">{{_('Settings Menu')}}</button>
-      </div>
+      <button class="btn aot-pill-btn aot-pill-btn-primary" id="menu-toggle">{{_('Settings Menu')}}</button>
     </div>
 
     <!-- ── Google Calendar: per-user connection ─────────────────────────── -->
-    <div class="aot-modal-group-title">{{_('Google Calendar')}}</div>
+    <div class="aot-settings-group-title">{{_('Google Calendar')}}</div>
 
-    <div class="aot-modal-container">
+    <div class="aot-settings-card">
       {% if not google_configured %}
-        <div class="aot-modal-option-row aot-full-width-row">
-          <div class="text-muted small">
+        <div class="aot-settings-row">
+          <div class="aot-settings-text">
             {{_('Google Calendar is not configured yet.')}}
             {% if is_admin %}
               {{_('Enter the OAuth client credentials below to enable it.')}}
@@ -31,49 +30,57 @@
           </div>
         </div>
       {% elif connection %}
-        <div class="aot-modal-option-row">
-          <div class="aot-modal-option-label">{{_('Status')}}</div>
-          <div class="aot-modal-option-control">
-            <span class="aot-tint-success" style="padding:0.15rem 0.6rem; border-radius: var(--aot-btn-pill-radius);">{{_('Connected')}}</span>
-            {% if connection.account_email %}<span class="ml-2">{{ connection.account_email }}</span>{% endif %}
+        {# 상태가 핵심 한 줄이고 어느 계정으로 붙었는지는 부연이다 — 한 자리에
+           한 사실(§3-2 ①③). 예전에는 둘이 같은 칸에 나란히 있었다. #}
+        <div class="aot-settings-row">
+          <label class="aot-settings-label">{{_('Status')}}</label>
+          <div class="aot-settings-control">
+            <span class="aot-status-badge aot-status-ok">{{_('Connected')}}</span>
           </div>
+          {% if connection.account_email %}
+          <div class="aot-settings-sub">{{ connection.account_email }}</div>
+          {% endif %}
         </div>
-        <div class="aot-modal-option-row">
-          <div class="aot-modal-option-label">{{_('Sync Direction')}}</div>
-          <div class="aot-modal-option-control">
+
+        <div class="aot-settings-row aot-settings-row-stack">
+          <label class="aot-settings-label">{{_('Sync Direction')}}</label>
+          <div class="aot-settings-control">
             {{_('AoT → Google')}}{% if connection.push_enabled %} ✓{% endif %} &nbsp;·&nbsp;
             {{_('Google → AoT')}}{% if connection.pull_enabled %} ✓{% endif %}
           </div>
         </div>
+
         {% if connection.last_synced_at %}
-        <div class="aot-modal-option-row">
-          <div class="aot-modal-option-label">{{_('Last Synced')}}</div>
-          <div class="aot-modal-option-control">
-            {{ connection.last_synced_at.strftime('%Y-%m-%d %H:%M') }} UTC
+        <div class="aot-settings-row">
+          <label class="aot-settings-label">{{_('Last Synced')}}</label>
+          <div class="aot-settings-control">
             {% if connection.last_sync_status == 'error' %}
-              <span class="aot-tint-danger" style="padding:0.1rem 0.5rem; border-radius: var(--aot-btn-pill-radius);">{{_('Error')}}</span>
+              <span class="aot-status-badge aot-status-fail">{{_('Error')}}</span>
             {% endif %}
           </div>
+          <div class="aot-settings-sub">{{ connection.last_synced_at.strftime('%Y-%m-%d %H:%M') }} UTC</div>
         </div>
         {% endif %}
-        <div class="aot-modal-option-row" style="justify-content: flex-end; border-bottom: none; gap: 8px;">
-          <form method="post" action="{{ url_for('routes_integrations.oauth_google_sync_now') }}" style="display:inline;">
+
+        {# 커밋 동작이 오른쪽 끝이다 — 되돌릴 수 없는 연결 해제가 마지막(§4-7). #}
+        <div class="aot-settings-actions">
+          <form method="post" action="{{ url_for('routes_integrations.oauth_google_sync_now') }}">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <button type="submit" class="btn aot-pill-btn aot-pill-btn-secondary">{{_('Sync Now')}}</button>
           </form>
           <form method="post" action="{{ url_for('routes_integrations.oauth_google_disconnect') }}"
-                onsubmit="return confirm({{ _('Disconnect Google Calendar? Synced events already in Google are not deleted.')|tojson|forceescape }});" style="display:inline;">
+                onsubmit="return confirm({{ _('Disconnect Google Calendar? Synced events already in Google are not deleted.')|tojson|forceescape }});">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <button type="submit" class="btn aot-pill-btn aot-pill-btn-danger">{{_('Disconnect')}}</button>
           </form>
         </div>
       {% else %}
-        <div class="aot-modal-option-row aot-full-width-row">
-          <div class="text-muted small">
+        <div class="aot-settings-row">
+          <div class="aot-settings-text">
             {{_('Connect your Google account to sync farm schedule events with your Google Calendar (two-way).')}}
           </div>
         </div>
-        <div class="aot-modal-option-row" style="justify-content: flex-end; border-bottom: none;">
+        <div class="aot-settings-actions">
           <a href="{{ url_for('routes_integrations.oauth_google_start') }}"
              class="btn aot-pill-btn aot-pill-btn-primary">{{_('Connect Google Calendar')}}</a>
         </div>
@@ -82,73 +89,89 @@
 
     <!-- ── Admin: instance-wide OAuth client config ─────────────────────── -->
     {% if is_admin %}
-    <div class="aot-modal-group-title" style="margin-top: 2rem;">{{_('Google OAuth Configuration')}} <span class="text-muted small">({{_('Admin')}})</span></div>
+    <div class="aot-settings-group-title">{{_('Google OAuth Configuration')}}</div>
+    <p class="aot-settings-sub">{{_('Admin')}}</p>
 
-    <div class="aot-modal-container">
-      <div class="aot-modal-option-row aot-full-width-row">
-        <div class="text-muted small">
+    {# 예전에는 이 안내가 `aot-tint-info` · `aot-tint-warning` · `aot-tint-danger`
+       같은 **정의가 없는 클래스**에 인라인 padding·radius 를 얹어 그려지고
+       있었다 — 클래스가 아무 일도 안 하니 운영자가 테마를 바꿔도 안 바뀌는
+       것이 아니라 아예 색이 없었다(§4-16 함정 2). 실제로 존재하는 안내상자
+       상태 배지(`.aot-status-badge`)와 글자 역할 다섯(§2-3)으로 옮긴다.
+       `.aot-notice-box` 는 쓰지 않았다 — 그 상자의 안쪽 여백(20px)이 카드
+       (16px)와 달라 나란히 서면 글자 시작선이 354 대 359 로 갈린다(실측). #}
+    <div class="aot-settings-card">
+      <div class="aot-settings-row">
+        <div class="aot-settings-text">
           {{_('Create an OAuth 2.0 Client ID (type: Web application) in the Google Cloud Console with the Google Calendar API enabled, then paste the credentials here.')}}
-          {% if google_redirect_uri %}
-          <br>{{_('Authorized redirect URI to register in Google:')}}
-          <code>{{ google_redirect_uri }}</code>
-          {% else %}
-          <br><span class="aot-tint-warning" style="padding:0.1rem 0.5rem; border-radius: var(--aot-btn-pill-radius);">{{_('Set the Public Base URL first to compute the redirect URI.')}}</span>
-          {% endif %}
-          {% if config_source and (config_source.client_id_env or config_source.client_secret_env or config_source.base_url_env) %}
-          <br><span class="aot-tint-info" style="padding:0.1rem 0.5rem; border-radius: var(--aot-btn-pill-radius);">{{_('Some values are provided by environment variables and override the fields below.')}}</span>
-          {% endif %}
         </div>
+        {% if google_redirect_uri %}
+        <div class="aot-settings-sub">
+          {{_('Authorized redirect URI to register in Google:')}}
+          <code>{{ google_redirect_uri }}</code>
+        </div>
+        {% else %}
+        <div class="aot-settings-sub">{{_('Set the Public Base URL first to compute the redirect URI.')}}</div>
+        {% endif %}
       </div>
 
-      <form method="post" action="{{ url_for('routes_integrations.settings_integrations_config') }}">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      {% if config_source and (config_source.client_id_env or config_source.client_secret_env or config_source.base_url_env) %}
+      <div class="aot-settings-row">
+        <div class="aot-settings-text">{{_('Some values are provided by environment variables and override the fields below.')}}</div>
+      </div>
+      {% endif %}
+    </div>
 
-        <div class="aot-modal-option-row">
-          <div class="aot-modal-option-label">{{_('Public Base URL')}}</div>
-          <div class="aot-modal-option-control">
-            <input type="text" name="oauth_public_base_url" class="aot-modern-input form-control"
+
+    <form method="post" action="{{ url_for('routes_integrations.settings_integrations_config') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+      <div class="aot-settings-card">
+
+        <div class="aot-settings-row">
+          <label class="aot-settings-label" for="oauth_public_base_url">{{_('Public Base URL')}}</label>
+          <div class="aot-settings-control">
+            <input type="text" id="oauth_public_base_url" name="oauth_public_base_url" class="aot-modern-input form-control"
                    value="{{ misc.oauth_public_base_url or '' }}"
                    placeholder="https://ai.aotinc.co.kr" autocomplete="off" spellcheck="false">
           </div>
         </div>
 
-        <div class="aot-modal-option-row">
-          <div class="aot-modal-option-label">{{_('OAuth Client ID')}}</div>
-          <div class="aot-modal-option-control">
-            <input type="text" name="google_oauth_client_id" class="aot-modern-input form-control"
+        <div class="aot-settings-row">
+          <label class="aot-settings-label" for="google_oauth_client_id">{{_('OAuth Client ID')}}</label>
+          <div class="aot-settings-control">
+            <input type="text" id="google_oauth_client_id" name="google_oauth_client_id" class="aot-modern-input form-control"
                    value="{{ misc.google_oauth_client_id or '' }}"
                    autocomplete="off" spellcheck="false" data-lpignore="true" data-1p-ignore>
           </div>
         </div>
 
-        <div class="aot-modal-option-row">
-          <div class="aot-modal-option-label">{{_('OAuth Client Secret')}}</div>
-          <div class="aot-modal-option-control">
-            <input type="text" name="google_oauth_client_secret" class="aot-modern-input form-control"
+        <div class="aot-settings-row">
+          <label class="aot-settings-label" for="google_oauth_client_secret">{{_('OAuth Client Secret')}}</label>
+          <div class="aot-settings-control">
+            <input type="text" id="google_oauth_client_secret" name="google_oauth_client_secret" class="aot-modern-input form-control"
                    value="{{ misc.google_oauth_client_secret or '' }}"
                    autocomplete="off" spellcheck="false" data-lpignore="true" data-1p-ignore>
           </div>
         </div>
 
-        <div class="aot-modal-option-row">
-          <div class="aot-modal-option-label">{{_('Google Picker API Key')}}</div>
-          <div class="aot-modal-option-control">
-            <input type="text" name="google_picker_api_key" class="aot-modern-input form-control"
+        <div class="aot-settings-row">
+          <label class="aot-settings-label" for="google_picker_api_key">{{_('Google Picker API Key')}}</label>
+          <div class="aot-settings-control">
+            <input type="text" id="google_picker_api_key" name="google_picker_api_key" class="aot-modern-input form-control"
                    value="{{ misc.google_picker_api_key or '' }}"
                    autocomplete="off" spellcheck="false" data-lpignore="true" data-1p-ignore>
           </div>
-        </div>
-        <div class="aot-modal-option-row aot-modal-option-row-wrap">
-          <div class="aot-modal-body-text">
+          <div class="aot-settings-sub">
             {{_('Optional — only needed for the AI Library Google Drive source (file picker). A Cloud Console API key with the Picker API enabled, NOT the OAuth Client Secret above.')}}
           </div>
         </div>
 
-        <div class="aot-modal-option-row" style="justify-content: flex-end; border-bottom: none;">
+        <div class="aot-settings-actions">
           <button type="submit" class="btn aot-pill-btn aot-pill-btn-primary">{{_('Save')}}</button>
         </div>
-      </form>
-    </div>
+
+      </div>
+    </form>
     {% endif %}
 
   </div>

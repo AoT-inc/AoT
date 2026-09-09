@@ -135,6 +135,9 @@
      그대로 복사해둔 실수였음 — 켜짐/오프라인 배경이 구분되지 않는 버그의 원인.
      --aot-btn-bg-pause·aot-toggle.css 의 pending 폴백(#f0ad4e)과 맞춰 구분되게 함. */
   --aot-bg-pause: #989E9E;
+  /* 무응답(comm_fault) 배경. 2026-09-09 tint_danger_bg 에서 분가 —
+     일시정지(--aot-bg-pause)와 같은 장치 상태 축에 둔다. */
+  --aot-bg-fault: #FBE7E7;
   --aot-bg-hold: #F0AD4E;
   --aot-bg-on: #B5BABA;
   --aot-bg-off: #F3F6F5;
@@ -177,7 +180,11 @@
   /* ========================================================================
      Section 1.5: color — border
      ======================================================================== */
+  /* 컨테이너 안 항목 구분선. 2026-09-09 settings/custom_ui 의 bd_divider
+     필드가 이 토큰을 발행한다 — 그전까지 여기 고정값이라 못 바꿨다. */
   --aot-border-neutral: #dddddd;
+  /* 옅은 구분선. 2026-09-09 settings/custom_ui 의 bd_divider_soft 가 이
+     토큰을 발행한다 — 그전까지 여기 고정값이라 53곳을 못 바꿨다. */
   --aot-border-light: #f0f0f0;
   --aot-border-form: #ced4da;
   --aot-border-form-focus: #80bdff;
@@ -223,10 +230,16 @@
   --aot-surface-card: #ffffff;
   --aot-surface-modal: #ffffff;
   --aot-surface-dropdown: #ffffff;
-  --aot-surface-input: #ffffff;
+  /* 입력칸 면 — 2026-09-09 흰색 고정에서 **배경색 보조**(bd_secondary)를
+     따르도록 바꾼다. 넓은 글자 입력칸은 카드 위에 얹히는 면이라, 카드와
+     같은 흰색이면 어디부터 쓰는 자리인지 경계가 사라진다(테두리를 걷어낸
+     뒤로는 더 그렇다 — ui-guide §2-2). 새 필드를 만들지 않고 기존 필드를
+     따르게 해서 운영자가 바꾸면 함께 따라온다.
+     다크는 custom-dark.css 가 이 뒤에서 #2a2a2a 로 재정의한다. */
+  --aot-surface-input: var(--aot-surface-body);
   /* bd_secondary(settings/custom_ui) 기본값과 일치 — 이 값도 /custom.css 로
      같은 필드에서 재발행된다(routes_general.py var_map). §3 "기본값 일치 계약" */
-  --aot-surface-body: #F3F6F5;
+  --aot-surface-body: #e0e6e3;
 
   /* ========================================================================
      Section 1.7: color — note (migrated from custom.css)
@@ -380,6 +393,11 @@
   --aot-ctrl-w-switch: var(--aot-roundbox-width, 60px);
   --aot-ctrl-w-color: 60px;
   --aot-ctrl-w-num: 96px;
+  /* ⚠ 아래 셋은 값이 같지만 뜻이 다르다. 하나를 고치면 나머지가 조용히
+     따라 움직인 것처럼 보이므로 무엇을 바꾸는지 확인하고 손댈 것.
+       --aot-btn-fixed-width  버튼 **최소** 폭 (긴 번역문에서는 늘어난다)
+       --aot-roundbox-width   토글 트랙 **고정** 폭 (글자가 없어 안 늘어난다)
+       --aot-ctrl-w-switch    옵션 행에서 스위치가 차지하는 폭 (위를 읽는다) */
   --aot-btn-fixed-width: 60px;
   --aot-roundbox-width: 60px;
   --aot-base-size: 28px;
@@ -416,7 +434,9 @@
      Section 1.14: shadow
      ======================================================================== */
   --aot-shadow-sm: 0 2px 4px rgba(0,0,0,0.05);
-  --aot-shadow-md: 0 4px 12px rgba(0,0,0,0.03);
+  /* 2026-09-09: md 가 sm(0.05)보다 옅어(0.03) 사다리 순서가 뒤집혀 있었다.
+     층이 올라가면 그림자도 짙어져야 고르는 사람이 헷갈리지 않는다. */
+  --aot-shadow-md: 0 4px 12px rgba(0,0,0,0.055);
   --aot-shadow-lg: 0 10px 25px rgba(0,0,0,0.06);
   --aot-shadow-modal: 0 5px 20px rgba(0,0,0,0.15);
 
@@ -482,11 +502,18 @@
      4의 배수 다섯 단으로 잡는다. 고를 때 망설일 일이 없다는 것이 이 모양을
      고른 이유다 — 6px 같은 중간값이 아예 없으므로 "4냐 6이냐" 를 묻지 않는다.
      실측 168곳 중 108곳이 이 다섯 단에 이미 정확히 앉아 있었다. */
+  /* 2026-09-09 용도 갱신 — docs/design/ui-guide.md §2-2 가 모양을 셋으로 갈랐다:
+     **면은 lg(16px) · 누르는 것은 알약(999px) · 쓰는 것은 밑줄.**
+     아래 주석은 그전 규칙(면 기본 = sm)에 머물러 있어 문서와 반대였다.
+     기존 화면에는 sm 이 61곳으로 가장 많다 — 새로 만드는 면부터 lg 다. */
   --aot-radius-xs:  4px;    /* 작은 컨트롤·체크박스·인라인 칩 */
-  --aot-radius-sm:  8px;    /* 카드·툴팁·패널 — 가장 많이 쓰인 값 */
-  --aot-radius-md: 12px;    /* 큰 카드·배지·목록 패널 */
-  --aot-radius-lg: 16px;    /* 메시지 말풍선·알약형 입력칸 */
-  --aot-radius-xl: 20px;    /* 가장 큰 카드·강조 버튼 */
+  --aot-radius-sm:  8px;    /* 컨테이너 안쪽 블록 (기존 면에 다수 잔존) */
+  --aot-radius-md: 12px;    /* 중간 카드·배지·목록 패널 */
+  --aot-radius-lg: 16px;    /* 중간 면·말풍선 */
+  --aot-radius-xl: 20px;    /* **면의 기본** — entry 카드·대시보드 위젯이 쓰는 값
+                               (.aot-entry-item / .grid-stack-item-content).
+                               헤더 안쪽은 19px = 20 − 테두리 1. */
+  /* 알약(누르는 것)은 사다리 밖이다 — 아래 --aot-btn-pill-radius 참조. */
 
   /* ⚠ 사다리 밖에 두는 것 — 값이 아니라 **모양**이라 스케일과 무관하다.
        · `50%`                      원형(아바타·FAB·점)
@@ -521,7 +548,6 @@
      `rgba(0,123,255,0.1)` 이었다 — 팔레트에 없는 색이 모달·설정·공지
      입력칸에 실제로 나왔다. 다크는 custom-dark.css 가 밝은 알파로 뒤집는다
      (딥그린 알파는 어두운 바탕에서 보이지 않는다). 2026-09-07 */
-  --aot-focus-ring: rgba(19, 38, 27, 0.12);
   --camera-preview-bg: #1a1a1a;
 
   /* Geometry (legacy aliases) */

@@ -157,5 +157,4 @@
    ======================================================================== */
 :root {
   --aot-input-focus-border: var(--aot-color-text-secondary);
-  --aot-focus-ring: rgba(209, 213, 213, 0.18);
 }

@@ -1,142 +1,291 @@
-/*
- * AoT Settings Page Layout
- * Page-level equivalents of aot-modal-modern.css row/container pattern.
- * Applies to pages using layout-settings.html (settings/*).
- */
+/* aot-settings.css — `settings/*` 와 그 골격을 빌려 쓰는 페이지(info ·
+   admin/backup · pages/method-list · tools/export · energy_usage_input_amps)
+   가 공유하는 **골격**이다. docs/design/ui-guide.md 의 디자인 언어를 따르고,
+   규칙마다 어느 절인지 적어 둔다 — pages/mcp-review.css 와 같은 문체다.
+
+   ⚠ 로드 자리가 페이지마다 다르다. `layout-settings.html` 은 이 파일을
+   `block body`(layout.html 967)에서 싣지만, info·backup·method-list·export 는
+   `block head`(:533)에서 싣는다. 즉 **설정 페이지에서는 aot-modal-modern.css
+   (:686)·components/aot-select.css(:690) 보다 뒤, 나머지에서는 앞**이다.
+   그래서 남의 규칙을 "순서로" 이기는 처방을 쓰면 절반의 페이지에서만 듣는다 —
+   이길 일이 있으면 **선택자(특이도)로** 푼다.
+
+   바꾼 것은 값이 아니라 구조다. 예전 골격은 선으로 영역을 나눴다:
+   화면 제목 아래 밑줄 하나, 카드마다 1px 테두리, 사이드바 오른쪽 세로선.
+   §2-2 가 금지하는 방식이라 전부 걷어내고 **배경 밝기**에 넘겼다 —
+   바닥 `--aot-surface-body`(#e0e6e3) 위에 카드 `--aot-surface-card`(#ffffff)
+   가 놓이므로 선 없이 두 단이 갈린다. */
+
 
 /* ============================================================
-   1. PAGE TITLE
-============================================================ */
+   1. 화면 제목 (§2-3 글자 역할 · §3-2 ②)
+   ============================================================ */
+
+/* 제목 줄 — 왼쪽에 제목, 오른쪽에 행동(설정 메뉴·저장).
+   예전에는 `flex-direction: column` 이라 버튼이 제목 **아래**에 쌓였고,
+   아래에 `border-bottom` 을 그어 영역을 갈랐다. 읽을 것이 한 줄(제목)이면
+   행동은 **같은 줄 오른쪽**이다(§3-2 ②). 경계는 선이 아니라 여백이 만든다.
+   좁아지면 `flex-wrap` 이 버튼 묶음을 아랫줄로 내린다(§4-6). */
 .aot-settings-title {
     display: flex;
-    flex-direction: column;
-    gap: 16px;
-    /* 좌우 16px: 단락 제목(.aot-modal-group-title padding-left:16px)과 정렬 통일 */
-    padding: 1.5rem 16px 0.75rem;
-    margin-bottom: 1.5rem;
-    border-bottom: 1px solid var(--aot-border-neutral);
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: var(--aot-space-3);
+    /* 좌우 16 — 담는 `.container` 의 16 과 더해 글자가 정렬선 32 에 온다
+       (§2-3). 위 24 / 아래 12 는 4의 배수 사다리에서 고른다. */
+    padding: var(--aot-space-5) var(--aot-space-4) var(--aot-space-3);
+    margin-bottom: var(--aot-space-3);     /* 블록과 블록 = 12 */
 }
 
+/* 화면 제목 — lg 18 / 700 / 1차. 굵기가 아니라 **크기**로 앞선다(§2-3). */
 .aot-settings-title h3,
-.aot-settings-title h4 {
+.aot-settings-title h4,
+.aot-settings-screen-title {
     margin: 0;
     font-size: var(--aot-font-size-lg);
     font-weight: 700;
-    color: var(--aot-text-title);
+    color: var(--aot-color-text-primary);
 }
 
+
 /* ============================================================
-   2. SECTION CONTAINER  (≈ aot-modal-container)
-============================================================ */
+   2. 면 — 카드 (§2-2 · §2-3)
+   ============================================================ */
+
+/* 설정 카드. **테두리를 두르지 않는다** — 바닥(`--aot-surface-body`)과
+   카드(`--aot-surface-card`)의 밝기 차이가 경계를 만든다(§2-2).
+   면 모서리는 20px 이 기본이다 — entry 카드·대시보드 위젯이 쓰는 정비된
+   값이라 이 화면만 다른 곡률로 서지 않는다(§4-2).
+
+   좌우 패딩 16 은 담는 `.container` 의 16 과 **더해지지 않는다**(카드가
+   컨테이너의 안쪽 폭을 그대로 쓰므로): 화면 가장자리 → 카드 16 → 글자 32.
+   위아래 8 은 20px 곡선에 첫/마지막 항목이 닿지 않게 하는 최소값이다.
+
+   `.aot-settings-section` 은 이 카드의 옛 이름이다. 쓰는 자리가 셋뿐이라
+   (admin/backup · pages/method-list · settings/custom_ui) 같은 규칙에 묶어
+   함께 새 모습을 입는다. 새로 쓸 때는 `.aot-settings-card` 를 쓴다. */
+.aot-settings-card,
 .aot-settings-section {
-    background-color: var(--aot-input-bg);
-    border: 1px solid var(--aot-border-neutral);
-    border-radius: var(--aot-radius-lg);
-    padding: 0 16px;
-    margin-bottom: 1.2rem;
-    overflow: visible;
+    background-color: var(--aot-surface-card);
+    border-radius: var(--aot-radius-xl);
+    padding: var(--aot-space-2) var(--aot-space-4);
+    margin-bottom: var(--aot-space-3);
+    overflow: visible;      /* 드롭다운 목록이 카드에 잘리지 않게 */
 }
 
+/* 세로로 쌓는 묶음 — 블록 사이 12(§2-3). 그 밖의 간격을 만들지 않는다. */
+.aot-settings-stack {
+    display: flex;
+    flex-direction: column;
+    gap: var(--aot-space-3);
+}
+
+/* 카드 **밖** 글자를 정렬선 32 에 세운다(§2-3) — 구획 제목·설명·안내처럼
+   카드에 안 들어 있는 글자가 16 에서 시작하면 스크롤할 때 좌우로 들락거린다.
+
+   ⚠ 이 클래스를 **대상 하나에만** 건다. `> :not(.카드)` 처럼 넓게 잡으면
+   중간 상자가 함께 걸리고 그 안의 글자가 두 번 밀린다(32 → 64). 정렬은
+   한 번만 걸려야 한다(§4-16 함정 4). */
+.aot-settings-bare {
+    padding-left: var(--aot-space-4);
+    padding-right: var(--aot-space-4);
+}
+
+
 /* ============================================================
-   3. GROUP TITLE  (≈ aot-modal-group-title)
-============================================================ */
+   3. 글자 역할 다섯 (§2-3)
+   ============================================================
+   사다리는 "쓸 수 있는 값" 이지 "어디에 무엇을 쓰는가" 가 아니다. 역할이
+   없으면 만들 때마다 크기·굵기를 새로 고르게 되고, 한 화면 안에서 같은
+   역할이 서로 다른 모습으로 선다(§4-16 함정 6).
+
+     화면 제목   lg 18 / 700 / 1차   .aot-settings-title h3 · -screen-title
+     구획 제목   base 16 / 700 / 1차 .aot-settings-group-title
+     핵심 한 줄  base 16 / 400 / 1차 .aot-settings-lead
+     본문        sm 14 / 400 / 1차   .aot-settings-text
+     부연        xs 12 / 400 / 2차   .aot-settings-sub
+
+   700 을 쓰는 것은 **제목 두 줄뿐**이다. 핵심 한 줄은 크기로 앞서고 굵기는
+   본문과 같다 — 목록에서 굵은 줄이 반복되면 강조가 강조를 잃는다.
+   ============================================================ */
+
+/* 구획 제목 — 화면 제목보다 한 단 작고 굵기는 같다. 색은 **1차**다.
+   예전에는 2차 글자색이라 제목이 부연처럼 흐렸다(§2-3 역할표). */
 .aot-settings-group-title {
     font-size: var(--aot-font-size-base);
     font-weight: 700;
-    color: var(--aot-color-text-secondary, var(--aot-color-text-secondary));
-    margin-top: 1.6rem;
-    margin-bottom: 0.2rem;
-    padding-left: 16px;
+    color: var(--aot-color-text-primary);
+    margin-top: var(--aot-space-5);     /* 앞 블록과 떨어뜨린다 */
+    margin-bottom: var(--aot-space-2);  /* 아래 것에 붙는다 */
+    padding-left: var(--aot-space-4);   /* 카드 밖이라 정렬선 32 */
 }
 
-/* Section description below group title */
-.aot-settings-group-title + p,
-.aot-modal-group-title + p {
+/* 핵심 한 줄 — 읽고 결정하는 문장. 크기로 앞서고 굵기는 본문과 같다. */
+.aot-settings-lead {
+    font-size: var(--aot-font-size-base);
+    font-weight: 400;
+    color: var(--aot-color-text-primary);
+    line-height: 1.45;
+}
+
+/* 본문 */
+.aot-settings-text {
     font-size: var(--aot-font-size-sm);
-    color: var(--aot-text-secondary);
-    padding-left: 16px;
-    margin-bottom: 0.6rem;
+    font-weight: 400;
+    color: var(--aot-color-text-primary);
     line-height: 1.5;
 }
 
+/* 부연 — 크기와 색을 **함께** 내린다(§3-2 ③). 하나만 내리면 눈이 여전히
+   그리로 간다. 구획 제목 바로 밑의 설명 문단도 같은 역할이라 같은 모습으로
+   맞춘다 — 한 화면에 문자 체계가 둘이면 안 된다(§4-16 함정 6). */
+.aot-settings-sub,
+.aot-settings-group-title + p,
+.aot-settings-group-title + p + p,
+.aot-settings-group-title + p + p + p,
+.aot-modal-group-title + p,
+.aot-modal-group-title + p + p,
+.aot-modal-group-title + p + p + p {
+    font-size: var(--aot-font-size-xs);
+    font-weight: 400;
+    color: var(--aot-color-text-secondary);
+    line-height: 1.5;
+}
+/* 설명이 **여러 문단**일 때 둘째·셋째 문단도 같은 정렬선에 서야 한다.
+   `+` 는 첫 형제 하나만 잡는다. `.aot-settings-stack` 으로 감싸 해결하면
+   flex 안에서 카드의 margin-bottom 이 상쇄되지 않아 구획 간격이 24 와 36
+   으로 갈린다(실측) — 그래서 감싸지 않고 선택자를 늘린다. */
+.aot-settings-group-title + p,
+.aot-settings-group-title + p + p,
+.aot-settings-group-title + p + p + p,
+.aot-modal-group-title + p,
+.aot-modal-group-title + p + p,
+.aot-modal-group-title + p + p + p {
+    padding-left: var(--aot-space-4);   /* 카드 밖이라 정렬선 32 */
+    margin-bottom: var(--aot-space-3);  /* 설명과 그 아래 목록은 블록 사이 12 */
+}
+
+
 /* ============================================================
-   4. ROW  (≈ aot-modal-option-row)
-============================================================ */
+   4. 결정 한 줄 (§3-2 ① · §4-6)
+   ============================================================ */
+
+/* 한 줄에 결정 하나 — 왼쪽은 읽어야 하는 것, 오른쪽은 행동(입력·선택·버튼).
+
+   `flex-wrap` 은 §4-6 의 세 단계를 자동으로 만든다: 라벨이 먼저 줄바꿈하고,
+   그래도 컨트롤의 최소 폭이 안 나오면 컨트롤이 **아랫줄 오른쪽**으로 내려간다.
+   컨트롤은 줄어들지 않는다 — 못 누르는 것보다 두 줄이 낫다. */
 .aot-settings-row {
     display: flex;
     align-items: center;
-    padding: 0.5rem 0;
-    min-height: 2.8rem;
-    border-bottom: 1px solid var(--aot-border-neutral);
-    gap: 16px;
+    flex-wrap: wrap;
+    gap: var(--aot-space-4);
+    padding: var(--aot-space-2) 0;
+    min-height: 2.8rem;     /* 터치 표적(§3-1). 정비된 값이라 그대로 둔다 */
 }
 
-.aot-settings-row:last-child {
-    border-bottom: none;
+/* 한 컨테이너 안의 **항목 구분선**이다 — 영역을 나누는 테두리가 아니다(§2-2).
+   첫 항목 위에는 긋지 않으므로 `+` 결합자로 아래 항목에만 건다. 예전에는
+   모든 행에 `border-bottom` 을 긋고 마지막만 지웠는데, 그러면 항목이 하나인
+   컨테이너에도 선이 생긴다(그래서 템플릿마다 인라인으로 지우고 있었다). */
+.aot-settings-row + .aot-settings-row {
+    border-top: 1px solid var(--aot-border-neutral);
 }
 
-/* ============================================================
-   5. LABEL  (≈ aot-modal-option-label)
-============================================================ */
+/* 라벨 — 결정 줄의 왼쪽. 라벨은 600 이다(§2-3 굵기 3단). */
 .aot-settings-label {
     flex: 1 1 auto;
+    min-width: 0;
     font-size: var(--aot-font-size-sm);
     font-weight: 600;
-    color: var(--aot-text-main);
+    color: var(--aot-color-text-primary);
     line-height: 1.3;
     word-break: break-word;
     margin-bottom: 0;
 }
 
-/* ============================================================
-   6. CONTROL  (160px fixed, right-aligned — mirrors aot-modal-option-control)
-============================================================ */
+/* 컨트롤 — 결정 줄의 오른쪽. 160px 은 모달 행(`--aot-common-control-width`)과
+   같은 값이라 두 체계가 한 페이지에 있어도 오른쪽 끝선이 하나다.
+   `margin-left: auto` 는 아랫줄로 내려갔을 때도 오른쪽에 붙게 한다(§4-6) —
+   왼쪽에 붙이면 "읽고 → 행동" 방향이 뒤집힌다. */
 .aot-settings-control {
     flex: 0 0 160px;
     width: 160px;
     min-width: 0;
+    margin-left: auto;
     display: flex;
     align-items: center;
     justify-content: flex-end;
-    gap: 8px;
+    gap: var(--aot-space-2);
 }
 
+/* 부연은 **아랫줄 전체 폭**이다(§3-2 ③ · §4-6). 결정 행동은 핵심 줄과 같은
+   줄에 서야 하므로, 부연을 라벨 아래에 넣어 컨트롤을 두 줄의 세로 중앙에
+   맞추지 않는다 — 그러면 결정 행동이 결정 메시지와 어긋난다. */
+.aot-settings-row > .aot-settings-sub {
+    flex: 1 1 100%;
+    margin-top: var(--aot-space-1);
+}
+
+/* 컨트롤 안의 입력은 160px 을 채운다. 알약·테두리·높이는 전역
+   `.aot-modern-input` / `select.aot-modern-select`(aot-modal-modern.css)가
+   이미 정한다 — 예전에는 여기서 그 선언을 통째로 베껴 두고 있었고, 그중
+   `padding: 0 1rem` 이 셀렉트의 캐럿 자리(`padding-right: 2rem`)를 더 높은
+   특이도로 덮어 글자가 캐럿 밑으로 흘렀다. 베낀 블록을 지우는 것이 답이다. */
 .aot-settings-control .form-control:not(.bootstrap-select),
 .aot-settings-control .aot-modern-input,
 .aot-settings-control .aot-modern-select {
     width: 100%;
 }
 
-/* Bootstrap-select wrapper width */
+/* 셀렉트 래퍼(.bootstrap-select)는 자리만 잡는 껍데기다. 벤더 CSS 의
+   `width: 220px` 은 `@layer vendor` 안에 있어(components/aot-select.css 0번)
+   레이어 밖인 이 선언에 특이도와 무관하게 진다 — `!important` 가 필요 없다.
+   우리 selectpicker 는 `width` 옵션이 없으면 인라인 폭을 쓰지 않는다
+   (static/js/aot/aot-selectpicker.js `setWidth`). */
 .aot-settings-control .bootstrap-select {
-    width: 100% !important;
+    width: 100%;
 }
 
-/* Inputs inside settings rows */
-.aot-settings-control .aot-modern-input,
-.aot-settings-control select.aot-modern-select {
+/* 래퍼(.bootstrap-select) 벗기기·라벨 세로정렬·줄임표는
+   components/aot-select.css 1번이 전 자리에서 한다. 여기서는 이 자리의
+   버튼이 입고 갈 알약만 준다 — 버튼은 `btn dropdown-toggle` 로 만들어져
+   부트스트랩 기본 모습뿐이기 때문이다.
+   ⚠ 이 테두리는 §2-2 가 남기기로 한 셋 중 하나가 아니라, **고르는 것**이
+   앱 전체에서 `select.aot-modern-select` 와 같은 모습이어야 해서 남긴다
+   (§4-9 "기존 알약형 입력칸은 새로 만들지 않는다"). */
+.aot-settings-control .bootstrap-select > .dropdown-toggle {
+    width: 100%;
     box-sizing: border-box;
     border-radius: var(--aot-btn-pill-radius);
-    border: 1px solid var(--aot-border-neutral);
-    padding: 0 1rem;
+    border: 0;   /* 누르는 것은 면으로 선다 (ui-guide §4-7) */
     height: 32px;
     font-size: var(--aot-font-size-sm);
-    background-color: var(--aot-input-bg);
-    color: var(--aot-text-main);
-    line-height: 30px;
+    background-color: var(--aot-surface-input);
+    color: var(--aot-color-text-primary);
+    padding: 0 1rem;
+    display: flex;
+    align-items: center;
 }
 
-/* aot-settings-select: plain HTML select with pill style (no bootstrap-select) */
+/* 목록은 <body> 로 빠지므로(components/aot-select.css) 자리별 z-index 가 필요 없다. */
+
+/* 벤더 없이 그대로 쓰는 <select>. 고르는 것은 입력이 아니라 **누르는 것**이라
+   밑줄이 아니라 알약이다(§2-2). 위 dropdown-toggle 과 같은 이유로 테두리를
+   남긴다.
+   ⚠ 예전에는 모서리·테두리에 `!important` 가 붙어 있었다. 부트스트랩은
+   `@layer vendor` 로 내려가 있어 특이도 싸움이 필요 없다(§4-14 1). */
 .aot-settings-select {
     box-sizing: border-box;
     width: 100%;
-    border-radius: var(--aot-btn-pill-radius) !important;
-    border: 1px solid var(--aot-border-neutral) !important;
+    border-radius: var(--aot-btn-pill-radius);
+    border: 0;   /* 누르는 것은 면으로 선다 (ui-guide §4-7) */
     padding: 0 2rem 0 1rem;
     height: 32px;
     font-size: var(--aot-font-size-sm);
-    background-color: var(--aot-input-bg);
-    color: var(--aot-text-main);
+    background-color: var(--aot-surface-input);
+    color: var(--aot-color-text-primary);
     line-height: 30px;
     appearance: none;
     -webkit-appearance: none;
@@ -147,193 +296,71 @@
     cursor: pointer;
 }
 
-.aot-settings-select:focus {
-    border-color: var(--aot-input-focus-border) !important;
-    box-shadow: 0 0 0 0.15rem var(--aot-focus-ring) !important;
+/* 포커스는 **색만** 바꾼다(§2-2) — 굵기나 모양을 바꾸면 줄이 흔들린다.
+   ⚠ `select.` 로 한정해 특이도를 올린다(0,2,1). 이겨야 할 상대는
+   aot-modal-modern.css 의 `.form-control:focus`(0,2,0) 인데, 이 파일은
+   info·backup 계열 페이지에서는 그보다 **먼저** 실려 순서로는 못 이긴다.
+   그래서 `!important` 가 아니라 선택자로 푼다. */
+select.aot-settings-select:focus {
+    border-color: var(--aot-input-focus-border);
     outline: none;
 }
 
+/* 같은 이유. 이쪽은 (0,3,0) 이라 순서와 무관하게 이긴다. */
 .aot-settings-control .aot-modern-input:focus {
-    border-color: var(--aot-input-focus-border) !important;
-    box-shadow: 0 0 0 0.15rem var(--aot-focus-ring) !important;
+    border-color: var(--aot-input-focus-border);
     outline: none;
 }
 
-/* 래퍼(.bootstrap-select) 벗기기는 components/aot-select.css 2번이 전 자리에서 한다. */
-.aot-settings-control .bootstrap-select > .dropdown-toggle {
-    width: 100%;
-    box-sizing: border-box;
-    border-radius: var(--aot-btn-pill-radius);
-    border: 1px solid var(--aot-border-neutral);
-    height: 32px;
-    font-size: var(--aot-font-size-sm);
-    background-color: var(--aot-input-bg);
-    color: var(--aot-text-main);
-    padding: 0 1rem;
-    display: flex;
-    align-items: center;
+/* 긴 값(측정 선택·기간)은 160px 에 안 들어간다. 데스크톱에서는 한 줄,
+   480px 이하에서는 라벨 위 / 컨트롤 아래로 쌓는다(§4-6 2단계).
+   쌓였을 때도 컨트롤은 **오른쪽 정렬**이다 — 왼쪽에 붙이면 방향이 뒤집힌다. */
+.aot-settings-row-stack .aot-settings-control {
+    flex: 1 1 auto;
+    width: auto;
+    max-width: 340px;
 }
-
-/* 라벨 세로정렬·줄임표는 components/aot-select.css 2번이 전 자리에서 한다. */
-
-/* 목록은 <body> 로 빠지므로(components/aot-select.css) 자리별 z-index 가 필요 없다. */
-
-/* ============================================================
-   8. SAVE BUTTON ROW
-============================================================ */
-.aot-settings-actions {
-    display: flex;
-    justify-content: flex-end;
-    gap: 8px;
-    padding: 1rem 0 0.5rem;
-}
-
-/* ============================================================
-   9. SIDEBAR  (layout-settings.html)
-============================================================ */
-#sidebar-wrapper {
-    border-right: 1px solid var(--aot-border-neutral) !important;
-    /* 배경 기본(카드) — 이게 없으면 모바일 폭(max-width:767.98px, simple-
-       sidebar.css)에서 이 메뉴가 position:absolute 로 페이지 위에 겹쳐 뜨는데
-       배경이 투명해 뒤의 페이지 제목/본문 글자가 메뉴 항목과 겹쳐 보였다
-       ("시스템 관리자" 헤딩 포함 전체 패널을 불투명하게). */
-    background-color: var(--aot-surface-card, #FFFFFF);
-}
-
-#menu-toggle {
-    /* override btn-primary inline in layout-settings.html */
-}
-
-/* ============================================================
-   10. PAGE CONTENT WRAPPER OVERRIDE  (Remove inner padding)
-============================================================ */
-#page-content-wrapper {
-    padding: 0;
-    min-width: 0;
-    overflow-x: hidden;
-}
-
-/* ============================================================
-   10b. CONTAINER FLUID OVERRIDE  (Remove restrictions on settings pages)
-============================================================ */
-#page-content-wrapper .container-fluid {
-    max-width: 100%;
-    margin-left: 0;
-    margin-right: 0;
-    padding-left: 0;
-    padding-right: 0;
-}
-
-/* ============================================================
-   10c. CONTAINER OVERRIDE  (Center and responsive)
-============================================================ */
-#page-content-wrapper .container {
-    max-width: 860px;
-    margin-left: auto;
-    margin-right: auto;
-    padding-left: 16px;
-    padding-right: 16px;
-}
-
-/* Responsive: full width on smaller screens */
-@media (max-width: 920px) {
-    #page-content-wrapper .container {
-        max-width: 100%;
-        padding-left: 8px !important;
-        padding-right: 8px !important;
+@media (max-width: 480px) {
+    .aot-settings-row-stack {
+        flex-direction: column;
+        align-items: stretch;
+        gap: var(--aot-space-2);
+    }
+    .aot-settings-row-stack .aot-settings-label {
+        flex: none;
+    }
+    .aot-settings-row-stack .aot-settings-control {
+        width: 100%;
+        max-width: none;
+        justify-content: flex-end;
     }
 }
 
-/* ============================================================
-   10d. MODAL CONTAINER (for tables)
-============================================================ */
-.aot-modal-container {
-    width: 100%;
-}
-
-/* Table-only scroll wrapper: overrides aot-modal-modern.css overflow:visible !important */
-.aot-table-scroll {
-    overflow-x: auto !important;
-    -ms-overflow-style: none;  /* IE and Edge */
-    scrollbar-width: none;  /* Firefox */
-}
-.aot-table-scroll::-webkit-scrollbar {
-    display: none;
-}
 
 /* ============================================================
-   11. TABLE STYLES (for import modules pages)
-============================================================ */
-.aot-module-table {
-    width: 100%;
-    border-collapse: collapse;
-    table-layout: fixed;
+   5. 행동 묶음 (§3-2 ② · §4-7)
+   ============================================================ */
+
+/* 저장·실행처럼 카드 전체에 대한 결정은 **오른쪽 아래**다(§3-2 ②).
+   나란한 결정 버튼은 12px 을 띄운다 — 장갑 낀 손이 옆 것을 누른다(§2-3). */
+/* ⚠ `padding` **축약형을 쓰지 않는다.** 축약형은 좌우까지 정하므로 뒤에
+   오는 `.aot-settings-bare`(좌우 여백만 주는 클래스)를 겹쳐 쓸 수 없다 —
+   카드 밖 버튼 묶음을 정렬선에 세우려고 감싸개를 하나 더 써야 했다. */
+.aot-settings-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--aot-space-3);
+    padding-top: var(--aot-space-4);
+    padding-bottom: var(--aot-space-2);
 }
 
-.aot-module-table tr {
-    border-bottom: 1px solid var(--aot-border-neutral);
-}
-
-.aot-module-table tr:last-child {
-    border-bottom: none;
-}
-
-.aot-module-table td {
-    padding: 0.8rem 0;
-    font-size: var(--aot-font-size-sm);
-    color: var(--aot-text-main);
-    vertical-align: middle;
-    word-wrap: break-word;
-    overflow-wrap: break-word;
-}
-
-.aot-module-table td:last-child {
-    text-align: right;
-    width: 160px !important;
-}
-
-.aot-module-table thead tr {
-    border-bottom: 1px solid var(--aot-color-text-secondary);
-}
-
-.aot-module-table thead td {
-    font-weight: 700;
-    padding: 0.8rem 0;
-    color: var(--aot-text-title);
-}
-
-/* 3-column table (output, function, action, widget) */
-/* Button column is a fixed 160px (see td:last-child above); remaining columns
-   split whatever width the box actually has, so the table always fits its
-   container instead of assuming a fixed 860px box width. */
-.aot-module-table-3col td:nth-child(1),
-.aot-module-table-3col td:nth-child(2) {
-    width: calc((100% - 160px) / 2) !important;
-}
-
-/* 5-column table (input) */
-.aot-module-table-5col td:nth-child(1),
-.aot-module-table-5col td:nth-child(2),
-.aot-module-table-5col td:nth-child(3),
-.aot-module-table-5col td:nth-child(4) {
-    width: calc((100% - 160px) / 4) !important;
-}
-
-/* ============================================================
-   11b. RESPONSIVE  (320px ~ : single-line maintained)
-============================================================ */
-/* No column stacking — row layout is preserved down to 320px */
-
-/* ============================================================
-   12. WRAPPING PILL-BUTTON GROUP
-   우측 정렬(데스크톱) → 좁은 폭에서 알약 단위로 통째 줄바꿈.
-   (목록 행 액션·재시작 버튼 그룹 등 공통 — 알약이 2~3줄로
-    쪼개지거나 원형화되는 문제 방지)
-============================================================ */
+/* 목록 행의 액션 묶음. 좁아지면 알약 단위로 통째 줄바꿈한다 — 알약이
+   2~3줄로 쪼개지거나 원형이 되는 것을 막는다. 되돌릴 수 없는 동작(삭제)이
+   섞이므로 간격은 8 이 아니라 12 다(§2-3 "되돌릴 수 없을수록 더 띄운다"). */
 .aot-btn-group {
     display: flex;
     flex-wrap: wrap;
-    gap: 8px;
+    gap: var(--aot-space-3);
     justify-content: flex-end;
 }
 .aot-btn-group-start {
@@ -345,22 +372,19 @@
     }
 }
 
-/* ============================================================
-   13. ENTITY LIST ROW  (info 좌측(신축) + 액션 우측, 좁으면 줄바꿈)
-   backup / method 등 목록 항목 공통.
-============================================================ */
+/* 목록 항목 — 왼쪽에 읽을 것(신축), 오른쪽에 행동. 좁으면 줄바꿈한다. */
 .aot-list-row {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 12px;
-    padding: 0.4rem 0;
+    gap: var(--aot-space-3);
+    padding: var(--aot-space-2) 0;
 }
 .aot-list-row-main {
     flex: 1 1 220px;
     min-width: 0;
     font-size: var(--aot-font-size-sm);
-    color: var(--aot-text-main);
+    color: var(--aot-color-text-primary);
     line-height: 1.5;
 }
 /* 목록 행에서 이름을 알약 버튼으로 쓸 때: 좌측 정렬 + 말줄임 */
@@ -370,51 +394,178 @@
     text-overflow: ellipsis;
 }
 
+
 /* ============================================================
-   14. WIDE-CONTROL ROW  (긴 값 입력: 데스크톱 한 줄 / 모바일 세로 스택)
-   측정 선택·날짜 범위 등 긴 값이 좁은 화면에서 잘리지 않도록,
-   480px 이하에서 라벨 위 / 컨트롤 아래 full-width 로 쌓는다.
-============================================================ */
-.aot-settings-row-stack .aot-settings-control {
-    flex: 1 1 auto;
-    width: auto;
-    max-width: 340px;
+   6. 페이지 골격 — layout-settings.html
+   ============================================================ */
+
+/* 설정 메뉴. **세로선을 긋지 않는다**(§2-2) — 메뉴는 카드색, 본문 바닥은
+   배경 보조색이라 밝기만으로 이미 갈린다. 배경 선언은 그 밝기 차이를
+   만드는 쪽이라 남긴다: 없으면 모바일 폭(max-width:767.98px,
+   simple-sidebar.css)에서 이 메뉴가 position:absolute 로 페이지 위에 겹쳐
+   뜨는데 배경이 투명해 뒤 글자가 메뉴 항목과 겹쳐 보인다. */
+#sidebar-wrapper {
+    background-color: var(--aot-surface-card, #FFFFFF);
 }
-@media (max-width: 480px) {
-    .aot-settings-row-stack {
-        flex-direction: column;
-        align-items: stretch;
-        gap: 6px;
-    }
-    .aot-settings-row-stack .aot-settings-label {
-        flex: none;
-    }
-    .aot-settings-row-stack .aot-settings-control {
-        width: 100%;
-        max-width: none;
-        justify-content: flex-start;
+
+#page-content-wrapper {
+    padding: 0;
+    min-width: 0;
+    overflow-x: hidden;
+}
+
+#page-content-wrapper .container-fluid {
+    max-width: 100%;
+    margin-left: 0;
+    margin-right: 0;
+    padding-left: 0;
+    padding-right: 0;
+}
+
+/* 바깥 여백은 **어느 폭에서나 같다**(§2-3). 예전에는 920px 이하에서 8 로
+   좁혀, 좁은 화면에서만 여백이 두 벌이었다 — 값이 두 벌이면 그 자체가
+   소음이다. 그 규칙을 지우면서 `!important` 둘도 함께 없앴다.
+
+   ⚠ 실측(2026-09-09, 브라우저): 이 `padding-left` 는 **지금 듣지 않는다.**
+   `static/css/custom.css` 의 `.container { padding-left: 15px !important }`
+   가 앱 전체에 걸려 있어 실제 여백은 15px 이고, 그래서 글자 정렬선도 32 가
+   아니라 **31** 이다(제목·구획 제목·카드 안 라벨이 모두 31 로 일치하므로
+   화면은 어긋나지 않는다). 여기에 `!important` 를 맞불로 놓지 않는다 —
+   고칠 자리는 앱 전역인 그쪽이고, 이 파일의 범위 밖이다. 16 이라는 의도는
+   남겨 두어 그쪽이 풀리면 그대로 32 가 되게 한다. */
+#page-content-wrapper .container {
+    max-width: 860px;
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: var(--aot-space-4);
+    padding-right: var(--aot-space-4);
+}
+@media (max-width: 920px) {
+    #page-content-wrapper .container {
+        max-width: 100%;
     }
 }
 
+.aot-modal-container {
+    width: 100%;
+}
+
+
 /* ============================================================
-   15. CODE / COMMAND OUTPUT BLOCK  (info 페이지 등)
-   토큰 기반 카드 + 가로 스크롤(스크롤바 숨김).
-============================================================ */
+   7. 표 (모듈 목록)
+   ============================================================ */
+
+/* 표만 가로로 스크롤한다. 이겨야 할 상대는 `.aot-modal-container` 의
+   `overflow: visible`(0,1,0) 이므로 **두 클래스를 함께** 적어 (0,2,0) 으로
+   이긴다 — 예전의 `!important` 는 필요 없다.
+   스크롤바는 숨긴다(§4-14 11: 장식 목적의 노출만 금지, 여기는 표 한 줄이라
+   남은 양을 알릴 자리가 아니다). */
+.aot-table-scroll,
+.aot-modal-container.aot-table-scroll {
+    overflow-x: auto;
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+.aot-table-scroll::-webkit-scrollbar {
+    display: none;
+}
+
+.aot-module-table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+}
+
+/* 행 사이 구분선 — 한 컨테이너 안의 항목 구분이라 남는다(§2-2).
+   `+` 결합자를 쓰지 않는 이유: 이 표는 `<thead>`/`<tbody>` 로 갈려 있고
+   템플릿이 `<tbody>` 안에 `<form>` 을 넣어(브라우저가 표 밖으로 들어낸다)
+   형제 관계를 믿을 수 없다. 마지막 행의 선만 지우는 쪽이 확실하다. */
+.aot-module-table tr {
+    border-bottom: 1px solid var(--aot-border-neutral);
+}
+.aot-module-table tr:last-child {
+    border-bottom: none;
+}
+
+.aot-module-table td {
+    padding: var(--aot-space-3) 0;
+    font-size: var(--aot-font-size-sm);
+    color: var(--aot-color-text-primary);
+    vertical-align: middle;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+}
+
+/* 버튼 열. 오른쪽 끝을 맞춘다(§2-3 오른쪽 정렬선).
+   ⚠ `!important` 를 남긴다. 이 표는 pages/geo-facility.css 가 그대로
+   빌려 쓰는데(`.aot-module-table.fac-table`, `.integ-table`), 그쪽의
+   `td:last-child { width: auto }`(0,2,1) 가 이 규칙(0,1,1)보다 세다.
+   지금 화면은 이 `!important` 가 이긴 상태이므로, 떼면 시설 페이지의 표
+   폭이 바뀐다 — 그 페이지는 이 작업의 범위 밖이라 건드리지 않는다. */
+.aot-module-table td:last-child {
+    text-align: right;
+    width: 160px !important;
+}
+
+/* 표 머리 — 본문과 갈리는 자리라 선을 하나 긋는다(§2-2 컨테이너 안 구분).
+   ⚠ 예전 색은 `--aot-color-text-secondary` 였다. **글자색을 선에 쓰는 것**은
+   계열을 넘나드는 것이라 금지다(§3-3) — 선은 선 계열(`bd_divider`)이다. */
+.aot-module-table thead tr {
+    border-bottom: 1px solid var(--aot-border-neutral);
+}
+.aot-module-table thead td {
+    font-weight: 700;
+    padding: var(--aot-space-3) 0;
+    color: var(--aot-color-text-primary);
+}
+
+/* 버튼 열은 위에서 160px 로 고정했고, 나머지 열은 실제 상자 폭을 나눠 갖는다
+   (860px 을 가정하지 않는다). 여기 붙어 있던 `!important` 는 이기는 상대가
+   없어(3col·5col 은 설정 페이지에서만 쓰고 겹치는 규칙이 없다) 걷어냈다. */
+.aot-module-table-3col td:nth-child(1),
+.aot-module-table-3col td:nth-child(2) {
+    width: calc((100% - 160px) / 2);
+}
+
+.aot-module-table-5col td:nth-child(1),
+.aot-module-table-5col td:nth-child(2),
+.aot-module-table-5col td:nth-child(3),
+.aot-module-table-5col td:nth-child(4) {
+    width: calc((100% - 160px) / 4);
+}
+
+/* ⚠ `table-layout: fixed` + `width: 100%` 는 좁은 화면에서 **줄어들기만
+   한다** — 감싼 `.aot-table-scroll` 이 있어도 내용이 상자보다 넓어지지
+   않으니 가로 스크롤이 영영 생기지 않고, 열이 쥐어짜여 머리글이 서너 줄로
+   쪼개진다(375px 실측: scrollWidth == clientWidth == 345). 예전 부트스트랩
+   `.table` + `.table-responsive` 는 auto 레이아웃이라 스크롤이 걸렸다 —
+   최소 폭이 없으면 폰에서 **후퇴**다.
+   값: 버튼 열 160 + 내용 열이 읽히는 최소치(3열은 160x2, 5열은 120x4). */
+.aot-table-scroll .aot-module-table-3col { min-width: 480px; }
+.aot-table-scroll .aot-module-table-5col { min-width: 640px; }
+
+
+/* ============================================================
+   8. 명령 출력 블록 (info 페이지 등)
+   ============================================================ */
+
 .aot-code-block-group {
-    margin-bottom: 1.5rem;
+    margin-bottom: var(--aot-space-3);   /* 블록과 블록 = 12 */
 }
+/* 목록 라벨 — 아래 것에 붙어야 하므로 아래쪽만 8 로 좁힌다(§2-3). */
 .aot-code-block-label {
+    font-size: var(--aot-font-size-sm);
     font-weight: 600;
-    color: var(--aot-text-main);
-    margin-bottom: 0.5rem;
+    color: var(--aot-color-text-primary);
+    margin-bottom: var(--aot-space-2);
 }
+/* 바닥 위에 놓이는 면이다 — 테두리 대신 밝기로 선다(§2-2). */
 .aot-code-block {
     margin: 0;
-    padding: 0.8em;
-    border: 1px solid var(--aot-border-neutral);
-    border-radius: var(--aot-radius-md);
-    background-color: var(--aot-input-bg);
-    color: var(--aot-text-main);
+    padding: var(--aot-space-3) var(--aot-space-4);
+    border-radius: var(--aot-radius-xl);
+    background-color: var(--aot-surface-card);
+    color: var(--aot-color-text-primary);
     font-size: var(--aot-font-size-sm);
     overflow-x: auto;
     -ms-overflow-style: none;

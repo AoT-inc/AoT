@@ -5460,6 +5460,10 @@ msgstr "새로고침 주기는 최소 1초 이상이어야 합니다."
 msgid "Enable Drag Handle"
 msgstr "드래그 핸들 활성화"
 
+#: aot_flask/forms/forms_dashboard.py:58
+msgid "Full Width on Mobile"
+msgstr "모바일에서 전체 폭"
+
 #: aot_flask/forms/forms_dependencies.py:14
 msgid "Install All Dependencies"
 msgstr "모든 종속성 설치"
@@ -34967,4 +34971,82 @@ msgstr "— 채널 선택 —"
 
 msgid "— Select —"
 msgstr "— 선택 —"
+
+
+#: widgets/widget_mcp_review.py (MCP 승인 처리 위젯 — 신규 2026-09-09)
+msgid "MCP Approval Requests"
+msgstr "MCP 승인 요청"
+
+msgid "Shows how many external AI write requests are waiting for approval. Click the count to open the list and approve, reject, or edit-then-approve them one at a time, or select several and approve/reject them in bulk. Approving runs the request immediately with exactly the values shown."
+msgstr "외부 AI의 쓰기 요청 중 승인 대기 중인 건수를 보여줍니다. 건수를 클릭하면 목록이 열리고, 항목별로 승인·거부·수정 후 승인하거나 여러 건을 선택해 일괄 승인·거부할 수 있습니다. 승인하면 화면에 보이는 값 그대로 즉시 실행됩니다."
+
+msgid "How often to refresh the pending count"
+msgstr "대기 건수를 얼마나 자주 새로고침할지"
+
+msgid "Max items shown"
+msgstr "최대 표시 개수"
+
+msgid "Cap on how many pending requests the list modal shows at once"
+msgstr "목록 모달에 한 번에 표시할 승인 대기 요청의 최대 개수"
+
+msgid "{n} pending"
+msgstr "{n}건 대기"
+
+msgid "Approve selected"
+msgstr "선택 항목 승인"
+
+msgid "Reject selected"
+msgstr "선택 항목 거부"
+
+msgid "Moves real equipment"
+msgstr "물리 제어"
+
+msgid "raw params"
+msgstr "원본 파라미터"
+
+msgid "{ok}/{total} succeeded"
+msgstr "{ok}/{total}건 성공"
+
+msgid "original: {val}"
+msgstr "원본: {val}"
+
+msgid "Invalid value in field '{field}'"
+msgstr "'{field}' 필드 값이 올바르지 않습니다"
+
+msgid "Edit and approve"
+msgstr "수정 후 승인"
+
+msgid "Save & approve"
+msgstr "저장 후 승인"
+
+msgid "View all"
+msgstr "전체 보기"
+
+
+#: widgets/widget_mcp_review.py (MCP 승인 위젯 재설계 — 헤드라인/필드라벨, 2026-09-09)
+msgid "Duration (min)"
+msgstr "지속 시간 (분)"
+
+msgid "Scheduled time"
+msgstr "예약 시각"
+
+msgid "Step"
+msgstr "단계"
+
+msgid "Body"
+msgstr "본문"
+
+msgid "View details"
+msgstr "세부 정보"
+
+msgid "This runs real equipment (valves, pumps)."
+msgstr "실제 장비(밸브·펌프)가 작동합니다."
+
+
+#: widgets/widget_mcp_review.py (트리거 텍스트+버튼 분리, 2026-09-09)
+msgid "View"
+msgstr "보기"
+
+msgid "{n} pending approval"
+msgstr "{n}건 승인 대기"
 

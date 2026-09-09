@@ -18,14 +18,14 @@
           {{form_user_groups.name(class_='form-control aot-modern-input', value=each_group.name, id='group_name_detail')}}
         </div>
       </div>
-      <div class="aot-modal-option-row">
-        <div class="aot-modal-option-label">
-          {{form_user_groups.description.label.text}}
-          <div class="aot-modal-body-text">{{_('What this group is for. Without it, nobody can tell later whether the group is still needed.')}}</div>
-        </div>
+      <div class="aot-modal-option-row aot-modal-option-row-wrap">
+        <label class="aot-modal-option-label" for="group_description_detail">{{form_user_groups.description.label.text}}</label>
         <div class="aot-modal-option-control">
           {{form_user_groups.description(class_='form-control aot-modern-input', value=each_group.description or '', id='group_description_detail')}}
         </div>
+        {# 부연은 라벨 안이 아니라 아랫줄 전체 폭이다 — 라벨 안에 넣으면 입력칸이
+           두 줄의 세로 중앙에 걸려 결정 행동이 결정 메시지와 어긋난다(§3-2 ③). #}
+        <div class="aot-modal-body-text w-100">{{_('What this group is for. Without it, nobody can tell later whether the group is still needed.')}}</div>
       </div>
     </div>
 
@@ -84,7 +84,7 @@
   </div>
 
   <div class="modal-footer">
-    <button type="button" class="btn aot-pill-btn" data-dismiss="modal">{{_('Close')}}</button>
+    <button type="button" class="btn aot-pill-btn aot-pill-btn-secondary" data-dismiss="modal">{{_('Close')}}</button>
     {{form_user_groups.user_group_delete(class_='btn aot-pill-btn aot-pill-btn-danger',
       **{'onclick':'return confirm("' + _('Are you sure you want to delete this group?') + '")'})}}
     {{form_user_groups.user_group_save(class_='btn aot-pill-btn aot-pill-btn-primary')}}

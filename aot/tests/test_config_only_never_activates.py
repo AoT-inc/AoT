@@ -356,6 +356,101 @@ def test_modify_program_returns_content_to_review(app, daemon):
         assert 'controller_activate' not in daemon.names, daemon.names
 
 
+# ---------------------------------------------------------------------------
+# 일정 (2026-09-09) — "활성화"에 해당하는 것이 다르다
+# ---------------------------------------------------------------------------
+#
+# add_schedule/add_schedule_batch는 장치를 직접 움직이지 않는 사람 작업
+# 항목이다. approve_job()이 action_type='human'인 잡은 APScheduler에 아예
+# 걸지 않으므로(ai_scheduler_service.py), 여기서 "활성화"에 해당하는 것은
+# 곧 "데몬을 조금이라도 건드렸는가"다 — 전혀 건드리지 않아야 한다.
+
+def test_add_schedule_creates_human_job_no_apscheduler(app, daemon):
+    """일정 등록은 SchedulerJobMeta 하나만 남기고 데몬은 전혀 건드리지 않는다."""
+    from aot.databases.models.scheduler import SchedulerJobMeta
+    from aot.ai.services.aot_data_tool_service import AoTDataToolService
+
+    with app.test_request_context():
+        res = AoTDataToolService.add_schedule_tool(date='2026-09-10', content='제초 작업')
+        assert res.get('status') == 'success', res
+
+        job = SchedulerJobMeta.query.filter(SchedulerJobMeta.unique_id == res['job_id']).first()
+        assert job is not None
+        assert job.action_type == 'human', "사람 작업이 아닌 액션으로 등록됐다"
+        assert not daemon.names, f"add_schedule이 데몬을 불렀다: {daemon.names}"
+
+
+def test_add_schedule_batch_creates_human_jobs_no_apscheduler(app, daemon):
+    from aot.databases.models.scheduler import SchedulerJobMeta
+    from aot.ai.services.aot_data_tool_service import AoTDataToolService
+
+    with app.test_request_context():
+        res = AoTDataToolService.add_schedule_batch_tool(
+            date='2026-09-10', content='제초 작업',
+            entries=[{'time': '09:00'}, {'time': '10:00'}])
+        assert res.get('status') == 'success', res
+        assert res.get('failed_count') == 0, res
+
+        for entry in res['results']:
+            job = SchedulerJobMeta.query.filter(
+                SchedulerJobMeta.unique_id == entry['result']['job_id']).first()
+            assert job is not None
+            assert job.action_type == 'human', "사람 작업이 아닌 액션으로 등록됐다"
+        assert not daemon.names, f"add_schedule_batch가 데몬을 불렀다: {daemon.names}"
+
+
+# ---------------------------------------------------------------------------
+# GIS Input / AI Agent (2026-09-09) — "활성화"는 각각 activate_gis_input,
+# 그리고 (AI가 부를 수 있는 도구 자체가 없는) 웹 UI 전용 활성화다.
+# ---------------------------------------------------------------------------
+
+def _make_ai_entry():
+    from aot.aot_flask.extensions import db
+    from aot.databases import set_uuid
+    from aot.databases.models.ai import AIEntry
+
+    entry = AIEntry(unique_id=set_uuid(), name='entry-under-test')
+    db.session.add(entry)
+    db.session.commit()
+    return entry.unique_id
+
+
+def test_create_gis_input_creates_deactivated(app, daemon):
+    """GIS Input은 항상 비활성으로 생성된다 — activate_gis_input을 거쳐야 쓰인다."""
+    from aot.databases.models import GeoLayer
+    from aot.ai.services.aot_data_tool_service import AoTDataToolService
+
+    with app.test_request_context():
+        types = AoTDataToolService._input_types()
+        gis_types = sorted(t for t in types if t.startswith('gis_'))
+        assert gis_types, "gis_* 타입이 하나도 없다 — 테스트 환경 확인 필요"
+
+        res = AoTDataToolService.create_gis_input(layer_type=gis_types[0])
+        assert res.get('status') == 'created', res
+        assert res.get('is_activated') is False, res
+
+        layer = GeoLayer.query.filter(GeoLayer.unique_id == res['layer_id']).first()
+        assert layer is not None
+        assert not layer.is_activated, "생성 도구가 GIS Input을 활성으로 만들었다"
+        assert not daemon.names, f"create_gis_input이 데몬을 불렀다: {daemon.names}"
+
+
+def test_create_ai_agent_creates_deactivated(app, daemon):
+    """AI Agent는 항상 비활성으로 생성된다 — AI가 스스로 켤 수 있는 도구가 없다."""
+    from aot.databases.models.ai import AIAgent
+    from aot.ai.services.aot_data_tool_service import AoTDataToolService
+
+    with app.test_request_context():
+        entry_id = _make_ai_entry()
+        res = AoTDataToolService.create_ai_agent(name='agent-under-test', entry_id=entry_id)
+        assert res.get('status') == 'created', res
+
+        agent = AIAgent.query.filter(AIAgent.unique_id == res['agent_id']).first()
+        assert agent is not None
+        assert not agent.is_activated, "생성 도구가 AI Agent를 활성으로 만들었다"
+        assert not daemon.names, f"create_ai_agent가 데몬을 불렀다: {daemon.names}"
+
+
 COVERED_CONFIG_ONLY_TOOLS = {
     'create_sequence_function',
     'modify_function_options',
@@ -364,6 +459,10 @@ COVERED_CONFIG_ONLY_TOOLS = {
     'configure_sequence_day',
     'create_program',
     'modify_program',
+    'add_schedule',
+    'add_schedule_batch',
+    'create_gis_input',
+    'create_ai_agent',
 }
 
 

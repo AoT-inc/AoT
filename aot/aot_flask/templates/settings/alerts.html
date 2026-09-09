@@ -9,25 +9,23 @@
   <!-- Route: /settings/alerts -->
   <div class="container">
 
-    <!-- Page Title -->
+    <!-- 화면 제목 — 행동(설정 메뉴)은 같은 줄 오른쪽 (§3-2 ②) -->
     <div class="aot-settings-title">
       <h3>{{_('Alert Settings')}} <a href="{{ manual_url('Configuration-Settings/#alert-settings') }}" target="_blank"><span class="fas fa-question-circle aot-help-icon"></span></a></h3>
-      <div class="d-flex" style="gap: 8px;">
-        <button class="btn aot-pill-btn aot-pill-btn-primary" id="menu-toggle">{{_('Settings Menu')}}</button>
-      </div>
+      <button class="btn aot-pill-btn aot-pill-btn-primary" id="menu-toggle">{{_('Settings Menu')}}</button>
     </div>
 
     <form method="post" action="/settings/alerts" id="form-alerts">
       <input type="hidden" name="form-name" value="EmailAlert">
       {{form_email_alert.hidden_tag()}}
 
-      <!-- SMTP Configuration -->
-      <div class="aot-modal-group-title">{{_('SMTP Configuration')}}</div>
-      <p class="aot-modal-body-text">
+      <!-- SMTP 설정 -->
+      <div class="aot-settings-group-title">{{_('SMTP Configuration')}}</div>
+      <p class="aot-settings-sub">
         {{_('If no port is specified, default ports for SSL (465), TLS (587), or Unencrypted (25) will be used. Enter in Port field if non-standard port is required.')}}
       </p>
 
-      <div class="aot-modal-container">
+      <div class="aot-settings-card">
 
         <div class="aot-settings-row">
           {{form_email_alert.smtp_host.label(class_='aot-settings-label')}}
@@ -77,33 +75,34 @@
           </div>
         </div>
 
-        <div class="aot-settings-row" style="border-bottom: none;">
+        <div class="aot-settings-row">
           {{form_email_alert.smtp_hourly_max.label(class_='aot-settings-label')}}
           <div class="aot-settings-control">
             {{form_email_alert.smtp_hourly_max(class_='form-control aot-modern-input', type="number", value=smtp.hourly_max, **{'title': _('Maximum number of alerts to send per hour')})}}
           </div>
         </div>
 
+        <!-- 카드 전체에 대한 결정은 카드 안 오른쪽 아래 (§3-2 ②) -->
+        <div class="aot-settings-actions">
+          {{form_email_alert.save(class_='btn aot-pill-btn aot-pill-btn-primary')}}
+        </div>
+
       </div>
 
-      <div style="display: flex; justify-content: flex-end; margin-top: 0.5rem; margin-bottom: 2rem;">
-        {{form_email_alert.save(class_='btn aot-pill-btn aot-pill-btn-primary')}}
-      </div>
+      <!-- 시험 발송 -->
+      <div class="aot-settings-group-title">{{_('Send Test Email')}}</div>
 
-      <!-- Send Test Email -->
-      <div class="aot-modal-group-title">{{_('Send Test Email')}}</div>
-
-      <div class="aot-modal-container">
-        <div class="aot-settings-row" style="border-bottom: none;">
+      <div class="aot-settings-card">
+        <div class="aot-settings-row">
           <label class="aot-settings-label">{{_('Test recipient')}}</label>
           <div class="aot-settings-control">
             {{form_email_alert.send_test_to_email(class_='form-control aot-modern-input')}}
           </div>
         </div>
-      </div>
 
-      <div style="display: flex; justify-content: flex-end; margin-top: 0.5rem;">
-        {{form_email_alert.send_test(class_='btn aot-pill-btn aot-pill-btn-primary')}}
+        <div class="aot-settings-actions">
+          {{form_email_alert.send_test(class_='btn aot-pill-btn aot-pill-btn-primary')}}
+        </div>
       </div>
 
     </form>

@@ -39,7 +39,79 @@ from datetime import datetime, timedelta
 logger = logging.getLogger(__name__)
 
 # 호출자가 전달하는 메타 키 — 핸들러 시그니처엔 없으므로 디스패치 전에 제거된다.
-META_KEYS = frozenset({'_reason', '_agent_id', '_confirmation_id'})
+META_KEYS = frozenset({'_reason', '_agent_id', '_confirmation_id', '_title'})
+
+# tool_name → 사람이 읽는 동작 설명. 승인 화면은 절대 tool_name 원문을 보여주지
+# 않는다("operate_device" 같은 내부 식별자를 일반 사용자가 볼 이유가 없다) —
+# LLM 이 _title 을 안 보내는 경우의 서버 쪽 최종 폴백이 이 표다.
+_TOOL_ACTION_LABELS = {
+    'operate_device': '장치 제어',
+    'set_output_state': '장치 상태 변경',
+    'schedule_device_control': '장치 제어 예약',
+    'add_schedule_batch': '작업 일정 등록',
+    'modify_sequence_step': '시퀀스 단계 수정',
+    'modify_sequence_schedule': '시퀀스 일정 수정',
+    'modify_function_options': '함수 설정 변경',
+    'create_notice': '공지 작성',
+    'modify_notice': '공지 수정',
+    'delete_notice': '공지 삭제',
+    'edit_schedule': '일정 수정',
+    'delete_schedule': '일정 삭제',
+    'create_function': '함수 생성',
+    'delete_function': '함수 삭제',
+    'create_sequence_function': '시퀀스 함수 생성',
+}
+
+
+def _resolve_device_display_name(device_id):
+    """장치 unique_id → 사람이 읽는 이름. Output/Input 어느 쪽에도 없으면 None —
+    실패해도 제목 합성 전체를 막지 않기 위해 예외를 삼킨다."""
+    if not device_id:
+        return None
+    try:
+        from aot.databases.models import Output, Input
+        for model in (Output, Input):
+            row = model.query.filter_by(unique_id=device_id).first()
+            if row is not None and getattr(row, 'name', None):
+                return row.name
+    except Exception:
+        logger.exception('[MCPGate] 장치 이름 조회 실패 (device_id=%s) — id 그대로 사용', device_id)
+    return None
+
+
+def synthesize_title(tool_name, params):
+    """LLM 이 _title 을 안 보냈을 때 서버가 대신 만드는 제목.
+
+    우선순위: (1) 도구 자체가 이미 사람이 쓴 제목을 담고 있는 필드
+    (create_notice/modify_notice 의 'title')를 그대로 재사용 — 이중으로
+    지어낼 필요가 없다. (2) device_id + state 조합이면 "장치명 켜기/끄기"
+    처럼 실제 동작을 서술. (3) 그 외엔 도구 이름을 사람이 읽는 동작
+    설명으로 치환한 표를 쓴다. 절대 tool_name 원문을 그대로 반환하지
+    않는다 — 표에 없는 새 도구가 추가되면 여기도 같이 채울 것.
+    """
+    params = params or {}
+    existing_title = params.get('title')
+    if isinstance(existing_title, str) and existing_title.strip():
+        return existing_title.strip()
+
+    label = _TOOL_ACTION_LABELS.get(tool_name, tool_name)
+    device_id = params.get('device_id')
+    state = params.get('state')
+    if device_id and state in ('on', 'off'):
+        name = _resolve_device_display_name(device_id) or device_id
+        verb = '켜기' if state == 'on' else '끄기'
+        # "지금 실행"(operate_device/set_output_state)과 "나중에 실행되도록
+        # 예약"(schedule_device_control)은 승인자 입장에서 완전히 다른
+        # 동작이다 — 둘 다 "{장치명} 켜기"로만 나오면 예약인 줄 모르고
+        # 즉시 실행으로 오인할 수 있다(2026-09-09 로컬 검증 중 실제로
+        # 구분이 안 되는 걸 확인).
+        if tool_name == 'schedule_device_control':
+            return f"{name} {verb} 예약"
+        return f"{name} {verb}"
+    if device_id:
+        name = _resolve_device_display_name(device_id) or device_id
+        return f"{name} {label}"
+    return label
 
 # 레지스트리에 없는 네이티브 도구 중 물리 제어에 해당하는 것.
 # (AoTNativeToolEngine 은 tool_registry.TOOLS 에 선언돼 있지 않다.)
@@ -342,6 +414,7 @@ def gate(tool_name, arguments, agent_id='unknown', role=None, reason='', elicit_
             row = MCPConfirmation(
                 expires_at=datetime.utcnow() + timedelta(seconds=_CONFIRM_TTL_SEC),
                 tool_name=tool_name,
+                title=(arguments or {}).get('_title') or synthesize_title(tool_name, arguments),
                 params_json=_canonical_params(arguments),
                 reason=(briefing or reason or ''),
                 agent_id=agent_id,
@@ -355,6 +428,7 @@ def gate(tool_name, arguments, agent_id='unknown', role=None, reason='', elicit_
             row = MCPConfirmation(
                 expires_at=datetime.utcnow() + timedelta(seconds=_CONFIRM_TTL_SEC),
                 tool_name=tool_name,
+                title=(arguments or {}).get('_title') or synthesize_title(tool_name, arguments),
                 params_json=_canonical_params(arguments),
                 reason=(briefing or reason or ''),
                 agent_id=agent_id,
@@ -508,6 +582,7 @@ def gate(tool_name, arguments, agent_id='unknown', role=None, reason='', elicit_
     row = MCPConfirmation(
         expires_at=datetime.utcnow() + timedelta(seconds=_CONFIRM_TTL_SEC),
         tool_name=tool_name,
+        title=(arguments or {}).get('_title') or synthesize_title(tool_name, arguments),
         params_json=_canonical_params(arguments),
         reason=full_reason,
         agent_id=agent_id,
@@ -587,10 +662,15 @@ def list_pending(limit=50):
             r.status = 'expired'
             r.save()
             continue
+        params = json.loads(r.params_json or '{}')
         out.append({
             "confirmation_id": r.unique_id,
+            # title 은 화면에 보일 유일한 헤드라인이다 — tool_name 원문은 절대
+            # 프런트에 안 보낸다(내부 식별자 노출 금지). 마이그레이션 이전에
+            # 만들어진 행 등 title 이 비어 있는 경우를 대비해 그때그때 합성한다.
+            "title": r.title or synthesize_title(r.tool_name, params),
             "tool_name": r.tool_name,
-            "params": json.loads(r.params_json or '{}'),
+            "params": params,
             "reason": r.reason,
             "agent_id": r.agent_id,
             "created_at": r.created_at.isoformat() if r.created_at else None,
@@ -599,7 +679,62 @@ def list_pending(limit=50):
     return out
 
 
-def _decide(confirmation_id, status, user_id=None):
+def validate_modified_params(original_params: dict, modified_params: dict):
+    """승인 전 수정이 안전한 범위인지 검사한다.
+
+    화면에 보인 값 = 실제 실행값 원칙(execute_approved 참고)은 지키면서,
+    그 "보인 값" 자체를 사람이 고칠 수 있게 하는 게 이 함수의 목적이다. 그래서
+    의도적으로 딱 두 가지만 본다:
+
+      1. 키 집합이 원본과 정확히 같아야 한다. 위젯 UI가 원본의 모든 키를
+         프리필한 편집 폼을 보여주므로 정상 흐름에선 항상 일치한다 — 다르면
+         승인 화면에 없던 필드가 몰래 끼어든 것(예: 안전장치 우회 플래그)이라
+         의심하고 막는다. 새 키 추가도, 기존 키 누락도 모두 거부.
+      2. 각 값의 타입이 원본과 같아야 한다(bool 은 int 의 서브클래스라 별도 처리).
+         원본이 None 이면 원래 타입을 알 수 없으니 통과시킨다 — 그 경우는
+         실행층(도구 핸들러)이 타입 오류를 내면 status='failed' 로 정상 기록된다.
+
+    도구별 의미 검증(장치 id 실존 여부, 열거값 범위 등)은 하지 않는다 — 그건
+    이미 execute_approved() 가 위임하는 실행층의 몫이다.
+
+    Returns: (ok: bool, error_message: str|None, cleaned: dict|None)
+    """
+    orig = strip_meta(original_params or {})
+    mod = strip_meta(modified_params or {})
+
+    if set(mod.keys()) != set(orig.keys()):
+        extra = sorted(set(mod.keys()) - set(orig.keys()))
+        missing = sorted(set(orig.keys()) - set(mod.keys()))
+        return False, (
+            f"Modified params must have exactly the original keys. "
+            f"Unexpected: {extra}, missing: {missing}"), None
+
+    for key, orig_val in orig.items():
+        new_val = mod[key]
+        if orig_val is None:
+            continue  # 원래 타입을 몰라 판단 불가 — 실행층 실패로 위임
+        if isinstance(orig_val, bool) or isinstance(new_val, bool):
+            if isinstance(orig_val, bool) != isinstance(new_val, bool):
+                return False, f"Field '{key}' type mismatch (expected bool).", None
+            continue
+        if isinstance(orig_val, (int, float)) and not isinstance(new_val, (int, float)):
+            return False, f"Field '{key}' must be a number.", None
+        if isinstance(orig_val, str) and not isinstance(new_val, str):
+            return False, f"Field '{key}' must be a string.", None
+        if isinstance(orig_val, list) and not isinstance(new_val, list):
+            return False, f"Field '{key}' must be an array.", None
+        if isinstance(orig_val, dict) and not isinstance(new_val, dict):
+            return False, f"Field '{key}' must be an object.", None
+
+    try:
+        json.dumps(mod, ensure_ascii=False)
+    except Exception:
+        return False, "Modified params are not JSON-serializable.", None
+
+    return True, None, mod
+
+
+def _decide(confirmation_id, status, user_id=None, modified_params=None):
     from aot.databases.models import MCPConfirmation
 
     row = MCPConfirmation.query.filter_by(unique_id=confirmation_id).first()
@@ -611,6 +746,15 @@ def _decide(confirmation_id, status, user_id=None):
         row.status = 'expired'
         row.save()
         return {"status": "error", "message": "The confirmation expired."}
+
+    if status == 'approved' and modified_params is not None:
+        original = json.loads(row.params_json or '{}')
+        ok, err, cleaned = validate_modified_params(original, modified_params)
+        if not ok:
+            # 검증 실패는 "거부"가 아니라 "요청 자체가 무효" — 상태를 바꾸지
+            # 않고 pending 그대로 둬서 다른 값으로 다시 시도할 수 있게 한다.
+            return {"status": "error", "message": err}
+        row.modified_params_json = json.dumps(cleaned, ensure_ascii=False, sort_keys=True)
 
     row.status = status
     if user_id:
@@ -699,8 +843,11 @@ def execute_approved(confirmation_id, role=None):
     실행됐다. 챗 모델은 사람이 말을 걸어야만 움직이므로 그 왕복은 설계상
     피할 수 없었다 — 그래서 실행 주체를 서버로 옮긴다.
 
-    저장해둔 인자(params_json)로만 실행하므로 승인 화면에 표시된 것과 실제
-    실행되는 것이 어긋날 수 없다. 인자 대조 단계가 아예 필요 없어진다.
+    저장해둔 인자로만 실행하므로 승인 화면에 표시된 것과 실제 실행되는 것이
+    어긋날 수 없다. 인자 대조 단계가 아예 필요 없어진다. modified_params_json 이
+    있으면(위젯에서 수정 후 승인한 경우) 그게 "화면에 보인 최종값"이므로 그걸
+    쓰고, 없으면 원본 params_json 을 쓴다 — 어느 쪽이든 "저장된 것 = 실행되는
+    것" 이라는 불변식은 그대로 유지된다.
 
     Returns: (status, result_dict) — status 는 'executed' 또는 'failed'.
     """
@@ -712,7 +859,7 @@ def execute_approved(confirmation_id, role=None):
         return 'failed', {"status": "error", "message": "confirmation not found"}
 
     try:
-        params = _json.loads(row.params_json or '{}')
+        params = _json.loads(row.modified_params_json or row.params_json or '{}')
     except Exception:
         params = {}
 
@@ -766,8 +913,8 @@ def execute_approved(confirmation_id, role=None):
     return status, result
 
 
-def approve(confirmation_id, user_id=None):
-    return _decide(confirmation_id, 'approved', user_id)
+def approve(confirmation_id, user_id=None, modified_params=None):
+    return _decide(confirmation_id, 'approved', user_id, modified_params=modified_params)
 
 
 def reject(confirmation_id, user_id=None):

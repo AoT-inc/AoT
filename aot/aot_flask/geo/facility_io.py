@@ -3,8 +3,10 @@
 Facility I/O Manager.
 CRUD for GeoFacility records and their linked GeoShape outer/bay polygons.
 """
+import json
 from copy import deepcopy
 from datetime import datetime
+from uuid import uuid4
 from flask import current_app
 
 from sqlalchemy.orm.attributes import flag_modified
@@ -30,6 +32,111 @@ def _shift_geometry(geometry, dlng, dlat):
     shifted = deepcopy(geometry)
     shifted['coordinates'] = _shift_coords(shifted['coordinates'], dlng, dlat)
     return shifted
+
+
+def _dedupe_fittings(fittings):
+    """설비 목록에서 id 중복을 걸러 (정리된 목록, 오류) 를 돌려준다.
+
+    id 는 설비의 신원이고, 읽는 쪽은 전부 그렇게 믿는다 — 면적·유량 합산은
+    행마다 한 번씩 더하고(facility_calc, irrigation_nozzles), 장치 배선은 첫
+    행이 이기고(device_binding), 베이 귀속은 마지막 행이 이기고
+    (facility_bays), 편집기의 삭제는 id 로 지운다(removeMany). 즉 겹친 id
+    하나가 세 소비자에게 서로 다른 답을 주고, 하나를 지우면 쌍둥이까지
+    사라진다. 여기서 걸러내지 않으면 그 어긋남이 조용히 저장된다.
+
+    내용까지 같은 행은 정보 손실 없이 하나로 합친다. 내용이 다르면 합칠 수
+    없다 — 어느 쪽이 진짜인지는 데이터가 말해주지 않는다(실측된 두 사례가
+    정확히 반대였다: 낡은 치수 대 현재 치수인 외피 창은 낡은 쪽을 버려야
+    했고, 같은 id 를 받은 스프링클러 둘은 **양쪽 다 실재**해서 하나에 새 id
+    를 줘야 했다). 그래서 조용히 고르지 않고 거절한다.
+    """
+    if not isinstance(fittings, list):
+        return fittings, None
+
+    seen = {}
+    cleaned = []
+    collapsed = []
+    conflicts = []
+    for item in fittings:
+        if not isinstance(item, dict) or not item.get('id'):
+            cleaned.append(item)
+            continue
+        fid = item['id']
+        if fid not in seen:
+            seen[fid] = item
+            cleaned.append(item)
+            continue
+        try:
+            same = json.dumps(seen[fid], sort_keys=True, default=str) == \
+                   json.dumps(item, sort_keys=True, default=str)
+        except (TypeError, ValueError):
+            same = False
+        if same:
+            collapsed.append(fid)          # 완전히 같은 행 — 하나만 남긴다
+        else:
+            conflicts.append(fid)
+
+    if conflicts:
+        names = ', '.join(sorted(set(conflicts))[:5])
+        more = '' if len(set(conflicts)) <= 5 else (
+            ' 외 %d건' % (len(set(conflicts)) - 5))
+        return None, (
+            '설비 id 가 겹칩니다: %s%s. 같은 id 를 가진 항목의 내용이 서로 달라 '
+            '자동으로 합칠 수 없습니다 — 하나를 지우면 나머지도 함께 사라지므로 '
+            '저장하지 않았습니다. `python -m aot.scripts.check_geo_integrity` 로 '
+            '어느 항목인지 확인하세요.' % (names, more)
+        )
+
+    if collapsed:
+        current_app.logger.warning(
+            '[FacilityManager] 내용이 같은 중복 설비 %d건을 하나로 합쳤습니다: %s',
+            len(collapsed), ', '.join(sorted(set(collapsed))[:10]))
+    return cleaned, None
+
+
+# 설비끼리 서로를 가리키는 자리. 관수 노즐은 배관을, 배관·노즐·밸브는 레이어를
+# 가리킨다 — id 를 새로 발급하면 이 참조도 같이 옮겨야 한다.
+_FITTING_REF_KEYS = ('layer_id', 'pipe_id', 'connected_main_id', 'draw_id')
+
+
+def _remint_cloned_fitting_ids(fittings):
+    """복제본의 설비 id 를 새로 발급한다(외피 파생 id 는 그대로 둔다).
+
+    복제는 원본의 id 를 그대로 물려받았다. 원본에 겹친 id 가 있으면 복제본도
+    같이 물려받고(실측: 육묘장과 그 복제본이 같은 잔재를 함께 갖고 있었다),
+    나중에 한쪽을 고쳐도 다른 쪽은 조용히 옛 값을 유지한다.
+
+    외피 파생 id(`env_...`)는 건드리지 않는다 — 구조에서 유도되는 이름이라
+    다시 그려질 때 같은 이름으로 만들어지고, 저장본과 짝지어지는 근거가 바로
+    그 이름이다. 여기서 새 이름을 주면 짝을 잃는다.
+    """
+    if not isinstance(fittings, list):
+        return fittings
+
+    remap = {}
+    for fit in fittings:
+        if not isinstance(fit, dict):
+            continue
+        old = fit.get('id')
+        if not old or str(old).startswith('env_'):
+            continue
+        prefix = str(old)[0] if str(old)[:1].isalpha() else 'F'
+        remap[old] = '%s%s%04x%s' % (
+            prefix, format(int(datetime.utcnow().timestamp() * 1000), 'x'),
+            len(remap) % 0x10000, uuid4().hex[:6])
+
+    if not remap:
+        return fittings
+
+    for fit in fittings:
+        if not isinstance(fit, dict):
+            continue
+        if fit.get('id') in remap:
+            fit['id'] = remap[fit['id']]
+        for key in _FITTING_REF_KEYS:
+            if fit.get(key) in remap:
+                fit[key] = remap[fit[key]]
+    return fittings
 
 
 def _geometry_centroid(geometry):
@@ -122,6 +229,12 @@ class FacilityManager:
         if not facility_uuid and not outer_geometry:
             return None, "Missing outer_geometry for new facility"
 
+        # 트랜잭션을 열기 전에 본다 — 거절할 페이로드라면 도형·베이를 손대기
+        # 전에 돌아서야 한다.
+        fittings_clean, fittings_error = _dedupe_fittings(data.get('fittings') or [])
+        if fittings_error:
+            return None, fittings_error
+
         # Resolve site → parent_id mapping (option Y: hierarchy via GeoShape.parent_id)
         parent_site_id = None
         if site_shape_uuid:
@@ -205,7 +318,7 @@ class FacilityManager:
             facility.actuators = data.get('actuators')
             # Fittings: list of placed elements from the 3D editor (FittingsUI).
             # Authoritative source for vent area & airflow simulation (G1 policy).
-            facility.fittings = data.get('fittings') or []
+            facility.fittings = fittings_clean
             flag_modified(facility, 'fittings')  # SQLAlchemy JSON 컬럼 변경 강제 감지
             # view_options: UI 표시 옵션 (카테고리 가시성 + 액추에이터 표시 순서).
             # AoT_map 위젯도 동일 값 읽음. actuator_order 는 위젯의 드래그 정렬에서
@@ -485,6 +598,7 @@ class FacilityManager:
                 fit.pop('actuator_id', None)
                 fit.pop('input_id', None)
                 fit.pop('measurement_id', None)
+        fittings = _remint_cloned_fitting_ids(fittings)
 
         actuators = deepcopy(source.actuators)
         actuator_items = actuators.values() if isinstance(actuators, dict) else (actuators or [])

@@ -60,6 +60,12 @@ class MCPConfirmation(CRUDMixin, db.Model):
                             default=datetime.utcnow)
     expires_at  = db.Column(db.DateTime, nullable=False)
     tool_name   = db.Column(db.String(100), nullable=False)
+    # 승인 화면에 보이는 유일한 헤드라인 — tool_name 원문(내부 식별자)은 절대
+    # 화면에 안 나간다. LLM 이 _title 메타 인자로 보내거나, 없으면
+    # mcp_safety_gate.synthesize_title() 이 만들어 채운다(항상 값이 있어야
+    # 한다는 뜻은 아니다 — 마이그레이션 이전 행은 비어 있을 수 있어 조회
+    # 시점에도 폴백한다, list_pending() 참고).
+    title       = db.Column(db.String(200), default=None)
     params_json = db.Column(db.Text, default='{}')
     reason      = db.Column(db.Text, default='')
     agent_id    = db.Column(db.String(100), default='unknown')
@@ -69,6 +75,10 @@ class MCPConfirmation(CRUDMixin, db.Model):
     #   AI 가 _confirmation_id 로 재호출하면 재실행하지 않고 result_json 을 돌려준다.
     result_json = db.Column(db.Text, default=None)
     user_id     = db.Column(db.String(36), default=None)
+    # 승인자가 값을 고쳐서 승인했을 때만 채워진다 (mcp_review 위젯의 "수정" 기능).
+    # params_json(원본)은 감사 근거로 절대 덮어쓰지 않는다 — execute_approved() 가
+    # 이 값이 있으면 이걸, 없으면 params_json 을 실행에 쓴다.
+    modified_params_json = db.Column(db.Text, default=None)
 
     def is_expired(self) -> bool:
         return datetime.utcnow() > self.expires_at

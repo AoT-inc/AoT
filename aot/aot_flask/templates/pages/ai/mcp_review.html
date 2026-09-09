@@ -4,34 +4,48 @@
 
 {% block head %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/aot-settings.css') }}" />
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/mcp-review.css') }}" />
 {% endblock %}
 
 {% block body %}
-<div class="container-fluid">
-    <div class="aot-settings-title">
+<div class="container-fluid aot-mrev">
+  <div class="aot-mrev-stack">
+
+    <div class="aot-mrev-bare">
+      <div class="aot-mrev-head">
         <h3>{{ _('AI Requests & Advice') }}</h3>
-        <div class="d-flex" style="gap: 8px;">
-            <button id="btn-reload" class="btn aot-pill-btn">{{ _('Refresh') }}</button>
-            <a href="{{ url_for('routes_mcp_api.mcp_servers_page') }}" class="btn aot-pill-btn">{{ _('MCP Servers') }}</a>
-        </div>
-    </div>
-    <p class="aot-modal-body-text">
+        <span class="aot-mrev-head-actions">
+          <button id="btn-reload" class="btn aot-pill-btn">{{ _('Refresh') }}</button>
+          <a href="{{ url_for('routes_mcp_api.mcp_servers_page') }}" class="btn aot-pill-btn">{{ _('MCP Servers') }}</a>
+        </span>
+      </div>
+      <p class="aot-mrev-sub">
         {{ _('External AI connected over MCP cannot change anything on its own. Control requests wait here for your approval, and opinions are collected for you to compare.') }}
-    </p>
+      </p>
+    </div>
 
-    <!-- 실행 승인 대기 — 일정(Scheduler) 화면과 같은 include 를 쓴다 -->
-    {% include 'pages/ai/_mcp_pending_approvals.html' %}
+    <!-- 실행 승인 대기 — 일정(Scheduler) 화면과 같은 include 를 쓴다.
+         include 안의 제목·설명은 카드 밖 글자라 정렬선(32px)에 세워야
+         하는데, 그 파일은 공유 자산이라 손대지 않는다. 여기서 감싸
+         이 화면에서만 선을 맞춘다(.aot-mrev-include). -->
+    <div class="aot-mrev-include">
+      {% include 'pages/ai/_mcp_pending_approvals.html' %}
+    </div>
 
-    <!-- 의견 원장 -->
-    <h5 class="mt-5">{{ _('AI advice ledger') }}</h5>
-    <p class="aot-modal-body-text">
+    <div class="aot-mrev-bare">
+      <div class="aot-mrev-section">{{ _('AI advice ledger') }}</div>
+      <p class="aot-mrev-sub">
         {{ _('Opinions submitted by the main AI, external AI, or subordinate nodes. Accepting is agreement only — it does not execute control.') }}
-    </p>
-    <div id="advice-list"><p class="aot-modal-body-text">{{ _('Loading...') }}</p></div>
+      </p>
+    </div>
+    <div id="advice-list"></div>
 
-    <!-- 감사 로그 -->
-    <h5 class="mt-5">{{ _('Recent AI tool calls') }}</h5>
-    <div id="audit-list"><p class="aot-modal-body-text">{{ _('Loading...') }}</p></div>
+    <div class="aot-mrev-bare">
+      <div class="aot-mrev-section">{{ _('Recent AI tool calls') }}</div>
+    </div>
+    <div id="audit-list"></div>
+
+  </div>
 </div>
 
 <script>
@@ -71,34 +85,49 @@
 
     function renderAdvice(rows) {
         var el = document.getElementById('advice-list');
-        if (!rows || !rows.length) { el.innerHTML = '<p class="aot-modal-body-text">' + esc(T.none_advice) + '</p>'; return; }
-        el.innerHTML = rows.map(function (r) {
-            var scope = (r.scope && (r.scope.name || r.scope.id)) ? (r.scope.name || r.scope.id) : (r.scope ? r.scope.type : '');
-            return '<div class="aot-settings-card mb-2">'
-                + '<div><strong>' + esc(r.title) + '</strong></div>'
-                + '<div class="aot-modal-body-text">'
-                + '[' + esc(r.agent_kind) + '] ' + esc(r.agent_id)
-                + ' &middot; ' + esc(scope) + ' &middot; ' + esc(r.severity)
-                + (r.confidence != null ? ' &middot; ' + esc(r.confidence) : '') + '</div>'
-                + '<div>' + esc(r.advice) + '</div>'
-                + (r.rationale ? '<div class="aot-modal-body-text">' + esc(T.rationale) + ': ' + esc(r.rationale) + '</div>' : '')
-                + (r.proposed_action ? '<div class="aot-modal-body-text">' + esc(T.proposed) + ': ' + esc(r.proposed_action) + '</div>' : '')
-                + '<div class="d-flex mt-2" style="gap:8px;">'
-                + '<button class="btn aot-pill-btn" data-accept="' + esc(r.advice_id) + '">' + esc(T.accept) + '</button>'
-                + '<button class="btn aot-pill-btn" data-reject-adv="' + esc(r.advice_id) + '">' + esc(T.reject) + '</button>'
-                + '</div></div>';
-        }).join('');
+        if (!rows || !rows.length) {
+            el.innerHTML = '<div class="aot-mrev-card"><span class="aot-mrev-nil">'
+                + esc(T.none_advice) + '</span></div>';
+            return;
+        }
+        // 핵심 한 줄(제안) + 행동 오른쪽, 부연(출처·근거)은 아랫줄 (§3-2).
+        el.innerHTML = '<div class="aot-mrev-card">' + rows.map(function (r) {
+            var sub = [];
+            if (r.agent_id) { sub.push(esc(r.agent_id)); }
+            if (r.rationale) { sub.push(esc(T.rationale) + ': ' + esc(r.rationale)); }
+            return '<div class="aot-mrev-row">'
+                + '<div class="aot-mrev-line">'
+                + '<span class="aot-mrev-what">'
+                + esc(r.proposed_action || r.title || T.proposed) + '</span>'
+                + '<span class="aot-mrev-acts">'
+                + '<button class="btn aot-pill-btn aot-pill-btn-secondary" data-reject-adv="' + esc(r.advice_id) + '">' + esc(T.reject) + '</button>'
+                + '<button class="btn aot-pill-btn aot-pill-btn-primary" data-accept="' + esc(r.advice_id) + '">' + esc(T.accept) + '</button>'
+                + '</span></div>'
+                + (sub.length ? '<div class="aot-mrev-sub">' + sub.join(' &middot; ') + '</div>' : '')
+                + '</div>';
+        }).join('') + '</div>';
     }
 
     function renderAudit(rows) {
         var el = document.getElementById('audit-list');
-        if (!rows || !rows.length) { el.innerHTML = '<p class="aot-modal-body-text">' + esc(T.none_audit) + '</p>'; return; }
-        el.innerHTML = '<div class="aot-settings-card">' + rows.map(function (r) {
-            return '<div class="aot-modal-body-text">'
-                + esc((r.timestamp || '').replace('T', ' ').slice(0, 19)) + ' &middot; '
-                + esc(r.agent_id) + ' &middot; <strong>' + esc(r.tool_name) + '</strong> &middot; '
-                + esc(r.permission) + ' &middot; ' + esc(r.confirmation_status)
-                + (r.reason ? ' &middot; ' + esc(r.reason) : '')
+        if (!rows || !rows.length) {
+            el.innerHTML = '<div class="aot-mrev-card"><span class="aot-mrev-nil">'
+                + esc(T.none_audit) + '</span></div>';
+            return;
+        }
+        // 예전에는 여섯 가지를 한 줄에 가운뎃점으로 이어 붙였다 — 무엇이
+        // 핵심인지 눈이 고를 수 없었다. 도구 이름이 핵심이고 나머지는
+        // 부연이다 (§1-2 한 자리에 한 사실, §3-2 ③ 부연은 아랫줄).
+        el.innerHTML = '<div class="aot-mrev-card">' + rows.map(function (r) {
+            var sub = [esc(r.agent_id), esc(r.permission), esc(r.confirmation_status)];
+            if (r.reason) { sub.push(esc(r.reason)); }
+            return '<div class="aot-mrev-row">'
+                + '<div class="aot-mrev-line">'
+                + '<span class="aot-mrev-what">' + esc(r.tool_name) + '</span>'
+                + '<span class="aot-mrev-sub aot-mrev-when">'
+                + esc((r.timestamp || '').replace('T', ' ').slice(0, 19)) + '</span>'
+                + '</div>'
+                + '<div class="aot-mrev-sub">' + sub.filter(Boolean).join(' &middot; ') + '</div>'
                 + '</div>';
         }).join('') + '</div>';
     }

@@ -6,7 +6,7 @@
   "band_5": "#CF5C58",
   "bd_btn_border": "#B6BABA",
   "bd_primary": "#FFFFFF",
-  "bd_secondary": "#F3F6F5",
+  "bd_secondary": "#e0e6e3",
   "bg_active": "#D1D5D5",
   "bg_btn_hold": "#D1D5D5",
   "bg_btn_off": "#5E6B64",
@@ -45,5 +45,8 @@
   "tint_success_fg": "#557A30",
   "tint_warning_bg": "#FFF3E2",
   "tint_warning_fg": "#94650A",
-  "toggle_track_off": "#DDDDDD"
+  "toggle_track_off": "#DDDDDD",
+  "bg_fault": "#FBE7E7",
+  "bd_divider": "#DDDDDD",
+  "bd_divider_soft": "#f0f0f0"
 }

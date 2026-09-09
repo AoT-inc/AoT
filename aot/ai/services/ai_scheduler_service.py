@@ -140,6 +140,66 @@ def _prune_orphan_jobs(scheduler, prefix, live_ids, tag):
         logger.warning("%s Orphan job prune failed: %s", tag, exc)
 
 
+# 데몬이 잡스토어를 다시 읽게 만드는 심박. 하는 일이 없다.
+#
+# **AI 잡이 아니라서 _OWNED_JOB_IDS 에 넣지 않는다.** AI 를 꺼도 사용자 예약은
+# 실행돼야 하고, 그러려면 다른 프로세스가 넣은 잡을 데몬이 알아채야 한다.
+_HEARTBEAT_JOB_ID = 'scheduler_heartbeat'
+_HEARTBEAT_SEC = 60
+
+
+def _scheduler_heartbeat():
+    """하는 일 없음 — 데몬 스케줄러를 깨워 잡스토어를 다시 읽게 한다."""
+
+
+# init_app 이 등록하는 잡 전부. **끄는 길**이 이 목록에 달려 있다 — 새 잡을
+# 여기 안 적으면, 그 잡은 한번 등록된 뒤 스위치를 꺼도 지울 수 없게 된다.
+_OWNED_JOB_IDS = (
+    'ai_scheduler_mcp_health',
+    'ai_scheduler_weather_summary',
+    'ai_scheduler_user_string_translation',
+    'ai_scheduler_context_broadcast',
+    'ai_scheduler_realtime_alert_check',
+    'tier_reclassification',
+    'audit_log_purge',
+)
+# 엔티티마다 하나씩 생기는 잡들(소스·연결 수만큼). id 를 미리 셀 수 없어
+# 접두사로 지운다.
+_OWNED_JOB_PREFIXES = ('context_source_sync_', 'calendar_sync_')
+
+
+def _remove_owned_jobs(scheduler):
+    """이 서비스가 등록하는 잡을 전부 지운다.
+
+    잡스토어가 DB 영속이라 **등록을 건너뛰는 것만으로는 꺼지지 않는다.**
+    예전에 켜져 있을 때 저장된 잡이 그대로 남아 스위치와 무관하게 계속
+    깨어난다(실측 2026-09-08: ai_enabled 를 끄고 재시작해도 잡 10개가 전부
+    생존, 다음 실행 시각까지 잡혀 있었다). 스위치를 끄는 길이 실제로
+    있어야 한다.
+    """
+    def _ids():
+        try:
+            return {j.id for j in scheduler.get_jobs()}
+        except Exception:
+            return set()
+
+    before = _ids()
+    for jid in _OWNED_JOB_IDS:
+        try:
+            scheduler.remove_job(jid)
+        except Exception:
+            pass                      # 원래 없으면 그만이다
+    try:
+        for job in list(scheduler.get_jobs()):
+            if job.id.startswith(_OWNED_JOB_PREFIXES):
+                scheduler.remove_job(job.id)
+    except Exception as exc:
+        logger.warning('[AIScheduler] 잡 정리 실패: %s', exc)
+    # 실제로 사라진 것만 센다 — remove_job 은 없는 id 에 예외를 올리는 구현도
+    # 있고 조용히 지나가는 구현도 있어, 호출 횟수로 세면 숫자가 거짓이 된다.
+    return len(before - _ids())
+
+
 # @ANCHOR: CONTEXT_SOURCE_SYNC_JOB_FUNC
 def _context_source_sync_job(source_id):
     """
@@ -980,32 +1040,107 @@ class AISchedulerService:
         return None
 
     @staticmethod
-    def init_app(app):
-        """Initialize the scheduler with Flask app context."""
+    def init_app(app, execute=False):
+        """스케줄러를 이 프로세스에 붙인다.
+
+        **예약을 실행하는 프로세스는 데몬 하나뿐이다**(`execute=True`).
+        `create_app()` 은 웹·MCP·점검 스크립트 등 여러 곳에서 불리는데, 잡스토어는
+        DB 하나를 공유하므로 두 곳이 실행하면 **같은 예약이 두 번 발화한다** —
+        그 예약에는 장치 제어가 들어 있어 밸브가 두 번 열린다.
+        (설계: docs/design/scheduler-process-separation.md 안 A)
+
+        실측(2026-09-08): 웹 워커와 데몬이 동시에 `aot_scheduler.db` 를 열고
+        있었다. `AOT_SKIP_SCHEDULER` 가 `aot_mcp` 에만 걸려 있었기 때문인데,
+        "안 끄면 켜짐" 이라 새 프로세스가 생길 때마다 빠뜨리면 조용히 늘어난다.
+        그래서 기본값을 뒤집었다 — `create_app(run_scheduler=True)` 를 넘기는
+        데몬만 실행하고, 나머지는 전부 실행하지 않는다. 빠뜨렸을 때의 결과가
+        "두 번 발화" 가 아니라 "안 켜짐" 이 되어 검증으로 잡힌다.
+
+        **실행하지 않는 프로세스도 멈춘 채(paused) 띄운다.** 아예 안 띄우면
+        APScheduler 가 `add_job` 을 잡스토어가 아니라 자기 메모리
+        (`_pending_jobs`)에 담고 `start()` 때 비우므로, 웹이나 MCP 에서 승인한
+        예약이 **DB 에 닿지 못하고 조용히 사라진다**(APScheduler 가 남기는
+        "Adding job tentatively" 가 그 신호다). paused 는 STOPPED 가 아니라서
+        등록·해제가 잡스토어로 곧장 간다 — 실행만 안 한다.
+        """
         global _flask_app
         _flask_app = app
 
-        scheduler = get_scheduler()
-        if not scheduler.running:
-            scheduler.start(paused=False)
-            logger.debug("APScheduler started")
-
-        # Register signal handlers regardless of AI enabled state
+        # 신호 핸들러는 **모든 프로세스**가 단다 — 요청을 처리하는 쪽에도 필요하다.
         from aot.utils.signals import trigger_fired, conditional_fired
         trigger_fired.connect(_on_trigger_fired)
         conditional_fired.connect(_on_conditional_fired)
 
-        # AI jobs are only registered when AI is enabled
+        scheduler = get_scheduler()
+        if not scheduler.running:
+            scheduler.start(paused=not execute)
+        elif execute:
+            # 같은 프로세스에서 create_app() 이 먼저 실행 없이 불렸을 수 있다
+            # (ai_action_service 가 그렇게 부른다). 데몬이 나중에 올라와도
+            # 실행 권한을 되찾도록 순서에 의존하지 않는다.
+            try:
+                from apscheduler.schedulers.base import STATE_PAUSED
+                if scheduler.state == STATE_PAUSED:
+                    scheduler.resume()
+            except Exception:
+                logger.warning('[AIScheduler] 스케줄러 재개 실패', exc_info=True)
+
+        if not execute:
+            logger.info('예약 실행은 데몬이 맡는다 — 이 프로세스는 등록·해제만 '
+                        '한다(paused).')
+            return
+
+        # 데몬은 **심박**을 하나 둔다. APScheduler 는 다음 잡의 실행 시각까지
+        # 잠드는데, 잡이 하나도 없으면 깨어날 이유가 없어 무기한 잠든다. 그
+        # 사이 웹에서 승인한 예약은 잡스토어에만 있고 실행되지 않는다. 하는 일
+        # 없는 잡 하나로 주기적으로 깨워 잡스토어를 다시 읽게 한다.
+        # (즉시성이 필요해지면 데몬 RPC 로 깨우는 것이 다음 단계다 — 그때도
+        #  RPC 가 실패할 때를 위해 이 심박은 남겨야 한다.)
+        try:
+            scheduler.add_job(func=_scheduler_heartbeat, trigger='interval',
+                              seconds=_HEARTBEAT_SEC, id=_HEARTBEAT_JOB_ID,
+                              coalesce=True, max_instances=1,
+                              replace_existing=True)
+        except Exception:
+            logger.warning('[AIScheduler] 심박 등록 실패 — 다른 프로세스가 넣은 '
+                           '예약이 늦게 잡힐 수 있다', exc_info=True)
+
+        # 백그라운드 잡은 **2단계**(ai_running)가 켜져야 등록한다.
+        #
+        # 예전에는 여기서 ai_enabled(1단계)만 봤다. 그런데 1단계는 모델 주석이
+        # 못박은 대로 "AI 메뉴/페이지를 노출한다" 일 뿐이고, 사람이 부르지
+        # 않아도 도는 작동은 2단계의 몫이다("이것만으로는 채팅도, 백그라운드
+        # 작동도 실제로 동작하지 않는다"). 그래서 메뉴만 켜 둔 설치에서도 잡이
+        # 전부 등록돼 주기마다 깨어났다(실측 2026-09-08: ai_running=False,
+        # 활성 에이전트 0 인데 60초 헬스체크까지 10개 전부 등록·예약됨).
+        # 개별 잡이 실행 시점에 ai_runtime_state 로 다시 판정해 대개 그냥
+        # 돌아가긴 했지만, 그것은 "안 도는 것" 이 아니라 "돌다가 되돌아오는
+        # 것" 이다 — 워커가 하나뿐인 이 앱에서는 그 깨어남도 남의 요청과 같은
+        # 스레드를 쓴다.
+        #
+        # 판정은 ai_runtime_state 를 거친다 — 모델 주석이 "판정은 반드시
+        # ai_runtime_state 를 거칠 것" 이라고 지정한 정본이다.
+        #
+        # 활성 에이전트까지 요구하는 ai_background_active 가 아니라
+        # ai_autonomy_enabled(1 AND 2)를 쓰는 이유: 에이전트가 없어도 할 일이
+        # 있는 잡(규칙 기반 실시간 알림 등)이 있고, 에이전트 유무는 각 잡이
+        # 실행 시점에 스스로 본다. 여기서 에이전트까지 요구하면 모델을 붙인
+        # 뒤에도 재시작 전까지 아무 잡도 생기지 않는다.
         with app.app_context():
             try:
-                from aot.databases.models import AIGlobalSettings
-                settings = AIGlobalSettings.query.first()
-                ai_enabled = settings is not None and settings.ai_enabled
+                from aot.ai.services import ai_runtime_state
+                autonomy_on = ai_runtime_state.ai_autonomy_enabled()
+                skip_reason = (None if autonomy_on
+                               else ai_runtime_state.background_skip_reason())
             except Exception:
-                ai_enabled = False
+                autonomy_on, skip_reason = False, '판정 실패'
 
-        if not ai_enabled:
-            logger.debug("AI disabled — AI scheduler jobs not registered")
+        if not autonomy_on:
+            # **등록을 건너뛰는 것만으로는 꺼지지 않는다** — 잡스토어가 DB
+            # 영속이라 예전에 켜져 있을 때 저장된 잡이 그대로 남는다.
+            removed = _remove_owned_jobs(scheduler)
+            logger.info('AI 백그라운드 미작동(%s) — 예약 잡을 등록하지 않았고 '
+                        '남아 있던 %d개를 정리했습니다.', skip_reason, removed)
             return
 
         # @ANCHOR: AI_SCHEDULER_MCP_HEALTH_CHECK

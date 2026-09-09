@@ -55,6 +55,7 @@ class DashboardBase(FlaskForm):
         widget=NumberInput()
     )
     enable_drag_handle = BooleanField(lazy_gettext('Enable Drag Handle'))
+    mobile_full_width = BooleanField(lazy_gettext('Full Width on Mobile'))
     widget_add = SubmitField(lazy_gettext('Add'))
     widget_mod = SubmitField(lazy_gettext('Save'))
     widget_delete = SubmitField(lazy_gettext('Delete'))

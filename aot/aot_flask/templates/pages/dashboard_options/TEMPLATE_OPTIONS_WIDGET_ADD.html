@@ -21,3 +21,20 @@
     </label>
   </div>
 </div>
+
+{#- 모바일(2열 격자)에서 한 줄을 통째로 쓸지. 새로 추가할 때의 기본값은 위젯
+    모듈이 정한다 — WIDGET_INFORMATION['mobile_full_width'] 이거나, 데스크톱
+    기본 폭이 24열의 절반(12)을 넘는 위젯. 추가된 뒤에는 이 값이 위젯 행에
+    저장되고 모듈 쪽 값은 더 이상 그 위젯을 건드리지 않는다. -#}
+{% set mfw_default = dict_options.get('mobile_full_width') or (dict_options.get('widget_width') or 0) > 12 %}
+<div class="aot-modal-option-row">
+  <label class="aot-modal-option-label" for="mobile_full_width">{{form_base.mobile_full_width.label.text}}</label>
+  <div class="aot-modal-option-control">
+    <label class="btn-toggle" style="margin-bottom: 0;">
+      <input id="mobile_full_width" name="mobile_full_width" type="checkbox" value="y"{% if mfw_default %} checked{% endif %} class="btn-toggle-input">
+      <span class="btn-toggle-slider">
+        <span class="btn-toggle-thumb"></span>
+      </span>
+    </label>
+  </div>
+</div>

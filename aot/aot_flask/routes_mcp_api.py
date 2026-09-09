@@ -274,11 +274,21 @@ def mcp_confirmation_approve(confirmation_id):
     실행은 저장해둔 인자로만 하므로 승인 화면에 보인 것과 실제 실행이 어긋나지
     않는다. 나중에 AI 가 _confirmation_id 로 재호출하면 재실행 없이 저장된 결과가
     돌아간다(mcp_safety_gate.gate 의 executed 분기).
+
+    body 에 선택적으로 {"modified_params": {...}} 를 실어 보내면, 승인자가 값을
+    고쳐서 승인한 것으로 취급한다(mcp_review 위젯의 "수정" 기능) — 그 값이 곧
+    "화면에 보인 최종값"이 되어 그대로 실행된다. body 를 안 보내는 기존
+    호출(스케줄러 화면 include 등)은 silent=True 라 그대로 동작한다.
     """
     from aot.ai.services import mcp_safety_gate as gate
     try:
+        body = request.get_json(silent=True) or {}
+        modified_params = body.get('modified_params')
+        if modified_params is not None and not isinstance(modified_params, dict):
+            return jsonify({"status": "error", "message": "modified_params must be an object"}), 400
+
         user_id = getattr(flask_login.current_user, 'unique_id', None)
-        result = gate.approve(confirmation_id, user_id=user_id)
+        result = gate.approve(confirmation_id, user_id=user_id, modified_params=modified_params)
         if result.get('status') != 'success':
             return jsonify(result), 400
 
@@ -305,6 +315,75 @@ def mcp_confirmation_reject(confirmation_id):
     except Exception as e:
         logger.error(f"MCP confirmation reject failed: {e}")
         return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@blueprint.route('/confirmations/batch_approve', methods=['POST'])
+@flask_login.login_required
+def mcp_confirmation_batch_approve():
+    """선택된 여러 요청을 원본 그대로 일괄 승인+즉시실행 (mcp_review 위젯의
+    일괄처리용). 수정 파라미터는 받지 않는다 — 수정은 항목 하나씩만 다루는
+    단건 전용 UX(여러 항목을 서로 다른 값으로 동시에 고치는 폼은 복잡도만
+    커지고 실수요는 낮다고 보고 만들지 않음).
+
+    부분 실패를 허용한다: 한 항목이 실패해도(만료, 이미 처리됨 등) 나머지는
+    계속 처리하고, 항목별 결과를 모아 돌려준다.
+    """
+    from aot.ai.services import mcp_safety_gate as gate
+    data = request.get_json(silent=True) or {}
+    ids = data.get('confirmation_ids')
+    if not isinstance(ids, list) or not ids:
+        return jsonify({"status": "error", "message": "confirmation_ids (non-empty array) required"}), 400
+
+    user_id = getattr(flask_login.current_user, 'unique_id', None)
+    results = []
+    for cid in ids:
+        try:
+            r = gate.approve(cid, user_id=user_id)
+            if r.get('status') != 'success':
+                results.append({"confirmation_id": cid, "ok": False, "message": r.get('message')})
+                continue
+            exec_status, exec_result = gate.execute_approved(cid)
+            results.append({
+                "confirmation_id": cid,
+                "ok": True,
+                "executed": exec_status == 'executed',
+                "execution": exec_result,
+            })
+        except Exception as e:
+            logger.error(f"MCP batch approve item failed cid={cid}: {e}")
+            results.append({"confirmation_id": cid, "ok": False, "message": str(e)})
+
+    succeeded = sum(1 for r in results if r.get('ok'))
+    return jsonify({
+        "status": "success", "results": results,
+        "succeeded": succeeded, "total": len(ids),
+    }), 200
+
+
+@blueprint.route('/confirmations/batch_reject', methods=['POST'])
+@flask_login.login_required
+def mcp_confirmation_batch_reject():
+    """선택된 여러 요청을 일괄 거부 (mcp_review 위젯의 일괄처리용)."""
+    from aot.ai.services import mcp_safety_gate as gate
+    data = request.get_json(silent=True) or {}
+    ids = data.get('confirmation_ids')
+    if not isinstance(ids, list) or not ids:
+        return jsonify({"status": "error", "message": "confirmation_ids (non-empty array) required"}), 400
+
+    user_id = getattr(flask_login.current_user, 'unique_id', None)
+    results = []
+    for cid in ids:
+        try:
+            r = gate.reject(cid, user_id=user_id)
+            results.append({"confirmation_id": cid, "ok": r.get('status') == 'success',
+                             "message": r.get('message')})
+        except Exception as e:
+            logger.error(f"MCP batch reject item failed cid={cid}: {e}")
+            results.append({"confirmation_id": cid, "ok": False, "message": str(e)})
+
+    succeeded = sum(1 for r in results if r.get('ok'))
+    return jsonify({"status": "success", "results": results,
+                     "succeeded": succeeded, "total": len(ids)}), 200
 
 
 @blueprint.route('/audit', methods=['GET'])

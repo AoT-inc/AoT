@@ -107,6 +107,28 @@ class TestCacheSemantics(unittest.TestCase):
         self.assertIn('_TTL_S', self.cc)
         self.assertIn('_naive_utc(r.computed_at) >= floor', _fn(self.cc, 'load'))
 
+    def test_confirming_an_unchanged_row_refreshes_computed_at(self):
+        """값이 같아도 확인 시각은 찍는다 — 안 찍으면 캐시가 영영 못 산다.
+
+        예전에는 `elif 값이 바뀌었으면:` 안에서만 computed_at 을 찍었다.
+        기하가 안정적이면 값은 늘 같으므로 그 분기에 영영 안 들어가고,
+        _TTL_S(24h)가 지나는 순간 load() 가 전 행을 걸러 낸다. 그 뒤 매
+        요청이 전량 재계산인데 결과도 같은 값이라 또 안 찍혀, **지도를
+        건드리지 않을수록 확실히 죽었다**(실측 2026-09-08 김제: 캐시 333행이
+        전부 전날 것 → 100% 미스 → 호출마다 shapely contains 약 15,700회).
+        """
+        store = _fn(self.cc, 'store')
+        # 갱신이 '값이 바뀐 경우' 블록 밖에 있어야 한다.
+        changed_branch = store.split('if row.parent_uuid != parent', 1)[1]
+        after_branch = changed_branch.split('row.geo_id = geo_id', 1)[1]
+        self.assertIn('row.computed_at = now', after_branch,
+                      'computed_at 갱신이 값 변경 분기 안에만 있으면 '
+                      '안정적인 지도에서 캐시가 영구히 만료된다')
+
+    def test_duplicate_keys_in_one_batch_do_not_break_the_write(self):
+        """같은 배치의 중복 키가 INSERT 두 번으로 잡히면 UNIQUE 로 깨진다."""
+        self.assertIn('deduped', _fn(self.cc, 'store'))
+
 
 class TestInvalidationIsWired(unittest.TestCase):
     """기하를 바꾸는 경로는 캐시를 버려야 한다. 안 버리면 화면과 AI 가 낡은

@@ -8,9 +8,29 @@ Facility Capacity Calculator (PRD/DESIGN-GEO-FACILITY-001).
 @phase active
 """
 import math
+import re
 import logging
 
 logger = logging.getLogger(__name__)
+
+
+# 저장된 외피 개구부를 이 파일이 만든 가상 개구부와 짝지어야 하는데, 두 곳의
+# id 규칙이 다르다. 프런트(_renderEnvelopeFittings)는 유닛 번호(u0)와 보강면
+# 표시(reinf), 지붕창의 좌/우 경사면 접미사를 붙이고, 여기서 만드는 가상
+# 기술자는 붙이지 않는다. 같은 개구부를 가리키는 두 이름을 한 형태로 모은다.
+# (실측 확인: 육묘장의 env_side_vent_outer_reinf_u0_right_upper 는 36.86×1.4 로
+#  이 파일이 계산하는 측창(길이×0.97 × 균등단높이)과 치수가 정확히 일치한다.)
+_ENV_UNIT_SEG_RE  = re.compile(r'_u\d+_')
+_ENV_ROOF_SLOPE_RE = re.compile(r'^(env_roof_vent_outer_b\d+)_(?:left|right)$')
+
+
+def _canon_env_vent_id(fitting_id):
+    """프런트가 저장한 외피 개구부 id → 가상 기술자 id 형태."""
+    if not fitting_id:
+        return None
+    canon = _ENV_UNIT_SEG_RE.sub('_', fitting_id)
+    canon = canon.replace('_reinf_', '_')
+    return _ENV_ROOF_SLOPE_RE.sub(r'\1', canon)
 
 # ----------------------------------------------------------------
 # Material thermal/optical properties (DESIGN §5-1)
@@ -614,17 +634,27 @@ def compute_capacity(spec):
     nameplate_heating_kw = act_totals['heating_kw']
     nameplate_cooling_kw = act_totals['cooling_kw']
 
-    # ---- 10. Fittings aggregation (user-placed fittings only) ----
-    # Envelope-derived fittings (source='envelope') are never saved to the DB —
-    # they are virtual, computed at runtime by _renderEnvelopeFittings in the
-    # frontend.  Their contribution is already captured in envelope_vent_m2 above.
-    # Only user-placed fittings (doors, explicit windows, fans) are in `fittings`.
-    # Final vent area = envelope_vent_m2 + fittings_vent_m2 (additive, no override).
+    # ---- 10. Fittings aggregation ----
+    # ⚠ 여기 있던 주석은 "외피 파생 설비(source='envelope')는 DB 에 저장되지
+    #    않는다" 고 단언하고, 그 전제로 가상 면적과 fittings 면적을 그냥 더했다.
+    #    사실이 아니다 — FittingsUI.read()(aot-facility-design.js)는 재생성으로
+    #    되살릴 수 없는 사용자 결정을 지닌 외피 항목을 **의도적으로 저장한다**:
+    #    액추에이터/입력 배선, 손으로 고친 치수, 연동 해제 플래그. 하필 그것들이
+    #    제어에 쓰이는 개구부라, 배선된 창은 전부 두 번 계산되고 있었다
+    #    (실측 2026-09-08: 육묘장 1,031 m² ← 실제 394 m², イチゴ 1,351 ← 519).
+    #    면적은 effect_functions 에서 그대로 효과 이득이 되므로(af = area/10),
+    #    2.6배로 알면 "조금만 열어도 목표에 닿는다"고 보고 창을 덜 연다.
+    #
+    #    저장된 외피 항목은 가상 기술자의 사본이 아니라 **정본**이다 — 같은
+    #    개구부를 실제 배선과 현재 치수로 기술한다. 그래서 더하지 않고 갈아끼운다.
     VENT_KINDS = {'window', 'side_window', 'door', 'fan'}
     fittings_by_kind = {}
     fittings_total_area = 0.0
     fittings_vent_m2 = 0.0
     vent_openings = []
+    saved_env_openings = []       # 저장된 외피 개구부 — 가상 기술자를 대체한다
+    saved_env_vent_m2 = 0.0
+    superseded_env_ids = set()
     for f in fittings:
         kind = f.get('kind') or 'fixture'
         sz = f.get('size') or {}
@@ -638,9 +668,8 @@ def compute_capacity(spec):
         fittings_total_area += area
 
         if kind in VENT_KINDS:
-            fittings_vent_m2 += area
             replica = f.get('replica_info') or {}
-            vent_openings.append({
+            opening = {
                 'id':              f.get('id'),
                 'kind':            kind,
                 'area_m2':         round(area, 3),
@@ -649,10 +678,33 @@ def compute_capacity(spec):
                 'face':            replica.get('face'),
                 'actuator_id':     f.get('actuator_id'),
                 'link_group':      f.get('link_group'),
-            })
+            }
+            if f.get('source') == 'envelope':
+                # 위 5절에서 이미 가상으로 센 개구부다. 더하지 않고, 그 가상
+                # 기술자를 이 저장본으로 갈아끼운다(배선과 현재 치수가 여기 있다).
+                saved_env_openings.append(opening)
+                saved_env_vent_m2 += area
+                canon = _canon_env_vent_id(f.get('id'))
+                if canon:
+                    superseded_env_ids.add(canon)
+            else:
+                fittings_vent_m2 += area
+                vent_openings.append(opening)
 
-    # Additive policy: envelope openings + user-placed fittings are both included.
-    vent_openings = envelope_vent_openings + vent_openings
+    # 저장본이 대체한 가상 기술자를 걷어낸다. 짝을 못 찾은 가상 기술자(배선이
+    # 없어 저장되지 않은 개구부)는 그대로 남는다 — 그것들은 여전히 유일한 근거다.
+    kept_env_openings = []
+    for vo in envelope_vent_openings:
+        if vo.get('id') in superseded_env_ids:
+            envelope_vent_m2 -= float(vo.get('area_m2') or 0.0)
+        else:
+            kept_env_openings.append(vo)
+    envelope_vent_m2 = round(max(envelope_vent_m2, 0.0), 3)
+
+    # 개구부 목록은 facility_wind 가 통째로 합산하므로(총 유입/유출량), 스칼라만
+    # 고쳐서는 부족하다 — 목록에서도 중복 기술자가 사라져야 한다.
+    vent_openings = kept_env_openings + saved_env_openings + vent_openings
+    envelope_vent_m2 += saved_env_vent_m2
     vent_open_m2  = envelope_vent_m2 + fittings_vent_m2
     if fittings_vent_m2 > 0 and envelope_vent_m2 > 0:
         vent_open_src = 'fittings+envelope'

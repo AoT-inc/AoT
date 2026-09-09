@@ -146,13 +146,31 @@ _SEQUENCE_SCHEDULE_TOOL_ADDITIONS = {'modify_sequence_schedule',
 # 전까지 제어에서 배제하고, reviewed 는 by != 'ai' 조건 때문에 AI 가 스스로 세울
 # 수 없다. 이 계약은 test_program_approval_contract.py 가 따로 붙들고 있다.
 # delete_program 은 복구 불가라 위 금지 조항대로 승인 대상으로 남는다.
+#
+# add_schedule / add_schedule_batch (2026-09-09, 사용자 지적: "일정 작성 정도에도
+# 승인이 필요해 보이지 않는다"). add_schedule_tool 구현은 SchedulerJobMeta 행
+# 하나만 적고 APScheduler 트리거를 만들지 않아 이 도구만으로는 어떤 장비도
+# 움직이지 않는다 — 사람이 일정을 읽고 직접 수행해야만 효과가 생기고, 그 자체가
+# activate_function 과 같은 역할의 검증 단계다. edit_schedule/delete_schedule 로
+# 되돌릴 수도 있다. schedule_device_control 은 실제 장비를 예약 제어하므로 넣지
+# 않았다 — 계속 승인 대상.
+# create_gis_input / create_ai_agent (2026-09-09) — 둘 다 항상 비활성으로 생성되고
+# 별도 게이트(activate_gis_input, 또는 AI Agent는 아예 AI 호출 활성화 도구가 없어
+# 사람의 웹 UI만 가능)를 거쳐야 실제로 쓰인다. modify_gis_input/modify_ai_agent는
+# 이미 활성인 대상을 즉시 바꿀 수 있어(특히 AI Agent는 system_prompt/tool_access
+# 자기수정이라 위험의 종류가 다름) 넣지 않았다 — tool_registry 의 _CONFIG_ONLY
+# 주석(2026-09-09 항목) 참조.
 _CONFIG_ONLY_APPROVAL_EXEMPTIONS = {'modify_sequence_schedule',
                                     'modify_sequence_step',
                                     'configure_sequence_day',
                                     'create_sequence_function',
                                     'modify_function_options',
                                     'create_program',
-                                    'modify_program'}
+                                    'modify_program',
+                                    'add_schedule',
+                                    'add_schedule_batch',
+                                    'create_gis_input',
+                                    'create_ai_agent'}
 
 # ---------------------------------------------------------------------------
 # 이름 휴리스틱 가드 — 위 스냅샷들이 못 잡는 구멍을 메운다.

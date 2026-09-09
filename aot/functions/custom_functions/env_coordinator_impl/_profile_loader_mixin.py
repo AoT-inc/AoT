@@ -586,7 +586,14 @@ class ProfileLoaderMixin:
 
                 # 이슈 B: fittings 권위 모드에서는 vent_open_m2 균등 분할 fallback
                 # 을 끈다 (이중 회계 방지). envelope-only 모드일 때만 균등 분할.
-                if vent_source != 'fittings':
+                #
+                # compute_capacity 는 두 근거가 모두 있으면 'fittings+envelope' 를
+                # 내보내는데, 이는 배선된 외피 창이 있는 시설의 정상 상태다.
+                # `!= 'fittings'` 로 비교하던 동안 이 가드는 **이중 회계가 실제로
+                # 일어나는 바로 그 상황에서만 비켜갔다.** 부분 일치로 바꿔,
+                # JS 쪽 소비자(aot-facility-design.js 의 indexOf('fitting'))와도
+                # 같은 계약을 읽게 한다.
+                if 'fittings' not in (vent_source or ''):
                     vent_slots = [
                         a for a in actuators_list
                         if a.get('kind') == 'opening' and a.get('slot_key')

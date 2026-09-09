@@ -31,18 +31,21 @@
 
     <div class="aot-settings-title">
       <h3>{{_('API Key Management')}}</h3>
-      <div class="d-flex" style="gap: 8px;">
-        <button class="btn aot-pill-btn aot-pill-btn-primary" id="menu-toggle">{{_('Settings Menu')}}</button>
+      <div class="aot-btn-group">
+        <button class="btn aot-pill-btn aot-pill-btn-secondary" id="menu-toggle">{{_('Settings Menu')}}</button>
       </div>
     </div>
 
-    <div style="display: flex; justify-content: flex-end; margin-bottom: 0.75rem;">
+    <div class="aot-settings-stack">
+    <div class="aot-btn-group aot-settings-bare">
       <button type="button" class="btn aot-pill-btn aot-pill-btn-primary"
         data-toggle="modal" data-target="#modal_add_api_key">{{_('Add New API Key')}}</button>
     </div>
 
     {% if not api_keys %}
-    <p class="aot-modal-body-text" style="padding-left: 4px;">{{_('No API keys stored yet.')}}</p>
+    <div class="aot-settings-card">
+      <div class="aot-settings-sub">{{_('No API keys stored yet.')}}</div>
+    </div>
     {% endif %}
 
     {# 목록에는 키 본문을 싣지 않는다 — 이전 구조는 저장된 모든 키의 평문을
@@ -74,6 +77,7 @@
     </div> <!-- grid-stack-item -->
     {% endfor %}
     </div> <!-- grid-stack -->
+    </div> <!-- aot-settings-stack -->
 
   </div>
 
@@ -112,35 +116,35 @@
             <div class="aot-modal-container">
 
               <div class="aot-modal-option-row">
-                <label class="aot-modal-option-label">{{form_add.name.label(class_='mb-0')}}</label>
+                {{form_add.name.label(class_='aot-modal-option-label')}}
                 <div class="aot-modal-option-control">
                   {{form_add.name(class_='form-control aot-modern-input')}}
                 </div>
               </div>
 
               <div class="aot-modal-option-row">
-                <label class="aot-modal-option-label">{{form_add.provider.label(class_='mb-0')}}</label>
+                {{form_add.provider.label(class_='aot-modal-option-label')}}
                 <div class="aot-modal-option-control">
                   {{form_add.provider(class_='form-control aot-modern-input')}}
                 </div>
               </div>
 
               <div class="aot-modal-option-row">
-                <label class="aot-modal-option-label">{{form_add.tag.label(class_='mb-0')}}</label>
+                {{form_add.tag.label(class_='aot-modal-option-label')}}
                 <div class="aot-modal-option-control">
                   {{form_add.tag(class_='form-control aot-modern-input')}}
                 </div>
               </div>
 
               <div class="aot-modal-option-row">
-                <label class="aot-modal-option-label">{{form_add.url.label(class_='mb-0')}}</label>
+                {{form_add.url.label(class_='aot-modal-option-label')}}
                 <div class="aot-modal-option-control">
                   {{form_add.url(class_='form-control aot-modern-input')}}
                 </div>
               </div>
 
               <div class="aot-modal-option-row">
-                <label class="aot-modal-option-label">{{form_add.description.label(class_='mb-0')}}</label>
+                {{form_add.description.label(class_='aot-modal-option-label')}}
                 <div class="aot-modal-option-control">
                   {{form_add.description(class_='form-control aot-modern-input', rows=1)}}
                 </div>
@@ -150,9 +154,9 @@
 
             <div class="aot-modal-group-title">{{form_add.key.label.text}}</div>
             <div class="aot-modal-container">
-              <div style="padding: 0.5rem 0;">
+              <div class="aot-modal-option-row">
                 {{form_add.key(style='display:none;', id='real_add_key')}}
-                <input type="text" class="form-control aot-modern-input" style="width: 100%;"
+                <input type="text" class="form-control aot-modern-input w-100"
                   autocomplete="off" spellcheck="false"
                   data-lpignore="true" data-dashlane-ignore="true" data-1p-ignore
                   placeholder="{{ _('API Key Body') }}"

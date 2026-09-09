@@ -118,6 +118,37 @@ class Tool:
 #   3. 되돌릴 수 있다 — 다시 고치거나 지우면 된다.
 #
 # `delete_program` 은 그대로 승인 대상이다(위 금지 조항).
+#
+# 2026-09-09 — add_schedule · add_schedule_batch 추가.
+#
+# 사용자 지적: "노트·일정 작성 정도에도 승인이 필요해 보이지 않는다." 확인해보니
+# `add_schedule_tool` 구현은 `SchedulerJobMeta` 행 하나를 `action_type='human'`으로
+# 적을 뿐이다 — APScheduler 트리거를 만들지 않으므로 이 도구만으로는 어떤 장비도
+# 움직이지 않는다. 사람이 그 일정을 읽고 직접 수행해야만 실제 효과가 생기는데,
+# 그 "사람이 본다"는 단계 자체가 activate_function 같은 별도 게이트 역할을 한다 —
+# 심지어 자동 실행 경로가 아예 없으므로 시퀀스 설정 편집 사례보다도 약하다.
+# edit_schedule/delete_schedule 로 언제든 고치거나 지울 수 있어 되돌릴 수도 있다.
+#
+# 물리 장비를 실제로 예약 제어하는 `schedule_device_control`은 위 1번 조건 자체가
+# 성립하지 않으므로 여기 넣지 않는다 — 계속 승인 대상이다.
+#
+# 2026-09-09 — create_gis_input · create_ai_agent 추가(사용자 지적의 연장선).
+#
+# 둘 다 "항상 비활성으로 생성되고, 활성화는 별도로 게이트된다"는 create_sequence_function
+# 과 같은 구조다. GIS Input은 `create_gis_input` 구현 자체가 매번 비활성으로 만들고
+# `activate_gis_input`(계속 승인 대상)을 거쳐야 실제로 지도/날씨 조회에 쓰인다. AI Agent는
+# 한 걸음 더 강하다 — `create_ai_agent`가 `is_activated=False`로 만드는 것은 물론, **AI가
+# 호출할 수 있는 활성화 도구 자체가 없다**(`activate_ai_agent` 없음). 파이프라인 라우터/
+# 감독자/작업자 선택 쿼리가 전부 `is_activated=True`만 보므로(`ai_agent_service.py`), 오직
+# 사람이 웹 UI에서 활성화해야만 그 에이전트가 실제로 쓰인다.
+#
+# `modify_gis_input`/`modify_ai_agent`는 여기 넣지 않았다 — 이미 활성 상태인 대상을
+# 고치면 시퀀스 사례처럼 "즉시 반영"되는데, GIS Input의 옵션(api_key 등)은 시퀀스
+# 시간표와 비슷한 무게로 볼 여지가 있지만, AI Agent의 system_prompt/tool_access는
+# **AI 자신의 동작지침·도구권한을 스스로 고치는 셈**이라 위험의 종류가 다르다(밸브
+# 타이밍 조정과 달리 프롬프트 인젝션/안전장치 무력화에 가깝다) — 사용자 판단 보류.
+# `activate_gis_input`/`delete_gis_input`/`delete_ai_agent`는 각각 "실제로 발동하는
+# 순간"과 "복구 불가"라 위 금지 조항대로 승인 대상으로 남는다.
 # ---------------------------------------------------------------------------
 
 
@@ -160,17 +191,17 @@ TOOLS: List[Tool] = [
     }),
 
     # --- physical / scheduling tools ---------------------------------------------
-    Tool('add_schedule', handler='add_schedule_tool', physical=True, manifest={
+    Tool('add_schedule', handler='add_schedule_tool', physical=True, config_only=True, manifest={
         "action_type": "add_schedule",
-        "description": "Register a human work schedule or memo. Use for manual tasks such as weeding, inspection, or cleaning.",
+        "description": "Register a human work schedule or memo. Use for manual tasks such as weeding, inspection, or cleaning. Saves immediately (no approval) — it only records a reminder for a person; it does not move any equipment.",
         # Corrected 2026-07-08: add_schedule_tool proposes a SchedulerJobMeta
         # job (source_type='human'), NOT a Notes row — verified against the
         # actual implementation. Use create_note for a plain memo/journal entry.
-        "usage_hint": "For a DATED work task/event (weeding, spraying, harvest, inspection) use this — it registers a human work item. Params: {date, content, worker, time, tags, target_name}. PASS target_name (a zone/facility/device name like '온실', '3-1', '1포장 1-1') whenever the user names a place, so the schedule links to that real location (map + location search). If the name is ambiguous/not found the tool returns available_targets — call ask_user to pick, then retry. Omit target_name only for a farm-wide event with no specific place. This is a GIS-based system: target_name resolves to exactly ONE entity and never auto-expands to its children. Before writing, if the request could apply per sub-unit ('각 구역별', 'each zone') call resolve_target(target_name) first — read-only, no approval — to see whether the name is a container with 'children'; if so, use add_schedule_batch to write all of them in one approval instead of one add_schedule call per child. For an undated memo/note, use create_note instead.",
+        "usage_hint": "For a DATED work task/event (weeding, spraying, harvest, inspection) use this — it registers a human work item. Params: {date, content, worker, time, tags, target_name}. PASS target_name (a zone/facility/device name like '온실', '3-1', '1포장 1-1') whenever the user names a place, so the schedule links to that real location (map + location search). If the name is ambiguous/not found the tool returns available_targets — call ask_user to pick, then retry. Omit target_name only for a farm-wide event with no specific place. This is a GIS-based system: target_name resolves to exactly ONE entity and never auto-expands to its children. Before writing, if the request could apply per sub-unit ('각 구역별', 'each zone') call resolve_target(target_name) first — read-only, no approval — to see whether the name is a container with 'children'; if so, use add_schedule_batch to write all of them in one call instead of one add_schedule call per child. For an undated memo/note, use create_note instead.",
     }),
-    Tool('add_schedule_batch', handler='add_schedule_batch_tool', physical=True, manifest={
+    Tool('add_schedule_batch', handler='add_schedule_batch_tool', physical=True, config_only=True, manifest={
         "action_type": "add_schedule_batch",
-        "description": "Register MULTIPLE per-entity work schedules in ONE call, behind a SINGLE approval — use instead of N separate add_schedule calls whenever a request applies per sub-unit ('각 구역별로', 'each zone'). Each add_schedule call needs its own approval AND consumes its own rate-limited request slot; a 9-entity request as 9 separate add_schedule calls can burn through the hourly limit before finishing.",
+        "description": "Register MULTIPLE per-entity work schedules in ONE call — use instead of N separate add_schedule calls whenever a request applies per sub-unit ('각 구역별로', 'each zone'). Saves immediately (no approval, like add_schedule). Prefer this over N separate calls anyway: it rejects a duplicate target_name up front, and given window_start/window_end it runs a single capacity check across all entries that per-call add_schedule cannot see.",
         "usage_hint": "params.arguments: {date, entries: [{target_name, time, content?, worker?}, ...], content?, worker?, tags?, window_start?, window_end?, duration_minutes?}. Call resolve_target on the container name FIRST to get the exact child names for `entries`. `content`/`worker` are shared defaults for entries that omit their own. Give BOTH window_start and window_end to get a server-side capacity check (entries.length * duration_minutes vs. available minutes) — if it doesn't fit, the call is rejected up front with the exact numbers instead of you having to compute it; the request then needs more than one date, so split entries across multiple calls (one per date) or ask the user how to compress/parallelize. Duplicate target_name within one batch is rejected.",
     }),
     Tool('schedule_device_control', handler='schedule_device_control_tool', physical=True, manifest={
@@ -853,10 +884,10 @@ TOOLS: List[Tool] = [
         "description": "Lists registered GIS Inputs (map layers/providers — VWorld, Google, OpenWeather, etc). Read-only.",
         "usage_hint": "params.arguments: {}",
     }),
-    Tool('create_gis_input', handler='create_gis_input', mutating=True, manifest={
+    Tool('create_gis_input', handler='create_gis_input', mutating=True, config_only=True, manifest={
         "tool_name": "create_gis_input",
         "action_type": "virtual_tool_call",
-        "description": "Creates a new GIS Input (map layer/provider, e.g. gis_vworld, gis_openweather). layer_type must be a 'gis_*' entry from list_device_types(kind='input'). Always created DEACTIVATED — call activate_gis_input once configured. Requires human approval.",
+        "description": "Creates a new GIS Input (map layer/provider, e.g. gis_vworld, gis_openweather). layer_type must be a 'gis_*' entry from list_device_types(kind='input'). Always created DEACTIVATED — call activate_gis_input once configured. Saves immediately (no approval); activate_gis_input still requires approval.",
         "usage_hint": "params.arguments: {layer_type (a 'gis_*' type from list_device_types(kind='input')), name (optional), params (optional dict, e.g. {'api_key': '...'})}",
     }),
     Tool('modify_gis_input', handler='modify_gis_input', mutating=True, manifest={
@@ -1008,10 +1039,10 @@ TOOLS: List[Tool] = [
         "description": "Lists AI service entries (models) an agent can bind to. Read-only. Call before create_ai_agent for a valid entry_id.",
         "usage_hint": "params.arguments: {}",
     }),
-    Tool('create_ai_agent', handler='create_ai_agent', mutating=True, manifest={
+    Tool('create_ai_agent', handler='create_ai_agent', mutating=True, config_only=True, manifest={
         "tool_name": "create_ai_agent",
         "action_type": "virtual_tool_call",
-        "description": "Creates a new AI pipeline agent bound to an AIEntry. Requires human approval.",
+        "description": "Creates a new AI pipeline agent bound to an AIEntry. Always created DEACTIVATED (is_activated=False) — saves immediately (no approval). There is no AI-callable activation tool: only a human, via the web UI, can make it live, so it can have no effect until then.",
         "usage_hint": "params.arguments: {name, entry_id (from list_ai_entries), role, specialty, system_prompt, pipeline_role, model_tier, tool_access}",
     }),
     Tool('modify_ai_agent', handler='modify_ai_agent', mutating=True, manifest={
@@ -2177,7 +2208,7 @@ _MCP_TOOL_PAYLOADS: List[Dict[str, Any]] = [
     },
     {
         "tool_name": "add_schedule_batch",
-        "description": "Register MULTIPLE per-entity work schedules in ONE call, behind a SINGLE approval - use instead of N separate add_schedule calls whenever a request applies per sub-unit ('각 구역별로', 'each zone'). Each add_schedule call needs its own approval and its own rate-limited request slot; a 9-entity request as 9 separate add_schedule calls can exhaust the hourly limit before finishing. Call resolve_target on the container name first to get the exact child names for entries. If entries.length * duration_minutes would not fit inside window_start-window_end, the call is rejected up front with the exact numbers (nothing created) - this is checked by the server, not something you need to compute yourself, but if it rejects, the request needs more than one date and you must either split entries across multiple add_schedule_batch calls (one per date) or ask the user how to compress/parallelize the work.",
+        "description": "Register MULTIPLE per-entity work schedules in ONE call - use instead of N separate add_schedule calls whenever a request applies per sub-unit ('각 구역별로', 'each zone'). Saves immediately (no approval, like add_schedule); still worth batching over N separate calls because it rejects a duplicate target_name up front and runs one capacity check across all entries that per-call add_schedule cannot see. Call resolve_target on the container name first to get the exact child names for entries. If entries.length * duration_minutes would not fit inside window_start-window_end, the call is rejected up front with the exact numbers (nothing created) - this is checked by the server, not something you need to compute yourself, but if it rejects, the request needs more than one date and you must either split entries across multiple add_schedule_batch calls (one per date) or ask the user how to compress/parallelize the work.",
         "input_schema": {
             "type": "object",
             "properties": {
@@ -2627,7 +2658,7 @@ _MCP_TOOL_PAYLOADS: List[Dict[str, Any]] = [
     },
     {
         "tool_name": "create_gis_input",
-        "description": "Creates a new GIS Input (map layer/provider, e.g. gis_vworld, gis_openweather). layer_type must be a 'gis_*' entry from list_device_types(kind='input'). Always created DEACTIVATED — call activate_gis_input once configured. Requires human approval.",
+        "description": "Creates a new GIS Input (map layer/provider, e.g. gis_vworld, gis_openweather). layer_type must be a 'gis_*' entry from list_device_types(kind='input'). Always created DEACTIVATED — call activate_gis_input once configured. Saves immediately (no approval); activate_gis_input still requires approval.",
         "input_schema": {
             "type": "object",
             "properties": {
@@ -2873,7 +2904,7 @@ _MCP_TOOL_PAYLOADS: List[Dict[str, Any]] = [
     },
     {
         "tool_name": "create_ai_agent",
-        "description": "Creates a new AI pipeline agent bound to an AIEntry. Requires human approval.",
+        "description": "Creates a new AI pipeline agent bound to an AIEntry. Always created DEACTIVATED (is_activated=False) — saves immediately (no approval). There is no AI-callable activation tool: only a human, via the web UI, can make it live.",
         "input_schema": {
             "type": "object",
             "properties": {

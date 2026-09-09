@@ -52,6 +52,11 @@ THEME_COLOR_FIELDS = [
     'bd_primary', 'bd_secondary',
     'bg_active', 'bg_inactive', 'bg_warning',
     'bg_on', 'bg_off', 'bg_pending', 'tint_warning_bg', 'tint_warning_fg',
+    # 2026-09-09 무응답(comm_fault)을 상태 계열로 옮긴다. 그전까지 이 자리가
+    # tint_danger_bg(의미 계열)를 빌려 써서, 같은 "장치 상태" 축인 일시정지
+    # (bg_warning)와 계열이 달랐다 — 운영자가 한쪽만 바꾸면 정상 운영(멈춤)과
+    # 고장의 무게가 조용히 뒤집힌다. 색값을 맞추는 것으로는 재발한다.
+    'bg_fault',
     # 의미 색상 — 성공/경고/위험/정보. 상태 표시(장치 ON/OFF·활성)와는 다른
     # 축이다. 종전에는 aot-theme-variables.css 에 고정돼 있어 운영자가 바꿀 수
     # 없었고, 그 탓에 페이지들이 장치 상태색을 빌려 쓰는 일이 생겼다.
@@ -66,6 +71,13 @@ THEME_COLOR_FIELDS = [
     # 슬라이드 토글 꺼짐 트랙. 켜짐은 band_3 을 쓰지만 꺼짐은 전역 테두리색
     # (--aot-border-neutral)을 빌려 쓰고 있어 이 페이지에서 못 바꿨다.
     'toggle_track_off',
+    # 컨테이너 안 항목 구분선(--aot-border-neutral, 121곳). 그전까지
+    # custom_ui 밖의 고정색이라 운영자가 못 바꿨다. 기본값은 현재값 그대로라
+    # 화면은 바뀌지 않고 제어권만 생긴다.
+    'bd_divider',
+    # 옅은 구분선(--aot-border-light, 53곳). bd_divider 와 굵기가 아니라
+    # **무게**가 다르다 — 값이 촘촘히 늘어설 때(목록 행 사이)는 이쪽이다.
+    'bd_divider_soft',
     # 측정 밴드 5색 (--aot-band-1..5) — 게이지/센서 라벨 등
     'band_1', 'band_2', 'band_3', 'band_4', 'band_5',
     # 차트 시리즈 앞 6색 (GRAPH_SERIES_PALETTE 라이트/다크 공통 구간)
@@ -95,6 +107,15 @@ LEGACY_THEME_FIELDS_DROP = {
 }
 
 
+# 신설 필드가 참고할 **기존** 필드 (구 필드를 지우지 않는다 —
+# LEGACY_THEME_FIELD_MAP 과 다른 점이다. 그쪽은 통합이고 이쪽은 분가다).
+# 2026-09-09 bg_fault: 그전까지 무응답 배경이 tint_danger_bg 였으므로,
+# 그 값을 손수 정해 둔 설치가 분가하면서 색을 잃지 않게 한 번 물려준다.
+THEME_FIELD_SEED_FROM = {
+    'bg_fault': 'tint_danger_bg',
+}
+
+
 def migrate_theme_dict(theme_dict):
     """구 필드명(bd_tertiary 등, 2026-07 통합 이전)을 신규 필드로 이관하고
     구 키를 제거한다. 저장된 custom_theme_json·프리셋을 읽는 모든 지점
@@ -111,6 +132,9 @@ def migrate_theme_dict(theme_dict):
                     break
     for old in LEGACY_THEME_FIELDS_DROP:
         theme_dict.pop(old, None)
+    for new_field, seed_from in THEME_FIELD_SEED_FROM.items():
+        if new_field not in theme_dict and seed_from in theme_dict:
+            theme_dict[new_field] = theme_dict[seed_from]
     return theme_dict
 
 
@@ -684,7 +708,10 @@ class SettingsCustomUI(FlaskForm):
     text_color_secondary = StringField(lazy_gettext('Text Color Secondary'), default=THEME_DEFAULTS.get('text_color_secondary', '#5E6B64'), render_kw={"type": "color"})
     text_color_tertiary = StringField(lazy_gettext('Text Color Tertiary'), default=THEME_DEFAULTS.get('text_color_tertiary', '#FFFFFF'), render_kw={"type": "color"})
     bd_primary = StringField(lazy_gettext('BG Primary'), default=THEME_DEFAULTS.get('bd_primary', '#FFFFFF'), render_kw={"type": "color"})
-    bd_secondary = StringField(lazy_gettext('BG Secondary'), default=THEME_DEFAULTS.get('bd_secondary', '#F3F6F5'), render_kw={"type": "color"})
+    # 2026-09-09 #F3F6F5 -> #e0e6e3. 테두리를 걷어내면(ui-guide §2-2) 카드와
+    # 바닥은 밝기 차이만으로 구분되는데, 흰색과 명도차가 3 정도라 그 역할을
+    # 못 했다 — 선이 있었기 때문에 여태 드러나지 않았을 뿐이다.
+    bd_secondary = StringField(lazy_gettext('BG Secondary'), default=THEME_DEFAULTS.get('bd_secondary', '#e0e6e3'), render_kw={"type": "color"})
     bg_active = StringField(lazy_gettext('BG Active'), default=THEME_DEFAULTS.get('bg_active', '#D1D5D5'), render_kw={"type": "color"})
     bg_inactive = StringField(lazy_gettext('BG Inactive'), default=THEME_DEFAULTS.get('bg_inactive', '#F3F6F5'), render_kw={"type": "color"})
     # 장치 offline/응답없음(comm_fault) 카드 배경 — 기존 --bg-pause/--aot-bg-pause
@@ -699,6 +726,7 @@ class SettingsCustomUI(FlaskForm):
     # 명령 전송 후 장치 확인 대기 중 배경(--bg-hold). PID 유지 버튼(bg_btn_hold,
     # --aot-btn-bg-hold)과는 다른 토큰이니 혼동 금지.
     bg_pending = StringField(lazy_gettext('Pending'), default=THEME_DEFAULTS.get('bg_pending', '#F0AD4E'), render_kw={"type": "color"})
+    bg_fault = StringField(lazy_gettext('Unresponsive'), default=THEME_DEFAULTS.get('bg_fault', '#FBE7E7'), render_kw={"type": "color"})
     # "실행 중이지만 확인 불가"(comm_capable=false 이면서 on) 장치를 표시하는 틴트.
     # aot-output-state.js paintUnverifiedRunning()이 채널 행에 인라인
     # !important 로 강제 적용해 bg_on/bg_off 를 덮어쓴다 — 지금까지 하드코딩
@@ -734,6 +762,8 @@ class SettingsCustomUI(FlaskForm):
     bg_btn_off = StringField(lazy_gettext('Btn BG Off'), default=THEME_DEFAULTS.get('bg_btn_off', '#5E6B64'), render_kw={"type": "color"})
     bg_btn_pause = StringField(lazy_gettext('Btn BG Pause'), default=THEME_DEFAULTS.get('bg_btn_pause', '#989E9E'), render_kw={"type": "color"})
     toggle_track_off = StringField(lazy_gettext('Toggle Track Off'), default=THEME_DEFAULTS.get('toggle_track_off', '#DDDDDD'), render_kw={"type": "color"})
+    bd_divider = StringField(lazy_gettext('Divider Line'), default=THEME_DEFAULTS.get('bd_divider', '#DDDDDD'), render_kw={"type": "color"})
+    bd_divider_soft = StringField(lazy_gettext('Divider Line (Soft)'), default=THEME_DEFAULTS.get('bd_divider_soft', '#f0f0f0'), render_kw={"type": "color"})
     bg_btn_hold = StringField(lazy_gettext('Btn BG Hold'), default=THEME_DEFAULTS.get('bg_btn_hold', '#D1D5D5'), render_kw={"type": "color"})
     bd_btn_border = StringField(lazy_gettext('Btn Border Base'), default=THEME_DEFAULTS.get('bd_btn_border', '#B6BABA'), render_kw={"type": "color"})
     # 측정 밴드 5색 (--aot-band-1..5, 차가움→적정→뜨거움)

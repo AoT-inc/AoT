@@ -348,10 +348,20 @@
   /* Header row above a table/list: title on the left, action on the right */
 
   /* Data tables (sensors / weather / groups) — one shared look */
-  /* Shared table (.aot-module-table) gives width/collapse/row rules. The drawer
-     is narrower than a settings page, so cells are tighter, and the last column
-     holds the row's controls rather than the settings pages' 160px action
-     column — so that one rule is put back. */
+  /* Shared table (.aot-module-table) gives width/collapse/row rules — but only
+     on pages that load aot-settings.css, which this drawer does not. Without
+     it the table had no width:100%, so it shrank to whatever its first-drawn
+     row needed and only grew once a click inserted wider content (e.g. the
+     placement accordion) that forced a reflow (2026-09-08 사용자 신고: 표가
+     처음엔 폭이 좁다가 행을 클릭해야 정상 폭이 됨). Restated here so this
+     table doesn't depend on a stylesheet the page never includes.
+     The drawer is narrower than a settings page, so cells are tighter, and the
+     last column holds the row's controls rather than the settings pages' 160px
+     action column — so that one rule is put back. */
+  .aot-module-table.fac-table {
+    width: 100%;
+    table-layout: fixed;
+  }
   .aot-module-table.fac-table td,
   .aot-module-table.fac-table th { padding: 6px 8px; }
   .aot-module-table.fac-table th {
@@ -1189,10 +1199,12 @@
 .aot-lib-search {
   width: 100%;
   padding: 0.38rem 0.65rem;
-  border: 1px solid var(--aot-border-neutral);
-  background: var(--aot-surface-input);
+    /* 2026-09-09 알약/테두리 -> 밑줄(ui-guide §2-2). 쓰는 것은 밑줄이다. */
+  border: 0;
+  border-bottom: 2px solid var(--aot-border-neutral);
+  background-color: transparent;
   color: var(--aot-color-text-primary);
-  border-radius: var(--aot-radius-sm);
+  border-radius: 0;
   font-size: var(--aot-fs-body);
   margin-bottom: 12px;
   box-sizing: border-box;

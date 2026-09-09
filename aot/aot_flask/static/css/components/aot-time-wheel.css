@@ -80,6 +80,19 @@ body.aot-wheel-lock{ overflow:hidden !important; }
   background:var(--bg-btn-hover-lighter,rgba(46,204,113,0.08));
   border-radius:var(--aot-radius-sm);
 }
+/* 일출/일몰 즉시-설정 버튼 — 휠 아래, 확인/취소 위. 위치가 없는 대상이면
+   fetch 결과로 개별 버튼(또는 줄 전체)이 display:none 처리된다(JS). */
+.aot-wheel-sun-row{ display:flex; gap:8px; margin-top:10px; }
+.aot-wheel-sun-btn{
+  flex:1 1 0; display:flex; align-items:center; justify-content:center; gap:6px;
+  padding:6px 8px; border-radius:var(--aot-radius-md);
+  border:1px solid var(--aot-border-neutral,#e2ded0);
+  background:var(--aot-surface-card,#fff); color:var(--aot-text-main,#333);
+  font-size:var(--aot-font-size-sm); cursor:pointer;
+}
+.aot-wheel-sun-btn:hover{ background:var(--bg-btn-hover-lighter,rgba(46,204,113,0.08)); }
+.aot-wheel-sun-btn .aot-wheel-sun-icon{ width:16px; height:16px; flex:0 0 auto; }
+
 .aot-wheel-actions{ display:flex; gap:8px; margin-top:12px; }
 
 /* 휠 두 개를 나란히 (예: 시작 시각 | 작동 시간). 세로로 쌓으면 180px 짜리 휠이

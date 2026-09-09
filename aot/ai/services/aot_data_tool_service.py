@@ -10084,6 +10084,12 @@ class AoTDataToolService:
                 info.get('widget_name') or widget_type)
             new_widget.width = int(width) if width else (info.get('widget_width') or 6)
             new_widget.height = int(height) if height else (info.get('widget_height') or 6)
+            # 모바일 전체 폭은 위젯 행의 설정이다(P6-63). 웹의 위젯 추가 폼과
+            # 같은 기본값을 쓴다 — 위젯 종류가 그렇게 선언했거나, 폭이 24열의
+            # 절반을 넘거나. 여기서 안 채우면 AI 가 만든 지도·달력이 폰에서
+            # 반 폭으로 접힌 채 놓인다.
+            new_widget.mobile_full_width = bool(
+                info.get('mobile_full_width') or new_widget.width > 12)
             # 새 위젯은 그 탭의 맨 아래에. 기존 위젯 위에 겹쳐 놓으면 사람이
             # 지금 보고 있는 화면이 재배치된다.
             bottom = 0

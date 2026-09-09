@@ -580,10 +580,12 @@ html {
   position: relative;
   display: flex;
   align-items: center;
-  border: 1px solid var(--aot-border-form);
-  border-radius: var(--aot-radius-md);
+    /* 2026-09-09 알약/테두리 -> 밑줄(ui-guide §2-2). 쓰는 것은 밑줄이다. */
+  border: 0;
+  border-bottom: 2px solid var(--aot-border-neutral);
+  border-radius: 0;
   /* Smooth rounded */
-  background: var(--aot-note-search-bg);
+  background-color: transparent;
   padding: 4px 12px;
   transition: border-color 0.2s, box-shadow 0.2s;
 }
@@ -819,7 +821,10 @@ html {
    배경만 칠한다(형제 클래스와 동일): 카드 전체에 글자색까지 강제하면 안에 든
    입력·버튼의 자기 색과 싸운다. */
 .fault-background {
-    background-color: var(--aot-tint-danger-bg);
+    /* 2026-09-09 tint_danger_bg(의미 계열) -> bg_fault(상태 계열).
+       일시정지(.pause-background)와 같은 축이라야 두 상태의 무게를
+       운영자가 함께 조절할 수 있다. docs/design/ui-guide.md §2-1. */
+    background-color: var(--aot-bg-fault, #FBE7E7);
 }
 
 .hold-background {

@@ -140,9 +140,40 @@ def test_the_model_carries_the_column():
     assert hasattr(Trigger, 'resume_on_activate')
 
 
-def test_the_migration_is_the_alembic_head():
+def test_the_migration_is_in_the_alembic_chain():
+    """이 마이그레이션이 사슬에서 떨어져 나가면 영영 실행되지 않는다."""
+    revisions, _head = _alembic_chain()
+    assert 'p6_61_sequence_resume_on_activate_20260901' in revisions
+
+
+def test_the_constant_points_at_the_alembic_head():
     """마이그레이션을 넣고 상수를 안 올리면 그 마이그레이션은 영영 실행되지
     않는다 — 앱은 'up to date' 를 남기고 정상 기동하며, 모델은 존재하지 않는
-    컬럼을 참조한 채 돈다."""
+    컬럼을 참조한 채 돈다.
+
+    head 를 파일에서 계산한다. 리비전 ID 를 여기 박아 두면 새 마이그레이션이
+    생길 때마다 이 테스트가 깨지고, 그때 사람이 하는 일은 '상수를 올렸는지
+    확인' 이 아니라 '테스트의 문자열을 바꾸기' 가 된다 — 검사가 사라진다."""
     from aot.config import ALEMBIC_VERSION
-    assert ALEMBIC_VERSION == 'p6_62_geo_journal_20260902'
+    _revisions, head = _alembic_chain()
+    assert ALEMBIC_VERSION == head
+
+
+def _alembic_chain():
+    """(모든 revision id 집합, head) — versions/*.py 를 정규식으로 읽는다."""
+    import pathlib
+    import re
+    versions = (pathlib.Path(__file__).parent.parent.parent
+                / 'alembic_db' / 'alembic' / 'versions')
+    revisions, parents = set(), set()
+    for each_file in versions.glob('*.py'):
+        src = each_file.read_text()
+        rev = re.search(r"^revision = '([^']+)'", src, re.M)
+        down = re.search(r"^down_revision = '([^']+)'", src, re.M)
+        if rev:
+            revisions.add(rev.group(1))
+        if down:
+            parents.add(down.group(1))
+    heads = revisions - parents
+    assert len(heads) == 1, f"alembic head 가 하나가 아니다: {sorted(heads)}"
+    return revisions, heads.pop()

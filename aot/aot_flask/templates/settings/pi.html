@@ -9,28 +9,29 @@
   <!-- Route: /settings/pi -->
   <div class="container">
 
-    <!-- Page Title -->
+    <!-- 화면 제목 — 행동(설정 메뉴)은 같은 줄 오른쪽 (§3-2 ②) -->
     <div class="aot-settings-title">
       <h3>{{_('Raspberry Pi Settings')}} <a href="{{ manual_url('Configuration-Settings/#pi-settings') }}" target="_blank"><span class="fas fa-question-circle aot-help-icon"></span></a></h3>
-      <div class="d-flex" style="gap: 8px;">
-        <button class="btn aot-pill-btn aot-pill-btn-primary" id="menu-toggle">{{_('Settings Menu')}}</button>
-      </div>
+      <button class="btn aot-pill-btn aot-pill-btn-primary" id="menu-toggle">{{_('Settings Menu')}}</button>
     </div>
 
     <form method="post" action="/settings/pi">
       <input type="hidden" name="form-name" value="Pi">
       {{ form_settings_pi.csrf_token }}
 
-      <!-- Interfaces -->
-      <div class="aot-modal-group-title">{{_('Interface')}}</div>
-      <p class="aot-modal-body-text">
+      <!-- 인터페이스 -->
+      <div class="aot-settings-group-title">{{_('Interface')}}</div>
+      <p class="aot-settings-sub">
         {{_('The following settings are configured via non-interactive raspi-config. Changes made here require a system reboot, which can be performed from the top menu (Settings -> Restart System).')}}
       </p>
 
-      <div class="aot-modal-container">
+      {# 라벨은 인터페이스 이름 하나만 든다. 켜짐/꺼짐은 **다른 사실**이라
+         아랫줄 부연으로 내린다 — 이름 옆에 상태를 이어 붙이지 않는다
+         (§3-2 ① 한 자리에 한 사실 · ③ 부연은 아랫줄로). #}
+      <div class="aot-settings-card">
 
         <div class="aot-settings-row">
-          <label class="aot-settings-label">I<sup>2</sup>C {% if pi_settings['i2c_enabled'] %}{{_('Enabled')}}{% else %}{{_('Disabled')}}{% endif %}</label>
+          <label class="aot-settings-label">I<sup>2</sup>C</label>
           <div class="aot-settings-control">
             {% if pi_settings['i2c_enabled'] %}
               {{ form_settings_pi.disable_i2c(class_='btn aot-pill-btn aot-pill-btn-primary') }}
@@ -38,10 +39,11 @@
               {{ form_settings_pi.enable_i2c(class_='btn aot-pill-btn aot-pill-btn-primary') }}
             {% endif %}
           </div>
+          <div class="aot-settings-sub">{% if pi_settings['i2c_enabled'] %}{{_('Enabled')}}{% else %}{{_('Disabled')}}{% endif %}</div>
         </div>
 
         <div class="aot-settings-row">
-          <label class="aot-settings-label">1-Wire {% if pi_settings['one_wire_enabled'] %}{{_('Enabled')}}{% else %}{{_('Disabled')}}{% endif %}</label>
+          <label class="aot-settings-label">1-Wire</label>
           <div class="aot-settings-control">
             {% if pi_settings['one_wire_enabled'] %}
               {{ form_settings_pi.disable_one_wire(class_='btn aot-pill-btn aot-pill-btn-primary') }}
@@ -49,10 +51,11 @@
               {{ form_settings_pi.enable_one_wire(class_='btn aot-pill-btn aot-pill-btn-primary') }}
             {% endif %}
           </div>
+          <div class="aot-settings-sub">{% if pi_settings['one_wire_enabled'] %}{{_('Enabled')}}{% else %}{{_('Disabled')}}{% endif %}</div>
         </div>
 
         <div class="aot-settings-row">
-          <label class="aot-settings-label">{{_('Serial')}} {% if pi_settings['serial_enabled'] %}{{_('Enabled')}}{% else %}{{_('Disabled')}}{% endif %}</label>
+          <label class="aot-settings-label">{{_('Serial')}}</label>
           <div class="aot-settings-control">
             {% if pi_settings['serial_enabled'] %}
               {{ form_settings_pi.disable_serial(class_='btn aot-pill-btn aot-pill-btn-primary') }}
@@ -60,10 +63,11 @@
               {{ form_settings_pi.enable_serial(class_='btn aot-pill-btn aot-pill-btn-primary') }}
             {% endif %}
           </div>
+          <div class="aot-settings-sub">{% if pi_settings['serial_enabled'] %}{{_('Enabled')}}{% else %}{{_('Disabled')}}{% endif %}</div>
         </div>
 
         <div class="aot-settings-row">
-          <label class="aot-settings-label">SPI {% if pi_settings['spi_enabled'] %}{{_('Enabled')}}{% else %}{{_('Disabled')}}{% endif %}</label>
+          <label class="aot-settings-label">SPI</label>
           <div class="aot-settings-control">
             {% if pi_settings['spi_enabled'] %}
               {{ form_settings_pi.disable_spi(class_='btn aot-pill-btn aot-pill-btn-primary') }}
@@ -71,10 +75,11 @@
               {{ form_settings_pi.enable_spi(class_='btn aot-pill-btn aot-pill-btn-primary') }}
             {% endif %}
           </div>
+          <div class="aot-settings-sub">{% if pi_settings['spi_enabled'] %}{{_('Enabled')}}{% else %}{{_('Disabled')}}{% endif %}</div>
         </div>
 
-        <div class="aot-settings-row" style="border-bottom: none;">
-          <label class="aot-settings-label">SSH {% if pi_settings['ssh_enabled'] %}{{_('Enabled')}}{% else %}{{_('Disabled')}}{% endif %}</label>
+        <div class="aot-settings-row">
+          <label class="aot-settings-label">SSH</label>
           <div class="aot-settings-control">
             {% if pi_settings['ssh_enabled'] %}
               {{ form_settings_pi.disable_ssh(class_='btn aot-pill-btn aot-pill-btn-primary') }}
@@ -82,33 +87,41 @@
               {{ form_settings_pi.enable_ssh(class_='btn aot-pill-btn aot-pill-btn-primary') }}
             {% endif %}
           </div>
+          <div class="aot-settings-sub">{% if pi_settings['ssh_enabled'] %}{{_('Enabled')}}{% else %}{{_('Disabled')}}{% endif %}</div>
         </div>
 
       </div>
 
-      <!-- Hostname -->
-      <div class="aot-modal-group-title" style="margin-top: 2rem;">{{_('Hostname')}}</div>
+      <!-- 호스트 이름 -->
+      {# 예전에는 밑줄 입력칸과 알약 버튼이 한 행에 나란히 섰다. 같은 "값을
+         정하는 자리" 가 두 모양이 되면 곡률을 역할로 가른 의미가 그 행에서
+         무너진다 — 둘이 함께 필요하면 줄을 나눈다(§2-2). 쓰는 것은 행에,
+         커밋하는 것은 카드 오른쪽 아래에. #}
+      <div class="aot-settings-group-title">{{_('Hostname')}}</div>
 
-      <div class="aot-modal-container">
-        <div class="aot-settings-row" style="border-bottom: none;">
-          <div class="aot-settings-label">
+      <div class="aot-settings-card">
+        <div class="aot-settings-row">
+          {{ form_settings_pi.hostname.label(class_='aot-settings-label') }}
+          <div class="aot-settings-control">
             {{ form_settings_pi.hostname(class_='form-control aot-modern-input', value=pi_settings['hostname']) }}
           </div>
-          <div class="aot-settings-control">
-            {{ form_settings_pi.change_hostname(class_='btn aot-pill-btn aot-pill-btn-primary') }}
-          </div>
+        </div>
+
+        <div class="aot-settings-actions">
+          {{ form_settings_pi.change_hostname(class_='btn aot-pill-btn aot-pill-btn-primary') }}
         </div>
       </div>
 
-      <!-- Service Options -->
-      <div class="aot-modal-group-title" style="margin-top: 2rem;">{{_('Service Options')}}</div>
+      <!-- 서비스 옵션 -->
+      {# 예전에는 부연(`.aot-modal-body-text`)이 `.aot-settings-label` **안에**
+         들어 있어, 라벨이 두 줄이 되면서 셀렉트가 두 줄의 세로 중앙에 걸렸다 —
+         결정 행동이 결정 메시지와 어긋난다. 부연은 행의 형제로 두어 아랫줄
+         전체 폭을 쓴다(§3-2 ③, aot-settings.css 4절). #}
+      <div class="aot-settings-group-title">{{_('Service Options')}}</div>
 
-      <div class="aot-modal-container">
-        <div class="aot-settings-row" style="border-bottom: none;">
-          <div class="aot-settings-label">
-            {{ form_settings_pi.pigpiod_sample_rate.label(class_='mb-0') }}
-            <div class="aot-modal-body-text">{{_('Select pigpiod sampling rate in milliseconds.')}}</div>
-          </div>
+      <div class="aot-settings-card">
+        <div class="aot-settings-row">
+          {{ form_settings_pi.pigpiod_sample_rate.label(class_='aot-settings-label') }}
           <div class="aot-settings-control">
             <select class="aot-settings-select" id="pigpiod_sample_rate" name="pigpiod_sample_rate">
               <option value=""></option>
@@ -118,11 +131,12 @@
               <option value="high"{% if pigpiod_sample_rate == 'high' %} selected{% endif %}>{{_('5 ms (Slow)')}}</option>
             </select>
           </div>
+          <div class="aot-settings-sub">{{_('Select pigpiod sampling rate in milliseconds.')}}</div>
         </div>
-      </div>
 
-      <div class="aot-settings-actions">
-        {{ form_settings_pi.change_pigpiod_sample_rate(class_='btn aot-pill-btn aot-pill-btn-primary', **{'onclick':'return confirm("' + _('Changing pigpiod sample rate requires restarting pigpiod and AoT daemon. Continue?') + '")'}) }}
+        <div class="aot-settings-actions">
+          {{ form_settings_pi.change_pigpiod_sample_rate(class_='btn aot-pill-btn aot-pill-btn-primary', **{'onclick':'return confirm("' + _('Changing pigpiod sample rate requires restarting pigpiod and AoT daemon. Continue?') + '")'}) }}
+        </div>
       </div>
 
     </form>

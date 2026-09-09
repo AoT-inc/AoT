@@ -122,13 +122,18 @@ def warm_start_mcp_servers(app):
     threading.Thread(target=_warm, name='mcp-warmup', daemon=True).start()
 
 
-def create_app(config=ProdConfig):
+def create_app(config=ProdConfig, run_scheduler=False):
 
     """
     Application factory:
         http://flask.pocoo.org/docs/0.11/patterns/appfactories/
 
     :param config: configuration object that holds config constants
+    :param run_scheduler: 이 프로세스가 예약을 **실행**하는가. 기본은 False —
+        데몬(aot_daemon.py)만 True 로 부른다. 이 팩토리는 웹·MCP·점검 스크립트·
+        디버그 오버레이에서도 불리는데 잡스토어는 DB 하나를 공유하므로, 둘 이상이
+        실행하면 같은 예약이 두 번 발화한다(장치 제어 포함). 기본을 False 로 두면
+        새로 생기는 호출부가 이 인자를 몰라도 안전한 쪽으로 떨어진다.
     :returns: Flask
     """
     app = Flask(__name__)
@@ -206,7 +211,7 @@ def create_app(config=ProdConfig):
             'pool_recycle': 3600,
         }
 
-    register_extensions(app)
+    register_extensions(app, run_scheduler=run_scheduler)
     register_blueprints(app)
     register_widget_endpoints(app)
 
@@ -492,8 +497,12 @@ def create_app(config=ProdConfig):
     return app
 
 
-def register_extensions(app):
-    """register extensions to the app."""
+def register_extensions(app, run_scheduler=False):
+    """register extensions to the app.
+
+    run_scheduler: 이 프로세스가 예약을 **실행**하는가. create_app() 이 그대로
+    넘겨준다 — 기본은 False 이고 데몬만 True 다(아래 스케줄러 초기화 참조).
+    """
     app.jinja_env.add_extension('jinja2.ext.do')  # Global values in jinja
 
     db.init_app(app)  # Influx db time-series database
@@ -721,10 +730,19 @@ def register_extensions(app):
             except Exception as e:
                 logger.warning(f"Startup MCP cleanup failed: {e}")
 
-    # Initialize APScheduler after DB is ready
-    if os.environ.get("ALEMBIC_RUNNING") != "1" and os.environ.get("AOT_SKIP_SCHEDULER") != "1":
+    # 예약 스케줄러. **실행하는 프로세스는 데몬 하나뿐**이고(run_scheduler=True),
+    # 웹·MCP·스크립트는 등록·해제만 되는 멈춘 상태로 붙는다. 두 곳이 실행하면
+    # 같은 예약이 두 번 발화하고 그 안에는 장치 제어가 들어 있다 — 근거와 함정은
+    # AISchedulerService.init_app 의 독스트링에 있다.
+    #
+    # AOT_SKIP_SCHEDULER 는 "여기서는 실행하지 말라" 는 기존 안전 스위치라 그대로
+    # 존중한다. 다만 이제 기본값이 이미 '실행 안 함' 이라, 이 변수는 데몬에서
+    # 일시적으로 실행을 끄고 싶을 때만 의미가 있다.
+    if os.environ.get("ALEMBIC_RUNNING") != "1":
         from aot.ai.services.ai_scheduler_service import AISchedulerService
-        AISchedulerService.init_app(app)
+        _execute_schedules = (run_scheduler
+                              and os.environ.get("AOT_SKIP_SCHEDULER") != "1")
+        AISchedulerService.init_app(app, execute=_execute_schedules)
         
 
     # v17.0: Memory Profiler (Phase 0 - Baseline measurement)

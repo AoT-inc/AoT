@@ -17,6 +17,16 @@
     </div>
 
     <div class="aot-modal-group-title">{{_('Permissions')}}</div>
+    {# ⚠ 아래 목록에서 bypass_group_scope 줄이 빠지면 역할을 저장할 때마다
+       면제가 **조용히 해제된다** — 체크박스는 꺼져 있을 때 아무것도 보내지
+       않고, BooleanField 는 그것을 False 로 읽는다. 관리자 역할이 그렇게
+       풀리면 첫 부여 순간 아무도 조작할 수 없게 된다.
+
+       이 설명은 원래 이 목록 리터럴 **안**에 있었다. Jinja 는 문(statement)
+       식(式) 안쪽의 주석 구문을 주석으로 읽지 않아 TemplateSyntaxError
+       (unexpected char) 로 렌더 자체가 실패했고, 역할 드로어가 "서버와 통신할
+       수 없습니다" 만 띄우고 있었다 — HEAD 에서도 똑같이 재현된다. 주석을 식
+       밖으로 옮겨 되살린다(2026-09-09). #}
     <div class="aot-modal-container">
       {% for field, attr in [
         (form_user_roles.view_logs, each_role.view_logs),
@@ -28,10 +38,6 @@
         (form_user_roles.edit_plots, each_role.edit_plots),
         (form_user_roles.edit_settings, each_role.edit_settings),
         (form_user_roles.reset_password, each_role.reset_password),
-        {# 이 줄이 빠지면 역할을 저장할 때마다 면제가 **조용히 해제된다** —
-           체크박스는 꺼져 있을 때 아무것도 보내지 않고, BooleanField 는 그것을
-           False 로 읽는다. 관리자 역할이 그렇게 풀리면 첫 부여 순간 아무도
-           조작할 수 없게 된다. #}
         (form_user_roles.bypass_group_scope, each_role.bypass_group_scope)
       ] %}
       <div class="aot-modal-option-row">
@@ -53,7 +59,7 @@
   </div>
 
   <div class="modal-footer">
-    <button type="button" class="btn aot-pill-btn" data-dismiss="modal">{{_('Close')}}</button>
+    <button type="button" class="btn aot-pill-btn aot-pill-btn-secondary" data-dismiss="modal">{{_('Close')}}</button>
     {{form_user_roles.user_role_delete(class_='btn aot-pill-btn aot-pill-btn-danger',
       **{'onclick':'return confirm("' + _('Are you sure you want to delete this role?') + '")'})}}
     {{form_user_roles.user_role_save(class_='btn aot-pill-btn aot-pill-btn-primary')}}

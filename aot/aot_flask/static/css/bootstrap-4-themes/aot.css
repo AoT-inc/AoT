@@ -135,7 +135,7 @@ body {
      settings/custom_ui bd_secondary) — 그 위에 얹히는 카드(.widget-outer,
      .aot-entry-item, .aot-modal-container 등)가 배경 기본(--aot-surface-card)
      으로 대비를 이룬다. docs/design/color-system.md 참조. */
-  background-color: var(--aot-surface-body, #F3F6F5);
+  background-color: var(--aot-surface-body, #e0e6e3);
 }
 
 /* 모바일 가독성: 제목/버튼류 굵기 표준화. 새 값을 만들지 않고 위젯 텍스트

@@ -524,6 +524,8 @@
         <div class="tab-pane fade" id="pane-color-background" role="tabpanel">
           <div class="aot-settings-section" id="group-background">
             {% set bg_fields = [
+              ('bd_divider',  _('Divider Line'),   _('Line between items inside one container — lists, option rows. Not a border around anything')),
+              ('bd_divider_soft', _('Divider Line (Soft)'), _('Lighter divider for dense lists, where a full-weight line would be noisy')),
               ('bd_primary',   _('Background Primary'),   _('Page cards — widgets, list rows, modal groups')),
               ('bd_secondary', _('Background Secondary'), _('Page background behind cards, list headers, modal body'))
             ] %}
@@ -565,6 +567,7 @@
               ('bg_on',       _('Channel On'),     _('Output/input channel row background when on; also a general surface color in facility widgets')),
               ('bg_off',      _('Channel Off'),    _('Output/input channel row background when off; also a general surface color in facility widgets')),
               ('bg_pending',  _('Pending'),        _('Row background while a command awaits device confirmation')),
+              ('bg_fault',    _('Unresponsive'),   _('Row/card background when a device stops answering — a different thing from Warning State, which is a person pausing it on purpose')),
               ('tint_warning_bg', _('Unverified Running Tint'), _('Overrides Channel On when a device with no confirmation path is running — forces this color even over bg_on')),
               ('tint_warning_fg', _('Unverified Running Tint Text'), _('Text color used with the tint above, and on map-popup device name warnings')),
               ('color_success', _('Success'), _('Semantic color for success/normal results — a different axis from the device-state colors above')),
@@ -840,6 +843,8 @@
       color_danger:  '#DF5353', color_info:    '#029ACF',
       tint_success_bg: '#EEF6E6', tint_success_fg: '#557A30',
       tint_danger_bg:  '#FBE7E7', tint_danger_fg:  '#B23B3B',
+      bg_fault:        '#FBE7E7', bd_divider:      '#DDDDDD',
+      bd_divider_soft: '#f0f0f0',
       tint_info_bg:    '#E7F4FB', tint_info_fg:    '#06709B'
     };
 
@@ -922,6 +927,9 @@
       tint_success_bg:      'tint-success-bg',
       tint_success_fg:      'tint-success-fg',
       tint_danger_bg:       'tint-danger-bg',
+      bg_fault:             'bg-fault',
+      bd_divider:           'border-neutral',
+      bd_divider_soft:      'border-light',
       tint_danger_fg:       'tint-danger-fg',
       tint_info_bg:         'tint-info-bg',
       tint_info_fg:         'tint-info-fg',

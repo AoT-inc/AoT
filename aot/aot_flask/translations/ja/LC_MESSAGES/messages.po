@@ -5397,6 +5397,10 @@ msgstr "更新継続時間は少なくとも1秒である必要があります"
 msgid "Enable Drag Handle"
 msgstr "ドラッグハンドルを有効化"
 
+#: aot_flask/forms/forms_dashboard.py:58
+msgid "Full Width on Mobile"
+msgstr "モバイルで全幅"
+
 #: aot_flask/forms/forms_dependencies.py:14
 msgid "Install All Dependencies"
 msgstr "すべての依存関係をインストール"

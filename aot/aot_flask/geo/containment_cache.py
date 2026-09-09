@@ -83,29 +83,74 @@ def store(entries):
     if not entries:
         return 0
     now = _naive_utc(utc_now())
+    # 같은 배치에 같은 (kind, child) 가 두 번 들어오면 둘 다 INSERT 로 잡혀
+    # UNIQUE 위반이 난다 — 부르는 쪽이 중복을 걸러 주기를 기대하지 않는다.
+    deduped = {}
+    for kind, child, parent, geo_id in entries:
+        deduped[(kind, child)] = (parent, geo_id)
     try:
         existing = {}
-        keys = {(k, c) for (k, c, _p, _g) in entries}
         for r in GeoContainmentCache.query.filter(
-                GeoContainmentCache.child_uuid.in_([c for (_k, c) in keys])).all():
+                GeoContainmentCache.child_uuid.in_(
+                    [c for (_k, c) in deduped])).all():
             existing[(r.child_kind, r.child_uuid)] = r
 
-        for kind, child, parent, geo_id in entries:
+        for (kind, child), (parent, geo_id) in deduped.items():
             row = existing.get((kind, child))
             if row is None:
                 db.session.add(GeoContainmentCache(
                     child_kind=kind, child_uuid=child, parent_uuid=parent,
                     geo_id=geo_id, computed_at=now))
-            elif row.parent_uuid != parent or row.geo_id != geo_id:
+                continue
+            if row.parent_uuid != parent or row.geo_id != geo_id:
+                row.parent_uuid = parent
+                row.geo_id = geo_id
+            # **값이 같아도 computed_at 은 갱신한다.**
+            #
+            # 예전에는 값이 바뀔 때만 찍었다. 그런데 기하가 안정적이면 값은
+            # 늘 같으므로 computed_at 이 영원히 처음 그대로 남고, _TTL_S(24h)
+            # 가 지나는 순간 load() 가 전 행을 걸러 낸다. 그 뒤로는 매 요청이
+            # 캐시 미스 → 전량 재계산인데, 재계산 결과도 같은 값이라 다시
+            # 아무것도 안 찍혀 **캐시가 영영 못 살아난다.** 지도를 건드리지
+            # 않을수록 확실히 죽는 구조였다(실측 2026-09-08: 김제 도형 301개,
+            # geo_containment_cache 333행이 전부 전날 것이라 100% 미스 →
+            # descendant_target_ids 가 호출마다 shapely contains 약 15,700회,
+            # 0.45초. 노트 조회 한 건이 3.3초까지 밀린 원인의 큰 몫이었다).
+            #
+            # 여기서 찍는 것은 "이 값이 방금 계산으로 확인됐다" 는 사실이다.
+            # TTL 은 무효화를 빠뜨린 경로를 위한 안전망인데(위 _TTL_S 주석),
+            # 재계산은 기하에서 다시 파생하므로 그때 값이 틀렸으면 위 분기가
+            # 고친다 — 확인 시각을 갱신해도 안전망은 그대로다.
+            row.computed_at = now
+        db.session.commit()
+        return len(deduped)
+    except Exception:
+        # 여러 요청이 동시에 같은 키를 처음 채우면 INSERT 가 겹쳐 UNIQUE 로
+        # 깨진다(실측: gunicorn 스레드 8개, 2026-09-07 하루 78건). 한 번은
+        # 다시 읽어 갱신으로 처리한다 — 그 사이 다른 요청이 이미 넣었다는
+        # 뜻이므로, 여기서 포기하면 캐시가 비는 창이 계속 남는다.
+        db.session.rollback()
+        try:
+            existing = {}
+            for r in GeoContainmentCache.query.filter(
+                    GeoContainmentCache.child_uuid.in_(
+                        [c for (_k, c) in deduped])).all():
+                existing[(r.child_kind, r.child_uuid)] = r
+            wrote = 0
+            for (kind, child), (parent, geo_id) in deduped.items():
+                row = existing.get((kind, child))
+                if row is None:
+                    continue          # 아직도 없으면 다음 계산에 맡긴다
                 row.parent_uuid = parent
                 row.geo_id = geo_id
                 row.computed_at = now
-        db.session.commit()
-        return len(entries)
-    except Exception:
-        db.session.rollback()
-        current_app.logger.exception('containment_cache: 저장 실패')
-        return 0
+                wrote += 1
+            db.session.commit()
+            return wrote
+        except Exception:
+            db.session.rollback()
+            current_app.logger.exception('containment_cache: 저장 실패')
+            return 0
 
 
 def invalidate(geo_id=None, child_uuids=None):

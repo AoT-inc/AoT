@@ -400,13 +400,15 @@
     width: 96px;
     flex-shrink: 0;
     box-sizing: border-box;
-    border-radius: var(--aot-btn-pill-radius);
-    border: 1px solid var(--aot-border-neutral);
+    border-radius: 0;
+    /* 2026-09-09 알약 -> 밑줄(ui-guide §2-2). 색 코드를 손으로 적는 칸이다. */
+    border: 0;
+    border-bottom: 2px solid var(--aot-border-neutral);
     padding: 0 0.6rem;
     height: 28px;
     font-size: var(--aot-font-size-xs);
     font-family: monospace;
-    background-color: var(--aot-input-bg);
+    background-color: transparent;
     color: var(--aot-text-main);
     text-transform: uppercase;
     letter-spacing: 0.03em;
@@ -414,8 +416,7 @@
 }
 
 .aot-color-hex:focus {
-    border-color: var(--aot-input-focus-border);
-    box-shadow: 0 0 0 0.15rem var(--aot-focus-ring);
+    border-bottom-color: var(--aot-input-focus-border);
     outline: none;
 }
 
@@ -548,24 +549,28 @@
 }
 
 .aot-color-popover-hex-input {
+    /* 2026-09-09 알약 -> 밑줄(ui-guide §2-2). 색 코드를 손으로 적는 칸이라
+       둥근 양 끝이 좌우 패딩을 먹으면 보이는 글자 수가 줄어든다.
+       포커스 폴백이 #F2D524(노랑)였다 — 시스템 밖 색이고, 가이드는 노란색을
+       액션에 쓰지 않는다. 토큰이 없을 때만 쓰이던 값이라 눈에 잘 안 띄었다. */
     flex: 1 1 auto;
     height: 32px;
-    border: 1px solid var(--aot-border-neutral, #dddddd);
-    border-radius: var(--aot-btn-pill-radius, 9999px);
-    padding: 0 0.7rem;
+    border: 0;
+    border-bottom: 2px solid var(--aot-border-neutral, #dddddd);
+    border-radius: 0;
+    background-color: transparent;
+    padding: 0 2px;
     font-size: var(--aot-font-size-xs);
     font-family: monospace;
     text-transform: uppercase;
     letter-spacing: 0.03em;
     text-align: center;
-    background: var(--aot-input-bg, #ffffff);
     color: var(--aot-text-main, #444);
 }
 
 .aot-color-popover-hex-input:focus {
     outline: none;
-    border-color: var(--aot-input-focus-border, #F2D524);
-    box-shadow: 0 0 0 0.15rem var(--aot-focus-ring, rgba(19,38,27,0.12));
+    border-bottom-color: var(--aot-input-focus-border, #13261B);
 }
 
 /* ============================================================

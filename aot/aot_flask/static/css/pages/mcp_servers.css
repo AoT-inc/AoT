@@ -92,8 +92,10 @@
 
 /* Form Styles */
 .premium-input {
-    border-radius: var(--aot-radius-md);
-    border: 1px solid var(--aot-border-neutral);
+    border-radius: 0;
+    /* 2026-09-09 알약/테두리 -> 밑줄(ui-guide §2-2). 쓰는 것은 밑줄이다. */
+    border: 0;
+    border-bottom: 2px solid var(--aot-border-neutral);
     padding: 12px 16px;
     transition: all 0.2s;
 }

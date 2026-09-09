@@ -56,6 +56,12 @@ GeoShape 는 도형의 종류를 두 곳에 들고 있다 — `type` 컬럼과
                   weather_bindings.input_uuid)가 실존하지 않는 장치를 가리킴.
                   JSON 안이라 DB 가 볼 수 없고 어느 삭제 경로도 정리하지
                   않는다 — 탐지가 유일한 방어다.
+  duplicate-fitting-id  GeoFacility.fittings 안에서 같은 id 를 쓰는 설비가 둘
+                  이상. id 는 설비의 신원인데 읽는 쪽마다 해석이 다르다 —
+                  면적·유량은 행마다 더하고, 배선은 첫 행이, 베이 귀속은
+                  마지막 행이 이긴다. 편집기의 삭제도 id 로 지우므로 하나를
+                  지우면 쌍둥이까지 사라진다. identical=True 면 내용도 같아
+                  합쳐도 잃을 것이 없고, False 면 사람이 봐야 한다.
   binding-drift   레거시 저장처에는 있는데 geo_binding 에 현재 바인딩이 없는
                   연결. 두 저장처가 공존하는 Phase B 완료 전까지의 감시자다.
                   geo_binding 테이블이 없는 설치에서는 건너뛴다.
@@ -412,6 +418,39 @@ def collect(map_uuid=None, tolerance=1e-6):
                 dict(_where(s), type=s.type, device_id=raw,
                      channel_id=s.channel_id))
 
+    # ── 같은 id 를 쓰는 설비 ────────────────────────────────────────────
+    # id 는 설비의 신원이고 읽는 쪽마다 다르게 해석한다 — 면적·유량은 행마다
+    # 더하고, 배선은 첫 행이, 베이 귀속은 마지막 행이 이긴다. 그래서 겹친 id
+    # 하나가 소비자별로 다른 답을 만든다. 저장 경로는 이제 막지만(2026-09-08),
+    # 이미 들어와 있는 것과 다른 경로로 들어온 것은 여기서만 보인다.
+    # 자동으로 고치지 않는다: 실측된 두 사례가 정확히 반대였다 — 낡은 치수 대
+    # 현재 치수인 외피 창은 낡은 쪽을 버려야 했고, 같은 id 를 받은 스프링클러
+    # 둘은 양쪽 다 실재해서 하나에 새 id 를 줘야 했다.
+    for fac in GeoFacility.query.all():
+        by_id = defaultdict(list)
+        for item in _json_items(getattr(fac, 'fittings', None)):
+            fid = item.get('id')
+            if fid:
+                by_id[fid].append(item)
+        for fid, items in by_id.items():
+            if len(items) < 2:
+                continue
+            try:
+                identical = len({json.dumps(i, sort_keys=True, default=str)
+                                 for i in items}) == 1
+            except (TypeError, ValueError):
+                identical = False
+            findings['duplicate-fitting-id'].append({
+                'facility': fac.name,
+                'facility_uuid': fac.unique_id,
+                'item_id': fid,
+                'kind': items[0].get('kind'),
+                'count': len(items),
+                # 내용까지 같으면 하나로 합쳐도 잃을 것이 없다. 다르면 어느
+                # 쪽이 진짜인지 사람이 봐야 한다.
+                'identical': identical,
+            })
+
     # ── 실존하지 않는 장치를 가리키는 시설 참조 ─────────────────────────
     # JSON blob 안의 참조는 어느 삭제 경로도 정리하지 않는다 — DB 가 볼 수
     # 없는 자리이기 때문이다. 그래서 탐지 계층이 유일한 방어다.
@@ -756,6 +795,7 @@ HEADINGS = {
     'phantom-map':     '유령 지도 (GeoMap 행 없는 geo_id) — 자동삭제 금지',
     'orphan-device-shape': '실존하지 않는 장치를 가리키는 도형 (고아 도형)',
     'dangling-fitting':    '실존하지 않는 장치를 가리키는 시설 참조',
+    'duplicate-fitting-id': '같은 id 를 쓰는 설비 (identical=True 면 내용도 동일)',
     'binding-drift':       '레거시 저장처에는 있는데 geo_binding 에 없는 연결',
     'plot-bad-geometry': '식생 구획이 폴리곤이 아님 (VP-1)',
     'plot-bad-dates':    '식생 구획의 종료일이 파종일보다 빠름 (VP-2)',

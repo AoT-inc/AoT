@@ -1,0 +1,92 @@
+/* aot-mcp-approval.css — shared styles for aot-mcp-approval.js
+   (js/common/aot-mcp-approval.js). Any widget embedding the approval
+   summary+modal loads this one file — see widget_mcp_review.py for the
+   reference consumer.
+
+   구조는 새로 짓지 않고 `/plots`(구획 페이지, aot_flask/static/css/pages/
+   geo-plots.css)의 목록 패턴을 옮겨왔다 — 카드 하나(.aot-mcprev-list) 안에
+   행을 쌓고, 행 사이는 개별 박스가 아니라 얇은 구분선(border-light) 하나로만
+   나눈다(그 옅은 선의 색은 2026-09-09 부터 custom_ui 의 `bd_divider_soft`
+   필드가 발행한다 — 그전까지는 코드 고정값이었다). 색은 전부 custom_ui 실토큰. 승인 없이 danger(빨강)를 쓰지 않는다 —
+   결정 버튼은 둘 다 면으로 선다 — 거부는 보조 버튼 배경(btn_secondary_bg),
+   승인은 브랜드색(btn_primary_bg). 처음에는 거부를 기본 .aot-pill-btn
+   (흰 면 + 회색 윤곽선)으로 뒀는데, 그 윤곽선이 "버튼에 테두리를 두르지
+   않는다"(ui-guide §4-7)와 어긋났다. 조용한 버튼을 채울 밝은 면 필드가
+   시스템에 없어 보조 버튼 배경을 쓴다(2026-09-09 결정). 물리 위험 경고도 색이
+   아니라 문구로 전달한다. */
+
+/* 텍스트("N건 승인 대기")와 실제 버튼("보기")을 분리한다 — 덩어리 전체를
+   누르게 하면 클릭 가능한 부분인지 알아보기 어렵다(2026-09-09 지적).
+   좌우 여백은 space-4(카드 표준 안여백)로 넉넉히 준다. */
+.aot-mcprev-summary {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: var(--aot-space-3); padding: var(--aot-space-3) var(--aot-space-4);
+}
+.aot-mcprev-summary-count { font-size: var(--aot-font-size-sm); color: var(--aot-color-text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* 전체선택·일괄승인·일괄거부는 다른 모달과 같은 modal-footer(우측 아래)에
+   산다(aot-modal-modern.css 의 .aot-option-modal .modal-footer). 그 규칙은
+   flex-wrap:nowrap 이라(다른 모달과의 일관성을 위해 그대로 둔다) 셋을
+   전부 담기엔 좁을 때 화면 밖으로 잘린다(2026-09-09 모바일에서 실제
+   확인) — 그래서 안쪽에 래퍼를 하나 더 둬 이 래퍼만 줄바꿈되게 한다.
+   modal-footer 자체는 항상 한 개(이 래퍼)만 자식으로 가지므로 nowrap 이어도
+   문제없다. */
+.aot-mcprev-footer-wrap {
+  display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap;
+  gap: var(--aot-space-2); row-gap: var(--aot-space-1); width: 100%;
+}
+/* 전체 선택도 거부·승인과 같은 .aot-pill-btn 이다 — 체크박스+라벨 조합은
+   버튼 두 개와 세로 크기가 달라 정렬이 안 맞았다(2026-09-09 지적). 같은
+   컴포넌트를 쓰면 셋의 높이·기준선이 저절로 맞는다. */
+.aot-mcprev-selected-count { margin-left: var(--aot-space-1); }
+
+/* 목록 — 카드 하나에 행을 쌓는다(/plots 의 .aot-plots-list 와 동일 모양).
+   높이는 직접 제한하지 않는다 — 부모 .aot-option-modal .modal-body 가 이미
+   flex:1 1 auto + overflow-y:auto 로 헤더/푸터를 뺀 나머지를 정확히 채워
+   스크롤한다(aot-modal-modern.css). 여기서 또 max-height(vh)를 걸면
+   실제 사용 가능한 높이보다 작게 잘려 아래쪽이 빈 채로 남는다(2026-09-09
+   모바일 전체화면에서 실제 확인된 버그). */
+.aot-mcprev-list {
+  /* 면의 기본 모서리는 xl(20px)이다 — 정비된 entry 카드·대시보드 위젯이
+     쓰는 값(docs/design/ui-guide.md §2-2·§4-2). lg(16px)를 쓰면 이 목록만
+     다른 곡률로 서서, 같은 화면의 다른 카드와 나란히 놓였을 때 튄다. */
+  background: var(--aot-surface-card); border-radius: var(--aot-radius-xl);
+  padding: var(--aot-space-2) var(--aot-space-4);
+}
+
+.aot-mcprev-row {
+  display: flex; flex-direction: column;
+  padding: var(--aot-space-3) 0;
+  border-bottom: 1px solid var(--aot-border-light);
+}
+.aot-mcprev-row:last-child { border-bottom: none; }
+
+/* 카드는 두 줄 고정이다(2026-09-09 요청). 1행: 체크박스+제목만
+   (.aot-mcprev-row-head) — 체크박스를 줄 밖에 두고 margin-top 을 눈대중으로
+   맞추면 폰트에 따라 다시 어긋나므로(2026-09-09 지적) 같은 줄의 flex
+   항목으로 둬 align-items:center 가 정확히 맞추게 한다. 2행: 버튼
+   (.aot-mcprev-row-actions, 아래) 우측 정렬. 부연(물리 경고·사유·신청자/
+   만료·원본 파라미터)은 카드에서 전부 빼서 "편집" 모달에만 둔다 —
+   aot-mcp-approval.js populateModifyFields() 참고. */
+.aot-mcprev-row-head {
+  display: flex; align-items: center; gap: var(--aot-space-2);
+}
+/* 제목을 별도 래퍼(.aot-mcprev-row-main) 안에 둔다 — 나중에 제목 아래
+   텍스트가 더 생기더라도 같은 부모의 자식으로 쌓이면 좌측 좌표가 저절로
+   같아진다. 정렬은 값을 맞춰서가 아니라 이런 구조로 보장한다. */
+.aot-mcprev-row-main { flex: 1 1 auto; min-width: 0; }
+/* 제목은 굵기가 아니라 크기로 앞선다 — /plots 의 .aot-plots-subject 와 같은
+   규약(geo-plots.css:22 "굵기가 아니라 크기로 앞선다"). */
+.aot-mcprev-row-title { font-size: var(--aot-font-size-base); color: var(--aot-color-text-primary); }
+/* 아래 두 클래스는 이제 카드가 아니라 "편집" 모달 안(populateModifyFields)
+   에서 신청자/만료·원본 파라미터 표시에 쓰인다 — 카드에서 쓰던 것과 같은
+   보조 텍스트 스타일을 그대로 옮겨 재사용한다. */
+.aot-mcprev-row-sub { margin-top: var(--aot-space-1); font-size: var(--aot-font-size-sm); color: var(--aot-color-text-secondary); }
+.aot-mcprev-raw { font-size: var(--aot-font-size-2xs); white-space: pre-wrap; margin: var(--aot-space-1) 0 0; }
+.aot-mcprev-row-details summary { cursor: pointer; }
+
+/* 2행 — 결정 버튼, 우측 정렬(2026-09-09 요청). */
+.aot-mcprev-row-actions {
+  display: flex; justify-content: flex-end; gap: var(--aot-space-2);
+  margin-top: var(--aot-space-2);
+}

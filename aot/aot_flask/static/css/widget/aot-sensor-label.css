@@ -406,7 +406,7 @@
   /* 셸과 **같은 배경**이어야 한다. `inherit` 은 부모(투명한 본문)를 따라가
      스크롤할 때 차트가 제목 뒤로 비친다. 값은 셸이 쓰는 토큰 그대로다
      (.maplibregl-popup-content, map.css). */
-  background: var(--aot-surface-body, #F3F6F5);
+  background: var(--aot-surface-body, #e0e6e3);
 }
 
 /* Section tab navigation — 헤더와 분리된 독립 행 (상위 단계 탭) */
@@ -792,8 +792,12 @@
   font-size: inherit;
   font-family: inherit;
   color: var(--aot-color-text-primary);
-  background: var(--aot-bg-off);
-  border: 1px solid var(--aot-border-light);
+  /* 2026-09-09: 여러 줄 입력은 옅은 면 + 8px 이 맞다(ui-guide §2-2) —
+     테두리만 걷어낸다. 배경이 --aot-bg-off(채널 꺼짐 **상태색**)였다:
+     장치 상태를 입력칸 면에 빌려 쓴 계열 위반이라, 입력 면 토큰으로
+     옮긴다(§3-3 "계열을 넘나들지 않는다"). */
+  background: var(--aot-input-bg);
+  border: 0;
   border-radius: var(--aot-radius-sm);
   resize: vertical;
 }
@@ -1272,7 +1276,11 @@
   transition: opacity 0.15s ease, width 0.15s ease;
 }
 .aot-map-sheet-grab:hover::before { opacity: 0.85; width: 56px; }
-.aot-map-sheet-grab:focus-visible { outline: 2px solid var(--aot-focus-ring, #4c9aff); outline-offset: 2px; }
+/* 포커스 링은 §4-10 의 한 값이다 — 브랜드색 2px, offset 2px.
+   폐기한 --aot-focus-ring 을 아웃라인 색으로 쓰고 있었고, 폴백이
+   #4c9aff(시스템 밖 파랑)라 토큰이 없으면 파랗게 그려졌다. */
+.aot-map-sheet-grab:focus-visible {
+  outline: 2px solid var(--aot-color-brand-primary, #13261B); outline-offset: 2px; }
 
 /* 그랩바는 시트 **안** 위쪽 여백에 앉는다. 예전에는 래퍼에 padding-top 을 주고
    시트 높이에서 그만큼 또 뺐는데, 래퍼의 콘텐츠 영역이 이미 줄어든 뒤라 18px 을

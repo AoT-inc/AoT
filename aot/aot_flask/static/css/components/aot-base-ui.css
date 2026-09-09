@@ -59,17 +59,39 @@
 }
 
 /* ------------------------------------------------------------
-   5. AoT Widget Specific Overrides (.frame-aot)
-   - Applies pill shape to buttons and inputs within widgets.
------------------------------------------------------------- */
-.frame-aot input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]),
+   5. 위젯 프레임(.frame-aot) 안의 컨트롤
+   ------------------------------------------------------------
+   2026-09-09: 예전에는 **입력과 버튼을 한 규칙으로** 묶어 둘 다 알약 +
+   1px 테두리로 만들었고 `!important` 까지 붙어 있었다. 그래서 입력
+   컴포넌트를 밑줄로 바꿔도(aot-modal-modern.css) 위젯 안에서만 알약이
+   남았다 — "일반 텍스트 입력이 아직 알약" 이라는 지적이 나온 자리다.
+
+   모양은 **역할이 정한다**(ui-guide §2-2): 누르는 것은 알약, 쓰는 것은
+   밑줄. 그래서 둘을 가른다.
+
+   `!important` 를 뗀다. 이기려던 상대가 부트스트랩인데 지금은
+   `@layer vendor` 로 내려가 있어, 레이어 밖인 이 선언에 특이도와 무관하게
+   진다. 테두리 색이던 `--border-light-disabled`(#cccccc)는 custom_ui 밖의
+   고정색이라 운영자가 못 바꾸는 값이었다 — 구분선 정본이 발행하는
+   `--aot-border-neutral`(bd_divider)로 옮긴다.
+------------------------------------------------------------- */
 .frame-aot button {
-    border-radius: var(--aot-btn-pill-radius) !important;
-    /* Ensure padding for text inputs so text doesn't hit the curve */
+    border-radius: var(--aot-btn-pill-radius);
     padding-left: 0.8em;
     padding-right: 0.8em;
-    border: 1px solid var(--border-light-disabled);
-    /* Ensure visibility if border is missing */
+}
+
+.frame-aot input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]) {
+    border: 0;
+    border-bottom: 2px solid var(--aot-border-neutral);
+    border-radius: 0;
+    background-color: transparent;
+    padding-left: 2px;
+    padding-right: 2px;
+}
+
+.frame-aot input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):focus {
+    border-bottom-color: var(--aot-input-focus-border);
 }
 
 /* Optional 1px border */
@@ -1380,11 +1402,99 @@ input:checked+.slider:before {
   margin-bottom: 4px;
 }
 
-/* Page-level section container — replaces inline border/padding on full pages */
+/* Page-level section container — replaces inline border/padding on full pages.
+   2026-09-09 테두리 제거(사용자 결정). 선이 아니라 배경 밝기로 나눈다
+   (ui-guide §2-2) — 카드 흰색이 바닥 위에 얹히므로 선이 없어도 선다.
+   /info 에서 같은 페이지의 코드 블록(테두리 없음)과 다르게 보이던 자리다. */
 .aot-page-section {
-  border: 1px solid var(--aot-border-neutral);
+  border: none;
   border-radius: var(--aot-radius-sm);
   padding: 1rem 1.25rem;
   margin-bottom: 1.5rem;
   background: var(--aot-surface-card);
+}
+/* ═══════════════════════════════════════════════════════════════════════
+   승인 대기 카드 — pages/ai/_mcp_pending_approvals.html (AI 요청 화면과
+   일정 화면이 공유하는 include). 두 화면이 같은 모습이어야 하므로 전역
+   컴포넌트로 둔다. docs/design/ui-guide.md 의 디자인 언어를 따른다.
+
+   그전에는 카드 마크업이 인라인 스타일로 모양을 정했다 —
+   `border-left:3px solid var(--aot-brand,#13261B); padding-left:10px`.
+   CSS 로는 인라인을 이길 수 없어(!important 없이는) 구조부터 옮겼다.
+   덤으로 --aot-brand 는 **존재하지 않는 토큰**이라 폴백 #13261B 로만
+   그려지고 있었다 — 운영자가 브랜드색을 바꿔도 이 띠만 안 바뀌었다.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+.aot-appr-card {
+  background: var(--aot-surface-card);
+  border-radius: var(--aot-radius-xl);      /* 면의 기본 (§2-2) */
+  /* 바깥 여백 16 + 안쪽 패딩 16 = 글자가 32 정렬선에 온다 (§2-3).
+     바깥 여백을 빼면 카드가 화면 가장자리에 붙고, 안쪽 글자도 16 에 서서
+     같은 화면의 카드 밖 글자(32)와 어긋난다. */
+  margin: 0 var(--aot-space-4);
+  padding: var(--aot-space-4);
+}
+.aot-appr-card + .aot-appr-card { margin-top: var(--aot-space-2); }
+
+/* 대기 건수 — 제목 옆 부연이다. 크기는 제목을 따르고 굵기·색만 내린다
+   (§2-3 글자 역할). 색 있는 알약(badge)으로 만들지 않는다. */
+.aot-appr-count {
+  margin-left: var(--aot-space-2);
+  font-weight: 400;
+  color: var(--aot-color-text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+/* 핵심 — 카드의 첫 줄이자 결정의 근거다. 제목이 아니라 **문장**이라
+   길어지면 여러 줄이 된다(서버가 만든 사람 읽는 문구, 실측 4줄).
+   본문 줄높이(1.6)는 네 줄이 되면 지나치게 성기다 — 1.45 로 조인다. */
+.aot-appr-what {
+  font-size: var(--aot-font-size-base); font-weight: 400;   /* 크기로 앞선다 */
+  line-height: 1.45;
+  color: var(--aot-color-text-primary);
+}
+
+/* 행동은 **오른쪽 아래**다 (§3-2 ②).
+   그전에는 핵심 줄과 같은 줄에 두고 좁아지면 아랫줄로 내려가게 했는데,
+   이 카드의 핵심은 한 줄이 아니라 문장이라 실제로는 늘 내려갔다. 그러면
+   부연·사유가 **버튼보다 뒤에** 와서 읽기 전에 누르는 순서가 된다.
+   읽을 것이 여러 줄인 카드는 행동을 맨 아래에 둔다 — 가이드가 처음부터
+   "오른쪽 또는 오른쪽 아래" 라고 한 이유가 이 경우다. */
+.aot-appr-acts {
+  display: flex; justify-content: flex-end;
+  gap: var(--aot-space-3);          /* 되돌릴 수 없는 실행이라 12px */
+  margin-top: var(--aot-space-4);
+}
+
+/* 부연 — 크기와 색을 함께 내린다 (§3-2 ③). */
+.aot-appr-sub {
+  margin-top: var(--aot-space-1);
+  font-size: var(--aot-font-size-xs);
+  color: var(--aot-color-text-secondary);
+}
+
+/* 실행 계획 안내 — **상자로 감싸지 않는다.** 서버가 만든 사람 읽는
+   문구라 카드의 본문이지 별도 영역이 아니다. 면과 4px 띠를 씌웠더니
+   한 카드 안에 면이 둘이 되고 요소가 늘었다(§1 "더할지 고민되면 뺀다").
+   본문 역할(sm / 400 / 1차)로 두면 부연(xs / 2차)과 저절로 갈린다. */
+.aot-appr-reason {
+  margin-top: var(--aot-space-3);
+  font-size: var(--aot-font-size-sm);
+  color: var(--aot-color-text-primary);
+  white-space: pre-wrap;
+}
+
+/* 원본 인자 — 접어 두는 참고 자료다. 펼쳤을 때만 면을 갖는다. */
+.aot-appr-raw { margin-top: var(--aot-space-2); }
+.aot-appr-raw > summary {
+  cursor: pointer; font-size: var(--aot-font-size-xs);
+  color: var(--aot-color-text-secondary);
+}
+.aot-appr-raw > pre {
+  margin: var(--aot-space-2) 0 0;
+  padding: var(--aot-space-3) var(--aot-space-4);
+  background: var(--aot-surface-body);
+  border-radius: var(--aot-radius-sm);
+  font-size: var(--aot-font-size-2xs);
+  white-space: pre-wrap;
 }

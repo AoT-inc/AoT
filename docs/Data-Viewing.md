@@ -33,6 +33,7 @@ With the current tab **unlocked**:
 -   **Move / resize** — drag a widget to reposition it, or drag its corner to resize. Positions are saved automatically.
 -   **Configure a widget** — click the widget's **gear** icon to open its settings in a drawer that slides in from the right edge (a bottom sheet on phones). For most widgets there's no Save button: each option you change is applied and saved automatically after a short pause, and the widget re-renders in place. If a change doesn't turn out the way you wanted, click **되돌리기 (Revert)** in the drawer's footer to restore every option to what it was when you opened the drawer. A few options that would require rebuilding the widget from scratch — such as the AoT Map widget's base map or 3D render mode — still need the classic Save button; see [AoT Map](#widget-map) below.
 -   **Move a widget to another tab** — in the widget's settings drawer, pick a different tab from the **Tab** dropdown (shown when more than one tab exists). Like any other option, the move is saved automatically.
+-   **Full Width on Mobile** — a toggle in the widget's settings drawer, under the basic settings. On a phone (two-column layout), turning it on gives the widget a whole row to itself; turning it off puts two widgets side by side. Widgets that are hard to read at a narrow width — the map, calendar, sequence controller — are added with it on, the rest with it off. It does not affect the desktop layout.
 
 ---
 

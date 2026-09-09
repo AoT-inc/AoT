@@ -173,9 +173,14 @@ a.aot-modal-section-title-collapsible + .collapse + .aot-modal-container:not(:ha
 }
 
 .aot-modal-container {
-    background-color: var(--aot-input-bg);
-    border: 1px solid var(--aot-border-neutral);
-    border-radius: var(--aot-radius-lg);
+    /* 카드(2단)다. 바닥 위에 흰 면으로 떠서 선 없이도 구분된다(§2-2).
+       예전에는 --aot-input-bg 를 빌려 썼는데, 그 토큰이 입력칸 면을 따라
+       (83aeb0c5) 바닥색으로 바뀌면서 바닥과 같은 색이 되어 묻혔다.
+       **뜻이 다른 값은 따로 읽는다.** */
+    background-color: var(--aot-surface-card);
+    /* 선이 아니라 밝기로 나눈다(§2-2). */
+    border: none;
+    border-radius: var(--aot-radius-xl);
     padding: 0 16px; /* 좌우 여백을 16px로 충분히 확보하여 답답함 해소 */
     margin-bottom: 1.2rem;
     overflow: visible; /* 드롭다운 목록이 잘리지 않도록 visible 설정 */
@@ -309,14 +314,23 @@ a.aot-modal-section-title-collapsible + .collapse + .aot-modal-container:not(:ha
    body 앵커(.bs-container)에도 복사하기 때문에, 한정하지 않으면 그 둘도
    같은 알약을 입어 버튼이 두 겹으로 보인다(실측: 래퍼 160×32 / 버튼
    158×32 가 1px 어긋남). 이 클래스는 앱 전체에서 <select> 에만 붙는다. */
-.aot-modern-input,
-select.aot-modern-select {
+/* ── 쓰는 것은 밑줄, 고르는 것은 알약 (docs/design/ui-guide.md §2-2) ──
+   한 줄 입력을 알약으로 만들면 둥근 양 끝이 좌우 패딩을 먹어 **보이는 글자
+   수가 줄고**(22개 언어로 나가는 앱에서 몇 글자는 곧 잘림이다), 커서가
+   곡면 안에 갇혀 글의 시작·끝을 가늠하기 어렵다.
+
+   `select` 는 입력이 아니라 **누르는 것**이다 — 눌러야 메뉴가 열리고
+   알약이 그것을 알린다. 그래서 아래에서 갈라 적는다. */
+.aot-modern-input {
     box-sizing: border-box;
-    border-radius: var(--aot-btn-pill-radius);
-    border: 1px solid var(--aot-border-neutral);
-    padding: 0 1rem;
+    border: 0;
+    border-bottom: 2px solid var(--aot-border-neutral);
+    border-radius: 0;
+    background-color: transparent;
+    /* 밑줄은 글자에 붙는다 — 좌우 패딩도 1rem 에서 2px 로 줄여 글자가
+       줄의 시작에 선다. 알약이 아니므로 안쪽으로 밀 이유가 없다. */
+    padding: 0 2px;
     font-size: var(--aot-font-size-sm);
-    background-color: var(--aot-input-bg);
     color: var(--aot-text-main);
     text-align: left;
     /* ⚠ 여기에 `transform: translateZ(0)`(GPU 가속 해킹)을 되살리지 말 것.
@@ -331,6 +345,18 @@ select.aot-modern-select {
 /* Fixed single-line height is for inputs/selects only. A <textarea> must NOT get a
    height/line-height with !important here, otherwise it overrides the inline height
    the browser writes while dragging the resize handle (resize becomes a no-op). */
+/* 고르는 것은 알약을 유지한다. 위에서 갈라 나온 select 의 기본형이다. */
+select.aot-modern-select {
+    box-sizing: border-box;
+    border-radius: var(--aot-btn-pill-radius);
+    border: 0;
+    background-color: var(--aot-input-bg);
+    padding: 0 1rem;
+    font-size: var(--aot-font-size-sm);
+    color: var(--aot-text-main);
+    text-align: left;
+}
+
 .aot-modern-input:not(textarea),
 select.aot-modern-select {
     height: 32px;
@@ -441,9 +467,9 @@ select.aot-modern-select {
     flex: 1;
 }
 
+/* 포커스는 **색만** 바꾼다(§2-2) — 굵기나 모양을 바꾸면 줄이 흔들린다. */
 .aot-modern-input:focus {
-    border-color: var(--aot-input-focus-border);
-    box-shadow: 0 0 0 0.15rem var(--aot-focus-ring);
+    border-bottom-color: var(--aot-input-focus-border);
 }
 
 /* 부트스트랩 기본 `.form-control:focus` 는 파란 테두리(#80bdff)와 파란 번짐
@@ -452,13 +478,17 @@ select.aot-modern-select {
    같은 토큰으로 맞춘다 — 부트스트랩은 @layer vendor 라 일반 선언으로 이긴다. */
 .form-control:focus {
     border-color: var(--aot-input-focus-border);
-    box-shadow: 0 0 0 0.15rem var(--aot-focus-ring);
 }
 
 /* Textarea: multi-line code editor. No !important height here — the height comes from
    the rows attribute / min-height, and is freely overridden by the inline height the
    browser writes while the user drags the resize handle. */
 textarea.aot-modern-input {
+    /* 2026-09-09: 여러 줄은 밑줄이 아니라 **컨테이너**로 받는다(§2-2).
+       줄이 길어지면 밑줄이 상자의 한 변처럼 보여, 안 그리기로 한 테두리를
+       도로 부른다. 옅은 면(--aot-input-bg = bd_secondary) + 8px 이다. */
+    background-color: var(--aot-input-bg);
+    border-bottom: 0;
     /* 알약 반경(9999px)은 한 줄 입력에만 맞다. 위 height 규칙은 :not(textarea)
        로 예외를 뒀는데 border-radius 는 빠져 있어서, 여러 줄 textarea 가 전부
        **타원**이 됐다 — 글이 곡선 안쪽에서 시작해 읽기 어렵다(2026-08-24
@@ -516,7 +546,7 @@ textarea.aot-modern-input.aot-input-prose {
     height: 32px;
     border-radius: var(--aot-btn-pill-radius);
     background: var(--aot-input-bg);
-    border: 1px solid var(--aot-border-neutral);
+    border: 0;
     color: var(--aot-text-main);
     font-size: var(--aot-font-size-sm);
     text-align: center;
@@ -1269,7 +1299,10 @@ body.modal-open {
        푸터와 같은 색으로 맞춰 둥근 모서리에서 흰 배경이 비치지 않게 한다.
        (완전 투명은 시도했으나 자식 사이 레이아웃 틈에서 대시보드 페이지가
        그대로 비쳐 모달이 조각나 보이는 회귀가 있었다 — 되돌림.) */
-    background-color: var(--aot-surface-body, #F3F6F5);
+    /* 모달 본문은 **바닥(1단)** 이다. 그 위에 얹히는
+       .aot-modal-container 가 카드(2단, 흰색)다 — 바닥 위에 흰 카드,
+       앱의 다른 화면과 같은 순서다(ui-guide §2-1). */
+    background-color: var(--aot-surface-body);
     box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
     /* 높이: vh 폴백 → dvh(동적 뷰포트, 모바일 크롬 반영) */
     max-height: calc(100vh - 100px);
@@ -1310,7 +1343,7 @@ body.modal-open {
     align-items: center;    /* Bootstrap 기본 flex-start 재정의 */
     min-height: 36px;
     border-bottom: none;
-    background-color: var(--aot-surface-body, #F3F6F5);
+    background-color: var(--aot-surface-body, #e0e6e3);
     border-top-left-radius: 1rem;
     border-top-right-radius: 1rem;
     /* !important 필수 — 일부 모달 템플릿(예: 탭 설정)이 헤더에 Bootstrap
@@ -1416,7 +1449,10 @@ body.modal-open {
        참고 모달(.aot-center-modal)과 같은 대비를 표준 설정 모달에도 부여한다.
        .aot-modal-container(배경 기본, 흰색) 그룹박스는 이 위에서 자동으로
        카드처럼 보인다. */
-    background-color: var(--aot-surface-body, #F3F6F5);
+    /* 모달 본문은 **바닥(1단)** 이다. 그 위에 얹히는
+       .aot-modal-container 가 카드(2단, 흰색)다 — 바닥 위에 흰 카드,
+       앱의 다른 화면과 같은 순서다(ui-guide §2-1). */
+    background-color: var(--aot-surface-body);
 }
 /* WebKit(Chrome/Safari): 모달 바디 스크롤바 트랙 자체 제거 (스크롤 동작은 유지) */
 .modal-dialog .modal-body::-webkit-scrollbar,
@@ -1449,7 +1485,7 @@ body.modal-open {
     padding-bottom: max(9px, env(safe-area-inset-bottom, 9px));
     border-top: none;
     /* 헤더와 같은 원칙 — 셸(헤더/본문/푸터)은 배경 보조, 카드만 배경 기본. */
-    background-color: var(--aot-surface-body, #F3F6F5);
+    background-color: var(--aot-surface-body, #e0e6e3);
     border-bottom-left-radius: 1rem;
     border-bottom-right-radius: 1rem;
     /* Bootstrap default margin 제거 */
@@ -2161,8 +2197,11 @@ body { transition: padding-right 0.4s cubic-bezier(0.075, 0.82, 0.165, 1); }
     color: inherit;
     border: 1px solid var(--aot-border-neutral);
     border-radius: var(--aot-radius-sm);
-    padding: 20px;
-    margin-bottom: 20px;
+    /* 2026-09-09 20 -> 16. 설정 카드(.aot-settings-card)의 안쪽 여백이 16 이라
+       안내상자를 그 옆에 두면 글자가 354 대 359 로 갈렸다(실측). 같은 화면에서
+       두 상자의 글자가 다른 x 에서 시작하면 안 된다. */
+    padding: var(--aot-space-4);
+    margin-bottom: var(--aot-space-4);
     line-height: 1.6;
 }
 .aot-notice-box p { margin-bottom: 10px; }

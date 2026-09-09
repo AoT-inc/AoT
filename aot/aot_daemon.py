@@ -158,7 +158,12 @@ class DaemonController:
     def __init__(self):
         self.logger = logger
         time.sleep(5)  # Wait for UI to finish migrations
-        self.flask_app = create_app()
+        # **예약을 실행하는 프로세스는 여기 하나뿐이다.** create_app() 은 웹·MCP·
+        # 점검 스크립트에서도 불리는데 잡스토어는 DB 하나를 공유하므로, 둘 이상이
+        # 실행하면 같은 예약이 두 번 발화한다 — 그 예약에는 장치 제어가 들어 있다.
+        # 데몬을 고른 이유는 이미 상시 돌고 이미 장치를 제어하기 때문이다
+        # (docs/design/scheduler-process-separation.md 안 A).
+        self.flask_app = create_app(run_scheduler=True)
 
         # 이 프로세스가 데몬임을 등록한다. 이게 없으면 데몬 내부의 자동화 명령
         # (PID·bang_bang·env_coordinator 등, 실행 컨텍스트를 안 심는 경로)이

@@ -46,6 +46,11 @@ class Widget(CRUDMixin, db.Model):
     log_level_debug = db.Column(db.Boolean, default=False)
     font_em_name = db.Column(db.Float, default=1.0)
     enable_drag_handle = db.Column(db.Boolean, default=True)
+    # 모바일(2열 격자)에서 이 위젯이 한 줄을 통째로 쓰는지. 예전에는 위젯
+    # 모듈의 WIDGET_INFORMATION['mobile_full_width'] 가 종류마다 고정으로
+    # 정했다 — 같은 종류의 위젯은 사용자가 바꿀 수 없었다. 이제 인스턴스
+    # 단위 설정이고, 모듈 쪽 값은 '새로 추가할 때의 기본값' 으로만 남는다.
+    mobile_full_width = db.Column(db.Boolean, default=False)
     position_x = db.Column(db.Integer, default=0)
     position_y = db.Column(db.Integer, default=999)
     width = db.Column(db.Integer, default=6)

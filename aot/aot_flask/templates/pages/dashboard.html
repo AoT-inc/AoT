@@ -101,7 +101,6 @@
 
     <div class="grid-stack" style="padding: 1em 1em 0em 1em; visibility: hidden;">
     {% for each_widget in table_widget.query.filter(table_widget.tab_id == dashboard_id).all() -%}
-      {% set widget_meta = dict_widgets.get(each_widget.graph_type) %}
       <div id="gridstack_widget_{{each_widget.unique_id}}"
         class="grid-stack-item"
       {% if this_dashboard.locked %}
@@ -117,7 +116,10 @@
         data-desktop-y="{{each_widget.position_y}}"
         data-desktop-w="{{each_widget.width}}"
         data-desktop-h="{{each_widget.height}}"
-        data-mobile-full-width="{{ '1' if widget_meta and widget_meta.get('mobile_full_width') else '0' }}">
+        {#- 모바일 전체 폭은 위젯 행에 저장된 사용자 설정이다(P6-63). 예전에는
+            위젯 종류(dict_widgets[...]['mobile_full_width'])가 고정으로 정했고,
+            모듈 쪽 값은 이제 '새로 추가할 때의 기본값' 으로만 남는다. -#}
+        data-mobile-full-width="{{ '1' if each_widget.mobile_full_width else '0' }}">
         {% include 'pages/dashboard_entry.html' %}
       </div> <!-- grid-stack-item -->
     {%- endfor -%}

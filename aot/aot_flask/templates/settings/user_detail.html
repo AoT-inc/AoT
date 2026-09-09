@@ -12,7 +12,7 @@
   <div class="modal-body">
 
     <div class="aot-modal-container">
-      <div class="col-12 text-muted small" style="padding:0">
+      <div class="aot-modal-body-text">
         {{_('Note: Password and keypad code fields are empty. Enter values and save to change. Leave empty to keep current settings. To disable keypad code, enter 0 and save.')}}
       </div>
     </div>
@@ -123,30 +123,30 @@
            줄에 나란히 눕고, align-items:center 때문에 각 행이 내용만큼만
            좁아져 이름 옆 버튼이 줄바꿈된다 — flex-column + stretch 래퍼로
            세로로 쌓고 각 행이 폭 전체를 쓰게 한다. #}
-        <div class="aot-modal-option-control d-flex flex-column" style="width:100%; align-items:stretch">
+        <div class="aot-modal-option-control d-flex flex-column align-items-stretch">
           {% if user_api_keys %}
           {% for each_key in user_api_keys %}
           {# 이름·권한/발급일·버튼을 고정 비율로 나눠 여러 키가 나열될 때
              세로로 열이 맞게 정렬한다(이름 길이에 따라 버튼 위치가 밀리지
              않도록). #}
           <div class="aot-list-row">
-            <div class="aot-list-row-main" style="flex:0 1 35%">
+            <div class="aot-list-row-main">
               {{each_key.name or _('Unnamed')}}
             </div>
-            <div class="text-muted small" style="flex:1 1 35%; min-width:0">
-              {% if each_key.is_readonly %}{{_('Read only')}}{% else %}{{_('Full access')}}{% endif %}
-              · {{each_key.created_at.strftime('%Y-%m-%d') if each_key.created_at else ''}}
-            </div>
-            <div class="aot-btn-group" style="flex:0 0 auto">
+            <div class="aot-btn-group">
               <button type="submit" name="user_revoke_api_key" value="1"
-                class="btn aot-pill-btn aot-pill-btn-secondary"
+                class="btn aot-pill-btn aot-pill-btn-danger"
                 data-revoke-key="{{each_key.unique_id}}"
                 onclick="return confirm({{ _('Revoke this API key? Anything using it will stop working.')|tojson|forceescape }})">{{_('Revoke')}}</button>
+            </div>
+            <div class="aot-modal-body-text w-100">
+              {% if each_key.is_readonly %}{{_('Read only')}}{% else %}{{_('Full access')}}{% endif %}
+              · {{each_key.created_at.strftime('%Y-%m-%d') if each_key.created_at else ''}}
             </div>
           </div>
           {% endfor %}
           {% else %}
-          <div class="text-muted small">{{_('No API keys issued.')}}</div>
+          <div class="aot-modal-body-text">{{_('No API keys issued.')}}</div>
           {% endif %}
           {{form_mod_user.api_key_id(class_='api_key_id_' ~ user.unique_id)}}
         </div>
@@ -189,7 +189,7 @@
           <input type="button" class="btn aot-pill-btn aot-pill-btn-secondary" value="{{_('Copy')}}"
             onclick="setClipboard(document.querySelector('.visible_mod_key_{{user.unique_id}}').value)">
         </div>
-        <div class="col-12 text-muted small" style="padding:0.4rem 0 0">
+        <div class="aot-modal-body-text">
           {{_('Copy it now — it is shown only once and cannot be retrieved later.')}}
         </div>
       </div>
@@ -198,11 +198,11 @@
   </div>
 
   <div class="modal-footer">
-    <button type="button" class="btn aot-pill-btn" data-dismiss="modal">{{_('Close')}}</button>
+    <button type="button" class="btn aot-pill-btn aot-pill-btn-secondary" data-dismiss="modal">{{_('Close')}}</button>
     {{form_mod_user.user_delete(class_='btn aot-pill-btn aot-pill-btn-danger',
       **{'onclick':'return confirm("' + _('Are you sure you want to delete this user?') + '")'})}}
     {% if not user.is_approved %}
-    {{form_mod_user.user_approve(class_='btn aot-pill-btn')}}
+    {{form_mod_user.user_approve(class_='btn aot-pill-btn aot-pill-btn-secondary')}}
     {% endif %}
     {{form_mod_user.user_save(class_='btn aot-pill-btn aot-pill-btn-primary')}}
   </div>
