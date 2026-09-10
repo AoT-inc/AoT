@@ -69,7 +69,11 @@
 .aot-settings-section {
     background-color: var(--aot-surface-card);
     border-radius: var(--aot-radius-xl);
-    padding: var(--aot-space-2) var(--aot-space-4);
+    /* 네 변 같은 16px — 모서리가 20px(radius-xl)이라 그보다 좁으면 첫/마지막
+       요소가 둥근 안쪽을 파고들고, 안에 또 상자가 오면 둘이 맞붙는다.
+       상하 8px 이 좁아 템플릿 세 곳이 제각기 인라인으로 덧대고 있었다
+       (0 / 0.9rem / 0.9rem). .aot-modal-container 와 같은 규약이다. */
+    padding: var(--aot-space-4);
     margin-bottom: var(--aot-space-3);
     overflow: visible;      /* 드롭다운 목록이 카드에 잘리지 않게 */
 }
@@ -193,6 +197,28 @@
     border-top: 1px solid var(--aot-border-neutral);
 }
 
+/* 컨트롤 칸의 두 변형. 기본은 고정폭인데, 고르는 칸과 단추가 나란히 서는
+   줄이나 여러 줄 입력이 통째로 내려오는 줄에는 그 폭이 맞지 않는다.
+   예전에는 호출부가 인라인으로 `flex: 1 1 auto; width: auto; …` 을 적었다. */
+.aot-settings-control.aot-settings-control-grow {
+    flex: 1 1 auto;
+    width: auto;
+    max-width: 320px;
+    gap: var(--aot-space-2);
+}
+
+/* 라벨 아래로 컨트롤이 통째로 내려오는 줄(여러 줄 입력). 줄 높이도 내용에
+   맡긴다 — 기본값 `min-height: 2.8rem` 은 한 줄 컨트롤 기준이다. */
+.aot-settings-row.aot-settings-row-full {
+    flex-wrap: wrap;
+    height: auto;
+}
+
+.aot-settings-row-full > .aot-settings-full {
+    flex: 1 1 100%;
+    margin-top: var(--aot-space-1);
+}
+
 /* 라벨 — 결정 줄의 왼쪽. 라벨은 600 이다(§2-3 굵기 3단). */
 .aot-settings-label {
     flex: 1 1 auto;
@@ -210,14 +236,43 @@
    `margin-left: auto` 는 아랫줄로 내려갔을 때도 오른쪽에 붙게 한다(§4-6) —
    왼쪽에 붙이면 "읽고 → 행동" 방향이 뒤집힌다. */
 .aot-settings-control {
-    flex: 0 0 160px;
-    width: 160px;
+    /* 160px 을 직접 박는 대신 공용 토큰을 읽는다 — 그래야 아래 사다리가
+       행마다 그 값을 갈아끼울 수 있다. 기본값은 그대로 160px 이다. */
+    flex: 0 0 var(--aot-common-control-width);
+    width: var(--aot-common-control-width);
     min-width: 0;
     margin-left: auto;
     display: flex;
     align-items: center;
     justify-content: flex-end;
     gap: var(--aot-space-2);
+}
+
+/* ── 컨트롤 폭 사다리 ──────────────────────────────────────────────────────
+   모달 쪽(aot-modal-modern.css)과 같은 규약이다. 160px 은 텍스트 입력·셀렉트
+   기준 폭이라, 스위치(60px)·색 피커(60px)·세 자리 숫자(96px)만 있는 행에서는
+   100px 안팎이 그냥 빈다 — 설정 화면은 그런 행이 대부분이다.
+
+   컨트롤은 `margin-left: auto` 로 오른쪽에 붙으므로, 좁혀도 오른쪽 끝선은
+   그대로다. 조건의 `:not(:has(> .aot-settings-control > * + *))` 는 "컨트롤의
+   직접 자식이 정확히 하나" — 값+버튼처럼 둘 이상인 행은 넓은 자리가 필요하다. */
+.aot-settings-row:has(> .aot-settings-control > .btn-toggle):not(:has(> .aot-settings-control > * + *)) {
+    /* 국소 오버라이드(의도) */
+    --aot-common-control-width: var(--aot-ctrl-w-switch);
+}
+.aot-settings-row:has(> .aot-settings-control > input[type="color"]):not(:has(> .aot-settings-control > * + *)) {
+    /* 국소 오버라이드(의도) */
+    --aot-common-control-width: var(--aot-ctrl-w-color);
+}
+.aot-settings-row:has(> .aot-settings-control > input[type="number"]):not(:has(> .aot-settings-control > * + *)) {
+    /* 국소 오버라이드(의도) */
+    --aot-common-control-width: var(--aot-ctrl-w-num);
+}
+/* 짧은 텍스트 칸은 스스로 밝혀야 한다 — 타입만 봐서는 두 글자짜리인지
+   호스트명인지 알 수 없다. 해당 입력에 `.aot-ctrl-short` 를 붙인다. */
+.aot-settings-row:has(> .aot-settings-control > .aot-ctrl-short):not(:has(> .aot-settings-control > * + *)) {
+    /* 국소 오버라이드(의도) */
+    --aot-common-control-width: var(--aot-ctrl-w-short);
 }
 
 /* 부연은 **아랫줄 전체 폭**이다(§3-2 ③ · §4-6). 결정 행동은 핵심 줄과 같은
@@ -262,7 +317,7 @@
     border: 0;   /* 누르는 것은 면으로 선다 (ui-guide §4-7) */
     height: 32px;
     font-size: var(--aot-font-size-sm);
-    background-color: var(--aot-surface-input);
+    background-color: var(--aot-surface-control);
     color: var(--aot-color-text-primary);
     padding: 0 1rem;
     display: flex;
@@ -284,7 +339,7 @@
     padding: 0 2rem 0 1rem;
     height: 32px;
     font-size: var(--aot-font-size-sm);
-    background-color: var(--aot-surface-input);
+    background-color: var(--aot-surface-control);
     color: var(--aot-color-text-primary);
     line-height: 30px;
     appearance: none;
@@ -352,6 +407,12 @@ select.aot-settings-select:focus {
     gap: var(--aot-space-3);
     padding-top: var(--aot-space-4);
     padding-bottom: var(--aot-space-2);
+}
+
+/* 구획 안쪽에서 끝나는 동작 묶음은 아래를 한 칸 좁힌다(다음 구획의 위
+   여백과 겹쳐 두 배로 보인다). */
+.aot-settings-actions.aot-settings-actions-tight {
+    padding-bottom: var(--aot-space-1);
 }
 
 /* 목록 행의 액션 묶음. 좁아지면 알약 단위로 통째 줄바꿈한다 — 알약이
@@ -460,15 +521,10 @@ select.aot-settings-select:focus {
    이긴다 — 예전의 `!important` 는 필요 없다.
    스크롤바는 숨긴다(§4-14 11: 장식 목적의 노출만 금지, 여기는 표 한 줄이라
    남은 양을 알릴 자리가 아니다). */
-.aot-table-scroll,
-.aot-modal-container.aot-table-scroll {
-    overflow-x: auto;
-    -ms-overflow-style: none;
-    scrollbar-width: none;
-}
-.aot-table-scroll::-webkit-scrollbar {
-    display: none;
-}
+/* `.aot-table-scroll` 의 기본 동작(가로 스크롤 + 스크롤바 숨김)은
+   components/aot-base-ui.css 로 옮겼다 — 이 시트는 설정 화면에서만 실려서,
+   같은 클래스를 쓰는 시설 드로어에서는 스크롤이 걸리지 않았다(실측:
+   overflow-x 가 visible 인 채 표가 상자 밖으로 308px 넘쳤다). */
 
 .aot-module-table {
     width: 100%;
@@ -502,9 +558,36 @@ select.aot-settings-select:focus {
    `td:last-child { width: auto }`(0,2,1) 가 이 규칙(0,1,1)보다 세다.
    지금 화면은 이 `!important` 가 이긴 상태이므로, 떼면 시설 페이지의 표
    폭이 바뀐다 — 그 페이지는 이 작업의 범위 밖이라 건드리지 않는다. */
+/* 동작 열의 폭은 **그 안에 무엇이 들어가느냐**를 따른다. 예전에는 160px 로
+   못박아, 저장 단추 하나뿐인 표에서도 그 폭을 잡아 방정식 칸과 단추 사이가
+   105px 씩 비었다(실측). 그리고 그 160px 이 최소 폭 계산에도 들어가 표가
+   카드 안쪽(554px)보다 8px 넓어져 단추가 카드 밖으로 나갔다. */
+.aot-module-table {
+    --aot-col-w-actions: 160px;   /* 저장 + 삭제 */
+}
+/* 어느 행에도 단추가 둘 이상인 묶음이 없으면 하나짜리다 — 저장 55px 에
+   양옆 여백을 더한 값. */
+.aot-module-table:not(:has(.aot-btn-group > * + *)) {
+    --aot-col-w-actions: 96px;
+}
 .aot-module-table td:last-child {
     text-align: right;
-    width: 160px !important;
+    width: var(--aot-col-w-actions) !important;
+}
+
+/* 버튼 열이 **없는** 읽기 전용 표에서는 마지막 열을 160px 로 잡아 둘 이유가
+   없다. "모두 측정값"·"모두 단위" 표에는 예전에 편집 표에서 베껴 온 빈 열이
+   하나 남아 있었고, 그 열이 폰에서 표의 절반을 먹었다(실측 375px: 표 313px
+   중 160px, 내용 세 열은 51px 씩). 빈 열은 템플릿에서 지웠고, 혹시 남아
+   있더라도 폭을 잡지 않도록 표 단위로 판정한다. */
+/* 동작이 **아예 없는** 읽기 전용 표에서만 폭을 잡지 않는다.
+   ⚠ 예전에는 `.aot-btn-group` 유무로 판정했는데, 단추를 그 묶음 없이 맨몸으로
+   두는 표가 있다(ChirpStack 장치 목록의 "상세"). 그 표가 읽기 전용으로
+   잘못 걸려 동작 열이 399px 까지 벌어졌다(실측 1280px). 묶음이 아니라
+   **동작 컨트롤 자체**를 본다. */
+.aot-module-table:not(:has(tbody td:last-child :is(button, input[type="submit"], input[type="button"], a.btn))) td:last-child {
+    width: auto !important;
+    text-align: left;
 }
 
 /* 표 머리 — 본문과 갈리는 자리라 선을 하나 긋는다(§2-2 컨테이너 안 구분).
@@ -524,14 +607,33 @@ select.aot-settings-select:focus {
    없어(3col·5col 은 설정 페이지에서만 쓰고 겹치는 규칙이 없다) 걷어냈다. */
 .aot-module-table-3col td:nth-child(1),
 .aot-module-table-3col td:nth-child(2) {
-    width: calc((100% - 160px) / 2);
+    width: calc((100% - var(--aot-col-w-actions)) / 2);
 }
 
-.aot-module-table-5col td:nth-child(1),
+/* 자리 번호처럼 두어 글자로 끝나는 열은 내용 열과 똑같이 나눠 가질 이유가
+   없다 — 실측: "01"(글자 18px)이 120px 칸에 앉아 100px 이 빈다.
+   같은 `.aot-module-table` 이라도 ID 열이 플러그인 키(`MQTT_PAHO_JSON` 등)인
+   페이지가 있으므로(설정 입력·출력·함수·작업·위젯) 첫 열을 싸잡아 좁히지
+   않는다. 짧은 열만 스스로 밝힌다. */
+.aot-module-table td.aot-col-id {
+    width: 72px;
+}
+
+/* ID 열을 밝힌 표에서는 남는 폭을 내용 세 열이 나눠 갖는다. */
+.aot-module-table-5col:has(td.aot-col-id) td:nth-child(2),
+.aot-module-table-5col:has(td.aot-col-id) td:nth-child(3),
+.aot-module-table-5col:has(td.aot-col-id) td:nth-child(4) {
+    width: calc((100% - var(--aot-col-w-actions) - 72px) / 3);
+}
+
+/* 첫 열은 `.aot-col-id` 로 따로 밝힌 표에서 제외한다 — 두 규칙의 특이도가
+   같아(0-2-1) 나중에 적힌 이쪽이 이기는 바람에, 72px 을 줘도 101px 로
+   남아 있었다(실측). */
+.aot-module-table-5col td:nth-child(1):not(.aot-col-id),
 .aot-module-table-5col td:nth-child(2),
 .aot-module-table-5col td:nth-child(3),
 .aot-module-table-5col td:nth-child(4) {
-    width: calc((100% - 160px) / 4);
+    width: calc((100% - var(--aot-col-w-actions)) / 4);
 }
 
 /* ⚠ `table-layout: fixed` + `width: 100%` 는 좁은 화면에서 **줄어들기만
@@ -541,8 +643,13 @@ select.aot-settings-select:focus {
    `.table` + `.table-responsive` 는 auto 레이아웃이라 스크롤이 걸렸다 —
    최소 폭이 없으면 폰에서 **후퇴**다.
    값: 버튼 열 160 + 내용 열이 읽히는 최소치(3열은 160x2, 5열은 120x4). */
-.aot-table-scroll .aot-module-table-3col { min-width: 480px; }
-.aot-table-scroll .aot-module-table-5col { min-width: 640px; }
+.aot-table-scroll .aot-module-table-3col { min-width: calc(160px * 2 + var(--aot-col-w-actions)); }
+.aot-table-scroll .aot-module-table-5col { min-width: calc(120px * 4 + var(--aot-col-w-actions)); }
+/* ID 열을 72px 로 밝힌 표는 그만큼 덜 필요하다: 동작 열 + ID 72 +
+   내용 3열 × 110. 동작 열이 96px 이면 498px 이라 카드 안쪽(554px)에 들어간다. */
+.aot-table-scroll .aot-module-table-5col:has(td.aot-col-id) {
+    min-width: calc(72px + 110px * 3 + var(--aot-col-w-actions));
+}
 
 
 /* ============================================================

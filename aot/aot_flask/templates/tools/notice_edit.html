@@ -6,6 +6,7 @@
 
 {% block body %}
 <script src="{{ asset('app-notice-render') }}"></script>
+<link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/pages/notice.css') }}" />
 <style>
     /* Body text area: plain prose, not the pill/code-editor look aot-modern-input
        gives textareas by default (9999px radius, no-wrap + horizontal scroll).
@@ -30,7 +31,7 @@
         outline: none !important;
     }
 </style>
-<div class="container-fluid px-0" style="max-width: 820px; margin: 0 auto; padding-bottom: 3rem;">
+<div class="container-fluid px-0 notice-page notice-page-edit">
     {% include 'flash_messages.html' %}
 
     <div class="mt-4 mb-2 px-3">
@@ -73,7 +74,7 @@
                 {% if post.files %}
                 <div class="aot-modal-option-row aot-full-width-row">
                     <label class="aot-modal-option-label">{{ _('Current Attachments') }}</label>
-                    <div class="aot-modal-option-control" style="flex-wrap:wrap; justify-content:flex-start;">
+                    <div class="aot-modal-option-control notice-control-wrap">
                         {% for f in post.files.split(',') %}
                         <span class="badge badge-light border mr-1 mb-1" data-file="{{ f }}">
                             <a href="{{ url_for('routes_notice.send_notice_attachment', filename=f) }}" target="_blank">{{ f.split('_', 1)[-1] }}</a>
@@ -95,8 +96,8 @@
             <button type="button" class="btn aot-pill-btn mb-2 {% if poll %}d-none{% endif %}" id="editPollToggleBtn">{{ _('Add Poll') }}</button>
             <div class="aot-modal-container {% if not poll %}d-none{% endif %}" id="editPollSection">
                 <div class="d-flex justify-content-between align-items-center">
-                    <div class="aot-modal-section-title" style="margin-top:0.6rem;">{{ _('Poll') }}</div>
-                    <button type="button" class="btn aot-pill-btn" id="editPollRemoveBtn" style="min-width:auto; padding:0 10px; height:26px; font-size: var(--aot-font-size-2xs);">{{ _('Remove Poll') }}</button>
+                    <div class="aot-modal-section-title notice-section-gap">{{ _('Poll') }}</div>
+                    <button type="button" class="btn aot-pill-btn notice-btn-xs" id="editPollRemoveBtn">{{ _('Remove Poll') }}</button>
                 </div>
                 <div class="aot-modal-option-row aot-full-width-row">
                     <label class="aot-modal-option-label">{{ _('Question') }}</label>
@@ -113,14 +114,14 @@
                 <div id="editPollOptionsContainer">
                     {% for opt in poll_options %}
                     <div class="aot-modal-option-row aot-full-width-row">
-                        <input type="text" name="poll_option" class="aot-modern-input" value="{{ opt.label }}" style="width:100%;">
+                        <input type="text" name="poll_option" class="aot-modern-input notice-poll-input" value="{{ opt.label }}">
                     </div>
                     {% else %}
                     <div class="aot-modal-option-row aot-full-width-row">
-                        <input type="text" name="poll_option" class="aot-modern-input" placeholder="{{ _('Option 1') }}" style="width:100%;">
+                        <input type="text" name="poll_option" class="aot-modern-input notice-poll-input" placeholder="{{ _('Option 1') }}">
                     </div>
                     <div class="aot-modal-option-row aot-full-width-row">
-                        <input type="text" name="poll_option" class="aot-modern-input" placeholder="{{ _('Option 2') }}" style="width:100%;">
+                        <input type="text" name="poll_option" class="aot-modern-input notice-poll-input" placeholder="{{ _('Option 2') }}">
                     </div>
                     {% endfor %}
                 </div>
@@ -170,7 +171,7 @@
                 <span>
                     <button type="button" class="btn aot-pill-btn aot-pill-btn-danger" id="editNoticeDeleteBtn" data-post="{{ post.unique_id }}">{{ _('Delete') }}</button>
                 </span>
-                <span class="d-flex" style="gap:6px;">
+                <span class="d-flex notice-actions">
                     <a href="{{ url_for('routes_notice.page_notice_detail', unique_id=post.unique_id) }}" class="btn aot-pill-btn">{{ _('Cancel') }}</a>
                     {{ form_notice_mod.notice_save(class_='btn aot-pill-btn aot-pill-btn-primary') }}
                 </span>
@@ -208,7 +209,7 @@ $(document).ready(function () {
     $('#editAddPollOptionBtn').on('click', function () {
         var count = $('#editPollOptionsContainer .aot-modal-option-row').length + 1;
         var $row = $('<div class="aot-modal-option-row aot-full-width-row">' +
-            '<input type="text" name="poll_option" class="aot-modern-input" placeholder="' + {{ _("Option")|tojson }} + ' ' + count + '" style="width:100%;"></div>');
+            '<input type="text" name="poll_option" class="aot-modern-input notice-poll-input" placeholder="' + {{ _("Option")|tojson }} + ' ' + count + '"></div>');
         $('#editPollOptionsContainer').append($row);
     });
 

@@ -11,7 +11,7 @@
 <div class="container-fluid mcp-container">
     <div class="aot-settings-title">
         <h3>{{ _('MCP Server Management') }}</h3>
-        <div class="d-flex" style="gap: 8px;">
+        <div class="d-flex aot-btn-group">
             <button id="btn-refresh-all" class="btn aot-pill-btn" title="{{ _('Refresh All Status') }}">
                 <i class="fas fa-sync-alt"></i>
             </button>
@@ -106,7 +106,7 @@
                     <span aria-hidden="true">&times;</span>
                 </button>
             </div>
-            <div class="modal-body overflow-auto" style="max-height: 70vh;">
+            <div class="modal-body overflow-auto mcp-modal-body">
                 <div id="tools-container" class="list-group list-group-flush">
                     <!-- Tools list injected by JS -->
                 </div>

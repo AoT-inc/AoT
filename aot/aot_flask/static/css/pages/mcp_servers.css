@@ -146,3 +146,6 @@
     border-radius: var(--aot-radius-xl) !important;
 }
 
+
+/* 서버 목록 모달은 화면보다 길어질 수 있다 — 제 안에서 흐른다. */
+.mcp-modal-body { max-height: 70vh; }

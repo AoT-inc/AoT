@@ -14,11 +14,11 @@
                 </div>
                 <div class="modal-body">
                     <!-- Service Description Area -->
-                    <div id="service_description_container" style="display: none; margin-bottom: 1.5rem; padding: 12px; background: var(--aot-gray-100); border-left: 4px solid #007bff; border-radius: var(--aot-radius-sm); font-size: var(--aot-font-size-sm); color: var(--aot-color-text-secondary, #555);">
+                    <div id="service_description_container" class="ai-modal-callout" style="display: none; border-left: 4px solid #007bff;">
                         <span id="service_description_text"></span>
                     </div>
 
-                    <div id="auth_link_container_top" style="display:none; margin-top: -1rem; margin-bottom: 1.5rem; padding-left: 12px; font-size: var(--aot-font-size-sm);">
+                    <div id="auth_link_container_top" class="ai-modal-auth-note" style="display:none;">
                         <strong>{{ _('Related Link') }}:</strong>
                         <a id="auth_link_href_top" href="#" target="_blank" class="text-primary">
                             {{ _('Get API Key') }}
@@ -55,14 +55,14 @@
                             <div class="aot-modal-option-row">
                                 <label class="aot-modal-option-label">{{ _('Engine Type') }}</label>
                                 <div class="aot-modal-option-control">
-                                    <input type="text" id="engineTypeDisplay" class="form-control aot-modern-input" readonly style="background: var(--aot-gray-100);">
+                                    <input type="text" id="engineTypeDisplay" class="form-control aot-modern-input" readonly>
                                 </div>
                             </div>
 
                             <div class="aot-modal-option-row">
                                 <label class="aot-modal-option-label">{{ _('Model Selection') }}</label>
                                 <div class="aot-modal-option-control">
-                                    <select name="model_name" id="modelNameSelect" class="form-control selectpicker aot-standard-select" data-style="btn-white border"></select>
+                                    <select name="model_name" id="modelNameSelect" class="form-control selectpicker aot-standard-select" data-style="btn-white"></select>
                                     <input type="text" id="manualModelInput" class="form-control aot-modern-input mt-2" style="display:none;" placeholder="{{ _('Enter model name manually') }}">
                                 </div>
                             </div>
@@ -94,7 +94,7 @@
                         <div class="aot-modal-container">
                             <label class="aot-modal-option-label" id="pipeline-role-label" data-toggle="tooltip" title="">{{ _('Pipeline Role') }}</label>
                             <div class="aot-modal-option-control">
-                                <select name="pipeline_role" class="form-control selectpicker aot-standard-select" data-style="btn-white border">
+                                <select name="pipeline_role" class="form-control selectpicker aot-standard-select" data-style="btn-white">
                                     <option value="worker">{{ _('Worker (Legacy)') }}</option>
                                     <option value="router">{{ _('Router') }}</option>
                                     <option value="planner">{{ _('Planner') }}</option>
@@ -106,7 +106,7 @@
                         <div class="aot-modal-option-row">
                             <label class="aot-modal-option-label">{{ _('Model Tier') }}</label>
                             <div class="aot-modal-option-control">
-                                <select name="model_tier" class="form-control selectpicker aot-standard-select" data-style="btn-white border">
+                                <select name="model_tier" class="form-control selectpicker aot-standard-select" data-style="btn-white">
                                     <option value="lightweight">{{ _('Lightweight') }}</option>
                                     <option value="standard" selected>{{ _('Standard') }}</option>
                                     <option value="heavy">{{ _('Heavy') }}</option>
@@ -116,7 +116,7 @@
                         <div class="aot-modal-option-row">
                             <label class="aot-modal-option-label">{{ _('Tool Access') }}</label>
                             <div class="aot-modal-option-control">
-                                <select name="tool_access" class="form-control selectpicker aot-standard-select" data-style="btn-white border">
+                                <select name="tool_access" class="form-control selectpicker aot-standard-select" data-style="btn-white">
                                     <option value="auto">{{ _('Auto') }}</option>
                                     <option value="all">{{ _('All') }}</option>
                                     <option value="assigned">{{ _('Assigned') }}</option>
@@ -126,9 +126,9 @@
                         </div>
 
                         <!-- MCP Assignment Checklist (Shown only when 'assigned' is selected) -->
-                        <div id="mcp-assignment-section" style="display:none; padding: 10px; background: var(--aot-gray-100); border: 1px solid #eee; border-radius: var(--aot-radius-sm); margin-top: 10px;">
+                        <div id="mcp-assignment-section" class="ai-modal-callout ai-modal-callout-mcp" style="display:none; border: 1px solid #eee;">
                             <label class="font-weight-bold mb-2">{{ _('Select Assigned MCP Servers') }}</label>
-                            <div id="mcp-checklist-container" style="max-height: 200px; overflow-y: auto;">
+                            <div id="mcp-checklist-container" class="ai-modal-checklist">
                                 {% for mcp in mcp_servers %}
                                 <div class="form-check mb-1">
                                     <input class="form-check-input" type="checkbox" name="assigned_mcp_ids" value="{{ mcp.unique_id }}" id="mcp_{{ mcp.unique_id }}">
@@ -151,11 +151,10 @@
 
                     <div class="aot-modal-group-title" id="rules-group-title">{{ _('Agent Rules') }}</div>
                     <div class="aot-modal-container">
-                        <div class="aot-modal-option-row mt-2 flex-column align-items-start">
+                        <div class="aot-modal-option-row aot-full-width-row mt-2">
                             <label class="aot-modal-option-label" id="system-prompt-label">{{ _('System Prompt') }}</label>
-                            <div class="aot-modal-option-control" style="flex: 1 1 100% !important; width: 100% !important;">
-                                <textarea name="system_prompt" class="form-control aot-modern-input" rows="5"
-                                          style="height: auto !important; border-radius: var(--aot-radius-lg) !important; text-align: left;"
+                            <div class="aot-modal-option-control">
+                                <textarea name="system_prompt" class="form-control aot-modern-input aot-input-prose" rows="5"
                                           placeholder="{{ _('Define how this agent should behave...') }}"></textarea>
                             </div>
                         </div>
@@ -203,7 +202,7 @@ function renderDynamicFields(type) {
             <div class="aot-modal-option-row">
                 <label class="aot-modal-option-label">{{ _('Auth Type') }}</label>
                 <div class="aot-modal-option-control">
-                    <select name="auth_type" class="form-control selectpicker aot-standard-select" data-style="btn-white border" id="authTypeSelect">
+                    <select name="auth_type" class="form-control selectpicker aot-standard-select" data-style="btn-white" id="authTypeSelect">
         `;
         preset.auth_methods.forEach(method => {
             let label = method === 'api_key' ? {{ _('API Key')|tojson }} : (method === 'account' ? {{ _('ID / Password')|tojson }} : method);
@@ -276,7 +275,7 @@ function renderDynamicFields(type) {
             const val = opt.default || '';
             let controlHtml = '';
             if (opt.type === 'select') {
-                controlHtml = `<select name="custom_${opt.id}" class="form-control selectpicker aot-standard-select" data-style="btn-white border" data-live-search="true">`;
+                controlHtml = `<select name="custom_${opt.id}" class="form-control selectpicker aot-standard-select" data-style="btn-white" data-live-search="true">`;
                 let optionsToRender = opt.options || [];
                 if (opt.id === 'reasoning_entry_id') {
                     const filtered = availableEntries.filter(e => !e.model_type.startsWith('mcp_'));

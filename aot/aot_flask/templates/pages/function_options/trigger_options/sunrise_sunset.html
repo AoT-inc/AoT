@@ -1,8 +1,8 @@
 <div class="aot-modal-container mb-3">
-  <div class="aot-modal-body-text d-flex flex-wrap" style="gap: 20px;">
+  <div class="aot-modal-body-text d-flex flex-wrap aot-meta-row">
     <div>
       <strong>{{_('Next Sunrise/Sunset at Geographic Location')}}</strong><br>
-      <div style="margin-top: 4px;">
+      <div class="mt-1">
         {% if 'sunrise' in sunrise_set_calc[each_function.unique_id] and
               sunrise_set_calc[each_function.unique_id]['sunrise'] and
               'sunset' in sunrise_set_calc[each_function.unique_id] and
@@ -17,7 +17,7 @@
     
     <div>
       <strong>{{_('Next Execution')}}</strong><br>
-      <div style="margin-top: 4px;">
+      <div class="mt-1">
         {% if sunrise_set_calc[each_function.unique_id].get('next_fire') %}
           {{dict(sun_events).get(each_function.rise_or_set or 'sunrise', each_function.rise_or_set)}}:
           {{sunrise_set_calc[each_function.unique_id]['next_fire']}}
@@ -47,7 +47,7 @@
   <div class="aot-modal-option-row">
     <label class="aot-modal-option-label">{{_('Location (Auto)')}}</label>
     <div class="aot-modal-option-control">
-      <span class="form-control-plaintext aot-modal-body-text" style="padding-left:0;">
+      <span class="form-control-plaintext aot-modal-body-text pl-0">
         {% if each_function.latitude is not none and each_function.longitude is not none %}
           {{ '%.5f'|format(each_function.latitude) }}, {{ '%.5f'|format(each_function.longitude) }}
           <small class="text-muted d-block">{{_('Set automatically from the map above. Move the marker to change location.')}}</small>

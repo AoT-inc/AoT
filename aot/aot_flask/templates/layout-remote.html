@@ -46,9 +46,8 @@
   <nav id="nav-respond"
     class="navbar navbar-expand-md{% if current_user.theme in dark_themes %} navbar-dark bg-dark{% else %} navbar-light bg-light{% endif %}">
 
-    <a class="navbar-brand" id="daemon-status" data-toggle="tooltip" data-placement="bottom"
-      href="{{url_for('routes_page.page_info')}}"
-      style="text-align: center; padding: 0 15px; font-size: 0.8em; font-weight: bold; color: var(--aot-color-text-primary, #373a3c)">{{_('Remote')}}<br />{{_('Admin')}}</a>
+    <a class="navbar-brand remote-brand" id="daemon-status" data-toggle="tooltip" data-placement="bottom"
+      href="{{url_for('routes_page.page_info')}}">{{_('Remote')}}<br />{{_('Admin')}}</a>
     <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarCollapse"
       aria-controls="navbarCollapse" aria-expanded="false" aria-label="Toggle navigation">
       <span class="navbar-toggler-icon"></span>
@@ -77,6 +76,15 @@
           z-index: var(--aot-z-navbar) !important;
         }
 
+
+      /* 원격 화면 상단의 두 줄짜리 제목 링크. */
+      .remote-brand {
+        padding: 0 15px;
+        text-align: center;
+        font-size: var(--aot-font-size-xs);
+        font-weight: 700;
+        color: var(--aot-color-text-primary);
+      }
       </style>
     </div>
   </nav>

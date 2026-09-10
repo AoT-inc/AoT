@@ -7,7 +7,7 @@
 
     {% from 'pages/map/map_option_macros.html' import render_device_map with context %}
     <div class="map-option-section">
-      <div class="col-12" style="padding:0">
+      <div class="col-12 aot-col-flush">
         {{ render_device_map(
         'function',
         each_function.unique_id,

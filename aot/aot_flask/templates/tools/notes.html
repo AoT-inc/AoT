@@ -15,7 +15,6 @@
     .note-tag-chip:hover { background-color: #dee2e6; color: var(--aot-color-text-primary, #212529); }
     .note-fab { background-color: #343a40; }
     .note-fab:hover { background-color: #23272b; }
-    .note-search-input-group:focus-within { border-color: #6c757d; box-shadow: 0 0 0 3px rgba(108, 117, 125, 0.1); }
     /* [Phase 2, 3, 4, 5] Modal Layout & Optimization */
     #editNoteModal.aot-option-modal .modal-content {
         height: auto;
@@ -123,10 +122,43 @@
     .note-truncate-wrapper::-webkit-scrollbar-track {
         background-color: transparent;
     }
+    /* ── 인라인에서 걷어 온 것들(2026-09-10) ───────────────────────────── */
+    /* 노트 화면은 바닥색 위에 카드가 뜬다. 아래는 새 노트 단추가 떠 있는
+       자리라 한 칸 더 비운다. */
+    .notes-page {
+        min-height: 100vh;
+        padding-bottom: 5rem;
+        background: var(--aot-surface-body);
+    }
+
+    /* 검색줄 오른쪽 끝의 "지우기" — 앞 칸과 선 하나로만 나뉜다.
+       ⚠ `#dee2e6` 은 부트스트랩 입력 테두리색이라 정본 구분선 토큰으로
+       옮긴다(값이 거의 같다). */
+    /* ⚠ 세 클래스로 적어야 한다 — 알약 버튼의 기본값
+       `.btn.aot-pill-btn { border: 1px …; border-radius: 9999px }` 이 (0,2,0)
+       이라 클래스 하나로는 진다(실측: 위 테두리가 살아나고 모서리가 알약이
+       됐다). 인라인일 때는 그냥 이기던 자리다. */
+    .btn.aot-pill-btn.notes-clear-btn {
+        border: 0;
+        border-left: 1px solid var(--aot-border-neutral);
+        border-radius: 0;
+    }
+
+    /* 결과가 없을 때 크게 뜨는 표시. */
+    .notes-empty-icon {
+        font-size: 3rem;
+        opacity: 0.3;
+    }
+
+    /* 입력 아래의 작은 도움말. */
+    .notes-hint { font-size: var(--aot-font-size-xs); }
+
+    /* 첨부가 없어도 자리를 지켜 화면이 튀지 않게 한다. */
+    .notes-attach-box { min-height: 40px; }
 </style>
 
 <!-- Path: /notes -->
-<div class="container-fluid px-0" style="background: var(--aot-surface-body); min-height: 100vh; padding-bottom: 5rem;">
+<div class="container-fluid px-0 notes-page">
   {% include 'flash_messages.html' %}
 
   <!-- 1. HEADER & INTEGRATED SEARCH BAR -->
@@ -158,8 +190,8 @@
                          <!-- Hidden actual input -->
                          {{form_note_show.filter_tags(class_='d-none', id='filter_tags_input')}}
                          <!-- UI Select -->
-                         <select class="selectpicker ui-pill form-control" multiple title="{{_('Tags')}}" 
-                                 data-style="btn-white border" data-selected-text-format="count > 1" 
+                         <select class="selectpicker form-control" multiple title="{{_('Tags')}}" 
+                                 data-style="btn-white" data-selected-text-format="count > 1" 
                                  data-width="100%" id="tag_selector_ui" data-live-search="true">
                              {% for each_tag in tags %}
                                  <option value="{{each_tag.name}}">{{each_tag.name}}</option>
@@ -171,7 +203,7 @@
                     <div class="col-6 col-md-3 d-flex align-items-center">
                         <div class="btn-group w-100 ui-pill overflow-hidden border">
                             {{form_note_show.notes_show(class_='btn btn-dark border-0 flex-grow-1 font-weight-bold', value=_('Select'), style='border-radius:0;')}}
-                            <button type="button" id="clearFilterBtn" class="btn aot-pill-btn border-0 text-muted" title="{{_('Clear Filters')}}" style="border-radius:0; border-left: 1px solid #dee2e6 !important;">
+                            <button type="button" id="clearFilterBtn" class="btn aot-pill-btn text-muted notes-clear-btn" title="{{_('Clear Filters')}}">
                                 <i class="fas fa-times-circle"></i>
                             </button>
                         </div>
@@ -261,13 +293,13 @@
   </div>
   
   <!-- Sentinel for Intersection Observer (Outside of Masonry Container) -->
-  <div id="scrollSentinel" style="height: 50px; width: 100%; clear: both;"></div>
+  <div id="scrollSentinel"></div>
   {% else %}
       <div class="text-center py-5">
           {# 사다리 예외: 빈 목록 자리를 채우는 장식용 큰 글리프다(opacity 0.3).
    읽는 글자가 아니라 여백을 메우는 도형이라 사다리 최상단(24px)으로는
    그 자리를 못 채운다. #}
-          <div class="mb-3 text-muted" style="font-size: 3rem; opacity: 0.3;">
+          <div class="mb-3 text-muted notes-empty-icon">
               <i class="far fa-folder-open"></i>
           </div>
           <h5 class="text-muted">{{_('No notes found')}}</h5>
@@ -389,7 +421,7 @@
                          <div class="custom-control custom-switch">
                               <input type="checkbox" class="custom-control-input" id="edit_map_visible_toggle">
                               <label class="custom-control-label" for="edit_map_visible_toggle">{{_('Show in Widget')}}</label>
-                              <small class="form-text text-muted mt-1" style="font-size: 0.8em;">
+                              <small class="form-text text-muted mt-1 notes-hint">
                                   {{_('Toggle to show or hide this note on the map.')}}
                               </small>
                          </div>
@@ -402,7 +434,7 @@
 
                     <div class="form-group mb-3">
                         <label class="small text-muted font-weight-bold">{{_('Current Attachments')}}</label>
-                        <div id="edit_attachments_container" class="d-flex flex-wrap mt-1 p-2 bg-light rounded" style="min-height: 40px;">
+                        <div id="edit_attachments_container" class="d-flex flex-wrap mt-1 p-2 bg-light rounded notes-attach-box">
                             <!-- Previews will be rendered here -->
                         </div>
                     </div>
@@ -583,8 +615,10 @@
             $container.attr('data-current-index', index);
             
             // UI Update
-            $container.find('.thumb-item').css({'border-color': 'transparent', 'opacity': '0.6'}).removeClass('active');
-            $(thumbElement).css({'border-color': '#007bff', 'opacity': '1'}).addClass('active');
+            // 고른 것 표시는 `.thumb-item.active` 규칙 하나가 한다(aot-base.css).
+            // 예전에는 여기서 인라인으로 색과 투명도를 다시 쓰고 있었다.
+            $container.find('.thumb-item').removeClass('active');
+            $(thumbElement).addClass('active');
         };
 
         window.scrollGallery = function(noteId, direction) {

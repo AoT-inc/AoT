@@ -31143,3 +31143,15 @@ msgstr "— Kanal seçin —"
 msgid "— Select —"
 msgstr "— Seçin —"
 
+
+#: Added by hand — do not re-extract (fuzzy contamination history).
+#: templates/modals/geo_settings_modal.html · templates/settings/measurement.html
+#: (2026-09-10)
+msgid "Device Color"
+msgstr "Cihaz Rengi"
+
+msgid "All Measurements"
+msgstr "Tüm Ölçümler"
+
+msgid "All Units"
+msgstr "Tüm Birimler"

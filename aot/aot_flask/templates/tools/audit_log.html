@@ -9,7 +9,7 @@
   <main role="main" class="container py-4">
     {% include 'flash_messages.html' %}
 
-    <form class="row align-items-end" method="get" action="/audit_log" style="padding-top: 0.5em">
+    <form class="row align-items-end pt-2" method="get" action="/audit_log">
       <div class="col-auto">
         <label for="action">{{_('Action')}}</label>
         <select class="form-control" id="action" name="action">
@@ -46,13 +46,13 @@
       </div>
     </form>
 
-    <div style="clear: both; padding: 0.5em 0;"></div>
+    <div class="aot-vspace"></div>
 
     <div class="aot-page-section">
       {% if not entries %}
         <p>{{_('No audit log entries found.')}}</p>
       {% else %}
-      <div style="overflow-x: auto">
+      <div class="aot-scroll-x">
         <table class="table table-sm">
           <thead>
             <tr>
@@ -71,7 +71,7 @@
           <tbody>
             {% for entry in entries %}
             <tr>
-              <td style="white-space: nowrap">{{ entry.local_timestamp }}</td>
+              <td class="text-nowrap">{{ entry.local_timestamp }}</td>
               <td>{{entry.action}}</td>
               <td>
                 {% if entry.result == 'failure' %}

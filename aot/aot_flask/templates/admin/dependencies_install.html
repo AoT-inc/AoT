@@ -1,6 +1,6 @@
 <div class="modal fade" id="modal_config_dependency_install" tabindex="-1" role="dialog" aria-labelledby="ModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-xl" role="document">
-      <div class="modal-content" style="padding: 1em">
+      <div class="modal-content p-3">
         <div class="modal-header">
           <h5 class="modal-title">Install Dependencies for <span class="dependencies_device_name"></span></h5>
         </div>
@@ -14,7 +14,7 @@
           <form id="form_dependency_install" method="post">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <input type="hidden" id="dependency_unmet" name="dependency_unmet" value="">
-            <div class="row small-gutters" style="padding-left: 0.5em">
+            <div class="row small-gutters pl-2">
               <div class="col-auto">
                 <button type="button" class="form-control btn aot-pill-btn aot-pill-btn-sm btn-block" data-dismiss="modal">{{_('Close')}}</button>
               </div>
@@ -31,13 +31,13 @@
           <p>{{_('The component installation log below refreshes every 5 seconds. Please wait until all components are installed and the frontend and backend restart before re-adding the associated device. When the installation process is complete, the message "#### Component installation complete" will appear at the end of the log.')}}</p>
           <p>{{_('If a problem occurs during installation and you need to reset the installation status, deleting the /opt/AoT/.dependency file will restore component installation functions.')}}</p>
 
-          <div class="row small-gutters" style="padding: 0.5em">
+          <div class="row small-gutters p-2">
             <div class="col-auto">
               <button type="button" class="form-control btn aot-pill-btn aot-pill-btn-sm btn-block" data-dismiss="modal">{{_('Close')}}</button>
             </div>
           </div>
 
-          <pre style="overflow:auto; resize: vertical; height:400px" id="dependency_status"></pre>
+          <pre class="aot-log-box" id="dependency_status"></pre>
         </div>
 
     </div>

@@ -28,7 +28,7 @@
         <div class="aot-modal-option-row aot-full-width-row">
           <label class="aot-modal-option-label font-weight-bold">{{ opt.name or opt.id }}</label>
           <div class="aot-modal-option-control">
-            <textarea name="custom_{{ opt.id }}" class="form-control aot-modern-input" rows="5" style="height: auto !important; min-height: 80px; border-radius: var(--aot-radius-md) !important;">{{ val }}</textarea>
+            <textarea name="custom_{{ opt.id }}" class="form-control aot-modern-input aot-input-prose aot-input-tall-sm" rows="5">{{ val }}</textarea>
           </div>
         </div>
       {% elif opt.type == 'password' %}
@@ -54,7 +54,7 @@
             {% elif opt.type == 'int' or opt.type == 'float' %}
               <input type="number" name="custom_{{ opt.id }}" class="form-control aot-modern-input" value="{{ val }}" step="{% if opt.type == 'float' %}0.01{% else %}1{% endif %}">
             {% elif opt.type == 'select' %}
-              <select name="custom_{{ opt.id }}" class="form-control selectpicker aot-standard-select" data-style="btn-white border">
+              <select name="custom_{{ opt.id }}" class="form-control selectpicker aot-standard-select" data-style="btn-white">
                 {% for choice in opt.choices %}
                   <option value="{{ choice.value }}" {% if val == choice.value %}selected{% endif %}>{{ choice.label }}</option>
                 {% endfor %}

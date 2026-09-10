@@ -17,6 +17,7 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/gridstack-custom.css') }}" />
 <link rel="stylesheet" href="{{ url_for('static', filename='css/aot-entry-ui.css') }}" />
 <link rel="stylesheet" href="{{ url_for('static', filename='css/aot-settings.css') }}" />
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/ai.css') }}" />
 <script src="{{ url_for('static', filename='js/vendor/gridstack-all.js') }}"></script>
 {% endblock %}
 
@@ -30,7 +31,7 @@
   </div>
   <p class="aot-modal-body-text">{{ _('Connect data sources so the AI answers from a source instead of its own general knowledge. The built-in public-data feeds are Korean; anywhere else, bring your own documents, web pages or APIs.') }}</p>
 
-  <div style="clear: both; padding: 0.5em 0;"></div>
+  <div class="aot-vspace"></div>
 
   <!-- Selection Row: source type picker → Add -->
   <div class="row aot-main-selection-row">
@@ -71,7 +72,7 @@
     </div>
   </div>
 
-  <div style="clear: both; padding: 1em 0;"></div>
+  <div class="aot-vspace-lg"></div>
 
   <!-- GridStack entry list -->
   <div class="grid-stack aot-entry-container" id="grid-sources">
@@ -141,7 +142,7 @@
   {#- 출처 표시. CC BY 자료는 표시하는 자리 옆에 출처를 밝혀야 한다
       (FAO ECOCROP, Open-Meteo 둘 다 CC BY 4.0). 켜진 소스만 싣는다. -#}
   {% if attributions %}
-  <div class="aot-modal-body-text" style="clear: both; padding: 1em 0 0;">
+  <div class="aot-modal-body-text ai-credits">
     {{ _('Data credits') }}:
     {% for credit in attributions %}
       {%- if credit.url -%}
@@ -154,7 +155,7 @@
   </div>
   {% endif %}
 
-  <div style="clear: both; padding: 2em 0 0.5em;">
+  <div class="ai-section-head">
     <div class="aot-settings-title">
       <h3>{{ _('AI-Curated Knowledge Review') }}</h3>
     </div>
@@ -163,7 +164,7 @@
         (t3_knowledge_search_enabled / knowledge_digest_enabled)은 끄면
         라이브러리가 조용히 아무 일도 안 하는 상태가 되는데, 그것을 원하는
         사람은 없다 — 켜짐 말고 쓸 자리가 없는 스위치는 설정이 아니다. -#}
-    <div class="aot-modal-body-text" style="padding: 0.25em 0 0.5em;">
+    <div class="aot-modal-body-text ai-section-desc">
       <input class="form-control btn aot-pill-btn{% if strict_mode %} aot-pill-btn-primary{% endif %}"
              id="strictModeBtn" type="button"
              value="{% if strict_mode %}{{ _('Reviewed knowledge only: ON') }}{% else %}{{ _('Reviewed knowledge only: OFF') }}{% endif %}"
@@ -172,7 +173,7 @@
     </div>
   </div>
 
-  <div id="reviewEmptyState" class="aot-modal-body-text" style="{% if review_items %}display:none;{% endif %} padding: 1em 0;">
+  <div id="reviewEmptyState" class="aot-modal-body-text ai-empty"{% if review_items %} style="display:none;"{% endif %}>
     {{ _('No AI-curated knowledge yet.') }}
   </div>
 
@@ -268,7 +269,7 @@
       "이 라이브러리에 무엇이 들어 있나" 를 볼 수 없다 — 비어 있는 것과 고장난
       것을 구분할 수 없고, 오래된 외부 피드도 눈에 띄지 않는다. 설계 §8 이
       요구한 '지식 저장소 관리' 는 이 섹션이다. -#}
-  <div style="clear: both; padding: 2em 0 0.5em;">
+  <div class="ai-section-head">
     <div class="aot-settings-title">
       <h3>{{ _('Knowledge Items') }}</h3>
     </div>
@@ -302,7 +303,7 @@
 
   {#- 태그 막대. 라이브러리가 실제로 무엇에 대해 알고 있는지가 여기서 한눈에
       보인다 — 목록을 훑기 전에 범위를 먼저 좁히는 자리다. -#}
-  <div id="kbTagBar" class="aot-modal-body-text" style="padding: 0.5em 0;">
+  <div id="kbTagBar" class="aot-modal-body-text ai-note">
     {% for t in knowledge_tags %}
     <input class="form-control btn aot-pill-btn kb-tag-btn" type="button"
            data-tag="{{ t.tag }}" value="{{ t.tag }} ({{ t.count }})"
@@ -313,8 +314,7 @@
   {#- 빈 상태는 "없음" 만 말하지 않는다. 라이브러리가 비면 AI 는 주제 질문에
       자기 기억으로 답할 수밖에 없는데, 화면이 그 사실도, 다음에 할 일도 알려
       주지 않으면 운영자는 이 페이지가 고장난 줄 안다. -#}
-  <div id="kbEmptyState" class="aot-modal-body-text"
-       style="{% if knowledge_summary.total %}display:none;{% endif %} padding: 1em 0;">
+  <div id="kbEmptyState" class="aot-modal-body-text ai-empty"{% if knowledge_summary.total %} style="display:none;"{% endif %}>
     <p>{{ _('The knowledge library is empty. Until something is in here, the AI answers subject questions from its own general knowledge — with no source to cite.') }}</p>
     <p>{{ _('Three ways to fill it: connect a source above, press Add Knowledge to write in what you already know, or just ask the AI to look something up — it saves what it finds.') }}</p>
   </div>
@@ -325,7 +325,7 @@
       `reuse_count` 는 '검색에 걸린 횟수'이지 '답변에 인용된 횟수'가 아니다 —
       그 둘을 가르는 계측은 아직 없으므로 문구도 정확히 그렇게 쓴다. -#}
   {% if knowledge_usage and knowledge_usage.total %}
-  <div class="aot-modal-body-text" style="padding: 0.5em 0;">
+  <div class="aot-modal-body-text ai-note">
     <div>
       {{ _('Retrieved at least once') }}: {{ knowledge_usage.total - knowledge_usage.never_retrieved }} / {{ knowledge_usage.total }}
       &nbsp;·&nbsp; {{ _('With a source link') }}: {{ knowledge_usage.with_source_url }}
@@ -343,14 +343,14 @@
   </div>
   {% endif %}
 
-  <div id="kbSummary" class="aot-modal-body-text" style="padding: 0.25em 0;"></div>
+  <div id="kbSummary" class="aot-modal-body-text ai-summary"></div>
   <div class="aot-entry-container" id="grid-knowledge"></div>
-  <div id="kbPager" style="padding: 0.75em 0;"></div>
+  <div id="kbPager" class="ai-pager"></div>
 
 </main>
 </div>
 
-<div style="clear: both; padding-bottom: 1.5em;"></div>
+<div class="aot-vspace-end"></div>
 
 <!-- Add Knowledge Modal -->
 <div class="modal fade aot-option-modal" id="addKnowledgeModal" tabindex="-1" role="dialog" aria-hidden="true">
@@ -841,13 +841,13 @@ function openSourceSettings(sourceId) {
     if (meta.urlSource) infoLinks.push(T.sourceSite + ' <a href="' + esc(meta.urlSource) + '" target="_blank">' + T.link + '</a>');
     if (meta.urlApiKey && meta.urlApiKey !== meta.urlSource) infoLinks.push(T.apiKey + ' <a href="' + esc(meta.urlApiKey) + '" target="_blank">' + T.link + '</a>');
     if (infoLinks.length) {
-      html += '<div class="aot-modal-body-text" style="font-size: var(--aot-font-size-sm);"><strong>' + T.relatedDocs + ':</strong> ' + infoLinks.join('; ') + '.</div>';
+      html += '<div class="aot-modal-body-text"><strong>' + T.relatedDocs + ':</strong> ' + infoLinks.join('; ') + '.</div>';
     }
     if (meta.description) {
-      html += '<div class="aot-modal-body-text" style="font-style: italic; background: var(--aot-gray-100); padding: 8px; border-radius: var(--aot-radius-sm); font-size: var(--aot-font-size-sm);">' + esc(meta.description) + '</div>';
+      html += '<div class="aot-modal-body-text aot-modal-desc">' + esc(meta.description) + '</div>';
     }
     if (meta.usage) {
-      html += '<div class="aot-modal-container"><div class="col-12 text-muted small" style="padding:0"><strong>' + T.usageLabel + '</strong> ' + esc(meta.usage) + '</div></div>';
+      html += '<div class="aot-modal-container"><div class="col-12 text-muted small ai-usage-line"><strong>' + T.usageLabel + '</strong> ' + esc(meta.usage) + '</div></div>';
     }
 
     html += '<div class="aot-modal-container">';
@@ -988,7 +988,7 @@ function renderSmartfarmkoreaFields(config, presetKey) {
   var html = '<div class="aot-modal-group-title">' + T.selectOperations + '</div>';
   html += '<div class="aot-modal-container">';
   html += '<select multiple class="selectpicker aot-standard-select" id="sfkOpsSelect"' +
-    ' data-style="btn-white border" data-selected-text-format="count > 2"' +
+    ' data-style="btn-white" data-selected-text-format="count > 2"' +
     ' data-actions-box="true" data-width="100%" title="' + esc(T.selectOperations) + '"' +
     ' data-select-all-text="' + esc(T.selectAll) + '" data-deselect-all-text="' + esc(T.deselectAll) + '">';
   order.forEach(function(cat) {
@@ -1005,7 +1005,7 @@ function renderSmartfarmkoreaFields(config, presetKey) {
      a date range) — showing the identity-discovery hint there would be
      actively wrong, not just irrelevant. */
   var opsHint = ops.identity ? T.sfkOpsHint : T.sfkOpsHintSimple;
-  html += '<div class="text-muted small" style="margin-top:6px;">' + esc(opsHint) + '</div>';
+  html += '<div class="text-muted small ai-gap-top">' + esc(opsHint) + '</div>';
   html += '</div>';
 
   html += '<div class="aot-modal-group-title">' + T.commonParams + '</div>';
@@ -1050,9 +1050,9 @@ function _sfkParamsHtml(ops, selectedKeys, config, presetKey) {
                    '" data-itemcode="' + esc(config.itemCode || '') + '" selected>' +
                    esc(curFarmLabel) + '</option>' : '') +
       '</select>' +
-      '<button type="button" class="btn btn-secondary aot-pill-btn" style="margin-top:6px;"' +
+      '<button type="button" class="btn btn-secondary aot-pill-btn ai-gap-top"' +
       ' onclick="sfkLoadFarms(\'' + esc(presetKey) + '\')">' + esc(T.sfkLoadFarms) + '</button>' +
-      '<span id="sfkFarmStatus" class="text-muted small" style="margin-left:8px;"></span>';
+      '<span id="sfkFarmStatus" class="text-muted small ai-gap-left"></span>';
     html += row(esc(T.sfkFarmLabel), farmCtl);
   }
 
@@ -1066,7 +1066,7 @@ function _sfkParamsHtml(ops, selectedKeys, config, presetKey) {
         (curSeason ? '<option value="' + esc(curSeason) + '" selected>' +
                      esc(curSeasonLabel) + '</option>' : '') +
       '</select>' +
-      '<span id="sfkSeasonStatus" class="text-muted small" style="margin-left:8px;"></span>';
+      '<span id="sfkSeasonStatus" class="text-muted small ai-gap-left"></span>';
     html += row(esc(T.sfkSeasonLabel), seasonCtl);
   }
 
@@ -1078,7 +1078,7 @@ function _sfkParamsHtml(ops, selectedKeys, config, presetKey) {
     var example = examples[p] || '';
     var field = '<input type="text" id="sSfk_' + p + '" class="form-control aot-modern-input" value="' + esc(config[p] || '') + '"' +
       (example ? ' placeholder="' + esc(example) + '"' : '') + '>';
-    field += '<div class="text-muted small" style="margin-top:2px;">' + esc(relevant[p]) + (hintLine ? ' — ' + esc(hintLine) : '') + '</div>';
+    field += '<div class="text-muted small ai-gap-top-xs">' + esc(relevant[p]) + (hintLine ? ' — ' + esc(hintLine) : '') + '</div>';
     html += row(esc(SMARTFARMKOREA_PARAM_LABELS[p]), field);
   });
 
@@ -1279,9 +1279,9 @@ function renderGdriveFileList() {
     return;
   }
   container.innerHTML = files.map(function(f, i) {
-    return '<div style="display:flex; justify-content:space-between; align-items:center; padding:2px 0;">' +
+    return '<div class="ai-list-row">' +
       '<span>' + esc(f.name) + '</span>' +
-      '<button type="button" class="btn btn-sm btn-link text-danger" style="padding:0 4px;" ' +
+      '<button type="button" class="btn btn-sm btn-link text-danger ai-btn-tight" ' +
       'onclick="gdriveRemoveFile(' + i + ')">' + esc(T.gdriveRemove) + '</button></div>';
   }).join('');
 }
@@ -1540,7 +1540,7 @@ function renderKnowledge(data) {
 
   if (!items.length) {
     grid.innerHTML = libraryEmpty ? '' :
-      '<div class="aot-modal-body-text" style="padding:1em 0;">' + esc(T.kbNoResults) + '</div>';
+      '<div class="aot-modal-body-text ai-empty">' + esc(T.kbNoResults) + '</div>';
     pager.innerHTML = '';
     return;
   }

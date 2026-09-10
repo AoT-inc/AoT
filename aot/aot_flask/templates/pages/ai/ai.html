@@ -247,6 +247,28 @@
         0% { background-position: 200% 0; }
         100% { background-position: -200% 0; }
     }
+    /* ── 인라인에서 걷어 온 것들(2026-09-10) ─────────────────────────
+       뼈대(skeleton) 조각의 크기와 안내 문구 색이 템플릿 속성과 JS 문자열에
+       적혀 있었다. 색은 `var(--토큰, #리터럴)` 폴백을 떼고 토큰만 읽는다 —
+       이 화면도 aot-theme-variables.css 를 먼저 실으므로 폴백이 하던 일이
+       없었다. */
+    .skeleton-line { height: 10px; width: 100%; margin-bottom: 0.5rem; }
+    .skeleton-title { height: 16px; width: 60%; }
+    .skeleton-field { height: 28px; width: 80%; }
+    .skeleton-block { height: 120px; }
+
+    /* 저장 실패 안내 — JS 가 보이고 숨긴다. */
+    #req-save-error {
+        margin-top: var(--aot-space-1);
+        font-size: var(--aot-font-size-sm);
+        color: var(--aot-color-danger);
+    }
+
+    /* "아직 배우는 중" 처럼 값 대신 서는 안내 문구. */
+    .ai-muted-note {
+        font-size: var(--aot-font-size-sm);
+        color: var(--aot-color-text-secondary);
+    }
 </style>
 {% endblock %}
 
@@ -294,8 +316,8 @@
             <div class="status-card" id="card-learning-progress">
                 <div class="status-card-title">{{ _('Learning Progress') }}</div>
                 <div id="progress-content">
-                    <div class="skeleton" style="height:10px; width:100%; margin-bottom:0.5rem;"></div>
-                    <div class="skeleton" style="height:16px; width:60%;"></div>
+                    <div class="skeleton skeleton-line"></div>
+                    <div class="skeleton skeleton-title"></div>
                 </div>
             </div>
 
@@ -303,7 +325,7 @@
             <div class="status-card" id="card-keywords">
                 <div class="status-card-title">{{ _('Key Keywords') }}</div>
                 <div id="keywords-content">
-                    <div class="skeleton" style="height:28px; width:80%;"></div>
+                    <div class="skeleton skeleton-field"></div>
                 </div>
             </div>
 
@@ -311,12 +333,12 @@
             <div class="status-card" id="card-features">
                 <div class="status-card-title">{{ _('Frequently Used Features') }}</div>
                 <div id="features-content">
-                    <div class="skeleton" style="height:120px;"></div>
+                    <div class="skeleton skeleton-block"></div>
                 </div>
             </div>
 
             {# Reset button #}
-            <div style="text-align:right;">
+            <div class="text-right">
                 <button class="ai-reset-btn" onclick="AiPage.resetSnapshot()">
                     {{ _('Reset AI Status') }}
                 </button>
@@ -381,7 +403,7 @@
                     <button class="req-save-btn" onclick="AiPage.saveRequirement()">{{ _('Save') }}</button>
                     <button class="req-cancel-btn" onclick="AiPage.cancelEditRequirement()">{{ _('Cancel') }}</button>
                 </div>
-                <div id="req-save-error" style="color:var(--aot-color-danger, #dc3545); font-size: var(--aot-font-size-sm); margin-top:0.4rem; display:none;"></div>
+                <div id="req-save-error" style="display:none;"></div>
             </div>
         </section>
 
@@ -449,7 +471,7 @@ const AiPage = (function() {
         const keywords = data.keywords || [];
         const kwEl = document.getElementById('keywords-content');
         if (keywords.length === 0) {
-            kwEl.innerHTML = '<span style="color:var(--aot-color-text-secondary, #adb5bd); font-size: var(--aot-font-size-sm);">' + {{ _("AI is still learning...")|tojson }} + '</span>';
+            kwEl.innerHTML = '<span class="ai-muted-note">' + {{ _("AI is still learning...")|tojson }} + '</span>';
         } else {
             kwEl.innerHTML = '<div class="keyword-chips">' +
                 keywords.map(function(k) {
@@ -462,7 +484,7 @@ const AiPage = (function() {
         const features = data.features || [];
         const fEl = document.getElementById('features-content');
         if (features.length === 0) {
-            fEl.innerHTML = '<span style="color:var(--aot-color-text-secondary, #adb5bd); font-size: var(--aot-font-size-sm);">' + {{ _("No activity yet")|tojson }} + '</span>';
+            fEl.innerHTML = '<span class="ai-muted-note">' + {{ _("No activity yet")|tojson }} + '</span>';
         } else {
             fEl.innerHTML = '<ul class="feature-list">' +
                 features.map(function(f, i) {

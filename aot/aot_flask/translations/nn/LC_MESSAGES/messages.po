@@ -31040,3 +31040,15 @@ msgstr "— Vel kanal —"
 msgid "— Select —"
 msgstr "— Vel —"
 
+
+#: Added by hand — do not re-extract (fuzzy contamination history).
+#: templates/modals/geo_settings_modal.html · templates/settings/measurement.html
+#: (2026-09-10)
+msgid "Device Color"
+msgstr "Einingsfarge"
+
+msgid "All Measurements"
+msgstr "Alle målingar"
+
+msgid "All Units"
+msgstr "Alle einingar"

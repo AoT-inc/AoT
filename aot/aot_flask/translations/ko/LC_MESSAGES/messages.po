@@ -5262,7 +5262,7 @@ msgstr "실시간 스트림"
 #: aot_flask/templates/pages/geo/geo_facility.html:1320
 #: functions/camera_libcamera.py:244 functions/camera_libcamera.py:400
 msgid "Width"
-msgstr "위젯"
+msgstr "폭"
 
 #: aot_flask/forms/forms_camera.py:172 functions/camera_libcamera.py:253
 #: functions/camera_libcamera.py:409
@@ -21436,7 +21436,7 @@ msgstr "'%(module)s'을(를) 임포트할 수 없어 Python 패키지 %(package)
 #: aot_flask/utils/utils_function.py:135
 #, python-brace-format
 msgid "Function not found: {}"
-msgstr "함수를(를) 찾을 수 없습니다"
+msgstr "함수를 찾을 수 없습니다: {}"
 
 #: aot_flask/utils/utils_function.py:344
 msgid "Function Name"
@@ -28056,7 +28056,7 @@ msgstr "Period 마다 Python 코드 실행"
 #: widgets/widget_python_code.py:164
 #, python-brace-format
 msgid "Loop Period ({})"
-msgstr "반복 주기"
+msgstr "반복 주기 ({})"
 
 #: widgets/widget_python_code.py:165
 msgid "The period of time between executing loop code"
@@ -35050,3 +35050,52 @@ msgstr "보기"
 msgid "{n} pending approval"
 msgstr "{n}건 승인 대기"
 
+
+#: 카탈로그에 없던 항목을 손으로 채운다(재추출 금지 — fuzzy 대량오염 이력).
+#: templates/modals/geo_settings_modal.html · templates/settings/measurement.html
+#: (2026-09-10)
+msgid "Device Color"
+msgstr "장치 색상"
+
+msgid "All Measurements"
+msgstr "전체 측정값"
+
+msgid "All Units"
+msgstr "전체 단위"
+
+#: aot_flask/forms/forms_settings.py
+#: aot_flask/templates/settings/custom_ui.html
+msgid "Unresponsive"
+msgstr "무응답"
+
+#: aot_flask/forms/forms_settings.py
+#: aot_flask/templates/settings/custom_ui.html
+msgid "Divider Line"
+msgstr "구분선"
+
+#: aot_flask/forms/forms_settings.py
+#: aot_flask/templates/settings/custom_ui.html
+msgid "Row/card background when a device stops answering — a different thing from Warning State, which is a person pausing it on purpose"
+msgstr "장치가 응답을 멈췄을 때의 행·카드 배경. 사람이 의도적으로 멈춘 '일시정지 상태'와는 다른 것입니다"
+
+#: aot_flask/forms/forms_settings.py
+#: aot_flask/templates/settings/custom_ui.html
+msgid "Line between items inside one container — lists, option rows. Not a border around anything"
+msgstr "한 컨테이너 안 항목 사이의 선 — 목록·옵션 행. 무언가를 둘러싸는 테두리가 아닙니다"
+
+#: aot_flask/forms/forms_settings.py
+#: aot_flask/templates/settings/custom_ui.html
+msgid "Control Surface"
+msgstr "컨트롤 면"
+
+#: aot_flask/templates/settings/custom_ui.html
+msgid "Text Field"
+msgstr "글자 입력칸"
+
+#: aot_flask/templates/settings/custom_ui.html
+msgid "Click to edit Control Surface colors"
+msgstr "컨트롤 면 색을 바꾸려면 누르세요"
+
+#: aot_flask/templates/settings/custom_ui.html
+msgid "Face of things you operate — text fields, selects, pills. Keep it apart from the page background, or a control sitting on the page vanishes into it"
+msgstr "조작하는 것들의 면 — 글자 입력칸·셀렉트·알약. 페이지 배경과 값을 벌려 두세요. 같으면 배경 위에 놓인 컨트롤이 통째로 묻혀 보이지 않습니다"

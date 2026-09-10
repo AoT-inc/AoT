@@ -20,13 +20,37 @@
 #aotConfirmModal {
     z-index: var(--aot-z-confirm);
 }
+/* ⚠ z-index 는 여기 한 곳에서만 적는다. layout 템플릿이 같은 값을 인라인으로
+   한 번 더 적고 있었는데, 두 곳이 갈리면 어느 쪽이 이겼는지 화면을 봐야만
+   알 수 있다. 배경 자체(고정·전면·반투명)도 여기서 그린다. */
 #aotConfirmBackdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: var(--aot-modal-backdrop);
     z-index: var(--aot-z-confirm-backdrop);
 }
 
 /* SECTION 1: DESIGN TOKENS — defined in aot-theme-variables.css */
 
 /* SECTION 1b: BODY / DESCRIPTION TEXT */
+/* 장치·함수 **설명 상자** — 여러 줄 부연이라 옅은 면에 앉힌다(§2-2: 여러 줄은
+   면). 예전에는 템플릿 일곱 곳에 인라인으로 복사돼 있었는데, 셋은 면이 있고
+   넷은 면 없이 padding 과 radius 만 남아 있어 장치 종류에 따라 상자가 보였다
+   안 보였다 했다. 기울임도 함께 걷는다 — 글자 역할 다섯에 기울임은 없고,
+   크기(sm)와 2차 문자색이 이미 "부연" 을 말한다.
+
+   면은 **카드색**이다 — 일곱 곳 모두 카드 안이 아니라 모달 바닥(1단) 위에
+   바로 놓이므로, 바닥색을 주면 배경과 같아져 상자가 사라진다(실측). */
+.aot-modal-desc {
+    background: var(--aot-surface-card);
+    border-radius: var(--aot-radius-sm);
+    padding: var(--aot-space-2);
+    font-size: var(--aot-font-size-sm);
+}
+
 .aot-modal-body-text {
     font-size: var(--aot-font-size-xs);
     font-weight: 400;
@@ -169,7 +193,47 @@ a.aot-modal-section-title-collapsible + .collapse + .aot-modal-container:not(:ha
     margin-bottom: 0.75rem; /* 상하 대칭 마진 */
     display: flex;
     align-items: center;
-    justify-content: center; /* 중앙 정렬 */
+    /* 왼쪽 정렬 — 제목은 글자 정렬선에 선다(§2-3). display:flex 라 text-align
+       은 듣지 않아 여기서 정한다. 예전에는 center 였고, 그 결과 이 소제목만
+       홀로 안쪽으로 밀려 있었다(실측: 다른 제목·행 라벨은 전부 x=290 인데
+       소제목만 494 — 204px 들여쓰기). 좌우 여백은 카드가 준다(16px). */
+    justify-content: flex-start;
+}
+
+/* 행 안의 설명은 **제 줄로 내린다.**
+   라벨 안에 넣으면 라벨 열에 갇힌다 — 그 열은 `max-width: calc(100% - 165px)`
+   라 좁은 드로어에서 131px 밖에 안 되고, 대여섯 글자마다 끊긴다(실측: 시설
+   외피의 "측벽이 높은 경우 2단으로 / 나눌 수 있습니다"). 게다가 줄이 두 줄이
+   되면 `align-items: center` 가 컨트롤을 그 가운데로 내려, 토글이 제목과
+   어긋나 보인다(실측: 토글 중심이 행 위에서 42px — 한 줄 행은 20px).
+
+   그래서 설명은 라벨 밖, 행의 **세 번째 자식**으로 두고 통째로 내린다
+   (`components/aot-drawer-form.css` 가 드로어 안에서 먼저 쓰던 방법이다).
+   1행 [제목][컨트롤] · 2행 [설명]. */
+.aot-modal-option-row:has(> .aot-modal-body-text) {
+    flex-wrap: wrap;
+}
+.aot-modal-option-row > .aot-modal-body-text {
+    flex: 1 1 100%;
+    margin-top: 0.15rem;
+}
+
+/* 카드의 **마지막 줄 아래에는 선을 긋지 않는다.** 구분선은 다음 줄과 나누는
+   것이지, 카드 바닥을 긋는 것이 아니다.
+   `:last-child` 로는 못 잡는다 — 접힌 상세 블록(`display:none`)이 뒤에 남아
+   있으면 줄은 마지막 자식이 아니게 되기 때문이다(실측: 외피 탭의 "외부 천창
+   환기"·"차광 커튼" 아래에 선이 매달려 빈 띠처럼 보였다). 그래서 "뒤따르는
+   줄이 있는가" 로 판정한다. */
+.aot-modal-container > .aot-modal-option-row:not(:has(~ .aot-modal-option-row)) {
+    border-bottom: none;
+}
+
+/* 구획 제목은 카드 **밖**에 서는 것이라 스스로 16px 을 들여 카드 안 라벨과
+   같은 정렬선에 맞춘다. 그런데 카드 **안**에 놓이면 카드가 이미 16px 을 주므로
+   32px 로 밀린다(실측: 시설 "설비 배치" 의 "장치 미연결" 만 글자 x=453,
+   나머지 제목·라벨은 437). 안에서는 제 몫을 내려놓는다. */
+.aot-modal-container .aot-modal-group-title {
+    padding-left: 0;
 }
 
 .aot-modal-container {
@@ -181,10 +245,28 @@ a.aot-modal-section-title-collapsible + .collapse + .aot-modal-container:not(:ha
     /* 선이 아니라 밝기로 나눈다(§2-2). */
     border: none;
     border-radius: var(--aot-radius-xl);
-    padding: 0 16px; /* 좌우 여백을 16px로 충분히 확보하여 답답함 해소 */
+    /* **상자의 라운드는 내용의 최소 여백이다.** 모서리가 20px(radius-xl)인데
+       상하 여백이 0 이면 첫 행과 마지막 행이 둥근 모서리 안쪽을 파고들고,
+       안에 또 상자가 오면 두 상자가 선 없이 맞붙어 한 덩어리로 읽힌다.
+       상하 0 은 자식의 세로 margin 이 컨테이너 밖으로 새는 원인이기도
+       했다(margin collapse). 네 변을 같은 16px 로 둔다(§2-3 바깥 16px). */
+    padding: 16px;
     margin-bottom: 1.2rem;
     overflow: visible; /* 드롭다운 목록이 잘리지 않도록 visible 설정 */
 }
+
+/* ⚠ 위 16px 은 **카드와 내용 사이의 전부**여야 한다. 그런데 줄도 제 위아래
+   여백(6.4px)을 갖고 있어 첫 줄·마지막 줄에서만 그것이 카드 여백에 더해졌다
+   — 실측 카드 위 → 글자 위 29px 인데 줄과 줄 사이는 13px 이었다. 바깥이
+   안쪽 간격의 두 배를 넘으면 위아래만 휑하게 뜬다.
+   줄과 줄을 벌리는 여백은 그대로 두고, **끝에서만** 뗀다. */
+.aot-modal-container > .aot-modal-option-row:first-child { padding-top: 0; }
+.aot-modal-container > .aot-modal-option-row:last-child { padding-bottom: 0; }
+
+/* 카드 안에 카드가 오고 그것이 **마지막**이면, 안쪽 카드의 아래 여백
+   (1.2rem)이 바깥 카드의 아래 여백(16px)에 그대로 얹혀 35px 이 된다.
+   그 여백은 *다음 카드와* 벌리려는 것이라 마지막에는 쓸 데가 없다. */
+.aot-modal-container > .aot-modal-container:last-child { margin-bottom: 0; }
 
 /* 채널 전용 그룹 스타일 (중첩 느낌 배제) */
 .aot-modal-channel-group {
@@ -293,6 +375,48 @@ a.aot-modal-section-title-collapsible + .collapse + .aot-modal-container:not(:ha
     flex-shrink: 0; /* Critical: Prevent crushing on mobile */
 }
 
+/* ── 컨트롤 폭 사다리 ──────────────────────────────────────────────────────
+   공용 160px 은 **텍스트 입력·셀렉트 기준** 폭이다. 스위치(60px)·색상
+   피커(60px)·짧은 숫자 칸만 있는 행에서는 100px 안팎이 그냥 버려지고, 라벨
+   max-width 가 같은 변수를 빼서 계산하므로 그만큼 제목이 잘린다. 행에 변수만
+   갈아끼우면 컨트롤 폭과 라벨 상한이 함께 맞춰진다 — #tabScopeGroups 등에서
+   쓰던 방식(바로 아래)을 일반화한 것.
+
+   ⚠ 예전에는 이 사다리가 `@media (max-width: 768px)` 안에 있었다. 좁은
+   화면에서 제목이 잘리는 것을 고치려고 넣은 자리라 그랬는데, **낭비되는
+   여백은 넓은 화면에서도 똑같다** — 세 자리 숫자 칸이 160px 로 늘어져 있는
+   것은 폰이든 데스크톱이든 마찬가지다. 화면 크기와 무관한 규칙이므로 밖으로
+   꺼냈다(2026-09-10).
+
+   조건의 `:not(:has(> .aot-modal-option-control > * + *))` 는 "컨트롤의 직접
+   자식이 정확히 하나" 를 뜻한다. 자식이 둘 이상인 행은 값+버튼,
+   hidden+드롭다운처럼 실제로 넓은 자리가 필요하므로 160px 그대로 둔다
+   (`:only-child` 로 쓰면 hidden input 형제 하나에 규칙이 조용히 빠지거나,
+   반대로 넓은 조합 행까지 좁혀 버린다). */
+.aot-modal-option-row:has(> .aot-modal-option-control > .btn-toggle):not(:has(> .aot-modal-option-control > * + *)) {
+    /* 국소 오버라이드(의도) */
+    --aot-common-control-width: var(--aot-ctrl-w-switch);
+}
+/* 폭이 어긋나더라도 스위치가 눌리는 일은 없게 — 눌리면 thumb 이 슬라이더
+   밖으로 삐져나와 대놓고 깨져 보인다. */
+.aot-modal-option-control > .btn-toggle {
+    flex-shrink: 0;
+}
+.aot-modal-option-row:has(> .aot-modal-option-control > input[type="color"]):not(:has(> .aot-modal-option-control > * + *)) {
+    /* 국소 오버라이드(의도) */
+    --aot-common-control-width: var(--aot-ctrl-w-color);
+}
+.aot-modal-option-row:has(> .aot-modal-option-control > input[type="number"]):not(:has(> .aot-modal-option-control > * + *)) {
+    /* 국소 오버라이드(의도) */
+    --aot-common-control-width: var(--aot-ctrl-w-num);
+}
+/* 짧은 텍스트 칸은 스스로 밝혀야 한다 — 타입만 봐서는 두 글자짜리인지
+   호스트명인지 알 수 없다. 해당 입력에 `.aot-ctrl-short` 를 붙인다. */
+.aot-modal-option-row:has(> .aot-modal-option-control > .aot-ctrl-short):not(:has(> .aot-modal-option-control > * + *)) {
+    /* 국소 오버라이드(의도) */
+    --aot-common-control-width: var(--aot-ctrl-w-short);
+}
+
 /* 그룹 부여 목록(탭/대시보드/지도/시설 — docs/design/access-scope-groups.md
    §7 "부여 UI 재설계"의 네 자리, #tabScopeGroups·.aot-dash-scope-groups·
    .aot-map-scope-groups·.aot-fac-scope-groups)은 행마다 스위치 하나뿐이라
@@ -378,11 +502,6 @@ select.aot-modern-select {
 .aot-modal-option-control input[type="color"] {
     height: 32px;
     width: 100%;
-    padding: 0;
-    border: 1px solid var(--aot-border-neutral);
-    border-radius: var(--aot-radius-lg);
-    cursor: pointer;
-    overflow: hidden;
 }
 
 /* 미리 고르는 색 칩 — `pages/form_options/Color_Presets.html` 이 그린다.
@@ -432,17 +551,6 @@ select.aot-modern-select {
     min-width: 0;
 }
 
-/* WebKit shadow DOM elements inside color input */
-.aot-modal-option-control input[type="color"]::-webkit-color-swatch-wrapper {
-    padding: 0;
-    border-radius: var(--aot-radius-lg);
-}
-
-.aot-modal-option-control input[type="color"]::-webkit-color-swatch {
-    border: none;
-    border-radius: var(--aot-radius-lg);
-}
-
 /* Internal controls follow the container's 160px width precisely */
 .aot-modal-option-control .aot-modern-input,
 .aot-modal-option-control .aot-modern-select,
@@ -475,9 +583,15 @@ select.aot-modern-select {
 /* 부트스트랩 기본 `.form-control:focus` 는 파란 테두리(#80bdff)와 파란 번짐
    (rgba(0,123,255,.25))을 준다. 앱이 이 자리를 한 번도 덮은 적이 없어, 위
    알약 입력칸을 제외한 모든 입력칸이 포커스 때 파랗게 빛나고 있었다.
-   같은 토큰으로 맞춘다 — 부트스트랩은 @layer vendor 라 일반 선언으로 이긴다. */
+   같은 토큰으로 맞춘다 — 부트스트랩은 @layer vendor 라 일반 선언으로 이긴다.
+   ⚠ border-color 만 고치고 box-shadow 는 그대로 둔 적이 있었다(실측: 네이티브
+   `<select class="form-control aot-modern-select">`, 예를 들어 사용자 편집
+   드로어의 역할/테마 선택 — 테두리는 브랜드색인데 번짐만 파랬다). 위
+   `.aot-modern-input:focus` 와 같은 원칙(§2-2, 포커스는 색만 바꾼다)으로
+   번짐 자체를 없앤다. */
 .form-control:focus {
     border-color: var(--aot-input-focus-border);
+    box-shadow: none;
 }
 
 /* Textarea: multi-line code editor. No !important height here — the height comes from
@@ -505,6 +619,92 @@ textarea.aot-modern-input {
     white-space: pre;       /* code: no wrap, horizontal scroll instead */
     overflow-wrap: normal;
 }
+
+/* 여러 줄을 **보여 주기만** 하는 칸. 입력이 아니라 <div> 라서 textarea 규칙이
+   닿지 않는데, 화면에서는 옆의 textarea 와 같은 면으로 읽혀야 한다(예약
+   화면의 "AI 제안 동작"). 예전에는 `form-control aot-modern-input` 을 달아
+   한 줄 입력 규칙(32px 알약)에 걸린 뒤, 인라인 `height/border-radius` 를
+   `!important` 로 도로 풀고 있었다. */
+.aot-modern-readout {
+    box-sizing: border-box;
+    width: 100%;
+    min-height: 32px;
+    padding: 0.5rem 1rem;
+    border: 0;
+    border-radius: var(--aot-radius-sm);
+    background-color: var(--aot-input-bg);
+    color: var(--aot-text-main);
+    font-size: var(--aot-font-size-sm);
+    line-height: 1.5;
+    text-align: left;
+}
+
+/* 여러 줄이 기본으로 넉넉해야 하는 칸(시스템 프롬프트 등). 높이는 내용에
+   맡기되 처음부터 여러 줄이 보이게 한다. */
+.aot-input-tall { min-height: 120px; }
+.aot-input-tall-sm { min-height: 80px; }
+
+/* 조심할 것을 알리는 안내 상자 — 왼쪽 띠로 성격을 말한다. */
+.aot-callout-warning {
+    margin-bottom: var(--aot-space-4);
+    padding: var(--aot-space-3);
+    border-radius: var(--aot-radius-sm);
+    border-left: 4px solid var(--aot-color-warning);
+    background: var(--aot-tint-warning-bg);
+}
+
+/* 알림 띠를 목록 위에 얹을 때의 얼굴 — 카드가 아니라 바닥색 면이다. */
+.alert.aot-entry-info {
+    margin-bottom: var(--aot-space-2);
+    border-radius: var(--aot-radius-md);
+    background: var(--aot-surface-body);
+}
+
+/* 누를 수 없는 알약(값을 보여 주기만 하는 칩). */
+.aot-pill-btn.aot-pill-static {
+    cursor: default;
+    padding: 0.5rem 1rem;
+}
+
+/* 아래에 줄 하나로 나뉘는 소제목·머리 줄. */
+.aot-heading-rule {
+    padding-bottom: var(--aot-space-2);
+    border-bottom: 1px solid var(--aot-border-neutral);
+}
+
+.aot-heading-rule-strong {
+    margin-bottom: var(--aot-space-2);
+    padding-bottom: var(--aot-space-1);
+    border-bottom: 2px solid var(--aot-btn-bg-secondary);
+}
+
+/* 줄 아래를 선으로 닫는 폼 행. */
+.aot-row-rule {
+    padding-bottom: var(--aot-space-1);
+    border-bottom: 1px solid var(--aot-border-neutral);
+}
+
+/* 화면 첫머리에서 그 화면이 무엇인지 설명하는 문단. */
+.aot-lede {
+    font-size: var(--aot-font-size-sm);
+    color: var(--aot-color-text-secondary);
+    line-height: 1.5;
+}
+
+/* 입력 아래에 붙는 아주 작은 도움말. */
+.aot-form-hint { font-size: var(--aot-font-size-xs); }
+
+/* 인증 안내처럼 문장 안에 서는 바깥 링크. */
+.aot-link-inline {
+    text-decoration: underline;
+    font-size: var(--aot-font-size-sm);
+}
+
+/* 코드를 적는 칸 — 글꼴만 고정폭으로 바꾼다. 줄바꿈을 막는 `white-space: pre`
+   와 모서리는 위 `textarea.aot-modern-input` 이 이미 코드 기준으로 정해 두었다
+   (예전 호출부는 모서리를 `--aot-radius-md` 로 `!important` 덮어써서, 같은
+   화면의 다른 여러 줄 입력과 모서리가 갈렸다). */
+.aot-input-code { font-family: monospace; }
 
 /* 산문 입력용. 위 규칙은 조건부 컨트롤러의 **코드 편집기**를 기준으로 삼아
    `white-space: pre` 로 줄바꿈을 막는다 — 코드는 그게 맞지만 사람이 쓰는 글은
@@ -536,13 +736,60 @@ textarea.aot-modern-input.aot-input-prose {
 
 /* 래퍼의 이중 상자 제거는 components/aot-select.css 2번이 전 자리에서 한다. */
 
+/* 컨트롤 칸은 기본이 고정폭(--aot-common-control-width)이다. 그런데 단추
+   하나만 서는 줄이나, 입력 둘이 나란히 늘어나야 하는 줄은 그 폭이 맞지
+   않는다. 예전에는 호출부가 인라인으로 `width:auto; flex:…` 를 적었다
+   (layout 의 환경설정 모달에만 네 곳). 두 갈래를 이름으로 둔다. */
+.aot-modal-option-control.aot-control-hug {
+    width: auto;
+    flex: 0 0 auto;
+}
+
+.aot-modal-option-control.aot-control-grow {
+    width: auto;
+    flex: 1 1 auto;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+}
+
+/* 그 안에서 자리를 나눠 갖는 입력(새 비밀번호 / 확인) — 160px 아래로는
+   줄이지 않고, 남는 자리는 함께 나눈다. */
+.aot-control-grow > .aot-input-share {
+    flex: 1 1 160px;
+}
+
+/* 구획 제목을 앞 카드에서 한 칸 떼어 놓는다. 크게 떼야 하는 자리가 따로
+   있어 두 단이다(24 / 32). */
+.aot-modal-group-title.aot-group-title-gap {
+    margin-top: var(--aot-space-5);
+}
+
+.aot-modal-group-title.aot-group-title-gap-lg {
+    margin-top: var(--aot-space-6);
+}
+
 /* Bootstrap Select Override */
 .aot-modal-option-control .bootstrap-select {
     width: var(--aot-common-control-width);
     padding: 0;
 }
 
-.aot-modal-option-control .bootstrap-select > .dropdown-toggle {
+/* 고르는 것은 **자리와 무관하게** 알약이다(§2-2). 예전에는 이 모양이
+   `.aot-modal-option-control` 안에 있을 때만 그려져서, 라벨 없이 통짜로 둔
+   행(device 모달의 "입력/출력"·"하위 장치" 링크 줄)에서는 벤더 기본 버튼이
+   그대로 나왔다 — 흰 면에 1px #ced4da 테두리, 높이 14px. 같은 화면 위쪽의
+   알약 셀렉트와 나란히 놓여 두 스타일이 한 번에 보였다.
+
+   ⚠ 조건을 두 번에 걸쳐 걷어냈다. 먼저 자리(`.aot-option-modal`,
+   `.aot-modal-option-control`)를 뗐고(2026-09-10), 이어서 **이름
+   (`.aot-modern-select`)까지 뗐다** — 알약이 옷이면 옷을 안 입은 셀렉트가
+   남는다. 실제로 앱 전체 selectpicker 중 서른여덟 곳이 그 옷을 안 입고 있어
+   벤더 기본 버튼(흰 면·1px #ced4da·높이 제각각)이 그대로 나왔다: 도구의
+   노트 태그·내보내기, function 옵션, ai 예약·라이브러리·모달 등.
+   이제 **selectpicker 면 무조건 알약**이고, 다르게 보여야 하는 것만 옷을
+   입는다(`aot-pill-btn-*` 계열이 (0,3,0) 으로, 무늬 없는 `.btn.aot-pill-btn`
+   은 이 파일 뒤쪽이라 순서로 이긴다). */
+.bootstrap-select > .dropdown-toggle {
     height: 32px;
     border-radius: var(--aot-btn-pill-radius);
     background: var(--aot-input-bg);
@@ -553,10 +800,11 @@ textarea.aot-modern-input.aot-input-prose {
     display: flex;
     justify-content: center;
     align-items: center;
-    box-shadow: none; /* Force stability */
-    /* Force GPU acceleration to fix repaint issues */
-    transform: translateZ(0);
-    backface-visibility: hidden;
+    box-shadow: none;
+    /* ⚠ `transform: translateZ(0)` 을 되살리지 말 것 — 이 파일 위쪽
+       `.aot-modern-input` 주석에 적힌 이유 그대로다. 여기 있던 것을
+       걷어냈다(2026-09-10): 규칙이 앱 전체 셀렉트로 넓어지는 마당에,
+       스택 컨텍스트를 셀렉트마다 하나씩 만들 이유가 없다. */
 }
 
 /* Ensure bootstrap-select internal label is visible and centered */
@@ -645,6 +893,11 @@ textarea.aot-modern-input.aot-input-prose {
     min-height: var(--aot-btn-height-sm);
 }
 
+/* 파일 고르기처럼 <label> 로 만든 알약 단추. <button> 과 달리 라벨은
+   브라우저가 손가락 커서를 주지 않는다 — 호출부가 인라인으로 적던 것을
+   여기서 한 번에 준다. */
+label.btn.aot-pill-btn { cursor: pointer; }
+
 /* 호버는 색을 바꾸지 않는다 — settings/custom_ui 미리보기와 같은 방식으로
    opacity 로만 반응한다. 예전엔 여기서 배경을 **페이지 배경색**
    (--aot-surface-body)으로 갈아 끼워, 켜짐/꺼짐·일시중지·유지 등 자기 색을
@@ -680,11 +933,50 @@ textarea.aot-modern-input.aot-input-prose {
     min-width: 120px;
 }
 
-/* 60px 고정폭 수정자 */
+/* ── 컨테이너 밖 툴바 — 장갑 낀 손 기준 터치 높이(44px) ──────────────
+   2026-09-10 사용자 결정: 카드/모달 안 화면은 32px 기준으로 이미 촘촘히
+   맞춰져 있어 --aot-btn-height 를 전역으로 올리지 않는다. 대신 **카드에
+   담기지 않고 페이지 바닥에 바로 놓인** 툴바만 골라 올린다 — 조사 결과
+   "컨테이너 밖"을 하나의 부정(:not) 선택자로 깔끔히 못 걸러(카드 헤더 안
+   툴바, 위젯 카드 안 툴바 등 예외가 계속 나옴), 카드 없이 확인된 툴바
+   래퍼 클래스를 하나씩 적어 화이트리스트로 켠다. 슬라이드 토글
+   (.btn-toggle)은 대상이 아니다 — 대부분 모달 컨테이너 안에 있다.
+   여기 없는 `.geo-map-toolbar-*`(카드 헤더 안) · `.aot-plotw-edit`
+   (위젯 카드 안) · `.asset-toolbar`(자체 CSS 를 쓰는 레거시 페이지, 이
+   컴포넌트 체계 밖) 는 확인 후 일부러 뺀 것이다. */
+.sched-toolbar .btn:not(.btn-toggle),
+.fac-page-actions .btn:not(.btn-toggle),
+.fac-stepbar .btn:not(.btn-toggle),
+.fac-stage-toggle .btn:not(.btn-toggle),
+.aot-graph-toolbar .btn:not(.btn-toggle),
+.mp-toolbar .btn:not(.btn-toggle),
+.aot-log-toolbar .btn:not(.btn-toggle),
+#btn-confirm-location {
+    height: var(--aot-btn-height-touch);
+    min-height: var(--aot-btn-height-touch);
+    line-height: calc(var(--aot-btn-height-touch) - 2px);
+}
+
+.sched-toolbar .bootstrap-select > .dropdown-toggle,
+.fac-page-actions .bootstrap-select > .dropdown-toggle,
+.fac-stepbar .bootstrap-select > .dropdown-toggle,
+.aot-graph-toolbar .bootstrap-select > .dropdown-toggle,
+.mp-toolbar .bootstrap-select > .dropdown-toggle,
+.aot-log-toolbar .bootstrap-select > .dropdown-toggle {
+    height: var(--aot-btn-height-touch);
+}
+
+/* 60px 최소폭 수정자 — 저장/닫기 같은 번역 가변 길이 라벨에 쓴다.
+   ⚠ 예전엔 width 를 60px 로 **고정**해 padding 도 0 이었다. overflow:hidden +
+   white-space:nowrap 과 겹쳐, 60px 보다 넓은 번역은 말줄임표도 없이 그냥
+   잘렸다(실측 2026-09-10, Gothic A1 600 12px 기준: "Save" 프랑스어
+   "Enregistrer" 64.3px, "Close" 독일어 "Schließen" 57.2px — 60px 고정폭 +
+   무패딩이면 좌우로 붙어 곧바로 넘친다). 60 을 바닥으로만 쓰고 패딩을
+   기본 알약과 같은 14px 로 되돌려 더 긴 번역은 옆으로 자라게 한다. */
 .btn.aot-pill-btn.aot-w-60 {
-    width: 60px;
+    width: auto;
     min-width: 60px;
-    padding: 0;
+    padding: 0 14px;
 }
 
 /* [Global] Tooltip z-index — 모달(--aot-z-modal)보다 위에 표시 */
@@ -720,18 +1012,21 @@ textarea.aot-modern-input.aot-input-prose {
     box-shadow: 0 1px 2px rgba(0,0,0,0.1);
 }
 
-/* ── Danger (0,3,0) ───────────────────────────────────── */
+/* ── Danger (0,3,0) ─────────────────────────────────────
+   되돌릴 수 없는 동작(삭제 등)이지만 경고색을 쓰지 않는다 — 구분은 색이 아니라
+   간격이 맡는다(aot-settings.css .aot-btn-group 주석: 이 묶음의 gap 이 8 이 아닌
+   12 인 이유). 보조 버튼과 같은 색으로 맞춘다. */
 .btn.aot-pill-btn.aot-pill-btn-danger {
-    background-color: var(--aot-color-danger, #DF5353);
-    border-color: var(--aot-color-danger, #DF5353);
+    background-color: var(--aot-btn-bg-secondary, #5E6B64);
+    border-color: var(--aot-btn-bg-secondary, #5E6B64);
     color: var(--aot-color-text-tertiary, #fff);
     box-shadow: 0 2px 4px rgba(0,0,0,0.05);
 }
 
 .btn.aot-pill-btn.aot-pill-btn-danger:hover,
 .btn.aot-pill-btn.aot-pill-btn-danger:focus {
-    background-color: var(--aot-color-danger);
-    border-color: var(--aot-color-danger);
+    background-color: var(--aot-btn-bg-secondary);
+    border-color: var(--aot-btn-bg-secondary);
     opacity: 0.82;
     color: var(--aot-color-text-tertiary, #fff);
     box-shadow: 0 4px 8px rgba(0,0,0,0.1);
@@ -815,6 +1110,29 @@ textarea.aot-modern-input.aot-input-prose {
     box-shadow: 0 1px 2px rgba(0,0,0,0.1);
 }
 
+/* [고르는 칸 2][단추 1] 이 한 줄을 나눠 갖는 묶음(동작 추가 줄).
+   이름만 붙어 있고 규칙이 없어서, 호출부가 자식마다 `flex: … !important` 를
+   인라인으로 적고 있었다. 그중 셀렉트 쪽은 **감춰진 원본 <select>** 에 붙어
+   있어 하는 일이 없었다(보이는 것은 컴포넌트가 만든 래퍼다). */
+.aot-control-composite {
+    display: flex;
+    align-items: center;
+}
+
+.aot-control-composite > .bootstrap-select,
+.aot-control-composite > select {
+    flex: 2 1 0;
+    min-width: 0;
+}
+
+/* 단추는 좌우 여백을 알약 기본값(14px)대로 둔다. 예전 인라인은
+   `padding: 0 !important` 였는데, `flex: 1 1 0` + `min-width: 0` 이 이미
+   줄어들 수 있게 하므로 여백까지 지울 이유가 없다. */
+.aot-control-composite > .btn {
+    flex: 1 1 0;
+    min-width: 0;
+}
+
 /* SECTION 5: SPECIAL COMPOSITES (API KEYS, ACTIONS) */
 .aot-api-key-group,
 .aot-action-group {
@@ -825,11 +1143,12 @@ textarea.aot-modern-input.aot-input-prose {
     min-width: 160px; /* Base container width */
 }
 
-/* Helper for 60px buttons — .btn.aot-pill-btn.aot-w-60 (0,3,0) 이미 정의됨, 비-btn 폴백 */
+/* Helper for 60px buttons — .btn.aot-pill-btn.aot-w-60 (0,3,0) 이미 정의됨, 비-btn 폴백.
+   위와 같은 이유로 고정폭이 아니라 최소폭이다. */
 .aot-w-60 {
-    width: 60px;
+    width: auto;
     min-width: 60px;
-    padding: 0;
+    padding: 0 14px;
 }
 
 /* Smart Grouping: 160px = Content(flex) + Button(60px) IF multiple items exist */
@@ -930,50 +1249,10 @@ textarea.aot-modern-input.aot-input-prose {
         justify-content: flex-end;
     }
 
-    /* ── 컨트롤 폭 사다리 ──────────────────────────────────────────────────
-       공용 160px 은 텍스트 입력·셀렉트 기준 폭이다. 스위치(54px)·색상
-       피커(60px)·짧은 숫자 칸만 있는 행에서는 100px 안팎이 그냥 버려지고,
-       라벨 max-width 가 같은 변수를 빼서 계산하므로 그만큼 제목이 잘렸다.
-       행에 변수만 갈아끼우면 컨트롤 폭과 라벨 상한이 함께 맞춰진다 —
-       #tabScopeGroups 등에서 쓰던 방식(Section 3 참조)을 일반화한 것.
-
-       조건의 `:not(:has(> .aot-modal-option-control > * + *))` 는 "컨트롤의
-       직접 자식이 정확히 하나" 를 뜻한다. 자식이 둘 이상인 행은 값+버튼,
-       hidden+드롭다운처럼 실제로 넓은 자리가 필요하므로 160px 그대로 둔다
-       (`:only-child` 로 쓰면 hidden input 형제 하나에 규칙이 조용히 빠지거나,
-       반대로 넓은 조합 행까지 좁혀 버린다). */
-    .aot-modal-option-row:has(> .aot-modal-option-control > .btn-toggle):not(:has(> .aot-modal-option-control > * + *)) {
-        /* 국소 오버라이드(의도) */
-        --aot-common-control-width: var(--aot-ctrl-w-switch);
-    }
-    /* 폭이 어긋나더라도 스위치가 눌리는 일은 없게 — 눌리면 thumb 이 슬라이더
-       밖으로 삐져나와 대놓고 깨져 보인다. */
-    .aot-modal-option-control > .btn-toggle {
-        flex-shrink: 0;
-    }
-    .aot-modal-option-row:has(> .aot-modal-option-control > input[type="color"]):not(:has(> .aot-modal-option-control > * + *)) {
-        /* 국소 오버라이드(의도) */
-        --aot-common-control-width: var(--aot-ctrl-w-color);
-    }
-    .aot-modal-option-row:has(> .aot-modal-option-control > input[type="number"]):not(:has(> .aot-modal-option-control > * + *)) {
-        /* 국소 오버라이드(의도) */
-        --aot-common-control-width: var(--aot-ctrl-w-num);
-    }
-
-    /* 모바일에서는 소제목 좌측 정렬 */
-    .aot-modal-section-title,
-    .aot-modal-subgroup-title,
-    .aot-modal-channel-title {
-        justify-content: flex-start; /* 좌측 정렬 */
-        padding-left: 16px; /* 좌측 여백 추가 */
-    }
-
-    /* 접기 카렛이 있는 헤더는 모바일에서도 카렛을 오른쪽 끝에 유지
-       (위 규칙이 justify-content 를 flex-start 로 되돌려 카렛이 제목
-       옆에 붙어버리는 것을 다시 space-between 으로 되돌림) */
-    a.aot-modal-section-title-collapsible {
-        justify-content: space-between;
-    }
+    /* 예전에 여기서 소제목을 모바일에서만 좌측 정렬로 되돌렸는데, 이제
+       기본이 좌측 정렬이라 군더더기다. padding-left:16px 도 함께 지운다 —
+       카드 안 소제목에는 카드가 이미 16px 을 주므로 32px 로 밀렸었다.
+       카렛 헤더의 space-between 되돌리기도 기본 규칙에 이미 있다. */
 
     /* Phase 6: Anti-Zoom for iOS Input Fields */
     /* 16px prevents native zoom on focus, stabilizing fixed layout */
@@ -1136,13 +1415,15 @@ textarea.aot-modern-input.aot-input-prose {
 }
 
 /* SECTION 10: GIS/GEO UNIFICATION */
-/* Compatibility for old geo styles while migrating to modern */
-.aot-modal-option-control .gis-custom-option,
-.aot-modal-option-control .aot-modern-select.gis-custom-option {
-    width: 100%;
-    height: 32px;
-    border-radius: var(--aot-btn-pill-radius);
-}
+/* `.gis-custom-option` 은 "이 값을 수집하라"는 기능 표식이지 모양 표식이
+   아니다(aot-geo-input-preview.js 가 값만 모을 때 쓴다) — 텍스트 입력·
+   select·checkbox 토글에 전부 붙는다. 예전엔 여기서 셋 다에게 알약
+   반경(width:100%; height:32px; border-radius:pill)을 강제했는데, select는
+   .aot-modern-select 자체 규칙이 이미 같은 값을 주고(448행 부근),
+   텍스트 입력은 .aot-modern-input 이 밑줄(border-radius:0)을 주므로 이
+   규칙의 (0,2,0) 특이도가 그걸 덮어써 밑줄이 알약처럼 보였다. 값 수집
+   기능과 모양은 무관하므로 통째로 걷어낸다 — 모양은 각 컨트롤 자신의
+   .aot-modern-input / .aot-modern-select 규칙이 그대로 맡는다. */
 
 /* .aot-option-modal 너비 제한 → Section 13 .aot-option-modal .modal-dialog 로 통합 */
 
@@ -1244,6 +1525,8 @@ textarea.aot-modern-input.aot-input-prose {
    그 파일의 규칙 하나와 layout 의 배치 훅이 정한다. 자리별 무력화 규칙
    (.modal / .add_dashboard_widget / .aot-main-selection-row / .aot-widget-drawer /
    .bs-container)은 전부 여기서 걷어냈다 — 다시 만들지 말 것. */
+
+/* ============================================================
    SECTION 13: OPTION MODAL — 공통 레이아웃 (단일 정의)
    대상: input / output / function / geo-input /
          ai-agent / dashboard 설정 모달 (.aot-option-modal)
@@ -1453,6 +1736,22 @@ body.modal-open {
        .aot-modal-container 가 카드(2단, 흰색)다 — 바닥 위에 흰 카드,
        앱의 다른 화면과 같은 순서다(ui-guide §2-1). */
     background-color: var(--aot-surface-body);
+    /* 셀렉트/입력칸 면(--aot-input-bg)은 원래 "바닥색"으로 고정돼 있다 —
+       카드(2단, 흰색) 위에서만 대비가 난다. 이 모달 본문(1단, 바닥색)에
+       .aot-modal-container 없이 폼을 바로 놓으면(예: 노트 추가 모달의 태그
+       셀렉트) 그 바닥과 같은 색이 되어 통째로 사라진다(실측 2026-09-10:
+       토글 rgb(224,230,227) = 모달 본문 배경과 동일). 이 스코프에서만 기본을
+       카드색으로 뒤집고, 진짜 카드(.aot-modal-container) 안에서는 아래
+       규칙으로 컨트롤 면(bd_control)으로 되돌려 표면 2단 교대를 지킨다. */
+    --aot-input-bg: var(--aot-surface-card);
+}
+.aot-option-modal .modal-body .aot-modal-container {
+    /* 카드 안에서는 컨트롤 면(bd_control)으로 되돌린다. 2026-09-10 이전에는
+       여기가 --aot-surface-body 였는데, 그때는 컨트롤 면이 바닥을 그대로
+       따라가 두 이름이 같은 값이었다. 지금은 갈라졌으므로 바닥이 아니라
+       컨트롤 면을 부른다 — 안 그러면 운영자가 bd_control 을 바꿔도 모달
+       카드 안 셀렉트만 안 따라온다. */
+    --aot-input-bg: var(--aot-surface-control);
 }
 /* WebKit(Chrome/Safari): 모달 바디 스크롤바 트랙 자체 제거 (스크롤 동작은 유지) */
 .modal-dialog .modal-body::-webkit-scrollbar,
@@ -1467,7 +1766,10 @@ body.modal-open {
 }
 
 /* --- modal-footer: 고정 ---
-   min-height: 50px = main-navbar 높이와 동일 */
+   min-height: 50px 이던 시절엔 main-navbar 높이와 같았다(9px+32px+9px).
+   2026-09-10: 버튼이 터치 높이(44px)로 커지면서 그 일치는 깨졌다 — 상하
+   9px 는 그대로 두고(align-items:center 가 어차피 수직 중앙을 맞춘다),
+   실제 높이는 44px 버튼 + 상하 9px = 62px 로 콘텐츠가 밀어 올린다. */
 .aot-option-modal .modal-footer,
 .aot-center-modal .modal-footer {
     flex: 0 0 auto;
@@ -1477,7 +1779,6 @@ body.modal-open {
     justify-content: flex-end;
     gap: 0.25rem;
     min-height: 50px;
-    /* 상하 9px = (50px - 버튼 32px) / 2 → 버튼 수직 중앙 정렬 */
     padding-top: 9px;
     padding-right: 1rem;
     padding-left: 1rem;
@@ -1492,18 +1793,28 @@ body.modal-open {
     margin: 0;
 }
 
-/* --- modal-footer 버튼: 기본 AoT btn 과 동일 높이(32px) 유지 ---
-   베이스 .btn.aot-pill-btn { height: 32px } 그대로 사용해 다른 페이지
-   버튼들과 시각적 일관성 확보. footer min-height 50px = 9px + 32px + 9px */
+/* --- modal-footer 버튼: 장갑 낀 손 기준 터치 높이(44px) ---
+   2026-09-10 이전에는 리터럴 32px 로 고정돼 있어 --aot-btn-height 와 별개로
+   움직였다(토큰이 아니라 여기 적힌 숫자가 실제 값이었다). 사용자 결정으로
+   모달 푸터는 컨테이너 밖 툴바와 함께 터치 목표를 키우는 대상이라
+   --aot-btn-height-touch 를 그대로 읽는다. footer min-height(아래
+   .aot-option-modal .modal-footer)는 44px 버튼 + 상하 9px 로 자연히
+   62px 가 된다 — "50px = main-navbar 높이" 라는 예전 일치는 더 이상
+   유지하지 않는다(터치 목표가 우선).
+   ⚠ #aotConfirmModal(layout.html — 전역 확인/취소 대화상자, 모든 페이지에
+   실린다)은 `.aot-option-modal`/`.aot-center-modal` 어느 쪽도 아니라
+   맨몸 `.modal-footer` 다 — 실측으로 32px 인 채 빠져 있던 것을 발견해
+   따로 추가했다. */
 .aot-option-modal .modal-footer .btn.aot-pill-btn,
-.aot-center-modal .modal-footer .btn.aot-pill-btn {
+.aot-center-modal .modal-footer .btn.aot-pill-btn,
+#aotConfirmModal .modal-footer .btn.aot-pill-btn {
     flex: 0 0 auto;
     min-width: 56px;
     font-size: var(--aot-font-size-xs);
-    height: 32px;
-    min-height: 32px;
+    height: var(--aot-btn-height-touch);
+    min-height: var(--aot-btn-height-touch);
     padding: 0 0.75rem;
-    line-height: 30px;
+    line-height: calc(var(--aot-btn-height-touch) - 2px);
 }
 
 /* --- 모바일 (≤767.98px): 전체 화면 + 바텀시트 슬라이드 애니메이션 ---
@@ -1655,6 +1966,73 @@ label.aot-modal-option-label[title]:not([title=""]):hover .aot-option-tip {
     color: var(--aot-color-info, #029ACF);
 }
 
+/* ── 설정 모달의 장치 정보 줄 ────────────────────────────────────────────
+   입력·출력·함수 설정 모달이 위쪽에 "제조사 / 모델 / 관련 문서" 를 적는다.
+   열 파일이 같은 선언을 인라인으로 갖고 있었다. */
+
+/* 부트스트랩 `.col-*` 이 주는 좌우 15px 을 뗀다 — 모달 카드가 이미 여백을
+   갖고 있어 두 겹이 된다. 열 곳이 `style="padding:0"` 을 적고 있었다. */
+.aot-col-flush { padding: 0; }
+
+/* 좌우만 떼고 아래는 한 칸 비우는 변형. */
+.aot-col-flush-x {
+    padding-left: 0;
+    padding-right: 0;
+    padding-bottom: var(--aot-space-2);
+}
+
+/* [제조사][모델][측정 범위] … 가 가로로 서고 좁아지면 접히는 줄. */
+.aot-meta-row {
+    gap: var(--aot-space-4);
+    margin-bottom: var(--aot-space-2);
+}
+
+/* 그 바로 아래 붙는 "관련 문서" 줄 — 위 줄에 붙여 한 덩어리로 읽는다. */
+.aot-meta-links {
+    margin-top: calc(-1 * var(--aot-space-2));
+    font-size: var(--aot-font-size-sm);
+}
+
+/* 모달 맨 위의 "쓰임" 안내 줄. */
+.aot-usage-row {
+    margin-bottom: var(--aot-space-3);
+    padding: var(--aot-space-1);
+    border-bottom: 1px solid var(--aot-border-neutral);
+}
+
+/* 줄의 오른쪽 끝에 동작이 모이는 줄. */
+.aot-modal-option-row.aot-row-actions-end {
+    justify-content: flex-end;
+    gap: var(--aot-space-2);
+}
+
+/* 항공 사진 겹치기의 안내 줄 — 줄 전체를 쓰는 부연이다.
+   ⚠ 예전에는 이 줄과 아래 투명도 슬라이더가 인라인으로 모양을 적었는데,
+   슬라이더의 `accent-color: var(--aot-surface-card, #2e7d32)` 는 **토큰을
+   잘못 고른 자리**였다 — `--aot-surface-card` 는 흰색이라 강조색이
+   사라진다(폴백의 초록이 원래 의도였다). 슬라이더는 아래 `.aot-ov-opacity`
+   규칙이 트랙과 손잡이를 직접 그리므로 그 선언은 하는 일이 없었다. 지웠다. */
+.aot-ov-status {
+    width: 100%;
+    margin: 0;
+    font-size: var(--aot-font-size-xs);
+    color: var(--aot-text-secondary);
+}
+
+/* 부트스트랩 `.row` 를 폼 줄로 쓸 때의 안쪽 여백. */
+.row.aot-row-pad { padding: var(--aot-space-2); }
+
+/* 잘못된 값을 알리는 짧은 문구. 예전 호출부는 `color: red` 라고 적었다 —
+   테마 밖의 색이라 다크에서도 원색 빨강이 나온다. */
+.aot-text-danger { color: var(--aot-color-danger); }
+
+/* 마지막 줄의 아래 여백만 조금 줄이는 자리. */
+.aot-row-tight-bottom { padding-bottom: var(--aot-space-1); }
+
+/* 구획 앞뒤로 비우는 두 자리. */
+.aot-block-head { padding: var(--aot-space-4) 0 var(--aot-space-2); }
+.aot-block-tail { padding: 0 0 var(--aot-space-4); }
+
 /* ── Aerial Photo overlay opacity slider ──────────────────────────────────
    Native range inputs render inconsistently inside the themed modal (the
    track/thumb can collapse to a hairline). Style them explicitly so the
@@ -1668,7 +2046,7 @@ input[type="range"].aot-ov-opacity {
     padding: 0;
     border: 0;
     border-radius: var(--aot-btn-pill-radius);
-    background: var(--aot-border, #d9dee3);
+    background: var(--aot-border-neutral);
     outline: none;
     cursor: pointer;
 }
@@ -1692,7 +2070,7 @@ input[type="range"].aot-ov-opacity::-webkit-slider-thumb {
 input[type="range"].aot-ov-opacity::-moz-range-track {
     height: 6px;
     border-radius: var(--aot-btn-pill-radius);
-    background: var(--aot-border, #d9dee3);
+    background: var(--aot-border-neutral);
 }
 input[type="range"].aot-ov-opacity::-moz-range-thumb {
     width: 16px;
@@ -2103,22 +2481,9 @@ body { transition: padding-right 0.4s cubic-bezier(0.075, 0.82, 0.165, 1); }
   min-width: auto;
 }
 
-/* 색상 input 은 aot-modal-option-control 바깥에서도 동일 pill 형태 유지 */
+/* 모양은 공용 규칙(components/aot-base-ui.css)이 정한다 — 높이만 맞춘다. */
 .aot-modal-detail-field input[type="color"] {
   height: 32px;
-  padding: 0;
-  border: 1px solid var(--aot-border-neutral);
-  border-radius: var(--aot-radius-lg);
-  cursor: pointer;
-  overflow: hidden;
-}
-.aot-modal-detail-field input[type="color"]::-webkit-color-swatch-wrapper {
-  padding: 0;
-  border-radius: var(--aot-radius-lg);
-}
-.aot-modal-detail-field input[type="color"]::-webkit-color-swatch {
-  border: none;
-  border-radius: var(--aot-radius-lg);
 }
 
 /* 토글 필드 안의 스위치를 라벨 아래에 좌측 정렬 */
@@ -2204,6 +2569,11 @@ body { transition: padding-right 0.4s cubic-bezier(0.075, 0.82, 0.165, 1); }
     margin-bottom: var(--aot-space-4);
     line-height: 1.6;
 }
+/* 안내 상자는 JS 가 문자열로 그리기도 한다. 그 자리 조상이 코드 편집기처럼
+   `white-space: pre` 를 물려주면 글이 가로로 흘러 나가므로 여기서 되돌린다
+   (예전에는 호출부 셋이 인라인으로 적었다). */
+.aot-notice-box { white-space: normal; }
+
 .aot-notice-box p { margin-bottom: 10px; }
 .aot-notice-box p:last-child { margin-bottom: 0; }
 /* 톤 네 개 — 배경·글자·테두리 세 값이 한 벌로 움직이고, 톤이 있는 상자만
@@ -2239,6 +2609,9 @@ body { transition: padding-right 0.4s cubic-bezier(0.075, 0.82, 0.165, 1); }
     overflow: hidden;
 }
 .aot-progress > .aot-progress-fill {
+    /* 시작은 0 이다. 예전에는 이 값을 호출부가 `style="width:0%"` 로 적어
+       줘야 했고, 안 적은 곳은 처음 한 순간 막대가 가득 찬 채 보였다. */
+    width: 0;
     height: 100%;
     background: var(--aot-btn-bg-primary);
     transition: width 0.4s;

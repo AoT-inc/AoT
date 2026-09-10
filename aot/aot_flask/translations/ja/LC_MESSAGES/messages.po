@@ -34354,3 +34354,52 @@ msgstr "— チャンネルを選択 —"
 msgid "— Select —"
 msgstr "— 選択 —"
 
+
+#: カタログに無い項目を手で追加(再抽出は禁止 — fuzzy 大量汚染の履歴)
+#: templates/modals/geo_settings_modal.html · templates/settings/measurement.html
+#: (2026-09-10)
+msgid "Device Color"
+msgstr "デバイスの色"
+
+msgid "All Measurements"
+msgstr "すべての測定値"
+
+msgid "All Units"
+msgstr "すべての単位"
+
+#: aot_flask/forms/forms_settings.py
+#: aot_flask/templates/settings/custom_ui.html
+msgid "Unresponsive"
+msgstr "応答なし"
+
+#: aot_flask/forms/forms_settings.py
+#: aot_flask/templates/settings/custom_ui.html
+msgid "Divider Line"
+msgstr "区切り線"
+
+#: aot_flask/forms/forms_settings.py
+#: aot_flask/templates/settings/custom_ui.html
+msgid "Row/card background when a device stops answering — a different thing from Warning State, which is a person pausing it on purpose"
+msgstr "デバイスが応答しなくなったときの行・カードの背景。人が意図的に停止した「一時停止」とは別のものです"
+
+#: aot_flask/forms/forms_settings.py
+#: aot_flask/templates/settings/custom_ui.html
+msgid "Line between items inside one container — lists, option rows. Not a border around anything"
+msgstr "一つのコンテナ内の項目の間に引く線 — リスト・オプション行。何かを囲む枠線ではありません"
+
+#: aot_flask/forms/forms_settings.py
+#: aot_flask/templates/settings/custom_ui.html
+msgid "Control Surface"
+msgstr "コントロール面"
+
+#: aot_flask/templates/settings/custom_ui.html
+msgid "Text Field"
+msgstr "テキスト入力欄"
+
+#: aot_flask/templates/settings/custom_ui.html
+msgid "Click to edit Control Surface colors"
+msgstr "クリックしてコントロール面の色を編集"
+
+#: aot_flask/templates/settings/custom_ui.html
+msgid "Face of things you operate — text fields, selects, pills. Keep it apart from the page background, or a control sitting on the page vanishes into it"
+msgstr "操作するものの面 — テキスト入力欄・セレクト・ピル。ページ背景と値を離してください。同じだと背景の上のコントロールが埋もれて見えなくなります"

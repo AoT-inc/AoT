@@ -51,9 +51,9 @@
 <main role="main" class="container">
   {% include 'flash_messages.html' %}
 
-  <div style="clear: both; padding: 0.5em 0;"></div>
+  <div class="aot-vspace"></div>
 
-  <form id="new_input_form" method="post" action="/input" style="padding-bottom: 0.5em">
+  <form class="pb-2" id="new_input_form" method="post" action="/input">
     {{form_add_input.hidden_tag()}}
     <div class="row aot-main-selection-row">
       <div class="col-auto">
@@ -74,7 +74,7 @@
     </div>
   </form>
 
-  <div style="clear: both; padding: 1em 0;"></div>
+  <div class="aot-vspace-lg"></div>
 
   <div class="grid-stack aot-entry-container">
     {% for each_input in input_dev -%}
@@ -89,7 +89,7 @@
 
 </main>
 
-<div style="clear: both; padding-bottom: 1.5em;"></div>
+<div class="aot-vspace-end"></div>
 
 <script>
   function initGrid() {

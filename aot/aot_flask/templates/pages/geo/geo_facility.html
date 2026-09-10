@@ -66,7 +66,7 @@
   <div class="fac-stage-view" id="fac-stage-map">
     <div id="facility-map-header">
       <span>{{ _('Place on Map') }}</span>
-      <div style="display:flex;gap:8px;align-items:center;">
+      <div class="fac-head-actions">
         <button type="button" class="btn btn-sm btn-outline-secondary" id="btn-clear-shape">{{ _('Clear') }}</button>
         <button type="button" class="btn btn-sm btn-primary" id="btn-place-on-map">{{ _('Place on Map') }}</button>
       </div>
@@ -83,9 +83,9 @@
   <!-- Toolbar row sits OUTSIDE the canvas panel so buttons are never overlaid -->
   <div id="facility-3d-header">
     <span>§ {{ _('3D Preview') }}</span>
-    <div style="display:flex;gap:8px;align-items:center;">
+    <div class="fac-head-actions">
       <!-- Asset link status (JS shows/hides) -->
-      <span id="facility-3d-asset-badge" style="display:none;font-size:var(--aot-font-size-xs);background:var(--aot-tint-info-bg);color:var(--aot-tint-info-fg);padding:0.15rem 0.5rem;border-radius: var(--aot-radius-md);font-weight:600;"></span>
+      <span id="facility-3d-asset-badge" style="display:none;"></span>
       <button id="btn-3d-asset-detach" class="btn btn-sm btn-outline-danger" style="display:none;" onclick="facilityDetachAsset()">{{ _('Detach Asset') }}</button>
       <!-- Fitting list panel toggle — the list is hidden by default so it does
            not cover the viewport; the count badge keeps it discoverable. -->
@@ -171,81 +171,74 @@
           <button type="button" data-action="irr-ortho"     class="tool-btn active" id="btn-irr-ortho" title="{{ _('Ortho snap — align pipes to the X/Z axes. Hold Shift while drawing to disable temporarily') }}">{{ _('Ortho Snap') }}</button>
         </div>
         <!-- Auto pipe generation -->
-        <div class="fly-sec" style="align-items:flex-start;gap:4px;padding:6px 8px;">
-          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-            <span style="font-size:var(--aot-font-size-xs);font-weight:600;color:var(--aot-color-text-secondary);">{{ _('Spacing') }}</span>
-            <input type="number" id="irr-pipe-spacing" value="3" min="0.5" max="100" step="0.5"
-                   style="width:50px;font-size:var(--aot-font-size-xs);padding:1px 4px;" title="{{ _('Branch pipe spacing (m)') }}">
-            <span style="font-size:var(--aot-font-size-xs);color:var(--aot-color-text-secondary);">m</span>
-            <span style="font-size:var(--aot-font-size-xs);font-weight:600;color:var(--aot-color-text-secondary);">{{ _('Angle') }}</span>
-            <input type="number" id="irr-pipe-angle" value="0" min="-180" max="180" step="5"
-                   style="width:44px;font-size:var(--aot-font-size-xs);padding:1px 4px;" title="{{ _('Pipe direction angle (deg)') }}">
-            <span style="font-size:var(--aot-font-size-xs);color:var(--aot-color-text-secondary);">°</span>
-            <span style="font-size:var(--aot-font-size-xs);font-weight:600;color:var(--aot-color-text-secondary);">{{ _('Offset') }}</span>
-            <input type="number" id="irr-pipe-offset" value="1.5" min="-50" max="50" step="0.5"
-                   style="width:48px;font-size:var(--aot-font-size-xs);padding:1px 4px;" title="{{ _('Parallel shift of pipe pattern (m, perpendicular) — default = spacing/2') }}">
-            <span style="font-size:var(--aot-font-size-xs);color:var(--aot-color-text-secondary);">m</span>
+        <div class="fly-sec fly-sec-form">
+          <div class="fly-row">
+            <span class="fly-label">{{ _('Spacing') }}</span>
+            <input type="number" id="irr-pipe-spacing" value="3" min="0.5" max="100" step="0.5" title="{{ _('Branch pipe spacing (m)') }}">
+            <span class="fly-unit">m</span>
+            <span class="fly-label">{{ _('Angle') }}</span>
+            <input type="number" id="irr-pipe-angle" value="0" min="-180" max="180" step="5" title="{{ _('Pipe direction angle (deg)') }}">
+            <span class="fly-unit">°</span>
+            <span class="fly-label">{{ _('Offset') }}</span>
+            <input type="number" id="irr-pipe-offset" value="1.5" min="-50" max="50" step="0.5" title="{{ _('Parallel shift of pipe pattern (m, perpendicular) — default = spacing/2') }}">
+            <span class="fly-unit">m</span>
           </div>
-          <div style="display:flex;gap:4px;align-items:center;">
-            <button type="button" id="btn-gen-pipe"  data-action="irr-gen-pipe"       class="tool-btn" style="font-size:var(--aot-font-size-xs);padding:2px 7px;" disabled>{{ _('Auto-generate Pipes') }}</button>
-            <button type="button" id="btn-clear-irr" data-action="irr-clear"          class="tool-btn" style="font-size:var(--aot-font-size-xs);padding:2px 7px;" disabled>{{ _('Clear') }}</button>
+          <div class="fly-row-btns">
+            <button type="button" id="btn-gen-pipe"  data-action="irr-gen-pipe"       class="tool-btn" disabled>{{ _('Auto-generate Pipes') }}</button>
+            <button type="button" id="btn-clear-irr" data-action="irr-clear"          class="tool-btn" disabled>{{ _('Clear') }}</button>
           </div>
         </div>
         <!-- Auto sprinkler placement -->
-        <div class="fly-sec" style="align-items:flex-start;gap:4px;padding:6px 8px;border-top:1px solid var(--aot-border-light);">
-          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-            <span style="font-size:var(--aot-font-size-xs);font-weight:600;color:var(--aot-color-text-secondary);">{{ _('Type') }}</span>
-            <select id="irr-sp-subtype" style="font-size:var(--aot-font-size-xs);padding:1px 4px;" title="{{ _('Irrigation device type') }}">
+        <div class="fly-sec fly-sec-form fly-sec-divided">
+          <div class="fly-row">
+            <span class="fly-label">{{ _('Type') }}</span>
+            <select id="irr-sp-subtype" title="{{ _('Irrigation device type') }}">
               <option value="sprinkler" selected>{{ _('Sprinkler') }}</option>
               <option value="drip">{{ _('Drip') }}</option>
             </select>
-            <span style="font-size:var(--aot-font-size-xs);font-weight:600;color:var(--aot-color-text-secondary);">{{ _('Direction') }}</span>
-            <select id="irr-sp-orientation" style="font-size:var(--aot-font-size-xs);padding:1px 4px;" title="{{ _('Spray direction (sprinkler)') }}">
+            <span class="fly-label">{{ _('Direction') }}</span>
+            <select id="irr-sp-orientation" title="{{ _('Spray direction (sprinkler)') }}">
               <option value="down" selected>{{ _('Down') }}</option>
               <option value="up">{{ _('Up') }}</option>
             </select>
           </div>
-          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-            <span style="font-size:var(--aot-font-size-xs);font-weight:600;color:var(--aot-color-text-secondary);">{{ _('Interval') }}</span>
-            <input type="number" id="irr-sp-interval" value="1.5" min="0.5" max="50" step="0.5"
-                   style="width:46px;font-size:var(--aot-font-size-xs);padding:1px 4px;" title="{{ _('Sprinkler interval (m)') }}">
-            <span style="font-size:var(--aot-font-size-xs);color:var(--aot-color-text-secondary);">m</span>
-            <span style="font-size:var(--aot-font-size-xs);font-weight:600;color:var(--aot-color-text-secondary);">{{ _('Radius') }}</span>
-            <input type="number" id="irr-sp-radius" value="2" min="0.5" max="50" step="0.5"
-                   style="width:40px;font-size:var(--aot-font-size-xs);padding:1px 4px;" title="{{ _('Spray radius (m)') }}">
-            <span style="font-size:var(--aot-font-size-xs);color:var(--aot-color-text-secondary);">m</span>
-            <span style="font-size:var(--aot-font-size-xs);font-weight:600;color:var(--aot-color-text-secondary);">{{ _('Flow') }}</span>
-            <input type="number" id="irr-sp-flow" value="40" min="1" max="9999" step="10"
-                   style="width:52px;font-size:var(--aot-font-size-xs);padding:1px 4px;" title="{{ _('Flow per device (L/h)') }}">
-            <span style="font-size:var(--aot-font-size-xs);color:var(--aot-color-text-secondary);">L/h</span>
+          <div class="fly-row">
+            <span class="fly-label">{{ _('Interval') }}</span>
+            <input type="number" id="irr-sp-interval" value="1.5" min="0.5" max="50" step="0.5" title="{{ _('Sprinkler interval (m)') }}">
+            <span class="fly-unit">m</span>
+            <span class="fly-label">{{ _('Radius') }}</span>
+            <input type="number" id="irr-sp-radius" value="2" min="0.5" max="50" step="0.5" title="{{ _('Spray radius (m)') }}">
+            <span class="fly-unit">m</span>
+            <span class="fly-label">{{ _('Flow') }}</span>
+            <input type="number" id="irr-sp-flow" value="40" min="1" max="9999" step="10" title="{{ _('Flow per device (L/h)') }}">
+            <span class="fly-unit">L/h</span>
           </div>
-          <div style="display:flex;gap:4px;align-items:center;flex-wrap:wrap;">
-            <button type="button" id="btn-gen-irrigation"  data-action="irr-gen-irrigation"  class="tool-btn" style="font-size:var(--aot-font-size-xs);padding:2px 7px;" disabled>{{ _('Place Irrigation Devices') }}</button>
-            <button type="button" id="btn-clear-sprinkler" data-action="irr-clear-sprinkler" class="tool-btn" style="font-size:var(--aot-font-size-xs);padding:2px 7px;" disabled>{{ _('Clear') }}</button>
+          <div class="fly-row-btns">
+            <button type="button" id="btn-gen-irrigation"  data-action="irr-gen-irrigation"  class="tool-btn" disabled>{{ _('Place Irrigation Devices') }}</button>
+            <button type="button" id="btn-clear-sprinkler" data-action="irr-clear-sprinkler" class="tool-btn" disabled>{{ _('Clear') }}</button>
           </div>
         </div>
         <!-- Add valve -->
-        <div class="fly-sec" style="align-items:flex-start;gap:4px;padding:6px 8px;border-top:1px solid var(--aot-border-light);">
-          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-            <span style="font-size:var(--aot-font-size-xs);font-weight:600;color:var(--aot-color-text-secondary);">{{ _('Valve') }}</span>
-            <select id="irr-valve-type" style="font-size:var(--aot-font-size-xs);padding:1px 4px;" title="{{ _('Valve type') }}">
+        <div class="fly-sec fly-sec-form fly-sec-divided">
+          <div class="fly-row">
+            <span class="fly-label">{{ _('Valve') }}</span>
+            <select id="irr-valve-type" title="{{ _('Valve type') }}">
               <option value="on_off" selected>{{ _('ON/OFF (Solenoid)') }}</option>
               <option value="proportional">{{ _('Proportional') }}</option>
             </select>
-            <select id="irr-valve-default" style="font-size:var(--aot-font-size-xs);padding:1px 4px;" title="{{ _('Default state') }}">
+            <select id="irr-valve-default" title="{{ _('Default state') }}">
               <option value="closed" selected>{{ _('Default Closed') }}</option>
               <option value="open">{{ _('Default Open') }}</option>
             </select>
             <button type="button" id="btn-irr-add-valve" data-action="irr-add-valve" class="tool-btn"
-                    style="font-size:var(--aot-font-size-xs);padding:2px 7px;"
                     title="{{ _('Add valve to selected pipe (layer center if no pipe selected)') }}" disabled>+ {{ _('Add Valve') }}</button>
           </div>
         </div>
         <!-- Delete-unit mode -->
-        <div class="fly-sec" style="padding:6px 8px;border-top:1px solid var(--aot-border-light);">
-          <button type="button" id="btn-irr-delete-mode" data-action="irr-delete-mode" class="tool-btn" style="font-size:var(--aot-font-size-xs);padding:2px 7px;" disabled
+        <div class="fly-sec fly-sec-pad fly-sec-divided">
+          <button type="button" id="btn-irr-delete-mode" data-action="irr-delete-mode" class="tool-btn" disabled
                   title="{{ _('After enabling, click pipes/nozzles/joints to delete them individually') }}">{{ _('Delete Unit') }}</button>
-          <span id="irr-delete-mode-hint" style="font-size:var(--aot-font-size-xs);color:var(--aot-tint-warning-fg);margin-left:8px;display:none;">{{ _('Delete mode: click an item to remove it') }}</span>
+          <span id="irr-delete-mode-hint" class="fly-note-warn" style="display:none;">{{ _('Delete mode: click an item to remove it') }}</span>
         </div>
         <!-- Flow statistics shown in 5. IEC integration summary panel -->
       </div>
@@ -262,8 +255,8 @@
     <!-- Viewport (canvas wrapper — only this area sizes the WebGL canvas) -->
     <div id="facility-3d-viewport">
       <canvas id="facility-3d-canvas"></canvas>
-      <div class="aot-3d-asset-status" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);color:var(--aot-color-text-secondary);font-size:var(--aot-font-size-sm);pointer-events:none;"></div>
-      <div id="facility-3d-hint" style="position:absolute;bottom:8px;right:12px;font-size:var(--aot-font-size-xs);color:var(--aot-color-text-secondary);pointer-events:none;">{{ _('Right-click: rotate · Left-click: pan/select · Scroll: zoom') }}</div>
+      <div class="aot-3d-asset-status"></div>
+      <div id="facility-3d-hint">{{ _('Right-click: rotate · Left-click: pan/select · Scroll: zoom') }}</div>
     </div>
 
 
@@ -307,8 +300,9 @@
   <div class="aot-modal-group-title">{{ _('Saved Facilities') }}</div>
   <div class="aot-modal-container">
 
+    {#- 카드 밖 구획 제목이 이미 "저장된 시설" 이라 행 라벨로 한 번 더 적지
+        않는다 — 같은 말이 위아래로 두 번 나왔었다. -#}
     <div class="aot-modal-option-row aot-full-width-row">
-      <label class="aot-modal-option-label">{{ _('Saved Facilities') }}</label>
       <div class="fac-body">
         <div id="facility-list">
           {% for f in facilities %}
@@ -368,15 +362,13 @@
     </div>
 
     <div class="aot-modal-option-row">
-      <div class="aot-modal-option-label">
-        {{ _('Site') }}
-        <div class="aot-modal-body-text">{{ _('Sites belonging to the selected map') }}</div>
-      </div>
+      <div class="aot-modal-option-label">{{ _('Site') }}</div>
       <div class="aot-modal-option-control">
         <select id="site-selector" class="form-control aot-modern-select" disabled>
           <option value="" disabled selected>{{ _('Select a Map first') }}</option>
         </select>
       </div>
+      <div class="aot-modal-body-text">{{ _('Sites belonging to the selected map') }}</div>
     </div>
 
   </div>
@@ -429,19 +421,20 @@
     </div>
 
     <div class="aot-modal-option-row">
-      <div class="aot-modal-option-label">
-        {{ _('Rotation') }}: <span id="orientation-value">0</span>°
-        <div class="aot-modal-body-text">{{ _('Drag the slider or type a value (0–359°)') }}</div>
-      </div>
+      {#- 라벨은 이름만 갖는다. 값은 바로 옆 입력칸과 아래 슬라이더가 이미
+          보여 주므로, 라벨에 또 적으면 같은 수가 한 줄에 두 번 나온다.
+          (읽던 JS 는 `if (orientValue)` 로 감싸 있어 없어도 안전하다.) -#}
+      <div class="aot-modal-option-label">{{ _('Rotation') }} (°)</div>
       <div class="aot-modal-option-control">
         <input type="number" id="orientation-input" class="form-control aot-modern-input" min="0" max="359" step="1" value="0">
       </div>
+      <div class="aot-modal-body-text">{{ _('Drag the slider or type a value (0–359°)') }}</div>
     </div>
 
-    <div class="aot-modal-option-row aot-full-width-row" style="border-bottom:none;">
+    <div class="aot-modal-option-row aot-full-width-row">
       <div class="fac-body">
         <input type="range" id="orientation-slider" min="0" max="359" step="1" value="0"
-               class="form-control-range mb-2" style="width:100%;">
+               class="form-control-range mb-2">
         <p class="aot-modal-body-text mb-0">
           {{ _('Use "Place on Map" above the map to set the facility center, then drag the facility on the map to adjust it.') }}
         </p>
@@ -475,17 +468,15 @@
        정본 설계: docs/design/access-scope-groups.md #}
     <div class="aot-fac-scope" style="display: none;">
       <div class="aot-modal-option-row">
-        <div class="aot-modal-option-label">
-          {{ _('Groups that can operate this facility') }}
-          <div class="aot-modal-body-text">
-            {{ _('If no group is selected, everyone can operate this facility. Selecting a group limits operation to its members. Data stays visible to everyone.') }}
-          </div>
-        </div>
-        <div class="aot-modal-option-control">
+        <div class="aot-modal-option-label">{{ _('Groups that can operate this facility') }}</div>
+      <div class="aot-modal-option-control">
           <button type="button" class="btn aot-pill-btn aot-pill-btn-primary"
                   id="fac_scope_apply">{{ _('Apply') }}</button>
         </div>
-      </div>
+        <div class="aot-modal-body-text">
+            {{ _('If no group is selected, everyone can operate this facility. Selecting a group limits operation to its members. Data stays visible to everyone.') }}
+          </div>
+    </div>
       <div class="aot-fac-scope-groups"></div>
       <div class="aot-modal-option-row">
         <div class="aot-modal-body-text aot-fac-scope-impact"></div>
@@ -551,34 +542,26 @@
   <div class="aot-modal-group-title">{{ _('Covering & Ventilation') }}</div>
   <div class="aot-modal-container">
 
-    <!-- (1) Cover layer list -->
-    <div class="aot-modal-option-row">
-      <div class="aot-modal-option-label">{{ _('Cover layers') }}
-        <div class="aot-modal-body-text">{{ _('Outer cover is always required. Add wall reinforcement or inner cover as needed.') }}</div>
-      </div>
-    </div>
-    <div id="envelope-layers-list" style="padding:0 0 0.25rem;"></div>
-    <div style="display:flex;gap:8px;padding:0.4rem 0 0.75rem;flex-wrap:wrap;border-bottom:1px solid var(--aot-border-light);">
-      <button class="btn aot-pill-btn aot-pill-btn-secondary" onclick="EnvelopeUI.addSideOnlyLayer()">+ {{ _('Wall reinforcement') }}</button>
-      <button class="btn aot-pill-btn aot-pill-btn-secondary" onclick="EnvelopeUI.addFrontOnlyLayer()">+ {{ _('Front reinforcement') }}</button>
-      <button class="btn aot-pill-btn aot-pill-btn-secondary" id="btn-add-inner-layer" onclick="EnvelopeUI.addInnerLayer()">+ {{ _('Inner cover') }}</button>
-    </div>
+    {#- (1) 피복 레이어 — JS(_renderLayers)가 줄 + 토글로 그린다.
+        예전에는 여기에 안내 문구 한 줄과 "+ 측벽 보강 / + 정면 보강 /
+        + 내부 피복" 세 단추가 있었다. 무엇을 켤 수 있는지 단추 뒤에 숨겨
+        두는 구조라, 이제 항목 자체를 줄로 세우고 토글로 켠다. -#}
+    <div id="envelope-layers-list"></div>
 
     <!-- (2) Side window (envelope) -->
     <div class="aot-modal-option-row">
-      <div class="aot-modal-option-label">{{ _('Outer side vent') }}
-        <div class="aot-modal-body-text">{{ _('Can be split into 2 stages for tall side walls') }}</div>
-      </div>
+      <div class="aot-modal-option-label">{{ _('Outer side vent') }}</div>
       <div class="aot-modal-option-control">
         <label class="btn-toggle mb-0">
           <input type="checkbox" class="btn-toggle-input" id="outer-side-vent" onchange="EnvelopeUI.onVentToggle()">
           <span class="btn-toggle-slider"><span class="btn-toggle-thumb"></span></span>
         </label>
       </div>
+      <div class="aot-modal-body-text">{{ _('Can be split into 2 stages for tall side walls') }}</div>
     </div>
-    <div id="outer-side-vent-detail" style="display:none;padding:0 0 0.25rem 0.5rem;border-bottom:1px solid var(--aot-border-light);">
-      <div class="aot-modal-option-row" style="border-bottom:none;padding-bottom:0;">
-        <div class="aot-modal-option-label" style="font-size:var(--aot-font-size-sm);">{{ _('Stages') }}</div>
+    <div id="outer-side-vent-detail" class="fac-detail" style="display:none;">
+      <div class="aot-modal-option-row">
+        <span class="aot-modal-option-label">{{ _('Stages') }}</span>
         <div class="aot-modal-option-control">
           <div class="btn-group btn-group-sm">
             <label class="btn fac-seg-btn active">
@@ -603,9 +586,10 @@
         </label>
       </div>
     </div>
-    <div id="outer-roof-vent-detail" style="display:none;padding:0 0 0.4rem 0.5rem;border-bottom:1px solid var(--aot-border-light);">
-      <div class="fac-inline-toggle">
-        {{ _('Position') }}:
+    <div id="outer-roof-vent-detail" class="fac-detail" style="display:none;">
+      <div class="aot-modal-option-row">
+        <span class="aot-modal-option-label">{{ _('Position') }}</span>
+        <div class="aot-modal-option-control">
         <div class="btn-group btn-group-sm">
           <label class="btn fac-seg-btn active">
             <input type="radio" name="roof-vent-placement" value="center" checked> {{ _('Center') }}
@@ -614,80 +598,87 @@
             <input type="radio" name="roof-vent-placement" value="sides"> {{ _('Left/Right') }}
           </label>
         </div>
+        </div>
       </div>
     </div>
 
-    <!-- (4) Thermal/shade curtain -->
-    <div class="aot-modal-option-row aot-full-width-row" style="border-bottom:none;">
-      <div class="aot-modal-option-label" style="margin-bottom:0.5rem;">{{ _('Curtains') }}</div>
-      <div class="fac-body" style="display:flex;flex-direction:column;gap:8px;">
+  </div><!-- /피복 및 환기 카드 -->
 
-        <!-- Ceiling thermal curtain -->
-        <div class="aot-modal-detail-item">
-          <div class="aot-modal-detail-head">
-            <span>{{ _('Ceiling thermal curtain') }}</span>
-            <label class="btn-toggle mb-0">
-              <input type="checkbox" class="btn-toggle-input" id="curtain-thermal-ceiling"
-                     onchange="EnvelopeUI.onCurtainCeilingToggle()">
-              <span class="btn-toggle-slider"><span class="btn-toggle-thumb"></span></span>
-            </label>
-          </div>
-          <div id="curtain-ceiling-detail" style="display:none;margin-top:8px;">
-            <div class="fac-inline-toggle">
-              {{ _('Layers') }}:
-              <div class="btn-group btn-group-sm">
-                <label class="btn fac-seg-btn active">
-                  <input type="radio" name="curtain-ceiling-layers" value="1" checked> {{ _('1 layer') }}
-                </label>
-                <label class="btn fac-seg-btn">
-                  <input type="radio" name="curtain-ceiling-layers" value="2"> {{ _('2 layers') }}
-                </label>
-              </div>
-            </div>
-          </div>
+  {#- (4) 커튼 — 제 구획으로 뗀다.
+
+      예전에는 "피복 및 환기" 카드 **안**에 행 라벨(`aot-modal-option-label`)
+      하나로 얹고, 세 커튼을 그 행의 `.fac-body` 안에 통째로 넣어 두었다.
+      그래서 토글이 행의 오른쪽 끝이 아니라 안쪽 내용 폭을 따라가, 형제
+      항목끼리도 어긋났다(실측: 환기 토글은 카드 오른쪽에서 16px 인데 커튼은
+      158px·189px — 서로도 31px 차이).
+
+      ⚠ 2026-08-27 에 여기에 `aot-modal-option-row` 를 넣었다가 정렬이 밀려
+      되돌린 기록이 있었다. 그때의 원인이던 `.aot-modal-option-control` 의
+      `display:flex !important` + 160px 고정은 그 뒤 스타일 정비에서 걷혔고,
+      바로 위 "외부 측면 환기"·"외부 천창 환기" 두 행이 지금 같은 골격으로
+      제자리에 선다. 그래서 같은 골격으로 통일한다. -#}
+  <div class="aot-modal-group-title">{{ _('Curtains') }}</div>
+  <div class="aot-modal-container">
+
+    <div class="aot-modal-option-row">
+      <span class="aot-modal-option-label">{{ _('Ceiling thermal curtain') }}</span>
+      <div class="aot-modal-option-control">
+        <label class="btn-toggle mb-0">
+          <input type="checkbox" class="btn-toggle-input" id="curtain-thermal-ceiling"
+                 onchange="EnvelopeUI.onCurtainCeilingToggle()">
+          <span class="btn-toggle-slider"><span class="btn-toggle-thumb"></span></span>
+        </label>
+      </div>
+    </div>
+    <div id="curtain-ceiling-detail" class="fac-detail" style="display:none;">
+      <div class="aot-modal-option-row">
+        <span class="aot-modal-option-label">{{ _('Layers') }}</span>
+        <div class="aot-modal-option-control">
+        <div class="btn-group btn-group-sm">
+          <label class="btn fac-seg-btn active">
+            <input type="radio" name="curtain-ceiling-layers" value="1" checked> {{ _('1 layer') }}
+          </label>
+          <label class="btn fac-seg-btn">
+            <input type="radio" name="curtain-ceiling-layers" value="2"> {{ _('2 layers') }}
+          </label>
         </div>
-
-        <!-- Wall thermal curtain -->
-        <div class="aot-modal-detail-item">
-          <div class="aot-modal-detail-head">
-            <span>{{ _('Wall thermal curtain') }}</span>
-            <label class="btn-toggle mb-0">
-              <input type="checkbox" class="btn-toggle-input" id="curtain-thermal-wall"
-                     onchange="EnvelopeUI.onCurtainWallToggle()">
-              <span class="btn-toggle-slider"><span class="btn-toggle-thumb"></span></span>
-            </label>
-          </div>
         </div>
+      </div>
+    </div>
 
-        <!-- Shade curtain -->
-        <div class="aot-modal-detail-item">
-          <div class="aot-modal-detail-head">
-            <span>{{ _('Shade curtain') }}</span>
-            <label class="btn-toggle mb-0">
-              <input type="checkbox" class="btn-toggle-input" id="curtain-shade" onchange="EnvelopeUI.onCurtainShadeToggle()">
-              <span class="btn-toggle-slider"><span class="btn-toggle-thumb"></span></span>
-            </label>
-          </div>
-          {#- ⚠ **이 페이지의 골격은 `fac-*` 다.** `aot-modal-option-row` 를
-              끼워 넣었더니 그 규칙(`display:flex !important` + 컨트롤 160px
-              고정)이 이 절의 정렬을 통째로 밀어, 오른쪽에 있어야 할 버튼들이
-              엉뚱한 자리로 갔다(2026-08-27 사용자 신고). 형제 항목
-              (`curtain-ceiling-detail`)과 **같은 골격**을 쓴다.
+    <div class="aot-modal-option-row">
+      <span class="aot-modal-option-label">{{ _('Wall thermal curtain') }}</span>
+      <div class="aot-modal-option-control">
+        <label class="btn-toggle mb-0">
+          <input type="checkbox" class="btn-toggle-input" id="curtain-thermal-wall"
+                 onchange="EnvelopeUI.onCurtainWallToggle()">
+          <span class="btn-toggle-slider"><span class="btn-toggle-thumb"></span></span>
+        </label>
+      </div>
+    </div>
 
-              차광막의 물성이라 여기 있다 — 시설이 아는 값이고, 예전에는 냉방
-              부하 계산에 0.50 이 박혀 있었다(설계문서 D9). -#}
-          <div id="curtain-shade-detail" style="display:none;margin-top:8px;">
-            <div class="fac-inline-toggle">
-              <span title="{{ _('Fraction of light that passes through the shade cloth when fully closed. 0.30 lets three tenths through.') }}">{{ _('Transmittance') }}</span>
-              <input type="number" id="curtain-shade-tau"
-                     min="0.01" max="1" step="0.01" placeholder="0.50"
-                     style="width:64px;font-size:var(--aot-font-size-xs);padding:1px 4px;"
-                     title="{{ _('Fraction of light that passes through the shade cloth when fully closed. 0.30 lets three tenths through.') }}"
-                     onchange="EnvelopeUI.onCurtainShadeToggle()">
-            </div>
-          </div>
+    <div class="aot-modal-option-row">
+      <span class="aot-modal-option-label">{{ _('Shade curtain') }}</span>
+      <div class="aot-modal-option-control">
+        <label class="btn-toggle mb-0">
+          <input type="checkbox" class="btn-toggle-input" id="curtain-shade" onchange="EnvelopeUI.onCurtainShadeToggle()">
+          <span class="btn-toggle-slider"><span class="btn-toggle-thumb"></span></span>
+        </label>
+      </div>
+    </div>
+    {#- 차광막의 물성이라 여기 있다 — 시설이 아는 값이고, 예전에는 냉방
+        부하 계산에 0.50 이 박혀 있었다(설계문서 D9). -#}
+    <div id="curtain-shade-detail" class="fac-detail" style="display:none;">
+      <div class="aot-modal-option-row">
+        <span class="aot-modal-option-label"
+              title="{{ _('Fraction of light that passes through the shade cloth when fully closed. 0.30 lets three tenths through.') }}">{{ _('Transmittance') }}</span>
+        <div class="aot-modal-option-control">
+          <input type="number" id="curtain-shade-tau"
+                 class="form-control aot-modern-input"
+                 min="0.01" max="1" step="0.01" placeholder="0.50"
+                 title="{{ _('Fraction of light that passes through the shade cloth when fully closed. 0.30 lets three tenths through.') }}"
+                 onchange="EnvelopeUI.onCurtainShadeToggle()">
         </div>
-
       </div>
     </div>
 
@@ -850,7 +841,7 @@
         </div>
         <!-- measurement_type: auto-set on channel selection — hidden, keeps data only -->
         <select id="fi-measurement-type" style="display:none;" aria-hidden="true"></select>
-        <div class="aot-modal-option-row" style="border-bottom:none;">
+        <div class="aot-modal-option-row">
           <label class="aot-modal-option-label">{{ _('Delete') }}</label>
           <div class="aot-modal-option-control">
             <button id="fi-delete" class="btn aot-pill-btn aot-pill-btn-danger" type="button">{{ _('Delete') }}</button>
@@ -860,7 +851,7 @@
     </div>
   <div class="aot-modal-group-title">{{ _('Add Component') }}</div>
   <div class="aot-modal-container">
-    <div class="aot-modal-option-row" style="border-bottom:none;">
+    <div class="aot-modal-option-row">
       <label class="aot-modal-option-label">{{ _('Type') }}</label>
       <div class="aot-modal-option-control">
         <select id="fac-add-kind" class="form-control aot-modern-select" aria-label="{{ _('Type') }}"></select>
@@ -896,7 +887,7 @@
     <table id="sensor-config-table" class="aot-module-table fac-table">
       <thead>
         <tr>
-          <th style="width:120px;">{{ _('Name') }}</th>
+          <th>{{ _('Name') }}</th>
           <th>{{ _('Settings') }}</th>
         </tr>
       </thead>
@@ -915,16 +906,17 @@
   <p class="aot-modal-body-text fac-section-desc">
     {{ _('Connect forecast Input devices. Any service (OpenWeatherMap, Open-Meteo, KMA …) works as long as it has an Input plugin that writes values to InfluxDB.') }}
   </p>
-  <div class="aot-modal-container" style="padding:12px 16px;">
+  <div class="aot-modal-container">
 
 
-    <table id="weather-config-table" class="aot-module-table fac-table">
+    <div class="aot-table-scroll">
+    <table id="weather-config-table" class="aot-module-table fac-table fac-table-weather">
       <thead>
         <tr>
-          <th style="width:110px;">{{ _('Name') }}</th>
-          <th style="width:160px;">{{ _('Measurement Item') }}</th>
+          <th>{{ _('Name') }}</th>
+          <th>{{ _('Measurement Item') }}</th>
           <th>{{ _('Input Channel') }}</th>
-          <th style="width:40px;"></th>
+          <th></th>
         </tr>
       </thead>
       <tbody id="weather-config-tbody">
@@ -933,11 +925,12 @@
         </tr>
       </tbody>
     </table>
+    </div>
     <div class="fac-card-actions">
       <button type="button" id="btn-weather-add" class="btn aot-pill-btn aot-pill-btn-primary">+ {{ _('Add Connection') }}</button>
     </div>
 
-    <div class="aot-modal-container"><div class="aot-modal-body-text">
+    <div class="aot-modal-body-text aot-modal-desc">
       <strong>{{ _('Measurement Item Guide') }}</strong><br>
       forecast_temperature — {{ _('Forecast temperature (°C)') }}<br>
       forecast_humidity — {{ _('Forecast humidity (%%)') }}<br>
@@ -945,7 +938,7 @@
       forecast_precipitation_prob — {{ _('Precipitation probability (%% 0-100)') }}<br>
       forecast_precipitation — {{ _('Precipitation (mm)') }}<br>
       forecast_solar — {{ _('Forecast solar radiation (W/m²)') }}
-    </div></div>
+    </div>
 
   </div>
   </div><!-- /#fac-tab-weather -->
@@ -956,16 +949,17 @@
   <p class="aot-modal-body-text fac-section-desc">
     {{ _('Grouping actuators of the same kind lets the coordinator command only the leader and automatically copy the same command to followers according to the mode.') }}
   </p>
-  <div class="aot-modal-container" style="padding:12px 16px;">
-    <table id="group-config-table" class="aot-module-table fac-table">
+  <div class="aot-modal-container">
+    <div class="aot-table-scroll">
+    <table id="group-config-table" class="aot-module-table fac-table fac-table-groups">
       <thead>
         <tr>
           <th>{{ _('Group Name') }}</th>
-          <th style="width:110px;">{{ _('Mode') }}</th>
+          <th>{{ _('Mode') }}</th>
           <th>{{ _('Leader') }}</th>
           <th>{{ _('Follower') }}</th>
-          <th style="width:70px;">{{ _('Threshold (%%)') }}</th>
-          <th style="width:40px;"></th>
+          <th>{{ _('Threshold (%%)') }}</th>
+          <th></th>
         </tr>
       </thead>
       <tbody id="group-config-tbody">
@@ -974,6 +968,7 @@
         </tr>
       </tbody>
     </table>
+    </div>
     <div class="fac-card-actions">
       <button type="button" id="btn-add-group" class="btn aot-pill-btn aot-pill-btn-primary">+ {{ _('Add Group') }}</button>
     </div>
@@ -986,22 +981,21 @@
   <p class="aot-modal-body-text fac-section-desc">
     {{ _("A facility-wide setting <strong>independent</strong> of sensor devices/channels. Define a color range once per measurement <strong>item</strong>, and every sensor label in the widgets automatically references the range matching its measurement type. You can freely change each stage’s <strong>color</strong> and <strong>upper limit</strong>, and add measurement items you want.") | safe }}
   </p>
-  <div class="aot-modal-container" style="padding:12px 16px;">
+  <div class="aot-modal-container">
 
 
     <div id="sensor-ranges-list"></div>
 
     <!-- Add measurement item -->
-    <div style="margin-top:16px;border-top:1px dashed var(--aot-border-neutral);padding-top:12px;">
-      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+    <div class="fac-add-item">
+      <div class="fac-inline-row">
         <span class="aot-modal-group-title">{{ _('Add Measurement Item') }}</span>
         <select id="sensor-ranges-add-select" class="form-control aot-modern-select fac-inline-select"></select>
-        <button type="button" id="btn-sensor-ranges-add" class="btn aot-pill-btn aot-pill-btn-primary"
-                style="white-space:nowrap;">+ {{ _('Add') }}</button>
+        <button type="button" id="btn-sensor-ranges-add" class="btn aot-pill-btn aot-pill-btn-primary">+ {{ _('Add') }}</button>
       </div>
       <!-- Custom entry (user-defined measurement item) -->
       <div id="sensor-ranges-custom" class="aot-modal-container" style="display:none;">
-        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+        <div class="fac-inline-row">
           <span>{{ _('Match Key') }}</span>
           <input type="text" id="sr-custom-key" placeholder="{{ _('e.g. CO2') }}" class="form-control aot-modern-input">
           <span>{{ _('Name') }}</span>
@@ -1010,7 +1004,7 @@
           <input type="text" id="sr-custom-unit" placeholder="{{ _('e.g. ppm') }}" class="form-control aot-modern-input">
           <button type="button" id="btn-sr-custom-add" class="btn aot-pill-btn aot-pill-btn-primary">{{ _('Add') }}</button>
         </div>
-        <p class="aot-modal-body-text" style="margin-top:8px;">
+        <p class="aot-modal-body-text fac-below-row">
           {{ _('The match key is the measurement-type identifier of the sensor channel (e.g. T, RH, CO2, VPD, light, wind_ms, wind_deg, rain_mm). The color range is applied only when the channel and key match.') }}
         </p>
       </div>
@@ -1037,20 +1031,22 @@
        운영 정보(노트·이력·센서 값·제어)는 여기가 아니라 대시보드 위젯의 구획
        모달이 맡는다. geo/design 과 같은 분담이다. -->
   <div id="fac-tab-plot" class="fac-step-pane" data-step="plot" role="tabpanel">
-    <div class="aot-modal-container">
-      <div class="aot-modal-body-text">
-        {{ _('Record what is in each zone. Facility plots need no drawing — the zone itself is the location.') }}
-      </div>
-    </div>
-    <div id="fac-plot-body"></div>
+  {#- 다른 탭과 같은 골격이다 — 구획 제목은 카드 밖에 서고, 안내는 제목 아래
+      카드 밖에 놓인다. 예전에는 제목이 없고 안내만 카드 하나에 담겨 있어,
+      문장 한 줄짜리 흰 상자가 덩그러니 떠 있었다. -#}
+  <div class="aot-modal-group-title">{{ _('Plot') }}</div>
+  <p class="aot-modal-body-text fac-section-desc">
+    {{ _('Record what is in each zone. Facility plots need no drawing — the zone itself is the location.') }}
+  </p>
+  <div id="fac-plot-body"></div>
   </div>
 
   <div class="fac-step-pane" data-step="check">
 
   <!-- Shown until the facility is saved — the integration summary and device
        check below need a saved facility, so say so instead of hiding them. -->
-  <div id="check-locked-hint" class="aot-modal-container" style="display:none;">
-    <div class="aot-modal-body-text">{{ _('Save the facility first to see the integration summary and run a device check.') }}</div>
+  <div id="check-locked-hint" class="aot-modal-body-text aot-modal-desc" style="display:none;">
+    {{ _('Save the facility first to see the integration summary and run a device check.') }}
   </div>
 
   <div class="aot-modal-group-title">{{ _('Capacity Preview') }}</div>
@@ -1073,13 +1069,14 @@
 
   <!-- ── IEC integration summary ─────────────────────────────────────────── -->
   <div id="integ-panel" style="display:none;">
-    <div class="aot-modal-group-title" style="display:flex;align-items:center;justify-content:space-between;">
+    {#- 제목과 그 구획의 동작이 한 줄에 선다. 예전에는 인라인 flex 를 제목에
+        직접 박아 두었다 — 같은 짝이 여러 곳에 있으므로 클래스로 뺀다. -#}
+    <div class="aot-modal-group-title fac-group-title-row">
       <span>{{ _('IEC Integration Summary') }}</span>
       <button type="button" id="btn-integ-refresh"
-              class="btn aot-pill-btn aot-pill-btn-secondary"
-              style="margin:0;">{{ _('Refresh') }}</button>
+              class="btn aot-pill-btn aot-pill-btn-secondary">{{ _('Refresh') }}</button>
     </div>
-    <div class="aot-modal-container" style="padding:0.6rem 0.75rem;">
+    <div class="aot-modal-container">
       <div id="integ-body">
         <span class="integ-loading">{{ _('Loading integration data…') }}</span>
       </div>
@@ -1089,7 +1086,7 @@
   <!-- ── Device Check ─────────────────────────────────────────────────────── -->
   <div id="comm-panel" style="display:none;">
     <div class="aot-modal-group-title">{{ _('Device Check') }}</div>
-    <div class="aot-modal-container" style="padding:0.6rem 0.75rem;">
+    <div class="aot-modal-container">
 
       <div id="comm-setup">
         <p class="comm-intro">
@@ -1097,9 +1094,9 @@
           {{ _('After the test, enter your judgment and the result will be applied to algorithm settings immediately.') }}
         </p>
         <div id="comm-act-list" class="comm-act-list">
-          <span style="color:var(--aot-color-text-secondary);font-size:var(--aot-font-size-sm);">{{ _('Select a facility first') }}</span>
+          <span class="aot-modal-body-text">{{ _('Select a facility first') }}</span>
         </div>
-        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+        <div class="fac-card-actions">
           <button type="button" class="btn aot-pill-btn aot-pill-btn-secondary"
                   id="btn-comm-select-all">{{ _('Select All') }}</button>
           <button type="button" class="btn aot-pill-btn aot-pill-btn-primary"
@@ -1111,11 +1108,11 @@
         <div id="comm-progress-info" class="comm-progress">
           <span id="comm-progress-text">{{ _('Preparing...') }}</span>
           <div class="aot-progress">
-            <div class="aot-progress-fill" id="comm-progress-fill" style="width:0%"></div>
+            <div class="aot-progress-fill" id="comm-progress-fill"></div>
           </div>
         </div>
         <div id="comm-results-list"></div>
-        <div style="margin-top:8px;display:flex;gap:8px;">
+        <div class="fac-inline-row fac-below-row">
           <button type="button" class="btn aot-pill-btn aot-pill-btn-secondary"
                   id="btn-comm-reset">{{ _('Reset') }}</button>
         </div>
@@ -1272,6 +1269,10 @@ window._IEC = {
   env_inner_full:{{ _('Inner (full)')|tojson }},
   env_side_reinf:{{ _('Side reinforcement')|tojson }},
   env_front_reinf:{{ _('Front reinforcement')|tojson }},
+  env_remove:{{ _('Remove')|tojson }},
+  env_inner_cover:{{ _('Inner cover')|tojson }},
+  env_cover_layers:{{ _('Cover layers')|tojson }},
+  insp_position:{{ _('Position')|tojson }},
   env_ceiling:{{ _('Ceiling')|tojson }},
   env_vent_curtain:{{ _('Vent/Curtain')|tojson }},
   stage_upper:{{ _('Upper')|tojson }},

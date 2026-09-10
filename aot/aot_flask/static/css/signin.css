@@ -42,3 +42,60 @@ body {
   border-top-left-radius: 0;
   border-top-right-radius: 0;
 }
+
+/* ============================================================
+   로그인·관리자 만들기 화면의 공통 조각
+   ============================================================
+   세 화면(login_password · login_keypad · create_admin)이 같은 골격을
+   쓰는데, 가운데 정렬·여백·글자 크기를 **각자 인라인 style 로** 적고
+   있었다(합쳐 36개). 같은 뜻이 화면마다 다른 값으로 갈리기 쉬운 자리라
+   여기로 모은다. 색은 `var(--토큰, #리터럴)` 폴백을 떼고 토큰만 읽는다 —
+   이 화면들도 `aot-theme-variables.css` 를 먼저 싣기 때문에 폴백이 하던
+   일이 없었다. */
+
+/* 가운데 정렬은 이 화면들의 기본이다. */
+.signin-center { text-align: center; }
+
+/* 제목·안내가 위아래로 숨 쉴 자리. */
+.signin-gap-top { margin-top: var(--aot-space-4); }
+.signin-gap-bottom { margin-bottom: var(--aot-space-4); }
+.signin-gap { margin: var(--aot-space-4) 0; }
+
+/* 묶음과 묶음 사이 — 값에 따라 세 단이다. */
+.signin-block-sm { margin-top: var(--aot-space-3); }
+.signin-block { margin-top: var(--aot-space-5); }
+.signin-spacer { height: var(--aot-space-6); }
+
+/* 환영 문구 두 단. */
+.signin-title {
+  padding: var(--aot-space-4) 0 var(--aot-space-1);
+  text-align: center;
+  font-size: 2em;
+  font-weight: 700;
+}
+
+.signin-subtitle {
+  padding: var(--aot-space-4) 0;
+  text-align: center;
+  font-size: 1.2em;
+  font-weight: 700;
+}
+
+/* 화면 폭 상한 — 넓은 화면에서 글줄이 지나치게 길어지지 않게 한다. */
+.signin-col-wide { max-width: 40em; }
+.signin-col { max-width: 30em; }
+
+/* 숫자판. 자릿수가 흔들리지 않도록 고정폭 글꼴을 쓴다. */
+.signin-keypad-btn { font-family: monospace; }
+
+/* 아래쪽 보조 링크(비밀번호 찾기·다른 방식으로 로그인)는 단추처럼 읽히므로
+   밑줄을 긋지 않는다. */
+.signin-link {
+  color: var(--aot-color-text-primary);
+  text-decoration: none;
+}
+
+/* ⚠ 구글 로그인 단추는 여기로 옮기지 않았다. 그 색(#fff/#444)은 우리 테마가
+   아니라 **구글 브랜드 지침**이 요구하는 값이라, 토큰으로 바꾸면 다크
+   테마에서 지침을 어기게 된다. 템플릿에 인라인으로 남기고 그 이유를 바로
+   위에 적어 둔다 — 자리를 옮기면 그 설명이 값과 떨어진다. */

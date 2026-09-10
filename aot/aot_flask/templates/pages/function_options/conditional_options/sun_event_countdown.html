@@ -4,7 +4,7 @@
   <strong>self.condition("{{each_condition.unique_id.split('-')[0]}}")</strong>
   {{_('Returns the number of seconds until the next selected sun event. The location is inherited from this Conditional Function.')}}
   {% if sun_preview %}
-    <div class="text-muted" style="margin-top: 4px;">
+    <div class="text-muted mt-1">
       {{_('Next event')}}: {{sun_preview['next_event']}}
     </div>
   {% endif %}
@@ -13,7 +13,7 @@
 <div class="aot-modal-option-row">
   {{form_conditional_conditions.sun_event.label(class_='aot-modal-option-label mb-0')}}
   <div class="aot-modal-option-control">
-    <select class="form-control aot-modern-select" id="sun_event" name="sun_event" style="width: 100%;"
+    <select class="form-control aot-modern-select w-100" id="sun_event" name="sun_event"
             title="{{_('Which sun event to count down to')}}">
       {% for value, label in sun_events -%}
         <option value="{{value}}"{% if (each_condition.sun_event or 'sunset') == value %} selected{% endif %}>{{label}}</option>

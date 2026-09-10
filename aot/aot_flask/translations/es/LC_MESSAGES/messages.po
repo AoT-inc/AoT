@@ -31798,3 +31798,15 @@ msgstr "— Seleccionar canal —"
 msgid "— Select —"
 msgstr "— Seleccionar —"
 
+
+#: Added by hand — do not re-extract (fuzzy contamination history).
+#: templates/modals/geo_settings_modal.html · templates/settings/measurement.html
+#: (2026-09-10)
+msgid "Device Color"
+msgstr "Color del dispositivo"
+
+msgid "All Measurements"
+msgstr "Todas las mediciones"
+
+msgid "All Units"
+msgstr "Todas las unidades"

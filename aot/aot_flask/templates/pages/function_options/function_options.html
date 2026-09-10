@@ -7,7 +7,7 @@
 
     {% if each_function.function_type == 'function_actions' %}
     <div class="aot-modal-container">
-        <div class="aot-modal-body-text d-flex flex-wrap mb-2" style="gap: 15px; padding-top: 0.5rem;">
+        <div class="aot-modal-body-text d-flex flex-wrap mb-2 aot-meta-row pt-2">
           <span><strong>{{_("Name")}}:</strong> {{_("Run Actions")}}</span>
           <span><strong>{{_("Comment")}}:</strong> {{_("Executes all listed actions sequentially.")}}</span>
         </div>
@@ -16,7 +16,7 @@
     {# Location settings and map: integrated with macro #}
     {% from 'pages/map/map_option_macros.html' import render_device_map with context %}
     <div class="aot-modal-container">
-      <div class="col-12" style="padding:0">
+      <div class="col-12 aot-col-flush">
         {% set _icon_field = form_function_base.marker_icon if form_function_base.marker_icon is defined else None %}
         {% set _color_field = form_function_base.marker_color if form_function_base.marker_color is defined else None %}
         {% set _size_field = form_function_base.marker_size if form_function_base.marker_size is defined else None %}
@@ -143,12 +143,12 @@
           <div class="d-flex align-items-center aot-control-composite">
             <select class="form-control aot-modern-select selectpicker mr-2" data-style="btn-white" data-live-search="true"
               title="{{_('Select Action')}}" id="action_type_{{each_function.unique_id}}"
-              name="action_type" style="flex: 2 !important;">
+              name="action_type">
               {% for value, name in choices_actions %}
               <option value="{{value}}">{{name}}</option>
               {% endfor %}
             </select>
-            <button data-form-id="form_actions_{{each_function.unique_id}}" onclick="return $(this).processRequest(this, 'add_action');" class="btn aot-pill-btn aot-pill-btn-primary" type="button" style="flex: 1 !important; padding: 0 !important; min-width: 0 !important;">{{_('Add')}}</button>
+            <button data-form-id="form_actions_{{each_function.unique_id}}" onclick="return $(this).processRequest(this, 'add_action');" class="btn aot-pill-btn aot-pill-btn-primary" type="button">{{_('Add')}}</button>
           </div>
         </div>
       </div>

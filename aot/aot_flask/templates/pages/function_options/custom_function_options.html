@@ -13,7 +13,7 @@
     {{form_function.function_type(value='function')}}
 
     {% if each_function.is_activated and not dict_options.get('modify_settings_without_deactivating') %}
-    <div class="aot-notice-box aot-notice-box-warning" style="margin-bottom: 15px;">
+    <div class="aot-notice-box aot-notice-box-warning mb-3">
       <p>{{_('This controller is active. Deactivate it before saving changes, or they will not be applied.')}}</p>
     </div>
     {% endif %}
@@ -21,7 +21,7 @@
     {% if each_function.device != 'function_spacer' %}
     {% from 'pages/map/map_option_macros.html' import render_device_map with context %}
     <div class="map-option-section">
-      <div class="col-12" style="padding:0">
+      <div class="col-12 aot-col-flush">
         {% set _icon_field = form_function.marker_icon if form_function is defined and form_function.marker_icon is defined else None %}
         {% set _color_field = form_function.marker_color if form_function is defined and form_function.marker_color is defined else None %}
         {% set _size_field = form_function.marker_size if form_function is defined and form_function.marker_size is defined else None %}
@@ -60,7 +60,7 @@
 
     {% if each_function.device in dict_controllers %}
 
-    <div class="aot-modal-body-text d-flex flex-wrap" style="gap: 15px; margin-bottom: 0.5rem;">
+    <div class="aot-modal-body-text d-flex flex-wrap aot-meta-row">
         {% if 'function_manufacturer' in dict_controllers[each_function.device] %}
         <span><strong>{{_("Manufacturer")}}:</strong> {{dict_controllers[each_function.device]['function_manufacturer']}}</span>
         {% endif %}
@@ -101,7 +101,7 @@
     {% set additional_url = 'url_additional' in dict_controllers[each_function.device] and dict_controllers[each_function.device]['url_additional'] %}
 
     {% if manufacturer_url or datasheet_url or product_purchase_url or additional_url %}
-    <div class="aot-modal-body-text" style="margin-top: -0.5rem; font-size: var(--aot-font-size-sm);">
+    <div class="aot-modal-body-text aot-meta-links">
         <strong>{{_("Resources")}}:</strong>
         {%- if manufacturer_url -%} {{_("Manufacturer")}} {% for each_url in dict_controllers[each_function.device]['url_manufacturer'] %}<a href="{{each_url}}" target="_blank">{{_("Link")}} {{loop.index}}</a>{{ ", " if not loop.last }}{% endfor %}{%- endif -%}
         {%- if datasheet_url -%} {% if manufacturer_url %}; {% endif %}{{_("Datasheet")}} {% for each_url in dict_controllers[each_function.device]['url_datasheet'] %}<a href="{{each_url}}" target="_blank">{{_("Link")}} {{loop.index}}</a>{{ ", " if not loop.last }}{% endfor %}{%- endif -%}
@@ -111,7 +111,7 @@
     {% endif %}
 
     {% if 'message' in dict_controllers[each_function.device] %}
-    <div class="aot-modal-body-text" style="font-style: italic; padding: 8px; border-radius: var(--aot-radius-sm); font-size: var(--aot-font-size-sm);">
+    <div class="aot-modal-body-text aot-modal-desc">
         {{dict_controllers[each_function.device]['message']|safe}}
     </div>
     {% endif %}
@@ -325,7 +325,7 @@
 
       {% if 'custom_channel_options' in dict_options %}
       <div class="aot-modal-container">
-      <div class="row small-gutters" style="padding: 1em">
+      <div class="row small-gutters p-3">
         {% for each_option in dict_options['custom_channel_options'] %}
         {% include 'pages/form_options/Custom_Options.html' %}
         {% endfor %}

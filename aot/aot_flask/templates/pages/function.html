@@ -51,7 +51,7 @@
 <main role="main" class="container">
   {% include 'flash_messages.html' %}
 
-  <div style="clear: both; padding: 0.5em 0;"></div>
+  <div class="aot-vspace"></div>
 
   <form id="new_function_form" method="post" action="/function">
     {{form_mod_pid_base.csrf_token}}
@@ -85,7 +85,7 @@
 
   </form>
 
-  <div style="clear: both; padding: 1em 0;"></div>
+  <div class="aot-vspace-lg"></div>
 
   <div class="grid-stack aot-entry-container">
     {%- for each_function in all_functions_sorted -%}
@@ -131,7 +131,7 @@
 
 </main>
 
-<div style="clear: both; padding-bottom: 1.5em;"></div>
+<div class="aot-vspace-end"></div>
 
 <script type="text/javascript">
   function initGrid() {

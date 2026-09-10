@@ -1,7 +1,7 @@
 <!-- modals/geo_settings_modal.html -->
 <div class="modal fade aot-option-modal" id="geoSettingsModal" tabindex="-1" role="dialog" aria-hidden="true">
     <div class="modal-dialog aot-modal-dialog" role="document">
-        <div class="modal-content" style="border-radius: var(--aot-radius-xl);">
+        <div class="modal-content">
             <div class="modal-header border-0">
                 <h5 class="aot-modal-title w-100">{{ _('GIS Settings') }}</h5>
                 <button type="button" class="close" data-dismiss="modal" aria-label="Close">
@@ -20,7 +20,7 @@
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     
                     <!-- Buttons placed at top (below title, right-aligned) -->
-                    <div class="row w-100 m-0 pb-1 d-flex flex-wrap justify-content-end" style="border-bottom: 2px solid var(--aot-btn-bg-secondary); margin-bottom: 0.5rem !important;">
+                    <div class="row w-100 m-0 d-flex flex-wrap justify-content-end aot-heading-rule-strong">
                         <button type="button" class="btn aot-pill-btn aot-w-60 mr-2 mb-2" data-dismiss="modal">{{ _('Close') }}</button>
                         <button type="submit" class="btn aot-pill-btn aot-pill-btn-primary aot-w-60 mb-2" id="btnSaveGeoSettings">{{ _('Save') }}</button>
                     </div>
@@ -75,11 +75,26 @@
 
                     <div class="aot-modal-section-title">{{ _('Design Theme Settings') }}</div>
                     <div class="aot-modal-container">
+                        {#- 라벨은 **낱개로 부른다.** 예전에는 `_(type.capitalize() + ' Color')`
+                            처럼 msgid 를 문자열로 조립했는데, 조립한 것은 추출기가 못 본다 —
+                            'Site Color'~'Equipment Color' 넷은 다른 데서 이미 등록돼 우연히
+                            번역됐고, 'Device Color'·'Panel bg Color' 둘은 등록된 적이 없어
+                            한국어 화면에 영어로 남아 있었다. panel_bg 는 이미 번역이 있는
+                            'Panel Background Color' 로 부른다. -#}
+                        {% set theme_color_labels = {
+                             'site':      _('Site Color'),
+                             'zone':      _('Zone Color'),
+                             'facility':  _('Facility Color'),
+                             'equipment': _('Equipment Color'),
+                             'device':    _('Device Color'),
+                             'panel_bg':  _('Panel Background Color') } %}
                         {% for type in ['site', 'zone', 'facility', 'equipment', 'device', 'panel_bg'] %}
                         <div class="aot-modal-option-row">
-                            <label class="aot-modal-option-label">{{ _(type.replace('_', ' ').capitalize() + ' Color') }}</label>
+                            <label class="aot-modal-option-label">{{ theme_color_labels[type] }}</label>
                             <div class="aot-modal-option-control">
-                                <input type="color" class="form-control" name="theme_{{ type }}" style="width: 60px; height: 32px; border-radius: var(--aot-radius-lg); border: none; padding: 0;">
+                                {#- 모양은 공용 규칙이 정한다(components/aot-base-ui.css). 여기서는
+                                    크기만이고, 그것도 클래스로 준다. -#}
+                                <input type="color" class="form-control aot-geo-theme-color" name="theme_{{ type }}">
                             </div>
                         </div>
                         {% endfor %}

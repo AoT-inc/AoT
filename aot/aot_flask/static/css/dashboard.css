@@ -195,3 +195,11 @@ body.aot-nav-hidden .widget-add-bar {
         top: -70px !important;
     }
 }
+
+/* 격자는 카드 사이 간격이 있어 좌우·위만 한 칸 준다. 처음에는 감춰 두고
+   gridstack 이 배치를 마치면 JS 가 보이게 한다(그래서 `visibility` 다 —
+   `display:none` 이면 gridstack 이 크기를 못 잰다). */
+.grid-stack.dash-grid-pad {
+  padding: var(--aot-space-4) var(--aot-space-4) 0;
+  visibility: hidden;
+}

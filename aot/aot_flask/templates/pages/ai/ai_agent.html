@@ -8,6 +8,7 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/gridstack-custom.css') }}" />
 <link rel="stylesheet" href="{{ url_for('static', filename='css/aot-entry-ui.css') }}" />
 <link rel="stylesheet" href="{{ url_for('static', filename='css/aot-settings.css') }}" />
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/ai.css') }}" />
 <script src="{{ url_for('static', filename='js/vendor/gridstack-all.js') }}"></script>
 {% endblock %}
 
@@ -56,7 +57,7 @@
         </label>
       </div>
     </div>
-    <div class="aot-modal-body-text" id="aiRuntimeHint" style="padding-top:0.25rem; padding-bottom:0.75rem;">
+    <div class="aot-modal-body-text pt-1 pb-3" id="aiRuntimeHint">
       {%- if not ai_runtime or not ai_runtime.ai_enabled -%}
         {{ _('The AI service is disabled. Enable it in Settings > General first.') }}
       {%- elif ai_runtime.agent_count == 0 -%}
@@ -69,10 +70,10 @@
     </div>
   </div>
 
-  <div style="clear: both; padding: 0.5em 0;"></div>
+  <div class="aot-vspace"></div>
 
 <!-- v8 Add Panel: Compact Row, Role-First, AoT Design System -->
-<form id="new_agent_form" method="post" action="{{ url_for('routes_ai_agent.ai_agent_add_direct') }}" style="padding-bottom: 0.5em">
+<form class="pb-2" id="new_agent_form" method="post" action="{{ url_for('routes_ai_agent.ai_agent_add_direct') }}">
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
   <div class="row aot-main-selection-row">
     <!-- Engine / Service Type dropdown -->
@@ -245,7 +246,7 @@
   }
 </script>
 
-  <div style="clear: both; padding: 1em 0;"></div>
+  <div class="aot-vspace-lg"></div>
 
   <div class="grid-stack aot-entry-container" id="grid-agents">
     {% for agent in agents -%}
@@ -263,7 +264,7 @@
 </main>
 </div>
 
-<div style="clear: both; padding-bottom: 1.5em;"></div>
+<div class="aot-vspace-end"></div>
 
 {% include 'pages/ai/ai_modals.html' %}
 
@@ -762,7 +763,7 @@
           </li>
         </ul>
 
-        <div class="tab-content px-3 pb-3" style="max-height: 65vh; overflow-y: auto;">
+        <div class="tab-content px-3 pb-3 ai-tab-scroll">
 
           <!-- TAB 1: System Settings -->
           <div class="tab-pane fade show active pt-3" id="tab-system" role="tabpanel">

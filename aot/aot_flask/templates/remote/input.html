@@ -11,11 +11,11 @@
   <div class="container">
     {% include 'flash_messages.html' %}
 
-    <div style="padding-bottom: 2em">
+    <div class="pb-4">
       Remote Inputs
     </div>
 
-    <div style="padding-bottom: 2em">
+    <div class="pb-4">
       Note: This is currently a work-in-progress. It is highly unpolished and should only be thought of as a proof-of-concept.
     </div>
 
@@ -27,9 +27,9 @@
         </div>
         <div class="col-auto">
       {% if host_inputs[each_host.host] %}
-          <img src="{{ url_for('static', filename='img/on.png') }}" style="width: 30px">
+          <img class="aot-state-icon" src="{{ url_for('static', filename='img/on.png') }}">
       {% else %}
-          <img src="{{ url_for('static', filename='img/off.png') }}" style="width: 30px">
+          <img class="aot-state-icon" src="{{ url_for('static', filename='img/off.png') }}">
       {% endif %}
         </div>
       </div>
@@ -38,7 +38,7 @@
       {% if host_inputs[each_host.host] %}
 
         {% for each_input in host_inputs[each_host.host] %}
-        <div class="col-auto" style="padding: 0.5em">
+        <div class="col-auto p-2">
           <div>
             Input ID: {{each_input}}
           </div>

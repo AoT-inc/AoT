@@ -25,7 +25,7 @@
           </button>
           
           <!-- Delete Button (Post form) -->
-          <form action="{{ url_for('routes_ai_agent.ai_mcp_delete', mcp_id=mcp.unique_id) }}" method="post" style="display: inline;" onsubmit="return confirm({{ _('Are you sure?')|tojson|forceescape }});">
+          <form class="d-inline" action="{{ url_for('routes_ai_agent.ai_mcp_delete', mcp_id=mcp.unique_id) }}" method="post" onsubmit="return confirm({{ _('Are you sure?')|tojson|forceescape }});">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
             <button type="submit" class="btn btn-sm btn-link text-danger">{{ _('Delete') }}</button>
           </form>

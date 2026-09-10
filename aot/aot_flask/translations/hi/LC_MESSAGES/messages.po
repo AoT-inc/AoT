@@ -31021,3 +31021,15 @@ msgstr "— चैनल चुनें —"
 msgid "— Select —"
 msgstr "— चुनें —"
 
+
+#: Added by hand — do not re-extract (fuzzy contamination history).
+#: templates/modals/geo_settings_modal.html · templates/settings/measurement.html
+#: (2026-09-10)
+msgid "Device Color"
+msgstr "डिवाइस का रंग"
+
+msgid "All Measurements"
+msgstr "सभी माप"
+
+msgid "All Units"
+msgstr "सभी इकाइयाँ"

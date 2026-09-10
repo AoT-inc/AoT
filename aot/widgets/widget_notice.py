@@ -332,7 +332,7 @@ WIDGET_INFORMATION = {
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   }
   .aot-notice-widget-open, .aot-notice-widget-note-open { cursor: pointer; }
-  .aot-notice-widget-open:hover, .aot-notice-widget-note-open:hover { border-color: var(--aot-border-strong, #ced4da); }
+  .aot-notice-widget-open:hover, .aot-notice-widget-note-open:hover { border-color: var(--aot-border-neutral); }
   /* 공지 카드 마지막 것과 "노트" 제목 사이 간격이 0px였다(둘 다 자기
      여백을 안 가짐 — .aot-ov-card-title는 margin-top이 없고, 마지막
      카드는 :last-child로 margin-bottom을 지운다). AoT_plot.py가 쓰는

@@ -29,44 +29,44 @@
     </div>
 
     <div class="aot-page-section">
-      <div style="padding-bottom: 0.5em; font-size: 1.15em">
-        {{_('AoT Version')}}: <span style="color: var(--aot-color-dark, #141414); font-weight: bold;">{{aot_version}}</span>
-        <br>{{_('Python Version')}}: <span style="color: var(--aot-color-dark, #141414); font-weight: bold;">{{python_version}}</span>
+      <div class="aot-kv-list">
+        {{_('AoT Version')}}: <span class="aot-kv-value">{{aot_version}}</span>
+        <br>{{_('Python Version')}}: <span class="aot-kv-value">{{python_version}}</span>
         <br>{{_('Platform')}}:&nbsp;
         {%- if system_env.platform_type == 'raspberry_pi' -%}
-          <span style="color: var(--aot-color-dark, #141414); font-weight: bold;">{{system_env.pi_model}}</span>
+          <span class="aot-kv-value">{{system_env.pi_model}}</span>
         {%- elif system_env.platform_type == 'docker' -%}
-          <span style="color: var(--aot-color-dark, #141414); font-weight: bold;">Docker{% if system_env.os_release %} ({{system_env.os_release}}){% endif %}</span>
+          <span class="aot-kv-value">Docker{% if system_env.os_release %} ({{system_env.os_release}}){% endif %}</span>
         {%- else -%}
-          <span style="color: var(--aot-color-dark, #141414); font-weight: bold;">{{system_env.os_release or system_env.kernel}}</span>
+          <span class="aot-kv-value">{{system_env.os_release or system_env.kernel}}</span>
         {%- endif %}
-        <br>{{_('CPU Cores')}}: <span style="color: var(--aot-color-dark, #141414); font-weight: bold;">{{system_env.cpu_cores}}</span>
-        {%- if system_env.platform_type == 'docker' %} <span style="color: var(--aot-color-text-secondary, #777);">({{_('container limit')}})</span>{% endif %}
+        <br>{{_('CPU Cores')}}: <span class="aot-kv-value">{{system_env.cpu_cores}}</span>
+        {%- if system_env.platform_type == 'docker' %} <span class="aot-kv-note">({{_('container limit')}})</span>{% endif %}
         {% if system_env.mem_total_gb %}
-        <br>{{_('Total Memory')}}: <span style="color: var(--aot-color-dark, #141414); font-weight: bold;">{{system_env.mem_total_gb}} GB</span>
-        {%- if system_env.platform_type == 'docker' %} <span style="color: var(--aot-color-text-secondary, #777);">({{_('container limit')}})</span>{% endif %}
+        <br>{{_('Total Memory')}}: <span class="aot-kv-value">{{system_env.mem_total_gb}} GB</span>
+        {%- if system_env.platform_type == 'docker' %} <span class="aot-kv-note">({{_('container limit')}})</span>{% endif %}
         {% endif %}
         <br>{{_('Database Version')}}:&nbsp;
-        {%- if database_version == correct_database_version -%}<span style="color: var(--aot-color-dark, #141414); font-weight: bold; overflow-wrap: anywhere;">{{database_version}}</span>
-            {%- else -%}<span style="color: var(--aot-color-danger, #F70D1A); font-weight: bold; overflow-wrap: anywhere;">{{database_version}}</span> ({{_('Incorrect Version. Should be')}} {{correct_database_version}}) <a href="{{ manual_url('Troubleshooting/#incorrect-database-version') }}"><span class="fas fa-question-circle aot-help-icon"></span></a>
+        {%- if database_version == correct_database_version -%}<span class="aot-kv-value aot-kv-wrap">{{database_version}}</span>
+            {%- else -%}<span class="aot-kv-alert aot-kv-wrap">{{database_version}}</span> ({{_('Incorrect Version. Should be')}} {{correct_database_version}}) <a href="{{ manual_url('Troubleshooting/#incorrect-database-version') }}"><span class="fas fa-question-circle aot-help-icon"></span></a>
             {%- endif -%}
-        <br>{{_('Database URL')}}: <span class="hide" style="font-weight: bold; overflow-wrap: anywhere;">{{database_url}}</span>
+        <br>{{_('Database URL')}}: <span class="hide aot-kv-value aot-kv-wrap">{{database_url}}</span>
         <br>{{_('Daemon Status')}}:&nbsp
-        {%- if daemon_status == "alive" %}<span style="color: var(--aot-color-dark, #141414); font-weight: bold;">{{_('Running')}}</span>
-        {%- else %}<span style="color: var(--aot-color-danger, #F70D1A); font-weight: bold;">{{_('Not Running')}}</span> <a href="{{ manual_url('Troubleshooting/#daemon-not-running') }}"><span class="fas fa-question-circle aot-help-icon"></span></a>
+        {%- if daemon_status == "alive" %}<span class="aot-kv-value">{{_('Running')}}</span>
+        {%- else %}<span class="aot-kv-alert">{{_('Not Running')}}</span> <a href="{{ manual_url('Troubleshooting/#daemon-not-running') }}"><span class="fas fa-question-circle aot-help-icon"></span></a>
         {% endif %}
         {% if daemon_up %}
-          <br>{{_('Daemon RAM Usage')}}: <span style="color: var(--aot-color-dark, #141414); font-weight: bold;">{{ram_use_daemon}} MB</span>
+          <br>{{_('Daemon RAM Usage')}}: <span class="aot-kv-value">{{ram_use_daemon}} MB</span>
           <br>{{_('Daemon Virtualenv')}}:&nbsp
-            {%- if virtualenv_daemon -%}<span style="color: var(--aot-color-dark, #141414); font-weight: bold;">{{_('Yes')}}</span>
-            {%- else -%}<span style="color: var(--aot-color-danger, #F70D1A); font-weight: bold;">{{_('No')}}</span>
+            {%- if virtualenv_daemon -%}<span class="aot-kv-value">{{_('Yes')}}</span>
+            {%- else -%}<span class="aot-kv-alert">{{_('No')}}</span>
             {%- endif -%}
         {% endif %}
-        <br>{{_('Frontend Process ID')}}: <span style="color: var(--aot-color-dark, #141414); font-weight: bold;">{{frontend_pid}}</span>
-        <br>{{_('Frontend RAM Usage')}}: <span style="color: var(--aot-color-dark, #141414); font-weight: bold;">{{ram_use_flask}} MB</span>
+        <br>{{_('Frontend Process ID')}}: <span class="aot-kv-value">{{frontend_pid}}</span>
+        <br>{{_('Frontend RAM Usage')}}: <span class="aot-kv-value">{{ram_use_flask}} MB</span>
         <br>{{_('Frontend Virtualenv')}}:&nbsp
-        {%- if virtualenv_flask -%}<span style="color: var(--aot-color-dark, #141414); font-weight: bold;">{{_('Yes')}}</span>
-        {%- else -%}<span style="color: var(--aot-color-danger, #F70D1A); font-weight: bold;">{{_('No')}}</span>
+        {%- if virtualenv_flask -%}<span class="aot-kv-value">{{_('Yes')}}</span>
+        {%- else -%}<span class="aot-kv-alert">{{_('No')}}</span>
         {%- endif -%}
       </div>
     </div>
@@ -75,25 +75,25 @@
       <div class="aot-code-block-label">
         {{_('Web Server Threads')}} (gunicorn)
       </div>
-      <div class="aot-code-block" style="font-size: var(--aot-font-size-sm);">
-        {{_('Effective Value')}}: <span style="font-weight: bold;">{{gunicorn_info.effective}}</span>
+      <div class="aot-code-block">
+        {{_('Effective Value')}}: <span class="aot-kv-value">{{gunicorn_info.effective}}</span>
         ({%- if gunicorn_info.source == 'env' -%}{{_('Environment variable')}} GUNICORN_THREADS
          {%- elif gunicorn_info.source == 'manual' -%}{{_('Manual setting')}}
          {%- else -%}{{_('Automatic')}}{%- endif -%})
         <br>{{_('Automatic recommendation for this system')}}: {{gunicorn_info.recommended}}
         {% if gunicorn_info.env_override %}
-        <br><span style="color: var(--aot-color-text-secondary, #777);">{{_('GUNICORN_THREADS environment variable is set; it overrides any setting here.')}}</span>
+        <br><span class="aot-kv-note">{{_('GUNICORN_THREADS environment variable is set; it overrides any setting here.')}}</span>
         {% elif gunicorn_info.can_edit %}
-        <form method="post" action="/info" style="margin-top: 0.8em;">
+        <form method="post" action="/info" class="mt-3">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <input type="hidden" name="action" value="save_gunicorn_threads">
           <label for="gunicorn_threads">{{_('Manual setting')}} ({{gunicorn_info.min}}~{{gunicorn_info.max}}, {{_('empty = automatic')}}):</label>
           <input id="gunicorn_threads" name="gunicorn_threads" type="number"
-                 min="{{gunicorn_info.min}}" max="{{gunicorn_info.max}}" class="form-control aot-modern-input" style="width: 6em; display: inline-block;"
+                 min="{{gunicorn_info.min}}" max="{{gunicorn_info.max}}" class="form-control aot-modern-input aot-ctrl-w-inline"
                  value="{{gunicorn_info.manual if gunicorn_info.manual else ''}}">
           <button type="submit" class="btn aot-pill-btn aot-pill-btn-primary">{{_('Save')}}</button>
         </form>
-        <div class="aot-btn-group aot-btn-group-start" style="margin-top: 0.5em;">
+        <div class="aot-btn-group aot-btn-group-start mt-2">
           <form method="post" action="/info"
                 onsubmit="return confirm({{ _('Reload the web server now? The connection will be briefly interrupted.')|tojson|forceescape }});">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">

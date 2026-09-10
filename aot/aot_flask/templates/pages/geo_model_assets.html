@@ -70,6 +70,14 @@
   .drop-zone input { display: none; }
   .modal-actions { display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1.1rem; }
   #upload-status { font-size: 0.82rem; color: var(--aot-color-text-secondary, #666); margin-top: 0.5rem; min-height: 1.2em; }
+    /* 단위 고르기 — 도구 줄 안의 작은 셀렉트.
+       ⚠ `#ccc` 고정색이던 테두리를 정본 구분선 토큰으로 옮긴다. */
+    #unit-select {
+        padding: 0.4rem 0.65rem;
+        border: 1px solid var(--aot-border-neutral);
+        border-radius: var(--aot-radius-sm);
+        font-size: var(--aot-font-size-sm);
+    }
 </style>
 {% endblock %}
 
@@ -79,7 +87,7 @@
 
   <div class="asset-toolbar">
     <input type="text" id="asset-search" placeholder="{{ _('Search by name…') }}" oninput="filterAssets(this.value)">
-    <select id="unit-select" style="padding:0.4rem 0.65rem;border:1px solid #ccc;border-radius: var(--aot-radius-sm);font-size: var(--aot-font-size-sm);"
+    <select id="unit-select"
             onchange="saveUnit(this.value)">
       <option value="mm">mm</option>
       <option value="cm">cm</option>
@@ -91,7 +99,7 @@
   </div>
 
   <div class="asset-grid" id="asset-grid">
-    <div class="asset-empty" id="asset-empty" style="grid-column:1/-1;">{{ _('Loading…') }}</div>
+    <div class="asset-empty aot-form-grid-item-full" id="asset-empty">{{ _('Loading…') }}</div>
   </div>
 </div>
 

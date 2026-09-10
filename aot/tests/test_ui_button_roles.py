@@ -125,15 +125,22 @@ class TestDeleteIsNeverPrimary(unittest.TestCase):
             '\n  '.join(bad))
 
     def test_the_danger_style_actually_exists(self):
-        """색을 새로 만들지 않았다는 전제 자체를 고정한다. 정의가 사라지면
-        위 검사는 통과하는데 화면의 삭제 버튼은 아무 색도 없어진다."""
+        """정의가 사라지면 위 검사는 통과하는데 화면의 삭제 버튼은 아무
+        색도 없어진다 — 그 premise 를 고정한다.
+
+        2026-09-10: 배경색은 경고색(--aot-color-danger, 빨강)에서 보조색
+        (--aot-btn-bg-secondary)으로 바뀌었다. 되돌릴 수 없는 동작이라도
+        화면 전체를 빨갛게 물들이지 않기로 한 결정 — 구분은 이미 간격이
+        맡고 있다(aot-settings.css .aot-btn-group 주석: 이 묶음의 gap 이
+        8 이 아닌 12 인 이유). 이 검사는 "색이 새지 않았는가"가 아니라
+        "정의가 살아 있는가"를 본다."""
         css = os.path.join(_ROOT, 'aot_flask', 'static', 'css',
                            'aot-modal-modern.css')
         with open(css, encoding='utf-8') as fh:
             body = fh.read()
         self.assertIn('.btn.aot-pill-btn.aot-pill-btn-danger {', body)
         block = body.split('.btn.aot-pill-btn.aot-pill-btn-danger {', 1)[1]
-        self.assertIn('--aot-color-danger', block.split('}', 1)[0])
+        self.assertIn('--aot-btn-bg-secondary', block.split('}', 1)[0])
 
 
 class TestOnlyTheLastFooterButtonIsPrimary(unittest.TestCase):

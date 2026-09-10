@@ -1,0 +1,257 @@
+/* ============================================================
+   동작 줄(action row) — 함수·트리거·조건의 "동작" 카드 한 장
+   ============================================================
+
+   `pages/function_options/gridstack_action_base.html` 매크로가 그리는 카드다.
+   함수·트리거·조건·사용자 함수·입력 옵션 등 아홉 템플릿이 이 매크로를 쓴다.
+
+   왜 이 파일이 생겼나
+   -------------------
+   이 컴포넌트는 **전부 인라인 style 로 적혀 있었다**(한 매크로에 43개).
+   그래서 세 가지 문제가 함께 있었다:
+     · 한 줄 안에서 같은 뜻의 여백이 `5px` 과 `8px` 로 갈렸다.
+     · 같은 종류의 칸이 자리마다 다른 최대 폭을 가졌다 — 셀렉트 240/210,
+       입력 100/80, 이름 칩 200/240. 그 차이에 규칙이 없었다.
+     · 읽기 전용 이름 칩이 `--bg-btn-active-light`(#e9ecef)를 썼다.
+       settings/custom_ui 에 없는 고정 회색이라 운영자가 바꿀 수 없었다.
+
+   여기서는 종류마다 **하나의 값**만 둔다. 치수는 이 카드의 성질이다
+   (28px 칸 · `--aot-radius-lg` 모서리) — 앱의 기본 컨트롤(32px 알약)보다
+   한 단 작은 조밀한 줄이라 자기 치수를 갖는다.
+   ============================================================ */
+
+/* ── 카드 ───────────────────────────────────────────────────── */
+.aot-action-card {
+  border: 1px solid var(--aot-border-neutral);
+  border-radius: var(--aot-radius-lg);
+  background-color: var(--aot-surface-card);
+  padding: 6px 8px;
+}
+
+/* 시퀀스 배치에서는 이 카드 아래에 두 번째 단(Tier 2)이 이어 붙는다.
+   그래서 아래 모서리와 아래 테두리를 넘겨주고, 줄마다 제 여백을 갖는다. */
+.aot-action-card-seq {
+  border-bottom: none;
+  border-radius: var(--aot-radius-lg) var(--aot-radius-lg) 0 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+.aot-action-card-seq > .aot-action-head,
+.aot-action-card-seq > .aot-action-opts {
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--aot-border-neutral);
+}
+
+.aot-action-opts { min-height: 40px; }
+
+/* ── 줄의 부품 ──────────────────────────────────────────────── */
+.aot-action-drag {
+  flex: 0 0 auto;
+  padding-right: 8px;
+  cursor: move;
+}
+
+.aot-action-drag > i {
+  font-size: 1.2em;
+  color: var(--aot-text-secondary);
+}
+
+.aot-action-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin-right: 8px;
+}
+
+/* 동작 이름은 **읽기만 하는** 칸이다. 그래서 입력칸이 아니라 채워진 면으로
+   보인다 — 앱의 다른 채워진 컨트롤과 같은 `--aot-input-bg` 를 쓴다.
+   (예전에는 `--bg-btn-active-light`(#e9ecef) 고정 회색이었다.) */
+.aot-action-name-chip {
+  display: flex;
+  align-items: center;
+  max-width: 240px;
+  height: 28px;
+  padding: 0 8px;
+  border: 1px solid var(--aot-border-neutral);
+  border-radius: var(--aot-radius-lg);
+  background-color: var(--aot-input-bg);
+  font-size: var(--aot-font-size-sm);
+  font-weight: 700;
+  line-height: 1;
+  cursor: default;
+}
+
+/* 지우기·저장 단추. 마지막 단추 뒤에는 여백을 두지 않는다. */
+.aot-action-btn {
+  flex: 0 0 auto;
+  margin-right: 8px;
+}
+
+.aot-action-btn:last-child { margin-right: 0; }
+
+/* ── 옵션 묶음 ──────────────────────────────────────────────── */
+/* 좁을 때 가로로 흘릴지(시퀀스 기본) 접을지(wrap)는 매크로가 정한다. */
+.aot-action-optwrap {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.aot-action-optwrap-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  /* 스크롤은 되되 스크롤바는 보이지 않는다 — 앱 전역 규칙 */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.aot-action-optwrap-scroll::-webkit-scrollbar { display: none; }
+
+.aot-action-optlist {
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
+  white-space: nowrap;
+}
+
+.aot-action-optlist-wrap {
+  flex-wrap: wrap;
+  white-space: normal;
+  row-gap: 6px;
+}
+
+.aot-action-opt {
+  flex: 0 0 auto;
+  margin-right: 8px;
+  margin-bottom: 6px;
+}
+
+/* 옵션 이름 줄 — 칸 위에 작은 글씨로 선다. */
+.aot-action-opt-label {
+  display: flex;
+  align-items: center;
+  min-height: 16px;
+  margin-bottom: 2px;
+}
+
+.aot-action-opt-label > label {
+  margin-bottom: 0;
+  font-size: var(--aot-font-size-xs);
+  color: var(--aot-text-secondary);
+  white-space: nowrap;
+}
+
+.aot-action-opt-help {
+  margin-left: 3px;
+  color: var(--aot-text-secondary);
+  cursor: pointer;
+}
+
+.aot-action-opt-help > i { font-size: var(--aot-font-size-xs); }
+
+/* ── 값을 넣는 칸 ───────────────────────────────────────────── */
+/* 고르는 칸과 쓰는 칸은 **폭만** 다르다. 나머지는 같다. */
+.aot-action-field {
+  height: 28px;
+  padding: 0 5px;
+  border-radius: var(--aot-radius-lg);
+  font-size: var(--aot-font-size-sm);
+}
+
+.aot-action-field-select { max-width: 240px; }
+.aot-action-field-input { max-width: 100px; }
+
+/* 켜고 끄는 옵션은 이름과 체크가 한 상자에 든다. */
+.aot-action-bool {
+  display: flex;
+  align-items: center;
+  height: 28px;
+  padding: 0 5px;
+  border: 1px solid var(--aot-border-neutral);
+  border-radius: var(--aot-radius-lg);
+}
+
+.aot-action-bool > label {
+  margin-bottom: 0;
+  margin-right: 0.25rem;
+  font-size: var(--aot-font-size-sm);
+}
+
+/* selectpicker 는 원본 <select> 의 클래스를 자기가 만든 래퍼에 통째로
+   복사한다. 그래서 `.aot-action-field` 는 래퍼에 붙고, 실제로 보이는 것은
+   그 안의 버튼이다 — 치수는 버튼에 준다.
+   앱 공용 알약(32px)보다 한 단 작다: 이 카드의 다른 칸이 전부 28px 이라
+   여기만 32px 이면 줄 안에서 혼자 커진다. 특이도 (0,3,0) 이라 공용 규칙
+   (0,2,0)을 파일 순서와 무관하게 이긴다. */
+.bootstrap-select.aot-action-field > .dropdown-toggle {
+  height: 28px;
+  border-radius: var(--aot-radius-lg);
+  font-size: var(--aot-font-size-sm);
+}
+
+/* 조건 카드는 두 번째 단(옵션)이 같은 카드 **안에서** 선을 하나 긋고
+   이어진다(동작 줄은 카드를 따로 쌓는다). */
+.aot-action-opts-divided {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid var(--aot-border-neutral);
+}
+
+/* ── 두 번째 단(Tier 2) — 시퀀스 단계의 설정 줄 ──────────────────────────
+   `.aot-action-card-seq` 아래에 이어 붙어 카드를 마무리한다(그래서 위쪽
+   테두리가 없고 아래 모서리만 둥글다).
+
+   여기도 전부 인라인이었다(8개). 값이 갈려 있던 곳 셋:
+     · 칸의 `min-width` 가 65·70·80·100px 넷 — 담는 내용이 같은데 다르다.
+       160px 칸은 80, 140px 칸은 70 두 단으로 모은다.
+     · 컨테이너가 `gap: 6px` 을 주는데 일부 칸이 `margin-right: 6px` 을 또
+       갖고 있어 그 사이만 12px 이었다. 간격은 gap 하나가 정한다.
+     · 같은 셀렉트 둘의 배경이 `--aot-input-bg` 와 `--aot-surface-card` 로
+       갈려 있었다 — 게다가 그 선언은 **감춰진 원본 <select>** 에 붙어 있어
+       화면에 나온 적이 없다(보이는 것은 컴포넌트가 만든 버튼이다). */
+.aot-action-tier2 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border: 1px solid var(--aot-border-neutral);
+  border-top: none;
+  border-radius: 0 0 var(--aot-radius-lg) var(--aot-radius-lg);
+  background-color: var(--aot-surface-card);
+}
+
+.aot-action-tier2-field {
+  flex: 1 1 auto;
+  min-width: 80px;
+  max-width: 160px;
+}
+
+.aot-action-tier2-field-sm {
+  flex: 1 1 auto;
+  min-width: 70px;
+  max-width: 140px;
+}
+
+/* 이 줄의 입력칸은 카드 본체(28px)보다 한 단 더 낮다 — 값 몇 자만 받는다. */
+.aot-action-tier2-input {
+  height: 26px;
+  padding: 0 4px;
+  border-radius: var(--aot-radius-lg);
+  background-color: var(--aot-input-bg);
+  font-size: var(--aot-font-size-xs);
+  text-align: center;
+}
+
+/* 이 줄의 셀렉트도 같은 높이로 맞춘다(공용 알약 32px 보다 한 단 낮다). */
+.bootstrap-select.aot-action-tier2-select > .dropdown-toggle {
+  height: 26px;
+  font-size: var(--aot-font-size-xs);
+}
+
+/* Tier2 가 없는 시퀀스 단계는 얇은 띠 하나로 카드를 닫는다 — 위 카드가
+   아래 테두리와 모서리를 넘겨받을 상대가 필요하기 때문이다. */
+.aot-action-tier2-cap {
+  height: 4px;
+  border: 1px solid var(--aot-border-neutral);
+  border-top: none;
+  border-radius: 0 0 var(--aot-radius-lg) var(--aot-radius-lg);
+}

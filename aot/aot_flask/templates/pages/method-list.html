@@ -6,6 +6,7 @@
 
 {% block head %}
   <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/aot-settings.css') }}" />
+  <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/pages/method.css') }}" />
   {% if method %}
   <script src="{{ url_for('static', filename='js/vendor/user_js/highcharts-9.1.2.js') }}"></script>
     {% if current_user.theme in dark_themes %}
@@ -38,7 +39,7 @@
           {{form_create_method.name(class_='form-control aot-modern-input')}}
         </div>
       </div>
-      <div class="aot-settings-row aot-settings-row-stack" style="border-bottom: none;">
+      <div class="aot-settings-row aot-settings-row-stack">
         {{form_create_method.method_type.label(class_='aot-settings-label')}}
         <div class="aot-settings-control">
           {{form_create_method.method_type(class_='selectpicker', **{'data-style': 'btn', 'title': _('Method') + ': ' + _('Select')}) }}
@@ -50,7 +51,7 @@
     </div>
     </form>
 
-    <div class="aot-modal-group-title" style="margin-top: 2rem;">
+    <div class="aot-modal-group-title aot-group-title-gap-lg">
       {%- if method == [] -%}
         {{_('No saved methods.')}}
       {%- else -%}
@@ -60,7 +61,7 @@
 
     {%- for each_method in method -%}
       {%- set chart_number = loop.index -%}
-      <div class="aot-settings-section" style="padding: 0.9rem 16px;">
+      <div class="aot-settings-section">
         <div class="aot-list-row">
           <button type="button" class="btn aot-pill-btn aot-list-row-main" onclick="setClipboard('{{each_method.unique_id}}')" title="[{{'%02d' % each_method.id}}] UUID: {{each_method.unique_id}}, {{dict_translation['copy_to_clipboard']['phrase']}}">[{{method_info[each_method.method_type]['name']}}] {{each_method.name}}</button>
           <div class="aot-btn-group">
@@ -75,7 +76,7 @@
         {%- endfor -%}
 
         {%- if method_setpoint or each_method.method_type in ["DailySine", "DailyBezier"] -%}
-          <div id="container{{chart_number}}" style="height: 300px; width: 100%; margin-top: 0.8rem;"></div>
+          <div id="container{{chart_number}}" class="mb-chart"></div>
         {%- endif -%}
 
       </div>

@@ -61,7 +61,7 @@
     <p>{{_('The package installation log below refreshes every 5 seconds. Please wait until all packages are installed before re-adding the associated device. When the installation process is complete, the message "#### Package installation complete" will appear at the end of the log.')}}</p>
     <p>{{_('If a problem occurs during installation and you need to reset the installation status, deleting the /opt/AoT/.dependency file will restore package installation functions.')}}</p>
     
-    <pre style="overflow:auto; resize: vertical; height:400px" id="dependency_status"></pre>
+    <pre class="aot-log-box" id="dependency_status"></pre>
     
     {% else %}
     
@@ -101,13 +101,13 @@
     <p>{{_('All required packages for this device are installed.')}}</p>
     {% endif %}
     
-    <h4 style="padding: 1em 0 0 0.5em"><a href="/admin/dependencies"><i class="fa fa-arrow-left"></i> {{_('Return to device list')}}</a></h4>
+    <h4 class="aot-back-link"><a href="/admin/dependencies"><i class="fa fa-arrow-left"></i> {{_('Return to device list')}}</a></h4>
     
     {% else %}
     
     {% if unmet_list %}
     <div>
-      <h3 style="color: var(--aot-color-warning, #f78900)">{{_('Some packages are not met')}}</h3>
+      <h3 class="aot-title-warning">{{_('Some packages are not met')}}</h3>
       <p>{{_('The following list includes packages not currently installed and the devices that use them. To use a specific function, you must first install the packages required for that function. Selecting a device name will allow you to check package information and installation options for that device.')}}</p>
     <table class="table">
       <thead>
@@ -142,7 +142,7 @@
     {% endif %}
 
     {% if unmet_exist %}
-    <div style="padding-top:1.5em">
+    <div class="aot-vspace-start">
       <h4>{{_('List of devices with unmet dependencies')}}</h4>
       {% for each_device, dependencies in unmet_dependencies.items()|sort(case_sensitive=False) if dependencies %}
       <div>
@@ -151,11 +151,11 @@
       {% endfor %}
     </div>
     {% else %}
-      <h3 style="color: var(--aot-color-success, #4E9258)">{{_('All dependencies are currently installed')}}</h3>
+      <h3 class="aot-title-success">{{_('All dependencies are currently installed')}}</h3>
     {% endif %}
 
     {% if met_exist %}
-    <div style="padding-top:1.5em">
+    <div class="aot-vspace-start">
       <h4>{{_('List of devices that have all dependencies installed')}}</h4>
       {% for each_device in met_dependencies|sort(case_sensitive=False) %}
       <div>

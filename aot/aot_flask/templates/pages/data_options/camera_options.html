@@ -1,4 +1,4 @@
-<form id="form_camera_options_{{each_camera.unique_id}}" method="post" action="/camera" style="overscroll-behavior: contain;">
+<form class="aot-scroll-contain" id="form_camera_options_{{each_camera.unique_id}}" method="post" action="/camera">
   {{form_mod_camera.csrf_token}}
   <input type="hidden" name="camera_id" value="{{each_camera.unique_id}}">
   <input type="hidden" name="camera_mod" value="1">

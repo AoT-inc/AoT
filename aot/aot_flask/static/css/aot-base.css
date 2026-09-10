@@ -480,6 +480,79 @@ html {
   }
 }
 
+/* 노트 카드의 사진 갤러리 — 예전에는 **모양 전체가 템플릿 인라인**이었다.
+   이름(`nav-arrow`·`note-thumbnails`·`thumb-item` …)은 붙어 있는데 규칙이
+   하나도 없었으니, 클래스는 JS 가 잡는 손잡이일 뿐이었다. */
+.note-card-title { max-width: 150px; }
+
+.note-main-image { background: var(--aot-gray-100); }
+
+.main-img-link { cursor: zoom-in; }
+
+.main-img-display {
+  min-height: 100px;
+  max-height: 380px;
+  object-fit: cover;
+}
+
+/* 좌우로 넘기는 손잡이. 흰 띠 위에 앉으므로 카드 면 색이면 충분하다
+   (예전 `rgba(255,255,255,0.9)` 은 그 흰 띠 위에서 같은 색으로 보였다). */
+.nav-arrow {
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 50%;
+  background: var(--aot-surface-card);
+  box-shadow: var(--aot-shadow-sm);
+  cursor: pointer;
+}
+
+.nav-arrow.prev { left: 5px; }
+.nav-arrow.next { right: 5px; }
+.nav-arrow > i { font-size: var(--aot-font-size-xs); }
+
+.note-thumbnails {
+  gap: var(--aot-space-2);
+  overflow-x: auto;
+  scroll-behavior: smooth;
+}
+
+/* 고른 것만 또렷하고 나머지는 흐리다. 예전에는 이 상태를 **세 군데**가
+   따로 말하고 있었다 — Jinja 의 `active` 클래스, 같은 자리의 인라인
+   `border-color/opacity`, 그리고 JS 가 다시 쓰는 인라인. 클래스 하나로
+   모은다. 테두리 색도 부트스트랩 기본 파랑(#007bff)에서 앱의 정보색
+   토큰으로 옮긴다. */
+.thumb-item {
+  width: 54px;
+  height: 54px;
+  border: 2px solid transparent;
+  border-radius: var(--aot-radius-xs);
+  overflow: hidden;
+  opacity: 0.6;
+  cursor: pointer;
+  transition: border-color 0.2s, opacity 0.2s;
+}
+
+.thumb-item.active {
+  border-color: var(--aot-color-info);
+  opacity: 1;
+}
+
+.thumb-item > img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* 첨부 파일 이름은 길어지면 줄임표로 끝난다. */
+.note-file-name { max-width: 250px; }
+
 /* 2. Note Card Design */
 .note-card {
   break-inside: avoid;
@@ -509,14 +582,19 @@ html {
   align-items: flex-start;
 }
 
+/* ⚠ 여백은 여기 하나가 정한다. 예전에는 호출부가 `p-4`(부트스트랩,
+   `!important`)로 사방 24 를 덮고 그 위에 인라인으로 아래만 30 을 다시
+   적고 있었다 — 이 규칙의 `0.5rem 1.25rem 1.25rem` 은 한 번도 쓰인 적이
+   없었다. 실제로 그려지던 값(24 / 24 / 30)을 여기에 적고 `p-4` 를 뗐다. */
 .note-card-body {
-  padding: 0.5rem 1.25rem 1.25rem;
+  padding: 1.5rem 1.5rem 30px;
   color: var(--aot-note-card-body-text);
   line-height: 1.6;
   font-size: var(--aot-font-size-base);
   white-space: pre-wrap;
   /* Preserve line breaks */
   position: relative;
+  font-weight: 500;
 }
 
 .expand-toggle-btn {
@@ -592,7 +670,9 @@ html {
 
 .note-search-input-group:focus-within {
   border-color: var(--aot-note-search-focus);
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  /* 2026-09-10: Tailwind 파랑(59,130,246) 이었다 — 위 테두리와 같은 색
+     (--aot-note-search-focus = --aot-color-info #029ACF)의 알파판으로. */
+  box-shadow: 0 0 0 3px rgba(2, 154, 207, 0.1);
 }
 
 .note-search-icon {
@@ -648,31 +728,14 @@ html {
   font-size: 1em;
 }
 
-/* For Selectpicker Button that gets generated */
-.bootstrap-select.ui-pill>.dropdown-toggle {
-  height: 32px;
-  border-radius: var(--aot-radius-lg) !important;
-  padding: 0 12px;
-  align-items: center;
-}
-
-/* Selectpicker Text Overflow Fix */
-.bootstrap-select.ui-pill .filter-option {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  display: flex;
-  align-items: center;
-  height: 100%;
-}
-
-.bootstrap-select.ui-pill .filter-option-inner-inner {
-  display: block;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  width: 100%;
-}
+/* ⚠ 여기 있던 `.bootstrap-select.ui-pill` 세 블록을 걷어냈다(2026-09-10).
+   `ui-pill` 은 이름이 알약인데 모서리가 `--aot-radius-lg`(16px)여서, 노트의
+   태그 셀렉트만 앱의 다른 셀렉트와 다른 모서리로 그려지고 있었다(실측 16px
+   대 9999px). 게다가 `!important` 라 공용 알약 규칙이 이길 수 없었다.
+   높이·모서리·라벨 줄임표는 지금 전부 공용 규칙이 한다 —
+   components/aot-select.css 의 §1 과 aot-modal-modern.css 의 알약 면.
+   셀렉트에 `ui-pill` 을 다시 달지 말 것. 검색칸 쪽 `.ui-pill` 은 셀렉트가
+   아니라 그대로 둔다. */
 
 /* Filter inputs (search box) */
 .note-search-input-group.ui-pill {

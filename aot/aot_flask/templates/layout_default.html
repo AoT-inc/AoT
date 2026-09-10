@@ -127,6 +127,7 @@ IMPORTANT: This is the SOURCE TEMPLATE file.
   <link href="{{ url_for('static', filename='css/aot-base.css') }}" rel="stylesheet">
   <link href="{{ url_for('static', filename='css/widget/aot-widget-typography.css') }}" rel="stylesheet">
   <link href="{{ url_for('static', filename='css/components/aot-base-ui.css') }}" rel="stylesheet">
+  <link href="{{ url_for('static', filename='css/components/aot-action-row.css') }}" rel="stylesheet">
   <link href="{{ url_for('static', filename='css/components/aot-toggle.css') }}" rel="stylesheet">
   <link href="{{ url_for('static', filename='css/components/aot-3way.css') }}" rel="stylesheet">
   {#- 눈금 입력(select_scale)이 `AoTViz` 골격을 그대로 쓴다 — 설정 화면에서도
@@ -695,7 +696,7 @@ IMPORTANT: This is the SOURCE TEMPLATE file.
   <link href="{{ url_for('static', filename='css/ai/aot-ai-global.css') }}" rel="stylesheet">
 </head>
 
-<body class="{% if active_page in ['geo_design', 'settings'] %}body-no-gap{% endif %}" style="width: 100%; max-width: 100vw !important; overflow-x: hidden !important; overflow-y: auto;">
+<body class="{% if active_page in ['geo_design', 'settings'] %}body-no-gap{% endif %}">
   {% set active_page = active_page|default('') -%}
   {% set help_page = help_page|default(['', '']) -%}
 
@@ -720,8 +721,8 @@ IMPORTANT: This is the SOURCE TEMPLATE file.
     <div class="d-md-none ml-auto d-flex align-items-center">
       <!-- Margin-right to align center with 40px dashboard settings button (28px burger vs 40px btn -> 6px offset) -->
       <!-- Adjusted based on browser inspection: Burger was 2px too far left. 6px - 2px = 4px -->
-      <div class="burger" data-toggle="collapse" data-target="#navbarCollapse" aria-controls="navbarCollapse"
-        aria-expanded="false" aria-label="Toggle navigation" style="margin-right: 4px;">
+      <div class="burger mr-1" data-toggle="collapse" data-target="#navbarCollapse" aria-controls="navbarCollapse"
+        aria-expanded="false" aria-label="Toggle navigation">
         <span class="line"></span>
       </div>
     </div>
@@ -959,7 +960,7 @@ IMPORTANT: This is the SOURCE TEMPLATE file.
       일지 표지(한 장을 통째로 쓰는 flex 상자)가 남은 높이에 못 들어가
       **통째로 다음 장으로 밀려 1쪽이 백지**가 됐다(실사용 지적 2026-09-04).
       Chrome 은 flex 컨테이너를 페이지 사이에서 쪼개지 않고 통째로 옮긴다. -#}
-  <div class="aot-top-spacer" style="height: 1.5em; clear: both;"></div>
+  <div class="aot-top-spacer"></div>
   {% endif %}
 
 
@@ -1005,14 +1006,14 @@ IMPORTANT: This is the SOURCE TEMPLATE file.
                   </div>
                   {% endif %}
                 </div>
-                <div class="aot-modal-option-control" style="width: auto; flex: 1 1 auto; justify-content: flex-start; flex-wrap: wrap;">
-                  <input type="password" class="aot-modern-input form-control" name="password_new"
-                    placeholder="{{ _('New Password') }}" autocomplete="new-password" style="flex: 1 1 160px;">
-                  <input type="password" class="aot-modern-input form-control" name="password_repeat"
-                    placeholder="{{ _('Confirm Password') }}" autocomplete="new-password" style="flex: 1 1 160px;">
+                <div class="aot-modal-option-control aot-control-grow">
+                  <input type="password" class="aot-modern-input form-control aot-input-share" name="password_new"
+                    placeholder="{{ _('New Password') }}" autocomplete="new-password">
+                  <input type="password" class="aot-modern-input form-control aot-input-share" name="password_repeat"
+                    placeholder="{{ _('Confirm Password') }}" autocomplete="new-password">
                 </div>
               </div>
-              <div class="aot-modal-option-row" style="border-bottom: none;">
+              <div class="aot-modal-option-row">
                 {% set language_tooltip = _("Selecting a language will override the web browser's language") %}
                 <div class="aot-modal-option-label">{{ _('Language') }}</div>
                 <div class="aot-modal-option-control">
@@ -1032,7 +1033,7 @@ IMPORTANT: This is the SOURCE TEMPLATE file.
                  끄면 사전 자체를 내려받지 않는다(원문 그대로 표시).
                  docs/design/user-string-live-translation.md #}
               {% if user_i18n_fingerprint and user_i18n_fingerprint != 'off' %}
-              <div class="aot-modal-option-row" style="border-bottom: none;">
+              <div class="aot-modal-option-row">
                 {% set user_i18n_tooltip = _("Names you typed in yourself — device, zone and crop names — stay in the language you wrote them in. Turn this on to have them shown in the interface language as well. The stored names are never changed.") %}
                 <div class="aot-modal-option-label">{{ _('Translate User-Defined Names') }}</div>
                 <div class="aot-modal-option-control">
@@ -1045,7 +1046,7 @@ IMPORTANT: This is the SOURCE TEMPLATE file.
                 </div>
               </div>
               {% endif %}
-              <div class="aot-modal-option-row" style="border-bottom: none;">
+              <div class="aot-modal-option-row">
                 {% set timezone_tooltip = _("Your personal timezone for displaying times. Leave blank to use the system default. Device schedules still use each device's own local time.") %}
                 <div class="aot-modal-option-label">{{ _('Timezone') }}</div>
                 <div class="aot-modal-option-control">
@@ -1064,12 +1065,12 @@ IMPORTANT: This is the SOURCE TEMPLATE file.
           </form>
 
           <!-- Google Account -->
-          <div class="aot-modal-group-title" style="margin-top: 1.5rem;">{{ _('Google Account') }}</div>
+          <div class="aot-modal-group-title aot-group-title-gap">{{ _('Google Account') }}</div>
           <div class="aot-modal-container">
             {% if not google_login_configured %}
-            <div class="aot-modal-option-row" style="border-bottom: none;">
+            <div class="aot-modal-option-row">
               <div class="aot-modal-option-label">{{ _('Google Account') }}</div>
-              <div class="aot-modal-body-text" style="text-align: right;">
+              <div class="aot-modal-body-text text-right">
                 {{ _("Not configured on this server yet — ask an administrator to set it up under Settings > Integrations.") }}
               </div>
             </div>
@@ -1079,17 +1080,17 @@ IMPORTANT: This is the SOURCE TEMPLATE file.
                 {{ _('Sync Google Calendar Now') }}
                 <div class="aot-modal-body-text">{{ _('Connected as %(email)s', email=google_connection.account_email or '') }}</div>
               </div>
-              <div class="aot-modal-option-control" style="width: auto; flex: 0 0 auto;">
-                <form method="post" action="{{ url_for('routes_integrations.oauth_google_sync_now') }}" style="margin: 0;">
+              <div class="aot-modal-option-control aot-control-hug">
+                <form method="post" action="{{ url_for('routes_integrations.oauth_google_sync_now') }}">
                   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                   <button type="submit" class="btn aot-pill-btn aot-pill-btn-primary">{{ _('Sync Now') }}</button>
                 </form>
               </div>
             </div>
-            <div class="aot-modal-option-row" style="border-bottom: none;">
+            <div class="aot-modal-option-row">
               <div class="aot-modal-option-label">{{ _('Disconnect Google Account') }}</div>
-              <div class="aot-modal-option-control" style="width: auto; flex: 0 0 auto;">
-                <form method="post" action="{{ url_for('routes_integrations.oauth_google_disconnect') }}" style="margin: 0;">
+              <div class="aot-modal-option-control aot-control-hug">
+                <form method="post" action="{{ url_for('routes_integrations.oauth_google_disconnect') }}">
                   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                   <button type="submit" class="btn aot-pill-btn"
                     onclick='return confirm({{ _("Disconnect your Google account?")|tojson|forceescape }})'>{{ _('Disconnect') }}</button>
@@ -1097,12 +1098,12 @@ IMPORTANT: This is the SOURCE TEMPLATE file.
               </div>
             </div>
             {% else %}
-            <div class="aot-modal-option-row" style="border-bottom: none;">
+            <div class="aot-modal-option-row">
               <div class="aot-modal-option-label">
                 {{ _('Connect Google Account') }}
                 <div class="aot-modal-body-text">{{ _('Sign in with Google and sync your AoT schedule to Google Calendar.') }}</div>
               </div>
-              <div class="aot-modal-option-control" style="width: auto; flex: 0 0 auto;">
+              <div class="aot-modal-option-control aot-control-hug">
                 <a class="btn aot-pill-btn aot-pill-btn-primary" href="{{ url_for('routes_integrations.oauth_google_start') }}">{{ _('Connect') }}</a>
               </div>
             </div>
@@ -1455,7 +1456,7 @@ IMPORTANT: This is the SOURCE TEMPLATE file.
 
   <!-- Global confirm modal: z-index above all other modals -->
   <div id="aotConfirmModal" class="modal fade" tabindex="-1" role="dialog"
-       style="z-index:var(--aot-z-confirm);" data-backdrop="false">
+       data-backdrop="false">
     <div class="modal-dialog modal-dialog-centered modal-sm" role="document">
       <div class="modal-content">
         <div class="modal-body text-center pt-4 pb-2">
@@ -1468,7 +1469,7 @@ IMPORTANT: This is the SOURCE TEMPLATE file.
       </div>
     </div>
   </div>
-  <div id="aotConfirmBackdrop" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:var(--aot-z-confirm-backdrop);"></div>
+  <div id="aotConfirmBackdrop" style="display:none;"></div>
 
   <script>
     (function () {

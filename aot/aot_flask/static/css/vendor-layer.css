@@ -29,7 +29,7 @@
  * 레이어를 하나 더 선언해 거기서만 되받는다(2026-09-08 에 bootstrap-select 의
  * 포커스 링 때문에 그렇게 했었고, 그 vendor 를 지우면서 함께 걷어냈다).
  */
-@layer reset, vendor;
+@layer vendor-important, reset, vendor;
 
 @import url("bootstrap.min.css") layer(vendor);
 /* bootstrap-select 의 CSS 는 더 이상 싣지 않는다. 셀렉트를 우리 컴포넌트가
@@ -45,3 +45,22 @@
    `.filter-option { padding: inherit }` 을 이겨 드롭다운 글자가 잘렸다.
    같이 `reset` 레이어로 내려 가장 약하게 만든다. */
 @import url("/static/js/notes/notes-widget.css?v=prod_v23") layer(reset);
+
+/* ⚠ 아래 블록은 반드시 **모든 @import 뒤**에 둔다. `@layer name;` 은 문장이라
+   @import 앞에 와도 되지만, `@layer name { … }` 은 블록 규칙이라 그 뒤의
+   @import 가 전부 무효가 된다(CSS 는 @import 를 @charset·@layer 문장
+   다음에만 허용한다). 한 번 앞에 두었다가 벤더 CSS 세 개가 통째로 안 실려
+   화면이 무너졌다. */
+/* ── 부트스트랩 **유틸리티** 되받기 ──────────────────────────────────────
+   위 주석이 예고한 그 경우다. `.text-muted` 같은 유틸리티는 부트스트랩이
+   `!important` 로 박아 두는데, 중요 선언은 레이어 순서가 뒤집히므로 레이어
+   밖에서는 `!important` 를 써도 못 이긴다. 그래서 vendor **앞** 레이어에서만
+   되받는다(앞선 레이어의 중요 선언이 이긴다).
+
+   `.text-muted` 의 #6c757d 는 settings/custom_ui 에 없는 색이라 운영자가
+   테마를 바꿔도 이 글자들만 남았다. 템플릿 47개에 189번 쓰여 하나씩 바꿀 수
+   없고, 바꿀 이유도 없다 — 이 클래스가 뜻하는 "부연" 은 우리 글자 역할
+   다섯 중 2차 문자색과 정확히 같다. */
+@layer vendor-important {
+  .text-muted { color: var(--aot-text-secondary) !important; }
+}

@@ -147,7 +147,7 @@
 /* 단계 추가는 **트랙과 패널 사이의 한 행**이다 — 아래 선이 "여기까지가 트랙,
    아래부터가 고른 단계" 를 말한다. */
 .aot-stage-add-row {
-  border-bottom: 1px solid var(--aot-color-border, #e5e5e5);
+  border-bottom: 1px solid var(--aot-border-neutral);
   padding-bottom: 0.6em;
   margin-bottom: 0.2em;
 }

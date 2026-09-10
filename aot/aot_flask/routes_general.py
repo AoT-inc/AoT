@@ -146,6 +146,11 @@ def custom_css():
             # dark_overridden 이 이 두 실토큰만 걸러 custom-dark.css 값을 지킨다.
             'bd_primary': ['--bd-primary', '--aot-surface-card'],
             'bd_secondary': ['--bd-secondary', '--aot-surface-body'],
+            # 컨트롤 면(글자 입력·셀렉트·알약). 2026-09-10 분가 — 그전까지는
+            # 이 토큰이 --aot-surface-body 를 따라가 bd_secondary 하나에
+            # 묶여 있었고, 그래서 바닥 위 컨트롤이 면과 같은 값이 됐다.
+            # 레거시 별칭은 없다(처음부터 --aot-* 로만 소비된 토큰이다).
+            'bd_control': ['--aot-surface-control'],
             'bg_active': ['--bg-active', '--aot-bg-active'],
             'bg_inactive': ['--bg-inactive', '--aot-bg-inactive'],
             # **일시정지** 카드 배경(사용자가 의도적으로 멈춘 상태). 소비처:
@@ -241,6 +246,9 @@ def custom_css():
             # 그대로 발행하면 다크 배경 위에 흰 카드가 뜨는 역전이 생긴다.
             '--aot-surface-card',
             '--aot-surface-body',
+            # custom-dark.css 가 #2a2a2a 로 재정의한다. 위 두 서피스와 같은
+            # 이유로 다크 사용자에게는 라이트 값을 발행하지 않는다.
+            '--aot-surface-control',
         }
         is_dark = False
         try:

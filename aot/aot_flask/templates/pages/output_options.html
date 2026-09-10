@@ -14,7 +14,7 @@
     {% if each_output.output_type != 'output_spacer' %}
     {% from 'pages/map/map_option_macros.html' import render_device_map with context %}
     <div class="map-option-section">
-      <div class="col-12" style="padding:0">
+      <div class="col-12 aot-col-flush">
         {{ render_device_map(
         'output',
         each_output.unique_id,
@@ -51,7 +51,7 @@
     </div>
     {% endif %}
 
-    <div class="aot-modal-body-text d-flex flex-wrap" style="gap: 15px; margin-bottom: 0.5rem; padding-top: 0.5rem;">
+    <div class="aot-modal-body-text d-flex flex-wrap aot-meta-row pt-2">
       {% if 'output_manufacturer' in dict_outputs[each_output.output_type] %}
       <span><strong>{{_("Manufacturer")}}:</strong> {{dict_outputs[each_output.output_type]['output_manufacturer']}}</span>
       {% endif %}
@@ -75,7 +75,7 @@
     {% set additional_url = dict_outputs[each_output.output_type].get('url_additional') %}
 
     {% if manufacturer_url or datasheet_url or product_purchase_url or additional_url %}
-    <div class="aot-modal-body-text" style="margin-top: -0.5rem; font-size: var(--aot-font-size-sm);">
+    <div class="aot-modal-body-text aot-meta-links">
       <strong>{{_("Related Documents")}}:</strong>
       {%- if manufacturer_url -%} {{_("Manufacturer")}} {% for each_url in manufacturer_url %}<a href="{{each_url}}" target="_blank">{{_('Link')}} {{loop.index}}</a>{{ ", " if not loop.last }}{% endfor %}{%- endif -%}
       {%- if datasheet_url -%} {% if manufacturer_url %}; {% endif %}{{_("Datasheet")}} {% for each_url in datasheet_url %}<a href="{{each_url}}" target="_blank">{{_('Link')}} {{loop.index}}</a>{{ ", " if not loop.last }}{% endfor %}{%- endif -%}
@@ -85,7 +85,7 @@
     {% endif %}
 
     {% if 'message' in dict_outputs[each_output.output_type] %}
-    <div class="aot-modal-body-text" style="font-style: italic; padding: 8px; border-radius: var(--aot-radius-sm); font-size: var(--aot-font-size-sm);">
+    <div class="aot-modal-body-text aot-modal-desc">
       {{dict_outputs[each_output.output_type]['message']|safe}}
     </div>
     {% endif %}
@@ -250,7 +250,7 @@
     {% if custom_options_values[unique_id] %}
 
     {% if 'custom_channel_options_message' in dict_options %}
-    <div class="aot-modal-body-text mb-2" style="padding: 1em 0 0.5em 0;">
+    <div class="aot-modal-body-text mb-2 pt-3 pb-2">
         {{dict_options['custom_channel_options_message']|safe}}
     </div>
     {% endif %}

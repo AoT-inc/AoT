@@ -913,15 +913,7 @@ input:checked+.slider:before {
     width: 46px !important;
     height: 28px;
     flex: 0 0 auto;
-    padding: 0;
-    border: 1px solid var(--aot-border-neutral, #dee2e6);
-    border-radius: var(--aot-radius-sm);
-    background: none;
-    cursor: pointer;
 }
-.aot-geo-color-input::-webkit-color-swatch-wrapper { padding: 2px; }
-.aot-geo-color-input::-webkit-color-swatch { border: none; border-radius: var(--aot-radius-sm); }
-.aot-geo-color-input::-moz-color-swatch { border: none; border-radius: var(--aot-radius-sm); }
 
 /* 숫자 + 단위 — 단위를 값 칸 밖 오른쪽에 두어 입력폭을 잡아먹지 않게 한다. */
 .aot-geo-input-unit {
@@ -1395,6 +1387,10 @@ input:checked+.slider:before {
   min-width: 120px;
 }
 
+/* 한 줄을 통째로 쓰는 칸(설명·긴 입력). 방법 옵션 다섯 파일이 같은
+   `grid-column: 1 / -1` 을 인라인으로 갖고 있었다. */
+.aot-form-grid-item-full { grid-column: 1 / -1; }
+
 .aot-form-grid-label {
   font-size: var(--aot-font-size-xs);
   font-weight: 600;
@@ -1498,3 +1494,275 @@ input:checked+.slider:before {
   font-size: var(--aot-font-size-2xs);
   white-space: pre-wrap;
 }
+
+/* 모달 안 링크 — 부트스트랩 기본이 #007bff(파랑)다. 글자에 색을 쓰지
+   않는다(§2-1)는 규칙에 걸리므로 본문색으로 두고, 누를 수 있다는 것은
+   밑줄로 말한다. 입력칸의 밑줄은 상자 아래 2px 선이라 섞이지 않는다. */
+.aot-option-modal .modal-body a:not(.btn):not(.aot-pill-btn) {
+  color: var(--aot-text-main);
+  text-decoration: underline;
+}
+
+/* ── 링크 ───────────────────────────────────────────────────────────────
+   부트스트랩 기본은 `a{color:#007bff}` 다 — settings/custom_ui 에 없는 색이라
+   테마를 바꿔도 이 글자만 파랗게 남았다. 글자에 색을 쓰지 않는다(§2-1).
+
+   탐색용 <a>(메뉴·탭·버튼·카드)는 저마다 색 규칙이 있고 특이도가 0-2-0 이상
+   이라 아래 규칙(0-0-1 / 0-1-1)을 이긴다 — 그래서 이 규칙이 실제로 닿는 것은
+   **클래스 없는 산문 링크**뿐이다(실측: 페이지당 1~3개, 템플릿 53곳 107개).
+   그 산문 링크만 밑줄로 "누를 수 있음" 을 말한다. 입력칸의 밑줄은 상자 아래
+   2px 선이라 섞이지 않는다.
+
+   부트스트랩은 @layer vendor 라 !important 없이 이긴다(유틸리티와 달리
+   `a{}` 는 일반 선언이다). */
+a,
+a:hover,
+a:focus {
+  color: var(--aot-text-main);
+}
+a:not([class]) {
+  text-decoration: underline;
+}
+
+/* ── 이름:값 목록의 값 ────────────────────────────────────────────────────
+   "AoT 버전: 26.09.02" 처럼 [이름] 뒤에 [값]이 오는 줄에서 값 쪽을 굵게
+   세운다. 시스템 정보 화면이 이 꼴을 열일곱 번 쓰는데, 전부 인라인으로
+   `color: var(--aot-color-dark, #141414); font-weight: bold` 라고 적혀
+   있었다 — 폴백 `#141414` 는 settings/custom_ui 밖의 고정색이라 운영자가
+   바꿀 수 없고, 가드가 세는 폴백 숫자를 키우던 자리이기도 하다. */
+.aot-kv-value {
+  color: var(--aot-text-main);
+  font-weight: 700;
+}
+
+/* 값 옆에 괄호로 붙는 보조 설명. */
+.aot-kv-note {
+  color: var(--aot-text-secondary);
+}
+
+/* 문제가 있는 값(연결 끊김·오류 등). */
+.aot-kv-alert {
+  color: var(--aot-color-danger);
+  font-weight: 700;
+}
+
+/* 긴 값(경로·해시)은 아무 데서나 접어서 칸을 넘지 않게 한다. */
+.aot-kv-wrap {
+  overflow-wrap: anywhere;
+}
+
+/* 문장 한가운데 끼어 있는 숫자 칸 — 라벨과 단추 사이에 서므로 줄을 통째로
+   차지하지 않는다. 폭은 앱의 숫자 칸 사다리를 읽는다(예전 인라인은 `6em`
+   이라 그 자리 글자 크기를 따라 84px 이 나왔다). */
+.aot-ctrl-w-inline {
+  display: inline-block;
+  width: var(--aot-ctrl-w-num);
+}
+
+/* 이름:값 줄이 여럿 쌓인 요약 묶음 — 화면 첫머리라 본문(14px)보다 한 단
+   크다. 예전 인라인은 `1.15em` 이라 그 자리 글자 크기를 따라 흔들렸다
+   (14px 본문에서 16.1px). 사다리의 16px 로 못 박는다. */
+.aot-kv-list {
+  padding-bottom: var(--aot-space-2);
+  font-size: var(--aot-font-size-base);
+}
+
+/* ── 화면 밖으로 새지 않는 본문 ─────────────────────────────────────────
+   가로 스크롤은 이 앱에서 언제나 사고다(표는 제 껍데기 안에서 흐른다).
+   예전에는 layout 템플릿의 <body> 에 인라인으로 `max-width:100vw !important;
+   overflow-x:hidden !important` 라고 적혀 있었다 — 인라인은 이미 다 이기는
+   자리라 `!important` 가 하는 일이 없었고, 규칙이 CSS 밖에 있어 어느 화면이
+   무엇을 이기고 있는지 볼 수 없었다. */
+body {
+  width: 100%;
+  max-width: 100vw;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+/* 누를 수 있음 / 누를 수 없음을 커서로 알린다. */
+.aot-clickable { cursor: pointer; }
+.aot-not-clickable { cursor: default; }
+
+/* 제 안에서 스크롤이 끝난다 — 끝에 닿아도 페이지가 따라 밀리지 않는다. */
+.aot-scroll-contain { overscroll-behavior: contain; }
+
+/* 사람이 엔터로 적은 글은 줄바꿈을 그대로 살린다. */
+.aot-pre-wrap { white-space: pre-wrap; }
+
+/* 긴 낱말(경로·URL)이 칸을 넘지 않게 아무 데서나 접는다. */
+.aot-break-word { word-break: break-word; }
+
+/* 넓은 내용을 제 안에서 가로로 흘린다 — 스크롤바는 보이지 않는다. */
+.aot-scroll-x {
+  overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.aot-scroll-x::-webkit-scrollbar { display: none; }
+
+/* 약관·개인정보처럼 **읽기만 하는 문서** 화면. 글줄이 길어지지 않게 폭을
+   묶는다(두 화면이 같은 값을 각자 인라인으로 갖고 있었다). */
+.aot-doc-page { max-width: 860px; }
+
+/* 원격 화면의 켜짐/꺼짐 그림. */
+.aot-state-icon { width: 30px; }
+
+/* ── 상태를 말하는 제목 ─────────────────────────────────────────────────
+   "일부 패키지가 없습니다" / "모두 설치되어 있습니다" 처럼 제목 자체가
+   상태인 자리. 호출부가 `var(--토큰, #리터럴)` 로 적던 것을 토큰만 읽게
+   한다(이 화면들도 토큰 파일을 먼저 싣는다). */
+.aot-title-warning { color: var(--aot-color-warning); }
+.aot-title-success { color: var(--aot-color-success); }
+
+/* 목록으로 돌아가는 줄 — 위로 한 칸 떼고 글자를 아래 목록의 정렬선에 맞춘다. */
+.aot-back-link { padding: var(--aot-space-4) 0 0 var(--aot-space-2); }
+
+/* 설치 로그처럼 길게 흐르는 출력 상자 — 높이는 사용자가 끌어서 바꾼다. */
+.aot-log-box {
+  height: 400px;
+  overflow: auto;
+  resize: vertical;
+}
+
+/* ── 알림 띠(flash) ──────────────────────────────────────────────────────
+   닫기 표시가 <button> 이 아니라 <span> 이라 브라우저가 손가락 커서를 주지
+   않는다. 메시지는 서버가 줄바꿈을 넣어 보내므로 그대로 살린다.
+   같은 두 선언이 템플릿에 네 번씩 되풀이돼 있었다. */
+.alert > span.close { cursor: pointer; }
+
+.alert li { white-space: pre-wrap; }
+
+/* ── 구획 사이를 벌리는 빈 칸 ────────────────────────────────────────────
+   페이지 구획 사이에 **아무 내용 없는 <div>** 를 넣어 여백을 만드는 오래된
+   방식이다(Mycodo 시절 float 레이아웃의 잔재라 `clear: both` 가 함께 붙어
+   있다 — 지금 이 저장소의 CSS 에는 float 가 하나도 없어 그 선언은 실제로
+   하는 일이 없지만, 벤더 조각이 섞이는 자리가 있어 남긴다).
+
+   값이 `0.5em`/`1em`/`1.5em` 로 적혀 있어서 **그 자리 글자 크기에 따라 여백이
+   달라졌다** — 본문이 14px 인 화면에서는 7/14/21px 이 나와 앱의 여백 사다리
+   (8/16/24)와 어긋났다. 여기서 토큰으로 못 박는다.
+
+   ⚠ 진짜 해법은 빈 칸이 아니라 구획 자신이 아래 여백을 갖는 것이다. 그건
+   화면마다 확인하며 옮겨야 하는 일이라, 우선 값만 한곳으로 모은다. 새
+   화면에서는 이 클래스를 쓰지 말고 구획에 margin 을 줄 것. */
+.aot-vspace {
+  clear: both;
+  padding: var(--aot-space-2) 0;
+}
+
+.aot-vspace-lg {
+  clear: both;
+  padding: var(--aot-space-4) 0;
+}
+
+/* 구획의 끝 — 아래쪽만 벌린다. */
+.aot-vspace-end {
+  clear: both;
+  padding-bottom: var(--aot-space-5);
+}
+
+/* 구획의 시작 — 위쪽만 벌린다. */
+.aot-vspace-start {
+  clear: both;
+  padding-top: var(--aot-space-5);
+}
+
+/* 내비게이션 아래 첫 칸(layout 이 페이지 맨 위에 넣는다). */
+.aot-top-spacer {
+  clear: both;
+  height: var(--aot-space-5);
+}
+
+/* 무한 스크롤이 화면에 들어오는지 지켜보는 표식 — 보이지는 않지만 관찰자가
+   잡을 높이가 있어야 한다. */
+#scrollSentinel {
+  clear: both;
+  width: 100%;
+  height: 50px;
+}
+
+/* ── 여러 개 고르는 목록칸 ───────────────────────────────────────────────
+   `<select multiple>` 은 알약이 될 수 없다 — 한 줄짜리 버튼이 아니라 여러 줄이
+   보이는 목록이다. 그러니 알약이 아니라 **열린 채로 있는 드롭다운 목록**으로
+   본다: 상자 얼굴을 `.dropdown-menu` 와 똑같이 맞춘다(테두리 없이 면 하나,
+   `--aot-radius-md`). 예전에는 부트스트랩 `.form-control` 기본이 그대로
+   나와, 같은 화면 안에서 이 칸만 흰 면에 1px 테두리·4px 모서리였다
+   (settings/measurement 의 단위 목록 두 곳, 2026-09-10 실측).
+
+   높이는 정하지 않는다 — 보이는 줄 수는 `size` 속성이 정할 일이다. */
+select[multiple] {
+  border: 0;
+  border-radius: var(--aot-radius-md);
+  background-color: var(--aot-input-bg);
+  color: var(--aot-text-main);
+  font-size: var(--aot-font-size-sm);
+  padding: 4px 0;
+  /* 스크롤은 되되 스크롤바는 보이지 않는다 — 앱 전역 규칙 */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+select[multiple]::-webkit-scrollbar { display: none; }
+
+select[multiple] option {
+  padding: 4px 12px;
+}
+
+/* ── 색 고르는 칸 ─────────────────────────────────────────────────────────
+   **알약 하나가 통째로 그 색이다.** 브라우저 기본은 상자 안에 사각형 견본을
+   넣어 두 겹으로 보이는데, 이 저장소는 그 위에 자리마다 다른 반경·테두리를
+   덧대 다섯 갈래로 갈려 있었다(radius-lg 둘, radius-sm 둘, 손대지 않은 곳
+   하나). 테두리는 두지 않는다 — 색 자체가 경계다.
+
+   크기는 자리마다 다를 수 있으므로 여기서 정하지 않는다(높이·폭은 각자). */
+input[type="color"] {
+  -webkit-appearance: none;
+  appearance: none;
+  padding: 0;
+  border: 0;
+  border-radius: var(--aot-btn-pill-radius);
+  background: none;
+  overflow: hidden;
+  cursor: pointer;
+}
+input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
+input[type="color"]::-webkit-color-swatch { border: 0; border-radius: var(--aot-btn-pill-radius); }
+input[type="color"]::-moz-color-swatch { border: 0; border-radius: var(--aot-btn-pill-radius); }
+
+/* 색이 뒤 면과 비슷하면 칩 자체가 사라진다 — settings/custom_ui 실측
+   (2026-09-09): 칩 50개 중 12개가 흰 카드와 대비 1.3 미만이고, 그중 셋은
+   값이 #ffffff 라 대비가 정확히 1.00 이었다. 밝기는 CSS 로 잴 수 없어
+   common/aot-color-chip.js 가 재서 `.is-pale` 만 달아 준다.
+   **필요한 칩에만** 선이 생긴다 — 진한 색은 그대로 테두리가 없다.
+   바깥 테두리가 아니라 안쪽 선이라 칩의 크기와 자리가 바뀌지 않는다. */
+input[type="color"].is-pale {
+  box-shadow: inset 0 0 0 1px var(--aot-border-neutral);
+}
+
+/* 지도 도형 테마 색 — 크기만 정한다(모양은 위 공용 규칙). */
+.aot-geo-theme-color {
+  width: 60px;
+  height: 32px;
+}
+
+/* ── 표를 가로로 흘리는 껍데기 ───────────────────────────────────────────
+   좁은 자리에서 표는 줄어들기만 한다 — 열이 쥐어짜이면 머리글이 서너 줄로
+   쪼개지고 한글은 낱글자로 끊긴다. 감싸서 가로로 흘리고, 스크롤바는 이
+   저장소 규약대로 감춘다.
+   예전에는 aot-settings.css 에만 있어 설정 화면 밖(시설 드로어 등)에서는
+   클래스를 붙여도 아무 일이 없었다. */
+/* ⚠ 겹친 클래스로 적는다. `.aot-settings-card`·`.aot-modal-container` 는
+   자기 시트에서 `overflow: visible` 을 선언하는데, 그 시트가 이 파일보다
+   나중에 실려 특이도가 같으면 그쪽이 이긴다 — 실측: 측정값 설정의 표가
+   586px 상자 안에서 640px 로 넘쳐도 스크롤이 걸리지 않고 잘렸다. */
+.aot-table-scroll,
+.aot-modal-container.aot-table-scroll,
+.aot-settings-card.aot-table-scroll,
+.aot-settings-section.aot-table-scroll {
+  overflow-x: auto;
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.aot-table-scroll::-webkit-scrollbar { display: none; }

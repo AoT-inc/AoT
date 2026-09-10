@@ -30813,3 +30813,15 @@ msgstr "— 請選擇通道 —"
 msgid "— Select —"
 msgstr "— 請選擇 —"
 
+
+#: Added by hand — do not re-extract (fuzzy contamination history).
+#: templates/modals/geo_settings_modal.html · templates/settings/measurement.html
+#: (2026-09-10)
+msgid "Device Color"
+msgstr "裝置顏色"
+
+msgid "All Measurements"
+msgstr "全部測量值"
+
+msgid "All Units"
+msgstr "全部單位"

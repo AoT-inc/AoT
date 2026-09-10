@@ -381,5 +381,11 @@ def parse_input_information(exclude_custom=False, custom_only=False):
             dict_inputs = dict_has_value(dict_inputs, input_custom, 'key_field')
             dict_inputs = dict_has_value(dict_inputs, input_custom, 'global_key_field')
             dict_inputs = dict_has_value(dict_inputs, input_custom, 'requires_key')
+            # Per-input center/zoom override (e.g. gis_gsi.py centers on Tokyo instead
+            # of the global default) — without these two, the settings-modal preview
+            # always falls back to AOT_GEO_CONFIG's global center, which is out of
+            # coverage for region-locked tile providers and renders nothing.
+            dict_inputs = dict_has_value(dict_inputs, input_custom, 'default_center')
+            dict_inputs = dict_has_value(dict_inputs, input_custom, 'default_zoom')
 
     return dict_inputs

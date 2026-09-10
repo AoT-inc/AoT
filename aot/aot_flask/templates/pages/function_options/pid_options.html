@@ -15,7 +15,7 @@
 
     {% from 'pages/map/map_option_macros.html' import render_device_map with context %}
     <div class="map-option-section">
-      <div class="col-12" style="padding:0">
+      <div class="col-12 aot-col-flush">
         {{ render_device_map(
         'function',
         each_function.unique_id,
@@ -41,7 +41,7 @@
     </div>
 
     {% if 'pid_pid' in function_info and 'message' in function_info['pid_pid'] %}
-    <div class="aot-modal-body-text mb-3" style="font-style: italic; padding: 8px; border-radius: var(--aot-radius-sm); font-size: var(--aot-font-size-sm);">
+    <div class="aot-modal-body-text aot-modal-desc mb-3">
         {{function_info['pid_pid']['message']}}
     </div>
     {% endif %}
@@ -272,7 +272,7 @@
         </div>
 
         <div class="aot-modal-container">
-            <div class="row small-gutters" style="padding: 1em">
+            <div class="row small-gutters p-3">
             {% if each_function.raise_output_type == 'pwm' %}
             {% include 'pages/function_options/pid_options/output_pwm_raise.html' %}
             {% elif each_function.raise_output_type == 'on_off' %}
@@ -323,7 +323,7 @@
         </div>
 
         <div class="aot-modal-container">
-            <div class="row small-gutters" style="padding: 1em">
+            <div class="row small-gutters p-3">
             {% if each_function.lower_output_type == 'pwm' %}
             {% include 'pages/function_options/pid_options/output_pwm_lower.html' %}
             {% elif each_function.lower_output_type == 'on_off' %}

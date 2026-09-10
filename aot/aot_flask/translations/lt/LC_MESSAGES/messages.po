@@ -31181,3 +31181,15 @@ msgstr "— Pasirinkite kanalą —"
 msgid "— Select —"
 msgstr "— Pasirinkite —"
 
+
+#: Added by hand — do not re-extract (fuzzy contamination history).
+#: templates/modals/geo_settings_modal.html · templates/settings/measurement.html
+#: (2026-09-10)
+msgid "Device Color"
+msgstr "Įrenginio spalva"
+
+msgid "All Measurements"
+msgstr "Visi matavimai"
+
+msgid "All Units"
+msgstr "Visi vienetai"

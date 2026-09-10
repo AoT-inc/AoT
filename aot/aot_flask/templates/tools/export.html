@@ -48,7 +48,7 @@
           </select>
         </div>
       </div>
-      <div class="aot-settings-row aot-settings-row-stack" style="border-bottom: none;">
+      <div class="aot-settings-row aot-settings-row-stack">
         {{form_export_measurements.date_range.label(class_='aot-settings-label')}}
         <div class="aot-settings-control">
           <input class="form-control aot-modern-input" type="text" name="date_range" value="{{start_picker}} - {{end_picker}}" />
@@ -61,7 +61,7 @@
   </form>
 
   <!-- Export InfluxDB database -->
-  <div class="aot-modal-group-title" style="margin-top: 2rem;">{{_('Export InfluxDB database and metastore as ZIP file')}}</div>
+  <div class="aot-modal-group-title aot-group-title-gap-lg">{{_('Export InfluxDB database and metastore as ZIP file')}}</div>
   <p class="aot-modal-body-text">
     {{_('This feature creates ZIP files of InfluxDB backup files containing all measurement data. These files are created with the "influxd backup -portable" command for version 1.x and the "influx backup" command for version 2.x. Refer to InfluxDB documentation for how to restore backups.')}}
   </p>
@@ -74,7 +74,7 @@
   </form>
 
   <!-- Export AoT settings -->
-  <div class="aot-modal-group-title" style="margin-top: 2rem;">{{_('Export AoT settings data as ZIP file')}}</div>
+  <div class="aot-modal-group-title aot-group-title-gap-lg">{{_('Export AoT settings data as ZIP file')}}</div>
   <p class="aot-modal-body-text">
     {{_('This feature creates a ZIP file of the setup database containing AoT configuration and user info. Custom functions, inputs, outputs, and widgets are also included, as well as uploaded files (note/notice attachments, facility and zone photos, and facility 3D model assets).')}}
   </p>
@@ -87,7 +87,7 @@
   </form>
 
   <!-- Import AoT settings -->
-  <div class="aot-modal-group-title" style="margin-top: 2rem;">{{_('Import AoT settings data from ZIP file')}}</div>
+  <div class="aot-modal-group-title aot-group-title-gap-lg">{{_('Import AoT settings data from ZIP file')}}</div>
   <p class="aot-modal-body-text">
     {{_('Warning: Be sure to create an')}} <a href="/admin/backup">{{_('AoT backup')}}</a> {{_('before importing settings data!')}}<br>
     {{_('This feature allows you to replace current settings by uploading a ZIP file containing the AoT setup database and custom functions/inputs/outputs/widgets. You must only import databases that are of the same or older version as the current AoT version. There is no procedure to verify this, but problems may occur if a database version higher than the current version is imported. Problems may also occur if the custom controller is not compatible with the AoT version being imported.')}}<br>
@@ -98,13 +98,13 @@
   <form method="post" action="/export" enctype="multipart/form-data">
     {{form_import_settings.csrf_token}}
     <input id="settings_import_file" name="settings_import_file" type="file" style="display:none" onchange="document.getElementById('settings_import_file_label').textContent = this.files[0] ? this.files[0].name : {{ _('Choose files')|tojson|forceescape }};">
-    <div class="aot-btn-group aot-btn-group-start" style="align-items: center;">
+    <div class="aot-btn-group aot-btn-group-start align-items-center">
       <button type="button" class="btn aot-pill-btn" onclick="document.getElementById('settings_import_file').click()"><span id="settings_import_file_label">{{_('Choose files')}}</span></button>
       {{form_import_settings.settings_import_upload(class_='btn aot-pill-btn aot-pill-btn-primary')}}
     </div>
   </form>
 
-  <div style="padding-top: 2em"></div>
+  <div class="aot-vspace-lg"></div>
 
 </main>
 </div>

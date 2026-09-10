@@ -31600,3 +31600,15 @@ msgstr "— Pilih saluran —"
 msgid "— Select —"
 msgstr "— Pilih —"
 
+
+#: Added by hand — do not re-extract (fuzzy contamination history).
+#: templates/modals/geo_settings_modal.html · templates/settings/measurement.html
+#: (2026-09-10)
+msgid "Device Color"
+msgstr "Warna Perangkat"
+
+msgid "All Measurements"
+msgstr "Semua Pengukuran"
+
+msgid "All Units"
+msgstr "Semua Satuan"

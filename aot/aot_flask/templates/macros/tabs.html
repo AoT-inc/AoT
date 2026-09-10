@@ -8,7 +8,7 @@ param_name='dashboard_id', use_query_string=False, page_type='') %}
         <span class="d-md-none">+</span>
     </a>
 
-    <div id="{{ container_id }}" class="d-flex align-items-center aot-tabs-wrapper" style="flex:1 1 auto;">
+    <div id="{{ container_id }}" class="d-flex align-items-center aot-tabs-wrapper flex-fill">
 
         {% for item in items %}
         {% set is_active = (item.unique_id == current_id) %}
@@ -23,8 +23,7 @@ param_name='dashboard_id', use_query_string=False, page_type='') %}
         <div class="dash-tab aot-tab-item{% if is_active %} active{% endif %}" draggable="true"
             data-id="{{ item.unique_id }}">
 
-            <a href="{{ href }}" class="aot-nav-tab text-center{% if is_active %} active{% endif %}"
-                style="width: 100%;">
+            <a href="{{ href }}" class="aot-nav-tab text-center{% if is_active %} active{% endif %}">
                 <span class="d-none d-md-inline">{{ _(item.name) }}</span>
                 <span class="d-md-none">{{ _(item.name) }}</span>
             </a>

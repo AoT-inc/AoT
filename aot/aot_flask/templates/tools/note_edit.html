@@ -11,7 +11,7 @@
 
   <h4>{{_('Notes')}} <a href="{{help_page[0]}}" target="_blank"><span class="fas fa-question-circle aot-help-icon"></span></a></h4>
 
-  <div style="clear: both; padding: 1em 0;"></div>
+  <div class="aot-vspace-lg"></div>
 
   <h3>{{_('Edit Note')}}</h3>
 
@@ -44,7 +44,7 @@
     <div class="col-auto">
       {{form_note_mod.note_tags.label(class_='control-label')}}
       <div>
-        <select class="form-control btn-sm" id="note_tags" name="note_tags" style="width: 100%;" size="{% if tags|length > 5 %}5{% else %}{{tags|length}}{% endif %}" multiple>
+        <select class="form-control btn-sm w-100" id="note_tags" name="note_tags" size="{% if tags|length > 5 %}5{% else %}{{tags|length}}{% endif %}" multiple>
         {% if tags %}
           {% for each_tag in tags -%}
           <option value="{{each_tag.unique_id}}"{% if each_tag.unique_id in this_note.tags.split(',') %} selected{% endif %}>{{each_tag.name}}</option>
@@ -116,7 +116,7 @@
     });
   </script>
 
-  <div style="clear: both; padding: 0.5em 0;"></div>
+  <div class="aot-vspace"></div>
 
 {% if this_note.files %}
 
@@ -156,7 +156,7 @@
 
 {% endif %}
 
-  <div style="clear: both; padding: 0.5em 0;"></div>
+  <div class="aot-vspace"></div>
 
 </div>
 

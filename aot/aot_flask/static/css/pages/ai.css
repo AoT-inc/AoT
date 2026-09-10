@@ -1,0 +1,100 @@
+/* ============================================================
+   AI 화면들(라이브러리 · 관리 · 모달)
+   ============================================================
+   치수·여백이 템플릿 인라인과 JS 문자열에 흩어져 있었다. 값이 `em` 이라
+   그 자리 글자 크기를 따라 흔들렸고(본문 14px 화면에서 `0.25em` = 3.5px,
+   `0.5em` = 7px), 같은 뜻의 여백이 다섯 가지로 갈려 있었다. 여기서는
+   **역할 이름**을 주고 값은 사다리(4/8/12/16/24/32)에서 고른다.
+   ============================================================ */
+
+/* ── 구획을 나누는 여백 ──────────────────────────────────────── */
+/* 구획 제목 — 앞 구획에서 크게 떼고 제 설명에는 붙인다. */
+.ai-section-head { padding: var(--aot-space-6) 0 var(--aot-space-2); }
+
+/* 제목 바로 아래의 설명. */
+.ai-section-desc { padding: var(--aot-space-1) 0 var(--aot-space-2); }
+
+/* 목록이 비었을 때의 안내. */
+.ai-empty { padding: var(--aot-space-4) 0; }
+
+/* 줄 사이에 서는 보조 안내(태그 줄·힌트). */
+.ai-note { padding: var(--aot-space-2) 0; }
+
+/* 목록 위의 한 줄 요약. */
+.ai-summary { padding: var(--aot-space-1) 0; }
+
+/* 목록 아래의 쪽 넘김. */
+.ai-pager { padding: var(--aot-space-3) 0; }
+
+/* 화면 맨 아래의 출처 표기. */
+.ai-credits { padding: var(--aot-space-4) 0 0; }
+
+/* ── 줄 안의 작은 간격 ──────────────────────────────────────── */
+.ai-gap-top { margin-top: var(--aot-space-2); }
+.ai-gap-top-xs { margin-top: var(--aot-space-1); }
+.ai-gap-left { margin-left: var(--aot-space-2); }
+
+/* [이름 ................ 지우기] 한 줄. */
+.ai-list-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 2px 0;
+}
+
+/* 줄 끝의 글자 단추는 표적만큼만 차지한다. */
+.ai-btn-tight { padding: 0 var(--aot-space-1); }
+
+/* 카드 안에 붙는 사용량 한 줄 — 카드가 이미 여백을 준다. */
+.ai-usage-line { padding: 0; }
+
+
+/* ── 에이전트 설정 모달(ai_modals.html) ──────────────────────────────────
+   ⚠ 색 둘(`#007bff` 왼쪽 띠, `#eee` 테두리)은 정본 토큰과 값이 달라 여기로
+   옮기지 않았다 — 옮기면 "custom_ui 밖의 색" 가드에 새 위반으로 잡힌다.
+   템플릿에 남겨 두고 색 정리 때 함께 본다. */
+
+/* 서비스 설명·MCP 배정처럼 접었다 펴는 안내 상자(JS 가 여닫는다). */
+.ai-modal-callout {
+  margin-bottom: var(--aot-space-5);
+  padding: var(--aot-space-3);
+  background: var(--aot-gray-100);
+  border-radius: var(--aot-radius-sm);
+  font-size: var(--aot-font-size-sm);
+  color: var(--aot-color-text-secondary);
+}
+
+.ai-modal-callout-mcp {
+  margin-top: var(--aot-space-3);
+  margin-bottom: 0;
+  padding: var(--aot-space-3);
+}
+
+/* 인증 안내 줄은 바로 위 입력에 붙는다. */
+.ai-modal-auth-note {
+  margin-top: calc(-1 * var(--aot-space-4));
+  margin-bottom: var(--aot-space-5);
+  padding-left: var(--aot-space-3);
+  font-size: var(--aot-font-size-sm);
+}
+
+/* 값을 보여 주기만 하는 칸은 옅은 면으로 잠긴 것을 알린다.
+   ⚠ 클래스로는 못 이긴다 — 앱의 입력 밑줄 규칙
+   `.frame-aot input:not(…):not(…):not(…):not(…)`(0,5,1)이 배경을 투명으로
+   돌린다(실측: 클래스만으로는 면이 사라졌다). 인라인일 때는 그냥 이기던
+   자리다. 여기 하나뿐이라 id 로 못 박고, 늘어나면 그때 같은 무게의 공용
+   규칙을 만든다. */
+#engineTypeDisplay { background: var(--aot-gray-100); }
+
+/* 도구 목록은 길어지면 제 안에서 흐른다. */
+.ai-modal-checklist {
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+
+/* 에이전트 모달의 탭 본문은 화면보다 길어질 수 있다 — 제 안에서 흐른다. */
+.ai-tab-scroll {
+  max-height: 65vh;
+  overflow-y: auto;
+}

@@ -19,6 +19,9 @@
     border: 1px solid var(--aot-border-neutral);
     border-radius: var(--aot-radius-md);
     padding: 0;
+    /* 위아래 여백은 템플릿 인라인(`margin: 0.75rem 0 1rem`)이 정하고 있었다.
+       12/16 은 사다리 값이라 그대로 옮긴다. */
+    margin: var(--aot-space-3) 0 var(--aot-space-4);
     overflow: hidden;
     min-height: 260px;
     user-select: none;
@@ -348,33 +351,11 @@
     line-height: 1.3;
 }
 
+/* 모양은 공용 규칙(components/aot-base-ui.css)이 정한다 — 크기만 맞춘다. */
 .aot-color-swatch {
     width: 40px;
     height: 28px;
-    padding: 0;
-    border: 1px solid var(--aot-border-neutral);
-    border-radius: var(--aot-radius-sm);
-    cursor: pointer;
     flex-shrink: 0;
-    -webkit-appearance: none;
-    appearance: none;
-    background: none;
-    overflow: hidden;
-}
-
-/* Normalize color picker across browsers */
-.aot-color-swatch::-webkit-color-swatch-wrapper {
-    padding: 0;
-}
-
-.aot-color-swatch::-webkit-color-swatch {
-    border: none;
-    border-radius: var(--aot-radius-xs);
-}
-
-.aot-color-swatch::-moz-color-swatch {
-    border: none;
-    border-radius: var(--aot-radius-xs);
 }
 
 .aot-color-label {
@@ -518,34 +499,13 @@
     text-align: right;
 }
 
-/* Native color input — compact swatch in row */
+/* 팝오버 안의 색 견본 — 모양은 공용 규칙(components/aot-base-ui.css)이
+   정한다. 여기서는 크기와 배치만 맞춘다. */
 .aot-color-popover-native {
-    -webkit-appearance: none;
-    appearance: none;
     width: 40px;
     height: 28px;
     flex-shrink: 0;
-    border: 1px solid var(--aot-border-neutral, #dddddd);
-    border-radius: var(--aot-radius-sm);
-    cursor: pointer;
-    padding: 2px;
-    background: none;
-    overflow: hidden;
     display: block;
-}
-
-.aot-color-popover-native::-webkit-color-swatch-wrapper {
-    padding: 0;
-}
-
-.aot-color-popover-native::-webkit-color-swatch {
-    border: none;
-    border-radius: var(--aot-radius-sm);
-}
-
-.aot-color-popover-native::-moz-color-swatch {
-    border: none;
-    border-radius: var(--aot-radius-sm);
 }
 
 .aot-color-popover-hex-input {
@@ -655,4 +615,47 @@
     font-size: var(--aot-font-size-2xs);
     color: var(--preview-text-color-secondary, #5E6B64);
     white-space: nowrap;
+}
+
+/* ── 컨트롤 면 (bd_control) ──────────────────────────────────
+   2026-09-10 신설. 컨트롤 면이 바닥(bd_secondary)을 그대로 따라가던 것을
+   떼면서, 운영자가 두 값을 어떻게 벌렸는지 여기서 바로 보이게 한다.
+   그래서 이 줄은 **바닥 위에** 있다 — 값이 같으면 알약과 밑줄이 통째로
+   사라지는 것이 그대로 보인다(실제 화면에서 나던 일이다).
+   모양은 디자인 규칙 그대로다: 고르는 것은 알약, 쓰는 것은 밑줄. */
+#aot-ui-preview .preview-control-label-row {
+    margin-top: 10px;
+    margin-bottom: 4px;
+    font-size: var(--aot-font-size-2xs);
+    color: var(--preview-text-color-secondary, #5E6B64);
+}
+
+#aot-ui-preview .preview-control-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    margin-bottom: 10px;
+    cursor: pointer;
+}
+
+#aot-ui-preview .preview-control-pill,
+#aot-ui-preview .preview-control-field {
+    height: 26px;
+    padding: 0 12px;
+    display: flex;
+    align-items: center;
+    font-size: 0.9286em;
+    color: var(--preview-text-color-primary, #13261B);
+    background-color: var(--preview-surface-control, #F3F6F5);
+}
+
+#aot-ui-preview .preview-control-pill {
+    border-radius: var(--aot-btn-pill-radius);
+}
+
+/* 쓰는 것은 밑줄 2px — 알약과 나란히 둬서 두 모양의 차이도 함께 읽힌다 */
+#aot-ui-preview .preview-control-field {
+    flex: 1 1 0;
+    border-radius: var(--aot-radius-xs) var(--aot-radius-xs) 0 0;
+    border-bottom: 2px solid var(--preview-brand-primary, #13261B);
 }

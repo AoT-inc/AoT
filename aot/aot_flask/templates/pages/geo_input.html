@@ -44,10 +44,10 @@
 
     <h4>{{ _('GIS Input Manager') }}</h4>
 
-    <div style="clear: both; padding: 0.5em 0;"></div>
+    <div class="aot-vspace"></div>
 
     <!-- Add Input Form (Matched Style) -->
-    <form id="new_input_form" method="post" action="/input" style="padding-bottom: 0.5em">
+    <form class="pb-2" id="new_input_form" method="post" action="/input">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="row aot-main-selection-row">
             <div class="col-auto">
@@ -61,7 +61,7 @@
         </div>
     </form>
 
-    <div style="clear: both; padding: 1em 0;"></div>
+    <div class="aot-vspace-lg"></div>
 
     <div class="grid-stack aot-entry-container">
         {% for each_input in gis_inputs %}
@@ -75,7 +75,7 @@
 </main>
 </div>
 
-<div style="clear: both; padding-bottom: 1.5em;"></div>
+<div class="aot-vspace-end"></div>
 
 <script>
     function initGrid() {
@@ -155,13 +155,9 @@
         }
     }
 
-    // Load preview map when modal opens (MapLibre requires visible container with real dimensions)
-    $(document).on('shown.bs.modal', '.aot-option-modal', function () {
-        const uuid = $(this).attr('id').replace('modal_config_', '');
-        if (uuid && window.AoTGeoInputPreview) {
-            AoTGeoInputPreview.load(uuid);
-        }
-    });
+    // Note: preview-map load/teardown on modal show/hide is handled by
+    // AoTGeoInputPreview's own document-level shown.bs.modal / hidden.bs.modal
+    // delegates (registered once in aot-geo-input-preview.js), not here.
 
     /**
      * Open a layer's settings modal, lazily fetching its body fragment on the

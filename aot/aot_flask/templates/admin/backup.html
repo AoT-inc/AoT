@@ -27,19 +27,19 @@
       </div>
     </form>
 
-    <div class="aot-modal-group-title" style="margin-top: 2rem;">{{_('Saved Backups')}}</div>
+    <div class="aot-modal-group-title mt-4">{{_('Saved Backups')}}</div>
 
     {% if not backup_dirs %}
       <p class="aot-modal-body-text">{{_('No backups found.')}}</p>
     {% else %}
       {%- for each_backup in backup_dirs -%}
-        <form method="post" action="/admin/backup" class="aot-settings-section" style="padding: 0.9rem 16px;">
+        <form method="post" action="/admin/backup" class="aot-settings-section">
           {{form_backup.csrf_token}}
           {{form_backup.selected_dir(value=each_backup[0][11:])}}
           {{form_backup.full_path(value=full_paths[loop.index0])}}
 
           <div class="aot-list-row">
-            <div class="aot-list-row-main" style="font-family: 'Courier New', monospace;">
+            <div class="aot-list-row-main aot-input-code">
               {{each_backup[0][11:30]}}<br>
               <a href="https://github.com/AoT-inc/AoT/releases/tag/v{{each_backup[0][31:]}}" target="_blank">v{{each_backup[0][31:]}}</a>, {{"%.1f MB"|format(each_backup[1])}}
             </div>

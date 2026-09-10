@@ -1,0 +1,84 @@
+/* ============================================================
+   공지 화면(목록 · 상세 · 편집)
+   ============================================================
+   세 템플릿이 같은 골격을 쓰면서 치수를 각자 인라인으로 적고 있었다(26개).
+   `notice-pin-badge` · `notice-category-badge` 처럼 **이름은 붙어 있는데
+   정의가 어디에도 없는** 클래스도 있었다 — 모양은 전부 인라인이 그리고
+   있었으니 이름은 장식이었다. 여기서 이름에 값을 준다.
+
+   색은 `var(--토큰, #리터럴)` 폴백을 떼고 토큰만 읽는다. 이 화면들도
+   `aot-theme-variables.css` 를 먼저 싣기 때문에 폴백이 하던 일이 없었다.
+   ============================================================ */
+
+/* 읽는 화면이라 글줄이 지나치게 길어지지 않게 폭을 묶는다. 세 화면의
+   상한이 서로 달랐다(편집 820 · 상세 760 · 목록 900) — 담는 내용이 달라
+   그대로 두고, 가운데 정렬과 아래 여백만 함께 쓴다. */
+.notice-page {
+  margin: 0 auto;
+  padding-bottom: var(--aot-space-6);
+}
+
+.notice-page-list { max-width: 900px; }
+.notice-page-edit { max-width: 820px; }
+.notice-page-detail { max-width: 760px; }
+
+/* 줄 안에서 나란히 서는 작은 동작들. */
+.notice-actions { gap: var(--aot-space-1); }
+.notice-meta-row { gap: var(--aot-space-2); }
+
+/* 제목 옆에 붙는 아주 작은 단추(고정·해제·설문 제거). 알약의 기본 치수
+   (54px·32px)보다 한 단 작다 — 제목 줄에 얹는 보조 동작이다. */
+.btn.aot-pill-btn.notice-btn-xs {
+  min-width: auto;
+  height: 26px;
+  min-height: 26px;
+  padding: 0 10px;
+  font-size: var(--aot-font-size-2xs);
+}
+
+/* 구획 제목을 앞 내용에서 살짝 떼어 놓는다. */
+.notice-section-gap { margin-top: var(--aot-space-2); }
+
+/* 설문 보기 입력은 제 칸을 가득 채운다. */
+.notice-poll-input { width: 100%; }
+
+/* 설문 막대가 앉는 칸 — 남는 자리를 다 쓴다. */
+.notice-poll-bar-wrap { flex: 1; }
+
+/* 본문·댓글은 줄바꿈을 그대로 살린다(사람이 엔터로 적는 글이다). */
+.notice-prose { white-space: pre-wrap; }
+
+/* 댓글 입력 — 여러 줄이라 높이를 내용에 맡기되 최소는 준다. */
+.notice-reply-input {
+  width: 100%;
+  height: auto;
+  min-height: 70px;
+}
+
+/* 라벨 옆 컨트롤 칸이 여러 개를 담아 접히는 줄. */
+.aot-modal-option-control.notice-control-wrap {
+  flex-wrap: wrap;
+  justify-content: flex-start;
+}
+
+/* ── 배지 ────────────────────────────────────────────────────
+   이름만 있고 정의가 없던 둘. 모양은 같고 색만 다르다. */
+.notice-pin-badge,
+.notice-category-badge {
+  display: inline-block;
+  margin-right: var(--aot-space-2);
+  padding: 0.15rem 0.55rem;
+  border-radius: var(--aot-btn-pill-radius);
+  font-size: var(--aot-font-size-2xs);
+  font-weight: 700;
+}
+
+.notice-pin-badge {
+  background: var(--aot-tint-info-bg);
+  color: var(--aot-tint-info-fg);
+}
+
+.notice-category-badge {
+  background: var(--aot-surface-body);
+  color: var(--aot-color-text-secondary);
+}

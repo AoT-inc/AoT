@@ -4,7 +4,7 @@
 {% if all_measurements %}
 
   {% if 'measurements_rescale' in dict_options and dict_options['measurements_rescale'] %}
-  <div class="aot-modal-body-text" style="background: var(--aot-tint-warning-bg); padding: 10px; border-radius: var(--aot-radius-sm); border-left: 4px solid #f0ad4e; margin-bottom: 1rem;">
+  <div class="aot-modal-body-text aot-callout-warning">
       <strong>Rescaling:</strong> If rescaling, set the Rescaled Measurement to the new measurement and unit and the Rescale Method to {{_('Linear')}} or {{_('Equation')}}. {{_('Linear')}} rescaling requires the {{dict_translation['scale_to_min']['title']}} and {{dict_translation['scale_to_max']['title']}} options be set. {{_('Equation')}} rescaling requires the {{_('Equation')}} option be set, with the variable "x" being replaced with the measurement and the result of the calculation being stored in the database.
   </div>
   {% endif %}
@@ -17,7 +17,7 @@
     {%- if each_measurement.channel != None -%}CH{{each_measurement.channel}}{%- endif -%}
     {%- if each_measurement.measurement in dict_measurements -%}{{' ' + dict_measurements[each_measurement.measurement]['name']}}{%- endif -%}
     {%- if each_measurement.unit in dict_units and dict_units[each_measurement.unit]['unit'] -%}{{' (' + dict_units[each_measurement.unit]['unit'] + ')'}}{%- endif -%}
-    <span class="ml-auto small text-muted font-weight-normal" style="cursor:pointer;" onclick="setClipboard('{{each_measurement.unique_id}}')">
+    <span class="ml-auto small text-muted font-weight-normal aot-clickable" onclick="setClipboard('{{each_measurement.unique_id}}')">
       UUID
     </span>
   </div>

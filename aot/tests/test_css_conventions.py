@@ -491,13 +491,31 @@ _IMPORTANT_BUDGET = {
     # 이기므로 안 붙였다.
     "aot-modal-modern.css": 3,  # body 인라인 보정 1 + iOS 확대 방지 2
     "map/map.css": 183,
-    "components/aot-base-ui.css": 139,
+    "components/aot-base-ui.css": 129,
     "ai/ai_scheduler.css": 53,
-    "pages/geo-facility.css": 36,
-    "aot-base.css": 15,
-    "aot-settings.css": 1,
-    "aot.css": 13,
-    "components/aot-drawer-form.css": 9,
+    # 37: 마지막 하나는 통합 표(.integ-table)의 동작 열이다. aot-settings.css 의
+    # `td:last-child { width: var(--aot-col-w-actions) !important }` 가 그 표에도
+    # 닿는데, 통합 표는 마지막 열이 동작이 아니라 값이라 폭을 내용에 맡겨야 한다.
+    # 상대가 !important 라 같은 무게로만 벗어날 수 있다.
+    "pages/geo-facility.css": 37,
+    "aot-base.css": 14,
+    # 2: 동작 열 폭 한 쌍이다. 이 표 규칙은 pages/geo-facility.css 가 그대로
+    # 쓰는데 그쪽에도 !important 가 있어(위 항목) 같은 무게가 아니면 진다.
+    # 하나는 폭을 정하고(`--aot-col-w-actions`), 하나는 동작 컨트롤이 없는 표에서
+    # 그 폭을 도로 푼다(`width: auto`).
+    "aot-settings.css": 2,
+    # 부트스트랩 유틸리티(.text-muted)는 벤더가 !important 로 박아 둔다.
+    # 중요 선언은 레이어 순서가 뒤집혀 레이어 밖에서는 못 이기므로,
+    # vendor 앞 레이어(vendor-important)에서만 되받는다.
+    # 10: 전부 `@layer vendor` 블록 안이다 — bootstrap-select 의 CSS 에서 **구조**
+    # 규칙만 그대로 옮겨 온 뼈대라 원문의 무게를 유지한다(원본 <select> 를 감추고
+    # body 앵커의 높이를 0 으로 묶는 등, 컴포넌트가 그 전제로 그린다).
+    # 레이어 안이라 레이어 밖의 우리 규칙이 언제나 이긴다. 색은 여기서도 토큰을
+    # 쓴다 — 뼈대는 옮겨 오되 색은 옮겨 오지 않는다.
+    "components/aot-select.css": 10,
+    "vendor-layer.css": 1,
+    "aot.css": 12,
+    "components/aot-drawer-form.css": 8,
     "dashboard.css": 8,
     "ai/device-timeline.css": 7,
     "ai/aot-ai-global.css": 5,
@@ -506,7 +524,7 @@ _IMPORTANT_BUDGET = {
     "pages/admin-upgrade.css": 3,
     "aot-custom-ui-preview.css": 2,
     "components/aot-drawer.css": 2,
-    "gridstack-custom.css": 2,
+    "gridstack-custom.css": 1,
     "pages/mcp_servers.css": 2,
     "ai/ai_entry.css": 1,
     "components/aot-time-wheel.css": 1,
@@ -662,20 +680,20 @@ _FALLBACK = re.compile(r"var\(\s*(--[A-Za-z0-9_-]+)\s*,\s*(#[0-9A-Fa-f]{3,8})\s*
 _HEX_DEF = re.compile(r"(--[A-Za-z0-9_-]+)\s*:\s*(#[0-9A-Fa-f]{3,8})\s*;")
 
 _FALLBACK_BUDGET = {
-    "--aot-color-text-secondary": 108,
-    "--aot-color-text-primary": 94,
-    "--aot-border-neutral": 21,
-    "--aot-surface-body": 14,
-    "--aot-color-danger": 11,
+    "--aot-color-text-secondary": 94,
+    "--aot-color-text-primary": 91,
+    "--aot-border-neutral": 20,
+    "--aot-surface-body": 12,
+    "--aot-color-danger": 6,
     "--aot-border-light": 8,
-    "--aot-color-warning": 8,
-    "--aot-btn-border-primary": 4,
-    "--aot-color-success": 4,
+    "--aot-color-warning": 7,
+    "--aot-btn-border-primary": 1,
+    "--aot-color-success": 3,
     "--color-zone-mode": 4,
     "--text-medium-gray": 4,
     "--aot-surface-card": 3,
-    "--aot-tint-info-bg": 3,
-    "--aot-tint-info-fg": 3,
+    "--aot-tint-info-bg": 1,
+    "--aot-tint-info-fg": 1,
     "--aot-color-dark": 2,
     "--aot-bg-pause": 1,
     "--aot-border-form": 1,

@@ -8,12 +8,12 @@
 
 {% block body %}
 <!-- Top Spacer -->
-<div style="height: 1.5em;"></div>
+<div class="aot-vspace"></div>
 
 <div class="container py-4">
     <div class="aot-settings-title">
         <h3>{{ _('AI Service Registry') }}</h3>
-        <div class="d-flex" style="gap: 8px;">
+        <div class="d-flex aot-btn-group">
             <a href="{{ url_for('routes_ai_agent.page_ai_dashboard') }}" class="btn aot-pill-btn">
                 {{ _('Back to Portal') }}
             </a>
@@ -32,10 +32,10 @@
                 <div class="card ai-card h-100">
                     <div class="card-body p-4">
                         <div class="d-flex justify-content-between align-items-start mb-3">
-                            <span class="badge badge-info px-2 py-1" style="font-size: var(--aot-font-size-2xs); border-radius: var(--aot-radius-md);">{{ entry.model_type.upper() }}</span>
+                            <span class="badge badge-info px-2 py-1 ai-entry-badge">{{ entry.model_type.upper() }}</span>
                             <div class="dropdown">
                                 <button class="btn btn-sm text-muted p-0" data-toggle="dropdown">{{_('Edit')}}</button>
-                                <div class="dropdown-menu dropdown-menu-right shadow-sm border-0" style="border-radius: var(--aot-radius-md);">
+                                <div class="dropdown-menu dropdown-menu-right shadow-sm border-0 ai-entry-menu">
                                     <form action="{{ url_for('routes_ai_agent.ai_entry_delete', entry_id=entry.unique_id) }}" method="POST" onsubmit="return confirm({{ _("Delete this service?")|tojson|forceescape }});">
                                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                                         <button class="dropdown-item text-danger py-2" type="submit">{{ _('Delete') }}</button>
@@ -53,7 +53,7 @@
 
                         <div class="d-flex justify-content-between align-items-center mt-auto">
                             <span class="small text-muted">{{ entry.auth_type }}</span>
-                            <span class="badge badge-pill badge-{{ 'success' if entry.is_activated else 'secondary' }} px-3" style="font-size: var(--aot-font-size-2xs);">{{ _('Active') if entry.is_activated else _('Inactive') }}</span>
+                            <span class="badge badge-pill badge-{{ 'success' if entry.is_activated else 'secondary' }} px-3 ai-entry-badge">{{ _('Active') if entry.is_activated else _('Inactive') }}</span>
                         </div>
                     </div>
                 </div>
@@ -90,7 +90,7 @@
                         <div class="aot-modal-option-row">
                             <label class="aot-modal-option-label">{{ _('Engine Type') }}</label>
                             <div class="aot-modal-option-control">
-                                <select name="model_type" class="form-control aot-modern-select selectpicker" data-style="btn-white border" id="engineTypeSelect">
+                                <select name="model_type" class="form-control aot-modern-select selectpicker" data-style="btn-white" id="engineTypeSelect">
                                     {% for key, preset in engine_presets.items() %}
                                     <option value="{{ key }}">{{ preset.ai_name }}</option>
                                     {% endfor %}
@@ -100,7 +100,7 @@
                         <div class="aot-modal-option-row">
                             <label class="aot-modal-option-label">{{ _('Model Name') }}</label>
                             <div class="aot-modal-option-control">
-                                <select name="model_name" id="modelNameSelect" class="form-control aot-modern-select selectpicker" data-style="btn-white border">
+                                <select name="model_name" id="modelNameSelect" class="form-control aot-modern-select selectpicker" data-style="btn-white">
                                 </select>
                             </div>
                         </div>
@@ -117,7 +117,7 @@
                         <div class="aot-modal-option-row">
                             <label class="aot-modal-option-label">{{ _('Auth Type') }}</label>
                             <div class="aot-modal-option-control">
-                                <select name="auth_type" class="form-control aot-modern-select selectpicker" data-style="btn-white border" id="authTypeSelect">
+                                <select name="auth_type" class="form-control aot-modern-select selectpicker" data-style="btn-white" id="authTypeSelect">
                                     <option value="api_key">{{ _('API Key') }}</option>
                                     <option value="account">{{ _('ID / Password') }}</option>
                                     <option value="no_auth">{{ _('No Auth') }}</option>

@@ -338,3 +338,15 @@ div.vis-tooltip {
 @media (min-width: 769px) {
     .mobile-task-list { display: none !important; }
 }
+
+/* ── 인라인에서 걷어 온 것들(2026-09-10) ────────────────────────────────── */
+/* 검색 상자는 도구 줄 안에서 제 폭을 갖는다. */
+.sched-search-box { width: 200px; }
+
+/* 표의 양 끝 열은 카드 안쪽 여백만큼 들여 쓴다. */
+.sched-col-check {
+  width: 40px;
+  padding-left: var(--aot-space-5);
+}
+
+.sched-col-actions { padding-right: var(--aot-space-5); }

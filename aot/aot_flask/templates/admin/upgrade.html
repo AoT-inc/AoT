@@ -26,7 +26,7 @@
     // does not wrap long lines -- these notice boxes need white-space: normal
     // of their own or the text runs off the right edge instead of wrapping.
     if (down_for_sec < 60) {
-      return `<div class="aot-notice-box aot-notice-box-danger" style="white-space: normal;">
+      return `<div class="aot-notice-box aot-notice-box-danger">
         {{_('Lost connection to server. This is normal during restart.')}}
       </div>`;
     }
@@ -34,15 +34,15 @@
       const waited = Math.floor(down_for_sec / 60);
       // Warning tone is explicit (aot-notice-box-warning). Until 2026-09 the
       // base class alone rendered warning-toned and no "-warning" existed.
-      return `<div class="aot-notice-box aot-notice-box-warning" style="white-space: normal;">
+      return `<div class="aot-notice-box aot-notice-box-warning">
         <strong>{{_('Still reconnecting')}}</strong> (${waited} {{_('min so far')}}).
         {{_('A normal restart is usually done within a minute. This may mean the update failed and an automatic rollback is in progress.')}}
       </div>`;
     }
-    return `<div class="aot-notice-box aot-notice-box-danger" style="white-space: normal;">
+    return `<div class="aot-notice-box aot-notice-box-danger">
       <strong>{{_('Reconnection has been failing for several minutes.')}}</strong><br>
       {{_('The automatic rollback may have failed too. Manual recovery is likely needed -- check the host directly:')}}
-      <pre class="mb-0 mt-1" style="white-space: pre-wrap;">docker compose -f docker/docker-compose.prod.yml ps</pre>
+      <pre class="mb-0 mt-1 aot-pre-wrap">docker compose -f docker/docker-compose.prod.yml ps</pre>
     </div>`;
   }
 

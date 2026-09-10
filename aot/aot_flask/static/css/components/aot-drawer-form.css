@@ -23,13 +23,6 @@
    어렵고 잘린 것처럼 보인다. */
 .aot-drawer-rows { padding-bottom: 2em; }
 
-/* **상자의 라운드는 내용의 최소 여백이다.** 공용 `.aot-modal-container` 는
-   `border-radius: 16px` 인데 상하 여백이 0 이라, 첫 행과 마지막 행이 둥근
-   모서리 안쪽을 파고들어 글자가 테두리에 닿는다. 같은 값만큼 띄운다. */
-.aot-drawer-rows .aot-modal-container {
-  padding: 16px !important;
-}
-
 /* ── 설정 한 줄 ──────────────────────────────────────────────────────────
    **1행 [제목][컨트롤] · 2행 [설명]**, 구분선은 그 아래.
 

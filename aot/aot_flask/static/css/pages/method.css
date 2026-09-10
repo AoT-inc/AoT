@@ -1,0 +1,121 @@
+/* ============================================================
+   방법(Method) 만들기·목록 화면
+   ============================================================
+   `pages/method-build.html` · `pages/method-list.html` ·
+   `pages/method_options/build_daily_multipoint.html` 세 템플릿이 쓴다.
+
+   세 파일이 치수를 전부 인라인 style 로 적고 있었다(합쳐 32개). 값이 `em`
+   이라 그 자리 글자 크기를 따라 흔들렸고 — 본문 14px 화면에서 `0.8em` 은
+   11.2px, `0.7em` 은 9.8px 이 되어 앱의 여백 사다리(4/8/12/16/24/32) 어디에도
+   닿지 않았다 — 같은 뜻의 여백이 `0.7em`·`0.8em`·`1em` 셋으로 갈려 있었다.
+   여기서 사다리로 못 박는다.
+
+   ⚠ 세 개는 일부러 인라인으로 남는다:
+     · 주(week) 열 머리의 색점 — 계열마다 다른 값이라 JS 가 정한다.
+     · 그래프 툴팁의 `headerFormat` 두 곳 — 하이차트가 그 문자열을 SVG
+       `<tspan>` 으로 옮기면서 style 속성만 들고 가므로, 클래스로 바꾸면
+       스타일이 사라진다. 우리 DOM 이 아니라 남의 렌더러에 넘기는 값이다.
+   ============================================================ */
+
+/* ── 여러 주 편집판(DailyMultiPoint) ─────────────────────────── */
+/* 묶음과 묶음 사이. */
+.mp-block { margin-bottom: var(--aot-space-3); }
+.mp-block-lg { margin-bottom: var(--aot-space-4); }
+
+/* 설명 문단 — 상자 안의 부연이라 여백을 따로 갖지 않는다. */
+.mp-note {
+  margin: 0;
+  font-size: var(--aot-font-size-xs);
+}
+
+/* [단추][단추][안내] 가 한 줄에 서고 좁아지면 접히는 줄. */
+.mp-toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--aot-space-2);
+  flex-wrap: wrap;
+  margin-bottom: var(--aot-space-3);
+}
+
+.mp-toolbar-lg { margin-bottom: var(--aot-space-4); }
+
+/* 줄 안의 보조 안내(몇 주째·몇 점). */
+.mp-label { font-size: var(--aot-font-size-xs); }
+
+/* 줄의 오른쪽 끝으로 밀어 두는 동작(저장). */
+.mp-push-end { margin-left: auto; }
+
+/* ── 편집 표 ─────────────────────────────────────────────────── */
+/* 열 폭은 표의 성질이다. 예전에는 JS 가 문자열로 짜는 <th> 마다 인라인으로
+   적혀 있어, 폭을 바꾸려면 JS 를 고쳐야 했다. */
+.mp-col-idx { width: 2.5em; }
+.mp-col-time { width: 8em; }
+.mp-col-week { min-width: 7em; }
+.mp-col-mode { width: 8em; }
+.mp-col-del { width: 3em; }
+
+/* 열 머리의 [색점][주 번호 입력]. */
+.mp-week-head {
+  display: flex;
+  align-items: center;
+  gap: var(--aot-space-1);
+}
+
+/* ⚠ 색점의 **색만** 인라인으로 남는다 — 계열마다 다른 값이라 JS 가 정한다.
+   굵기처럼 색과 무관한 것은 여기서 정한다. */
+.mp-week-dot { font-weight: 700; }
+
+.mp-week-input {
+  display: inline-block;
+  width: 4.5em;
+}
+
+/* 칸 정렬 — 번호·삭제 열은 가운데, 나머지는 가운데 줄맞춤만. */
+.mp-cell { vertical-align: middle; }
+
+.mp-cell-center {
+  text-align: center;
+  vertical-align: middle;
+}
+
+/* 양 끝점(시작·끝)은 시간을 바꿀 수 없다 — 잠긴 칸으로 보인다.
+   ⚠ 클래스가 아니라 `[readonly]` 로 잡는다. 이 <input> 은 JS 가 문자열로
+   짜는데 이미 `class="form-control form-control-sm"` 을 갖고 있어서, 클래스를
+   하나 더 붙이면 **class 속성이 두 개**가 되고 파서가 뒤엣것을 버린다
+   (실측: 색이 부트스트랩 기본 readonly 회색 #e9ecef 로 돌아갔다).
+   잠김은 이미 `readonly` 가 말하고 있으므로 그것을 그대로 읽는다. */
+#mp-point-table input[readonly] {
+  background: var(--aot-gray-100);
+  cursor: not-allowed;
+}
+
+/* ── 방법 만들기 화면 ────────────────────────────────────────── */
+/* 입력 줄의 안쪽 여백. 예전에는 네 줄이 각각 `padding: 0.7em` 이었다. */
+.mb-row-pad { padding: var(--aot-space-3); }
+
+/* 라벨 없이 자리만 맞추는 빈 라벨(줄 끝의 단추와 높이를 맞춘다). */
+.mb-label-spacer { padding-top: var(--aot-space-4); }
+
+/* 그래프가 앉는 자리. */
+#container {
+  width: 100%;
+  height: 400px;
+  padding-top: var(--aot-space-5);
+}
+
+/* 목록 화면의 미리보기 그래프. */
+.mb-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: var(--aot-space-3);
+}
+
+/* 테두리로 묶은 하위 구획. */
+.mb-box {
+  margin-top: var(--aot-space-4);
+  padding: var(--aot-space-4);
+  border: 1px solid var(--aot-border-neutral);
+  border-radius: var(--aot-radius-lg);
+}
+
+.mb-box-head { padding-bottom: var(--aot-space-4); }

@@ -37,17 +37,17 @@
   {% if not dismiss_notification %}
 
   <div class="row justify-content-center">
-    <div class="col-12" style="max-width: 40em;">
+    <div class="col-12 signin-col-wide">
 
-      <p style="padding: 1em 0 0.1em 0; text-align: center; font-size: 2em; font-weight: bold;">{{_('Welcome to AoT')}}</p>
-      <h4 class="form-signin-heading" style="text-align: center;">{{host}}</h4>
+      <p class="signin-title">{{_('Welcome to AoT')}}</p>
+      <h4 class="form-signin-heading signin-center">{{host}}</h4>
 
       <p></p>
 
       <p>
         {{_("Start a new AoT installation. Please create an admin user. To start, please read and agree to the terms.")}}</p>
 
-      <p style="padding: 1em 0; text-align: center; font-size: 1.2em; font-weight: bold;">
+      <p class="signin-subtitle">
         {{_('Quality Assurance Notice')}}
       </p>
 
@@ -71,16 +71,16 @@
   {% else %}
 
   <div class="row justify-content-center">
-    <div class="col-12" style="max-width: 30em;">
+    <div class="col-12 signin-col">
 
-      <h2 class="form-signin-heading" style="text-align: center;">AoT</h2>
-      <h4 class="form-signin-heading" style="text-align: center;">{{host}}</h4>
-      <h3 class="form-signin-heading" style="text-align: center;">{{_('Create Admin')}}</h3>
+      <h2 class="form-signin-heading signin-center">AoT</h2>
+      <h4 class="form-signin-heading signin-center">{{host}}</h4>
+      <h3 class="form-signin-heading signin-center">{{_('Create Admin')}}</h3>
 
       <p></p>
 
-      <h6 style="text-align: center;">{{_('Login information is stored locally')}}</h6>
-      <h6 style="text-align: center;">{{_('Usernames must be 3 to 64 characters, passwords >3 characters, and contain only letters and numbers')}}</h6>
+      <h6 class="signin-center">{{_('Login information is stored locally')}}</h6>
+      <h6 class="signin-center">{{_('Usernames must be 3 to 64 characters, passwords >3 characters, and contain only letters and numbers')}}</h6>
 
       <form id='create_admin_form' class="form-signin" name="create_admin" action="/create_admin" method="POST">
         <input type="hidden" name="form-name" value="create_admin">

@@ -7,6 +7,7 @@
 {% block body %}
 <script src="{{ asset('app-notice-render') }}"></script>
 <script type="application/json" id="noticeBodyData">{{ post.body | tojson }}</script>
+<link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/pages/notice.css') }}" />
 <style>
     .notice-detail-card {
         background: var(--aot-surface-card, #fff);
@@ -71,7 +72,7 @@
     }
 </style>
 
-<div class="container-fluid px-0" style="max-width: 760px; margin: 0 auto; padding-bottom: 3rem;">
+<div class="container-fluid px-0 notice-page notice-page-detail">
     {% include 'flash_messages.html' %}
 
     <div class="mt-4 mb-2 px-3">
@@ -82,15 +83,15 @@
         <div class="notice-detail-card">
             <div class="d-flex justify-content-between align-items-start">
                 <div>
-                    {% if post.pinned %}<span class="notice-pin-badge" style="display:inline-block;font-size: var(--aot-font-size-2xs);font-weight:700;padding:0.15rem 0.55rem;border-radius: var(--aot-btn-pill-radius);background:var(--aot-tint-info-bg,#e7f3fb);color:var(--aot-tint-info-fg,#0d6efd);margin-right:0.5rem;">{{ _('Pinned') }}</span>{% endif %}
-                    {% if post.category %}<span class="notice-category-badge" style="display:inline-block;font-size: var(--aot-font-size-2xs);font-weight:700;padding:0.15rem 0.55rem;border-radius: var(--aot-btn-pill-radius);background:var(--aot-surface-body,#f1f3f5);color:var(--aot-color-text-secondary,#6c757d);margin-right:0.5rem;">{{ post.category }}</span>{% endif %}
+                    {% if post.pinned %}<span class="notice-pin-badge">{{ _('Pinned') }}</span>{% endif %}
+                    {% if post.category %}<span class="notice-category-badge">{{ post.category }}</span>{% endif %}
                     <span class="notice-detail-title">{{ post.title }}</span>
                     <div class="notice-detail-meta">
                         {{ post.author.name if post.author else '?' }} &middot; {{ utc_to_local_time(post.date_time) }}
                     </div>
                 </div>
                 {% if can_manage %}
-                <div class="d-flex" style="gap:6px;">
+                <div class="d-flex notice-actions">
                     <a class="btn aot-pill-btn" href="{{ url_for('routes_notice.page_notice_edit', unique_id=post.unique_id) }}">{{ _('Edit') }}</a>
                 </div>
                 {% endif %}
@@ -98,7 +99,7 @@
 
             <div class="notice-detail-body" id="noticeBodyContent"></div>
 
-            <div class="d-flex align-items-center mt-3" style="gap:10px;">
+            <div class="d-flex align-items-center mt-3 notice-meta-row">
                 <button type="button" class="btn aot-pill-btn {% if has_acked %}aot-pill-btn-secondary{% endif %}" id="ackBtn" data-post="{{ post.unique_id }}" {% if has_acked %}disabled{% endif %}>
                     {% if has_acked %}{{ _('Acknowledged') }}{% else %}{{ _('Acknowledge') }}{% endif %}
                 </button>
@@ -112,7 +113,7 @@
             <div id="noticePollOptions">
                 {% for r in poll_results %}
                 <div class="notice-poll-option-row {% if r.option.id in user_selected %}selected{% endif %}" data-option="{{ r.option.unique_id }}">
-                    <div style="flex:1;">
+                    <div class="notice-poll-bar-wrap">
                         <div>{{ r.option.label }}</div>
                         <div class="notice-poll-bar-track">
                             <div class="notice-poll-bar-fill" style="width: {{ (r.count / voter_count * 100) if voter_count else 0 }}%;"></div>
@@ -138,12 +139,12 @@
                         <a href="#" class="text-danger ml-2 reply-del-btn" data-reply="{{ reply.unique_id }}">{{ _('Delete') }}</a>
                         {% endif %}
                     </div>
-                    <div style="white-space:pre-wrap;">{{ reply.body }}</div>
+                    <div class="notice-prose">{{ reply.body }}</div>
                 </div>
                 {% endfor %}
             </div>
             <div class="mt-3">
-                <textarea class="aot-modern-input aot-notice-textarea" id="replyBody" rows="3" style="width:100%; height:auto; min-height:70px;" placeholder="{{ _('Write a reply...') }}"></textarea>
+                <textarea class="aot-modern-input aot-notice-textarea notice-reply-input" id="replyBody" rows="3" placeholder="{{ _('Write a reply...') }}"></textarea>
                 <button type="button" class="btn aot-pill-btn aot-pill-btn-primary mt-2" id="replySubmitBtn" data-post="{{ post.unique_id }}">{{ _('Reply') }}</button>
             </div>
         </div>
@@ -239,7 +240,7 @@ $(document).ready(function () {
                 var esc = AoTNoticeRender.escapeHtml;
                 var html = '<div class="notice-reply-item" data-reply="' + res.reply.unique_id + '">' +
                     '<div class="notice-reply-meta">' + esc(res.reply.author) + ' &middot; ' + esc(res.reply.date_time) + '</div>' +
-                    '<div style="white-space:pre-wrap;">' + esc(res.reply.body) + '</div></div>';
+                    '<div class="notice-prose">' + esc(res.reply.body) + '</div></div>';
                 $('#noticeReplyList').append(html);
                 $('#replyBody').val('');
                 autosizeTextarea(document.getElementById('replyBody'));

@@ -1144,6 +1144,12 @@ body.aot-nav-hidden .aot-sticky-tabs {
   text-decoration: none;
 }
 
+/* 탭 칸 안의 링크는 칸을 가득 채운다 — 글자 밖 여백도 눌러야 탭이 바뀐다.
+   대시보드와 공용 탭 매크로(입력·출력·함수·프로그램)가 같은 선언을 각자
+   인라인으로 갖고 있었다. 매크로 쪽 네 화면은 dashboard.css 를 싣지 않으므로
+   규칙은 `.aot-nav-tab` 이 사는 여기에 둔다. */
+.dash-tab > .aot-nav-tab { width: 100%; }
+
 .aot-nav-tab-add {
   background-color: var(--aot-btn-bg-secondary, #5E6B64);
   color: var(--aot-color-text-tertiary);
@@ -1398,19 +1404,19 @@ textarea::-moz-focus-inner {
 }
 
 /* 오른쪽 커스텀 화살표 영역 설정 */
-.bootstrap-select .dropdown-toggle .filter-option-inner-inner {
-  position: relative;
-  padding-right: 1.8em;
-  /* 화살표가 들어갈 공간 확보 (필요에 따라 조절) */
-}
-
-/* 오른쪽 위치에 작은 삼각형(▼) 추가 */
-.bootstrap-select .dropdown-toggle .filter-option-inner-inner::after {
+/* 캐럿은 **버튼 오른쪽 끝**에 선다.
+   예전에는 글자 상자(`.filter-option-inner-inner`)에 붙여 두고 그 상자에
+   `padding-right: 1.8em` 로 자리를 비웠다. 그런데 그 상자는 글자 폭만큼만
+   차지하므로 캐럿이 글자를 졸졸 따라다녔다 — 실측: 150px 버튼에 "일본"
+   (28px)이 들어가면 캐럿이 왼쪽에서 66px 지점, 오른쪽으로 66px 이 빈다.
+   버튼 전체를 덮는 `.filter-option`(position:absolute; inset:0)으로 옮긴다.
+   12px 은 네이티브 셀렉트가 화살표를 두는 자리와 같다
+   (`background-position: calc(100% - 12px)`). 버튼의 오른쪽 padding 32px 이
+   이미 글자와 캐럿이 겹치지 않을 자리를 비워 둔다. */
+.bootstrap-select .dropdown-toggle .filter-option::after {
   content: "\25BC";
-  /* ▼ 문자 */
   position: absolute;
-  right: 0;
-  /* 오른쪽 여백 (디자인에 맞게 조절) */
+  right: 12px;
   top: 50%;
   transform: translateY(-50%);
   /* 사다리 예외: content:"▼" 로 그리는 장식 삼각형이다. 글자가 아니라 도형이고,

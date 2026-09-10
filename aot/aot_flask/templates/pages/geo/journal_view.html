@@ -653,7 +653,7 @@
           ⚠ 적산온도는 여기 없다. 표의 **행**으로 옮겼다(DLI·VPD 와 같은
             자리) — 세 지표를 각 층에서 같이 다루기로 했다. -#}
       {% if b.daylight_h %}
-      <span class="aot-modal-body-text" style="font-weight:400;">
+      <span class="aot-modal-body-text font-weight-normal">
         · {{ _('daylight %(h)s h', h=b.daylight_h) }}
         {#- ⚠ **둘 다 있을 때만** 적는다. 접힌 버킷의 일몰은 마지막 날의 것을
             그대로 들고 오는데(`_merge_bucket_group`), 그 날이 아직 진행 중이면
@@ -988,7 +988,7 @@
         달라져도 **거짓말이 된다.** 대신 각 단락이 새 장에서 시작한다는 사실과
         그 안에 무엇이 몇 개 있는지를 적는다 — 종이에서 실제로 쓸모가 있다. -#}
     <h3>{{ _('Contents') }}</h3>
-    <p class="text-muted small" style="margin:0 0 .3rem;">
+    <p class="text-muted small mt-0 mb-1">
       {{ _('Each section below starts on a new page, in this order.') }}
     </p>
     <ul class="aot-journal-guide-toc">
@@ -1131,7 +1131,7 @@
       {#- 확대/축소·나침반은 **왼쪽**이다 — 편집 지도와 같은 자리·같은 마크업.
           나침반은 네이티브 maplibre 단추를 이 묶음 안으로 옮겨 붙인다
           (`journal-map.js`), 편집 지도가 하는 것과 똑같다. -#}
-      <div class="map-tools-left" style="top: 10px; left: 10px;">
+      <div class="map-tools-left">
         <div class="tool-group">
           <button class="btn btn-white" id="tool-zoom-in"
                   title="{{ _('Zoom In') }}"><i class="fas fa-plus"></i></button>
@@ -1140,7 +1140,7 @@
           <!-- Native MapLibre compass button injected here by JS -->
         </div>
       </div>
-      <div class="map-tools-right" style="top: 10px; right: 10px;">
+      <div class="map-tools-right">
         <button class="btn btn-white btn-circle" id="tool-layers"
                 title="{{ _('Layers') }}"><i class="fas fa-layer-group"></i></button>
       </div>
@@ -1217,7 +1217,7 @@
       </span>
     </div>
     {% endif %}
-    <div class="aot-modal-option-row" style="border-bottom:none;">
+    <div class="aot-modal-option-row">
       <span class="aot-modal-option-label">{{ _('Time zone') }}</span>
       <span>{{ d.target.tz_name }}</span>
     </div>

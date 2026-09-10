@@ -27,6 +27,18 @@
     border-radius: 999px;
     font-size: 0.85rem;
   }
+    /* ── 인라인에서 걷어 온 것들(2026-09-10) ─────────────────────────
+       아래 둘은 JS 가 문자열로 짜는 줄이라 인라인으로 적혀 있었다. */
+    /* [고르는 칸][연결 단추] 한 줄 — 칸이 남는 자리를 다 쓰고 단추는 제 글자만큼. */
+    .dev-link-row {
+        display: flex;
+        align-items: center;
+        gap: var(--aot-space-2);
+        width: 100%;
+    }
+    .dev-link-row > .bootstrap-select,
+    .dev-link-row > select { flex: 1 1 auto; min-width: 0; }
+    .dev-link-row > .btn { flex: 0 0 auto; }
 </style>
 <link rel="stylesheet" href="{{ url_for('static', filename='css/gridstack-custom.css') }}" />
 <link rel="stylesheet" href="{{ url_for('static', filename='css/aot-entry-ui.css') }}" />
@@ -38,7 +50,7 @@
 <main role="main" class="container">
   {% include 'flash_messages.html' %}
 
-  <div style="clear: both; padding: 0.5em 0;"></div>
+  <div class="aot-vspace"></div>
 
   <div class="row aot-main-selection-row">
     <div class="col-auto">
@@ -60,7 +72,7 @@
     </div>
   </div>
 
-  <div style="clear: both; padding: 0.5em 0;"></div>
+  <div class="aot-vspace"></div>
 
   {% if not choices_devices %}
   <p class="text-muted">
@@ -85,7 +97,7 @@
 
         <div class="aot-entry-content-item aot-col-uuid">
           <span id="device_status_badge_{{ dev.unique_id }}" class="badge">{{ _('Unverifiable') }}</span>
-          <span id="device_count_{{ dev.unique_id }}" class="text-muted" style="font-size: 0.8em; margin-left: 0.4em;"></span>
+          <span id="device_count_{{ dev.unique_id }}" class="text-muted aot-form-hint ml-1"></span>
         </div>
 
         <div class="aot-entry-actions aot-col-action">
@@ -285,38 +297,47 @@
     var el = document.getElementById('device_settings_modal_tree');
     var html = '';
 
+    // 행을 먼저 만들고, 하나라도 있을 때만 제목·카드를 낸다 — 예전에는
+    // inputs 가 있으면 무조건 카드를 열었는데, 채널이 전부
+    // measurement_id 없이 걸러지면 빈 카드만 덩그러니 남았다.
     if (summary.inputs.length) {
-      html += '<div class="aot-modal-group-title">' + {{ _("Measurement Channels")|tojson }} + '</div><div class="aot-modal-container">';
+      var inRows = '';
       summary.inputs.forEach(function (inp) {
         var inactiveTag = inp.is_activated ? '' :
-          ' <span class="text-muted" style="font-size: 0.75em;">(' + {{ _("Input inactive")|tojson }} + ')</span>';
+          ' <span class="text-muted aot-form-hint">(' + {{ _("Input inactive")|tojson }} + ')</span>';
         inp.channels.forEach(function (ch) {
           if (!ch.measurement_id) return;
-          html += '<div class="aot-modal-option-row" data-measurement-id="' + ch.measurement_id + '">' +
+          inRows += '<div class="aot-modal-option-row" data-measurement-id="' + ch.measurement_id + '">' +
             '<label class="aot-modal-option-label">' + ch.name + '</label>' +
             '<div class="aot-modal-option-control">' +
             '<span class="ch-value" id="mval_' + ch.measurement_id + '">—</span>' + inactiveTag +
             '</div></div>';
         });
       });
-      html += '</div>';
+      if (inRows) {
+        html += '<div class="aot-modal-group-title">' + {{ _("Measurement Channels")|tojson }} + '</div>' +
+          '<div class="aot-modal-container">' + inRows + '</div>';
+      }
     }
 
     if (summary.outputs.length) {
-      html += '<div class="aot-modal-group-title">' + {{ _("Control Channels")|tojson }} + '</div><div class="aot-modal-container">';
+      var outRows = '';
       summary.outputs.forEach(function (out) {
         out.channels.forEach(function (ch) {
-          html += '<div class="aot-modal-option-row" data-output-id="' + out.unique_id + '" data-channel="' + ch.channel + '">' +
+          outRows += '<div class="aot-modal-option-row" data-output-id="' + out.unique_id + '" data-channel="' + ch.channel + '">' +
             '<label class="aot-modal-option-label">' + ch.name + '</label>' +
             '<div class="aot-modal-option-control">' +
             '<span class="ch-state" id="ostate_' + out.unique_id + '_' + ch.channel + '">—</span>' +
             '</div></div>';
         });
       });
-      html += '</div>';
+      if (outRows) {
+        html += '<div class="aot-modal-group-title">' + {{ _("Control Channels")|tojson }} + '</div>' +
+          '<div class="aot-modal-container">' + outRows + '</div>';
+      }
     }
 
-    if (!summary.inputs.length && !summary.outputs.length) {
+    if (!html) {
       html = '<span class="text-muted">' + {{ _("This device has no measurements or controls yet.")|tojson }} + '</span>';
     }
 
@@ -348,15 +369,19 @@
       return '<div class="aot-modal-option-row"><span class="text-muted">' + {{ _("None")|tojson }} + '</span></div>';
     }
     var html = '<div class="aot-modal-option-row">' +
-      '<div class="d-flex" style="gap: 0.5em; align-items: center; width: 100%;">' +
-      '<select id="' + selectId + '" class="selectpicker" data-live-search="true" ' +
-      'data-style="btn-white" style="flex: 1 1 auto; min-width: 0;">';
+      '<div class="dev-link-row">' +
+      // 공용 셀렉트 골격을 그대로 쓴다 — aot-modern-select 가 없으면
+      // bootstrap-select 가 테두리 있는 흰 버튼(높이 14px)으로 그려져
+      // 위쪽 옵션 fragment 의 알약 셀렉트와 달라 보였다.
+      '<select id="' + selectId + '" data-live-search="true" ' +
+      'class="form-control aot-modern-select selectpicker aot-standard-select" ' +
+      'data-style="btn-white">';
     items.forEach(function (m) {
       html += '<option value="' + m.type + '|' + m.id + '">' + m.name + '</option>';
     });
     html += '</select>' +
       '<button type="button" class="btn aot-pill-btn aot-pill-btn-primary btn-sm" id="' + btnId + '" ' +
-      'style="flex: 0 0 auto;">' + linkLabel + '</button></div></div>';
+      '>' + linkLabel + '</button></div></div>';
     return html;
   }
 

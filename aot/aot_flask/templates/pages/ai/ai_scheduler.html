@@ -66,7 +66,7 @@
                         <h4 class="mb-0"><i class="fa fa-magic mr-2"></i>{{ _('AI Proposed Tasks Management') }}</h4>
                         <small class="text-muted">{{ _('Review and manage tasks proposed by AI Agents.') }}</small>
                     </div>
-                        <div class="input-group input-group-sm mr-3" style="width: 200px;">
+                        <div class="input-group input-group-sm mr-3 sched-search-box">
                             <div class="input-group-prepend">
                                 <span class="input-group-text bg-white border-right-0"><i class="fa fa-search text-muted"></i></span>
                             </div>
@@ -93,7 +93,7 @@
                         <table class="table table-hover table-striped mb-0" id="proposed-tasks-table">
                             <thead class="thead-light">
                                 <tr>
-                                    <th style="width: 40px; padding-left: 1.5rem;">
+                                    <th class="sched-col-check">
                                         <div class="custom-control custom-checkbox">
                                             <input type="checkbox" class="custom-control-input" id="selectAllTasks">
                                             <label class="custom-control-label" for="selectAllTasks"></label>
@@ -103,7 +103,7 @@
                                     <th>{{ _('Target') }}</th>
                                     <th>{{ _('Scheduled Time') }}</th>
                                     <th>{{ _('Status') }}</th>
-                                    <th class="text-right" style="padding-right: 1.5rem;">{{ _('Actions') }}</th>
+                                    <th class="text-right sched-col-actions">{{ _('Actions') }}</th>
                                 </tr>
                             </thead>
                             <tbody id="proposed-tasks-body">
@@ -232,15 +232,15 @@
                                 <input type="datetime-local" id="edit-job-time" class="form-control aot-modern-input">
                             </div>
                         </div>
-                        <div class="aot-modal-option-row aot-modal-row-wrap">
+                        <div class="aot-modal-option-row aot-full-width-row">
                             <label class="aot-modal-option-label">{{ _('AI Reasoning') }}</label>
-                            <div class="aot-modal-option-control" style="flex: 1 1 100% !important; width: 100% !important;">
+                            <div class="aot-modal-option-control">
                                 <textarea id="edit-job-reasoning" class="form-control aot-modern-input" rows="3" readonly></textarea>
                             </div>
                         </div>
-                        <div class="aot-modal-option-row aot-modal-row-wrap" id="deletion-reason-container" style="display: none;">
+                        <div class="aot-modal-option-row aot-full-width-row" id="deletion-reason-container" style="display: none;">
                             <label class="aot-modal-option-label text-danger">{{ _('Reason for Deletion') }}</label>
-                            <div class="aot-modal-option-control" style="flex: 1 1 100% !important; width: 100% !important;">
+                            <div class="aot-modal-option-control">
                                 <textarea id="edit-job-delete-reason" class="form-control aot-modern-input border-danger" rows="2" placeholder="{{ _('e.g. Unnecessary, Wrong timing...') }}"></textarea>
                             </div>
                         </div>

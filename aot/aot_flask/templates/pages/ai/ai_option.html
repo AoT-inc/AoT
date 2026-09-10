@@ -20,7 +20,7 @@
     </div>
     <p class="aot-modal-body-text">{{ _('Configure system-wide parameters for the AI orchestration layer.') }}</p>
 
-    <div style="clear: both; padding: 0.5em 0;"></div>
+    <div class="aot-vspace"></div>
 
     <!-- AI Context Section -->
     <div class="alert alert-info mb-4" role="alert">
@@ -52,8 +52,8 @@
             <div class="aot-modal-option-row">
                 <label class="aot-modal-option-label">{{ _('Request Timeout (sec)') }}</label>
                 <div class="aot-modal-option-control">
-                    <input type="number" name="request_timeout" class="form-control aot-modern-input" 
-                           value="60" style="max-width: 150px;">
+                    <input type="number" name="request_timeout" class="form-control aot-modern-input aot-ctrl-w-inline" 
+                           value="60">
                 </div>
             </div>
         </div>
@@ -84,7 +84,7 @@
             </div>
         </div>
 
-        <div class="text-right mt-4" style="padding-right: 15px;">
+        <div class="text-right mt-4 pr-3">
             <button type="submit" class="btn btn-primary aot-pill-btn px-5 font-weight-bold">{{ _('Save Settings') }}</button>
         </div>
     </form>

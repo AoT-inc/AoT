@@ -3,8 +3,8 @@
 {% set _md = method_data[0] if method_data else None %}
 {% set _raw = _md.points_json if _md and _md.points_json else '{"version":2,"weeks":[0],"points":[{"point_id":0,"t_sec":0,"values":[0.8],"smooth":false,"is_endpoint":true},{"point_id":1,"t_sec":86400,"values":[0.8],"smooth":false,"is_endpoint":true}]}' %}
 
-<div style="margin-bottom:0.8em;">
-  <p class="text-muted" style="font-size:0.9em; margin:0;">
+<div class="mp-block">
+  <p class="text-muted mp-note">
     {{_('Each column = one week number. Values interpolate linearly between week columns over time.')}}
     {{_('Linear = straight segment, Smooth = monotonic Hermite, Bezier = drag-adjustable tangent handle.')}}
   </p>
@@ -14,18 +14,18 @@
 <input type="hidden" name="points_json" id="mp-points-json-field">
 
 {# ── Week column controls ── #}
-<div style="margin-bottom:0.7em; display:flex; gap:0.5em; flex-wrap:wrap; align-items:center;">
+<div class="mp-toolbar">
   <button type="button" class="btn btn-sm aot-pill-btn" onclick="mpAddWeekCol()">
     + {{_('Add Week Column')}}
   </button>
   <button type="button" class="btn btn-sm btn-outline-secondary" onclick="mpRemoveWeekCol()">
     − {{_('Remove Last Column')}}
   </button>
-  <span class="text-muted" style="font-size:0.85em;" id="mp-week-label"></span>
+  <span class="text-muted mp-label" id="mp-week-label"></span>
 </div>
 
 {# ── Control point table (JS rendered) ── #}
-<div class="table-responsive" style="margin-bottom:0.8em;">
+<div class="table-responsive mp-block">
   <table class="table table-sm table-bordered" id="mp-point-table">
     <thead class="thead-light" id="mp-thead"></thead>
     <tbody id="mp-tbody"></tbody>
@@ -33,12 +33,12 @@
 </div>
 
 {# ── Add point / save ── #}
-<div style="margin-bottom:1em; display:flex; gap:0.5em; flex-wrap:wrap; align-items:center;">
+<div class="mp-toolbar mp-toolbar-lg">
   <button type="button" class="btn btn-sm aot-pill-btn" onclick="mpAddPoint()">
     + {{_('Add Point')}}
   </button>
-  <span class="text-muted" style="font-size:0.85em;" id="mp-count-label"></span>
-  <button type="button" class="btn aot-pill-btn aot-pill-btn-primary" onclick="mpSave()" style="margin-left:auto;">
+  <span class="text-muted mp-label" id="mp-count-label"></span>
+  <button type="button" class="btn aot-pill-btn aot-pill-btn-primary mp-push-end" onclick="mpSave()">
     {{_('Save')}}
   </button>
 </div>
@@ -127,18 +127,18 @@
   function renderHead() {
     const thead = document.getElementById('mp-thead');
     let html = '<tr>' +
-      '<th style="width:2.5em;">#</th>' +
-      '<th style="width:8em;">' + {{ _("Time (HH:MM)")|tojson }} + '</th>';
+      '<th class="mp-col-idx">#</th>' +
+      '<th class="mp-col-time">' + {{ _("Time (HH:MM)")|tojson }} + '</th>';
     weeks.forEach(function(w, wi) {
-      html += '<th style="min-width:7em;">' +
-        '<div style="display:flex;align-items:center;gap:4px;">' +
-        '<span style="color:' + COLORS[wi % COLORS.length] + ';font-weight:700;">●</span>' +
+      html += '<th class="mp-col-week">' +
+        '<div class="mp-week-head">' +
+        '<span class="mp-week-dot" style="color:' + COLORS[wi % COLORS.length] + '">●</span>' +
         {{ _("Week")|tojson }} + ' <input type="number" min="0" max="999" value="' + w + '" ' +
-        'class="form-control form-control-sm" style="width:4.5em;display:inline-block;" ' +
+        'class="form-control form-control-sm mp-week-input" ' +
         'onchange="mpUpdateWeek(this,' + wi + ')">' +
         '</div></th>';
     });
-    html += '<th style="width:8em;">' + {{ _("Mode")|tojson }} + '</th><th style="width:3em;"></th></tr>';
+    html += '<th class="mp-col-mode">' + {{ _("Mode")|tojson }} + '</th><th class="mp-col-del"></th></tr>';
     thead.innerHTML = html;
   }
 
@@ -149,11 +149,11 @@
       const ep = !!pt.is_endpoint;
       const ct = getCurveType(pt);
       const tr = document.createElement('tr');
-      let html = '<td style="text-align:center;vertical-align:middle;">' + (idx+1) + '</td>';
+      let html = '<td class="mp-cell-center">' + (idx+1) + '</td>';
       // Time
       html += '<td><input type="text" class="form-control form-control-sm" value="' +
         secToHHMM(pt.t_sec) + '" ' +
-        (ep ? 'readonly style="background: var(--aot-gray-100);cursor:not-allowed;"' : '') +
+        (ep ? 'readonly' : '') +
         ' data-idx="' + idx + '" onchange="mpUpdateTime(this)"></td>';
       // Value columns
       weeks.forEach(function(_, wi) {
@@ -163,7 +163,7 @@
           'data-idx="' + idx + '" data-wi="' + wi + '" onchange="mpUpdateVal(this)"></td>';
       });
       // Curve mode selector
-      html += '<td style="vertical-align:middle;">' +
+      html += '<td class="mp-cell">' +
         '<select class="form-control form-control-sm" data-idx="' + idx + '" ' +
         'onchange="mpUpdateCurve(this)">' +
         '<option value="linear"' + (ct === 'linear' ? ' selected' : '') + '>' + {{ _("Linear")|tojson }} + '</option>' +
@@ -171,7 +171,7 @@
         '<option value="bezier"' + (ct === 'bezier' ? ' selected' : '') + '>' + {{ _("Bezier")|tojson }} + '</option>' +
         '</select></td>';
       // Delete
-      html += '<td style="text-align:center;vertical-align:middle;">' +
+      html += '<td class="mp-cell-center">' +
         (ep ? '' : '<button type="button" class="btn btn-sm btn-outline-danger" ' +
           'onclick="mpDeletePoint(' + idx + ')">×</button>') + '</td>';
       tr.innerHTML = html;

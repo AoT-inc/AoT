@@ -36,7 +36,7 @@
   <div class="container">
     <div class="aot-settings-title">
       <h3>{{_('Custom UI Settings')}} <a href="{{ manual_url('Configuration-Settings/#general-settings') }}" target="_blank"><span class="fas fa-question-circle aot-help-icon"></span></a></h3>
-      <div class="d-flex" style="gap: 8px;">
+      <div class="aot-btn-group">
         <button class="btn aot-pill-btn" id="menu-toggle">{{_('Settings Menu')}}</button>
         <button type="submit" form="form-custom_ui" class="btn aot-pill-btn aot-pill-btn-primary aot-w-60">{{_('Save')}}</button>
       </div>
@@ -51,13 +51,13 @@
       ============================================================ -->
       <div class="aot-settings-group-title">{{_('Theme Preview')}}</div>
       <p class="aot-modal-body-text">{{_('Live Preview — click any element to jump to its color settings')}}</p>
-      <div class="aot-settings-section" style="padding: 0 16px;">
+      <div class="aot-settings-section">
 
         <div class="aot-settings-row">
           <label class="aot-settings-label" for="theme-preset-select">{{_('Theme Preset')}}
             <span class="aot-preview-modified-badge" id="preset-modified-badge">{{_('(modified)')}}</span>
           </label>
-          <div class="aot-settings-control" style="flex: 1 1 auto; width: auto; max-width: 320px; gap: 8px;">
+          <div class="aot-settings-control aot-settings-control-grow">
             <select id="theme-preset-select" class="aot-settings-select" aria-label="{{_('Theme Preset')}}">
               <option value="">{{_('Select Preset...')}}</option>
               <optgroup label="{{_('Built-in Presets')}}">
@@ -74,9 +74,9 @@
           </div>
         </div>
 
-        <div class="aot-settings-row" style="border-bottom: none;">
+        <div class="aot-settings-row">
           <label class="aot-settings-label" for="preset-name-input">{{_('Preset Name')}}</label>
-          <div class="aot-settings-control" style="flex: 1 1 auto; width: auto; max-width: 320px; gap: 8px;">
+          <div class="aot-settings-control aot-settings-control-grow">
             <input type="text"
                    id="preset-name-input"
                    class="form-control aot-modern-input"
@@ -89,7 +89,7 @@
         </div>
 
         <!-- Preview Canvas — CSS variables injected inline; isolated from real page -->
-        <div id="aot-ui-preview" role="img" aria-label="{{_('Theme color preview')}}" style="margin: 0.75rem 0 1rem;">
+        <div id="aot-ui-preview" role="img" aria-label="{{_('Theme color preview')}}" >
 
           <!-- 어두운 강조 바 — 실제 앱 navbar 는 흰 배경이라 이 요소는 navbar 를
                흉내내는 게 아니라 '주 버튼 배경'(btn_primary_bg: 저장/설정 메뉴
@@ -178,6 +178,20 @@
                 <div class="preview-card-title">{{_('Secondary Card')}}</div>
                 <div class="preview-card-subtitle">bd_secondary background</div>
               </div>
+            </div>
+
+            <!-- 컨트롤 면 — **바닥 위에** 둔다. 컨트롤은 카드 안에도 놓이지만,
+                 면과 같은 값이 돼서 사라지는 자리는 바닥 쪽이다. 여기서
+                 안 보이면 실제 화면에서도 안 보인다. -->
+            <div class="preview-control-label-row">{{_('Control Surface')}}</div>
+            <div class="preview-control-row"
+                 role="button" tabindex="0"
+                 data-color-bg="bd_control"
+                 data-color-text="text_color_primary"
+                 data-color-label="{{_('Control Surface')}}"
+                 aria-label="{{_('Click to edit Control Surface colors')}}">
+              <span class="preview-control-pill">{{_('Select')}}</span>
+              <span class="preview-control-field">{{_('Text Field')}}</span>
             </div>
 
             <!-- Badges -->
@@ -389,7 +403,7 @@
         <div class="aot-settings-row">
           {{form_settings_custom_ui.brand_image.label(class_='aot-settings-label')}}
           <div class="aot-settings-control">
-            <label class="btn aot-pill-btn aot-pill-btn-primary mb-0" style="cursor: pointer;"
+            <label class="btn aot-pill-btn aot-pill-btn-primary mb-0"
                    title="{{_('Saved')}}: {% if settings.brand_image %}True{% else %}False{% endif %} | {{_('Formats')}}: JPG, PNG, GIF, SVG, WebP">
               {{_('Upload')}}
               <input class="sr-only" id="brand_image" name="brand_image" type="file" accept="image/jpeg,image/png,image/gif,image/svg+xml,image/webp">
@@ -417,7 +431,7 @@
         <div class="aot-settings-row">
           {{form_settings_custom_ui.brand_favicon.label(class_='aot-settings-label')}}
           <div class="aot-settings-control">
-            <label class="btn aot-pill-btn aot-pill-btn-primary mb-0" style="cursor: pointer;"
+            <label class="btn aot-pill-btn aot-pill-btn-primary mb-0"
                    title="{{_('Saved')}}: {% if settings.brand_favicon %}True{% else %}False{% endif %}">
               {{_('Upload')}}
               <input class="sr-only" id="brand_favicon" name="brand_favicon" type="file">
@@ -527,7 +541,8 @@
               ('bd_divider',  _('Divider Line'),   _('Line between items inside one container — lists, option rows. Not a border around anything')),
               ('bd_divider_soft', _('Divider Line (Soft)'), _('Lighter divider for dense lists, where a full-weight line would be noisy')),
               ('bd_primary',   _('Background Primary'),   _('Page cards — widgets, list rows, modal groups')),
-              ('bd_secondary', _('Background Secondary'), _('Page background behind cards, list headers, modal body'))
+              ('bd_secondary', _('Background Secondary'), _('Page background behind cards, list headers, modal body')),
+              ('bd_control',   _('Control Surface'),      _('Face of things you operate — text fields, selects, pills. Keep it apart from the page background, or a control sitting on the page vanishes into it'))
             ] %}
             {% for field_name, label, desc in bg_fields %}
             <div class="aot-color-row" data-css-key="{{field_name}}">
@@ -769,7 +784,7 @@
       </div><!-- /.tab-content (colorGroupTabContent) -->
 
       <!-- Reset / Save actions (end of Colors zone) -->
-      <div class="aot-settings-actions" style="padding-bottom: 0.25rem;">
+      <div class="aot-settings-actions aot-settings-actions-tight">
         <button type="button"
                 class="btn aot-pill-btn"
                 id="btn-reset-defaults"
@@ -791,17 +806,17 @@
       <div class="aot-settings-group-title">{{_('Custom CSS')}}</div>
       <div class="aot-settings-section">
 
-        <div class="aot-settings-row" style="flex-wrap: wrap; height: auto;">
+        <div class="aot-settings-row aot-settings-row-full">
           {{form_settings_custom_ui.custom_css.label(class_='aot-settings-label')}}
-          <div style="flex: 1 1 100%; margin-top: 6px;">
-            <textarea class="form-control aot-modern-input" id="custom_css" name="custom_css" title="{{_('Custom CSS Settings')}}" rows="4" style="border-radius: var(--aot-radius-sm) !important; resize: vertical;">{{settings.custom_css or ''}}</textarea>
+          <div class="aot-settings-full">
+            <textarea class="form-control aot-modern-input" id="custom_css" name="custom_css" title="{{_('Custom CSS Settings')}}" rows="4">{{settings.custom_css or ''}}</textarea>
           </div>
         </div>
 
-        <div class="aot-settings-row" style="flex-wrap: wrap; height: auto;">
+        <div class="aot-settings-row aot-settings-row-full">
           {{form_settings_custom_ui.custom_layout.label(class_='aot-settings-label')}}
-          <div style="flex: 1 1 100%; margin-top: 6px;">
-            <textarea class="form-control aot-modern-input" id="custom_layout" name="custom_layout" title="{{_('Custom Layout HTML Settings')}}" rows="4" style="border-radius: var(--aot-radius-sm) !important; resize: vertical;">{{settings.custom_layout or ''}}</textarea>
+          <div class="aot-settings-full">
+            <textarea class="form-control aot-modern-input" id="custom_layout" name="custom_layout" title="{{_('Custom Layout HTML Settings')}}" rows="4">{{settings.custom_layout or ''}}</textarea>
           </div>
         </div>
 
@@ -857,7 +872,7 @@
       aot_default: Object.assign({
         brand_primary: '#13261B', brand_secondary: '#5E6B64', brand_accent: '#F3F6F5',
         text_color_primary: '#13261B', text_color_secondary: '#5E6B64', text_color_tertiary: '#FFFFFF',
-        bd_primary: '#FFFFFF', bd_secondary: '#F3F6F5', bg_active: '#D1D5D5', bg_inactive: '#F3F6F5', bg_warning: '#989E9E', bg_on: '#B5BABA', bg_off: '#F3F6F5', bg_pending: '#F0AD4E', tint_warning_bg: '#FFF3E2', tint_warning_fg: '#94650A',
+        bd_primary: '#FFFFFF', bd_secondary: '#e0e6e3', bd_control: '#F3F6F5', bg_active: '#D1D5D5', bg_inactive: '#F3F6F5', bg_warning: '#989E9E', bg_on: '#B5BABA', bg_off: '#F3F6F5', bg_pending: '#F0AD4E', tint_warning_bg: '#FFF3E2', tint_warning_fg: '#94650A',
         bg_llm: '#6277C7', bg_mcp: '#64C762',
         btn_primary_bg: '#13261B', btn_secondary_bg: '#5E6B64',
         bg_btn_on: '#13261B', bg_btn_off: '#5E6B64',
@@ -866,7 +881,7 @@
       ocean_blue: Object.assign({
         brand_primary: '#0A2342', brand_secondary: '#2C5F8A', brand_accent: '#E8F4FD',
         text_color_primary: '#0A2342', text_color_secondary: '#2C5F8A', text_color_tertiary: '#FFFFFF',
-        bd_primary: '#FFFFFF', bd_secondary: '#E8F4FD', bg_active: '#BDD7EE', bg_inactive: '#E8F4FD', bg_warning: '#989E9E', bg_on: '#B5BABA', bg_off: '#F3F6F5', bg_pending: '#F0AD4E', tint_warning_bg: '#FFF3E2', tint_warning_fg: '#94650A',
+        bd_primary: '#FFFFFF', bd_secondary: '#E8F4FD', bd_control: '#E1EDF6', bg_active: '#BDD7EE', bg_inactive: '#E8F4FD', bg_warning: '#989E9E', bg_on: '#B5BABA', bg_off: '#F3F6F5', bg_pending: '#F0AD4E', tint_warning_bg: '#FFF3E2', tint_warning_fg: '#94650A',
         bg_llm: '#4A90D9', bg_mcp: '#42A85A',
         btn_primary_bg: '#0A2342', btn_secondary_bg: '#2C5F8A',
         bg_btn_on: '#0A2342', bg_btn_off: '#2C5F8A',
@@ -875,7 +890,7 @@
       warm_sunset: Object.assign({
         brand_primary: '#6B2737', brand_secondary: '#C0614D', brand_accent: '#FDF0EC',
         text_color_primary: '#6B2737', text_color_secondary: '#C0614D', text_color_tertiary: '#FFFFFF',
-        bd_primary: '#FFFFFF', bd_secondary: '#FDF0EC', bg_active: '#F5C6BC', bg_inactive: '#FDF0EC', bg_warning: '#989E9E', bg_on: '#B5BABA', bg_off: '#F3F6F5', bg_pending: '#F0AD4E', tint_warning_bg: '#FFF3E2', tint_warning_fg: '#94650A',
+        bd_primary: '#FFFFFF', bd_secondary: '#FDF0EC', bd_control: '#F6E9E5', bg_active: '#F5C6BC', bg_inactive: '#FDF0EC', bg_warning: '#989E9E', bg_on: '#B5BABA', bg_off: '#F3F6F5', bg_pending: '#F0AD4E', tint_warning_bg: '#FFF3E2', tint_warning_fg: '#94650A',
         bg_llm: '#9B59B6', bg_mcp: '#27AE60',
         btn_primary_bg: '#6B2737', btn_secondary_bg: '#C0614D',
         bg_btn_on: '#6B2737', bg_btn_off: '#C0614D',
@@ -884,7 +899,7 @@
       minimal_gray: Object.assign({
         brand_primary: '#2D2D2D', brand_secondary: '#6B6B6B', brand_accent: '#F5F5F5',
         text_color_primary: '#2D2D2D', text_color_secondary: '#6B6B6B', text_color_tertiary: '#FFFFFF',
-        bd_primary: '#FFFFFF', bd_secondary: '#F5F5F5', bg_active: '#D0D0D0', bg_inactive: '#F5F5F5', bg_warning: '#989E9E', bg_on: '#B5BABA', bg_off: '#F3F6F5', bg_pending: '#F0AD4E', tint_warning_bg: '#FFF3E2', tint_warning_fg: '#94650A',
+        bd_primary: '#FFFFFF', bd_secondary: '#F5F5F5', bd_control: '#EEEEEE', bg_active: '#D0D0D0', bg_inactive: '#F5F5F5', bg_warning: '#989E9E', bg_on: '#B5BABA', bg_off: '#F3F6F5', bg_pending: '#F0AD4E', tint_warning_bg: '#FFF3E2', tint_warning_fg: '#94650A',
         bg_llm: '#5B7FA6', bg_mcp: '#4A9E5C',
         btn_primary_bg: '#2D2D2D', btn_secondary_bg: '#6B6B6B',
         bg_btn_on: '#2D2D2D', bg_btn_off: '#6B6B6B',
@@ -893,7 +908,7 @@
       night_mode: Object.assign({
         brand_primary: '#BB86FC', brand_secondary: '#03DAC6', brand_accent: '#1E1E1E',
         text_color_primary: '#E1E1E1', text_color_secondary: '#B0B0B0', text_color_tertiary: '#121212',
-        bd_primary: '#1E1E1E', bd_secondary: '#2C2C2C', bg_active: '#3C3C3C', bg_inactive: '#2C2C2C', bg_warning: '#989E9E', bg_on: '#B5BABA', bg_off: '#F3F6F5', bg_pending: '#F0AD4E', tint_warning_bg: '#FFF3E2', tint_warning_fg: '#94650A',
+        bd_primary: '#1E1E1E', bd_secondary: '#2C2C2C', bd_control: '#262626', bg_active: '#3C3C3C', bg_inactive: '#2C2C2C', bg_warning: '#989E9E', bg_on: '#B5BABA', bg_off: '#F3F6F5', bg_pending: '#F0AD4E', tint_warning_bg: '#FFF3E2', tint_warning_fg: '#94650A',
         bg_llm: '#7C5CBF', bg_mcp: '#00A896',
         btn_primary_bg: '#BB86FC', btn_secondary_bg: '#03DAC6',
         bg_btn_on: '#BB86FC', bg_btn_off: '#03DAC6',
@@ -912,6 +927,7 @@
       text_color_tertiary:  'text-color-tertiary',
       bd_primary:           'bd-primary',
       bd_secondary:         'bd-secondary',
+      bd_control:           'surface-control',
       bg_active:            'bg-active',
       bg_inactive:          'bg-inactive',
       bg_warning:            'bg-warning',

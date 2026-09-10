@@ -9,8 +9,8 @@
     <input type="hidden" name="input_type" value="{{ each_input.type }}">
 
     <!-- Preview Section (Moved to Top) -->
-    <div class="map-option-section" style="margin-bottom: 1.2rem;">
-        <div class="col-12" style="padding:0">
+    <div class="map-option-section map-option-section-gap">
+        <div class="col-12 aot-col-flush">
             <div id="preview_map_{{ each_input.unique_id }}"
                 data-url-template="{{ dict_inputs.get(each_input.type, {}).get('default_url', '') }}"
                 data-layer-type="{{ dict_inputs.get(each_input.type, {}).get('layer_type', 'xyz') }}"
@@ -20,20 +20,20 @@
                 data-legend="{{ (dict_inputs.get(each_input.type, {}).get('legend') or None) | tojson | forceescape }}"
                 data-default-center="{{ dict_inputs.get(each_input.type, {}).get('default_center', '') | tojson | forceescape }}"
                 data-default-zoom="{{ dict_inputs.get(each_input.type, {}).get('default_zoom', '') }}"
-                style="height: 280px; width: 100%; border: 1px solid #eee; border-radius: var(--aot-radius-md);"></div>
+                class="map-option-preview"></div>
         </div>
     </div>
 
     <!-- Manufacturer Info (Standard Style) -->
     {% if dict_inputs.get(each_input.type, {}).get('input_manufacturer') %}
-    <div class="aot-modal-body-text d-flex flex-wrap" style="gap: 15px; margin-bottom: 0.5rem;">
+    <div class="aot-modal-body-text d-flex flex-wrap aot-meta-row">
         <span><strong>{{ _('Manufacturer') }}:</strong> {{ dict_inputs.get(each_input.type, {}).get('input_manufacturer') }}</span>
     </div>
     {% endif %}
 
     {% set manufacturer_url = dict_inputs.get(each_input.type, {}).get('url_manufacturer') %}
     {% if manufacturer_url %}
-    <div class="aot-modal-body-text" style="margin-top: -0.5rem; font-size: var(--aot-font-size-sm);">
+    <div class="aot-modal-body-text aot-meta-links">
         <strong>{{ _('Related Documents') }}:</strong>
         {{ _('Manufacturer') }}
         {% for each_url in manufacturer_url %}
@@ -45,7 +45,7 @@
 
     {% set gis_info = dict_inputs.get(each_input.type, {}) %}
     {% if gis_info.get('message') %}
-    <div class="aot-modal-body-text" style="font-style: italic; background: var(--aot-gray-100); padding: 8px; border-radius: var(--aot-radius-sm); font-size: var(--aot-font-size-sm);">
+    <div class="aot-modal-body-text aot-modal-desc">
         {{ gis_info.get('message') | safe }}
     </div>
     {% endif %}
@@ -239,7 +239,7 @@
             <label class="aot-modal-option-label" title="{{ _('Overlay transparency.') }}">{{ _('Opacity') }}</label>
             <div class="aot-modal-option-control">
                 <input type="range" class="aot-ov-opacity" min="0" max="1" step="0.05"
-                       value="{{ ov_opacity }}" style="width:100%; accent-color: var(--aot-surface-card, #2e7d32);">
+                       value="{{ ov_opacity }}">
             </div>
         </div>
 
@@ -255,13 +255,12 @@
         </div>
 
         <div class="aot-modal-option-row aot-modal-option-row-wrap">
-            <div class="aot-ov-status aot-modal-body-text"
-                 style="width:100%; font-size: var(--aot-font-size-xs); color:var(--aot-text-muted,#6b7280); margin:0;">
+            <div class="aot-ov-status aot-modal-body-text">
                 {% if ov_image_url %}{{ _('Image loaded. Centre handle moves it; corners scale & rotate. Then Save Placement.') }}{% else %}{{ _('Upload a drone or aerial photo to begin.') }}{% endif %}
             </div>
         </div>
 
-        <div class="aot-modal-option-row aot-modal-option-row-wrap" style="justify-content:flex-end; gap:8px;">
+        <div class="aot-modal-option-row aot-modal-option-row-wrap aot-row-actions-end">
             <button type="button" class="btn aot-pill-btn aot-ov-reset">{{ _('Re-center') }}</button>
             <button type="button" class="btn aot-pill-btn aot-pill-btn-primary aot-ov-save">{{ _('Save Placement') }}</button>
         </div>

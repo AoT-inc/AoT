@@ -212,7 +212,7 @@
       <table class="aot-module-table aot-module-table-5col">
         <thead>
           <tr>
-            <td>{{_('ID')}}</td>
+            <td class="aot-col-id">{{_('ID')}}</td>
             <td>{{form_mod_conversion.convert_unit_from.label.text}}</td>
             <td>{{form_mod_conversion.convert_unit_to.label.text}}</td>
             <td>{{form_mod_conversion.equation.label.text}}</td>
@@ -225,7 +225,7 @@
     {{form_mod_conversion.csrf_token}}
     {{form_mod_conversion.conversion_id(value=each_conversion.unique_id)}}
           <tr>
-            <td>{{'%02d' % each_conversion.id}}</td>
+            <td class="aot-col-id">{{'%02d' % each_conversion.id}}</td>
             <td>
             {% if not each_conversion.protected %}
               <select class="aot-settings-select" id="convert_unit_from" name="convert_unit_from">
@@ -273,7 +273,10 @@
     </div>
     {% endif %}
 
-    <div class="aot-settings-group-title">{{_('All')}} {{_('Measurements')}}</div>
+    {#- 문구를 낱개로 부른다. `{{_('All')}} {{_('Measurements')}}` 처럼 두 msgid 를
+    이어 붙이면 한국어에서 "모두 측정값" 같은 어색한 말이 되고, 추출기도 그
+    문구를 보지 못한다(번역가가 고칠 자리가 없다). -#}
+<div class="aot-settings-group-title">{{_('All Measurements')}}</div>
     <div class="aot-settings-card aot-table-scroll">
       <table class="aot-module-table">
         <thead>
@@ -281,7 +284,6 @@
             <td>{{form_mod_measurement.id.label.text}}</td>
             <td>{{form_mod_measurement.name.label.text}}</td>
             <td>{{form_add_measurement.units.label.text}}</td>
-            <td></td>
           </tr>
         </thead>
         <tbody>
@@ -290,14 +292,13 @@
             <td>{{each_unit}}</td>
             <td>{{each_info['name']}}</td>
             <td>{% for each_unit in each_info['units'] %}{{each_unit}}{{ ", " if not loop.last }}{% endfor %}</td>
-            <td></td>
           </tr>
     {% endfor %}
         </tbody>
       </table>
     </div>
 
-    <div class="aot-settings-group-title">{{_('All')}} {{_('Units')}}</div>
+    <div class="aot-settings-group-title">{{_('All Units')}}</div>
     <div class="aot-settings-card aot-table-scroll">
       <table class="aot-module-table">
         <thead>
@@ -305,7 +306,6 @@
             <td>{{form_mod_unit.id.label.text}}</td>
             <td>{{form_mod_unit.name.label.text}}</td>
             <td>{{form_mod_unit.unit.label.text}}</td>
-            <td></td>
           </tr>
         </thead>
         <tbody>
@@ -314,7 +314,6 @@
             <td>{{each_unit}}</td>
             <td>{{each_info['name']}}</td>
             <td>{{each_info['unit']}}</td>
-            <td></td>
           </tr>
     {% endfor %}
         </tbody>

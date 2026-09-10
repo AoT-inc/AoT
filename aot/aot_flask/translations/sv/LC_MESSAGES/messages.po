@@ -31049,3 +31049,15 @@ msgstr "— Välj kanal —"
 msgid "— Select —"
 msgstr "— Välj —"
 
+
+#: Added by hand — do not re-extract (fuzzy contamination history).
+#: templates/modals/geo_settings_modal.html · templates/settings/measurement.html
+#: (2026-09-10)
+msgid "Device Color"
+msgstr "Enhetsfärg"
+
+msgid "All Measurements"
+msgstr "Alla mätningar"
+
+msgid "All Units"
+msgstr "Alla enheter"

@@ -4,23 +4,23 @@
 
 {% call gridstack_action_item(each_action, each_function, is_sequence=True, gs_h=32) %}
     <!-- Tier 2: Sequence Settings (Mode, Duration, Ref) -->
-    <div class="d-flex align-items-center" style="border: 1px solid var(--aot-border-neutral); border-top: none; border-radius: 0 0 var(--aot-radius-lg) var(--aot-radius-lg); padding: 4px 8px; background-color: var(--aot-surface-card); gap: 6px;">
+    <div class="aot-action-tier2">
         <!-- Mode Selection -->
-        <div style="flex: 1 1 auto; max-width: 160px; margin-right: 6px; min-width: 80px;">
-             <select class="form-control selectpicker aot-no-caret-select" data-width="100%" name="sequence_mode" style="height: 26px; font-size: var(--aot-font-size-xs); background-color: var(--aot-input-bg);" onchange="toggleSequenceFields('{{unique_id}}', this.value)" title="{{_('Operation Mode')}}">
+        <div class="aot-action-tier2-field">
+             <select class="form-control selectpicker aot-no-caret-select aot-action-tier2-select" data-width="100%" name="sequence_mode" onchange="toggleSequenceFields('{{unique_id}}', this.value)" title="{{_('Operation Mode')}}">
                 <option value="single" {% if action_options.get('sequence_mode') == 'single' %}selected{% endif %}>{{_('Single')}}</option>
                 <option value="total" {% if action_options.get('sequence_mode') == 'total' %}selected{% endif %}>{{_('Total')}}</option>
             </select>
         </div>
 
         <!-- Duration Input -->
-        <div class="sequence-duration-field-{{unique_id}}" style="flex: 1 1 auto; max-width: 160px; margin-right: 6px; min-width: 65px; {% if action_options.get('sequence_mode', 'single') == 'total' %}display:none{% endif %}">
-             <input type="text" class="form-control aot-time-input" name="action_duration" value="{{ action_options.get('action_duration', 0) }}" placeholder="{{_('Sec')}}" style="height: 26px; font-size: var(--aot-font-size-xs); text-align: center; border-radius: var(--aot-radius-lg); padding: 0 4px;" title="{{_('Default Duration (sec)')}}">
+        <div class="sequence-duration-field-{{unique_id}} aot-action-tier2-field"{% if action_options.get('sequence_mode', 'single') == 'total' %} style="display:none"{% endif %}>
+             <input type="text" class="form-control aot-time-input aot-action-tier2-input" name="action_duration" value="{{ action_options.get('action_duration', 0) }}" placeholder="{{_('Sec')}}" title="{{_('Default Duration (sec)')}}">
         </div>
 
         <!-- Dynamic Duration -->
-        <div class="sequence-duration-field-{{unique_id}}" style="flex: 1 1 auto; max-width: 160px; min-width: 100px; {% if action_options.get('sequence_mode', 'single') == 'total' %}display:none{% endif %}">
-            <select class="form-control selectpicker aot-no-caret-select" data-width="100%" name="action_duration_id" style="height: 26px; font-size: var(--aot-font-size-xs); background-color: var(--aot-surface-card);" title="{{_('Dynamic Duration Reference')}}">
+        <div class="sequence-duration-field-{{unique_id}} aot-action-tier2-field"{% if action_options.get('sequence_mode', 'single') == 'total' %} style="display:none"{% endif %}>
+            <select class="form-control selectpicker aot-no-caret-select aot-action-tier2-select" data-width="100%" name="action_duration_id" title="{{_('Dynamic Duration Reference')}}">
                 <option value="">-</option>
                 <optgroup label="PID">
                     {% for pid in choices_pid %}
@@ -41,17 +41,17 @@
         </div>
 
         <!-- Device Group: steps sharing the same label fire simultaneously -->
-        <div class="sequence-duration-field-{{unique_id}}" style="flex: 1 1 auto; max-width: 140px; min-width: 70px; {% if action_options.get('sequence_mode', 'single') == 'total' %}display:none{% endif %}">
-             <input type="text" class="form-control" name="group_name" value="{{ action_options.get('group_name', '') }}" placeholder="{{_('Group')}}" style="height: 26px; font-size: var(--aot-font-size-xs); text-align: center; border-radius: var(--aot-radius-lg); padding: 0 4px; background-color: var(--aot-input-bg);" title="{{_('Steps sharing the same group name run together at once')}}">
+        <div class="sequence-duration-field-{{unique_id}} aot-action-tier2-field-sm"{% if action_options.get('sequence_mode', 'single') == 'total' %} style="display:none"{% endif %}>
+             <input type="text" class="form-control aot-action-tier2-input" name="group_name" value="{{ action_options.get('group_name', '') }}" placeholder="{{_('Group')}}" title="{{_('Steps sharing the same group name run together at once')}}">
         </div>
 
         <!-- Total-mode margins: keep this step inside the others' window, e.g.
              a pump that must start after the valve opens and stop before it closes -->
-        <div class="sequence-total-field-{{unique_id}}" style="flex: 1 1 auto; max-width: 140px; min-width: 70px; {% if action_options.get('sequence_mode', 'single') != 'total' %}display:none{% endif %}">
-             <input type="text" class="form-control aot-time-input" name="total_lead" value="{{ action_options.get('total_lead', 0) }}" placeholder="{{_('Lead')}}" style="height: 26px; font-size: var(--aot-font-size-xs); text-align: center; border-radius: var(--aot-radius-lg); padding: 0 4px; background-color: var(--aot-input-bg);" title="{{_('Start this many seconds after the sequence begins')}}">
+        <div class="sequence-total-field-{{unique_id}} aot-action-tier2-field-sm"{% if action_options.get('sequence_mode', 'single') != 'total' %} style="display:none"{% endif %}>
+             <input type="text" class="form-control aot-time-input aot-action-tier2-input" name="total_lead" value="{{ action_options.get('total_lead', 0) }}" placeholder="{{_('Lead')}}" title="{{_('Start this many seconds after the sequence begins')}}">
         </div>
-        <div class="sequence-total-field-{{unique_id}}" style="flex: 1 1 auto; max-width: 140px; min-width: 70px; {% if action_options.get('sequence_mode', 'single') != 'total' %}display:none{% endif %}">
-             <input type="text" class="form-control aot-time-input" name="total_lag" value="{{ action_options.get('total_lag', 0) }}" placeholder="{{_('Lag')}}" style="height: 26px; font-size: var(--aot-font-size-xs); text-align: center; border-radius: var(--aot-radius-lg); padding: 0 4px; background-color: var(--aot-input-bg);" title="{{_('Stop this many seconds before the sequence ends')}}">
+        <div class="sequence-total-field-{{unique_id}} aot-action-tier2-field-sm"{% if action_options.get('sequence_mode', 'single') != 'total' %} style="display:none"{% endif %}>
+             <input type="text" class="form-control aot-time-input aot-action-tier2-input" name="total_lag" value="{{ action_options.get('total_lag', 0) }}" placeholder="{{_('Lag')}}" title="{{_('Stop this many seconds before the sequence ends')}}">
         </div>
     </div>
 {% endcall %}

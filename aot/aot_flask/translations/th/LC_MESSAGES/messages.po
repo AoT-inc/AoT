@@ -31420,3 +31420,15 @@ msgstr "— เลือกช่อง —"
 msgid "— Select —"
 msgstr "— เลือก —"
 
+
+#: Added by hand — do not re-extract (fuzzy contamination history).
+#: templates/modals/geo_settings_modal.html · templates/settings/measurement.html
+#: (2026-09-10)
+msgid "Device Color"
+msgstr "สีอุปกรณ์"
+
+msgid "All Measurements"
+msgstr "การวัดทั้งหมด"
+
+msgid "All Units"
+msgstr "หน่วยทั้งหมด"

@@ -467,6 +467,15 @@ def custom_options_return_json(
                 if use_defaults and 'default_value' in each_option:
                     dict_options_return[each_option['id']] = each_option['default_value']
                     null_value = False
+                elif use_defaults and 'default' in each_option:
+                    # GIS input modules (aot/inputs_gis/*.py) declare their custom_options
+                    # default under 'default', not 'default_value' — without this branch,
+                    # every newly-added GIS layer (e.g. channel_selector options) silently
+                    # got the blind type-based default below (empty list for channel_selector)
+                    # instead of the module author's actual default, leaving no channel
+                    # checked and the settings-modal preview map permanently blank.
+                    dict_options_return[each_option['id']] = each_option['default']
+                    null_value = False
                 elif use_defaults:
                     # Set type-appropriate defaults when no default_value is specified
                     if each_option['type'] == 'integer':

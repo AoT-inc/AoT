@@ -187,7 +187,10 @@
      토큰을 발행한다 — 그전까지 여기 고정값이라 53곳을 못 바꿨다. */
   --aot-border-light: #f0f0f0;
   --aot-border-form: #ced4da;
-  --aot-border-form-focus: #80bdff;
+  /* 2026-09-10: 부트스트랩 파랑(#80bdff) 이었다 — settings/custom_ui 밖의
+     고정색이라 사용자가 못 바꿨다. 이미 검증된 입력 포커스 색(브랜드 딥그린)
+     을 그대로 참조한다. */
+  --aot-border-form-focus: var(--aot-input-focus-border, #13261B);
 
   /* ========================================================================
      Section 1.5b: color — 중립 회색 스케일
@@ -230,13 +233,25 @@
   --aot-surface-card: #ffffff;
   --aot-surface-modal: #ffffff;
   --aot-surface-dropdown: #ffffff;
-  /* 입력칸 면 — 2026-09-09 흰색 고정에서 **배경색 보조**(bd_secondary)를
-     따르도록 바꾼다. 넓은 글자 입력칸은 카드 위에 얹히는 면이라, 카드와
-     같은 흰색이면 어디부터 쓰는 자리인지 경계가 사라진다(테두리를 걷어낸
-     뒤로는 더 그렇다 — ui-guide §2-2). 새 필드를 만들지 않고 기존 필드를
-     따르게 해서 운영자가 바꾸면 함께 따라온다.
+  /* **컨트롤 면** — 조작하는 칸(글자 입력·셀렉트·알약)의 바탕.
+     이름이 역할이다: 어디에 놓이느냐가 아니라 **무엇의 면인가**로 부른다.
+     `-input` 이던 이름을 바꾼 이유도 그것이다 — 셀렉트와 알약까지 이 면을
+     쓰는데 이름이 입력칸만 가리켰다.
+
+     2026-09-10 **바닥에서 뗀다.** 09-09 에 흰색 고정을 그만두고
+     `--aot-surface-body`(bd_secondary)를 따르게 했는데, 그러면 두 값이
+     **항상 같아** 바닥 위에 놓인 컨트롤이 통째로 사라진다 — 컨테이너 밖
+     셀렉트가 보이지 않던 것이 이것이다. 면과 그 위에 얹히는 컨트롤은
+     같은 값일 수 없으므로 따라가게 두면 안 되고, 값을 나눠야 한다.
+     그래서 자기 필드(bd_control)를 준다.
+
+     값은 **카드와 바닥 사이**다 — 어느 쪽에 놓여도 면에서 떨어져 보여야
+     하므로 한 쪽에 붙일 수 없다. 실측 대비: 카드(#ffffff) 1.09 ·
+     바닥(#e0e6e3) 1.16. 종전 실효값(#e0e6e3)은 바닥에서 정확히 1.00
+     이었다. 09-08 까지 --bd-secondary 가 갖고 있던 값이기도 하다 —
+     그 단이 원래 담으려던 것이 이 면이었다.
      다크는 custom-dark.css 가 이 뒤에서 #2a2a2a 로 재정의한다. */
-  --aot-surface-input: var(--aot-surface-body);
+  --aot-surface-control: #F3F6F5;
   /* bd_secondary(settings/custom_ui) 기본값과 일치 — 이 값도 /custom.css 로
      같은 필드에서 재발행된다(routes_general.py var_map). §3 "기본값 일치 계약" */
   --aot-surface-body: #e0e6e3;
@@ -368,6 +383,12 @@
   /* 아직 한 단뿐이다. 더 작은 단이 필요해지면 **여기서만** 갈라 놓는다 —
      호출부는 이미 의도(sm)를 적어 두었으므로 이름은 남긴다. */
   --aot-btn-height-sm: var(--aot-btn-height);
+  /* 장갑 낀 손 기준 터치 목표(2026-09-10, 사용자 결정). 화면 대부분이 이미
+     32px 기준으로 촘촘히 맞춰져 있어 --aot-btn-height 를 전역으로 올리지
+     않는다 — **컨테이너 밖 툴바 + 모달 푸터**의 셀렉트/일반 버튼에만 이
+     토큰을 쓴다(슬라이드 토글 .btn-toggle 은 대상 아님, 대부분 모달
+     컨테이너 안에 있다). 적용 지점은 aot-modal-modern.css 참고. */
+  --aot-btn-height-touch: 44px;
   --aot-btn-radius: 18px;
   --aot-btn-radius-sm: 16px;
   /* 키보드 포커스 표시 — `outline: var(--aot-focus-outline)` 로 쓴다.
@@ -393,6 +414,11 @@
   --aot-ctrl-w-switch: var(--aot-roundbox-width, 60px);
   --aot-ctrl-w-color: 60px;
   --aot-ctrl-w-num: 96px;
+  /* 자릿수가 정해진 **짧은 텍스트** — 통화 기호(₩·$), 단위 약어처럼
+     두세 글자로 끝나는 칸이다. 숫자 칸과 값이 같지만 뜻이 다르다:
+     숫자는 '소수점까지 보이는 최소치', 이쪽은 '몇 글자면 충분한가'.
+     한쪽을 고칠 때 다른 쪽이 따라 움직이지 않게 이름을 나눠 둔다. */
+  --aot-ctrl-w-short: 96px;
   /* ⚠ 아래 셋은 값이 같지만 뜻이 다르다. 하나를 고치면 나머지가 조용히
      따라 움직인 것처럼 보이므로 무엇을 바꾸는지 확인하고 손댈 것.
        --aot-btn-fixed-width  버튼 **최소** 폭 (긴 번역문에서는 늘어난다)
@@ -446,8 +472,13 @@
   --aot-shadow-nav-panel: 0 10px 40px rgba(0, 0, 0, 0.2);
   --aot-shadow-btn-nav-back: 0 2px 5px rgba(0, 0, 0, 0.1);
   --aot-shadow-btn-nav-hover: 0 4px 8px rgba(0, 0, 0, 0.15);
-  --aot-shadow-form-focus: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
-  --aot-shadow-mode-sub-tab: 0 2px 4px rgba(0, 123, 255, 0.3);
+  /* 2026-09-10: 부트스트랩 파랑 rgba(0,123,255,.25) 이었다 — 브랜드 딥그린
+     (--aot-color-brand-primary #13261B) 알파판으로 바꾼다. */
+  --aot-shadow-form-focus: 0 0 0 0.2rem rgba(19, 38, 27, 0.25);
+  /* 2026-09-10: 이 그림자가 얹히는 배경은 --color-equipment-mode
+     (= --aot-color-info #029ACF) 다 — 부트스트랩 파랑이 아니라 그 색의
+     알파판이어야 같은 색으로 번진다. */
+  --aot-shadow-mode-sub-tab: 0 2px 4px rgba(2, 154, 207, 0.3);
 
   /* ========================================================================
      Legacy token mappings (backward compatibility aliases)
@@ -532,7 +563,7 @@
      다른 색으로 피해 갔다(예: aot-drawer.css 의 composer 는 브랜드색을 직접
      적었다). 토큰 쪽을 고쳐 그 우회를 없앤다. 2026-09-07 */
   --aot-input-focus-border: var(--aot-color-brand-primary);
-  --aot-input-bg: var(--aot-surface-input);
+  --aot-input-bg: var(--aot-surface-control);
   --aot-text-main: var(--aot-modal-body-text);
   --aot-text-title: var(--aot-modal-title-text);
   --aot-text-secondary: var(--aot-color-text-secondary);

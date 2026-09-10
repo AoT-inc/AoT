@@ -17,7 +17,7 @@
     {% if each_input.device != 'input_spacer' %}
     {% from 'pages/map/map_option_macros.html' import render_device_map with context %}
     <div class="map-option-section">
-      <div class="col-12" style="padding:0">
+      <div class="col-12 aot-col-flush">
         {{ render_device_map(
         'input',
         each_input.unique_id,
@@ -56,7 +56,7 @@
 
 
     {% if each_input.device in dict_inputs %}
-    <div class="aot-modal-body-text d-flex flex-wrap" style="gap: 15px; margin-bottom: 0.5rem;">
+    <div class="aot-modal-body-text d-flex flex-wrap aot-meta-row">
       {% if 'input_manufacturer' in dict_inputs[each_input.device] %}
       <span><strong>{{_("Manufacturer")}}:</strong> {{dict_inputs[each_input.device]['input_manufacturer']}}</span>
       {% endif %}
@@ -88,7 +88,7 @@
     {% set additional_url = dict_inputs[each_input.device].get('url_additional') %}
 
     {% if manufacturer_url or datasheet_url or product_purchase_url or additional_url %}
-    <div class="aot-modal-body-text" style="margin-top: -0.5rem; font-size: var(--aot-font-size-sm);">
+    <div class="aot-modal-body-text aot-meta-links">
       <strong>{{_("Related Documents")}}:</strong>
       {%- if manufacturer_url -%} {{_("Manufacturer")}} {% for each_url in manufacturer_url %}<a href="{{each_url}}" target="_blank">{{_('Link')}} {{loop.index}}</a>{{ ", " if not loop.last }}{% endfor %}{%- endif -%}
       {%- if datasheet_url -%} {% if manufacturer_url %}; {% endif %}{{_("Datasheet")}} {% for each_url in datasheet_url %}<a href="{{each_url}}" target="_blank">{{_('Link')}} {{loop.index}}</a>{{ ", " if not loop.last }}{% endfor %}{%- endif -%}
@@ -98,7 +98,7 @@
     {% endif %}
 
     {% if 'message' in dict_inputs[each_input.device] %}
-    <div class="aot-modal-body-text" style="font-style: italic; background: var(--aot-gray-100); padding: 8px; border-radius: var(--aot-radius-sm); font-size: var(--aot-font-size-sm);">
+    <div class="aot-modal-body-text aot-modal-desc">
       {{dict_inputs[each_input.device]['message']|safe}}
     </div>
     {% endif %}
@@ -109,7 +109,7 @@
 
     {% if 'custom_channel_options_message' in dict_options %}
     <div class="aot-modal-container">
-      <div class="col-12" style="padding-bottom: 0.5em; padding-left:0; padding-right:0;">
+      <div class="col-12 aot-col-flush-x">
         {{dict_options['custom_channel_options_message']|safe}}
       </div>
     </div>
@@ -121,7 +121,7 @@
     <!-- ... skipped ... -->
 
   <div class="aot-modal-container">
-    <div class="col-12 text-muted small" style="padding:0">
+    <div class="col-12 text-muted small aot-col-flush">
       <strong>{{_('Usage:')}}</strong> {{_('Every Period of the Input, each Action is executed with the returned measurements.')}}
     </div>
   </div>
@@ -353,13 +353,13 @@
     {% if custom_options_values[unique_id] %}
 
     {% if 'custom_channel_options_message' in dict_options %}
-    <div style="padding: 1em 0 0.5em 0;">
+    <div class="aot-block-head">
         {{dict_options['custom_channel_options_message']|safe}}
     </div>
     {% endif %}
 
     {% if 'custom_channel_options' in dict_options %}
-    <div style="padding: 0 0 1em 0;">
+    <div class="aot-block-tail">
       {% for each_option in dict_options['custom_channel_options'] %}
       {% include 'pages/form_options/Custom_Options.html' %}
       {% endfor %}
@@ -411,7 +411,7 @@
   {% set channel_options = false %}
   {% set post_action = "/input" %}
 
-  <div class="row small-gutters" style="border-bottom: 1px solid #ddd; padding: 0.3em; margin-bottom: 10px;">
+  <div class="row small-gutters aot-usage-row">
     <div class="col-12 text-muted small">
       <strong>{{_('Usage:')}}</strong> {{_('Every Period of the Input, each Action is executed with the returned measurements.')}}
     </div>

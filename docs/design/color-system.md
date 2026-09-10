@@ -36,6 +36,7 @@ settings/custom_ui 연동 구조를 정의한다. z-index 는 `z-index-system.md
 | brand_accent | --brand-accent | --aot-color-brand-accent, --bd-btn-tertiary |
 | text_color_primary/secondary/tertiary | --text-color-* | --aot-color-text-* |
 | bd_primary/secondary | --bd-* | --aot-surface-card / --aot-surface-body (2026-08, §5-6) |
+| bd_control | (없음) | --aot-surface-control (2026-09-10 분가 — 그전까지 --aot-surface-body 를 따라가 값을 벌릴 수 없었다. 기본 #F3F6F5, 옛 값을 물려주지 않는다) |
 | badge_upgrade | --bg-upgrade, --bg-btn-upgrade | --aot-bg-upgrade, --aot-btn-bg-upgrade |
 | bg_active / bg_inactive | --bg-* | --aot-bg-* |
 | bg_warning | --bg-pause | --aot-bg-pause |

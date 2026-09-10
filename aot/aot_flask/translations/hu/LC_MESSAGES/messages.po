@@ -31373,3 +31373,15 @@ msgstr "— Csatorna kiválasztása —"
 msgid "— Select —"
 msgstr "— Kiválasztás —"
 
+
+#: Added by hand — do not re-extract (fuzzy contamination history).
+#: templates/modals/geo_settings_modal.html · templates/settings/measurement.html
+#: (2026-09-10)
+msgid "Device Color"
+msgstr "Eszköz színe"
+
+msgid "All Measurements"
+msgstr "Összes mérés"
+
+msgid "All Units"
+msgstr "Összes mértékegység"

@@ -417,9 +417,9 @@
 <main role="main" class="container">
   {% include 'flash_messages.html' %}
 
-  <div style="clear: both; padding: 0.5em 0;"></div>
+  <div class="aot-vspace"></div>
 
-  <form id="new_output_form" method="post" action="/output" style="padding-bottom: 0.5em">
+  <form class="pb-2" id="new_output_form" method="post" action="/output">
     {{form_add_output.hidden_tag()}}
     <div class="row aot-main-selection-row">
       <div class="col-auto">
@@ -440,7 +440,7 @@
     </div>
   </form>
 
-  <div style="clear: both; padding: 1em 0;"></div>
+  <div class="aot-vspace-lg"></div>
 
   <div class="grid-stack aot-entry-container">
     {#- gs-y is computed from the cumulative card height, not from position_y (the sequential rank).
@@ -466,7 +466,7 @@
 
 </main>
 
-<div style="clear: both; padding: 0.5em 0;"></div>
+<div class="aot-vspace"></div>
 
 {% include 'admin/dependencies_install.html' %}
 

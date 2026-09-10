@@ -26,3 +26,11 @@
     color: var(--color-equipment-mode);
     word-break: break-all;
 }
+
+/* ── 인라인에서 걷어 온 것들(2026-09-10) ────────────────────────────────── */
+/* 목록 항목의 작은 배지(모델 종류·활성 여부). */
+.ai-entry-badge { font-size: var(--aot-font-size-2xs); }
+
+/* 배지와 액션 메뉴는 같은 모서리를 쓴다. */
+.ai-entry-badge.badge-info,
+.ai-entry-menu { border-radius: var(--aot-radius-md); }

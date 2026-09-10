@@ -233,20 +233,12 @@
         z-index: var(--aot-z-modal-backdrop) !important;
     }
 
-    /* Site Selector Dropdown Style */
-    #design-info-container .site-selector-dropdown+.dropdown-toggle {
-        height: 32px;
-        border-radius: 16px;
-        min-width: 150px;
-        max-width: 210px;
-        padding-top: 4px;
-        padding-bottom: 4px;
-        font-size: 0.85rem;
-    }
-
-    #design-info-container .site-selector-dropdown+.dropdown-toggle .filter-option {
-        text-align: center;
-    }
+    /* 사이트 셀렉트의 모양은 공용 규칙(.aot-modern-select)이 정한다.
+       예전에는 여기서 높이 32px·반경 16px·글자 크기를 따로 챙겼는데, 그건
+       공용 셀렉트 규칙이 `.aot-modal-option-control` 안에서만 걸리던 시절의
+       임시방편이었다. 그 자리 조건을 떼면서(2026-09-10) 이 블록은 오히려
+       공용 알약(9999px)과 어긋난 값을 덮어쓰는 자리가 됐다 — 같은 화면의
+       지도 셀렉트와 면·테두리가 달라 보였다. 폭 제한은 감싼 div 가 갖는다. */
 
     /* [Theme] Inactive State Borders (User Req) */
     .mode-tab[data-mode="site"] {
@@ -386,6 +378,69 @@
         position: relative; /* Needed for abs positioning of leaving elements */
         overflow-x: hidden; /* Hide sliding elements */
     }
+    /* ── 인라인에서 걷어 온 것들(2026-09-10) ────────────────────────────
+       아래는 전부 템플릿 속성에 적혀 있던 값이다. 카드 모서리처럼 위쪽
+       규칙이 이미 정하고 있는데 인라인이 같은 값을 한 번 더 적던 것도
+       있었다 — 그런 건 규칙만 남기고 지웠다. */
+    .geo-design-lead { margin-bottom: var(--aot-space-4); }
+
+    /* 체크상자 줄에 맞춘 들여쓰기. */
+    .geo-design-indent { padding-left: 1.25rem; }
+
+    /* 지도를 담은 카드만 모서리 안으로 내용을 가둔다. */
+    .geo-design-card-clip { overflow: hidden; }
+
+    /* 지도 위 도구 줄의 고른 셀렉트. */
+    .geo-map-toolbar-select {
+        width: 160px;
+        flex-shrink: 0;
+    }
+
+    /* 글자 길이와 무관하게 나란히 서는 작은 단추들.
+       ⚠ 알약 버튼의 기본값 `.btn.aot-pill-btn { min-width: 54px }` 이 (0,2,0)
+       이라 클래스 하나로는 지고(실측 54px), `.btn` 을 더해 (0,2,0) 으로
+       맞춰도 이 <style> 블록이 head 블록 자리라 **공용 CSS 보다
+       먼저** 실려 순서로 또 진다(실측 54px). 세 클래스로 못 박는다.
+       인라인일 때는 그냥 이기던 자리라 이 싸움이 보이지 않았다. */
+    .btn.aot-pill-btn.geo-btn-minw { min-width: 60px; }
+
+    /* 지도가 앉는 자리. */
+    #geo-map {
+        width: 100%;
+        height: 640px;
+    }
+
+    /* 사이트 목록 팝오버 — 도구 단추 오른쪽에 붙는다. */
+    #site-list-popover {
+        position: absolute;
+        left: 40px;
+        width: 200px;
+        max-height: 300px;
+        overflow-y: auto;
+        z-index: var(--aot-z-fixed-panel);
+    }
+
+    /* 레이어 관리자를 모드 패널보다 위에 두려고 밖으로 뺀 자리.
+       ⚠ 자리 값은 `.map-tools-right` 와 같아야 한다(map.css). */
+    #external-layer-control {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        z-index: var(--aot-z-fixed-panel);
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+    }
+
+    /* 인쇄용 꼬리말. */
+    .print-footer p { font-size: var(--aot-font-size-sm); }
+
+    /* 지번 검색 결과 목록 — 길어지면 제 안에서 흐른다. */
+    #parcel-result-list {
+        max-height: 160px;
+        overflow-y: auto;
+        font-size: var(--aot-font-size-sm);
+    }
 </style>
 <script src="{{ asset('geo-design-parcel') }}"></script>
 {% endblock %}
@@ -394,18 +449,18 @@
 <div class="container-fluid px-0">
 <div class="container py-4">
     <!-- System Flash Messages (Standard) -->
-    <div style="margin-bottom: 1rem;">
+    <div class="geo-design-lead">
         {% include 'flash_messages.html' %}
     </div>
 
     <!-- Section 1: Title -->
-    <div class="mb-3" style="padding-left: 1.25rem;">
+    <div class="mb-3 geo-design-indent">
         <h3 class="mb-2">{{ _('Spatial Design Studio') }}</h3>
         <button class="btn aot-pill-btn aot-pill-btn-primary" onclick="openGeoSettings()">{{ _('Settings') }}</button>
     </div>
 
     <!-- Section 2: Map & Selector -->
-    <div class="card mb-4 shadow-sm" style="border-radius: var(--aot-radius-xl); overflow: hidden;">
+    <div class="card mb-4 shadow-sm geo-design-card-clip">
         <div class="card-header bg-white py-3">
             <div class="mb-2 font-weight-bold">
                 <h5>{{ _('Map Design') }}</h5>
@@ -414,8 +469,10 @@
 
             <!-- Map Selector Row -->
             <div class="d-flex align-items-center w-100 justify-content-between geo-map-toolbar-row">
-                <div class="geo-map-toolbar-select" style="width: 160px; flex-shrink: 0;">
-                    <select id="map-selector" class="selectpicker" data-width="100%" data-style="btn-white border">
+                <div class="geo-map-toolbar-select">
+                    {#- 공용 셀렉트 골격을 단다 — 이게 없으면 어떤 높이 규칙도 닿지 않아
+                        토글이 16px 로 찌부러진다. `border` 는 뺀다(면은 선이 아니라 밝기로 나눈다). -#}
+                    <select id="map-selector" class="selectpicker aot-modern-select" data-width="100%" data-style="btn-white">
                         <option value="" disabled selected>{{ _('Select a Map') }}</option>
                         <option value="new" data-icon="fas fa-plus-circle" class="text-primary font-weight-bold">{{ _('Create New Map') }}</option>
                         {% for m in map_configs %}
@@ -428,16 +485,16 @@
 
                 <div class="d-flex align-items-center geo-map-toolbar-buttons">
                     <!-- Edit Name Button (Hidden initially) -->
-                    <button class="btn aot-pill-btn aot-pill-btn-primary mr-1 ml-1" id="btn-edit-map-name" style="min-width: 60px;"
+                    <button class="btn aot-pill-btn aot-pill-btn-primary mr-1 ml-1 geo-btn-minw" id="btn-edit-map-name"
                         title="{{ _('Rename') }}">
                         {{ _('Edit') }}
                     </button>
                     <!-- Delete Button -->
-                    <button class="btn aot-pill-btn aot-pill-btn-danger mr-1" id="btn-delete-map" style="min-width: 60px;">
+                    <button class="btn aot-pill-btn aot-pill-btn-danger mr-1 geo-btn-minw" id="btn-delete-map">
                         {{ _('Delete') }}
                     </button>
                     <!-- Save Button -->
-                    <button class="btn aot-pill-btn aot-pill-btn-primary" id="btn-save-global" style="min-width: 60px;">
+                    <button class="btn aot-pill-btn aot-pill-btn-primary geo-btn-minw" id="btn-save-global">
                         {{ _('Save') }}
                     </button>
                 </div>
@@ -447,10 +504,10 @@
 
         <div class="card-body p-0 position-relative aot-map-container" id="geo-design-wrapper">
             <!-- Map Container (Fixed Height) -->
-            <div id="geo-map" style="height: 640px; width: 100%; z-index: auto !important;"></div>
+            <div id="geo-map"></div>
 
             <!-- Floating Map Tools (Left) -->
-            <div class="map-tools-left" style="top: 10px; left: 10px;">
+            <div class="map-tools-left">
                 <!-- Group: Zoom + Compass -->
                 <div class="tool-group">
                     <button class="btn btn-white" id="tool-zoom-in" title="{{ _('Zoom In') }}"><i class="fas fa-plus"></i></button>
@@ -482,13 +539,13 @@
                 </button>
 
                 <div id="site-list-popover" class="bg-white shadow-lg rounded border"
-                     style="display: none; position: absolute; left: 40px; width: 200px; max-height: 300px; overflow-y: auto; z-index: var(--aot-z-fixed-panel);">
+                     style="display: none;">
                     <ul class="list-group list-group-flush small" id="site-list-ul"></ul>
                 </div>
             </div>
 
             <!-- Floating Map Tools (Right) -->
-            <div class="map-tools-right" style="top: 10px; right: 10px;">
+            <div class="map-tools-right">
                 <!-- Tool: Layers — top-right (above drawing tools) -->
                 <button class="btn btn-white btn-circle" id="tool-layers" title="{{ _('Layers') }}">
                     <i class="fas fa-layer-group"></i>
@@ -506,8 +563,7 @@
 
             <!-- [Fix] External Container for Layer Manager to ensure Z-Index > Mode Panel -->
             <!-- Position matches Leaflet Top-Right standard margin (20px) -> Adjusted to 10px (Mobile Standard) -->
-            <div id="external-layer-control"
-                style="position: absolute; top: 10px; right: 10px; z-index: var(--aot-z-fixed-panel); display: flex; flex-direction: column; align-items: flex-end;">
+            <div id="external-layer-control">
                 <!-- JS will move leaflet-control-layers here -->
             </div>
 
@@ -565,7 +621,7 @@
     </div>
 
     <!-- Section 3: Information (Dashboard) -->
-    <div class="card mb-4 shadow-sm" style="border-radius: var(--aot-radius-xl);">
+    <div class="card mb-4 shadow-sm">
         <div class="card-header bg-white font-weight-bold mt-2 border-0">
             <h5>{{ _('Design Information') }}</h5>
             <hr class="mt-0 mb-3">
@@ -580,7 +636,7 @@
     </div>
 
     <!-- Section 4: Data Processing -->
-    <div class="card mb-5 shadow-sm" id="section-data-processing" style="border-radius: var(--aot-radius-xl);">
+    <div class="card mb-5 shadow-sm" id="section-data-processing">
         <div class="card-header bg-white font-weight-bold mt-2 border-0">
             <h5>{{ _('Data Processing') }}</h5>
             <hr class="mt-0 mb-3">
@@ -605,9 +661,9 @@
 
     <!-- Print Footer (Hidden on Screen) -->
     <div class="print-footer mt-5 p-4 text-left text-muted" style="display: none;">
-        <p class="mb-1" style="font-size: var(--aot-font-size-sm);">{{ _('This document was created using the <strong>AoT Geographic Information System</strong>, free software available to everyone.') }}</p>
-        <p class="mb-1" style="font-size: var(--aot-font-size-sm);">{{ _('Maps and drawings included in this material are generated based on satellite imagery and basic data, so <strong>errors may occur compared to the actual site.</strong>') }}</p>
-        <p class="mb-0" style="font-size: var(--aot-font-size-sm);">{{ _('AoT provides <strong>no legal warranty</strong> regarding the accuracy or suitability of the outputs, and the user is responsible for construction and decision-making based on them.') }}</p>
+        <p class="mb-1">{{ _('This document was created using the <strong>AoT Geographic Information System</strong>, free software available to everyone.') }}</p>
+        <p class="mb-1">{{ _('Maps and drawings included in this material are generated based on satellite imagery and basic data, so <strong>errors may occur compared to the actual site.</strong>') }}</p>
+        <p class="mb-0">{{ _('AoT provides <strong>no legal warranty</strong> regarding the accuracy or suitability of the outputs, and the user is responsible for construction and decision-making based on them.') }}</p>
     </div>
 </div>
 </div>
@@ -827,7 +883,7 @@
               </button>
             </div>
           </div>
-          <div id="parcel-result-list" class="mb-2" style="max-height:160px;overflow-y:auto;font-size: var(--aot-font-size-sm);"></div>
+          <div id="parcel-result-list" class="mb-2"></div>
 
           <!-- Site name (used only when saving merged; individual saves use each parcel's name) -->
           <div class="form-group row mb-2" id="parcel-site-name-row">

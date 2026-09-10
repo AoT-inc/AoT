@@ -16,12 +16,12 @@
 
     {% if each_option['type'] == 'message' %}
 
-<div class="aot-modal-body-text" style="padding-top: 1em; padding-bottom: 0.5em">
+<div class="aot-modal-body-text pt-3 pb-2">
   {{each_option['default_value']|safe}}
 </div>
 
     {% elif each_option['type'] == 'new_line' %}
-<div class="w-100" style="padding: 0.5em"></div>
+<div class="w-100 p-2"></div>
 
     {#- 머리말(단계 A) — 설정이 아니라 **답**이다. "지금 뭘 하고 있나" 와
         "목표는 어디서 정하나" 를 채우는 것은 `aot-env-status.js` 다. 여기서는
@@ -215,7 +215,7 @@
 <div class="aot-modal-option-row flex-column align-items-start">
   <label class="aot-modal-option-label mb-2" title="{{each_option.get('phrase', '')}}">{{each_option['name']}}{% if each_option.get('phrase') %}<span class="fas fa-info-circle aot-option-tip" aria-hidden="true"></span>{% endif %}</label>
   <div class="w-100">
-    <textarea style="font-family:monospace; border-radius: var(--aot-radius-md) !important;" class="form-control" id="{{name_prefix}}{{each_option['id']}}" name="{% if channel_options %}{{name_prefix}}{% endif %}{{each_option['id']}}" rows="{{each_option['lines']}}" type="text" title="{{each_option['phrase']}}"
+    <textarea class="form-control aot-input-code" id="{{name_prefix}}{{each_option['id']}}" name="{% if channel_options %}{{name_prefix}}{% endif %}{{each_option['id']}}" rows="{{each_option['lines']}}" type="text" title="{{each_option['phrase']}}"
     {%- if 'disabled' in each_option and each_option['disabled'] %} disabled{% endif -%}
     >
     {%- if channel_options and custom_options_values[unique_id][channel][each_option['id']] is not none -%}

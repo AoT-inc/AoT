@@ -399,13 +399,117 @@ body.aot-map-fullscreen-active .grid-stack-item {
    ========================================================================== */
 
 /* Map Tools Positioning inside Map Container */
+/* 자리(위·좌·우)도 여기서 정한다. 예전에는 세 템플릿이 각자 인라인으로
+   적었고, 그러다 값이 갈렸다 — 지오 설계·일지는 위 10px, 지도 위젯만
+   20px. 기본을 10px 로 두고 다른 자리는 아래 수정자로 말한다. */
 .map-tools-left,
 .map-tools-right {
   position: absolute;
+  top: 10px;
   z-index: 25;
   display: flex;
   flex-direction: column;
   gap: 5px;
+}
+
+.map-tools-left { left: 10px; }
+.map-tools-right { right: 10px; }
+
+/* 위젯 지도는 위쪽에 한 칸 더 띄운다(제목 줄이 있다). */
+.map-tools-inset-lg { top: 20px; }
+
+
+/* ── 설정 모달 안의 작은 지도(map_option_macros) ─────────────────────────
+   장치·함수·트리거 설정 모달 열 곳이 같은 매크로를 불러 쓴다. 그 매크로는
+   지도·도구·검색 상자의 치수를 **전부 인라인 style 로** 적고 있었다(13개).
+   그중 넷은 `#ddd`·`#666` 고정색이었는데, 둘 다 정본 토큰과 값이 같다
+   (`--aot-border-neutral` = #dddddd, `--aot-color-text-secondary`).
+   이 도구 줄은 위쪽 `.tool-group`(29px)보다 한 단 크다 — 모달 안에서
+   손가락으로 누르는 자리라 36px 이다. 그래서 이름을 따로 둔다. */
+.map-option-wrapper {
+  width: 100%;
+  border-radius: var(--aot-radius-sm);
+  overflow: hidden;
+  padding-bottom: var(--aot-space-4);
+}
+
+/* 지도 자체는 껍데기를 가득 채운다. */
+.map-option-canvas {
+  width: 100%;
+  height: 100%;
+  border: 1px solid var(--aot-border-neutral);
+}
+
+.map-option-tools {
+  gap: var(--aot-space-2);
+  z-index: var(--aot-z-fixed-panel);
+}
+
+.map-option-tool-group {
+  display: flex;
+  flex-direction: column;
+  border-radius: var(--aot-radius-sm);
+  overflow: hidden;
+  /* 패널 바탕은 layout 이 실행 중에 채운다(--panel-bg-rgba). 아직 안 채워진
+     순간에는 카드 면으로 선다 — 고정색을 새로 적지 않는다. */
+  background: var(--panel-bg-rgba, var(--aot-surface-card));
+  border: 1px solid var(--aot-border-neutral);
+}
+
+.map-option-tool-group > .btn {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--aot-border-neutral);
+}
+
+.map-option-tool-group > .btn:last-child { border-bottom: none; }
+
+.map-option-tool-group > .btn > i { color: var(--aot-color-text-secondary); }
+
+/* ── 위치 고르기 전용 화면(location_option) ─────────────────────────────
+   지도가 화면 남은 높이를 통째로 쓴다(65px 은 위 도구 줄). */
+.loc-map-stage { height: calc(100vh - 65px); }
+
+.loc-map-canvas {
+  width: 100%;
+  height: 100%;
+}
+
+/* 지도 아래 가운데에 떠 있는 좌표 표시. */
+.loc-coord-readout {
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: var(--aot-z-fixed-panel);
+  padding: var(--aot-space-2) var(--aot-space-4);
+  border-radius: var(--aot-radius-xl);
+  /* 지도 위에 뜨는 패널이라 앱의 패널 바탕(layout 이 실행 중에 채운다)을
+     쓴다 — 새 고정색을 적지 않는다. */
+  background: var(--panel-bg-rgba, var(--aot-surface-card));
+  box-shadow: var(--aot-shadow-sm);
+}
+
+/* GIS 입력 설정의 미리보기 지도. */
+.map-option-section-gap { margin-bottom: var(--aot-space-4); }
+
+.map-option-preview {
+  width: 100%;
+  height: 280px;
+  /* `#eee` 고정색이던 것을 정본 구분선 토큰으로 옮긴다. */
+  border: 1px solid var(--aot-border-neutral);
+  border-radius: var(--aot-radius-md);
+}
+
+/* 주소 검색 상자 — 지도 위에 떠 있지만 상자 자신은 칠하지 않는다. */
+.map-option-search-inner {
+  pointer-events: auto;
+  width: 100%;
+  max-width: 400px;
+  background: transparent;
+  border-radius: var(--aot-radius-xl);
 }
 
 /* Tool Group (Vertical Button Stack) — MapTiler style */
@@ -876,7 +980,7 @@ body.aot-map-fullscreen-active .grid-stack-item {
     
     backdrop-filter: blur(5px);
     -webkit-backdrop-filter: blur(5px);
-    border: 1px solid var(--panel-border, rgba(0,0,0,0.05));
+    border: 1px solid var(--aot-border-light);
     color: var(--aot-color-text-primary, #333);
 
     /* Horizontal Scroll for overflowing Pages */
@@ -938,7 +1042,7 @@ body.aot-map-fullscreen-active .grid-stack-item {
     white-space: nowrap;
     font-size: 0.85em;
     padding: 2px 0 4px;
-    border-bottom: 1px solid var(--panel-border, rgba(0,0,0,0.08));
+    border-bottom: 1px solid var(--aot-border-light);
 }
 .aot-meas-summary-row::-webkit-scrollbar { display: none; }
 /* Summary row only (no measurement items below): drop the divider */
@@ -1078,7 +1182,7 @@ body.aot-map-fullscreen-active .grid-stack-item {
     width: fit-content;
     max-width: 100%;
     justify-content: flex-start;
-    border-top: 1px solid var(--panel-border, rgba(0,0,0,0.08));
+    border-top: 1px solid var(--aot-border-light);
 }
 .aot-meas-dock .aot-meas-summary-value {
     font-size: calc(1.25em * var(--aot-meas-sum-scale, 1));
@@ -1498,7 +1602,7 @@ body.aot-map-fullscreen-active .grid-stack-item {
     max-width: min(260px, calc(100vw - 80px));
     box-sizing: border-box;
     background: var(--panel-bg-rgba, rgba(255, 255, 255, 0.95));
-    border: 1px solid var(--panel-border, rgba(0, 0, 0, 0.08));
+    border: 1px solid var(--aot-border-light);
     border-radius: var(--aot-radius-sm);
     padding: 6px 10px;
     font-size: var(--aot-font-size-2xs);
@@ -1577,7 +1681,7 @@ body.aot-map-fullscreen-active .grid-stack-item {
     right: 10px;
     bottom: 10px;
     background-color: var(--panel-bg-rgba, rgba(255, 255, 255, 0.9));
-    border: 1px solid var(--panel-border, rgba(0,0,0,0.05));
+    border: 1px solid var(--aot-border-light);
     border-radius: var(--aot-radius-lg);
     padding: 6px 12px;
     min-height: 32px;
@@ -1682,7 +1786,7 @@ body.aot-map-fullscreen-active .grid-stack-item {
     max-width: min(100%, 480px);
     min-width: 0;
     padding: 4px 12px;
-    border: 1px solid var(--panel-border, rgba(0, 0, 0, 0.06));
+    border: 1px solid var(--aot-border-light);
     border-radius: var(--aot-btn-pill-radius);
     background: var(--panel-bg-rgba, rgba(255, 255, 255, 0.92));
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);

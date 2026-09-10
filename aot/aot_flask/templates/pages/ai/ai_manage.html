@@ -77,6 +77,26 @@
     .badge-status-pending    { background-color: #ffc107; color: var(--aot-color-text-primary, #333); }
     .badge-status-resolved   { background-color: #28a745; color: var(--aot-color-text-tertiary, white); }
     .badge-status-ignored    { background-color: #6c757d; color: var(--aot-color-text-tertiary, white); }
+    /* ── 인라인에서 걷어 온 것들(2026-09-10) ───────────────────────── */
+    /* 추론 기록 표의 열 배분. */
+    .reasoning-cols col:nth-child(1),
+    .reasoning-cols col:nth-child(3) { width: 20%; }
+    .reasoning-cols col:nth-child(2) { width: 60%; }
+
+    /* 목록이 비었을 때의 안내 상자. */
+    .ai-empty-box { border-radius: var(--aot-radius-xl); }
+
+    /* 로그·원문은 줄바꿈을 그대로 살린다. */
+    .ai-pre-wrap { white-space: pre-wrap; }
+
+    /* 사람이 고쳐 준 내용은 읽기 전용으로, 경고 색 면 위에 앉힌다. */
+    #detail_user_correction { background-color: var(--aot-tint-warning-bg); }
+
+    /* 권장 사항 카드만 왼쪽 띠 색이 다르다.
+       ⚠ 이 `#17a2b8` 은 정본 토큰(--aot-color-info = #029ACF)과 값이 달라
+       그대로 옮겼다. 위 `.pattern-card` 의 `#fcc419` 와 함께 settings/custom_ui
+       밖의 색이라, 색 정리 때 두 개를 같이 봐야 한다. */
+    .pattern-card-info { border-left-color: #17a2b8; }
 </style>
 {% endblock %}
 
@@ -112,10 +132,8 @@
             <div class="status-card p-0 overflow-hidden">
               <div class="table-responsive">
                 <table class="table table-hover mb-0">
-                    <colgroup>
-                        <col style="width: 20%">
-                        <col style="width: 60%">
-                        <col style="width: 20%">
+                    <colgroup class="reasoning-cols">
+                        <col><col><col>
                     </colgroup>
                     <thead class="thead-light">
                         <tr>
@@ -141,7 +159,7 @@
               </div>
             </div>{# /.status-card #}
             {% else %}
-            <div class="inactive-background text-center py-5" style="border-radius: var(--aot-radius-xl);">
+            <div class="inactive-background text-center py-5 ai-empty-box">
                 <p class="text-muted mb-0">{{ _('No reasoning history yet.') }}</p>
             </div>
             {% endif %}
@@ -296,11 +314,11 @@
                             {% if p3 is iterable and p3 is not string %}
                                 {% for log in p3 %}
                                     <div class="mb-2 pb-1 {% if not loop.last %}border-bottom{% endif %}">
-                                        <pre class="mb-0 small" style="white-space: pre-wrap;">{{ log }}</pre>
+                                        <pre class="mb-0 small ai-pre-wrap">{{ log }}</pre>
                                     </div>
                                 {% endfor %}
                             {% else %}
-                                <pre class="mb-0 small" style="white-space: pre-wrap;">{{ p3 }}</pre>
+                                <pre class="mb-0 small ai-pre-wrap">{{ p3 }}</pre>
                             {% endif %}
                         </div>
                     </div>
@@ -365,7 +383,7 @@
                     </div>
                 </div>
                 <div class="aot-modal-group-title">{{ _('User Correction') }}</div>
-                <textarea class="form-control border-warning" id="detail_user_correction" rows="3" readonly style="background-color: var(--aot-tint-warning-bg);"></textarea>
+                <textarea class="form-control border-warning" id="detail_user_correction" rows="3" readonly></textarea>
                 <div class="d-flex justify-content-end mt-4">
                     <button type="button" class="btn btn-secondary aot-pill-btn mr-2" data-dismiss="modal">{{ _('Close') }}</button>
                     <button type="button" class="btn btn-primary aot-pill-btn" onclick="addToKnowledge()">{{ _('Apply to Knowledge') }}</button>
@@ -407,7 +425,7 @@ async function loadPatterns() {
         if (data.status === 'success') {
             let html = `<div class="col-md-4 mb-3"><div class="pattern-card"><h6>{{ _('Total Pending') }}</h6><h3>${data.summary.total_pending}</h3></div></div>`;
             if (data.patterns.recommended_actions) {
-                html += `<div class="col-md-8 mb-3"><div class="pattern-card" style="border-left-color: #17a2b8;"><h6>{{ _('Recommendations') }}</h6><ul class="pl-3 mb-0">${data.patterns.recommended_actions.slice(0, 2).map(a => `<li>${a}</li>`).join('')}</ul></div></div>`;
+                html += `<div class="col-md-8 mb-3"><div class="pattern-card pattern-card-info"><h6>{{ _('Recommendations') }}</h6><ul class="pl-3 mb-0">${data.patterns.recommended_actions.slice(0, 2).map(a => `<li>${a}</li>`).join('')}</ul></div></div>`;
             }
             $('#patterns-container').html(html);
         }

@@ -659,10 +659,11 @@
      칸보다 굵어 서로 붙어 한 덩어리로 뭉갠다(실측: 칸 폭 10.3px). */
   /* 국소 오버라이드(의도) */
   --aot-viz-range-bar: var(--aot-viz-track-h);
+  --aot-viz-range-h: 64px;
 }
 .aot-viz--range .aot-viz-plot {
   position: relative;
-  height: var(--aot-viz-range-h, 64px);
+  height: var(--aot-viz-range-h);
   /* 눈금 글자가 앉을 왼쪽 자리. 글자를 트랙 위에 겹치면 값을 가린다. */
   padding-left: 2.2em;
 }

@@ -25,8 +25,8 @@
     (.aot-w-title/.aot-w-body …)가 정한다 — 위젯마다 따로 정하지 않는다. -#}
 <div class="aot-modal-option-row">
   <label class="aot-modal-option-label" for="enable_drag_handle_{{each_widget.unique_id}}">{{form_base.enable_drag_handle.label.text}}</label>
-  <div class="aot-modal-option-control" style="display: flex; align-items: center;">
-    <label class="btn-toggle" style="margin-bottom: 0;">
+  <div class="aot-modal-option-control">
+    <label class="btn-toggle">
       <input id="enable_drag_handle_{{each_widget.unique_id}}" class="btn-toggle-input" name="enable_drag_handle" type="checkbox" value="y"{% if each_widget.enable_drag_handle %} checked{% endif %}>
       <span class="btn-toggle-slider">
         <span class="btn-toggle-thumb"></span>
@@ -42,8 +42,8 @@
     깔기 위한 손잡이다(dashboard-widget-live-preview.js). -#}
 <div class="aot-modal-option-row">
   <label class="aot-modal-option-label" for="mobile_full_width_{{each_widget.unique_id}}">{{form_base.mobile_full_width.label.text}}</label>
-  <div class="aot-modal-option-control" style="display: flex; align-items: center;">
-    <label class="btn-toggle" style="margin-bottom: 0;">
+  <div class="aot-modal-option-control">
+    <label class="btn-toggle">
       <input id="mobile_full_width_{{each_widget.unique_id}}" class="btn-toggle-input" name="mobile_full_width" type="checkbox" value="y" data-aot-mobile-full-width="{{each_widget.unique_id}}"{% if each_widget.mobile_full_width %} checked{% endif %}>
       <span class="btn-toggle-slider">
         <span class="btn-toggle-thumb"></span>

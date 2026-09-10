@@ -5,6 +5,7 @@
 {% block title %} - {{dict_translation['method']['title']}}{% endblock %}
 
 {% block head %}
+  <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/pages/method.css') }}" />
   <script src="{{ url_for('static', filename='js/vendor/user_js/highcharts-9.1.2.js') }}"></script>
   {% if current_user.theme in dark_themes %}
     <script src="{{ url_for('static', filename='js/vendor/user_js/dark-unica-custom.js') }}"></script>
@@ -25,7 +26,7 @@
 
     <a href="/method" class="btn aot-pill-btn" role="button">← {{_('Return to Method Management')}}</a>
 
-    <div style="clear: both; padding:0.5em 0;"></div>
+    <div class="aot-vspace"></div>
 
     <div class="aot-page-section">
       <div>
@@ -36,7 +37,7 @@
       {{form_mod_method.csrf_token}}
       {{form_mod_method.method_id(class_='form-control', value=method.unique_id)}}
 
-      <div class="row small-gutters" style="padding: 0.7em">
+      <div class="row small-gutters mb-row-pad">
         <div class="col-auto">
           {{form_mod_method.name.label(class_='control-label')}}
           <div>
@@ -44,7 +45,7 @@
           </div>
         </div>
         <div class="col-auto">
-          <label style="padding-top: 1em"></label>
+          <label class="mb-label-spacer"></label>
           <div>
             {{form_mod_method.rename(class_='btn aot-pill-btn aot-pill-btn-primary')}}
           </div>
@@ -78,12 +79,12 @@
 
     {%- if method.method_type != "Cascade" -%}
       <div class="row">
-        <div class="col-sm-12" id="container" style="padding-top: 1.5em; height: 400px; width: 100%;"></div>
+        <div class="col-sm-12" id="container"></div>
       </div>
     {%- endif -%}
 
     {%- if method.method_type == "Cascade" -%}
-      <div class="row small-gutters" style="padding: 0.7em">
+      <div class="row small-gutters mb-row-pad">
         <div class="col-sm-12">
           {{_('Method called to calculate this method value')}}:
         </div>
@@ -96,7 +97,7 @@
         {{form_mod_method.method_id(class_='form-control', value=method.unique_id)}}
         {{form_mod_method.method_data_id(class_='form-control', value=each_method.unique_id)}}
 
-        <div class="row align-items-end small-gutters" style="padding: 0.7em">
+        <div class="row align-items-end small-gutters mb-row-pad">
 
           <div class="col-auto">
             {%- for linked_method in cascade_method if linked_method.unique_id == each_method.linked_method_id -%}
@@ -116,8 +117,8 @@
 
     {%- if method_setpoint -%}
 
-      <div class="row small-gutters" style="margin: 1em 0 0 0; padding: 1em; border: 1px solid var(--aot-border-neutral); border-radius: var(--aot-radius-lg);">
-        <div class="col-12" style="padding-bottom: 1em">
+      <div class="row small-gutters mb-box">
+        <div class="col-12 mb-box-head">
           <h3>{{_('Setpoint Tracking')}}</h3>
         </div>
 
@@ -129,7 +130,7 @@
         {{form_mod_method.method_id(class_='form-control', value=method.unique_id)}}
         {{form_mod_method.method_data_id(class_='form-control', value=each_method.unique_id)}}
 
-        <div class="row align-items-end small-gutters" style="padding: 0.7em">
+        <div class="row align-items-end small-gutters mb-row-pad">
 
           {% if method.method_type == "Date" -%}
 

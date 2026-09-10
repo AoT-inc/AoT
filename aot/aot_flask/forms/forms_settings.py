@@ -50,6 +50,11 @@ THEME_COLOR_FIELDS = [
     'brand_primary', 'brand_secondary', 'brand_accent',
     'text_color_primary', 'text_color_secondary', 'text_color_tertiary',
     'bd_primary', 'bd_secondary',
+    # 2026-09-10 컨트롤 면. 그전까지 --aot-surface-control 이
+    # --aot-surface-body(bd_secondary)를 그대로 따라가, 바닥 위에 놓인
+    # 셀렉트·입력칸이 면과 **같은 값**이라 통째로 사라졌다. 값을
+    # 나눌 수 있어야 고쳐지는 문제라 필드를 분가시킨다.
+    'bd_control',
     'bg_active', 'bg_inactive', 'bg_warning',
     'bg_on', 'bg_off', 'bg_pending', 'tint_warning_bg', 'tint_warning_fg',
     # 2026-09-09 무응답(comm_fault)을 상태 계열로 옮긴다. 그전까지 이 자리가
@@ -113,6 +118,11 @@ LEGACY_THEME_FIELDS_DROP = {
 # 그 값을 손수 정해 둔 설치가 분가하면서 색을 잃지 않게 한 번 물려준다.
 THEME_FIELD_SEED_FROM = {
     'bg_fault': 'tint_danger_bg',
+    # bd_control(컨트롤 면)은 **일부러 여기 넣지 않는다.** 다른 분가와 달리
+    # 물려받을 값(bd_secondary)이 곧 고장이기 때문이다 — 두 값이 같아서
+    # 바닥 위 컨트롤이 사라진 것이 분가의 이유였다. 물려주면 기존 설치는
+    # 고장난 채로 남는다. 값이 없으면 routes_general.custom_css 가 폼
+    # 기본값(#F3F6F5)으로 떨어뜨리므로, 손대지 않은 설치가 고쳐진다.
 }
 
 
@@ -204,7 +214,11 @@ class SettingsGeneral(FlaskForm):
     landing_page = StringField(lazy_gettext('Landing Page'))
     index_page = StringField(lazy_gettext('Index Page'))
     language = StringField(lazy_gettext('Language'))
-    rpyc_timeout = StringField(lazy_gettext('Pyro Timeout'))
+    # 초 단위 정수다. 값은 그대로 문자열로 오고 DB 컬럼(Integer)이 받으므로
+    # 저장 경로는 그대로다 — 바뀌는 것은 화면에 나오는 입력 종류뿐이다
+    # (폰에서 숫자 자판이 뜨고, 옵션 행의 컨트롤 폭 사다리가 96px 로 잡는다).
+    rpyc_timeout = StringField(
+        lazy_gettext('Pyro Timeout'), widget=NumberInput(step='1', min=1))
     daemon_debug_mode = BooleanField(lazy_gettext('Enable Daemon Debug Logging'))
     force_https = BooleanField(lazy_gettext('Force HTTPS'))
     hide_success = BooleanField(lazy_gettext('Hide Success Messages'))
@@ -229,7 +243,9 @@ class SettingsGeneral(FlaskForm):
     output_stats_cost = DecimalField(
         lazy_gettext('Cost per kWh'), widget=NumberInput(step='any'))
     output_stats_currency = StringField(lazy_gettext('Currency Unit'))
-    output_stats_day_month = StringField(lazy_gettext('Base Day of Month'))
+    # 월 중 며칠인가 — 1~31 이다.
+    output_stats_day_month = StringField(
+        lazy_gettext('Base Day of Month'), widget=NumberInput(step='1', min=1, max=31))
     output_usage_report_gen = BooleanField(lazy_gettext('Generate Usage/Cost Report'))
     output_usage_report_span = StringField(lazy_gettext('Report Generation Period'))
     output_usage_report_day = IntegerField(
@@ -712,6 +728,7 @@ class SettingsCustomUI(FlaskForm):
     # 바닥은 밝기 차이만으로 구분되는데, 흰색과 명도차가 3 정도라 그 역할을
     # 못 했다 — 선이 있었기 때문에 여태 드러나지 않았을 뿐이다.
     bd_secondary = StringField(lazy_gettext('BG Secondary'), default=THEME_DEFAULTS.get('bd_secondary', '#e0e6e3'), render_kw={"type": "color"})
+    bd_control = StringField(lazy_gettext('Control Surface'), default=THEME_DEFAULTS.get('bd_control', '#F3F6F5'), render_kw={"type": "color"})
     bg_active = StringField(lazy_gettext('BG Active'), default=THEME_DEFAULTS.get('bg_active', '#D1D5D5'), render_kw={"type": "color"})
     bg_inactive = StringField(lazy_gettext('BG Inactive'), default=THEME_DEFAULTS.get('bg_inactive', '#F3F6F5'), render_kw={"type": "color"})
     # 장치 offline/응답없음(comm_fault) 카드 배경 — 기존 --bg-pause/--aot-bg-pause

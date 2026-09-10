@@ -111,6 +111,18 @@
   #modal_fac_step .btn-group > .btn:not(:last-child) {
     border-top-right-radius: 0; border-bottom-right-radius: 0;
   }
+  /* 바깥 두 모서리는 알약이다 — 안쪽만 각지게 두면 묶음 전체가 하나의
+     알약으로 읽힌다. 예전에는 바깥도 radius-sm 이라 각진 상자였다. */
+.container .btn-group > .btn:first-child,
+  #modal_fac_step .btn-group > .btn:first-child {
+    border-top-left-radius: var(--aot-btn-pill-radius);
+    border-bottom-left-radius: var(--aot-btn-pill-radius);
+  }
+.container .btn-group > .btn:last-child,
+  #modal_fac_step .btn-group > .btn:last-child {
+    border-top-right-radius: var(--aot-btn-pill-radius);
+    border-bottom-right-radius: var(--aot-btn-pill-radius);
+  }
 
   /* Uniform button typography — one weight + size family for every .btn on the
      page, so action buttons stop drifting between Bootstrap's 0.875rem and the
@@ -197,7 +209,7 @@
     padding: 0;
     border: 1px solid var(--aot-border-neutral);
     border-radius: var(--aot-btn-radius-sm, 6px);
-    background: var(--aot-surface-input);
+    background: var(--aot-surface-control);
     cursor: pointer;
   }
 
@@ -287,26 +299,27 @@
 
   /* Type glyph ([F], [T]…) — unreadable shorthand, and the tab already says
      which type this is. */
-  #fi-icon { display: none; }
 
   /* ── Segmented control ─────────────────────────────────────────────────────
      Page-owned class rather than Bootstrap's .btn-outline-*: those paint blue
      from bootstrap.min.css on the first frame and only turn brand-green once
      this (much later) stylesheet arrives, which read as a colour flash on load.
      Owning the class means there is no default to repaint. */
+  /* 고르는 것도 누르는 것이다 — 알약에 면을 채우고 테두리는 두지 않는다
+     (§2-2). 예전에는 흰 면 + 1px 테두리라 같은 화면의 알약 단추·셀렉트와
+     혼자 각졌다. 고른 칸만 브랜드 면으로 채워 구분한다. */
   .fac-seg-btn {
-    background: var(--aot-surface-card);
-    border: 1px solid var(--aot-border-neutral);
-    color: var(--aot-color-text-secondary);
+    background: var(--aot-input-bg);
+    border: 0;
+    color: var(--aot-text-main);
     font-weight: 600;
   }
   .fac-seg-btn:hover {
-    border-color: var(--aot-color-brand-primary);
     color: var(--aot-color-brand-primary);
   }
   .fac-seg-btn.active {
     background: var(--aot-btn-bg-primary);
-    border-color: var(--aot-btn-bg-primary);
+    border: 0;
     color: var(--aot-btn-color-primary);
   }
 
@@ -371,6 +384,11 @@
     background: var(--aot-surface-body);
     white-space: nowrap;
   }
+  /* 칸 안의 입력은 제 칸을 넘지 않는다. `<input type=text>` 는 기본 폭이
+     size=20(≈143px)이라, `table-layout: fixed` 로 120px 이 된 이름 열에서
+     31px 넘쳐 나갔다(실측). 넓힐 때는 그대로 두고 좁을 때만 줄인다. */
+  .aot-module-table.fac-table td .aot-modern-input,
+  .aot-module-table.fac-table td .aot-modern-select { max-width: 100%; }
   .aot-module-table.fac-table td:last-child { width: auto; text-align: left; }
   .fac-table tr:last-child td { border-bottom: none; }
   .fac-table-empty { text-align: center; color: var(--aot-color-text-secondary); padding: 16px 8px; }
@@ -459,14 +477,19 @@
     opacity: 0.9;
   }
   .zone-boundary:hover::before { opacity: 1; }
-  /* zone tint palette — 전역 measurement band 팔레트(--aot-band-1..5,
-     aot-theme-variables.css) + --aot-color-llm 을 옅게(tint) 순환 사용 */
-  .zone-c0 { background: color-mix(in srgb, var(--aot-band-1) 18%, transparent); }
-  .zone-c1 { background: color-mix(in srgb, var(--aot-band-3) 18%, transparent); }
-  .zone-c2 { background: color-mix(in srgb, var(--aot-band-4) 22%, transparent); }
-  .zone-c3 { background: color-mix(in srgb, var(--aot-band-5) 18%, transparent); }
-  .zone-c4 { background: color-mix(in srgb, var(--aot-color-llm) 16%, transparent); }
-  .zone-c5 { background: color-mix(in srgb, var(--aot-band-2) 20%, transparent); }
+  /* 구역 칸이 말하는 것은 "이 동들이 한 구획" 뿐이다 — **이웃끼리 다르기만
+     하면 된다.** 예전에는 `--aot-band-1..5`(측정값 단계: 차가움→적정→뜨거움)
+     와 `--aot-color-llm` 을 빌려 구역 번호에 썼다. 그 색들은 custom_ui 필드가
+     맞지만 뜻이 다른 계열이라, 운영자가 "적정" 색을 고치면 엉뚱하게 구역
+     둘째 칸이 따라 움직였다(§3-3 계열을 넘나들지 않는다).
+     브랜드색 두 농도로 번갈아 칠해 이웃만 가른다 — 색이 여섯에서 없어진
+     셈이고, 구역이 몇 개든 인접한 둘은 늘 다르다. */
+  .zone-c0,
+  .zone-c2,
+  .zone-c4 { background: color-mix(in srgb, var(--aot-color-brand-primary) 8%, transparent); }
+  .zone-c1,
+  .zone-c3,
+  .zone-c5 { background: color-mix(in srgb, var(--aot-color-brand-primary) 20%, transparent); }
   .zone-name-list { display: flex; flex-direction: column; gap: 4px; }
   .zone-name-row { display: flex; align-items: center; gap: 8px; }
   .zone-name-row .zone-chip {
@@ -570,6 +593,18 @@
     --aot-common-control-width: clamp(150px, calc(var(--aot-wdrawer-w, 520px) - 330px), 190px);
   }
 
+  /* 다만 **숫자 칸은 그렇게 넓을 이유가 없다.** 이 드로어에서 다루는 수는
+     길어야 세 자리다 — 동 수, 각도 0–359, 미터 값(11.5). 190px 짜리 칸에
+     세 글자가 앉으면 입력칸이 빈 채로 길게 늘어져 보인다.
+     공용 규칙에 숫자 전용 폭(--aot-ctrl-w-num, 96px)이 이미 있지만
+     `@media (max-width: 768px)` 안에 있어 넓은 화면에서는 걸리지 않고,
+     걸리더라도 위 id 규칙(1-1-0)이 그것(0-3-0)을 덮는다. 여기서 같은
+     특이도로 다시 말한다. 컨트롤은 행 오른쪽 끝에 붙으므로 오른쪽
+     정렬선은 그대로다. */
+  #modal_fac_step .aot-modal-option-row:has(> .aot-modal-option-control > input[type="number"]):not(:has(> .aot-modal-option-control > * + *)) {
+    --aot-common-control-width: var(--aot-ctrl-w-num);
+  }
+
   /* Dense JS-built number fields (envelope layers, vent stages, zone names) get
      an explicit narrow width from the script; the shared pill's side padding
      overflows them, so trim it for just those inputs. */
@@ -585,23 +620,24 @@
     padding-right: 0.45rem !important;
   }
 
-  /* Narrow drawer / phone: stack the row so long labels stop squeezing inputs.
-     The shared row/control rules use !important, so these have to as well. */
+  /* 좁은 화면에서도 **한 줄에 [제목][컨트롤]** 이다.
+     예전에는 여기서 행을 세로로 쌓았다 — "긴 제목이 입력칸을 짓누른다" 는
+     이유였는데, 그 짓누름은 컨트롤이 남는 폭을 나눠 갖던 탓이었다. 컨트롤이
+     제 폭을 갖게 된 뒤로는(숫자 96px, 셀렉트 150–190px, 토글 60px) 제목이
+     길면 제목이 줄바꿈될 뿐 입력칸은 그대로다.
+     쌓으면 한 항목이 두 줄을 먹어 훑기 어렵고, 컨트롤을 행 전체 폭으로 펴는
+     바람에 "일본" 한 단어짜리 셀렉트가 306px 알약이 되기도 했다(실측 375px).
+     공용 행/컨트롤 규칙이 !important 라 여기서도 같은 무게로 말한다. */
   @media (max-width: 620px) {
-    #modal_fac_step .aot-modal-option-row {
-      flex-direction: column;
-      align-items: stretch;
-      gap: 4px;
-    }
     #modal_fac_step .aot-modal-option-label {
       max-width: none;
-      flex: 0 0 auto;
+      flex: 0 1 auto;
     }
     #modal_fac_step .aot-modal-option-control {
-      flex: 1 1 auto !important;
-      width: 100% !important;
+      flex: 0 0 auto !important;
+      width: var(--aot-common-control-width) !important;
+      max-width: 100% !important;
       min-width: 0 !important;
-      justify-content: flex-start;
     }
   }
   .fac-step-footer { justify-content: flex-start; gap: 8px; }
@@ -678,6 +714,7 @@
     #facility-3d-hint { display: none !important; }
     .fac-rail { padding: 3px; }
     #facility-3d-tools .tool-btn,
+    #facility-3d-tools .fly-sec select,
     #facility-3d-tools .rail-btn { font-size: var(--aot-font-size-xs); padding: 4px 5px; }
 
     /* Bottom sheet. The modal layer spans the viewport, so it must not swallow
@@ -789,10 +826,26 @@
   /* Shared table (.aot-module-table) gives width/collapse/row rules. Two things
      differ here: the drawer is narrow so the cells are tighter, and the last
      column is data — not the settings pages' 160px action column. */
+  /* `.aot-module-table` 의 기본(width·border-collapse)은 aot-settings.css 에
+     있는데, 그 시트는 설정 전용 레이아웃(layout-settings.html)에서만 실린다.
+     이 페이지는 layout.html 을 쓰므로 표가 `width: auto` 로 남아 카드를 채우지
+     못했다(실측 데스크톱 1061px: 표 391px / 카드 488px — 오른쪽이 100px 가까이
+     비었다). 좁은 화면에서는 반대로 쥐어짜였다. 여기서 필요한 몫만 다시 적는다.
+     `.fac-table` 은 이미 아래에서 제 폭을 정하고 있다. */
+  .aot-module-table.integ-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
   .aot-module-table.integ-table td,
   .aot-module-table.integ-table th { padding: 3px 6px; font-size: var(--aot-font-size-sm); }
   .aot-module-table.integ-table th { text-align: left; }
   .aot-module-table.integ-table td { vertical-align: top; }
+  /* 한글은 낱글자로 끊지 않는다. 열이 좁아지면 브라우저가 "가지배관" 을
+     글자마다 잘라 한 줄에 한 자씩 세웠다(실측: 배관 열 27px, 행 높이 82px).
+     `keep-all` 은 낱말 안에서 끊지 않으므로 열이 제 폭을 요구한다. 그래도
+     좁으면 감싼 `.aot-table-scroll` 이 가로로 흘린다. */
+  .aot-module-table.integ-table th,
+  .aot-module-table.integ-table td { word-break: keep-all; }
   .aot-module-table.integ-table td:last-child { width: auto !important; text-align: left; }
   .integ-slot { color: var(--aot-color-text-secondary); font-size: var(--aot-font-size-sm); }
   .integ-empty { color: var(--aot-color-text-secondary); font-size: var(--aot-font-size-sm); padding: 0.4rem 0; }
@@ -922,7 +975,14 @@
     gap: 4px;
     padding: 3px 4px 5px;
   }
-  #facility-3d-tools .tool-btn {
+  /* 도구 팔레트의 셀렉트는 이 팔레트의 버튼과 같은 얼굴을 쓴다. 앱의 알약
+     셀렉트(32px·9999px)를 여기 들이면 4px 모서리 버튼들 사이에서 혼자 크고
+     둥글어진다 — 이 패널은 3D 뷰 위에 얹는 조밀한 도구 판이라 자기 치수를
+     따로 갖는다. 예전에는 넷 다 클래스가 없어 **브라우저 기본 셀렉트**가
+     그대로 나왔고(회색 화살표·시스템 모서리), 치수는 템플릿 인라인
+     `style="font-size:…;padding:1px 4px"` 이 정하고 있었다. */
+  #facility-3d-tools .tool-btn,
+  #facility-3d-tools .fly-sec select {
     border: 1px solid var(--aot-border-neutral);
     background: var(--aot-surface-card);
     color: var(--aot-color-text-primary);
@@ -937,6 +997,98 @@
     white-space: nowrap;
     width: 100%;
   }
+  /* 버튼은 rail 한 칸을 채우지만(width:100%), 셀렉트는 라벨 옆에 나란히 서므로
+     제 글자만큼만 차지한다. */
+  #facility-3d-tools .fly-sec select {
+    width: auto;
+    min-width: 0;
+    /* 높이는 입력 구획 공통값을 읽는다(아래 `--fac-tool-h`).
+       ⚠ 캐럿은 브라우저 것을 그대로 쓴다(appearance 를 끄지 않는다). 이만한
+       칸에 우리 화살표를 얹으려면 오른쪽 여백을 2rem 씩 비워야 해서, 도구
+       판에서는 글자가 들어갈 자리가 남지 않는다. */
+    height: var(--fac-tool-h);
+    padding: 0 6px;
+  }
+
+  /* ── 도구 판의 입력 구획 ──────────────────────────────────────────────
+     "관수" 판에는 버튼 줄 말고 **값을 적는 구획**이 넷 있다(자동 배관 생성 ·
+     자동 관수기 배치 · 밸브 추가 · 단위 삭제). 이 넷의 치수·글자·줄 배치가
+     전부 템플릿 인라인 style 로 적혀 있었다 — 같은 선언이 라벨에 아홉 번,
+     단위에 여섯 번, 버튼에 여섯 번, 줄에 여섯 번 되풀이됐다.
+     여기로 옮긴다. 값은 옮기기 전 그대로다. */
+  .fac-flyout .fly-sec-form {
+    align-items: flex-start;
+    padding: 6px 8px;
+  }
+  .fac-flyout .fly-sec-pad { padding: 6px 8px; }
+  /* 구획 사이 구분선. 첫 입력 구획(자동 배관 생성)에는 붙이지 않는다 —
+     바로 위 버튼 줄과 한 덩어리로 읽히는 자리다. */
+  .fac-flyout .fly-sec-divided { border-top: 1px solid var(--aot-border-light); }
+
+  /* 입력 구획의 컨트롤은 **한 높이**로 선다. 예전에는 같은 줄에서 버튼 18 ·
+     셀렉트 20 · 숫자칸 28 로 셋 다 달랐다(숫자칸은 크롬이 스피너 때문에
+     제 최소 높이를 갖는다). 값은 셀렉트가 저절로 서던 20px 을 쓴다. */
+  #facility-3d-tools { --fac-tool-h: 20px; }
+
+  /* 구획 안의 줄: [라벨][값][단위] … 가 가로로 서고 좁아지면 접힌다. */
+  #facility-3d-tools .fly-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  /* 버튼만 나란히 서는 줄은 더 좁게 붙인다. */
+  #facility-3d-tools .fly-row-btns {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-wrap: wrap;
+  }
+
+  #facility-3d-tools .fly-label {
+    font-size: var(--aot-font-size-xs);
+    font-weight: 600;
+    color: var(--aot-color-text-secondary);
+  }
+  /* 값 뒤에 붙는 단위(m · ° · L/h)는 라벨이 아니라 값의 꼬리라 굵게 하지 않는다. */
+  #facility-3d-tools .fly-unit {
+    font-size: var(--aot-font-size-xs);
+    color: var(--aot-color-text-secondary);
+  }
+
+  /* 숫자칸. 예전에는 칸마다 40·44·46·48·50·52px 여섯 가지 폭이 인라인으로
+     적혀 있었는데, 그 차이에 규칙이 없었다(모두 네 글자 이하를 받는 칸이다).
+     제일 넓던 52px 하나로 모은다 — 어느 칸도 지금보다 좁아지지 않는다. */
+  #facility-3d-tools .fly-sec input[type="number"] {
+    width: 52px;
+    height: var(--fac-tool-h);
+    font-size: var(--aot-font-size-xs);
+    padding: 2px 6px;
+    /* 셀렉트와 같은 얼굴을 준다. 앱의 입력칸은 밑줄인데(쓰는 것), 이 칸들은
+       밑줄조차 그려지지 않아 **글자만 떠 있었다** — 이 판은 `.frame-aot`
+       바깥이라 밑줄 규칙이 닿지 않는다. 옆의 셀렉트·버튼이 전부 상자인
+       자리에서 값 칸만 아무 테두리가 없으면 어디를 눌러야 하는지 알 수 없다. */
+    border: 1px solid var(--aot-border-neutral);
+    border-radius: var(--aot-radius-xs);
+    background: var(--aot-surface-card);
+    color: var(--aot-color-text-primary);
+  }
+
+  /* 입력 구획의 버튼은 rail 버튼보다 납작하다(줄이 여럿 쌓이는 자리라
+     세로를 아낀다). rail 쪽 `5px 6px` 과 구분되는 유일한 값이다. */
+  #facility-3d-tools .fly-sec-form .tool-btn,
+  #facility-3d-tools .fly-sec-pad .tool-btn {
+    height: var(--fac-tool-h);
+    padding: 0 7px;
+  }
+
+  /* 단위 삭제 모드가 켜졌을 때만 보이는 안내(JS 가 display 로 여닫는다). */
+  #facility-3d-tools .fly-note-warn {
+    font-size: var(--aot-font-size-xs);
+    color: var(--aot-tint-warning-fg);
+    margin-left: 8px;
+  }
+
   #facility-3d-tools .tool-btn:hover { background: var(--aot-surface-body); border-color: var(--aot-color-brand-primary); color: var(--aot-color-brand-primary); }
   #facility-3d-tools .tool-btn.active { background: var(--aot-btn-bg-primary); color: var(--aot-btn-color-primary); border-color: var(--aot-btn-bg-primary); }
   /* Delete-unit mode active: danger action, so red emphasis */
@@ -1182,6 +1334,39 @@
     border-radius: var(--aot-radius-md) var(--aot-radius-md) 0 0;
     border-bottom: none;
   }
+  /* 두 스테이지 헤더(지도·3D)의 오른쪽 동작 묶음. 같은 선언이 템플릿 인라인에
+     두 번 적혀 있었다. */
+  #facility-map-header .fac-head-actions,
+  #facility-3d-header .fac-head-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  /* 3D 모델이 외부 자산에 연결돼 있을 때만 보이는 배지(JS 가 여닫는다). */
+  #facility-3d-asset-badge {
+    font-size: var(--aot-font-size-xs);
+    font-weight: 600;
+    background: var(--aot-tint-info-bg);
+    color: var(--aot-tint-info-fg);
+    padding: 0.15rem 0.5rem;
+    border-radius: var(--aot-radius-md);
+  }
+
+  /* 뷰포트 한가운데의 자산 로딩 안내. */
+  #facility-3d-viewport .aot-3d-asset-status {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: var(--aot-font-size-sm);
+    color: var(--aot-color-text-secondary);
+    pointer-events: none;
+  }
+
+  /* ⚠ 아래 자리 값은 예전에 템플릿 인라인(`bottom:8px;right:12px`)이 덮고
+     있어서, 이 규칙이 적힌 대로 그려진 적이 없다. 인라인을 걷어내면서
+     여기 값이 제자리를 찾는다. */
   #facility-3d-hint {
     position: absolute;
     bottom: 12px; right: 16px;
@@ -1225,3 +1410,160 @@
 .fac-catalog-item:hover { border-color: var(--aot-color-brand-primary); }
 .fac-catalog-item-text { flex: 1; font-size: var(--aot-font-size-base); }
 .fac-catalog-item-text small { color: var(--aot-color-text-secondary); }
+
+/* ── 피복 레이어 ─────────────────────────────────────────────────────────
+   항목은 같은 카드의 환기·커튼과 똑같이 `.aot-modal-option-row` 로 선다.
+   여기서 정할 것은 켰을 때 열리는 **세부 줄 묶음**뿐이다. */
+
+/* 세부는 한 칸 들여쓴다 — 같은 탭의 `#outer-side-vent-detail` 과 같은 값.
+   묶음의 마지막 줄 아래에는 선을 긋지 않는다(공용 규칙이 카드 직계 자식만
+   보므로 여기서 한 번 더 말한다). */
+.env-layer-detail,
+.fac-detail {
+  padding-left: var(--aot-space-2);
+}
+.env-layer-detail > .aot-modal-option-row:last-child,
+.fac-detail > .aot-modal-option-row:last-child {
+  border-bottom: none;
+}
+
+/* 어느 벽인가 — 체크박스 넷은 공용 컨트롤 칸(160px)에 안 들어가 두 줄로
+   접혔다(실측: "X− X+ Y+" 다음 줄에 "Y−"). 이 줄만 칸을 늘린다. */
+.env-layer-detail .aot-modal-option-row:has(.env-layer-sides) .aot-modal-option-control {
+  width: auto;
+  flex: 1 1 auto;
+  justify-content: flex-end;
+}
+
+.env-layer-sides {
+  display: flex;
+  gap: var(--aot-space-3);
+  align-items: center;
+  flex-wrap: wrap;
+}
+.env-layer-sides label {
+  display: flex;
+  align-items: center;
+  gap: var(--aot-space-1);
+  margin: 0;
+  font-size: var(--aot-font-size-sm);
+  cursor: pointer;
+}
+
+/* ── 설비 카드 ───────────────────────────────────────────────────────────
+   외피 레이어 줄과 같은 규약이다 — 이미 흰 카드 안이므로 또 칠하지 않고
+   선으로만 나눈다. 예전에는 JS 가 인라인으로 테두리 상자를 그렸다. */
+.act-card {
+  padding: var(--aot-space-3) 0;
+  border-bottom: 1px solid var(--aot-border-light);
+}
+.act-card:last-child { border-bottom: none; }
+
+.act-card-head {
+  display: flex;
+  align-items: center;
+  gap: var(--aot-space-2);
+  margin-bottom: var(--aot-space-1);
+}
+.act-card-name {
+  font-weight: 700;
+  font-size: var(--aot-font-size-sm);
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.act-card-remove { flex: 0 0 auto; }
+
+/* ── 연결 탭 ─────────────────────────────────────────────────────────────
+   `table-layout: fixed` + `width: 100%` 는 좁은 화면에서 **줄어들기만 한다**
+   (aot-settings.css 의 같은 주석 참고). 이 드로어의 표 폭은 310px 인데,
+   날씨 표는 고정 열이 110+160+40 = 310 이라 "Input 채널" 열이 폭 0 으로
+   찌부러져 글자가 넘쳤고(실측), 그룹 표는 6열 중 고정 220 을 뺀 90px 을
+   세 열이 나눠 가져 머리글끼리 겹쳤다. 최소 폭을 주고 가로로 스크롤한다.
+   값: 날씨 = 110+160+140(채널)+40, 그룹 = 110x3+110(모드)+70+40. */
+.aot-table-scroll .fac-table-weather:has(tr[data-wb-id])    { min-width: 450px; }
+.aot-table-scroll .fac-table-groups:has(tr[data-group-id]) { min-width: 550px; }
+
+/* 다만 **자료가 있을 때만** 넓힌다. 빈 상태 문구는 열을 가로지르는 한 칸이라,
+   표를 늘리면 그 문구까지 450px 로 늘어나 보이는 폭(296px) 밖으로 잘려 나갔다
+   (실측: 칸 450 / 보이는 폭 296). 그리고 자료가 없을 때는 머리글을 감춘다 —
+   빈 표 위의 머리글은 알려 주는 것이 없고, 넓히지 않은 표에서는 어차피
+   "Input 채널" 열이 폭 0 으로 찌부러진다. */
+.aot-table-scroll .fac-table-weather:not(:has(tr[data-wb-id])) thead,
+.aot-table-scroll .fac-table-groups:not(:has(tr[data-group-id])) thead {
+  display: none;
+}
+
+/* 라벨 색 — 단계 다섯은 **한눈에 다 보여야** 뜻이 있다. 색 띠는 서로 견주는
+   것이라 하나가 밖에 있으면 못 읽는다. 예전에는 칸마다 최소 60px 이라 합이
+   332px 이 되어 270px 짜리 줄에서 "단 5" 가 잘려 나갔고, 스크롤도 없어
+   되찾을 수조차 없었다. 가로로 흘리는 것도 답이 아니다 — 스크롤바를 감추는
+   저장소 규약상 다섯째가 있는 줄 알 길이 없다.
+   다섯이 폭을 고르게 나눠 갖게 한다(실측: 48px씩, 네 자리 수까지 들어간다). */
+.fac-range-stages {
+  display: flex;
+  gap: var(--aot-space-2);
+  align-items: flex-start;
+}
+.fac-range-stage {
+  flex: 1 1 0;
+  min-width: 0;
+  text-align: center;
+}
+/* 견본과 숫자칸은 제 칸을 채운다 — 브라우저 기본 폭을 그대로 두면 칸이
+   좁아져도 줄지 않아 줄 전체가 넘친다. */
+.fac-range-stage input[type="color"],
+.fac-range-stage input.fac-range-limit {
+  width: 100%;
+  min-width: 0;
+}
+
+/* ── 표 열 폭 ─────────────────────────────────────────────────────────────
+   `<th style="width:…">` 로 템플릿에 흩어져 있던 값들이다. 폭은 표의 성질이라
+   표 규칙과 같은 자리에 둔다 — 여기 이미 이 표들의 최소 폭이 적혀 있다. */
+#sensor-config-table th:nth-child(1) { width: 120px; }
+
+#weather-config-table th:nth-child(1) { width: 110px; }
+#weather-config-table th:nth-child(2) { width: 160px; }
+#weather-config-table th:nth-child(4) { width: 40px; }
+
+#group-config-table th:nth-child(2) { width: 110px; }
+#group-config-table th:nth-child(5) { width: 70px; }
+#group-config-table th:nth-child(6) { width: 40px; }
+
+/* 방위 슬라이더는 줄 전체를 쓴다. */
+.aot-modal-option-row.aot-full-width-row .fac-body input[type="range"] { width: 100%; }
+
+/* [제목][고르는 칸][단추] 가 한 줄에 서고 좁아지면 접히는 줄. 측정 항목
+   추가 · 사용자 항목 추가 두 곳이 같은 선언을 인라인으로 갖고 있었다. */
+.fac-inline-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* 줄 아래에 붙는 설명·동작 묶음의 윗여백. */
+.fac-below-row { margin-top: var(--aot-space-2); }
+
+/* 목록 아래의 "추가" 묶음 — 점선으로 나누던 것을 공용 구분선으로 바꾼다
+   (선은 한 종류다). */
+.fac-add-item {
+  margin-top: var(--aot-space-4);
+  padding-top: var(--aot-space-3);
+  border-top: 1px solid var(--aot-border-light);
+}
+
+/* 카드 안에 놓이는 안내 상자는 **바닥색**이다 — 카드가 이미 흰 면이라
+   카드색을 주면 사라진다(표면 2단 교대). */
+.aot-modal-container .aot-modal-desc {
+  background: var(--aot-surface-body);
+}
+
+/* 구획 제목 오른쪽에 그 구획의 동작이 함께 서는 줄. */
+.aot-modal-group-title.fac-group-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--aot-space-2);
+}
+.aot-modal-group-title.fac-group-title-row .btn { margin: 0; }

@@ -30805,3 +30805,15 @@ msgstr "— 请选择通道 —"
 msgid "— Select —"
 msgstr "— 请选择 —"
 
+
+#: Added by hand — do not re-extract (fuzzy contamination history).
+#: templates/modals/geo_settings_modal.html · templates/settings/measurement.html
+#: (2026-09-10)
+msgid "Device Color"
+msgstr "设备颜色"
+
+msgid "All Measurements"
+msgstr "全部测量值"
+
+msgid "All Units"
+msgstr "全部单位"

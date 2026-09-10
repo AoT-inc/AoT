@@ -1,0 +1,42 @@
+/* ============================================================
+   에너지 사용량 화면(/energy_usage_input_amps)
+   ============================================================
+   치수가 전부 템플릿 인라인이었다(13개). 값이 `em` 이라 그 자리 글자
+   크기를 따라 흔들렸고, 같은 뜻의 줄 여백이 `0.3em`·`0.5em`·`0.1em` 셋으로
+   갈려 있었다. 사다리로 못 박는다.
+   ⚠ 그래프 툴팁의 `color:' + point.color + '` 둘은 계열마다 값이 달라 JS 가
+     정한다 — 인라인으로 남는다.
+   ============================================================ */
+
+/* 접었다 펴는 항목의 머리 줄과 그 아래 줄들 — 구분선 하나로 나눈다. */
+.eu-row-divided {
+  border-bottom: 1px solid var(--aot-border-neutral);
+  padding: var(--aot-space-1) var(--aot-space-1) var(--aot-space-1) 0;
+}
+
+.eu-row-divided-pad {
+  border-bottom: 1px solid var(--aot-border-neutral);
+  padding: var(--aot-space-2);
+}
+
+.eu-row-divided-top {
+  border-bottom: 1px solid var(--aot-border-neutral);
+  padding-top: var(--aot-space-1);
+}
+
+/* 구분선 없이 여백만 갖는 줄. */
+.eu-row-pad { padding: var(--aot-space-2); }
+
+.eu-col-pad-top { padding-top: var(--aot-space-2); }
+
+/* 접기/펴기 손잡이 — 줄 높이만큼 큰 아이콘 하나가 표적이다. */
+.eu-collapse-icon { font-size: 3.6em; }
+
+/* 측정값 고르기는 제 칸을 가득 채운다. */
+.eu-select-full { width: 100%; }
+
+/* 그래프가 앉는 자리. */
+.eu-chart {
+  width: 100%;
+  height: 400px;
+}

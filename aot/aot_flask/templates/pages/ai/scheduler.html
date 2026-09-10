@@ -8,6 +8,7 @@
 <!-- FullCalendar v5 -->
 {#- 같은 5.11.5 를 이미 반입해 두고도 CDN 에서 받고 있었다. -#}
 <link href="{{ url_for('static', filename='vendor/fullcalendar-5.11.5/main.min.css') }}" rel="stylesheet">
+<link href="{{ url_for('static', filename='css/pages/scheduler.css') }}" rel="stylesheet">
 <script src="{{ url_for('static', filename='vendor/fullcalendar-5.11.5/main.min.js') }}"></script>
 <style>
 /* FullCalendar minimal overrides only */
@@ -59,7 +60,7 @@
 {%- endmacro %}
 
 {% block body %}
-<main role="main" class="container">
+<main role="main" class="container" id="scheduler-page">
     {% include 'flash_messages.html' %}
 
     <!-- Page Title -->
@@ -69,7 +70,7 @@
                 <span class="fas fa-question-circle aot-help-icon"></span>
             </a>
         </h3>
-        <div class="d-flex" style="gap: 8px;">
+        <div class="d-flex sched-toolbar">
             <input class="btn aot-pill-btn aot-pill-btn-primary" type="button" value="{{ _('New Task') }}"
                    data-toggle="modal" data-target="#addTaskModal" />
         </div>
@@ -91,15 +92,14 @@
         {% endif %}
     </div>
 
-    <div style="clear: both; padding: 0.5em 0;"></div>
+    <div class="aot-vspace"></div>
 
     {% if drafts %}
     <div class="aot-entry-container">
     {% for draft in drafts %}
-    <div class="grid-stack-item-content pause-background aot-entry-item" style="margin-bottom: 4px;">
+    <div class="grid-stack-item-content pause-background aot-entry-item">
         <div class="aot-entry-content-item aot-col-icon">
-            <i style="font-size: 1.3em"
-               class="{% if draft.proposed_by == 'AI' %}fas fa-robot{% else %}fas fa-user{% endif %}"
+            <i class="sched-icon {% if draft.proposed_by == 'AI' %}fas fa-robot{% else %}fas fa-user{% endif %}"
                title="{{ draft.proposed_by }}"></i>
         </div>
         <div class="aot-entry-content-item aot-col-grow">
@@ -123,21 +123,21 @@
                    onclick="rejectJob('{{ draft.id }}')">
         </div>
         <div class="aot-entry-content-item aot-col-icon">
-            <a class="btn p-0" style="border-color: transparent;"
+            <a class="btn p-0 sched-icon-btn"
                data-toggle="modal" data-target="#modal_proposal_{{ draft.id }}">
-                <i style="font-size: 1.2em" class="fas fa-cog" title="{{ _('Details') }}"></i>
+                <i class="fas fa-cog sched-icon-sm" title="{{ _('Details') }}"></i>
             </a>
         </div>
     </div>
     {% endfor %}
     </div>
     {% else %}
-    <div class="inactive-background text-center py-4" style="border-radius: var(--aot-radius-xl);">
+    <div class="inactive-background text-center py-4 sched-empty">
         <p class="text-muted mb-0">{{ _('No pending proposals.') }}</p>
     </div>
     {% endif %}
 
-    <div style="clear: both; padding: 1em 0;"></div>
+    <div class="aot-vspace-lg"></div>
 
     <!-- Active Jobs -->
     <div class="aot-modal-group-title">{{ _('Active Jobs') }}
@@ -146,12 +146,12 @@
         {% endif %}
     </div>
 
-    <div style="clear: both; padding: 0.5em 0;"></div>
+    <div class="aot-vspace"></div>
 
     {% if active_jobs %}
     <div class="aot-entry-container">
     {% for job in active_jobs %}
-    <div class="grid-stack-item-content active-background aot-entry-item" style="margin-bottom: 4px;">
+    <div class="grid-stack-item-content active-background aot-entry-item">
         <div class="aot-entry-content-item aot-col-grow">
             <input class="form-control aot-entry-name-input" disabled
                    value="{{ job.display_content }}" type="text">
@@ -166,48 +166,48 @@
                    value="{{ state_label(job.state) }}">
         </div>
         <div class="aot-entry-content-item aot-col-icon">
-            <a class="btn p-0" style="border-color: transparent;"
+            <a class="btn p-0 sched-icon-btn"
                data-toggle="modal" data-target="#modal_job_{{ job.id }}">
-                <i style="font-size: 1.2em" class="fas fa-cog" title="{{ _('Details') }}"></i>
+                <i class="fas fa-cog sched-icon-sm" title="{{ _('Details') }}"></i>
             </a>
         </div>
     </div>
     {% endfor %}
     </div>
     {% else %}
-    <div class="inactive-background text-center py-4" style="border-radius: var(--aot-radius-xl);">
+    <div class="inactive-background text-center py-4 sched-empty">
         <p class="text-muted mb-0">{{ _('No active jobs.') }}</p>
     </div>
     {% endif %}
 
-    <div style="clear: both; padding: 1em 0;"></div>
+    <div class="aot-vspace-lg"></div>
 
     <!-- Timeline -->
     <div class="aot-modal-group-title">{{ _('Timeline') }}</div>
 
-    <div style="clear: both; padding: 0.5em 0;"></div>
+    <div class="aot-vspace"></div>
 
-    <div class="aot-entry-container" style="border-radius: var(--aot-radius-xl); padding: 20px;">
+    <div class="aot-entry-container sched-panel">
         <div id="scheduler-calendar"></div>
     </div>
 
-    <div style="clear: both; padding: 1em 0;"></div>
+    <div class="aot-vspace-lg"></div>
 
     <!-- Device Timeline (New) -->
     <div class="aot-modal-group-title">{{ _('Device Timeline') }}
-        <small class="text-muted" style="font-size: 0.7em">({{ _('Beta: Device-Centric View') }})</small>
+        <small class="text-muted sched-title-note">({{ _('Beta: Device-Centric View') }})</small>
     </div>
     
-    <div style="clear: both; padding: 0.5em 0;"></div>
+    <div class="aot-vspace"></div>
     
-    <div class="aot-entry-container" style="border-radius: var(--aot-radius-xl); padding: 20px;">
+    <div class="aot-entry-container sched-panel">
         <!-- Desktop View -->
         <div id="device-timeline-container" class="d-none d-md-block"></div>
         <!-- Mobile View -->
         <div id="mobile-device-list" class="d-md-none"></div>
     </div>
 
-    <div style="clear: both; padding: 1em 0;"></div>
+    <div class="aot-vspace-lg"></div>
 
     <!-- History -->
     <div class="aot-modal-group-title aot-ov-sec-title--row">
@@ -215,7 +215,7 @@
       {#- 자동 실행 기록은 기본으로 숨긴다(전체의 77%). 말없이 빼면 "일정이
           사라졌다" 로 읽히므로 **몇 건을 숨겼는지 적고** 되돌릴 길을 준다. -#}
       {% if automated_count %}
-      <a class="aot-ov-pill" style="text-decoration:none"
+      <a class="aot-ov-pill"
          href="{{ url_for('routes_scheduler.page_scheduler') }}{% if not show_automated %}?show_automated=1{% endif %}">
         {% if show_automated %}
           {{ _('Hide automated records (%(n)s)', n=automated_count) }}
@@ -226,7 +226,7 @@
       {% endif %}
     </div>
 
-    <div style="clear: both; padding: 0.5em 0;"></div>
+    <div class="aot-vspace"></div>
 
     {% if completed_jobs %}
     <div class="aot-entry-container">
@@ -235,10 +235,9 @@
                 {% if job.state|lower == 'completed' %}active-background
                 {% elif job.state|lower == 'failed' %}inactive-background
                 {% else %}inactive-background{% endif %}
-                aot-entry-item" style="margin-bottom: 4px;">
+                aot-entry-item">
         <div class="aot-entry-content-item aot-col-icon">
-            <i style="font-size: 1.3em"
-               class="{% if job.state|lower == 'completed' %}fas fa-check-circle{% else %}fas fa-times-circle{% endif %}"></i>
+            <i class="sched-icon {% if job.state|lower == 'completed' %}fas fa-check-circle{% else %}fas fa-times-circle{% endif %}"></i>
         </div>
         <div class="aot-entry-content-item aot-col-grow">
             <input class="form-control aot-entry-name-input" disabled
@@ -254,21 +253,20 @@
                    value="{{ state_label(job.state) }}">
         </div>
         <div class="aot-entry-content-item aot-col-btn">
-            <input class="form-control aot-entry-name-input" disabled
-                   style="font-size: var(--aot-font-size-xs);"
+            <input class="form-control aot-entry-name-input sched-entry-note" disabled
                    value="{{ job.display_created_at }}" type="text">
         </div>
         <div class="aot-entry-content-item aot-col-icon">
-            <a class="btn p-0" style="border-color: transparent;"
+            <a class="btn p-0 sched-icon-btn"
                data-toggle="modal" data-target="#modal_history_job_{{ job.id }}">
-                <i style="font-size: 1.2em" class="fas fa-cog" title="{{ _('Details') }}"></i>
+                <i class="fas fa-cog sched-icon-sm" title="{{ _('Details') }}"></i>
             </a>
         </div>
     </div>
     {% endfor %}
     </div>
     {% else %}
-    <div class="inactive-background text-center py-4" style="border-radius: var(--aot-radius-xl);">
+    <div class="inactive-background text-center py-4 sched-empty">
         <p class="text-muted mb-0">{{ _('No history yet.') }}</p>
     </div>
     {% endif %}
@@ -347,11 +345,10 @@
                 {% if draft.reasoning %}
                 <div class="aot-modal-group-title">{{ _('Reasoning') }}</div>
                 <div class="aot-modal-container">
-                    <div class="aot-modal-option-row aot-modal-row-wrap">
+                    <div class="aot-modal-option-row aot-full-width-row">
                         <label class="aot-modal-option-label">{{ _('Reasoning') }}</label>
-                        <div class="aot-modal-option-control" style="flex: 1 1 100% !important; width: 100% !important;">
-                            <textarea class="form-control aot-modern-input" rows="3" readonly
-                                      style="height: auto !important; border-radius: var(--aot-radius-lg) !important; text-align: left;">{{ draft.reasoning }}</textarea>
+                        <div class="aot-modal-option-control">
+                            <textarea class="form-control aot-modern-input aot-input-prose" rows="3" readonly>{{ draft.reasoning }}</textarea>
                         </div>
                     </div>
                 </div>
@@ -449,11 +446,10 @@
                 {% if job.reasoning %}
                 <div class="aot-modal-group-title">{{ _('Reasoning') }}</div>
                 <div class="aot-modal-container">
-                    <div class="aot-modal-option-row aot-modal-row-wrap">
+                    <div class="aot-modal-option-row aot-full-width-row">
                         <label class="aot-modal-option-label">{{ _('Reasoning') }}</label>
-                        <div class="aot-modal-option-control" style="flex: 1 1 100% !important; width: 100% !important;">
-                            <textarea class="form-control aot-modern-input" rows="3" readonly
-                                      style="height: auto !important; border-radius: var(--aot-radius-lg) !important; text-align: left;">{{ job.reasoning }}</textarea>
+                        <div class="aot-modal-option-control">
+                            <textarea class="form-control aot-modern-input aot-input-prose" rows="3" readonly>{{ job.reasoning }}</textarea>
                         </div>
                     </div>
                 </div>
@@ -542,11 +538,10 @@
                 {% if job.reasoning %}
                 <div class="aot-modal-group-title">{{ _('Reasoning') }}</div>
                 <div class="aot-modal-container">
-                    <div class="aot-modal-option-row aot-modal-row-wrap">
+                    <div class="aot-modal-option-row aot-full-width-row">
                         <label class="aot-modal-option-label">{{ _('Reasoning') }}</label>
-                        <div class="aot-modal-option-control" style="flex: 1 1 100% !important; width: 100% !important;">
-                            <textarea class="form-control aot-modern-input" rows="3" readonly
-                                      style="height: auto !important; border-radius: var(--aot-radius-lg) !important; text-align: left;">{{ job.reasoning }}</textarea>
+                        <div class="aot-modal-option-control">
+                            <textarea class="form-control aot-modern-input aot-input-prose" rows="3" readonly>{{ job.reasoning }}</textarea>
                         </div>
                     </div>
                 </div>
@@ -588,7 +583,7 @@
                             <div class="aot-modal-option-row">
                                 <label class="aot-modal-option-label">{{ _('AI Agent') }}</label>
                                 <div class="aot-modal-option-control">
-                                    <select id="smartAgent" class="form-control selectpicker aot-standard-select" data-style="btn-white border">
+                                    <select id="smartAgent" class="form-control selectpicker aot-standard-select" data-style="btn-white">
                                         <option value="auto" selected>{{ _('Auto-Dispatch (AI Multi-Agent)') }}</option>
                                         {% for agent in active_agents %}
                                         <option value="{{ agent.unique_id }}">{{ agent.name }} ({{ agent.role }})</option>
@@ -596,11 +591,10 @@
                                     </select>
                                 </div>
                             </div>
-                            <div class="aot-modal-option-row aot-modal-row-wrap">
+                            <div class="aot-modal-option-row aot-full-width-row">
                                 <label class="aot-modal-option-label">{{ _('Command') }}</label>
-                                <div class="aot-modal-option-control" style="flex: 1 1 100% !important; width: 100% !important;">
-                                    <textarea id="smartCommand" class="form-control aot-modern-input" rows="3"
-                                              style="height: auto !important; border-radius: var(--aot-radius-lg) !important; text-align: left;"
+                                <div class="aot-modal-option-control">
+                                    <textarea id="smartCommand" class="form-control aot-modern-input aot-input-prose" rows="3"
                                               placeholder="{{ _('e.g., Water Zone A at 5 PM for 10 seconds') }}"></textarea>
                                 </div>
                             </div>
@@ -609,18 +603,16 @@
                         <div id="smartResult" class="d-none mt-3">
                             <div class="aot-modal-group-title">{{ _('AI Response') }}</div>
                             <div class="aot-modal-container">
-                                <div class="aot-modal-option-row aot-modal-row-wrap">
+                                <div class="aot-modal-option-row aot-full-width-row">
                                     <label class="aot-modal-option-label">{{ _('Insight') }}</label>
-                                    <div class="aot-modal-option-control" style="flex: 1 1 100% !important; width: 100% !important;">
-                                        <textarea id="aiInsight" class="form-control aot-modern-input" rows="2" readonly
-                                                  style="height: auto !important; border-radius: var(--aot-radius-lg) !important; text-align: left;"></textarea>
+                                    <div class="aot-modal-option-control">
+                                        <textarea id="aiInsight" class="form-control aot-modern-input aot-input-prose" rows="2" readonly></textarea>
                                     </div>
                                 </div>
-                                <div class="aot-modal-option-row aot-modal-row-wrap">
+                                <div class="aot-modal-option-row aot-full-width-row">
                                     <label class="aot-modal-option-label">{{ _('Actions') }}</label>
-                                    <div class="aot-modal-option-control" style="flex: 1 1 100% !important; width: 100% !important;">
-                                        <div id="aiProposedActions" class="form-control aot-modern-input"
-                                             style="height: auto !important; border-radius: var(--aot-radius-lg) !important; text-align: left;"></div>
+                                    <div class="aot-modal-option-control">
+                                        <div id="aiProposedActions" class="aot-modern-readout"></div>
                                     </div>
                                 </div>
                             </div>
@@ -634,7 +626,7 @@
                                 <div class="aot-modal-option-row">
                                     <label class="aot-modal-option-label">{{ _('Action Type') }}</label>
                                     <div class="aot-modal-option-control">
-                                        <select id="taskActionType" class="form-control selectpicker aot-standard-select" data-style="btn-white border">
+                                        <select id="taskActionType" class="form-control selectpicker aot-standard-select" data-style="btn-white">
                                             <option value="output">{{ _('Output Control') }}</option>
                                             <option value="pid">{{ _('PID Adjustment') }}</option>
                                             <option value="function">{{ _('Trigger Function') }}</option>
@@ -645,7 +637,7 @@
                                 <div class="aot-modal-option-row">
                                     <label class="aot-modal-option-label" id="targetLabel">{{ _('Target Device') }}</label>
                                     <div class="aot-modal-option-control">
-                                        <select id="taskTarget" class="form-control selectpicker aot-standard-select" data-style="btn-white border" data-live-search="true">
+                                        <select id="taskTarget" class="form-control selectpicker aot-standard-select" data-style="btn-white" data-live-search="true">
                                             {% for o in outputs %}
                                             <option value="{{ o.unique_id }}">{{ o.name }} ({{ o.type }})</option>
                                             {% endfor %}
@@ -655,7 +647,7 @@
                                 <div class="aot-modal-option-row" id="channelGroup">
                                     <label class="aot-modal-option-label">{{ _('Channel') }}</label>
                                     <div class="aot-modal-option-control">
-                                        <select id="taskChannel" class="form-control selectpicker aot-standard-select" data-style="btn-white border">
+                                        <select id="taskChannel" class="form-control selectpicker aot-standard-select" data-style="btn-white">
                                             <option value="0">{{ _('CH0 (Default)') }}</option>
                                         </select>
                                     </div>
@@ -663,7 +655,7 @@
                                 <div class="aot-modal-option-row" id="stateGroup">
                                     <label class="aot-modal-option-label">{{ _('State') }}</label>
                                     <div class="aot-modal-option-control">
-                                        <select id="taskState" class="form-control selectpicker aot-standard-select" data-style="btn-white border">
+                                        <select id="taskState" class="form-control selectpicker aot-standard-select" data-style="btn-white">
                                             <option value="on">{{ _('On') }}</option>
                                             <option value="off">{{ _('Off') }}</option>
                                         </select>
@@ -672,7 +664,7 @@
                                 <div class="aot-modal-option-row d-none" id="pidSettingGroup">
                                     <label class="aot-modal-option-label">{{ _('PID Setting') }}</label>
                                     <div class="aot-modal-option-control">
-                                        <select id="taskPidSetting" class="form-control selectpicker aot-standard-select" data-style="btn-white border">
+                                        <select id="taskPidSetting" class="form-control selectpicker aot-standard-select" data-style="btn-white">
                                             <option value="setpoint">{{ _('Setpoint') }}</option>
                                             <option value="kp">Kp</option>
                                             <option value="ki">Ki</option>
@@ -696,13 +688,13 @@
                                     <label class="aot-modal-option-label">{{ _('Schedule Time') }}</label>
                                     <div class="aot-modal-option-control">
                                         <input type="datetime-local" id="taskScheduleTime" class="form-control aot-modern-input">
-                                        <small id="taskDualClock" class="form-text text-muted d-none" style="line-height:1.5;"></small>
+                                        <small id="taskDualClock" class="form-text text-muted d-none"></small>
                                     </div>
                                 </div>
                                 <div class="aot-modal-option-row">
                                     <label class="aot-modal-option-label">{{ _('Recurrence') }}</label>
                                     <div class="aot-modal-option-control">
-                                        <select id="taskRecurrence" class="form-control selectpicker aot-standard-select" data-style="btn-white border" onchange="toggleRecurrenceFields()">
+                                        <select id="taskRecurrence" class="form-control selectpicker aot-standard-select" data-style="btn-white" onchange="toggleRecurrenceFields()">
                                             <option value="none" selected>{{ _('One-time') }}</option>
                                             <option value="daily">{{ _('Daily') }}</option>
                                             <option value="interval">{{ _('Interval (Minutes)') }}</option>
