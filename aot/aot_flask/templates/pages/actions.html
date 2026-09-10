@@ -32,7 +32,7 @@
   {% endif %}
 
       <div class="col-auto">
-        <input onclick="return confirm({{ _('Are you sure you want to delete?')|tojson|forceescape }}) && $(this).processRequest(this, 'delete_action');" name="delete_action" value="{{_('Delete')}}" class="form-control btn aot-pill-btn aot-pill-btn-primary btn-block" type="button"/>
+        <input onclick="return confirm({{ _('Are you sure you want to delete?')|tojson|forceescape }}) && $(this).processRequest(this, 'delete_action');" name="delete_action" value="{{_('Delete')}}" class="form-control btn aot-pill-btn aot-pill-btn-danger btn-block" type="button"/>
       </div>
 
   {% if 'custom_options' in dict_options and unique_id in custom_options_values %}

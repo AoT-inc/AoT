@@ -13,23 +13,8 @@
      `.aot-modal-container`(좌우 16px) · `.aot-modal-section-title` ·
      `.aot-modal-group-title`(각각 "박스 내부 레이블과 정렬 통일 (16px)") ·
      `.aot-modal-body-text`. 제목에는 그 클래스를 쓰고 본문은 컨테이너 안에
-     넣는다 — 여기 남은 것은 공용에 없는 것(검색 결과 목록)뿐이다. */
+     넣는다 — 여기 남은 것은 공용에 없는 것뿐이다. */
 
-  /* 구획 검색 — 이 화면의 주 진입이라 전폭이다(옵션 행 문법은 160px 고정). */
-  .aot-journal-search { margin: 0 16px 1rem; }
-  .aot-journal-search-label { display: block; font-size: .8rem; text-transform: uppercase; letter-spacing: .04em; opacity: .6; margin-bottom: .3rem; }
-  .aot-journal-search input[type="search"] { width: 100%; }
-
-  /* 구획 검색 결과 — /plots 의 목록과 같은 문법을 쓰되 고르는 용도라 짧다. */
-  .aot-journal-results { max-height: 15rem; overflow-y: auto; border: 1px solid rgba(128,128,128,.2); border-radius: 6px; margin-top: .4rem; }
-  .aot-journal-results::-webkit-scrollbar { display: none; }
-  .aot-journal-results { scrollbar-width: none; }
-  .aot-journal-result { display: flex; justify-content: space-between; gap: .8rem; width: 100%; padding: .45rem .75rem; background: none; border: none; border-bottom: 1px solid rgba(128,128,128,.12); text-align: left; cursor: pointer; }
-  .aot-journal-result:last-child { border-bottom: none; }
-  .aot-journal-result:hover, .aot-journal-result.is-active { background: rgba(128,128,128,.12); }
-  .aot-journal-result-where { font-size: .8rem; opacity: .6; }
-  .aot-journal-chosen { display: flex; align-items: center; gap: .6rem; flex-wrap: wrap; }
-  .aot-journal-clear { background: none; border: none; font-size: .82rem; opacity: .65; cursor: pointer; text-decoration: underline; }
 
   /* 2차 경로(대지·구역)는 접어 둔다 — 구획을 찾기 위해 지나야 하는 관문이
      아니라는 것이 화면에도 드러나야 한다. */
@@ -107,22 +92,29 @@
       것의 이름(작물·품종·별칭)을 이미 알고 있다. /plots 페이지가 같은
       문제를 검색 하나로 푼 것을 그대로 따른다.
 
-      ⚠ 옵션 행(`.aot-modal-option-row`)에 넣지 않는다 — 그 문법의 컨트롤은
-        160px 고정(`!important`)이라 검색 결과가 세로로 뭉개진다. 이건 설정
-        한 줄이 아니라 이 화면의 **주 진입**이므로 전폭 블록이 맞다. -#}
-  <div class="aot-journal-search">
-    <label class="aot-journal-search-label" for="journal-plot-search">{{ _('Plot') }}</label>
-    <div id="journal-plot-chosen" class="aot-journal-chosen" style="display:none;">
-      <strong id="journal-plot-chosen-name"></strong>
-      <button type="button" class="aot-journal-clear" id="journal-plot-clear">{{ _('Change') }}</button>
-    </div>
-    <input type="search" id="journal-plot-search" class="form-control aot-modern-input"
-           placeholder="{{ _('Search by crop, variety, name, zone…') }}"
-           autocomplete="off">
-    <div class="aot-journal-results" id="journal-plot-results" style="display:none;"></div>
-  </div>
-
+      2026-09-10 두 번 바뀌었다:
+        · 자체 검색칸 + 자체 결과 목록 → **앱 공용 셀렉트**(aot-selectpicker,
+          live-search). 바닥 위 투명한 밑줄 칸이었는데 밑줄(#dddddd)이
+          바닥(#e0e6e3)과 같은 색이라 칸 자체가 보이지 않았다(실측).
+        · 카드 밖 전폭 블록 → **이 폼 카드의 첫 줄**(사용자 결정). 대상 →
+          기간 → 단위가 한 카드 안에서 위에서 아래로 읽힌다. 옵션 행 문법을
+          그대로 쓰므로 폭(표준 160px)·정렬을 따로 정하지 않는다.
+          예전에 옵션 행을 피했던 이유("160px 고정이라 결과가 세로로
+          뭉개진다")는 **자체 결과 목록 시절** 이야기다 — 공용 셀렉트는 결과를
+          목록 상자에 띄우고 그 폭은 공용 규칙(`width: max-content`)이 정한다.
+      옵션은 JS 가 `/api/geo/plots` 로 채운다. 검색이 훑는 필드는
+      `data-tokens` 로 넘긴다 — /plots 의 `_matches()` 와 같은 필드다. -#}
   <div class="aot-modal-container" id="journal-form">
+    <div class="aot-modal-option-row">
+      <label class="aot-modal-option-label" for="journal-plot-select">{{ _('Plot') }}</label>
+      <div class="aot-modal-option-control">
+        <select id="journal-plot-select" class="form-control aot-modern-select"
+                data-live-search="true"
+                data-live-search-placeholder="{{ _('Search by crop, variety, name, zone…') }}"
+                title="{{ _('Select…') }}"></select>
+      </div>
+    </div>
+
     <div class="aot-modal-option-row">
       <label class="aot-modal-option-label" for="journal-start">{{ _('Start date') }}</label>
       <div class="aot-modal-option-control">
@@ -212,10 +204,19 @@
       여기서는 빈 컨테이너만 둔다. -#}
   <div id="journal-meas-block" style="display:none;"></div>
 
-  <p class="text-muted small" id="journal-plot-note" style="display:none;"></p>
-  <p class="text-danger small" id="journal-form-error" style="display:none;"></p>
+  {#- 카드 밖 글줄은 이 페이지 전부가 **카드 내용선**(바깥 변 + 16px)에 선다 —
+      소개 문단(pl-3)·구획 라벨·"저장된 일지" 제목·대지 summary 가 모두 그렇다.
+      이 두 문단만 인셋이 없어 16px 튀어나와 있었다(실측 2026-09-10). -#}
+  <p class="text-muted small px-3" id="journal-plot-note" style="display:none;"></p>
+  <p class="text-danger small px-3" id="journal-form-error" style="display:none;"></p>
 
-  <div class="mb-4">
+  {#- 카드 밖에서 **이 화면의 작업을 끝내는 버튼**이다 — 공용 결정 버튼 묶음
+      (`.aot-settings-actions`: 우측 정렬 + 장갑 낀 손 단 40px)을 쓴다.
+      예전 `mb-4` 감싸개는 왼쪽에 32px 로 붙어 있었다.
+      ⚠ 오른쪽 변은 카드 **바깥 변이 아니라 내용선**이다 — 설정 페이지의 같은
+        묶음이 그렇게 서고(실측: 버튼 954 = 카드 970 − 16), 바로 위 구획
+        셀렉트도 내용선에 선다. `px-3` 이 그 16px 이다. -#}
+  <div class="aot-settings-actions px-3 mb-3">
     <button type="button" id="journal-generate"
             class="btn aot-pill-btn aot-pill-btn-primary">{{ _('Generate journal') }}</button>
   </div>

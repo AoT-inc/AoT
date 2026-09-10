@@ -1602,6 +1602,30 @@ body {
 
 .aot-scroll-x::-webkit-scrollbar { display: none; }
 
+/* 넘치는 가로 줄을 **마우스로 끌어** 넘긴다(common/aot-drag-scroll.js).
+   탭 줄처럼 누르는 것이 늘어선 줄에 단다 — 스크롤바는 보이지 않는다.
+   레이아웃(flex·줄바꿈 금지)은 그 컴포넌트의 몫이고 여기는 넘침만 다룬다.
+   ⚠ 표처럼 글자를 긁어 복사해야 하는 곳에는 달지 말 것 — 끌기가 선택을 이긴다
+     (그런 곳은 `.aot-scroll-x`). */
+.aot-drag-scroll {
+  overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.aot-drag-scroll::-webkit-scrollbar { display: none; }
+
+/* 끄는 동안에는 줄 전체가 쥔 손이고 글자가 선택되지 않는다.
+   ⚠ `html` 에 거는 이유 — 탭 버튼마다 `cursor: pointer`(클래스 하나)가 있어
+     컨테이너에 걸면 버튼 위에서 손 모양이 풀린다. 이 선택자의 특이도(0,1,1)가
+     그 규칙(0,1,0)을 이긴다 — `!important` 없이. */
+html.aot-drag-scrolling,
+html.aot-drag-scrolling * {
+  cursor: grabbing;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
 /* 약관·개인정보처럼 **읽기만 하는 문서** 화면. 글줄이 길어지지 않게 폭을
    묶는다(두 화면이 같은 값을 각자 인라인으로 갖고 있었다). */
 .aot-doc-page { max-width: 860px; }

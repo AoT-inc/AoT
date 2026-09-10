@@ -1,44 +1,55 @@
-<div class="modal fade" id="modal_config_dependency_install" tabindex="-1" role="dialog" aria-labelledby="ModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-xl" role="document">
-      <div class="modal-content p-3">
-        <div class="modal-header">
-          <h5 class="modal-title">Install Dependencies for <span class="dependencies_device_name"></span></h5>
-        </div>
-        <div id="container_confirm_install" >
-          <p>{{_('Unmet components were found while adding the following device')}}: <span class="dependencies_device_name"></span> (<span class="dependencies_device"></span>)</p>
-          <p>{{_('Unmet components')}}: <span class="dependencies_unmet"></span></p>
-          <div id="dependencies_message"></div>
-          
-          <p>{{_('To install these components, click the "Install" button below and wait until the installation is complete before re-adding the device. After installation, the frontend and backend will automatically restart to detect the newly installed modules.')}}</p>
+{# Dependency install modal — shared by output.html / input.html / function.html.
+   Same shell as tabSettingsModal / api_key_detail (drawer body):
+   .aot-option-modal > .modal-content > .modal-header + form > .modal-body + .modal-footer #}
+<div class="modal fade aot-option-modal" id="modal_config_dependency_install" tabindex="-1" role="dialog" aria-labelledby="dependencyInstallModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header border-0 pt-4 px-4">
+        <h5 class="modal-title font-weight-bold" id="dependencyInstallModalLabel">{{_('Install Dependencies for')}} <span class="dependencies_device_name"></span></h5>
+        <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span></button>
+      </div>
 
-          <form id="form_dependency_install" method="post">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <input type="hidden" id="dependency_unmet" name="dependency_unmet" value="">
-            <div class="row small-gutters pl-2">
-              <div class="col-auto">
-                <button type="button" class="form-control btn aot-pill-btn aot-pill-btn-sm btn-block" data-dismiss="modal">{{_('Close')}}</button>
+      <form id="form_dependency_install" method="post">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" id="dependency_unmet" name="dependency_unmet" value="">
+
+        <div class="modal-body">
+          <div id="container_confirm_install">
+            <div class="aot-modal-container">
+              <div class="aot-modal-option-row aot-full-width-row">
+                <div class="aot-modal-body-text">{{_('Unmet components were found while adding the following device')}}: <span class="dependencies_device_name"></span> (<span class="dependencies_device"></span>)</div>
               </div>
-              <div class="col-auto">
-                <input class="form-control btn aot-pill-btn aot-pill-btn-primary aot-pill-btn-sm btn-block" type="submit" name="install" value="{{_('Install')}}">
+              <div class="aot-modal-option-row aot-full-width-row">
+                <div class="aot-modal-body-text">{{_('Unmet components')}}: <span class="dependencies_unmet"></span></div>
               </div>
-            </div>
-          </form>
-        </div>
-
-        <div id="container_install" style="display: none;">
-          <p>{{_('Installation has started for the following components')}}: <span class="dependencies_unmet"></span></p>
-
-          <p>{{_('The component installation log below refreshes every 5 seconds. Please wait until all components are installed and the frontend and backend restart before re-adding the associated device. When the installation process is complete, the message "#### Component installation complete" will appear at the end of the log.')}}</p>
-          <p>{{_('If a problem occurs during installation and you need to reset the installation status, deleting the /opt/AoT/.dependency file will restore component installation functions.')}}</p>
-
-          <div class="row small-gutters p-2">
-            <div class="col-auto">
-              <button type="button" class="form-control btn aot-pill-btn aot-pill-btn-sm btn-block" data-dismiss="modal">{{_('Close')}}</button>
+              <div class="aot-modal-option-row aot-full-width-row" id="dependencies_message"></div>
+              <div class="aot-modal-option-row aot-full-width-row">
+                <div class="aot-modal-body-text">{{_('To install these components, click the "Install" button below and wait until the installation is complete before re-adding the device. After installation, the frontend and backend will automatically restart to detect the newly installed modules.')}}</div>
+              </div>
             </div>
           </div>
 
-          <pre class="aot-log-box" id="dependency_status"></pre>
+          <div id="container_install" style="display: none;">
+            <div class="aot-modal-container">
+              <div class="aot-modal-option-row aot-full-width-row">
+                <div class="aot-modal-body-text">{{_('Installation has started for the following components')}}: <span class="dependencies_unmet"></span></div>
+              </div>
+              <div class="aot-modal-option-row aot-full-width-row">
+                <div class="aot-modal-body-text">{{_('The component installation log below refreshes every 5 seconds. Please wait until all components are installed and the frontend and backend restart before re-adding the associated device. When the installation process is complete, the message "#### Component installation complete" will appear at the end of the log.')}}</div>
+              </div>
+              <div class="aot-modal-option-row aot-full-width-row">
+                <div class="aot-modal-body-text">{{_('If a problem occurs during installation and you need to reset the installation status, deleting the /opt/AoT/.dependency file will restore component installation functions.')}}</div>
+              </div>
+            </div>
+            <pre class="aot-log-box" id="dependency_status"></pre>
+          </div>
         </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn aot-pill-btn" data-dismiss="modal">{{_('Close')}}</button>
+          <input class="btn aot-pill-btn aot-pill-btn-primary" type="submit" name="install" id="btn_dependency_install" value="{{_('Install')}}">
+        </div>
+      </form>
 
     </div>
   </div>
@@ -94,6 +105,7 @@
       success: function (data) {
         document.getElementById('container_confirm_install').style.display = "none";
         document.getElementById('container_install').style.display = "";
+        document.getElementById('btn_dependency_install').style.display = "none";
         popup_response(data);
         check_dependency_status();
         setInterval(function() {
@@ -109,5 +121,6 @@
   $("#modal_config_dependency_install").on("hidden.bs.modal", function () {
     document.getElementById('container_confirm_install').style.display = "";
     document.getElementById('container_install').style.display = "none";
+    document.getElementById('btn_dependency_install').style.display = "";
   });
 </script>

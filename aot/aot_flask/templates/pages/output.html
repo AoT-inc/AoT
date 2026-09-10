@@ -632,8 +632,12 @@
         headers: { "X-CSRFToken": "{{form_mod_output.csrf_token._value()}}" },
         data: $form.serialize() + '&' + action + '=1',
         success: function (data) {
-          if ((action === 'output_add' || action === 'output_duplicate') && data.data.output_id) {
+          if (action === 'output_add' || action === 'output_duplicate') {
             if ('dep_unmet' in data.data && data.data.dep_unmet.length > 0) {
+              // 의존성 미설치 — output_id 는 생성되지 않는다(백엔드가 아예
+              // 만들지 않고 되돌린다). output_id 유무로 먼저 분기하면 이
+              // 경로가 통째로 스킵되어 토스트 에러만 뜨고 모달이 안 뜬다.
+              // dep_unmet 을 output_id 보다 먼저 검사한다.
               $(".dependencies_device_name").text(data.data.dep_name);
               $(".dependencies_device").text(data.data.dep_unmet);
               $(".dependencies_unmet").text(data.data.dep_list.join(", "));
@@ -643,7 +647,8 @@
               }
               $('#modal_config_dependency_install').modal('show');
               popup_response(data);
-            } else {
+              return;
+            } else if (data.data.output_id) {
               $.ajax({
                 type: "GET",
                 url: '/output?output_type=entry&output_id=' + data.data.output_id,
@@ -668,8 +673,10 @@
                   window.showToast('Error: Could not get new output entry', 'error');
                 }
               });
+              return;
             }
-            return;
+            // else: output_id 도 dep_unmet 도 없음 — 진짜 검증 실패, 아래
+            // 공용 에러 처리(messages.error 토스트)로 흘려보낸다.
           }
           if (data.data.messages.error.length === 0) {
             if (action === 'output_mod' && 'output_id' in data.data) {

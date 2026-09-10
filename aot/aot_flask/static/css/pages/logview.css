@@ -23,8 +23,13 @@
   color: var(--aot-text-secondary, #5E6B64);
 }
 
+/* 장갑 낀 손 기준 터치 높이(--aot-btn-height-touch, 2026-09-10). 이 툴바의
+   셀렉트·검색칸은 전부 순정 부트스트랩 모양을 그대로 쓴다(알약이 아니다) —
+   나란히 놓인 필드가 같은 모양이어야 하니, 옆의 [새로고침]·[다운로드]
+   알약 버튼과 세로 크기만 맞추고 모양은 손대지 않는다. */
 .aot-log-toolbar .form-control {
-  height: calc(1.5em + 0.75rem + 2px);
+  height: var(--aot-btn-height-touch);
+  min-height: var(--aot-btn-height-touch);
 }
 
 .aot-log-search {

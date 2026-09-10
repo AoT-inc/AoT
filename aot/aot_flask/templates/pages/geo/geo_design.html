@@ -484,8 +484,13 @@
                 </div>
 
                 <div class="d-flex align-items-center geo-map-toolbar-buttons">
-                    <!-- Edit Name Button (Hidden initially) -->
-                    <button class="btn aot-pill-btn aot-pill-btn-primary mr-1 ml-1 geo-btn-minw" id="btn-edit-map-name"
+                    <!-- Edit Name Button — 지도가 실제로 열려 있을 때만 뜻이 있다(이름
+                         바꿀 대상이 있어야 함). d-none 으로 시작하고 AoTGeoDesign.loadMap()
+                         이 켠다(2026-09-10: 이 클래스가 마크업에서 빠져 있어, 마지막으로 연
+                         지도를 자동으로 불러오는 경로에서는 페이지를 열자마자 보이고
+                         있었다 — 이름 바꾸기는 권하는 동작이 아닌데도 저장과 나란히
+                         강조돼 있던 원인 중 하나). -->
+                    <button class="btn aot-pill-btn aot-pill-btn-secondary mr-1 ml-1 geo-btn-minw d-none" id="btn-edit-map-name"
                         title="{{ _('Rename') }}">
                         {{ _('Edit') }}
                     </button>
@@ -642,10 +647,13 @@
             <hr class="mt-0 mb-3">
         </div>
         <div class="card-body d-flex gap-3 flex-wrap">
-            <button class="btn aot-pill-btn aot-pill-btn-primary" id="btn-download-csv">
+            {#- CSV 와 PDF 는 서로 대등한 선택지라 둘 중 하나를 "권하는 동작"으로
+                내세울 근거가 없다 — 둘 다 강조(primary)면 강조가 아무 뜻도
+                없어진다(§한 묶음에 하나). 옆의 내보내기/가져오기와 같은 보조색. -#}
+            <button class="btn aot-pill-btn aot-pill-btn-secondary" id="btn-download-csv">
                 <i class="fas fa-file-csv mr-2"></i> CSV
             </button>
-            <button class="btn aot-pill-btn aot-pill-btn-primary" id="btn-download-pdf">
+            <button class="btn aot-pill-btn aot-pill-btn-secondary" id="btn-download-pdf">
                 <i class="fas fa-file-pdf mr-2"></i> PDF
             </button>
             <div class="border-left mx-2"></div>

@@ -385,10 +385,19 @@
   --aot-btn-height-sm: var(--aot-btn-height);
   /* 장갑 낀 손 기준 터치 목표(2026-09-10, 사용자 결정). 화면 대부분이 이미
      32px 기준으로 촘촘히 맞춰져 있어 --aot-btn-height 를 전역으로 올리지
-     않는다 — **컨테이너 밖 툴바 + 모달 푸터**의 셀렉트/일반 버튼에만 이
-     토큰을 쓴다(슬라이드 토글 .btn-toggle 은 대상 아님, 대부분 모달
-     컨테이너 안에 있다). 적용 지점은 aot-modal-modern.css 참고. */
-  --aot-btn-height-touch: 44px;
+     않는다 — **컨테이너 밖 툴바 + 모달 푸터 + 페이지 하단 저장/삭제
+     묶음**(.aot-settings-actions)의 셀렉트/일반 버튼에만 이 토큰을 쓴다
+     (슬라이드 토글 .btn-toggle 은 대상 아님, 대부분 모달 컨테이너 안에
+     있다). 적용 지점은 aot-modal-modern.css · aot-settings.css 참고.
+
+     ⚠ **목록 행의 액션 묶음(.aot-btn-group)은 대상이 아니다.** 행마다
+     붙는 버튼이라 키우면 settings/measurement(123개)·output·ai 페이지의
+     행 높이가 전부 올라간다.
+
+     값은 40px = 32의 +25%. 44(Apple HIG)·48(Material)보다 낮춰 잡은 것은
+     한 화면에 들어가는 목록 행 수를 지키기 위해서다(사용자가 네 후보 중
+     고른 값이다 — 처음 44 로 넣었다가 40 으로 내렸다). */
+  --aot-btn-height-touch: 40px;
   --aot-btn-radius: 18px;
   --aot-btn-radius-sm: 16px;
   /* 키보드 포커스 표시 — `outline: var(--aot-focus-outline)` 로 쓴다.

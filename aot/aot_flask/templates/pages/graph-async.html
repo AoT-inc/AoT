@@ -185,11 +185,19 @@
       padding: 3px;
     }
 
+    /* 장갑 낀 손 기준 터치 높이(--aot-btn-height-touch, 2026-09-10). 바깥
+       트랙(.aot-period-group)은 padding 3px 로 안쪽 버튼을 감싸는 구조라
+       버튼 쪽만 키우면 트랙이 flex 로 자동으로 따라 늘어난다(3px×2 만큼
+       더 커짐) — 트랙은 손대지 않는다. */
     .aot-period-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      height: var(--aot-btn-height-touch);
       border: none;
       background: transparent;
       border-radius: 9999px;
-      padding: 0.25rem 0.9rem;
+      padding: 0 0.9rem;
       font-size: 0.85rem;
       color: var(--aot-color-text-secondary, #5E6B64);
       cursor: pointer;

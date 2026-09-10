@@ -669,10 +669,18 @@ html {
 }
 
 .note-search-input-group:focus-within {
-  border-color: var(--aot-note-search-focus);
-  /* 2026-09-10: Tailwind 파랑(59,130,246) 이었다 — 위 테두리와 같은 색
-     (--aot-note-search-focus = --aot-color-info #029ACF)의 알파판으로. */
-  box-shadow: 0 0 0 3px rgba(2, 154, 207, 0.1);
+  /* 공용 입력 포커스와 같은 자리다(브랜드 딥그린). 이 칸만 --aot-color-info
+     (#029ACF)를 써서 **앱에서 유일하게 파랗게 포커스되는 입력칸**이었다 —
+     09-10 에 Tailwind 파랑을 걷어낼 때 앱의 파랑으로 바꿨을 뿐이라 파란
+     강조는 그대로 남아 있었다. ui-guide 「키보드 포커스」: 버튼·토글·
+     셀렉트·입력 전부 같은 값이다.
+
+     번짐(box-shadow)도 뗀다. §2-2 는 **포커스는 색만 바꾼다** — 굵기나
+     모양을 바꾸면 줄이 흔들린다. 밑줄 한 줄짜리 칸에 3px 사각 링이 둘러
+     붙으면 걷어낸 테두리를 도로 부르는 셈이다. 그 값은 --aot-color-info
+     의 알파를 손으로 적은 것이라, 운영자가 color_info 를 바꾸면 테두리만
+     따라오고 번짐은 옛 색으로 남는 문제도 있었다. */
+  border-color: var(--aot-input-focus-border, #13261B);
 }
 
 .note-search-icon {

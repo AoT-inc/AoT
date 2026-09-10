@@ -398,22 +398,11 @@ select.aot-settings-select:focus {
 
 /* 저장·실행처럼 카드 전체에 대한 결정은 **오른쪽 아래**다(§3-2 ②).
    나란한 결정 버튼은 12px 을 띄운다 — 장갑 낀 손이 옆 것을 누른다(§2-3). */
-/* ⚠ `padding` **축약형을 쓰지 않는다.** 축약형은 좌우까지 정하므로 뒤에
-   오는 `.aot-settings-bare`(좌우 여백만 주는 클래스)를 겹쳐 쓸 수 없다 —
-   카드 밖 버튼 묶음을 정렬선에 세우려고 감싸개를 하나 더 써야 했다. */
-.aot-settings-actions {
-    display: flex;
-    justify-content: flex-end;
-    gap: var(--aot-space-3);
-    padding-top: var(--aot-space-4);
-    padding-bottom: var(--aot-space-2);
-}
-
-/* 구획 안쪽에서 끝나는 동작 묶음은 아래를 한 칸 좁힌다(다음 구획의 위
-   여백과 겹쳐 두 배로 보인다). */
-.aot-settings-actions.aot-settings-actions-tight {
-    padding-bottom: var(--aot-space-1);
-}
+/* `.aot-settings-actions`(페이지 하단 결정 버튼 묶음)는 aot-modal-modern.css
+   로 옮겼다(2026-09-10) — 설정 페이지만의 것이 아니라 카드 밖에서 작업을
+   끝내는 버튼 묶음 전부의 것이다. 이 파일은 설정 템플릿만 싣기 때문에, 다른
+   페이지(일지 등)가 같은 클래스를 써도 규칙이 없어 조용히 벤더 기본으로
+   남았다. */
 
 /* 목록 행의 액션 묶음. 좁아지면 알약 단위로 통째 줄바꿈한다 — 알약이
    2~3줄로 쪼개지거나 원형이 되는 것을 막는다. 되돌릴 수 없는 동작(삭제)이

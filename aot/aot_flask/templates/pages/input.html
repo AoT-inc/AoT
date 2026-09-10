@@ -348,8 +348,12 @@
         headers: { "X-CSRFToken": "{{form_mod_input.csrf_token._value()}}" },
         data: $form.serialize() + '&' + action + '=1',
         success: function (data) {
-          if ((action === 'input_add' || action === 'input_duplicate') && data.data.input_id) {
+          if (action === 'input_add' || action === 'input_duplicate') {
             if ('dep_unmet' in data.data && data.data.dep_unmet.length > 0) {
+              // 의존성 미설치 — input_id 는 생성되지 않는다(백엔드가 아예
+              // 만들지 않고 되돌린다). input_id 유무로 분기하면 이 경로가
+              // 통째로 스킵되어 토스트 에러만 뜨고 모달이 안 뜬다(실사례:
+              // MIFLORA). dep_unmet 을 input_id 보다 먼저 검사한다.
               $(".dependencies_device_name").text(data.data.dep_name);
               $(".dependencies_device").text(data.data.dep_unmet);
               $(".dependencies_unmet").text(data.data.dep_list.join(", "));
@@ -359,7 +363,8 @@
               }
               $('#modal_config_dependency_install').modal('show');
               popup_response(data);
-            } else {
+              return;
+            } else if (data.data.input_id) {
               $.ajax({
                 type: "GET",
                 url: '/input?input_type=entry&input_id=' + data.data.input_id,
@@ -369,7 +374,7 @@
                       w: 24,
                       h: 1
                     });
-                    
+
                     // [Fix] Initialize all selectpickers in the newly added widget
                     let $newWidget = $('#gridstack_input_' + data.data.input_id);
                     $newWidget.find('.selectpicker').selectpicker();
@@ -390,8 +395,10 @@
                   window.showToast('Error: Could not get new Input entry', 'error');
                 }
               });
+              return;
             }
-            return;
+            // else: input_id 도 dep_unmet 도 없음 — 진짜 검증 실패, 아래
+            // 공용 에러 처리(messages.error 토스트)로 흘려보낸다.
           }
           else if (action === 'add_action' && 'dep_unmet' in data.data && data.data.dep_unmet.length > 0) {
             $(".dependencies_device_name").text(data.data.dep_name);

@@ -489,7 +489,14 @@ _IMPORTANT_BUDGET = {
     # 부트스트랩이 모달을 열며 body **인라인**에 넣어 둔 스크롤바 보정을 이겨야
     # 한다 — 인라인은 선택자로는 못 이긴다. 같은 블록의 overflow 는 특이도로
     # 이기므로 안 붙였다.
-    "aot-modal-modern.css": 3,  # body 인라인 보정 1 + iOS 확대 방지 2
+    # 6: 위 3(body 인라인 보정 1 + iOS 확대 방지 2)에 `.modal.aot-option-modal.show`
+    # 세 줄(display/padding/overflow)이 더해졌다(2026-09-10). Bootstrap 4
+    # modal.js 가 show() 때마다 모달에 인라인 style="display:block"(+스크롤바
+    # 보정 padding-right)을 직접 박는다 — 인라인은 선택자·특이도로 못 이기고
+    # !important 로만 이긴다. 벗겨내면(2026-09 !important 일괄 제거 감사가
+    # 한 번, 이번이 세 번째) 데스크톱 옵션모달이 세로 중앙 대신 화면 맨 위에
+    # 붙는 회귀가 재발한다.
+    "aot-modal-modern.css": 6,
     "map/map.css": 183,
     "components/aot-base-ui.css": 129,
     "ai/ai_scheduler.css": 53,

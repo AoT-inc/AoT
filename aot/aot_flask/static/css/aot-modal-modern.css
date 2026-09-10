@@ -105,7 +105,15 @@
     border-radius: 0;
     border-left: none;
     border-bottom: none;
-    margin: 1.6rem 0 0.2rem 0; /* 2:1 비율 */
+    /* 위 1.6rem(25.6px) : 아래 12px ≈ 2:1 — 제목은 **자기가 가리키는 카드 쪽에
+       더 가깝게** 선다. 2026-09-10 이전에는 주석만 "2:1 비율" 이고 값은
+       0.2rem(3.2px)이라 실제로는 8:1 이었다(첫 커밋부터). 컨테이너는 위 여백이
+       0 이라 그 3px 이 곧 "섹션 제목 → 카드" 간격이 되어, 앱 전체에서 제목이
+       카드에 붙어 보였다(사용자 지적 — /geo/journal "저장된 일지",
+       공지 모달 "스케줄" 실측 3px).
+       ⚠ 뒤따르는 요소가 더 큰 위 여백을 가지면 세로 여백 상쇄로 그쪽이
+       이긴다(예: 설정의 소제목 24px) — 그런 자리는 이 값을 바꿔도 그대로다. */
+    margin: 1.6rem 0 var(--aot-space-3) 0;
     box-shadow: none;
     display: flex;
     align-items: center;
@@ -928,12 +936,16 @@ label.btn.aot-pill-btn { cursor: pointer; }
     }
 }
 
-/* Tab Settings 모달 푸터 */
-#tabSettingsModal .modal-footer .btn.aot-pill-btn {
-    min-width: 120px;
-}
+/* 2026-09-10: 여기 있던 #tabSettingsModal 전용 min-width:120px 를 지웠다.
+   사용자 지적: input/output/function/geo/programs 의 탭 설정 모달(이 id)
+   이 대시보드의 같은 성격 모달(layout.html 의 .aot-tab-settings-modal,
+   id="modal_config_*")과 버튼 스타일이 달라 보인다 — 실측하니 색·높이·
+   글자 크기는 전부 동일하고 이 규칙의 120px 강제 최소폭만 달랐다
+   (dashboard 는 기본 56px). 지우면 두 모달이 완전히 같은 크기로 맞는다.
+   번역이 길어 모바일에서 버튼 줄이 넘칠 때는 아래 modal-footer 의
+   가로 스크롤이 받는다. */
 
-/* ── 컨테이너 밖 툴바 — 장갑 낀 손 기준 터치 높이(44px) ──────────────
+/* ── 컨테이너 밖 툴바 — 장갑 낀 손 기준 터치 높이(40px) ──────────────
    2026-09-10 사용자 결정: 카드/모달 안 화면은 32px 기준으로 이미 촘촘히
    맞춰져 있어 --aot-btn-height 를 전역으로 올리지 않는다. 대신 **카드에
    담기지 않고 페이지 바닥에 바로 놓인** 툴바만 골라 올린다 — 조사 결과
@@ -943,7 +955,27 @@ label.btn.aot-pill-btn { cursor: pointer; }
    (.btn-toggle)은 대상이 아니다 — 대부분 모달 컨테이너 안에 있다.
    여기 없는 `.geo-map-toolbar-*`(카드 헤더 안) · `.aot-plotw-edit`
    (위젯 카드 안) · `.asset-toolbar`(자체 CSS 를 쓰는 레거시 페이지, 이
-   컴포넌트 체계 밖) 는 확인 후 일부러 뺀 것이다. */
+   컴포넌트 체계 밖) 는 확인 후 일부러 뺀 것이다.
+
+   `.aot-main-selection-row` (2026-09-10 추가) — output/input/function/
+   geo_input/programs/device/camera/ai_library/ai_agent 9개 페이지가 공유하는
+   "장치·항목 추가" 줄(셀렉트+추가 버튼). 전부 `<main class="container">`
+   바로 아래, 카드 없이 놓여 있는 것을 9곳 모두 확인했다.
+
+   `.aot-settings-title` (2026-09-10 추가) — 페이지 제목 줄(제목 + 우측
+   버튼). 설정 하위 페이지의 "Settings Menu"(#menu-toggle)·"저장" 뿐 아니라
+   ai_library/ai_manage/scheduler 등 30개 템플릿이 같은 틀을 쓴다.
+   `display:flex` 제목+액션 한 줄짜리 레이아웃 클래스라(aot-settings.css)
+   페이지당(또는 페이지 안 구획당) 한 번만 나온다 — 목록 행처럼 반복되지
+   않는 것을 30곳 전부 확인(ai_library.html 은 구획 3개, 각각 한 번).
+
+   `.aot-btn-group` 자체는 건드리지 않는다 — 목록 행마다 반복되는 액션
+   묶음과 같은 클래스라, 그대로 걸면 행 반복 쪽(measurement 123개 등)까지
+   표 전체 높이가 올라간다. 딱 `.aot-btn-group.aot-settings-bare` 조합만
+   추가로 켠다 — `.aot-settings-bare`(카드 밖 글자 정렬용)는 저장소 전체에
+   4곳뿐이고(settings/users.html 3 · api_key.html 1) 전부 탭 하나당 단
+   하나뿐인 페이지 헤더 "추가" 버튼이다(반복 행이 아니다) — 실측으로
+   4곳 전부 확인. */
 .sched-toolbar .btn:not(.btn-toggle),
 .fac-page-actions .btn:not(.btn-toggle),
 .fac-stepbar .btn:not(.btn-toggle),
@@ -951,6 +983,9 @@ label.btn.aot-pill-btn { cursor: pointer; }
 .aot-graph-toolbar .btn:not(.btn-toggle),
 .mp-toolbar .btn:not(.btn-toggle),
 .aot-log-toolbar .btn:not(.btn-toggle),
+.aot-main-selection-row .btn:not(.btn-toggle),
+.aot-btn-group.aot-settings-bare .btn:not(.btn-toggle),
+.aot-settings-title .btn:not(.btn-toggle),
 #btn-confirm-location {
     height: var(--aot-btn-height-touch);
     min-height: var(--aot-btn-height-touch);
@@ -962,8 +997,45 @@ label.btn.aot-pill-btn { cursor: pointer; }
 .fac-stepbar .bootstrap-select > .dropdown-toggle,
 .aot-graph-toolbar .bootstrap-select > .dropdown-toggle,
 .mp-toolbar .bootstrap-select > .dropdown-toggle,
-.aot-log-toolbar .bootstrap-select > .dropdown-toggle {
+.aot-log-toolbar .bootstrap-select > .dropdown-toggle,
+.aot-main-selection-row .bootstrap-select > .dropdown-toggle {
     height: var(--aot-btn-height-touch);
+}
+
+/* ── 페이지 하단 결정 버튼 묶음 ─────────────────────────────────────────
+   카드 밖에서 **이 화면의 작업을 끝내는 버튼**(저장·삭제·생성)을 우측에
+   세운다. 2026-09-10 aot-settings.css 에서 옮겨 왔다 — 그 파일은 설정
+   템플릿만 싣기 때문에, 일지 페이지가 같은 클래스를 써도 규칙이 없었다.
+   전역 파일(layout 이 싣는다)에 두어 어느 페이지든 그대로 쓴다.
+   페이지 `{% block head %}` 는 이 파일보다 **먼저** 실린다 — 페이지가 이
+   묶음을 덮으려면 특이도로 이겨야 한다(순서로는 못 이긴다). */
+/* ⚠ `padding` **축약형을 쓰지 않는다.** 축약형은 좌우까지 정하므로 뒤에
+   오는 `.aot-settings-bare`(좌우 여백만 주는 클래스)를 겹쳐 쓸 수 없다 —
+   카드 밖 버튼 묶음을 정렬선에 세우려고 감싸개를 하나 더 써야 했다. */
+.aot-settings-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--aot-space-3);
+    padding-top: var(--aot-space-4);
+    padding-bottom: var(--aot-space-2);
+}
+
+/* 구획 안쪽에서 끝나는 동작 묶음은 아래를 한 칸 좁힌다(다음 구획의 위
+   여백과 겹쳐 두 배로 보인다). */
+.aot-settings-actions.aot-settings-actions-tight {
+    padding-bottom: var(--aot-space-1);
+}
+
+/* 장갑 낀 손 단(--aot-btn-height-touch). 이 묶음은 **페이지의 작업을 끝내는 버튼**이라
+   (저장·삭제) 모달 푸터와 같은 자리다 — 두 곳이 같은 토큰을 읽는다.
+   2026-09-10 사용자 결정: 전역으로 키우지 않는다. 바로 아래 .aot-btn-group
+   (목록 행의 액션 묶음)은 **대상이 아니다** — 행마다 붙는 버튼이라 여기를
+   키우면 measurement·output·ai 페이지의 행 높이가 전부 올라간다.
+   `.btn` 을 함께 적어 베이스 `.btn.aot-pill-btn`(0,2,0)을 이긴다. */
+.aot-settings-actions .btn.aot-pill-btn {
+    height: var(--aot-btn-height-touch);
+    min-height: var(--aot-btn-height-touch);
+    line-height: calc(var(--aot-btn-height-touch) - 2px);
 }
 
 /* 60px 최소폭 수정자 — 저장/닫기 같은 번역 가변 길이 라벨에 쓴다.
@@ -1543,15 +1615,21 @@ body.modal-open {
 }
 
 /* --- 모달 컨테이너: 화면 중앙 배치 ---
-   display 는 Bootstrap JS 가 제어하므로 override 금지.
-   Bootstrap 이 show 시 display:block 으로 설정한 후
-   align-items / justify-content 가 동작하도록 flex 는 .show 에서만 적용. */
+   !important 필수 — Bootstrap 4 modal.js 가 show() 때마다 인라인
+   style="display:block"(+ 스크롤바 보정용 padding-right)를 이 엘리먼트에
+   직접 박아 넣는다. 인라인 스타일은 !important 없는 클래스 규칙을 항상
+   이긴다 — 그래서 !important 없이는 이 규칙이 존재해도 절대 적용되지
+   않고, .modal-dialog(margin:0 auto)만 가로로는 중앙이지만 세로는
+   컨테이너 맨 위(top:0)에 붙어버린다(실측 2026-09-10: getBoundingClientRect
+   top=0). 2026-09 !important 일괄 제거 감사(25f1a5cd)가 이 규칙을 "장식"으로
+   오인해 벗겨내면서 데스크톱 전 옵션모달(공지 새 글쓰기 등)이 이 상태로
+   회귀해 있었다 — 여기서 세 번째로 같은 함정에 걸린 사례. */
 .modal.aot-option-modal.show {
-    display: flex;
+    display: flex !important;
     align-items: center;
     justify-content: center;
-    padding: 0;
-    overflow: hidden; /* 모달 컨테이너 자체 스크롤 방지 */
+    padding: 0 !important;
+    overflow: hidden !important; /* 모달 컨테이너 자체 스크롤 방지 */
 }
 
 /* --- modal-dialog: 너비 제한 + 화면 초과 방지 ---
@@ -1766,18 +1844,35 @@ body.modal-open {
 }
 
 /* --- modal-footer: 고정 ---
-   min-height: 50px 이던 시절엔 main-navbar 높이와 같았다(9px+32px+9px).
-   2026-09-10: 버튼이 터치 높이(44px)로 커지면서 그 일치는 깨졌다 — 상하
-   9px 는 그대로 두고(align-items:center 가 어차피 수직 중앙을 맞춘다),
-   실제 높이는 44px 버튼 + 상하 9px = 62px 로 콘텐츠가 밀어 올린다. */
+   `min-height: 50px` 은 **한 번도 실제 높이였던 적이 없다.** 부트스트랩이
+   `.modal-footer > *` 에 걸던 `margin: .25rem` 때문에, 버튼이 32px 이던
+   시절에도 9 + 4 + 32 + 4 + 9 = **58px** 였다(실측 2026-09-10). "50px =
+   main-navbar 높이" 라는 주석은 그래서 처음부터 사실이 아니었다.
+   그 자식 마진은 아래에서 걷어냈다 — 지금은 9 + 40 + 9 = **58px** 로,
+   패딩이 말하는 값과 실제 높이가 처음으로 일치한다.
+   ⚠ min-height 에 그 값을 적지 말 것 — 토큰을 바꿀 때 따라오지 않는
+   숫자가 하나 더 생긴다. 콘텐츠가 밀어 올리게 두면 된다. */
 .aot-option-modal .modal-footer,
-.aot-center-modal .modal-footer {
+.aot-center-modal .modal-footer,
+#aotConfirmModal .modal-footer {
     flex: 0 0 auto;
     display: flex;
     flex-wrap: nowrap;
     align-items: center;
-    justify-content: flex-end;
-    gap: 0.25rem;
+    /* ⚠ justify-content:flex-end 가 아니라 flex-start + 첫 자식
+       margin-left:auto 로 오른쪽 정렬한다(바로 아래 규칙). 넘치지 않을 때는
+       결과가 완전히 같지만, 번역이 길어 넘칠 때는 다르다 — flex-end 는
+       흘러넘친 몫을 **왼쪽(시작 쪽)으로** 내보내는데, 그 방향의 넘침은
+       scrollWidth 에 잡히지 않아(실측 2026-09-10: scrollWidth==clientWidth
+       인데 첫 버튼 좌표가 음수) overflow-x:auto 를 걸어도 스크롤이 아예
+       안 걸렸다 — 화면 밖으로 나간 버튼을 볼 방법이 없었다. flex-start 로
+       시작점을 왼쪽에 고정하면 넘친 몫이 **오른쪽(끝 쪽)** 으로 나가고,
+       그 방향은 스크롤이 정상 작동한다. */
+    justify-content: flex-start;
+    /* 간격은 **여기 한 곳**이 정한다. 12px 인 이유는 되돌릴 수 없는 동작
+       (삭제)이 섞이기 때문이다 — §2-3 "되돌릴 수 없을수록 더 띄운다",
+       목록 행의 .aot-btn-group 과 같은 값이다(aot-settings.css). */
+    gap: var(--aot-space-3);
     min-height: 50px;
     padding-top: 9px;
     padding-right: 1rem;
@@ -1791,15 +1886,57 @@ body.modal-open {
     border-bottom-right-radius: 1rem;
     /* Bootstrap default margin 제거 */
     margin: 0;
+    /* 2026-09-10: 글자 긴 번역(예: 네덜란드어 Sluiten/Verwijderen/Dupliceren/
+       Opslaan)은 버튼 4개 폭 합이 좁은 화면 폭을 넘는다 — nowrap 이라
+       줄바꿈은 안 되고, 줄이지도 않는다(글자를 자르면 item2 의 60px 버그가
+       되풀이된다) — 대신 가로로 쓸어서 보게 한다. 스크롤은 되되 스크롤바는
+       숨김(앱 공통 규칙, 위 modal-body 와 같은 처리). */
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+/* flex-start 로 바꾼 만큼 첫 자식에 auto 여백을 줘 오른쪽 정렬을 되살린다
+   (안 넘칠 때는 flex-end 와 픽셀 단위로 같다 — 자유 공간을 첫 자식 앞에
+   전부 몰아주는 결과이므로). 이미 같은 자리에 `.mr-auto`(삭제 버튼을 홀로
+   왼쪽으로 떼는 부트스트랩 유틸)를 쓰던 두 곳(ai_scheduler.html)도 첫
+   자식이 그 버튼이라 겹쳐도 결과가 같다 — 충돌이 아니다. */
+.aot-option-modal .modal-footer > *:first-child,
+.aot-center-modal .modal-footer > *:first-child,
+#aotConfirmModal .modal-footer > *:first-child {
+    margin-left: auto;
+}
+.aot-option-modal .modal-footer::-webkit-scrollbar,
+.aot-center-modal .modal-footer::-webkit-scrollbar,
+#aotConfirmModal .modal-footer::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+    display: none;
 }
 
-/* --- modal-footer 버튼: 장갑 낀 손 기준 터치 높이(44px) ---
+/* 부트스트랩은 `.modal-footer > * { margin: .25rem }` 로 **자식마다** 여백을
+   건다. 위 `gap` 과 겹쳐 두 겹이 되어 있었다(2026-09-10 실측):
+     · 버튼 사이 = gap 4 + 마진 4 + 4 = 12px — 값은 맞았지만 두 곳이 정했다.
+       한쪽만 고치면 조용히 어긋난다.
+     · **오른쪽 정렬선이 깨졌다.** 본문 카드 오른쪽 변 472 / 푸터 마지막
+       버튼 468 — 패딩 16px 위에 마진 4px 이 더 얹혀 버튼만 4px 안쪽이었다.
+     · 세로 마진 4px 이 푸터를 부풀렸다. 패딩은 9px 인데 실제는 9+4 였다.
+   자식 여백을 걷고 간격은 위 `gap` 하나로 정한다. `mr-auto`(삭제 버튼을
+   왼쪽으로 미는 유틸)는 부트스트랩 유틸리티라 `!important` — 여기서 지워지지
+   않는다. */
+.aot-option-modal .modal-footer > *,
+.aot-center-modal .modal-footer > *,
+#aotConfirmModal .modal-footer > * {
+    margin: 0;
+}
+
+/* --- modal-footer 버튼: 장갑 낀 손 기준 터치 높이(40px) ---
    2026-09-10 이전에는 리터럴 32px 로 고정돼 있어 --aot-btn-height 와 별개로
    움직였다(토큰이 아니라 여기 적힌 숫자가 실제 값이었다). 사용자 결정으로
    모달 푸터는 컨테이너 밖 툴바와 함께 터치 목표를 키우는 대상이라
    --aot-btn-height-touch 를 그대로 읽는다. footer min-height(아래
-   .aot-option-modal .modal-footer)는 44px 버튼 + 상하 9px 로 자연히
-   62px 가 된다 — "50px = main-navbar 높이" 라는 예전 일치는 더 이상
+   .aot-option-modal .modal-footer)는 40px 버튼 + 상하 9px 로 자연히
+   58px 가 된다 — "50px = main-navbar 높이" 라는 예전 일치는 더 이상
    유지하지 않는다(터치 목표가 우선).
    ⚠ #aotConfirmModal(layout.html — 전역 확인/취소 대화상자, 모든 페이지에
    실린다)은 `.aot-option-modal`/`.aot-center-modal` 어느 쪽도 아니라

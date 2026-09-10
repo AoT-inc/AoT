@@ -142,6 +142,26 @@
     min-height: 0;
     padding: 0;
     line-height: normal;
+    /* ⚠ **자기가 대신하는 컨트롤처럼 굴게 한다.**
+       원래 자리에 있던 `<select class="form-control">` 은 부트스트랩에서
+       `display: block` 이라 부모 높이가 셀렉트 높이와 정확히 같다. 그런데
+       vendor 는 그 자리를 `display:inline-block; vertical-align:baseline`
+       래퍼로 바꿔 놓는다 — 인라인이 되는 순간 부모의 **줄 상자**가 생겨
+       셀렉트 아래에 descender 자리가 남는다.
+
+       실측(2026-09-10, /notes 태그 필터): 셀렉트 32px 인데 칸은 41px 였고,
+       그 9px 때문에 `align-items:center` 가 칸을 가운데 맞추면서 셀렉트만
+       옆 칸들보다 **4px 위로** 떴다. 여백을 준 적이 없는데 어긋나 보이는
+       증상의 정체다(`mb-2` 는 md 이상에서 0 이라 범인이 아니었다).
+
+       `display:block` 으로 바꾸면 확실하지만, 블록 부모 안에서 형제와 한
+       줄을 나눠 쓰는 래퍼가 있어(실측 /notes 6개 중 4개) 그쪽 줄바꿈이
+       깨진다. `vertical-align` 은 흐름을 그대로 두고 줄 상자만 없앤다.
+
+       ⚠ 이 칸을 `.aot-settings-control`·`.aot-modal-option-control` 같은
+       **공용 래퍼(flex)** 안에 두면 이 문제는 애초에 안 난다. 부트스트랩
+       `col-*` 에 셀렉트를 바로 넣는 자리에서만 드러난다. */
+    vertical-align: middle;
 }
 
 /* 버튼 라벨은 버튼 안에서 세로 가운데에 놓이고, 넘치면 줄임표로 끝난다.
@@ -187,6 +207,18 @@
 }
 
 .bootstrap-select > .dropdown-toggle:focus-visible {
+    outline: var(--aot-focus-outline);
+    outline-offset: var(--aot-focus-outline-offset);
+}
+
+/* 목록이 **열려 있는 동안** 버튼을 같은 링으로 두른다 — 지금 어느 셀렉트가
+   열려 있는지 보이게 한다(2026-09-10 사용자 결정). 닫히면 사라진다.
+   면은 바꾸지 않는다 — 예전 테마 규칙은 이 자리에서 면을 #141414 로 뒤집어
+   글자가 안 읽혔다(bootstrap-4-themes/aot.css 주석 참조).
+   열린 동안 버튼이 포커스를 갖고 있어도 위 `:focus { outline: none }` 에 지지
+   않도록 `:focus` 짝을 함께 적는다(0,4,0). */
+.bootstrap-select.show > .dropdown-toggle,
+.bootstrap-select.show > .dropdown-toggle:focus {
     outline: var(--aot-focus-outline);
     outline-offset: var(--aot-focus-outline-offset);
 }

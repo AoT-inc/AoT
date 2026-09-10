@@ -553,12 +553,16 @@ body {
   text-align: center;
 }
 
-.bootstrap-select .dropdown-toggle:focus {
-  background-color: var(--aot-color-dark, #141414);
-  color: var(--primary);
-  outline: none;
-  /* 추가 포커스 outline 제거 */
-}
+/* `.bootstrap-select .dropdown-toggle:focus` 의 면 칠하기를 지웠다(2026-09-10).
+   포커스를 받은 셀렉트 버튼을 `#141414`(거의 검정)으로 칠하고 있었다 — 목록을
+   닫을 때 포커스가 버튼으로 돌아오면 버튼이 통째로 검게 바뀌었고, 아직 고르지
+   않은 상태("선택…")는 글자가 보조 글자색이라 검정 위에서 읽을 수 없었다
+   (사용자 지적). 첫 커밋부터 있던 규칙이다.
+   공용 규칙과도 어긋난다: 셀렉트 버튼의 면은 컨트롤 면(`--aot-input-bg`)이고,
+   포커스는 **색을 뒤집지 않고** 키보드 이동일 때 링 하나로만 보인다
+   (components/aot-select.css 의 `:focus-visible` — ui-guide 「키보드 포커스」).
+   이 파일은 `@layer` 밖에서 실려 특이도로 겨루는데, 이 `:focus`(0,3,0)가 공용
+   면 규칙(0,2,0)을 이겨 공용 쪽에서는 막을 수 없었다 — 그래서 여기서 지운다. */
 
 /* 입력창 스타일 */
 /* Bootstrap .form-control 기본 텍스트색(#495057)이 모든 input/select/textarea에
@@ -687,12 +691,20 @@ button.dropdown-toggle.btn.btn-primary:hover {
 }
 
 
-/* PID 위젯 내부 col-3, col-4의 input 요소 폰트 크기 강제 설정 */
+/* PID 위젯 내부 col-3, col-4의 input 요소 폰트 크기 강제 설정
+   ⚠ 2026-09-10: font-size 를 지웠다. `div[id^="pid_"] input.form-control`
+   (0,2,2)가 활성화/비활성화/일시중지/재개/유지 버튼에 공통으로 쓰이는
+   `.aot-entry-actions input.btn { font-size: var(--aot-font-size-xs) }`
+   (0,2,2 아닌 0,2,1)를 특이도로 이겨, PID 카드의 버튼 글자만 12px 대신
+   1em(부모 맥락 상속, 실측 14px)으로 커 보였다(사용자 신고). `.col-3`
+   `.col-6` `.col-4` 는 지금 템플릿 어디서도 `input.form-control` 과 같이
+   쓰이지 않아(출력 항목은 `aot-output-col-4` 처럼 다른 이름을 쓴다)
+   font-size 만 없어도 실제로 잃는 것이 없다. text-align/color 는 그대로
+   둔다 — 그건 다른 문제였다는 증거가 없다. */
 .col-3 input.form-control,
 .col-6 input.form-control,
 .col-4 input.form-control,
 div[id^="pid_"] input.form-control {
-  font-size: 1em;
   text-align: center;
   color: var(--aot-color-text-primary, #000);
 }

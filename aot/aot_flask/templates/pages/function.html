@@ -473,8 +473,12 @@
         headers: { "X-CSRFToken": "{{form_function_base.csrf_token._value()}}" },
         data: $form.serialize() + '&' + action + '=1',
         success: function (data) {
-          if (action === 'function_add' && data.data.function_id) {
+          if (action === 'function_add') {
             if ('dep_unmet' in data.data && data.data.dep_unmet.length > 0) {
+              // 의존성 미설치 — function_id 는 생성되지 않는다(백엔드가
+              // 아예 만들지 않고 되돌린다). function_id 유무로 먼저
+              // 분기하면 이 경로가 통째로 스킵되어 토스트 에러만 뜨고
+              // 모달이 안 뜬다. dep_unmet 을 function_id 보다 먼저 검사한다.
               $(".dependencies_device_name").text(data.data.dep_name);
               $(".dependencies_device").text(data.data.dep_unmet);
               $(".dependencies_unmet").text(data.data.dep_list.join(", "));
@@ -488,7 +492,7 @@
               }
               $('#modal_config_dependency_install').modal('show');
               popup_response(data);
-            } else {
+            } else if (data.data.function_id) {
               $.ajax({
                 type: "GET",
                 url: '/function?function_type=entry&function_id=' + data.data.function_id,

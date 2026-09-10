@@ -1464,7 +1464,12 @@ IMPORTANT: This is the SOURCE TEMPLATE file.
         </div>
         <div class="modal-footer justify-content-center border-0 pt-0">
           <button type="button" class="btn aot-pill-btn aot-pill-btn-primary aot-confirm-ok">{{_('OK')}}</button>
-          <button type="button" class="btn aot-pill-btn" data-dismiss="modal">{{_('Cancel')}}</button>
+          {#- 무늬 없는 .btn.aot-pill-btn 은 배경이 흰색(--aot-surface-card)이다.
+              이 모달(#aotConfirmModal)은 .aot-option-modal 이 아니라 순정
+              부트스트랩 흰 배경(.modal-content)을 그대로 쓰고 있어, 흰 버튼이
+              흰 카드 위에서 사라졌다(실측 2026-09-10: 둘 다 rgb(255,255,255)).
+              취소는 보조 동작이니 보조색을 명시한다. -#}
+          <button type="button" class="btn aot-pill-btn aot-pill-btn-secondary" data-dismiss="modal">{{_('Cancel')}}</button>
         </div>
       </div>
     </div>
