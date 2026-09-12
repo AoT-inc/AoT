@@ -115,6 +115,26 @@ class TestKnowledgeBrowseC6(unittest.TestCase):
         self.assertEqual(1, lib.browse()['total'])
         self.assertEqual(2, lib.browse(include_disabled=True)['total'])
 
+    def test_state_filter_finds_ai_notes_still_waiting_for_a_person(self):
+        """AI 지식 화면이 검토 목록을 따로 두지 않고 지식 목록의 "확인이 필요한
+        것" 필터로 합쳤다(2026-09-10) — 그 필터가 AI 가 쓴 미확인 메모만 골라야
+        한다. 사람이 직접 쓴 항목(user_confirmed)이 섞이면 확인할 것이 아닌데
+        확인하라고 내미는 셈이 된다."""
+        self._seed()
+        items = lib.browse(provenance='ai_curated', context_state='system_generated')['items']
+        self.assertEqual(['밸브 안정화'], [i['heading'] for i in items])
+        self.assertEqual(0, lib.browse(provenance='user_provided',
+                                       context_state='system_generated')['total'])
+
+    def test_provenance_filter_takes_a_list_so_synced_feed_chunks_can_be_left_out(self):
+        """AI 지식 화면의 기본 목록은 사람과 AI 가 쓴 것이다(2026-09-10). 소스에서
+        동기화한 조각은 제목이 전부 소스 이름이라 목록에 섞이면 같은 줄이 반복돼
+        읽을 수 없다 — 쉼표 목록으로 여럿을 고를 수 있어야 그 조각만 뺄 수 있다."""
+        self._seed()
+        both = lib.browse(provenance='user_provided,ai_curated')['items']
+        self.assertEqual({'user_provided', 'ai_curated'}, {i['provenance'] for i in both})
+        self.assertEqual(0, lib.browse(provenance='external_authority,data_derived')['total'])
+
     def test_set_enabled_keeps_the_row(self):
         """치우는 것이지 지우는 것이 아니다 — 되돌릴 수 있어야 한다."""
         self._seed()

@@ -856,10 +856,9 @@ def register_blueprints(app):
     app.register_blueprint(routes_orch_api.blueprint)  # register orch api routes
     app.register_blueprint(routes_mcp_api.blueprint)   # register mcp api routes
     app.register_blueprint(routes_ai_monitoring.ai_monitoring_bp)  # register ai monitoring routes
-    from aot.aot_flask import routes_ai_api, routes_locale_api, routes_scheduler, routes_ai_context, routes_ai_portal, routes_integrations
+    from aot.aot_flask import routes_ai_api, routes_locale_api, routes_scheduler, routes_ai_context, routes_integrations
     app.register_blueprint(routes_ai_api.blueprint)  # register ai api routes
     app.register_blueprint(routes_ai_context.blueprint)  # register ai context routes
-    app.register_blueprint(routes_ai_portal.blueprint)  # register ai portal routes
     app.register_blueprint(routes_locale_api.blueprint)  # register locale api routes
     app.register_blueprint(routes_scheduler.blueprint)  # register scheduler routes
     app.register_blueprint(routes_integrations.blueprint)  # register external integrations (Google Calendar OAuth)

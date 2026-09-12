@@ -31222,3 +31222,17 @@ msgstr "Усі вимірювання"
 
 msgid "All Units"
 msgstr "Усі одиниці виміру"
+
+#: aot/widgets/AoT_plot.py
+msgid "Map or site"
+msgstr "Карта/об'єкт"
+
+#: aot/widgets/AoT_plot.py
+msgid ""
+"Show only the plots in this map or site. Leave empty to show every plot in "
+"progress."
+msgstr "Показувати лише ділянки на цій карті або об'єкті. Залиште порожнім, щоб показати всі ділянки, що вирощуються."
+
+#: aot/aot_flask/static/js/widgets/AoT_plot/aot-plot-widget.js
+msgid "Go to page %(n)s"
+msgstr "Перейти на сторінку %(n)s"

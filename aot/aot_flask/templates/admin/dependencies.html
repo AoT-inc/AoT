@@ -5,6 +5,7 @@
 {% block title %} - {{_('Dependencies')}}{% endblock %}
 
 {% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/aot-settings.css') }}" />
   {% if install_in_progress == 1 %}
 <script>
   let prev_string = '';
@@ -42,11 +43,17 @@
   <main role="main" class="container py-4">
     {% include 'flash_messages.html' %}
 
-    <h4>{{_('Package Management')}} <a href="{{help_page[0]}}" target="_blank"><span class="fas fa-question-circle aot-help-icon"></span></a></h4>
+    {#- 2026-09-11: 이 페이지는 날 h4(24/600)가 제목이고 바로 아래 조건부
+        h2(32/600)가 더 커서 위계가 뒤집혀 있었다(사용자 지적). 페이지 제목은
+        .aot-settings-title(h3, 24/500)로, 하위 제목은 h4로 낮춘다
+        (§4-4 "페이지 제목"). -#}
+    <div class="aot-settings-title">
+      <h3>{{_('Package Management')}} <a href="{{help_page[0]}}" target="_blank"><span class="fas fa-question-circle aot-help-icon"></span></a></h3>
+    </div>
     <p>{{_('Various software packages used in AoT may be deactivated to speed up the initial installation process. On this page, you can check installed packages and install those that are currently unmet.')}}</p>
-    
+
     {% if device != '0' %}
-    <h2>{{_('Device')}}: {{device_name}} ({{device}})</h2>
+    <h4 class="aot-settings-group-title">{{_('Device')}}: {{device_name}} ({{device}})</h4>
     
     {% if device_unmet_dependencies %}
     
@@ -107,8 +114,8 @@
     
     {% if unmet_list %}
     <div>
-      <h3 class="aot-title-warning">{{_('Some packages are not met')}}</h3>
-      <p>{{_('The following list includes packages not currently installed and the devices that use them. To use a specific function, you must first install the packages required for that function. Selecting a device name will allow you to check package information and installation options for that device.')}}</p>
+      <h4 class="aot-title-warning aot-section-title-size">{{_('Some packages are not met')}}</h4>
+      <p class="aot-settings-sub aot-settings-bare">{{_('The following list includes packages not currently installed and the devices that use them. To use a specific function, you must first install the packages required for that function. Selecting a device name will allow you to check package information and installation options for that device.')}}</p>
     <table class="table">
       <thead>
         <tr>
@@ -151,7 +158,7 @@
       {% endfor %}
     </div>
     {% else %}
-      <h3 class="aot-title-success">{{_('All dependencies are currently installed')}}</h3>
+      <h4 class="aot-title-success aot-section-title-size">{{_('All dependencies are currently installed')}}</h4>
     {% endif %}
 
     {% if met_exist %}

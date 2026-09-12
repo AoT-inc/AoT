@@ -3,6 +3,7 @@
 {% set help_page = [manual_url("Data-Viewing/#asynchronous-graphs"), _('Asynchronous Graphs')] %}
 
 {% block head %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/aot-settings.css') }}" />
   <script type="text/javascript" src="{{ asset('highcharts-stack') }}"></script>
   <script src="{{ asset('app-chart-core') }}"></script>
 
@@ -79,7 +80,7 @@
       max-height: 320px;
       overflow-y: auto;
       min-width: 280px;
-      max-width: 92vw;
+      max-width: calc(92 * var(--aot-vw));
       padding: 0.4rem;
       /* 스크롤은 되되 스크롤바는 보이지 않는다(앱 공통 규칙). 목록이 짧을 때는
          드러나지 않던 문제인데, 구역 필터가 36줄이 되면서 눈에 띄었다. */
@@ -178,11 +179,26 @@
       padding-top: 0.85rem;
     }
 
+    /* 다섯 알약이 한 줄이라 폭이 좁은 폰에서는 카드 밖으로 흘러넘친다
+       (2026-09-11 사용자 지적: "모바일에서 컨테이너 밖으로 출력"). 줄바꿈
+       대신 가로 스크롤을 준다 — 트랙 하나짜리 세그먼트 컨트롤을 두 줄로
+       접으면 트랙 모양(둥근 알약)이 깨진다. 터치·트랙패드는 그대로 넘어가고,
+       마우스만 쓰는 데스크탑은 `.aot-drag-scroll`(전역, app-shell)이 끌기를
+       준다(§4-6 "탭 줄이 넘치면"과 같은 처방). 스크롤바는 앱 공통 정책대로
+       숨긴다. */
     .aot-period-group {
       display: inline-flex;
       background: var(--aot-bg-off, #F3F6F5);
       border-radius: 9999px;
       padding: 3px;
+      max-width: 100%;
+      overflow-x: auto;
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+    }
+
+    .aot-period-group::-webkit-scrollbar {
+      display: none;
     }
 
     /* 장갑 낀 손 기준 터치 높이(--aot-btn-height-touch, 2026-09-10). 바깥
@@ -231,6 +247,26 @@
       text-align: center;
     }
 
+    /* "같은 자리의 이전 장치 값도 함께" 체크박스 문구는 위 `.aot-height-field
+       label`(짧은 "높이" 라벨용 nowrap)을 그대로 물려받으면 줄바꿈을 못 해
+       폰에서 카드 밖으로 흘러나간다(2026-09-11 사용자 지적: "설명 문구 및
+       체크박스… 같은 자리의 이전 장치 값도 함께"). 이 필드만 줄바꿈을
+       허용하고 flex 항목으로서 줄어들 수 있게 한다. 선택자 특이도는 위와
+       같아 순서(이 규칙이 뒤에 옴)로 이긴다. */
+    .aot-stitch-field {
+      min-width: 0;
+      align-items: flex-start;
+    }
+
+    .aot-stitch-field label {
+      white-space: normal;
+    }
+
+    :lang(ko) .aot-stitch-field label {
+      word-break: keep-all;
+      overflow-wrap: anywhere;
+    }
+
     /* 모양(반지름·패딩)은 .aot-pill-btn 이 정한다 — 여기는 배치만. */
     .aot-graph-submit {
       margin-left: auto;
@@ -257,7 +293,7 @@
   <main role="main" class="container py-4">
   {% include 'flash_messages.html' %}
 
-    <h4>{{_('Asynchronous Graphs')}} <a href="{{help_page[0]}}" target="_blank"><span class="fas fa-question-circle aot-help-icon"></span></a></h4>
+    <h3 class="aot-page-title-size aot-page-title-inset">{{_('Asynchronous Graphs')}} <a href="{{help_page[0]}}" target="_blank"><span class="fas fa-question-circle aot-help-icon"></span></a></h3>
 
     <p>{{_('Graphs are useful for visualizing datasets over weeks, months, or years. Displaying such data on synchronous graphs can cause high data processing and computation load.')}}</p>
 
@@ -342,7 +378,7 @@
       <div class="aot-graph-chips" id="measure-chips"></div>
 
       <div class="aot-toolbar-controls">
-        <div class="aot-period-group" role="group" aria-label="{{_('Period')}}">
+        <div class="aot-period-group aot-drag-scroll" role="group" aria-label="{{_('Period')}}">
           <button type="button" class="aot-period-btn" data-period="all">{{_('All Data')}}</button>
           <button type="button" class="aot-period-btn" data-period="year">{{_('1 Year')}}</button>
           <button type="button" class="aot-period-btn" data-period="month">{{_('1 Month')}}</button>
@@ -362,7 +398,7 @@
             사람에게 이 옵션이 보이면 "장치를 교체하면 뭔가 달라지나" 로
             읽힌다. -#}
         {% if has_replacements %}
-        <div class="aot-height-field">
+        <div class="aot-height-field aot-stitch-field">
           <label for="stitch_history" title="{{_('Only applies to devices placed on a map. The values of the device that held the same spot before are appended; past data is never rewritten.')}}">
             <input type="checkbox" id="stitch_history" name="stitch_history" value="1"{% if stitch_history %} checked{% endif %}>
             {{_('Include the previous device in this spot')}}

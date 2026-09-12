@@ -593,7 +593,7 @@ input:checked+.slider:before {
     left: 50%;
     transform: translateX(-50%);
     bottom: 35px; /* [Fix] V8: Restore position */
-    max-height: 50vh; /* [Fix] V8: Enable scroll */
+    max-height: calc(50 * var(--aot-vh)); /* [Fix] V8: Enable scroll */
     z-index: var(--aot-z-fixed-panel); /* 지도 컨트롤 위로 뜨는 패널 */
 }
 
@@ -1498,7 +1498,10 @@ input:checked+.slider:before {
 /* 모달 안 링크 — 부트스트랩 기본이 #007bff(파랑)다. 글자에 색을 쓰지
    않는다(§2-1)는 규칙에 걸리므로 본문색으로 두고, 누를 수 있다는 것은
    밑줄로 말한다. 입력칸의 밑줄은 상자 아래 2px 선이라 섞이지 않는다. */
-.aot-option-modal .modal-body a:not(.btn):not(.aot-pill-btn) {
+/* 구획 탭(`.nav-link`)은 산문 링크가 아니다 — 이 규칙(특이도 0,4,1)이
+   공용 구획 탭(`.nav-tabs .nav-link`, 0,2,0)을 이겨 모달 안 꺼진 탭이
+   1차 글자색 + 밑줄 글자로 나왔다(2026-09-10 실측). */
+.aot-option-modal .modal-body a:not(.btn):not(.aot-pill-btn):not(.nav-link) {
   color: var(--aot-text-main);
   text-decoration: underline;
 }
@@ -1575,7 +1578,7 @@ a:not([class]) {
    무엇을 이기고 있는지 볼 수 없었다. */
 body {
   width: 100%;
-  max-width: 100vw;
+  max-width: calc(100 * var(--aot-vw));
   overflow-x: hidden;
   overflow-y: auto;
 }
@@ -1624,6 +1627,85 @@ html.aot-drag-scrolling * {
   cursor: grabbing;
   -webkit-user-select: none;
   user-select: none;
+}
+
+/* ── 구획 탭 — 부트스트랩 `.nav-tabs` 의 공용 모습 ────────────────────────
+   한 페이지·모달 **안에서** 구획을 바꾸는 탭(`data-toggle="tab"`)이다. 끌어서
+   순서를 바꾸는 대시보드·페이지 탭(`.aot-sticky-tabs` / `.aot-tab-item`)과는
+   다른 부품이다.
+
+   그전에는 공용 모습이 없어 부트스트랩 기본(회색 상자 테두리·파란 글자)이
+   그대로 나오거나 화면마다 따로 칠했다 — AI 관리자는 파란 밑줄, AI
+   라이브러리는 알약 + 테두리(05d56ad6, 되돌림). 같은 요소가 페이지마다 다른
+   모습이 된 근본 원인이 "공용이 없다" 였다.
+
+   모양은 **글자 + 켜진 탭 밑줄**이다(2026-09-10 사용자 결정 — 알약 시안 둘과
+   나란히 입혀 보고 고름). 색은 전부 settings/custom_ui 필드다:
+     꺼진 탭 글자   text_color_secondary
+     켜진 탭 글자   text_color_primary
+     켜진 탭 밑줄   brand_primary — 입력 밑줄의 포커스색과 같은 "여기" 표식
+     탭 줄 바닥선   bd_divider(--aot-border-neutral) — 탭과 그 아래 내용을 잇는 한 줄
+
+   켜짐/꺼짐의 굵기는 같다. 굵기를 바꾸면 글자 폭이 달라져 옆 탭이 밀린다.
+   넘치면 줄바꿈하지 않고 가로로 넘긴다 — 두 줄이 되면 어느 탭이 어느 줄인지
+   읽히지 않는다(§4-6). 마우스로 넘기는 것은 `aot-drag-scroll.js` 가 이
+   선택자까지 맡는다. */
+.nav-tabs {
+  flex-wrap: nowrap;
+  border-bottom: 1px solid var(--aot-border-neutral);
+  margin-bottom: var(--aot-space-3);     /* 블록과 블록 = 12 */
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.nav-tabs::-webkit-scrollbar { display: none; }
+
+.nav-tabs .nav-item {
+  flex: 0 0 auto;
+  margin: 0;
+}
+
+.nav-tabs .nav-link {
+  display: flex;
+  align-items: center;
+  min-height: var(--aot-btn-height-touch);   /* 누르는 것 — 터치 표적(§3-1) */
+  /* 좌우 16 — 담는 컨테이너의 16 과 더해 첫 탭 글자가 정렬선 32 에 온다(§2-3). */
+  padding: 0 var(--aot-space-4);
+  margin: 0 0 -1px;              /* 켜진 탭의 밑줄이 바닥선 위에 겹친다 */
+  border: 0;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  background: transparent;
+  color: var(--aot-color-text-secondary);
+  font-size: var(--aot-font-size-sm);
+  font-weight: 600;
+  white-space: nowrap;
+  text-decoration: none;
+}
+
+/* 호버는 밝기만(§3-3 승인 예외). 전역 `a:hover` 가 글자를 1차색으로 바꾸므로
+   색을 다시 적어 둔다 — 안 그러면 호버만으로 켜진 탭처럼 보인다. */
+.nav-tabs .nav-link:hover {
+  color: var(--aot-color-text-secondary);
+  opacity: 0.82;
+}
+
+.nav-tabs .nav-link.active,
+.nav-tabs .nav-link.active:hover,
+.nav-tabs .nav-item.show .nav-link {
+  color: var(--aot-color-text-primary);
+  background: transparent;
+  border-bottom-color: var(--aot-color-brand-primary);
+  opacity: 1;
+}
+
+/* 포커스 링(§4-10). 탭 줄이 `overflow` 로 잘리므로 링을 안쪽으로 그린다 —
+   바깥(+2px)에 두면 위아래가 줄에 먹혀 링이 보이지 않는다. */
+.nav-tabs .nav-link:focus-visible {
+  outline: 2px solid var(--aot-color-brand-primary);
+  outline-offset: -2px;
 }
 
 /* 약관·개인정보처럼 **읽기만 하는 문서** 화면. 글줄이 길어지지 않게 폭을

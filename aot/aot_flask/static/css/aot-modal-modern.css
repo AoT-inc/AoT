@@ -64,6 +64,14 @@
     white-space: normal;
 }
 
+/* 한국어만 어절 경계에서 접는다 — 자세한 이유는
+   aot-settings.css `.aot-settings-sub` 앞 주석에 적었다(같은 규칙이라
+   두 번 풀어 쓰지 않는다). ja/zh 는 띄어쓰기가 없는 언어라 그대로 둔다. */
+:lang(ko) .aot-modal-body-text {
+    word-break: keep-all;
+    overflow-wrap: anywhere;
+}
+
 /* 컨테이너 **바로 위**에서 그 컨테이너 하나를 설명하는 문구 — 제목과 상자
    사이. `.aot-modal-body-text` 와 함께 쓴다(문자색·크기는 그대로, 좌우
    여백만 더한다). 상자의 좌우 여백(`--aot-space-4` = `.aot-modal-container`
@@ -77,9 +85,12 @@
 }
 
 /* SECTION 2: TOPOGRAPHY & LAYOUT HIERARCHY */
+/* 페이지 제목 역할(§2-3, 2026-09-11 확정) — 크기는 그대로 xl 24, 굵기만
+   700 → 500. 모달·드로어는 페이지 한 장이라 이 역할이 여기서도 페이지
+   제목이다. */
 .aot-modal-title {
-    font-size: var(--aot-font-size-xl);
-    font-weight: 700;
+    font-size: var(--aot-fs-page-title);
+    font-weight: var(--aot-fw-title);
     color: var(--aot-text-title);
     margin-top: 1rem;
     margin-bottom: 0.8rem;
@@ -88,8 +99,8 @@
 }
 
 .aot-modal-group-title {
-    font-size: var(--aot-font-size-lg);
-    font-weight: 700;
+    font-size: var(--aot-fs-section-title);
+    font-weight: var(--aot-fw-title);
     color: var(--aot-color-text-secondary);
     margin-top: 1.6rem; /* 2:1 비율 - 위쪽 */
     margin-bottom: 0.2rem; /* 2:1 비율 - 아래쪽 */
@@ -99,8 +110,8 @@
 .aot-modal-section-title {
     background: none;
     color: var(--aot-color-text-secondary);
-    font-weight: 700;
-    font-size: var(--aot-font-size-lg);
+    font-weight: var(--aot-fw-title);
+    font-size: var(--aot-fs-section-title);
     padding: 0 0 0 16px; /* 박스 내부 레이블과 정렬 통일 (16px) */
     border-radius: 0;
     border-left: none;
@@ -191,8 +202,8 @@ a.aot-modal-section-title-collapsible + .collapse + .aot-modal-container:not(:ha
 }
 
 .aot-modal-subgroup-title {
-    font-size: var(--aot-font-size-base);
-    font-weight: 700;
+    font-size: var(--aot-fs-container-title);
+    font-weight: var(--aot-fw-title);
     color: var(--aot-text-main);
     background: none;
     padding: 7px 0 7px 0; /* 상하 대칭 패딩 */
@@ -363,12 +374,19 @@ a.aot-modal-section-title-collapsible + .collapse + .aot-modal-container:not(:ha
     flex: 0 1 auto; /* Shrink-only: label occupies content width, not full row */
     min-width: 100px;
     max-width: calc(100% - var(--aot-common-control-width, 160px) - var(--aot-row-gap, 15px));
-    font-size: var(--aot-font-size-sm);
-    font-weight: 700;
+    font-size: var(--aot-fs-page-body);
+    font-weight: 600;
     color: var(--aot-text-main);
     line-height: 1.3;
     word-break: break-word; /* Prevent long titles from breaking layout */
     margin-bottom: 0; /* Override Bootstrap's default label margin to enable proper vertical centering */
+}
+
+/* 한국어만 어절 경계에서 접는다 — aot-settings.css `.aot-settings-sub` 앞
+   주석 참고. ja/zh 는 띄어쓰기가 없는 언어라 그대로 둔다. */
+:lang(ko) .aot-modal-option-label {
+    word-break: keep-all;
+    overflow-wrap: anywhere;
 }
 
 /* SECTION 3: FORM CONTROLS & LAYOUT */
@@ -626,6 +644,16 @@ textarea.aot-modern-input {
     overflow: auto;
     white-space: pre;       /* code: no wrap, horizontal scroll instead */
     overflow-wrap: normal;
+    /* 스크롤은 되되 스크롤바는 보이지 않는다 — 앱 전역 규칙
+       (components/aot-base-ui.css `.nav-tabs` 와 같은 패턴). 코드 칸은
+       가로로, 아래 `.aot-input-prose` 는 세로로 넘치는데 이 규칙이 부모라
+       한 자리에서 둘 다 잡는다. */
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+textarea.aot-modern-input::-webkit-scrollbar {
+    display: none;
 }
 
 /* 여러 줄을 **보여 주기만** 하는 칸. 입력이 아니라 <div> 라서 textarea 규칙이
@@ -716,7 +744,8 @@ textarea.aot-modern-input {
 
 /* 산문 입력용. 위 규칙은 조건부 컨트롤러의 **코드 편집기**를 기준으로 삼아
    `white-space: pre` 로 줄바꿈을 막는다 — 코드는 그게 맞지만 사람이 쓰는 글은
-   가로로 흘러 나가 읽을 수 없다. 코드가 아닌 곳에 이 클래스를 함께 준다. */
+   가로로 흘러 나가 읽을 수 없다. 코드가 아닌 곳에 이 클래스를 함께 준다.
+   (스크롤바 숨김은 위 `textarea.aot-modern-input` 기본 규칙이 이미 맡는다.) */
 textarea.aot-modern-input.aot-input-prose {
     white-space: normal;
     overflow-wrap: break-word;
@@ -825,6 +854,15 @@ textarea.aot-modern-input.aot-input-prose {
     color: var(--aot-text-main);
     opacity: 1;
     visibility: visible;
+}
+
+/* 짙은 알약 셀렉트(data-style="… aot-pill-btn-primary")는 버튼이 흰 글자다.
+   위 두 규칙이 안쪽 글자를 --aot-text-main 으로 덮어 배경과 같은 #13261B 가
+   되던 것(API 키 선택 · 카메라 옵션, 2026-09-11 실측) — 버튼 글자색을 따른다.
+   밝은 컨트롤 면 셀렉트는 위 규칙 그대로다. */
+.aot-modal-option-control .bootstrap-select > .aot-pill-btn-primary .filter-option,
+.aot-modal-option-control .bootstrap-select > .aot-pill-btn-primary .filter-option-inner-inner {
+    color: inherit;
 }
 
 .aot-modal-option-control .bootstrap-select .dropdown-toggle:after {
@@ -975,12 +1013,18 @@ label.btn.aot-pill-btn { cursor: pointer; }
    추가로 켠다 — `.aot-settings-bare`(카드 밖 글자 정렬용)는 저장소 전체에
    4곳뿐이고(settings/users.html 3 · api_key.html 1) 전부 탭 하나당 단
    하나뿐인 페이지 헤더 "추가" 버튼이다(반복 행이 아니다) — 실측으로
-   4곳 전부 확인. */
+   4곳 전부 확인.
+
+   `.aot-graph-toolbar` 는 뺐다(2026-09-11, 사용자가 "컨테이너 안에 컨테이너
+   밖 버튼이 쓰였다"고 지적) — 2026-09-10에 "카드 없이 확인"됐다고 넣었지만
+   틀린 확인이었다. 그 클래스는 graph-async.html 자체 `<style>` 에서
+   `background: var(--aot-surface-card)` · `border-radius: 20px` ·
+   `box-shadow` 로 카드다. 안의 버튼(`.aot-graph-submit` 등)은 이제 카드
+   기준(§ 위 문단, --aot-btn-height 32px)으로 되돌아간다. */
 .sched-toolbar .btn:not(.btn-toggle),
 .fac-page-actions .btn:not(.btn-toggle),
 .fac-stepbar .btn:not(.btn-toggle),
 .fac-stage-toggle .btn:not(.btn-toggle),
-.aot-graph-toolbar .btn:not(.btn-toggle),
 .mp-toolbar .btn:not(.btn-toggle),
 .aot-log-toolbar .btn:not(.btn-toggle),
 .aot-main-selection-row .btn:not(.btn-toggle),
@@ -995,7 +1039,6 @@ label.btn.aot-pill-btn { cursor: pointer; }
 .sched-toolbar .bootstrap-select > .dropdown-toggle,
 .fac-page-actions .bootstrap-select > .dropdown-toggle,
 .fac-stepbar .bootstrap-select > .dropdown-toggle,
-.aot-graph-toolbar .bootstrap-select > .dropdown-toggle,
 .mp-toolbar .bootstrap-select > .dropdown-toggle,
 .aot-log-toolbar .bootstrap-select > .dropdown-toggle,
 .aot-main-selection-row .bootstrap-select > .dropdown-toggle {
@@ -1418,7 +1461,7 @@ label.btn.aot-pill-btn { cursor: pointer; }
     right: 0;
     height: 100%;
     width: 400px;
-    max-width: 90vw; /* Guard for very small non-mobile windows */
+    max-width: calc(90 * var(--aot-vw)); /* Guard for very small non-mobile windows */
 
     @media (min-width: 992px) { /* LG */
         width: 450px;
@@ -1453,7 +1496,7 @@ label.btn.aot-pill-btn { cursor: pointer; }
     position: fixed;
     top: 0;
     right: 0;
-    height: 100vh;
+    height: calc(100 * var(--aot-vh));
     z-index: var(--aot-z-popover); /* 모달 위, 모달 밖에서도 최상위 */
 }
 
@@ -1666,8 +1709,8 @@ body.modal-open {
     background-color: var(--aot-surface-body);
     box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
     /* 높이: vh 폴백 → dvh(동적 뷰포트, 모바일 크롬 반영) */
-    max-height: calc(100vh - 100px);
-    max-height: calc(100dvh - 100px);
+    max-height: calc(100 * var(--aot-vh) - 100px);
+    max-height: calc(100 * var(--aot-dvh) - 100px);
 }
 
 /* --- form 직속 자식 (dashboard 위젯 패턴) --- */
@@ -2058,8 +2101,8 @@ body.modal-open {
         bottom: auto;
         left: auto;
         height: auto;
-        max-height: calc(100vh - 2rem);
-        max-height: calc(100dvh - 2rem);
+        max-height: calc(100 * var(--aot-vh) - 2rem);
+        max-height: calc(100 * var(--aot-dvh) - 2rem);
         border-radius: var(--aot-radius-lg);
     }
 
@@ -2306,7 +2349,7 @@ body { transition: padding-right 0.4s cubic-bezier(0.075, 0.82, 0.165, 1); }
     margin: 0;
     width: var(--aot-wdrawer-w);
     max-width: var(--aot-wdrawer-w);
-    height: 100vh; height: 100dvh;
+    height: calc(100 * var(--aot-vh)); height: calc(100 * var(--aot-dvh));
     pointer-events: auto;
     transform: translateX(100%);      /* start off-screen right */
     transition: transform 0.4s cubic-bezier(0.075, 0.82, 0.165, 1);
@@ -2314,8 +2357,8 @@ body { transition: padding-right 0.4s cubic-bezier(0.075, 0.82, 0.165, 1); }
   .aot-widget-drawer.show .modal-dialog { transform: translateX(0); }
 
   .aot-widget-drawer .modal-content {
-    height: 100vh; height: 100dvh;
-    max-height: 100dvh;
+    height: calc(100 * var(--aot-vh)); height: calc(100 * var(--aot-dvh));
+    max-height: calc(100 * var(--aot-dvh));
     border-radius: 0;
     box-shadow: -5px 0 25px rgba(0, 0, 0, 0.12);
   }
@@ -2337,8 +2380,8 @@ body { transition: padding-right 0.4s cubic-bezier(0.075, 0.82, 0.165, 1); }
      모르는 브라우저는 둘째 줄을 버리고 첫 줄(`vh`)을 쓴다. 순서가 곧 폴백이라
      합쳐 쓰거나 순서를 바꾸면 안 된다. */
   :root {
-    --aot-preview-band-h: 42vh;   /* @kind spacing */
-    --aot-preview-band-h: 42dvh;  /* @kind spacing */
+    --aot-preview-band-h: calc(42 * var(--aot-vh));   /* @kind spacing */
+    --aot-preview-band-h: calc(42 * var(--aot-dvh));  /* @kind spacing */
   }
 
   /* The widget drawer also carries .aot-option-modal, so the generic mobile
@@ -2357,8 +2400,8 @@ body { transition: padding-right 0.4s cubic-bezier(0.075, 0.82, 0.165, 1); }
     margin: 0;
     width: 100%;
     max-width: 100%;
-    height: calc(100vh - var(--aot-preview-band-h));
-    height: calc(100dvh - var(--aot-preview-band-h));
+    height: calc(100 * var(--aot-vh) - var(--aot-preview-band-h));
+    height: calc(100 * var(--aot-dvh) - var(--aot-preview-band-h));
     transform: none;
     /* No dialog transition: this build has a documented "stuck transition when
        Bootstrap toggles the dialog" bug (see the full-screen block's note). The
@@ -2369,7 +2412,7 @@ body { transition: padding-right 0.4s cubic-bezier(0.075, 0.82, 0.165, 1); }
 
   /* Preview hidden → the sheet grows up to cover the band (max form space). */
   body.aot-preview-collapsed .modal.aot-option-modal.aot-widget-drawer .modal-dialog {
-    height: 94vh; height: 94dvh;
+    height: calc(94 * var(--aot-vh)); height: calc(94 * var(--aot-dvh));
   }
 
   /* The full-screen rule pins .modal-content position:absolute inset:0 (fills the
@@ -2420,9 +2463,21 @@ body { transition: padding-right 0.4s cubic-bezier(0.075, 0.82, 0.165, 1); }
      band the card is also visibility:hidden. */
   .grid-stack-item.aot-preview-lift {
     position: fixed;
-    top: 0; left: 0; right: 0;
-    width: auto;
-    height: var(--aot-preview-band-h);
+    /* !important 필수(top/left/width/height 넷 다) — 위 문단이 이미 경고하고
+       있었는데(0,3,0) 코드는 어긋나 있었다. GridStack 이 이 위젯의 실제 그리드
+       좌표로 두 계통의 규칙을 건다: ① 런타임에 <style> 로 직접 insertRule 하는
+       `.gs-id-N > .grid-stack-item[gs-h="H"] { height }` · `[gs-y="Y"] { top }`
+       (정적 CSS 어디에도 없어 grep 으로 안 보임) ② **정적** `gridstack-custom.css`
+       의 `.gs-2 > .grid-stack-item[gs-x="1"] { left: 50% }` (@media max-width:768px,
+       모바일 2열). 전부 specificity (0,3,0)로 이 규칙(0,2,0)보다 높거나
+       (width 는 0,2,0 동점이라 그 파일이 나중에 실려 순서로도 이긴다) 같다.
+       !important 전수 제거 감사(25f1a5cd)가 이 문단의 경고를 놓치고 넷 다
+       벗겨내면서, 그리드 좌상단(gs-x=0,gs-y=0)이 아닌 위젯은 42vh 밴드로
+       뜨지 않고 **원래 그리드 좌표에 그대로 남아** 있었다(실측 2026-09-10 —
+       좌상단 지도 위젯은 값이 우연히 0 이라 회귀가 가려져 있었다). */
+    top: 0 !important; left: 0 !important; right: 0;
+    width: 100% !important;
+    height: var(--aot-preview-band-h) !important;
     transform: none;
     z-index: 5099;
     margin: 0;
@@ -2528,8 +2583,8 @@ body { transition: padding-right 0.4s cubic-bezier(0.075, 0.82, 0.165, 1); }
   .modal.aot-option-modal.aot-widget-drawer.aot-drawer-fullcover .modal-dialog {
     top: 0;
     bottom: 0;
-    height: 100vh;
-    height: 100dvh;
+    height: calc(100 * var(--aot-vh));
+    height: calc(100 * var(--aot-dvh));
   }
   /* Square the top corners while covering so nothing peeks through the rounded cut. */
   body:not(.aot-drawer-lowered) .modal.aot-option-modal.aot-widget-drawer.aot-drawer-fullcover .modal-content {
@@ -2539,8 +2594,8 @@ body { transition: padding-right 0.4s cubic-bezier(0.075, 0.82, 0.165, 1); }
   body.aot-drawer-lowered .modal.aot-option-modal.aot-widget-drawer.aot-drawer-fullcover .modal-dialog {
     top: auto;
     bottom: 0;
-    height: 58vh;
-    height: 58dvh;
+    height: calc(58 * var(--aot-vh));
+    height: calc(58 * var(--aot-dvh));
   }
   /* 지도 그랩바(.aot-map-sheet-grab)와 같은 원칙: 커버링/내림 두 상태 모두 같은
      .modal-content 이므로, 상태와 무관하게 그랩바 전용 22px 을 콘텐츠 앞에
@@ -2669,8 +2724,8 @@ body { transition: padding-right 0.4s cubic-bezier(0.075, 0.82, 0.165, 1); }
     display: inline-block;
     padding: 1px 7px;
     border-radius: var(--aot-radius-md);
-    font-size: var(--aot-font-size-xs);
-    font-weight: 700;
+    font-size: var(--aot-fs-control);
+    font-weight: 600;
     letter-spacing: 0.02em;
     background: var(--aot-color-brand-accent);
     color: var(--aot-color-text-secondary);
@@ -2699,10 +2754,12 @@ body { transition: padding-right 0.4s cubic-bezier(0.075, 0.82, 0.165, 1); }
     color: inherit;
     border: 1px solid var(--aot-border-neutral);
     border-radius: var(--aot-radius-sm);
-    /* 2026-09-09 20 -> 16. 설정 카드(.aot-settings-card)의 안쪽 여백이 16 이라
-       안내상자를 그 옆에 두면 글자가 354 대 359 로 갈렸다(실측). 같은 화면에서
-       두 상자의 글자가 다른 x 에서 시작하면 안 된다. */
-    padding: var(--aot-space-4);
+    /* 2026-09-09 20 -> 16, 2026-09-10 16 -> 16-1. 설정 카드(.aot-settings-card)는
+       테두리가 없어 안쪽 여백 16 이 곧 글자 시작 x 다. 이 상자는 테두리가 1px
+       있어 여백을 16 그대로 두면 그 1px 만큼 글자가 더 밀린다(실측 1280px,
+       /ai/library: 카드 64 대 상자 65, 우측 정렬 버튼도 1202 대 1201).
+       테두리 폭만큼 빼서 두 상자의 글자 x·버튼 우측 끝을 맞춘다. */
+    padding: calc(var(--aot-space-4) - 1px);
     margin-bottom: var(--aot-space-4);
     line-height: 1.6;
 }
@@ -2759,7 +2816,7 @@ body { transition: padding-right 0.4s cubic-bezier(0.075, 0.82, 0.165, 1); }
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
     gap: 12px;
-    max-height: 55vh;
+    max-height: calc(55 * var(--aot-vh));
     overflow-y: auto;
     padding-right: 4px;
 }

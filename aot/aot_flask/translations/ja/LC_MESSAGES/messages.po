@@ -8239,7 +8239,7 @@ msgstr "ラベル名を編集:"
 #: aot_flask/templates/pages/output.html:400
 #: aot_flask/templates/tools/notes.html:173
 msgid "Select"
-msgstr "Select"
+msgstr "選択"
 
 #: aot_flask/static/js/geo/design/aot-geo-events.js:97
 msgid "creating_new_map"
@@ -9189,6 +9189,11 @@ msgstr "APIドキュメント"
 #: aot_flask/templates/pages/landing.html:242
 msgid "AoT Github"
 msgstr "AoT GitHub"
+
+#: aot_flask/templates/layout.html:716
+#: aot_flask/templates/layout_default.html:716
+msgid "AoT Homepage"
+msgstr "AoTホームページ"
 
 #: aot_flask/templates/layout.html:717
 #: aot_flask/templates/layout_default.html:717
@@ -34403,3 +34408,427 @@ msgstr "クリックしてコントロール面の色を編集"
 #: aot_flask/templates/settings/custom_ui.html
 msgid "Face of things you operate — text fields, selects, pills. Keep it apart from the page background, or a control sitting on the page vanishes into it"
 msgstr "操作するものの面 — テキスト入力欄・セレクト・ピル。ページ背景と値を離してください。同じだと背景の上のコントロールが埋もれて見えなくなります"
+
+msgid "AI Connection"
+msgstr "AI接続"
+
+msgid "Connect your AI app"
+msgstr "自分のAIアプリで接続"
+
+msgid "An AI app you already use, such as Claude Desktop, can read this farm and ask to control equipment. Equipment control only runs after a person approves it."
+msgstr "Claude Desktopなど普段使っているAIアプリが、この農場の情報を読み、機器の制御を依頼できます。機器の制御は人が承認して初めて実行されます。"
+
+msgid "External AI access"
+msgstr "外部AIのアクセス"
+
+msgid "Allowed"
+msgstr "許可"
+
+msgid "Not allowed"
+msgstr "許可しない"
+
+msgid "Turned on or off in Settings > General."
+msgstr "設定 > 一般でオン・オフを切り替えます。"
+
+msgid "Open General Settings"
+msgstr "一般設定を開く"
+
+msgid "Access keys"
+msgstr "アクセスキー"
+
+msgid "Manage keys"
+msgstr "キーの管理"
+
+msgid "Issue one key per AI app and paste it into that app."
+msgstr "AIアプリごとにキーを1つ発行し、そのアプリに入力します。"
+
+msgid "Built-in AI"
+msgstr "内蔵AI"
+
+msgid "The AI model used by chat and advice inside this app. It runs separately from your own AI app, so you can leave it off if you do not use it."
+msgstr "アプリ内のチャットと助言が使うAIモデルです。自分のAIアプリの接続とは別に動くため、使わなければオフのままで構いません。"
+
+msgid "Run built-in AI"
+msgstr "内蔵AIを動かす"
+
+msgid "The site the AI uses when a chat or screen does not name one."
+msgstr "会話や画面でサイトが指定されていないとき、AIが基準にするサイトです。"
+
+msgid "Lets the built-in AI periodically summarize the farm's situation in the background."
+msgstr "内蔵AIがバックグラウンドで農場の状況を定期的に要約します。"
+
+msgid "MCP bridge servers"
+msgstr "MCPブリッジサーバー"
+
+msgid "Tool servers the built-in AI calls. One is added automatically when you add an MCP engine above."
+msgstr "内蔵AIがツールとして呼び出すサーバーです。上でMCPエンジンを追加すると自動で1つ作られます。"
+
+msgid "Changing the role asks whether to refill specialty, system prompt, tier and model with that role's defaults."
+msgstr "役割を変えると、その役割の既定の専門分野・システムプロンプト・ティア・モデルで入れ直すか確認します。"
+
+msgid "Fill in this role's default specialty, system prompt, tier and model? What you entered will be replaced."
+msgstr "この役割の既定の専門分野・システムプロンプト・ティア・モデルで入力しますか？入力済みの値は置き換わります。"
+
+msgid "Estimated monthly spend of the built-in AI. You are alerted as it nears the limit, and once the limit is reached it switches to the cheapest model. 0 means no limit."
+msgstr "内蔵AIの月間利用額（推定）です。上限に近づくと通知し、上限に達すると最も安いモデルに切り替えます。0は上限なしです。"
+
+msgid "Servers"
+msgstr "サーバー"
+
+msgid "Tool servers the built-in AI calls. Adding an MCP engine on the AI Connection page creates one automatically."
+msgstr "内蔵AIがツールとして呼び出すサーバーです。AI接続ページでMCPエンジンを追加すると自動で1つ作られます。"
+
+msgid "Tools"
+msgstr "ツール"
+
+msgid "Stopped"
+msgstr "停止中"
+
+msgid "Waiting to retry"
+msgstr "再試行待ち"
+
+msgid "No MCP servers yet."
+msgstr "まだMCPサーバーがありません。"
+
+msgid "Could not load the MCP server list."
+msgstr "MCPサーバー一覧を読み込めませんでした。"
+
+msgid "No tools exposed by this server."
+msgstr "このサーバーが公開しているツールはありません。"
+
+msgid "Input schema"
+msgstr "入力形式"
+
+msgid "Delete this server?"
+msgstr "このサーバーを削除しますか？"
+
+msgid "JSON object, for example {\"API_KEY\": \"...\"}."
+msgstr "JSONオブジェクトです。例: {\"API_KEY\": \"...\"}"
+
+msgid "Server added."
+msgstr "サーバーを追加しました。"
+
+msgid "Server updated."
+msgstr "サーバー設定を保存しました。"
+
+msgid "Server deleted."
+msgstr "サーバーを削除しました。"
+
+msgid "AI Knowledge"
+msgstr "AI知識"
+
+msgid "Data sources"
+msgstr "データソース"
+
+msgid "%(n)s notes the AI wrote are waiting for a person to confirm them."
+msgstr "AIが書いたメモ%(n)s件が確認を待っています。"
+
+msgid "Show them"
+msgstr "それだけ表示"
+
+msgid "All states"
+msgstr "すべての状態"
+
+msgid "Needs confirming"
+msgstr "確認が必要なもの"
+
+msgid "All tags"
+msgstr "すべてのタグ"
+
+msgid "Title, text or attribution"
+msgstr "タイトル・本文・出典表記"
+
+msgid "Three ways to fill it: connect a source on the Data sources tab, press Add Knowledge to write in what you already know, or ask the AI to look something up — it saves what it finds."
+msgstr "入れ方は3つです。データソースのタブでソースを接続する、知識を追加で知っていることを書く、またはAIに調べてもらうと見つけた内容を保存します。"
+
+msgid "How the knowledge is used"
+msgstr "知識の使われ方"
+
+msgid "Knowledge settings"
+msgstr "知識の設定"
+
+msgid "Cite confirmed knowledge only"
+msgstr "確認済みの知識のみ引用"
+
+msgid "Synced {time}"
+msgstr "{time} 同期"
+
+msgid "Synced"
+msgstr "同期済み"
+
+msgid "Looked up on demand"
+msgstr "都度照会"
+
+msgid "Not synced yet"
+msgstr "未同期"
+
+msgid "Trust"
+msgstr "信頼度"
+
+msgid "Kind of source"
+msgstr "出典の種類"
+
+msgid "Times retrieved"
+msgstr "検索に使われた回数"
+
+msgid "Added"
+msgstr "登録日"
+
+msgid "Open link"
+msgstr "リンクを開く"
+
+msgid "Save and confirm"
+msgstr "保存して確認"
+
+msgid "0 means no automatic sync."
+msgstr "0にすると自動同期しません。"
+
+msgid "Library source"
+msgstr "ソース"
+
+msgid "Bearer Token"
+msgstr "Bearerトークン"
+
+msgid "API Key Header"
+msgstr "APIキーヘッダー"
+
+msgid "What people and the AI wrote down for the AI to cite. Data synced from sources is hidden here by default — pick it in the source filter, or manage it on the Data sources tab."
+msgstr "人とAIが書き留めた、AIが引用する知識です。ソースから同期した資料はここでは既定で隠します — 出典の絞り込みで選ぶか、データソースタブで管理してください。"
+
+msgid "Written by people and the AI"
+msgstr "人とAIが書いたもの"
+
+msgid "Last synced"
+msgstr "最終同期"
+
+msgid "Sync now"
+msgstr "今すぐ同期"
+
+msgid "Sync error"
+msgstr "失敗"
+
+msgid "AI Requests"
+msgstr "AIリクエスト"
+
+msgid "Requests"
+msgstr "リクエスト"
+
+msgid "What the AI is waiting on you for. Nothing here has run yet — each item waits for your decision."
+msgstr "AIが人の判断を待っているものです。ここにあるものはまだ何も実行されていません。"
+
+msgid "These have not run. Approving runs exactly what is described here — you do not need to go back and tell the AI."
+msgstr "まだ実行されていません。承認するとここに書かれたとおりにすぐ実行され、AIに改めて伝える必要はありません。"
+
+msgid "Schedule proposals"
+msgstr "スケジュールの提案"
+
+msgid "Tasks the AI proposed for the schedule. Approving puts them on the schedule — they run at their time."
+msgstr "AIがスケジュールに入れようと提案した作業です。承認するとスケジュールに入り、決めた時刻に実行されます。"
+
+msgid "No schedule proposals are waiting."
+msgstr "待っているスケジュールの提案はありません。"
+
+msgid "Only people who can edit controllers can decide on these."
+msgstr "コントローラーを編集できる人だけが決定できます。"
+
+msgid "Proposed by the AI"
+msgstr "AIの提案"
+
+msgid "Put this proposal on the schedule?"
+msgstr "この提案をスケジュールに入れますか?"
+
+msgid "Reject this proposal?"
+msgstr "この提案を却下しますか?"
+
+msgid "AI advice"
+msgstr "AIのアドバイス"
+
+msgid "Opinions from this AI and other connected AIs. Accepting records that you agree — it does not run anything."
+msgstr "このAIや接続された他のAIが出した意見です。採用は同意したという記録で、何も実行しません。"
+
+msgid "No advice is waiting."
+msgstr "待っているアドバイスはありません。"
+
+msgid "%(n)s schedule proposals are waiting under AI → Requests."
+msgstr "AIのスケジュール提案%(n)s件が AI → リクエスト で待っています。"
+
+msgid "Control requests and AI schedule proposals are decided under AI → Requests."
+msgstr "制御リクエストとAIのスケジュール提案は AI → リクエスト で決定します。"
+
+msgid "Open requests"
+msgstr "リクエストを開く"
+
+msgid "Could not load advice"
+msgstr "アドバイスを読み込めませんでした"
+
+msgid "Could not load control requests"
+msgstr "制御リクエストを読み込めませんでした"
+
+msgid "AI Records"
+msgstr "AI記録"
+
+msgid "Tool calls"
+msgstr "ツール呼び出し"
+
+msgid "Conversations"
+msgstr "会話"
+
+msgid "Error reports"
+msgstr "エラー報告"
+
+msgid "What connected AIs did through the tools — newest first. Requests that needed approval show how they were decided."
+msgstr "接続されたAIがツールで行ったことです(新しい順)。承認が必要だった要求は、どう決まったかも表示します。"
+
+msgid "Questions asked of the built-in AI and its answers."
+msgstr "内蔵AIへの質問とその回答です。"
+
+msgid "Wrong AI answers people reported, with their corrections. Applying a correction adds it to the AI Knowledge."
+msgstr "人が報告したAIの誤った回答と、その訂正です。訂正を反映するとAI知識に入ります。"
+
+msgid "Received"
+msgstr "受付"
+
+msgid "Corrected"
+msgstr "訂正済み"
+
+msgid "Learned"
+msgstr "知識に反映済み"
+
+msgid "Dismissed"
+msgstr "却下"
+
+msgid "All severities"
+msgstr "すべての重要度"
+
+msgid "All types"
+msgstr "すべての種類"
+
+msgid "Could not load records"
+msgstr "記録を読み込めませんでした"
+
+msgid "No error reports."
+msgstr "報告されたエラーはありません。"
+
+msgid "Caller"
+msgstr "呼び出したAI"
+
+msgid "Answer"
+msgstr "回答"
+
+msgid "What the AI said"
+msgstr "AIの回答"
+
+msgid "Correction"
+msgstr "訂正"
+
+msgid "Applied to the knowledge."
+msgstr "知識に反映しました。"
+
+msgid "Looked up"
+msgstr "照会"
+
+msgid "Carried out"
+msgstr "実行済み"
+
+msgid "Approved"
+msgstr "承認済み"
+
+msgid "Awaiting approval"
+msgstr "承認待ち"
+
+msgid "Expired"
+msgstr "期限切れ"
+
+msgid "Browsed the tool list"
+msgstr "ツール一覧を閲覧"
+
+msgid "Checked pending approvals"
+msgstr "承認待ちを確認"
+
+msgid "Answered an approval request"
+msgstr "承認リクエストに応答"
+
+msgid "Looked up devices"
+msgstr "機器を照会"
+
+msgid "Read sensor values"
+msgstr "センサー値を照会"
+
+msgid "Looked up functions and controllers"
+msgstr "関数・コントローラーを照会"
+
+msgid "Looked up the schedule"
+msgstr "スケジュールを照会"
+
+msgid "Looked up notes and knowledge"
+msgstr "ノート・知識を照会"
+
+msgid "Looked up the map and zones"
+msgstr "地図・区画を照会"
+
+msgid "Looked up device definitions"
+msgstr "機器定義を照会"
+
+msgid "Looked up AI settings and system status"
+msgstr "AI設定・システム状態を照会"
+
+msgid "Looked something up"
+msgstr "情報を照会"
+
+msgid "Made a change"
+msgstr "設定を変更"
+
+msgid "Cancel this task?"
+msgstr "このタスクを取り消しますか?"
+
+msgid "No devices found."
+msgstr "機器がありません。"
+
+msgid "Could not load the device timeline"
+msgstr "デバイスタイムラインを読み込めませんでした"
+
+msgid "Error loading settings"
+msgstr "設定を読み込めませんでした"
+
+msgid "What the AI is waiting on you for — each item below waits for your decision."
+msgstr "AIが人の判断を待っているものです。以下の項目それぞれが判断を待っています。"
+
+
+
+#: aot/aot_flask/templates/layout_default.html
+msgid "Computer Screen Size"
+msgstr "パソコンの画面サイズ"
+
+#: aot/aot_flask/templates/layout_default.html
+msgid "Mobile Screen Size"
+msgstr "モバイルの画面サイズ"
+
+#: aot/aot_flask/templates/layout_default.html
+msgid "Enlarges the whole page on phones and tablets — text, buttons and maps together. Computers use the setting below."
+msgstr "スマートフォン・タブレットで文字・ボタン・地図をまとめて、ページ全体を拡大します。パソコンは下の設定に従います。"
+
+#: aot/aot_flask/templates/layout_default.html
+msgid "Enlarges the whole page on computers — text, buttons and maps together. Phones and tablets use the setting above."
+msgstr "パソコンで文字・ボタン・地図をまとめて、ページ全体を拡大します。スマートフォン・タブレットは上の設定に従います。"
+
+#: aot/widgets/AoT_plot.py
+msgid "Map or site"
+msgstr "地図・サイト"
+
+#: aot/widgets/AoT_plot.py
+msgid ""
+"Show only the plots in this map or site. Leave empty to show every plot in "
+"progress."
+msgstr "この地図またはサイト内の区画のみを表示します。空欄のままにすると、栽培中のすべての区画を表示します。"
+
+#: aot/aot_flask/templates/tools/notice.html
+msgid "Search title, content, category..."
+msgstr "タイトル・内容・分類を検索..."
+
+#: aot/aot_flask/templates/tools/notice.html
+msgid "No notices match your search."
+msgstr "検索に一致するお知らせがありません。"
+
+#: aot/aot_flask/static/js/widgets/AoT_plot/aot-plot-widget.js
+msgid "Go to page %(n)s"
+msgstr "%(n)s ページに移動"

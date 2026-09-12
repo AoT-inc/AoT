@@ -3,13 +3,31 @@
 {% set help_page = [manual_url("Security/#audit-log"), _('Audit Log')] %}
 {% block title %} - {{_('Audit Log')}}{% endblock %}
 
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/aot-settings.css') }}" />
+<style>
+  /* 2026-09-11: 페이지 제목(.aot-settings-title, 정렬선 32)을 새로 얹으며
+     실측하니 이 필터 폼이 15에 남아 제목과 16px 어긋났다. 부트스트랩
+     .row 의 음수 여백(-15px)을 감안해, 자기 패딩으로 정렬선까지 밀어낸다. */
+  .aot-audit-filter-form {
+    padding-left: var(--aot-space-4);
+  }
+</style>
+{% endblock %}
+
 {% block body %}
 <div class="container-fluid px-0">
   <!-- Route: /audit_log -->
   <main role="main" class="container py-4">
     {% include 'flash_messages.html' %}
 
-    <form class="row align-items-end pt-2" method="get" action="/audit_log">
+    <div class="aot-settings-title">
+      <h3>{{ _('Audit Log') }}
+        <a href="{{ help_page[0] }}" target="_blank"><span class="fas fa-question-circle aot-help-icon"></span></a>
+      </h3>
+    </div>
+
+    <form class="row align-items-end pt-2 aot-audit-filter-form" method="get" action="/audit_log">
       <div class="col-auto">
         <label for="action">{{_('Action')}}</label>
         <select class="form-control" id="action" name="action">

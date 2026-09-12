@@ -90,6 +90,13 @@ class User(UserMixin, CRUDMixin, db.Model):
     # docs/design/user-string-live-translation.md
     translate_user_strings = db.Column(db.Boolean, default=None)
     timezone = db.Column(db.String(64), default=None)  # IANA tz for personal display; None = use system default (docs/design/timezone-management.md §3·§7)
+    # 모바일(폰·태블릿) 화면 배율(%) — 90~150, 5 단위(계정 모달 "모바일 화면 크기").
+    # NULL = 기본 115. 적용은 templates/_screen_zoom.html, 손가락 화면에만 걸린다.
+    # (컬럼 이름은 폰 전용이던 때 그대로 — 2026-09-11 태블릿 포함)
+    ui_zoom_phone = db.Column(db.Integer, default=None)
+    # 컴퓨터 화면 배율(%) — 90~150, 5 단위(계정 모달 "컴퓨터 화면 크기").
+    # NULL = 기본 100(바꾸지 않음). 마우스 화면에만 걸린다.
+    ui_zoom_desktop = db.Column(db.Integer, default=None)
     password_reset_code = db.Column(db.Text, default=None)
     password_reset_code_expiration = db.Column(db.DateTime, default=None)
     password_reset_last_request = db.Column(db.DateTime, default=None)

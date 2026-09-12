@@ -45,6 +45,25 @@
   max-width: 20em;
 }
 
+/* "노트 페이지와 같은 알약형 입력 그룹"이라는 의도가 여기서도 실패했다 —
+   그 공용 정의(aot-base.css)는 2026-09-09에 알약(면색)을 밑줄로 바꾸며
+   채움을 뺐는데, notes 페이지는 흰 카드(`.note-search-bar`) 위에 있어
+   밑줄(#dddddd)이 보이지만, 이 화면은 카드 없이 바닥(`<main class="container">`,
+   `--aot-surface-body` #e0e6e3) 위에 바로 놓여 밑줄이 거의 안 보였다 —
+   plots 페이지와 같은 증상(2026-09-11, 168e2121)이라 같은 처방을 쓴다.
+   `.ui-pill`이 이미 `border-radius: 16px !important`를 걸어 두므로(이름
+   그대로 알약) 채움색만 주면 그 자리에서 알약으로 보인다 — 셀렉트가
+   바닥에서 분가할 때 쓴 것과 같은 토큰(`--aot-surface-control`)을 그대로
+   쓴다. 밑줄은 채움 위에서 안 보이므로 테두리로 바꾸고, 포커스는
+   §2-2대로 색만 바뀐다(굵기·번짐 없음). */
+#veg-search-group {
+  background: var(--aot-surface-control);
+  border: 2px solid transparent;
+}
+#veg-search-group:focus-within {
+  border-color: var(--aot-input-focus-border, #13261B);
+}
+
 /* 폰트 아이콘은 글리프 잉크가 em 박스 안에서 아래쪽에 쏠려 있어, 박스만
    flex-center 해도 눈에는 살짝 위로 떠 보인다(돋보기 손잡이가 오른쪽 아래로
    빠지는 모양이라 더 그렇다). line-height 를 명시해 폰트 메트릭이 만드는

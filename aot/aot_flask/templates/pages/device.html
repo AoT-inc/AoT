@@ -6,6 +6,7 @@
 
 {% block head %}
 {{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/aot-settings.css') }}" />
 <style>
   @media (max-width: 768px) {
     .grid-stack-item {
@@ -49,6 +50,12 @@
 {%- block body %}
 <main role="main" class="container">
   {% include 'flash_messages.html' %}
+
+  <div class="aot-settings-title">
+    <h3>{{ _('Device') }}
+      <a href="{{ help_page[0] }}" target="_blank"><span class="fas fa-question-circle aot-help-icon"></span></a>
+    </h3>
+  </div>
 
   <div class="aot-vspace"></div>
 

@@ -249,7 +249,7 @@
 .bootstrap-select > .dropdown-menu {
     min-width: 100%;
     width: max-content;
-    max-width: min(560px, calc(100vw - 24px));
+    max-width: min(560px, calc(100 * var(--aot-vw) - 24px));
     margin: 4px 0;
     /* 떠 있는 목록의 경계는 **그림자 하나**로만 낸다. 예전에는 테두리와 그림자를
        같이 줘서, 버튼 바로 아래 열릴 때 버튼 테두리와 목록 테두리가 나란히

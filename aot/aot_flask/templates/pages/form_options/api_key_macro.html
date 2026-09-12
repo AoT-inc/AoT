@@ -3,7 +3,7 @@
         data-style="aot-pill-btn aot-pill-btn-primary" 
         data-live-search="true" 
         data-selected-text-format="static" 
-        title="Key"
+        title="{{ _('Key') }}"
         data-width="fit"
         onchange="AoTApiKeyPicker.handleSelectChange(this, '{{ url_for('routes_settings.settings_api_key') }}')">
   {% if api_keys %}

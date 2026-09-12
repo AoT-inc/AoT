@@ -31432,3 +31432,17 @@ msgstr "การวัดทั้งหมด"
 
 msgid "All Units"
 msgstr "หน่วยทั้งหมด"
+
+#: aot/widgets/AoT_plot.py
+msgid "Map or site"
+msgstr "แผนที่/ไซต์"
+
+#: aot/widgets/AoT_plot.py
+msgid ""
+"Show only the plots in this map or site. Leave empty to show every plot in "
+"progress."
+msgstr "แสดงเฉพาะแปลงในแผนที่หรือไซต์นี้เท่านั้น ปล่อยว่างไว้เพื่อแสดงแปลงที่กำลังเพาะปลูกทั้งหมด"
+
+#: aot/aot_flask/static/js/widgets/AoT_plot/aot-plot-widget.js
+msgid "Go to page %(n)s"
+msgstr "ไปที่หน้า %(n)s"

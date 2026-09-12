@@ -712,7 +712,7 @@ WIDGET_INFORMATION = {
   flex-direction: column;
   width: 400px;
   max-width: 100%;
-  max-height: calc(100vh - 1rem);
+  max-height: calc(100 * var(--aot-vh) - 1rem);
   overflow: hidden;
   background: var(--aot-surface-card, #fff);
   border-radius: 1rem;

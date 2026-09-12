@@ -34,14 +34,14 @@
 </tr>
 <tr>
 <td>Google Picker API Key</td>
-<td>任意。AIライブラリでGoogle Driveソース(ファイルピッカー)を有効にする場合にのみ必要な、Picker APIを有効化した別個の非シークレットなCloud Console APIキーです。OAuth Client Secretとは別物です。</td>
+<td>任意。AI知識でGoogle Driveソース(ファイルピッカー)を有効にする場合にのみ必要な、Picker APIを有効化した別個の非シークレットなCloud Console APIキーです。OAuth Client Secretとは別物です。</td>
 </tr>
 </tbody>
 </table>
 
 これら3つの値は、環境変数(`GOOGLE_OAUTH_CLIENT_ID`、`GOOGLE_OAUTH_CLIENT_SECRET`、`OAUTH_PUBLIC_BASE_URL`)を通じてインスタンス全体に対して指定することもでき、その場合は上記フィールドの値より優先されます — 同じクライアントを複数のサーバーで共有する場合、デプロイ設定を通じて渡せるため便利です。値が環境変数から来ている場合、ページ上でその旨が示されます。
 
-アカウントを接続すると、次のスコープが要求されます: **Calendar**へのフルアクセス(イベントの読み書き用)、**email**(接続したアカウントにラベルを付けるため)、**openid**、そしてユーザーが明示的に選んだファイルに限定されたDriveアクセス(`drive.file`。AIライブラリのGoogle Driveソースのみで使われ、カレンダー同期では使われません)。
+アカウントを接続すると、次のスコープが要求されます: **Calendar**へのフルアクセス(イベントの読み書き用)、**email**(接続したアカウントにラベルを付けるため)、**openid**、そしてユーザーが明示的に選んだファイルに限定されたDriveアクセス(`drive.file`。AI知識のGoogle Driveソースのみで使われ、カレンダー同期では使われません)。
 
 ---
 

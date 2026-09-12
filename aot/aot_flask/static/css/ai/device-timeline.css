@@ -1,79 +1,36 @@
-/* Device Timeline base styles */
-.device-timeline-wrapper {
-  margin: 20px 0;
-  background: var(--aot-surface-card, #fff);
-  border-radius: var(--aot-radius-sm);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-  overflow: hidden;
+/* ============================================================
+   장치 타임라인 — 일정 화면(/scheduler)의 "장치별 보기" 전용(vis-timeline).
+
+   2026-09-10 다시 짬. 예전 이 파일은
+   - 장치 종류별 무지개 띠(밸브 파랑·펌프 초록·히터 빨강·조명 노랑·팬 보라…)를
+     칠했다 — 종류라는 사실을 색으로만 말하는 장식이었고, 장치 이름이 이미 있다.
+   - 예약 항목을 파랑(#3498db, --aot-color-info)으로, 실행 기록을 고정 초록으로
+     칠하고 !important 로 반입 CSS 를 눌렀다.
+   색은 settings/custom_ui 토큰만 쓴다. 반입 CSS(vis)가 이 파일보다 **뒤에** 실리므로
+   #scheduler-page 특이도로 이긴다(!important 없음). 폰 화면의 카드 목록은 공용 설정
+   카드·목록 항목 행으로 그린다(device-timeline-mobile.js) — 여기서 따로 칠하지 않는다.
+   ============================================================ */
+
+/* 항목 기본 — vis 의 기본색은 파랑(#D5DDF6 / #97B0F8)이다. */
+#scheduler-page .vis-item {
+  background-color: var(--aot-color-brand-accent);
+  border-color: var(--aot-border-neutral);
+  color: var(--aot-color-text-primary);
 }
 
-#device-timeline-container {
-  height: 400px;
+/* 예약 — 아직 일어나지 않은 일은 점선으로만 가른다. */
+#scheduler-page .vis-item.status-scheduled {
+  border-style: dashed;
 }
 
-/* Device types colors */
-.device-valve { border-left: 4px solid #3498db; }
-.device-pump { border-left: 4px solid #2ecc71; }
-.device-heater { border-left: 4px solid #e74c3c; }
-.device-light { border-left: 4px solid #f1c40f; }
-.device-fan { border-left: 4px solid #9b59b6; }
-.device-motor { border-left: 4px solid #34495e; }
-.device-relay { border-left: 4px solid #e67e22; }
-
-/* Status styles */
-.status-scheduled {
-  background-color: rgba(52, 152, 219, 0.2) !important;
-  border-color: #3498db !important;
-  border-style: dashed !important;
-  color: var(--aot-color-info, #029ACF) !important;
+/* 실행 기록 — 일어난 일, 공용 상태 배지의 성공 톤. */
+#scheduler-page .vis-item.status-completed {
+  background-color: var(--aot-tint-success-bg);
+  border-color: var(--aot-tint-success-fg);
+  color: var(--aot-tint-success-fg);
 }
 
-.status-completed {
-  background-color: rgba(46, 204, 113, 0.8) !important;
-  border-color: #27ae60 !important;
-  color: var(--aot-color-text-tertiary, #fff) !important;
-}
-
-/* Mobile specific cards */
-@media (max-width: 768px) {
-  .mobile-device-card {
-    background: var(--aot-surface-card, #fff);
-    border-radius: var(--aot-radius-md);
-    padding: 16px;
-    margin-bottom: 12px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-  }
-  
-  .card-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 12px;
-    border-bottom: 1px solid rgba(0,0,0,0.05);
-    padding-bottom: 8px;
-  }
-  
-  .device-name {
-    font-size: var(--aot-font-size-base);
-    font-weight: 600;
-    color: var(--aot-modal-body-text, #333);
-  }
-  
-  .stats {
-    display: flex;
-    gap: 16px;
-    font-size: var(--aot-font-size-sm);
-    color: var(--aot-color-text-secondary, #666);
-  }
-  
-  .stat-item i {
-    margin-right: 4px;
-  }
-  
-  .empty-state {
-    text-align: center;
-    padding: 40px 20px;
-    color: var(--aot-color-text-secondary, #aaa);
-    font-size: var(--aot-font-size-sm);
-  }
+/* 선택 — vis 의 기본 선택색은 노랑(#FFF785 / #FFC200)이다. 테두리만 브랜드색으로. */
+#scheduler-page .vis-item.vis-selected {
+  border-color: var(--aot-color-brand-primary);
 }

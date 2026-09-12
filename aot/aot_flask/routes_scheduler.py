@@ -531,9 +531,15 @@ def api_timeline_events():
     events = []
     for j in jobs:
         tz_name = _job_target_tz_name(j)
+        # 달력 제목은 사람 말이다 — 예전에는 "control_output: 3f2a9c1e"(대상 UUID 앞
+        # 8자)였다. 목록 카드와 같은 풀이(_enrich_job_display)를 쓴다.
+        _enrich_job_display(j)
+        title = j.display_content or ''
+        if j.display_location:
+            title = f"{title} · {j.display_location}" if title else j.display_location
         event = {
             'id': j.id,
-            'title': f"{j.action_type}: {j.target_id[:8]}",
+            'title': title,
             # UTC+offset ISO so FullCalendar places the event at the correct
             # absolute instant. Previously .isoformat() on a naive-UTC column
             # emitted no offset → FullCalendar read it as browser-local and
@@ -545,14 +551,12 @@ def api_timeline_events():
                 'proposed_by': j.proposed_by,
                 'reasoning': j.reasoning or '',
                 'action_type': j.action_type,
-                'target_id': j.target_id,
                 'priority': j.priority,
                 'tz': tz_name,   # device-local tz for display/labeling
             }
         }
-        if j.state == JOB_STATE_DRAFT:
-            event['borderColor'] = '#FEA60B'
-            event['backgroundColor'] = 'rgba(254, 166, 11, 0.15)'
+        # 상태 색은 className(fc-event-draft 등)과 scheduler.css 의 토큰이 정한다 —
+        # 여기서 고정색을 인라인으로 넣으면 CSS 가 !important 없이 이길 수 없다.
         events.append(event)
     return jsonify(events)
 

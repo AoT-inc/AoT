@@ -17,7 +17,7 @@ html {
 }
 
 #sidebar-wrapper {
-  min-height: 100vh;
+  min-height: calc(100 * var(--aot-vh));
   margin-left: -15rem;
   -webkit-transition: margin .25s ease-out;
   -moz-transition: margin .25s ease-out;

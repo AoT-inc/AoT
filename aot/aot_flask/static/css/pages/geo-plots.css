@@ -9,17 +9,28 @@
   padding: var(--aot-space-5) var(--aot-space-4);
 }
 
+/* 카드 밖 글자를 정렬선 32에 세운다(§2-3) — `.aot-page`가 이미 주는 16px
+   (화면 가장자리 ↔ main)에 더해, 카드 안 들어간 제목·행동 버튼 자체도
+   16px을 더 가져야 글자가 32에 선다(`.aot-settings-bare`와 같은 역할).
+   2026-09-11 실측: 이 여백 없이는 제목이 15px, 아래 목록/설명이 31px 로
+   갈려 있었다(사용자 지적 — geo/journal "일지" 제목 회귀). */
 .aot-page-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--aot-space-4);
   margin-bottom: var(--aot-space-4);
+  padding-left: var(--aot-space-4);
+  padding-right: var(--aot-space-4);
 }
 
+/* 페이지 제목 역할(§2-3, 2026-09-11 확정) — xl 24 / 500 / 1차.
+   전에는 400(굵기가 아니라 크기로 앞선다는 원칙은 맞았지만 확정 표의
+   제목 굵기 500과는 어긋났다) — 500으로 맞춘다. 역할 토큰으로 쓴다(페이지
+   CSS에 사다리 토큰을 직접 적지 않는다). */
 .aot-page-title {
-  font-size: calc(var(--aot-font-size-base) * 1.5);
-  font-weight: 400;      /* 굵기가 아니라 크기로 앞선다(카드 제목과 같은 규약) */
+  font-size: var(--aot-fs-page-title);
+  font-weight: var(--aot-fw-title);
   margin: 0;
   color: var(--aot-color-text-primary, #13261B);
 }
@@ -36,7 +47,31 @@
   gap: var(--aot-space-3);
   margin-bottom: var(--aot-space-4);
 }
-.aot-plots-filters > .note-search-input-group { flex: 1 1 240px; min-width: 0; }
+/* 2026-09-11 사용자 지적: flex-grow:1 로 남은 폭을 전부 먹어 화면
+   가로폭과 비슷할 만큼 늘어져 있었다(오른쪽엔 `.aot-plots-count` 하나뿐이라
+   먹을 공간이 컸다). programs 페이지(`#veg-search-group`, 20em)와 같은
+   흔한 검색창 폭으로 맞춘다 — 늘어나지 않고(grow:0), 좁은 화면에서만
+   줄어든다(shrink:1). */
+.aot-plots-filters > .note-search-input-group { flex: 0 1 20em; min-width: 0; }
+
+/* "노트 페이지와 같은 알약형 입력 그룹"(위 §41)이라는 의도가 여기서는 실패
+   했다 — 그 공용 정의(aot-base.css)는 2026-09-09에 알약(면색)을 밑줄로
+   바꾸며 채움을 뺐는데, notes 페이지는 흰 카드(`.note-search-bar`) 위에
+   있어 밑줄(#dddddd)이 보이지만, 이 화면은 카드 없이 바닥(`.aot-page`,
+   `--aot-surface-body` #e0e6e3) 위에 바로 놓여 밑줄이 거의 안 보였다
+   (2026-09-11 사용자 지적: "검색창 배경색이 페이지 배경색과 구분 안 됨").
+   `.ui-pill`이 이미 `border-radius: 16px !important`를 걸어 두므로(이름
+   그대로 알약) 채움색만 주면 그 자리에서 알약으로 보인다 — 셀렉트가
+   바닥에서 분가할 때 쓴 것과 같은 토큰(`--aot-surface-control`, 2026-09-10
+   "컨트롤 면을 바닥에서 분가")을 그대로 쓴다. 밑줄은 채움 위에서 안
+   보이므로 테두리로 바꾸고, 포커스는 §2-2대로 색만 바뀐다(굵기·번짐 없음). */
+.aot-plots-filters .note-search-input-group {
+  background: var(--aot-surface-control);
+  border: 2px solid transparent;
+}
+.aot-plots-filters .note-search-input-group:focus-within {
+  border-color: var(--aot-input-focus-border, #13261B);
+}
 
 .aot-plots-count {
   margin-left: auto;

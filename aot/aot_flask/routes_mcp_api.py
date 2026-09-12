@@ -240,13 +240,10 @@ def mcp_server_restart(server_id):
 @blueprint.route('/review_page', methods=['GET'])
 @flask_login.login_required
 def mcp_review_page():
-    """승인 대기 + 의견 원장 + 감사 로그를 한 화면에서 처리하는 페이지."""
-    from flask import render_template
-    from aot.ai.services import mcp_safety_gate as gate
-    # 물리 제어 목록은 게이트가 정본이다. 화면에 하드코딩하면 도구가 늘 때
-    # 조용히 어긋나고, 그 어긋남이 곧 "확인 없이 밸브가 열리는" 상태가 된다.
-    return render_template('pages/ai/mcp_review.html', active_page='mcp_servers',
-                           physical_tools=sorted(gate.PHYSICAL_TOOLS))
+    """옛 "AI 요청 및 조언" 화면 — AI → 요청(승인·제안·조언)과 AI → 기록(도구 호출)으로
+    나눠 옮겼다(2026-09-10). 북마크·문서 링크를 살리려고 주소는 남겨 요청으로 보낸다."""
+    from flask import redirect, url_for
+    return redirect(url_for('routes_ai_agent.page_ai_dashboard'))
 
 
 @blueprint.route('/confirmations', methods=['GET'])
@@ -386,6 +383,51 @@ def mcp_confirmation_batch_reject():
                      "succeeded": succeeded, "total": len(ids)}), 200
 
 
+def _audit_title(tool_name, params, permission=None):
+    """AI → 기록의 도구 호출 한 줄 제목 — 도구 이름 원문(search_notes 등)은 싣지 않는다.
+
+    synthesize_title 의 표는 승인이 걸리는 쓰기 도구만 채워 두어, 조회 도구는 원문
+    이름으로 떨어졌다(2026-09-10 실측: open_drawer·search_notes 가 그대로 보였다).
+    표에 없으면 도구가 든 서랍(tool_registry)의 범주로 사람 말을 만든다 — 새 도구가
+    늘어도 따로 채울 것이 없다. 요청 문맥이 있어 번역된다."""
+    from flask_babel import gettext as _t
+    from aot.ai.services import mcp_safety_gate as gate
+    name = tool_name or ''
+    title = gate.synthesize_title(name, params)
+    if title and title != name:
+        return title
+    meta = {
+        'open_drawer': _t('Browsed the tool list'),
+        'get_tool_detail': _t('Browsed the tool list'),
+        'list_pending_confirmations': _t('Checked pending approvals'),
+        'respond_to_confirmation': _t('Answered an approval request'),
+    }
+    if name in meta:
+        return meta[name]
+    drawer = None
+    try:
+        from aot.ai.services import tool_registry as reg
+        # tier_of 는 배정이 없는 도구에 'system' 을 기본으로 준다 — 그대로 쓰면 모르는
+        # 도구가 전부 "AI 설정·시스템 상태 조회" 가 된다. 배정된 도구만 서랍을 쓴다.
+        if name in getattr(reg, '_TIER_ASSIGNMENT', {}):
+            drawer = reg.tier_of(name)[0]
+    except Exception:
+        drawer = None
+    if permission == 'read':
+        by_drawer = {
+            'device': _t('Looked up devices'),
+            'measurement': _t('Read sensor values'),
+            'function': _t('Looked up functions and controllers'),
+            'schedule': _t('Looked up the schedule'),
+            'record': _t('Looked up notes and knowledge'),
+            'space': _t('Looked up the map and zones'),
+            'definition': _t('Looked up device definitions'),
+            'system': _t('Looked up AI settings and system status'),
+        }
+        return by_drawer.get(drawer) or _t('Looked something up')
+    return _t('Made a change')
+
+
 @blueprint.route('/audit', methods=['GET'])
 @flask_login.login_required
 def mcp_audit_recent():
@@ -393,14 +435,17 @@ def mcp_audit_recent():
     from aot.mcp_server import audit
     try:
         limit = min(int(request.args.get('limit', 50)), 500)
-        return jsonify({
-            "status": "success",
-            "entries": audit.get_recent(
-                limit=limit,
-                agent_id=request.args.get('agent_id'),
-                tool_name=request.args.get('tool_name'),
-            ),
-        })
+        from aot.ai.services import mcp_safety_gate as gate
+        entries = audit.get_recent(
+            limit=limit,
+            agent_id=request.args.get('agent_id'),
+            tool_name=request.args.get('tool_name'),
+        )
+        # 화면(AI → 기록)은 도구 이름·인자 원문 대신 사람 말 제목을 싣는다. 인자에는
+        # 대상 UUID 가 들어 있어 응답에서도 뺀다(도구 이름은 필터용으로 남긴다).
+        for e in entries:
+            e['title'] = _audit_title(e.get('tool_name'), e.pop('params', None), e.get('permission'))
+        return jsonify({"status": "success", "entries": entries})
     except Exception as e:
         logger.error(f"MCP audit query failed: {e}")
         return jsonify({"status": "error", "message": str(e)}), 500

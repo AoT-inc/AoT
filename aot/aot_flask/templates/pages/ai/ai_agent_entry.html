@@ -5,19 +5,21 @@
         <i class="fa fa-grip-lines"></i>
     </div>
 
+    {# 이름 칸에는 이름 하나만 둔다(한 칸 한 사실) — 예전에는 "LLM" 배지를
+       이름 앞에 붙였다. 종류는 추가 줄의 엔진 목록과 드로어 제목이 이미 말한다. #}
     <div class="aot-entry-content-item aot-col-name">
-      {% if agent.entry and not agent.entry.model_type.startswith('mcp_') %}
-      <span class="badge badge-llm aot-badge-inline">LLM</span>
-      {% endif %}
       <div id="agent_name_{{agent.unique_id}}" class="form-control aot-entry-name-input"
         title="{{ agent.name }}">{{agent.name}}</div>
     </div>
 
+    {# 둘째 칸은 이 에이전트가 쓰는 **모델**이다. 예전에는 제조사 이름(대개
+       이름과 같은 "Google")을 보여 줘 첫 칸과 겹쳤다. 누르면 UUID 를 복사하는
+       동작은 Input 행과 같다. #}
     <div class="aot-entry-content-item aot-col-uuid">
         <input class="form-control btn aot-entry-uuid-btn aot-pill-btn"
             type="button" onclick="setClipboard('{{agent.unique_id}}')"
             title="UUID: {{agent.unique_id}}, {{dict_translation['copy_to_clipboard']['phrase']}}"
-            value="{% if agent.entry %}{{ agent.entry.name }}{% else %}-{% endif %}">
+            value="{% if agent.entry and agent.entry.model_name %}{{ agent.entry.model_name }}{% elif agent.entry %}{{ agent.entry.name }}{% else %}—{% endif %}">
     </div>
 
     <div class="aot-entry-actions aot-col-action">
@@ -25,8 +27,10 @@
                onclick="return aiAgentAction('agent_activate', '{{agent.unique_id}}');" name="agent_activate"
                id="agent_activate_{{agent.unique_id}}" class="form-control btn aot-pill-btn aot-pill-btn-primary" type="button"
                value="{{_('Activate')}}" />
+        {# name 이 있어야 켜기/끄기 버튼 색 규칙(aot-entry-ui.css, [name*="_deactivate"])이
+           언어와 무관하게 걸린다 — value 로만 맞추면 영어·한국어 밖에서 색이 빠진다. #}
         <input {% if not agent.is_activated -%}style="display: none" {% endif %}
-            onclick="return aiAgentAction('agent_deactivate', '{{agent.unique_id}}');"
+            onclick="return aiAgentAction('agent_deactivate', '{{agent.unique_id}}');" name="agent_deactivate"
             id="agent_deactivate_{{agent.unique_id}}" class="form-control btn aot-pill-btn aot-pill-btn-primary" type="button"
             value="{{_('Deactivate')}}" />
     </div>

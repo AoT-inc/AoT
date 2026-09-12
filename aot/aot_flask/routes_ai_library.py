@@ -218,7 +218,7 @@ LIBRARY_PRESETS = {
         'usage': '키가 필요 없습니다. 농장 좌표는 지도 설정의 기본 위치에서 자동으로 '
                  '채워지므로, 그대로 활성화하면 됩니다(다른 지점을 보고 싶으면 AI 에게 '
                  '좌표를 말하면 됩니다). '
-                 '⚠ **무료 이용은 약관상 비상업 목적으로 한정됩니다.** 상업적으로 쓰신다면 '
+                 '**무료 이용은 약관상 비상업 목적으로 한정됩니다.** 상업적으로 쓰신다면 '
                  'Open-Meteo 유료 키를 발급받아 아래에 넣어 주세요 — 키를 넣으면 상업용 '
                  '엔드포인트로 조회합니다. 자료 출처 표시(CC BY 4.0)가 필요합니다.',
         'url_source': 'https://open-meteo.com/',
@@ -443,7 +443,8 @@ def page_ai_library():
         attributions=attributions,
         active_page='ai_library',
         library_presets=LIBRARY_PRESETS,
-        review_items=knowledge_promotion_service.list_review_items(),
+        # 검토 목록(review_items)은 따로 싣지 않는다 — AI 가 쓴 메모는 지식 목록의
+        # "확인이 필요한 것" 필터로 합쳤다(2026-09-10). /review API 는 그대로다.
         knowledge_summary=knowledge_library_service.summary(),
         strict_mode=bool(getattr(_ai_settings(), 'knowledge_chunk_confirmed_only', False)),
         knowledge_tags=knowledge_library_service.tag_counts(),
@@ -689,7 +690,15 @@ def api_create_source():
 @ai_library_bp.route('/api/v1/ai/library/sources/<source_id>', methods=['PATCH'])
 @login_required
 def api_update_source(source_id):
-    """Update fields on an existing AIContextSource."""
+    """Update fields on an existing AIContextSource.
+
+    config_json is replaced wholesale (the settings modal always sends the
+    full config), so a blank secret field here does not mean "clear the
+    key" — the modal never shows the stored key back to the browser (see
+    _mask_secrets), so a blank api_key/auth_value means "the operator left
+    it untouched." Same blank-keeps-existing semantics as ai_agent_mod's
+    password custom_options.
+    """
     if not utils_general.user_has_permission('edit_settings'):
         return jsonify({'success': False, 'error': 'Permission denied'}), 403
 
@@ -702,8 +711,17 @@ def api_update_source(source_id):
     for field in updatable:
         if field in body:
             val = body[field]
-            if field == 'config_json' and isinstance(val, dict):
-                val = json.dumps(val)
+            if field == 'config_json':
+                if isinstance(val, dict):
+                    val = _keep_existing_secrets(source.config_json, val)
+                    val = json.dumps(val)
+                elif isinstance(val, str):
+                    try:
+                        parsed = json.loads(val or '{}')
+                    except (ValueError, TypeError):
+                        parsed = None
+                    if isinstance(parsed, dict):
+                        val = json.dumps(_keep_existing_secrets(source.config_json, parsed))
             setattr(source, field, val)
 
     try:
@@ -909,13 +927,20 @@ def api_sync_source(source_id):
 @login_required
 def api_smartfarmkorea_farms():
     """Resolve the farm list for a dataset from a service key (calls the
-    dataset's identity op). Body: { preset_key, api_key }.
+    dataset's identity op). Body: { preset_key, api_key, source_id }.
+    `api_key` is only sent when the operator just typed a new one — the
+    settings modal never gets the stored key back (see _mask_secrets), so
+    if it's blank and `source_id` names an existing source, its stored key
+    is used instead.
     Returns { success, farms: [{value,label,userId,facilityId,itemCode}] }."""
     if not utils_general.user_has_permission('edit_settings'):
         return jsonify({'success': False, 'error': 'Permission denied'}), 403
     body = request.get_json(silent=True) or {}
     preset_key = (body.get('preset_key') or '').strip()
     api_key = (body.get('api_key') or '').strip()
+    source_id = (body.get('source_id') or '').strip()
+    if not api_key and source_id:
+        api_key = _stored_api_key(source_id)
     if not api_key:
         return jsonify({'success': False, 'error': 'API key is required.'}), 400
 
@@ -930,7 +955,8 @@ def api_smartfarmkorea_farms():
 @login_required
 def api_smartfarmkorea_seasons():
     """Resolve the season list for one farm (calls the dataset's cropping op).
-    Body: { preset_key, api_key, user_id }.
+    Body: { preset_key, api_key, user_id, source_id }. Same stored-key
+    fallback as the farms endpoint above when `api_key` is blank.
     Returns { success, seasons: [{value,label,croppingSerlNo,itemCode}] }."""
     if not utils_general.user_has_permission('edit_settings'):
         return jsonify({'success': False, 'error': 'Permission denied'}), 403
@@ -938,6 +964,9 @@ def api_smartfarmkorea_seasons():
     preset_key = (body.get('preset_key') or '').strip()
     api_key = (body.get('api_key') or '').strip()
     user_id = (body.get('user_id') or '').strip()
+    source_id = (body.get('source_id') or '').strip()
+    if not api_key and source_id:
+        api_key = _stored_api_key(source_id)
     if not api_key:
         return jsonify({'success': False, 'error': 'API key is required.'}), 400
     if not user_id:
@@ -1037,9 +1066,12 @@ def api_google_drive_picker_config():
 @ai_library_bp.route('/api/v1/ai/library/knowledge', methods=['GET'])
 @login_required
 def api_browse_knowledge():
-    """Every knowledge item, filtered. Read-only, so no edit_settings gate —
-    the same permission that got the operator onto this page is enough to
-    LOOK at what the AI is being told."""
+    """Every knowledge item, filtered. Read-only, but gated like the page
+    itself (page_ai_library requires edit_settings) — without the gate any
+    logged-in account could read the whole library through this API even
+    though it cannot open the page."""
+    if not utils_general.user_has_permission('edit_settings'):
+        return jsonify({'success': False, 'error': 'Permission denied'}), 403
     return jsonify({
         'success': True,
         **knowledge_library_service.browse(
@@ -1048,6 +1080,7 @@ def api_browse_knowledge():
             provenance=request.args.get('provenance'),
             include_disabled=request.args.get('include_disabled') == '1',
             page=request.args.get('page', 1, type=int),
+            context_state=request.args.get('state') or None,
         ),
         'tags': knowledge_library_service.tag_counts(),
         'summary': knowledge_library_service.summary(),
@@ -1188,15 +1221,87 @@ def _resolve_facility_id():
     return fid or 'default'
 
 
+def _mask_secrets(config_json):
+    """Strip stored secrets (`api_key`, `auth_value`) out of a source's
+    config_json before it leaves the server, keeping a `has_*` flag so the
+    settings modal can still show "Leave blank to keep existing key" instead
+    of silently pretending nothing is saved.
+
+    Returns (masked_config_json_str, has_api_key, has_auth_value).
+    """
+    try:
+        cfg = json.loads(config_json or '{}')
+    except (ValueError, TypeError):
+        cfg = None
+    if not isinstance(cfg, dict):
+        return config_json, False, False
+
+    has_api_key = bool((cfg.get('api_key') or '').strip())
+    has_auth_value = bool((cfg.get('auth_value') or '').strip())
+    if not has_api_key and not has_auth_value:
+        return config_json, False, False
+
+    masked = dict(cfg)
+    if has_api_key:
+        masked['api_key'] = ''
+    if has_auth_value:
+        masked['auth_value'] = ''
+    return json.dumps(masked), has_api_key, has_auth_value
+
+
+def _stored_api_key(source_id):
+    """Read the plaintext `api_key` off an existing source's config_json, or
+    '' if there is no such source or no stored key. Server-side only —
+    used to resolve the SmartFarmKorea farm/season pickers against the
+    already-saved key when the modal's key field is blank (masked)."""
+    source = AIContextSource.query.filter_by(source_id=source_id).first()
+    if not source:
+        return ''
+    try:
+        cfg = json.loads(source.config_json or '{}')
+    except (ValueError, TypeError):
+        return ''
+    return (cfg.get('api_key') or '').strip() if isinstance(cfg, dict) else ''
+
+
+def _keep_existing_secrets(stored_config_json, incoming_config):
+    """If `incoming_config` leaves `api_key`/`auth_value` blank and the
+    source already has a stored value for that field, carry the stored
+    value forward instead of overwriting it with blank.
+
+    Returns a new dict — does not mutate `incoming_config`.
+    """
+    try:
+        stored = json.loads(stored_config_json or '{}')
+    except (ValueError, TypeError):
+        stored = {}
+    if not isinstance(stored, dict):
+        stored = {}
+
+    result = dict(incoming_config)
+    for secret_field in ('api_key', 'auth_value'):
+        if not (result.get(secret_field) or '').strip() and (stored.get(secret_field) or '').strip():
+            result[secret_field] = stored[secret_field]
+    return result
+
+
 def _source_to_dict(source):
-    """Serialize AIContextSource to a JSON-safe dict."""
+    """Serialize AIContextSource to a JSON-safe dict.
+
+    config_json carries this source's credentials (api_key for preset
+    sources, auth_value for custom REST ones) — those never leave the
+    server as plaintext, even to a user who can open the settings modal.
+    """
+    masked_config, has_api_key, has_auth_value = _mask_secrets(source.config_json)
     return {
         'source_id': source.source_id,
         'facility_id': source.facility_id,
         'source_name': source.source_name,
         'source_type': source.source_type,
         'parameter_name': source.parameter_name,
-        'config_json': source.config_json,
+        'config_json': masked_config,
+        'has_api_key': has_api_key,
+        'has_auth_value': has_auth_value,
         'sync_interval_min': source.sync_interval_min,
         'last_synced_at': source.last_synced_at.isoformat() if source.last_synced_at else None,
         'last_sync_status': source.last_sync_status,

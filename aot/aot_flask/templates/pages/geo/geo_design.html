@@ -10,6 +10,7 @@
     map.css 318 규칙이 두 벌이었다). -#}
 {#- 공용 구획 폼(`common/aot-plot-form.js`)의 스타일 — 지도 위젯·/plots 와 **같은 파일**이다. -#}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/components/aot-plot-form.css') }}" />
+<link rel="stylesheet" href="{{ url_for('static', filename='css/aot-settings.css') }}" />
 <style>
     /* Card Styles */
     .card {
@@ -31,7 +32,7 @@
         left: 50%;
         transform: translateX(-50%);
         bottom: 35px; /* [Fix] Restore position (User V8) */
-        max-height: 50vh; /* [Fix] Enable scroll (User V8) */
+        max-height: calc(50 * var(--aot-vh)); /* [Fix] Enable scroll (User V8) */
         z-index: var(--aot-z-fixed-panel);
         /* 지도 위 떠있는 패널 — leaflet 컨트롤(~1000) 위 */
         border-radius: 12px;
@@ -74,6 +75,17 @@
        지도 오른쪽을 드로어 폭만큼 비워 둘 수 있다 — 겹치지 않으니 컨트롤도
        드로어도 동시에 보인다. 대시보드 지도 위젯이 iOS 에서 쓰는
        `.aot-map-pseudo-fullscreen`(map.css) 과 같은 발상이다. */
+    /* 평소 배치. 예전에는 마크업의 부트스트랩 유틸리티 `position-relative` 가
+       맡았는데, 부트스트랩이 `@layer vendor` 로 들어온 뒤로 그 클래스의
+       `position: relative !important` 가 아래 최대화 규칙의 `position: fixed
+       !important` 를 이겼다 — 레이어 안의 !important 는 레이어 밖의 !important
+       보다 강하다. 그래서 최대화하면 wrapper 가 고정되지 않고 `.card-body` 의
+       min-height 1px 로 접혀 지도가 사라졌다(2026-09-11 사용자 신고·실측).
+       평소 값은 여기서 일반 규칙으로 준다. */
+    #geo-design-wrapper {
+        position: relative;
+    }
+
     body.aot-geo-maximized {
         overflow: hidden !important;
     }
@@ -140,11 +152,11 @@
 
         /* User Req: Match Mode Panel margins (which is 90vw -> 5vw margin) */
         .map-tools-left {
-            left: 2vw !important;
+            left: calc(2 * var(--aot-vw)) !important;
         }
 
         .map-tools-right {
-            right: 2vw !important;
+            right: calc(2 * var(--aot-vw)) !important;
         }
 
         /* Adjust Search Overlay to fit between closer/further controls */
@@ -162,7 +174,7 @@
         .mode-panel {
             /* 96vw was relative to viewport, causing overflow if container < 100vw */
             /* New: 100% of container minus 2vw on each side */
-            width: calc(100% - 4vw);
+            width: calc(100% - 4 * var(--aot-vw));
             max-width: none;
         }
 
@@ -385,7 +397,9 @@
     .geo-design-lead { margin-bottom: var(--aot-space-4); }
 
     /* 체크상자 줄에 맞춘 들여쓰기. */
-    .geo-design-indent { padding-left: 1.25rem; }
+    /* 2026-09-11: 정렬선 32 재점검 — 다른 페이지 제목(x=31)과 맞추려고
+       1.25rem(20px, 임의값)을 표준 토큰(16px)으로 바꾼다. */
+    .geo-design-indent { padding-left: var(--aot-space-4); }
 
     /* 지도를 담은 카드만 모서리 안으로 내용을 가둔다. */
     .geo-design-card-clip { overflow: hidden; }
@@ -455,7 +469,7 @@
 
     <!-- Section 1: Title -->
     <div class="mb-3 geo-design-indent">
-        <h3 class="mb-2">{{ _('Spatial Design Studio') }}</h3>
+        <h3 class="mb-2 aot-page-title-size">{{ _('Spatial Design Studio') }}</h3>
         <button class="btn aot-pill-btn aot-pill-btn-primary" onclick="openGeoSettings()">{{ _('Settings') }}</button>
     </div>
 
@@ -507,7 +521,7 @@
 
         </div>
 
-        <div class="card-body p-0 position-relative aot-map-container" id="geo-design-wrapper">
+        <div class="card-body p-0 aot-map-container" id="geo-design-wrapper">
             <!-- Map Container (Fixed Height) -->
             <div id="geo-map"></div>
 

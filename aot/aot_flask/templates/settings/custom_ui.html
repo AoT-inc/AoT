@@ -7,28 +7,8 @@
 
 {% block head %}
   <link rel="stylesheet" href="{{ url_for('static', filename='css/aot-custom-ui-preview.css') }}">
-  <style>
-    /* Color group tabs — same underline pattern as #userSettingsTabs (settings/users.html) */
-    #colorGroupTabs {
-      border-bottom: 2px solid var(--aot-border-neutral, #dee2e6);
-      margin-bottom: 1rem;
-      flex-wrap: wrap;
-    }
-    #colorGroupTabs .nav-link {
-      border: none;
-      color: var(--aot-text-secondary, #6c757d);
-      font-weight: 500;
-      padding: 0.6rem 1.1rem;
-      border-radius: 0;
-      border-bottom: 2px solid transparent;
-      cursor: pointer;
-    }
-    #colorGroupTabs .nav-link.active {
-      color: var(--aot-color-brand-secondary);
-      background: transparent;
-      border-bottom: 2px solid var(--aot-color-brand-secondary);
-    }
-  </style>
+  {# 색 그룹 탭의 모습은 공용 구획 탭(components/aot-base-ui.css `.nav-tabs`)이
+     정한다 — 여기서 #colorGroupTabs 로 따로 칠하던 규칙을 걷었다(2026-09-10). #}
 {% endblock %}
 
 {% block settings %}

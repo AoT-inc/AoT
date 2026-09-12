@@ -1,28 +1,26 @@
 {% from 'pages/form_options/api_key_macro.html' import render_api_key_picker with context %}
 {% from 'pages/ai/options/ai_custom_options.html' import render_ai_custom_options with context %}
+{% set _aid = agent.unique_id %}
 
-<form action="{{ url_for('routes_ai_agent.ai_agent_mod', agent_id=agent.unique_id) }}" method="POST">
+{# 내장 AI 에이전트 설정 드로어 — 기본 셋(이름·모델·키)만 펼쳐 두고, 역할·등급·
+   샘플링 값·시스템 프롬프트는 "고급" 으로 접는다. 모델과 키만 있으면 동작하고,
+   나머지는 역할 기본값이 이미 채워 두는 값이라 대부분 손댈 일이 없다. #}
+<form id="agentOptionsForm_{{ _aid }}" action="{{ url_for('routes_ai_agent.ai_agent_mod', agent_id=_aid) }}" method="POST">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
 
-    <!-- Agent Engine Description -->
+    {# 엔진 설명·키 발급 링크는 상자 밖 글자다 — 상자 안 라벨과 같은 선(16)에
+       세운다(.aot-modal-container-intro). 예전에는 들여쓰기 없이 16px 왼쪽에 섰다. #}
     {% if engine_info.description %}
-    <div class="mb-2 aot-lede">
-        {{ engine_info.description }}
-    </div>
+    <p class="aot-modal-body-text aot-modal-container-intro">{{ engine_info.description }}</p>
     {% endif %}
-
-    <!-- Agent Auth Link (Left aligned, no box) -->
     {% if engine_info.auth_link %}
-    <div class="mb-3 text-left">
-        <a href="{{ engine_info.auth_link }}" target="_blank" class="text-primary aot-link-inline">
-            <i class="fas fa-external-link-alt mr-1"></i> {{ _('Get API Key / Documentation') }}
-        </a>
-    </div>
+    <p class="aot-modal-body-text aot-modal-container-intro">
+        <a href="{{ engine_info.auth_link }}" target="_blank" rel="noopener">{{ _('Get API Key / Documentation') }}</a>
+    </p>
     {% endif %}
 
-    <!-- Basic Configuration -->
     <div class="aot-modal-group-title">{{ _('Basic Configuration') }}</div>
-    <div class="aot-modal-container mb-3">
+    <div class="aot-modal-container">
         <div class="aot-modal-option-row">
             <label class="aot-modal-option-label">{{ _('Agent Name') }}</label>
             <div class="aot-modal-option-control">
@@ -31,183 +29,182 @@
         </div>
 
         <div class="aot-modal-option-row">
-            <label class="aot-modal-option-label">{{ _('Specialty') }}</label>
-            <div class="aot-modal-option-control">
-                <input type="text" name="specialty" class="form-control aot-modern-input" value="{{ agent.specialty or '' }}" placeholder="{{ _('e.g. Energy Analytics, GIS Data') }}">
-            </div>
-        </div>
-
-        <div class="aot-modal-option-row">
-            <label class="aot-modal-option-label">{{ _('Plan Tier') }}</label>
-            <div class="aot-modal-option-control">
-                <select name="model_tier" class="form-control selectpicker aot-standard-select" data-style="btn-white">
-                    <option value="lightweight" {% if agent.model_tier == 'lightweight' %}selected{% endif %}>{{ _('Small') }}</option>
-                    <option value="standard" {% if agent.model_tier == 'standard' %}selected{% endif %}>{{ _('Medium') }}</option>
-                    <option value="heavy" {% if agent.model_tier == 'heavy' %}selected{% endif %}>{{ _('Large') }}</option>
-                </select>
-                <small class="form-text text-muted aot-form-hint">
-                    {{ _('Budgets are automatically optimized per Tier.') }}
-                </small>
-            </div>
-        </div>
-    </div>
-
-    <!-- Identity & Model (Legacy/Service details) -->
-    <div class="aot-modal-group-title">{{ _('Service & Model') }}</div>
-    <div class="aot-modal-container mb-3">
-        <div class="aot-modal-option-row">
             <label class="aot-modal-option-label">{{ _('Model Selection') }}</label>
             <div class="aot-modal-option-control">
-                <select name="model_name" class="form-control selectpicker aot-standard-select" data-style="btn-white" id="modelSelect_{{ agent.unique_id }}">
+                <select name="model_name" class="form-control aot-modern-select">
                     {% for m in engine_info.models %}
                     <option value="{{ m.value }}" {% if agent.entry and agent.entry.model_name == m.value %}selected{% endif %}>{{ m.label }}</option>
                     {% endfor %}
                     <option value="custom">{{ _('Manual Entry') }}...</option>
                 </select>
-                <input type="text" id="manualModel_{{ agent.unique_id }}" name="manual_model_name" class="form-control aot-modern-input mt-2" style="display:none;" placeholder="{{ _('Enter model name manually') }}">
+            </div>
+        </div>
+
+        {# 목록에 없는 모델명 — "직접 입력" 을 골랐을 때만 한 줄로 나타난다.
+           예전에는 같은 칸 아래에 인라인 display:none 입력을 붙여 두었다. #}
+        <div class="aot-modal-option-row" data-role="manual-model-row" hidden>
+            <label class="aot-modal-option-label">{{ _('Enter model name manually') }}</label>
+            <div class="aot-modal-option-control">
+                <input type="text" name="manual_model_name" class="form-control aot-modern-input">
             </div>
         </div>
 
         <div class="aot-modal-option-row">
             <label class="aot-modal-option-label">{{ _('API Key') }}</label>
-            <div class="aot-modal-option-control">
+            {#- 공용 160px 폭 안에서 입력칸+키 선택 버튼을 나누면 입력칸이 80~114px 로
+                좁아져 placeholder("기존 키를 유지하려면 비워두세요")가 잘렸다(실측
+                101px). 비밀번호 두 칸 나눔과 같은 처방(aot-control-grow)으로 행이 가진
+                남는 폭을 전부 이 컨트롤에 준다 — 그 안에서 입력칸이 나머지를 갖는다. -#}
+            <div class="aot-modal-option-control aot-control-grow">
                 <div class="aot-api-key-group">
+                    {# 저장된 키는 브라우저로 내려보내지 않는다 — 빈 칸으로 저장하면
+                       ai_agent_mod 가 기존 키를 그대로 둔다. #}
                     <input type="hidden" name="api_key">
-                    <input type="text" class="form-control aot-modern-input"
-                           value="{{ agent.entry.api_key or '' }}"
-                           placeholder="{{ _('Leave blank to keep existing key') }}"
-                           autocomplete="off" data-lpignore="true" data-dashlane-ignore="true" spellcheck="false"
+                    <input type="password" class="form-control aot-modern-input"
+                           value=""
+                           {% if agent.entry and agent.entry.api_key %}placeholder="{{ _('Leave blank to keep existing key') }}"{% endif %}
+                           autocomplete="new-password" data-lpignore="true" data-1p-ignore="true" data-dashlane-ignore="true" spellcheck="false"
                            oninput="this.previousElementSibling.value = this.value;">
                     {{ render_api_key_picker() }}
                 </div>
-                <small id="api_key_hint" class="form-text text-muted" style="display:none"></small>
             </div>
+            {# 부연은 행의 셋째 자식 — 아랫줄 전체 폭으로 내려간다(§4-6). #}
+            <div class="aot-modal-body-text" data-role="key-hint" hidden></div>
         </div>
     </div>
 
-    <!-- Pipeline Configuration -->
-    <div class="aot-modal-group-title">{{ _('Pipeline Configuration') }}</div>
-    <div class="aot-modal-container">
-        <div class="aot-modal-option-row">
-            <label class="aot-modal-option-label">{{ _('Pipeline Role') }}</label>
-            <div class="aot-modal-option-control">
-                <select name="pipeline_role" class="form-control selectpicker aot-standard-select" data-style="btn-white">
-                    <option value="worker" {% if agent.pipeline_role == 'worker' %}selected{% endif %}>{{ _('Worker (Legacy)') }}</option>
-                    <option value="router" {% if agent.pipeline_role == 'router' %}selected{% endif %}>{{ _('Router') }}</option>
-                    <option value="planner" {% if agent.pipeline_role == 'planner' %}selected{% endif %}>{{ _('Planner') }}</option>
-                    <option value="executor" {% if agent.pipeline_role == 'executor' %}selected{% endif %}>{{ _('Executor') }}</option>
-                    <option value="synthesizer" {% if agent.pipeline_role == 'synthesizer' %}selected{% endif %}>{{ _('Synthesizer') }}</option>
-                </select>
+    <a class="aot-modal-section-title aot-modal-section-title-collapsible collapsed" data-toggle="collapse"
+       href="#agentAdvanced_{{ _aid }}" role="button" aria-expanded="false" aria-controls="agentAdvanced_{{ _aid }}">
+      {{ _('Advanced') }}<span class="aot-collapse-caret-btn" aria-hidden="true">
+        <svg class="aot-collapse-caret" viewBox="0 0 24 24"
+             fill="none" stroke="currentColor" stroke-width="2.6"
+             stroke-linecap="round" stroke-linejoin="round">
+          <path d="M9.5 5.5 16 12l-6.5 6.5"/>
+        </svg>
+      </span>
+    </a>
+    <div class="collapse" id="agentAdvanced_{{ _aid }}">
+        <div class="aot-modal-container">
+            <div class="aot-modal-option-row">
+                <label class="aot-modal-option-label">{{ _('Pipeline Role') }}</label>
+                <div class="aot-modal-option-control">
+                    <select name="pipeline_role" class="form-control aot-modern-select">
+                        <option value="worker" {% if agent.pipeline_role == 'worker' %}selected{% endif %}>{{ _('Worker (Legacy)') }}</option>
+                        <option value="router" {% if agent.pipeline_role == 'router' %}selected{% endif %}>{{ _('Router') }}</option>
+                        <option value="planner" {% if agent.pipeline_role == 'planner' %}selected{% endif %}>{{ _('Planner') }}</option>
+                        <option value="executor" {% if agent.pipeline_role == 'executor' %}selected{% endif %}>{{ _('Executor') }}</option>
+                        <option value="synthesizer" {% if agent.pipeline_role == 'synthesizer' %}selected{% endif %}>{{ _('Synthesizer') }}</option>
+                    </select>
+                </div>
+                <div class="aot-modal-body-text">{{ _("Changing the role asks whether to refill specialty, system prompt, tier and model with that role's defaults.") }}</div>
             </div>
+
+            <div class="aot-modal-option-row">
+                <label class="aot-modal-option-label">{{ _('Specialty') }}</label>
+                <div class="aot-modal-option-control">
+                    <input type="text" name="specialty" class="form-control aot-modern-input" value="{{ agent.specialty or '' }}" placeholder="{{ _('e.g. Energy Analytics, GIS Data') }}">
+                </div>
+            </div>
+
+            <div class="aot-modal-option-row">
+                <label class="aot-modal-option-label">{{ _('Plan Tier') }}</label>
+                <div class="aot-modal-option-control">
+                    <select name="model_tier" class="form-control aot-modern-select">
+                        <option value="lightweight" {% if agent.model_tier == 'lightweight' %}selected{% endif %}>{{ _('Small') }}</option>
+                        <option value="standard" {% if agent.model_tier == 'standard' %}selected{% endif %}>{{ _('Medium') }}</option>
+                        <option value="heavy" {% if agent.model_tier == 'heavy' %}selected{% endif %}>{{ _('Large') }}</option>
+                    </select>
+                </div>
+                {# 예전에는 컨트롤 칸 안에 넣어 160px 폭에서 세 줄로 접혔다. #}
+                <div class="aot-modal-body-text">{{ _('Budgets are automatically optimized per Tier.') }}</div>
+            </div>
+
+            {% if engine_info.custom_options %}
+                {{ render_ai_custom_options(engine_info.custom_options, custom_options) }}
+            {% endif %}
+
+            {# Temperature 가 엔진 custom option 에 이미 있으면 한 번만 보인다(#023). #}
+            {% set custom_ids = engine_info.custom_options | map(attribute='id') | list if engine_info.custom_options else [] %}
+            {% if 'temperature' not in custom_ids %}
+            <div class="aot-modal-option-row">
+                <label class="aot-modal-option-label">{{ _('Temperature') }}</label>
+                <div class="aot-modal-option-control">
+                    <input type="number" name="temperature" class="form-control aot-modern-input" value="{{ agent.temperature }}" step="0.1" min="0" max="2">
+                </div>
+            </div>
+            {% endif %}
         </div>
 
-        {% if engine_info.custom_options %}
-            {{ render_ai_custom_options(engine_info.custom_options, custom_options) }}
-        {% endif %}
-
-        {# v24: Only show standard Temperature if not already provided as a Custom Option (Prevent Duplication #023) #}
-        {% set custom_ids = engine_info.custom_options | map(attribute='id') | list if engine_info.custom_options else [] %}
-        {% if 'temperature' not in custom_ids %}
-        <div class="aot-modal-option-row">
-            <label class="aot-modal-option-label">{{ _('Temperature') }}</label>
-            <div class="aot-modal-option-control">
-                <input type="number" name="temperature" class="form-control aot-modern-input" value="{{ agent.temperature }}" step="0.1" min="0" max="2">
-            </div>
-        </div>
-        {% endif %}
-    </div>
-
-    <!-- System Instructions -->
-    <div class="aot-modal-group-title">{{ _('System Instructions') }}</div>
-    <div class="aot-modal-container">
-        <div class="aot-modal-option-row aot-full-width-row">
-            <label class="aot-modal-option-label font-weight-bold">{{ _('System Prompt') }}</label>
-            <div class="aot-modal-option-control">
-                <textarea name="system_prompt" class="form-control aot-modern-input aot-input-prose aot-input-tall" rows="5"
-                          placeholder="{{ _('Define how this agent should behave...') }}">{{ agent.system_prompt }}</textarea>
+        <div class="aot-modal-group-title">{{ _('System Instructions') }}</div>
+        <div class="aot-modal-container">
+            <div class="aot-modal-option-row aot-full-width-row">
+                <label class="aot-modal-option-label">{{ _('System Prompt') }}</label>
+                <div class="aot-modal-option-control">
+                    <textarea name="system_prompt" class="form-control aot-modern-input aot-input-prose aot-input-tall" rows="5"
+                              placeholder="{{ _('Define how this agent should behave...') }}">{{ agent.system_prompt }}</textarea>
+                </div>
             </div>
         </div>
     </div>
 </form>
 
 <script>
-    // Model selection logic
-    $('#modelSelect_{{ agent.unique_id }}').on('change', function() {
-        if ($(this).val() === 'custom') {
-            $('#manualModel_{{ agent.unique_id }}').show();
-        } else {
-            $('#manualModel_{{ agent.unique_id }}').hide();
-        }
+(function () {
+    var $form = $('#agentOptionsForm_{{ _aid }}');
+
+    // 셀렉트는 공용 드롭인이 버튼으로 바꿔 그리므로 값은 selectpicker('val') 로
+    // 넣는다 — el.value 로 넣으면 버튼 글자가 따라오지 않는다.
+    function setSelect($sel, value) {
+        if ($sel.data('selectpicker')) { $sel.selectpicker('val', value); }
+        else { $sel.val(value).trigger('change'); }
+    }
+
+    $form.find('select[name="model_name"]').on('change', function () {
+        $form.find('[data-role="manual-model-row"]').prop('hidden', $(this).val() !== 'custom');
     });
 
-    // Pipeline Role change logic (v6) - enhanced with preset auto-apply
-    $('select[name="pipeline_role"]').on('change', function() {
-        const role = $(this).val();
-        if (typeof rolePresets !== 'undefined' && rolePresets[role]) {
-            const preset = rolePresets[role];
+    function lookupKeyHint(provider) {
+        var $hint = $form.find('[data-role="key-hint"]');
+        $.getJSON('/api/ai/entry/key_hint?provider=' + encodeURIComponent(provider))
+            .done(function (data) {
+                if (data.found) {
+                    $hint.text({{ _("Existing key on file")|tojson }} + ': ' + data.hint).prop('hidden', false);
+                } else {
+                    $hint.prop('hidden', true);
+                }
+            })
+            .fail(function () { $hint.prop('hidden', true); });
+    }
 
-            // Update Specialty
-            $('input[name="specialty"]').val(preset.specialty || '');
-
-            // Update System Prompt
-            $('textarea[name="system_prompt"]').val(preset.system_prompt || '');
-
-            // Update Model Tier
-            $('select[name="model_tier"]').val(preset.model_tier || 'standard');
-
-            // Auto-apply model from preset (if model_name select exists)
+    // 역할을 바꾸면 그 역할의 기본값으로 다시 채울지 **묻는다.** 예전에는 묻지
+    // 않고 덮어써 손으로 고친 프롬프트가 사라졌다. 거절하면 역할만 바뀐다.
+    // 핸들러는 이 폼 안에만 건다 — 전역 선택자에 걸면 드로어를 열 때마다
+    // 쌓여, 한 번 바꿀 때 여러 번 돌았다.
+    $form.find('select[name="pipeline_role"]').on('change', function () {
+        var role = $(this).val();
+        if (typeof rolePresets === 'undefined' || !rolePresets[role]) { return; }
+        var preset = rolePresets[role];
+        window.aotConfirm({{ _("Fill in this role's default specialty, system prompt, tier and model? What you entered will be replaced.")|tojson }}, function () {
+            $form.find('input[name="specialty"]').val(preset.specialty || '');
+            $form.find('textarea[name="system_prompt"]').val(preset.system_prompt || '');
+            setSelect($form.find('select[name="model_tier"]'), preset.model_tier || 'standard');
             if (preset.model_value) {
-                const $modelSelect = $('select[name="model_name"]');
-                if ($modelSelect.length) {
-                    // Check if preset model exists in options
-                    const modelExists = $modelSelect.find('option[value="' + preset.model_value + '"]').length > 0;
-                    if (modelExists) {
-                        $modelSelect.val(preset.model_value).trigger('change');
-                    }
+                var $model = $form.find('select[name="model_name"]');
+                if ($model.find('option[value="' + preset.model_value + '"]').length) {
+                    setSelect($model, preset.model_value);
                 }
             }
-
-            // Auto-apply temperature from preset
             if (preset.temperature !== undefined) {
-                $('input[name="temperature"]').val(preset.temperature);
+                $form.find('input[name="temperature"], input[name="custom_temperature"]').val(preset.temperature);
             }
-
-            // Auto-apply max_tokens from preset
             if (preset.max_tokens !== undefined) {
-                $('input[name="max_tokens"]').val(preset.max_tokens);
+                $form.find('input[name="max_tokens"], input[name="custom_max_tokens"]').val(preset.max_tokens);
             }
-
-            // Trigger API key hint lookup based on ai_name_unique from preset
-            if (preset.ai_name_unique) {
-                lookupKeyHint(preset.ai_name_unique);
-            }
-
-            // Refresh selectpickers
-            if (typeof $('.selectpicker').selectpicker === 'function') {
-                $('.selectpicker').selectpicker('refresh');
-            }
-
+            if (preset.ai_name_unique) { lookupKeyHint(preset.ai_name_unique); }
             if (typeof window.showToast === 'function') {
                 window.showToast({{ _('Default options for role applied')|tojson }}, 'info');
             }
-        }
-    });
-
-    // API key hint auto-populate
-    function lookupKeyHint(provider) {
-        $.getJSON('/api/ai/entry/key_hint?provider=' + encodeURIComponent(provider), function(data) {
-            if (data.found) {
-                const hint = {{ _("Existing key on file")|tojson }} + ': ' + data.hint;
-                $('#api_key_hint').text(hint).show();
-            } else {
-                $('#api_key_hint').hide();
-            }
-        }).fail(function() {
-            $('#api_key_hint').hide();
         });
-    }
-
-    if (typeof $('.selectpicker').selectpicker === 'function') {
-        $('.selectpicker').selectpicker('refresh');
-    }
+    });
+})();
 </script>

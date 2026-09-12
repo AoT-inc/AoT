@@ -31612,3 +31612,17 @@ msgstr "Semua Pengukuran"
 
 msgid "All Units"
 msgstr "Semua Satuan"
+
+#: aot/widgets/AoT_plot.py
+msgid "Map or site"
+msgstr "Peta/Situs"
+
+#: aot/widgets/AoT_plot.py
+msgid ""
+"Show only the plots in this map or site. Leave empty to show every plot in "
+"progress."
+msgstr "Hanya tampilkan petak dalam peta atau situs ini. Biarkan kosong untuk menampilkan semua petak yang sedang ditanami."
+
+#: aot/aot_flask/static/js/widgets/AoT_plot/aot-plot-widget.js
+msgid "Go to page %(n)s"
+msgstr "Buka halaman %(n)s"

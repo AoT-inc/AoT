@@ -19,7 +19,7 @@ body.aot-wheel-lock{ overflow:hidden !important; }
 .aot-wheel-panel{
   background:var(--aot-surface-card,#fff); border-radius:var(--aot-radius-xl);
   box-shadow:0 12px 40px rgba(0,0,0,0.25);
-  padding:14px 16px 12px; width:min(320px,90vw);
+  padding:14px 16px 12px; width:min(320px,90 * var(--aot-vw));
   user-select:none; -webkit-user-select:none;
 }
 .aot-wheel-title{

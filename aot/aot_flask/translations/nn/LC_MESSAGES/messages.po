@@ -31052,3 +31052,17 @@ msgstr "Alle målingar"
 
 msgid "All Units"
 msgstr "Alle einingar"
+
+#: aot/widgets/AoT_plot.py
+msgid "Map or site"
+msgstr "Kart/anlegg"
+
+#: aot/widgets/AoT_plot.py
+msgid ""
+"Show only the plots in this map or site. Leave empty to show every plot in "
+"progress."
+msgstr "Vis berre teigane på dette kartet eller anlegget. La stå tomt for å visa alle teigar som er under dyrking."
+
+#: aot/aot_flask/static/js/widgets/AoT_plot/aot-plot-widget.js
+msgid "Go to page %(n)s"
+msgstr "Gå til side %(n)s"

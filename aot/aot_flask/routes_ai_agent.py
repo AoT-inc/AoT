@@ -1,6 +1,7 @@
 # coding=utf-8
 import json
 import logging
+import re
 import flask_login
 from flask import Blueprint, render_template, request, jsonify, flash, redirect, url_for
 from flask_login import login_required
@@ -21,47 +22,28 @@ blueprint = Blueprint('routes_ai_agent', __name__)
 @blueprint.route('/ai', methods=['GET'])
 @login_required
 def page_ai_dashboard():
-    """AI Portal - accessible to all logged-in users."""
-    from aot.databases.models import AIFacilityLearning, AIUserProfile
+    """AI 요청 — AI 가 사람의 결정을 기다리는 것(제어 요청·일정 제안·조언)을 모은다.
 
-    entries_count = AIEntry.query.filter_by(is_activated=True).count()
-    agents_count = AIAgent.query.filter_by(is_activated=True).count()
-    recent_history = AIHistory.query.order_by(AIHistory.timestamp.desc()).limit(5).all()
+    예전 "포털"(학습 진행·키워드·AI 지침·첫 방문 마법사)은 걷었다 — 지표는 실제
+    동작과 무관했고, AI 지침은 저장만 되고 어떤 프롬프트도 읽지 않았다(2026-09-10).
+    제어 요청과 조언은 페이지가 API 로 읽고, 일정 제안만 여기서 싣는다."""
+    from aot.ai.services import mcp_safety_gate as gate
+    from aot.ai.services.ai_scheduler_service import AISchedulerService
+    from aot.aot_flask.routes_scheduler import _enrich_job_display
 
-    # Resolve facility_id
-    facility_id = request.args.get('facility_id', None)
-    if not facility_id and flask_login.current_user.is_authenticated:
-        misc = Misc.query.first()
-        if misc and hasattr(misc, 'default_facility_id'):
-            facility_id = misc.default_facility_id
-
-    # 016: Fetch AIUserProfile for onboarding mode detection
-    user_profile = None
-    if flask_login.current_user.is_authenticated:
-        user_profile = AIUserProfile.query.filter_by(
-            user_id=flask_login.current_user.id
-        ).first()
-
-    # Re-invoke flag: show Getting-to-Know flow even if already onboarded
-    reinvoke = request.args.get('reinvoke', '0') == '1'
-
-    # Facility-level learning record (used by 013/014 journey view)
-    onboarding_profile = None
-    if facility_id:
-        onboarding_profile = AIFacilityLearning.query.filter_by(facility_id=facility_id).first()
+    drafts = AISchedulerService.get_drafts()
+    for d in drafts:
+        _enrich_job_display(d)
 
     return render_template('pages/ai/ai.html',
-                           entries_count=entries_count,
-                           agents_count=agents_count,
-                           recent_history=recent_history,
                            active_page='ai_dashboard',
-                           now_timestamp=12345,
                            settings=Misc.query.first(),
                            ai_settings=AIGlobalSettings.query.first(),
-                           facility_id=facility_id or '',
-                           user_profile=user_profile,
-                           reinvoke=reinvoke,
-                           onboarding_profile=onboarding_profile)
+                           drafts=drafts,
+                           # 일정 제안 승인·거절 API 가 요구하는 권한과 같다.
+                           can_decide=user_has_permission('edit_controllers'),
+                           # 물리 제어 목록은 게이트가 정본이다(화면에 하드코딩 금지).
+                           physical_tools=sorted(gate.PHYSICAL_TOOLS))
 
 
 @blueprint.route('/ai/agent', methods=['GET'])
@@ -131,18 +113,81 @@ def page_ai_agent():
 @blueprint.route('/ai/manage', methods=['GET'])
 @login_required
 def page_ai_manage():
-    """AI Manager - Integrated Conversation & Error Dashboard."""
+    """AI 기록 — 도구 호출 · 대화 · 오류 보고. 목록은 페이지가 API 로 읽는다.
+
+    예전에는 최근 대화 100건과 그 상세 모달 100개를 서버가 미리 그렸다(2026-09-10 걷음)."""
     if not user_has_permission('edit_controllers'):
         return redirect(url_for('routes_ai_agent.page_ai_dashboard'))
-        
-    active_tab = request.args.get('tab', 'manage')
-    history = AIHistory.query.order_by(AIHistory.timestamp.desc()).limit(100).all()
-    agents = AIAgent.query.order_by(AIAgent.created_at.desc()).all()
-    
     return render_template('pages/ai/ai_manage.html',
-                           history=history,
-                           active_tab=active_tab,
-                           active_page='ai_manage')
+                           active_page='ai_manage',
+                           # 오류 보고를 지식에 반영하는 API 가 관리자만 받는다(role_id 1).
+                           is_admin=getattr(flask_login.current_user, 'role_id', None) == 1)
+
+
+_CONTEXT_LINE = re.compile(r'^\[[A-Z][A-Za-z ]{2,40}:')
+
+
+def _human_question(text):
+    """저장된 요청(goal)에서 사람이 쓴 질문만 남긴다.
+
+    내장 AI 에 보낸 원문 앞에는 시스템이 붙인 문맥이 쌓여 있다(실측 40건 중 17건):
+      [MODE: …] 한 줄씩 · [Page Context: URL=…, (ID: <UUID>)] · IMPORTANT: … 한 줄 ·
+      [Page structure … 로 시작해 "]" 한 줄로 닫히는 블록 ·
+      [Current … 로 시작하고 들여쓴 줄이 이어지는 블록.
+    그대로 싣으면 기록의 첫 줄이 전부 "[MODE: FAST] Answer concisely…" 가 되고
+    페이지 UUID 가 보인다. 걷고 남은 줄이 질문이다(없으면 빈 문자열)."""
+    keep, skip = [], None
+    for line in (text or '').splitlines():
+        s = line.strip()
+        if skip == 'block':                    # [Page structure … ] 블록
+            if s == ']':
+                skip = None
+            continue
+        if skip == 'indent':                   # [Current …] 뒤의 들여쓴 줄
+            if line[:1].isspace() or s.startswith('- ') or not s:
+                continue
+            skip = None
+        if not s:
+            continue
+        if s.startswith(('[MODE:', '[Page Context:', 'IMPORTANT:')):
+            continue
+        # 같은 모양의 다른 문맥 줄 — "[System Context: … Dashboard ID '<UUID>']" 처럼
+        # "[대문자로 시작하는 이름: …]" 한 줄. 목록을 늘리는 대신 모양으로 거른다.
+        if _CONTEXT_LINE.match(s):
+            if not s.endswith(']'):
+                skip = 'block'
+            continue
+        if s.startswith('[Page structure'):
+            skip = None if s.endswith(']') else 'block'
+            continue
+        if s.startswith('[Current '):
+            skip = 'indent'
+            continue
+        keep.append(s)
+    return '\n'.join(keep).strip()
+
+
+@blueprint.route('/ai/manage/conversations', methods=['GET'])
+@login_required
+def api_ai_conversations():
+    """내장 AI 문답을 최신 순으로 쪽 단위로 준다 — AI 기록의 "대화" 탭.
+
+    사람이 읽을 두 칸(질문·답)과 시각만 싣는다. metadata_json 의 단계별 도구 로그는
+    기계 원문이라 화면에 내보내지 않는다."""
+    if not user_has_permission('edit_controllers'):
+        return jsonify({'status': 'error', 'message': 'Permission denied'}), 403
+    offset = max(0, request.args.get('offset', 0, type=int) or 0)
+    limit = min(100, max(1, request.args.get('limit', 25, type=int) or 25))
+    rows = (AIHistory.query.order_by(AIHistory.timestamp.desc())
+            .offset(offset).limit(limit + 1).all())
+    items = [{
+        'id': r.id,
+        # 저장값은 시간대 없는 UTC 다 — 'Z' 를 붙여 브라우저가 보는 사람의 시간대로 옮기게 한다.
+        'time': (r.timestamp.isoformat() + 'Z') if r.timestamp else None,
+        'request': _human_question(r.goal),
+        'answer': r.insight or '',
+    } for r in rows[:limit]]
+    return jsonify({'status': 'success', 'items': items, 'has_more': len(rows) > limit})
 
 
 @blueprint.route('/ai/scheduler', methods=['GET'])

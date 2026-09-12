@@ -9271,6 +9271,11 @@ msgstr "API 문서"
 msgid "AoT Github"
 msgstr "AoT 깃허브"
 
+#: aot_flask/templates/layout.html:716
+#: aot_flask/templates/layout_default.html:716
+msgid "AoT Homepage"
+msgstr "AoT 홈페이지"
+
 #: aot_flask/templates/layout.html:717
 #: aot_flask/templates/layout_default.html:717
 #: aot_flask/templates/pages/landing.html:238
@@ -11834,7 +11839,7 @@ msgstr "AI 서비스가 비활성 상태입니다. 설정 > 일반에서 먼저 
 msgid ""
 "No AI model is registered yet. Add and activate at least one agent below,"
 " then start the service."
-msgstr "등록된 AI 모델이 없습니다. 아래에서 에이전트를 하나 이상 추가·활성화한 뒤 서비스를 시작하세요."
+msgstr "등록된 AI 모델이 없습니다. 아래에서 에이전트를 하나 이상 추가·활성화한 뒤 실행하세요."
 
 #: aot_flask/templates/pages/ai/ai_agent.html:66
 #: aot_flask/templates/pages/ai/ai_agent.html:691
@@ -12071,7 +12076,7 @@ msgstr "컨텍스트 레이어"
 
 #: aot_flask/templates/pages/ai/ai_agent.html:824
 msgid "Context Broadcast"
-msgstr "컨텍스트 브로드캐스트"
+msgstr "정기 상황 요약"
 
 #: aot_flask/templates/pages/ai/ai_agent.html:835
 msgid "Default Site"
@@ -12219,7 +12224,7 @@ msgid ""
 "else, bring your own documents, web pages or APIs."
 msgstr ""
 "AI 가 자기 일반 지식이 아니라 출처를 근거로 답하도록 데이터 소스를 연결합니다. 내장 공공데이터 피드는 한국 자료이며, 그 밖의"
-" 지역에서는 자기 문서·웹 페이지·API 를 쓰십시오."
+" 지역에서는 자기 문서·웹 페이지·API 를 쓰세요."
 
 #: aot_flask/templates/pages/ai/ai_library.html:42
 msgid "Select Source Type"
@@ -12371,7 +12376,7 @@ msgstr ""
 
 #: aot_flask/templates/pages/ai/ai_library.html:331
 msgid "Retrieved at least once"
-msgstr "한 번 이상 검색에 걸림"
+msgstr "1회 이상 검색됨"
 
 #: aot_flask/templates/pages/ai/ai_library.html:332
 msgid "With a source link"
@@ -12421,7 +12426,7 @@ msgstr "출처"
 #: aot_flask/templates/pages/ai/ai_library.html:387
 #: aot_flask/templates/pages/ai/ai_library.html:391
 msgid "optional"
-msgstr "선택"
+msgstr "선택 사항"
 
 #: aot_flask/templates/pages/ai/ai_library.html:391
 #: aot_flask/templates/pages/ai/ai_library.html:513
@@ -35099,3 +35104,427 @@ msgstr "컨트롤 면 색을 바꾸려면 누르세요"
 #: aot_flask/templates/settings/custom_ui.html
 msgid "Face of things you operate — text fields, selects, pills. Keep it apart from the page background, or a control sitting on the page vanishes into it"
 msgstr "조작하는 것들의 면 — 글자 입력칸·셀렉트·알약. 페이지 배경과 값을 벌려 두세요. 같으면 배경 위에 놓인 컨트롤이 통째로 묻혀 보이지 않습니다"
+
+msgid "AI Connection"
+msgstr "AI 연결"
+
+msgid "Connect your AI app"
+msgstr "내 AI 앱으로 연결"
+
+msgid "An AI app you already use, such as Claude Desktop, can read this farm and ask to control equipment. Equipment control only runs after a person approves it."
+msgstr "Claude Desktop처럼 이미 쓰는 AI 앱이 이 농장의 정보를 읽고 장치 제어를 요청할 수 있습니다. 장치 제어는 사람이 승인해야 실행됩니다."
+
+msgid "External AI access"
+msgstr "외부 AI 접속"
+
+msgid "Allowed"
+msgstr "허용"
+
+msgid "Not allowed"
+msgstr "허용 안 함"
+
+msgid "Turned on or off in Settings > General."
+msgstr "설정 > 일반에서 켜고 끕니다."
+
+msgid "Open General Settings"
+msgstr "일반 설정 열기"
+
+msgid "Access keys"
+msgstr "접속 키"
+
+msgid "Manage keys"
+msgstr "키 관리"
+
+msgid "Issue one key per AI app and paste it into that app."
+msgstr "AI 앱마다 키를 하나씩 발급해 그 앱에 넣습니다."
+
+msgid "Built-in AI"
+msgstr "내장 AI"
+
+msgid "The AI model used by chat and advice inside this app. It runs separately from your own AI app, so you can leave it off if you do not use it."
+msgstr "앱 안의 채팅과 조언이 쓰는 AI 모델입니다. 내 AI 앱 연결과는 따로 동작하므로, 쓰지 않으면 꺼 두어도 됩니다."
+
+msgid "Run built-in AI"
+msgstr "내장 AI 작동"
+
+msgid "The site the AI uses when a chat or screen does not name one."
+msgstr "대화나 화면에 사이트가 정해지지 않았을 때 AI가 기준으로 삼는 사이트입니다."
+
+msgid "Lets the built-in AI periodically summarize the farm's situation in the background."
+msgstr "내장 AI가 백그라운드에서 농장 상황을 주기적으로 요약해 둡니다."
+
+msgid "MCP bridge servers"
+msgstr "MCP 브리지 서버"
+
+msgid "Tool servers the built-in AI calls. One is added automatically when you add an MCP engine above."
+msgstr "내장 AI가 도구로 부르는 서버입니다. 위에서 MCP 엔진을 추가하면 자동으로 하나 생깁니다."
+
+msgid "Changing the role asks whether to refill specialty, system prompt, tier and model with that role's defaults."
+msgstr "역할을 바꾸면 그 역할의 기본 전문 분야·시스템 프롬프트·등급·모델로 다시 채울지 묻습니다."
+
+msgid "Fill in this role's default specialty, system prompt, tier and model? What you entered will be replaced."
+msgstr "이 역할의 기본 전문 분야·시스템 프롬프트·등급·모델로 채울까요? 입력해 둔 값은 바뀝니다."
+
+msgid "Estimated monthly spend of the built-in AI. You are alerted as it nears the limit, and once the limit is reached it switches to the cheapest model. 0 means no limit."
+msgstr "내장 AI의 한 달 사용 금액(추정)입니다. 한도에 가까워지면 알리고, 한도에 이르면 가장 싼 모델로 바꿉니다. 0이면 한도가 없습니다."
+
+msgid "Servers"
+msgstr "서버"
+
+msgid "Tool servers the built-in AI calls. Adding an MCP engine on the AI Connection page creates one automatically."
+msgstr "내장 AI가 도구로 부르는 서버입니다. AI 연결 페이지에서 MCP 엔진을 추가하면 자동으로 하나 생깁니다."
+
+msgid "Tools"
+msgstr "도구"
+
+msgid "Stopped"
+msgstr "정지됨"
+
+msgid "Waiting to retry"
+msgstr "재시도 대기"
+
+msgid "No MCP servers yet."
+msgstr "아직 MCP 서버가 없습니다."
+
+msgid "Could not load the MCP server list."
+msgstr "MCP 서버 목록을 불러오지 못했습니다."
+
+msgid "No tools exposed by this server."
+msgstr "이 서버가 내놓은 도구가 없습니다."
+
+msgid "Input schema"
+msgstr "입력 형식"
+
+msgid "Delete this server?"
+msgstr "이 서버를 삭제할까요?"
+
+msgid "JSON object, for example {\"API_KEY\": \"...\"}."
+msgstr "JSON 객체입니다. 예: {\"API_KEY\": \"...\"}"
+
+msgid "Server added."
+msgstr "서버를 추가했습니다."
+
+msgid "Server updated."
+msgstr "서버 설정을 저장했습니다."
+
+msgid "Server deleted."
+msgstr "서버를 삭제했습니다."
+
+msgid "AI Knowledge"
+msgstr "AI 지식"
+
+msgid "Data sources"
+msgstr "소스"
+
+msgid "%(n)s notes the AI wrote are waiting for a person to confirm them."
+msgstr "AI가 쓴 메모 %(n)s건이 사람의 확인을 기다립니다."
+
+msgid "Show them"
+msgstr "그 메모만 보기"
+
+msgid "All states"
+msgstr "모든 상태"
+
+msgid "Needs confirming"
+msgstr "확인이 필요한 것"
+
+msgid "All tags"
+msgstr "모든 태그"
+
+msgid "Title, text or attribution"
+msgstr "제목·본문·출처 표기"
+
+msgid "Three ways to fill it: connect a source on the Data sources tab, press Add Knowledge to write in what you already know, or ask the AI to look something up — it saves what it finds."
+msgstr "채우는 방법은 셋입니다. 소스 탭에서 소스를 연결하거나, 지식 추가를 눌러 이미 아는 것을 적거나, AI에게 무언가를 찾아 달라고 하면 찾은 것을 저장합니다."
+
+msgid "How the knowledge is used"
+msgstr "지식이 쓰이는 정도"
+
+msgid "Knowledge settings"
+msgstr "지식 설정"
+
+msgid "Cite confirmed knowledge only"
+msgstr "확인한 지식만 인용"
+
+msgid "Synced {time}"
+msgstr "{time} 동기화"
+
+msgid "Synced"
+msgstr "동기화됨"
+
+msgid "Looked up on demand"
+msgstr "실시간 조회"
+
+msgid "Not synced yet"
+msgstr "동기화 전"
+
+msgid "Trust"
+msgstr "신뢰"
+
+msgid "Kind of source"
+msgstr "출처 종류"
+
+msgid "Times retrieved"
+msgstr "검색에 걸린 횟수"
+
+msgid "Added"
+msgstr "등록일"
+
+msgid "Open link"
+msgstr "링크 열기"
+
+msgid "Save and confirm"
+msgstr "저장하고 확인"
+
+msgid "0 means no automatic sync."
+msgstr "0이면 자동으로 동기화하지 않습니다."
+
+msgid "Library source"
+msgstr "소스"
+
+msgid "Bearer Token"
+msgstr "Bearer 토큰"
+
+msgid "API Key Header"
+msgstr "API 키 헤더"
+
+msgid "What people and the AI wrote down for the AI to cite. Data synced from sources is hidden here by default — pick it in the source filter, or manage it on the Data sources tab."
+msgstr "사람과 AI 가 적어 둔, AI 가 인용할 지식입니다. 소스에서 동기화한 자료는 여기서 기본으로 숨깁니다 — 출처 필터에서 고르거나 소스 탭에서 관리하세요."
+
+msgid "Written by people and the AI"
+msgstr "사람과 AI 가 쓴 것"
+
+msgid "Last synced"
+msgstr "마지막 동기화"
+
+msgid "Sync now"
+msgstr "지금 동기화"
+
+msgid "Sync error"
+msgstr "실패"
+
+msgid "AI Requests"
+msgstr "AI 요청"
+
+msgid "Requests"
+msgstr "요청"
+
+msgid "What the AI is waiting on you for. Nothing here has run yet — each item waits for your decision."
+msgstr "AI 가 사람의 결정을 기다리는 것들입니다. 여기 있는 것은 아직 아무것도 실행되지 않았습니다."
+
+msgid "These have not run. Approving runs exactly what is described here — you do not need to go back and tell the AI."
+msgstr "아직 실행되지 않았습니다. 승인하면 여기 적힌 그대로 곧바로 실행되며, AI 에게 다시 알릴 필요는 없습니다."
+
+msgid "Schedule proposals"
+msgstr "일정 제안"
+
+msgid "Tasks the AI proposed for the schedule. Approving puts them on the schedule — they run at their time."
+msgstr "AI 가 일정에 올리자고 제안한 작업입니다. 승인하면 일정에 오르고, 정한 시각에 실행됩니다."
+
+msgid "No schedule proposals are waiting."
+msgstr "기다리는 일정 제안이 없습니다."
+
+msgid "Only people who can edit controllers can decide on these."
+msgstr "제어기를 편집할 수 있는 사람만 결정할 수 있습니다."
+
+msgid "Proposed by the AI"
+msgstr "AI 제안"
+
+msgid "Put this proposal on the schedule?"
+msgstr "이 제안을 일정에 올릴까요?"
+
+msgid "Reject this proposal?"
+msgstr "이 제안을 거절할까요?"
+
+msgid "AI advice"
+msgstr "AI 조언"
+
+msgid "Opinions from this AI and other connected AIs. Accepting records that you agree — it does not run anything."
+msgstr "이 AI 와 연결된 다른 AI 가 낸 의견입니다. 채택은 동의한다는 기록일 뿐, 아무것도 실행하지 않습니다."
+
+msgid "No advice is waiting."
+msgstr "기다리는 조언이 없습니다."
+
+msgid "%(n)s schedule proposals are waiting under AI → Requests."
+msgstr "AI 일정 제안 %(n)s건이 AI → 요청에서 기다립니다."
+
+msgid "Control requests and AI schedule proposals are decided under AI → Requests."
+msgstr "제어 요청과 AI 일정 제안은 AI → 요청에서 결정합니다."
+
+msgid "Open requests"
+msgstr "요청 열기"
+
+msgid "Could not load advice"
+msgstr "조언을 불러오지 못했습니다"
+
+msgid "Could not load control requests"
+msgstr "제어 요청을 불러오지 못했습니다"
+
+msgid "AI Records"
+msgstr "AI 기록"
+
+msgid "Tool calls"
+msgstr "도구 호출"
+
+msgid "Conversations"
+msgstr "대화"
+
+msgid "Error reports"
+msgstr "오류 보고"
+
+msgid "What connected AIs did through the tools — newest first. Requests that needed approval show how they were decided."
+msgstr "연결된 AI 가 도구로 한 일입니다(최근 순). 승인이 필요했던 요청은 어떻게 결정됐는지 함께 보입니다."
+
+msgid "Questions asked of the built-in AI and its answers."
+msgstr "내장 AI 에게 물은 것과 그 답입니다."
+
+msgid "Wrong AI answers people reported, with their corrections. Applying a correction adds it to the AI Knowledge."
+msgstr "사람이 보고한 AI 의 틀린 답과 고친 내용입니다. 고친 내용을 반영하면 AI 지식에 들어갑니다."
+
+msgid "Received"
+msgstr "접수"
+
+msgid "Corrected"
+msgstr "고침"
+
+msgid "Learned"
+msgstr "지식에 반영됨"
+
+msgid "Dismissed"
+msgstr "무시함"
+
+msgid "All severities"
+msgstr "모든 심각도"
+
+msgid "All types"
+msgstr "모든 유형"
+
+msgid "Could not load records"
+msgstr "기록을 불러오지 못했습니다"
+
+msgid "No error reports."
+msgstr "보고된 오류가 없습니다."
+
+msgid "Caller"
+msgstr "호출한 AI"
+
+msgid "Answer"
+msgstr "답"
+
+msgid "What the AI said"
+msgstr "AI 의 답"
+
+msgid "Correction"
+msgstr "고친 내용"
+
+msgid "Applied to the knowledge."
+msgstr "지식에 반영했습니다."
+
+msgid "Looked up"
+msgstr "조회"
+
+msgid "Carried out"
+msgstr "실행됨"
+
+msgid "Approved"
+msgstr "승인됨"
+
+msgid "Awaiting approval"
+msgstr "승인 대기"
+
+msgid "Expired"
+msgstr "만료"
+
+msgid "Browsed the tool list"
+msgstr "도구 목록 열람"
+
+msgid "Checked pending approvals"
+msgstr "승인 대기 확인"
+
+msgid "Answered an approval request"
+msgstr "승인 요청에 응답"
+
+msgid "Looked up devices"
+msgstr "장치 조회"
+
+msgid "Read sensor values"
+msgstr "센서 값 조회"
+
+msgid "Looked up functions and controllers"
+msgstr "함수·제어기 조회"
+
+msgid "Looked up the schedule"
+msgstr "일정 조회"
+
+msgid "Looked up notes and knowledge"
+msgstr "노트·지식 조회"
+
+msgid "Looked up the map and zones"
+msgstr "지도·구역 조회"
+
+msgid "Looked up device definitions"
+msgstr "장치 정의 조회"
+
+msgid "Looked up AI settings and system status"
+msgstr "AI 설정·시스템 상태 조회"
+
+msgid "Looked something up"
+msgstr "정보 조회"
+
+msgid "Made a change"
+msgstr "설정 변경"
+
+msgid "Cancel this task?"
+msgstr "이 작업을 취소할까요?"
+
+msgid "No devices found."
+msgstr "장치가 없습니다."
+
+msgid "Could not load the device timeline"
+msgstr "장치 타임라인을 불러오지 못했습니다"
+
+msgid "Error loading settings"
+msgstr "설정을 불러오지 못했습니다"
+
+msgid "What the AI is waiting on you for — each item below waits for your decision."
+msgstr "AI 가 사람의 결정을 기다리는 것들입니다. 아래 항목마다 결정을 기다립니다."
+
+
+
+#: aot/aot_flask/templates/layout_default.html
+msgid "Computer Screen Size"
+msgstr "컴퓨터 화면 크기"
+
+#: aot/aot_flask/templates/layout_default.html
+msgid "Mobile Screen Size"
+msgstr "모바일 화면 크기"
+
+#: aot/aot_flask/templates/layout_default.html
+msgid "Enlarges the whole page on phones and tablets — text, buttons and maps together. Computers use the setting below."
+msgstr "휴대폰·태블릿에서 글자·버튼·지도를 함께, 페이지 전체를 키웁니다. 컴퓨터는 아래 설정을 따릅니다."
+
+#: aot/aot_flask/templates/layout_default.html
+msgid "Enlarges the whole page on computers — text, buttons and maps together. Phones and tablets use the setting above."
+msgstr "컴퓨터에서 글자·버튼·지도를 함께, 페이지 전체를 키웁니다. 휴대폰·태블릿은 위의 설정을 따릅니다."
+
+#: aot/widgets/AoT_plot.py
+msgid "Map or site"
+msgstr "지도 · 대지"
+
+#: aot/widgets/AoT_plot.py
+msgid ""
+"Show only the plots in this map or site. Leave empty to show every plot in "
+"progress."
+msgstr "이 지도나 대지 안의 구획만 보여 줍니다. 비워 두면 재배 중인 구획을 모두 보여 줍니다."
+
+#: aot/aot_flask/templates/tools/notice.html
+msgid "Search title, content, category..."
+msgstr "제목, 내용, 분류 검색..."
+
+#: aot/aot_flask/templates/tools/notice.html
+msgid "No notices match your search."
+msgstr "검색과 일치하는 공지가 없습니다."
+
+#: aot/aot_flask/static/js/widgets/AoT_plot/aot-plot-widget.js
+msgid "Go to page %(n)s"
+msgstr "%(n)s 페이지로 이동"

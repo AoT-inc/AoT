@@ -38,14 +38,95 @@
     margin-bottom: var(--aot-space-3);     /* 블록과 블록 = 12 */
 }
 
-/* 화면 제목 — lg 18 / 700 / 1차. 굵기가 아니라 **크기**로 앞선다(§2-3). */
+/* 페이지 제목 — xl 24 / 500 / 1차(§2-3, 2026-09-11 확정 — 옛 lg 18/700을
+   대체한다). 굵기가 아니라 **크기**로 앞선다. 역할 토큰으로 쓴다(사다리
+   토큰을 페이지 CSS에 직접 적지 않는다) — 크기표가 바뀌어도(고령 사용자
+   대응, 결정 대기) 토큰 정의만 고치면 되게. */
 .aot-settings-title h3,
 .aot-settings-title h4,
 .aot-settings-screen-title {
     margin: 0;
-    font-size: var(--aot-font-size-lg);
-    font-weight: 700;
+    font-size: var(--aot-fs-page-title);
+    font-weight: var(--aot-fw-title);
     color: var(--aot-color-text-primary);
+}
+
+/* 크기만 — 색은 그대로. 날 h3/h4 로 남아 있던 몇몇 페이지 제목을 이 크기
+   사다리에 맞추면서, **이번 작업 범위(2026-09-11 사용자 지시: 문자 크기·
+   위치만, 색은 이전 스타일 유지)** 때문에 색은 손대지 않는 자리에 쓴다.
+   위 `.aot-settings-title h3` 와 크기·굵기는 같지만 `color` 선언이 없다 —
+   그 페이지가 원래 쓰던 색(부트스트랩 상속색 · `.text-dark` 등)이 그대로
+   이긴다. 색까지 통일하기로 정해지면 그때 이 클래스를 걷어내고
+   `.aot-settings-title` 골격으로 옮긴다(§4-4 이관 표). */
+.aot-page-title-size {
+    font-size: var(--aot-fs-page-title);
+    font-weight: var(--aot-fw-title);
+}
+
+/* 가로 정렬만 — 세로 여백은 안 건드린다. 이미 `<main class="container
+   py-4">`로 위/아래 24px를 갖고 있는 페이지(geo_input·graph-async·
+   energy_usage_outputs)의 제목을 `.aot-page-title-row`로 감싸면 그 24px
+   위에 또 24px가 겹친다(2026-09-11, admin/dependencies·AI 페이지에서
+   이미 확인된 것과 같은 함정). 그 페이지들은 이 클래스만 얹어 좌우
+   16px(정렬선 31, `.container`의 15px 기본 여백 기준)만 더한다. */
+.aot-page-title-inset {
+    padding-left: var(--aot-space-4);
+    padding-right: var(--aot-space-4);
+}
+
+/* 같은 이유로 — 단락 제목 역할(18/500)의 크기만, 색은 그대로. 상태 헤더
+   (`.aot-title-warning`/`-success`)처럼 자기 의미색을 이미 갖고 있는
+   h4가 날 태그 그대로면 부트스트랩 기본(24px)이 페이지 제목(24px)과
+   같아져 위계가 무너진다(§2-3 "같아지면 안 된다").
+
+   `padding-left` 를 자체적으로 갖는다 — `.aot-settings-group-title` 과 같은
+   방식이다. 이 클래스가 쓰이는 자리(admin/dependencies.html 상태 헤더)는
+   위 페이지 제목처럼 `.aot-settings-title`(자체 16px 패딩)로 감싸여 있지
+   않고 `<div>` 하나로 직접 놓인다 — 그대로 두면 제목(정렬선 32)보다 16px
+   안쪽(15)에 서게 된다(2026-09-11 실측·사용자 지적). */
+.aot-section-title-size {
+    font-size: var(--aot-fs-section-title);
+    font-weight: var(--aot-fw-title);
+    padding-left: var(--aot-space-4);
+}
+
+/* 제목 줄 배치만 — 색은 안 준다(2026-09-11, 사용자 재지적: 페이지마다
+   제목 위/아래 여백이 다 달랐다). `.aot-settings-title`과 여백·구조는
+   완전히 같지만, 그 선택자(`.aot-settings-title h3`)는 자식 h3의 색까지
+   강제해 버린다 — 색은 이전 스타일 유지 범위 밖이라 별도 클래스로 뗀다.
+   `.aot-page-title-size`와 짝지어 쓴다. 이 클래스를 쓰는 자리는 **감싸던
+   부트스트랩 여백 유틸(mt- 계열, mb- 계열, px- 계열, py- 계열 등)을
+   걷어내고 이것 하나로 바꾼다** — 안 걷으면 여백이 겹친다.
+   ⚠ 주석 글 안에서 별표 바로 뒤에 슬래시를 붙이지 말 것 — CSS 주석을
+   중간에서 끊어 뒤 블록 전체가 파싱에서 사라진다(2026-09-11 실제로
+   이 자리에서 겪음 — .aot-page-title-row 규칙이 브라우저에 통째로
+   안 보였다. 가드: test_css_comments_are_not_truncated_by_slash_asterisk). */
+.aot-page-title-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: var(--aot-space-3);
+    padding: var(--aot-space-5) var(--aot-space-4) var(--aot-space-3);
+    margin-bottom: var(--aot-space-3);
+}
+
+/* 2026-09-11 재지적(사용자): 페이지마다 제목 x 좌표가 또 갈려 있었다.
+   원인 — 위 `.aot-page-title-row`는 `<main class="container ...">`
+   (부트스트랩 기본 좌우 15px)에 얹힌다고 가정한 값이다(15 + 이 16 =
+   31, `.aot-settings-title` 페이지들과 같은 자리). `<div class=
+   "container-fluid px-0">`로 시작하는 페이지(바깥 여백 0)에 그대로
+   쓰면 0 + 16 = 16으로 16px 모자라진다(notice.html·notes.html에서
+   실측). 그 자리는 이 변종을 쓴다 — 좌우만 32(`--aot-space-6`)로 늘려
+   0 + 32 = 32(정렬선 자체 값, §2-3)를 직접 맞춘다. */
+.aot-page-title-row-flush {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: var(--aot-space-3);
+    padding: var(--aot-space-5) var(--aot-space-6) var(--aot-space-3);
+    margin-bottom: var(--aot-space-3);
 }
 
 
@@ -98,60 +179,78 @@
 
 
 /* ============================================================
-   3. 글자 역할 다섯 (§2-3)
+   3. 글자 역할 (§2-3, 2026-09-11 확정)
    ============================================================
    사다리는 "쓸 수 있는 값" 이지 "어디에 무엇을 쓰는가" 가 아니다. 역할이
    없으면 만들 때마다 크기·굵기를 새로 고르게 되고, 한 화면 안에서 같은
    역할이 서로 다른 모습으로 선다(§4-16 함정 6).
 
-     화면 제목   lg 18 / 700 / 1차   .aot-settings-title h3 · -screen-title
-     구획 제목   base 16 / 700 / 1차 .aot-settings-group-title
-     핵심 한 줄  base 16 / 400 / 1차 .aot-settings-lead
-     본문        sm 14 / 400 / 1차   .aot-settings-text
-     부연        xs 12 / 400 / 2차   .aot-settings-sub
+     페이지 제목  xl 24 / 500 / 1차   --aot-fs-page-title      .aot-settings-title h3 · -screen-title
+     단락 제목    lg 18 / 500 / 1차   --aot-fs-section-title   .aot-settings-group-title
+     핵심 한 줄   base 16 / 500 / 1차 --aot-fs-container-title .aot-settings-lead
+     본문         sm 14 / 400 / 1차   --aot-fs-page-body       .aot-settings-text
+     부연         xs 12 / 400 / 2차   --aot-fs-desc            .aot-settings-sub
 
-   700 을 쓰는 것은 **제목 두 줄뿐**이다. 핵심 한 줄은 크기로 앞서고 굵기는
-   본문과 같다 — 목록에서 굵은 줄이 반복되면 강조가 강조를 잃는다.
+   제목 세 단(페이지·단락·컨테이너, §2-3)은 모두 500 이고 **크기로만**
+   갈린다. 700 은 이제 측정값에만 쓴다 — 옛 "제목 두 줄뿐" 700 규칙은
+   494c228a 에서 500 으로 대체됐다.
    ============================================================ */
 
-/* 구획 제목 — 화면 제목보다 한 단 작고 굵기는 같다. 색은 **1차**다.
+/* 단락 제목 — 페이지 제목보다 한 단 작고 굵기는 같다(500). 색은 **1차**다.
    예전에는 2차 글자색이라 제목이 부연처럼 흐렸다(§2-3 역할표). */
 .aot-settings-group-title {
-    font-size: var(--aot-font-size-base);
-    font-weight: 700;
+    font-size: var(--aot-fs-section-title);
+    font-weight: var(--aot-fw-title);
     color: var(--aot-color-text-primary);
     margin-top: var(--aot-space-5);     /* 앞 블록과 떨어뜨린다 */
     margin-bottom: var(--aot-space-2);  /* 아래 것에 붙는다 */
     padding-left: var(--aot-space-4);   /* 카드 밖이라 정렬선 32 */
 }
 
-/* 핵심 한 줄 — 읽고 결정하는 문장. 크기로 앞서고 굵기는 본문과 같다. */
+/* 핵심 한 줄 — 읽고 결정하는 문장. §2-3 "컨테이너 제목" 역할과 같다
+   (2026-09-11: 400 → 500 — 옛 "굵기는 본문과 같다"가 폐기됐다). */
 .aot-settings-lead {
-    font-size: var(--aot-font-size-base);
-    font-weight: 400;
+    font-size: var(--aot-fs-container-title);
+    font-weight: var(--aot-fw-title);
     color: var(--aot-color-text-primary);
     line-height: 1.45;
 }
 
 /* 본문 */
 .aot-settings-text {
-    font-size: var(--aot-font-size-sm);
+    font-size: var(--aot-fs-page-body);
     font-weight: 400;
     color: var(--aot-color-text-primary);
     line-height: 1.5;
 }
 
-/* 부연 — 크기와 색을 **함께** 내린다(§3-2 ③). 하나만 내리면 눈이 여전히
-   그리로 간다. 구획 제목 바로 밑의 설명 문단도 같은 역할이라 같은 모습으로
-   맞춘다 — 한 화면에 문자 체계가 둘이면 안 된다(§4-16 함정 6). */
+/* 부연 · 페이지 설명 — 크기와 색을 **함께** 내린다(§3-2 ③). 하나만 내리면
+   눈이 여전히 그리로 간다. 단락 제목 바로 밑, 그리고 페이지 제목 바로 밑의
+   설명 문단도 같은 역할이라 같은 모습으로 맞춘다 — 한 화면에 문자 체계가
+   둘이면 안 된다(§4-16 함정 6). `.aot-settings-title + p` 는 §4-4 "페이지
+   제목" 절의 "페이지 설명" 역할(§2-3 4번, 있는 페이지만 선택적으로 씀)이다.
+
+   `.aot-page-title-inset`/`-row`(색 보존 변종, 위 §1)로 제목만 옮긴 자리의
+   설명 문단도 같은 역할이다 — 빠져 있으면 `<p>` 가 부트스트랩 기본값(1차
+   글자색·본문 크기)에 카드 밖 정렬선도 없이 남는다(2026-09-11 graph-async
+   실측: 제목 x=71인데 설명 x=55로 16px 어긋나 있었다). */
 .aot-settings-sub,
+.aot-settings-title + p,
+.aot-settings-title + p + p,
+.aot-settings-title + p + p + p,
 .aot-settings-group-title + p,
 .aot-settings-group-title + p + p,
 .aot-settings-group-title + p + p + p,
 .aot-modal-group-title + p,
 .aot-modal-group-title + p + p,
-.aot-modal-group-title + p + p + p {
-    font-size: var(--aot-font-size-xs);
+.aot-modal-group-title + p + p + p,
+.aot-page-title-inset + p,
+.aot-page-title-inset + p + p,
+.aot-page-title-inset + p + p + p,
+.aot-page-title-row + p,
+.aot-page-title-row + p + p,
+.aot-page-title-row + p + p + p {
+    font-size: var(--aot-fs-desc);
     font-weight: 400;
     color: var(--aot-color-text-secondary);
     line-height: 1.5;
@@ -159,15 +258,61 @@
 /* 설명이 **여러 문단**일 때 둘째·셋째 문단도 같은 정렬선에 서야 한다.
    `+` 는 첫 형제 하나만 잡는다. `.aot-settings-stack` 으로 감싸 해결하면
    flex 안에서 카드의 margin-bottom 이 상쇄되지 않아 구획 간격이 24 와 36
-   으로 갈린다(실측) — 그래서 감싸지 않고 선택자를 늘린다. */
+   으로 갈린다(실측) — 그래서 감싸지 않고 선택자를 늘린다.
+
+   `.aot-page-title-inset`/`-row` 는 좌우 패딩이 `--aot-space-4` 라(§1) 여기도
+   같은 값을 쓴다 — `-row-flush`(정렬선 32, `--aot-space-6`)를 쓰는 자리는
+   지금 뒤에 `<p>` 를 붙인 곳이 없어 아직 포함하지 않는다. */
+.aot-settings-title + p,
+.aot-settings-title + p + p,
+.aot-settings-title + p + p + p,
 .aot-settings-group-title + p,
 .aot-settings-group-title + p + p,
 .aot-settings-group-title + p + p + p,
 .aot-modal-group-title + p,
 .aot-modal-group-title + p + p,
-.aot-modal-group-title + p + p + p {
+.aot-modal-group-title + p + p + p,
+.aot-page-title-inset + p,
+.aot-page-title-inset + p + p,
+.aot-page-title-inset + p + p + p,
+.aot-page-title-row + p,
+.aot-page-title-row + p + p,
+.aot-page-title-row + p + p + p {
     padding-left: var(--aot-space-4);   /* 카드 밖이라 정렬선 32 */
     margin-bottom: var(--aot-space-3);  /* 설명과 그 아래 목록은 블록 사이 12 */
+}
+
+/* 한국어는 유니코드 줄바꿈 규칙(UAX #14)상 `word-break: normal` 이어도 음절
+   사이 어디서나 접힌다 — 공백(어절 경계)이 있어도 기다리지 않고 글자
+   하나하나에서 잘린다(실측 2026-09-10 `/ai/library` 375px: "소스에서" →
+   "소스" / "에서", 라벨 쪽은 "기다립니다." → "기다립니" / "다."). `keep-all`
+   로 음절 사이 줄바꿈을 끄면 ui-guide §4-6 이 말하는 "자연 줄바꿈"(어절
+   경계에서만 접기)이 된다. `overflow-wrap: anywhere` 는 공백 없는 긴 토큰
+   (URL·키·해시)이 칸을 넘을 때의 안전판으로 남긴다.
+
+   일본어·중국어(ja/zh)는 원래 띄어쓰기가 없는 언어라 이 음절 단위 줄바꿈이
+   정상이자 유일한 줄바꿈 수단이다 — 전역으로 끄면 어절 경계가 없어 줄
+   전체가 넘친다. 그래서 `:lang(ko)` 로 한국어에만 좁혀 건다. 태국어(th)는
+   CJK 문자 집합이 아니라 `keep-all` 의 영향을 받지 않는다(브라우저가
+   자체 사전 기반 분절을 그대로 쓴다). */
+:lang(ko) .aot-settings-sub,
+:lang(ko) .aot-settings-title + p,
+:lang(ko) .aot-settings-title + p + p,
+:lang(ko) .aot-settings-title + p + p + p,
+:lang(ko) .aot-settings-group-title + p,
+:lang(ko) .aot-settings-group-title + p + p,
+:lang(ko) .aot-settings-group-title + p + p + p,
+:lang(ko) .aot-modal-group-title + p,
+:lang(ko) .aot-modal-group-title + p + p,
+:lang(ko) .aot-modal-group-title + p + p + p,
+:lang(ko) .aot-page-title-inset + p,
+:lang(ko) .aot-page-title-inset + p + p,
+:lang(ko) .aot-page-title-inset + p + p + p,
+:lang(ko) .aot-page-title-row + p,
+:lang(ko) .aot-page-title-row + p + p,
+:lang(ko) .aot-page-title-row + p + p + p {
+    word-break: keep-all;
+    overflow-wrap: anywhere;
 }
 
 
@@ -231,6 +376,13 @@
     margin-bottom: 0;
 }
 
+/* 한국어만 어절 경계에서 접는다 — 자세한 이유는 §3 부연 블록의 주석
+   (아래 `.aot-settings-sub` 앞)에 한 번만 적는다. */
+:lang(ko) .aot-settings-label {
+    word-break: keep-all;
+    overflow-wrap: anywhere;
+}
+
 /* 컨트롤 — 결정 줄의 오른쪽. 160px 은 모달 행(`--aot-common-control-width`)과
    같은 값이라 두 체계가 한 페이지에 있어도 오른쪽 끝선이 하나다.
    `margin-left: auto` 는 아랫줄로 내려갔을 때도 오른쪽에 붙게 한다(§4-6) —
@@ -281,6 +433,36 @@
 .aot-settings-row > .aot-settings-sub {
     flex: 1 1 100%;
     margin-top: var(--aot-space-1);
+}
+
+/* 목록 항목 행 — 이름이 길면 이름 칸 **안에서** 줄바꿈하고, 오른쪽 표지(배지
+   하나)는 같은 줄 오른쪽에 남는다. 기본 결정 행은 컨트롤을 아랫줄로 내리는데
+   (§4-6), 목록에서 그러면 폰에서 항목마다 배지만 홀로 선 줄이 생긴다(실측:
+   AI 지식 목록 375px 에서 행 높이 52 → 102).
+
+   줄바꿈을 끄지(nowrap) 않고 이름 칸의 기준 폭을 0 으로 둔다 — 그래야 첫 줄은
+   이름 + 표지가 나눠 갖고, 셋째 자식 부연(.aot-settings-sub, 폭 100%)은 여전히
+   아랫줄 전체 폭에 선다. 컨트롤 칸은 내용 폭만 차지하고 `margin-left: auto` 로
+   오른쪽 끝선(카드 안쪽 16)은 그대로다. (2026-09-10 `-nowrap` 에서 이름을 바꿈 —
+   nowrap 이면 부연까지 첫 줄로 끌려 올라왔다.) */
+.aot-settings-row.aot-settings-row-item > .aot-settings-label {
+    flex: 1 1 0;
+}
+.aot-settings-row-item > .aot-settings-control {
+    flex: 0 0 auto;
+    width: auto;
+}
+
+/* 항목 안 세로 간격은 항목 사이 간격보다 **좁아야** 한다 — 좁음이 "같은
+   항목" 이라는 뜻이다. 배지(control)가 라벨 줄보다 높으면(예: 상태 배지
+   23.6px vs 라벨 줄높이 18.2px, align-items:center 로 가운데 맞춰짐) 기본
+   행 gap(16, `.aot-settings-row`)이 배지의 아랫변부터 계산돼 라벨 기준으로는
+   23px 로 보인다 — 항목 사이 구분선 간격(20px, 카드 padding 8+8)보다 넓어져
+   부연(시각·부연 줄)이 오히려 **다음 항목에 붙어** 보인다(2026-09-11 실측:
+   AI 기록 도구 호출 목록, 라벨→부연 23px > 행→행 20px). 행 안쪽 세로 gap 만
+   줄인다 — 같은 줄 라벨↔배지 사이 가로 gap(16)은 그대로 둔다. */
+.aot-settings-row.aot-settings-row-item {
+    row-gap: var(--aot-space-1);
 }
 
 /* 컨트롤 안의 입력은 160px 을 채운다. 알약·테두리·높이는 전역

@@ -77,6 +77,33 @@ def save_dashboard_layout():
     return "success"
 
 
+def _geo_scope_choices():
+    """위젯 설정의 '지도 · 대지' 선택지 — 지도마다 그 안의 대지.
+
+    템플릿이 **부를 때만** 조회한다(`select_device` + `'GeoScope'`,
+    Custom_Options.html). 대시보드를 그릴 때마다 미리 만들면 그 옵션을 쓰는
+    위젯이 없는 대시보드도 지도 도형을 읽는다.
+
+    대지 이름은 도형 properties 에 있다 — 구획 응답의 `site_name` 과 같은 규칙
+    (`plot_context._shape_name`)을 쓴다. 다르게 뽑으면 설정의 이름과 화면의
+    이름이 갈린다.
+    """
+    from aot.aot_flask.geo.plot_context import _shape_name
+    from aot.databases.models import GeoShape
+    sites = {}
+    for shape in GeoShape.query.filter_by(type='site').all():
+        sites.setdefault(shape.geo_id, []).append({
+            'unique_id': shape.unique_id,
+            'name': _shape_name(shape) or shape.unique_id[:8],
+        })
+    choices = [{'unique_id': m.unique_id,
+                'name': m.name or m.unique_id[:8],
+                'sites': sorted(sites.get(m.unique_id, []),
+                                key=lambda s: s['name'])}
+               for m in GeoMap.query.all()]
+    return sorted(choices, key=lambda m: m['name'])
+
+
 @blueprint.route('/save_widget_custom_options', methods=['POST'])
 @flask_login.login_required
 def save_widget_custom_options():
@@ -605,6 +632,7 @@ def _build_dashboard_render_context(this_dashboard, dashboard_id, form_base, for
                            table_conditional=Conditional,
                            table_trigger=Trigger,
                            table_geomap=GeoMap,
+                           geo_scope_choices=_geo_scope_choices,
                            choices_camera=choices_camera,
                            choices_function=choices_function,
                            choices_input=choices_input,

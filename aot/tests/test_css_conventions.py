@@ -496,10 +496,23 @@ _IMPORTANT_BUDGET = {
     # !important 로만 이긴다. 벗겨내면(2026-09 !important 일괄 제거 감사가
     # 한 번, 이번이 세 번째) 데스크톱 옵션모달이 세로 중앙 대신 화면 맨 위에
     # 붙는 회귀가 재발한다.
-    "aot-modal-modern.css": 6,
-    "map/map.css": 183,
+    # 7: `.grid-stack-item.aot-preview-lift` 의 height 한 줄이 더해졌다
+    # (2026-09-10). GridStack 이 런타임에 <style> 로 직접 주입하는
+    # `.gs-id-N > .grid-stack-item[gs-h="H"] { height: ...px }` 규칙이
+    # specificity (0,3,0)로 이 규칙(0,2,0)보다 높다 — 정적 CSS 어디에도 없어
+    # grep 으로도 안 보이는 상대라, !important 일괄 제거 감사가 "장식"으로
+    # 오인해 벗겨내면서 모바일 위젯 설정 미리보기가 42vh 밴드로 줄지 않고
+    # 원래 그리드 높이를 유지해 아래 설정 시트를 밀어내는 회귀가 있었다.
+    # 10: 같은 규칙의 top/left/width 세 줄이 더해졌다(2026-09-10, 같은 날
+    # 후속 실측). height 하나만으로는 부족했다 — GridStack 이 같은 위젯에
+    # `[gs-y="Y"] { top }` 런타임 규칙과 **정적** `gridstack-custom.css`의
+    # 모바일 2열 `[gs-x="1"] { left: 50% }` 규칙까지 건다. 전부 (0,3,0)으로
+    # 이 블록(0,2,0)보다 높거나 같아(width 는 동점, 파일 순서로 이김), 그리드
+    # 좌상단(gs-x=0,gs-y=0)이 아닌 위젯은 42vh 밴드로 뜨지 않고 원래 그리드
+    # 좌표에 남아 있었다 — 좌상단 위젯은 값이 우연히 0 이라 회귀가 가려졌다.
+    "aot-modal-modern.css": 10,
+    "map/map.css": 181,
     "components/aot-base-ui.css": 129,
-    "ai/ai_scheduler.css": 53,
     # 37: 마지막 하나는 통합 표(.integ-table)의 동작 열이다. aot-settings.css 의
     # `td:last-child { width: var(--aot-col-w-actions) !important }` 가 그 표에도
     # 닿는데, 통합 표는 마지막 열이 동작이 아니라 값이라 폭을 내용에 맡겨야 한다.
@@ -524,16 +537,13 @@ _IMPORTANT_BUDGET = {
     "aot.css": 12,
     "components/aot-drawer-form.css": 8,
     "dashboard.css": 8,
-    "ai/device-timeline.css": 7,
     "ai/aot-ai-global.css": 5,
     "custom.css": 5,
     "components/aot-dataviz.css": 4,
-    "pages/admin-upgrade.css": 3,
+    "pages/admin-upgrade.css": 2,
     "aot-custom-ui-preview.css": 2,
     "components/aot-drawer.css": 2,
     "gridstack-custom.css": 1,
-    "pages/mcp_servers.css": 2,
-    "ai/ai_entry.css": 1,
     "components/aot-time-wheel.css": 1,
     "pages/logview.css": 1,
 }
@@ -687,15 +697,15 @@ _FALLBACK = re.compile(r"var\(\s*(--[A-Za-z0-9_-]+)\s*,\s*(#[0-9A-Fa-f]{3,8})\s*
 _HEX_DEF = re.compile(r"(--[A-Za-z0-9_-]+)\s*:\s*(#[0-9A-Fa-f]{3,8})\s*;")
 
 _FALLBACK_BUDGET = {
-    "--aot-color-text-secondary": 94,
-    "--aot-color-text-primary": 91,
-    "--aot-border-neutral": 20,
+    "--aot-color-text-secondary": 64,
+    "--aot-color-text-primary": 78,
+    "--aot-border-neutral": 19,
     "--aot-surface-body": 12,
-    "--aot-color-danger": 6,
+    "--aot-color-danger": 1,
     "--aot-border-light": 8,
     "--aot-color-warning": 7,
     "--aot-btn-border-primary": 1,
-    "--aot-color-success": 3,
+    "--aot-color-success": 1,
     "--color-zone-mode": 4,
     "--text-medium-gray": 4,
     "--aot-surface-card": 3,
@@ -710,10 +720,6 @@ _FALLBACK_BUDGET = {
     "--aot-color-brand-primary": 1,
     "--aot-color-text-tertiary": 1,
     "--aot-tint-danger-bg": 1,
-    "--aot-tint-success-bg": 1,
-    "--aot-tint-success-fg": 1,
-    "--aot-tint-warning-bg": 1,
-    "--aot-tint-warning-fg": 1,
 }
 
 
@@ -877,13 +883,10 @@ _COLOR_LITERAL = re.compile(
 # 위반 수 상한. **내려가기만 한다.**
 # 2026-09-08 실측 99곳에서 시작한다. 0 이 되면 항목째 지운다.
 _COLOR_LITERAL_BUDGET = {
-    "ai/ai_scheduler.css": 26,
     "map/map.css": 16,
-    "ai/device-timeline.css": 12,
     "bootstrap-4-themes/aot.css": 11,
     "dashboard.css": 4,
     "aot-base.css": 3,
-    "ai/aot-ai-global.css": 2,
     "aot-custom-ui-preview.css": 2,
     "aot-modal-modern.css": 2,
     "components/aot-base-ui.css": 1,
@@ -1025,3 +1028,175 @@ def test_output_state_buttons_keep_three_class_specificity():
         "3-클래스 규칙을 둘 다 찾지 못했다: " + repr(found) + " — 2-클래스로 "
         "줄이면 .btn.aot-pill-btn(더 늦게 실림)에 배경·테두리·글자색을 다시 "
         "내준다. settings/custom_ui 의 켜짐/꺼짐 색이 안 먹히던 회귀가 그것.")
+
+
+# ----------------------------------------- 뷰포트 단위 — 화면 배율 보정 (2026-09-11)
+#
+# 화면 배율(templates/_screen_zoom.html, 모바일 기본 115%)이 iPhone·iPad·컴퓨터
+# 에서는 CSS zoom 으로 걸린다. 그때 원시 vw·vh·dvh 에는 배율이 **한 번 더** 곱해져
+# 화면을 넘는다 — 지도 위젯 전체화면이 125% 에서 1280×900 화면에 1600×1125 로
+# 그려진 것이 그 사례다. 뷰포트 단위는 배율로 나눈 토큰
+# (`--aot-vw` / `--aot-vh` / `--aot-dvh`, aot-theme-variables.css)으로만 쓴다:
+#     height: calc(100 * var(--aot-dvh));
+#     max-height: min(80 * var(--aot-vh), 760px);
+_RAW_VIEWPORT_UNIT = re.compile(r"(?<![\w.#-])\d*\.?\d+(?:vw|vh|dvh|svh|lvh)(?![\w-])")
+_VIEWPORT_TOKEN_DEF = re.compile(r"--aot-(?:vw|vh|dvh)\s*:")
+
+
+def _viewport_css_files():
+    # `_target_css()` 는 widget/ 을 빼지만(글자 사다리는 위젯 테스트가 본다)
+    # 뷰포트 단위는 위젯 팝업(센서 라벨 등)에서도 똑같이 넘치므로 함께 본다.
+    return list(_target_css()) + sorted((CSS_DIR / "widget").glob("*.css"))
+
+
+def test_viewport_units_go_through_zoom_tokens():
+    """자체 CSS 의 vw·vh·dvh 는 배율 보정 토큰을 거친다."""
+    offenders = []
+    for path in _viewport_css_files():
+        text = _blank_comments(path.read_text(encoding="utf-8"))
+        for lineno, line in enumerate(text.splitlines(), 1):
+            if _VIEWPORT_TOKEN_DEF.search(line):
+                continue
+            if _RAW_VIEWPORT_UNIT.search(line):
+                offenders.append(
+                    f"{path.relative_to(CSS_DIR)}:{lineno}: {line.strip()}")
+    assert not offenders, (
+        "원시 뷰포트 단위가 있다 — 스마트폰 배율이 CSS zoom 으로 걸리면 화면을 "
+        "넘는다. `calc(N * var(--aot-vh))` 꼴의 토큰으로 바꿀 것:\n  "
+        + "\n  ".join(offenders))
+
+
+# ---------------------------------------- 페이지 제목 역할 토큰 (회귀 가드)
+
+# 2026-09-11 오후, 고령 사용자 대응으로 크기표(24/18/16/14/12) 자체가 바뀔 수
+# 있다는 제안이 나왔다(결정 대기, feedback_page_title_hierarchy). 크기가
+# 바뀌었을 때 페이지 CSS 곳곳에 박힌 사다리 토큰(`var(--aot-font-size-xl)`
+# 등)을 전부 다시 찾아 고치지 않아도 되도록, §2-3 페이지 제목 역할은 역할
+# 토큰(`--aot-fs-page-title` 등, aot-theme-variables.css)을 가리키게 옮겼다
+# (c3408b76 → 이 커밋). 이 검사는 그 이관이 도로 사다리 토큰으로 풀리지
+# 않는지를 본다.
+#
+# 위젯이 쓰는 옛 역할 이름(`--aot-fs-body`·`-caption`·`-label`·`-title`)은
+# 대상이 아니다 — 그쪽은 값을 바꾸지 않기로 했다(위 토큰 정의 옆 주석 참고).
+#
+# selector → (파일, 기대하는 역할 토큰). 파일별로 좁혀서 본다 — 같은 이름의
+# `+ p` 형제 선택자(예: `.aot-settings-group-title + p`, 부연 역할)까지
+# 걸리지 않게 아래 정규식이 `+` 결합자 앞에서 멈춘다.
+_PAGE_TITLE_ROLE_TOKENS = (
+    ("aot-settings.css", ".aot-settings-title h3", "--aot-fs-page-title"),
+    ("aot-settings.css", ".aot-settings-group-title", "--aot-fs-section-title"),
+    ("aot-settings.css", ".aot-settings-lead", "--aot-fs-container-title"),
+    ("aot-settings.css", ".aot-settings-text", "--aot-fs-page-body"),
+    ("aot-modal-modern.css", ".aot-modal-title", "--aot-fs-page-title"),
+    ("aot-modal-modern.css", ".aot-modal-group-title", "--aot-fs-section-title"),
+    ("aot-modal-modern.css", ".aot-modal-section-title", "--aot-fs-section-title"),
+    ("aot-modal-modern.css", ".aot-modal-subgroup-title", "--aot-fs-container-title"),
+    ("pages/geo-plots.css", ".aot-page-title", "--aot-fs-page-title"),
+    ("aot-settings.css", ".aot-page-title-size", "--aot-fs-page-title"),
+    ("aot-settings.css", ".aot-section-title-size", "--aot-fs-section-title"),
+    ("pages/geo-facility.css", ".fac-page-title h3", "--aot-fs-page-title"),
+)
+
+
+def _selector_block(text, selector):
+    """`selector` 가 여는 규칙 블록의 본문을 돌려준다(없으면 None).
+
+    콤마로 묶인 선택자 목록(`.a,\\n.b {`)까지 잡되, `+`(형제 결합자)로
+    이어지는 자리는 다른 역할(부연 등)의 선택자라 제외한다.
+    """
+    pattern = re.compile(
+        re.escape(selector) + r"(?![\w-])(?!\s*\+)[^{}]*\{([^}]*)\}")
+    m = pattern.search(text)
+    return m.group(1) if m else None
+
+
+def test_page_title_roles_use_role_tokens():
+    """§2-3 페이지 제목 역할 선택자는 사다리 토큰이 아니라 역할 토큰을 쓴다."""
+    offenders = []
+    for rel, selector, expected in _PAGE_TITLE_ROLE_TOKENS:
+        text = _blank_comments((CSS_DIR / rel).read_text(encoding="utf-8"))
+        block = _selector_block(text, selector)
+        if block is None:
+            offenders.append(f"{rel}: {selector} 규칙을 찾지 못했다")
+            continue
+        fs = re.search(r"font-size:\s*([^;]+);", block)
+        if fs is None:
+            offenders.append(f"{rel}: {selector} 에 font-size 선언이 없다")
+            continue
+        value = fs.group(1).strip()
+        if value != f"var({expected})":
+            offenders.append(
+                f"{rel}: {selector} font-size 가 {value!r} — "
+                f"var({expected}) 이어야 한다")
+    assert not offenders, (
+        "페이지 제목 역할 선택자가 사다리 토큰(--aot-font-size-*)이나 값을 "
+        "직접 쓰고 있다. aot-theme-variables.css 의 역할 토큰"
+        "(--aot-fs-page-title 등)을 쓸 것 — 크기표가 바뀌면 그 토큰 정의 "
+        "여섯 줄만 고치면 되게 하려는 것이다: " + " | ".join(offenders))
+
+
+# ---------------------------------------- 주석 안 "*/" 가 주석을 일찍 끊는 사고
+
+# 2026-09-11 실제로 겪었다 — 주석 글 안에 "mt-*/mb-*" 처럼 별표+슬래시가
+# 붙는 표기를 썼더니, CSS 파서가 그 자리를 주석의 **진짜 끝**으로 읽어
+# 나머지 설명과 그 아래 규칙(`.aot-page-title-row`) 전체가 조용히 사라졌다
+# (문법 오류가 아니라서 브라우저도 테스트도 잡지 못했다 — 브라우저에서
+# getComputedStyle 로 재고서야 발견). CSS 주석은 **중첩되지 않는다** — 이미
+# 연 주석 안에서 `/*` 가 또 나와도 무시되고, 처음 만나는 `*/` 에서 곧바로
+# 닫힌다. 그래서 "widgets/*.py" 처럼 `/*` 가 주석 **안에서 다시 열리는**
+# 것은 괜찮지만(그 파서는 애초에 안 세므로), `mt-*` 뒤에 바로 `/mb-*` 가
+# 와서 `*/` 가 되는 것은 그 자리에서 주석을 끊는다.
+#
+# 이 검사는 파일을 실제 CSS 파서처럼(비-중첩) 훑어, 파일 끝에서 열린 채로
+# 남은 주석이 있는지만 본다 — 정확히 이번에 겪은 증상이다.
+
+
+def _comment_desync_lines(text):
+    """비-중첩 규칙으로 주석을 훑어 두 가지 신호를 찾는다.
+
+    1. 주석 밖에서 만나는 `*/` — 어딘가의 주석이 **일찍(글 중간에서) 닫혀**
+       그 뒤가 평범한 텍스트로 풀렸다는 뜻이다(이번에 실제로 겪은 증상 —
+       `mt-*/mb-*` 처럼 별표 바로 뒤에 슬래시가 오는 표기 때문이었다).
+    2. 파일 끝까지 열린 채로 남은 주석 — 반대로 닫는 토큰을 못 만난 경우.
+
+    CSS 주석은 중첩되지 않는다: 이미 연 주석 안에서 `/*` 가 또 나와도
+    무시되고, 처음 만나는 `*/` 에서 곧바로 닫힌다.
+    """
+    i, n = 0, len(text)
+    in_comment = False
+    open_at = None
+    lines = []
+    while i < n - 1:
+        if not in_comment and text[i:i + 2] == "/*":
+            in_comment = True
+            open_at = i
+            i += 2
+            continue
+        if not in_comment and text[i:i + 2] == "*/":
+            lines.append(text[:i].count("\n") + 1)
+            i += 2
+            continue
+        if in_comment and text[i:i + 2] == "*/":
+            in_comment = False
+            i += 2
+            continue
+        i += 1
+    if in_comment:
+        lines.append(text[:open_at].count("\n") + 1)
+    return lines
+
+
+def test_css_comments_are_not_truncated_by_slash_asterisk():
+    """주석 글 안의 `*/` 가 그 주석을 일찍 끊어 뒷부분을 삼키지 않는다."""
+    offenders = []
+    for path in _target_css():
+        for line in _comment_desync_lines(path.read_text(encoding="utf-8")):
+            offenders.append(f"{path.relative_to(CSS_DIR)}:{line}")
+    assert not offenders, (
+        "주석 글 안 어딘가에 `*/` 가 섞여 있어(예: `mt-*/mb-*` 같은 표기) "
+        "그 주석이 문장 중간에서 일찍 끝나고, 뒤따르는 설명·CSS 규칙이 "
+        "평범한 텍스트로 풀려 파서에서 조용히 사라졌을 가능성이 크다 — "
+        "문법 오류가 아니라 브라우저도 테스트도 못 잡는다(2026-09-11 실제로 "
+        "이렇게 .aot-page-title-row 규칙 전체가 사라졌었다). CSS 주석은 "
+        "중첩되지 않으므로 글에서 별표 바로 뒤에 슬래시가 오는 표기를 피할 "
+        "것: " + ", ".join(offenders))

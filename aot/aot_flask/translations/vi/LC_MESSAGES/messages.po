@@ -31576,3 +31576,17 @@ msgstr "Tất cả phép đo"
 
 msgid "All Units"
 msgstr "Tất cả đơn vị"
+
+#: aot/widgets/AoT_plot.py
+msgid "Map or site"
+msgstr "Bản đồ/Địa điểm"
+
+#: aot/widgets/AoT_plot.py
+msgid ""
+"Show only the plots in this map or site. Leave empty to show every plot in "
+"progress."
+msgstr "Chỉ hiển thị các khu đất trong bản đồ hoặc địa điểm này. Để trống để hiển thị tất cả khu đất đang canh tác."
+
+#: aot/aot_flask/static/js/widgets/AoT_plot/aot-plot-widget.js
+msgid "Go to page %(n)s"
+msgstr "Đi tới trang %(n)s"

@@ -582,6 +582,11 @@ class AccountSelf(FlaskForm):
     # 오지만, DB 의 NULL(=미지정)은 켬으로 읽는다.
     translate_user_strings = BooleanField(
         lazy_gettext('Translate User-Defined Names'))
+    # 스마트폰 화면 배율(%). 모달의 셀렉트가 90~150(5 단위)과 빈 값(=기본 115)만
+    # 보낸다 — 범위 검사는 account_self_update() 가 한다(빈 칸 = 기본값 계약 유지).
+    ui_zoom_phone = StringField(lazy_gettext('Mobile Screen Size'))
+    # 컴퓨터 화면 배율(%) — 같은 규칙, 빈 값 = 기본(100).
+    ui_zoom_desktop = StringField(lazy_gettext('Computer Screen Size'))
     user_account_save = SubmitField(lazy_gettext('Save'))
 
 

@@ -594,6 +594,19 @@ def account_self_update(form):
                         pass
                 else:
                     user.timezone = None
+
+            # 화면 배율(%) — 모바일(폰·태블릿)·컴퓨터 각각 90~150, 5 단위(모달 셀렉트와
+            # 같은 범위). 빈 값 = 기본(모바일 115 · 컴퓨터 100) → None. 범위 밖 값은
+            # 무시한다(저장값 유지). 적용은 templates/_screen_zoom.html.
+            for zoom_field in ('ui_zoom_phone', 'ui_zoom_desktop'):
+                if not hasattr(form, zoom_field):
+                    continue
+                zoom_val = (getattr(form, zoom_field).data or '').strip()
+                if not zoom_val:
+                    setattr(user, zoom_field, None)
+                elif (zoom_val.isdigit() and 90 <= int(zoom_val) <= 150
+                        and int(zoom_val) % 5 == 0):
+                    setattr(user, zoom_field, int(zoom_val))
             db.session.commit()
     except Exception as except_msg:
         error.append(except_msg)

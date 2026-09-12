@@ -1,42 +1,38 @@
-{# 외부 AI 제어 요청 승인 대기 — 재사용 include.
+{# 외부 AI 제어 요청 승인 대기 — AI → 요청 화면의 첫 구획(include).
 
-   전용 페이지(mcp_review)에만 있던 시절, 그 페이지로 가는 링크는 "MCP 서버 목록"
-   안의 버튼 하나뿐이었다. MCP 서버 목록은 연결을 설정하는 화면이라 현장 운영자가
-   매일 들어갈 이유가 없다 — 승인 대기 요청이 아무도 안 보는 곳에 쌓였다.
-   그래서 운영자가 일정 때문에 이미 들르는 일정(Scheduler) 화면에도 같은 목록을
-   띄운다. 승인은 유효시간이 짧아(5분) 발견이 늦으면 그대로 만료된다.
+   외부 AI(MCP)가 쓰기 도구를 부르면 실행이 보류되고 여기 한 장씩 쌓인다. 승인은
+   유효시간이 짧아(5분) 발견이 늦으면 그대로 만료된다 — 그래서 결정할 것을 한
+   화면(요청)에 모았다(2026-09-10). 예전에는 일정 화면과 "AI 요청 및 조언" 두 곳에
+   이 조각이 있었다.
 
-   include 하는 쪽이 준비해야 할 것:
+   include 하는 쪽이 준비할 것:
+     - aot-settings.css (구획 제목·카드 역할)
      - 라우트 컨텍스트에 physical_tools (mcp_safety_gate.PHYSICAL_TOOLS 가 정본)
    승인/거부가 일어나면 document 에 'aot:mcp-approval-changed' 를 쏜다.
-   같은 화면의 다른 목록(감사 로그 등)은 그 이벤트로 갱신하면 된다. #}
 
-<div class="aot-modal-group-title" id="mcp-pending-title">
-    {{ _('Control requests awaiting approval') }}
-    {# 개수는 **사실이지 판정이 아니다.** 부트스트랩 badge-primary(파랑)는
-       시스템 밖 색이었고, 숫자에 색을 입힐 이유도 없다 — 제목 옆에 글로
-       둔다(ui-guide §1 "색은 판정할 것이 있을 때만", §4-12 "의미는 글자로").
-       제목과 굵기·색으로 갈려서 색 없이도 층이 보인다. #}
-    <span class="aot-appr-count d-none" id="mcp-pending-count"></span>
-</div>
-<p class="aot-modal-body-text">
-    {{ _('These have NOT been executed. Approving runs it immediately with exactly the arguments shown — you do not need to go back to the AI and tell it.') }}
-</p>
-<div id="mcp-pending-list"><p class="aot-modal-body-text">{{ _('Loading...') }}</p></div>
+   2026-09-10 다시 짬:
+   - 구획 제목·설명·카드를 공용 설정 역할로(.aot-settings-group-title + p,
+     .aot-settings-card). 예전에는 모달용 역할(aot-modal-group-title)을 카드 밖에
+     썼고, 카드는 양옆 16 여백을 스스로 가져 설정 화면에 두면 글자가 80 에 섰다.
+   - 원본 인자(raw params) 펼침을 뺐다. 기계 JSON 이고 대상 UUID 가 그대로 보였다.
+     제목과 안내문은 서버가 **실제 인자로** 만든 사람 말이다(synthesize_title,
+     _build_human_briefing) — 승인하는 사람이 믿을 근거로 그것이면 된다.
+   - 되돌릴 수 없는 물리 동작 확인을 브라우저 confirm 대신 앱 공용 확인창으로. #}
+
+<div class="aot-settings-group-title" id="mcp-pending-title">{{ _('Control requests awaiting approval') }}<span class="aot-appr-count" id="mcp-pending-count" hidden></span></div>
+<p>{{ _('These have not run. Approving runs exactly what is described here — you do not need to go back and tell the AI.') }}</p>
+<div id="mcp-pending-list"></div>
 
 <script>
 (function () {
+    var CSRF = (document.querySelector('meta[name="csrf-token"]') || {}).content || '';
     var T = {
         none_pending: {{ _('No control requests are waiting.')|tojson }},
+        load_failed: {{ _('Could not load control requests')|tojson }},
         approve: {{ _('Approve')|tojson }},
         reject: {{ _('Reject')|tojson }},
-        // 어순이 언어마다 달라 숫자를 끼워 넣는 한 문장으로 둔다.
-        // NOTE: placeholder is '{sec}', NOT '%(sec)s' - newer jinja2's gettext()
-        // unconditionally applies %-formatting to every translated string, even
-        // with no kwargs passed (see jinja2/ext.py _make_new_gettext: "Always
-        // treat as a format string"), so a literal '%(sec)s' left for JS-side
-        // .replace() to fill in raises KeyError('sec') server-side before the
-        // page even renders. '{sec}' has no '%' in it, so it round-trips safely.
+        // 어순이 언어마다 달라 숫자를 끼워 넣는 한 문장으로 둔다. '%(sec)s' 가 아니라
+        // '{sec}' 인 이유: jinja2 gettext 는 번역문에 늘 %-포맷을 적용해 서버에서 깨진다.
         expires_fmt: {{ _('expires in {sec}s')|tojson }},
         failed: {{ _('Request failed')|tojson }},
         confirm_physical: {{ _('This moves real equipment (valves, pumps) as soon as you approve. Run it now?')|tojson }},
@@ -54,13 +50,12 @@
             return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
         });
     }
-
-    function toast(msg, type) {
-        if (typeof window.showToast === 'function') { window.showToast(msg, type); }
-    }
+    function toast(msg, type) { if (typeof window.showToast === 'function') { window.showToast(msg, type); } }
+    /* 사람 말이 아닌 식별자(UUID)는 싣지 않는다. */
+    function human(s) { s = String(s || '').trim(); return /^[0-9a-f]{8}-[0-9a-f]{4}-/i.test(s) ? '' : s; }
 
     function post(url, onData) {
-        fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' } })
+        fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF } })
             .then(function (r) { return r.json().catch(function () { return {}; }); })
             .then(function (d) {
                 if (d && d.status === 'error') { toast(T.failed + ': ' + (d.message || ''), 'error'); }
@@ -76,45 +71,24 @@
     }
 
     function render(rows) {
-        if (countEl) {
-            countEl.textContent = rows && rows.length ? rows.length : '';
-            countEl.classList.toggle('d-none', !(rows && rows.length));
-        }
-        if (!rows || !rows.length) {
-            listEl.innerHTML = '<p class="aot-modal-body-text">' + esc(T.none_pending) + '</p>';
+        rows = rows || [];
+        countEl.textContent = rows.length ? rows.length : '';
+        countEl.hidden = !rows.length;
+        if (!rows.length) {
+            listEl.innerHTML = '<div class="aot-settings-card"><div class="aot-settings-row"><div class="aot-settings-sub">'
+                + esc(T.none_pending) + '</div></div></div>';
             return;
         }
+        // 카드 하나에 결정 하나: 무엇을(핵심) · 누가·만료(부연) · 실행 계획(본문) · 행동(오른쪽 아래).
+        // r.title 은 서버가 만든 사람 문구다 — tool_name 같은 내부 이름은 data-tool 에만 남긴다.
         listEl.innerHTML = rows.map(function (r) {
-            // `reason` now carries an auto-generated plain-language plan
-            // briefing (built server-side from the actual arguments, not
-            // from anything the requesting AI said in chat) whenever the
-            // tool call is spatial (target_name) or a batch (add_schedule_batch)
-            // - see mcp_safety_gate._build_human_briefing. Show it prominently,
-            // ahead of and visually distinct from the raw params dump, so
-            // approving here does not require trusting a chat paraphrase.
-            // 사유는 상자로 감싸지 않고 글로 둔다(2026-09-09 요청) —
-            // 카드의 본문이지 별도 영역이 아니다.
-            var briefing = r.reason
-                ? '<div class="aot-appr-reason">' + esc(r.reason) + '</div>'
-                : '';
-            // r.title 은 서버(mcp_safety_gate.synthesize_title)가 만든 사람이
-            // 읽는 문구다 — tool_name(operate_device 등) 같은 내부 이름을
-            // 화면에 그대로 노출하지 않는다(대시보드 위젯과 같은 원칙,
-            // 2026-09-09). tool_name 은 data-tool 속성으로만 남겨 물리 제어
-            // 확인(PHYSICAL_TOOLS 매칭)에 쓴다.
-            //
-            // 2026-09-09 디자인 언어 적용: 예전에는 제목·에이전트·만료를
-            // 한 줄에 &mdash; 로 이어 붙였다. 한 자리에 한 사실만 두고
-            // (ui-guide §1-2) 부연은 아랫줄로 내린다(§3-2 ③). 결정 버튼은
-            // 핵심 줄 오른쪽에 선다(§3-2 ②) — 읽고 나서 누르는 순서다.
-            // 승인은 이 화면의 유일한 커밋 동작이라 브랜드색을 쓴다.
-            return '<div class="aot-appr-card">'
+            var sub = [];
+            if (human(r.agent_id)) { sub.push(esc(r.agent_id)); }
+            sub.push(esc(T.expires_fmt.replace('{sec}', r.expires_in_sec)));
+            return '<div class="aot-settings-card">'
                 + '<div class="aot-appr-what">' + esc(r.title) + '</div>'
-                + '<div class="aot-appr-sub">' + esc(r.agent_id)
-                + ' &middot; ' + esc(T.expires_fmt.replace('{sec}', r.expires_in_sec)) + '</div>'
-                + briefing
-                + '<details class="aot-appr-raw"><summary>raw params</summary>'
-                + '<pre>' + esc(JSON.stringify(r.params, null, 2)) + '</pre></details>'
+                + '<div class="aot-appr-sub">' + sub.join(' · ') + '</div>'
+                + (r.reason ? '<div class="aot-appr-reason">' + esc(r.reason) + '</div>' : '')
                 + '<div class="aot-appr-acts">'
                 + '<button type="button" class="btn aot-pill-btn aot-pill-btn-secondary" data-reject-conf="' + esc(r.confirmation_id) + '">' + esc(T.reject) + '</button>'
                 + '<button type="button" class="btn aot-pill-btn aot-pill-btn-primary" data-approve="' + esc(r.confirmation_id) + '" data-tool="' + esc(r.tool_name || '') + '">' + esc(T.approve) + '</button>'
@@ -122,30 +96,49 @@
         }).join('');
     }
 
+    // 읽기에 실패하면 "대기 없음" 이라고 말하지 않는다 — 승인은 유효 5분이라, 오류를
+    // 빈 목록으로 그리면 기다리는 요청이 아무도 모르게 만료된다.
+    function renderError(msg) {
+        countEl.hidden = true;
+        listEl.innerHTML = '<div class="aot-settings-card"><div class="aot-settings-row"><div class="aot-settings-sub">'
+            + esc(T.load_failed + (msg ? ': ' + msg : '')) + '</div></div></div>';
+    }
+
     function load() {
-        fetch('/api/v1/mcp/confirmations').then(function (r) { return r.json(); })
-            .then(function (d) { render(d.pending); })
-            .catch(function () { render([]); });
+        fetch('/api/v1/mcp/confirmations')
+            .then(function (r) {
+                return r.json().catch(function () { return {}; }).then(function (d) {
+                    if (!r.ok || d.status === 'error') { renderError(d.message || d.error || r.status); return; }
+                    render(d.pending);
+                });
+            })
+            .catch(function (e) { renderError(String(e)); });
+    }
+
+    function approve(btn, id) {
+        btn.disabled = true;
+        post('/api/v1/mcp/confirmations/' + encodeURIComponent(id) + '/approve', function (d) {
+            if (d && d.executed === false) {
+                var m = (d.execution && (d.execution.message || d.execution.error)) || '';
+                toast(T.exec_failed + (m ? ': ' + m : ''), 'error');
+            } else if (d && d.executed) {
+                toast(T.executed, 'success');
+            }
+        });
     }
 
     // 이 include 안에서만 듣는다. 페이지 전역 핸들러에 얹으면 include 를 쓰는
     // 화면마다 중복 처리돼 승인이 두 번 전송된다.
     listEl.addEventListener('click', function (ev) {
-        var t = ev.target;
-        if (!t || t.tagName !== 'BUTTON') { return; }
+        var t = ev.target.closest('button');
+        if (!t) { return; }
         var id;
         if ((id = t.getAttribute('data-approve'))) {
-            if (PHYSICAL_TOOLS.indexOf(t.getAttribute('data-tool')) !== -1
-                && !confirm(T.confirm_physical)) { return; }
-            t.disabled = true;
-            post('/api/v1/mcp/confirmations/' + encodeURIComponent(id) + '/approve', function (d) {
-                if (d && d.executed === false) {
-                    var m = (d.execution && (d.execution.message || d.execution.error)) || '';
-                    toast(T.exec_failed + (m ? ': ' + m : ''), 'error');
-                } else if (d && d.executed) {
-                    toast(T.executed, 'success');
-                }
-            });
+            if (PHYSICAL_TOOLS.indexOf(t.getAttribute('data-tool')) !== -1) {
+                window.aotConfirm(T.confirm_physical, function () { approve(t, id); });
+                return;
+            }
+            approve(t, id);
         } else if ((id = t.getAttribute('data-reject-conf'))) {
             t.disabled = true;
             post('/api/v1/mcp/confirmations/' + encodeURIComponent(id) + '/reject');

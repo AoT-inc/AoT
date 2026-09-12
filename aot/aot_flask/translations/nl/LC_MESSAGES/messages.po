@@ -31393,3 +31393,17 @@ msgstr "Alle metingen"
 
 msgid "All Units"
 msgstr "Alle eenheden"
+
+#: aot/widgets/AoT_plot.py
+msgid "Map or site"
+msgstr "Kaart/locatie"
+
+#: aot/widgets/AoT_plot.py
+msgid ""
+"Show only the plots in this map or site. Leave empty to show every plot in "
+"progress."
+msgstr "Toon alleen de percelen op deze kaart of locatie. Laat leeg om alle percelen in teelt te tonen."
+
+#: aot/aot_flask/static/js/widgets/AoT_plot/aot-plot-widget.js
+msgid "Go to page %(n)s"
+msgstr "Ga naar pagina %(n)s"

@@ -348,6 +348,24 @@
   --aot-fs-value-sm: var(--aot-font-size-lg);    /* 18px */
   --aot-fs-value-lg: var(--aot-font-size-xl);
 
+  /* ⚠ 위 여섯 줄(`--aot-fs-caption`~`-value-lg`)은 위젯이 쓴다
+     (`widgets/*.py` 가 만드는 CSS-in-Python) — `body` 25곳·`caption` 34곳·
+     `label` 26곳, `title`은 `AoT_advice.py`의 `.aot-advice__summary` 1곳.
+     **값을 바꾸지 않는다.** 바꾸면 위젯과, 기준으로 삼는 지도 위젯 모달까지
+     따라 커진다. 페이지 제목 위계는 아래 별도 이름을 쓴다. */
+
+  /* 페이지 역할 토큰(§2-3, 2026-09-11) — 페이지 CSS 는 사다리 토큰을 직접
+     쓰지 않고 이 이름을 쓴다. 지금은 확정 표(24/18/16/14/12) 값을 그대로
+     가리키지만, 고령 사용자 대응으로 크기표 자체가 바뀔 수 있어(결정 대기
+     — `feedback_page_title_hierarchy` 26-09-11 오후 항목) 사이에 이름을
+     하나 끼워 둔다. 크기가 바뀌면 여기 여섯 줄만 고치면 된다. */
+  --aot-fs-page-title:      var(--aot-font-size-xl);    /* 24px — h3, 페이지 제목 */
+  --aot-fs-section-title:   var(--aot-font-size-lg);    /* 18px — h4, 단락 제목 */
+  --aot-fs-container-title: var(--aot-font-size-base);  /* 16px — 카드 첫 줄·목록 행 이름 */
+  --aot-fs-page-body:       var(--aot-font-size-sm);    /* 14px — 본문·행 라벨·값·탭 */
+  --aot-fs-desc:            var(--aot-font-size-xs);    /* 12px — 설명·행 설명 */
+  --aot-fs-control:         var(--aot-font-size-xs);    /* 12px — 버튼·배지 */
+
   --aot-btn-font-size: var(--aot-font-size-sm);  /* 14px */
 
   /* font-weight tokens. 색·간격 축이 아니라 숫자 사다리다 — 줄마다 붙은
@@ -359,6 +377,11 @@
   --aot-fw-medium:   500;  /* @kind other */
   --aot-fw-semibold: 600;  /* @kind other */
   --aot-fw-bold:     700;  /* @kind other */
+
+  /* 페이지 제목 세 단(페이지·단락·컨테이너)의 굵기 역할. 지금은 500
+     (`--aot-fw-medium`)을 가리킨다 — 위 페이지 역할 토큰과 같은 이유로
+     이름을 끼워 둔다. */
+  --aot-fw-title: var(--aot-fw-medium);
 
   /* line-height / letter-spacing */
   --aot-lh-tight: 1.1;  /* @kind other */
@@ -463,6 +486,16 @@
   --aot-z-confirm-backdrop: 5900;  /* @kind other */ /* 전역 confirm 다이얼로그 배경(일반 모달 위) */
   --aot-z-confirm:        6000;    /* @kind other */ /* 전역 confirm 다이얼로그 */
   --aot-z-toast:          6500;    /* @kind other */ /* 토스트·알림 (모달 위) */
+
+  /* ── 뷰포트 단위 — 화면 배율 보정 (2026-09-11) ─────────────────────────
+     화면 배율이 CSS zoom 으로 걸리면(iPhone·iPad·컴퓨터) vw·vh·dvh 에도 배율이
+     한 번 더 곱해져 화면을 넘는다(실측 125%: 화면 1280×900 에 100vw×100dvh =
+     1600×1125). 뷰포트 단위는 반드시 이 토큰으로 쓴다 — `calc(100 * var(--aot-dvh))`.
+     --aot-zoom 은 templates/_screen_zoom.html 이 CSS zoom 을 걸 때만 html 에
+     심는다(없으면 1 → 원래 단위와 같다). */
+  --aot-vw:  calc(1vw / var(--aot-zoom, 1));   /* @kind other */
+  --aot-vh:  calc(1vh / var(--aot-zoom, 1));   /* @kind other */
+  --aot-dvh: calc(1dvh / var(--aot-zoom, 1));  /* @kind other */
   --aot-z-tooltip:        7000;    /* @kind other */ /* 툴팁 — 항상 최상위 */
 
   /* ========================================================================

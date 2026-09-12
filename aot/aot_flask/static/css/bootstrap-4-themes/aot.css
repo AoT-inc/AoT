@@ -206,6 +206,10 @@ body {
   background-color: var(--primary);
   border: 1px solid rgba(0, 0, 0, 0.08);
   border-radius: var(--aot-radius-lg);
+  /* 항목(.dropdown-item)은 각지어(border-radius: 0) 있다 — 클리핑이 없으면
+     맨 위/아래 항목의 hover·active 배경 모서리가 이 둥근 모서리 밖으로
+     삐져나온다(2026-09-11 버그 리포트). */
+  overflow: hidden;
   padding-top: 10px;
   padding-bottom: 10px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
@@ -344,7 +348,7 @@ body {
     padding-bottom: 6em;
     background-color: var(--primary);
     z-index: 998;
-    max-height: calc(100vh - 50px);
+    max-height: calc(100 * var(--aot-vh) - 50px);
     overflow-y: auto;
   }
 
@@ -875,10 +879,6 @@ select.form-control.form-dropdown {
 }
 
 
-main.container>p {
-  font-size: 1.2em;
-}
-
 .widget-drag-handle {
   transform: translateY(-1px);
 }
@@ -1138,8 +1138,10 @@ body.aot-nav-hidden .aot-sticky-tabs {
 .aot-nav-tab {
   background-color: var(--aot-bg-off, #F3F6F5);
   height: 40px;
-  font-size: 1.1em;
-  font-weight: 500;
+  /* 탭 역할(§2-3, 2026-09-11 확정): sm 14/600 — 사다리 밖 1.1em(15.4px)·500
+     이었던 것을 역할 토큰으로 옮긴다. */
+  font-size: var(--aot-fs-page-body);
+  font-weight: 600;
   border-radius: 0px;
   border: none;
   padding: 0;
@@ -1466,7 +1468,7 @@ textarea::-moz-focus-inner {
     .aot-unified-modal .modal-content {
         border-radius: 0;
         border: none;
-        min-height: 100vh; /* Ensure full height */
+        min-height: calc(100 * var(--aot-vh)); /* Ensure full height */
     }
 }
 

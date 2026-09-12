@@ -9127,6 +9127,11 @@ msgstr ""
 msgid "AoT Github"
 msgstr ""
 
+#: aot_flask/templates/layout.html:716
+#: aot_flask/templates/layout_default.html:716
+msgid "AoT Homepage"
+msgstr ""
+
 #: aot_flask/templates/layout.html:717
 #: aot_flask/templates/layout_default.html:717
 #: aot_flask/templates/pages/landing.html:238
@@ -29061,4 +29066,18 @@ msgstr ""
 
 #: aot/widgets/widget_notice.py:1
 msgid "Notes Filter"
+msgstr ""
+
+#: aot/widgets/AoT_plot.py
+msgid "Map or site"
+msgstr ""
+
+#: aot/widgets/AoT_plot.py
+msgid ""
+"Show only the plots in this map or site. Leave empty to show every plot in "
+"progress."
+msgstr ""
+
+#: aot/aot_flask/static/js/widgets/AoT_plot/aot-plot-widget.js
+msgid "Go to page %(n)s"
 msgstr ""

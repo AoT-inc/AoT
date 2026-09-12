@@ -7,20 +7,14 @@
 <form action="{{ url_for('routes_ai_agent.ai_agent_mod', agent_id=agent.unique_id) }}" method="POST">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
 
-    <!-- Agent Engine Description -->
+    {# 엔진 설명·링크는 상자 밖 글자라 상자 안 라벨과 같은 선(16)에 세운다. #}
     {% if engine_info.description %}
-    <div class="mb-2 aot-lede">
-        {{ engine_info.description }}
-    </div>
+    <p class="aot-modal-body-text aot-modal-container-intro">{{ engine_info.description }}</p>
     {% endif %}
-
-    <!-- Agent Auth Link (Left aligned, no box) -->
     {% if engine_info.auth_link %}
-    <div class="mb-3 text-left">
-        <a href="{{ engine_info.auth_link }}" target="_blank" class="text-primary aot-link-inline">
-            <i class="fas fa-external-link-alt mr-1"></i> {{ _('Get API Key / Documentation') }}
-        </a>
-    </div>
+    <p class="aot-modal-body-text aot-modal-container-intro">
+        <a href="{{ engine_info.auth_link }}" target="_blank" rel="noopener">{{ _('Get API Key / Documentation') }}</a>
+    </p>
     {% endif %}
 
     <!-- Identity & Service (includes auth credentials if any) -->
@@ -58,7 +52,7 @@
     <div class="aot-modal-group-title">{{ _('System Instructions') }}</div>
     <div class="aot-modal-container">
         <div class="aot-modal-option-row aot-full-width-row">
-            <label class="aot-modal-option-label font-weight-bold">{{ _('Server Instruction / System Prompt') }}</label>
+            <label class="aot-modal-option-label">{{ _('Server Instruction / System Prompt') }}</label>
             <div class="aot-modal-option-control">
                 <textarea name="system_prompt" class="form-control aot-modern-input aot-input-prose aot-input-tall" rows="5"
                           placeholder="{{ _('Define how this MCP server should be utilized...') }}">{{ agent.system_prompt }}</textarea>
@@ -66,10 +60,3 @@
         </div>
     </div>
 </form>
-
-<script>
-    // Refresh any selectpickers that might be in custom options
-    if (typeof $('.selectpicker').selectpicker === 'function') {
-        $('.selectpicker').selectpicker('refresh');
-    }
-</script>

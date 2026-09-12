@@ -80,18 +80,32 @@ def _to_dict(row):
 
 # @ANCHOR: KNOWLEDGE_BROWSE
 def browse(query=None, tag=None, provenance=None, include_disabled=False,
-           page=1, page_size=_PAGE_SIZE):
+           page=1, page_size=_PAGE_SIZE, context_state=None):
     """Every knowledge item, filtered. Ordered newest first.
 
     Deliberately a plain DB query, NOT `knowledge_search`: browsing asks
     "what is in here" and must show items a relevance ranker would drop,
     including retired ones when asked. Relevance scoring is the AI's read
-    path, not a person's inventory."""
+    path, not a person's inventory.
+
+    `context_state` narrows to one trust state — the AI Knowledge page uses
+    it (with provenance='ai_curated') for "notes still waiting for a person"
+    now that the separate review list is folded into this one."""
     q = AIKnowledgeChunk.query
     if not include_disabled:
         q = q.filter(AIKnowledgeChunk.is_enabled.is_(True))
     if provenance:
-        q = q.filter(AIKnowledgeChunk.provenance == provenance)
+        # 쉼표로 여럿을 받는다 — AI 지식 화면의 기본 목록은 "사람과 AI 가 쓴 것"
+        # (user_provided·ai_curated·data_derived)이고, 소스에서 동기화한 조각
+        # (external_authority)은 뺀다. 그 조각은 제목이 전부 소스 이름이라 목록에
+        # 섞이면 사람이 가려 읽을 수 없는 같은 줄이 반복된다.
+        provs = [p.strip() for p in str(provenance).split(',') if p.strip()]
+        if len(provs) == 1:
+            q = q.filter(AIKnowledgeChunk.provenance == provs[0])
+        elif provs:
+            q = q.filter(AIKnowledgeChunk.provenance.in_(provs))
+    if context_state:
+        q = q.filter(AIKnowledgeChunk.context_state == context_state)
     if tag:
         # 태그는 쉼표로 이어 붙인 한 컬럼이라 LIKE 로 본다. 부분 일치가
         # 섞이지 않게 양쪽에 쉼표를 붙여 비교한다('무' 가 '무름병' 에

@@ -6,13 +6,11 @@
    그중 셋은 `.aot-entry-container` 처럼 **이미 클래스가 붙은 요소**를
    인라인으로 덧칠하고 있었다.
 
-   ⚠ 이 파일에 FullCalendar 덮어쓰기는 옮기지 않았다. 템플릿의 <style>
-   블록에 고정색(#EBCF21 등)이 섞여 있어, 그대로 옮기면 "custom_ui 밖의 색"
-   가드에 새 위반으로 잡힌다. 색을 정본 토큰으로 옮기는 일과 함께 처리한다.
+   FullCalendar·타임라인 덮어쓰기는 2026-09-10 템플릿 <style> 에서 여기로 옮기며
+   색을 정본 토큰으로 바꿨다(아래 끝 구획).
    ============================================================ */
 
-/* 목록 한 줄 — 줄과 줄은 4px 로 붙여 둔다(카드가 아니라 목록이다). */
-#scheduler-page .aot-entry-item { margin-bottom: var(--aot-space-1); }
+/* 목록 행 사이 4px 는 공용 규칙(aot-entry-ui.css, 정적 목록 행 간격)이 준다. */
 
 /* 줄 맨 앞의 상태 아이콘, 맨 뒤의 설정 아이콘. */
 #scheduler-page .sched-icon { font-size: 1.3em; }
@@ -41,3 +39,64 @@
 
 /* 화면 위쪽 동작 묶음. 부트스트랩 4 에는 gap 유틸리티가 없다. */
 #scheduler-page .sched-toolbar { gap: var(--aot-space-2); }
+
+/* ── 달력(FullCalendar 5) ─────────────────────────────────────────────
+   예전에는 템플릿 <style> 이 부트스트랩 --primary(이 테마에서 노랑 #F2D524)와
+   고정색(#EBCF21·#029ACF 파랑 등)으로 칠했다 — 노랑은 행동 단추에 쓰지 않고,
+   색은 settings/custom_ui 토큰만 쓴다. FullCalendar 가 여는 CSS 변수에 토큰을
+   넘기므로 !important 가 필요 없다(서버도 이벤트에 고정색을 싣지 않는다).
+   단추는 공용 알약과 같은 두 색: 평소 2차, 눌린 보기는 1차. */
+#scheduler-page .fc {
+  font-family: var(--aot-font-family);
+  --fc-button-bg-color: var(--aot-btn-bg-secondary);
+  --fc-button-border-color: var(--aot-btn-bg-secondary);
+  --fc-button-text-color: var(--aot-color-text-tertiary);
+  --fc-button-hover-bg-color: var(--aot-btn-bg-secondary);
+  --fc-button-hover-border-color: var(--aot-btn-bg-secondary);
+  --fc-button-active-bg-color: var(--aot-btn-bg-primary);
+  --fc-button-active-border-color: var(--aot-btn-bg-primary);
+  /* 기본 이벤트색(파랑 #3788d8)과 오늘 칸(노랑 반투명)도 토큰으로. */
+  --fc-event-bg-color: var(--aot-color-brand-accent);
+  --fc-event-border-color: var(--aot-border-neutral);
+  --fc-event-text-color: var(--aot-color-text-primary);
+  --fc-today-bg-color: color-mix(in srgb, var(--aot-color-brand-primary) 6%, transparent);
+}
+#scheduler-page .fc .fc-button {
+  border-radius: var(--aot-btn-radius);
+  font-size: var(--aot-font-size-sm);
+  padding: var(--aot-space-1) var(--aot-space-3);
+}
+#scheduler-page .fc .fc-toolbar-title { font-size: var(--aot-font-size-base); font-weight: 700; }
+#scheduler-page .fc .fc-daygrid-day-number,
+#scheduler-page .fc .fc-col-header-cell-cushion { font-size: var(--aot-font-size-sm); }
+
+/* 이벤트 상태 — 공용 상태 배지와 같은 톤(제안 = 경고, 실행 중·완료 = 성공, 실패 = 위험). */
+#scheduler-page .fc-event-draft {
+  --fc-event-bg-color: var(--aot-tint-warning-bg);
+  --fc-event-border-color: var(--aot-tint-warning-fg);
+  --fc-event-text-color: var(--aot-tint-warning-fg);
+  border-style: dashed;
+}
+#scheduler-page .fc-event-running,
+#scheduler-page .fc-event-completed {
+  --fc-event-bg-color: var(--aot-tint-success-bg);
+  --fc-event-border-color: var(--aot-tint-success-fg);
+  --fc-event-text-color: var(--aot-tint-success-fg);
+}
+#scheduler-page .fc-event-completed { opacity: 0.7; }
+#scheduler-page .fc-event-failed {
+  --fc-event-bg-color: var(--aot-tint-danger-bg);
+  --fc-event-border-color: var(--aot-tint-danger-fg);
+  --fc-event-text-color: var(--aot-tint-danger-fg);
+}
+#scheduler-page .fc-event-archived { opacity: 0.4; }
+
+/* ── 장치 타임라인(vis-timeline) — 반입 CSS 가 이 파일보다 뒤에 실려 id 로 이긴다. */
+#scheduler-page #device-timeline-container { height: 400px; border-radius: var(--aot-radius-xl); overflow: hidden; }
+#scheduler-page .vis-timeline { border: none; }
+#scheduler-page .vis-item { border-radius: var(--aot-radius-sm); }
+/* 반입 CSS 의 "현재 시각 따라가기" 단추가 파랑(#3876c2)이다 — 공용 2차 단추 색으로. */
+#scheduler-page .vis-rolling-mode-btn {
+  background-color: var(--aot-btn-bg-secondary);
+  color: var(--aot-color-text-tertiary);
+}

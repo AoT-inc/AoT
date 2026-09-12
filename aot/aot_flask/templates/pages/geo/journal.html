@@ -79,7 +79,12 @@
 <main role="main" class="container aot-page aot-journal-doc">
 
   <div class="aot-page-head">
-    <h1 class="aot-modal-section-title">{{ _('Journals') }}</h1>
+    {#- 2026-09-11: 이 h1이 아래 "Saved journals" 구획 제목과 완전히 같은
+        클래스(aot-modal-section-title)를 써서 페이지 제목이 구획 제목과
+        구분되지 않았다(사용자 지적). plots.html과 같은 골격(.aot-page/
+        .aot-page-head)이므로 같은 페이지 제목 클래스로 맞춘다
+        (§4-4 "페이지 제목"). -#}
+    <h1 class="aot-page-title">{{ _('Journals') }}</h1>
   </div>
 
   <p class="aot-modal-body-text pl-3">

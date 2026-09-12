@@ -31033,3 +31033,17 @@ msgstr "सभी माप"
 
 msgid "All Units"
 msgstr "सभी इकाइयाँ"
+
+#: aot/widgets/AoT_plot.py
+msgid "Map or site"
+msgstr "मानचित्र/साइट"
+
+#: aot/widgets/AoT_plot.py
+msgid ""
+"Show only the plots in this map or site. Leave empty to show every plot in "
+"progress."
+msgstr "इस मानचित्र या साइट के भीतर के प्लॉट ही दिखाएँ। खाली छोड़ने पर उगाए जा रहे सभी प्लॉट दिखेंगे।"
+
+#: aot/aot_flask/static/js/widgets/AoT_plot/aot-plot-widget.js
+msgid "Go to page %(n)s"
+msgstr "पृष्ठ %(n)s पर जाएँ"

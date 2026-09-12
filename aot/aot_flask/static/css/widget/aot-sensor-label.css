@@ -165,9 +165,9 @@
      높이(width*0.62)도 함께 커지고, 레전드가 한 줄에 더 많이 들어가 플롯을
      덜 잡아먹는다. 높이도 88vh 로 올려 1.5배로 키운 그래프가 스크롤 없이
      들어가게 한다(openPopup 의 heightScale 참고). */
-  width: clamp(380px, 34vw, 560px);
-  max-width: 92vw;
-  max-height: 88vh;
+  width: clamp(380px, 34 * var(--aot-vw), 560px);
+  max-width: calc(92 * var(--aot-vw));
+  max-height: calc(88 * var(--aot-vh));
   display: flex;
   flex-direction: column;
   font-size: var(--aot-font-size-base);
@@ -236,9 +236,9 @@
   overflow: hidden;
   overscroll-behavior: contain;
   touch-action: pan-y;
-  width: clamp(340px, 38vw, 600px);
-  max-width: 94vw;
-  height: min(80vh, 760px);
+  width: clamp(340px, 38 * var(--aot-vw), 600px);
+  max-width: calc(94 * var(--aot-vw));
+  height: min(80 * var(--aot-vh), 760px);
 }
 
 /* Modal text base — fixed ABSOLUTE size so mobile renders identically to
@@ -1164,10 +1164,10 @@
    (and DevTools tablet emulation) go fullscreen unintentionally. */
 @media (max-width: 480px) {
   .aot-center-modal {
-    width: 100vw;
-    max-width: 100vw;
-    height: 100dvh;
-    max-height: 100dvh;
+    width: calc(100 * var(--aot-vw));
+    max-width: calc(100 * var(--aot-vw));
+    height: calc(100 * var(--aot-dvh));
+    max-height: calc(100 * var(--aot-dvh));
     border-radius: 0;
     /* safe-area-inset-top 이 0인 기기(노치 없음/브라우저)에서도
        maplibregl-popup-content 의 기본 12px 상단 여백을 유지한다. */

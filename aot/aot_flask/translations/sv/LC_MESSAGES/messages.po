@@ -31061,3 +31061,17 @@ msgstr "Alla mätningar"
 
 msgid "All Units"
 msgstr "Alla enheter"
+
+#: aot/widgets/AoT_plot.py
+msgid "Map or site"
+msgstr "Karta/plats"
+
+#: aot/widgets/AoT_plot.py
+msgid ""
+"Show only the plots in this map or site. Leave empty to show every plot in "
+"progress."
+msgstr "Visa endast odlingsytorna på den här kartan eller platsen. Lämna tomt för att visa alla pågående odlingsytor."
+
+#: aot/aot_flask/static/js/widgets/AoT_plot/aot-plot-widget.js
+msgid "Go to page %(n)s"
+msgstr "Gå till sida %(n)s"

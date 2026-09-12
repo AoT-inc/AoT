@@ -31286,3 +31286,17 @@ msgstr "Wszystkie pomiary"
 
 msgid "All Units"
 msgstr "Wszystkie jednostki"
+
+#: aot/widgets/AoT_plot.py
+msgid "Map or site"
+msgstr "Mapa/teren"
+
+#: aot/widgets/AoT_plot.py
+msgid ""
+"Show only the plots in this map or site. Leave empty to show every plot in "
+"progress."
+msgstr "Pokaż tylko działki na tej mapie lub terenie. Pozostaw puste, aby pokazać wszystkie działki w uprawie."
+
+#: aot/aot_flask/static/js/widgets/AoT_plot/aot-plot-widget.js
+msgid "Go to page %(n)s"
+msgstr "Przejdź do strony %(n)s"

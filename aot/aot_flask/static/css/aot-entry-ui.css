@@ -108,6 +108,17 @@
   background-color: transparent;
   color: var(--aot-color-text-primary);
   width: 100%;
+  max-width: 100%;
+}
+
+/* 위 width:100% 는 `.btn` 을 함께 단 알약(입력/카메라/geo_input/함수/AI 계열)에선
+   특이도가 높은 `.btn.aot-pill-btn { width: auto }`(aot-modal-modern.css, 0,2,0)에
+   져서 걸리지 않는다 — 그래서 함수·AI 연결 행의 알약만 글자 길이만큼 좁게 남아
+   같은 클래스가 페이지마다 다른 폭으로 보였다. entry 알약은 칸 폭을 꽉 채우는
+   쪽으로 통일한다(입력·출력 방식, 2026-09-10 결정) — `.btn.aot-pill-btn.variant`
+   변형과 같은 (0,3,0) 특이도로 !important 없이 이긴다. */
+.btn.aot-pill-btn.aot-entry-uuid-btn {
+  width: 100%;
 }
 
 .aot-entry-uuid-btn:hover {
@@ -196,6 +207,13 @@
 /* Entry Container Margins */
 .aot-entry-container {
     margin: 0; /* Phase 9-4: Changed from 0 0.75em to allow full width, matching container padding */
+}
+
+/* 정적 목록(GridStack 없이 서버·JS 가 그대로 쌓는 행)의 행 사이 — GridStack 화면
+   (입력·출력·함수)과 같은 4px. 그전에는 정적 목록의 행이 0px 로 맞붙었다(2026-09-11
+   실측: AI 지식 소스 목록). 일정 화면이 페이지 CSS 로 따로 주던 간격도 여기로 모았다. */
+.aot-entry-container:not(.grid-stack) > .aot-entry-item + .aot-entry-item {
+    margin-top: var(--aot-space-1);
 }
 
 /* Ensure .row classes used as entry items do not break out of bounds via negative margins */

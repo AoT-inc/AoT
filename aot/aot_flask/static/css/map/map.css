@@ -95,8 +95,10 @@
   right: 0 !important;
   bottom: 0 !important;
   z-index: var(--aot-z-overlay) !important; /* Above navbar; container is reparented to <body> in JS */
-  height: 100dvh !important;
-  width: 100vw !important;
+  /* 크기는 위 네 변(top/right/bottom/left: 0)이 정한다. 예전의 `width: 100vw;
+     height: 100dvh` 는 페이지에 CSS zoom 이 걸리면 배율이 한 번 더 곱해져 화면을
+     넘겼다(2026-09-11 실측, 125%: 화면 1280×900 에 지도 1600×1125). 네 변은
+     배율과 무관하게 화면에 맞고, iOS 에서 100vh 가 주소창만큼 넘치는 문제도 없다. */
   background: #fff;
 }
 
@@ -471,7 +473,7 @@ body.aot-map-fullscreen-active .grid-stack-item {
 
 /* ── 위치 고르기 전용 화면(location_option) ─────────────────────────────
    지도가 화면 남은 높이를 통째로 쓴다(65px 은 위 도구 줄). */
-.loc-map-stage { height: calc(100vh - 65px); }
+.loc-map-stage { height: calc(100 * var(--aot-vh) - 65px); }
 
 .loc-map-canvas {
   width: 100%;
@@ -674,7 +676,7 @@ body.aot-map-fullscreen-active .grid-stack-item {
   bottom: 120px !important;
   margin-bottom: 0 !important;
   /* Height grows with content; capped so it doesn't overflow the map */
-  max-height: 50vh !important;
+  max-height: calc(50 * var(--aot-vh)) !important;
   z-index: 10 !important;
   overflow-y: auto;
   box-sizing: border-box;
@@ -1599,7 +1601,7 @@ body.aot-map-fullscreen-active .grid-stack-item {
        child is an <img max-width:100%> collapses (circular width dependency),
        which squeezed the VWorld logo to ~half its width. */
     width: max-content;
-    max-width: min(260px, calc(100vw - 80px));
+    max-width: min(260px, calc(100 * var(--aot-vw) - 80px));
     box-sizing: border-box;
     background: var(--panel-bg-rgba, rgba(255, 255, 255, 0.95));
     border: 1px solid var(--aot-border-light);

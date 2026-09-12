@@ -1,51 +1,45 @@
+{#- 서버 flash 메시지는 세션 전역 큐다 — 어느 라우트에서 flash() 했든, 그 다음
+    렌더되는 페이지가 이 include 를 가지고 있으면 여기서 뜬다. 그래서 "이 페이지
+    전용" 배너가 아니라 전역 통지이며, 다른 모든 피드백과 마찬가지로 표준 토스트
+    (window.showToast, layout.html) 로 떠야 한다. 지면에 고정되는 alert 박스로
+    렌더하면 페이지마다 다른 자리에서 다른 모양으로 나타나고, hide_alert_* 설정도
+    두 경로(alert 박스 vs 토스트)로 따로 관리해야 했다. -#}
 {%- with errors = get_flashed_messages(category_filter=["success"]) -%}
   {%- if errors and not hide_alert_success %}
-    <div class="alert alert-success">
-      <span class="close" data-dismiss="alert" aria-label="close">&times;</span>
-      <ul>
-        {%- for msg in errors %}
-          <li>{{_('Success')}}: {{msg}}</li>
-        {%- endfor %}
-      </ul>
-    </div>
+    <script>
+      {%- for msg in errors %}
+      window.showToast({{ (_('Success') ~ ': ' ~ msg) | tojson }}, 'success');
+      {%- endfor %}
+    </script>
   {%- endif -%}
 {%- endwith -%}
 
 {%- with errors = get_flashed_messages(category_filter=["info"]) -%}
   {%- if errors and not hide_alert_info %}
-    <div class="alert alert-info">
-      <span class="close" data-dismiss="alert" aria-label="close">&times;</span>
-      <ul>
-        {%- for msg in errors %}
-          <li>{{_('Info')}}: {{msg}}</li>
-        {%- endfor %}
-      </ul>
-    </div>
+    <script>
+      {%- for msg in errors %}
+      window.showToast({{ (_('Info') ~ ': ' ~ msg) | tojson }}, 'info');
+      {%- endfor %}
+    </script>
   {%- endif -%}
 {%- endwith -%}
 
 {%- with errors = get_flashed_messages(category_filter=["warning"]) -%}
   {%- if errors and not hide_alert_warning %}
-    <div class="alert alert-warning">
-      <span class="close" data-dismiss="alert" aria-label="close">&times;</span>
-      <ul>
-        {%- for msg in errors %}
-          <li>{{_('Warning')}}: {{msg}}</li>
-        {%- endfor %}
-      </ul>
-    </div>
+    <script>
+      {%- for msg in errors %}
+      window.showToast({{ (_('Warning') ~ ': ' ~ msg) | tojson }}, 'warning');
+      {%- endfor %}
+    </script>
   {%- endif -%}
 {%- endwith -%}
 
 {%- with errors = get_flashed_messages(category_filter=["error"]) -%}
   {%- if errors and not hide_alert_warning %}
-    <div class="alert alert-danger">
-      <span class="close" data-dismiss="alert" aria-label="close">&times;</span>
-      <ul>
-        {%- for msg in errors %}
-          <li>{{_('Error')}}: {{msg}}</li>
-        {%- endfor %}
-      </ul>
-    </div>
+    <script>
+      {%- for msg in errors %}
+      window.showToast({{ (_('Error') ~ ': ' ~ msg) | tojson }}, 'error');
+      {%- endfor %}
+    </script>
   {%- endif -%}
 {%- endwith -%}

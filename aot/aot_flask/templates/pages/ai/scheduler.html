@@ -9,32 +9,11 @@
 {#- 같은 5.11.5 를 이미 반입해 두고도 CDN 에서 받고 있었다. -#}
 <link href="{{ url_for('static', filename='vendor/fullcalendar-5.11.5/main.min.css') }}" rel="stylesheet">
 <link href="{{ url_for('static', filename='css/pages/scheduler.css') }}" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/aot-settings.css') }}" />
 <script src="{{ url_for('static', filename='vendor/fullcalendar-5.11.5/main.min.js') }}"></script>
-<style>
-/* FullCalendar minimal overrides only */
-.fc { font-family: var(--aot-font-family); }
-.fc .fc-toolbar-title { font-size: 1.1rem; font-weight: 700; }
-.fc .fc-button { border-radius: 16px !important; font-size: 0.85rem; padding: 4px 12px; }
-.fc .fc-button-primary { background-color: var(--primary, #F2D524); border-color: var(--primary, #F2D524); color: #000; }
-.fc .fc-button-primary:hover { background-color: #EBCF21; border-color: #EBCF21; }
-.fc .fc-button-primary:not(:disabled).fc-button-active { background-color: #d4b91e; border-color: #d4b91e; }
-.fc .fc-daygrid-day-number, .fc .fc-col-header-cell-cushion { font-size: 0.85rem; }
-.fc-event-draft { background: rgba(254,166,11,0.15) !important; border: 2px dashed #FEA60B !important; color: var(--aot-color-warning, #FEA60B) !important; }
-.fc-event-pending { background: rgba(2,154,207,0.2) !important; border-color: #029ACF !important; }
-.fc-event-running { background: rgba(150,192,100,0.25) !important; border-color: #96C064 !important; }
-.fc-event-completed { background: rgba(150,192,100,0.1) !important; border-color: #96C064 !important; opacity: 0.7; }
-.fc-event-failed { background: rgba(223,83,83,0.15) !important; border-color: #DF5353 !important; }
-.fc-event-archived { opacity: 0.4; }
-
-/* Device Timeline */
-#device-timeline-container { height: 400px; border-radius: 24px; overflow: hidden; }
-.vis-timeline { border: none !important; }
-.vis-item { border-radius: 8px !important; }
-</style>
+{#- 달력·타임라인 덮어쓰기는 pages/scheduler.css 로 옮겼다(색은 토큰, 2026-09-10). -#}
 <!-- Vis-Timeline -->
-{#- vis-timeline 7.7.3 반입본. **ai_scheduler.html 은 8.5.4 를 쓴다** —
-   두 화면이 서로 다른 판을 쓰고 있어 우선 각자 쓰던 판 그대로 로컬로만
-   옮겼다. 통합하려면 이 화면을 8 에서 실제로 확인한 뒤에 해야 한다. -#}
+{#- vis-timeline 7.7.3 반입본(로컬 고정판). -#}
 <link href="{{ url_for('static', filename='vendor/vis-timeline-7.7.3/vis-timeline-graph2d.min.css') }}" rel="stylesheet" type="text/css" />
 <link href="{{ url_for('static', filename='css/ai/device-timeline.css') }}" rel="stylesheet" type="text/css" />
 <link href="{{ url_for('static', filename='css/aot-settings.css') }}" rel="stylesheet" type="text/css" />
@@ -76,75 +55,26 @@
         </div>
     </div>
 
-    {# 외부 AI 제어 요청 승인 대기. 승인 유효시간이 5분이라 아무도 안 보는
-       화면에 두면 그대로 만료된다 — 운영자가 이미 들르는 이 화면에 올린다.
-       전용 화면(AI 요청 및 조언)은 의견 원장·감사 로그까지 함께 본다. #}
-    {% include 'pages/ai/_mcp_pending_approvals.html' %}
-    <div class="text-right mb-3">
-        <a href="{{ url_for('routes_mcp_api.mcp_review_page') }}"
-           class="aot-modal-body-text">{{ _('AI Requests & Advice') }} &rarr;</a>
+    {# 제어 요청 승인과 AI 일정 제안은 AI → 요청 화면으로 옮겼다(2026-09-10). 결정할
+       것이 한 화면에 모여야 발견이 늦지 않는다 — 여기에는 한 줄로 알리고 그리로 보낸다. #}
+    <div class="aot-settings-card">
+        <div class="aot-settings-row">
+            <div class="aot-settings-label">{% if drafts %}{{ _('%(n)s schedule proposals are waiting under AI → Requests.', n=drafts|length) }}{% else %}{{ _('Control requests and AI schedule proposals are decided under AI → Requests.') }}{% endif %}</div>
+            <div class="aot-settings-control">
+                <a class="btn aot-pill-btn aot-pill-btn-secondary" href="{{ url_for('routes_ai_agent.page_ai_dashboard') }}">{{ _('Open requests') }}</a>
+            </div>
+        </div>
     </div>
 
-    <!-- AI Proposals -->
-    <div class="aot-modal-group-title">{{ _('AI Proposals') }}
-        {% if drafts %}
-        <span class="badge badge-pill badge-primary ml-1">{{ drafts|length }}</span>
-        {% endif %}
-    </div>
-
-    <div class="aot-vspace"></div>
-
-    {% if drafts %}
-    <div class="aot-entry-container">
-    {% for draft in drafts %}
-    <div class="grid-stack-item-content pause-background aot-entry-item">
-        <div class="aot-entry-content-item aot-col-icon">
-            <i class="sched-icon {% if draft.proposed_by == 'AI' %}fas fa-robot{% else %}fas fa-user{% endif %}"
-               title="{{ draft.proposed_by }}"></i>
-        </div>
-        <div class="aot-entry-content-item aot-col-grow">
-            <input class="form-control aot-entry-name-input" disabled
-                   value="{{ draft.display_content }}" type="text">
-        </div>
-        <div class="aot-entry-content-item aot-col-grow">
-            <input class="form-control aot-entry-name-input" disabled
-                   value="{{ draft.display_location or _('General') }}" type="text">
-        </div>
-        <div class="aot-entry-content-item aot-col-btn">
-            <input class="form-control btn aot-pill-btn aot-pill-btn-primary"
-                   type="button"
-                   value="{{ _('Approve') }}"
-                   onclick="approveJob('{{ draft.id }}')">
-        </div>
-        <div class="aot-entry-content-item aot-col-btn">
-            <input class="form-control btn aot-pill-btn aot-pill-btn-secondary"
-                   type="button"
-                   value="{{ _('Reject') }}"
-                   onclick="rejectJob('{{ draft.id }}')">
-        </div>
-        <div class="aot-entry-content-item aot-col-icon">
-            <a class="btn p-0 sched-icon-btn"
-               data-toggle="modal" data-target="#modal_proposal_{{ draft.id }}">
-                <i class="fas fa-cog sched-icon-sm" title="{{ _('Details') }}"></i>
-            </a>
-        </div>
-    </div>
-    {% endfor %}
-    </div>
-    {% else %}
-    <div class="inactive-background text-center py-4 sched-empty">
-        <p class="text-muted mb-0">{{ _('No pending proposals.') }}</p>
-    </div>
-    {% endif %}
-
-    <div class="aot-vspace-lg"></div>
+    {#- 2026-09-11: 여기 있던 빈 `.aot-vspace-lg`(32px)가 아래 구획 제목의
+        자체 위 여백(1.6rem=25.6px)과 함께 쌓여 카드 → "Active Jobs" 사이가
+        73px까지 벌어져 있었다(사용자 지적). 구획 제목은 이미 자기 여백을
+        가지므로(aot-base-ui.css 의 `.aot-vspace` 주석: "새 화면에서는 이
+        클래스를 쓰지 말고 구획에 margin을 줄 것") 빈 칸을 지운다. -#}
 
     <!-- Active Jobs -->
-    <div class="aot-modal-group-title">{{ _('Active Jobs') }}
-        {% if active_jobs %}
-        <span class="badge badge-pill badge-primary ml-1">{{ active_jobs|length }}</span>
-        {% endif %}
-    </div>
+    {#- 건수는 사실이지 판정이 아니다 — 파란 알약 대신 제목 옆 글자로(요청 화면과 같다). -#}
+    <div class="aot-modal-group-title">{{ _('Active Jobs') }}{% if active_jobs %}<span class="aot-appr-count">{{ active_jobs|length }}</span>{% endif %}</div>
 
     <div class="aot-vspace"></div>
 
@@ -161,7 +91,7 @@
                    value="{{ job.display_location or _('General') }}" type="text">
         </div>
         <div class="aot-entry-content-item aot-col-btn">
-            <input class="form-control btn btn-primary btn-block aot-pill-btn"
+            <input class="form-control btn btn-block aot-pill-btn aot-pill-btn-secondary"
                    type="button" disabled
                    value="{{ state_label(job.state) }}">
         </div>
@@ -200,12 +130,19 @@
     
     <div class="aot-vspace"></div>
     
-    <div class="aot-entry-container sched-panel">
+    {#- 화면 문구는 번역해 data-t-* 로 넘긴다 — 번들 JS 는 번역 카탈로그를 읽지 않는다.
+        폰 목록은 면(sched-panel) 밖에 둔다 — 공용 설정 카드라, 면 안에 넣으면 면의 안쪽
+        여백만큼 글자가 페이지 정렬선(31)에서 밀려났다(실측 55). -#}
+    <div class="aot-entry-container sched-panel d-none d-md-block">
         <!-- Desktop View -->
-        <div id="device-timeline-container" class="d-none d-md-block"></div>
-        <!-- Mobile View -->
-        <div id="mobile-device-list" class="d-md-none"></div>
+        <div id="device-timeline-container"
+             data-t-failed="{{ _('Could not load the device timeline') }}"></div>
     </div>
+    <!-- Mobile View -->
+    <div id="mobile-device-list" class="d-md-none"
+         data-t-scheduled="{{ _('Scheduled') }}" data-t-runtime="{{ _('Runtime') }}"
+         data-t-empty="{{ _('No devices found.') }}"
+         data-t-failed="{{ _('Could not load the device timeline') }}"></div>
 
     <div class="aot-vspace-lg"></div>
 
@@ -236,9 +173,10 @@
                 {% elif job.state|lower == 'failed' %}inactive-background
                 {% else %}inactive-background{% endif %}
                 aot-entry-item">
-        <div class="aot-entry-content-item aot-col-icon">
-            <i class="sched-icon {% if job.state|lower == 'completed' %}fas fa-check-circle{% else %}fas fa-times-circle{% endif %}"></i>
-        </div>
+        {#- 완료·실패는 이미 바탕색(active/inactive-background)과 아래 상태
+            알약(state_label)이 글자로 말한다(§4-11) — 같은 사실을 체크·엑스
+            아이콘으로 세 번째로 말할 필요가 없다(이모지·아이콘 금지 규칙).
+            Active Jobs 목록도 이 칸 없이 내용부터 시작한다 — 두 목록을 맞춘다. -#}
         <div class="aot-entry-content-item aot-col-grow">
             <input class="form-control aot-entry-name-input" disabled
                    value="{{ job.display_content }}" type="text">
@@ -248,7 +186,7 @@
                    value="{{ job.display_location or _('General') }}" type="text">
         </div>
         <div class="aot-entry-content-item aot-col-btn">
-            <input class="form-control btn btn-primary btn-block aot-pill-btn"
+            <input class="form-control btn btn-block aot-pill-btn aot-pill-btn-secondary"
                    type="button" disabled
                    value="{{ state_label(job.state) }}">
         </div>
@@ -271,101 +209,6 @@
     </div>
     {% endif %}
 </main>
-
-<!-- Proposal Detail Modals -->
-{% for draft in drafts %}
-<div class="modal fade aot-option-modal" id="modal_proposal_{{ draft.id }}" tabindex="-1" role="dialog" aria-hidden="true">
-    <div class="modal-dialog modal-xl aot-modal-dialog" role="document">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">{{ _('Proposal Details') }}</h5>
-                <button type="button" class="close" data-dismiss="modal" aria-label="{{ _('Close') }}">
-                    <span aria-hidden="true">&times;</span>
-                </button>
-            </div>
-            <div class="modal-body">
-                <div class="aot-modal-container">
-                    <div class="aot-modal-option-row">
-                        <label class="aot-modal-option-label">{{ _('Action Type') }}</label>
-                        <div class="aot-modal-option-control">
-                            <input type="text" class="form-control aot-modern-input" value="{{ action_type_label(draft.action_type) }}" readonly>
-                        </div>
-                    </div>
-                    <div class="aot-modal-option-row">
-                        <label class="aot-modal-option-label">{{ _('Proposed By') }}</label>
-                        <div class="aot-modal-option-control">
-                            <input type="text" class="form-control aot-modern-input" value="{{ draft.proposed_by }}" readonly>
-                        </div>
-                    </div>
-                    <div class="aot-modal-option-row">
-                        <label class="aot-modal-option-label">{{ _('Location') }}</label>
-                        <div class="aot-modal-option-control">
-                            <input type="text" class="form-control aot-modern-input" id="edit-location-{{ draft.id }}"
-                                   value="{{ draft.display_location or '' }}"
-                                   placeholder="{{ _('e.g. 3-1, Zone A') }}"
-                                   {{ '' if draft.display_editable else 'readonly' }}>
-                        </div>
-                    </div>
-                    <div class="aot-modal-option-row">
-                        <label class="aot-modal-option-label">{{ _('Content') }}</label>
-                        <div class="aot-modal-option-control">
-                            <input type="text" class="form-control aot-modern-input" id="edit-content-{{ draft.id }}"
-                                   value="{{ draft.display_content }}"
-                                   {{ '' if draft.display_editable else 'readonly' }}>
-                        </div>
-                    </div>
-                    <div class="aot-modal-option-row">
-                        <label class="aot-modal-option-label">{{ _('Worker') }}</label>
-                        <div class="aot-modal-option-control">
-                            <input type="text" class="form-control aot-modern-input" id="edit-worker-{{ draft.id }}"
-                                   value="{{ draft.display_worker or '' }}"
-                                   {{ '' if draft.display_editable else 'readonly' }}>
-                        </div>
-                    </div>
-                    {% if draft.display_schedule_time %}
-                    <div class="aot-modal-option-row">
-                        <label class="aot-modal-option-label">{{ _('Schedule Time') }}</label>
-                        <div class="aot-modal-option-control">
-                            <input type="datetime-local" class="form-control aot-modern-input" id="edit-time-{{ draft.id }}"
-                                   value="{{ draft.display_schedule_time.replace(' ', 'T') }}"
-                                   {{ '' if draft.display_editable else 'readonly' }}>
-                            {% if draft.display_tz %}<small class="form-text text-muted">{{ _('Device-local time') }} · {{ draft.display_tz }}</small>{% endif %}
-                        </div>
-                    </div>
-                    {% endif %}
-                    {% if draft.duration_sec %}
-                    <div class="aot-modal-option-row">
-                        <label class="aot-modal-option-label">{{ _('Duration') }}</label>
-                        <div class="aot-modal-option-control">
-                            <input type="text" class="form-control aot-modern-input" value="{{ (draft.duration_sec // 60) }} {{ _('min') }}" readonly>
-                        </div>
-                    </div>
-                    {% endif %}
-                </div>
-                {% if draft.reasoning %}
-                <div class="aot-modal-group-title">{{ _('Reasoning') }}</div>
-                <div class="aot-modal-container">
-                    <div class="aot-modal-option-row aot-full-width-row">
-                        <label class="aot-modal-option-label">{{ _('Reasoning') }}</label>
-                        <div class="aot-modal-option-control">
-                            <textarea class="form-control aot-modern-input aot-input-prose" rows="3" readonly>{{ draft.reasoning }}</textarea>
-                        </div>
-                    </div>
-                </div>
-                {% endif %}
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn aot-pill-btn aot-pill-btn-danger mr-auto" onclick="rejectJob('{{ draft.id }}')">{{ _('Reject') }}</button>
-                <button type="button" class="btn aot-pill-btn aot-pill-btn-secondary" data-dismiss="modal">{{ _('Close') }}</button>
-                {% if draft.display_editable %}
-                <button type="button" class="btn aot-pill-btn aot-pill-btn-secondary" onclick="saveJob('{{ draft.id }}')">{{ _('Save') }}</button>
-                {% endif %}
-                <button type="button" class="btn aot-pill-btn aot-pill-btn-primary" onclick="approveJob('{{ draft.id }}')">{{ _('Approve') }}</button>
-            </div>
-        </div>
-    </div>
-</div>
-{% endfor %}
 
 <!-- Active Job Detail Modals -->
 {% for job in active_jobs %}
@@ -568,17 +411,19 @@
             <div class="modal-body">
                 <!-- Tabs -->
                 <div class="nav d-flex flex-wrap mb-3" id="taskModalTabs" role="tablist">
-                    <button type="button" class="btn aot-pill-btn aot-pill-btn-primary flex-fill mr-2" id="smart-tab" data-toggle="tab" href="#tab-smart" role="tab">
-                        {{ _('Smart AI') }}
-                    </button>
-                    <button type="button" class="btn aot-pill-btn aot-pill-btn-secondary flex-fill" id="manual-tab" data-toggle="tab" href="#tab-manual" role="tab">
+                    {#- 직접 입력이 먼저다 — AI 없이도 쓰는 화면이다(내장 AI 가 꺼져 있으면
+                        AI 탭은 쓸 수 없다). 2026-09-10 기본 탭을 AI 에서 직접 입력으로 바꿨다. -#}
+                    <button type="button" class="btn aot-pill-btn aot-pill-btn-primary flex-fill mr-2" id="manual-tab" data-toggle="tab" href="#tab-manual" role="tab">
                         {{ _('Manual') }}
+                    </button>
+                    <button type="button" class="btn aot-pill-btn aot-pill-btn-secondary flex-fill" id="smart-tab" data-toggle="tab" href="#tab-smart" role="tab">
+                        {{ _('Smart AI') }}
                     </button>
                 </div>
 
                 <div class="tab-content">
                     <!-- Smart Tab -->
-                    <div class="tab-pane fade show active" id="tab-smart" role="tabpanel">
+                    <div class="tab-pane fade" id="tab-smart" role="tabpanel">
                         <div class="aot-modal-container">
                             <div class="aot-modal-option-row">
                                 <label class="aot-modal-option-label">{{ _('AI Agent') }}</label>
@@ -620,7 +465,7 @@
                     </div>
 
                     <!-- Manual Tab -->
-                    <div class="tab-pane fade" id="tab-manual" role="tabpanel">
+                    <div class="tab-pane fade show active" id="tab-manual" role="tabpanel">
                         <form id="addTaskForm">
                             <div class="aot-modal-container">
                                 <div class="aot-modal-option-row">
@@ -719,11 +564,15 @@
                 </div>
             </div>
             <div class="modal-footer">
+                {#- AI 탭 · 직접 입력 탭이 각각 [질문하기]/[저장] 하나만 보인다(탭을
+                    바꾸면 d-none 토글, 절대 함께 뜨지 않는다). 강조는 마지막(저장)
+                    하나만 둔다 — 질문하기가 뜨는 자리에서도 오른쪽 끝이라는 자리가
+                    권하는 동작임을 말한다. -#}
                 <button type="button" class="btn aot-pill-btn aot-pill-btn-secondary" data-dismiss="modal">{{ _('Close') }}</button>
-                <button type="button" class="btn aot-pill-btn" id="btnAskAI" onclick="askAI()">
+                <button type="button" class="btn aot-pill-btn aot-pill-btn-secondary d-none" id="btnAskAI" onclick="askAI()">
                     {{ _('Ask AI') }}
                 </button>
-                <button type="button" class="btn aot-pill-btn aot-pill-btn-primary d-none" id="btnSaveTask" onclick="submitTask()">
+                <button type="button" class="btn aot-pill-btn aot-pill-btn-primary" id="btnSaveTask" onclick="submitTask()">
                     {{ _('Save') }}
                 </button>
             </div>
@@ -874,21 +723,12 @@ function apiCall(url, method, data, onSuccess) {
         error: function(xhr) {
             var msg = {{ _("Error")|tojson }};
             try { msg = JSON.parse(xhr.responseText).error || msg; } catch(e) {}
-            alert(msg);
+            if (window.showToast) { window.showToast(msg, 'error'); }
         }
     });
 }
 
-function approveJob(jobId) {
-    if (!confirm({{ _("Approve this job?")|tojson }})) return;
-    apiCall('/api/v1/scheduler/approve/' + jobId, 'POST', {});
-}
-
-function rejectJob(jobId) {
-    var feedback = prompt({{ _("Rejection reason (optional):")|tojson }});
-    if (feedback === null) return;
-    apiCall('/api/v1/scheduler/reject/' + jobId, 'POST', { feedback: feedback });
-}
+/* 일정 제안 승인·거절은 AI → 요청 화면으로 옮겼다(2026-09-10). */
 
 function saveJob(jobId) {
     var data = {};
@@ -909,16 +749,20 @@ function saveJob(jobId) {
     apiCall('/api/v1/scheduler/jobs/' + jobId, 'PUT', data);
 }
 
+/* 브라우저 prompt·alert 대신 앱 공용 확인창과 알림을 쓴다. 취소 사유는 선택이었다. */
 function deleteJob(jobId) {
-    var reason = prompt({{ _("Cancellation reason (optional):")|tojson }});
-    if (reason === null) return;
-    apiCall('/api/v1/scheduler/jobs/' + jobId, 'DELETE', { reason: reason });
+    window.aotConfirm({{ _("Cancel this task?")|tojson }}, function () {
+        apiCall('/api/v1/scheduler/jobs/' + jobId, 'DELETE', {});
+    });
 }
 
 function askAI() {
     var agentId = $('#smartAgent').val();
     var command = $('#smartCommand').val();
-    if (!command) return alert({{ _('Please enter a command')|tojson }});
+    if (!command) {
+        if (window.showToast) { window.showToast({{ _('Please enter a command')|tojson }}, 'warning'); }
+        return;
+    }
 
     var btn = $('button[onclick="askAI()"]');
     var originalHtml = btn.html();
@@ -936,13 +780,14 @@ function askAI() {
             $('#smartResult').removeClass('d-none');
             $('#aiInsight').val(data.insight);
             var actionsHtml = '<ul class="mb-0 pl-3">';
+            // 대상 UUID 는 싣지 않는다. 설명은 모델이 쓴 글이라 이스케이프한다.
             data.proposed_actions.forEach(function(a) {
-                actionsHtml += '<li>' + a.description + ' (Target: ' + a.target_id + ')</li>';
+                actionsHtml += '<li>' + $('<div>').text(a.description || '').html() + '</li>';
             });
             actionsHtml += '</ul>';
             $('#aiProposedActions').html(actionsHtml);
-        } else {
-            alert({{ _('Error: ')|tojson }} + data.message);
+        } else if (window.showToast) {
+            window.showToast({{ _('Error: ')|tojson }} + (data.message || ''), 'error');
         }
     })
     .catch(error => {
@@ -1003,16 +848,14 @@ document.addEventListener('DOMContentLoaded', function() {
         timeZone: 'local',
         events: '/api/v1/scheduler/timeline',
         eventClick: function(info) {
-            var props = info.event.extendedProps;
-            // Device-local time (confirmed anchor policy) + explicit tz label,
-            // so a viewer in a different timezone always sees where/when the
-            // job fires at the device's own location.
-            var deviceLocal = (window.AoTTz && props.tz)
-                ? AoTTz.formatDevice(info.event.start, props.tz, { fmt: 'datetime' }) + ' (' + props.tz + ')'
-                : '';
-            alert({{ _("State: ")|tojson }} + props.state + '\n' + {{ _("Type: ")|tojson }} + props.action_type + '\n' + {{ _("Target: ")|tojson }} + props.target_id + '\n' + {{ _("By: ")|tojson }} + props.proposed_by
-                + (deviceLocal ? '\n' + {{ _("Local time: ")|tojson }} + deviceLocal : '')
-                + '\n' + {{ _("Reasoning: ")|tojson }} + (props.reasoning || '-'));
+            // 목록과 같은 상세 창을 연다. 예전에는 브라우저 alert 에 대상 UUID·내부 종류
+            // 이름(control_output 등)을 그대로 적었다. 제안(DRAFT)은 요청 화면에서 결정한다.
+            var id = info.event.id;
+            var m = document.getElementById('modal_job_' + id) || document.getElementById('modal_history_job_' + id);
+            if (m) { $(m).modal('show'); return; }
+            if (info.event.extendedProps.state === 'DRAFT') {
+                window.location.href = {{ url_for('routes_ai_agent.page_ai_dashboard')|tojson }} + '#proposals';
+            }
         },
         eventDidMount: function(info) {
             var props = info.event.extendedProps;
@@ -1036,8 +879,7 @@ document.addEventListener('DOMContentLoaded', function() {
     try {
         var _axisTz = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
         var _cap = document.createElement('div');
-        _cap.className = 'text-muted small';
-        _cap.style.cssText = 'margin-top:4px;text-align:right;';
+        _cap.className = 'aot-settings-sub text-right mt-1';
         _cap.textContent = {{ _("Calendar shown in your timezone")|tojson }} + ': ' + _axisTz;
         calendarEl.parentNode.insertBefore(_cap, calendarEl.nextSibling);
     } catch (e) {}

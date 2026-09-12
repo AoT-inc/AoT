@@ -82,7 +82,7 @@ ${a}`;let f=e.options.color||e.options.fillColor;!f&&e.feature&&e.feature.proper
                             <h5 class="modal-title font-weight-bold" id="geo-binding-title">${e}</h5>
                             <button type="button" class="close" data-dismiss="modal">&times;</button>
                         </div>
-                        <div class="modal-body p-4" id="geo-binding-body" style="max-height: 60vh;"></div>
+                        <div class="modal-body p-4" id="geo-binding-body" style="max-height: calc(60 * var(--aot-vh));"></div>
                     </div>
                 </div>
             </div>

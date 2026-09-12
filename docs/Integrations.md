@@ -34,14 +34,14 @@ Before any user can connect an account, an administrator must configure an insta
 </tr>
 <tr>
 <td>Google Picker API Key</td>
-<td>Optional. Only needed to enable the Google Drive source (file picker) in the AI Library — a separate, non-secret Cloud Console API key with the Picker API enabled. Not the OAuth Client Secret.</td>
+<td>Optional. Only needed to enable the Google Drive source (file picker) in the AI Knowledge — a separate, non-secret Cloud Console API key with the Picker API enabled. Not the OAuth Client Secret.</td>
 </tr>
 </tbody>
 </table>
 
 These three values can also be supplied instance-wide via environment variables (`GOOGLE_OAUTH_CLIENT_ID`, `GOOGLE_OAUTH_CLIENT_SECRET`, `OAUTH_PUBLIC_BASE_URL`), which take precedence over the fields above — useful when the same client is shared across a fleet of servers via deployment config. When a value comes from the environment, the page marks it as such.
 
-Connecting an account requests these scopes: full **Calendar** access (to read and write events), **email** (to label the connected account), **openid**, and Drive access limited to files the user explicitly picks (`drive.file`, used only by the AI Library's Google Drive source, not by calendar sync).
+Connecting an account requests these scopes: full **Calendar** access (to read and write events), **email** (to label the connected account), **openid**, and Drive access limited to files the user explicitly picks (`drive.file`, used only by the AI Knowledge's Google Drive source, not by calendar sync).
 
 ---
 

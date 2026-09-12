@@ -15,7 +15,7 @@ from aot.ai.services.ai_facility_learning_service import AIFacilityLearningServi
 from aot.ai.services.ai_onboarding_service import AIOnboardingService
 from aot.databases.models import AIHistory, db, Output, AIEntry, MCPServer
 from aot.databases.models.scheduler import SchedulerJobMeta, SchedulerAuditLog
-from aot.utils.device_helpers import get_device_icon, get_device_runtime
+from aot.utils.device_helpers import get_device_runtime
 import uuid
 import json
 import logging
@@ -260,6 +260,21 @@ def _control_proposal_message(actions, fallback):
         return fallback
 
 
+# 내장 모델을 부르지 않는 경로 — 모델이 꺼져 있어도 열려 있어야 한다(아래 가드 참조).
+_OPEN_WITHOUT_MODEL = frozenset({
+    # AI → 요청: 조언 원장 검토(사람이 한다)
+    'routes_ai_api.ai_advice_list_endpoint',
+    'routes_ai_api.ai_advice_accept',
+    'routes_ai_api.ai_advice_reject',
+    # AI → 기록: 오류 보고 목록 · 고친 내용을 지식에 반영(DB 기록만, 모델 호출 없음)
+    'routes_ai_api.ai_list_errors',
+    'routes_ai_api.ai_update_knowledge',
+    # 일정 화면의 장치 타임라인 — AI 기능이 아니라 출력 장치와 예약을 보여 줄 뿐이다.
+    # 내장 AI 가 꺼진 설치에서 403 으로 타임라인이 비었다(2026-09-10 실측).
+    'routes_ai_api.get_device_timeline',
+})
+
+
 @blueprint.before_request
 def check_ai_enabled():
     if not AI_AGENT_ENABLED:
@@ -267,6 +282,12 @@ def check_ai_enabled():
     ai_settings = AIGlobalSettings.query.first()
     if ai_settings and not ai_settings.ai_enabled:
         return jsonify({'error': 'AI service is disabled'}), 403
+    # 조언 원장의 사람 검토(목록·채택·기각)는 내장 AI 가 돌지 않아도 열려 있어야 한다.
+    # 의견은 외부 AI(MCP)·하위 노드도 내고, 검토하는 것은 사람이다 — 내장 모델이 꺼져
+    # 있다고 403 을 주면 AI → 요청 화면이 "기다리는 조언 없음" 으로 거짓말을 했다
+    # (2026-09-10 실측). 내장 모델을 **실행**하는 경로만 아래 조건을 받는다.
+    if request.endpoint in _OPEN_WITHOUT_MODEL:
+        return None
     if not ai_runtime_state.ai_autonomy_enabled(ai_settings):
         return jsonify({'error': 'AI model is not running yet. Start it on the AI page.'}), 403
 
@@ -1195,8 +1216,12 @@ def get_device_timeline():
                 # 그룹 추가
                 timeline_data['groups'].append({
                     'id': device.unique_id,
-                    'content': f"{get_device_icon(device.type)} {device.name}",
-                    'className': f'device-{device.type}'
+                    # 이름만 싣는다 — 장치 종류별 이모지 아이콘을 붙이던 것을 뺐다(아이콘 금지 규칙).
+                    'content': device.name,
+                    # 예전에는 'className': f'device-{device.type}' 이었는데 Output 에는
+                    # type 속성이 없어 **모든 장치가** 예외로 건너뛰어졌다 — 장치 106대에
+                    # 그룹 0개(2026-09-10 실측, 그전에는 403 에 가려 드러나지 않았다).
+                    # 종류별 색 띠도 걷었으므로 클래스를 싣지 않는다.
                 })
                 
                 # 스케줄 아이템 추가
@@ -1211,7 +1236,7 @@ def get_device_timeline():
                         'group': device.unique_id,
                         'start': serialize_ts(schedule.schedule_time),
                         'end': serialize_ts(schedule.end_time) if schedule.end_time else None,
-                        'content': 'Scheduled',
+                        'content': _('Scheduled'),  # 화면에 그대로 나가는 글자라 번역한다
                         'className': 'status-scheduled',
                         'type': 'range'
                     })

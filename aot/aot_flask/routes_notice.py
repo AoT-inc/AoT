@@ -14,6 +14,7 @@ from bs4 import BeautifulSoup
 from flask import (Blueprint, current_app, flash, jsonify, redirect,
                     render_template, request, send_file, url_for)
 from flask_babel import gettext
+from sqlalchemy import or_
 _ = gettext
 
 from aot.config import PATH_NOTICE_ATTACHMENTS
@@ -76,8 +77,20 @@ def page_notice():
     page = request.args.get('page', 1, type=int)
     per_page = 15
 
-    query = _visible_posts_query().order_by(
-        NoticePost.pinned.desc(), NoticePost.date_time.desc())
+    # 검색어 하나로 좁힌다(2026-09-11 사용자 지시: 제목 아래에 검색창) —
+    # /notes·/plots 와 같은 방식. 제목·본문·분류를 한 번에 훑는다. 검색이
+    # 없으면 목록 전부(기존 동작 그대로).
+    q = (request.args.get('q') or '').strip()
+
+    query = _visible_posts_query()
+    if q:
+        like = '%{0}%'.format(q)
+        query = query.filter(or_(
+            NoticePost.title.ilike(like),
+            NoticePost.body.ilike(like),
+            NoticePost.category.ilike(like),
+        ))
+    query = query.order_by(NoticePost.pinned.desc(), NoticePost.date_time.desc())
     pagination = query.paginate(page=page, per_page=per_page, error_out=False)
 
     posts_info = []
@@ -98,6 +111,7 @@ def page_notice():
                             form_notice_options=form_notice_options,
                             pagination=pagination,
                             page=page,
+                            q=q,
                             category_list=utils_notice.notice_category_list(),
                             can_create=utils_general.user_has_permission('edit_settings', silent=True),
                             is_admin=utils_general.user_is_admin())

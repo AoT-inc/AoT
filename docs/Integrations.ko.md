@@ -34,14 +34,14 @@
 </tr>
 <tr>
 <td>Google Picker API Key</td>
-<td>선택 항목. AI 라이브러리의 Google Drive 소스(파일 선택기)를 쓸 때만 필요한, 별도의 비-비밀(non-secret) Cloud Console API 키(Picker API 활성화)입니다. 위의 OAuth Client Secret과는 다른 값입니다.</td>
+<td>선택 항목. AI 지식의 Google Drive 소스(파일 선택기)를 쓸 때만 필요한, 별도의 비-비밀(non-secret) Cloud Console API 키(Picker API 활성화)입니다. 위의 OAuth Client Secret과는 다른 값입니다.</td>
 </tr>
 </tbody>
 </table>
 
 이 세 값은 환경 변수(`GOOGLE_OAUTH_CLIENT_ID`, `GOOGLE_OAUTH_CLIENT_SECRET`, `OAUTH_PUBLIC_BASE_URL`)로도 인스턴스 전역에 지정할 수 있으며, 이 경우 위 입력 필드보다 우선합니다 — 배포 설정을 통해 여러 서버가 같은 클라이언트를 공유할 때 유용합니다. 값이 환경 변수에서 온 경우 화면에 그렇게 표시됩니다.
 
-계정을 연결하면 다음 권한(scope)을 요청합니다: 이벤트를 읽고 쓰기 위한 **캘린더(Calendar)** 전체 접근, 연결된 계정을 표시하기 위한 **이메일(email)**, **openid**, 그리고 사용자가 직접 선택한 파일에만 한정된 Drive 접근(`drive.file`, 캘린더 동기화가 아니라 AI 라이브러리의 Google Drive 소스에서만 사용).
+계정을 연결하면 다음 권한(scope)을 요청합니다: 이벤트를 읽고 쓰기 위한 **캘린더(Calendar)** 전체 접근, 연결된 계정을 표시하기 위한 **이메일(email)**, **openid**, 그리고 사용자가 직접 선택한 파일에만 한정된 Drive 접근(`drive.file`, 캘린더 동기화가 아니라 AI 지식의 Google Drive 소스에서만 사용).
 
 ---
 

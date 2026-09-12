@@ -1411,6 +1411,87 @@ def daily_channel_stats(dm_row, start_str, end_str, tz,
             'dli_assumed': light_assumed}
 
 
+def _stitched_channel_stats(dm_row, start_str, end_str, tz, granularity,
+                            bucket_sec, sun_fn, want_stats):
+    """`daily_channel_stats(dm_row, ...)` 를 센서 교체 이력 위로 접는다.
+
+    구획의 대표 센서가 프로그램 도중 A→B 로 갈리면(비활성화 + 새 장치),
+    위치 마커는 **지금** 장치 하나만 기억한다(`GeoShape.device_id`). 그대로
+    조회하면 [환경] 차트가 A 가 유일했던 기간의 값을 통째로 잃는다 —
+    `gdd_accumulated`(plot_context)가 이미 겪은 것과 같은 결함이다.
+
+    `utils_series_stitch.slot_segments()` 로 그 자리의 교체 구간을 되짚어
+    구간마다 그 구간의 실제 측정값 행으로 따로 묻고, **같은 채널 항목
+    하나**로 `by_bucket` 을 합친다 — 채널 수가 늘어나면 안 된다
+    (`env_channel_series` 의 계약).
+
+    교체 이력이 없으면(구간 1개 이하) 기존 단일 장치 경로 그대로다.
+
+    원형(bearing) 채널은 접지 않는다. 섹터 다수결(`_circular_channel_stats`)
+    이라 구간을 병합하는 규칙이 선형 평균과 다르고, 이 결함의 실제 대상도
+    아니다(풍향계는 자리를 바꾸는 일이 드물고, 접어도 다수결이 왜곡될 수만
+    있다).
+    """
+    from aot.databases.models import DeviceMeasurements
+
+    channel, unit, measurement, _mf = _channel_info(dm_row)
+    if unit in CIRCULAR_UNITS:
+        return daily_channel_stats(dm_row, start_str, end_str, tz,
+                                   granularity=granularity,
+                                   bucket_sec=bucket_sec, sun_fn=sun_fn,
+                                   stats=want_stats)
+
+    from aot.aot_flask.utils import utils_series_stitch as stitch
+
+    segments = stitch.slot_segments(dm_row.device_id, dm_row.unique_id)
+    if not plot_context.segments_are_sequential(segments):
+        # 대지 기상대처럼 다중 점유인 슬롯은 지금도 바인딩이 둘 이상 열려
+        # 있을 수 있다 — 그 둘은 교체가 아니라 동시 활성(경합)이다. 그대로
+        # 접으면 다른 장치의 값이 이 채널 항목에 섞여 들어간다. 접합을
+        # 포기하고 단일 장치 경로로 돌아간다(GDD/DLI 와 같은 판단 —
+        # `plot_context.segments_are_sequential` 참조).
+        segments = []
+    if len(segments) < 2:
+        return daily_channel_stats(dm_row, start_str, end_str, tz,
+                                   granularity=granularity,
+                                   bucket_sec=bucket_sec, sun_fn=sun_fn,
+                                   stats=want_stats)
+
+    fmt = '%Y-%m-%dT%H:%M:%SZ'
+    start_dt = datetime.strptime(start_str, fmt)
+    end_dt = datetime.strptime(end_str, fmt)
+
+    merged_bucket = {}
+    assumed = False
+    for seg in segments:
+        if not seg['has_data']:
+            continue
+        seg_from = (max(start_dt, seg['valid_from'])
+                   if seg['valid_from'] else start_dt)
+        seg_to = min(end_dt, seg['valid_to']) if seg['valid_to'] else end_dt
+        if seg_from >= seg_to:
+            continue
+        seg_dm = DeviceMeasurements.query.filter_by(
+            unique_id=seg['measurement_id']).first()
+        if seg_dm is None:
+            continue
+        got = daily_channel_stats(seg_dm, seg_from.strftime(fmt),
+                                  seg_to.strftime(fmt), tz,
+                                  granularity=granularity,
+                                  bucket_sec=bucket_sec, sun_fn=sun_fn,
+                                  stats=want_stats)
+        if got is None:
+            continue
+        merged_bucket.update(got.get('by_bucket') or {})
+        assumed = assumed or bool(got.get('dli_assumed'))
+
+    if not merged_bucket:
+        return None
+    return {'device_id': dm_row.device_id, 'channel': channel, 'unit': unit,
+           'measurement': measurement, 'by_bucket': merged_bucket,
+           'dli_assumed': assumed or None}
+
+
 def _wanted_measurement(dm_row, wanted, scope=None):
     """이 채널을 일지에 실을 것인가 → bool.
 
@@ -1737,10 +1818,9 @@ def env_channel_series(device_ids, start_str, end_str, tz,
             except Exception:                                   # noqa: BLE001
                 logger.exception('journal: 감춘 채널 판정 실패(%s)', dm.device_id)
         _t0 = time.monotonic()
-        stats = daily_channel_stats(dm, start_str, end_str, tz,
-                                    granularity=granularity,
-                                    bucket_sec=bucket_sec, sun_fn=sun_fn,
-                                    stats=want_stats)
+        stats = _stitched_channel_stats(dm, start_str, end_str, tz,
+                                        granularity, bucket_sec, sun_fn,
+                                        want_stats)
         if stats is None:
             errors.append({'device_id': dm.device_id,
                            'channel': getattr(dm, 'channel', None),
@@ -2018,9 +2098,45 @@ def cover_light_factor(plot):
             'shade': bool(env.get('curtain_shade_enabled'))}
 
 
+def _collapse_zone_fallback(rows, fallback_rank):
+    """구역 폴백 후보끼리 같은 버킷·같은 측정값이 겹치면 **더 가까운 것
+    하나만** 남긴다(값이 있는 쪽 우선).
+
+    **평상시 동작이 아니라 장애 대응(failover)이다.** 정상적으로는 rank 0
+    (가장 가까운 후보) 만 데이터를 내 늘 그것이 남고, rank 1 은 rank 0 이
+    그 버킷에 값을 못 낸 경우(센서 교체·고장 등 비상 상황)에만 대신
+    나선다 — `_ZONE_FALLBACK_RANK` 독스트링 참조.
+
+    `fallback_rank` 에 없는 device_id(구획 자체에 실제로 설치된 센서)는
+    손대지 않는다 — 서로 다른 실제 설치를 하나로 접지 않는 것은
+    `measured_stage_targets` 의 "센서를 가로질러 평균하지 않는다" 와 같은
+    원칙이다.
+    """
+    if not fallback_rank:
+        return rows
+    groups, keep = {}, []
+    for row in rows:
+        did = row.get('device_id')
+        if did not in fallback_rank:
+            keep.append(row)
+            continue
+        groups.setdefault((row.get('measurement'), row.get('scope')),
+                          []).append(row)
+    for candidates in groups.values():
+        if len(candidates) == 1:
+            keep.append(candidates[0])
+            continue
+        candidates.sort(key=lambda r: fallback_rank.get(r.get('device_id'), 999))
+        # 둘 다 그 날 데이터가 없으면 가장 가까운 쪽의 "빈" 행을 남긴다 —
+        # 빈손으로 돌아서지 않는 것이 낫다(빈 행이 그 자체로 결측의 증거다).
+        keep.append(next((r for r in candidates if (r.get('samples') or 0) > 0),
+                         candidates[0]))
+    return keep
+
+
 def env_rows_by_bucket(series, labels, tz=None, bucket_sec=3600,
                        granularity='day', period_start=None, period_end=None,
-                       cover=None):
+                       cover=None, fallback_rank=None):
     """채널 시계열 → `{bucket_key: [env row, …]}`.
 
     값이 없는 버킷에도 **키를 만든다**(빈 리스트). 그래야 바깥에서 "그날은
@@ -2030,6 +2146,12 @@ def env_rows_by_bucket(series, labels, tz=None, bucket_sec=3600,
     내보내면 결측을 숨긴다** — 실측에서 24시간 중 7시간이 빈 채널의 평균이
     멀쩡한 숫자로 보였다(모듈 머리말). 화면은 `coverage_low` 인 행의 평균을
     "참고값" 으로 표시해야 한다.
+
+    `fallback_rank` — 구역 폴백 후보의 거리 순위(`_ZONE_FALLBACK_RANK` 의
+    값 하나, `{device_id: rank}`). 주어지면 `_collapse_zone_fallback` 으로
+    버킷마다 접는다. 호출부 넷(`build_journal_for_target`·`recent_env_trends`·
+    target-drift 추정·`measured_stage_targets`)이 전부 같은 규칙을 써야
+    일지 문서와 [환경] 카드가 같은 구획에 대해 다른 숫자를 보여주지 않는다.
     """
     out = {key: [] for key in labels}
     exp_cache = {}
@@ -2148,6 +2270,9 @@ def env_rows_by_bucket(series, labels, tz=None, bucket_sec=3600,
             })
 
     for key in out:
+        # DLI 파생 행까지 포함해 접는다 — 구역 폴백 후보의 일사 채널에서
+        # 나온 것도 같은 규칙을 받아야 한다.
+        out[key] = _collapse_zone_fallback(out[key], fallback_rank)
         # 이름순이 아니라 **중요도순**(`MEASUREMENT_ORDER`). 같은 측정값
         # 안에서는 실내를 먼저 두어 실외와 나란히 놓이게 한다 — 두 값을
         # 견주는 것이 이 표를 보는 이유다.
@@ -2587,113 +2712,27 @@ def notes_by_bucket(notes, labels, tz, granularity='day'):
 _NEAREST_M = {}
 
 
-#: 기간 안에 값이 있었는지 볼 때 장치당 최대 몇 채널까지 물을 것인가.
-#: 살아 있는 센서는 대개 첫 채널에서 바로 걸리고, 죽은 센서만 끝까지 간다.
-_PERIOD_PROBE_CHANNELS = 4
+#: 구역 폴백 후보의 거리 순위. `_plot_sensor_ids` 가 채우고
+#: `env_rows_by_bucket` 호출부가 읽어 `fallback_rank` 로 넘긴다.
+#: `{plot uuid: {device_id: rank}}` — rank 0 이 가장 가깝다. 기하 없는
+#: 구획(zone 전체를 그대로 쓰는 경우)은 거리를 모르므로 `None` 으로 남고,
+#: 그때는 접기 없이 기존처럼 전부 나란히 나온다.
+#:
+#: ⚠ **평상시 동작이 아니라 장애 대응(failover) 장치다.** 정상적으로는
+#: rank 0 하나만 계속 값을 내므로 그것만 쓰이고, rank 1(두 번째로 가까운
+#: 후보)은 평소엔 조용히 있다가 rank 0 이 **그 버킷(날짜)에** 값을 못 낸
+#: 경우(센서 교체·고장 등 비상 상황)에만 대신 나선다 — `_collapse_zone_fallback`
+#: 참조.
+_ZONE_FALLBACK_RANK = {}
+
+#: 구역 폴백 후보를 몇 개까지 실제로 조회할 것인가(가까운 순). 후보 하나당
+#: 채널 조회 비용이 그대로 붙으므로, 커버리지와 비용을 저울질해 정한 값이다
+#: — 가장 가깝고 두 번째로 가까운 것이 **둘 다** 어느 시점 무응답이었다면
+#: 그 구간은 여전히 비어 있다(받아들인 한계).
+_ZONE_FALLBACK_CANDIDATES = 2
 
 
-def _had_data_in_period(device_id, period):
-    """그 기간에 값을 낸 적이 있는가 → bool.
-
-    진단 채널(rssi·snr·배터리)은 **보지 않는다.** LoRaWAN 노드는 센서가 죽어도
-    배터리 전압만 계속 올리는 일이 있어서, 그것을 "값이 있다" 로 세면 빈 일지를
-    만든 센서를 그대로 다시 고르게 된다.
-
-    조회가 실패하면 **있는 것으로 본다**(fail-open) — 인플럭스가 흔들릴 때마다
-    같은 기간의 일지가 다른 센서로 만들어지면 문서가 재현되지 않는다.
-    """
-    from aot.databases.models import DeviceMeasurements
-    from aot.utils.influx import query_string
-
-    start_str, end_str = period
-    try:
-        rows = DeviceMeasurements.query.filter_by(device_id=device_id).all()
-    except Exception:
-        return True
-
-    looked = 0
-    for dm in rows:
-        if looked >= _PERIOD_PROBE_CHANNELS:
-            break
-        channel, unit, display, measure_filter = _channel_info(dm)
-        if unit is None or display in DIAGNOSTIC_MEASUREMENTS:
-            continue
-        looked += 1
-        try:
-            tables = query_string(unit, device_id, channel=channel,
-                                  measure=measure_filter, value='LAST',
-                                  start_str=start_str, end_str=end_str)
-        except Exception:
-            return True
-        for table in (tables or []):
-            for _rec in table.records:
-                return True
-    return False
-
-
-#: 폴백 후보를 몇 개까지 실제로 물어볼 것인가(가까운 순). 구역에 센서가 많은
-#: 설치에서 후보마다 인플럭스를 치면 문서 하나 만드는 데 그것만 수십 회가 된다.
-_FALLBACK_CANDIDATES = 6
-
-
-def _tail_period(period):
-    """기간의 **마지막 하루** → `(start_str, end_str)`. 못 구하면 None.
-
-    "기간에 값이 있었나" 만 보면 중간에 끊긴 센서가 그대로 뽑힌다(실측: 8/29~
-    9/4 일지에서 8/31에 죽은 센서가 앞의 사흘 때문에 통과했고, 뒤 나흘이 통째로
-    비었다). 사람이 보는 기준은 "이 기간을 **끝까지** 따라왔나" 라서, 끝자락을
-    따로 본다.
-    """
-    from datetime import datetime as _dt, timedelta as _td
-
-    fmt = '%Y-%m-%dT%H:%M:%SZ'
-    try:
-        start = _dt.strptime(period[0], fmt)
-        end = _dt.strptime(period[1], fmt)
-    except Exception:
-        return None
-    tail = max(start, end - _td(days=1))
-    return tail.strftime(fmt), period[1]
-
-
-def _pick_with_data(ranked, period):
-    """거리순 후보 → **그 기간의 값을 실제로 가진 것 중 가장 가까운** 하나.
-
-    ⚠ 판정 기준은 *오늘 살아 있는가* 가 아니라 **그 기간에 값이 있었는가** 다.
-    일지는 지나간 기간의 기록이라, 오늘 상태로 고르면 같은 기간의 문서가 만들
-    때마다 달라진다 — 위젯의 stale 규칙(`routes_geo_plot._live_first`)을 여기
-    그대로 쓰지 못하는 이유가 이것이다.
-
-    보는 순서는 **끝자락 → 기간 전체 → 거리**다. 끝까지 따라온 센서가 있으면
-    그중 가장 가까운 것, 없으면 기간 안에 값이라도 있던 것 중 가장 가까운 것,
-    그것도 없으면 그냥 최근접이다. 마지막 단계에서 빈손으로 돌아서지 않는 이유:
-    "이 센서로 봤는데 없었다" 가 "아무것도 안 봤다" 보다 낫고, 그래야 빈 일지가
-    고장을 가리키는 정보가 된다.
-
-    기간을 모르면(측정 목록처럼 기간이 없는 질문) 예전처럼 최근접이다.
-    """
-    if not period or len(ranked) < 2:
-        return ranked[0]
-
-    ranked = ranked[:_FALLBACK_CANDIDATES]
-    probes = []
-    for probe in (_tail_period(period), period):
-        # 하루보다 짧은 기간에서는 끝자락이 곧 기간이다 — 같은 것을 두 번
-        # 묻지 않는다.
-        if probe and probe not in probes:
-            probes.append(probe)
-    for probe in probes:
-        for did, dist in ranked:
-            try:
-                if _had_data_in_period(did, probe):
-                    return did, dist
-            except Exception:
-                logger.exception('journal: 기간 내 자료 유무 확인 실패')
-                return did, dist
-    return ranked[0]
-
-
-def _plot_sensor_ids(plot, with_weather=True, period=None):
+def _plot_sensor_ids(plot, with_weather=True):
     """구획이 참조할 센서 id → `(실내 set, 실외 set)`.
 
     실내 우선순위는 `sensors_for_plot()` 그대로(배타적 체인). **실외(기상)는
@@ -2714,8 +2753,9 @@ def _plot_sensor_ids(plot, with_weather=True, period=None):
            or list(found.get('in_bay') or [])
            or list(found.get('from_facility') or []))
     nearest_m = None
+    fallback_rank = None
     if not ids:
-        # ── 구역으로 내려갈 때는 **가장 가까운 하나**만 ──────────────────
+        # ── 구역으로 내려갈 때는 **가장 가까운 최대 2개**만 ──────────────
         # 지도 위젯이 그렇게 한다(`routes_geo_plot` → `nearest_devices`).
         # "이 구역에 있다" 는 이유만으로 전부 넣으면 한 구역에 든 구획들의
         # 일지가 서로 같은 문서가 된다 — 실측으로 21개 구획이 그 상태였고,
@@ -2726,31 +2766,40 @@ def _plot_sensor_ids(plot, with_weather=True, period=None):
         #   기록이라 오늘 죽은 센서가 그때는 값을 냈을 수 있다. 오늘 상태로
         #   과거 문서의 센서를 바꾸면 같은 기간의 일지가 만들 때마다 달라진다.
         #
-        # 고르는 기준은 거리 하나가 아니다 — **그 기간에 값이 있었던 것 중**
-        # 가장 가까운 것이다(`_pick_with_data`). 거리만 보면 무응답 센서를
-        # 골라 놓고 실내 행이 통째로 빈 일지가 나온다(실측 2026-09-04, 김제
-        # 3-2 청자5호: 최근접 35.8m 온습도계가 8/31 이후 무응답).
+        # 두 번째로 가까운 것을 함께 담는 이유는 "평소에 더 쓰겠다" 가 아니라
+        # **센서 교체·고장 대응**이다 — 실측 2026-09-12(김제 "콩 6구",
+        # zone 3-2): 하루 전 막 바인딩된 신규 센서가 최근접이라 그 하나로
+        # 고정되면서, 기간 조회 전체(88일)가 그 센서 하나에 묶여 09-11
+        # 이전이 통째로 비었다. 거리 하나로 "지금 기준 최근접" 을 기간
+        # 전체에 고정하지 않고, **버킷(날짜)마다** 가까운 순으로 데이터
+        # 있는 쪽을 쓰도록 `env_rows_by_bucket` 의 `fallback_rank` 접기로
+        # 넘긴다 — 실제 접는 규칙은 `_collapse_zone_fallback` 참조.
         zone_ids = list(found.get('from_zone') or [])
         if zone_ids:
             near = []
             try:
                 near = plot_context.nearest_devices(
-                    plot, set(zone_ids), limit=len(zone_ids)) or []
+                    plot, set(zone_ids),
+                    limit=_ZONE_FALLBACK_CANDIDATES) or []
             except Exception:
                 logger.exception('journal: 최근접 센서 조회 실패')
             if near:
-                did, dist = _pick_with_data(near, period)
-                ids = [did]
-                nearest_m = dist
+                ids = [did for did, _dist in near]
+                nearest_m = near[0][1]
+                fallback_rank = {did: rank
+                                 for rank, (did, _dist) in enumerate(near)}
             else:
                 # 기하가 없는 구획(시설 구획)은 "가깝다" 를 말할 수 없다 —
-                # 그때는 예전처럼 구역 전체를 쓴다(빈 손보다 낫다).
+                # 그때는 예전처럼 구역 전체를 쓴다(빈 손보다 낫다). 거리를
+                # 모르니 순위를 매길 수 없고, fallback_rank 는 None 으로
+                # 남아 접기 없이 전부 나란히 나온다.
                 ids = zone_ids
     outdoor = set(found.get('from_weather') or []) if with_weather else set()
     # 같은 장치가 양쪽에 잡히면(대지에 기상대만 있고 그것이 구역 센서로도
     # 걸리는 설치) **실내에서 뺀다** — 실외로 보는 편이 사실에 가깝고, 양쪽에
     # 두면 같은 값이 표에 두 번 나온다.
     _NEAREST_M[getattr(plot, 'unique_id', None)] = nearest_m
+    _ZONE_FALLBACK_RANK[getattr(plot, 'unique_id', None)] = fallback_rank
     return set(ids) - outdoor, outdoor
 
 
@@ -2917,7 +2966,7 @@ def resolve_target_row(target_type, target_id):
     return row
 
 
-def resolve_devices(target_type, target_row, period=None):
+def resolve_devices(target_type, target_row):
     """대상 → `(sensor_ids, actuators, unassigned_areas, area_device_ids)`.
 
     §3 의 정본 조합을 한 자리에 둔다. 승인 게이트가 **집계를 시작하기 전에**
@@ -2930,14 +2979,15 @@ def resolve_devices(target_type, target_row, period=None):
     함수에 직접 붙은 노트)가 빠진다 — `note_scope_for_target` 이 이 집합을
     `descendant_ids` 에 합치는 것이 정확히 그 갭을 메우는 자리다.
 
-    `period` 는 `(start_str, end_str)`(UTC 문자열, `period_bounds_utc` 의 결과).
-    구획에서만 뜻이 있다 — 구역 폴백 후보를 **그 기간에 값이 있었던 것** 중에서
-    고르기 위한 것이다(`_pick_with_data`). 안 주면 예전처럼 최근접이므로, 기간이
-    없는 질문(측정 목록·자료 시작 시각)은 그대로 두면 된다. 다만 **게이트와
-    실제 집계는 같은 값을 넘겨야 한다** — 다르면 다른 센서를 세고 통과한다.
+    ⚠ 예전에는 `period` 인자를 받아 `_plot_sensor_ids` 에 그대로 넘겼다 —
+    구역 폴백 후보를 "그 기간에 값이 있었던 것" 중에서 고르던 시절
+    (`_pick_with_data`) 의 흔적이다. 지금은 구역 폴백이 거리(기하)로만
+    정해지고 기간과 무관하므로, 게이트(`estimate_journal_cost`)와 실제
+    집계가 다른 인자를 넘겨 다른 센서를 셀 수가 없다 — 그래서 그 인자를
+    없앴다.
     """
     if target_type == 'plot':
-        sensor_ids, outdoor_ids = _plot_sensor_ids(target_row, period=period)
+        sensor_ids, outdoor_ids = _plot_sensor_ids(target_row)
         actuators, unassigned = plot_context.actuators_for_plot(target_row)
         return sensor_ids | outdoor_ids, actuators, unassigned, None
 
@@ -3112,18 +3162,16 @@ def build_journal_for_target(target_type, target_id, start_date, end_date,
 
     # ── 장치 조회(§3) ────────────────────────────────────────────────────
     (sensor_ids, actuators, unassigned_areas,
-     area_device_ids) = resolve_devices(target_type, target_row,
-                                        period=(s_str, e_str))
+     area_device_ids) = resolve_devices(target_type, target_row)
 
     # 어느 것이 실외(기상)인가. 구획은 대지의 기상원을 따로 받고, zone/site
     # 대상은 자기 안에 기상대가 있으면 그것이 곧 실외다.
     if target_type == 'plot':
-        # 기간을 **여기서도** 넘긴다. 이 호출은 실외 목록만 쓰지만
-        # `_plot_sensor_ids` 가 지나가며 `_NEAREST_M` 을 다시 쓰기 때문에,
-        # 빼먹으면 문서에 적히는 거리가 위에서 실제로 고른 센서가 아니라
-        # 그냥 최근접의 것이 된다(실측: 50m 센서를 쓰면서 36m 라고 적혔다).
-        _indoor, outdoor_ids = _plot_sensor_ids(target_row,
-                                                period=(s_str, e_str))
+        # 이 호출은 실외 목록만 쓰지만 `_plot_sensor_ids` 가 지나가며
+        # `_NEAREST_M`/`_ZONE_FALLBACK_RANK` 를 다시 쓴다 — 구역 폴백이
+        # 거리(기하)로만 정해져 기간과 무관하므로, 위에서 고른 것과 항상
+        # 같은 결과가 나온다(달라질 방법이 없다).
+        _indoor, outdoor_ids = _plot_sensor_ids(target_row)
     else:
         from aot.aot_flask.geo import device_membership as _dm
         outdoor_ids = set(_dm.weather_device_ids(target_row.unique_id)[0])
@@ -3203,7 +3251,9 @@ def build_journal_for_target(target_type, target_id, start_date, end_date,
     cover = cover_light_factor(target_row) if target_type == 'plot' else None
     env_by_bucket = env_rows_by_bucket(
         series, labels, tz=tz, bucket_sec=bucket_sec, granularity=granularity,
-        period_start=start_date, period_end=end_date, cover=cover)
+        period_start=start_date, period_end=end_date, cover=cover,
+        fallback_rank=(_ZONE_FALLBACK_RANK.get(target_id)
+                      if target_type == 'plot' else None))
 
     # ── 목표 대비 편차(§4-5, plot 만) ────────────────────────────────────
     stages = None
@@ -3903,20 +3953,21 @@ def recent_env_trends(plot, days=7, end_date=None, sensor_ids=None,
     tz = as_tz(resolve_location_tz(target_id))
     end = end_date or datetime.now(tz).date()
     start = end - timedelta(days=max(1, int(days or 7)) - 1)
-    # 기간을 **센서를 고르기 전에** 구한다 — 구역 폴백이 그 기간에 값이 있었던
-    # 센서를 고르기 때문이다(`_pick_with_data`). 안 넘기면 같은 모달에서
-    # 센서 목록(`_live_first`)과 이 계열이 서로 다른 센서를 보게 된다.
     s_str, e_str = period_bounds_utc(start, end, tz)
 
-    if sensor_ids is None:
-        sensor_ids, outdoor_ids = _plot_sensor_ids(plot, period=(s_str, e_str))
+    # 폴백 순위(`_ZONE_FALLBACK_RANK`)는 **구획 자체의 우선순위 체인**을
+    # 탄 경우에만 뜻이 있다 — 시설 카드는 `facility_sensor_ids` 가 이미 정한
+    # 목록을 그대로 받으므로, 그 목록은 구역 폴백 후보가 아니다.
+    own_sensors = sensor_ids is None
+    if own_sensors:
+        sensor_ids, outdoor_ids = _plot_sensor_ids(plot)
     else:
         # 시설 카드 — 센서 목록을 부르는 쪽이 정한다(`facility_sensor_ids`).
         # 구획의 우선순위 체인과 규칙이 달라, 여기서 다시 만들면 같은 시설을
         # 두 화면이 다르게 세게 된다.
         sensor_ids = set(sensor_ids or ())
         if outdoor_ids is None:
-            _i, outdoor_ids = (_plot_sensor_ids(plot, period=(s_str, e_str))
+            _i, outdoor_ids = (_plot_sensor_ids(plot)
                                if plot is not None else (set(), set()))
     if not sensor_ids and not outdoor_ids:
         return []
@@ -3931,7 +3982,9 @@ def recent_env_trends(plot, days=7, end_date=None, sensor_ids=None,
     env_by_bucket = env_rows_by_bucket(
         series, labels, tz=tz, bucket_sec=bucket_sec, granularity='day',
         period_start=start, period_end=end,
-        cover=(cover_light_factor(plot) if plot is not None else None))
+        cover=(cover_light_factor(plot) if plot is not None else None),
+        fallback_rank=(_ZONE_FALLBACK_RANK.get(target_id)
+                      if own_sensors else None))
 
     # 목표 — 일지의 문서 도표와 **같은 규칙**이다: 버킷마다 그날의 단계 목표를
     # 붙이고(`attach_targets`), 도표의 가로 목표대는 기간과 겹치는 마지막 단계의
@@ -4355,10 +4408,8 @@ def recent_target_drift(plot, days=RECENT_DRIFT_DAYS, on=None):
     if not wanted:
         return None
 
-    # 기간을 먼저 구해 센서 선택에 넘긴다 — 구역 폴백이 그 기간에 값이 있었던
-    # 센서를 고른다(`_pick_with_data`).
     s_str, e_str = period_bounds_utc(start_date, end_date, tz)
-    sensor_ids, outdoor_ids = _plot_sensor_ids(plot, period=(s_str, e_str))
+    sensor_ids, outdoor_ids = _plot_sensor_ids(plot)
     ids = set(sensor_ids) | set(outdoor_ids)
     if not ids:
         return None
@@ -4383,7 +4434,8 @@ def recent_target_drift(plot, days=RECENT_DRIFT_DAYS, on=None):
     env_by_bucket = env_rows_by_bucket(
         series, labels, tz=tz, bucket_sec=bucket_sec, granularity='day',
         period_start=start_date, period_end=end_date,
-        cover=cover_light_factor(plot))
+        cover=cover_light_factor(plot),
+        fallback_rank=_ZONE_FALLBACK_RANK.get(plot.unique_id))
 
     from aot.utils.timekit import to_tz
 
@@ -4505,9 +4557,8 @@ def measured_stage_targets(plot, on=None):
     if not wanted:
         return None
 
-    # 위와 같다 — 기간을 먼저 구해 센서 선택에 넘긴다.
     s_str, e_str = period_bounds_utc(started, end_date, tz)
-    sensor_ids, outdoor_ids = _plot_sensor_ids(plot, period=(s_str, e_str))
+    sensor_ids, outdoor_ids = _plot_sensor_ids(plot)
     ids = set(sensor_ids) | set(outdoor_ids)
     if not ids:
         return None
@@ -4527,7 +4578,8 @@ def measured_stage_targets(plot, on=None):
     env_by_bucket = env_rows_by_bucket(
         series, labels, tz=tz, bucket_sec=bucket_sec, granularity='day',
         period_start=started, period_end=end_date,
-        cover=cover_light_factor(plot))
+        cover=cover_light_factor(plot),
+        fallback_rank=_ZONE_FALLBACK_RANK.get(plot.unique_id))
 
     def _pick(row, when):
         if when == 'day':
@@ -6230,24 +6282,6 @@ _BUILD_LOCK = threading.Lock()
 STALE_RUNNING_MINUTES = 30
 
 
-def _utc_bounds_for(target_id, start_date, end_date):
-    """대상의 현지 시간대로 접은 `(start_str, end_str)` — 실패하면 None.
-
-    `build_journal_for_target` 이 집계 전에 하는 것과 같은 계산이다. 실패를
-    None 으로 접는 이유: 이건 후보를 고르는 힌트일 뿐이라, 못 구했다고 비용
-    판정을 막을 값이 아니다(그때는 예전처럼 최근접이 된다).
-    """
-    from aot.utils.device_tz import resolve_location_tz
-    from aot.utils.timekit import as_tz
-
-    try:
-        return period_bounds_utc(start_date, end_date,
-                                 as_tz(resolve_location_tz(target_id)))
-    except Exception:
-        logger.exception('journal: 기간 경계 계산 실패')
-        return None
-
-
 def estimate_journal_cost(target_type, target_id, start_date, end_date,
                           measurements=None):
     """집계를 **시작하기 전에** 비용을 센다 → dict.
@@ -6263,15 +6297,13 @@ def estimate_journal_cost(target_type, target_id, start_date, end_date,
 
     세는 기준은 실제로 도는 것과 같아야 한다(`resolve_devices`·`count_channels`
     를 그대로 쓴다) — 게이트가 따로 세면 통과해 놓고 다르게 도는 일이 생긴다.
+    구획의 구역 폴백은 거리(기하)로만 정해져 기간과 무관하므로, 여기서 다시
+    불러도 실제 집계와 항상 같은 센서를 센다.
     """
     days = (end_date - start_date).days + 1
     target_row = resolve_target_row(target_type, target_id)
-    # 기간을 함께 넘긴다 — 구획의 구역 폴백은 **기간에 값이 있었던 센서**를
-    # 고르므로(`_pick_with_data`), 여기서 빼면 게이트가 다른 센서의 채널을
-    # 세고 통과한다(이 함수의 존재 이유가 그 어긋남을 막는 것이다).
     sensor_ids, actuators, _unassigned, _area = resolve_devices(
-        target_type, target_row,
-        period=_utc_bounds_for(target_id, start_date, end_date))
+        target_type, target_row)
 
     env_channels, circular_channels = count_channels_detail(sensor_ids,
                                                             measurements)

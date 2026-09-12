@@ -564,7 +564,9 @@
     <select class="form-control aot-modern-select" id="{{name_prefix}}{{each_option['id']}}" name="{% if channel_options %}{{name_prefix}}{% endif %}{{each_option['id']}}" title="{{each_option['phrase']}}"
     {%- if 'disabled' in each_option and each_option['disabled'] %} disabled{% endif -%}
     >
-      <option value="">{{dict_translation['select_one']['title']}}</option>
+      {#- 'GeoScope' 는 **거르는** 셀렉트다(구획 위젯의 지도·대지 필터) — 비워
+          두면 거르지 않으므로 빈 항목은 "하나 고르기" 가 아니라 "모든 지도" 다. -#}
+      <option value="">{% if 'GeoScope' in each_option['options_select'] %}{{ _('All maps') }}{% else %}{{dict_translation['select_one']['title']}}{% endif %}</option>
       {% for name, devices in form_choices %}
         {% if name in each_option['options_select'] %}
           {%- for each_dev in devices -%}
@@ -576,6 +578,21 @@
           {%- endfor -%}
         {% endif %}
       {% endfor %}
+      {#- 지도 → 그 안의 대지, 두 층. 지도 한 줄은 "그 지도 전체" 다. 선택지는
+          부를 때만 조회한다(`routes_dashboard._geo_scope_choices`) — 이 옵션이
+          없는 화면은 지도 도형을 읽지 않는다. 그 컨텍스트가 없는 화면
+          (출력·기능 페이지)에서는 조용히 빈다. -#}
+      {% if 'GeoScope' in each_option['options_select'] and geo_scope_choices is defined %}
+        {%- set _scope_cur = custom_options_values[unique_id][each_option['id']] if custom_options_values else '' -%}
+        {% for each_map in geo_scope_choices() %}
+      <optgroup label="{{ each_map.name }}">
+        <option value="{{ each_map.unique_id }}"{% if each_map.unique_id == _scope_cur %} selected{% endif %}>{{ each_map.name }} · {{ _('All sites') }}</option>
+          {% for each_site in each_map.sites %}
+        <option value="{{ each_site.unique_id }}"{% if each_site.unique_id == _scope_cur %} selected{% endif %}>{{ each_site.name }}</option>
+          {% endfor %}
+      </optgroup>
+        {% endfor %}
+      {% endif %}
       {% if 'Method' in each_option['options_select'] %}
         {% for each_method_form in choices_method -%}
       <option value="{{each_method_form['value']}}"{% if (channel_options and each_method_form['value'] == custom_options_values[unique_id][channel][each_option['id']]) or (custom_options_values and each_method_form['value'] == custom_options_values[unique_id][each_option['id']]) %} selected{% endif %}>{{each_method_form['item']}}</option>

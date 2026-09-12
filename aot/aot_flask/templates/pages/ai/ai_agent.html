@@ -1,30 +1,43 @@
 {% extends "layout.html" %}
 {% set active_page = "ai_agent" %}
-{% set help_page = [manual_url("ai/overview/"), _('AI Agent')] %}
+{% set help_page = [manual_url("ai/overview/"), _('AI Connection')] %}
 
-{% block title %} - {{ _('AI Agent') }}{% endblock %}
+{% block title %} - {{ _('AI Connection') }}{% endblock %}
 
 {% block head %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/gridstack-custom.css') }}" />
 <link rel="stylesheet" href="{{ url_for('static', filename='css/aot-entry-ui.css') }}" />
 <link rel="stylesheet" href="{{ url_for('static', filename='css/aot-settings.css') }}" />
-<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/ai.css') }}" />
 <script src="{{ url_for('static', filename='js/vendor/gridstack-all.js') }}"></script>
 {% endblock %}
+
+{#
+  AI 연결 — 이 농장에 AI 를 잇는 곳(AI 메뉴의 "연결").
+
+  사람이 여기서 하는 일은 둘이다: 이미 쓰는 AI 앱(Claude Desktop 등)을 연결하거나,
+  앱 안의 내장 AI 에 모델을 등록해 켠다. 주 경로는 앞쪽이라 위에 둔다.
+
+  2026-09-10 재구성. 예전에는 "AI 설정" 모달(두 탭)에 설정 열두 개가 있었는데
+  실제로 코드가 읽는 것은 셋(기본 사이트·월 예산·컨텍스트 브로드캐스트)뿐이었다
+  — 나머지 아홉(자동 승인·영향 한도·실패 피드백·감독/작업 모델·블랙아웃·
+  컨텍스트 범위·최대 이력)은 저장만 되고 아무 데서도 쓰이지 않았다. 셋만
+  "고급" 구획으로 옮기고 모달을 걷었다. 그 모달의 "AoT MCP Server" 는 외부 AI 가
+  접속하는 입구가 아니라 내장 AI 가 쓰는 브리지(AoT System Expert Server)였다 —
+  외부 접속은 설정 > 일반의 스위치와 사용자별 접속 키가 정한다.
+#}
 
 {% block body %}
 <div class="container-fluid px-0">
 <main role="main" class="container py-4">
   {% include 'flash_messages.html' %}
-  
-  <!-- v6 Data Store for Presets (Global for modals and entries) -->
-  <div id="aot-preset-data" style="display:none;" 
+
+  <!-- 엔진·역할 프리셋 — 추가 줄과 설정 드로어가 함께 읽는다 -->
+  <div id="aot-preset-data" hidden
        data-engine-presets='{{ (engine_presets or {}) | tojson | safe }}'
        data-available-entries='{{ (serialized_entries or []) | tojson | safe }}'
        data-role-presets='{{ (role_presets or {}) | tojson | safe }}'>
   </div>
   <script>
-    // Global access for all child templates
     const presetDataStore = $('#aot-preset-data');
     const enginePresets = JSON.parse(presetDataStore.attr('data-engine-presets') || '{}');
     const rolePresets = JSON.parse(presetDataStore.attr('data-role-presets') || '{}');
@@ -32,220 +45,96 @@
   </script>
 
   <div class="aot-settings-title">
-    <h3>{{_('AI Agent')}} <a href="{{help_page[0]}}" target="_blank"><span class="fas fa-question-circle aot-help-icon"></span></a></h3>
-    <button type="button" class="btn aot-pill-btn" onclick="openAiSettings();">
-      {{ _('AI Settings') }}
-    </button>
+    <h3>{{ _('AI Connection') }}</h3>
   </div>
-  <p class="aot-modal-body-text">{{_('AI Agents orchestration layer. Manage your AI services and agents to automate complex tasks.')}}</p>
 
-  <!-- AI 작동 시작/중지 — Settings > General 의 "AI 서비스 사용"(1단계, 메뉴/페이지
-       노출)과 분리된 스위치(2단계). 여기가 꺼져 있으면 LLM 모델이 작동하지 않아
-       백그라운드 작동(주기 요약·컨텍스트 브로드캐스트·날씨 요약·MCP 헬스체크·
-       실시간 알림)뿐 아니라 사용자가 직접 보내는 채팅/조언/명령 요청도 멈춘다.
-       외부 LLM 클라이언트가 쓰는 MCP 서버는 이 스위치와 무관하게 계속 동작한다. -->
-  <div class="aot-modal-container" id="aiRuntimeBlock">
-    <div class="aot-modal-option-row">
-      <div class="aot-modal-option-label">{{ _('AI Service Operation') }}</div>
-      <div class="aot-modal-option-control">
+  {# 구획마다 <section> 으로 묶는다 — 제목·설명·카드가 한 덩어리라는 뜻이기도 하고,
+     설명 <p> 가 main.container 의 직계 자식이 되면 테마(aot.css)의
+     `main.container > p { font-size: 1.2em }` 이 부연 역할 규칙을 이겨 글자가
+     16.8px 로 커진다(2026-09-10 실측). section 은 여백이 없어 배치는 그대로다. #}
+
+  {# ── 내 AI 앱으로 연결 — 주 경로 ─────────────────────────────────── #}
+  <section>
+  <div class="aot-settings-group-title">{{ _('Connect your AI app') }}</div>
+  <p>{{ _('An AI app you already use, such as Claude Desktop, can read this farm and ask to control equipment. Equipment control only runs after a person approves it.') }}</p>
+  <div class="aot-settings-card">
+    <div class="aot-settings-row">
+      <div class="aot-settings-label">{{ _('External AI access') }}</div>
+      <div class="aot-settings-control">
+        {% if ai_settings and ai_settings.mcp_http_enabled %}
+        <span class="aot-status-badge aot-status-ok">{{ _('Allowed') }}</span>
+        {% else %}
+        <span class="aot-status-badge">{{ _('Not allowed') }}</span>
+        {% endif %}
+      </div>
+      <div class="aot-settings-sub">
+        {{ _('Turned on or off in Settings > General.') }}
+        <a href="{{ url_for('routes_settings.settings_general') }}">{{ _('Open General Settings') }}</a>
+      </div>
+    </div>
+    <div class="aot-settings-row">
+      <div class="aot-settings-label">{{ _('Access keys') }}</div>
+      <div class="aot-settings-control">
+        <a class="btn aot-pill-btn aot-pill-btn-secondary"
+           href="{{ url_for('routes_settings.settings_users', open_user=current_user.unique_id, focus='api_keys') }}">{{ _('Manage keys') }}</a>
+      </div>
+      <div class="aot-settings-sub">{{ _('Issue one key per AI app and paste it into that app.') }}</div>
+    </div>
+  </div>
+  </section>
+
+  {# ── 내장 AI ────────────────────────────────────────────────────────
+     작동 스위치는 이 구획의 것이다 — 켜고 끄는 대상이 앱 안의 LLM 뿐이고, 외부
+     AI 앱이 쓰는 MCP 서버는 이 스위치와 무관하게 계속 돈다(ai_runtime_state).
+     Settings > General 의 "AI 서비스 사용"(메뉴 노출)과는 다른 층이다. #}
+  <section>
+  <div class="aot-settings-group-title">{{ _('Built-in AI') }}</div>
+  <p>{{ _('The AI model used by chat and advice inside this app. It runs separately from your own AI app, so you can leave it off if you do not use it.') }}</p>
+  <div class="aot-settings-card" id="aiRuntimeBlock">
+    <div class="aot-settings-row">
+      <label class="aot-settings-label" for="toggleAiRunning">{{ _('Run built-in AI') }}</label>
+      <div class="aot-settings-control">
         <label class="btn-toggle mb-0">
           <input type="checkbox" class="btn-toggle-input" id="toggleAiRunning"
-                 title="{{ _('Start or stop the AI model. While stopped, chat, advice requests and background AI work are all unavailable.') }}"
                  {% if ai_runtime and ai_runtime.ai_running %} checked{% endif %}
                  {% if not ai_runtime or not ai_runtime.can_start %} disabled{% endif %}>
           <span class="btn-toggle-slider"><span class="btn-toggle-thumb"></span></span>
         </label>
       </div>
-    </div>
-    <div class="aot-modal-body-text pt-1 pb-3" id="aiRuntimeHint">
-      {%- if not ai_runtime or not ai_runtime.ai_enabled -%}
-        {{ _('The AI service is disabled. Enable it in Settings > General first.') }}
-      {%- elif ai_runtime.agent_count == 0 -%}
-        {{ _('No AI model is registered yet. Add and activate at least one agent below, then start the service.') }}
-      {%- elif ai_runtime.ai_running -%}
-        {{ _('Running. Chat, advice requests and background AI work are all active.') }}
-      {%- else -%}
-        {{ _('Stopped. Chat, advice requests and background AI work are all unavailable until you start it.') }}
-      {%- endif -%}
-    </div>
-  </div>
-
-  <div class="aot-vspace"></div>
-
-<!-- v8 Add Panel: Compact Row, Role-First, AoT Design System -->
-<form class="pb-2" id="new_agent_form" method="post" action="{{ url_for('routes_ai_agent.ai_agent_add_direct') }}">
-  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-  <div class="row aot-main-selection-row">
-    <!-- Engine / Service Type dropdown -->
-    <div class="col-auto">
-      <select class="selectpicker aot-standard-select" data-style="btn aot-pill-btn aot-pill-btn-primary"
-              data-live-search="true"
-              title="{{ _('Engine') }}: {{ _('Select') }}"
-              id="agent_source_select">
-      </select>
-    </div>
-    <!-- Role dropdown (AI Agent only; hidden for MCP) -->
-    <div class="col-auto" id="role-dropdown-container" style="display:none;">
-      <select class="selectpicker aot-standard-select" data-style="btn aot-pill-btn aot-pill-btn-primary"
-              title="{{ _('Role') }}: {{ _('Select') }}"
-              id="agent_role_select">
-        <option value="router">{{ _('Router') }}</option>
-        <option value="planner">{{ _('Planner') }}</option>
-        <option value="executor">{{ _('Executor') }}</option>
-        <option value="synthesizer">{{ _('Synthesizer') }}</option>
-        <option value="worker">{{ _('Worker') }}</option>
-      </select>
-    </div>
-    <!-- Add button -->
-    <div class="col-auto">
-      <input onclick="return triggerAddAgentCompact(this);" name="agent_add" value="{{ _('Add') }}"
-        class="btn aot-pill-btn aot-pill-btn-primary" type="button" />
+      <div class="aot-settings-sub" id="aiRuntimeHint">
+        {%- if not ai_runtime or not ai_runtime.ai_enabled -%}
+          {{ _('The AI service is disabled. Enable it in Settings > General first.') }}
+        {%- elif ai_runtime.agent_count == 0 -%}
+          {{ _('No AI model is registered yet. Add and activate at least one agent below, then start the service.') }}
+        {%- elif ai_runtime.ai_running -%}
+          {{ _('Running. Chat, advice requests and background AI work are all active.') }}
+        {%- else -%}
+          {{ _('Stopped. Chat, advice requests and background AI work are all unavailable until you start it.') }}
+        {%- endif -%}
+      </div>
     </div>
   </div>
-</form>
 
-<script>
-  // Populate engine dropdown with optgroups on page load
-  $(document).ready(function() {
-    var $select = $('#agent_source_select');
-    $select.empty();
+  {# 추가 줄 — Input·Output·Function 과 같은 모습(엔진 셀렉트 + 추가). 예전의 역할
+     셀렉트는 뺐다 — 역할은 드로어의 "고급" 에서 고르고, 비워 두면 엔진 기본값이다. #}
+  <form id="new_agent_form" method="post" action="{{ url_for('routes_ai_agent.ai_agent_add_direct') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+    <div class="row aot-main-selection-row">
+      <div class="col-auto">
+        <select class="selectpicker aot-standard-select" data-style="btn aot-pill-btn aot-pill-btn-primary"
+                data-live-search="true"
+                title="{{ _('Engine') }}: {{ _('Select') }}"
+                id="agent_source_select">
+        </select>
+      </div>
+      <div class="col-auto">
+        <input onclick="return triggerAddAgentCompact(this);" name="agent_add" value="{{ _('Add') }}"
+          class="btn aot-pill-btn aot-pill-btn-primary" type="button" />
+      </div>
+    </div>
+  </form>
 
-    // Group engines by is_mcp flag
-    var aiAgentGroup = $('<optgroup label="' + {{ _('AI Agent')|tojson }} + '">');
-    var mcpGroup = $('<optgroup label="' + {{ _('MCP Server')|tojson }} + '">');
-
-    Object.keys(enginePresets).forEach(function(engineKey) {
-      var preset = enginePresets[engineKey];
-      var label = preset.ai_name || engineKey;
-      var option = $('<option>', {
-        value: 'preset:' + engineKey,
-        text: label,
-        'data-is-mcp': preset.is_mcp ? '1' : '0'
-      });
-      if (preset.is_mcp) {
-        mcpGroup.append(option);
-      } else {
-        aiAgentGroup.append(option);
-      }
-    });
-
-    $select.append(aiAgentGroup);
-    $select.append(mcpGroup);
-    $select.selectpicker('refresh');
-
-    // Toggle role dropdown when engine selection changes
-    $select.on('changed.bs.select', function(e) {
-      var selectedOption = $select.find('option:selected');
-      var isMcp = selectedOption.data('is-mcp') === '1';
-      if (isMcp) {
-        $('#role-dropdown-container').hide();
-        $('#agent_role_select').selectpicker('val', '');
-      } else {
-        $('#role-dropdown-container').show();
-      }
-    });
-  });
-
-  // Main compact add trigger — creates agent then opens settings modal
-  function triggerAddAgentCompact(button) {
-    var rawVal = $('#agent_source_select').val();
-    if (!rawVal) {
-      window.showToast({{ _('Please select an engine first.')|tojson }}, 'info');
-      return false;
-    }
-
-    var isMcp = $('#agent_source_select').find('option:selected').data('is-mcp') === '1';
-    var pipelineRole = isMcp ? '' : ($('#agent_role_select').val() || '');
-
-    window.showToast({{ _('Creating agent... Please wait.')|tojson }}, 'info');
-
-    $.ajax({
-      url: "{{ url_for('routes_ai_agent.ai_agent_add_direct') }}",
-      type: 'POST',
-      data: {
-        source_select: rawVal,
-        pipeline_role: pipelineRole,
-        open_modal: 'true'
-      },
-      headers: { 'X-CSRFToken': "{{ csrf_token() }}" },
-      success: function(resp) {
-        if (resp.status === 'success') {
-          // Add widget to grid
-          if (grids['grid-agents'] && resp.html) {
-            grids['grid-agents'].addWidget(
-              '<div class="grid-stack-item" id="gridstack_agent_' + resp.agent_id + '" gs-id="' + resp.agent_id + '">' + resp.html + '</div>',
-              { w: 24, h: 1, x: 0, y: 0, autoPosition: true }
-            );
-            $('#gridstack_agent_' + resp.agent_id).find('.selectpicker').selectpicker();
-          }
-          window.showToast(resp.message, 'success');
-          // Open settings modal with newly created agent
-          openAgentSettings(resp.agent_id);
-          // Reset form
-          $('#agent_source_select').selectpicker('val', '');
-          $('#agent_role_select').selectpicker('val', '');
-          $('#role-dropdown-container').hide();
-        } else {
-          window.showToast(resp.message || 'Error', 'error');
-        }
-      },
-      error: function() {
-        window.showToast({{ _('Error: Could not communicate with server')|tojson }}, 'error');
-      }
-    });
-    return false;
-  }
-
-  // Legacy triggerAddAgent kept for backward compatibility with other callers
-  function triggerAddAgent() {
-    var rawVal = $('#agent_source_select').val();
-    if (!rawVal) {
-      window.showToast({{ _('Please select a service or implementation first.')|tojson }}, 'info');
-      return;
-    }
-    window.showToast({{ _('Creating agent... Please wait.')|tojson }}, 'info');
-    $.ajax({
-      url: "{{ url_for('routes_ai_agent.ai_agent_add_direct') }}",
-      type: 'POST',
-      data: { source_select: rawVal },
-      headers: { 'X-CSRFToken': "{{ csrf_token() }}" },
-      success: function(resp) {
-        if (resp.status === 'success') {
-          if (grids['grid-agents']) {
-            grids['grid-agents'].addWidget('<div class="grid-stack-item" id="gridstack_agent_' + resp.agent_id + '" gs-id="' + resp.agent_id + '">' + resp.html + '</div>', {
-              w: 24, h: 1, x: 0, y: 0, autoPosition: true
-            });
-            var $newWidget = $('#gridstack_agent_' + resp.agent_id);
-            $newWidget.find('.selectpicker').selectpicker();
-          }
-          window.showToast(resp.message, 'success');
-        } else {
-          window.showToast(resp.message || 'Error creating agent', 'error');
-        }
-      },
-      error: function() {
-        window.showToast({{ _('Error: Could not communicate with server')|tojson }}, 'error');
-      }
-    });
-  }
-
-  function triggerAddMCPServer() {
-    var name = $('#mcp_add_name').val().trim();
-    var cmd  = $('#mcp_add_command').val().trim();
-    if (!name || !cmd) { window.showToast({{ _('Name and Command are required.')|tojson }}, 'warning'); return; }
-    $.ajax({
-      url: '/api/ai/mcp/server/add', type: 'POST', contentType: 'application/json',
-      data: JSON.stringify({ name: name, command: cmd }),
-      headers: { 'X-CSRFToken': "{{ csrf_token() }}" },
-      success: function(resp) {
-        if (resp.status === 'success') { window.showToast({{ _('MCP Server added.')|tojson }}, 'success'); window.location.reload(); }
-        else { window.showToast(resp.error || {{ _('Failed.')|tojson }}, 'error'); }
-      },
-      error: function() { window.showToast({{ _('Failed to add MCP server.')|tojson }}, 'error'); }
-    });
-  }
-</script>
-
+  {#- 추가 줄과 목록 사이 — 입력·출력 화면과 같은 공용 간격(없으면 알약이 목록에 붙는다). -#}
   <div class="aot-vspace-lg"></div>
 
   <div class="grid-stack aot-entry-container" id="grid-agents">
@@ -260,668 +149,351 @@
     </div>
     {%- endfor -%}
   </div>
+  </section>
+
+  {# ── 고급 — 실제로 쓰이는 설정 셋과 MCP 브리지 서버 ─────────────────
+     바꾸는 즉시 저장한다(이 페이지의 스위치들과 같은 방식). #}
+  <section>
+  <div class="aot-settings-group-title">{{ _('Advanced') }}</div>
+  <div class="aot-settings-card" id="aiAdvancedSettings">
+    {% if facilities %}
+    <div class="aot-settings-row">
+      <label class="aot-settings-label" for="aiDefaultSite">{{ _('Default Site') }}</label>
+      <div class="aot-settings-control">
+        <select class="form-control aot-modern-select" id="aiDefaultSite" data-ai-setting="default_facility_id">
+          <option value="">{{ _('(none)') }}</option>
+          {% for f in facilities %}
+          <option value="{{ f.unique_id }}" {% if settings and settings.default_facility_id == f.unique_id %}selected{% endif %}>{{ f.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="aot-settings-sub">{{ _('The site the AI uses when a chat or screen does not name one.') }}</div>
+    </div>
+    {% endif %}
+    <div class="aot-settings-row">
+      <label class="aot-settings-label" for="aiBudget">{{ _('Monthly Budget Limit (USD)') }}</label>
+      <div class="aot-settings-control">
+        <input type="number" step="0.1" min="0" class="form-control aot-modern-input" id="aiBudget"
+               data-ai-setting="budget_limit_usd" value="{{ ai_settings.budget_limit_usd if ai_settings else 10.0 }}">
+      </div>
+      {# ⚠ 문구에 퍼센트 기호를 넣지 않는다 — Jinja 의 gettext 는 변수가 없어도
+         % 서식을 적용해 "100% it" 의 "% i" 에서 렌더가 멈춘다. #}
+      <div class="aot-settings-sub">{{ _('Estimated monthly spend of the built-in AI. You are alerted as it nears the limit, and once the limit is reached it switches to the cheapest model. 0 means no limit.') }}</div>
+    </div>
+    <div class="aot-settings-row">
+      <label class="aot-settings-label" for="toggleContextBroadcast">{{ _('Context Broadcast') }}</label>
+      <div class="aot-settings-control">
+        <label class="btn-toggle mb-0">
+          <input type="checkbox" id="toggleContextBroadcast" class="btn-toggle-input" data-ai-setting="context_broadcast_enabled"
+                 {% if not ai_settings or ai_settings.context_broadcast_enabled is none or ai_settings.context_broadcast_enabled %}checked{% endif %}>
+          <span class="btn-toggle-slider"><span class="btn-toggle-thumb"></span></span>
+        </label>
+      </div>
+      <div class="aot-settings-sub">{{ _("Lets the built-in AI periodically summarize the farm's situation in the background.") }}</div>
+    </div>
+    <div class="aot-settings-row">
+      <div class="aot-settings-label">{{ _('MCP bridge servers') }}</div>
+      <div class="aot-settings-control">
+        <a class="btn aot-pill-btn aot-pill-btn-secondary" href="{{ url_for('routes_mcp_api.mcp_servers_page') }}">{{ _('Manage') }}</a>
+      </div>
+      <div class="aot-settings-sub">{{ _('Tool servers the built-in AI calls. One is added automatically when you add an MCP engine above.') }}</div>
+    </div>
+  </div>
+  </section>
 
 </main>
 </div>
 
-<div class="aot-vspace-end"></div>
 
-{% include 'pages/ai/ai_modals.html' %}
-
-<!-- Unified Agent Settings Modal -->
+<!-- 에이전트 설정 드로어 — Input 옵션 드로어와 같은 골격 -->
 <div class="modal fade aot-option-modal aot-widget-drawer aot-drawer-fullcover" data-backdrop="false" id="unifiedAgentSettingsModal" tabindex="-1" role="dialog" aria-hidden="true">
   <div class="modal-dialog modal-xl aot-modal-dialog" role="document">
     <div class="modal-content">
       <div class="modal-header">
         <h5 class="modal-title">{{ _('Agent Settings') }}</h5>
-        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+        <button type="button" class="close" data-dismiss="modal" aria-label="{{ _('Close') }}">
           <span aria-hidden="true">&times;</span>
         </button>
       </div>
       <div class="modal-body" id="unifiedAgentSettingsBody">
-        <div id="agentSettingsDynamicContent">
-            <div class="text-center p-5">
-                <div class="spinner-border text-primary" role="status">
-                    <span class="sr-only">Loading...</span>
-                </div>
-                <p class="mt-2">{{ _('Loading settings...') }}</p>
-            </div>
-        </div>
+        <div id="agentSettingsDynamicContent"></div>
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn aot-pill-btn" data-dismiss="modal">{{ _('Close') }}</button>
-        <button type="button" class="btn aot-pill-btn aot-pill-btn-danger" onclick="$('#unifiedAgentDeleteBtn').trigger('click');">{{ _('Delete') }}</button>
-        <button type="button" class="btn aot-pill-btn aot-pill-btn-primary" onclick="$('#unifiedAgentSettingsBody form').submit();">{{ _('Save') }}</button>
+        <button type="button" class="btn aot-pill-btn aot-pill-btn-secondary" data-dismiss="modal">{{ _('Close') }}</button>
+        <button type="button" class="btn aot-pill-btn aot-pill-btn-danger" id="unifiedAgentDeleteBtn">{{ _('Delete') }}</button>
+        <button type="button" class="btn aot-pill-btn aot-pill-btn-primary" id="unifiedAgentSaveBtn">{{ _('Save') }}</button>
       </div>
     </div>
   </div>
 </div>
 
 <script>
+  var T = {
+    loading: {{ _('Loading settings...')|tojson }},
+    agentSettings: {{ _('Agent Settings')|tojson }},
+    commErr: {{ _('Error: Could not communicate with server')|tojson }},
+    loadErr: {{ _('Error loading settings')|tojson }},
+    deleteQ: {{ _('Delete this agent?')|tojson }},
+    pickEngine: {{ _('Please select an engine first.')|tojson }},
+    creating: {{ _('Creating agent... Please wait.')|tojson }},
+    sent: {{ _('Command sent. Please wait...')|tojson }},
+    success: {{ _('Success')|tojson }},
+    saved: {{ _('Saved')|tojson }},
+    saveFailed: {{ _('Save failed')|tojson }},
+    running: {{ _('Running. Chat, advice requests and background AI work are all active.')|tojson }},
+    stopped: {{ _('Stopped. Chat, advice requests and background AI work are all unavailable until you start it.')|tojson }},
+    started: {{ _('AI service started')|tojson }},
+    stoppedToast: {{ _('AI service stopped')|tojson }},
+    mcpStarting: {{ _('Starting MCP process...')|tojson }},
+    mcpStopping: {{ _('Stopping MCP process...')|tojson }},
+    mcpOn: {{ _('MCP server activated')|tojson }},
+    mcpOff: {{ _('MCP server deactivated')|tojson }},
+    actFail: {{ _('Activation failed')|tojson }},
+    deactFail: {{ _('Deactivation failed')|tojson }}
+  };
+  var CSRF = "{{ csrf_token() }}";
+
+  // ── 추가 줄: 엔진 목록(내장 AI / MCP 서버 두 묶음) ─────────────────────
+  $(document).ready(function () {
+    var $select = $('#agent_source_select');
+    $select.empty();
+    var aiGroup = $('<optgroup>', { label: {{ _('AI Agent')|tojson }} });
+    var mcpGroup = $('<optgroup>', { label: {{ _('MCP Server')|tojson }} });
+    Object.keys(enginePresets).forEach(function (key) {
+      var preset = enginePresets[key];
+      var $opt = $('<option>', { value: 'preset:' + key, text: preset.ai_name || key });
+      (preset.is_mcp ? mcpGroup : aiGroup).append($opt);
+    });
+    $select.append(aiGroup).append(mcpGroup);
+    $select.selectpicker('refresh');
+  });
+
+  // 에이전트를 만들고 곧바로 설정 드로어를 연다.
+  function triggerAddAgentCompact() {
+    var rawVal = $('#agent_source_select').val();
+    if (!rawVal) { window.showToast(T.pickEngine, 'info'); return false; }
+    window.showToast(T.creating, 'info');
+    $.ajax({
+      url: "{{ url_for('routes_ai_agent.ai_agent_add_direct') }}",
+      type: 'POST',
+      data: { source_select: rawVal, open_modal: 'true' },
+      headers: { 'X-CSRFToken': CSRF },
+      success: function (resp) {
+        if (resp.status === 'success') {
+          if (grids['grid-agents'] && resp.html) {
+            grids['grid-agents'].addWidget(
+              '<div class="grid-stack-item" id="gridstack_agent_' + resp.agent_id + '" gs-id="' + resp.agent_id + '">' + resp.html + '</div>',
+              { w: 24, h: 1, x: 0, y: 0, autoPosition: true }
+            );
+          }
+          window.showToast(resp.message, 'success');
+          openAgentSettings(resp.agent_id);
+          $('#agent_source_select').selectpicker('val', '');
+        } else {
+          window.showToast(resp.message || T.commErr, 'error');
+        }
+      },
+      error: function () { window.showToast(T.commErr, 'error'); }
+    });
+    return false;
+  }
+
+  // ── 설정 드로어 ───────────────────────────────────────────────────────
+  var currentAgentId = null;
+
   function openAgentSettings(agentId) {
-    const $modal = $('#unifiedAgentSettingsModal');
-    const $dynamicContent = $('#agentSettingsDynamicContent');
-    
-    // Reset to loading state
-    $dynamicContent.html('<div class="text-center p-5"><div class="spinner-border text-primary" role="status"></div><p class="mt-2">' + {{ _("Loading settings...")|tojson }} + '</p></div>');
-    // Tell the shared drawer which agent card this (single, shared) modal belongs to,
-    // so the matching row is lifted with a shadow. Set before show so the show.bs.modal
-    // hook reads it; also call activateByUid directly to cover switching agents while the
-    // drawer is already open (Bootstrap fires no show event on an already-open modal).
+    var $modal = $('#unifiedAgentSettingsModal');
+    var $content = $('#agentSettingsDynamicContent');
+    currentAgentId = agentId;
+    $content.html('<p class="aot-modal-body-text aot-modal-container-intro">' + $('<span>').text(T.loading).html() + '</p>');
+    // 공유 드로어가 어느 행의 것인지 알려 그 행을 들어 올린다(Input 과 같은 동작).
     $modal.attr('data-config-uid-target', agentId);
     if (window.AoTWidgetDrawer) { window.AoTWidgetDrawer.activateByUid(agentId); }
     $modal.modal('show');
-    
+
     $.ajax({
       url: '/ai/agent/options/' + agentId,
       type: 'GET',
-      success: function(resp) {
-        if (resp.status === 'success') {
-          // Update modal title with service name (like Input Settings: device_name)
-          if (resp.service_name) {
-            $modal.find('.modal-title').text({{ _('Agent Settings')|tojson }} + ': ' + resp.service_name);
-          } else {
-            $modal.find('.modal-title').text({{ _('Agent Settings')|tojson }});
-          }
-          $dynamicContent.html(resp.html);
-          
-          // Bind Save Button
-          $('#unifiedAgentSaveBtn').off('click').on('click', function() {
-              const $form = $dynamicContent.find('form');
-              if ($form.length) {
-                  $form.submit();
-              } else {
-                  console.error("No form found in dynamic content");
-                  window.showToast({{ _('Error: Form not found')|tojson }}, "error");
-              }
-          });
-          
-          // Bind Delete Button
-          $('#unifiedAgentDeleteBtn').off('click').on('click', function() {
-              if (confirm({{ _('Delete this agent?')|tojson }})) {
-                  const tempForm = $('<form>', {
-                      method: 'POST',
-                      action: '/ai/agent/delete/' + agentId
-                  }).append($('<input>', {
-                      type: 'hidden',
-                      name: 'csrf_token',
-                      value: "{{ csrf_token() }}"
-                  }));
-                  $('body').append(tempForm);
-                  tempForm.submit();
-              }
-          });
-          
-          // Initialize/Refresh selectpickers
-          if (typeof $('.selectpicker').selectpicker === 'function') {
-              $dynamicContent.find('.selectpicker').selectpicker('refresh');
-          }
-        } else {
-          $dynamicContent.html('<div class="alert alert-danger">' + (resp.message || 'Error loading settings') + '</div>');
+      success: function (resp) {
+        if (resp.status !== 'success') {
+          $content.html('<div class="aot-notice-box aot-notice-box-danger">' + $('<span>').text(resp.message || T.loadErr).html() + '</div>');
+          return;
         }
+        $modal.find('.modal-title').text(resp.service_name ? T.agentSettings + ': ' + resp.service_name : T.agentSettings);
+        $content.html(resp.html);
+        // 공용 셀렉트 드롭인은 페이지를 처음 불러올 때만 돈다 — 나중에 채운
+        // 드로어 본문은 여기서 같은 변환을 건다(layout 의 .aot-modern-select 처리와 같다).
+        $content.find('select.aot-modern-select').each(function () {
+          var $s = $(this);
+          $s.addClass('selectpicker');
+          if (!$s.data('style')) { $s.attr('data-style', 'btn-white'); }
+        }).selectpicker();
       },
-      error: function() {
-        $body.html('<div class="alert alert-danger">' + {{ _("Error: Could not communicate with server")|tojson }} + '</div>');
+      error: function () {
+        $content.html('<div class="aot-notice-box aot-notice-box-danger">' + $('<span>').text(T.commErr).html() + '</div>');
       }
     });
   }
 
-  // Store grid instances by ID
+  $('#unifiedAgentSaveBtn').on('click', function () {
+    $('#agentSettingsDynamicContent form').first().submit();
+  });
+
+  // 삭제는 되돌릴 수 없다 — 앱 공용 확인창으로 한 번 묻는다(브라우저 confirm 대신).
+  $('#unifiedAgentDeleteBtn').on('click', function () {
+    if (!currentAgentId) { return; }
+    var agentId = currentAgentId;
+    window.aotConfirm(T.deleteQ, function () {
+      $('<form>', { method: 'POST', action: '/ai/agent/delete/' + agentId })
+        .append($('<input>', { type: 'hidden', name: 'csrf_token', value: CSRF }))
+        .appendTo('body').submit();
+    });
+  });
+
+  // ── 목록(GridStack) — Input 과 같은 설정: 손잡이로만 끌고, 놓을 때 순서를 저장 ──
   var grids = {};
 
   function initGrid(gridId, saveUrl) {
-    let targetColumn = (window.innerWidth <= 768) ? 1 : 24;
-    let gridSelector = '#' + gridId;
-
+    var targetColumn = (window.innerWidth <= 768) ? 1 : 24;
     if (grids[gridId]) {
-      if (grids[gridId].getColumn() === targetColumn) return;
-
+      if (grids[gridId].getColumn() === targetColumn) { return; }
       grids[gridId].batchUpdate(true);
       grids[gridId].column(targetColumn, 'list');
-
       if (targetColumn === 24) {
-        grids[gridId].engine.nodes.forEach(node => {
-          grids[gridId].update(node.el, { w: 24, x: 0 });
-        });
+        grids[gridId].engine.nodes.forEach(function (node) { grids[gridId].update(node.el, { w: 24, x: 0 }); });
       }
       grids[gridId].batchUpdate(false);
-    } else {
-      grids[gridId] = GridStack.init({
-        animate: true,
-        cellHeight: 52,
-        column: targetColumn,
-        margin: 2,
-        draggable: { handle: '.panel-heading' },
-        float: false,
-        disableOneColumnMode: true,
-        alwaysShowResizeHandle: false
-      }, gridSelector);
-
-      grids[gridId].off('change');
-      grids[gridId].on('change', function (event, items) {
-        if (grids[gridId].getColumn() === 1) return;
-        saveLayout(grids[gridId], saveUrl);
-      });
+      return;
     }
+    grids[gridId] = GridStack.init({
+      animate: true,
+      cellHeight: 52,
+      column: targetColumn,
+      // 0 — Input 목록과 같은 결과가 되게 한다. 2 를 주면 GridStack 이 행 상자에
+      // inset 2px 를 인라인 규칙으로 걸어, 행만 추가 줄·카드보다 2px 안쪽에서
+      // 시작했다(실측 50 대 48). 행 높이는 aot-entry-ui.css 가 48px 로 정하므로
+      // 줄 사이 간격(52-48)은 그대로다.
+      margin: 0,
+      // 예전 손잡이 선택자(.panel-heading)는 행 안에 없어 행 어디를 잡아도 끌렸다.
+      draggable: { handle: '.aot-entry-drag-handle' },
+      float: false,
+      disableOneColumnMode: true,
+      alwaysShowResizeHandle: false
+    }, '#' + gridId);
+    grids[gridId].on('dragstop', function () {
+      if (grids[gridId].getColumn() === 1) { return; }
+      saveLayout(grids[gridId], saveUrl);
+    });
   }
 
   function saveLayout(grid, url) {
-    const layoutData = grid.save(false).map(node => {
-        return {
-            id: node.id || node.el.getAttribute('gs-id'),
-            x: node.x,
-            y: node.y,
-            w: node.w,
-            h: node.h
-        };
+    var layoutData = grid.save(false).map(function (node) {
+      return { id: node.id || node.el.getAttribute('gs-id'), x: node.x, y: node.y, w: node.w, h: node.h };
     });
-
     $.ajax({
-        url: url,
-        type: 'POST',
-        contentType: 'application/json',
-        data: JSON.stringify(layoutData),
-        headers: { 'X-CSRFToken': "{{ csrf_token() }}" },
-        success: function(resp) {
-            console.log('Layout saved to ' + url);
-        }
+      url: url, type: 'POST', contentType: 'application/json',
+      data: JSON.stringify(layoutData),
+      headers: { 'X-CSRFToken': CSRF }
     });
   }
 
   function initAllGrids() {
     initGrid('grid-agents', "{{ url_for('routes_ai_agent.save_agent_layout') }}");
   }
+  $(document).ready(initAllGrids);
+  var resizeTimer;
+  $(window).on('resize', function () {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(initAllGrids, 50);
+  });
 
-
-  function triggerAddAgent() {
-    const rawVal = $('#agent_source_select').val();
-    if (!rawVal) {
-      window.showToast({{ _('Please select a service or implementation first.')|tojson }}, 'info');
-      return;
-    }
-
-    window.showToast({{ _('Creating agent... Please wait.')|tojson }}, 'info');
-
-    $.ajax({
-      url: "{{ url_for('routes_ai_agent.ai_agent_add_direct') }}",
-      type: 'POST',
-      data: { source_select: rawVal },
-      headers: { 'X-CSRFToken': "{{ csrf_token() }}" },
-      success: function(resp) {
-        if (resp.status === 'success') {
-          // Add widget to GridStack immediately
-          if (grids['grid-agents']) {
-            grids['grid-agents'].addWidget('<div class="grid-stack-item" id="gridstack_agent_' + resp.agent_id + '" gs-id="' + resp.agent_id + '">' + resp.html + '</div>', {
-              w: 24, h: 1, x: 0, y: 0, autoPosition: true
-            });
-            
-            // Initialize selectpickers in the new widget
-            const $newWidget = $('#gridstack_agent_' + resp.agent_id);
-            $newWidget.find('.selectpicker').selectpicker();
-          }
-          window.showToast(resp.message, 'success');
-        } else {
-          window.showToast(resp.message || 'Error creating agent', 'error');
-        }
-      },
-      error: function() {
-        window.showToast({{ _('Error: Could not communicate with server')|tojson }}, 'error');
-      }
-    });
+  // ── 행의 켜기/끄기 ─────────────────────────────────────────────────────
+  function setRowActive(agentId, on) {
+    $('#agent_status_' + agentId).toggleClass('active-background', on).toggleClass('inactive-background', !on);
+    $('#agent_activate_' + agentId).toggle(!on);
+    $('#agent_deactivate_' + agentId).toggle(on);
   }
 
   function aiAgentAction(action, agentId) {
-    var url = (action === 'agent_activate')
-      ? '/ai/agent/activate/' + agentId
-      : '/ai/agent/deactivate/' + agentId;
-    window.showToast({{ _('Command sent. Please wait...')|tojson }}, 'info');
+    var on = (action === 'agent_activate');
+    window.showToast(T.sent, 'info');
     $.ajax({
       type: 'POST',
-      url: url,
-      headers: { 'X-CSRFToken': '{{ csrf_token() }}' },
-      success: function(data) {
-        if (data.status === 'success') {
-          if (action === 'agent_activate') {
-            $('#agent_status_' + agentId).removeClass('inactive-background').addClass('active-background');
-            $('#agent_activate_' + agentId).hide();
-            $('#agent_deactivate_' + agentId).show();
-          } else {
-            $('#agent_status_' + agentId).removeClass('active-background').addClass('inactive-background');
-            $('#agent_activate_' + agentId).show();
-            $('#agent_deactivate_' + agentId).hide();
-          }
-          window.showToast({{ _('Success')|tojson }}, 'success');
-        }
+      url: '/ai/agent/' + (on ? 'activate' : 'deactivate') + '/' + agentId,
+      headers: { 'X-CSRFToken': CSRF },
+      success: function (data) {
+        if (data.status === 'success') { setRowActive(agentId, on); window.showToast(T.success, 'success'); }
+        else { window.showToast(data.message || (on ? T.actFail : T.deactFail), 'error'); }
       },
-      error: function() { window.showToast({{ _('Error: Could not communicate with server')|tojson }}, 'error'); }
+      error: function () { window.showToast(T.commErr, 'error'); }
     });
     return false;
   }
 
-  function confirmAgentDelete(formId, message) {
-    if (confirm(message)) {
-      document.getElementById(formId).submit();
-    }
-  }
-
-
-  $(document).ready(function() {
-    initAllGrids();
-  });
-  $(window).on('load', initAllGrids);
-  let resizeTimer;
-  $(window).on('resize', function() {
-    clearTimeout(resizeTimer);
-    resizeTimer = setTimeout(function() {
-      initAllGrids();
-    }, 50);
-  });
-
-  // ==========================================================
-  // v29: MCP Process Lifecycle Functions
-  // ==========================================================
-
-  // v35: mcpStatusRefresh — modal MCP tab only
-  function mcpStatusRefresh() {
-    if ($('#tab-mcp').hasClass('active')) { _loadAiSettingsMcp(); }
-    else { _loadAotMcpServerStatus(); }
-  }
-
-  // Activate MCP agent: DB flag + eager process start + status refresh
+  // MCP 엔진 행: 켜면 DB 표시와 함께 프로세스를 바로 띄운다(서버가 한다).
   function mcpAgentActivate(agentId) {
-    window.showToast({{ _('Starting MCP process...')|tojson }}, 'info');
+    window.showToast(T.mcpStarting, 'info');
     $.ajax({
-      type: 'POST',
-      url: '/ai/agent/activate/' + agentId,
-      headers: { 'X-CSRFToken': '{{ csrf_token() }}' },
-      success: function(data) {
-        if (data.status === 'success') {
-          $('#agent_status_' + agentId).removeClass('inactive-background').addClass('active-background');
-          $('#agent_activate_' + agentId).hide();
-          $('#agent_deactivate_' + agentId).show();
-          window.showToast({{ _('MCP server activated')|tojson }}, 'success');
-          setTimeout(mcpStatusRefresh, 2000);
-        } else {
-          window.showToast(data.message || {{ _('Activation failed')|tojson }}, 'error');
-        }
+      type: 'POST', url: '/ai/agent/activate/' + agentId, headers: { 'X-CSRFToken': CSRF },
+      success: function (data) {
+        if (data.status === 'success') { setRowActive(agentId, true); window.showToast(T.mcpOn, 'success'); }
+        else { window.showToast(data.message || T.actFail, 'error'); }
       },
-      error: function() { window.showToast({{ _('Error: Could not communicate with server')|tojson }}, 'error'); }
+      error: function () { window.showToast(T.commErr, 'error'); }
     });
     return false;
   }
 
-  // Deactivate MCP agent: DB flag + process stop + status refresh
   function mcpAgentDeactivate(agentId) {
-    window.showToast({{ _('Stopping MCP process...')|tojson }}, 'info');
+    window.showToast(T.mcpStopping, 'info');
     $.ajax({
-      type: 'POST',
-      url: '/ai/agent/deactivate/' + agentId,
-      headers: { 'X-CSRFToken': '{{ csrf_token() }}' },
-      success: function(data) {
-        if (data.status === 'success') {
-          $('#agent_status_' + agentId).removeClass('active-background').addClass('inactive-background');
-          $('#agent_activate_' + agentId).show();
-          $('#agent_deactivate_' + agentId).hide();
-          window.showToast({{ _('MCP server deactivated')|tojson }}, 'success');
-          setTimeout(mcpStatusRefresh, 1000);
-        } else {
-          window.showToast(data.message || {{ _('Deactivation failed')|tojson }}, 'error');
-        }
+      type: 'POST', url: '/ai/agent/deactivate/' + agentId, headers: { 'X-CSRFToken': CSRF },
+      success: function (data) {
+        if (data.status === 'success') { setRowActive(agentId, false); window.showToast(T.mcpOff, 'success'); }
+        else { window.showToast(data.message || T.deactFail, 'error'); }
       },
-      error: function() { window.showToast({{ _('Error: Could not communicate with server')|tojson }}, 'error'); }
+      error: function () { window.showToast(T.commErr, 'error'); }
     });
     return false;
   }
 
-  // Stop, Restart, or Start MCP process directly (without changing DB activation flag)
-  function mcpProcessAction(action, agentId) {
-    var url = '/api/v1/mcp/servers/' + agentId + '/' + action;
-    fetch(url, { method: 'POST', headers: { 'X-CSRFToken': '{{ csrf_token() }}' } })
-      .then(res => res.json())
-      .then(function(data) {
-        window.showToast(data.message || action + ' sent', data.status === 'success' ? 'success' : 'error');
-        setTimeout(function() {
-          mcpStatusRefresh();
-          if ($('#tab-mcp').hasClass('active')) { _loadAiSettingsMcp(); }
-        }, 2000);
-      })
-      .catch(function() { window.showToast({{ _('Error: Could not communicate with server')|tojson }}, 'error'); });
-  }
-
-  // TASK_32: Unified AI Settings modal — System + MCP
-  function openAiSettings() {
-    $('#aiSettingsModal').modal('show');
-    _loadAiSettingsMcp();
-  }
-
-  // Load AoT MCP Server status (systemd: aotmcp)
-  function _loadAotMcpServerStatus() {
-    fetch('/api/v1/mcp/aot-mcp/status')
-      .then(function(res) { return res.json(); })
-      .then(function(data) {
-        var state = data.status || 'unknown';
-        var statusCls = state === 'active'   ? 'badge-success'
-                      : state === 'failed'   ? 'badge-danger'
-                      : 'badge-secondary';
-        var label = state === 'active' ? {{ _("running")|tojson }} : state;
-        $('#aotMcpStatusBadge').removeClass('badge-success badge-danger badge-secondary badge-warning')
-                               .addClass(statusCls).text(label);
-        // Toggle buttons
-        if (state === 'active') {
-          $('#btnAotMcpStart').hide();
-          $('#btnAotMcpStop').show();
-          $('#btnAotMcpRestart').show();
-        } else {
-          $('#btnAotMcpStart').show();
-          $('#btnAotMcpStop').hide();
-          $('#btnAotMcpRestart').hide();
-        }
-      })
-      .catch(function() {
-        $('#aotMcpStatusBadge').removeClass().addClass('badge badge-secondary').text({{ _("unknown")|tojson }});
-      });
-  }
-
-  // AoT MCP Server control action
-  function aotMcpAction(action) {
-    var labels = { start: {{ _("Starting...")|tojson }}, stop: {{ _("Stopping...")|tojson }}, restart: {{ _("Restarting...")|tojson }} };
-    window.showToast(labels[action] || action, 'info');
-    fetch('/api/v1/mcp/aot-mcp/' + action, {
-      method: 'POST',
-      headers: { 'X-CSRFToken': '{{ csrf_token() }}' }
-    })
-    .then(function(res) { return res.json(); })
-    .then(function(data) {
-      if (data.status === 'success') {
-        window.showToast({{ _("AoT MCP Server")|tojson }} + ': ' + action + ' OK', 'success');
-      } else {
-        window.showToast(data.message || {{ _("Action failed")|tojson }}, 'error');
-      }
-      setTimeout(_loadAotMcpServerStatus, 1500);
-    })
-    .catch(function() { window.showToast({{ _("Request failed")|tojson }}, 'error'); });
-  }
-
-  // Load MCP entry list — status only, no lifecycle controls (auto-managed)
-  function _loadAiSettingsMcp() {
-    _loadAotMcpServerStatus();
-    var $body = $('#aiSettingsMcpList');
-    $body.html('<p class="text-muted">' + {{ _("Loading...")|tojson }} + '</p>');
-    fetch('/api/v1/mcp/servers')
-      .then(function(res) { return res.json(); })
-      .then(function(servers) {
-        if (!servers.length) {
-          $body.html('<p class="text-muted">' + {{ _("No MCP entries configured.")|tojson }} + '</p>');
-          return;
-        }
-        var html = '';
-        servers.forEach(function(s) {
-          var statusCls = s.status === 'running'  ? 'badge-success'
-                        : s.status === 'cooldown' ? 'badge-warning'
-                        : 'badge-secondary';
-          html += '<div class="aot-modal-option-row">'
-                + '<span class="aot-modal-option-label">' + s.name
-                + ' <span class="badge ' + statusCls + ' ml-1">' + (s.status || 'stopped') + '</span>'
-                + '</span>'
-                + '</div>';
-        });
-        $body.html(html);
-      })
-      .catch(function() {
-        $body.html('<p class="text-danger">' + {{ _("Failed to load MCP entries.")|tojson }} + '</p>');
-      });
-  }
-
-  // AI 작동 시작/중지 토글. 서버가 거부하면(모델 0개 등) 스위치를 되돌린다 —
-  // 화면만 켜진 채로 두면 "켰는데 아무것도 안 돈다" 가 된다.
-  $(document).on('change', '#toggleAiRunning', function() {
+  // ── 내장 AI 작동 스위치 — 서버가 거부하면(모델 0개 등) 스위치를 되돌린다.
+  //    화면만 켜진 채로 두면 "켰는데 아무것도 안 돈다" 가 된다.
+  $(document).on('change', '#toggleAiRunning', function () {
     var $input = $(this);
     var desired = $input.prop('checked');
     $input.prop('disabled', true);
-    fetch('/api/v1/ai/settings/update', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token() }}' },
-      body: JSON.stringify({ ai_running: desired })
-    })
-    .then(function(r) { return r.json().then(function(res) { return { ok: r.ok, res: res }; }); })
-    .then(function(out) {
+    postSetting({ ai_running: desired }, function (ok, res) {
       $input.prop('disabled', false);
-      if (out.ok && out.res.status === 'success') {
-        $('#aiRuntimeHint').text(desired
-          ? {{ _("Running. Chat, advice requests and background AI work are all active.")|tojson }}
-          : {{ _("Stopped. Chat, advice requests and background AI work are all unavailable until you start it.")|tojson }});
-        window.showToast(desired
-          ? {{ _("AI service started")|tojson }}
-          : {{ _("AI service stopped")|tojson }}, 'success');
+      if (ok) {
+        $('#aiRuntimeHint').text(desired ? T.running : T.stopped);
+        window.showToast(desired ? T.started : T.stoppedToast, 'success');
       } else {
         $input.prop('checked', !desired);
-        window.showToast(out.res.message || {{ _("Save failed")|tojson }}, 'error');
+        window.showToast((res && res.message) || T.saveFailed, 'error');
       }
-    })
-    .catch(function() {
-      $input.prop('disabled', false).prop('checked', !desired);
-      window.showToast({{ _("Error: Could not communicate with server")|tojson }}, 'error');
     });
   });
 
-  // Save System Settings (Tab 1)
-  $(document).on('click', '#btnSaveUnifiedSettings', function() {
-    var btn = $(this);
-    btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> ' + {{ _("Saving...")|tojson }});
-    var data = {};
-    $('#unifiedSystemSettingsForm').serializeArray().forEach(function(f) {
-      data[f.name] = f.value === 'true' ? true : f.value === 'false' ? false : f.value;
+  // ── 고급 설정 — 바꾸는 즉시 저장한다 ────────────────────────────────────
+  $(document).on('change', '[data-ai-setting]', function () {
+    var payload = {};
+    payload[this.getAttribute('data-ai-setting')] = (this.type === 'checkbox') ? this.checked : this.value;
+    postSetting(payload, function (ok, res) {
+      window.showToast(ok ? T.saved : ((res && res.message) || T.saveFailed), ok ? 'success' : 'error');
     });
-    // Checkbox toggles are not captured by serializeArray — add manually
-    data['context_broadcast_enabled'] = $('#toggleContextBroadcast').prop('checked');
+  });
+
+  function postSetting(payload, done) {
     fetch('/api/v1/ai/settings/update', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token() }}' },
-      body: JSON.stringify(data)
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+      body: JSON.stringify(payload)
     })
-    .then(function(r) { return r.json(); })
-    .then(function(res) {
-      btn.prop('disabled', false).html('<i class="fa fa-save"></i> ' + {{ _("Save Settings")|tojson }});
-      if (res.status === 'success') {
-        window.showToast({{ _("Settings saved")|tojson }}, 'success');
-        if (res.restart_required) {
-          window.showToast({{ _("Restart required for AI toggle change")|tojson }}, 'warning');
-        }
-      } else {
-        window.showToast(res.message || {{ _("Save failed")|tojson }}, 'error');
-      }
-    })
-    .catch(function() {
-      btn.prop('disabled', false).html('<i class="fa fa-save"></i> ' + {{ _("Save Settings")|tojson }});
-      window.showToast({{ _("Error: Could not communicate with server")|tojson }}, 'error');
-    });
-  });
+      .then(function (r) { return r.json().then(function (res) { return { ok: r.ok && res.status === 'success', res: res }; }); })
+      .then(function (out) { done(out.ok, out.res); })
+      .catch(function () { window.showToast(T.commErr, 'error'); done(false, null); });
+  }
 </script>
-
-<!-- TASK_34: Unified AI Settings Modal — AoT Modern UI Standard -->
-<div class="modal fade aot-option-modal" id="aiSettingsModal" tabindex="-1" role="dialog" aria-labelledby="aiSettingsModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-xl aot-modal-dialog" role="document">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="aiSettingsModalLabel">{{ _('AI Settings') }}</h5>
-        <button type="button" class="close" data-dismiss="modal" aria-label="{{ _('Close') }}">
-          <span aria-hidden="true">&times;</span>
-        </button>
-      </div>
-      <div class="modal-body p-0">
-        <!-- Tab Nav -->
-        <ul class="nav nav-tabs px-3 pt-2" id="aiSettingsTabs" role="tablist">
-          <li class="nav-item">
-            <a class="nav-link active" id="tab-system-tab" data-toggle="tab" href="#tab-system" role="tab">
-              {{ _('System') }}
-            </a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link" id="tab-mcp-tab" data-toggle="tab" href="#tab-mcp" role="tab">
-              {{ _('MCP Servers') }}
-            </a>
-          </li>
-        </ul>
-
-        <div class="tab-content px-3 pb-3 ai-tab-scroll">
-
-          <!-- TAB 1: System Settings -->
-          <div class="tab-pane fade show active pt-3" id="tab-system" role="tabpanel">
-            <form id="unifiedSystemSettingsForm">
-              <div class="alert alert-info mb-3" role="alert">
-                <i class="fa fa-info-circle"></i>
-                <strong>{{ _('Experimental Feature') }}</strong>:
-                {{ _('AI functionality is currently in experimental stage.') }}
-              </div>
-
-              <div class="aot-modal-group-title">{{ _('General') }}</div>
-              <div class="aot-modal-container">
-                <div class="aot-modal-option-row">
-                  <label class="aot-modal-option-label">{{ _('Auto Approve Routine Tasks') }}</label>
-                  <div class="aot-modal-option-control">
-                    <select class="form-control aot-modern-select" name="auto_approve_routine">
-                      <option value="true" {% if ai_settings and ai_settings.auto_approve_routine %}selected{% endif %}>{{ _('Yes') }}</option>
-                      <option value="false" {% if not ai_settings or not ai_settings.auto_approve_routine %}selected{% endif %}>{{ _('No') }}</option>
-                    </select>
-                  </div>
-                </div>
-                <div class="aot-modal-option-row">
-                  <label class="aot-modal-option-label">{{ _('Max Impact to Auto Approve') }}</label>
-                  <div class="aot-modal-option-control">
-                    <input type="number" class="form-control aot-modern-input" name="max_impact_auto_approve" value="{{ ai_settings.max_impact_auto_approve if ai_settings else 30 }}">
-                  </div>
-                </div>
-                <div class="aot-modal-option-row">
-                  <label class="aot-modal-option-label">{{ _('Require Feedback on Fail') }}</label>
-                  <div class="aot-modal-option-control">
-                    <select class="form-control aot-modern-select" name="require_feedback">
-                      <option value="true" {% if not ai_settings or ai_settings.require_feedback %}selected{% endif %}>{{ _('Yes') }}</option>
-                      <option value="false" {% if ai_settings and not ai_settings.require_feedback %}selected{% endif %}>{{ _('No') }}</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-
-              <div class="aot-modal-group-title">{{ _('Models') }}</div>
-              <div class="aot-modal-container">
-                <div class="aot-modal-option-row">
-                  <label class="aot-modal-option-label">{{ _('Supervisor Model') }}</label>
-                  <div class="aot-modal-option-control">
-                    <input type="text" class="form-control aot-modern-input" name="default_supervisor" value="{{ ai_settings.default_supervisor if ai_settings else 'gemini-2.5-pro' }}">
-                  </div>
-                </div>
-                <div class="aot-modal-option-row">
-                  <label class="aot-modal-option-label">{{ _('Worker Model') }}</label>
-                  <div class="aot-modal-option-control">
-                    <input type="text" class="form-control aot-modern-input" name="default_worker" value="{{ ai_settings.default_worker if ai_settings else 'gemini-2.5-flash' }}">
-                  </div>
-                </div>
-              </div>
-
-              <div class="aot-modal-group-title">{{ _('Context Layer') }}</div>
-              <div class="aot-modal-container">
-                <div class="aot-modal-option-row">
-                  <label class="aot-modal-option-label">{{ _('Context Broadcast') }}</label>
-                  <div class="aot-modal-option-control">
-                    <label class="btn-toggle mb-0">
-                      <input type="checkbox" id="toggleContextBroadcast" class="btn-toggle-input"
-                             {% if not ai_settings or ai_settings.context_broadcast_enabled is none or ai_settings.context_broadcast_enabled %}checked{% endif %}>
-                      <div class="btn-toggle-slider"><div class="btn-toggle-thumb"></div></div>
-                    </label>
-                  </div>
-                </div>
-                {% if facilities %}
-                <div class="aot-modal-option-row">
-                  <label class="aot-modal-option-label">{{ _('Default Site') }}</label>
-                  <div class="aot-modal-option-control">
-                    <!-- Multi-site fallback: which GeoFacility to use when a page/conversation
-                         has no explicit facility scope (AI Library, conversational AI, portal
-                         all fall back to this). See
-                         .local/plans/phase6_knowledge_digest_design.md (multi-site addendum). -->
-                    <select class="form-control aot-modern-select" name="default_facility_id">
-                      <option value="">{{ _('(none)') }}</option>
-                      {% for f in facilities %}
-                      <option value="{{ f.unique_id }}" {% if settings and settings.default_facility_id == f.unique_id %}selected{% endif %}>
-                        {{ f.name }}
-                      </option>
-                      {% endfor %}
-                    </select>
-                  </div>
-                </div>
-                {% endif %}
-              </div>
-
-              <div class="aot-modal-group-title">{{ _('Context & Budget') }}</div>
-              <div class="aot-modal-container">
-                <div class="aot-modal-option-row">
-                  <label class="aot-modal-option-label">{{ _('Blackout Start') }}</label>
-                  <div class="aot-modal-option-control">
-                    <input type="time" class="form-control aot-modern-input" name="blackout_start" value="{{ ai_settings.blackout_start if ai_settings else '23:00' }}">
-                  </div>
-                </div>
-                <div class="aot-modal-option-row">
-                  <label class="aot-modal-option-label">{{ _('Blackout End') }}</label>
-                  <div class="aot-modal-option-control">
-                    <input type="time" class="form-control aot-modern-input" name="blackout_end" value="{{ ai_settings.blackout_end if ai_settings else '06:00' }}">
-                  </div>
-                </div>
-                <div class="aot-modal-option-row">
-                  <label class="aot-modal-option-label">{{ _('Context Scope (Hours)') }}</label>
-                  <div class="aot-modal-option-control">
-                    <input type="number" class="form-control aot-modern-input" name="context_hours" value="{{ ai_settings.context_hours if ai_settings else 24 }}">
-                  </div>
-                </div>
-                <div class="aot-modal-option-row">
-                  <label class="aot-modal-option-label">{{ _('Max History Context') }}</label>
-                  <div class="aot-modal-option-control">
-                    <input type="number" class="form-control aot-modern-input" name="max_history" value="{{ ai_settings.max_history if ai_settings else 5 }}">
-                  </div>
-                </div>
-                <div class="aot-modal-option-row">
-                  <label class="aot-modal-option-label">{{ _('Monthly Budget Limit (USD)') }}</label>
-                  <div class="aot-modal-option-control">
-                    <input type="number" step="0.1" class="form-control aot-modern-input" name="budget_limit_usd" value="{{ ai_settings.budget_limit_usd if ai_settings else 10.0 }}">
-                  </div>
-                </div>
-              </div>
-            </form>
-          </div>
-
-          <!-- TAB 2: MCP Servers -->
-          <div class="tab-pane fade pt-3" id="tab-mcp" role="tabpanel">
-
-            <!-- AoT MCP Server control -->
-            <div class="aot-modal-group-title">{{ _('AoT MCP Server') }}</div>
-            <div class="aot-modal-container">
-              <div class="aot-modal-option-row">
-                <span class="aot-modal-option-label">
-                  AoT MCP Server
-                  <span id="aotMcpStatusBadge" class="badge badge-secondary ml-1">{{ _('loading...') }}</span>
-                </span>
-                <div class="aot-modal-option-control">
-                  <button id="btnAotMcpStart" class="btn btn-xs btn-outline-success aot-pill-btn" style="display:none;" onclick="aotMcpAction('start')">{{ _('Start') }}</button>
-                  <button id="btnAotMcpRestart" class="btn btn-xs btn-outline-secondary aot-pill-btn" style="display:none;" onclick="aotMcpAction('restart')">{{ _('Restart') }}</button>
-                  <button id="btnAotMcpStop" class="btn btn-xs btn-outline-danger aot-pill-btn" style="display:none;" onclick="aotMcpAction('stop')">{{ _('Stop') }}</button>
-                </div>
-              </div>
-            </div>
-
-            <!-- MCP entry list (auto-managed, status only) -->
-            <div class="aot-modal-group-title">{{ _('MCP Entries') }}</div>
-            <div class="aot-modal-container" id="aiSettingsMcpList">
-              <p class="text-muted">{{ _('Loading...') }}</p>
-            </div>
-          </div>
-
-        </div><!-- /tab-content -->
-      </div><!-- /modal-body -->
-
-      <div class="modal-footer">
-        <button type="button" class="btn aot-pill-btn" data-dismiss="modal">{{ _('Close') }}</button>
-        <button type="button" class="btn aot-pill-btn aot-pill-btn-primary" id="btnSaveUnifiedSettings">{{ _('Save Settings') }}</button>
-      </div>
-    </div>
-  </div>
-</div>
 <script src="{{ asset('app-widget-drawer') }}"></script>
 {% endblock %}

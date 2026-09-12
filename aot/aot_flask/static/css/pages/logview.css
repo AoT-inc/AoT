@@ -4,11 +4,16 @@
  * custom-dark.css 가 표면만 바꾸고 이 화면은 그대로 남아 읽을 수 없게 된다.
  */
 
+/* 2026-09-11: 페이지 제목(.aot-settings-title, 정렬선 32)을 새로 얹으면서
+   실측하니 이 툴바가 15에 남아 제목과 16px 어긋났다 — 카드 밖 글자는
+   정렬선에 서야 한다(§2-3, `.aot-settings-bare`와 같은 논리). */
 .aot-log-toolbar {
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
   align-items: flex-end;
+  padding-left: var(--aot-space-4);
+  padding-right: var(--aot-space-4);
 }
 
 .aot-log-toolbar .aot-log-field {
@@ -103,7 +108,7 @@
   border-radius: var(--aot-radius-xs);
   overflow: auto;
   resize: vertical;
-  height: 60vh;
+  height: calc(60 * var(--aot-vh));
   min-height: 14rem;
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: var(--aot-font-size-xs);
@@ -213,7 +218,7 @@
   /* 버튼 묶음은 한 줄을 통째로 쓴다. 다른 필드와 같은 8rem 을 나눠 가지면
      버튼이 눌려 세로로 쌓인다. */
   .aot-log-toolbar .aot-log-actions { flex: 1 1 100%; }
-  .aot-log-pane { height: 55vh; font-size: var(--aot-font-size-2xs); }
+  .aot-log-pane { height: calc(55 * var(--aot-vh)); font-size: var(--aot-font-size-2xs); }
   /* 폰에서는 로거 이름과 날짜를 접는다 — 가로가 부족하면 메시지가 먼저 잘린다. */
   .aot-log-logger { display: none; }
   .aot-log-ts { width: 4.4rem; }

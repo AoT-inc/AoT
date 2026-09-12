@@ -1,0 +1,72 @@
+{#- 화면 배율 — 모바일(폰·태블릿)·컴퓨터 (2026-09-11) ────────────────────────
+    사용자 설정(계정 모달 "모바일 화면 크기" / "컴퓨터 화면 크기",
+    users.ui_zoom_phone / ui_zoom_desktop — 컬럼 이름은 폰 전용이던 때 그대로)대로
+    페이지 전체를 키운다. 기본값: 모바일 115% · 컴퓨터 100%(바꾸지 않음).
+    로그인 전 화면(로그인·비밀번호 찾기 등)도 이 부품을 넣어 기본값으로 연다.
+
+    · 모바일 — 손가락 화면(pointer: coarse + hover: none), 폰과 태블릿 모두(사용자,
+      2026-09-11). html.aot-mobile 을 붙여 aot-base.css 의 "손가락 화면은 글자만
+      115%" 를 끈다 — 글자만 키우면 같이 커지지 않는 요소가 너무 많았다(사용자).
+      방식:
+        - 뷰포트 확대: 뷰포트 폭을 기기 폭 ÷ 배율로 알린다(두 손가락 확대와 같은 원리).
+        - CSS zoom: 좁은 뷰포트 폭을 받지 않는 브라우저(iPhone·iPad — 사파리·크롬 모두
+          WebKit, 2026-09-11 사용자 폰 실측)는 바로 CSS zoom. iPadOS 사파리는 Mac 으로
+          자기를 소개하므로 "터치 되는 Mac" 을 iPad 로 본다.
+    · 컴퓨터 — 마우스 화면(hover: hover + pointer: fine). "데스크탑에서 문자 크기가 작아
+      매번 확대해서 읽어야 한다"(사용자, 2026-09-11). 데스크톱 브라우저는 뷰포트
+      메타를 쓰지 않으므로 CSS zoom 만 쓴다.
+    · CSS zoom 을 걸 때는 --aot-zoom 을 함께 심는다. zoom 아래에서는 vw·vh 에도 배율이
+      곱해져 화면을 넘으므로 CSS 는 뷰포트 단위를 --aot-vw / --aot-vh / --aot-dvh
+      토큰으로 쓴다(aot-theme-variables.css, 가드 test_viewport_units_go_through_zoom_tokens).
+    · 반드시 <meta name="viewport"> 바로 뒤, 화면을 그리기 전에 돈다. -#}
+{%- set _aot_authed = current_user and current_user.is_authenticated -%}
+{%- set _aot_zoom_mobile = (current_user.ui_zoom_phone if (_aot_authed and current_user.ui_zoom_phone) else 115) -%}
+{%- set _aot_zoom_desktop = (current_user.ui_zoom_desktop if (_aot_authed and current_user.ui_zoom_desktop) else 100) -%}
+<script>
+  (function () {
+    try {
+      var root = document.documentElement;
+      var nav = window.navigator;
+      var mq = function (q) { return window.matchMedia(q).matches; };
+      var isMobile = mq('(pointer: coarse) and (hover: none)');
+      var isDesktop = !isMobile && mq('(hover: hover) and (pointer: fine)');
+      if (!isMobile && !isDesktop) { return; }
+      if (isMobile) { root.classList.add('aot-mobile'); }
+      var z = isMobile ? {{ _aot_zoom_mobile|int }} : {{ _aot_zoom_desktop|int }};
+      if (!z || z === 100) { return; }
+      var meta = document.querySelector('meta[name="viewport"]');
+      var original = meta ? meta.getAttribute('content') : '';
+      var want = 0;
+      var useCssZoom = function () {
+        if (meta) { meta.setAttribute('content', original); }
+        root.style.zoom = String(z / 100);
+        root.style.setProperty('--aot-zoom', String(z / 100));
+        root.setAttribute('data-aot-zoom', 'css');
+      };
+      var useViewport = function () {
+        var landscape = mq('(orientation: landscape)');
+        var sw = window.screen.width, sh = window.screen.height;
+        var dw = landscape ? Math.max(sw, sh) : Math.min(sw, sh);
+        want = Math.round(dw * 100 / z);
+        meta.setAttribute('content', 'width=' + want + ', initial-scale=' + (dw / want).toFixed(3) + ', viewport-fit=cover');
+        root.setAttribute('data-aot-zoom', 'viewport');
+      };
+      // iPhone·iPad(WebKit)는 좁은 뷰포트 폭을 받지 않는다 — 한 번 그렸다 바꾸는 깜빡임 없이
+      // 바로 CSS zoom. iPadOS 사파리는 "Macintosh" 로 소개하므로 터치 되는 Mac 을 iPad 로 본다.
+      var webkitTouch = /iPhone|iPod|iPad/.test(nav.userAgent) ||
+                        (/Macintosh/.test(nav.userAgent) && nav.maxTouchPoints > 1);
+      if (isDesktop || !meta || webkitTouch) {
+        useCssZoom();
+      } else {
+        useViewport();
+        window.addEventListener('orientationchange', function () {
+          if (root.getAttribute('data-aot-zoom') === 'viewport') { setTimeout(useViewport, 300); }
+        });
+        // 그 밖에도 좁은 뷰포트 폭을 받지 않는 브라우저면 CSS zoom 으로 대신한다
+        document.addEventListener('DOMContentLoaded', function () {
+          if (root.getAttribute('data-aot-zoom') === 'viewport' && root.clientWidth > want + 4) { useCssZoom(); }
+        });
+      }
+    } catch (e) { /* 배율 없이 연다 */ }
+  })();
+</script>

@@ -5,6 +5,7 @@
 {% block title %} - {{dict_translation['camera']['title']}}{% endblock %}
 
 {% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/aot-settings.css') }}" />
 <style>
   /* Force 100% width on mobile immediately to prevent jagged reflow */
   @media (max-width: 768px) {
@@ -15,10 +16,6 @@
   }
   .grid-stack-item-content {
     transition: none !important;
-  }
-  .grid-stack-item-content input.form-control {
-    width: 100% !important;
-    min-width: 0 !important;
   }
 </style>
 <link rel="stylesheet" href="{{ url_for('static', filename='css/gridstack-custom.css') }}" />
@@ -32,31 +29,18 @@
 <main role="main" class="container py-4">
   {% include 'flash_messages.html' %}
 
+  <div class="aot-settings-title">
+    <h3>{{ dict_translation['camera']['title'] }}
+      <a href="{{ help_page[0] }}" target="_blank"><span class="fas fa-question-circle aot-help-icon"></span></a>
+    </h3>
+  </div>
+
   <div class="aot-vspace"></div>
 
   <!-- Camera selection and add form -->
   <form class="pb-2" id="new_camera_form" method="post" action="/camera">
     {{form_add_camera.hidden_tag()}}
     <div class="row aot-main-selection-row">
-      <!-- Platform auto-detection display -->
-      <div class="col-12 mb-3">
-        <div class="alert aot-entry-info">
-          <i class="fas fa-microchip mr-2"></i>
-          <strong>{{_('Detected Platform')}}:</strong>
-          <span id="detected_platform" class="ml-1 text-primary">
-            {% if platform == 'raspberry_pi' %}
-              <i class="fab fa-raspberry-pi"></i> Raspberry Pi
-            {% elif platform == 'debian_pc' %}
-              <i class="fas fa-desktop"></i> {{_('PC/Server')}}
-            {% elif platform == 'docker' %}
-              <i class="fab fa-docker"></i> {{_('Docker Container')}}
-            {% else %}
-              <i class="fas fa-question-circle"></i> {{_('Unknown')}}
-            {% endif %}
-          </span>
-        </div>
-      </div>
-
       <div class="col-auto">
         <select name="camera_type"
                 id="camera_type_select"

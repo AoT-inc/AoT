@@ -21,11 +21,13 @@ Every scheduler entry (job) moves through one of these states:
 
 ## AI Proposals
 
-When an AI agent proposes a scheduling action (e.g. via `add_schedule` or `schedule_device_control`), it appears in the **AI Proposals** queue as a `Draft` job. Each proposal card shows the target, proposed time, and the agent's reasoning.
+When an AI agent proposes a scheduling action (e.g. via `add_schedule` or `schedule_device_control`), it is saved as a `Draft` job and appears as a card under "Schedule proposals" on the **AI → Requests** screen. Each card shows the content, location, proposed time, and the agent's reasoning. The top of the Scheduler shows one line with the number of waiting proposals and a button to the Requests screen; clicking a proposal on the calendar takes you there too.
 
 - **Approve** — moves the job to `Pending`; a device-control job registers its trigger at this point.
-- **Reject** — moves the job to `Archived` and records optional feedback for the agent.
-- Opening a proposal's **Details** lets you adjust time, worker, or content before approving it.
+- **Reject** — moves the job to `Archived`.
+- **Details** lets you adjust time, worker, content, or location before approving it.
+
+Deciding on proposals requires permission to edit controllers.
 
 ---
 
@@ -43,7 +45,7 @@ Manual tasks skip the approval step and go straight to `Pending`.
 
 ## Ask AI
 
-The **Ask AI** panel on the New Task modal lets you describe a task in natural language (e.g. "3구역 관수 밸브 내일 아침 6시에 5분만 열어줘") and pick which AI agent should interpret it. The agent's response becomes a `Draft` proposal in the same approval queue as above — nothing executes without an explicit **Approve**.
+The New Task modal opens on the **Manual** tab. Its second, **AI** tab lets you describe a task in natural language (e.g. "3구역 관수 밸브 내일 아침 6시에 5분만 열어줘") and pick which AI agent should interpret it (the built-in AI must be running). The agent's response becomes a `Draft` proposal that you decide on the **AI → Requests** screen — nothing executes without an explicit **Approve**.
 
 ---
 

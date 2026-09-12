@@ -5,6 +5,7 @@
 {% block title %} - {{_('Notes Manager')}}{% endblock %}
 
 {% block body %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/aot-settings.css') }}" />
 <style>
     /* Inline overrides for Gray Theme */
     .btn-dark { background-color: #343a40; border-color: #343a40; }
@@ -18,7 +19,7 @@
     /* [Phase 2, 3, 4, 5] Modal Layout & Optimization */
     #editNoteModal.aot-option-modal .modal-content {
         height: auto;
-        max-height: calc(100vh - 100px) !important; /* Visual usability improved (50px top/bottom) */
+        max-height: calc(100 * var(--aot-vh) - 100px) !important; /* Visual usability improved (50px top/bottom) */
         overflow: hidden;
         border-radius: 1rem;
         box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
@@ -126,7 +127,7 @@
     /* 노트 화면은 바닥색 위에 카드가 뜬다. 아래는 새 노트 단추가 떠 있는
        자리라 한 칸 더 비운다. */
     .notes-page {
-        min-height: 100vh;
+        min-height: calc(100 * var(--aot-vh));
         padding-bottom: 5rem;
         background: var(--aot-surface-body);
     }
@@ -155,118 +156,66 @@
 
     /* 첨부가 없어도 자리를 지켜 화면이 튀지 않게 한다. */
     .notes-attach-box { min-height: 40px; }
+
+    /* 검색 한 칸만 남은 줄(2026-09-11) — 제목(.aot-page-title-row-flush,
+       정렬선 32)과 같은 자리에 서게 좌우 32(--aot-space-6)를 준다. 너무
+       넓게 늘어지지 않게 흔한 검색창 폭으로 좁힌다(geo/programs 페이지의
+       #veg-search-group 과 같은 처방). */
+    .notes-search-row {
+        padding-left: var(--aot-space-6);
+        padding-right: var(--aot-space-6);
+        margin-bottom: var(--aot-space-4);
+        max-width: 30em;
+    }
+
+    /* "노트 페이지와 같은 알약형"이 카드(.note-search-bar) 없이는 실패한다
+       — 공용 정의(aot-base.css)가 2026-09-09에 채움을 밑줄로 바꿨는데,
+       카드 없이 바닥(--aot-surface-body) 위에 바로 놓이면 밑줄이 거의 안
+       보인다(plots 페이지에서 먼저 잡힌 것과 같은 버그, 커밋 168e2121).
+       셀렉트가 바닥에서 분가할 때 쓴 같은 토큰(--aot-surface-control)을
+       쓴다. `.ui-pill`이 이미 16px 모서리를 강제하므로 채움만 주면 그
+       자리에서 알약으로 보인다. */
+    .notes-search-row .note-search-input-group {
+        background: var(--aot-surface-control);
+        border: 2px solid transparent;
+    }
+    .notes-search-row .note-search-input-group:focus-within {
+        border-color: var(--aot-input-focus-border, #13261B);
+    }
 </style>
 
 <!-- Path: /notes -->
 <div class="container-fluid px-0 notes-page">
   {% include 'flash_messages.html' %}
 
-  <!-- 1. HEADER & INTEGRATED SEARCH BAR -->
-  <div class="row justify-content-center py-4">
-    <div class="col-12 col-md-10 col-lg-8 col-xl-7">
-        <div class="note-search-bar">
-             <div class="d-flex justify-content-between align-items-center mb-3">
-                 <h4 class="mb-0 font-weight-bold text-dark">{{ _('Notes Manager') }}</h4>
-                 <div class="text-muted small">
-                    <i class="fas fa-sticky-note mr-1"></i> {{_('Total')}}: {{number_displayed_notes[1]}}
-                 </div>
-             </div>
+  {#- 2026-09-11 사용자 지시: 제목을 검색 카드(.note-search-bar) 밖으로 —
+      다른 페이지처럼 바탕 위에 바로 서게 한다. 카드 안에 있을 때는 이
+      페이지만 제목이 흰 상자 안에 갇혀 보였다. 색은 이전 그대로
+      (.text-dark) 유지하고 자리만 옮긴다. -#}
+  <div class="aot-page-title-row-flush">
+    <h3 class="mb-0 aot-page-title-size text-dark">{{ _('Notes Manager') }}</h3>
+  </div>
 
-             <!-- Smart Filter Form -->
-             <form method="post" action="/notes" id="noteFilterForm">
-                {{form_note_show.csrf_token}}
-                
-                <div class="row small-gutters align-items-center">
-                    <!-- Integrated Search Input -->
-                    <div class="col-12 col-md-6 mb-2 mb-md-0">
-                        <div class="note-search-input-group ui-pill">
-                            <span class="note-search-icon"><i class="fas fa-search"></i></span>
-                            {{form_note_show.filter_notes(class_='note-search-input', id='note_search_input', placeholder=_('Search content, subject...'))}}
-                        </div>
-                    </div>
-
-                    <!-- Filter Tags -->
-                    <div class="col-6 col-md-3 mb-2 mb-md-0">
-                         <!-- Hidden actual input -->
-                         {{form_note_show.filter_tags(class_='d-none', id='filter_tags_input')}}
-                         <!-- UI Select -->
-                         <select class="selectpicker form-control" multiple title="{{_('Tags')}}" 
-                                 data-style="btn-white" data-selected-text-format="count > 1" 
-                                 data-width="100%" id="tag_selector_ui" data-live-search="true">
-                             {% for each_tag in tags %}
-                                 <option value="{{each_tag.name}}">{{each_tag.name}}</option>
-                             {% endfor %}
-                         </select>
-                    </div>
-
-                    <!-- Search & Clear Buttons -->
-                    <div class="col-6 col-md-3 d-flex align-items-center">
-                        <div class="btn-group w-100 ui-pill overflow-hidden border">
-                            {{form_note_show.notes_show(class_='btn btn-dark border-0 flex-grow-1 font-weight-bold', value=_('Select'), style='border-radius:0;')}}
-                            <button type="button" id="clearFilterBtn" class="btn aot-pill-btn text-muted notes-clear-btn" title="{{_('Clear Filters')}}">
-                                <i class="fas fa-times-circle"></i>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Advanced Options Toggle -->
-                <div class="mt-2 text-right">
-                    <a href="#advancedOptions" data-toggle="collapse" class="small text-secondary text-decoration-none">
-                        {{_('Advanced Filters')}} <i class="fas fa-chevron-down ml-1"></i>
-                    </a>
-                </div>
-
-                <div class="collapse mt-3" id="advancedOptions">
-                     <div class="card card-body bg-light border-0 rounded-lg p-3">
-                        <div class="row small-gutters">
-                            <div class="col-6">
-                                <label class="small text-muted mb-1">{{_('Sort By')}}</label>
-                                {{form_note_show.sort_by(class_='selectpicker form-control', id='sort_by_select', data_style='btn-white border')}}
-                            </div>
-                            <div class="col-6">
-                                <label class="small text-muted mb-1">{{_('Direction')}}</label>
-                                {{form_note_show.sort_direction(class_='selectpicker form-control', id='sort_direction_select', data_style='btn-white border')}}
-                            </div>
-                            <div class="col-12 mt-2">
-                                {{form_note_show.notes_export(class_='btn btn-outline-secondary btn-sm btn-block', value=_('Export Results'))}}
-                            </div>
-                        </div>
-
-                        <hr class="my-3">
-
-                        <!-- PDF Report Export (period + tag based) -->
-                        <div class="mb-2">
-                            <label class="small font-weight-bold text-secondary mb-2">
-                                <i class="far fa-file-pdf mr-1"></i>{{_('PDF Report Export')}}
-                            </label>
-                            <p class="small text-muted mb-2">{{_('Compose notes within a period (using the tag filter above) into a formatted PDF report.')}}</p>
-                            <div class="row small-gutters">
-                                <div class="col-12 mb-2">
-                                    {{form_note_show.report_title(class_='form-control form-control-sm', id='report_title_input', placeholder=_('Report Title (optional)'))}}
-                                </div>
-                                <div class="col-12 col-md-6 mb-2">
-                                    <label class="small text-muted mb-1">{{_('Period')}}</label>
-                                    {{form_note_show.report_period(class_='form-control form-control-sm', id='report_period_select')}}
-                                </div>
-                                <div class="col-6 col-md-3 mb-2 report-custom-range d-none">
-                                    <label class="small text-muted mb-1">{{_('Start')}}</label>
-                                    {{form_note_show.report_date_start(class_='form-control form-control-sm', id='report_date_start_input', type='date')}}
-                                </div>
-                                <div class="col-6 col-md-3 mb-2 report-custom-range d-none">
-                                    <label class="small text-muted mb-1">{{_('End')}}</label>
-                                    {{form_note_show.report_date_end(class_='form-control form-control-sm', id='report_date_end_input', type='date')}}
-                                </div>
-                                <div class="col-12 mt-1">
-                                    {{form_note_show.notes_export_pdf(class_='btn btn-danger btn-sm btn-block', value=_('Export PDF Report'))}}
-                                </div>
-                            </div>
-                        </div>
-                     </div>
-                </div>
-             </form>
-        </div>
-    </div>
+  {#- 2026-09-11 사용자 지시: 검색 한 칸만 남기고 태그 셀렉터·선택/해제
+      버튼·고급 필터(정렬·CSV/PDF 내보내기)를 없앴다. 카드(.note-search-bar)
+      도 함께 걷어 제목처럼 바탕 위에 바로 서게 한다 — 카드를 걷으면 밑줄이
+      바닥색과 거의 안 보이므로 plots·programs 페이지와 같은 처방
+      (`--aot-surface-control` 채움)을 쓴다(`.notes-search-row` 아래).
+      남은 입력은 검색어 하나뿐이라 폼을 GET 으로 바꿨다 — POST 는
+      "Select" 버튼이 눌려야만(`notes_show.data`) 서버가 걸러 주므로,
+      그 버튼 없이 Enter 로 찾으려면 GET 이어야 한다(라우트의 GET 분기가
+      이미 쿼리스트링 필터를 지원한다). 정렬은 볼 곳이 없어졌지만 결과
+      순서가 사라지면 안 되므로 "최신순"을 숨은 값으로 고정해 보낸다. -#}
+  <div class="notes-search-row">
+    <form method="get" action="/notes" id="noteFilterForm">
+      {{form_note_show.filter_tags(type='hidden', id='filter_tags_input')}}
+      <input type="hidden" name="sort_by" value="date">
+      <input type="hidden" name="sort_direction" value="desc">
+      <div class="note-search-input-group ui-pill">
+        <span class="note-search-icon"><i class="fas fa-search"></i></span>
+        {{form_note_show.filter_notes(class_='note-search-input', id='note_search_input', placeholder=_('Search content, subject...'))}}
+      </div>
+    </form>
   </div>
 
   <!-- 2. QUICK ADD (Collapsible) -->
@@ -463,42 +412,22 @@
 </div>
 
 <script>
-    // Tag Filter Function
+    // 태그 칩(note_item.html)을 누르면 그 태그로 좁힌다. 태그 셀렉터 UI가
+    // 없어졌으므로(2026-09-11) 숨은 입력에 바로 쓴다 — 지금 값(서버가
+    // ?filter_tags= 를 그대로 되돌려준 것)에 이어 붙인다.
     function filterByTag(tagName) {
-        // Clear search input for isolated tag filtering (optional, based on preference)
-        // $('#note_search_input').val('');
-        
-        // Update the selectpicker UI
-        var $selector = $('#tag_selector_ui');
-        var currentVals = $selector.val() || [];
-        
+        var $hidden = $('#filter_tags_input');
+        var currentVals = ($hidden.val() || '').split(',').map(function (v) { return v.trim(); }).filter(Boolean);
+
         if (!currentVals.includes(tagName)) {
             currentVals.push(tagName);
-            $selector.selectpicker('val', currentVals);
         }
-        
-        // Sync the hidden input
-        $('#filter_tags_input').val(currentVals.join(','));
-        
-        // Submit
+        $hidden.val(currentVals.join(','));
+
         $('#noteFilterForm').submit();
     }
 
     $(document).ready(function() {
-        // Restore Tag Selection State if available
-        var currentTags = $('#filter_tags_input').val();
-         if (currentTags) {
-             // Need to refresh selectpicker to show selected values
-             $('#tag_selector_ui').selectpicker('val', currentTags.split(','));
-        }
-
-        // Sync Visual Tag Selector with Hidden Form Input
-        $('#tag_selector_ui').on('changed.bs.select', function (e, clickedIndex, isSelected, previousValue) {
-            var selectedValues = $(this).val();
-            var strVal = (selectedValues) ? selectedValues.join(',') : '';
-            $('#filter_tags_input').val(strVal);
-        });
-
         // Dynamic Tag Creator Functionality for Selectpickers
         function enableDynamicTags($pickerId) {
             var $picker = $($pickerId);
@@ -534,12 +463,7 @@
                                 $picker.append(newOption);
                                 $picker.selectpicker('refresh');
                                 $picker.selectpicker('val', val); // Select the new one
-                                
-                                // For filter selector, also update hidden input
-                                if ($pickerId === '#tag_selector_ui') {
-                                    $picker.trigger('changed.bs.select');
-                                }
-                                
+
                                 // Reset search and hide dropdown
                                 $(this).val('');
                                 $picker.selectpicker('toggle');
@@ -550,27 +474,8 @@
             });
         }
 
-        enableDynamicTags('#tag_selector_ui');
         enableDynamicTags('#note_tags');
         enableDynamicTags('#edit_note_tags');
-
-        // Clear Filter Button Handler
-        $('#clearFilterBtn').click(function() {
-            $('#note_search_input').val('');
-            $('#filter_tags_input').val('');
-            $('#tag_selector_ui').selectpicker('val', []);
-            $('#sort_by_select').selectpicker('val', 'date');
-            $('#sort_direction_select').selectpicker('val', 'desc');
-            $('#noteFilterForm').submit();
-        });
-
-        // PDF Report: show/hide custom date range when "Custom Range" is selected
-        function togglePdfReportRange() {
-            var isCustom = $('#report_period_select').val() === 'custom';
-            $('.report-custom-range').toggleClass('d-none', !isCustom);
-        }
-        $('#report_period_select').on('change', togglePdfReportRange);
-        togglePdfReportRange();
 
         // Helper to Initialize Read More / Fold controls
         function initExpansionControls($items) {
@@ -876,16 +781,16 @@
             const params = new URLSearchParams(window.location.search);
             params.set('page', currentPage + 1);
 
-            // [MODIFIED] Add search/tag/sort filters to AJAX request directly from UI elements
+            // 검색·정렬 UI 는 검색어 하나만 남았다(2026-09-11) — 정렬은
+            // 화면에 없지만 무한 스크롤도 첫 페이지와 같은 순서(최신순)를
+            // 이어가야 하므로 폼의 숨은 값과 같은 값을 그대로 보낸다.
             const searchText = $('#note_search_input').val();
             const searchTags = $('#filter_tags_input').val();
-            const sortBy = $('#sort_by_select').val();
-            const sortDir = $('#sort_direction_select').val();
-            
+
             if (searchText) params.set('filter_notes', searchText);
             if (searchTags) params.set('filter_tags', searchTags);
-            if (sortBy) params.set('sort_by', sortBy);
-            if (sortDir) params.set('sort_direction', sortDir);
+            params.set('sort_by', 'date');
+            params.set('sort_direction', 'desc');
             
             $.ajax({
                 url: window.location.pathname,

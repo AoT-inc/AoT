@@ -26,20 +26,23 @@
       {% if opt.type == 'textarea' %}
         {# Textarea: vertical full-width layout #}
         <div class="aot-modal-option-row aot-full-width-row">
-          <label class="aot-modal-option-label font-weight-bold">{{ opt.name or opt.id }}</label>
+          <label class="aot-modal-option-label">{{ opt.name or opt.id }}</label>
           <div class="aot-modal-option-control">
             <textarea name="custom_{{ opt.id }}" class="form-control aot-modern-input aot-input-prose aot-input-tall-sm" rows="5">{{ val }}</textarea>
           </div>
         </div>
       {% elif opt.type == 'password' %}
-        {# Password/Token/API Key: horizontal row with API Key Picker #}
+        {# Password/Token/API Key: horizontal row with API Key Picker.
+           저장된 값은 브라우저로 내려보내지 않는다 — 빈 칸으로 저장하면
+           ai_agent_mod 가 기존 값을 그대로 둔다. #}
         <div class="aot-modal-option-row">
           <label class="aot-modal-option-label">{{ opt.name or opt.id }}</label>
           <div class="aot-modal-option-control">
             <div class="aot-api-key-group">
-              <input type="text" name="custom_{{ opt.id }}" class="form-control aot-modern-input"
-                     value="{{ val }}" autocomplete="off"
-                     placeholder="{{ _('Leave blank to keep') }}">
+              <input type="password" name="custom_{{ opt.id }}" class="form-control aot-modern-input"
+                     value="" autocomplete="new-password"
+                     data-lpignore="true" data-1p-ignore="true" data-dashlane-ignore="true" spellcheck="false"
+                     {% if values.get(opt.id) %}placeholder="{{ _('Leave blank to keep') }}"{% endif %}>
               {{ render_api_key_picker() }}
             </div>
           </div>
@@ -54,17 +57,19 @@
             {% elif opt.type == 'int' or opt.type == 'float' %}
               <input type="number" name="custom_{{ opt.id }}" class="form-control aot-modern-input" value="{{ val }}" step="{% if opt.type == 'float' %}0.01{% else %}1{% endif %}">
             {% elif opt.type == 'select' %}
-              <select name="custom_{{ opt.id }}" class="form-control selectpicker aot-standard-select" data-style="btn-white">
+              {# 공용 셀렉트 — .aot-modern-select 는 공용 드롭인이 알약 버튼으로 바꿔 그린다. #}
+              <select name="custom_{{ opt.id }}" class="form-control aot-modern-select">
                 {% for choice in opt.choices %}
                   <option value="{{ choice.value }}" {% if val == choice.value %}selected{% endif %}>{{ choice.label }}</option>
                 {% endfor %}
               </select>
             {% elif opt.type == 'boolean' %}
-              {% set switch_id = 'custom_' ~ opt.id ~ '_' ~ range(1, 99999) | random %}
-              <div class="custom-control custom-switch">
-                <input type="checkbox" name="custom_{{ opt.id }}" class="custom-control-input" id="{{ switch_id }}" {% if val %}checked{% endif %}>
-                <label class="custom-control-label" for="{{ switch_id }}"></label>
-              </div>
+              {# 앱 전체의 슬라이드 토글(components/aot-toggle.css). 예전에는 부트스트랩
+                 custom-switch 라 이 드로어에서만 스위치 모양이 달랐다. 이름·값은 같다. #}
+              <label class="btn-toggle mb-0">
+                <input type="checkbox" name="custom_{{ opt.id }}" class="btn-toggle-input" {% if val %}checked{% endif %}>
+                <span class="btn-toggle-slider"><span class="btn-toggle-thumb"></span></span>
+              </label>
             {% endif %}
           </div>
         </div>

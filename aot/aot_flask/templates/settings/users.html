@@ -10,25 +10,8 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/aot-entry-ui.css') }}" />
 <script src="{{ url_for('static', filename='js/vendor/gridstack-all.js') }}"></script>
 <style>
-  #userSettingsTabs {
-    border-bottom: 2px solid var(--aot-border-neutral);
-    margin-bottom: var(--aot-space-3);
-  }
-  #userSettingsTabs .nav-link {
-    border: none;
-    color: var(--aot-color-text-secondary);
-    font-weight: 500;
-    /* 좌우 16 — 담는 .container 와 더해 탭 글자가 카드 안 라벨과 같은 x 에 선다(§2-3). */
-    padding: var(--aot-space-2) var(--aot-space-4);
-    border-radius: 0;
-    border-bottom: 2px solid transparent;
-    cursor: pointer;
-  }
-  #userSettingsTabs .nav-link.active {
-    color: var(--aot-color-brand-secondary);
-    background: transparent;
-    border-bottom: 2px solid var(--aot-color-brand-secondary);
-  }
+  /* 탭 모습은 공용 구획 탭(components/aot-base-ui.css `.nav-tabs`)이 정한다 —
+     이 화면에서 따로 칠하던 #userSettingsTabs 규칙을 걷었다(2026-09-10). */
   /* Force 100% width on mobile immediately to prevent jagged reflow */
   @media (max-width: 768px) {
     .grid-stack-item {
@@ -554,10 +537,38 @@
       // stays lit while B is the one being edited.
       if (window.AoTWidgetDrawer) { window.AoTWidgetDrawer.activateByUid(uid); }
 
-      $.get(url).done(swap).fail(function () {
+      $.get(url).done(function (html) {
+        swap(html);
+        $drawer.trigger('aot:detail-loaded');
+      }).fail(function () {
         swap('<div class="modal-body"><div class="aot-modal-container">' + {{ _("Error: Unable to communicate with server.")|tojson }} + '</div></div>');
       });
     });
+
+    // Deep link from other screens (AI → Connect "Manage keys"):
+    // /settings/users?open_user=<uid>&focus=api_keys. The detail URL is a drawer
+    // fragment — opened on its own it renders unstyled — so other screens must
+    // come through this page and let the drawer load it.
+    (function () {
+      var params = new URLSearchParams(window.location.search);
+      var openUid = params.get('open_user');
+      if (!openUid) return;
+      // Whitelisted: the value ends up in an attribute selector below.
+      var focus = { api_keys: 'api_keys' }[params.get('focus')];
+      var $card = $('[data-open-detail="user"]').filter(function () {
+        return $(this).attr('data-uid') === openUid;
+      }).first();
+      if (!$card.length) return;
+      if (focus) {
+        $drawer.one('aot:detail-loaded', function () {
+          var el = $drawer.find('[data-detail-focus="' + focus + '"]')[0];
+          if (el) { el.scrollIntoView({ block: 'start' }); }
+        });
+      }
+      $card.trigger('click');
+      // A refresh should not reopen the drawer.
+      window.history.replaceState(null, '', window.location.pathname);
+    })();
 
     $(document).on('submit', 'form', function (e) {
       let submitter_btn = $(e.originalEvent.submitter);

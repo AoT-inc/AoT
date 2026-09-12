@@ -31155,3 +31155,17 @@ msgstr "Tüm Ölçümler"
 
 msgid "All Units"
 msgstr "Tüm Birimler"
+
+#: aot/widgets/AoT_plot.py
+msgid "Map or site"
+msgstr "Harita/Alan"
+
+#: aot/widgets/AoT_plot.py
+msgid ""
+"Show only the plots in this map or site. Leave empty to show every plot in "
+"progress."
+msgstr "Yalnızca bu harita veya alandaki ekim alanlarını göster. Yetiştirilmekte olan tüm ekim alanlarını göstermek için boş bırakın."
+
+#: aot/aot_flask/static/js/widgets/AoT_plot/aot-plot-widget.js
+msgid "Go to page %(n)s"
+msgstr "%(n)s. sayfaya git"

@@ -853,7 +853,7 @@ WIDGET_INFORMATION = {
         .seq-group-opt-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 6px; vertical-align: middle; }
         /* Group picker modal (wider, modern, one group per line) */
         .seq-group-modal .seq-type-panel {
-            width: min(360px, 92vw);
+            width: min(360px, 92 * var(--aot-vw));
             box-sizing: border-box;
             padding: var(--aot-space-4, 16px);
         }
@@ -865,7 +865,7 @@ WIDGET_INFORMATION = {
         .seq-group-modal .seq-type-options {
             flex-direction: column;
             gap: var(--aot-space-2, 8px);
-            max-height: 44vh;
+            max-height: calc(44 * var(--aot-vh));
             overflow-y: auto;
             margin-bottom: var(--aot-space-3, 12px);
         }
@@ -905,7 +905,7 @@ WIDGET_INFORMATION = {
         }
 
         /* Combined step settings modal (time on top, group below) */
-        .seq-step-modal .seq-type-panel { width: min(360px, 92vw); box-sizing: border-box; padding: var(--aot-space-4, 16px); max-height: 92vh; overflow-y: auto; }
+        .seq-step-modal .seq-type-panel { width: min(360px, 92 * var(--aot-vw)); box-sizing: border-box; padding: var(--aot-space-4, 16px); max-height: calc(92 * var(--aot-vh)); overflow-y: auto; }
         .seq-step-time-body .aot-wheel-cols { margin: 2px 0 4px; }
         .seq-step-modal .seq-type-panel-title { text-align: left; margin-bottom: var(--aot-space-3, 12px); }
         .seq-step-section { margin-bottom: var(--aot-space-4, 16px); }
@@ -921,7 +921,7 @@ WIDGET_INFORMATION = {
         }
         .seq-step-time-input:hover { border-color: var(--aot-color-brand-secondary); }
         .seq-step-note { color: var(--aot-color-text-secondary, #888); font-size: var(--aot-fs-body); padding: 4px 2px; }
-        .seq-step-group-body { display: flex; flex-direction: column; gap: var(--aot-space-2, 8px); max-height: 34vh; overflow-y: auto; }
+        .seq-step-group-body { display: flex; flex-direction: column; gap: var(--aot-space-2, 8px); max-height: calc(34 * var(--aot-vh)); overflow-y: auto; }
         .seq-step-group-body .btn.aot-pill-btn { width: 100%; text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .seq-step-newrow { display: flex; gap: var(--aot-space-2, 8px); width: 100%; box-sizing: border-box; margin-top: var(--aot-space-2, 8px); }
         {#- 옆에 선 버튼이 알약 규격(32px)이라 이 칸도 같은 높이여야 밑선이 맞는다. -#}
@@ -947,7 +947,7 @@ WIDGET_INFORMATION = {
             background: var(--aot-surface-modal, #fff); border-radius: var(--aot-btn-radius, 18px);
             box-shadow: var(--aot-shadow-modal, 0 5px 20px rgba(0,0,0,0.15));
             padding: var(--aot-space-4, 16px) var(--aot-space-4, 16px) var(--aot-space-3, 12px);
-            width: min(220px, 85vw); user-select: none;
+            width: min(220px, 85 * var(--aot-vw)); user-select: none;
         }
         .seq-type-panel-title { text-align: center; font-weight: var(--aot-fw-bold, 700); font-size: var(--aot-fs-body, 0.875rem); color: var(--aot-text-title, #222); margin-bottom: var(--aot-space-3, 12px); }
         .seq-type-options { display: flex; gap: var(--aot-space-2, 8px); margin-bottom: var(--aot-space-3, 12px); }
@@ -1733,7 +1733,7 @@ WIDGET_INFORMATION = {
         if (!box) {
             box = document.createElement('div');
             box.id = 'seq-dnd-debug-box';
-            box.style.cssText = 'position:fixed;left:0;right:0;bottom:0;max-height:45vh;overflow:auto;' +
+            box.style.cssText = 'position:fixed;left:0;right:0;bottom:0;max-height:calc(45 * var(--aot-vh));overflow:auto;' +
                 'background:rgba(0,0,0,0.88);color:#7CFC00;font:11px/1.4 monospace;padding:6px 8px;' +
                 'z-index:2147483647;white-space:pre-wrap;';
             document.body.appendChild(box);

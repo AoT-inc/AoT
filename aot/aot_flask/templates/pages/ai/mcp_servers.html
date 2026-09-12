@@ -1,121 +1,159 @@
 {% extends "layout.html" %}
+{% set active_page = "mcp_servers" %}
+{% set help_page = [manual_url("ai/overview/"), _('MCP bridge servers')] %}
 
-{% block title %} - {{ _('MCP Servers') }}{% endblock %}
+{% block title %} - {{ _('MCP bridge servers') }}{% endblock %}
 
 {% block head %}
-<link href="{{ url_for('static', filename='css/pages/mcp_servers.css') }}" rel="stylesheet">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/aot-settings.css') }}" />
 {% endblock %}
 
+{#
+  MCP 브리지 서버 — 내장 AI 가 도구로 부르는 MCP 서버 프로세스(AI 연결 > 고급).
+
+  2026-09-10 재구성. 예전에는 이 페이지만의 카드·버튼 체계(pages/mcp_servers.css:
+  테두리 카드, radius-md 버튼, 유리 효과, 호버 들림)와 아이콘만 있는 버튼, 영문
+  상태 원문을 썼고, 삭제 메뉴에는 동작이 연결돼 있지 않았다. 공용 설정 카드·행·
+  알약 버튼·상태 배지와 모달 골격으로 옮기고 전용 CSS 를 지웠다.
+#}
+
 {% block body %}
-<div class="container-fluid mcp-container">
-    <div class="aot-settings-title">
-        <h3>{{ _('MCP Server Management') }}</h3>
-        <div class="d-flex aot-btn-group">
-            <button id="btn-refresh-all" class="btn aot-pill-btn" title="{{ _('Refresh All Status') }}">
-                <i class="fas fa-sync-alt"></i>
-            </button>
-            <a href="{{ url_for('routes_mcp_api.mcp_review_page') }}" class="btn aot-pill-btn">
-                {{ _('AI Requests & Advice') }}
-            </a>
-            <button id="btn-add-server" class="btn aot-pill-btn aot-pill-btn-primary" data-toggle="modal" data-target="#modal-add-server">
-                <i class="fas fa-plus mr-2"></i>{{ _('Add Server') }}
-            </button>
-        </div>
+<div class="container-fluid px-0">
+<main role="main" class="container py-4">
+  <div class="aot-settings-title">
+    <h3>{{ _('MCP bridge servers') }}</h3>
+    <div class="aot-btn-group">
+      <a class="btn aot-pill-btn aot-pill-btn-secondary" href="{{ url_for('routes_ai_agent.page_ai_dashboard') }}">{{ _('AI Requests') }}</a>
+      <button type="button" id="btn-add-server" class="btn aot-pill-btn aot-pill-btn-primary">{{ _('Add Server') }}</button>
     </div>
-    <p class="aot-modal-body-text">{{ _('Monitor and control Model Context Protocol bridge processes') }}</p>
+  </div>
 
-    <div class="row" id="mcp-server-grid">
-        <!-- Server cards will be injected here by JS -->
-        <div class="col-12 text-center py-5 loading-state">
-            <div class="spinner-border text-primary" role="status">
-                <span class="sr-only">Loading...</span>
-            </div>
-            <p class="mt-3 text-muted">{{ _('Discovering MCP servers...') }}</p>
-        </div>
+  {# 구획을 section 으로 묶는다 — 설명 <p> 가 main.container 의 직계 자식이면
+     테마의 main.container>p 가 글자를 키운다(ui-guide §4-16 함정 9). #}
+  <section>
+    <div class="aot-settings-group-title">{{ _('Servers') }}</div>
+    <p>{{ _('Tool servers the built-in AI calls. Adding an MCP engine on the AI Connection page creates one automatically.') }}</p>
+    <div class="aot-settings-card" id="mcp-server-list" aria-live="polite">
+      <div class="aot-settings-sub">{{ _('Loading...') }}</div>
     </div>
+  </section>
+</main>
 </div>
 
-<!-- Add/Edit Server Modal -->
-<div class="modal fade aot-option-modal" id="modal-add-server" tabindex="-1" role="dialog">
-    <div class="modal-dialog modal-lg" role="document">
-        <div class="modal-content">
-            <div class="modal-header border-0">
-                <h5 class="modal-title font-weight-bold">{{ _('Configure MCP Server') }}</h5>
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
+<!-- 서버 추가·편집 -->
+<div class="modal fade aot-option-modal" id="modal-mcp-server" tabindex="-1" role="dialog" aria-hidden="true">
+  <div class="modal-dialog modal-lg aot-modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">{{ _('Configure MCP Server') }}</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="{{ _('Close') }}">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <form id="form-mcp-server">
+          <input type="hidden" id="server-unique-id">
+          <div class="aot-modal-container">
+            <div class="aot-modal-option-row">
+              <label class="aot-modal-option-label" for="server-name">{{ _('Server Name') }}</label>
+              <div class="aot-modal-option-control">
+                <input type="text" class="form-control aot-modern-input" id="server-name" required>
+              </div>
             </div>
-            <div class="modal-body p-0">
-                <form id="form-mcp-server">
-                    <input type="hidden" id="server-unique-id" name="unique_id">
-                    <div class="aot-modal-container">
-                        <div class="aot-modal-option-row">
-                            <label class="aot-modal-option-label">{{ _('Server Name') }}</label>
-                            <div class="aot-modal-option-control">
-                                <input type="text" class="form-control aot-modern-input" id="server-name" name="name" placeholder="e.g., Local Python Tooling" required>
-                            </div>
-                        </div>
-                        <div class="aot-modal-option-row">
-                            <label class="aot-modal-option-label">{{ _('Command') }}</label>
-                            <div class="aot-modal-option-control">
-                                <input type="text" class="form-control aot-modern-input" id="server-command" name="command" placeholder="e.g., npx -y @modelcontextprotocol/server-everything" required>
-                            </div>
-                        </div>
-                        <div class="aot-modal-body-text text-muted">{{ _('The executable command to start the MCP server process.') }}</div>
-                        <div class="aot-modal-option-row">
-                            <label class="aot-modal-option-label">{{ _('Scope') }}</label>
-                            <div class="aot-modal-option-control">
-                                <select class="form-control aot-modern-select" id="server-scope" name="scope">
-                                    <option value="general">{{ _('General (Shared)') }}</option>
-                                    <option value="specific">{{ _('Specific (Restricted)') }}</option>
-                                </select>
-                            </div>
-                        </div>
-                        <div class="aot-modal-option-row">
-                            <label class="aot-modal-option-label">{{ _('Activate on Save') }}</label>
-                            <div class="aot-modal-option-control">
-                                <label class="btn-toggle mb-0">
-                                    <input type="checkbox" class="btn-toggle-input" id="server-is-activated" name="is_activated">
-                                    <div class="btn-toggle-slider"><div class="btn-toggle-thumb"></div></div>
-                                </label>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="aot-modal-group-title">{{ _('Environment Variables') }} (JSON)</div>
-                    <div class="aot-modal-container">
-                        <textarea class="form-control aot-modern-input" id="server-env" name="env_json" rows="3" placeholder='{"API_KEY": "..."}'></textarea>
-                    </div>
-                </form>
+            <div class="aot-modal-option-row">
+              <label class="aot-modal-option-label" for="server-command">{{ _('Command') }}</label>
+              <div class="aot-modal-option-control">
+                <input type="text" class="form-control aot-modern-input" id="server-command" required>
+              </div>
+              {# 부연은 행의 셋째 자식 — 아랫줄 전체 폭(§4-6). 예전에는 행 사이에 떠 있었다. #}
+              <div class="aot-modal-body-text">{{ _('The executable command to start the MCP server process.') }}</div>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn aot-pill-btn" data-dismiss="modal">{{ _('Cancel') }}</button>
-                <button type="button" id="btn-save-server" class="btn aot-pill-btn aot-pill-btn-primary">{{ _('Save Configuration') }}</button>
+            <div class="aot-modal-option-row">
+              <label class="aot-modal-option-label" for="server-scope">{{ _('Scope') }}</label>
+              <div class="aot-modal-option-control">
+                <select class="form-control aot-modern-select" id="server-scope">
+                  <option value="general">{{ _('General (Shared)') }}</option>
+                  <option value="specific">{{ _('Specific (Restricted)') }}</option>
+                </select>
+              </div>
             </div>
-        </div>
+            <div class="aot-modal-option-row">
+              <label class="aot-modal-option-label" for="server-is-activated">{{ _('Activate on Save') }}</label>
+              <div class="aot-modal-option-control">
+                <label class="btn-toggle mb-0">
+                  <input type="checkbox" class="btn-toggle-input" id="server-is-activated">
+                  <span class="btn-toggle-slider"><span class="btn-toggle-thumb"></span></span>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <div class="aot-modal-group-title">{{ _('Environment Variables') }}</div>
+          <p class="aot-modal-body-text aot-modal-container-intro">{{ _('JSON object, for example {"API_KEY": "..."}.') }}</p>
+          <div class="aot-modal-container">
+            <div class="aot-modal-option-row aot-full-width-row">
+              <label class="aot-modal-option-label" for="server-env">JSON</label>
+              <div class="aot-modal-option-control">
+                <textarea class="form-control aot-modern-input aot-input-prose" id="server-env" rows="3" spellcheck="false"></textarea>
+              </div>
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn aot-pill-btn aot-pill-btn-secondary" data-dismiss="modal">{{ _('Close') }}</button>
+        <button type="button" id="btn-delete-server" class="btn aot-pill-btn aot-pill-btn-danger" hidden>{{ _('Delete') }}</button>
+        <button type="button" id="btn-save-server" class="btn aot-pill-btn aot-pill-btn-primary">{{ _('Save') }}</button>
+      </div>
     </div>
+  </div>
 </div>
 
-<!-- Tools List Modal -->
-<div class="modal fade aot-option-modal" id="modal-view-tools" tabindex="-1" role="dialog">
-    <div class="modal-dialog modal-xl" role="document">
-        <div class="modal-content">
-            <div class="modal-header border-0">
-                <h5 class="modal-title font-weight-bold" id="tools-modal-title">{{ _('Available Tools') }}</h5>
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
-            </div>
-            <div class="modal-body overflow-auto mcp-modal-body">
-                <div id="tools-container" class="list-group list-group-flush">
-                    <!-- Tools list injected by JS -->
-                </div>
-            </div>
-        </div>
+<!-- 서버가 내놓은 도구 -->
+<div class="modal fade aot-option-modal" id="modal-mcp-tools" tabindex="-1" role="dialog" aria-hidden="true">
+  <div class="modal-dialog modal-lg aot-modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="tools-modal-title">{{ _('Available Tools') }}</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="{{ _('Close') }}">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="aot-modal-container" id="tools-container"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn aot-pill-btn aot-pill-btn-secondary" data-dismiss="modal">{{ _('Close') }}</button>
+      </div>
     </div>
+  </div>
 </div>
 
-<!-- MCP Server Management Logic -->
+<script>
+  // 번들(mcp_servers.js)이 읽는 문구·토큰. 번역문은 전부 |tojson 으로 넘긴다.
+  window.AOT_MCP = {
+    csrf: {{ csrf_token()|tojson }},
+    t: {
+      loading: {{ _('Loading...')|tojson }},
+      running: {{ _('Running')|tojson }},
+      stopped: {{ _('Stopped')|tojson }},
+      cooldown: {{ _('Waiting to retry')|tojson }},
+      tools: {{ _('Tools')|tojson }},
+      edit: {{ _('Edit')|tojson }},
+      start: {{ _('Start')|tojson }},
+      stop: {{ _('Stop')|tojson }},
+      restart: {{ _('Restart')|tojson }},
+      none: {{ _('No MCP servers yet.')|tojson }},
+      loadFailed: {{ _('Could not load the MCP server list.')|tojson }},
+      noTools: {{ _('No tools exposed by this server.')|tojson }},
+      schema: {{ _('Input schema')|tojson }},
+      deleteQ: {{ _('Delete this server?')|tojson }},
+      added: {{ _('Server added.')|tojson }},
+      updated: {{ _('Server updated.')|tojson }},
+      deleted: {{ _('Server deleted.')|tojson }},
+      failed: {{ _('Request failed')|tojson }}
+    }
+  };
+</script>
 <script src="{{ url_for('static', filename='js/geo/dist/mcp_servers.bundle.js') }}"></script>
-
 {% endblock %}

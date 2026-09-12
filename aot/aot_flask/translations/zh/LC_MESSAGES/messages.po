@@ -30817,3 +30817,17 @@ msgstr "全部测量值"
 
 msgid "All Units"
 msgstr "全部单位"
+
+#: aot/widgets/AoT_plot.py
+msgid "Map or site"
+msgstr "地图/站点"
+
+#: aot/widgets/AoT_plot.py
+msgid ""
+"Show only the plots in this map or site. Leave empty to show every plot in "
+"progress."
+msgstr "仅显示此地图或站点内的地块。留空则显示所有种植中的地块。"
+
+#: aot/aot_flask/static/js/widgets/AoT_plot/aot-plot-widget.js
+msgid "Go to page %(n)s"
+msgstr "转到第 %(n)s 页"

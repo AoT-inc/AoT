@@ -5,6 +5,7 @@
 {% block title %} - {{_('Live Measurements')}}{% endblock %}
 
 {% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/aot-settings.css') }}" />
 <script>
   function updateMeasurements(unique_id, measure_type, measurement_id, period) {
     const url = '/last/' + unique_id + '/' + measure_type + '/' + measurement_id + '/' + period.toString();
@@ -84,6 +85,12 @@
 <main role="main" class="container py-4">
 
   {% include 'flash_messages.html' %}
+
+  <div class="aot-settings-title">
+    <h3>{{ _('Live Measurements') }}
+      <a href="{{ help_page[0] }}" target="_blank"><span class="fas fa-question-circle aot-help-icon"></span></a>
+    </h3>
+  </div>
 
   {%- if not activated_inputs and not activated_functions -%}
   <div>

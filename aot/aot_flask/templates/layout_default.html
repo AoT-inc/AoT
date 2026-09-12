@@ -39,6 +39,8 @@ IMPORTANT: This is the SOURCE TEMPLATE file.
   <meta charset="utf-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no, viewport-fit=cover">
+  {# 화면 배율 — 사용자 설정(계정 모달), 기본 모바일 115% · 컴퓨터 100%. 반드시 viewport 메타 바로 뒤. #}
+  {% include '_screen_zoom.html' %}
 
   <!-- 지도 베이스맵(MapTiler) 조기 연결: 지도 위젯의 style.json→sprite→glyphs→tiles
        의존 체인은 외부 호스트 왕복이 끝나야 첫 타일을 그린다(그 전엔 빈 캔버스).
@@ -362,7 +364,7 @@ IMPORTANT: This is the SOURCE TEMPLATE file.
       padding-left: 19px !important;
       padding-right: 19px !important;
       transition: top 0.3s ease;
-      max-width: 100vw !important;
+      max-width: calc(100 * var(--aot-vw)) !important;
     }
 
     {# 내비 메뉴 상자는 components/aot-select.css 가 다른 메뉴들과 함께 정한다.
@@ -751,7 +753,7 @@ IMPORTANT: This is the SOURCE TEMPLATE file.
            layout.html nav-bar conditional logic MUST also be applied here, or they will be lost. #}
         {% if ai_settings and ai_settings.ai_enabled %}
         <li
-          class="nav-item dropdown {% if active_page in ['ai_dashboard', 'ai_scheduler', 'ai_manage', 'ai_agent', 'ai_library', 'mcp_servers'] %} active{% endif %}">
+          class="nav-item dropdown {% if active_page in ['ai_dashboard', 'ai_manage', 'ai_agent', 'ai_library', 'mcp_servers'] %} active{% endif %}">
           <a class="nav-link dropdown-toggle" href="#" id="dropdownAIAgent" data-toggle="dropdown" aria-haspopup="true"
              aria-expanded="false">
              {{ _('AI') }}
@@ -759,23 +761,21 @@ IMPORTANT: This is the SOURCE TEMPLATE file.
           <div class="dropdown-menu" aria-labelledby="dropdownAIAgent">
             <a class="dropdown-item {% if active_page == 'ai_dashboard' %} active{% endif %}"
                href="{{ url_for('routes_ai_agent.page_ai_dashboard') }}">
-               {{ _('Portal') }}
+               {{ _('Requests') }}
             </a>
-            <a class="dropdown-item {% if active_page == 'ai_agent' %} active{% endif %}"
+            {# AI 메뉴는 사람이 하는 일 넷이다 — 요청·연결·지식·기록. MCP 서버 관리는
+               연결 페이지의 고급 구획에서 들어간다(메뉴 항목 제거, 2026-09-10). #}
+            <a class="dropdown-item {% if active_page in ['ai_agent', 'mcp_servers'] %} active{% endif %}"
                href="{{ url_for('routes_ai_agent.page_ai_agent') }}">
-               {{ _('Agent') }}
-            </a>
-            <a class="dropdown-item {% if active_page == 'ai_manage' %} active{% endif %}"
-               href="{{ url_for('routes_ai_agent.page_ai_manage') }}">
-               {{ _('Manager') }}
+               {{ _('Connection') }}
             </a>
             <a class="dropdown-item {% if active_page == 'ai_library' %} active{% endif %}"
                href="{{ url_for('routes_ai_library.page_ai_library') }}">
-               {{ _('Library') }}
+               {{ _('Knowledge') }}
             </a>
-            <a class="dropdown-item {% if active_page == 'mcp_servers' %} active{% endif %}"
-               href="{{ url_for('routes_mcp_api.mcp_servers_page') }}">
-               {{ _('MCP Servers') }}
+            <a class="dropdown-item {% if active_page == 'ai_manage' %} active{% endif %}"
+               href="{{ url_for('routes_ai_agent.page_ai_manage') }}">
+               {{ _('Records') }}
             </a>
           </div>
         </li>
@@ -901,6 +901,7 @@ IMPORTANT: This is the SOURCE TEMPLATE file.
             <a class="dropdown-item" target="_blank" href="{{ manual_url('API/') }}">{{ _('API Info') }}</a>
             <a class="dropdown-item" target="_blank" href="/api">{{ _('API Documentation') }}</a>
             <a class="dropdown-item" target="_blank" href="https://github.com/AoT-inc/AoT">{{ _('AoT Github') }}</a>
+            <a class="dropdown-item" target="_blank" href="https://aotinc.framer.ai">{{ _('AoT Homepage') }}</a>
             <div class="dropdown-divider"></div>
             <a class="dropdown-item" target="_blank" href="{{ url_for('routes_legal.page_privacy_policy') }}">{{ _('Privacy Policy') }}</a>
             <a class="dropdown-item" target="_blank" href="{{ url_for('routes_legal.page_terms_of_service') }}">{{ _('Terms of Service') }}</a>
@@ -941,8 +942,8 @@ IMPORTANT: This is the SOURCE TEMPLATE file.
           </div>
         </li>
         <li class="nav-item navbar-shopping-bottom">
-          <a class="nav-link" href="https://aotinc.framer.ai" target="_blank">
-            <i class="fas fa-shopping-bag"></i>
+          <a class="nav-link" href="#" data-toggle="modal" data-target="#modal_config_theme">
+            <i class="fas fa-user"></i>
           </a>
         </li>
       </ul>
@@ -1059,6 +1060,32 @@ IMPORTANT: This is the SOURCE TEMPLATE file.
                     <option value="{{ _tz }}"></option>
                     {% endfor %}
                   </datalist>
+                </div>
+              </div>
+              <div class="aot-modal-option-row">
+                {% set phone_zoom_tooltip = _("Enlarges the whole page on phones and tablets — text, buttons and maps together. Computers use the setting below.") %}
+                {#- 설명은 라벨에 둔다 — 셀렉트의 title 은 공용 셀렉트가 "고르기 전 안내 문구"로
+                    받아 빈 선택지를 끼워 넣고, 기본값(빈 값)을 고르면 버튼에 긴 설명문이 뜬다. -#}
+                <div class="aot-modal-option-label" title="{{ phone_zoom_tooltip }}">{{ _('Mobile Screen Size') }}</div>
+                <div class="aot-modal-option-control">
+                  <select class="form-control aot-modern-select" id="ui_zoom_phone" name="ui_zoom_phone">
+                    <option value=""{% if not current_user.ui_zoom_phone %} selected{% endif %}>{{ _('Default') }} (115%)</option>
+                    {% for _z in range(90, 155, 5) %}
+                    <option value="{{ _z }}"{% if current_user.ui_zoom_phone == _z %} selected{% endif %}>{{ _z }}%</option>
+                    {% endfor %}
+                  </select>
+                </div>
+              </div>
+              <div class="aot-modal-option-row">
+                {% set desktop_zoom_tooltip = _("Enlarges the whole page on computers — text, buttons and maps together. Phones and tablets use the setting above.") %}
+                <div class="aot-modal-option-label" title="{{ desktop_zoom_tooltip }}">{{ _('Computer Screen Size') }}</div>
+                <div class="aot-modal-option-control">
+                  <select class="form-control aot-modern-select" id="ui_zoom_desktop" name="ui_zoom_desktop">
+                    <option value=""{% if not current_user.ui_zoom_desktop %} selected{% endif %}>{{ _('Default') }} (100%)</option>
+                    {% for _z in range(90, 155, 5) %}
+                    <option value="{{ _z }}"{% if current_user.ui_zoom_desktop == _z %} selected{% endif %}>{{ _z }}%</option>
+                    {% endfor %}
+                  </select>
                 </div>
               </div>
             </div>

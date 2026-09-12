@@ -31328,3 +31328,17 @@ msgstr "Все измерения"
 
 msgid "All Units"
 msgstr "Все единицы измерения"
+
+#: aot/widgets/AoT_plot.py
+msgid "Map or site"
+msgstr "Карта/участок"
+
+#: aot/widgets/AoT_plot.py
+msgid ""
+"Show only the plots in this map or site. Leave empty to show every plot in "
+"progress."
+msgstr "Показывать только участки на этой карте или на этом участке. Оставьте поле пустым, чтобы показать все выращиваемые участки."
+
+#: aot/aot_flask/static/js/widgets/AoT_plot/aot-plot-widget.js
+msgid "Go to page %(n)s"
+msgstr "Перейти на страницу %(n)s"

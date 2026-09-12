@@ -1,20 +1,9 @@
 /* Admin > Upgrade — live log tail during an update. Terminal look is
    page-specific (nothing else shows a scrolling log like this), so it stays
    out of the shared component sheet. */
-/* aot.css (global, loaded earlier) has `main.container > p { font-size: 1.2em; }`.
-   It only matches <p> that are DIRECT children of <main> -- on this page that
-   is just the one "Installed Version / Latest Version" paragraph at the top;
-   every other paragraph is one level deeper, inside a .aot-notice-box or
-   .form-inline, so it never gets the bump. The result was one paragraph
-   visibly larger than every other paragraph on the page for a reason that had
-   nothing to do with content, only incidental DOM depth. Loaded after aot.css
-   with equal selector specificity, so this wins and every paragraph on this
-   page renders at the same size regardless of how deep it's nested. The
-   source rule is `!important`, so this has to match that or lose regardless
-   of load order. */
-main.container > p {
-    font-size: inherit !important;
-}
+/* 2026-09-11: aot.css 의 `main.container > p { font-size: 1.2em; }`(함정 9)
+   자체가 사라졌다(§2-3 확정 표 이관) — 이 페이지가 그 규칙을 되돌리던
+   카운터룰도 더는 필요 없어 함께 지운다. */
 
 /* Time-of-day picker for the auto-update schedule -- narrower than the
    form-control default so it doesn't stretch across the row next to Save. */

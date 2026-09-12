@@ -232,7 +232,7 @@ utc_to_wall(dt, tz)            # UTC → 대상 tz 벽시계 (예약 표시)
 
 스케줄러의 `schedule_time`은 **표시이자 편집 입력 시드**다. 리스트/모달의
 `<input type="datetime-local">` 값이 이 필드로 채워지고([scheduler.html:306](../../aot/aot_flask/templates/pages/ai/scheduler.html:306),
-[scheduler-batch.js:150](../../aot/aot_flask/static/js/ai/scheduler-batch.js:150)의 `.slice(0,16)`),
+`scheduler-batch.js:150`(2026-09 삭제된 구 AI 스케줄러 화면)의 `.slice(0,16)`),
 저장 시 `wall_to_utc(..., get_user_tz())`(시스템 tz)로 재해석된다. **표시 tz만 장치 현지로
 바꾸고 저장 해석을 그대로 두면 저장 시점에 9시간 밀림**(고치려던 바로 그 버그)이 재발한다.
 

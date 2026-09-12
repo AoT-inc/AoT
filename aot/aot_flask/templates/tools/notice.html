@@ -7,6 +7,7 @@
 {% block body %}
 <script src="{{ asset('app-notice-render') }}"></script>
 <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/pages/notice.css') }}" />
+<link rel="stylesheet" href="{{ url_for('static', filename='css/aot-settings.css') }}" />
 <style>
     .notice-list-card {
         background: var(--aot-surface-card, #fff);
@@ -76,18 +77,58 @@
         box-shadow: 0 0 0 0.15rem var(--aot-focus-ring) !important;
         outline: none !important;
     }
+
+    /* 검색 줄(2026-09-11) — 제목(.aot-page-title-row-flush, 정렬선 32)과
+       같은 자리에 서게 좌우 32(--aot-space-6)를 준다. */
+    .notice-search-row {
+        padding-left: var(--aot-space-6);
+        padding-right: var(--aot-space-6);
+        margin-bottom: var(--aot-space-4);
+        max-width: 30em;
+    }
+
+    /* "노트 페이지와 같은 알약형"이 카드 없이는 실패한다 — 공용 정의
+       (aot-base.css)가 2026-09-09에 채움을 밑줄로 바꿨는데, 이 화면은
+       카드 없이 바닥(--aot-surface-body) 위에 바로 놓여 밑줄이 거의 안
+       보인다(plots·notes 페이지에서 먼저 잡힌 것과 같은 버그, 커밋
+       168e2121·fc4717e9). 셀렉트가 바닥에서 분가할 때 쓴 같은 토큰
+       (--aot-surface-control)을 쓴다. */
+    .notice-search-row .note-search-input-group {
+        background: var(--aot-surface-control);
+        border: 2px solid transparent;
+    }
+    .notice-search-row .note-search-input-group:focus-within {
+        border-color: var(--aot-input-focus-border, #13261B);
+    }
 </style>
 
 <div class="container-fluid px-0 notice-page notice-page-list">
     {% include 'flash_messages.html' %}
 
-    <div class="d-flex justify-content-between align-items-center mt-4 mb-3 px-3">
-        <h4 class="mb-0 font-weight-bold">{{ _('Notice Board') }}</h4>
+    <div class="aot-page-title-row-flush">
+        <h3 class="mb-0 aot-page-title-size">{{ _('Notice Board') }}</h3>
         {% if can_create %}
         <button type="button" class="btn aot-pill-btn aot-pill-btn-primary" data-toggle="modal" data-target="#addNoticeModal">
             {{ _('New Post') }}
         </button>
         {% endif %}
+    </div>
+
+    {#- 2026-09-11 사용자 지시: 제목 아래에 검색창. /notes·/plots 와 같은
+        알약형 입력 그룹을 그대로 가져다 쓴다(aot-base.css) — 새 모양을
+        만들지 않는다. 카드 없이 바닥(--aot-surface-body) 위에 바로 놓이면
+        공용 밑줄이 거의 안 보이므로 같은 처방(`--aot-surface-control`
+        채움, 커밋 168e2121)을 쓴다. 검색은 GET 이라 새로고침·북마크·
+        뒤로가기에서도 검색어가 유지된다. -#}
+    <div class="notice-search-row">
+        <form method="get" action="{{ url_for('routes_notice.page_notice') }}">
+            <div class="note-search-input-group ui-pill">
+                <span class="note-search-icon"><i class="fas fa-search"></i></span>
+                <input type="text" name="q" class="note-search-input" value="{{ q }}"
+                       placeholder="{{ _('Search title, content, category...') }}"
+                       aria-label="{{ _('Search title, content, category...') }}" autocomplete="off">
+            </div>
+        </form>
     </div>
 
     <div class="px-3">
@@ -130,17 +171,21 @@
         {% if pagination.pages > 1 %}
         <div class="d-flex justify-content-center gap-2 mt-4">
             {% if pagination.has_prev %}
-            <a class="btn aot-pill-btn" href="{{ url_for('routes_notice.page_notice', page=pagination.prev_num) }}">{{ _('Previous') }}</a>
+            <a class="btn aot-pill-btn" href="{{ url_for('routes_notice.page_notice', page=pagination.prev_num, q=q) }}">{{ _('Previous') }}</a>
             {% endif %}
             <span class="align-self-center small text-muted mx-2">{{ page }} / {{ pagination.pages }}</span>
             {% if pagination.has_next %}
-            <a class="btn aot-pill-btn" href="{{ url_for('routes_notice.page_notice', page=pagination.next_num) }}">{{ _('Next') }}</a>
+            <a class="btn aot-pill-btn" href="{{ url_for('routes_notice.page_notice', page=pagination.next_num, q=q) }}">{{ _('Next') }}</a>
             {% endif %}
         </div>
         {% endif %}
     {% else %}
         <div class="text-center py-5 text-muted">
+            {% if q %}
+            <p>{{ _('No notices match your search.') }}</p>
+            {% else %}
             <p>{{ _('No notices yet.') }}</p>
+            {% endif %}
         </div>
     {% endif %}
     </div>

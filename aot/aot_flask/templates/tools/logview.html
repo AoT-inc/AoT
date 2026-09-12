@@ -5,6 +5,7 @@
 
 {% block head %}
 <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/pages/logview.css') }}" />
+<link rel="stylesheet" href="{{ url_for('static', filename='css/aot-settings.css') }}" />
 {% endblock %}
 
 {% block body %}
@@ -12,6 +13,12 @@
   <!-- Route: /logview -->
   <main role="main" class="container py-4">
     {% include 'flash_messages.html' %}
+
+    <div class="aot-settings-title">
+      <h3>{{ _('Log View') }}
+        <a href="{{ help_page[0] }}" target="_blank"><span class="fas fa-question-circle aot-help-icon"></span></a>
+      </h3>
+    </div>
 
     <div class="aot-log-toolbar">
       <div class="aot-log-field">

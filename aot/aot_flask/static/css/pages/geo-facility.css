@@ -406,20 +406,27 @@
   }
 
   /* ── Page title bar ────────────────────────────────────────────────────────── */
+  /* 2026-09-11 재지적: 좌우 패딩이 0이라 제목이 x=15(container 기본
+     여백만)에 서 있었다 — 다른 페이지 제목(x=31)과 16px 어긋났다.
+     좌우에 --aot-space-4(16px)를 더해 정렬선을 맞춘다. */
   .fac-page-title {
     display: flex;
     align-items: center;
     justify-content: space-between;
     flex-wrap: wrap;
     gap: 8px;
-    padding: 0.55rem 0 0.5rem;
+    padding: 0.55rem var(--aot-space-4) 0.5rem;
     margin-bottom: 8px;
     border-bottom: 1px solid var(--aot-border-neutral);
   }
+  /* 페이지 제목 역할(§2-3, 2026-09-11) — 크기·굵기만 맞춘다(18/700 →
+     24/500). 색은 이미 목표와 같은 토큰이라 손대지 않는다. 테두리는
+     `.fac-page-title`에 남아 있다 — 이번 작업 범위(문자 크기·위치만)
+     밖이라 그대로 둔다. */
   .fac-page-title h3 {
     margin: 0;
-    font-size: var(--aot-font-size-lg);
-    font-weight: 700;
+    font-size: var(--aot-fs-page-title);
+    font-weight: var(--aot-fw-title);
     color: var(--aot-color-text-primary);
   }
   .fac-page-actions {
@@ -654,7 +661,7 @@
   @media (max-width: 767.98px) {
     :root {
       --fac-nav-h: 50px;
-      --fac-band-h: 34vh; --fac-band-h: 34dvh;
+      --fac-band-h: calc(34 * var(--aot-vh)); --fac-band-h: calc(34 * var(--aot-dvh));
       --fac-stepbar-h: 46px;
     }
 
@@ -681,7 +688,7 @@
       top: calc(var(--fac-nav-h) + var(--fac-stepbar-h));
       left: 0; right: 0;
       /* With the sheet closed the model gets the whole screen */
-      height: calc(100dvh - var(--fac-nav-h) - var(--fac-stepbar-h));
+      height: calc(100 * var(--aot-dvh) - var(--fac-nav-h) - var(--fac-stepbar-h));
       margin: 0;
       z-index: 1034;
       background: var(--aot-surface-card);
@@ -774,7 +781,7 @@
   /* ── Map canvas ────────────────────────────────────────────────────────────── */
   #facility-map-canvas {
     width: 100%;
-    height: clamp(320px, calc(100vh - 292px), 1360px);
+    height: clamp(320px, calc(100 * var(--aot-vh) - 292px), 1360px);
     border: 1px solid var(--aot-border-neutral);
     border-radius: 0 0 var(--aot-radius-lg) var(--aot-radius-lg);
     background: var(--aot-surface-body);
@@ -1261,7 +1268,7 @@
    * sheet, the page switches to the band layout, and none of this applies. */
   @media (min-width: 768px) {
     body.aot-widget-drawer-open {
-      --aot-wdrawer-w: clamp(360px, calc(100vw - 420px), 520px);
+      --aot-wdrawer-w: clamp(360px, calc(100 * var(--aot-vw) - 420px), 520px);
     }
   }
 
@@ -1304,7 +1311,7 @@
     border-radius: 0 0 var(--aot-radius-lg) var(--aot-radius-lg);
     overflow: hidden;
     position: relative;
-    height: clamp(360px, calc(100vh - 250px), 1400px);
+    height: clamp(360px, calc(100 * var(--aot-vh) - 250px), 1400px);
     min-height: 360px;
     margin-bottom: 16px;
   }
@@ -1395,7 +1402,7 @@
   box-sizing: border-box;
 }
 
-.fac-catalog-list { max-height: 55vh; overflow-y: auto; }
+.fac-catalog-list { max-height: calc(55 * var(--aot-vh)); overflow-y: auto; }
 .fac-catalog-item {
   display: flex;
   align-items: center;

@@ -11,9 +11,11 @@ Using the AI takes two switches in two different places. They are deliberately n
 | Switch | Where | What it turns on |
 |--------|-------|------------------|
 | **Enable AI Service** | Settings > General | The AI menu appears in the navigation and the AI page becomes reachable. Chat and advice requests work. |
-| **AI Service Operation** | AI > AI Agent | Work that runs without anyone asking for it — periodic summaries, context broadcast, weather summary, MCP health checks, real-time alerts. |
+| **Run built-in AI** | AI > Connection > Built-in AI | Work that runs without anyone asking for it — periodic summaries, context broadcast, weather summary, MCP health checks, real-time alerts. |
 
-The order is **enable in Settings → register a model (agent) on the AI page → start operation**.
+The order is **enable in Settings → register a model (agent) on the AI > Connection page → start operation**.
+
+**Connecting your own AI app** (Claude Desktop and the like) works independently of this switch. It only needs external MCP access allowed in Settings > General and a per-user access key — the built-in AI can stay off. The top of the AI > Connection page shows both and links to each screen.
 
 - **Operation cannot be started with no model registered.** Running background work with nothing to ask only piles up errors in the log every cycle. The switch is available only once at least one agent is activated.
 - **Deactivating or deleting the last model stops operation too.** Re-activating a model later does not silently resume autonomous operation — start it again on the AI page.
@@ -168,13 +170,19 @@ Non-mutating **read tools** run immediately. **State-changing tools** pass throu
 
 Actions requiring approval are not applied immediately. In the **in-app assistant** they are presented in chat as an **approval card**, executed only once the user approves. Through the **external MCP server** they come back as a `pending_approval` response (a queued confirmation_id) and only proceed once the user explicitly approves or rejects that id — either path, nothing changes if the user rejects.
 
-Approving on the web review page (`AI → MCP Servers → AI Requests & Advice`) **runs it there and then**. Previously approval only issued a permit: the person had to go back to the AI and tell it, and the AI had to call again — a round trip the AI could not close on its own, since a chat model only acts when spoken to. The server now executes using exactly the arguments stored with the confirmation, so what the approval screen showed and what runs cannot diverge. If the AI later calls again with the same confirmation_id it gets that stored result back instead of a second execution. Only irreversible physical control (valves, pumps) asks for one extra confirmation on the approval screen.
+Approving on the web Requests screen (`AI → Requests`) **runs it there and then**. Previously approval only issued a permit: the person had to go back to the AI and tell it, and the AI had to call again — a round trip the AI could not close on its own, since a chat model only acts when spoken to. The server now executes using exactly the arguments stored with the confirmation, so what the approval screen showed and what runs cannot diverge. If the AI later calls again with the same confirmation_id it gets that stored result back instead of a second execution. Only irreversible physical control (valves, pumps) asks for one extra confirmation on the approval screen.
 
 ---
 
-## Knowledge Library
+## AI Knowledge { #knowledge-library }
 
-The `AI -> Library` page (`/ai/library`) is where you register the **context sources** that ground the AI's answers. Sources can be documents (PDF/text), web URLs, REST APIs, or internal queries.
+The `AI -> Knowledge` page (`/ai/library`) holds what grounds the AI's answers,
+in two tabs. **Knowledge** lists every item the AI can cite; **Data sources**
+lists where that knowledge comes in from — documents (PDF/text), web URLs, REST
+APIs, internal queries and public-data feeds. The second column of a source row
+is its sync status (synced, sync failed, not synced yet, or "Looked up on demand"
+for sources queried live); hover it or open the source's settings for the last
+sync time. Sync now lives in the settings window too.
 
 ### Where knowledge comes from
 
@@ -194,19 +202,27 @@ disclosure even if the model forgets to.
 
 ### Reviewing what the AI wrote
 
-The **AI-Curated Knowledge Review** section lists the AI's own notes. Open the
-source link to check the original, then confirm, edit or retire. Confirming is
-what promotes a note out of "unconfirmed"; a note with no source link cannot
-really be checked, so it shows no link and stays unconfirmed.
+When notes the AI wrote are waiting for a person, a one-line notice sits at the
+top of the Knowledge tab; **Show them** filters the list to *Needs confirming*.
+Click an item to open it, check the source link if it has one, then **Save and
+confirm** (after correcting anything wrong) or **Retire**. Confirming is what
+promotes a note out of "unconfirmed". A note with no source link shows no link —
+there is no original to check it against.
 
-**Reviewed knowledge only** (off by default) stops the AI citing its own
-unreviewed notes. Authoritative and hand-entered knowledge is unaffected.
+**Knowledge settings → Cite confirmed knowledge only** (off by default) stops the
+AI citing its own unconfirmed notes. Authoritative and hand-entered knowledge is
+unaffected.
 
 ### Browsing and adding
 
-The **Knowledge Items** section shows everything the AI can cite — search it,
-filter by tag or origin, and set aside anything stale (set-aside keeps the row;
-it only takes it out of the AI's reach).
+The **Knowledge** tab lists one item per row (title, trust) and by default shows
+only what people and the AI wrote. Data synced from sources is left out — every
+synced chunk carries the source's name as its title, so mixed in they read as
+the same line over and over; pick it in the source filter or manage it on the
+Data sources tab. Tags are shown in the item's window. Search, filter by origin,
+state or tag, and set aside anything
+stale from the item's window (set-aside keeps the row; it only takes it out of
+the AI's reach — show set-aside items with the state filter to put one back).
 
 **Add Knowledge** writes in what you already know, without an AI turn or a
 registered source. What you write is treated as confirmed: you are the source.
@@ -261,8 +277,8 @@ pages, REST APIs — plus whatever the AI looks up and shelves as it works.
 Both global built-ins are **CC BY 4.0** data. That licence requires the credit
 to appear where the data is shown, so AoT shows it in two places.
 
-- **AI Library page** — a "Data credits" line under the source list, covering
-  the sources you have enabled.
+- **AI Knowledge page** — a "Data credits" line under the list on the Data
+  sources tab, covering the sources you have enabled.
 - **AI answers** — query responses carry the credit text, so the AI includes it
   when it quotes those values.
 
@@ -426,11 +442,9 @@ accounts cannot use this path at all.
    ChatGPT should show that to the user, who approves it on the web approval
    screen, then the same call is retried with `_confirmation_id` added to
    actually execute. There is no automatic re-approval inside a Custom GPT.
-   Two screens show the approval list — day to day, the scheduler page
-   (`/scheduler`) works fine (the "Pending control requests" block at the
-   top). For the audit log and advice history alongside it, there's a
-   dedicated page (`/api/v1/mcp/review_page`, menu: **AI → MCP Servers → AI
-   Requests & Advice**) — the approval list itself is the same either way.
+   Approve it on the **AI → Requests** screen (`/ai`), in the "Control requests
+   awaiting approval" block at the top. Schedule proposals and advice from the
+   AI are decided on the same screen.
 
 **When it won't connect**
 
