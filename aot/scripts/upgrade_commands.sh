@@ -296,8 +296,18 @@ case "${1:-''}" in
     ;;
     'build-notes-widget')
         printf "\n#### Building React Notes Widget\n"
-        # Ensure npm and node are available
-        if ! command -v npm &> /dev/null; then
+        # The public GitHub release (what native/systemd installs upgrade from)
+        # ships only the pre-built bundle at aot/aot_flask/static/js/notes/ --
+        # notes-widget's own source (package.json, src/, vite.config.js, ...) is
+        # deliberately excluded (2026-09-05 JS publish policy: AoT's own JS
+        # source stays private, only build output is public). So package.json
+        # won't exist here on a release install, and that's expected, not an
+        # error -- the widget already works via the checked-in bundle. Only
+        # attempt a rebuild when the source is actually present (e.g. a dev
+        # checkout building from a private clone).
+        if [ ! -f "${AOT_PATH}"/aot/aot_flask/static/apps/notes-widget/package.json ]; then
+            printf "#### notes-widget source not present (public release ships the pre-built bundle only). Skipping build.\n"
+        elif ! command -v npm &> /dev/null; then
             printf "#### npm not found. Skipping build.\n"
         else
             cd "${AOT_PATH}"/aot/aot_flask/static/apps/notes-widget || return
@@ -968,8 +978,20 @@ case "${1:-''}" in
         printf "\n#### Restarting nginx\n"
         service nginx restart
         sleep 5
-        printf "#### Reloading aotflask\n"
-        service aotflask reload
+        # aotflask 'reload' (SIGHUP) re-reads gunicorn_conf.py from disk but
+        # keeps the master process's Python interpreter alive, so any module
+        # already imported before the upgrade (e.g. aot.utils.system_environment)
+        # stays cached in sys.modules with its PRE-upgrade contents. If the new
+        # gunicorn_conf.py imports a name that didn't exist yet at that cached
+        # version, the import fails and the service dies (2026-09-12 aot-gw-001:
+        # 4dc8ba82 added resolve_gunicorn_workers, reload crashed with
+        # "cannot import name 'resolve_gunicorn_workers'"). 'restart' spawns a
+        # fresh process that reads every file from disk anew, so it always
+        # picks up the upgrade's code correctly. reload_frontend() in
+        # service_control.py is unaffected -- it's for live settings changes
+        # with no code change, where the cached modules are still accurate.
+        printf "#### Restarting aotflask\n"
+        service aotflask restart
         sleep 5
     ;;
     'web-server-disable')
