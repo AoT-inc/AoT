@@ -53,6 +53,7 @@ import queue
 import time
 import os
 import json
+import uuid
 from flask_login import current_user
 from pytz import timezone
 from aot.utils.influx import read_influxdb_list
@@ -478,9 +479,7 @@ def aot_timer_output_started_at_public(device_unique_id, channel_id):
 # existing On/Off Counter widget's saved session is picked up after migration.
 # =====================================================================
 _CYCLE_LOCK = threading.Lock()
-_CYCLE_STATE_CACHE = {}
 _CYCLE_WORKERS = {}
-_CYCLE_PRESETS_CACHE = {}
 
 
 def _cyc_sanitize(value):
@@ -564,6 +563,7 @@ def _cyc_state_default(device_unique_id, channel_id):
         "scheduled_until_ms": None,
         "message": "Inactive",
         "error": None,
+        "run_id": None,
         "updated_ms": now
     }
 
@@ -573,13 +573,17 @@ def _cyc_key(device_unique_id, channel_id):
 
 
 def _cyc_state_ref(device_unique_id, channel_id):
-    key = _cyc_key(device_unique_id, channel_id)
-    state = _CYCLE_STATE_CACHE.get(key)
-    if state is None:
-        loaded = _cyc_state_read(device_unique_id, channel_id)
-        state = loaded if isinstance(loaded, dict) else _cyc_state_default(device_unique_id, channel_id)
-        _CYCLE_STATE_CACHE[key] = state
-    return state
+    """Always the on-disk state — never a process-cached copy.
+
+    gunicorn can run this app as several worker *processes* (see
+    install/gunicorn_conf.py); a module-level dict is per-process. Caching a
+    snapshot here used to mean each process kept returning whatever it first
+    saw for a given device/channel forever, so status polls (which land on a
+    random process) disagreed with each other and the widget toggle flickered
+    on/off even though only one real state existed on disk.
+    """
+    loaded = _cyc_state_read(device_unique_id, channel_id)
+    return loaded if isinstance(loaded, dict) else _cyc_state_default(device_unique_id, channel_id)
 
 
 def _cyc_state_snapshot(device_unique_id, channel_id):
@@ -600,17 +604,10 @@ def _cyc_state_update(device_unique_id, channel_id, **updates):
 
 
 def _cyc_preset_get(device_unique_id, channel_id):
-    key = _cyc_key(device_unique_id, channel_id)
-    with _CYCLE_LOCK:
-        cached = copy.deepcopy(_CYCLE_PRESETS_CACHE.get(key))
-    if cached is not None:
-        return cached
+    # Same reasoning as _cyc_state_ref: no process-local cache, disk is the
+    # only thing every gunicorn worker process agrees on.
     data = _cyc_preset_read(device_unique_id, channel_id)
-    if isinstance(data, dict):
-        with _CYCLE_LOCK:
-            _CYCLE_PRESETS_CACHE[key] = data
-        return copy.deepcopy(data)
-    return None
+    return data if isinstance(data, dict) else None
 
 
 def _cyc_preset_set(device_unique_id, channel_id, run_sec, rest_sec, cycles):
@@ -620,9 +617,6 @@ def _cyc_preset_set(device_unique_id, channel_id, run_sec, rest_sec, cycles):
         "cycles": int(cycles),
         "updated_ms": int(time.time() * 1000)
     }
-    key = _cyc_key(device_unique_id, channel_id)
-    with _CYCLE_LOCK:
-        _CYCLE_PRESETS_CACHE[key] = payload
     _cyc_preset_write(device_unique_id, channel_id, payload)
 
 
@@ -651,16 +645,41 @@ def _cyc_decorate(state):
     return payload
 
 
-def _sleep_with_cancel(stop_event, seconds):
-    """Sleep for 'seconds' while watching stop_event. Returns True if completed."""
-    if seconds <= 0:
+def _cyc_should_stop(device_unique_id, channel_id, run_id, stop_event):
+    """True if this worker's run must end now.
+
+    Two independent reasons, because the stop request and the thread running
+    this loop can land on *different* gunicorn worker processes:
+      - stop_event is set: a stop/restart landed on THIS SAME process (the
+        fast, normal path).
+      - the on-disk state's run_id no longer matches ours: a stop/restart
+        landed on a DIFFERENT process. That process has no way to reach this
+        thread's in-memory stop_event, so it can only overwrite the state
+        file — we notice by polling it here.
+    """
+    if stop_event is not None and stop_event.is_set():
         return True
-    end_time = time.time() + seconds
+    st = _cyc_state_read(device_unique_id, channel_id)
+    return isinstance(st, dict) and st.get('run_id') != run_id
+
+
+def _cyc_sleep(device_unique_id, channel_id, run_id, stop_event, seconds):
+    """Like _sleep_with_cancel, but also bails out on cross-process supersession
+    (see _cyc_should_stop). seconds=None waits indefinitely (used for the
+    infinite-hold mode). Returns True if the full duration elapsed normally,
+    False if the run was stopped/superseded."""
+    end_time = None if seconds is None else time.time() + seconds
     while True:
-        remaining = end_time - time.time()
-        if remaining <= 0:
-            return True
-        if stop_event.wait(timeout=min(1.0, max(0.1, remaining))):
+        if _cyc_should_stop(device_unique_id, channel_id, run_id, stop_event):
+            return False
+        if end_time is not None:
+            remaining = end_time - time.time()
+            if remaining <= 0:
+                return True
+            tick = min(1.0, max(0.1, remaining))
+        else:
+            tick = 1.0
+        if stop_event.wait(timeout=tick):
             return False
 
 
@@ -777,6 +796,16 @@ def _cyc_stop_worker(device_unique_id, channel_id, reason='user_stop'):
     if worker:
         worker['stop_event'].set()
         thread = worker.get('thread')
+
+    # Clear run_id on disk FIRST, before anything below. The running worker
+    # thread for this device/channel may live in a *different* gunicorn
+    # worker process (install/gunicorn_conf.py can start more than one) — it
+    # never sees worker['stop_event'] above, so the only way to reach it is
+    # this file (see _cyc_should_stop). The sooner this lands, the sooner an
+    # orphaned thread on another process stops re-issuing ON commands instead
+    # of racing the OFF sent below.
+    _cyc_state_update(device_unique_id, channel_id, run_id=None)
+
     if thread and thread.is_alive():
         thread.join(timeout=2.0)
 
@@ -789,24 +818,31 @@ def _cyc_stop_worker(device_unique_id, channel_id, reason='user_stop'):
         message = 'User stopped' if reason == 'user_stop' else 'Initializing'
         _cyc_state_update(
             device_unique_id, channel_id,
-            active=False, phase='stopped', message=message, error=None,
+            active=False, phase='stopped', message=message, error=None, run_id=None,
             next_transition_ms=None, phase_duration_sec=0, phase_started_ms=None,
             scheduled_until_ms=None, stopped_at_ms=now_ms)
     else:
         _cyc_state_update(
             device_unique_id, channel_id,
-            active=False, phase='error',
+            active=False, phase='error', run_id=None,
             message=lazy_gettext('OFF Failed: {}').format(err), error=str(err),
             next_transition_ms=None, phase_duration_sec=0, phase_started_ms=None,
             scheduled_until_ms=None, stopped_at_ms=now_ms)
 
 
 def _cyc_worker(device_unique_id, channel_id, channel_index,
-                run_sec, rest_sec, total_cycles, mode, scheduled_until_ms, stop_event):
+                run_sec, rest_sec, total_cycles, mode, scheduled_until_ms, run_id, stop_event):
     key = _cyc_key(device_unique_id, channel_id)
     # extended_timeout=True: allow up to 30 s Pyro5 RPC so remote-output HTTP
     # calls (which may need 15+ s on slow networks) don't time out mid-command.
     daemon = DaemonControl(pyro_timeout=90, extended_timeout=True)
+    # Set once a break/return is caused by cross-process supersession (a
+    # different gunicorn worker process wrote a newer run_id or an explicit
+    # stop — see _cyc_should_stop) rather than this thread's own stop_event.
+    # In that case some OTHER process already owns (or is about to own) the
+    # state file, so this thread must not write a final summary over it —
+    # only the output-off in `finally` below still applies.
+    superseded = False
     try:
         now_ms = int(time.time() * 1000)
         # started_at_ms is intentionally left None here so the total-time counter
@@ -817,7 +853,7 @@ def _cyc_worker(device_unique_id, channel_id, channel_index,
             run_sec=run_sec, rest_sec=rest_sec, target_cycles=total_cycles,
             current_cycle=0, completed_cycles=0, started_at_ms=None, stopped_at_ms=None,
             next_transition_ms=None, phase_started_ms=None, phase_duration_sec=0,
-            scheduled_until_ms=scheduled_until_ms, error=None)
+            scheduled_until_ms=scheduled_until_ms, error=None, run_id=run_id)
 
         # ---- Scheduled start: wait until the target wall-clock time ----
         if isinstance(scheduled_until_ms, int) and scheduled_until_ms > now_ms:
@@ -826,12 +862,15 @@ def _cyc_worker(device_unique_id, channel_id, channel_index,
                 device_unique_id, channel_id, phase='scheduled', message='Scheduled',
                 phase_started_ms=now_ms, phase_duration_sec=wait_total,
                 next_transition_ms=scheduled_until_ms)
-            if not _sleep_with_cancel(stop_event, wait_total):
-                _cyc_state_update(
-                    device_unique_id, channel_id, active=False, phase='stopped',
-                    message='User stopped', next_transition_ms=None, phase_duration_sec=0,
-                    phase_started_ms=None, scheduled_until_ms=None,
-                    stopped_at_ms=int(time.time() * 1000))
+            if not _cyc_sleep(device_unique_id, channel_id, run_id, stop_event, wait_total):
+                if stop_event.is_set():
+                    _cyc_state_update(
+                        device_unique_id, channel_id, active=False, phase='stopped',
+                        message='User stopped', next_transition_ms=None, phase_duration_sec=0,
+                        phase_started_ms=None, scheduled_until_ms=None, run_id=None,
+                        stopped_at_ms=int(time.time() * 1000))
+                else:
+                    superseded = True
                 return
             _cyc_state_update(device_unique_id, channel_id, scheduled_until_ms=None)
 
@@ -848,7 +887,7 @@ def _cyc_worker(device_unique_id, channel_id, channel_index,
                     device_unique_id, channel_id, active=False, phase='error',
                     message=lazy_gettext('ON Failed: {}').format(err), error=str(err),
                     next_transition_ms=None, phase_duration_sec=0, phase_started_ms=None,
-                    stopped_at_ms=int(time.time() * 1000))
+                    run_id=None, stopped_at_ms=int(time.time() * 1000))
                 return
             # Model A: only count runtime once the device confirms the ON.
             cst = _wait_for_confirm(daemon, device_unique_id, channel_index, stop_event)
@@ -868,17 +907,23 @@ def _cyc_worker(device_unique_id, channel_id, channel_index,
                     device_unique_id, channel_id, phase='offline', current_cycle=1,
                     message='Offline (no response)', phase_started_ms=None,
                     phase_duration_sec=0, next_transition_ms=None, active=True)
-            stop_event.wait()  # hold indefinitely until stopped
+            _cyc_sleep(device_unique_id, channel_id, run_id, stop_event, None)  # hold until stopped
             _issue_output_off(daemon, device_unique_id, channel_index, why='hold end')
-            _cyc_state_update(
-                device_unique_id, channel_id, active=False, phase='stopped',
-                message='User stopped', next_transition_ms=None, phase_duration_sec=0,
-                phase_started_ms=None, completed_cycles=1, stopped_at_ms=int(time.time() * 1000))
+            if stop_event.is_set():
+                _cyc_state_update(
+                    device_unique_id, channel_id, active=False, phase='stopped',
+                    message='User stopped', next_transition_ms=None, phase_duration_sec=0,
+                    phase_started_ms=None, completed_cycles=1, run_id=None,
+                    stopped_at_ms=int(time.time() * 1000))
+            else:
+                superseded = True
             return
 
         # ---- Normal run / (rest) x cycles ----
         for cycle in range(1, total_cycles + 1):
-            if stop_event.is_set():
+            if _cyc_should_stop(device_unique_id, channel_id, run_id, stop_event):
+                if not stop_event.is_set():
+                    superseded = True
                 break
             ok, err = _issue_output_command_with_retry(
                 daemon, device_unique_id, channel_index, 'on', run_sec, stop_event=stop_event)
@@ -887,7 +932,7 @@ def _cyc_worker(device_unique_id, channel_id, channel_index,
                     device_unique_id, channel_id, active=False, phase='error',
                     message=lazy_gettext('ON Failed: {}').format(err), error=str(err),
                     next_transition_ms=None, phase_duration_sec=0, phase_started_ms=None,
-                    stopped_at_ms=int(time.time() * 1000))
+                    run_id=None, stopped_at_ms=int(time.time() * 1000))
                 return
             # Model A: gate the run countdown on device confirmation so runtime
             # reflects confirmed-on, not dispatch. Offline -> show offline, no count.
@@ -907,7 +952,9 @@ def _cyc_worker(device_unique_id, channel_id, channel_index,
                     message=f'{cycle}/{total_cycles}, Offline (no response)', phase_started_ms=None,
                     phase_duration_sec=0, next_transition_ms=phase_start + run_sec * 1000,
                     active=True)
-            if not _sleep_with_cancel(stop_event, run_sec):
+            if not _cyc_sleep(device_unique_id, channel_id, run_id, stop_event, run_sec):
+                if not stop_event.is_set():
+                    superseded = True
                 break
             _issue_output_off(daemon, device_unique_id, channel_index, why='cycle run end')
             now_ms = int(time.time() * 1000)
@@ -917,7 +964,9 @@ def _cyc_worker(device_unique_id, channel_id, channel_index,
                     message=f'{cycle}/{total_cycles}, Resting', phase='resting',
                     phase_started_ms=now_ms, phase_duration_sec=rest_sec,
                     next_transition_ms=now_ms + rest_sec * 1000)
-                if not _sleep_with_cancel(stop_event, rest_sec):
+                if not _cyc_sleep(device_unique_id, channel_id, run_id, stop_event, rest_sec):
+                    if not stop_event.is_set():
+                        superseded = True
                     break
             else:
                 _cyc_state_update(
@@ -925,17 +974,19 @@ def _cyc_worker(device_unique_id, channel_id, channel_index,
                     message=f'{cycle}/{total_cycles}, Completed', phase='waiting',
                     phase_started_ms=None, phase_duration_sec=0, next_transition_ms=None)
 
-        if stop_event.is_set():
+        if superseded:
+            pass
+        elif stop_event.is_set():
             _cyc_state_update(
                 device_unique_id, channel_id, active=False, phase='stopped',
                 message='User stopped', next_transition_ms=None, phase_duration_sec=0,
-                phase_started_ms=None, stopped_at_ms=int(time.time() * 1000))
+                phase_started_ms=None, run_id=None, stopped_at_ms=int(time.time() * 1000))
         else:
             _cyc_state_update(
                 device_unique_id, channel_id, active=False, phase='completed',
                 message='All cycles completed', current_cycle=total_cycles,
                 completed_cycles=total_cycles, next_transition_ms=None, phase_duration_sec=0,
-                phase_started_ms=None, stopped_at_ms=int(time.time() * 1000))
+                phase_started_ms=None, run_id=None, stopped_at_ms=int(time.time() * 1000))
     finally:
         _issue_output_off(daemon, device_unique_id, channel_index, why='worker finally')
         with _CYCLE_LOCK:
@@ -947,33 +998,45 @@ def _cyc_worker(device_unique_id, channel_id, channel_index,
 def _cyc_start_worker(device_unique_id, channel_id, channel_index,
                       run_sec, rest_sec, total_cycles, mode, scheduled_until_ms):
     _cyc_stop_worker(device_unique_id, channel_id, reason='restart')
+    # run_id identifies THIS run on disk (see _cyc_should_stop) so a thread
+    # left running in another gunicorn worker process — one that never sees
+    # this process's stop_event — can still tell it has been superseded.
+    run_id = uuid.uuid4().hex
     stop_event = threading.Event()
     thread = threading.Thread(
         target=_cyc_worker,
         args=(device_unique_id, channel_id, channel_index, run_sec, rest_sec,
-              total_cycles, mode, scheduled_until_ms, stop_event),
+              total_cycles, mode, scheduled_until_ms, run_id, stop_event),
         daemon=True)
     key = _cyc_key(device_unique_id, channel_id)
     with _CYCLE_LOCK:
-        _CYCLE_WORKERS[key] = {'thread': thread, 'stop_event': stop_event}
+        _CYCLE_WORKERS[key] = {'thread': thread, 'stop_event': stop_event, 'run_id': run_id}
     thread.start()
 
 
 _RECOVERED = False
 _RECOVER_LOCK = threading.Lock()
+# A stale claim can only be left behind by a process that crashed between
+# claiming and releasing (see _cyc_try_claim_recovery) — that window is a
+# handful of milliseconds, so anything older than this is dead, not just slow.
+_RECOVERY_CLAIM_STALE_SEC = 60
 
 
 def _cyc_trigger_recovery_once():
-    """Kick off scheduled-worker recovery exactly once, in the background.
+    """Kick off scheduled-worker recovery exactly once per process, in the
+    background.
 
     Triggered lazily from a request handler (NOT during app creation) so it can
     never block or break aotflask startup. The actual work runs in a daemon
     thread so the request returns immediately even if the daemon RPC is slow.
 
     The flag is checked+set under a lock: with gunicorn gthread, two concurrent
-    first polls could otherwise both pass the check and spawn duplicate recovery
-    threads, re-arming the same schedule twice (two workers fighting one output
-    -> toggle flicker / output not operating).
+    first polls in THIS process could otherwise both pass the check and spawn
+    duplicate recovery threads. That only rules out same-process duplicates —
+    gunicorn normally runs several worker PROCESSES (install/gunicorn_conf.py),
+    each with its own copy of this module-level flag, so each process still
+    calls recover_scheduled_workers() once on its own first request. See
+    _cyc_try_claim_recovery for the cross-process half of this guard.
     """
     global _RECOVERED
     with _RECOVER_LOCK:
@@ -984,6 +1047,59 @@ def _cyc_trigger_recovery_once():
         threading.Thread(target=recover_scheduled_workers, daemon=True).start()
     except Exception as exc:
         logger.debug("recovery thread spawn failed: %s", exc)
+
+
+def _cyc_recovery_claim_path(device_unique_id, channel_id):
+    return os.path.join(
+        _SESS_DIR, f"{_cyc_sanitize(device_unique_id)}__{_cyc_sanitize(channel_id)}__recover.lock")
+
+
+def _cyc_try_claim_recovery(device_unique_id, channel_id):
+    """Atomically claim the right to recover this device/channel's pending
+    schedule after a restart — True for exactly one caller.
+
+    Every gunicorn worker PROCESS runs recover_scheduled_workers() once on its
+    own first request (_cyc_trigger_recovery_once only dedupes within a single
+    process). Without this claim, N processes booting together would each see
+    the same still-'scheduled' state file within milliseconds of each other
+    and each start its own worker for it — briefly duplicate ON/OFF commands
+    that only converge once run_id supersession is noticed, about a second
+    later (see _cyc_should_stop). O_CREAT|O_EXCL is atomic even across
+    processes sharing a filesystem, so only the first opener gets True.
+    """
+    path = _cyc_recovery_claim_path(device_unique_id, channel_id)
+    try:
+        os.close(os.open(path, os.O_CREAT | os.O_EXCL | os.O_WRONLY))
+        return True
+    except FileExistsError:
+        try:
+            stale = (time.time() - os.path.getmtime(path)) > _RECOVERY_CLAIM_STALE_SEC
+        except OSError:
+            stale = False
+        if not stale:
+            return False
+        # recover_scheduled_workers() deliberately leaves a successful claim
+        # in place (see its comment) rather than releasing it right after
+        # starting the thread, so an unstale claim here is normal, not a bug.
+        # Once it's this old, though, either that recovery genuinely finished
+        # long ago or the process crashed mid-claim — steal it either way
+        # rather than let a schedule silently never recover again.
+        try:
+            os.remove(path)
+            os.close(os.open(path, os.O_CREAT | os.O_EXCL | os.O_WRONLY))
+            return True
+        except OSError:
+            return False
+    except Exception as exc:
+        logger.debug("recovery claim failed for %s/%s: %s", device_unique_id, channel_id, exc)
+        return True  # fail open: a rare duplicate start beats never recovering
+
+
+def _cyc_release_recovery_claim(device_unique_id, channel_id):
+    try:
+        os.remove(_cyc_recovery_claim_path(device_unique_id, channel_id))
+    except OSError:
+        pass
 
 
 def recover_scheduled_workers():
@@ -1019,8 +1135,17 @@ def recover_scheduled_workers():
             with _CYCLE_LOCK:
                 if key in _CYCLE_WORKERS:
                     continue
+            if not _cyc_try_claim_recovery(dev, ch):
+                # A different gunicorn worker PROCESS already claimed this
+                # device/channel's recovery in the same startup race — it
+                # will start (or has started) the worker, so skip here.
+                continue
             ch_index = _resolve_channel_index(dev, ch)
             if ch_index is None:
+                # Nothing was started — release now so a later attempt (this
+                # scan only ever runs once per process) isn't blocked by a
+                # claim nothing came of.
+                _cyc_release_recovery_claim(dev, ch)
                 continue
             run = int(st.get('run_sec', 0) or 0)
             rest = int(st.get('rest_sec', 0) or 0)
@@ -1030,6 +1155,17 @@ def recover_scheduled_workers():
                 "AoT_timer: re-arming scheduled worker %s::%s (fires in %ss)",
                 dev, ch, int((sched - now_ms) / 1000))
             _cyc_start_worker(dev, ch, ch_index, run, rest, cycles, mode, sched)
+            # Claim intentionally left in place on success (no release here).
+            # recover_scheduled_workers() only ever runs to completion once
+            # per process (_cyc_trigger_recovery_once), so nothing in THIS
+            # boot asks for this key again — and releasing right after
+            # starting the thread would reopen the exact race this exists to
+            # close: the new thread's first state write (which moves phase
+            # off 'scheduled') lands a moment later, not before this returns,
+            # so a racing process could still see 'scheduled' and reclaim it.
+            # The claim goes stale on its own (_cyc_try_claim_recovery) well
+            # before the next restart, so a future schedule at the same
+            # device/channel can still recover then.
     except Exception as exc:
         logger.debug("recover_scheduled_workers failed: %s", exc)
 

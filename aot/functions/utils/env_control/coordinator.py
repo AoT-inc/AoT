@@ -535,224 +535,277 @@ def coordinate(
     # 저렴한 액추에이터부터 확정 → 이후 것들은 잔여 편차를 보고 적게 동작(부하분담).
     order = sorted(available, key=lambda p: p.cost_fn(ctx, 100.0))
 
+    # ── tier 그룹화: 비용이 동률인 액추에이터들은 같은 잔여편차 스냅숏을 보고 계산한다.
+    #
+    # 배경(aot-005 실사례, 2026-09): 같은 kind 의 천창 2개는 _build_cost_fn 에서
+    # base_cost=5.0 고정이라 cost_fn 값이 항상 동일하다. 정렬 후 순차 처리하면
+    # 먼저 처리된 천창의 기여가 accum 에 즉시 반영되어 뒤에 오는 천창은 잔여편차가
+    # 거의 0 인 "평형 근방" 으로 진입해 0% 에 고착된다. 처리 순서가 매 사이클
+    # 안정정렬로 고정되므로 자기수정 메커니즘 없이 0%/100% 비대칭이 영속된다.
+    #
+    # 해법: 비용 동률 묶음(tier) 안에서는 **묶음 시작 전 accum 스냅숏**을 공통으로
+    # 사용한다. 그래야 같은 kind 의 두 천창이 동일한 잔여편차를 보고 동일한
+    # e_norm 을 계산해 대칭적 명령으로 수렴한다. 묶음 전체 처리가 끝난 뒤에만
+    # 각 멤버의 물리효과를 accum 에 한꺼번에 반영한다.
+    #
+    # 서로 다른 비용의 묶음 사이 순서(저비용→고비용)는 그대로이므로
+    # "환기 먼저, 부족하면 냉난방" 동작은 변경 없다.
+    #
+    # 동률 판정: 같은 kind 면 cost_fn 이 수치상 완전히 같지만 부동소수점 연산
+    # 경로가 달라질 수 있는 미래를 대비해 math.isclose 로 방어한다.
+
+    def _cost_key(p: 'ActuatorProfile') -> float:
+        return p.cost_fn(ctx, 100.0)
+
+    # order 를 비용 동률 묶음(tier) 리스트로 분할.
+    # 예: [cost=5, cost=5, cost=9] → [[p0,p1], [p2]]
+    tiers: list = []
     for p in order:
-        accum = accumulated[domain_of(p)]
-        _is_hvac = ACTUATOR_DOMAIN.get(getattr(p, 'kind', '')) == 'hvac'
-        prev_val = state.prev_commands.get(p.actuator_id, 0.0)
-        I = new_state.integral.get(p.actuator_id, 0.0)
-        kp = p.gains.get('kp', POS_KP)
-        ki = p.gains.get('ki', POS_KI)
-
-        # ── 결합 drive: 이 액추에이터가 제어 가능한 모든 변수의 정규화 drive 를
-        #    priority × 유효도(effect magnitude)로 가중합한다. 이는 가중 오차제곱합의
-        #    음의 기울기(gradient-descent) 방향으로, "냉방 개방 이득 vs 습도 악화"
-        #    같은 다목적 트레이드오프를 단일 평형으로 수렴시킨다.
-        #    (기존 primary-var 선택 + binary conflict 의 toggle limit-cycle 제거)
-        #    effect 방향이 외기차 부호에 따라 뒤집히므로(외기가 더 더우면 개방=가온),
-        #    역방향 개방도 자동 음(─) drive 로 차단된다.
-        #    주의: g_v 는 변수 간 '상대' 가중치만 정한다. e_norm=num/den 은 정규화되어
-        #    절대 유효도를 반영하지 못하므로(무구배에도 편차 비례로 명령 → 헛돎),
-        #    아래에서 max_g(절대 유효도)로 권한 게이트를 따로 건다.
-        num = 0.0
-        den = 0.0
-        max_g = 0.0
-        primary_var = None
-        primary_score = -1.0
-        for v, eff in p.live_effect.items():
-            if eff.direction not in ('↑', '↓'):
-                continue
-            if v in natural_vars or v not in situation.deviation_native:
-                continue
-            t = situation.target.get(v)
-            if t is None or t.tolerance <= 0:
-                continue
-            # 부호 주의: 빼면 부하'분담'이 부하'증폭'이 된다. 앞 장비가 −3°C 를
-            # 확정했는데 편차 +5 에서 5−(−3)=8 을 보면 뒤 장비는 혼자일 때보다
-            # 더 세게 돈다. 실제로 2026-08-20 로컬 육묘장에서 분무 64.9%(모델상
-            # −29.6°C)가 냉방기에 +29.6°C 로 넘어가 편차 0 인데도 냉방 100%,
-            # 난방 0% 로 고착됐다. 위 주석의 "적게 동작"과도 반대였다.
-            residual_v  = situation.deviation_native[v] + accum.get(v, 0.0)
-            if _is_hvac:
-                # 실외가 대신 해 주는 몫만큼 냉난방의 짐을 던다. 부호는 편차를
-                # **0 쪽으로** 옮기는 방향이고(`_ventilation_credit` 이 need 를
-                # 넘지 않게 잘라 놓는다), 그래서 부호가 뒤집힐 수 없다.
-                # ⚠ 환기 자신에게는 적용하지 않는다 — 자기가 할 일을 자기
-                #   편차에서 빼면 창이 열리지 않는다.
-                residual_v += vent_credit.get(v, 0.0)
-            effect_sign = 1.0 if eff.direction == '↑' else -1.0
-            pband_v     = max(PBAND_MULT * t.tolerance, 1e-9)
-            e_v         = (-residual_v * effect_sign) / pband_v    # + = 더 열기
-            g_v         = eff.magnitude_native / pband_v           # 유효도(구동력)
-            w_v         = max(t.priority, 1e-6) * g_v
-            num += w_v * e_v
-            den += w_v
-            max_g = max(max_g, g_v)
-            score = abs(residual_v) / t.tolerance * t.priority
-            if score > primary_score:
-                primary_score = score
-                primary_var = v
-
-        if p.actuator_id in hold_ids:
-            # 실외 근거 없음 → **제자리**. 감쇠하지 않는다(그건 닫는 것이다).
-            # 적분도 그대로 둔다 — 모르는 동안 '평형 개도 기억'을 흔들면 실외가
-            # 돌아왔을 때 엉뚱한 자리에서 다시 출발한다.
-            cmd_raw = _clamp(prev_val, 0.0, 100.0)
-            reason = REASON_NO_OUTDOOR_DATA
-        elif den <= 1e-12 or max_g < G_MIN_EFFECT or p.actuator_id in park_ids:
-            # 제어 가능 변수 없음 OR 유효 구동력 없음(무구배 환기 등) OR 파킹 대상
-            # (환기 무익 / 냉난방 연동 — 2.5 참조) → 안전 idle
-            # 위치(safe_default)로 부드럽게 수렴하고 적분을 풀어준다. 100% 가동해도
-            # 효과 없는 액추에이터를 편차 비례로 켜 두면 성과 없이 작동시간만 늘고
-            # 적분이 와인드업한다. safe_default 기준으로 감쇠하므로 개구부(sd=0)는
-            # 닫힘, 스크린(보온커튼·차광막 sd=100)은 걷힘으로 수렴한다.
-            #
-            # 주의: 여기서 반드시 prev_val(직전 실제 dispatch 위치)에서 감쇠해야
-            # 한다. I(적분)에서 감쇠하면 안 된다 — I 는 포화(saturation) 중
-            # anti-windup back-calculation(아래 else 분기, L266~267)에 의해
-            # dispatch 값과 무관하게 낮아질 수 있다. 예: 스크린이 며칠째 100%로
-            # 열려 있어도(강한 냉방 수요로 P+I 가 100을 크게 초과) I 는 그 이면에서
-            # 조용히 0 근처까지 깎일 수 있고, 그 상태에서 갑자기 무구배로 전환되면
-            # "표시상 100%였는데 다음 사이클에 40%로 뚝 떨어지는" 것처럼 보이는
-            # 명령 급변이 발생한다(2026-07-29 aot-005 폭염 중 보온커튼 오폐쇄 사건의
-            # 원인). prev_val 은 dispatch 좌표 그대로이므로 이 괴리가 없다.
-            sd = p.safe_default
-            I = sd + (prev_val - sd) * RELAX_FACTOR
-            cmd_raw = _clamp(I, 0.0, 100.0)
-            # 같은 감쇠 경로를 쓰되 **사유는 나눈다** — 맞서는 짝의 진 쪽은
-            # "밀어도 안 움직인다"(무구배)가 아니라 "지금 밀 방향이 아니다"다.
-            # 야간 파킹은 사용자가 켠 옵션의 결과다 — 무구배로 뭉치면
-            # "왜 밤에 창이 안 열리나" 에 화면이 답할 수 없다.
-            if p.actuator_id in night_parked:
-                reason = REASON_NIGHT_PARKED
-            elif p.actuator_id in opposing_ids:
-                reason = REASON_OPPOSING_PARKED
-            else:
-                reason = REASON_NO_GRADIENT
+        c = _cost_key(p)
+        if tiers and math.isclose(c, _cost_key(tiers[-1][-1]), rel_tol=1e-9):
+            tiers[-1].append(p)
         else:
-            e_norm = num / den
-            # 데드존을 분기가 아니라 '빼기'로 적용한다 — 경계에서 P항이 0 으로
-            # 연속 수렴하므로 입력이 경계를 넘나들어도 명령 계단이 생기지 않는다.
-            # (분기 구현이 만들던 ±kp·hb·100 계단 = 야간 창호 진동의 직접 원인)
-            e_eff = math.copysign(
-                max(0.0, abs(e_norm) - HOLD_FRAC / PBAND_MULT), e_norm)
-            if e_eff == 0.0:
-                # ── 평형 근방(결합오차 작음) → 적분 동결, 직전 평형 개도 유지
+            tiers.append([p])
+
+    for tier in tiers:
+        # ── 묶음 시작 전 accum 스냅숏 — 모든 도메인 × 변수를 얕은 복사로 확보.
+        # 묶음 안에서 순서대로 갱신하지 않으므로 모든 멤버가 같은 잔여편차를 본다.
+        accum_snapshot: Dict[str, Dict[str, float]] = {
+            dom: dict(dv) for dom, dv in accumulated.items()
+        }
+
+        # 묶음 처리 중 각 멤버의 물리효과를 임시로 모아 두었다가 묶음 끝에 반영.
+        tier_effect_deltas: Dict[str, Dict[str, float]] = {}
+
+        for p in tier:
+            accum = accum_snapshot[domain_of(p)]  # 스냅숏 읽기 전용
+            _is_hvac = ACTUATOR_DOMAIN.get(getattr(p, 'kind', '')) == 'hvac'
+            prev_val = state.prev_commands.get(p.actuator_id, 0.0)
+            I = new_state.integral.get(p.actuator_id, 0.0)
+            kp = p.gains.get('kp', POS_KP)
+            ki = p.gains.get('ki', POS_KI)
+
+            # ── 결합 drive: 이 액추에이터가 제어 가능한 모든 변수의 정규화 drive 를
+            #    priority × 유효도(effect magnitude)로 가중합한다. 이는 가중 오차제곱합의
+            #    음의 기울기(gradient-descent) 방향으로, "냉방 개방 이득 vs 습도 악화"
+            #    같은 다목적 트레이드오프를 단일 평형으로 수렴시킨다.
+            #    (기존 primary-var 선택 + binary conflict 의 toggle limit-cycle 제거)
+            #    effect 방향이 외기차 부호에 따라 뒤집히므로(외기가 더 더우면 개방=가온),
+            #    역방향 개방도 자동 음(─) drive 로 차단된다.
+            #    주의: g_v 는 변수 간 '상대' 가중치만 정한다. e_norm=num/den 은 정규화되어
+            #    절대 유효도를 반영하지 못하므로(무구배에도 편차 비례로 명령 → 헛돎),
+            #    아래에서 max_g(절대 유효도)로 권한 게이트를 따로 건다.
+            num = 0.0
+            den = 0.0
+            max_g = 0.0
+            primary_var = None
+            primary_score = -1.0
+            for v, eff in p.live_effect.items():
+                if eff.direction not in ('↑', '↓'):
+                    continue
+                if v in natural_vars or v not in situation.deviation_native:
+                    continue
+                t = situation.target.get(v)
+                if t is None or t.tolerance <= 0:
+                    continue
+                # 부호 주의: 빼면 부하'분담'이 부하'증폭'이 된다. 앞 장비가 −3°C 를
+                # 확정했는데 편차 +5 에서 5−(−3)=8 을 보면 뒤 장비는 혼자일 때보다
+                # 더 세게 돈다. 실제로 2026-08-20 로컬 육묘장에서 분무 64.9%(모델상
+                # −29.6°C)가 냉방기에 +29.6°C 로 넘어가 편차 0 인데도 냉방 100%,
+                # 난방 0% 로 고착됐다. 위 주석의 "적게 동작"과도 반대였다.
+                residual_v  = situation.deviation_native[v] + accum.get(v, 0.0)
+                if _is_hvac:
+                    # 실외가 대신 해 주는 몫만큼 냉난방의 짐을 던다. 부호는 편차를
+                    # **0 쪽으로** 옮기는 방향이고(`_ventilation_credit` 이 need 를
+                    # 넘지 않게 잘라 놓는다), 그래서 부호가 뒤집힐 수 없다.
+                    # ⚠ 환기 자신에게는 적용하지 않는다 — 자기가 할 일을 자기
+                    #   편차에서 빼면 창이 열리지 않는다.
+                    residual_v += vent_credit.get(v, 0.0)
+                effect_sign = 1.0 if eff.direction == '↑' else -1.0
+                pband_v     = max(PBAND_MULT * t.tolerance, 1e-9)
+                e_v         = (-residual_v * effect_sign) / pband_v    # + = 더 열기
+                g_v         = eff.magnitude_native / pband_v           # 유효도(구동력)
+                w_v         = max(t.priority, 1e-6) * g_v
+                num += w_v * e_v
+                den += w_v
+                max_g = max(max_g, g_v)
+                score = abs(residual_v) / t.tolerance * t.priority
+                if score > primary_score:
+                    primary_score = score
+                    primary_var = v
+
+            if p.actuator_id in hold_ids:
+                # 실외 근거 없음 → **제자리**. 감쇠하지 않는다(그건 닫는 것이다).
+                # 적분도 그대로 둔다 — 모르는 동안 '평형 개도 기억'을 흔들면 실외가
+                # 돌아왔을 때 엉뚱한 자리에서 다시 출발한다.
+                cmd_raw = _clamp(prev_val, 0.0, 100.0)
+                reason = REASON_NO_OUTDOOR_DATA
+            elif den <= 1e-12 or max_g < G_MIN_EFFECT or p.actuator_id in park_ids:
+                # 제어 가능 변수 없음 OR 유효 구동력 없음(무구배 환기 등) OR 파킹 대상
+                # (환기 무익 / 냉난방 연동 — 2.5 참조) → 안전 idle
+                # 위치(safe_default)로 부드럽게 수렴하고 적분을 풀어준다. 100% 가동해도
+                # 효과 없는 액추에이터를 편차 비례로 켜 두면 성과 없이 작동시간만 늘고
+                # 적분이 와인드업한다. safe_default 기준으로 감쇠하므로 개구부(sd=0)는
+                # 닫힘, 스크린(보온커튼·차광막 sd=100)은 걷힘으로 수렴한다.
                 #
-                # ⚠ 그런데 **넘어선 채로 얼어붙을 수 있다.** 데드존 안에서는
-                # e_eff=0 이라 구동이 없고, 구동이 없으면 방향 판정도 서지
-                # 않는다 — 그래서 잔여 편차가 부호를 넘어가도 그 순간의 명령이
-                # 그대로 유지되고 근거는 PRIMARY 로 남는다.
-                #
-                # 실측(2026-08-26 영양 육묘장): 낮에 VPD 가 목표보다 높아 냉방기
-                # 적분이 100% 까지 감겼고, VPD 가 목표로 내려와 편차가 −0.0 이
-                # 된 순간 그 100% 가 얼어붙었다. 그 시점의 냉방기는 VPD 를
-                # **내리는** 쪽(모델: vpd ↓0.484)이라 방향이 이미 반대였다.
-                # **목표에 도달했다는 사실이 잘못된 출력을 고정한 것이다.**
-                #
-                # 그래서 데드존 안이라도 부호가 반대면 물러난다. 다만 **한
-                # 사이클의 부호로 판단하지 않는다** — 데드존이 있는 이유가
-                # 센서 잡음이고, 잡음은 매 사이클 부호가 뒤집힌다. 연속으로
-                # 같은 쪽이어야 "넘어갔다" 이고, 한 번이라도 되돌아오면 0 이다.
-                # 읽기는 직전 상태, 쓰기는 새 상태 — 새 상태는 비어서 출발하므로
-                # 이 경로를 안 지난 장치는 자동으로 0 이 된다.
-                if e_norm < 0.0:
-                    _n = (state.deadzone_wrong_side or {}).get(
-                        p.actuator_id, 0) + 1
-                    new_state.deadzone_wrong_side[p.actuator_id] = _n
+                # 주의: 여기서 반드시 prev_val(직전 실제 dispatch 위치)에서 감쇠해야
+                # 한다. I(적분)에서 감쇠하면 안 된다 — I 는 포화(saturation) 중
+                # anti-windup back-calculation(아래 else 분기, L266~267)에 의해
+                # dispatch 값과 무관하게 낮아질 수 있다. 예: 스크린이 며칠째 100%로
+                # 열려 있어도(강한 냉방 수요로 P+I 가 100을 크게 초과) I 는 그 이면에서
+                # 조용히 0 근처까지 깎일 수 있고, 그 상태에서 갑자기 무구배로 전환되면
+                # "표시상 100%였는데 다음 사이클에 40%로 뚝 떨어지는" 것처럼 보이는
+                # 명령 급변이 발생한다(2026-07-29 aot-005 폭염 중 보온커튼 오폐쇄 사건의
+                # 원인). prev_val 은 dispatch 좌표 그대로이므로 이 괴리가 없다.
+                sd = p.safe_default
+                I = sd + (prev_val - sd) * RELAX_FACTOR
+                cmd_raw = _clamp(I, 0.0, 100.0)
+                # 같은 감쇠 경로를 쓰되 **사유는 나눈다** — 맞서는 짝의 진 쪽은
+                # "밀어도 안 움직인다"(무구배)가 아니라 "지금 밀 방향이 아니다"다.
+                # 야간 파킹은 사용자가 켠 옵션의 결과다 — 무구배로 뭉치면
+                # "왜 밤에 창이 안 열리나" 에 화면이 답할 수 없다.
+                if p.actuator_id in night_parked:
+                    reason = REASON_NIGHT_PARKED
+                elif p.actuator_id in opposing_ids:
+                    reason = REASON_OPPOSING_PARKED
                 else:
-                    _n = 0
-                if _n >= DEADZONE_BACKOFF_CYCLES:
-                    # 파킹과 **같은 감쇠 경로**를 쓴다(RELAX_FACTOR, safe_default
-                    # 기준). 감쇠율을 여기만 따로 두면 "왜 이 장치만 다르게
-                    # 내려오는가" 에 답할 자리가 없어진다.
-                    sd = p.safe_default
-                    I = sd + (prev_val - sd) * RELAX_FACTOR
-                    cmd_raw = _clamp(I, 0.0, 100.0)
-                    reason = REASON_DEADZONE_BACKOFF
-                else:
-                    cmd_raw = _clamp(I, 0.0, 100.0)
-                    reason = REASON_PRIMARY
+                    reason = REASON_NO_GRADIENT
             else:
-                # ── 방향 전환 시 적분을 실제 개도로 되앉힌다 (PID 컨트롤러 차용)
-                # PID 는 direction='both' 에서 올림↔내림이 뒤집히는 순간
-                # `integrator = 0.0` 으로 지운다. 한쪽에서 쌓은 누적이 반대쪽으로
-                # 넘어가면, 이미 방향이 바뀌었는데도 그 값이 명령을 계속 밀기
-                # 때문이다 — 실측: 냉방기가 I=97.9 를 들고 있어, VPD 를 올려야
-                # 하는 상황으로 바뀐 뒤에도 계속 돌았다.
-                #
-                # ⚠ **0 으로 지우면 안 된다.** 여기서 적분은 PID 의 '누적 오차'가
-                # 아니라 **'기억된 평형 개도(%)'** 다. 0 = "완전히 닫아라" 라서,
-                # 그대로 베끼면 방향이 바뀔 때마다 창이 쾅 닫혔다 다시 열린다.
-                # 같은 뜻을 갖는 조치는 **실제 서 있는 자리로 되앉히는 것**이다:
-                # 옛 방향의 기억은 지우면서 물리적 연속성은 지킨다.
-                _sign = 1 if e_eff > 0 else -1
-                if new_state.drive_sign.get(p.actuator_id, 0) == -_sign:
-                    I = _clamp(prev_val, 0.0, 100.0)
-                new_state.drive_sign[p.actuator_id] = _sign
-
-                I = _clamp(I + ki * e_eff, 0.0, 100.0)
-                p_term = kp * e_eff * 100.0
-                cmd_unclamped = p_term + I
-                cmd_raw = _clamp(cmd_unclamped, 0.0, 100.0)
-                if cmd_unclamped != cmd_raw:
-                    if abs(prev_val - cmd_raw) <= RAIL_EPS:
-                        # ── 레일 고착 회복 경로 ────────────────────────────
-                        # 직전 dispatch 가 이미 이 레일이다 = 최소 한 사이클
-                        # 이상 여기 눌러붙어 있었다. 그 상태의 적분은 '기억된
-                        # 평형 개도'가 아니라 **포화 부산물**이라 값에 뜻이 없다.
-                        # 실제 개도(cmd_raw) 쪽으로 기하 감쇠시켜 적분이 자기
-                        # 정의(=이 액추에이터가 서 있는 자리)를 되찾게 한다.
-                        I = cmd_raw + (I - cmd_raw) * RELAX_FACTOR
+                e_norm = num / den
+                # 데드존을 분기가 아니라 '빼기'로 적용한다 — 경계에서 P항이 0 으로
+                # 연속 수렴하므로 입력이 경계를 넘나들어도 명령 계단이 생기지 않는다.
+                # (분기 구현이 만들던 ±kp·hb·100 계단 = 야간 창호 진동의 직접 원인)
+                e_eff = math.copysign(
+                    max(0.0, abs(e_norm) - HOLD_FRAC / PBAND_MULT), e_norm)
+                if e_eff == 0.0:
+                    # ── 평형 근방(결합오차 작음) → 적분 동결, 직전 평형 개도 유지
+                    #
+                    # ⚠ 그런데 **넘어선 채로 얼어붙을 수 있다.** 데드존 안에서는
+                    # e_eff=0 이라 구동이 없고, 구동이 없으면 방향 판정도 서지
+                    # 않는다 — 그래서 잔여 편차가 부호를 넘어가도 그 순간의 명령이
+                    # 그대로 유지되고 근거는 PRIMARY 로 남는다.
+                    #
+                    # 실측(2026-08-26 영양 육묘장): 낮에 VPD 가 목표보다 높아 냉방기
+                    # 적분이 100% 까지 감겼고, VPD 가 목표로 내려와 편차가 −0.0 이
+                    # 된 순간 그 100% 가 얼어붙었다. 그 시점의 냉방기는 VPD 를
+                    # **내리는** 쪽(모델: vpd ↓0.484)이라 방향이 이미 반대였다.
+                    # **목표에 도달했다는 사실이 잘못된 출력을 고정한 것이다.**
+                    #
+                    # 그래서 데드존 안이라도 부호가 반대면 물러난다. 다만 **한
+                    # 사이클의 부호로 판단하지 않는다** — 데드존이 있는 이유가
+                    # 센서 잡음이고, 잡음은 매 사이클 부호가 뒤집힌다. 연속으로
+                    # 같은 쪽이어야 "넘어갔다" 이고, 한 번이라도 되돌아오면 0 이다.
+                    # 읽기는 직전 상태, 쓰기는 새 상태 — 새 상태는 비어서 출발하므로
+                    # 이 경로를 안 지난 장치는 자동으로 0 이 된다.
+                    if e_norm < 0.0:
+                        _n = (state.deadzone_wrong_side or {}).get(
+                            p.actuator_id, 0) + 1
+                        new_state.deadzone_wrong_side[p.actuator_id] = _n
                     else:
-                        # 갓 포화 — 표준 back-calculation(포화분만큼 되돌림).
-                        # 첫 사이클의 빠른 anti-windup 은 그대로 둔다.
-                        I = _clamp(I - (cmd_unclamped - cmd_raw) * AW_BETA,
-                                   0.0, 100.0)
-                reason = REASON_PRIMARY
+                        _n = 0
+                    if _n >= DEADZONE_BACKOFF_CYCLES:
+                        # 파킹과 **같은 감쇠 경로**를 쓴다(RELAX_FACTOR, safe_default
+                        # 기준). 감쇠율을 여기만 따로 두면 "왜 이 장치만 다르게
+                        # 내려오는가" 에 답할 자리가 없어진다.
+                        sd = p.safe_default
+                        I = sd + (prev_val - sd) * RELAX_FACTOR
+                        cmd_raw = _clamp(I, 0.0, 100.0)
+                        reason = REASON_DEADZONE_BACKOFF
+                    else:
+                        cmd_raw = _clamp(I, 0.0, 100.0)
+                        reason = REASON_PRIMARY
+                else:
+                    # ── 방향 전환 시 적분을 실제 개도로 되앉힌다 (PID 컨트롤러 차용)
+                    # PID 는 direction='both' 에서 올림↔내림이 뒤집히는 순간
+                    # `integrator = 0.0` 으로 지운다. 한쪽에서 쌓은 누적이 반대쪽으로
+                    # 넘어가면, 이미 방향이 바뀌었는데도 그 값이 명령을 계속 밀기
+                    # 때문이다 — 실측: 냉방기가 I=97.9 를 들고 있어, VPD 를 올려야
+                    # 하는 상황으로 바뀐 뒤에도 계속 돌았다.
+                    #
+                    # ⚠ **0 으로 지우면 안 된다.** 여기서 적분은 PID 의 '누적 오차'가
+                    # 아니라 **'기억된 평형 개도(%)'** 다. 0 = "완전히 닫아라" 라서,
+                    # 그대로 베끼면 방향이 바뀔 때마다 창이 쾅 닫혔다 다시 열린다.
+                    # 같은 뜻을 갖는 조치는 **실제 서 있는 자리로 되앉히는 것**이다:
+                    # 옛 방향의 기억은 지우면서 물리적 연속성은 지킨다.
+                    _sign = 1 if e_eff > 0 else -1
+                    if new_state.drive_sign.get(p.actuator_id, 0) == -_sign:
+                        I = _clamp(prev_val, 0.0, 100.0)
+                    new_state.drive_sign[p.actuator_id] = _sign
 
-        cmd = finalize_command(p, cmd_raw, prev_val, cycle_sec,
-                               reason=reason, var_source=primary_var)
-        commands[p.actuator_id] = cmd
-        cmd_ap = cmd.control_value()
+                    I = _clamp(I + ki * e_eff, 0.0, 100.0)
+                    p_term = kp * e_eff * 100.0
+                    cmd_unclamped = p_term + I
+                    cmd_raw = _clamp(cmd_unclamped, 0.0, 100.0)
+                    if cmd_unclamped != cmd_raw:
+                        if abs(prev_val - cmd_raw) <= RAIL_EPS:
+                            # ── 레일 고착 회복 경로 ────────────────────────────
+                            # 직전 dispatch 가 이미 이 레일이다 = 최소 한 사이클
+                            # 이상 여기 눌러붙어 있었다. 그 상태의 적분은 '기억된
+                            # 평형 개도'가 아니라 **포화 부산물**이라 값에 뜻이 없다.
+                            # 실제 개도(cmd_raw) 쪽으로 기하 감쇠시켜 적분이 자기
+                            # 정의(=이 액추에이터가 서 있는 자리)를 되찾게 한다.
+                            I = cmd_raw + (I - cmd_raw) * RELAX_FACTOR
+                        else:
+                            # 갓 포화 — 표준 back-calculation(포화분만큼 되돌림).
+                            # 첫 사이클의 빠른 anti-windup 은 그대로 둔다.
+                            I = _clamp(I - (cmd_unclamped - cmd_raw) * AW_BETA,
+                                       0.0, 100.0)
+                    reason = REASON_PRIMARY
 
-        # ── 속도에 막힌 몫만 적분에 되먹인다 (2026-08-26) ────────────────────
-        # 적분의 뜻은 '기억된 평형 개도'다. 그런데 anti-windup 이 [0,100] 클램프
-        # 만 되먹이고 **슬루(변화율) 제한은 되먹이지 않아**, PI 가 88.7% 를
-        # 원하고 실제로는 25% 만 나가도 적분은 88.7 이 나간 것처럼 계속 자랐다.
-        # 그렇게 부풀려진 적분은 자기 정의를 잃고(실측: 側面窓右 I=67.9 인데
-        # 실제 개도 25.0), 그 값이 만든 과장된 물리 기여가 부하분담을 타고
-        # 남을 거꾸로 켰다 — 2026-08-25 사고의 근원이다.
-        #
-        # ⚠⚠ **min-ON 스냅은 되먹이면 안 된다.** 둘은 "요구만큼 못 나갔다" 로
-        # 같아 보이지만 뜻이 정반대다.
-        #
-        #   슬루     장치가 **가고는 있다**. 덜 간 몫은 허구이므로 되돌린다.
-        #   min-ON  장치가 **아무것도 안 했다**. 몇 초 켜서는 실제 출력이 안
-        #           나오는 장치가 많아 일부러 버린 것이다. 여기서 적분까지
-        #           깎으면 적분이 문턱을 **영영 못 넘어** 장치가 한 번도 안
-        #           도는 교착이 된다.
-        #
-        # 그래서 버린 몫은 적분에 남긴다 — 쌓여서 의미 있는 한 번을 만들 때
-        # 몰아서 켜진다. 펄스 **폭**이 아니라 **빈도**로 조절하는 것이고,
-        # PID 컨트롤러의 on/off 경로가 같은 판단을 한다(`raise_min_duration`
-        # 미만이면 출력을 건너뛰되 integrator 는 그대로 쌓는다). 적분은
-        # [0,100] 하드클램프가 있으므로 이래도 무한히 자라지 않는다.
-        #
-        # ⚠ 세 분기(hold·무구배·평형)는 적분을 이미 자기 규칙으로 정했으므로
-        # 건드리지 않는다 — 그 값들은 요구가 아니라 **의도된 위치**다.
-        reachable = cmd.slewed if cmd.slewed is not None else cmd_ap
-        if reason == REASON_PRIMARY and abs(cmd_raw - reachable) > 1e-9:
-            I = _clamp(I - (cmd_raw - reachable) * AW_BETA, 0.0, 100.0)
+            cmd = finalize_command(p, cmd_raw, prev_val, cycle_sec,
+                                   reason=reason, var_source=primary_var)
+            commands[p.actuator_id] = cmd
+            cmd_ap = cmd.control_value()
 
-        new_state.integral[p.actuator_id] = I
+            # ── 속도에 막힌 몫만 적분에 되먹인다 (2026-08-26) ────────────────────
+            # 적분의 뜻은 '기억된 평형 개도'다. 그런데 anti-windup 이 [0,100] 클램프
+            # 만 되먹이고 **슬루(변화율) 제한은 되먹이지 않아**, PI 가 88.7% 를
+            # 원하고 실제로는 25% 만 나가도 적분은 88.7 이 나간 것처럼 계속 자랐다.
+            # 그렇게 부풀려진 적분은 자기 정의를 잃고(실측: 側面窓右 I=67.9 인데
+            # 실제 개도 25.0), 그 값이 만든 과장된 물리 기여가 부하분담을 타고
+            # 남을 거꾸로 켰다 — 2026-08-25 사고의 근원이다.
+            #
+            # ⚠⚠ **min-ON 스냅은 되먹이면 안 된다.** 둘은 "요구만큼 못 나갔다" 로
+            # 같아 보이지만 뜻이 정반대다.
+            #
+            #   슬루     장치가 **가고는 있다**. 덜 간 몫은 허구이므로 되돌린다.
+            #   min-ON  장치가 **아무것도 안 했다**. 몇 초 켜서는 실제 출력이 안
+            #           나오는 장치가 많아 일부러 버린 것이다. 여기서 적분까지
+            #           깎으면 적분이 문턱을 **영영 못 넘어** 장치가 한 번도 안
+            #           도는 교착이 된다.
+            #
+            # 그래서 버린 몫은 적분에 남긴다 — 쌓여서 의미 있는 한 번을 만들 때
+            # 몰아서 켜진다. 펄스 **폭**이 아니라 **빈도**로 조절하는 것이고,
+            # PID 컨트롤러의 on/off 경로가 같은 판단을 한다(`raise_min_duration`
+            # 미만이면 출력을 건너뛰되 integrator 는 그대로 쌓는다). 적분은
+            # [0,100] 하드클램프가 있으므로 이래도 무한히 자라지 않는다.
+            #
+            # ⚠ 세 분기(hold·무구배·평형)는 적분을 이미 자기 규칙으로 정했으므로
+            # 건드리지 않는다 — 그 값들은 요구가 아니라 **의도된 위치**다.
+            reachable = cmd.slewed if cmd.slewed is not None else cmd_ap
+            if reason == REASON_PRIMARY and abs(cmd_raw - reachable) > 1e-9:
+                I = _clamp(I - (cmd_raw - reachable) * AW_BETA, 0.0, 100.0)
 
-        # 확정 효과 누적 (모든 변수) — 부하분담용. slew 적용된 개도 사용.
-        # **자기 도메인 안에만** 쌓는다(위 accumulated 주석 참조).
-        for v, e in p.live_effect.items():
-            s = 1.0 if e.direction == '↑' else (-1.0 if e.direction == '↓' else 0.0)
-            accum[v] = accum.get(v, 0.0) + e.magnitude_native * (cmd_ap / 100.0) * s
+            new_state.integral[p.actuator_id] = I
 
-        _log_cmd(unique_id, p.actuator_id, a_idx, cmd_ap, reason)
+            # 물리효과를 tier_effect_deltas 에 임시 보관 — 묶음 끝에 accum 반영.
+            # **자기 도메인 안에만** 쌓는다(위 accumulated 주석 참조).
+            dom = domain_of(p)
+            if dom not in tier_effect_deltas:
+                tier_effect_deltas[dom] = {}
+            for v, e in p.live_effect.items():
+                s = 1.0 if e.direction == '↑' else (-1.0 if e.direction == '↓' else 0.0)
+                delta = e.magnitude_native * (cmd_ap / 100.0) * s
+                tier_effect_deltas[dom][v] = (
+                    tier_effect_deltas[dom].get(v, 0.0) + delta)
+
+            _log_cmd(unique_id, p.actuator_id, a_idx, cmd_ap, reason)
+
+        # ── 묶음 전체 처리 완료 → 물리효과를 accumulated 에 한꺼번에 반영.
+        # 이 시점 이후의 다음 tier 는 이 묶음 전체의 기여를 포함한 잔여편차를 본다.
+        for dom, var_deltas in tier_effect_deltas.items():
+            for v, delta in var_deltas.items():
+                accumulated[dom][v] = accumulated[dom].get(v, 0.0) + delta
 
     # ── 4. 명령을 못 받은 프로필(이론상 없음) → 안전 기본값 ──────────────────────
     for p in profiles:
