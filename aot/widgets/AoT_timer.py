@@ -610,11 +610,12 @@ def _cyc_preset_get(device_unique_id, channel_id):
     return data if isinstance(data, dict) else None
 
 
-def _cyc_preset_set(device_unique_id, channel_id, run_sec, rest_sec, cycles):
+def _cyc_preset_set(device_unique_id, channel_id, run_sec, rest_sec, cycles, start_at='00:00'):
     payload = {
         "run_sec": int(run_sec),
         "rest_sec": int(rest_sec),
         "cycles": int(cycles),
+        "start_at": str(start_at or '00:00'),
         "updated_ms": int(time.time() * 1000)
     }
     _cyc_preset_write(device_unique_id, channel_id, payload)
@@ -831,7 +832,7 @@ def _cyc_stop_worker(device_unique_id, channel_id, reason='user_stop'):
 
 
 def _cyc_worker(device_unique_id, channel_id, channel_index,
-                run_sec, rest_sec, total_cycles, mode, scheduled_until_ms, run_id, stop_event):
+                run_sec, rest_sec, total_cycles, mode, scheduled_until_ms, start_at, run_id, stop_event):
     key = _cyc_key(device_unique_id, channel_id)
     # extended_timeout=True: allow up to 30 s Pyro5 RPC so remote-output HTTP
     # calls (which may need 15+ s on slow networks) don't time out mid-command.
@@ -853,7 +854,8 @@ def _cyc_worker(device_unique_id, channel_id, channel_index,
             run_sec=run_sec, rest_sec=rest_sec, target_cycles=total_cycles,
             current_cycle=0, completed_cycles=0, started_at_ms=None, stopped_at_ms=None,
             next_transition_ms=None, phase_started_ms=None, phase_duration_sec=0,
-            scheduled_until_ms=scheduled_until_ms, error=None, run_id=run_id)
+            scheduled_until_ms=scheduled_until_ms, error=None, run_id=run_id,
+            start_at=str(start_at or '00:00'))
 
         # ---- Scheduled start: wait until the target wall-clock time ----
         if isinstance(scheduled_until_ms, int) and scheduled_until_ms > now_ms:
@@ -996,7 +998,7 @@ def _cyc_worker(device_unique_id, channel_id, channel_index,
 
 
 def _cyc_start_worker(device_unique_id, channel_id, channel_index,
-                      run_sec, rest_sec, total_cycles, mode, scheduled_until_ms):
+                      run_sec, rest_sec, total_cycles, mode, scheduled_until_ms, start_at='00:00'):
     _cyc_stop_worker(device_unique_id, channel_id, reason='restart')
     # run_id identifies THIS run on disk (see _cyc_should_stop) so a thread
     # left running in another gunicorn worker process — one that never sees
@@ -1006,7 +1008,7 @@ def _cyc_start_worker(device_unique_id, channel_id, channel_index,
     thread = threading.Thread(
         target=_cyc_worker,
         args=(device_unique_id, channel_id, channel_index, run_sec, rest_sec,
-              total_cycles, mode, scheduled_until_ms, run_id, stop_event),
+              total_cycles, mode, scheduled_until_ms, start_at, run_id, stop_event),
         daemon=True)
     key = _cyc_key(device_unique_id, channel_id)
     with _CYCLE_LOCK:
@@ -1151,10 +1153,11 @@ def recover_scheduled_workers():
             rest = int(st.get('rest_sec', 0) or 0)
             cycles = int(st.get('target_cycles', 1) or 1)
             mode = st.get('mode', 'cycle')
+            start_at = st.get('start_at', '00:00')
             logger.info(
                 "AoT_timer: re-arming scheduled worker %s::%s (fires in %ss)",
                 dev, ch, int((sched - now_ms) / 1000))
-            _cyc_start_worker(dev, ch, ch_index, run, rest, cycles, mode, sched)
+            _cyc_start_worker(dev, ch, ch_index, run, rest, cycles, mode, sched, start_at)
             # Claim intentionally left in place on success (no release here).
             # recover_scheduled_workers() only ever runs to completion once
             # per process (_cyc_trigger_recovery_once), so nothing in THIS
@@ -1274,10 +1277,11 @@ def aot_timer_cycle_start(device_unique_id, channel_id):
         channel_index = _resolve_channel_index(device_unique_id, channel_id)
         if channel_index is None:
             return jsonify({"error": "channel"}), 400
-        scheduled_until_ms = _cyc_compute_scheduled_ms(payload.get('start_at', '00:00'), device_unique_id)
-        _cyc_preset_set(device_unique_id, channel_id, run_sec, rest_sec, cycles)
+        start_at = str(payload.get('start_at', '00:00') or '00:00').strip() or '00:00'
+        scheduled_until_ms = _cyc_compute_scheduled_ms(start_at, device_unique_id)
+        _cyc_preset_set(device_unique_id, channel_id, run_sec, rest_sec, cycles, start_at)
         _cyc_start_worker(device_unique_id, channel_id, channel_index,
-                          run_sec, rest_sec, cycles, mode, scheduled_until_ms)
+                          run_sec, rest_sec, cycles, mode, scheduled_until_ms, start_at)
         return jsonify(_cyc_decorate(_cyc_state_snapshot(device_unique_id, channel_id)))
     except Exception as exc:
         logger.debug(f"aot_timer_cycle_start error: {exc}")
@@ -1776,6 +1780,10 @@ WIDGET_INFORMATION = {
         }
         if (Number.isFinite(data.cycles) && data.cycles > 0) {
           $('#aot_tm_cycles_'+wid).val(parseInt(data.cycles, 10));
+        }
+        if (typeof data.start_at === 'string' && /^[0-9]{1,2}:[0-9]{2}$/.test(data.start_at)) {
+          $('#aot_tm_startat_'+wid).val(data.start_at);
+          $('#aot_tm_startat_trigger_'+wid).text(data.start_at);
         }
       }
 

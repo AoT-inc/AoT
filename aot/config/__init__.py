@@ -18,7 +18,7 @@ from config_translations import TRANSLATIONS as T
 
 MYCODO_VERSION = '8.16.0'
 ALEMBIC_VERSION = 'p6_67_user_ui_zoom_desktop_20260911'
-AOT_VERSION = '26.09.04'
+AOT_VERSION = '26.09.05'
 
 # FORCE UPGRADE MASTER
 # Set True to enable upgrading to the master branch of the AoT repository.
