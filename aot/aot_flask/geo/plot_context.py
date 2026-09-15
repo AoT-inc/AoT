@@ -3484,107 +3484,6 @@ def _query_daily_extremes(device_id, channel, measure, start_ts, end_ts, tz,
             if v[0] is not None and v[1] is not None}
 
 
-def _plot_temperature_channels(plot):
-    """구획이 참조하는 온도 채널 → [(device_id, channel, measurement_id)].
-
-    구획 안 센서가 1순위, 없으면 bay → 시설 → zone 순으로 폴백한다
-    (`sensors_for_plot` 의 `source` 우선순위와 같은 규율 — 시설 구획은
-    `in_plot` 이 항상 비어 있어 `in_bay`/`from_facility` 를 빼먹으면 무조건
-    zone 폴백으로 떨어진다).
-
-    `measurement_id`(`DeviceMeasurements.unique_id`)를 함께 내는 이유는
-    센서 교체를 관통해 이어 붙이기 위해서다 — 자리를 대표하던 센서가
-    갈리면 이 마커는 새 장치 하나만 기억하는데(`GeoShape.device_id`),
-    `gdd_accumulated` 가 이 값으로 `utils_series_stitch.slot_segments()` 를
-    불러 옛 장치의 구간을 되짚는다.
-    """
-    from aot.databases.models import DeviceMeasurements
-
-    try:
-        found = sensors_for_plot(plot) or {}
-    except Exception:
-        return []
-    ids = (list(found.get('in_plot') or [])
-           or list(found.get('in_bay') or [])
-           or list(found.get('from_facility') or [])
-           or list(found.get('from_zone') or []))
-    out = []
-    seen = set()
-    for did in ids:
-        if did in seen:
-            continue
-        seen.add(did)
-        try:
-            rows = DeviceMeasurements.query.filter_by(device_id=did).all()
-        except Exception:
-            continue
-        for m in rows:
-            if m.measurement == _GDD_TEMP_MEASURE:
-                out.append((did, m.channel, m.unique_id))
-    return out
-
-
-def _channel_of_measurement(measurement_id):
-    """`DeviceMeasurements.unique_id` → 그 행의 채널 번호. 없으면 None.
-
-    센서 교체 구간을 접을 때 옛 장치의 채널을 다시 구하는 자리다 — 새
-    장치의 채널 번호를 그대로 옛 장치에 쓰면(둘이 다른 채널일 수 있다)
-    `_daily_extremes`/`query_string` 이 엉뚱한 채널을 묻거나 0건을 낸다.
-    """
-    from aot.databases.models import DeviceMeasurements
-
-    row = DeviceMeasurements.query.filter_by(unique_id=measurement_id).first()
-    return row.channel if row is not None else None
-
-
-def segments_are_sequential(segments):
-    """`slot_segments()` 결과가 '교체'(순차)인지 — '동시 점유'(경합)가 아닌지.
-
-    `slot_segments` 는 `spatial_kind:spatial_id/role` 슬롯의 바인딩 이력을
-    통째로 되짚는다. **단일 점유** 슬롯(마커·구역)에서는 그것이 늘 교체
-    사슬이지만, `weather`(대지 기상대) 같은 **다중 점유** 슬롯은 지금 이
-    순간에도 바인딩이 둘 이상 열려 있을 수 있다(대지에 기상대 두 대를
-    등록한 설치, `set_site_weather` 참조) — 그 둘은 교체 관계가 아니라
-    **동시에 활성**이다.
-
-    그런데 `_slot_of` 는 장치 하나가 매인 슬롯 키만 보고 `history()` 를
-    부르므로, 그 슬롯에 동시에 열려 있는 **다른 장치**까지 '구간'으로
-    섞여 나온다. 그 상태로 접으면 열린 구간(`valid_to=None`)이 둘이라
-    같은 기간을 두 장치에게 이중으로 묻게 된다 — GDD/DLI 는 합산·평균이
-    라 값이 부풀거나 흐려진다.
-
-    구분법: 정상적인 교체 사슬은 열린 구간이 **마지막 하나**뿐이고, 그
-    앞의 구간들은 서로 겹치지 않는다(끝난 구간의 `valid_to` 가 다음 구간의
-    `valid_from` 이하). 이 조건이 깨지면 접합을 포기해야 한다는 뜻이다 —
-    호출자는 `len(segments) < 2` 와 똑같이 취급해 단일(현재) 장치 경로로
-    돌아갈 것.
-    """
-    if len(segments) < 2:
-        return True
-    ordered = sorted(segments, key=lambda s: s['valid_from'] or _datetime.min)
-    open_count = sum(1 for s in ordered if s['valid_to'] is None)
-    if open_count > 1:
-        return False
-    for a, b in zip(ordered, ordered[1:]):
-        if a['valid_to'] is None or a['valid_to'] > b['valid_from']:
-            return False
-    return True
-
-
-def _fold_extremes_into(per_day, extremes, start, last):
-    """`_daily_extremes()` 결과 하루치를 `per_day` 누적에 접어 넣는다.
-
-    GDD 는 채널이 여럿이면 날마다 평균하므로(모듈 위 주석), 접합된 구간의
-    옛 장치·새 장치도 **같은 채널의 다른 시기**일 뿐 같은 방식으로 접는다.
-    """
-    for day, (tmax, tmin) in (extremes or {}).items():
-        if day < start or day > last:
-            continue
-        acc = per_day.setdefault(day, [[], []])
-        acc[0].append(tmax)
-        acc[1].append(tmin)
-
-
 def gdd_accumulated(plot, program_row=None, on=None, with_series=False):
     """구획의 누적 GDD → dict (판정 불가면 `usable=False` + 이유).
 
@@ -3595,6 +3494,13 @@ def gdd_accumulated(plot, program_row=None, on=None, with_series=False):
     보상용으로 사이클마다 적분하고 env_coordinator 함수가 있어야 한다. 노지
     구획에는 코디네이터가 없으므로 여기에 얹을 수 없다. 두 값이 다른 것은
     정상이다 — 한쪽을 다른 쪽에 맞추려 하지 말 것(docs/design/program-layer.md).
+
+    ## 어느 센서의 값인가 — 날짜마다 정한다
+
+    출처는 `plot_sources.resolve` 가 **기간별로** 준다(위치 이력 × 바인딩
+    이력). 떼어낸 센서도 그 기간에는 출처이고, 구획 안에 새 센서가 찍혀도 그
+    전 날짜는 구역 센서가 채운다 — 날짜마다 값이 있는 것 중 가장 좁은 출처를
+    쓴다(`plot_sources.choose`).
     """
     from datetime import timedelta
 
@@ -3650,13 +3556,9 @@ def gdd_accumulated(plot, program_row=None, on=None, with_series=False):
     if info['days_expected'] <= 0:
         return dict(info, reason='too-early')
 
-    channels = _plot_temperature_channels(plot)
-    info['sensor_count'] = len(channels)
-    if not channels:
-        return dict(info, reason='no-temperature-sensor')
-
     # 구간도 **현지 자정** 기준이다 — UTC 자정으로 자르면 첫날의 새벽과
     # 마지막 날의 저녁이 통째로 빠진다(그 자체로 하루가 덜 세어진다).
+    from aot.aot_flask.geo import plot_sources
     from aot.utils.device_tz import resolve_location_tz
     from aot.utils.timekit import as_tz, bucket_seconds_for, local_day_bounds_utc
 
@@ -3664,55 +3566,42 @@ def gdd_accumulated(plot, program_row=None, on=None, with_series=False):
     # 창 크기는 **기간 전체를 보고** 정한다 — 서머타임 전환이 끼면 오프셋이
     # 둘이라, 한쪽만 보면 나머지 절반에서 현지 자정이 창 경계를 벗어난다.
     bucket_sec = bucket_seconds_for(tz, start, end)
-    start_ts, end_ts = local_day_bounds_utc(start, end, tz)
+    start_dt, end_dt = local_day_bounds_utc(start, end, tz, as_str=False)
 
-    # 채널이 여럿이면 **날마다 평균**한다. 최고끼리·최저끼리 평균하는 것이라
-    # 한 센서의 이상값이 그날을 통째로 끌고 가지 않는다.
-    #
-    # 자리를 대표하던 센서가 프로그램 도중 교체되면(비활성화 + 새 장치)
-    # `_plot_temperature_channels` 가 넘기는 것은 **지금** 그 자리의
-    # 장치 하나뿐이다 — 마커의 `device_id` 컬럼이 지금 값만 기억하기
-    # 때문이다. 그대로 조회하면 옛 장치가 유일했던 기간의 최고·최저가
-    # 통째로 빠진다. `slot_segments` 로 그 자리의 교체 구간을 되짚어
-    # 구간마다 그 구간의 장치에게 물은 뒤 같은 채널로 접는다.
-    from aot.aot_flask.utils import utils_series_stitch as _stitch
+    channels = plot_sources.channels_for(
+        plot_sources.resolve(plot, start_dt, end_dt)['indoor'],
+        (_GDD_TEMP_MEASURE,))
+    info['sensor_count'] = len(channels)
+    if not channels:
+        return dict(info, reason='no-temperature-sensor')
 
+    # 날짜마다 후보를 모은다. 출처의 기간이 조회 창 전체면 일별 극값 캐시를
+    # 쓰고, 잘린 기간(떼어낸 센서·새로 단 센서)은 캐시를 거치지 않는다 —
+    # 잘린 날의 절반 값이 캐시에 남아 다음 전체 조회에 섞이면 안 된다.
     _fmt = '%Y-%m-%dT%H:%M:%SZ'
     per_day = {}
-    for did, ch, mid in channels:
-        segments = _stitch.slot_segments(did, mid) if mid else []
-        if not segments_are_sequential(segments):
-            # 다중 점유 슬롯(대지 기상대 등)에 지금 열린 구간이 둘 이상이다
-            # — 교체가 아니라 경합이다. 접합을 포기하고 지금 장치만 묻는다.
-            segments = []
-        if len(segments) < 2:
-            _fold_extremes_into(per_day, _daily_extremes(
-                did, ch, _GDD_TEMP_MEASURE, start_ts, end_ts, tz, bucket_sec),
-                start, last)
-            continue
+    for src, dm in channels:
+        for p_from, p_to in src['periods']:
+            whole = (p_from, p_to) == (start_dt, end_dt)
+            fetch = _daily_extremes if whole else _query_daily_extremes
+            extremes = fetch(src['device_id'], dm.channel, _GDD_TEMP_MEASURE,
+                             p_from.strftime(_fmt), p_to.strftime(_fmt),
+                             tz, bucket_sec)
+            for day, (tmax, tmin) in (extremes or {}).items():
+                if day < start or day > last:
+                    continue
+                per_day.setdefault(day, []).append(
+                    {'tier': src['tier'], 'rank': src['rank'],
+                     'tmax': tmax, 'tmin': tmin})
 
-        start_dt = _datetime.strptime(start_ts, _fmt)
-        end_dt = _datetime.strptime(end_ts, _fmt)
-        for seg in segments:
-            if not seg['has_data']:
-                continue
-            seg_from = (max(start_dt, seg['valid_from'])
-                       if seg['valid_from'] else start_dt)
-            seg_to = min(end_dt, seg['valid_to']) if seg['valid_to'] else end_dt
-            if seg_from >= seg_to:
-                continue
-            seg_ch = _channel_of_measurement(seg['measurement_id'])
-            if seg_ch is None:
-                continue
-            _fold_extremes_into(per_day, _daily_extremes(
-                seg['device_id'], seg_ch, _GDD_TEMP_MEASURE,
-                seg_from.strftime(_fmt), seg_to.strftime(_fmt),
-                tz, bucket_sec), start, last)
-
+    # 그날 쓸 출처의 채널이 여럿이면 **날마다 평균**한다. 최고끼리·최저끼리
+    # 평균하는 것이라 한 센서의 이상값이 그날을 통째로 끌고 가지 않는다.
     total = 0.0
     series = []
     for day in sorted(per_day):
-        maxes, mins = per_day[day]
+        chosen = plot_sources.choose(per_day[day], lambda c: True)
+        maxes = [c['tmax'] for c in chosen]
+        mins = [c['tmin'] for c in chosen]
         t_avg = (sum(maxes) / len(maxes) + sum(mins) / len(mins)) / 2.0
         gain = max(0.0, t_avg - t_base)
         total += gain
@@ -3738,73 +3627,13 @@ def gdd_accumulated(plot, program_row=None, on=None, with_series=False):
 _DLI_LIGHT_MEASURES = frozenset({'radiation', 'light'})
 
 
-def _plot_light_channels(plot):
-    """구획이 참조하는 빛(광량) 채널 → [(device_id, channel, unit, measurement_id)].
-
-    `measurement_id` 는 `_plot_temperature_channels` 와 같은 이유로 싣는다 —
-    센서 교체를 관통해 이어 붙이는 `utils_series_stitch.slot_segments()`
-    의 근거다.
-
-    온도(`_plot_temperature_channels`)와 달리 **실외(기상)까지 포함한다** —
-    `plot_journal._plot_sensor_ids` 와 같은 판단이다: "일사·강우는 대지에
-    하나 있는 기상대가 재고, 구획 안에 온습도계가 있다는 이유로 빠지면 안
-    된다." 실측으로 확인했다 — 구획 안·bay 안에 광량 센서를 따로 둔 시설은
-    드물고, 시설 fitting 으로 물린 지역 기상대(`from_weather`)가 사실상
-    유일한 광량 출처인 경우가 흔하다. 온도는 실내/실외가 다른 값이라 섞으면
-    안 되지만(`sensors_for_plot` 의 실외 배제), 빛은 그 경계를 넘나든다 —
-    반투광 외피 안쪽 값은 결국 바깥 일사에서 파생된다.
-
-    같은 장치가 실내 우선순위 체인과 `from_weather` 양쪽에 잡히면(대지에
-    기상대 하나뿐인 설치) **실외 쪽만 남긴다** — `_plot_sensor_ids` 와 같은
-    dedup 규칙(같은 값이 표에 두 번 나오지 않게).
-
-    환산(Conversion)이 걸린 채널은 `return_measurement_info` 로 실제 표시
-    단위를 구한다 — 원본 `unit` 컬럼을 그대로 쓰면(예: lux→W/m² 환산) 엉뚱한
-    PPFD 계수가 걸린다(`plot_journal._channel_info` 와 같은 이유).
-    """
-    from aot.databases.models import Conversion, DeviceMeasurements
-    from aot.utils.system_pi import return_measurement_info
-
-    try:
-        found = sensors_for_plot(plot) or {}
-    except Exception:
-        return []
-    indoor_ids = (list(found.get('in_plot') or [])
-                  or list(found.get('in_bay') or [])
-                  or list(found.get('from_facility') or [])
-                  or list(found.get('from_zone') or []))
-    outdoor_ids = list(found.get('from_weather') or [])
-    outdoor_set = set(outdoor_ids)
-    ids = [d for d in indoor_ids if d not in outdoor_set] + outdoor_ids
-
-    out = []
-    seen = set()
-    for did in ids:
-        if did in seen:
-            continue
-        seen.add(did)
-        try:
-            rows = DeviceMeasurements.query.filter_by(device_id=did).all()
-        except Exception:
-            continue
-        for m in rows:
-            conv = None
-            if getattr(m, 'conversion_id', None):
-                conv = Conversion.query.filter(
-                    Conversion.unique_id == m.conversion_id).first()
-            _, unit, measurement = return_measurement_info(m, conv)
-            display = measurement or m.measurement
-            if display in _DLI_LIGHT_MEASURES:
-                out.append((did, m.channel, unit, m.unique_id))
-    return out
-
-
 def _light_channel_sum(device_id, channel, unit, factor, start_str, end_str):
-    """이 채널의 [start_str, end_str] 구간 PPFD 적분(mol/m²). 조회 실패면 None.
+    """이 채널의 [start_str, end_str] 구간 PPFD 적분 → `(mol/m², 표본 수)`.
+    조회 실패면 None.
 
-    `dli_accumulated` 의 단일 장치 경로와 접합 경로가 같은 조회·적분
-    규칙을 쓰게 묶은 것 — 둘로 나뉘면 접합 유무에 따라 다른 숫자가 나올
-    수 있다.
+    표본 수를 함께 내는 이유: 밤에는 적분이 0 인 것이 정상이라, 적분값만으로는
+    "빛이 없었다" 와 "센서가 값을 안 냈다" 가 구별되지 않는다 — 날짜별 출처
+    선택(`plot_sources.choose`)은 뒤쪽만 건너뛰어야 한다.
     """
     from aot.utils.influx import query_string
 
@@ -3817,6 +3646,7 @@ def _light_channel_sum(device_id, channel, unit, factor, start_str, end_str):
         logger.debug('DLI: %s 조회 실패: %s', device_id, exc)
         return None
     total = 0.0
+    samples = 0
     for table in (tables or []):
         for rec in table.records:
             try:
@@ -3824,7 +3654,8 @@ def _light_channel_sum(device_id, channel, unit, factor, start_str, end_str):
             except (TypeError, ValueError, AttributeError):
                 continue
             total += val * factor * 3600.0 / 1e6
-    return total
+            samples += 1
+    return total, samples
 
 
 def dli_accumulated(plot, program_row=None, on=None):
@@ -3841,10 +3672,16 @@ def dli_accumulated(plot, program_row=None, on=None):
 
     단위 환산은 `plot_journal.LIGHT_UNITS_TO_PPFD` 를 그대로 쓴다(모르는 단위는
     환산하지 않는다 — 두 번째 환산표를 만들지 않는다).
+
+    출처는 GDD 와 같다(`plot_sources.resolve`). **실외(기상)까지 포함한다** —
+    일사는 대지에 하나 있는 기상대가 재고, 구획 안에 온습도계가 있다는 이유로
+    빠지면 안 된다. 실내는 값을 낸 것 중 가장 좁은 출처만, 실외는 전부 더한다.
     """
+    from aot.aot_flask.geo import plot_sources
     from aot.aot_flask.geo.plot_journal import ppfd_factor
-    from aot.aot_flask.utils import utils_series_stitch as _stitch
+    from aot.databases.models import Conversion
     from aot.utils.device_tz import resolve_location_tz
+    from aot.utils.system_pi import return_measurement_info
     from aot.utils.timekit import as_tz, local_day_bounds_utc
 
     info = {'usable': False, 'value': None, 'reason': None,
@@ -3860,75 +3697,50 @@ def dli_accumulated(plot, program_row=None, on=None):
             target = None
     info['target'] = target
 
-    channels = _plot_light_channels(plot)
+    today = on or date.today()
+    tz = as_tz(resolve_location_tz(plot.unique_id))
+    start_dt, end_dt = local_day_bounds_utc(today, today, tz, as_str=False)
+
+    found = plot_sources.resolve(plot, start_dt, end_dt)
+    channels = plot_sources.channels_for(found['indoor'] + found['outdoor'],
+                                         _DLI_LIGHT_MEASURES)
     info['sensor_count'] = len(channels)
     if not channels:
         return dict(info, reason='no-light-sensor')
 
-    today = on or date.today()
-    tz = as_tz(resolve_location_tz(plot.unique_id))
-    start_ts, end_ts = local_day_bounds_utc(today, today, tz)
-
-    # GDD 와 같은 결함 — 대표 센서가 그날 안에 교체됐으면(드물지만 DLI 도
-    # '그날 하루' 안에서는 같은 문제를 겪는다) 마커의 device_id 컬럼은
-    # 지금 장치만 기억해 교체 전 값을 놓친다. `slot_segments` 로 되짚는다.
     _fmt = '%Y-%m-%dT%H:%M:%SZ'
-    total = 0.0
-    assumed = False
-    counted = 0
-    for did, ch, unit, mid in channels:
+    indoor, outdoor = [], []
+    for src, dm in channels:
+        conv = None
+        if getattr(dm, 'conversion_id', None):
+            conv = Conversion.query.filter(
+                Conversion.unique_id == dm.conversion_id).first()
+        _ch, unit, _meas = return_measurement_info(dm, conv)
         factor, is_assumed = ppfd_factor(unit)
         if factor is None:
             continue          # 모르는 단위 — 지어내지 않는다
-
-        segments = _stitch.slot_segments(did, mid) if mid else []
-        if not segments_are_sequential(segments):
-            # 대지 기상대는 다중 점유다(기상대 두 대를 동시에 등록할 수
-            # 있다) — 지금 열린 구간이 둘 이상이면 교체가 아니라 경합이다.
-            # DLI 는 채널을 **합산**하므로 잘못 접으면 겹치는 기간이
-            # 두 배로 더해진다. 접합을 포기하고 지금 장치만 묻는다.
-            segments = []
-        if len(segments) < 2:
-            got = _light_channel_sum(did, ch, unit, factor, start_ts, end_ts)
+        value, samples, answered = 0.0, 0, False
+        for p_from, p_to in src['periods']:
+            got = _light_channel_sum(src['device_id'], dm.channel, unit, factor,
+                                     p_from.strftime(_fmt), p_to.strftime(_fmt))
             if got is None:
                 continue
-            total += got
-            counted += 1
-            assumed = assumed or is_assumed
+            answered = True
+            value += got[0]
+            samples += got[1]
+        if not answered:
             continue
+        cand = {'tier': src['tier'], 'rank': src['rank'], 'value': value,
+                'samples': samples, 'assumed': is_assumed}
+        (outdoor if src['scope'] == 'outdoor' else indoor).append(cand)
 
-        start_dt = _datetime.strptime(start_ts, _fmt)
-        end_dt = _datetime.strptime(end_ts, _fmt)
-        seg_total = 0.0
-        seg_hit = False
-        for seg in segments:
-            if not seg['has_data']:
-                continue
-            seg_from = (max(start_dt, seg['valid_from'])
-                       if seg['valid_from'] else start_dt)
-            seg_to = min(end_dt, seg['valid_to']) if seg['valid_to'] else end_dt
-            if seg_from >= seg_to:
-                continue
-            seg_ch = _channel_of_measurement(seg['measurement_id'])
-            if seg_ch is None:
-                continue
-            got = _light_channel_sum(seg['device_id'], seg_ch, unit, factor,
-                                     seg_from.strftime(_fmt),
-                                     seg_to.strftime(_fmt))
-            if got is None:
-                continue
-            seg_total += got
-            seg_hit = True
-        if seg_hit:
-            total += seg_total
-            counted += 1
-            assumed = assumed or is_assumed
-
-    if counted == 0:
+    chosen = (plot_sources.choose(indoor, lambda c: c['samples'] > 0)
+              + outdoor)
+    if not chosen:
         return dict(info, reason='unknown-light-unit')
 
-    info['value'] = round(total, 2)
-    info['assumed'] = assumed
+    info['value'] = round(sum(c['value'] for c in chosen), 2)
+    info['assumed'] = any(c['assumed'] for c in chosen)
     return dict(info, usable=True)
 
 

@@ -31342,3 +31342,11 @@ msgstr "Показывать только участки на этой карт�
 #: aot/aot_flask/static/js/widgets/AoT_plot/aot-plot-widget.js
 msgid "Go to page %(n)s"
 msgstr "Перейти на страницу %(n)s"
+
+#: aot_flask/static/js/geo/facility/sensor-ui.js
+msgid "Main sensor"
+msgstr "Основной датчик"
+
+#: aot_flask/static/js/geo/facility/sensor-ui.js
+msgid "Backup sensor"
+msgstr "Резервный датчик"

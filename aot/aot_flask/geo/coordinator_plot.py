@@ -108,6 +108,48 @@ def _pick_by_axis(targets):
     return out
 
 
+# ── 온도·습도 **가이드** (2026-09-14) ─────────────────────────────────────
+#
+# VPD 는 계속 1차 목표다. 그런데 같은 VPD 를 너무 덥고 습한 조합으로도, 너무
+# 차고 건조한 조합으로도 맞출 수 있다. 단계의 주·야 온도와 습도는 그런 조합을
+# 막는 가이드다 — 목표 칸(`TARGET_MAP`)에 넣지 않는 이유는 그대로다.
+#
+# 범위(값 ± 폭)는 코디네이터가 만든다(`_cycle_mixin.stage_guide_range`). 여기서는
+# 단계에서 값만 고른다.
+#
+# 온도는 주·야가 같은 물리량이라 `when` 으로 가른다. `CONTROL_AXES` 처럼 물리량만
+# 보면 두 항목이 모호해져 **아무것도 고르지 않는다**.
+GUIDE_SLOTS = {
+    'temp_day':   ('temperature', 'day'),
+    'temp_night': ('temperature', 'night'),
+    'rh':         ('humidity', None),
+}
+
+
+def _pick_guide(targets):
+    """단계 목표 목록 → `{'temp_day', 'temp_night', 'rh'}` 숫자|None.
+
+    고르는 규칙은 `_pick_by_axis` 와 같다 — 고정 항목이 이기고, 고정 항목 없이
+    후보가 둘 이상이면 고르지 않는다. 곡선이 걸린 항목은 단계에 숫자가 없어
+    None 이다(곡선의 지금 값은 제어에 연결할 때 함께 푼다).
+    """
+    out = {slot: None for slot in GUIDE_SLOTS}
+    for slot, (want_m, want_when) in GUIDE_SLOTS.items():
+        items = [t for t in (targets or [])
+                 if t.get('measurement') == want_m
+                 and (t.get('shape') or 'instant') == 'instant'
+                 and (t.get('when') or None) == want_when]
+        fixed = [t for t in items if t.get('fixed')]
+        if len(fixed) == 1:
+            pick = fixed[0]
+        elif len(items) == 1:
+            pick = items[0]
+        else:
+            continue
+        out[slot] = _num(pick.get('value'))
+    return out
+
+
 def _options(fn):
     import json as _json
     try:
@@ -160,7 +202,9 @@ def control_targets(fn, on=None):
            'stage': None,
            'vpd': {'value': None, 'method_id': None},
            'co2': {'value': None, 'method_id': None},
-           'dli': None, 'gdd_daily': None, 'T_base': None, 'model': {}}
+           'dli': None, 'gdd_daily': None, 'T_base': None, 'model': {},
+           # 온도·습도 가이드 값(범위가 아니다) — `_pick_guide` 참조.
+           'guide': {slot: None for slot in GUIDE_SLOTS}}
 
     scope = plot_context.plot_for_coordinator(fn, on=on)
     out['reason'] = scope.get('reason')
@@ -200,6 +244,17 @@ def control_targets(fn, on=None):
         out['reason'] = 'program-unreviewed'
         return out
 
+    # 구획 종류 ≠ 프로그램 종류: 단계·목표 해석이 통째로 어긋난다.
+    # 쓰기 게이트웨이가 붙는 순간 막지만, 게이트웨이 이전 행·백필·직접 수정으로
+    # 들어온 행은 아무도 걸러내지 않는다(`check_geo_integrity` 가 SEVERE 로
+    # 분류하는 이유가 바로 이것이다). 여기서 차단해 잘못된 목표값이 제어로
+    # 흐르는 것을 방지한다.
+    plot_kind = (row.kind or 'vegetation')
+    prog_kind = (prow.kind or 'vegetation')
+    if plot_kind != prog_kind:
+        out['reason'] = 'program-kind-mismatch'
+        return out
+
     prog = plot_context.program_brief(row)
     st = plot_context.stage_of(row, program=prog, on=on)
     if not st or st.get('state') != 'running':
@@ -208,6 +263,7 @@ def control_targets(fn, on=None):
     out['stage'] = {'name': st.get('name'), 'index': st.get('index'),
                     'total': st.get('total'), 'key': st.get('key')}
     out['reason'] = 'ok'
+    out['guide'] = _pick_guide(st.get('targets') or [])
 
     picked = _pick_by_axis(st.get('targets') or [])
     for axis, t in picked.items():
@@ -430,23 +486,32 @@ def _coordinator_live_targets(facility_uuid):
     없으면 아무것도 없다. 그래서 "없으면 곡선 이름만" 으로 되돌아간다 — 지어낸
     숫자를 목표라고 적는 것보다 낫다.
     """
+    fn = facility_env_coordinator(facility_uuid)
+    if fn is None:
+        return {}
+    tgt = _live_summary(fn).get('targets')
+    return tgt if isinstance(tgt, dict) else {}
+
+
+def _live_summary(fn):
+    """코디네이터의 마지막 사이클 요약(`FunctionRuntimeState.summary_json`) → dict.
+
+    스냅샷이다 — 멈춰 있으면 마지막 값, 한 번도 돈 적이 없으면 빈 dict. 읽지
+    못하면 빈 dict 를 돌려준다(화면이 지어낸 값을 그리는 것보다 비우는 편이 낫다).
+    """
     import json as _json
     from aot.databases.models.function import FunctionRuntimeState
 
     try:
-        fn = facility_env_coordinator(facility_uuid)
-        if fn is None:
-            return {}
         rs = FunctionRuntimeState.query.filter_by(
             function_id=fn.unique_id).first()
         if rs is None or not getattr(rs, 'summary_json', None):
             return {}
         summary = _json.loads(rs.summary_json) or {}
-        tgt = summary.get('targets')
-        return tgt if isinstance(tgt, dict) else {}
+        return summary if isinstance(summary, dict) else {}
     except Exception as exc:                                # noqa: BLE001
-        logger.debug('코디네이터 목표 스냅샷 읽기 실패(%s): %s',
-                     facility_uuid, exc)
+        logger.debug('코디네이터 요약 스냅샷 읽기 실패(%s): %s',
+                     getattr(fn, 'unique_id', None), exc)
         return {}
 
 
@@ -526,6 +591,11 @@ def display_state(fn, on=None):
     out['stage'] = tgt['stage']
     out['targets'] = []
     out['unmapped'] = []
+    # 가이드 범위는 **코디네이터가 계산한 값**을 그대로 보인다(요약 `stage_guide`).
+    # 낮·밤·하드 임계·시설 guide 를 모두 거친 결과라 화면이 다시 계산하면 갈린다.
+    # 구획이 없으면 싣지 않는다 — 시설 guide 만 되풀이하는 줄이 된다.
+    out['guide'] = (_live_summary(fn).get('stage_guide')
+                    if tgt.get('plot_uuid') else None)
     for key, unit in TARGET_MAP:
         item = tgt.get(key)
         if key == 'dli':

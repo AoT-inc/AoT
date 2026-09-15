@@ -31207,3 +31207,11 @@ msgstr "Rodyti tik šio žemėlapio arba vietos sklypus. Palikite tuščią, kad
 #: aot/aot_flask/static/js/widgets/AoT_plot/aot-plot-widget.js
 msgid "Go to page %(n)s"
 msgstr "Eiti į %(n)s puslapį"
+
+#: aot_flask/static/js/geo/facility/sensor-ui.js
+msgid "Main sensor"
+msgstr "Pagrindinis jutiklis"
+
+#: aot_flask/static/js/geo/facility/sensor-ui.js
+msgid "Backup sensor"
+msgstr "Atsarginis jutiklis"

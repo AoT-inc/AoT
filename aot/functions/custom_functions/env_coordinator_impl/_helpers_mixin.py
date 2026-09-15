@@ -244,6 +244,7 @@ class HelpersMixin:
         empty = {'vpd': {'value': None, 'method_id': None},
                  'co2': {'value': None, 'method_id': None},
                  'dli': None, 'gdd_daily': None, 'T_base': None,
+                 'guide': {'temp_day': None, 'temp_night': None, 'rh': None},
                  'started_on': None, 'plot_uuid': None, 'plot_name': None,
                  'stage': None, 'reason': 'unavailable'}
         try:

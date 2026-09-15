@@ -1209,11 +1209,15 @@ def set_stage_target(plot_uuid, stage_key=None, target_key=None,
         if stage_key in ov['targets'] and not ov['targets'][stage_key]:
             ov['targets'].pop(stage_key)
     else:
-        try:
-            num = float(value)
-        except (TypeError, ValueError):
-            return None, '숫자를 입력해 주세요'
-        ov['targets'].setdefault(stage_key, {})[target_key] = num
+        # 범위는 프로그램에 저장할 때와 **같은 검사**를 거친다. 예전에는 숫자
+        # 변환만 해서 999°C 같은 값이 그대로 제어 입력이 됐다 — 구획 값이
+        # 프로그램 값보다 우선하므로 여기가 느슨하면 프로그램 검사가 무의미하다.
+        from aot.aot_flask.geo.program_io import _clean_targets
+        cleaned, verr = _clean_targets({target_key: value}, defs)
+        if verr:
+            return None, verr
+        ov['targets'].setdefault(stage_key, {})[target_key] = \
+            cleaned[target_key]
     err = _save_overrides(row, ov)
     if err:
         return None, err

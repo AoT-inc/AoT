@@ -31705,3 +31705,11 @@ msgstr "Mostrar apenas os talhões deste mapa ou site. Deixe em branco para most
 #: aot/aot_flask/static/js/widgets/AoT_plot/aot-plot-widget.js
 msgid "Go to page %(n)s"
 msgstr "Ir para a página %(n)s"
+
+#: aot_flask/static/js/geo/facility/sensor-ui.js
+msgid "Main sensor"
+msgstr "Sensor principal"
+
+#: aot_flask/static/js/geo/facility/sensor-ui.js
+msgid "Backup sensor"
+msgstr "Sensor de reserva"

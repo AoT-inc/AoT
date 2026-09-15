@@ -31236,3 +31236,11 @@ msgstr "Показувати лише ділянки на цій карті аб
 #: aot/aot_flask/static/js/widgets/AoT_plot/aot-plot-widget.js
 msgid "Go to page %(n)s"
 msgstr "Перейти на сторінку %(n)s"
+
+#: aot_flask/static/js/geo/facility/sensor-ui.js
+msgid "Main sensor"
+msgstr "Основний датчик"
+
+#: aot_flask/static/js/geo/facility/sensor-ui.js
+msgid "Backup sensor"
+msgstr "Резервний датчик"

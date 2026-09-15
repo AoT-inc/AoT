@@ -67,6 +67,28 @@ def vent_reachable(magnitude: float, gap: float) -> float:
     return min(abs(magnitude), abs(gap))
 
 
+def _vent_exchange_fraction(env: EnvContext, cmd_pct: float, profile,
+                            temp_fn, humid_fn) -> float:
+    """환기 장치가 이 개도로 한 사이클에 바꾸는 공기의 몫 [0, 1].
+
+    장치의 온도 효과는 `|내외 온도차| × 몫` 꼴이므로 거꾸로 나눠 몫을 얻는다
+    — 면적·풍속·형태 보정·캘리브레이션이 전부 그 안에 이미 들어 있어 계수를
+    다시 세지 않는다. 온도차가 작아 온도 효과가 0 이면 습도 쪽으로 같은 일을
+    한다. 둘 다 못 재면 0 이다.
+    """
+    for fn, k_in, k_out, floor in ((temp_fn, 'T_int', 'T_ext', 0.5),
+                                   (humid_fn, 'RH_int', 'RH_ext', 1.0)):
+        if fn is None:
+            continue
+        diff = abs(float(env.get(k_out) or 0.0) - float(env.get(k_in) or 0.0))
+        if diff < floor:
+            continue
+        r = fn(env, cmd_pct, profile)
+        if r.magnitude_native > 0.0:
+            return min(1.0, r.magnitude_native / diff)
+    return 0.0
+
+
 def make_vpd_effect(temp_fn, humid_fn, humid_is_moisture: bool = True,
                     vent_bounded: bool = False):
     """액추에이터의 T·RH effect 로부터 VPD effect 를 연쇄법칙으로 유도한다.
@@ -90,6 +112,33 @@ def make_vpd_effect(temp_fn, humid_fn, humid_is_moisture: bool = True,
     절반만 잡혔다(24.34°C, dT=2°C 실측: 옛 0.182 vs 실제 0.365 kPa).
     """
     def vpd_effect(env: EnvContext, cmd_pct: float, profile=None) -> EffectResult:
+        if vent_bounded:
+            # ── 환기는 실내를 **실외 VPD 쪽으로** 민다 (2026-09-14) ──────────
+            # 연쇄법칙을 쓰지 않는다. 습도 효과가 **상대습도 차**로 신고되고
+            # 계수도 온도(0.08)와 습도(0.06)가 달라서, 같은 공기 교환인데 열은
+            # 많이 빠지고 수분은 적게 빠지는 모델이 된다. 그러면 "실외가 더
+            # 차다" 만으로 환기 = VPD 하강이 나온다.
+            #
+            # 실측(2026-09-14 aot-005 육묘장): 실내 30.1 °C · 97 %(VPD 0.13),
+            # 실외 22.9 °C · 62 %(VPD 1.07), 목표 VPD 1.0. 수증기압이 4.1 →
+            # 1.7 kPa 로 빠질 자리인데 모델은 **모든 시각에서 ↓** 를 냈고, 창은
+            # 근거 '주작용' 으로 0 % 에 서 있었다. 실내는 33.8 °C 까지 올랐고
+            # 사람이 창을 열자 VPD 는 1.3 으로, 온도는 27 °C 로 갔다.
+            #
+            # 끝점은 실외 하나다(`vent_reachable` 과 같은 판단). 여는 순간의
+            # 혼합만 보면 식는 쪽이 앞서 VPD 가 잠깐 내려갈 수 있지만, 일사는
+            # 계속 들어오고 수분은 빠진 채로 남는다 — 가는 곳은 실외 상태다.
+            # 환기 무익 게이트(`coordinator._ventilation_is_futile`)도 같은
+            # 기준(실외 − 실내)으로 판단한다. **두 곳이 같은 물리를 반대로
+            # 판단하지 않게 할 것.**
+            gap = _vpd_gap(env)
+            if gap is not None:
+                f = _vent_exchange_fraction(env, cmd_pct, profile,
+                                            temp_fn, humid_fn)
+                mag = vent_reachable(abs(gap) * f, gap)
+                if mag < 1e-6:
+                    return EffectResult('0', 0.0)
+                return EffectResult('↑' if gap > 0 else '↓', mag)
         T  = env.get('T_int', 0.0)
         svp_ = _svp_kpa(T)
         dsvp = svp_ * 17.27 * 237.3 / (T + 237.3) ** 2

@@ -31824,3 +31824,11 @@ msgstr "Muestra solo las parcelas de este mapa o sitio. Déjalo vacío para most
 #: aot/aot_flask/static/js/widgets/AoT_plot/aot-plot-widget.js
 msgid "Go to page %(n)s"
 msgstr "Ir a la página %(n)s"
+
+#: aot_flask/static/js/geo/facility/sensor-ui.js
+msgid "Main sensor"
+msgstr "Sensor principal"
+
+#: aot_flask/static/js/geo/facility/sensor-ui.js
+msgid "Backup sensor"
+msgstr "Sensor de respaldo"

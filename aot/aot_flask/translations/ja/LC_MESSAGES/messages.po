@@ -34832,3 +34832,25 @@ msgstr "検索に一致するお知らせがありません。"
 #: aot/aot_flask/static/js/widgets/AoT_plot/aot-plot-widget.js
 msgid "Go to page %(n)s"
 msgstr "%(n)s ページに移動"
+
+#: aot_flask/static/js/common/aot-coordinator-plot.js
+msgid ""
+"The program's kind does not match this plot's kind, so control does not "
+"use it."
+msgstr "プログラムの対象種別がこの区画の種別と異なるため、制御には使用しません。"
+
+#: aot_flask/static/js/common/aot-coordinator-plot.js
+msgid "Guide range"
+msgstr "ガイド範囲"
+
+#: aot_flask/static/js/common/aot-coordinator-plot.js
+msgid "Not applied to control yet"
+msgstr "まだ制御には適用していません"
+
+#: aot_flask/static/js/geo/facility/sensor-ui.js
+msgid "Main sensor"
+msgstr "メインセンサー"
+
+#: aot_flask/static/js/geo/facility/sensor-ui.js
+msgid "Backup sensor"
+msgstr "バックアップセンサー"

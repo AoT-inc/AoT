@@ -31399,3 +31399,11 @@ msgstr "Csak az ezen a térképen vagy telephelyen lévő parcellákat jeleníts
 #: aot/aot_flask/static/js/widgets/AoT_plot/aot-plot-widget.js
 msgid "Go to page %(n)s"
 msgstr "Ugrás a(z) %(n)s. oldalra"
+
+#: aot_flask/static/js/geo/facility/sensor-ui.js
+msgid "Main sensor"
+msgstr "Fő érzékelő"
+
+#: aot_flask/static/js/geo/facility/sensor-ui.js
+msgid "Backup sensor"
+msgstr "Tartalék érzékelő"

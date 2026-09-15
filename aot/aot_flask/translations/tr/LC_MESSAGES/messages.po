@@ -31169,3 +31169,11 @@ msgstr "Yalnızca bu harita veya alandaki ekim alanlarını göster. Yetiştiril
 #: aot/aot_flask/static/js/widgets/AoT_plot/aot-plot-widget.js
 msgid "Go to page %(n)s"
 msgstr "%(n)s. sayfaya git"
+
+#: aot_flask/static/js/geo/facility/sensor-ui.js
+msgid "Main sensor"
+msgstr "Ana sensör"
+
+#: aot_flask/static/js/geo/facility/sensor-ui.js
+msgid "Backup sensor"
+msgstr "Yedek sensör"

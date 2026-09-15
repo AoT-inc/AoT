@@ -30831,3 +30831,11 @@ msgstr "仅显示此地图或站点内的地块。留空则显示所有种植中
 #: aot/aot_flask/static/js/widgets/AoT_plot/aot-plot-widget.js
 msgid "Go to page %(n)s"
 msgstr "转到第 %(n)s 页"
+
+#: aot_flask/static/js/geo/facility/sensor-ui.js
+msgid "Main sensor"
+msgstr "主传感器"
+
+#: aot_flask/static/js/geo/facility/sensor-ui.js
+msgid "Backup sensor"
+msgstr "备用传感器"

@@ -139,6 +139,39 @@ def load_markers(map_uuid):
     return out
 
 
+def marker_points(map_uuid):
+    """지도의 위치 마커 → `[(shape_uuid, (lng, lat))]` — 장치는 묻지 않는다.
+
+    과거 기간을 조합하는 쪽(`plot_sources`)은 "어느 장치였나" 를 바인딩 이력
+    에서 따로 구한다. 여기서 장치 컬럼까지 읽으면 지금 값 하나가 과거 기간에
+    덮어씌워진다 — 그 결함을 없애려는 조회다.
+    """
+    out = []
+    rows = GeoShape.query.filter(
+        GeoShape.geo_id == map_uuid,
+        GeoShape.type.in_(_MARKER_TYPES)).all()
+    for m in rows:
+        pt = _marker_point(m)
+        if pt and m.unique_id:
+            out.append((m.unique_id, pt))
+    return out
+
+
+def legacy_marker_devices(map_uuid):
+    """바인딩 이력이 전혀 없는 마커의 장치 → `{shape_uuid: device_id}`.
+
+    백필 전 설치에서만 쓰이는 폴백이다(`device_binding` 의 레거시 폴백과 같은
+    성격). 이 값은 **지금** 장치 하나라 기간을 말하지 못한다 — 호출자는 그
+    마커를 "처음부터 지금까지" 로만 읽어야 한다.
+    """
+    rows = GeoShape.query.filter(
+        GeoShape.geo_id == map_uuid,
+        GeoShape.device_id.isnot(None),
+        GeoShape.type.in_(_MARKER_TYPES)).all()
+    return {m.unique_id: str(m.device_id).split('::')[0] for m in rows
+            if m.unique_id}
+
+
 def zone_for_device(device_unique_id, map_uuid):
     """장치 하나의 소속 site/zone GeoShape (없으면 None)."""
     marker = GeoShape.query.filter(

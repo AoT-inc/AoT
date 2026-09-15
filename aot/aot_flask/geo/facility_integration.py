@@ -23,6 +23,7 @@ from .facility_io import FacilityManager
 from .facility_calc import compute_capacity
 from .facility_bays import compute_bay_slices, build_fitting_bay_map
 from .irrigation_nozzles import nozzles_by_actuator, summarize_nozzles
+from .facility_sensors import sensor_priority_of
 
 # ── TTL cache ─────────────────────────────────────────────────────────────────
 _INTEG_CACHE_TTL  = 30          # seconds
@@ -548,6 +549,10 @@ def get_facility_integration(facility_uuid, bypass_cache=False):
                 # 화면이 "자동" 을 표시할 수 있어야 사용자가 무엇이 어떻게 읽히는지
                 # 안다 — 자동 해석을 조용히 하면 지어내던 것과 같은 문제가 된다.
                 'auto':             bool(ch.get('auto')),
+                # 실외 센서의 순위 — 'primary'(기본) | 'backup'.
+                # `facility_sensors.read_outdoor_sensors` 가 메인이 끊겼을 때만
+                # 백업을 쓴다. 실내 센서에는 뜻이 없다(공간 평균이 정상이다).
+                'sensor_priority':  sensor_priority_of(f),
             }
             if role == 'outdoor':
                 sensors_outdoor.append(entry)

@@ -213,6 +213,63 @@ def clamp_guide_range_to_hard_limits(
     return (T_min, T_max, RH_min, RH_max), changed
 
 
+# 단계 가이드의 폭 — 단계 값 ± 이만큼이 가이드 범위다.
+#
+# 프로그램에 폭 항목을 두지 않는다: 재배 기술문서 대부분이 평균값만 주고 주·야간
+# 폭을 서술하지 않는다(2026-09-14 사용자 확정). 가이드는 목표를 맞추는 폭이 아니라
+# **VPD 를 극단적인 온습도 조합으로 달성하는 것**을 막는 울타리라서 넓게 잡는다.
+GUIDE_BAND = {'temperature': 5.0, 'humidity': 10.0}
+
+
+def stage_guide_range(guide, is_day, facility_guide, band=None,
+                      temp_min=None, temp_max=None,
+                      humid_min=None, humid_max=None):
+    """단계 가이드 값 → 이번 사이클의 온도·습도 가이드 범위 → dict.
+
+    `guide` 는 `coordinator_plot._pick_guide` 의 `{'temp_day', 'temp_night',
+    'rh'}` 다. 규칙:
+
+    1. 단계에 값이 있으면 **값 ± 폭**(`GUIDE_BAND`). 온도는 지금이 낮이면
+       `temp_day`, 밤이면 `temp_night` 를 쓴다.
+    2. 값이 없으면 **시설 guide 범위**(`facility_guide`).
+    3. 어느 쪽이든 마지막에 하드 임계 안으로 좁힌다
+       (`clamp_guide_range_to_hard_limits`).
+
+    프로그램 값이 있으면 시설 범위와 **교집합을 내지 않는다** — 목표를 정하는
+    곳은 한 군데여야 한다.
+
+    ⚠ `is_day` 가 None(좌표를 몰라 일출·일몰을 못 구함)이면 온도는 시설 범위로
+      물러난다. 낮·밤을 지어내면 한낮에 야간 온도로 울타리를 친다.
+    """
+    band = band or GUIDE_BAND
+    guide = guide or {}
+    T_min, T_max, RH_min, RH_max = (float(v) for v in facility_guide)
+
+    t_source = 'facility'
+    if is_day is not None:
+        t_key = 'temp_day' if is_day else 'temp_night'
+        t_val = guide.get(t_key)
+        if t_val is not None:
+            T_min = float(t_val) - band['temperature']
+            T_max = float(t_val) + band['temperature']
+            t_source = t_key
+
+    rh_source = 'facility'
+    if guide.get('rh') is not None:
+        rh_val = float(guide['rh'])
+        RH_min = max(0.0, rh_val - band['humidity'])
+        RH_max = min(100.0, rh_val + band['humidity'])
+        rh_source = 'rh'
+
+    (T_min, T_max, RH_min, RH_max), clamped = clamp_guide_range_to_hard_limits(
+        (T_min, T_max, RH_min, RH_max),
+        temp_min=temp_min, temp_max=temp_max,
+        humid_min=humid_min, humid_max=humid_max)
+    return {'T_min': T_min, 'T_max': T_max, 'RH_min': RH_min, 'RH_max': RH_max,
+            'T_source': t_source, 'RH_source': rh_source, 'is_day': is_day,
+            'clamped': clamped}
+
+
 def apply_temp_humid_threshold_overrides(
         internal: dict, profiles: list[ActuatorProfile], final_cmds: dict) -> None:
     """온습도 하드 임계(temp_max/min, humid_max/min) — **제약**이지 목표가 아니다.
@@ -253,6 +310,12 @@ def apply_temp_humid_threshold_overrides(
 
     ⚠ **여기에 `= 100.0` 을 되살리지 말 것.** 그 한 줄이 참고값을 목표로
       바꾸고, 제어 중심을 덮어쓴다.
+
+    ⚠ **"그러면 더워도 창이 안 열린다" 는 여기서 풀지 않는다.** 그 일은
+      `coordinator._temperature_ceiling` 이 PI 안에서 맡는다 — 상한을 향해
+      오르면 온도 항을 더하고, 하드 상한에서는 맞서는 항을 뺀다. 여전히 편차
+      비례라 결과가 안 따라오면 `_assess_strain` 이 말할 수 있다(2026-09-14
+      aot-005: 이 둘이 모두 없어서 실내가 33.8 °C 까지 오르는 동안 창이 0 %).
     """
     if internal.get('_force_cool'):
         for p in profiles:
@@ -756,6 +819,20 @@ class CycleMixin:
                 from aot.aot_flask.geo.facility_sensors import read_outdoor_sensors
                 _od_cache = read_outdoor_sensors(
                     _outdoor_sr, max_age=_freshness.as_seconds(max_age)) or {}
+                # 메인 실외 센서가 끊겨 백업을 쓰기 시작하거나 멈출 때 **한 번만**
+                # 남긴다. `error` 인 이유는 `_clamp_key` 주석과 같다 — 기본 설치의
+                # 컨트롤러 로거는 ERROR 라 warning 은 아무 데도 안 남는다.
+                _bk = tuple(_od_cache.get('backup_keys') or ())
+                _bk_prev = getattr(self, '_last_outdoor_backup', ())
+                if _bk != _bk_prev:
+                    if _bk:
+                        self.logger.error(
+                            '실외 메인 센서 값이 없어 백업 센서를 씁니다: %s',
+                            ', '.join(_bk))
+                    else:
+                        self.logger.error(
+                            '실외 메인 센서 값이 돌아왔습니다 — 백업 사용을 멈춥니다')
+                    self._last_outdoor_backup = _bk
                 _od_fresh = False
                 # T/RH: 두 키 모두 채워 situation.py('T') 와 _build_gate_env('T_ext') 양쪽 호환
                 if _od_cache.get('T_ext') is not None:
@@ -1047,6 +1124,8 @@ class CycleMixin:
                     '설정한 목표 범위가 그대로 쓰이지 않습니다. '
                     '유도 범위와 온습도 상·하한 설정을 맞춰 주세요.', _clamp_key)
             self._last_guide_clamp = _clamp_key
+        # 단계 온·습도 가이드 — 지금은 **기록만** 한다(제어값 불변, 2026-09-14).
+        self._preview_stage_guide((T_g_min, T_g_max, RH_g_min, RH_g_max))
 
         self._warn_inert_options_once()
 
@@ -1086,7 +1165,9 @@ class CycleMixin:
         if co2_t is None:
             env_target.pop('co2', None)
 
-        self._apply_forecast_feedforward(env_target, internal, T_int, RH_int)
+        self._apply_forecast_feedforward(
+            env_target, internal, T_int, RH_int,
+            guide=(T_g_min, T_g_max, RH_g_min, RH_g_max))
 
         # 목표값/우선순위는 write_cycle_metrics(env_control, CH20~27)로 일원화 기록.
 
@@ -1161,6 +1242,11 @@ class CycleMixin:
             else False)
         # `hvac_interlock` 의 짝 — 환기로 닿을 수 있으면 냉난방을 쓰지 않는다.
         situation.context['vent_first'] = bool(getattr(self, 'vent_first', False))
+        # 온도 상한 — VPD 제어 중에도 이 선을 향해 오르면 환기가 반응한다
+        # (`coordinator._temperature_ceiling`). 하드 임계로 좁힌 **뒤의** 유도
+        # 상한을 넘긴다 — 좁히기 전 값을 넘기면 하드 상한보다 높은 선을 좇는다.
+        situation.context['T_ceiling'] = T_g_max
+        situation.context['temp_max'] = self.temp_max
         # 야간에는 개구부만 닫고 냉난방·제습으로 관리한다. 하드 임계를 넘으면
         # 스스로 풀린다(`_night_vent_parked` 의 탈출구).
         situation.context['night_vent_park'] = self._night_vent_parked(internal)
@@ -1365,19 +1451,48 @@ class CycleMixin:
             if w is not None:
                 p.cmd_scale = min(p.cmd_scale, max(0.0, min(1.0, float(w))))
 
+    def _preview_stage_guide(self, facility_guide: tuple) -> None:
+        """단계 온·습도 가이드 범위를 계산해 `_last_stage_guide` 에 남긴다.
+
+        **기록만 한다**(2026-09-14 1단계). 요약의 `stage_guide` 로 화면에 "이
+        범위였다면" 을 보이고, 사람이 확인한 뒤 guide 자리에 연결한다.
+
+        `facility_guide` 는 `_run_cycle` 이 하드 임계로 좁힌 시설 guide 범위다.
+        낮·밤은 시스템의 위치별 일출·일몰로 가른다(`solar.is_daytime`) — 야간 창
+        닫기(`_night_vent_parked`)와 같은 위치 해석이다. 실패해도 사이클을
+        멈추지 않는다.
+        """
+        try:
+            guide = self._plot_targets().get('guide') or {}
+            is_day = None
+            if (guide.get('temp_day') is not None
+                    or guide.get('temp_night') is not None):
+                from aot.utils.solar import is_daytime
+                is_day = is_daytime(target_id=self.unique_id)
+            r = stage_guide_range(
+                guide, is_day, facility_guide,
+                temp_min=self.temp_min, temp_max=self.temp_max,
+                humid_min=self.humid_min, humid_max=self.humid_max)
+            for k in ('T_min', 'T_max', 'RH_min', 'RH_max'):
+                r[k] = round(r[k], 1)
+            self._last_stage_guide = r
+        except Exception as exc:                            # noqa: BLE001
+            self.logger.debug('단계 가이드 계산 실패: %s', exc)
+            self._last_stage_guide = None
+
     def _apply_forecast_feedforward(
             self, env_target: dict, internal: dict,
-            T_int: float, RH_int: float) -> None:
+            T_int: float, RH_int: float, guide: tuple) -> None:
         """기상 예보로 목표를 선제 보정한다(피드포워드).
 
         env_target 을 제자리에서 고치고 self._last_ff_signal 에 신호를 남긴다.
-        가이드 범위(guide_T_min 등)는 사이클 중 바뀌지 않으므로 여기서 다시
-        읽어도 값이 달라지지 않는다.
+
+        `guide` 는 `_run_cycle` 이 **하드 임계로 좁힌** `(T_min, T_max, RH_min,
+        RH_max)` 다. ⚠ 옵션(`guide_T_min` 등)을 여기서 다시 읽지 말 것 — 예전에
+        그렇게 해서 보정이 클램프 전 범위를 기준으로 돌았고, 예보 보정이 목표를
+        하드 임계 밖으로 밀 수 있었다(2026-09-14).
         """
-        T_g_min  = self.guide_T_min  if self.guide_T_min  is not None else 12.0
-        T_g_max  = self.guide_T_max  if self.guide_T_max  is not None else 32.0
-        RH_g_min = self.guide_RH_min if self.guide_RH_min is not None else 40.0
-        RH_g_max = self.guide_RH_max if self.guide_RH_max is not None else 85.0
+        T_g_min, T_g_max, RH_g_min, RH_g_max = guide
         # ── P3-4: Forecast Feedforward ────────────────────────────────────────
         if getattr(self, 'forecast_feedforward_enabled', False):
             _forecast_bindings = getattr(self, '_sensors_forecast', [])
@@ -2155,6 +2270,8 @@ class CycleMixin:
                 'CO2_per_min': _r(ctx.get('CO2_trend'), 2),
             },
             'targets': {k: _r(tv.value) for k, tv in (env_target or {}).items()},
+            # 단계 온·습도 가이드 범위 — 아직 제어에 쓰지 않는다(`_preview_stage_guide`).
+            'stage_guide': getattr(self, '_last_stage_guide', None),
             'vent': {
                 'effective_area_m2': _r(vent_eff),
                 'total_area_m2':     _r(vent_total),

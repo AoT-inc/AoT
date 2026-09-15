@@ -85,6 +85,7 @@ from .geo_binding import GeoBinding
 from .geo_journal import GeoJournal
 from .geo_plot import GeoPlot
 from .geo_plot_stage_event import GeoPlotStageEvent
+from .geo_marker_position import GeoMarkerPosition
 from .geo_program import GeoProgram
 # 옛 이름 — 한 릴리스 동안만 남긴다(p6_43 에서 관리 프로그램으로 넓혔다).
 GeoCropProgram = GeoProgram

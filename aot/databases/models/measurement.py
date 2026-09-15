@@ -147,6 +147,16 @@ class DeviceMeasurements(CRUDMixin, db.Model):
     # 값은 device_link_status.BATTERY_TYPES 의 키. ''(빈 값) = 자동 추정.
     battery_type = db.Column(db.Text, default='')
 
+    # 제거 시각(naive UTC). NULL 이면 살아 있는 정의다.
+    #
+    # **측정 정의는 지우지 않는다.** Influx 값은 장치 id·채널 태그로 남는데,
+    # 정의 행을 지우면 그 값을 어떤 채널·단위로 불러야 하는지가 사라져 떼어낸
+    # 센서의 과거 기간을 구획에 다시 적용할 수 없다. 삭제 요청은
+    # `_retire_instead_of_delete` 가 이 표시로 바꾸고, 표시된 행은
+    # `_hide_removed` 가 모든 조회에서 감춘다 — 과거 조회만
+    # `execution_options(include_removed_measurements=True)` 로 연다.
+    removed_at = db.Column(db.DateTime, nullable=True, default=None)
+
 
 class DeviceMeasurementsSchema(ma.SQLAlchemyAutoSchema):
     """
@@ -156,3 +166,53 @@ class DeviceMeasurementsSchema(ma.SQLAlchemyAutoSchema):
     """
     class Meta:
         model = DeviceMeasurements
+
+
+#: 제거 표시된 측정 정의까지 읽는 실행 옵션 이름.
+INCLUDE_REMOVED_MEASUREMENTS = 'include_removed_measurements'
+
+_removed_listeners_registered = False
+
+
+def _register_removed_measurement_listeners():
+    """삭제를 제거 표시로 바꾸고, 표시된 행을 모든 ORM 조회에서 감춘다.
+
+    Session **클래스**에 건다 — 웹 요청·데몬·테스트가 각자 세션을 만들어도
+    모두 같은 규칙을 지나게 하려는 것이다. 모델 모듈이 import 될 때 한 번만
+    등록한다(앱 팩토리에 걸면 앱을 거치지 않는 데몬·테스트가 빠진다).
+
+    ⚠ 대량 `Query.delete()` 는 이 전환을 지나지 않는다(ORM 삭제만 바뀐다).
+      운영 코드에는 측정 정의 대량 삭제가 없고, 새로 만들지 말 것.
+    """
+    global _removed_listeners_registered
+    if _removed_listeners_registered:
+        return
+    _removed_listeners_registered = True
+
+    from datetime import datetime
+
+    from sqlalchemy import event
+    from sqlalchemy.orm import Session, with_loader_criteria
+
+    @event.listens_for(Session, 'before_flush')
+    def _retire_instead_of_delete(session, flush_context, instances):
+        for obj in list(session.deleted):
+            if not isinstance(obj, DeviceMeasurements):
+                continue
+            session.expunge(obj)
+            if obj.removed_at is None:
+                obj.removed_at = datetime.utcnow()
+            session.add(obj)
+
+    @event.listens_for(Session, 'do_orm_execute')
+    def _hide_removed(state):
+        if (not state.is_select or state.is_column_load
+                or state.is_relationship_load
+                or state.execution_options.get(INCLUDE_REMOVED_MEASUREMENTS)):
+            return
+        state.statement = state.statement.options(with_loader_criteria(
+            DeviceMeasurements, lambda cls: cls.removed_at.is_(None),
+            include_aliases=True))
+
+
+_register_removed_measurement_listeners()

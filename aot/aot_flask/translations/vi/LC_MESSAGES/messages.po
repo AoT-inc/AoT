@@ -31590,3 +31590,11 @@ msgstr "Chỉ hiển thị các khu đất trong bản đồ hoặc địa đi�
 #: aot/aot_flask/static/js/widgets/AoT_plot/aot-plot-widget.js
 msgid "Go to page %(n)s"
 msgstr "Đi tới trang %(n)s"
+
+#: aot_flask/static/js/geo/facility/sensor-ui.js
+msgid "Main sensor"
+msgstr "Cảm biến chính"
+
+#: aot_flask/static/js/geo/facility/sensor-ui.js
+msgid "Backup sensor"
+msgstr "Cảm biến dự phòng"

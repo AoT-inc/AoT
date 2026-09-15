@@ -31047,3 +31047,11 @@ msgstr "इस मानचित्र या साइट के भीतर 
 #: aot/aot_flask/static/js/widgets/AoT_plot/aot-plot-widget.js
 msgid "Go to page %(n)s"
 msgstr "पृष्ठ %(n)s पर जाएँ"
+
+#: aot_flask/static/js/geo/facility/sensor-ui.js
+msgid "Main sensor"
+msgstr "मुख्य सेंसर"
+
+#: aot_flask/static/js/geo/facility/sensor-ui.js
+msgid "Backup sensor"
+msgstr "बैकअप सेंसर"

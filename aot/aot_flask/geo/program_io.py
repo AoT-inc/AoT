@@ -734,7 +734,10 @@ def clone_program(program_uuid, data=None):
 
 # AI 가 이것을 쓰면 검토 게이트로 되돌린다(아래 update_program 참조) — 제어가
 # 실제로 읽는 필드들이다. 이름·설명·탭은 여기 없다(제어에 닿지 않는다).
-_AI_CONTENT_FIELDS = ('stages', 'target_defs', 'photosynthesis')
+# ⚠ `targets_methods`(목표 곡선)도 제어가 읽는다 — 곡선이 단계 값보다 우선한다.
+#   빠져 있던 동안 AI 가 곡선만 바꾸면 검토 표시가 그대로 남았다(2026-09-14).
+_AI_CONTENT_FIELDS = ('stages', 'target_defs', 'targets_methods',
+                      'photosynthesis')
 
 
 def update_program(program_uuid, data, by=None):

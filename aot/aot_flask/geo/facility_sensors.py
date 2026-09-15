@@ -961,6 +961,16 @@ def compute_spatial_internal(
     }
 
 
+def sensor_priority_of(entry: dict) -> str:
+    """실외 센서의 순위 — 'backup' 이라고 적힌 것만 백업이고 나머지는 메인이다.
+
+    ⚠ 모르는 값을 백업으로 읽지 말 것. 오타 하나로 멀쩡한 기상대가 뒤로
+      밀리면 API 값이 제어를 가져가는데 아무 에러도 안 난다.
+    """
+    raw = (entry or {}).get('sensor_priority')
+    return 'backup' if str(raw or '').strip().lower() == 'backup' else 'primary'
+
+
 def read_outdoor_sensors(
     sensors_outdoor: List[dict],
     max_age: Optional[int] = None,
@@ -984,10 +994,28 @@ def read_outdoor_sensors(
         'total_count': int,
     }
     """
-    # key → [readings]
-    buckets: Dict[str, List[float]] = {k: [] for k in ('T', 'RH', 'CO2', 'wind_ms', 'wind_deg', 'light', 'rain_mm')}
+    # ── 메인과 백업 (2026-09-14) ─────────────────────────────────────────────
+    # 실외 센서가 둘 이상일 때 **동등하게 평균하지 않는다.** 현장 기상대가
+    # 메인이고 위성·예보 API 는 기상대가 꺼질 때를 대비한 백업인데, 둘을
+    # 평균하면 멀쩡한 기상대 값이 API 쪽으로 끌려간다. 실측(2026-09-14
+    # aot-005): 09:40 기상대 22.9 °C · 62 % 인데 Open-Meteo 는 19.5 °C · 79 %
+    # 였다 — 평균하면 실외가 실제보다 차고 습해져 창이 늦게 열린다.
+    #
+    # 규칙: 값 종류마다 **메인에 신선한 값이 하나라도 있으면 메인만** 쓰고,
+    # 메인이 전부 끊겼을 때만 백업을 쓴다. 같은 순위 안에서는 예전처럼 평균이다.
+    #
+    # ⚠ **온도와 습도는 짝으로 고른다.** 메인이 온도만 주고 습도를 못 줄 때
+    #   종류별로 따로 고르면 메인 온도 + 백업 습도가 되어, 서로 다른 장소의
+    #   두 값으로 VPD 를 계산한다. 짝이 온전한 순위를 먼저 찾는다.
+    #
+    # 순위가 없는 설비(기존 설치 전부)는 메인이다 — 업그레이드로 동작이 바뀌지
+    # 않는다.
+    _KEYS = ('T', 'RH', 'CO2', 'wind_ms', 'wind_deg', 'light', 'rain_mm')
+    tiers: Dict[str, Dict[str, List[float]]] = {
+        k: {'primary': [], 'backup': []} for k in _KEYS}
     total = 0
     outdoor_device_ids: List[str] = []
+    device_tier: Dict[str, str] = {}
 
     # 표시 경로(max_age 미지정)에서만 장치 주기를 조회한다 — 한 번의 IN 조회.
     fresh = _freshness_by_device(
@@ -998,8 +1026,12 @@ def read_outdoor_sensors(
         if not input_uuid:
             continue
         total += 1
+        tier = sensor_priority_of(s)
         if input_uuid not in outdoor_device_ids:
             outdoor_device_ids.append(input_uuid)
+        # 한 장치가 두 순위에 걸쳐 있으면 메인으로 본다(강우 자동 스캔 순서용).
+        if device_tier.get(input_uuid) != 'primary':
+            device_tier[input_uuid] = tier
 
         mtype   = s.get('measurement_type') or None
         meas_id = s.get('measurement_id')   or None
@@ -1007,16 +1039,38 @@ def read_outdoor_sensors(
                                 _max_age_for(max_age, *_fresh(fresh, input_uuid)),
                                 measurement_id=meas_id)
 
-        for k in ('T', 'RH', 'CO2', 'light', 'rain_mm'):
+        for k in _KEYS:
             if vals.get(k) is not None:
-                buckets[k].append(vals[k])
-        if vals.get('wind_ms') is not None:
-            buckets['wind_ms'].append(vals['wind_ms'])
-        if vals.get('wind_deg') is not None:
-            buckets['wind_deg'].append(vals['wind_deg'])
+                tiers[k][tier].append(vals[k])
+
+    buckets: Dict[str, List[float]] = {k: [] for k in _KEYS}
+    backup_keys: List[str] = []
+
+    def _take(keys, tier):
+        for k in keys:
+            buckets[k] = tiers[k][tier]
+            if tier == 'backup' and tiers[k][tier]:
+                backup_keys.append(k)
+
+    # 온도·습도 짝
+    _pair = ('T', 'RH')
+    if all(tiers[k]['primary'] for k in _pair):
+        _take(_pair, 'primary')
+    elif all(tiers[k]['backup'] for k in _pair):
+        _take(_pair, 'backup')
+    else:
+        # 어느 순위도 짝이 온전하지 않다 — 종류별로 있는 것을 쓴다.
+        for k in _pair:
+            _take((k,), 'primary' if tiers[k]['primary'] else 'backup')
+    for k in _KEYS:
+        if k in _pair:
+            continue
+        _take((k,), 'primary' if tiers[k]['primary'] else 'backup')
 
     # 명시적 rain 피팅이 없어도 outdoor 장치 채널을 자동 스캔해서 rain 감지
     # 변환 후 단위가 mm인 채널, 또는 measurement 이름이 _MEAS_RAIN_NAMES에 속하는 채널을 찾는다
+    # 메인 장치를 먼저 본다 — 백업의 강우가 메인의 강우를 앞지르면 안 된다.
+    outdoor_device_ids.sort(key=lambda d: device_tier.get(d) == 'backup')
     if not buckets['rain_mm'] and outdoor_device_ids:
         from aot.databases.models.measurement import DeviceMeasurements
         from aot.utils.database import db_retrieve_table_daemon
@@ -1041,6 +1095,8 @@ def read_outdoor_sensors(
                             max_age=_max_age_for(max_age, *_fresh(fresh, dm.device_id)))
                         if ts is not None and val is not None:
                             buckets['rain_mm'].append(float(val))
+                            if device_tier.get(dm.device_id) == 'backup':
+                                backup_keys.append('rain_mm')
                             break
                     except Exception:
                         pass
@@ -1069,6 +1125,8 @@ def read_outdoor_sensors(
         'rain_mm':     rain_mm,
         'valid_count': valid,
         'total_count': total,
+        # 메인이 끊겨 백업에서 온 값의 종류 — 비어 있으면 전부 메인(또는 없음).
+        'backup_keys': backup_keys,
     }
 
 

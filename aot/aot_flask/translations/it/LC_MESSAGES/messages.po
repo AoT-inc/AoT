@@ -31523,3 +31523,11 @@ msgstr "Mostra solo gli appezzamenti in questa mappa o sito. Lascia vuoto per mo
 #: aot/aot_flask/static/js/widgets/AoT_plot/aot-plot-widget.js
 msgid "Go to page %(n)s"
 msgstr "Vai alla pagina %(n)s"
+
+#: aot_flask/static/js/geo/facility/sensor-ui.js
+msgid "Main sensor"
+msgstr "Sensore principale"
+
+#: aot_flask/static/js/geo/facility/sensor-ui.js
+msgid "Backup sensor"
+msgstr "Sensore di riserva"

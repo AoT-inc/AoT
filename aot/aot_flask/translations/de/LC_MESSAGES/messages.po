@@ -31554,3 +31554,11 @@ msgstr "Zeigt nur die Flächen auf dieser Karte oder an diesem Standort. Leer la
 #: aot/aot_flask/static/js/widgets/AoT_plot/aot-plot-widget.js
 msgid "Go to page %(n)s"
 msgstr "Zu Seite %(n)s wechseln"
+
+#: aot_flask/static/js/geo/facility/sensor-ui.js
+msgid "Main sensor"
+msgstr "Hauptsensor"
+
+#: aot_flask/static/js/geo/facility/sensor-ui.js
+msgid "Backup sensor"
+msgstr "Ersatzsensor"

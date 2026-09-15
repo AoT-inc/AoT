@@ -31626,3 +31626,11 @@ msgstr "Hanya tampilkan petak dalam peta atau situs ini. Biarkan kosong untuk me
 #: aot/aot_flask/static/js/widgets/AoT_plot/aot-plot-widget.js
 msgid "Go to page %(n)s"
 msgstr "Buka halaman %(n)s"
+
+#: aot_flask/static/js/geo/facility/sensor-ui.js
+msgid "Main sensor"
+msgstr "Sensor utama"
+
+#: aot_flask/static/js/geo/facility/sensor-ui.js
+msgid "Backup sensor"
+msgstr "Sensor cadangan"

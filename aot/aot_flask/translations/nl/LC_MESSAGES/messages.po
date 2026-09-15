@@ -31407,3 +31407,11 @@ msgstr "Toon alleen de percelen op deze kaart of locatie. Laat leeg om alle perc
 #: aot/aot_flask/static/js/widgets/AoT_plot/aot-plot-widget.js
 msgid "Go to page %(n)s"
 msgstr "Ga naar pagina %(n)s"
+
+#: aot_flask/static/js/geo/facility/sensor-ui.js
+msgid "Main sensor"
+msgstr "Hoofdsensor"
+
+#: aot_flask/static/js/geo/facility/sensor-ui.js
+msgid "Backup sensor"
+msgstr "Reservesensor"

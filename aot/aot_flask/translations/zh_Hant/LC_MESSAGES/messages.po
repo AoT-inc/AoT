@@ -30839,3 +30839,11 @@ msgstr "僅顯示此地圖或站點內的地塊。留空則顯示所有種植中
 #: aot/aot_flask/static/js/widgets/AoT_plot/aot-plot-widget.js
 msgid "Go to page %(n)s"
 msgstr "前往第 %(n)s 頁"
+
+#: aot_flask/static/js/geo/facility/sensor-ui.js
+msgid "Main sensor"
+msgstr "主感測器"
+
+#: aot_flask/static/js/geo/facility/sensor-ui.js
+msgid "Backup sensor"
+msgstr "備援感測器"

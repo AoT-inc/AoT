@@ -195,6 +195,59 @@ G_MIN_EFFECT = 0.025 # 유효도(g=magnitude/pband) 하한. 100% 가동해도 �
                      # 권한 없음으로 보고 idle — 헛돌며 적분 와인드업 하는 것 방지.
                      # 측정상 무구배 g≈0.008~0.011, 약구배(ΔT≥1°C) g≳0.05 로 명확히 분리.
 
+# ── 온도 상한 (2026-09-14) ───────────────────────────────────────────────────
+# VPD 를 직접 제어하면 `_decompose_vpd` 가 온도를 제어목표에서 뺀다. 그래서
+# 온도가 유도 상한을 넘어도 **창을 여는 힘이 하나도 없었고**, 하드 상한
+# (`temp_max`)을 넘어도 임계 오버라이드는 난방 끄기·차광막 닫기만 한다.
+#
+# 실측(2026-09-14 aot-005 육묘장): 08:10 20.8 °C → 10:00 33.7 °C, 유도 상한
+# 27 · 하드 상한 32, 실외 19~24 °C. 천창·측창은 두 시간 내내 근거 '주작용'
+# 으로 0 % 였고 사람이 강제로 열고서야 내려갔다. VPD 가 목표보다 낮아서
+# (습도 97 %) "닫아 둔다" 가 VPD 쪽 판단이었다.
+#
+# 규칙 셋:
+#   ① 선을 **넘을 것 같으면** 반응한다 — 지금 온도가 아니라 다음 결정 시점의
+#      예상 온도(T + 상승률 × 제어주기)로 본다. 오늘 상승은 10분당 1.5~1.8 °C
+#      였고 긴급 판정(10분당 2 °C)에는 한 번도 안 걸렸다.
+#   ② 유도 상한 초과분에 비례해 온도 항을 **더한다**. 넘은 만큼 우선순위가
+#      커지므로 VPD 와 맞서면 온도가 점점 이긴다. 환기(vent)에만 건다 —
+#      공짜로 식힐 수 있는 수단이 먼저다.
+#   ③ 하드 상한에 닿으면 온도가 **이긴다** — 식히는 방향과 맞서는 다른 변수의
+#      항을 뺀다. 이때는 냉방(hvac)에도 건다.
+# 강제 100 % 가 아니다. 여전히 편차에 비례하는 PI 이고, 실외가 더 더우면 온도
+# 효과 방향이 ↑ 라 창은 **닫히는** 쪽으로 간다.
+T_CEILING_TOL      = 1.0   # `_cycle_mixin` 의 T_tol 과 같다 — 비례 밴드 기준
+T_CEILING_PRIORITY = 1.0   # 초과 0 에서의 우선순위. (1 + 초과/허용오차) 배로 커진다
+_T_CEILING_DOMAINS      = frozenset({'vent'})
+_T_CEILING_HARD_DOMAINS = frozenset({'vent', 'hvac'})
+
+
+def _temperature_ceiling(situation: SituationReport, ctx: Dict,
+                         cycle_sec: float) -> Optional[Tuple[float, bool]]:
+    """(유도 상한 초과분 °C, 하드 상한 도달) — 걸린 것이 없으면 None.
+
+    온도가 이미 제어목표(deviation)에 있으면 None 이다. 그때는 온도가 자기
+    목표로 스스로 끌리므로 여기서 한 번 더 더하면 이중계상이다.
+    """
+    if 'temperature' in (situation.deviation_native or {}):
+        return None
+    t_now = ctx.get('T_int')
+    ceiling = ctx.get('T_ceiling')
+    if t_now is None or not ceiling:
+        return None
+    trend = max(0.0, float(ctx.get('T_trend') or 0.0))          # °C/min
+    projected = float(t_now) + trend * float(cycle_sec) / 60.0
+    # 선에 **닿기 전에** 반응한다 — 허용오차만큼 앞에서 시작한다. 선에서
+    # 시작하면 유도 상한 = 하드 상한(하드 임계로 좁혀진 경우)일 때 막 넘은
+    # 초과분이 데드존(허용오차 × HOLD_FRAC) 안이라 아무 일도 안 일어난다.
+    excess = max(0.0, projected - (float(ceiling) - T_CEILING_TOL))
+    hard_max = ctx.get('temp_max')
+    hard = (bool((ctx.get('internal') or {}).get('_force_cool'))
+            or (bool(hard_max) and projected >= float(hard_max)))
+    if excess <= 0.0 and not hard:
+        return None
+    return excess, hard
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Coordination state (preserved across cycles)
@@ -349,6 +402,12 @@ def coordinate(
     #   (b) 냉난방 연동 — 갈 수는 있으나 냉난방과 맞서 에너지를 버린다 (상충)
     park_ids: set = set()
     vents = [p for p in available if getattr(p, 'kind', '') in VENTILATING_KINDS]
+
+    # 온도 상한 — 무익 게이트와 PI 가 같은 판정을 본다(한 번만 계산).
+    t_ceiling = _temperature_ceiling(situation, ctx, cycle_sec)
+    ctx['_t_ceiling'] = t_ceiling
+    if t_ceiling is not None:
+        logger.debug('온도 상한 — 초과 %.2f °C, 하드 %s', t_ceiling[0], t_ceiling[1])
 
     if bool(ctx.get('vent_futility_gate', False)):
         futile = {p.actuator_id for p in vents
@@ -595,11 +654,9 @@ def coordinate(
             #    주의: g_v 는 변수 간 '상대' 가중치만 정한다. e_norm=num/den 은 정규화되어
             #    절대 유효도를 반영하지 못하므로(무구배에도 편차 비례로 명령 → 헛돎),
             #    아래에서 max_g(절대 유효도)로 권한 게이트를 따로 건다.
-            num = 0.0
-            den = 0.0
-            max_g = 0.0
-            primary_var = None
-            primary_score = -1.0
+            # 변수별 항 (v, w, e, g, score) — 온도 상한이 하드 임계에서 맞서는
+            # 항을 뺄 수 있도록 먼저 모으고 나중에 합친다.
+            terms: list = []
             for v, eff in p.live_effect.items():
                 if eff.direction not in ('↑', '↓'):
                     continue
@@ -626,13 +683,37 @@ def coordinate(
                 e_v         = (-residual_v * effect_sign) / pband_v    # + = 더 열기
                 g_v         = eff.magnitude_native / pband_v           # 유효도(구동력)
                 w_v         = max(t.priority, 1e-6) * g_v
-                num += w_v * e_v
-                den += w_v
-                max_g = max(max_g, g_v)
                 score = abs(residual_v) / t.tolerance * t.priority
-                if score > primary_score:
-                    primary_score = score
-                    primary_var = v
+                terms.append((v, w_v, e_v, g_v, score))
+
+            # ── 온도 상한 항 (위 `_temperature_ceiling` 주석 참조) ────────────
+            _dom_p = ACTUATOR_DOMAIN.get(getattr(p, 'kind', ''))
+            if t_ceiling is not None and 'temperature' not in situation.deviation_native:
+                _excess, _hard = t_ceiling
+                _eff_t = p.live_effect.get('temperature')
+                _allowed = (_T_CEILING_HARD_DOMAINS if _hard else _T_CEILING_DOMAINS)
+                if (_dom_p in _allowed and _eff_t is not None
+                        and _eff_t.direction in ('↑', '↓')
+                        and _eff_t.magnitude_native > 0.0):
+                    _sign_t = 1.0 if _eff_t.direction == '↑' else -1.0
+                    _pband_t = PBAND_MULT * T_CEILING_TOL
+                    # 초과분이 곧 편차다(측정 − 선). 같은 도메인이 이미 확정한
+                    # 냉각 몫은 부하분담으로 뺀다.
+                    _resid_t = _excess + accum.get('temperature', 0.0)
+                    _e_t = (-_resid_t * _sign_t) / _pband_t
+                    _g_t = _eff_t.magnitude_native / _pband_t
+                    _pri_t = T_CEILING_PRIORITY * (1.0 + _excess / T_CEILING_TOL)
+                    terms.append(('temperature', _pri_t * _g_t, _e_t, _g_t,
+                                  _excess / T_CEILING_TOL * _pri_t + 1e6 * _hard))
+                    if _hard and _e_t > 0.0:
+                        # 하드 상한 — 식히는 방향과 맞서는 항을 뺀다.
+                        terms = [tm for tm in terms
+                                 if tm[0] == 'temperature' or tm[2] >= 0.0]
+
+            num = sum(tm[1] * tm[2] for tm in terms)
+            den = sum(tm[1] for tm in terms)
+            max_g = max((tm[3] for tm in terms), default=0.0)
+            primary_var = (max(terms, key=lambda tm: tm[4])[0] if terms else None)
 
             if p.actuator_id in hold_ids:
                 # 실외 근거 없음 → **제자리**. 감쇠하지 않는다(그건 닫는 것이다).
@@ -1043,7 +1124,17 @@ def _ventilation_is_futile(profile: ActuatorProfile,
     실외값을 모르면 보수적으로 False(게이트 미발동).
 
     deviation_native 는 '측정 - 목표' 규약이므로 need = -deviation 이다.
+
+    ⚠ **온도 상한이 걸려 있으면 온도도 본다.** VPD 제어 중에는 온도가
+    deviation 에 없어서, 실외 VPD 가 도움이 안 되는 순간 창이 "무익" 으로
+    파킹된다 — 실내가 33 °C 로 오르고 실외가 23 °C 라도.
     """
+    tc = ctx.get('_t_ceiling')
+    if tc is not None:
+        eff_t = (profile.live_effect or {}).get('temperature')
+        if (eff_t is not None and eff_t.direction == '↓'
+                and eff_t.magnitude_native > 0.0):
+            return False                          # 식힐 수 있다 — 무익이 아니다
     decisive = False
     for var in profile.live_effect:
         if var not in situation.deviation_native:

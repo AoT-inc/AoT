@@ -31075,3 +31075,11 @@ msgstr "Visa endast odlingsytorna på den här kartan eller platsen. Lämna tomt
 #: aot/aot_flask/static/js/widgets/AoT_plot/aot-plot-widget.js
 msgid "Go to page %(n)s"
 msgstr "Gå till sida %(n)s"
+
+#: aot_flask/static/js/geo/facility/sensor-ui.js
+msgid "Main sensor"
+msgstr "Huvudsensor"
+
+#: aot_flask/static/js/geo/facility/sensor-ui.js
+msgid "Backup sensor"
+msgstr "Reservsensor"
