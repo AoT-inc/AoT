@@ -56,18 +56,32 @@ limiter = Limiter(key_func=get_ip_address)
 def home():
     """Load the default landing page."""
     try:
-        if flask_login.current_user.is_authenticated:
-            if flask_login.current_user.landing_page == 'live':
-                return redirect(url_for('routes_page.page_live'))
-            elif flask_login.current_user.landing_page == 'dashboard':
-                return redirect(url_for('routes_dashboard.page_dashboard_default'))
-            elif flask_login.current_user.landing_page == 'info':
-                return redirect(url_for('routes_page.page_info'))
-            return redirect(url_for('routes_page.page_live'))
+        is_authenticated = flask_login.current_user.is_authenticated
+    except Exception:
+        # current_user 조회 자체가 실패하면(예: user_loader 예외) 진짜로
+        # 세션이 망가진 것이므로 쿠키를 지운다. 실제 원인이 로그에 남도록
+        # exc_info 를 반드시 남긴다 — 예전엔 이유 없이 로그인 직후 로그인
+        # 페이지로 튕기는 문제를 재현·진단할 수 없었다.
+        logger.exception("Failed to resolve current_user. Clearing cookie auth.")
+        return clear_cookie_auth()
+
+    if not is_authenticated:
         return render_template('pages/landing.html')
-    except:
-        logger.error("User may not be logged in. Clearing cookie auth.")
-    return clear_cookie_auth()
+
+    try:
+        landing_page = flask_login.current_user.landing_page
+        if landing_page == 'dashboard':
+            return redirect(url_for('routes_dashboard.page_dashboard_default'))
+        elif landing_page == 'info':
+            return redirect(url_for('routes_page.page_info'))
+        return redirect(url_for('routes_page.page_live'))
+    except Exception:
+        # 이미 인증된 사용자다 — 랜딩 페이지 선택 로직이 실패했다고 해서
+        # 방금 로그인한 세션까지 지우면 안 된다. 기본 랜딩으로 보낸다.
+        logger.exception(
+            "Failed to resolve landing page for an authenticated user. "
+            "Falling back to page_live without clearing the session.")
+        return redirect(url_for('routes_page.page_live'))
 
 
 @blueprint.route('/index_page')

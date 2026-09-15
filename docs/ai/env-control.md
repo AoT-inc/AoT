@@ -58,6 +58,28 @@ been reviewed, or no stage running today, there are simply no targets: control k
 running inside its own guide ranges, which is already the defined behaviour — an empty
 greenhouse still needs heating.
 
+### Day/night temperature and humidity guide the ranges { #stage-guide }
+
+VPD stays the primary target. The stage's **Day temp**, **Night temp** and **Humidity**
+are not targets — they keep VPD from being reached with a combination that is too hot
+and humid or too cold and dry. Each cycle the coordinator replaces its guide ranges with:
+
+| | Range |
+|---|---|
+| Temperature | stage Day temp (between sunrise and sunset at the facility's location) or Night temp, **± 5 °C** |
+| Humidity | stage Humidity **± 10 %** |
+
+- The width is fixed and not a programme setting — cultivation guides almost always give
+  an average, not a day/night spread.
+- A stage without the value, or a facility whose location is unknown (no sunrise/sunset),
+  leaves the function's own guide range in charge for that quantity.
+- The hard limits (`Min/Max Temperature`, `Min/Max Humidity`) still apply last.
+- Everything that reads the guide range follows it: the temperature/humidity that VPD is
+  split into, the mid-point used when there is no VPD target, forecast feedforward, and
+  the ventilation temperature ceiling.
+- The range actually used is shown as **Guide range** under the plot in the function's
+  settings.
+
 Since 2026-09-01 the coordinator has **no end-date option of its own**. Whether growing
 continues is the plot's business. The previous behaviour was that a date set once in the
 function kept the facility stopped even after a new crop was planted.

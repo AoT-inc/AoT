@@ -34843,10 +34843,6 @@ msgstr "プログラムの対象種別がこの区画の種別と異なるため
 msgid "Guide range"
 msgstr "ガイド範囲"
 
-#: aot_flask/static/js/common/aot-coordinator-plot.js
-msgid "Not applied to control yet"
-msgstr "まだ制御には適用していません"
-
 #: aot_flask/static/js/geo/facility/sensor-ui.js
 msgid "Main sensor"
 msgstr "メインセンサー"

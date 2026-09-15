@@ -25,6 +25,7 @@ from wtforms.widgets import NumberInput
 from wtforms.widgets import TextArea
 
 from aot.config_translations import TRANSLATIONS
+from aot.aot_flask.forms.forms_authentication import _strip_whitespace
 import json
 import os
 
@@ -510,7 +511,8 @@ class UserAdd(FlaskForm):
     # 라벨이 그냥 '사용자'였을 때는 바로 아래 '이름' 칸과 구분이 되지 않았다.
     # 이 칸은 로그인에 쓰는 계정이고 만든 뒤에는 바꿀 수 없으므로 그렇게 부른다.
     user_name = StringField(
-        lazy_gettext('Login account'), validators=[DataRequired()])
+        lazy_gettext('Login account'), validators=[DataRequired()],
+        filters=[_strip_whitespace])
     full_name = StringField(lazy_gettext('Display Name'))
     email = EmailField(
         TRANSLATIONS['email']['title'],

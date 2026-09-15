@@ -1124,8 +1124,10 @@ class CycleMixin:
                     '설정한 목표 범위가 그대로 쓰이지 않습니다. '
                     '유도 범위와 온습도 상·하한 설정을 맞춰 주세요.', _clamp_key)
             self._last_guide_clamp = _clamp_key
-        # 단계 온·습도 가이드 — 지금은 **기록만** 한다(제어값 불변, 2026-09-14).
-        self._preview_stage_guide((T_g_min, T_g_max, RH_g_min, RH_g_max))
+        # 단계 온·습도 가이드 — 단계에 값이 있으면 이 범위가 guide 를 대신한다
+        # (값 ± 폭, 하드 임계 안). 아래 클램프·중앙값·예보·T_ceiling 이 모두 이것을 쓴다.
+        (T_g_min, T_g_max, RH_g_min, RH_g_max) = self._apply_stage_guide(
+            (T_g_min, T_g_max, RH_g_min, RH_g_max))
 
         self._warn_inert_options_once()
 
@@ -1451,16 +1453,24 @@ class CycleMixin:
             if w is not None:
                 p.cmd_scale = min(p.cmd_scale, max(0.0, min(1.0, float(w))))
 
-    def _preview_stage_guide(self, facility_guide: tuple) -> None:
-        """단계 온·습도 가이드 범위를 계산해 `_last_stage_guide` 에 남긴다.
+    def _apply_stage_guide(self, facility_guide: tuple) -> tuple:
+        """이번 사이클의 guide 범위 → `(T_min, T_max, RH_min, RH_max)`.
 
-        **기록만 한다**(2026-09-14 1단계). 요약의 `stage_guide` 로 화면에 "이
-        범위였다면" 을 보이고, 사람이 확인한 뒤 guide 자리에 연결한다.
+        VPD 가 1차 목표인 채로, 단계의 주·야 온도와 습도가 VPD 를 극단적인
+        온습도 조합으로 달성하는 것을 막는다(2026-09-15 2단계 — 1단계는 기록만
+        했다). 돌려준 범위가 `_run_cycle` 의 guide 변수를 대신하므로 그것을 읽는
+        곳이 모두 따라온다: `T_aux`/`RH_aux` 클램프, VPD 없을 때의 중앙값, 예보
+        보정, 환기 온도 상한(`T_ceiling`).
 
         `facility_guide` 는 `_run_cycle` 이 하드 임계로 좁힌 시설 guide 범위다.
-        낮·밤은 시스템의 위치별 일출·일몰로 가른다(`solar.is_daytime`) — 야간 창
-        닫기(`_night_vent_parked`)와 같은 위치 해석이다. 실패해도 사이클을
-        멈추지 않는다.
+        단계에 값이 없으면 그대로 돌아온다(`stage_guide_range` 규칙). 낮·밤은
+        시스템의 위치별 일출·일몰로 가른다(`solar.is_daytime`) — 야간 창
+        닫기(`_night_vent_parked`)와 같은 위치 해석이다. 결과는 요약의
+        `stage_guide` 로 화면에 나간다.
+
+        ⚠ 계산이 깨지면 **시설 guide 를 그대로** 돌려준다 — 여기서 예외를 올려
+          사이클을 멈추면 하드 임계 보호까지 멈춘다. 같은 실패는 한 번만
+          `error` 로 남긴다(컨트롤러 로거 기본이 ERROR 라 debug 는 안 보인다).
         """
         try:
             guide = self._plot_targets().get('guide') or {}
@@ -1473,12 +1483,20 @@ class CycleMixin:
                 guide, is_day, facility_guide,
                 temp_min=self.temp_min, temp_max=self.temp_max,
                 humid_min=self.humid_min, humid_max=self.humid_max)
-            for k in ('T_min', 'T_max', 'RH_min', 'RH_max'):
-                r[k] = round(r[k], 1)
-            self._last_stage_guide = r
+            self._last_stage_guide = dict(
+                r, **{k: round(r[k], 1)
+                      for k in ('T_min', 'T_max', 'RH_min', 'RH_max')})
+            self._last_stage_guide_error = None
+            return (r['T_min'], r['T_max'], r['RH_min'], r['RH_max'])
         except Exception as exc:                            # noqa: BLE001
-            self.logger.debug('단계 가이드 계산 실패: %s', exc)
+            msg = str(exc)
+            if msg != getattr(self, '_last_stage_guide_error', None):
+                self.logger.error(
+                    '단계 온·습도 가이드를 계산하지 못해 시설 유도 범위로 '
+                    '제어합니다: %s', msg)
+                self._last_stage_guide_error = msg
             self._last_stage_guide = None
+            return tuple(facility_guide)
 
     def _apply_forecast_feedforward(
             self, env_target: dict, internal: dict,
@@ -2270,7 +2288,7 @@ class CycleMixin:
                 'CO2_per_min': _r(ctx.get('CO2_trend'), 2),
             },
             'targets': {k: _r(tv.value) for k, tv in (env_target or {}).items()},
-            # 단계 온·습도 가이드 범위 — 아직 제어에 쓰지 않는다(`_preview_stage_guide`).
+            # 이 사이클이 쓴 단계 온·습도 가이드 범위(`_apply_stage_guide`). None 이면 시설 guide.
             'stage_guide': getattr(self, '_last_stage_guide', None),
             'vent': {
                 'effective_area_m2': _r(vent_eff),

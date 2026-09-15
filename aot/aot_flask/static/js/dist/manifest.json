@@ -1,7 +1,7 @@
 {
   "ai-global": "e82b855ea9",
   "aot-facility-widget": "4283cd3e15",
-  "aot-map-widget": "eeaa72605e",
+  "aot-map-widget": "a52d4590eb",
   "aot-plot-widget": "6761ee9252",
   "app-chart-core": "5fc3c5a133",
   "app-early": "4e4537e9bf",
@@ -34,7 +34,7 @@
   "map-shim": "b1cb240705",
   "page-crud-tail": "b6ecaa38cd",
   "page-dashboard": "9b15e7a505",
-  "page-function-head": "54842a2570",
+  "page-function-head": "8cef6c661e",
   "page-geo-facility-scope": "8279205804",
   "page-geo-input": "b0500a01d4",
   "page-journal": "afc1a22fcd",

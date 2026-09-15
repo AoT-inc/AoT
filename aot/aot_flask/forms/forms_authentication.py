@@ -13,6 +13,18 @@ from wtforms import widgets
 from wtforms.validators import DataRequired
 
 
+def _strip_whitespace(value):
+    """모바일 키보드 자동완성이 아이디 끝에 붙이는 공백을 제거한다.
+
+    안드로이드 Gboard 등은 제안 단어를 탭하면 다음 단어를 위해 뒤 공백을
+    같이 넣는다. 아이디 필드는 그 공백까지 그대로 값이 되어 로그인 조회가
+    "unknown username"으로 실패하는데, 사용자에게는 방금 만든 계정으로
+    로그인이 안 되는 것처럼 보인다(2026-09-15 실제 사고, 원격 사용자만
+    재현·개발자 PC는 공백 없이 정상).
+    """
+    return value.strip() if isinstance(value, str) else value
+
+
 #
 # Language Select
 #
@@ -29,7 +41,8 @@ class CreateAdmin(FlaskForm):
     username = StringField(
         lazy_gettext('Username'),
         render_kw={"placeholder": lazy_gettext("Username")},
-        validators=[DataRequired()])
+        validators=[DataRequired()],
+        filters=[_strip_whitespace])
     email = StringField(
         lazy_gettext('Email'),
         render_kw={"placeholder": lazy_gettext("Email")},
@@ -52,7 +65,8 @@ class Login(FlaskForm):
     aot_username = StringField(
         lazy_gettext('Username'),
         render_kw={"placeholder": lazy_gettext("Username")},
-        validators=[DataRequired()]
+        validators=[DataRequired()],
+        filters=[_strip_whitespace]
     )
     aot_password = PasswordField(
         lazy_gettext('Password'),
@@ -76,7 +90,8 @@ class ForgotPassword(FlaskForm):
     )
     username = StringField(
         lazy_gettext('Username'),
-        render_kw={"placeholder": lazy_gettext("Username")})
+        render_kw={"placeholder": lazy_gettext("Username")},
+        filters=[_strip_whitespace])
     submit = SubmitField(lazy_gettext('Submit'))
 
 

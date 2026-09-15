@@ -35539,10 +35539,6 @@ msgstr "프로그램의 대상 종류가 이 구획의 종류와 달라 제어�
 msgid "Guide range"
 msgstr "가이드 범위"
 
-#: aot_flask/static/js/common/aot-coordinator-plot.js
-msgid "Not applied to control yet"
-msgstr "아직 제어에 적용하지 않음"
-
 #: aot_flask/static/js/geo/facility/sensor-ui.js
 msgid "Main sensor"
 msgstr "메인 센서"

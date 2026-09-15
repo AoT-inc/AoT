@@ -58,6 +58,8 @@ Day temp · Night temp · Humidity · CO₂ · DLI · VPD.
 !!! warning "For display and advice"
     Setting a target does not switch anything on by itself — that still needs an environmental control function to exist and be configured to act on it. A target's job is to let people, the AI, and (where one is configured) the control function read the same number for "what this stage should aim at".
 
+**Day temp, Night temp and Humidity are a guide, not a target.** VPD stays the environment coordinator's primary target, but the same VPD can be reached with a combination that is too hot and humid or too cold and dry. The coordinator keeps its temperature and humidity within **the stage value ± 5 °C / ± 10 %** — Day temp between sunrise and sunset at the facility's location, Night temp otherwise — and still inside its hard limits. A stage with no value leaves the facility's own guide range in charge. The coordinator's settings show the range it used as **Guide range**.
+
 **An item with a curve shows no number on this screen.** Showing the stage value for an item that actually follows a curve would present a figure that is not in use as if it were the target — the screen says "Follows curve: (name)" instead. What the curve actually asked for on a given day, and how far the readings sat from it, is shown split by day and night in [the journal](journal.md#curve-target).
 
 ### Overriding targets per plot { #plot-override }
