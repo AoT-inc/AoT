@@ -12231,7 +12231,7 @@ msgstr ""
 #: aot_flask/templates/pages/ai/ai_agent.html:691
 msgid "Running. Chat, advice requests and background AI work are all active."
 msgstr ""
-"In esecuzione. Chat, richieste di consulenza e attività IA in background "
+"In esecuzione. Chat, richieste di consigli e attività IA in background "
 "sono tutte attive."
 
 #: aot_flask/templates/pages/ai/ai_agent.html:68

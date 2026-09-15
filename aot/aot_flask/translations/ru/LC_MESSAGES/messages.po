@@ -4518,7 +4518,7 @@ msgstr "Псевдоним не найден"
 
 #: aot_flask/routes_ai_api.py:1738
 msgid "Advice not found."
-msgstr "Совет не найден."
+msgstr "Рекомендация не найдена."
 
 #: aot_flask/routes_ai_api.py:1741
 #, python-format
@@ -10004,7 +10004,7 @@ msgstr "Автономность"
 #: aot_flask/templates/layout.html:1214
 #: aot_flask/templates/layout_default.html:1214
 msgid "Advice"
-msgstr "Советы"
+msgstr "Рекомендации"
 
 #: aot_flask/templates/layout.html:1216
 #: aot_flask/templates/layout_default.html:1216
@@ -12188,7 +12188,7 @@ msgid ""
 "Stopped. Chat, advice requests and background AI work are all unavailable"
 " until you start it."
 msgstr ""
-"Остановлено. Чат, запросы советов и фоновая работа ИИ недоступны, пока вы"
+"Остановлено. Чат, запросы рекомендаций и фоновая работа ИИ недоступны, пока вы"
 " её не запустите."
 
 #: aot_flask/templates/pages/ai/ai_agent.html:83
@@ -13866,7 +13866,7 @@ msgstr "Сохранить изменения"
 #: aot_flask/templates/pages/ai/mcp_servers.html:19
 #: aot_flask/templates/pages/ai/scheduler.html:84
 msgid "AI Requests & Advice"
-msgstr "Запросы и советы ИИ"
+msgstr "Запросы и рекомендации ИИ"
 
 #: aot_flask/templates/pages/ai/mcp_review.html:19
 msgid ""
@@ -13880,7 +13880,7 @@ msgstr ""
 
 #: aot_flask/templates/pages/ai/mcp_review.html:26
 msgid "AI advice ledger"
-msgstr "Журнал советов ИИ"
+msgstr "Журнал рекомендаций ИИ"
 
 #: aot_flask/templates/pages/ai/mcp_review.html:28
 msgid ""
@@ -14341,7 +14341,7 @@ msgstr "В течение периода обучения:"
 
 #: aot_flask/templates/pages/ai/components/onboarding_flow.html:21
 msgid "Advice is based on general agricultural knowledge"
-msgstr "Советы основаны на общих сельскохозяйственных знаниях"
+msgstr "Рекомендации основаны на общих сельскохозяйственных знаниях"
 
 #: aot_flask/templates/pages/ai/components/onboarding_flow.html:22
 msgid "Facility-specific data is still limited"
@@ -27708,7 +27708,7 @@ msgstr ""
 
 #: widgets/AoT_advice.py:241
 msgid "Advice Scope"
-msgstr "Область советов"
+msgstr "Область рекомендаций"
 
 #: widgets/AoT_advice.py:242
 msgid "Scope level for AI advice display."
@@ -27740,7 +27740,7 @@ msgstr "Минимальный уровень оповещения"
 
 #: widgets/AoT_advice.py:267
 msgid "Advice below this alert level will be treated as empty."
-msgstr "Советы ниже этого уровня оповещения будут считаться пустыми."
+msgstr "Рекомендации ниже этого уровня оповещения будут считаться пустыми."
 
 #: widgets/AoT_advice.py:274
 msgid "Max Change Items"

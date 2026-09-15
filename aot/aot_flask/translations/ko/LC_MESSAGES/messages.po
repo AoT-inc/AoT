@@ -20712,7 +20712,7 @@ msgstr "액추에이터 제어"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_facility_body.html:113
 msgid "AI Advice"
-msgstr "AI 권고"
+msgstr "AI 조언"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_facility_body.html:122
 msgid "No facility selected. Register one at"
@@ -27052,13 +27052,13 @@ msgstr "오버레이 지도를 숨기고 데이터 패널만 표시합니다."
 
 #: widgets/AoT_map.py:581
 msgid "Show AI Advice"
-msgstr "AI 권고"
+msgstr "AI 조언 표시"
 
 #: widgets/AoT_map.py:583
 msgid ""
 "Display the latest periodic AI advice summary for this map's "
 "facility/site."
-msgstr "이 지도의 시설/대지에 대한 최신 정기 AI 권고 요약을 표시합니다."
+msgstr "이 지도의 시설/대지에 대한 최신 정기 AI 조언 요약을 표시합니다."
 
 #: widgets/AoT_map.py:597
 msgid "Show Local Time"

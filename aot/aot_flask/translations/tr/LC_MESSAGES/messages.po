@@ -4496,7 +4496,7 @@ msgstr "Takma ad bulunamadı"
 
 #: aot_flask/routes_ai_api.py:1738
 msgid "Advice not found."
-msgstr "Öneri bulunamadı."
+msgstr "Tavsiye bulunamadı."
 
 #: aot_flask/routes_ai_api.py:1741
 #, python-format
@@ -9102,7 +9102,7 @@ msgstr "Tesis etiketlerini aç/kapat"
 
 #: aot_flask/static/js/widgets/AoT_map/aot-map-widget-vector.js:10673
 msgid "Hide AI advice"
-msgstr "AI önerisini gizle"
+msgstr "AI tavsiyesini gizle"
 
 #: aot_flask/static/js/widgets/AoT_map/aot-map-widget-vector.js:12080
 #: aot_flask/static/js/widgets/AoT_map/aot-map-widget-vector.js:12218
@@ -9977,7 +9977,7 @@ msgstr "Özerklik"
 #: aot_flask/templates/layout.html:1214
 #: aot_flask/templates/layout_default.html:1214
 msgid "Advice"
-msgstr "Öneri"
+msgstr "Tavsiye"
 
 #: aot_flask/templates/layout.html:1216
 #: aot_flask/templates/layout_default.html:1216
@@ -13829,7 +13829,7 @@ msgstr "Değişiklikleri Kaydet"
 #: aot_flask/templates/pages/ai/mcp_servers.html:19
 #: aot_flask/templates/pages/ai/scheduler.html:84
 msgid "AI Requests & Advice"
-msgstr "AI İstekleri ve Önerileri"
+msgstr "AI İstekleri ve Tavsiyeleri"
 
 #: aot_flask/templates/pages/ai/mcp_review.html:19
 msgid ""
@@ -13843,7 +13843,7 @@ msgstr ""
 
 #: aot_flask/templates/pages/ai/mcp_review.html:26
 msgid "AI advice ledger"
-msgstr "AI öneri kaydı"
+msgstr "AI tavsiye kaydı"
 
 #: aot_flask/templates/pages/ai/mcp_review.html:28
 msgid ""
@@ -13859,7 +13859,7 @@ msgstr "Son AI Araç Çağrıları"
 
 #: aot_flask/templates/pages/ai/mcp_review.html:42
 msgid "No advice has been submitted yet."
-msgstr "Henüz gönderilmiş öneri yok."
+msgstr "Henüz gönderilmiş tavsiye yok."
 
 #: aot_flask/templates/pages/ai/mcp_review.html:43
 msgid "No tool calls recorded yet."
@@ -14304,7 +14304,7 @@ msgstr "Öğrenme dönemi boyunca:"
 
 #: aot_flask/templates/pages/ai/components/onboarding_flow.html:21
 msgid "Advice is based on general agricultural knowledge"
-msgstr "Öneriler genel tarım bilgisine dayanmaktadır"
+msgstr "Tavsiyeler genel tarım bilgisine dayanmaktadır"
 
 #: aot_flask/templates/pages/ai/components/onboarding_flow.html:22
 msgid "Facility-specific data is still limited"
@@ -27546,7 +27546,7 @@ msgstr "Kapsam Türü"
 
 #: widgets/AoT_advice.py:219
 msgid "Hierarchy level for advice: system, farm, device_group, or device."
-msgstr "Öneri için hiyerarşi düzeyi: system, farm, device_group veya device."
+msgstr "Tavsiye için hiyerarşi düzeyi: system, farm, device_group veya device."
 
 #: widgets/AoT_advice.py:226
 msgid "Scope ID"
@@ -27562,7 +27562,7 @@ msgstr ""
 
 #: widgets/AoT_advice.py:241
 msgid "Advice Scope"
-msgstr "Öneri Kapsamı"
+msgstr "Tavsiye Kapsamı"
 
 #: widgets/AoT_advice.py:242
 msgid "Scope level for AI advice display."
@@ -27586,7 +27586,7 @@ msgstr "Yenileme Aralığı"
 
 #: widgets/AoT_advice.py:254
 msgid "How often the widget polls for new advice."
-msgstr "Widget'ın yeni öneriler için ne sıklıkla sorgu yapacağı."
+msgstr "Widget'ın yeni tavsiyeler için ne sıklıkla sorgu yapacağı."
 
 #: widgets/AoT_advice.py:265
 msgid "Minimum Alert Level"
@@ -27594,7 +27594,7 @@ msgstr "Minimum Uyarı Seviyesi"
 
 #: widgets/AoT_advice.py:267
 msgid "Advice below this alert level will be treated as empty."
-msgstr "Bu uyarı seviyesinin altındaki öneriler boş olarak kabul edilecektir."
+msgstr "Bu uyarı seviyesinin altındaki tavsiyeler boş olarak kabul edilecektir."
 
 #: widgets/AoT_advice.py:274
 msgid "Max Change Items"
@@ -27666,7 +27666,7 @@ msgid ""
 "grid, and AI advice."
 msgstr ""
 "Tesis 3D görünümü, ortam özeti, ayar noktası düzenleyicisi, aktüatör "
-"kontrol ızgarası ve yapay zeka önerileri."
+"kontrol ızgarası ve yapay zeka tavsiyeleri."
 
 #: widgets/AoT_facility.py:402
 msgid "Refresh interval for runtime data. 0 to disable."

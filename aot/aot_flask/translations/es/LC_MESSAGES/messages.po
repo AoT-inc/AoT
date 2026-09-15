@@ -14178,7 +14178,7 @@ msgid ""
 " your facility."
 msgstr ""
 "Este sistema de IA requiere un período de aprendizaje para ofrecer "
-"recomendaciones personalizadas para su instalación."
+"consejos personalizados para su instalación."
 
 #: aot_flask/templates/pages/ai/components/onboarding_flow.html:19
 msgid "During the learning period:"
@@ -14186,7 +14186,7 @@ msgstr "Durante el período de aprendizaje:"
 
 #: aot_flask/templates/pages/ai/components/onboarding_flow.html:21
 msgid "Advice is based on general agricultural knowledge"
-msgstr "Las recomendaciones se basan en conocimientos agrícolas generales"
+msgstr "Los consejos se basan en conocimientos agrícolas generales"
 
 #: aot_flask/templates/pages/ai/components/onboarding_flow.html:22
 msgid "Facility-specific data is still limited"
@@ -14270,7 +14270,7 @@ msgid ""
 " be taken without your approval."
 msgstr ""
 "Este asesor de IA aprende sobre su instalación con el tiempo. Durante el "
-"período de aprendizaje inicial, las recomendaciones se basan en "
+"período de aprendizaje inicial, los consejos se basan en "
 "conocimientos agrícolas generales y pueden no ser específicas para sus "
 "condiciones. Sus comentarios (confirmar, ajustar o rechazar sugerencias) "
 "son lo que calibra el sistema según su instalación. El sistema le "
@@ -14297,8 +14297,8 @@ msgid ""
 "advice becomes."
 msgstr ""
 "El asesor de IA comenzará a aprender sobre esta instalación. Cuantos más "
-"comentarios proporcione sobre sus sugerencias, más precisas y "
-"personalizadas serán las recomendaciones."
+"comentarios proporcione sobre sus sugerencias, más precisos y "
+"personalizados serán los consejos."
 
 #: aot_flask/templates/pages/ai/components/onboarding_flow.html:109
 msgid "Start Using AI"

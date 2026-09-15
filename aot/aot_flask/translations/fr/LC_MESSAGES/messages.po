@@ -13976,7 +13976,7 @@ msgstr "Appels d'outils IA récents"
 
 #: aot_flask/templates/pages/ai/mcp_review.html:42
 msgid "No advice has been submitted yet."
-msgstr "Aucun avis n'a encore été soumis."
+msgstr "Aucun conseil n'a encore été soumis."
 
 #: aot_flask/templates/pages/ai/mcp_review.html:43
 msgid "No tool calls recorded yet."

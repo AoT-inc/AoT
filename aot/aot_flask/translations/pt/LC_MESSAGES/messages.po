@@ -14147,7 +14147,7 @@ msgid ""
 " your facility."
 msgstr ""
 "Este sistema de IA requer um período de aprendizado para fornecer "
-"recomendações personalizadas para sua instalação."
+"conselhos personalizados para sua instalação."
 
 #: aot_flask/templates/pages/ai/components/onboarding_flow.html:19
 msgid "During the learning period:"
@@ -14155,7 +14155,7 @@ msgstr "Durante o período de aprendizado:"
 
 #: aot_flask/templates/pages/ai/components/onboarding_flow.html:21
 msgid "Advice is based on general agricultural knowledge"
-msgstr "As recomendações são baseadas em conhecimento agrícola geral"
+msgstr "Os conselhos são baseados em conhecimento agrícola geral"
 
 #: aot_flask/templates/pages/ai/components/onboarding_flow.html:22
 msgid "Facility-specific data is still limited"
@@ -14239,7 +14239,7 @@ msgid ""
 " be taken without your approval."
 msgstr ""
 "Este consultor de IA aprende sobre sua instalação ao longo do tempo. "
-"Durante o período inicial de aprendizado, as recomendações são baseadas "
+"Durante o período inicial de aprendizado, os conselhos são baseados "
 "em conhecimento agrícola geral e podem não ser específicas para suas "
 "condições. Seu feedback — confirmando, ajustando ou rejeitando sugestões "
 "— é o que calibra o sistema para sua instalação. O sistema informará "
@@ -14265,8 +14265,8 @@ msgid ""
 "advice becomes."
 msgstr ""
 "O consultor de IA começará a aprender sobre esta instalação. Quanto mais "
-"feedback você fornecer sobre suas sugestões, mais precisas e "
-"personalizadas serão as recomendações."
+"feedback você fornecer sobre suas sugestões, mais precisos e "
+"personalizados serão os conselhos."
 
 #: aot_flask/templates/pages/ai/components/onboarding_flow.html:109
 msgid "Start Using AI"
@@ -20950,7 +20950,7 @@ msgstr "A análise sugere que podem ter ocorrido as seguintes mudanças:"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_advice_js.html:255
 msgid "Unable to load advice. Check connection."
-msgstr "Não foi possível carregar as recomendações. Verifique a conexão."
+msgstr "Não foi possível carregar os conselhos. Verifique a conexão."
 
 #: aot_flask/templates/user_templates/widget_template_AoT_advice_js.html:288
 msgid "Please enter a note before submitting."
@@ -21061,7 +21061,7 @@ msgstr "Controle do Atuador"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_facility_body.html:113
 msgid "AI Advice"
-msgstr "Recomendações da IA"
+msgstr "Conselho da IA"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_facility_body.html:122
 msgid "No facility selected. Register one at"

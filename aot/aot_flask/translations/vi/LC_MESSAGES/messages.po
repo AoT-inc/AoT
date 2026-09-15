@@ -12123,7 +12123,7 @@ msgid ""
 "Start or stop the AI model. While stopped, chat, advice requests and "
 "background AI work are all unavailable."
 msgstr ""
-"Bắt đầu hoặc dừng mô hình AI. Trong khi dừng, trò chuyện, yêu cầu tư vấn "
+"Bắt đầu hoặc dừng mô hình AI. Trong khi dừng, trò chuyện, yêu cầu lời khuyên "
 "và các tác vụ AI nền đều không khả dụng."
 
 #: aot_flask/templates/pages/ai/ai_agent.html:62
@@ -12142,7 +12142,7 @@ msgstr ""
 #: aot_flask/templates/pages/ai/ai_agent.html:691
 msgid "Running. Chat, advice requests and background AI work are all active."
 msgstr ""
-"Đang chạy. Trò chuyện, yêu cầu tư vấn và công việc AI nền đều đang hoạt "
+"Đang chạy. Trò chuyện, yêu cầu lời khuyên và công việc AI nền đều đang hoạt "
 "động."
 
 #: aot_flask/templates/pages/ai/ai_agent.html:68
@@ -12151,7 +12151,7 @@ msgid ""
 "Stopped. Chat, advice requests and background AI work are all unavailable"
 " until you start it."
 msgstr ""
-"Đã dừng. Trò chuyện, yêu cầu tư vấn và các tác vụ AI nền đều không khả "
+"Đã dừng. Trò chuyện, yêu cầu lời khuyên và các tác vụ AI nền đều không khả "
 "dụng cho đến khi bạn khởi động lại."
 
 #: aot_flask/templates/pages/ai/ai_agent.html:83
@@ -27496,7 +27496,7 @@ msgstr "Phạm vi lời khuyên"
 
 #: widgets/AoT_advice.py:242
 msgid "Scope level for AI advice display."
-msgstr "Mức phạm vi để hiển thị tư vấn AI."
+msgstr "Mức phạm vi để hiển thị lời khuyên AI."
 
 #: widgets/AoT_advice.py:249
 msgid "5 minutes"
@@ -27596,7 +27596,7 @@ msgid ""
 "grid, and AI advice."
 msgstr ""
 "Chế độ xem 3D cơ sở, tóm tắt môi trường, trình chỉnh sửa điểm đặt, lưới "
-"điều khiển bộ truyền động và tư vấn AI."
+"điều khiển bộ truyền động và lời khuyên AI."
 
 #: widgets/AoT_facility.py:402
 msgid "Refresh interval for runtime data. 0 to disable."
@@ -28133,7 +28133,7 @@ msgid ""
 "Display the latest periodic AI advice summary for this map's "
 "facility/site."
 msgstr ""
-"Hiển thị bản tóm tắt tư vấn AI định kỳ mới nhất cho cơ sở/địa điểm của "
+"Hiển thị bản tóm tắt lời khuyên AI định kỳ mới nhất cho cơ sở/địa điểm của "
 "bản đồ này."
 
 #: widgets/AoT_map.py:597

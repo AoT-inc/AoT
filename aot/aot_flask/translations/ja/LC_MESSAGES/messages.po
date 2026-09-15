@@ -34446,7 +34446,7 @@ msgid "Built-in AI"
 msgstr "内蔵AI"
 
 msgid "The AI model used by chat and advice inside this app. It runs separately from your own AI app, so you can leave it off if you do not use it."
-msgstr "アプリ内のチャットと助言が使うAIモデルです。自分のAIアプリの接続とは別に動くため、使わなければオフのままで構いません。"
+msgstr "アプリ内のチャットとアドバイスが使うAIモデルです。自分のAIアプリの接続とは別に動くため、使わなければオフのままで構いません。"
 
 msgid "Run built-in AI"
 msgstr "内蔵AIを動かす"

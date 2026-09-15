@@ -13958,7 +13958,7 @@ msgstr "Kürzliche KI-Tool-Aufrufe"
 
 #: aot_flask/templates/pages/ai/mcp_review.html:42
 msgid "No advice has been submitted yet."
-msgstr "Es wurde noch kein Ratschlag eingereicht."
+msgstr "Es wurde noch keine Empfehlung eingereicht."
 
 #: aot_flask/templates/pages/ai/mcp_review.html:43
 msgid "No tool calls recorded yet."
@@ -14487,7 +14487,7 @@ msgid ""
 " be taken without your approval."
 msgstr ""
 "Dieser KI-Berater lernt im Laufe der Zeit von Ihrer Anlage. Während der "
-"anfänglichen Lernphase basiert die Beratung auf allgemeinem "
+"anfänglichen Lernphase basiert die Empfehlung auf allgemeinem "
 "landwirtschaftlichem Wissen und ist möglicherweise nicht auf Ihre "
 "Gegebenheiten zugeschnitten. Ihr Feedback — das Bestätigen, Anpassen oder"
 " Ablehnen von Vorschlägen — kalibriert das System auf Ihre Anlage. Das "
@@ -14515,7 +14515,7 @@ msgid ""
 msgstr ""
 "Der KI-Berater beginnt, diese Anlage kennenzulernen. Je mehr "
 "Rückmeldungen Sie zu seinen Vorschlägen geben, desto genauer und "
-"individueller wird die Beratung."
+"individueller wird die Empfehlung."
 
 #: aot_flask/templates/pages/ai/components/onboarding_flow.html:109
 msgid "Start Using AI"
@@ -28560,7 +28560,7 @@ msgid ""
 "Display the latest periodic AI advice summary for this map's "
 "facility/site."
 msgstr ""
-"Zeigt die neueste periodische KI-Ratschlagszusammenfassung für die "
+"Zeigt die neueste periodische KI-Empfehlungszusammenfassung für die "
 "Anlage/den Standort dieser Karte an."
 
 #: widgets/AoT_map.py:597
