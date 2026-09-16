@@ -112,7 +112,7 @@ WIDGET_INFORMATION = {
   {% set _dummy = dashboard_dict.update({"aot_calendar_render": 1}) %}
 <link rel="stylesheet" href="/static/vendor/fullcalendar-5.11.5/main.min.css?v=20260814a">
 <script src="/static/vendor/fullcalendar-5.11.5/main.min.js?v=20260814a"></script>
-<link rel="stylesheet" href="/static/css/widget/aot-calendar-widget.css?v=9">
+<link rel="stylesheet" href="/static/css/widget/aot-calendar-widget.css?v=10">
 <script src="{{ asset('widget-calendar') }}"></script>
 {% endif %}
 <style>
@@ -210,7 +210,10 @@ aotCalendarWidgetInit('{{each_widget.unique_id}}', {
   i18nMap: {{_('Map')|tojson}},
   i18nStageDone: {{_('Done')|tojson}},
   i18nStageCurrent: {{_('In progress')|tojson}},
-  i18nStagePlanned: {{_('Planned')|tojson}}
+  i18nStagePlanned: {{_('Planned')|tojson}},
+  i18nStageName: {{_('Stage name')|tojson}},
+  i18nSave: {{_('Save')|tojson}},
+  i18nRevert: {{_('Revert')|tojson}},
 });
 """,
 }

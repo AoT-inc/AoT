@@ -53,6 +53,16 @@ def _server_instructions():
         "UUIDs. Most lookup tools here return both a human-readable name (zone, "
         "crop, device, etc.) and its unique_id — refer to the entity by name "
         "instead. Only include the raw id if the user explicitly asks for it."
+        "\n\nTIME — do not infer the current time from the data. Every response "
+        "carries `now` = {farm_local, tz}: that, and nothing else in the payload, "
+        "is what time it is. Timestamps in the data are past events, and a field "
+        "like `evaluated_at` or `last_seen` is when something was measured, not "
+        "now. Read every timestamp by its own offset (they are ISO 8601 and are "
+        "not all in the same zone — sensor values come back in their device's "
+        "local time). Devices can sit in different timezones from the farm "
+        "default, so before any day/night, scheduling or 'is it due yet' "
+        "reasoning about a particular place, call get_local_time (system drawer) "
+        "for that location."
     )
     try:
         from aot.ai.services.tool_registry import DRAWERS
@@ -410,6 +420,35 @@ _MAX_RESPONSE_TOKENS = int(os.environ.get("AOT_MCP_MAX_RESPONSE_TOKENS", "15000"
 #: 도구가 응답에 실어 보내는 캡 우선순위 힌트의 키. `_cap_result` 가 읽고
 #: **응답에서 떼어낸다** — 클라이언트가 볼 내용이 아니다.
 CAP_PRIORITY_KEY = _CAP_PRIORITY_KEY = "_cap_priority"
+
+
+def _farm_now():
+    """모든 응답에 실리는 "지금" — 농장 기준 현지시각과 그 IANA 시간대.
+
+    **외부 AI 에게는 시계가 없다.** 인앱 AI 는 컨텍스트에 현재 시각이 주입되지만
+    MCP 로 붙은 AI 는 대개 날짜까지만 알고, 그래서 응답 안에서 시각처럼 보이는
+    값을 "지금" 의 대용으로 집는다. 2026-09-16 실제 사고가 그랬다: 브리핑의
+    `evaluated_at`(UTC 05:10) 을 현재 시각으로 읽고 "지금은 새벽, 곧 05:30 관수"
+    라고 답했는데 실제로는 한낮 14:10 이었다.
+
+    그래서 기준선을 **도구마다가 아니라 여기 한 곳에서** 준다. 여기는 stdio /
+    HTTP 양쪽이 반드시 지나는 단일 지점이라, 서랍 안에 있든 없든 모든 도구가
+    같은 값을 달고 나간다. 장치별 tz 는 장치마다 다를 수 있으므로 이 값은
+    **농장 기본 시간대**임을 키 이름(`farm_local`)으로 분명히 한다 — 특정 위치의
+    현지시각이 필요하면 `get_local_time` 이 답한다.
+
+    실패해도 응답을 깨서는 안 된다(시계 하나 때문에 도구 결과를 잃는 것이 훨씬
+    나쁘다). 해석이 안 되면 UTC 로라도 반드시 무언가를 싣는다.
+    """
+    try:
+        from aot.utils.device_tz import resolve_location_tz
+        from aot.utils.timekit import utc_now
+        tz = resolve_location_tz(None)
+        local = utc_now().astimezone(tz)
+        return {"farm_local": local.isoformat(), "tz": str(tz)}
+    except Exception:                                       # noqa: BLE001
+        from datetime import datetime, timezone as _tz
+        return {"farm_local": datetime.now(_tz.utc).isoformat(), "tz": "UTC"}
 
 
 # ASCII 계열 몇 글자를 1토큰으로 셀 것인가. 영어 산문의 통념은 4지만 **여기서
@@ -929,6 +968,7 @@ def _execute_tool(app, tool_name, arguments, agent_id="unknown", role=None,
         # 호출이 실제로 돌았는지를 도구별 어휘와 무관하게 한 키로 알린다.
         # 여기가 stdio/HTTP 양쪽이 반드시 지나는 단일 지점이라 한 번만 찍으면 된다.
         result["call_state"] = gate.call_state(blocked, result, error_text)
+        result["now"] = _farm_now()
         # 감사 기록(위)이 끝난 뒤에 줄인다 — 진단에는 잘리지 않은 원본이 필요하다.
         result = _cap_result(result, tool_name)
     out = [{"type": "text", "text": json.dumps(result, ensure_ascii=False)}]

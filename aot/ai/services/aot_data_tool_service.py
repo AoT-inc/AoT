@@ -198,6 +198,21 @@ def _plot_ended_on(controller):
         return None, False
 
 
+def _local_iso(value):
+    """UTC ISO 문자열 → 농장 현지시각 ISO 문자열. 못 읽으면 원래 값 그대로.
+
+    `serialize_ts` 는 datetime 을 받는데, 여기 오는 값은 이미 다른 층에서
+    문자열로 굳은 뒤다(요약 스냅샷의 timestamp 처럼). 그 층은 UTC 로 저장하는
+    것이 맞으므로 저장을 건드리지 않고 **내보낼 때만** 현지시각으로 돌린다.
+    """
+    if not value:
+        return value
+    try:
+        return serialize_ts(datetime.fromisoformat(str(value)))
+    except Exception:                                       # noqa: BLE001
+        return value
+
+
 class AoTDataToolService:
     """
     AoT 내부 데이터를 AI 도구 규격에 맞게 제공하는 서비스 레이어.
@@ -8333,6 +8348,37 @@ class AoTDataToolService:
         return (" No global forecast source is registered; the operator can add "
                 "Open-Meteo on the AI Library page.")
 
+    # 예보 신선도 임계(시간). 기상청 단기예보는 3시간마다 새로 발표되므로 6을
+    # 넘겼으면 한 번을 통째로 건너뛴 것이고(경고), 24를 넘겼으면 수집 자체가
+    # 멈춘 것이다(데이터 취급 안 함).
+    _FORECAST_STALE_H = 6
+    _FORECAST_UNUSABLE_H = 24
+
+    @staticmethod
+    def _forecast_is_usable():
+        """지금 쓸 만한 예보가 있는가. 파일이 없거나 낡았으면 False.
+
+        브리핑이 예보 도구를 **안내할지 말지** 정하는 데 쓴다. 예보가 죽은
+        시스템에 "예보를 확인하라" 고 적어 두면 읽는 AI 는 매 대화마다 그것을
+        부르고, 매번 같은 "오래된 예보" 보고가 사용자에게 나간다.
+        """
+        try:
+            from aot.functions.utils.env_control.forecast_feedforward import _load_forecast
+            from aot.utils.timekit import as_tz, utc_now as _utc_now
+            from datetime import datetime as _dt2
+            data = _load_forecast() or {}
+            if not (data.get('forecasts') or {}):
+                return False
+            pub_raw = data.get('pub_dt')
+            if not pub_raw:
+                return False
+            pub = as_tz('Asia/Seoul').localize(
+                _dt2.strptime(str(pub_raw), '%Y%m%d%H%M'))
+            age_h = (_utc_now() - pub).total_seconds() / 3600.0
+            return age_h <= AoTDataToolService._FORECAST_UNUSABLE_H
+        except Exception:                                   # noqa: BLE001
+            return False
+
     @staticmethod
     def get_weather_forecast(hours=24, **extra):
         """[읽기전용] 기상청 단기예보 — 선제 제어 조언의 근거.
@@ -8365,9 +8411,18 @@ class AoTDataToolService:
             published_at, age_hours = None, None
             if pub_raw:
                 try:
-                    pub = _dt.strptime(str(pub_raw), '%Y%m%d%H%M')
+                    # 기상청 발표시각은 **KST 벽시계**다(이 경로는 한국 전용).
+                    # 예전에는 그것을 naive 로 둔 채 `_dt.now()` 와 뺐는데,
+                    # 컨테이너 시계는 언제나 UTC 라 그 뺄셈은 서로 다른 두
+                    # 시간대를 뺀 것이었다 — 발표 30분 된 예보가 "8.5시간 전"
+                    # 으로 나와 stale 판정이 통째로 어긋난다. 오프셋을 붙여
+                    # 비교하고, 내보낼 때도 오프셋을 함께 싣는다.
+                    from aot.utils.timekit import as_tz, utc_now as _utc_now
+                    pub = as_tz('Asia/Seoul').localize(
+                        _dt.strptime(str(pub_raw), '%Y%m%d%H%M'))
                     published_at = pub.isoformat()
-                    age_hours = round((_dt.now() - pub).total_seconds() / 3600.0, 1)
+                    age_hours = round(
+                        (_utc_now() - pub).total_seconds() / 3600.0, 1)
                 except ValueError:
                     published_at = str(pub_raw)
 
@@ -8387,7 +8442,28 @@ class AoTDataToolService:
                     future.append({"hour_offset": off, **(v if isinstance(v, dict) else {})})
             future.sort(key=lambda x: x["hour_offset"])
 
-            stale = age_hours is not None and age_hours > 6
+            # 하루를 넘긴 것은 "낡은 예보" 가 아니라 **수집이 멈춘 것**이다.
+            # 그런데도 내용을 실어 보내면 받는 쪽은 그것을 예보로 다루고, 매번
+            # 사용자에게 "예보가 오래됐다" 를 보고한다 — 2026-09-16 사용자가
+            # 짜증을 낸 것이 정확히 이 경로다(발표 215일 지난 파일이 계속
+            # success 로 나갔다). 그런 파일은 데이터로 취급하지 않는다.
+            if (age_hours is not None
+                    and age_hours > AoTDataToolService._FORECAST_UNUSABLE_H) or not future:
+                return {
+                    "status": "unavailable",
+                    "message": (
+                        "Forecast collection is not running on this system — the "
+                        "stored file was last issued %s and holds no future hours. "
+                        "Treat this as having no forecast at all: do not read values "
+                        "out of it, and do not bring this up with the user again "
+                        "unless they ask about forecast collection itself."
+                        % (published_at or "an unknown time ago")),
+                    "published_at": published_at,
+                    "age_hours": age_hours,
+                    "checked_source": "forecast.json",
+                }
+
+            stale = age_hours is not None and age_hours > AoTDataToolService._FORECAST_STALE_H
             result = {
                 "status": "success",
                 "published_at": published_at,
@@ -8403,10 +8479,6 @@ class AoTDataToolService:
                     f"This forecast was issued {age_hours} hours ago. It is stale: do not "
                     f"recommend pre-emptive control based on it; report that forecast "
                     f"collection needs checking first.")
-            if not future:
-                result["warning"] = (
-                    "No future entries in the requested window (the file holds past hours "
-                    "only). " + result.get("warning", ""))
             return result
         except Exception as e:
             logger.exception("Error in get_weather_forecast")
@@ -8453,7 +8525,12 @@ class AoTDataToolService:
                         "signal. To find long-silent devices call get_device_freshness."),
                 },
                 "compared_with": ("이전 요약 v%s" % previous.version) if previous else None,
-                "evaluated_at": current.get('timestamp'),
+                # 현지시각으로 낸다. 이 값은 get_system_brief 에 그대로 실려
+                # 나가는데, 거기서는 **시각처럼 보이는 유일한 필드**라 읽는 쪽이
+                # "지금" 으로 집어 든다 — UTC 로 두었더니 한낮 14:10 을 새벽
+                # 05:10 으로 읽고 "곧 05:30 관수" 라고 답한 일이 있었다
+                # (2026-09-16). 지금 시각 자체는 응답의 `now` 가 따로 싣는다.
+                "evaluated_at": _local_iso(current.get('timestamp')),
             }
         except Exception as e:
             logger.exception("Error in get_anomalies")
@@ -8511,6 +8588,16 @@ class AoTDataToolService:
             from datetime import timezone as _tz
             seen = datetime.fromtimestamp(newest_ts, _tz.utc)
             age = (now_utc() - seen).total_seconds()
+            # 장치 자기 위치의 시각으로 낸다. 경과초(age)는 이미 절대시간 차라
+            # 영향이 없고, 바뀌는 것은 표시뿐이다 — 그런데 이 표시가 UTC 로
+            # 나가면 같은 응답 묶음 안에서 센서값(장치 현지)과 기준이 갈려
+            # "마지막 수신 08:39 / 현재값 14:06" 이 나란히 놓인다(9시간 어긋난
+            # 것을 9시간 침묵으로 읽는다).
+            try:
+                from aot.utils.device_tz import resolve_location_tz
+                seen = seen.astimezone(resolve_location_tz(device_id))
+            except Exception:                               # noqa: BLE001
+                pass
         except Exception:
             return None, None, None
         return max(0.0, age), seen.isoformat(), newest_label
@@ -9010,11 +9097,17 @@ class AoTDataToolService:
             "1. Use this brief to identify the target (facility/zone) and its crop.",
             "2. To judge control, read get_control_state for current targets, the limiting "
             "factor and safety-gate status.",
-            "3. Sensor history: get_sensor_detail. Forecast: get_weather_forecast (always "
-            "check the 'stale' flag). If a reading looks missing or frozen, call "
-            "get_device_freshness — anomalies.comm_offline_devices only counts drivers "
-            "that report a fault themselves and stays 0 for a device that simply went "
-            "silent.",
+            # 예보 안내는 **예보가 살아 있을 때만** 싣는다. 죽은 예보를 가리키면
+            # 읽는 AI 가 매 대화마다 그 도구를 부르고, 매번 "예보가 오래됐다" 를
+            # 사용자에게 보고한다 — 하지 말라고 해도 다음 대화의 브리핑이 다시
+            # 시킨다(2026-09-16).
+            ("3. Sensor history: get_sensor_detail." +
+             (" Forecast: get_weather_forecast."
+              if AoTDataToolService._forecast_is_usable() else "") +
+             " If a reading looks missing or frozen, call "
+             "get_device_freshness — anomalies.comm_offline_devices only counts drivers "
+             "that report a fault themselves and stays 0 for a device that simply went "
+             "silent."),
             "4. Look up growing guidance and manual references with knowledge_search.",
             "5. Check search_schedule for already-planned work to avoid duplicate or "
             "conflicting instructions.",
@@ -9055,7 +9148,11 @@ class AoTDataToolService:
             rows = q.order_by(AIAdvice.created_at.desc()).limit(lim).all()
             results = [{
                 "advice_id": r.unique_id,
-                "created_at": r.created_at.isoformat() if r.created_at else None,
+                # serialize_ts 로 낸다(원시 isoformat 이 아니라). 이 컬럼은 naive
+                # UTC 로 저장되므로 그대로 내보내면 **오프셋이 아예 없는** 문자열이
+                # 되고, 읽는 쪽은 그것을 현지시각으로 읽는다 — 한국이면 9시간
+                # 어긋난 채 "방금 낸 의견" 이 오전으로 보인다.
+                "created_at": serialize_ts(r.created_at),
                 "agent_id": r.agent_id,
                 "agent_kind": r.agent_kind,
                 "scope": {"type": r.scope_type, "id": r.scope_id, "name": r.scope_name},
@@ -9067,7 +9164,7 @@ class AoTDataToolService:
                 "confidence": r.confidence,
                 "status": r.status,
                 "review_note": r.review_note,
-                "reviewed_at": r.reviewed_at.isoformat() if r.reviewed_at else None,
+                "reviewed_at": serialize_ts(r.reviewed_at),
             } for r in rows]
 
             # 같은 대상에 여러 주체가 의견을 냈으면 알려준다 — 상충 가능 신호.

@@ -195,6 +195,35 @@
   padding-right: 8px;
 }
 
+/* ── Stage name edit (plot-stage popover only, canEdit) ─────────────────── */
+.aot-cal-popover-rename {
+  border-top: 1px solid var(--aot-border-light, #f0f0f0);
+  margin-top: 0.35rem;
+  padding-top: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+.aot-cal-popover-rename-label {
+  display: block;
+  font-size: var(--aot-font-size-2xs);
+  font-weight: 700;
+  color: var(--aot-color-text-secondary, #6c757d);
+  text-transform: uppercase;
+  margin-bottom: 0.25rem;
+}
+.aot-cal-popover-rename-row {
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
+}
+.aot-cal-popover-rename-row .aot-modern-input {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.aot-cal-popover-rename-row .aot-cal-popover-action {
+  flex: 0 0 auto;
+  padding-left: 8px;
+  padding-right: 8px;
+}
 @media (max-width: 767.98px) {
   .aot-calendar-widget-outer .fc-toolbar {
     flex-direction: column;

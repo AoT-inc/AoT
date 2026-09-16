@@ -1008,12 +1008,18 @@ def effective_stages(plot, program_row):
     ⚠ 이 함수가 **유일한 삽입점**이다. 여기서 얹으면 `_stage_targets` →
       `stage_of` → 화면·AI·제어가 전부 같은 값을 본다. 소비처마다 따로 얹으면
       갈라지고, 갈라지면 화면과 제어가 다른 목표를 말한다.
+
+    **이름(`name`)도 같은 자리에서 얹는다.** 프로그램의 이름은 그 대상의
+    일반 명칭이고, 구획이 적으면 그 구획만 다르게 부른다 — 지침·목표와 같은
+    이유다. 날짜(`stage_plan`)와 달리 기준점 검사를 하지 않는다: 이름은 원장이
+    확정한 사실이 아니라 라벨이라, 지나간 단계도 고칠 수 있다.
     """
     stages = program_row.stage_list() if program_row is not None else []
     if plot is None or not hasattr(plot, 'stage_override_map'):
         return list(stages)
     ov = plot.stage_override_map()
-    if not (ov['removed'] or ov['added'] or ov['guidance'] or ov['targets']):
+    if not (ov['removed'] or ov['added'] or ov['guidance'] or ov['targets']
+             or ov.get('name')):
         return list(stages)
 
     out = []
@@ -1043,6 +1049,9 @@ def effective_stages(plot, program_row):
         text = ov['guidance'].get(key)
         if text:
             st['guidance'] = text
+        nm = ov.get('name', {}).get(key)
+        if nm:
+            st['name'] = nm
         # 목표는 **항목 단위로** 덮는다. 단계의 dict 를 통째로 갈아치우면
         # 사람이 손대지 않은 항목까지 사라진다 — 프로그램이 정한 나머지는
         # 그대로 따라와야 한다.

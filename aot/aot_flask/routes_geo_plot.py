@@ -1378,6 +1378,32 @@ def api_plot_stage_guidance(plot_uuid):
     return jsonify(dict({'ok': True}, **result))
 
 
+@blueprint.route('/api/geo/plot/<string:plot_uuid>/stage-name',
+                 methods=['POST'])
+@login_required
+def api_plot_stage_name(plot_uuid):
+    """이 구획이 이 단계를 자기만 다르게 부른다 (P8).
+
+    프로그램의 이름은 그 대상의 일반 명칭이고, 여기서 고치는 것은 이 구획만의
+    호칭이다 — `stage_guidance` 와 같은 규칙(같은 프로그램을 쓰는 다른 구획이
+    조용히 함께 바뀌면 안 된다). 지침과 달리 지나간 단계도 고칠 수 있다.
+    """
+    denied = _require_edit()
+    if denied:
+        return denied
+
+    data = request.get_json(silent=True) or {}
+    result, error = plot_io.set_stage_name(
+        plot_uuid, stage_key=data.get('stage_key'),
+        name=data.get('name'), set_by=_current_user_name())
+    if error:
+        status = 404 if '찾을 수 없습니다' in error else 400
+        return jsonify({'ok': False, 'message': error}), status
+    from aot.aot_flask.geo.site_summary import invalidate_plot_contents
+    invalidate_plot_contents(plot_uuid)
+    return jsonify(dict({'ok': True}, **result))
+
+
 @blueprint.route('/api/geo/plot/<string:plot_uuid>/stage-target',
                  methods=['POST'])
 @login_required

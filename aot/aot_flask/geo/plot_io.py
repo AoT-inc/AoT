@@ -26,6 +26,13 @@ logger = logging.getLogger(__name__)
 _FORBIDDEN_PROPS = ('device_id', 'channel_id', 'unique_id', 'color',
                     'zone_uuid', 'zone_id')
 
+# 구획이 단계 이름을 자기만 다르게 부를 때(`set_stage_name`)의 길이 상한.
+# 이 파일에는 이름 길이를 직접 정한 선례가 없다(`add_stage` 도 이름 길이를
+# 안 잰다) — `GeoProgram.name` 컬럼(String(128))을 그대로 빌린다. 카탈로그의
+# 실제 단계 이름은 훨씬 짧지만(대개 2~10자), "이름"이라는 성격이 같은 값에
+# 서로 다른 상한을 두면 어느 쪽이 진짜 제약인지 헷갈린다.
+_MAX_STAGE_NAME = 128
+
 _VALID_END_REASONS = ('harvested', 'failed', 'replaced', 'removed')
 # 'facility' — 기하 없이 시설 구역에 매단 구획(p6_39). 'bay_snapshot' 과 다르다:
 # 그쪽은 bay 폴리곤을 **복사해 온** 것이고(백필), 이쪽은 애초에 기하가 없다.
@@ -1119,6 +1126,8 @@ def _save_overrides(row, ov):
         out['guidance'] = ov['guidance']
     if ov.get('targets'):
         out['targets'] = ov['targets']
+    if ov.get('name'):
+        out['name'] = ov['name']
     try:
         row.stage_overrides = out or None
         db.session.commit()
@@ -1163,6 +1172,48 @@ def set_stage_guidance(plot_uuid, stage_key=None, text=None, set_by=None):
         return None, err
     return {'stage_key': stage_key,
             'guidance': text or None,
+            'stage_schedule': plot_context.stage_schedule_view(row)}, None
+
+
+def set_stage_name(plot_uuid, stage_key=None, name=None, set_by=None):
+    """이 구획이 이 단계를 **자기만 다르게 부른다** → (dict, error).
+
+    프로그램의 이름은 그 대상의 일반 명칭이고, 여기서 고치는 것은 이 구획만의
+    호칭이다. 이름을 못 고치게 두면 사람은 프로그램을 고치고, 그러면 그
+    프로그램을 쓰는 **다른 구획까지** 함께 이름이 바뀐다
+    (`stage_override_map` 의 `guidance`·`targets` 와 같은 이유, 2026-08-27).
+
+    빈 이름을 주면 지운다(= 프로그램 이름이 다시 보인다).
+
+    ⚠ **지나간 단계도 고칠 수 있다.** 이름은 원장이 확정한 사실이 아니라
+      라벨이다 — `stage_plan` 의 날짜(기준점 이후만 허용)와 다르다. 그래서
+      `add_stage`/`remove_stage` 가 쓰는 기준점 검사를 여기서는 하지 않는다.
+
+    ⚠ 프로그램을 고치지 않는다. 구획 화면에서 템플릿을 건드리면 같은 프로그램을
+    쓰는 다른 구획이 조용히 함께 바뀐다.
+    """
+    row, prog, stages, first, err = _plan_context(plot_uuid)
+    if err:
+        return None, err
+    if not stage_key:
+        return None, '단계를 지정해야 합니다'
+    if stage_key not in {st.get('key') for st in stages}:
+        return None, '이 구획에 없는 단계입니다: %s' % stage_key
+
+    name = (name or '').strip()
+    if len(name) > _MAX_STAGE_NAME:
+        return None, '이름이 너무 깁니다 (%d자)' % _MAX_STAGE_NAME
+
+    ov = row.stage_override_map()
+    if name:
+        ov['name'][stage_key] = name
+    else:
+        ov['name'].pop(stage_key, None)
+    err = _save_overrides(row, ov)
+    if err:
+        return None, err
+    return {'stage_key': stage_key,
+            'name': name or None,
             'stage_schedule': plot_context.stage_schedule_view(row)}, None
 
 

@@ -315,10 +315,16 @@ class GeoPlot(CRUDMixin, db.Model):
         return out
 
     def stage_override_map(self):
-        """단계 구성 → `{removed, added, guidance, targets}`.
+        """단계 구성 → `{removed, added, guidance, targets, name}`.
 
         깨진 값은 조용히 버린다 — 그 구획은 프로그램 그대로 동작할 뿐이다
         (`stage_plan_map` 과 같은 태도).
+
+        ## `name` — `{단계키: 이름}`
+
+        이름도 `guidance`·`targets` 와 같은 이유로 구획이 이긴다 — 못 고치게
+        두면 사람은 프로그램을 고치고, 그러면 그 프로그램을 쓰는 다른 구획까지
+        함께 이름이 바뀐다.
 
         ## `targets` — `{단계키: {목표키: 값}}`
 
@@ -345,6 +351,7 @@ class GeoPlot(CRUDMixin, db.Model):
         added = raw.get('added')
         guidance = raw.get('guidance')
         targets = raw.get('targets')
+        name = raw.get('name')
         return {
             'removed': {str(k) for k in removed} if isinstance(removed, list) else set(),
             'added': [a for a in added if isinstance(a, dict) and a.get('key')]
@@ -355,6 +362,8 @@ class GeoPlot(CRUDMixin, db.Model):
                                  if tv is not None}
                         for k, v in targets.items() if isinstance(v, dict)}
                        if isinstance(targets, dict) else {},
+            'name': {str(k): v for k, v in name.items() if v}
+                    if isinstance(name, dict) else {},
         }
 
     def has_own_geometry(self):
