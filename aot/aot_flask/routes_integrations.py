@@ -244,6 +244,17 @@ def api_available_calendars():
         {'key': 'device', 'name': gettext('Device'), 'color': _BUCKET_COLOR['device']},
         {'key': 'ai', 'name': gettext('AI'), 'color': _BUCKET_COLOR['ai']},
     ], 'google': []}
+    # 구획 단계 — 부지별 버킷이라 개수가 고정되어 있지 않다(부지가 없으면
+    # 하나도 안 붙는다). 그래서 위 5개처럼 하드코딩하지 않고 실제로 표시할
+    # 구획이 속한 부지만 훑어서 붙인다(aot/utils/calendar_event_providers.py).
+    # 부지 판정은 구획 기하를 훑는 파생 계산이라 여기서 죽을 수 있다. 그때
+    # 목록 전체를 500 으로 만들면 구글 캘린더까지 함께 사라진다 — 구획 항목만
+    # 빠지고 나머지는 그대로 나가는 쪽이 맞다.
+    try:
+        from aot.utils.calendar_event_providers import plot_stage_buckets
+        result['aot'].extend(plot_stage_buckets())
+    except Exception:
+        logger.exception('calendars: 구획 단계 부지 목록 실패')
 
     connection = (UserCalendarConnection.query
                   .filter_by(user_id=flask_login.current_user.id, provider='google')

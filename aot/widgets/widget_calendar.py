@@ -203,7 +203,14 @@ aotCalendarWidgetInit('{{each_widget.unique_id}}', {
   i18nDeleteFailed: {{_('Delete failed')|tojson}},
   i18nCalendars: {{_('Calendars')|tojson}},
   i18nGoogle: {{_('Google Calendar')|tojson}},
-  i18nLoading: {{_('Loading...')|tojson}}
+  i18nLoading: {{_('Loading...')|tojson}},
+  i18nSites: {{_('Site')|tojson}},
+  i18nEnd: {{_('End')|tojson}},
+  i18nOngoing: {{_('ongoing')|tojson}},
+  i18nMap: {{_('Map')|tojson}},
+  i18nStageDone: {{_('Done')|tojson}},
+  i18nStageCurrent: {{_('In progress')|tojson}},
+  i18nStagePlanned: {{_('Planned')|tojson}}
 });
 """,
 }

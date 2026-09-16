@@ -1391,7 +1391,14 @@ def stage_schedule_view(plot, program=None, on=None, sched=None, events=None,
             'guidance': b.get('guidance'),
             # 마지막 칸은 다음 경계가 없어 기간을 정할 수 없다(끝내는 날은
             # 재배 종료가 정한다).
-            'editable': i >= first_editable and nxt is not None,
+            #
+            # `first_editable` 자리는 **기준점 단계 자신**이다. 그 시작일은
+            # 확정된 사실이거나 구획 시작일이라 계획이 손대지 못한다
+            # (`plot_io._plan_context` 의 `first = 기준점 + 1` 과 같은 규칙) —
+            # 여기서 `>=` 를 쓰면 화면은 고칠 수 있다고 말하는데 저장은 "이미
+            # 지나간 경계입니다" 로 거절하는, 늘 실패하는 편집을 권하게 된다
+            # (26-09-16 실측: 프로그램이 걸린 구획 8/8 이 그랬다).
+            'editable': i > first_editable and nxt is not None,
             # 지나간 단계는 뺄 수 없다 — 확인된 전환이 그것을 가리킨다.
             # 지침은 지나간 단계에도 적을 수 있다(관찰의 기록이다).
             'removable': i >= first_editable and len(bounds) > 1,

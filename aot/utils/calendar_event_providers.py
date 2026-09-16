@@ -309,8 +309,220 @@ def provide_note_events(start=None, end=None, limit=500, category=None):
     return events
 
 
+# --- 구획 단계 provider -------------------------------------------------
+#
+# 단계 경계(시작일 · "다음 단계 시작일 - 1일"인 종료일)는 저장값이 아니라
+# `plot_context.stage_schedule_view` 가 매번 다시 세운 파생값이다(정본:
+# `plot_context.py` 모듈 docstring — 이 도메인은 파생값을 물질화했다가 이미
+# 여러 번 데었다). 그래서 이 provider 는 새 테이블/컬럼을 두지 않고, 요청마다
+# 구획을 다시 훑어 그 자리에서 이벤트를 만든다.
+#
+# 버킷은 다른 provider 처럼 '카테고리'(ai|user|...)가 아니라 **부지**다 —
+# 캘린더가 부지별로 켜고 끄는 화면이기 때문이다. 그래서 `category` 는
+# `'site:<site_uuid>'` | `'site:unassigned'` 형태를 쓴다.
+#
+# 색은 한 가지만 쓴다: 부지 구분은 이미 버킷(토글)이 하고 있어서 단계마다
+# 다른 색을 주면 "부지가 다른데 왜 색이 같지" 와 "부지가 같은데 왜 색이
+# 다르지"가 동시에 생긴다. `_CATEGORY_COLOR_HINT`/`_NOTE_COLOR_HINT`/
+# `_NOTICE_COLOR_HINT` 가 chart-1/3/4/5/6 을 이미 각자의 뜻으로 차지했으니
+# (사람=1·AI=3·노트=4·공지=5·장치=6), 남는 chart-2 를 쓴다 — 스케줄
+# provider 에서 chart-2 는 `_DEFAULT_COLOR_HINT` 로 등록돼 있지만 그건 "위
+# 세 action_type 어디에도 안 걸리면" 만 떨어지는 잡동사니 자리라 실제로 한
+# 카테고리의 대표색으로 화면에 나타나지 않는다 — 실질적으로 비어 있는 칸이다.
+_PLOT_STAGE_COLOR_HINT = 'chart-2'
+
+# 피커의 점 색도 새로 짓지 않는다. `_BUCKET_COLOR`의 ai/user/device 값은
+# aot-theme-variables.css 의 --aot-chart-3/1/6 hex 를 그대로 옮긴 것이다
+# (note/notice 는 그 팔레트 밖 커스텀 색). 위에서 고른 chart-2 와 같은
+# 출처(같은 CSS 파일의 --aot-chart-2)를 그대로 쓴다.
+_PLOT_STAGE_BUCKET_COLOR = '#8BC1C1'  # aot-theme-variables.css --aot-chart-2
+
+
+def provide_plot_stage_events(start=None, end=None, limit=500, category=None):
+    """구획(`GeoPlot`)의 단계 → 캘린더 이벤트.
+
+    `category` 는 버킷 필터이되 다른 provider 처럼 고정된 이름 집합이 아니라
+    `'site:<site_uuid>'`(부지 하나) | `'site:unassigned'`(부지가 안 잡히는
+    구획) 이다. `'site:'` 로 시작하지 않는 요청은 이 소스와 무관하다.
+
+    대상은 `program_uuid` 가 있는(= 단계 개념이 성립하는) 구획 중 표시 창과
+    기간이 겹치는 것만이다. 프로그램이 없는 구획은 `stage_schedule_view` 가
+    애초에 `[]` 를 주므로 걸러도 정보 손실이 없다.
+
+    `programs`/`containers`/`facilities` 캐시를 루프 밖에서 만들어 넘긴다 —
+    구획 수만큼 프로그램 행·지도 도형을 다시 읽으면 목록 화면 하나가 N+1이
+    된다(같은 이유로 `plot_context.to_dict` 도 이 캐시들을 쓴다).
+    """
+    if category and not category.startswith('site:'):
+        return []
+
+    from datetime import date, timedelta
+
+    from sqlalchemy import or_
+
+    from aot.databases.models import GeoPlot
+    from aot.aot_flask.geo import device_membership
+    from aot.aot_flask.geo.plot_context import (
+        geometry_of, program_brief, stage_schedule, stage_schedule_view,
+    )
+
+    start_dt = _parse_range_bound(start)
+    end_dt = _parse_range_bound(end)
+    start_date = start_dt.date() if start_dt is not None else None
+    end_date = end_dt.date() if end_dt is not None else None
+
+    query = GeoPlot.query.filter(GeoPlot.program_uuid.isnot(None))
+    if end_date is not None:
+        query = query.filter(GeoPlot.started_on <= end_date)
+    if start_date is not None:
+        query = query.filter(or_(GeoPlot.ended_on.is_(None),
+                                 GeoPlot.ended_on >= start_date))
+    plots = query.order_by(GeoPlot.started_on.asc()).limit(limit).all()
+
+    programs = {}
+    containers_cache = {}
+    facilities_cache = {}
+
+    events = []
+    for plot in plots:
+        try:
+            program = program_brief(plot, programs=programs)
+            if not program or program.get('missing'):
+                continue
+            sched = stage_schedule(plot, program=program, programs=programs)
+            stages = stage_schedule_view(plot, sched=sched)
+
+            containers = containers_cache.get(plot.geo_id)
+            if containers is None:
+                containers = device_membership.load_containers(plot.geo_id)
+                containers_cache[plot.geo_id] = containers
+            site = device_membership.site_for_geometry(
+                plot.geo_id, geometry_of(plot, facilities=facilities_cache),
+                containers=containers)
+        except Exception:
+            # 구획 하나의 파생이 깨져도 달력 전체를 비우지 않는다 — 다른
+            # provider 들과 같은 태도.
+            logger.exception("provide_plot_stage_events: 구획 %s 준비 실패",
+                             getattr(plot, 'unique_id', None))
+            continue
+
+        bucket = 'site:%s' % site.unique_id if site is not None else 'site:unassigned'
+        if category and bucket != category:
+            continue
+
+        plot_name = plot.name or plot.subject
+
+        for st in stages:
+            starts_on = st.get('starts_on')
+            if not starts_on:
+                # 앞 단계가 "끝까지"(길이 없음)라 다음 경계를 셀 수 없는
+                # 경우다 — 지어내지 않고 그 칸은 건너뛴다.
+                continue
+            ends_on = st.get('ends_on')
+
+            try:
+                s_date = date.fromisoformat(starts_on)
+                e_date = date.fromisoformat(ends_on) if ends_on else None
+            except (TypeError, ValueError):
+                continue
+            if end_date is not None and s_date > end_date:
+                continue
+            if start_date is not None and e_date is not None and e_date < start_date:
+                continue
+
+            # FullCalendar 의 allDay 이벤트에서 `end` 는 배타적인데
+            # `ends_on` 은 마지막 날(포함)이다 — +1일 하지 않으면 모든 단계
+            # 막대가 하루씩 짧게 그려진다.
+            end_exclusive = (e_date + timedelta(days=1)).isoformat() if e_date else None
+
+            events.append({
+                'id': 'plotstage-%s-%s' % (plot.unique_id, st.get('key')),
+                'jobId': None,
+                'title': '%s · %s' % (plot_name, st.get('name')),
+                'start': starts_on,
+                'end': end_exclusive,
+                'allDay': True,
+                'sourceType': 'plot_stage',
+                'category': 'plot_stage',
+                'bucket': bucket,
+                'state': st.get('state'),
+                'colorHint': _PLOT_STAGE_COLOR_HINT,
+                'content': st.get('name'),
+                'location': plot_name,
+                'worker': None,
+                # 드래그로 미래 단계를 옮기는 쓰기 경로는 이미 있다(다른 작업) —
+                # 여기서는 `stage_schedule_view` 가 이미 판정한 `editable` 을
+                # 그대로 옮길 뿐 다시 판정하지 않는다(두 번째 판정자를 만들면
+                # 갈라진다).
+                'rowEditable': bool(st.get('editable')),
+                'rowDeletable': False,
+                'deepLink': '/geo',
+                'plotUuid': plot.unique_id,
+                'stageKey': st.get('key'),
+                'openEnd': ends_on is None,
+            })
+
+    if len(events) > limit:
+        events = events[:limit]
+    return events
+
+
+def plot_stage_buckets():
+    """구획 단계 캘린더가 켤 수 있는 **부지** 목록 → 피커 항목.
+
+    부지마다 색을 달리하지 않는다 — 단계는 전부 `_PLOT_STAGE_COLOR_HINT`
+    하나를 쓰고, 부지 구분은 이 목록 항목을 켜고 끄는 것으로 한다. 그래서
+    여기서 필요한 것은 "프로그램이 걸린 구획을 가진 부지가 어디인가" 뿐이다.
+    구획이 하나도 없는 부지, 즉 눌러도 빈 달력만 나오는 항목은 올리지 않는다.
+    부지가 안 잡히는 구획이 하나라도 있으면 `'site:unassigned'` 를 목록
+    끝에 붙인다.
+    """
+    from flask_babel import gettext
+
+    from aot.databases.models import GeoPlot
+    from aot.aot_flask.geo import device_membership
+    from aot.aot_flask.geo.plot_context import geometry_of, _shape_name
+
+    plots = GeoPlot.query.filter(GeoPlot.program_uuid.isnot(None)).all()
+
+    containers_cache = {}
+    facilities_cache = {}
+    site_names = {}
+    has_unassigned = False
+
+    for plot in plots:
+        try:
+            containers = containers_cache.get(plot.geo_id)
+            if containers is None:
+                containers = device_membership.load_containers(plot.geo_id)
+                containers_cache[plot.geo_id] = containers
+            site = device_membership.site_for_geometry(
+                plot.geo_id, geometry_of(plot, facilities=facilities_cache),
+                containers=containers)
+        except Exception:
+            logger.exception("plot_stage_buckets: 구획 %s 부지 판정 실패",
+                             getattr(plot, 'unique_id', None))
+            continue
+
+        if site is None:
+            has_unassigned = True
+            continue
+        site_names.setdefault(site.unique_id, _shape_name(site) or site.unique_id[:8])
+
+    buckets = [{'key': 'site:%s' % uuid, 'name': name,
+               'color': _PLOT_STAGE_BUCKET_COLOR}
+              for uuid, name in site_names.items()]
+    buckets.sort(key=lambda b: b['name'])
+    if has_unassigned:
+        buckets.append({'key': 'site:unassigned',
+                        'name': gettext('Unassigned site'),
+                        'color': _PLOT_STAGE_BUCKET_COLOR})
+    return buckets
+
+
 CALENDAR_EVENT_PROVIDERS = {
     'schedule': provide_schedule_events,
     'notice': provide_notice_events,
     'note': provide_note_events,
+    'plot_stage': provide_plot_stage_events,
 }
