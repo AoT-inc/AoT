@@ -274,19 +274,6 @@ def api_geo_init_design():
         
     return jsonify(result)
 
-@blueprint.route('/api/geo/designs/<string:map_uuid>', methods=['GET'])
-@login_required
-def api_geo_design_get(map_uuid):
-    """Get GeoMap Metadata & State by UUID"""
-    from aot.aot_flask.geo import GeoDesignManager
-    result, error = GeoDesignManager.get_design_map(map_uuid)
-    
-    if error:
-        status_code = 404 if "not found" in error else 500
-        return jsonify({'ok': False, 'message': error}), status_code
-        
-    return jsonify(result)
-
 @blueprint.route('/api/geo/designs/list', methods=['GET'])
 @login_required
 def api_geo_designs_list():
@@ -311,55 +298,6 @@ def api_geo_designs_list():
         return jsonify(result)
     except Exception as e:
         return jsonify({'ok': False, 'message': str(e)}), 500
-
-@blueprint.route('/api/geo/designs/<map_uuid>', methods=['DELETE'])
-@login_required
-def api_geo_design_delete(map_uuid):
-    """Delete GeoMap"""
-    if not utils_general.user_has_permission('edit_settings'):
-        return jsonify({'ok': False, 'message': 'Permission Denied'}), 403
-
-    # 그룹 스코프 — 지도는 자기 자신이 부여 단위다.
-    # (정본: docs/design/access-scope-groups.md)
-    if not scope.can_operate('geo_map', map_uuid):
-        return jsonify({'ok': False, 'message': scope.deny_message()}), 403
-        
-    from aot.aot_flask.geo import GeoDesignManager
-    result, error = GeoDesignManager.delete_design_map(map_uuid)
-    
-    if error:
-        if isinstance(result, dict) and result.get('blocked'):
-            # 아직 쓰는 곳이 있어 거절한 것 — 서버 오류가 아니다.
-            status_code = 409
-        else:
-            status_code = 404 if "not found" in error else 500
-        return jsonify({'ok': False, 'message': error}), status_code
-        
-    return jsonify(result)
-
-@blueprint.route('/api/geo/designs', methods=['POST'])
-@login_required
-def api_geo_design_save():
-    """Create or Update GeoMap Metadata & State"""
-    if not utils_general.user_has_permission('edit_settings'):
-        return jsonify({'ok': False, 'message': 'Permission Denied'}), 403
-    
-    from aot.aot_flask.geo import GeoDesignManager
-    data = request.get_json() or {}
-
-    # 그룹 스코프 — 기존 지도를 고칠 때만 판정한다. 새 지도(uuid 없음)는
-    # 부여할 대상이 아직 없으므로 막을 것이 없다.
-    _map_uuid = data.get('map_uuid')
-    if _map_uuid and not scope.can_operate('geo_map', _map_uuid):
-        return jsonify({'ok': False, 'message': scope.deny_message()}), 403
-
-    result, error = GeoDesignManager.save_design_map(data, current_user.id)
-    
-    if error:
-         status_code = 404 if "not found" in error else 500
-         return jsonify({'ok': False, 'message': error}), status_code
-         
-    return jsonify(result)
 
 @blueprint.route('/api/tools/kma_lookup', methods=['POST'])
 @login_required
@@ -588,41 +526,6 @@ def api_geo_settings():
 def api_geo_overlays_list():
     from aot.aot_flask.geo.geo_overlays import GeoOverlayManager
     return GeoOverlayManager.get_overlays()
-
-@blueprint.route('/api/geo/overlays', methods=['GET', 'POST'])
-@login_required
-def api_geo_overlays():
-    """Unified Overlays Interface (GET: load, POST: bulk save)"""
-    from aot.aot_flask.geo import GeoOverlayManager
-    
-    if request.method == 'GET':
-        map_uuid = request.args.get('map_uuid')
-        parent_id = request.args.get('parent_id')
-        target_type = request.args.get('type')
-        device_id = request.args.get('device_id')
-        
-        result, error = GeoOverlayManager.get_overlays(map_uuid, target_type, parent_id, device_id=device_id)
-        if error:
-            return jsonify({'error': error}), 500
-        return jsonify(result)
-        
-    else: # POST
-        if not utils_general.user_has_permission('edit_settings'):
-            return jsonify({'ok': False, 'message': 'Permission Denied'}), 403
-            
-        data = request.get_json() or {}
-
-        # 그룹 스코프 — 도형은 지도에 속한다. 여기를 막지 않으면 부여된 지도의
-        # 도형을 남이 통째로 갈아치울 수 있다(이 경로는 전량 교체다).
-        if not scope.can_operate('geo_map', data.get('map_uuid')):
-            return jsonify({'ok': False, 'message': scope.deny_message()}), 403
-
-        result, error = GeoOverlayManager.save_overlays(data)
-        
-        if error:
-            return jsonify({'ok': False, 'message': error}), 500
-            
-        return jsonify(result)
 
 @blueprint.route('/api/geo/overlays/delta', methods=['POST'])
 @login_required

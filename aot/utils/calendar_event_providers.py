@@ -385,13 +385,11 @@ def provide_plot_stage_events(start=None, end=None, limit=500, category=None):
 
     events = []
     for plot in plots:
+        # **부지를 먼저 판정하고 거른다.** 단계 계산이 부지 판정보다 두 배 넘게
+        # 비싸서(실측 구획당 3.8ms 대 1.6ms), 버킷이 안 맞는 구획까지 계산해
+        # 놓고 버리면 부지 하나를 켜는 요청이 전체를 켜는 것과 같은 값을 치른다
+        # (26-09-16 실측: 부지 하나 371ms, 전체 277ms — 필터가 뒤에 있어서다).
         try:
-            program = program_brief(plot, programs=programs)
-            if not program or program.get('missing'):
-                continue
-            sched = stage_schedule(plot, program=program, programs=programs)
-            stages = stage_schedule_view(plot, sched=sched)
-
             containers = containers_cache.get(plot.geo_id)
             if containers is None:
                 containers = device_membership.load_containers(plot.geo_id)
@@ -400,14 +398,25 @@ def provide_plot_stage_events(start=None, end=None, limit=500, category=None):
                 plot.geo_id, geometry_of(plot, facilities=facilities_cache),
                 containers=containers)
         except Exception:
-            # 구획 하나의 파생이 깨져도 달력 전체를 비우지 않는다 — 다른
-            # provider 들과 같은 태도.
-            logger.exception("provide_plot_stage_events: 구획 %s 준비 실패",
+            logger.exception("provide_plot_stage_events: 구획 %s 부지 판정 실패",
                              getattr(plot, 'unique_id', None))
             continue
 
         bucket = 'site:%s' % site.unique_id if site is not None else 'site:unassigned'
         if category and bucket != category:
+            continue
+
+        try:
+            program = program_brief(plot, programs=programs)
+            if not program or program.get('missing'):
+                continue
+            sched = stage_schedule(plot, program=program, programs=programs)
+            stages = stage_schedule_view(plot, sched=sched)
+        except Exception:
+            # 구획 하나의 파생이 깨져도 달력 전체를 비우지 않는다 — 다른
+            # provider 들과 같은 태도.
+            logger.exception("provide_plot_stage_events: 구획 %s 단계 계산 실패",
+                             getattr(plot, 'unique_id', None))
             continue
 
         plot_name = plot.name or plot.subject

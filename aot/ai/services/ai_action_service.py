@@ -1623,6 +1623,31 @@ class AIActionService:
                 # @ANCHOR: CONTROL_OUTPUT_FIX — use operate_device_tool directly.
                 # Formerly delegated to 'output' action which is blocked by LegacyGuardResolver.
                 # operate_device_tool talks directly to the daemon, bypassing the legacy gate.
+                #
+                # [PC-089-GATE-EXT] This branch used to have NO approval check of its own —
+                # it relied entirely on the MCP layer (mcp_safety_gate.gate()) having already
+                # approved the call before dispatch. That is true for every caller reachable
+                # in normal operation (set_output_state's native-tool handler is only invoked
+                # after gate() returns None), but it meant anyone who could call
+                # execute_action('control_output', ...) directly in Python — a different
+                # internal service, a background script, a shell inside the app container —
+                # skipped approval and the audit log entirely, with no signal that anything
+                # unusual happened. Confirmed by direct reproduction 2026-09-16
+                # (mcp_tool_audit_tracker.md #17): a shell call turned a valve off with zero
+                # approval record.
+                # Mirrors the same _approved requirement already used for 'human_device_control'
+                # above and the PC-089-GATE check for mcp_tool_call/virtual_tool_call — this was
+                # the one physical-actuation action_type that had been left out of that pattern.
+                if not _approved:
+                    logger.error(
+                        "[PC-089-GATE-EXT] Blocked control_output on %s: call path lacks "
+                        "an _approved=True approval token.", target_id)
+                    return {
+                        "status": "error",
+                        "message": "control_output requires an approval token (_approved=True); "
+                                   "it is reachable only through the approved MCP dispatch path.",
+                        "blocked": True,
+                    }
                 from aot.ai.services.aot_data_tool_service import AoTDataToolService
                 state = params.get('state', 'off')
                 duration_minutes = params.get('duration_minutes')

@@ -655,6 +655,44 @@ class HelpersMixin:
         except Exception:
             self.logger.debug('안 쓰이는 옵션 점검 실패', exc_info=True)
 
+    def _warn_light_band_conflict_once(self) -> None:
+        """광량 상·하한이 서로 모순이면 기동 후 한 번 알린다.
+
+        차광막을 닫으면 그 아래 광량은 `상한 × 총 투과율`(피복 × 차광막) 까지
+        떨어진다. 그 값이 하한보다 낮으면 **어떤 개도로도 두 기준을 함께
+        만족할 수 없다** — 밝아서 닫으면 이번엔 어둡다.
+
+        예(영양 육묘장): 상한 250 · 피복 0.85 · 차광막 0.5 → 닫으면 106 인데
+        하한이 150 이다. 사람이 고쳐야 하는 설정이고, 제어는 그동안 차광을
+        우선한다(`_check_hard_constraints`).
+
+        ⚠ **한 번만, error 로** — `_warn_inert_options_once` 와 같은 이유다
+          (기본 설치의 컨트롤러 로거는 ERROR 라 warning 은 안 남는다).
+        """
+        if getattr(self, '_light_band_logged', False):
+            return
+        self._light_band_logged = True
+        try:
+            lmax = float(getattr(self, 'light_max', 0.0) or 0.0)
+            lmin = float(getattr(self, 'light_min', 0.0) or 0.0)
+            if lmax <= 0.0 or lmin <= 0.0:
+                return                      # 한쪽을 껐으면 모순이 성립하지 않는다
+            tau = (self._facility_shade_transmittance()
+                   * self._facility_cover_transmittance())
+            if not (0.0 < tau <= 1.0):
+                return
+            closed = lmax * tau
+            if lmin < closed:
+                return                      # 정상 — 닫아도 하한 위다
+            self.logger.error(
+                '광량 상·하한이 서로 모순입니다 — 상한 %.0f 에서 차광막을 닫으면 '
+                '%.0f W/m² 이 되어 하한 %.0f 아래입니다(총 투과율 %.2f). '
+                '하한을 %.0f 미만으로 낮추거나 상한을 %.0f 이상으로 올리세요. '
+                '그때까지는 차광을 우선하고 보광·개방 강제는 하지 않습니다.',
+                lmax, closed, lmin, tau, closed, lmin / tau)
+        except Exception:
+            self.logger.debug('광량 밴드 점검 실패', exc_info=True)
+
     # ── Email notification helpers ─────────────────────────────────────────────────────
 
     def _get_email_actions(self) -> list:

@@ -1252,6 +1252,38 @@ def _dispatch_virtual_tool(tool_name, arguments):
     except (TypeError, ValueError):
         pass
 
+    # 필수 인자가 아예 빠지면 여기서 잡는다. 그러지 않으면 `handler(**kwargs)`
+    # 가 곧장 raw `TypeError` 를 내고, 그게 `_execute_tool` 의 바깥 except 에
+    # 잡혀 응답에 그대로 실린다 — "AoTDataToolService.resolve_target_tool()
+    # missing 1 required positional argument: 'target_name'" 처럼 내부 클래스명
+    # ·메서드명이 노출된다(2026-09-16 실측: `resolve_target` 을 잘못된 인자명
+    # `query` 로, `get_sensor_detail` 을 `device_id` 로 호출했을 때 재현,
+    # mcp_tool_audit_tracker.md #19). 위의 '알 수 없는 인자를 조용히 무시'와
+    # 대칭인 반대쪽 실패 모드라 같은 자리에서 함께 정리한다.
+    try:
+        import inspect as _inspect
+        _sig_params = _inspect.signature(handler).parameters
+        _missing = [
+            name for name, p in _sig_params.items()
+            if p.default is _inspect.Parameter.empty
+            and p.kind in (_inspect.Parameter.POSITIONAL_OR_KEYWORD,
+                           _inspect.Parameter.KEYWORD_ONLY)
+            and name not in kwargs
+        ]
+    except (TypeError, ValueError):
+        _missing = []
+    if _missing:
+        return {
+            "status": "error",
+            "message": (
+                f"Missing required argument(s) for '{tool_name}': "
+                f"{', '.join(_missing)}. Received: "
+                f"{', '.join(sorted(kwargs.keys())) or '(none)'}. "
+                f"Check tools/list (or open_drawer/get_tool_detail) for this tool's "
+                f"exact parameter names — a near-miss name (e.g. 'query' instead of "
+                f"'target_name') is silently NOT what you meant."),
+        }
+
     result = handler(**kwargs)
     if ignored and isinstance(result, dict):
         result = dict(result)

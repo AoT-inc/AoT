@@ -254,12 +254,21 @@ class AoTNativeToolEngine:
                 if not output:
                     return {"status": "error", "message": f"Output device '{device_id}' not found"}
 
-                # Delegate to the daemon control channel via AIActionService
+                # Delegate to the daemon control channel via AIActionService.
+                # _approved=True: this static method is only ever reached AFTER
+                # mcp_safety_gate.gate() has already approved the call — 'set_output_state'
+                # is in _NATIVE_WRITE_TOOLS, so tool_execution.py's dispatch (and the
+                # elicitation-approved immediate-execute path in mcp_safety_gate.py) both
+                # gate this before it ever reaches here. Passing the token forward tells
+                # execute_action's own 'control_output' check (added 2026-09-16,
+                # mcp_tool_audit_tracker.md #17) that approval already happened, instead of
+                # leaving that branch unguarded for every caller.
                 from aot.ai.services.ai_action_service import AIActionService
                 result = AIActionService.execute_action(
                     "control_output",
                     device_id,
                     {"state": state, "duration_seconds": duration},
+                    _approved=True,
                 )
                 if isinstance(result, dict) and result.get("status") == "error":
                     logger.error(f"[NativeToolEngine] set_output_state failed for {device_id}: {result}")

@@ -8306,6 +8306,26 @@ class AoTDataToolService:
                 if ch not in channel_states:
                     continue
                 entry = {"state": channel_states[ch]}
+                if entry["state"] is None:
+                    # null의 원인은 최소 두 가지고, 이 응답만으로는 구분이 안 된다:
+                    # 한 번도 조작 안 함, 드라이버가 아직 설정을 못 마침(예:
+                    # LoRaWAN 다운링크가 API 토큰 없이 등록됨), 또는 그 드라이버가
+                    # 원래 상태를 되읽지 않음. 실측(2026-09-16, mcp_tool_audit_
+                    # tracker.md #18): 임실 붕어섬 밸브 13개가 전부 이 상태였는데,
+                    # 실제 원인은 `chirpstack_downlink` 드라이버의 `cs_api_token`
+                    # 설정값이 빈 문자열이라 `is_setup()`이 False로 떨어져
+                    # `is_on()`이 절대 값을 못 내는 것이었다 — "이 드라이버는
+                    # 원래 상태를 안 알려준다"는 처음 가정은 틀렸다(실제로는
+                    # 확인가능한 필드다, 설정만 마치면 됨). 이 도구 층에서
+                    # 원인을 단정하지 않는다 — 드라이버 종류·설정을 몰라도 되는
+                    # 응답 구조를 유지하려면, 원인 판정은 사람이 장치 설정 화면을
+                    # 보고 하게 두는 편이 낫다.
+                    entry["note"] = ("state is null for this channel — this can mean the "
+                                      "output has never been commanded, its driver has not "
+                                      "finished setup (e.g. a LoRaWAN downlink missing its "
+                                      "API token/EUI), or the driver does not report state "
+                                      "back at all. This response cannot tell which; check "
+                                      "the device's own configuration to find out.")
                 try:
                     entry["seconds_on"] = daemon.output_sec_currently_on(device_id, ch)
                 except Exception:
@@ -8323,7 +8343,7 @@ class AoTDataToolService:
                 "status": "success",
                 "device_id": device_id,
                 "name": output.name,
-                "channels": channels_out
+                "channels": channels_out,
             }
         except Exception as e:
             logger.exception("Error in get_output_state")

@@ -661,6 +661,18 @@ class CycleMixin:
             if solar is not None and solar > 0.0:
                 light_val  = float(solar)
                 is_outdoor = True
+        # 차광막을 **걷었을 때** 실내가 얼마나 밝아지는가 — 차광 판정이 이 값을
+        # 본다(아래 `_check_hard_constraints` 참조). 지금 상태의 광량으로 판정하면
+        # 닫는 순간 어두워져 판정이 뒤집히고, 차광막이 매 사이클 왕복한다.
+        outdoor_raw = light_val if is_outdoor else None
+        if outdoor_raw is None and external:
+            _solar = external.get('solar')
+            if _solar is not None and _solar > 0.0:
+                outdoor_raw = float(_solar)
+        if outdoor_raw is not None:
+            internal['light_open_est'] = estimate_indoor_light(
+                outdoor_raw, [], {},
+                cover_tau=self._facility_cover_transmittance())
         if light_val is not None and is_outdoor:
             est = estimate_indoor_light(
                 light_val, self._profiles, self._coord_state.prev_commands,
@@ -1143,6 +1155,7 @@ class CycleMixin:
             (T_g_min, T_g_max, RH_g_min, RH_g_max))
 
         self._warn_inert_options_once()
+        self._warn_light_band_conflict_once()
 
         T_int  = internal.get('T',  22.0)
         RH_int = internal.get('RH', 60.0)
@@ -1682,25 +1695,43 @@ class CycleMixin:
         # ── Light threshold constraint check ──────────────────────────────────
         # 실내 추정 광량은 사이클 앞에서 _compute_light_est() 가 이미 계산했다.
         light_val = internal.get('light_est', internal.get('light'))
+        # ⚠ **차광 판정은 "걷었을 때" 값으로 한다** (2026-09-16).
+        #   지금 상태의 광량으로 판정하면 이렇게 된다: 밝아서 닫는다 → 닫으니
+        #   어두워진다 → 판정이 풀린다 → 걷는다 → 다시 밝다. 차광막이 사이클마다
+        #   왕복하고, 그동안 작물은 둘 중 어느 쪽도 아닌 빛을 받는다.
+        #   기준을 "막을 걷으면 얼마나 밝은가" 로 두면 해가 높은 동안 판정이
+        #   흔들리지 않는다. 실외를 모르면(실내 센서만 있는 설치) 예전처럼
+        #   지금 값으로 판정한다 — 없는 값을 지어내지 않는다.
+        open_val = internal.get('light_open_est')
+        judge_max = open_val if open_val is not None else light_val
         lbs = self._light_breach_state
         if light_val is not None:
             dbg = getattr(self, 'log_level_debug', False)
             if self.light_max and self.light_max > 0:
                 breached = latch_threshold(
-                    light_val, self.light_max, self.light_max * LIGHT_HYST_FRAC,
+                    judge_max, self.light_max, self.light_max * LIGHT_HYST_FRAC,
                     lbs['max'], 'max')
                 if breached:
                     if not lbs['max'] and dbg:
                         self.logger.debug(
-                            'light=%.0f > max=%.0f — forcing shade',
-                            light_val, self.light_max)
+                            'light(걷었을 때)=%.0f > max=%.0f — forcing shade',
+                            judge_max, self.light_max)
                     internal['_force_shade'] = True
                 elif lbs['max'] and dbg:
                     self.logger.debug(
-                        'light=%.0f — max=%.0f 차광강제 해제(히스테리시스 %.0f)',
-                        light_val, self.light_max, self.light_max * LIGHT_HYST_FRAC)
+                        'light(걷었을 때)=%.0f — max=%.0f 차광강제 해제(히스테리시스 %.0f)',
+                        judge_max, self.light_max, self.light_max * LIGHT_HYST_FRAC)
                 lbs['max'] = breached
-            if self.light_min and self.light_min > 0:
+            # ⚠ **차광 중에는 보광·개방을 강제하지 않는다.** 차광막을 닫으면
+            #   그 아래가 하한보다 어두워지는 설정이 있다(하한 ≥ 상한 × 총
+            #   투과율). 그 상태에서 둘 다 강제하면 한쪽은 닫으라 하고 한쪽은
+            #   열라 해서 사이클마다 왕복한다 — 설정이 모순인 것이지 상황이
+            #   모순인 것이 아니므로, 장치를 흔드는 대신 사람에게 알린다
+            #   (`_warn_light_band_conflict_once`).
+            if lbs['max'] and self.light_min and light_val is not None \
+                    and light_val < self.light_min:
+                internal['_light_band_conflict'] = True
+            if self.light_min and self.light_min > 0 and not lbs['max']:
                 breached = latch_threshold(
                     light_val, self.light_min, self.light_min * LIGHT_HYST_FRAC,
                     lbs['min'], 'min')

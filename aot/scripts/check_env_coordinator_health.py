@@ -36,7 +36,8 @@
               정상 사유이지만 **24시간 100%** 면 그 장치는 사실상 죽어 있다.
 긴급 사이클   emergency 모드 비율. 드물어야 정상이다.
 설정 점검     오늘 실제로 밟은 지뢰들 — 종료일 임박, 유도/하드 역전,
-              신선도 상한이 센서 주기보다 짧아 값이 늘 만료되는 경우.
+              신선도 상한이 센서 주기보다 짧아 값이 늘 만료되는 경우,
+              차광막을 닫으면 광량 하한 아래로 떨어지는 모순 설정.
 """
 
 import argparse
@@ -524,7 +525,50 @@ def _check_settings(opts, facility_uuid, row=None):
                 f'({h_lo:g}~{h_hi:g}) 밖입니다 — 매 사이클 경고가 납니다'))
 
     findings.extend(_check_sensor_freshness(opts, facility_uuid))
+    findings.extend(_check_light_band(opts, facility_uuid))
     return findings
+
+
+def _check_light_band(opts, facility_uuid):
+    """차광막을 닫으면 하한 아래로 떨어지는 설정인가 (2026-09-16).
+
+    차광막 아래 광량은 `상한 × 총 투과율`(피복 × 차광막) 까지 떨어진다. 그 값이
+    하한보다 낮으면 **어떤 개도로도 두 기준을 함께 만족할 수 없다** — 밝아서
+    닫으면 이번엔 어둡다고 한다. 제어는 차광을 우선해 왕복만 막고 있으므로,
+    고치는 것은 사람 몫이고 그 사실이 어딘가에는 보여야 한다.
+
+    실측(영양 육묘장): 상한 250 · 피복 0.85 · 차광막 0.5 → 닫으면 106 인데
+    하한이 150 이었다.
+    """
+    lmax = float(opts.get('light_max') or 0.0)
+    lmin = float(opts.get('light_min') or 0.0)
+    if lmax <= 0.0 or lmin <= 0.0 or not facility_uuid:
+        return []            # 한쪽을 껐으면 모순이 성립하지 않는다
+    try:
+        from aot.aot_flask.geo.facility_integration import get_facility_integration
+        from aot.aot_flask.geo.facility_calc import _shade_tau
+        data, err = get_facility_integration(facility_uuid)
+        if err or not isinstance(data, dict):
+            return []
+        cover = float((data.get('capacity_meta') or {}).get('transmittance')
+                      or (data.get('computed') or {}).get('transmittance') or 0.0)
+        shade = (((data.get('envelope') or {}).get('curtain') or {}).get('shade')
+                 or {})
+        s_tau = _shade_tau(shade) if shade.get('enabled') else 1.0
+    except Exception:                                        # noqa: BLE001
+        return []
+    tau = cover * s_tau
+    if not (0.0 < tau <= 1.0):
+        return []
+    closed = lmax * tau
+    if lmin < closed:
+        return []            # 닫아도 하한 위다 — 정상
+    return [(
+        'warn',
+        f'광량 상·하한이 모순입니다 — 상한 {lmax:g} 에서 차광막을 닫으면'
+        f' {closed:.0f} W/m² 이라 하한 {lmin:g} 아래입니다(총 투과율 {tau:.2f}).'
+        f' 하한을 {closed:.0f} 미만으로 낮추거나 상한을 {lmin / tau:.0f} 이상으로'
+        f' 올리세요 — 그때까지 보광·개방 강제는 서지 않습니다')]
 
 
 def _check_sensor_freshness(opts, facility_uuid):
