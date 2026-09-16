@@ -30122,26 +30122,16 @@ msgid "Max Light Threshold"
 msgstr "Макс. порог освещённости"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:527
-msgid ""
-"Close the shade screen above this light level. 0 = never shade. This is a"
-" shading choice only — how much light the crop can use comes from its "
-"program."
-msgstr ""
-"Закрывать затеняющий экран выше этого уровня освещённости. 0 = никогда не"
-" затенять. Это только выбор затенения — сколько света может использовать "
-"культура, определяется её программой."
+msgid "Close the shade screen above this light level. 0 = never shade. This is a shading choice only — how much light the crop can use comes from its program. Measured under the screen — the estimate applies cover and screen transmittance to outdoor sunlight."
+msgstr "Закрывать затеняющий экран выше этого уровня освещённости. 0 = никогда не затенять. Это только выбор затенения — сколько света может использовать культура, определяется её программой. Измеряется под экраном — оценка учитывает светопропускание покрытия и экрана для наружного света."
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:536
 msgid "Min Light Threshold (Supplemental)"
 msgstr "Мин. порог освещённости (доп. досветка)"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:538
-msgid ""
-"Switch supplemental lighting on below this light level. 0 = no "
-"supplemental lighting, which is most facilities."
-msgstr ""
-"Включать дополнительное освещение ниже этого уровня освещённости. 0 = без"
-" дополнительного освещения — так устроено большинство объектов."
+msgid "Switch supplemental lighting on below this light level. 0 = no supplemental lighting, which is most facilities. Measured under the screen — the estimate applies cover and screen transmittance to outdoor sunlight."
+msgstr "Включать дополнительное освещение ниже этого уровня освещённости. 0 = без дополнительного освещения — так устроено большинство объектов. Измеряется под экраном — оценка учитывает светопропускание покрытия и экрана для наружного света."
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:546
 msgid "CO₂"

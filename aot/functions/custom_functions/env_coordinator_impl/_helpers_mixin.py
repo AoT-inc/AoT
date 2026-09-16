@@ -865,7 +865,11 @@ class HelpersMixin:
         # internal['light'] 는 시스템 관례상 W/m²(전천일사). light_unit 이 명시되면 사용.
         rolled = accumulate_cycle(
             acc=self._daily_acc,
-            light_value=internal.get('light'),
+            # ⚠ **막 아래 값이다.** DLI 는 작물이 하루에 받은 광이므로, 실외
+            #   원본으로 쌓으면 차광막을 닫아 둔 날도 목표를 채운 것으로 나온다
+            #   (2026-09-16 지적). `light_est` 는 차광막 개도와 피복 투과율을
+            #   반영한 값이고, 실내 광센서가 있으면 그 실측 그대로다.
+            light_value=internal.get('light_est', internal.get('light')),
             light_unit=internal.get('light_unit'),
             T_mean=internal.get('T', 20.0),
             VPD=internal.get('VPD', 0.5),
@@ -983,6 +987,36 @@ class HelpersMixin:
             except Exception as exc:                            # noqa: BLE001
                 self.logger.debug('차광막 투과율 조회 실패: %s', exc)
         self._shade_tau_cache = tau
+        return tau
+
+    def _facility_cover_transmittance(self) -> float:
+        """연동 시설 피복재의 일사 투과율(0~1). 못 읽으면 1.0(깎지 않음).
+
+        지붕은 차광막이 없어도 늘 빛을 깎는다. 유리 0.85 · 2중 비닐 0.78 ·
+        부직포 0.50 처럼 자재마다 다르므로, 이것을 빼면 광량 상·하한이 설비마다
+        다른 것을 뜻하게 된다 — 같은 250 이 작물에게는 두 배 차이다.
+
+        값의 정본은 시설이다(`capacity_meta['transmittance']`, 프로필 로더가
+        시설 통합에서 실어 준다). **여기서 자재표를 다시 읽지 말 것** — 두 벌이
+        되면 갈라지고, 갈라지면 화면과 제어가 다른 광량을 본다.
+
+        ⚠ 못 읽을 때 0 을 쓰면 안 된다. 그러면 실내 광량이 0 으로 굳어 대낮에
+          보광등이 켜진다(`_facility_shade_transmittance` 와 같은 판단).
+        """
+        cached = getattr(self, '_cover_tau_cache', None)
+        if cached is not None:
+            return cached
+        tau = 1.0
+        for p in (getattr(self, '_profiles', None) or []):
+            v = (getattr(p, 'capacity_meta', None) or {}).get('transmittance')
+            try:
+                v = float(v or 0.0)
+            except (TypeError, ValueError):
+                continue
+            if 0.0 < v <= 1.0:
+                tau = v
+                break
+        self._cover_tau_cache = tau
         return tau
 
     def _hvac_running(self, prev_commands: dict = None) -> bool:

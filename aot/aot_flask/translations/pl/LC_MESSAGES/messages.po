@@ -30083,26 +30083,16 @@ msgid "Max Light Threshold"
 msgstr "Maksymalny próg światła"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:527
-msgid ""
-"Close the shade screen above this light level. 0 = never shade. This is a"
-" shading choice only — how much light the crop can use comes from its "
-"program."
-msgstr ""
-"Zamknij ekran zacieniający powyżej tego poziomu światła. 0 = nigdy nie "
-"zacieniaj. To wyłącznie wybór zacieniania — ilość światła, jaką może "
-"wykorzystać uprawa, wynika z jej programu."
+msgid "Close the shade screen above this light level. 0 = never shade. This is a shading choice only — how much light the crop can use comes from its program. Measured under the screen — the estimate applies cover and screen transmittance to outdoor sunlight."
+msgstr "Zamknij ekran zacieniający powyżej tego poziomu światła. 0 = nigdy nie zacieniaj. To wyłącznie wybór zacieniania — ilość światła, jaką może wykorzystać uprawa, wynika z jej programu. Mierzone pod ekranem — szacunek uwzględnia przepuszczalność pokrycia i ekranu dla światła zewnętrznego."
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:536
 msgid "Min Light Threshold (Supplemental)"
 msgstr "Min. próg światła (doświetlanie)"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:538
-msgid ""
-"Switch supplemental lighting on below this light level. 0 = no "
-"supplemental lighting, which is most facilities."
-msgstr ""
-"Włącz doświetlanie poniżej tego poziomu światła. 0 = brak doświetlania, "
-"co dotyczy większości obiektów."
+msgid "Switch supplemental lighting on below this light level. 0 = no supplemental lighting, which is most facilities. Measured under the screen — the estimate applies cover and screen transmittance to outdoor sunlight."
+msgstr "Włącz doświetlanie poniżej tego poziomu światła. 0 = brak doświetlania, co dotyczy większości obiektów. Mierzone pod ekranem — szacunek uwzględnia przepuszczalność pokrycia i ekranu dla światła zewnętrznego."
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:546
 msgid "CO₂"

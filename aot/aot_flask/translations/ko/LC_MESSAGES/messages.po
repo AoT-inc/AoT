@@ -28673,21 +28673,16 @@ msgid "Max Light Threshold"
 msgstr "최대 광량 임계값"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:527
-msgid ""
-"Close the shade screen above this light level. 0 = never shade. This is a"
-" shading choice only — how much light the crop can use comes from its "
-"program."
-msgstr ""
+msgid "Close the shade screen above this light level. 0 = never shade. This is a shading choice only — how much light the crop can use comes from its program. Measured under the screen — the estimate applies cover and screen transmittance to outdoor sunlight."
+msgstr "이 광량을 넘으면 차광막을 칩니다. 0 = 차광하지 않음. 이것은 차광 운영 기준일 뿐이고, 작물이 쓸 수 있는 광량은 프로그램이 정합니다. 차광막 아래 기준입니다. 실외 일사에 피복재와 차광막의 투과율을 반영해 추정합니다."
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:536
 msgid "Min Light Threshold (Supplemental)"
 msgstr "최소 광량 임계값 (보광)"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:538
-msgid ""
-"Switch supplemental lighting on below this light level. 0 = no "
-"supplemental lighting, which is most facilities."
-msgstr ""
+msgid "Switch supplemental lighting on below this light level. 0 = no supplemental lighting, which is most facilities. Measured under the screen — the estimate applies cover and screen transmittance to outdoor sunlight."
+msgstr "이 광량 아래로 내려가면 보광등을 켭니다. 0 = 보광 없음(대부분의 시설이 그렇습니다). 차광막 아래 기준입니다. 실외 일사에 피복재와 차광막의 투과율을 반영해 추정합니다."
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:546
 msgid "CO₂"

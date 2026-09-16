@@ -552,7 +552,7 @@ FUNCTION_INFORMATION = {
             'required': False,
             'name': lazy_gettext('Max Light Threshold'),
             'phrase': lazy_gettext(
-                'Close the shade screen above this light level. 0 = never shade. This is a shading choice only — how much light the crop can use comes from its program.'
+                'Close the shade screen above this light level. 0 = never shade. This is a shading choice only — how much light the crop can use comes from its program. Measured under the screen — the estimate applies cover and screen transmittance to outdoor sunlight.'
             ),
         },
         {
@@ -565,6 +565,7 @@ FUNCTION_INFORMATION = {
             'phrase': lazy_gettext(
                 'Switch supplemental lighting on below this light level. '
                 '0 = no supplemental lighting, which is most facilities.'
+                ' Measured under the screen — the estimate applies cover and screen transmittance to outdoor sunlight.'
             ),
         },
 

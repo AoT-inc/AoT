@@ -95,7 +95,8 @@ def latch_threshold(value: float, threshold: float, hysteresis: float,
 
 
 def estimate_indoor_light(outdoor_light: float, profiles: list[ActuatorProfile],
-                          apertures: dict, default_tau: float = 0.0) -> float:
+                          apertures: dict, default_tau: float = 0.0,
+                          cover_tau: float = 1.0) -> float:
     """실외 일사 + 차광막 개도로 차광막 '아래' 광량을 추정한다.
 
     실내 광센서가 없으면 internal['light'] 에 실외 일사가 그대로 들어가는데,
@@ -116,9 +117,15 @@ def estimate_indoor_light(outdoor_light: float, profiles: list[ActuatorProfile],
 
     둘 다 없으면 원본을 그대로 돌려준다(미설정 시 기존 동작 유지 — opt-in).
 
-    주의: 온실 피복재 투과율은 곱하지 않는다. 그 값은 차광막 개도와 무관한
-    상수라 사용자가 잡아둔 light_min/light_max 기준선에 이미 녹아 있고, 여기서
-    다시 곱하면 임계가 갑자기 훨씬 자주 걸린다.
+    **피복재 투과율(cover_tau)도 함께 곱한다** (2026-09-16). 예전에는 "그 값은
+    사용자가 잡아둔 기준선에 이미 녹아 있다" 며 빼 두었는데, 그러면 광량 상·하한이
+    설비마다 다른 것을 뜻하게 된다 — 유리 온실의 250 과 부직포 하우스의 250 이
+    작물 입장에서 두 배 차이다. 지금 이 함수가 돌려주는 값은 **작물이 실제로 받는
+    광량**이고, 광량 상·하한도 그 기준으로 읽는다.
+
+    ⚠ 그래서 이 변경 전에 잡아 둔 기준값은 실외 기준이다. 피복 투과율이 0.78 이면
+      같은 설정이 예전보다 22% 낮은 광량에서 걸린다 — 기존 설치는 기준값을 다시
+      잡아야 한다(릴리스 노트에 적을 것).
     """
     factors = []
     for p in profiles:
@@ -134,11 +141,15 @@ def estimate_indoor_light(outdoor_light: float, profiles: list[ActuatorProfile],
             continue
         closed = max(0.0, min(1.0, (100.0 - float(aperture)) / 100.0))
         factors.append(1.0 - closed * (1.0 - float(tau)))
+    # 피복재 투과율 — 차광막이 없어도 지붕은 언제나 빛을 깎는다.
+    cover = float(cover_tau or 1.0)
+    if not (0.0 < cover <= 1.0):
+        cover = 1.0          # 값이 이상하면 깎지 않는다(어둡게 지어내지 않는다)
     if not factors:
-        return outdoor_light
+        return outdoor_light * cover
     # 차광막이 여러 장이면 가장 어두운 쪽(최소 통과율)을 대표값으로 쓴다.
     # 작물이 실제로 받는 최악 조건을 봐야 광부족을 놓치지 않는다.
-    return outdoor_light * min(factors)
+    return outdoor_light * min(factors) * cover
 
 
 def apply_light_threshold_overrides(
@@ -653,7 +664,8 @@ class CycleMixin:
         if light_val is not None and is_outdoor:
             est = estimate_indoor_light(
                 light_val, self._profiles, self._coord_state.prev_commands,
-                default_tau=self._facility_shade_transmittance())
+                default_tau=self._facility_shade_transmittance(),
+                cover_tau=self._facility_cover_transmittance())
             if est != light_val and getattr(self, 'log_level_debug', False):
                 self.logger.debug(
                     '실내광 추정: 실외 %.0f → %.0f W/m² (차광막 개도 반영)',
@@ -697,7 +709,8 @@ class CycleMixin:
                 return None
             return estimate_indoor_light(
                 outdoor, self._profiles, self._coord_state.prev_commands,
-                default_tau=self._facility_shade_transmittance())
+                default_tau=self._facility_shade_transmittance(),
+                cover_tau=self._facility_cover_transmittance())
         except Exception as exc:
             if getattr(self, 'log_level_debug', False):
                 self.logger.debug('맑은날 광량 어림 실패(폴백 없음): %s', exc)
@@ -1559,7 +1572,11 @@ class CycleMixin:
         격상해도 소용없으므로 authority 를 함께 본다.
         """
         # ── P5-4: Photosynthesis-oriented priority 격상 ───────────────────────
-        if self.photosynth_mode_enabled and internal.get('light') is not None:
+        # ⚠ **막 아래 광량으로 판정한다**(2026-09-16). 실외 원본으로 재면
+        #   차광막을 닫아 둔 대낮에도 "빛은 충분하다" 가 되고, 그 판정이
+        #   우선순위 격상을 통해 제어로 그대로 흘러간다.
+        _light_int = internal.get('light_est', internal.get('light'))
+        if self.photosynth_mode_enabled and _light_int is not None:
             from aot.functions.utils.env_control.photosynthesis import (
                 boost_limiting_priority, decay_priorities,
                 find_limiting_factor, ppfd_from_wm2,
@@ -1570,7 +1587,7 @@ class CycleMixin:
                 # ⚠ 단위 경계. internal['light'] 는 W/m²(전천일사)인데 crop 의
                 # K_L 은 µmol/m²/s 다 — 변환 없이 넣으면 다른 단위를 같은 축에서
                 # 비교하게 되고, 광이 제한 인자인지 아닌지가 통째로 뒤집힌다.
-                L=ppfd_from_wm2(internal.get('light', 0.0)),
+                L=ppfd_from_wm2(_light_int or 0.0),
                 CO2=internal.get('CO2', 400.0),
                 T=internal.get('T', 22.0),
                 VPD=vpd_now,
@@ -2041,7 +2058,7 @@ class CycleMixin:
             # 화면이 이 값을 µmol/m²/s 목표(K_L) 옆에 나란히 놓으므로 **여기서**
             # 바꿔 싣는다. 요약이 W/m² 를 담고 화면이 µmol 라벨을 붙이던 것이
             # 2026-08-26 에 발견된 문제다.
-            L   = ppfd_from_wm2(internal.get('light'))
+            L   = ppfd_from_wm2(internal.get('light_est', internal.get('light')))
             CO2 = internal.get('CO2')
             T   = internal.get('T')
             VPD = internal.get('VPD')

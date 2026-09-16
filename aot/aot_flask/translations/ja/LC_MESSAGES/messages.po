@@ -28310,21 +28310,16 @@ msgid "Max Light Threshold"
 msgstr "最大光量しきい値"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:527
-msgid ""
-"Close the shade screen above this light level. 0 = never shade. This is a"
-" shading choice only — how much light the crop can use comes from its "
-"program."
-msgstr ""
+msgid "Close the shade screen above this light level. 0 = never shade. This is a shading choice only — how much light the crop can use comes from its program. Measured under the screen — the estimate applies cover and screen transmittance to outdoor sunlight."
+msgstr "この光量を超えるとスクリーンを閉じます。0 = 遮光しない。これは遮光運用の基準で、作物が使える光量はプログラムが決めます。 スクリーン下の値です。屋外日射に被覆材とスクリーンの透過率を掛けて推定します。"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:536
 msgid "Min Light Threshold (Supplemental)"
 msgstr "最小光量しきい値(補光)"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:538
-msgid ""
-"Switch supplemental lighting on below this light level. 0 = no "
-"supplemental lighting, which is most facilities."
-msgstr ""
+msgid "Switch supplemental lighting on below this light level. 0 = no supplemental lighting, which is most facilities. Measured under the screen — the estimate applies cover and screen transmittance to outdoor sunlight."
+msgstr "この光量を下回ると補光灯を点けます。0 = 補光なし（多くの施設がこれです）。 スクリーン下の値です。屋外日射に被覆材とスクリーンの透過率を掛けて推定します。"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:546
 msgid "CO₂"

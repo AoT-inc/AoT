@@ -30023,26 +30023,16 @@ msgid "Max Light Threshold"
 msgstr "Макс. поріг освітлення"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:527
-msgid ""
-"Close the shade screen above this light level. 0 = never shade. This is a"
-" shading choice only — how much light the crop can use comes from its "
-"program."
-msgstr ""
-"Закривати затінювальний екран вище цього рівня освітлення. 0 = ніколи не "
-"затіняти. Це лише вибір затінення — скільки світла може використати "
-"культура, визначається її програмою."
+msgid "Close the shade screen above this light level. 0 = never shade. This is a shading choice only — how much light the crop can use comes from its program. Measured under the screen — the estimate applies cover and screen transmittance to outdoor sunlight."
+msgstr "Закривати затінювальний екран вище цього рівня освітлення. 0 = ніколи не затіняти. Це лише вибір затінення — скільки світла може використати культура, визначається її програмою. Вимірюється під екраном — оцінка враховує світлопропускання покриття та екрана для зовнішнього світла."
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:536
 msgid "Min Light Threshold (Supplemental)"
 msgstr "Мін. поріг освітлення (додаткове)"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:538
-msgid ""
-"Switch supplemental lighting on below this light level. 0 = no "
-"supplemental lighting, which is most facilities."
-msgstr ""
-"Вмикати додаткове освітлення нижче цього рівня освітленості. 0 = без "
-"додаткового освітлення, що характерно для більшості об'єктів."
+msgid "Switch supplemental lighting on below this light level. 0 = no supplemental lighting, which is most facilities. Measured under the screen — the estimate applies cover and screen transmittance to outdoor sunlight."
+msgstr "Вмикати додаткове освітлення нижче цього рівня освітленості. 0 = без додаткового освітлення, що характерно для більшості об'єктів. Вимірюється під екраном — оцінка враховує світлопропускання покриття та екрана для зовнішнього світла."
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:546
 msgid "CO₂"

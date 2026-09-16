@@ -29861,26 +29861,16 @@ msgid "Max Light Threshold"
 msgstr "Ngưỡng ánh sáng tối đa"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:527
-msgid ""
-"Close the shade screen above this light level. 0 = never shade. This is a"
-" shading choice only — how much light the crop can use comes from its "
-"program."
-msgstr ""
-"Đóng màn che nắng khi vượt quá mức ánh sáng này. 0 = không bao giờ che. "
-"Đây chỉ là lựa chọn che nắng — lượng ánh sáng cây trồng có thể sử dụng "
-"được xác định bởi chương trình của nó."
+msgid "Close the shade screen above this light level. 0 = never shade. This is a shading choice only — how much light the crop can use comes from its program. Measured under the screen — the estimate applies cover and screen transmittance to outdoor sunlight."
+msgstr "Đóng màn che nắng khi vượt quá mức ánh sáng này. 0 = không bao giờ che. Đây chỉ là lựa chọn che nắng — lượng ánh sáng cây trồng có thể sử dụng được xác định bởi chương trình của nó. Đo dưới lưới — ước tính áp dụng độ truyền sáng của lớp phủ và lưới cho ánh sáng ngoài trời."
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:536
 msgid "Min Light Threshold (Supplemental)"
 msgstr "Ngưỡng ánh sáng tối thiểu (Bổ sung)"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:538
-msgid ""
-"Switch supplemental lighting on below this light level. 0 = no "
-"supplemental lighting, which is most facilities."
-msgstr ""
-"Bật đèn chiếu sáng bổ sung khi mức ánh sáng thấp hơn giá trị này. 0 = "
-"không có đèn bổ sung, áp dụng cho hầu hết các cơ sở."
+msgid "Switch supplemental lighting on below this light level. 0 = no supplemental lighting, which is most facilities. Measured under the screen — the estimate applies cover and screen transmittance to outdoor sunlight."
+msgstr "Bật đèn chiếu sáng bổ sung khi mức ánh sáng thấp hơn giá trị này. 0 = không có đèn bổ sung, áp dụng cho hầu hết các cơ sở. Đo dưới lưới — ước tính áp dụng độ truyền sáng của lớp phủ và lưới cho ánh sáng ngoài trời."
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:546
 msgid "CO₂"

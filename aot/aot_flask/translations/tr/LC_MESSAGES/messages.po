@@ -29962,26 +29962,16 @@ msgid "Max Light Threshold"
 msgstr "Maks. Işık Eşiği"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:527
-msgid ""
-"Close the shade screen above this light level. 0 = never shade. This is a"
-" shading choice only — how much light the crop can use comes from its "
-"program."
-msgstr ""
-"Bu ışık seviyesinin üzerinde gölgeleme perdesini kapatır. 0 = asla "
-"gölgeleme. Bu yalnızca bir gölgeleme tercihidir — ürünün ne kadar ışık "
-"kullanabileceği kendi programından gelir."
+msgid "Close the shade screen above this light level. 0 = never shade. This is a shading choice only — how much light the crop can use comes from its program. Measured under the screen — the estimate applies cover and screen transmittance to outdoor sunlight."
+msgstr "Bu ışık seviyesinin üzerinde gölgeleme perdesini kapatır. 0 = asla gölgeleme. Bu yalnızca bir gölgeleme tercihidir — ürünün ne kadar ışık kullanabileceği kendi programından gelir. Perde altında ölçülür — tahmin, dış ışığa örtü ve perde geçirgenliğini uygular."
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:536
 msgid "Min Light Threshold (Supplemental)"
 msgstr "Min. Işık Eşiği (Ek)"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:538
-msgid ""
-"Switch supplemental lighting on below this light level. 0 = no "
-"supplemental lighting, which is most facilities."
-msgstr ""
-"Bu ışık seviyesinin altında takviye aydınlatmayı açın. 0 = takviye "
-"aydınlatma yok, ki çoğu tesis için durum budur."
+msgid "Switch supplemental lighting on below this light level. 0 = no supplemental lighting, which is most facilities. Measured under the screen — the estimate applies cover and screen transmittance to outdoor sunlight."
+msgstr "Bu ışık seviyesinin altında takviye aydınlatmayı açın. 0 = takviye aydınlatma yok, ki çoğu tesis için durum budur. Perde altında ölçülür — tahmin, dış ışığa örtü ve perde geçirgenliğini uygular."
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:546
 msgid "CO₂"

@@ -27911,10 +27911,7 @@ msgid "Max Light Threshold"
 msgstr ""
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:527
-msgid ""
-"Close the shade screen above this light level. 0 = never shade. This is a "
-"shading choice only — how much light the crop can use comes from its "
-"program."
+msgid "Close the shade screen above this light level. 0 = never shade. This is a shading choice only — how much light the crop can use comes from its program. Measured under the screen — the estimate applies cover and screen transmittance to outdoor sunlight."
 msgstr ""
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:536
@@ -27922,9 +27919,7 @@ msgid "Min Light Threshold (Supplemental)"
 msgstr ""
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:538
-msgid ""
-"Switch supplemental lighting on below this light level. 0 = no supplemental "
-"lighting, which is most facilities."
+msgid "Switch supplemental lighting on below this light level. 0 = no supplemental lighting, which is most facilities. Measured under the screen — the estimate applies cover and screen transmittance to outdoor sunlight."
 msgstr ""
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:546

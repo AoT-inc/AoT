@@ -122,6 +122,14 @@ def assess(
         'wind':    external.get('wind', 0.0),
         'rain':    external.get('rain', 0.0),
         'solar':   external.get('solar', 0.0),
+        # ⚠ `solar` 는 **막 위**(실외) 일사다 — 차광막 효과 모델의 입력이라
+        #   원본이어야 한다. 작물이 실제로 받는 광량은 따로 싣는다: 차광막
+        #   개도와 피복 투과율을 반영한 `light_est`(_compute_light_est).
+        #   둘을 한 이름으로 합치면 "차광막을 닫았는데 광합성 판정은 계속
+        #   빛이 충분하다고 한다" 가 된다(2026-09-16 지적).
+        'light_int': (internal.get('light_est')
+                      if internal.get('light_est') is not None
+                      else internal.get('light')),
         'dewpoint':external.get('dewpoint', 10.0),
         'now_ts':  now,
         'cycle_sec': cycle_sec,
@@ -225,14 +233,18 @@ def _assess_limiting_factor(ctx: EnvContext, light_sat: Optional[float] = None) 
     solar = ctx.get('solar', 0.0)
 
     if solar < _LIGHT_COMP:
-        return None   # 야간 — 광합성 평가 불필요
+        return None   # 야간 — 광합성 평가 불필요. **실외로 판정한다**:
+                      # 차광막을 닫은 대낮을 밤으로 읽으면 안 된다.
 
     sat = light_sat if (light_sat and light_sat > 0) else _LIGHT_SAT
     scores: Dict[str, float] = {}
 
-    # 광 제한
-    if solar < sat:
-        scores['light'] = (sat - solar) / sat
+    # 광 제한 — 작물이 실제로 받는 광량으로 잰다(막 아래). 실외로 재면
+    # 차광막을 닫아 광부족이 된 상황을 영영 못 본다.
+    light_int = ctx.get('light_int')
+    light_int = solar if light_int is None else float(light_int)
+    if light_int < sat:
+        scores['light'] = (sat - light_int) / sat
 
     # CO₂ 제한 — 측정이 없으면 판단하지 않는다(없는 값으로 제한 인자를
     # 고르면 늘 CO₂ 가 부족하다고 답한다).

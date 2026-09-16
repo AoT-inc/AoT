@@ -1064,6 +1064,11 @@ class TestOutdoorSolarShadeConsistency:
             def _facility_shade_transmittance(self):
                 return TestOutdoorSolarShadeConsistency.TAU
 
+            def _facility_cover_transmittance(self):
+                # 이 절이 보는 것은 **차광막**이라 피복은 깎지 않는다(1.0).
+                # 피복 투과율 자체는 test_indoor_light_below_screen.py 가 본다.
+                return 1.0
+
             def _evening_fog_blocked(self):
                 return False
 

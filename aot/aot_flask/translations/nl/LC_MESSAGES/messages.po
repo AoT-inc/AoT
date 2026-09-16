@@ -30186,26 +30186,16 @@ msgid "Max Light Threshold"
 msgstr "Max. lichtdrempel"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:527
-msgid ""
-"Close the shade screen above this light level. 0 = never shade. This is a"
-" shading choice only — how much light the crop can use comes from its "
-"program."
-msgstr ""
-"Sluit het schermdoek boven dit lichtniveau. 0 = nooit schermen. Dit is "
-"uitsluitend een schermingskeuze — hoeveel licht het gewas kan gebruiken, "
-"komt uit het bijbehorende programma."
+msgid "Close the shade screen above this light level. 0 = never shade. This is a shading choice only — how much light the crop can use comes from its program. Measured under the screen — the estimate applies cover and screen transmittance to outdoor sunlight."
+msgstr "Sluit het schermdoek boven dit lichtniveau. 0 = nooit schermen. Dit is uitsluitend een schermingskeuze — hoeveel licht het gewas kan gebruiken, komt uit het bijbehorende programma. Gemeten onder het scherm — de schatting past de transmissie van dek en scherm toe op het buitenlicht."
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:536
 msgid "Min Light Threshold (Supplemental)"
 msgstr "Min. lichtdrempel (bijbelichting)"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:538
-msgid ""
-"Switch supplemental lighting on below this light level. 0 = no "
-"supplemental lighting, which is most facilities."
-msgstr ""
-"Schakel de bijbelichting in onder dit lichtniveau. 0 = geen "
-"bijbelichting, wat voor de meeste faciliteiten geldt."
+msgid "Switch supplemental lighting on below this light level. 0 = no supplemental lighting, which is most facilities. Measured under the screen — the estimate applies cover and screen transmittance to outdoor sunlight."
+msgstr "Schakel de bijbelichting in onder dit lichtniveau. 0 = geen bijbelichting, wat voor de meeste faciliteiten geldt. Gemeten onder het scherm — de schatting past de transmissie van dek en scherm toe op het buitenlicht."
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:546
 msgid "CO₂"

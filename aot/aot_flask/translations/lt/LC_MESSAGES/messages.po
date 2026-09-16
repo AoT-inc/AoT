@@ -30003,26 +30003,16 @@ msgid "Max Light Threshold"
 msgstr "Maksimalus apšvietimo slenkstis"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:527
-msgid ""
-"Close the shade screen above this light level. 0 = never shade. This is a"
-" shading choice only — how much light the crop can use comes from its "
-"program."
-msgstr ""
-"Uždaryti pritemdymo ekraną, kai apšvietimas viršija šį lygį. 0 = niekada "
-"nepritemdyti. Tai tik pritemdymo pasirinkimas — kiek šviesos gali "
-"panaudoti kultūra, nustatoma jos programoje."
+msgid "Close the shade screen above this light level. 0 = never shade. This is a shading choice only — how much light the crop can use comes from its program. Measured under the screen — the estimate applies cover and screen transmittance to outdoor sunlight."
+msgstr "Uždaryti pritemdymo ekraną, kai apšvietimas viršija šį lygį. 0 = niekada nepritemdyti. Tai tik pritemdymo pasirinkimas — kiek šviesos gali panaudoti kultūra, nustatoma jos programoje. Matuojama po ekranu — įvertinime taikomas dangos ir ekrano pralaidumas lauko šviesai."
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:536
 msgid "Min Light Threshold (Supplemental)"
 msgstr "Minimalus apšvietimo slenkstis (papildomas apšvietimas)"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:538
-msgid ""
-"Switch supplemental lighting on below this light level. 0 = no "
-"supplemental lighting, which is most facilities."
-msgstr ""
-"Įjungti papildomą apšvietimą, kai apšvietimas nukrenta žemiau šio lygio. "
-"0 = be papildomo apšvietimo, kaip dažniausiai daugumoje patalpų."
+msgid "Switch supplemental lighting on below this light level. 0 = no supplemental lighting, which is most facilities. Measured under the screen — the estimate applies cover and screen transmittance to outdoor sunlight."
+msgstr "Įjungti papildomą apšvietimą, kai apšvietimas nukrenta žemiau šio lygio. 0 = be papildomo apšvietimo, kaip dažniausiai daugumoje patalpų. Matuojama po ekranu — įvertinime taikomas dangos ir ekrano pralaidumas lauko šviesai."
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:546
 msgid "CO₂"

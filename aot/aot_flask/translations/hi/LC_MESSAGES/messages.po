@@ -29849,26 +29849,16 @@ msgid "Max Light Threshold"
 msgstr "अधिकतम प्रकाश सीमा"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:527
-msgid ""
-"Close the shade screen above this light level. 0 = never shade. This is a"
-" shading choice only — how much light the crop can use comes from its "
-"program."
-msgstr ""
-"इस प्रकाश स्तर से ऊपर शेड स्क्रीन बंद करें। 0 = कभी शेड न करें। यह केवल "
-"एक शेडिंग विकल्प है — फसल कितना प्रकाश उपयोग कर सकती है यह उसके प्रोग्राम"
-" से तय होता है।"
+msgid "Close the shade screen above this light level. 0 = never shade. This is a shading choice only — how much light the crop can use comes from its program. Measured under the screen — the estimate applies cover and screen transmittance to outdoor sunlight."
+msgstr "इस प्रकाश स्तर से ऊपर शेड स्क्रीन बंद करें। 0 = कभी शेड न करें। यह केवल एक शेडिंग विकल्प है — फसल कितना प्रकाश उपयोग कर सकती है यह उसके प्रोग्राम से तय होता है। स्क्रीन के नीचे मापा जाता है — अनुमान बाहरी प्रकाश पर आवरण और स्क्रीन की पारगम्यता लागू करता है।"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:536
 msgid "Min Light Threshold (Supplemental)"
 msgstr "न्यूनतम प्रकाश सीमा (अतिरिक्त)"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:538
-msgid ""
-"Switch supplemental lighting on below this light level. 0 = no "
-"supplemental lighting, which is most facilities."
-msgstr ""
-"इस प्रकाश स्तर से नीचे पूरक लाइटिंग चालू करें। 0 = कोई पूरक लाइटिंग नहीं,"
-" जो अधिकतर सुविधाओं के लिए है।"
+msgid "Switch supplemental lighting on below this light level. 0 = no supplemental lighting, which is most facilities. Measured under the screen — the estimate applies cover and screen transmittance to outdoor sunlight."
+msgstr "इस प्रकाश स्तर से नीचे पूरक लाइटिंग चालू करें। 0 = कोई पूरक लाइटिंग नहीं, जो अधिकतर सुविधाओं के लिए है। स्क्रीन के नीचे मापा जाता है — अनुमान बाहरी प्रकाश पर आवरण और स्क्रीन की पारगम्यता लागू करता है।"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:546
 msgid "CO₂"

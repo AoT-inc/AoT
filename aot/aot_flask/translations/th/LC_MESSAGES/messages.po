@@ -29732,26 +29732,16 @@ msgid "Max Light Threshold"
 msgstr "ค่าเกณฑ์แสงสูงสุด"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:527
-msgid ""
-"Close the shade screen above this light level. 0 = never shade. This is a"
-" shading choice only — how much light the crop can use comes from its "
-"program."
-msgstr ""
-"ปิดม่านบังแดดเมื่อระดับแสงสูงกว่าค่านี้ 0 = ไม่บังแดดเลย "
-"นี่เป็นเพียงตัวเลือกการบังแดดเท่านั้น — "
-"ปริมาณแสงที่พืชสามารถใช้ได้มาจากโปรแกรมของพืชนั้น"
+msgid "Close the shade screen above this light level. 0 = never shade. This is a shading choice only — how much light the crop can use comes from its program. Measured under the screen — the estimate applies cover and screen transmittance to outdoor sunlight."
+msgstr "ปิดม่านบังแดดเมื่อระดับแสงสูงกว่าค่านี้ 0 = ไม่บังแดดเลย นี่เป็นเพียงตัวเลือกการบังแดดเท่านั้น — ปริมาณแสงที่พืชสามารถใช้ได้มาจากโปรแกรมของพืชนั้น วัดใต้ม่าน — ค่าประมาณนำค่าการส่องผ่านของวัสดุคลุมและม่านมาคูณกับแสงภายนอก."
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:536
 msgid "Min Light Threshold (Supplemental)"
 msgstr "เกณฑ์แสงต่ำสุด (แสงเสริม)"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:538
-msgid ""
-"Switch supplemental lighting on below this light level. 0 = no "
-"supplemental lighting, which is most facilities."
-msgstr ""
-"เปิดไฟเสริมเมื่อระดับแสงต่ำกว่าค่านี้ 0 = ไม่มีไฟเสริม "
-"ซึ่งเป็นกรณีของโรงเรือนส่วนใหญ่"
+msgid "Switch supplemental lighting on below this light level. 0 = no supplemental lighting, which is most facilities. Measured under the screen — the estimate applies cover and screen transmittance to outdoor sunlight."
+msgstr "เปิดไฟเสริมเมื่อระดับแสงต่ำกว่าค่านี้ 0 = ไม่มีไฟเสริม ซึ่งเป็นกรณีของโรงเรือนส่วนใหญ่ วัดใต้ม่าน — ค่าประมาณนำค่าการส่องผ่านของวัสดุคลุมและม่านมาคูณกับแสงภายนอก."
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:546
 msgid "CO₂"
