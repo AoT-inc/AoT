@@ -506,6 +506,23 @@ IMPORTANT: This is the SOURCE TEMPLATE file.
             return;
         }
         el.title = text || '';
+        // The page's delegated Bootstrap tooltip ($('body').tooltip({selector:
+        // '.btn[title]...'}), below) caches the title into data-original-title
+        // the first time an element is hovered and only re-reads it on the
+        // NEXT show — the `el.title = ...` above never reaches an instance
+        // that already exists. Without this, a caller that retitles an
+        // element the pointer is already resting on (e.g. a button whose
+        // label changes on click) leaves the bubble showing the OLD text
+        // until the user moves the mouse away and back.
+        if (el.hasAttribute('data-original-title')) {
+            el.setAttribute('data-original-title', text || '');
+        }
+        const describedBy = el.getAttribute('aria-describedby');
+        if (describedBy) {
+            const tip = document.getElementById(describedBy);
+            const inner = tip && tip.querySelector('.tooltip-inner');
+            if (inner) inner.textContent = text || '';
+        }
     };
 
     /**

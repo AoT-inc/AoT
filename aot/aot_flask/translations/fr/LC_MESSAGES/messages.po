@@ -31617,3 +31617,7 @@ msgstr "Capteur principal"
 #: aot_flask/static/js/geo/facility/sensor-ui.js
 msgid "Backup sensor"
 msgstr "Capteur de secours"
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-widget-vector.js
+msgid "Stop Rotation"
+msgstr "Arrêter la rotation"

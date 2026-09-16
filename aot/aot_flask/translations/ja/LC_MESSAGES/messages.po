@@ -34845,3 +34845,7 @@ msgstr "メインセンサー"
 #: aot_flask/static/js/geo/facility/sensor-ui.js
 msgid "Backup sensor"
 msgstr "バックアップセンサー"
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-widget-vector.js
+msgid "Stop Rotation"
+msgstr "回転を停止"

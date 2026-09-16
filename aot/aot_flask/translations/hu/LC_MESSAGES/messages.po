@@ -31397,3 +31397,7 @@ msgstr "Fő érzékelő"
 #: aot_flask/static/js/geo/facility/sensor-ui.js
 msgid "Backup sensor"
 msgstr "Tartalék érzékelő"
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-widget-vector.js
+msgid "Stop Rotation"
+msgstr "Forgatás leállítása"

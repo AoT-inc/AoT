@@ -31588,3 +31588,7 @@ msgstr "Cảm biến chính"
 #: aot_flask/static/js/geo/facility/sensor-ui.js
 msgid "Backup sensor"
 msgstr "Cảm biến dự phòng"
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-widget-vector.js
+msgid "Stop Rotation"
+msgstr "Dừng xoay"

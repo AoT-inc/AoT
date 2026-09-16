@@ -31520,3 +31520,7 @@ msgstr "Sensore principale"
 #: aot_flask/static/js/geo/facility/sensor-ui.js
 msgid "Backup sensor"
 msgstr "Sensore di riserva"
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-widget-vector.js
+msgid "Stop Rotation"
+msgstr "Interrompi rotazione"
