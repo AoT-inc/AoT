@@ -17,12 +17,23 @@ REST stands for Representational State Transfer. It is an architectural pattern 
 
 ### Authentication
 
-An API key can be generated under **Manage → System Management → Users**, editing
-the user, then **Generate API Key**. The key is a 128-byte random value, shown to
-you as a base64-encoded string **only once, at the moment it is generated** — AoT
-stores only a one-way hash of it, not the key itself, so it cannot be displayed
-again later. If it is lost, generate a new one. See [Security](Security.md#api-keys)
-for more.
+Each user can issue **multiple, independently named API keys** under **Manage →
+System Management → Users**, editing the user, in the **API Key** section. Name
+each key for the client that will use it (for example "ChatGPT" or "Claude
+Desktop") and click **Generate** — issuing a new key no longer overwrites a
+previous one, so the same user can connect several integrations at once, and any
+one key can be revoked on its own without breaking the others.
+
+When issuing a key, choose its **Permissions**: **Full access** (the default —
+the same permissions as the user account) or **Read only** (the key can retrieve
+data but any request that changes state is rejected with `403 Forbidden`). Choose
+the scope before generating — it cannot be changed on an existing key, only
+revoked and reissued.
+
+Each key is a 128-byte random value, shown to you as a base64-encoded string
+**only once, at the moment it is generated** — AoT stores only a one-way hash of
+it, not the key itself, so it cannot be displayed again later. If it is lost,
+issue a new one. See [Security](Security.md#api-keys) for more.
 
 AoT supports several authentication methods. All API requests must be made over HTTPS. Calls made over plain HTTP will fail. API requests made without authentication will fail.
 
@@ -102,7 +113,7 @@ print("Response dictionary: {}".format(response_dict))
 
 AoT uses conventional HTTP response codes to indicate the success or failure of an API request. In general: codes in the 2xx range indicate success. Codes in the 4xx range indicate an error that failed due to the information provided (for example, a required parameter was omitted, a charge failed, and so on). Codes in the 5xx range indicate an error on the AoT server (these are rare).
 
-4xx errors that can be handled programmatically (for example, a card being declined) include an error code that briefly describes the reported error.
+4xx errors that can be handled programmatically (for example, a card being declined) include an error code that briefly describes the reported error. One example specific to this API: a request that changes state (anything other than `GET`/`HEAD`/`OPTIONS`) made with a **read-only** API key returns `403 Forbidden` with `{"error": "Forbidden", "message": "..."}`, even if the same request would otherwise succeed for that user.
 
 ### Endpoints
 

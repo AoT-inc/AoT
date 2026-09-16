@@ -44,19 +44,25 @@ code from the authenticator app; neither one alone is enough.
 ## API keys { #api-keys }
 
 An API key authenticates requests to the [HTTP API](API.md) without a browser
-session. Generate one under **Manage → System Management → Users**, editing the
-user, then **Generate API Key**.
+session. A single user can hold **several keys at once** — issue one under
+**Manage → System Management → Users**, editing the user, in the **API Key**
+section: give it a name (so you know which client it belongs to), pick its
+**Permissions** (**Full access**, matching the user's own permissions, or
+**Read only**, which can retrieve data but has every state-changing request
+rejected with `403 Forbidden`), then click **Generate**. Issuing a new key does
+**not** affect any of that user's existing keys — each one keeps working until it
+is individually revoked, so separate integrations (for example ChatGPT and
+Claude Desktop) can run at the same time under one account, and a suspected leak
+can be shut off by revoking just that one key.
 
 **The key is shown only once, at the moment it is generated.** AoT does not store
 the key itself — only a one-way hash of it — so the settings page cannot display an
 existing key again later. Copy it somewhere safe immediately after generating it. If
-it is lost, generate a new one; there is no way to recover the old value, and doing
-so immediately invalidates the previous key.
+it is lost, revoke it and issue a new one; there is no way to recover the old value.
 
 The key can be presented three ways: the `X-API-KEY` header, HTTP Basic
 authentication, or (deprecated, see [API.md](API.md#authentication)) an `api_key`
-query parameter. Regenerating a key immediately invalidates the previous one — update
-any script or integration using the old key before generating a replacement.
+query parameter.
 
 ## Audit log { #audit-log }
 
