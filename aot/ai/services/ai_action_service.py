@@ -1151,8 +1151,22 @@ class AIActionService:
                         if not os.path.exists(file_path):
                             import difflib
                             try:
-                                available_files = [f for f in os.listdir(os.path.join(INSTALL_DIRECTORY, "docs")) if f.endswith('.md')]
-                                matches = difflib.get_close_matches(target_file, available_files, n=1, cutoff=0.4)
+                                # The manual index also carries sub-directory
+                                # pages (ai/, geo/), so match on basenames and
+                                # keep the path that leads back to the file.
+                                docs_root = os.path.join(INSTALL_DIRECTORY, "docs")
+                                available_files = {}
+                                for _root, _dirs, _files in os.walk(docs_root):
+                                    _dirs[:] = [d for d in _dirs if d not in ('ai_docs', 'images', 'css', 'js')]
+                                    for _f in _files:
+                                        if not _f.endswith('.md'):
+                                            continue
+                                        _rel = os.path.relpath(os.path.join(_root, _f), docs_root)
+                                        available_files.setdefault(_f, _rel)
+                                        available_files[_rel] = _rel
+                                matches = difflib.get_close_matches(target_file, list(available_files), n=1, cutoff=0.4)
+                                if matches:
+                                    matches = [available_files[matches[0]]]
                                 if matches:
                                     target_file = matches[0]
                                     file_path = os.path.join(INSTALL_DIRECTORY, "docs", target_file)
@@ -1176,6 +1190,15 @@ class AIActionService:
                         # 바꾸면서 이 경로(section 없이 호출 -> 목차)를 모델에게
                         # 권하게 됐으므로, 권하기 전에 상한을 채운다.
                         toc = [line.strip() for line in lines if line.startswith('#')]
+                        full_text = "".join(lines).strip()
+                        # Short pages (and pages with no headings at all, e.g.
+                        # Alerts.md) have nothing to drill into — a table of
+                        # contents would send the caller back for a section
+                        # that does not exist. Hand over the whole page.
+                        if len(toc) < 2 or len(full_text) <= 4000:
+                            if len(full_text) > 8000:
+                                full_text = full_text[:8000] + "\n\n...[TRUNCATED_DUE_TO_LENGTH]..."
+                            return {"status": "success", "data": full_text}
                         toc_str = "\n".join(toc)
                         if len(toc_str) > 8000:
                             kept = toc_str[:8000].rsplit("\n", 1)[0]

@@ -1,6 +1,6 @@
 # AI Features Overview
 
-AoT uses an MCP (Model Context Protocol) based AI agent to observe, diagnose, and control the environment in greenhouses and growing facilities. The AI acts in an advisory role — any action that moves equipment requires user approval before execution (edits that only change configuration are exempt; see the Sequences section).
+AoT uses an MCP (Model Context Protocol) based AI agent to observe, diagnose, and control the environment in greenhouses and growing facilities. The AI acts in an advisory role — any action that moves equipment requires user approval before execution (edits that only change configuration are exempt; see Safety & Approval Model).
 
 ---
 
@@ -16,6 +16,8 @@ Using the AI takes two switches in two different places. They are deliberately n
 The order is **enable in Settings → register a model (agent) on the AI > Connection page → start operation**.
 
 **Connecting your own AI app** (Claude Desktop and the like) works independently of this switch. It only needs external MCP access allowed in Settings > General and a per-user access key — the built-in AI can stay off. The top of the AI > Connection page shows both and links to each screen.
+
+That "external MCP access" toggle (**Settings > General > Enable External MCP Server**, `AIGlobalSettings.mcp_http_enabled`) is checked fresh on every HTTP request to the MCP server, not cached — turning it off returns `503` to every external MCP call immediately, with no restart needed, and turning it back on restores access just as fast.
 
 - **Operation cannot be started with no model registered.** Running background work with nothing to ask only piles up errors in the log every cycle. The switch is available only once at least one agent is activated.
 - **Deactivating or deleting the last model stops operation too.** Re-activating a model later does not silently resume autonomous operation — start it again on the AI page.
@@ -49,46 +51,58 @@ Both paths pull tools from the same registry (`aot/ai/services/tool_registry.py`
 
 Tools exposed by the external MCP server and the internal `mcp_aot` engine. Read tools and configuration-edit tools run immediately; control, scheduling and activation tools pass through an approval gate either way — the in-app assistant's chat approval card, or the external MCP server's approval queue (`pending_approval` + `respond_to_confirmation`, see "Running the MCP Server" below).
 
+### Two layers: `tools/list` vs. drawers { #tool-drawers }
+
+The catalog is not one flat list. Listing every tool up front costs roughly 20K tokens before the conversation even starts, so `tools/list` returns only two layers, and the rest is opened on demand:
+
+- **Core — 27 tools, always listed.** The narrow set an agent needs to take its next step without guessing: name resolution (`resolve_target`), device lookup, reading a value, immediate control, the approval queue, and a handful more (`aot/ai/services/tool_registry.py`, the `_TIER_ASSIGNMENT` table).
+- **4 meta tools, always listed alongside core:** `open_drawer` (lists a drawer's tools, or all drawers with no argument), `get_tool_detail` (one tool's full schema by name), `use_tool` (actually *calls* a drawer tool by name — the only way to execute one; `open_drawer`/`get_tool_detail` only return definitions), `respond_to_confirmation` (approve/reject a pending confirmation).
+- **101 tools live in 8 drawers**, grouped by purpose, and only appear once `open_drawer` is called: `device` (device control/state), `measurement` (sensors, environment, weather, energy), `function` (functions/controllers/sequences), `schedule` (scheduling), `record` (notes/notices/knowledge/advice), `space` (map/zones/facilities/plots), `definition` (device-definition CRUD), `system` (AI settings, system status, diagnostics, screens).
+
+This tiering is on by default; set `AOT_MCP_TOOL_TIERING=0` to fall back to listing the whole catalog flat (`aot/ai/services/tool_execution.py:132-239`, `aot/ai/services/tool_registry.py:1342-1560`).
+
+The tables in this section describe tools regardless of which layer they're in — a **Drawer** column marks the ones that are *not* in `tools/list` and must be opened first. For the complete tool list, including every drawer-only tool with its full argument schema, see the AI Agent Guide (`docs/ai_guide.md`) — this page does not duplicate that reference.
+
 ### Observation (read — immediate)
 
-| Tool | Description |
-|------|-------------|
-| `get_spatial_tree` | Spatial hierarchy (Site > Zone > Device) tree |
-| `resolve_target` | Resolve a place/device name to its exact entity — check upfront whether it's a container (has children) |
-| `get_device_list` | List of all registered devices (inputs/outputs/cameras) |
-| `search_devices` | Find devices by name or type keyword |
-| `get_sensor_detail` | Sensor time-series history (min/max/avg stats) |
-| `get_weather` | Current weather for a field/zone (temp, RH, wind, precip) |
-| `get_energy_report` | Energy usage report by period/zone |
-| `get_cumulative_status` | EnvCoordinator DLI / GDD cumulative status |
-| `search_notes` | Read notes/memos/work logs attached to a zone or device |
-| `get_note_attachment` | View a photo attached to a note as an actual image (one per call) |
-| `list_notices` | Notice board post list |
-| `get_system_update_status` | Installed version vs latest GitHub release |
-| `list_available_devices` | Devices available for AI judgment (native bridge) |
-| `get_sensor_reading` | Latest reading for a specific sensor (native bridge) |
+| Tool | Description | Drawer |
+|------|-------------|--------|
+| `get_spatial_tree` | Spatial hierarchy (Site > Zone > Device) tree | — (core) |
+| `resolve_target` | Resolve a place/device name to its exact entity — check upfront whether it's a container (has children) | — (core) |
+| `get_device_list` | List of all registered devices (inputs/outputs/cameras) | — (core) |
+| `search_devices` | Find devices by name or type keyword | — (core) |
+| `get_sensor_detail` | Sensor time-series history (min/max/avg stats) | — (core) |
+| `get_weather` | Current weather for a field/zone (temp, RH, wind, precip) | — (core) |
+| `get_energy_report` | Energy usage report by period/zone | `measurement` |
+| `get_cumulative_status` | EnvCoordinator DLI / GDD cumulative status | `measurement` |
+| `search_notes` | Read notes/memos/work logs attached to a zone or device | — (core) |
+| `get_note_attachment` | View a photo attached to a note as an actual image (one per call) | `record` |
+| `list_notices` | Notice board post list | `record` |
+| `get_system_update_status` | Installed version vs latest GitHub release | `system` |
+| `list_available_devices` | Devices available for AI judgment (native bridge) | — (in-app only) |
+| `get_sensor_reading` | Latest reading for a specific sensor (native bridge) | — (in-app only) |
 
 ### Record / Task
 
-| Tool | Description | Approval |
-|------|-------------|----------|
-| `create_note` | Create an undated memo/note attached to an entity, saved immediately | Not required |
-| `add_schedule` | Register a human work task (weeding, inspection, cleaning) | Required |
-| `add_schedule_batch` | Register schedules for multiple targets (e.g. per zone) behind a single approval | Required |
+| Tool | Description | Approval | Drawer |
+|------|-------------|----------|--------|
+| `create_note` | Create an undated memo/note attached to an entity, saved immediately | Not required | — (core) |
+| `add_schedule` | Register a human work task (weeding, inspection, cleaning) | Not required — `config_only`: it only creates a Draft scheduler job, it moves no equipment. A person still reviews it on the scheduler screen afterward, as a separate step. | — (core) |
+| `add_schedule_batch` | Register schedules for multiple targets (e.g. per zone) in one call | Not required — same `config_only` reasoning as `add_schedule` | `schedule` |
 
 ### Control (user approval required)
 
-| Tool | Description |
-|------|-------------|
-| `operate_device` | Immediate physical control of valves/pumps/lights |
-| `set_output_state` | Turn an output on/off (optional duration, native bridge) |
-| `schedule_device_control` | Reserve a one-off device operation at a specific time |
+| Tool | Description | Drawer |
+|------|-------------|--------|
+| `operate_device` | Immediate physical control of valves/pumps/lights | — (core) |
+| `set_output_state` | Turn an output on/off (optional duration, native bridge) | `device` |
+| `schedule_device_control` | Reserve a one-off device operation at a specific time | `schedule` |
 
-> In the in-app assistant, the control tools above and `add_schedule` execute only after confirmation via the approval card. Calling directly through the external MCP server goes through the same kind of gate: the first call is not executed and comes back as `pending_approval` with a `confirmation_id`; the user must explicitly approve or reject that confirmation_id in chat (handled via `respond_to_confirmation`) or on the web review page, then the caller retries the same arguments plus `_confirmation_id` to actually execute it. See "Running the MCP Server" below for the full flow.
+> In the in-app assistant, the control tools above execute only after confirmation via the approval card. Calling directly through the external MCP server goes through the same kind of gate: the first call is not executed and comes back as `pending_approval` with a `confirmation_id`; the user must explicitly approve or reject that confirmation_id in chat (handled via `respond_to_confirmation`) or on the web review page, then the caller retries the same arguments plus `_confirmation_id` to actually execute it. See "Running the MCP Server" below for the full flow. `add_schedule`/`add_schedule_batch` are not in this gate — see the Record / Task table above.
 
 ### Sequences (configuration edits need no approval)
 
-A [sequence](../Functions.md#trigger-sequence) runs several outputs in a set order — the usual shape for irrigation, where valves take turns and a pump spans the run. These tools read and shape one.
+A [sequence](../Functions.md#trigger-sequence) runs several outputs in a set order — the usual shape for irrigation, where valves take turns and a pump spans the run. These tools read and shape one. All four tools on this page (the three below, plus `create_sequence_function`) live in the `function` drawer.
 
 | Tool | Description |
 |------|-------------|
@@ -133,20 +147,20 @@ branch on them, so this adds an axis rather than redefining one.
 
 ### Extended In-app Assistant Tools
 
-Beyond the MCP catalog above, the in-app AI assistant uses additional tools for entity assembly, automation, and knowledge. Every state-changing tool requires approval.
+Beyond the tools above, the in-app AI assistant (and, for the ones that are `core`, the external MCP server directly) uses additional tools for entity assembly, automation, and knowledge. Most state-changing tools require approval; the `config_only` ones noted below don't — see Safety & Approval Model.
 
 - **Input/Output management**: `list_device_types`, `get_device_type_options`, `create_input`·`modify_input`·`delete_input`, `create_output`·`modify_output`·`delete_output`, `get_device_measurements`
-- **Functions (automation)**: `get_function_list`, `get_function_detail`, `create_function`, `create_sequence_function`, `modify_function_options` (not for triggers — see Sequences above), `activate_function`·`deactivate_function`·`delete_function`, plus the sequence tools `configure_sequence_day`·`modify_sequence_step`·`modify_sequence_schedule`
+- **Functions (automation)**: `get_function_list`, `get_function_detail`, `create_function`, `create_sequence_function` (`config_only`), `modify_function_options` (`config_only`; not for triggers — see Sequences above), `activate_function`·`deactivate_function`·`delete_function`, plus the sequence tools `configure_sequence_day`·`modify_sequence_step`·`modify_sequence_schedule` (all `config_only`)
 - **Schedule ledger**: `search_schedule`, `edit_schedule`, `delete_schedule`
 - **Map (GIS)**: `list_geo_maps`, `get_device_location`, `set_device_location`, `delete_geo_shape`, `list_unbound_slots` (which places have no device), `rebind_device` (move every map slot of one device onto another)
-- **GIS inputs (map layers)**: `list_gis_inputs`, `create_gis_input`·`modify_gis_input`·`delete_gis_input`, `activate_gis_input` (manage map layer providers such as VWorld/Google/OpenWeather)
+- **GIS inputs (map layers)**: `list_gis_inputs`, `create_gis_input` (`config_only` — always created deactivated), `modify_gis_input`·`delete_gis_input`·`activate_gis_input` (approval required) — manage map layer providers such as VWorld/Google/OpenWeather
 - **Facility/equipment lookup**: `get_facility_capacity` (a facility's heating/cooling capacity, volume, ventilation, irrigation design summary), `get_map_equipment` (map-drawn equipment's irrigation design summary per site/zone, sprinkler vs. drip kept separate), `get_map_equipment_detail` (individual sprinkler positions/spacing/radius, per-pipe detail — only when the summary isn't enough)
 - **Notice board**: `create_notice`·`modify_notice`·`delete_notice`
-- **AI agent management**: `list_ai_agents`, `list_ai_entries`, `create_ai_agent`·`modify_ai_agent`·`delete_ai_agent`
+- **AI agent management**: `list_ai_agents` — this one is `core`, so it's already in `tools/list` for the external MCP server too, not just the in-app assistant; `list_ai_entries`, `create_ai_agent` (`config_only`), `modify_ai_agent`·`delete_ai_agent` (approval required)
 - **Knowledge library**: `knowledge_search`, `knowledge_shelve`, `list_library_source_types`, `smartfarmkorea_lookup`, `configure_library_source`
 - **Diagnostics / misc**: `analyze_system_failure`, `get_local_time`, `get_tool_detail`, `read_manual`, `get_detailed_manifest`, `ask_user`
 
-> The single source of truth for tools is `aot/ai/services/tool_registry.py`. When a tool is added or changed, that file — not this page — is authoritative.
+> The single source of truth for tools is `aot/ai/services/tool_registry.py`. When a tool is added or changed, that file — not this page — is authoritative. For the full tool list with arguments, including everything behind a drawer, see the AI Agent Guide (`docs/ai_guide.md`).
 
 ---
 
@@ -163,14 +177,16 @@ New inputs and outputs are created with this enabled by default (`is_ai_enabled=
 
 ## Safety & Approval Model
 
-Non-mutating **read tools** run immediately. **State-changing tools** pass through an approval gate no matter which path calls them.
+Non-mutating **read tools** run immediately. Writes split into two categories.
 
-- **Approval required (mutation / physical control)**: device control (`operate_device`, `set_output_state`, `schedule_device_control`), create/edit/delete of inputs/outputs/functions/notices/AI agents/GIS inputs, map placement changes (`set_device_location`, `delete_geo_shape`), device replacement (`rebind_device`), `add_schedule`·`add_schedule_batch`, `configure_library_source`, etc.
-- **No approval (low-risk writes)**: `create_note`, `knowledge_shelve` — reversible personal memos / unconfirmed knowledge that save immediately and are treated as non-authoritative until confirmed.
+- **Approval required (mutation / physical control)**: device control (`operate_device`, `set_output_state`, `schedule_device_control`), create/edit/delete of inputs/outputs/functions/notices, `modify_gis_input`·`delete_gis_input`·`activate_gis_input`, `modify_ai_agent`·`delete_ai_agent`, map placement changes (`set_device_location`, `delete_geo_shape`), device replacement (`rebind_device`), `configure_library_source`, etc.
+- **Config-only writes (approval exempt)**: `add_schedule`, `add_schedule_batch`, `create_gis_input`, `create_ai_agent`, `create_program`, `modify_program`, `create_sequence_function`, `modify_function_options`, `modify_sequence_schedule`, `modify_sequence_step`, `configure_sequence_day`. These save immediately, without approval, because they never move equipment by themselves: most of them (`create_gis_input`, `create_ai_agent`, the sequence tools, etc.) only ever produce something that is created **inactive**, with its own separate activation step that *is* still gated — `create_gis_input` saves at once but stays off until `activate_gis_input` (approval required), and a sequence's schedule can be edited freely but only takes effect on the ground once `activate_function` (approval required) runs it. `create_note` and `knowledge_shelve` are not classed as write tools at all in the registry: they have no activation step and save as unconfirmed/non-authoritative until a person confirms them (see AI Knowledge below) — reversible personal memos and unconfirmed knowledge, not standing configuration.
 
 Actions requiring approval are not applied immediately. In the **in-app assistant** they are presented in chat as an **approval card**, executed only once the user approves. Through the **external MCP server** they come back as a `pending_approval` response (a queued confirmation_id) and only proceed once the user explicitly approves or rejects that id — either path, nothing changes if the user rejects.
 
 Approving on the web Requests screen (`AI → Requests`) **runs it there and then**. Previously approval only issued a permit: the person had to go back to the AI and tell it, and the AI had to call again — a round trip the AI could not close on its own, since a chat model only acts when spoken to. The server now executes using exactly the arguments stored with the confirmation, so what the approval screen showed and what runs cannot diverge. If the AI later calls again with the same confirmation_id it gets that stored result back instead of a second execution. Only irreversible physical control (valves, pumps) asks for one extra confirmation on the approval screen.
+
+A **dashboard widget** (`aot/widgets/widget_mcp_review.py`, `js/common/aot-mcp-approval.js`) offers the same approval queue as a widget: approve/reject one at a time or several at once, or **edit then approve** — correct the stored arguments before running them. It asks for that same extra confirmation before any physical control.
 
 ---
 
@@ -479,7 +495,7 @@ Add to `claude_desktop_config.json`:
 }
 ```
 
-> State-changing tool calls do not execute immediately here either (`aot/ai/services/mcp_safety_gate.py`). The first call comes back as `pending_approval` with a `confirmation_id`; the user must explicitly approve or reject it, in that same conversation or on the scheduler page (`/scheduler`; for the audit log too, `/api/v1/mcp/review_page`), which is handled through `respond_to_confirmation`. Approving executes nothing by itself — retry the same call with `_confirmation_id` added afterward. The calling AI has no way to decide or fake this approval on its own. Set `AOT_MCP_WRITE_ENABLED=0` to refuse write tools outright (advice-only mode). Two separate deadlines apply: 15 minutes by default for a human to approve (`AOT_MCP_CONFIRM_TTL_SEC`), then a fresh 5 minutes from the moment of approval to execute (`AOT_MCP_APPROVED_TTL_SEC`). It still exposes control tools, so connect this server only to trusted clients.
+> State-changing tool calls do not execute immediately here either (`aot/ai/services/mcp_safety_gate.py`). The first call comes back as `pending_approval` with a `confirmation_id`; the user must explicitly approve or reject it, in that same conversation or on the **AI → Requests** screen (`/ai`), which is handled through `respond_to_confirmation`. (`/api/v1/mcp/review_page` still exists as a bookmark-compatible redirect to `/ai`, but the audit log itself moved — it's now **AI → Records** (`/ai/manage`), under the Tool Calls tab, alongside Conversations and Error Reports.) Approving executes nothing by itself — retry the same call with `_confirmation_id` added afterward. The calling AI has no way to decide or fake this approval on its own. Set `AOT_MCP_WRITE_ENABLED=0` to refuse write tools outright (advice-only mode). Two separate deadlines apply: 15 minutes by default for a human to approve (`AOT_MCP_CONFIRM_TTL_SEC`), then a fresh 5 minutes from the moment of approval to execute (`AOT_MCP_APPROVED_TTL_SEC`). It still exposes control tools, so connect this server only to trusted clients.
 
 ---
 
@@ -487,4 +503,4 @@ Add to `claude_desktop_config.json`:
 
 - [Environmental Control Automation](env-control.md)
 - [Scheduler](scheduler.md)
-- Full AI Guide
+- Full AI Guide — `docs/ai_guide.md` in the repository (not part of this published manual): the complete tool list, including everything behind a drawer, with arguments

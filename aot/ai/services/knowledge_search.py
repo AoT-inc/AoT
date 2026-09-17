@@ -162,14 +162,38 @@ def _docs_dir():
 
 
 def _is_indexable(filename):
+    """filename is a path relative to docs/ — 'Inputs.md' or 'geo/plots.md'."""
     if not filename.endswith('.md'):
         return False
-    m = _LOCALE_SUFFIX.search(filename)
-    if m and not filename.endswith('.ko.md'):
+    base = os.path.basename(filename)
+    m = _LOCALE_SUFFIX.search(base)
+    if m and not base.endswith('.ko.md'):
         return False  # skip non-Korean locale variants
-    if filename in _EXCLUDE_DOCS or _INTERNAL_DOC_RE.search(filename):
+    if base in _EXCLUDE_DOCS or _INTERNAL_DOC_RE.search(base):
         return False  # skip internal engineering / design docs (not the manual)
     return True
+
+
+def _manual_files(docs):
+    """Every manual page under docs/, as paths relative to docs/.
+
+    The manual is not flat: the map and AI chapters live in docs/geo/ and
+    docs/ai/, and a listdir of the root alone silently drops both — which is
+    most of what an agent gets asked about. Directories that hold generated
+    data or assets rather than prose are skipped.
+
+    @dependency docs/*.md
+    """
+    skip_dirs = {'ai_docs', 'images', 'css', 'js', 'fonts', 'design', 'dev',
+                 'architecture', 'upgrade'}
+    found = []
+    for root, dirs, files in os.walk(docs):
+        dirs[:] = sorted(d for d in dirs if d not in skip_dirs and not d.startswith('.'))
+        for fn in sorted(files):
+            rel = os.path.relpath(os.path.join(root, fn), docs)
+            if _is_indexable(rel):
+                found.append(rel)
+    return found
 
 
 def _split_sections(filename, text):
@@ -192,7 +216,9 @@ def _split_sections(filename, text):
         if m:
             flush()
             cur_level = len(m.group(1))
-            cur_heading = m.group(2).strip()
+            # Strip the attr_list anchor the manual carries for deep links
+            # ("Splitting a zone { #split }") — it is markup, not a heading.
+            cur_heading = re.sub(r'\s*\{[^}]*\}\s*$', '', m.group(2).strip()).strip()
             buf = []
         else:
             buf.append(line)
@@ -208,9 +234,7 @@ def _build_index():
         out = []
         try:
             docs = _docs_dir()
-            for fn in sorted(os.listdir(docs)):
-                if not _is_indexable(fn):
-                    continue
+            for fn in _manual_files(docs):
                 try:
                     with open(os.path.join(docs, fn), 'r', encoding='utf-8') as f:
                         out.extend(_split_sections(fn, f.read()))

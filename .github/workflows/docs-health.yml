@@ -13,6 +13,9 @@ name: Docs Health
 #   - docs/**/*.md 가 참조하는 이미지가 실제로는 없는 경우.
 #   - mkdocs.yml 의 extra.version 과 aot/config/__init__.py 의 AOT_VERSION 불일치
 #     (과거 태그·문서 버전 불일치 이력).
+#   - docs/ai_docs/ai_doc_index.json(AI 가 읽는 매뉴얼 색인)이 매뉴얼과 어긋난 채로
+#     커밋되는 경우. 쪽이 늘거나 제목이 바뀌었는데 재생성을 빼먹으면 AI 는 없어진 절을
+#     찾고 새 쪽은 모른다 (실제로 두 달 동안 geo·ai 챕터 16쪽이 통째로 빠져 있었다).
 #
 # aot/scripts/check_docs_health.py 의 5개 검사 중 4개(links·i18n·version·images)만 여기
 # 건다. 남은 하나(drift: docs/Supported-*.md 생성기 6종을 재실행해 git diff 가 비는지)는
@@ -34,6 +37,7 @@ on:
       - 'aot/aot_flask/templates/**'
       - 'aot/config/__init__.py'
       - 'aot/scripts/check_docs_health.py'
+      - 'aot/scripts/generate_ai_doc_index.py'
   pull_request:
     paths:
       - 'docs/**'
@@ -41,6 +45,7 @@ on:
       - 'aot/aot_flask/templates/**'
       - 'aot/config/__init__.py'
       - 'aot/scripts/check_docs_health.py'
+      - 'aot/scripts/generate_ai_doc_index.py'
   workflow_dispatch:
 
 permissions:
@@ -61,5 +66,5 @@ jobs:
       - name: mkdocs 및 플러그인 설치
         run: pip install -r docs/requirements.txt
 
-      - name: 문서 건전성 검사 (links · anchors · i18n · version · images)
+      - name: 문서 건전성 검사 (links · anchors · i18n · version · images · ai-index)
         run: python3 aot/scripts/check_docs_health.py

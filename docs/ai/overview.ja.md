@@ -1,6 +1,6 @@
 # AI機能の概要
 
-AoTは、MCP(Model Context Protocol)ベースのAIエージェントを使って、温室や栽培施設の環境を観察・診断・制御します。AIはあくまでアドバイス役に徹し、機器を動かす操作はすべて実行前にユーザーの承認が必要です(設定だけを変更する編集は例外です。詳しくはシーケンスの節を参照してください)。
+AoTは、MCP(Model Context Protocol)ベースのAIエージェントを使って、温室や栽培施設の環境を観察・診断・制御します。AIはあくまでアドバイス役に徹し、機器を動かす操作はすべて実行前にユーザーの承認が必要です(設定だけを変更する編集は例外です。詳しくは「安全性と承認のモデル」の節を参照してください)。
 
 ---
 
@@ -16,6 +16,8 @@ AIを使うには、別々の場所にある2つのスイッチを入れる必�
 順序は **設定で有効化 → AI > 接続ページでモデル(エージェント)を登録 → 稼働を開始** です。
 
 Claude Desktop などの**自分のAIアプリで接続**する経路は、このスイッチとは別に動きます。設定 > 一般で外部MCPのアクセスを許可し、ユーザーごとのアクセスキーがあれば足ります。内蔵AIはオフのままで構いません。AI > 接続ページの上部で両方の状態を確認し、それぞれの画面へ移動できます。
+
+この「外部MCPアクセス」トグル(**設定 > 一般 > 外部MCPサーバーを有効化**、`AIGlobalSettings.mcp_http_enabled`)は、MCPサーバーへのリクエストのたびにキャッシュせず毎回確認されます — オフにすると、再起動なしでその場から外部MCP呼び出しがすべて`503`になり、オンに戻せば同じくらいすぐに復旧します。
 
 - **モデルを1つも登録していないと稼働を開始できません。** 尋ねる相手がいないままバックグラウンド処理だけが回ると、サイクルのたびにログにエラーが積み重なるだけです。このスイッチは、少なくとも1つのエージェントが有効化されている場合にのみ使えるようになります。
 - **最後のモデルを無効化または削除すると、稼働も止まります。** 後でモデルを再度有効化しても、自律稼働は黙って再開しません — AIページであらためて開始してください。
@@ -49,46 +51,58 @@ AoTのAIは、2つの経路でツールを使用します。
 
 外部MCPサーバーと内部の`mcp_aot`エンジンが公開するツールです。読み取り系ツールと設定編集系ツールは即座に実行されます。制御・スケジューリング・有効化系ツールは、どちらの経路でも承認ゲートを通ります — アプリ内アシスタントのチャット承認カード、または外部MCPサーバーの承認キュー(`pending_approval` + `respond_to_confirmation`。詳しくは後述の「MCPサーバーの実行」を参照)です。
 
+### 2つの層: `tools/list` とドロワー { #tool-drawers }
+
+ツールカタログは1枚のフラットな一覧ではありません。全量をそのまま公開すると会話が始まる前だけで約2万トークンかかるため、`tools/list`が返すのは2つの層だけで、残りは必要になった時点でドロワーを開いて取り出します。
+
+- **常時公開(core) — 27個。** 次の一歩を、推測に頼らず踏み出すために欠かせない狭い集合です — 名前解決(`resolve_target`)、デバイス検索、値の読み取り、即時制御、承認キューなど(`aot/ai/services/tool_registry.py`の`_TIER_ASSIGNMENT`テーブル)。
+- **メタツール4個、coreと一緒に常時公開:** `open_drawer`(ドロワー1つの中のツール一覧。引数なしで呼ぶと全ドロワーの索引)、`get_tool_detail`(ツール1つの完全なスキーマを名前で取得)、`use_tool`(ドロワーのツールを名前で実際に**呼び出す** — ドロワーのツールを実行する唯一の手段で、`open_drawer`・`get_tool_detail`は定義を返すだけです)、`respond_to_confirmation`(保留中の確認を承認/却下)。
+- **残り101個は目的別の8つのドロワー**に入っており、`open_drawer`を呼んではじめて見えます: `device`(デバイス操作・状態)、`measurement`(センサー・環境・天気・エネルギー)、`function`(Function・コントローラー・シーケンス)、`schedule`(スケジュール)、`record`(ノート・掲示板・知識・アドバイス)、`space`(地図・ゾーン・施設・作物区画)、`definition`(デバイス定義のCRUD)、`system`(AI設定・システム状態・診断・画面)。
+
+このティアリングは既定でオンです。環境変数`AOT_MCP_TOOL_TIERING=0`で以前どおりカタログ全量をフラットに公開する動作へ戻せます(`aot/ai/services/tool_execution.py:132-239`、`aot/ai/services/tool_registry.py:1342-1560`)。
+
+以下の表はどちらの層にあるかにかかわらずツールを説明します — **ドロワー**列は`tools/list`には無く、先に開く必要があるツールを示します。引数まで含む完全なツール一覧(ドロワー内のツールを含む)はAIエージェントガイド(`docs/ai_guide.md`)にあるので、そちらを参照してください — このページでは表を重複して並べません。
+
 ### 観察(読み取り — 即時)
 
-| ツール | 説明 |
-|------|-------------|
-| `get_spatial_tree` | 空間階層(サイト > ゾーン > デバイス)のツリー |
-| `resolve_target` | 場所やデバイスの名前を正確なエンティティへ解決 — コンテナ(子を持つか)かどうかを事前に確認 |
-| `get_device_list` | 登録済みの全デバイス(入力・出力・カメラ)の一覧 |
-| `search_devices` | 名前や種類のキーワードでデバイスを検索 |
-| `get_sensor_detail` | センサーの時系列履歴(最小・最大・平均の統計) |
-| `get_weather` | 圃場・ゾーンの現在の天気(気温、湿度、風、降水) |
-| `get_energy_report` | 期間・ゾーン別のエネルギー使用量レポート |
-| `get_cumulative_status` | EnvCoordinatorのDLI / GDD累積状況 |
-| `search_notes` | ゾーンやデバイスのノート・メモ・作業記録を読み取る |
-| `get_note_attachment` | ノートに添付された写真を実画像として表示(1回の呼び出しにつき1枚) |
-| `list_notices` | 掲示板の投稿一覧 |
-| `get_system_update_status` | インストール済みバージョンと最新のGitHubリリースの比較 |
-| `list_available_devices` | AI判断に使えるデバイス(ネイティブブリッジ) |
-| `get_sensor_reading` | 特定センサーの最新の測定値(ネイティブブリッジ) |
+| ツール | 説明 | ドロワー |
+|------|-------------|------|
+| `get_spatial_tree` | 空間階層(サイト > ゾーン > デバイス)のツリー | ―(core) |
+| `resolve_target` | 場所やデバイスの名前を正確なエンティティへ解決 — コンテナ(子を持つか)かどうかを事前に確認 | ―(core) |
+| `get_device_list` | 登録済みの全デバイス(入力・出力・カメラ)の一覧 | ―(core) |
+| `search_devices` | 名前や種類のキーワードでデバイスを検索 | ―(core) |
+| `get_sensor_detail` | センサーの時系列履歴(最小・最大・平均の統計) | ―(core) |
+| `get_weather` | 圃場・ゾーンの現在の天気(気温、湿度、風、降水) | ―(core) |
+| `get_energy_report` | 期間・ゾーン別のエネルギー使用量レポート | `measurement` |
+| `get_cumulative_status` | EnvCoordinatorのDLI / GDD累積状況 | `measurement` |
+| `search_notes` | ゾーンやデバイスのノート・メモ・作業記録を読み取る | ―(core) |
+| `get_note_attachment` | ノートに添付された写真を実画像として表示(1回の呼び出しにつき1枚) | `record` |
+| `list_notices` | 掲示板の投稿一覧 | `record` |
+| `get_system_update_status` | インストール済みバージョンと最新のGitHubリリースの比較 | `system` |
+| `list_available_devices` | AI判断に使えるデバイス(ネイティブブリッジ) | ―(アプリ内のみ) |
+| `get_sensor_reading` | 特定センサーの最新の測定値(ネイティブブリッジ) | ―(アプリ内のみ) |
 
 ### 記録 / タスク
 
-| ツール | 説明 | 承認 |
-|------|-------------|----------|
-| `create_note` | 日付のないメモ・ノートをエンティティに作成し、即座に保存 | 不要 |
-| `add_schedule` | 人が行う作業タスク(除草、点検、清掃)を登録 | 必要 |
-| `add_schedule_batch` | 複数の対象(ゾーンごとなど)へのスケジュールを1回の承認でまとめて登録 | 必要 |
+| ツール | 説明 | 承認 | ドロワー |
+|------|-------------|----------|------|
+| `create_note` | 日付のないメモ・ノートをエンティティに作成し、即座に保存 | 不要 | ―(core) |
+| `add_schedule` | 人が行う作業タスク(除草、点検、清掃)を登録 | 不要 — `config_only`: Draft状態のスケジューラージョブを作るだけで、機器は動かしません。人が後でスケジューラー画面で確認するのは、それとは別の手順です。 | ―(core) |
+| `add_schedule_batch` | 複数の対象(ゾーンごとなど)へのスケジュールを1回の呼び出しでまとめて登録 | 不要 — `add_schedule`と同じ`config_only`の理由 | `schedule` |
 
 ### 制御(ユーザー承認が必要)
 
-| ツール | 説明 |
-|------|-------------|
-| `operate_device` | バルブ・ポンプ・照明の即時物理制御 |
-| `set_output_state` | 出力のオン・オフ切り替え(継続時間の指定は任意、ネイティブブリッジ) |
-| `schedule_device_control` | 特定の時刻に1回限りのデバイス操作を予約 |
+| ツール | 説明 | ドロワー |
+|------|-------------|------|
+| `operate_device` | バルブ・ポンプ・照明の即時物理制御 | ―(core) |
+| `set_output_state` | 出力のオン・オフ切り替え(継続時間の指定は任意、ネイティブブリッジ) | `device` |
+| `schedule_device_control` | 特定の時刻に1回限りのデバイス操作を予約 | `schedule` |
 
-> アプリ内アシスタントでは、上記の制御ツールと`add_schedule`は、承認カードでの確認を経てはじめて実行されます。外部MCPサーバーから直接呼び出す場合も同種のゲートを通ります — 最初の呼び出しは実行されず、`confirmation_id`付きの`pending_approval`として返ってきます。ユーザーがチャット(`respond_to_confirmation`で処理)またはWebレビュー画面でそのconfirmation_idを明示的に承認または却下したのち、呼び出し側が同じ引数に`_confirmation_id`を加えて再試行してはじめて実際に実行されます。全体の流れは後述の「MCPサーバーの実行」を参照してください。
+> アプリ内アシスタントでは、上記の制御ツールは、承認カードでの確認を経てはじめて実行されます。外部MCPサーバーから直接呼び出す場合も同種のゲートを通ります — 最初の呼び出しは実行されず、`confirmation_id`付きの`pending_approval`として返ってきます。ユーザーがチャット(`respond_to_confirmation`で処理)またはWebレビュー画面でそのconfirmation_idを明示的に承認または却下したのち、呼び出し側が同じ引数に`_confirmation_id`を加えて再試行してはじめて実際に実行されます。全体の流れは後述の「MCPサーバーの実行」を参照してください。`add_schedule`・`add_schedule_batch`はこのゲートを通りません — 上の「記録 / タスク」表を参照してください。
 
 ### シーケンス(設定編集には承認不要)
 
-[シーケンス](../Functions.md#trigger-sequence)は複数の出力を決まった順序で動かします — かんがいでよくある形で、バルブが順番に切り替わり、ポンプが運転全体にまたがって動きます。以下のツールはシーケンスを読み取り、組み立てます。
+[シーケンス](../Functions.md#trigger-sequence)は複数の出力を決まった順序で動かします — かんがいでよくある形で、バルブが順番に切り替わり、ポンプが運転全体にまたがって動きます。以下のツールはシーケンスを読み取り、組み立てます。この節のツール4つ(以下の3つと`create_sequence_function`)はいずれも`function`ドロワーにあります。
 
 | ツール | 説明 |
 |------|-------------|
@@ -132,20 +146,20 @@ AoTのAIは、2つの経路でツールを使用します。
 
 ### 拡張アプリ内アシスタントツール
 
-上記のMCPカタログに加え、アプリ内AIアシスタントはエンティティの組み立て・自動化・知識のための追加ツールを使います。状態を変更するツールはすべて承認が必要です。
+上記のツールに加え、アプリ内AIアシスタントは(そのうち`core`のものは外部MCPサーバーも直接)エンティティの組み立て・自動化・知識のための追加ツールを使います。状態を変更するツールの多くは承認が必要ですが、以下で`config_only`と記したものは不要です — 「安全性と承認のモデル」の節を参照してください。
 
 - **入力/出力の管理**: `list_device_types`、`get_device_type_options`、`create_input`・`modify_input`・`delete_input`、`create_output`・`modify_output`・`delete_output`、`get_device_measurements`
-- **Function(自動化)**: `get_function_list`、`get_function_detail`、`create_function`、`create_sequence_function`、`modify_function_options`(トリガーには使えません — 上記のシーケンスの節を参照)、`activate_function`・`deactivate_function`・`delete_function`、加えてシーケンス用ツール`configure_sequence_day`・`modify_sequence_step`・`modify_sequence_schedule`
+- **Function(自動化)**: `get_function_list`、`get_function_detail`、`create_function`、`create_sequence_function`(`config_only`)、`modify_function_options`(`config_only`。トリガーには使えません — 上記のシーケンスの節を参照)、`activate_function`・`deactivate_function`・`delete_function`、加えてシーケンス用ツール`configure_sequence_day`・`modify_sequence_step`・`modify_sequence_schedule`(いずれも`config_only`)
 - **スケジュール台帳**: `search_schedule`、`edit_schedule`、`delete_schedule`
 - **地図(GIS)**: `list_geo_maps`、`get_device_location`、`set_device_location`、`delete_geo_shape`、`list_unbound_slots`(デバイスのない場所を確認)、`rebind_device`(1台のデバイスが占める地図上の全スロットを別のデバイスへ移す)
-- **GIS入力(地図レイヤー)**: `list_gis_inputs`、`create_gis_input`・`modify_gis_input`・`delete_gis_input`、`activate_gis_input`(VWorld/Google/OpenWeatherなどの地図レイヤー提供元を管理)
+- **GIS入力(地図レイヤー)**: `list_gis_inputs`、`create_gis_input`(`config_only` — 常に非有効の状態で作成)、`modify_gis_input`・`delete_gis_input`・`activate_gis_input`(承認が必要) — VWorld/Google/OpenWeatherなどの地図レイヤー提供元を管理
 - **施設/設備の照会**: `get_facility_capacity`(施設の冷暖房能力・容積・換気・かんがい設計の要約)、`get_map_equipment`(地図に描かれた設備のサイト/ゾーン別かんがい設計要約。スプリンクラーと点滴かんがいは分けて集計)、`get_map_equipment_detail`(個々のスプリンクラーの位置・間隔・散水半径、配管ごとの詳細 — 要約で足りないときだけ)
 - **掲示板**: `create_notice`・`modify_notice`・`delete_notice`
-- **AIエージェント管理**: `list_ai_agents`、`list_ai_entries`、`create_ai_agent`・`modify_ai_agent`・`delete_ai_agent`
-- **知識ライブラリ**: `knowledge_search`、`knowledge_shelve`、`list_library_source_types`、`smartfarmkorea_lookup`、`configure_library_source`
+- **AIエージェント管理**: `list_ai_agents` — これは`core`なので、アプリ内だけでなく外部MCPサーバーの`tools/list`にもすでに含まれています。`list_ai_entries`、`create_ai_agent`(`config_only`)、`modify_ai_agent`・`delete_ai_agent`(承認が必要)
+- **知識ライブラリ**: `knowledge_search`、`knowledge_shelve`(`config_only`)、`list_library_source_types`、`smartfarmkorea_lookup`、`configure_library_source`
 - **診断/その他**: `analyze_system_failure`、`get_local_time`、`get_tool_detail`、`read_manual`、`get_detailed_manifest`、`ask_user`
 
-> ツールの単一の正本は`aot/ai/services/tool_registry.py`です。ツールが追加・変更されたときは、このページではなくそのファイルが正となります。
+> ツールの単一の正本は`aot/ai/services/tool_registry.py`です。ツールが追加・変更されたときは、このページではなくそのファイルが正となります。引数まで含む完全なツール一覧(ドロワー内のツールを含む)はAIエージェントガイド(`docs/ai_guide.md`)を参照してください。
 
 ---
 
@@ -162,14 +176,16 @@ AoTのAIは、2つの経路でツールを使用します。
 
 ## 安全性と承認のモデル { #safety-approval-model }
 
-状態を変えない**読み取りツール**は即座に実行されます。**状態を変更するツール**は、どちらの経路から呼ばれても承認ゲートを通ります。
+状態を変えない**読み取りツール**は即座に実行されます。書き込みツールは2つに分かれます。
 
-- **承認が必要(変更・物理制御)**: デバイス制御(`operate_device`、`set_output_state`、`schedule_device_control`)、入力/出力/Function/掲示板/AIエージェント/GIS入力の作成・編集・削除、地図の配置変更(`set_device_location`、`delete_geo_shape`)、デバイスの置き換え(`rebind_device`)、`add_schedule`・`add_schedule_batch`、`configure_library_source`など。
-- **承認不要(低リスクな書き込み)**: `create_note`、`knowledge_shelve` — 取り消し可能な個人メモ・未確認知識で、即座に保存され、確認されるまでは正としては扱われません。
+- **承認が必要(変更・物理制御)**: デバイス制御(`operate_device`、`set_output_state`、`schedule_device_control`)、入力/出力/Function/掲示板の作成・編集・削除、`modify_gis_input`・`delete_gis_input`・`activate_gis_input`、`modify_ai_agent`・`delete_ai_agent`、地図の配置変更(`set_device_location`、`delete_geo_shape`)、デバイスの置き換え(`rebind_device`)、`configure_library_source`など。
+- **config-onlyな書き込み(承認免除)**: `add_schedule`、`add_schedule_batch`、`create_gis_input`、`create_ai_agent`、`create_program`、`modify_program`、`create_sequence_function`、`modify_function_options`、`modify_sequence_schedule`、`modify_sequence_step`、`configure_sequence_day`。これらはそれ自体では機器を動かさないため、承認なしで即座に保存されます — このうち大半(`create_gis_input`、`create_ai_agent`、シーケンス系ツールなど)は、作られるものが常に**非有効**の状態で、実際にそれを有効にする別の段階が用意されており、その段階は引き続き承認の対象です。たとえば`create_gis_input`は即座に保存されますが、`activate_gis_input`(承認が必要)を経るまでオフのままですし、シーケンスのスケジュールは自由に編集できても、実際に現場で動くのは`activate_function`(承認が必要)を経たあとだけです。`create_note`・`knowledge_shelve`はレジストリ上そもそも書き込みツールとして数えません — こうした有効化の段階はありませんが、その代わり、人が確認するまでは未確認・非正としての扱いで保存されます(後述のAI知識の節を参照) — 取り消し可能な個人メモや未確認知識であって、常時反映される設定ではないからです。
 
 承認が必要な操作は即座には適用されません。**アプリ内アシスタント**では、チャット上に**承認カード**として提示され、ユーザーが承認してはじめて実行されます。**外部MCPサーバー**経由では、`pending_approval`レスポンス(キューに入ったconfirmation_id)として返り、ユーザーがそのidを明示的に承認または却下してはじめて先に進みます — どちらの経路でも、ユーザーが却下すれば何も変わりません。
 
 Webのリクエスト画面(`AI → リクエスト`)で承認すると、**その場で即座に実行されます。** 以前は、承認しても許可証が出るだけでした — 人がAIのところへ戻って伝え、AIがもう一度呼び出す必要があり、チャットモデルは話しかけられたときにしか動かないため、この往復をAI自身では完結できませんでした。現在はサーバーが、確認と一緒に保存された引数をそのまま使って実行するため、承認画面に表示された内容と実際に実行される内容がずれることはありません。AIが後で同じconfirmation_idで再度呼び出しても、二度目の実行にはならず、その保存済みの結果が返るだけです。取り消せない物理制御(バルブ、ポンプ)だけは、承認画面でもう一段階の確認を求めます。
+
+**ダッシュボードウィジェット**(`aot/widgets/widget_mcp_review.py`、`js/common/aot-mcp-approval.js`)でも同じ承認キューを扱えます。1件ずつ、またはまとめて承認・却下でき、**修正してから承認**(保存された引数を直してから実行)にも対応します。物理制御はここでも、もう一段階の確認を求められます。
 
 ---
 
@@ -471,7 +487,7 @@ REST APIを残しているのは、通常プランのChatGPT Custom GPTがMCPサ
 }
 ```
 
-> ここでも、状態を変更するツール呼び出しは即座には実行されません(`aot/ai/services/mcp_safety_gate.py`)。最初の呼び出しは`confirmation_id`付きの`pending_approval`として返り、ユーザーは同じ会話の中、またはスケジューラーページ(`/scheduler`。監査ログも見るなら`/api/v1/mcp/review_page`)上で明示的に承認または却下する必要があり、これは`respond_to_confirmation`を通じて処理されます。承認しただけでは何も実行されません — そのあと`_confirmation_id`を加えて同じ呼び出しを再試行してください。呼び出し元のAIには、この承認を自分で決めたり偽装したりする手段がありません。`AOT_MCP_WRITE_ENABLED=0`を設定すると、書き込み系ツールを一律拒否します(アドバイス専用モード)。締め切りは2段階あります — 既定で人が承認するまで15分(`AOT_MCP_CONFIRM_TTL_SEC`)、承認された瞬間からあらためて5分で実行(`AOT_MCP_APPROVED_TTL_SEC`)です。制御ツールを引き続き公開しているため、このサーバーは信頼できるクライアントにのみ接続してください。
+> ここでも、状態を変更するツール呼び出しは即座には実行されません(`aot/ai/services/mcp_safety_gate.py`)。最初の呼び出しは`confirmation_id`付きの`pending_approval`として返り、ユーザーは同じ会話の中、または**AI → リクエスト**画面(`/ai`)上で明示的に承認または却下する必要があり、これは`respond_to_confirmation`を通じて処理されます(`/api/v1/mcp/review_page`は今も存在しますが、`/ai`へのリダイレクトになっただけです — ブックマーク互換のためです。監査ログ自体は**AI → 記録**(`/ai/manage`)の「ツール呼び出し」タブに移り、「会話」「エラーレポート」タブと並んでいます)。承認しただけでは何も実行されません — そのあと`_confirmation_id`を加えて同じ呼び出しを再試行してください。呼び出し元のAIには、この承認を自分で決めたり偽装したりする手段がありません。`AOT_MCP_WRITE_ENABLED=0`を設定すると、書き込み系ツールを一律拒否します(アドバイス専用モード)。締め切りは2段階あります — 既定で人が承認するまで15分(`AOT_MCP_CONFIRM_TTL_SEC`)、承認された瞬間からあらためて5分で実行(`AOT_MCP_APPROVED_TTL_SEC`)です。制御ツールを引き続き公開しているため、このサーバーは信頼できるクライアントにのみ接続してください。
 
 ---
 
@@ -479,4 +495,4 @@ REST APIを残しているのは、通常プランのChatGPT Custom GPTがMCPサ
 
 - [環境制御自動化](env-control.md)
 - [スケジューラー](scheduler.md)
-- 完全なAIガイド
+- 完全なAIガイド — リポジトリの`docs/ai_guide.md`(この公開マニュアルには含まれません): ドロワー内のツールを含む完全なツール一覧と引数

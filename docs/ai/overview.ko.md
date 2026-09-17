@@ -1,6 +1,6 @@
 # AI 기능 개요
 
-AoT는 MCP(Model Context Protocol) 기반 AI 에이전트를 통해 온실·재배 시설의 환경을 관찰·진단·제어합니다. AI는 시스템을 보조하는 역할로, 장비를 움직이는 동작은 사용자 승인 후 실행됩니다(설정만 바꾸는 편집은 예외 — 아래 시퀀스 절 참고).
+AoT는 MCP(Model Context Protocol) 기반 AI 에이전트를 통해 온실·재배 시설의 환경을 관찰·진단·제어합니다. AI는 시스템을 보조하는 역할로, 장비를 움직이는 동작은 사용자 승인 후 실행됩니다(설정만 바꾸는 편집은 예외 — 아래 안전·승인 모델 절 참고).
 
 ---
 
@@ -16,6 +16,8 @@ AI를 쓰려면 서로 다른 자리의 스위치 두 개를 켜야 합니다. �
 순서는 **설정에서 사용 → AI > 연결 페이지에서 모델(에이전트) 등록 → 작동 시작**입니다.
 
 Claude Desktop 같은 **내 AI 앱으로 연결**하는 경로는 이 스위치와 따로 동작합니다. 설정 > 일반의 외부 MCP 접속 허용과 사용자별 접속 키만 있으면 되고, 내장 AI 를 꺼 두어도 됩니다. AI > 연결 페이지 맨 위에서 두 가지 상태를 보고 각 화면으로 이동할 수 있습니다.
+
+이 "외부 MCP 접속 허용" 토글(**설정 > 일반 > 외부 MCP 서버 사용**, `AIGlobalSettings.mcp_http_enabled`)은 캐시되지 않고 MCP 서버로 들어오는 요청마다 매번 새로 확인됩니다 — 끄면 재시작 없이 그 즉시 모든 외부 MCP 호출이 `503`으로 거부되고, 다시 켜면 그만큼 빠르게 되살아납니다.
 
 - **모델을 하나도 등록하지 않으면 작동을 시작할 수 없습니다.** 물어볼 모델이 없는데 백그라운드 작업만 돌면 매 주기 로그에 오류만 쌓입니다. 작동 스위치는 활성 에이전트가 하나 이상일 때만 눌립니다.
 - **마지막 모델을 비활성화하거나 삭제하면 작동도 함께 멈춥니다.** 나중에 모델을 다시 살려도 자율 작동은 저절로 재개되지 않습니다 — AI 페이지에서 다시 켜 주세요.
@@ -49,46 +51,58 @@ AoT의 AI는 두 가지 경로로 도구를 사용합니다.
 
 외부 MCP 서버와 내부 `mcp_aot` 엔진이 노출하는 도구입니다. 읽기 도구와 설정 편집 도구는 즉시 실행되고, 제어·일정·활성화 도구는 승인 게이트를 거칩니다 — 인앱 어시스턴트에서는 채팅의 승인 카드로, 외부 MCP 서버에서는 대기열(`pending_approval` + `respond_to_confirmation`)로 처리됩니다(자세한 내용은 아래 "MCP 서버 실행" 참고).
 
+### 두 층: `tools/list` vs. 서랍 { #tool-drawers }
+
+도구 목록은 한 장에 전부 실리지 않습니다. 전량을 그대로 노출하면 대화가 시작되기도 전에 약 2만 토큰이 나가므로, `tools/list`는 두 층만 돌려주고 나머지는 필요할 때 서랍을 열어 꺼내 씁니다.
+
+- **상시 노출(core) — 27개.** 다음 한 걸음을 떼는 데 없어서는 안 되는 좁은 집합입니다 — 이름 해석(`resolve_target`), 장치 조회, 값 읽기, 즉시 제어, 승인 대기열 등(`aot/ai/services/tool_registry.py`의 `_TIER_ASSIGNMENT` 표).
+- **메타 도구 4개, core와 함께 항상 노출:** `open_drawer`(서랍 하나의 도구 목록, 인자 없이 부르면 전체 서랍 인덱스), `get_tool_detail`(도구 하나의 완전한 스키마를 이름으로 조회), `use_tool`(서랍 도구를 이름으로 실제 **실행** — 서랍 도구를 실행하는 유일한 방법이며, `open_drawer`·`get_tool_detail`은 정의만 돌려줍니다), `respond_to_confirmation`(대기 중인 확인을 승인/거부).
+- **나머지 101개는 목적별 8개 서랍**에 들어 있고, `open_drawer`를 불러야 비로소 보입니다: `device`(장치 조작·상태), `measurement`(센서·환경·날씨·에너지), `function`(함수·제어기·시퀀스), `schedule`(일정·예약), `record`(노트·공지·지식·조언), `space`(지도·구역·시설·구획), `definition`(장치 정의 CRUD), `system`(AI 설정·시스템 상태·진단·화면).
+
+이 구조는 기본으로 켜져 있으며, 환경변수 `AOT_MCP_TOOL_TIERING=0`으로 되돌리면 예전처럼 전량이 평면 목록으로 노출됩니다(`aot/ai/services/tool_execution.py:132-239`, `aot/ai/services/tool_registry.py:1342-1560`).
+
+아래 표들은 어느 층에 있는지와 무관하게 도구를 설명합니다 — **서랍** 칸은 `tools/list`에 없어서 먼저 열어야 하는 도구를 표시합니다. 인자까지 포함한 전체 도구 목록(서랍 안 도구 포함)은 AI 에이전트 가이드(`docs/ai_guide.md`)에 있으니 그쪽을 참고하세요 — 이 문서에서는 표를 장황하게 복제하지 않습니다.
+
 ### 관찰·조회 (읽기 — 즉시 실행)
 
-| 도구 | 설명 |
-|------|------|
-| `get_spatial_tree` | 공간 계층(사이트 > 구역 > 장치) 트리 |
-| `resolve_target` | 장치/구역 이름을 정확한 엔티티로 해석 — 컨테이너(하위 구역 보유)인지 미리 확인 |
-| `get_device_list` | 등록된 전체 장치(입력·출력·카메라) 목록 |
-| `search_devices` | 이름·유형 키워드로 장치 검색 |
-| `get_sensor_detail` | 센서 시계열 이력 (min/max/avg 통계) |
-| `get_weather` | 포장·구역의 현재 기상 (기온·습도·풍속·강수) |
-| `get_energy_report` | 기간·구역별 에너지 사용량 리포트 |
-| `get_cumulative_status` | EnvCoordinator DLI(일적산광량)·GDD(누적온도) 상태 |
-| `search_notes` | 구역·장치에 부착된 노트/메모/작업기록 조회 |
-| `get_note_attachment` | 노트에 첨부된 사진을 실제 이미지로 조회 (한 번에 한 장) |
-| `list_notices` | 공지 게시판 글 목록 |
-| `get_system_update_status` | 설치 버전 vs GitHub 최신 릴리스 비교 |
-| `list_available_devices` | AI 판단 대상 장치 목록 (네이티브 브리지) |
-| `get_sensor_reading` | 특정 센서의 최신 측정값 (네이티브 브리지) |
+| 도구 | 설명 | 서랍 |
+|------|------|------|
+| `get_spatial_tree` | 공간 계층(사이트 > 구역 > 장치) 트리 | — (core) |
+| `resolve_target` | 장치/구역 이름을 정확한 엔티티로 해석 — 컨테이너(하위 구역 보유)인지 미리 확인 | — (core) |
+| `get_device_list` | 등록된 전체 장치(입력·출력·카메라) 목록 | — (core) |
+| `search_devices` | 이름·유형 키워드로 장치 검색 | — (core) |
+| `get_sensor_detail` | 센서 시계열 이력 (min/max/avg 통계) | — (core) |
+| `get_weather` | 포장·구역의 현재 기상 (기온·습도·풍속·강수) | — (core) |
+| `get_energy_report` | 기간·구역별 에너지 사용량 리포트 | `measurement` |
+| `get_cumulative_status` | EnvCoordinator DLI(일적산광량)·GDD(누적온도) 상태 | `measurement` |
+| `search_notes` | 구역·장치에 부착된 노트/메모/작업기록 조회 | — (core) |
+| `get_note_attachment` | 노트에 첨부된 사진을 실제 이미지로 조회 (한 번에 한 장) | `record` |
+| `list_notices` | 공지 게시판 글 목록 | `record` |
+| `get_system_update_status` | 설치 버전 vs GitHub 최신 릴리스 비교 | `system` |
+| `list_available_devices` | AI 판단 대상 장치 목록 (네이티브 브리지) | — (인앱 전용) |
+| `get_sensor_reading` | 특정 센서의 최신 측정값 (네이티브 브리지) | — (인앱 전용) |
 
 ### 기록·작업
 
-| 도구 | 설명 | 승인 |
-|------|------|------|
-| `create_note` | 날짜 없는 메모/노트를 대상 엔티티에 부착해 즉시 저장 | 불필요 |
-| `add_schedule` | 사람이 수행할 작업 일정(제초·점검·청소 등) 등록 | 필요 |
-| `add_schedule_batch` | 여러 대상(구역별 등)의 일정을 단일 승인으로 일괄 등록 | 필요 |
+| 도구 | 설명 | 승인 | 서랍 |
+|------|------|------|------|
+| `create_note` | 날짜 없는 메모/노트를 대상 엔티티에 부착해 즉시 저장 | 불필요 | — (core) |
+| `add_schedule` | 사람이 수행할 작업 일정(제초·점검·청소 등) 등록 | 불필요 — `config_only`: Draft 상태의 스케줄러 잡만 만들 뿐 장비는 움직이지 않습니다. 사람이 나중에 스케줄러 화면에서 확인하는 것은 이와 별개의 절차입니다. | — (core) |
+| `add_schedule_batch` | 여러 대상(구역별 등)의 일정을 한 번의 호출로 일괄 등록 | 불필요 — `add_schedule`과 같은 `config_only` 이유 | `schedule` |
 
 ### 제어 (사용자 승인 필요)
 
-| 도구 | 설명 |
-|------|------|
-| `operate_device` | 밸브·펌프·조명 등 즉시 물리 제어 |
-| `set_output_state` | 출력 장치 on/off (선택적 지속시간, 네이티브 브리지) |
-| `schedule_device_control` | 특정 시각 1회성 장치 제어 예약 |
+| 도구 | 설명 | 서랍 |
+|------|------|------|
+| `operate_device` | 밸브·펌프·조명 등 즉시 물리 제어 | — (core) |
+| `set_output_state` | 출력 장치 on/off (선택적 지속시간, 네이티브 브리지) | `device` |
+| `schedule_device_control` | 특정 시각 1회성 장치 제어 예약 | `schedule` |
 
-> 인앱 어시스턴트에서는 위 제어·`add_schedule` 호출이 승인 카드로 확인을 받은 뒤 실행됩니다. 외부 MCP 서버로 직접 호출할 때도 동일하게 승인을 거칩니다 — 최초 호출은 실행되지 않고 `pending_approval`(대기 중인 confirmation_id)로 응답하며, 사용자가 그 confirmation_id를 채팅에서 명시적으로 승인/거부해야 `respond_to_confirmation` 호출(또는 웹 승인 페이지 클릭)로 처리되고, 그 뒤 같은 인자에 `_confirmation_id`를 붙여 재호출해야 실제로 실행됩니다. 자세한 흐름은 아래 "MCP 서버 실행"을 참고하세요.
+> 인앱 어시스턴트에서는 위 제어 도구 호출이 승인 카드로 확인을 받은 뒤 실행됩니다. 외부 MCP 서버로 직접 호출할 때도 동일하게 승인을 거칩니다 — 최초 호출은 실행되지 않고 `pending_approval`(대기 중인 confirmation_id)로 응답하며, 사용자가 그 confirmation_id를 채팅에서 명시적으로 승인/거부해야 `respond_to_confirmation` 호출(또는 웹 승인 페이지 클릭)로 처리되고, 그 뒤 같은 인자에 `_confirmation_id`를 붙여 재호출해야 실제로 실행됩니다. 자세한 흐름은 아래 "MCP 서버 실행"을 참고하세요. `add_schedule`·`add_schedule_batch`는 이 게이트를 거치지 않습니다 — 위 기록·작업 표를 참고하세요.
 
 ### 시퀀스 (설정 편집은 승인 불필요)
 
-[시퀀스](../Functions.ko.md#trigger-sequence)는 여러 출력 장치를 정해진 순서로 돌리는 기능으로, 밸브가 차례로 열리고 펌프가 전 구간을 도는 관수가 대표적인 형태입니다. 아래 도구로 시퀀스를 읽고 구성합니다.
+[시퀀스](../Functions.ko.md#trigger-sequence)는 여러 출력 장치를 정해진 순서로 돌리는 기능으로, 밸브가 차례로 열리고 펌프가 전 구간을 도는 관수가 대표적인 형태입니다. 아래 도구로 시퀀스를 읽고 구성합니다. 이 절의 도구 넷(아래 셋과 `create_sequence_function`)은 모두 `function` 서랍에 있습니다.
 
 | 도구 | 설명 |
 |------|------|
@@ -133,20 +147,20 @@ AoT의 AI는 두 가지 경로로 도구를 사용합니다.
 
 ### 인앱 어시스턴트 확장 도구
 
-인앱 AI 어시스턴트는 위 MCP 카탈로그 외에 엔티티 조립·자동화·지식까지 다루는 확장 도구를 추가로 사용합니다. 장비를 움직이거나 함수를 활성화·삭제하는 도구는 승인이 필요합니다.
+위 도구 외에 인앱 AI 어시스턴트는(그리고 그중 `core`인 것은 외부 MCP 서버도 직접) 엔티티 조립·자동화·지식까지 다루는 확장 도구를 추가로 사용합니다. 대부분의 상태 변경 도구는 승인이 필요하지만, 아래 `config_only`로 표시한 것은 필요하지 않습니다 — 안전·승인 모델 절 참고.
 
 - **입력/출력 관리**: `list_device_types`, `get_device_type_options`, `create_input`·`modify_input`·`delete_input`, `create_output`·`modify_output`·`delete_output`, `get_device_measurements`
-- **함수(자동화)**: `get_function_list`, `get_function_detail`, `create_function`, `create_sequence_function`, `modify_function_options`(트리거에는 통하지 않음 — 위 시퀀스 절 참고), `activate_function`·`deactivate_function`·`delete_function`, 그리고 시퀀스 도구 `configure_sequence_day`·`modify_sequence_step`·`modify_sequence_schedule`
+- **함수(자동화)**: `get_function_list`, `get_function_detail`, `create_function`, `create_sequence_function`(`config_only`), `modify_function_options`(`config_only`; 트리거에는 통하지 않음 — 위 시퀀스 절 참고), `activate_function`·`deactivate_function`·`delete_function`, 그리고 시퀀스 도구 `configure_sequence_day`·`modify_sequence_step`·`modify_sequence_schedule`(모두 `config_only`)
 - **일정 원장**: `search_schedule`, `edit_schedule`, `delete_schedule`
 - **지도(GIS)**: `list_geo_maps`, `get_device_location`, `set_device_location`, `delete_geo_shape`, `list_unbound_slots`(장치가 없는 자리), `rebind_device`(한 장치의 지도 자리 전부를 다른 장치로)
-- **GIS 입력(지도 레이어)**: `list_gis_inputs`, `create_gis_input`·`modify_gis_input`·`delete_gis_input`, `activate_gis_input`(VWorld/Google/OpenWeather 등 지도 레이어 제공자 관리)
+- **GIS 입력(지도 레이어)**: `list_gis_inputs`, `create_gis_input`(`config_only` — 항상 비활성 상태로 생성), `modify_gis_input`·`delete_gis_input`·`activate_gis_input`(승인 필요) — VWorld/Google/OpenWeather 등 지도 레이어 제공자 관리
 - **설비/시설 조회**: `get_facility_capacity`(시설 냉난방 용량·체적·환기·관수 설계 요약), `get_map_equipment`(지도에 그린 설비의 구역별 관수 설계 요약, 스프링클러/점적 구분), `get_map_equipment_detail`(개별 스프링클러 위치·간격·반경, 배관별 상세 — 요약으로 부족할 때만)
 - **공지 게시판**: `create_notice`·`modify_notice`·`delete_notice`
-- **AI 에이전트 관리**: `list_ai_agents`, `list_ai_entries`, `create_ai_agent`·`modify_ai_agent`·`delete_ai_agent`
+- **AI 에이전트 관리**: `list_ai_agents` — 이 도구는 `core`라 인앱뿐 아니라 외부 MCP 서버의 `tools/list`에도 이미 실립니다; `list_ai_entries`, `create_ai_agent`(`config_only`), `modify_ai_agent`·`delete_ai_agent`(승인 필요)
 - **지식 라이브러리**: `knowledge_search`, `knowledge_shelve`, `list_library_source_types`, `smartfarmkorea_lookup`, `configure_library_source`
 - **진단·기타**: `analyze_system_failure`, `get_local_time`, `get_tool_detail`, `read_manual`, `get_detailed_manifest`, `ask_user`
 
-> 도구의 단일 정본은 `aot/ai/services/tool_registry.py`입니다. 도구가 추가·변경되면 이 문서보다 그 파일이 우선합니다.
+> 도구의 단일 정본은 `aot/ai/services/tool_registry.py`입니다. 도구가 추가·변경되면 이 문서보다 그 파일이 우선합니다. 인자까지 포함한 전체 도구 목록(서랍 안 도구 포함)은 AI 에이전트 가이드(`docs/ai_guide.md`)를 참고하세요.
 
 ---
 
@@ -163,14 +177,16 @@ AoT의 AI는 두 가지 경로로 도구를 사용합니다.
 
 ## 안전·승인 모델 { #safety-approval-model }
 
-상태를 바꾸지 않는 **읽기 도구**는 즉시 실행됩니다. **상태를 바꾸는 도구**는 어느 경로로 호출되든 승인 게이트를 거칩니다.
+상태를 바꾸지 않는 **읽기 도구**는 즉시 실행됩니다. 쓰기 도구는 둘로 나뉩니다.
 
-- **승인 필요(변이·물리 제어)**: 장치 제어(`operate_device`, `set_output_state`, `schedule_device_control`), 입력/출력/함수/공지/AI 에이전트/GIS 입력의 생성·수정·삭제, 지도 배치 변경(`set_device_location`, `delete_geo_shape`), 장치 교체(`rebind_device`), `add_schedule`·`add_schedule_batch`, `configure_library_source` 등.
-- **승인 불필요(저위험 기록)**: `create_note`, `knowledge_shelve` — 되돌릴 수 있는 개인 메모/미확인 지식으로 즉시 저장되며, 확정 전까지 권위 없는 정보로 취급됩니다.
+- **승인 필요(변이·물리 제어)**: 장치 제어(`operate_device`, `set_output_state`, `schedule_device_control`), 입력/출력/함수/공지의 생성·수정·삭제, `modify_gis_input`·`delete_gis_input`·`activate_gis_input`, `modify_ai_agent`·`delete_ai_agent`, 지도 배치 변경(`set_device_location`, `delete_geo_shape`), 장치 교체(`rebind_device`), `configure_library_source` 등.
+- **config-only 쓰기(승인 면제)**: `add_schedule`, `add_schedule_batch`, `create_gis_input`, `create_ai_agent`, `create_program`, `modify_program`, `create_sequence_function`, `modify_function_options`, `modify_sequence_schedule`, `modify_sequence_step`, `configure_sequence_day`. 이들은 그 자체로는 장비를 움직이지 않으므로 승인 없이 즉시 저장됩니다 — 대부분(`create_gis_input`, `create_ai_agent`, 시퀀스 도구 등)은 만들어진 결과물이 항상 **비활성 상태**이고, 그 결과물을 실제로 켜는 별도의 활성화 단계가 따로 있으며 그 단계는 여전히 승인 대상입니다. 예를 들어 `create_gis_input`은 즉시 저장되지만 `activate_gis_input`(승인 필요)을 거쳐야 켜지고, 시퀀스의 시간표는 자유롭게 편집할 수 있지만 실제로 도는 것은 `activate_function`(승인 필요)을 지난 뒤입니다. `create_note`·`knowledge_shelve`는 레지스트리에서 아예 쓰기 도구로 치지 않습니다 — 활성화 단계가 없는 대신, 사람이 확인하기 전까지 미확인·비권위 정보로 저장됩니다(아래 AI 지식 절 참고) — 되돌릴 수 있는 개인 메모나 미확인 지식일 뿐, 상시 반영되는 설정이 아니기 때문입니다.
 
 승인이 필요한 동작은 즉시 적용되지 않습니다. **인앱 어시스턴트**에서는 채팅에 **승인 카드**로 제시되어 사용자가 승인해야 실제로 실행됩니다. **외부 MCP 서버**에서는 `pending_approval` 응답(대기열)으로 나가고, 사용자가 그 confirmation_id를 명시적으로 승인/거부해야 처리됩니다 — 어느 경로든 거부하면 아무 변경도 일어나지 않습니다.
 
 웹 요청 화면(`AI → 요청`)에서 승인하면 **서버가 그 자리에서 실행**합니다. 사람이 승인한 뒤 다시 AI 에게 알려줘야 실행되던 왕복을 없앤 것으로, 실행은 승인 화면에 표시된 인자 그대로만 이루어집니다. 이후 AI 가 같은 confirmation_id 로 재호출하면 재실행 없이 그때의 결과가 돌아옵니다. 밸브·펌프처럼 되돌릴 수 없는 물리 제어만 승인 화면에서 한 번 더 확인을 받습니다.
+
+**대시보드 위젯**(`aot/widgets/widget_mcp_review.py`, `js/common/aot-mcp-approval.js`)에서도 같은 승인 대기열을 다룰 수 있습니다. 단건 또는 여러 건을 한 번에 승인·거부할 수 있고, **수정 후 승인**(저장된 인자를 고쳐서 실행)도 지원합니다. 물리 제어는 여기서도 한 번 더 확인을 받습니다.
 
 ---
 
@@ -466,7 +482,7 @@ Action**으로 등록합니다. Custom GPT 생성·Actions 기능은 ChatGPT 유
 }
 ```
 
-> 상태를 바꾸는 도구 호출은 이 서버에서도 곧장 실행되지 않습니다(`aot/ai/services/mcp_safety_gate.py`). 최초 호출은 `pending_approval` + `confirmation_id`로 응답하고, 사용자가 그 대화(또는 스케줄러 페이지 `/scheduler`, 감사 로그까지 보려면 `/api/v1/mcp/review_page`)에서 명시적으로 승인/거부해야 `respond_to_confirmation` 호출로 처리됩니다. 승인 후 같은 인자에 `_confirmation_id`를 붙여 재호출해야 실제로 실행됩니다 — 호출한 AI가 스스로 승인 여부를 판단하거나 대신 답할 수 없습니다. `AOT_MCP_WRITE_ENABLED=0`이면 쓰기 도구 자체가 조언 전용으로 거부됩니다. 유효시간은 두 구간으로 나뉩니다 — 사람이 승인할 때까지 기본 15분(`AOT_MCP_CONFIRM_TTL_SEC`), 승인 이후 실행할 때까지 승인 시점부터 다시 기본 5분(`AOT_MCP_APPROVED_TTL_SEC`). 그래도 제어 도구가 노출되는 서버이므로 신뢰할 수 있는 클라이언트에만 연결하세요.
+> 상태를 바꾸는 도구 호출은 이 서버에서도 곧장 실행되지 않습니다(`aot/ai/services/mcp_safety_gate.py`). 최초 호출은 `pending_approval` + `confirmation_id`로 응답하고, 사용자가 그 대화 또는 **AI → 요청** 화면(`/ai`)에서 명시적으로 승인/거부해야 `respond_to_confirmation` 호출로 처리됩니다(`/api/v1/mcp/review_page`는 지금도 존재하지만 `/ai`로 넘겨주는 리다이렉트일 뿐입니다 — 북마크 호환용입니다. 감사 로그 자체는 **AI → 기록**(`/ai/manage`)의 "도구 호출" 탭으로 옮겨졌고, "대화"·"오류 보고" 탭과 나란히 있습니다). 승인 후 같은 인자에 `_confirmation_id`를 붙여 재호출해야 실제로 실행됩니다 — 호출한 AI가 스스로 승인 여부를 판단하거나 대신 답할 수 없습니다. `AOT_MCP_WRITE_ENABLED=0`이면 쓰기 도구 자체가 조언 전용으로 거부됩니다. 유효시간은 두 구간으로 나뉩니다 — 사람이 승인할 때까지 기본 15분(`AOT_MCP_CONFIRM_TTL_SEC`), 승인 이후 실행할 때까지 승인 시점부터 다시 기본 5분(`AOT_MCP_APPROVED_TTL_SEC`). 그래도 제어 도구가 노출되는 서버이므로 신뢰할 수 있는 클라이언트에만 연결하세요.
 
 ---
 
@@ -474,4 +490,4 @@ Action**으로 등록합니다. Custom GPT 생성·Actions 기능은 ChatGPT 유
 
 - [환경 제어 자동화](env-control.md)
 - [스케줄러](scheduler.md)
-- AI 가이드 (전체)
+- AI 가이드 (전체) — 저장소의 `docs/ai_guide.ko.md`(이 매뉴얼에는 발행되지 않습니다): 서랍 안 도구를 포함한 전체 도구 목록과 인자

@@ -11,7 +11,7 @@
      코드가 바뀐 뒤 재생성 없이 손으로 고치거나 그냥 방치하면 문서가 코드와
      드리프트한다. 재생성해서 git diff 가 나면 그 드리프트다.
 
-검사 5종 (이름 -> --skip/--only 에 쓰는 키):
+검사 6종 (이름 -> --skip/--only 에 쓰는 키):
   links    앱 템플릿의 manual_url('...') 인자 전부를 mkdocs 빌드 산출물과 대조:
            그 페이지가 있는가, '#앵커'가 있으면 그 앵커도 있는가.
            `minify_html: true` 라 산출물의 id 속성은 따옴표가 없다(id=foo) —
@@ -28,8 +28,15 @@
   version  mkdocs.yml 의 extra.version 과 aot/config/__init__.py 의
            AOT_VERSION 이 같아야 한다(과거 태그·문서 버전 불일치 이력).
   images   docs/**/*.md 가 참조하는 images/... 실물이 전부 있어야 한다.
+  ai-index docs/ai_docs/ai_doc_index.json 은 AI 가 "어떤 매뉴얼의 어떤 절이
+           있는지" 를 아는 유일한 목록이고, 표준/헤비 티어에서는 통째로
+           컨텍스트에 실린다. 매뉴얼에 쪽이 늘거나 제목이 바뀌었는데 재생성을
+           빼먹으면 AI 는 없어진 절을 찾고 새 쪽은 모른다(실제로 두 달 동안
+           geo·ai 챕터 16쪽이 통째로 빠져 있었다). 생성기를 다시 돌려 커밋된
+           파일과 같은지 본다 — 이 생성기는 aot.config 없이도 돌아서 drift 와
+           달리 CI 에 걸 수 있다.
 
-CI 에 건 것은 links·i18n·version·images 뿐이다. drift 는 aot 전체(입력/출력/
+CI 에 건 것은 links·i18n·version·images·ai-index 뿐이다. drift 는 aot 전체(입력/출력/
 함수/액션/위젯 파서)를 import 하는데, 그 경로가 requirements.txt 전체(numpy,
 influxdb_client, opencv-python-headless 등 120여 개)를 요구한다 — 이 저장소의
 다른 CI 잡이 이미 그 설치를 하고 있어, 문서 워크플로에 통째로 다시 물리면
@@ -51,6 +58,7 @@ macOS 확인만으로는 보증이 안 된다) 처음부터 빨간 CI 를 만들
 import argparse
 import glob
 import html
+import json
 import os
 import re
 import shutil
@@ -63,8 +71,8 @@ DOCS = os.path.join(ROOT, "docs")
 TEMPLATES = os.path.join(ROOT, "aot", "aot_flask", "templates")
 MKDOCS_YML = os.path.join(ROOT, "mkdocs.yml")
 
-ALL_CHECKS = ["links", "anchors", "i18n", "drift", "version", "images"]
-CI_CHECKS = ["links", "anchors", "i18n", "version", "images"]  # drift 제외 - 위 docstring 참고
+ALL_CHECKS = ["links", "anchors", "i18n", "drift", "version", "images", "ai-index"]
+CI_CHECKS = ["links", "anchors", "i18n", "version", "images", "ai-index"]  # drift 제외 - 위 docstring 참고
 
 # 알려진 미해결 manual_url() 항목 - 문서가 아직 없어 실패로 세지 않는 것들.
 # 지금은 없음: 항목을 추가할 때 왜 미해결인지, 언제 지울지 주석으로 남길 것.
@@ -417,6 +425,57 @@ def _generated_entry_counts():
     return out
 
 
+AI_DOC_INDEX = os.path.join(DOCS, "ai_docs", "ai_doc_index.json")
+
+
+def check_ai_index():
+    """AI 매뉴얼 색인이 지금 매뉴얼과 같은지 본다.
+
+    생성기를 재실행해 결과를 커밋된 파일과 비교하고, 파일은 원래대로 되돌려
+    워킹트리를 더럽히지 않는다.
+
+    @dependency aot/scripts/generate_ai_doc_index.py
+    """
+    try:
+        with open(AI_DOC_INDEX, "rb") as f:
+            before = f.read()
+    except OSError as e:
+        return [f"{rel(AI_DOC_INDEX)} 를 읽을 수 없다: {e}"]
+
+    gen = os.path.join(ROOT, "aot", "scripts", "generate_ai_doc_index.py")
+    r = subprocess.run([sys.executable, gen], cwd=ROOT,
+                       capture_output=True, text=True)
+    if r.returncode != 0:
+        return [f"generate_ai_doc_index.py 실행 실패(exit {r.returncode}):\n"
+                f"{r.stderr[-2000:]}"]
+
+    try:
+        with open(AI_DOC_INDEX, "rb") as f:
+            after = f.read()
+    except OSError as e:
+        return [f"재생성 후 {rel(AI_DOC_INDEX)} 를 읽을 수 없다: {e}"]
+
+    if before == after:
+        return []
+
+    with open(AI_DOC_INDEX, "wb") as f:
+        f.write(before)  # 검사는 워킹트리를 바꾸지 않는다
+
+    old_keys = set(json.loads(before.decode("utf-8")))
+    new_keys = set(json.loads(after.decode("utf-8")))
+    detail = []
+    if new_keys - old_keys:
+        detail.append("색인에 없는 쪽: " + ", ".join(sorted(new_keys - old_keys)))
+    if old_keys - new_keys:
+        detail.append("없어진 쪽이 색인에 남음: " + ", ".join(sorted(old_keys - new_keys)))
+    if not detail:
+        detail.append("쪽 목록은 같고 절 제목이 달라졌다")
+    return [
+        f"{rel(AI_DOC_INDEX)} 가 매뉴얼과 어긋난다({'; '.join(detail)}) - "
+        "재생성해서 커밋할 것 (python3 aot/scripts/generate_ai_doc_index.py)."
+    ]
+
+
 def check_drift():
     """생성기를 다시 돌려 나온 내용이 지금 파일과 같은지 본다.
 
@@ -610,6 +669,8 @@ def main():
                 problems = check_version()
             elif name == "images":
                 problems = check_images()
+            elif name == "ai-index":
+                problems = check_ai_index()
             else:
                 continue
 
