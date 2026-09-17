@@ -300,12 +300,18 @@ def _seed_sequence(output_ids):
         action = Actions()
         action.function_id = fn.unique_id
         action.function_type = 'trigger_sequence'
-        action.action_type = 'output'
+        # 실제로 있는 액션 종류를 쓴다 — 없는 이름을 넣으면 화면이 카드마다
+        # "Unknown Action" 을 그려, 무엇이 어느 단계인지 사람도 검사도 못 읽는다.
+        action.action_type = 'output_on_off'
         action.do_unique_id = output_ids[0]
         action.do_output_state = 'on' if index % 2 == 0 else 'off'
         action.pause_duration = 5.0
-        action.custom_options = json.dumps(
-            {'gridstack_y': index, 'name': step_name})
+        action.custom_options = json.dumps({
+            # 순서의 정본. 드래그 재정렬(/function_save_order)이 쓰는 열과 같다.
+            'gridstack_y': index,
+            'name': step_name,
+            'state': 'on' if index % 2 == 0 else 'off',
+        })
         action.save()
 
     return fn.unique_id
