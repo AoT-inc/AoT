@@ -83,15 +83,22 @@ jobs:
           docker compose -f docker/docker-compose.e2e.yml exec -T aot-app \
             python -m aot.tests.e2e.seed
 
+      # L0 만 따로 먼저 돌린다 — 15초면 끝나고, 여기서 깨지면 아래를 볼 것도 없다
+      # (앱이 제대로 안 떴거나 인증이 통째로 새는 상태다).
       - name: L0 라우트 스모크
         env:
           AOT_E2E_BASE_URL: http://127.0.0.1:8085
         run: python3 -m pytest aot/tests/e2e/test_route_smoke.py -q -p no:cacheprovider
 
-      - name: L1 페이지 부팅 검사
+      # 나머지는 **디렉터리째** 돌린다. 파일을 하나씩 적으면 새로 만든 검사가
+      # 조용히 빠진다 — 실제로 L2 여정 여덟이 그렇게 CI 밖에 있었다
+      # (2026-09-18 발견). 새 파일이 자동으로 포함되는 쪽이 옳다.
+      - name: L1 페이지 부팅 검사 · L2 사용자 여정
         env:
           AOT_E2E_BASE_URL: http://127.0.0.1:8085
-        run: python3 -m pytest aot/tests/e2e/test_page_boot.py -q -p no:cacheprovider
+        run: |
+          python3 -m pytest aot/tests/e2e -q -p no:cacheprovider \
+            --ignore=aot/tests/e2e/test_route_smoke.py
 
       # 실패했을 때 사람이 볼 것을 남긴다. 스크린샷 없이 "콘솔 오류 3건"만
       # 보면 원인을 찾는 데 시간이 걸린다.
