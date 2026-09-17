@@ -1467,7 +1467,11 @@ class AIContextService:
             if tier != 'lightweight':
                 try:
                     from aot.ai.services.context_metadata_builder import ContextMetadataBuilder
-                    from flask_login import current_user
+                    # v26.1: current_user 는 모듈 상단(15행)에서 이미 import 됨.
+                    # 여기서 다시 import 하면 함수 전체에서 current_user 가 지역변수로
+                    # 바인딩되어(파이썬 함수 스코프 규칙) lightweight 티어처럼 이
+                    # 블록을 건너뛰는 경로에서 아래 "User Profile Injection" 참조 시
+                    # UnboundLocalError 가 났다.
 
                     if current_user and current_user.is_authenticated:
                         facility_id = current_user.current_facility_id if hasattr(current_user, 'current_facility_id') else None
@@ -1535,16 +1539,20 @@ class AIContextService:
                 logger.error(f"Failed to load AI doc index: {e}")
 
             # API Keys summary for AI (names and providers only, no secrets)
-            try:
-                from aot.databases.models import APIKey
-                api_keys_raw = APIKey.query.all()
-                if api_keys_raw:
-                    master["available_api_keys"] = [
-                        {"name": k.name, "provider": k.provider, "tag": k.tag}
-                        for k in api_keys_raw
-                    ]
-            except Exception:
-                pass
+            # v26.1: lightweight 티어는 exclude_for_slim(1337행)에 'available_api_keys'
+            # 를 이미 강제 제외 목록으로 올려뒀는데, 이 블록은 should_include() 를
+            # 안 거치고 무조건 넣고 있어 실제로는 제외가 안 먹었다.
+            if should_include('available_api_keys'):
+                try:
+                    from aot.databases.models import APIKey
+                    api_keys_raw = APIKey.query.all()
+                    if api_keys_raw:
+                        master["available_api_keys"] = [
+                            {"name": k.name, "provider": k.provider, "tag": k.tag}
+                            for k in api_keys_raw
+                        ]
+                except Exception:
+                    pass
 
             # User Profile Injection (Phase 25)
             if current_user and current_user.is_authenticated:
