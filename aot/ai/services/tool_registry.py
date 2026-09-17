@@ -165,7 +165,7 @@ TOOLS: List[Tool] = [
     # --- special action-type tools (manifest entries, not virtual_tool_call) -----
     Tool('read_manual', handler=None, action_type='read_manual', manifest={
         "action_type": "read_manual",
-        "description": "Reads a specific section from the AoT system manuals. Requires 'target_id' (filename from manual_index) and Optional 'params.section' (heading name).",
+        "description": "Reads a specific section from the AoT system manuals. Requires 'target_id' (filename from manual_index_files). 'params.section' (heading name) is optional — OMIT it to get that document's table of contents, then call again with one of the returned headings.",
         "usage_hint": "Use this when you need detailed technical specs for a specific sensor, output, or API endpoint.",
     }),
     Tool('get_detailed_manifest', handler=None, action_type='get_detailed_manifest', manifest={

@@ -81,7 +81,7 @@ class GeminiAI(AbstractAI):
         Gemini-specific input character budget. AbstractAI's generic 'standard'
         cap (100k chars) was sized for engines without Gemini's context window
         and left almost no room once get_master_context() + the tool schema
-        (spatial hierarchy, manual_index, note digests, ~50 tool declarations)
+        (spatial hierarchy, manual_index_files, note digests, ~50 tool declarations)
         filled it — every real turn hit "Near budget limit" from message one
         and got hard-truncated, discarding conversation history and tool
         results before the model ever saw them. Gemini 2.5/3.x models support

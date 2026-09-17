@@ -1492,23 +1492,47 @@ class AIContextService:
                 except Exception as e:
                     logger.warning("Failed to inject context_metadata (Phase 2): %s", e)
 
-            # Phase 6: Inject AI Documentation Index (ONLY for standard/heavy tiers)
-            if tier != 'lightweight':
-                try:
-                    from aot.config import INSTALL_DIRECTORY
-                    import os
-                    index_path = os.path.join(INSTALL_DIRECTORY, "docs/ai_docs/ai_doc_index.json")
-                    if os.path.exists(index_path):
-                        with open(index_path, "r", encoding="utf-8") as f:
-                            idx_data = json.load(f)
-                            if tier == 'lightweight':
-                                # v16.3: Slim Index (Filenames only) to save ~30KB
-                                master["manual_index_files"] = list(idx_data.keys())
-                                master["manual_index_hint"] = "Use 'read_manual' with these filenames for details."
-                            else:
-                                master["manual_index"] = idx_data
-                except Exception as e:
-                    logger.error(f"Failed to load AI doc index: {e}")
+            # Phase 6: Inject AI Documentation Index — 모든 티어(쪽 이름만)
+            #
+            # lightweight 도 이제 받는다. 종전 코드는 바깥 가드가
+            # `tier != 'lightweight'` 인데 안쪽에서 다시
+            # `tier == 'lightweight'` 를 물어 그 분기가 **닿지 않았다** —
+            # 슬림 색인을 쓰려던 티어가 정작 아무 색인도 못 받고 있었다.
+            # 이제 실리는 양이 0.8KB 라 lightweight 예산에도 얹을 수 있다.
+            #
+            # 2026-09-18 — 쪽 이름만 싣는다. 종전에는 표준/헤비 티어에 절 제목
+            # 947개를 통째로 실었고(compact 통과 후 14.4KB, 약 5천 토큰) 그게
+            # **모든** 요청에 붙었다. 파일명 목록은 0.8KB 다.
+            #
+            # 절 제목을 미리 알아야 할 이유가 없다:
+            #   - read_manual 을 section 없이 부르면 그 문서의 목차를 돌려준다
+            #     (ai_action_service.py, 'no section was provided' 분기).
+            #   - knowledge_search 는 파일명도 제목도 없이 자유문으로 해당 절
+            #     본문을 바로 찾아 준다.
+            #   - 게다가 능력·방법 질문이면 _manual_grounding 이 서버측에서
+            #     관련 절을 이미 찾아 manual_reference 로 앞에 실어 준다
+            #     (ai_agent_service.py). 모델이 색인을 볼 일 자체가 드물다.
+            #
+            # 실린 색인이 정확하지도 않았다: 아래 compact() 가 리스트를 30개로
+            # 자르므로 Supported-Inputs-By-Measurement.md 는 222절 중 30절만
+            # 보였다. 없는 절을 "없다" 로 읽게 만드는 쪽이 더 위험하다.
+            try:
+                from aot.config import INSTALL_DIRECTORY
+                import os
+                index_path = os.path.join(INSTALL_DIRECTORY, "docs/ai_docs/ai_doc_index.json")
+                if os.path.exists(index_path):
+                    with open(index_path, "r", encoding="utf-8") as f:
+                        idx_data = json.load(f)
+                    master["manual_index_files"] = list(idx_data.keys())
+                    master["manual_index_hint"] = (
+                        "These are the manual filenames only — section titles are NOT listed here. "
+                        "To get a document's section list, call read_manual with target_id=<filename> "
+                        "and NO 'section' param; it returns that document's table of contents. "
+                        "To find the right section without knowing the file, call knowledge_search "
+                        "with a free-text query — it returns the matching section bodies directly."
+                    )
+            except Exception as e:
+                logger.error(f"Failed to load AI doc index: {e}")
 
             # API Keys summary for AI (names and providers only, no secrets)
             try:

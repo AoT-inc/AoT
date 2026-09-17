@@ -357,7 +357,10 @@ class AbstractAI(ABC):
             "- **Functions**: Logic (Schedules, Conditionals, PID).\n"
             "- **GIS**: Map data (Satellite, Radar).\n"
             "- **Notes**: Digital logbook.\n"
-            "**Tool Rule:** Use `read_manual` (see `manual_index`) for technical specs (e.g., target_id='API.md', 'Supported-Inputs.md'). DO NOT GUESS.\n\n"
+            "**Tool Rule:** For technical specs, DO NOT GUESS. `manual_index_files` lists the manual filenames "
+            "(section titles are not listed). Use `knowledge_search` with a free-text query when you do not "
+            "know the file, or `read_manual` with target_id='API.md' and no 'section' to get that file's "
+            "table of contents first.\n\n"
         )
         
         default_instructions = (

@@ -1168,8 +1168,21 @@ class AIActionService:
                         
                     section_query = params.get('section', '').lower()
                     if not section_query:
+                        # 목차에도 상한을 둔다. 아래 본문 반환과 달리 여기엔
+                        # 제한이 없어서, 절이 많은 문서 하나가 통째로 실렸다 —
+                        # Supported-Inputs-By-Measurement.md 는 목차만 39,740자
+                        # (약 1만 토큰) 로, 컨텍스트에서 걷어낸 매뉴얼 색인
+                        # 전체보다도 컸다. 2026-09-18 색인을 쪽 이름만 싣도록
+                        # 바꾸면서 이 경로(section 없이 호출 -> 목차)를 모델에게
+                        # 권하게 됐으므로, 권하기 전에 상한을 채운다.
                         toc = [line.strip() for line in lines if line.startswith('#')]
                         toc_str = "\n".join(toc)
+                        if len(toc_str) > 8000:
+                            kept = toc_str[:8000].rsplit("\n", 1)[0]
+                            dropped = len(toc) - len(kept.split("\n"))
+                            toc_str = (f"{kept}\n\n...[{dropped} more heading(s) omitted — "
+                                       f"use knowledge_search with a free-text query to find a "
+                                       f"section in this document instead]...")
                         return {
                             "status": "success", 
                             "result": f"Document '{target_file}' found but no 'section' was provided in params. Here is the Table of Contents:\n\n{toc_str}\n\nPlease call read_manual again and specify one of these headings as the 'section' parameter to read the details."
