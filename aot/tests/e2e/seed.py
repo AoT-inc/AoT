@@ -94,11 +94,14 @@ def _purge():
         GeoJournal.query.filter(GeoJournal.target_id == row.unique_id).delete()
         db.session.delete(row)
 
-    # 도형은 이름이 아니라 feature 안의 표식으로 찾는다(이 시드가 만든 것만).
+    # 도형은 **전부** 지운다. 이 스택에는 시드가 만든 것과 검사가 그리다 남긴
+    # 것밖에 없다(AOT_E2E=1 안전핀이 개발·운영에서 이 스크립트를 막는다).
+    #
+    # 이름으로만 골라 지우면 그리기 여정이 남긴 도형이 실행마다 쌓인다 —
+    # 사각형 하나를 그리면 본체와 라벨 보조 도형이 함께 생겨 두 개씩 는다.
+    # 시드가 "같은 상태에서 시작한다" 를 보장하려면 그 잔재도 거둬야 한다.
     for row in GeoShape.query.all():
-        props = (row.feature or {}).get('properties') or {}
-        if props.get('name', '').startswith('E2E '):
-            db.session.delete(row)
+        db.session.delete(row)
 
     for row in Dashboard.query.filter(Dashboard.name == F.DASHBOARD).all():
         # 위젯이 대시보드에 매이는 열은 `tab_id` 다(이름과 달리 Tab 이 아니라

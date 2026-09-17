@@ -90,6 +90,15 @@ jobs:
           docker compose -f docker/docker-compose.e2e.yml exec -T aot-app \
             python -m aot.tests.e2e.seed
 
+      # 데몬은 **기동 시점의 DB** 를 읽는다. 시드가 장치를 새로 만들면(새 uuid)
+      # 먼저 떠 있던 데몬은 그것을 모르고, 제어 폐루프가 "상태가 아예 없음" 으로
+      # 깨진다(2026-09-18 실측 — CI 에서만 났다. 로컬은 시드 뒤에 데몬을 다시
+      # 띄운 상태로 돌고 있었다). 시드 다음에 다시 읽힌다.
+      - name: 데몬에 새 픽스처를 읽힌다
+        run: |
+          docker compose -f docker/docker-compose.e2e.yml \
+            restart aot_daemon
+
       # L0 만 따로 먼저 돌린다 — 15초면 끝나고, 여기서 깨지면 아래를 볼 것도 없다
       # (앱이 제대로 안 떴거나 인증이 통째로 새는 상태다).
       - name: L0 라우트 스모크

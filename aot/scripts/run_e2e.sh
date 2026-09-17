@@ -38,6 +38,14 @@ done
 echo "== 픽스처 시드 =="
 $COMPOSE exec -T aot-app python -m aot.tests.e2e.seed
 
+# 데몬이 떠 있다면 새 픽스처를 다시 읽힌다. 데몬은 기동 시점의 DB 를 들고
+# 있어서, 시드가 장치를 새로 만들면(새 uuid) 그것을 모른다 — 제어 폐루프(L3)가
+# "상태가 아예 없음" 으로 깨진다.
+if $COMPOSE ps --status running --format '{{.Service}}' | grep -q aot_daemon; then
+    echo "== 데몬에 새 픽스처를 읽힌다 =="
+    $COMPOSE restart aot_daemon
+fi
+
 export AOT_E2E_BASE_URL="$BASE_URL"
 
 run_l0() {

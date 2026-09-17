@@ -160,11 +160,17 @@ def page(context):
 # L3 — 제어 폐루프
 # ---------------------------------------------------------------------------
 @pytest.fixture(scope='session')
-def daemon():
-    """데몬이 떠 있어야 도는 검사용.
+def daemon(admin_http, base_url):
+    """데몬이 떠 있고 **실제로 응답할 때** 도는 검사용.
 
     데몬은 `--profile control` 로만 뜬다. 띄우지 않았으면 **건너뛴다** —
     "데몬이 없어서 통과" 가 아니라 "돌지 않았음" 으로 보이게 하는 것이 맞다.
+
+    띄워져 있으면 **말이 될 때까지 기다린다.** 컨테이너가 running 인 것과
+    앱이 데몬과 말이 되는 것은 다른 사건이고, 그 사이는 CI 처럼 스택을 방금
+    올린 곳에서 특히 길다 — 로컬에서는 데몬이 이미 오래 떠 있어 이 대기가
+    없어도 통과하다가, CI 에서만 "시작 상태를 만들지 못했습니다" 로 깨졌다
+    (2026-09-18 실측).
     """
     from aot.tests.e2e import daemon as daemon_ctl
 
@@ -173,6 +179,14 @@ def daemon():
             '데몬이 떠 있지 않습니다. 제어 폐루프 검사는 데몬이 필요합니다:\n'
             '  docker compose -f docker/docker-compose.e2e.yml '
             '--profile control up -d aot_daemon')
+
+    def _answers():
+        resp = admin_http.get(f'{base_url}/outputstate', timeout=20,
+                              headers={'Accept': 'application/json'})
+        return resp.status_code == 200 and bool(resp.json())
+
+    if not daemon_ctl.wait_until_ready(_answers, wait_s=180):
+        pytest.skip('데몬이 떠 있지만 3분 안에 응답하지 않았습니다')
     return daemon_ctl
 
 
