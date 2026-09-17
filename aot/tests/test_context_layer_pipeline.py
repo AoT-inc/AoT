@@ -917,7 +917,12 @@ class TestContextBroadcastJobRegistration(unittest.TestCase):
                    MagicMock(), create=True), \
              ai_enabled():
             from aot.ai.services.ai_scheduler_service import AISchedulerService
-            AISchedulerService.init_app(mock_app)
+        # `execute=True` 로 부른다. `init_app(app)` 은 **등록만 하고 잡을 걸지
+        # 않는다** — 2026 년에 예약 실행이 데몬 전담으로 바뀌면서
+        # `if not execute: return` 이 들어왔고(ai_scheduler_service.init_app),
+        # 웹 프로세스는 등록·해제만 한다. 잡 등록을 검사하려면 데몬과 같은
+        # 조건으로 불러야 한다.
+            AISchedulerService.init_app(mock_app, execute=True)
 
         return mock_scheduler.add_job.call_args_list
 

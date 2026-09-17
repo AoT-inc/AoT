@@ -13,6 +13,7 @@
 """
 import json
 import os
+import re
 import sys
 import tempfile
 import unittest
@@ -536,15 +537,30 @@ class TestTemplateSyntax(unittest.TestCase):
         env = jinja2.Environment(extensions=['jinja2.ext.i18n'])
         env.parse(source)   # 문법 오류면 여기서 예외
 
-    def test_table_never_renders_a_form_field_for_the_original(self):
-        """원문 칸은 읽기 전용이어야 한다 — 여기서 고치면 원문이 바뀐다."""
+    def test_the_screen_never_renders_a_form_field_for_the_original(self):
+        """원문은 읽기 전용이어야 한다 — 거기서 고치면 원문이 바뀐다.
+
+        마크업 **형태**는 박아 두지 않는다. 이 화면은 2026-09 에 표(`<td>`)에서
+        행(`aot-settings-row`)으로 재조판됐고(01451072), 그때 `<td>` 를 기대하던
+        이 검사가 거짓 경보를 냈다. 지킬 것은 "원문이 입력 필드에 들어가지
+        않는다" 이지 어떤 태그를 쓰느냐가 아니다.
+        """
         path = os.path.join(os.path.dirname(__file__), '..', 'aot_flask',
                             'templates', 'settings', 'translations.html')
         with open(path, encoding='utf-8') as fh:
             source = fh.read()
-        original_cell = source.split('<td>{{row.source_text}}</td>')
-        self.assertEqual(len(original_cell), 2,
-                         '원문 칸이 단순 출력이 아니다')
+
+        self.assertIn('{{row.source_text}}', source, '원문을 아예 안 보여 준다')
+
+        # 원문이 놓인 자리마다 그 앞쪽을 훑어, 열려 있는 입력 태그 안이 아닌지
+        # 본다(`value="{{row.source_text}}"` · `<textarea>…` 둘 다 잡는다).
+        for match in re.finditer(r'\{\{\s*row\.source_text\s*\}\}', source):
+            before = source[:match.start()]
+            self.assertNotRegex(
+                before[-200:], r'<(input|textarea)\b[^>]*$',
+                '원문이 입력 필드 안에 있다 — 여기서 고치면 원문이 바뀐다')
+            self.assertNotIn('<textarea', before[before.rfind('>'):],
+                             '원문이 textarea 안에 있다')
 
 
 if __name__ == '__main__':

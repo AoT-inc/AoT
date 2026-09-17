@@ -1,3 +1,35 @@
+{#- 표준 경로는 토스트다. 다만 **레이아웃을 상속하지 않는 화면**(로그인·핀패드·
+    2단계·비밀번호 찾기/재설정·관리자 생성)은 독립 문서라 `window.showToast`
+    (layout.html)도 toastr 도 없다. 그대로 두면 여기서 뿜은 호출이 그 화면에서
+    조용히 죽어 **flash 가 통째로 사라진다** — 틀린 비밀번호도, 잠금 안내도,
+    재설정 메일 안내도 화면에 아무 말이 없었다(2026-09-17 종단 검사가 잡음).
+
+    그래서 호출을 한 겹 감싼다. 토스트가 있으면 그대로 쓰고, 없으면 그 화면이
+    이미 싣고 있는 부트스트랩 `.alert` 로 같은 자리에 적는다 — 새 클래스도
+    새 여백도 만들지 않는다. -#}
+<script>
+  (function () {
+    if (window.__aotFlashNotice) return;
+    window.__aotFlashNotice = function (message, kind) {
+      if (typeof window.showToast === 'function' && typeof toastr !== 'undefined') {
+        window.__aotFlashNotice(message, kind);
+        return;
+      }
+      var box = document.getElementById('aot-flash-fallback');
+      if (!box) {
+        box = document.createElement('div');
+        box.id = 'aot-flash-fallback';
+        var anchor = document.querySelector('.container') || document.body;
+        anchor.insertBefore(box, anchor.firstChild);
+      }
+      var line = document.createElement('div');
+      line.className = 'alert alert-' + (kind === 'error' ? 'danger' : kind);
+      line.setAttribute('role', 'alert');   // 스크린리더가 즉시 읽는다
+      line.textContent = message;
+      box.appendChild(line);
+    };
+  })();
+</script>
 {#- 서버 flash 메시지는 세션 전역 큐다 — 어느 라우트에서 flash() 했든, 그 다음
     렌더되는 페이지가 이 include 를 가지고 있으면 여기서 뜬다. 그래서 "이 페이지
     전용" 배너가 아니라 전역 통지이며, 다른 모든 피드백과 마찬가지로 표준 토스트
@@ -8,7 +40,7 @@
   {%- if errors and not hide_alert_success %}
     <script>
       {%- for msg in errors %}
-      window.showToast({{ (_('Success') ~ ': ' ~ msg) | tojson }}, 'success');
+      window.__aotFlashNotice({{ (_('Success') ~ ': ' ~ msg) | tojson }}, 'success');
       {%- endfor %}
     </script>
   {%- endif -%}
@@ -18,7 +50,7 @@
   {%- if errors and not hide_alert_info %}
     <script>
       {%- for msg in errors %}
-      window.showToast({{ (_('Info') ~ ': ' ~ msg) | tojson }}, 'info');
+      window.__aotFlashNotice({{ (_('Info') ~ ': ' ~ msg) | tojson }}, 'info');
       {%- endfor %}
     </script>
   {%- endif -%}
@@ -28,7 +60,7 @@
   {%- if errors and not hide_alert_warning %}
     <script>
       {%- for msg in errors %}
-      window.showToast({{ (_('Warning') ~ ': ' ~ msg) | tojson }}, 'warning');
+      window.__aotFlashNotice({{ (_('Warning') ~ ': ' ~ msg) | tojson }}, 'warning');
       {%- endfor %}
     </script>
   {%- endif -%}
@@ -38,7 +70,7 @@
   {%- if errors and not hide_alert_warning %}
     <script>
       {%- for msg in errors %}
-      window.showToast({{ (_('Error') ~ ': ' ~ msg) | tojson }}, 'error');
+      window.__aotFlashNotice({{ (_('Error') ~ ': ' ~ msg) | tojson }}, 'error');
       {%- endfor %}
     </script>
   {%- endif -%}

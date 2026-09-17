@@ -269,8 +269,13 @@ _OPEN_WITHOUT_MODEL = frozenset({
     # AI → 기록: 오류 보고 목록 · 고친 내용을 지식에 반영(DB 기록만, 모델 호출 없음)
     'routes_ai_api.ai_list_errors',
     'routes_ai_api.ai_update_knowledge',
-    # 일정 화면의 장치 타임라인 — AI 기능이 아니라 출력 장치와 예약을 보여 줄 뿐이다.
-    # 내장 AI 가 꺼진 설치에서 403 으로 타임라인이 비었다(2026-09-10 실측).
+})
+
+# AI 기능이 아닌데 이 블루프린트에 얹혀 있는 경로. `ai_enabled` 검사보다
+# **앞에서** 면제한다 — 위 `_OPEN_WITHOUT_MODEL` 은 "내장 모델이 꺼져 있을 때"
+# 의 면제이고, 이쪽은 "AI 메뉴 자체를 껐을 때"까지 열려야 하는 것이다.
+_NOT_AN_AI_FEATURE = frozenset({
+    # 일정 화면의 장치 타임라인 — 출력 장치와 예약을 보여 줄 뿐이다.
     'routes_ai_api.get_device_timeline',
 })
 
@@ -279,13 +284,25 @@ _OPEN_WITHOUT_MODEL = frozenset({
 def check_ai_enabled():
     if not AI_AGENT_ENABLED:
         return jsonify({'error': 'AI Agent feature is disabled'}), 403
+
+    # 이 블루프린트에 얹혀 있을 뿐, **AI 기능이 아닌** 경로. AI 메뉴를 통째로
+    # 끈 설치(`ai_enabled=False`)에서도 열려 있어야 한다 — 일정 화면의 장치
+    # 타임라인은 출력 장치와 예약을 보여 줄 뿐이고, 그 화면은 AI 와 무관하게
+    # 쓰인다. 2026-09-10 에 `_OPEN_WITHOUT_MODEL` 에 넣어 뒀지만 그 면제는
+    # `ai_enabled` 검사 **뒤**에 있어서, 기본 설치(`ai_enabled=False`)에서는
+    # 여전히 403 이었다 — /scheduler 의 타임라인이 조용히 비어 있었고,
+    # 2026-09-17 E2E 페이지 부팅 검사가 잡았다.
+    if request.endpoint in _NOT_AN_AI_FEATURE:
+        return None
+
     ai_settings = AIGlobalSettings.query.first()
     if ai_settings and not ai_settings.ai_enabled:
         return jsonify({'error': 'AI service is disabled'}), 403
-    # 조언 원장의 사람 검토(목록·채택·기각)는 내장 AI 가 돌지 않아도 열려 있어야 한다.
-    # 의견은 외부 AI(MCP)·하위 노드도 내고, 검토하는 것은 사람이다 — 내장 모델이 꺼져
-    # 있다고 403 을 주면 AI → 요청 화면이 "기다리는 조언 없음" 으로 거짓말을 했다
-    # (2026-09-10 실측). 내장 모델을 **실행**하는 경로만 아래 조건을 받는다.
+    # 조언 원장의 사람 검토(목록·채택·기각)는 내장 AI 가 돌지 않아도 열려 있어야
+    # 한다. 의견은 외부 AI(MCP)·하위 노드도 내고, 검토하는 것은 사람이다 —
+    # 내장 모델이 꺼져 있다고 403 을 주면 AI → 요청 화면이 "기다리는 조언 없음"
+    # 으로 거짓말을 했다(2026-09-10 실측). 내장 모델을 **실행**하는 경로만
+    # 아래 조건을 받는다.
     if request.endpoint in _OPEN_WITHOUT_MODEL:
         return None
     if not ai_runtime_state.ai_autonomy_enabled(ai_settings):

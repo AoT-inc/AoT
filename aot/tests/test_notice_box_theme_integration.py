@@ -120,18 +120,20 @@ def test_notice_box_base_has_no_tone():
             f'기본형이 {tone} 톤을 갖고 있다 — 톤은 변형으로만 붙인다: {body.strip()}')
 
 
-def test_upgrade_page_paragraphs_are_not_bumped_by_global_main_rule():
-    """aot.css 의 `main.container > p { font-size: 1.2em !important; }` 는
-    <main> 직계 자식 <p> 만 건드려, 이 페이지에서 한 단락만 다른 크기로 튀는
-    원인이었다(2026-08-12). admin-upgrade.css 가 !important 로 다시 눌러야
-    한다 -- 그냥 font-size 는 소스 뒤에 와도 !important 를 못 이긴다."""
-    text = ADMIN_UPGRADE_CSS.read_text()
-    # 파일 맨 앞 설명 주석 안에도 같은 셀렉터가 예시로 등장하므로(백틱 인용),
-    # 실제 규칙(줄 시작에 오는 블록)만 골라야 한다.
-    body = _find_rule_body(text, 'main.container > p')
-    assert body is not None, "main.container > p 중화 규칙이 없다"
-    assert '!important' in body, (
-        "!important 없이는 aot.css 의 같은 규칙(!important 있음)을 못 이긴다")
+def test_the_global_paragraph_bump_stays_gone():
+    """`main.container > p { font-size: 1.2em }`(함정 9)가 되살아나지 않는다.
+
+    이 규칙은 <main> 직계 자식 <p> 만 건드려, 업그레이드 페이지에서 한 단락만
+    크기가 튀는 원인이었다(2026-08-12). 각 페이지가 !important 로 되누르는
+    카운터룰을 달고 다니다가, 2026-09-11 §2-3 제목 사다리 이관에서 **원 규칙
+    자체를 지웠고** 카운터룰도 함께 걷었다(admin-upgrade.css 머리말 참조).
+
+    그래서 지금 검사할 것은 카운터룰의 존재가 아니라 **원 규칙의 부재**다.
+    다시 들어오면 페이지마다 카운터룰을 붙이는 옛 상태로 돌아간다."""
+    theme = (REPO / "aot/aot_flask/static/css/bootstrap-4-themes/aot.css").read_text()
+    assert _find_rule_body(_strip_css_comments(theme), 'main.container > p') is None, (
+        "main.container > p 규칙(함정 9)이 다시 들어왔다 — 단락 크기는 "
+        "§2-3 제목 사다리로만 정한다")
 
 
 if __name__ == '__main__':

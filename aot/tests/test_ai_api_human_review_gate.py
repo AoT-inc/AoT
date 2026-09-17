@@ -81,3 +81,18 @@ def test_advice_is_blocked_when_the_ai_feature_is_turned_off(app, monkeypatch):
     """AI 메뉴 자체를 끈 설치(ai_enabled=False)에서는 조언도 닫힌다."""
     resp = _guard(app, monkeypatch, '/api/v1/ai/advice', ai_enabled=False)
     assert resp is not None and resp[1] == 403
+
+
+def test_the_device_timeline_survives_turning_the_ai_menu_off(app, monkeypatch):
+    """장치 타임라인은 AI 메뉴를 통째로 꺼도 열려 있어야 한다.
+
+    이 경로는 AI 기능이 아니라 일정 화면(`/scheduler`)이 출력 장치와 예약을
+    그리는 데 쓴다. 블루프린트만 AI 쪽에 얹혀 있을 뿐이다.
+
+    이 검사를 따로 두는 이유: 2026-09-10 에 면제 목록에는 들어갔지만 그 면제가
+    `ai_enabled` 검사 **뒤**에 있어, 기본 설치(`ai_enabled=False`)에서는 여전히
+    403 이었다. 목록에 이름이 있다는 것만으로는 열려 있다는 뜻이 아니다 —
+    순서까지 고정해야 한다.
+    """
+    assert _guard(app, monkeypatch, '/api/scheduler/device_timeline',
+                  ai_enabled=False) is None

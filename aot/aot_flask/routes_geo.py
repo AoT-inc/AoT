@@ -524,8 +524,23 @@ def api_geo_settings():
 @blueprint.route('/api/geo/overlays/list', methods=['GET'])
 @login_required
 def api_geo_overlays_list():
+    """지도 하나의 도형을 GeoJSON 으로 돌려준다.
+
+    `get_overlays()` 는 `(FeatureCollection, error)` 튜플을 돌려주고 첫 인자로
+    `map_uuid` 를 요구한다. 예전 호출은 인자 없이 불러 **항상** TypeError →
+    500 이었다(2026-09-17 E2E 라우트 스모크가 처음 잡음). 필터 인자도 정의된
+    대로 받아서 넘긴다.
+    """
     from aot.aot_flask.geo.geo_overlays import GeoOverlayManager
-    return GeoOverlayManager.get_overlays()
+
+    collection, error = GeoOverlayManager.get_overlays(
+        request.args.get('map_uuid'),
+        target_type=request.args.get('target_type'),
+        parent_id=request.args.get('parent_id'),
+        device_id=request.args.get('device_id'))
+    if error:
+        return jsonify({'ok': False, 'error': str(error)}), 500
+    return jsonify(collection)
 
 @blueprint.route('/api/geo/overlays/delta', methods=['POST'])
 @login_required

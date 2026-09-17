@@ -49,8 +49,11 @@
 고르는 크기가 아니라 담는 상자를 따라가는 장치라, **체인의 뿌리**(px·rem)만
 본다. 뿌리가 사다리에 있으면 가지는 저절로 사다리 위에 선다.
 """
+import os
 import re
 from pathlib import Path
+
+import pytest
 
 from aot.tests.test_widget_ui_conventions import (
     _EXEMPT,
@@ -795,8 +798,34 @@ def test_var_fallback_matches_the_token():
         "적을 것 (부트스트랩 기본색을 적지 말 것): " + " | ".join(grew[:6]))
 
 
+# 공개본에서는 빠지는 파일들. 이 중 하나라도 없으면 "저장소 전체를 세는"
+# 검사가 성립하지 않는다(아래 참조).
+_PUBLIC_TREE_OMITS = (
+    'aot/aot_flask/static/apps/notes-widget/src/App.css',
+    'aot/aot_flask/static/apps/notes-widget/src/index.css',
+)
+
+
+def _tree_is_complete():
+    root = os.path.dirname(os.path.dirname(os.path.dirname(
+        os.path.abspath(__file__))))
+    return all(os.path.exists(os.path.join(root, rel))
+               for rel in _PUBLIC_TREE_OMITS)
+
+
 def test_fallback_budget_is_not_stale():
-    """폴백 상한도 내려가기만 한다."""
+    """폴백 상한도 내려가기만 한다.
+
+    **저장소 전체를 세는 검사라 트리가 온전할 때만 뜻이 있다.** 공개본
+    (`publish_public.sh` 가 거르는 트리)에는 JS 원본과 함께 CSS 두 개가 빠져
+    실제 개수가 상한보다 작게 나온다 — 그 상태에서 "상한이 낡았다" 고 말하면
+    거짓이다. 파일이 실제로 없으면 세지 않는다.
+
+    (2026-09-17: 단위 스위트를 CI 에 넣으면서 공개 저장소에서만 이 검사가
+     빨간불이 되는 것을 발견했다. 상한을 내리면 이번엔 비공개 쪽이 깨진다.)
+    """
+    if not _tree_is_complete():
+        pytest.skip('공개본 트리 — 세는 대상이 온전하지 않아 상한을 판정할 수 없다')
     counts = _current_fallback_counts()
     stale = [f"{t}: 상한 {cap} -> 실제 {counts.get(t, 0)}"
              for t, cap in sorted(_FALLBACK_BUDGET.items())

@@ -1,0 +1,54 @@
+name: Unit Tests
+
+# 레포의 단위 스위트 전체(5,300여 개)를 돌린다.
+#
+# **왜 이제야 만드는가**: 지금까지 CI 워크플로 12개는 전부 정적 가드였고,
+# pytest 를 도는 것은 driver-dependency-pins 와 geo-integrity 의 네 파일뿐이었다.
+# 나머지 5,300여 개는 사람이 로컬에서 기억해서 돌릴 때만 돌았다 — 즉 테스트는
+# 있는데 아무도 지키지 않는 상태였다. 2026-09-17 실측으로 전체 실행이 3분 11초,
+# 수집이 6.6초임을 확인했고, 이 정도면 모든 PR 에서 돌릴 수 있다.
+#
+# 이 워크플로가 없으면 E2E 를 아무리 잘 만들어도 같은 구멍이 남는다.
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  # 같은 브랜치에 연속으로 밀어 넣으면 앞의 실행은 의미가 없다.
+  group: unit-tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  pytest:
+    runs-on: ubuntu-latest
+    # 로컬 실측 3분 11초. 두 배 남짓으로 상한을 둔다 — 넘으면 무언가
+    # (네트워크를 타는 테스트 등) 새로 들어온 것이다.
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: requirements.txt
+
+      # 부분 설치 목록을 만들지 않는다. 스위트가 앱 전반을 import 하므로
+      # 목록을 유지하는 비용이 전체 설치보다 크다(geo-integrity 는 파일 세 개만
+      # 돌리므로 사정이 다르다). pip 캐시가 반복 실행을 감당한다.
+      - name: 의존성 설치
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      # conftest.py 가 세션마다 임시 디렉터리에 스키마를 새로 만들므로
+      # DB 준비가 따로 필요 없다. 레포의 aot.db 는 열리지도 않는다.
+      - name: 단위 스위트
+        run: python3 -m pytest aot/tests -q -p no:cacheprovider --durations=10

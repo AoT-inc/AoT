@@ -291,7 +291,7 @@
      다크모드는 custom-dark.css 가 별도 리터럴로 재정의해 영향 없음. */
   --aot-modal-title-text: var(--aot-color-text-primary, #222222);
   --aot-modal-body-text: var(--aot-color-text-primary, #444444);
-  --aot-modal-group-title: var(--aot-color-text-secondary, #888888);
+  --aot-modal-group-title: var(--aot-color-text-secondary, #5E6B64);
   --aot-modal-backdrop: rgba(0,0,0,0.5);
   --panel-border-light: rgba(255, 255, 255, 0.4);
 

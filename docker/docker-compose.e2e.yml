@@ -1,0 +1,125 @@
+# E2E 전용 스택 — 라이브 개발 스택(aot_local, 8084)과 완전히 분리한다.
+#
+# 분리해야 하는 이유는 세 가지다.
+#   1. E2E 는 데이터를 만들고 지운다. 개발용 DB 에서 돌리면 남의 작업물을 지운다.
+#   2. E2E 는 매 실행마다 **같은 상태에서 시작**해야 판정이 재현된다. 개발 DB 는
+#      매번 다르다.
+#   3. 제어 폐루프(L3)는 출력을 실제로 켜고 끈다. 개발 스택의 데몬이 실장비에
+#      물려 있으면 위험하다.
+#
+# 분리 수단: compose 프로젝트명(name)이 다르므로 named volume 이 전부 별개로
+# 생성된다(aot-e2e_aot_data …). 단 **bind mount 는 프로젝트명으로 갈라지지
+# 않으므로** 라이브 compose 가 bind 로 쓰는 것(../influxdb_data, ../logs)은
+# 여기서 전부 named volume 으로 바꿨다. 코드(../:/app)만 공유한다 — 지금
+# 체크아웃한 브랜치를 그대로 시험하는 것이 목적이기 때문이다.
+#
+#   docker compose -f docker/docker-compose.e2e.yml up -d
+#   docker compose -f docker/docker-compose.e2e.yml down -v   # -v 로 DB 까지 폐기
+name: aot-e2e
+
+services:
+  aot-app:
+    image: aot_ai
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    command: gunicorn -c /app/install/gunicorn_conf.py --bind 0.0.0.0:80 aot.start_flask_ui:app
+    ports:
+      - "127.0.0.1:8085:80"
+    volumes:
+      - ../:/app
+      - ../aot/databases:/app/aot/databases
+      # 라이브와 달리 전부 named volume — 프로젝트명으로 갈라진다.
+      - e2e_logs:/var/log/aot
+      - e2e_data:/app/aot_local
+      - e2e_session:/app/aot/databases/flask_session
+    environment:
+      - TZ=Asia/Seoul
+      - FLASK_ENV=development
+      - PYTHONPATH=/app
+      - DOCKER_CONTAINER=TRUE
+      - HARDWARE_PROFILE=LOW
+      - AOT_LOCAL_DIR=/app/aot_local
+      - INFLUXDB_HOST=influxdb
+      - INFLUXDB_PORT=8086
+      # E2E 실행 중임을 앱이 알 필요는 없다. 이 변수는 시드 스크립트가
+      # "여기가 E2E 스택이 맞는지" 확인하는 안전핀으로만 쓴다.
+      - AOT_E2E=1
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          # 라이브(3072M)보다 작게 잡는다 — 이 스택은 개발 스택과 **동시에**
+          # 뜨고, 도커 VM 총량이 3.8GiB 다. 카메라·MCP subprocess 가 없는
+          # 구성이라 실측 ~250MB 에서 돈다.
+          memory: 1024M
+    depends_on:
+      - influxdb
+    restart: "no"
+
+  influxdb:
+    image: influxdb:2.7
+    # 포트를 호스트로 내보내지 않는다 — E2E 측정 DB 는 컨테이너 안에서만 쓴다.
+    # (라이브는 127.0.0.1:8087 을 쓴다. 겹치지 않게 하려는 목적도 있다.)
+    volumes:
+      - e2e_influx_data:/var/lib/influxdb2
+      - e2e_influx_config:/etc/influxdb2
+    environment:
+      - TZ=Asia/Seoul
+      - DOCKER_INFLUXDB_INIT_MODE=setup
+      - DOCKER_INFLUXDB_INIT_USERNAME=aot
+      - DOCKER_INFLUXDB_INIT_PASSWORD=mmdu77sj3nIoiajjs
+      - DOCKER_INFLUXDB_INIT_ORG=aot
+      - DOCKER_INFLUXDB_INIT_BUCKET=aot_db
+      - DOCKER_INFLUXDB_INIT_ADMIN_TOKEN=mmdu77sj3nIoiajjs
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+    restart: "no"
+
+  # 데몬은 L3(제어 폐루프)에서만 필요하다. 평소에는 뜨지 않게 프로필 뒤에 둔다 —
+  # 도커 VM 메모리가 빠듯하고, L0~L2 는 데몬 없이도 전부 판정된다.
+  #   docker compose -f docker/docker-compose.e2e.yml --profile control up -d
+  aot_daemon:
+    profiles: ["control"]
+    image: aot_ai
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    command: python aot/aot_daemon.py
+    stop_grace_period: 30s
+    volumes:
+      - ../:/app
+      - ../aot/databases:/app/aot/databases
+      - e2e_logs:/var/log/aot
+      - e2e_data:/app/aot_local
+    environment:
+      - TZ=Asia/Seoul
+      - PYTHONPATH=/app
+      - DOCKER_CONTAINER=TRUE
+      - HARDWARE_PROFILE=LOW
+      - AOT_LOCAL_DIR=/app/aot_local
+      - INFLUXDB_HOST=influxdb
+      - INFLUXDB_PORT=8086
+      - AOT_E2E=1
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 768M
+    depends_on:
+      - influxdb
+    restart: "no"
+
+volumes:
+  e2e_data:
+  e2e_session:
+  e2e_logs:
+  e2e_influx_data:
+  e2e_influx_config:

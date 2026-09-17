@@ -38,6 +38,22 @@ def _css(*parts):
         return fh.read()
 
 
+def _resolve_size_token(name):
+    """역할 토큰(`--aot-fs-*`)을 크기 토큰(`--aot-font-size-*`)으로 푼다.
+
+    2026-09-11 §2-3 제목 사다리 이관에서 **역할 토큰 계층**이 생겼다 —
+    `--aot-fs-page-body: var(--aot-font-size-sm)` 처럼 역할이 크기 칸을
+    가리킨다. 사다리가 갈라졌는지 보려면 끝까지 따라가 같은 칸인지 봐야 한다.
+    리터럴로 되돌아간 경우는 여기서 풀리지 않으므로 여전히 걸린다.
+    """
+    if name.startswith('--aot-font-size-'):
+        return name
+    variables = _css('aot-theme-variables.css')
+    m = re.search(
+        r'%s:\s*var\((--aot-font-size-[\w-]+)\)' % re.escape(name), variables)
+    return m.group(1) if m else name
+
+
 def _rule(css, selector):
     """`selector { … }` 본문 → str. 없으면 None."""
     m = re.search(re.escape(selector) + r'\s*\{([^}]*)\}', css)
@@ -87,9 +103,10 @@ class TestTheAdapterSetsTheSize(unittest.TestCase):
         """
         label = _rule(_css('aot-modal-modern.css'), '.aot-modal-option-label')
         self.assertIsNotNone(label, '모달 옵션 라벨 규칙이 없다')
-        got = re.search(r'font-size:\s*var\((--aot-font-size-[\w-]+)\)', label)
+        got = re.search(
+            r'font-size:\s*var\((--aot-(?:font-size|fs)-[\w-]+)\)', label)
         self.assertIsNotNone(got, '모달 옵션 라벨이 토큰을 안 쓴다')
-        self.assertEqual(got.group(1), '--aot-font-size-sm',
+        self.assertEqual(_resolve_size_token(got.group(1)), '--aot-font-size-sm',
                          '어댑터(sm)와 모달 라벨이 다른 칸을 가리킨다 — '
                          'viz 가 다시 옆줄과 달라진다')
 

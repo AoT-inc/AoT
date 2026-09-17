@@ -96,6 +96,12 @@ def brand_image():
             mimetype=mimetype
         )
 
+    # 브랜드 이미지를 설정하지 않은 설치(기본값)에서는 여기까지 온다. 예전에는
+    # return 이 없어 뷰가 None 을 돌려주고 Flask 가 500 을 냈다 — 레이아웃은
+    # 이미지가 있을 때만 <img> 를 그리므로 화면에서는 안 보였지만, 캐시된
+    # URL·직접 호출·이미지 삭제 직후에는 그대로 500 이었다.
+    return '', 404
+
 
 @blueprint.route('/settings/general', methods=('GET', 'POST'))
 @flask_login.login_required

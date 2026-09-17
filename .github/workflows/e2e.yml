@@ -1,0 +1,113 @@
+name: E2E
+
+# 브라우저로 앱을 실제로 열어 보는 유일한 검사.
+#
+# 나머지 워크플로가 전부 정적 가드이고 단위 스위트도 브라우저를 켜지 않으므로,
+# "CSS 가 통째로 안 실려 화면이 무너졌다", "번역문이 인라인 JS 를 깨뜨려
+# 그리드스택이 죽었다" 류는 여기서만 걸린다. 실제로 그 두 사고 모두 현장에서
+# 먼저 발견됐다 — 그것을 병합 전으로 옮기는 것이 이 워크플로의 목적이다.
+#
+# 구성:
+#   L0  aot/tests/e2e/test_route_smoke.py  — GET 라우트 220여 개 (HTTP, ~15초)
+#   L1  aot/tests/e2e/test_page_boot.py    — 페이지 65개 부팅 (브라우저, ~2분 30초)
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: e2e-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: requirements.txt
+
+      # 테스트 러너 쪽 의존성만 설치한다. 앱 자체는 컨테이너 안에서 돌기
+      # 때문에 여기에 requirements 전체를 깔 필요가 없다 — 다만 pytest 가
+      # aot/tests/conftest.py 를 로드하므로 그 conftest 가 쓰는 만큼은 필요하다.
+      - name: 테스트 러너 의존성
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install playwright
+          python -m playwright install --with-deps chromium
+
+      # 도커 레이어 캐시가 없으면 매번 requirements 를 다시 깐다(수 분).
+      - uses: docker/setup-buildx-action@v3
+
+      - name: 앱 이미지 빌드
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/Dockerfile
+          tags: aot_ai:latest
+          load: true
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: E2E 스택 기동
+        run: docker compose -f docker/docker-compose.e2e.yml up -d
+
+      # 신규 설치는 스키마 생성·AI 부트스트랩을 거치므로 첫 응답까지 시간이
+      # 걸린다. 고정 sleep 대신 실제 응답을 기다린다.
+      - name: 앱이 뜰 때까지 대기
+        run: |
+          for i in $(seq 1 60); do
+            if curl -sf -o /dev/null http://127.0.0.1:8085/; then
+              echo "앱이 응답합니다 (${i}회차)"; exit 0
+            fi
+            sleep 5
+          done
+          echo "앱이 5분 안에 뜨지 않았습니다"
+          docker compose -f docker/docker-compose.e2e.yml logs --tail 100
+          exit 1
+
+      - name: 픽스처 시드
+        run: |
+          docker compose -f docker/docker-compose.e2e.yml exec -T aot-app \
+            python -m aot.tests.e2e.seed
+
+      - name: L0 라우트 스모크
+        env:
+          AOT_E2E_BASE_URL: http://127.0.0.1:8085
+        run: python3 -m pytest aot/tests/e2e/test_route_smoke.py -q -p no:cacheprovider
+
+      - name: L1 페이지 부팅 검사
+        env:
+          AOT_E2E_BASE_URL: http://127.0.0.1:8085
+        run: python3 -m pytest aot/tests/e2e/test_page_boot.py -q -p no:cacheprovider
+
+      # 실패했을 때 사람이 볼 것을 남긴다. 스크린샷 없이 "콘솔 오류 3건"만
+      # 보면 원인을 찾는 데 시간이 걸린다.
+      - name: 실패 증거 업로드
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-artifacts
+          path: .local/e2e-artifacts/
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: 앱 로그 업로드
+        if: failure()
+        run: docker compose -f docker/docker-compose.e2e.yml logs --tail 500
+
+      - name: 스택 정리
+        if: always()
+        run: docker compose -f docker/docker-compose.e2e.yml down -v

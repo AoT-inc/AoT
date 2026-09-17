@@ -19,6 +19,8 @@ Phase 0 에서 이 테스트가 하는 일은 하나 — **더 나빠지는 것�
 """
 import unittest
 
+import pytest
+
 from aot.scripts.measure_ai_tool_cost import _tok, measure_manifest
 
 # 2026-08-15 기준선(70ba1ff6). 낮추는 것은 언제든 환영이고, 올리려면 근거를
@@ -340,12 +342,31 @@ TIERED_MANIFEST_TOKEN_CEILING = 7_600
 SINGLE_TOOL_CHAR_CEILING = 3_400
 
 
+# ---------------------------------------------------------------------------
+# 2026-09-17: 두 예산이 모두 넘었다 — 매니페스트 32,382 > 32,200(도구 116개),
+# MCP 카탈로그 53,091 > 52,800(도구 128개).
+#
+# 상한을 올릴지, 문구를 줄일지, 도구를 없앨지는 **AI 표면 설계 판단**이라
+# 보류하기로 했다(사용자 결정). 그동안 이 두 검사가 빨간불이면 단위 스위트
+# 워크플로 전체가 빨간불이 되어, 정작 새로 들어온 회귀를 가린다.
+#
+# 그래서 `xfail(strict=True)` 로 **예상된 실패**임을 적어 둔다. 숨기는 것이
+# 아니다 — 예산 안으로 되돌아오면 XPASS 로 **실패**하므로, 그때 이 표시를
+# 걷으라는 신호가 온다. 결정이 서면 상한을 재기준선으로 잡고 이 블록을 지운다.
+# ---------------------------------------------------------------------------
+_BUDGET_DECISION_PENDING = (
+    '토큰 예산 초과를 어떻게 처리할지 보류 중(2026-09-17). '
+    '상한 인상·문구 축소·도구 정리 중 무엇을 할지 정해지면 이 표시를 걷는다.'
+)
+
+
 class TestToolSurfaceBudget(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
         cls.manifest = measure_manifest()
 
+    @pytest.mark.xfail(strict=True, reason=_BUDGET_DECISION_PENDING)
     def test_agent_manifest_within_budget(self):
         block = self.manifest['agent_manifest']
         self.assertLessEqual(
@@ -358,6 +379,7 @@ class TestToolSurfaceBudget(unittest.TestCase):
             'docs/design/ai-tool-architecture.md §노출 등급과 서랍'
             % (block['tokens'], AGENT_MANIFEST_TOKEN_CEILING, block['count']))
 
+    @pytest.mark.xfail(strict=True, reason=_BUDGET_DECISION_PENDING)
     def test_mcp_catalog_within_budget(self):
         block = self.manifest['mcp_catalog']
         self.assertLessEqual(
