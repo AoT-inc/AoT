@@ -154,3 +154,39 @@ def page(context):
     page = context.new_page()
     yield page
     page.close()
+
+
+# ---------------------------------------------------------------------------
+# L3 — 제어 폐루프
+# ---------------------------------------------------------------------------
+@pytest.fixture(scope='session')
+def daemon():
+    """데몬이 떠 있어야 도는 검사용.
+
+    데몬은 `--profile control` 로만 뜬다. 띄우지 않았으면 **건너뛴다** —
+    "데몬이 없어서 통과" 가 아니라 "돌지 않았음" 으로 보이게 하는 것이 맞다.
+    """
+    from aot.tests.e2e import daemon as daemon_ctl
+
+    if not daemon_ctl.is_running():
+        pytest.skip(
+            '데몬이 떠 있지 않습니다. 제어 폐루프 검사는 데몬이 필요합니다:\n'
+            '  docker compose -f docker/docker-compose.e2e.yml '
+            '--profile control up -d aot_daemon')
+    return daemon_ctl
+
+
+@pytest.fixture
+def output_states(admin_http, base_url):
+    """데몬이 아는 출력 상태를 그대로 읽어 온다 — `{출력id: {채널: 'on'|'off'}}`.
+
+    화면 표시가 아니라 **데몬의 대답**이다. 둘이 갈리는 것이 곧 사고이므로
+    폐루프 검사는 이쪽을 본다.
+    """
+    def _read():
+        resp = admin_http.get(f'{base_url}/outputstate', timeout=30,
+                              headers={'Accept': 'application/json'})
+        assert resp.status_code == 200, (
+            f'출력 상태 조회가 HTTP {resp.status_code} 를 냈습니다')
+        return resp.json()
+    return _read

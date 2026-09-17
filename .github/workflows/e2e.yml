@@ -10,6 +10,8 @@ name: E2E
 # 구성:
 #   L0  aot/tests/e2e/test_route_smoke.py  — GET 라우트 220여 개 (HTTP, ~15초)
 #   L1  aot/tests/e2e/test_page_boot.py    — 페이지 65개 부팅 (브라우저, ~2분 30초)
+#   L2  aot/tests/e2e/test_journey_*.py    — 사용자 여정 8종 (저장하고 되읽기까지)
+#   L3  aot/tests/e2e/test_control_loop.py — 제어 폐루프 (데몬까지 왕복, ~1분)
 
 on:
   push:
@@ -61,8 +63,13 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: E2E 스택 기동
-        run: docker compose -f docker/docker-compose.e2e.yml up -d
+      # `--profile control` 로 데몬까지 띄운다. 데몬이 없으면 L3(제어 폐루프)가
+      # 건너뛰어지는데, 건너뛴 검사는 없는 검사와 같다 — 실제로 여정 여덟이
+      # 그렇게 CI 밖에 있었다.
+      - name: E2E 스택 기동 (데몬 포함)
+        run: |
+          docker compose -f docker/docker-compose.e2e.yml \
+            --profile control up -d
 
       # 신규 설치는 스키마 생성·AI 부트스트랩을 거치므로 첫 응답까지 시간이
       # 걸린다. 고정 sleep 대신 실제 응답을 기다린다.
@@ -93,7 +100,7 @@ jobs:
       # 나머지는 **디렉터리째** 돌린다. 파일을 하나씩 적으면 새로 만든 검사가
       # 조용히 빠진다 — 실제로 L2 여정 여덟이 그렇게 CI 밖에 있었다
       # (2026-09-18 발견). 새 파일이 자동으로 포함되는 쪽이 옳다.
-      - name: L1 페이지 부팅 검사 · L2 사용자 여정
+      - name: L1 페이지 부팅 검사 · L2 사용자 여정 · L3 제어 폐루프
         env:
           AOT_E2E_BASE_URL: http://127.0.0.1:8085
         run: |
