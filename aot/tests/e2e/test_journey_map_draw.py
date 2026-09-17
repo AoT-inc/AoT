@@ -10,12 +10,15 @@
 
 새로 그리는 것이 **기존 도형을 밀어내지 않는지**도 함께 본다.
 
-지우는 흐름은 아직 없다. 삭제 모드는 버튼을 누르면 켜지지만(`text-danger` 가
-붙는다) 캔버스 클릭만으로는 반응하지 않았다 — `_deleteAtPoint` 가
-`queryRenderedFeatures` 로 최상단 레이어를 찾는 구조라, 자동화가 찍어야 할
-지점 조건이 더 있다. 반쯤 맞는 검사를 두느니 없는 편이 낫다(통과해도 무엇을
-지켰는지 말할 수 없다). "겹친 도형을 지우면 전량이 지워지던" 2026-08 사고의
-재발 감시는 그 조건을 짚은 뒤에 붙인다.
+지우는 것까지 본다. 2026-08 에 "겹친 도형을 지우면 전량이 지워지던" 사고가
+있었다 — 그래서 하나를 지운 뒤 **나머지가 그대로인지**를 함께 단언한다.
+
+⚠ **그리기와 지우기는 저장 방식이 다르다.** 그리기는 놓는 즉시
+`/api/geo/overlays/delta` 로 한 건이 나간다. 지우기는 `_pendingDeletes` 에
+**쌓이기만 하고**(화면에서는 이미 사라진다) 전역 저장(`#btn-save-global`)을
+눌러야 `/api/geo/overlays` 로 전체가 올라간다. 되돌릴 수 있게 하려는 설계다.
+그래서 삭제 여정은 저장을 누르는 데까지 가야 하고, 그러지 않으면 "지웠다" 는
+화면만 보고 통과해 버린다.
 """
 import re
 
@@ -116,3 +119,60 @@ def test_a_drawn_shape_is_saved_and_survives_a_reload(page, base_url,
     reloaded = _shapes(admin_http, base_url, map_uuid)
     assert len(reloaded) == len(after), (
         f'새로고침 뒤 도형 수가 달라졌습니다: {len(after)} → {len(reloaded)}')
+
+
+def _delete_at(page, x, y):
+    """삭제 모드로 그 지점의 **최상단** 도형 하나를 지운다.
+
+    지워지는 것은 `queryRenderedFeatures` 가 z 순서로 고른 맨 위 하나다
+    (`_deleteAtPoint`). 겹쳐 있으면 한 번에 하나씩, 위에서부터 지워진다 —
+    그것이 2026-06 에 전량 삭제를 고치며 세운 규칙이다.
+    """
+    page.locator('#draw-tools-container .tool-btn-delete').first.click()
+    page.wait_for_timeout(700)
+    page.mouse.click(x, y)
+    page.wait_for_timeout(1200)
+
+
+def test_deleting_one_shape_leaves_the_others_alone(page, base_url, admin_http):
+    """하나를 지우면 **그 하나만** 지워지는가."""
+    map_uuid = _open_design(page, base_url)
+    seeded = _shapes(admin_http, base_url, map_uuid)
+
+    # 지울 대상을 하나 그린다. 시드 도형을 지우면 다음 검사의 전제가 무너진다.
+    with page.expect_response(
+            lambda r: '/api/geo/overlays/delta' in r.url
+            and r.request.method == 'POST',
+            timeout=30000):
+        _draw_rectangle(page, dx=120, dy=90)
+    page.wait_for_timeout(SAVE_SETTLE_MS)
+    drawn = _shapes(admin_http, base_url, map_uuid)
+    assert len(drawn) > len(seeded), '지울 도형을 만들지 못했습니다'
+
+    canvas = page.locator('.maplibregl-canvas').first
+    box = canvas.bounding_box()
+    _delete_at(page, box['x'] + box['width'] / 2, box['y'] + box['height'] / 2)
+
+    # 여기까지는 화면에서만 사라진 상태다. 저장해야 서버로 간다.
+    #
+    # 전역 저장은 `/api/geo/overlays` 로 **전체를 다시 올린다**(그리기 한 건이
+    # 쓰는 `/api/geo/overlays/delta` 와 다른 경로다). 끝이 정확히 `/overlays`
+    # 인 것만 본다 — `in` 으로 보면 delta 요청도 걸려 엉뚱한 응답을 기다린다.
+    with page.expect_response(
+            lambda r: (r.url.split('?')[0].rstrip('/').endswith('/api/geo/overlays')
+                       and r.request.method == 'POST'),
+            timeout=40000) as saved:
+        page.locator('#btn-save-global').first.click()
+    assert saved.value.status == 200, (
+        f'삭제 저장이 HTTP {saved.value.status} 로 끝났습니다')
+    page.wait_for_timeout(SAVE_SETTLE_MS)
+
+    after = _shapes(admin_http, base_url, map_uuid)
+    names = _shape_names(after)
+
+    assert len(after) < len(drawn), (
+        f'지우고 저장했는데 도형이 줄지 않았습니다: '
+        f'{len(drawn)} → {len(after)}')
+    for name in (F.GEO_SITE, F.GEO_ZONE):
+        assert name in names, (
+            f'하나를 지웠는데 다른 도형까지 사라졌습니다: {name} 없음 ({names})')
