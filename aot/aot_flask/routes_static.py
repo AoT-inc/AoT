@@ -33,7 +33,7 @@ from aot.aot_client import DaemonControl
 from aot.aot_flask.forms import forms_dashboard
 from aot.aot_flask.routes_authentication import admin_exists
 from aot.aot_flask.utils.utils_general import is_hex_color_light, user_has_permission
-from aot.aot_flask.extensions import db
+from aot.aot_flask.extensions import db, cache
 
 blueprint = Blueprint('routes_static',
                       __name__,
@@ -46,88 +46,130 @@ _daemon_status_cache = {'value': '0', 'ts': 0.0}
 _DAEMON_STATUS_TTL = 30.0
 
 _INJECT_CACHE_TTL = 10.0
-_misc_cache = {'obj': None, 'ts': 0.0}
-_dashboards_cache = {'objs': None, 'ts': 0.0}
-_api_keys_cache = {'objs': None, 'ts': 0.0}
-_ai_settings_cache = {'obj': None, 'ts': 0.0}
+_misc_cache = {'obj': None, 'ts': 0.0, 'gen': None}
+_dashboards_cache = {'objs': None, 'ts': 0.0, 'gen': None}
+_api_keys_cache = {'objs': None, 'ts': 0.0, 'gen': None}
+_ai_settings_cache = {'obj': None, 'ts': 0.0, 'gen': None}
+
+# gunicorn 워커마다 프로세스가 갈라져 위 dict 들은 워커 하나의 메모리에만 산다.
+# 설정을 저장한 요청을 받은 워커가 자기 dict 를 비워도(invalidate_misc_cache)
+# 다른 워커는 그 사실을 모른 채 최대 _INJECT_CACHE_TTL(10초) 동안 옛 값을 계속
+# 그린다 — 실측(2026-09-18, 8091 2워커 E2E 스택): 커넥션마다 워커를 바꿔 가며
+# 저장 직후 연타하면 새/옛 테마 색이 섞여 나온다(워커별 pid 로그로 확인).
+#
+# 고치는 값은 이 작은 "세대값" 하나뿐이다 — flask_caching.cache(FileSystemCache,
+# /tmp/aot_flask_cache)는 디스크 파일이라 워커 전원이 같은 것을 본다. Misc·
+# APIKey 행 자체(chirpstack_api_token 등 비밀 컬럼 포함)는 여전히 DB 에서만
+# 읽어 각 워커 메모리에만 둔다 — 행 전체를 공유 캐시에 넣으면 그 비밀이
+# /tmp 에 그대로 pickle 된다. 저장 경로가 세대값을 찍으면(_bump_generation)
+# 모든 워커가 **다음 요청부터** "내가 든 사본이 낡았다"를 싸게(파일 하나 읽기)
+# 알아채고 그때만 실제 행을 다시 읽는다.
+_MISC_GEN_KEY = 'inject_vars_gen:misc'
+_DASHBOARDS_GEN_KEY = 'inject_vars_gen:dashboards'
+_API_KEYS_GEN_KEY = 'inject_vars_gen:api_keys'
+_AI_SETTINGS_GEN_KEY = 'inject_vars_gen:ai_settings'
+
+
+def _generation(gen_key):
+    """공유 세대값 — 아직 아무도 안 찍었으면 0(항상 첫 캐시를 채운다)."""
+    return cache.get(gen_key) or 0
+
+
+def _bump_generation(gen_key):
+    """저장 경로에서 부른다. timeout=0 은 cachelib 규약상 '만료 없음'."""
+    cache.set(gen_key, time.time(), timeout=0)
+
+
+def _refresh_if_stale(slot, gen_key, loader):
+    """slot(dict: obj/objs·ts·gen) 이 최신이면 그대로, 아니면 loader() 로 채운다.
+
+    "최신"의 조건은 둘 다: ① 이 프로세스가 그 세대값을 본 뒤로 로컬 TTL 이
+    아직 안 지났고, ② 공유 세대값이 그때와 같다(다른 워커의 저장으로 바뀌지
+    않았다). loader() 는 DB 를 읽고 세션에서 expunge 까지 마친 값을 돌려줘야
+    한다.
+    """
+    now = time.time()
+    gen = _generation(gen_key)
+    key = 'objs' if 'objs' in slot else 'obj'
+    if (slot[key] is not None and slot['gen'] == gen
+            and now - slot['ts'] < _INJECT_CACHE_TTL):
+        return slot[key]
+    value = loader()
+    slot[key] = value
+    slot['ts'] = now
+    slot['gen'] = gen
+    return value
+
+
+def _expunge_all(objs):
+    for o in objs:
+        try:
+            db.session.expunge(o)
+        except Exception:
+            pass
 
 
 def _cached_misc():
-    now = time.time()
-    if now - _misc_cache['ts'] < _INJECT_CACHE_TTL and _misc_cache['obj'] is not None:
-        return _misc_cache['obj']
-    obj = Misc.query.first()
-    try:
-        db.session.expunge(obj)
-    except Exception:
-        pass
-    _misc_cache['obj'] = obj
-    _misc_cache['ts'] = now
-    return obj
-
-
-def invalidate_misc_cache():
-    """settings 저장 직후 stale 값이 렌더링되지 않도록 inject_variables()의 Misc 캐시를 즉시 만료시킨다."""
-    _misc_cache['obj'] = None
-    _misc_cache['ts'] = 0.0
-
-
-def _cached_dashboards():
-    now = time.time()
-    if now - _dashboards_cache['ts'] < _INJECT_CACHE_TTL and _dashboards_cache['objs'] is not None:
-        return _dashboards_cache['objs']
-    try:
-        rows = db.session.execute(db.text(
-            "SELECT unique_id FROM dashboard ORDER BY COALESCE(sort_order, 999999), id"
-        ))
-        ordered_uids = [r[0] for r in rows]
-        if ordered_uids:
-            dash_map = {d.unique_id: d for d in Dashboard.query.filter(Dashboard.unique_id.in_(ordered_uids)).all()}
-            objs = [dash_map[uid] for uid in ordered_uids if uid in dash_map]
-        else:
-            objs = Dashboard.query.order_by(Dashboard.id.asc()).all()
-    except Exception:
-        objs = Dashboard.query.order_by(Dashboard.id.asc()).all()
-    for o in objs:
-        try:
-            db.session.expunge(o)
-        except Exception:
-            pass
-    _dashboards_cache['objs'] = objs
-    _dashboards_cache['ts'] = now
-    return objs
-
-
-def _cached_api_keys():
-    from aot.databases.models import APIKey
-    now = time.time()
-    if now - _api_keys_cache['ts'] < _INJECT_CACHE_TTL and _api_keys_cache['objs'] is not None:
-        return _api_keys_cache['objs']
-    objs = APIKey.query.all()
-    for o in objs:
-        try:
-            db.session.expunge(o)
-        except Exception:
-            pass
-    _api_keys_cache['objs'] = objs
-    _api_keys_cache['ts'] = now
-    return objs
-
-
-def _cached_ai_settings():
-    from aot.databases.models import AIGlobalSettings
-    now = time.time()
-    if now - _ai_settings_cache['ts'] < _INJECT_CACHE_TTL and _ai_settings_cache['obj'] is not None:
-        return _ai_settings_cache['obj']
-    obj = AIGlobalSettings.query.first()
-    if obj is not None:
+    def _load():
+        obj = Misc.query.first()
         try:
             db.session.expunge(obj)
         except Exception:
             pass
-    _ai_settings_cache['obj'] = obj
-    _ai_settings_cache['ts'] = now
-    return obj
+        return obj
+    return _refresh_if_stale(_misc_cache, _MISC_GEN_KEY, _load)
+
+
+def invalidate_misc_cache():
+    """settings 저장 직후 stale 값이 렌더링되지 않도록 inject_variables()의 Misc 캐시를 즉시 만료시킨다.
+
+    이 프로세스(저장 요청을 받은 워커)의 사본은 바로 비우고, 다른 워커들에게는
+    공유 세대값을 찍어 알린다 — 위 모듈 주석 참조.
+    """
+    _misc_cache['obj'] = None
+    _misc_cache['ts'] = 0.0
+    _bump_generation(_MISC_GEN_KEY)
+
+
+def _cached_dashboards():
+    def _load():
+        try:
+            rows = db.session.execute(db.text(
+                "SELECT unique_id FROM dashboard ORDER BY COALESCE(sort_order, 999999), id"
+            ))
+            ordered_uids = [r[0] for r in rows]
+            if ordered_uids:
+                dash_map = {d.unique_id: d for d in Dashboard.query.filter(Dashboard.unique_id.in_(ordered_uids)).all()}
+                objs = [dash_map[uid] for uid in ordered_uids if uid in dash_map]
+            else:
+                objs = Dashboard.query.order_by(Dashboard.id.asc()).all()
+        except Exception:
+            objs = Dashboard.query.order_by(Dashboard.id.asc()).all()
+        _expunge_all(objs)
+        return objs
+    return _refresh_if_stale(_dashboards_cache, _DASHBOARDS_GEN_KEY, _load)
+
+
+def _cached_api_keys():
+    def _load():
+        from aot.databases.models import APIKey
+        objs = APIKey.query.all()
+        _expunge_all(objs)
+        return objs
+    return _refresh_if_stale(_api_keys_cache, _API_KEYS_GEN_KEY, _load)
+
+
+def _cached_ai_settings():
+    def _load():
+        from aot.databases.models import AIGlobalSettings
+        obj = AIGlobalSettings.query.first()
+        if obj is not None:
+            try:
+                db.session.expunge(obj)
+            except Exception:
+                pass
+        return obj
+    return _refresh_if_stale(_ai_settings_cache, _AI_SETTINGS_GEN_KEY, _load)
 
 
 
