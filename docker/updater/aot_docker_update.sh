@@ -439,6 +439,23 @@ process_request() {
 
     log "request $_id from ${_by:-unknown}: install $_target"
     run_update "$_target"
+    _rc=$?
+
+    # Consume the request file once acted on, success or failure. Before this,
+    # the ONLY thing stopping a request from being replayed was the id check
+    # above (request.json's id vs. the last id status.json recorded) -- and
+    # that check breaks the moment anything writes status.json with a
+    # different id for the same underlying event. That is exactly what
+    # happened 2026-09-16 on koat: a request last handled on 2026-09-13 was
+    # never removed, an unrelated `--update` CLI run (which stamps status.json
+    # with its own synthetic "cli-<timestamp>" id, see the oneshot branch)
+    # left a status.json whose id no longer matched, and the next poll read
+    # the same three-day-old request.json as new and replayed it -- silently
+    # downgrading a server that had just been upgraded. Deleting the file here
+    # makes "already handled" durable even if some future writer's id
+    # bookkeeping drifts again.
+    rm -f "$REQUEST_FILE"
+    return "$_rc"
 }
 
 acquire_lock() {
@@ -537,6 +554,20 @@ case "$MODE" in
     oneshot)
         acquire_lock || { log "another updater run is in progress"; exit 1; }
         trap release_lock EXIT
+        # A leftover request.json is stale by definition here: an operator is
+        # about to hand-drive an update, which is not something the file-based
+        # queue asked for. Left in place, it survives this run untouched (this
+        # branch never reads it) and the loop-mode process sharing this same
+        # container can replay it the moment the lock above is released --
+        # which is exactly what turned a successful `--update` into a silent
+        # downgrade on koat, 2026-09-16 (see process_request's own cleanup for
+        # the full account). Clear it before acting, not after: waiting until
+        # this run finishes would leave the same window open for its own
+        # multi-minute image pull / container swap.
+        if [ -f "$REQUEST_FILE" ]; then
+            log "clearing stale request.json before manual update (oneshot does not consume it)"
+            rm -f "$REQUEST_FILE"
+        fi
         REQUEST_ID="cli-$(date +%s)"
         run_update "$ONESHOT_TARGET"
         exit $?
