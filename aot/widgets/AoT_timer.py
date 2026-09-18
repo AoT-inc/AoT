@@ -1046,6 +1046,16 @@ def _cyc_worker(device_unique_id, channel_id, channel_index,
             if off_state == 'cancelled':
                 break
             if off_state != 'off':
+                if _cyc_should_stop(device_unique_id, channel_id, run_id, stop_event):
+                    # 우리 stop_event 는 안 섰다(섰다면 위에서 'cancelled' 로
+                    # 걸러졌다) — 그런데도 여기 왔다는 건 이 30초 대기 동안
+                    # *다른* gunicorn 워커 프로세스가 이 장치/채널을 정지·재시작
+                    # 시켰다는 뜻이다(그 프로세스는 이 스레드의 stop_event 를
+                    # 볼 수 없어 디스크 run_id 로만 알린다 — _cyc_should_stop
+                    # 참고). 그 프로세스가 이미 더 최신 상태를 써 뒀으니, 여기서
+                    # 'OFF not confirmed' 로 덮어쓰면 그 최신 상태(예: 막 시작한
+                    # 새 실행)를 지워버린다.
+                    return
                 # 끄지 못한 채 다음 사이클로 넘어가면 "끄는 척하며 계속 켜져
                 # 있는" 상태가 된다 — 2026-09-14 현장이 정확히 그랬다(감사로그엔
                 # ON/OFF 가 번갈아 성공으로 남았는데 밸브는 20시간 열려 있었다).

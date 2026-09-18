@@ -139,3 +139,50 @@ def test_worker_commands_are_attributed_to_the_timer(monkeypatch):
     finally:
         timer._cyc_stop_worker(dev, ch, reason='test_cleanup')
         _cleanup(dev, ch)
+
+
+# ---- ③ OFF 확인 대기 중 다른 프로세스에 넘어간 상태를 덮어쓰지 않는가 ----
+
+def test_off_confirm_timeout_does_not_clobber_a_different_process_restart(monkeypatch):
+    """OFF 확인 대기(최대 30초) 동안 *다른* gunicorn 워커 프로세스가 같은
+    장치/채널을 재시작시켰으면, 그 프로세스가 이미 디스크에 새 run_id 를 써
+    둔다 — 이 스레드의 stop_event 는 그 프로세스에서 보이지 않으니
+    `_cyc_should_stop` 의 run_id 대조가 유일한 감지 수단이다(_cyc_sleep 이
+    이미 쓰는 것과 같은 메커니즘). 이 워커가 타임아웃 뒤 그 상태를
+    'OFF not confirmed' 오류로 덮어쓰면, 방금 시작된 새 실행이 화면에서
+    사라진다.
+    """
+    dev, ch = 'dev-off-cross-process', '0'
+    _cleanup(dev, ch)
+    calls = []
+    other_run_id = 'other-process-run-id'
+
+    def _fake_off_confirm(daemon, device_unique_id, channel_index, stop_event=None, timeout=30.0):
+        # 다른 프로세스가 이 30초 대기 동안 같은 장치/채널을 재시작시킨
+        # 상황을 흉내낸다 — 디스크에 새 run_id 로 곧바로 새 실행이 있다고 쓴다.
+        timer._cyc_state_update(
+            dev, ch, run_id=other_run_id,
+            active=True, phase='initializing', message='Initializing (other process)')
+        return 'timeout'
+
+    monkeypatch.setattr(timer, 'DaemonControl', lambda *a, **kw: _FakeDaemon(calls))
+    monkeypatch.setattr(timer, '_wait_for_off_confirm', _fake_off_confirm)
+
+    timer._cyc_start_worker(dev, ch, 0, 1, 1, 3, 'cycle', None, '00:00')
+    try:
+        deadline = _t.time() + 8.0
+        st = {}
+        while _t.time() < deadline:
+            st = timer._cyc_state_snapshot(dev, ch)
+            if st.get('run_id') == other_run_id:
+                break
+            _t.sleep(0.1)
+        assert st.get('run_id') == other_run_id, (
+            f'다른 프로세스가 써 둔 새 실행 상태가 안 보인다: {st}')
+        assert st.get('phase') == 'initializing' and st.get('active') is True, (
+            f'superseded 된 워커가 다른 프로세스의 새 실행 상태를 '
+            f"'off_not_confirmed' 로 덮어썼다: {st}")
+    finally:
+        with timer._CYCLE_LOCK:
+            timer._CYCLE_WORKERS.pop(timer._cyc_key(dev, ch), None)
+        _cleanup(dev, ch)
