@@ -14,3 +14,6 @@ The AoT settings can be exported as a ZIP file containing the AoT settings datab
 
 !!! warning
     Importing overwrites (that is, deletes) the current settings and custom controller data. It is recommended to create an AoT backup before attempting an import.
+
+!!! note
+    Only **administrators** can import settings. The settings database holds the user accounts and roles, so an import by anyone else could be used to change their own permissions. Other roles do not see the import section.

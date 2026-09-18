@@ -131,3 +131,29 @@ def test_a_guest_cannot_download_the_settings(guest_http, base_url):
                                  'export_settings_zip': '1'})
     assert not resp.headers.get('Content-Type', '').startswith('application/zip'), (
         '게스트가 설정 DB(사용자·비밀번호 해시 포함)를 내려받았습니다')
+
+
+def test_only_an_admin_can_import_settings(editor_http, admin_http, base_url):
+    """설정 가져오기는 관리자만 — 설정 DB 에는 사용자 표가 들어 있다.
+
+    편집자가 관리자 계정을 담은 DB 를 올리면 스스로 관리자가 될 수 있다
+    (2026-09-18 결정: 관리자 전용). 편집자는 가져오기 칸이 안 보이고, 요청을
+    직접 보내도 **이름 검사에도 닿지 못하고** 거절된다.
+    """
+    html = _export_page(editor_http, base_url)
+    assert 'name="settings_import_file"' not in html, (
+        '편집자 화면에 설정 가져오기 칸이 있습니다')
+
+    filename, _content = _export_settings(admin_http, base_url)
+    resp = editor_http.post(
+        f'{base_url}/export', timeout=120, allow_redirects=True,
+        data={'csrf_token': form_csrf(html), 'settings_import_upload': '1'},
+        files={'settings_import_file': (filename, _zip_without_database(),
+                                        'application/zip')})
+    assert resp.status_code == 200
+    assert DATABASE_NAME + ' ' not in resp.text and 'not included in zip' not in resp.text, (
+        '편집자의 가져오기가 파일 검사까지 진행됐습니다 — 권한 검사가 없습니다')
+    assert 'edit_users' in resp.text, '편집자에게 권한 부족을 알리지 않았습니다'
+
+    # 관리자에게는 칸이 있다
+    assert 'name="settings_import_file"' in _export_page(admin_http, base_url)

@@ -26,6 +26,12 @@ MONITOR_USER = 'e2emonitor'
 MONITOR_PASS = 'e2epass1234'
 MONITOR_EMAIL = 'e2e-monitor@example.com'
 
+# 편집자(Editor) — 설정·제어는 되지만 사용자 관리는 안 된다. 관리자 전용 경계
+# (설정 가져오기 등)를 확인하는 데 쓴다.
+EDITOR_USER = 'e2eeditor'
+EDITOR_PASS = 'e2epass1234'
+EDITOR_EMAIL = 'e2e-editor@example.com'
+
 # 장치 이름 — 화면에서 이 문자열로 찾는다.
 INPUT_RAM = 'E2E RAM Input'
 INPUT_CPU = 'E2E CPU Input'

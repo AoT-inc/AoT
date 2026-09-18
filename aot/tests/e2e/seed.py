@@ -156,7 +156,8 @@ def _seed_users():
     for name, password, email, role_id in (
             (F.ADMIN_USER, F.ADMIN_PASS, F.ADMIN_EMAIL, 1),   # Admin
             (F.GUEST_USER, F.GUEST_PASS, F.GUEST_EMAIL, 4),   # Guest
-            (F.MONITOR_USER, F.MONITOR_PASS, F.MONITOR_EMAIL, 3)):  # Monitor
+            (F.MONITOR_USER, F.MONITOR_PASS, F.MONITOR_EMAIL, 3),   # Monitor
+            (F.EDITOR_USER, F.EDITOR_PASS, F.EDITOR_EMAIL, 2)):  # Editor
         user = User.query.filter(User.name == name).first()
         if user is None:
             user = User()

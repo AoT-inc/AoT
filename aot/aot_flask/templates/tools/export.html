@@ -86,6 +86,8 @@
     </div>
   </form>
 
+  {# 가져오기는 관리자만 — 설정 DB 에 사용자 표가 들어 있다(routes_page.page_export). #}
+  {% if can_import_settings %}
   <!-- Import AoT settings -->
   <div class="aot-modal-group-title aot-group-title-gap-lg">{{_('Import AoT settings data from ZIP file')}}</div>
   <p class="aot-modal-body-text">
@@ -103,6 +105,7 @@
       {{form_import_settings.settings_import_upload(class_='btn aot-pill-btn aot-pill-btn-primary')}}
     </div>
   </form>
+  {% endif %}
 
   <div class="aot-vspace-lg"></div>
 

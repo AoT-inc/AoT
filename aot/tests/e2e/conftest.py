@@ -93,6 +93,17 @@ def monitor_http(base_url):
     return session
 
 
+@pytest.fixture(scope='session')
+def editor_http(base_url):
+    """편집자(Editor) — 설정·제어는 되지만 관리자 전용은 막혀야 한다."""
+    import requests
+    from aot.tests.e2e import fixtures as F
+
+    session = requests.Session()
+    _login(session, base_url, F.EDITOR_USER, F.EDITOR_PASS)
+    return session
+
+
 def csrf_headers(session, base_url):
     """세션의 CSRF 토큰을 머리글로 — JSON API 를 화면처럼 부를 때."""
     token = session.get(f'{base_url}/csrf-token', timeout=30).json()['csrf_token']

@@ -381,6 +381,11 @@ def page_export():
                 flash('Unknown error creating zipped settings database',
                       'error')
         elif form_import_settings.settings_import_upload.data:
+            # 가져오기는 **관리자만**(edit_users — 관리자만 가진 권한). 설정 DB 에는
+            # 사용자 표가 들어 있어, 편집자가 관리자 계정을 담은 DB 를 올리면 스스로
+            # 관리자가 될 수 있었다(2026-09-18 결정). 거절 알림은 user_has_permission 이 띄운다.
+            if not utils_general.user_has_permission('edit_users'):
+                return redirect(url_for('routes_page.page_export'))
             restore_success = utils_export.import_settings(form_import_settings)
             if restore_success:
                 return redirect(url_for('routes_authentication.logout'))
@@ -409,6 +414,8 @@ def page_export():
                            form_export_measurements=form_export_measurements,
                            form_export_settings=form_export_settings,
                            form_import_settings=form_import_settings,
+                           can_import_settings=utils_general.user_has_permission(
+                               'edit_users', silent=True),
                            choices_function=choices_function,
                            choices_input=choices_input,
                            choices_output=choices_output)
