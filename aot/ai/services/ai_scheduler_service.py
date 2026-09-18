@@ -995,6 +995,11 @@ class AISchedulerService:
             if action_type == 'mcp_tool_call' and isinstance(params, dict):
                 args = params.get('arguments') or {}
                 device_id = args.get('device_id') or args.get('unique_id') or target_id
+                # device_id 가 uuid 가 아니라 이름이면 can_operate_device 가
+                # 그 값으로 탭을 못 찾아 "탭 없음 = 전원 공개" 로 통과시킨다 —
+                # 이름으로 지정한 예약이 재검사를 조용히 우회하는 구멍이었다
+                # (2026-09-18). 실행 단계와 같은 폭으로 이름을 먼저 풀어둔다.
+                device_id = scope.resolve_device_token(device_id)
 
             if scope.can_operate_device(device_id, user=owner):
                 return None
