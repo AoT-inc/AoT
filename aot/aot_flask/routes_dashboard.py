@@ -358,7 +358,7 @@ def page_dashboard_add():
 @blueprint.route('/dashboard/<dashboard_id>', methods=('GET', 'POST'))
 @flask_login.login_required
 def page_dashboard(dashboard_id):
-    logger.info(f"\n[DASHBOARD TRACE] Loading dashboard: {dashboard_id}\n")
+    logger.debug(f"[DASHBOARD TRACE] Loading dashboard: {dashboard_id}")
     """Generate custom dashboard with various data."""
     this_dashboard = Dashboard.query.filter(
         Dashboard.unique_id == dashboard_id).first()

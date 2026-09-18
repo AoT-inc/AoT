@@ -306,8 +306,8 @@ def invalidate_zone_contents(zone_uuid):
 def invalidate_rep(shape):
     """대표 측정 지정이 바뀐 직후 부른다 — **그 값을 쓰는 캐시만** 버린다.
 
-    rep_key 를 읽는 곳은 셋뿐이다: 구역 모달 응답, 지도 라벨의 구역 상태
-    (지도 단위), 필지 요약의 자식 행(필지 단위). 전체 `invalidate()` 를
+    rep_key 를 읽는 곳은 둘뿐이다: 구역 모달 응답, 필지 요약의 자식 행
+    (필지 단위). 지도 라벨의 구역 상태는 되돌려져 더 이상 없다. 전체 `invalidate()` 를
     부르면 편하지만 `_PARENT_CACHE` 까지 함께 날아간다 — 그건 지도 도형 전량을
     shapely 로 훑어 만드는 이 모듈에서 가장 비싼 캐시이고, 대표 측정과는 아무
     상관이 없다. 값 하나 바꿨다고 그걸 다시 만들게 할 이유가 없다.
@@ -316,7 +316,6 @@ def invalidate_rep(shape):
         return
     with _CACHE_LOCK:
         _ZONE_CONTENTS_CACHE.pop(shape.unique_id, None)
-        _ZONE_STATUS_CACHE.pop(getattr(shape, 'geo_id', None), None)
     # 필지 요약은 상위 site 를 찾아야 한다(캐시된 부모 색인을 그대로 쓴다).
     try:
         parent = parent_site_for_shape(shape.unique_id)
@@ -334,7 +333,6 @@ def invalidate(site_uuid=None):
             _CACHE.clear()
             _PARENT_CACHE.clear()
             _STATUS_CACHE.clear()
-            _ZONE_STATUS_CACHE.clear()
             _ZONE_CONTENTS_CACHE.clear()
         else:
             _CACHE.pop(site_uuid, None)

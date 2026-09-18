@@ -1781,8 +1781,10 @@ def api_geo_devices_list():
         if include_all_param is None:
             include_all = (not device_ids)
 
-        # [Fix] Explicitly log the filtering mode
-        current_app.logger.info(f"[AoT API] Fetching devices for map_uuid: {map_uuid} include_all: {include_all} device_ids_count: {len(device_ids) if device_ids else 0}")
+        # 지도 위젯이 주기적으로 부르는 자리다 — INFO 로 두면 이 한 줄이 로그를
+        # 통째로 덮는다(실측 2026-09-16: 최근 5,000줄 중 3,997줄, 80%). 필터링
+        # 모드를 보려던 진단 로그이므로 debug 로 내린다.
+        current_app.logger.debug(f"[AoT API] Fetching devices for map_uuid: {map_uuid} include_all: {include_all} device_ids_count: {len(device_ids) if device_ids else 0}")
 
         # [Optimization] Use shared logic from utils_geo to ensure consistency
         # collect_devices handles all types (Input, Output, Function, etc.) and styling (Icon, Color, Status)

@@ -306,3 +306,38 @@ class FoldOrderTest(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class InvalidateDoesNotRaise(unittest.TestCase):
+    """무효화 함수가 **부르는 것만으로 터지지 않는가.**
+
+    `_ZONE_STATUS_CACHE` 는 정의와 그것을 채우던 `zone_status_for_map` 이
+    5ab9e309("구역 라벨 대표값·문제 표시 되돌림")에서 함께 지워졌는데, 그걸
+    비우던 참조 두 곳이 남아 `NameError` 로 터지고 있었다. 현장 로그에서
+    잡혔다(2026-09-15, 시설 대표측정 저장 API 가 500).
+
+    두 경로 모두 "값이 맞나" 이전에 **부르면 터진다** 는 문제였으므로,
+    검사도 그 수준에서 잠근다. 지우기만 하는 함수라 DB 도 필요 없다.
+    """
+
+    def test_invalidate_all_does_not_raise(self):
+        ss.invalidate()
+
+    def test_invalidate_one_site_does_not_raise(self):
+        ss.invalidate('some-site-uuid')
+
+    def test_invalidate_rep_does_not_raise(self):
+        class _Shape:
+            unique_id = 'shape-1'
+            geo_id = 'geo-1'
+
+        ss.invalidate_rep(_Shape())
+
+    def test_invalidate_rep_ignores_none(self):
+        ss.invalidate_rep(None)
+
+    def test_no_dangling_cache_names_remain(self):
+        """지워진 캐시 이름이 다시 참조되면 같은 방식으로 또 터진다."""
+        src = _read('aot_flask/geo/site_summary.py')
+        self.assertNotIn('_ZONE_STATUS_CACHE', src,
+                         '정의 없는 캐시를 다시 참조한다 — NameError 로 터진다')
