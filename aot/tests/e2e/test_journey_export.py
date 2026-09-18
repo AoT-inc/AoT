@@ -125,6 +125,7 @@ def test_a_wrong_file_is_refused_and_nothing_breaks(admin_http, base_url):
 
 
 def test_a_guest_cannot_download_the_settings(guest_http, base_url):
+    """(관리자 전용이 된 뒤에도 남겨 둔다 — 가장 낮은 역할의 경계.)"""
     html = _export_page(guest_http, base_url)
     resp = guest_http.post(f'{base_url}/export', timeout=60, allow_redirects=False,
                            data={'csrf_token': form_csrf(html),
@@ -143,6 +144,12 @@ def test_only_an_admin_can_import_settings(editor_http, admin_http, base_url):
     html = _export_page(editor_http, base_url)
     assert 'name="settings_import_file"' not in html, (
         '편집자 화면에 설정 가져오기 칸이 있습니다')
+    assert 'name="export_settings_zip"' not in html, (
+        '편집자 화면에 설정 내보내기 단추가 있습니다')
+    resp = editor_http.post(f'{base_url}/export', timeout=60, data={
+        'csrf_token': form_csrf(html), 'export_settings_zip': '1'})
+    assert not resp.headers.get('Content-Type', '').startswith('application/zip'), (
+        '편집자가 웹 화면에서 설정 DB 를 내려받았습니다')
 
     filename, _content = _export_settings(admin_http, base_url)
     resp = editor_http.post(
@@ -179,23 +186,25 @@ def test_only_an_admin_gets_the_settings_db_by_api(admin_http, editor_http,
         f'관리자가 API 로 설정 DB 를 받지 못했습니다(HTTP {resp.status_code})')
 
 
-def _restore(session, base_url):
-    """없는 경로로 복원을 요청한다 — 권한을 지나도 경로 검사에서 멈춘다."""
+def _backup_action(session, base_url, action):
+    """없는 백업으로 복원·내려받기를 요청한다 — 권한을 지나도 경로 검사에서 멈춘다."""
     token = form_csrf(_export_page(session, base_url))   # 세션 단위 토큰
     return session.post(f'{base_url}/admin/backup', timeout=60, data={
-        'csrf_token': token, 'restore': '1',
-        'full_path': '/nonexistent/AoT-backup-e2e', 'selected_dir': 'e2e'})
+        'csrf_token': token, action: '1',
+        'full_path': '/nonexistent/AoT-backup-e2e', 'selected_dir': 'e2e-none'})
 
 
-def test_only_an_admin_can_restore_a_backup(admin_http, editor_http, base_url):
-    """백업 복원도 관리자만 — 사용자·역할까지 백업 시점으로 돌아간다."""
-    refused = _restore(editor_http, base_url)
+@pytest.mark.parametrize('action', ['restore', 'download'])
+def test_only_an_admin_can_restore_or_download_a_backup(admin_http, editor_http,
+                                                         base_url, action):
+    """백업 복원·내려받기는 관리자만 — 백업에는 설정 DB(사용자 표)가 통째로 있다."""
+    refused = _backup_action(editor_http, base_url, action)
     assert refused.status_code == 200
     assert 'edit_users' in refused.text, (
-        '편집자의 복원 요청이 권한에서 거절되지 않았습니다(경로 검사까지 갔습니다)')
+        f'편집자의 {action} 요청이 권한에서 거절되지 않았습니다(경로 검사까지 갔습니다)')
     page = editor_http.get(f'{base_url}/admin/backup', timeout=60).text
-    assert 'name="restore"' not in page, '편집자 화면에 복원 단추가 있습니다'
+    assert f'name="{action}"' not in page, f'편집자 화면에 {action} 단추가 있습니다'
 
-    passed = _restore(admin_http, base_url)
+    passed = _backup_action(admin_http, base_url, action)
     assert passed.status_code == 200
-    assert 'edit_users' not in passed.text, '관리자의 복원 요청이 권한에서 거절됐습니다'
+    assert 'edit_users' not in passed.text, f'관리자의 {action} 요청이 권한에서 거절됐습니다'

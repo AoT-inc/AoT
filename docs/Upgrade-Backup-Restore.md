@@ -87,4 +87,4 @@ sudo aot-commands backup-restore [backup_location]
 ```
 
 !!! note
-    Restoring a backup from the web interface is limited to **administrators**, because a restore also returns user accounts and roles to the state they were in when the backup was made. Other roles do not see the Restore button.
+    Downloading or restoring a backup from the web interface is limited to **administrators**. A backup contains the settings database with user accounts, roles and password hashes, and a restore also returns user accounts and roles to the state they were in when the backup was made. Other roles do not see the Download and Restore buttons.

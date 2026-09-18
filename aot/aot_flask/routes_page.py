@@ -374,6 +374,10 @@ def page_export():
             if url:
                 return redirect(url)
         elif form_export_settings.export_settings_zip.data:
+            # 설정 DB 내려받기도 **관리자만** — 사용자 표·비밀번호 해시가 들어 있다
+            # (2026-09-18 결정, 가져오기·API 내보내기·백업과 같은 경계).
+            if not utils_general.user_has_permission('edit_users'):
+                return redirect(url_for('routes_page.page_export'))
             file_send = utils_export.export_settings()
             if file_send:
                 return file_send
@@ -414,7 +418,8 @@ def page_export():
                            form_export_measurements=form_export_measurements,
                            form_export_settings=form_export_settings,
                            form_import_settings=form_import_settings,
-                           can_import_settings=utils_general.user_has_permission(
+                           # 설정 DB 를 내보내고 가져오는 것은 관리자만(edit_users).
+                           can_handle_settings_db=utils_general.user_has_permission(
                                'edit_users', silent=True),
                            choices_function=choices_function,
                            choices_input=choices_input,

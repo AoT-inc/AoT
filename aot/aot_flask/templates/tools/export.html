@@ -73,6 +73,8 @@
     </div>
   </form>
 
+  {# 설정 DB 내보내기·가져오기는 관리자만 — 사용자 표가 들어 있다(routes_page.page_export). #}
+  {% if can_handle_settings_db %}
   <!-- Export AoT settings -->
   <div class="aot-modal-group-title aot-group-title-gap-lg">{{_('Export AoT settings data as ZIP file')}}</div>
   <p class="aot-modal-body-text">
@@ -86,8 +88,6 @@
     </div>
   </form>
 
-  {# 가져오기는 관리자만 — 설정 DB 에 사용자 표가 들어 있다(routes_page.page_export). #}
-  {% if can_import_settings %}
   <!-- Import AoT settings -->
   <div class="aot-modal-group-title aot-group-title-gap-lg">{{_('Import AoT settings data from ZIP file')}}</div>
   <p class="aot-modal-body-text">
