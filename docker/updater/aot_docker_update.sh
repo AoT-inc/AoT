@@ -439,6 +439,23 @@ process_request() {
 
     log "request $_id from ${_by:-unknown}: install $_target"
     run_update "$_target"
+    _rc=$?
+
+    # Consume the request file once acted on, success or failure. Before this,
+    # the ONLY thing stopping a request from being replayed was the id check
+    # above (request.json's id vs. the last id status.json recorded) -- and
+    # that check breaks the moment anything writes status.json with a
+    # different id for the same underlying event. That is exactly what
+    # happened 2026-09-16 on koat: a request last handled on 2026-09-13 was
+    # never removed, an unrelated `--update` CLI run (which stamps status.json
+    # with its own synthetic "cli-<timestamp>" id, see the oneshot branch)
+    # left a status.json whose id no longer matched, and the next poll read
+    # the same three-day-old request.json as new and replayed it -- silently
+    # downgrading a server that had just been upgraded. Deleting the file here
+    # makes "already handled" durable even if some future writer's id
+    # bookkeeping drifts again.
+    rm -f "$REQUEST_FILE"
+    return "$_rc"
 }
 
 acquire_lock() {
@@ -537,6 +554,31 @@ case "$MODE" in
     oneshot)
         acquire_lock || { log "another updater run is in progress"; exit 1; }
         trap release_lock EXIT
+        # A leftover request.json here is USUALLY an already-handled one that
+        # nobody deleted (process_request now deletes its own when it runs
+        # one, so this is the residual case: something pre-dating that fix,
+        # or a crash between run_update() finishing and that rm). Clearing it
+        # closes the replay this loop hit on koat 2026-09-16 (see
+        # process_request's own cleanup for the full account) -- but it can
+        # ALSO be a request the app just wrote that the loop has not yet
+        # picked up (request_update() -> process_request() has up to
+        # POLL_INTERVAL seconds of latency, and this lock is free during all
+        # of it). Deleting THAT one unconditionally would silently drop a
+        # live user request instead of just delaying it. So only clear it
+        # when it is confirmably already handled -- same id check
+        # process_request uses -- and otherwise leave it for the loop.
+        if [ -f "$REQUEST_FILE" ]; then
+            _stale_body="$(cat "$REQUEST_FILE" 2>/dev/null)"
+            _stale_id="$(json_value "$_stale_body" id)"
+            _stale_done=""
+            [ -f "$STATUS_FILE" ] && _stale_done="$(json_value "$(cat "$STATUS_FILE")" id)"
+            if [ -n "$_stale_id" ] && [ "$_stale_id" = "$_stale_done" ]; then
+                log "clearing already-handled request.json before manual update"
+                rm -f "$REQUEST_FILE"
+            else
+                log "request.json present but not confirmed handled; leaving it for the queue"
+            fi
+        fi
         REQUEST_ID="cli-$(date +%s)"
         run_update "$ONESHOT_TARGET"
         exit $?
