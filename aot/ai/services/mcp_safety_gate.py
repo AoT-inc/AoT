@@ -734,6 +734,76 @@ def validate_modified_params(original_params: dict, modified_params: dict):
     return True, None, mod
 
 
+def _normalize_device_id_for_scope(tool_name, params):
+    """PHYSICAL_TOOLS 의 `device_id` 가 이름이면 uuid 로 바꾼 복사본을 돌려준다.
+
+    아래 `_approval_scope_denial()`이 쓰는 `scope.can_operate_tool_call()`은
+    인자 **값**만 훑어 uuid 모양을 찾는다(`docs/design/access-scope-groups.md`
+    §6-2 — 도구 59개의 인자 이름이 제각각이라 이름으로 찾으면 새 도구가 다른
+    이름을 쓰는 순간 조용히 샌다). 그런데 `device_id`는 이름도 받는다 —
+    실행층(operate_device_tool·schedule_device_control_tool)이 `resolve_output`
+    으로 해석하는 것과 같다 — 이름 그대로면 uuid 모양이 아니라서 그 스캔에
+    아예 안 걸린다. 여기서 미리 풀어 스캔이 보게 만든다.
+
+    해석 실패(없음·이름 겹침)면 원래 값 그대로 둔다 — 스코프가 아니라 실행
+    단계가 이미 "그런 장치 없음" 으로 막으므로 여기서 막을 이유가 없다.
+    """
+    if tool_name not in PHYSICAL_TOOLS or not isinstance(params, dict):
+        return params
+    device_id = params.get('device_id')
+    if not device_id:
+        return params
+    from aot.services.resolvers.device_resolver import resolve_output
+    # `allow_partial=True` — `schedule_device_control_tool` 이 실행 시점에
+    # 부분 이름까지 허용한다(`aot_data_tool_service.py`). 여기서 `False` 로
+    # 좁히면 부분 일치로만 찾아지는 이름은 스코프 검사에서 "장치 없음"이 되어
+    # 통과해 버리고, 곧이어 실행층은 그 이름을 찾아내 그대로 돌려버린다 —
+    # 승인 시점과 실행 시점이 다른 장치를 보는 구멍이 생긴다.
+    match = resolve_output(device_id, allow_partial=True)
+    if match.row is None:
+        return params
+    normalized = dict(params)
+    normalized['device_id'] = match.row.unique_id
+    return normalized
+
+
+def _approval_scope_denial(tool_name, params, user=None):
+    """승인자가 이 요청의 대상(들)을 조작할 그룹 스코프 권한이 있는가.
+
+    호출 시점 검사(`tool_execution._scope_refusal` → `scope.can_operate_tool_call`)
+    와 **같은 정본**을 쓴다 — 승인 경로만 따로 인자 이름(예: `device_id`)을
+    하드코딩해 판정하면, 새 물리 도구가 다른 이름을 쓰거나 스코프 대상이
+    장치가 아닌 탭·대시보드·지도일 때 조용히 새고, 그 사실은 남의 자원이
+    움직인 뒤에야 드러난다.
+
+    직접 제어 경로(`routes_general.output_mod`)는 역할 검사 뒤에 항상
+    `scope.can_operate_device()` 로 "이 장치를" 다룰 수 있는지도 본다. 승인
+    경로는 2026-09-18에 역할 검사(`edit_controllers`)만 추가됐을 뿐 그룹은
+    보지 않아서, 편집자 역할이지만 다른 그룹 소속인 사람이 승인 화면에서
+    남의 그룹 자원의 쓰기 요청을 승인하면 그대로 실행됐다. 이 함수가 그
+    구멍을 막는다.
+
+    `user` 는 **승인자**여야 한다(`_decide`가 `user_id`로 조회한 행) — 넘기지
+    않으면 `scope.can_operate_tool_call`이 `flask_login.current_user`로
+    암묵적으로 찾는데, 그건 웹 승인 화면에만 맞고 MCP `respond_to_confirmation`
+    처럼 실제 로그인 세션이 없는 호출자에게는 아무도 아닌 사람이 되어 늘
+    거부로 샌다.
+
+    거부해도 `MCPConfirmation` 상태는 바꾸지 않는다 — 호출자(`_decide`)가
+    저장하기 전에 이 결과로 그냥 반환해 pending 을 유지하고, 권한 있는
+    다른 승인자가 다시 볼 수 있게 한다.
+
+    Returns: None(통과) 또는 (denied_uuid, message) — 거부.
+    """
+    from aot.aot_flask.access import scope
+    normalized = _normalize_device_id_for_scope(tool_name, params)
+    allowed, denied_uuid = scope.can_operate_tool_call(
+        tool_name, normalized, user=user)
+    if allowed:
+        return None
+    return denied_uuid, scope.deny_message()
+
+
 def _decide(confirmation_id, status, user_id=None, modified_params=None):
     from aot.databases.models import MCPConfirmation
 
@@ -747,6 +817,7 @@ def _decide(confirmation_id, status, user_id=None, modified_params=None):
         row.save()
         return {"status": "error", "message": "The confirmation expired."}
 
+    cleaned = None
     if status == 'approved' and modified_params is not None:
         original = json.loads(row.params_json or '{}')
         ok, err, cleaned = validate_modified_params(original, modified_params)
@@ -755,6 +826,57 @@ def _decide(confirmation_id, status, user_id=None, modified_params=None):
             # 않고 pending 그대로 둬서 다른 값으로 다시 시도할 수 있게 한다.
             return {"status": "error", "message": err}
         row.modified_params_json = json.dumps(cleaned, ensure_ascii=False, sort_keys=True)
+
+    if status == 'approved':
+        # 승인자 신원 — `user_id` 가 있으면 **반드시** 그 사람으로 판정한다.
+        # `scope.can_operate_tool_call()` 의 암묵적 `flask_login.current_user`
+        # 폴백에 맡기면, 실제 로그인 세션이 없는 MCP `respond_to_confirmation`
+        # 경로(`user_id` 는 있지만 요청 컨텍스트의 current_user 는 미인증)에서
+        # 그룹 소속과 무관하게 항상 거부로 샌다.
+        approving_user = None
+        if user_id:
+            from aot.databases.models import User
+            approving_user = User.query.filter(
+                User.unique_id == user_id).first()
+
+        # 승인 직전, 실행될 최종 인자(수정됐으면 그 값)를 기준으로 그룹
+        # 스코프를 본다 — execute_approved() 가 고르는 것과 같은 우선순위.
+        # `cleaned` 가 이미 파싱된 dict 라 있으면 그걸 쓰고, 없으면(수정 없이
+        # 승인) 저장된 원본을 새로 읽는다 — 방금 만든 값을 직렬화했다가
+        # 곧바로 다시 파싱하지 않는다.
+        if cleaned is not None:
+            effective_params = cleaned
+        else:
+            try:
+                effective_params = json.loads(row.params_json or '{}')
+            except Exception:
+                # 저장된 인자 자체를 못 읽으면 무엇을 승인하는지 확인할 수
+                # 없다 — 통과시키지 않는다(그 밖의 실패는 전부 pending 유지·
+                # 거부로 처리하는 이 함수의 다른 분기들과 같은 방향).
+                logger.error(
+                    '[MCPGate] 승인 대상 인자 파싱 실패, 안전하게 거부 '
+                    'confirmation=%s', confirmation_id)
+                return {"status": "error",
+                        "message": "Stored confirmation parameters are "
+                                   "corrupted.",
+                        "reason_code": "group_scope_denied"}
+
+        denial = _approval_scope_denial(row.tool_name, effective_params,
+                                        user=approving_user)
+        if denial is not None:
+            denied_uuid, message = denial
+            # `target_type='Output'` 은 PHYSICAL_TOOLS(이 구멍의 원래 대상)
+            # 기준이다 — `can_operate_tool_call` 이 이제 탭·대시보드·지도까지
+            # 훑으므로 이론적으로는 다른 종류도 거부될 수 있지만, 그 경우도
+            # `audit.OUTPUT_CONTROL` 이 "그룹 스코프가 뭔가를 막았다"는 감사
+            # 기록 자체는 정확히 남긴다(분류만 근사치).
+            from aot.utils import audit
+            from aot.utils.audit import audit_log
+            audit_log(audit.OUTPUT_CONTROL, target_type='Output',
+                      target_id=denied_uuid, result='failure',
+                      detail='denied by group scope')
+            return {"status": "error", "message": message,
+                    "reason_code": "group_scope_denied"}
 
     row.status = status
     if user_id:

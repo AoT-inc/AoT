@@ -381,7 +381,11 @@ def mcp_confirmation_approve(confirmation_id):
         user_id = getattr(flask_login.current_user, 'unique_id', None)
         result = gate.approve(confirmation_id, user_id=user_id, modified_params=modified_params)
         if result.get('status') != 'success':
-            return jsonify(result), 400
+            # 그룹 스코프 거부는 "요청이 무효" 가 아니라 "이 승인자에게 권한이
+            # 없음" 이므로 403 — 직접 제어 경로(scope.deny_message())와 같은
+            # 뜻의 코드를 쓴다. 그 밖의 실패(만료·이미 처리됨 등)는 400 그대로.
+            status_code = 403 if result.get('reason_code') == 'group_scope_denied' else 400
+            return jsonify(result), status_code
 
         exec_status, exec_result = gate.execute_approved(confirmation_id)
         result['executed'] = (exec_status == 'executed')
@@ -431,7 +435,9 @@ def mcp_confirmation_batch_approve():
         try:
             r = gate.approve(cid, user_id=user_id)
             if r.get('status') != 'success':
-                results.append({"confirmation_id": cid, "ok": False, "message": r.get('message')})
+                results.append({"confirmation_id": cid, "ok": False,
+                                "message": r.get('message'),
+                                "reason_code": r.get('reason_code')})
                 continue
             exec_status, exec_result = gate.execute_approved(cid)
             results.append({

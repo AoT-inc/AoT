@@ -935,6 +935,11 @@ class AISchedulerService:
         'confirmation_already_used', 'confirmation_rejected',
         'confirmation_expired', 'confirmation_params_mismatch',
         'needs_disambiguation',
+        # 승인 경로의 그룹 스코프 거부(2026-09-18) — 승인자가 대상 장치의
+        # 그룹 밖이면 `_decide()` 가 이 reason_code 로 거부하고 실행하지
+        # 않는다. `_scope_denies()`(위, §8-7 발화 시점 재검사)와는 다른
+        # 자리지만 같은 뜻이라, 둘 다 "미실행"으로 잡아야 한다.
+        'group_scope_denied',
     )
 
     # AoT MCP 서버가 **모든** tools/call 응답에 찍는 단일 판정 축
