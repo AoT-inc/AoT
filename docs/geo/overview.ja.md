@@ -31,10 +31,17 @@ GIS & Map System
 
 ### 地図デザインツール
 
-- **7つの編集モード**: Site（サイト）→ Zone（ゾーン）→ Facility（施設）→ Equipment（機器）→ Device（デバイス）→ Connection（配管・配線）→ Infrastructure（インフラ）
+- **6つの編集モード**: Site（サイト）→ Zone（ゾーン）→ Facility（施設）→ Plot（区画）→ Equipment（機器）→ Device（デバイス、モードバーでは「A」と表示）
 - **ベクター描画**: ポリゴン、ポリライン、円、マーカーの作成・編集
 - **筆地インポート**: VWorld住所検索またはCSV一括インポートで、サイト境界を即座に生成
 - **差分保存**: 変更されたフィーチャのみを送信するため、大規模な地図でも高速に保存できます
+
+### 区画とプログラム
+
+- **区画（Plot）**: どこで、いつから、何を目標に育てているか — Plotモードで図形を描きますが、記録（作物・品種・日付・生育段階のスケジュール）は図形とは別に保存され、図形を描き直しても、シーズンが終わっても残ります。
+- **プログラム（Program）**: 再利用可能なテンプレート（「トマトを5段階で、この目標に向けて」）。区画に紐づけると、現在の生育段階・目標環境・終了予定日が自動的に反映されます。
+- **種類（Kind）**: 区画とプログラムはどちらも種類を持ちます — 作物、家畜、施設、その他 — 同じ種類同士でしか紐づけられません。
+- **日誌（Journal）**: 選んだ期間について、区画・ゾーン・サイトが何を育て、何を計測し、どう制御されたかをその時点のまま記録する（再計算されない）スナップショットで、引き継ぎや認証提出に使います。
 
 ### 施設管理
 
@@ -93,11 +100,13 @@ GIS & Map System
 ```
 Site          ← Top-level boundary (polygon)
   └── Zone    ← Growing blocks / sections
-        └── Facility   ← Building unit
-              └── Equipment / Device
+        ├── Facility   ← Building unit
+        ├── Plot       ← What/since when/toward what (区画とプログラム参照)
+        ├── Equipment  ← Pumps, valves, piping, irrigation
+        └── Device     ← AoT Input/Output/Function markers
 ```
 
-上から順に、サイト（最上位の境界・ポリゴン）→ ゾーン（栽培ブロック・区分）→ 施設（建物単位）→ 機器・デバイスという階層になります。
+上から順に、サイト（最上位の境界・ポリゴン）→ ゾーン（栽培ブロック・区分）→ その下に施設・区画・機器・デバイスが並ぶ階層になります。区画・機器・デバイスがどのゾーンに属するかは地図上に描かれた位置で決まり、一覧から選ぶものではありません。
 
 ---
 
@@ -105,9 +114,14 @@ Site          ← Top-level boundary (polygon)
 
 - [Getting Started（はじめに）](getting-started.md)
 - [Design Tool（デザインツール）](design-tool.md)
+- [筆地インポート](parcel-import.md)
 - [Facility Management（施設管理）](facility.md)
+- [区画](plots.md)
+- [管理プログラム](programs.md)
+- [日誌](journal.md)
 - [GIS Layers（GISレイヤー）](layers.md)
 - [Map Widget（地図ウィジェット）](map-widget.md)
 - [Facility Widget（施設ウィジェット）](facility-widget.md)
+- [AoT_plot ウィジェット](plot-widget.md)
 - [Settings（設定）](settings.md)
 - [API Reference（APIリファレンス）](api-reference.md)

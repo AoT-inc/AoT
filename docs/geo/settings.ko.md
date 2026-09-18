@@ -60,6 +60,7 @@
 | 항목 | 기본값 | 설명 |
 |------|--------|------|
 | Tile Fade Animation | On | 타일 로드 시 페이드인 애니메이션 |
+| Serve MapLibre Locally | Off | MapLibre GL 라이브러리를 CDN 대신 로컬에 내장된 파일로 제공 |
 | Prefer Canvas | Off | Canvas 렌더러 우선 사용 (SVG 대신, Leaflet 모드만 해당) |
 
 ### 폴리곤 표시 한도
@@ -109,6 +110,7 @@ Content-Type: application/json
   "digital_zoom": false,
   "smooth_zoom": true,
   "tile_fade_animation": true,
+  "maplibre_local_serving": false,
   "prefer_canvas": false,
   "length_unit": "m",
   "max_polygons_site": 500,

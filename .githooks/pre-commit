@@ -160,3 +160,16 @@ if [ -z "$AOT_SKIP_REVERT_CHECK" ]; then
         fi
     fi
 fi
+
+# ── 매뉴얼 최신화 리마인더 (비차단) ──────────────────────────────────────
+# AI/MCP·geo·공지 등 매뉴얼이 딸린 기능 코드만 바뀌고 docs/ 는 그대로인
+# 커밋을 알려준다. docs-health 워크플로는 docs/ 가 바뀌었을 때만 도니까
+# "기능은 바뀌었는데 문서가 안 바뀐 경우" 를 잡는 장치가 그동안 없었다
+# (2026-09-18 매뉴얼 감사에서 실제로 여러 쪽이 최대 4개월 밀려 있었다).
+# 판정을 내릴 수 없어(리팩터링인지 사용자에게 보이는 변경인지는 기계가
+# 못 가른다) 항상 통과만 하고 알림만 띄운다 — 그래서 우회 변수도 없고,
+# 메시지 자체를 끄고 싶을 때만 AOT_SKIP_DOCS_REMINDER=1 을 쓴다.
+DR_CHECK="$ROOT/aot/scripts/check_docs_reminder.py"
+if [ -f "$DR_CHECK" ]; then
+    python3 "$DR_CHECK"
+fi

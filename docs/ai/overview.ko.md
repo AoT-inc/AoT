@@ -158,6 +158,7 @@ AoT의 AI는 두 가지 경로로 도구를 사용합니다.
 - **공지 게시판**: `create_notice`·`modify_notice`·`delete_notice`
 - **AI 에이전트 관리**: `list_ai_agents` — 이 도구는 `core`라 인앱뿐 아니라 외부 MCP 서버의 `tools/list`에도 이미 실립니다; `list_ai_entries`, `create_ai_agent`(`config_only`), `modify_ai_agent`·`delete_ai_agent`(승인 필요)
 - **지식 라이브러리**: `knowledge_search`, `knowledge_shelve`, `list_library_source_types`, `smartfarmkorea_lookup`, `configure_library_source`
+- **문서 스토리지 티어**: `get_storage_tier_status`, `search_archives`, `get_archived_document`, `archive_note`·`restore_note_from_archive`·`delete_archive`·`set_document_tier` — 오래된 노트를 위한 선택적 콜드 아카이브입니다. `archive_note`는 노트 내용을 압축된 장기 보관소에 복사하고 tier 3로 표시할 뿐, 원본 노트는 그대로 남습니다. `delete_archive`는 그 아카이브 사본만 지우며 노트 자체는 건드리지 않습니다. 이 기능엔 별도 화면이 없습니다 — AI 도구로만 씁니다.
 - **진단·기타**: `analyze_system_failure`, `get_local_time`, `get_tool_detail`, `read_manual`, `get_detailed_manifest`, `ask_user`
 
 > 도구의 단일 정본은 `aot/ai/services/tool_registry.py`입니다. 도구가 추가·변경되면 이 문서보다 그 파일이 우선합니다. 인자까지 포함한 전체 도구 목록(서랍 안 도구 포함)은 AI 에이전트 가이드(`docs/ai_guide.md`)를 참고하세요.

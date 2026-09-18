@@ -179,32 +179,9 @@ AoTのInput・Output・Functionデバイスの物理的な位置を示し、地�
 
 ## Parcel Import（筆地インポート） { #parcel-import }
 
-韓国の地籍データ（VWorld）を使って、サイト境界をすばやくインポートします。
+韓国の地籍データ（VWorld）を使って、サイト境界を手描きせずにすばやくインポートします。**Site** モードの設定ドロワーで **Add from Address** 横の **Search** ボタンを押すとダイアログが開き、**Address Input** タブ（住所を1つ以上入力、VWorld PNU APIを使用）か **CSV Batch** タブ（1行に住所1つ、1列目のみ）のどちらかを使います。どちらの場合も同じプレビューにつながります — 地図上に描かれる見つかった筆地、隣接する結果を1つのSiteに統合する任意の **Merge Adjacent Parcels** チェックボックス、そして **Save as Site** ボタンです。既にインポート済みの筆地を再度インポートしても、重複は作られずスキップされます。
 
-### 住所からインポートする
-
-1. 上部ツールバーの **Parcel Import** をクリックします。
-2. 住所を入力して検索します（VWorld PNU APIを使用します）。
-3. 検索結果から筆地を選択します。
-4. **Save as Site** をクリックします → Siteのフィーチャーが自動的に作成されます。
-
-### CSV一括インポート
-
-複数の筆地を一度にインポートする場合に使います。
-
-CSV形式:
-```csv
-address,name
-123 Gojung-ri, Songsan-myeon, Hwaseong-si, Gyeonggi-do,Greenhouse Site 1
-124 Gojung-ri, Songsan-myeon, Hwaseong-si, Gyeonggi-do,Greenhouse Site 2
-```
-
-1. **Parcel Import → CSV Import** を選択します。
-2. CSVファイルをアップロードします。
-3. プレビューを確認します — エラーのある行は赤色で強調表示されます。
-4. **Import** をクリックします。
-
-詳しくは[Parcel Import Details（筆地インポートの詳細）](parcel-import.md)を参照してください。
+詳しい手順とAPIは[Parcel Import Details（筆地インポートの詳細）](parcel-import.md)を参照してください。
 
 ---
 

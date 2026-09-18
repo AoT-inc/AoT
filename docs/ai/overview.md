@@ -158,6 +158,7 @@ Beyond the tools above, the in-app AI assistant (and, for the ones that are `cor
 - **Notice board**: `create_notice`·`modify_notice`·`delete_notice`
 - **AI agent management**: `list_ai_agents` — this one is `core`, so it's already in `tools/list` for the external MCP server too, not just the in-app assistant; `list_ai_entries`, `create_ai_agent` (`config_only`), `modify_ai_agent`·`delete_ai_agent` (approval required)
 - **Knowledge library**: `knowledge_search`, `knowledge_shelve`, `list_library_source_types`, `smartfarmkorea_lookup`, `configure_library_source`
+- **Document storage tiers**: `get_storage_tier_status`, `search_archives`, `get_archived_document`, `archive_note`·`restore_note_from_archive`·`delete_archive`·`set_document_tier` — an optional cold archive for old notes. `archive_note` copies a note's content into compressed long-term storage and flags it tier 3; the original note is left untouched either way. `delete_archive` removes only that archived copy, never the note itself. There is no screen for this — it is AI-tool-only.
 - **Diagnostics / misc**: `analyze_system_failure`, `get_local_time`, `get_tool_detail`, `read_manual`, `get_detailed_manifest`, `ask_user`
 
 > The single source of truth for tools is `aot/ai/services/tool_registry.py`. When a tool is added or changed, that file — not this page — is authoritative. For the full tool list with arguments, including everything behind a drawer, see the AI Agent Guide (`docs/ai_guide.md`).

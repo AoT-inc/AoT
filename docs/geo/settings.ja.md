@@ -60,6 +60,7 @@
 | 項目 | デフォルト | 説明 |
 |-------|---------|-------------|
 | Tile Fade Animation（タイルのフェードアニメーション） | On | タイル読み込み時のフェードインアニメーション |
+| Serve MapLibre Locally（MapLibreをローカル配信） | Off | MapLibre GLライブラリをCDNの代わりにローカルに同梱したファイルで配信する |
 | Prefer Canvas（Canvasを優先） | Off | SVGよりCanvasレンダラーを優先する（Leafletモードのみ） |
 
 ### ポリゴン表示の上限
@@ -109,6 +110,7 @@ Content-Type: application/json
   "digital_zoom": false,
   "smooth_zoom": true,
   "tile_fade_animation": true,
+  "maplibre_local_serving": false,
   "prefer_canvas": false,
   "length_unit": "m",
   "max_polygons_site": 500,

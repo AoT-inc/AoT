@@ -14,17 +14,21 @@ A VWorld API key must be registered.
 
 ---
 
-## Import by Address
+## Opening the Import Dialog
 
 1. Go to `/geo/design`.
-2. Click the **Parcel Import** button in the top toolbar.
-3. Enter an address (e.g., `123 Gojung-ri, Songsan-myeon, Hwaseong-si, Gyeonggi-do`).
-4. Click **Search**.
-5. Select the parcel from the results.
-6. The parcel boundary appears as a preview on the map.
-7. Click **Save as Site**.
+2. Switch to **Site** mode in the mode bar below the map.
+3. In the Site settings drawer, click **Search** next to **Add from Address**.
 
-The parcel boundary is saved as a `Site` type GeoShape.
+This opens the **Import Site by Address** dialog, which has two tabs: **Address Input** and **CSV Batch**.
+
+---
+
+## Address Input
+
+1. Type an address (e.g., `808 Yeoksam-dong, Gangnam-gu, Seoul`). Separate several addresses with commas, or click **Add Address** to add another input row.
+2. Click **Search**.
+3. Matched parcels appear in the preview list below, each with its boundary drawn on the map; failed lookups are listed with the reason.
 
 ---
 
@@ -34,34 +38,42 @@ Use this to import multiple parcels at once.
 
 ### CSV File Format
 
-```csv
-address,name
-123 Gojung-ri, Songsan-myeon, Hwaseong-si, Gyeonggi-do,Greenhouse Site 1
-124 Gojung-ri, Songsan-myeon, Hwaseong-si, Gyeonggi-do,Greenhouse Site 2
-456 Ipbuk-dong, Gwonseon-gu, Suwon-si, Gyeonggi-do,Admin Building Site
-```
+Addresses only, one per row, in the **first column**. There is no header row and no name column — any extra columns are ignored, and a name for each imported Site comes from the address itself (or from the **Site Name** field at save time).
 
-Fields:
-- `address` (required): Street address or lot number address
-- `name` (optional): Site name. If omitted, the address string is used as the name.
+```csv
+123 Gojung-ri, Songsan-myeon, Hwaseong-si, Gyeonggi-do
+124 Gojung-ri, Songsan-myeon, Hwaseong-si, Gyeonggi-do
+456 Ipbuk-dong, Gwonseon-gu, Suwon-si, Gyeonggi-do
+```
 
 ### How to Import
 
-1. Select **Parcel Import → CSV Import** in the top toolbar of `/geo/design`.
-2. Select or drag and drop a CSV file.
-3. Review the data in the preview table.
-4. Rows with errors are highlighted in red (address not recognized).
-5. Click **Import**.
+1. On the **CSV Batch** tab, choose a CSV file.
+2. Click **Upload and Process**.
+3. Results land in the same preview list as address search — matched parcels with a ✓, failed addresses with the reason.
 
-Processing results are displayed:
-- Success: Site feature created
-- Failure: Address search failed (check address format)
+---
+
+## Reviewing and Saving
+
+Both tabs share one preview area:
+
+- **Merge Adjacent Parcels** (checkbox, off by default) — unions any touching polygons in the preview into a single Site (via turf.js) before saving. With it off, each previewed parcel is saved as its own Site.
+- **Site Name** — auto-filled from the first result (and "+ N more" when there are several); edit it before saving. With multiple, unmerged parcels, each is saved under its own resolved name rather than this field, unless there is exactly one result.
+- **Save as Site** — saves every previewed parcel (or the single merged one).
+
+After saving, the status line reports how many were **saved**, how many were **already imported** (see below), and how many **failed**.
+
+!!! note "Importing the same parcel twice does not create a duplicate"
+    If a parcel with the same geometry already exists as a Site on the current map, saving it again is skipped rather than treated as an error — it is counted separately as "already imported."
+
+Saved parcels are `Site` type GeoShapes, editable the same as any Site feature drawn by hand.
 
 ---
 
 ## Direct API Usage
 
-Use the REST API to call parcel import from an automation script.
+Use the REST API to call parcel import from an automation script. The web UI above is a thin client over these same three endpoints.
 
 ### Import by Address
 
@@ -77,15 +89,17 @@ Content-Type: application/json
 Response:
 ```json
 {
-  "pnu": "4159025300100230000",
-  "geometry": {
-    "type": "Polygon",
-    "coordinates": [[[...], ...]]
+  "ok": true,
+  "feature": {
+    "type": "Feature",
+    "geometry": { "type": "Polygon", "coordinates": [[[...], ...]] },
+    "properties": { "name": "..." }
   },
-  "address": "123 Gojung-ri, ...",
-  "area_m2": 3256.7
+  "name": "123 Gojung-ri, ...",
+  "pnu": "4159025300100230000"
 }
 ```
+On failure: `{"ok": false, "error": "..."}`.
 
 ### CSV Batch Import
 
@@ -93,7 +107,17 @@ Response:
 POST /api/geo/parcel/from_csv
 Content-Type: multipart/form-data
 
-file=<CSV file>
+file=<CSV file, one address per line, first column only>
+```
+
+Response:
+```json
+{
+  "ok": true,
+  "features": [ /* GeoJSON Feature, one per resolved address */ ],
+  "names": [ "..." ],
+  "errors": [ "<address>: <reason>", "..." ]
+}
 ```
 
 ### Save as Site
@@ -103,19 +127,21 @@ POST /api/geo/parcel/save_as_site
 Content-Type: application/json
 
 {
-  "geo_id": "<map UUID>",
-  "geometry": { "type": "Polygon", "coordinates": [...] },
-  "name": "Greenhouse Site 1"
+  "feature": { "type": "Feature", "geometry": { "type": "Polygon", "coordinates": [...] }, "properties": {} },
+  "name": "Greenhouse Site 1",
+  "map_uuid": "<map UUID>"
 }
 ```
+
+`map_uuid` must be an existing map. If a Site with the same geometry already exists on that map, the response is `409` with `{"ok": false, "duplicate": true, "shape_id": ..., "existing_name": "..."}` instead of creating a second copy.
 
 ---
 
 ## Notes
 
-- Only Korean addresses are supported (uses VWorld PNU API).
-- If address recognition fails, try both the road address and lot number address.
-- Large CSV imports (100+ rows) may take time to process.
+- Only Korean addresses are supported (uses the VWorld PNU API).
+- If address recognition fails, try both the road address and the lot-number address.
+- Large CSV imports (100+ rows) may take time to process — each row is a separate VWorld lookup.
 - Imported parcels can be edited the same as any Site feature.
 
 ---

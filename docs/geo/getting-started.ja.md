@@ -105,6 +105,7 @@
 
 ## 次のステップ
 
-- [Design Tool Guide（デザインツールガイド）](design-tool.md) — 7つのモードすべての完全ガイド
+- [Design Tool Guide（デザインツールガイド）](design-tool.md) — 6つのモード（Site, Zone, Facility, Plot, Equipment, Device）すべての完全ガイド
+- [区画](plots.md)、[管理プログラム](programs.md) — どこで何を、何を目標に育てているかを管理
 - [Facility Management（施設管理）](facility.md) — 3D建物モデリングと工学計算
 - [Map Widget Settings（地図ウィジェット設定）](map-widget.md) — ウィジェットオプションの詳細

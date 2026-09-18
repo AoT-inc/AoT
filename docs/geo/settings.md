@@ -60,6 +60,7 @@ Each item has a color picker and an opacity slider (0–100%).
 | Field | Default | Description |
 |-------|---------|-------------|
 | Tile Fade Animation | On | Fade-in animation when tiles load |
+| Serve MapLibre Locally | Off | Use local vendored files instead of the CDN for the MapLibre GL library |
 | Prefer Canvas | Off | Prefer Canvas renderer over SVG (Leaflet mode only) |
 
 ### Polygon Display Limits
@@ -109,6 +110,7 @@ Content-Type: application/json
   "digital_zoom": false,
   "smooth_zoom": true,
   "tile_fade_animation": true,
+  "maplibre_local_serving": false,
   "prefer_canvas": false,
   "length_unit": "m",
   "max_polygons_site": 500,

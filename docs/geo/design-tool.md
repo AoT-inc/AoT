@@ -179,32 +179,9 @@ The **Save** button at the top forces a full save of the current state. There is
 
 ## Parcel Import { #parcel-import }
 
-Use Korean land data (VWorld) to quickly import site boundaries.
+Use Korean land data (VWorld) to quickly import site boundaries instead of drawing them by hand. In **Site** mode, click **Search** next to **Add from Address** in the settings drawer — this opens a dialog with an **Address Input** tab (type one or more addresses, uses the VWorld PNU API) and a **CSV Batch** tab (one address per line, first column only). Either way you land on the same preview: matched parcels drawn on the map, an optional **Merge Adjacent Parcels** checkbox to union touching results into one Site, and a **Save as Site** button. Re-importing a parcel you already saved is skipped, not duplicated.
 
-### Import by Address
-
-1. Click **Parcel Import** in the top toolbar.
-2. Enter an address and search (uses VWorld PNU API).
-3. Select the parcel from the results.
-4. Click **Save as Site** → a Site feature is automatically created.
-
-### CSV Batch Import
-
-Use this to import multiple parcels at once.
-
-CSV format:
-```csv
-address,name
-123 Gojung-ri, Songsan-myeon, Hwaseong-si, Gyeonggi-do,Greenhouse Site 1
-124 Gojung-ri, Songsan-myeon, Hwaseong-si, Gyeonggi-do,Greenhouse Site 2
-```
-
-1. Select **Parcel Import → CSV Import**.
-2. Upload the CSV file.
-3. Review the preview; rows with errors are highlighted in red.
-4. Click **Import**.
-
-See [Parcel Import Details](parcel-import.md) for more.
+See [Parcel Import Details](parcel-import.md) for the full walkthrough and the underlying API.
 
 ---
 

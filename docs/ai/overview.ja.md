@@ -157,6 +157,7 @@ AoTのAIは、2つの経路でツールを使用します。
 - **掲示板**: `create_notice`・`modify_notice`・`delete_notice`
 - **AIエージェント管理**: `list_ai_agents` — これは`core`なので、アプリ内だけでなく外部MCPサーバーの`tools/list`にもすでに含まれています。`list_ai_entries`、`create_ai_agent`(`config_only`)、`modify_ai_agent`・`delete_ai_agent`(承認が必要)
 - **知識ライブラリ**: `knowledge_search`、`knowledge_shelve`(`config_only`)、`list_library_source_types`、`smartfarmkorea_lookup`、`configure_library_source`
+- **ドキュメントストレージ階層**: `get_storage_tier_status`、`search_archives`、`get_archived_document`、`archive_note`・`restore_note_from_archive`・`delete_archive`・`set_document_tier` — 古いノートのための任意のコールドアーカイブです。`archive_note`はノートの内容を圧縮した長期保存領域にコピーしてtier 3として印を付けるだけで、元のノートはそのまま残ります。`delete_archive`はそのアーカイブされたコピーだけを削除し、ノート自体には触れません。この機能には専用画面がなく、AIツールからのみ使えます。
 - **診断/その他**: `analyze_system_failure`、`get_local_time`、`get_tool_detail`、`read_manual`、`get_detailed_manifest`、`ask_user`
 
 > ツールの単一の正本は`aot/ai/services/tool_registry.py`です。ツールが追加・変更されたときは、このページではなくそのファイルが正となります。引数まで含む完全なツール一覧(ドロワー内のツールを含む)はAIエージェントガイド(`docs/ai_guide.md`)を参照してください。

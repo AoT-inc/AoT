@@ -31,10 +31,17 @@ GIS & Map System
 
 ### Map Design Tool
 
-- **7 editing modes**: Site → Zone → Facility → Equipment → Device → Connection → Infrastructure
+- **6 editing modes**: Site → Zone → Facility → Plot → Equipment → Device (labeled "A" in the mode bar, for "AoT device")
 - **Vector drawing**: Create and edit polygons, polylines, circles, and markers
 - **Parcel import**: Instantly generate site boundaries via VWorld address search or CSV batch import
 - **Delta save**: Only changed features are transmitted, enabling fast saves on large maps
+
+### Plots & Programs
+
+- **Plots**: what is growing where, since when, and toward what — drawn in Plot mode, but the record (crop, variety, dates, stage schedule) lives separately from the shape and survives after the shape is redrawn or the season ends.
+- **Programs**: reusable templates ("tomatoes, in 5 stages, toward these targets"). Attach one to a plot and the current stage, target environment, and expected end date follow automatically.
+- **Kinds**: plots and programs are both typed — Vegetation, Livestock, Facility, Other — and only a matching kind can attach.
+- **Journals**: a point-in-time, never-recalculated snapshot of what a plot/zone/site grew, measured, and was controlled by over a chosen period, for handoff or certification.
 
 ### Facility Management
 
@@ -93,9 +100,13 @@ Integrates with 23 external GIS providers.
 ```
 Site          ← Top-level boundary (polygon)
   └── Zone    ← Growing blocks / sections
-        └── Facility   ← Building unit
-              └── Equipment / Device
+        ├── Facility    ← Building unit
+        ├── Plot        ← What's planted, since when, toward what (see Plots & Programs)
+        ├── Equipment   ← Pumps, valves, piping, irrigation
+        └── Device      ← AoT Input/Output/Function markers
 ```
+
+Which zone a plot, piece of equipment, or device belongs to is derived from where it is drawn on the map — it is never picked from a dropdown.
 
 ---
 
@@ -103,9 +114,14 @@ Site          ← Top-level boundary (polygon)
 
 - [Getting Started](getting-started.md)
 - [Design Tool](design-tool.md)
+- [Parcel Import](parcel-import.md)
 - [Facility Management](facility.md)
+- [Plots](plots.md)
+- [Management Programs](programs.md)
+- [Journals](journal.md)
 - [GIS Layers](layers.md)
 - [Map Widget](map-widget.md)
 - [Facility Widget](facility-widget.md)
+- [Plot Widget](plot-widget.md)
 - [Settings](settings.md)
 - [API Reference](api-reference.md)

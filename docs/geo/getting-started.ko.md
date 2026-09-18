@@ -105,6 +105,7 @@
 
 ## 다음 단계
 
-- [디자인 도구 상세 가이드](design-tool.md) — 7가지 모드 전체 활용법
+- [디자인 도구 상세 가이드](design-tool.md) — 6가지 모드(Site, Zone, Facility, Plot, Equipment, Device) 전체 활용법
+- [구획](plots.md), [관리 프로그램](programs.md) — 무엇을 어디에, 무엇을 목표로 재배하는지 관리
 - [시설 관리](facility.md) — 3D 건물 모델링 및 공학 계산
 - [지도 위젯 설정](map-widget.md) — 위젯 옵션 상세 안내

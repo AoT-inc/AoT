@@ -105,6 +105,7 @@ Device markers will appear on the map. Clicking a marker shows real-time values 
 
 ## Next Steps
 
-- [Design Tool Guide](design-tool.md) — Full guide for all 7 modes
+- [Design Tool Guide](design-tool.md) — Full guide for all 6 modes (Site, Zone, Facility, Plot, Equipment, Device)
+- [Plots](plots.md) and [Management Programs](programs.md) — Track what is growing where and toward what target
 - [Facility Management](facility.md) — 3D building modeling and engineering calculations
 - [Map Widget Settings](map-widget.md) — Detailed widget options
