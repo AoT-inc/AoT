@@ -20,6 +20,53 @@ blueprint = Blueprint(
 )
 
 
+#: 보기만 하는 엔드포인트 — 역할의 `view_camera`.
+_VIEW_ENDPOINTS = frozenset({
+    'routes_camera.camera_last_image',
+})
+
+#: 카메라를 바꾸거나 움직이는 엔드포인트 — `edit_controllers`(`/camera_submit`
+#: 이 쓰던 기준). `/camera` 는 GET 이 보기, POST 가 추가·수정·삭제다.
+_EDIT_ENDPOINTS = frozenset({
+    'routes_camera.camera_detect',
+    'routes_camera.camera_save_order',
+    'routes_camera.camera_capture',
+    'routes_camera.camera_timelapse',
+    'routes_camera.camera_record_video',
+})
+
+
+@blueprint.before_request
+def _require_camera_permission():
+    """역할 검사 — 이 블루프린트는 로그인만 보고 있었다.
+
+    2026-09-18 E2E 가 실측: 게스트(모든 권한 거짓)가 카메라 화면을 열고, 카메라를
+    추가·수정(저장 경로 포함)·삭제하고, 촬영을 시킬 수 있었다. `view_camera` 는
+    역할 설정 화면에서 켜고 끌 수 있었지만 **어디서도 검사되지 않았다.**
+    """
+    if not current_user.is_authenticated:
+        return None   # login_required 가 로그인으로 돌려보낸다
+
+    endpoint = request.endpoint
+    if endpoint == 'routes_camera.page_camera':
+        permission = 'edit_controllers' if request.method == 'POST' else 'view_camera'
+    elif endpoint in _VIEW_ENDPOINTS:
+        permission = 'view_camera'
+    elif endpoint in _EDIT_ENDPOINTS:
+        permission = 'edit_controllers'
+    else:
+        return None
+
+    if utils_general.user_has_permission(permission, silent=True):
+        return None
+    message = gettext("Insufficient permission: %(permission)s",
+                      permission=permission)
+    if endpoint == 'routes_camera.page_camera':
+        flash(message, 'error')
+        return redirect(url_for('routes_general.home'))
+    return jsonify({'status': 'error', 'message': message}), 403
+
+
 @blueprint.route('/camera', methods=('GET', 'POST'))
 @login_required
 def page_camera():
@@ -40,16 +87,20 @@ def page_camera():
     # POST 요청 처리
     if request.method == 'POST':
         action = None
+        # 삭제를 **저장보다 먼저** 본다. 설정 폼에는 Enter 로도 저장되도록
+        # `camera_mod` 숨은 칸이 늘 들어 있어서, 삭제 단추가 `camera_delete` 를
+        # 덧붙여 보내도 저장 분기가 먼저 잡았다 — 확인창까지 거친 삭제가 조용히
+        # 저장으로 처리되고 카메라는 남았다(2026-09-18 E2E 실측).
         if 'camera_add' in request.form:
             utils_camera.camera_add(form_add_camera, platform)
+        elif 'camera_delete' in request.form:
+            utils_camera.camera_delete(request.form.get('camera_id'))
         elif 'camera_activate' in request.form:
             utils_camera.camera_activate(request.form.get('camera_id'))
         elif 'camera_deactivate' in request.form:
             utils_camera.camera_deactivate(request.form.get('camera_id'))
         elif 'camera_mod' in request.form:
             utils_camera.camera_mod(form_mod_camera, request.form.get('camera_id'))
-        elif 'camera_delete' in request.form:
-            utils_camera.camera_delete(request.form.get('camera_id'))
 
         return redirect(url_for('routes_camera.page_camera'))
 

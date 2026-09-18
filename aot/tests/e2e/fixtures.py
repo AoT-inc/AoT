@@ -20,6 +20,12 @@ GUEST_USER = 'e2eguest'
 GUEST_PASS = 'e2epass1234'
 GUEST_EMAIL = 'e2e-guest@example.com'
 
+# 보기 권한만 있는 사용자(Monitor) — 게스트와 달리 화면은 열리고 **쓰기만**
+# 막혀야 한다. 거절 가지에 숨은 결함은 이 역할로만 드러난다.
+MONITOR_USER = 'e2emonitor'
+MONITOR_PASS = 'e2epass1234'
+MONITOR_EMAIL = 'e2e-monitor@example.com'
+
 # 장치 이름 — 화면에서 이 문자열로 찾는다.
 INPUT_RAM = 'E2E RAM Input'
 INPUT_CPU = 'E2E CPU Input'
@@ -40,6 +46,23 @@ DASHBOARD = 'E2E Dashboard'
 # 시설 — 만들고 다시 열어 확인하는 데 쓴다.
 FACILITY_NAME = 'E2E Facility'
 FACILITY_DELETE_NAME = 'E2E Facility To Delete'   # 삭제 검사 전용
+
+# 에너지 사용량 — 계산이 맞는지 손으로 검산할 수 있는 값.
+ENERGY_OUTPUT_AMPS = 2.0            # E2E Virtual Multi 채널 0 의 전류
+ENERGY_OUTPUT_SEC_ON = 3600         # 지난 하루 켜져 있던 시간(1시간)
+ENERGY_INPUT_AMPS = 2.0             # 전류 측정값(일정)
+ENERGY_INPUT_MEASUREMENT = 'E2E Current'   # 전류 측정 채널 이름
+
+# 카메라 — 장치 없이 촬영까지 가도록 앱이 내놓는 정적 이미지를 URL 카메라로 찍는다.
+CAMERA_NAME = 'E2E Camera'
+GEO_LAYER_NAME = 'E2E OSM Layer'
+METHOD_NAME = 'E2E Method'
+
+# MCP 서버 — 앱에 들어 있는 AoT MCP 서버를 한 번 더 등록한다(인증을 끈 채로).
+MCP_SERVER_NAME = 'E2E MCP Server'
+MCP_SERVER_COMMAND = '/usr/local/bin/python /app/aot/aot_mcp_server.py'
+MCP_SERVER_ENV = '{"AOT_MCP_REQUIRE_AUTH": "0"}'
+CAMERA_IMAGE_URL = 'http://127.0.0.1/static/img/aot-hero-dashboard-v2.jpg'
 
 # 일정 — 달력에 뜨는지 보는 데 쓴다.
 SCHEDULE_TITLE = 'E2E Scheduled Run'

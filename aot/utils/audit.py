@@ -64,10 +64,11 @@ def _current_actor():
         if not has_request_context():
             return None, None, None
 
-        ip = (request.environ.get('HTTP_X_FORWARDED_FOR')
-              or request.remote_addr
+        # 앱의 ProxyFix(x_for=1)가 풀어 둔 주소가 먼저다. 원래 머리글의 첫 값은
+        # 접속자가 마음대로 적어 보낼 수 있다 — 감사 기록에는 믿을 수 있는 쪽을.
+        ip = (request.remote_addr
+              or request.environ.get('HTTP_X_FORWARDED_FOR')
               or None)
-        # X-Forwarded-For 는 프록시 체인이라 여러 개일 수 있다 — 첫 값만.
         if ip and ',' in ip:
             ip = ip.split(',')[0].strip()
 

@@ -237,7 +237,7 @@ def login_password():
             session['language'] = form_language.language.data
         else:
             username = form_login.aot_username.data.lower()
-            user_ip = request.environ.get('HTTP_X_FORWARDED_FOR', 'unknown address')
+            user_ip = utils_general.get_ip_address()
 
             # Lockout is now checked per-account, so it has to happen after we
             # know which account is being attempted (the old session-based
@@ -345,7 +345,7 @@ def login_totp():
         session.pop(_TOTP_PENDING_REMEMBER_KEY, None)
         return redirect('/login')
 
-    user_ip = request.environ.get('HTTP_X_FORWARDED_FOR', 'unknown address')
+    user_ip = utils_general.get_ip_address()
 
     locked_seconds = account_locked_seconds(user.name)
     if locked_seconds:
@@ -438,7 +438,7 @@ def login_keypad_code(code):
         host = socket.gethostname()
 
     user = User.query.filter(User.code == code).first()
-    user_ip = request.environ.get('HTTP_X_FORWARDED_FOR', 'unknown address')
+    user_ip = utils_general.get_ip_address()
 
     if not user:
         # The keypad code itself identifies the account, so an unknown code has
@@ -529,7 +529,7 @@ def complete_google_login(tokens, email):
               "error")
         return redirect(url_for('routes_authentication.login_check'))
 
-    user_ip = request.environ.get('HTTP_X_FORWARDED_FOR', 'unknown address')
+    user_ip = utils_general.get_ip_address()
     user = User.query.filter(func.lower(User.email) == email.lower()).first()
 
     if user is not None:

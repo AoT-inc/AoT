@@ -428,6 +428,9 @@ def note_gallery(unique_id):
 @flask_login.login_required
 def camera_img_return_path(unique_id, img_type, filename):
     """Return an image from stills or time-lapses."""
+    # 카메라 화면·위젯과 같은 기준(view_camera). 로그인만 보던 자리다.
+    if not utils_general.user_has_permission('view_camera', silent=True):
+        return 'Insufficient permission: view_camera', 403
     if img_type not in ['still', 'video', 'timelapse']:
         return "img_type not still, video, or timelapse"
 
@@ -524,7 +527,11 @@ def gen(camera):
 @flask_login.login_required
 def video_feed(unique_id):
     """Video streaming route. Put this in the src attribute of an img tag."""
+    if not utils_general.user_has_permission('view_camera', silent=True):
+        return 'Insufficient permission: view_camera', 403
     camera_options = Camera.query.filter(Camera.unique_id == unique_id).first()
+    if camera_options is None:
+        return 'Camera not found', 404
     camera_stream = import_module('aot.aot_flask.camera.camera_' + camera_options.library).Camera
     camera_stream.set_camera_options(camera_options)
     return Response(gen(camera_stream(unique_id=unique_id)),

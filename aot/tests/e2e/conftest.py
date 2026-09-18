@@ -83,6 +83,28 @@ def guest_http(base_url):
 
 
 @pytest.fixture(scope='session')
+def monitor_http(base_url):
+    """보기 권한만 있는 사용자(Monitor) — 화면은 열리고 쓰기만 막혀야 한다."""
+    import requests
+    from aot.tests.e2e import fixtures as F
+
+    session = requests.Session()
+    _login(session, base_url, F.MONITOR_USER, F.MONITOR_PASS)
+    return session
+
+
+def csrf_headers(session, base_url):
+    """세션의 CSRF 토큰을 머리글로 — JSON API 를 화면처럼 부를 때."""
+    token = session.get(f'{base_url}/csrf-token', timeout=30).json()['csrf_token']
+    return {'X-CSRFToken': token}
+
+
+def form_csrf(html):
+    """화면 폼의 csrf_token 값."""
+    return _csrf_token(html)
+
+
+@pytest.fixture(scope='session')
 def anon_http():
     """로그인하지 않은 세션 — 인증 게이트 검사용."""
     import requests

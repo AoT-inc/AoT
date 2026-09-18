@@ -1202,7 +1202,10 @@ def page_energy_usage_input_amps():
 
     if request.method == 'POST':
         if not utils_general.user_has_permission('edit_controllers'):
-            return redirect(url_for('routes_page.page_usage'))
+            # 예전 대상(`routes_page.page_usage`)은 없는 엔드포인트였다 — 보기 권한만
+            # 있는 사람(Monitor)이 추가·수정을 누르면 거절 대신 500 이 났다.
+            # user_has_permission 이 이미 "권한 부족" 을 알렸으니 이 화면으로 돌아온다.
+            return redirect(url_for('routes_page.page_energy_usage_input_amps'))
 
         if form_energy_usage_add.energy_usage_add.data:
             dep_unmet, _unused, _unmet = return_dependencies('highstock')

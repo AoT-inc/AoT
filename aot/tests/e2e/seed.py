@@ -32,7 +32,7 @@ _refuse_unless_e2e_stack()
 
 from aot.aot_flask.extensions import db  # noqa: E402
 from aot.databases.models import (  # noqa: E402
-    Actions, Conditional, Dashboard, DeviceMeasurements, Function, GeoJournal,
+    Actions, Camera, EnergyUsage, GeoLayer, Method, MethodData, Conditional, Dashboard, DeviceMeasurements, Function, GeoJournal,
     GeoFacility, GeoMap, GeoPlot, GeoShape, Input, MCPConfirmation, Output, OutputChannel,
     SchedulerJobMeta, Trigger, User, Widget)
 from aot.tests.e2e import fixtures as F  # noqa: E402
@@ -119,6 +119,25 @@ def _purge():
     for row in GeoShape.query.all():
         db.session.delete(row)
 
+    # 여정이 만들었다 남긴 것들. 카메라·에너지 항목은 시드가 만들지 않으므로
+    # 이 스택의 것은 전부 여정의 잔재다.
+    for row in Camera.query.all():
+        db.session.delete(row)
+    for row in EnergyUsage.query.all():
+        db.session.delete(row)
+    # 지도 레이어도 전부 — 추가하면 서비스 이름("GL: OpenStreetMap")으로 생겨
+    # 이름으로는 고를 수 없고, 이 스택에는 시드가 심는 레이어가 없다.
+    for row in GeoLayer.query.all():
+        db.session.delete(row)
+    for row in Method.query.filter(Method.name.like('E2E %')).all():
+        MethodData.query.filter(MethodData.method_id == row.unique_id).delete()
+        db.session.delete(row)
+    from aot.databases.models.mcp_server import AgentMCPAccess, MCPServer
+    for row in MCPServer.query.filter(MCPServer.name.like('E2E %')).all():
+        AgentMCPAccess.query.filter(
+            AgentMCPAccess.mcp_unique_id == row.unique_id).delete()
+        db.session.delete(row)
+
     for row in Dashboard.query.filter(Dashboard.name == F.DASHBOARD).all():
         # 위젯이 대시보드에 매이는 열은 `tab_id` 다(이름과 달리 Tab 이 아니라
         # **대시보드의 unique_id** 가 들어간다 — dashboard.html 이
@@ -136,7 +155,8 @@ def _seed_users():
     made = []
     for name, password, email, role_id in (
             (F.ADMIN_USER, F.ADMIN_PASS, F.ADMIN_EMAIL, 1),   # Admin
-            (F.GUEST_USER, F.GUEST_PASS, F.GUEST_EMAIL, 4)):  # Guest
+            (F.GUEST_USER, F.GUEST_PASS, F.GUEST_EMAIL, 4),   # Guest
+            (F.MONITOR_USER, F.MONITOR_PASS, F.MONITOR_EMAIL, 3)):  # Monitor
         user = User.query.filter(User.name == name).first()
         if user is None:
             user = User()
@@ -199,6 +219,18 @@ def _seed_inputs():
     dm.channel = 0
     dm.is_enabled = True
     dm.save()
+
+    # 전류(A) 채널 — 전류 기반 에너지 사용량 화면이 고를 측정. 값은
+    # _seed_measurements 가 일정하게(ENERGY_INPUT_AMPS) 써 넣는다.
+    dm = DeviceMeasurements()
+    dm.name = F.ENERGY_INPUT_MEASUREMENT
+    dm.device_id = cpu.unique_id
+    dm.device_type = 'input'
+    dm.measurement = 'electrical_current'
+    dm.unit = 'A'
+    dm.channel = 1
+    dm.is_enabled = True
+    dm.save()
     return [ram.unique_id, cpu.unique_id]
 
 
@@ -219,6 +251,9 @@ def _seed_outputs():
         oc.output_id = multi.unique_id
         oc.channel = ch
         oc.name = f'E2E Channel {ch}'
+        # 채널 0 에만 전류를 준다 — 에너지 사용량은 전류가 있는 채널만 센다.
+        oc.custom_options = json.dumps(
+            {'name': '', 'amps': F.ENERGY_OUTPUT_AMPS if ch == 0 else 0.0})
         oc.save()
 
     bare = Output()
@@ -329,7 +364,39 @@ def _seed_measurements(input_ids):
             written += 1
         except Exception:                    # noqa: BLE001
             return written
+
+    # 전류 — 일정한 값이라 평균이 곧 그 값이다(검산이 쉽다). 최근 1시간 평균이
+    # 비지 않도록 지난 2시간은 10분 간격으로 촘촘히.
+    stamps = ([now - datetime.timedelta(minutes=m) for m in range(0, 120, 10)]
+              + [now - datetime.timedelta(hours=h) for h in range(2, 24 * 5)])
+    for stamp in stamps:
+        try:
+            write_influxdb_value(
+                input_ids[1], 'A', float(F.ENERGY_INPUT_AMPS),
+                measure='electrical_current', channel=1, timestamp=stamp)
+            written += 1
+        except Exception:                    # noqa: BLE001
+            return written
     return written
+
+
+def _seed_output_usage(output_ids):
+    """출력이 켜져 있던 시간 — 에너지 사용량 화면이 세는 값.
+
+    데몬은 출력을 끌 때 켜져 있던 초를 `duration_time` 으로 남긴다. 그것을
+    직접 한 점(1시간) 써서 "지난 하루 1시간" 을 만든다.
+    """
+    try:
+        from aot.utils.influx import write_influxdb_value
+        # **실수로** 쓴다. 필드 형은 측정(단위)마다 처음 쓴 값으로 굳고, 데몬은
+        # 켜짐 시간을 실수로 남긴다 — 정수를 쓰면 형 충돌(422)로 조용히 버려진다.
+        write_influxdb_value(
+            output_ids[0], 's', float(F.ENERGY_OUTPUT_SEC_ON),
+            measure='duration_time', channel=0,
+            timestamp=datetime.datetime.utcnow() - datetime.timedelta(hours=2))
+        return True
+    except Exception:                        # noqa: BLE001
+        return False
 
 
 def _seed_sequence(output_ids):
@@ -495,6 +562,7 @@ def main():
         _seed_functions(input_ids)
         _seed_sequence(output_ids)
         measurement_points = _seed_measurements(input_ids)
+        _seed_output_usage(output_ids)
         _seed_schedule(output_ids)
         _seed_approvals(output_ids)
         _seed_geo_shapes()

@@ -2516,7 +2516,20 @@ def use_unit_generate(device_measurements, input_dev, output, function):
 
 
 def get_ip_address():
-    return request.environ.get('HTTP_X_FORWARDED_FOR', 'unknown address')
+    """요청한 쪽의 주소 — 감사 기록과 요청 제한(limiter)의 열쇠.
+
+    예전에는 `X-Forwarded-For` 머리글만 봤다. 운영 구성은 gunicorn 이 80 을
+    직접 받고(앞단 프록시 없음) 농장 LAN 에서는 그 머리글이 오지 않으므로,
+    **모든 접속자가 'unknown address'** 가 됐다 — 감사 기록에 주소가 남지 않았고,
+    요청 제한은 IP 별이 아니라 익명 접속자 전체가 한 바구니를 나눠 썼다
+    (2026-09-18 E2E 감사 로그 검사가 잡음).
+
+    `request.remote_addr` 는 앱이 거는 ProxyFix(x_for=1)가 이미 풀어 둔 값이다 —
+    프록시 뒤에서는 프록시가 붙인 마지막 주소, 직접 접속이면 소켓의 상대 주소.
+    """
+    return (request.remote_addr
+            or request.environ.get('HTTP_X_FORWARDED_FOR')
+            or 'unknown address')
 
 
 def generate_form_controller_list(dict_controllers):

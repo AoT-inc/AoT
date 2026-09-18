@@ -104,7 +104,10 @@ def export_settings():
                 mimetype='application/zip',
                 as_attachment=True,
                 download_name=
-                    'AoT_{mver}_setup_{aver}_{host}_{dt}.zip'.format(
+                    # 가져오기가 요구하는 형식(AoT_버전_Settings_…)과 같게 짓는다.
+                    # 예전에는 '_setup_' 이라 **내보낸 파일을 그대로 다시 가져오면
+                    # 파일명 검사에서 거절됐다**(2026-09-18 E2E 실측, 처음 커밋부터).
+                    'AoT_{mver}_Settings_{aver}_{host}_{dt}.zip'.format(
                         mver=AOT_VERSION, aver=ALEMBIC_VERSION,
                         host=socket.gethostname().replace(' ', ''),
                         dt=to_local(utc_now()).strftime("%Y-%m-%d_%H-%M-%S"))
@@ -233,6 +236,9 @@ def import_settings(form):
             correct_name = correct_format.rsplit('.', 1)[0]
             correct_name_1 = correct_name.split('_')[0]
             correct_name_2 = correct_name.split('_')[2]
+            # 2026-09-18 전 내보내기는 'setup' 으로 이름을 지었다 — 이미 받아 둔
+            # 백업 파일도 복원할 수 있어야 한다.
+            accepted_name_2 = (correct_name_2, 'setup')
             correct_extension = correct_format.rsplit('.', 1)[1].lower()
 
             # Validate filename parts
@@ -240,7 +246,7 @@ def import_settings(form):
                 if name_split[0] != correct_name_1:
                     error.append(gettext("Invalid filename: %(filename)s: %(part)s != %(correct)s.", filename=file_name, part=name_split[0], correct=correct_name_1))
                     error.append(gettext("Correct format is: %(format)s", format=correct_format))
-                elif name_split[2] != correct_name_2:
+                elif name_split[2] not in accepted_name_2:
                     error.append(gettext("Invalid filename: %(filename)s: %(part)s != %(correct)s", filename=file_name, part=name_split[2], correct=correct_name_2))
                     error.append(gettext("Correct format is: %(format)s", format=correct_format))
                 elif extension != correct_extension:

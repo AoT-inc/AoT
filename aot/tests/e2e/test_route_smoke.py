@@ -184,3 +184,49 @@ def test_every_private_get_route_rejects_anonymous(anon_http, base_url,
         '로그인 없이 접근됐습니다. 의도한 공개라면 PUBLIC_PREFIXES 에 '
         '사유와 함께 등록하세요:\n' + '\n'.join(
             f'  {rule} — {why}' for rule, why in leaks))
+
+
+# ---------------------------------------------------------------------------
+# 코드가 가리키는 엔드포인트가 실제로 있는가
+# ---------------------------------------------------------------------------
+_REPO = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../..'))
+_URL_FOR = re.compile(r"url_for\(\s*['\"]([A-Za-z_]\w*\.[A-Za-z_]\w*)['\"]")
+
+
+def _url_for_targets():
+    """파이썬·템플릿에 **글자 그대로** 적힌 `url_for('블루프린트.함수')` 대상."""
+    found = {}
+    roots = [os.path.join(_REPO, 'aot', 'aot_flask'),
+             os.path.join(_REPO, 'aot', 'widgets')]
+    for root in roots:
+        for dirpath, _dirs, files in os.walk(root):
+            for name in files:
+                if not name.endswith(('.py', '.html')):
+                    continue
+                path = os.path.join(dirpath, name)
+                with open(path, encoding='utf-8', errors='ignore') as f:
+                    text = f.read()
+                for match in _URL_FOR.finditer(text):
+                    line = text.count('\n', 0, match.start()) + 1
+                    found.setdefault(match.group(1), []).append(
+                        f'{os.path.relpath(path, _REPO)}:{line}')
+    return found
+
+
+def test_every_url_for_points_at_a_real_endpoint(routes):
+    """`url_for` 가 없는 엔드포인트를 가리키면 그 줄이 실행되는 순간 500 이다.
+
+    평소 흐름에서는 안 지나가는 가지(권한 거절·오류 처리)에 숨어 있다가
+    드물게 터진다. 2026-09-18: 전류 에너지 화면이 권한 없는 POST 를
+    `routes_page.page_usage`(없는 엔드포인트)로 돌려보내 거절 대신 500 이
+    났다. 정적 스캔만으로는 블루프린트를 여러 파일이 나눠 쓰는 경우를 오판하므로
+    **실제 앱의 URL 맵**과 대조한다.
+    """
+    endpoints = {r['endpoint'] for r in routes}
+    missing = {name: where for name, where in _url_for_targets().items()
+               if not name.startswith('static') and not name.endswith('.static')
+               and name not in endpoints}
+    assert not missing, (
+        '없는 엔드포인트를 가리키는 url_for 가 있습니다 — 그 줄이 실행되면 500 '
+        '입니다:\n' + '\n'.join(f'  {n}  ← {", ".join(w[:3])}'
+                                for n, w in sorted(missing.items())))

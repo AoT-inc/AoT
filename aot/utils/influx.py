@@ -639,9 +639,14 @@ def output_sec_on(output_id, past_seconds, output_channel=0):
                     for row in table.records:
                         sec_recorded_on += row.values['_value']
             elif settings.measurement_db_version == '2':
+                # 표(시리즈)마다 **더한다.** 데몬은 켜짐 시간에 누가 켰는지
+                # (source_type·source_id)를 태그로 붙이므로, 사람·함수·AI 가 번갈아
+                # 켠 출력은 SUM 이 시리즈 수만큼의 표로 나온다. 예전에는 마지막 표
+                # 값으로 덮어써서 가동 시간·에너지 사용량이 크게 적게 나왔다
+                # (2026-09-18 E2E: 1 시간 켜짐이 0.0 시간으로 보고됨).
                 for table in data:
                     for row in table.records:
-                        sec_recorded_on = row.values['_value']
+                        sec_recorded_on += row.values['_value']
 
     sec_currently_on = 0
     if output_time_on:
@@ -705,9 +710,11 @@ def sum_past_seconds(unique_id, unit, channel, past_seconds, measure=None):
                         total_seconds += row.values['_value']
                 return total_seconds
             elif settings.measurement_db_version == '2':
+                # 시리즈(태그 조합)마다 표가 따로 온다 — 덮어쓰지 않고 더한다
+                # (output_sec_on 참고).
                 for table in data:
                     for row in table.records:
-                        total_seconds = row.values['_value']
+                        total_seconds += row.values['_value']
         return total_seconds
 
 

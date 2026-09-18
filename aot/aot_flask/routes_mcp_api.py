@@ -77,6 +77,31 @@ def _require_role_permission():
     }), 403
 
 
+def _parse_env(value):
+    """설정 화면이 보낸 환경변수를 dict 로 — 아니면 (None, 이유).
+
+    화면의 입력칸은 JSON **문자열**을 보낸다. 그것을 그대로 저장하면 문자열
+    안에 JSON 이 든 채로 남는다(모델 `env_vars` 참고). 객체가 아니면 저장하지
+    않고 이유를 돌려준다 — 조용히 빈 값으로 바꾸면 API 키가 사라진다.
+    """
+    if value is None or value == '':
+        return {}, None
+    if isinstance(value, str):
+        try:
+            value = json.loads(value)
+        except ValueError as exc:
+            return None, f"env_json is not valid JSON: {exc}"
+    if not isinstance(value, dict):
+        return None, "env_json must be a JSON object, e.g. {\"KEY\": \"value\"}"
+    return {str(k): '' if v is None else str(v) for k, v in value.items()}, None
+
+
+def _can_see_server_config():
+    """실행 명령·환경변수(API 키 자리)는 설정을 **고칠 수 있는** 사람에게만."""
+    from aot.aot_flask.utils import utils_general
+    return utils_general.user_has_permission('edit_settings', silent=True)
+
+
 @blueprint.route('/servers_page', methods=['GET'])
 @flask_login.login_required
 def mcp_servers_page():
@@ -89,12 +114,13 @@ def mcp_servers_page():
 def mcp_servers():
     if request.method == 'GET':
         servers = MCPServer.query.all()
+        show_config = _can_see_server_config()
         return jsonify([{
             "id": s.id,
             "unique_id": s.unique_id,
             "name": s.name,
-            "command": s.command,
-            "env_json": json.dumps(s.env_vars) if s.env_vars else "",  # v26 BF-07
+            "command": s.command if show_config else None,
+            "env_json": (json.dumps(s.env_vars) if s.env_vars else "") if show_config else None,  # v26 BF-07
             "scope": s.scope,
             "is_activated": s.is_activated,
             "status": MCPBridgeService.get_server_status(s.unique_id),  # v25 BF-05
@@ -103,6 +129,9 @@ def mcp_servers():
     
     elif request.method == 'POST':
         data = request.json
+        env, env_error = _parse_env(data.get('env_json'))
+        if env_error:
+            return jsonify({"error": env_error}), 400
         try:
             new_server = MCPServer(
                 name=data.get('name'),
@@ -110,8 +139,7 @@ def mcp_servers():
                 scope=data.get('scope', 'general'),
                 is_activated=data.get('is_activated', False)
             )
-            if 'env_json' in data:
-                new_server.env_vars = data['env_json']  # v26 BF-06
+            new_server.env_vars = env  # v26 BF-06
             
             new_server.save()
             return jsonify({"status": "success", "unique_id": new_server.unique_id}), 201
@@ -127,24 +155,29 @@ def mcp_server_detail(server_id):
         return jsonify({"error": "Server not found"}), 404
 
     if request.method == 'GET':
+        show_config = _can_see_server_config()
         return jsonify({
             "id": server.id,
             "unique_id": server.unique_id,
             "name": server.name,
-            "command": server.command,
-            "env_vars": server.env_vars,
+            "command": server.command if show_config else None,
+            "env_vars": server.env_vars if show_config else None,
             "scope": server.scope,
             "is_activated": server.is_activated
         })
 
     elif request.method == 'PUT':
         data = request.json
+        if 'env_json' in data:
+            env, env_error = _parse_env(data['env_json'])
+            if env_error:
+                return jsonify({"error": env_error}), 400
         try:
             if 'name' in data: server.name = data['name']
             if 'command' in data: server.command = data['command']
             if 'scope' in data: server.scope = data['scope']
             if 'is_activated' in data: server.is_activated = data['is_activated']
-            if 'env_json' in data: server.env_vars = data['env_json']  # v26 BF-06
+            if 'env_json' in data: server.env_vars = env  # v26 BF-06
             
             server.save()
             return jsonify({"status": "success"})

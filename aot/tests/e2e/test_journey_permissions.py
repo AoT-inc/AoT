@@ -24,6 +24,7 @@ FORBIDDEN_PAGES = (
     '/audit_log',
     '/logview',
     '/geo/design',
+    '/camera',          # view_camera — 2026-09-18 까지 검사 자체가 없었다
 )
 
 # 게스트도 **볼 수 있어야 하는** 화면. 과잉 차단을 잡는 쪽이다.

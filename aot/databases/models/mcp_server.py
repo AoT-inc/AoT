@@ -69,10 +69,23 @@ class MCPServer(db.Model, CRUDMixin):
 
     @property
     def env_vars(self):
-        try:
-            return json.loads(self.env_json) if self.env_json else {}
-        except Exception:
-            return {}
+        """환경변수 — 언제나 dict 다.
+
+        설정 화면은 입력칸의 **문자열**을 그대로 보냈고 setter 가 그것을 다시
+        `json.dumps` 해서, 문자열 안에 JSON 이 든 채로 저장된 행이 있다(편집할
+        때마다 한 겹씩 더 감싸졌다). 그런 행도 풀어서 읽는다 — 그대로 두면 서버
+        프로세스에 환경변수가 하나도 안 가고, 연결 시험은 500 이 났다
+        (2026-09-18 E2E 실측).
+        """
+        value = self.env_json or '{}'
+        for _ in range(5):
+            if not isinstance(value, str):
+                break
+            try:
+                value = json.loads(value) if value.strip() else {}
+            except Exception:
+                return {}
+        return value if isinstance(value, dict) else {}
 
     @env_vars.setter
     def env_vars(self, value):

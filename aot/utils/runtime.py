@@ -5,7 +5,7 @@ import time
 from pytz import timezone
 
 # AoT Imports
-from aot.databases.models import Output, OutputChannel, Misc
+from aot.databases.models import Output, OutputChannel
 from aot.utils.database import db_retrieve_table_daemon
 from aot.utils.influx import read_influxdb_list, query_string, read_influxdb_single
 from aot.aot_client import DaemonControl
@@ -140,14 +140,13 @@ def get_operational_seconds(device_unique_id, past_seconds, channel_id=0):
         
         sec_recorded = 0
         if data:
-            settings = db_retrieve_table_daemon(Misc, entry='first')
-            # InfluxDB 결과를 합산 (버전에 따른 처리)
+            # InfluxDB 결과를 합산한다 — 버전과 무관하게 **더한다.** 켜짐 시간은
+            # 누가 켰는지(source_type·source_id) 태그가 붙어 시리즈마다 표가 따로
+            # 오는데, v2 에서 마지막 표 값으로 덮어써 가동 시간이 적게 나왔다
+            # (2026-09-18 E2E, influx.output_sec_on 과 같은 결함).
             for table in data:
                 for row in table.records:
-                    if settings.measurement_db_version == '1':
-                        sec_recorded += row.values['_value']
-                    else:
-                        sec_recorded = row.values['_value']
+                    sec_recorded += row.values['_value']
                         
         # 2. 현재 작동 중인 경우, 지금 이 순간까지의 실시간 가동 시간 추가
         sec_currently_on = 0
