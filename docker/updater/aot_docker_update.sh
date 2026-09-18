@@ -554,19 +554,30 @@ case "$MODE" in
     oneshot)
         acquire_lock || { log "another updater run is in progress"; exit 1; }
         trap release_lock EXIT
-        # A leftover request.json is stale by definition here: an operator is
-        # about to hand-drive an update, which is not something the file-based
-        # queue asked for. Left in place, it survives this run untouched (this
-        # branch never reads it) and the loop-mode process sharing this same
-        # container can replay it the moment the lock above is released --
-        # which is exactly what turned a successful `--update` into a silent
-        # downgrade on koat, 2026-09-16 (see process_request's own cleanup for
-        # the full account). Clear it before acting, not after: waiting until
-        # this run finishes would leave the same window open for its own
-        # multi-minute image pull / container swap.
+        # A leftover request.json here is USUALLY an already-handled one that
+        # nobody deleted (process_request now deletes its own when it runs
+        # one, so this is the residual case: something pre-dating that fix,
+        # or a crash between run_update() finishing and that rm). Clearing it
+        # closes the replay this loop hit on koat 2026-09-16 (see
+        # process_request's own cleanup for the full account) -- but it can
+        # ALSO be a request the app just wrote that the loop has not yet
+        # picked up (request_update() -> process_request() has up to
+        # POLL_INTERVAL seconds of latency, and this lock is free during all
+        # of it). Deleting THAT one unconditionally would silently drop a
+        # live user request instead of just delaying it. So only clear it
+        # when it is confirmably already handled -- same id check
+        # process_request uses -- and otherwise leave it for the loop.
         if [ -f "$REQUEST_FILE" ]; then
-            log "clearing stale request.json before manual update (oneshot does not consume it)"
-            rm -f "$REQUEST_FILE"
+            _stale_body="$(cat "$REQUEST_FILE" 2>/dev/null)"
+            _stale_id="$(json_value "$_stale_body" id)"
+            _stale_done=""
+            [ -f "$STATUS_FILE" ] && _stale_done="$(json_value "$(cat "$STATUS_FILE")" id)"
+            if [ -n "$_stale_id" ] && [ "$_stale_id" = "$_stale_done" ]; then
+                log "clearing already-handled request.json before manual update"
+                rm -f "$REQUEST_FILE"
+            else
+                log "request.json present but not confirmed handled; leaving it for the queue"
+            fi
         fi
         REQUEST_ID="cli-$(date +%s)"
         run_update "$ONESHOT_TARGET"
