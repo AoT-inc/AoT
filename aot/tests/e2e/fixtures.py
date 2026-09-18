@@ -43,6 +43,12 @@ FACILITY_NAME = 'E2E Facility'
 # 일정 — 달력에 뜨는지 보는 데 쓴다.
 SCHEDULE_TITLE = 'E2E Scheduled Run'
 
+# AI 승인 대기 — 모두 E2E Virtual Multi 를 켜 달라는 요청이다. 검사마다 상태를
+# 바꾸므로(승인·거부) 한 건을 나눠 쓰지 않고 쓰임새별로 따로 둔다.
+APPROVAL_FOR_APPROVE = 'E2E Approval Approve'
+APPROVAL_FOR_REJECT = 'E2E Approval Reject'
+APPROVAL_FOR_GUEST = 'E2E Approval Guest'
+
 NOTICE_TITLE = 'E2E Notice Post'
 NOTICE_BODY = 'E2E 공지 본문 — 종단 검사가 만든 글입니다.'
 

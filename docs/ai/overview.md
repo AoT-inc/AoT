@@ -38,12 +38,18 @@ User chat ───────────────┐            External M
               In-app agent loop           aot_mcp_server.py (stdio/HTTP)
                           └──────────┬───────────────┘
                                      ↓
-                     Tool registry (tool_registry.py, single source)
+                tool_execution.py — approval gate + audit log
+                                     ↓
+      Tool registry (tool_registry.py) — single source of tool
+      declarations; its dispatch map resolves the call to a handler
                                      ↓
                         AoT system (Daemon / InfluxDB / SQLite)
 ```
 
-Both paths pull tools from the same registry (`aot/ai/services/tool_registry.py`), so their lists can never diverge.
+Both paths execute through the same gate (`aot/ai/services/tool_execution.py`) and pull tool
+definitions from the same registry (`aot/ai/services/tool_registry.py`), so neither their
+approval rules nor their tool lists can ever diverge between the in-app assistant and an
+external MCP client.
 
 ---
 

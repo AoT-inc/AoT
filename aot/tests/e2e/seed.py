@@ -33,8 +33,8 @@ _refuse_unless_e2e_stack()
 from aot.aot_flask.extensions import db  # noqa: E402
 from aot.databases.models import (  # noqa: E402
     Actions, Conditional, Dashboard, DeviceMeasurements, Function, GeoJournal,
-    GeoMap, GeoPlot, GeoShape, Input, Output, OutputChannel, SchedulerJobMeta,
-    Trigger, User, Widget)
+    GeoMap, GeoPlot, GeoShape, Input, MCPConfirmation, Output, OutputChannel,
+    SchedulerJobMeta, Trigger, User, Widget)
 from aot.tests.e2e import fixtures as F  # noqa: E402
 
 
@@ -78,6 +78,11 @@ def _purge():
         SchedulerJobMeta.query.filter(
             SchedulerJobMeta.target_id.in_(_e2e_output_ids)
         ).delete(synchronize_session=False)
+
+    # AI 승인 대기는 제목으로 고른다(대상 출력은 매번 새 id 로 다시 만들어진다).
+    MCPConfirmation.query.filter(
+        MCPConfirmation.title.like('E2E %')
+    ).delete(synchronize_session=False)
 
     for row in Output.query.filter(Output.name.like('E2E %')).all():
         OutputChannel.query.filter(
@@ -306,7 +311,10 @@ def _seed_measurements(input_ids):
 
     now = datetime.datetime.utcnow()
     written = 0
-    for offset_min in range(0, 60 * 26, 30):   # 26시간치, 30분 간격
+    # **5일치**를 쓴다. 기간 버튼(1일·1주)이 축을 바꾸는지 보려면 데이터가 1일
+    # 보다 뚜렷이 길어야 한다 — 26시간치로 했을 때는 "1일" 과 "전체" 의 폭이
+    # 24h 대 25.5h 라 구별이 안 됐다.
+    for offset_min in range(0, 60 * 24 * 5, 60):   # 5일치, 1시간 간격
         stamp = now - datetime.timedelta(minutes=offset_min)
         try:
             write_influxdb_value(
@@ -383,6 +391,31 @@ def _seed_schedule(output_ids):
     return job.unique_id
 
 
+def _seed_approvals(output_ids):
+    """AI 가 올린 **물리 제어** 승인 대기 세 건 — 출력 켜기.
+
+    모델 없이 만든다. 승인 대기는 모델이 무엇이었든 이 행 하나로 표현되고,
+    검사가 보려는 것은 "사람이 결정하기 전에는 움직이지 않는다" 와
+    "결정할 자격이 있는 사람만 결정한다" 이다 — 모델의 판단이 아니다.
+
+    검사가 상태를 바꾸므로 쓰임새마다 한 건씩 둔다.
+    """
+    now = datetime.datetime.utcnow()
+    for title in (F.APPROVAL_FOR_APPROVE, F.APPROVAL_FOR_REJECT,
+                  F.APPROVAL_FOR_GUEST):
+        row = MCPConfirmation()
+        row.tool_name = 'operate_device'
+        row.title = title
+        row.params_json = json.dumps({'device_id': output_ids[0],
+                                      'state': 'on'})
+        row.reason = 'E2E'
+        row.agent_id = 'e2e'
+        row.status = 'pending'
+        # 대기 목록을 읽을 때 만료가 정리되므로 스위트 한 바퀴보다 넉넉히.
+        row.expires_at = now + datetime.timedelta(hours=6)
+        row.save()
+
+
 def _seed_geo_shapes():
     """지도에 도형을 놓는다 — 부지 하나와 그 안의 구역 하나.
 
@@ -457,6 +490,7 @@ def main():
         _seed_sequence(output_ids)
         measurement_points = _seed_measurements(input_ids)
         _seed_schedule(output_ids)
+        _seed_approvals(output_ids)
         _seed_geo_shapes()
         _seed_dashboard()
         db.session.commit()

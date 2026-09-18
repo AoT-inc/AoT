@@ -16,6 +16,67 @@ logger = logging.getLogger(__name__)
 
 blueprint = Blueprint('routes_mcp_api', __name__, url_prefix='/api/v1/mcp')
 
+
+#: 엔드포인트별로 필요한 역할 권한. 여기 없는 것(승인 대기 목록·화면)은 로그인만 본다.
+#:
+#: 이 블루프린트는 `login_required` 만 걸려 있어서 **게스트도** 다음을 할 수 있었다
+#: (2026-09-18 E2E 권한 경계 검사가 실측으로 잡음):
+#:   - AI 가 올린 물리 제어 요청을 승인해 **출력을 실제로 켠다** — 같은 동작을
+#:     직접 누르는 `/output_mod` 는 `edit_controllers` 를 요구하는데, 승인을 거치면
+#:     그 검사를 건너뛰었다.
+#:   - MCP 서버의 실행 명령과 환경변수(API 키가 들어가는 자리)를 읽는다.
+#:   - MCP 서버를 등록·시험·재시작한다 — 등록한 명령은 서버 프로세스로 실행된다.
+#:
+#: 승인 권한을 `edit_controllers` 로 둔 이유: MCP 쪽이 쓰기 도구를 허용하는 기준
+#: (`mcp_auth.role_can_write`)과 출력 직접 제어의 기준이 모두 그것이다. 승인은
+#: "대신 눌러 주는 것" 이므로 직접 누를 자격보다 넓을 수 없다.
+_REQUIRED_PERMISSION = {
+    'routes_mcp_api.mcp_confirmation_approve': 'edit_controllers',
+    'routes_mcp_api.mcp_confirmation_reject': 'edit_controllers',
+    'routes_mcp_api.mcp_confirmation_batch_approve': 'edit_controllers',
+    'routes_mcp_api.mcp_confirmation_batch_reject': 'edit_controllers',
+    'routes_mcp_api.mcp_server_test': 'edit_settings',
+    'routes_mcp_api.mcp_server_stop': 'edit_settings',
+    'routes_mcp_api.mcp_server_restart': 'edit_settings',
+    'routes_mcp_api.aot_mcp_start': 'edit_settings',
+    'routes_mcp_api.aot_mcp_stop': 'edit_settings',
+    'routes_mcp_api.aot_mcp_restart': 'edit_settings',
+    'routes_mcp_api.mcp_server_tools': 'view_settings',
+    'routes_mcp_api.aot_mcp_status': 'view_settings',
+    'routes_mcp_api.mcp_audit_recent': 'view_logs',
+}
+
+#: 한 엔드포인트가 읽기와 쓰기를 함께 받는 경우 — 읽기는 설정 보기, 쓰기는 설정 편집.
+_READ_WRITE_ENDPOINTS = frozenset({
+    'routes_mcp_api.mcp_servers',
+    'routes_mcp_api.mcp_server_detail',
+})
+
+
+@blueprint.before_request
+def _require_role_permission():
+    # 로그인하지 않은 요청은 각 라우트의 login_required 가 로그인으로 돌려보낸다.
+    # 여기서 403 을 먼저 주면 그 흐름이 깨진다.
+    if not flask_login.current_user.is_authenticated:
+        return None
+
+    permission = _REQUIRED_PERMISSION.get(request.endpoint)
+    if request.endpoint in _READ_WRITE_ENDPOINTS:
+        permission = 'view_settings' if request.method == 'GET' else 'edit_settings'
+    if permission is None:
+        return None
+
+    from aot.aot_flask.utils import utils_general
+    if utils_general.user_has_permission(permission, silent=True):
+        return None
+    from flask_babel import gettext
+    return jsonify({
+        "status": "error",
+        "message": gettext("Insufficient permission: %(permission)s",
+                           permission=permission),
+    }), 403
+
+
 @blueprint.route('/servers_page', methods=['GET'])
 @flask_login.login_required
 def mcp_servers_page():

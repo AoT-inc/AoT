@@ -8,6 +8,9 @@
    include 하는 쪽이 준비할 것:
      - aot-settings.css (구획 제목·카드 역할)
      - 라우트 컨텍스트에 physical_tools (mcp_safety_gate.PHYSICAL_TOOLS 가 정본)
+     - 라우트 컨텍스트에 can_decide (edit_controllers). 없으면 버튼을 그린다 —
+       막는 것은 서버(routes_mcp_api 의 역할 검사)이고, 이 값은 누를 수 없는
+       버튼을 보이지 않게 할 뿐이다.
    승인/거부가 일어나면 document 에 'aot:mcp-approval-changed' 를 쏜다.
 
    2026-09-10 다시 짬:
@@ -37,8 +40,12 @@
         failed: {{ _('Request failed')|tojson }},
         confirm_physical: {{ _('This moves real equipment (valves, pumps) as soon as you approve. Run it now?')|tojson }},
         executed: {{ _('Approved and carried out.')|tojson }},
-        exec_failed: {{ _('Approved, but it failed to run')|tojson }}
+        exec_failed: {{ _('Approved, but it failed to run')|tojson }},
+        cannot_decide: {{ _('Only people who can edit controllers can decide on these.')|tojson }}
     };
+    // 결정할 수 없는 사람에게 승인 버튼을 보이면, 눌러 보고 나서야 "권한 부족" 을
+    // 듣는다. 목록은 그대로 보인다 — 무엇이 기다리는지 아는 것은 해가 없다.
+    var CAN_DECIDE = {{ (can_decide|default(true))|tojson }};
     // 되돌릴 수 없는 물리 동작만 한 번 더 확인한다. 설정 변경까지 매번 물으면
     // 확인창이 의미 없는 클릭으로 전락해 정작 중요한 순간에도 그냥 눌리게 된다.
     var PHYSICAL_TOOLS = {{ physical_tools|tojson }};
@@ -89,11 +96,15 @@
                 + '<div class="aot-appr-what">' + esc(r.title) + '</div>'
                 + '<div class="aot-appr-sub">' + sub.join(' · ') + '</div>'
                 + (r.reason ? '<div class="aot-appr-reason">' + esc(r.reason) + '</div>' : '')
-                + '<div class="aot-appr-acts">'
-                + '<button type="button" class="btn aot-pill-btn aot-pill-btn-secondary" data-reject-conf="' + esc(r.confirmation_id) + '">' + esc(T.reject) + '</button>'
-                + '<button type="button" class="btn aot-pill-btn aot-pill-btn-primary" data-approve="' + esc(r.confirmation_id) + '" data-tool="' + esc(r.tool_name || '') + '">' + esc(T.approve) + '</button>'
-                + '</div></div>';
-        }).join('');
+                + (CAN_DECIDE
+                    ? '<div class="aot-appr-acts">'
+                      + '<button type="button" class="btn aot-pill-btn aot-pill-btn-secondary" data-reject-conf="' + esc(r.confirmation_id) + '">' + esc(T.reject) + '</button>'
+                      + '<button type="button" class="btn aot-pill-btn aot-pill-btn-primary" data-approve="' + esc(r.confirmation_id) + '" data-tool="' + esc(r.tool_name || '') + '">' + esc(T.approve) + '</button>'
+                      + '</div>'
+                    : '')
+                + '</div>';
+        }).join('')
+            + (CAN_DECIDE ? '' : '<p class="aot-settings-sub aot-settings-bare">' + esc(T.cannot_decide) + '</p>');
     }
 
     // 읽기에 실패하면 "대기 없음" 이라고 말하지 않는다 — 승인은 유효 5분이라, 오류를

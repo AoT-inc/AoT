@@ -38,12 +38,17 @@ AoTのAIは、2つの経路でツールを使用します。
             アプリ内エージェントループ       aot_mcp_server.py (stdio/HTTP)
                          └──────────┬───────────────┘
                                     ↓
-                    ツールレジストリ (tool_registry.py, 単一のソース)
+               tool_execution.py — 承認ゲート + 監査ログ
+                                    ↓
+      ツールレジストリ (tool_registry.py) — ツール宣言の単一のソース。
+      このディスパッチマップが呼び出しを実際のハンドラーに解決します
                                     ↓
                        AoTシステム (Daemon / InfluxDB / SQLite)
 ```
 
-どちらの経路も同じレジストリ(`aot/ai/services/tool_registry.py`)からツールを取得するため、両者のツール一覧がずれることはありません。
+どちらの経路も同じゲート(`aot/ai/services/tool_execution.py`)を通って実行され、同じ
+レジストリ(`aot/ai/services/tool_registry.py`)からツール定義を取得するため、アプリ内
+アシスタントと外部MCPクライアントの間で承認ルールもツール一覧も決してずれません。
 
 ---
 

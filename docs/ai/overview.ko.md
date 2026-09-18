@@ -38,12 +38,17 @@ AoT의 AI는 두 가지 경로로 도구를 사용합니다.
               인앱 에이전트 루프          aot_mcp_server.py (stdio/HTTP)
                          └──────────┬───────────────┘
                                     ↓
-                    도구 레지스트리 (tool_registry.py, 단일 소스)
+               tool_execution.py — 승인 게이트 + 감사 로그
+                                    ↓
+      도구 레지스트리 (tool_registry.py) — 도구 선언의 단일 소스.
+      이 디스패치 맵이 호출을 실제 핸들러로 연결합니다
                                     ↓
                         AoT 시스템 (Daemon / InfluxDB / SQLite)
 ```
 
-두 경로 모두 같은 도구 레지스트리(`aot/ai/services/tool_registry.py`)에서 도구를 가져오므로 목록이 서로 어긋나지 않습니다.
+두 경로 모두 같은 게이트(`aot/ai/services/tool_execution.py`)를 거쳐 실행되고 같은
+도구 레지스트리(`aot/ai/services/tool_registry.py`)에서 도구 선언을 가져오므로, 인앱
+어시스턴트와 외부 MCP 클라이언트 사이에 승인 규칙도 도구 목록도 절대 어긋나지 않습니다.
 
 ---
 

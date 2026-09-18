@@ -41,7 +41,11 @@ def page_ai_dashboard():
                            ai_settings=AIGlobalSettings.query.first(),
                            drafts=drafts,
                            # 일정 제안 승인·거절 API 가 요구하는 권한과 같다.
-                           can_decide=user_has_permission('edit_controllers'),
+                           # silent: 여기는 "보여 줄까" 를 묻는 것뿐이다. 조용히
+                           # 묻지 않으면 게스트가 이 화면을 열 때마다 "권한 부족"
+                           # 플래시가 쌓여 **다음 화면**에 뜬다.
+                           can_decide=user_has_permission('edit_controllers',
+                                                          silent=True),
                            # 물리 제어 목록은 게이트가 정본이다(화면에 하드코딩 금지).
                            physical_tools=sorted(gate.PHYSICAL_TOOLS))
 
