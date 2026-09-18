@@ -59,7 +59,10 @@ class BackupInfluxdb(Resource):
         """
         Return an archive of the AoT confgiuration export.
         """
-        if not user_has_permission('view_settings'):
+        # 관리자만(edit_users). 설정 DB 에는 사용자 표·비밀번호 해시가 들어 있는데
+        # 예전에는 설정 보기(view_settings)만 봐서 모니터 역할도 통째로 받았다
+        # (2026-09-18 결정 — 설정 가져오기와 같은 경계).
+        if not user_has_permission('edit_users', silent=True):
             abort(403)
 
         try:

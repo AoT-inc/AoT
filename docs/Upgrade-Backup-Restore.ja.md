@@ -84,3 +84,6 @@ Upgradeページには進行状況がリアルタイムに表示され、終了�
 ```bash
 sudo aot-commands backup-restore [backup_location]
 ```
+
+!!! note
+    Webインターフェースからのバックアップの復元は**管理者のみ**が行えます。復元するとユーザーアカウントとロールもバックアップ時点に戻るためです。他のロールにはRestoreボタンが表示されません。

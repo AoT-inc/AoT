@@ -240,6 +240,11 @@ def admin_backup():
                     subprocess.Popen(cmd, stderr=devnull)
                 flash(gettext("Deletion of backup in progress"), "success")
 
+        elif form_backup.restore.data and not utils_general.user_has_permission('edit_users'):
+            # 복원은 관리자만(edit_users). 백업을 되돌리면 사용자·역할도 그 시점으로
+            # 돌아가므로, 편집자가 옛 권한·비밀번호를 되살릴 수 있었다(2026-09-18
+            # 결정 — 설정 가져오기와 같은 경계). 거절 알림은 user_has_permission 이 띄운다.
+            pass
         elif form_backup.restore.data:
             full_path = form_backup.full_path.data
             # Resolve symlinks and ensure path is within backup_root
@@ -277,6 +282,8 @@ def admin_backup():
 
     return render_template('admin/backup.html',
                            form_backup=form_backup,
+                           can_restore=utils_general.user_has_permission(
+                               'edit_users', silent=True),
                            backup_dirs=backup_dirs,
                            full_paths=full_paths)
 

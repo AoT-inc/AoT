@@ -45,7 +45,8 @@
             </div>
             <div class="aot-btn-group">
               {{form_backup.download(class_='btn aot-pill-btn', value=_('Download Backup'))}}
-              {{form_backup.restore(class_='btn aot-pill-btn aot-pill-btn-primary', value=_('Restore Backup'))}}
+              {# 복원은 관리자만 — 사용자·역할도 백업 시점으로 돌아간다(routes_admin.admin_backup). #}
+              {% if can_restore %}{{form_backup.restore(class_='btn aot-pill-btn aot-pill-btn-primary', value=_('Restore Backup'))}}{% endif %}
               {{form_backup.delete(class_='btn aot-pill-btn aot-pill-btn-danger', value=_('Delete Backup'), **{'onclick':"return confirm(_('Are you sure you want to delete?'))"})}}
             </div>
           </div>

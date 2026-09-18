@@ -85,3 +85,6 @@ you would like restored and press the Restore button beside it. If you're unable
 ```bash
 sudo aot-commands backup-restore [backup_location]
 ```
+
+!!! note
+    Restoring a backup from the web interface is limited to **administrators**, because a restore also returns user accounts and roles to the state they were in when the backup was made. Other roles do not see the Restore button.

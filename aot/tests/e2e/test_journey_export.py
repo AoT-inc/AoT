@@ -157,3 +157,45 @@ def test_only_an_admin_can_import_settings(editor_http, admin_http, base_url):
 
     # 관리자에게는 칸이 있다
     assert 'name="settings_import_file"' in _export_page(admin_http, base_url)
+
+
+API_EXPORT_SETTINGS = '/api/export_import/export_settings'
+
+
+def test_only_an_admin_gets_the_settings_db_by_api(admin_http, editor_http,
+                                                   monitor_http, base_url):
+    """API 로 설정 DB 를 받는 것도 관리자만(2026-09-18 결정).
+
+    예전에는 설정 보기(view_settings)만 봐서 모니터 역할도 사용자 표·비밀번호
+    해시가 든 설정 DB 를 통째로 받았다.
+    """
+    headers = {'Accept': 'application/vnd.aot.v1+json'}
+    for who, session in (('모니터', monitor_http), ('편집자', editor_http)):
+        resp = session.get(base_url + API_EXPORT_SETTINGS, headers=headers, timeout=60)
+        assert resp.status_code == 403, (
+            f'{who}가 API 로 설정 DB 를 받았습니다(HTTP {resp.status_code})')
+    resp = admin_http.get(base_url + API_EXPORT_SETTINGS, headers=headers, timeout=120)
+    assert resp.status_code == 200 and resp.content[:2] == b'PK', (
+        f'관리자가 API 로 설정 DB 를 받지 못했습니다(HTTP {resp.status_code})')
+
+
+def _restore(session, base_url):
+    """없는 경로로 복원을 요청한다 — 권한을 지나도 경로 검사에서 멈춘다."""
+    token = form_csrf(_export_page(session, base_url))   # 세션 단위 토큰
+    return session.post(f'{base_url}/admin/backup', timeout=60, data={
+        'csrf_token': token, 'restore': '1',
+        'full_path': '/nonexistent/AoT-backup-e2e', 'selected_dir': 'e2e'})
+
+
+def test_only_an_admin_can_restore_a_backup(admin_http, editor_http, base_url):
+    """백업 복원도 관리자만 — 사용자·역할까지 백업 시점으로 돌아간다."""
+    refused = _restore(editor_http, base_url)
+    assert refused.status_code == 200
+    assert 'edit_users' in refused.text, (
+        '편집자의 복원 요청이 권한에서 거절되지 않았습니다(경로 검사까지 갔습니다)')
+    page = editor_http.get(f'{base_url}/admin/backup', timeout=60).text
+    assert 'name="restore"' not in page, '편집자 화면에 복원 단추가 있습니다'
+
+    passed = _restore(admin_http, base_url)
+    assert passed.status_code == 200
+    assert 'edit_users' not in passed.text, '관리자의 복원 요청이 권한에서 거절됐습니다'

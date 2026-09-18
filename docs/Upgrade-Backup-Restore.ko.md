@@ -84,3 +84,6 @@ docker compose -f docker/docker-compose.prod.yml \
 ```bash
 sudo aot-commands backup-restore [backup_location]
 ```
+
+!!! 참고
+    웹 화면에서 백업을 복원하는 것은 **관리자만** 할 수 있습니다. 복원하면 사용자 계정과 역할도 백업 시점으로 돌아가기 때문입니다. 다른 역할에게는 Restore 버튼이 보이지 않습니다.
