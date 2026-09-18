@@ -64,3 +64,13 @@ def wait_until_ready(is_ready, wait_s=120):
             pass
         time.sleep(2)
     return False
+
+
+def restart_app(is_up, wait_s=180):
+    """웹 앱 컨테이너를 다시 띄우고, **응답할 때까지** 기다린다.
+
+    웹 프로세스 안에서 도는 것(타이머 위젯의 작업 스레드 등)이 재시작을 어떻게
+    넘기는지 보는 검사용이다. 앱이 떠 있는지도 응답으로만 판단한다.
+    """
+    _compose('restart', 'aot-app')
+    return wait_until_ready(is_up, wait_s)

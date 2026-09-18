@@ -46,6 +46,17 @@ FUNCTION_CONDITIONAL = 'E2E Conditional'
 FUNCTION_SEQUENCE = 'E2E Sequence'
 SEQUENCE_STEPS = ('E2E Step One', 'E2E Step Two', 'E2E Step Three')
 
+# 제어 폐루프(L3) — 데몬이 **실제로 돌리는** 시퀀스. 위 시퀀스는 단계 순서 화면용이라
+# 돌릴 수 있는 모양이 아니다. E2E Virtual Multi 의 채널 1 만 쓴다(채널 0 은 에너지·
+# 제어 검사, 채널 2 는 타이머 검사가 쓴다).
+SEQUENCE_RUN = 'E2E Run Sequence'
+SEQUENCE_RUN_STEP = 'E2E Run Step'
+SEQUENCE_RUN_CHANNEL = 1
+SEQUENCE_RUN_STEP_SEC = 30
+SEQUENCE_RUN_PERIOD_SEC = 60
+CONTROL_DASHBOARD = 'E2E Control Dashboard'
+TIMER_CHANNEL = 2
+
 DASHBOARD = 'E2E Dashboard'
 
 # 공지 — 작성한 것이 대시보드 위젯까지 가는지 보는 데 쓴다.

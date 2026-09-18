@@ -138,7 +138,8 @@ def _purge():
             AgentMCPAccess.mcp_unique_id == row.unique_id).delete()
         db.session.delete(row)
 
-    for row in Dashboard.query.filter(Dashboard.name == F.DASHBOARD).all():
+    for row in Dashboard.query.filter(
+            Dashboard.name.in_((F.DASHBOARD, F.CONTROL_DASHBOARD))).all():
         # 위젯이 대시보드에 매이는 열은 `tab_id` 다(이름과 달리 Tab 이 아니라
         # **대시보드의 unique_id** 가 들어간다 — dashboard.html 이
         # `table_widget.tab_id == dashboard_id` 로 거른다).
@@ -440,6 +441,67 @@ def _seed_sequence(output_ids):
     return fn.unique_id
 
 
+def _seed_run_sequence(output_ids):
+    """데몬이 실제로 돌리는 시퀀스 하나와, 그것을 보여 주는 위젯 하나.
+
+    단계 하나 — E2E Virtual Multi 채널 1 을 SEQUENCE_RUN_STEP_SEC 동안 켠다.
+    주기 SEQUENCE_RUN_PERIOD_SEC, 창은 하루 종일(시작=끝 "00:00" 은 24:00 까지로
+    펼쳐진다 — weekly_schedule.from_legacy). 꺼 둔 채로 심는다 — 켜는 것은 검사다.
+    """
+    channel = OutputChannel.query.filter(
+        OutputChannel.output_id == output_ids[0],
+        OutputChannel.channel == F.SEQUENCE_RUN_CHANNEL).first()
+
+    fn = Function()
+    fn.name = F.SEQUENCE_RUN
+    fn.function_type = 'trigger_sequence'
+    fn.save()
+
+    trigger = Trigger()
+    trigger.unique_id = fn.unique_id
+    trigger.name = F.SEQUENCE_RUN
+    trigger.trigger_type = 'trigger_sequence'
+    trigger.is_activated = False
+    trigger.period = float(F.SEQUENCE_RUN_PERIOD_SEC)
+    trigger.timer_start_time = '00:00'
+    trigger.timer_end_time = '00:00'
+    trigger.timer_weekday = None
+    trigger.timer_start_offset = 0
+    trigger.save()
+
+    action = Actions()
+    action.function_id = fn.unique_id
+    action.function_type = 'trigger_sequence'
+    action.action_type = 'output_on_off'
+    action.custom_options = json.dumps({
+        'output': f'{output_ids[0]},{channel.unique_id}',
+        'state': 'on',
+        'duration': 0,
+        'action_duration': F.SEQUENCE_RUN_STEP_SEC,
+        'sequence_mode': 'single',
+        'enabled': True,
+        'gridstack_y': 0,
+        'name': F.SEQUENCE_RUN_STEP,
+    })
+    action.save()
+
+    dash = Dashboard()
+    dash.name = F.CONTROL_DASHBOARD
+    dash.save()
+    widget = Widget()
+    widget.tab_id = dash.unique_id
+    widget.graph_type = 'widget_trigger_sequence'
+    widget.name = F.SEQUENCE_RUN
+    widget.position_x = 0
+    widget.position_y = 0
+    widget.width = 12
+    widget.height = 8
+    widget.custom_options = json.dumps({
+        'function_id': fn.unique_id, 'refresh_seconds': 5, 'show_details': True})
+    widget.save()
+    return fn.unique_id
+
+
 def _seed_schedule(output_ids):
     """달력에 뜰 일정 하나.
 
@@ -562,6 +624,7 @@ def main():
         output_ids = _seed_outputs()
         _seed_functions(input_ids)
         _seed_sequence(output_ids)
+        _seed_run_sequence(output_ids)
         measurement_points = _seed_measurements(input_ids)
         _seed_output_usage(output_ids)
         _seed_schedule(output_ids)
