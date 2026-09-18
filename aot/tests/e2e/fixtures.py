@@ -10,11 +10,15 @@
 # 하이픈·밑줄을 쓰지 않는다(3~64자).
 ADMIN_USER = 'e2eadmin'
 ADMIN_PASS = 'e2epass1234'
-ADMIN_EMAIL = 'e2e-admin@example.invalid'
+# `.invalid` 는 예약 TLD 지만 폼의 이메일 검증기가 거부한다 — 그러면 사용자
+# 설정 저장이 **폼 전체 거부**로 막혀, 언어·배율을 바꾸는 여정이 통째로
+# 실패한다(2026-09-18 실측). `example.com` 도 예약 도메인이라 메일이 실제로
+# 나가지 않으면서 검증은 통과한다.
+ADMIN_EMAIL = 'e2e-admin@example.com'
 
 GUEST_USER = 'e2eguest'
 GUEST_PASS = 'e2epass1234'
-GUEST_EMAIL = 'e2e-guest@example.invalid'
+GUEST_EMAIL = 'e2e-guest@example.com'
 
 # 장치 이름 — 화면에서 이 문자열로 찾는다.
 INPUT_RAM = 'E2E RAM Input'
@@ -31,6 +35,16 @@ FUNCTION_SEQUENCE = 'E2E Sequence'
 SEQUENCE_STEPS = ('E2E Step One', 'E2E Step Two', 'E2E Step Three')
 
 DASHBOARD = 'E2E Dashboard'
+
+# 공지 — 작성한 것이 대시보드 위젯까지 가는지 보는 데 쓴다.
+# 시설 — 만들고 다시 열어 확인하는 데 쓴다.
+FACILITY_NAME = 'E2E Facility'
+
+# 일정 — 달력에 뜨는지 보는 데 쓴다.
+SCHEDULE_TITLE = 'E2E Scheduled Run'
+
+NOTICE_TITLE = 'E2E Notice Post'
+NOTICE_BODY = 'E2E 공지 본문 — 종단 검사가 만든 글입니다.'
 
 # 지도 도형 — 부지 하나와 그 안의 구역 하나.
 GEO_SITE = 'E2E Site'

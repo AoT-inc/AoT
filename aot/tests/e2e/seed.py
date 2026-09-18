@@ -33,8 +33,8 @@ _refuse_unless_e2e_stack()
 from aot.aot_flask.extensions import db  # noqa: E402
 from aot.databases.models import (  # noqa: E402
     Actions, Conditional, Dashboard, DeviceMeasurements, Function, GeoJournal,
-    GeoMap, GeoPlot, GeoShape, Input, Output, OutputChannel, Trigger, User,
-    Widget)
+    GeoMap, GeoPlot, GeoShape, Input, Output, OutputChannel, SchedulerJobMeta,
+    Trigger, User, Widget)
 from aot.tests.e2e import fixtures as F  # noqa: E402
 
 
@@ -62,28 +62,33 @@ def _app():
 # 데이터가 갑자기 사라지지 않는다.
 # --------------------------------------------------------------------------
 def _purge():
-    for name in (F.INPUT_RAM, F.INPUT_CPU):
-        for row in Input.query.filter(Input.name == name).all():
-            DeviceMeasurements.query.filter(
-                DeviceMeasurements.device_id == row.unique_id).delete()
-            db.session.delete(row)
-
-    for name in (F.OUTPUT_MULTI, F.OUTPUT_NOCHANNEL, F.OUTPUT_PWM):
-        for row in Output.query.filter(Output.name == name).all():
-            OutputChannel.query.filter(
-                OutputChannel.output_id == row.unique_id).delete()
-            DeviceMeasurements.query.filter(
-                DeviceMeasurements.device_id == row.unique_id).delete()
-            db.session.delete(row)
-
-    for row in Function.query.filter(
-            Function.name == F.FUNCTION_CONDITIONAL).all():
-        Conditional.query.filter(
-            Conditional.unique_id == row.unique_id).delete()
+    # 이름이 'E2E ' 로 시작하는 것은 **전부** 지운다 — 시드가 만든 것뿐 아니라
+    # 여정이 만들었다 남긴 것(CRUD 검사의 임시 장치 등)까지 거둔다. 목록을
+    # 이름 하나하나로 적으면 그런 잔재가 실행마다 쌓인다.
+    for row in Input.query.filter(Input.name.like('E2E %')).all():
+        DeviceMeasurements.query.filter(
+            DeviceMeasurements.device_id == row.unique_id).delete()
         db.session.delete(row)
 
-    for row in Function.query.filter(
-            Function.name == F.FUNCTION_SEQUENCE).all():
+    # 일정에는 제목 열이 없다 — 달력 제목은 대상 장치 이름으로 만들어진다.
+    # 그래서 **대상이 E2E 출력인 것**을 지운다(출력을 지우기 전에 해야 한다).
+    _e2e_output_ids = [row.unique_id for row in
+                       Output.query.filter(Output.name.like('E2E %')).all()]
+    if _e2e_output_ids:
+        SchedulerJobMeta.query.filter(
+            SchedulerJobMeta.target_id.in_(_e2e_output_ids)
+        ).delete(synchronize_session=False)
+
+    for row in Output.query.filter(Output.name.like('E2E %')).all():
+        OutputChannel.query.filter(
+            OutputChannel.output_id == row.unique_id).delete()
+        DeviceMeasurements.query.filter(
+            DeviceMeasurements.device_id == row.unique_id).delete()
+        db.session.delete(row)
+
+    for row in Function.query.filter(Function.name.like('E2E %')).all():
+        Conditional.query.filter(
+            Conditional.unique_id == row.unique_id).delete()
         Actions.query.filter(Actions.function_id == row.unique_id).delete()
         Trigger.query.filter(Trigger.unique_id == row.unique_id).delete()
         db.session.delete(row)
@@ -129,7 +134,10 @@ def _seed_users():
             user.role_id = role_id
             user.theme = '/static/css/bootstrap-4-themes/aot.css'
             made.append(name)
-        # 비밀번호는 매번 다시 건다 — 이전 실행에서 바뀌었을 수 있다.
+        # 비밀번호와 이메일은 매번 다시 건다 — 이전 실행에서 바뀌었을 수 있고,
+        # 이메일이 낡으면(검증을 통과하지 못하는 주소 등) 사용자 설정 저장이
+        # 폼 전체 거부로 막힌다.
+        user.email = email
         user.set_password(password)
         user.is_approved = True
         user.is_enabled = True
@@ -280,6 +288,36 @@ def _enable_ai_menu():
     settings.save()
 
 
+def _seed_measurements(input_ids):
+    """측정값 몇 시간치를 실제로 써 넣는다.
+
+    그래프는 값이 없으면 축도 그리지 않는다 — 데이터 없이 "기간 버튼이 축을
+    바꾸는가" 를 보려 하면 아무것도 없는 화면을 재게 된다. 값은 InfluxDB 에
+    들어가고, 지운 뒤 다시 심는 것이 아니라 **덮어 쓴다**(같은 시각·같은 태그면
+    같은 점이다).
+
+    실패해도 시드 전체를 막지 않는다 — 측정 DB 가 없는 환경에서도 나머지
+    픽스처는 쓸 수 있어야 한다.
+    """
+    try:
+        from aot.utils.influx import write_influxdb_value
+    except Exception:                        # noqa: BLE001
+        return 0
+
+    now = datetime.datetime.utcnow()
+    written = 0
+    for offset_min in range(0, 60 * 26, 30):   # 26시간치, 30분 간격
+        stamp = now - datetime.timedelta(minutes=offset_min)
+        try:
+            write_influxdb_value(
+                input_ids[0], 'MB', 1000 + (offset_min % 120),
+                measure='disk_space', channel=0, timestamp=stamp)
+            written += 1
+        except Exception:                    # noqa: BLE001
+            return written
+    return written
+
+
 def _seed_sequence(output_ids):
     """시퀀스 하나 — 단계 셋이 순서대로.
 
@@ -318,6 +356,31 @@ def _seed_sequence(output_ids):
         action.save()
 
     return fn.unique_id
+
+
+def _seed_schedule(output_ids):
+    """달력에 뜰 일정 하나.
+
+    일정의 출처는 `SchedulerJobMeta` 다(노트가 아니다 — 달력은 여러 출처를
+    합쳐 그린다). 승인 대기가 아니라 **확정된** 것으로 둔다: 상태에 따라
+    달력에서 걸러지므로, DRAFT 로 두면 "일정이 없다" 로 보인다.
+    """
+    job = SchedulerJobMeta()
+    job.action_type = 'output'
+    job.target_id = output_ids[0]
+    job.params_json = json.dumps({'state': 'on', 'duration': 60})
+    job.reasoning = F.SCHEDULE_TITLE
+    job.schedule_time = datetime.datetime.utcnow() + datetime.timedelta(hours=3)
+    job.duration_sec = 60
+    job.end_time = job.schedule_time + datetime.timedelta(seconds=60)
+    job.proposed_by = 'HUMAN'
+    job.approval_required = False
+    # 달력이 보여 주는 상태는 정해져 있다(_CALENDAR_VISIBLE_STATES:
+    # DRAFT·PENDING·RUNNING·COMPLETED·FAILED). 'APPROVED' 로 두면 저장은 되는데
+    # 달력에서는 아무것도 안 보인다 — 검사가 "일정이 없다" 로 읽힌다.
+    job.state = 'PENDING'
+    job.save()
+    return job.unique_id
 
 
 def _seed_geo_shapes():
@@ -392,6 +455,8 @@ def main():
         output_ids = _seed_outputs()
         _seed_functions(input_ids)
         _seed_sequence(output_ids)
+        measurement_points = _seed_measurements(input_ids)
+        _seed_schedule(output_ids)
         _seed_geo_shapes()
         _seed_dashboard()
         db.session.commit()

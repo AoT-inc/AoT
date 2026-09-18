@@ -112,6 +112,11 @@ def _problems(rule, state, console_errors, bad_responses):
     if state['overflow_x'] > 1:
         problems.append(f"가로로 {state['overflow_x']}px 넘칩니다")
 
+    if state.get('foreign_script'):
+        problems.append(
+            '화면에 우리 언어가 아닌 문자가 섞였습니다: %s'
+            % state['foreign_script'][:3])
+
     for selector, height in state['anchors'].items():
         if height is None:
             problems.append(f'앵커 요소가 없습니다: {selector}')
@@ -183,9 +188,36 @@ def _open_and_collect(context, base_url, rule):
                     dead.push(href + ' (본문을 받지 못함: ' + e + ')');
                 }
             }
+            // 화면 언어와 무관한 문자 체계가 섞였는가. 날짜 눈금 같은 것이
+            // 라이브러리 기본 로케일로 그려지면 엉뚱한 제3 언어가 나온다 —
+            // 실제로 한국어 화면의 장치 타임라인에 우크라이나어 요일·월이
+            // 찍혔다(2026-09-18). 사람이 보면 바로 이상한데, 텍스트를 읽지
+            // 않는 검사로는 통과한다.
+            // **선택지는 제외한다.** 언어 고르는 목록에는 다른 문자 체계가
+            // 정당하게 들어 있다(Українська·русский). 그것까지 사고로 세면
+            // 설정 화면이 영원히 빨간불이다.
+            let text = '';
+            if (document.body) {
+                const walk = document.createTreeWalker(
+                    document.body, NodeFilter.SHOW_TEXT);
+                while (walk.nextNode()) {
+                    const parent = walk.currentNode.parentElement;
+                    if (!parent) continue;
+                    if (parent.closest('select, option, optgroup, datalist,'
+                                       + ' .bootstrap-select, .dropdown-menu')) continue;
+                    // 숨어 있는 것도 빼야 한다 — 계정 설정 모달의 언어 목록은
+                    // **모든 화면에** 들어 있어서, 안 보이는 것까지 세면 전
+                    // 페이지가 걸린다.
+                    const box = parent.getBoundingClientRect();
+                    if (box.width === 0 && box.height === 0) continue;
+                    text += walk.currentNode.nodeValue + '\n';
+                }
+            }
+            const cyrillicOrGreek = text.match(/[\u0400-\u04FF\u0370-\u03FF]{2,}/g) || [];
             const de = document.documentElement;
             return {
                 url: location.pathname,
+                foreign_script: Array.from(new Set(cyrillicOrGreek)).slice(0, 5),
                 dead_sheets: dead,
                 empty_but_ok: suspects.length - dead.length,
                 sheet_count: document.styleSheets.length,
