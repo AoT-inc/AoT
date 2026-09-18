@@ -201,7 +201,7 @@ def extract_measurements(widget_options: dict) -> dict:
     for key, dev_type in keys:
         raw_val = widget_options.get(f"custom_option_{key}") or widget_options.get(key)
         if raw_val:
-            logger.info(f"[AoT Map Opt TRACE] key={key} raw_val={raw_val} (type={type(raw_val)})")
+            logger.debug(f"[AoT Map Opt TRACE] key={key} raw_val={raw_val} (type={type(raw_val)})")
         if not raw_val:
             continue
             

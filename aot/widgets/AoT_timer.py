@@ -62,7 +62,11 @@ from aot.databases.models import OutputChannel, Output, Misc
 from aot.aot_client import DaemonControl
 from aot.aot_flask.access import scope
 from aot.aot_flask.utils import utils_general
+from aot.utils.command_origin import TYPE_TIMER
 from aot.utils.device_tz import get_device_tz
+from aot.utils.execution_context import (clear_execution_context,
+                                          set_execution_context,
+                                          set_thread_default)
 from flask_babel import lazy_gettext
 
 from aot.utils.constraints_pass import constraints_pass_positive_value
@@ -749,6 +753,72 @@ def _wait_for_confirm(daemon, device_unique_id, channel_index, stop_event, timeo
     return 'timeout'
 
 
+def _wait_for_off_confirm(daemon, device_unique_id, channel_index,
+                          stop_event=None, timeout=30.0):
+    """장치가 **실제로 꺼졌다고 보고할 때까지** 기다린다.
+
+    `_issue_output_off` 가 성공을 돌려줘도 그것은 "드라이버가 오류를 안 냈다"
+    까지다. LoRaWAN 처럼 큐를 타는 전송에서는 "전송 큐가 접수했다" 는 뜻이고,
+    전파와 장치 동작은 그 뒤에 온다 — 끝내 닿지 않으면 **화면에는 정지라고
+    떠 있는데 밸브는 열려 있다.** ON 쪽은 이미 `_wait_for_confirm` 으로 확인을
+    기다리는데 OFF 쪽만 없었다.
+
+    'off' | 'cancelled' | 'timeout' 을 돌려준다.
+    """
+    end = time.time() + max(1.0, float(timeout))
+    while time.time() < end:
+        if stop_event is not None and stop_event.is_set():
+            return 'cancelled'
+        try:
+            st = daemon.output_state(device_unique_id, output_channel=channel_index)
+        except Exception:
+            st = None
+        if st == 'off' or (isinstance(st, (int, float))
+                           and not isinstance(st, bool) and st == 0):
+            return 'off'
+        time.sleep(1.0)
+    return 'timeout'
+
+
+def _verify_off_async(device_unique_id, channel_id, timeout=30.0):
+    """정지 뒤 OFF 가 실제로 먹혔는지 배경에서 확인하고, 아니면 화면에 알린다.
+
+    정지는 사람이 누른 요청이라 응답이 빨라야 한다. 그래서 확인은 여기서
+    배경으로 돌리고, 확인이 오지 않으면 그때 상태를 오류로 고쳐 쓴다 —
+    위젯은 몇 초 주기로 상태를 읽으므로 곧 화면에 뜬다.
+
+    그 사이 사용자가 새 사이클을 시작했으면 덮어쓰지 않는다.
+    """
+    def _worker():
+        try:
+            ch_index = _resolve_channel_index(device_unique_id, channel_id)
+            if ch_index is None:
+                return
+            result = _wait_for_off_confirm(
+                DaemonControl(), device_unique_id, ch_index, timeout=timeout)
+            if result == 'off':
+                return
+            logger.error(
+                "출력 OFF 가 장치에서 확인되지 않았습니다 %s ch=%s — 명령은 나갔지만 "
+                "이 출력이 켜진 채 남아 있을 수 있으니 직접 확인하십시오.",
+                device_unique_id, ch_index)
+            st = _cyc_state_read(device_unique_id, channel_id)
+            if isinstance(st, dict) and st.get('active'):
+                return  # 새 실행이 시작됐다 — 남의 상태를 덮지 않는다
+            _cyc_state_update(
+                device_unique_id, channel_id,
+                active=False, phase='error', run_id=None,
+                message='OFF not confirmed by device',
+                error='off_not_confirmed')
+        except Exception as exc:
+            logger.debug("OFF 확인 실패: %s", exc)
+
+    try:
+        threading.Thread(target=_worker, daemon=True).start()
+    except Exception as exc:
+        logger.debug("OFF 확인 스레드 기동 실패: %s", exc)
+
+
 def _issue_output_off(daemon, device_unique_id, channel_index, why=''):
     """OFF 를 보내고 **성공했는지 돌려준다**. 실패는 재시도하고 크게 남긴다.
 
@@ -815,6 +885,12 @@ def _cyc_stop_worker(device_unique_id, channel_id, reason='user_stop'):
     # 사용자는 껐다고 믿고 자리를 뜨는데 밸브는 열려 있다.
     ok, err = _force_output_off(device_unique_id, channel_id)
     now_ms = int(time.time() * 1000)
+    if ok and reason != 'restart':
+        # 명령이 나갔다는 것과 밸브가 닫혔다는 것은 다르다 — 배경에서 확인하고
+        # 확인이 안 오면 화면을 오류로 고쳐 쓴다(_verify_off_async).
+        # 재시작 경로는 제외한다: 바로 뒤에 새 실행이 켜므로 'off' 가 올 리 없고,
+        # 확인기는 그때마다 30초씩 헛돌다 새 실행을 보고 물러난다.
+        _verify_off_async(device_unique_id, channel_id)
     if ok:
         message = 'User stopped' if reason == 'user_stop' else 'Initializing'
         _cyc_state_update(
@@ -844,6 +920,11 @@ def _cyc_worker(device_unique_id, channel_id, channel_index,
     # state file, so this thread must not write a final summary over it —
     # only the output-off in `finally` below still applies.
     superseded = False
+    # 이 스레드에서 나가는 모든 출력 명령의 출처를 타이머로 못박는다. 워커는
+    # 요청 문맥 밖의 배경 스레드라 출처 판정이 `unknown` 으로 떨어졌고, 그래서
+    # 감사로그만 봐서는 "타이머가 켰다" 를 말할 수 없었다(2026-09-14 현장에서
+    # 실제로 origin=unknown 으로만 남았다).
+    set_thread_default(TYPE_TIMER, f"{device_unique_id}:{channel_id}")
     try:
         now_ms = int(time.time() * 1000)
         # started_at_ms is intentionally left None here so the total-time counter
@@ -958,7 +1039,38 @@ def _cyc_worker(device_unique_id, channel_id, channel_index,
                 if not stop_event.is_set():
                     superseded = True
                 break
-            _issue_output_off(daemon, device_unique_id, channel_index, why='cycle run end')
+            off_ok, _off_err = _issue_output_off(
+                daemon, device_unique_id, channel_index, why='cycle run end')
+            off_state = _wait_for_off_confirm(
+                daemon, device_unique_id, channel_index, stop_event) if off_ok else 'timeout'
+            if off_state == 'cancelled':
+                break
+            if off_state != 'off':
+                if _cyc_should_stop(device_unique_id, channel_id, run_id, stop_event):
+                    # 우리 stop_event 는 안 섰다(섰다면 위에서 'cancelled' 로
+                    # 걸러졌다) — 그런데도 여기 왔다는 건 이 30초 대기 동안
+                    # *다른* gunicorn 워커 프로세스가 이 장치/채널을 정지·재시작
+                    # 시켰다는 뜻이다(그 프로세스는 이 스레드의 stop_event 를
+                    # 볼 수 없어 디스크 run_id 로만 알린다 — _cyc_should_stop
+                    # 참고). 그 프로세스가 이미 더 최신 상태를 써 뒀으니, 여기서
+                    # 'OFF not confirmed' 로 덮어쓰면 그 최신 상태(예: 막 시작한
+                    # 새 실행)를 지워버린다.
+                    return
+                # 끄지 못한 채 다음 사이클로 넘어가면 "끄는 척하며 계속 켜져
+                # 있는" 상태가 된다 — 2026-09-14 현장이 정확히 그랬다(감사로그엔
+                # ON/OFF 가 번갈아 성공으로 남았는데 밸브는 20시간 열려 있었다).
+                # 여기서 멈추고 사람에게 알린다. `finally` 가 OFF 를 한 번 더 시도한다.
+                logger.error(
+                    "출력 OFF 가 확인되지 않아 사이클을 중단합니다 %s ch=%s — "
+                    "이 출력이 켜진 채 남아 있을 수 있습니다.",
+                    device_unique_id, channel_index)
+                _cyc_state_update(
+                    device_unique_id, channel_id, active=False, phase='error',
+                    message='OFF not confirmed by device', error='off_not_confirmed',
+                    run_id=None, next_transition_ms=None, phase_duration_sec=0,
+                    phase_started_ms=None, completed_cycles=cycle,
+                    stopped_at_ms=int(time.time() * 1000))
+                return
             now_ms = int(time.time() * 1000)
             if rest_sec > 0:
                 _cyc_state_update(
@@ -999,7 +1111,15 @@ def _cyc_worker(device_unique_id, channel_id, channel_index,
 
 def _cyc_start_worker(device_unique_id, channel_id, channel_index,
                       run_sec, rest_sec, total_cycles, mode, scheduled_until_ms, start_at='00:00'):
-    _cyc_stop_worker(device_unique_id, channel_id, reason='restart')
+    # 재시작 전 정리 OFF 도 타이머가 낸 명령이다. 여기를 비워 두면 그 한 건만
+    # `unknown` 으로 남아, 출처 불명(=탐지 신호)의 의미가 흐려진다. 사람이 누른
+    # 정지(`aot_timer_cycle_stop`)는 요청 문맥에서 `user` 로 잡히므로 건드리지
+    # 않는다 — 그쪽이 더 나은 기록이다.
+    set_execution_context(TYPE_TIMER, f"{device_unique_id}:{channel_id}")
+    try:
+        _cyc_stop_worker(device_unique_id, channel_id, reason='restart')
+    finally:
+        clear_execution_context()
     # run_id identifies THIS run on disk (see _cyc_should_stop) so a thread
     # left running in another gunicorn worker process — one that never sees
     # this process's stop_event — can still tell it has been superseded.
