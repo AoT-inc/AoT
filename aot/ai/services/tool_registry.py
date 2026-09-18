@@ -1066,7 +1066,7 @@ TOOLS: List[Tool] = [
     Tool('activate_function', handler='activate_function_tool', mutating=True, manifest={
         "tool_name": "activate_function",
         "action_type": "virtual_tool_call",
-        "description": "Activates an existing function by function_id. Requires human approval.",
+        "description": "Activates an existing function by function_id. Requires human approval. Refuses a trigger_sequence with no steps.",
         "usage_hint": "params.arguments: {function_id: '<unique_id>'}",
     }),
     Tool('deactivate_function', handler='deactivate_function_tool', mutating=True, manifest={
@@ -2461,7 +2461,7 @@ _MCP_TOOL_PAYLOADS: List[Dict[str, Any]] = [
     },
     {
         "tool_name": "get_function_list",
-        "description": "List registered control Functions with name, type and activation state. The entry point for understanding what automation is configured. Read-only.",
+        "description": "List registered control Functions with name, type, trigger_type (e.g. trigger_sequence) and activation state. The entry point for understanding what automation is configured. Read-only.",
         "input_schema": {
             "type": "object",
             "properties": {
@@ -2603,7 +2603,7 @@ _MCP_TOOL_PAYLOADS: List[Dict[str, Any]] = [
     },
     {
         "tool_name": "activate_function",
-        "description": "Activates an existing function by function_id. Requires human approval.",
+        "description": "Activates an existing function by function_id. Requires human approval. Refuses a trigger_sequence with no steps.",
         "input_schema": {
             "type": "object",
             "properties": {"function_id": {"type": "string", "description": "unique_id of the function to activate."}},

@@ -4010,7 +4010,9 @@ class AoTDataToolService:
     def get_function_list(function_type=None, active_only=False):
         """
         Returns all registered Function-type controllers with their name, type,
-        activation state, and period.
+        activation state, and period. Trigger entries also carry trigger_type
+        (e.g. 'trigger_sequence') so a sequence can be told apart from a plain
+        timer/edge trigger without a separate get_function_detail call per row.
 
         :param function_type: Filter by type string — one of 'conditional',
                               'trigger', 'pid', 'custom'. Case-insensitive.
@@ -4053,6 +4055,7 @@ class AoTDataToolService:
                         "function_id": r.unique_id,
                         "name": r.name,
                         "function_type": "trigger",
+                        "trigger_type": getattr(r, 'trigger_type', None),
                         "is_activated": bool(getattr(r, 'is_activated', False)),
                         "period": getattr(r, 'period', None),
                     })
@@ -4366,6 +4369,7 @@ class AoTDataToolService:
         """
         Activates a Function-type controller (Conditional, Trigger, PID, or
         CustomController). Updates is_activated=True in DB and signals the daemon.
+        Refuses to activate a trigger_sequence that has no steps yet.
 
         NOTE: This tool is in APPROVAL_REQUIRED_TOOLS — the planning service
         will intercept it and request human confirmation before execution.
@@ -4396,7 +4400,7 @@ class AoTDataToolService:
         Resolves function type, updates DB, and calls DaemonControl.
         """
         try:
-            from aot.databases.models.function import Conditional, Trigger
+            from aot.databases.models.function import Conditional, Trigger, Actions
             from aot.databases.models.controller import CustomController
             from aot.databases.models.pid import PID
             from aot.aot_flask.extensions import db as _db
@@ -4442,6 +4446,17 @@ class AoTDataToolService:
 
             if mod is None:
                 return {"error": f"Function not found: {function_id}"}
+
+            # A trigger_sequence with no steps has nothing to run — activating it
+            # would flip is_activated on real device control with no configured
+            # actions. create_sequence_function already refuses to create one
+            # empty; mirror that guard here so an empty one can't be activated
+            # later either (same message style as configure_sequence_day).
+            if activate and controller_type == 'Trigger' and getattr(mod, 'trigger_type', None) == 'trigger_sequence':
+                has_steps = Actions.query.filter(Actions.function_id == mod.unique_id).first()
+                if not has_steps:
+                    return {"error": f"'{mod.name}' has no steps yet — add devices to it "
+                                      "before activating (create_sequence_function / modify_sequence_step)."}
 
             # Update DB
             mod.is_activated = activate
