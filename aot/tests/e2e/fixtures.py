@@ -39,6 +39,7 @@ DASHBOARD = 'E2E Dashboard'
 # 공지 — 작성한 것이 대시보드 위젯까지 가는지 보는 데 쓴다.
 # 시설 — 만들고 다시 열어 확인하는 데 쓴다.
 FACILITY_NAME = 'E2E Facility'
+FACILITY_DELETE_NAME = 'E2E Facility To Delete'   # 삭제 검사 전용
 
 # 일정 — 달력에 뜨는지 보는 데 쓴다.
 SCHEDULE_TITLE = 'E2E Scheduled Run'

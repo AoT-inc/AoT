@@ -33,7 +33,7 @@ _refuse_unless_e2e_stack()
 from aot.aot_flask.extensions import db  # noqa: E402
 from aot.databases.models import (  # noqa: E402
     Actions, Conditional, Dashboard, DeviceMeasurements, Function, GeoJournal,
-    GeoMap, GeoPlot, GeoShape, Input, MCPConfirmation, Output, OutputChannel,
+    GeoFacility, GeoMap, GeoPlot, GeoShape, Input, MCPConfirmation, Output, OutputChannel,
     SchedulerJobMeta, Trigger, User, Widget)
 from aot.tests.e2e import fixtures as F  # noqa: E402
 
@@ -110,6 +110,12 @@ def _purge():
     # 이름으로만 골라 지우면 그리기 여정이 남긴 도형이 실행마다 쌓인다 —
     # 사각형 하나를 그리면 본체와 라벨 보조 도형이 함께 생겨 두 개씩 는다.
     # 시드가 "같은 상태에서 시작한다" 를 보장하려면 그 잔재도 거둬야 한다.
+    # 시설도 **전부** 지운다 — 시설의 외곽은 도형이라 위에서 지운 도형과 함께
+    # 사라지는데, 시설 행만 남으면 외곽 없는 시설이 목록에 쌓인다. 이 스택의
+    # 시설은 여정이 만든 것뿐이다(시드는 시설을 심지 않는다).
+    for row in GeoFacility.query.all():
+        db.session.delete(row)
+
     for row in GeoShape.query.all():
         db.session.delete(row)
 
