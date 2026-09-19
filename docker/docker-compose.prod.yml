@@ -31,6 +31,10 @@ services:
       # Facility 3D model assets (.glb/.gltf + preview thumbnails) — same risk,
       # separate mount because it lives under the Flask static folder, not /app/uploads.
       - aot_model_assets:/app/aot/aot_flask/static/uploads/model_assets
+      # Map image overlays (drone/aerial photos + generated tile pyramids) — same
+      # reason and same location as model_assets; without it every uploaded
+      # overlay image 404s after the next image swap.
+      - aot_geo_overlays:/app/aot/aot_flask/static/uploads/geo_overlays
       # admin/backup snapshots (see aot/utils/docker_backup.py) — must persist
       # independently of aot_data, since a backup exists precisely so it can
       # outlive a bad restore or a corrupted live DB.
@@ -187,6 +191,7 @@ volumes:
   aot_logs:
   aot_uploads:
   aot_model_assets:
+  aot_geo_overlays:
   aot_backups:
   aot_user_scripts:
   influxdb_data:
