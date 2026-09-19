@@ -21,6 +21,8 @@
 #  Contact at kylegabriel.com
 #
 
+import contextlib
+import fcntl
 import subprocess
 
 import sqlalchemy
@@ -29,6 +31,7 @@ from sqlalchemy import and_
 
 from aot.config import ALEMBIC_VERSION
 from aot.config import INSTALL_DIRECTORY
+from aot.config import SQL_DATABASE_AOT
 from aot.config import USER_ROLES
 from aot.config_devices_units import UNIT_CONVERSIONS
 from aot.aot_flask.extensions import db
@@ -148,11 +151,52 @@ from .geo_facility_setpoint import GeoFacilitySetpoint
 
 
 
+@contextlib.contextmanager
+def _startup_db_lock():
+    """File lock serializing the one-time, first-boot DB setup across processes.
+
+    gunicorn forks several worker processes that each independently call
+    alembic_upgrade_db() and populate_db() at startup. Against a completely
+    empty DB volume this is a race on every "does this row/table exist yet"
+    check followed by a create — two workers can both see nothing there and
+    both try to create it. Observed in practice (2026-09-18) as two separate
+    crashes with GUNICORN_WORKERS=2 against a fresh volume:
+      - alembic_upgrade_db(): both workers see "no such table:
+        alembic_version" and both run `db.create_all()`; the loser gets
+        "table alembic_version already exists".
+      - populate_db(): both workers see zero Role rows and both insert the
+        same default roles; the loser gets "UNIQUE constraint failed:
+        roles.id".
+    Either crash kills that worker during gunicorn's boot barrier, which
+    gunicorn treats as "Worker failed to boot" and shuts the whole master
+    down — the container dies. `restart: "no"` (as in the E2E/prod compose
+    files) means nothing brings it back.
+
+    The lock file lives next to the database file so every worker (and any
+    other process that imports this module) blocks on the same lock
+    regardless of who gets there first. Once the first caller has finished
+    creating/populating, later callers just see everything already exists
+    and take the fast idempotent no-op path — so the lock only matters on
+    the very first boot, and costs nothing afterward beyond an flock/funlock
+    pair.
+
+    @phase active
+    """
+    lock_path = f"{SQL_DATABASE_AOT}.migrate.lock"
+    with open(lock_path, 'a+') as lock_file:
+        fcntl.flock(lock_file, fcntl.LOCK_EX)
+        try:
+            yield
+        finally:
+            fcntl.flock(lock_file, fcntl.LOCK_UN)
+
+
 def alembic_upgrade_db(app):
     """Upgrade the SQLite database schema to the current ALEMBIC_VERSION using Alembic.
 
     Checks the alembic_version row; if absent, empty, or mismatched, runs the
-    upgrade script. Idempotent — safe to call on every startup.
+    upgrade script. Idempotent — safe to call on every startup. Serialized
+    across processes by _startup_db_lock() — see that docstring.
 
     Fresh installs and existing installs take deliberately different paths (see
     the two branches below) — collapsing them caused the 2026-08-18 bug where
@@ -162,6 +206,15 @@ def alembic_upgrade_db(app):
     so alembic's own `CREATE TABLE` for that same table failed with "already
     exists" and the version was never bumped — indistinguishable from success
     to the caller, since the subprocess failure is only logged, not raised).
+
+    @phase active
+    """
+    with _startup_db_lock():
+        _alembic_upgrade_db_locked(app)
+
+
+def _alembic_upgrade_db_locked(app):
+    """Body of alembic_upgrade_db(), run while holding the startup DB lock.
 
     @phase active
     """
@@ -277,57 +330,61 @@ def populate_db():
 
     Creates initial system configuration records if they are not already present.
     Idempotent for known roles (updates existing records). Must be called after
-    init_db().
+    init_db(). Serialized across processes by _startup_db_lock() — see that
+    docstring; on a fresh install this races the same way alembic_upgrade_db()
+    did (two workers both see zero Role rows and both insert the same
+    defaults, one gets "UNIQUE constraint failed: roles.id").
 
     @phase active
     """
-    known_roles = {r.name: r for r in Role.query.all()}
-    for role_cfg in USER_ROLES:
-        if role_cfg['name'] in known_roles:
-            # Update Previous Roles
-            previous_record = known_roles[role_cfg['name']]
-            for k, v in role_cfg.items():
-                if k == 'id':  # skip the primary key
-                    continue
-                setattr(previous_record, k, v)  # set values from app config
-                previous_record.save()
-        else:
-            # Create new roles
-            Role(**role_cfg).save()
+    with _startup_db_lock():
+        known_roles = {r.name: r for r in Role.query.all()}
+        for role_cfg in USER_ROLES:
+            if role_cfg['name'] in known_roles:
+                # Update Previous Roles
+                previous_record = known_roles[role_cfg['name']]
+                for k, v in role_cfg.items():
+                    if k == 'id':  # skip the primary key
+                        continue
+                    setattr(previous_record, k, v)  # set values from app config
+                    previous_record.save()
+            else:
+                # Create new roles
+                Role(**role_cfg).save()
 
-    if not AlembicVersion.query.count():
-        AlembicVersion().save()
-    if not DisplayOrder.query.count():
-        DisplayOrder(id=1).save()
-    if not Misc.query.count():
-        Misc(id=1).save()
-    if not Misc.query.count():
-        Misc(id=1).save()
-    if not AIGlobalSettings.query.count():
-        AIGlobalSettings(id=1).save()
+        if not AlembicVersion.query.count():
+            AlembicVersion().save()
+        if not DisplayOrder.query.count():
+            DisplayOrder(id=1).save()
+        if not Misc.query.count():
+            Misc(id=1).save()
+        if not Misc.query.count():
+            Misc(id=1).save()
+        if not AIGlobalSettings.query.count():
+            AIGlobalSettings(id=1).save()
 
-    if not GeoSetting.query.count():
-        GeoSetting(id=1).save()
-    if not SMTP.query.count():
-        SMTP(id=1).save()
-    if not Dashboard.query.count():
-        Dashboard(id=1, name='Default').save()
-    if not APIKey.query.count():
-        # Optional: Add any default API keys if needed
-        pass
-    
-    if not IrrigationDesign.query.count():
-        # Optional: Add default design if needed
-        pass
+        if not GeoSetting.query.count():
+            GeoSetting(id=1).save()
+        if not SMTP.query.count():
+            SMTP(id=1).save()
+        if not Dashboard.query.count():
+            Dashboard(id=1, name='Default').save()
+        if not APIKey.query.count():
+            # Optional: Add any default API keys if needed
+            pass
 
-    # Populate conversion tables
-    for (conv_from, conv_to, equation) in UNIT_CONVERSIONS:
-        if not Conversion.query.filter(
-                and_(Conversion.convert_unit_from == conv_from,
-                     Conversion.convert_unit_to == conv_to)).count():
-            new_conv = Conversion()
-            new_conv.protected = True
-            new_conv.convert_unit_from = conv_from
-            new_conv.convert_unit_to = conv_to
-            new_conv.equation = equation
-            new_conv.save()
+        if not IrrigationDesign.query.count():
+            # Optional: Add default design if needed
+            pass
+
+        # Populate conversion tables
+        for (conv_from, conv_to, equation) in UNIT_CONVERSIONS:
+            if not Conversion.query.filter(
+                    and_(Conversion.convert_unit_from == conv_from,
+                         Conversion.convert_unit_to == conv_to)).count():
+                new_conv = Conversion()
+                new_conv.protected = True
+                new_conv.convert_unit_from = conv_from
+                new_conv.convert_unit_to = conv_to
+                new_conv.equation = equation
+                new_conv.save()
