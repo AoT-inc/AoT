@@ -17,7 +17,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from config_translations import TRANSLATIONS as T
 
 MYCODO_VERSION = '8.16.0'
-ALEMBIC_VERSION = 'p6_69_geo_marker_position_20260915'
+ALEMBIC_VERSION = 'p6_70_mcp_audit_indexes_20260920'
 AOT_VERSION = '26.09.05'
 
 # FORCE UPGRADE MASTER
@@ -222,6 +222,15 @@ LOGIN_BAN_SECONDS = 600  # 10 minutes
 # 보존기간(1년)을 기본값으로 둔다. 발주기관이 더 긴 기간을 요구하면 이 값만
 # 올리면 되고, 0 이하로 두면 자동 정리를 끈다(무한 증가하므로 권장하지 않음).
 AUDIT_LOG_RETENTION_DAYS = 365
+
+# MCP 계열 테이블(mcp_audit_log, mcp_confirmation) 보존기간. 범용 audit_log 와
+# 분리한 이유는 성격이 다르기 때문이다 — 이쪽은 "누가 로그인했는가" 같은 접속기록이
+# 아니라 AI 도구 호출 이력이라 법정 최소보존 대상이 아니고, 대신 호출량이 훨씬
+# 많아 오래 두면 그냥 무게만 된다. 90일은 MCPAuditLog docstring 이 애초에 밝힌
+# 의도값이다. 두 테이블에 같은 값을 쓰는 것도 의도된 것으로, mcp_audit_log.
+# confirmation_id 가 mcp_confirmation.unique_id 를 가리키므로 보존기간을 다르게
+# 두면 한쪽에 끊어진 참조가 남는다. 0 이하면 자동 정리를 끈다.
+MCP_AUDIT_RETENTION_DAYS = 90
 
 # Check for upgrade every 2 days (if enabled)
 UPGRADE_CHECK_INTERVAL = 172800

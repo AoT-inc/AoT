@@ -161,3 +161,56 @@ def purge_old_audit_logs(retention_days=None):
         db.session.rollback()
         logger.exception("감사로그 정리 실패")
         return 0
+
+
+def purge_old_mcp_logs(retention_days=None):
+    """보존기간이 지난 MCP 감사로그/승인큐 삭제.
+
+    `purge_old_audit_logs` 와 같은 잡(`_audit_log_purge_job`)이 이어서 호출한다.
+    범용 audit_log 만 정리하던 탓에 mcp_audit_log(모델 docstring 은 "90일 보존"
+    이라고 적혀 있었다)와 mcp_confirmation 은 아무도 지우지 않아 무한히 커지고
+    있었다.
+
+    두 테이블을 같은 cutoff 로 함께 지운다. mcp_audit_log.confirmation_id 가
+    mcp_confirmation.unique_id 를 가리키므로 따로 지우면 한쪽에 끊어진 참조가
+    남기 때문이다(FK 제약이 아니라 문자열 참조라 DB가 막아주지 않는다).
+
+    승인큐는 status 를 보지 않고 지운다 — 승인·실행 유효시간(`mcp_safety_gate` 의
+    기본 15분/5분)이 보존기간(기본 90일)보다 훨씬 짧아, 지나간 pending 행은
+    이미 오래전에 만료돼 다시 쓰일 수 없다.
+
+    :param retention_days: None 이면 config.MCP_AUDIT_RETENTION_DAYS.
+        0 이하면 정리하지 않는다.
+    :return: (감사로그 삭제수, 승인큐 삭제수)
+    """
+    from datetime import datetime, timedelta
+
+    from aot.databases.models import MCPAuditLog, MCPConfirmation
+
+    if retention_days is None:
+        from aot.config import MCP_AUDIT_RETENTION_DAYS
+        retention_days = MCP_AUDIT_RETENTION_DAYS
+
+    if retention_days is None or retention_days <= 0:
+        logger.debug("MCP 로그 보존기간이 0 이하 — 자동 정리를 건너뜁니다")
+        return 0, 0
+
+    try:
+        # 두 테이블 모두 naive UTC(datetime.utcnow)로 기록되므로 cutoff 도
+        # naive UTC 로 맞춘다. utc_now() 의 aware 값을 그대로 비교에 넣으면
+        # 백엔드에 따라 tz 오프셋 처리 방식이 달라진다.
+        cutoff = datetime.utcnow() - timedelta(days=retention_days)
+
+        logs = MCPAuditLog.query.filter(MCPAuditLog.timestamp < cutoff).delete()
+        confirms = MCPConfirmation.query.filter(
+            MCPConfirmation.created_at < cutoff).delete()
+        db.session.commit()
+
+        if logs or confirms:
+            logger.info("MCP 감사로그 %s건 · 승인큐 %s건 삭제 (보존 %s일 초과)",
+                        logs, confirms, retention_days)
+        return logs, confirms
+    except Exception:
+        db.session.rollback()
+        logger.exception("MCP 로그 정리 실패")
+        return 0, 0

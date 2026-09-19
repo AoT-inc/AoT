@@ -127,6 +127,10 @@ the Rows limit, so the file can hold more than what is shown on screen.
 Entries older than 1 year (`AUDIT_LOG_RETENTION_DAYS`) are removed automatically by
 a daily background job. This is not currently configurable from the settings page.
 
+AI tool-call history (the MCP audit log) and its approval queue are a different kind of
+record from access logs, so they are removed by the same job after 90 days
+(`MCP_AUDIT_RETENTION_DAYS`).
+
 Passwords, password hashes, and API keys themselves are never written to the audit
 log — only the fact that an action occurred and who performed it.
 
