@@ -55,13 +55,49 @@ def _login(session, base, username, password):
     return resp
 
 
+#: 검사가 만든 HTTP 세션들 — 웹 앱을 재시작한 뒤 연결 풀을 비우는 데 쓴다.
+_SESSIONS = []
+
+
+def _tracked(session):
+    """검사용 세션 — 읽기 요청(GET)은 끊긴 연결에서 두 번까지 다시 보낸다.
+
+    gunicorn 은 유휴 keep-alive 연결을 곧 닫는다. 검사가 그 무렵에 같은 연결을
+    다시 쓰면 "Remote end closed connection without response" 로 실패한다 — 앱의
+    잘못이 아니라 연결 재사용의 경합이다(2026-09-19, 2초 간격 폴링에서 반복).
+    쓰기(POST 등)는 다시 보내지 않는다 — 두 번 실행될 수 있다.
+    """
+    from requests.adapters import HTTPAdapter
+    from urllib3.util.retry import Retry
+
+    retry = Retry(total=2, connect=2, read=2, status=0, backoff_factor=0.2,
+                  allowed_methods=frozenset({'GET', 'HEAD'}), raise_on_status=False)
+    adapter = HTTPAdapter(max_retries=retry)
+    session.mount('http://', adapter)
+    session.mount('https://', adapter)
+    _SESSIONS.append(session)
+    return session
+
+
+def reset_http_sessions():
+    """웹 앱을 재시작한 뒤 부른다 — 세션들의 연결 풀을 비운다.
+
+    requests 세션은 연결을 다시 쓴다. 앱이 재시작되면 풀에 남은 연결은 죽어 있어,
+    나중에 그것을 집은 요청이 "Remote end closed connection without response" 로
+    실패한다 — 재시작 뒤 **아무 검사에서나** 우연히 터진다(2026-09-19 L3 C4).
+    로그인 쿠키는 세션에 그대로 있으므로 로그인은 유지된다.
+    """
+    for session in _SESSIONS:
+        session.close()
+
+
 @pytest.fixture(scope='session')
 def admin_http(base_url):
     """관리자로 로그인한 `requests.Session`."""
     import requests
     from aot.tests.e2e import fixtures as F
 
-    session = requests.Session()
+    session = _tracked(requests.Session())
     resp = _login(session, base_url, F.ADMIN_USER, F.ADMIN_PASS)
     assert resp.status_code == 200, f'관리자 로그인 실패: {resp.status_code}'
     assert '/login' not in resp.url, (
@@ -77,7 +113,7 @@ def guest_http(base_url):
     import requests
     from aot.tests.e2e import fixtures as F
 
-    session = requests.Session()
+    session = _tracked(requests.Session())
     _login(session, base_url, F.GUEST_USER, F.GUEST_PASS)
     return session
 
@@ -88,7 +124,7 @@ def monitor_http(base_url):
     import requests
     from aot.tests.e2e import fixtures as F
 
-    session = requests.Session()
+    session = _tracked(requests.Session())
     _login(session, base_url, F.MONITOR_USER, F.MONITOR_PASS)
     return session
 
@@ -99,7 +135,7 @@ def editor_http(base_url):
     import requests
     from aot.tests.e2e import fixtures as F
 
-    session = requests.Session()
+    session = _tracked(requests.Session())
     _login(session, base_url, F.EDITOR_USER, F.EDITOR_PASS)
     return session
 
@@ -119,7 +155,7 @@ def form_csrf(html):
 def anon_http():
     """로그인하지 않은 세션 — 인증 게이트 검사용."""
     import requests
-    return requests.Session()
+    return _tracked(requests.Session())
 
 
 # ---------------------------------------------------------------------------

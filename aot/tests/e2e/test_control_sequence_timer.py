@@ -5,9 +5,9 @@
     데몬의 사실과 같다.
   * C5 시퀀스를 끄면 그 단계의 출력이 **확실히** 꺼진다 — 끈 줄 알았는데 밸브가
     열려 있는 것이 이 계열에서 가장 위험한 사고다.
-  * C4 타이머가 도는 중에 웹 앱이 재시작돼도 출력과 표시가 사실과 맞는다.
-    타이머의 반복은 웹 프로세스 안의 작업 스레드가 돌리므로, 재시작이 곧 그
-    스레드의 죽음이다.
+  * C4 타이머가 도는 중에 웹 앱이 재시작돼도 출력과 표시가 사실과 맞고, 반복은
+    남은 주기를 이어 돈다. 타이머의 반복은 웹 프로세스 안의 작업 스레드가 돌리므로,
+    재시작이 곧 그 스레드의 죽음이다 — 복구가 상태 파일로 그 자리를 되찾는다.
 
 대상은 시드가 만든 가상 출력(E2E Virtual Multi)의 채널 1(시퀀스)·2(타이머)다.
 채널 0 은 다른 제어 검사와 에너지 검사가 쓴다.
@@ -17,7 +17,7 @@ import time
 import pytest
 
 from aot.tests.e2e import fixtures as F
-from aot.tests.e2e.conftest import csrf_headers
+from aot.tests.e2e.conftest import csrf_headers, reset_http_sessions
 from aot.tests.e2e.journeys import open_dashboard
 
 pytestmark = pytest.mark.e2e
@@ -176,8 +176,9 @@ def _timer_status(session, base_url, out, channel_id):
     return resp.json() if resp.status_code == 200 and resp.text.strip() else {}
 
 
-def _start_timer_then_restart_app(daemon, admin_http, base_url, output_states):
-    """타이머를 TIMER_RUN_SEC 동안 켜고, 도는 중에 웹 앱을 재시작한다."""
+def _start_timer_then_restart_app(daemon, admin_http, base_url, output_states,
+                                  payload=None):
+    """타이머를 켜고(기본: TIMER_RUN_SEC 한 번), 도는 중에 웹 앱을 재시작한다."""
     from aot.tests.e2e import daemon as control
 
     out = _output_id(admin_http, base_url)
@@ -186,7 +187,7 @@ def _start_timer_then_restart_app(daemon, admin_http, base_url, output_states):
     started = admin_http.post(
         f'{base_url}/aot_timer_cycle_start/{out}/{channel_id}', timeout=60,
         headers=csrf_headers(admin_http, base_url),
-        json={'mode': 'simple', 'run_sec': TIMER_RUN_SEC})
+        json=payload or {'mode': 'simple', 'run_sec': TIMER_RUN_SEC})
     assert started.status_code == 200, f'타이머 시작이 HTTP {started.status_code}'
     t0 = time.time()
     assert _wait_channel(output_states, out, F.TIMER_CHANNEL, 'on', 20) == 'on', (
@@ -196,6 +197,7 @@ def _start_timer_then_restart_app(daemon, admin_http, base_url, output_states):
         return admin_http.get(f'{base_url}/outputstate', timeout=10,
                               headers={'Accept': 'application/json'}).status_code == 200
     assert control.restart_app(_up), '웹 앱이 재시작 뒤 응답하지 않습니다'
+    reset_http_sessions()   # 재시작 전 연결은 죽었다 — 모든 세션의 풀을 비운다
     return out, channel_id, t0
 
 
@@ -233,15 +235,13 @@ def test_c4_a_timed_run_still_ends_across_an_app_restart(
         _force(admin_http, base_url, out, F.TIMER_CHANNEL, 'off')
 
 
-@pytest.mark.xfail(strict=True, reason=(
-    '알려진 결함(2026-09-18): 타이머 반복은 웹 프로세스의 작업 스레드가 돌리고, '
-    '재시작 뒤 재개(recover_scheduled_workers)는 시작 전 예약만 다시 건다. 도는 중이던 '
-    '타이머는 스레드와 함께 사라져 상태가 "진행 중" 으로 굳고, 반복 모드의 남은 주기는 '
-    '조용히 사라진다. 타이머 코드는 별도 PR(pr/aot-timer-widget-control)에서 고치는 중이라 '
-    '여기서는 결함을 고정만 한다 — 고쳐지면 이 표시가 strict 로 실패해 알려 준다.'))
 def test_c4_after_an_app_restart_the_timer_does_not_claim_to_run(
         daemon, admin_http, base_url, output_states):
-    """끝난 타이머가 "진행 중" 으로 남으면 사람은 그것을 믿는다."""
+    """끝난 타이머가 "진행 중" 으로 남으면 사람은 그것을 믿는다.
+
+    2026-09-18 까지 그랬다 — 재시작 뒤 복구가 시작 전 예약만 다시 걸어, 도는 중이던
+    타이머는 스레드와 함께 사라지고 상태가 running 으로 굳었다.
+    """
     out, channel_id, t0 = _start_timer_then_restart_app(
         daemon, admin_http, base_url, output_states)
     try:
@@ -257,3 +257,50 @@ def test_c4_after_an_app_restart_the_timer_does_not_claim_to_run(
         admin_http.post(f'{base_url}/aot_timer_cycle_stop/{out}/{channel_id}', timeout=60,
                         headers=csrf_headers(admin_http, base_url))
         _force(admin_http, base_url, out, F.TIMER_CHANNEL, 'off')
+
+
+CYCLE_RUN_SEC, CYCLE_REST_SEC, CYCLES = 20, 15, 2
+
+
+def test_c4_a_cycle_timer_picks_up_its_remaining_cycles_after_a_restart(
+        daemon, admin_http, base_url, output_states):
+    """반복 타이머는 재시작 뒤 **남은 주기를 이어 돈다** — 누가 화면을 열지 않아도.
+
+    20초 켜짐 · 15초 쉼 · 2주기를 첫 켜짐 도중에 재시작한다. 그 뒤로는 타이머 상태를
+    조회하지 않는다(예전에는 상태 조회가 들어와야 복구가 돌았다 — 밤 관수처럼 아무도
+    보지 않으면 다시 걸리지 않았다). 2주기가 제 시각에 켜지면 앱이 스스로 이은 것이다.
+    """
+    out, channel_id, t0 = _start_timer_then_restart_app(
+        daemon, admin_http, base_url, output_states,
+        payload={'mode': 'cycle', 'run_sec': CYCLE_RUN_SEC,
+                 'rest_sec': CYCLE_REST_SEC, 'cycles': CYCLES})
+    ch = F.TIMER_CHANNEL
+    try:
+        # 1주기 켜짐이 끝나면 꺼지고(데몬이 기간으로 끈다),
+        first_end = CYCLE_RUN_SEC - (time.time() - t0)
+        assert _wait_channel(output_states, out, ch, 'off', max(5, first_end) + 15) == 'off', (
+            '1주기 켜짐이 끝나지 않았습니다')
+        # 쉼이 지나면 2주기가 **다시 켜진다** — 이어서 돌고 있다는 증거
+        second_start = CYCLE_RUN_SEC + CYCLE_REST_SEC - (time.time() - t0)
+        again = _wait_channel(output_states, out, ch, 'on', max(5, second_start) + 25)
+        assert again == 'on', (
+            f'재시작 뒤 2주기가 켜지지 않았습니다({again!r}) — 남은 주기가 사라졌습니다')
+        # 2주기가 끝나면 꺼지고, 상태는 완료다
+        total = CYCLES * CYCLE_RUN_SEC + (CYCLES - 1) * CYCLE_REST_SEC
+        assert _wait_channel(output_states, out, ch, 'off',
+                             max(5, total - (time.time() - t0)) + 20) == 'off'
+        # 작업 스레드는 마지막 주기 뒤에도 쉼을 한 번 거친 다음 '완료' 로 적는다.
+        deadline = time.time() + CYCLE_REST_SEC + 20
+        status = {}
+        while time.time() < deadline:
+            status = _timer_status(admin_http, base_url, out, channel_id)
+            if status.get('phase') == 'completed':
+                break
+            time.sleep(2)
+        assert status.get('phase') == 'completed' and not status.get('active'), (
+            f"모든 주기가 끝났는데 상태가 {status.get('phase')!r} 입니다")
+        assert status.get('completed_cycles') == CYCLES
+    finally:
+        admin_http.post(f'{base_url}/aot_timer_cycle_stop/{out}/{channel_id}', timeout=60,
+                        headers=csrf_headers(admin_http, base_url))
+        _force(admin_http, base_url, out, ch, 'off')

@@ -132,6 +132,8 @@ def _parse_widget_information_cached(exclude_custom, custom_only, locale):
             dict_widgets = dict_has_value(dict_widgets, widget_custom, 'period')
 
             dict_widgets = dict_has_value(dict_widgets, widget_custom, 'endpoints')
+            # 웹 앱이 뜬 뒤 한 번 부를 일(app.register_widget_endpoints 가 늦춰서 부른다).
+            dict_widgets = dict_has_value(dict_widgets, widget_custom, 'on_web_start')
             dict_widgets = dict_has_value(dict_widgets, widget_custom, 'execute_at_creation')
             dict_widgets = dict_has_value(dict_widgets, widget_custom, 'execute_at_modification')
             dict_widgets = dict_has_value(dict_widgets, widget_custom, 'execute_at_deletion')

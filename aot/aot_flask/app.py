@@ -6,6 +6,7 @@ import base64
 import logging
 import os
 import sys
+import threading
 import time
 
 import flask_login
@@ -906,6 +907,20 @@ def register_widget_endpoints(app):
                     "register_widget_endpoints: failed to add %s (%s) for %s",
                     endpoint, rule, each_widget_type)
     logger.info("register_widget_endpoints: registered %d widget endpoint(s).", added)
+
+    # 위젯이 "웹 앱이 뜬 뒤 할 일" 을 선언하면 **늦춰서, 배경에서** 부른다 — 기동을
+    # 막지도 깨뜨리지도 않는다(예: 타이머 위젯이 재시작 전의 실행을 잇는 것).
+    for each_widget_type, info in dict_widgets.items():
+        hook = info.get('on_web_start') if isinstance(info, dict) else None
+        if not callable(hook):
+            continue
+        try:
+            timer = threading.Timer(15.0, hook)
+            timer.daemon = True
+            timer.start()
+        except Exception:
+            logger.exception(
+                "register_widget_endpoints: on_web_start for %s failed", each_widget_type)
 
 
 def extension_babel(app):

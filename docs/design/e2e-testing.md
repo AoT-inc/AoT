@@ -53,7 +53,7 @@ volume 이다 — **bind mount 는 프로젝트명으로 갈라지지 않기 때
 | L0 | `test_route_smoke.py` | GET 라우트 전수 — 5xx·렌더 실패 없음, 익명은 전부 차단 | ~15초 |
 | L1 | `test_page_boot.py` | 페이지마다 **부팅됐는가** | ~2분 30초 |
 | L2 | `test_journey_*.py` | 사람이 하는 일 — 저장하고 되읽기까지 | 시나리오마다 |
-| L3 | `test_control_loop.py`, `test_control_sequence_timer.py` | 누른 것이 **데몬까지 갔는가**, 실패가 정직하게 돌아오는가, 시퀀스를 켜고 끄면 데몬과 위젯이 같은 말을 하는가, 타이머가 앱 재시작을 넘기는가 | ~4분 |
+| L3 | `test_control_loop.py`, `test_control_sequence_timer.py` | 누른 것이 **데몬까지 갔는가**, 실패가 정직하게 돌아오는가, 시퀀스를 켜고 끄면 데몬과 위젯이 같은 말을 하는가, 타이머가 앱 재시작 뒤 **남은 주기를 이어 도는가** | ~5분 |
 
 ### L0 — 대상이 자동으로 자란다
 
@@ -252,6 +252,13 @@ AI 승인 대기는 모델이 무엇이었든 `MCPConfirmation` 한 행이다. �
 타이머 C4 는 웹 앱 컨테이너를 재시작한다(`daemon.restart_app`). 로그인 세션은
 재시작을 넘긴다 — 그 검사가 뒤따르는 검사들을 위해 이것도 확인한다.
 
+재시작 뒤에는 **HTTP 세션의 연결 풀을 비운다**(`conftest.reset_http_sessions`).
+풀에 남은 연결은 죽어 있어, 나중에 그것을 집은 요청이 아무 검사에서나 "Remote end
+closed connection without response" 로 터진다. 같은 증상은 재시작이 없어도 난다 —
+gunicorn 이 유휴 keep-alive 연결을 곧 닫으므로, 2초 간격 폴링이 닫히는 순간과 겹친다.
+그래서 검사 세션은 **읽기(GET)만** 끊긴 연결에서 두 번까지 다시 보낸다(`_tracked`).
+쓰기는 다시 보내지 않는다 — 두 번 실행될 수 있다.
+
 #### 권한 검사보다 CSRF 가 먼저다
 
 쓰기 요청을 게스트로 보내 "403 이어야 한다" 를 보려면 **CSRF 토큰을 실어야**
@@ -282,10 +289,6 @@ COMPLETED·FAILED). 픽스처를 만들 때는 **그 화면이 보여 주는 값
 ## 아직 없는 것
 
 - 계획서(`.local/plans/2609_e2e_test_plan.md`)의 P0·P1·P2·L3 는 모두 있다.
-- **알려진 결함 하나를 strict xfail 로 고정해 두었다** — 타이머가 도는 중에 웹 앱이
-  재시작되면 상태가 "진행 중" 으로 굳고 반복의 남은 주기가 사라진다
-  (`test_c4_after_an_app_restart_the_timer_does_not_claim_to_run`). 고쳐지면 그
-  검사가 실패로 알려 주므로 표시를 걷는다.
 
 ## 실패했을 때
 

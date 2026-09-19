@@ -908,7 +908,11 @@ def _cyc_stop_worker(device_unique_id, channel_id, reason='user_stop'):
 
 
 def _cyc_worker(device_unique_id, channel_id, channel_index,
-                run_sec, rest_sec, total_cycles, mode, scheduled_until_ms, start_at, run_id, stop_event):
+                run_sec, rest_sec, total_cycles, mode, scheduled_until_ms, start_at, run_id, stop_event,
+                resume=None):
+    """`resume` 이 있으면 **웹 앱 재시작 전에 돌던 실행을 그 자리부터 잇는다**
+    (recover_scheduled_workers → _cyc_resume_point). 키: cycle, kind('run'|'rest'),
+    remaining_sec, started_at_ms. 없으면 처음부터 시작한다(기존 동작)."""
     key = _cyc_key(device_unique_id, channel_id)
     # extended_timeout=True: allow up to 30 s Pyro5 RPC so remote-output HTTP
     # calls (which may need 15+ s on slow networks) don't time out mid-command.
@@ -927,16 +931,26 @@ def _cyc_worker(device_unique_id, channel_id, channel_index,
     set_thread_default(TYPE_TIMER, f"{device_unique_id}:{channel_id}")
     try:
         now_ms = int(time.time() * 1000)
+        resume = resume or None
+        first_cycle = int(resume['cycle']) if resume else 1
         # started_at_ms is intentionally left None here so the total-time counter
         # does NOT run during the scheduled wait — it is set when operation begins.
+        # 이어서 도는 실행은 원래 시작 시각·완료 수를 그대로 둔다(총 가동 시간이 재시작에서
+        # 0 으로 돌아가지 않게).
         _cyc_state_update(
             device_unique_id, channel_id,
-            active=True, phase='initializing', message='Initializing', mode=mode,
+            active=True, phase='initializing',
+            message='Resuming' if resume else 'Initializing', mode=mode,
             run_sec=run_sec, rest_sec=rest_sec, target_cycles=total_cycles,
-            current_cycle=0, completed_cycles=0, started_at_ms=None, stopped_at_ms=None,
+            current_cycle=first_cycle if resume else 0,
+            completed_cycles=(first_cycle - 1) if resume else 0,
+            started_at_ms=resume.get('started_at_ms') if resume else None,
+            stopped_at_ms=None,
             next_transition_ms=None, phase_started_ms=None, phase_duration_sec=0,
-            scheduled_until_ms=scheduled_until_ms, error=None, run_id=run_id,
-            start_at=str(start_at or '00:00'))
+            scheduled_until_ms=None if resume else scheduled_until_ms, error=None,
+            run_id=run_id, start_at=str(start_at or '00:00'))
+        if resume:
+            scheduled_until_ms = None   # 이어서 도는 실행에는 예약 대기가 없다
 
         # ---- Scheduled start: wait until the target wall-clock time ----
         if isinstance(scheduled_until_ms, int) and scheduled_until_ms > now_ms:
@@ -959,7 +973,8 @@ def _cyc_worker(device_unique_id, channel_id, channel_index,
 
         # ---- Operation begins now: start the total-time counter here so the
         #      scheduled wait above is excluded from total operation time. ----
-        _cyc_state_update(device_unique_id, channel_id, started_at_ms=int(time.time() * 1000))
+        if not (resume and resume.get('started_at_ms')):
+            _cyc_state_update(device_unique_id, channel_id, started_at_ms=int(time.time() * 1000))
 
         # ---- Infinite hold (simple mode, run_sec <= 0): ON until stopped ----
         if run_sec <= 0:
@@ -1003,13 +1018,33 @@ def _cyc_worker(device_unique_id, channel_id, channel_index,
             return
 
         # ---- Normal run / (rest) x cycles ----
-        for cycle in range(1, total_cycles + 1):
+        for cycle in range(first_cycle, total_cycles + 1):
             if _cyc_should_stop(device_unique_id, channel_id, run_id, stop_event):
                 if not stop_event.is_set():
                     superseded = True
                 break
+            # 이어서 도는 첫 주기: 쉼 구간이면 켜짐을 건너뛰고 남은 쉼만 쉰다.
+            resuming_here = bool(resume) and cycle == first_cycle
+            if resuming_here and resume.get('kind') == 'rest':
+                rest_left = max(0, int(round(resume.get('remaining_sec') or 0)))
+                now_ms = int(time.time() * 1000)
+                _cyc_state_update(
+                    device_unique_id, channel_id, completed_cycles=cycle, current_cycle=cycle,
+                    message=f'{cycle}/{total_cycles}, Resting', phase='resting',
+                    phase_started_ms=now_ms, phase_duration_sec=max(1, rest_left),
+                    next_transition_ms=now_ms + rest_left * 1000)
+                if not _cyc_sleep(device_unique_id, channel_id, run_id, stop_event, rest_left):
+                    if not stop_event.is_set():
+                        superseded = True
+                    break
+                continue
+            # 켜짐 구간 중간에서 잇는다면 **남은 시간만** 켠다. 기간은 데몬에 실려 가므로
+            # (출력이 이미 켜져 있어도) 같은 끝 시각에 데몬이 끈다 — 다시 보내도 무해하다.
+            this_run = run_sec
+            if resuming_here and resume.get('remaining_sec'):
+                this_run = max(1, int(round(resume['remaining_sec'])))
             ok, err = _issue_output_command_with_retry(
-                daemon, device_unique_id, channel_index, 'on', run_sec, stop_event=stop_event)
+                daemon, device_unique_id, channel_index, 'on', this_run, stop_event=stop_event)
             if not ok:
                 _cyc_state_update(
                     device_unique_id, channel_id, active=False, phase='error',
@@ -1027,15 +1062,15 @@ def _cyc_worker(device_unique_id, channel_id, channel_index,
                 _cyc_state_update(
                     device_unique_id, channel_id, phase='running', current_cycle=cycle,
                     message=f'{cycle}/{total_cycles}, Active', phase_started_ms=phase_start,
-                    phase_duration_sec=max(1, run_sec), next_transition_ms=phase_start + run_sec * 1000,
+                    phase_duration_sec=max(1, this_run), next_transition_ms=phase_start + this_run * 1000,
                     active=True)
             else:
                 _cyc_state_update(
                     device_unique_id, channel_id, phase='offline', current_cycle=cycle,
                     message=f'{cycle}/{total_cycles}, Offline (no response)', phase_started_ms=None,
-                    phase_duration_sec=0, next_transition_ms=phase_start + run_sec * 1000,
+                    phase_duration_sec=0, next_transition_ms=phase_start + this_run * 1000,
                     active=True)
-            if not _cyc_sleep(device_unique_id, channel_id, run_id, stop_event, run_sec):
+            if not _cyc_sleep(device_unique_id, channel_id, run_id, stop_event, this_run):
                 if not stop_event.is_set():
                     superseded = True
                 break
@@ -1110,16 +1145,21 @@ def _cyc_worker(device_unique_id, channel_id, channel_index,
 
 
 def _cyc_start_worker(device_unique_id, channel_id, channel_index,
-                      run_sec, rest_sec, total_cycles, mode, scheduled_until_ms, start_at='00:00'):
+                      run_sec, rest_sec, total_cycles, mode, scheduled_until_ms, start_at='00:00',
+                      resume=None):
     # 재시작 전 정리 OFF 도 타이머가 낸 명령이다. 여기를 비워 두면 그 한 건만
     # `unknown` 으로 남아, 출처 불명(=탐지 신호)의 의미가 흐려진다. 사람이 누른
     # 정지(`aot_timer_cycle_stop`)는 요청 문맥에서 `user` 로 잡히므로 건드리지
     # 않는다 — 그쪽이 더 나은 기록이다.
-    set_execution_context(TYPE_TIMER, f"{device_unique_id}:{channel_id}")
-    try:
-        _cyc_stop_worker(device_unique_id, channel_id, reason='restart')
-    finally:
-        clear_execution_context()
+    # 재시작 뒤 **이어서 도는** 실행은 정리 OFF 를 건너뛴다. 이 프로세스에는 멈출
+    # 스레드가 없고, 켜짐 구간 한가운데라면 출력은 켜져 있어야 한다 — 정리 OFF 를
+    # 보내면 밸브를 괜히 껐다 켠다.
+    if not resume:
+        set_execution_context(TYPE_TIMER, f"{device_unique_id}:{channel_id}")
+        try:
+            _cyc_stop_worker(device_unique_id, channel_id, reason='restart')
+        finally:
+            clear_execution_context()
     # run_id identifies THIS run on disk (see _cyc_should_stop) so a thread
     # left running in another gunicorn worker process — one that never sees
     # this process's stop_event — can still tell it has been superseded.
@@ -1129,6 +1169,7 @@ def _cyc_start_worker(device_unique_id, channel_id, channel_index,
         target=_cyc_worker,
         args=(device_unique_id, channel_id, channel_index, run_sec, rest_sec,
               total_cycles, mode, scheduled_until_ms, start_at, run_id, stop_event),
+        kwargs={'resume': resume},
         daemon=True)
     key = _cyc_key(device_unique_id, channel_id)
     with _CYCLE_LOCK:
@@ -1138,6 +1179,7 @@ def _cyc_start_worker(device_unique_id, channel_id, channel_index,
 
 _RECOVERED = False
 _RECOVER_LOCK = threading.Lock()
+_PROCESS_STARTED_AT = time.time()   # 이 모듈을 불러온 시각 ≈ 이 웹 프로세스의 부팅
 # A stale claim can only be left behind by a process that crashed between
 # claiming and releasing (see _cyc_try_claim_recovery) — that window is a
 # handful of milliseconds, so anything older than this is dead, not just slow.
@@ -1195,7 +1237,11 @@ def _cyc_try_claim_recovery(device_unique_id, channel_id):
         return True
     except FileExistsError:
         try:
-            stale = (time.time() - os.path.getmtime(path)) > _RECOVERY_CLAIM_STALE_SEC
+            mtime = os.path.getmtime(path)
+            # 이 프로세스가 뜨기 **전에** 만든 선점은 이전 부팅의 것이다. 나이(60초)만
+            # 보면 1분 안에 두 번 재시작했을 때 두 번째 복구가 통째로 건너뛰어진다.
+            stale = ((time.time() - mtime) > _RECOVERY_CLAIM_STALE_SEC
+                     or mtime < _PROCESS_STARTED_AT - 2)
         except OSError:
             stale = False
         if not stale:
@@ -1224,13 +1270,95 @@ def _cyc_release_recovery_claim(device_unique_id, channel_id):
         pass
 
 
+#: 작업 스레드가 돌고 있어야 하는 단계 — 재시작 뒤 이 단계로 남은 상태 파일은 주인을 잃은 것이다.
+_CYC_LIVE_PHASES = ('initializing', 'running', 'offline', 'resting', 'waiting')
+
+
+def _cyc_resume_point(st, now_ms):
+    """재시작 전 상태(`st`)와 지금 시각으로 **지금 있어야 할 자리**를 구한다.
+
+    돌던 실행의 마지막 전환 시각(`next_transition_ms`)부터 켜짐·쉼을 차례로 넘기며
+    재시작 동안 지나간 구간을 건너뛴다. 반환: {'cycle', 'kind': 'run'|'rest'|'hold',
+    'remaining_sec'} — 모든 주기가 이미 끝났으면 None.
+    """
+    run = int(st.get('run_sec') or 0)
+    rest = int(st.get('rest_sec') or 0)
+    total = max(1, int(st.get('target_cycles') or 1))
+    cycle = max(1, int(st.get('current_cycle') or 1))
+    phase = st.get('phase')
+    if run <= 0:
+        return {'cycle': 1, 'kind': 'hold', 'remaining_sec': None}   # 멈출 때까지 켜 둠
+    end = st.get('next_transition_ms')
+    if phase in ('running', 'offline'):
+        kind = 'run'
+    elif phase == 'resting':
+        kind = 'rest'
+    elif phase == 'waiting':            # 쉼 없이 다음 주기로 넘어가는 찰나
+        kind, cycle, end = 'run', cycle + 1, None
+    else:                               # initializing — 켜기 전에 죽었다
+        kind, end = 'run', None
+    if not isinstance(end, int):
+        end = now_ms + run * 1000 if kind == 'run' else now_ms + rest * 1000
+    while end <= now_ms:
+        if kind == 'run' and rest > 0:
+            kind, end = 'rest', end + rest * 1000
+        else:
+            kind, cycle, end = 'run', cycle + 1, end + run * 1000
+        if cycle > total:
+            return None
+    if cycle > total:
+        return None
+    if kind == 'rest' and cycle >= total:
+        return None                     # 마지막 주기 뒤의 쉼 — 할 일이 없다
+    return {'cycle': cycle, 'kind': kind, 'remaining_sec': (end - now_ms) / 1000.0}
+
+
+def _cyc_recover_live_run(st, now_ms):
+    """웹 앱 재시작으로 작업 스레드를 잃은 실행을 **그 자리부터 잇는다.**
+
+    예전에는 시작 전 예약만 다시 걸었다 — 돌던 실행은 스레드와 함께 사라져 상태가
+    "진행 중" 으로 굳었고, 반복 모드의 남은 주기는 조용히 사라졌다(2026-09-18 E2E:
+    40초 타이머가 끝난 뒤에도 running). 출력은 켤 때 기간을 데몬에 실어 보내므로
+    꺼지긴 했지만, 화면은 거짓말을 했고 관수는 반만 됐다.
+    """
+    dev = st.get('device_unique_id')
+    ch = st.get('channel_id')
+    point = _cyc_resume_point(st, now_ms)
+    if point is None:
+        # 재시작하는 동안 모든 주기가 끝났다 — 끝났다고 적고, 한 번 더 끈다.
+        _force_output_off(dev, ch)
+        total = int(st.get('target_cycles') or 1)
+        _cyc_state_update(
+            dev, ch, active=False, phase='completed', message='All cycles completed',
+            current_cycle=total, completed_cycles=total, next_transition_ms=None,
+            phase_duration_sec=0, phase_started_ms=None, run_id=None,
+            stopped_at_ms=now_ms)
+        logger.info("AoT_timer: %s::%s finished while the app was restarting", dev, ch)
+        return
+    ch_index = _resolve_channel_index(dev, ch)
+    if ch_index is None:
+        return
+    point['started_at_ms'] = st.get('started_at_ms')
+    logger.info("AoT_timer: resuming %s::%s after restart at cycle %s (%s, %.0fs left)",
+                dev, ch, point['cycle'], point['kind'], point.get('remaining_sec') or 0)
+    _cyc_start_worker(
+        dev, ch, ch_index,
+        int(st.get('run_sec') or 0), int(st.get('rest_sec') or 0),
+        int(st.get('target_cycles') or 1), st.get('mode', 'cycle'), None,
+        st.get('start_at', '00:00'),
+        resume=None if point['kind'] == 'hold' else point)
+
+
 def recover_scheduled_workers():
-    """Re-arm scheduled-but-not-yet-fired workers persisted to disk.
+    """Re-arm workers persisted to disk after a web-app restart.
 
     The cycle worker runs as an in-memory daemon thread, so an aotflask restart
-    loses any pending schedule. Scans the state files and restarts workers for
-    entries still in the 'scheduled' phase with a future target time, so a
-    schedule armed before a restart still fires.
+    loses it. Scans the state files and
+      * restarts workers for entries still in the 'scheduled' phase with a
+        future target time, so a schedule armed before a restart still fires;
+      * **resumes** runs that were live (running/resting/…) from where they
+        should be now (_cyc_recover_live_run) — or marks them completed if they
+        ended during the restart.
     """
     try:
         now_ms = int(time.time() * 1000)
@@ -1243,6 +1371,23 @@ def recover_scheduled_workers():
                 with open(os.path.join(_SESS_DIR, fn), 'r', encoding='utf-8') as f:
                     st = json.load(f)
             except Exception:
+                continue
+            if (isinstance(st, dict) and st.get('active')
+                    and st.get('phase') in _CYC_LIVE_PHASES):
+                dev = st.get('device_unique_id')
+                ch = st.get('channel_id')
+                if not dev or ch in (None, ''):
+                    continue
+                with _CYCLE_LOCK:
+                    if _cyc_key(dev, ch) in _CYCLE_WORKERS:
+                        continue
+                if not _cyc_try_claim_recovery(dev, ch):
+                    continue
+                try:
+                    _cyc_recover_live_run(st, now_ms)
+                except Exception as exc:
+                    logger.error("AoT_timer: could not resume %s::%s: %s", dev, ch, exc)
+                    _cyc_release_recovery_claim(dev, ch)
                 continue
             if not isinstance(st, dict) or st.get('phase') != 'scheduled':
                 continue
@@ -1541,6 +1686,11 @@ WIDGET_INFORMATION = {
     {% endif %}
     <script src="{{ asset('app-time-wheel') }}"></script>
     """,
+
+    # 웹 앱이 뜬 뒤 한 번(app.register_widget_endpoints 가 늦춰서 부른다). 예전에는
+    # 상태 조회가 처음 들어올 때만 복구가 돌아, **아무도 대시보드를 열지 않으면**
+    # 재시작 전의 예약·실행이 다시 걸리지 않았다(밤 관수가 그 경우다).
+    'on_web_start': _cyc_trigger_recovery_once,
 
     'endpoints': [
         ("/aot_timer_output_started_at/<device_unique_id>/<channel_id>", "aot_timer_output_started_at", aot_timer_output_started_at, ["GET"]),

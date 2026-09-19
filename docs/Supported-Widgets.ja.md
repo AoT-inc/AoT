@@ -62,7 +62,7 @@ Displays and controls a PWM output with a single slider.
 
 - Libraries: timer
 
-Use the toggle switch to turn the device on and off. Turn on "Timer" to operate on a timer: in Simple mode the device runs once for the set time (0 = run until stopped), and in Cycle mode it repeats a Run / Rest sequence for the set number of cycles. "Scheduled Start" begins operation at a set wall-clock time in the device timezone. When "Timer" is off, the toggle simply switches the device on or off regardless of the time settings.
+Use the toggle switch to turn the device on and off. Turn on "Timer" to operate on a timer: in Simple mode the device runs once for the set time (0 = run until stopped), and in Cycle mode it repeats a Run / Rest sequence for the set number of cycles. "Scheduled Start" begins operation at a set wall-clock time in the device timezone. When "Timer" is off, the toggle simply switches the device on or off regardless of the time settings. If the web app restarts while a timer is running (an update, for example), the timer carries on from where it should be by then: phases that would have ended during the restart are skipped, and a timer that finished in the meantime is shown as completed.
 
 ### AoT天気予報
 
