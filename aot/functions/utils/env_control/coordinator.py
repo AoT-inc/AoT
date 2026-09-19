@@ -482,14 +482,30 @@ def coordinate(
         if _reaches or _credit:
             # 환기에 **의지하고 있는** 동안 인내를 센다. 전부 맡기든 일부만
             # 맡기든, 목표에 못 닿은 채 시간이 흐르면 예측이 틀린 것이다.
+            _held_before = new_state.vent_first_held_s
             new_state.vent_first_held_s += float(cycle_sec)
             if new_state.vent_first_held_s >= VENT_FIRST_PATIENCE_S:
                 # 넘겼다는 사실은 남긴다 — 안 그러면 "왜 갑자기 켜졌나" 에
                 # 답할 근거가 어디에도 없다.
-                logger.error(
-                    '환기 우선 — %.0f분째 목표에 못 닿아 냉난방 %d개에 '
-                    '전부 넘깁니다(실외 예측이 빗나갔습니다)',
-                    new_state.vent_first_held_s / 60.0, len(hvac_ids))
+                #
+                # ⚠ **문턱을 처음 넘는 사이클에 한 번만** (2026-09-20). 예전에는
+                #   넘긴 뒤 매 사이클 찍어서 aot-005 에서 하루 14~80줄이 쌓였다
+                #   — 읽어야 할 로그를 밀어낸다. 한 번이면 "언제부터" 가 남고,
+                #   풀릴 때 한 번 더 남겨 "언제까지" 를 닫는다(아래 else).
+                # ⚠ **냉난방이 없으면 "넘긴다" 고 말하지 않는다.** 넘길 대상이
+                #   없는데 넘긴다고 쓰면 거짓이고, 그 시설에서 이 판정의 실제
+                #   뜻은 "환기만으로 목표에 못 닿는다"(설비 한계)다.
+                if _held_before < VENT_FIRST_PATIENCE_S:
+                    if hvac_ids:
+                        logger.error(
+                            '환기 우선 — %.0f분째 목표에 못 닿아 냉난방 %d개에 '
+                            '넘깁니다(실외 예측이 빗나갔습니다)',
+                            new_state.vent_first_held_s / 60.0, len(hvac_ids))
+                    else:
+                        logger.error(
+                            '환기만으로 목표에 닿지 못하고 있습니다(%.0f분째) — '
+                            '넘길 냉난방 장치가 없어 환기로 계속 버팁니다',
+                            new_state.vent_first_held_s / 60.0)
             elif _reaches and hvac_ids:
                 park_ids |= hvac_ids
                 logger.debug(
@@ -501,6 +517,13 @@ def coordinate(
                     '환기 우선 — 실외가 대신 해 주는 몫: %s',
                     {k: round(v, 3) for k, v in _credit.items()})
         else:
+            if new_state.vent_first_held_s >= VENT_FIRST_PATIENCE_S:
+                # 위에서 한 번 남긴 경고를 닫는다 — 없으면 로그만 보고는
+                # 그 상태가 지금도 이어지는지 알 수 없다.
+                logger.error(
+                    '환기 우선 — 판정이 풀렸습니다(%.0f분 지속). 목표에 '
+                    '들어왔거나 환기로 갈 수 없는 조건이 되었습니다',
+                    new_state.vent_first_held_s / 60.0)
             new_state.vent_first_held_s = 0.0
     else:
         new_state.vent_first_held_s = 0.0

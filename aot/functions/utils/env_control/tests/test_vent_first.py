@@ -358,3 +358,66 @@ class TestContract:
 
 if __name__ == '__main__':
     pytest.main([__file__, '-v'])
+
+
+class TestPatienceLogIsNotSpam:
+    """넘김 경고는 **상태가 바뀔 때만** 남긴다 (2026-09-20).
+
+    예전에는 인내를 넘긴 뒤 매 사이클 ERROR 를 찍었다. aot-005(냉난방 없음)
+    에서 하루 14~80줄이 쌓였고, 문구는 "냉난방 0개에 전부 넘깁니다" 였다 —
+    넘길 대상이 없는데 넘긴다고 말하고 있었다.
+    """
+
+    LOGGER = 'aot.functions.utils.env_control.coordinator'
+    N = int(VENT_FIRST_PATIENCE_S // 600) + 6      # 문턱을 넘고도 한참 더
+
+    def _run(self, caplog, with_heater=True, then_reach=False):
+        import logging
+        vent = _profile('vent', 'opening', '↑', magnitude=2.0)
+        profs = [vent]
+        if with_heater:
+            profs.append(_profile('heater', 'heater', '↑', magnitude=2.0))
+        state = CoordinatorState()
+        state.prev_commands = {p.actuator_id: 10.0 for p in profs}
+        ctx = {'cycle_sec': 600.0, 'T_ext': 30.0,
+               'vent_first': True, 'vent_futility_gate': False}
+        with caplog.at_level(logging.ERROR, logger=self.LOGGER):
+            for _ in range(self.N):
+                _, state = coordinate(
+                    _Situation(_TARGET, {'temperature': -4.0}, dict(ctx)),
+                    profs, state, unique_id='t')
+            if then_reach:
+                _, state = coordinate(
+                    _Situation(_TARGET, {'temperature': 0.0}, dict(ctx)),
+                    profs, state, unique_id='t')
+        return [r.getMessage() for r in caplog.records if r.name == self.LOGGER]
+
+    def test_넘김_경고는_한_번만(self, caplog):
+        msgs = self._run(caplog)
+        hits = [m for m in msgs if '넘깁니다' in m]
+        assert len(hits) == 1, msgs
+
+    def test_냉난방이_없으면_넘긴다고_하지_않는다(self, caplog):
+        msgs = self._run(caplog, with_heater=False)
+        assert not any('넘깁니다' in m for m in msgs), msgs
+        hits = [m for m in msgs if '환기만으로 목표에 닿지 못하고' in m]
+        assert len(hits) == 1, msgs
+
+    def test_풀리면_한_번_알린다(self, caplog):
+        msgs = self._run(caplog, then_reach=True)
+        assert sum('판정이 풀렸습니다' in m for m in msgs) == 1, msgs
+
+    def test_인내_안에서_풀리면_해제_알림도_없다(self, caplog):
+        """경고를 낸 적이 없으면 닫을 것도 없다."""
+        import logging
+        vent = _profile('vent', 'opening', '↑', magnitude=2.0)
+        state = CoordinatorState()
+        state.prev_commands = {'vent': 10.0}
+        ctx = {'cycle_sec': 600.0, 'T_ext': 30.0,
+               'vent_first': True, 'vent_futility_gate': False}
+        with caplog.at_level(logging.ERROR, logger=self.LOGGER):
+            _, state = coordinate(_Situation(_TARGET, {'temperature': -4.0}, dict(ctx)),
+                                  [vent], state, unique_id='t')
+            _, state = coordinate(_Situation(_TARGET, {'temperature': 0.0}, dict(ctx)),
+                                  [vent], state, unique_id='t')
+        assert not [r for r in caplog.records if r.name == self.LOGGER]
