@@ -57,6 +57,18 @@ SEQUENCE_RUN_PERIOD_SEC = 60
 CONTROL_DASHBOARD = 'E2E Control Dashboard'
 TIMER_CHANNEL = 2
 
+# 시퀀스 위젯의 그룹 드래그 — 그룹은 한 블록으로만 움직여야 한다. 돌리지 않는
+# 시퀀스라(꺼 둔 채) 채널은 상관없다. 단계는 (표시 이름, 그룹 이름) — 빈 그룹 = 단독.
+GROUP_SEQUENCE = 'E2E Group Sequence'
+GROUP_NAME = 'E2E Pair'
+GROUP_SEQUENCE_STEPS = (
+    ('E2E Solo First', ''),
+    ('E2E Pair A', GROUP_NAME),
+    ('E2E Pair B', GROUP_NAME),
+    ('E2E Solo Last', ''),
+)
+GROUP_DASHBOARD = 'E2E Group Dashboard'
+
 DASHBOARD = 'E2E Dashboard'
 
 # 공지 — 작성한 것이 대시보드 위젯까지 가는지 보는 데 쓴다.

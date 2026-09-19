@@ -113,6 +113,7 @@ volume 이다 — **bind mount 는 프로젝트명으로 갈라지지 않기 때
 | `test_journey_scheduler.py` | 예약한 일이 달력 자료에도 화면에도 있다 |
 | `test_journey_facility.py` | 시설 저장이 조건을 지키고 막을 때 알려 주며, **지도에 배치해 만든** 시설의 외곽이 입력한 치수이고, 지우면 외곽까지 사라진다 |
 | `test_journey_sequence_order.py` | 시퀀스 단계를 끌어 옮기면 저장되고, 다시 열어도 그 순서다 |
+| `test_journey_sequence_group_drag.py` | 시퀀스 위젯에서 그룹 멤버 하나를 잡아도 그룹 전체가 함께 움직이고, 그룹 한가운데 놓아도 그룹 밖에 꽂힌다 — 저장된 실행 순서(함수 설정)에서도 그룹이 쪼개지지 않는다 |
 | `test_journey_graph_period.py` | 그래프에 점이 있고, 기간 버튼을 누르면 축이 **그 기간**만큼이다 |
 | `test_journey_ai_approval.py` | AI 제어 요청은 결정 전엔 안 돌고, **결정할 자격이 있는 사람만** 결정하며, 승인하면 적힌 그대로 돈다 |
 | `test_journey_camera.py` | URL 카메라로 **장치 없이** 추가·설정·촬영·마지막 이미지·삭제, 게스트는 못 보고 못 건드린다 |

@@ -139,7 +139,8 @@ def _purge():
         db.session.delete(row)
 
     for row in Dashboard.query.filter(
-            Dashboard.name.in_((F.DASHBOARD, F.CONTROL_DASHBOARD))).all():
+            Dashboard.name.in_((F.DASHBOARD, F.CONTROL_DASHBOARD,
+                                F.GROUP_DASHBOARD))).all():
         # 위젯이 대시보드에 매이는 열은 `tab_id` 다(이름과 달리 Tab 이 아니라
         # **대시보드의 unique_id** 가 들어간다 — dashboard.html 이
         # `table_widget.tab_id == dashboard_id` 로 거른다).
@@ -614,6 +615,72 @@ def _seed_geo_shapes():
     return geo_map.unique_id
 
 
+def _seed_group_sequence(output_ids):
+    """그룹이 있는 시퀀스 하나와, 그것을 보여 주는 위젯 하나.
+
+    단독 · 그룹(둘) · 단독 순서. 위젯은 같은 그룹 이름의 단계를 한 블록으로
+    묶어 **블록째로만** 끌게 한다 — 그 불변식을 드래그 검사가 본다. 꺼 둔 채로
+    심는다(위젯은 데몬이 모르는 시퀀스도 DB 로 그린다).
+    """
+    channel = OutputChannel.query.filter(
+        OutputChannel.output_id == output_ids[0],
+        OutputChannel.channel == 0).first()
+
+    fn = Function()
+    fn.name = F.GROUP_SEQUENCE
+    fn.function_type = 'trigger_sequence'
+    fn.save()
+
+    trigger = Trigger()
+    trigger.unique_id = fn.unique_id
+    trigger.name = F.GROUP_SEQUENCE
+    trigger.trigger_type = 'trigger_sequence'
+    trigger.is_activated = False
+    trigger.period = 600.0
+    trigger.timer_start_time = '00:00'
+    trigger.timer_end_time = '00:00'
+    trigger.timer_weekday = None
+    trigger.timer_start_offset = 0
+    trigger.save()
+
+    for index, (step_name, group_name) in enumerate(F.GROUP_SEQUENCE_STEPS):
+        action = Actions()
+        action.function_id = fn.unique_id
+        action.function_type = 'trigger_sequence'
+        action.action_type = 'output_on_off'
+        action.custom_options = json.dumps({
+            'output': f'{output_ids[0]},{channel.unique_id}',
+            'state': 'on',
+            'duration': 0,
+            'action_duration': 10,
+            'sequence_mode': 'single',
+            'group_name': group_name,
+            'enabled': True,
+            'gridstack_y': index,
+            'name': step_name,
+            'display_name': step_name,
+        })
+        action.save()
+
+    dash = Dashboard()
+    dash.name = F.GROUP_DASHBOARD
+    dash.save()
+    widget = Widget()
+    widget.tab_id = dash.unique_id
+    widget.graph_type = 'widget_trigger_sequence'
+    widget.name = F.GROUP_SEQUENCE
+    widget.position_x = 0
+    widget.position_y = 0
+    widget.width = 12
+    # 단계 목록까지 한 화면에 — 잘리면 끌어 놓을 자리가 화면 밖이라 드래그가 안 된다.
+    widget.height = 40
+    widget.custom_options = json.dumps({
+        # 'Show' 라야 단계 목록이 펼쳐진다 — 템플릿은 이 문자열만 본다(True 는 접힘).
+        'function_id': fn.unique_id, 'refresh_seconds': 5, 'show_details': 'Show'})
+    widget.save()
+    return fn.unique_id
+
+
 def main():
     app = _app()
     with app.app_context():
@@ -625,6 +692,7 @@ def main():
         _seed_functions(input_ids)
         _seed_sequence(output_ids)
         _seed_run_sequence(output_ids)
+        _seed_group_sequence(output_ids)
         measurement_points = _seed_measurements(input_ids)
         _seed_output_usage(output_ids)
         _seed_schedule(output_ids)
@@ -636,8 +704,8 @@ def main():
     print('E2E 시드 완료')
     print(f'  사용자 신규 생성: {users or "(이미 있음 — 비밀번호만 재설정)"}')
     print(f'  입력 {len(input_ids)} · 출력 {len(output_ids)}'
-          f'(채널 0개 1건 포함) · 함수 1 · 시퀀스 1(단계 3) · '
-          f'대시보드 1(위젯 3) · 도형 2(부지·구역) · 구획 1')
+          f'(채널 0개 1건 포함) · 함수 1 · 시퀀스 3(순서·실행·그룹) · '
+          f'대시보드 3(위젯 3·시퀀스·그룹) · 도형 2(부지·구역) · 구획 1')
 
 
 if __name__ == '__main__':
