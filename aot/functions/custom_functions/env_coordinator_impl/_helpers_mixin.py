@@ -1230,8 +1230,16 @@ class HelpersMixin:
         return result
 
     def _build_gate_env(self, internal: dict, external: dict) -> dict:
-        wind_val     = internal.get('wind',     external.get('wind',     0.0))
-        wind_dir_val = internal.get('wind_dir', external.get('wind_dir', None))
+        # ⚠ **없으면 None 이다, 0 이 아니다**(2026-09-19). 게이트는 "이번에 안
+        #   왔다" 로 강우·풍속을 잃었는지 가른다(`SafetyPreGate._weather_view`).
+        #   여기서 0 을 채우면 비 오던 중 센서가 끊긴 순간이 "비 그침" 으로 읽혀
+        #   강우 게이트가 풀린다 — 그 구멍을 막는 것이 이 재정의의 목적이다.
+        wind_val = internal.get('wind')
+        if wind_val is None:
+            wind_val = external.get('wind')
+        wind_dir_val = internal.get('wind_dir')
+        if wind_dir_val is None:
+            wind_dir_val = external.get('wind_dir')
         # Heatwave/cold judgment uses spatial extremes, not the average — if one corner is
         # at a dangerous level, emergency must fire even when the average is still normal.
         T_for_heat = internal.get('T_max', internal.get('T', 25.0))
@@ -1260,7 +1268,7 @@ class HelpersMixin:
                 'RH':       external.get('RH_ext', 60.0),
                 'wind':     wind_val,
                 'wind_dir': wind_dir_val,
-                'rain':     external.get('rain', 0.0),
+                'rain':     external.get('rain'),     # 없으면 None(위 wind 주석)
                 # 기본값 0.0 을 넣지 않는다 — 육묘 일소 게이트가 "측정 없음"과
                 # "측정 0"을 구분해야 태양고도 어림값 폴백으로 넘어갈 수 있다.
                 # 여기서 0.0 을 채우면 일사 센서가 없는 시설은 게이트가 늘
@@ -1268,7 +1276,10 @@ class HelpersMixin:
                 'solar':    external.get('solar'),
             },
             'now_ts':      time.time(),
-            'last_ext_ts': external.get('last_ext_ts', time.time()),
+            # `last_ext_ts` 는 싣지 않는다 — 게이트는 실외 나이를 재지 않는다
+            # (`PreGateConfig.ext_context_max_age` 주석). 예전에는 기본값이 now
+            # 라 시설 센서 설치에서는 영영 신선, 수집기 설치에서는 300초 뒤 창
+            # 폐쇄로 **설치마다 다른 동작**이 나왔다.
             'last_int_ts': time.time(),
         }
 

@@ -19,8 +19,9 @@
     (그때 명령을 붙잡고 있던 것은 I 가 아니라 P 였지만, I 는 계단으로 남아 있었다.)
 
 회복 경로: 직전 dispatch 가 이미 그 레일이면(=한 사이클 이상 눌러붙어 있었다)
-적분을 **실제 개도 쪽으로** 기하 감쇠시킨다. 포화 직후 한 사이클은 종전대로
-back-calculation 에 맡긴다.
+적분을 **실제 개도 쪽으로** 기하 감쇠시킨다. 포화 직후 사이클은 위쪽 레일이면
+back-calculation, 아래쪽 레일이면 적분 동결이다(2026-09-19 — 아래쪽 back-calc 가
+I 를 위로 밀어 0→100 을 만든 사고, `test_ceiling_rail_windup.py`).
 """
 
 import pytest
@@ -150,9 +151,10 @@ class TestUpperRailRecovery:
 
 class TestBackCalculationStillRunsFirst:
     def test_first_saturated_cycle_uses_back_calculation(self):
-        """갓 포화된 사이클은 회복 경로가 아니라 back-calculation 이 처리한다.
+        """갓 포화된 사이클은 회복 경로가 처리하지 않는다.
 
-        직전 개도가 레일에서 멀면(아직 도달 전) 빠른 anti-windup 을 유지한다.
+        직전 개도가 레일에서 멀면(아직 도달 전) 감쇠하지 않는다. 아래쪽 레일은
+        적분 동결이라 들어올 때 값(100) 그대로다.
         """
         st = CoordinatorState(prev_commands={AID: 100.0}, integral={AID: 100.0})
         st, integrals, apertures = _run(st, n=1, **COLD)
@@ -162,8 +164,8 @@ class TestBackCalculationStillRunsFirst:
     def test_brief_saturation_does_not_trigger_the_relax(self):
         """레일에 닿지 못한 짧은 포화에서는 회복 경로가 돌지 않는다.
 
-        이때 적분이 그대로인 것은 아니다 — 아래쪽 레일의 back-calculation 은
-        I 를 **위로** 민다(그게 종전 동작이고, 여기서는 그대로 둔다). 확인할
+        아래쪽 레일의 갓 포화는 적분 동결이라 들어올 때 값(80) 그대로다.
+        (2026-09-19 전에는 back-calculation 이 I 를 **위로** 밀었다.) 확인할
         것은 "레일 쪽으로 감쇠하지 않았다" 는 것이다.
         """
         st = CoordinatorState(prev_commands={AID: 50.0}, integral={AID: 80.0})

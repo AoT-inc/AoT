@@ -194,7 +194,8 @@ def reason_code(reason) -> float:
 # 안전 게이트 비트마스크 (CH_SAFETY_GATE)
 GATE_BIT_RAIN    = 1 << 0
 GATE_BIT_WIND    = 1 << 1
-GATE_BIT_EXT_EXP = 1 << 2
+GATE_BIT_EXT_EXP = 1 << 2   # 강우·풍속을 잃음 → 개구부 "더 열지 않음"(2026-09-19 재정의;
+                            # 전에는 실외 컨텍스트 300초 만료 → 개구부·차광막 0 강제)
 GATE_BIT_INT_EXP = 1 << 3
 GATE_BIT_HEAT    = 1 << 4
 GATE_BIT_COLD    = 1 << 5

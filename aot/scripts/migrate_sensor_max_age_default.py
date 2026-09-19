@@ -1,5 +1,8 @@
 # coding=utf-8
-"""env_coordinator 의 `sensor_max_age` 옛 기본값 120초를 '자동' 으로 눕힌다.
+"""env_coordinator·ext_context_collector 의 `sensor_max_age` 옛 기본값 120초를 '자동' 으로 눕힌다.
+
+수집기(ext_context_collector)는 2026-09-19 에 합류했다 — 같은 옵션·같은 옛
+기본값·같은 사고(느린 실외 데이터원이 전부 만료)라 따로 둘 이유가 없다.
 
 120초는 **기본값이었지 누가 고른 값이 아니다.** 그런데 그보다 느린 센서는 전부
 만료로 걸려 그 축이 통째로 죽는다 — 기상청 300초 · OpenWeather 600초라 실외
@@ -30,13 +33,14 @@ from aot.databases.utils import session_scope
 from aot.config import SQL_DATABASE_AOT
 
 OLD_DEFAULT = 120.0
+DEVICES = ('env_coordinator', 'ext_context_collector')
 
 
 def collect():
     """(unique_id, 이름, 현재값) 중 옛 기본값 그대로인 것."""
     targets, kept = [], []
     for row in CustomController.query.filter(
-            CustomController.device == 'env_coordinator').all():
+            CustomController.device.in_(DEVICES)).all():
         try:
             opts = json.loads(row.custom_options or '{}')
         except ValueError:

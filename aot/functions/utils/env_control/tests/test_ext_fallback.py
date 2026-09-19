@@ -5,8 +5,8 @@ P2-2: 외부 센서 만료 fallback 단위 테스트.
 대상:
   - ExtContextCache: 갱신·age 계산·빈 캐시
   - build_fallback_context: 키 존재, 캐시 우선, 내부값 fallback, _stale 마커
-  - 게이트: EXT_EXP 단독 시 partial=True, 개구부만 강제 폐쇄
-  - 게이트: EXT_EXP + 다른 게이트 동시 시 triggered=True (보수적 전체 차단)
+  - 게이트: 강우·풍속을 잃으면(EXT_EXP) partial, 강제 명령 없이 "더 열지 않음"
+  - 게이트: 잃은 마지막 값이 위험이면 그 값으로 계속 닫는다(래치)
 """
 
 import time
@@ -123,42 +123,44 @@ def _run_gate(ctx, profiles=None, cfg=None):
 
 
 class TestGateExtExpBehaviour:
+    """강우·풍속을 잃었을 때의 게이트 — 규칙 A(오래된 값은 안전한 방향으로만)."""
+
+    @staticmethod
+    def _lose(ctx, *keys):
+        for k in keys:
+            ctx['external'].pop(k, None)
+        return ctx
+
     def test_ext_exp_alone_is_partial(self):
-        """EXT_EXP 단독 → partial=True, triggered=False."""
-        now = time.time()
-        ctx = make_ctx(rain=0.0, wind=2.0, now_ts=now)
-        ctx['last_ext_ts'] = now - 400
-        result = _run_gate(ctx)
+        """평온하던 값을 잃음 → partial, 강제 명령 없음, 더 열지 않음."""
+        from aot.functions.utils.env_control.tests.conftest import make_heater_profile
+        gate = SafetyPreGate()
+        profiles = [make_opening_profile('v1'), make_heater_profile('h1')]
+        gate.evaluate(make_ctx(rain=0.0, wind=2.0), profiles)
+        result = gate.evaluate(self._lose(make_ctx(), 'rain', 'wind'), profiles)
         assert not result.triggered
         assert result.partial
-
-    def test_ext_exp_only_closes_openings(self):
-        """EXT_EXP 단독 → opening 강제 0%, 내부 전용 액추에이터 명령 없음."""
-        from aot.functions.utils.env_control.tests.conftest import make_heater_profile
-        now = time.time()
-        ctx = make_ctx(rain=0.0, wind=2.0, now_ts=now)
-        ctx['last_ext_ts'] = now - 400
-        profiles = [make_opening_profile('v1'), make_heater_profile('h1')]
-        result = _run_gate(ctx, profiles)
-        assert 'v1' in result.forced_commands
-        assert result.forced_commands['v1']['value'] == pytest.approx(0.0)
-        assert 'h1' not in result.forced_commands  # 난방기는 강제 명령 없음
+        assert result.vent_open_ceiling
+        assert result.forced_commands == {}
 
     def test_ext_exp_plus_rain_triggers_full(self):
-        """EXT_EXP + 강우 동시 → triggered=True (보수적 전체 차단)."""
-        now = time.time()
-        ctx = make_ctx(rain=2.0, wind=2.0, now_ts=now)
-        ctx['last_ext_ts'] = now - 400
-        result = _run_gate(ctx)
-        assert result.triggered
-        assert not result.partial
+        """비 오던 중 강우를 잃음 → 마지막 값으로 계속 닫는다(래치)."""
+        gate = SafetyPreGate()
+        gate.evaluate(make_ctx(rain=2.0, wind=2.0), [make_opening_profile()])
+        gate._triggered_until = 0.0                      # gate_ttl 경과 가정
+        result = gate.evaluate(self._lose(make_ctx(), 'rain'),
+                               [make_opening_profile()])
+        assert result.triggered and not result.partial
+        assert result.gate_mask & GATE_BIT_RAIN
+        assert result.forced_commands['vent_01']['value'] == pytest.approx(0.0)
 
     def test_ext_exp_plus_wind_triggers_full(self):
-        """EXT_EXP + 강풍 동시 → triggered=True."""
-        now = time.time()
-        ctx = make_ctx(rain=0.0, wind=15.0, now_ts=now)
-        ctx['last_ext_ts'] = now - 400
-        result = _run_gate(ctx)
+        """강풍 중 풍속을 잃음 → 풍향 차등 없이 전부 닫는다."""
+        gate = SafetyPreGate()
+        gate.evaluate(make_ctx(rain=0.0, wind=15.0), [make_opening_profile()])
+        gate._triggered_until = 0.0
+        result = gate.evaluate(self._lose(make_ctx(), 'wind'),
+                               [make_opening_profile()])
         assert result.triggered
 
 

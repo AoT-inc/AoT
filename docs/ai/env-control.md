@@ -561,7 +561,7 @@ Once triggered, a Pre-Gate stays active for at least 300 s after its last trigge
 | Heat Emergency | Outdoor T ≥ 45 °C **and** indoor T ≥ 35 °C (both fixed) | Fully opens vents, closes shade screens, forces coolers to 100 %. |
 | Cold Emergency | Outdoor T ≤ −5 °C **and** indoor T ≤ 5 °C (both fixed) | Closes vents, closes thermal curtains, forces heaters to 100 %. |
 | Internal Sensor Expired | No fresh indoor reading for > 120 s (fixed) | Every actuator returns to its safe default — control isn't possible without indoor data. |
-| External Sensor Expired (alone) | No fresh outdoor reading for > 300 s, and no other gate is active | Partial gate: only vents/shade close conservatively; heater/cooler/fogger/CO₂/curtain keep running under normal L1–L3 control. |
+| Outdoor Rain/Wind Lost | A rain or wind reading that used to arrive stops arriving (judged by each sensor's own freshness rule — no separate 300 s clock). A sensor the facility never had does not count. | If the last value was rain or strong wind, the Rain/Wind gate keeps the vents **closed** until a fresh reading says otherwise. Otherwise vents may hold or close but **never open further** — a stale "no rain" is not a reason to open. Exception: above your **Max Temperature** hard limit vents may still open. Shades and everything else keep normal control. |
 | Misting Lockout | Strong light, or the evening cutoff, with Sunburn/Evening Protection on | Locks wetting-type misters only. A local lock: it does not freeze the rest of the facility and does not hold for 300 s. |
 
 Rain, Heat and Cold thresholds are fixed in code — the **Wind** threshold is the only

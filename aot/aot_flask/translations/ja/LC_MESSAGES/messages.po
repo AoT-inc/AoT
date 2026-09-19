@@ -34849,3 +34849,17 @@ msgstr "バックアップセンサー"
 #: aot_flask/static/js/widgets/AoT_map/aot-map-widget-vector.js
 msgid "Stop Rotation"
 msgstr "回転を停止"
+
+#: functions/ext_context_collector.py:99
+msgid ""
+"Collects external temperature, humidity, wind speed, rainfall, solar "
+"radiation, dew point, and CO2 from outside the facility. The integrated "
+"environment control Function uses this collector as its single source of "
+"truth. Select the external sensor for each item. Items left blank are not "
+"shared — the integrated control treats them as unknown instead of assuming a "
+"value."
+msgstr ""
+"施設の外の温度・湿度・風速・降雨・日射・露点・CO2 を集めます。統合環境制御 "
+"Function はこの収集器を屋外値の正本として使います。項目ごとに屋外センサーを"
+"選んでください。空欄の項目は共有しません — 統合制御は値を仮定せず、「分から"
+"ない」ものとして扱います。"

@@ -46,6 +46,12 @@ class GateResult:
     # True 일 경우: triggered=False 라도 forced_commands 가 비어있지 않을 수 있다.
     # 호출자는 L1~L3 를 정상 실행하고 마지막 단계에서 forced_commands 를 override 로 적용해야 한다.
     # 예: 풍향 차등 폐쇄 — windward openings 만 강제 폐쇄, leeward 는 정상 운용.
+    vent_open_ceiling: bool = False
+    # True: 강우·풍속을 **잃었다**(전에 받던 값이 끊겼다). 개구부는 제자리 또는
+    # 닫기만 하고 **더 열지 않는다.** 강제 명령이 아니라 코디네이터에게 주는
+    # 제약이다 — 호출자는 `situation.context['vent_open_ceiling']` 로 넘겨
+    # coordinate() 안에서 걸어야 한다. 밖에서 명령을 자르면 적분이 그 사실을
+    # 모른 채 감겨, 풀리는 순간 창이 튄다(`coordinator` 2.6 주석 참조).
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -57,7 +63,13 @@ class PreGateConfig:
     """사용자 설정 가능한 Pre-Gate 임계값."""
     rain_threshold:       float = 0.5    # rain_sensor 임계 (mm/hr 또는 boolean 1)
     wind_threshold:       float = 12.0   # m/s
-    ext_context_max_age:  float = 300.0  # 외부 컨텍스트 만료 (초)
+    # 실외 온습도의 **승계 유예**(초) — 이 시간 동안은 마지막 실측을 그대로 쓰고,
+    # 넘으면 `build_fallback_context` 로 넘긴다(`_cycle_mixin` P2-2).
+    # ⚠ **게이트는 이 값으로 나이를 재지 않는다**(2026-09-19). 값이 쓸 만한가는
+    #   `measurement_freshness.effective_max_age`(장치값 > 요청 > 주기 파생)가
+    #   장치마다 이미 정했고, 게이트는 그 결과(값이 왔는가)만 본다. 여기서 한
+    #   번 더 재면 판정이 두 벌이 되고 느슨한 쪽이 실질이 된다.
+    ext_context_max_age:  float = 300.0
     int_sensor_max_age:   float = 120.0  # 내부 센서 만료 (초)
     heat_ext_threshold:   float = 38.0   # 폭염: 외부 온도 임계 (°C)
     heat_int_threshold:   float = 35.0   # 폭염: 내부 온도 임계 (°C)
@@ -100,6 +112,8 @@ class SafetyPreGate:
     L1~L3 를 건너뛴다.
 
     게이트 해제 후 호출자는 L3 적분 상태를 reset 해야 한다 (bumpless 복귀).
+    ⚠ 2026-09-19 현재 `reset_after_release()` 를 부르는 곳이 없다 — 전체 게이트
+      해제 뒤 적분은 게이트 전 값 그대로 복귀한다. 알려진 미결 사항이다.
     """
 
     def __init__(self, config: PreGateConfig = None):
@@ -113,6 +127,59 @@ class SafetyPreGate:
         #   무조건 "햇빛에 잎이 델 수 있어" 라고 말한다 — 비 오는 밤에도 그
         #   문장이 나갔다(2026-08-28 사용자 지적: 강우 중 "일소" 안내는 모순).
         self._nursery_lock_reason: str | None = None
+        # 강우·풍속의 **마지막 실측** — {'rain': 값, 'wind': 값, 'wind_dir': 값}.
+        # 값이 끊겼을 때 "모른다" 와 "원래 없던 센서" 를 가르는 근거이자,
+        # 끊기기 직전이 위험했는지를 기억하는 래치다(`_weather_view` 참조).
+        # 프로세스 메모리에만 있다 — 재시작 뒤에는 "원래 없던 센서" 로 출발한다.
+        self._weather_seen: Dict[str, float] = {}
+        self._weather_lost_logged: set = set()
+
+    def _weather_view(self, ext: dict) -> Tuple[dict, List[str]]:
+        """강우·풍속을 **안전한 방향으로만** 쓰는 판정용 값과 잃은 항목.
+
+        `docs/design/sensor-freshness-and-control-cadence.md` 규칙 A 다:
+
+            오래된 "비 옴"·"바람 셈"   → 닫는 근거로 **쓴다** (래치)
+            오래된 "비 안 옴"·"바람 없음" → 여는 근거로 **안 쓴다** (더 열지 않음)
+
+        값 셋 중 하나다:
+          - 이번에 왔다(None 이 아님)   → 그대로 쓰고 기억한다.
+          - 안 왔는데 전에 봤다(잃음)   → 마지막 값을 쓴다. 위험했으면 그 게이트가
+            계속 서고, 평온했으면 호출자가 "더 열지 않음" 을 건다.
+          - 한 번도 못 봤다             → 그 센서가 없는 설치다. 예전과 같이
+            제약하지 않는다(강우계 없는 시설은 원래 강우를 모른 채 돈다).
+
+        "왔는가" 는 여기서 재지 않는다 — 상류(`read_outdoor_sensors`·수집기)가
+        `measurement_freshness` 로 이미 가려 None 을 준다.
+        """
+        view = dict(ext)
+        lost: List[str] = []
+        for key in ('rain', 'wind'):
+            v = ext.get(key)
+            if v is not None:
+                self._weather_seen[key] = float(v)
+                if key == 'wind' and ext.get('wind_dir') is not None:
+                    self._weather_seen['wind_dir'] = float(ext['wind_dir'])
+                if key in self._weather_lost_logged:
+                    logger.error('실외 %s 값이 돌아왔습니다', key)
+                    self._weather_lost_logged.discard(key)
+                continue
+            if key in self._weather_seen:
+                lost.append(key)
+                view[key] = self._weather_seen[key]
+                if key == 'wind' and view.get('wind_dir') is None:
+                    view['wind_dir'] = self._weather_seen.get('wind_dir')
+                if key not in self._weather_lost_logged:
+                    # `error` — 컨트롤러 로거 기본 레벨이 ERROR 라 warning 은
+                    # 아무 데도 안 남는다(`_cycle_mixin._clamp_key` 주석).
+                    logger.error(
+                        '실외 %s 값이 끊겼습니다 — 마지막 값 %.2f 기준으로 '
+                        '개구부를 더 열지 않습니다(위험 값이면 닫힌 채 유지)',
+                        key, self._weather_seen[key])
+                    self._weather_lost_logged.add(key)
+            else:
+                view[key] = 0.0         # 원래 없는 센서 — 예전 기본값과 같다
+        return view, lost
 
     def _eval_nursery_lock(self, env: EnvContext) -> bool:
         """육묘 일소 잠금 상태를 갱신하고 반환한다.
@@ -209,22 +276,30 @@ class SafetyPreGate:
         mask = 0
         reasons: List[str] = []
 
-        ext = env.get('external', {})
         now_ts = env.get('now_ts', now)
+        # 강우·풍속은 규칙 A 로 본 값이다 — 잃었으면 마지막 실측(`_weather_view`).
+        ext, weather_lost = self._weather_view(env.get('external', {}))
 
         # ── 강우 ──────────────────────────────────────────────────────────────
-        if ext.get('rain', 0.0) >= cfg.rain_threshold:
+        if ext['rain'] >= cfg.rain_threshold:
             mask |= GATE_BIT_RAIN
             reasons.append('rain')
 
         # ── 강풍 ──────────────────────────────────────────────────────────────
-        if ext.get('wind', 0.0) >= cfg.wind_threshold:
+        if ext['wind'] >= cfg.wind_threshold:
             mask |= GATE_BIT_WIND
             reasons.append('wind')
 
-        # ── 외부 컨텍스트 만료 ─────────────────────────────────────────────────
-        last_ext_ts = env.get('last_ext_ts', now_ts)
-        if (now_ts - last_ext_ts) > cfg.ext_context_max_age:
+        # ── 강우·풍속을 잃음 (2026-09-19 재정의) ───────────────────────────────
+        # 예전에는 `last_ext_ts` 가 `ext_context_max_age`(300초)를 넘으면 개구부와
+        # 차광막을 **0 으로 강제**했다. 그것은 두 가지로 틀렸다:
+        #   - 실외를 모를 때 개구부를 제자리에 두는 코디네이터(2.6, 2026-08-22)와
+        #     정반대였고, 뒤에서 덮어써 늘 이겼다 — 한여름 기상대 두절 = 창 폐쇄.
+        #   - 차광막은 강우·강풍에서도 강제하지 않는 내부 시설인데, 두절이 실제
+        #     비바람보다 더 세게 개입했다(0 = 전면 차광).
+        # 지금은 규칙 A 다: 위험했던 마지막 값은 위 두 게이트가 이어서 닫고,
+        # 평온했던 값은 "더 열지 않음"(vent_open_ceiling)만 건다.
+        if weather_lost:
             mask |= GATE_BIT_EXT_EXP
             reasons.append('ext_context_expired')
 
@@ -271,12 +346,15 @@ class SafetyPreGate:
         # 함께 켜졌다고 해서 풍향 차등 폐쇄 같은 기존 동작이 바뀌면 안 된다.
         mask_core = mask & ~GATE_BIT_FOG_SUNBURN
 
-        # ── EXT_EXP 단독 발동 → partial gate (개구부만 강제 폐쇄, 내부 제어 지속) ──
+        # ── EXT_EXP 단독 발동 → partial gate (강제 명령 없음, 개구부 "더 열지 않음") ──
         # 다른 게이트(강우·강풍·폭염·한파·내부 만료)가 함께 발동된 경우는 일반 경로.
         ext_exp_only = (mask_core == GATE_BIT_EXT_EXP)
 
         triggered = bool(mask) or (now < self._triggered_until)
-        if triggered and mask_core:
+        # EXT_EXP 는 TTL 을 잡지 않는다 — 제약(더 열지 않음)이지 비상이 아니다.
+        # 잡으면 값이 돌아온 뒤 300초 동안 L1~L3 가 통째로 멈춘다(TTL 구간은
+        # 강제 명령 없는 전체 홀드다).
+        if triggered and (mask_core & ~GATE_BIT_EXT_EXP):
             self._triggered_until = now + cfg.gate_ttl
 
         if not triggered:
@@ -297,9 +375,12 @@ class SafetyPreGate:
         opening_profiles = [p for p in profiles if p.kind == 'opening']
         all_have_azimuth = (opening_profiles and
                             all(p.azimuth_deg is not None for p in opening_profiles))
-        per_opening_mode = (wind_only and wind_dir is not None and all_have_azimuth)
+        # 풍속을 잃었으면 풍향 차등을 하지 않는다 — 마지막 풍향이 지금도 맞다는
+        # 근거가 없으므로 전부 닫는다(규칙 A: 오래된 값은 닫는 쪽으로만).
+        per_opening_mode = (wind_only and wind_dir is not None and all_have_azimuth
+                            and 'wind' not in weather_lost)
 
-        # EXT_EXP 단독: partial=True, triggered=False → L1-L3 계속, 개구부만 강제 폐쇄
+        # EXT_EXP 단독: partial=True, triggered=False → L1-L3 계속, 개구부는 "더 열지 않음"
         # 육묘 분무 잠금 단독(mask_core == 0)도 마찬가지 — 분무기만 끄고 나머지
         # 제어는 그대로 돈다. mask == 0 인 TTL 유지 구간은 기존대로 전체 홀드.
         is_partial = per_opening_mode or ext_exp_only
@@ -317,6 +398,7 @@ class SafetyPreGate:
             forced_commands=forced,
             description=', '.join(reasons),
             partial=is_partial,
+            vent_open_ceiling=bool(mask & GATE_BIT_EXT_EXP),
         )
 
     def reset_after_release(self):
@@ -384,12 +466,10 @@ class SafetyPreGate:
                 # 내부 센서 만료: 모두 안전 기본값 (제어 불가)
                 value = p.safe_default
 
-            if (mask & GATE_BIT_EXT_EXP) and not (mask & GATE_BIT_INT_EXP):
-                # 외부 센서 단독 만료: 개구부·차광막만 보수적 폐쇄.
-                # 내부 전용 액추에이터(heater/cooler/fogger/co2_injector/curtain)는
-                # L1-L3 제어 지속 → forced 명령 생성 안 함.
-                if p.kind in ('opening', 'shade'):
-                    value = 0.0
+            # EXT_EXP(강우·풍속 잃음)는 **강제 명령을 만들지 않는다.** "더 열지
+            # 않음" 은 GateResult.vent_open_ceiling 으로 코디네이터가 건다 —
+            # 여기서 값을 박으면 코디네이터 적분이 모르는 제약이 된다.
+            # ⚠ 예전의 "개구부·차광막 0 강제" 를 되살리지 말 것(evaluate 주석).
 
             # 육묘 일소 잠금은 마지막에 적용해 다른 게이트를 이긴다.
             # 특히 폭염 게이트와 겹치는 경우가 중요하다 — 한여름 정오는

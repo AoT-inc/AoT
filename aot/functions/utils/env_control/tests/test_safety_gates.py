@@ -5,7 +5,7 @@ safety_gates.py 단위 테스트.
 대상:
   - 강우(rain) 게이트 발동
   - 강풍(wind) 게이트 발동
-  - 외부 센서 만료(ext_expired) 게이트 발동
+  - 강우·풍속 잃음(EXT_EXP) — 더 열지 않음 제약
   - 풍향 차등 폐쇄 (G4 — partial gate)
   - 정상 조건에서 게이트 미발동
 """
@@ -109,25 +109,33 @@ class TestWindGate:
 # ─────────────────────────────────────────────────────────────────────────────
 
 class TestExtExpiredGate:
-    def test_stale_ext_partial_gate(self):
-        """P2-2: 외부 센서 단독 만료 → partial=True/triggered=False (내부 제어 지속)."""
-        now = time.time()
-        ctx = make_ctx(now_ts=now)
-        ctx['last_ext_ts'] = now - 400  # 400초 경과
-        result = _run_gate(ctx)
-        assert not result.triggered          # 전체 차단 아님
-        assert result.partial                # partial 모드 (개구부만 강제)
-        assert result.gate_mask & GATE_BIT_EXT_EXP
+    """EXT_EXP = 강우·풍속을 **잃음**(2026-09-19 재정의).
 
-    def test_stale_ext_closes_openings(self):
-        """외부 센서 만료 → 개구부(opening) 강제 폐쇄."""
+    예전에는 `last_ext_ts` 300초 만료로 개구부·차광막을 0 으로 강제했다. 이제
+    게이트는 나이를 재지 않고(정본 `measurement_freshness` 가 상류에서 가린다),
+    전에 받던 강우·풍속이 **안 오면** "더 열지 않음" 제약만 건다. 전체 시나리오는
+    `test_outdoor_unknown_consistency.py`.
+    """
+
+    def test_게이트는_실외_나이를_재지_않는다(self):
         now = time.time()
         ctx = make_ctx(now_ts=now)
-        ctx['last_ext_ts'] = now - 400
+        ctx['last_ext_ts'] = now - 4000
+        result = _run_gate(ctx)
+        assert not (result.gate_mask & GATE_BIT_EXT_EXP)
+        assert not result.vent_open_ceiling
+
+    def test_잃으면_강제명령_없이_더_열지_않음(self):
+        gate = SafetyPreGate()
         profiles = [make_opening_profile('v1'), make_opening_profile('v2')]
-        result = _run_gate(ctx, profiles)
-        assert result.forced_commands['v1']['value'] == pytest.approx(0.0)
-        assert result.forced_commands['v2']['value'] == pytest.approx(0.0)
+        gate.evaluate(make_ctx(rain=0.0, wind=2.0), profiles)
+        ctx = make_ctx()
+        del ctx['external']['rain']
+        result = gate.evaluate(ctx, profiles)
+        assert result.gate_mask & GATE_BIT_EXT_EXP
+        assert result.partial and not result.triggered
+        assert result.vent_open_ceiling
+        assert result.forced_commands == {}, '개구부를 0 으로 박으면 안 된다'
 
     def test_fresh_ext_no_gate(self):
         """외부 센서 최신 → 미발동."""

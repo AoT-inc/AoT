@@ -106,7 +106,7 @@ LIMIT_LABEL = {0: '없음', 1: '광량', 2: 'CO₂', 3: '온도', 4: '수분'}
 GATE_LABEL = [
     (LC.GATE_BIT_RAIN,        '강우'),
     (LC.GATE_BIT_WIND,        '강풍'),
-    (LC.GATE_BIT_EXT_EXP,     '외기 극한'),
+    (LC.GATE_BIT_EXT_EXP,     '실외 비·바람 끊김'),
     (LC.GATE_BIT_INT_EXP,     '내부 극한'),
     (LC.GATE_BIT_HEAT,        '고온'),
     (LC.GATE_BIT_COLD,        '저온'),

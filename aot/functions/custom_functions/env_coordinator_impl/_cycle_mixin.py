@@ -781,7 +781,12 @@ class CycleMixin:
             self._force_immediate = False
             return True, 'setpoint_change'
 
-        if gate_result.triggered or gate_result.partial:
+        # 부분 게이트는 **강제 명령이 있을 때만** 긴급이다. 강우·풍속을 잃은
+        # EXT_EXP 단독은 "더 열지 않음" 제약뿐이라 급히 움직일 것이 없다 —
+        # 긴급으로 치면 기상 센서가 며칠 끊긴 내내 모터 최소 이동 간격 보호가
+        # 풀린 채 돈다(2026-09-19).
+        if gate_result.triggered or (gate_result.partial
+                                     and gate_result.forced_commands):
             return True, 'safety_gate'
 
         mult = float(getattr(self, 'emergency_deviation_mult', 3.0) or 3.0)
@@ -815,10 +820,18 @@ class CycleMixin:
         # (선택)에서 받는다. 먼저 ext_context_collector 공유 컨텍스트를 읽고,
         # facility 실외 센서가 있으면 아래에서 override 한다.
         try:
-            from aot.functions.ext_context_collector import get_shared_context
+            from aot.functions.ext_context_collector import (
+                get_shared_context, shared_context_is_current)
             _shared = get_shared_context()
+            # 수집기가 멈추면 마지막 공유값이 **영원히** 남는다. 그 값을 이번
+            # 사이클 것으로 쓰면 강우·풍속을 잃은 사실이 게이트에 안 닿는다.
+            if _shared and not shared_context_is_current():
+                _shared = {}
             if _shared:
-                external = dict(_shared)
+                # 값이 없는 항목은 **키째 뺀다** — None 이 실리면 뒤에서
+                # `.get(k, 기본값)` 이 기본값 대신 None 을 받아 숫자 계산에서
+                # 터지고, 게이트는 "왔다" 와 "안 왔다" 를 키 유무로 가른다.
+                external = {k: v for k, v in _shared.items() if v is not None}
                 # situation.py 는 'T'/'RH'/'CO2' 키를 읽으나 ext_context_collector 는
                 # 'T_ext'/'RH_ext'/'CO2_ext' 로 저장하므로 양쪽 키를 맞춰준다.
                 # **값이 없으면 키를 만들지 않는다** — 없는 실외값을 20°C/60% 로
@@ -1057,10 +1070,15 @@ class CycleMixin:
             ext_t  = gate_env.get('external', {})
             int_t  = gate_env.get('internal', {})
             if mask & GATE_BIT_WIND:
-                wind_v = ext_t.get('wind', 0.0)
+                # 풍속을 잃은 채 마지막 값으로 닫고 있으면 이번 값은 None 이다
+                # (`SafetyPreGate._weather_view` — 래치). 숫자 서식에 None 을
+                # 넣으면 여기서 예외가 나 사이클이 죽는다.
+                wind_v = ext_t.get('wind')
+                wind_txt = (f'풍속 {wind_v:.1f} m/s 감지' if wind_v is not None
+                            else '풍속 센서 끊김(마지막 값이 강풍)')
                 self._send_critical_email(
                     'wind_gate',
-                    f'[돌풍 경보] 풍속 {wind_v:.1f} m/s 감지 — '
+                    f'[돌풍 경보] {wind_txt} — '
                     f'환기구 전체 강제 폐쇄 중. 시설 고정 상태를 점검하세요.',
                 )
             if mask & GATE_BIT_RAIN:
@@ -1278,6 +1296,12 @@ class CycleMixin:
         # 야간에는 개구부만 닫고 냉난방·제습으로 관리한다. 하드 임계를 넘으면
         # 스스로 풀린다(`_night_vent_parked` 의 탈출구).
         situation.context['night_vent_park'] = self._night_vent_parked(internal)
+        # 강우·풍속을 잃었다 → 개구부는 **더 열지 않는다**(제자리 또는 닫기).
+        # 게이트가 명령을 박지 않고 여기로 넘기는 이유는 적분이다 — 상한은
+        # coordinate() 안에서 걸어야 적분이 실제 서 있는 개도를 따라간다
+        # (`coordinator` 2.6 주석).
+        situation.context['vent_open_ceiling'] = bool(
+            getattr(gate_result, 'vent_open_ceiling', False))
 
         # 편차/모드/제한인자는 write_cycle_metrics(env_control, CH30~32·71·72)로 일원화 기록.
 
@@ -2629,6 +2653,7 @@ class CycleMixin:
         )
         from aot.functions.utils.env_control.coordinator import (
             finalize_command, ActuatorCommand, CoordinatorState,
+            limit_vent_for_unknown_outdoor,
         )
         from aot.functions.utils.env_control.log_channels import (
             REASON_PRIMARY, REASON_MANUAL_OVERRIDE,
@@ -2675,8 +2700,14 @@ class CycleMixin:
                 continue
             ap = apertures.get(p.actuator_id, 0.0)
             prev = self._coord_state.prev_commands.get(p.actuator_id, 0.0)
+            # 실외를 모를 때의 개구부 규칙(제자리 · 더 열지 않음)은 PI 와 **같아야**
+            # 한다 — 엔진에 따라 비 오는 날 창이 열리고 안 열리고가 갈리면 안 된다.
+            # 이 경로에는 적분이 없어 명령만 자르면 된다(prev 가 곧 기억이다).
+            ap, _held = limit_vent_for_unknown_outdoor(ctx, p, ap, prev)
             cmd = finalize_command(p, ap, prev, cycle_sec,
-                                   reason=REASON_PRIMARY, var_source='mpc')
+                                   reason=(_held if _held is not None
+                                           else REASON_PRIMARY),
+                                   var_source='mpc')
             commands[p.actuator_id] = cmd
             new_prev[p.actuator_id] = cmd.control_value()
 

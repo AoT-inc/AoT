@@ -29088,3 +29088,13 @@ msgstr ""
 #: aot_flask/static/js/widgets/AoT_map/aot-map-widget-vector.js
 msgid "Stop Rotation"
 msgstr ""
+
+#: functions/ext_context_collector.py:99
+msgid ""
+"Collects external temperature, humidity, wind speed, rainfall, solar "
+"radiation, dew point, and CO2 from outside the facility. The integrated "
+"environment control Function uses this collector as its single source of "
+"truth. Select the external sensor for each item. Items left blank are not "
+"shared — the integrated control treats them as unknown instead of assuming a "
+"value."
+msgstr ""
