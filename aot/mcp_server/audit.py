@@ -129,12 +129,23 @@ def get_recent(
         return []
 
 
-def purge_old(days: int = 90) -> int:
-    """days 일 이전 로그 삭제. 삭제된 행 수 반환."""
+def purge_old(days: int | None = None) -> int:
+    """days 일 이전 로그 삭제. 삭제된 행 수 반환.
+
+    days 를 생략하면 config.MCP_AUDIT_RETENTION_DAYS 를 쓴다 — 하루 1회 도는
+    정리 잡(`aot.utils.audit.purge_old_mcp_logs`)과 같은 기준이어야 하는데,
+    여기에 90 을 따로 박아두면 config 만 바꿨을 때 조용히 어긋난다.
+    이 함수는 Flask 앱 컨텍스트 밖(MCP 서버 프로세스)에서 쓰는 경로다.
+    """
     try:
         from aot.databases.models import MCPAuditLog
-        from aot.config import AOT_DB_PATH
+        from aot.config import AOT_DB_PATH, MCP_AUDIT_RETENTION_DAYS
         from aot.databases.utils import session_scope
+
+        if days is None:
+            days = MCP_AUDIT_RETENTION_DAYS
+        if days is None or days <= 0:
+            return 0
 
         cutoff = datetime.utcnow() - timedelta(days=days)
         with session_scope(AOT_DB_PATH) as sess:

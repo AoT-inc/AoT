@@ -762,11 +762,22 @@ def _tier_reclassification_job() -> None:
 
 # @ANCHOR: AUDIT_LOG_PURGE_JOB
 def _audit_log_purge_job() -> None:
-    """Background job: drop audit_log rows past the retention period.
+    """Background job: drop audit rows past their retention period.
 
-    Without this the audit table grows without bound. Retention defaults to
-    config.AUDIT_LOG_RETENTION_DAYS (1 year — the minimum the personal-data
-    safeguards standard requires for access records).
+    Covers three tables, on two different retention clocks:
+
+      - audit_log: config.AUDIT_LOG_RETENTION_DAYS (1 year — the minimum the
+        personal-data safeguards standard requires for access records)
+      - mcp_audit_log + mcp_confirmation: config.MCP_AUDIT_RETENTION_DAYS
+        (90 days — AI tool call history, not an access record, and far
+        higher volume)
+
+    Without this the tables grow without bound. The MCP pair was left out of
+    this job when it was written, so those two grew unbounded regardless of
+    the "90일 보존" the model docstring claimed.
+
+    Each table's purge swallows its own exceptions, so one failing does not
+    stop the others.
 
     Module-level (not a closure) because APScheduler has to be able to
     reference the function by qualified name.
@@ -778,10 +789,16 @@ def _audit_log_purge_job() -> None:
 
     with _flask_app.app_context():
         try:
-            from aot.utils.audit import purge_old_audit_logs
+            from aot.utils.audit import purge_old_audit_logs, purge_old_mcp_logs
+
             deleted = purge_old_audit_logs()
             if deleted:
                 logger.info("[AuditLogPurge] Removed %d expired audit entries", deleted)
+
+            mcp_logs, mcp_confirms = purge_old_mcp_logs()
+            if mcp_logs or mcp_confirms:
+                logger.info("[AuditLogPurge] Removed %d expired MCP audit entries "
+                            "and %d expired confirmations", mcp_logs, mcp_confirms)
         except Exception as exc:
             logger.error("[AuditLogPurge] Job failed: %s", exc, exc_info=True)
 
