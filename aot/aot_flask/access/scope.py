@@ -313,6 +313,36 @@ def can_operate_device(device_uuid, user=None):
     return can_operate(RESOURCE_TAB, tab_uuid, user=user)
 
 
+def resolve_device_token(token, allow_partial=True):
+    """이름일 수 있는 토큰을 실제 장치 unique_id 로 최선을 다해 바꾼다.
+
+    스코프 판정 **직전에만** 쓴다. `can_operate_device` 는 uuid 로 `tab_of_
+    device()` 를 찾을 뿐 이름을 풀지 않으므로, 이름으로 지정된 장치를 그대로
+    넘기면 조회가 실패해 "탭 없음 = 전원 공개" 로 통과한다 — 이름으로 지정한
+    예약/도구 호출이 스코프 재검사를 조용히 우회하던 사고(2026-09-18,
+    `ai_scheduler_service._scope_denies`).
+
+    `allow_partial=True` 가 기본이다 — `schedule_device_control_tool` 등 실제
+    실행 단계가 부분 이름까지 허용하므로, 여기서 더 좁게 풀면 실행 시점에는
+    통과할 호출이 재검사에서는 (엉뚱하게) "탭 없음" 으로 잘못 통과하거나 새
+    장치를 못 찾아 원본 문자열이 그대로 남는 폭이 실행 폭과 어긋난다.
+
+    해석 실패(없음/이름 겹침)면 **원래 값을 그대로** 돌려준다 — 여기서
+    거부로 몰지 않는다. 그런 장치가 실제로 없거나 모호하면 실행 단계가 이미
+    막는다.
+    """
+    if not token:
+        return token
+    try:
+        from aot.services.resolvers.device_resolver import resolve_output
+        match = resolve_output(token, allow_partial=allow_partial)
+        if match.row is not None:
+            return match.row.unique_id
+    except Exception:
+        logger.exception('[scope] 장치 토큰 해석 실패 — 원본 값 유지: %s', token)
+    return token
+
+
 def can_operate_widget(widget_uuid, user=None):
     """위젯 실행 판정. 근거는 **그 위젯이 놓인 대시보드**다.
 
