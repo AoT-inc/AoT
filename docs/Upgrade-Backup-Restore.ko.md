@@ -71,7 +71,7 @@ docker compose -f docker/docker-compose.prod.yml \
 
 ### 데이터
 
-데이터베이스, 업로드 파일, 시설 3D 모델, 백업, 사용자 스크립트는 모두 Docker 볼륨에 있어 이미지를 교체해도 보존됩니다. 이전 버전으로 되돌리려면 ``docker/.env`` 의 ``AOT_IMAGE_TAG`` 를 바꾸고 컨테이너를 다시 만들면 됩니다 — 마지막으로 정상 동작한 태그는 업데이터가 같은 파일에 ``AOT_IMAGE_TAG_PREV`` 로 기록해 둡니다.
+데이터베이스, 업로드 파일, 지도 오버레이 이미지, 시설 3D 모델, 백업, 사용자 스크립트는 모두 Docker 볼륨에 있어 이미지를 교체해도 보존됩니다. 이전 버전으로 되돌리려면 ``docker/.env`` 의 ``AOT_IMAGE_TAG`` 를 바꾸고 컨테이너를 다시 만들면 됩니다 — 마지막으로 정상 동작한 태그는 업데이터가 같은 파일에 ``AOT_IMAGE_TAG_PREV`` 로 기록해 둡니다.
 
 ## 백업 / 복원 { #backup-restore }
 

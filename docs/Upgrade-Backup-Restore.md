@@ -71,7 +71,7 @@ When the time arrives, AoT checks the registry and, if a newer version has been 
 
 ### Data
 
-Everything lives in Docker volumes and survives an image swap: the database, uploaded files, facility 3D models, backups and user scripts. Rolling back to a previous version is a matter of setting ``AOT_IMAGE_TAG`` in ``docker/.env`` and recreating the containers — the updater records the last working tag there as ``AOT_IMAGE_TAG_PREV``.
+Everything lives in Docker volumes and survives an image swap: the database, uploaded files, map overlay images, facility 3D models, backups and user scripts. Rolling back to a previous version is a matter of setting ``AOT_IMAGE_TAG`` in ``docker/.env`` and recreating the containers — the updater records the last working tag there as ``AOT_IMAGE_TAG_PREV``.
 
 ## Backup-Restore
 

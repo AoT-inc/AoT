@@ -232,6 +232,28 @@ runSelfUpgrade() {
     printf "Done.\n"
   fi
 
+  # Files that users upload at runtime. The release tarball ships none of them,
+  # so anything not carried over here stays in the /var/AoT-backups copy and the
+  # new install serves 404s for every note photo and map overlay image (native
+  # installs lost them this way on every upgrade). Paths mirror aot/config
+  # (PATH_NOTE_ATTACHMENTS, PATH_FACILITY_PHOTOS, PATH_GEO_ZONE_PHOTOS,
+  # PATH_NOTICE_ATTACHMENTS -> uploads/*) and the Flask static uploads
+  # (geo_overlays incl. tiles/, model_assets). note_attachments is the legacy
+  # top-level folder that setup still creates.
+  # "src/." + mkdir -p merges into the new tree, so a folder that already exists
+  # there is not nested one level deeper the way `cp -r dir dest/` would do.
+  for USER_DATA_DIR in uploads note_attachments aot/aot_flask/static/uploads ; do
+    if [ -d "${CURRENT_AOT_DIRECTORY}"/"${USER_DATA_DIR}" ] ; then
+      printf "Copying %s..." "${USER_DATA_DIR}"
+      if ! mkdir -p "${THIS_AOT_DIRECTORY}"/"${USER_DATA_DIR}" || \
+         ! cp -a "${CURRENT_AOT_DIRECTORY}"/"${USER_DATA_DIR}"/. "${THIS_AOT_DIRECTORY}"/"${USER_DATA_DIR}"/ ; then
+        printf "Failed: Error while trying to copy %s" "${USER_DATA_DIR}"
+        error_found
+      fi
+      printf "Done.\n"
+    fi
+  done
+
   if [ -d "${CURRENT_AOT_DIRECTORY}"/aot/aot_flask/static/js/user_js ] ; then
     printf "Copying aot/aot_flask/static/js/user_js..."
     if ! cp -r "${CURRENT_AOT_DIRECTORY}"/aot/aot_flask/static/js/user_js "${THIS_AOT_DIRECTORY}"/aot/aot_flask/static/js/ ; then
