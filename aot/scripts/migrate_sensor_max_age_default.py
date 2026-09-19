@@ -27,18 +27,56 @@ import argparse
 import json
 import sys
 
-from aot.start_flask_ui import app
-from aot.databases.models import CustomController
-from aot.databases.utils import session_scope
-from aot.config import SQL_DATABASE_AOT
+from aot.utils.measurement_freshness import as_seconds
 
 OLD_DEFAULT = 120.0
 DEVICES = ('env_coordinator', 'ext_context_collector')
 
+# 분류 — 화면에 찍는 말과 1:1 이다.
+TARGET = 'target'   # 옛 기본값 그대로 → 0 으로 눕힌다
+AUTO = 'auto'       # 이미 미지정(0·빈 값) → 센서 주기로 자동 판정 중
+KEPT = 'kept'       # 사람이 고른 값 → 손대지 않는다
+
+LABEL = {
+    AUTO: '이미 자동 — 미지정, 센서 주기로 판정',
+    KEPT: '사람이 고른 값',
+}
+
+
+def classify(value) -> str:
+    """저장된 `sensor_max_age` 를 셋 중 하나로 가른다.
+
+    ⚠ **0 을 "사람이 고른 값" 으로 부르지 말 것**(2026-09-20 정정). 0 은 옵션의
+    현재 기본값이자 "안 정했다" 는 뜻이다 — 판단은 `measurement_freshness.
+    as_seconds` 하나에 맡긴다(0·음수·빈 값·숫자 아님 → 미지정). 여기서 따로
+    판단하면 정본과 갈라진다. 예전에는 120 이 아닌 값을 전부 "사람이 고른 값" 으로
+    찍어, 이미 자동인 설치를 누가 손으로 정한 것처럼 보고했다.
+    """
+    try:
+        if float(value) == OLD_DEFAULT:
+            return TARGET
+    except (TypeError, ValueError):
+        pass
+    return AUTO if as_seconds(value) is None else KEPT
+
+
+def restart_note(changed_rows) -> str:
+    """반영 뒤 안내 — 켜져 있는 Function 만 재시작 대상이다.
+
+    꺼진 Function 은 켤 때 새 값을 읽으므로 재시작할 것이 없다. 예전에는 무엇이
+    바뀌었든 "코디네이터를 재시작해야" 라고 찍어, 꺼진 수집기 하나만 바뀐 경우에도
+    불필요한 재시작을 권했다.
+    """
+    active = [name for name, is_active in changed_rows if is_active]
+    if active:
+        return ('켜져 있는 Function 을 재시작해야 적용됩니다: ' + ', '.join(active))
+    return '바뀐 Function 이 모두 꺼져 있어 재시작할 것이 없습니다(켤 때 적용됩니다).'
+
 
 def collect():
-    """(unique_id, 이름, 현재값) 중 옛 기본값 그대로인 것."""
-    targets, kept = [], []
+    """(unique_id, 이름, 현재값, 켜짐, 분류) 목록."""
+    from aot.databases.models import CustomController
+    rows = []
     for row in CustomController.query.filter(
             CustomController.device.in_(DEVICES)).all():
         try:
@@ -46,19 +84,18 @@ def collect():
         except ValueError:
             continue
         value = opts.get('sensor_max_age')
-        if value is None:
-            continue
-        if float(value) == OLD_DEFAULT:
-            targets.append((row.unique_id, row.name, float(value)))
-        else:
-            kept.append((row.unique_id, row.name, float(value)))
-    return targets, kept
+        rows.append((row.unique_id, row.name, value,
+                     bool(row.is_activated), classify(value)))
+    return rows
 
 
 def apply_changes(targets):
-    changed = 0
+    from aot.config import SQL_DATABASE_AOT
+    from aot.databases.models import CustomController
+    from aot.databases.utils import session_scope
+    changed = []
     with session_scope(f'sqlite:///{SQL_DATABASE_AOT}') as session:
-        for uuid, _name, _value in targets:
+        for uuid, name, _value, is_active, _kind in targets:
             row = session.query(CustomController).filter(
                 CustomController.unique_id == uuid).first()
             if not row:
@@ -68,7 +105,7 @@ def apply_changes(targets):
                 continue                      # 그 사이에 사람이 고쳤다 — 존중한다
             opts['sensor_max_age'] = 0.0
             row.custom_options = json.dumps(opts)
-            changed += 1
+            changed.append((name, is_active))
     return changed
 
 
@@ -78,17 +115,27 @@ def main():
     ap.add_argument('--apply', action='store_true', help='실제로 반영한다')
     args = ap.parse_args()
 
+    # 앱은 여기서 띄운다 — 모듈 머리에서 띄우면 분류 함수만 검사하려 해도
+    # 앱 전체가 기동한다.
+    from aot.start_flask_ui import app
+
     with app.app_context():
         try:
-            targets, kept = collect()
+            rows = collect()
         except Exception as exc:                             # noqa: BLE001
             print(f'ERROR: 조회 실패 — {exc}', file=sys.stderr)
             return 2
 
-        for _u, name, value in kept:
-            print(f'  건너뜀  {name}: {value:g}초 (사람이 고른 값)')
-        for _u, name, value in targets:
-            print(f'  대상    {name}: {value:g}초 → 0 (센서 주기로 자동)')
+        targets = [r for r in rows if r[4] == TARGET]
+        for _u, name, value, _on, kind in rows:
+            if kind != TARGET:
+                try:
+                    shown = f'{float(value):g}초'
+                except (TypeError, ValueError):
+                    shown = '비어 있음' if value in (None, '') else repr(value)
+                print(f'  건너뜀  {name}: {shown} ({LABEL[kind]})')
+        for _u, name, value, _on, _k in targets:
+            print(f'  대상    {name}: {float(value):g}초 → 0 (센서 주기로 자동)')
 
         if not targets:
             print('바꿀 것이 없습니다.')
@@ -105,7 +152,7 @@ def main():
             print(f'ERROR: 반영 실패 — {exc}', file=sys.stderr)
             return 2
 
-    print(f'\n{changed}건 반영했습니다. 코디네이터를 재시작해야 적용됩니다.')
+    print(f'\n{len(changed)}건 반영했습니다. {restart_note(changed)}')
     return 0
 
 
