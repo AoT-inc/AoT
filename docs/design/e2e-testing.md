@@ -33,6 +33,36 @@ bind mount 로 쓰는 것(`../influxdb_data`, `../logs`)은 여기서 전부 nam
 volume 이다 — **bind mount 는 프로젝트명으로 갈라지지 않기 때문이다.**
 공유하는 것은 코드(`../:/app`)뿐이고, 그것이 목적이다(지금 브랜치를 시험한다).
 
+### 스택이 **어느 워크트리**를 보고 있는지 먼저 확인한다
+
+컨테이너는 워크트리 하나를 통째로 `/app` 에 bind mount 한다. 스택은 8085 에
+하나뿐이므로, 다른 워크트리에서 `docker compose ... up` 을 부르면 **그쪽으로
+다시 묶인다.** 그 뒤로는 내 워크트리에서 pytest 를 돌려도 검사하는 코드는
+남의 워크트리다 — 내가 방금 고친 것이 아닌 것을 보고 "통과" 라고 말하게 된다
+(2026-09-20 실제로 그랬다. 두 세션이 같은 스택을 썼다).
+
+돌리기 전에 한 줄로 본다:
+
+```bash
+docker inspect aot-e2e-aot-app-1 \
+  --format '{{range .Mounts}}{{if eq .Destination "/app"}}{{.Source}}{{end}}{{end}}'
+```
+
+지금 워크트리(`git rev-parse --show-toplevel`)와 다르면 다시 묶는다 — DB 는
+named volume 이라 남는다:
+
+```bash
+docker compose -f docker/docker-compose.e2e.yml --profile control up -d
+docker compose -f docker/docker-compose.e2e.yml exec -T -e AOT_E2E=1 aot-app \
+    python -m aot.tests.e2e.seed
+docker compose -f docker/docker-compose.e2e.yml restart aot_daemon
+```
+
+`conftest.py` 가 세션 시작에 같은 것을 확인하고, 어긋나면 **검사를 멈춘다**
+(`AOT_E2E_SKIP_MOUNT_CHECK=1` 로 끌 수 있다 — 원격 스택처럼 호스트에서
+컨테이너를 못 보는 경우를 위한 것이다). 사람이 기억해야 하는 절차는 언젠가
+잊히므로, 기억은 검사에 맡기고 이 문단은 그 이유를 남긴다.
+
 데몬은 `--profile control` 뒤에 있다. L0~L2 는 데몬 없이 판정되고 L3 만
 데몬을 쓴다 — 다만 **CI 는 항상 데몬까지 띄운다.** 건너뛴 검사는 없는 검사와
 같기 때문이다(데몬이 없으면 L3 는 skip 된다).

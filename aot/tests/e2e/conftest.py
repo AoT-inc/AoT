@@ -21,6 +21,60 @@ if not E2E_BASE_URL:
 def pytest_configure(config):
     config.addinivalue_line(
         'markers', 'e2e: 실제 서버와 브라우저가 필요한 종단 테스트')
+    if E2E_BASE_URL:
+        _assert_stack_serves_this_worktree()
+
+
+# ---------------------------------------------------------------------------
+# 스택이 **이 워크트리**를 보고 있는가
+# ---------------------------------------------------------------------------
+#: 컨테이너가 `/app` 에 통째로 마운트하는 것은 워크트리 하나뿐이고, 스택은
+#: 8085 에 하나뿐이다. 다른 워크트리에서 `docker compose ... up` 을 부르면
+#: 그쪽으로 다시 묶이므로, 여기서 pytest 를 돌려도 검사하는 코드는 남의
+#: 워크트리가 된다 — 방금 고친 것이 아닌 것을 보고 "통과" 라고 말하게 된다
+#: (2026-09-20 실제로 그랬다). 그래서 시작할 때 한 번 확인하고 멈춘다.
+E2E_APP_CONTAINER = os.environ.get('AOT_E2E_APP_CONTAINER', 'aot-e2e-aot-app-1')
+
+
+def _repo_root():
+    import subprocess
+    out = subprocess.run(['git', 'rev-parse', '--show-toplevel'],
+                         cwd=os.path.dirname(os.path.abspath(__file__)),
+                         capture_output=True, text=True, timeout=30)
+    return os.path.realpath(out.stdout.strip()) if out.returncode == 0 else None
+
+
+def _mounted_source():
+    """컨테이너가 `/app` 으로 마운트한 호스트 경로. 볼 수 없으면 None."""
+    import subprocess
+    fmt = ('{{range .Mounts}}{{if eq .Destination "/app"}}{{.Source}}'
+           '{{end}}{{end}}')
+    try:
+        out = subprocess.run(
+            ['docker', 'inspect', E2E_APP_CONTAINER, '--format', fmt],
+            capture_output=True, text=True, timeout=30)
+    except (OSError, subprocess.SubprocessError):
+        return None
+    if out.returncode != 0:
+        return None
+    return out.stdout.strip() or None
+
+
+def _assert_stack_serves_this_worktree():
+    # 원격 스택·CI 처럼 호스트에서 컨테이너를 못 보는 경우가 있다. 그때는
+    # 확인할 방법이 없으므로 조용히 넘어간다(끄는 스위치도 둔다).
+    if os.environ.get('AOT_E2E_SKIP_MOUNT_CHECK'):
+        return
+    mounted, here = _mounted_source(), _repo_root()
+    if not mounted or not here or os.path.realpath(mounted) == here:
+        return
+    raise pytest.UsageError(
+        f'E2E 스택이 다른 워크트리를 보고 있습니다 — 검사해도 지금 고친 코드가 '
+        f'아닙니다.\n  컨테이너: {mounted}\n  여기: {here}\n'
+        f'  다시 묶으려면: docker compose -f docker/docker-compose.e2e.yml '
+        f'--profile control up -d\n'
+        f'  (그 뒤 시드: ... exec -T -e AOT_E2E=1 aot-app '
+        f'python -m aot.tests.e2e.seed)')
 
 
 # ---------------------------------------------------------------------------
