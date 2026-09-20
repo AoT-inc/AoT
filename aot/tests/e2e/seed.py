@@ -138,9 +138,12 @@ def _purge():
             AgentMCPAccess.mcp_unique_id == row.unique_id).delete()
         db.session.delete(row)
 
-    for row in Dashboard.query.filter(
-            Dashboard.name.in_((F.DASHBOARD, F.CONTROL_DASHBOARD,
-                                F.GROUP_DASHBOARD))).all():
+    # 대시보드는 **처음 것(Default) 하나만 남기고 전부** 지운다. 시드가 만든
+    # 것뿐 아니라, `/dashboard-add` 가 열리기만 해도 하나씩 만들어 내는 빈
+    # 대시보드까지 거두기 위해서다(L0·L1 이 그 주소를 매번 연다 — 두면 실행마다
+    # 탭이 둘씩 늘어 화면 위쪽이 시험 산출물로 덮인다). 이름으로는 못 고른다 —
+    # 자동 이름은 화면 언어를 따라간다("대시보드 7" · "Dashboard 7").
+    for row in Dashboard.query.order_by(Dashboard.id).offset(1).all():
         # 위젯이 대시보드에 매이는 열은 `tab_id` 다(이름과 달리 Tab 이 아니라
         # **대시보드의 unique_id** 가 들어간다 — dashboard.html 이
         # `table_widget.tab_id == dashboard_id` 로 거른다).
