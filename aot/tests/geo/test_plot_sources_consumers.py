@@ -11,7 +11,7 @@ InfluxDB 는 없다. 조회 함수를 대역으로 잡고 "어느 장치에게 �
 """
 from datetime import date, datetime, timedelta
 
-from aot.aot_flask.geo import plot_context, plot_journal, plot_sources
+from aot.aot_flask.geo import plot_accumulation, plot_context, plot_journal, plot_sources
 from aot.aot_flask.geo.plot_journal import calc as _pj_calc
 from aot.databases.models import DeviceMeasurements, Input
 from aot.tests.geo.test_plot_sources import T1, T2, _Base, _Plot
@@ -78,14 +78,18 @@ class TestGddFollowsTheReplacement(_Flow):
                 return {d: TEMPS[device_id] for d in _days(start_ts, end_ts)}
             return _extremes
 
-        self._orig = (plot_context._daily_extremes,
-                      plot_context._query_daily_extremes)
-        plot_context._daily_extremes = fake('cached')
-        plot_context._query_daily_extremes = fake('uncached')
+        # `gdd_accumulated` 는 `_daily_extremes`/`_query_daily_extremes` 를
+        # `plot_accumulation.py` 안에서 맨이름으로 부른다 — `plot_context.
+        # _daily_extremes` 는 재노출한 복사본이라 그것만 바꾸면 내부 참조는
+        # 그대로 원본을 본다(`TestEnvSeriesFollowsTheReplacement` 와 같은 함정).
+        self._orig = (plot_accumulation._daily_extremes,
+                      plot_accumulation._query_daily_extremes)
+        plot_accumulation._daily_extremes = fake('cached')
+        plot_accumulation._query_daily_extremes = fake('uncached')
 
     def tearDown(self):
-        (plot_context._daily_extremes,
-         plot_context._query_daily_extremes) = self._orig
+        (plot_accumulation._daily_extremes,
+         plot_accumulation._query_daily_extremes) = self._orig
         super().tearDown()
 
     def test_each_day_uses_the_sensor_that_was_there(self):
@@ -112,12 +116,14 @@ class TestDliPrefersThePlotSensor(_Flow):
         def fake_sum(device_id, channel, unit, factor, start_str, end_str):
             return values[device_id]
 
-        orig = plot_context._light_channel_sum
-        plot_context._light_channel_sum = fake_sum
+        # `dli_accumulated` 도 `_light_channel_sum` 을 `plot_accumulation.py`
+        # 안에서 맨이름으로 부른다 — 위 GDD 대역과 같은 이유로 그쪽을 바꾼다.
+        orig = plot_accumulation._light_channel_sum
+        plot_accumulation._light_channel_sum = fake_sum
         try:
             return plot_context.dli_accumulated(_CropPlot(), None, on=on)
         finally:
-            plot_context._light_channel_sum = orig
+            plot_accumulation._light_channel_sum = orig
 
     def test_the_plot_sensor_wins_once_it_is_installed(self):
         out = self._dli(date(2026, 9, 5),
