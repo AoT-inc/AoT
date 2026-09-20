@@ -117,8 +117,6 @@ from .ai_context_source import AIContextSource, SourceType
 from .ai_library_sync_log import AILibrarySyncLog
 from .ai_knowledge_chunk import AIKnowledgeChunk
 from .ai_facility_learning import AIFacilityLearning
-from .ai_recommendation import AIRecommendation
-from .ai_status_snapshot import AIStatusSnapshot
 from .ai_feedback_event import AIFeedbackEvent
 from .ai_onboarding_record import AIOnboardingRecord
 from .mcp_server import MCPServer
@@ -137,8 +135,7 @@ from .ekg import HumanNote, DaemonEvent, PatternCluster, EdgeRecord  # Phase 5 E
 from .ext_smartfarm_setpoints import ExtSmartfarmSetpoints  # Phase 2a EXT-KR-01
 from .ext_nongsaro_guides import ExtNongsaroGuides          # Phase 2b EXT-KR-02
 from .ext_pest_alerts import ExtPestAlerts              # Phase 2b EXT-KR-03
-from .tier_adaptive_storage import TierThreshold           # Adaptive Document Storage
-from .tier_adaptive_storage import TierDecision
+from .tier_adaptive_storage import TierDecision            # Adaptive Document Storage
 from .tier_adaptive_storage import DocumentAccessLog
 from .tier_adaptive_storage import AdaptiveStorageSettings
 from .cold_storage import ColdDocuments                     # Tier 3 (Cold/Archive)

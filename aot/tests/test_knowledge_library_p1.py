@@ -343,14 +343,14 @@ class TestKnowledgeLibraryP1(unittest.TestCase):
         """**빈 결과만 보고 판정하면 안 된다** — 검색은 저장소에 늘 있는 AoT
         매뉴얼도 함께 뒤지므로 도메인 질문에도 엉뚱한 매뉴얼 섹션이 느슨하게
         걸린다. 그러면 결과가 비지 않아 '자료 없음' 분기를 영영 안 탄다."""
-        from aot.ai.services.aot_data_tool_service import AoTDataToolService as S
+        from aot.tools.aot_data_tool_service import AoTDataToolService as S
 
         res = S.knowledge_search_tool(query='상추 생육단계별 재배 관리')
         self.assertTrue(res.get('library_empty'), res)
         self.assertIn('EMPTY', res['result'])
 
     def test_populated_library_gets_no_empty_notice(self):
-        from aot.ai.services.aot_data_tool_service import AoTDataToolService as S
+        from aot.tools.aot_data_tool_service import AoTDataToolService as S
 
         self._enable_digest()
         self._make_chunk(self._make_source(), '상추 육묘',

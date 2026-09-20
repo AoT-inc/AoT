@@ -16,7 +16,7 @@ import 해서 쓴다. 2026-08-22 실행층을 MCP 서버에서 분리하면서(`
 ## 왜 기존 검사로 안 잡혔나
 
 **함수 안 import 는 모듈을 불러오는 것만으로는 실행되지 않는다.** `import
-aot.ai.services.mcp_safety_gate` 는 멀쩡히 성공하고, 문법 검사도 통과하고,
+aot.tools.mcp_safety_gate` 는 멀쩡히 성공하고, 문법 검사도 통과하고,
 그 모듈을 건드리는 어떤 테스트도 이 줄을 밟지 않는다 — 승인된 항목을 실제로
 실행해 봐야만 드러난다. CLAUDE.md 의 `ai_loader_service` 사고와 같은 계열이다
 ("import 이 되는 것과 동작하는 것은 다르다").
@@ -29,12 +29,12 @@ import pathlib
 
 import pytest
 
-GATE = pathlib.Path(__file__).resolve().parents[1] / 'ai/services/mcp_safety_gate.py'
+GATE = pathlib.Path(__file__).resolve().parents[1] / 'tools/mcp_safety_gate.py'
 
 
 def test_실행층_심볼을_실제로_가져올_수_있다():
     """승인 즉시실행이 쓰는 이름 두 개가 정본 위치에 있는가."""
-    from aot.ai.services.tool_execution import (   # noqa: F401
+    from aot.tools.tool_execution import (   # noqa: F401
         _NATIVE_TOOLS, _dispatch_virtual_tool)
     assert callable(_dispatch_virtual_tool)
     assert isinstance(_NATIVE_TOOLS, (set, frozenset))
@@ -56,7 +56,7 @@ def test_승인경로가_옛_위치에서_가져오지_않는다():
                 bad.append((node.lineno, names))
     assert not bad, (
         f'승인 즉시실행이 옛 위치에서 실행층 심볼을 가져온다: {bad}. '
-        f'`aot.ai.services.tool_execution` 에서 가져올 것.')
+        f'`aot.tools.tool_execution` 에서 가져올 것.')
 
 
 def test_즉시실행이_import_에러로_죽지_않는다():
@@ -66,7 +66,7 @@ def test_즉시실행이_import_에러로_죽지_않는다():
     거기까지 가려면 모듈과 그 안의 import 가 성립해야 한다. ImportError 가 나면
     이 테스트가 그 자리에서 깨진다.
     """
-    from aot.ai.services import mcp_safety_gate as gate
+    from aot.tools import mcp_safety_gate as gate
     fn = getattr(gate, 'execute_approved', None) or getattr(
         gate, 'execute_confirmed', None)
     if fn is None:

@@ -60,7 +60,7 @@ SERVER_HOST = socket.gethostname()
 # 자신에게 JSON-RPC 를 보냈고, 그 대가로 앱을 한 벌 더 로드(약 400MB)하면서
 # 두 프로세스의 코드 버전이 갈렸다. 이 파일이 하는 일은 이제 **전송**뿐이다:
 # stdio/HTTP 로 받아 tool_execution 에 넘기고 결과를 돌려준다.
-from aot.ai.services.tool_execution import (  # noqa: E402
+from aot.tools.tool_execution import (  # noqa: E402
     SERVER_HOST,
     _CONFIRMATION_RESPONSE_TOOL,
     _EXTRA_TOOLS,
@@ -204,7 +204,7 @@ class StdioMCPServer:
                        f"{self._supports_elicitation}")
             # stdio 는 클라이언트가 프로세스를 spawn 하는 구조지만, 정책을 켜면
             # HTTP 와 동일하게 키를 요구한다(키는 클라이언트 설정의 env 로 전달).
-            from aot.ai.services import mcp_auth
+            from aot.tools import mcp_auth
             with self._app.app_context():
                 ok, agent_id, role, err = mcp_auth.authenticate_stdio(declared)
             if not ok:
@@ -331,7 +331,7 @@ def _run_http_server(app, port=5700):
     import uuid as _uuid
 
     from flask import Flask, request, jsonify, Response
-    from aot.ai.services import mcp_auth
+    from aot.tools import mcp_auth
     from aot.databases.models import AIGlobalSettings
 
     http_app = Flask("aot_mcp_http")
@@ -634,6 +634,12 @@ def main():
     # Bootstrap Flask app for SQLAlchemy / config access
     # Skip scheduler initialization in MCP server process to avoid DB job conflicts
     os.environ["AOT_SKIP_SCHEDULER"] = "1"
+    # NOTE: create_app() (routes_ai_agent et al.) imports aot.ai as a side effect,
+    # which binds the aot/tools/providers.py callbacks the tool layer needs
+    # (aot/ai/services/tool_providers.py::bind_all(), called from aot/ai/__init__.py).
+    # Deliberately NOT importing aot.ai directly in this file — the mcp-no-ai guard
+    # (check_import_layers.py) forbids this module from depending on aot.ai, and this
+    # transitive import already satisfies the binding requirement before any tool runs.
     from aot.aot_flask.app import create_app
     app = create_app()
     logger.info(f"[AoTMCP] Flask app context initialized (install dir: {_INSTALL_DIR})")

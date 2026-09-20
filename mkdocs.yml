@@ -31,12 +31,8 @@ extra_css:
 
 # 매뉴얼이 아닌 내부 문서/개발 노트는 빌드에서 제외
 exclude_docs: |
-  architecture/
-  dev/
-  upgrade/
   design/
   ai_docs/
-  *_Analysis.md
   PLAN-*.md
   TASK_*.md
   directive_*.md

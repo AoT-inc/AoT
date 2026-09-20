@@ -324,7 +324,7 @@ def mcp_server_restart(server_id):
 
 
 # =============================================================================
-# 외부 MCP 승인 큐 + 감사 로그 (aot/ai/services/mcp_safety_gate.py)
+# 외부 MCP 승인 큐 + 감사 로그 (aot/tools/mcp_safety_gate.py)
 #
 # 외부 AI가 쓰기 도구를 호출하면 MCP 서버 프로세스가 mcp_confirmation 에
 # pending 행을 만들고 실행을 보류한다. 승인은 사람이 여기서 한다 — MCP 서버는
@@ -344,7 +344,7 @@ def mcp_review_page():
 @flask_login.login_required
 def mcp_confirmations_list():
     """승인 대기 중인 외부 AI 쓰기 요청 목록."""
-    from aot.ai.services import mcp_safety_gate as gate
+    from aot.tools import mcp_safety_gate as gate
     try:
         return jsonify({"status": "success", "pending": gate.list_pending()})
     except Exception as e:
@@ -371,7 +371,7 @@ def mcp_confirmation_approve(confirmation_id):
     "화면에 보인 최종값"이 되어 그대로 실행된다. body 를 안 보내는 기존
     호출(스케줄러 화면 include 등)은 silent=True 라 그대로 동작한다.
     """
-    from aot.ai.services import mcp_safety_gate as gate
+    from aot.tools import mcp_safety_gate as gate
     try:
         body = request.get_json(silent=True) or {}
         modified_params = body.get('modified_params')
@@ -402,7 +402,7 @@ def mcp_confirmation_approve(confirmation_id):
 @flask_login.login_required
 def mcp_confirmation_reject(confirmation_id):
     """대기 중인 요청을 거부."""
-    from aot.ai.services import mcp_safety_gate as gate
+    from aot.tools import mcp_safety_gate as gate
     try:
         user_id = getattr(flask_login.current_user, 'unique_id', None)
         result = gate.reject(confirmation_id, user_id=user_id)
@@ -423,7 +423,7 @@ def mcp_confirmation_batch_approve():
     부분 실패를 허용한다: 한 항목이 실패해도(만료, 이미 처리됨 등) 나머지는
     계속 처리하고, 항목별 결과를 모아 돌려준다.
     """
-    from aot.ai.services import mcp_safety_gate as gate
+    from aot.tools import mcp_safety_gate as gate
     data = request.get_json(silent=True) or {}
     ids = data.get('confirmation_ids')
     if not isinstance(ids, list) or not ids:
@@ -461,7 +461,7 @@ def mcp_confirmation_batch_approve():
 @flask_login.login_required
 def mcp_confirmation_batch_reject():
     """선택된 여러 요청을 일괄 거부 (mcp_review 위젯의 일괄처리용)."""
-    from aot.ai.services import mcp_safety_gate as gate
+    from aot.tools import mcp_safety_gate as gate
     data = request.get_json(silent=True) or {}
     ids = data.get('confirmation_ids')
     if not isinstance(ids, list) or not ids:
@@ -491,7 +491,7 @@ def _audit_title(tool_name, params, permission=None):
     표에 없으면 도구가 든 서랍(tool_registry)의 범주로 사람 말을 만든다 — 새 도구가
     늘어도 따로 채울 것이 없다. 요청 문맥이 있어 번역된다."""
     from flask_babel import gettext as _t
-    from aot.ai.services import mcp_safety_gate as gate
+    from aot.tools import mcp_safety_gate as gate
     name = tool_name or ''
     title = gate.synthesize_title(name, params)
     if title and title != name:
@@ -506,7 +506,7 @@ def _audit_title(tool_name, params, permission=None):
         return meta[name]
     drawer = None
     try:
-        from aot.ai.services import tool_registry as reg
+        from aot.tools import tool_registry as reg
         # tier_of 는 배정이 없는 도구에 'system' 을 기본으로 준다 — 그대로 쓰면 모르는
         # 도구가 전부 "AI 설정·시스템 상태 조회" 가 된다. 배정된 도구만 서랍을 쓴다.
         if name in getattr(reg, '_TIER_ASSIGNMENT', {}):
@@ -535,7 +535,7 @@ def mcp_audit_recent():
     from aot.mcp_server import audit
     try:
         limit = min(int(request.args.get('limit', 50)), 500)
-        from aot.ai.services import mcp_safety_gate as gate
+        from aot.tools import mcp_safety_gate as gate
         entries = audit.get_recent(
             limit=limit,
             agent_id=request.args.get('agent_id'),

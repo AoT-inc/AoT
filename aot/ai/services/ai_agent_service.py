@@ -1312,7 +1312,7 @@ class AIAgentService:
 
                         # [001_WEATHER_LOGIC_UPGRADE] Weather-aware truth tagging via AIRoutingService
                         if a.get('action_type') == 'virtual_tool_call':
-                            from aot.ai.services.ai_routing_service import AIRoutingService as _ARS
+                            from aot.ai.ai_routing_service import AIRoutingService as _ARS
                             log_msg = _ARS.format_weather_tool_result(a, res)
                         else:
                             # [TASK_8 054_] Truth-Source Enforcement: Tag sensor/weather data from MCP
@@ -1955,7 +1955,7 @@ class AIAgentService:
                                         res = AIActionService.execute_action(a['action_type'], a.get('target_id'), a.get('params'))
                                         # [001_WEATHER_LOGIC_UPGRADE] Weather-aware truth tagging
                                         if a.get('action_type') == 'virtual_tool_call':
-                                            from aot.ai.services.ai_routing_service import AIRoutingService as _ARS
+                                            from aot.ai.ai_routing_service import AIRoutingService as _ARS
                                             _base = _ARS.format_weather_tool_result(a, res)
                                             log_msg = f"[Worker:{w.name}] {_base}"
                                         else:
@@ -2209,7 +2209,7 @@ class AIAgentService:
                         res = AIActionService.execute_action(a['action_type'], a.get('target_id'), a.get('params'))
                         # [001_WEATHER_LOGIC_UPGRADE] Weather-aware truth tagging
                         if a.get('action_type') == 'virtual_tool_call':
-                            from aot.ai.services.ai_routing_service import AIRoutingService as _ARS
+                            from aot.ai.ai_routing_service import AIRoutingService as _ARS
                             log_msg = _ARS.format_weather_tool_result(a, res)
                         else:
                             log_msg = f"Auto-RAG Action '{a['action_type']}' Output:\n{json.dumps(res, ensure_ascii=False)}"
@@ -3629,7 +3629,7 @@ class AIAgentService:
 
                         # [001_WEATHER_LOGIC_UPGRADE] Weather-aware truth tagging
                         if a.get('action_type') == 'virtual_tool_call':
-                            from aot.ai.services.ai_routing_service import AIRoutingService as _ARS
+                            from aot.ai.ai_routing_service import AIRoutingService as _ARS
                             log_msg = _ARS.format_weather_tool_result(a, res)
                         else:
                             log_msg = f"Tool '{a['action_type']}' result:\n{json.dumps(res, ensure_ascii=False)}"
@@ -3891,27 +3891,27 @@ class AIAgentService:
 
     @staticmethod
     def _validate_and_normalize_action(action):
-        from aot.ai.services.ai_routing_service import AIRoutingService
+        from aot.ai.ai_routing_service import AIRoutingService
         return AIRoutingService._validate_and_normalize_action(action=action)
 
     @staticmethod
     def _resolve_action_route(action, agent_id):
-        from aot.ai.services.ai_routing_service import AIRoutingService
+        from aot.ai.ai_routing_service import AIRoutingService
         return AIRoutingService._resolve_action_route(action=action, agent_id=agent_id)
 
     @staticmethod
     def _dispatch_actions(agent_id, goal, insight, actions, thread_id=None, message_type='ai', metadata=None):
-        from aot.ai.services.ai_dispatch_service import AIDispatchService
+        from aot.ai.ai_dispatch_service import AIDispatchService
         return AIDispatchService._dispatch_actions(agent_id=agent_id, goal=goal, insight=insight, actions=actions, thread_id=thread_id, message_type=message_type, metadata=metadata)
 
     @staticmethod
     def _register_drafts(actions, reasoning, agent_name='AI'):
-        from aot.ai.services.ai_dispatch_service import AIDispatchService
+        from aot.ai.ai_dispatch_service import AIDispatchService
         return AIDispatchService._register_drafts(actions=actions, reasoning=reasoning, agent_name=agent_name)
 
     @staticmethod
     def _register_drafts_no_commit(actions, reasoning, agent_name='AI'):
-        from aot.ai.services.ai_dispatch_service import AIDispatchService
+        from aot.ai.ai_dispatch_service import AIDispatchService
         return AIDispatchService._register_drafts_no_commit(actions=actions, reasoning=reasoning, agent_name=agent_name)
 
     @staticmethod
@@ -3955,7 +3955,7 @@ class AIAgentService:
 
     @staticmethod
     def _check_approval_required(action_type, target_id, params):
-        from aot.ai.services.ai_dispatch_service import AIDispatchService
+        from aot.ai.ai_dispatch_service import AIDispatchService
         return AIDispatchService._check_approval_required(action_type=action_type, target_id=target_id, params=params)
 
     @staticmethod
@@ -3979,6 +3979,6 @@ class AIAgentService:
 
     @staticmethod
     def run_router(command_text, thread_id=None):
-        from aot.ai.services.ai_routing_service import AIRoutingService
+        from aot.ai.ai_routing_service import AIRoutingService
         return AIRoutingService.run_router(command_text=command_text, thread_id=thread_id)
 

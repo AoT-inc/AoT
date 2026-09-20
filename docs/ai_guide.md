@@ -1,6 +1,6 @@
 # AoT AI Agent Guide
 
-Explains how AoT's AI observes, diagnoses, and controls facilities and fields. The AI runs through two paths: the dashboard's **in-app assistant** (the agent loop), and an **external MCP server** (`aot/aot_mcp_server.py`) that external clients such as Claude Desktop and ChatGPT connect to. Both paths pull their tools from the same tool registry (`aot/ai/services/tool_registry.py`).
+Explains how AoT's AI observes, diagnoses, and controls facilities and fields. The AI runs through two paths: the dashboard's **in-app assistant** (the agent loop), and an **external MCP server** (`aot/aot_mcp_server.py`) that external clients such as Claude Desktop and ChatGPT connect to. Both paths pull their tools from the same tool registry (`aot/tools/tool_registry.py`).
 
 ---
 
@@ -34,6 +34,7 @@ Setting the environment variable `AOT_MCP_TOOL_TIERING=0` exposes all 128 tools 
 | Space | `get_map_equipment` | Equipment/devices placed on the map | Not required |
 | Device | `get_device_list` / `search_devices` | Full list / search by name, type, or measurement kind | Not required |
 | Device | `get_device_measurements` | List of a device's measurement channels | Not required |
+| Device | `get_device_detail` | Everything about ONE device in a single call — what/where/measures/controls/communication/space/constraints, instead of chaining search_devices + get_device_measurements + get_device_location | Not required |
 | Device | `get_output_state` | Current state of an output (valve, pump, light) | Not required |
 | Measurement | `get_sensor_detail` | Sensor history (min/max/avg), including Function aggregate values | Not required |
 | Measurement | `get_zone_sensor_summary` | Latest values plus period stats for an entire zone, in one call | Not required |
@@ -69,7 +70,7 @@ Setting the environment variable `AOT_MCP_TOOL_TIERING=0` exposes all 128 tools 
 
 In addition to the above, the in-app assistant also uses `read_manual` (reads the manual by file name + section), `get_detailed_manifest`, `ask_user`, `get_sensor_reading`, `list_available_devices`, `set_output_state`, `list_unbound_slots`, `rebind_device`, and `get_function_doc` / `get_input_doc` / `get_output_doc`. When looking up the manual from the external MCP, use `knowledge_search` instead of `read_manual` — it finds the relevant section across the whole manual even when you don't know the file name.
 
-> The single source of truth for tools is `aot/ai/services/tool_registry.py`. If this document and that file disagree, the file is correct.
+> The single source of truth for tools is `aot/tools/tool_registry.py`. If this document and that file disagree, the file is correct.
 
 ---
 
@@ -95,7 +96,7 @@ Tools fall into three tiers.
 
 Presented in chat as an **approval card**; it only runs once the user approves it.
 
-### External MCP (`aot/ai/services/mcp_safety_gate.py`)
+### External MCP (`aot/tools/mcp_safety_gate.py`)
 
 1. The first call to a write tool → doesn't execute; responds with `pending_approval` + a `confirmation_id`.
 2. A person approves — via the dashboard's **MCP Approval widget**, the AI screen, or `respond_to_confirmation` only when the user has explicitly told you to approve it in this conversation.

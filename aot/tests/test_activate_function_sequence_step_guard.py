@@ -79,7 +79,7 @@ def _make_output():
 
 
 def test_empty_sequence_refuses_to_activate(app, daemon):
-    from aot.ai.services.aot_data_tool_service import AoTDataToolService
+    from aot.tools.aot_data_tool_service import AoTDataToolService
     from aot.databases.models.function import Trigger
 
     with app.test_request_context():
@@ -97,7 +97,7 @@ def test_empty_sequence_refuses_to_activate(app, daemon):
 
 
 def test_sequence_with_steps_still_activates(app, daemon):
-    from aot.ai.services.aot_data_tool_service import AoTDataToolService
+    from aot.tools.aot_data_tool_service import AoTDataToolService
     from aot.databases.models.function import Trigger
 
     with app.test_request_context():
@@ -118,7 +118,7 @@ def test_sequence_with_steps_still_activates(app, daemon):
 def test_non_sequence_trigger_activation_unaffected(app, daemon):
     """게이트는 trigger_sequence 전용이어야 한다 — 다른 트리거 타입까지
     스텝 없다고 막으면 과잉 제한이다."""
-    from aot.ai.services.aot_data_tool_service import AoTDataToolService
+    from aot.tools.aot_data_tool_service import AoTDataToolService
     from aot.databases.models.function import Trigger
 
     with app.test_request_context():

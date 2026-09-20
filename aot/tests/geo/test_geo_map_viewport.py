@@ -76,7 +76,7 @@ class TestReadersUseViewport:
                 '%s is NULL on every map — use viewport()' % dead)
 
     def test_designs_list_endpoint_reads_viewport(self):
-        path = os.path.join(self.ROOT, 'aot_flask', 'routes_geo.py')
+        path = os.path.join(self.ROOT, 'aot_flask', 'routes_geo_map.py')
         with open(path, encoding='utf-8') as fh:
             src = fh.read()
         tree = ast.parse(src)

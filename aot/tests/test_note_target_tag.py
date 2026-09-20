@@ -23,6 +23,19 @@ def _read(*parts):
         return fh.read()
 
 
+def _read_ai_tool_service():
+    """aot_data_tool_service.py + every drawer mixin it assembles from
+    (aot/tools/data_tools/*.py), concatenated -- the class used to be
+    one file; it is now an assembler plus per-drawer mixin modules."""
+    parts = [_read('..', 'aot', 'tools', 'aot_data_tool_service.py')]
+    data_tools_dir = os.path.join(_ROOT, '..', 'aot', 'tools', 'data_tools')
+    if os.path.isdir(data_tools_dir):
+        for name in sorted(os.listdir(data_tools_dir)):
+            if name.endswith('.py'):
+                parts.append(_read('..', 'aot', 'tools', 'data_tools', name))
+    return '\n'.join(parts)
+
+
 class TestEveryCreatePathEnsuresTheTargetTag(unittest.TestCase):
 
     def test_the_rule_lives_in_one_place(self):
@@ -43,7 +56,7 @@ class TestEveryCreatePathEnsuresTheTargetTag(unittest.TestCase):
     def test_the_ai_tool_path_is_wired(self):
         """AI 는 태그를 주지 않는 것이 보통이다 — 여기가 빠지면 그 노트만 조용히
         태그 없이 남는다."""
-        src = _read('..', 'aot', 'ai', 'services', 'aot_data_tool_service.py')
+        src = _read_ai_tool_service()
         create = src.split('def create_note(', 1)[1].split('\n    def ', 1)[0]
         self.assertIn('ensure_target_tag(', create)
         self.assertNotIn("tags=tags or ''", create,

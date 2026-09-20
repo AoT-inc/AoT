@@ -397,7 +397,7 @@ class TestToolSurfaceBudget(unittest.TestCase):
         import json
         import os
 
-        from aot.ai.services import tool_registry as registry
+        from aot.tools import tool_registry as registry
 
         old = os.environ.get('AOT_AI_TOOL_TIERING')
         os.environ['AOT_AI_TOOL_TIERING'] = '1'
@@ -436,7 +436,7 @@ class TestToolSurfaceBudget(unittest.TestCase):
         보수적 기본값이라 사고는 아니지만, **아무도 그 도구를 배치하기로
         판단한 적이 없다**는 사실이 묻힌다. 양방향으로 잡는다.
         """
-        from aot.ai.services import tool_registry as registry
+        from aot.tools import tool_registry as registry
 
         declared = {t.name for t in registry.TOOLS}
         assigned = set(registry._TIER_ASSIGNMENT)
@@ -447,7 +447,7 @@ class TestToolSurfaceBudget(unittest.TestCase):
 
     def test_drawer_names_are_declared(self):
         """서랍 이름 오타는 그 도구를 아무도 못 여는 서랍에 넣는다."""
-        from aot.ai.services import tool_registry as registry
+        from aot.tools import tool_registry as registry
 
         unknown = sorted({d for d, _, _ in registry._TIER_ASSIGNMENT.values()}
                          - set(registry.DRAWERS))
@@ -455,7 +455,7 @@ class TestToolSurfaceBudget(unittest.TestCase):
 
     def test_core_set_stays_small(self):
         """상시 노출이 늘면 고정비를 줄이려던 이유가 사라진다."""
-        from aot.ai.services import tool_registry as registry
+        from aot.tools import tool_registry as registry
 
         core = registry.core_tools()
         self.assertLessEqual(
@@ -465,7 +465,7 @@ class TestToolSurfaceBudget(unittest.TestCase):
 
     def test_the_drawer_opener_is_never_in_a_drawer(self):
         """서랍을 여는 수단이 서랍에 있으면 나머지가 영영 안 열린다."""
-        from aot.ai.services import tool_registry as registry
+        from aot.tools import tool_registry as registry
 
         for essential in ('get_tool_detail', 'resolve_target', 'ask_user'):
             self.assertIn(essential, registry.core_tools(),
@@ -475,7 +475,7 @@ class TestToolSurfaceBudget(unittest.TestCase):
         """배포만으로 동작이 바뀌면 안 된다. 켜는 것이 명시적 결정이어야 한다."""
         import os
 
-        from aot.ai.services import tool_registry as registry
+        from aot.tools import tool_registry as registry
 
         self.assertNotIn('AOT_AI_TOOL_TIERING', os.environ,
                          '테스트 환경에 스위치가 켜져 있으면 아래 판정이 무의미하다')
@@ -488,7 +488,7 @@ class TestToolSurfaceBudget(unittest.TestCase):
         어느 쪽에도 없으면 그 도구는 조용히 사라진 것이고, 그것이 이 기능이
         절대 해서는 안 되는 일이다.
         """
-        from aot.ai.services import tool_registry as registry
+        from aot.tools import tool_registry as registry
 
         core = registry.core_tools()
         in_drawers = set()
@@ -501,7 +501,7 @@ class TestToolSurfaceBudget(unittest.TestCase):
 
     def test_unknown_drawer_returns_the_list_not_an_error(self):
         """이름을 틀렸을 때 '없다' 로 끝나면 LLM 이 포기한다."""
-        from aot.ai.services.aot_data_tool_service import AoTDataToolService
+        from aot.tools.aot_data_tool_service import AoTDataToolService
 
         result = AoTDataToolService.open_drawer('없는이름')
         self.assertTrue(result.get('drawers'),

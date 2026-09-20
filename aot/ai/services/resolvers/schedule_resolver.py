@@ -30,7 +30,7 @@ class ScheduleResolver(BaseActionResolver):
         context: Optional[Dict[str, Any]],
         approved: bool = False,
     ) -> Dict[str, Any]:
-        from aot.ai.services.aot_data_tool_service import AoTDataToolService
+        from aot.tools.aot_data_tool_service import AoTDataToolService
 
         try:
             if action_type == 'add_schedule':

@@ -561,8 +561,8 @@ def api_note_schedule(note_id):
                             'message': _('That text is no longer in the note')}), 409
         start, end = idx, idx + len(text)
 
-    from aot.aot_flask.routes_geo import (_create_human_schedule,
-                                          _schedule_target_label)
+    from aot.aot_flask.routes_geo_schedule import (_create_human_schedule,
+                                                    _schedule_target_label)
     from aot.databases.models import NoteScheduleLink
 
     target_id = note.target_id or 'none'

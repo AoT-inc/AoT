@@ -1,6 +1,6 @@
 # AI Features Overview
 
-AoT uses an MCP (Model Context Protocol) based AI agent to observe, diagnose, and control the environment in greenhouses and growing facilities. The AI acts in an advisory role — any action that moves equipment requires user approval before execution (edits that only change configuration are exempt; see Safety & Approval Model).
+AoT uses an MCP (Model Context Protocol) based AI agent to observe, diagnose, and control the environment of a site — a greenhouse, a field, a park, a building, anywhere devices are laid out in space. The AI acts in an advisory role — any action that moves equipment requires user approval before execution (edits that only change configuration are exempt; see Safety & Approval Model).
 
 ---
 
@@ -46,8 +46,8 @@ User chat ───────────────┐            External M
                         AoT system (Daemon / InfluxDB / SQLite)
 ```
 
-Both paths execute through the same gate (`aot/ai/services/tool_execution.py`) and pull tool
-definitions from the same registry (`aot/ai/services/tool_registry.py`), so neither their
+Both paths execute through the same gate (`aot/tools/tool_execution.py`) and pull tool
+definitions from the same registry (`aot/tools/tool_registry.py`), so neither their
 approval rules nor their tool lists can ever diverge between the in-app assistant and an
 external MCP client.
 
@@ -61,11 +61,11 @@ Tools exposed by the external MCP server and the internal `mcp_aot` engine. Read
 
 The catalog is not one flat list. Listing every tool up front costs roughly 20K tokens before the conversation even starts, so `tools/list` returns only two layers, and the rest is opened on demand:
 
-- **Core — 27 tools, always listed.** The narrow set an agent needs to take its next step without guessing: name resolution (`resolve_target`), device lookup, reading a value, immediate control, the approval queue, and a handful more (`aot/ai/services/tool_registry.py`, the `_TIER_ASSIGNMENT` table).
+- **Core — 27 tools, always listed.** The narrow set an agent needs to take its next step without guessing: name resolution (`resolve_target`), device lookup, reading a value, immediate control, the approval queue, and a handful more (`aot/tools/tool_registry.py`, the `_TIER_ASSIGNMENT` table).
 - **4 meta tools, always listed alongside core:** `open_drawer` (lists a drawer's tools, or all drawers with no argument), `get_tool_detail` (one tool's full schema by name), `use_tool` (actually *calls* a drawer tool by name — the only way to execute one; `open_drawer`/`get_tool_detail` only return definitions), `respond_to_confirmation` (approve/reject a pending confirmation).
 - **101 tools live in 8 drawers**, grouped by purpose, and only appear once `open_drawer` is called: `device` (device control/state), `measurement` (sensors, environment, weather, energy), `function` (functions/controllers/sequences), `schedule` (scheduling), `record` (notes/notices/knowledge/advice), `space` (map/zones/facilities/plots), `definition` (device-definition CRUD), `system` (AI settings, system status, diagnostics, screens).
 
-This tiering is on by default; set `AOT_MCP_TOOL_TIERING=0` to fall back to listing the whole catalog flat (`aot/ai/services/tool_execution.py:132-239`, `aot/ai/services/tool_registry.py:1342-1560`).
+This tiering is on by default; set `AOT_MCP_TOOL_TIERING=0` to fall back to listing the whole catalog flat (`aot/tools/tool_execution.py:132-239`, `aot/tools/tool_registry.py:1342-1560`).
 
 The tables in this section describe tools regardless of which layer they're in — a **Drawer** column marks the ones that are *not* in `tools/list` and must be opened first. For the complete tool list, including every drawer-only tool with its full argument schema, see the AI Agent Guide (`docs/ai_guide.md`) — this page does not duplicate that reference.
 
@@ -167,7 +167,7 @@ Beyond the tools above, the in-app AI assistant (and, for the ones that are `cor
 - **Document storage tiers**: `get_storage_tier_status`, `search_archives`, `get_archived_document`, `archive_note`·`restore_note_from_archive`·`delete_archive`·`set_document_tier` — an optional cold archive for old notes. `archive_note` copies a note's content into compressed long-term storage and flags it tier 3; the original note is left untouched either way. `delete_archive` removes only that archived copy, never the note itself. There is no screen for this — it is AI-tool-only.
 - **Diagnostics / misc**: `analyze_system_failure`, `get_local_time`, `get_tool_detail`, `read_manual`, `get_detailed_manifest`, `ask_user`
 
-> The single source of truth for tools is `aot/ai/services/tool_registry.py`. When a tool is added or changed, that file — not this page — is authoritative. For the full tool list with arguments, including everything behind a drawer, see the AI Agent Guide (`docs/ai_guide.md`).
+> The single source of truth for tools is `aot/tools/tool_registry.py`. When a tool is added or changed, that file — not this page — is authoritative. For the full tool list with arguments, including everything behind a drawer, see the AI Agent Guide (`docs/ai_guide.md`).
 
 ---
 
@@ -502,7 +502,7 @@ Add to `claude_desktop_config.json`:
 }
 ```
 
-> State-changing tool calls do not execute immediately here either (`aot/ai/services/mcp_safety_gate.py`). The first call comes back as `pending_approval` with a `confirmation_id`; the user must explicitly approve or reject it, in that same conversation or on the **AI → Requests** screen (`/ai`), which is handled through `respond_to_confirmation`. (`/api/v1/mcp/review_page` still exists as a bookmark-compatible redirect to `/ai`, but the audit log itself moved — it's now **AI → Records** (`/ai/manage`), under the Tool Calls tab, alongside Conversations and Error Reports.) Approving executes nothing by itself — retry the same call with `_confirmation_id` added afterward. The calling AI has no way to decide or fake this approval on its own. Set `AOT_MCP_WRITE_ENABLED=0` to refuse write tools outright (advice-only mode). Two separate deadlines apply: 15 minutes by default for a human to approve (`AOT_MCP_CONFIRM_TTL_SEC`), then a fresh 5 minutes from the moment of approval to execute (`AOT_MCP_APPROVED_TTL_SEC`). It still exposes control tools, so connect this server only to trusted clients.
+> State-changing tool calls do not execute immediately here either (`aot/tools/mcp_safety_gate.py`). The first call comes back as `pending_approval` with a `confirmation_id`; the user must explicitly approve or reject it, in that same conversation or on the **AI → Requests** screen (`/ai`), which is handled through `respond_to_confirmation`. (`/api/v1/mcp/review_page` still exists as a bookmark-compatible redirect to `/ai`, but the audit log itself moved — it's now **AI → Records** (`/ai/manage`), under the Tool Calls tab, alongside Conversations and Error Reports.) Approving executes nothing by itself — retry the same call with `_confirmation_id` added afterward. The calling AI has no way to decide or fake this approval on its own. Set `AOT_MCP_WRITE_ENABLED=0` to refuse write tools outright (advice-only mode). Two separate deadlines apply: 15 minutes by default for a human to approve (`AOT_MCP_CONFIRM_TTL_SEC`), then a fresh 5 minutes from the moment of approval to execute (`AOT_MCP_APPROVED_TTL_SEC`). It still exposes control tools, so connect this server only to trusted clients.
 
 ---
 

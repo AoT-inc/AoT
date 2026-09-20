@@ -77,7 +77,7 @@ class ActionRegistrySync:
             db.session.commit()
 
             # Invalidate AILoaderService action cache so next load includes new entries
-            from aot.ai.services.ai_loader_service import AILoaderService
+            from aot.ai.ai_loader_service import AILoaderService
             AILoaderService.invalidate('actions')
 
             logger.info(

@@ -16,7 +16,9 @@ import pytest
 from aot.functions.utils.env_control.ext_context_fallback import (
     ExtContextCache, build_fallback_context,
 )
-from aot.functions.utils.env_control.log_channels import GATE_BIT_EXT_EXP
+from aot.functions.utils.env_control.log_channels import (
+    GATE_BIT_EXT_EXP, GATE_BIT_HEAT, GATE_BIT_INT_EXP,
+)
 from aot.functions.utils.env_control.safety_gates import (
     SafetyPreGate, PreGateConfig, GATE_BIT_RAIN,
 )
@@ -165,14 +167,71 @@ class TestGateExtExpBehaviour:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# INT_EXP — 내부 센서 만료는 전체 차단 유지
+# INT_EXP — 실내 값을 잃으면 **제자리** (2026-09-20 재정의)
+# ─────────────────────────────────────────────────────────────────────────────
+# 예전에는 `last_int_ts` 로 나이를 재서 모든 액추에이터를 safe_default 로
+# 강제했다. 둘 다 틀렸다 — 호출자가 그 키에 매번 `time.time()` 을 실어 보내
+# **한 번도 발동한 적이 없었고**, 되살리면 실내 노드가 끊기는 순간 한여름에
+# 창이 닫힌다. EXT_EXP 가 2026-09-19 에 같은 이유로 그만둔 동작이다.
 # ─────────────────────────────────────────────────────────────────────────────
 
 class TestIntExpBehaviour:
-    def test_int_exp_triggers_full(self):
-        """내부 센서 만료 → triggered=True (내부 제어 불가)."""
+
+    @staticmethod
+    def _lost(ctx):
+        """실내 값이 안 온 사이클 — 게이트는 나이가 아니라 이것을 본다."""
+        ctx['internal']['T'] = None
+        ctx['internal']['RH'] = None
+        return ctx
+
+    def test_실내_값을_잃으면_발동한다(self):
+        result = _run_gate(self._lost(make_ctx(rain=0.0, wind=2.0)))
+        assert result.gate_mask & GATE_BIT_INT_EXP
+        assert 'int_sensor_expired' in result.description
+
+    def test_나이로_재지_않는다(self):
+        """값이 왔으면 `last_int_ts` 가 아무리 낡아도 발동하지 않는다.
+
+        판정이 두 벌이 되면 느슨한 쪽이 실질이 된다 — 값이 쓸 만한가는
+        `measurement_freshness` 가 센서마다 이미 정했다.
+        """
         now = time.time()
         ctx = make_ctx(rain=0.0, wind=2.0, now_ts=now)
-        ctx['last_int_ts'] = now - 300   # 내부 만료 (기본 임계 120s)
+        ctx['last_int_ts'] = now - 86400
+        assert not (_run_gate(ctx).gate_mask & GATE_BIT_INT_EXP)
+
+    def test_강제_명령을_만들지_않는다(self):
+        """근거가 없다는 이유로 장비를 움직이지 않는다.
+
+        예전에는 개구부가 safe_default(0 = 닫힘), 스크린이 100(= 걷힘) 으로
+        끌려갔다. 실내를 모르는 동안 할 일은 아무것도 하지 않는 것이다.
+        """
+        result = _run_gate(self._lost(make_ctx(rain=0.0, wind=2.0)))
+        assert result.forced_commands == {}
+
+    def test_L1_L3_를_멈추지_않는다(self):
+        """잴 수 있는 축(CO₂·광량 임계)은 계속 제어해야 한다."""
+        result = _run_gate(self._lost(make_ctx(rain=0.0, wind=2.0)))
+        assert result.partial and not result.triggered
+
+    def test_TTL_을_잡지_않는다(self):
+        """값이 돌아오면 곧바로 재개한다 — 300초 더 멈추지 않는다."""
+        gate = SafetyPreGate()
+        gate.evaluate(self._lost(make_ctx(rain=0.0, wind=2.0)),
+                      [make_opening_profile()])
+        back = gate.evaluate(make_ctx(rain=0.0, wind=2.0),
+                             [make_opening_profile()])
+        assert not back.triggered and back.gate_mask == 0
+
+    def test_비상_게이트가_함께_서면_그쪽이_이긴다(self):
+        """강우는 실내를 몰라도 판단할 수 있다 — 창은 닫혀야 한다."""
+        result = _run_gate(self._lost(make_ctx(rain=5.0, wind=2.0)))
+        assert result.triggered and not result.partial
+        assert result.forced_commands['vent_01']['value'] == pytest.approx(0.0)
+
+    def test_실내를_모르면_폭염_한파를_판정하지_않는다(self):
+        """비상 게이트는 전 장비를 한쪽으로 몬다 — 근거가 확실할 때만 선다."""
+        ctx = self._lost(make_ctx(rain=0.0, wind=2.0))
+        ctx['external']['T'] = 46.0          # 폭염 임계 밖
         result = _run_gate(ctx)
-        assert result.triggered
+        assert not (result.gate_mask & GATE_BIT_HEAT)

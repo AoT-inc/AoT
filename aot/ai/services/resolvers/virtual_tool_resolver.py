@@ -52,8 +52,8 @@ class VirtualToolResolver(BaseActionResolver):
         # @ANCHOR: TOOL_MAP — now DERIVED from the SSOT tool registry (Phase 1).
         # Was a hand-maintained dict duplicated across 5 places; build_tool_map()
         # resolves each declared tool's handler on AoTDataToolService. Add a tool
-        # by declaring it once in aot/ai/services/tool_registry.py.
-        from aot.ai.services.tool_registry import build_tool_map
+        # by declaring it once in aot/tools/tool_registry.py.
+        from aot.tools.tool_registry import build_tool_map
         tool_map = build_tool_map()
         handler = tool_map.get(tool_name)
         if not handler:

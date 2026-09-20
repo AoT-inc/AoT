@@ -65,7 +65,7 @@ def _enrich_job_display(job):
     tested via the AI schedule tools) for content/location/editable/deletable,
     with a live id→name fallback when the row predates location-linking (no
     params.target_name stored) or has no summary-derivable location."""
-    from aot.ai.services.aot_data_tool_service import AoTDataToolService
+    from aot.tools.aot_data_tool_service import AoTDataToolService
     summary = AoTDataToolService._schedule_summary(job)
     job.display_content = summary['content']
     job.display_location = summary['location'] or _resolve_target_name(job.target_id)
@@ -174,7 +174,7 @@ def page_scheduler():
     # _mcp_pending_approvals.html include 가 요구한다. 물리 제어 목록은 게이트가
     # 정본이다 — 화면에 하드코딩하면 도구가 늘 때 조용히 어긋나고, 그 어긋남이
     # 곧 "확인 없이 밸브가 열리는" 상태가 된다.
-    from aot.ai.services import mcp_safety_gate as gate
+    from aot.tools import mcp_safety_gate as gate
 
     return render_template('pages/ai/scheduler.html',
                            show_automated=show_automated,
@@ -265,7 +265,7 @@ def api_propose_job():
             # task this is the DEVICE'S own local time, so anchor to the target's
             # tz (device-local), not the browser/system clock. Storage is UTC;
             # display re-derives device-local. (timezone-management.md §6)
-            from aot.ai.services.aot_data_tool_service import AoTDataToolService
+            from aot.tools.aot_data_tool_service import AoTDataToolService
             from aot.utils.timekit import wall_to_utc
             _atz, _anchor_name, _anchor_src = \
                 AoTDataToolService._resolve_schedule_anchor(data.get('target_id'))
@@ -391,7 +391,7 @@ def api_update_job(job_id):
         return jsonify({'error': 'Permission denied'}), 403
 
     data = request.get_json(silent=True) or {}
-    from aot.ai.services.aot_data_tool_service import AoTDataToolService
+    from aot.tools.aot_data_tool_service import AoTDataToolService
     result = AoTDataToolService.edit_schedule_tool(
         job_id=str(job_id),
         date=data.get('date'),
@@ -421,7 +421,7 @@ def api_delete_job(job_id):
     # 않는다** — `or {}` 는 실행될 기회가 없다. 취소 버튼처럼 본문 없이 DELETE 만
     # 보내는 호출부가 정상인데도 실패한다(지도 위젯의 [예약 취소] 가 그랬다).
     data = request.get_json(silent=True) or {}
-    from aot.ai.services.aot_data_tool_service import AoTDataToolService
+    from aot.tools.aot_data_tool_service import AoTDataToolService
     result = AoTDataToolService.delete_schedule_tool(
         job_id=str(job_id),
         reason=data.get('reason'),

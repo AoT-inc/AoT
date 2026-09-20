@@ -18,6 +18,7 @@ on:
       - Driver Dependency Pins
       - Geo Data Integrity
       - i18n Catalog Sync
+      - Import Layers
       - JS Bundle Drift
       - Security Checks
       - Static Cache Busting

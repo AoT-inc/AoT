@@ -1,20 +1,23 @@
-AoT is an open-source system for monitoring an environment with sensors and controlling devices remotely. It is not tied to any particular purpose or kind of site — greenhouses, barns, and fields, but equally parks, public infrastructure, and traffic: anywhere the things you want to watch are laid out in space.
+AoT puts your space on a map and links the records and devices that belong to it. It then lets AI look at that space together with people, make judgments, and get work done.
+
+It is an open-source system for monitoring an environment with sensors and controlling devices remotely, not tied to any particular purpose or kind of site.
 
 It runs natively on single-board computers such as the [Raspberry Pi](https://en.wikipedia.org/wiki/Raspberry_Pi), and in Docker on ordinary servers and PCs.
 
-Two things define AoT:
+What it offers:
 
-- a **GIS digital twin** — every device, sensor, and structure has a real place on a map, and the map is the primary interface rather than a list of readouts;
-- an **AI layer built on MCP** (Model Context Protocol) — an assistant that can read that map, diagnose it, and act on it, with your approval for anything that moves hardware.
+- a proven **Input / Output / Function** control model, inherited from the Mycodo project AoT started out from (see [Origins](#origins));
+- a **GIS map** — devices, sensors, and structures can be placed at their real positions and viewed and operated from there;
+- an **AI layer built on MCP** (Model Context Protocol) — an assistant that can read the system, diagnose it, and act on it, with your approval for anything that moves hardware.
 
-Underneath both sits a proven Input / Output / Function control model, inherited from the Mycodo project AoT started out from (see [Origins](#origins)).
+Which of these you use is up to you.
 
 ## GIS — Map, Facility, and Information
 
-The map is not a viewer bolted onto a device list; it is where devices live.
+The map widget holds devices, sensors, structures, and areas at their real positions. Whether to use it is up to you; a setup without the map works the same way.
 
 - **Spatial hierarchy** — sites, zones, facilities, and planting areas form a real hierarchy, so a question like "what is happening in the east house" has a definite answer.
-- **Facilities in 3D** — greenhouse and barn outlines are defined as polygons and visualized in 3D; vents, curtains, and other components are bound to the geometry and controlled from there.
+- **Facilities in 3D** — facility outlines are defined as polygons and visualized in 3D; vents, curtains, and other components are bound to the geometry and controlled from there.
 - **GIS data sources** — weather, satellite, and soil layers are registered as Inputs, so external map data flows into the same time-series database as your sensors.
 - **Devices on the map** — sensor Inputs and Output devices (valves, relays, curtains, vents) are placed on the map and operated directly from the map or facility view.
 - **Geometry drives control** — facility-level environmental control uses the geometry itself: opening area, azimuth, and wind direction coordinate several actuators as a single feedback loop (for example, differential venting by wind side).

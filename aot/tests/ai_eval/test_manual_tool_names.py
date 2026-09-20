@@ -24,7 +24,7 @@ import json
 import os
 import re
 
-from aot.ai.services.tool_registry import TOOLS
+from aot.tools.tool_registry import TOOLS
 
 # Tools the MCP surface defines outside the registry (aot/ai/services/
 # tool_execution.py:_EXTRA_TOOLS) — they have no Tool(...) declaration.
@@ -86,7 +86,7 @@ def test_manuals_name_only_existing_tools():
 
 def test_guide_core_table_matches_registry():
     """ai_guide.ko.md §1.1 이 상시 노출이라고 적은 도구는 실제로 core 여야 한다."""
-    from aot.ai.services.tool_registry import core_tools, virtual_tools
+    from aot.tools.tool_registry import core_tools, virtual_tools
 
     docs, _ = _manual_pages()
     path = os.path.join(docs, 'ai_guide.ko.md')

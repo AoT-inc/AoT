@@ -19,7 +19,7 @@ import json
 import os
 import unittest
 
-from aot.ai.services import tool_registry as registry
+from aot.tools import tool_registry as registry
 
 
 def _load_server():
@@ -35,7 +35,7 @@ def _load_exec():
     실행층을 보는 검사는 전송을 거치지 않고 이쪽을 본다.
     """
     import importlib
-    return importlib.import_module('aot.ai.services.tool_execution')
+    return importlib.import_module('aot.tools.tool_execution')
 
 
 class TestDrawerSurface(unittest.TestCase):
@@ -236,7 +236,7 @@ class TestExecutionLayerIsShared(unittest.TestCase):
         self.assertNotIn('def _execute_tool(', src,
                          '전송 계층이 실행층을 다시 정의하고 있다 — '
                          'tool_execution 에서 가져다 쓸 것')
-        self.assertIn('from aot.ai.services.tool_execution import', src,
+        self.assertIn('from aot.tools.tool_execution import', src,
                       '전송 계층이 실행층을 import 하지 않는다')
 
     def test_internal_entry_point_exists_and_returns_bridge_shape(self):
@@ -250,7 +250,13 @@ class TestExecutionLayerIsShared(unittest.TestCase):
         self.assertTrue(hasattr(exec_mod, 'tools_for_agent'))
         import inspect
         src = inspect.getsource(exec_mod.execute_for_agent)
-        self.assertIn('_check_tool_access', src,
+        # tools-no-ai 가드 이후 이 파일은 `MCPBridgeService._check_tool_access` 를
+        # 직접 부르지 않는다 — `providers.get('tool_access_allowed')` 를 거친다
+        # (aot/tools/providers.py, 바인딩은 aot/ai/services/tool_providers.py).
+        # 그 프로바이더 자체가 `_check_tool_access` 를 감싼다는 것은
+        # test_tool_providers.py 와 그 어댑터 구현이 보장한다 — 여기서는 "ACL
+        # 체크 지점이 빠지지 않았다" 만 본다.
+        self.assertIn("providers.get('tool_access_allowed')", src,
                       'ACL 이 빠졌다 — 브리지를 우회하면서 에이전트 권한 제어가 '
                       '함께 사라진다(매핑이 없으면 기본 거부라 더 위험하다)')
         self.assertIn('call_state', src,
@@ -553,7 +559,7 @@ class TestSpatialTreeDepth(unittest.TestCase):
     """
 
     def setUp(self):
-        from aot.ai.services.aot_data_tool_service import AoTDataToolService
+        from aot.tools.aot_data_tool_service import AoTDataToolService
         self.svc = AoTDataToolService
         # site > zone > device 3단. 잎(빈 자식)도 하나 둔다.
         self.tree = [{
@@ -660,7 +666,7 @@ class TestJournalNarrowsAndFolds(unittest.TestCase):
 
     def _src(self):
         import inspect
-        from aot.ai.services.aot_data_tool_service import AoTDataToolService
+        from aot.tools.aot_data_tool_service import AoTDataToolService
         return inspect.getsource(AoTDataToolService.get_plot_journal)
 
     def test_dates_narrow_the_stage_plan_too(self):
@@ -726,7 +732,7 @@ class TestPlotCurrentValuesAreNarrowed(unittest.TestCase):
 
     def _src(self):
         import inspect
-        from aot.ai.services.aot_data_tool_service import AoTDataToolService
+        from aot.tools.aot_data_tool_service import AoTDataToolService
         return inspect.getsource(AoTDataToolService._latest_by_measurement)
 
     def test_narrowing_is_by_measurement_not_by_channel(self):
@@ -757,7 +763,7 @@ class TestPlotCurrentValuesAreNarrowed(unittest.TestCase):
         """무엇을 읽을지는 목표 항목이 정한다 — 목록을 손으로 적으면 목표가
         늘 때 조용히 빠진다."""
         import inspect
-        from aot.ai.services.aot_data_tool_service import AoTDataToolService
+        from aot.tools.aot_data_tool_service import AoTDataToolService
         src = inspect.getsource(AoTDataToolService._stage_target_check)
         self.assertIn('wanted_meas', src)
         self.assertIn("t.get('measurement') or t.get('key')", src)
@@ -782,7 +788,7 @@ class TestGuidanceIsLabelledAsThePlanNotTheOutcome(unittest.TestCase):
 
     def _src(self, fn_name):
         import inspect
-        from aot.ai.services.aot_data_tool_service import AoTDataToolService
+        from aot.tools.aot_data_tool_service import AoTDataToolService
         return inspect.getsource(getattr(AoTDataToolService, fn_name))
 
     def test_the_list_says_guidance_is_a_plan(self):
@@ -811,7 +817,7 @@ class TestTruncationSaysHowToNarrow(unittest.TestCase):
     """
 
     def _cap(self, result, limit, priority=None):
-        from aot.ai.services import tool_execution as TE
+        from aot.tools import tool_execution as TE
         if priority is not None:
             result = dict(result)
             result[TE.CAP_PRIORITY_KEY] = priority
@@ -836,7 +842,7 @@ class TestTruncationSaysHowToNarrow(unittest.TestCase):
 
     def test_the_hint_never_reaches_the_client(self):
         """`narrow_with` 는 캡을 위한 지시이지 응답의 내용이 아니다."""
-        from aot.ai.services import tool_execution as TE
+        from aot.tools import tool_execution as TE
         out = self._cap(self._big(), 900, {'narrow_with': "…"})
         self.assertNotIn(TE.CAP_PRIORITY_KEY, out)
         # 자를 필요가 없을 때도 떼어낸다
@@ -860,7 +866,7 @@ class TestTruncationSaysHowToNarrow(unittest.TestCase):
         """문구를 캡 쪽에 두면 도구가 늘 때마다 두 곳이 갈라진다 — 도구가
         자기 인자를 적는다."""
         import inspect
-        from aot.ai.services.aot_data_tool_service import AoTDataToolService
+        from aot.tools.aot_data_tool_service import AoTDataToolService
         src = inspect.getsource(AoTDataToolService.get_plot_journal)
         self.assertIn("'narrow_with'", src)
         for arg in ('date_from', 'date_to', 'granularity'):
@@ -881,7 +887,7 @@ class TestPlotCurrentValuesAreReadInOneRoundTrip(unittest.TestCase):
 
     def _src(self):
         import inspect
-        from aot.ai.services.aot_data_tool_service import AoTDataToolService
+        from aot.tools.aot_data_tool_service import AoTDataToolService
         return inspect.getsource(AoTDataToolService._latest_by_measurement)
 
     def test_the_bulk_query_is_issued_once_not_per_channel(self):
@@ -954,7 +960,7 @@ class TestCapPriorityHint(unittest.TestCase):
         선택을 보는 것이 아니게 된다(처음에 그렇게 짰다가 12행이 1행으로
         잘리면서 무거운 열이 그대로 남았다).
         """
-        from aot.ai.services import tool_execution as TE
+        from aot.tools import tool_execution as TE
         res = TE._cap_result(self._big(), 'x', max_tokens=1600)
         self.assertEqual(len(res['rows']), 12, '행이 잘렸다 — 상한을 다시 잡을 것')
         self.assertNotIn('heavy', res['rows'][0])   # 무거운 쪽이 먼저 빠졌다
@@ -962,7 +968,7 @@ class TestCapPriorityHint(unittest.TestCase):
 
     def test_hint_can_protect_a_column_even_when_it_is_heaviest(self):
         """`keep_last` 로 지목한 열은 다른 후보가 남아 있는 동안 지켜진다."""
-        from aot.ai.services import tool_execution as TE
+        from aot.tools import tool_execution as TE
         payload = self._big()
         # 무게를 뒤집는다 — wanted 가 가장 무겁지만 지켜져야 한다.
         for r in payload['rows']:
@@ -981,7 +987,7 @@ class TestCapPriorityHint(unittest.TestCase):
         """열은 통째로 빠지므로, 조금 모자란 것을 메우려고 지켜야 할 열을
         뽑으면 과잉 절삭이 된다 — 실측: 340 토큰이 모자란데 5,682 토큰짜리
         `env` 를 통째로 뺐다. 남은 몫은 행 자르기가 맡는다."""
-        from aot.ai.services import tool_execution as TE
+        from aot.tools import tool_execution as TE
         payload = {'rows': [{'wanted': ['y' * 500], 'id': i} for i in range(12)]}
         payload[TE.CAP_PRIORITY_KEY] = {'keep_last': [['rows', 'wanted']]}
         res = TE._cap_result(payload, 'x', max_tokens=1500)
@@ -992,7 +998,7 @@ class TestCapPriorityHint(unittest.TestCase):
     def test_hint_is_never_returned_to_the_client(self):
         """힌트는 캡을 위한 지시이지 응답의 내용이 아니다 — 캡이 꺼져 있거나
         자를 필요가 없을 때도 떼어내야 한다."""
-        from aot.ai.services import tool_execution as TE
+        from aot.tools import tool_execution as TE
         for max_tokens in (0, 300, 10 ** 9):
             payload = self._big()
             payload[TE.CAP_PRIORITY_KEY] = {'drop_first': [['rows', 'heavy']]}
@@ -1004,7 +1010,7 @@ class TestCapPriorityHint(unittest.TestCase):
         """그 기간의 측정값과 노트는 이 도구에만 있다 — 단계 계획의 산문·이탈
         통계는 `get_plot` 으로도 볼 수 있으므로 그쪽을 먼저 버린다."""
         import inspect
-        from aot.ai.services.aot_data_tool_service import AoTDataToolService
+        from aot.tools.aot_data_tool_service import AoTDataToolService
         src = inspect.getsource(AoTDataToolService.get_plot_journal)
         self.assertIn('CAP_PRIORITY_KEY', src)
         self.assertIn("'keep_last'", src.replace('"', "'"))
@@ -1024,7 +1030,7 @@ class TestSystemBriefIsSummaryNotUnion(unittest.TestCase):
 
     def _src(self):
         import inspect
-        from aot.ai.services.aot_data_tool_service import AoTDataToolService
+        from aot.tools.aot_data_tool_service import AoTDataToolService
         return inspect.getsource(AoTDataToolService.get_system_brief)
 
     def test_subtool_responses_are_not_embedded_whole(self):

@@ -312,13 +312,13 @@ class TestParcelImportDoesNotDuplicate(unittest.TestCase):
                           'properties': {'name': '기존 필지'}}).save()
 
     def test_same_parcel_is_detected(self):
-        from aot.aot_flask.routes_geo import _find_duplicate_site
+        from aot.aot_flask.routes_geo_map import _find_duplicate_site
         self._site(self.GEOM)
         self.assertIsNotNone(_find_duplicate_site('m1', self.GEOM))
 
     def test_different_parcel_is_not_blocked(self):
         """과차단 방지 — 다른 필지는 정상적으로 들어와야 한다."""
-        from aot.aot_flask.routes_geo import _find_duplicate_site
+        from aot.aot_flask.routes_geo_map import _find_duplicate_site
         self._site(self.GEOM)
         other = {'type': 'Polygon',
                  'coordinates': [[[127.6, 36.2], [127.6001, 36.2],
@@ -327,14 +327,14 @@ class TestParcelImportDoesNotDuplicate(unittest.TestCase):
 
     def test_other_map_is_not_blocked(self):
         """지도가 다르면 같은 필지를 가져올 수 있다 — 지도마다 독립이다."""
-        from aot.aot_flask.routes_geo import _find_duplicate_site
+        from aot.aot_flask.routes_geo_map import _find_duplicate_site
         GeoMap(unique_id='m2', name='다른 지도', category='design').save()
         self._site(self.GEOM)
         self.assertIsNone(_find_duplicate_site('m2', self.GEOM))
 
     def test_non_site_shapes_do_not_block(self):
         """대지만 본다 — 같은 자리에 그린 구역이 필지 가져오기를 막으면 안 된다."""
-        from aot.aot_flask.routes_geo import _find_duplicate_site
+        from aot.aot_flask.routes_geo_map import _find_duplicate_site
         GeoShape(geo_id='m1', type='zone',
                  feature={'type': 'Feature', 'geometry': self.GEOM,
                           'properties': {}}).save()
@@ -347,7 +347,7 @@ class TestParcelImportDoesNotDuplicate(unittest.TestCase):
         테스트는 전부 통과했다. 함수의 정확성과 그 함수가 실제로 쓰이는지는
         다른 문제다.
         """
-        tree = ast.parse(open(os.path.join(ROOT, 'aot/aot_flask/routes_geo.py'),
+        tree = ast.parse(open(os.path.join(ROOT, 'aot/aot_flask/routes_geo_map.py'),
                               encoding='utf-8').read())
         called = set()
         for node in ast.walk(tree):
@@ -362,7 +362,7 @@ class TestParcelImportDoesNotDuplicate(unittest.TestCase):
     def test_geometry_key_matches_the_integrity_checker(self):
         """두 규칙이 갈리면 만들 때는 통과하고 점검에서만 걸린다."""
         import importlib.util
-        from aot.aot_flask.routes_geo import _parcel_geom_key
+        from aot.aot_flask.routes_geo_map import _parcel_geom_key
         path = os.path.join(ROOT, 'aot/scripts/check_geo_integrity.py')
         spec = importlib.util.spec_from_file_location('_chk', path)
         mod = importlib.util.module_from_spec(spec)

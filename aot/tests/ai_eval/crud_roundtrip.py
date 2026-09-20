@@ -56,7 +56,7 @@ def _step(results, name, ok, detail=''):
 def _ai_agent_roundtrip(results):
     """create → modify → delete an AIAgent, asserting DB state at each hop.
     Pure ORM (AIAgent + AgentMCPAccess); no daemon/measurement side effects."""
-    from aot.ai.services.aot_data_tool_service import AoTDataToolService
+    from aot.tools.aot_data_tool_service import AoTDataToolService
     from aot.databases.models.ai import AIAgent, AIEntry
 
     entry = AIEntry.query.first()
@@ -100,7 +100,7 @@ def _ai_agent_roundtrip(results):
 def _device_location_roundtrip(results):
     """set_device_location on a real device, then RESTORE its original coords —
     net-zero. Pure ORM write to the latitude/longitude columns."""
-    from aot.ai.services.aot_data_tool_service import AoTDataToolService
+    from aot.tools.aot_data_tool_service import AoTDataToolService
     from aot.databases.models import Input, Output
 
     target = (Output.query.filter(Output.unique_id.isnot(None)).first()
@@ -160,7 +160,7 @@ def _output_crud_roundtrip(results):
     """create_output → modify_output → delete_output. GATED: goes through
     output_add/output_del + DaemonControl, which can reach the LIVE daemon.
     Only run under --include-daemon-crud in an isolated, daemon-less env."""
-    from aot.ai.services.aot_data_tool_service import AoTDataToolService
+    from aot.tools.aot_data_tool_service import AoTDataToolService
     from aot.databases.models import Output
 
     types = None

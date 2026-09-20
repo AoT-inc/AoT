@@ -1,6 +1,6 @@
 # coding=utf-8
 """
-aot.mcp_server — AoT AI/MCP 서버 패키지.
+aot.mcp_server — 도구 호출 감사 로그(audit).
 
-진입점: aot/mcp_server/server.py  (FastMCP)
+외부 MCP 서버 진입점은 aot/aot_mcp_server.py 이다.
 """

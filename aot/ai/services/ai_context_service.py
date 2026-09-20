@@ -1568,7 +1568,7 @@ class AIContextService:
             # Skipped for lightweight tier to conserve tokens
             if tier != 'lightweight':
                 try:
-                    from aot.ai.services.aot_data_tool_service import AoTDataToolService
+                    from aot.tools.aot_data_tool_service import AoTDataToolService
                     fn_result = AoTDataToolService.get_active_functions_summary()
                     fn_list = fn_result.get("active_functions", [])
                     if fn_list:

@@ -158,7 +158,7 @@ def sync_source(source_id):
             # 표를 한 벌 받아 두는 것뿐이고, 조회는 AI 가 물어볼 때 일어난다
             # (reference_table_service 모듈 주석 참조). 그래서 여기서
             # records/청크를 만들지 않는다 — 만들면 그 순간 관련도 오염이 시작된다.
-            from aot.ai.services import reference_table_service as _rts
+            from aot.utils import reference_table_service as _rts
             n_rows, n_cols, err = _rts.fetch(source.source_id, config.get('data_url'))
             records = []
             if err:

@@ -1,6 +1,6 @@
 # AoT AI 에이전트 가이드 (한국어)
 
-AoT의 AI가 시설·포장을 관찰·진단·제어하는 방법을 설명합니다. AI는 두 경로로 동작합니다: 대시보드의 **인앱 어시스턴트**(에이전트 루프)와, Claude Desktop·ChatGPT 등 외부 클라이언트가 붙는 **외부 MCP 서버**(`aot/aot_mcp_server.py`). 두 경로 모두 같은 도구 레지스트리(`aot/ai/services/tool_registry.py`)에서 도구를 가져옵니다.
+AoT의 AI가 시설·포장을 관찰·진단·제어하는 방법을 설명합니다. AI는 두 경로로 동작합니다: 대시보드의 **인앱 어시스턴트**(에이전트 루프)와, Claude Desktop·ChatGPT 등 외부 클라이언트가 붙는 **외부 MCP 서버**(`aot/aot_mcp_server.py`). 두 경로 모두 같은 도구 레지스트리(`aot/tools/tool_registry.py`)에서 도구를 가져옵니다.
 
 ---
 
@@ -34,6 +34,7 @@ AoT의 AI가 시설·포장을 관찰·진단·제어하는 방법을 설명합�
 | 공간 | `get_map_equipment` | 지도에 놓인 설비·장치 | 불필요 |
 | 장치 | `get_device_list` / `search_devices` | 전체 목록 / 이름·유형·측정종류 검색 | 불필요 |
 | 장치 | `get_device_measurements` | 장치의 측정 채널 목록 | 불필요 |
+| 장치 | `get_device_detail` | 장치 하나의 정체·위치·측정·제어·통신·담당구역·제약을 한 번에 — search_devices + get_device_measurements + get_device_location 을 잇달아 부르지 않아도 됨 | 불필요 |
 | 장치 | `get_output_state` | 출력(밸브·펌프·조명) 현재 상태 | 불필요 |
 | 측정 | `get_sensor_detail` | 센서 이력(min/max/avg), Function 집계값 포함 | 불필요 |
 | 측정 | `get_zone_sensor_summary` | 구역 전체 최신값+기간 통계를 한 번에 | 불필요 |
@@ -69,7 +70,7 @@ AoT의 AI가 시설·포장을 관찰·진단·제어하는 방법을 설명합�
 
 인앱 어시스턴트는 위에 더해 `read_manual`(매뉴얼을 파일명+섹션으로 읽기), `get_detailed_manifest`, `ask_user`, `get_sensor_reading`, `list_available_devices`, `set_output_state`, `list_unbound_slots`, `rebind_device`, `get_function_doc`·`get_input_doc`·`get_output_doc`를 씁니다. 외부 MCP에서 매뉴얼을 찾을 때는 `read_manual` 대신 `knowledge_search`를 쓰세요 — 파일명을 몰라도 매뉴얼 전체에서 해당 섹션을 찾아 줍니다.
 
-> 도구의 단일 정본은 `aot/ai/services/tool_registry.py`입니다. 이 문서와 어긋나면 그 파일이 맞습니다.
+> 도구의 단일 정본은 `aot/tools/tool_registry.py`입니다. 이 문서와 어긋나면 그 파일이 맞습니다.
 
 ---
 
@@ -95,7 +96,7 @@ AoT의 AI가 시설·포장을 관찰·진단·제어하는 방법을 설명합�
 
 채팅에 **승인 카드**로 제시되고, 사용자가 승인해야 실행됩니다.
 
-### 외부 MCP (`aot/ai/services/mcp_safety_gate.py`)
+### 외부 MCP (`aot/tools/mcp_safety_gate.py`)
 
 1. 쓰기 도구 최초 호출 → 실행되지 않고 `pending_approval` + `confirmation_id` 응답.
 2. 사람이 승인 — 대시보드의 **MCP 승인 위젯**, AI 화면, 또는 사용자가 이 대화에서 명시적으로 승인하라고 말했을 때만 `respond_to_confirmation`.

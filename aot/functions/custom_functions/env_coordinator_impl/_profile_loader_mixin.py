@@ -622,10 +622,26 @@ class ProfileLoaderMixin:
                     self.logger.debug(
                         '_reload_profiles: GeoShape bulk fetch failed: %s', exc)
 
+                # 종류를 못 알아본 설비 — 아래에서 **한 번** 알린다.
+                unmapped: list = []
+
                 for ar in actuators_list:
                     output_uuid = ar.get('output_uuid')
                     kind        = ar.get('kind')
-                    if not output_uuid or not kind:
+                    if not output_uuid:
+                        continue
+                    if not kind:
+                        # ⚠ **조용히 버리지 말 것** (2026-09-20). 사용자는 시설
+                        #   도면에 장치를 배치하고 Output 까지 물렸는데 제어에
+                        #   한 번도 안 나타난다 — 화면 어디에도 이유가 없다.
+                        #   바로 위 `_FITTING_KIND_TO_ACTUATOR_KIND` 주석이
+                        #   기록하는 2026-07-31 육묘장 사고가 정확히 이것이고,
+                        #   그때도 "조용히 버린다" 는 사실만 주석에 남고 로그는
+                        #   없었다. 습윤 분무 제외가 바로 아래에서 error 로
+                        #   남기는 것과 같은 무게다 — 장치 하나가 환경 제어에서
+                        #   통째로 빠지는 일이다.
+                        unmapped.append((ar.get('output_name') or output_uuid[:8],
+                                         ar.get('fitting_kind') or '미상'))
                         continue
 
                     # 관수 겸용 분무기 제외 — 프로필을 만들지 않아야 조율기의
@@ -746,6 +762,20 @@ class ProfileLoaderMixin:
                     by_id[output_uuid] = profile
                     channel_map[output_uuid] = 0
                     n_facility += 1
+
+                # ⚠ **바뀔 때만** 찍는다 — 프로필 재적재는 주기적으로 돌므로
+                #   매번이면 같은 줄이 하루 내내 쌓여 읽어야 할 로그를 밀어낸다.
+                _unmapped_key = sorted(unmapped)
+                if _unmapped_key != getattr(self, '_last_unmapped_actuators', None):
+                    if unmapped:
+                        self.logger.error(
+                            '통합환경제어가 다루지 않는 종류라 제외한 설비 %d개: %s '
+                            '— 시설 편집기에서 종류를 환경 장치(개구부·차광막·'
+                            '보온커튼·냉난방·가습·CO₂·보광·팬) 중 하나로 지정하면 '
+                            '제어에 들어옵니다.',
+                            len(unmapped),
+                            ', '.join('%s(%s)' % (n, k) for n, k in _unmapped_key))
+                    self._last_unmapped_actuators = _unmapped_key
 
                 self.logger.debug(
                     '_reload_profiles: %d facility-derived actuator(s) from "%s" '

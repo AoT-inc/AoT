@@ -26,7 +26,7 @@ from aot.databases.models import GeoMap, GeoShape, Output, Notes
 # pushed) — importing this deep inside a test after setUp() has an app
 # context active hits flask_babel's get_babel() with no 'babel' extension
 # registered on that ad-hoc test app and raises KeyError('babel').
-from aot.ai.services.aot_data_tool_service import AoTDataToolService
+from aot.tools.aot_data_tool_service import AoTDataToolService
 
 
 def _make_app():

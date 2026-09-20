@@ -24,7 +24,7 @@ REPO = Path(__file__).resolve().parents[2]
 SCRIPT = REPO / "aot" / "scripts" / "upgrade_install.sh"
 COMPOSE_PROD = REPO / "docker" / "docker-compose.prod.yml"
 
-# routes_geo.py 의 _OVERLAY_SUBDIR / model_asset_io.py 의 UPLOAD_SUBDIR 는
+# routes_geo_layer.py 의 _OVERLAY_SUBDIR / model_asset_io.py 의 UPLOAD_SUBDIR 는
 # Flask static 폴더 아래 'uploads/...' 다. (import 하면 앱 전체가 딸려 와서 소스로 확인)
 STATIC_UPLOADS = "aot/aot_flask/static/uploads"
 
@@ -65,7 +65,7 @@ def test_every_runtime_upload_dir_is_carried_over():
             "업그레이드 때 이 폴더의 파일이 사라진다")
 
     # Flask static 아래 업로드: 오버레이 이미지·타일, 3D 모델 자산
-    geo = (REPO / "aot" / "aot_flask" / "routes_geo.py").read_text()
+    geo = (REPO / "aot" / "aot_flask" / "routes_geo_layer.py").read_text()
     assert "_OVERLAY_SUBDIR = os.path.join('uploads', 'geo_overlays')" in geo
     assert _covered(STATIC_UPLOADS + "/geo_overlays", listed)
     assert _covered(STATIC_UPLOADS + "/model_assets", listed)

@@ -33072,6 +33072,15 @@ msgid "Holding position until the outdoor reading returns"
 msgstr "屋外の値を再び受け取るまでそのままにしています"
 
 #: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Holding position until the indoor reading returns"
+msgstr "室内の値を再び受け取るまでそのままにしています"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+#, python-format
+msgid "%(var)s cannot be measured right now, so the devices that move it are holding position"
+msgstr "%(var)s を今は測定できないため、これを動かす装置はそのままにしています"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
 msgid "Set by hand"
 msgstr "人が直接決めた値です"
 

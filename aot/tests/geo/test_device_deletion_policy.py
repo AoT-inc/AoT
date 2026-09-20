@@ -393,7 +393,7 @@ class TestDeleteReportsWhatActuallyHappened(unittest.TestCase):
     def _delete_output_with(self, messages):
         """output_del 을 주어진 결과로 갈아끼우고 MCP 핸들러를 부른다."""
         from aot.aot_flask.utils import utils_output
-        from aot.ai.services.aot_data_tool_service import AoTDataToolService
+        from aot.tools.aot_data_tool_service import AoTDataToolService
         original = utils_output.output_del
         utils_output.output_del = lambda form: messages
         try:

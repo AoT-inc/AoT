@@ -471,6 +471,12 @@ _JOURNAL_TOOL_ADDITIONS = {'list_plot_journals', 'get_plot_journal'}
 # 같은 함수로 지난다.
 _JOURNAL_CREATE_TOOL_ADDITIONS = {'create_plot_journal'}
 
+# 장치 하나의 정체·위치·측정·제어·통신·담당구역·제약을 한 번에 내는 조회
+# 도구 (2026-09-21). search_devices → get_device_measurements →
+# get_device_location 을 잇달아 부르던 왕복을 하나로 접는다. 기존 도구를
+# 조합만 할 뿐 아무것도 쓰지 않으므로 읽기 전용 — 승인 집합에는 안 넣는다.
+_DEVICE_DETAIL_TOOL_ADDITIONS = {'get_device_detail'}
+
 # 4. _VIRTUAL_APPROVAL_TOOLS (ai_dispatch_service.py) — 17 mutations, no physical.
 _ORIG_VIRTUAL_APPROVAL_TOOLS = {
     'create_function', 'create_sequence_function', 'modify_function_options',
@@ -510,7 +516,7 @@ def run(check_dispatch: bool = True):
     나눠 게이팅 쪽을 의존성 없이 먼저 돌린다 — geo-integrity 가 무거운 설치
     하나 때문에 통째로 가려졌던 것과 같은 실패를 피하려는 것이다.
     """
-    from aot.ai.services import tool_registry as R
+    from aot.tools import tool_registry as R
 
     print("=== SSOT tool_registry derivations vs pre-refactor snapshots ===")
 
@@ -545,7 +551,7 @@ def _check_dispatch_map(R):
            | _ZONE_SUMMARY_TOOL_ADDITIONS | _GEO_DISTANCE_TOOL_ADDITIONS
            | _DRAWER_TOOL_ADDITIONS | _DEVICE_FRESHNESS_TOOL_ADDITIONS
            | _NOTE_ATTACHMENT_TOOL_ADDITIONS | _JOURNAL_TOOL_ADDITIONS
-           | _JOURNAL_CREATE_TOOL_ADDITIONS,
+           | _JOURNAL_CREATE_TOOL_ADDITIONS | _DEVICE_DETAIL_TOOL_ADDITIONS,
            set(R.build_tool_map().keys()))
 
 
@@ -576,7 +582,7 @@ def _check_declarations(R):
            | _ZONE_SUMMARY_TOOL_ADDITIONS | _GEO_DISTANCE_TOOL_ADDITIONS
            | _DRAWER_TOOL_ADDITIONS | _DEVICE_FRESHNESS_TOOL_ADDITIONS
            | _NOTE_ATTACHMENT_TOOL_ADDITIONS | _JOURNAL_TOOL_ADDITIONS
-           | _JOURNAL_CREATE_TOOL_ADDITIONS,
+           | _JOURNAL_CREATE_TOOL_ADDITIONS | _DEVICE_DETAIL_TOOL_ADDITIONS,
            set(R.virtual_tool_registry()))
 
     # 4. dispatch approval set — original PLUS the mutating post-Phase-1 additions,
@@ -657,7 +663,7 @@ def test_write_tools_are_gated():
     통과시킬 수 없다 — 통과하려면 도구에 선언을 붙이거나, 승인을 안 받겠다는
     결정을 _INTENTIONALLY_UNGATED_WRITE_TOOLS 에 근거와 함께 명시해야 한다.
     """
-    from aot.ai.services import tool_registry as R
+    from aot.tools import tool_registry as R
 
     declared = {t.name for t in R.TOOLS}
 

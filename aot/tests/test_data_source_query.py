@@ -149,7 +149,7 @@ class TestDiscoveryIsOnePlace(unittest.TestCase):
     실측으로 이미 한 번 겪었다(2026-08-25)."""
 
     def test_list_lookup_sources_labels_each_kind(self):
-        from aot.ai.services.aot_data_tool_service import AoTDataToolService as T
+        from aot.tools.aot_data_tool_service import AoTDataToolService as T
         with mock.patch.object(dsq, 'describe_all',
                                return_value=[{'source_id': 'a', 'label': 'API', 'operations': []}]), \
              mock.patch('aot.databases.models.AIContextSource') as _S:

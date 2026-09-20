@@ -12,6 +12,7 @@ InfluxDB 는 없다. 조회 함수를 대역으로 잡고 "어느 장치에게 �
 from datetime import date, datetime, timedelta
 
 from aot.aot_flask.geo import plot_context, plot_journal, plot_sources
+from aot.aot_flask.geo.plot_journal import calc as _pj_calc
 from aot.databases.models import DeviceMeasurements, Input
 from aot.tests.geo.test_plot_sources import T1, T2, _Base, _Plot
 
@@ -152,11 +153,14 @@ class TestEnvSeriesFollowsTheReplacement(_Flow):
                                   for d in _days(start_str, end_str)},
                     'dli_assumed': None}
 
-        self._orig = plot_journal.daily_channel_stats
-        plot_journal.daily_channel_stats = fake_daily
+        # env_channel_series 는 daily_channel_stats 를 calc.py 안에서 맨이름으로
+        # 부른다 — plot_journal.daily_channel_stats 는 __init__ 이 재노출한
+        # 복사본이라 그것만 바꾸면 calc.py 내부 참조는 그대로 원본을 본다.
+        self._orig = _pj_calc.daily_channel_stats
+        _pj_calc.daily_channel_stats = fake_daily
 
     def tearDown(self):
-        plot_journal.daily_channel_stats = self._orig
+        _pj_calc.daily_channel_stats = self._orig
         super().tearDown()
 
     def _rows(self):

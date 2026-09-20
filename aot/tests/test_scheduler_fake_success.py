@@ -132,7 +132,7 @@ def test_every_non_executed_call_state_is_detected():
     추가하면서 스케줄러 쪽 판정을 안 고치면, 그 상태의 미실행이 조용히
     COMPLETED 로 기록된다. 그래서 목록을 여기 복사하지 않고 SSOT 에서 읽는다.
     """
-    from aot.ai.services import mcp_safety_gate
+    from aot.tools import mcp_safety_gate
     from aot.ai.services.ai_scheduler_service import AISchedulerService
 
     executed = AISchedulerService._EXECUTED_CALL_STATES
@@ -155,7 +155,7 @@ def test_gate_refusal_reason_codes_are_all_covered():
     응답에만 있다. `mcp_safety_gate.gate()` 를 다른 자리에서 직접 부르면(현재
     routes_mcp_api·aot_data_tool_service 가 그렇다) reason_code 만 남는다.
     """
-    from aot.ai.services import mcp_safety_gate
+    from aot.tools import mcp_safety_gate
 
     src = pathlib.Path(inspect.getsourcefile(mcp_safety_gate)).read_text(encoding='utf-8')
     tree = ast.parse(src)
@@ -251,7 +251,7 @@ def test_schedule_resolver_passes_real_success():
 
 def _virtual_tool_result(monkeypatch, payload):
     """VirtualToolResolver 를 가짜 핸들러 하나로 돌린다 (DB·데몬 없음)."""
-    from aot.ai.services import tool_registry
+    from aot.tools import tool_registry
     from aot.ai.services.resolvers.virtual_tool_resolver import VirtualToolResolver
 
     monkeypatch.setattr(tool_registry, 'build_tool_map',

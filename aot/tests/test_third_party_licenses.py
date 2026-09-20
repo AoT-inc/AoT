@@ -70,7 +70,7 @@ class TestNoticeExists(unittest.TestCase):
                          '.gitignore 화이트리스트에 !/THIRD-PARTY-LICENSES.md 를 넣을 것')
 
     def test_the_readme_points_at_it(self):
-        with open(os.path.join(_ROOT, 'README.rst'), encoding='utf-8') as f:
+        with open(os.path.join(_ROOT, 'README.md'), encoding='utf-8') as f:
             self.assertIn('THIRD-PARTY-LICENSES.md', f.read())
 
 

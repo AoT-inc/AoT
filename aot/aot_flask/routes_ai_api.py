@@ -802,7 +802,7 @@ def ai_portal_chat_history():
         # read/non-approval turns (e.g. a summary, or create_note which is now
         # auto-executed) — clicking them did nothing but reported "완료". Read-only
         # and already-resolved turns now reload with NO button.
-        from aot.ai.services.tool_registry import approval_required_tools as _art
+        from aot.tools.tool_registry import approval_required_tools as _art
         _APPROVAL_TOOLS = _art()
         _PENDING_STATES = (None, '', 'proposed', 'pending', 'pending_approval', 'planning')
 
@@ -1756,7 +1756,7 @@ def add_mcp_server():
 @login_required
 def ai_advice_list_endpoint():
     """의견 원장 조회 (기본: 미검토 건)."""
-    from aot.ai.services.aot_data_tool_service import AoTDataToolService
+    from aot.tools.aot_data_tool_service import AoTDataToolService
     try:
         result = AoTDataToolService.list_advice(
             scope_type=request.args.get('scope_type'),

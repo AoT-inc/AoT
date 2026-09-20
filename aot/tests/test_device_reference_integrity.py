@@ -324,7 +324,7 @@ class TestResolveDevice:
     def test_operate_device_refuses_an_ambiguous_name(self, app):
         """실제 사고 경로 — 이름이 겹치면 조작하지 않는다."""
         from aot.aot_flask.extensions import db
-        from aot.ai.services.aot_data_tool_service import AoTDataToolService
+        from aot.tools.aot_data_tool_service import AoTDataToolService
         from aot.services.tab_service import TabService
 
         with app.app_context():

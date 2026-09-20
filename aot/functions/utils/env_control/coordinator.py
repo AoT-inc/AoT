@@ -77,7 +77,7 @@ from .log_channels import (
     REASON_IDLE, REASON_PRIMARY, REASON_SECONDARY,
     REASON_WRONG_DIRECTION, REASON_SIDE_EFFECT, REASON_MANUAL_OVERRIDE,
     REASON_NO_GRADIENT, REASON_NO_OUTDOOR_DATA, REASON_OPPOSING_PARKED,
-    REASON_DEADZONE_BACKOFF, REASON_NIGHT_PARKED,
+    REASON_DEADZONE_BACKOFF, REASON_NIGHT_PARKED, REASON_NO_MEASUREMENT,
 )
 from .authority import is_natural_var
 from .types import (
@@ -636,6 +636,36 @@ def coordinate(
             '강우·풍속 모름 — 개구부 %d개 더 열지 않음: %s',
             len(ceiling_ids), sorted(i[:8] for i in ceiling_ids))
 
+    # ── 2.8. 실내 측정이 없으면 → **제자리 유지**(2026-09-20) ─────────────────
+    # 2.6 과 같은 원칙의 실내판이다. 실외를 모르면 창을 움직일 근거가 없듯,
+    # 실내를 모르면 **어떤 장치도** 움직일 근거가 없다 — 편차를 잴 수가 없다.
+    #
+    # 예전에는 없는 실내값이 0 으로 채워져(`situation.assess`) 편차가 온도
+    # −22 °C · 습도 −60 % 로 서고 난방기·분무가 근거 1(주작용)로 100 % 까지
+    # 올라갔다. 지금은 그 값이 None 이라 편차가 서지 않고 효과 모델도 구동력
+    # 0 을 신고하므로, 그대로 두면 **무구배 완화 경로**로 떨어져 safe_default
+    # 로 수렴한다 — 그것은 개구부를 닫고 스크린을 걷는 **결정**이다. 근거가
+    # 없다는 이유로 장비를 움직이지 않는다(2.6 주석과 같은 판단).
+    #
+    # ⚠ 판정은 "이 장치가 미는 축 중 하나라도 잴 수 없다" 가 **아니다.** 그러면
+    #   습도 센서 하나가 끊긴 날 개구부까지 멈춰 더위에 창이 잠긴다. 잴 수 있는
+    #   축이 하나라도 남아 구동력이 서면(den > 0) 그쪽으로 정상 제어한다 —
+    #   여기 걸리는 것은 **남은 근거가 하나도 없는** 장치뿐이다.
+    # ⚠ 파킹(2.5)이 이긴다. 그쪽은 근거가 있는 결정이고 이쪽은 근거의 부재다.
+    unmeasured = set(ctx.get('unmeasured') or ())
+    blind_ids: set = set()
+    if unmeasured:
+        blind_ids = {p.actuator_id for p in available
+                     if set(p.effect_model or {}) & unmeasured} - park_ids
+        if blind_ids:
+            # 여기 담기는 것은 **후보**다 — 다른 축이 남아 구동력이 서면 그
+            # 장치는 아래에서 정상 제어로 간다. 실제로 선 장치는 근거 21 로
+            # 남는다(명령 로그).
+            logger.debug(
+                '실내 측정 없음(%s) — 그 축을 다루는 %d개: %s',
+                ','.join(sorted(unmeasured)), len(blind_ids),
+                sorted(i[:8] for i in blind_ids))
+
     # ── 3. Per-actuator position-form PI (다목적 결합 drive) ───────────────────
     # accumulated: 이미 확정된 명령들이 만들 **부호 있는 물리 변화량**(native).
     # 부호는 물리 방향 그대로다('↑'=+, '↓'=−, 아래 축적부 참조). 따라서 잔여
@@ -782,6 +812,13 @@ def coordinate(
                 # 돌아왔을 때 엉뚱한 자리에서 다시 출발한다.
                 cmd_raw = _clamp(prev_val, 0.0, 100.0)
                 reason = REASON_NO_OUTDOOR_DATA
+            elif (p.actuator_id in blind_ids
+                    and (den <= 1e-12 or max_g < G_MIN_EFFECT)):
+                # 실내 측정 없음(2.8) → 제자리. hold_ids 와 같은 처리다 —
+                # 감쇠하지 않고 적분도 그대로 둔다(모르는 동안 '평형 개도
+                # 기억' 을 흔들면 센서가 돌아왔을 때 엉뚱한 자리에서 출발한다).
+                cmd_raw = _clamp(prev_val, 0.0, 100.0)
+                reason = REASON_NO_MEASUREMENT
             elif den <= 1e-12 or max_g < G_MIN_EFFECT or p.actuator_id in park_ids:
                 # 제어 가능 변수 없음 OR 유효 구동력 없음(무구배 환기 등) OR 파킹 대상
                 # (환기 무익 / 냉난방 연동 — 2.5 참조) → 안전 idle

@@ -204,11 +204,16 @@ class TestVpdDirectControlModeStripsHumidityKey:
         assert rh_tv.value == pytest.approx(83.42)
         assert rh_tv.tolerance == pytest.approx(5.0)
 
-    def test_run_cycle이_두_키_모두를_조회한다(self):
-        """실제 판정 코드가 폴백을 쓰는지 소스로 고정한다."""
+    def test_판정_코드가_두_키_모두를_조회한다(self):
+        """실제 판정 코드가 폴백을 쓰는지 소스로 고정한다.
+
+        판정은 2026-09-20 에 `_run_cycle` 에서 `_judge_fog_humidity_block` 으로
+        떨어져 나왔다(사이클 길이 상한 — `test_env_coordinator_cycle_structure`).
+        보는 자리만 옮겼고 규칙은 그대로다.
+        """
         import inspect
         from aot.functions.custom_functions.env_coordinator_impl import _cycle_mixin
-        src = inspect.getsource(_cycle_mixin.CycleMixin._run_cycle)
+        src = inspect.getsource(_cycle_mixin.CycleMixin._judge_fog_humidity_block)
         i = src.index("_rh_tv = ")
         window = src[i:i + 200]
         assert "get('humidity')" in window and "get('_humidity_constraint')" in window, (

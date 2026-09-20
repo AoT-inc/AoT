@@ -30,10 +30,14 @@
 !/.gitea/
 !/.github/
 !/.githooks/
-!/README.rst
+!/README.md
+!/README.ko.md
+!/ARCHITECTURE.md
+!/CONTRIBUTING.md
+!/SECURITY.md
+!/pyproject.toml
 !/LICENSE.txt
 !/CHANGELOG.md
-!/CACHE_CLEAR_GUIDE_KO.md
 !/requirements.txt
 
 # ==============================================================
@@ -67,6 +71,7 @@ aot/databases/flask_session/
 aot/aot_flask/static/uploads/
 /statistics.id
 aot/databases/*.db
+aot/databases/*.db.migrate.lock
 *.db-shm
 *.db-wal
 *.db-*

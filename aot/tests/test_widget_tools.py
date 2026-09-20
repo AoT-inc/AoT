@@ -23,7 +23,7 @@ import inspect
 import json
 import unittest
 
-from aot.ai.services.aot_data_tool_service import AoTDataToolService as Service
+from aot.tools.aot_data_tool_service import AoTDataToolService as Service
 
 
 class TestWidgetOptionCoercion(unittest.TestCase):
@@ -200,13 +200,13 @@ class TestWidgetToolsAreWiredEverywhere(unittest.TestCase):
     WRITE = ('create_widget', 'modify_widget', 'delete_widget')
 
     def test_handlers_exist(self):
-        from aot.ai.services import tool_registry as registry
+        from aot.tools import tool_registry as registry
         tool_map = registry.build_tool_map()
         for name in self.READ + self.WRITE:
             self.assertIn(name, tool_map, '%s 가 디스패치 표에 없다' % name)
 
     def test_writes_need_approval(self):
-        from aot.ai.services import tool_registry as registry
+        from aot.tools import tool_registry as registry
         approval = registry.approval_required_tools()
         for name in self.WRITE:
             self.assertIn(name, approval,
@@ -215,7 +215,7 @@ class TestWidgetToolsAreWiredEverywhere(unittest.TestCase):
             self.assertNotIn(name, approval, '%s 는 읽기다' % name)
 
     def test_all_are_in_the_mcp_catalog(self):
-        from aot.ai.services import tool_registry as registry
+        from aot.tools import tool_registry as registry
         catalog = {t['tool_name'] for t in registry.virtual_tools()}
         for name in self.READ + self.WRITE:
             self.assertIn(name, catalog,
@@ -224,7 +224,7 @@ class TestWidgetToolsAreWiredEverywhere(unittest.TestCase):
 
     def test_tab_tools_are_in_the_mcp_catalog_too(self):
         """탭 도구는 오래 이 상태였다(선언은 있고 카탈로그에는 없음)."""
-        from aot.ai.services import tool_registry as registry
+        from aot.tools import tool_registry as registry
         catalog = {t['tool_name'] for t in registry.virtual_tools()}
         for name in ('list_tabs', 'create_tab', 'modify_tab', 'delete_tab'):
             self.assertIn(name, catalog, '%s 가 MCP 카탈로그에 없다' % name)

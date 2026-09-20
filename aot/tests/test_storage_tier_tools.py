@@ -12,8 +12,12 @@ DB 는 건드리지 않는다 — 모델 쿼리는 스텁으로 대체한다.
 """
 from unittest.mock import MagicMock, patch
 
-from aot.ai.services import tool_registry as tr
-from aot.ai.services.aot_data_tool_service import AoTDataToolService
+from aot.tools import tool_registry as tr
+from aot.tools.aot_data_tool_service import AoTDataToolService
+# get_storage_tier_status lives in the 'system' drawer mixin, archive_note /
+# restore_note_from_archive / set_document_tier in 'record' -- `db`/`Notes`
+# are looked up in THOSE modules' globals at call time now (the class used to
+# be one file), so the `db`/`Notes` patches below target those module paths.
 
 _TOOLS = ('get_storage_tier_status', 'search_archives', 'get_archived_document')
 
@@ -67,7 +71,7 @@ def _run_status(tier_counts, archived_rows, enabled, decisions=0):
     cold_cls = MagicMock()
     cold_cls.query.count.return_value = archived_rows
 
-    with patch('aot.ai.services.aot_data_tool_service.db', db_mock), \
+    with patch('aot.tools.data_tools.system.db', db_mock), \
          patch.dict('sys.modules', {
              'aot.databases.models.tier_adaptive_storage': MagicMock(
                  AdaptiveStorageSettings=settings_cls, TierDecision=decision_cls),
@@ -199,7 +203,7 @@ def _patch_notes(note):
     """Notes.query.filter_by(...).first() 가 note 를 돌려주도록."""
     notes_cls = MagicMock()
     notes_cls.query.filter_by.return_value.first.return_value = note
-    return patch('aot.ai.services.aot_data_tool_service.Notes', notes_cls)
+    return patch('aot.tools.data_tools.record.Notes', notes_cls)
 
 
 def test_archive_note_copies_and_marks_tier3():
@@ -211,7 +215,7 @@ def test_archive_note_copies_and_marks_tier3():
     }
     with _patch_notes(note), \
          patch.object(AoTDataToolService, '_cold_storage_service', return_value=svc), \
-         patch('aot.ai.services.aot_data_tool_service.db'):
+         patch('aot.tools.data_tools.record.db'):
         result = AoTDataToolService.archive_note(note_id='note-1')
 
     assert result['status'] == 'success'
@@ -233,7 +237,7 @@ def test_archive_note_surfaces_duplicate():
     svc.archive_document.side_effect = ValueError('Document note-1 is already archived')
     with _patch_notes(_note()), \
          patch.object(AoTDataToolService, '_cold_storage_service', return_value=svc), \
-         patch('aot.ai.services.aot_data_tool_service.db'):
+         patch('aot.tools.data_tools.record.db'):
         result = AoTDataToolService.archive_note(note_id='note-1')
 
     assert result['status'] == 'error'
@@ -246,7 +250,7 @@ def test_restore_reports_orphan_archive():
     svc.restore_document.return_value = {'content': '보관된 본문'}
     with _patch_notes(None), \
          patch.object(AoTDataToolService, '_cold_storage_service', return_value=svc), \
-         patch('aot.ai.services.aot_data_tool_service.db'):
+         patch('aot.tools.data_tools.record.db'):
         result = AoTDataToolService.restore_note_from_archive(note_id='note-1')
 
     assert result['status'] == 'orphan_archive'
@@ -259,7 +263,7 @@ def test_restore_moves_tier_back():
     svc.restore_document.return_value = {'content': '본문'}
     with _patch_notes(note), \
          patch.object(AoTDataToolService, '_cold_storage_service', return_value=svc), \
-         patch('aot.ai.services.aot_data_tool_service.db'):
+         patch('aot.tools.data_tools.record.db'):
         result = AoTDataToolService.restore_note_from_archive(note_id='note-1')
 
     assert result['status'] == 'success'
@@ -270,7 +274,7 @@ def test_restore_moves_tier_back():
 def test_set_document_tier_warns_that_nothing_moved():
     """tier=3 만 찍고 끝나는데 '아카이브했다'로 읽히면 안 된다."""
     note = _note(tier=2)
-    with _patch_notes(note), patch('aot.ai.services.aot_data_tool_service.db'):
+    with _patch_notes(note), patch('aot.tools.data_tools.record.db'):
         result = AoTDataToolService.set_document_tier(note_id='note-1', tier=3)
 
     assert result['status'] == 'success'

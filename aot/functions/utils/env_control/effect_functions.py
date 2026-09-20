@@ -28,6 +28,32 @@ def _svp_kpa(T: float) -> float:
 _THERMAL_RH_KINDS = frozenset({'heater', 'cooler'})
 
 
+# 효과 모델이 없을 때 쓰는 값 — 차이 0 이 아니라 **모름**이다.
+_NO_EFFECT = EffectResult('0', 0.0)
+
+
+def _gradient(env: EnvContext, ext_key: str, int_key: str):
+    """실외 − 실내. 어느 한쪽이라도 **측정이 없으면 None**(0 이 아니다).
+
+    `_co2_excess` 와 같은 규칙이다. 예전에는 `env.get('T_int', 0.0)` 처럼
+    기본값을 썼는데, 실내 센서가 없거나 만료된 사이클에서 그 0 이 그대로
+    물리 계산에 들어가 **실외 20 °C 대 실내 0 °C, 즉 20 °C 구배**를 지어냈다.
+    없는 구배를 지어내면 그 장치는 "여기 큰 효과가 있다" 고 신고하고 코디네이터는
+    그 말을 믿는다 — 틀리는 방향이 최악이다(전력 가동).
+
+    None 을 받은 효과 함수는 구동력 0 을 신고하고, 코디네이터가 그 장치를
+    제자리에 세운다(`REASON_NO_MEASUREMENT`). "차이가 없다" 와 "잴 수 없다" 는
+    같은 0 이지만 처방이 다르므로, 판정은 여기 한 곳에서만 한다.
+    """
+    e, i = env.get(ext_key), env.get(int_key)
+    if e is None or i is None:
+        return None
+    try:
+        return float(e) - float(i)
+    except (TypeError, ValueError):
+        return None
+
+
 def _vpd_gap(env: EnvContext):
     """실내 → 실외 VPD 폭. 실외를 모르면 None(클램프하지 않는다).
 
@@ -139,7 +165,12 @@ def make_vpd_effect(temp_fn, humid_fn, humid_is_moisture: bool = True,
                 if mag < 1e-6:
                     return EffectResult('0', 0.0)
                 return EffectResult('↑' if gap > 0 else '↓', mag)
-        T  = env.get('T_int', 0.0)
+        # 실내 온도를 모르면 연쇄법칙의 기울기(dsvp/dT)를 세울 수 없다 —
+        # 0 °C 로 지어내면 svp 가 실제의 1/3 이라 모든 VPD 효과가 축소된 채
+        # 신고된다. 모를 때는 구동력 0 이 맞다.
+        T  = env.get('T_int')
+        if T is None:
+            return _NO_EFFECT
         svp_ = _svp_kpa(T)
         dsvp = svp_ * 17.27 * 237.3 / (T + 237.3) ** 2
         dVPD_dT  = dsvp                  # (T, ea) 좌표 — RH 고정 인자를 곱하지 않는다
@@ -293,9 +324,9 @@ def opening_temp_effect(env: EnvContext, cmd_pct: float, profile=None) -> Effect
     참고: 개구부가 열리면 envelope u_eff 는 우회되므로 u_factor 미적용.
     u_factor 는 curtain/외피 단열 변경 효과에서 의미가 있다.
     """
-    delta = env.get('T_ext', 0.0) - env.get('T_int', 0.0)
-    if abs(delta) < 0.5:
-        return EffectResult('0', 0.0)
+    delta = _gradient(env, 'T_ext', 'T_int')
+    if delta is None or abs(delta) < 0.5:
+        return _NO_EFFECT
     direction = '↑' if delta > 0 else '↓'
     af, _u = _gis_factor(profile, use_u=False)
     k = _calibrated_k(profile, 'temperature', K_OPENING_T)
@@ -309,16 +340,16 @@ def opening_temp_effect(env: EnvContext, cmd_pct: float, profile=None) -> Effect
 
 def opening_humid_effect(env: EnvContext, cmd_pct: float, profile=None) -> EffectResult:
     """외부 습도 방향으로 내부 RH를 끌어당긴다. 풍속·면적 보정."""
-    delta = env.get('RH_ext', 0.0) - env.get('RH_int', 0.0)
-    if abs(delta) < 1.0:
-        return EffectResult('0', 0.0)
+    delta = _gradient(env, 'RH_ext', 'RH_int')
+    if delta is None or abs(delta) < 1.0:
+        return _NO_EFFECT
     direction = '↑' if delta > 0 else '↓'
     af, _u = _gis_factor(profile, use_u=False)
     k = _calibrated_k(profile, 'humidity', K_OPENING_RH)
     # 수분도 같은 공기 교환을 타므로 형태 보정을 함께 받는다 — 온도만 보정하면
     # 같은 개구부가 열은 적게, 수분은 그대로 옮기는 모순된 모델이 된다.
-    gain = _vent_form_gain(
-        profile, env.get('T_ext', 0.0) < env.get('T_int', 0.0))
+    _dT  = _gradient(env, 'T_ext', 'T_int')
+    gain = _vent_form_gain(profile, (_dT is not None and _dT < 0))
     magnitude = vent_reachable(
         abs(delta) * (cmd_pct / 100.0) * k * _wind_boost(env) * af * gain, delta)
     return EffectResult(direction, magnitude)
@@ -457,8 +488,15 @@ def _evaporation_availability(env: EnvContext) -> float:
     `_EVAP_REF_RH` 로 정규화해 기준 습도 이하에서는 1.0 에 걸어 둔다 — K_FOG_*
     는 이미 보수적인 실사용 계수라, 건조할 때 그 값을 넘겨 키우면 근거가 없다.
     """
-    rh   = float(env.get('RH_int') or 0.0)
-    head = 1.0 - max(0.0, min(100.0, rh)) / 100.0
+    # ⚠ 습도를 **모르면 0** 이다(가능 비율 없음). 예전에는 None 이 0 % 로
+    #   떨어져 "가장 건조하다 = 최대로 증발한다" 가 됐는데, 이 함수의 독스트링이
+    #   말하는 "보수적인 쪽" 과 정반대다. 습도 센서가 끊긴 시설에서 분무가
+    #   냉각 효과를 최대로 주장하게 된다 — 그 주장을 검증할 수단이 없는
+    #   상태에서 가장 크게 주장하는 셈이다.
+    rh = env.get('RH_int')
+    if rh is None:
+        return 0.0
+    head = 1.0 - max(0.0, min(100.0, float(rh))) / 100.0
     ref  = 1.0 - _EVAP_REF_RH / 100.0
     return max(0.0, min(1.0, head / ref))
 
@@ -635,9 +673,9 @@ def curtain_temp_effect(env: EnvContext, cmd_pct: float, profile=None) -> Effect
     걷으면(개도↑) 단열이 사라져 내부 온도가 외기 쪽으로 끌린다(전도/복사 손실,
     약한 환기와 유사하나 풍속 무관·계수 작음). 닫으면(0%) 외피가 단열되어 효과 0.
     """
-    delta = env.get('T_ext', 0.0) - env.get('T_int', 0.0)
-    if abs(delta) < 0.5:
-        return EffectResult('0', 0.0)
+    delta = _gradient(env, 'T_ext', 'T_int')
+    if delta is None or abs(delta) < 0.5:
+        return _NO_EFFECT
     af, _ = _gis_factor(profile, use_u=False)
     k = _calibrated_k(profile, 'temperature', K_CURTAIN_U)
     return EffectResult('↑' if delta > 0 else '↓',
@@ -726,7 +764,9 @@ def exhaust_fan_temp_effect(env: EnvContext, cmd_pct: float, profile=None) -> Ef
     if pf <= 0.0:
         return EffectResult('0', 0.0)   # 창이 열려 압력 안 걸림 → 배기 무력
     ach = _exhaust_ach(cmd_pct, profile)
-    delta_T = env.get('T_ext', 20.0) - env.get('T_int', 25.0)
+    delta_T = _gradient(env, 'T_ext', 'T_int')
+    if delta_T is None:
+        return _NO_EFFECT
     if ach <= 0:
         # rated_m3h 미설정 → 환기(구배 의존)로 근사. 무구배에 상수 효과를 주면
         # (구 K_CIRC_FAN_T 폴백) 무구배에도 큰 효과를 주장해 결합 drive 가 팬을
@@ -746,7 +786,9 @@ def exhaust_fan_humid_effect(env: EnvContext, cmd_pct: float, profile=None) -> E
     if pf <= 0.0:
         return EffectResult('0', 0.0)
     ach = _exhaust_ach(cmd_pct, profile)
-    delta_rh = env.get('RH_ext', 60.0) - env.get('RH_int', 70.0)
+    delta_rh = _gradient(env, 'RH_ext', 'RH_int')
+    if delta_rh is None:
+        return _NO_EFFECT
     if ach <= 0:
         # rated_m3h 미설정 → 환기(구배 의존)로 근사 (temp 와 일관, VPD 유도 정확도)
         if abs(delta_rh) < 1.0:
@@ -850,17 +892,17 @@ def _build_effect_model_raw(kind: str, k: dict) -> dict:
         k_co2 = k.get('K_OPENING_CO2', K_OPENING_CO2)
 
         def _t(env, pct, profile=None, _k=k_t):
-            d = env.get('T_ext', 0) - env.get('T_int', 0)
-            if abs(d) < 0.5:
-                return EffectResult('0', 0.0)
+            d = _gradient(env, 'T_ext', 'T_int')
+            if d is None or abs(d) < 0.5:
+                return _NO_EFFECT
             af, _u = _gis_factor(profile, use_u=False)
             return EffectResult('↑' if d > 0 else '↓', vent_reachable(
                 abs(d) * (pct/100) * _k * _wind_boost(env) * af, d))
 
         def _rh(env, pct, profile=None, _k=k_rh):
-            d = env.get('RH_ext', 0) - env.get('RH_int', 0)
-            if abs(d) < 1.0:
-                return EffectResult('0', 0.0)
+            d = _gradient(env, 'RH_ext', 'RH_int')
+            if d is None or abs(d) < 1.0:
+                return _NO_EFFECT
             af, _u = _gis_factor(profile, use_u=False)
             return EffectResult('↑' if d > 0 else '↓', vent_reachable(
                 abs(d) * (pct/100) * _k * _wind_boost(env) * af, d))
@@ -917,9 +959,9 @@ def _build_effect_model_raw(kind: str, k: dict) -> dict:
 
         def _curtain_t(env, pct, profile=None, _k=k_t):
             # 규약: pct=개도(100=걷힘=단열없음). 걷으면 외기로 열교환(↑/↓), 닫으면 0.
-            delta = env.get('T_ext', 0.0) - env.get('T_int', 0.0)
-            if abs(delta) < 0.5:
-                return EffectResult('0', 0.0)
+            delta = _gradient(env, 'T_ext', 'T_int')
+            if delta is None or abs(delta) < 0.5:
+                return _NO_EFFECT
             af, _u = _gis_factor(profile, use_u=False)
             return EffectResult('↑' if delta > 0 else '↓',
                                 abs(delta) * (pct / 100) * _k * af)

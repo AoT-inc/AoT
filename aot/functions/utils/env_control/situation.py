@@ -107,8 +107,19 @@ def assess(
 
     # ── EnvContext 구성 ────────────────────────────────────────────────────────
     ctx: EnvContext = {
-        'T_int':   internal.get('T',   0.0),
-        'RH_int':  internal.get('RH',  0.0),
+        # ⚠ **없으면 None 이다, 0 이 아니다** (2026-09-20). 바로 아래 CO₂ 가
+        #   이미 그 규칙인데 온도·습도만 밖에 있었다. 0 은 물리적으로 말이 되는
+        #   값이라 아무도 의심하지 않은 채 제어까지 흘러간다 — 실측 재현:
+        #   실내 센서가 없거나 **만료된** 사이클에서 편차가 온도 −22 °C ·
+        #   습도 −60 % 로 서고, 난방기와 분무가 근거 1(주작용)로 100 % 까지
+        #   올라갔다. 하드 임계는 값이 None 이라 건너뛰므로 막지도 못한다.
+        #   실내 센서가 다 만료돼도 실외 풍속·일사가 `internal` 에 들어가
+        #   "센서 없음" 가드(`_run_cycle` 의 `if not internal`)를 통과하기
+        #   때문에, 이것은 미설치 시설만의 이야기가 아니다.
+        #   None 이면 `_get_measured` 가 그 변수를 건너뛰어 편차가 서지 않고,
+        #   효과 모델도 구동력 0 을 신고해 그 장치는 제자리에 선다(근거 21).
+        'T_int':   internal.get('T'),
+        'RH_int':  internal.get('RH'),
         # **없는 측정을 400 으로 지어내지 않는다.** 그러면 CO₂ 센서가 없는
         # 시설에서도 편차가 계산돼 화면이 "CO2 −500 ppm 벗어남" 이라 말하는데,
         # 바로 옆 광합성 블록은 같은 값을 "—"(없음) 으로 보인다 — 한 화면이 두
@@ -162,15 +173,22 @@ def assess(
     working_target = _decompose_vpd(env_target, ctx)
 
     # ── 편차 계산 (native 단위, R1) ───────────────────────────────────────────
+    # ⚠ **목표는 있는데 측정이 없는 변수**를 따로 모은다. 편차가 없다는 사실
+    #   하나로는 "목표가 없다" 와 "잴 수가 없다" 가 구분되지 않는데, 둘은 답이
+    #   정반대다 — 앞은 할 일이 없는 것이고 뒤는 **판단할 근거가 없는 것**이다.
+    #   코디네이터가 이 목록으로 "제자리 유지"(근거 21)와 "무구배"(15)를 가른다.
     deviation: Dict[str, float] = {}
+    unmeasured: List[str] = []
     for var, tv in working_target.items():
         if var.startswith('_'):
             continue
         measured = _get_measured(var, ctx)
         if measured is None:
+            unmeasured.append(var)
             continue
         # 편차 = 현재 - 목표 (양수 = 목표 초과 → 낮춰야 함)
         deviation[var] = measured - tv.value
+    ctx['unmeasured'] = unmeasured
 
     # ── D2: 광합성 제한 인자 ─────────────────────────────────────────────────
     limiting = _assess_limiting_factor(ctx, light_sat=light_sat)
@@ -252,17 +270,19 @@ def _assess_limiting_factor(ctx: EnvContext, light_sat: Optional[float] = None) 
     if co2 is not None and co2 < _CO2_OPT:
         scores['co2'] = max(0.0, (_CO2_OPT - co2) / (_CO2_OPT - _CO2_COMP + 1e-6))
 
-    # 온도 제한
-    T = ctx['T_int']
-    if T < _T_OPT_LO:
-        scores['temperature'] = min(1.0, (_T_OPT_LO - T) / _T_LIMIT_BAND)
-    elif T > _T_OPT_HI:
-        scores['temperature'] = min(1.0, (T - _T_OPT_HI) / _T_LIMIT_BAND)
+    # 온도 제한 — CO₂ 와 같은 규칙으로 측정이 없으면 점수를 내지 않는다.
+    T  = ctx.get('T_int')
+    RH = ctx.get('RH_int')
+    if T is not None:
+        if T < _T_OPT_LO:
+            scores['temperature'] = min(1.0, (_T_OPT_LO - T) / _T_LIMIT_BAND)
+        elif T > _T_OPT_HI:
+            scores['temperature'] = min(1.0, (T - _T_OPT_HI) / _T_LIMIT_BAND)
 
     # 수분(VPD) 제한
-    vpd = ctx.get('VPD_int', 0.0)
-    if vpd <= 0.0:
-        vpd = _compute_vpd(T, ctx['RH_int'])
+    vpd = ctx.get('VPD_int') or 0.0
+    if vpd <= 0.0 and T is not None and RH is not None:
+        vpd = _compute_vpd(T, RH)
     if vpd > _VPD_STRESS:
         scores['water'] = min(1.0, (vpd - _VPD_STRESS) / (_VPD_SEVERE - _VPD_STRESS + 1e-6))
 
@@ -292,8 +312,11 @@ def _decide_modes(
       trend_lead < _TREND_LEAD_MIN 이면 이미 편차 없어도 모드 활성
     """
     modes: List[str] = []
-    T_now   = ctx['T_int']
-    RH_now  = ctx['RH_int']
+    # ⚠ 셋 다 **측정이 없으면 None** 이다. 각 블록이 그것을 확인하고 넘어간다 —
+    #   없는 값으로 모드를 세우면 화면이 "난방 중" 이라고 말하는데 아무 장치도
+    #   돌지 않는다(그 축은 제어에서 빠져 있다).
+    T_now   = ctx.get('T_int')
+    RH_now  = ctx.get('RH_int')
     CO2_now = ctx.get('CO2_int')
     solar   = ctx.get('solar', 0.0)
 
@@ -302,7 +325,7 @@ def _decide_modes(
     CO2_trend = ctx.get('CO2_trend', 0.0)   # ppm/min
 
     # ── 온도 ─────────────────────────────────────────────────────────────────
-    if 'temperature' in target:
+    if 'temperature' in target and T_now is not None:
         tv  = target['temperature']
         dev = T_now - tv.value
         if T_now > tv.value + tv.tolerance:
@@ -328,7 +351,7 @@ def _decide_modes(
                     modes.append(MODE_HEATING)
 
     # ── 습도 ─────────────────────────────────────────────────────────────────
-    if 'humidity' in target:
+    if 'humidity' in target and RH_now is not None:
         hv  = target['humidity']
         dev = RH_now - hv.value
         if RH_now < hv.value - hv.tolerance:

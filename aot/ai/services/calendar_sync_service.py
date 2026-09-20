@@ -158,7 +158,7 @@ def _job_event_body(job):
     edits it in Google. Shape depends on action_type: device on/off/value
     (장치/상태/값/지속), PID setpoint (PID/목표값), function trigger (함수/실행),
     human/AI (장소/내용/담당)."""
-    from aot.ai.services.aot_data_tool_service import AoTDataToolService
+    from aot.tools.aot_data_tool_service import AoTDataToolService
     from aot.utils.device_tz import resolve_location_tz
     from aot.utils import calendar_event_format as fmt
     import json as _j
@@ -306,7 +306,7 @@ def _resolve_target_by_name(name):
     except Exception:
         pass
     try:
-        from aot.ai.services.aot_data_tool_service import AoTDataToolService
+        from aot.tools.aot_data_tool_service import AoTDataToolService
         tid, ttype, rname, _lat, _lng = AoTDataToolService._resolve_note_target(name)
         # Only accept an EXACT name match here — partial zone matches are exactly
         # what corrupted a device link before (밸브1 → a shape named '1').
@@ -480,7 +480,7 @@ def _build_imported_job(connection, fields, event, start, end):
     doesn't resolve degrades to a labeled human reminder rather than being lost.
     Returns a SchedulerJobMeta (uncommitted) or None."""
     from aot.utils import calendar_event_format as fmt
-    from aot.ai.services.aot_data_tool_service import AoTDataToolService
+    from aot.tools.aot_data_tool_service import AoTDataToolService
     from sqlalchemy import or_
 
     # --- Activate / deactivate an Input or controller ---

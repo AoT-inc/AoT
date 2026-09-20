@@ -12,7 +12,7 @@ import logging
 from flask import Blueprint, jsonify, redirect, render_template, request, url_for
 from flask_login import login_required, current_user
 
-from aot.ai.services import source_attribution
+from aot.utils import source_attribution
 from aot.aot_flask.extensions import db
 from aot.aot_flask.utils import utils_general
 from aot.databases.models import AIContextSource, Misc

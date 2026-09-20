@@ -260,7 +260,7 @@ Site (GeoShape)      → tzの権威。明示的なoverride | centroidを1回だ
 - 座標→tz・位置の解決: `aot/utils/device_tz.py`
 - 図形のtz/継承/境界: `aot/databases/models/geo.py`、`aot/aot_flask/geo/geo_overlays.py`
 - 座標→tzの自動物質化リスナー: `aot/databases/device_tz_listeners.py`
-- 予約のアンカー・表示: `aot/ai/services/aot_data_tool_service.py`、
+- 予約のアンカー・表示: `aot/tools/aot_data_tool_service.py`、
   `aot/aot_flask/routes_scheduler.py`
 - フロント側の表示ユーティリティ: `aot/aot_flask/static/js/common/aot-tz.js`
 - 設計・意思決定: `docs/design/timezone-management.md`(開発用、マニュアル未公開)

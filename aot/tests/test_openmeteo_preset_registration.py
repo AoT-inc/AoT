@@ -243,7 +243,7 @@ class TestSyncDoesNotIngest:
 class TestForecastFallback:
     def test_the_korea_only_path_points_at_the_registered_source(self, app):
         """한국 밖에서 "예보 없음" 으로 끝내면 대안이 있어도 모델이 못 찾는다."""
-        from aot.ai.services.aot_data_tool_service import AoTDataToolService
+        from aot.tools.aot_data_tool_service import AoTDataToolService
 
         with app.app_context():
             src = _make_source({'preset_key': 'ext_openmeteo',
@@ -256,7 +256,7 @@ class TestForecastFallback:
     def test_it_does_not_recommend_a_source_that_is_not_registered(self, app):
         """없는 것을 권하면 모델이 부를 수 없는 것을 부르고, 그 실패는
         사용자에게 그냥 고장으로 보인다."""
-        from aot.ai.services.aot_data_tool_service import AoTDataToolService
+        from aot.tools.aot_data_tool_service import AoTDataToolService
 
         with app.app_context():
             hint = AoTDataToolService._forecast_fallback_hint()

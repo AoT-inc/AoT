@@ -351,7 +351,7 @@ def propose_location_scoped_control(raw_cmd, thread_id):
     grab-bag of unrelated / previously-mentioned devices. Returns the proposal, or
     None to fall through when nothing resolves."""
     from aot.databases.models import Output
-    from aot.ai.services.aot_data_tool_service import AoTDataToolService
+    from aot.tools.aot_data_tool_service import AoTDataToolService
     res = AoTDataToolService.search_devices(raw_cmd) or {}
     rows = [r for r in res.get('results', []) if r.get('type') == 'output']
     if not rows:
@@ -471,7 +471,7 @@ def propose_function_create(raw_cmd, thread_id):
     # search as control. Falls back to an empty create only when nothing resolves.
     if ftype == 'trigger_sequence':
         try:
-            from aot.ai.services.aot_data_tool_service import AoTDataToolService as _T
+            from aot.tools.aot_data_tool_service import AoTDataToolService as _T
             res = _T.search_devices(raw_cmd) or {}
             outs = [r for r in res.get('results', []) if r.get('type') == 'output']
             outs.sort(key=lambda r: (r.get('name') or ''))

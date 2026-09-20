@@ -50,7 +50,7 @@ class TestLibraryCatalogAxes(unittest.TestCase):
         """상수가 아니라 계산값이어야 한다 — 지역 불가지 시스템 프리셋이
         생기면 도구의 안내도 저절로 따라와야 하고, 그때 사람이 문구를 고치는
         것을 잊어도 거짓말이 되지 않아야 한다."""
-        from aot.ai.services.aot_data_tool_service import AoTDataToolService
+        from aot.tools.aot_data_tool_service import AoTDataToolService
         out = AoTDataToolService.list_library_source_types_tool()
         self.assertIn('system_preset_regions', out)
         expected = sorted({p.get('region', 'any')
@@ -63,7 +63,7 @@ class TestLibraryCatalogAxes(unittest.TestCase):
     def test_tool_note_tells_the_model_what_to_do_outside_that_region(self):
         """지역을 실어 놓고 그것으로 무엇을 하라는 말이 없으면 모델은 그냥
         무시한다 — 실제로 예전 note 는 '둘 다 제시하라' 만 말했다."""
-        from aot.ai.services.aot_data_tool_service import AoTDataToolService
+        from aot.tools.aot_data_tool_service import AoTDataToolService
         note = AoTDataToolService.list_library_source_types_tool()['note']
         self.assertIn('region', note)
         self.assertIn('custom_types', note)

@@ -34,8 +34,8 @@ class InvalidToolError(Exception):
 # Was a hand-maintained frozenset that drifted from the resolver tool_map
 # (get_weather / get_cumulative_status were dispatchable but missing here, so
 # resolve_action raised InvalidToolError for them). Declaring each tool once in
-# aot/ai/services/tool_registry.py and deriving this set makes drift impossible.
-from aot.ai.services.tool_registry import (
+# aot/tools/tool_registry.py and deriving this set makes drift impossible.
+from aot.tools.tool_registry import (
     virtual_tool_registry as _virtual_tool_registry,
     manifest_system_tools as _manifest_system_tools,
 )
@@ -481,7 +481,7 @@ class AIActionService:
                     # Explicit if/else avoids contextlib.nullcontext() version dependency.
                     def _fetch_tools():
                         if _builtin:
-                            from aot.ai.services import tool_execution
+                            from aot.tools import tool_execution
                             from flask import current_app as _ca
                             return tool_execution.tools_for_agent(
                                 _ca._get_current_object())
@@ -721,7 +721,7 @@ class AIActionService:
         if not tool_name:
             return False
         from aot.ai.services.resolvers.constants import PHYSICAL_TOOLS
-        from aot.ai.services.tool_registry import approval_required_tools
+        from aot.tools.tool_registry import approval_required_tools
         return tool_name in PHYSICAL_TOOLS or tool_name in approval_required_tools()
 
     @staticmethod
@@ -1113,7 +1113,7 @@ class AIActionService:
                 # (Conditional/Trigger/PID/CustomController). Same DB+daemon
                 # path as the settings UI; the scheduled job reached here only
                 # via approve_job (_approved=True), so it's already human-confirmed.
-                from aot.ai.services.aot_data_tool_service import AoTDataToolService
+                from aot.tools.aot_data_tool_service import AoTDataToolService
                 res = AoTDataToolService._set_entity_activation(target_id, action_type == 'activate')
                 if isinstance(res, dict) and res.get('error'):
                     return {"status": "error", "message": res['error'], "result": res}
@@ -1274,7 +1274,7 @@ class AIActionService:
                     from aot.databases.models.mcp_server import MCPServer as _Srv
                     _row = _Srv.query.filter_by(unique_id=mcp_server_id).first()
                     if _row and 'aot_mcp_server' in (_row.command or ''):
-                        from aot.ai.services import tool_execution
+                        from aot.tools import tool_execution
                         from flask import current_app as _ca
                         tools = tool_execution.tools_for_agent(
                             _ca._get_current_object())
@@ -1684,7 +1684,7 @@ class AIActionService:
                                    "it is reachable only through the approved MCP dispatch path.",
                         "blocked": True,
                     }
-                from aot.ai.services.aot_data_tool_service import AoTDataToolService
+                from aot.tools.aot_data_tool_service import AoTDataToolService
                 state = params.get('state', 'off')
                 duration_minutes = params.get('duration_minutes')
                 duration_seconds = params.get('duration_seconds')

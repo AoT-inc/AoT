@@ -268,7 +268,7 @@ An operational group doesn't split just because it straddles a boundary.
   `aot/aot_flask/geo/geo_overlays.py`
 - Coordinate-to-tz auto-materialization listener:
   `aot/databases/device_tz_listeners.py`
-- Schedule anchor / display: `aot/ai/services/aot_data_tool_service.py`,
+- Schedule anchor / display: `aot/tools/aot_data_tool_service.py`,
   `aot/aot_flask/routes_scheduler.py`
 - Frontend display utility: `aot/aot_flask/static/js/common/aot-tz.js`
 - Design and decisions: `docs/design/timezone-management.md` (dev-only, not published

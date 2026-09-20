@@ -43,7 +43,7 @@ class CreateOutputSuccessVsErrorTest(unittest.TestCase):
         self.ctx.pop()
 
     def test_daemon_unreachable_is_a_warning_not_a_failure(self):
-        from aot.ai.services.aot_data_tool_service import AoTDataToolService
+        from aot.tools.aot_data_tool_service import AoTDataToolService
         from aot.databases.models import Output, OutputChannel
 
         result = AoTDataToolService.create_output(output_type='chirpstack_downlink')
@@ -67,7 +67,7 @@ class CreateOutputSuccessVsErrorTest(unittest.TestCase):
 
     def test_unknown_output_type_is_still_a_real_error(self):
         """new_id 를 먼저 보는 것이 "에러를 무시한다" 는 뜻이 되면 안 된다."""
-        from aot.ai.services.aot_data_tool_service import AoTDataToolService
+        from aot.tools.aot_data_tool_service import AoTDataToolService
 
         result = AoTDataToolService.create_output(output_type='not_a_real_output_type')
         self.assertIn('error', result)

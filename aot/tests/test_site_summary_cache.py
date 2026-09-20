@@ -24,6 +24,14 @@ def _read(rel):
         return f.read()
 
 
+def _read_plot_journal():
+    """`plot_journal.py` 는 패키지로 나뉘었다 — 하위 모듈을 전부 이어 붙인다."""
+    import glob
+    paths = sorted(glob.glob(os.path.join(
+        _ROOT, 'aot_flask/geo/plot_journal/*.py')))
+    return '\n'.join(_read(os.path.relpath(p, _ROOT)) for p in paths)
+
+
 class CachedBuildTest(unittest.TestCase):
     def setUp(self):
         self.cache = {}
@@ -193,7 +201,7 @@ class HiddenKeyVocabularyTest(unittest.TestCase):
     """
 
     def test_series_filter_uses_the_same_key_function_as_the_card(self):
-        src = _read('aot_flask/geo/plot_journal.py')
+        src = _read_plot_journal()
         body = src.split('def env_channel_series', 1)[1].split(
             '\ndef ', 1)[0]
         self.assertIn('channel_meta_for_dm', body,
@@ -215,7 +223,7 @@ class HiddenKeyVocabularyTest(unittest.TestCase):
         반대로 두면(못 읽으면 뺀다) 매핑이 깨진 채널이 카드에는 있는데
         그래프에서만 사라진다 — 원인에 닿을 실마리가 없다.
         """
-        src = _read('aot_flask/geo/plot_journal.py')
+        src = _read_plot_journal()
         body = src.split('def env_channel_series', 1)[1].split('\ndef ', 1)[0]
         guard = body.split('if hidden:', 1)[1].split('_t0 =', 1)[0]
         # except 절에 continue 가 있으면 "못 읽으면 뺀다" 가 된다.
@@ -293,13 +301,13 @@ class FoldOrderTest(unittest.TestCase):
     """
 
     def test_fold_comes_after_attach_targets(self):
-        src = _read('aot_flask/geo/plot_journal.py')
+        src = _read_plot_journal()
         body = src.split('def recent_env_trends', 1)[1].split('\ndef ', 1)[0]
         self.assertLess(body.index('attach_targets('), body.index('fold_buckets('))
 
     def test_fold_reuses_the_journal_function(self):
         """단위 전환을 다시 짜면 같은 구획을 일지와 위젯이 다르게 접는다."""
-        src = _read('aot_flask/geo/plot_journal.py')
+        src = _read_plot_journal()
         body = src.split('def recent_env_trends', 1)[1].split('\ndef ', 1)[0]
         self.assertIn('fold_buckets(', body)
 

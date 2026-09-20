@@ -22,7 +22,7 @@ os.environ["ALEMBIC_RUNNING"] = "1"
 
 import tempfile
 
-from aot.ai.services import reference_table_service as rts
+from aot.utils import reference_table_service as rts
 
 _CSV = (
     "ScientificName,COMNAME,TOPMN,TOPMX,TMIN,TMAX,GMIN,NOTE\n"
@@ -91,7 +91,7 @@ class TestReferenceTableQuery(unittest.TestCase):
 
     def test_reparse_is_skipped_when_the_file_has_not_changed(self):
         rts.load('tbl-1')
-        with mock.patch('aot.ai.services.reference_table_service.csv.DictReader') as reader:
+        with mock.patch('aot.utils.reference_table_service.csv.DictReader') as reader:
             rts.load('tbl-1')
             reader.assert_not_called()
 
@@ -179,7 +179,7 @@ class TestAliases(unittest.TestCase):
     def test_an_unmatched_local_name_is_told_to_retry_with_the_canonical_one(self):
         """유의어는 모델이 옮겨야 한다 — 그러라고 응답이 시킨다. 매니페스트가
         아니라 응답에 담아 표가 없는 설치의 고정비를 0으로 둔다."""
-        from aot.ai.services.aot_data_tool_service import AoTDataToolService as T
+        from aot.tools.aot_data_tool_service import AoTDataToolService as T
         from unittest import mock as _m
         src = _Src('tbl-a')
         with _m.patch('aot.databases.models.AIContextSource') as _S:
@@ -204,7 +204,7 @@ class TestSearchPointsAtTables(unittest.TestCase):
                'name_language': '영어 통용명'}]
 
     def test_empty_result_hands_over_how_to_call_it(self):
-        from aot.ai.services.aot_data_tool_service import AoTDataToolService as T
+        from aot.tools.aot_data_tool_service import AoTDataToolService as T
         with mock.patch.object(T, '_registered_lookup_briefs', return_value=self._BRIEF), \
              mock.patch('aot.ai.services.knowledge_search.search_as_text', return_value=''), \
              mock.patch('aot.ai.services.knowledge_search.library_is_populated', return_value=True):
@@ -215,7 +215,7 @@ class TestSearchPointsAtTables(unittest.TestCase):
 
     def test_nothing_is_added_when_no_table_is_registered(self):
         """표가 없는 설치에서는 고정비가 0이어야 한다."""
-        from aot.ai.services.aot_data_tool_service import AoTDataToolService as T
+        from aot.tools.aot_data_tool_service import AoTDataToolService as T
         with mock.patch.object(T, '_registered_lookup_briefs', return_value=[]), \
              mock.patch('aot.ai.services.knowledge_search.search_as_text', return_value=''), \
              mock.patch('aot.ai.services.knowledge_search.library_is_populated', return_value=True):

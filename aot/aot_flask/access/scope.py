@@ -492,7 +492,7 @@ def can_operate_tool_call(tool_name, arguments, user=None, write_tools=None):
         return True, None
     if write_tools is None:
         try:
-            from aot.ai.services.mcp_safety_gate import write_tools as _wt
+            from aot.tools.mcp_safety_gate import write_tools as _wt
             write_tools = _wt()
         except Exception:
             return True, None

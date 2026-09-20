@@ -41,13 +41,13 @@ AI_INFORMATION = {
 }
 
 # Virtual tool definitions exposed to the LLM prompt.
-# SSOT: this list is now DERIVED from the tool registry (aot/ai/services/
+# SSOT: this list is now DERIVED from the tool registry (aot/tools/
 # tool_registry.py :: virtual_tools()) — it used to be hand-maintained here and
 # drifted from the registry (advertising tools the stdio MCP server could not
 # dispatch). Add/edit an MCP tool in tool_registry._MCP_TOOL_PAYLOADS, not here.
-from aot.ai.services.tool_registry import virtual_tools as _virtual_tools
-
-VIRTUAL_TOOLS = _virtual_tools()
+# The tool layer owns this data (aot/tools/virtual_tools.py); this is the
+# allowed direction (aot.ai importing aot.tools).
+from aot.tools.virtual_tools import VIRTUAL_TOOLS
 
 
 def _get_request_locale() -> str:
@@ -99,7 +99,7 @@ class AoTSystemMCP_AI(AbstractAI):
 
     def _init_brain(self, agent_config):
         """Initialize the LLM reasoning engine via BrainResolver."""
-        from aot.ai.services.brain_resolver import BrainResolver
+        from aot.ai.brain_resolver import BrainResolver
         brain_ctx = BrainResolver.resolve(
             skeleton_id=agent_config.unique_id,
             preferred_entry_id=self.reasoning_entry_id
@@ -136,7 +136,7 @@ class AoTSystemMCP_AI(AbstractAI):
         """
         all_tools = list(VIRTUAL_TOOLS)
         try:
-            from aot.ai.services.aot_native_tool_engine import AoTNativeToolEngine
+            from aot.tools.aot_native_tool_engine import AoTNativeToolEngine
             native_tools = AoTNativeToolEngine.get_tools()
             existing_names = {t["tool_name"] for t in all_tools}
             for nt in native_tools:
@@ -193,7 +193,7 @@ class AoTSystemMCP_AI(AbstractAI):
         """
         tools = list(VIRTUAL_TOOLS)
         try:
-            from aot.ai.services.aot_native_tool_engine import AoTNativeToolEngine
+            from aot.tools.aot_native_tool_engine import AoTNativeToolEngine
             native_tools = AoTNativeToolEngine.get_tools()
             # Avoid duplicates by name
             existing_names = {t["tool_name"] for t in tools}
@@ -240,7 +240,7 @@ class AoTSystemMCP_AI(AbstractAI):
 
         if tool_name in NATIVE_TOOL_NAMES:
             try:
-                from aot.ai.services.aot_native_tool_engine import AoTNativeToolEngine
+                from aot.tools.aot_native_tool_engine import AoTNativeToolEngine
                 result = AoTNativeToolEngine.execute(tool_name, arguments)
                 # [IMP_01] Semantic tagging: annotate raw sensor value before returning to LLM
                 if tool_name == 'get_sensor_reading' and isinstance(result, dict) and 'value' in result:
@@ -257,7 +257,7 @@ class AoTSystemMCP_AI(AbstractAI):
         # code called AoTDataToolService.execute(), which does not exist, so this
         # branch always errored; build_tool_map resolves each tool's real handler.)
         try:
-            from aot.ai.services.tool_registry import build_tool_map
+            from aot.tools.tool_registry import build_tool_map
             handler = build_tool_map().get(tool_name)
             if handler is None:
                 return {"status": "error", "message": f"Unknown virtual tool: {tool_name}"}

@@ -94,7 +94,7 @@ class TestCatalogsAreNotShippedEveryCall(unittest.TestCase):
         self.assertIn('list_device_types', self.src,
                       'creatable_inputs_summary 가 list_device_types 를 가리키지 '
                       '않는다')
-        from aot.ai.services import tool_registry as registry
+        from aot.tools import tool_registry as registry
         self.assertIn('list_device_types', registry.build_tool_map(),
                       'summary 가 가리키는 list_device_types 가 디스패치되지 않는다')
 
@@ -108,7 +108,7 @@ class TestDrawerIndexNamesTheTools(unittest.TestCase):
     """
 
     def test_index_lists_tool_names(self):
-        from aot.ai.services import tool_registry as registry
+        from aot.tools import tool_registry as registry
         entry = registry._drawer_index_manifest()
         desc = entry['description']
         available = {t.name for t in registry.TOOLS if t.manifest}
@@ -122,7 +122,7 @@ class TestDrawerIndexNamesTheTools(unittest.TestCase):
     def test_index_does_not_advertise_tools_it_cannot_hand_out(self):
         """`open_drawer` 는 manifest 가 있는 도구만 돌려준다. 그 밖의 이름을
         광고하면 열어도 안 나와, 서랍에서 한 번 더 멀어지게 만든다."""
-        from aot.ai.services import tool_registry as registry
+        from aot.tools import tool_registry as registry
         desc = registry._drawer_index_manifest()['description']
         no_manifest = [t.name for t in registry.TOOLS if not t.manifest]
         listed = [n for n in no_manifest if ', %s' % n in desc or ': %s' % n in desc]

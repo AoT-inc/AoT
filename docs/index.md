@@ -2,7 +2,9 @@ description: Documentation for AoT, an open source GIS- and AI-based environment
 
 ## AoT Environmental Monitoring and Control System
 
-AoT is open source software for monitoring an environment with sensors and controlling devices remotely — not tied to any particular purpose or kind of site. It is built around a **GIS digital twin** — every device, sensor, and structure has a real place on a map — and an **AI layer built on MCP** (Model Context Protocol) that can read that map, diagnose it, and act on it with your approval.
+AoT puts your space on a map and links the records and devices that belong to it. It then lets AI look at that space together with people, make judgments, and get work done.
+
+It is open source software for monitoring an environment with sensors and controlling devices remotely, not tied to any particular purpose or kind of site. Devices, sensors, and structures can be placed at their real positions on a **GIS map**, and an **AI layer built on MCP** (Model Context Protocol) can read the system, diagnose it, and act on it with your approval. Which features you use is up to you.
 
 It runs natively on the [Raspberry Pi](https://en.wikipedia.org/wiki/Raspberry_Pi) and other single-board computers (SBCs), and in Docker on ordinary servers and PCs.
 

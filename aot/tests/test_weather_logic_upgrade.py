@@ -286,7 +286,7 @@ class TestAiDocServiceClassifyWeatherDevice(unittest.TestCase):
 # 3. ai_routing_service — format_weather_tool_result()
 # ===========================================================================
 
-from aot.ai.services.ai_routing_service import AIRoutingService
+from aot.ai.ai_routing_service import AIRoutingService
 
 
 class TestFormatWeatherToolResult(unittest.TestCase):

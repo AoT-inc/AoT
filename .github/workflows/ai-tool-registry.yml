@@ -25,11 +25,13 @@ on:
       - main
     paths:
       - 'aot/ai/**'
+      - 'aot/tools/**'
       - 'aot/tests/ai_eval/test_tool_registry_ssot.py'
       - '.github/workflows/ai-tool-registry.yml'
   pull_request:
     paths:
       - 'aot/ai/**'
+      - 'aot/tools/**'
       - 'aot/tests/ai_eval/test_tool_registry_ssot.py'
       - '.github/workflows/ai-tool-registry.yml'
   workflow_dispatch:

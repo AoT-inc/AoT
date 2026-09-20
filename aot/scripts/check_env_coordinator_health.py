@@ -37,7 +37,8 @@
 긴급 사이클   emergency 모드 비율. 드물어야 정상이다.
 설정 점검     오늘 실제로 밟은 지뢰들 — 종료일 임박, 유도/하드 역전,
               신선도 상한이 센서 주기보다 짧아 값이 늘 만료되는 경우,
-              차광막을 닫으면 광량 하한 아래로 떨어지는 모순 설정.
+              차광막을 닫으면 광량 하한 아래로 떨어지는 모순 설정,
+              센서·장치 조합이 제어로 이어지지 않는 경우(`_check_combinations`).
 """
 
 import argparse
@@ -75,6 +76,7 @@ REASON_LABEL = {
     LC.REASON_DEADZONE_BACKOFF: '데드존 후퇴',
     LC.REASON_NIGHT_PARKED:     '야간 파킹',
     LC.REASON_MANUAL_OVERRIDE:  '수동 잠금',
+    LC.REASON_NO_MEASUREMENT:   '실내 값 없음',
     # 임계 오버라이드 계열 — coordinate() 가 아니라
     # `apply_threshold_and_gate_overrides` 가 붙이는 근거다. 최종 명령
     # 로그(CH100 계열)에만 나타난다.
@@ -94,7 +96,7 @@ REASON_LABEL = {
 IDLE_REASONS = frozenset({
     LC.REASON_IDLE, LC.REASON_NO_GRADIENT, LC.REASON_NO_OUTDOOR_DATA,
     LC.REASON_OPPOSING_PARKED, LC.REASON_NIGHT_PARKED,
-    LC.REASON_WRONG_DIRECTION,
+    LC.REASON_WRONG_DIRECTION, LC.REASON_NO_MEASUREMENT,
 })
 
 MODE_LABEL = {
@@ -107,7 +109,7 @@ GATE_LABEL = [
     (LC.GATE_BIT_RAIN,        '강우'),
     (LC.GATE_BIT_WIND,        '강풍'),
     (LC.GATE_BIT_EXT_EXP,     '실외 비·바람 끊김'),
-    (LC.GATE_BIT_INT_EXP,     '내부 극한'),
+    (LC.GATE_BIT_INT_EXP,     '실내 값 끊김'),
     (LC.GATE_BIT_HEAT,        '고온'),
     (LC.GATE_BIT_COLD,        '저온'),
     (LC.GATE_BIT_FOG_SUNBURN, '일소 방지 분무 잠금'),
@@ -526,6 +528,135 @@ def _check_settings(opts, facility_uuid, row=None):
 
     findings.extend(_check_sensor_freshness(opts, facility_uuid))
     findings.extend(_check_light_band(opts, facility_uuid))
+    findings.extend(_check_combinations(opts, facility_uuid, row))
+    return findings
+
+
+# ── 센서·장치 조합 ──────────────────────────────────────────────────────────
+# 축 → 그 축을 잴 수 있는 measurement_type. 시설 편집기가 쓰는 어휘 그대로다
+# (`facility_sensors._MTYPE_KEY`). VPD 채널은 온도·습도를 대신하지 못한다 —
+# 제어가 T/RH 로 폴백할 때 필요한 것은 그 둘 자체다.
+_AXIS_MTYPE = {'T': 'temperature', 'RH': 'humidity',
+               'CO2': 'co2', 'Light': 'light'}
+_AXIS_LABEL = {'T': '온도', 'RH': '습도', 'CO2': 'CO₂', 'Light': '광량'}
+
+
+def _axes_of_kind(kind):
+    """이 종류가 실제로 미는 축 {'T','RH',…}. **정본은 authority 표 하나다** —
+    여기 표를 한 벌 더 적으면 새 종류가 생길 때 조용히 갈라진다."""
+    from aot.functions.utils.env_control.authority import _KIND_AUTHORITY
+    return {k.rsplit('_', 1)[0] for k in _KIND_AUTHORITY.get(kind, {})}
+
+
+def _has_ext_collector():
+    """실외 컨텍스트 수집기가 하나라도 활성인가."""
+    try:
+        return bool(CustomController.query.filter(
+            CustomController.device == 'ext_context_collector',
+            CustomController.is_activated.is_(True)).first())
+    except Exception:                                        # noqa: BLE001
+        return False
+
+
+def _check_combinations(opts, facility_uuid, row=None):
+    """센서와 장치의 **조합**이 제어로 이어지는가 (2026-09-20).
+
+    시설마다 장치 구성이 다르고, 측정만 있고 제어가 없는 축(참고값)이나 그
+    반대가 정상이다. 그런데 어긋남 중 셋은 **아무 에러 없이 제어를 통째로
+    세운다** — 사람은 동작을 며칠 지켜보다 알게 된다.
+
+    보는 것 셋:
+      1. 목표는 있는데 **측정**이 없다 — 편차를 못 재 그 축이 제어에서 빠진다.
+      2. 목표는 있는데 **장치**가 없다 — 재기는 하는데 움직일 수단이 없다.
+      3. **장치**는 있는데 그 장치가 미는 축을 하나도 못 잰다 — 근거가 없어
+         영원히 제자리다(근거 21).
+
+    ⚠ **"측정만 있고 목표·장치가 없다" 는 보고하지 않는다.** 그것이 곧 보조
+      값(참고용)이고 정상 구성이다 — 제한이 없는 설치를 영구히 빨간불로 두면
+      아무도 안 본다(`check_scope_grants` 와 같은 판단).
+    """
+    if not facility_uuid:
+        return []
+    try:
+        from aot.aot_flask.geo.facility_integration import get_facility_integration
+        data, err = get_facility_integration(facility_uuid)
+        if err or not isinstance(data, dict):
+            return []
+    except Exception:                                        # noqa: BLE001
+        return []
+
+    def _mtypes(rows):
+        return {(x.get('measurement_type') or '').strip()
+                for x in (rows or []) if x.get('input_uuid')}
+
+    indoor  = _mtypes(data.get('sensors_resolved'))
+    outdoor = _mtypes(data.get('sensors_outdoor'))
+    kinds   = {(a.get('kind') or '').strip()
+               for a in (data.get('actuators_resolved') or [])}
+    kinds.discard('')
+
+    measured = {ax for ax, mt in _AXIS_MTYPE.items() if mt in indoor}
+    # 광량만 실외로 대신할 수 있다 — 실내 광센서가 없으면 코디네이터가 실외
+    # 일사에 차광막 개도와 피복 투과율을 곱해 막 아래 값을 추정한다
+    # (`_cycle_mixin.estimate_indoor_light`). 온습도·CO₂ 에는 그런 경로가 없다.
+    #
+    # ⚠ 실외 일사의 유입구는 **둘**이다 — 시설 도면의 실외 센서와
+    #   `ext_context_collector` 의 공유 컨텍스트(`_compute_light_est` 주석).
+    #   뒤를 빠뜨리면 수집기로 일사를 받는 설치가 "광 센서를 다세요" 라는
+    #   틀린 안내를 받는다. 수집기가 실제로 일사를 싣는지까지는 여기서 알 수
+    #   없으므로, 하나라도 활성이면 **보고하지 않는다** — 없는 문제를 만들어
+    #   내는 쪽이 놓치는 쪽보다 나쁘다(사람이 찾을 것이 없다).
+    if 'light' in outdoor or _has_ext_collector():
+        measured.add('Light')
+
+    controlled = set()
+    for k in kinds:
+        controlled |= _axes_of_kind(k)
+
+    # ── 이 시설이 실제로 목표를 갖는 축 ──────────────────────────────────────
+    # 온습도는 언제나 목표가 있다(guide 범위는 끌 수 없다). CO₂·VPD 는 구획
+    # 단계 목표가 있을 때만이고, 광량은 상·하한을 적었을 때만이다.
+    targeted = {'T', 'RH'}
+    if float(opts.get('light_max') or 0) > 0 or float(opts.get('light_min') or 0) > 0:
+        targeted.add('Light')
+    tgt = {}
+    if row is not None:
+        try:
+            from aot.aot_flask.geo import coordinator_plot
+            tgt = coordinator_plot.control_targets(row) or {}
+        except Exception:                                    # noqa: BLE001
+            tgt = {}
+    co2_t = (tgt.get('co2') or {})
+    if co2_t.get('value') or co2_t.get('method_id'):
+        targeted.add('CO2')
+
+    findings = []
+
+    # 1. 목표는 있는데 측정이 없다
+    for ax in sorted(targeted - measured):
+        # 온습도가 빠지면 제어 전체가 선다 — 다른 축과 같은 무게가 아니다.
+        level = 'severe' if ax in ('T', 'RH') else 'warn'
+        findings.append((level,
+            f'{_AXIS_LABEL[ax]} 목표는 있는데 측정이 없습니다 — 편차를 잴 수 '
+            f'없어 이 축은 제어에서 빠지고, 이 축을 움직이던 장치는 제자리에 '
+            f'섭니다(근거 21). 시설 편집기에서 '
+            f'{_AXIS_MTYPE[ax]} 채널을 묶으세요'))
+
+    # 2. 목표는 있는데 장치가 없다
+    for ax in sorted((targeted & measured) - controlled):
+        findings.append(('warn',
+            f'{_AXIS_LABEL[ax]} 목표는 있는데 이 축을 움직일 장치가 '
+            f'없습니다 — 값은 보이지만 따라갈 수단이 없습니다'))
+
+    # 3. 장치는 있는데 그 장치가 미는 축을 하나도 못 잰다
+    for k in sorted(kinds):
+        axes = _axes_of_kind(k)
+        if not axes or (axes & measured):
+            continue
+        findings.append(('warn',
+            f"'{k}' 장치가 움직이는 축({'·'.join(_AXIS_LABEL.get(a, a) for a in sorted(axes))})"
+            f'을 하나도 잴 수 없습니다 — 이 장치는 근거가 없어 계속 제자리입니다'))
+
     return findings
 
 

@@ -69,19 +69,28 @@ class TestOnlyTheSiteEndpointTurnsItOff(unittest.TestCase):
     """켜고 끄는 자리를 늘리면 어느 화면이 무엇을 세는지 아무도 모르게 된다."""
 
     def _routes(self):
-        import aot.aot_flask.routes_geo as rg
+        # routes_geo_summary 를 바로 import 하면 routes_geo_shape ↔
+        # routes_geo_schedule 순환 참조로 죽는다 — 둘 다 모듈 최상단에서
+        # `routes_geo_shape._shape_feature_dict` 를 가져오는데, 그 이름은
+        # routes_geo 의 footer 가 정상 순서로 다 돌아야 채워진다. 앱과 같은
+        # 순서(`routes_geo` 먼저)로 부르면 사슬이 풀린다
+        # (routes_geo_plot/routes_geo_device_split 와 같은 함정).
+        import aot.aot_flask.routes_geo  # noqa: F401
+        import aot.aot_flask.routes_geo_summary as rg
         return inspect.getsource(rg)
 
     def test_the_site_contents_endpoint_turns_it_off(self):
+        import aot.aot_flask.routes_geo  # noqa: F401
         body = inspect.getsource(
-            __import__('aot.aot_flask.routes_geo', fromlist=['x'])
+            __import__('aot.aot_flask.routes_geo_summary', fromlist=['x'])
             .api_geo_site_contents)
         self.assertIn('include_facility_fittings=False', body)
 
     def test_the_zone_endpoint_does_not(self):
         """구역은 그대로다 — 구역 안 시설의 설비는 구역의 것이 맞다."""
+        import aot.aot_flask.routes_geo  # noqa: F401
         body = inspect.getsource(
-            __import__('aot.aot_flask.routes_geo', fromlist=['x'])
+            __import__('aot.aot_flask.routes_geo_summary', fromlist=['x'])
             ._build_zone_contents)
         self.assertNotIn('include_facility_fittings', body)
 

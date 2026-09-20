@@ -1194,7 +1194,7 @@ def upcoming_schedule(shape, device_ids, extra_targets=(), limit=5):
                   (실제로 그렇게 나갔다).
     """
     from aot.databases.models.scheduler import SchedulerJobMeta
-    from aot.ai.services.aot_data_tool_service import AoTDataToolService
+    from aot.tools.aot_data_tool_service import AoTDataToolService
     from aot.utils.time_utils import utc_now
 
     shape_targets = set()

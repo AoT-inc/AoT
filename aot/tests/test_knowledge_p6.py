@@ -404,19 +404,19 @@ class TestUnknownTagDoesNotHideEverything(unittest.TestCase):
         knowledge_search._library_stamp = None
 
     def test_a_tag_nobody_uses_is_ignored_rather_than_hiding_the_answer(self):
-        from aot.ai.services.aot_data_tool_service import AoTDataToolService as T
+        from aot.tools.aot_data_tool_service import AoTDataToolService as T
         out = T.knowledge_search_tool(query='가을무 재배', tags='crop')
         self.assertIn('80일', out.get('result') or '')
 
     def test_it_says_which_tags_actually_exist(self):
-        from aot.ai.services.aot_data_tool_service import AoTDataToolService as T
+        from aot.tools.aot_data_tool_service import AoTDataToolService as T
         res = T.knowledge_search_tool(query='가을무 재배', tags='crop')['result']
         self.assertIn('IGNORED', res)
         self.assertIn('가을무', res)
 
     def test_a_real_tag_still_filters(self):
         """무효 태그를 버린다고 유효 태그까지 무력화하면 스코핑이 사라진다."""
-        from aot.ai.services.aot_data_tool_service import AoTDataToolService as T
+        from aot.tools.aot_data_tool_service import AoTDataToolService as T
         res = T.knowledge_search_tool(query='가을무 재배', tags='무')['result']
         self.assertIn('80일', res)
         self.assertNotIn('IGNORED', res)

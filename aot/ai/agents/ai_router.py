@@ -65,7 +65,7 @@ class AIRouterAI(AbstractAI):
             self._brain._build_prompt = types.MethodType(self.__class__._build_prompt, self._brain)
 
     def _init_brain(self, agent_config):
-        from aot.ai.services.brain_resolver import BrainResolver
+        from aot.ai.brain_resolver import BrainResolver
         brain_ctx = BrainResolver.resolve(
             skeleton_id=agent_config.unique_id,
             preferred_entry_id=self.reasoning_entry_id

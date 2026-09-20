@@ -1,0 +1,6 @@
+# Tool configuration only. AoT is installed by install/setup.sh or Docker,
+# not by pip; there is no [project] table on purpose.
+
+[tool.pytest.ini_options]
+testpaths = ["aot/tests"]
+addopts = "-p no:cacheprovider"

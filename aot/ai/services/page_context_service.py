@@ -73,7 +73,7 @@ def assemble(dashboard_id):
     try:
         from aot.databases.models.dashboard import Widget
         from aot.databases.models import DeviceMeasurements
-        from aot.ai.services.aot_data_tool_service import AoTDataToolService
+        from aot.tools.aot_data_tool_service import AoTDataToolService
 
         widgets = Widget.query.filter_by(tab_id=dashboard_id).limit(_MAX_WIDGETS).all()
         if not widgets:

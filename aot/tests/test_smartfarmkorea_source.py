@@ -547,7 +547,7 @@ class TestSmartfarmkoreaAITools(unittest.TestCase):
 
     @patch('aot.ai.context.ext.smartfarmkorea_client.requests.get')
     def test_lookup_tool_filters_and_caps(self, mock_get):
-        from aot.ai.services.aot_data_tool_service import AoTDataToolService as T
+        from aot.tools.aot_data_tool_service import AoTDataToolService as T
         rows = [{'statusCode': '00', 'statusMessage': 'NORMAL_CODE', 'userId': f'PF_{i:04d}',
                  'facilityId': f'PF_{i:04d}_01', 'addressName': ('경상남도 사천시' if i % 2 else '전북 김제시'),
                  'itemCode': '080300'} for i in range(50)]
@@ -562,7 +562,7 @@ class TestSmartfarmkoreaAITools(unittest.TestCase):
         """REGRESSION: the AI only ever recommended SmartFarmKorea because it
         had no way to enumerate the other source types. This tool must return
         BOTH the external-API presets AND the custom types."""
-        from aot.ai.services.aot_data_tool_service import AoTDataToolService as T
+        from aot.tools.aot_data_tool_service import AoTDataToolService as T
         r = T.list_library_source_types_tool()
         sys_keys = {e['key'] for e in r['system_presets']}
         cust_keys = {e['key'] for e in r['custom_types']}
@@ -577,7 +577,7 @@ class TestSmartfarmkoreaAITools(unittest.TestCase):
         self.assertGreater(len(sys_keys), 3)
 
     def test_lookup_tool_livestock_has_no_discovery(self):
-        from aot.ai.services.aot_data_tool_service import AoTDataToolService as T
+        from aot.tools.aot_data_tool_service import AoTDataToolService as T
         out = T.smartfarmkorea_lookup_tool(dataset='smartfarmkorea_livestock', api_key='SK', mode='farms')
         self.assertIn('identity', out['error'])
 
@@ -586,7 +586,7 @@ class TestSmartfarmkoreaAITools(unittest.TestCase):
         """crop='딸기' must return only 딸기 farms — the fix for the AI
         proposing a 토마토 farm (itemCode 080300) for a 딸기 request. Labels
         also show the crop NAME, not the raw code."""
-        from aot.ai.services.aot_data_tool_service import AoTDataToolService as T
+        from aot.tools.aot_data_tool_service import AoTDataToolService as T
         rows = [
             {'statusCode': '00', 'statusMessage': 'NORMAL_CODE', 'userId': 'PF_A',
              'facilityId': 'PF_A_01', 'addressName': '경상남도 사천시', 'itemCode': '080400'},  # 딸기
@@ -610,12 +610,12 @@ class TestSmartfarmkoreaAITools(unittest.TestCase):
         self.assertEqual(sfk.crop_name(None), '')
 
     def test_configure_tool_rejects_non_sfk_preset(self):
-        from aot.ai.services.aot_data_tool_service import AoTDataToolService as T
+        from aot.tools.aot_data_tool_service import AoTDataToolService as T
         out = T.configure_library_source_tool(preset_key='document', api_key='SK', operations=['x'])
         self.assertIn('preset_key must be one of', out['error'])
 
     def test_configure_tool_reports_missing_params_per_operation(self):
-        from aot.ai.services.aot_data_tool_service import AoTDataToolService as T
+        from aot.tools.aot_data_tool_service import AoTDataToolService as T
         out = T.configure_library_source_tool(
             preset_key='smartfarmkorea', api_key='SK', operations=['growth_strawberry'])
         self.assertIn('missing required params', out['error'])
@@ -627,7 +627,7 @@ class TestSmartfarmkoreaAITools(unittest.TestCase):
     def test_configure_tool_creates_activates_and_syncs(self, mock_get):
         """The AI-driven one-shot: create source + activate + sync in one call.
         Confirms the resolved codes land in config_json and a chunk is written."""
-        from aot.ai.services.aot_data_tool_service import AoTDataToolService as T
+        from aot.tools.aot_data_tool_service import AoTDataToolService as T
         resp = MagicMock(); resp.raise_for_status.return_value = None
         resp.json.return_value = [
             {'statusCode': '00', 'statusMessage': 'NORMAL_CODE', 'croppingSerlNo': 4940,

@@ -52,7 +52,7 @@ def run_condition(db_path, n, seed, drawer_ratio, out_path, label=None,
     os.environ['ALEMBIC_RUNNING'] = '1'
     from aot.aot_flask.app import create_app
     from aot.config import ProdConfig
-    from aot.ai.services import tool_registry as registry
+    from aot.tools import tool_registry as registry
 
     class _EvalConfig(ProdConfig):
         SQLALCHEMY_DATABASE_URI = 'sqlite:///%s' % db_path

@@ -50,6 +50,9 @@
 않는다) 냉난방이 파킹되면 `hvac_running` 이 내려가고 개구부 잠금이 풀린다.
 반대 방향으로는 ③ 이 막는다.
 """
+import contextlib
+import logging
+
 import pytest
 
 from aot.functions.utils.env_control.coordinator import (
@@ -371,8 +374,34 @@ class TestPatienceLogIsNotSpam:
     LOGGER = 'aot.functions.utils.env_control.coordinator'
     N = int(VENT_FIRST_PATIENCE_S // 600) + 6      # 문턱을 넘고도 한참 더
 
+    @staticmethod
+    @contextlib.contextmanager
+    def _propagating():
+        """`caplog` 이 이 로거의 줄을 실제로 받게 한다 (2026-09-20).
+
+        ⚠ **`caplog.at_level` 만으로는 부족하다.** pytest 는 핸들러를 **루트**에
+          달고 전파에 기대는데, `configure_aot_file_logging()` 이 'aot' 로거의
+          `propagate` 를 False 로 내린다. 그 함수는 `create_app()` 경로에서
+          불리므로, **앱을 띄우는 다른 테스트가 먼저 돈 뒤에는** 이 로거의 줄이
+          루트까지 올라가지 않는다.
+
+          증상이 고약하다 — 단독 실행은 통과하고 전체 스위트에서만 깨진다.
+          그리고 **없음을 확인하는 테스트는 그때도 통과한다**(레코드가 0 이니
+          당연히 없다). 즉 검사가 도는 것처럼 보이면서 아무것도 안 본다.
+        """
+        lg = logging.getLogger(TestPatienceLogIsNotSpam.LOGGER)
+        chain, node = [], lg
+        while node:
+            chain.append((node, node.propagate))
+            node.propagate = True
+            node = node.parent if node.parent is not logging.getLogger() else None
+        try:
+            yield
+        finally:
+            for node, was in chain:
+                node.propagate = was
+
     def _run(self, caplog, with_heater=True, then_reach=False):
-        import logging
         vent = _profile('vent', 'opening', '↑', magnitude=2.0)
         profs = [vent]
         if with_heater:
@@ -381,7 +410,8 @@ class TestPatienceLogIsNotSpam:
         state.prev_commands = {p.actuator_id: 10.0 for p in profs}
         ctx = {'cycle_sec': 600.0, 'T_ext': 30.0,
                'vent_first': True, 'vent_futility_gate': False}
-        with caplog.at_level(logging.ERROR, logger=self.LOGGER):
+        with self._propagating(), caplog.at_level(logging.ERROR,
+                                                  logger=self.LOGGER):
             for _ in range(self.N):
                 _, state = coordinate(
                     _Situation(_TARGET, {'temperature': -4.0}, dict(ctx)),
@@ -409,13 +439,13 @@ class TestPatienceLogIsNotSpam:
 
     def test_인내_안에서_풀리면_해제_알림도_없다(self, caplog):
         """경고를 낸 적이 없으면 닫을 것도 없다."""
-        import logging
         vent = _profile('vent', 'opening', '↑', magnitude=2.0)
         state = CoordinatorState()
         state.prev_commands = {'vent': 10.0}
         ctx = {'cycle_sec': 600.0, 'T_ext': 30.0,
                'vent_first': True, 'vent_futility_gate': False}
-        with caplog.at_level(logging.ERROR, logger=self.LOGGER):
+        with self._propagating(), caplog.at_level(logging.ERROR,
+                                                  logger=self.LOGGER):
             _, state = coordinate(_Situation(_TARGET, {'temperature': -4.0}, dict(ctx)),
                                   [vent], state, unique_id='t')
             _, state = coordinate(_Situation(_TARGET, {'temperature': 0.0}, dict(ctx)),

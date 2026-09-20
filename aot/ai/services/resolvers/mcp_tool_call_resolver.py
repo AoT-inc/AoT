@@ -67,7 +67,7 @@ class MCPToolCallResolver(BaseActionResolver):
             # AI 는 system_tools 로 우회해 **아무도 모르는** 상태가 됐다.
             # 승인·감사·응답 캡은 tool_execution 이 그대로 건다(같은 게이트다).
             if _is_builtin_server(server_id):
-                from aot.ai.services import tool_execution
+                from aot.tools import tool_execution
                 from flask import current_app
                 res = tool_execution.execute_for_agent(
                     current_app._get_current_object(), tool_name, arguments,

@@ -67,6 +67,19 @@ def smooth_vpd(prev: Optional[float], raw: float,
 _HVAC_KINDS = frozenset({'cooler', 'heater'})
 
 
+def _first_not_none(*values):
+    """앞에서부터 None 이 아닌 첫 값, 없으면 None.
+
+    `internal.get('T_max', internal.get('T'))` 처럼 쓰면 키가 **있고 값이
+    None** 일 때 폴백에 닿지 못한다 — 실내 측정이 없는 사이클이 정확히 그
+    모양이다(`situation.assess` 주석).
+    """
+    for v in values:
+        if v is not None:
+            return v
+    return None
+
+
 class HelpersMixin:
     """Mixin: VPD setpoint, time window, end behaviors, sensor collection, gate env, dispatch."""
 
@@ -1242,16 +1255,25 @@ class HelpersMixin:
             wind_dir_val = external.get('wind_dir')
         # Heatwave/cold judgment uses spatial extremes, not the average — if one corner is
         # at a dangerous level, emergency must fire even when the average is still normal.
-        T_for_heat = internal.get('T_max', internal.get('T', 25.0))
-        T_for_cold = internal.get('T_min', internal.get('T', 25.0))
+        #
+        # ⚠ **실내 온습도도 없으면 None 이다**(2026-09-20). 25 °C · 60 % 를 채우면
+        #   둘이 한꺼번에 무너진다 — 게이트가 "실내 값을 잃었다" 를 영영 못 보고
+        #   (그 판정이 이 값으로 선다), 폭염·한파 판정이 **지어낸 25 °C** 위에서
+        #   돈다. 25 는 아무 일도 안 일어나는 값이라 조용히 통과하는데, 그것은
+        #   안전하다는 뜻이 아니라 판정을 포기했다는 뜻이다.
+        #   게이트 쪽은 `_first_num` 으로 받아 모르면 발동하지 않는다.
+        T_for_heat = _first_not_none(internal.get('T_max'), internal.get('T'))
+        T_for_cold = _first_not_none(internal.get('T_min'), internal.get('T'))
         return {
             'internal': {
-                'T':      internal.get('T',  25.0),
+                'T':      internal.get('T'),
                 'T_max':  T_for_heat,
                 'T_min':  T_for_cold,
-                'RH':     internal.get('RH', 60.0),
-                'RH_max': internal.get('RH_max', internal.get('RH', 60.0)),
-                'RH_min': internal.get('RH_min', internal.get('RH', 60.0)),
+                'RH':     internal.get('RH'),
+                'RH_max': _first_not_none(internal.get('RH_max'),
+                                          internal.get('RH')),
+                'RH_min': _first_not_none(internal.get('RH_min'),
+                                          internal.get('RH')),
                 # 육묘 일소 게이트 판정용 — 차광막 개도를 반영한 실내 추정 광량.
                 # 없으면 게이트가 external['solar'] → 태양고도 어림값 순으로 폴백한다.
                 'light_est': internal.get('light_est'),
@@ -1276,11 +1298,12 @@ class HelpersMixin:
                 'solar':    external.get('solar'),
             },
             'now_ts':      time.time(),
-            # `last_ext_ts` 는 싣지 않는다 — 게이트는 실외 나이를 재지 않는다
-            # (`PreGateConfig.ext_context_max_age` 주석). 예전에는 기본값이 now
-            # 라 시설 센서 설치에서는 영영 신선, 수집기 설치에서는 300초 뒤 창
-            # 폐쇄로 **설치마다 다른 동작**이 나왔다.
-            'last_int_ts': time.time(),
+            # `last_ext_ts`·`last_int_ts` 는 싣지 않는다 — 게이트는 나이를 재지
+            # 않는다(`PreGateConfig.ext_context_max_age` 주석). 실외는 예전에
+            # 기본값이 now 라 시설 센서 설치에서는 영영 신선, 수집기 설치에서는
+            # 300초 뒤 창 폐쇄로 **설치마다 다른 동작**이 나왔다. 실내는 여기서
+            # 매번 `time.time()` 을 실어 보내 나이가 언제나 0 이었고, 그래서
+            # 실내 만료 게이트가 **한 번도 발동하지 못했다**(2026-09-20).
         }
 
     # ── Dispatch lifetime-protection constants ────────────────────────────────────────────────

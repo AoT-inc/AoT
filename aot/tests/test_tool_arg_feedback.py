@@ -24,8 +24,8 @@ DB·데몬·앱 컨텍스트를 쓰지 않는다.
 """
 import unittest
 
-from aot.ai.services import tool_execution
-from aot.ai.services.tool_execution import (
+from aot.tools import tool_execution
+from aot.tools.tool_execution import (
     _discarded_kwarg_sink, _dispatch_virtual_tool)
 
 
@@ -55,7 +55,7 @@ class TestKwargSinkDetection(unittest.TestCase):
 
     def test_real_tools_split_the_way_the_source_says(self):
         """실제 도구로도 갈리는지 — 합성 함수만으로는 계약이 안 고정된다."""
-        from aot.ai.services.aot_data_tool_service import AoTDataToolService
+        from aot.tools.aot_data_tool_service import AoTDataToolService
 
         # 잉여 키를 버리는 조회 도구 — 오타가 조용한 전체 스캔이 되는 쪽.
         for name in ('get_zone_sensor_summary', 'get_plot', 'list_plots'):
@@ -75,7 +75,7 @@ class TestDispatchReportsIgnoredArguments(unittest.TestCase):
     """`_dispatch_virtual_tool` 이 실제로 응답에 실어 주는가."""
 
     def _dispatch(self, handler, arguments, tool_name='fake_tool'):
-        from aot.ai.services import tool_registry
+        from aot.tools import tool_registry
 
         original = tool_registry.build_tool_map
         tool_registry.build_tool_map = lambda: {tool_name: handler}
@@ -157,7 +157,7 @@ class TestTheWarningCannotBeMistakenForFailure(unittest.TestCase):
         def handler(a=None, **extra):
             return {'status': 'success'}
 
-        from aot.ai.services import tool_registry
+        from aot.tools import tool_registry
         original = tool_registry.build_tool_map
         tool_registry.build_tool_map = lambda: {'fake_tool': handler}
         try:

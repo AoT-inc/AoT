@@ -50,7 +50,8 @@ SCAN_ROOT = os.path.join(ROOT, 'aot')
 ALLOWED_PREFIXES = (
     'aot/aot_flask/geo/',              # geo 패키지 전체 — 정당한 소유자
     'aot/aot_flask/api/geo.py',        # geo REST 리소스
-    'aot/aot_flask/routes_geo.py',     # geo 페이지·API 라우트
+    'aot/aot_flask/routes_geo.py',     # geo 페이지·API 라우트(핵심 — blueprint·전역 훅)
+    'aot/aot_flask/routes_geo_map.py', # routes_geo 형제 — GeoSetting·parcel·site_order·design
     'aot/aot_flask/cli_geo.py',        # geo 스키마 마이그레이션 CLI
     'aot/aot_flask/utils/utils_map_config.py',   # 지도 설정 수명주기
     'aot/databases/',                  # 모델 정의·DDL

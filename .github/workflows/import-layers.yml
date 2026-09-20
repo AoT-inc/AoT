@@ -1,0 +1,47 @@
+name: Import Layers
+
+# ARCHITECTURE.md §4 의 패키지 간 import 방향 규칙을 지킨다 — aot_flask 는
+# 데몬을 RPC 로만 부르고, 데몬 쪽 패키지는 Flask 를 모르고, MCP 서버는
+# in-app 어시스턴트(ai/)에 기대지 않고, DB 모델은 앱 계층을 모른다.
+#
+# 오늘 이 규칙은 전부 지켜지고 있지 않다 — 검사기는 그 기존 위반을
+# aot/scripts/import_layers_baseline.txt 에 동결해 두고 **새 위반만**
+# 막는다. 여기서 실패했다면 이번 변경이 새 경계 위반을 추가했다는 뜻이다.
+#
+# pre-commit 훅(.githooks/pre-commit)이 로컬 1차 방어고, 여기는 훅을 켜지
+# 않은 클론과 우회 커밋을 받는 최종 관문이다.
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'aot/**/*.py'
+      - 'aot/scripts/import_layers_baseline.txt'
+      - 'aot/scripts/check_import_layers.py'
+      - '.github/workflows/import-layers.yml'
+  pull_request:
+    paths:
+      - 'aot/**/*.py'
+      - 'aot/scripts/import_layers_baseline.txt'
+      - 'aot/scripts/check_import_layers.py'
+      - '.github/workflows/import-layers.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  import-layers:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      # 의존성 설치가 없다 — 검사기는 표준 라이브러리만 쓰고 aot 패키지를
+      # import 하지 않는다(설치 실패가 검사를 가리지 않도록).
+      - name: Check import layer boundaries
+        run: python3 aot/scripts/check_import_layers.py

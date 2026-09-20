@@ -33,7 +33,7 @@ data_source_query_service.py — 등록된 데이터 API를 **물어볼 때** �
 import json
 import logging
 
-from aot.ai.services import source_attribution
+from aot.utils import source_attribution
 
 logger = logging.getLogger(__name__)
 

@@ -137,6 +137,8 @@ def create_app(config=ProdConfig, run_scheduler=False):
         새로 생기는 호출부가 이 인자를 몰라도 안전한 쪽으로 떨어진다.
     :returns: Flask
     """
+    import aot.ai  # noqa: F401 — binds aot/tools/providers.py callbacks (tools-no-ai guard)
+
     app = Flask(__name__)
     app.config.from_object(config)
 
@@ -646,7 +648,7 @@ def register_extensions(app, run_scheduler=False):
             # 자세한 배경은 mcp_auth.ensure_service_account 의 docstring 참조.
             try:
                 if _aot_mcp:
-                    from aot.ai.services.mcp_auth import ensure_service_account
+                    from aot.tools.mcp_auth import ensure_service_account
                     from aot.databases.models import User
                     from aot.utils.system_pi import base64_encode_bytes
                     import base64 as _b64

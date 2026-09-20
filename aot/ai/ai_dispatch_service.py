@@ -23,7 +23,7 @@ IMMEDIATE_ACTIONS = {'mcp_tool_call', 'virtual_tool_call', 'read_manual', 'knowl
 # ai_planning_service.py; both now derive from the same registry so they cannot drift.
 # (Physical control is gated separately by the P4 hard gate below, so it is excluded
 # here — the planner set additionally includes the physical/schedule tools.)
-from aot.ai.services.tool_registry import virtual_approval_tools as _virtual_approval_tools
+from aot.tools.tool_registry import virtual_approval_tools as _virtual_approval_tools
 _VIRTUAL_APPROVAL_TOOLS = _virtual_approval_tools()
 
 class AIDispatchService:

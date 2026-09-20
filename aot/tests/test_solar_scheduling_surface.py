@@ -119,7 +119,7 @@ def scheduling_stubs(monkeypatch):
 
 
 def test_solar_event_resolves_schedule_time(scheduling_stubs):
-    from aot.ai.services.aot_data_tool_service import AoTDataToolService as S
+    from aot.tools.aot_data_tool_service import AoTDataToolService as S
 
     S.schedule_device_control_tool('밸브1', solar_event='sunset',
                                    solar_offset_minutes=-30, duration_minutes=1)
@@ -132,7 +132,7 @@ def test_solar_event_resolves_schedule_time(scheduling_stubs):
 
 
 def test_solar_event_passes_date_offset(scheduling_stubs):
-    from aot.ai.services.aot_data_tool_service import AoTDataToolService as S
+    from aot.tools.aot_data_tool_service import AoTDataToolService as S
 
     S.schedule_device_control_tool('밸브1', solar_event='civil_dawn',
                                    solar_date_offset_days=2)
@@ -141,7 +141,7 @@ def test_solar_event_passes_date_offset(scheduling_stubs):
 
 
 def test_unknown_solar_event_returns_error(scheduling_stubs):
-    from aot.ai.services.aot_data_tool_service import AoTDataToolService as S
+    from aot.tools.aot_data_tool_service import AoTDataToolService as S
 
     result = S.schedule_device_control_tool('밸브1', solar_event='moonrise')
     assert 'error' in result
@@ -151,7 +151,7 @@ def test_unknown_solar_event_returns_error(scheduling_stubs):
 
 def test_missing_solar_event_returns_error(scheduling_stubs):
     """극야 등으로 커널이 시각을 못 주면 조용히 지금으로 잡지 않는다."""
-    from aot.ai.services.aot_data_tool_service import AoTDataToolService as S
+    from aot.tools.aot_data_tool_service import AoTDataToolService as S
 
     scheduling_stubs['result'] = None
     result = S.schedule_device_control_tool('밸브1', solar_event='sunrise')
@@ -161,7 +161,7 @@ def test_missing_solar_event_returns_error(scheduling_stubs):
 
 def test_time_inputs_still_work(scheduling_stubs):
     """기존 경로(delay_seconds)는 태양 인자 없이 그대로 동작한다."""
-    from aot.ai.services.aot_data_tool_service import AoTDataToolService as S
+    from aot.tools.aot_data_tool_service import AoTDataToolService as S
 
     S.schedule_device_control_tool('밸브1', delay_seconds=600)
     assert 'kind' not in scheduling_stubs          # 커널을 부르지 않았다

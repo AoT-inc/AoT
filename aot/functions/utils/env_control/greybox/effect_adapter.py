@@ -35,9 +35,18 @@ _TINY = 1e-9
 def _gb_effect(channel: str, idx: int, env: dict,
                params: GreyboxParams, dt_default: float) -> EffectResult:
     dt = float(env.get('cycle_sec', dt_default) or dt_default)
-    T  = env.get('T_int',  env.get('T_ext', 20.0))
-    RH = env.get('RH_int', env.get('RH_ext', 60.0))
-    CO2 = env.get('CO2_int', env.get('CO2_ext', 400.0))
+    # ⚠ `dict.get(k, 기본)` 은 키가 **있고 값이 None** 이면 None 을 돌려준다.
+    #   실내 측정이 없는 사이클의 `T_int` 가 그 모양이라, 예전 형태는 폴백에
+    #   닿지 못하고 None 을 그대로 물리 계산에 넘겼다.
+    T   = env.get('T_int')
+    RH  = env.get('RH_int')
+    CO2 = env.get('CO2_int')
+    if T is None:
+        T = env.get('T_ext', 20.0)
+    if RH is None:
+        RH = env.get('RH_ext', 60.0)
+    if CO2 is None:
+        CO2 = env.get('CO2_ext', 400.0)
     ext = {
         'T_ext':   env.get('T_ext',   20.0),
         'RH_ext':  env.get('RH_ext',  60.0),

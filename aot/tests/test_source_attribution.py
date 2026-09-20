@@ -11,7 +11,7 @@ import json
 
 import pytest
 
-from aot.ai.services import source_attribution as sa
+from aot.utils import source_attribution as sa
 from aot.config import ProdConfig
 
 
@@ -103,7 +103,7 @@ class TestBothQueryPathsCarryIt:
         """이 경로는 이미 attribution 을 싣고 있었지만 의무는 말하지 않았다."""
         import inspect
 
-        from aot.ai.services.aot_data_tool_service import AoTDataToolService
+        from aot.tools.aot_data_tool_service import AoTDataToolService
 
         body = inspect.getsource(AoTDataToolService.query_reference_table)
         assert 'source_attribution' in body

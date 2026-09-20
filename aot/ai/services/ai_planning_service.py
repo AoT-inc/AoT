@@ -532,7 +532,7 @@ class AIPlanningService:
         # (operate_device, set_output_state, schedule_device_control, add_schedule).
         # Was hand-synced with _VIRTUAL_APPROVAL_TOOLS in ai_dispatch_service.py; both
         # now derive from the same registry so the two lists cannot drift.
-        from aot.ai.services.tool_registry import approval_required_tools
+        from aot.tools.tool_registry import approval_required_tools
         _APPROVAL_REQUIRED_TOOLS = approval_required_tools()
 
         executor_agent = AIAgent.query.filter_by(pipeline_role='executor', is_activated=True).first()

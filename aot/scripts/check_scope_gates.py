@@ -61,8 +61,8 @@ SCOPE_CALLS = {'can_operate', 'can_operate_device', 'can_operate_widget'}
 GATED_CONTROL_VIEWS = {
     ('aot/aot_flask/routes_general.py', 'output_mod'),
     ('aot/aot_flask/routes_general.py', 'widget_execute'),
-    ('aot/aot_flask/routes_geo.py', 'api_geo_output_state'),
-    ('aot/aot_flask/routes_geo.py', 'api_facility_apply'),
+    ('aot/aot_flask/routes_geo_device.py', 'api_geo_output_state'),
+    ('aot/aot_flask/routes_geo_facility.py', 'api_facility_apply'),
     ('aot/aot_flask/routes_geo_iec.py', 'api_facility_control'),
     ('aot/aot_flask/routes_geo_iec.py', 'api_facility_function_state'),
     ('aot/aot_flask/api/output.py', 'post'),

@@ -104,7 +104,7 @@ def provide_schedule_events(start=None, end=None, limit=500, category=None):
     command is correctly locked even for an editor).
     """
     from aot.databases.models.scheduler import SchedulerJobMeta
-    from aot.ai.services.aot_data_tool_service import AoTDataToolService
+    from aot.tools.aot_data_tool_service import AoTDataToolService
     from aot.utils.time_utils import serialize_ts
 
     start_dt = _parse_range_bound(start)

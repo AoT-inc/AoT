@@ -408,6 +408,10 @@ def get_facility_integration(facility_uuid, bypass_cache=False):
                 # 종류(`kind`)는 둘 다 'opening' 이라 여기서 갈라 두지 않으면
                 # 제어기가 구분할 근거를 영영 갖지 못한다(2026-08-26).
                 'vent_form':             _vent_form(f),
+                # 추론에 **실패했을 때** 무엇이었는지. 제어 로더가 이 값을
+                # 그대로 로그에 적는다 — 없으면 "종류를 알 수 없는 장치 1개"
+                # 까지만 말할 수 있어, 사용자가 어느 설비인지 찾지 못한다.
+                'fitting_kind':          f.get('kind'),
             }
         else:
             # 이미 slot 으로 등록된 액추에이터에 추가 fitting 이 붙은 경우 —

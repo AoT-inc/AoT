@@ -64,8 +64,8 @@ class LoaderActuallyRunsTest(unittest.TestCase):
         self.assertIsNot(first, AILoaderService.get_all_roles())
 
     def test_legacy_import_path_still_works(self):
-        """aot.ai.services.ai_loader_service 는 옛 경로 shim 이다."""
-        from aot.ai.services.ai_loader_service import AILoaderService as Shim
+        """aot.ai.ai_loader_service 는 옛 경로 shim 이다."""
+        from aot.ai.ai_loader_service import AILoaderService as Shim
         self.assertTrue(Shim.get_all_actions())
 
 

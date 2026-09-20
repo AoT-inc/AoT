@@ -37,6 +37,14 @@ os.environ.setdefault('ALEMBIC_RUNNING', '1')
 
 import pytest  # noqa: E402
 
+# aot.tools 는 aot.ai 를 직접 import 하지 않는다(tools-no-ai 가드) — 필요한 것은
+# aot/tools/providers.py 의 콜백으로 받고, 그 등록은 aot.ai 가 import 될 때
+# aot/ai/services/tool_providers.py::bind_all() 이 한다. 실제 앱 진입점은 모두
+# (직접이든 간접이든) aot.ai 를 import 하므로 항상 바인딩되어 있지만, aot.tools
+# 만 단독으로 import 하는 테스트는 그 경로를 안 타므로 여기서 명시적으로
+# 바인딩해 둔다.
+import aot.ai  # noqa: E402,F401
+
 
 def pytest_configure(config):
     """임시 DB 에 현재 모델 기준 스키마를 만들어 둔다.

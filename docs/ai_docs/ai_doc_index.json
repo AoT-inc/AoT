@@ -1282,7 +1282,7 @@
     "2. Time — Don't Infer \"Now\" from the Data",
     "3. Safety and Approval",
     "In-App Assistant",
-    "External MCP (`aot/ai/services/mcp_safety_gate.py`)",
+    "External MCP (`aot/tools/mcp_safety_gate.py`)",
     "Other Restrictions",
     "4. Recommended Workflows",
     "Check status → control",

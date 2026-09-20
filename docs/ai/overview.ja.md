@@ -1,6 +1,6 @@
 # AI機能の概要
 
-AoTは、MCP(Model Context Protocol)ベースのAIエージェントを使って、温室や栽培施設の環境を観察・診断・制御します。AIはあくまでアドバイス役に徹し、機器を動かす操作はすべて実行前にユーザーの承認が必要です(設定だけを変更する編集は例外です。詳しくは「安全性と承認のモデル」の節を参照してください)。
+AoTは、MCP(Model Context Protocol)ベースのAIエージェントを使って、現場(温室、圃場、公園、建物など、機器が空間に配置された場所ならどこでも)の環境を観察・診断・制御します。AIはあくまでアドバイス役に徹し、機器を動かす操作はすべて実行前にユーザーの承認が必要です(設定だけを変更する編集は例外です。詳しくは「安全性と承認のモデル」の節を参照してください)。
 
 ---
 
@@ -46,8 +46,8 @@ AoTのAIは、2つの経路でツールを使用します。
                        AoTシステム (Daemon / InfluxDB / SQLite)
 ```
 
-どちらの経路も同じゲート(`aot/ai/services/tool_execution.py`)を通って実行され、同じ
-レジストリ(`aot/ai/services/tool_registry.py`)からツール定義を取得するため、アプリ内
+どちらの経路も同じゲート(`aot/tools/tool_execution.py`)を通って実行され、同じ
+レジストリ(`aot/tools/tool_registry.py`)からツール定義を取得するため、アプリ内
 アシスタントと外部MCPクライアントの間で承認ルールもツール一覧も決してずれません。
 
 ---
@@ -60,11 +60,11 @@ AoTのAIは、2つの経路でツールを使用します。
 
 ツールカタログは1枚のフラットな一覧ではありません。全量をそのまま公開すると会話が始まる前だけで約2万トークンかかるため、`tools/list`が返すのは2つの層だけで、残りは必要になった時点でドロワーを開いて取り出します。
 
-- **常時公開(core) — 27個。** 次の一歩を、推測に頼らず踏み出すために欠かせない狭い集合です — 名前解決(`resolve_target`)、デバイス検索、値の読み取り、即時制御、承認キューなど(`aot/ai/services/tool_registry.py`の`_TIER_ASSIGNMENT`テーブル)。
+- **常時公開(core) — 27個。** 次の一歩を、推測に頼らず踏み出すために欠かせない狭い集合です — 名前解決(`resolve_target`)、デバイス検索、値の読み取り、即時制御、承認キューなど(`aot/tools/tool_registry.py`の`_TIER_ASSIGNMENT`テーブル)。
 - **メタツール4個、coreと一緒に常時公開:** `open_drawer`(ドロワー1つの中のツール一覧。引数なしで呼ぶと全ドロワーの索引)、`get_tool_detail`(ツール1つの完全なスキーマを名前で取得)、`use_tool`(ドロワーのツールを名前で実際に**呼び出す** — ドロワーのツールを実行する唯一の手段で、`open_drawer`・`get_tool_detail`は定義を返すだけです)、`respond_to_confirmation`(保留中の確認を承認/却下)。
 - **残り101個は目的別の8つのドロワー**に入っており、`open_drawer`を呼んではじめて見えます: `device`(デバイス操作・状態)、`measurement`(センサー・環境・天気・エネルギー)、`function`(Function・コントローラー・シーケンス)、`schedule`(スケジュール)、`record`(ノート・掲示板・知識・アドバイス)、`space`(地図・ゾーン・施設・作物区画)、`definition`(デバイス定義のCRUD)、`system`(AI設定・システム状態・診断・画面)。
 
-このティアリングは既定でオンです。環境変数`AOT_MCP_TOOL_TIERING=0`で以前どおりカタログ全量をフラットに公開する動作へ戻せます(`aot/ai/services/tool_execution.py:132-239`、`aot/ai/services/tool_registry.py:1342-1560`)。
+このティアリングは既定でオンです。環境変数`AOT_MCP_TOOL_TIERING=0`で以前どおりカタログ全量をフラットに公開する動作へ戻せます(`aot/tools/tool_execution.py:132-239`、`aot/tools/tool_registry.py:1342-1560`)。
 
 以下の表はどちらの層にあるかにかかわらずツールを説明します — **ドロワー**列は`tools/list`には無く、先に開く必要があるツールを示します。引数まで含む完全なツール一覧(ドロワー内のツールを含む)はAIエージェントガイド(`docs/ai_guide.md`)にあるので、そちらを参照してください — このページでは表を重複して並べません。
 
@@ -165,7 +165,7 @@ AoTのAIは、2つの経路でツールを使用します。
 - **ドキュメントストレージ階層**: `get_storage_tier_status`、`search_archives`、`get_archived_document`、`archive_note`・`restore_note_from_archive`・`delete_archive`・`set_document_tier` — 古いノートのための任意のコールドアーカイブです。`archive_note`はノートの内容を圧縮した長期保存領域にコピーしてtier 3として印を付けるだけで、元のノートはそのまま残ります。`delete_archive`はそのアーカイブされたコピーだけを削除し、ノート自体には触れません。この機能には専用画面がなく、AIツールからのみ使えます。
 - **診断/その他**: `analyze_system_failure`、`get_local_time`、`get_tool_detail`、`read_manual`、`get_detailed_manifest`、`ask_user`
 
-> ツールの単一の正本は`aot/ai/services/tool_registry.py`です。ツールが追加・変更されたときは、このページではなくそのファイルが正となります。引数まで含む完全なツール一覧(ドロワー内のツールを含む)はAIエージェントガイド(`docs/ai_guide.md`)を参照してください。
+> ツールの単一の正本は`aot/tools/tool_registry.py`です。ツールが追加・変更されたときは、このページではなくそのファイルが正となります。引数まで含む完全なツール一覧(ドロワー内のツールを含む)はAIエージェントガイド(`docs/ai_guide.md`)を参照してください。
 
 ---
 
@@ -493,7 +493,7 @@ REST APIを残しているのは、通常プランのChatGPT Custom GPTがMCPサ
 }
 ```
 
-> ここでも、状態を変更するツール呼び出しは即座には実行されません(`aot/ai/services/mcp_safety_gate.py`)。最初の呼び出しは`confirmation_id`付きの`pending_approval`として返り、ユーザーは同じ会話の中、または**AI → リクエスト**画面(`/ai`)上で明示的に承認または却下する必要があり、これは`respond_to_confirmation`を通じて処理されます(`/api/v1/mcp/review_page`は今も存在しますが、`/ai`へのリダイレクトになっただけです — ブックマーク互換のためです。監査ログ自体は**AI → 記録**(`/ai/manage`)の「ツール呼び出し」タブに移り、「会話」「エラーレポート」タブと並んでいます)。承認しただけでは何も実行されません — そのあと`_confirmation_id`を加えて同じ呼び出しを再試行してください。呼び出し元のAIには、この承認を自分で決めたり偽装したりする手段がありません。`AOT_MCP_WRITE_ENABLED=0`を設定すると、書き込み系ツールを一律拒否します(アドバイス専用モード)。締め切りは2段階あります — 既定で人が承認するまで15分(`AOT_MCP_CONFIRM_TTL_SEC`)、承認された瞬間からあらためて5分で実行(`AOT_MCP_APPROVED_TTL_SEC`)です。制御ツールを引き続き公開しているため、このサーバーは信頼できるクライアントにのみ接続してください。
+> ここでも、状態を変更するツール呼び出しは即座には実行されません(`aot/tools/mcp_safety_gate.py`)。最初の呼び出しは`confirmation_id`付きの`pending_approval`として返り、ユーザーは同じ会話の中、または**AI → リクエスト**画面(`/ai`)上で明示的に承認または却下する必要があり、これは`respond_to_confirmation`を通じて処理されます(`/api/v1/mcp/review_page`は今も存在しますが、`/ai`へのリダイレクトになっただけです — ブックマーク互換のためです。監査ログ自体は**AI → 記録**(`/ai/manage`)の「ツール呼び出し」タブに移り、「会話」「エラーレポート」タブと並んでいます)。承認しただけでは何も実行されません — そのあと`_confirmation_id`を加えて同じ呼び出しを再試行してください。呼び出し元のAIには、この承認を自分で決めたり偽装したりする手段がありません。`AOT_MCP_WRITE_ENABLED=0`を設定すると、書き込み系ツールを一律拒否します(アドバイス専用モード)。締め切りは2段階あります — 既定で人が承認するまで15分(`AOT_MCP_CONFIRM_TTL_SEC`)、承認された瞬間からあらためて5分で実行(`AOT_MCP_APPROVED_TTL_SEC`)です。制御ツールを引き続き公開しているため、このサーバーは信頼できるクライアントにのみ接続してください。
 
 ---
 

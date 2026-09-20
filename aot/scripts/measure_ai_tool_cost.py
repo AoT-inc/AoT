@@ -36,7 +36,7 @@ import sys
 # 상한을 "여유 26토큰" 으로 읽게 만들어, 실제로는 두 배 위인 상태를 정상으로
 # 보이게 했다. 자가 틀리면 예산은 예산이 아니다.
 def _tok(obj):
-    from aot.ai.services.tool_execution import _estimate_tokens
+    from aot.tools.tool_execution import _estimate_tokens
     text = obj if isinstance(obj, str) else json.dumps(obj, ensure_ascii=False,
                                                        default=str)
     return len(text), _estimate_tokens(text)
@@ -48,7 +48,7 @@ def _tok(obj):
 
 def measure_manifest():
     """매 호출에 실리는 도구 정의의 크기. LLM·DB 없이 잴 수 있다."""
-    from aot.ai.services import tool_registry as registry
+    from aot.tools import tool_registry as registry
 
     agent = registry.manifest_system_tools()
     mcp = registry.virtual_tools()
@@ -92,7 +92,7 @@ PAYLOAD_PROBES = [
 
 def measure_payload():
     """실제 조회 응답의 크기. 앱 컨텍스트(DB)가 필요하다."""
-    from aot.ai.services.aot_data_tool_service import AoTDataToolService as svc
+    from aot.tools.aot_data_tool_service import AoTDataToolService as svc
 
     handlers = {
         'get_spatial_tree': svc.get_spatial_tree,

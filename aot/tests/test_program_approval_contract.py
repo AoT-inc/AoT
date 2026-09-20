@@ -25,7 +25,7 @@ from flask import Flask
 from flask_babel import Babel
 
 from aot.aot_flask.extensions import db
-from aot.ai.services import tool_registry as registry
+from aot.tools import tool_registry as registry
 
 
 def _make_test_app():

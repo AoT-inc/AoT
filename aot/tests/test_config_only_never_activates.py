@@ -138,7 +138,7 @@ def _make_sequence(device_count=2):
     픽스처를 손으로 만들지 않고 도구를 쓰는 이유: 그 도구도 config_only 라
     여기서 함께 검사 대상이 된다.
     """
-    from aot.ai.services.aot_data_tool_service import AoTDataToolService
+    from aot.tools.aot_data_tool_service import AoTDataToolService
 
     res = AoTDataToolService.create_sequence_function(
         name='seq-under-test', device_ids=_make_outputs(device_count),
@@ -172,7 +172,7 @@ def test_modify_function_options_does_not_activate(app, daemon):
     from aot.aot_flask.extensions import db
     from aot.databases import set_uuid
     from aot.databases.models.function import Conditional
-    from aot.ai.services.aot_data_tool_service import AoTDataToolService
+    from aot.tools.aot_data_tool_service import AoTDataToolService
 
     with app.test_request_context():
         uid = set_uuid()
@@ -197,7 +197,7 @@ def test_modify_function_options_still_reloads_when_active(app, daemon):
     from aot.aot_flask.extensions import db
     from aot.databases import set_uuid
     from aot.databases.models.function import Conditional
-    from aot.ai.services.aot_data_tool_service import AoTDataToolService
+    from aot.tools.aot_data_tool_service import AoTDataToolService
 
     with app.test_request_context():
         uid = set_uuid()
@@ -216,7 +216,7 @@ def test_modify_function_options_still_reloads_when_active(app, daemon):
 
 
 def test_modify_sequence_schedule_does_not_activate(app, daemon):
-    from aot.ai.services.aot_data_tool_service import AoTDataToolService
+    from aot.tools.aot_data_tool_service import AoTDataToolService
 
     with app.test_request_context():
         seq = _make_sequence()
@@ -233,7 +233,7 @@ def test_modify_sequence_schedule_does_not_activate(app, daemon):
 
 def test_modify_sequence_step_does_not_activate(app, daemon):
     from aot.databases.models.function import Actions
-    from aot.ai.services.aot_data_tool_service import AoTDataToolService
+    from aot.tools.aot_data_tool_service import AoTDataToolService
 
     with app.test_request_context():
         seq = _make_sequence()
@@ -253,7 +253,7 @@ def test_modify_sequence_step_does_not_activate(app, daemon):
 
 def test_configure_sequence_day_does_not_activate(app, daemon):
     from aot.databases.models.function import Actions
-    from aot.ai.services.aot_data_tool_service import AoTDataToolService
+    from aot.tools.aot_data_tool_service import AoTDataToolService
 
     with app.test_request_context():
         seq = _make_sequence()
@@ -289,7 +289,7 @@ def test_configure_sequence_day_does_not_activate(app, daemon):
 
 
 def _make_program():
-    from aot.ai.services.aot_data_tool_service import AoTDataToolService
+    from aot.tools.aot_data_tool_service import AoTDataToolService
 
     return AoTDataToolService.create_program(
         name='prog-under-test', subject='무', kind='vegetation',
@@ -319,7 +319,7 @@ def test_create_program_lands_unreviewed(app, daemon):
 def test_modify_program_cannot_mark_itself_reviewed(app, daemon):
     """AI 가 `reviewed` 를 보내도 검토됨이 되지 않는다 — 될 수 있으면
     게이트가 없는 것과 같다."""
-    from aot.ai.services.aot_data_tool_service import AoTDataToolService
+    from aot.tools.aot_data_tool_service import AoTDataToolService
 
     with app.test_request_context():
         created = _make_program()
@@ -337,7 +337,7 @@ def test_modify_program_returns_content_to_review(app, daemon):
     """사람이 확인한 프로그램이라도 AI 가 제어에 닿는 내용을 다시 쓰면
     검토 대기로 돌아간다."""
     from aot.aot_flask.extensions import db
-    from aot.ai.services.aot_data_tool_service import AoTDataToolService
+    from aot.tools.aot_data_tool_service import AoTDataToolService
     from aot.utils.time_utils import utc_now
 
     with app.test_request_context():
@@ -368,7 +368,7 @@ def test_modify_program_returns_content_to_review(app, daemon):
 def test_add_schedule_creates_human_job_no_apscheduler(app, daemon):
     """일정 등록은 SchedulerJobMeta 하나만 남기고 데몬은 전혀 건드리지 않는다."""
     from aot.databases.models.scheduler import SchedulerJobMeta
-    from aot.ai.services.aot_data_tool_service import AoTDataToolService
+    from aot.tools.aot_data_tool_service import AoTDataToolService
 
     with app.test_request_context():
         res = AoTDataToolService.add_schedule_tool(date='2026-09-10', content='제초 작업')
@@ -382,7 +382,7 @@ def test_add_schedule_creates_human_job_no_apscheduler(app, daemon):
 
 def test_add_schedule_batch_creates_human_jobs_no_apscheduler(app, daemon):
     from aot.databases.models.scheduler import SchedulerJobMeta
-    from aot.ai.services.aot_data_tool_service import AoTDataToolService
+    from aot.tools.aot_data_tool_service import AoTDataToolService
 
     with app.test_request_context():
         res = AoTDataToolService.add_schedule_batch_tool(
@@ -418,7 +418,7 @@ def _make_ai_entry():
 def test_create_gis_input_creates_deactivated(app, daemon):
     """GIS Input은 항상 비활성으로 생성된다 — activate_gis_input을 거쳐야 쓰인다."""
     from aot.databases.models import GeoLayer
-    from aot.ai.services.aot_data_tool_service import AoTDataToolService
+    from aot.tools.aot_data_tool_service import AoTDataToolService
 
     with app.test_request_context():
         types = AoTDataToolService._input_types()
@@ -438,7 +438,7 @@ def test_create_gis_input_creates_deactivated(app, daemon):
 def test_create_ai_agent_creates_deactivated(app, daemon):
     """AI Agent는 항상 비활성으로 생성된다 — AI가 스스로 켤 수 있는 도구가 없다."""
     from aot.databases.models.ai import AIAgent
-    from aot.ai.services.aot_data_tool_service import AoTDataToolService
+    from aot.tools.aot_data_tool_service import AoTDataToolService
 
     with app.test_request_context():
         entry_id = _make_ai_entry()
@@ -473,7 +473,7 @@ def test_every_config_only_tool_has_a_case():
     받는다. 약속을 지키는지 아무도 안 보는 도구가 그 집합에 조용히 끼는
     것을 막는 게 이 검사의 전부다.
     """
-    from aot.ai.services.tool_registry import config_only_tools
+    from aot.tools.tool_registry import config_only_tools
 
     declared = set(config_only_tools())
     missing = declared - COVERED_CONFIG_ONLY_TOOLS

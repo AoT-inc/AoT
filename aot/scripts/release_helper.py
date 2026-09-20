@@ -15,7 +15,10 @@ from datetime import datetime
 # FileNotFoundError — a likely cause of the inconsistent release tags.
 CONFIG_FILE = 'aot/config/__init__.py'
 MKDOCS_FILE = 'mkdocs.yml'
-README_FILE = 'README.rst'
+README_FILES = (
+    ('README.md', r"Latest version: [\d\.]+", "Latest version: {v}"),
+    ('README.ko.md', r"최신 버전: [\d\.]+", "최신 버전: {v}"),
+)
 CHANGELOG_FILE = 'CHANGELOG.md'
 GENERATE_SCRIPT = 'aot/scripts/generate_all.sh'
 
@@ -143,11 +146,11 @@ def main():
                 f"version: {args.new_version}", 
                 args.check)
 
-    # 3. Update README.rst
-    update_file(README_FILE,
-                 r"최신 버전: [\d\.]+",
-                 f"최신 버전: {args.new_version}",
-                 args.check)
+    # 3. Update README.md / README.ko.md
+    for readme, pattern, template in README_FILES:
+        update_file(readme, pattern,
+                    template.format(v=args.new_version),
+                    args.check)
 
     # 4. Update CHANGELOG.md
     today = datetime.now().strftime('%Y-%m-%d')
@@ -162,7 +165,7 @@ def main():
     print("\nDone! Please review changes.")
     print(f"1. Check {CONFIG_FILE}")
     print(f"2. Check {MKDOCS_FILE}")
-    print(f"3. Check {README_FILE}")
+    print("3. Check README.md / README.ko.md")
     print(f"4. Fill in {CHANGELOG_FILE}")
     print("5. Commit and push")
 

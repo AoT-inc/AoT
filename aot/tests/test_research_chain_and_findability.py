@@ -44,7 +44,7 @@ class TestLookupSourcesTellsTheNextStep:
 
     def _note(self, app):
         from aot.aot_flask.extensions import db
-        from aot.ai.services.aot_data_tool_service import AoTDataToolService
+        from aot.tools.aot_data_tool_service import AoTDataToolService
         from aot.databases.models import AIContextSource
 
         with app.app_context():
@@ -86,7 +86,7 @@ class TestLocalNameGuard:
     """비친 항목을 사용자가 자기 말로 다시 찾을 수 있는가."""
 
     def _check(self, app, heading, body, lang='ko'):
-        from aot.ai.services.aot_data_tool_service import AoTDataToolService
+        from aot.tools.aot_data_tool_service import AoTDataToolService
 
         with app.test_request_context(headers={'Accept-Language': lang}):
             return AoTDataToolService._missing_local_name(heading, body)
@@ -105,7 +105,7 @@ class TestLocalNameGuard:
     def test_a_tag_does_not_count(self, app):
         """검색은 태그를 점수화하지 않는다 — 태그에만 있는 이름으로는 이
         항목이 걸리지 않으므로, 태그를 세면 검사가 목적을 잃는다."""
-        from aot.ai.services.aot_data_tool_service import AoTDataToolService
+        from aot.tools.aot_data_tool_service import AoTDataToolService
 
         with app.test_request_context(headers={'Accept-Language': 'ko'}):
             res = AoTDataToolService.knowledge_shelve(
@@ -117,7 +117,7 @@ class TestLocalNameGuard:
         assert self._check(app, 'Arachis hypogaea', 'groundnut', lang='en') is None
 
     def test_outside_a_request_it_does_not_block(self, app):
-        from aot.ai.services.aot_data_tool_service import AoTDataToolService
+        from aot.tools.aot_data_tool_service import AoTDataToolService
 
         with app.app_context():
             assert AoTDataToolService._missing_local_name('Arachis', 'groundnut') is None
@@ -127,7 +127,7 @@ class TestLocalNameGuard:
 
 class TestTheGuardActuallyBlocksTheWrite:
     def test_shelving_an_unfindable_note_is_refused_and_nothing_is_saved(self, app):
-        from aot.ai.services.aot_data_tool_service import AoTDataToolService
+        from aot.tools.aot_data_tool_service import AoTDataToolService
         from aot.databases.models import AIKnowledgeChunk
 
         with app.test_request_context(headers={'Accept-Language': 'ko'}):
@@ -141,7 +141,7 @@ class TestTheGuardActuallyBlocksTheWrite:
             assert AIKnowledgeChunk.query.count() == before, '거부했는데 저장됐다'
 
     def test_the_same_note_with_a_local_name_goes_through(self, app):
-        from aot.ai.services.aot_data_tool_service import AoTDataToolService
+        from aot.tools.aot_data_tool_service import AoTDataToolService
 
         with app.test_request_context(headers={'Accept-Language': 'ko'}):
             res = AoTDataToolService.knowledge_shelve(
@@ -217,7 +217,7 @@ class TestBothNamesRequired:
         return src.source_id
 
     def test_a_local_name_alone_is_refused_for_a_table_note(self, app):
-        from aot.ai.services.aot_data_tool_service import AoTDataToolService
+        from aot.tools.aot_data_tool_service import AoTDataToolService
 
         with app.test_request_context(headers={'Accept-Language': 'ko'}):
             ref = self._table(app)
@@ -229,7 +229,7 @@ class TestBothNamesRequired:
             assert 'ECOCROP' in res['message'], '어느 표인지 말해야 고칠 수 있다'
 
     def test_both_names_go_through(self, app):
-        from aot.ai.services.aot_data_tool_service import AoTDataToolService
+        from aot.tools.aot_data_tool_service import AoTDataToolService
 
         with app.test_request_context(headers={'Accept-Language': 'ko'}):
             ref = self._table(app)
@@ -244,7 +244,7 @@ class TestBothNamesRequired:
         """실측 사례의 태그가 정확히 'crop,땅콩' 이었다. 태그를 세면 범용
         분류어 'crop' 이 라틴 낱말이라 통과해 버려, 잡아야 할 바로 그 항목이
         빠져나간다."""
-        from aot.ai.services.aot_data_tool_service import AoTDataToolService
+        from aot.tools.aot_data_tool_service import AoTDataToolService
 
         with app.test_request_context(headers={'Accept-Language': 'ko'}):
             ref = self._table(app)
@@ -256,7 +256,7 @@ class TestBothNamesRequired:
 
     def test_the_source_name_in_the_body_is_enough(self, app):
         """본문도 검색이 점수화한다 — 제목에 없어도 본문에 있으면 찾을 수 있다."""
-        from aot.ai.services.aot_data_tool_service import AoTDataToolService
+        from aot.tools.aot_data_tool_service import AoTDataToolService
 
         with app.test_request_context(headers={'Accept-Language': 'ko'}):
             ref = self._table(app)
@@ -269,7 +269,7 @@ class TestBothNamesRequired:
     def test_a_field_observation_is_not_forced_to_invent_a_foreign_name(self, app):
         """현장 메모에는 대응하는 외국어 이름이 애초에 없다 — 요구하면
         지어내게 된다. source_ref 가 없으면 이 검사는 돌지 않는다."""
-        from aot.ai.services.aot_data_tool_service import AoTDataToolService
+        from aot.tools.aot_data_tool_service import AoTDataToolService
 
         with app.test_request_context(headers={'Accept-Language': 'ko'}):
             res = AoTDataToolService.knowledge_shelve(
@@ -283,7 +283,7 @@ class TestBothNamesRequired:
         """API 소스는 측정값이라 '이름으로 찾는' 자료가 아니고, 한국 기관
         자료에 영문 이름을 강요할 이유도 없다."""
         from aot.aot_flask.extensions import db
-        from aot.ai.services.aot_data_tool_service import AoTDataToolService
+        from aot.tools.aot_data_tool_service import AoTDataToolService
         from aot.databases.models import AIContextSource
 
         with app.test_request_context(headers={'Accept-Language': 'ko'}):
@@ -302,7 +302,7 @@ class TestBothNamesRequired:
             assert res.get('error') != 'findable in only one language', res
 
     def test_an_unknown_source_ref_does_not_block(self, app):
-        from aot.ai.services.aot_data_tool_service import AoTDataToolService
+        from aot.tools.aot_data_tool_service import AoTDataToolService
 
         with app.test_request_context(headers={'Accept-Language': 'ko'}):
             res = AoTDataToolService.knowledge_shelve(
@@ -382,7 +382,7 @@ class TestTheMiddleStepIsRemoved:
 
     def _pointer(self, app):
         from aot.aot_flask.extensions import db
-        from aot.ai.services.aot_data_tool_service import AoTDataToolService
+        from aot.tools.aot_data_tool_service import AoTDataToolService
         from aot.databases.models import AIContextSource
 
         with app.app_context():

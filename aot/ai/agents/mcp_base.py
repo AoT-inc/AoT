@@ -54,7 +54,7 @@ class BaseMCP_AI(AbstractAI):
 
     def _init_brain(self, agent_config):
         """Helper to get the appropriate engine class based on selected reasoning brain via BrainResolver."""
-        from aot.ai.services.brain_resolver import BrainResolver
+        from aot.ai.brain_resolver import BrainResolver
         brain_ctx = BrainResolver.resolve(
             skeleton_id=agent_config.unique_id,
             preferred_entry_id=self.reasoning_entry_id

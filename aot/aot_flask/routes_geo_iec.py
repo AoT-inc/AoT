@@ -581,7 +581,8 @@ def api_facility_control(facility_uuid):
         },
         'now_ts':      now_ts,
         'last_ext_ts': now_ts,   # manual call — treat ext as fresh
-        'last_int_ts': now_ts,
+        # `last_int_ts` 는 싣지 않는다 — 게이트는 나이를 재지 않고 값이 왔는지만
+        # 본다(2026-09-20, `PreGateConfig` 주석).
     }
 
     # Build minimal ActuatorProfile list (only target actuator) for gate evaluation
@@ -1512,11 +1513,11 @@ def api_facility_rep_key(facility_uuid):
 def api_facility_hidden_rows(facility_uuid):
     """시설 [현황] 카드에서 뺄 항목 — 구역과 같은 자리·같은 규칙.
 
-    저장 로직은 `routes_geo._save_hidden_rows` 하나다. 시설·구역이 각자
+    저장 로직은 `routes_geo_shape._save_hidden_rows` 하나다. 시설·구역이 각자
     한 벌씩 들고 있으면 검사 규칙이 조용히 갈린다(rep_key 가 실제로 그랬다).
     """
     from aot.databases.models import GeoFacility, GeoShape
-    from aot.aot_flask.routes_geo import _save_hidden_rows
+    from aot.aot_flask.routes_geo_shape import _save_hidden_rows
 
     if not utils_general.user_has_permission('edit_settings', silent=True):
         return jsonify({'ok': False, 'error': 'permission denied'}), 403

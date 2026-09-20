@@ -9,7 +9,7 @@ def generate_page_variables(widget_unique_id, widget_options):
     동일한 이유) — 위젯에 하드코딩하면 도구가 늘 때 조용히 어긋나고, 그 어긋남이
     곧 "확인 없이 밸브가 열리는" 상태가 된다. 함수 안에서 import 하는 이유도
     같은 파일의 라우트들과 동일 — 위젯 스캔 시점의 앱 초기화 순서 문제를 피한다."""
-    from aot.ai.services import mcp_safety_gate as gate
+    from aot.tools import mcp_safety_gate as gate
     return {'physical_tools': sorted(gate.PHYSICAL_TOOLS)}
 
 

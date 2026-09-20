@@ -231,7 +231,7 @@ Site (GeoShape)      → tz 권위. 명시 override | centroid 1회 해석 → �
 - 좌표→tz·위치 해석: `aot/utils/device_tz.py`
 - 도형 tz/상속/경계: `aot/databases/models/geo.py`, `aot/aot_flask/geo/geo_overlays.py`
 - 좌표→tz 자동 물질화 리스너: `aot/databases/device_tz_listeners.py`
-- 예약 앵커·표시: `aot/ai/services/aot_data_tool_service.py`, `aot/aot_flask/routes_scheduler.py`
+- 예약 앵커·표시: `aot/tools/aot_data_tool_service.py`, `aot/aot_flask/routes_scheduler.py`
 - 프론트 표시 유틸: `aot/aot_flask/static/js/common/aot-tz.js`
 - 설계·의사결정: `docs/design/timezone-management.md` (개발용, 매뉴얼 미발행)
 - 이전 점검 보고서: `docs/design/timezone_audit.md` (개발용, 매뉴얼 미발행)

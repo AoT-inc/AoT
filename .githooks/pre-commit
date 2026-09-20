@@ -102,6 +102,25 @@ if [ -z "$AOT_SKIP_ALEMBIC_CHECK" ]; then
     fi
 fi
 
+# ── 패키지 간 import 방향 (ARCHITECTURE.md §4) ────────────────────────────
+# aot_flask 는 데몬을 RPC 로만 부르고, 데몬 쪽 패키지는 Flask 를 모르고,
+# MCP 서버는 ai/ 에 기대지 않고, DB 모델은 앱 계층을 모른다. 오늘 이 규칙은
+# 전부 지켜지진 않지만, 기존 위반은 aot/scripts/import_layers_baseline.txt
+# 에 동결해 두고 검사기는 **새 위반만** 막는다.
+# 우회: AOT_SKIP_IMPORT_LAYERS_CHECK=1 git commit ...
+if [ -z "$AOT_SKIP_IMPORT_LAYERS_CHECK" ]; then
+    IL_CHECK="$ROOT/aot/scripts/check_import_layers.py"
+    if [ -f "$IL_CHECK" ] && git diff --cached --name-only | grep -qE '^aot/.*\.py$'; then
+        if ! python3 "$IL_CHECK" --staged; then
+            echo
+            echo "커밋 중단: 이 변경이 새로운 import 방향 위반을 추가합니다."
+            echo "  배경: ARCHITECTURE.md §4"
+            echo "  (의도한 커밋이라면 AOT_SKIP_IMPORT_LAYERS_CHECK=1 git commit ...)"
+            exit 1
+        fi
+    fi
+fi
+
 # ── 번역 카탈로그 .po ↔ .mo ───────────────────────────────────────────────
 # 앱이 읽는 것은 .mo 다. .po 만 고치고 컴파일을 빠뜨리면 아무 에러 없이 그
 # 언어 사용자만 영어를 본다 — .mo 는 바이너리라 diff 에도 안 드러난다.

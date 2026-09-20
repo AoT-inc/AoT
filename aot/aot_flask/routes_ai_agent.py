@@ -27,7 +27,7 @@ def page_ai_dashboard():
     예전 "포털"(학습 진행·키워드·AI 지침·첫 방문 마법사)은 걷었다 — 지표는 실제
     동작과 무관했고, AI 지침은 저장만 되고 어떤 프롬프트도 읽지 않았다(2026-09-10).
     제어 요청과 조언은 페이지가 API 로 읽고, 일정 제안만 여기서 싣는다."""
-    from aot.ai.services import mcp_safety_gate as gate
+    from aot.tools import mcp_safety_gate as gate
     from aot.ai.services.ai_scheduler_service import AISchedulerService
     from aot.aot_flask.routes_scheduler import _enrich_job_display
 

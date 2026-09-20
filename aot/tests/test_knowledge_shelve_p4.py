@@ -188,18 +188,24 @@ class TestKnowledgeShelveP4(unittest.TestCase):
     # -- underlying service (§ tool_registry.py / aot_data_tool_service.py)   --
 
     def test_tool_registry_maps_to_handler_and_is_not_approval_gated(self):
-        from aot.ai.services import tool_registry as R
-        from aot.ai.services.aot_data_tool_service import AoTDataToolService
+        from aot.tools import tool_registry as R
+        from aot.tools.aot_data_tool_service import AoTDataToolService
 
         tool_map = R.build_tool_map()
         self.assertIn('knowledge_shelve', tool_map)
-        self.assertIs(tool_map['knowledge_shelve'], AoTDataToolService.knowledge_shelve)
+        # AoTDataToolService.knowledge_shelve is a classmethod now (it lives in
+        # the 'record' drawer mixin, aot/tools/data_tools/record.py, and
+        # calls sibling tools via `cls.`) -- each attribute access creates a
+        # fresh bound-method wrapper, so compare the underlying function
+        # (`__func__`) rather than object identity.
+        self.assertIs(tool_map['knowledge_shelve'].__func__,
+                      AoTDataToolService.knowledge_shelve.__func__)
         self.assertIn('knowledge_shelve', R.virtual_tool_registry())
         self.assertNotIn('knowledge_shelve', R.virtual_approval_tools())
         self.assertNotIn('knowledge_shelve', R.approval_required_tools())
 
     def test_handler_end_to_end_defaults_attribution_and_converts_ttl_hours(self):
-        from aot.ai.services.aot_data_tool_service import AoTDataToolService
+        from aot.tools.aot_data_tool_service import AoTDataToolService
 
         result = AoTDataToolService.knowledge_shelve(
             content='총채벌레 발견 — 3동 남측', tags='pest,zone-3', ttl_hours=2,
@@ -213,7 +219,7 @@ class TestKnowledgeShelveP4(unittest.TestCase):
         self.assertGreater(chunk.ttl, datetime.utcnow() + timedelta(hours=1))
 
     def test_handler_rejects_missing_content_or_tags(self):
-        from aot.ai.services.aot_data_tool_service import AoTDataToolService
+        from aot.tools.aot_data_tool_service import AoTDataToolService
 
         r1 = AoTDataToolService.knowledge_shelve(content=None, tags='a')
         self.assertIn('error', r1)

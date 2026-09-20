@@ -35,6 +35,23 @@ logger = logging.getLogger(__name__)
 # Gate 발동 결과
 # ─────────────────────────────────────────────────────────────────────────────
 
+def _first_num(*values):
+    """앞에서부터 **숫자인 첫 값**, 없으면 None.
+
+    `dict.get(k, 기본)` 은 키가 있고 값이 None 이면 기본을 쓰지 않는다. 실내
+    측정이 없는 사이클의 `T`/`T_max` 가 그 모양이라, 폴백을 기본값 인자로
+    적어 두면 그 자리에 닿지 못한 채 None 이 비교식으로 흘러간다.
+    """
+    for v in values:
+        if v is None:
+            continue
+        try:
+            return float(v)
+        except (TypeError, ValueError):
+            continue
+    return None
+
+
 @dataclass
 class GateResult:
     triggered: bool = False
@@ -54,6 +71,11 @@ class GateResult:
     # 모른 채 감겨, 풀리는 순간 창이 튄다(`coordinator` 2.6 주석 참조).
 
 
+# **값을 잃었다**는 게이트 — 비상이 아니라 제약이다. 강제 명령을 만들지 않고,
+# TTL 도 잡지 않으며, 이것만 서 있으면 L1~L3 가 정상 실행된다.
+_GATE_BITS_LOST = GATE_BIT_EXT_EXP | GATE_BIT_INT_EXP
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Pre-Gate 설정
 # ─────────────────────────────────────────────────────────────────────────────
@@ -70,7 +92,11 @@ class PreGateConfig:
     #   장치마다 이미 정했고, 게이트는 그 결과(값이 왔는가)만 본다. 여기서 한
     #   번 더 재면 판정이 두 벌이 되고 느슨한 쪽이 실질이 된다.
     ext_context_max_age:  float = 300.0
-    int_sensor_max_age:   float = 120.0  # 내부 센서 만료 (초)
+    # ⚠ `int_sensor_max_age` 는 **없다**(2026-09-20 제거). 실내 만료도 실외와
+    #   같은 규칙으로 옮겼다 — 값이 쓸 만한가는 `measurement_freshness` 가
+    #   센서마다 이미 정하고, 게이트는 그 결과(값이 왔는가)만 본다. 게다가 그
+    #   타이머는 한 번도 돈 적이 없었다: 호출자가 `last_int_ts` 에 매번
+    #   `time.time()` 을 실어 보내 나이가 언제나 0 이었다.
     heat_ext_threshold:   float = 38.0   # 폭염: 외부 온도 임계 (°C)
     heat_int_threshold:   float = 35.0   # 폭염: 내부 온도 임계 (°C)
     cold_ext_threshold:   float = -2.0   # 한파: 외부 온도 임계 (°C)
@@ -303,26 +329,49 @@ class SafetyPreGate:
             mask |= GATE_BIT_EXT_EXP
             reasons.append('ext_context_expired')
 
-        # ── 내부 센서 만료 ─────────────────────────────────────────────────────
-        last_int_ts = env.get('last_int_ts', now_ts)
-        if (now_ts - last_int_ts) > cfg.int_sensor_max_age:
+        # ── 실내 값을 잃음 (2026-09-20 재정의) ─────────────────────────────────
+        # 예전에는 `last_int_ts` 로 나이를 재서 **모든 액추에이터를 safe_default
+        # 로 강제**했다. 둘 다 틀렸다:
+        #   - 호출자가 그 키에 매번 `time.time()` 을 실어 보내 나이가 언제나
+        #     0 이었다 — 게이트도, 화면 문구도, 설정값도 있는데 **한 번도 발동한
+        #     적이 없었다**(2026-09-20 발견).
+        #   - 되살리면 실내 값을 잃는 순간 개구부가 닫히고 스크린이 걷힌다.
+        #     근거가 없다는 이유로 장비를 움직이는 것이고, EXT_EXP 가 2026-09-19
+        #     에 똑같은 이유로 그만둔 동작이다.
+        # 지금은 **강제 명령을 만들지 않는다.** 실내를 모르면 편차를 못 재므로
+        # 코디네이터가 그 축을 제어에서 빼고 근거를 잃은 장치를 제자리에 세운다
+        # (`coordinator` 2.8 · 근거 21). 게이트가 하는 일은 그 사실에 이름을
+        # 붙여 화면과 로그에 남기는 것뿐이다.
+        #
+        # 판정은 실외와 같은 기준이다 — **이번에 값이 왔는가**. 나이를 여기서
+        # 다시 재면 판정이 두 벌이 되고 느슨한 쪽이 실질이 된다(`PreGateConfig.
+        # ext_context_max_age` 주석).
+        int_state = env.get('internal', {})
+        if int_state.get('T') is None and int_state.get('RH') is None:
             mask |= GATE_BIT_INT_EXP
             reasons.append('int_sensor_expired')
 
         # ── 폭염 / 한파 ────────────────────────────────────────────────────────
         # 등가 환경 전제 + 공간 outlier 제거 후의 극값으로 판정.
         # T_max/T_min 이 없으면 (단일 센서) T 로 폴백.
-        int_state = env.get('internal', {})
-        T_int_hot  = int_state.get('T_max', int_state.get('T', 999))
-        T_int_cold = int_state.get('T_min', int_state.get('T', -999))
+        #
+        # ⚠ **모르면 발동하지 않는다.** 비상 게이트는 전 장비를 한쪽으로 몰기
+        #   때문에(창 만개 또는 완전 폐쇄) 근거가 확실할 때만 서야 한다. 예전
+        #   폴백값(999/−999)은 키가 **없을 때만** 걸렸는데, 이제 실내 측정이
+        #   없으면 키가 있고 값이 None 이라 그 폴백에 닿지 못한다.
+        T_int_hot  = _first_num(int_state.get('T_max'), int_state.get('T'))
+        T_int_cold = _first_num(int_state.get('T_min'), int_state.get('T'))
+        T_ext_now  = _first_num(ext.get('T'))
 
-        if (ext.get('T', 999) >= cfg.heat_ext_threshold and
-                T_int_hot >= cfg.heat_int_threshold):
+        if (T_ext_now is not None and T_int_hot is not None
+                and T_ext_now >= cfg.heat_ext_threshold
+                and T_int_hot >= cfg.heat_int_threshold):
             mask |= GATE_BIT_HEAT
             reasons.append('heat_emergency')
 
-        if (ext.get('T', -999) <= cfg.cold_ext_threshold and
-                T_int_cold <= cfg.cold_int_threshold):
+        if (T_ext_now is not None and T_int_cold is not None
+                and T_ext_now <= cfg.cold_ext_threshold
+                and T_int_cold <= cfg.cold_int_threshold):
             mask |= GATE_BIT_COLD
             reasons.append('cold_emergency')
 
@@ -346,15 +395,19 @@ class SafetyPreGate:
         # 함께 켜졌다고 해서 풍향 차등 폐쇄 같은 기존 동작이 바뀌면 안 된다.
         mask_core = mask & ~GATE_BIT_FOG_SUNBURN
 
-        # ── EXT_EXP 단독 발동 → partial gate (강제 명령 없음, 개구부 "더 열지 않음") ──
-        # 다른 게이트(강우·강풍·폭염·한파·내부 만료)가 함께 발동된 경우는 일반 경로.
-        ext_exp_only = (mask_core == GATE_BIT_EXT_EXP)
+        # ── 값을 잃은 것은 **제약**이지 비상이 아니다 ──────────────────────────
+        # EXT_EXP(강우·풍속을 잃음)와 INT_EXP(실내 값을 잃음)는 둘 다 강제
+        # 명령을 만들지 않는다 — 앞은 개구부에 "더 열지 않음" 을 걸고, 뒤는
+        # 코디네이터가 근거를 잃은 장치를 제자리에 세운다. 이 둘만 서 있으면
+        # L1~L3 를 정상 실행해야 한다: 잴 수 있는 축(CO₂·광량 임계)은 계속
+        # 제어해야 하고, 전체를 멈추면 그것까지 함께 선다.
+        lost_only = bool(mask_core) and not (mask_core & ~_GATE_BITS_LOST)
 
         triggered = bool(mask) or (now < self._triggered_until)
-        # EXT_EXP 는 TTL 을 잡지 않는다 — 제약(더 열지 않음)이지 비상이 아니다.
-        # 잡으면 값이 돌아온 뒤 300초 동안 L1~L3 가 통째로 멈춘다(TTL 구간은
-        # 강제 명령 없는 전체 홀드다).
-        if triggered and (mask_core & ~GATE_BIT_EXT_EXP):
+        # 값을 잃은 게이트는 TTL 을 잡지 않는다. 잡으면 값이 돌아온 뒤에도
+        # 300초 동안 L1~L3 가 통째로 멈춘다(TTL 구간은 강제 명령 없는 전체
+        # 홀드다) — 돌아온 값으로 곧바로 제어를 재개해야 한다.
+        if triggered and (mask_core & ~_GATE_BITS_LOST):
             self._triggered_until = now + cfg.gate_ttl
 
         if not triggered:
@@ -380,10 +433,10 @@ class SafetyPreGate:
         per_opening_mode = (wind_only and wind_dir is not None and all_have_azimuth
                             and 'wind' not in weather_lost)
 
-        # EXT_EXP 단독: partial=True, triggered=False → L1-L3 계속, 개구부는 "더 열지 않음"
+        # 값을 잃은 게이트만: partial=True, triggered=False → L1-L3 계속.
         # 육묘 분무 잠금 단독(mask_core == 0)도 마찬가지 — 분무기만 끄고 나머지
         # 제어는 그대로 돈다. mask == 0 인 TTL 유지 구간은 기존대로 전체 홀드.
-        is_partial = per_opening_mode or ext_exp_only
+        is_partial = per_opening_mode or lost_only
         if mask and mask_core == 0:
             is_partial = True
 
@@ -462,11 +515,18 @@ class SafetyPreGate:
                 elif p.kind == 'heater':
                     value = 100.0
 
-            if mask & GATE_BIT_INT_EXP:
-                # 내부 센서 만료: 모두 안전 기본값 (제어 불가)
-                value = p.safe_default
-
-            # EXT_EXP(강우·풍속 잃음)는 **강제 명령을 만들지 않는다.** "더 열지
+            # INT_EXP(실내 값 잃음)·EXT_EXP(강우·풍속 잃음)는 **강제 명령을
+            # 만들지 않는다.**
+            #
+            # ⚠ **예전의 "모두 safe_default" 를 되살리지 말 것**(2026-09-20 제거).
+            #   그것은 실내 값을 잃는 순간 개구부를 닫고 스크린을 걷는 **결정**
+            #   이다 — 한여름에 실내 노드가 끊기면 창이 닫힌다는 뜻이고, 근거가
+            #   없다는 이유로 장비를 움직이는 것이다. 실내를 모르는 동안 할 일은
+            #   아무것도 하지 않는 것이고, 그 판단은 코디네이터가 축별로 한다
+            #   (`coordinator` 2.8 — 잴 수 있는 축이 남아 있으면 그쪽은 계속
+            #   제어한다. 여기서 일괄로 덮으면 그 구분이 사라진다).
+            #
+            # "더 열지
             # 않음" 은 GateResult.vent_open_ceiling 으로 코디네이터가 건다 —
             # 여기서 값을 박으면 코디네이터 적분이 모르는 제약이 된다.
             # ⚠ 예전의 "개구부·차광막 0 강제" 를 되살리지 말 것(evaluate 주석).

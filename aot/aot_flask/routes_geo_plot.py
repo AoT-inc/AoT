@@ -9,7 +9,7 @@ routes_geo.py 맨 아래에서 import 되어 공유 blueprint 에 등록된다
 import logging
 from datetime import datetime, timedelta
 
-from flask import request, jsonify, current_app
+from flask import request, jsonify, current_app, render_template
 from flask_login import current_user, login_required
 
 from aot.aot_flask.extensions import db
@@ -919,7 +919,7 @@ def _build_facility_plot_contents(row):
     `'bay' | 'facility'` 다 — 화면이 "이건 이 동 것" 과 "온실 공통" 을 구분해
     말할 수 있어야 한다.
     """
-    from aot.aot_flask.routes_geo import _build_area_contents
+    from aot.aot_flask.routes_geo_summary import _build_area_contents
 
     sensors = plot_context.sensors_for_plot(row)
     control = plot_context.facility_control_for_plot(row)
@@ -990,7 +990,7 @@ def _build_facility_plot_contents(row):
 def _build_plot_contents(plot_uuid):
     """식생 모달 인벤토리 본체. 못 찾으면 None(캐시에 남기지 않는다)."""
     from aot.aot_flask.geo import device_membership
-    from aot.aot_flask.routes_geo import _build_area_contents
+    from aot.aot_flask.routes_geo_summary import _build_area_contents
 
     row = GeoPlot.query.filter_by(unique_id=plot_uuid).first()
     if row is None:
@@ -1853,3 +1853,46 @@ def api_plot_split_apply():
                     'message': (None if not errors else
                                 '%d of %d pieces failed to save'
                                 % (len(errors), len(strips)))})
+
+
+
+
+@blueprint.route('/plots')
+@login_required
+def page_plots():
+    """구획 운영 페이지 — 전체 목록·검색·이력.
+
+    ## 왜 페이지가 필요한가
+
+    지금까지 구획의 중간 지점은 지도 위젯 모달이었고 그 판단은 옳다(일반
+    사용자의 세계는 대시보드가 전부다). 다만 모달은 **하나의 대상**을 다루기에
+    적합하고, 구획은 수가 느는 대상이라 곧 감당이 안 된다 — 작기 20개, 시설
+    5동, 지난 이력. "이번 철에 무엇을 어디에 심었나" 는 지도를 세 번 오가며
+    답할 질문이 아니다.
+
+    ## 진입은 누구나, 편집은 `edit_plots`
+
+    **보기는 전원 공개**다(그룹 스코프 A 결정 — 그룹은 조작만 제한한다).
+    그래서 진입에 권한을 걸지 않는다. 걸면 Monitor 가 "이번 철에 뭐 심었나" 를
+    보려고 대시보드를 열어 지도를 돌려야 하는데, 그 정보는 원래 그에게 공개다.
+
+    편집 가능 여부는 **서버가 판정해 응답에 싣는다**(`can_edit`) — 화면이 스스로
+    판단하면 곧 갈라지고, 그 갈라짐은 "눌러도 403" 으로만 드러난다.
+
+    ## 목록은 클라이언트가 API 로 받는다
+
+    `/api/geo/plots` 를 그대로 쓴다(`map_uuid` 없으면 전체). 서버 렌더 목록을
+    또 만들면 같은 필터·정렬이 두 벌이 되고, 이 도메인은 그 실패를 이미 겪었다.
+    """
+    # 화면이 좁히는 수단은 **검색 하나**다 — 지도·대지·구역·종류 드롭다운을
+    # 없앴다. 다섯 개를 조합해야 답이 나오는 화면은 "무엇을 고르면 되는지"부터
+    # 배워야 하는데, 정작 사람은 찾는 것의 이름을 이미 알고 있다. 검색이
+    # 대지·구역 이름까지 훑으므로(`plots-page.js` 의 `_matches`, 목록 응답의
+    # `site_name`/`zone_name`) 드롭다운으로 하던 일이 전부 타이핑으로 된다.
+    # 그래서 선택지 목록을 서버가 미리 만들 이유가 없어졌다.
+    return render_template(
+        'pages/geo/plots.html',
+        active_page='plots',
+        can_edit=utils_general.user_has_permission('edit_plots', silent=True),
+        can_design=utils_general.user_has_permission('edit_settings',
+                                                     silent=True))

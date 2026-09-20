@@ -1651,7 +1651,7 @@ def apply_stage_resources(plot_uuid):
     여기서 DB 를 직접 고치면 데몬에 알리는 일이 빠져 "켜졌다고 나오는데 안 돈다"
     가 된다.
     """
-    from aot.ai.services.aot_data_tool_service import AoTDataToolService
+    from aot.tools.aot_data_tool_service import AoTDataToolService
 
     row = GeoPlot.query.filter_by(unique_id=plot_uuid).first()
     if row is None:

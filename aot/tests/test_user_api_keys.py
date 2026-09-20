@@ -268,7 +268,7 @@ def _write_capable_role(db, name='Editor'):
 
 def test_readonly_key_turns_off_write_even_for_a_write_capable_role(app_db):
     """스코프는 역할 **위에** 얹히는 제한이다 — 좁은 쪽이 이겨야 한다."""
-    from aot.ai.services import mcp_auth
+    from aot.tools import mcp_auth
     from aot.databases.models import User
 
     role = _write_capable_role(app_db)
@@ -291,7 +291,7 @@ def test_readonly_key_turns_off_write_even_for_a_write_capable_role(app_db):
 
 def test_legacy_key_keeps_write_access(app_db):
     """키 행이 없는(레거시) 키는 예전처럼 역할 그대로 동작해야 한다."""
-    from aot.ai.services import mcp_auth
+    from aot.tools import mcp_auth
     from aot.databases.models import User
 
     role = _write_capable_role(app_db)
@@ -307,7 +307,7 @@ def test_legacy_key_keeps_write_access(app_db):
 
 def test_readonly_cannot_be_widened_by_a_read_only_role(app_db):
     """읽기 전용 역할 + 전체 권한 키 = 여전히 쓰기 불가(역할이 좁은 쪽)."""
-    from aot.ai.services import mcp_auth
+    from aot.tools import mcp_auth
     from aot.databases.models import Role, User
 
     role = Role()

@@ -1088,16 +1088,19 @@ class CycleMixin:
                     '전기 장치 수분 노출 여부를 점검하세요.',
                 )
             if mask & GATE_BIT_HEAT:
-                T_e = ext_t.get('T', 0.0)
-                T_i = int_t.get('T', 0.0)
+                # ⚠ `get(k, 기본)` 은 값이 None 이면 기본을 쓰지 않는다. 폭염
+                #   판정은 극값(T_max)으로 서므로 평균 T 가 비어 있을 수 있고,
+                #   그러면 서식에서 예외가 나 **경보를 내려던 사이클이 죽는다**.
+                T_e = ext_t.get('T') or 0.0
+                T_i = int_t.get('T') or int_t.get('T_max') or 0.0
                 self._send_critical_email(
                     'extreme_heat',
                     f'[폭염 경보] 외부 {T_e:.1f}°C / 내부 {T_i:.1f}°C — '
                     f'냉방 장치 최대 가동 중. 그늘막·차광 설비를 점검하세요.',
                 )
             if mask & GATE_BIT_COLD:
-                T_e = ext_t.get('T', 0.0)
-                T_i = int_t.get('T', 0.0)
+                T_e = ext_t.get('T') or 0.0
+                T_i = int_t.get('T') or int_t.get('T_min') or 0.0
                 self._send_critical_email(
                     'extreme_cold',
                     f'[한파 경보] 외부 {T_e:.1f}°C / 내부 {T_i:.1f}°C — '
@@ -1246,34 +1249,11 @@ class CycleMixin:
             light_sat=self._light_saturation(),
         )
 
-        # ── 습윤형 분무 습도 상한 판정 ──────────────────────────────────────
-        # `_check_hard_constraints`(정적 humid_max)와 달리 **여기서** 판정한다 —
-        # 유효 목표는 프로그램·VPD 분해를 거쳐 `assess` 가 정하므로, 함수 옵션의
-        # `target_humidity` 로 판정하면 실제로 쓰인 목표와 어긋난다(실측: 설정
-        # 65.0 인데 유효 목표 62.5).
-        #
-        # ⚠ **VPD 직접 제어 모드에서는 'humidity' 키가 없다.** VPD 목표+측정이
-        # 둘 다 있으면 `situation._decompose_vpd` 가 'humidity'/'temperature' 를
-        # 제어목표에서 빼고 `_humidity_constraint`/`_temperature_constraint` 로
-        # 이름만 바꿔 진단용으로 남긴다(TargetVar 는 그대로). 원래 코드는
-        # 'humidity' 만 봐서 VPD 모드가 걸린 뒤로 **항상 "목표 없음"으로 빠져
-        # 게이트가 한 번도 서지 않았다** — 습도 91%(목표+허용오차 대비 초과)에서
-        # 분무 67% 가 그대로 나간 실사고로 발견했다(2026-08-25 イチゴ).
-        # 값·허용오차는 옮겨진 뒤에도 같은 TargetVar 이므로 폴백으로 집는다.
-        _rh_now = internal.get('RH')
-        _rh_tv = ((situation.target or {}).get('humidity')
-                 or (situation.target or {}).get('_humidity_constraint'))
-        if _rh_now is not None and _rh_tv is not None and _rh_tv.tolerance > 0:
-            _ceiling = float(_rh_tv.value) + float(_rh_tv.tolerance)
-            _cbs = self._constraint_breach_state
-            _cbs['fog_RH'] = latch_threshold(
-                float(_rh_now), _ceiling, RH_HYST_PCT, _cbs.get('fog_RH', False),
-                'max')
-            if _cbs['fog_RH']:
-                internal['_fog_humidity_block'] = True
-        else:
-            # 습도 목표가 없으면 막을 근거가 없다 — 종전대로 둔다.
-            self._constraint_breach_state['fog_RH'] = False
+        # 사이클이 읽히게 두기 위해 둘 다 헬퍼다(`test_env_coordinator_
+        # cycle_structure`). 판정과 그 판정을 말하는 일은 여기서 **부르기만**
+        # 한다 — 새 단계를 인라인으로 붙이면 727줄 시절로 돌아간다.
+        self._warn_missing_measurements(situation)
+        self._judge_fog_humidity_block(situation, internal)
 
         # 개구부 파킹 관련 옵션 — coordinator 가 ctx 에서 읽는다. ctx 경유인
         # 이유는 coordinate() 시그니처를 늘리지 않기 위해서다(vent_open_frac 과
@@ -1656,6 +1636,75 @@ class CycleMixin:
                 'vpd': self.priority_vpd or 1.2,
             }
             decay_priorities(env_target, self._priority_ewa_state, base_priorities)
+
+    def _warn_missing_measurements(self, situation) -> None:
+        """측정이 사라진 축을 **말한다** (2026-09-20).
+
+        이 상태에서 코디네이터는 그 축을 제어에서 빼고 근거를 잃은 장치를
+        제자리에 세운다(근거 21). 조용히 그러면 화면은 "정상 운전 중" 인데
+        아무것도 안 움직이는 것으로 보이고, 사람이 해야 할 조치(센서 점검)가
+        어디에도 안 나타난다.
+
+        ⚠ **상태가 바뀔 때만** 찍는다 — 매 사이클이면 정작 읽어야 할 로그를
+          밀어낸다(`_warn_inert_options_once` 와 같은 판단). 돌아온 것도 한 번
+          남긴다: 없으면 로그만 보고는 지금도 끊겨 있는지 알 수 없다.
+        ⚠ **등급은 error** — 컨트롤러 로거는 `log_level_debug` 가 꺼져 있으면
+          레벨이 ERROR 라, warning 은 기본 설치에서 아무 데도 안 남는다.
+        """
+        _missing = sorted(situation.context.get('unmeasured') or ())
+        if _missing != getattr(self, '_last_missing', None):
+            if _missing:
+                self.logger.error(
+                    '측정이 없어 제어에서 빠진 항목: %s — 이 항목을 움직이던 '
+                    '장치는 근거가 없어 제자리에 섭니다. 실내 센서 연결과 '
+                    '측정 주기·신선도 상한을 확인하세요.', ', '.join(_missing))
+            elif getattr(self, '_last_missing', None):
+                self.logger.error(
+                    '측정이 돌아왔습니다(%s) — 제어를 재개합니다.',
+                    ', '.join(getattr(self, '_last_missing', []) or []))
+            self._last_missing = _missing
+
+    def _judge_fog_humidity_block(self, situation, internal: dict) -> None:
+        """습윤형 분무를 습도 상한으로 잠글 것인가 → internal 에 표식을 심는다.
+
+        `_check_hard_constraints`(정적 humid_max)와 달리 **여기서** 판정한다 —
+        유효 목표는 프로그램·VPD
+        분해를 거쳐 `assess` 가 정하므로, 함수 옵션의 `target_humidity` 로
+        판정하면 실제로 쓰인 목표와 어긋난다(실측: 설정 65.0 · 유효 목표 62.5).
+
+        ⚠ **VPD 직접 제어 모드에서는 'humidity' 키가 없다.** VPD 목표+측정이
+        둘 다 있으면 `situation._decompose_vpd` 가 'humidity'/'temperature' 를
+        제어목표에서 빼고 `_humidity_constraint`/`_temperature_constraint` 로
+        이름만 바꿔 진단용으로 남긴다(TargetVar 는 그대로). 원래 코드는
+        'humidity' 만 봐서 VPD 모드가 걸린 뒤로 **항상 "목표 없음"으로 빠져
+        게이트가 한 번도 서지 않았다** — 습도 91%(목표+허용오차 대비 초과)에서
+        분무 67% 가 그대로 나간 실사고로 발견했다(2026-08-25 イチゴ).
+        값·허용오차는 옮겨진 뒤에도 같은 TargetVar 이므로 폴백으로 집는다.
+        """
+        _rh_now = internal.get('RH')
+        _rh_tv = ((situation.target or {}).get('humidity')
+                 or (situation.target or {}).get('_humidity_constraint'))
+        if _rh_now is not None and _rh_tv is not None and _rh_tv.tolerance > 0:
+            _ceiling = float(_rh_tv.value) + float(_rh_tv.tolerance)
+            _cbs = self._constraint_breach_state
+            _cbs['fog_RH'] = latch_threshold(
+                float(_rh_now), _ceiling, RH_HYST_PCT, _cbs.get('fog_RH', False),
+                'max')
+            if _cbs['fog_RH']:
+                internal['_fog_humidity_block'] = True
+        elif _rh_now is None:
+            # ⚠ **습도를 모르면 습윤형 분무를 잠근다** (2026-09-20). 이 게이트의
+            #   목적은 "이미 젖은 공기에서 잎을 더 적시지 않는 것" 인데, 판정
+            #   입력이 사라지면 게이트만 조용히 열린다. 막으려던 상황(포화 근처)
+            #   인지 아닌지를 **알 수 없는 것**이지 아니라고 확인한 것이 아니다.
+            #   안전 결정은 모를 때 보수적인 쪽으로 간다 — 고압 미세포그와
+            #   드립은 애초에 대상이 아니므로(`is_wetting_fogger`) 잠기는 것은
+            #   잎을 적시는 분무뿐이다.
+            internal['_fog_humidity_block'] = True
+            self._constraint_breach_state['fog_RH'] = False
+        else:
+            # 습도 목표가 없으면 막을 근거가 없다 — 종전대로 둔다.
+            self._constraint_breach_state['fog_RH'] = False
 
     def _check_hard_constraints(self, internal: dict) -> None:
         """온습도·광량 하드 임계를 히스테리시스 래치로 판정한다.
@@ -2352,6 +2401,10 @@ class CycleMixin:
                                    situation, env_target, obk, ctx, now_ts,
                                    internal_for_strain=internal),
             'limiting_factor': situation.limiting_factor,
+            # 목표는 있는데 **잴 수가 없어** 제어에서 빠진 항목. 편차 목록의
+            # 빈자리만으로는 "목표가 없다" 와 구분되지 않는다 — 화면이 둘을
+            # 같은 '—' 로 그리면 센서가 끊긴 사실이 어디에도 안 보인다.
+            'unmeasured':      list(ctx.get('unmeasured') or []),
             'deviation': {k: _r(v) for k, v
                           in (situation.deviation_native or {}).items()},
             'trend': {
@@ -2665,7 +2718,11 @@ class CycleMixin:
             return None
 
         ctx = situation.context or {}
-        state = (ctx.get('T_int', 20.0), ctx.get('RH_int', 60.0), ctx.get('CO2_int', 400.0))
+        # `get(k, 기본)` 은 값이 None 이면 기본을 쓰지 않는다 — 실내 측정이
+        # 없는 사이클이 그 경우다(`situation.assess` 주석).
+        state = (ctx.get('T_int') if ctx.get('T_int') is not None else 20.0,
+                 ctx.get('RH_int') if ctx.get('RH_int') is not None else 60.0,
+                 ctx.get('CO2_int') if ctx.get('CO2_int') is not None else 400.0)
         cycle_sec = float(ctx.get('cycle_sec', 60.0) or 60.0)
 
         targets = {}

@@ -1,6 +1,6 @@
 # AI 기능 개요
 
-AoT는 MCP(Model Context Protocol) 기반 AI 에이전트를 통해 온실·재배 시설의 환경을 관찰·진단·제어합니다. AI는 시스템을 보조하는 역할로, 장비를 움직이는 동작은 사용자 승인 후 실행됩니다(설정만 바꾸는 편집은 예외 — 아래 안전·승인 모델 절 참고).
+AoT는 MCP(Model Context Protocol) 기반 AI 에이전트를 통해 현장(온실·노지·공원·건물 등 장치가 공간에 놓인 곳이면 어디든)의 환경을 관찰·진단·제어합니다. AI는 시스템을 보조하는 역할로, 장비를 움직이는 동작은 사용자 승인 후 실행됩니다(설정만 바꾸는 편집은 예외 — 아래 안전·승인 모델 절 참고).
 
 ---
 
@@ -46,8 +46,8 @@ AoT의 AI는 두 가지 경로로 도구를 사용합니다.
                         AoT 시스템 (Daemon / InfluxDB / SQLite)
 ```
 
-두 경로 모두 같은 게이트(`aot/ai/services/tool_execution.py`)를 거쳐 실행되고 같은
-도구 레지스트리(`aot/ai/services/tool_registry.py`)에서 도구 선언을 가져오므로, 인앱
+두 경로 모두 같은 게이트(`aot/tools/tool_execution.py`)를 거쳐 실행되고 같은
+도구 레지스트리(`aot/tools/tool_registry.py`)에서 도구 선언을 가져오므로, 인앱
 어시스턴트와 외부 MCP 클라이언트 사이에 승인 규칙도 도구 목록도 절대 어긋나지 않습니다.
 
 ---
@@ -60,11 +60,11 @@ AoT의 AI는 두 가지 경로로 도구를 사용합니다.
 
 도구 목록은 한 장에 전부 실리지 않습니다. 전량을 그대로 노출하면 대화가 시작되기도 전에 약 2만 토큰이 나가므로, `tools/list`는 두 층만 돌려주고 나머지는 필요할 때 서랍을 열어 꺼내 씁니다.
 
-- **상시 노출(core) — 27개.** 다음 한 걸음을 떼는 데 없어서는 안 되는 좁은 집합입니다 — 이름 해석(`resolve_target`), 장치 조회, 값 읽기, 즉시 제어, 승인 대기열 등(`aot/ai/services/tool_registry.py`의 `_TIER_ASSIGNMENT` 표).
+- **상시 노출(core) — 27개.** 다음 한 걸음을 떼는 데 없어서는 안 되는 좁은 집합입니다 — 이름 해석(`resolve_target`), 장치 조회, 값 읽기, 즉시 제어, 승인 대기열 등(`aot/tools/tool_registry.py`의 `_TIER_ASSIGNMENT` 표).
 - **메타 도구 4개, core와 함께 항상 노출:** `open_drawer`(서랍 하나의 도구 목록, 인자 없이 부르면 전체 서랍 인덱스), `get_tool_detail`(도구 하나의 완전한 스키마를 이름으로 조회), `use_tool`(서랍 도구를 이름으로 실제 **실행** — 서랍 도구를 실행하는 유일한 방법이며, `open_drawer`·`get_tool_detail`은 정의만 돌려줍니다), `respond_to_confirmation`(대기 중인 확인을 승인/거부).
 - **나머지 101개는 목적별 8개 서랍**에 들어 있고, `open_drawer`를 불러야 비로소 보입니다: `device`(장치 조작·상태), `measurement`(센서·환경·날씨·에너지), `function`(함수·제어기·시퀀스), `schedule`(일정·예약), `record`(노트·공지·지식·조언), `space`(지도·구역·시설·구획), `definition`(장치 정의 CRUD), `system`(AI 설정·시스템 상태·진단·화면).
 
-이 구조는 기본으로 켜져 있으며, 환경변수 `AOT_MCP_TOOL_TIERING=0`으로 되돌리면 예전처럼 전량이 평면 목록으로 노출됩니다(`aot/ai/services/tool_execution.py:132-239`, `aot/ai/services/tool_registry.py:1342-1560`).
+이 구조는 기본으로 켜져 있으며, 환경변수 `AOT_MCP_TOOL_TIERING=0`으로 되돌리면 예전처럼 전량이 평면 목록으로 노출됩니다(`aot/tools/tool_execution.py:132-239`, `aot/tools/tool_registry.py:1342-1560`).
 
 아래 표들은 어느 층에 있는지와 무관하게 도구를 설명합니다 — **서랍** 칸은 `tools/list`에 없어서 먼저 열어야 하는 도구를 표시합니다. 인자까지 포함한 전체 도구 목록(서랍 안 도구 포함)은 AI 에이전트 가이드(`docs/ai_guide.md`)에 있으니 그쪽을 참고하세요 — 이 문서에서는 표를 장황하게 복제하지 않습니다.
 
@@ -166,7 +166,7 @@ AoT의 AI는 두 가지 경로로 도구를 사용합니다.
 - **문서 스토리지 티어**: `get_storage_tier_status`, `search_archives`, `get_archived_document`, `archive_note`·`restore_note_from_archive`·`delete_archive`·`set_document_tier` — 오래된 노트를 위한 선택적 콜드 아카이브입니다. `archive_note`는 노트 내용을 압축된 장기 보관소에 복사하고 tier 3로 표시할 뿐, 원본 노트는 그대로 남습니다. `delete_archive`는 그 아카이브 사본만 지우며 노트 자체는 건드리지 않습니다. 이 기능엔 별도 화면이 없습니다 — AI 도구로만 씁니다.
 - **진단·기타**: `analyze_system_failure`, `get_local_time`, `get_tool_detail`, `read_manual`, `get_detailed_manifest`, `ask_user`
 
-> 도구의 단일 정본은 `aot/ai/services/tool_registry.py`입니다. 도구가 추가·변경되면 이 문서보다 그 파일이 우선합니다. 인자까지 포함한 전체 도구 목록(서랍 안 도구 포함)은 AI 에이전트 가이드(`docs/ai_guide.md`)를 참고하세요.
+> 도구의 단일 정본은 `aot/tools/tool_registry.py`입니다. 도구가 추가·변경되면 이 문서보다 그 파일이 우선합니다. 인자까지 포함한 전체 도구 목록(서랍 안 도구 포함)은 AI 에이전트 가이드(`docs/ai_guide.md`)를 참고하세요.
 
 ---
 
@@ -488,7 +488,7 @@ Action**으로 등록합니다. Custom GPT 생성·Actions 기능은 ChatGPT 유
 }
 ```
 
-> 상태를 바꾸는 도구 호출은 이 서버에서도 곧장 실행되지 않습니다(`aot/ai/services/mcp_safety_gate.py`). 최초 호출은 `pending_approval` + `confirmation_id`로 응답하고, 사용자가 그 대화 또는 **AI → 요청** 화면(`/ai`)에서 명시적으로 승인/거부해야 `respond_to_confirmation` 호출로 처리됩니다(`/api/v1/mcp/review_page`는 지금도 존재하지만 `/ai`로 넘겨주는 리다이렉트일 뿐입니다 — 북마크 호환용입니다. 감사 로그 자체는 **AI → 기록**(`/ai/manage`)의 "도구 호출" 탭으로 옮겨졌고, "대화"·"오류 보고" 탭과 나란히 있습니다). 승인 후 같은 인자에 `_confirmation_id`를 붙여 재호출해야 실제로 실행됩니다 — 호출한 AI가 스스로 승인 여부를 판단하거나 대신 답할 수 없습니다. `AOT_MCP_WRITE_ENABLED=0`이면 쓰기 도구 자체가 조언 전용으로 거부됩니다. 유효시간은 두 구간으로 나뉩니다 — 사람이 승인할 때까지 기본 15분(`AOT_MCP_CONFIRM_TTL_SEC`), 승인 이후 실행할 때까지 승인 시점부터 다시 기본 5분(`AOT_MCP_APPROVED_TTL_SEC`). 그래도 제어 도구가 노출되는 서버이므로 신뢰할 수 있는 클라이언트에만 연결하세요.
+> 상태를 바꾸는 도구 호출은 이 서버에서도 곧장 실행되지 않습니다(`aot/tools/mcp_safety_gate.py`). 최초 호출은 `pending_approval` + `confirmation_id`로 응답하고, 사용자가 그 대화 또는 **AI → 요청** 화면(`/ai`)에서 명시적으로 승인/거부해야 `respond_to_confirmation` 호출로 처리됩니다(`/api/v1/mcp/review_page`는 지금도 존재하지만 `/ai`로 넘겨주는 리다이렉트일 뿐입니다 — 북마크 호환용입니다. 감사 로그 자체는 **AI → 기록**(`/ai/manage`)의 "도구 호출" 탭으로 옮겨졌고, "대화"·"오류 보고" 탭과 나란히 있습니다). 승인 후 같은 인자에 `_confirmation_id`를 붙여 재호출해야 실제로 실행됩니다 — 호출한 AI가 스스로 승인 여부를 판단하거나 대신 답할 수 없습니다. `AOT_MCP_WRITE_ENABLED=0`이면 쓰기 도구 자체가 조언 전용으로 거부됩니다. 유효시간은 두 구간으로 나뉩니다 — 사람이 승인할 때까지 기본 15분(`AOT_MCP_CONFIRM_TTL_SEC`), 승인 이후 실행할 때까지 승인 시점부터 다시 기본 5분(`AOT_MCP_APPROVED_TTL_SEC`). 그래도 제어 도구가 노출되는 서버이므로 신뢰할 수 있는 클라이언트에만 연결하세요.
 
 ---
 

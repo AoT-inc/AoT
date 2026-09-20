@@ -141,6 +141,25 @@ def _action_tool_name(action):
             or args.get('tool_name') or action.get('action_type'))
 
 
+def _capture_descriptor(klass, name):
+    """복원용 원본: (raw 디스크립터, 이 클래스 자신의 __dict__ 에 있었는가).
+
+    믹스인에서 상속된 메서드는 klass.__dict__ 에 없다 — 그 경우 복원은 대입이
+    아니라 delattr 로 해야 상속 경로가 다시 드러난다."""
+    import inspect
+    return inspect.getattr_static(klass, name), name in vars(klass)
+
+
+def _restore_descriptor(klass, name, raw, own):
+    if own:
+        setattr(klass, name, raw)
+    else:
+        try:
+            delattr(klass, name)
+        except AttributeError:
+            pass
+
+
 class ToolCallProbe:
     """with 블록 안에서 일어난 LLM 왕복·도구 호출을 기록한다."""
 
@@ -192,17 +211,19 @@ class ToolCallProbe:
     def __enter__(self):
         import requests
         from aot.ai.services.ai_action_service import AIActionService
-        from aot.ai.services.aot_data_tool_service import AoTDataToolService
+        from aot.tools.aot_data_tool_service import AoTDataToolService
 
         self._orig_post = requests.post
         self._safe_targets = [(k, k.__dict__['_safe_api_result'])
                               for k in _classes_defining('_safe_api_result')]
-        self._orig_exec = AIActionService.execute_action.__func__ \
-            if hasattr(AIActionService.execute_action, '__func__') \
-            else AIActionService.execute_action
-        self._orig_drawer = AoTDataToolService.open_drawer.__func__ \
-            if hasattr(AoTDataToolService.open_drawer, '__func__') \
-            else AoTDataToolService.open_drawer
+        # 원본은 두 가지로 잡는다: 호출용(클래스에서 꺼낸 바운드 객체 — staticmethod 든
+        # classmethod 든 그대로 부르면 된다)과 복원용(raw 디스크립터와 그것이 이 클래스
+        # 자신의 __dict__ 에 있었는지). open_drawer 는 서랍 믹스인의 classmethod 라
+        # `.__func__` 를 꺼내 staticmethod 로 되돌리면 cls 인자가 빠져 영구히 깨진다.
+        self._orig_exec = AIActionService.execute_action
+        self._exec_raw, self._exec_own = _capture_descriptor(AIActionService, 'execute_action')
+        self._orig_drawer = AoTDataToolService.open_drawer
+        self._drawer_raw, self._drawer_own = _capture_descriptor(AoTDataToolService, 'open_drawer')
         probe = self
 
         def post(url, *a, **kw):
@@ -283,12 +304,12 @@ class ToolCallProbe:
     def __exit__(self, *exc):
         import requests
         from aot.ai.services.ai_action_service import AIActionService
-        from aot.ai.services.aot_data_tool_service import AoTDataToolService
+        from aot.tools.aot_data_tool_service import AoTDataToolService
         requests.post = self._orig_post
         for klass, orig in self._safe_targets:
             setattr(klass, '_safe_api_result', orig)
-        AIActionService.execute_action = staticmethod(self._orig_exec)
-        AoTDataToolService.open_drawer = staticmethod(self._orig_drawer)
+        _restore_descriptor(AIActionService, 'execute_action', self._exec_raw, self._exec_own)
+        _restore_descriptor(AoTDataToolService, 'open_drawer', self._drawer_raw, self._drawer_own)
         return False
 
 

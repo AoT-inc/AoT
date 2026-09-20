@@ -12,7 +12,7 @@ from datetime import datetime, timedelta
 
 from aot.aot_flask.app import create_app
 from aot.aot_flask.extensions import db
-from aot.ai.services import mcp_safety_gate as gate
+from aot.tools import mcp_safety_gate as gate
 from aot.databases.models import MCPConfirmation
 
 

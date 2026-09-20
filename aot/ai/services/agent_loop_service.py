@@ -147,7 +147,7 @@ class AgentLoopService:
         with candidate places to pick from. Returns None when every schedule action's
         location resolves (or none was given — a farm-wide schedule needs no place).
         """
-        from aot.ai.services.aot_data_tool_service import AoTDataToolService
+        from aot.tools.aot_data_tool_service import AoTDataToolService
         _SCHED_TOOLS = {'add_schedule', 'edit_schedule'}
         for a in (actions or []):
             if AgentLoopService._tool_name(a) not in _SCHED_TOOLS:

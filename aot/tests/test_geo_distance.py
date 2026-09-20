@@ -433,7 +433,7 @@ class TestWriteResolverIsNotBorrowed(unittest.TestCase):
         self.assertNotIn('_resolve_target_by_crop(', src)
 
     def test_tool_schema_accepts_names(self):
-        from aot.ai.services import tool_registry
+        from aot.tools import tool_registry
 
         payloads = {p['tool_name']: p
                     for p in tool_registry._MCP_TOOL_PAYLOADS

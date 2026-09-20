@@ -35,7 +35,7 @@ from unittest.mock import MagicMock, patch
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 
-from aot.ai.services import mcp_auth
+from aot.tools import mcp_auth
 
 
 def _role(name='Editor', role_id=2, edit_controllers=True, edit_users=False):

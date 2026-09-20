@@ -646,7 +646,7 @@ class AIRoutingService:
         # registry members deliberately routed to MCP via mcp_binding.
         if action.get('action_type') == 'mcp_tool_call' and action.get('params', {}).get('arguments') is not None:
             try:
-                from aot.ai.services.tool_registry import virtual_tool_registry
+                from aot.tools.tool_registry import virtual_tool_registry
                 if tool_name in virtual_tool_registry() and tool_name not in {'operate_device'}:
                     action['action_type'] = 'virtual_tool_call'
                     action['target_id'] = 'system_internal'

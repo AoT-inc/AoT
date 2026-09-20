@@ -185,11 +185,11 @@ def test_control_routes_check_the_daemon_return_value():
     """
     import inspect
 
-    from aot.aot_flask import routes_geo, routes_geo_iec
+    from aot.aot_flask import routes_geo_device, routes_geo_iec
 
     for module, funcs in (
             (routes_geo_iec, ('api_facility_estop', 'api_facility_control')),
-            (routes_geo, ('api_geo_output_state',)),
+            (routes_geo_device, ('api_geo_output_state',)),
     ):
         for func_name in funcs:
             func = getattr(module, func_name)

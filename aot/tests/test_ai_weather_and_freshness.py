@@ -30,8 +30,14 @@ sys.path.insert(
 )
 os.environ.setdefault("ALEMBIC_RUNNING", "1")
 
-from aot.ai.services import aot_data_tool_service as ADT
-from aot.ai.services.aot_data_tool_service import AoTDataToolService as S
+from aot.tools import aot_data_tool_service as ADT
+from aot.tools.aot_data_tool_service import AoTDataToolService as S
+# get_weather_tool/_pick_weather_input/get_device_freshness live in the
+# 'measurement' drawer mixin now (aot_data_tool_service.py is an assembler of
+# aot/tools/data_tools/*.py mixins) -- GeoShape/Input/_devices_on_map_p2
+# are looked up in THIS module's globals at call time, so patches must target
+# it rather than the assembler module.
+from aot.tools.data_tools import measurement as ADT_MEASUREMENT
 
 
 def _fake_input(uid, name, device, period=300, is_activated=True):
@@ -86,7 +92,7 @@ class TestWeatherDeviceSelection(unittest.TestCase):
                           return_value={'w-in': near, 'w-map': far}), \
              patch('aot.aot_flask.geo.device_membership.device_ids_in_shape',
                    return_value={'w-in', 'soil-1'}), \
-             patch.object(ADT, '_devices_on_map_p2', return_value={'w-in', 'w-map'}):
+             patch.object(ADT_MEASUREMENT, '_devices_on_map_p2', return_value={'w-in', 'w-map'}):
             chosen, scope, others = S._pick_weather_input(_fake_shape(), '1포장')
         self.assertEqual('w-in', chosen.unique_id)
         self.assertEqual('in_zone', scope)
@@ -100,7 +106,7 @@ class TestWeatherDeviceSelection(unittest.TestCase):
                           return_value={'kma-1': a, 'kma-3': b}), \
              patch('aot.aot_flask.geo.device_membership.device_ids_in_shape',
                    return_value=set()), \
-             patch.object(ADT, '_devices_on_map_p2', return_value=set()):
+             patch.object(ADT_MEASUREMENT, '_devices_on_map_p2', return_value=set()):
             chosen, scope, others = S._pick_weather_input(_fake_shape(), '3포장')
         self.assertEqual('kma-3', chosen.unique_id)
         self.assertEqual('elsewhere', scope)
@@ -144,8 +150,8 @@ class TestGetWeatherToolEnvelope(unittest.TestCase):
         payload = sensor_payload if sensor_payload is not None else [
             {"device_name": "기상대", "measurement": "temperature",
              "readings": [{"t": "2026-08-17T09:00:00+09:00", "v": 27.1, "u": "C"}]}]
-        with patch.object(ADT, 'GeoShape', geo), \
-             patch.object(ADT, 'Input', inp), \
+        with patch.object(ADT_MEASUREMENT, 'GeoShape', geo), \
+             patch.object(ADT_MEASUREMENT, 'Input', inp), \
              patch('aot.aot_flask.geo.device_membership.device_ids_in_shape',
                    return_value={'any-1'}), \
              patch.object(S, '_pick_weather_input',
@@ -188,8 +194,8 @@ class TestGetWeatherToolEnvelope(unittest.TestCase):
             geo.query.filter_by.return_value.first.return_value = shape
             inp = MagicMock()
             inp.query.filter.return_value.first.return_value = slow
-            with patch.object(ADT, 'GeoShape', geo), \
-                 patch.object(ADT, 'Input', inp), \
+            with patch.object(ADT_MEASUREMENT, 'GeoShape', geo), \
+                 patch.object(ADT_MEASUREMENT, 'Input', inp), \
                  patch('aot.aot_flask.geo.device_membership.device_ids_in_shape',
                        return_value={'slow-1'}), \
                  patch.object(S, '_pick_weather_input', return_value=(None, None, [])):
@@ -202,7 +208,7 @@ class TestGetWeatherToolEnvelope(unittest.TestCase):
         geo.query.filter_by.return_value.first.return_value = None
         geo.query.all.return_value = []
         geo.query.limit.return_value.all.return_value = []
-        with patch.object(ADT, 'GeoShape', geo):
+        with patch.object(ADT_MEASUREMENT, 'GeoShape', geo):
             out = S.get_weather_tool(zone_name='없는포장')
         self.assertEqual('zone_not_found', out['error'])
 
@@ -224,7 +230,7 @@ class TestDeviceFreshness(unittest.TestCase):
                 return None, None, None
             return age, '2026-08-15T00:00:00+00:00', 'temperature (ch0)'
 
-        with patch.object(ADT, 'Input', inp), \
+        with patch.object(ADT_MEASUREMENT, 'Input', inp), \
              patch.object(S, '_last_seen_seconds', side_effect=_last_seen):
             return S.get_device_freshness()
 

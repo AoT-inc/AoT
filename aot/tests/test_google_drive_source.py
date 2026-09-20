@@ -320,7 +320,7 @@ class TestLibraryCatalogIncludesGoogleDrive(unittest.TestCase):
     exists — otherwise it's the same blind spot, one source later."""
 
     def test_google_drive_appears_in_custom_types(self):
-        from aot.ai.services.aot_data_tool_service import AoTDataToolService as T
+        from aot.tools.aot_data_tool_service import AoTDataToolService as T
         r = T.list_library_source_types_tool()
         cust_keys = {e['key'] for e in r['custom_types']}
         self.assertIn('google_drive', cust_keys)
