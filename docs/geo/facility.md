@@ -82,6 +82,8 @@ Once envelope settings are saved, a Three.js-rendered building model is displaye
 - **Right mouse drag**: Pan
 - **Scroll**: Zoom
 
+The **N arrow** on the floor is this facility's true north (it follows the rotation set in the position step). The default view looks from the south toward the north, so right is east and far is north — the same left/right and front/back as a north-up map. The view cube's N views look from the north, so east appears on the left there.
+
 ### 3D Asset Mode
 
 Instead of automatic parametric generation, you can apply a custom GLTF model.

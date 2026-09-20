@@ -63,15 +63,22 @@
   {# Flashed messages handled via Toastr in head script #}
   </div>
 
+<form id="dash-add-form" method="post" action="{{ url_for('routes_dashboard.page_dashboard_add') }}">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+</form>
+
 <div class="container-fluid px-0">
   <!-- Sticky Container with unified aot-sticky-tabs class -->
   <div id="dash-sticky" class="container-fluid px-0 aot-sticky-tabs">
     <div class="d-flex align-items-center position-relative w-100">
         <!-- + button fixed size -->
-        <a href="/dashboard-add" class="aot-nav-tab-add text-center btn-fixed-40">
+        {# 추가는 POST 다 — 링크(GET)로 만들면 열리기만 해도 대시보드가 생긴다.
+           버튼이 flex 자식으로 남도록 폼은 아래에 따로 두고 form 속성으로 잇는다. #}
+        <button type="submit" form="dash-add-form" class="aot-nav-tab-add text-center btn-fixed-40"
+                aria-label="{{ _('Add Dashboard') }}">
             <span class="d-none d-md-inline">+</span>
             <span class="d-md-none">+</span>
-        </a>
+        </button>
 
         <!-- Tabs Wrapper (New Layout Logic) -->
         <!-- Added aot-tabs-wrapper for "Natural Split" -->

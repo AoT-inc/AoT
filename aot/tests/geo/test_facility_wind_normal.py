@@ -1,31 +1,26 @@
 # coding=utf-8
-"""측창 법선의 좌표 규약 — **미러 보정은 없다**.
+"""측창·박공 법선의 좌표 규약 — **지도가 그리는 대로**.
 
-model +X → 지도 East. 추가 부호 반전이 없다.
+`_world_normal_from_sn` 은 지도가 시설을 그리는 식(지도 라벨 모듈의 `_toLngLat`,
+`facility_bays._rect_ring`)을 (동, 북) 평면에 옮겨 적은 것이다:
+model +X = 동, model +Z = 남, orientation_deg 가 늘면 +X 가 동 → 북 으로 돈다.
 
-## 한때는 있었다
+## 이력
 
-"3D 미리보기에서 만든 것을 지도에 배치하면 X축이 미러된다" 는 실제 문제가
-있었고, 그 보정으로 `_side_world_normal` 이 X 부호를 뒤집었다. 그 뒤 지도
-렌더러의 변환이 정리되면서 미러가 사라졌는데 **보정만 남았다.**
+- "3D 미리보기에서 만든 것을 지도에 배치하면 X축이 미러된다" 는 실제 문제가
+  있었고, 그 보정으로 `_side_world_normal` 이 X 부호를 뒤집었다. 지도 렌더러가
+  정리된 뒤 **보정만 남아** 동풍에 서쪽 창을 열었다(2026-08-26 실측, 방위
+  11.5°). 현장에서 X 부호를 확인해 걷어냈다 — `TestDirectionMatchesTheField`.
+- 그 뒤에도 nz 를 북 성분으로 넣고 회전을 시계로 돌리고 있었다. 둘이 겹치면
+  지도 기준 법선을 남북으로 뒤집은 것과 같다 — 방위 11.5° 의 동·서 측창에서는
+  북 성분이 ±0.2 라 실측이 못 잡았다. 2026-09-20 지도 변환과 대조해 고쳤다 —
+  `TestMatchesTheMap`. 이 검사가 부호·회전 방향의 정본이다.
 
-남은 동안 풍향 가중치가 정확히 반대로 돌았다 — 실측(방위 11.5° · 5 m/s):
-동풍에서 동쪽을 보는 측창이 0.2 로 깎이고 서쪽 창이 0.98 을 받았다. 정책
-("windward 높게, leeward 낮게")과 정반대이고, 그 상태로 창을 여닫으면 풍압을
-받는 쪽을 닫고 그늘진 쪽을 연다.
-
-## ⚠ 부호는 코드로 판정할 수 없다
-
-직사각형 시설은 미러해도 footprint 가 똑같아서, 좌우가 다른 내용물(측창)이
-있어야만 드러난다. 지도 렌더러의 변환 행렬도, git 이력(스쿼시)도 근거가 못
-된다 — **현장에서 만들어 보고 지도와 대조하는 것**만이 답한다.
-2026-08-26 에 그렇게 확인했다: 일치한다(미러 없음).
-
-바꿔야 할 날이 오면 `_world_normal_from_sn` **한 곳**만 고친다. 아래 일치·
-대칭 검사는 부호와 무관하게 통과하고, 방향 검사만 뒤집으면 된다.
+바꿔야 할 날이 오면 `_world_normal_from_sn` **한 곳**만 고친다.
 """
 import math
 
+from aot.aot_flask.geo.facility_bays import _rect_ring
 from aot.aot_flask.geo.facility_wind import (
     _side_world_normal, _world_normal_from_sn, wind_biased_opening,
 )
@@ -61,12 +56,50 @@ class TestOneConvention:
         assert '_world_normal_from_sn' in code, '정본을 거치지 않는다'
 
 
-class TestDirectionMatchesTheField:
-    """현장 확인된 방향 (2026-08-26): 미러 없음, model +X = 지도 East.
+def _map_normal(nx, nz, deg):
+    """지도가 fitting 을 찍는 식(지도 라벨 모듈의 `_toLngLat`):
+    rx(동) = x·cos + z·sin, rz(남) = −x·sin + z·cos → (동, 북)."""
+    t = math.radians(deg)
+    east = nx * math.cos(t) + nz * math.sin(t)
+    south = -nx * math.sin(t) + nz * math.cos(t)
+    return (east, -south)
 
-    ⚠ 이 검사만이 부호에 의존한다. 현장에서 다시 미러가 확인되면
-      `_world_normal_from_sn` 한 곳을 고치고 여기 기대값을 뒤집는다.
-    """
+
+class TestMatchesTheMap:
+    """정본은 지도다 — 사용자가 화면에서 보는 것이 물리적 진실이다."""
+
+    def test_agrees_with_the_fitting_transform_for_every_orientation(self):
+        for deg in range(0, 360, 15):
+            for sn in ([1, 0, 0], [-1, 0, 0], [0, 0, 1], [0, 0, -1], [0.6, 0, -0.8]):
+                got = _world_normal_from_sn(sn, deg)
+                exp = _map_normal(sn[0], sn[2], deg)
+                assert math.isclose(got[0], exp[0], abs_tol=1e-9), (deg, sn)
+                assert math.isclose(got[1], exp[1], abs_tol=1e-9), (deg, sn)
+
+    def test_east_wall_normal_points_out_of_the_footprint_ring(self):
+        """`_rect_ring` 이 그리는 사각형의 +X 변 바깥 방향과 같아야 한다."""
+        for deg in (0, 30, 90, 150, 265):
+            ring = _rect_ring(0.0, 0.0, 0.0, 0.0, 10.0, 40.0, deg)
+            # 코너 1·2 가 +X 변 — 그 중점 방향(위도 0 이라 도→m 비례 동일)
+            mx = (ring[1][0] + ring[2][0]) / 2
+            my = (ring[1][1] + ring[2][1]) / 2
+            n = math.hypot(mx, my)
+            got = _world_normal_from_sn([1, 0, 0], deg)
+            assert math.isclose(got[0], mx / n, abs_tol=1e-6), deg
+            assert math.isclose(got[1], my / n, abs_tol=1e-6), deg
+
+    def test_gable_plus_z_faces_south_at_zero(self):
+        e, n = _world_normal_from_sn([0, 0, 1], 0.0)
+        assert math.isclose(e, 0.0, abs_tol=1e-9) and math.isclose(n, -1.0, abs_tol=1e-9)
+
+    def test_orientation_90_turns_east_wall_to_north(self):
+        """footprint 는 90° 에서 +X 변을 북으로 돌린다 — 법선도 그래야 한다."""
+        e, n = _world_normal_from_sn([1, 0, 0], 90.0)
+        assert math.isclose(e, 0.0, abs_tol=1e-9) and math.isclose(n, 1.0, abs_tol=1e-9)
+
+
+class TestDirectionMatchesTheField:
+    """현장 확인된 방향 (2026-08-26): 미러 없음, model +X = 지도 East."""
 
     def _w(self, wind_deg):
         return wind_biased_opening(

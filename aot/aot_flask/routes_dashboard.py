@@ -344,10 +344,16 @@ def page_dashboard_default():
     return redirect(url_for('routes_page.page_live'))
 
 
-@blueprint.route('/dashboard-add', methods=('GET', 'POST'))
+@blueprint.route('/dashboard-add', methods=('POST',))
 @flask_login.login_required
 def page_dashboard_add():
-    """Add a dashboard."""
+    """Add a dashboard.
+
+    **POST 전용이다.** 예전에는 GET 만으로 빈 대시보드가 하나 생겼다. 브라우저의
+    링크 미리읽기·새로고침·뒤로가기, 그리고 인자 없는 GET 을 전부 여는 E2E
+    (L0 스모크·L1 부팅)가 열 때마다 하나씩 쌓였다. GET 은 405 다 — 쓰기는
+    CSRF 토큰이 붙은 폼으로만 들어온다.
+    """
     if not utils_general.user_has_permission('edit_controllers'):
         return redirect(url_for('routes_general.home'))
     dashboard_id = utils_dashboard.dashboard_add()

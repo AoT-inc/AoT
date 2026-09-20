@@ -8,7 +8,12 @@ facility_wind.py — 자연환기 풍압 시뮬레이션 (D1).
 좌표 규약
 ---------
 - 지도 2D: X = 동(East), Y = 북(North)
-- facility orientation_deg: 시계방향(북 기준) — Three.js Y축 회전과 동일
+- facility orientation_deg: 지도 footprint 와 같은 회전 — 각도가 늘면 시설의
+  +X 축이 동 → 북 으로 돈다(북쪽이 위인 지도에서 반시계). 정본은
+  `aot-facility-design.js` `rotatedRectRing` / `facility_bays._rect_ring`
+  (사용자가 슬라이더로 위성사진에 맞추는 그 사각형)이다.
+- 3D 모형 로컬 축: +X = 동, +Z = **남** (`aot-facility-map-3d.js`
+  `_buildTransform`, `aot-map-sensor-labels.js` `_toLngLat`)
 - 기상 wind_dir_deg: 기상 표준(0=북풍·북에서 불어옴, 90=동풍)
 
 개구부 face 레이블 → 로컬 법선(orientation=0 기준)
@@ -44,12 +49,18 @@ _FACE_LOCAL_NORMAL = {
 }
 
 
-def _rotate_2d(nx, ny, angle_deg_cw):
-    """시계방향 angle_deg_cw 만큼 2D 벡터 회전 (지도 방위 기준)."""
-    rad = math.radians(angle_deg_cw)
+def _rotate_2d(nx, ny, orientation_deg):
+    """(동, 북) 벡터를 orientation_deg 만큼 회전 — 지도 footprint 와 같은 식.
+
+    `facility_bays._rect_ring` / `rotatedRectRing` 이 시설 사각형을 돌리는
+    식 그대로다: rx = dx·cos − dy·sin, ry = dx·sin + dy·cos. 예전에는 여기가
+    반대 방향(시계)으로 돌아서, 방위 90° 시설의 동쪽 벽이 지도에서는 북을
+    보는데 풍압 계산은 남을 봤다(2026-09-20).
+    """
+    rad = math.radians(orientation_deg)
     cos_a, sin_a = math.cos(rad), math.sin(rad)
-    return (nx * cos_a + ny * sin_a,
-            -nx * sin_a + ny * cos_a)
+    return (nx * cos_a - ny * sin_a,
+            nx * sin_a + ny * cos_a)
 
 
 def _world_normal(face: Optional[str], orientation_deg: float):
@@ -63,28 +74,28 @@ def _world_normal(face: Optional[str], orientation_deg: float):
 def _world_normal_from_sn(surface_normal, orientation_deg: float):
     """3D surface_normal [nx, ny, nz] → 세계 좌표 2D 법선. **좌표 규약의 정본.**
 
-    model +X → 지도 East, model +Z → 지도 South. 추가 부호 반전은 **없다.**
+    지도가 그 시설을 그리는 식을 그대로 따른다 — 사용자가 화면에서 보는 것이
+    물리적 진실이다:
+      east  =  nx·cosθ + nz·sinθ
+      north =  nx·sinθ − nz·cosθ      (model +X = 동, model +Z = **남**)
+    즉 `_rotate_2d(nx, −nz, θ)`. 이 식은 `aot-map-sensor-labels.js` `_toLngLat`
+    (측창·센서를 지도에 찍는 곳)과 `aot-facility-map-3d.js` `_buildTransform`
+    (3D 모형을 지도에 얹는 곳)을 (동, 북) 평면에 옮겨 적은 것이다.
 
-    ## 미러 보정이 있었고, 지금은 없다 (2026-08-26 현장 재확인)
+    ## 이력
 
-    한때 "3D 미리보기에서 만든 것을 지도에 배치하면 X축이 미러된다" 는 실제
-    문제가 있었고, 그 보정으로 `_side_world_normal` 이 X 부호를 뒤집었다.
-    그 뒤 지도 렌더러의 변환(`aot-facility-map-3d.js` `_buildTransform`)이
-    정리되면서 미러가 사라졌는데, **보정만 남았다.**
+    - 한때 `_side_world_normal` 이 X 부호를 뒤집는 "미러 보정" 을 갖고 있었고
+      (지도 렌더러의 옛 미러를 상쇄하던 것), 렌더러가 고쳐진 뒤 보정만 남아
+      동풍에 서쪽 창을 열었다(2026-08-26 실측 방위 11.5°). 그때 X 부호를
+      현장에서 확인해 걷어냈다.
+    - 그 뒤에도 이 함수는 nz 를 **북** 성분으로 넣고 회전을 **시계** 로 돌리고
+      있었다. 두 오류가 겹치면 정확히 "지도 기준 법선을 남북으로 뒤집은 것" 이
+      된다 — 방위 11.5° 의 동·서 측창에서는 북 성분이 ±0.2 라 실측으로 안
+      드러났고, 박공(y_pos/y_neg) 개구부나 방위 90° 시설에서는 정반대였다.
+      2026-09-20 지도 변환과 대조해 고쳤다.
 
-    남은 동안 풍향 가중치가 정확히 반대로 돌았다 — 실측(방위 11.5° · 5 m/s):
-    동풍에서 동쪽을 보는 측창이 0.2 로 깎이고 서쪽 창이 0.98 을 받았다.
-    정책("windward 높게, leeward 낮게")과 정반대다.
-
-    ⚠ **부호는 코드로 판정할 수 없다.** 직사각형 시설은 미러해도 footprint 가
-      똑같아서, 좌우가 다른 내용물(측창)이 있어야만 드러난다. 변환 행렬을 읽는
-      것도, git 이력(스쿼시)도 근거가 못 된다 — **현장에서 만들어 보고 지도와
-      대조하는 것**만이 답한다. 2026-08-26 에 그렇게 확인했다: 일치한다.
-
-    ⚠ **여기가 유일한 자리다.** 예전에는 이 함수와 `_side_world_normal` 이
-      같은 필드에 **반대 규약**을 적어 두고 있었다(전자는 "반전 없이", 후자는
-      뒤집기). 그러면 환기량 계산과 풍향 가중치가 한 시설에서 서로 다른 방향을
-      가리키는데, 화면에는 아무 신호도 없다. 부호를 바꿔야 하면 여기만 고친다.
+    ⚠ **여기가 유일한 자리다.** 부호나 회전 방향을 바꿔야 하면 여기만 고치고,
+      `aot/tests/geo/test_facility_wind_normal.py` 의 지도 대조 검사로 확인한다.
     """
     if not (isinstance(surface_normal, (list, tuple)) and len(surface_normal) >= 3):
         return None
@@ -92,7 +103,7 @@ def _world_normal_from_sn(surface_normal, orientation_deg: float):
     nz = float(surface_normal[2])
     if abs(nx) < 1e-6 and abs(nz) < 1e-6:
         return None  # 수직면(지붕) — 지붕 취급
-    return _rotate_2d(nx, nz, orientation_deg)
+    return _rotate_2d(nx, -nz, orientation_deg)
 
 
 def _wind_from_vector(wind_dir_deg: float):
@@ -120,7 +131,7 @@ def compute_natural_ventilation(
     vent_openings   : compute_capacity() 의 vent_openings[] 리스트
     wind_speed_ms   : 풍속 m/s
     wind_dir_deg    : 기상 표준 풍향 (0=북풍, 90=동풍, 180=남풍, 270=서풍)
-    orientation_deg : 시설 방위각 (시계방향, 북 기준) — facility.geometry_3d.orientation_deg
+    orientation_deg : 시설 방위각 — facility.geometry_3d.orientation_deg (규약은 모듈 머리)
     volume_m3       : 시설 체적 (ACH 환산용)
     opening_pct     : 개구부 개방률 0~100% (운영 상태 반영)
 

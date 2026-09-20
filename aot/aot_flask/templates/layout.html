@@ -762,7 +762,11 @@ IMPORTANT: This is the SOURCE TEMPLATE file.
             </a>
             <div class="dropdown-divider"></div>
             {% endfor %}
-            <a class="dropdown-item" href="/dashboard-add">{{ _('Add Dashboard') }}</a>
+            {# 추가는 POST 다 — 링크(GET)로 두면 열리기만 해도 대시보드가 생긴다. #}
+            <form method="post" action="{{ url_for('routes_dashboard.page_dashboard_add') }}">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+              <button type="submit" class="dropdown-item">{{ _('Add Dashboard') }}</button>
+            </form>
           </div>
         </li>
         {# WARNING: This file (layout_default.html) is the source template that overwrites layout.html
