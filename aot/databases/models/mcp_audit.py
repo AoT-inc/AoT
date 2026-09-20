@@ -13,10 +13,20 @@ from aot.aot_flask.extensions import db
 
 
 class MCPAuditLog(CRUDMixin, db.Model):
-    """AI 에이전트의 MCP 도구 호출 감사 로그 (90일 보존)."""
+    """AI 에이전트의 MCP 도구 호출 감사 로그.
+
+    보존기간은 config.MCP_AUDIT_RETENTION_DAYS(기본 90일)이며
+    `aot.utils.audit.purge_old_mcp_logs` 가 하루 1회 정리한다.
+    """
 
     __tablename__ = 'mcp_audit_log'
-    __table_args__ = {'extend_existing': True}
+    __table_args__ = (
+        # 정리 잡의 `timestamp < cutoff` 와 get_recent 의 timestamp 역순 정렬.
+        db.Index('ix_mcp_audit_log_timestamp', 'timestamp'),
+        # 승인/거부 시 해당 호출 행을 되찾는 경로 (mcp_safety_gate._decide).
+        db.Index('ix_mcp_audit_log_confirmation_id', 'confirmation_id'),
+        {'extend_existing': True},
+    )
 
     id                  = db.Column(db.Integer, primary_key=True)
     unique_id           = db.Column(db.String(36), nullable=False,
@@ -48,10 +58,20 @@ class MCPConfirmation(CRUDMixin, db.Model):
     `expires_at` 은 상태에 따라 뜻이 다르다: pending 이면 "언제까지 승인할 수
     있는가", approved 면 "언제까지 실행할 수 있는가"(승인 시점부터 다시 셈).
     유효시간은 mcp_safety_gate 의 `_CONFIRM_TTL_SEC` / `_APPROVED_TTL_SEC`.
+
+    처리가 끝난 행도 남는다(감사 목적). mcp_audit_log 와 같은 보존기간으로
+    `aot.utils.audit.purge_old_mcp_logs` 가 함께 정리한다 — 위 표의
+    confirmation_id 가 이 표의 unique_id 를 가리키기 때문이다.
     """
 
     __tablename__ = 'mcp_confirmation'
-    __table_args__ = {'extend_existing': True}
+    __table_args__ = (
+        # 승인 대기 목록(status='pending' + created_at 역순)과
+        # 정리 잡의 `created_at < cutoff` 를 함께 받는다.
+        db.Index('ix_mcp_confirmation_status_created_at', 'status', 'created_at'),
+        db.Index('ix_mcp_confirmation_created_at', 'created_at'),
+        {'extend_existing': True},
+    )
 
     id          = db.Column(db.Integer, primary_key=True)
     unique_id   = db.Column(db.String(36), nullable=False,
