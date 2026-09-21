@@ -134,6 +134,19 @@ class AbstractOutput(AbstractBaseController, ConfirmableOutputMixin):
     def comm_is_fault(self, output_channel=0):
         return ConfirmableOutputMixin.comm_is_fault(self, output_channel)
 
+    def _state_unknown(self, output_channel=0):
+        """True 면 로컬 on/off 캐시를 장치 상태로 믿을 수 없다 — 마지막 명령이
+        확인되지 않았거나(fault) 장치가 두절로 판정돼 있다(offline).
+
+        링크 축(공유 연결 다운)은 넣지 않는다: 그것은 명령이 갈 수 없다는 뜻이지
+        캐시가 틀렸다는 뜻이 아니다."""
+        try:
+            if not self.confirmation_capable():
+                return False
+            return bool(self.is_fault(output_channel) or self.is_offline(output_channel))
+        except Exception:
+            return False
+
     def is_setup(self):
         self.logger.error(
             f"{type(self).__name__} did not overwrite the is_setup() method. All "
@@ -548,6 +561,18 @@ class AbstractOutput(AbstractBaseController, ConfirmableOutputMixin):
             amount = 0
 
         output_is_on = self.is_on(output_channel)
+
+        # 확인 실패(fault)나 두절(offline) 채널의 on/off 는 **실제 장치 상태가
+        # 아니다.** 확인이 오지 않은 명령은 명령 전 상태로 되돌려 둔 추정값이라,
+        # 그것을 믿고 "이미 켜져 있다" 로 켜기를 건너뛰면 사람은 켤 방법이 없어진다
+        # (2026-09-21 koat v341: OFF 가 유실된 뒤 켜짐으로 되돌아가 ON 이 전송조차
+        # 안 됐다). 상태를 모르는 채널은 켜져 있지 않은 것으로 보고 명령을 보낸다.
+        # OFF 는 원래 항상 보낸다.
+        if output_is_on and self._state_unknown(output_channel):
+            self.logger.debug(
+                f"Output {self.unique_id} CH{output_channel}: last command was not "
+                f"confirmed; treating state as unknown and sending the command.")
+            output_is_on = False
 
         # Check if output channel exists
         if output_channel not in self.output_states:
