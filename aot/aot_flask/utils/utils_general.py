@@ -2695,12 +2695,19 @@ def sudo_present():
 
 
 def utc_to_local_time(utc_dt):
-    from aot.utils.time_utils import to_local
+    """사람이 읽는 목록의 시각 — **보는 사람의 시계**(User.timezone, 없으면
+    시스템)로 적고 오프셋을 붙인다: '2026-09-21 09:00:00 (UTC+09:00)'.
+
+    라벨이 없으면 다른 시간대의 사람이 자기 시각으로 읽는다. 입력 칸을 채우는
+    값에는 쓰지 말 것 — 라벨 때문에 다시 파싱되지 않는다(utils_notes.utc_to_wall_str).
+    """
+    from aot.utils.timekit import current_user_tz, to_tz, utc_offset_label
     try:
         if not utc_dt:
             return ""
-        # to_local handles naive/aware conversion
-        local_dt = to_local(utc_dt)
-        return local_dt.strftime("%Y-%m-%d %H:%M:%S")
-    except:
+        tz = current_user_tz()
+        local_dt = to_tz(utc_dt, tz)
+        return '{} ({})'.format(local_dt.strftime("%Y-%m-%d %H:%M:%S"),
+                                utc_offset_label(utc_dt, tz))
+    except Exception:
         return "TIMESTAMP ERROR"

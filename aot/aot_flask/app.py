@@ -301,6 +301,24 @@ def create_app(config=ProdConfig, run_scheduler=False):
             return {'system_timezone': 'UTC'}
 
     @app.context_processor
+    def inject_viewer_clock():
+        """사람이 적고 읽는 시각의 시계 — 보는(쓰는) 사람의 시계.
+
+        `viewer_tz_label()` 은 입력 칸 옆에 '어느 시계인지' 를 적는 데 쓴다
+        ('Asia/Seoul (UTC+09:00)'). `utc_to_wall_str(dt)` 는 그 시계의 라벨 없는
+        벽시계로 칸을 채운다 — 저장(utils_notes.datetime_time_to_utc)이 같은
+        시계로 읽으므로 왕복이 맞는다. 둘 다 호출 때 계산한다(요청마다 사용자가
+        다르다).
+        """
+        def viewer_tz_label():
+            from aot.utils.timekit import current_user_tz, tz_label
+            return tz_label(current_user_tz())
+
+        from aot.aot_flask.utils.utils_notes import utc_to_wall_str
+        return {'viewer_tz_label': viewer_tz_label,
+                'utc_to_wall_str': utc_to_wall_str}
+
+    @app.context_processor
     def inject_manual_url():
         """도움말 매뉴얼 URL을 현재 UI 언어에 맞춰 생성.
 

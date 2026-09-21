@@ -77,10 +77,12 @@ def _enrich_job_display(job):
     # anchor). Using the system clock here while the save path anchors to the
     # device tz would reintroduce the 9h round-trip drift. (timezone-management.md §6·§7)
     anchor = getattr(job, 'anchor_tz', None)
+    anchor_source = getattr(job, 'anchor_source', None)
     if not anchor and job.target_id and job.target_id != 'none':
         try:
-            from aot.utils.device_tz import resolve_location_tz
-            anchor = str(resolve_location_tz(job.target_id))
+            from aot.utils.device_tz import resolve_location_tz_and_source
+            _tz, anchor_source = resolve_location_tz_and_source(job.target_id)
+            anchor = str(_tz)
         except Exception:
             anchor = None
 
@@ -96,6 +98,9 @@ def _enrich_job_display(job):
     job.display_schedule_time = _fmt(job.schedule_time, '%Y-%m-%d %H:%M')
     job.display_end_time = _fmt(job.end_time, '%Y-%m-%d %H:%M')
     job.display_tz = anchor  # shown as a label next to the time so device≠viewer is explicit
+    # 위치를 몰라 시스템 시간대로 추정한 앵커 — '장치 현지 시각' 이라고 말하지
+    # 않는다. (§3.2: 시스템 tz 사용은 라벨한다)
+    job.display_tz_guess = (anchor_source == 'system')
     return job
 
 
@@ -143,6 +148,14 @@ def page_scheduler():
     # Each target carries its anchor tz (device-local) so the new-task form can
     # show a live dual-clock (device time / your time / UTC). tz is read from the
     # materialized device.timezone column — O(1), no per-row finder. §6·§7
+    # tz_guess: 위치를 몰라 시스템 시간대로 추정한 대상 — 화면이 '장치 현지' 라
+    # 말하지 않고 추정이라고 적는다(§3.2).
+    from aot.utils.timekit import SOURCE_SYSTEM, SOURCE_UTC, resolve_tz
+
+    def _tz_of(row):
+        tz, src = resolve_tz(row)
+        return {'tz': str(tz), 'tz_guess': src in (SOURCE_SYSTEM, SOURCE_UTC)}
+
     manual_outputs = []
     for o in Output.query.order_by(Output.name).all():
         channels = OutputChannel.query.filter_by(output_id=o.unique_id).order_by(OutputChannel.channel).all()
@@ -150,13 +163,13 @@ def page_scheduler():
             'unique_id': o.unique_id,
             'name': o.name,
             'type': o.output_type,
-            'tz': str(get_device_tz(o)),
+            **_tz_of(o),
             'channels': [{'index': ch.channel, 'name': ch.name or f'CH{ch.channel}'} for ch in channels],
         })
 
-    manual_pids = [{'unique_id': p.unique_id, 'name': p.name, 'tz': str(get_device_tz(p))}
+    manual_pids = [{'unique_id': p.unique_id, 'name': p.name, **_tz_of(p)}
                    for p in PID.query.order_by(PID.name).all()]
-    manual_functions = [{'unique_id': f.unique_id, 'name': f.name, 'tz': str(get_device_tz(f))}
+    manual_functions = [{'unique_id': f.unique_id, 'name': f.name, **_tz_of(f)}
                         for f in Function.query.order_by(Function.name).all()]
 
     manual_zones = []
@@ -164,10 +177,11 @@ def page_scheduler():
         meta = z.meta_json if z.meta_json else {}
         try:
             _ztz = z.resolve_timezone()
-            ztz = str(_ztz) if _ztz is not None else str(get_device_tz(None))
         except Exception:
-            ztz = str(get_device_tz(None))
-        manual_zones.append({'unique_id': z.unique_id, 'name': meta.get('name', f'Zone_{z.id}'), 'tz': ztz})
+            _ztz = None
+        ztz = str(_ztz) if _ztz is not None else str(get_device_tz(None))
+        manual_zones.append({'unique_id': z.unique_id, 'name': meta.get('name', f'Zone_{z.id}'),
+                             'tz': ztz, 'tz_guess': _ztz is None})
 
     active_agents = AIAgent.query.filter_by(is_activated=True).all()
 
@@ -265,11 +279,15 @@ def api_propose_job():
             # task this is the DEVICE'S own local time, so anchor to the target's
             # tz (device-local), not the browser/system clock. Storage is UTC;
             # display re-derives device-local. (timezone-management.md §6)
+            # A value WITH an offset is an absolute instant instead — the map
+            # widget's wheel picks a time on the viewer's clock and sends
+            # Date.toISOString(); reading that as a device wall clock shifted
+            # it by the viewer↔device offset.
             from aot.tools.aot_data_tool_service import AoTDataToolService
-            from aot.utils.timekit import wall_to_utc
+            from aot.utils.timekit import instant_or_wall_to_utc
             _atz, _anchor_name, _anchor_src = \
                 AoTDataToolService._resolve_schedule_anchor(data.get('target_id'))
-            schedule_time = wall_to_utc(data['schedule_time'], _atz)
+            schedule_time = instant_or_wall_to_utc(data['schedule_time'], _atz)
 
         action_type = data['action_type']
         target_id = data['target_id']
@@ -400,6 +418,7 @@ def api_update_job(job_id):
         worker=data.get('worker'),
         target_name=data.get('target_name'),
         duration_minutes=data.get('duration_minutes'),
+        at=data.get('at'),
     )
     if result.get('error'):
         status = 404 if 'not found' in result['error'].lower() else 400
@@ -587,6 +606,7 @@ def _serialize_job(meta):
         'schedule_time': serialize_ts(meta.schedule_time),  # tz: UTC→user_tz for display (legacy)
         'schedule_time_local': schedule_local,  # device-local (anchor tz) ISO
         'anchor_tz': anchor,
+        'anchor_source': getattr(meta, 'anchor_source', None),  # 'system' = 위치 몰라 추정
         'schedule_cron': json.loads(meta.schedule_cron) if meta.schedule_cron else None,
         'proposed_by': meta.proposed_by,
         'reasoning': meta.reasoning,

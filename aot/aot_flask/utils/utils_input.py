@@ -38,6 +38,7 @@ from aot.aot_flask.utils.utils_general import delete_entry_with_id
 from aot.aot_flask.utils.utils_general import return_dependencies
 from aot.aot_flask.utils.utils_general import sync_geo_device_name
 from aot.utils.inputs import parse_input_information
+from aot.utils.device_tz import apply_system_tz_fallback
 from aot.utils.system_pi import parse_custom_option_values
 from aot.aot_flask.utils.utils_map_config import (
     ensure_map_config,
@@ -131,8 +132,7 @@ def input_add(form_add, tab_id=None):
             if misc:
                 new_input.latitude = misc.map_latitude
                 new_input.longitude = misc.map_longitude
-                if not new_input.latitude and not new_input.longitude and misc.timezone:
-                    new_input.timezone = misc.timezone
+                apply_system_tz_fallback(new_input, misc.timezone)
         except Exception:
             pass
 

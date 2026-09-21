@@ -418,6 +418,72 @@ def wall_to_utc(wall: Union[str, datetime],
     return local_aware.astimezone(timezone.utc)
 
 
+def instant_or_wall_to_utc(value: Union[str, datetime],
+                           tz: Union[str, pytz.BaseTzInfo, None]) -> datetime:
+    """오프셋이 붙은 값은 **절대순간**으로, 없는 값은 tz 의 벽시계로 해석해
+    UTC-aware 로 돌려준다.
+
+    브라우저 화면(지도 예약 휠·캘린더 드래그)은 보는 사람의 시계로 시각을
+    고른다. 그것을 오프셋 없는 벽시계로 보내면 서버가 장치 시계로 다시 읽어
+    둘의 시차만큼 어긋난다 — 화면은 절대순간(`Date.toISOString()`)을 보내고
+    여기서 그대로 받는다. wall_to_utc 는 오프셋을 떼는 계약이라 따로 둔다.
+    """
+    if isinstance(value, datetime):
+        dt = value
+    else:
+        s = str(value).strip().replace(' ', 'T')
+        if s.endswith(('Z', 'z')):
+            s = s[:-1] + '+00:00'
+        dt = datetime.fromisoformat(s)
+    if dt.tzinfo is not None:
+        return dt.astimezone(timezone.utc)
+    return wall_to_utc(dt, tz)
+
+
+def utc_offset_label(dt: Optional[datetime], tz: Union[str, pytz.BaseTzInfo, None]) -> str:
+    """그 순간의 tz 오프셋을 'UTC+09:00' 꼴로. 목록의 각 시각 뒤에 붙인다
+    (이름보다 짧고, 서머타임이 있는 곳에서도 그 순간의 값이 정확하다)."""
+    local = to_tz(dt, tz)
+    off = local.strftime('%z') if local is not None else ''
+    return 'UTC' + (off[:3] + ':' + off[3:] if off else '+00:00')
+
+
+def tz_label(tz: Union[str, pytz.BaseTzInfo, None], at: Optional[datetime] = None) -> str:
+    """입력 칸 옆에 붙일 '어느 시계인지' — 'Asia/Seoul (UTC+09:00)'."""
+    tzinfo = as_tz(tz)
+    name = getattr(tzinfo, 'zone', None) or str(tzinfo)
+    return '{} ({})'.format(name, utc_offset_label(at or utc_now(), tzinfo))
+
+
+def format_labeled(dt: Optional[datetime], tz: Union[str, pytz.BaseTzInfo, None],
+                   fmt: str = '%Y-%m-%d %H:%M:%S') -> str:
+    """순간을 tz 시계로 적고 **어느 시계인지**를 붙인다.
+
+    예: '2026-09-21 09:00:00 (Asia/Seoul, UTC+09:00)'. 서로 다른 시간대의
+    사람이 같은 글을 읽을 때 라벨 없는 시각은 각자 자기 시각으로 읽힌다.
+    naive 는 UTC 로 본다.
+    """
+    local = to_tz(dt, tz)
+    if local is None:
+        return ''
+    off = local.strftime('%z')
+    off = off[:3] + ':' + off[3:] if off else '+00:00'
+    name = getattr(local.tzinfo, 'zone', None) or str(local.tzinfo)
+    return '{} ({}, UTC{})'.format(local.strftime(fmt), name, off)
+
+
+def picker_wall_to_epoch(text: str, fmt: str = '%m/%d/%Y %H:%M',
+                         tz: Union[str, pytz.BaseTzInfo, None] = None) -> int:
+    """구간 선택 칸의 벽시계 문자열 → UTC epoch 초.
+
+    칸의 기본값을 채운 시계(생략 시 시스템 tz)로 해석한다. `time.mktime` 은
+    **컨테이너 OS 시계**로 읽어, 기본값을 채운 시계와 다르면 구간이 그 시차만큼
+    어긋났다(측정값 내보내기·에너지 사용량).
+    """
+    naive = datetime.strptime(str(text).strip(), fmt)
+    return int(wall_to_utc(naive, tz if tz is not None else system_tz()).timestamp())
+
+
 def utc_to_wall(dt: Optional[datetime],
                 tz: Union[str, pytz.BaseTzInfo, None]) -> Optional[datetime]:
     """UTC(또는 naive=UTC) → 앵커 tz 의 벽시계(aware datetime, 예약 표시용)."""

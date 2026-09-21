@@ -120,18 +120,13 @@ def device_tz_name(device) -> str:
     return str(get_device_tz(device))
 
 
-def resolve_location_tz(target_id: Optional[str]) -> pytz.BaseTzInfo:
-    """
-    Resolve the pytz timezone for ANY location/entity identified by `target_id`
-    — a GeoShape (zone/site/facility outline), a device row (Input/Output/
-    Function/Conditional/Trigger/PID/CustomController), or None/'none'/unknown
-    (system-wide fallback: Misc.timezone → UTC, same chain as get_device_tz).
+def resolve_location_tz_and_source(target_id: Optional[str]):
+    """resolve_location_tz 와 같은 해석 + **출처**: (tzinfo, 'device'|'system').
 
-    This is the single entry point AI-facing code should use whenever it needs
-    "what is LOCAL time at this location" — e.g. formatting a schedule tied to
-    a zone, or answering "지금 3-1 구역은 몇시야?". Every entity in the system
-    that carries a location (GeoShape coordinates, or a device's own lat/lng)
-    can answer this without the caller knowing which table `target_id` lives in.
+    'system' 은 그 대상의 위치를 몰라 시스템 시간대로 추정했다는 뜻이다(장치 행이
+    시스템 폴백이거나, 대상을 못 찾았거나, 대상이 없음). 예약 앵커가 이것을 그대로
+    적어야 화면이 '장치 현지 시각' 이 아니라 '시스템 추정' 이라고 말할 수 있다.
+    (docs/design/timezone-management.md §3.2·§15.4)
     """
     if target_id and target_id != 'none':
         try:
@@ -140,7 +135,7 @@ def resolve_location_tz(target_id: Optional[str]) -> pytz.BaseTzInfo:
             if shape is not None:
                 tz = shape.resolve_timezone()
                 if tz is not None:
-                    return tz
+                    return tz, 'device'
         except Exception as exc:
             logger.debug(f"resolve_location_tz: GeoShape lookup failed for {target_id}: {exc}")
 
@@ -160,21 +155,64 @@ def resolve_location_tz(target_id: Optional[str]) -> pytz.BaseTzInfo:
                 if container is not None:
                     tz = container.resolve_timezone()
                     if tz is not None:
-                        return tz
+                        return tz, 'device'
         except Exception as exc:
             logger.debug(f"resolve_location_tz: GeoPlot lookup failed for {target_id}: {exc}")
+
+        # 시설(GeoFacility)도 자기 위치가 있다 — 여기서 몰랐던 동안 시설에 건
+        # 일정·구획의 '오늘' 이 시스템 시간대로 떨어졌다.
+        try:
+            from aot.databases.models.geo import GeoFacility
+            fac = GeoFacility.query.filter_by(unique_id=target_id).first()
+            if fac is not None:
+                tz = fac.resolve_timezone()
+                if tz is not None:
+                    return tz, 'device'
+        except Exception as exc:
+            logger.debug(f"resolve_location_tz: GeoFacility lookup failed for {target_id}: {exc}")
 
         try:
             from aot.databases.models import Input, Output, Function, Conditional, Trigger, PID, CustomController
             for model in (Input, Output, Function, Conditional, Trigger, PID, CustomController):
                 row = model.query.filter_by(unique_id=target_id).first()
                 if row is not None:
-                    return get_device_tz(row)
+                    from aot.utils.timekit import SOURCE_SYSTEM, SOURCE_UTC, resolve_tz
+                    tz, src = resolve_tz(row)
+                    return tz, ('system' if src in (SOURCE_SYSTEM, SOURCE_UTC) else 'device')
         except Exception as exc:
             logger.debug(f"resolve_location_tz: device lookup failed for {target_id}: {exc}")
 
+        # 지도 자체(GeoMap uuid) — 그 지도의 사이트 도형(없으면 아무 도형)의 시계.
+        # 새로 그리는 구획처럼 아직 자기 행이 없는 것의 '현지' 가 여기다.
+        try:
+            from aot.databases.models.geo import GeoShape
+            shapes = GeoShape.query.filter_by(geo_id=target_id).limit(50).all()
+            # site(1) → zone(2) → 나머지 순 — level_id 는 열이 아니라 속성이다.
+            for shape in sorted(shapes, key=lambda x: x.level_id):
+                tz = shape.resolve_timezone()
+                if tz is not None:
+                    return tz, 'device'
+        except Exception as exc:
+            logger.debug(f"resolve_location_tz: map lookup failed for {target_id}: {exc}")
+
     # No target_id, or nothing matched — system-wide fallback chain.
-    return get_device_tz(None)
+    return get_device_tz(None), 'system'
+
+
+def resolve_location_tz(target_id: Optional[str]) -> pytz.BaseTzInfo:
+    """
+    Resolve the pytz timezone for ANY location/entity identified by `target_id`
+    — a GeoShape (zone/site/facility outline), a device row (Input/Output/
+    Function/Conditional/Trigger/PID/CustomController), or None/'none'/unknown
+    (system-wide fallback: Misc.timezone → UTC, same chain as get_device_tz).
+
+    This is the single entry point AI-facing code should use whenever it needs
+    "what is LOCAL time at this location" — e.g. formatting a schedule tied to
+    a zone, or answering "지금 3-1 구역은 몇시야?". Every entity in the system
+    that carries a location (GeoShape coordinates, or a device's own lat/lng)
+    can answer this without the caller knowing which table `target_id` lives in.
+    """
+    return resolve_location_tz_and_source(target_id)[0]
 
 
 def resolve_location_coords(target_id: Optional[str]):
@@ -211,6 +249,50 @@ def resolve_location_coords(target_id: Optional[str]):
     return (None, None)
 
 
+def apply_system_tz_fallback(row, system_tz_name: Optional[str]) -> bool:
+    """위치 없는 새 장치 행에 시스템 시간대를 복사하고 **출처를 'system' 으로
+    남긴다**. 복사했으면 True.
+
+    출처 없이 복사하면 나중에 이 값이 사람이 정한 것인지 폴백인지 가릴 수 없어
+    `resolve_tz` 가 'explicit' 로 보고, 시스템 시간대를 바꿔도 따라가지 않았다.
+    'system' 표시가 있는 행은 시스템 시간대를 저장할 때 새 값을 따른다
+    (sync_system_tz_copies). (docs/design/timezone-management.md §15.4)
+    """
+    if row is None or not system_tz_name:
+        return False
+    if getattr(row, 'latitude', None) or getattr(row, 'longitude', None):
+        return False
+    row.timezone = system_tz_name
+    if hasattr(row, 'tz_source'):
+        row.tz_source = 'system'
+    return True
+
+
+DEVICE_TZ_MODELS = ('Input', 'Output', 'Function', 'Conditional', 'Trigger',
+                    'PID', 'CustomController')
+
+
+def sync_system_tz_copies(system_tz_name: Optional[str]) -> int:
+    """시스템 시간대를 복사해 둔 장치 행(tz_source='system')을 새 값으로.
+
+    사람이 정했거나(explicit) 좌표·도형에서 온(coords·inherited) 값은 건드리지
+    않는다. 호출자가 commit 한다. 바꾼 행 수를 돌려준다.
+    """
+    if not system_tz_name:
+        return 0
+    import aot.databases.models as models
+    changed = 0
+    for name in DEVICE_TZ_MODELS:
+        model = getattr(models, name)
+        changed += (model.query
+                    .filter(model.tz_source == 'system',
+                            model.timezone.isnot(None),
+                            model.timezone != system_tz_name)
+                    .update({model.timezone: system_tz_name},
+                            synchronize_session=False))
+    return changed
+
+
 def refresh_device_timezone(device) -> Optional[str]:
     """
     Recompute device.timezone from its current coords and write it back.
@@ -233,5 +315,8 @@ __all__ = [
     "to_device_tz",
     "device_tz_name",
     "resolve_location_tz",
+    "resolve_location_tz_and_source",
+    "apply_system_tz_fallback",
+    "sync_system_tz_copies",
     "refresh_device_timezone",
 ]

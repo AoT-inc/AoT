@@ -536,7 +536,15 @@ def geo_journal_view(journal_uuid):
         elif order[_g] >= order.get(stored, 0):
             available.append(_g)
 
+    # 표지의 '생성' 시각 — 옆에 대상의 시간대 이름을 붙이므로 값도 그 시계로
+    # 바꾼다. 저장값(UTC)을 그대로 찍으면 라벨과 값이 시차만큼 어긋난다.
+    from aot.utils.timekit import to_tz
+    _tz_name = ((row.data or {}).get('target') or {}).get('tz_name')
+    generated_local = (to_tz(row.created_at, _tz_name)
+                       if row.created_at and _tz_name else None)
+
     return render_template('pages/geo/journal_view.html', journal=row,
+                           generated_local=generated_local,
                            caveat_texts=caveat_texts,
                            glossary=glossary,
                            has_targets=has_targets,
@@ -644,6 +652,16 @@ def geo_journal_target_info():
         logger.exception('[journal] 측정값 목록 조회 실패: %s', target_id)
         groups = []
 
+    # 그 대상이 있는 곳의 '오늘' — 기간 끝 기본값. 브라우저가 UTC 날짜로
+    # 계산하던 동안 +9 에서 오전에 열면 어제가 들어가 오늘 자료가 빠졌다.
+    try:
+        from aot.utils.device_tz import resolve_location_tz
+        from aot.utils.timekit import utc_now
+        today = utc_now().astimezone(resolve_location_tz(target_id)).date().isoformat()
+    except Exception:
+        today = None
+
     return jsonify({'ok': True,
                     'first_date': first_at.isoformat() if first_at else None,
+                    'today': today,
                     'measurement_groups': groups})

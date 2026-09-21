@@ -15,7 +15,7 @@ from flask_restx import Resource
 
 from aot.aot_flask.api import api
 from aot.aot_flask.api import default_responses
-from aot.utils.device_tz import device_tz_name, resolve_tz_from_coords
+from aot.utils.device_tz import resolve_tz_from_coords
 from aot.utils.time_utils import get_timezone_name
 
 logger = logging.getLogger(__name__)
@@ -49,13 +49,14 @@ class DeviceTimezone(Resource):
         device = _lookup_device(unique_id)
         if device is None:
             return {'error': 'device not found'}, 404
-        tz = device_tz_name(device)
+        # 출처는 해석 체인이 준 그대로 — 예전엔 값만 있으면 'explicit' 라 해서
+        # 시스템 폴백 복사본까지 사람이 정한 값처럼 보였다.
+        from aot.utils.timekit import resolve_tz
+        tzinfo, source = resolve_tz(device)
         return {
             'unique_id': unique_id,
-            'timezone': tz,
-            'source': ('explicit' if getattr(device, 'timezone', None)
-                       else ('coords' if getattr(device, 'latitude', None) is not None
-                             else 'fallback'))
+            'timezone': str(tzinfo),
+            'source': source,
         }
 
 
@@ -74,6 +75,26 @@ class CoordsTimezone(Resource):
             return {'error': 'lat and lon required'}, 400
         tz = resolve_tz_from_coords(lat, lon) or get_timezone_name() or 'UTC'
         return {'lat': lat, 'lon': lon, 'timezone': tz}
+
+
+@ns_tz.route('/today')
+@ns_tz.doc(security='apikey', responses=default_responses)
+class PlaceToday(Resource):
+    """`?target_id=` 가 있는 곳의 오늘(현지 날짜). 구획·시설·도형·장치·지도 uuid.
+
+    날짜 칸의 '오늘' 기본값을 브라우저 날짜로 채우면, 보는 사람과 그 장소의
+    날짜가 다를 때(시차) 파종일 같은 값이 하루 어긋난다.
+    """
+
+    @flask_login.login_required
+    def get(self):
+        from flask import request
+        from aot.utils.device_tz import resolve_location_tz_and_source
+        from aot.utils.timekit import utc_now
+        target_id = (request.args.get('target_id') or '').strip() or None
+        tz, source = resolve_location_tz_and_source(target_id)
+        return {'target_id': target_id, 'timezone': str(tz), 'source': source,
+                'today': utc_now().astimezone(tz).date().isoformat()}
 
 
 @ns_tz.route('/fallback')

@@ -799,6 +799,10 @@ class InputModule(AbstractInput):
             forecasts[str(offset)] = forecast_data
         
         json_obj = {
+            # `now`·`pub_dt` 는 장치 시계의 벽시계다 — 어느 시계인지 함께 싣는다.
+            # 위젯이 이것 없이 브라우저 시계와 빼서, 보는 사람과 장치의 시차만큼
+            # 엉뚱한 시각의 예보를 '현재' 로 보였다.
+            "tz": str(device_tz),
             "now": now_rounded.strftime("%Y%m%d%H%M"),
             "pub_dt": pub_dt.strftime("%Y%m%d%H%M"),
             "forecasts": forecasts,

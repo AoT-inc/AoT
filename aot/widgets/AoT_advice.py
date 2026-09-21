@@ -14,6 +14,7 @@ import logging
 from flask import jsonify, request
 from flask_babel import lazy_gettext
 
+from aot.utils.timekit import iso_utc
 from aot.widgets.base_widget import AbstractWidget
 
 logger = logging.getLogger(__name__)
@@ -65,10 +66,9 @@ def advice_get_latest():
                 'alert_level': summary.alert_level,
                 'anomaly_detected': summary.anomaly_detected,
                 'quality_score': summary.quality_score,
-                'timestamp': (
-                    summary.timestamp.isoformat()
-                    if summary.timestamp else None
-                ),
+                # 오프셋을 붙인다 — naive 는 브라우저가 지역시각으로 읽어
+                # 시각과 'N시간 전' 이 모두 시차만큼 틀렸다.
+                'timestamp': iso_utc(summary.timestamp),
                 'version': summary.version,
             },
         })
@@ -114,7 +114,7 @@ def advice_get_history():
                 'summary_text': s.summary_text,
                 'alert_level': s.alert_level,
                 'quality_score': s.quality_score,
-                'timestamp': s.timestamp.isoformat() if s.timestamp else None,
+                'timestamp': iso_utc(s.timestamp),
                 'version': s.version,
             })
         return jsonify({'status': 'ok', 'data': items})

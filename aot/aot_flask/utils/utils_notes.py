@@ -359,7 +359,8 @@ def note_mod(form):
         
         if dt_obj:
             try:
-                mod_note.date_time = datetime_time_to_utc(dt_obj)
+                # 장소 노트는 그 장소의 시계로 읽는다(칸도 그 시계로 채웠다).
+                mod_note.date_time = datetime_time_to_utc(dt_obj, mod_note.target_id)
             except Exception as e:
                  logger.error(f"Date time conversion error: {e}")
                  error.append(f"Error converting date/time: {e}")
@@ -370,7 +371,7 @@ def note_mod(form):
     elif form.date_time.data:
          # Fallback to form data if raw string was somehow missing but object exists (rare)
          try:
-            mod_note.date_time = datetime_time_to_utc(form.date_time.data)
+            mod_note.date_time = datetime_time_to_utc(form.date_time.data, mod_note.target_id)
          except:
             error.append("Error while parsing date/time object")
 
@@ -667,8 +668,9 @@ def export_notes(form):
 
             cw.writerow([each_note.id,
                          each_note.unique_id,
-                         # Export in configured facility timezone (paired with local->UTC on import)
-                         to_local(each_note.date_time).strftime("%Y-%m-%d %H:%M:%S"),
+                         # 오프셋을 붙인다 — 파일은 다른 시간대의 사람이 열고
+                         # 가져온다. 가져오기(csv_time_to_utc)가 오프셋을 따른다.
+                         to_local(each_note.date_time).strftime("%Y-%m-%d %H:%M:%S%z"),
                          each_note.name,
                          each_note.note,
                          ';'.join(list_tag_id_names),
@@ -762,9 +764,7 @@ def import_notes(form):
 
                                 new_note = Notes()
                                 new_note.unique_id = line['UUID']
-                                # CSV 'Time' is in facility-local timezone (see export_notes); convert back to UTC
-                                new_note.date_time = datetime_time_to_utc(
-                                    datetime.strptime(line['Time'], '%Y-%m-%d %H:%M:%S'))
+                                new_note.date_time = csv_time_to_utc(line['Time'])
                                 new_note.name = line['Name']
                                 new_note.note = line['Note']
 
@@ -821,9 +821,95 @@ def import_notes(form):
     flash_success_errors(error, action, url_for('routes_page.page_export'))
 
 
-def datetime_time_to_utc(datetime_time):
-    """Convert a user-entered naive datetime (in the configured facility timezone,
-    Misc.timezone) to naive UTC for storage.
+def _wall_tz(target_id=None):
+    """노트·공지의 벽시계 칸이 뜻하는 시간대.
+
+    - **장소에 붙은 노트**(target_id) → 그 장소의 현지 시계. '3-1 구역 관수
+      확인 09:00' 은 그 구역의 09:00 이다 — 현지 시간 원칙(§7·§15.5). 장소의
+      위치를 모르면 해석 체인이 시스템 시간대로 추정한다.
+    - 장소 없는 노트·공지 → **쓰는 사람의 시계**(User.timezone, 없으면 시스템).
+
+    저장(datetime_time_to_utc)과 편집 칸 채우기(utc_to_wall)가 **같은 함수**를
+    써야 왕복이 맞는다 — 편집 화면이 UTC 원값을 채우고 저장이 이것으로 해석하던
+    동안, 저장을 누를 때마다 시각이 시간대 오프셋만큼 밀렸다. 칸 옆에는
+    어느 시계인지 적는다(`note_tz_label` / `viewer_tz_label`)."""
+    if target_id:
+        return _place_tz(target_id)
+    from aot.utils.timekit import current_user_tz
+    return current_user_tz()
+
+
+def _place_tz(target_id):
+    """장소의 시계 — 요청 안에서는 장소마다 한 번만 푼다(목록은 노트 수만큼 부른다)."""
+    from aot.utils.device_tz import resolve_location_tz
+    try:
+        from flask import g, has_request_context
+        if has_request_context():
+            cache = g.setdefault('_note_place_tz', {})
+            if target_id not in cache:
+                cache[target_id] = resolve_location_tz(target_id)
+            return cache[target_id]
+    except Exception:
+        pass
+    return resolve_location_tz(target_id)
+
+
+def utc_to_wall(dt, target_id=None):
+    """저장된 UTC(naive=UTC) → 편집 칸에 채울 naive 벽시계.
+    datetime_time_to_utc 의 역함수."""
+    if dt is None:
+        return None
+    from aot.utils.timekit import to_tz
+    return to_tz(dt, _wall_tz(target_id)).replace(tzinfo=None)
+
+
+def utc_to_wall_str(dt, fmt='%Y-%m-%d %H:%M:%S', target_id=None):
+    """utc_to_wall 을 칸에 넣을 문자열로. 없으면 ''."""
+    wall = utc_to_wall(dt, target_id)
+    return wall.strftime(fmt) if wall else ''
+
+
+def note_time_text(note):
+    """목록에 보일 노트 시각 — 그 노트의 시계(장소면 현지) + 오프셋 라벨."""
+    if note is None or not note.date_time:
+        return ''
+    from aot.utils.timekit import to_tz, utc_offset_label
+    tz = _wall_tz(getattr(note, 'target_id', None))
+    return '{} ({})'.format(to_tz(note.date_time, tz).strftime('%Y-%m-%d %H:%M:%S'),
+                            utc_offset_label(note.date_time, tz))
+
+
+def note_wall_str(note):
+    """노트 편집 칸을 채울 라벨 없는 벽시계 — 저장이 읽는 시계와 같다."""
+    if note is None:
+        return ''
+    return utc_to_wall_str(note.date_time, target_id=getattr(note, 'target_id', None))
+
+
+def note_tz_label(note):
+    """노트 시각 칸 옆에 적을 '어느 시계인지' — 'Asia/Seoul (UTC+09:00)'."""
+    from aot.utils.timekit import tz_label
+    return tz_label(_wall_tz(getattr(note, 'target_id', None) if note is not None else None))
+
+
+def csv_time_to_utc(text):
+    """노트 CSV 'Time' → naive UTC. 오프셋이 있으면(현행 내보내기) 그 순간,
+    없으면 옛 내보내기 형식이라 **시스템 시계**로 읽는다(그때의 내보내기는
+    시스템 시계로 적었다). 가져오는 사람의 시계로 읽으면 옛 파일이 밀린다."""
+    from datetime import timezone
+    from aot.utils.timekit import system_tz, wall_to_utc
+    text = str(text).strip()
+    try:
+        dt = datetime.strptime(text, '%Y-%m-%d %H:%M:%S%z')
+        return dt.astimezone(timezone.utc).replace(tzinfo=None)
+    except ValueError:
+        naive = datetime.strptime(text, '%Y-%m-%d %H:%M:%S')
+        return wall_to_utc(naive, system_tz()).replace(tzinfo=None)
+
+
+def datetime_time_to_utc(datetime_time, target_id=None):
+    """Convert a user-entered naive datetime (in the writer's clock, `_wall_tz`)
+    to naive UTC for storage.
 
     The previous implementation used time.mktime(), which interprets the naive
     value as the container OS timezone. Since the container is always UTC while
@@ -831,13 +917,12 @@ def datetime_time_to_utc(datetime_time):
     offset on every save. We now localize with the configured timezone.
     """
     from datetime import timezone
-    from aot.utils.tz_utils import get_user_tz
     if not datetime_time:
         return datetime.utcnow()
     try:
         if datetime_time.tzinfo is None:
             # Interpret the naive input as configured local time (DST-aware via pytz)
-            local_dt = get_user_tz().localize(datetime_time)
+            local_dt = _wall_tz(target_id).localize(datetime_time)
         else:
             local_dt = datetime_time
         return local_dt.astimezone(timezone.utc).replace(tzinfo=None)

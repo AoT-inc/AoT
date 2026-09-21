@@ -40,6 +40,7 @@ from aot.aot_flask.utils.utils_map_config import (
     clone_map_config,
 )
 from aot.utils.system_pi import is_int
+from aot.utils.device_tz import apply_system_tz_fallback
 
 logger = logging.getLogger(__name__)
 _DROP = object()
@@ -186,8 +187,7 @@ def output_add(form_add, request_form, tab_id=None):
                 if misc:
                     new_output.latitude = misc.map_latitude
                     new_output.longitude = misc.map_longitude
-                    if not new_output.latitude and not new_output.longitude and misc.timezone:
-                        new_output.timezone = misc.timezone
+                    apply_system_tz_fallback(new_output, misc.timezone)
             except Exception:
                 pass
 

@@ -60,8 +60,11 @@ def export_measurements(form):
 
         # Parse date range
         start_time_str, end_time_str = form.date_range.data.split(' - ')
-        start_seconds = int(time.mktime(time.strptime(start_time_str, '%m/%d/%Y %H:%M')))
-        end_seconds = int(time.mktime(time.strptime(end_time_str, '%m/%d/%Y %H:%M')))
+        # 칸의 기본값은 시스템 시각으로 채운다(routes_page.page_export) — 같은
+        # 시계로 해석한다.
+        from aot.utils.timekit import picker_wall_to_epoch
+        start_seconds = picker_wall_to_epoch(start_time_str)
+        end_seconds = picker_wall_to_epoch(end_time_str)
 
         # Parse measurement data
         measurement_parts = form.measurement.data.split(',')

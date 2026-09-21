@@ -215,17 +215,52 @@ $(document).ready(function(){
     return new Date(year, month, day, hour, minute, 0, 0);
   }
 
+  // 예보의 시계 — forecast.json 의 `tz`(장치 현지). 예보의 `now` 가 그 시계의
+  // 벽시계이므로 '지금' 도 같은 시계로 만들어야 둘을 뺄 수 있다. 브라우저 시계로
+  // 만들면 보는 사람과 장치의 시차만큼 다른 시각의 예보가 '현재' 로 보였다.
+  // 옛 파일(tz 없음)은 예전처럼 브라우저 시계.
+  function forecastTz() {
+    return (forecastData && forecastData.tz) || null;
+  }
+
+  // tz 시계의 벽시계 조각 {y,mo,d,h} (tz 없으면 브라우저)
+  function wallParts(date, tz) {
+    if (tz) {
+      try {
+        var p = {};
+        new Intl.DateTimeFormat('en-US', {
+          timeZone: tz, hourCycle: 'h23', year: 'numeric', month: '2-digit',
+          day: '2-digit', hour: '2-digit'
+        }).formatToParts(date).forEach(function (x) { p[x.type] = x.value; });
+        return {y: p.year, mo: p.month, d: p.day, h: p.hour};
+      } catch (e) { /* 아래 브라우저 시계로 */ }
+    }
+    return {y: String(date.getFullYear()), mo: ('0' + (date.getMonth() + 1)).slice(-2),
+            d: ('0' + date.getDate()).slice(-2), h: ('0' + date.getHours()).slice(-2)};
+  }
+
   // Helper: return the current time as a "yyyymmddhh00" string (minutes=00)
   function getWidgetNow() {
-    var now = new Date();
-    now.setMinutes(0);
-    now.setSeconds(0);
-    now.setMilliseconds(0);
-    var year = now.getFullYear();
-    var month = ('0' + (now.getMonth()+1)).slice(-2);
-    var day = ('0' + now.getDate()).slice(-2);
-    var hour = ('0' + now.getHours()).slice(-2);
-    return "" + year + month + day + hour + "00";
+    var w = wallParts(new Date(), forecastTz());
+    return "" + w.y + w.mo + w.d + w.h + "00";
+  }
+
+  // 지금부터 offsetHours 뒤의 예보 시계 '시'(0~23)
+  function forecastHourAt(offsetHours) {
+    var at = new Date(Date.now() + offsetHours * 3600 * 1000);
+    return parseInt(wallParts(at, forecastTz()).h, 10);
+  }
+
+  // 예보 시계가 보는 사람의 시계와 다르면 제목 옆에 오프셋을 적는다
+  // ('UTC+09:00'). 같으면 붙이지 않는다 — 좁은 제목줄을 아낀다.
+  function forecastTzSuffix() {
+    var tz = forecastTz();
+    if (!tz || !window.AoTTz || tz === AoTTz.viewerTz()) return '';
+    try {
+      var name = new Intl.DateTimeFormat('en-US', {timeZone: tz, timeZoneName: 'longOffset'})
+        .formatToParts(new Date()).filter(function (x) { return x.type === 'timeZoneName'; })[0];
+      return name ? ' (' + name.value.replace('GMT', 'UTC') + ')' : ' (' + tz + ')';
+    } catch (e) { return ' (' + tz + ')'; }
   }
 
   function getWeatherIcon(data, forecastHour) {
@@ -370,10 +405,8 @@ $(document).ready(function(){
       return;
     }
 
-    // As a simple example, keep the day/night background
-    var forecastTime = new Date();
-    forecastTime.setHours(forecastTime.getHours() + parseInt(hour));
-    var forecastHour = forecastTime.getHours();
+    // 낮·밤 배경은 예보 시계의 시각으로 가른다(장치가 있는 곳의 낮·밤).
+    var forecastHour = forecastHourAt(parseInt(hour));
 
     if (forecastHour >= 6 && forecastHour < 18) {
       container.classList.add("day-background");
@@ -385,9 +418,6 @@ $(document).ready(function(){
 
     // Title bar
     var offset = hour;
-    var forecastTime = new Date();
-    forecastTime.setHours(forecastTime.getHours() + offset);
-    var forecastHour = forecastTime.getHours();
     var forecastTimeString = "";
     if (offset < 0) {
         forecastTimeString = Math.abs(offset) + window._("h ago") + " ";
@@ -399,7 +429,7 @@ $(document).ready(function(){
     // 담는 span 이 이미 `.aot-w-caption` 이다(제목줄 계약: 이름은 셸이 그리고
     // 위젯은 그 옆 부가물만 넣는다). 여기서 `.aot-w-title` 을 다시 씌우면
     // 예보 시각이 이름 옆에서 **두 번째 제목**처럼 커진다. 글자만 넣는다.
-    widgetTitleBar.textContent = forecastTimeString + forecastHour + ':00 ' + window._('Forecast');
+    widgetTitleBar.textContent = forecastTimeString + forecastHour + ':00' + forecastTzSuffix() + ' ' + window._('Forecast');
 
     // Center-align the icon
     iconContainer.style.display = 'flex';

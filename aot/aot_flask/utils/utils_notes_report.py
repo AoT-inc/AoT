@@ -21,8 +21,20 @@ from aot.config import PATH_NOTE_ATTACHMENTS
 from aot.databases.models import NoteTags
 from aot.aot_flask.utils.utils_notes import datetime_time_to_utc
 from aot.aot_flask.utils.utils_notes import notes_filter
-from aot.utils.time_utils import get_local_now
-from aot.utils.time_utils import to_local
+
+
+# 보고서는 한 시계로 쓴다 — 만드는 사람의 시계(User.timezone, 없으면 시스템).
+# 기간 경계는 datetime_time_to_utc(같은 시계)로 UTC 가 되고, 시각 표시도 그
+# 시계로 한다. 어느 시계인지는 '생성' 줄에 적는다(종이는 다른 사람이 읽는다).
+def get_local_now():
+    from aot.utils.timekit import current_user_tz, utc_now
+    return utc_now().astimezone(current_user_tz())
+
+
+def to_local(dt):
+    from aot.utils.timekit import current_user_tz, to_tz
+    return to_tz(dt, current_user_tz())
+
 
 logger = logging.getLogger(__name__)
 
@@ -239,7 +251,9 @@ def generate_notes_pdf(notes, period_label, report_title=None, tag_label=''):
     sub_bits = [gettext('Period: %(label)s', label=period_label)]
     if tag_label:
         sub_bits.append(gettext('Tags: %(label)s', label=tag_label))
-    sub_bits.append(gettext('Generated: %(dt)s', dt=get_local_now().strftime('%Y-%m-%d %H:%M')))
+    from aot.utils.timekit import current_user_tz, format_labeled, utc_now
+    sub_bits.append(gettext('Generated: %(dt)s', dt=format_labeled(
+        utc_now(), current_user_tz(), fmt='%Y-%m-%d %H:%M')))
     sub_bits.append(gettext('%(num)d notes', num=len(notes)))
     elements.append(Paragraph(_esc('  |  '.join(sub_bits)), style_sub))
     elements.append(Spacer(1, 4 * mm))

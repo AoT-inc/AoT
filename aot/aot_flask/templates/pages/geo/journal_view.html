@@ -1078,8 +1078,8 @@
     </div>
 
     <p class="aot-journal-cover-meta">
-      {{ _('Generated') }}: {{ journal.created_at.strftime('%Y-%m-%d %H:%M') if journal.created_at else '—' }}
-      · {{ d.target.tz_name }}
+      {{ _('Generated') }}: {% if generated_local %}{{ generated_local.strftime('%Y-%m-%d %H:%M') }}
+      · {{ d.target.tz_name }}{% elif journal.created_at %}{{ journal.created_at.strftime('%Y-%m-%d %H:%M') }} UTC{% else %}—{% endif %}
       <span class="d-none d-print-inline"> · AoT {{ AOT_VERSION if AOT_VERSION is defined else '' }}</span>
     </p>
   </div>

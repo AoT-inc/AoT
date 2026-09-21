@@ -30,6 +30,9 @@ def _maybe_refresh(target):
                 target.tz_source = 'coords'
         elif new_tz is None:
             target.timezone = None
+            # 좌표가 사라졌으면 'coords' 출처도 거짓이 된다.
+            if getattr(target, "tz_source", None) == 'coords':
+                target.tz_source = None
     except Exception as exc:
         logger.warning(f"device_tz auto-refresh failed: {exc}")
 
@@ -42,6 +45,12 @@ def _coords_changed(target):
 
 def _on_insert(mapper, connection, target):
     existing_tz = getattr(target, "timezone", None)
+    # 시스템 폴백 복사본(apply_system_tz_fallback) — 좌표가 없어 복사한 것이니
+    # 좌표로 다시 풀 것이 없다. 지우지 않고 둬야 시스템 시간대를 바꿀 때 따라간다.
+    if (getattr(target, "tz_source", None) == 'system'
+            and getattr(target, "latitude", None) is None
+            and getattr(target, "longitude", None) is None):
+        return
     # 'UTC' is often a pre-assigned fallback (from Misc.timezone when coords are
     # absent), not an intentional explicit setting.  Still attempt coord-based
     # resolution so devices created with valid lat/lon get the correct timezone.

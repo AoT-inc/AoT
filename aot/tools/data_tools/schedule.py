@@ -442,8 +442,10 @@ class ScheduleToolsMixin:
             # Persist the device-local tz anchor (already used for interpretation
             # above) so display can re-derive the device wall-clock. §6.
             try:
-                meta.anchor_tz = str(resolve_location_tz(output.unique_id))
-                meta.anchor_source = 'device'
+                from aot.utils.device_tz import resolve_location_tz_and_source
+                _atz, _asrc = resolve_location_tz_and_source(output.unique_id)
+                meta.anchor_tz = str(_atz)
+                meta.anchor_source = _asrc   # 위치 모르면 'system'(추정)
                 from aot.databases.models import db as _db
                 _db.session.commit()
             except Exception:
@@ -470,10 +472,13 @@ class ScheduleToolsMixin:
         from aot.utils.timekit import system_tz
         if target_id and target_id != 'none':
             try:
-                from aot.utils.device_tz import resolve_location_tz
-                tz = resolve_location_tz(target_id)
+                # 위치를 몰라 시스템 시간대로 떨어진 대상은 출처를 'system' 으로
+                # 적는다 — 'device' 로 적으면 화면이 추정값을 장치 현지 시각이라
+                # 말한다. (§3.2: 시스템 tz 사용은 기록·라벨)
+                from aot.utils.device_tz import resolve_location_tz_and_source
+                tz, source = resolve_location_tz_and_source(target_id)
                 if tz is not None:
-                    return tz, str(tz), 'device'
+                    return tz, str(tz), source
             except Exception:
                 pass
         tz = system_tz()
@@ -634,7 +639,8 @@ class ScheduleToolsMixin:
 
     @classmethod
     def edit_schedule_tool(cls, job_id, date=None, time=None, content=None,
-                           worker=None, target_name=None, duration_minutes=None, **extra):
+                           worker=None, target_name=None, duration_minutes=None,
+                           at=None, **extra):
         """
         [일정 수정 — 변이(승인 필요)]
         기존 일정의 시각/소요시간/내용/담당자/위치를 수정한다. 먼저 search_schedule로 job_id를 얻는다.
@@ -649,6 +655,10 @@ class ScheduleToolsMixin:
             target_name (str): 새 위치(구역/시설/장치 이름)로 재연결. 미해석이면
                 available_targets를 돌려주니 ask_user로 확인 후 재시도.
             duration_minutes (int): 새 소요시간(분). 기존 duration_sec/end_time을 대체한다.
+            at (str): 화면 전용 — 오프셋이 붙은 절대순간(ISO 8601). 주면 date/time
+                대신 쓴다. 캘린더는 보는 사람의 시계로 시각을 고르므로 벽시계로
+                보내면 장치 시계로 다시 읽혀 시차만큼 밀린다. AI 도구 표면
+                (tool_registry)에는 노출하지 않는다.
         """
         try:
             import json as _json
@@ -691,7 +701,13 @@ class ScheduleToolsMixin:
 
             # 1. 시각 변경 — 앵커 tz 기준 해석. date/time 하나만 와도 기존값과 병합.
             new_dt = None
-            if date or time:
+            if at:
+                from aot.utils.timekit import instant_or_wall_to_utc
+                new_dt = instant_or_wall_to_utc(at, _anchor_tz)
+                meta.schedule_time = new_dt
+                meta.anchor_tz = _anchor_name
+                meta.anchor_source = _anchor_src
+            elif date or time:
                 from aot.utils.timekit import to_tz
                 base_local = to_tz(meta.schedule_time, _anchor_tz) if meta.schedule_time else None
                 new_date = date or (base_local.strftime("%Y-%m-%d") if base_local else None)

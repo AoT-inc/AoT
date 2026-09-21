@@ -129,9 +129,11 @@ class Tier0Classifier:
             '今何時', '何時',
         ])
         if any(p in clean for p in TIME_PATTERNS):
-            from aot.utils.time_utils import get_local_now
+            # 묻는 사람의 시계로, 어느 시계인지 붙여 답한다 — 라벨 없는
+            # 시스템 시각은 다른 시간대의 사람이 자기 시각으로 오독한다.
+            from aot.utils.timekit import current_user_tz, format_labeled, utc_now
             from flask_babel import gettext as _
-            now = get_local_now().strftime("%Y-%m-%d %H:%M:%S")
+            now = format_labeled(utc_now(), current_user_tz())
             return cls._make_response(_("The current time is %(time)s.", time=now))
 
         # --- Greeting (exact + fuzzy) ---

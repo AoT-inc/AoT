@@ -30,7 +30,8 @@
     <div class="col-auto">
       {{form_note_mod.date_time.label(class_='control-label')}}
       <div>
-        {{form_note_mod.date_time(class_='form-control', value=this_note.date_time.strftime('%Y-%m-%d %H:%M:%S') if this_note.date_time else '')}}
+        {{form_note_mod.date_time(class_='form-control', value=note_wall.strftime('%Y-%m-%d %H:%M:%S') if note_wall else '')}}
+        <small class="form-text text-muted">{{ _('Time zone') }}: {{ note_tz_label(this_note) }}</small>
       </div>
     </div>
     <div class="col-auto">

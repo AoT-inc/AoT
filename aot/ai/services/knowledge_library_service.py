@@ -31,6 +31,7 @@ from sqlalchemy import or_
 
 from aot.aot_flask.extensions import db
 from aot.databases.models import AIKnowledgeChunk
+from aot.utils.timekit import iso_utc
 from aot.ai.services.knowledge_shelve_service import (
     _clean_source_url, get_or_create_reserved_source,
 )
@@ -74,7 +75,8 @@ def _to_dict(row):
         'flagged_reason': row.flagged_reason,
         'reuse_count': row.reuse_count or 0,
         'is_enabled': bool(row.is_enabled),
-        'created_at': row.created_at.isoformat() if row.created_at else None,
+        # 오프셋을 붙인다 — naive 는 브라우저가 지역시각으로 읽어 날짜가 밀렸다.
+        'created_at': iso_utc(row.created_at),
     }
 
 

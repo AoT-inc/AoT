@@ -267,7 +267,7 @@
                             <input type="datetime-local" class="form-control aot-modern-input" id="edit-time-{{ job.id }}"
                                    value="{{ job.display_schedule_time.replace(' ', 'T') }}"
                                    {{ '' if job.display_editable else 'readonly' }}>
-                            {% if job.display_tz %}<small class="form-text text-muted">{{ _('Device-local time') }} · {{ job.display_tz }}</small>{% endif %}
+                            {% if job.display_tz %}<small class="form-text text-muted">{% if job.display_tz_guess %}{{ _('Location not set — estimated with the system time zone') }}{% else %}{{ _('Device-local time') }}{% endif %} · {{ job.display_tz }}</small>{% endif %}
                         </div>
                     </div>
                     {% endif %}
@@ -679,19 +679,35 @@ function _selectedTargetTz() {
     var item = (list || []).find(function (x) { return x.unique_id === id; });
     return (item && item.tz) ? item.tz : null;
 }
+function _selectedTargetTzGuess() {
+    var at = $('#taskActionType').val();
+    var list = at === 'output' ? outputData
+             : at === 'pid' ? pidData
+             : at === 'function' ? functionData
+             : at === 'abstract_plan' ? zoneData : [];
+    var id = $('#taskTarget').val();
+    var item = (list || []).find(function (x) { return x.unique_id === id; });
+    return !!(item && item.tz_guess);
+}
 function updateTaskDualClock() {
     var el = document.getElementById('taskDualClock');
     if (!el || !window.AoTTz) return;
     var val = $('#taskScheduleTime').val();
     var dtz = _selectedTargetTz();
     if (!val) { el.classList.add('d-none'); el.innerHTML = ''; return; }
-    var anchorTz = dtz || AoTTz.viewerTz();
+    // 대상이 없으면 서버는 시스템 시계로 해석한다(_resolve_schedule_anchor) —
+    // 미리보기도 같은 시계로 읽어야 보여준 순간과 저장된 순간이 같다.
+    var anchorTz = dtz || AoTTz.fallbackTz();
     var inst = AoTTz.wallToInstant(val, anchorTz);
     if (!inst) { el.classList.add('d-none'); return; }
     var vtz = AoTTz.viewerTz();
     var lines = [];
     if (dtz) {
-        lines.push({{ _("Device-local")|tojson }} + ': <b>' + AoTTz.formatDevice(inst, dtz, { fmt: 'datetimeShort' }) + '</b> (' + dtz + ')');
+        // 위치를 몰라 시스템 시간대로 추정한 대상이면 '장치 현지' 라 말하지 않는다.
+        var dlabel = _selectedTargetTzGuess()
+            ? {{ _('Location not set — estimated with the system time zone')|tojson }}
+            : {{ _("Device-local")|tojson }};
+        lines.push(dlabel + ': <b>' + AoTTz.formatDevice(inst, dtz, { fmt: 'datetimeShort' }) + '</b> (' + dtz + ')');
     }
     if (!dtz || dtz !== vtz) {
         lines.push({{ _("Your time")|tojson }} + ': ' + AoTTz.formatViewer(inst, { fmt: 'datetimeShort' }) + ' (' + vtz + ')');

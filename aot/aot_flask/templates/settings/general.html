@@ -64,7 +64,7 @@
         <div class="aot-settings-row">
           {{form_settings_general.system_timezone.label(class_='aot-settings-label')}}
           <div class="aot-settings-control">
-            {{form_settings_general.system_timezone(class_='form-control aot-modern-input', value=settings.timezone, **{'title': _("System-wide default timezone (IANA name, e.g. Asia/Seoul). Used for daemon log times, the audit log, and as the last fallback for schedules on devices without a location. This is not your personal display timezone in Account settings.")})}}
+            {{form_settings_general.system_timezone(class_='form-control aot-modern-input', value=settings.timezone, **{'title': _("System-wide default timezone (IANA name, e.g. Asia/Seoul). Used for daemon log times and as the last fallback for devices without a location; those devices follow it when you save here. Times people read and write use each person's own timezone from Account settings.")})}}
           </div>
         </div>
 
