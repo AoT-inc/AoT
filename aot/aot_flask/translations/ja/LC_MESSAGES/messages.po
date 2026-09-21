@@ -34872,3 +34872,22 @@ msgstr ""
 "Function はこの収集器を屋外値の正本として使います。項目ごとに屋外センサーを"
 "選んでください。空欄の項目は共有しません — 統合制御は値を仮定せず、「分から"
 "ない」ものとして扱います。"
+
+#: aot_flask/forms/forms_settings.py:222
+msgid "System Timezone"
+msgstr "システムのタイムゾーン"
+
+#: aot_flask/templates/settings/general.html:67
+msgid ""
+"System-wide default timezone (IANA name, e.g. Asia/Seoul). Used for "
+"daemon log times, the audit log, and as the last fallback for schedules "
+"on devices without a location. This is not your personal display timezone"
+" in Account settings."
+msgstr ""
+"システム全体の既定タイムゾーンです(IANA 名、例: "
+"Asia/Seoul)。デーモンのログ時刻と監査ログに使われ、位置情報のない機器のスケジュールを解釈する際の最後の基準になります。アカウント設定の個人表示用タイムゾーンとは別の値です。"
+
+#: aot_flask/utils/utils_settings.py:1005
+#, python-format
+msgid "Unknown timezone: %(tz)s"
+msgstr "不明なタイムゾーンです: %(tz)s"

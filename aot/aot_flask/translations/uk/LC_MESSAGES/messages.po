@@ -31238,3 +31238,25 @@ msgstr "Резервний датчик"
 #: aot_flask/static/js/widgets/AoT_map/aot-map-widget-vector.js
 msgid "Stop Rotation"
 msgstr "Зупинити обертання"
+
+#: aot_flask/forms/forms_settings.py:222
+msgid "System Timezone"
+msgstr "Часовий пояс системи"
+
+#: aot_flask/templates/settings/general.html:67
+msgid ""
+"System-wide default timezone (IANA name, e.g. Asia/Seoul). Used for "
+"daemon log times, the audit log, and as the last fallback for schedules "
+"on devices without a location. This is not your personal display timezone"
+" in Account settings."
+msgstr ""
+"Часовий пояс за замовчуванням для всієї системи (назва IANA, напр. "
+"Asia/Seoul). Використовується для часу в журналі демона, журналі аудиту "
+"та як останній резервний варіант для розкладів пристроїв без "
+"розташування. Це не ваш особистий часовий пояс відображення в "
+"налаштуваннях облікового запису."
+
+#: aot_flask/utils/utils_settings.py:1005
+#, python-format
+msgid "Unknown timezone: %(tz)s"
+msgstr "Невідомий часовий пояс: %(tz)s"

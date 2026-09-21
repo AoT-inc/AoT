@@ -31049,3 +31049,24 @@ msgstr "बैकअप सेंसर"
 #: aot_flask/static/js/widgets/AoT_map/aot-map-widget-vector.js
 msgid "Stop Rotation"
 msgstr "घूर्णन रोकें"
+
+#: aot_flask/forms/forms_settings.py:222
+msgid "System Timezone"
+msgstr "सिस्टम समय क्षेत्र"
+
+#: aot_flask/templates/settings/general.html:67
+msgid ""
+"System-wide default timezone (IANA name, e.g. Asia/Seoul). Used for "
+"daemon log times, the audit log, and as the last fallback for schedules "
+"on devices without a location. This is not your personal display timezone"
+" in Account settings."
+msgstr ""
+"पूरे सिस्टम का डिफ़ॉल्ट समय क्षेत्र (IANA नाम, जैसे Asia/Seoul)। डेमन लॉग"
+" के समय, ऑडिट लॉग और बिना स्थान वाले उपकरणों के शेड्यूल के अंतिम आधार के "
+"रूप में उपयोग होता है। यह खाता सेटिंग्स में आपका व्यक्तिगत प्रदर्शन समय "
+"क्षेत्र नहीं है।"
+
+#: aot_flask/utils/utils_settings.py:1005
+#, python-format
+msgid "Unknown timezone: %(tz)s"
+msgstr "अज्ञात समय क्षेत्र: %(tz)s"

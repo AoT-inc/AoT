@@ -27,6 +27,33 @@ def _flux_str(value):
     return str(value).replace('\\', '\\\\').replace('"', '\\"')
 
 
+def _as_influx_number(value):
+    """정수로 들어온 측정값을 float 으로 맞춘다.
+
+    **InfluxDB 의 필드 타입은 시리즈 단위로 한 번 정해지면 바뀌지 않는다.**
+    influxdb-client 는 파이썬 타입을 그대로 라인 프로토콜에 싣기 때문에, 같은
+    시리즈에 한 번이라도 `10`(int) 이 들어가면 `10i` 로 기록되고, 이미 float 로
+    만들어진 시리즈라면 그 점은 422 로 거부된다 — 게다가 write_api 가 비동기
+    배치라 호출자는 성공으로 알고 지나간다. 실측(2026-09-21):
+
+        field type conflict: input field "value" on measurement "s"
+        is type integer, already exists as type float dropped=1
+
+    원인은 `base_output._record_on_duration` 이 `abs(output_last_duration) -
+    remaining_time` 을 그대로 넘기는 것인데, `output_last_duration` 은 호출자가
+    준 amount 이고 파이썬 출력의 `control.output_on(..., amount=10)` 처럼 정수
+    리터럴이 흔하다. 그 결과 10분마다 한 점씩 개방 시간 기록이 조용히 사라져
+    그래프에서는 "밸브가 열린 적 없는" 것으로 보였다.
+
+    호출자마다 float() 를 흩뿌리는 대신 유일한 쓰기 길목인 여기서 맞춘다.
+    bool 은 int 의 하위형이라 함께 걸리며, 문자열·None 은 손대지 않는다 —
+    숫자가 아닌 필드를 숫자로 바꾸는 것은 이 함수의 일이 아니다.
+    """
+    if isinstance(value, bool) or isinstance(value, int):
+        return float(value)
+    return value
+
+
 #
 # Influxdb using Flux (influxdb versions 1.8+ and 2.x)
 #
@@ -75,7 +102,7 @@ def write_influxdb_value(unique_id, unit, value, measure=None, channel=None, tim
         if timestamp:
             point = point.time(timestamp)
 
-        point = point.field("value", value)
+        point = point.field("value", _as_influx_number(value))
 
         try:
             write_api.write(bucket=bucket, record=point)
@@ -154,7 +181,12 @@ def add_measurements_influxdb_flux(unique_id, measurements, use_same_timestamp=T
             if timestamp:
                 point = point.time(timestamp)
 
-            point = point.field("value", each_measurement['value'])
+            # 단건 경로와 같은 이유로 정수를 float 으로 맞춘다
+            # (_as_influx_number 참조). 이쪽은 Input 일괄 기록 경로라, 정수만
+            # 돌려주는 센서 하나가 시리즈 타입을 integer 로 굳혀 버리면 이후의
+            # 실수 값이 전부 422 로 거부된다.
+            point = point.field(
+                "value", _as_influx_number(each_measurement['value']))
             write_api.write(bucket=bucket, record=point)
 
 

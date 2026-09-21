@@ -31409,3 +31409,24 @@ msgstr "Reservesensor"
 #: aot_flask/static/js/widgets/AoT_map/aot-map-widget-vector.js
 msgid "Stop Rotation"
 msgstr "Rotatie stoppen"
+
+#: aot_flask/forms/forms_settings.py:222
+msgid "System Timezone"
+msgstr "Systeemtijdzone"
+
+#: aot_flask/templates/settings/general.html:67
+msgid ""
+"System-wide default timezone (IANA name, e.g. Asia/Seoul). Used for "
+"daemon log times, the audit log, and as the last fallback for schedules "
+"on devices without a location. This is not your personal display timezone"
+" in Account settings."
+msgstr ""
+"Standaardtijdzone voor het hele systeem (IANA-naam, bijv. Asia/Seoul). "
+"Gebruikt voor tijden in het daemonlogboek, het auditlogboek en als "
+"laatste terugvaloptie voor schema's van apparaten zonder locatie. Dit is "
+"niet uw persoonlijke weergavetijdzone in de accountinstellingen."
+
+#: aot_flask/utils/utils_settings.py:1005
+#, python-format
+msgid "Unknown timezone: %(tz)s"
+msgstr "Onbekende tijdzone: %(tz)s"

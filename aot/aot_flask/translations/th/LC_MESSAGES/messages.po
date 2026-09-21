@@ -31448,3 +31448,24 @@ msgstr "เซ็นเซอร์สำรอง"
 #: aot_flask/static/js/widgets/AoT_map/aot-map-widget-vector.js
 msgid "Stop Rotation"
 msgstr "หยุดการหมุน"
+
+#: aot_flask/forms/forms_settings.py:222
+msgid "System Timezone"
+msgstr "เขตเวลาของระบบ"
+
+#: aot_flask/templates/settings/general.html:67
+msgid ""
+"System-wide default timezone (IANA name, e.g. Asia/Seoul). Used for "
+"daemon log times, the audit log, and as the last fallback for schedules "
+"on devices without a location. This is not your personal display timezone"
+" in Account settings."
+msgstr ""
+"เขตเวลาเริ่มต้นของทั้งระบบ (ชื่อ IANA เช่น Asia/Seoul) "
+"ใช้สำหรับเวลาในบันทึกของเดมอน บันทึกการตรวจสอบ "
+"และเป็นค่าสำรองสุดท้ายสำหรับกำหนดการของอุปกรณ์ที่ไม่มีตำแหน่ง "
+"ค่านี้ไม่ใช่เขตเวลาสำหรับแสดงผลส่วนตัวในการตั้งค่าบัญชี"
+
+#: aot_flask/utils/utils_settings.py:1005
+#, python-format
+msgid "Unknown timezone: %(tz)s"
+msgstr "ไม่รู้จักเขตเวลา: %(tz)s"

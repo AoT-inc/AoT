@@ -56,6 +56,7 @@ def make_controller():
     inst.sequence_cycle_duration = PERIOD
     inst.active_actions = set()
     inst._runt_logged_start = None
+    inst._skip_logged_start = None
     # 활성 시퀀스가 기본이다 — 재개 재동기화는 활성일 때만 돈다(비활성 시퀀스가
     # 밸브를 여는 사고가 있어 가드가 붙었다, test_trigger_sequence_restart_resume
     # 의 test_deactivated_sequence_does_not_reopen_outputs 참조).
@@ -200,6 +201,30 @@ def test_skipped_cycles_are_warned_not_silently_swallowed():
     # ERROR 로 남긴다 — log_level_debug 가 꺼지면 로거가 ERROR 레벨이라
     # warning 으로는 기본 설정에서 아무 데도 남지 않는다.
     assert inst.logger.error.called
+
+
+def test_skipped_cycle_warning_is_logged_once_per_grid_point():
+    """같은 격자점에 대해 두 번 이상 남기지 않는다.
+
+    `_reject_runt` 가 None 을 돌려주면 호출자는 `cycle_start_time` 을 갱신하지
+    않는다. 루프는 0.1초마다 돌므로 같은 판정이 창이 닫힐 때까지 되풀이되고,
+    그때 이 한 줄이 초당 열 줄씩 쌓여 같은 시간대의 진짜 오류를 묻어 버린다
+    (실측 2026-09-20).
+    """
+    inst = make_controller()
+    inst.cycle_start_time = ANCHOR
+    now = ANCHOR + 3 * PERIOD + 10
+
+    inst._next_cycle_start(ENTRY, now, PERIOD)
+    assert inst.logger.error.call_count == 1
+
+    # 루프가 다시 돌아도(= cycle_start_time 이 그대로여도) 한 줄에서 멈춘다.
+    inst._next_cycle_start(ENTRY, now + 0.1, PERIOD)
+    assert inst.logger.error.call_count == 1
+
+    # 격자가 다음 칸으로 넘어가면 그건 새 사건이므로 다시 남긴다.
+    inst._next_cycle_start(ENTRY, now + PERIOD, PERIOD)
+    assert inst.logger.error.call_count == 2
 
 
 def test_single_late_cycle_is_not_warned():

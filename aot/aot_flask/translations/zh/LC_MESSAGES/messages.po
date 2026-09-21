@@ -30838,3 +30838,22 @@ msgstr "备用传感器"
 #: aot_flask/static/js/widgets/AoT_map/aot-map-widget-vector.js
 msgid "Stop Rotation"
 msgstr "Stop Rotation"
+
+#: aot_flask/forms/forms_settings.py:222
+msgid "System Timezone"
+msgstr "系统时区"
+
+#: aot_flask/templates/settings/general.html:67
+msgid ""
+"System-wide default timezone (IANA name, e.g. Asia/Seoul). Used for "
+"daemon log times, the audit log, and as the last fallback for schedules "
+"on devices without a location. This is not your personal display timezone"
+" in Account settings."
+msgstr ""
+"系统范围的默认时区(IANA 名称,例如 "
+"Asia/Seoul)。用于守护进程日志时间、审计日志,并在解析没有位置的设备的计划时作为最后的依据。它不同于账户设置中的个人显示时区。"
+
+#: aot_flask/utils/utils_settings.py:1005
+#, python-format
+msgid "Unknown timezone: %(tz)s"
+msgstr "未知时区:%(tz)s"

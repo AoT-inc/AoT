@@ -31524,3 +31524,25 @@ msgstr "Sensore di riserva"
 #: aot_flask/static/js/widgets/AoT_map/aot-map-widget-vector.js
 msgid "Stop Rotation"
 msgstr "Interrompi rotazione"
+
+#: aot_flask/forms/forms_settings.py:222
+msgid "System Timezone"
+msgstr "Fuso orario di sistema"
+
+#: aot_flask/templates/settings/general.html:67
+msgid ""
+"System-wide default timezone (IANA name, e.g. Asia/Seoul). Used for "
+"daemon log times, the audit log, and as the last fallback for schedules "
+"on devices without a location. This is not your personal display timezone"
+" in Account settings."
+msgstr ""
+"Fuso orario predefinito per l'intero sistema (nome IANA, ad es. "
+"Asia/Seoul). Usato per l'ora dei log del demone, il registro di audit e "
+"come ultima risorsa per le pianificazioni dei dispositivi senza "
+"posizione. Non è il fuso orario di visualizzazione personale delle "
+"impostazioni dell'account."
+
+#: aot_flask/utils/utils_settings.py:1005
+#, python-format
+msgid "Unknown timezone: %(tz)s"
+msgstr "Fuso orario sconosciuto: %(tz)s"

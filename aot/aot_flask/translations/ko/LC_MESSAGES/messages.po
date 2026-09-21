@@ -35568,3 +35568,22 @@ msgstr ""
 "제어 Function 은 이 수집기를 실외값의 정본으로 씁니다. 항목마다 실외 센서를 "
 "고르세요. 비워 둔 항목은 공유하지 않습니다 — 통합 제어는 값을 가정하지 않고 "
 "모르는 것으로 다룹니다."
+
+#: aot_flask/forms/forms_settings.py:222
+msgid "System Timezone"
+msgstr "시스템 시간대"
+
+#: aot_flask/templates/settings/general.html:67
+msgid ""
+"System-wide default timezone (IANA name, e.g. Asia/Seoul). Used for "
+"daemon log times, the audit log, and as the last fallback for schedules "
+"on devices without a location. This is not your personal display timezone"
+" in Account settings."
+msgstr ""
+"시스템 전체의 기본 시간대입니다(IANA 이름, 예: Asia/Seoul). 데몬 로그 시각과 감사로그에 쓰이고, 위치가 없는 "
+"장치의 예약을 해석할 때 마지막 기준이 됩니다. 계정 설정의 개인 표시 시간대와는 다른 값입니다."
+
+#: aot_flask/utils/utils_settings.py:1005
+#, python-format
+msgid "Unknown timezone: %(tz)s"
+msgstr "알 수 없는 시간대입니다: %(tz)s"

@@ -340,6 +340,7 @@ class SequenceTriggerController(AbstractController, threading.Thread):
         self.active_actions = set()
         self._close_grace_started = None
         self._runt_logged_start = None
+        self._skip_logged_start = None
         self.all_actions_cache = []
         self._chan_idx_cache = {}  # OutputChannel.unique_id -> channel index
         self.logger = logger # Use module-level logger initially
@@ -1310,6 +1311,7 @@ class SequenceTriggerController(AbstractController, threading.Thread):
                     continue
                 self._close_grace_started = None
                 self._runt_logged_start = None
+                self._skip_logged_start = None
                 if time.time() - last_log_time > 60:
                     self.logger.debug(f"Sequence {self.unique_id}: outside scheduled window.")
                     last_log_time = time.time()
@@ -1415,8 +1417,16 @@ class SequenceTriggerController(AbstractController, threading.Thread):
             while start + period <= now:
                 start += period
                 skipped += 1
-            if skipped > 1:
+            if skipped > 1 and self._skip_logged_start != start:
                 # 격자는 지켰지만 사이클을 통째로 건너뛴 것은 조용히 넘기면 안 된다.
+                #
+                # **격자점당 한 번만 남긴다 — `_reject_runt` 와 같은 이유다.**
+                # 바로 아래 `_reject_runt` 가 None 을 돌려주면 호출자는
+                # `cycle_start_time` 을 갱신하지 않는다. 그러면 0.1초 루프가 다음
+                # 틱에 같은 계산을 다시 해 같은 줄을 또 찍고, 창이 닫힐 때까지
+                # 초당 열 줄씩 쌓인다(실측 2026-09-20: 한 시퀀스가 자정 무렵
+                # 이 한 줄로 로그를 가득 채워 그 시간대의 진짜 오류가 묻혔다).
+                self._skip_logged_start = start
                 self.logger.error(
                     f"Sequence {self.unique_id}: {skipped - 1} cycle(s) skipped — "
                     f"a step transition took longer than one period ({period:.0f}s).")

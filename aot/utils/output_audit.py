@@ -94,6 +94,13 @@ def _flush_one(entry):
     if origin_id is not None:
         detail += f" origin_id={origin_id}"
 
+    # 명령이 장치까지 가지 않은 건(드라이버가 "이미 그 상태" 로 흡수)은 그렇다고
+    # 적는다. 없으면 진짜 제어와 구분되지 않아, 상태 캐시가 어긋났을 때
+    # "기록은 있는데 장치는 안 움직였다" 의 원인을 로그에서 찾을 수 없다.
+    # 키가 없는 옛 항목은 아무것도 붙이지 않는다 — 모르는 것을 단정하지 않는다.
+    if entry.get('dispatched') is False:
+        detail += " dispatched=no"
+
     # 데몬에는 요청 문맥이 없어 audit_log() 의 자동 행위자 추출이 통하지 않는다.
     # 출처에서 뽑은 값을 명시적으로 넘긴다.
     user_id = origin_id if origin.get('type') == 'user' else None

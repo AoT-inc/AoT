@@ -77,6 +77,9 @@ class _Gate:
     def __init__(self, driver=None):
         self.output = {'out-1': driver} if driver is not None else {}
         self.logger = logging.getLogger('gate-test')
+        # ON 의 출처는 그 채널의 자동 OFF 가 물려받는다
+        # (OutputController._auto_off).
+        self._on_origin = {}
 
 
 def _drain():

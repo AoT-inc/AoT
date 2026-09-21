@@ -322,6 +322,65 @@ def drop_db():
     db.drop_all()
 
 
+def _host_timezone_name():
+    """설치 시점의 **호스트 시간대**를 IANA 이름으로. 모르면 'UTC'.
+
+    `Misc.timezone` 은 모델 기본값이 'UTC' 이고, 지금까지 설치 과정 어디에서도
+    이 값을 채우지 않았다. 그래서 OS 가 `Asia/Seoul` 로 맞춰져 있어도 새로 깐
+    AoT 는 사람이 설정 화면에 들어가 손으로 고르기 전까지 UTC 로 돌았다.
+    이 값은 표시용이 아니다 — 데몬 로그의 asctime(`utils/logging_setup.py`),
+    감사로그 표시(`routes_page.page_audit_log`), 시퀀스·타이머의 창/격자
+    (`utils/timekit.resolve_tz` 의 시스템 폴백)가 전부 여기에 달려 있다.
+
+    실측(2026-09-21): 새로 설치한 장치가 시스템은 KST 인데
+    `Misc.timezone='UTC'` 로 남아, 다른 서버(Asia/Seoul)에서 원격으로 밸브를
+    조작하면 같은 사건이 두 서버 화면에 9시간 차로 찍혔다. 두 기록을 맞춰 보는
+    일이 곧 원격 제어 장애 조사이므로, 이 어긋남은 단순한 표시 문제가 아니다.
+
+    검출은 세 곳을 이 순서로 본다(이 앱이 도는 곳은 Debian/RPi/컨테이너다):
+
+      1. 환경변수 `TZ` — 컨테이너에서 유일하게 믿을 수 있는 신호다.
+         `docker-compose.yml` 은 `TZ=Asia/Seoul` 을 주지만 이미지의
+         `/etc/localtime` 은 tzdata 재설정을 하지 않는 한 `Etc/UTC` 그대로다
+         (실측: 데몬 컨테이너에서 `date` 는 KST, `realpath /etc/localtime`
+         은 Etc/UTC). 파일부터 보면 컨테이너는 늘 UTC 로 잘못 읽힌다.
+      2. `/etc/timezone` — Debian/RPi 네이티브 설치의 정본.
+      3. `/etc/localtime` 심볼릭 링크가 가리키는 zoneinfo 경로.
+
+    어느 쪽도 못 읽거나 pytz 가 모르는 이름이면 기존 동작대로 'UTC' 를 쓴다 —
+    설치를 막을 만한 일이 아니다.
+    """
+    import os
+
+    candidate = (os.environ.get('TZ') or '').strip() or None
+
+    if not candidate:
+        try:
+            with open('/etc/timezone') as f:
+                candidate = f.read().strip()
+        except Exception:
+            candidate = None
+
+    if not candidate:
+        try:
+            target = os.path.realpath('/etc/localtime')
+            marker = '/zoneinfo/'
+            if marker in target:
+                candidate = target.split(marker, 1)[1]
+        except Exception:
+            candidate = None
+
+    if not candidate:
+        return 'UTC'
+
+    try:
+        import pytz
+        pytz.timezone(candidate)
+    except Exception:
+        return 'UTC'
+    return candidate
+
+
 def populate_db():
     """Insert default rows into Role, AlembicVersion, DisplayOrder, Misc, and other tables.
 
@@ -354,9 +413,7 @@ def populate_db():
         if not DisplayOrder.query.count():
             DisplayOrder(id=1).save()
         if not Misc.query.count():
-            Misc(id=1).save()
-        if not Misc.query.count():
-            Misc(id=1).save()
+            Misc(id=1, timezone=_host_timezone_name()).save()
         if not AIGlobalSettings.query.count():
             AIGlobalSettings(id=1).save()
 

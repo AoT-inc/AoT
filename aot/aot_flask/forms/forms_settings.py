@@ -215,6 +215,11 @@ class SettingsGeneral(FlaskForm):
     landing_page = StringField(lazy_gettext('Landing Page'))
     index_page = StringField(lazy_gettext('Index Page'))
     language = StringField(lazy_gettext('Language'))
+    # 농장 전역 기본 시간대(`Misc.timezone`, docs/design/timezone-management.md
+    # §3.2). 사용자 폼의 동명 필드는 **개인 표시용**(`User.timezone`)이라
+    # 서로 다른 값이다 — 이걸 혼동해 개인 설정만 바꾸면 데몬 로그·감사로그·
+    # 시퀀스 창은 그대로 남는다(실측 2026-09-21).
+    system_timezone = StringField(lazy_gettext('System Timezone'))
     # 초 단위 정수다. 값은 그대로 문자열로 오고 DB 컬럼(Integer)이 받으므로
     # 저장 경로는 그대로다 — 바뀌는 것은 화면에 나오는 입력 종류뿐이다
     # (폰에서 숫자 자판이 뜨고, 옵션 행의 컨트롤 폭 사다리가 96px 로 잡는다).

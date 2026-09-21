@@ -31401,3 +31401,24 @@ msgstr "Tartalék érzékelő"
 #: aot_flask/static/js/widgets/AoT_map/aot-map-widget-vector.js
 msgid "Stop Rotation"
 msgstr "Forgatás leállítása"
+
+#: aot_flask/forms/forms_settings.py:222
+msgid "System Timezone"
+msgstr "Rendszer-időzóna"
+
+#: aot_flask/templates/settings/general.html:67
+msgid ""
+"System-wide default timezone (IANA name, e.g. Asia/Seoul). Used for "
+"daemon log times, the audit log, and as the last fallback for schedules "
+"on devices without a location. This is not your personal display timezone"
+" in Account settings."
+msgstr ""
+"A teljes rendszer alapértelmezett időzónája (IANA-név, pl. Asia/Seoul). A"
+" démonnapló időpontjaihoz, a felügyeleti naplóhoz és a hely nélküli "
+"eszközök ütemezéseinél végső tartalékként használatos. Ez nem az Ön "
+"személyes megjelenítési időzónája a fiókbeállításokban."
+
+#: aot_flask/utils/utils_settings.py:1005
+#, python-format
+msgid "Unknown timezone: %(tz)s"
+msgstr "Ismeretlen időzóna: %(tz)s"

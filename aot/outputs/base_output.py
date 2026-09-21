@@ -66,6 +66,9 @@ class AbstractOutput(AbstractBaseController, ConfirmableOutputMixin):
         self._started_at_written = {}
         self.output_session_start = {}
         self.output_session_max = {}
+        # ch -> 직전 output_on_off() 가 실제로 장치에 명령을 내보냈는가.
+        # 자세한 이유는 last_command_dispatched() 참조.
+        self._command_dispatched = {}
 
         self.output = output
         self.running = True
@@ -454,6 +457,28 @@ class AbstractOutput(AbstractBaseController, ConfirmableOutputMixin):
         self.stop_output()
         self.logger.info(f"Stopped in {(timeit.default_timer() - shutdown_timer) * 1000:.1f} ms")
 
+    def last_command_dispatched(self, output_channel=0):
+        """직전 `output_on_off()` 가 이 채널에서 실제로 장치 명령을 보냈는가.
+
+        `output_on_off()` 는 아무것도 내보내지 않고 성공(0)을 돌려주는 경로를
+        여럿 갖고 있다 — 이미 그 상태임, 같은 명령이 이미 진행 중, 이미 켜진
+        타이머의 시간만 연장 등. 장치 입장에서는 옳은 처리지만, 호출자가 (0, msg)
+        만 보고 있으면 **명령을 보낸 성공과 아무것도 안 한 성공이 똑같이 보인다.**
+
+        실제로 그것이 오진의 출발점이었다(2026-09-21): 원격 밸브가 "감사로그에는
+        ON 이 남는데 실물은 움직이지 않는다" 는 사례였는데, 로컬이 캐시한 상태가
+        원격 장치의 실제 상태와 어긋나 있으면 ON 요청이 "이미 켜져 있음" 으로
+        흡수되고 그 기록은 정상 ON 과 구분되지 않았다. 감사 기록이 둘을 구분해야
+        다음번엔 로그만 보고 판별할 수 있다.
+
+        판정 불가(그 채널로 명령이 간 적 없음)는 True 로 답한다 — 근거 없이
+        "안 보냈다" 고 적는 쪽이 더 나쁜 오보다.
+        """
+        try:
+            return bool(self._command_dispatched.get(output_channel, True))
+        except Exception:
+            return True
+
     @staticmethod
     def _switch_failed(out_ret):
         """Opt-in failure signalling from output_switch().
@@ -510,6 +535,14 @@ class AbstractOutput(AbstractBaseController, ConfirmableOutputMixin):
 
         current_time = utc_now()
 
+        # 이 명령이 장치까지 갔는지 기록한다. 아래 분기 중 여럿은 **아무것도
+        # 내보내지 않고 성공(0)** 을 돌려준다(이미 켜져 있음, 같은 명령이 이미
+        # 진행 중 등). 그것이 잘못된 동작은 아니지만, 감사로그에서는 진짜로
+        # 내보낸 명령과 구분되지 않아 "로그에는 ON 이 남았는데 장치는 안 움직였다"
+        # 로 보인다 — 원격 출력처럼 로컬 캐시 상태가 실제 장치와 어긋날 수 있는
+        # 경우 그 구분이 바로 원인 규명의 출발점이다. 기본값 False 로 두고
+        # output_switch() 를 실제로 부른 직후에만 True 로 올린다.
+        self._command_dispatched[output_channel] = False
 
         if amount is None:
             amount = 0
@@ -578,6 +611,7 @@ class AbstractOutput(AbstractBaseController, ConfirmableOutputMixin):
                     amount=amount,
                     output_channel=output_channel,
                     additional_options=additional_options)
+                self._command_dispatched[output_channel] = True
                 self._ensure_started_marked(output_channel)
 
                 msg = f"Command sent: Output {self.unique_id} CH{output_channel} " \
@@ -590,6 +624,7 @@ class AbstractOutput(AbstractBaseController, ConfirmableOutputMixin):
                     output_type='vol',
                     amount=amount,
                     output_channel=output_channel)
+                self._command_dispatched[output_channel] = True
 
                 msg = f"Command sent: Output {self.unique_id} CH{output_channel} " \
                       f"({self.output_name}) volume: {amount:.1f} "
@@ -601,6 +636,7 @@ class AbstractOutput(AbstractBaseController, ConfirmableOutputMixin):
                     output_type='pwm',
                     amount=amount,
                     output_channel=output_channel)
+                self._command_dispatched[output_channel] = True
 
                 # Same opt-in (code, msg) contract the on_off path above uses.
                 # Without this the PWM path captured out_ret and then reported
@@ -700,6 +736,7 @@ class AbstractOutput(AbstractBaseController, ConfirmableOutputMixin):
                 else:
                     out_ret = self.output_switch(
                         'on', output_type='sec', amount=amount, output_channel=output_channel)
+                    self._command_dispatched[output_channel] = True
                     failed, fail_msg = self._switch_failed(out_ret)
                     if failed:
                         self.logger.error(
@@ -764,6 +801,7 @@ class AbstractOutput(AbstractBaseController, ConfirmableOutputMixin):
 
                     ret_value = self.output_switch(
                         'on', output_channel=output_channel, output_type='sec')
+                    self._command_dispatched[output_channel] = True
 
                     failed, fail_msg = self._switch_failed(ret_value)
                     if failed:
@@ -787,6 +825,7 @@ class AbstractOutput(AbstractBaseController, ConfirmableOutputMixin):
         elif state == 'off':
 
             ret_value = self.output_switch('off', output_type=output_type, output_channel=output_channel)
+            self._command_dispatched[output_channel] = True
 
             failed, fail_msg = self._switch_failed(ret_value)
             if failed:

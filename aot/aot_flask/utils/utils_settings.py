@@ -981,6 +981,32 @@ def settings_general_mod(form):
                     mod_misc.force_https = form.force_https.data
                     reload_frontend = True
 
+                # 농장 전역 기본 시간대. **이 값에 UI 가 없었다.**
+                # `Misc.timezone` 은 모델 기본값 'UTC' 로 설치되는데 어떤 화면도
+                # 이것을 쓰지 않아, 한 번 깔린 서버는 영영 UTC 로 남았다.
+                # 설정 화면의 'Timezone' 은 `User.timezone`(개인 표시용)이라
+                # 그것을 바꿔도 데몬 로그 asctime(`utils/logging_setup.py`),
+                # 감사로그 표시(`routes_page.page_audit_log`), 시퀀스·타이머의
+                # 창 해석(`utils/timekit.resolve_tz` 시스템 폴백)은 그대로다 —
+                # 실측(2026-09-21): 사용자가 개인 시간대를
+                # Asia/Seoul 로 바꿨는데도 로그는 계속 UTC 로 찍혔다.
+                #
+                # 빈 값은 "건드리지 않음" 으로 본다. 유효하지 않은 이름은
+                # 저장하지 않고 오류로 돌려준다 — 잘못된 tz 가 들어가면 모든
+                # 예약의 벽시계 해석이 한꺼번에 틀어진다.
+                if hasattr(form, 'system_timezone'):
+                    tz_val = (form.system_timezone.data or '').strip()
+                    if tz_val and tz_val != mod_misc.timezone:
+                        try:
+                            import pytz
+                            pytz.timezone(tz_val)
+                        except Exception:
+                            messages["error"].append(gettext(
+                                "Unknown timezone: %(tz)s", tz=tz_val))
+                        else:
+                            _audit_before['timezone'] = mod_misc.timezone
+                            mod_misc.timezone = tz_val
+
                 mod_misc.rpyc_timeout = form.rpyc_timeout.data
                 mod_misc.daemon_debug_mode = form.daemon_debug_mode.data
                 mod_misc.hide_alert_success = form.hide_success.data
@@ -1049,7 +1075,13 @@ def settings_general_mod(form):
                           target_name='General Settings',
                           before=_audit_before,
                           after={'force_https': mod_misc.force_https,
-                                 'hostname_override': mod_misc.hostname_override})
+                                 'hostname_override': mod_misc.hostname_override,
+                                 # 전역 tz 는 모든 예약의 벽시계 해석을 바꾸므로
+                                 # 바뀐 경우 반드시 남긴다(바뀌지 않았으면
+                                 # _audit_before 에도 없어 before/after 가 모두
+                                 # 조용하다).
+                                 **({'timezone': mod_misc.timezone}
+                                    if 'timezone' in _audit_before else {})})
                 invalidate_misc_cache()
                 control = DaemonControl()
                 control.refresh_daemon_misc_settings()

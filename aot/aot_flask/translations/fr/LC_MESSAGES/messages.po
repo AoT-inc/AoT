@@ -31621,3 +31621,25 @@ msgstr "Capteur de secours"
 #: aot_flask/static/js/widgets/AoT_map/aot-map-widget-vector.js
 msgid "Stop Rotation"
 msgstr "Arrêter la rotation"
+
+#: aot_flask/forms/forms_settings.py:222
+msgid "System Timezone"
+msgstr "Fuseau horaire du système"
+
+#: aot_flask/templates/settings/general.html:67
+msgid ""
+"System-wide default timezone (IANA name, e.g. Asia/Seoul). Used for "
+"daemon log times, the audit log, and as the last fallback for schedules "
+"on devices without a location. This is not your personal display timezone"
+" in Account settings."
+msgstr ""
+"Fuseau horaire par défaut de tout le système (nom IANA, p. ex. "
+"Asia/Seoul). Utilisé pour l'heure des journaux du démon, le journal "
+"d'audit et comme dernier recours pour les planifications des appareils "
+"sans emplacement. Ce n'est pas votre fuseau horaire d'affichage personnel"
+" défini dans les paramètres du compte."
+
+#: aot_flask/utils/utils_settings.py:1005
+#, python-format
+msgid "Unknown timezone: %(tz)s"
+msgstr "Fuseau horaire inconnu : %(tz)s"

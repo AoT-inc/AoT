@@ -31592,3 +31592,24 @@ msgstr "Cảm biến dự phòng"
 #: aot_flask/static/js/widgets/AoT_map/aot-map-widget-vector.js
 msgid "Stop Rotation"
 msgstr "Dừng xoay"
+
+#: aot_flask/forms/forms_settings.py:222
+msgid "System Timezone"
+msgstr "Múi giờ hệ thống"
+
+#: aot_flask/templates/settings/general.html:67
+msgid ""
+"System-wide default timezone (IANA name, e.g. Asia/Seoul). Used for "
+"daemon log times, the audit log, and as the last fallback for schedules "
+"on devices without a location. This is not your personal display timezone"
+" in Account settings."
+msgstr ""
+"Múi giờ mặc định cho toàn hệ thống (tên IANA, ví dụ Asia/Seoul). Dùng cho"
+" thời gian trong nhật ký daemon, nhật ký kiểm tra và làm phương án cuối "
+"cùng cho lịch của thiết bị không có vị trí. Đây không phải múi giờ hiển "
+"thị cá nhân của bạn trong cài đặt tài khoản."
+
+#: aot_flask/utils/utils_settings.py:1005
+#, python-format
+msgid "Unknown timezone: %(tz)s"
+msgstr "Múi giờ không xác định: %(tz)s"

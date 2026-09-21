@@ -78,6 +78,12 @@ class OutputController(AbstractController, threading.Thread):
         self._setup_locks = {}
         self._setup_locks_guard = threading.Lock()
 
+        # (output_id, channel) -> 그 채널을 켠 명령의 출처.
+        # 자동 OFF 는 그 명령의 꼬리이므로 같은 출처로 귀속한다 (loop() 참조).
+        self._on_origin = {}
+        # (output_id, channel) -> 자동 OFF 재시도를 허용할 최소 시각(monotonic).
+        self._auto_off_retry_at = {}
+
     def initialize_variables(self):
         """Begin initializing output parameters."""
         self.sample_rate = db_retrieve_table_daemon(Misc, entry='first').sample_rate_controller_output
@@ -100,6 +106,10 @@ class OutputController(AbstractController, threading.Thread):
         except Exception:
             self.logger.exception("Problem initializing outputs")
 
+    # 자동 OFF 가 실패했을 때 다시 시도하기까지 기다리는 시간(초).
+    # 0.25초 루프에서 곧바로 재시도하면 죽은 원격 호스트를 초당 네 번 두들긴다.
+    AUTO_OFF_RETRY_INTERVAL_S = 30.0
+
     def loop(self):
         """Main loop of the output controller."""
         for output_id in self.output:
@@ -113,13 +123,71 @@ class OutputController(AbstractController, threading.Thread):
                         self.output[output_id].output_on_duration[each_channel] and
                         not self.output[output_id].output_off_triggered[each_channel]):
 
+                    # 직전 자동 OFF 가 실패해 빗장을 다시 푼 경우, 백오프가 끝날
+                    # 때까지는 재시도하지 않는다 — 이 루프는 0.25초마다 돈다.
+                    if time.monotonic() < self._auto_off_retry_at.get(
+                            (output_id, each_channel), 0):
+                        continue
+
                     # Use a thread to prevent blocking the loop
                     self.output[output_id].output_off_triggered[each_channel] = True
                     turn_output_off = threading.Thread(
-                        target=self.output[output_id].output_on_off,
-                        args=('off',),
-                        kwargs={'output_channel': each_channel})
+                        target=self._auto_off,
+                        args=(output_id, each_channel))
                     turn_output_off.start()
+
+    def _auto_off(self, output_id, output_channel):
+        """시간이 다 된 출력을 끈다 — **제어 게이트를 통해서.**
+
+        예전에는 `loop()` 이 드라이버의 `output_on_off('off')` 를 직접 불렀다.
+        게이트(`OutputController.output_on_off`)를 건너뛰므로 세 가지가 동시에
+        빠졌고, 셋 다 "기록과 실물이 어긋난다" 는 같은 증상으로 나타난다:
+
+        1. **감사 기록이 없다.** 타이머 ON 은 감사로그에 남는데 그것을 끝낸
+           자동 OFF 는 아무 데도 안 남는다. 로그만 보면 밸브가 아직 열려 있는
+           것으로 읽힌다 — 원격 밸브 조사(2026-09-21)에서 실제로 그렇게 보였다.
+        2. **실행 컨텍스트가 없다.** `set_execution_context` 를 지나지 않으니
+           InfluxDB 의 `source_type` 태그가 비고, 게이트 주석이 "그래서 30일간
+           한 건도 안 찍혔다" 고 적어 둔 그 사고가 이 경로에서만 그대로 남는다.
+        3. **실패가 아무 데도 안 드러난다.** `output_off_triggered` 를 미리
+           True 로 올려 두므로 OFF 가 실패해도(원격 호스트 불통 등) 재시도도
+           기록도 없다. 밸브는 열린 채, 화면은 조용한 채로 굳는다.
+
+        출처는 **그 채널을 켠 명령의 출처를 물려받는다.** 자동 OFF 는 독립된
+        명령이 아니라 그 명령의 꼬리이기 때문이다. 덕분에 감사 정책도 그대로
+        유지된다 — 사람/시퀀스가 켠 것의 OFF 는 남고(그래야 로그가 말이 된다),
+        PID 처럼 주기마다 켜는 자동화의 OFF 는 ON 과 마찬가지로 안 남아
+        관계형 테이블을 잠그지 않는다(`command_origin.AUDITED_TYPES` 참조).
+        """
+        key = (output_id, output_channel)
+        origin = self._on_origin.get(key)
+        try:
+            ret = self.output_on_off(
+                output_id, 'off', output_channel=output_channel, origin=origin)
+        except Exception:
+            self.logger.exception(
+                f"자동 OFF 실패: output={output_id} CH{output_channel}")
+            ret = (1, 'exception')
+
+        failed = bool(ret[0]) if isinstance(ret, (tuple, list)) and ret else False
+        if not failed:
+            self._auto_off_retry_at.pop(key, None)
+            return
+
+        # 실패했으면 다시 시도할 수 있게 빗장을 푼다. 그대로 두면 이 채널은
+        # 영영 감시 대상에서 빠져(`output_off_triggered` 가 True 로 굳는다)
+        # 물리적으로 열린 밸브를 아무도 닫지 않는다. 다음 시도까지의 간격은
+        # `loop()` 이 `_auto_off_retry_at` 으로 지킨다.
+        self._auto_off_retry_at[key] = (
+            time.monotonic() + self.AUTO_OFF_RETRY_INTERVAL_S)
+        self.logger.error(
+            f"Output {output_id} CH{output_channel}: 자동 OFF 가 실패했습니다 "
+            f"({ret[1] if isinstance(ret, (tuple, list)) and len(ret) > 1 else ret}). "
+            f"{self.AUTO_OFF_RETRY_INTERVAL_S:.0f}초 뒤 다시 시도합니다.")
+        try:
+            self.output[output_id].output_off_triggered[output_channel] = False
+        except Exception:
+            pass
 
     def run_finally(self):
         """Run when the controller is shutting down.
@@ -486,6 +554,12 @@ class OutputController(AbstractController, threading.Thread):
         # 30일 내내 한 건도 안 찍혔다. origin 은 이제 인자로 넘어오므로 여기서 다시
         # 심으면 base_output 의 get_extra_tags() 가 제 값을 본다.
         origin = origin or {}
+        # 이 채널을 켠 명령의 출처를 기억해 둔다. 시간이 다 돼 자동으로 끌 때
+        # 그 출처를 물려받아야 감사로그가 "누가 켜고 언제 닫혔다" 로 읽힌다
+        # (`_auto_off` 참조). OFF 에서는 갱신하지 않는다 — OFF 의 출처는
+        # 그 자체로 기록되고, 다음 ON 이 오기 전까지 물려줄 것도 없다.
+        if state in ('on', 1, True):
+            self._on_origin[(output_id, output_channel)] = origin
         set_execution_context(
             source_type=origin.get('type'), source_id=origin.get('id'))
         try:
@@ -518,6 +592,15 @@ class OutputController(AbstractController, threading.Thread):
             if not should_audit(origin):
                 return
             driver = self.output.get(output_id)
+            # 명령을 실제로 내보냈는지까지 남긴다. 드라이버가 "이미 그 상태" 라서
+            # 아무것도 안 보내고 성공을 돌려준 경우가 정상 제어와 똑같이 기록되면,
+            # 로컬 상태 캐시가 실제 장치와 어긋났을 때 "로그에는 ON 인데 장치는
+            # 그대로" 가 되고 로그만으로는 원인을 가릴 수 없다
+            # (base_output.last_command_dispatched 참조).
+            try:
+                dispatched = driver.last_command_dispatched(output_channel)
+            except Exception:
+                dispatched = True
             output_audit.record({
                 'output_id': output_id,
                 'output_name': getattr(driver, 'output_name', None),
@@ -528,6 +611,7 @@ class OutputController(AbstractController, threading.Thread):
                 'origin': normalize_origin(origin),
                 'ip_address': normalize_origin(origin).get('ip'),
                 'result': result,
+                'dispatched': dispatched,
             })
         except Exception:
             self.logger.debug("Output 감사 적재 실패", exc_info=True)

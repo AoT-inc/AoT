@@ -31302,3 +31302,24 @@ msgstr "Czujnik zapasowy"
 #: aot_flask/static/js/widgets/AoT_map/aot-map-widget-vector.js
 msgid "Stop Rotation"
 msgstr "Zatrzymaj obrót"
+
+#: aot_flask/forms/forms_settings.py:222
+msgid "System Timezone"
+msgstr "Strefa czasowa systemu"
+
+#: aot_flask/templates/settings/general.html:67
+msgid ""
+"System-wide default timezone (IANA name, e.g. Asia/Seoul). Used for "
+"daemon log times, the audit log, and as the last fallback for schedules "
+"on devices without a location. This is not your personal display timezone"
+" in Account settings."
+msgstr ""
+"Domyślna strefa czasowa całego systemu (nazwa IANA, np. Asia/Seoul). "
+"Używana do czasu w dzienniku demona, dzienniku audytu oraz jako ostatnia "
+"rezerwa dla harmonogramów urządzeń bez lokalizacji. Nie jest to Twoja "
+"osobista strefa czasowa wyświetlania z ustawień konta."
+
+#: aot_flask/utils/utils_settings.py:1005
+#, python-format
+msgid "Unknown timezone: %(tz)s"
+msgstr "Nieznana strefa czasowa: %(tz)s"

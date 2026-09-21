@@ -269,7 +269,18 @@ class OutputModule(AbstractOutput):
                 # allow_clear=False: keep last good api_output on transient failure
                 # so send_remote_output can still resolve channel ids.
                 self.get_remote_output_information(allow_clear=False)
-                self.parse_output_state_info()
+                # **폴이 실패했으면 상태 반영을 건너뛴다.** allow_clear=False 는
+                # 채널 id 해석을 위해 마지막 성공분을 일부러 남겨 두는데, 그
+                # 낡은 payload 를 parse_output_state_info() 에 그대로 흘리면
+                # confirm_command(..., 'remote-status') 가 몇 분 전 상태를
+                # "장치가 방금 이렇게 보고했다" 로 기록한다. 그러면 (1) 원격에서
+                # 이미 바뀐 상태가 옛 값으로 되돌아가고, (2) want_on=True 인
+                # 경우 output_time_turned_on 이 재앵커링돼 진행 중인 개방
+                # 시간이 잘린다. 못 읽었으면 모르는 채로 두는 것이 맞다 —
+                # comm_is_fault() 가 이미 _remote_reachable=False 를 fault 로
+                # 보고하므로 화면에도 "모름"으로 드러난다.
+                if self._remote_reachable:
+                    self.parse_output_state_info()
                 self.query_timer = now + self.state_query_period
 
             time.sleep(1)

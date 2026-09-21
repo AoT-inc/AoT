@@ -31171,3 +31171,24 @@ msgstr "Yedek sensör"
 #: aot_flask/static/js/widgets/AoT_map/aot-map-widget-vector.js
 msgid "Stop Rotation"
 msgstr "Döndürmeyi Durdur"
+
+#: aot_flask/forms/forms_settings.py:222
+msgid "System Timezone"
+msgstr "Sistem Saat Dilimi"
+
+#: aot_flask/templates/settings/general.html:67
+msgid ""
+"System-wide default timezone (IANA name, e.g. Asia/Seoul). Used for "
+"daemon log times, the audit log, and as the last fallback for schedules "
+"on devices without a location. This is not your personal display timezone"
+" in Account settings."
+msgstr ""
+"Tüm sistem için varsayılan saat dilimi (IANA adı, ör. Asia/Seoul). Daemon"
+" günlüğü zamanları, denetim günlüğü ve konumu olmayan cihazların "
+"zamanlamaları için son yedek olarak kullanılır. Bu, hesap ayarlarındaki "
+"kişisel görüntüleme saat diliminiz değildir."
+
+#: aot_flask/utils/utils_settings.py:1005
+#, python-format
+msgid "Unknown timezone: %(tz)s"
+msgstr "Bilinmeyen saat dilimi: %(tz)s"

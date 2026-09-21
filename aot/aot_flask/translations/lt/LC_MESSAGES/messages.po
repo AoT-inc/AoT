@@ -31209,3 +31209,24 @@ msgstr "Atsarginis jutiklis"
 #: aot_flask/static/js/widgets/AoT_map/aot-map-widget-vector.js
 msgid "Stop Rotation"
 msgstr "Sustabdyti sukimą"
+
+#: aot_flask/forms/forms_settings.py:222
+msgid "System Timezone"
+msgstr "Sistemos laiko juosta"
+
+#: aot_flask/templates/settings/general.html:67
+msgid ""
+"System-wide default timezone (IANA name, e.g. Asia/Seoul). Used for "
+"daemon log times, the audit log, and as the last fallback for schedules "
+"on devices without a location. This is not your personal display timezone"
+" in Account settings."
+msgstr ""
+"Visos sistemos numatytoji laiko juosta (IANA pavadinimas, pvz., "
+"Asia/Seoul). Naudojama demono žurnalo laikui, audito žurnalui ir kaip "
+"paskutinė atsarginė reikšmė įrenginių be vietos tvarkaraščiams. Tai nėra "
+"jūsų asmeninė rodymo laiko juosta paskyros nustatymuose."
+
+#: aot_flask/utils/utils_settings.py:1005
+#, python-format
+msgid "Unknown timezone: %(tz)s"
+msgstr "Nežinoma laiko juosta: %(tz)s"

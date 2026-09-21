@@ -31101,3 +31101,24 @@ msgstr "Резервни сензор"
 #: aot_flask/static/js/widgets/AoT_map/aot-map-widget-vector.js
 msgid "Stop Rotation"
 msgstr "Заустави ротацију"
+
+#: aot_flask/forms/forms_settings.py:222
+msgid "System Timezone"
+msgstr "Системска временска зона"
+
+#: aot_flask/templates/settings/general.html:67
+msgid ""
+"System-wide default timezone (IANA name, e.g. Asia/Seoul). Used for "
+"daemon log times, the audit log, and as the last fallback for schedules "
+"on devices without a location. This is not your personal display timezone"
+" in Account settings."
+msgstr ""
+"Подразумевана временска зона за цео систем (IANA назив, нпр. Asia/Seoul)."
+" Користи се за време у дневнику демона, дневнику ревизије и као последња "
+"резерва за распореде уређаја без локације. Ово није ваша лична временска "
+"зона приказа у подешавањима налога."
+
+#: aot_flask/utils/utils_settings.py:1005
+#, python-format
+msgid "Unknown timezone: %(tz)s"
+msgstr "Непозната временска зона: %(tz)s"
