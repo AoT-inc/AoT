@@ -60,13 +60,29 @@ def _mounted_source():
     return out.stdout.strip() or None
 
 
+#: Docker Desktop(macOS)은 바인드 원본을 VM 안의 경로로 보여 줄 때가 있다 —
+#: `/Users/...` 가 `/host_mnt/Users/...` 로 나온다(compose 의 `../:/app` 처럼
+#: 끝이 `/` 인 바인드에서 보인다). 벗기지 않으면 같은 워크트리를 남의 것으로 본다.
+_DOCKER_DESKTOP_PREFIXES = ('/host_mnt',)
+
+
+def _normalize_mount(path):
+    """컨테이너가 보고한 바인드 원본을 호스트 경로로 — 비교할 수 있게."""
+    path = (path or '').rstrip('/') or path
+    for prefix in _DOCKER_DESKTOP_PREFIXES:
+        if path.startswith(prefix + '/'):
+            path = path[len(prefix):]
+            break
+    return os.path.realpath(path)
+
+
 def _assert_stack_serves_this_worktree():
     # 원격 스택·CI 처럼 호스트에서 컨테이너를 못 보는 경우가 있다. 그때는
     # 확인할 방법이 없으므로 조용히 넘어간다(끄는 스위치도 둔다).
     if os.environ.get('AOT_E2E_SKIP_MOUNT_CHECK'):
         return
     mounted, here = _mounted_source(), _repo_root()
-    if not mounted or not here or os.path.realpath(mounted) == here:
+    if not mounted or not here or _normalize_mount(mounted) == here:
         return
     raise pytest.UsageError(
         f'E2E 스택이 다른 워크트리를 보고 있습니다 — 검사해도 지금 고친 코드가 '

@@ -59,7 +59,8 @@ docker compose -f docker/docker-compose.e2e.yml restart aot_daemon
 ```
 
 `conftest.py` 가 세션 시작에 같은 것을 확인하고, 어긋나면 **검사를 멈춘다**
-(`AOT_E2E_SKIP_MOUNT_CHECK=1` 로 끌 수 있다 — 원격 스택처럼 호스트에서
+(Docker Desktop 이 원본을 `/host_mnt/Users/...` 로 보여 주는 경우는 같은 곳으로
+본다. `AOT_E2E_SKIP_MOUNT_CHECK=1` 로 끌 수 있다 — 원격 스택처럼 호스트에서
 컨테이너를 못 보는 경우를 위한 것이다). 사람이 기억해야 하는 절차는 언젠가
 잊히므로, 기억은 검사에 맡기고 이 문단은 그 이유를 남긴다.
 
