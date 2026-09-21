@@ -667,13 +667,42 @@ class AbstractOutput(AbstractBaseController, ConfirmableOutputMixin):
 
                 # Output is already on for an amount, update duration on with new end time
                 if output_is_on and self.output_on_duration[output_channel]:
-                    if self.output_on_until[output_channel] > current_time:
-                        remaining_time = (
-                            self.output_on_until[output_channel] - current_time).total_seconds()
+                    # 확인형 출력이 아직 확인 전이면 끝 시각이 None 이다(확인 시점에
+                    # 건다 — defer_duration_to_confirm). None 과 비교하면 TypeError.
+                    until = self.output_on_until[output_channel]
+                    if until is not None and until > current_time:
+                        remaining_time = (until - current_time).total_seconds()
                     else:
                         remaining_time = 0
 
                     time_on = abs(self.output_last_duration[output_channel]) - remaining_time
+
+                    # **이어받기(renew_session)** — 같은 출력을 다음 스텝이 이어서 쓸 때
+                    # 시퀀스가 요청한다. 켜진 채로 두되 **새 세션**으로 시작한다.
+                    #
+                    # 아래 상한이 필요한 이유(PID 가 매 주기 ON 을 다시 보내 끝없이
+                    # 연장하는 것)는 그대로 유효하므로 일반 ON 에는 계속 건다. 그런데
+                    # 이어받기에까지 걸면 끝 시각이 **첫 세션 끝에서 잘려**, 시퀀스가
+                    # OFF 를 생략했는데도 출력층이 옛 끝 시각에 스스로 끈다. 시퀀스는
+                    # 켜져 있다고 믿으므로 다시 켜지 않고, 그 슬롯 내내 밸브가 닫힌다.
+                    renew = False
+                    try:
+                        renew = bool((additional_options or {}).get('renew_session'))
+                    except Exception:
+                        renew = False
+
+                    if renew and until is None and output_channel in getattr(
+                            self, '_cmd_duration', {}):
+                        # 확인 대기 중 — 확인이 오면 새 길이로 걸리게 바꿔 둔다.
+                        self._cmd_duration[output_channel] = abs(amount)
+                        self.output_last_duration[output_channel] = amount
+                        self.output_session_start[output_channel] = current_time
+                        self.output_session_max[output_channel] = abs(amount)
+                        msg = (f"Output {self.unique_id} CH{output_channel} ({self.output_name}) "
+                               f"renewed while awaiting confirmation: {abs(amount):.2f} s "
+                               f"from confirmation (no command sent).")
+                        self.logger.debug(msg)
+                        return 0, msg
 
                     # Cap the new end time to session_start + session_max to enforce max on duration.
                     # Without this, repeated output_on calls (e.g. from PID each period) extend the
@@ -681,7 +710,10 @@ class AbstractOutput(AbstractBaseController, ConfirmableOutputMixin):
                     session_start = self.output_session_start.get(output_channel)
                     session_max = self.output_session_max.get(output_channel, 0)
                     proposed_until = current_time + timedelta(seconds=abs(amount))
-                    if session_start and session_max:
+                    if renew:
+                        self.output_session_start[output_channel] = current_time
+                        self.output_session_max[output_channel] = abs(amount)
+                    elif session_start and session_max:
                         hard_limit = session_start + timedelta(seconds=session_max)
                         if proposed_until > hard_limit:
                             proposed_until = hard_limit

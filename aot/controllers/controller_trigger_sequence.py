@@ -335,6 +335,8 @@ class SequenceTriggerController(AbstractController, threading.Thread):
         self.cycle_start_time = None
         self._fresh_activation = False
         self._had_persisted_cycle = False
+        self._handover = {}          # 사이클 경계에서 끄지 않고 넘긴 출력 → 옛 스텝
+        self._out_key_cache = {}
         self.activation_timestamp = 0
         self.current_schedule = []
         self.active_actions = set()
@@ -1351,7 +1353,7 @@ class SequenceTriggerController(AbstractController, threading.Thread):
                 self.logger.debug(
                     f"Starting new cycle. now={now}, cycle_start={self.cycle_start_time}, "
                     f"grid_start={next_start}, limit={period}")
-                self.start_new_cycle(next_start, period=period)
+                self.start_new_cycle(next_start, period=period, at=now)
             
             self.process_cycle(now)
             
@@ -1361,6 +1363,11 @@ class SequenceTriggerController(AbstractController, threading.Thread):
     # 재시도하면 장치를 두들기게 된다.
     OFF_RETRY_INTERVAL_SEC = 5.0
     OFF_MAX_ATTEMPTS = 5
+
+    # 시퀀스가 싣는 출력층 타이머의 여유 (_action_value · _renew_on).
+    # 타이머는 시퀀스가 멈췄을 때의 안전장치다 — 정상 운전에서는 시퀀스의 OFF 나
+    # 이어받기가 먼저 와야 하므로 스텝 끝보다 조금 늦게 끝나게 한다.
+    RENEW_GRACE_S = 10.0
 
     # 창이 닫혔을 때 자연 종료를 기다려 주는 시간 (_within_close_grace).
     WINDOW_CLOSE_GRACE_SEC = 5.0
@@ -1509,20 +1516,162 @@ class SequenceTriggerController(AbstractController, threading.Thread):
                 "이번 사이클은 건너뜁니다.")
         return None
 
-    def start_new_cycle(self, now, period=None):
+    def start_new_cycle(self, now, period=None, at=None):
+        """`now` 는 새 사이클의 **격자 위 시작 시각**, `at` 은 지금 시각.
+
+        `at` 은 바로 뒤에 `process_cycle(at)` 이 쓸 시각과 **같아야** 한다. 무엇을
+        이어받을지(끄지 않을지) 여기서 정하고 그 이어받기를 `process_cycle` 이
+        마무리하므로, 둘이 다른 시계를 보면 판정이 어긋난다.
+        """
         if period is not None:
             self.sequence_cycle_duration = period
+        old_schedule = list(getattr(self, 'current_schedule', None) or [])
         self.cycle_start_time = now
-        self.stop_all_active()
+        # 새 계획을 **먼저** 세운다 — 무엇을 이어받을지 알아야 무엇을 끌지 정할 수
+        # 있다. 예전에는 전부 끄고 나서 세웠고, 그래서 새 사이클 첫 스텝이 방금
+        # 끈 출력을 그대로 쓰면 경계마다 OFF→ON 이 나갔다(아래 _end_previous_cycle).
+        try:
+            self.build_cycle_schedule()
+        except Exception:
+            # 계획을 못 세우면 무엇을 이어받을지 모른다 — 예전처럼 전부 끈다.
+            self.current_schedule = old_schedule
+            self.stop_all_active()
+            self._completed_actions = set()
+            raise
         # 새 사이클이니 "이번 사이클에 이미 끝난 스텝" 기록도 비운다.
         self._completed_actions = set()
-        self.build_cycle_schedule()
+        self._end_previous_cycle(
+            old_schedule, (time.time() if at is None else at) - now)
         self.logger.debug(f"Started new cycle at {now}. Schedule has {len(self.current_schedule)} items.")
         for i, item in enumerate(self.current_schedule):
              self.logger.debug(f" - Item {i}: Action {item['action'].unique_id} [{item['start']} ~ {item['end']}]")
 
+    def _end_previous_cycle(self, old_schedule, elapsed):
+        """지난 사이클의 스텝을 끝낸다 — **새 사이클이 곧바로 이어 쓰는 출력은 끄지 않는다.**
 
-    def _off_order(self, action_ids):
+        스텝이 주기를 꽉 채우는 설정(펌프 total, 스텝 하나짜리 시퀀스 등)에서는
+        지난 사이클의 마지막 스텝과 새 사이클의 첫 스텝이 같은 출력을 쓴다. 예전에는
+        경계에서 전부 끄고 곧바로 다시 켜서, 같은 출력에 **수 밀리초 간격으로
+        OFF→ON** 이 나갔다. 펄스로 구동하는 밸브(CLOSE 코일이 도는 중에 OPEN 이
+        온다)나 펌프(매 주기 멈췄다 선다)에는 그것이 실제 부담이다
+        (보고: C동 예전 설정, 2026-09-21).
+
+        이어받는 출력은 OFF 를 보내지 않고 `_handover` 에 넘긴다. 바로 다음
+        `process_cycle` 이 새 스텝을 **이어받기 ON**(`_renew_on`)으로 켜고, 아무도
+        이어받지 않으면 그때 정상적으로 끈다 — 넘겨 둔 채 잊히는 출력은 없다.
+
+        서로 다른 출력이 경계에서 바뀌는 것은 그대로다(끄고 켠다).
+        """
+        keep = self._output_keys_desired_at(elapsed)
+        handover = {}
+        for act_id in self._off_order(self.active_actions, old_schedule):
+            item = next((i for i in old_schedule
+                         if i['action'].unique_id == act_id), None)
+            key = self._output_key(item['action']) if item else None
+            if key is not None and key in keep and key not in handover:
+                handover[key] = act_id
+                self.active_actions.discard(act_id)
+                continue
+            if item:
+                self.turn_off_action(item['action'], item)
+            else:
+                self._force_off_unscheduled(act_id)
+        self._handover = handover
+        if handover:
+            self._save_runtime_state()
+
+    def _output_key(self, action):
+        """이 스텝이 켜는 출력 `(출력 id, 채널)`. 합칠 수 없는 스텝이면 None.
+
+        합치는 대상은 **출력을 켜는 on/off 스텝**뿐이다. PWM·값 설정·알림 같은
+        스텝은 "켜진 채로 둔다" 가 성립하지 않는다.
+
+        판정을 스텝이 아니라 출력으로 하는 이유: 서로 다른 스텝이 같은 출력을 쓰는
+        일이 정상적으로 있다(예: 그룹 a·b 가 액비 밸브를 함께 씀). 스텝으로 보면
+        그 경계에서 새 스텝을 먼저 켜고(이미 켜져 있음) 옛 스텝을 끄므로 **출력은
+        꺼졌는데 컨트롤러는 켜져 있다고 믿는다** — 한 슬롯 내내 밸브가 닫힌다.
+
+        채널 해석에 DB 조회가 들 수 있어 옵션 문자열까지 키로 캐시한다(옵션이
+        바뀌면 저절로 다시 계산된다). 전환 시점에만 부른다.
+        """
+        if action is None or getattr(action, 'action_type', None) != 'output_on_off':
+            return None
+        cache = getattr(self, '_out_key_cache', None)
+        if cache is None:
+            cache = self._out_key_cache = {}
+        ck = (action.unique_id, getattr(action, 'custom_options', None),
+              getattr(action, 'do_unique_id', None))
+        if ck in cache:
+            return cache[ck]
+        key = None
+        try:
+            opts = json.loads(action.custom_options) if action.custom_options else {}
+            # 사람이 지속시간을 넣어 둔 스텝은 "그 시간만 켜고 끈다" 는 뜻이라
+            # 켜진 채로 이어받는 대상이 아니다(_action_value 참조).
+            if (str(opts.get('state', 'on')).lower() in ('on', '1', 'true')
+                    and not self._configured_duration(action)):
+                key = self._resolve_output_target(action)
+        except Exception:
+            key = None
+        cache[ck] = key
+        return key
+
+    def _output_keys_desired_at(self, elapsed):
+        keys = set()
+        for item in getattr(self, 'current_schedule', None) or []:
+            if item['start'] <= elapsed < item['end']:
+                key = self._output_key(item['action'])
+                if key is not None:
+                    keys.add(key)
+        return keys
+
+    def _renew_on(self, action, item):
+        """같은 출력을 이어받는 스텝을 켠다 — **장치에는 아무것도 보내지 않는다.**
+
+        출력은 이미 켜져 있으므로 출력층이 명령을 내보내지 않고 타이머만 새 세션
+        (이 스텝의 길이)으로 갈아 끼운다. 일반 ON 을 다시 보내면 안 되는 이유:
+        출력층은 이미 켜진 출력의 연장을 **첫 세션 끝에서 자른다**(PID 가 매 주기
+        ON 을 보내 끝없이 연장하는 것을 막는 상한). 그러면 옛 끝 시각에 출력층이
+        스스로 끄고, 시퀀스는 켜져 있다고 믿어 다시 켜지 않는다.
+
+        출력이 실제로는 꺼져 있었다면(방금 스스로 꺼졌거나 실패) 출력층의 일반
+        경로가 ON 을 보낸다 — 켜야 하는 상황이므로 그것이 맞다.
+        """
+        target = self._resolve_output_target(action)
+        if not target:
+            self.turn_on_action(action, item)
+            return
+        out_id, channel_index = target
+        # 여유를 더한다 — 이 타이머의 끝은 다음 경계와 같은 순간이라, 그 경계의
+        # 이어받기·OFF 가 루프 지연으로 조금만 늦어도 출력층이 먼저 끄고 곧바로 다시
+        # 켜지는 OFF→ON 이 되살아난다. 스텝이 끝나면 시퀀스가 어차피 명시적으로
+        # 끄거나 다시 이어받으므로 여유는 시퀀스가 멈췄을 때만 드러난다.
+        duration = (item['end'] - item['start']) + self.RENEW_GRACE_S
+        self.logger.debug(f"Action ON (renew, same output handed over): {action.unique_id}")
+        set_execution_context(source_type=SOURCE_SEQUENCE, source_id=self.unique_id)
+        try:
+            ret = self.control.output_on(
+                out_id, output_type='sec', amount=duration,
+                output_channel=channel_index,
+                additional_options={'renew_session': True})
+        except Exception as err:
+            ret = (1, str(err))
+        finally:
+            clear_execution_context()
+        if isinstance(ret, (tuple, list)) and ret and ret[0]:
+            self.logger.error(
+                f"Action {action.unique_id}: 같은 출력을 이어받으며 타이머를 갱신하지 "
+                f"못했습니다 — {ret[1] if len(ret) > 1 else ret[0]}. 이 출력은 앞 스텝의 "
+                "끝 시각에 꺼질 수 있습니다.")
+        self.active_actions.add(action.unique_id)
+        self._save_runtime_state()
+
+    def _release_without_off(self, act_id):
+        """끝난 스텝을 놓아준다 — 같은 출력을 다른 스텝이 이어받았으므로 끄지 않는다."""
+        self.active_actions.discard(act_id)
+        self._save_runtime_state()
+
+    def _off_order(self, action_ids, schedule=None):
         """Order ids for shutdown: 'total' steps first, then the rest.
 
         active_actions is a set, so iterating it directly gave an arbitrary
@@ -1531,8 +1680,10 @@ class SequenceTriggerController(AbstractController, threading.Thread):
         total steps first drains the line pressure before any valve closes.
         Returns a plain list, safe to iterate while the set is mutated.
         """
+        if schedule is None:
+            schedule = self.current_schedule
         type_of = {item['action'].unique_id: item.get('type')
-                   for item in self.current_schedule}
+                   for item in schedule}
         return sorted(action_ids, key=lambda a: 0 if type_of.get(a) == 'total' else 1)
 
     def process_cycle(self, now, off_only=False):
@@ -1541,6 +1692,11 @@ class SequenceTriggerController(AbstractController, threading.Thread):
         `off_only` 는 창이 닫힌 뒤 유예 중에 쓴다. 끝난 스텝은 정상적으로
         끄되 새 스텝은 켜지 않는다 — 창 밖에서 밸브를 여는 것은 유예의 취지가
         아니다.
+
+        **같은 출력은 끊지 않고 이어받는다**(`_output_key`). 새로 켤 스텝의 출력을
+        이미 다른 스텝이(또는 방금 끝난 사이클이, `_handover`) 켜 두었으면 일반 ON
+        대신 이어받기 ON 을 쓰고, 끝난 스텝의 출력을 지금 도는 다른 스텝이 쓰고
+        있으면 OFF 를 보내지 않는다. 출력이 다를 때는 예전 그대로다.
         """
         elapsed = now - self.cycle_start_time
 
@@ -1548,6 +1704,9 @@ class SequenceTriggerController(AbstractController, threading.Thread):
         completed = getattr(self, '_completed_actions', None)
         if completed is None:
             completed = self._completed_actions = set()
+        handover = getattr(self, '_handover', None) or {}
+        self._handover = {}
+        held = None     # 지금 켜져 있는 스텝들의 출력 — 전환이 있을 때만 계산
 
         for item in self.current_schedule:
             if item['start'] <= elapsed < item['end']:
@@ -1566,11 +1725,29 @@ class SequenceTriggerController(AbstractController, threading.Thread):
                     if item['action'].unique_id in completed:
                         continue
                     self.logger.debug(f"Desired matched: Action {item['action'].unique_id} at elapsed {elapsed}")
+                    key = self._output_key(item['action'])
+                    if key is not None:
+                        if held is None:
+                            held = {self._output_key(self._item_for(a)['action'])
+                                    for a in self.active_actions if self._item_for(a)}
+                        if key in handover or key in held:
+                            handover.pop(key, None)
+                            self._renew_on(item['action'], item)
+                            held.add(key)
+                            continue
                     self.turn_on_action(item['action'], item)
+                    if key is not None and held is not None:
+                        held.add(key)
+
+        # 넘겨받았는데 아무 스텝도 이어 쓰지 않은 출력 — 이제 정상적으로 끈다.
+        # 집합에 되돌려 두면 아래 OFF 루프가 끈다(계획에 없으면 DB 로 되짚어).
+        for act_id in handover.values():
+            self.active_actions.add(act_id)
 
         # Turn OFF things that shouldn't be active
         # Create a copy to iterate because we modify the set
         current_active_ids = self._off_order(self.active_actions)
+        running_keys = None   # 계속 도는(원하는) 스텝들의 출력 — 끌 것이 있을 때만 계산
         for act_id in current_active_ids:
             if act_id not in desired_active:
                 # Need action object to turn off
@@ -1578,6 +1755,19 @@ class SequenceTriggerController(AbstractController, threading.Thread):
                 # item can be found by ID
                 found_item = next((i for i in self.current_schedule if i['action'].unique_id == act_id), None)
                 if found_item:
+                    key = self._output_key(found_item['action'])
+                    if key is not None:
+                        if running_keys is None:
+                            running_keys = {
+                                self._output_key(self._item_for(a)['action'])
+                                for a in self.active_actions
+                                if a in desired_active and self._item_for(a)}
+                        if key in running_keys:
+                            # 같은 출력을 지금 도는 다른 스텝이 쓰고 있다 — 끄면
+                            # 그 스텝의 밸브가 닫힌다. 놓아주기만 한다.
+                            self._release_without_off(act_id)
+                            completed.add(act_id)
+                            continue
                     if self.turn_off_action(found_item['action'], found_item):
                         completed.add(act_id)
                 else:
@@ -1590,6 +1780,10 @@ class SequenceTriggerController(AbstractController, threading.Thread):
                     # 같은 처리를 여기서도 한다.
                     self._force_off_unscheduled(act_id)
 
+    def _item_for(self, act_id):
+        return next((i for i in self.current_schedule
+                     if i['action'].unique_id == act_id), None)
+
     def turn_on_action(self, action, item):
         self.logger.debug(f"Action ON: {action.unique_id}")
         duration = item['end'] - item['start']
@@ -1598,15 +1792,50 @@ class SequenceTriggerController(AbstractController, threading.Thread):
         # 정상적인 시퀀스 동작과 진짜 인증 우회를 구별하지 못하게 만든다.
         set_execution_context(source_type=SOURCE_SEQUENCE, source_id=self.unique_id)
         try:
-            trigger_action(self.dict_actions, action.unique_id, value={
-                'message': f"Sequence {self.unique_id}: ",
-                'duration': duration
-            })
+            trigger_action(self.dict_actions, action.unique_id,
+                           value=self._action_value(action, duration))
         finally:
             # 스레드는 재사용된다. 안 지우면 다음 명령이 이 출처를 뒤집어쓴다.
             clear_execution_context()
         self.active_actions.add(action.unique_id)
         self._save_runtime_state()
+
+    @staticmethod
+    def _configured_duration(action):
+        """스텝 옵션에 사람이 넣은 지속시간(초). 없거나 0 이면 0."""
+        try:
+            opts = json.loads(action.custom_options) if action.custom_options else {}
+            return abs(float(opts.get('duration') or 0))
+        except (TypeError, ValueError):
+            return 0.0
+
+    def _action_value(self, action, duration):
+        """`trigger_action` 에 넘길 값. **스텝 길이를 출력에 실제로 닿게 한다.**
+
+        예전에는 `{'message': …, 'duration': 스텝길이}` 로 넘겼는데 액션은
+        `dict_vars["value"]["duration"]`(한 겹 더 감싼 자리)을 읽는다. 그래서
+        KeyError → 스텝 옵션의 `duration`(기본 0 = 무기한)으로 조용히 폴백했고,
+        **시퀀스가 켠 출력은 전부 무기한**이었다(2026-09-21 실측: 감사 로그 ON 이
+        `amount=0.0`). 스텝 길이는 "시퀀스가 멈춰도 밸브는 제때 닫힌다" 는 안전
+        타이머인데 한 번도 걸린 적이 없던 것이다.
+
+        한정 두 가지:
+          - `output_on_off` 에만 싣는다. `output_ramp_pwm` 은 같은 자리를 **램프
+            시간**으로 읽고, `create_note` 는 `value` 를 스칼라로 쓴다 — 거기에
+            스텝 길이를 넣으면 뜻이 바뀐다.
+          - 스텝 옵션에 사람이 지속시간을 넣어 두었으면(펄스처럼 쓰는 스텝) 그
+            값을 그대로 둔다. 지금까지 실제로 그렇게 동작했고, 설정한 사람의
+            뜻이다.
+        """
+        value = {'message': f"Sequence {self.unique_id}: "}
+        if (getattr(action, 'action_type', None) == 'output_on_off'
+                and not self._configured_duration(action)):
+            # 여유를 더한다. 타이머 끝이 스텝 끝과 같은 순간이면 출력층이 먼저
+            # 끄고 시퀀스가 한 번 더 끄는 **중복 OFF** 가 스텝마다 나간다
+            # (sequence_sim 첫 실행에서 드러났다). 정상 운전에서는 시퀀스의 OFF
+            # 가 먼저 오고, 이 타이머는 시퀀스가 멈췄을 때만 쓰인다.
+            value['value'] = {'duration': duration + self.RENEW_GRACE_S}
+        return value
 
     def _resolve_output_target(self, action):
         """스텝이 가리키는 `(출력 unique_id, 채널 index)`. 못 구하면 None."""
@@ -1699,8 +1928,11 @@ class SequenceTriggerController(AbstractController, threading.Thread):
                 f"남은 {remaining:.0f}초만큼 다시 켭니다.")
             set_execution_context(source_type=SOURCE_SEQUENCE, source_id=self.unique_id)
             try:
+                # 남은 시간에 여유를 더한다 — 타이머 끝이 스텝 끝과 같은 순간이면
+                # 출력층과 시퀀스가 둘 다 끄는 중복 OFF 가 된다(_action_value 와
+                # 같은 이유, sequence_sim S05 에서 드러났다).
                 self.control.output_on(
-                    out_id, output_type='sec', amount=remaining,
+                    out_id, output_type='sec', amount=remaining + self.RENEW_GRACE_S,
                     output_channel=channel_index)
             except Exception as err:
                 self.logger.error(f"Action {act_id}: 재개 재전송 실패 — {err}")
@@ -1918,6 +2150,8 @@ class SequenceTriggerController(AbstractController, threading.Thread):
         #     경계가 움직이면 끝난 스텝의 창이 지금 elapsed 를 다시 품는다.
         #   - 계획에서 빠진 스텝은 집합에서 빼지 말고 **꺼야 한다**
         #     (`_force_off_unscheduled`) — 안 그러면 밸브가 열린 채 잊힌다.
+        # 스텝의 출력 지정이 바뀌었을 수 있다 — 이어받기 판정을 새로 한다.
+        self._out_key_cache = {}
         if self.cycle_start_time is not None:
             try:
                 self.build_cycle_schedule()

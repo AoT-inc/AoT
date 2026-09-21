@@ -488,7 +488,13 @@ def test_resume_reissues_only_the_remaining_time(monkeypatch):
     kwargs = inst.control.output_on.call_args.kwargs
     # 전체 3600 이 아니라 남은 600 이어야 한다. 전체로 켜면 재시작할 때마다
     # 그 스텝의 총 개방시간이 늘어난다.
-    assert kwargs['amount'] == 600.0
+    #
+    # 여기에 여유(RENEW_GRACE_S)가 더해진다(2026-09-21). 타이머 끝이 스텝 끝과
+    # 같은 순간이면 출력층과 시퀀스가 둘 다 끄는 중복 OFF 가 났다. 여유는 개방
+    # 시간을 늘리지 않는다 — 시퀀스가 스텝 끝에 먼저 끄고(test_sequence_scenarios
+    # S05 가 그 명령열을 고정한다), 타이머는 시퀀스가 멈췄을 때만 쓰인다.
+    grace = seq_mod.SequenceTriggerController.RENEW_GRACE_S
+    assert kwargs['amount'] == 600.0 + grace
     assert kwargs['output_type'] == 'sec'
     assert kwargs['output_channel'] == 0
 
