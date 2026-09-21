@@ -98,7 +98,7 @@ Turns an output on for a set time, then off again automatically — the simplest
 
 ### AoT Graph { #widget-graph }
 
-Overlay several measurements on one time-series graph (built on Highcharts Stock) to see how they relate. For example, plot a greenhouse bay's temperature and humidity (Input measurements) together with its VPD (a Function measurement) and its irrigation valves' run time (Output measurements), so you can see at a glance whether a temperature spike lines up with a watering cycle.
+Overlay several measurements on one time-series graph (built on Apache ECharts) to see how they relate. For example, plot a greenhouse bay's temperature and humidity (Input measurements) together with its VPD (a Function measurement) and its irrigation valves' run time (Output measurements), so you can see at a glance whether a temperature spike lines up with a watering cycle.
 
 ![AoT Graph widget — a bay's temperature/humidity/VPD lines alongside its irrigation output series](images/aot-dashboard-data-view.png)
 

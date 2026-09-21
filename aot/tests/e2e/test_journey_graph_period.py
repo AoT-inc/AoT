@@ -48,10 +48,10 @@ def _choose_ram_measurement(page):
 def _draw(page):
     page.locator('button', has_text='그래프 보기').first.click()
     # 차트가 데이터를 받을 때까지 기다린다.
+    # 페이지가 차트 핸들을 window.aotAsyncGraph 에 둔다(공용 시계열 차트 모듈).
     page.wait_for_function(
-        "() => { const H = window.Highcharts; if (!H) return false;"
-        "  const c = (H.charts || []).filter(Boolean)[0];"
-        "  return c && c.xAxis[0].getExtremes().dataMax != null; }",
+        "() => { const g = window.aotAsyncGraph;"
+        "  return !!(g && g.getExtremes().dataMax != null); }",
         timeout=30000)
     page.wait_for_timeout(800)
 
@@ -59,10 +59,10 @@ def _draw(page):
 def _axis(page):
     """지금 그려진 x 축의 범위와 점 수."""
     return page.evaluate(
-        "() => { const c = (Highcharts.charts || []).filter(Boolean)[0];"
-        "  const x = c.xAxis[0].getExtremes();"
-        "  const pts = c.series.reduce((n, s) =>"
-        "      n + ((s.xData || []).length || (s.points || []).length), 0);"
+        "() => { const g = window.aotAsyncGraph;"
+        "  const x = g.getExtremes();"
+        "  let pts = 0;"
+        "  for (let i = 0; i < g.seriesCount; i++) pts += g.data(i).length;"
         "  return {min: x.min, max: x.max, dataMax: x.dataMax, points: pts}; }")
 
 

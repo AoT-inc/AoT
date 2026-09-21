@@ -6,10 +6,9 @@
 
 {% block head %}
   <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/pages/method.css') }}" />
-  <script src="{{ url_for('static', filename='js/vendor/user_js/highcharts-9.1.2.js') }}"></script>
-  {% if current_user.theme in dark_themes %}
-    <script src="{{ url_for('static', filename='js/vendor/user_js/dark-unica-custom.js') }}"></script>
-  {% endif %}
+  <script src="{{ asset('echarts-stack') }}"></script>
+  <script src="{{ asset('app-chart-core') }}"></script>
+  <script src="{{ asset('page-method-chart') }}"></script>
 {% endblock %}
 
 {% block body %}
@@ -264,102 +263,24 @@
 
   <script>
   $(document).ready(function() {
-    // Retrieve initial chart data set from the past (duration set by user)
-    function getPastData(method_id, chart) {
-      const url = '/method-data/' + method_id;
-      $.getJSON(url,
-        function(data, responseText, jqXHR) {
-          if (jqXHR.status !== 204) {
-            chart.addSeries({
-              name: 'Setpoint',
-              data : data
-            });
-          }
-        }
-      );
-    }
+    // 설정값 곡선 — 그리기는 aot-method-chart.js (옛 Highcharts 판과 같은 모양).
+    // DailyMultiPoint 편집기(method_options/build_daily_multipoint.html)는
+    // window.aotMethodChart 핸들로 이 차트를 다시 그리고 핸들을 얹는다.
+    const el = document.getElementById('container');
+    if (!el) return;
 
-    const x = new Date();
-    const currentTimeZoneOffsetInHours = x.getTimezoneOffset();
-
-    if (!document.getElementById('container')) return;
-
-    Highcharts.setOptions({
-      global: {
-        useUTC: true
-      },
-      lang: {
-        thousandsSep: ','
-      }
+    const handle = AoTMethodChart.create(el, {
+      methodType: {{ method.method_type|tojson }},
+      thousandsSep: ','
     });
+    window.aotMethodChart = handle;
 
-    window.aotMethodChart = new Highcharts.Chart({
-      chart : {
-        renderTo: 'container',
-        zoomType: 'x',
-        resetZoomButton: {
-          theme: {
-            display: 'none'
-          }
-        },
-        events: {
-          load: function () {
-            var _chart = this;
-            {% if method.method_type != "DailyMultiPoint" %}
-            getPastData("{{method.unique_id}}", _chart);
-            {% endif %}
-            window.aotMethodChart = _chart;
-            if (typeof window.mpOnChartReady === 'function') {
-              window.mpOnChartReady(_chart);
-            }
-          }
-        }
-      },
-      title: {
-        text: null
-      },
-      tooltip: {
-        {% if method.method_type == "Duration" -%}
-          headerFormat: '<span style="font-size: var(--aot-font-size-2xs)">{point.key} Seconds</span><br/>',
-        {%- endif -%}
-        {% if method.method_type == "Date" -%}
-          xDateFormat: '%a, %b %e, %Y %H:%M:%S',
-        {% elif method.method_type in ["Daily", "DailySine", "DailyBezier", "DailyMultiPoint"] -%}
-          xDateFormat: '%H:%M:%S',
-        {%- endif -%}
-        valueDecimals: 2
-      },
-      legend: {
-        enabled: false
-      },
-      navigator: {
-        enabled: false
-      },
-      rangeSelector: {
-        enabled: false
-      },
-      scrollbar: {
-        enabled: false
-      },
-      xAxis: {
-        type: '{%- if method.method_type == "Duration" -%}linear{%- elif method.method_type in ["Date", "Daily", "DailySine", "DailyBezier", "DailyMultiPoint"] -%}datetime{%- endif -%}',
-        ordinal: false
-      },
-      yAxis: [
-      {   
-        title: {
-          text: null,
-        },
-        labels: {
-          format: '{value}',
-        },
-        opposite: false
-      }],
-      credits: {
-        enabled: false
-      }
+    {% if method.method_type != "DailyMultiPoint" -%}
+    $.getJSON('/method-data/' + {{ method.unique_id|tojson }}, function (data, responseText, jqXHR) {
+      if (jqXHR.status !== 204) handle.setSeries([{ name: 'Setpoint', data: data }]);
     });
-
+    {%- endif %}
+    if (typeof window.mpOnChartReady === 'function') window.mpOnChartReady(handle);
   });
   </script>
 

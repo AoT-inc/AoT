@@ -45,7 +45,6 @@
 #  Last modified: 2025-04-21
 
 import datetime
-import os
 import json
 import logging
 import re
@@ -57,7 +56,7 @@ from flask_babel import lazy_gettext
 from flask_login import current_user
 from pytz import timezone
 
-from aot.config import THEMES_DARK, PATH_JS_USER
+from aot.config import THEMES_DARK
 from aot.databases.models import Conversion
 from aot.databases.models import CustomController
 from aot.databases.models import DeviceMeasurements
@@ -238,43 +237,10 @@ def generate_page_variables(widget_unique_id, widget_options):
 WIDGET_INFORMATION = {
     'widget_name_unique': 'AoT_graph',
     'widget_name': lazy_gettext('AoT Graph'),
-    'widget_library': 'Highstock',
+    'widget_library': 'ECharts',
     'no_class': True,
 
     'message': lazy_gettext('Displays a synchronous graph. Data selected will be displayed on the X-axis for the configured duration.'),
-
-    'dependencies_module': [
-        ('bash-commands',
-        [
-            os.path.join(PATH_JS_USER, 'highstock-9.1.2.js'),
-            os.path.join(PATH_JS_USER, 'highcharts-more-9.1.2.js'),
-            os.path.join(PATH_JS_USER, 'data-9.1.2.js'),
-            os.path.join(PATH_JS_USER, 'exporting-9.1.2.js'),
-            os.path.join(PATH_JS_USER, 'export-data-9.1.2.js'),
-            os.path.join(PATH_JS_USER, 'offline-exporting-9.1.2.js')
-        ],
-        [
-            'rm -rf Highcharts-Stock-9.1.2.zip',
-            'wget https://code.highcharts.com/zips/Highcharts-Stock-9.1.2.zip 2>&1',
-            'unzip Highcharts-Stock-9.1.2.zip -d Highcharts-Stock-9.1.2',
-            f'cp -rf Highcharts-Stock-9.1.2/code/highstock.js {os.path.join(PATH_JS_USER, "highstock-9.1.2.js")}',
-            f'cp -rf Highcharts-Stock-9.1.2/code/highstock.js.map {os.path.join(PATH_JS_USER, "highstock.js.map")}',
-            f'cp -rf Highcharts-Stock-9.1.2/code/highcharts-more.js {os.path.join(PATH_JS_USER, "highcharts-more-9.1.2.js")}',
-            f'cp -rf Highcharts-Stock-9.1.2/code/highcharts-more.js.map {os.path.join(PATH_JS_USER, "highcharts-more.js.map")}',
-            f'cp -rf Highcharts-Stock-9.1.2/code/modules/data.js {os.path.join(PATH_JS_USER, "data-9.1.2.js")}',
-            f'cp -rf Highcharts-Stock-9.1.2/code/modules/data.js.map {os.path.join(PATH_JS_USER, "data.js.map")}',
-            f'cp -rf Highcharts-Stock-9.1.2/code/modules/exporting.js {os.path.join(PATH_JS_USER, "exporting-9.1.2.js")}',
-            f'cp -rf Highcharts-Stock-9.1.2/code/modules/exporting.js.map {os.path.join(PATH_JS_USER, "exporting.js.map")}',
-            f'cp -rf Highcharts-Stock-9.1.2/code/modules/export-data.js {os.path.join(PATH_JS_USER, "export-data-9.1.2.js")}',
-            f'cp -rf Highcharts-Stock-9.1.2/code/modules/export-data.js.map {os.path.join(PATH_JS_USER, "export-data.js.map")}',
-            f'cp -rf Highcharts-Stock-9.1.2/code/modules/offline-exporting.js {os.path.join(PATH_JS_USER, "offline-exporting-9.1.2.js")}',
-            f'cp -rf Highcharts-Stock-9.1.2/code/modules/offline-exporting.js.map {os.path.join(PATH_JS_USER, "offline-exporting.js.map")}',
-            'rm -rf Highcharts-Stock-9.1.2.zip',
-            'rm -rf Highcharts-Stock-9.1.2'
-        ])
-    ],
-
-    'dependencies_message': lazy_gettext('Highcharts is free for open source and personal use. However, if used as part of a commercial product, a commercial license may be required. Please check https://shop.highsoft.com for the most accurate information.'),
 
     'execute_at_creation': execute_at_creation,
     'execute_at_modification': execute_at_modification,
@@ -493,17 +459,17 @@ WIDGET_INFORMATION = {
         }
     ],
 
-    'widget_dashboard_head': """{% if "highstock" not in dashboard_dict %}
-  <script type="text/javascript" src="{{ asset('highcharts-stack') }}"></script>
-  {% set _dummy = dashboard_dict.update({"highstock": 1}) %}
+    'widget_dashboard_head': """{% if "echarts" not in dashboard_dict %}
+  <script src="{{ asset('echarts-stack') }}"></script>
+  {% set _dummy = dashboard_dict.update({"echarts": 1}) %}
 {% endif %}
 {% if "aot_chart_core" not in dashboard_dict %}
   <script src="{{ asset('app-chart-core') }}"></script>
   {% set _dummy = dashboard_dict.update({"aot_chart_core": 1}) %}
 {% endif %}
-
-{% if current_user.theme in dark_themes %}
-  <script type="text/javascript" src="/static/js/vendor/user_js/dark-unica-custom.js?v=20260814a"></script>
+{% if "timeseries_chart" not in dashboard_dict %}
+  <script src="{{ asset('widget-timeseries-chart') }}"></script>
+  {% set _dummy = dashboard_dict.update({"timeseries_chart": 1}) %}
 {% endif %}
 """,
 
@@ -691,24 +657,21 @@ WIDGET_INFORMATION = {
   if (typeof window._graph_series_meta === 'undefined') window._graph_series_meta = {};
   if (typeof window._graph_load_gen === 'undefined') window._graph_load_gen = {};
   if (typeof window._graph_load_debounce === 'undefined') window._graph_load_debounce = {};
-  if (typeof window._graph_suppress === 'undefined') window._graph_suppress = {};
   var note_timestamps = window.note_timestamps;
   var last_output_time_mil = window.last_output_time_mil;
 
   // ---- History browsing -------------------------------------------------
   // This widget normally holds only x_axis_duration of data. When the user
-  // navigates (range button / navigator / zoom / pan) to a time earlier than
-  // what is loaded, fetch the missing earlier slice (downsampled via /async)
-  // and merge it in, so users can look further back without reconfiguring the
-  // widget. While earlier data is shown ("browsing"), the live auto-reset and
-  // trim are suppressed so it stays visible; the header Reset button returns
-  // to the live sliding window.
-
-  function _graphButtonSpanMs(btn) {
-    const unit = { second: 1000, minute: 60000, hour: 3600000, day: 86400000,
-                   week: 604800000, month: 2592000000, year: 31536000000 };
-    return (btn.count || 1) * (unit[btn.type] || 0);
-  }
+  // navigates (range button / navigator / zoom / date input) to a time earlier
+  // than what is loaded, fetch the missing earlier slice (downsampled via
+  // /async) and merge it in, so users can look further back without
+  // reconfiguring the widget. While earlier data is shown ("browsing"), the
+  // live auto-reset and trim are suppressed so it stays visible; the header
+  // Reset button returns to the live sliding window.
+  //
+  // widget[id] is an AoTTimeSeries handle (aot-timeseries-chart.js). Ranges set
+  // from code (setExtremes) never call back into onUserZoom, so no suppress
+  // flag is needed around them.
 
   function _graphRegisterSeries(widget_id, series, unique_id, measure_type, measurement_id) {
     if (!window._graph_series_meta[widget_id]) window._graph_series_meta[widget_id] = [];
@@ -717,60 +680,37 @@ WIDGET_INFORMATION = {
     };
   }
 
-  function _graphOldestLoaded(chart) {
-    let oldest = Infinity;
-    chart.series.forEach(function (s) {
-      if (s.xData && s.xData.length) oldest = Math.min(oldest, s.xData[0]);
-    });
-    return oldest === Infinity ? null : oldest;
-  }
-
   // Browsing = loaded data reaches meaningfully earlier than the live window.
-  function _graphIsBrowsing(chart, xaxis_duration_min) {
-    if (!chart) return false;
-    const oldest = _graphOldestLoaded(chart);
+  function _graphIsBrowsing(ts, xaxis_duration_min) {
+    if (!ts) return false;
+    const oldest = ts.oldest();
     if (oldest === null) return false;
     return oldest < (Date.now() - xaxis_duration_min * 60000) - (5 * 60000);
-  }
-
-  function _graphSetExtremes(widget_id, chart, min_mil, max_mil) {
-    window._graph_suppress[widget_id] = true;
-    chart.xAxis[0].setExtremes(min_mil, max_mil, true);
-    window._graph_suppress[widget_id] = false;
   }
 
   // Fetch [start_mil, end_mil] downsampled via /async for every non-tag series
   // and merge in the points older than what is already loaded. onDone() fires
   // once every series settles.
-  function _graphLoadRange(widget_id, chart, start_mil, end_mil, onDone) {
+  function _graphLoadRange(widget_id, ts, start_mil, end_mil, onDone) {
     const meta = window._graph_series_meta[widget_id] || [];
     const gen = (window._graph_load_gen[widget_id] = (window._graph_load_gen[widget_id] || 0) + 1);
     let pending = 0, started = false;
-    chart.showLoading();
+    ts.showLoading();
     const finish = function () {
       if (gen !== window._graph_load_gen[widget_id]) return;
-      chart.hideLoading();
-      chart.redraw();
+      ts.hideLoading();
+      ts.redraw();
       if (onDone) onDone();
     };
     meta.forEach(function (m, idx) {
-      if (!m || m.type === 'tag') return;
-      const s = chart.series[idx];
-      if (!s) return;
+      if (!m || m.type === 'tag' || idx >= ts.seriesCount) return;
       started = true; pending++;
       const url = '/async/' + m.id + '/' + m.type + '/' + m.measure + '/' +
                   Math.round(start_mil) / 1000 + '/' + Math.round(end_mil) / 1000;
       $.getJSON(url, function (data, txt, jq) {
         if (gen !== window._graph_load_gen[widget_id]) return;
         if (jq.status !== 204 && data && data.length) {
-          const existing = (s.options.data || []);
-          const existingMin = (s.xData && s.xData.length) ? s.xData[0] : end_mil;
-          const add = [];
-          for (let i = 0; i < data.length; i++) {
-            const t = data[i][0] * 1000;
-            if (t < existingMin) add.push([t, data[i][1]]);
-          }
-          if (add.length) s.setData(add.concat(existing), false, false);
+          ts.prepend(idx, data.map(function (d) { return [d[0] * 1000, d[1]]; }));
         }
       }).always(function () {
         if (gen !== window._graph_load_gen[widget_id]) return;
@@ -781,82 +721,56 @@ WIDGET_INFORMATION = {
     if (!started) finish();
   }
 
-  // setExtremes hook: load earlier data on demand. Range-selector buttons are
-  // read from the button itself (not e.min) because Highcharts clamps e.min to
-  // the small loaded range, which is why "1w/1mo/All" otherwise did nothing.
-  // setExtremes hook handles navigator / scrollbar / pan / zoom. Range-selector
-  // buttons are handled separately (see _graphRangeButtonClick) because Highcharts
-  // does not even fire setExtremes when a button's range clamps to the current
-  // (small) loaded range — which is why "1w/1mo/All" otherwise did nothing.
-  function _graphOnSetExtremes(widget_id, chart, e, xaxis_duration_min) {
-    if (window._graph_suppress[widget_id]) return;
-    if (typeof e.rangeSelectorButton !== 'undefined') return;  // handled via button click
+  // Navigator / drag-zoom / date input: load earlier data on demand.
+  function _graphOnUserZoom(widget_id, ts, e, xaxis_duration_min) {
     const now = Date.now();
     const live_min = now - (xaxis_duration_min * 60 * 1000);
-    const userTriggers = ['navigator', 'scrollbar', 'pan', 'zoom'];
-    if (userTriggers.indexOf(e.trigger) === -1 || e.min == null) return;
-    if (e.min >= live_min - 1000) return;
-    const loaded_min = _graphOldestLoaded(chart);
+    if (e.min == null || e.min >= live_min - 1000) return;
+    const loaded_min = ts.oldest();
     if (loaded_min !== null && e.min >= loaded_min - 1000) return;
     const fetchEnd = (loaded_min !== null) ? loaded_min : live_min;
     if (window._graph_load_debounce[widget_id]) clearTimeout(window._graph_load_debounce[widget_id]);
     window._graph_load_debounce[widget_id] = setTimeout(function () {
-      _graphLoadRange(widget_id, chart, e.min, fetchEnd, null);
+      _graphLoadRange(widget_id, ts, e.min, fetchEnd, null);
     }, 250);
   }
 
-  // Order must match the rangeSelector.buttons config below.
-  var _GRAPH_BTNS = [
-    {type:'minute',count:1}, {type:'minute',count:5}, {type:'minute',count:15},
-    {type:'minute',count:30}, {type:'hour',count:1}, {type:'hour',count:6},
-    {type:'day',count:1}, {type:'week',count:1}, {type:'month',count:1},
-    {type:'month',count:3}, {type:'all'}
-  ];
-
-  function _graphRangeButtonClick(widget_id, chart, idx, xaxis_duration_min) {
-    const btn = _GRAPH_BTNS[idx];
+  // Range buttons reach past the loaded data (1w / 1mo / All) — load it, then fit.
+  function _graphRangeButtonClick(widget_id, ts, btn, xaxis_duration_min) {
     if (!btn) return;
     const now = Date.now();
     const live_min = now - (xaxis_duration_min * 60 * 1000);
     const isAll = (btn.type === 'all');
-    const start = isAll ? 0 : (now - _graphButtonSpanMs(btn));
-    // Within the live window: let Highcharts zoom normally.
+    const start = isAll ? 0 : (now - AoTTimeSeries.buttonSpanMs(btn));
+    // Within the live window: the chart already zoomed.
     if (!isAll && start >= live_min - 1000) return;
-    const loaded_min = _graphOldestLoaded(chart);
+    const loaded_min = ts.oldest();
     if (!isAll && loaded_min !== null && start >= loaded_min - 1000) {
-      _graphSetExtremes(widget_id, chart, start, now);  // already loaded
+      ts.setExtremes(start, now);  // already loaded
       return;
     }
     const fetchEnd = (loaded_min !== null) ? loaded_min : live_min;
     if (window._graph_load_debounce[widget_id]) clearTimeout(window._graph_load_debounce[widget_id]);
     window._graph_load_debounce[widget_id] = setTimeout(function () {
-      _graphLoadRange(widget_id, chart, isAll ? 0 : start, fetchEnd, function () {
-        const fitMin = isAll ? (_graphOldestLoaded(chart) || start) : start;
-        _graphSetExtremes(widget_id, chart, fitMin, now);
+      _graphLoadRange(widget_id, ts, isAll ? 0 : start, fetchEnd, function () {
+        if (isAll) { ts.setExtremes(null, null); return; }
+        ts.setExtremes(start, now);
       });
     }, 250);
   }
 
   // Return to the live sliding window: trim earlier data and snap to [now-dur, now].
   function _graphResetToLive(widget_id, xaxis_duration_min) {
-    const chart = Highcharts.charts.filter(Boolean).find(function (c) {
-      return c.renderTo && c.renderTo.id === 'container-synchronous-graph-' + widget_id;
-    });
-    if (!chart) return;
+    const ts = widget[widget_id];
+    if (!ts) return;
     // cancel any in-flight history loads
     window._graph_load_gen[widget_id] = (window._graph_load_gen[widget_id] || 0) + 1;
+    ts.hideLoading();
     const epoch_max = Date.now();
     const epoch_min = epoch_max - (xaxis_duration_min * 60 * 1000);
-    chart.series.forEach(function (s) {
-      if (!s.options || !s.options.data) return;
-      for (let i = s.options.data.length - 1; i >= 0; i--) {
-        const pt = s.options.data[i];
-        const ts = Array.isArray(pt) ? pt[0] : (pt ? pt.x : null);
-        if (ts != null && ts < epoch_min) s.removePoint(i, false);
-      }
-    });
-    _graphSetExtremes(widget_id, chart, epoch_min, epoch_max);
-    chart.redraw();
+    for (let i = 0; i < ts.seriesCount; i++) ts.removeBefore(i, epoch_min);
+    ts.setExtremes(epoch_min, epoch_max);
+    ts.redraw();
   }
 
   function graphMenuFunction(widget_id) {
@@ -872,19 +786,20 @@ WIDGET_INFORMATION = {
   // Redraw a particular chart — deferred during scroll to avoid jank
   function redrawGraph(widget_id, refresh_seconds, xaxis_duration_min, xaxis_reset) {
     AoTChart.deferWhileScrolling(function () {
-      widget[widget_id].redraw();
-
+      const ts = widget[widget_id];
+      if (!ts) return;
       // Don't snap back to the live window while the user is browsing earlier data.
-      if (xaxis_reset && !_graphIsBrowsing(widget[widget_id], xaxis_duration_min)) {
-        const epoch_max = Date.now();  // current time (milliseconds)
-        const epoch_min = epoch_max - (xaxis_duration_min * 60 * 1000);  // computed explicitly in milliseconds
-
-        // Update the x-axis with the exact time range.
-        widget[widget_id].xAxis[0].update({ min: epoch_min, max: epoch_max }, false);
-        widget[widget_id].xAxis[0].setExtremes(epoch_min, epoch_max, true);
-        widget[widget_id].xAxis[0].isDirty = true;
+      if (xaxis_reset && !_graphIsBrowsing(ts, xaxis_duration_min)) {
+        const epoch_max = Date.now();
+        ts.setExtremes(epoch_max - (xaxis_duration_min * 60 * 1000), epoch_max);
       }
+      ts.redraw();
     });
+  }
+
+  // Note text keeps runs of spaces visible (the tooltip is HTML).
+  function _graphNoteText(s) {
+    return String(s == null ? '' : s).replace(/  /g, '\\u2591\\u2591');
   }
 
   // Retrieve initial graph data set from the past (duration set by user)
@@ -894,7 +809,6 @@ WIDGET_INFORMATION = {
                        measure_type,
                        measurement_id,
                        past_seconds) {
-    const epoch_mil = new Date().getTime();
     const url = '/past/' + unique_id + '/' + measure_type + '/' + measurement_id + '/' + past_seconds;
     const update_id = widget_id + "-" + series + "-" + unique_id + "-" + measure_type + '-' + measurement_id;
     // Record series metadata so on-demand history loads can target the right device.
@@ -902,45 +816,39 @@ WIDGET_INFORMATION = {
 
     $.getJSON(url,
       function(data, responseText, jqXHR) {
-        if (jqXHR.status !== 204) {
-          let past_data = [];
-          const note_key = widget_id + "_" + series;
-          let newest_time = 0;
+        const ts = widget[widget_id];
+        if (!ts || jqXHR.status === 204) return;
+        let past_data = [];
+        const note_key = widget_id + "_" + series;
+        let newest_time = 0;
 
-          // Add the received data to the graph
-          for (let i = 0; i < data.length; i++) {
-            const new_time = new Date(data[i][0] * 1000).getTime();
+        for (let i = 0; i < data.length; i++) {
+          const new_time = new Date(data[i][0] * 1000).getTime();
 
-            if (measure_type === 'tag') {
-              if (!(note_key in note_timestamps)) note_timestamps[note_key] = [];
-              if (!note_timestamps[note_key].includes(new_time)) {
-                past_data.push({
-                  x: new_time,
-                  title: data[i][1],
-                  text: data[i][2].replace(/(?:\\r\\n|\\r|\\n)/g, '<br/>').replace(/  /g, '\\u2591\\u2591')
-                });
-                note_timestamps[note_key].push(new_time);
-              }
+          if (measure_type === 'tag') {
+            if (!(note_key in note_timestamps)) note_timestamps[note_key] = [];
+            if (!note_timestamps[note_key].includes(new_time)) {
+              past_data.push({ x: new_time, title: data[i][1], text: _graphNoteText(data[i][2]) });
+              note_timestamps[note_key].push(new_time);
             }
-            else {
-              past_data.push([new_time, data[i][1]]);
-            }
-
-            // Data is not guaranteed sorted — track the newest timestamp, not the last element.
-            // Storing an older timestamp here makes every later poll re-fetch and re-add the
-            // whole window, which grows the series without bound (hundreds of MB over hours).
-            if (new_time > newest_time) newest_time = new_time;
           }
-          if (newest_time > 0) {
-            last_output_time_mil[update_id] = (measure_type === 'tag') ? newest_time + 3000 : newest_time;
+          else {
+            past_data.push([new_time, data[i][1]]);
           }
 
-          // Set x-axis extremes, set graph data
-          widget[widget_id].series[series].isDirty = true;  // Data may not be in order by timestamp
-          const epoch_min = new Date().setMinutes(new Date().getMinutes() - (past_seconds / 60))
-          widget[widget_id].xAxis[0].setExtremes(epoch_min, epoch_mil);
-          widget[widget_id].series[series].setData(past_data, true, false);
+          // Data is not guaranteed sorted — track the newest timestamp, not the last element.
+          // Storing an older timestamp here makes every later poll re-fetch and re-add the
+          // whole window, which grows the series without bound (hundreds of MB over hours).
+          if (new_time > newest_time) newest_time = new_time;
         }
+        if (newest_time > 0) {
+          last_output_time_mil[update_id] = (measure_type === 'tag') ? newest_time + 3000 : newest_time;
+        }
+
+        const epoch_mil = Date.now();
+        ts.setData(series, past_data);
+        ts.setExtremes(epoch_mil - past_seconds * 1000, epoch_mil);
+        ts.redraw();
       }
     );
   }
@@ -969,66 +877,54 @@ WIDGET_INFORMATION = {
 
     $.getJSON(url,
       function(data, responseText, jqXHR) {
-        if (jqXHR.status !== 204) {
-          let time_point;
-          const note_key = widget_id + "_" + series;
-          // The timestamp of the beginning of the graph (oldest timestamp allowed on the graph)
-          const oldest_timestamp_allowed = epoch_mil - (xaxis_duration_min * 60 * 1000);
-          // Points at or before this timestamp are already on the chart — the server window
-          // may overlap, and re-adding them duplicates points without bound.
-          const last_known_mil = last_output_time_mil[update_id] || 0;
-          let newest_time = last_known_mil;
+        const ts = widget[widget_id];
+        if (!ts || jqXHR.status === 204) return;
+        const note_key = widget_id + "_" + series;
+        // The timestamp of the beginning of the graph (oldest timestamp allowed on the graph)
+        const oldest_timestamp_allowed = epoch_mil - (xaxis_duration_min * 60 * 1000);
+        // Points at or before this timestamp are already on the chart — the server window
+        // may overlap, and re-adding them duplicates points without bound.
+        const last_known_mil = last_output_time_mil[update_id] || 0;
+        let newest_time = last_known_mil;
 
-          // Loop through data and add points to chart
-          for (let i = 0; i < data.length; i++) {
-            const time_point_raw = new Date(data[i][0] * 1000);
-            time_point = time_point_raw.getTime();
+        for (let i = 0; i < data.length; i++) {
+          const time_point = new Date(data[i][0] * 1000).getTime();
 
-            if (measure_type === 'tag') {
-              if (!(note_key in note_timestamps)) note_timestamps[note_key] = [];
-              if (!note_timestamps[note_key].includes(time_point)) {
-                widget[widget_id].series[series].addPoint({
-                    x: time_point,
-                    title: data[i][1],
-                    text: data[i][2].replace(/(?:\\r\\n|\\r|\\n)/g, '<br/>').replace(/  /g, '\\u2591\\u2591')
-                }, false, false);
-                note_timestamps[note_key].push(time_point);
-              }
-              if (time_point > newest_time) newest_time = time_point;
+          if (measure_type === 'tag') {
+            if (!(note_key in note_timestamps)) note_timestamps[note_key] = [];
+            if (!note_timestamps[note_key].includes(time_point)) {
+              ts.addPoint(series, { x: time_point, title: data[i][1], text: _graphNoteText(data[i][2]) });
+              note_timestamps[note_key].push(time_point);
             }
-            else {
-              if (time_point <= last_known_mil) continue;
-              widget[widget_id].series[series].addPoint([time_point, data[i][1]], false, false);
-              if (time_point > newest_time) newest_time = time_point;
-            }
+            if (time_point > newest_time) newest_time = time_point;
           }
-
-          // Store the newest timestamp seen (data is not guaranteed sorted)
-          if (newest_time > last_known_mil) {
-            last_output_time_mil[update_id] = (measure_type === 'tag') ? newest_time + 3000 : newest_time;
+          else {
+            if (time_point <= last_known_mil) continue;
+            ts.addPoint(series, [time_point, data[i][1]]);
+            if (time_point > newest_time) newest_time = time_point;
           }
-
-          // Remove any points before beginning of chart (reverse to avoid index shift bug).
-          // Skip while the user is browsing earlier data, or it would delete the
-          // earlier history we just loaded on the next refresh.
-          if (!_graphIsBrowsing(widget[widget_id], xaxis_duration_min)) {
-            const s = widget[widget_id].series[series];
-            for (let i = s.options.data.length - 1; i >= 0; i--) {
-              const pt = s.options.data[i];
-              const point_ts = (measure_type === 'tag') ? pt.x : pt[0];
-              if (point_ts < oldest_timestamp_allowed) {
-                s.removePoint(i, false);
-                if (measure_type === 'tag') {
-                  const idx = note_timestamps[note_key].indexOf(point_ts);
-                  if (idx > -1) note_timestamps[note_key].splice(idx, 1);
-                }
-              }
-            }
-          }
-
-          // Redraw after cleanup so removed points never appear on screen
-          redrawGraph(widget_id, refresh_seconds, xaxis_duration_min, xaxis_reset);
         }
+
+        // Store the newest timestamp seen (data is not guaranteed sorted)
+        if (newest_time > last_known_mil) {
+          last_output_time_mil[update_id] = (measure_type === 'tag') ? newest_time + 3000 : newest_time;
+        }
+
+        // Remove any points before beginning of chart. Skip while the user is
+        // browsing earlier data, or it would delete the earlier history we just
+        // loaded on the next refresh.
+        if (!_graphIsBrowsing(ts, xaxis_duration_min)) {
+          const gone = ts.removeBefore(series, oldest_timestamp_allowed);
+          if (measure_type === 'tag' && note_timestamps[note_key]) {
+            gone.forEach(function (pt) {
+              const idx = note_timestamps[note_key].indexOf(pt.x);
+              if (idx > -1) note_timestamps[note_key].splice(idx, 1);
+            });
+          }
+        }
+
+        // Redraw after cleanup so removed points never appear on screen
+        redrawGraph(widget_id, refresh_seconds, xaxis_duration_min, xaxis_reset);
       }
     );
   }
@@ -1059,6 +955,7 @@ WIDGET_INFORMATION = {
   }
 """,
 
+
     'widget_dashboard_js_ready': """<!-- No JS ready content -->""",
 
     'widget_dashboard_js_ready_end': """
@@ -1070,11 +967,11 @@ WIDGET_INFORMATION = {
 
   // Idempotency guard: when this script is re-run for live option preview (no
   // page reload), tear down the previous chart, its live-data intervals and the
-  // per-widget history state so re-init starts clean (no leaked Highcharts
+  // per-widget history state so re-init starts clean (no leaked chart
   // instance, no stacked intervals, no stale series bookkeeping).
   try {
     if (typeof widget !== 'undefined' && widget['{{each_widget.unique_id}}']) {
-      widget['{{each_widget.unique_id}}'].destroy();
+      widget['{{each_widget.unique_id}}'].dispose();
       delete widget['{{each_widget.unique_id}}'];
     }
   } catch (e) {}
@@ -1092,327 +989,75 @@ WIDGET_INFORMATION = {
     delete window._graph_load_debounce['{{each_widget.unique_id}}'];
   }
 
-  widget['{{each_widget.unique_id}}'] = new Highcharts.StockChart({
-    chart : {
-      renderTo: 'container-synchronous-graph-{{each_widget.unique_id}}',
-      zoomType: 'x',
-      alignTicks: {% if widget_options['enable_align_ticks'] %}true{% else %}false{% endif %},
-      resetZoomButton: {
-        theme: { style: { display: 'none'} }
-      },
-
-      events: {
-        render: function () {
-          AoTChart.axisAdjust(this, { hideOnMobile: {% if widget_options.get('hide_axis_labels_on_mobile', True) %}true{% else %}false{% endif %} });
-          {% if widget_options['enable_night_shading'] %}
-          // 보이는 구간의 밤을 깐다. 축 범위가 바뀔 때마다 render 가 다시 도므로
-          // 별도 훅 없이 따라오고, 같은 범위는 클라이언트 캐시에서 끝난다.
-          AoTChart.applyNightShading(this, {});
-          {% endif %}
-          // Wire range-selector buttons once to load earlier data on demand.
-          if (!this._graphBtnsWired && this.rangeSelector && this.rangeSelector.buttons && this.rangeSelector.buttons.length) {
-            this._graphBtnsWired = true;
-            const _chart = this;
-            this.rangeSelector.buttons.forEach(function (b, i) {
-              if (b && b.element) {
-                Highcharts.addEvent(b.element, 'click', function () {
-                  _graphRangeButtonClick('{{each_widget.unique_id}}', _chart, i, {{widget_variables['x_axis_duration_min']}});
-                });
-              }
-            });
-          }
-        },
-        load: function () {
-          {% set count_series = [] -%}
-
-          {%- for input_and_measurement_ids in graph_input_ids -%}
-            {%- set input_id = input_and_measurement_ids.split(',')[0] -%}
-            {%- set measurement_id = input_and_measurement_ids.split(',')[1] -%}
-            {%- set all_input = table_input.query.filter(table_input.unique_id == input_id).all() -%}
-            {%- if all_input -%}
-              {% for each_input in all_input %}
-          getPastDataSynchronousGraph('{{each_widget.unique_id}}', {{count_series|count}}, '{{each_input.unique_id}}', 'input', '{{measurement_id}}', {{widget_variables['x_axis_duration_sec']}});
-                {% if widget_options['enable_auto_refresh'] -%}
-          getLiveDataSynchronousGraph('{{each_widget.unique_id}}', {{count_series|count}}, '{{each_input.unique_id}}', 'input', '{{measurement_id}}', {{widget_variables['x_axis_duration_min']}}, {{widget_options['enable_xaxis_reset']|int}}, {{widget_options['refresh_seconds']}});
-                {%- endif -%}
-                {%- do count_series.append(1) -%}
-              {%- endfor -%}
-            {%- endif -%}
-          {%- endfor -%}
-
-          {%- for function_and_measurement_ids in graph_function_ids -%}
-            {%- set function_id = function_and_measurement_ids.split(',')[0] -%}
-            {%- set measurement_id = function_and_measurement_ids.split(',')[1] -%}
-            {%- set all_function = table_function.query.filter(table_function.unique_id == function_id).all() -%}
-            {%- if all_function -%}
-              {% for each_function in all_function %}
-          getPastDataSynchronousGraph('{{each_widget.unique_id}}', {{count_series|count}}, '{{each_function.unique_id}}', 'function', '{{measurement_id}}', {{widget_variables['x_axis_duration_sec']}});
-                {% if widget_options['enable_auto_refresh'] %}
-          getLiveDataSynchronousGraph('{{each_widget.unique_id}}', {{count_series|count}}, '{{each_function.unique_id}}', 'function', '{{measurement_id}}', {{widget_variables['x_axis_duration_min']}}, {{widget_options['enable_xaxis_reset']|int}}, {{widget_options['refresh_seconds']}});
-                {% endif %}
-                {%- do count_series.append(1) %}
-              {%- endfor -%}
-            {%- endif -%}
-          {%- endfor -%}
-
-          {%- for output_and_measurement_ids in graph_output_ids -%}
-            {%- set output_id = output_and_measurement_ids.split(',')[0] -%}
-            {%- set measurement_id = output_and_measurement_ids.split(',')[1] -%}
-            {%- set all_output = table_output.query.filter(table_output.unique_id == output_id).all() -%}
-            {%- if all_output -%}
-              {% for each_output in all_output %}
-          getPastDataSynchronousGraph('{{each_widget.unique_id}}', {{count_series|count}}, '{{each_output.unique_id}}', 'output', '{{measurement_id}}', {{widget_variables['x_axis_duration_sec']}});
-                {% if widget_options['enable_auto_refresh'] -%}
-          getLiveDataSynchronousGraph('{{each_widget.unique_id}}', {{count_series|count}}, '{{each_output.unique_id}}', 'output', '{{measurement_id}}', {{widget_variables['x_axis_duration_min']}}, {{widget_options['enable_xaxis_reset']|int}}, {{widget_options['refresh_seconds']}});
-                {%- endif -%}
-                {%- do count_series.append(1) -%}
-              {%- endfor -%}
-            {%- endif -%}
-          {%- endfor -%}
-
-          {%- for each_pid in pid -%}
-            {%- for pid_and_measurement_id in graph_pid_ids if each_pid.unique_id == pid_and_measurement_id.split(',')[0] %}
-              {%- set measurement_id = pid_and_measurement_id.split(',')[1] -%}
-          getPastDataSynchronousGraph('{{each_widget.unique_id}}', {{count_series|count}}, '{{each_pid.unique_id}}', 'pid', '{{measurement_id}}', {{widget_variables['x_axis_duration_sec']}});
-          {% if widget_options['enable_auto_refresh'] %}
-          getLiveDataSynchronousGraph('{{each_widget.unique_id}}', {{count_series|count}}, '{{each_pid.unique_id}}', 'pid', '{{measurement_id}}', {{widget_variables['x_axis_duration_min']}}, {{widget_options['enable_xaxis_reset']|int}}, {{widget_options['refresh_seconds']}});
-          {% endif %}
-              {%- do count_series.append(1) %}
-            {%- endfor -%}
-          {%- endfor -%}
-
-          {%- for each_tag in tags -%}
-            {%- for tag_and_measurement_id in graph_note_tag_ids if each_tag.unique_id == tag_and_measurement_id.split(',')[0] %}
-              {%- set measurement_id = tag_and_measurement_id.split(',')[1] -%}
-          getPastDataSynchronousGraph('{{each_widget.unique_id}}', {{count_series|count}}, '{{each_tag.unique_id}}', 'tag', '{{measurement_id}}', {{widget_variables['x_axis_duration_sec']}});
-          {% if widget_options['enable_auto_refresh'] %}
-          getLiveDataSynchronousGraph('{{each_widget.unique_id}}', {{count_series|count}}, '{{each_tag.unique_id}}', 'tag', '{{measurement_id}}', {{widget_variables['x_axis_duration_min']}}, {{widget_options['enable_xaxis_reset']|int}}, {{widget_options['refresh_seconds']}});
-          {% endif %}
-              {%- do count_series.append(1) %}
-            {%- endfor -%}
-          {%- endfor -%}
-        }
-      }
-    },
+  widget['{{each_widget.unique_id}}'] = AoTTimeSeries.create(document.getElementById('container-synchronous-graph-{{each_widget.unique_id}}'), {
   {% if widget_options['use_custom_colors'] and widget_variables['colors_graph'] -%}
     {% set color_list = widget_variables['colors_graph'] %}
-      colors: [
+    colors: [
     {%- for each_series in color_list if each_series['color'] -%}
       "{{each_series['color']}}"{% if not loop.last %},{% endif %}
      {%- endfor -%}],
   {%- endif -%}
 
     title: {
-      text: "{% if widget_options['enable_title'] %}{{each_widget.name}}{% endif %}",
-      style: {
-        fontSize:'{{widget_options['graph_font_size_em_title']}}em'
-      }
+      text: {{ (each_widget.name if widget_options['enable_title'] else '')|tojson }},
+      fontSizeEm: {{widget_options['graph_font_size_em_title']}}
     },
-
     legend: {
-        enabled: {% if widget_options['enable_graph_legend'] %}true{% else %}false{% endif %},
-        labelFormatter: function () {
-            let lastVal = this.yData[this.yData.length - 1];
-            let unit = this.tooltipOptions.valueSuffix || '';
-            return this.name + ': <b>' + AoTChart.formatSeriesValue(lastVal, unit, 2) + '</b>';
-        },
-        itemStyle: {
-            fontSize:'{{widget_options['graph_font_size_em_legend']}}em'
-        }
-    },    
-    
-    
-    xAxis: {
-      type: 'datetime',
-      ordinal: false,
-      events: {
-        setExtremes: function (e) {
-          _graphOnSetExtremes('{{each_widget.unique_id}}', this.chart, e, {{widget_variables['x_axis_duration_min']}});
-        }
-      },
-      labels: {
-        style: {
-          fontSize:'{{widget_options['graph_font_size_em_axes']}}em',
-          color: 'var(--aot-color-text-secondary, #666666)'
-        }
-      }
+      enabled: {% if widget_options['enable_graph_legend'] %}true{% else %}false{% endif %},
+      fontSizeEm: {{widget_options['graph_font_size_em_legend']}}
     },
-
-    yAxis: [
+    axisFontSizeEm: {{widget_options['graph_font_size_em_axes']}},
+    alignTicks: {% if widget_options['enable_align_ticks'] %}true{% else %}false{% endif %},
+    hideOnMobile: {% if widget_options.get('hide_axis_labels_on_mobile', True) %}true{% else %}false{% endif %},
+    nightShading: {% if widget_options['enable_night_shading'] %}true{% else %}false{% endif %},
+    navigator: {% if widget_options['enable_navbar'] %}true{% else %}false{% endif %},
+    exporting: {
+      enabled: {% if widget_options['enable_export'] %}true{% else %}false{% endif %},
+      name: {{ each_widget.name|tojson }}
+    },
+    tooltipMs: true,
+    columnMaxWidth: 3,
+    rangeSelector: {
+      enabled: {% if widget_options['enable_range_selector'] %}true{% else %}false{% endif %},
+      buttons: [
+        { type: 'minute', count: 1,  text: '{{_("1m")}}' },
+        { type: 'minute', count: 5,  text: '{{_("5m")}}' },
+        { type: 'minute', count: 15, text: '{{_("15m")}}' },
+        { type: 'minute', count: 30, text: '{{_("30m")}}' },
+        { type: 'hour',   count: 1,  text: '{{_("1h")}}' },
+        { type: 'hour',   count: 6,  text: '{{_("6h")}}' },
+        { type: 'day',    count: 1,  text: '{{_("1d")}}' },
+        { type: 'week',   count: 1,  text: '{{_("1w")}}' },
+        { type: 'month',  count: 1,  text: '{{_("1mo")}}' },
+        { type: 'month',  count: 3,  text: '{{_("3mo")}}' },
+        { type: 'all',               text: '{{_("All")}}' }
+      ]
+    },
+    onRangeButton: function (i, btn) {
+      _graphRangeButtonClick('{{each_widget.unique_id}}', widget['{{each_widget.unique_id}}'], btn, {{widget_variables['x_axis_duration_min']}});
+    },
+    onUserZoom: function (e) {
+      _graphOnUserZoom('{{each_widget.unique_id}}', widget['{{each_widget.unique_id}}'], e, {{widget_variables['x_axis_duration_min']}});
+    },
+    yAxes: [
   {% for each_axis_meas in widget_variables['y_axes'] if each_axis_meas in dict_units %}
-      AoTChart.unitYAxis({
+      {
         id: '{{each_axis_meas}}',
         unit: "{% if dict_units[each_axis_meas]['unit'] != '' %}{{dict_units[each_axis_meas]['unit']}}{% else %}{{dict_units[each_axis_meas]['name']}}{% endif %}",
         fontSizeEm: {{widget_options['graph_font_size_em_axes']}},
         titleFontSizeEm: {{widget_options['graph_font_size_em_axes_title']}},
-        extra: {
     {% if widget_options['enable_manual_y_axis'] and
           widget_variables['custom_yaxes'][each_axis_meas]['minimum'] != widget_variables['custom_yaxes'][each_axis_meas]['maximum'] %}
+        fixed: {
           min: {{widget_variables['custom_yaxes'][each_axis_meas]['minimum']}},
           max: {{widget_variables['custom_yaxes'][each_axis_meas]['maximum']}},
           startOnTick: {% if widget_options['enable_start_on_tick'] %}true{% else %}false{% endif %},
           endOnTick: {% if widget_options['enable_end_on_tick'] %}true{% else %}false{% endif %}
-    {% endif %}
         }
-      }),
+    {% endif %}
+      },
   {% endfor %}
     ],
-
-    exporting: {
-      enabled: {% if widget_options['enable_export'] %}true{% else %}false{% endif %},
-      fallbackToExportServer: false,
-    },
-
-    navigator: {
-      enabled: {% if widget_options['enable_navbar'] %}true{% else %}false{% endif %},
-      xAxis: {
-        labels: { style: { color: 'var(--aot-color-text-secondary, #666666)' } }
-      }
-    },
-
-    scrollbar: {
-      enabled: false
-    },
-
-    rangeSelector: {
-      enabled: {% if widget_options['enable_range_selector'] %}true{% else %}false{% endif %},
-      labelStyle: { color: 'var(--aot-color-text-secondary, #666666)' },
-      buttonTheme: {
-        style: { color: 'var(--aot-color-text-secondary, #666666)' },
-        states: {
-          hover: { style: { color: 'var(--aot-color-text-primary, #333333)' } },
-          select: { style: { color: 'var(--aot-color-text-primary, #333333)' } },
-          disabled: { style: { color: 'var(--aot-color-text-secondary, #cccccc)' } }
-        }
-      },
-      buttons: [{
-        count: 1,
-        type: 'minute',
-        text: '{{_("1m")}}'
-      }, {
-        count: 5,
-        type: 'minute',
-        text: '{{_("5m")}}'
-      }, {
-        count: 15,
-        type: 'minute',
-        text: '{{_("15m")}}'
-      }, {
-        count: 30,
-        type: 'minute',
-        text: '{{_("30m")}}'
-      }, {
-        type: 'hour',
-        count: 1,
-        text: '{{_("1h")}}'
-      }, {
-        type: 'hour',
-        count: 6,
-        text: '{{_("6h")}}'
-      }, {
-        type: 'day',
-        count: 1,
-        text: '{{_("1d")}}'
-      }, {
-        type: 'week',
-        count: 1,
-        text: '{{_("1w")}}'
-      }, {
-        type: 'month',
-        count: 1,
-        text: '{{_("1mo")}}'
-      }, {
-        type: 'month',
-        count: 3,
-        text: '{{_("3mo")}}'
-      }, {
-        type: 'all',
-        text: '{{_("All")}}'
-      }]
-    },
-
-    credits: {
-      enabled: false,
-      href: "https://github.com/AoT-inc/AoT",
-      text: "aot"
-    },
-
-    tooltip: {
-      split: false,
-      shared: true,
-      useHTML: true,
-      formatter: function(){
-        if (this.point) {
-          return '<b>'+ AoTChart.formatDateTime(this.x, {ms: true})
-               + '</b><br/>' + this.series.name
-               + '<br/>' + this.point.title
-               + '<br/>' + this.point.text;
-        }
-        else {
-          let s = '<b>' + AoTChart.formatDateTime(this.x, {ms: true}) + '</b>';
-          $.each(this.points, function(i, point) {
-              s += '<br/><span style="color:' + point.color + '">&#9679;</span> ' + point.series.name + ': ' + AoTChart.formatPointValue(point);
-          });
-          return s;
-        }
-      }
-    },
-
-    plotOptions: {
-      column: {
-        maxPointWidth: 3  /* limit the maximum column width. */
-      },
-      series:{
-        connectNulls: true,  /* Connect line across null values */
-        states: {
-          hover: {
-            enabled: false
-          }
-        }
-      }
-    },
-
-{#    // Generate  thermal image from pixel data#}
-{#    // point click event opens image in a new window#}
-{#    plotOptions: {#}
-{#      series: {#}
-{#        cursor: 'pointer',#}
-{#        point: {#}
-{#          events: {#}
-{#            click: function () {#}
-{#              URL = '/generate_thermal_image/f36ce034-3129-456d-b877-ff0d5587e375/' + this.x;#}
-{#              window.open(URL, "_blank");#}
-{#            }#}
-{#          }#}
-{#        }#}
-{#      }#}
-{#    },#}
-
-{#    plotOptions: {#}
-{#      series: {#}
-{#        cursor: 'pointer',#}
-{#        point: {#}
-{#          events: {#}
-{#            click: function(e){#}
-{#              hs.htmlExpand(null, {#}
-{#                pageOrigin: {#}
-{#                  x: e.pageX || e.clientX,#}
-{#                  y: e.pageY || e.clientY#}
-{#                },#}
-{#                headingText: this.series.name,#}
-{#                maincontentText: '<img src="/generate_thermal_image/f36ce034-3129-456d-b877-ff0d5587e375/' + this.x + '">',#}
-{#                width: 215,#}
-{#                height: 255,#}
-{#              });#}
-{#            }#}
-{#          }#}
-{#        },#}
-{#        marker: {#}
-{#          lineWidth: 1#}
-{#        }#}
-{#      }#}
-{#    },#}
-
     series: [
   {%- for input_and_measurement_ids in graph_input_ids -%}
     {%- set input_id = input_and_measurement_ids.split(',')[0] -%}
@@ -1435,23 +1080,10 @@ WIDGET_INFORMATION = {
       {
 
         name: "{{this_input.name}}{% if device_measurements_dict[measurement_id].channel is not none %} CH{{device_measurements_dict[measurement_id].channel}}{% endif %}{% if device_measurements_dict[measurement_id].name %} {{device_measurements_dict[measurement_id].name}}{% endif %}",
-
-        {% if ns.series_type in ['line', 'column'] -%}
-        type: '{{ns.series_type}}',
-        {%- elif ns.series_type == 'step-left' -%}
-        step: 'left',
-        {%- elif ns.series_type == 'step-center' -%}
-        step: 'center',
-        {%- elif ns.series_type == 'step-right' -%}
-        step: 'right',
-        {%- endif %}
-        dataGrouping: {
-          enabled: {% if ns.disable_data_grouping %}false{% else %}true{% endif %},
-          approximation: 'average',
-          groupPixelWidth: 2
-        },
-        tooltip: {
-          valueSuffix: '
+        kind: '{{ 'column' if ns.series_type == 'column' else 'line' }}',
+        step: {% if ns.series_type.startswith('step-') %}'{{ ns.series_type[5:] }}'{% else %}null{% endif %},
+        grouping: { enabled: {% if ns.disable_data_grouping %}false{% else %}true{% endif %}, approximation: 'average' },
+        valueSuffix: '
         {%- if device_measurements_dict[measurement_id].conversion_id -%}
           {{' ' + dict_units[table_conversion.query.filter(table_conversion.unique_id == device_measurements_dict[measurement_id].conversion_id).first().convert_unit_to]['unit']}}
         {%- elif device_measurements_dict[measurement_id].rescaled_unit -%}
@@ -1460,14 +1092,12 @@ WIDGET_INFORMATION = {
           {{' ' + dict_units[device_measurements_dict[measurement_id].unit]['unit']}}
         {%- endif -%}
           ',
-          valueDecimals: 3
-        },
+        valueDecimals: 3,
         yAxis: '
         {%- if measurement_id in dict_measure_units -%}
           {{dict_measure_units[measurement_id]}}
         {%- endif -%}
-            ',
-        data: []
+            '
       },
 
       {%- endif -%}
@@ -1492,23 +1122,10 @@ WIDGET_INFORMATION = {
       {%- if measurement_id in device_measurements_dict -%}
       {
       name: "{{each_function.name}}{% if device_measurements_dict[measurement_id].channel is not none %} CH{{device_measurements_dict[measurement_id].channel}}{% endif %}{% if device_measurements_dict[measurement_id].name %} {{device_measurements_dict[measurement_id].name}}{% endif %}",
-
-      {% if ns.series_type in ['line', 'column'] -%}
-      type: '{{ns.series_type}}',
-      {%- elif ns.series_type == 'step-left' -%}
-      step: 'left',
-      {%- elif ns.series_type == 'step-center' -%}
-      step: 'center',
-      {%- elif ns.series_type == 'step-right' -%}
-      step: 'right',
-      {%- endif %}
-      dataGrouping: {
-        enabled: {% if ns.disable_data_grouping %}false{% else %}true{% endif %},
-        approximation: 'average',
-        groupPixelWidth: 2
-      },
-      tooltip: {
-        valueSuffix: '
+        kind: '{{ 'column' if ns.series_type == 'column' else 'line' }}',
+        step: {% if ns.series_type.startswith('step-') %}'{{ ns.series_type[5:] }}'{% else %}null{% endif %},
+      grouping: { enabled: {% if ns.disable_data_grouping %}false{% else %}true{% endif %}, approximation: 'average' },
+      valueSuffix: '
         {%- if device_measurements_dict[measurement_id].conversion_id -%}
           {{' ' + dict_units[table_conversion.query.filter(table_conversion.unique_id == device_measurements_dict[measurement_id].conversion_id).first().convert_unit_to]['unit']}}
         {%- elif device_measurements_dict[measurement_id].rescaled_unit -%}
@@ -1517,14 +1134,12 @@ WIDGET_INFORMATION = {
           {{' ' + dict_units[device_measurements_dict[measurement_id].unit]['unit']}}
         {%- endif -%}
         ',
-        valueDecimals: 3
-      },
+      valueDecimals: 3,
       yAxis: '
         {%- if measurement_id in dict_measure_units -%}
           {{dict_measure_units[measurement_id]}}
         {%- endif -%}
-          ',
-      data: []
+          '
     },
 
       {%- endif -%}
@@ -1551,24 +1166,10 @@ WIDGET_INFORMATION = {
       {%- if measurement_id in device_measurements_dict -%}
       {
         name: "{{this_output.name}}{% if device_measurements_dict[measurement_id].channel is not none %} CH{{device_measurements_dict[measurement_id].channel}}{% endif %}{% if device_measurements_dict[measurement_id].name %} {{device_measurements_dict[measurement_id].name}}{% endif %}",
-        
-        
-        {% if ns.series_type in ['line', 'column'] -%}
-        type: '{{ns.series_type}}',
-        {%- elif ns.series_type == 'step-left' -%}
-        step: 'left',
-        {%- elif ns.series_type == 'step-center' -%}
-        step: 'center',
-        {%- elif ns.series_type == 'step-right' -%}
-        step: 'right',
-        {%- endif %}
-        dataGrouping: {
-          enabled: {% if ns.disable_data_grouping %}false{% else %}true{% endif %},
-          approximation: 'average',
-          groupPixelWidth: 5
-        },
-        tooltip: {
-          valueSuffix: '
+        kind: '{{ 'column' if ns.series_type == 'column' else 'line' }}',
+        step: {% if ns.series_type.startswith('step-') %}'{{ ns.series_type[5:] }}'{% else %}null{% endif %},
+        grouping: { enabled: {% if ns.disable_data_grouping %}false{% else %}true{% endif %}, approximation: 'average' },
+        valueSuffix: '
         {%- if device_measurements_dict[measurement_id].conversion_id -%}
           {{' ' + dict_units[table_conversion.query.filter(table_conversion.unique_id == device_measurements_dict[measurement_id].conversion_id).first().convert_unit_to]['unit']}}
         {%- elif device_measurements_dict[measurement_id].rescaled_unit -%}
@@ -1577,14 +1178,12 @@ WIDGET_INFORMATION = {
           {{' ' + dict_units[device_measurements_dict[measurement_id].unit]['unit']}}
         {%- endif -%}
           ',
-          valueDecimals: 3
-        },
+        valueDecimals: 3,
         yAxis: '
         {%- if measurement_id in dict_measure_units -%}
           {{dict_measure_units[measurement_id]}}
         {%- endif -%}
-            ',
-        data: []
+            '
       },
 
       {%- endif -%}
@@ -1609,35 +1208,20 @@ WIDGET_INFORMATION = {
       {%- if measurement_id in device_measurements_dict -%}
     {
       name: "{{each_pid.name}}{% if device_measurements_dict[measurement_id].channel is not none %} CH{{device_measurements_dict[measurement_id].channel}}{% endif %}{% if device_measurements_dict[measurement_id].name %} {{device_measurements_dict[measurement_id].name}}{% endif %}",
-
-      {% if ns.series_type in ['line', 'column'] -%}
-      type: '{{ns.series_type}}',
-      {%- elif ns.series_type == 'step-left' -%}
-      step: 'left',
-      {%- elif ns.series_type == 'step-center' -%}
-      step: 'center',
-      {%- elif ns.series_type == 'step-right' -%}
-      step: 'right',
-      {%- endif %}
-      dataGrouping: {
-        enabled: {% if ns.disable_data_grouping %}false{% else %}true{% endif %},
-        approximation: 'average',
-        groupPixelWidth: 2
-      },
-      tooltip: {
-        valueSuffix: '
+        kind: '{{ 'column' if ns.series_type == 'column' else 'line' }}',
+        step: {% if ns.series_type.startswith('step-') %}'{{ ns.series_type[5:] }}'{% else %}null{% endif %},
+      grouping: { enabled: {% if ns.disable_data_grouping %}false{% else %}true{% endif %}, approximation: 'average' },
+      valueSuffix: '
         {%- if measurement_id in dict_measure_units and dict_measure_units[measurement_id] in dict_units -%}
           {{' ' + dict_units[dict_measure_units[measurement_id]]['unit']}}
         {%- endif -%}
         ',
-        valueDecimals: 3
-      },
+      valueDecimals: 3,
       yAxis: '
         {%- if measurement_id in dict_measure_units -%}
           {{dict_measure_units[measurement_id]}}
         {%- endif -%}
-          ',
-      data: []
+          '
     },
 
       {%- endif -%}
@@ -1648,16 +1232,82 @@ WIDGET_INFORMATION = {
     {%- for each_graph_note_tag_id in graph_note_tag_ids if each_tag.unique_id == each_graph_note_tag_id.split(',')[0] -%}
       {
         name: 'Note Tag: {{each_tag.name}}',
-        type: 'flags',
-        data: [],
-        stackDistance: 40,
-        shape: 'squarepin'
+        kind: 'flags'
       },
     {% endfor %}
   {% endfor %}
 
     ]
   });
+
+    {% set count_series = [] -%}
+
+    {%- for input_and_measurement_ids in graph_input_ids -%}
+      {%- set input_id = input_and_measurement_ids.split(',')[0] -%}
+      {%- set measurement_id = input_and_measurement_ids.split(',')[1] -%}
+      {%- set all_input = table_input.query.filter(table_input.unique_id == input_id).all() -%}
+      {%- if all_input -%}
+        {% for each_input in all_input %}
+    getPastDataSynchronousGraph('{{each_widget.unique_id}}', {{count_series|count}}, '{{each_input.unique_id}}', 'input', '{{measurement_id}}', {{widget_variables['x_axis_duration_sec']}});
+          {% if widget_options['enable_auto_refresh'] -%}
+    getLiveDataSynchronousGraph('{{each_widget.unique_id}}', {{count_series|count}}, '{{each_input.unique_id}}', 'input', '{{measurement_id}}', {{widget_variables['x_axis_duration_min']}}, {{widget_options['enable_xaxis_reset']|int}}, {{widget_options['refresh_seconds']}});
+          {%- endif -%}
+          {%- do count_series.append(1) -%}
+        {%- endfor -%}
+      {%- endif -%}
+    {%- endfor -%}
+
+    {%- for function_and_measurement_ids in graph_function_ids -%}
+      {%- set function_id = function_and_measurement_ids.split(',')[0] -%}
+      {%- set measurement_id = function_and_measurement_ids.split(',')[1] -%}
+      {%- set all_function = table_function.query.filter(table_function.unique_id == function_id).all() -%}
+      {%- if all_function -%}
+        {% for each_function in all_function %}
+    getPastDataSynchronousGraph('{{each_widget.unique_id}}', {{count_series|count}}, '{{each_function.unique_id}}', 'function', '{{measurement_id}}', {{widget_variables['x_axis_duration_sec']}});
+          {% if widget_options['enable_auto_refresh'] %}
+    getLiveDataSynchronousGraph('{{each_widget.unique_id}}', {{count_series|count}}, '{{each_function.unique_id}}', 'function', '{{measurement_id}}', {{widget_variables['x_axis_duration_min']}}, {{widget_options['enable_xaxis_reset']|int}}, {{widget_options['refresh_seconds']}});
+          {% endif %}
+          {%- do count_series.append(1) %}
+        {%- endfor -%}
+      {%- endif -%}
+    {%- endfor -%}
+
+    {%- for output_and_measurement_ids in graph_output_ids -%}
+      {%- set output_id = output_and_measurement_ids.split(',')[0] -%}
+      {%- set measurement_id = output_and_measurement_ids.split(',')[1] -%}
+      {%- set all_output = table_output.query.filter(table_output.unique_id == output_id).all() -%}
+      {%- if all_output -%}
+        {% for each_output in all_output %}
+    getPastDataSynchronousGraph('{{each_widget.unique_id}}', {{count_series|count}}, '{{each_output.unique_id}}', 'output', '{{measurement_id}}', {{widget_variables['x_axis_duration_sec']}});
+          {% if widget_options['enable_auto_refresh'] -%}
+    getLiveDataSynchronousGraph('{{each_widget.unique_id}}', {{count_series|count}}, '{{each_output.unique_id}}', 'output', '{{measurement_id}}', {{widget_variables['x_axis_duration_min']}}, {{widget_options['enable_xaxis_reset']|int}}, {{widget_options['refresh_seconds']}});
+          {%- endif -%}
+          {%- do count_series.append(1) -%}
+        {%- endfor -%}
+      {%- endif -%}
+    {%- endfor -%}
+
+    {%- for each_pid in pid -%}
+      {%- for pid_and_measurement_id in graph_pid_ids if each_pid.unique_id == pid_and_measurement_id.split(',')[0] %}
+        {%- set measurement_id = pid_and_measurement_id.split(',')[1] -%}
+    getPastDataSynchronousGraph('{{each_widget.unique_id}}', {{count_series|count}}, '{{each_pid.unique_id}}', 'pid', '{{measurement_id}}', {{widget_variables['x_axis_duration_sec']}});
+    {% if widget_options['enable_auto_refresh'] %}
+    getLiveDataSynchronousGraph('{{each_widget.unique_id}}', {{count_series|count}}, '{{each_pid.unique_id}}', 'pid', '{{measurement_id}}', {{widget_variables['x_axis_duration_min']}}, {{widget_options['enable_xaxis_reset']|int}}, {{widget_options['refresh_seconds']}});
+    {% endif %}
+        {%- do count_series.append(1) %}
+      {%- endfor -%}
+    {%- endfor -%}
+
+    {%- for each_tag in tags -%}
+      {%- for tag_and_measurement_id in graph_note_tag_ids if each_tag.unique_id == tag_and_measurement_id.split(',')[0] %}
+        {%- set measurement_id = tag_and_measurement_id.split(',')[1] -%}
+    getPastDataSynchronousGraph('{{each_widget.unique_id}}', {{count_series|count}}, '{{each_tag.unique_id}}', 'tag', '{{measurement_id}}', {{widget_variables['x_axis_duration_sec']}});
+    {% if widget_options['enable_auto_refresh'] %}
+    getLiveDataSynchronousGraph('{{each_widget.unique_id}}', {{count_series|count}}, '{{each_tag.unique_id}}', 'tag', '{{measurement_id}}', {{widget_variables['x_axis_duration_min']}}, {{widget_options['enable_xaxis_reset']|int}}, {{widget_options['refresh_seconds']}});
+    {% endif %}
+        {%- do count_series.append(1) %}
+      {%- endfor -%}
+    {%- endfor -%}
 
   $('#updateData{{each_widget.unique_id}}').off('click').on('click', function() {
     {% set count_series = [] -%}
@@ -1708,19 +1358,8 @@ WIDGET_INFORMATION = {
   });
 
   $('#showhidebutton{{each_widget.unique_id}}').off('click').on('click', function() {
-    const chart = $('#container-synchronous-graph-{{each_widget.unique_id}}').highcharts();
-    const series = chart.series[0];
-    if (series.visible) {
-      $(chart.series).each(function(){
-        this.setVisible(false, false);
-      });
-      chart.redraw();
-    } else {
-      $(chart.series).each(function(){
-        this.setVisible(true, false);
-      });
-      chart.redraw();
-    }
+    const ts = widget['{{each_widget.unique_id}}'];
+    if (ts) ts.toggleAll();
   });
 """,
 }

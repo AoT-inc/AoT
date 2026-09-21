@@ -11,7 +11,7 @@ from aot.config import (CAMERA_INFO, DEPENDENCIES_GENERAL,
                            DEPENDENCY_LOG_FILE, FUNCTION_INFO,
                            INSTALL_DIRECTORY, METHOD_INFO)
 from aot.databases.models import (Actions, Camera, Conditional,
-                                     CustomController, EnergyUsage, Function,
+                                     CustomController, Function,
                                      Input, Method, Output, Trigger, Widget)
 from aot.aot_flask.utils.utils_general import return_dependencies
 from aot.utils.actions import parse_action_information
@@ -109,10 +109,6 @@ if __name__ == "__main__":
         if each_dev.graph_type not in devices:
             devices.append(each_dev.graph_type)
 
-    energy_usage = db_retrieve_table_daemon(EnergyUsage)
-    for each_dev in energy_usage:
-        if 'highstock' not in devices:
-            devices.append('highstock')
 
     if devices:
         logger.info(f"Checking dependencies for installed devices: {devices}")

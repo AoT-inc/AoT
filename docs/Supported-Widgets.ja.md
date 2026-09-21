@@ -24,15 +24,13 @@ Displays and controls a PWM output with a single slider.
 
 ### AoT グラフ
 
-- Libraries: Highstock
-- Dependencies: highstock-9.1.2.js, highcharts-more-9.1.2.js, data-9.1.2.js, exporting-9.1.2.js, export-data-9.1.2.js, offline-exporting-9.1.2.js
+- Libraries: ECharts
 
 同期グラフを表示します。選択されたデータは設定された期間X軸に表示されます。
 
 ### AoT サーキュラーゲージ
 
-- Libraries: Highcharts
-- Dependencies: highstock-9.1.2.js, highcharts-more-9.1.2.js
+- Libraries: ECharts
 
 円形ゲージでデータを表示します。最大値オプションが最後のセクション（高）と一致していることを確認してください。温度、湿度、VPDなどのプリセットを選択すると、最小/最大値と色セクションが自動的に設定されます。
 
@@ -95,10 +93,9 @@ Pythonコードを実行し、結果をウィジェット内に表示します�
 
 Shows scheduled events (from the Scheduler) on a calendar, split by category (AI / User / Device), and any Google calendars you connect. Click an event for details or to edit; open the full Scheduler for more.
 
-### ゲージ (ソリッド) [Highcharts]
+### ゲージ (ソリッド)
 
-- Libraries: Highcharts
-- Dependencies: highstock-9.1.2.js, highcharts-more-9.1.2.js, solid-gauge-9.1.2.js
+- Libraries: ECharts
 
 ソリッドゲージを表示します。ゲージを正しく表示するには、最大値オプションを最後のStop値に設定してください。
 

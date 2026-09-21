@@ -39,7 +39,6 @@ from aot.aot_flask.routes_static import inject_variables
 from aot.aot_flask.utils import (utils_camera, utils_dashboard,
                                        utils_export, utils_general, utils_misc,
                                        utils_notes)
-from aot.aot_flask.utils.utils_general import return_dependencies
 from aot.utils.functions import parse_function_information
 from aot.utils.inputs import (list_analog_to_digital_converters,
                                  parse_input_information)
@@ -461,11 +460,6 @@ def _filter_choices_by_area(choices, allowed_ids):
 @flask_login.login_required
 def page_graph_async():
     """Generate graphs using asynchronous data retrieval."""
-    if not current_app.config['TESTING']:
-        dep_unmet, _unused, _unmet = return_dependencies('highstock')
-        if dep_unmet:
-            return redirect(url_for('routes_admin.admin_dependencies',
-                                    device='highstock'))
 
     function = CustomController.query.all()
     input_dev = Input.query.all()
@@ -1220,10 +1214,6 @@ def page_energy_usage_input_amps():
             return redirect(url_for('routes_page.page_energy_usage_input_amps'))
 
         if form_energy_usage_add.energy_usage_add.data:
-            dep_unmet, _unused, _unmet = return_dependencies('highstock')
-            if dep_unmet:
-                return redirect(url_for('routes_admin.admin_dependencies',
-                                        device='highstock'))
             utils_misc.energy_usage_add(form_energy_usage_add)
         elif form_energy_usage_mod.energy_usage_mod.data:
             utils_misc.energy_usage_mod(form_energy_usage_mod)

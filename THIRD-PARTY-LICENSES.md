@@ -35,21 +35,22 @@ AoT 는 GPLv3 로 배포되며(`LICENSE.txt`), 오픈소스 [Mycodo](https://git
 | vis-timeline | 7.7.3 | Apache-2.0 OR MIT | `vendor/vis-timeline-7.7.3/` |
 | three.js GLTFExporter (**로컬 자립 빌드**, 아래 참고) | r155 | MIT | `js/widgets/AoT_facility/three-gltf-exporter.js` |
 | MapLibre GL JS | 4.1.2 | BSD 3-Clause | `vendor/maplibre-gl-4.1.2/` |
-| Highcharts · Highstock (+ more · exporting · solid-gauge 모듈) | 9.1.2 | 상용 라이선스 (아래 참고) | `js/vendor/user_js/` |
-| Highcharts "Dark Unica" 테마 (**로컬 수정본**) | — | Highcharts 라이선스에 종속 | `js/vendor/user_js/dark-unica-custom.js` |
+| Apache ECharts (**맞춤 빌드**, 아래 참고) — zrender · d3.js 일부 · tslib 포함 | 6.1.0 (zrender 6.1.0, tslib 2.3.0) | Apache-2.0 (zrender·d3 부분 BSD 3-Clause, tslib 0BSD) | `js/vendor/echarts-6.1.0/` |
 | Turf.js | 번들에 표기 없음 | MIT | `js/common/turf.min.js` |
 | three.js | 2023 판 (**로컬 수정본**, 아래 참고) | MIT | `js/widgets/AoT_facility/three.min.js` |
 | three-mesh-bvh | 번들에 표기 없음 | MIT | `js/widgets/AoT_facility/three-mesh-bvh.js` |
 
 ### 확인해 둘 것
 
-**Highcharts** 는 오픈소스 라이선스가 아닙니다. AoT 는 무료·비상업 배포이므로
-Highcharts 의 비상업 조건 아래 포함하고 있습니다. **AoT 를 상업적으로 재배포하려면
-Highcharts 상용 라이선스를 별도로 확보해야 합니다.**
-
-`dark-unica-custom.js` 는 Highcharts 의 Dark Unica 테마를 AoT 용으로 고친 것입니다
-(원저자 Torstein Honsi, 수정 Kyle Gabriel). 원본과 같은 Highcharts 라이선스를
-따릅니다.
+**Apache ECharts 는 필요한 부분만 담은 맞춤 빌드입니다.** 그래프를 그립니다.
+2026-09-21 까지 쓰던 Highcharts(비상업 용도로만 무료인 상용 라이선스)를 이것으로 바꿨고,
+Highcharts 파일은 저장소에서 뺐습니다. 배포판 전체 대신 AoT 가 쓰는 차트(선·막대·산점·게이지)와
+컴포넌트만 esbuild 로 묶었고, 담은 목록은 파일 머리말에 있습니다. 같은 폴더에
+ECharts 의 `LICENSE`·`NOTICE`, 빌드에 함께 들어가는 zrender 의 `LICENSE-zrender`,
+ECharts 안에 들어 있는 d3.js 코드의 `LICENSE-d3` 를 두었습니다. 다시 만드는 방법은
+`js/tools/build_echarts_vendor.mjs` 에 있고, 같은 입력이면 같은 파일이
+나옵니다. 화면이 싣는 배포 번들(`js/dist/echarts-stack.bundle.js`)은 다른 번들처럼
+압축하면서 주석을 지우므로, 라이선스 머리말과 고지 전문은 위 폴더에 있습니다.
 
 **`three-gltf-exporter.js` 는 AoT 가 만든 자립 빌드입니다.** three.js 예제의
 `GLTFExporter` 를 esbuild 로 묶되, three 본체는 다시 번들하지 않고 이미 로드된

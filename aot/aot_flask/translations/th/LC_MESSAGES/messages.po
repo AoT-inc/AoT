@@ -28835,8 +28835,8 @@ msgid "Select a Function to display the status of"
 msgstr "เลือกฟังก์ชันเพื่อแสดงสถานะ"
 
 #: widgets/widget_gauge_solid.py:122
-msgid "Gauge (Solid) [Highcharts]"
-msgstr "เกจ (แบบทึบ) [Highcharts]"
+msgid "Gauge (Solid)"
+msgstr "เกจ (แบบทึบ)"
 
 #: widgets/widget_gauge_solid.py:126
 msgid ""

@@ -29,8 +29,7 @@ Displays and controls a PWM output with a single slider.
 
 ### AoT 그래프
 
-- Libraries: Highstock
-- Dependencies: highstock-9.1.2.js, highcharts-more-9.1.2.js, data-9.1.2.js, exporting-9.1.2.js, export-data-9.1.2.js, offline-exporting-9.1.2.js
+- Libraries: ECharts
 
 동기식 그래프를 표시합니다. 선택한 데이터를 설정한 시간 만큼 X축에 표시 합니다.
 
@@ -47,8 +46,7 @@ Displays and controls a PWM output with a single slider.
 
 ### AoT 원형 게이지
 
-- Libraries: Highcharts
-- Dependencies: highstock-9.1.2.js, highcharts-more-9.1.2.js
+- Libraries: ECharts
 
 데이터를 원형 게이지로 표시합니다. 게이지가 올바르게 표시되도록 최대값 옵션을 마지막 구간(High)에 맞춰 설정하세요. 온도, 습도, VPD 등의 사전 설정을 선택하면, 최소/최대값 및 색상 구간이 자동으로 설정됩니다.
 
@@ -75,10 +73,9 @@ Displays and controls a PWM output with a single slider.
 
 풍향은 원형 링(0~360°)으로 표시하고, 중앙에는 풍속을 표시합니다. 주요 8개 방위(0/45/90/135/180/225/270/315°) 보조선을 제공합니다.
 
-### 게이지 (솔리드) [Highcharts]
+### 게이지 (솔리드)
 
-- Libraries: Highcharts
-- Dependencies: highstock-9.1.2.js, highcharts-more-9.1.2.js, solid-gauge-9.1.2.js
+- Libraries: ECharts
 
 솔리드 게이지를 표시합니다. 게이지가 올바르게 표시되도록 최댓값 옵션을 마지막 Stop 값으로 설정하세요.
 

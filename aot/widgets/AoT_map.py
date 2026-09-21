@@ -170,7 +170,7 @@ WIDGET_HEAD_HTML = """
 <!-- GeoJSON overlay support -->
 
 <!-- Sensor labels (facility fittings measurement labels + 24h popup) -->
-<!-- aot-chart-core: 공용 Highcharts 기본값(local TZ 등) — bay 모달 인라인 차트가 사용 -->
+<!-- aot-chart-core: 차트 공용층(ECharts 어댑터 포함) — bay 모달 인라인 차트가 사용 -->
 <!-- 출력 상태 공용 분류기(on/off/pending/fault). 위젯 코드가 이미 이것을
      전제로 쓰고 있었는데 정작 로드는 안 하고 있어서, 늘 인라인 폴백으로
      떨어져 있었다 — 'fault'(무응답) 판정이 화면마다 달라질 수 있는 상태였다. -->

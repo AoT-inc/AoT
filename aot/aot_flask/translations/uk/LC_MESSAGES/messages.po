@@ -29118,8 +29118,8 @@ msgid "Select a Function to display the status of"
 msgstr "Виберіть функцію для відображення статусу"
 
 #: widgets/widget_gauge_solid.py:122
-msgid "Gauge (Solid) [Highcharts]"
-msgstr "Індикатор (суцільний) [Highcharts]"
+msgid "Gauge (Solid)"
+msgstr "Індикатор (суцільний)"
 
 #: widgets/widget_gauge_solid.py:126
 msgid ""

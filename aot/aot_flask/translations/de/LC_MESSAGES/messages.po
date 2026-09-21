@@ -29416,8 +29416,8 @@ msgid "Select a Function to display the status of"
 msgstr "Wählen Sie eine Funktion aus, deren Status angezeigt werden soll"
 
 #: widgets/widget_gauge_solid.py:122
-msgid "Gauge (Solid) [Highcharts]"
-msgstr "Anzeige (Voll) [Highcharts]"
+msgid "Gauge (Solid)"
+msgstr "Anzeige (Voll)"
 
 #: widgets/widget_gauge_solid.py:126
 msgid ""

@@ -13,8 +13,7 @@ Displays and controls a positional (open/close) actuator: close/stop/open button
 
 ### AoT Circular Gauge
 
-- Libraries: Highcharts
-- Dependencies: highstock-9.1.2.js, highcharts-more-9.1.2.js
+- Libraries: ECharts
 
 Displays data in a circular gauge. Ensure the maximum value option matches the last section (High) for correct display. Selecting presets like Temperature, Humidity, or VPD automatically sets min/max values and color sections.
 
@@ -31,8 +30,7 @@ Facility 3D view, environment summary, setpoint editor, actuator control grid, a
 
 ### AoT Graph
 
-- Libraries: Highstock
-- Dependencies: highstock-9.1.2.js, highcharts-more-9.1.2.js, data-9.1.2.js, exporting-9.1.2.js, export-data-9.1.2.js, offline-exporting-9.1.2.js
+- Libraries: ECharts
 
 Displays a synchronous graph. Data selected will be displayed on the X-axis for the configured duration.
 
@@ -90,10 +88,9 @@ Displays a camera image or stream.
 
 Displays the status of a Function (if supported).
 
-### Gauge (Solid) [Highcharts]
+### Gauge (Solid)
 
-- Libraries: Highcharts
-- Dependencies: highstock-9.1.2.js, highcharts-more-9.1.2.js, solid-gauge-9.1.2.js
+- Libraries: ECharts
 
 Displays a solid gauge. Be sure to set the Maximum option to the last Stop value for the gauge to display properly.
 

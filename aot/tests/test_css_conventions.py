@@ -700,8 +700,8 @@ _FALLBACK = re.compile(r"var\(\s*(--[A-Za-z0-9_-]+)\s*,\s*(#[0-9A-Fa-f]{3,8})\s*
 _HEX_DEF = re.compile(r"(--[A-Za-z0-9_-]+)\s*:\s*(#[0-9A-Fa-f]{3,8})\s*;")
 
 _FALLBACK_BUDGET = {
-    "--aot-color-text-secondary": 64,
-    "--aot-color-text-primary": 78,
+    "--aot-color-text-secondary": 50,
+    "--aot-color-text-primary": 73,
     "--aot-border-neutral": 19,
     "--aot-surface-body": 12,
     "--aot-color-danger": 1,

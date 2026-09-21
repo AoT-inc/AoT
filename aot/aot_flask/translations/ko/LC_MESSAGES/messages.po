@@ -27828,8 +27828,8 @@ msgid "Select a Function to display the status of"
 msgstr "상태를 표시할 기능 선택"
 
 #: widgets/widget_gauge_solid.py:122
-msgid "Gauge (Solid) [Highcharts]"
-msgstr "게이지 (솔리드) [Highcharts]"
+msgid "Gauge (Solid)"
+msgstr "게이지 (솔리드)"
 
 #: widgets/widget_gauge_solid.py:126
 msgid ""

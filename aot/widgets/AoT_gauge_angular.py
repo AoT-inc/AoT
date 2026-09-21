@@ -45,14 +45,12 @@
 #  Last modified: 2025-04-21
 
 import json
-import os
 import logging
 import re
 
 from flask import flash
 from flask_babel import lazy_gettext
 
-from aot.config import PATH_JS_USER
 from aot.utils.constraints_pass import constraints_pass_positive_value
 
 logger = logging.getLogger(__name__)
@@ -215,7 +213,7 @@ def generate_page_variables(widget_unique_id, widget_options):
 WIDGET_INFORMATION = {
     'widget_name_unique': 'AoT_gauge_angular',
     'widget_name': lazy_gettext('AoT Circular Gauge'),
-    'widget_library': 'Highcharts',
+    'widget_library': 'ECharts',
     'no_class': True,
 
     # Widget description
@@ -224,27 +222,6 @@ WIDGET_INFORMATION = {
     'execute_at_creation': execute_at_creation,
     'execute_at_modification': execute_at_modification,
     'generate_page_variables': generate_page_variables,
-
-    'dependencies_module': [
-        ('bash-commands',
-        [
-            os.path.join(PATH_JS_USER, 'highstock-9.1.2.js'),
-            os.path.join(PATH_JS_USER, 'highcharts-more-9.1.2.js')
-        ],
-        [
-            'rm -rf Highcharts-Stock-9.1.2.zip',
-            'wget https://code.highcharts.com/zips/Highcharts-Stock-9.1.2.zip 2>&1',
-            'unzip Highcharts-Stock-9.1.2.zip -d Highcharts-Stock-9.1.2',
-            f'cp -rf Highcharts-Stock-9.1.2/code/highstock.js {os.path.join(PATH_JS_USER, "highstock-9.1.2.js")}',
-            f'cp -rf Highcharts-Stock-9.1.2/code/highstock.js.map {os.path.join(PATH_JS_USER, "highstock.js.map")}',
-            f'cp -rf Highcharts-Stock-9.1.2/code/highcharts-more.js {os.path.join(PATH_JS_USER, "highcharts-more-9.1.2.js")}',
-            f'cp -rf Highcharts-Stock-9.1.2/code/highcharts-more.js.map {os.path.join(PATH_JS_USER, "highcharts-more.js.map")}',
-            'rm -rf Highcharts-Stock-9.1.2.zip',
-            'rm -rf Highcharts-Stock-9.1.2'
-        ])
-    ],
-
-    'dependencies_message': lazy_gettext('Highcharts is free for open source and personal use. However, if used as part of a commercial product, a commercial license may be required. Please check https://shop.highsoft.com for the most accurate information.'),
 
     'execute_at_creation': execute_at_creation,
     'execute_at_modification': execute_at_modification,
@@ -372,13 +349,17 @@ WIDGET_INFORMATION = {
         }        
     ],
 
-    'widget_dashboard_head': """{% if "highstock" not in dashboard_dict %}
-  <script src="{{ asset('highcharts-stack') }}"></script>
-  {% set _dummy = dashboard_dict.update({"highstock": 1}) %}
+    'widget_dashboard_head': """{% if "echarts" not in dashboard_dict %}
+  <script src="{{ asset('echarts-stack') }}"></script>
+  {% set _dummy = dashboard_dict.update({"echarts": 1}) %}
 {% endif %}
-
-{% if current_user.theme in dark_themes %}
-  <script type="text/javascript" src="/static/js/vendor/user_js/dark-unica-custom.js?v=20260814a"></script>
+{% if "aot_chart_core" not in dashboard_dict %}
+  <script src="{{ asset('app-chart-core') }}"></script>
+  {% set _dummy = dashboard_dict.update({"aot_chart_core": 1}) %}
+{% endif %}
+{% if "gauge_chart" not in dashboard_dict %}
+  <script src="{{ asset('widget-gauge-chart') }}"></script>
+  {% set _dummy = dashboard_dict.update({"gauge_chart": 1}) %}
 {% endif %}
 """,
 
@@ -439,19 +420,6 @@ WIDGET_INFORMATION = {
     """,
 
     'widget_dashboard_js': """
-  /* 테마 토큰을 색 문자열로 읽는다.
-     Highcharts 는 아래 색들을 SVG 표현속성(stroke/fill)으로 넣기 때문에
-     `var(--…)` 를 그대로 주면 풀리지 않는다. 여기서 한 번 계산해 넘긴다.
-     테마별 값은 aot-theme-variables.css / custom-dark.css 가 갖고 있다. */
-  window.aotThemeColor = window.aotThemeColor || function (name, fallback) {
-    try {
-      var v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
-      return v || fallback;
-    } catch (e) {
-      return fallback;
-    }
-  };
-
   function getLastDataGaugeAngular(widget_id,
                        unique_id,
                        measure_type,
@@ -461,16 +429,15 @@ WIDGET_INFORMATION = {
     $.ajax(url, {
       success: function(data, responseText, jqXHR) {
         if (jqXHR.status === 204) {
-          widget[widget_id].series[0].points[0].update(null);
+          widget[widget_id].setValue(null);
         }
         else {
-          const formattedTime = epoch_to_timestamp(data[0] * 1000);
           const measurement = data[1];
-          widget[widget_id].series[0].points[0].update(measurement);
+          widget[widget_id].setValue(measurement);
         }
       },
       error: function(jqXHR, textStatus, errorThrown) {
-        widget[widget_id].series[0].points[0].update(null);
+        widget[widget_id].setValue(null);
       }
     });
   }
@@ -504,14 +471,12 @@ WIDGET_INFORMATION = {
     'widget_dashboard_js_ready_end': """
 {%- set device_id = widget_options['measurement'].split(",")[0] -%}
 {%- set measurement_id = widget_options['measurement'].split(",")[1] -%}
-
-{% set measure = { 'measurement_id': None } %}
   // Idempotency guard: when this script is re-run for live option preview (no
   // page reload), tear down the previous chart + its polling interval first so
-  // re-init doesn't leak a Highcharts instance or stack another setInterval.
+  // re-init doesn't leak a chart instance or stack another setInterval.
   try {
     if (typeof widget !== 'undefined' && widget['{{each_widget.unique_id}}']) {
-      widget['{{each_widget.unique_id}}'].destroy();
+      widget['{{each_widget.unique_id}}'].dispose();
       delete widget['{{each_widget.unique_id}}'];
     }
   } catch (e) {}
@@ -519,106 +484,39 @@ WIDGET_INFORMATION = {
     clearInterval(window._gauge_intervals['{{each_widget.unique_id}}']);
     delete window._gauge_intervals['{{each_widget.unique_id}}'];
   }
-  widget['{{each_widget.unique_id}}'] = new Highcharts.chart({
-    chart: {
-      renderTo: 'container-gauge-{{each_widget.unique_id}}',
-      type: 'gauge',
-      animation: false,
-      plotBackgroundColor: null,
-      plotBackgroundImage: null,
-      plotBorderWidth: 0,
-      plotShadow: false,
-      events: {
-        load: function () {
-          {% for each_input in input  if each_input.unique_id == device_id %}
-          getLastDataGaugeAngular('{{each_widget.unique_id}}', '{{device_id}}', 'input', '{{measurement_id}}', {{widget_options['max_measure_age'] if widget_options['max_measure_age'] else 120}});
-          repeatLastDataGaugeAngular('{{each_widget.unique_id}}', '{{device_id}}', 'input', '{{measurement_id}}', {{widget_options['refresh_seconds'] if widget_options['refresh_seconds'] else 30}}, {{widget_options['max_measure_age'] if widget_options['max_measure_age'] else 120}});
-          {%- endfor -%}
-          
-          {% for each_function in function if each_function.unique_id == device_id %}
-          getLastDataGaugeAngular('{{each_widget.unique_id}}', '{{device_id}}', 'function', '{{measurement_id}}', {{widget_options['max_measure_age'] if widget_options['max_measure_age'] else 120}});
-          repeatLastDataGaugeAngular('{{each_widget.unique_id}}', '{{device_id}}', 'function', '{{measurement_id}}', {{widget_options['refresh_seconds'] if widget_options['refresh_seconds'] else 30}}, {{widget_options['max_measure_age'] if widget_options['max_measure_age'] else 120}});
-          {%- endfor -%}
-
-          {%- for each_pid in pid if each_pid.unique_id == device_id %}
-          getLastDataGaugeAngular('{{each_widget.unique_id}}', '{{device_id}}', 'pid', '{{measurement_id}}', {{widget_options['max_measure_age'] if widget_options['max_measure_age'] else 120}});
-          repeatLastDataGaugeAngular('{{each_widget.unique_id}}', '{{device_id}}', 'pid', '{{measurement_id}}', {{widget_options['refresh_seconds'] if widget_options['refresh_seconds'] else 30}}, {{widget_options['max_measure_age'] if widget_options['max_measure_age'] else 120}});
-          {%- endfor -%}
-        }
-      },
-      spacingTop: 0,
-      spacingLeft: 0,
-      spacingRight: 0,
-      spacingBottom: 0
-    },
-
-    title: null,
-
-    exporting: {
-      enabled: false
-    },
-
-    pane: {
-        // Align with wind gauge layout:
-        // - Horizontal padding 12% ⇒ size ≈ 76%
-        // - Top padding ~4% ⇒ centerY ≈ 42% (since size/2 = 38%, 42-38 = 4%)
-        center: [ '50%', '42%' ],
-        size: '76%',
-        startAngle: -120,
-        endAngle: 120,
-        background: [{
-          backgroundColor: 'none',
-          borderWidth: 0,
-          outerRadius: '0%',
-          innerRadius: '0%'
-        }]
-    },
-
-    yAxis: {
-        min: {{widget_options['min']}},
-        max: {{widget_options['max']}},
-        title: {
-          text: '',
-          y: 20
-        },
-
-        minColor: aotThemeColor('--aot-gauge-dial', '#3e3f46'),
-        maxColor: aotThemeColor('--aot-gauge-dial', '#3e3f46'),
-
-        minorTickInterval: 'auto',
-        minorTickWidth: 0,
-        minorTickLength: 0,
-        minorTickPosition: 'inside',
-        minorTickColor: aotThemeColor('--aot-gauge-tick', '#666666'),
-
-        tickPixelInterval: 50,
-        tickWidth: 0,
-        
-        tickPosition: 'inside',
-        tickLength: 0,
-        tickColor: aotThemeColor('--aot-gauge-tick', '#666666'),
-
-        labels: {
-            step: 2,
-            rotation: 'auto',
-            style: {
-                color: 'var(--aot-color-text-secondary, #666666)'
-            }
-        },
-        plotBands: [
-          {% for n in range(widget_variables['colors_gauge_angular']|length) %}
-            {% set index = '{0:0>2}'.format(n) %}
-        {
-            from: {{widget_variables['colors_gauge_angular'][n]['low']}},
-            to: {{widget_variables['colors_gauge_angular'][n]['high']}},
-            color: '{{widget_variables['colors_gauge_angular'][n]['hex']}}'
-        },
-          {% endfor %}
-        ]
-    },
-
-    series: [{
-      name: '
+  widget['{{each_widget.unique_id}}'] = AoTGauge.angular(document.getElementById('container-gauge-{{each_widget.unique_id}}'), {
+    min: {{widget_options['min']}},
+    max: {{widget_options['max']}},
+    bands: [
+      {%- for n in range(widget_variables['colors_gauge_angular']|length) %}
+      { from: {{widget_variables['colors_gauge_angular'][n]['low']}}, to: {{widget_variables['colors_gauge_angular'][n]['high']}}, color: '{{widget_variables['colors_gauge_angular'][n]['hex']}}' },
+      {%- endfor %}
+    ],
+    decimals: {{ widget_options.get("decimal_places", 1) }},
+    valueOffsetPx: {{ widget_options.get("text_y_offset", 30) }},
+    valueWeight: '{{ widget_options.get("text_font_tick", 500) }}',
+    unit: {% if measurement_id in dict_measure_units and dict_measure_units[measurement_id] in dict_units and dict_units[dict_measure_units[measurement_id]]['unit'] %}
+        '{{ dict_units[dict_measure_units[measurement_id]]["unit"] }}'
+    {% else %}
+        {%- if measurement_id in device_measurements_dict and device_measurements_dict[measurement_id].unit in dict_units -%}
+          '{{ dict_units[device_measurements_dict[measurement_id].unit]["unit"] }}'
+        {%- else -%}
+          'N/A'
+        {%- endif -%}
+    {% endif %},
+    tooltipUnit: '
+      {%- for each_input in input if each_input.unique_id == device_id -%}
+        {%- if measurement_id in device_measurements_dict and device_measurements_dict[measurement_id].unit in dict_units -%}
+          {{ dict_units[device_measurements_dict[measurement_id].unit]["unit"] }}
+        {%- endif -%}
+      {%- endfor -%}
+      {%- for each_function in function if each_function.unique_id == device_id -%}
+        {{ each_function.measure_units|safe }}
+      {%- endfor -%}
+      {%- for each_pid in pid if each_pid.unique_id == device_id -%}
+        {{ each_pid.measure_units|safe }}
+      {%- endfor -%}',
+    name: '
       {%- for each_input in input if each_input.unique_id == device_id -%}
         {%- if measurement_id in device_measurements_dict -%}
           {{each_input.name}} (
@@ -630,90 +528,29 @@ WIDGET_INFORMATION = {
             {%- endif -%}
           {%- endif -%}
       {%- endfor -%}
-      
       {%- for each_function in function if each_function.unique_id == device_id -%}
         {{each_function.measure|safe}}
       {%- endfor -%}
-      
       {%- for each_pid in pid if each_pid.unique_id == device_id -%}
         {{each_pid.measure|safe}}
       {%- endfor -%}
-      )',
-      data: [null],
-      dataLabels: {
-        enabled: true,
-        useHTML: true,
-        crop: false,
-        overflow: 'allow',
-        allowOverlap: true,
-        borderWidth: 0,
-        backgroundColor: 'none',
-        style: {
-          textOutline: 'none',
-          color: 'var(--aot-color-text-primary, #333333)',
-          fontWeight: '{{ widget_options.get("text_font_tick", 500) }}',
-          fontSize: '{{ widget_options.get("text_font_size", 2) }}em'
-        },
-        y: {{ widget_options.get("text_y_offset", 30) }},
-        formatter: function() {
-          var dec = {{ widget_options.get("decimal_places", 1) }};
-          // 값이 없으면 **빈 칸이 아니라 대시**. 빈 칸은 "0" 인지 "센서가
-          // 죽었" 는지 "아직 안 왔" 는지를 구분해 주지 못한다.
-          var val = (this.y === null) ? '—' : Highcharts.numberFormat(this.y, dec);
-          var dataFontSize = {{ widget_options.get("text_font_size", 1.5) }};
-          var unitFontSize = {{ widget_options.get("unit_font_size", 0.7) }};
-          // Get the unit the existing way
-          var unitLabel = {% if measurement_id in dict_measure_units and dict_measure_units[measurement_id] in dict_units and dict_units[dict_measure_units[measurement_id]]['unit'] %}
-              '{{ dict_units[dict_measure_units[measurement_id]]["unit"] }}'
-          {% else %}
-              {%- if measurement_id in device_measurements_dict and device_measurements_dict[measurement_id].unit in dict_units -%}
-                '{{ dict_units[device_measurements_dict[measurement_id].unit]["unit"] }}'
-              {%- else -%}
-                'N/A'
-              {%- endif -%}
-          {% endif %};
-          if (this.y === null) {
-            // 값이 없는데 단위만 남으면 ("— °C") 읽는 사람이 값을 찾게 된다.
-            return '<span class="aot-w-nodata" style="font-size:var(--aot-fs-value)">' + val + '</span>';
-          }
-          return '<span style="font-size:var(--aot-fs-value)">' + val + '</span>' +
-                '<span style="font-size:var(--aot-fs-unit);margin-left:0.2em">' + unitLabel + '</span>';
-        }
-      },
-      yAxis: 0,
-      dial: {
-        backgroundColor: aotThemeColor('--aot-gauge-dial', '#3e3f46'),
-        baseWidth: 5
-      },
-      tooltip: {
-      {%- for each_input in input if each_input.unique_id == device_id %}
-        pointFormatter: function () {
-          return this.series.name + ':<b> ' + Highcharts.numberFormat(this.y, 2) + ' {% if measurement_id in device_measurements_dict and device_measurements_dict[measurement_id].unit in dict_units %}{{ dict_units[device_measurements_dict[measurement_id].unit]["unit"] }}{% endif %}</b><br>';
-        },
-      {%- endfor -%}
-        valueSuffix: '
-      {%- for each_input in input if each_input.unique_id == device_id -%}
-        {%- if measurement_id in device_measurements_dict and device_measurements_dict[measurement_id].unit in dict_units -%}
-          {{' ' + dict_units[device_measurements_dict[measurement_id].unit]["unit"]}}
-        {%- endif -%}
-      {%- endfor -%}
-      
-      {%- for each_function in function if each_function.unique_id == device_id -%}
-        {{' ' + each_function.measure_units|safe}}
-      {%- endfor -%}
-      
-      {%- for each_pid in pid if each_pid.unique_id == device_id -%}
-        {{' ' + each_pid.measure_units|safe}}
-      {%- endfor -%}'
-      }
-    }],
-
-    credits: {
-      enabled: false,
-      href: "https://github.com/AoT-inc/AoT",
-      text: "aot"
-    }
+      )'
   });
+
+  {% for each_input in input  if each_input.unique_id == device_id %}
+  getLastDataGaugeAngular('{{each_widget.unique_id}}', '{{device_id}}', 'input', '{{measurement_id}}', {{widget_options['max_measure_age'] if widget_options['max_measure_age'] else 120}});
+  repeatLastDataGaugeAngular('{{each_widget.unique_id}}', '{{device_id}}', 'input', '{{measurement_id}}', {{widget_options['refresh_seconds'] if widget_options['refresh_seconds'] else 30}}, {{widget_options['max_measure_age'] if widget_options['max_measure_age'] else 120}});
+  {%- endfor -%}
+
+  {% for each_function in function if each_function.unique_id == device_id %}
+  getLastDataGaugeAngular('{{each_widget.unique_id}}', '{{device_id}}', 'function', '{{measurement_id}}', {{widget_options['max_measure_age'] if widget_options['max_measure_age'] else 120}});
+  repeatLastDataGaugeAngular('{{each_widget.unique_id}}', '{{device_id}}', 'function', '{{measurement_id}}', {{widget_options['refresh_seconds'] if widget_options['refresh_seconds'] else 30}}, {{widget_options['max_measure_age'] if widget_options['max_measure_age'] else 120}});
+  {%- endfor -%}
+
+  {%- for each_pid in pid if each_pid.unique_id == device_id %}
+  getLastDataGaugeAngular('{{each_widget.unique_id}}', '{{device_id}}', 'pid', '{{measurement_id}}', {{widget_options['max_measure_age'] if widget_options['max_measure_age'] else 120}});
+  repeatLastDataGaugeAngular('{{each_widget.unique_id}}', '{{device_id}}', 'pid', '{{measurement_id}}', {{widget_options['refresh_seconds'] if widget_options['refresh_seconds'] else 30}}, {{widget_options['max_measure_age'] if widget_options['max_measure_age'] else 120}});
+  {%- endfor -%}
 """}
 
 

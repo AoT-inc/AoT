@@ -283,13 +283,42 @@
   .aot-journal-table.aot-journal-drift td:nth-child(3),
   .aot-journal-table.aot-journal-drift th:nth-child(4),
   .aot-journal-table.aot-journal-drift td:nth-child(4) { width: 10%; }
+  /* 평균·범위는 **22% 씩 똑같이** 나눈다. 예전에는 18 : 26 이었는데, 정작
+     자리가 모자란 쪽이 18 이었다 — 평균 칸은 값에 단위까지 담고, 센서가
+     여럿이면 값이 하나가 아니라 범위(`+1.36 ~ +12.09`)다.
+
+     표가 더는 좁아지지 않는 폭(`min-width: 32rem` = 512px)에서 잰 필요치:
+
+       5열 평균  `+1.36 ~ +12.09`   98px = 19.0%   ← 배정 18% 로는 모자랐다
+       6열 범위  `-21.81 ~ +28.66` 105px = 20.5%   ← 배정 26% 중 5.5% 가 남았다
+
+     둘 다 22% 면 여유가 15px · 8px 이다. ⚠ 첫 열에서 떼지 않는다 — 남는 쪽은
+     범위 열이었고, 첫 열은 센서 이름이 드는 **유일하게 줄바꿈이 되는 열**이라
+     좁히면 이름이 여러 줄로 접힌다.
+     ⚠ 필요치도 `min-width` 도 rem 을 따라가므로(글자가 커지면 표도 같이
+       넓어진다) 이 비율은 화면 배율이 달라져도 그대로 맞는다. */
   .aot-journal-table.aot-journal-drift th:nth-child(5),
-  .aot-journal-table.aot-journal-drift td:nth-child(5) { width: 18%; }
+  .aot-journal-table.aot-journal-drift td:nth-child(5) { width: 22%; }
   .aot-journal-table.aot-journal-drift th:nth-child(6),
-  .aot-journal-table.aot-journal-drift td:nth-child(6) { width: 26%; }
-  /* 값은 한 덩어리다 — `-3.73 ~ -1.36` 이 `~` 에서 갈리면 두 수처럼 읽힌다.
-     넘치면 표가 밀린다(가로 스크롤). */
-  .aot-journal-table.aot-journal-drift td:nth-child(5),
+  .aot-journal-table.aot-journal-drift td:nth-child(6) { width: 22%; }
+  /* ── 값은 한 덩어리, 단위는 접혀도 된다 ───────────────────────────────
+     `-3.73 ~ -1.36` 이 `~` 에서 갈리면 두 수처럼 읽힌다. 그래서 **값에만**
+     `nowrap` 을 건다(`.aot-journal-num`).
+
+     ⚠ 예전에는 칸 전체에 `nowrap` 을 걸고 "넘치면 표가 밀린다(가로 스크롤)"
+       고 적어 두었는데, **사실이 아니었다.** `table-layout: fixed` 에서
+       nowrap 내용은 칸을 넓히지도 표를 밀지도 않고 **옆 칸 위로 그냥
+       넘친다.** 평균 칸은 값에 단위까지 담는데 폭이 18% 라, DLI
+       (`+1.36 ~ +12.09 mol/m²/d`)가 옆 칸의 범위 값과 글자째 포개졌다
+       (실측 2026-09-21: 화면·인쇄 모두. PDF 5쪽·21쪽에서 글자 상자가 겹친
+       것을 확인했고, 표 폭 611px 에 스크롤 폭도 611px 로 표는 꿈쩍도 하지
+       않았다).
+
+     폭 재배분으로는 못 막는다 — 평균 칸이 최악에 30.4% 를 원하는데 범위 칸은
+     이미 26% 를 꽉 쓰고 있다. 이 문서에 맞춰 나눠 봐야 단위가 더 긴 지표에서
+     또 터진다. 값만 묶어 두면 **폭이 얼마든 겹치지 않는다.** */
+  .aot-journal-num { white-space: nowrap; }
+  /* 범위 칸은 단위가 붙지 않아 칸 전체가 곧 값이다. */
   .aot-journal-table.aot-journal-drift td:nth-child(6) { white-space: nowrap; }
 
   .aot-journal-table.aot-journal-runtime th:nth-child(2),
@@ -347,11 +376,17 @@
         남긴다** — 그 둘은 지도에 딸린 사실이지 조작 수단이 아니다. -#}
     .maplibregl-ctrl-group { display: none !important; }
 
-    /* ⚠ 부트스트랩 인쇄 리셋이 `body`·`.container` 에
-       `min-width: 992px !important` 를 건다(A3 를 전제한 값이다). A4 의
-       인쇄 폭은 그보다 좁아 오른쪽이 잘린다 — 우리는 위에서 A4 를 지정하고
-       있으므로 그 상한도 함께 푼다. */
-    body, .container { min-width: 0 !important; }
+    /* ⚠ 부트스트랩 인쇄 리셋(`body`·`.container` 의 `min-width: 992px`)을
+       푸는 줄은 **이 블록에 둘 수 없다** — 이 <style> 은 레이어 밖이고,
+       중요 선언은 레이어 순서가 뒤집혀 `@layer vendor` 를 못 이긴다.
+       이 파일 맨 아래 `@layer vendor-important` 블록에 있다. */
+
+    /* ⚠ 화면 배율(`_screen_zoom.html` 이 <html> 에 거는 인라인 `zoom`)을
+       종이까지 끌고 오지 않는다. 배율이 100% 가 아닌 사람은 표지의 mm 기하
+       (`min-height: 260mm`)가 그만큼 어긋나고, 넘친 폭은 다시 축소 인쇄로
+       돌아온다. 종이 크기는 고정이라 배율에 뜻이 없다.
+       인라인 스타일이지만 중요 선언이 일반 선언을 이기므로 이 한 줄로 끝난다. */
+    html { zoom: 1 !important; }
 
     body { font-size: 10.5pt; }
 
@@ -473,12 +508,82 @@
     /* 버튼만 숨기면 그 행이 빈 줄로 남는다 — 줄 자체를 뺀다. */
     .aot-journal-more-row { display: none !important; }
     /* 접힌 도표·계획도 종이에는 전부 나온다 — 표의 나머지 행과 같은 원칙. */
-    .aot-journal-chart-extra,
     .aot-journal-plan { display: block !important; }
+
+    /* ── 도표는 종이에서 **두 칸으로 눕힌다** ───────────────────────────
+       화면은 아래로 스크롤하니 도표가 한 줄에 하나씩 쌓여도 되지만, 종이는
+       가로가 178mm 로 고정이라 그 폭이 그대로 낭비가 된다. 실측(콩 1구):
+       단계 넷짜리 도표가 가로를 다 쓰면서 막대는 네 개뿐이었고, 도표만
+       7,803px(약 7.8쪽)를 먹었다. 두 칸으로 눕히면 5,638px 다.
+
+       ⚠ **접힘 상자를 먼저 없앤다.** `.aot-journal-chart-extra`(원 데이터
+         묶음)를 그대로 두면 격자 칸 **하나**로 들어가 그 안이 1열로 남는다 —
+         이것만 빠뜨리면 절감이 28% 가 아니라 9% 였다(실측). 종이에서는 늘
+         펼쳐지므로 상자 자체를 없앤다. 위 `.aot-journal-plan` 과 갈라 적은
+         이유가 이것이다(그쪽은 상자가 필요하다).
+       ⚠ display:contents 여도 **DOM 부모는 그대로**라 `>` 선택자가 상자 안의
+         도표를 못 잡는다. 아래 여백 리셋을 자손결합자로 적는 이유다. */
+    .aot-journal-chart-extra { display: contents !important; }
+    .aot-journal-chart-list {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      /* 간격은 격자가 준다 — `.aot-viz-grid`(공용)와 같은 토큰을 쓴다. */
+      gap: var(--aot-space-6) var(--aot-space-5);
+    }
+    /* 화면용 줄 간격 규칙이 셋 걸려 있다(`+`, 접힘 상자 `:first-child`,
+       목록+목록). 격자에서는 gap 이 그 일을 하므로 위 여백을 통째로 지운다.
+       ⚠ `!important` 가 필요하다 — `.aot-journal-chart-extra > .aot-viz
+         :first-child` 가 특이도로 이겨, 격자 한 줄에서 오른쪽 도표만 32px
+         내려앉는다(실측). */
+    .aot-journal-chart-list .aot-viz { margin-top: 0 !important; }
+    /* 장치 가동 도표는 **별도 목록**이다 — 위에서 여백을 지웠으니 목록
+       자신이 앞 목록과의 간격을 갖는다(예전에는 그 첫 도표가 가졌다). */
+    .aot-journal-chart-list + .aot-journal-chart-list {
+      margin-top: var(--aot-space-6, 32px);
+    }
+    /* ⚠ **칸이 많은 도표는 두 칸을 다 쓴다.** 막대 굵기를 정하는 사다리
+       (aot-dataviz.js `range()`: 칸 24개 이하 8px · 60개 이하 4px · 그 위
+       2px)는 **도표가 전폭일 때**를 전제로 눈금이 매겨져 있다 — 그 주석이
+       "빌더는 문자열만 돌려주므로 폭을 재서 정할 수 없다" 고 밝힌다. 폭을
+       절반으로 줄이면 칸은 반이 되는데 굵기는 그대로라, 막대가 칸보다 굵어져
+       `width: min(…, 100%)` 의 100% 에 눌리고 서로 맞붙는다.
+       실측(2열): 53칸은 막대 4px 가 칸 3.88px 에, 99칸은 막대 2px 가 칸
+       1.61px 에 눌려 틈이 flex 의 `gap: 1px` 하나(종이에서 0.26mm)만 남았다.
+       그래서 사다리의 첫 경계(24)를 그대로 가름선으로 쓴다 — 막대가 8px 를
+       지키는 한계이고, `:nth-child(25)` 는 칸이 25개 이상일 때만 맞는다.
+       근본적으로는 빌더가 그린 뒤 실제 폭을 재야 하지만, 그것은 공용
+       컴포넌트(지도 팝업 등이 함께 쓴다)의 일이라 여기서 하지 않는다. */
+    .aot-journal-chart-list .aot-viz:has(.aot-viz-col:nth-child(25)) {
+      grid-column: 1 / -1;
+    }
 
     .aot-journal-photos img { max-width: 55mm; }
 
     .aot-viz-grid { page-break-inside: avoid; }
+  }
+
+  /* ══ 부트스트랩 인쇄 리셋 되받기 ═══════════════════════════════════════
+     부트스트랩은 인쇄에서 `body`·`.container` 에
+     `min-width: 992px !important` 를 건다 — A3(같은 블록의 `@page{size:a3}`)
+     를 전제한 값이다. A4 의 인쇄 폭은 178mm(≈673px)뿐이라 문서가 넘치고,
+     넘치면 브라우저가 **통째로 축소해서** 찍는다. 실측: 673 ÷ 992 = 0.678 —
+     받아 본 PDF 의 모든 글자가 정확히 그 비율로 작았다(표지 제목 30pt 가
+     20.4pt, 본문 9pt 가 6.1pt). 글자 크기 설정이 아니라 배율 문제다.
+
+     ⚠ **레이어 밖에서는 이길 수 없다.** 부트스트랩은 vendor-layer.css 가
+       `@layer vendor` 에 가둬 두는데, 중요 선언(`!important`)은 레이어 순서가
+       **뒤집힌다** — 앞선 레이어가 뒤 레이어와 레이어 밖을 모두 이긴다.
+       위 인쇄 블록에 `min-width: 0 !important` 가 첫 커밋부터 있었지만 레이어
+       밖이라 한 번도 걸린 적이 없다. vendor **앞** 레이어에서만 되받을 수 있고,
+       그 레이어 이름은 vendor-layer.css 가 이미 선언해 두었다
+       (`@layer vendor-important, reset, vendor;`).
+
+     ⚠ 이 블록을 위 `@media print` **앞**으로 옮기지 않는다 — 검사가
+       `html.index('@media print')` 로 인쇄 블록의 시작을 찾는다. */
+  @layer vendor-important {
+    @media print {
+      body, .container { min-width: 0 !important; }
+    }
   }
 </style>
 {% endblock %}
@@ -561,7 +666,9 @@
         <td>{{ span_cell(it.days, it.days_hi) }}</td>
         <td>{{ span_cell(it.above, it.above_hi) if it.above_hi else '' }}</td>
         <td>{{ span_cell(it.below, it.below_hi) if it.below_hi else '' }}</td>
-        <td>{{ span_cell(it.mean, it.mean_hi, signed=True) }}{{ ' ' ~ it.unit_label if it.unit_label else '' }}</td>
+        {#- 값은 묶고 단위는 밖에 둔다 — 자리가 모자라면 단위만 다음 줄로
+            내려간다(위 `.aot-journal-num` 주석). -#}
+        <td><span class="aot-journal-num">{{ span_cell(it.mean, it.mean_hi, signed=True) }}</span>{{ ' ' ~ it.unit_label if it.unit_label else '' }}</td>
         <td>{{ '%+g' | format(it.min) }} ~ {{ '%+g' | format(it.max) }}</td>
       </tr>
       {% if it.sensor_count > 1 %}
@@ -571,7 +678,7 @@
         <td>{{ s.days }}</td>
         <td>{{ s.above or '' }}</td>
         <td>{{ s.below or '' }}</td>
-        <td>{{ '%+g' | format(s.mean) }}{{ ' ' ~ it.unit_label if it.unit_label else '' }}</td>
+        <td><span class="aot-journal-num">{{ '%+g' | format(s.mean) }}</span>{{ ' ' ~ it.unit_label if it.unit_label else '' }}</td>
         <td>{{ '%+g' | format(s.min) }} ~ {{ '%+g' | format(s.max) }}</td>
       </tr>
       {% endfor %}
@@ -780,15 +887,17 @@
             <td>{{ grp.summary.min if grp.summary.min is not none else '' }}</td>
             <td>{{ grp.summary.max if grp.summary.max is not none else '' }}</td>
             <td>
-              {{ grp.summary.avg if grp.summary.avg is not none else '' }}{{ ' ' ~ unit_label(grp.unit) if unit_label(grp.unit) else '' }}
+              <span class="aot-journal-num">{{ grp.summary.avg if grp.summary.avg is not none else '' }}</span>{{ ' ' ~ unit_label(grp.unit) if unit_label(grp.unit) else '' }}
               {% if grp.summary.coverage_low %}<span class="text-muted small">({{ _('partial coverage') }})</span>{% endif %}
             </td>
             {% if show_target %}
             <td>
               {% if grp.summary.target_phases %}{{ phase_delta(grp.summary.target_phases) }}
               {% elif grp.summary.delta_min is not none %}
-                {% if grp.summary.delta_min == grp.summary.delta_max %}{{ '%+g' | format(grp.summary.delta_min) }}
-                {% else %}{{ '%+g' | format(grp.summary.delta_min) }} ~ {{ '%+g' | format(grp.summary.delta_max) }}{% endif %}
+                {#- Δ 범위도 한 덩어리다 — 이 표에는 칸 단위 `nowrap` 이 없어
+                    `+1.36 ~ +12.09` 가 `~` 에서 갈릴 수 있었다. -#}
+                {% if grp.summary.delta_min == grp.summary.delta_max %}<span class="aot-journal-num">{{ '%+g' | format(grp.summary.delta_min) }}</span>
+                {% else %}<span class="aot-journal-num">{{ '%+g' | format(grp.summary.delta_min) }} ~ {{ '%+g' | format(grp.summary.delta_max) }}</span>{% endif %}
               {% elif grp.summary.delta_skipped == 'when' %}<span class="text-muted small">{{ _('day/night target') }}</span>
               {% elif grp.summary.delta_skipped == 'daily-shape' %}<span class="text-muted small">{{ _('cumulative target') }}</span>
               {% endif %}
@@ -834,9 +943,9 @@
             <td>
               {#- 방위는 각도가 아니라 최다 풍향으로 말한다. -#}
               {% if e.sector is not none %}
-                {{ compass(e.sector) }}{% if e.sector_pct %} {{ e.sector_pct }}%{% endif %}
+                {{ compass(e.sector) }}{% if e.sector_pct %} <span class="aot-journal-num">{{ e.sector_pct }}%</span>{% endif %}
               {% elif e.avg is not none %}
-                {{ e.avg }}{{ ' ' ~ unit_label(e.unit) if unit_label(e.unit) else '' }}
+                <span class="aot-journal-num">{{ e.avg }}</span>{{ ' ' ~ unit_label(e.unit) if unit_label(e.unit) else '' }}
               {% endif %}
               {% if e.coverage_low %}<span class="text-muted small">({{ _('partial coverage') }})</span>{% endif %}
               {#- 피복을 지난 값이면 **그 자리에서** 근거를 말한다. 안내
@@ -1336,16 +1445,18 @@
                 키가 없으므로 **`.get()` 으로 본다** — 점 접근은 없는 키에서
                 템플릿을 통째로 500 으로 떨어뜨린다(실제로 그랬다). -#}
             {% set sector = row.get('sector') %}
-            {% if sector is not none %}{{ compass(sector) }}{% if row.get('sector_pct') %} {{ row.get('sector_pct') }}%{% endif %}
-            {% elif row.get('avg') is not none %}{{ row.get('avg') }}{{ ' ' ~ unit_label(grp.unit) if unit_label(grp.unit) else '' }}{% endif %}
+            {% if sector is not none %}{{ compass(sector) }}{% if row.get('sector_pct') %} <span class="aot-journal-num">{{ row.get('sector_pct') }}%</span>{% endif %}
+            {% elif row.get('avg') is not none %}<span class="aot-journal-num">{{ row.get('avg') }}</span>{{ ' ' ~ unit_label(grp.unit) if unit_label(grp.unit) else '' }}{% endif %}
             {% if row.get('coverage_low') %}<span class="text-muted small">({{ _('partial coverage') }})</span>{% endif %}
           </td>
           <td>
             {% if grp.summary %}
               {% if grp.summary.target_phases %}{{ phase_delta(grp.summary.target_phases) }}
               {% elif grp.summary.delta_min is not none %}
-                {% if grp.summary.delta_min == grp.summary.delta_max %}{{ '%+g' | format(grp.summary.delta_min) }}
-                {% else %}{{ '%+g' | format(grp.summary.delta_min) }} ~ {{ '%+g' | format(grp.summary.delta_max) }}{% endif %}
+                {#- Δ 범위도 한 덩어리다 — 이 표에는 칸 단위 `nowrap` 이 없어
+                    `+1.36 ~ +12.09` 가 `~` 에서 갈릴 수 있었다. -#}
+                {% if grp.summary.delta_min == grp.summary.delta_max %}<span class="aot-journal-num">{{ '%+g' | format(grp.summary.delta_min) }}</span>
+                {% else %}<span class="aot-journal-num">{{ '%+g' | format(grp.summary.delta_min) }} ~ {{ '%+g' | format(grp.summary.delta_max) }}</span>{% endif %}
               {% elif grp.summary.delta_skipped == 'when' %}<span class="text-muted small">{{ _('day/night target') }}</span>
               {% elif grp.summary.delta_skipped == 'daily-shape' %}<span class="text-muted small">{{ _('cumulative target') }}</span>
               {% endif %}

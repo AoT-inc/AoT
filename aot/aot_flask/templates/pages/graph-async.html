@@ -4,12 +4,9 @@
 
 {% block head %}
   <link rel="stylesheet" href="{{ url_for('static', filename='css/aot-settings.css') }}" />
-  <script type="text/javascript" src="{{ asset('highcharts-stack') }}"></script>
+  <script src="{{ asset('echarts-stack') }}"></script>
   <script src="{{ asset('app-chart-core') }}"></script>
-
-  {% if current_user.theme in dark_themes %}
-    <script src="{{ url_for('static', filename='js/vendor/user_js/dark-unica-custom.js') }}"></script>
-  {% endif %}
+  <script src="{{ asset('widget-timeseries-chart') }}"></script>
 
   <style>
     .aot-graph-card {
@@ -488,11 +485,7 @@ $(document).ready(function () {
   {% if selected_ids_measures %}
   <script>
 AoTChart.applyGlobalDefaults();
-Highcharts.setOptions({
-  lang: {
-    thousandsSep: ','
-  }
-});
+AoTChart.setNumberLang({ thousandsSep: ',' });
 
 $(document).ready(function() {
     const id_measure = [
@@ -504,14 +497,14 @@ $(document).ready(function() {
     },
     {% endfor %}
     ];
-    let chart = [];
+    let ts = null;
 
-    // True extent of the whole dataset (ms). The async design replaces the main
-    // series with only the currently-viewed window, which makes the x-axis
-    // dataMin/dataMax drift to that window. The range-selector buttons ("최근 1주"
-    // 등) and zoom compute their range from dataMax, so without a fixed anchor a
-    // "1주" click means "last week of whatever was loaded" and jumps to an
-    // arbitrary position. We pin these and re-assert them on every redraw.
+    // True extent of the whole dataset (ms). This async page replaces the main
+    // series with only the currently-viewed window, so the loaded data alone no
+    // longer tells where the dataset ends. The range buttons ("최근 1주" 등)
+    // must anchor to the real latest time, not to wherever the user last looked.
+    // The navigator keeps the whole (downsampled) first series, which also keeps
+    // the x-axis spanning the whole dataset.
     let _fullDataMin = null;
     let _fullDataMax = null;
 
@@ -524,16 +517,9 @@ $(document).ready(function() {
     const AREA = '{{ area_filter }}';
     const _areaQS = AREA ? '&area=' + encodeURIComponent(AREA) : '';
 
-    // Span (ms) for a range-selector button, used to re-anchor "최근 N" to now.
-    function _rangeButtonSpanMs(btn) {
-      const unit = {
-        hour: 3600000,
-        day: 86400000,
-        week: 604800000,
-        month: 2592000000,   // 30 days
-        year: 31536000000    // 365 days
-      };
-      return (btn.count || 1) * (unit[btn.type] || 0);
+    // Note text keeps runs of spaces visible (the tooltip is HTML).
+    function _noteText(s) {
+      return String(s == null ? '' : s).replace(/  /g, '\u2591\u2591');
     }
 
     /**
@@ -551,20 +537,34 @@ $(document).ready(function() {
      */
     function drawHardwareEvents(device_id, measurement_id) {
       $.getJSON('/async_segments/' + device_id + '/' + measurement_id, function (res) {
-        if (!res || !res.ok || !res.events || !res.events.length) return;
-        const series = chart[0] && chart[0].get('hardware-events');
-        if (!series) return;
-        series.setData(res.events.map(function (e) {
+        if (!res || !res.ok || !res.events || !res.events.length || !ts) return;
+        // 하드웨어 교체 표식은 늘 마지막 시리즈다(아래 series 목록 끝)
+        ts.setData(ts.seriesCount - 1, res.events.map(function (e) {
           // 깃발 위 글자는 짧아야 읽힌다 — 길면 서로 겹쳐 아무것도 안 읽힌다.
           // 자세한 내용은 툴팁이 맡는다.
           const label = String(e.label || e.title || '');
           return {
             x: e.time * 1000,
             title: label.length > 10 ? label.slice(0, 9) + '…' : label,
-            text: (e.title || '') + (e.text ? '<br/>' + e.text.replace(/\n/g, '<br/>') : '')
+            text: (e.title || '') + (e.text ? '\n' + e.text : '')
           };
-        }), true, false);
+        }));
+        ts.redraw();
       });
+    }
+
+    // 처음 불러오기: 시리즈마다 전체 구간(다운샘플)을 받는다. 다 오면 첫 보기를 건다.
+    let _initialPending = id_measure.filter(function (m) { return m.device_type !== 'tag'; }).length;
+    let _navSet = false;
+
+    function _applyInitialView() {
+      // Highstock 판은 기간 버튼 "1y" 가 선택된 채 열렸다 — 최근 1년(데이터가
+      // 그보다 짧으면 전부)
+      const max = (_fullDataMax !== null) ? _fullDataMax : Date.now();
+      let min = max - AoTTimeSeries.buttonSpanMs({ type: 'year', count: 1 });
+      if (_fullDataMin !== null) min = Math.max(min, _fullDataMin);
+      ts.setExtremes(min, max);
+      ts.redraw();
     }
 
     function getPastData(chart_number, series, device_id, device_type, measurement_id, start_time) {
@@ -572,18 +572,11 @@ $(document).ready(function() {
       $.getJSON(url,
         function(data, responseText, jqXHR) {
           if (jqXHR.status !== 204) {
-
             let new_data = [];
             for (let i = 0; i < data.length; i++) {
-              let new_date = new Date(data[i][0] * 1000);
-              let new_time = new_date.getTime();
-
+              const new_time = new Date(data[i][0] * 1000).getTime();
               if (device_type === 'tag') {
-                chart[chart_number].series[series].addPoint({
-                  x: new_time,
-                  title: data[i][1],
-                  text: data[i][2].replace(/(?:\r\n|\r|\n)/g, "<br/>").replace(/  /g, '\u2591\u2591')
-                }, false, false);
+                ts.addPoint(series, { x: new_time, title: data[i][1], text: _noteText(data[i][2]) });
               }
               else {
                 new_data.push([new_time, data[i][1]]);
@@ -592,25 +585,30 @@ $(document).ready(function() {
 
             if (device_type !== 'tag') {
               const realNow = new Date().getTime();
-              // Record the true full extent for the range-selector anchor.
+              // Record the true full extent for the range-button anchor.
               if (new_data.length && (_fullDataMin === null || new_data[0][0] < _fullDataMin)) {
                 _fullDataMin = new_data[0][0];
               }
               if (_fullDataMax === null || realNow > _fullDataMax) {
                 _fullDataMax = realNow;
               }
-              new_data.push([realNow, null]);
-              chart[chart_number].series[series].setData(new_data, false, false);
-              let nav = chart[chart_number].get('navigator');
-              nav.setData(new_data, false, false);
+              ts.setData(series, new_data);
+              if (!_navSet && new_data.length) {
+                _navSet = true;
+                ts.setNavigatorData(new_data.concat([[realNow, null]]));
+              }
             }
-
           }
-          if (device_type !== 'tag') {
-            chart[chart_number].redraw();
+          if (device_type === 'tag') {
+            ts.redraw();
+          } else {
+            _initialPending--;
+            if (_initialPending <= 0) _applyInitialView(); else ts.redraw();
           }
         }
-      );
+      ).fail(function () {
+        if (device_type !== 'tag' && --_initialPending <= 0) _applyInitialView();
+      });
     }
 
     // Request sequencing so that out-of-order async responses (common once data
@@ -620,6 +618,7 @@ $(document).ready(function() {
     let _seriesReqGen = 0;
     let _seriesReqDebounce = null;
     let _seriesReqXhrs = [];
+    let _seriesReqPending = 0;
 
     function set_data_from_url(url, series, device_type, gen) {
       const xhr = $.getJSON(url,
@@ -629,35 +628,18 @@ $(document).ready(function() {
           let new_data = [];
           if (jqXHR.status !== 204) {
             for (let i = 0; i < data.length; i++) {
-              const new_date = new Date(data[i][0] * 1000);
-              const new_time = new_date.getTime();
-              if (device_type === 'tag') {
-                chart[0].series[series].addPoint({
-                  x: new_time,
-                  title: data[i][1],
-                  text: data[i][2].replace(/(?:\r\n|\r|\n)/g, "<br/>").replace(/  /g, '\u2591\u2591')
-                }, false, false);
-              }
-              else {
-                new_data.push([new_time, data[i][1]]);
-              }
+              new_data.push([new Date(data[i][0] * 1000).getTime(), data[i][1]]);
             }
           }
-          if (device_type !== 'tag') {
-            // Re-assert the true data extent with invisible (null) sentinel points
-            // at both ends, so axis dataMin/dataMax stay pinned to the real first
-            // point and latest time even though only the current window's points
-            // are drawn. This keeps the range-selector buttons and zoom anchored
-            // to the actual latest data instead of drifting to the loaded window.
-            const anchored = [];
-            if (_fullDataMin !== null) anchored.push([_fullDataMin, null]);
-            for (let k = 0; k < new_data.length; k++) anchored.push(new_data[k]);
-            if (_fullDataMax !== null) anchored.push([_fullDataMax, null]);
-            chart[0].series[series].setData(anchored);
-          }
-          chart[0].hideLoading();
+          ts.setData(series, new_data);
         }
-      );
+      ).always(function () {
+        if (gen !== _seriesReqGen) return;
+        if (--_seriesReqPending <= 0) {
+          ts.hideLoading();
+          ts.redraw();
+        }
+      });
       _seriesReqXhrs.push(xhr);
     }
 
@@ -671,28 +653,24 @@ $(document).ready(function() {
         try { _seriesReqXhrs[i].abort(); } catch (err) {}
       }
       _seriesReqXhrs = [];
-      chart[0].showLoading();
+      _seriesReqPending = 0;
+      for (let each_series in id_measure) {
+        if (id_measure[each_series]['device_type'] !== 'tag') _seriesReqPending++;
+      }
+      if (!_seriesReqPending) return;
+      ts.showLoading();
       for (let each_series in id_measure) {
         if (id_measure[each_series]['device_type'] !== 'tag') {
           const url = '/async/' + id_measure[each_series]['device_id'] + '/' + id_measure[each_series]['device_type'] + '/' + id_measure[each_series]['measurement_id'] + '/' + Math.round(min) / 1000 + '/' + Math.round(max) / 1000 + (_stitchQS || '?') + _areaQS;
-          set_data_from_url(url, each_series, id_measure[each_series]['device_type'], gen);
+          set_data_from_url(url, +each_series, id_measure[each_series]['device_type'], gen);
         }
       }
     }
 
-    function updateAllSeries(e) {
-      let min = null;
-      let max = null;
-      if (e.xAxis == null) {
-        min = e.min;
-        max = e.max;
-      } else {
-        min = e.xAxis[0].min;
-        max = e.xAxis[0].max;
-      }
-      // Debounce: navigator/scrollbar drags fire setExtremes continuously. Only
-      // fetch once the viewport settles, using the final min/max, so we don't
-      // flood InfluxDB with requests for intermediate positions.
+    // Debounce: navigator drags report the range continuously. Only fetch once
+    // the viewport settles, using the final min/max, so we don't flood
+    // InfluxDB with requests for intermediate positions.
+    function updateAllSeries(min, max) {
       if (_seriesReqDebounce) clearTimeout(_seriesReqDebounce);
       _seriesReqDebounce = setTimeout(function () {
         _fetchSeriesForRange(min, max);
@@ -700,162 +678,48 @@ $(document).ready(function() {
     }
 
     // create the chart
-    chart[0] = new Highcharts.StockChart({
-        chart: {
-          renderTo: 'chart-container',
-          zoomType: 'x',
-          events: {
-            render: function () {
-              AoTChart.axisAdjust(this);
-            },
-            load: function () {
-              {% set count_series = [] -%}
-              {% for each_id_meas in selected_ids_measures %}
-                {%- set device_id = each_id_meas.split(',')[0] -%}
-                {%- set measurement_id = each_id_meas.split(',')[1] -%}
-                {%- set device_type = each_id_meas.split(',')[2] -%}
-              getPastData(0, {{count_series|count}}, '{{device_id}}', '{{device_type}}', '{{measurement_id}}', '{{start_time_epoch}}');
-              {% if loop.first %}drawHardwareEvents('{{device_id}}', '{{measurement_id}}');{% endif %}
-                {%- do count_series.append(1) %}
-              {% endfor %}
-            },
-            selection: updateAllSeries
-          }
-        },
-
-        tooltip: {
-          shared: true,
-          formatter: function(){
-            if (this.point) {
-              return '<b>'+ AoTChart.formatDateTime(this.x, {ms: true})
-                   + '</b><br/>' + this.series.name
-                   + '<br/>' + this.point.title
-                   + '<br/>' + this.point.text;
-            }
-            else {
-              let s = '<b>'+ AoTChart.formatDateTime(this.x, {ms: true}) + '</b>';
-              $.each(this.points, function(i, point) {
-                  s += '<br/><span style="color:' + point.color + '">\u25CF</span> ' + point.series.name + ': ' + AoTChart.formatPointValue(point);
-              });
-              return s;
-            }
-          }
-        },
-
-        navigator: {
-            adaptToUpdatedData: false,
-            series: {
-                id: 'navigator'
-            }
-        },
-
-        scrollbar: {
-          liveRedraw: false
-        },
-
-        legend: {
-          enabled: true
-        },
-
-        // subtitle: {
-        //     text: 'Display many data points'
-        // },
-
-        rangeSelector: {
-            buttons: [{
-                type: 'hour',
-                count: 1,
-                text: {{ _('1h')|tojson }}
-            }, {
-                type: 'day',
-                count: 1,
-                text: {{ _('1d')|tojson }}
-            }, {
-                type: 'week',
-                count: 1,
-                text: {{ _('1w')|tojson }}
-            }, {
-                type: 'month',
-                count: 1,
-                text: {{ _('1mo')|tojson }}
-            }, {
-                type: 'year',
-                count: 1,
-                text: {{ _('1y')|tojson }}
-            }, {
-                type: 'all',
-                text: {{ _('All')|tojson }}
-            }],
-            inputEnabled: false, // it supports only days
-            selected: 4 // all
-        },
-
-        xAxis: {
-          events: {
-            setExtremes: function(e) {
-              if (typeof(e.rangeSelectorButton) !== 'undefined') {
-                // Range-selector buttons ("최근 1주" 등) must anchor to the real
-                // latest data. Highcharts instead anchors them to the CURRENTLY
-                // loaded window's max, which — because this async chart swaps the
-                // main series for each view — drifts to wherever the user last
-                // looked. That made "1주/1일/1달" jump to an arbitrary position.
-                // Force the anchor to the true latest time so "최근 N" always
-                // means the most recent N.
-                const btn = e.rangeSelectorButton;
-                const realMax = (_fullDataMax !== null) ? _fullDataMax : e.max;
-                let realMin;
-                if (btn.type === 'all') {
-                  realMin = (_fullDataMin !== null) ? _fullDataMin : e.min;
-                } else {
-                  realMin = realMax - _rangeButtonSpanMs(btn);
-                }
-                // Only re-issue when Highcharts anchored somewhere other than now.
-                if (Math.abs(e.max - realMax) > 60000) {
-                  const ax = this;
-                  setTimeout(function () {
-                    ax.setExtremes(realMin, realMax, true, false);
-                    _fetchSeriesForRange(realMin, realMax);
-                  }, 0);
-                  return;
-                }
-                updateAllSeries(e);
-                return;
-              }
-              // Also handle scrollbar drags and pan gestures — previously only
-              // rangeSelector buttons and navigator handles refetched data, so
-              // panning via the scrollbar showed stale/empty data.
-              if (e.trigger === 'navigator' ||
-                  e.trigger === 'scrollbar' ||
-                  e.trigger === 'pan') {
-                updateAllSeries(e);
-              }
-            }
-          },
-          // Linear time axis: ordinal axes remap screen position by data-point
-          // index, so with unevenly downsampled data the navigator slider and
-          // selections land on a different time than the cursor position. A
-          // linear axis keeps position ↔ time consistent.
-          ordinal: false,
-          minRange: 1800 * 1000 // 30 minutes
-        },
-
-        yAxis: [
+    ts = AoTTimeSeries.create(document.getElementById('chart-container'), {
+      legend: { enabled: true, values: false },
+      navigator: true,
+      navigatorData: true,
+      tooltipMs: true,
+      minRange: 1800 * 1000,  // 30 minutes
+      rangeSelector: {
+        enabled: true,
+        dateInputs: false,
+        selected: 4,
+        buttons: [
+          { type: 'hour',  count: 1, text: {{ _('1h')|tojson }} },
+          { type: 'day',   count: 1, text: {{ _('1d')|tojson }} },
+          { type: 'week',  count: 1, text: {{ _('1w')|tojson }} },
+          { type: 'month', count: 1, text: {{ _('1mo')|tojson }} },
+          { type: 'year',  count: 1, text: {{ _('1y')|tojson }} },
+          { type: 'all',             text: {{ _('All')|tojson }} }
+        ]
+      },
+      // Range buttons ("최근 1주" 등) anchor to the real latest time, not to the
+      // right edge of whatever window is loaded now.
+      onRangeButton: function (i, btn) {
+        const realMax = (_fullDataMax !== null) ? _fullDataMax : Date.now();
+        let realMin = (btn.type === 'all') ? _fullDataMin
+                                           : realMax - AoTTimeSeries.buttonSpanMs(btn);
+        if (_fullDataMin !== null && (realMin === null || realMin < _fullDataMin)) realMin = _fullDataMin;
+        if (realMin === null) return;
+        ts.setExtremes(realMin, realMax);
+        _fetchSeriesForRange(realMin, realMax);
+      },
+      // Drag-zoom and navigator: refetch the detailed window.
+      onUserZoom: function (e) { updateAllSeries(e.min, e.max); },
+    yAxes: [
         {% for each_axis in y_axes if dict_units and each_axis in dict_units %}
-          AoTChart.unitYAxis({
+          {
             id: '{{each_axis}}',
             unit: '{% if dict_units[each_axis]['unit'] != '' %}{{dict_units[each_axis]['unit']}}{% else %}{{dict_units[each_axis]['name']}}{% endif %}',
-            extra: { labels: { format: '{value}', x: -8 } }
-          }),
+            plainLabels: true
+          },
         {% endfor %}
         ],
-
-        credits: {
-          enabled: false,
-          href: "https://github.com/AoT-inc/AoT",
-          text: "AoT"
-        },
-
-        series: [
+      series: [
 
         {% for each_id_meas in selected_ids_measures -%}
           {%- set device_id = each_id_meas.split(',')[0] -%}
@@ -885,27 +749,21 @@ $(document).ready(function() {
 
                 )',
 
-              {% if dict_measure_measurements[measurement_id] in dict_measurements and
-                    dict_measurements[dict_measure_measurements[measurement_id]]['meas'] == 'edge' %}
-              type: 'column',
-              {% else %}
-              type: 'line',
-              {% endif %}
-              tooltip: {
-                valueSuffix: '
+              kind: '{{ 'column' if dict_measure_measurements[measurement_id] in dict_measurements and dict_measurements[dict_measure_measurements[measurement_id]]['meas'] == 'edge' else 'line' }}',
+
+              grouping: { enabled: true, approximation: '{{ 'sum' if dict_measure_measurements[measurement_id] in dict_measurements and dict_measurements[dict_measure_measurements[measurement_id]]['meas'] == 'edge' else 'average' }}' },
+              valueSuffix: '
                 {%- if dict_measure_units[measurement_id] in dict_units and
                      dict_units[dict_measure_units[measurement_id]]['unit'] -%}
                 {{' ' + dict_units[dict_measure_units[measurement_id]]['unit']}}
                 {%- endif -%}
                 ',
-                valueDecimals: 3
-              },
+              valueDecimals: 3,
               yAxis: '
                 {%- if measurement_id in dict_measure_units -%}
                   {{dict_measure_units[measurement_id]}}
                 {%- endif -%}
-                  ',
-              data: []
+                  '
             },
 
             {%- endif -%}
@@ -936,27 +794,21 @@ $(document).ready(function() {
 
               )',
 
-            {% if dict_measure_measurements[measurement_id] in dict_measurements and
-                  dict_measurements[dict_measure_measurements[measurement_id]]['meas'] == 'edge' %}
-            type: 'column',
-            {% else %}
-            type: 'line',
-            {% endif %}
-            tooltip: {
-              valueSuffix: '
+            kind: '{{ 'column' if dict_measure_measurements[measurement_id] in dict_measurements and dict_measurements[dict_measure_measurements[measurement_id]]['meas'] == 'edge' else 'line' }}',
+
+            grouping: { enabled: true, approximation: '{{ 'sum' if dict_measure_measurements[measurement_id] in dict_measurements and dict_measurements[dict_measure_measurements[measurement_id]]['meas'] == 'edge' else 'average' }}' },
+            valueSuffix: '
               {%- if dict_measure_units[measurement_id] in dict_units and
                      dict_units[dict_measure_units[measurement_id]]['unit'] -%}
                 {{' ' + dict_units[dict_measure_units[measurement_id]]['unit']}}
               {%- endif -%}
               ',
-              valueDecimals: 3
-            },
+            valueDecimals: 3,
             yAxis: '
               {%- if measurement_id in dict_measure_units -%}
                 {{dict_measure_units[measurement_id]}}
               {%- endif -%}
-                ',
-            data: []
+                '
           },
             {%- endif -%}
           {% endfor %}
@@ -985,27 +837,21 @@ $(document).ready(function() {
 
                 )',
 
-              {% if dict_measure_measurements[measurement_id] in dict_measurements and
-                    dict_measurements[dict_measure_measurements[measurement_id]]['meas'] == 'edge' %}
-              type: 'column',
-              {% else %}
-              type: 'line',
-              {% endif %}
-              tooltip: {
-                valueSuffix: '
+              kind: '{{ 'column' if dict_measure_measurements[measurement_id] in dict_measurements and dict_measurements[dict_measure_measurements[measurement_id]]['meas'] == 'edge' else 'line' }}',
+
+              grouping: { enabled: true, approximation: '{{ 'sum' if dict_measure_measurements[measurement_id] in dict_measurements and dict_measurements[dict_measure_measurements[measurement_id]]['meas'] == 'edge' else 'average' }}' },
+              valueSuffix: '
                 {%- if dict_measure_units[measurement_id] in dict_units and
                        dict_units[dict_measure_units[measurement_id]]['unit'] -%}
                   {{' ' + dict_units[dict_measure_units[measurement_id]]['unit']}}
                 {%- endif -%}
                 ',
-                valueDecimals: 3
-              },
+              valueDecimals: 3,
               yAxis: '
                 {%- if measurement_id in dict_measure_units -%}
                   {{dict_measure_units[measurement_id]}}
                 {%- endif -%}
-                  ',
-              data: []
+                  '
             },
 
             {%- endif -%}
@@ -1035,26 +881,20 @@ $(document).ready(function() {
 
                 )',
 
-              type: 'column',
-              tooltip: {
-                valueSuffix: '
+              kind: 'column',
+              valueSuffix: '
                 {%- if dict_measure_units[measurement_id] in dict_units and
                        dict_units[dict_measure_units[measurement_id]]['unit'] -%}
                   {{' ' + dict_units[dict_measure_units[measurement_id]]['unit']}}
                 {%- endif -%}
                 ',
-                valueDecimals: 3
-              },
-              dataGrouping: {
-                enabled: false,
-                groupPixelWidth: 2
-              },
+              valueDecimals: 3,
+              grouping: { enabled: false },
               yAxis: '
                 {%- if measurement_id in dict_measure_units -%}
                   {{dict_measure_units[measurement_id]}}
                 {%- endif -%}
-                  ',
-              data: []
+                  '
             },
 
             {%- endif -%}
@@ -1063,9 +903,7 @@ $(document).ready(function() {
           {% for each_tag in tag if each_tag.unique_id == device_id %}
             {
               name: 'Note Tag: {{each_tag.name}}',
-              type: 'flags',
-              data: [],
-              shape: 'squarepin'
+              kind: 'flags'
             },
           {% endfor %}
 
@@ -1077,17 +915,25 @@ $(document).ready(function() {
               판단해야 하고, 판단하려면 이 시점이 보여야 한다. 비어 있으면
               아무것도 그리지 않으므로 늘 달아 둔다. -#}
           {
-            id: 'hardware-events',
             name: {{ _('Hardware changes')|tojson }},
-            type: 'flags',
-            data: [],
-            shape: 'flag',
-            color: 'var(--aot-color-text-secondary, #5E6B64)',
-            showInLegend: false
+            kind: 'flags',
+            legend: false
           }
 
-        ]
+      ]
     });
+    // 여정 시험(E2E)이 지금 그려진 축을 읽는 자리
+    window.aotAsyncGraph = ts;
+
+    {% set count_series = [] -%}
+    {% for each_id_meas in selected_ids_measures %}
+      {%- set device_id = each_id_meas.split(',')[0] -%}
+      {%- set measurement_id = each_id_meas.split(',')[1] -%}
+      {%- set device_type = each_id_meas.split(',')[2] -%}
+    getPastData(0, {{count_series|count}}, '{{device_id}}', '{{device_type}}', '{{measurement_id}}', '{{start_time_epoch}}');
+    {% if loop.first %}drawHardwareEvents('{{device_id}}', '{{measurement_id}}');{% endif %}
+      {%- do count_series.append(1) %}
+    {% endfor %}
 });
 </script>
 {% endif %}

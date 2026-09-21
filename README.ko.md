@@ -58,4 +58,4 @@ AoT 는 Kyle T. Gabriel 의 오픈소스 [Mycodo](https://github.com/kizniche/My
 
 AoT 는 GNU 일반 공중 사용 허가서(GPL) 3버전 또는 그 이후 버전을 따르는 자유 소프트웨어입니다. [LICENSE.txt](LICENSE.txt) 를 참고하세요. 유용하게 쓰이길 바라며 배포하지만 어떤 보증도 없습니다.
 
-이 소프트웨어에는 타사 오픈소스 소프트웨어가 포함되어 있습니다. 전체 목록과 각 라이선스는 [THIRD-PARTY-LICENSES.md](THIRD-PARTY-LICENSES.md) 에 있습니다.
+이 소프트웨어에는 다른 곳에서 만든 소프트웨어가 함께 들어 있으며, 각각 자기 라이선스를 따릅니다. 전체 목록과 각 라이선스는 [THIRD-PARTY-LICENSES.md](THIRD-PARTY-LICENSES.md) 에 있습니다.

@@ -1738,7 +1738,7 @@ class AIContextService:
                         if w_readings:
                             w_info['live_readings'] = w_readings
                             
-                    # v15.0: Visual Context Mirroring (Highcharts Interpretation)
+                    # v15.0: Visual Context Mirroring (chart widget interpretation)
                     w_info['visual_interpretation'] = AIContextService.get_widget_visual_summary(
                         w.unique_id, w.graph_type, opts
                     )
@@ -1832,7 +1832,7 @@ class AIContextService:
     def get_widget_visual_summary(widget_id, widget_type, options):
         """
         v15.0: Mirrored Visual Context.
-        Translates Highcharts/Gauge configuration into a semantic summary for AI.
+        Translates chart/gauge widget configuration into a semantic summary for AI.
         """
         summary = {"timeframe": "live_only", "status": "unknown"}
         try:

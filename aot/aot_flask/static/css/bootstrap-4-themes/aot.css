@@ -1259,11 +1259,6 @@ textarea::-moz-focus-inner {
   color: var(--aot-color-text-tertiary);
 }
 
-.highcharts-data-label text {
-  font-family: 'Gothic A1';
-  font-weight: 700;
-}
-
 /* 단기예보 */
 .row-aot-weather-1 {
   display: flex;

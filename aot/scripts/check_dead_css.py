@@ -70,7 +70,7 @@ VENDOR_CSS = {"daterangepicker.css", "gridstack.css"}
 # 라이브러리가 런타임에 붙이는 이름. 그 라이브러리 소스가 CDN 이라 저장소에
 # 없으면 "마크업에 없음" 으로 잡히지만 살아 있다.
 VENDOR_PREFIX = ("maplibregl-", "leaflet-", "mapbox", "gs-", "grid-stack",
-                 "ui-resizable", "bootstrap-select", "gridstack", "highcharts-",
+                 "ui-resizable", "bootstrap-select", "gridstack",
                  "fa-", "dt-")
 VENDOR_EXACT = {"no-gutters", "col-3", "container-sm", "container-md",
                 "container-lg", "container-xl", "form-check-inline",

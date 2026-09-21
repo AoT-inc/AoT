@@ -28981,8 +28981,8 @@ msgid "Select a Function to display the status of"
 msgstr "Välj en funktion att visa status för"
 
 #: widgets/widget_gauge_solid.py:122
-msgid "Gauge (Solid) [Highcharts]"
-msgstr "Mätare (Solid) [Highcharts]"
+msgid "Gauge (Solid)"
+msgstr "Mätare (Solid)"
 
 #: widgets/widget_gauge_solid.py:126
 msgid ""

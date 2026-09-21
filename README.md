@@ -58,4 +58,4 @@ AoT started as a modified build of the open-source [Mycodo](https://github.com/k
 
 AoT is free software under the GNU General Public License, version 3 or later. See [LICENSE.txt](LICENSE.txt). It is distributed in the hope that it will be useful, but without any warranty.
 
-This software includes third-party open-source software. The full list and each license are in [THIRD-PARTY-LICENSES.md](THIRD-PARTY-LICENSES.md).
+This software ships with software written by others, each under its own license. The full list and each license are in [THIRD-PARTY-LICENSES.md](THIRD-PARTY-LICENSES.md).

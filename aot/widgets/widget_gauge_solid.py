@@ -1,5 +1,4 @@
 # coding=utf-8
-import os
 #
 #  Copyright (C) 2015-2022 Kyle T. Gabriel <mycodo@kylegabriel.com>
 #
@@ -26,7 +25,6 @@ import re
 from flask import flash
 from flask_babel import lazy_gettext
 
-from aot.config import PATH_JS_USER
 from aot.utils.constraints_pass import constraints_pass_positive_value
 
 logger = logging.getLogger(__name__)
@@ -141,39 +139,11 @@ def generate_page_variables(widget_unique_id, widget_options):
 
 WIDGET_INFORMATION = {
     'widget_name_unique': 'widget_gauge_solid',
-    'widget_name': lazy_gettext('Gauge (Solid) [Highcharts]'),
-    'widget_library': 'Highcharts',
+    'widget_name': lazy_gettext('Gauge (Solid)'),
+    'widget_library': 'ECharts',
     'no_class': True,
 
     'message': lazy_gettext('Displays a solid gauge. Be sure to set the Maximum option to the last Stop value for the gauge to display properly.'),
-
-    'dependencies_module': [
-        ('bash-commands',
-        [
-            os.path.join(PATH_JS_USER, 'highstock-9.1.2.js'),
-            os.path.join(PATH_JS_USER, 'highcharts-more-9.1.2.js'),
-            os.path.join(PATH_JS_USER, 'solid-gauge-9.1.2.js')
-        ],
-        [
-            'rm -rf Highcharts-Stock-9.1.2.zip',
-            'wget https://code.highcharts.com/zips/Highcharts-Stock-9.1.2.zip 2>&1',
-            'unzip Highcharts-Stock-9.1.2.zip -d Highcharts-Stock-9.1.2',
-            f'cp -rf Highcharts-Stock-9.1.2/code/highstock.js {os.path.join(PATH_JS_USER, "highstock-9.1.2.js")}',
-            f'cp -rf Highcharts-Stock-9.1.2/code/highstock.js.map {os.path.join(PATH_JS_USER, "highstock.js.map")}',
-            f'cp -rf Highcharts-Stock-9.1.2/code/highcharts-more.js {os.path.join(PATH_JS_USER, "highcharts-more-9.1.2.js")}',
-            f'cp -rf Highcharts-Stock-9.1.2/code/highcharts-more.js.map {os.path.join(PATH_JS_USER, "highcharts-more.js.map")}',
-            f'cp -rf Highcharts-Stock-9.1.2/code/modules/solid-gauge.js {os.path.join(PATH_JS_USER, "solid-gauge-9.1.2.js")}',
-            f'cp -rf Highcharts-Stock-9.1.2/code/modules/solid-gauge.js.map {os.path.join(PATH_JS_USER, "solid-gauge.js.map")}',
-            'rm -rf Highcharts-Stock-9.1.2.zip',
-            'rm -rf Highcharts-Stock-9.1.2'
-        ])
-    ],
-
-    'dependencies_message': 'Highcharts is free to use for open source, personal use. However, '
-                            'if you are using this software as a part of a commercial product, '
-                            'you or the manufacturer may be required to obtain a commercial '
-                            'license to use it. Contact Highcharts for the most accurate '
-                            'information, at https://shop.highsoft.com',
 
     'execute_at_creation': execute_at_creation,
     'execute_at_modification': execute_at_modification,
@@ -246,14 +216,17 @@ WIDGET_INFORMATION = {
         }
     ],
 
-    'widget_dashboard_head': """{% if "highstock" not in dashboard_dict %}
-  <script src="{{ asset('highcharts-stack') }}"></script>
-  {% set _dummy = dashboard_dict.update({"highstock": 1}) %}
+    'widget_dashboard_head': """{% if "echarts" not in dashboard_dict %}
+  <script src="{{ asset('echarts-stack') }}"></script>
+  {% set _dummy = dashboard_dict.update({"echarts": 1}) %}
 {% endif %}
-<script src="/static/js/vendor/user_js/solid-gauge-9.1.2.js?v=20260814a"></script>
-
-{% if current_user.theme in dark_themes %}
-  <script type="text/javascript" src="/static/js/vendor/user_js/dark-unica-custom.js?v=20260814a"></script>
+{% if "aot_chart_core" not in dashboard_dict %}
+  <script src="{{ asset('app-chart-core') }}"></script>
+  {% set _dummy = dashboard_dict.update({"aot_chart_core": 1}) %}
+{% endif %}
+{% if "gauge_chart" not in dashboard_dict %}
+  <script src="{{ asset('widget-gauge-chart') }}"></script>
+  {% set _dummy = dashboard_dict.update({"gauge_chart": 1}) %}
 {% endif %}
 """,
 
@@ -296,17 +269,15 @@ WIDGET_INFORMATION = {
     $.ajax(url, {
       success: function(data, responseText, jqXHR) {
         if (jqXHR.status === 204) {
-          widget[widget_id].series[0].points[0].update(null);
+          widget[widget_id].setValue(null);
         }
         else {
-          const formattedTime = epoch_to_timestamp(data[0] * 1000);
           const measurement = data[1];
-          widget[widget_id].series[0].points[0].update(measurement);
-          //document.getElementById('timestamp-' + widget_id).innerHTML = formattedTime;
+          widget[widget_id].setValue(measurement);
         }
       },
       error: function(jqXHR, textStatus, errorThrown) {
-        widget[widget_id].series[0].points[0].update(null);
+        widget[widget_id].setValue(null);
       }
     });
   }
@@ -336,11 +307,11 @@ WIDGET_INFORMATION = {
 {%- set device_id = widget_options['measurement'].split(",")[0] -%}
 {%- set measurement_id = widget_options['measurement'].split(",")[1] -%}
 
-  // Idempotency guard for live-preview re-init (no page reload): destroy prior
+  // Idempotency guard for live-preview re-init (no page reload): dispose prior
   // chart + clear its polling interval before rebuilding.
   try {
     if (typeof widget !== 'undefined' && widget['{{each_widget.unique_id}}']) {
-      widget['{{each_widget.unique_id}}'].destroy();
+      widget['{{each_widget.unique_id}}'].dispose();
       delete widget['{{each_widget.unique_id}}'];
     }
   } catch (e) {}
@@ -348,96 +319,34 @@ WIDGET_INFORMATION = {
     clearInterval(window._gauge_intervals['{{each_widget.unique_id}}']);
     delete window._gauge_intervals['{{each_widget.unique_id}}'];
   }
-  widget['{{each_widget.unique_id}}'] = new Highcharts.chart({
-    chart: {
-      renderTo: 'container-gauge-{{each_widget.unique_id}}',
-      type: 'solidgauge',
-      animation: false,
-      events: {
-        load: function () {
-          {% for each_input in input if each_input.unique_id == device_id %}
-          getLastDataGaugeSolid('{{each_widget.unique_id}}', '{{device_id}}', 'input', '{{measurement_id}}', {{widget_options['max_measure_age']}});
-          repeatLastDataGaugeSolid('{{each_widget.unique_id}}', '{{device_id}}', 'input', '{{measurement_id}}', {{widget_options['refresh_seconds']}}, {{widget_options['max_measure_age']}});
-          {%- endfor -%}
-          
-          {% for each_function in function if each_function.unique_id == device_id %}
-          getLastDataGaugeSolid('{{each_widget.unique_id}}', '{{device_id}}', 'function', '{{measurement_id}}', {{widget_options['max_measure_age']}});
-          repeatLastDataGaugeSolid('{{each_widget.unique_id}}', '{{device_id}}', 'function', '{{measurement_id}}', {{widget_options['refresh_seconds']}}, {{widget_options['max_measure_age']}});
-          {%- endfor -%}
-
-          {%- for each_pid in pid  if each_pid.unique_id == device_id %}
-          getLastDataGaugeSolid('{{each_widget.unique_id}}', '{{device_id}}', 'pid', '{{measurement_id}}', {{widget_options['max_measure_age']}});
-          repeatLastDataGaugeSolid('{{each_widget.unique_id}}', '{{device_id}}', 'pid', '{{measurement_id}}', {{widget_options['refresh_seconds']}}, {{widget_options['max_measure_age']}});
-          {%- endfor -%}
-        }
-      },
-      spacingTop: 0,
-      spacingLeft: 0,
-      spacingRight: 0,
-      spacingBottom: 0
-    },
-
-    title: null,
-
-    pane: {
-      center: ['50%', '85%'],
-      size: '140%',
-      startAngle: -90,
-      endAngle: 90,
-      background: {
-        backgroundColor: (Highcharts.theme && Highcharts.theme.background2) || '#EEE',
-        innerRadius: '60%',
-        outerRadius: '100%',
-        shape: 'arc'
-      }
-    },
-
-    exporting: {
-      enabled: false
-    },
-    rangeSelector: {
-        enabled: false
-    },
-
-    // the value axis
-    yAxis: {
-      min: {{widget_options['min']}},
-      max: {{widget_options['max']}},
-      stops: [
-          {% for n in range(widget_variables['colors_gauge_solid']|length) %}
-              {% set index = '{0:0>2}'.format(n) %}
-        [{{widget_variables['colors_gauge_solid'][n]['stop']}}, '{{widget_variables['colors_gauge_solid'][n]['hex']}}'],
-          {% endfor %}
-      ],
-      lineWidth: 0,
-      minorTickInterval: null,
-      tickAmount: 2,
-      title: {
+  widget['{{each_widget.unique_id}}'] = AoTGauge.solid(document.getElementById('container-gauge-{{each_widget.unique_id}}'), {
+    min: {{widget_options['min']}},
+    max: {{widget_options['max']}},
+    stops: [
+      {%- for n in range(widget_variables['colors_gauge_solid']|length) %}
+      [{{widget_variables['colors_gauge_solid'][n]['stop']}}, '{{widget_variables['colors_gauge_solid'][n]['hex']}}'],
+      {%- endfor %}
+    ],
+    decimals: {{ widget_options['decimal_places'] }},
+    // 호 위 제목(옛 판 yAxis.title)
+    unit: '
       {%- if dict_measure_units[measurement_id] in dict_units and
              dict_units[dict_measure_units[measurement_id]]['unit'] -%}
-          text: '{{dict_units[dict_measure_units[measurement_id]]['unit']}}',
-      {% else %}
-          text: '',
-      {%- endif -%}
-        y: -80
-      },
-      labels: {
-        y: 16
-      }
-    },
-
-    plotOptions: {
-      solidgauge: {
-        dataLabels: {
-          y: 5,
-          borderWidth: 0,
-          useHTML: true
-        }
-      }
-    },
-
-    series: [{
-      name: '
+        {{dict_units[dict_measure_units[measurement_id]]['unit']}}
+      {%- endif -%}',
+    // 값 아래 줄(옛 판 dataLabels 의 measure_unit)
+    valueUnit: '{{measure_unit}}',
+    tooltipUnit: '
+      {%- for each_input in input if each_input.unique_id == device_id -%}
+        {{dict_units[device_measurements_dict[measurement_id].unit]['unit']}}
+      {%- endfor -%}
+      {%- for each_function in function if each_function.unique_id == device_id -%}
+        {{dict_units[device_measurements_dict[measurement_id].unit]['unit']}}
+      {%- endfor -%}
+      {%- for each_pid in pid if each_pid.unique_id == device_id -%}
+        {{dict_units[device_measurements_dict[measurement_id].unit]['unit']}}
+      {%- endfor -%}',
+    name: '
         {%- for each_input in input if each_input.unique_id == device_id and measurement_id in device_measurements_dict -%}
           {{each_input.name}} (
             {%- if not device_measurements_dict[measurement_id].single_channel -%}
@@ -466,60 +375,23 @@ WIDGET_INFORMATION = {
             {%- if device_measurements_dict[measurement_id].measurement -%}
           {{', ' + dict_measurements[device_measurements_dict[measurement_id].measurement]['name']}}
             {%- endif -%}
-        {%- endfor -%})',
-      data: [null],
-      dataLabels: {
-        // `format` 문자열로는 값이 없을 때를 구분할 수 없다 — Highcharts 가
-        // null 이면 라벨을 아예 안 그려서 **값 자리가 빈 칸**이 됐다.
-        // 빈 칸은 "0" 인지 "센서가 죽었" 는지 "아직 안 왔" 는지를 말해 주지 않는다.
-        // 각도 게이지와 같은 규칙으로 대시를 그린다(단위는 붙이지 않는다).
-        formatter: function () {
-          var big = 'font-size:var(--aot-fs-value-lg);font-weight:var(--aot-fw-bold);color:' +
-            ((Highcharts.theme && Highcharts.theme.contrastTextColor) || 'var(--aot-color-text-primary)');
-          if (this.y === null || this.y === undefined) {
-            return '<div style="text-align:center"><span class="aot-w-nodata" style="' + big + '">—</span></div>';
-          }
-          var dec = {{ widget_options['decimal_places'] }};
-          return '<div style="text-align:center"><span style="' + big + '">' +
-            Highcharts.numberFormat(this.y, dec) + '</span><br/>' +
-            '<span style="font-size:var(--aot-fs-unit);font-weight:var(--aot-fw-medium);color:var(--aot-color-text-secondary)">{{measure_unit}}</span></div>';
-        }
-      },
-      tooltip: {
-
-        {%- for each_input in input if each_input.unique_id == device_id %}
-        pointFormatter: function () {
-            return this.series.name + ':<b> ' + Highcharts.numberFormat(this.y, 2) + ' {{dict_units[device_measurements_dict[measurement_id].unit]['unit']}}</b><br>';
-        },
-        {%- endfor -%}
-        
-        {%- for each_function in function if each_function.unique_id == device_id %}
-        pointFormatter: function () {
-            return this.series.name + '</span>:<b> ' + Highcharts.numberFormat(this.y, 2) + ' {{dict_units[device_measurements_dict[measurement_id].unit]['unit']}}</b><br>';
-        },
-        {%- endfor -%}
-
-        valueSuffix: '
-        {%- for each_input in input if each_input.unique_id == device_id -%}
-            {{' ' + dict_units[device_measurements_dict[measurement_id].unit]['unit']}}
-        {%- endfor -%}
-
-        {%- for each_function in function if each_function.unique_id == device_id -%}
-            {{' ' + dict_units[device_measurements_dict[measurement_id].unit]['unit']}}
-        {%- endfor -%}
-
-        {%- for each_pid in pid if each_pid.unique_id == device_id -%}
-            {{' ' + dict_units[device_measurements_dict[measurement_id].unit]['unit']}}
-        {%- endfor -%}'
-      }
-    }],
-
-    credits: {
-      enabled: false,
-      href: "https://github.com/AoT-inc/AoT",
-      text: "AoT"
-    }
+        {%- endfor -%})'
   });
+
+  {% for each_input in input if each_input.unique_id == device_id %}
+  getLastDataGaugeSolid('{{each_widget.unique_id}}', '{{device_id}}', 'input', '{{measurement_id}}', {{widget_options['max_measure_age']}});
+  repeatLastDataGaugeSolid('{{each_widget.unique_id}}', '{{device_id}}', 'input', '{{measurement_id}}', {{widget_options['refresh_seconds']}}, {{widget_options['max_measure_age']}});
+  {%- endfor -%}
+  
+  {% for each_function in function if each_function.unique_id == device_id %}
+  getLastDataGaugeSolid('{{each_widget.unique_id}}', '{{device_id}}', 'function', '{{measurement_id}}', {{widget_options['max_measure_age']}});
+  repeatLastDataGaugeSolid('{{each_widget.unique_id}}', '{{device_id}}', 'function', '{{measurement_id}}', {{widget_options['refresh_seconds']}}, {{widget_options['max_measure_age']}});
+  {%- endfor -%}
+
+  {%- for each_pid in pid  if each_pid.unique_id == device_id %}
+  getLastDataGaugeSolid('{{each_widget.unique_id}}', '{{device_id}}', 'pid', '{{measurement_id}}', {{widget_options['max_measure_age']}});
+  repeatLastDataGaugeSolid('{{each_widget.unique_id}}', '{{device_id}}', 'pid', '{{measurement_id}}', {{widget_options['refresh_seconds']}}, {{widget_options['max_measure_age']}});
+  {%- endfor -%}
 """
 }
 

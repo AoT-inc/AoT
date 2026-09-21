@@ -414,42 +414,46 @@
   }
 
   // ── Chart — multi-series ──────────────────────────────────────────────
+  // 차트는 method-build 가 만든 핸들(window.aotMethodChart, aot-method-chart.js)로만
+  // 다룬다 — 그리는 라이브러리를 몰라도 되게.
   function updateChart(chartObj) {
     const chart = chartObj || window.aotMethodChart;
     if (!chart) return;
-    while (chart.series.length > 0) chart.series[0].remove(false);
 
     const step = 300;
-    weeks.forEach(function(w, wi) {
-      const color = COLORS[wi % COLORS.length];
+    const series = weeks.map(function(w, wi) {
       const resolved = resolveV2At(w);
       const data = [];
       for (let t = 0; t <= 86400; t += step) {
         data.push([t * 1000, parseFloat(evalCurve(resolved, t).toFixed(4))]);
       }
-      chart.addSeries({
-        name: {{ _("Week")|tojson }} + ' ' + w, data: data, color: color,
-        lineWidth: 2, marker: { enabled: false }
-      }, wi === weeks.length - 1);
+      return { name: {{ _("Week")|tojson }} + ' ' + w, data: data,
+               color: COLORS[wi % COLORS.length], lineWidth: 2, showSymbol: false };
     });
 
     // First week control point scatter plot
-    const ctrlData = points.map(function(p) {
-      return { x: p.t_sec * 1000, y: p.values[0] !== undefined ? p.values[0] : 0 };
-    });
-    chart.addSeries({
+    series.push({
       type: 'scatter',
       name: 'Points (Week ' + (weeks[0] || 0) + ')',
-      data: ctrlData, color: COLORS[0],
-      marker: { symbol: 'circle', radius: 5 },
-      tooltip: { pointFormat: '{point.x:%H:%M}: <b>{point.y:.3f}</b>' },
-      showInLegend: false
-    }, true);
-
+      data: points.map(function(p) {
+        return [p.t_sec * 1000, p.values[0] !== undefined ? p.values[0] : 0];
+      }),
+      color: COLORS[0],
+      symbolSize: 10,
+      rowFormat: function(x, y) {
+        return AoTChart.strftime('%H:%M', x, { utc: true }) +
+               ': <b>' + AoTChart.formatNumber(y, 3) + '</b>';
+      }
+    });
+    chart.setSeries(series);
     renderHandles();
   }
 
-  window.mpOnChartReady = function(chartObj) { updateChart(chartObj); };
+  window.mpOnChartReady = function(chartObj) {
+    updateChart(chartObj);
+    // 확대·크기 변경·축 배치가 끝나 좌표가 바뀌면 핸들도 다시 얹는다
+    chartObj.onRendered(renderHandles);
+  };
 
   // ── Bezier handle SVG overlay ──────────────────────────────────────────
   function renderHandles() {
@@ -462,8 +466,7 @@
     const hasBezier = points.some(function(p) { return getCurveType(p) === 'bezier'; });
     if (!hasBezier) return;
 
-    const container = chart.container;
-    container.style.position = 'relative';
+    const container = chart.overlayHost;
 
     const NS = 'http://www.w3.org/2000/svg';
     const svg = document.createElementNS(NS, 'svg');
@@ -473,8 +476,6 @@
     svg.setAttribute('height', container.offsetHeight);
     container.appendChild(svg);
 
-    const xAxis = chart.xAxis[0];
-    const yAxis = chart.yAxis[0];
     const resolved = resolveV2At(weeks[0]);
 
     points.forEach(function(pt, idx) {
@@ -483,16 +484,15 @@
       const rpt = resolved.find(function(r) { return r.t_sec === pt.t_sec; });
       if (!rpt) return;
 
-      const cx  = xAxis.toPixels(pt.t_sec * 1000, false);
-      const cy  = yAxis.toPixels(rpt.value, false);
+      const c0  = chart.toPixel(pt.t_sec * 1000, rpt.value);
+      const cx  = c0[0], cy = c0[1];
 
       const hdt = pt.handle_dt != null ? pt.handle_dt : DEFAULT_HDT;
       const hdv = pt.handle_dv != null ? pt.handle_dv : 0;
 
-      const rhx = xAxis.toPixels((pt.t_sec + hdt) * 1000, false);
-      const rhy = yAxis.toPixels(rpt.value + hdv, false);
-      const lhx = xAxis.toPixels((pt.t_sec - hdt) * 1000, false);
-      const lhy = yAxis.toPixels(rpt.value - hdv, false);
+      const rh  = chart.toPixel((pt.t_sec + hdt) * 1000, rpt.value + hdv);
+      const lh  = chart.toPixel((pt.t_sec - hdt) * 1000, rpt.value - hdv);
+      const rhx = rh[0], rhy = rh[1], lhx = lh[0], lhy = lh[1];
 
       // Arm line
       const line = document.createElementNS(NS, 'line');
@@ -553,12 +553,10 @@
 
     const { idx, dir } = _drag;
     const pt  = points[idx];
-    const rect = chart.container.getBoundingClientRect();
-    const px  = e.clientX - rect.left;
-    const py  = e.clientY - rect.top;
-
-    const tMs  = chart.xAxis[0].toValue(px);
-    const vNew = chart.yAxis[0].toValue(py);
+    const rect = chart.overlayHost.getBoundingClientRect();
+    const v   = chart.toValue(e.clientX - rect.left, e.clientY - rect.top);
+    const tMs  = v[0];
+    const vNew = v[1];
     const tSec = tMs / 1000;
 
     const resolved = resolveV2At(weeks[0]);

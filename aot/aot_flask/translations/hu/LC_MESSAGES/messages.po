@@ -29267,8 +29267,8 @@ msgid "Select a Function to display the status of"
 msgstr "Válassza ki azt a funkciót, amelynek állapotát meg szeretné jeleníteni"
 
 #: widgets/widget_gauge_solid.py:122
-msgid "Gauge (Solid) [Highcharts]"
-msgstr "Műszer (tömör) [Highcharts]"
+msgid "Gauge (Solid)"
+msgstr "Műszer (tömör)"
 
 #: widgets/widget_gauge_solid.py:126
 msgid ""

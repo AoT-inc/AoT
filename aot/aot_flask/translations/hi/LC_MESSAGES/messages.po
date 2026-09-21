@@ -28958,8 +28958,8 @@ msgid "Select a Function to display the status of"
 msgstr "जिसकी स्थिति प्रदर्शित करनी है वह फ़ंक्शन चुनें"
 
 #: widgets/widget_gauge_solid.py:122
-msgid "Gauge (Solid) [Highcharts]"
-msgstr "गेज (सॉलिड) [Highcharts]"
+msgid "Gauge (Solid)"
+msgstr "गेज (सॉलिड)"
 
 #: widgets/widget_gauge_solid.py:126
 msgid ""

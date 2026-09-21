@@ -517,17 +517,17 @@ WIDGET_INFORMATION = {
     ],
 
   # ------------------ HEAD (CSS) ------------------
-  'widget_dashboard_head': """
-{% if "highstock" not in dashboard_dict %}
-  <script type="text/javascript" src="{{ asset('highcharts-stack') }}"></script>
-  {% set _dummy = dashboard_dict.update({"highstock": 1}) %}
+  'widget_dashboard_head': """{% if "echarts" not in dashboard_dict %}
+  <script src="{{ asset('echarts-stack') }}"></script>
+  {% set _dummy = dashboard_dict.update({"echarts": 1}) %}
 {% endif %}
 {% if "aot_chart_core" not in dashboard_dict %}
   <script src="{{ asset('app-chart-core') }}"></script>
   {% set _dummy = dashboard_dict.update({"aot_chart_core": 1}) %}
 {% endif %}
-{% if current_user.theme in dark_themes %}
-  <script type="text/javascript" src="/static/js/vendor/user_js/dark-unica-custom.js?v=20260814a"></script>
+{% if "timeseries_chart" not in dashboard_dict %}
+  <script src="{{ asset('widget-timeseries-chart') }}"></script>
+  {% set _dummy = dashboard_dict.update({"timeseries_chart": 1}) %}
 {% endif %}
 """,
 
@@ -801,7 +801,7 @@ WIDGET_INFORMATION = {
     </div>
   </div>
 
-  <!-- Row 2: graph (same Highstock graph as AoT_graph, including range selector) -->
+  <!-- Row 2: graph (same time-series chart as AoT_graph, including range buttons) -->
   {% if widget_options.get('enable_graph', True) %}
   <div class="not-draggable pid-graph"
        id="container-synchronous-graph-{{each_widget.unique_id}}"
@@ -1231,34 +1231,31 @@ function repeatPidDataAoT(wid, pidid, refsec, max_age, decs) {
   }, refsec*1000);
 }
 
-// ===== PID graph — shared Highcharts defaults via aot-chart-core =====
+// ===== PID graph — shared time-series chart (aot-timeseries-chart.js) =====
 // (the global widget[] registry is declared in dashboard.html)
 AoTChart.applyGlobalDefaults();
 if (typeof window.last_output_time_mil === 'undefined') window.last_output_time_mil = {};
 var last_output_time_mil = window.last_output_time_mil;
 if (typeof window._aot_pid_user_range === 'undefined') window._aot_pid_user_range = {};
 var _aot_pid_user_range = window._aot_pid_user_range;
-
 function redrawGraphPidg(widget_id, refresh_seconds, xaxis_duration_min, xaxis_reset) {
   AoTChart.deferWhileScrolling(function () {
-    widget[widget_id].redraw();
+    const ts = widget[widget_id];
+    if (!ts) return;
     if (xaxis_reset && !_aot_pid_user_range[widget_id]) {
       const epoch_max = Date.now();
-      const epoch_min = epoch_max - (xaxis_duration_min * 60 * 1000);
-      widget[widget_id].xAxis[0].update({ min: epoch_min, max: epoch_max }, false);
-      widget[widget_id].xAxis[0].setExtremes(epoch_min, epoch_max, true);
-      widget[widget_id].xAxis[0].isDirty = true;
+      ts.setExtremes(epoch_max - (xaxis_duration_min * 60 * 1000), epoch_max);
     }
+    ts.redraw();
   });
 }
-
 function getPastDataPidg(widget_id, series, unique_id, measure_type, measurement_id, past_seconds, sign) {
   sign = (sign === undefined) ? 1 : sign;
-  const epoch_mil = new Date().getTime();
   const url = '/past/' + unique_id + '/' + measure_type + '/' + measurement_id + '/' + past_seconds;
   const update_id = widget_id + "-" + series + "-" + unique_id + "-" + measure_type + '-' + measurement_id;
   $.getJSON(url, function(data, responseText, jqXHR) {
-    if (jqXHR.status !== 204 && data && data.length) {
+    const ts = widget[widget_id];
+    if (ts && jqXHR.status !== 204 && data && data.length) {
       let past_data = [];
       let newest_time = 0;
       for (let i = 0; i < data.length; i++) {
@@ -1268,14 +1265,13 @@ function getPastDataPidg(widget_id, series, unique_id, measure_type, measurement
         if (new_time > newest_time) newest_time = new_time;
       }
       if (newest_time > 0) last_output_time_mil[update_id] = newest_time;
-      widget[widget_id].series[series].isDirty = true;
-      const epoch_min = new Date().setMinutes(new Date().getMinutes() - (past_seconds / 60));
-      widget[widget_id].xAxis[0].setExtremes(epoch_min, epoch_mil);
-      widget[widget_id].series[series].setData(past_data, true, false);
+      const epoch_mil = Date.now();
+      ts.setData(series, past_data);
+      ts.setExtremes(epoch_mil - past_seconds * 1000, epoch_mil);
+      ts.redraw();
     }
   });
 }
-
 function retrieveLiveDataPidg(widget_id, series, unique_id, measure_type, measurement_id, xaxis_duration_min, xaxis_reset, refresh_seconds, sign) {
   sign = (sign === undefined) ? 1 : sign;
   let url = '';
@@ -1288,7 +1284,8 @@ function retrieveLiveDataPidg(widget_id, series, unique_id, measure_type, measur
     url = '/past/' + unique_id + '/' + measure_type + '/' + measurement_id + '/' + refresh_seconds;
   }
   $.getJSON(url, function(data, responseText, jqXHR) {
-    if (jqXHR.status !== 204 && data && data.length) {
+    const ts = widget[widget_id];
+    if (ts && jqXHR.status !== 204 && data && data.length) {
       const oldest_timestamp_allowed = epoch_mil - (xaxis_duration_min * 60 * 1000);
       // Points at or before last_known are already on the chart — the server window
       // may overlap, and re-adding them duplicates points without bound (heap blowup).
@@ -1297,22 +1294,15 @@ function retrieveLiveDataPidg(widget_id, series, unique_id, measure_type, measur
       for (let i = 0; i < data.length; i++) {
         const time_point = new Date(data[i][0] * 1000).getTime();
         if (time_point <= last_known_mil) continue;
-        widget[widget_id].series[series].addPoint([time_point, parseFloat(data[i][1]) * sign], false, false);
+        ts.addPoint(series, [time_point, parseFloat(data[i][1]) * sign]);
         if (time_point > newest_time) newest_time = time_point;
       }
       if (newest_time > last_known_mil) last_output_time_mil[update_id] = newest_time;
-      const s_pid = widget[widget_id].series[series];
-      for (let i = s_pid.options.data.length - 1; i >= 0; i--) {
-        const pt = s_pid.options.data[i];
-        if ((Array.isArray(pt) ? pt[0] : pt.x) < oldest_timestamp_allowed) {
-          s_pid.removePoint(i, false);
-        }
-      }
+      ts.removeBefore(series, oldest_timestamp_allowed);
       redrawGraphPidg(widget_id, refresh_seconds, xaxis_duration_min, xaxis_reset);
     }
   });
 }
-
 function getLiveDataPidg(widget_id, series, unique_id, measure_type, measurement_id, xaxis_duration_min, xaxis_reset, refresh_seconds, sign) {
   sign = (sign === undefined) ? 1 : sign;
   window._pid_intervals = window._pid_intervals || {};
@@ -1396,12 +1386,12 @@ getPidDataAoT('{{each_widget.unique_id}}','{{widget_options['pid']}}',{{max_age}
   {% set xreset = widget_options.get('enable_xaxis_reset', True)|int %}
   {% set auto   = widget_options.get('enable_auto_refresh', True) %}
 
-  // Idempotency guard for live-preview re-init (no page reload): destroy the
+  // Idempotency guard for live-preview re-init (no page reload): dispose the
   // previous chart + clear this widget's stored data/live intervals before
-  // rebuilding, so re-init doesn't leak a Highcharts instance or stack intervals.
+  // rebuilding, so re-init doesn't leak a chart instance or stack intervals.
   try {
     if (typeof widget !== 'undefined' && widget['{{each_widget.unique_id}}']) {
-      widget['{{each_widget.unique_id}}'].destroy();
+      widget['{{each_widget.unique_id}}'].dispose();
       delete widget['{{each_widget.unique_id}}'];
     }
   } catch (e) {}
@@ -1414,95 +1404,20 @@ getPidDataAoT('{{each_widget.unique_id}}','{{widget_options['pid']}}',{{max_age}
     });
   }
 
-widget['{{each_widget.unique_id}}'] = new Highcharts.StockChart({
+widget['{{each_widget.unique_id}}'] = AoTTimeSeries.create(document.getElementById('container-synchronous-graph-{{each_widget.unique_id}}'), {
   {# 전역 차트 시리즈 팔레트 — aot.config GRAPH_SERIES_PALETTE(_DARK), inject_variables 주입 #}
   {% if current_user.theme in dark_themes %}
   colors: {{ graph_series_palette_dark | tojson }},
   {% else %}
   colors: {{ graph_series_palette | tojson }},
   {% endif %}
-  chart: {
-    renderTo: 'container-synchronous-graph-{{each_widget.unique_id}}',
-    zoomType: 'x',
-    alignTicks: false,
-    spacingTop: 16,
-    spacingBottom: 16,
-    resetZoomButton: { theme: { style: { display: 'none' } } },
-    events: {
-      render: function () {
-        AoTChart.axisAdjust(this);
-      },
-      load: function () {
-        {% if sp_mid %}
-        getPastDataPidg('{{each_widget.unique_id}}', 0, '{{pid_id}}', 'pid', '{{sp_mid}}', {{x_sec}});
-        {% if auto %}getLiveDataPidg('{{each_widget.unique_id}}', 0, '{{pid_id}}', 'pid', '{{sp_mid}}', {{x_min}}, {{xreset}}, {{refresh_sec}});{% endif %}
-        {% endif %}
-        {% if act_mid %}
-        getPastDataPidg('{{each_widget.unique_id}}', 1, '{{act_dev}}', 'input', '{{act_mid}}', {{x_sec}});
-        {% if auto %}getLiveDataPidg('{{each_widget.unique_id}}', 1, '{{act_dev}}', 'input', '{{act_mid}}', {{x_min}}, {{xreset}}, {{refresh_sec}});{% endif %}
-        {% endif %}
-        {% if raise_out_mid %}
-        getPastDataPidg('{{each_widget.unique_id}}', 2, '{{raise_dev_id}}', 'output', '{{raise_out_mid}}', {{x_sec}}, 1);
-        {% if auto %}getLiveDataPidg('{{each_widget.unique_id}}', 2, '{{raise_dev_id}}', 'output', '{{raise_out_mid}}', {{x_min}}, {{xreset}}, {{refresh_sec}}, 1);{% endif %}
-        {% endif %}
-        {% if lower_out_mid %}
-        getPastDataPidg('{{each_widget.unique_id}}', 3, '{{lower_dev_id}}', 'output', '{{lower_out_mid}}', {{x_sec}}, {{lower_sign}});
-        {% if auto %}getLiveDataPidg('{{each_widget.unique_id}}', 3, '{{lower_dev_id}}', 'output', '{{lower_out_mid}}', {{x_min}}, {{xreset}}, {{refresh_sec}}, {{lower_sign}});{% endif %}
-        {% endif %}
-      }
-    }
-  },
-  title: { text: '' },
-  legend: {
-    enabled: true,
-    useHTML: true,
-    labelFormatter: function () {
-      let lastVal = this.yData[this.yData.length - 1];
-      let unit = this.tooltipOptions.valueSuffix || '';
-      return this.name + ': <b>' + Highcharts.numberFormat(lastVal, 2) + unit + '</b>';
-    }
-  },
-  xAxis: {
-    type: 'datetime',
-    ordinal: false,
-    labels: {
-      style: { color: 'var(--aot-color-text-secondary, #666666)' }
-    },
-    events: {
-      afterSetExtremes: function(e) {
-        if (e.trigger) {
-          _aot_pid_user_range['{{each_widget.unique_id}}'] = true;
-        }
-      }
-    }
-  },
-  yAxis: [
-    AoTChart.unitYAxis({
-      id: 'val',
-      unit: '{% if val_unit %}{{val_unit}}{% else %}{{val_unit_name}}{% endif %}',
-      extra: { labels: { format: '{value}', x: -8, style: { fontSize: '1em', color: 'var(--aot-color-text-secondary, #666666)' } } }
-    }),
-    AoTChart.unitYAxis({
-      id: 'out',
-      unit: 's',
-      extra: { gridLineWidth: 0, labels: { format: '{value}', x: -8, style: { fontSize: '1em', color: 'var(--aot-color-text-secondary, #666666)' } } }
-    })
-  ],
-  exporting: { enabled: false },
-  navigator: { enabled: false },
-  scrollbar: { enabled: false },
+  alignTicks: false,
+  spacing: { top: 16, bottom: 16 },
+  legend: { enabled: true, valueFormat: 'number' },
+  columnMaxWidth: 10,
   rangeSelector: {
     enabled: true,
-    inputEnabled: false,
-    labelStyle: { color: 'var(--aot-color-text-secondary, #666666)' },
-    buttonTheme: {
-      style: { color: 'var(--aot-color-text-secondary, #666666)' },
-      states: {
-        hover: { style: { color: 'var(--aot-color-text-primary, #333333)' } },
-        select: { style: { color: 'var(--aot-color-text-primary, #333333)' } },
-        disabled: { style: { color: 'var(--aot-color-text-secondary, #cccccc)' } }
-      }
-    },
+    dateInputs: false,
     buttons: [
       { count: 5,  type: 'minute', text: '{{_("5m")}}' },
       { count: 30, type: 'minute', text: '{{_("30m")}}' },
@@ -1513,50 +1428,45 @@ widget['{{each_widget.unique_id}}'] = new Highcharts.StockChart({
     ],
     selected: 3
   },
-  credits: { enabled: false },
-  tooltip: {
-    shared: true,
-    useHTML: true,
-    formatter: function () {
-      let s = '<b>' + AoTChart.formatDateTime(this.x) + '</b>';
-      $.each(this.points, function (i, point) {
-        s += '<br/><span style="color:' + point.color + '">\\u25CF</span> '
-           + point.series.name + ': ' + AoTChart.formatPointValue(point);
-      });
-      return s;
-    }
-  },
-  plotOptions: {
-    column: { maxPointWidth: 10 },
-    series: { connectNulls: true, states: { hover: { enabled: false } } }
-  },
+  // 사람이 기간을 바꾸면(버튼·끌어 확대) 실시간 창으로 되돌리지 않는다
+  onRangeButton: function () { _aot_pid_user_range['{{each_widget.unique_id}}'] = true; },
+  onUserZoom: function () { _aot_pid_user_range['{{each_widget.unique_id}}'] = true; },
+  yAxes: [
+    { id: 'val', unit: '{% if val_unit %}{{val_unit}}{% else %}{{val_unit_name}}{% endif %}', plainLabels: true },
+    { id: 'out', unit: 's', plainLabels: true, grid: false }
+  ],
   series: [
-    {
-      name: '{{_('Setpoint')}}', type: 'line', yAxis: 'val',
-      dataGrouping: { enabled: true, approximation: 'average', groupPixelWidth: 2 },
-      tooltip: { valueSuffix: '{% if val_unit %} {{val_unit}}{% endif %}', valueDecimals: {{dec_places}} },
-      data: []
-    },
-    {
-      name: '{{_('Actual')}}', type: 'line', yAxis: 'val',
-      dataGrouping: { enabled: true, approximation: 'average', groupPixelWidth: 2 },
-      tooltip: { valueSuffix: '{% if val_unit %} {{val_unit}}{% endif %}', valueDecimals: {{dec_places}} },
-      data: []
-    },
-    {
-      name: '{{_('Raise')}}', type: 'column', yAxis: 'out',
-      dataGrouping: { enabled: true, approximation: 'max', groupPixelWidth: 4 },
-      tooltip: { valueSuffix: ' s', valueDecimals: 1 },
-      data: []
-    },
-    {
-      name: '{{_('Lower')}}', type: 'column', yAxis: 'out',
-      dataGrouping: { enabled: true, approximation: 'min', groupPixelWidth: 4 },
-      tooltip: { valueSuffix: ' s', valueDecimals: 1 },
-      data: []
-    }
+    { name: '{{_('Setpoint')}}', kind: 'line', yAxis: 'val',
+      grouping: { enabled: true, approximation: 'average' },
+      valueSuffix: '{% if val_unit %} {{val_unit}}{% endif %}', valueDecimals: {{dec_places}} },
+    { name: '{{_('Actual')}}', kind: 'line', yAxis: 'val',
+      grouping: { enabled: true, approximation: 'average' },
+      valueSuffix: '{% if val_unit %} {{val_unit}}{% endif %}', valueDecimals: {{dec_places}} },
+    { name: '{{_('Raise')}}', kind: 'column', yAxis: 'out',
+      grouping: { enabled: true, approximation: 'max' },
+      valueSuffix: ' s', valueDecimals: 1 },
+    { name: '{{_('Lower')}}', kind: 'column', yAxis: 'out',
+      grouping: { enabled: true, approximation: 'min' },
+      valueSuffix: ' s', valueDecimals: 1 }
   ]
 });
+
+  {% if sp_mid %}
+  getPastDataPidg('{{each_widget.unique_id}}', 0, '{{pid_id}}', 'pid', '{{sp_mid}}', {{x_sec}});
+  {% if auto %}getLiveDataPidg('{{each_widget.unique_id}}', 0, '{{pid_id}}', 'pid', '{{sp_mid}}', {{x_min}}, {{xreset}}, {{refresh_sec}});{% endif %}
+  {% endif %}
+  {% if act_mid %}
+  getPastDataPidg('{{each_widget.unique_id}}', 1, '{{act_dev}}', 'input', '{{act_mid}}', {{x_sec}});
+  {% if auto %}getLiveDataPidg('{{each_widget.unique_id}}', 1, '{{act_dev}}', 'input', '{{act_mid}}', {{x_min}}, {{xreset}}, {{refresh_sec}});{% endif %}
+  {% endif %}
+  {% if raise_out_mid %}
+  getPastDataPidg('{{each_widget.unique_id}}', 2, '{{raise_dev_id}}', 'output', '{{raise_out_mid}}', {{x_sec}}, 1);
+  {% if auto %}getLiveDataPidg('{{each_widget.unique_id}}', 2, '{{raise_dev_id}}', 'output', '{{raise_out_mid}}', {{x_min}}, {{xreset}}, {{refresh_sec}}, 1);{% endif %}
+  {% endif %}
+  {% if lower_out_mid %}
+  getPastDataPidg('{{each_widget.unique_id}}', 3, '{{lower_dev_id}}', 'output', '{{lower_out_mid}}', {{x_sec}}, {{lower_sign}});
+  {% if auto %}getLiveDataPidg('{{each_widget.unique_id}}', 3, '{{lower_dev_id}}', 'output', '{{lower_out_mid}}', {{x_min}}, {{xreset}}, {{refresh_sec}}, {{lower_sign}});{% endif %}
+  {% endif %}
 {% endif %}
 """
 }

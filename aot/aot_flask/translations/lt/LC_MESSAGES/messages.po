@@ -29101,8 +29101,8 @@ msgid "Select a Function to display the status of"
 msgstr "Pasirinkite funkciją, kurios būseną rodyti"
 
 #: widgets/widget_gauge_solid.py:122
-msgid "Gauge (Solid) [Highcharts]"
-msgstr "Matuoklis (vientisas) [Highcharts]"
+msgid "Gauge (Solid)"
+msgstr "Matuoklis (vientisas)"
 
 #: widgets/widget_gauge_solid.py:126
 msgid ""

@@ -10,12 +10,9 @@
   <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/aot-settings.css') }}" />
   <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/pages/energy-usage.css') }}" />
 
-  <script type="text/javascript" src="{{ asset('highcharts-stack') }}"></script>
+  <script src="{{ asset('echarts-stack') }}"></script>
   <script src="{{ asset('app-chart-core') }}"></script>
-
-  {% if current_user.theme in dark_themes %}
-    <script src="{{ url_for('static', filename='js/vendor/user_js/dark-unica-custom.js') }}"></script>
-  {% endif %}
+  <script src="{{ asset('widget-timeseries-chart') }}"></script>
 {% endblock %}
 
 {% block body %}
@@ -223,337 +220,100 @@ $('.collapse').on('show.bs.collapse', function(){
 <script>
 // 월·요일 이름과 날짜 라벨 서식을 현재 언어로 (전역 번역 경유).
 AoTChart.applyLangDefaults();
-
-Highcharts.setOptions({
-  global: {
-    useUTC: false
-  },
-  lang: {
-    thousandsSep: ','
-  }
-});
+AoTChart.setNumberLang({ thousandsSep: ',' });
 
 $(document).ready(function() {
-    const id_measure = [
-    {% for energy_usage_id in graph_info %}
-    {
-      chart_id: '{{energy_usage_id}}',
+    const charts = {};
+
+    // 차트 하나 = 장치 하나. 처음에는 전체 구간(다운샘플)을 받아 내비게이터 개요와
+    // 본선에 같이 넣고, 기간 버튼·끌어 확대·내비게이터로 보기 범위가 바뀌면 그
+    // 구간만 자세히 다시 받는다.
+    //
+    // 예전 판은 구간을 다시 받을 때 **모든 항목**의 장치를 차례로 받아 이 차트에
+    // 덮어썼다 — 항목이 둘 이상이면 마지막에 온 응답(남의 장치)이 그려졌다.
+    // 이제 차트마다 자기 장치만 받는다.
+    function makeChart(el_id, src) {
+      const ts = AoTTimeSeries.create(document.getElementById(el_id), {
+        legend: { enabled: false },
+        navigator: true,
+        navigatorData: true,
+        tooltipMs: true,
+        minRange: 1800 * 1000,
+        rangeSelector: {
+          enabled: true,
+          dateInputs: false,
+          selected: 4,
+          buttons: [
+            { type: 'hour',  count: 1, text: {{ _('1 Hour')|tojson }} },
+            { type: 'day',   count: 1, text: {{ _('1 Day')|tojson }} },
+            { type: 'week',  count: 1, text: {{ _('1 Week')|tojson }} },
+            { type: 'month', count: 1, text: {{ _('1 Month')|tojson }} },
+            { type: 'all',             text: {{ _('All')|tojson }} }
+          ]
+        },
+        onRangeButton: function (i, btn, range) { fetchRange(range.min, range.max); },
+        onUserZoom: function (e) { fetchRange(e.min, e.max); },
+        yAxes: [{ id: 'A', unit: 'A', plainLabels: true }],
+        series: [{
+          name: {{ _('Amps')|tojson }}, kind: 'column', yAxis: 'A',
+          grouping: { enabled: true, approximation: 'average' },
+          valueSuffix: ' A', valueDecimals: 3
+        }]
+      });
+
+      let gen = 0, debounce = null;
+      function url(start, end) {
+        return '/async_usage/' + src.device_id + '/' + src.unit + '/' + src.channel + '/' + start + '/' + end;
+      }
+      function toPoints(data) {
+        return (data || []).map(function (d) { return [new Date(d[0] * 1000).getTime(), d[1]]; });
+      }
+      function fetchRange(min, max) {
+        if (min == null || max == null) return;
+        if (debounce) clearTimeout(debounce);
+        debounce = setTimeout(function () {
+          const my = ++gen;
+          ts.showLoading();
+          $.getJSON(url(Math.round(min) / 1000, Math.round(max) / 1000), function (data, txt, jq) {
+            if (my !== gen) return;
+            ts.setData(0, jq.status === 204 ? [] : toPoints(data));
+          }).always(function () {
+            if (my !== gen) return;
+            ts.hideLoading();
+            ts.redraw();
+          });
+        }, 250);
+      }
+
+      $.getJSON(url(src.start, src.end == null ? 0 : src.end), function (data, txt, jq) {
+        if (jq.status === 204) return;
+        const pts = toPoints(data);
+        // 끝을 지금으로 — 마지막 측정 뒤 빈 구간도 보이게(예전 판과 같다)
+        const nav = (src.end == null) ? pts.concat([[Date.now(), null]]) : pts;
+        ts.setNavigatorData(nav);
+        ts.setData(0, pts);
+      }).always(function () { ts.redraw(); });
+      return ts;
+    }
+
+  {% for energy_usage_id in graph_info %}
+    {% if calculate_usage[energy_usage_id] %}
+    charts['calc-{{energy_usage_id}}'] = makeChart('container-calc-{{energy_usage_id}}', {
+      device_id: '{{graph_info[energy_usage_id]['calculate']['device_id']}}',
+      unit: '{{graph_info[energy_usage_id]['calculate']['unit']}}',
+      channel: '{{graph_info[energy_usage_id]['calculate']['channel']}}',
+      start: '{{graph_info[energy_usage_id]['calculate']['start_time_epoch']}}',
+      end: '{{graph_info[energy_usage_id]['calculate']['end_time_epoch']}}'
+    });
+    {% endif %}
+    charts['{{energy_usage_id}}'] = makeChart('container-{{energy_usage_id}}', {
       device_id: '{{graph_info[energy_usage_id]['main']['device_id']}}',
       unit: '{{graph_info[energy_usage_id]['main']['unit']}}',
-      channel: '{{graph_info[energy_usage_id]['main']['channel']}}'
-    },
-    {% endfor %}
-    ];
-    let chart = [];
-
-    function getPastData(chart_id, device_id, unit, channel, start_time, end_time) {
-      let url;
-      if (typeof(end_time)==='undefined') {
-        url = '/async_usage/' + device_id + '/' + unit + '/' + channel + '/' + start_time + '/0';
-      } else {
-        url = '/async_usage/' + device_id + '/' + unit + '/' + channel + '/' + start_time + '/' + end_time;
-      }
-      $.getJSON(url,
-        function(data, responseText, jqXHR) {
-          if (jqXHR.status !== 204) {
-            let new_data = [];
-            for (let i = 0; i < data.length; i++) {
-              const new_date = new Date(data[i][0] * 1000);
-              const new_time = new_date.getTime();
-              new_data.push([new_time, data[i][1]]);
-            }
-            if (typeof(end_time)==='undefined') new_data.push([new Date().getTime(), null]);
-            chart[chart_id].series[0].setData(new_data, false, false);
-            let nav = chart[chart_id].get('navigator');
-            nav.setData(new_data, false, false);
-          }
-          chart[chart_id].redraw();
-        }
-      );
-    }
-
-    function set_data_from_url(url, chart_id) {
-      $.getJSON(url,
-        function (data, responseText, jqXHR) {
-          if (jqXHR.status !== 204) {
-            let new_data = [];
-            for (let i = 0; i < data.length; i++) {
-              const new_date = new Date(data[i][0] * 1000);
-              const new_time = new_date.getTime();
-              new_data.push([new_time, data[i][1]]);
-            }
-          }
-          chart[chart_id].series[0].setData(new_data);
-          chart[chart_id].hideLoading();
-        }
-      );
-    }
-
-    function updateAllSeries(e, chart_id) {
-      let min;
-      let max;
-      if (e.xAxis == null) {
-        min = e.min;
-        max = e.max;
-      } else {
-        min = e.xAxis[0].min;
-        max = e.xAxis[0].max;
-      }
-      for (let each_id in id_measure) {
-        const url = '/async_usage/' + id_measure[each_id]['device_id'] + '/' + id_measure[each_id]['unit'] + '/' + id_measure[each_id]['channel'] + '/' + Math.round(min) / 1000 + '/' + Math.round(max) / 1000;
-        set_data_from_url(url, chart_id)
-      }
-    }
-
-    // create the chart
-  {% for energy_usage_id in graph_info %}
-
-    {% if calculate_usage[energy_usage_id] %}
-
-    chart['calc-{{energy_usage_id}}'] = new Highcharts.StockChart({
-        chart: {
-          renderTo: 'container-calc-{{energy_usage_id}}',
-          zoomType: 'x',
-          events: {
-            load: function () {
-              getPastData('calc-{{energy_usage_id}}', '{{graph_info[energy_usage_id]['calculate']['device_id']}}', '{{graph_info[energy_usage_id]['calculate']['unit']}}', '{{graph_info[energy_usage_id]['calculate']['channel']}}', '{{graph_info[energy_usage_id]['calculate']['start_time_epoch']}}', '{{graph_info[energy_usage_id]['calculate']['end_time_epoch']}}');
-            },
-            selection: function(e) {
-              updateAllSeries(e, 'calc-{{energy_usage_id}}')
-            }
-          }
-        },
-
-        tooltip: {
-          shared: true,
-          formatter: function(){
-            if (this.point) {
-              return '<b>'+ AoTChart.formatDateTime(this.x, {ms: true})
-                   + '</b><br/>' + this.series.name
-                   + '<br/>' + this.point.title
-                   + '<br/>' + this.point.text;
-            }
-            else {
-              let s = '<b>'+ AoTChart.formatDateTime(this.x, {ms: true}) + '</b>';
-              $.each(this.points, function(i, point) {
-                  s += '<br/><span style="color:' + point.color + '">\u25CF</span> ' + point.series.name + ': ' + Highcharts.numberFormat(point.y, this.series.tooltipOptions.valueDecimals) + ' ' + this.series.tooltipOptions.valueSuffix;
-              });
-              return s;
-            }
-          }
-        },
-
-        navigator: {
-            adaptToUpdatedData: false,
-            series: {
-                id: 'navigator'
-            }
-        },
-
-        scrollbar: {
-          liveRedraw: false
-        },
-
-        legend: {
-          enabled: false
-        },
-
-        rangeSelector: {
-            buttons: [{
-                type: 'hour',
-                count: 1,
-                text: {{ _('1 Hour')|tojson }}
-            }, {
-                type: 'day',
-                count: 1,
-                text: {{ _('1 Day')|tojson }}
-            }, {
-                type: 'week',
-                count: 1,
-                text: {{ _('1 Week')|tojson }}
-            }, {
-                type: 'month',
-                count: 1,
-                text: {{ _('1 Month')|tojson }}
-            }, {
-                type: 'all',
-                text: {{ _('All')|tojson }}
-            }],
-            inputEnabled: false,
-            selected: 4
-        },
-
-        xAxis: {
-          events: {
-            setExtremes: function(e) {
-              if (typeof(e.rangeSelectorButton) !== 'undefined' || e.trigger === 'navigator') {
-                updateAllSeries(e, 'calc-{{energy_usage_id}}');
-              }
-            }
-          },
-          minRange: 1800 * 1000
-        },
-
-        yAxis: [
-          {
-            title: {
-              text: {{ _('Amps')|tojson }} + ' (A)'
-            },
-            labels: {
-              format: '{value}'
-            },
-            opposite: false,
-            id: 'A'
-          }
-        ],
-
-        credits: {
-          enabled: false,
-          href: "https://github.com/AoT-inc/AoT",
-          text: "AoT"
-        },
-
-        series: [
-            {
-              name: 'Amps',
-              type: 'column',
-              dataGrouping: {
-                approximation: 'average'
-              },
-              tooltip: {
-                valueSuffix: ' A',
-                valueDecimals: 3
-              },
-              yAxis: 'A',
-              data: []
-            }
-        ]
+      channel: '{{graph_info[energy_usage_id]['main']['channel']}}',
+      start: '{{graph_info[energy_usage_id]['main']['start_time_epoch']}}',
+      end: null
     });
-
-    {% endif %}
-
-    chart['{{energy_usage_id}}'] = new Highcharts.StockChart({
-      chart: {
-        renderTo: 'container-{{energy_usage_id}}',
-        zoomType: 'x',
-        events: {
-          load: function () {
-            getPastData('{{energy_usage_id}}', '{{graph_info[energy_usage_id]['main']['device_id']}}', '{{graph_info[energy_usage_id]['main']['unit']}}', '{{graph_info[energy_usage_id]['main']['channel']}}', '{{graph_info[energy_usage_id]['main']['start_time_epoch']}}');
-          },
-          selection: function(e) {
-            updateAllSeries(e, '{{energy_usage_id}}')
-          }
-        }
-      },
-
-      tooltip: {
-        shared: true,
-        formatter: function(){
-          if (this.point) {
-            return '<b>'+ AoTChart.formatDateTime(this.x, {ms: true})
-                 + '</b><br/>' + this.series.name
-                 + '<br/>' + this.point.title
-                 + '<br/>' + this.point.text;
-          }
-          else {
-            let s = '<b>'+ AoTChart.formatDateTime(this.x, {ms: true}) + '</b>';
-            $.each(this.points, function(i, point) {
-                s += '<br/><span style="color:' + point.color + '">\u25CF</span> ' + point.series.name + ': ' + Highcharts.numberFormat(point.y, this.series.tooltipOptions.valueDecimals) + ' ' + this.series.tooltipOptions.valueSuffix;
-            });
-            return s;
-          }
-        }
-      },
-
-      navigator: {
-          adaptToUpdatedData: false,
-          series: {
-              id: 'navigator'
-          }
-      },
-
-      scrollbar: {
-        liveRedraw: false
-      },
-
-      legend: {
-        enabled: false
-      },
-
-      rangeSelector: {
-          buttons: [{
-              type: 'hour',
-              count: 1,
-              text: {{ _('1 Hour')|tojson }}
-          }, {
-              type: 'day',
-              count: 1,
-              text: {{ _('1 Day')|tojson }}
-          }, {
-              type: 'week',
-              count: 1,
-              text: {{ _('1 Week')|tojson }}
-          }, {
-              type: 'month',
-              count: 1,
-              text: {{ _('1 Month')|tojson }}
-          }, {
-              type: 'all',
-              text: {{ _('All')|tojson }}
-          }],
-          inputEnabled: false,
-          selected: 4
-      },
-
-      xAxis: {
-        events: {
-          setExtremes: function(e) {
-            if (typeof(e.rangeSelectorButton) !== 'undefined' || e.trigger === 'navigator') {
-              updateAllSeries(e, '{{energy_usage_id}}');
-            }
-          }
-        },
-        minRange: 1800 * 1000
-      },
-
-      yAxis: [
-        {
-          title: {
-            text: {{ _('Amps')|tojson }} + ' (A)'
-          },
-          labels: {
-            format: '{value}'
-          },
-          opposite: false,
-          id: 'A'
-        }
-      ],
-
-      credits: {
-        enabled: false,
-        href: "https://github.com/AoT-inc/AoT",
-        text: "AoT"
-      },
-
-      series: [
-        {
-          name: 'Amps',
-          type: 'column',
-          dataGrouping: {
-            approximation: 'average'
-          },
-          tooltip: {
-            valueSuffix: ' A',
-            valueDecimals: 3
-          },
-          yAxis: 'A',
-          data: []
-        }
-      ]
-    });
-
-{% endfor %}
-
+  {% endfor %}
 });
 </script>
 {% endif %}

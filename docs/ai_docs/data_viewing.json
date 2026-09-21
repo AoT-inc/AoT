@@ -74,7 +74,7 @@
     },
     "AoT_graph": {
       "name": "AoT Graph",
-      "purpose": "Synchronous time-series graph (Highcharts Stock) plotting selected measurements over a configured window.",
+      "purpose": "Synchronous time-series graph (Apache ECharts) plotting selected measurements over a configured window.",
       "key_options": ["time axis: refresh, X-axis duration + unit, auto-refresh, live-window reset", "data sources: Input/Function/Output/PID/Note Tag", "style toggles: header buttons, title, navigator, export, range selector, legend", "per-series color, type (line/step/column), Y-axis min/max"],
       "notable": "On-demand history loading via range buttons (1m..3mo/All) or zoom; Reset returns to the live sliding window."
     },

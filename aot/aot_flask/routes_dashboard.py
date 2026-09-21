@@ -691,7 +691,7 @@ def _render_widget_fragments(this_dashboard, dashboard_id, widget,
 
     Returns ``(body_html, js_ready_end_html)``. ``body_html`` is the content of
     #container-graph-<id>; ``js_ready_end_html`` re-creates chart-type widgets
-    (Highcharts) — the client re-executes it for those widget types so option
+    (gauges, graphs) — the client re-executes it for those widget types so option
     changes take effect without a page reload. Text-only widgets (e.g.
     widget_measurement) ignore the script and just swap the body.
     """

@@ -8,10 +8,9 @@
   <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/aot-settings.css') }}" />
   <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/pages/method.css') }}" />
   {% if method %}
-  <script src="{{ url_for('static', filename='js/vendor/user_js/highcharts-9.1.2.js') }}"></script>
-    {% if current_user.theme in dark_themes %}
-  <script src="{{ url_for('static', filename='js/vendor/user_js/dark-unica-custom.js') }}"></script>
-    {% endif %}
+  <script src="{{ asset('echarts-stack') }}"></script>
+  <script src="{{ asset('app-chart-core') }}"></script>
+  <script src="{{ asset('page-method-chart') }}"></script>
   {% endif %}
 {% endblock %}
 
@@ -86,15 +85,11 @@
 
   <script>
   $(document).ready(function() {
-    let chart = [];
-    // Retrieve initial chart data set from the past (duration set by user)
-    function getPastData(chart_number, method_id) {
-      const url = '/method-data/' + method_id;
-      $.getJSON(url,
-        function(data, responseText, jqXHR) {
-          if (jqXHR.status !== 204) chart[chart_number].addSeries({name: 'Setpoint', data: data});
-        }
-      );
+    // 설정값 곡선 — 그리기는 aot-method-chart.js (옛 Highcharts 판과 같은 모양)
+    function loadSetpoints(handle, methodId) {
+      $.getJSON('/method-data/' + methodId, function (data, responseText, jqXHR) {
+        if (jqXHR.status !== 204) handle.setSeries([{ name: 'Setpoint', data: data }]);
+      });
     }
     {% for each_method in method -%}
       {%- set method_setpoint = [] -%}
@@ -103,69 +98,13 @@
       {%- endfor -%}
       {%- set chart_number = loop.index -%}
 
-      {%- if method_setpoint or each_method.method_type in ['DailySine', 'DailyBezier'] -%}
-        chart[{{chart_number}}] = new Highcharts.Chart({
-          chart : {
-            renderTo: 'container{{chart_number}}',
-            zoomType: 'x',
-            resetZoomButton: {
-              theme: {
-                display: 'none'
-              }
-            },
-            events: {
-              load: function () {
-                getPastData({{chart_number}}, "{{each_method.unique_id}}");
-              }
-            }
-          },
-          title: {
-            text: null
-          },
-          tooltip: {
-            {% if each_method.method_type == "Duration" -%}
-              headerFormat: '<span style="font-size: var(--aot-font-size-2xs)">{point.key} Seconds</span><br/>',
-            {%- endif -%}
-            {% if each_method.method_type == "Date" -%}
-              xDateFormat: '%a, %b %e, %Y %H:%M:%S',
-            {% elif each_method.method_type in ["Daily", "DailySine", 'DailyBezier'] -%}
-              xDateFormat: '%H:%M:%S',
-            {%- endif %}
-            valueDecimals: 2
-          },
-          legend: {
-            enabled: false
-          },
-          navigator: {
-            enabled: false
-          },
-          rangeSelector: {
-            enabled: false
-          },
-          scrollbar: {
-            enabled: false
-          },
-          xAxis: {
-            type: '{%- if each_method.method_type == "Duration" -%}linear{%- elif each_method.method_type in ["Date", "Daily", "DailySine", "DailyBezier"] -%}datetime{%- endif -%}',
-            ordinal: false
-          },
-          yAxis: [
-          {   
-            title: {
-              text: null
-            },
-            labels: {
-              format: '{value}'
-            },
-            opposite: false
-          }],
-          credits: {
-            enabled: false
-          }
-        });
+      {%- if method_setpoint or each_method.method_type in ['DailySine', 'DailyBezier'] %}
+    loadSetpoints(
+      AoTMethodChart.create(document.getElementById('container{{chart_number}}'),
+                            { methodType: {{ each_method.method_type|tojson }} }),
+      {{ each_method.unique_id|tojson }});
       {%- endif -%}
-    {%- endfor -%}
-
+    {%- endfor %}
   });
   </script>
 

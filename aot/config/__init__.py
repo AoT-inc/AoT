@@ -397,17 +397,11 @@ CAMERA_INFO = {
     },
 }
 
-METHOD_DEP_BASE = [
-    ('bash-commands',
-     [os.path.join(PATH_JS_USER, 'highcharts-9.1.2.js')],
-     [
-        'wget --no-clobber https://code.highcharts.com/zips/Highcharts-9.1.2.zip',
-        'unzip Highcharts-9.1.2.zip -d Highcharts-9.1.2',
-        f'cp -rf Highcharts-9.1.2/code/highcharts.js {os.path.join(PATH_JS_USER, "highcharts-9.1.2.js")}',
-        f'cp -rf Highcharts-9.1.2/code/highcharts.js.map {os.path.join(PATH_JS_USER, "highcharts.js.map")}',
-        'rm -rf Highcharts-9.1.2'
-     ])
-]
+# 모든 방식(Method)이 공통으로 요구하던 의존성. 예전에는 방식 곡선을 그리는
+# Highcharts(highcharts-9.1.2.js)가 없으면 내려받게 했다. 2026-09-21 방식 곡선을
+# ECharts(저장소에 함께 배포되는 맞춤 빌드)로 옮겨 더는 필요 없다 — 남겨 두면
+# Highcharts 파일을 걷어낸 뒤 쓰지도 않는 라이브러리를 받으라고 요구한다.
+METHOD_DEP_BASE = []
 
 # Method info
 METHOD_INFO = {
@@ -521,39 +515,10 @@ PID_INFO = {
     }
 }
 
-DEPENDENCIES_GENERAL = {
-    'highstock': {
-        'name': 'Highstock',
-        'dependencies_module': [
-            ('bash-commands',
-             [
-                 os.path.join(PATH_JS_USER, 'highstock-9.1.2.js'),
-                 os.path.join(PATH_JS_USER, 'highcharts-more-9.1.2.js'),
-                 os.path.join(PATH_JS_USER, 'data-9.1.2.js'),
-                 os.path.join(PATH_JS_USER, 'exporting-9.1.2.js'),
-                 os.path.join(PATH_JS_USER, 'export-data-9.1.2.js'),
-                 os.path.join(PATH_JS_USER, 'offline-exporting-9.1.2.js')
-             ],
-             [
-                 'wget --no-clobber https://code.highcharts.com/zips/Highcharts-Stock-9.1.2.zip',
-                 'unzip Highcharts-Stock-9.1.2.zip -d Highcharts-Stock-9.1.2',
-                 f'cp -rf Highcharts-Stock-9.1.2/code/highstock.js {os.path.join(PATH_JS_USER, "highstock-9.1.2.js")}',
-                 f'cp -rf Highcharts-Stock-9.1.2/code/highstock.js.map {os.path.join(PATH_JS_USER, "highstock.js.map")}',
-                 f'cp -rf Highcharts-Stock-9.1.2/code/highcharts-more.js {os.path.join(PATH_JS_USER, "highcharts-more-9.1.2.js")}',
-                 f'cp -rf Highcharts-Stock-9.1.2/code/highcharts-more.js.map {os.path.join(PATH_JS_USER, "highcharts-more.js.map")}',
-                 f'cp -rf Highcharts-Stock-9.1.2/code/modules/data.js {os.path.join(PATH_JS_USER, "data-9.1.2.js")}',
-                 f'cp -rf Highcharts-Stock-9.1.2/code/modules/data.js.map {os.path.join(PATH_JS_USER, "data.js.map")}',
-                 f'cp -rf Highcharts-Stock-9.1.2/code/modules/exporting.js {os.path.join(PATH_JS_USER, "exporting-9.1.2.js")}',
-                 f'cp -rf Highcharts-Stock-9.1.2/code/modules/exporting.js.map {os.path.join(PATH_JS_USER, "exporting.js.map")}',
-                 f'cp -rf Highcharts-Stock-9.1.2/code/modules/export-data.js {os.path.join(PATH_JS_USER, "export-data-9.1.2.js")}',
-                 f'cp -rf Highcharts-Stock-9.1.2/code/modules/export-data.js.map {os.path.join(PATH_JS_USER, "export-data.js.map")}',
-                 f'cp -rf Highcharts-Stock-9.1.2/code/modules/offline-exporting.js {os.path.join(PATH_JS_USER, "offline-exporting-9.1.2.js")}',
-                 f'cp -rf Highcharts-Stock-9.1.2/code/modules/offline-exporting.js.map {os.path.join(PATH_JS_USER, "offline-exporting.js.map")}',
-                 'rm -rf Highcharts-Stock-9.1.2'
-             ])
-        ]
-    }
-}
+# 장치·위젯 정의 밖에서 쓰는 공통 의존성. 예전에는 그래프 화면이 쓰던 Highstock
+# 파일 묶음이 있었다 — 2026-09-21 차트를 레포에 든 ECharts 로 옮기면서 내려받을
+# 것이 없어졌다. 형식을 쓰는 코드(관리 > 의존성)는 그대로 둔다.
+DEPENDENCIES_GENERAL = {}
 
 # Conditional Functions
 CONDITIONAL_CONDITIONS = [
@@ -738,9 +703,9 @@ THEMES_DARK = [
 BAND_PALETTE = ['#2DB4FF', '#54BCC1', '#32c85a', '#FEAE5F', '#CF5C58']
 
 # 전역 차트 시리즈 팔레트 (단일 소스 — docs/design/color-system.md 5절)
-# 그래프류 위젯(AoT_graph, AoT_PID)의 Highcharts
+# 그래프류 위젯(AoT_graph, AoT_PID)의
 # 시리즈 기본색. 앞 6색은 AoT 시맨틱 색과 정렬(#FEA60B=warning, #DF5353=danger,
-# #008DDE≈info), 이후는 Highcharts 관례 색. 앞 6색(라이트/다크 공통)은
+# #008DDE≈info), 이후는 예전에 쓰던 Highcharts 의 관례 색을 그대로 둔다. 앞 6색(라이트/다크 공통)은
 # settings/custom_ui 의 chart_1..6 필드로 사용자 정의 가능 — 코드에서는
 # utils_theme.get_graph_series_palette() 로 오버레이된 값을 읽을 것.
 GRAPH_SERIES_PALETTE = [

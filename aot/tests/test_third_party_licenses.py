@@ -85,7 +85,7 @@ class TestNoticeMatchesReality(unittest.TestCase):
         """라이브러리를 새로 반입하고 고지를 빠뜨리면 여기서 걸린다.
 
         파일 하나하나가 아니라 **이름이 언급되었는지**를 본다 — 소스맵이나
-        Highcharts 처럼 파일이 여럿인 라이브러리를 한 줄로 적을 수 있어야 한다.
+        ECharts 처럼 파일이 여럿인 라이브러리를 한 줄로 적을 수 있어야 한다.
         """
         files = _tracked(list(_VENDOR_DIRS) + list(_VENDOR_STRAYS))
         if files is None:
@@ -97,6 +97,8 @@ class TestNoticeMatchesReality(unittest.TestCase):
             if path.endswith(('.map', '.LICENSE.txt')):
                 continue
             name = os.path.basename(path)
+            if name.startswith('.'):
+                continue   # .gitkeep 같은 자리표시 — 자산이 아니다
             stem = re.split(r'[-.]\d|\.min|\.js$|\.css$', name)[0]
             # 상위 디렉터리를 **끝까지** 훑는다. 바로 위 디렉터리만 보면
             # `fontawesome-5.11.2/webfonts/fa-solid-900.woff2` 가 'webfonts'
@@ -105,7 +107,7 @@ class TestNoticeMatchesReality(unittest.TestCase):
                          if seg not in _GENERIC_SEGMENTS]
             tokens = [name, stem] + ancestors
             # 대소문자를 맞추지 않는다 — 파일명은 소문자, 문서는 고유명사
-            # 표기(Highcharts)라 그대로 비교하면 전부 누락으로 잡힌다.
+            # 표기(ECharts)라 그대로 비교하면 전부 누락으로 잡힌다.
             lowered = self.text.lower()
             if any(t and t.lower() in lowered for t in tokens):
                 continue
@@ -127,11 +129,17 @@ class TestNoticeMatchesReality(unittest.TestCase):
                 missing.append(path)
         self.assertEqual([], missing, '고지가 가리키는데 없는 경로: %s' % missing)
 
-    def test_the_highcharts_commercial_caveat_survives(self):
-        """Highcharts 는 오픈소스가 아니다. 상업 재배포에는 별도 라이선스가
-        필요하다는 경고가 사라지면, 그것을 모르고 재배포하는 사람이 생긴다."""
-        self.assertIn('Highcharts', self.text)
-        self.assertIn('상용', self.text)
+    def test_highcharts_is_not_shipped_again(self):
+        """Highcharts 는 오픈소스가 아니다(비상업 용도로만 무료). GPL 로 공개 배포하는
+        AoT 에 맞지 않아 2026-09-21 ECharts 로 바꾸고 파일을 뺐다. 다시 들어오면
+        README·이용약관의 "모두 자기 라이선스를 따른다" 는 설명이 틀린 말이 된다 —
+        들이려면 그 문서들의 경고부터 되살릴 것."""
+        files = _tracked(['aot/aot_flask/static'])
+        if files is None:
+            self.skipTest('git 을 쓸 수 없는 환경')
+        shipped = [f for f in files
+                   if re.search(r'highcharts|highstock', os.path.basename(f), re.I)]
+        self.assertEqual([], shipped, 'Highcharts 파일이 다시 들어왔다: %s' % shipped)
 
     def test_data_source_credits_are_linked_not_duplicated(self):
         """자료 출처는 성격이 달라 문서가 따로 있다 — 두 곳에 적으면 갈라진다."""
