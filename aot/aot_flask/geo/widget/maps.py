@@ -4,6 +4,7 @@ import logging
 from aot.aot_flask.extensions import db
 from aot.aot_flask.geo.facility_sensors import channel_label_meta
 from aot.aot_flask.utils import utils_geo
+from aot.utils.timekit import iso_utc
 from aot.config import (
     MAP_API_KEY,
     MAP_DEFAULT_CENTER,
@@ -859,7 +860,7 @@ def generate_page_variables_logic(widget_unique_id, widget_options):
                 'scope_type': _stype,
                 'scope_label': _slabel,
                 'title': _title,
-                'timestamp': _s.timestamp.isoformat() if _s.timestamp else None,
+                'timestamp': iso_utc(_s.timestamp),  # naive 는 브라우저가 지역시각으로 읽는다
                 'summary_text': _s.summary_text,
                 'quality_score': _s.quality_score,
                 'anomalies': _anomalies,

@@ -291,6 +291,7 @@
                         <div class="form-group col-md-6">
                             <label class="small text-muted font-weight-bold">{{_('Date & Time')}}</label>
                             {{form_note_add.date_time(value=current_date_time, class_='form-control bg-light border-0 small', placeholder='YYYY-MM-DD HH:MM:SS')}}
+                            <small class="form-text text-muted">{{ _('Time zone') }}: {{ viewer_tz_label() }}</small>
                         </div>
                         <div class="form-group col-md-6">
                             <label class="small text-muted font-weight-bold">{{_('Tags')}}</label>
@@ -352,6 +353,8 @@
                         <div class="form-group col-md-6">
                             <label class="small text-muted font-weight-bold">{{_('Date & Time')}}</label>
                             {{form_note_mod.date_time(id="edit_note_date_time", class_='form-control bg-light border-0 small', placeholder='YYYY-MM-DD HH:MM:SS')}}
+                            {# 장소 노트는 그 장소의 시계 — 여는 노트마다 아래 JS 가 바꿔 적는다 #}
+                            <small class="form-text text-muted">{{ _('Time zone') }}: <span id="edit_note_tz_label">{{ viewer_tz_label() }}</span></small>
                         </div>
                         <div class="form-group col-md-6">
                             <label class="small text-muted font-weight-bold">{{_('Tags')}}</label>
@@ -542,13 +545,15 @@
             var title = $(this).data('title');
             var content = $(this).data('content');
             var tags = $(this).data('tags'); // comma separated unique_ids
-            var dateTime = $(this).data('date'); // YYYY-MM-DD HH:MM:SS
+            var dateTime = $(this).data('date'); // YYYY-MM-DD HH:MM:SS (그 노트의 시계)
+            var tzLabel = $(this).data('tz-label');
             var files = $(this).data('files');
 
             $('#edit_note_unique_id').val(uid);
             $('#edit_note_name').val(title);
             $('#edit_note_content').val(content);
             $('#edit_note_date_time').val(dateTime);
+            if (tzLabel) $('#edit_note_tz_label').text(tzLabel);
             $('#edit_deleted_files').val(''); // Reset deleted files
             
             

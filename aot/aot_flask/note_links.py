@@ -21,6 +21,7 @@ from flask import current_app
 from aot.aot_flask.extensions import db
 from aot.databases.models import NoteScheduleLink
 from aot.databases.models.scheduler import SchedulerJobMeta
+from aot.utils.timekit import iso_utc
 
 # 재탐색은 정확히 같은 문자열만 본다. 부분 일치·유사도로 넓히면 비슷한 문장이
 # 여럿인 노트에서 **엉뚱한 구간**에 하이라이트가 붙는데, 그건 링크가 끊긴
@@ -113,7 +114,7 @@ def links_for_notes(notes, prune=True):
             # 구간을 못 찾아도 무엇에 대한 약속이었는지는 말해 준다.
             'text': l.text_snapshot,
             'orphaned': span is None,
-            'when': job.schedule_time.isoformat() if job.schedule_time else None,
+            'when': iso_utc(job.schedule_time),
             'anchor_tz': getattr(job, 'anchor_tz', None),
             'state': job.state,
         })
@@ -145,7 +146,7 @@ def orphaned_after_edit(note, new_body):
                 'link_id': l.unique_id,
                 'job_uid': l.job_uid,
                 'text': l.text_snapshot,
-                'when': job.schedule_time.isoformat() if job.schedule_time else None,
+                'when': iso_utc(job.schedule_time),
             })
     return out
 

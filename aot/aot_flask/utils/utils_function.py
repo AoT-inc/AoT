@@ -33,6 +33,7 @@ from aot.aot_flask.utils.utils_general import sync_geo_device_name
 from aot.utils.conditional import save_conditional_code
 from aot.utils.actions import parse_action_information
 from aot.utils.functions import parse_function_information
+from aot.utils.device_tz import apply_system_tz_fallback
 from aot.aot_flask.utils.utils_map_config import (
     ensure_map_config,
     delete_map_config,
@@ -197,8 +198,7 @@ return status_dict'''
                 if misc:
                     new_func.latitude = misc.map_latitude
                     new_func.longitude = misc.map_longitude
-                    if not new_func.latitude and not new_func.longitude and misc.timezone:
-                        new_func.timezone = misc.timezone
+                    apply_system_tz_fallback(new_func, misc.timezone)
             except Exception:
                 pass
 
@@ -238,8 +238,7 @@ return status_dict'''
                 if misc:
                     new_func.latitude = misc.map_latitude
                     new_func.longitude = misc.map_longitude
-                    if not new_func.latitude and not new_func.longitude and misc.timezone:
-                        new_func.timezone = misc.timezone
+                    apply_system_tz_fallback(new_func, misc.timezone)
             except Exception:
                 pass
 
@@ -290,8 +289,7 @@ return status_dict'''
                 if misc:
                     new_func.latitude = misc.map_latitude
                     new_func.longitude = misc.map_longitude
-                    if not new_func.latitude and not new_func.longitude and misc.timezone:
-                        new_func.timezone = misc.timezone
+                    apply_system_tz_fallback(new_func, misc.timezone)
             except Exception:
                 pass
 
@@ -319,8 +317,7 @@ return status_dict'''
                 if misc:
                     new_func.latitude = misc.map_latitude
                     new_func.longitude = misc.map_longitude
-                    if not new_func.latitude and not new_func.longitude and misc.timezone:
-                        new_func.timezone = misc.timezone
+                    apply_system_tz_fallback(new_func, misc.timezone)
             except Exception:
                 pass
 
@@ -354,8 +351,7 @@ return status_dict'''
                 if misc:
                     new_func.latitude = misc.map_latitude
                     new_func.longitude = misc.map_longitude
-                    if not new_func.latitude and not new_func.longitude and misc.timezone:
-                        new_func.timezone = misc.timezone
+                    apply_system_tz_fallback(new_func, misc.timezone)
             except Exception:
                 pass
 

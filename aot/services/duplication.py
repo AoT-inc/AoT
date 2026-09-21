@@ -239,12 +239,11 @@ def _fill_timezone_fallback(clone):
         from aot.databases.models import Misc
         misc = Misc.query.first()
         if misc and misc.timezone:
-            clone.timezone = misc.timezone
-            # 출처를 같이 남긴다 — tz_source 가 비면 나중에 이 값이 좌표에서
-            # 나온 것인지 사람이 지정한 것인지 판정할 수 없다.
-            # (docs/design/timezone-management.md)
-            if hasattr(clone, 'tz_source') and not getattr(clone, 'tz_source', None):
-                clone.tz_source = 'inherited'
+            # 출처는 'system' — 예전엔 'inherited' 로 적어, 도형에서 물려받은
+            # 값처럼 보였고 시스템 시간대를 바꿔도 따라가지 않았다.
+            # (docs/design/timezone-management.md §15.4)
+            from aot.utils.device_tz import apply_system_tz_fallback
+            apply_system_tz_fallback(clone, misc.timezone)
     except Exception:
         logger.debug("복제: timezone 폴백을 적용하지 못했습니다.", exc_info=True)
 

@@ -8,7 +8,7 @@
                     </div>
                     <div>
                         <h6 class="mb-0 font-weight-bold text-dark text-truncate note-card-title">{{each_note.name}}</h6>
-                        <small class="text-muted">{{utc_to_local_time(each_note.date_time)}}</small>
+                        <small class="text-muted">{{note_time_text(each_note)}}</small>
                     </div>
                 </div>
                 <!-- Actions Menu -->
@@ -22,7 +22,8 @@
                                 data-title="{{each_note.name}}" 
                                 data-content="{{each_note.note}}" 
                                 data-tags="{{each_note.tags}}"
-                                data-date="{{utc_to_local_time(each_note.date_time)}}"
+                                data-date="{{note_wall_str(each_note)}}"
+                                data-tz-label="{{note_tz_label(each_note)}}"
                                 data-target-type="{{each_note.target_type}}"
                                 data-files="{{each_note.files if each_note.files else ''}}">
                             <i class="fas fa-edit mr-2 text-dark"></i> {{_('Edit')}}

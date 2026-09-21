@@ -516,6 +516,44 @@ def api_note_links(note_id):
     return jsonify({'ok': True, 'links': note_links.links_for_note(note)})
 
 
+def _note_schedule_target(note):
+    """노트 구간 예정의 대상 — 노트의 대상을 승계한다. (target_id, label, kind)"""
+    from aot.aot_flask.routes_geo_schedule import _schedule_target_label
+    target_id = note.target_id or 'none'
+    label, kind = _schedule_target_label(target_id)
+    if label is None:
+        # 대상이 없는(또는 이미 사라진) 노트도 예정을 가질 수 있다 — 그 경우
+        # 장소 없는 일정이 된다. 거절하면 "어디" 를 안 적었다는 이유로 "언제"
+        # 를 못 적게 된다.
+        target_id, label, kind = 'none', (note.name or _('Note')), 'general'
+    return target_id, label, kind
+
+
+@blueprint.route('/notes/<note_id>/schedule', methods=['GET'])
+@login_required
+def note_schedule_clock(note_id):
+    """예정 입력 칸이 **어느 시계**인지 — 저장(POST)이 해석하는 시계와 같다.
+
+    예정은 그 장소의 시각으로 잡힌다(대상 없으면 시스템 시계, §6). 칸의 기본값을
+    브라우저 시계로 계산하던 동안, 보는 사람과 장소의 시차만큼 기본값이 어긋나고
+    칸에는 어느 시계인지 적혀 있지 않았다.
+    """
+    note = Notes.query.filter_by(unique_id=note_id).first()
+    if not note:
+        return jsonify({'error': 'Note not found'}), 404
+    from datetime import timedelta
+    from aot.tools.aot_data_tool_service import AoTDataToolService
+    from aot.utils.timekit import tz_label, utc_now
+    target_id, _label, _kind = _note_schedule_target(note)
+    tz, tz_name, source = AoTDataToolService._resolve_schedule_anchor(target_id)
+    # 기본값: 그 시계의 다음 정시(지나간 시각이 기본으로 들어가면 안 된다).
+    nxt = (utc_now().astimezone(tz).replace(minute=0, second=0, microsecond=0)
+           + timedelta(hours=1))
+    return jsonify({'tz': tz_name, 'source': source, 'label': tz_label(tz),
+                    'default_date': nxt.strftime('%Y-%m-%d'),
+                    'default_time': nxt.strftime('%H:%M')})
+
+
 @blueprint.route('/notes/<note_id>/schedule', methods=['POST'])
 @login_required
 @csrf.exempt
@@ -561,17 +599,10 @@ def api_note_schedule(note_id):
                             'message': _('That text is no longer in the note')}), 409
         start, end = idx, idx + len(text)
 
-    from aot.aot_flask.routes_geo_schedule import (_create_human_schedule,
-                                                    _schedule_target_label)
+    from aot.aot_flask.routes_geo_schedule import _create_human_schedule
     from aot.databases.models import NoteScheduleLink
 
-    target_id = note.target_id or 'none'
-    label, kind = _schedule_target_label(target_id)
-    if label is None:
-        # 대상이 없는(또는 이미 사라진) 노트도 예정을 가질 수 있다 — 그 경우
-        # 장소 없는 일정이 된다. 거절하면 "어디" 를 안 적었다는 이유로 "언제"
-        # 를 못 적게 된다.
-        target_id, label, kind = 'none', (note.name or _('Note')), 'general'
+    target_id, label, kind = _note_schedule_target(note)
 
     resp = _create_human_schedule(
         target_id, kind, label, date_str,

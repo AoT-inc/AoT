@@ -57,8 +57,10 @@ _COMMAND_TIMEOUT = 15
 
 # `%(asctime)s - %(levelname)s - %(name)s - %(message)s`
 # (aot/utils/logging_setup.py, aot_daemon.py 의 공통 포맷)
+# 시각 뒤 오프셋(`+06:00`)은 있을 수도 없을 수도 있다(logging_setup.TzLogFormatter,
+# 그 이전 로그는 없음).
 _RE_AOT = re.compile(
-    r'^(?P<ts>\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2}(?:[.,]\d+)?)'
+    r'^(?P<ts>\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2}(?:[.,]\d+)?(?:[+-]\d{2}:?\d{2}|Z)?)'
     r'\s+-\s+(?P<level>[A-Z]+)\s+-\s+(?P<logger>\S+)\s+-\s?(?P<msg>.*)$')
 
 # `%(asctime)s %(name)s %(levelname)s %(message)s` (aot_mcp_server.py)

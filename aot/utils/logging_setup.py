@@ -26,46 +26,63 @@ from logging.handlers import RotatingFileHandler
 _TZ_CACHE = {'tz': None, 'expires': 0.0, 'resolving': False}
 
 
-def _user_tz_converter(secs):
-    """Render log asctime in the user-configured timezone (Misc.timezone).
-    Falls back to UTC when the DB is not yet reachable (early startup) or
-    when called from a process with no DB access at all."""
+def _log_tz():
+    """로그 시각의 시계 — 시스템 시간대(Misc.timezone). 60초 캐시.
+    DB 에 닿지 못하면(기동 초기) UTC."""
+    import pytz
+
+    now = time.time()
+    if _TZ_CACHE['tz'] is not None and now <= _TZ_CACHE['expires']:
+        return _TZ_CACHE['tz']
+
+    if _TZ_CACHE['resolving']:
+        # Re-entrancy guard. db_retrieve_table_daemon() logs its own
+        # retry/failure lines via the 'aot' logger, which get formatted
+        # through this same path before the outer call below
+        # returns. Without this guard, a missing `misc` table (e.g. a
+        # brand new install, before db.create_all() has run) turns every
+        # one of those retry log lines into a fresh 5-retry DB lookup of
+        # its own, which logs more lines, which trigger more lookups -
+        # a self-sustaining loop that stalled app startup indefinitely
+        # (2026-08-17 aot-gw-001: fresh install's aotflask/aot_daemon
+        # spun on "no such table: misc" continuously and never finished
+        # booting). Just fall back to UTC for this one line instead.
+        return pytz.utc
+
+    _TZ_CACHE['resolving'] = True
     try:
-        import pytz
-        from datetime import datetime as _dt
+        from aot.databases.models import Misc
+        from aot.utils.database import db_retrieve_table_daemon
 
-        now = time.time()
-        if _TZ_CACHE['tz'] is not None and now <= _TZ_CACHE['expires']:
-            return _dt.fromtimestamp(secs, _TZ_CACHE['tz']).timetuple()
+        misc = db_retrieve_table_daemon(Misc, entry='first')
+        tz_name = misc.timezone if misc and getattr(misc, 'timezone', None) else 'UTC'
+        _TZ_CACHE['tz'] = pytz.timezone(tz_name)
+        _TZ_CACHE['expires'] = now + 60
+    finally:
+        _TZ_CACHE['resolving'] = False
+    return _TZ_CACHE['tz']
 
-        if _TZ_CACHE['resolving']:
-            # Re-entrancy guard. db_retrieve_table_daemon() logs its own
-            # retry/failure lines via the 'aot' logger, which get formatted
-            # through this same converter before the outer call below
-            # returns. Without this guard, a missing `misc` table (e.g. a
-            # brand new install, before db.create_all() has run) turns every
-            # one of those retry log lines into a fresh 5-retry DB lookup of
-            # its own, which logs more lines, which trigger more lookups -
-            # a self-sustaining loop that stalled app startup indefinitely
-            # (2026-08-17 aot-gw-001: fresh install's aotflask/aot_daemon
-            # spun on "no such table: misc" continuously and never finished
-            # booting). Just fall back to gmtime for this one line instead.
-            return time.gmtime(secs)
 
-        _TZ_CACHE['resolving'] = True
+class TzLogFormatter(logging.Formatter):
+    """asctime 을 시스템 시계로 적고 **오프셋을 붙인다**:
+    `2026-09-21 06:00:00,123+06:00`.
+
+    오프셋이 없으면 시스템 시간대를 바꾼 전후의 로그가 구분되지 않고, 다른
+    시간대에 있는 사람이 로그 시각을 자기 시각으로 읽는다. 로그 화면 파서
+    (utils/log_reader._RE_AOT)는 이 꼴과 옛 꼴을 모두 읽는다.
+    """
+    def formatTime(self, record, datefmt=None):
+        from datetime import datetime
         try:
-            from aot.databases.models import Misc
-            from aot.utils.database import db_retrieve_table_daemon
-
-            misc = db_retrieve_table_daemon(Misc, entry='first')
-            tz_name = misc.timezone if misc and getattr(misc, 'timezone', None) else 'UTC'
-            _TZ_CACHE['tz'] = pytz.timezone(tz_name)
-            _TZ_CACHE['expires'] = now + 60
-        finally:
-            _TZ_CACHE['resolving'] = False
-        return _dt.fromtimestamp(secs, _TZ_CACHE['tz']).timetuple()
-    except Exception:
-        return time.gmtime(secs)
+            dt = datetime.fromtimestamp(record.created, _log_tz())
+        except Exception:
+            from datetime import timezone
+            dt = datetime.fromtimestamp(record.created, timezone.utc)
+        if datefmt:
+            return dt.strftime(datefmt)
+        off = dt.strftime('%z') or '+0000'
+        return '%s,%03d%s:%s' % (dt.strftime('%Y-%m-%d %H:%M:%S'),
+                                 record.msecs, off[:3], off[3:])
 
 
 def configure_aot_file_logging(level=logging.INFO):
@@ -81,9 +98,8 @@ def configure_aot_file_logging(level=logging.INFO):
 
     from aot.config import DAEMON_LOG_FILE
 
-    formatter = logging.Formatter(
+    formatter = TzLogFormatter(
         '%(asctime)s - %(levelname)s - %(name)s - %(message)s')
-    formatter.converter = _user_tz_converter
 
     # 50 MB x 5 파일 = 최대 250 MB 유지. aot_daemon.py 와 동일한 정책.
     file_handler = RotatingFileHandler(

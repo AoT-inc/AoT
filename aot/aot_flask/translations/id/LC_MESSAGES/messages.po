@@ -31654,3 +31654,11 @@ msgstr ""
 #, python-format
 msgid "Unknown timezone: %(tz)s"
 msgstr "Zona waktu tidak dikenal: %(tz)s"
+
+#: aot_flask/routes_scheduler.py aot_flask/templates/pages/ai/scheduler.html
+msgid "Location not set — estimated with the system time zone"
+msgstr "Lokasi belum diatur — diperkirakan dengan zona waktu sistem"
+
+#: aot_flask/templates/settings/general.html
+msgid "System-wide default timezone (IANA name, e.g. Asia/Seoul). Used for daemon log times and as the last fallback for devices without a location; those devices follow it when you save here. Times people read and write use each person's own timezone from Account settings."
+msgstr "Zona waktu bawaan seluruh sistem (nama IANA, mis. Asia/Seoul). Dipakai untuk waktu log daemon dan sebagai cadangan terakhir bagi perangkat tanpa lokasi; perangkat tersebut mengikutinya saat Anda menyimpan di sini. Waktu yang dibaca dan ditulis orang mengikuti zona waktu pribadi masing-masing di pengaturan akun."

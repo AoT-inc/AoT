@@ -142,7 +142,10 @@
                 <div class="aot-modal-option-row aot-full-width-row {% if post.publish_at is none %}d-none{% endif %}" id="editPublishAtRow">
                     <label class="aot-modal-option-label">{{ _('Publish At') }}</label>
                     <div class="aot-modal-option-control">
-                        {{ form_notice_mod.publish_at(class_='aot-modern-input', style='width:100%;', placeholder='YYYY-MM-DD HH:MM:SS') }}
+                        <div class="w-100">
+                            {{ form_notice_mod.publish_at(class_='aot-modern-input', style='width:100%;', placeholder='YYYY-MM-DD HH:MM:SS') }}
+                            <small class="form-text text-muted">{{ _('Time zone') }}: {{ viewer_tz_label() }}</small>
+                        </div>
                     </div>
                 </div>
                 <div class="aot-modal-option-row">
@@ -154,7 +157,10 @@
                 <div class="aot-modal-option-row aot-full-width-row {% if post.expire_at is none %}d-none{% endif %}" id="editExpireAtRow">
                     <label class="aot-modal-option-label">{{ _('Expires At') }}</label>
                     <div class="aot-modal-option-control">
-                        {{ form_notice_mod.expire_at(class_='aot-modern-input', style='width:100%;', placeholder='YYYY-MM-DD HH:MM:SS') }}
+                        <div class="w-100">
+                            {{ form_notice_mod.expire_at(class_='aot-modern-input', style='width:100%;', placeholder='YYYY-MM-DD HH:MM:SS') }}
+                            <small class="form-text text-muted">{{ _('Time zone') }}: {{ viewer_tz_label() }}</small>
+                        </div>
                     </div>
                 </div>
                 {% if is_admin %}

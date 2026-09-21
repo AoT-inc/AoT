@@ -84,7 +84,11 @@ def inject_functions():
 
     return dict(epoch_to_time_string=epoch_to_time_string,
                 get_note_tag_from_unique_id=utils_notes.get_note_tag_from_unique_id,
-                utc_to_local_time=utils_general.utc_to_local_time)
+                utc_to_local_time=utils_general.utc_to_local_time,
+                # 노트 시각은 노트마다 시계가 다르다(장소 노트 = 그 장소 현지).
+                note_time_text=utils_notes.note_time_text,
+                note_wall_str=utils_notes.note_wall_str,
+                note_tz_label=utils_notes.note_tz_label)
 
 
 @blueprint.route('/camera_submit', methods=['POST'])
@@ -150,8 +154,9 @@ def page_notes():
     notes = Notes.query.order_by(Notes.id.desc()).all()
     tags = NoteTags.query.all()
 
-    from aot.utils.time_utils import get_local_now
-    current_date_time = get_local_now().strftime("%Y-%m-%d %H:%M:%S")
+    # 쓰는 사람의 시계로 채운다 — 저장(datetime_time_to_utc)이 같은 시계로 읽는다.
+    from aot.utils.timekit import utc_now
+    current_date_time = utils_notes.utc_to_wall_str(utc_now())
 
     # [MODIFIED] Handle Filter & Sort Logic for GET Persistence
     if request.method == 'GET':
@@ -330,9 +335,14 @@ def page_note_edit(unique_id):
 
     form_note_mod.note.data = this_note.note
 
+    # 편집 칸은 저장이 해석하는 시간대의 벽시계로 채운다 — UTC 원값을 채우면
+    # 저장할 때마다 오프셋만큼 밀린다(utils_notes.utc_to_wall).
+    note_wall = utils_notes.utc_to_wall(this_note.date_time, this_note.target_id)
+
     return render_template('tools/note_edit.html',
                            form_note_mod=form_note_mod,
                            this_note=this_note,
+                           note_wall=note_wall,
                            tags=tags)
 
 
@@ -1119,15 +1129,13 @@ def page_audit_log():
 
     entries = query.limit(limit).all()
 
-    # Stored UTC, displayed in the viewer's local zone — the project's single
-    # source of truth for this is aot.utils.time_utils (docs/design/timezone-management.md).
-    from aot.utils.time_utils import to_local
+    # 저장은 UTC, 표시는 **보는 사람의 시계**(User.timezone, 없으면 시스템)에
+    # 오프셋을 붙여서 — 예전 주석은 그렇게 말했지만 실제로는 시스템 시계였고
+    # 라벨이 없어, 다른 시간대의 관리자가 자기 시각으로 읽었다.
+    # (docs/design/timezone-management.md §15)
+    from aot.aot_flask.utils.utils_general import utc_to_local_time
     for entry in entries:
-        try:
-            entry.local_timestamp = to_local(entry.timestamp).strftime(
-                '%Y-%m-%d %H:%M:%S')
-        except Exception:
-            entry.local_timestamp = entry.timestamp
+        entry.local_timestamp = utc_to_local_time(entry.timestamp) or entry.timestamp
 
     return render_template('tools/audit_log.html',
                            entries=entries,

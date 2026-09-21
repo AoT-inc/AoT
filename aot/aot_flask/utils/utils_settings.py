@@ -994,9 +994,16 @@ def settings_general_mod(form):
                 # 빈 값은 "건드리지 않음" 으로 본다. 유효하지 않은 이름은
                 # 저장하지 않고 오류로 돌려준다 — 잘못된 tz 가 들어가면 모든
                 # 예약의 벽시계 해석이 한꺼번에 틀어진다.
+                #
+                # 위치 없는 장치에 복사해 둔 시스템 시간대(tz_source='system')는
+                # 여기서 새 값을 따른다 — **값이 같아도** 맞춘다. 예전 값을 복사해
+                # 둔 채 남은 행(이행 전 설치)을 사용자가 저장 한 번으로 바로잡을
+                # 수 있어야 한다. 사람이 정했거나 좌표·도형에서 온 값은 그대로.
+                # (docs/design/timezone-management.md §15.4)
+                _tz_synced = 0
                 if hasattr(form, 'system_timezone'):
                     tz_val = (form.system_timezone.data or '').strip()
-                    if tz_val and tz_val != mod_misc.timezone:
+                    if tz_val:
                         try:
                             import pytz
                             pytz.timezone(tz_val)
@@ -1004,8 +1011,11 @@ def settings_general_mod(form):
                             messages["error"].append(gettext(
                                 "Unknown timezone: %(tz)s", tz=tz_val))
                         else:
-                            _audit_before['timezone'] = mod_misc.timezone
-                            mod_misc.timezone = tz_val
+                            if tz_val != mod_misc.timezone:
+                                _audit_before['timezone'] = mod_misc.timezone
+                                mod_misc.timezone = tz_val
+                            from aot.utils.device_tz import sync_system_tz_copies
+                            _tz_synced = sync_system_tz_copies(tz_val)
 
                 mod_misc.rpyc_timeout = form.rpyc_timeout.data
                 mod_misc.daemon_debug_mode = form.daemon_debug_mode.data
@@ -1081,7 +1091,10 @@ def settings_general_mod(form):
                                  # _audit_before 에도 없어 before/after 가 모두
                                  # 조용하다).
                                  **({'timezone': mod_misc.timezone}
-                                    if 'timezone' in _audit_before else {})})
+                                    if 'timezone' in _audit_before else {}),
+                                 # 시스템 시간대를 따라 값이 바뀐 장치 수
+                                 **({'devices_following_system_tz': _tz_synced}
+                                    if _tz_synced else {})})
                 invalidate_misc_cache()
                 control = DaemonControl()
                 control.refresh_daemon_misc_settings()

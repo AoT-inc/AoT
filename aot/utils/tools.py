@@ -299,18 +299,16 @@ def calc_energy_usage(
     picker_start = {}
     picker_end = {}
 
-    start_seconds = int(time.mktime(
-        time.strptime(start_string, '%m/%d/%Y %H:%M')))
-    end_seconds = int(time.mktime(
-        time.strptime(end_string, '%m/%d/%Y %H:%M')))
+    # 칸의 기본값은 시스템 시각으로 채운다(routes_page.page_energy_usage) —
+    # 같은 시계로 해석한다. 예전 mktime 은 컨테이너 OS 시계로 읽었다.
+    from aot.utils.timekit import picker_wall_to_epoch
+    start_seconds = picker_wall_to_epoch(start_string)
+    end_seconds = picker_wall_to_epoch(end_string)
 
-    utc_offset_timedelta = datetime.datetime.utcnow() - datetime.datetime.now()
-    start = datetime.datetime.fromtimestamp(float(start_seconds))
-    start += utc_offset_timedelta
-    start_str = start.strftime('%Y-%m-%dT%H:%M:%S.%fZ')
-    end = datetime.datetime.fromtimestamp(float(end_seconds))
-    end += utc_offset_timedelta
-    end_str = end.strftime('%Y-%m-%dT%H:%M:%S.%fZ')
+    start_str = datetime.datetime.fromtimestamp(
+        start_seconds, datetime.timezone.utc).strftime('%Y-%m-%dT%H:%M:%S.%fZ')
+    end_str = datetime.datetime.fromtimestamp(
+        end_seconds, datetime.timezone.utc).strftime('%Y-%m-%dT%H:%M:%S.%fZ')
 
     energy_device = energy_usage.filter(
         EnergyUsage.unique_id == energy_usage_id).first()

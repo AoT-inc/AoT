@@ -1,6 +1,6 @@
 # coding=utf-8
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from aot.utils.influx import read_influxdb_list
 
 logger = logging.getLogger(__name__)
@@ -44,7 +44,10 @@ def get_device_runtime(device_id, hours=24):
         for ts_epoch, duration_val in data:
             try:
                 if duration_val and float(duration_val) > 0:
-                    start_time = datetime.fromtimestamp(float(ts_epoch))
+                    # UTC 로 고정하고 오프셋을 붙여 낸다 — 컨테이너 지역시각의
+                    # naive 문자열은 브라우저가 자기 시간대로 읽어 막대가 시차만큼
+                    # 옮겨졌다.
+                    start_time = datetime.fromtimestamp(float(ts_epoch), timezone.utc)
                     end_time = start_time + timedelta(seconds=float(duration_val))
                     
                     runtime_records.append({

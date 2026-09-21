@@ -73,7 +73,9 @@ from aot.ai.services.ai_action_service import AIActionService
 from aot.utils.influx import write_influxdb_value
 
 
-formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(name)s - %(message)s')
+# 시각은 시스템 시계 + 오프셋 — Flask 쪽(configure_aot_file_logging)과 같은 포매터.
+from aot.utils.logging_setup import TzLogFormatter
+formatter = TzLogFormatter('%(asctime)s - %(levelname)s - %(name)s - %(message)s')
 
 
 # Shutdown join budgets. Both were previously unbounded or silently short,
@@ -102,30 +104,6 @@ WIDGET_JOIN_TIMEOUT_S = 15
 OUTPUT_JOIN_TIMEOUT_S = 120
 
 
-_TZ_CACHE = {'tz': None, 'expires': 0.0}
-
-
-def _user_tz_converter(secs):
-    """Render log asctime in the user-configured timezone (Misc.timezone).
-    Uses db_retrieve_table_daemon (no Flask app context required) and a
-    60s TTL cache to avoid querying the DB on every log record.
-    Falls back to UTC when DB is not yet available (early startup)."""
-    try:
-        import pytz
-        from datetime import datetime as _dt
-        now = time.time()
-        if _TZ_CACHE['tz'] is None or now > _TZ_CACHE['expires']:
-            from aot.utils.database import db_retrieve_table_daemon as _db
-            misc = _db(Misc, entry='first')
-            tz_name = misc.timezone if misc and getattr(misc, 'timezone', None) else 'UTC'
-            _TZ_CACHE['tz'] = pytz.timezone(tz_name)
-            _TZ_CACHE['expires'] = now + 60
-        return _dt.fromtimestamp(secs, _TZ_CACHE['tz']).timetuple()
-    except Exception:
-        return time.gmtime(secs)
-
-
-formatter.converter = _user_tz_converter
 
 # File handler — RotatingFileHandler: 50 MB × 5 파일 = 최대 250 MB 유지.
 # 핸들러 레벨은 INFO 기본. daemon_debug_mode=True 시 start() 에서 DEBUG로 전환.

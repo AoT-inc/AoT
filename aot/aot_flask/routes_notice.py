@@ -22,6 +22,7 @@ from aot.databases.models import NoticePost
 from aot.aot_flask.extensions import csrf
 from aot.aot_flask.forms import forms_notice
 from aot.aot_flask.utils import utils_general, utils_notice
+from aot.aot_flask.utils.utils_notes import utc_to_wall, utc_to_wall_str
 from aot.utils.time_utils import utc_now
 
 logger = logging.getLogger('aot.aot_flask.routes_notice')
@@ -177,11 +178,13 @@ def page_notice_edit(unique_id):
     form_notice_mod.body.data = post.body
     form_notice_mod.category.data = post.category
     form_notice_mod.publish_now.data = post.publish_at is None
+    # 저장(utils_notice → datetime_time_to_utc)이 해석하는 시간대의 벽시계로
+    # 채운다 — UTC 원값을 채우면 저장할 때마다 오프셋만큼 밀린다.
     if post.publish_at:
-        form_notice_mod.publish_at.data = post.publish_at
+        form_notice_mod.publish_at.data = utc_to_wall(post.publish_at)
     form_notice_mod.set_expire.data = post.expire_at is not None
     if post.expire_at:
-        form_notice_mod.expire_at.data = post.expire_at
+        form_notice_mod.expire_at.data = utc_to_wall(post.expire_at)
     form_notice_mod.pinned.data = post.pinned
 
     poll = utils_notice.NoticePoll.query.filter_by(post_id=post.id).first()
@@ -269,8 +272,9 @@ def api_notice_detail(unique_id):
         'has_acked': has_acked,
         'ack_count': ack_count,
         'can_manage': utils_notice.can_manage_post(post),
-        'publish_at': utils_general.utc_to_local_time(post.publish_at) if post.publish_at else None,
-        'expire_at': utils_general.utc_to_local_time(post.expire_at) if post.expire_at else None,
+        # 편집 칸을 채우는 값 — 라벨 없는 벽시계, 저장이 읽는 시계와 같은 시계.
+        'publish_at': utc_to_wall_str(post.publish_at) if post.publish_at else None,
+        'expire_at': utc_to_wall_str(post.expire_at) if post.expire_at else None,
         'files': post.files.split(',') if post.files else [],
         'poll': None if not poll else {
             'unique_id': poll.unique_id,
