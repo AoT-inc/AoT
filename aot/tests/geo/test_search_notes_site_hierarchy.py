@@ -19,6 +19,7 @@ import json
 import unittest
 
 from flask import Flask
+from flask_babel import Babel
 
 from aot.aot_flask.extensions import db
 from aot.databases.models import GeoMap, GeoShape, Output, Notes
@@ -34,6 +35,12 @@ def _make_app():
     app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite://'
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     db.init_app(app)
+    # 실제 앱처럼 번역을 붙여 둔다. 도구 계층은 이제 지도 모듈을 **쓸 때**
+    # 불러오므로(계층 정리 뒤 모듈 수준 import 가 사라졌다), 그 import 가
+    # 이 앱 컨텍스트 안에서 처음 일어나 번역 문구 표(config_translations)의
+    # lazy_gettext 를 평가한다 — 번역이 없는 앱이면 KeyError('babel') 이다.
+    # 위의 모듈 수준 import 만으로는 더 이상 막을 수 없다.
+    Babel(app)
     return app
 
 
