@@ -102,6 +102,24 @@ def sequence_func_toggle_details(unique_id, state):
         logger.error(f"Error toggling details: {e}")
         return jsonify({'error': str(e)}), 500
 
+def _today_period(trigger):
+    """위젯이 보여 줄 주기 — 정본(JSON)의 **오늘 요일** 항목에서 읽을 때 계산한다.
+
+    레거시 `trigger.period` 는 per_day 에서 "첫 활성 요일" 의 거울일 뿐이라 오늘
+    값과 다를 수 있다. 예전에는 저장 경로마다 이 컬럼을 오늘 값으로 덮어써 두었는데,
+    그렇게 저장한 값은 **다음 날 낡는다.**
+    """
+    from aot.utils import sequence_schedule
+    from aot.utils.device_tz import get_device_tz
+    try:
+        tz = get_device_tz(trigger)
+    except Exception:
+        tz = 'UTC'
+    return sequence_schedule.today_period(
+        sequence_schedule.load(trigger), tz,
+        float(trigger.period) if trigger.period is not None else 3600.0)
+
+
 def refresh_display_values(widget_unique_id, options_values):
     """대시보드를 열 때, 저장된 위젯 캐시가 아니라 **Trigger 의 지금 값**을 보여준다.
 
@@ -139,7 +157,7 @@ def refresh_display_values(widget_unique_id, options_values):
     # `or 기본값` 을 쓰면 0 이 정당한 값인 필드(time_offset_minutes 등)에서
     # 0 을 "없음" 으로 오인해 기본값으로 덮어쓴다 — 컨트롤러의
     # initialize_variables 가 같은 필드에 쓰는 `is not None` 검사와 맞춘다.
-    values['sequence_period'] = float(trigger.period) if trigger.period is not None else 3600.0
+    values['sequence_period'] = _today_period(trigger)
     values['timer_start_offset'] = (
         int(trigger.timer_start_offset) if trigger.timer_start_offset is not None else 0)
     values['output_duration'] = (
@@ -188,8 +206,7 @@ def execute_at_modification(mod_widget, request_form, custom_options_presave, cu
         if trigger:
             if func_id != old_func_id:
                 # Case A: Function Changed (or Init) -> Pull ALL from Function
-                final_options['sequence_period'] = (
-                    float(trigger.period) if trigger.period is not None else 3600.0)
+                final_options['sequence_period'] = _today_period(trigger)
                 final_options['timer_start_offset'] = (
                     int(trigger.timer_start_offset) if trigger.timer_start_offset is not None else 0)
                 final_options['output_duration'] = (
@@ -251,7 +268,37 @@ def execute_at_modification(mod_widget, request_form, custom_options_presave, cu
                 # 사용자가 값을 고쳐 저장해도 아무 일도 없이 옛 값으로 되돌아왔다
                 # (칸은 멀쩡히 보이므로 왜 안 먹는지 알 방법이 없다). 편집기를
                 # 하나로 줄여 그 갈래를 없앴다.
-                smart_sync_field('sequence_period', 'period', float, float)
+                # 주기는 정본(JSON)으로 저장한다. per_day 면 **오늘 요일에만**
+                # 반영한다 — 요일마다 주기가 다른 것이 per_day 의 존재 이유라, 전역
+                # 값 하나를 7일에 퍼뜨리면 짜 둔 구성이 통째로 사라진다(실측
+                # 2026-09-01: 10800×6 + 금 1200 이 옵션 하나를 바꾼 저장 뒤 전부 60).
+                # 표시값도 레거시 컬럼이 아니라 JSON 의 오늘 항목에서 계산한다.
+                _sub_p = final_options.get('sequence_period')
+                _stored_p = options.get('sequence_period')
+                if _sub_p is not None and str(_sub_p) != str(_stored_p):
+                    try:
+                        from aot.utils import sequence_schedule
+                        from aot.utils.device_tz import get_device_tz
+                        from aot.utils.weekly_schedule import get_today_idx
+                        _sched = sequence_schedule.load(trigger)
+                        _day = (get_today_idx(str(get_device_tz(trigger)))
+                                if _sched.get('mode') == 'per_day' else None)
+                        sequence_schedule.set_window(_sched, period=float(_sub_p), day=_day)
+                        _errs = sequence_schedule.save(trigger, _sched)
+                        if _errs:
+                            logger.error(f"sequence_period not saved: {_errs}")
+                            final_options['sequence_period'] = _today_period(trigger)
+                        else:
+                            updates_to_push = True
+                            pushed_fields.add('sequence_period')
+                            logger.info(
+                                f"User updated sequence_period: {_stored_p} -> {_sub_p} "
+                                f"({'오늘 요일만' if _day is not None else '모든 요일'}).")
+                    except (TypeError, ValueError) as _e:
+                        logger.error(f"sequence_period invalid: {_sub_p!r} ({_e})")
+                        final_options['sequence_period'] = _today_period(trigger)
+                else:
+                    final_options['sequence_period'] = _today_period(trigger)
 
                 # 이 옵션만 표현이 다르다: 화면은 'resume'/'restart', DB 는 불리언.
                 # smart_sync_field 의 문자열 비교에 그대로 태우면 True 와
@@ -272,50 +319,8 @@ def execute_at_modification(mod_widget, request_form, custom_options_presave, cu
                 smart_sync_field('time_offset_minutes', 'time_offset_minutes', int, int)
                 
                 if updates_to_push:
-                    # Sync timer_schedule JSON so the daemon picks up new shared-mode values
-                    try:
-                        import json as _j
-                        from aot.utils.weekly_schedule import (
-                            apply_shared_window, parse_schedule, from_legacy)
-                        raw_sched = getattr(trigger, 'timer_schedule', None)
-                        sched = parse_schedule(raw_sched) or from_legacy(
-                            trigger.timer_start_time, trigger.timer_end_time,
-                            getattr(trigger, 'timer_weekday', None), trigger.period or 3600,
-                        )
-                        if sched.get('mode') == 'shared':
-                            # 레거시 컬럼 → 정본 JSON. 같은 계산이 세 곳에 있었고
-                            # 그중 하나(Functions 편집 폼)가 빠져 있어 편집이 통째로
-                            # 무시됐다 — 이제 셋 다 이 헬퍼를 지난다.
-                            apply_shared_window(
-                                sched,
-                                start=trigger.timer_start_time or '00:00',
-                                end=trigger.timer_end_time or '23:59',
-                                period=trigger.period or 3600)
-                            trigger.timer_schedule = _j.dumps(sched)
-                        elif sched.get('mode') == 'per_day':
-                            # 요일마다 주기가 다른 것이 per_day 의 존재 이유다.
-                            # `trigger.period` 는 그중 **오늘의 주기** 하나일
-                            # 뿐인데(routes_function 이 그렇게 동기화한다), 예전에는
-                            # 그것을 7일 전부에 덮어썼다 — 위젯에서 아무 칸이나
-                            # 고쳐 저장하면 요일별로 짜 둔 주기가 통째로 하나가
-                            # 됐다. 실측(2026-09-01 로컬): 10800×6 + 금 1200 이
-                            # 옵션 하나를 바꾼 저장 뒤 전부 60 이 됐다.
-                            #
-                            # 주기 칸을 실제로 고쳤을 때만, 그것도 그 값이 가리키는
-                            # **오늘 요일에만** 반영한다. 다른 요일은 건드리지 않는다.
-                            if 'sequence_period' in pushed_fields:
-                                from aot.utils.weekly_schedule import get_today_idx
-                                from aot.utils.device_tz import get_device_tz
-                                new_period = int(float(trigger.period or 3600))
-                                today_idx = str(get_today_idx(str(get_device_tz(trigger))))
-                                if today_idx in sched.get('days', {}):
-                                    sched['days'][today_idx]['period'] = new_period
-                                    trigger.timer_schedule = _j.dumps(sched)
-                                    logger.info(
-                                        f"per_day: 오늘({today_idx}) 주기만 {new_period}s 로 "
-                                        "갱신 — 다른 요일은 그대로 둔다.")
-                    except Exception as _e:
-                        logger.error(f"execute_at_modification: timer_schedule sync failed: {_e}")
+                    # 스케줄(주기)은 위에서 이미 정본으로 저장했다 — 여기서 JSON 을
+                    # 따로 맞추지 않는다(두 번째 쓰기 경로가 되면 규칙이 갈라진다).
                     db.session.commit()
                     # Refresh Controller if we pushed changes
                     from aot.aot_client import DaemonControl

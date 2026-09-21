@@ -741,6 +741,7 @@ class FunctionToolsMixin:
         from aot.utils.weekly_schedule import (
             parse_schedule, from_legacy, validate, minutes_to_hhmm, time_to_minutes,
             DAY_NAMES)
+        from aot.utils import sequence_schedule
         from aot.controllers.controller_trigger_sequence import SequenceTriggerController
 
         if not function_id:
@@ -809,9 +810,7 @@ class FunctionToolsMixin:
         if len(listed) != len(set(listed)):
             return {"error": "The same step appears in more than one slot."}
 
-        sched = parse_schedule(getattr(trig, 'timer_schedule', None)) or from_legacy(
-            trig.timer_start_time, trig.timer_end_time,
-            getattr(trig, 'timer_weekday', None), trig.period or 3600)
+        sched = sequence_schedule.load(trig)
         sched['mode'] = 'per_day'
         entry = sched['days'].setdefault(str(day), {})
 
@@ -865,14 +864,13 @@ class FunctionToolsMixin:
         entry['period'] = int(period_seconds) if period_seconds else (
             int(span) if not repeat else int(entry.get('period') or span))
 
-        errors = validate(sched)
+        # 저장은 정본 모듈 하나로 — 검증하고, 레거시 창 컬럼도 한 규칙으로 맞춘다.
+        # 예전에는 JSON 과 timer_weekday 만 쓰고 시작·종료·주기 거울은 옛 값으로
+        # 남겨 두었다.
+        errors = sequence_schedule.save(trig, sched)
         if errors:
+            db.session.rollback()
             return {"error": "The resulting schedule is not valid", "details": errors}
-
-        trig.timer_schedule = _json.dumps(sched)
-        if any(sched['days'].get(str(i), {}).get('enabled') for i in range(7)):
-            trig.timer_weekday = ','.join(
-                str(i) for i in range(7) if sched['days'].get(str(i), {}).get('enabled'))
         db.session.commit()
 
         try:
@@ -909,6 +907,7 @@ class FunctionToolsMixin:
         from aot.databases.models.function import Actions, Trigger
         from aot.utils.weekly_schedule import (
             parse_schedule, from_legacy, validate, day_action_group, DAY_NAMES)
+        from aot.utils import sequence_schedule
 
         blocked = [k for k, v in (global_only or {}).items() if v is not None]
         if blocked:
@@ -930,9 +929,7 @@ class FunctionToolsMixin:
         if not trig:
             return {"error": f"Sequence not found for step {action.unique_id}"}
 
-        sched = parse_schedule(getattr(trig, 'timer_schedule', None)) or from_legacy(
-            trig.timer_start_time, trig.timer_end_time,
-            getattr(trig, 'timer_weekday', None), trig.period or 3600)
+        sched = sequence_schedule.load(trig)
         sched['mode'] = 'per_day'
         entry = sched['days'].setdefault(str(day), {})
         uid = action.unique_id
@@ -970,11 +967,10 @@ class FunctionToolsMixin:
                         entry['durations'][sib.unique_id] = dur
                         propagated.append(sib.unique_id)
 
-        errors = validate(sched)
+        errors = sequence_schedule.save(trig, sched)
         if errors:
+            db.session.rollback()
             return {"error": "Invalid schedule after the per-day change", "details": errors}
-
-        trig.timer_schedule = _json.dumps(sched)
         db.session.commit()
 
         try:
@@ -1200,6 +1196,7 @@ class FunctionToolsMixin:
         from aot.utils.weekly_schedule import (
             parse_schedule, from_legacy, validate, to_legacy, build_warnings,
             get_today_idx)
+        from aot.utils import sequence_schedule
 
         if not function_id:
             return {"error": "function_id is required"}
@@ -1214,9 +1211,7 @@ class FunctionToolsMixin:
         if trig.trigger_type != 'trigger_sequence':
             return {"error": f"'{trig.name}' is a {trig.trigger_type}, not a sequence."}
 
-        sched = parse_schedule(getattr(trig, 'timer_schedule', None)) or from_legacy(
-            trig.timer_start_time, trig.timer_end_time,
-            getattr(trig, 'timer_weekday', None), trig.period or 3600)
+        sched = sequence_schedule.load(trig)
 
         # "00:00" as an end means end-of-day, stored as "24:00" (a literal
         # 00:00 end would fail validation as start >= end).
@@ -1266,26 +1261,13 @@ class FunctionToolsMixin:
             for i in range(7):
                 sched['days'].setdefault(str(i), {})['enabled'] = (i in wanted)
 
-        errors = validate(sched)
+        # 저장은 정본 모듈 하나로. 예전에는 여기서만 per_day 의 레거시 주기를
+        # "오늘 요일" 로 덮어써, 같은 컬럼이 저장 경로마다 다른 뜻이 됐다. 오늘의
+        # 주기는 이제 읽을 때 JSON 에서 계산한다(sequence_schedule.today_period).
+        errors = sequence_schedule.save(trig, sched)
         if errors:
+            db.session.rollback()
             return {"error": "Invalid schedule", "details": errors}
-
-        trig.timer_schedule = _json.dumps(sched)
-        leg_start, leg_end, leg_weekday, leg_period = to_legacy(sched)
-        trig.timer_start_time = leg_start
-        trig.timer_end_time = leg_end
-        trig.timer_weekday = leg_weekday or None
-        trig.period = leg_period
-        if sched.get('mode') == 'per_day':
-            # trigger.period is what function_status and the widget read, so
-            # point it at the period actually running today.
-            try:
-                from aot.utils.device_tz import get_device_tz
-                today = sched['days'].get(str(get_today_idx(str(get_device_tz(trig)))), {})
-                if today.get('period') is not None:
-                    trig.period = float(today['period'])
-            except Exception as exc:
-                logger.warning(f"[modify_sequence_schedule] today's period sync failed: {exc}")
 
         db.session.commit()
 

@@ -18,8 +18,9 @@ Functions 편집 폼(`utils_trigger.trigger_mod`)이 정확히 그 상태였다 
 관수 시간은 하나도 안 바뀐다. 사용자 신고 "종료 시간을 변경해도 작동이
 중단되지 않음" 의 경로 중 하나다.
 
-`apply_shared_window()` 가 그 반영을 맡고, 여기서는 (1) 함수 자체의 규칙과
-(2) 폼 저장 경로가 실제로 그것을 부르는지를 고정한다.
+창 편집은 `apply_shared_window()`(dict 규칙)와 정본 모듈 `sequence_schedule`
+(읽기·저장, 2026-09-21)이 맡는다. 여기서는 (1) 그 규칙과 (2) 폼 저장 경로가 실제로
+정본 모듈을 지나는지를 고정한다.
 """
 import ast
 import pathlib
@@ -133,13 +134,40 @@ def _sequence_branch():
     return tail[:end]
 
 
+def _calls_in(node, module_attr):
+    """노드 안에서 `sequence_schedule.<module_attr>(...)` 호출들."""
+    return [n for n in ast.walk(node)
+            if isinstance(n, ast.Call) and isinstance(n.func, ast.Attribute)
+            and n.func.attr == module_attr
+            and isinstance(n.func.value, ast.Name) and n.func.value.id == 'sequence_schedule']
+
+
+def _sequence_branch_node():
+    """`trigger_mod` 안의 `trigger_type == 'trigger_sequence'` 분기(AST)."""
+    # 같은 비교가 파일에 여러 번 나온다(저장 뒤 위젯 동기화 등). **폼 값을 읽는**
+    # 분기 — `form.timer_end_time` 을 참조하는 것 — 를 집는다. 첫 번째 것을 집으면
+    # 엉뚱한 분기를 검사해 조용히 틀린다(이 테스트를 쓰며 실제로 그랬다).
+    tree = ast.parse(SRC)
+    for node in ast.walk(tree):
+        if (isinstance(node, ast.If) and isinstance(node.test, ast.Compare)
+                and any(isinstance(c, ast.Constant) and c.value == 'trigger_sequence'
+                        for c in node.test.comparators)):
+            body = ast.Module(body=node.body, type_ignores=[])
+            reads_form = any(
+                isinstance(n, ast.Attribute) and n.attr == 'timer_end_time'
+                and isinstance(n.value, ast.Name) and n.value.id == 'form'
+                for n in ast.walk(body))
+            if reads_form:
+                return body
+    raise AssertionError('폼을 처리하는 trigger_sequence 분기가 사라졌다')
+
+
 def test_form_save_writes_the_authoritative_json():
-    """레거시 컬럼만 쓰면 저장은 성공하는데 동작은 안 바뀐다 — 조용한 실패다."""
-    branch = _sequence_branch()
-    assert 'apply_shared_window' in branch, (
-        '폼 저장이 정본 JSON(timer_schedule)을 반영하지 않는다 — '
-        '데몬은 레거시 컬럼을 읽지 않으므로 편집이 통째로 무시된다')
-    assert 'trigger.timer_schedule' in branch, 'JSON 을 실제로 쓰지 않는다'
+    """레거시 컬럼만 쓰면 저장은 성공하는데 동작은 안 바뀐다 — 조용한 실패다.
+    폼은 정본 모듈로 창을 고치고 저장해야 한다(2026-09-21 정본 일원화)."""
+    branch = _sequence_branch_node()
+    assert _calls_in(branch, 'set_window'), '폼이 정본(JSON)의 창을 고치지 않는다'
+    assert _calls_in(branch, 'save'), '폼이 정본 저장을 거치지 않는다'
 
 
 def test_per_day_form_save_tells_the_user_instead_of_discarding():
@@ -157,39 +185,47 @@ def test_a_midnight_crossing_window_is_refused_at_save_time():
     그 폴백은 창을 24:00 으로 자르고 **요일별 설정(요일별 창·스텝 on/off·
     요일별 길이)을 통째로 버린다**(실측 2026-09-05: 23:29~02:39 로 저장하자
     데몬의 오늘 항목이 4개 키만 남아 스텝 on/off 가 통째로 무시됐다).
-    무시되는 것보다 나쁘므로 저장 자체를 막아야 한다.
+    무시되는 것보다 나쁘므로 저장 자체를 막아야 한다 — 그리고 **아무것도 쓰지
+    않아야** 한다(반쯤 쓰인 상태가 다음 커밋에 묻어 나간다).
     """
-    from aot.utils.weekly_schedule import validate
+    from types import SimpleNamespace
+    from aot.utils import sequence_schedule
 
-    sched = _shared(start='23:00', end='02:00')
-    apply_shared_window(sched, start='23:00', end='02:00')
-    assert validate(sched), '자정을 넘는 창인데 검증이 통과한다'
+    trig = SimpleNamespace(timer_schedule=None, timer_start_time='05:30',
+                           timer_end_time='17:00', timer_weekday=None, period=3600.0)
+    sched = sequence_schedule.load(trig)
+    sequence_schedule.set_window(sched, start='23:00', end='02:00')
+    errors = sequence_schedule.save(trig, sched)
 
-    branch = _sequence_branch()
-    assert 'validate_schedule' in branch, (
-        '폼 저장이 스케줄을 검증하지 않는다 — 데몬이 읽을 때 폴백해 '
-        '요일별 설정이 사라진다')
+    assert errors, '자정을 넘는 창인데 저장됐다'
+    assert trig.timer_schedule is None and trig.timer_end_time == '17:00', (
+        '거부했는데 무엇인가 썼다')
 
 
 def test_midnight_end_is_written_as_24_00_not_00_00():
-    """자정 종료('00:00')는 '시작보다 앞'으로 읽혀 위 검증에 걸린다 —
-    정상 설정이 저장되지 않는 것이라 반드시 24:00 으로 눕혀야 한다."""
-    branch = _sequence_branch()
-    assert "'24:00'" in branch, "자정 종료를 24:00 으로 정규화하지 않는다"
+    """자정 종료('00:00')는 '시작보다 앞'으로 읽혀 검증에 걸린다 — 정상 설정이
+    저장되지 않는 것이라 반드시 24:00 으로 눕혀야 한다."""
+    from types import SimpleNamespace
+    from aot.utils import sequence_schedule
+
+    trig = SimpleNamespace(timer_schedule=None, timer_start_time='05:30',
+                           timer_end_time='17:00', timer_weekday=None, period=3600.0)
+    sched = sequence_schedule.load(trig)
+    sequence_schedule.set_window(sched, end='00:00')
+    assert sequence_schedule.save(trig, sched) == []
+    assert trig.timer_end_time == '24:00'
 
 
 def test_the_json_write_is_guarded_by_the_helpers_verdict():
-    """`apply_shared_window` 가 False(=per_day)를 줬는데도 JSON 을 덮어쓰면
-    per_day 구성이 사라진다. 반드시 반환값 분기 안에서 써야 한다."""
-    tree = ast.parse(SRC)
-    found = False
-    for node in ast.walk(tree):
-        if not isinstance(node, ast.If):
-            continue
-        call = node.test
-        if isinstance(call, ast.Call) and getattr(call.func, 'id', '') == 'apply_shared_window':
-            writes = [n for n in ast.walk(ast.Module(body=node.body, type_ignores=[]))
-                      if isinstance(n, ast.Attribute) and n.attr == 'timer_schedule']
-            assert writes, 'if 본문에서 timer_schedule 을 쓰지 않는다'
-            found = True
-    assert found, 'apply_shared_window 의 반환값으로 분기하지 않는다'
+    """`set_window` 이 False(=per_day)를 줬는데도 저장하면 per_day 구성이 사라진다.
+    저장은 반드시 그 반환값 분기 안에 있어야 한다."""
+    branch = _sequence_branch_node()
+    guarded = False
+    for node in ast.walk(branch):
+        if isinstance(node, ast.If) and _calls_in(node.test, 'set_window'):
+            body = ast.Module(body=node.body, type_ignores=[])
+            assert _calls_in(body, 'save'), 'set_window 가 참일 때 저장하지 않는다'
+            orelse = ast.Module(body=node.orelse, type_ignores=[])
+            assert not _calls_in(orelse, 'save'), 'per_day 인데도 저장한다'
+            guarded = True
+    assert guarded, 'set_window 의 반환값으로 분기하지 않는다'

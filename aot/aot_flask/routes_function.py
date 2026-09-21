@@ -71,6 +71,7 @@ from aot.aot_flask.utils.utils_misc import determine_controller_type
 from aot.utils.actions import parse_action_information
 from aot.utils.functions import device_module_names
 from aot.utils.functions import parse_function_information
+from aot.utils import sequence_schedule
 from aot.utils.weekly_schedule import (
     apply_shared_window, from_legacy, parse_schedule, to_legacy,
     validate as validate_schedule, build_warnings
@@ -1641,54 +1642,19 @@ def function_sequence_update_settings():
         end_time = data.get('end_time')
         period = data.get('period')
 
-        # End at 00:00 means end of day (24:00)
-        if end_time == '00:00':
-            end_time = '24:00'
-
         trigger = Trigger.query.filter_by(unique_id=function_id).first()
         if not trigger:
             return jsonify({'error': 'Function not found'}), 404
-            
-        if start_time: trigger.timer_start_time = start_time
-        if end_time: trigger.timer_end_time = end_time
-        if period is not None: trigger.period = float(period)
 
-        # Keep timer_schedule in sync if it exists (shared mode update)
-        import json as _json
-        raw_sched = getattr(trigger, 'timer_schedule', None)
-        sched = parse_schedule(raw_sched) or from_legacy(
-            trigger.timer_start_time, trigger.timer_end_time,
-            getattr(trigger, 'timer_weekday', None), trigger.period or 3600,
-        )
-        applied = apply_shared_window(
+        # 정본(JSON)을 고쳐서 저장한다 — 레거시 컬럼은 save() 가 맞춘다.
+        # 예전에는 레거시 컬럼을 먼저 쓰고 JSON 을 따로 맞춰, per_day 에서는
+        # 레거시만 바뀌고 실제 동작은 그대로였다.
+        sched = sequence_schedule.load(trigger)
+        applied = sequence_schedule.set_window(
             sched, start=start_time, end=end_time, period=period)
-
-        # 저장 시점에 막지 않으면 데몬이 읽을 때 `parse_schedule` 이 거부하고
-        # `from_legacy` 로 폴백한다 — 창이 조용히 잘리고(23:00~02:00 →
-        # 23:00~24:00) **요일별 설정이 통째로 사라진다.**
-        sched_errors = validate_schedule(sched)
-        if sched_errors:
-            # 레거시 컬럼은 위에서 이미 객체에 올라갔다 — 커밋하지 않고
-            # 되돌린다(반쯤 반영된 상태로 두면 다음 커밋에 묻어 나간다).
-            db.session.rollback()
-            return jsonify({'error': _(
-                "End time must be later than start time on the same day "
-                "(a window crossing midnight is not supported).")}), 400
-
-        trigger.timer_schedule = _json.dumps(sched)
-
-        db.session.commit()
-
-        # Refresh Controller
-        control = DaemonControl()
-        control.refresh_daemon_trigger_settings(function_id)
-
         if not applied:
             # per_day 에서는 전역 값 하나를 7일에 퍼뜨릴 수 없다(요일별 구성이
-            # 사라진다). 레거시 컬럼만 바뀌고 정본 JSON 은 그대로이므로 **실제
-            # 동작은 하나도 안 바뀐다** — 조용히 성공이라고 답하면 안 된다.
-            # 지금은 위젯 JS 가 per_day 에서 이 엔드포인트를 부르지 않지만,
-            # 새 호출자가 생기면 그때 조용한 무반영이 된다.
+            # 사라진다). 아무것도 쓰지 않고 **조용히 성공이라고 답하지 않는다.**
             return jsonify({
                 'status': 'success',
                 'warnings': [_(
@@ -1697,6 +1663,16 @@ def function_sequence_update_settings():
                     "the sequence widget.")],
             })
 
+        # 저장 시점에 막지 않으면 데몬이 읽을 때 JSON 을 거부하고 레거시로
+        # 폴백한다 — 창이 조용히 잘리고 요일별 설정이 통째로 사라진다.
+        if sequence_schedule.save(trigger, sched):
+            db.session.rollback()
+            return jsonify({'error': _(
+                "End time must be later than start time on the same day "
+                "(a window crossing midnight is not supported).")}), 400
+
+        db.session.commit()
+        DaemonControl().refresh_daemon_trigger_settings(function_id)
         return jsonify({'status': 'success'})
     except Exception as e:
         logger.error(f"Sequence Update Error: {e}")
@@ -1752,15 +1728,10 @@ def sequence_update_weekday():
         if not trigger:
             return jsonify({'error': 'Trigger not found'}), 404
 
-        trigger.timer_weekday = str(weekdays) if weekdays else None
-
-        # Keep timer_schedule in sync (update enabled flags in days)
-        import json as _json
-        raw_sched = getattr(trigger, 'timer_schedule', None)
-        sched = parse_schedule(raw_sched) or from_legacy(
-            trigger.timer_start_time, trigger.timer_end_time,
-            getattr(trigger, 'timer_weekday', None), trigger.period or 3600,
-        )
+        # 켜짐 플래그는 정본(JSON)의 요일 항목에 있다. 레거시 timer_weekday 는
+        # save() 가 거기서 맞춘다 — 예전에는 둘을 따로 써서 시작·종료·주기
+        # 거울은 맞추지 않았다.
+        sched = sequence_schedule.load(trigger)
         enabled_days = set()
         if weekdays:
             for tok in str(weekdays).split(','):
@@ -1770,8 +1741,11 @@ def sequence_update_weekday():
         else:
             enabled_days = {0, 1, 2, 3, 4, 5, 6}
         for i in range(7):
-            sched['days'][str(i)]['enabled'] = (i in enabled_days)
-        trigger.timer_schedule = _json.dumps(sched)
+            sched.setdefault('days', {}).setdefault(str(i), {})['enabled'] = (i in enabled_days)
+        errors = sequence_schedule.save(trigger, sched)
+        if errors:
+            db.session.rollback()
+            return jsonify({'error': errors}), 400
 
         db.session.commit()
 
@@ -1802,14 +1776,12 @@ def function_sequence_update_schedule():
         if not function_id or schedule is None:
             return jsonify({'error': 'function_id and schedule are required'}), 400
 
-        # End at 00:00 means end of day (24:00)
-        if isinstance(schedule, dict):
-            if isinstance(schedule.get('shared'), dict) and schedule['shared'].get('end') == '00:00':
-                schedule['shared']['end'] = '24:00'
-            for entry in (schedule.get('days') or {}).values():
-                if isinstance(entry, dict) and entry.get('end') == '00:00':
-                    entry['end'] = '24:00'
-
+        if not isinstance(schedule, dict):
+            return jsonify({'error': 'schedule must be an object'}), 400
+        # 자정 종료 정규화와 검증은 sequence_schedule.save() 가 한다 — 여기서
+        # 따로 하면 저장 경로마다 규칙이 갈라진다. 다만 요일별 그룹을 옮기는 아래
+        # 부수 효과보다 **먼저** 거부해야 하므로 검증만 앞에서 한 번 본다.
+        sequence_schedule._normalize_ends(schedule)
         errors = validate_schedule(schedule)
         if errors:
             return jsonify({'error': errors}), 400
@@ -1863,30 +1835,14 @@ def function_sequence_update_schedule():
             logger.warning(
                 f"per_day→shared 전환에서 요일별 그룹·작동시간을 옮기지 못했다: {_e}")
 
-        # Persist schedule JSON
-        import json as _json
-        trigger.timer_schedule = _json.dumps(schedule)
-
-        # Back-sync legacy columns for compat
-        start, end, weekday_str, period = to_legacy(schedule)
-        trigger.timer_start_time = start
-        trigger.timer_end_time = end
-        trigger.timer_weekday = weekday_str if weekday_str else None
-        trigger.period = period
-
-        # For per_day mode, also update trigger.period to today's active per-day
-        # period so that function_status() and widget custom_options both reflect
-        # the value the controller is actually running with today.
-        if schedule.get('mode') == 'per_day':
-            try:
-                from aot.utils.weekly_schedule import get_today_idx
-                from aot.utils.device_tz import get_device_tz
-                today_idx = get_today_idx(str(get_device_tz(trigger)))
-                today_period = schedule.get('days', {}).get(str(today_idx), {}).get('period')
-                if today_period is not None:
-                    trigger.period = float(today_period)
-            except Exception as _e:
-                logger.warning(f"Could not sync today's per-day period to trigger.period: {_e}")
+        # 정본을 저장한다 — 레거시 컬럼은 save() 가 한 가지 규칙으로 맞춘다.
+        # 예전에는 여기서만 per_day 의 레거시 주기를 "오늘 요일" 로 덮어써서, 같은
+        # 컬럼이 저장 경로마다 다른 뜻이 됐다. 오늘의 주기는 이제 읽을 때 JSON 에서
+        # 계산한다(sequence_schedule.today_period).
+        errors = sequence_schedule.save(trigger, schedule)
+        if errors:
+            db.session.rollback()
+            return jsonify({'error': errors}), 400
 
         db.session.commit()
 

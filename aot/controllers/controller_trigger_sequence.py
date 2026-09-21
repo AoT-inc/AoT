@@ -21,6 +21,7 @@ from aot.utils.influx import get_last_measurement
 from aot.utils.device_tz import get_device_tz
 from aot.utils.command_origin import TYPE_SEQUENCE as SOURCE_SEQUENCE
 from aot.utils.execution_context import set_execution_context, clear_execution_context
+from aot.utils import sequence_schedule
 from aot.utils.weekly_schedule import (
     DAY_NAMES, active_entry_now, day_action_enabled, day_action_group,
     day_action_duration, from_legacy, is_continuity_boundary, get_today_idx,
@@ -476,11 +477,7 @@ class SequenceTriggerController(AbstractController, threading.Thread):
 
         from aot.utils.device_tz import get_device_tz
         tz = get_device_tz(trigger)
-        raw_schedule = getattr(trigger, 'timer_schedule', None)
-        sched = parse_schedule(raw_schedule) or from_legacy(
-            trigger.timer_start_time, trigger.timer_end_time,
-            getattr(trigger, 'timer_weekday', None), trigger.period or 3600,
-        )
+        sched = sequence_schedule.load(trigger)
         today_idx = get_today_idx(tz)
 
         # Determine steps/schedule (per-day actions map overrides global flag)
@@ -630,9 +627,7 @@ class SequenceTriggerController(AbstractController, threading.Thread):
         if not trigger:
             return {"error": f"Trigger {unique_id} not found"}
 
-        sched = parse_schedule(getattr(trigger, 'timer_schedule', None)) or from_legacy(
-            trigger.timer_start_time, trigger.timer_end_time,
-            getattr(trigger, 'timer_weekday', None), trigger.period or 3600)
+        sched = sequence_schedule.load(trigger)
         entry = (sched.get('days') or {}).get(str(day_idx), {})
         day_name = DAY_NAMES[day_idx] if 0 <= day_idx <= 6 else str(day_idx)
 
@@ -773,13 +768,11 @@ class SequenceTriggerController(AbstractController, threading.Thread):
         self.timer_weekday = getattr(self.trigger, 'timer_weekday', None) or ''
 
         # Weekly schedule: parse from timer_schedule JSON, fall back to legacy columns
-        raw_schedule = getattr(self.trigger, 'timer_schedule', None)
-        self.schedule = parse_schedule(raw_schedule) or from_legacy(
-            self.trigger.timer_start_time,
-            self.trigger.timer_end_time,
-            getattr(self.trigger, 'timer_weekday', None),
-            self.trigger.period or 3600,
-        )
+        self.schedule = sequence_schedule.load(self.trigger)
+        # 주기는 레거시 컬럼(per_day 면 첫 활성 요일의 거울)이 아니라 오늘 항목에서
+        # 읽는다. 재개 판단(_load_runtime_state 의 '낡음')이 이 값을 쓴다.
+        self.sequence_cycle_duration = sequence_schedule.today_period(
+            self.schedule, self.device_tz, self.sequence_cycle_duration)
         # Track which day's window is currently active (for continuity detection)
         self.active_weekday = None
         
