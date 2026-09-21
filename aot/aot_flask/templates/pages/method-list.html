@@ -85,7 +85,7 @@
 
   <script>
   $(document).ready(function() {
-    // 설정값 곡선 — 그리기는 aot-method-chart.js (옛 Highcharts 판과 같은 모양)
+    // 설정값 곡선 — 그리기는 aot-method-chart.js
     function loadSetpoints(handle, methodId) {
       $.getJSON('/method-data/' + methodId, function (data, responseText, jqXHR) {
         if (jqXHR.status !== 204) handle.setSeries([{ name: 'Setpoint', data: data }]);

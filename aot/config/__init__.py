@@ -397,10 +397,8 @@ CAMERA_INFO = {
     },
 }
 
-# 모든 방식(Method)이 공통으로 요구하던 의존성. 예전에는 방식 곡선을 그리는
-# Highcharts(highcharts-9.1.2.js)가 없으면 내려받게 했다. 2026-09-21 방식 곡선을
-# ECharts(저장소에 함께 배포되는 맞춤 빌드)로 옮겨 더는 필요 없다 — 남겨 두면
-# Highcharts 파일을 걷어낸 뒤 쓰지도 않는 라이브러리를 받으라고 요구한다.
+# 모든 방식(Method)이 공통으로 요구하는 외부 의존성. 방식 곡선은 저장소에 함께
+# 배포되는 ECharts 맞춤 빌드로 그리므로 따로 내려받을 것이 없다.
 METHOD_DEP_BASE = []
 
 # Method info
@@ -705,7 +703,7 @@ BAND_PALETTE = ['#2DB4FF', '#54BCC1', '#32c85a', '#FEAE5F', '#CF5C58']
 # 전역 차트 시리즈 팔레트 (단일 소스 — docs/design/color-system.md 5절)
 # 그래프류 위젯(AoT_graph, AoT_PID)의
 # 시리즈 기본색. 앞 6색은 AoT 시맨틱 색과 정렬(#FEA60B=warning, #DF5353=danger,
-# #008DDE≈info), 이후는 예전에 쓰던 Highcharts 의 관례 색을 그대로 둔다. 앞 6색(라이트/다크 공통)은
+# #008DDE≈info), 이후는 기존 기본 색을 그대로 둔다. 앞 6색(라이트/다크 공통)은
 # settings/custom_ui 의 chart_1..6 필드로 사용자 정의 가능 — 코드에서는
 # utils_theme.get_graph_series_palette() 로 오버레이된 값을 읽을 것.
 GRAPH_SERIES_PALETTE = [

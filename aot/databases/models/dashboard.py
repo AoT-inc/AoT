@@ -83,9 +83,9 @@ class Widget(CRUDMixin, db.Model):
     enable_auto_refresh = db.Column(db.Boolean, default=True)  # Automatically update graph
     enable_xaxis_reset = db.Column(db.Boolean, default=True)  # Reset the graph x-axis min/max on update
     enable_manual_y_axis = db.Column(db.Boolean, default=False)  # Manual selection of y-axis min/max
-    enable_start_on_tick = db.Column(db.Boolean, default=True)  # Enable HighCharts startOnTick
-    enable_end_on_tick = db.Column(db.Boolean, default=True)  # Enable HighCharts endOnTick
-    enable_align_ticks = db.Column(db.Boolean, default=True)  # Enable HighCharts alignTicks
+    enable_start_on_tick = db.Column(db.Boolean, default=True)  # Start the y axis on a tick
+    enable_end_on_tick = db.Column(db.Boolean, default=True)  # End the y axis on a tick
+    enable_align_ticks = db.Column(db.Boolean, default=True)  # Align ticks across y axes
     use_custom_colors = db.Column(db.Boolean, default=False)  # Enable custom colors of graph series
     custom_colors = db.Column(db.Text, default='')  # Custom hex color values (csv)
     disable_data_grouping = db.Column(db.Text, default='')  # Disable data grouping for measurement IDs

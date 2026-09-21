@@ -29,7 +29,7 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const OUT_DIR = join(ROOT, 'vendor', `echarts-${VERSION}`);
 const OUT = join(OUT_DIR, 'echarts.aot.min.js');
 
-// AoT 가 쓰는 것. Highcharts 에서 옮겨 올 화면들(시계열·게이지·이벤트 표시)을 덮는다.
+// AoT 가 쓰는 것. 시계열·게이지·이벤트 표시 화면을 덮는다.
 const USE = {
   'echarts/charts': ['LineChart', 'BarChart', 'ScatterChart', 'GaugeChart'],
   'echarts/components': [

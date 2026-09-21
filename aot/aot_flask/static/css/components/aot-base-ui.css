@@ -1878,7 +1878,7 @@ input[type="color"].is-pale {
    시리즈 값 상자는 각 점 옆, 시각 머리글은 플롯 안쪽 위(아래에 두면 x축
    라벨과 레전드를 가린다). 자리(left/top)·꼬리 위치·테두리 색(시리즈 색,
    --aot-tip-border)만 스크립트가 넣고 모양은 여기서 정한다. 머리글 테두리는
-   중립선이다(Highcharts 와 같다). */
+   중립선이다. */
 .aot-chart-split-tip {
   position: absolute;
   inset: 0;
@@ -1926,7 +1926,7 @@ input[type="color"].is-pale {
 }
 
 /* 차트 끌어서 확대의 선택 상자(aot-method-chart.js). 자리만 스크립트가 넣는다.
-   Highcharts 선택 상자(zoomType)의 반투명 파랑과 같은 역할이라 정보색을 옅게 쓴다. */
+   선택 영역을 표시하는 역할이라 정보색을 옅게 쓴다. */
 .aot-chart-zoom-select {
   position: absolute;
   pointer-events: none;
@@ -1942,7 +1942,7 @@ input[type="color"].is-pale {
   flex-direction: column;
   width: 100%;
   height: 100%;
-  font-size: var(--aot-font-size-xs);   /* 차트 글자 기준 12px(Highcharts chart.style) */
+  font-size: var(--aot-font-size-xs);   /* 차트 글자 기준 12px */
   color: var(--aot-color-text-primary);
 }
 .aot-ts-toolbar {
@@ -2022,7 +2022,7 @@ input[type="color"].is-pale {
   padding: 0;
   cursor: pointer;
 }
-/* 끈 시리즈는 흐리게(Highcharts legend itemHiddenStyle) */
+/* 끈 시리즈는 흐리게 */
 .aot-ts-legend-item[aria-pressed="false"] { opacity: 0.4; }
 .aot-ts-legend-name { font-weight: 400; }
 .aot-ts-legend-mark { display: inline-block; flex: 0 0 auto; }
