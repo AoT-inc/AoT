@@ -930,6 +930,9 @@ def compute_spatial_internal(
 
     # VPD 센서 미설정 시 T/RH 평균으로 자동 계산
     vpd_readings = kept['VPD']
+    # 호출자가 "센서가 준 VPD" 와 "T/RH 로 계산한 VPD" 를 가를 수 있게 남긴다 —
+    # 계산값이면 걸러진 T/RH 로 다시 계산하는 쪽이 맞다(env_coordinator 잡음 필터).
+    vpd_measured = bool(vpd_readings)
     if not vpd_readings and T_readings and RH_readings:
         import math as _math
         T_avg  = sum(T_readings)  / len(T_readings)
@@ -947,6 +950,7 @@ def compute_spatial_internal(
         'RH':          _avg(RH_readings,        1),
         'CO2':         _avg(kept['CO2'],        0),
         'VPD':         _avg(vpd_readings,       3),
+        'vpd_measured': vpd_measured,
         'light':       _avg(kept['light'],      1),
         'T_min':       _min(T_readings,         2),
         'T_max':       _max(T_readings,         2),

@@ -220,8 +220,8 @@ class TestOptionSchema:
             import _cycle_mixin as m
         src = inspect.getsource(m.CycleMixin._run_cycle)
         assert "situation.context['night_vent_park']" in src
-        assert '_night_vent_parked(internal)' in src, (
-            '내부 상태를 안 넘기면 하드 임계 탈출구가 판정할 근거가 없다')
+        assert '_night_vent_parked(\n            internal, external_for_control)' in src, (
+            '내부·실외 상태를 안 넘기면 하드 임계·결로 탈출구가 판정할 근거가 없다')
 
 
 if __name__ == '__main__':

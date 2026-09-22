@@ -1437,7 +1437,8 @@ class CycleMixin:
         situation.context['temp_max'] = self.temp_max
         # 야간에는 개구부만 닫고 냉난방·제습으로 관리한다. 하드 임계를 넘으면
         # 스스로 풀린다(`_night_vent_parked` 의 탈출구).
-        situation.context['night_vent_park'] = self._night_vent_parked(internal)
+        situation.context['night_vent_park'] = self._night_vent_parked(
+            internal, external_for_control)
         # 강우·풍속을 잃었다 → 개구부는 **더 열지 않는다**(제자리 또는 닫기).
         # 게이트가 명령을 박지 않고 여기로 넘기는 이유는 적분이다 — 상한은
         # coordinate() 안에서 걸어야 적분이 실제 서 있는 개도를 따라간다
@@ -1882,8 +1883,10 @@ class CycleMixin:
         액추에이터가 왕복하는 것을 막는다.
         """
         # ── T/RH constraint check (before L1) ────────────────────────────────
-        t_val  = internal.get('T')
-        rh_val = internal.get('RH')
+        # 하드 한계는 **원값**으로 판정한다 — 잡음 필터 지연만큼 보호를 늦추지
+        # 않는다. 경계 흔들림은 여기 래치의 히스테리시스가 이미 막는다.
+        t_val  = internal.get('T_raw', internal.get('T'))
+        rh_val = internal.get('RH_raw', internal.get('RH'))
         # Per-cycle WARN spam → state-transition only. Re-arm when value returns
         # to within bounds, so the next breach is logged again.
         cbs = self._constraint_breach_state

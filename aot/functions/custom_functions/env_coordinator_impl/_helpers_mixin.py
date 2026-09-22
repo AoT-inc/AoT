@@ -46,6 +46,79 @@ def smooth_vpd(prev: Optional[float], raw: float,
     return prev + alpha * (raw - prev)
 
 
+# 온도·습도도 같은 방식으로 거른다(2026-09-22). VPD 만 거르면 T/RH 를 직접 쓰는
+# 곳 — 온도 상한 항, 분무 습도 잠금(보조 습도 목표 + 5 %, 히스테리시스 없음) — 에
+# 습도 눈금 1 % 디더가 그대로 들어간다. **VPD 가 T/RH 계산값이면 걸러진 T/RH 로
+# 다시 계산한다** — 둘을 따로 거르면 VPD 와 T/RH 가 서로 다른 순간을 말한다.
+# snap 은 "실제 전이" 로 보고 즉시 따라붙는 폭이자 지연 상한이다: 온도 눈금
+# 0.1 °C·습도 눈금 1 % 의 디더는 누르고, 그보다 확실히 큰 변화는 바로 반영한다.
+# ⚠ **안전 판단은 원값을 쓴다.** 게이트(폭염·한파는 공간 극값)와 하드 한계는
+#   `T_raw`/`RH_raw` 를 본다 — 보호를 필터 지연만큼 늦출 이유가 없다.
+_T_EMA_SNAP  = 0.5      # °C
+_RH_EMA_SNAP = 3.0      # %
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 야간 파킹의 결로 탈출구 (2026-09-22)
+# ─────────────────────────────────────────────────────────────────────────────
+# 결로 위험 = 실내 온도와 이슬점의 차(이슬점 여유)가 작다. 들어가는 문턱과 나오는
+# 문턱을 나눈다 — 새벽 내내 여유가 문턱 위아래로 흔들리면 창이 따라 여닫힌다.
+_CONDENSATION_ENTER_C = 2.0   # 여유가 이보다 작으면 위험(20 °C 에서 RH ≈ 88 %)
+_CONDENSATION_EXIT_C  = 3.0   # 탈출 중이면 여유가 이만큼 회복돼야 다시 닫는다
+_MIX_FRACTION         = 0.1   # "조금 섞으면" — 외기 10 % 와 섞은 공기로 판정
+
+
+def _svp_kpa(T: float) -> float:
+    import math
+    return 0.6108 * math.exp(17.27 * T / (T + 237.3))
+
+
+def _dewpoint_from_e(e_kpa: float) -> Optional[float]:
+    import math
+    if e_kpa is None or e_kpa <= 0.0:
+        return None
+    a = math.log(e_kpa / 0.6108)
+    return 237.3 * a / (17.27 - a)
+
+
+def dewpoint_margin(T: Optional[float], RH: Optional[float]) -> Optional[float]:
+    """실내 온도 − 이슬점(°C). 모르면 None."""
+    if T is None or RH is None or RH <= 0:
+        return None
+    td = _dewpoint_from_e(RH / 100.0 * _svp_kpa(T))
+    return None if td is None else T - td
+
+
+def condensation_escape(T_in, RH_in, T_out, RH_out,
+                        was_escaping: bool = False) -> bool:
+    """야간 파킹을 풀어야 하는가 — 결로가 임박했고, 환기가 그것을 덜어 줄 때.
+
+    외기를 `_MIX_FRACTION` 만큼 섞은 공기의 이슬점 여유가 지금보다 **커야** 한다.
+    같은 기압에서 수증기압과 온도가 섞인 비율대로 선형으로 섞인다고 본다. 차가운
+    외기는 실내를 식혀 상대습도를 올릴 수 있으므로(예: 실내 15 °C·95 %, 실외
+    5 °C·90 %), 실외가 건조하다는 것만으로는 열지 않는다.
+
+    실외 값을 모르면 풀지 않는다 — 파킹은 사용자가 켠 옵션이고, 모르는 채로
+    푸는 것은 그 결정을 근거 없이 뒤집는 것이다(습도 상한 탈출구는 따로 있다).
+    """
+    if None in (T_in, RH_in, T_out, RH_out):
+        return False
+    margin = dewpoint_margin(T_in, RH_in)
+    if margin is None:
+        return False
+    limit = _CONDENSATION_EXIT_C if was_escaping else _CONDENSATION_ENTER_C
+    if margin >= limit:
+        return False
+    e_in  = RH_in / 100.0 * _svp_kpa(T_in)
+    e_out = RH_out / 100.0 * _svp_kpa(T_out)
+    T_mix = T_in + _MIX_FRACTION * (T_out - T_in)
+    e_mix = e_in + _MIX_FRACTION * (e_out - e_in)
+    td_mix = _dewpoint_from_e(e_mix)
+    if td_mix is None:
+        return False
+    return (T_mix - td_mix) > margin
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # 냉·난방 가동 감지 (hvac_interlock)
 # ─────────────────────────────────────────────────────────────────────────────
@@ -561,7 +634,8 @@ class HelpersMixin:
 
     # ── 야간 개구부 파킹 ───────────────────────────────────────────────────────
 
-    def _night_vent_parked(self, internal: dict = None) -> bool:
+    def _night_vent_parked(self, internal: dict = None,
+                           external: dict = None) -> bool:
         """지금 개구부를 야간 파킹해야 하는가.
 
         밤에는 습도가 오르고 이슬이 맺힌다. 해질 무렵 "쓸모 있어 보이던" 개구도
@@ -581,6 +655,12 @@ class HelpersMixin:
         `_force_heat`(너무 춥다)는 탈출구가 아니다 — 그쪽은 하드 임계 처리가
         이미 개구부를 0 으로 강제하므로 파킹과 방향이 같다.
 
+        하드 임계보다 앞에서 푸는 탈출구가 하나 더 있다 — **결로가 임박했고, 환기가
+        그것을 실제로 덜어 줄 때**(`condensation_escape`). 닫아 두면 수분이 갇힌다.
+        그러나 차가운 외기는 실내를 식혀 상대습도를 오히려 올릴 수도 있으므로
+        "실외가 건조하다" 만으로는 열지 않는다 — 외기를 조금 섞었을 때 이슬점
+        여유가 **벌어지는지** 습공기로 계산한다.
+
         ## 근거를 모르면 막지 않는다
 
         좌표가 없어 태양시를 못 구하면 **파킹하지 않는다.** 위치를 모른다는
@@ -593,6 +673,21 @@ class HelpersMixin:
         internal = internal or {}
         if internal.get('_force_cool') or internal.get('_force_dehumid'):
             return False                      # 선을 넘었다 — 열어서 빼야 한다
+
+        escape = condensation_escape(
+            internal.get('T'), internal.get('RH'),
+            (external or {}).get('T'), (external or {}).get('RH'),
+            was_escaping=bool(getattr(self, '_night_condensation_escape', False)))
+        if escape != bool(getattr(self, '_night_condensation_escape', False)):
+            # ⚠ error 등급 — 기본 로거가 ERROR 라 info 는 안 남는다. 바뀔 때만.
+            self.logger.error(
+                'EnvCoordinator 야간 파킹 %s — 결로 여유 %s',
+                '해제(환기가 결로를 덜어 줌)' if escape else '복귀',
+                'x' if internal.get('T') is None else '%.1f °C' % (
+                    dewpoint_margin(internal.get('T'), internal.get('RH')) or 0.0))
+        self._night_condensation_escape = escape
+        if escape:
+            return False
 
         basis = str(getattr(self, 'night_vent_basis', 'sun') or 'sun')
         if basis == 'clock':
@@ -1161,6 +1256,7 @@ class HelpersMixin:
                           전달 시 outdoor 재조회를 생략한다 (InfluxDB 중복 쿼리 방지).
         """
         result = {}
+        _vpd_derived = False   # VPD 가 T/RH 계산값인가(아래 잡음 필터가 쓴다)
 
         # geo/facility single source: sensors_resolved (indoor) -> T, RH, CO2, VPD, light
         _sr = getattr(self, '_sensors_resolved', [])
@@ -1171,6 +1267,8 @@ class HelpersMixin:
                 for _k in ('T', 'RH', 'CO2', 'VPD', 'light'):
                     if spatial.get(_k) is not None:
                         result[_k] = spatial[_k]
+                _vpd_derived = (spatial.get('VPD') is not None
+                                and spatial.get('vpd_measured') is False)
                 # Spatial extremes — safety_gates judge heatwave/cold using max/min, not the average
                 for _k in ('T_min', 'T_max', 'RH_min', 'RH_max'):
                     if spatial.get(_k) is not None:
@@ -1231,15 +1329,34 @@ class HelpersMixin:
                     # 반영돼 있으므로 추정을 덧씌우면 이중 계산이 된다.
                     result['_light_is_outdoor'] = True
 
-        # ── VPD 측정 잡음 필터 ────────────────────────────────────────────────
-        # 조율기의 1차 제어변수라 센서 눈금 디더가 그대로 개구부 명령이 된다.
+        # ── 측정 잡음 필터 (T·RH·VPD) ────────────────────────────────────────
+        # 조율기의 입력이라 센서 눈금 디더가 그대로 개구부 명령이 된다.
         # 여기 한 곳에서 걸러 situation/coordinator/광합성/greybox 가 모두 같은
         # 값을 보게 한다 (제어와 진단이 갈리면 로그로 원인을 못 찾는다).
         # 측정이 없는 사이클은 상태를 갱신하지 않는다 — 센서 만료 뒤 복귀할 때
         # 낡은 필터값이 새 측정값을 끌어당기지 않도록.
         try:
+            for _key, _attr, _snap in (('T', '_t_ema', _T_EMA_SNAP),
+                                       ('RH', '_rh_ema', _RH_EMA_SNAP)):
+                _raw = result.get(_key)
+                if _raw is None:
+                    continue
+                _raw = float(_raw)
+                _prev = getattr(self, _attr, None)
+                if not isinstance(_prev, float):
+                    _prev = None
+                _f = smooth_vpd(_prev, _raw, snap=_snap)
+                setattr(self, _attr, _f)
+                result[_key + '_raw'] = _raw
+                result[_key] = _f
+
             _vpd_raw = result.get('VPD')
-            if _vpd_raw is not None:
+            if _vpd_derived and result.get('T') is not None and result.get('RH') is not None:
+                # 계산값 — 걸러진 T/RH 로 다시 계산(따로 한 번 더 거르지 않는다).
+                from aot.functions.utils.env_control.situation import compute_vpd
+                result['VPD'] = round(compute_vpd(result['T'], result['RH']), 3)
+                self._vpd_ema = result['VPD']
+            elif _vpd_raw is not None:
                 _prev = getattr(self, '_vpd_ema', None)
                 if not isinstance(_prev, float):
                     _prev = None   # 첫 샘플 / 재시작 직후
@@ -1276,18 +1393,20 @@ class HelpersMixin:
         #   돈다. 25 는 아무 일도 안 일어나는 값이라 조용히 통과하는데, 그것은
         #   안전하다는 뜻이 아니라 판정을 포기했다는 뜻이다.
         #   게이트 쪽은 `_first_num` 으로 받아 모르면 발동하지 않는다.
-        T_for_heat = _first_not_none(internal.get('T_max'), internal.get('T'))
-        T_for_cold = _first_not_none(internal.get('T_min'), internal.get('T'))
+        # ⚠ 안전 판단은 **원값**이다 — 잡음 필터(`_collect_internal`)의 지연만큼
+        #   보호를 늦출 이유가 없다. 극값(T_max/T_min)은 애초에 거르지 않는다.
+        T_now  = _first_not_none(internal.get('T_raw'), internal.get('T'))
+        RH_now = _first_not_none(internal.get('RH_raw'), internal.get('RH'))
+        T_for_heat = _first_not_none(internal.get('T_max'), T_now)
+        T_for_cold = _first_not_none(internal.get('T_min'), T_now)
         return {
             'internal': {
-                'T':      internal.get('T'),
+                'T':      T_now,
                 'T_max':  T_for_heat,
                 'T_min':  T_for_cold,
-                'RH':     internal.get('RH'),
-                'RH_max': _first_not_none(internal.get('RH_max'),
-                                          internal.get('RH')),
-                'RH_min': _first_not_none(internal.get('RH_min'),
-                                          internal.get('RH')),
+                'RH':     RH_now,
+                'RH_max': _first_not_none(internal.get('RH_max'), RH_now),
+                'RH_min': _first_not_none(internal.get('RH_min'), RH_now),
                 # 육묘 일소 게이트 판정용 — 차광막 개도를 반영한 실내 추정 광량.
                 # 없으면 게이트가 external['solar'] → 태양고도 어림값 순으로 폴백한다.
                 'light_est': internal.get('light_est'),

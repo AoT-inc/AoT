@@ -102,6 +102,12 @@ class PreGateConfig:
     cold_ext_threshold:   float = -2.0   # 한파: 외부 온도 임계 (°C)
     cold_int_threshold:   float = 5.0    # 한파: 내부 온도 임계 (°C)
     gate_ttl:             float = 300.0  # 게이트 발동 후 최소 유지 시간 (초)
+    # 폭염·한파 **해제 여유**(°C). 들어가는 문턱과 나오는 문턱을 나눈다 — 문턱
+    # 바로 위아래에서 값이 흔들리면 300 초 유지(gate_ttl)만으로는 5 분마다 전
+    # 장비가 비상 운전과 정상 운전을 오간다. 들어갈 때는 두 조건(실외·실내)이 모두
+    # 문턱을 넘어야 하고, 나올 때는 둘 중 하나라도 문턱에서 이만큼 물러나야 한다.
+    heat_release_margin:  float = 2.0
+    cold_release_margin:  float = 2.0
     windward_arc_deg:     float = 60.0   # 풍향 ±이 각도 이내 = windward (강제 폐쇄 대상)
     # ── 육묘 일소 방지 (2026-07-31 aot-005) ───────────────────────────────
     nursery_mode:         bool  = False  # 육묘장 모드 — 습윤형 분무 일사 잠금
@@ -148,6 +154,8 @@ class SafetyPreGate:
         self._last_triggered = False
         self._triggered_until: float = 0.0  # gate_ttl 보장용
         self._nursery_locked = False        # 육묘 일소 잠금 래치 (히스테리시스)
+        self._heat_latched = False          # 폭염 래치 (heat_release_margin)
+        self._cold_latched = False          # 한파 래치 (cold_release_margin)
         # 잠금 사유 — 'sunburn'(광량 임계) | 'evening'(저녁 잎마름병 방지) | None.
         # ⚠ **`_nursery_locked` bool 하나로는 화면에 거짓말을 하게 된다.**
         #   저녁 차단은 광량과 **무관하게** 잠그는데, 이 값이 없으면 호출자가
@@ -364,15 +372,25 @@ class SafetyPreGate:
         T_int_cold = _first_num(int_state.get('T_min'), int_state.get('T'))
         T_ext_now  = _first_num(ext.get('T'))
 
-        if (T_ext_now is not None and T_int_hot is not None
-                and T_ext_now >= cfg.heat_ext_threshold
-                and T_int_hot >= cfg.heat_int_threshold):
+        # 래치: 들어갈 때는 문턱, 나올 때는 문턱에서 여유만큼 물러난 값.
+        # 값을 모르면 래치도 푼다 — "모르면 발동하지 않는다" 와 같은 규칙이다.
+        if T_ext_now is None or T_int_hot is None:
+            self._heat_latched = False
+        else:
+            m = 0.0 if not self._heat_latched else cfg.heat_release_margin
+            self._heat_latched = (T_ext_now >= cfg.heat_ext_threshold - m
+                                  and T_int_hot >= cfg.heat_int_threshold - m)
+        if self._heat_latched:
             mask |= GATE_BIT_HEAT
             reasons.append('heat_emergency')
 
-        if (T_ext_now is not None and T_int_cold is not None
-                and T_ext_now <= cfg.cold_ext_threshold
-                and T_int_cold <= cfg.cold_int_threshold):
+        if T_ext_now is None or T_int_cold is None:
+            self._cold_latched = False
+        else:
+            m = 0.0 if not self._cold_latched else cfg.cold_release_margin
+            self._cold_latched = (T_ext_now <= cfg.cold_ext_threshold + m
+                                  and T_int_cold <= cfg.cold_int_threshold + m)
+        if self._cold_latched:
             mask |= GATE_BIT_COLD
             reasons.append('cold_emergency')
 

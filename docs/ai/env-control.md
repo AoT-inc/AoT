@@ -128,6 +128,13 @@ timezone.
 
 Evaluates current deviation, limiting factors, and trend.
 
+Indoor temperature, humidity and VPD are **filtered for noise** first, so that a sensor
+flicking between two display steps (0.1 °C, 1 %) does not move the vents. Exponential
+smoothing is used, but when the reading moves 0.5 °C or 3 % away from the filtered value
+it is treated as a real change and followed immediately. Where VPD is computed from
+temperature and humidity, it is recomputed from the filtered values. **Safety gates and
+hard limits judge the raw readings**, so protection is never delayed by the filter.
+
 | Evaluation item | Description |
 |----------------|-------------|
 | Deviation | `current value - target` |
@@ -405,6 +412,14 @@ period (×2, floor 300 s). An expired signal counts as *not running*, and that i
 looked useful at dusk can leave the crop wet by morning. Its sub-settings appear only
 once the toggle is on.
 
+It lifts itself when staying closed becomes the greater risk: when a temperature or
+humidity hard limit is crossed, and when **condensation is imminent and ventilation would
+actually relieve it**. Imminent means the gap between indoor temperature and dew point is
+under 2 °C; relieving means that mixing in a little outside air widens that gap. Cold,
+humid outside air can cool the house into condensation, so dry outside air alone is not
+a reason to open. Once lifted, parking returns when the gap recovers to 3 °C or
+ventilation stops helping. With no outdoor readings it is not lifted.
+
 | Field (shown when Close at Night is on) | Default | Description |
 |-------|---------|-------------|
 | Night Starts At | Sunset to sunrise | Whether night is measured from sunset to sunrise, or by fixed clock times. |
@@ -681,8 +696,8 @@ pre-gate opening, because conditions may have changed in the meantime.
 |------|--------------------|--------|
 | Rain | Rain rate ≥ 0.5 mm/hr (fixed, not user-configurable) | Closes side/roof vents. Curtains/shades are interior equipment and are left alone. |
 | Strong Wind | Wind speed ≥ **Strong Wind Threshold** (default 12 m/s) | Closes vents. If wind is the *only* active gate (no lost readings either), the wind direction is known, and **every** vent has an azimuth, only windward vents (within ±60°) are forced closed — leeward vents keep running under normal control. |
-| Heat Emergency | Outdoor T ≥ 45 °C **and** indoor T ≥ 35 °C (both fixed) | Fully opens vents, closes shade screens, forces coolers to 100 %. |
-| Cold Emergency | Outdoor T ≤ −5 °C **and** indoor T ≤ 5 °C (both fixed) | Closes vents, closes thermal curtains, forces heaters to 100 %. |
+| Heat Emergency | Outdoor T ≥ 45 °C **and** indoor T ≥ 35 °C (both fixed). Releases once either drops 2 °C below its threshold | Fully opens vents, closes shade screens, forces coolers to 100 %. |
+| Cold Emergency | Outdoor T ≤ −5 °C **and** indoor T ≤ 5 °C (both fixed). Releases once either rises 2 °C above its threshold | Closes vents, closes thermal curtains, forces heaters to 100 %. |
 | Heat/cold cannot be judged | Indoor temperature unknown | The emergency gates **do not fire** — they drive every device one way, so they fire only on firm evidence. |
 | Indoor values lost | Indoor temperature/humidity stop arriving (judged by each sensor's own freshness rule — there is no separate 120 s clock) | **Nothing is forced.** The deviation cannot be measured, so that axis leaves control and devices that lost their evidence hold where they are. Axes that can still be measured (CO₂, light) keep being controlled, and control resumes as soon as values return (no 300 s hold). |
 | Outdoor Rain/Wind Lost | A rain or wind reading that used to arrive stops arriving (judged by each sensor's own freshness rule — no separate 300 s clock). A sensor the facility never had does not count. | If the last value was rain or strong wind, the Rain/Wind gate keeps the vents **closed** until a fresh reading says otherwise. Otherwise vents may hold or close but **never open further** — a stale "no rain" is not a reason to open. Exception: above your **Max Temperature** hard limit vents may still open. Shades and everything else keep normal control. |
