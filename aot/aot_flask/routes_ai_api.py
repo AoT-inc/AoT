@@ -363,6 +363,14 @@ def ai_execute():
 @login_required
 def ai_portal_chat():
     """ Handles multi-turn chat in the AI Portal. """
+    # 채팅 자체(LLM 호출)는 제안 실행과 별개 권한이다(p6_73, 2026-09-22 제품
+    # 결정) — 실행은 승인 시점에 edit_controllers+그룹 스코프로 따로 막힌다
+    # (execute_logged_action._approval_denial). 여기서 막는 것은 "물어볼 수
+    # 있는가" 뿐이다: Guest·Kiosk 는 기본 시드에서 막히고 Monitor 는 열린다.
+    from aot.aot_flask.utils.utils_general import user_has_permission
+    if not user_has_permission('use_ai_chat', silent=True):
+        return jsonify({'error': 'Insufficient permission: use_ai_chat'}), 403
+
     data = request.json or {}
     message = data.get('message')
     thread_id = data.get('thread_id') or str(uuid.uuid4())

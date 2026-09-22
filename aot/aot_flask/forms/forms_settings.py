@@ -478,6 +478,8 @@ class UserRoles(FlaskForm):
     edit_plots = BooleanField(lazy_gettext('Edit Plots'))
     edit_settings = BooleanField(lazy_gettext('Edit Settings'))
     reset_password = BooleanField(lazy_gettext('Reset Password'))
+    # AI 채팅 사용(p6_73) — LLM 호출 비용이 드는 자리라 view_* 와 분리한다.
+    use_ai_chat = BooleanField(lazy_gettext('Use AI Chat'))
     # 그룹 스코프 면제(p6_52). 다른 항목이 "무엇을 할 수 있는가"(동사)라면
     # 이것은 "어디까지"(목적어)라, 목록 맨 아래에 따로 둔다.
     bypass_group_scope = BooleanField(

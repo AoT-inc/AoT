@@ -118,6 +118,7 @@ def user_roles(form):
             new_role.edit_settings = form.edit_settings.data
             new_role.edit_controllers = form.edit_controllers.data
             new_role.edit_plots = form.edit_plots.data
+            new_role.use_ai_chat = form.use_ai_chat.data
             new_role.reset_password = form.reset_password.data
             new_role.bypass_group_scope = form.bypass_group_scope.data
             try:
@@ -141,6 +142,7 @@ def user_roles(form):
             mod_role.edit_settings = form.edit_settings.data
             mod_role.edit_controllers = form.edit_controllers.data
             mod_role.edit_plots = form.edit_plots.data
+            mod_role.use_ai_chat = form.use_ai_chat.data
             mod_role.reset_password = form.reset_password.data
 
             # **마지막 면제 역할을 풀지 못하게 한다.** 면제 역할이 하나도 없는

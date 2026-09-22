@@ -959,6 +959,21 @@ id 가 생기면 그 인자는 후보에서 조용히 빠진다 —
 
 구현: `mcp_safety_gate._decide()`(웹 승인 화면·MCP 도구 둘 다 여기로 모인다).
 
+**⑦ 채팅 제안 승인도 같은 기준이다 (2026-09-22 추가).** 내장 AI 채팅이 제안한
+행동을 승인하는 `POST /api/v1/ai/portal/chat/action` 은 ⑥과 다른 길이다 —
+`MCPConfirmation` 을 거치지 않고 `AIAgentService.execute_logged_action` 이
+`execute_action(..., _approved=True)` 로 곧장 실행한다. 이 길은 대화 기록
+소유자만 확인했고 역할도 그룹도 보지 않아서, **Monitor 가 자기 채팅의 출력
+켜기 제안을 승인해 장치를 실제로 켰다**(E2E 스택 재현). 이제
+`execute_logged_action` 이 실행 직전에 승인자(로그인한 사람)를 본다 — 쓰기
+제안이면 `edit_controllers`, 그다음 ③과 같은 `can_operate_tool_call` 로 대상.
+단건·`'all'` 배치·autonomy=`auto` 자동 실행이 모두 이 함수를 지난다. 읽기 제안
+(도구 레지스트리에서 쓰기가 아닌 것)은 막지 않고, 레지스트리에 없는 이름은
+쓰기로 본다. `execute_action` 자체에 걸지 않은 이유: 예약 발화처럼 사람이 없는
+경로도 그 함수를 쓰고, 거기서는 `current_user` 가 익명이라 모든 예약이 멈춘다
+(예약은 §8-7 이 만든 사람으로 따로 재검사한다). 회귀:
+`test_chat_approval_role_guard.py`.
+
 #### A2 실증 (2026-08-22, 로컬 MCP HTTP)
 
 ⚠ 상주 HTTP 프로세스는 코드가 bind mount 돼 있어도 **갈아타지 않는다** —

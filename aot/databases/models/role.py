@@ -52,6 +52,13 @@ class Role(CRUDMixin, db.Model):
     view_stats = db.Column(db.Boolean, nullable=False, default=False)
     view_logs = db.Column(db.Boolean, nullable=False, default=False)
     reset_password = db.Column(db.Boolean, nullable=False, default=False)
+    # AI 채팅(내장 모델 호출) 사용 — LLM 호출 비용이 드는 자리라 다른 view_*
+    # 와 분리한 별도 권한이다(p6_73). `edit_controllers` 는 이것을 함의한다
+    # (`user_has_permission` 이 처리) — 편집자가 업그레이드 순간 채팅을
+    # 못 쓰게 되면 안 된다. 실행(제어 승인)은 이것과 무관하게 여전히
+    # `edit_controllers`·그룹 스코프로 따로 막힌다(§6-2, A2 참고) — 채팅을
+    # 열어도 "물어볼 수 있다" 뿐이지 "실행할 수 있다" 가 아니다.
+    use_ai_chat = db.Column(db.Boolean, nullable=False, default=False)
 
     # user = db.relationship("User", back_populates="roles")
 

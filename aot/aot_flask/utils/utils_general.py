@@ -1914,6 +1914,11 @@ def user_has_permission(permission, silent=False):
             (permission == 'edit_plots' and
              (getattr(role, 'edit_plots', False) or role.edit_settings)) or
             (permission == 'edit_controllers' and role.edit_controllers) or
+            # AI 채팅 사용(p6_73). 제어 권한은 이것을 함의한다 — 편집자가
+            # 업그레이드 순간 채팅을 못 쓰게 되면 안 된다(edit_plots 와 같은
+            # 이유·같은 방향).
+            (permission == 'use_ai_chat' and
+             (getattr(role, 'use_ai_chat', False) or role.edit_controllers)) or
             (permission == 'edit_users' and role.edit_users) or
             (permission == 'view_settings' and role.view_settings) or
             (permission == 'view_camera' and role.view_camera) or

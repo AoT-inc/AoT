@@ -17,7 +17,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from config_translations import TRANSLATIONS as T
 
 MYCODO_VERSION = '8.16.0'
-ALEMBIC_VERSION = 'p6_72_device_tz_source_system_20260921'
+ALEMBIC_VERSION = 'p6_73_role_use_ai_chat_20260922'
 AOT_VERSION = '26.09.06'
 
 # FORCE UPGRADE MASTER
@@ -636,27 +636,27 @@ FUNCTIONS = [
 USER_ROLES = [
     dict(id=1, name='Admin',
          edit_settings=True, edit_controllers=True, edit_users=True,
-         edit_plots=True, bypass_group_scope=True,
+         edit_plots=True, bypass_group_scope=True, use_ai_chat=True,
          view_settings=True, view_camera=True, view_stats=True, view_logs=True,
          reset_password=True),
     dict(id=2, name='Editor',
          edit_settings=True, edit_controllers=True, edit_users=False,
-         edit_plots=True, bypass_group_scope=False,
+         edit_plots=True, bypass_group_scope=False, use_ai_chat=True,
          view_settings=True, view_camera=True, view_stats=True, view_logs=True,
          reset_password=True),
     dict(id=3, name='Monitor',
          edit_settings=False, edit_controllers=False, edit_users=False,
-         edit_plots=False, bypass_group_scope=False,
+         edit_plots=False, bypass_group_scope=False, use_ai_chat=True,
          view_settings=True, view_camera=True, view_stats=True, view_logs=True,
          reset_password=True),
     dict(id=4, name='Guest',
          edit_settings=False, edit_controllers=False, edit_users=False,
-         edit_plots=False, bypass_group_scope=False,
+         edit_plots=False, bypass_group_scope=False, use_ai_chat=False,
          view_settings=False, view_camera=False, view_stats=False, view_logs=False,
          reset_password=False),
     dict(id=5, name='Kiosk',
          edit_settings=False, edit_controllers=False, edit_users=False,
-         edit_plots=False, bypass_group_scope=False,
+         edit_plots=False, bypass_group_scope=False, use_ai_chat=False,
          view_settings=False, view_camera=True, view_stats=True, view_logs=False,
          reset_password=False)
 ]

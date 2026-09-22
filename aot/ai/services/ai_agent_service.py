@@ -2471,6 +2471,88 @@ class AIAgentService:
         # Fallback v23.0: Empty instead of all to prevent token waste
         return []
 
+    # 승인해도 상태를 바꾸지 않는 옛 action_type. 여기 없는 것은 전부 쓰기로 본다.
+    _READ_ONLY_ACTION_TYPES = frozenset({
+        'read_manual', 'knowledge_search', 'get_detailed_manifest'})
+
+    @staticmethod
+    def _approval_is_write(action_type, target_id, params):
+        """이 제안을 실행하면 무언가가 바뀌는가.
+
+        도구 호출은 도구 레지스트리가 정본이다(MCP 승인·키 권한과 같은 표).
+        **레지스트리에 없는 이름은 쓰기로 본다** — 모르는 도구를 읽기로 치면
+        새 도구가 생길 때마다 보기 전용 역할에 조용히 열린다.
+        """
+        if action_type in ('mcp_tool_call', 'virtual_tool_call'):
+            tool = (params or {}).get('tool_name') or (
+                target_id if isinstance(target_id, str) else None)
+            try:
+                from aot.tools.tool_registry import TOOLS
+                from aot.tools.mcp_safety_gate import write_tools
+                known = {t.name for t in TOOLS}
+                return tool not in known or tool in write_tools()
+            except Exception:
+                logger.exception('[chat-approval] 도구 분류 실패 — 쓰기로 본다')
+                return True
+        return action_type not in AIAgentService._READ_ONLY_ACTION_TYPES
+
+    @staticmethod
+    def _approval_denial(action_type, target_id, params):
+        """채팅 제안을 승인해 실행해도 되는 사람인가. 막으면 사유, 통과면 None.
+
+        직접 제어(`routes_general.output_mod`)·MCP 승인 대기(`routes_ai_agent`)와
+        **같은 기준**이다: 쓰기는 `edit_controllers` 역할, 그다음 대상이 그
+        사람의 그룹 스코프 안인지. 이 관문이 없어서 Monitor 가 채팅 제안 승인
+        (`/api/v1/ai/portal/chat/action`)으로 출력을 실제로 켰다(2026-09-22
+        E2E 스택 재현).
+
+        `AIActionService.execute_action` 이 아니라 여기서 보는 이유: 그 함수는
+        예약 발화·백그라운드 루프처럼 **사람이 없는** 경로도 함께 쓴다. 그
+        경로에서는 물을 사람이 없고(예약은 발화 때 만든 사람으로 따로 재검사한다
+        — `AISchedulerService._scope_denies`), 거기서 `current_user` 를 보면
+        익명이라 모든 예약이 멈춘다. 사람이 승인해 실행하는 채팅 경로는
+        (단건·'all'·autonomy=auto 모두) 이 함수 하나를 지난다.
+
+        실패는 **거부**로 닫는다 — 사람이 승인 버튼을 누른 자리이므로 다시
+        누르면 되지만, 열린 채 실패하면 권한 없는 실행이 조용히 남는다.
+        """
+        if not AIAgentService._approval_is_write(action_type, target_id, params):
+            return None
+        try:
+            import flask_login
+            from flask import has_request_context
+            from aot.aot_flask.access import scope
+            from aot.aot_flask.utils.utils_general import user_has_permission
+
+            user = flask_login.current_user if has_request_context() else None
+            if user is None or not user.is_authenticated:
+                return 'approval requires a signed-in user'
+            if not user_has_permission('edit_controllers', silent=True):
+                return 'Insufficient permission: edit_controllers'
+
+            # 그룹 스코프 — 대상은 인자 안에 있다(도구 호출은 겉 target_id 가
+            # 서버/도구 이름이다). 값으로 uuid 를 훑는 정본 판정을 그대로 쓴다.
+            p = params if isinstance(params, dict) else {}
+            if action_type in ('mcp_tool_call', 'virtual_tool_call'):
+                tool = p.get('tool_name') or target_id
+                args = dict(p.get('arguments') or p.get('params') or {})
+                for key in ('device_id', 'output_id', 'unique_id'):
+                    if isinstance(args.get(key), str):
+                        args[key] = scope.resolve_device_token(args[key])
+            else:
+                tool = action_type
+                args = {'target_id': scope.resolve_device_token(target_id)
+                        if isinstance(target_id, str) else target_id,
+                        'params': p}
+            allowed, denied = scope.can_operate_tool_call(
+                tool, args, write_tools=frozenset({tool}))
+            if not allowed:
+                return scope.deny_message()
+            return None
+        except Exception:
+            logger.exception('[chat-approval] 권한 판정 실패 — 거부로 닫는다')
+            return 'permission check failed'
+
     @staticmethod
     def execute_all_logged_actions(history_id):
         """Batch approval: execute EVERY action in a history record. Runs each via
@@ -2572,6 +2654,13 @@ class AIAgentService:
                         logger.info(f"[TASK_38] execute_logged_action: re-resolved target_id='{target_id}' for '{tool_name}'")
                     else:
                         logger.error(f"[TASK_38] execute_logged_action: could not resolve target_id for '{tool_name}'")
+
+            # 승인자 역할·그룹 스코프 — 대상이 확정된 뒤, 실행 전에.
+            _denied = AIAgentService._approval_denial(action_type, target_id, params)
+            if _denied:
+                logger.warning(f"[chat-approval] blocked {action_type} on {target_id}: {_denied}")
+                return {"status": "error", "message": _denied,
+                        "error_code": "permission_denied", "blocked": True}
 
             # Safety validation before execution
             try:
