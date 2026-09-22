@@ -56,7 +56,7 @@ def fit(
 
     # 파라미터 이름과 초기값 벡터
     # v2: 수분은 수증기량으로 섞이므로 K_RH_vent 는 더 쓰지 않는다 — 대신 증산·
-    # 광합성 흡수를 배운다. volume_m3·tau_shade 는 시설이 아는 값이라 배우지 않는다.
+    # 광합성 흡수를 배운다. volume_m3·tau_shade·보온커튼 계수는 시설이 아는 값이라 배우지 않는다.
     param_keys = ['UA_eff', 'alpha_sol', 'Q_heat', 'Q_cool', 'm_vent_coef',
                   'Q_plant_base', 'tau_T', 'K_CO2_inj', 'k_transp', 'k_photo']
     x0 = [getattr(p0, k) for k in param_keys]

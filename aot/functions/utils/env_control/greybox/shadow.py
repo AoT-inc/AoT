@@ -96,6 +96,7 @@ class GreyboxShadow:
         cmds_pct: dict,
         dt: float = 60.0,
         kind_by_aid: Optional[Dict[str, str]] = None,
+        vent_caps: Optional[dict] = None,
     ):
         """1-step 예측 실행. 이전 예측 오차 기록. 제어값 변경 없음.
 
@@ -131,8 +132,8 @@ class GreyboxShadow:
             except Exception:
                 pass
 
-        # 명령 벡터 집계 (greybox 채널별 최대값, kind 기반)
-        cmds = aggregate_cmds_by_kind(cmds_pct, kind_by_aid)
+        # 명령 벡터 집계 (kind 기반). vent 는 풍량 비율(`channels.vent_channel_value`)
+        cmds = aggregate_cmds_by_kind(cmds_pct, kind_by_aid, vent_caps)
 
         ext = {
             'T_ext':   external.get('T_ext',   20.0),

@@ -82,7 +82,14 @@ def greybox_effect_model(
         def _fn(env, pct=100.0, profile=None, _ch=channel, _i=var_idx):
             # pct 는 coordinator 가 항상 100 으로 호출(자성=100% 기준). 모델이 선형이라
             # 0→100 유한차분이 곧 100% 자성이며, coordinator 가 cmd/100 로 스케일한다.
-            return _gb_effect(_ch, _i, env, params, dt_default)
+            r = _gb_effect(_ch, _i, env, params, dt_default)
+            # vent 채널은 풍량 비율이다 — 창 하나를 다 열면 채널의 제 몫(c_i/C)만
+            # 움직인다(E 단계). 예전에는 창마다 채널 전체 효과를 주장해 합이 과대였다.
+            share = (env.get('_gb_vent_share') or {}).get(
+                getattr(profile, 'actuator_id', None)) if _ch == 'vent' else None
+            if share is not None and r.magnitude_native:
+                return EffectResult(r.direction, r.magnitude_native * float(share))
+            return r
         return _fn
 
     return {var: _make(idx) for var, idx in _VAR_INDEX.items()}

@@ -132,7 +132,7 @@ def test_v1_params_are_revalidated():
     p = GreyboxParams.from_dict(old)
     assert p.UA_eff == 900.0 and p.n_updates == 0 and p.rmse_T == 999.0
     again = GreyboxParams.from_dict(p.to_dict())
-    assert again.model_version == 2
+    assert again.model_version == GreyboxParams().model_version
 
 
 def test_identification_recovers_transpiration():

@@ -36,7 +36,8 @@ def test_old_model_record_is_rejected():
 
 
 def test_matching_record_is_accepted():
-    st = {'greybox_kpi_passed': True, 'greybox_kpi_model_version': 2,
+    st = {'greybox_kpi_passed': True,
+          'greybox_kpi_model_version': GreyboxParams().model_version,
           'greybox_kpi_basis': cm._KPI_BASIS}
     assert _coord(st)._greybox_control_gate_ok()
 

@@ -26,8 +26,16 @@ AH 이고, 수증기압 e·RH·VPD 는 매 순간 (T, AH) 에서 계산한다.
   (개도 %, 100 = 걷힘). 없으면 걷힌 것으로 본다.
 - **CO₂ 환기**: v1 의 `vent_m3s / tau_co2` 는 차원이 맞지 않았다. 이제 V̇/V.
 
+## v3 (2026-09-22, E 단계)
+
+- **보온커튼**: 외피 열손실 UA × (1 − curtain_ua_saving·닫힘), 일사 × (tau_curtain +
+  (1 − tau_curtain)·개도). 입력 `cmds['curtain']`(개도 %, 100 = 걷힘), 없으면 걷힘.
+  열용량(tau_T·UA_eff)은 시설의 성질이라 커튼이 바꾸지 않는다.
+- **vent 채널의 뜻**: 가장 많이 연 장치의 개도 → 시설 환기 능력 대비 **풍량 비율**
+  (`channels.vent_channel_value`). 식은 같고 입력의 뜻이 바뀐다 — 그래서 판을 올린다.
+
 상태벡터(내부): [T, AH, CO2]  입력: ext{T_ext, RH_ext, CO2_ext, solar, wind},
-cmds{heat, cool, vent, fog, co2_inj, shade}. 단계 적분: RK4 + 안정 서브스텝.
+cmds{heat, cool, vent, fog, co2_inj, shade, curtain}. 단계 적분: RK4 + 안정 서브스텝.
 """
 
 from __future__ import annotations
@@ -182,13 +190,16 @@ def _ode(
     cmd_fog     = cmds.get('fog',     0.0) / 100.0
     cmd_co2_inj = cmds.get('co2_inj', 0.0) / 100.0
     shade_open  = max(0.0, min(100.0, cmds.get('shade', 100.0))) / 100.0
+    curtain_open = max(0.0, min(100.0, cmds.get('curtain', 100.0))) / 100.0
 
     V = _volume(p)
     vent_m3s = _vent_m3s(ext, cmds, p)
     e_sat = _svp(T)
     vpd = max(0.0, e_sat - e)
     shade_f = p.tau_shade + (1.0 - p.tau_shade) * shade_open
-    solar_in = solar * shade_f
+    curtain_f = p.tau_curtain + (1.0 - p.tau_curtain) * curtain_open
+    solar_in = solar * shade_f * curtain_f
+    ua = p.UA_eff * (1.0 - p.curtain_ua_saving * (1.0 - curtain_open))
 
     # ── 수분원 [kg/s] ──────────────────────────────────────────────────────
     # 분무: 잠열 출력 m_fog_evap[W] 을 증발량으로. 포화에 가까울수록 줄어든다.
@@ -200,7 +211,7 @@ def _ode(
 
     # ── 온도 수지 dT/dt [K/s] ──────────────────────────────────────────────
     thermal_mass = max(p.tau_T * p.UA_eff, 1.0)
-    Q = (p.UA_eff * (T_e - T)
+    Q = (ua * (T_e - T)
          + p.alpha_sol * solar_in
          + p.Q_heat * cmd_heat - p.Q_cool * cmd_cool
          + RHO_CP_AIR * vent_m3s * (T_e - T)

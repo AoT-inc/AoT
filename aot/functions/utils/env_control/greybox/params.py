@@ -62,8 +62,15 @@ class GreyboxParams:
     volume_m3:    Optional[float] = None
     # tau_shade: 차광막을 다 쳤을 때 일사 투과율. 시설 값이 정본(_facility_shade_transmittance).
     tau_shade:    float = 0.5
+    # ── 모델 v3 (2026-09-22, E 단계) — 보온커튼. 역시 **학습하지 않는다**(커튼은 늘
+    #   밤에 닫히고 낮에 걷혀 외기·일사와 함께 움직인다 — 데이터로 떼어낼 수 없다).
+    # curtain_ua_saving: 다 닫았을 때 외피 열손실(UA)을 줄이는 비율. 에너지 스크린 문헌값
+    #   30~50 %의 보수적인 쪽.
+    curtain_ua_saving: float = 0.35
+    # tau_curtain: 다 닫았을 때 일사 투과율(보온 전용 막 기준).
+    tau_curtain:  float = 0.8
     # model_version: 물리식 판. 식이 바뀌면 옛 판으로 학습한 값·KPI 는 다시 검증한다.
-    model_version: int = 2
+    model_version: int = 3
 
     # ── 수렴 상태 ─────────────────────────────────────────────────────────────
     n_updates: int = 0
@@ -113,6 +120,11 @@ class GreyboxParams:
             # tau_T = ρVcp / UA_eff  (공기: ρcp≈1200 J/m³K)
             p.tau_T = max(60.0, 1200.0 * volume / max(p.UA_eff, 1.0))
             p.volume_m3 = volume
+        for key, attr in (('curtain_u_saving', 'curtain_ua_saving'),
+                          ('curtain_transmittance', 'tau_curtain')):
+            v = meta.get(key)
+            if v is not None and 0.0 <= float(v) <= 1.0:
+                setattr(p, attr, float(v))
         tau_sh = meta.get('shade_transmittance')
         if tau_sh is not None and 0.0 < float(tau_sh) <= 1.0:
             p.tau_shade = float(tau_sh)
@@ -144,5 +156,6 @@ class GreyboxParams:
 
 _PERSIST_KEYS = ('UA_eff', 'alpha_sol', 'Q_heat', 'Q_cool', 'm_vent_coef',
                  'm_fog_evap', 'Q_plant_base', 'tau_T', 'K_RH_vent', 'K_CO2_inj',
-                 'k_transp', 'k_photo', 'volume_m3', 'tau_shade', 'model_version',
+                 'k_transp', 'k_photo', 'volume_m3', 'tau_shade',
+                 'curtain_ua_saving', 'tau_curtain', 'model_version',
                  'n_updates', 'rmse_T', 'rmse_RH')

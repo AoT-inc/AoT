@@ -2287,6 +2287,7 @@ class CycleMixin:
                     cmds_pct=current_cmd_pcts,
                     dt=cycle_sec,
                     kind_by_aid=_kind_by_aid,
+                    vent_caps=self._vent_caps(),
                 )
                 # Hourly KPI log + auto-transition check
                 if (int(time.time()) % 3600) < int(cycle_sec):
@@ -3047,10 +3048,13 @@ class CycleMixin:
 
         try:
             from aot.functions.utils.env_control.greybox.effect_adapter import greybox_effect_model
-            from aot.functions.utils.env_control.greybox.channels import aggregate_cmds_by_kind
+            from aot.functions.utils.env_control.greybox.channels import (
+                aggregate_cmds_by_kind, vent_shares)
             kind_by_aid = {p.actuator_id: getattr(p, 'kind', None) for p in self._profiles}
-            base = aggregate_cmds_by_kind(self._coord_state.prev_commands, kind_by_aid)
+            caps = self._vent_caps()
+            base = aggregate_cmds_by_kind(self._coord_state.prev_commands, kind_by_aid, caps)
             situation.context['_gb_base_cmds'] = base
+            situation.context['_gb_vent_share'] = vent_shares(caps)
             params = self._greybox_shadow.params
             dt = float(situation.context.get('cycle_sec', 60.0) or 60.0)
             for p in self._profiles:
@@ -3101,6 +3105,11 @@ class CycleMixin:
             actuator_index=self._actuator_idx,
         )
 
+    def _vent_caps(self) -> dict:
+        """vent 채널 장치별 풍량 능력(`greybox.channels.vent_capacities`)."""
+        from aot.functions.utils.env_control.greybox.channels import vent_capacities
+        return vent_capacities(getattr(self, '_profiles', None) or [])
+
     def _build_mpc_ext_seq(self, situation: SituationReport, horizon: int) -> list[dict]:
         """MPC 예측용 외기(ext) 시퀀스. v1: 현재 외기를 지평 동안 유지(persistence).
 
@@ -3127,7 +3136,8 @@ class CycleMixin:
         (같은 사이클에 PI 가 같은 판정을 이미 남긴다)."""
         from aot.functions.utils.env_control.greybox import mpc as gbmpc
         from aot.functions.utils.env_control.greybox.channels import (
-            channel_for_kind, aggregate_cmds_by_kind,
+            channel_for_kind, aggregate_cmds_by_kind, distribute_vent,
+            vent_reachable_pct,
         )
         from aot.functions.utils.env_control.coordinator import (
             finalize_command, ActuatorCommand, CoordinatorState,
@@ -3170,7 +3180,9 @@ class CycleMixin:
         cfg = getattr(self, '_mpc_config', None) or gbmpc.MPCConfig()
         ext_seq = self._build_mpc_ext_seq(situation, cfg.horizon)
         kind_by_aid = {p.actuator_id: getattr(p, 'kind', None) for p in self._profiles}
-        prev_ch = aggregate_cmds_by_kind(self._coord_state.prev_commands, kind_by_aid)
+        vcaps = self._vent_caps()
+        prev_ch = aggregate_cmds_by_kind(self._coord_state.prev_commands, kind_by_aid,
+                                         vcaps)
         # 에너지 무게 — 채널에 속한 장치 kW × 종류별 단가의 합(`energy`, C 단계).
         from aot.functions.utils.env_control.energy import actuator_kw, unit_price
         ch_kw: dict = {}
@@ -3204,15 +3216,26 @@ class CycleMixin:
         for p in modeled:
             by_ch.setdefault(channel_for_kind(p.kind), []).append(p)
         for ch, ps in by_ch.items():
+            if ch == 'vent':
+                continue
             if ps and all(p.actuator_id in pk.park_ids for p in ps):
                 caps[ch] = max(float(p.safe_default or 0.0) for p in ps)
+        # vent 는 장치마다 풍량이 달라(E 단계) 파킹되지 않은 장치로 낼 수 있는 만큼이
+        # 상한이다 — 일부만 파킹이면 나머지가 그 몫을 대신 낸다(`distribute_vent`).
+        vent_blocked = {a for a in vcaps if a in pk.park_ids}
+        if vcaps and vent_blocked:
+            caps['vent'] = vent_reachable_pct(vcaps, vent_blocked)
         self._last_mpc_caps = {k: round(v, 1) for k, v in caps.items()}
 
         res = gbmpc.optimize_channels(
             state=state, targets=targets, profiles=modeled, ext_seq=ext_seq,
             params=self._greybox_shadow.params, prev_channel_cmds=prev_ch,
             cycle_sec=cycle_sec, config=cfg,
-            fixed_cmds=({'shade': prev_ch['shade']} if 'shade' in prev_ch else None),
+            # 차광막·보온커튼은 최적화하지 않는 모델 입력 — 지금 개도로 둔다. 둘을
+            # 최적화하려면 빛(DLI)이 목적함수에 있어야 한다: 없으면 MPC 는 "공짜 냉방" 인
+            # 차광을 끝없이 친다.
+            fixed_cmds=({k: prev_ch[k] for k in ('shade', 'curtain') if k in prev_ch}
+                        or None),
             soft_bounds=soft,
             channel_kw=ch_kw,
             prev_move=prev_move,
@@ -3223,6 +3246,13 @@ class CycleMixin:
             return None
 
         apertures = gbmpc.distribute_to_actuators(res.channel_cmds, modeled)
+        if vcaps:
+            _Ti, _Te = ctx.get('T_int'), ctx.get('T_ext')
+            apertures.update(distribute_vent(
+                res.channel_cmds.get('vent', 0.0), vcaps,
+                indoor_hotter=(_Ti is not None and _Te is not None
+                               and float(_Ti) > float(_Te)),
+                blocked=vent_blocked))
         commands = {}
         new_prev = dict(self._coord_state.prev_commands)
         for p in modeled:
